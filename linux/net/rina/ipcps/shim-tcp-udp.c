@@ -513,6 +513,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                 flow->addr.sin_family      = AF_INET;
                 flow->addr.sin_port        = htons(entry->port);
 
+                LOG_DBG("Max allowable gap is %d", fspec->max_allowable_gap);
                 if (!fspec->max_allowable_gap == 0) {
                         LOG_DBG("Unreliable flow requested");
                         flow->fspec_id = 0;
@@ -520,7 +521,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                         err = sock_create_kern(PF_INET, SOCK_DGRAM,
                                                IPPROTO_UDP, &flow->sock);
                         if (err < 0) {
-                                LOG_ERR("Could not create udp socket");
+                                LOG_ERR("Could not create UDP socket");
                                 unbind_and_destroy_flow(data, flow);
                                 return -1;
                         }
@@ -600,9 +601,10 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                         return -1;
                 }
 
-                if (!rfifo_is_empty(flow->sdu_queue)) {
-                        LOG_ERR("We are going to leak ...");
-                }
+                if (flow->sdu_queue)
+                        if (!rfifo_is_empty(flow->sdu_queue)) {
+                                LOG_ERR("We are going to leak ...");
+                        }
                 flow->sdu_queue = NULL;
 
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm, data->id,
@@ -675,6 +677,8 @@ tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
                         unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
+
+                ASSERT(user_ipcp);
                 ASSERT(user_ipcp->ops);
                 ASSERT(user_ipcp->ops->flow_binding_ipcp);
                 if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
@@ -685,15 +689,18 @@ tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
                         unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
-                ASSERT(flow->sdu_queue);
 
+                LOG_DBG("Moving SDUs from sdu-queue to user-IPCP");
+
+                ASSERT(flow->sdu_queue);
                 while (!rfifo_is_empty(flow->sdu_queue)) {
                         struct sdu * tmp = NULL;
 
                         tmp = rfifo_pop(flow->sdu_queue);
                         ASSERT(tmp);
 
-                        LOG_DBG("Got a new element from the fifo");
+                        LOG_DBG("Got a new element from the fifo, "
+                                "enqueuing into user-IPCP");
 
                         ASSERT(flow->user_ipcp->ops);
                         ASSERT(flow->user_ipcp->ops->sdu_enqueue);
@@ -701,7 +708,7 @@ tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
                             sdu_enqueue(flow->user_ipcp->data,
                                         flow->port_id,
                                         tmp)) {
-                                LOG_ERR("Couldn't enqueue SDU to KFA ...");
+                                LOG_ERR("Couldn't enqueue SDU to user-IPCP");
                                 return -1;
                         }
                 }
@@ -818,7 +825,7 @@ int recv_msg(struct socket *      sock,
                         LOG_ERR("Problems receiving message (%d)", size);
                 }
         } else {
-                LOG_DBG("Received message with %d bytes", size);
+                LOG_DBG("Received message is %d byte(s) long", size);
         }
 
         return size;
@@ -985,6 +992,8 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 LOG_DBG("Flow's SDU queue created");
 
                 /* Store SDU in queue */
+
+                LOG_DBG("Queueing frame in SDU queue");
                 if (rfifo_push(flow->sdu_queue, du)) {
                         flow->port_id_state = PORT_STATE_NULL;
 
@@ -1023,9 +1032,13 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 }
                 name_destroy(sname);
         } else {
-                LOG_DBG("Flow exists. Queueing, delivering or dropping");
+                LOG_DBG("Flow exists, handling SDU");
+
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
                         spin_unlock(&data->lock);
+
+                        LOG_DBG("Port is ALLOCATED, "
+                                "queueing frame in user-IPCP");
 
                         ASSERT(flow->user_ipcp);
                         ASSERT(flow->user_ipcp->ops);
@@ -1039,7 +1052,8 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                                 return -1;
                         }
                 } else if (flow->port_id_state == PORT_STATE_PENDING) {
-                        LOG_DBG("Queueing frame");
+                        LOG_DBG("Port is PENDING, "
+                                "queueing frame in SDU queue");
 
                         if (rfifo_push(flow->sdu_queue, du)) {
                                 spin_unlock(&data->lock);
@@ -1055,7 +1069,14 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                         spin_unlock(&data->lock);
                 } else if (flow->port_id_state == PORT_STATE_NULL) {
                         spin_unlock(&data->lock);
+
+                        LOG_DBG("Port is NULL, "
+                                "dropping SDU");
+
                         sdu_destroy(du);
+                } else {
+                        spin_unlock(&data->lock);
+                        LOG_ERR("Port state is unhandled");
                 }
         }
 
@@ -1081,7 +1102,7 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
         }
 
         if (size != 2) {
-                LOG_DBG("Didn't read both bytes for size: %d", size);
+                LOG_DBG("Didn't read both bytes for size %d", size);
 
                 /*
                  * Shim can't function correct when only one size byte is read,
@@ -1091,7 +1112,7 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
                 while (size == -EAGAIN) {
                         size = recv_msg(sock, NULL, 0, &sbuf[1], 1);
                         if (size != -EAGAIN && size <= 0) {
-                                LOG_ERR("Can't read 2nd size byte: %d", size);
+                                LOG_ERR("Can't read 2nd size byte %d", size);
                                 return size;
                         }
                 }
@@ -1108,7 +1129,7 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
         size = recv_msg(sock, NULL, 0, buf, flow->bytes_left);
         if (size <= 0) {
                 if (size != -EAGAIN) {
-                        LOG_ERR("Error during tcp receive: %d", size);
+                        LOG_ERR("Error during TCP receive (%d)", size);
                         rkfree(buf);
                 }
                 return size;
@@ -1146,7 +1167,8 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
                                 return -1;
                         }
                 } else if (flow->port_id_state == PORT_STATE_PENDING) {
-                        LOG_DBG("Queueing frame");
+                        LOG_DBG("Port is PENDING, "
+                                "queueing frame in SDU queue");
 
                         if (rfifo_push_ni(flow->sdu_queue, du)) {
                                 spin_unlock(&data->lock);
@@ -1192,7 +1214,7 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
         size = recv_msg(sock, NULL, 0, &flow->buf[start], flow->bytes_left);
         if (size <= 0) {
                 if (size != -EAGAIN)
-                        LOG_ERR("Error during TCP receive: %d", size);
+                        LOG_ERR("Error during TCP receive (%d)", size);
                 return size;
         }
 
@@ -1216,8 +1238,10 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
                         spin_unlock(&data->lock);
 
+                        ASSERT(flow->user_ipcp);
                         ASSERT(flow->user_ipcp->ops);
                         ASSERT(flow->user_ipcp->ops->sdu_enqueue);
+
                         if (flow->user_ipcp->ops->
                             sdu_enqueue(flow->user_ipcp->data,
                                         flow->port_id,
@@ -1226,7 +1250,8 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
                                 return -1;
                         }
                 } else if (flow->port_id_state == PORT_STATE_PENDING) {
-                        LOG_DBG("Queueing frame");
+                        LOG_DBG("Port is PENDING, "
+                                "queueing frame in SDU queue");
 
                         if (rfifo_push_ni(flow->sdu_queue, du)) {
                                 spin_unlock(&data->lock);
@@ -1270,8 +1295,8 @@ static int tcp_process_msg(struct ipcp_instance_data * data,
 
         flow = find_flow_by_socket(data, sock);
         if (!flow) {
-                LOG_ERR("Cannot find the flow "
-                        "(data = %pK, socket = %pK)", data, sock);
+                LOG_ERR("Cannot find the flow (data = %pK, socket = %pK)",
+                        data, sock);
                 return -1;
         }
 
@@ -1282,11 +1307,15 @@ static int tcp_process_msg(struct ipcp_instance_data * data,
 
         if (size == 0 && (flow->port_id_state == PORT_STATE_ALLOCATED ||
                           flow->port_id_state == PORT_STATE_PENDING)) {
-                LOG_DBG("Closing flow");
+                LOG_DBG("Got 0 size message, closing flow");
 
-                if (flow->port_id_state == PORT_STATE_ALLOCATED)
+                if (flow->port_id_state == PORT_STATE_ALLOCATED) {
+                        LOG_DBG("Port was ALLOCATED, moving to NULL");
                         flow->port_id_state = PORT_STATE_NULL;
-                
+                } else {
+                        LOG_DBG("Port was PENDING");
+                }
+
                 write_lock_bh(&flow->sock->sk->sk_callback_lock);
                 flow->sock->sk->sk_data_ready = flow->sock->sk->sk_user_data;
                 flow->sock->sk->sk_user_data  = NULL;
@@ -1308,7 +1337,7 @@ static int tcp_process_msg(struct ipcp_instance_data * data,
                         msleep(2);
                 }
 
-                LOG_DBG("Notifying KIPCM aboud deallocate");
+                LOG_DBG("Notifying KIPCM about deallocate");
                 kipcm_notify_flow_dealloc(data->id, 0, flow->port_id, 1);
                 kfa_port_id_release(data->kfa, flow->port_id);
                 unbind_and_destroy_flow(data, flow);
@@ -1321,11 +1350,11 @@ static int tcp_process_msg(struct ipcp_instance_data * data,
 
 static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
 {
-        struct shim_tcp_udp_flow *  flow;
-        struct reg_app_data *       app;
-        struct socket *             acsock;
-        struct name *               sname;
-        int                         err;
+        struct shim_tcp_udp_flow * flow;
+        struct reg_app_data *      app;
+        struct socket *            acsock;
+        struct name *              sname;
+        int                        err;
         struct ipcp_instance     * ipcp, * user_ipcp;
 
         LOG_HBEAT;
@@ -1466,7 +1495,7 @@ static int tcp_udp_rcv_process_msg(struct sock * sk)
                 LOG_ERR("Couldn't retrieve hostname");
                 return -1;
         }
-        LOG_DBG("Found sockname: %d", ntohl(own.sin_addr.s_addr));
+        LOG_DBG("Found sockname (%d)", ntohl(own.sin_addr.s_addr));
 
         mapping = inst_data_mapping_get(ntohl(own.sin_addr.s_addr));
         ASSERT(mapping);
@@ -2070,7 +2099,7 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
 
                         rkfree(copy);
                 } else
-                        LOG_WARN("Unknown config param: %s", entry->name);
+                        LOG_WARN("Unknown config parameter '%s'", entry->name);
         }
 
         return 0;
@@ -2144,7 +2173,6 @@ static int tcp_udp_update_dif_config(struct ipcp_instance_data * data,
          * FIXME: Update configuration here
          *
          * Close all sockets, destroy all flows
-         *
          */
 
         undo_assignment(data);
