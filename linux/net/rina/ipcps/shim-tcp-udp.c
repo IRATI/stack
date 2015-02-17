@@ -774,7 +774,7 @@ static int tcp_udp_flow_deallocate(struct ipcp_instance_data * data,
 
         app = find_app_by_socket(data, flow->sock);
 
-        if (flow->fspec_id == 1 &&
+        if ( (flow->fspec_id == 1 || (flow->fspec_id == 0 && !app)) &&
             flow->port_id_state == PORT_STATE_ALLOCATED) {
 
                 /* FIXME: better cleanup (= removing from list) */
