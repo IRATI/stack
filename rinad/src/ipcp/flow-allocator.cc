@@ -860,14 +860,15 @@ void FlowAllocatorInstance::processCreateConnectionResultEvent(
 		return;
 	}
 
-	if (event.getSourceCepId() < 0) {
+	if (event.sourceCepId < 0) {
 		LOG_ERR("Create connection operation was unsuccessful: %d",
-				event.getSourceCepId());
+				event.sourceCepId);
 		releaseUnlockRemove();
 		return;
 	}
 
 	try {
+		flow_->getActiveConnection()->sourceCepId = event.sourceCepId;
 		state = APP_NOTIFIED_OF_INCOMING_FLOW;
 		allocate_response_message_handle_ =
 				rina::extendedIPCManager->allocateFlowRequestArrived(
@@ -1169,7 +1170,7 @@ void FlowAllocatorInstance::createResponse(int result,
 			Flow * receivedFlow = (Flow *) object_value;
 			flow_->destination_port_id = receivedFlow->destination_port_id;
 			flow_->getActiveConnection()->setDestCepId(
-					receivedFlow->getActiveConnection()->getDestCepId());
+					receivedFlow->getActiveConnection()->getSourceCepId());
 
 			delete receivedFlow;
 		}
