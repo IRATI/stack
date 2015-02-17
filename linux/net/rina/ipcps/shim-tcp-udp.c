@@ -1620,7 +1620,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
         }
 
         write_lock_bh(&app->udpsock->sk->sk_callback_lock);
-        app->udpsock->sk->sk_user_data = app->udpsock->sk->sk_data_ready;
+        app->udpsock->sk->sk_user_data  = app->udpsock->sk->sk_data_ready;
         app->udpsock->sk->sk_data_ready = tcp_udp_rcv;
         write_unlock_bh(&app->udpsock->sk->sk_callback_lock);
 
