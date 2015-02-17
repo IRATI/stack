@@ -909,28 +909,30 @@ static int udp_process_msg(struct ipcp_instance_data * data,
         spin_lock(&data->lock);
         flow = find_udp_flow(data, &addr, sock);
         if (!flow) {
-            	spin_unlock(&data->lock);
+                spin_unlock(&data->lock);
                 LOG_DBG("No flow found, creating it");
 
                 app = find_app_by_socket(data, sock);
                 if (!app) {
-                	LOG_ERR("No app registered yet! "
-                			"Someone is doing something bad on the network");
-                	sdu_destroy(du);
-                	return -1;
+                        LOG_ERR("No app registered yet! "
+                                "Someone is doing something bad "
+                                "on the network");
+                        sdu_destroy(du);
+                        return -1;
                 }
 
-                user_ipcp = kipcm_find_ipcp_by_name(default_kipcm, app->app_name);
+                user_ipcp = kipcm_find_ipcp_by_name(default_kipcm,
+                                                    app->app_name);
 
                 ASSERT(data);
 
                 if (!user_ipcp)
-                	user_ipcp = kfa_ipcp_instance(data->kfa);
+                        user_ipcp = kfa_ipcp_instance(data->kfa);
                 ipcp = kipcm_find_ipcp(default_kipcm, data->id);
                 if (!user_ipcp || !ipcp) {
-                	LOG_ERR("Could not find required ipcps");
-                	sdu_destroy(du);
-                	return -1;
+                        LOG_ERR("Could not find required ipcps");
+                        sdu_destroy(du);
+                        return -1;
                 }
 
                 ASSERT(user_ipcp);
@@ -1396,7 +1398,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                 user_ipcp = kipcm_find_ipcp_by_name(default_kipcm,
                                                     app->app_name);
                 if (!user_ipcp)
-                	user_ipcp = kfa_ipcp_instance(data->kfa);
+                        user_ipcp = kfa_ipcp_instance(data->kfa);
                 ASSERT(user_ipcp);
 
                 ipcp = kipcm_find_ipcp(default_kipcm, data->id);
@@ -1427,14 +1429,14 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                 LOG_DBG("Added flow to the list");
 
                 if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
-                	LOG_DBG("This flow goes for an app");
-                	if (kfa_flow_create(data->kfa, flow->port_id, ipcp)) {
-                		LOG_ERR("Could not create flow in KFA");
-                		kfa_port_id_release(data->kfa, flow->port_id);
-                		if (flow_destroy(data, flow))
-                			LOG_ERR("Problems destroying flow");
-                		return -1;
-                	}
+                        LOG_DBG("This flow goes for an app");
+                        if (kfa_flow_create(data->kfa, flow->port_id, ipcp)) {
+                                LOG_ERR("Could not create flow in KFA");
+                                kfa_port_id_release(data->kfa, flow->port_id);
+                                if (flow_destroy(data, flow))
+                                        LOG_ERR("Problems destroying flow");
+                                return -1;
+                        }
                 }
 
                 flow->sdu_queue = rfifo_create_ni();
@@ -1502,12 +1504,12 @@ static int tcp_udp_rcv_process_msg(struct sock * sk)
         ASSERT(mapping);
 
         if (sk->sk_socket->type == SOCK_DGRAM) {
-        	res = udp_process_msg(mapping->data, sock);
-        	while (res > 0)
-        		res = udp_process_msg(mapping->data, sock);
-        	return res;
+                res = udp_process_msg(mapping->data, sock);
+                while (res > 0)
+                        res = udp_process_msg(mapping->data, sock);
+                return res;
         } else
-        	return tcp_process(mapping->data, sock);
+                return tcp_process(mapping->data, sock);
 }
 
 static void tcp_udp_rcv_worker(struct work_struct * work)
@@ -1543,19 +1545,21 @@ static void tcp_udp_rcv_worker(struct work_struct * work)
 static int tcp_udp_application_register(struct ipcp_instance_data * data,
                                         const struct name *         name)
 {
-        struct reg_app_data *      app;
-        struct sockaddr_in         sin;
-        struct exp_reg *           exp_reg;
-        int                        err;
+        struct reg_app_data * app;
+        struct sockaddr_in    sin;
+        struct exp_reg *      exp_reg;
+        int                   err;
 
         LOG_HBEAT;
 
         ASSERT(data);
         ASSERT(name);
 
+        LOG_DBG("Handling application registration");
+
         app = find_app_by_name(data, name);
         if (app) {
-                LOG_ERR("Application already registered");
+                LOG_ERR("Application is already registered");
                 return -1;
         }
 
@@ -1585,7 +1589,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
         err = sock_create_kern(PF_INET, SOCK_DGRAM, IPPROTO_UDP,
                                &app->udpsock);
         if (err < 0) {
-                LOG_ERR("could not create UDP socket for registration");
+                LOG_ERR("Could not create UDP socket for registration");
                 name_destroy(app->app_name);
                 rkfree(app);
                 return -1;
@@ -1667,9 +1671,11 @@ static int tcp_udp_application_unregister(struct ipcp_instance_data * data,
         ASSERT(data);
         ASSERT(name);
 
+        LOG_DBG("Handling application un-registration");
+
         app = find_app_by_name(data, name);
         if (!app) {
-                LOG_ERR("App is not registered, so can't unregister");
+                LOG_ERR("Application is not registered, so can't unregister");
                 return -1;
         }
 
