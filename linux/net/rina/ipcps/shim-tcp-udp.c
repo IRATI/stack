@@ -442,7 +442,6 @@ static void tcp_udp_rcv(struct sock * sk)
                 LOG_ERR("Bad socket passed to callback, bailing out");
                 return;
         }
-
         LOG_DBG("Callback on socket %pK", sk->sk_socket);
 
         recvd = rkmalloc(sizeof(struct rcv_data), GFP_ATOMIC);
@@ -760,6 +759,8 @@ static int tcp_udp_flow_deallocate(struct ipcp_instance_data * data,
 {
         struct shim_tcp_udp_flow * flow;
         struct reg_app_data *      app;
+        struct rcv_data *          recvd;
+        unsigned long              flags;
 
         LOG_HBEAT;
 
@@ -775,17 +776,13 @@ static int tcp_udp_flow_deallocate(struct ipcp_instance_data * data,
 
         if ( (flow->fspec_id == 1 || (flow->fspec_id == 0 && !app)) &&
             flow->port_id_state == PORT_STATE_ALLOCATED) {
-                unsigned long     flags;
-                struct rcv_data * recvd;
-                struct rcv_data * next;
 
+                /* FIXME: better cleanup (= removing from list) */
                 spin_lock_irqsave(&rcv_wq_lock, flags);
-                list_for_each_entry_safe(recvd, next, &rcv_wq_data, list) {
+                list_for_each_entry(recvd, &rcv_wq_data, list) {
                         if (recvd->sk->sk_socket == flow->sock) {
-                                LOG_DBG("Removing entry from recvd");
-                                
-                                list_del(&recvd->list);
-                                rkfree(recvd);
+                                LOG_DBG("Setting socket to NULL");
+                                recvd->sk = NULL;
                         }
                 }
                 spin_unlock_irqrestore(&rcv_wq_lock, flags);
@@ -802,17 +799,15 @@ static int tcp_udp_flow_deallocate(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int recv_msg(struct socket *      sock,
-                    struct sockaddr_in * other,
-                    int                  lother,
-                    unsigned char *      buf,
-                    int                  len)
+int recv_msg(struct socket *      sock,
+             struct sockaddr_in * other,
+             int                  lother,
+             unsigned char *      buf,
+             int                  len)
 {
         struct msghdr msg;
         struct kvec   iov;
         int           size;
-
-        ASSERT(!sock);
 
         iov.iov_base = buf;
         iov.iov_len  = len;
@@ -1315,8 +1310,6 @@ static int tcp_process_msg(struct ipcp_instance_data * data,
 
         if (size == 0 && (flow->port_id_state == PORT_STATE_ALLOCATED ||
                           flow->port_id_state == PORT_STATE_PENDING)) {
-                struct rcv_data * next;
-
                 LOG_DBG("Got 0 size message, closing flow");
 
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
@@ -1333,13 +1326,9 @@ static int tcp_process_msg(struct ipcp_instance_data * data,
 
                 /* FIXME: better cleanup */
                 spin_lock_irqsave(&rcv_wq_lock, flags);
-                list_for_each_entry_safe(recvd, next, &rcv_wq_data, list) {
-                        if (recvd->sk->sk_socket == flow->sock) {
-                                LOG_DBG("Removing entry from recvd");
-                                
-                                list_del(&recvd->list);
-                                rkfree(recvd);
-                        }
+                list_for_each_entry(recvd, &rcv_wq_data, list) {
+                        if (recvd->sk->sk_socket == flow->sock)
+                                recvd->sk = NULL;
                 }
                 spin_unlock_irqrestore(&rcv_wq_lock, flags);
 
@@ -2729,8 +2718,6 @@ static void __exit mod_exit(void)
 {
         struct rcv_data * recvd, * nxt_r;
         struct rcv_data * sendd, * nxt_s;
-
-        /* FIXME: Add spinlocks here */
 
         LOG_DBG("Disposing receiver-wq");
         flush_workqueue(rcv_wq);
