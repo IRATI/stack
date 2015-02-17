@@ -906,35 +906,35 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        app = find_app_by_socket(data, sock);
-        if (!app) {
-                LOG_ERR("No app registered yet! "
-                        "Someone is doing something bad on the network");
-                sdu_destroy(du);
-                return -1;
-        }
-
-        user_ipcp = kipcm_find_ipcp_by_name(default_kipcm, app->app_name);
-
-        ASSERT(data);
-
-        if (!user_ipcp)
-                user_ipcp = kfa_ipcp_instance(data->kfa);
-        ipcp = kipcm_find_ipcp(default_kipcm, data->id);
-        if (!user_ipcp || !ipcp) {
-                LOG_ERR("Could not find required ipcps");
-                sdu_destroy(du);
-                return -1;
-        }
-
-        ASSERT(user_ipcp);
-        ASSERT(ipcp);
-
         spin_lock(&data->lock);
         flow = find_udp_flow(data, &addr, sock);
         if (!flow) {
             	spin_unlock(&data->lock);
                 LOG_DBG("No flow found, creating it");
+
+                app = find_app_by_socket(data, sock);
+                if (!app) {
+                	LOG_ERR("No app registered yet! "
+                			"Someone is doing something bad on the network");
+                	sdu_destroy(du);
+                	return -1;
+                }
+
+                user_ipcp = kipcm_find_ipcp_by_name(default_kipcm, app->app_name);
+
+                ASSERT(data);
+
+                if (!user_ipcp)
+                	user_ipcp = kfa_ipcp_instance(data->kfa);
+                ipcp = kipcm_find_ipcp(default_kipcm, data->id);
+                if (!user_ipcp || !ipcp) {
+                	LOG_ERR("Could not find required ipcps");
+                	sdu_destroy(du);
+                	return -1;
+                }
+
+                ASSERT(user_ipcp);
+                ASSERT(ipcp);
 
                 flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
                 if (!flow) {
@@ -1502,12 +1502,12 @@ static int tcp_udp_rcv_process_msg(struct sock * sk)
         ASSERT(mapping);
 
         if (sk->sk_socket->type == SOCK_DGRAM) {
-                res = udp_process_msg(mapping->data, sock);
-                while (res > 0)
-                        res = udp_process_msg(mapping->data, sock);
-                return res;
+        	res = udp_process_msg(mapping->data, sock);
+        	while (res > 0)
+        		res = udp_process_msg(mapping->data, sock);
+        	return res;
         } else
-                return tcp_process(mapping->data, sock);
+        	return tcp_process(mapping->data, sock);
 }
 
 static void tcp_udp_rcv_worker(struct work_struct * work)
