@@ -212,7 +212,8 @@ unsigned int IPCProcess::assignToDIF(const DIFInformation& difInformation)
 
         try {
                 //FIXME, compute maximum message size dynamically
-                rinaManager->sendMessage(&message);
+                rinaManager->sendMessageOfMaxSize(&message,
+                                                  5 * get_page_size());
         } catch (NetlinkException &e) {
                 throw AssignToDIFException(e.what());
         }
