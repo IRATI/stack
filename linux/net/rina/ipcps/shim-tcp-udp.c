@@ -1543,19 +1543,21 @@ static void tcp_udp_rcv_worker(struct work_struct * work)
 static int tcp_udp_application_register(struct ipcp_instance_data * data,
                                         const struct name *         name)
 {
-        struct reg_app_data *      app;
-        struct sockaddr_in         sin;
-        struct exp_reg *           exp_reg;
-        int                        err;
+        struct reg_app_data * app;
+        struct sockaddr_in    sin;
+        struct exp_reg *      exp_reg;
+        int                   err;
 
         LOG_HBEAT;
 
         ASSERT(data);
         ASSERT(name);
 
+        LOG_DBG("Handling application registration");
+
         app = find_app_by_name(data, name);
         if (app) {
-                LOG_ERR("Application already registered");
+                LOG_ERR("Application is already registered");
                 return -1;
         }
 
@@ -1585,7 +1587,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
         err = sock_create_kern(PF_INET, SOCK_DGRAM, IPPROTO_UDP,
                                &app->udpsock);
         if (err < 0) {
-                LOG_ERR("could not create UDP socket for registration");
+                LOG_ERR("Could not create UDP socket for registration");
                 name_destroy(app->app_name);
                 rkfree(app);
                 return -1;
@@ -1667,9 +1669,11 @@ static int tcp_udp_application_unregister(struct ipcp_instance_data * data,
         ASSERT(data);
         ASSERT(name);
 
+        LOG_DBG("Handling application un-registration");
+
         app = find_app_by_name(data, name);
         if (!app) {
-                LOG_ERR("App is not registered, so can't unregister");
+                LOG_ERR("Application is not registered, so can't unregister");
                 return -1;
         }
 
