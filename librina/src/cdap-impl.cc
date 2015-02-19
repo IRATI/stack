@@ -607,11 +607,11 @@ void CDAPSessionImpl::requestMessageSentOrReceived(
 	checkIsConnected();
 	checkInvokeIdNotExists(cdap_message, sent);
 
-        std::map<int, CDAPOperationState*>* pending_messages;
-        if (sent)
-                pending_messages = &pending_messages_sent_;
-        else
-                pending_messages = &pending_messages_recv_;
+	std::map<int, CDAPOperationState*>* pending_messages;
+	if (sent)
+		pending_messages = &pending_messages_sent_;
+	else
+		pending_messages = &pending_messages_recv_;
 
 	if (cdap_message.get_invoke_id() != 0) {
 		CDAPOperationState *new_operation_state = new CDAPOperationState(
@@ -634,18 +634,19 @@ void CDAPSessionImpl::checkCanSendOrReceiveResponse(
 		const CDAPMessage &cdap_message, CDAPMessage::Opcode op_code,
 		bool sender) const {
 	bool validation_failed = false;
-        const std::map<int, CDAPOperationState*>* pending_messages;
-        if (!sender)
-                pending_messages = &pending_messages_sent_;
-        else
-                pending_messages = &pending_messages_recv_;
+	const std::map<int, CDAPOperationState*>* pending_messages;
+	if (!sender)
+		pending_messages = &pending_messages_sent_;
+	else
+		pending_messages = &pending_messages_recv_;
 
 	std::map<int, CDAPOperationState*>::const_iterator iterator;
 	iterator = pending_messages->find(cdap_message.invoke_id_);
 	if (iterator == pending_messages->end()) {
 		std::stringstream ss;
 		ss << "Cannot send a response for the " << op_code
-				<< " operation with invokeId " << cdap_message.get_invoke_id();
+				<< " operation with invokeId " << cdap_message.get_invoke_id() << std::endl;
+		ss << "There are " << pending_messages->size() << " entries";
 		throw CDAPException(ss.str());
 	}
 	CDAPOperationState* state = iterator->second;
@@ -660,7 +661,7 @@ void CDAPSessionImpl::checkCanSendOrReceiveResponse(
 	}
 	if (validation_failed) {
 		std::stringstream ss;
-		ss << "Cannot sender a response for the " << op_code
+		ss << "Cannot send a response for the " << op_code
 				<< " operation with invokeId " << cdap_message.get_invoke_id();
 		throw CDAPException(ss.str());
 	}

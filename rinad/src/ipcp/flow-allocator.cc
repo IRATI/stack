@@ -462,7 +462,13 @@ Flow * SimpleNewFlowRequestPolicy::generateFlowObject(IPCProcess * ipc_process,
 	Flow* flow;
 	rina::QoSCube * qosCube = 0;
 
-	flow = new Flow();
+  qosCube = selectQoSCube(ipc_process, event.flowSpecification);
+  if (!qosCube)
+    return 0;
+
+  flow = new Flow();
+  LOG_DBG("Selected qos cube with name %s", qosCube->get_name().c_str());
+
 	flow->destination_naming_info = event.remoteApplicationName;
 	flow->source_naming_info = event.localApplicationName;
 	flow->hop_count = 3;
@@ -471,13 +477,6 @@ Flow * SimpleNewFlowRequestPolicy::generateFlowObject(IPCProcess * ipc_process,
 	flow->state = Flow::ALLOCATION_IN_PROGRESS;
 
 	std::list<rina::Connection*> connections;
-	try {
-		qosCube = selectQoSCube(ipc_process, event.flowSpecification);
-	} catch (Exception &e) {
-		delete flow;
-		throw e;
-	}
-	LOG_DBG("Selected qos cube with name %s", qosCube->get_name().c_str());
 
 	rina::Connection * connection = new rina::Connection();
 	connection->portId = event.portId;
@@ -522,8 +521,7 @@ rina::QoSCube * SimpleNewFlowRequestPolicy::selectQoSCube(
 			}
 		}
 	}
-
-	throw Exception("Could not find a QoS Cube");
+	return 0;
 }
 
 std::list<rina::QoSCube*> SimpleNewFlowRequestPolicy::getQoSCubes(
@@ -572,20 +570,10 @@ FlowAllocatorInstance::FlowAllocatorInstance(IPCProcess * ipc_process,
 
 FlowAllocatorInstance::~FlowAllocatorInstance()
 {
-	if (new_flow_request_policy_) {
-		delete new_flow_request_policy_;
-	}
-
-	if (flow_) {
-		delete flow_;
-	}
-	if (lock_) {
-		delete lock_;
-	}
-
-	if (timer_) {
-		delete timer_;
-	}
+  delete new_flow_request_policy_;
+  delete flow_;
+  delete lock_;
+  delete timer_;
 }
 
 void FlowAllocatorInstance::initialize(IPCProcess * ipc_process,
@@ -647,6 +635,10 @@ void FlowAllocatorInstance::submitAllocateRequest(
 	flow_request_event_ = event;
 	flow_ = new_flow_request_policy_->generateFlowObject(ipc_process_,
 			flow_request_event_);
+	if (!flow_){
+	  flow_ = new Flow();
+	  throw Exception("Could not find a QoS Cube");
+	}
 
 	LOG_DBG("Generated flow object");
 
@@ -860,14 +852,15 @@ void FlowAllocatorInstance::processCreateConnectionResultEvent(
 		return;
 	}
 
-	if (event.getSourceCepId() < 0) {
+	if (event.sourceCepId < 0) {
 		LOG_ERR("Create connection operation was unsuccessful: %d",
-				event.getSourceCepId());
+				event.sourceCepId);
 		releaseUnlockRemove();
 		return;
 	}
 
 	try {
+		flow_->getActiveConnection()->sourceCepId = event.sourceCepId;
 		state = APP_NOTIFIED_OF_INCOMING_FLOW;
 		allocate_response_message_handle_ =
 				rina::extendedIPCManager->allocateFlowRequestArrived(
@@ -1169,7 +1162,7 @@ void FlowAllocatorInstance::createResponse(int result,
 			Flow * receivedFlow = (Flow *) object_value;
 			flow_->destination_port_id = receivedFlow->destination_port_id;
 			flow_->getActiveConnection()->setDestCepId(
-					receivedFlow->getActiveConnection()->getDestCepId());
+					receivedFlow->getActiveConnection()->getSourceCepId());
 
 			delete receivedFlow;
 		}

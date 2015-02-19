@@ -49,7 +49,8 @@ int                  dtcp_common_rcv_control(struct dtcp * dtcp,
                                              struct pdu *  pdu);
 
 /* Used by DTP to have an ack-control PDU sent by DTCP */
-int                  dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp);
+int                  dtcp_ack_flow_control_pdu_send(struct dtcp * instance,
+                                                    seq_num_t     seq);
 
 seq_num_t            dtcp_rcv_rt_win(struct dtcp * instance);
 seq_num_t            dtcp_snd_rt_win(struct dtcp * instance);
@@ -59,4 +60,6 @@ int                  dtcp_snd_lf_win_set(struct dtcp * instance,
 
 struct dtcp_config * dtcp_config_get(struct dtcp * dtcp);
 
+/*FIXME: wrapper to be called by dtp in the post_worker */
+int                  dtcp_sending_ack_policy(struct dtcp * dtcp);
 #endif

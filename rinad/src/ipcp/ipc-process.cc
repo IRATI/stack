@@ -170,6 +170,8 @@ void IPCProcessImpl::init_encoder() {
 			new WhatevercastNameListEncoder());
 	encoder_->addEncoder(EncoderConstants::WATCHDOG_RIB_OBJECT_CLASS,
 			new WatchdogEncoder());
+	encoder_->addEncoder(rina::ADataObject::A_DATA_OBJECT_CLASS,
+			new ADataObjectEncoder());
 }
 
 unsigned short IPCProcessImpl::get_id() {

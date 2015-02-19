@@ -24,6 +24,7 @@
 #include <linux/types.h>
 #include <linux/slab.h>
 #include <linux/mutex.h>
+#include <linux/spinlock.h>
 
 
 struct vmpi_hdr {
@@ -62,8 +63,12 @@ struct vmpi_ring {
         unsigned int nr;    /* Next ready. */
         unsigned int buf_size;
         struct vmpi_buffer *bufs;
+#ifdef VMPI_TX_MUTEX
         wait_queue_head_t wqh;
         struct mutex lock;
+#else
+        spinlock_t   lock;
+#endif
 };
 
 static inline unsigned int

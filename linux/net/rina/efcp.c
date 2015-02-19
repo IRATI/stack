@@ -42,6 +42,7 @@
 
 struct efcp {
         struct connection *     connection;
+        struct ipcp_instance *  user_ipcp;
         struct dt *             dt;
         struct efcp_container * container;
 };
@@ -74,6 +75,12 @@ static int efcp_destroy(struct efcp * instance)
                 return -1;
         }
 
+        if (instance->user_ipcp) {
+                instance->user_ipcp->ops->flow_unbinding_ipcp(
+                                instance->user_ipcp->data,
+                                instance->connection->port_id);
+        }
+
         if (instance->dt) {
                 /*
                  * FIXME:
@@ -86,18 +93,15 @@ static int efcp_destroy(struct efcp * instance)
                 struct rtxq * rtxq = dt_rtxq_unbind(instance->dt);
 
                 /* FIXME: We should watch for memleaks here ... */
-                if (rtxq) rtxq_destroy(rtxq);
-                if (instance->container->rmt)
-                        rmt_flush_work(instance->container->rmt);
                 if (dtp)  dtp_destroy(dtp);
-                if (instance->container->rmt)
-                        rmt_restart_work(instance->container->rmt);
+                if (rtxq) rtxq_destroy(rtxq);
                 if (dtcp) dtcp_destroy(dtcp);
                 if (cwq)  cwq_destroy(cwq);
 
                 dt_destroy(instance->dt);
         } else
                 LOG_WARN("No DT instance present");
+
 
         if (instance->connection) {
                 if (is_cep_id_ok(instance->connection->source_cep_id)) {
@@ -378,7 +382,44 @@ static bool is_connection_ok(const struct connection * connection)
         return true;
 }
 
+int efcp_enable_write(struct efcp * efcp)
+{
+        if (!efcp                 ||
+            !efcp->user_ipcp      ||
+            !efcp->user_ipcp->ops ||
+            !efcp->user_ipcp->data) {
+                LOG_ERR("No EFCP or user IPCP provided");
+                return -1;
+        }
+
+        if (efcp->user_ipcp->ops->enable_write(efcp->user_ipcp->data,
+                                               efcp->connection->port_id)) {
+                return -1;
+        }
+
+        return 0;
+}
+
+int efcp_disable_write(struct efcp * efcp)
+{
+        if (!efcp                 ||
+            !efcp->user_ipcp      ||
+            !efcp->user_ipcp->ops ||
+            !efcp->user_ipcp->data) {
+                LOG_ERR("No user IPCP provided");
+                return -1;
+        }
+
+        if (efcp->user_ipcp->ops->disable_write(efcp->user_ipcp->data,
+                                                efcp->connection->port_id)) {
+                return -1;
+        }
+
+        return 0;
+}
+
 cep_id_t efcp_connection_create(struct efcp_container * container,
+                                struct ipcp_instance *  user_ipcp,
                                 struct connection *     connection)
 {
         struct efcp * tmp;
@@ -405,6 +446,9 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         if (!tmp)
                 return cep_id_bad();
 
+        if (user_ipcp)
+                tmp->user_ipcp = user_ipcp;
+
         tmp->dt = dt_create();
         if (!tmp->dt) {
                 efcp_destroy(tmp);
@@ -430,7 +474,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         /* FIXME: dtp_create() takes ownership of the connection parameter */
         dtp = dtp_create(tmp->dt,
                          container->rmt,
-                         container->kfa,
+                         tmp,
                          connection);
         if (!dtp) {
                 efcp_destroy(tmp);
@@ -487,6 +531,11 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                         efcp_destroy(tmp);
                         return cep_id_bad();
                 }
+        }
+
+        if (dt_efcp_bind(tmp->dt, tmp)) {
+                efcp_destroy(tmp);
+                return cep_id_bad();
         }
 
         /* FIXME: This is crap and have to be rethinked */
@@ -595,6 +644,7 @@ int efcp_connection_destroy(struct efcp_container * container,
 EXPORT_SYMBOL(efcp_connection_destroy);
 
 int efcp_connection_update(struct efcp_container * container,
+                           struct ipcp_instance *  user_ipcp,
                            cep_id_t                from,
                            cep_id_t                to)
 {
@@ -620,6 +670,7 @@ int efcp_connection_update(struct efcp_container * container,
                 return -1;
         }
         tmp->connection->destination_cep_id = to;
+        tmp->user_ipcp = user_ipcp;
 
         LOG_DBG("Connection updated");
         LOG_DBG("  Source address:     %d",
@@ -665,3 +716,26 @@ int efcp_unbind_rmt(struct efcp_container * container)
         return 0;
 }
 EXPORT_SYMBOL(efcp_unbind_rmt);
+
+int efcp_enqueue(struct efcp * efcp,
+                 port_id_t     port,
+                 struct sdu *  sdu)
+{
+        if (!sdu_is_ok(sdu)) {
+                LOG_ERR("Bad sdu, cannot enqueue it");
+                return -1;
+        }
+        if (!efcp) {
+                LOG_ERR("Bogus efcp passed, bailing out");
+                sdu_destroy(sdu);
+                return -1;
+        }
+
+        if (efcp->user_ipcp->ops->sdu_enqueue(efcp->user_ipcp->data,
+                                              port,
+                                              sdu)) {
+                LOG_ERR("Upper ipcp could not enqueue sdu to port: %d", port);
+                return -1;
+        }
+        return 0;
+}

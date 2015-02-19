@@ -31,6 +31,7 @@
 struct pdu_ser;
 
 struct pdu_ser * pdu_ser_create_buffer_with(struct buffer * buffer);
+struct pdu_ser * pdu_ser_create_buffer_with_ni(struct buffer * buffer);
 int              pdu_ser_destroy(struct pdu_ser * pdu);
 
 bool             pdu_ser_is_ok(const struct pdu_ser * s);

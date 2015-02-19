@@ -64,13 +64,18 @@ public:
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	void eventHappened(Event * event);
 	void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event);
-        void sendMessageSpecific(bool useAddress, const rina::CDAPMessage & cdapMessage, int sessionId,
-                        unsigned int address, rina::ICDAPResponseMessageHandler * cdapMessageHandler);
+	void sendMessageSpecific(bool useAddress, const rina::CDAPMessage & cdapMessage, int sessionId,
+			unsigned int address, rina::ICDAPResponseMessageHandler * cdapMessageHandler);
+	void cdapMessageDelivered(char* message, int length, int portId);
 
 private:
 	IPCProcess * ipc_process_;
 	INMinusOneFlowManager * n_minus_one_flow_manager_;
 	rina::Thread * management_sdu_reader_;
+
+    /// Lock to control that when sending a message requiring a reply the
+    /// CDAP Session manager has been updated before receiving the response message
+    rina::Lockable atomic_send_lock_;
 
 	void subscribeToEvents();
 
