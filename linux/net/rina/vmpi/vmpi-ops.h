@@ -38,4 +38,7 @@ struct vmpi_ops {
 unsigned int vmpi_get_num_channels(void);
 unsigned int vmpi_get_max_payload_size(void);
 
+/* Use spinlocks on the TX side. */
+// #define VMPI_TX_MUTEX
+
 #endif  /* __VMPI_OPS_H__ */

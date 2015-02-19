@@ -266,6 +266,13 @@ public:
 	void* decode(const rina::ObjectValueInterface * object_value) const;
 };
 
+/// Encoder of the AData object
+class ADataObjectEncoder: public rina::EncoderInterface {
+public:
+	const rina::SerializedObject* encode(const void* object);
+	void* decode(const rina::ObjectValueInterface * object_value) const;
+};
+
 }
 
 #endif

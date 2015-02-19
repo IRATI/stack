@@ -735,6 +735,7 @@ public:
         static const int WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT = 101;
         static const int WAIT_UNTIL_AGE_INCREMENT_DEFAULT = 997;
         static const std::string DEFAULT_ROUTING_ALGORITHM;
+
         unsigned int object_maximum_age_;
         int wait_until_read_cdap_;
         int wait_until_error_;
@@ -844,6 +845,7 @@ public:
 class DIFConfiguration {
 public:
 #ifndef SWIG
+  DIFConfiguration();
 	unsigned int get_address() const;
 	void set_address(unsigned int address);
 	const EFCPConfiguration& get_efcp_configuration() const;

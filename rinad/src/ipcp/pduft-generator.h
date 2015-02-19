@@ -240,7 +240,7 @@ public:
 	void addObjectToGroup(unsigned int address, int portId,
 			unsigned int neighborAddress, int neighborPortId);
 	void deprecateObject(int port_id);
-	std::vector< std::list<FlowStateObject*> > prepareForPropagation(const std::list<rina::FlowInformation>& flows);
+  std::map <int, std::list<FlowStateObject*> > prepareForPropagation(const std::list<rina::FlowInformation>& flows);
 	void incrementAge();
 	void updateObjects(const std::list<FlowStateObject*>& newObjects, int avoidPort, unsigned int address);
 	std::list<FlowStateObject*> getModifiedFSOs();

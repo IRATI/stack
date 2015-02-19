@@ -229,6 +229,8 @@ void IPCPRIBDaemonImpl::processQueryRIBRequestEvent(const rina::QueryRIBRequestE
 void IPCPRIBDaemonImpl::sendMessageSpecific(bool useAddress, const rina::CDAPMessage& cdapMessage, int sessionId,
 			unsigned int address, rina::ICDAPResponseMessageHandler * cdapMessageHandler) {
 	const rina::SerializedObject * sdu;
+	rina::ADataObject adata;
+	rina::CDAPMessage * adataCDAPMessage;
 	rina::CDAPSessionManagerInterface * cdsm = ipc_process_->cdap_session_manager_;
 
 	if (!cdapMessageHandler && cdapMessage.get_invoke_id() != 0
@@ -249,18 +251,29 @@ void IPCPRIBDaemonImpl::sendMessageSpecific(bool useAddress, const rina::CDAPMes
 	atomic_send_lock_.lock();
     sdu = 0;
 	try {
-		sdu = cdsm->encodeNextMessageToBeSent(cdapMessage, sessionId);
 		if (useAddress) {
+			adata.source_address_ = ipc_process_->get_address();
+			adata.dest_address_ = address;
+			adata.encoded_cdap_message_ = cdsm->encodeCDAPMessage(cdapMessage);
+			adataCDAPMessage = rina::CDAPMessage::getWriteObjectRequestMessage(0,
+					rina::CDAPMessage::NONE_FLAGS, rina::ADataObject::A_DATA_OBJECT_CLASS,
+					0, rina::ADataObject::A_DATA_OBJECT_NAME, 0);
+			ipc_process_->encoder_->encode(&adata, adataCDAPMessage);
+			sdu = cdsm->encodeCDAPMessage(*adataCDAPMessage);
 			rina::kernelIPCProcess->sendMgmgtSDUToAddress(sdu->get_message(), sdu->get_size(), address);
-			LOG_DBG("Sent CDAP message to address %ud: %s", address,
+			LOG_DBG("Sent A-Data CDAP message to address %u: %s", address,
 					cdapMessage.to_string().c_str());
+			delete sdu;
+			delete adataCDAPMessage;
 		} else {
+			sdu = cdsm->encodeNextMessageToBeSent(cdapMessage, sessionId);
 			rina::kernelIPCProcess->writeMgmgtSDUToPortId(sdu->get_message(), sdu->get_size(), sessionId);
 			LOG_DBG("Sent CDAP message of size %d through port-id %d: %s" , sdu->get_size(), sessionId,
 					cdapMessage.to_string().c_str());
-		}
 
-		cdsm->messageSent(cdapMessage, sessionId);
+			cdsm->messageSent(cdapMessage, sessionId);
+		    delete sdu;
+		}
 	} catch (Exception &e) {
 		if (sdu) {
 			delete sdu;
@@ -275,8 +288,6 @@ void IPCPRIBDaemonImpl::sendMessageSpecific(bool useAddress, const rina::CDAPMes
 
 		throw e;
 	}
-
-    delete sdu;
 
     if (cdapMessage.get_invoke_id() != 0
     		&& cdapMessage.get_op_code() != rina::CDAPMessage::M_CONNECT
@@ -294,6 +305,71 @@ void IPCPRIBDaemonImpl::sendMessageSpecific(bool useAddress, const rina::CDAPMes
     }
 
 	atomic_send_lock_.unlock();
+}
+
+void IPCPRIBDaemonImpl::cdapMessageDelivered(char* message, int length, int portId) {
+    const rina::CDAPMessage * cdapMessage;
+    const rina::CDAPMessage * aDataCDAPMessage;
+    const rina::CDAPSessionInterface * cdapSession;
+    rina::CDAPSessionDescriptor  * cdapSessionDescriptor;
+    rina::ADataObject * adata;
+
+    //1 Decode the message and obtain the CDAP session descriptor
+    atomic_send_lock_.lock();
+    try {
+            rina::SerializedObject serializedMessage = rina::SerializedObject(message, length);
+            cdapMessage = cdap_session_manager_->messageReceived(serializedMessage, portId);
+    } catch (Exception &e) {
+            atomic_send_lock_.unlock();
+            LOG_ERR("Error decoding CDAP message: %s", e.what());
+            return;
+    }
+
+    //2 If it is an A-Data PDU extract the real message
+    if (cdapMessage->obj_name_ == rina::ADataObject::A_DATA_OBJECT_NAME) {
+    	try {
+    		adata = (rina::ADataObject *) ipc_process_->encoder_->decode(cdapMessage);
+    		if (!adata) {
+    			delete cdapMessage;
+    			atomic_send_lock_.unlock();
+    			return;
+    		}
+
+    		aDataCDAPMessage = cdap_session_manager_->decodeCDAPMessage(*adata->encoded_cdap_message_);
+    		cdapSessionDescriptor = new rina::CDAPSessionDescriptor();
+
+    	    LOG_DBG("Received A-Data CDAP message from address %u : %s", adata->source_address_,
+    	    		aDataCDAPMessage->to_string().c_str());
+
+    		atomic_send_lock_.unlock();
+    		processIncomingCDAPMessage(aDataCDAPMessage, cdapSessionDescriptor);
+    		delete aDataCDAPMessage;
+    		delete adata;
+    		delete cdapSessionDescriptor;
+    		delete cdapMessage;
+    		return;
+    	} catch (Exception &e) {
+    		atomic_send_lock_.unlock();
+    		LOG_ERR("Error processing A-data message: %s", e.what());
+    		return;
+    	}
+    }
+
+    cdapSession = cdap_session_manager_->get_cdap_session(portId);
+    if (!cdapSession) {
+            atomic_send_lock_.unlock();
+            LOG_ERR("Could not find open CDAP session related to portId %d", portId);
+            delete cdapMessage;
+            return;
+    }
+
+    cdapSessionDescriptor = cdapSession->get_session_descriptor();
+    LOG_DBG("Received CDAP message through portId %d: %s", portId,
+                    cdapMessage->to_string().c_str());
+    atomic_send_lock_.unlock();
+
+    processIncomingCDAPMessage(cdapMessage, cdapSessionDescriptor);
+    delete cdapMessage;
 }
 
 }

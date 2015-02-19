@@ -851,7 +851,7 @@ EXPORT_SYMBOL(dtcp_max_closed_winq_length);
 uint_t dtcp_initial_credit(struct dtcp_config * cfg)
 {
         if (!cfg || !cfg->fctrl_cfg || !cfg->fctrl_cfg->wfctrl_cfg)
-                return 0;
+                return UINT_MAX;
 
         return cfg->fctrl_cfg->wfctrl_cfg->initial_credit;
 }

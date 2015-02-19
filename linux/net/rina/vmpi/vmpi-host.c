@@ -178,7 +178,9 @@ vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
         //struct vhost_mpi_virtqueue *nvq = &mpi->vqs[VHOST_MPI_VQ_RX];
         struct vmpi_ring *ring = &mpi->write;
         size_t len = iov_length(iv, iovcnt);
+#ifdef VMPI_TX_MUTEX
         DECLARE_WAITQUEUE(wait, current);
+#endif
         size_t buf_data_size = ring->buf_size - sizeof(struct vmpi_hdr);
         ssize_t ret = 0;
 
@@ -187,16 +189,21 @@ vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
 
         //IFV(printk("vmpi_write %ld %ld\n", iovcnt, len));
         /* XXX file->f_flags & O_NONBLOCK */
-
+#ifdef VMPI_TX_MUTEX
         add_wait_queue(&ring->wqh, &wait);
+#endif
         while (len) {
                 struct vmpi_buffer *buf;
                 size_t copylen;
 
+#ifdef VMPI_TX_MUTEX
                 current->state = TASK_INTERRUPTIBLE;
-
                 mutex_lock(&ring->lock);
+#else
+                spin_lock(&ring->lock);
+#endif
                 if (vmpi_ring_unused(ring) == 0) {
+#ifdef VMPI_TX_MUTEX
                         mutex_unlock(&ring->lock);
                         if (signal_pending(current)) {
                                 ret = -ERESTARTSYS;
@@ -206,6 +213,10 @@ vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
                         /* No space to write to, let's sleep */
                         schedule();
                         continue;
+#else
+                        spin_unlock(&ring->lock);
+                        return -EBUSY;
+#endif
                 }
 
                 buf = &ring->bufs[ring->nu];
@@ -226,15 +237,20 @@ vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
                 buf->len = sizeof(struct vmpi_hdr) + copylen;
                 VMPI_RING_INC(ring->nu);
                 mpi->stats.txreq++;
+#ifdef VMPI_TX_MUTEX
                 mutex_unlock(&ring->lock);
+#else
+                spin_unlock(&ring->lock);
+#endif
 
                 vmpi_impl_txkick(mpi->vi);
 
                 break;
         }
-
+#ifdef VMPI_TX_MUTEX
         current->state = TASK_RUNNING;
         remove_wait_queue(&ring->wqh, &wait);
+#endif
 
         return ret;
 }

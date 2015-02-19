@@ -193,7 +193,10 @@ void IPCMConsole::body()
 
                 for (;;) {
                         outstream << "IPCM >>> ";
-                        flush_output(cfd);
+                        if (flush_output(cfd)) {
+                        	close(cfd);
+                        	break;
+                        }
 
                         n = read(cfd, cmdbuf, sizeof(cmdbuf));
                         if (n < 0) {
@@ -201,7 +204,7 @@ void IPCMConsole::body()
                                         "] calling read() " << endl;
                                 FLUSH_LOG(ERR, ss);
                                 close(cfd);
-                                continue;
+                                break;
                         }
 
                         cmdret = process_command(cfd, cmdbuf, n);
@@ -224,10 +227,16 @@ IPCMConsole::flush_output(int cfd)
 
         n = write(cfd, str.c_str(), str.size());
         if (n < 0) {
-                ss  << " Error [" << errno <<
-                        "] calling write() " << endl;
-                FLUSH_LOG(ERR, ss);
-                return -1;
+                if (errno != EPIPE) {
+                    ss  << " Error [" << errno <<
+                        "] calling write()" << endl;
+                    FLUSH_LOG(ERR, ss);
+                    return -1;
+                } else {
+                    ss  << " Console client disconnected" << endl;
+                    FLUSH_LOG(INFO, ss);
+                    return -1;
+                }
         }
 
         // Make the stringstream empty
@@ -257,7 +266,9 @@ IPCMConsole::process_command(int cfd, char *cmdbuf, int size)
         mit = commands_map.find(args[0]);
         if (mit == commands_map.end()) {
                 outstream << "Unknown command '" << args[0] << "'" << endl;
-                flush_output(cfd);
+                if (flush_output(cfd)) {
+                    return CMDRETSTOP;
+                }
                 return 0;
         }
 
@@ -265,7 +276,9 @@ IPCMConsole::process_command(int cfd, char *cmdbuf, int size)
         ret = (this->*fun)(args);
 
         outstream << endl;
-        flush_output(cfd);
+        if (flush_output(cfd)) {
+            return CMDRETSTOP;
+        }
 
         return ret;
 }

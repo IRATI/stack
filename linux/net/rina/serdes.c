@@ -764,6 +764,11 @@ struct pdu_ser * pdu_serialize(const struct serdes * instance,
 { return pdu_serialize_gfp(GFP_KERNEL, instance, pdu); }
 EXPORT_SYMBOL(pdu_serialize);
 
+struct pdu_ser * pdu_serialize_ni(const struct serdes * instance,
+                                  struct pdu *          pdu)
+{ return pdu_serialize_gfp(GFP_ATOMIC, instance, pdu); }
+EXPORT_SYMBOL(pdu_serialize_ni);
+
 static struct pdu * pdu_deserialize_gfp(gfp_t                 flags,
                                         const struct serdes * instance,
                                         struct pdu_ser *      pdu)
@@ -990,3 +995,8 @@ struct pdu * pdu_deserialize(const struct serdes * instance,
                              struct pdu_ser *      pdu)
 { return pdu_deserialize_gfp(GFP_KERNEL, instance, pdu); }
 EXPORT_SYMBOL(pdu_deserialize);
+
+struct pdu * pdu_deserialize_ni(const struct serdes * instance,
+                                struct pdu_ser *      pdu)
+{ return pdu_deserialize_gfp(GFP_ATOMIC, instance, pdu); }
+EXPORT_SYMBOL(pdu_deserialize_ni);
