@@ -104,7 +104,7 @@ int pidm_release(struct pidm * instance,
 
         bitmap_clear(instance->bitmap, (id - 1), 1);
 
-        LOG_DBG("Bitmap release completed successfully");
+        LOG_DBG("Bitmap release completed successfully (port_id: %d)", id);
 
         return 0;
 }

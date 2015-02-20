@@ -470,7 +470,81 @@ void FlowAllocator::removeFlowAllocatorInstance(int portId)
 	}
 }
 
+<<<<<<< HEAD
 std::list<rina::QoSCube*> FlowAllocator::getQoSCubes()
+=======
+//Class Simple New flow Request Policy
+Flow * SimpleNewFlowRequestPolicy::generateFlowObject(IPCProcess * ipc_process,
+		const rina::FlowRequestEvent& event)
+{
+	Flow* flow;
+	rina::QoSCube * qosCube = 0;
+
+  qosCube = selectQoSCube(ipc_process, event.flowSpecification);
+  if (!qosCube)
+    return 0;
+
+  flow = new Flow();
+  LOG_DBG("Selected qos cube with name %s", qosCube->get_name().c_str());
+
+	flow->destination_naming_info = event.remoteApplicationName;
+	flow->source_naming_info = event.localApplicationName;
+	flow->hop_count = 3;
+	flow->max_create_flow_retries = 1;
+	flow->source = true;
+	flow->state = Flow::ALLOCATION_IN_PROGRESS;
+
+	std::list<rina::Connection*> connections;
+
+	rina::Connection * connection = new rina::Connection();
+	connection->portId = event.portId;
+	connection->sourceAddress = ipc_process->get_address();
+	connection->setQosId(1);
+	connection->setFlowUserIpcProcessId(event.flowRequestorIpcProcessId);
+	rina::ConnectionPolicies connectionPolicies = rina::ConnectionPolicies(
+			qosCube->get_efcp_policies());
+	connectionPolicies.set_in_order_delivery(qosCube->is_ordered_delivery());
+	connectionPolicies.set_partial_delivery(qosCube->is_partial_delivery());
+	if (event.flowSpecification.maxAllowableGap < 0) {
+		connectionPolicies.set_max_sdu_gap(INT_MAX);
+	} else {
+		connectionPolicies.set_max_sdu_gap(qosCube->get_max_allowable_gap());
+	}
+	connection->setPolicies(connectionPolicies);
+	connections.push_back(connection);
+
+	flow->connections = connections;
+	flow->current_connection_index = 0;
+	flow->flow_specification = event.flowSpecification;
+
+	return flow;
+}
+
+rina::QoSCube * SimpleNewFlowRequestPolicy::selectQoSCube(
+		IPCProcess * ipc_process, const rina::FlowSpecification& flowSpec)
+{
+	std::list<rina::QoSCube*> qosCubes = getQoSCubes(ipc_process);
+	if (flowSpec.maxAllowableGap < 0) {
+		return *(qosCubes.begin());
+	}
+
+	std::list<rina::QoSCube*>::const_iterator iterator;
+	rina::QoSCube* cube;
+	for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
+		cube = *iterator;
+		if (cube->get_efcp_policies().is_dtcp_present()) {
+			if (flowSpec.maxAllowableGap >= 0
+					&& cube->get_efcp_policies().get_dtcp_configuration().is_rtx_control()) {
+				return cube;
+			}
+		}
+	}
+	return 0;
+}
+
+std::list<rina::QoSCube*> SimpleNewFlowRequestPolicy::getQoSCubes(
+		IPCProcess * ipc_process)
+>>>>>>> integration-1.1.0
 {
 	std::list<rina::QoSCube *> qosCubes;
 	std::list<rina::BaseRIBObject *> children;
@@ -513,6 +587,7 @@ FlowAllocatorInstance::FlowAllocatorInstance(IPCProcess * ipc_process,
 
 FlowAllocatorInstance::~FlowAllocatorInstance()
 {
+<<<<<<< HEAD
 	if (flow_) {
 		delete flow_;
 	}
@@ -523,6 +598,12 @@ FlowAllocatorInstance::~FlowAllocatorInstance()
 	if (timer_) {
 		delete timer_;
 	}
+=======
+  delete new_flow_request_policy_;
+  delete flow_;
+  delete lock_;
+  delete timer_;
+>>>>>>> integration-1.1.0
 }
 
 void FlowAllocatorInstance::initialize(IPCProcess * ipc_process,
@@ -584,7 +665,16 @@ void FlowAllocatorInstance::submitAllocateRequest(
 	rina::AccessGuard g(*lock_);
 
 	flow_request_event_ = event;
+<<<<<<< HEAD
 	flow_ = faps->newFlowRequest(ipc_process_, flow_request_event_);
+=======
+	flow_ = new_flow_request_policy_->generateFlowObject(ipc_process_,
+			flow_request_event_);
+	if (!flow_){
+	  flow_ = new Flow();
+	  throw Exception("Could not find a QoS Cube");
+	}
+>>>>>>> integration-1.1.0
 
 	LOG_DBG("Generated flow object");
 
@@ -802,14 +892,15 @@ void FlowAllocatorInstance::processCreateConnectionResultEvent(
 		return;
 	}
 
-	if (event.getSourceCepId() < 0) {
+	if (event.sourceCepId < 0) {
 		LOG_ERR("Create connection operation was unsuccessful: %d",
-				event.getSourceCepId());
+				event.sourceCepId);
 		releaseUnlockRemove();
 		return;
 	}
 
 	try {
+		flow_->getActiveConnection()->sourceCepId = event.sourceCepId;
 		state = APP_NOTIFIED_OF_INCOMING_FLOW;
 		allocate_response_message_handle_ =
 				rina::extendedIPCManager->allocateFlowRequestArrived(
@@ -1111,7 +1202,7 @@ void FlowAllocatorInstance::createResponse(int result,
 			Flow * receivedFlow = (Flow *) object_value;
 			flow_->destination_port_id = receivedFlow->destination_port_id;
 			flow_->getActiveConnection()->setDestCepId(
-					receivedFlow->getActiveConnection()->getDestCepId());
+					receivedFlow->getActiveConnection()->getSourceCepId());
 
 			delete receivedFlow;
 		}

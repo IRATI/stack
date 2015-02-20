@@ -87,6 +87,8 @@ EXPORT_SYMBOL(rtimer_is_pending);
 static int __rtimer_start(struct rtimer * timer,
                           unsigned int    millisecs)
 {
+        int status;
+
         ASSERT(timer);
 
         /* FIXME: Crappy, rearrange */
@@ -94,9 +96,12 @@ static int __rtimer_start(struct rtimer * timer,
         timer->tl.data     = (unsigned long)           timer->data;
         timer->tl.expires  = jiffies + (millisecs * HZ) / 1000;
 
-        add_timer(&timer->tl);
+        status = mod_timer(&timer->tl, timer->tl.expires);
 
-        LOG_DBG("Timer %pK started (function = %pK, data = %pK, expires = %ld",
+
+        LOG_DBG("Previously %s Timer %pK restarted (function = %pK, data = %pK, "
+                "expires = %ld",
+                status ? "active" : "inactive",
                 timer,
                 (void *) timer->tl.function,
                 (void *) timer->tl.data,
@@ -129,7 +134,7 @@ static int __rtimer_stop(struct rtimer * timer)
                 return 0;
         }
 
-        del_timer(&timer->tl);
+        del_timer_sync(&timer->tl);
         LOG_DBG("Timer %pK stopped", timer);
 
         return 0;
@@ -148,9 +153,6 @@ int rtimer_restart(struct rtimer * timer,
                    unsigned int    millisecs)
 {
         if (!timer)
-                return -1;
-
-        if (__rtimer_stop(timer))
                 return -1;
 
         return __rtimer_start(timer, millisecs);

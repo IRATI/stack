@@ -91,8 +91,12 @@ vmpi_ring_init(struct vmpi_ring *ring, unsigned int buf_size)
         int ret = -ENOMEM;
         int i;
 
+#ifdef VMPI_TX_MUTEX
         init_waitqueue_head(&ring->wqh);
         mutex_init(&ring->lock);
+#else
+        spin_lock_init(&ring->lock);
+#endif
 
         ring->nu = ring->np = ring->nr = 0;
 

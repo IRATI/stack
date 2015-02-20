@@ -540,6 +540,10 @@ void RIBDaemon::deleteObject(const std::string& objectClass,
                              const NotificationPolicy * notificationPolicy)
 {
         BaseRIBObject * ribObject;
+        //Copy objectClass and objectName since they may be deleted when
+        //deleting the object (depending who calls deleteObject)
+        std::string oClass = std::string(objectClass);
+        std::string oName = std::string(objectName);
 
         ribObject = rib_.getRIBObject(objectClass, objectName, true);
         ribObject->deleteObject(objectValue);
@@ -561,9 +565,9 @@ void RIBDaemon::deleteObject(const std::string& objectClass,
                                         cdap_session_manager_->
                                         getDeleteObjectRequestMessage(peers[i], 0,
                                                                       rina::CDAPMessage::NONE_FLAGS,
-                                                                      objectClass,
+                                                                      oClass,
                                                                       0,
-                                                                      objectName,
+                                                                      oName,
                                                                       0, false);
                                 sendMessage(*cdapMessage, peers[i], 0);
                                 delete cdapMessage;
@@ -778,121 +782,72 @@ void RIBDaemon::processIncomingResponseMessage(const rina::CDAPMessage * cdapMes
         }
 }
 
-void RIBDaemon::cdapMessageDelivered(char* message, int length, int portId)
-{
-        const rina::CDAPMessage * cdapMessage;
-        const rina::CDAPSessionInterface * cdapSession;
-        rina::CDAPSessionDescriptor  * cdapSessionDescriptor;
-
-        //1 Decode the message and obtain the CDAP session descriptor
-        atomic_send_lock_.lock();
-        try {
-                rina::SerializedObject serializedMessage = rina::SerializedObject(message, length);
-                cdapMessage = cdap_session_manager_->messageReceived(serializedMessage, portId);
-        } catch (Exception &e) {
-                atomic_send_lock_.unlock();
-                LOG_ERR("Error decoding CDAP message: %s", e.what());
-                return;
-        }
-
-        cdapSession = cdap_session_manager_->get_cdap_session(portId);
-        if (!cdapSession) {
-                atomic_send_lock_.unlock();
-                LOG_ERR("Could not find open CDAP session related to portId %d", portId);
-                delete cdapMessage;
-                return;
-        }
-
-        cdapSessionDescriptor = cdapSession->get_session_descriptor();
-        LOG_DBG("Received CDAP message through portId %d: %s", portId,
-                        cdapMessage->to_string().c_str());
-        atomic_send_lock_.unlock();
-
-        //2 Find the message recipient and call it
+void RIBDaemon::processIncomingCDAPMessage(const rina::CDAPMessage * cdapMessage,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor){
         rina::CDAPMessage::Opcode opcode = cdapMessage->get_op_code();
         try {
                 switch (opcode) {
                 case rina::CDAPMessage::M_CONNECT:
                         app_conn_handler_->connect(cdapMessage->invoke_id_, cdapSessionDescriptor);
-                        delete cdapMessage;
                         break;
                 case rina::CDAPMessage::M_CONNECT_R:
                         app_conn_handler_->connectResponse(cdapMessage->result_, cdapMessage->result_reason_,
                                         cdapSessionDescriptor);
-                        delete cdapMessage;
                         break;
                 case rina::CDAPMessage::M_RELEASE:
                         app_conn_handler_->release(cdapMessage->invoke_id_, cdapSessionDescriptor);
-                        delete cdapMessage;
                         break;
                 case rina::CDAPMessage::M_RELEASE_R:
                         app_conn_handler_->releaseResponse(cdapMessage->result_, cdapMessage->result_reason_,
                                         cdapSessionDescriptor);
-                        delete cdapMessage;
                         break;
                 case rina::CDAPMessage::M_CREATE:
                         processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
-                        delete cdapMessage;
                         break;
                 case rina::CDAPMessage::M_CREATE_R:
                         processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
-                        delete cdapMessage;
                         break;
                 case rina::CDAPMessage::M_DELETE:
                         processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
-                        delete cdapMessage;
                         break;
                 case rina::CDAPMessage::M_DELETE_R:
                         processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
-                        delete cdapMessage;
                         break;
                 case rina::CDAPMessage::M_START:
                         processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
-                        delete cdapMessage;
                         break;
                 case rina::CDAPMessage::M_START_R:
                         processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
-                        delete cdapMessage;
                         break;
                 case rina::CDAPMessage::M_STOP:
                         processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
-                        delete cdapMessage;
                         break;
                 case rina::CDAPMessage::M_STOP_R:
                         processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
-                        delete cdapMessage;
                         break;
                 case rina::CDAPMessage::M_READ:
                         processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
-                        delete cdapMessage;
                         break;
                 case rina::CDAPMessage::M_READ_R:
                         processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
-                        delete cdapMessage;
                         break;
                 case rina::CDAPMessage::M_CANCELREAD:
                         processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
-                        delete cdapMessage;
                         break;
                 case rina::CDAPMessage::M_CANCELREAD_R:
                         processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
-                        delete cdapMessage;
                         break;
                 case rina::CDAPMessage::M_WRITE:
                         processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
-                        delete cdapMessage;
                         break;
                 case rina::CDAPMessage::M_WRITE_R:
                         processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
-                        delete cdapMessage;
                         break;
                 default:
                         LOG_ERR("Unrecognized CDAP operation code: %d", cdapMessage->get_op_code());
-                        delete cdapMessage;
                 }
         } catch(Exception &e) {
                 LOG_ERR("Problems processing incoming CDAP message: %s", e.what());
-                delete cdapMessage;
         }
 }
 
@@ -902,12 +857,11 @@ void RIBDaemon::sendMessage(const rina::CDAPMessage& cdapMessage, int sessionId,
         sendMessageSpecific(false, cdapMessage, sessionId, 0, cdapMessageHandler);
 }
 
-void RIBDaemon::sendMessageToAddress(const rina::CDAPMessage& cdapMessage,
-                                     int sessionId,
+void RIBDaemon::sendAData(const rina::CDAPMessage& cdapMessage,
                                      unsigned int address,
                                      ICDAPResponseMessageHandler * cdapMessageHandler)
 {
-        sendMessageSpecific(true, cdapMessage, sessionId, address, cdapMessageHandler);
+        sendMessageSpecific(true, cdapMessage, 0, address, cdapMessageHandler);
 }
 
 void
@@ -923,7 +877,7 @@ RIBDaemon::sendMessages(const std::list<const rina::CDAPMessage*>& cdapMessages,
 void RIBDaemon::sendMessageToProcess(const rina::CDAPMessage & message, const RemoteProcessId& remote_id,
                 ICDAPResponseMessageHandler * response_handler) {
         if (remote_id.use_address_) {
-                sendMessageToAddress(message, remote_id.port_id_, remote_id.address_, response_handler);
+                sendAData(message, remote_id.address_, response_handler);
         } else {
                 sendMessage(message, remote_id.port_id_, response_handler);
         }
@@ -1338,6 +1292,31 @@ void RIBDaemon::remoteStopObjectResponse(const std::string& object_class, const 
         }
 
         delete message;
+}
+
+/// Class ADataObject
+const std::string ADataObject::A_DATA_OBJECT_CLASS = "a_data";
+const std::string ADataObject::A_DATA = "a_data";
+const std::string ADataObject::A_DATA_OBJECT_NAME = A_DATA;
+
+ADataObject::ADataObject() {
+	source_address_ = 0;
+	dest_address_ = 0;
+	encoded_cdap_message_ = 0;
+}
+
+ADataObject::ADataObject(unsigned int source_address,
+		unsigned int dest_address) {
+	source_address_ = source_address;
+	dest_address_ = dest_address;
+	encoded_cdap_message_ = 0;
+}
+
+ADataObject::~ADataObject() {
+	if (encoded_cdap_message_) {
+		delete encoded_cdap_message_;
+		encoded_cdap_message_ = 0;
+	}
 }
 
 }

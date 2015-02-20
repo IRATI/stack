@@ -472,13 +472,13 @@ void * doNetlinkMessageReaderWork(void * arg) {
 			myRINAManager->netlinkMessageArrived(incomingMessage);
 			event = incomingMessage->toIPCEvent();
 			if (event) {
-			        eventsQueue->put(event);
-			        LOG_DBG("Added event of type %s and sequence number %u to events queue",
-			        			IPCEvent::eventTypeToString(event->eventType).c_str(),
-			                    event->sequenceNumber);
+          LOG_DBG("Added event of type %s and sequence number %u to events queue",
+            IPCEvent::eventTypeToString(event->eventType).c_str(),
+                  event->sequenceNumber);
+          eventsQueue->put(event);
 			} else
-			        LOG_WARN("Event is null for message type %d",
-			                        incomingMessage->getOperationCode());
+          LOG_WARN("Event is null for message type %d",
+                          incomingMessage->getOperationCode());
 
 			delete incomingMessage;
 		}

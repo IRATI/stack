@@ -2,6 +2,7 @@
  * RINA Work Queues
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,10 +25,17 @@
 #include <linux/workqueue.h>
 
 /*
- * RWQ allows to post multiple times the same work-item (worker and data)
+ * RWQ allows to post multiple times the same work-item (worker and data),
+ * or create singe work_items that can be posted only once
  */
 
+#define RWQ_WORKERROR    1
+#define RWQ_NORESCHEDULE 0
+#define RWQ_RESCHEDULE   1
+
+
 struct workqueue_struct * rwq_create(const char * name);
+struct workqueue_struct * rwq_create_hp(const char * name);
 int                       rwq_flush(struct workqueue_struct * q);
 int                       rwq_destroy(struct workqueue_struct * q);
 
@@ -39,6 +47,11 @@ struct rwq_work_item *    rwq_work_create(int (* worker)(void * data),
                                           void * data);
 struct rwq_work_item *    rwq_work_create_ni(int (* worker)(void * data),
                                              void * data);
+struct rwq_work_item *    rwq_work_create_single(int  (* worker)(void * data),
+                                                 void * data);
+struct rwq_work_item *    rwq_work_create_single_ni(int  (* worker)(void * data),
+                                                    void * data);
+void                      rwq_work_destroy(struct rwq_work_item * item);
 
 /*
  * NOTE: This function will dispose the rwq_work_item on failure. The item

@@ -694,7 +694,7 @@ void ExtendedIPCManager::deallocatePortId(int portId) {
 
         return;
 #else
-        int result = syscallDeallocatePortId(portId);
+        int result = syscallDeallocatePortId(ipcProcessId, portId);
         if (result < 0) {
                 throw PortAllocationException();
         }
