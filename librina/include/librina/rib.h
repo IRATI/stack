@@ -735,6 +735,7 @@ class BaseRIBObject
   std::list<BaseRIBObject*> children_;
 };
 
+// FIXME: this class is only used in enrollment, it must go in a different file that rib
 class IApplicationConnectionHandler
 {
  public:
