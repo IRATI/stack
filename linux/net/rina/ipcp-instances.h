@@ -225,7 +225,6 @@ struct ipcp_instance_ops {
 
         const struct name * (* ipcp_name)(struct ipcp_instance_data * data);
 
-<<<<<<< HEAD
         int (* set_policy_set_param)(struct ipcp_instance_data * data,
                                      const string_t * path,
                                      const string_t * param_name,
@@ -233,10 +232,9 @@ struct ipcp_instance_ops {
         int (* select_policy_set)(struct ipcp_instance_data * data,
                                   const string_t * path,
                                   const string_t * ps_name);
-=======
+
         int (* enable_write)(struct ipcp_instance_data * data, port_id_t id);
         int (* disable_write)(struct ipcp_instance_data * data, port_id_t id);
->>>>>>> integration-1.1.0
 };
 
 /* FIXME: Should work on struct ipcp_instance, not on ipcp_instance_ops */
