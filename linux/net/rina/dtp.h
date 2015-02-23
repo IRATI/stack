@@ -84,6 +84,5 @@ struct rmt * dtp_rmt(struct dtp * dtp);
 struct dtp_sv * dtp_dtp_sv(struct dtp * dtp);
 struct connection * dtp_sv_connection(struct dtp_sv * sv);
 void nxt_seq_reset(struct dtp_sv * sv, seq_num_t sn);
-struct efcp * dtp_efcp(struct dtp * dtp);
 
 #endif

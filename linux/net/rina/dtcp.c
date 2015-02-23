@@ -496,6 +496,7 @@ struct pdu * pdu_ctrl_generate(struct dtcp * dtcp, pdu_type_t type)
 
         return pdu;
 }
+EXPORT_SYMBOL(pdu_ctrl_generate);
 
 /* not a policy according to specs */
 static int rcv_nack_ctl(struct dtcp * dtcp, seq_num_t seq_num)
@@ -882,6 +883,7 @@ int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
 
         return 0;
 }
+EXPORT_SYMBOL(dtcp_ack_flow_control_pdu_send);
 
 void update_rt_wind_edge(struct dtcp * dtcp)
 {

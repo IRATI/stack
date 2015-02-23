@@ -417,6 +417,7 @@ struct dtp * dt_dtp(struct dt * dt)
 
         return tmp;
 }
+EXPORT_SYMBOL(dt_dtp);
 
 struct dtcp * dt_dtcp(struct dt * dt)
 {
@@ -464,6 +465,7 @@ struct rtxq * dt_rtxq(struct dt * dt)
 
         return tmp;
 }
+EXPORT_SYMBOL(dt_rtxq);
 
 struct efcp * dt_efcp(struct dt * dt)
 {
@@ -479,7 +481,7 @@ struct efcp * dt_efcp(struct dt * dt)
 
         return tmp;
 }
-EXPORT_SYMBOL(dt_rtxq);
+EXPORT_SYMBOL(dt_efcp);
 
 uint_t dt_sv_max_pdu_size(struct dt * dt)
 {

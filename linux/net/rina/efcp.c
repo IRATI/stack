@@ -547,6 +547,7 @@ int efcp_disable_write(struct efcp * efcp)
 
         return 0;
 }
+EXPORT_SYMBOL(efcp_disable_write);
 
 /* FIXME This function has not been ported yet to use the DTCP policy set
  * parameters in place of struct dtcp_config. This because the code

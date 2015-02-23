@@ -200,6 +200,7 @@ int dtp_sv_max_seq_nr_set(struct dtp * instance, seq_num_t num)
 
         return 0;
 }
+EXPORT_SYMBOL(dtp_sv_max_seq_nr_set);
 
 #if 0
 static uint_t dropped_pdus(struct dtp_sv * sv)
@@ -693,6 +694,7 @@ finish:
         LOG_DBG("Finish process_Atimer_expiration");
         return ret;
 }
+EXPORT_SYMBOL(process_A_expiration);
 
 static bool seqq_is_empty(struct squeue * queue)
 {

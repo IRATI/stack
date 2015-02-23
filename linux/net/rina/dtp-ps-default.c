@@ -178,7 +178,7 @@ default_flow_control_overrun(struct dtp_ps * ps,
                 return -1;
         }
 
-        if (efcp_disable_write(dtp_efcp(dtp)))
+        if (efcp_disable_write(dt_efcp(dt)))
                 return -1;
 
         return 0;
