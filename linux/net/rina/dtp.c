@@ -225,286 +225,6 @@ static void dropped_pdus_inc(struct dtp_sv * sv)
         spin_unlock(&sv->lock);
 }
 
-<<<<<<< HEAD
-=======
-static int default_flow_control_overrun(struct dtp * dtp, struct pdu * pdu)
-{
-        struct cwq * cwq;
-        struct dt *  dt;
-
-        if (!dtp) {
-                LOG_ERR("No instance passed, cannot run policy");
-                return -1;
-        }
-
-        dt = dtp->parent;
-        ASSERT(dt);
-
-        cwq = dt_cwq(dt);
-        if (!cwq) {
-                LOG_ERR("Failed to get cwq");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        LOG_DBG("Default Flow Control");
-
-        if (!pdu_is_ok(pdu)) {
-                LOG_ERR("PDU is not ok, cannot run policy");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        if (cwq_push(cwq, pdu)) {
-                LOG_ERR("Failed to push into cwq");
-                return -1;
-        }
-
-        if (efcp_disable_write(dtp->efcp))
-                return -1;
-
-        return 0;
-}
-
-static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
-{
-        struct cwq * cwq;
-        struct dt *  dt;
-        uint_t       max_len;
-
-        if (!dtp) {
-                LOG_ERR("No instance passed, cannot run policy");
-                return -1;
-        }
-        if (!pdu_is_ok(pdu)) {
-                LOG_ERR("PDU is not ok, cannot run policy");
-                return -1;
-        }
-
-        dt = dtp->parent;
-        ASSERT(dt);
-
-        cwq = dt_cwq(dt);
-        if (!cwq) {
-                LOG_ERR("Failed to get cwq");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        LOG_DBG("Closed Window Queue");
-
-        ASSERT(dtp);
-
-        ASSERT(dtp->sv);
-        ASSERT(dtp->sv->connection);
-        ASSERT(dtp->sv->connection->policies_params);
-
-        max_len = dtcp_max_closed_winq_length(dtp->
-                                              sv->
-                                              connection->
-                                              policies_params->
-                                              dtcp_cfg);
-        if (cwq_size(cwq) < (max_len - 1)) {
-                if (cwq_push(cwq, pdu)) {
-                        LOG_ERR("Failed to push into cwq");
-                        return -1;
-                }
-
-                return 0;
-        }
-
-        ASSERT(dtp->policies);
-        ASSERT(dtp->policies->flow_control_overrun);
-
-        if (dtp->policies->flow_control_overrun(dtp, pdu)) {
-                LOG_ERR("Failed Flow Control Overrun");
-                return -1;
-        }
-
-        return 0;
-}
-
-static int default_transmission(struct dtp * dtp, struct pdu * pdu)
-{
-
-        struct dt  *  dt;
-        struct dtcp * dtcp;
-
-        /*  VARIABLES FOR SYSTEM TIME DBG MESSAGE BELOW */
-        struct timeval te;
-        long long milliseconds;
-
-        if (!dtp) {
-                LOG_ERR("No instance passed, cannot run policy");
-                return -1;
-        }
-
-        dt = dtp->parent;
-        if (!dt) {
-                LOG_ERR("Passed instance has no parent, cannot run policy");
-                return -1;
-        }
-
-        dtcp = dt_dtcp(dt);
-
-#if DTP_INACTIVITY_TIMERS_ENABLE
-        /* Start SenderInactivityTimer */
-        if (dtcp &&
-            rtimer_restart(dtp->timers.sender_inactivity,
-                           3 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
-                LOG_ERR("Failed to start sender_inactiviy timer");
-                return 0;
-        }
-#endif
-        /* Post SDU to RMT */
-        LOG_DBG("defaultTxPolicy - sending to rmt");
-        if (dtp_sv_max_seq_nr_set(dtp,
-                                  pci_sequence_number_get(pdu_pci_get_ro(
-                                                           pdu))))
-                LOG_ERR("Problems setting sender left window edge "
-                        "in default_transmission");
-
-        /*  SYSTEM TIME DBG_MESSAGE */
-       do_gettimeofday(&te);
-       milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
-       LOG_DBG("DTP (default tx) Sent PDU %d of type %d at %lld",
-                pci_sequence_number_get(pdu_pci_get_ro(pdu)),
-                pci_type(pdu_pci_get_ro(pdu)),
-                milliseconds);
-       LOG_DBG("local_soft_irq_pending: %d", local_softirq_pending());
-
-        return rmt_send(dtp->rmt,
-                        pci_destination(pdu_pci_get_ro(pdu)),
-                        pci_qos_id(pdu_pci_get_ro(pdu)),
-                        pdu);
-}
-
-static int default_initial_seq_number(struct dtp * dtp)
-{
-        seq_num_t seq_num;
-
-        if (!dtp) {
-                LOG_ERR("No instance passed, cannot run policy");
-                return -1;
-        }
-
-        get_random_bytes(&seq_num, sizeof(seq_num_t));
-        nxt_seq_reset(dtp->sv, seq_num);
-
-        LOG_DBG("initial_seq_number reset");
-        return seq_num;
-}
-
-static int default_receiver_inactivity(struct dtp * dtp)
-{
-        struct dt *          dt;
-        struct dtcp *        dtcp;
-        struct dtcp_config * cfg;
-
-        LOG_DBG("default_receiver_inactivity launched");
-
-        if (!dtp) return 0;
-
-        dt = dtp->parent;
-        if (!dt)
-                return -1;
-
-        dtcp = dt_dtcp(dt);
-        if (!dtcp)
-                return -1;
-
-        dt_sv_drf_flag_set(dt, true);
-        dtp_initial_sequence_number(dtp);
-
-        cfg = dtcp_config_get(dtcp);
-        if (!cfg)
-                return -1;
-
-        if (dtcp_rtx_ctrl(cfg)) {
-                struct rtxq * q;
-
-                q = dt_rtxq(dt);
-                if (!q) {
-                        LOG_ERR("Couldn't find the Retransmission queue");
-                        return -1;
-                }
-                rtxq_flush(q);
-        }
-        if (dtcp_flow_ctrl(cfg)) {
-                struct cwq * cwq;
-
-                cwq = dt_cwq(dt);
-                ASSERT(cwq);
-                if (cwq_flush(cwq)) {
-                        LOG_ERR("Coudln't flush cwq");
-                        return -1;
-                }
-        }
-
-        /*FIXME: Missing sending the control ack pdu */
-        return 0;
-}
-
-static int default_sender_inactivity(struct dtp * dtp)
-{
-        struct dt *          dt;
-        struct dtcp *        dtcp;
-        struct dtcp_config * cfg;
-
-        LOG_DBG("default_sender_inactivity launched");
-
-        if (!dtp) return 0;
-
-        dt = dtp->parent;
-        if (!dt)
-                return -1;
-
-        dtcp = dt_dtcp(dt);
-        if (!dtp)
-                return -1;
-
-        dt_sv_drf_flag_set(dt, true);
-        dtp_initial_sequence_number(dtp);
-
-        cfg = dtcp_config_get(dtcp);
-        if (!cfg)
-                return -1;
-
-        if (dtcp_rtx_ctrl(cfg)) {
-                struct rtxq * q;
-
-                q = dt_rtxq(dt);
-                if (!q) {
-                        LOG_ERR("Couldn't find the Retransmission queue");
-                        return -1;
-                }
-                rtxq_flush(q);
-        }
-        if (dtcp_flow_ctrl(cfg)) {
-                struct cwq * cwq;
-
-                cwq = dt_cwq(dt);
-                ASSERT(cwq);
-                if (cwq_flush(cwq)) {
-                        LOG_ERR("Coudln't flush cwq");
-                        return -1;
-                }
-        }
-
-        /*FIXME: Missing sending the control ack pdu */
-        return 0;
-}
-
-static struct dtp_policies default_policies = {
-        .transmission_control      = default_transmission,
-        .closed_window             = default_closed_window,
-        .flow_control_overrun      = default_flow_control_overrun,
-        .initial_sequence_number   = default_initial_seq_number,
-        .receiver_inactivity_timer = default_receiver_inactivity,
-        .sender_inactivity_timer   = default_sender_inactivity,
-};
-
->>>>>>> integration-1.1.0
 int dtp_initial_sequence_number(struct dtp * instance)
 {
         struct dtp_ps *ps;
@@ -837,14 +557,11 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         seq_num_t                max_sdu_gap;
         timeout_t                a;
         struct seq_queue_entry * pos, * n;
-<<<<<<< HEAD
         struct dtp_ps * ps;
         struct dtcp_ps * dtcp_ps;
-=======
         seq_num_t                ret;
         unsigned long            flags;
         /*struct rqueue *          to_pos*/
->>>>>>> integration-1.1.0
 
         ASSERT(dtp);
 
@@ -929,15 +646,7 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                 if (time_before_eq(pos->time_stamp + msecs_to_jiffies(a),
                                    jiffies)) {
                         LOG_DBG("Processing A timer expired");
-
-<<<<<<< HEAD
-                        if (dtcp && rtx_ctrl) {
-                                spin_unlock(&seqq->lock);
-                                spin_unlock(&dtp->a_lock);
-
-=======
                         if (dtcp && dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
->>>>>>> integration-1.1.0
                                 LOG_DBG("Retransmissions will be required");
                                 ret = seq_num;
                                 goto finish;
@@ -1070,26 +779,6 @@ int dtp_sv_init(struct dtp * dtp,
         return 0;
 }
 
-<<<<<<< HEAD
-#define MAX_NAME_SIZE 128
-
-/* FIXME: This function is not re-entrant */
-static const char * twq_name_format(const char *       prefix,
-                                    const struct dtp * instance)
-{
-        static char name[MAX_NAME_SIZE];
-
-        ASSERT(prefix);
-        ASSERT(instance);
-
-        if (snprintf(name, sizeof(name), RINA_PREFIX "-%s-%pK",
-                     prefix, instance) >=
-            sizeof(name))
-                return NULL;
-
-        return name;
-}
-
 /* Must be called under RCU read lock. */
 struct dtp_ps *
 dtp_ps_get(struct dtp * dtp)
@@ -1203,8 +892,6 @@ int dtp_set_policy_set_param(struct dtp* dtp,
 }
 EXPORT_SYMBOL(dtp_set_policy_set_param);
 
-=======
->>>>>>> integration-1.1.0
 struct dtp * dtp_create(struct dt *         dt,
                         struct rmt *        rmt,
                         struct efcp *       efcp,
@@ -1295,17 +982,10 @@ int dtp_destroy(struct dtp * instance)
         if (instance->timers.receiver_inactivity)
                 rtimer_destroy(instance->timers.receiver_inactivity);
 
-<<<<<<< HEAD
-        if (instance->twq)  rwq_destroy(instance->twq);
-        if (instance->rcv_wq) rwq_destroy(instance->rcv_wq);
         if (instance->seqq) squeue_destroy(instance->seqq);
         if (instance->sv)   rkfree(instance->sv);
         rina_component_fini(&instance->base);
 
-=======
-        if (instance->seqq)   squeue_destroy(instance->seqq);
-        if (instance->sv)     rkfree(instance->sv);
->>>>>>> integration-1.1.0
         rkfree(instance);
 
         LOG_DBG("Instance %pK destroyed successfully", instance);
@@ -1349,10 +1029,6 @@ int dtp_write(struct dtp * instance,
         struct rtxq *         rtxq;
         struct pdu *          cpdu;
         struct dtp_ps * ps;
-
-        /*  VARIABLES FOR SYSTEM TIME DBG MESSAGE BELOW */
-        struct timeval te;
-        long long milliseconds;
 
         if (!sdu_is_ok(sdu))
                 return -1;
@@ -1529,15 +1205,6 @@ int dtp_write(struct dtp * instance,
         }
 
         /* Post SDU to RMT */
-
-       /* SYSTEM TIME DBG MESSAGE */
-       do_gettimeofday(&te); // get current time
-       milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
-       LOG_DBG("DTP Sent PDU %d of type %d at %lld",
-                pci_sequence_number_get(pci),
-                pci_type(pdu_pci_get_ro(pdu)),
-                milliseconds);
-
         return rmt_send(instance->rmt,
                         pci_destination(pci),
                         pci_qos_id(pci),
@@ -1617,31 +1284,20 @@ int dtp_mgmt_write(struct rmt * rmt,
 int dtp_receive(struct dtp * instance,
                 struct pdu * pdu)
 {
-<<<<<<< HEAD
-        struct dtp_ps * ps;
-        struct dtp *          instance;
-        struct pdu *          pdu;
-        struct rcv_item *     ritem;
-=======
-        struct dtp_policies * policies;
->>>>>>> integration-1.1.0
-        struct pci *          pci;
-        struct dtp_sv *       sv;
-        struct dtcp *         dtcp;
-        struct dtcp_ps *      dtcp_ps;
-        struct dt *           dt;
-        seq_num_t             seq_num;
-        timeout_t             a;
-        seq_num_t             LWE;
-        bool                  in_order;
-        bool                  rtx_ctrl;
-        seq_num_t             max_sdu_gap;
-        unsigned long         flags;
+        struct dtp_ps *  ps;
+        struct pci *     pci;
+        struct dtp_sv *  sv;
+        struct dtcp *    dtcp;
+        struct dtcp_ps * dtcp_ps;
+        struct dt *      dt;
+        seq_num_t        seq_num;
+        timeout_t        a;
+        seq_num_t        LWE;
+        bool             in_order;
+        bool             rtx_ctrl;
+        seq_num_t        max_sdu_gap;
+        unsigned long    flags;
         /*struct rqueue *       to_post;*/
-
-        /* VARIABLES FOR SYSTEM TIMESTAMP DBG MESSAGE BELOW*/
-        struct timeval te;
-        long long milliseconds;
 
         LOG_DBG("DTP receive started...");
 
@@ -1700,10 +1356,6 @@ int dtp_receive(struct dtp * instance,
 #endif
         seq_num = pci_sequence_number_get(pci);
 
-        /* SYSTEM TIMESTAMP DBG MESSAGE */
-        do_gettimeofday(&te); // get current time
-        milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
-        LOG_DBG("DTP Received PDU %d at %lld", seq_num, milliseconds);
         LOG_DBG("local_soft_irq_pending: %d", local_softirq_pending());
 
         if (!(pci_flags_get(pci) ^ PDU_FLAGS_DATA_RUN)) {
@@ -1775,12 +1427,7 @@ int dtp_receive(struct dtp * instance,
                         goto exit;
                 }
 
-<<<<<<< HEAD
-                set_lft_win_edge = !(dtcp                                 &&
-                                     rtx_ctrl    &&
-=======
                 set_lft_win_edge = !(dtcp_rtx_ctrl(dtcp_config_get(dtcp)) &&
->>>>>>> integration-1.1.0
                                      ((seq_num -LWE) > max_sdu_gap));
 
                 if (set_lft_win_edge) {
@@ -1874,7 +1521,6 @@ int dtp_receive(struct dtp * instance,
 #endif
         return 0;
 }
-<<<<<<< HEAD
 
 int dtp_ps_publish(struct ps_factory * factory)
 {
@@ -1890,49 +1536,3 @@ EXPORT_SYMBOL(dtp_ps_publish);
 int dtp_ps_unpublish(const char * name)
 { return ps_unpublish(&policy_sets, name); }
 EXPORT_SYMBOL(dtp_ps_unpublish);
-
-int dtp_receive(struct dtp * instance,
-                struct pdu * pdu)
-{
-        struct rwq_work_item * item;
-        struct rcv_item *      ritem;
-
-        if (!pdu_is_ok(pdu)) {
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        if (!instance) {
-                LOG_ERR("Bogus instance passed, bailing out");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        ritem = rkzalloc(sizeof(*ritem), GFP_KERNEL);
-        if (!ritem) {
-                pdu_destroy(pdu);
-                LOG_ERR("Could not create receive item");
-                return -1;
-        }
-
-        ritem->dtp = instance;
-        ritem->pdu = pdu;
-
-        item = rwq_work_create_ni(rcv_worker, ritem);
-        if (!item) {
-                LOG_ERR("Could not create wwq item");
-                pdu_destroy(pdu);
-                rkfree(ritem);
-                return -1;
-        }
-
-        if (rwq_work_post(instance->rcv_wq, item)) {
-                LOG_ERR("Could not add rcv wq item to the wq");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        return 0;
-}
-=======
->>>>>>> integration-1.1.0
