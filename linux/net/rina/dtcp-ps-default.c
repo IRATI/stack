@@ -135,92 +135,19 @@ default_lost_control_pdu(struct dtcp_ps * ps)
         return 0;
 }
 
-static int
-default_rcvr_ack(struct dtcp_ps * ps, seq_num_t seq)
+#ifdef CONFIG_RINA_DTCP_RCVR_ACK
+static int default_rcvr_ack(struct dtcp_ps * instance, seq_num_t seq)
 {
-        struct dtcp * dtcp = ps->dm;
-        struct pdu * pdu;
-        struct pci * pci;
-        struct dtcp_config * dtcp_cfg;
-        seq_num_t    LWE;
-        seq_num_t    snd_lft;
-        seq_num_t    snd_rt;
-        pdu_type_t   type;
+        struct dtcp * dtcp = instance->dm;
 
-        if (!dtcp) {
-                LOG_ERR("No instance passed, cannot run policy");
-                return -1;
-        }
-
-        dtcp_cfg = dtcp_config_get(dtcp);
-        if (!dtcp_cfg)
-                return -1;
-
-        LWE  = dt_sv_rcv_lft_win(dtcp_dt(dtcp));
-        type = pdu_ctrl_type_get(dtcp, seq);
-        if (!type)
-                return 0;
-
-        pdu  = pdu_ctrl_create_ni(dtcp, type);
-        if (!pdu)
-                return -1;
-
-        pci = pdu_pci_get_rw(pdu);
-        if (!pci) {
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        /*
-         * FIXME: Shouldn't we check if PDU_TYPE_ACK_AND_FC or
-         * PDU_TYPE_NACK_AND_FC ?
-         */
-        if (ps->flow_ctrl) {
-                if (ps->flowctrl.window_based) {
-                        snd_lft = snd_lft_win(dtcp);
-                        snd_rt  = snd_rt_wind_edge(dtcp);
-
-                        pci_control_new_left_wind_edge_set(pci, LWE);
-                        pci_control_new_rt_wind_edge_set(pci,
-                                                         rcvr_rt_wind_edge(dtcp));
-                        pci_control_my_left_wind_edge_set(pci, snd_lft);
-                        pci_control_my_rt_wind_edge_set(pci, snd_rt);
-                }
-
-                if (ps->flowctrl.rate_based) {
-                        LOG_MISSING;
-                }
-        }
-
-        switch (pci_type(pci)) {
-        case PDU_TYPE_ACK_AND_FC:
-        case PDU_TYPE_ACK:
-                if (pci_control_ack_seq_num_set(pci, LWE)) {
-                        pdu_destroy(pdu);
-                        return -1;
-                }
-                dump_we(dtcp,pci);
-                if (pdu_send(dtcp, pdu))
-                        return -1;
-
-                return 0;
-        case PDU_TYPE_NACK_AND_FC:
-        case PDU_TYPE_NACK:
-                if (pci_control_ack_seq_num_set(pci, LWE + 1)) {
-                        pdu_destroy(pdu);
-                        return -1;
-                }
-                if (pdu_send(dtcp, pdu))
-                        return -1;
-
-                return 0;
-        default:
-                LOG_ERR("A PDU type not considered here has been produced");
-                break;
-        }
-
-        return -1;
+        return dtcp_ack_flow_control_pdu_send(dtcp, seq);
 }
+#endif
+
+#ifdef CONFIG_RINA_DTCP_RCVR_ACK_ATIMER
+static int default_rcvr_ack_atimer(struct dtcp_ps * instance, seq_num_t seq)
+{ return 0; }
+#endif
 
 static int
 default_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num)
@@ -249,29 +176,32 @@ default_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num)
 static int
 default_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
 {
+        struct dtp * dtp;
+        seq_num_t    seq_num;
+
         struct dtcp * dtcp = ps->dm;
-        struct pdu * pdu_ctrl;
-        seq_num_t    last_rcv_ctrl, snd_lft, snd_rt;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
                 return -1;
         }
 
-        last_rcv_ctrl = last_rcv_ctrl_seq(dtcp);
-        snd_lft       = snd_lft_win(dtcp);
-        snd_rt        = snd_rt_wind_edge(dtcp);
-        pdu_ctrl      = pdu_ctrl_ack_create(dtcp,
-                                            last_rcv_ctrl,
-                                            snd_lft,
-                                            snd_rt);
-        if (!pdu_ctrl)
+        dtp = dt_dtp(dtcp_dt(dtcp));
+        if (!dtp) {
+                LOG_ERR("No DTP from dtcp->parent");
                 return -1;
+        }
 
-        if (pdu_send(dtcp, pdu_ctrl))
+        /* Invoke delimiting and update left window edge */
+
+        seq_num = process_A_expiration(dtp, dtcp);
+        if ((int) seq_num < 0) {
+                LOG_ERR("Seq num returned by A-timer is negative, "
+                        "bailing out ...");
                 return -1;
+        }
 
-        return 0;
+        return ps->sv_update(ps, seq_num);
 }
 
 static int
@@ -279,34 +209,31 @@ default_receiving_flow_control(struct dtcp_ps * ps, seq_num_t seq)
 {
         struct dtcp * dtcp = ps->dm;
         struct pdu * pdu;
-        struct pci * pci;
-        seq_num_t    snd_lft, snd_rt, LWE;
+
+        /* VARIABLES FOR SYSTEM TIMESTAMP DBG MESSAGE BELOW*/
+        struct timeval te;
+        long long milliseconds;
+        seq_num_t dbg_seq_num;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
                 return -1;
         }
-        pdu = pdu_ctrl_create_ni(dtcp, PDU_TYPE_FC);
+        pdu = pdu_ctrl_generate(dtcp, PDU_TYPE_FC);
         if (!pdu)
                 return -1;
 
-        pci = pdu_pci_get_rw(pdu);
-        if (!pci) {
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        snd_lft = snd_lft_win(dtcp);
-        snd_rt  = snd_rt_wind_edge(dtcp);
-        LWE     = dt_sv_rcv_lft_win(dtcp_dt(dtcp));
-
-        pci_control_new_left_wind_edge_set(pci, LWE);
-        pci_control_new_rt_wind_edge_set(pci, rcvr_rt_wind_edge(dtcp));
-        pci_control_my_left_wind_edge_set(pci, snd_lft);
-        pci_control_my_rt_wind_edge_set(pci, snd_rt);
+        dbg_seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
+        dump_we(dtcp, pdu_pci_get_rw(pdu));
 
         if (pdu_send(dtcp, pdu))
                 return -1;
+
+        /* SYSTEM TIMESTAMP DBG MESSAGE */
+        do_gettimeofday(&te);
+        milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
+        LOG_DBG("DTCP Sending FC %d at %lld",
+                dbg_seq_num, milliseconds);
 
         return 0;
 }
@@ -396,7 +323,6 @@ dtcp_ps_default_create(struct rina_component * component)
         ps->rtt_estimator               = NULL;
         ps->retransmission_timer_expiry = NULL;
         ps->received_retransmission     = NULL;
-        ps->rcvr_ack                    = default_rcvr_ack;
         ps->sender_ack                  = default_sender_ack;
         ps->sending_ack                 = default_sending_ack;
         ps->receiving_ack_list          = NULL;
@@ -405,6 +331,12 @@ dtcp_ps_default_create(struct rina_component * component)
         ps->update_credit               = NULL;
         ps->flow_control_overrun        = default_flow_control_overrun;
         ps->reconcile_flow_conflict     = NULL;
+#ifdef CONFIG_RINA_DTCP_RCVR_ACK
+        ps->rcvr_ack                    = default_rcvr_ack,
+#endif
+#ifdef CONFIG_RINA_DTCP_RCVR_ACK_ATIMER
+        ps->rcvr_ack                    = default_rcvr_ack_atimer,
+#endif
         ps->rcvr_flow_control           = default_rcvr_flow_control;
         ps->rate_reduction              = default_rate_reduction;
         ps->rcvr_control_ack            = NULL;

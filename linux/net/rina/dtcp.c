@@ -139,32 +139,6 @@ struct dtcp_sv {
         uint_t       flow_ctl;
 };
 
-<<<<<<< HEAD
-=======
-struct dtcp_policies {
-        int (* flow_init)(struct dtcp * instance);
-        int (* sv_update)(struct dtcp * instance, seq_num_t seq);
-        int (* lost_control_pdu)(struct dtcp * instance);
-        int (* rtt_estimator)(struct dtcp * instance);
-        int (* retransmission_timer_expiry)(struct dtcp * instance);
-        int (* received_retransmission)(struct dtcp * instance);
-        int (* rcvr_ack)(struct dtcp * instance, seq_num_t seq);
-        int (* sender_ack)(struct dtcp * instance, seq_num_t seq);
-        int (* sending_ack)(struct dtcp * instance);
-        int (* receiving_ack_list)(struct dtcp * instance);
-        int (* initial_rate)(struct dtcp * instance);
-        int (* receiving_flow_control)(struct dtcp * instance, seq_num_t seq);
-        int (* update_credit)(struct dtcp * instance);
-        int (* flow_control_overrun)(struct dtcp * instance, struct pdu * pdu);
-        int (* reconcile_flow_conflict)(struct dtcp * instance);
-        int (* rcvr_flow_control)(struct dtcp * instance, seq_num_t seq);
-        int (* rate_reduction)(struct dtcp * instance);
-        int (* rcvr_control_ack)(struct dtcp * instance);
-        int (* no_rate_slow_down)(struct dtcp * instance);
-        int (* no_override_default_peak)(struct dtcp * instance);
-};
-
->>>>>>> integration-1.1.0
 struct dtcp {
         struct dt *            parent;
 
@@ -440,14 +414,6 @@ struct pdu * pdu_ctrl_create_ni(struct dtcp * dtcp, pdu_type_t type)
 }
 EXPORT_SYMBOL(pdu_ctrl_create_ni);
 
-<<<<<<< HEAD
-/* This is 0x8803 PDU type */
-/* NOTE: Specs do not detail it structure */
-struct pdu * pdu_ctrl_ack_create(struct dtcp * dtcp,
-                                 seq_num_t     last_ctrl_seq_rcvd,
-                                 seq_num_t     snd_left_wind_edge,
-                                 seq_num_t     snd_rt_wind_edge)
-=======
 static int populate_ctrl_pci(struct pci *  pci,
                              struct dtcp * dtcp)
 {
@@ -506,69 +472,7 @@ static int populate_ctrl_pci(struct pci *  pci,
         return 0;
 }
 
-static pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
-{
-        struct dtcp_config * dtcp_cfg;
-        seq_num_t    LWE;
-        timeout_t    a;
-
-        ASSERT(dtcp);
-        ASSERT(dtcp->parent);
-
-        dtcp_cfg = dtcp_config_get(dtcp);
-        ASSERT(dtcp_cfg);
-
-        a = dt_sv_a(dtcp->parent);
-
-        /*
-         * FIXME:
-         *   pdu_ctrl_type_get should not be controlling if the seq_num was
-         *   already acked, I would move this out of here, probably to
-         *   default_rcvr_ack and default_sending_ack policies
-         */
-        LWE = dt_sv_rcv_lft_win(dtcp->parent);
-        if (last_snd_data_ack(dtcp) < LWE) {
-                last_snd_data_ack_set(dtcp, LWE);
-                if (!a) {
-#if 0
-                        if (seq > LWE) {
-                                LOG_DBG("This is a NACK, "
-                                        "LWE couldn't be updated");
-                                if (dtcp_flow_ctrl(dtcp_cfg)) {
-                                        return PDU_TYPE_NACK_AND_FC;
-                                }
-                                return PDU_TYPE_NACK;
-                        }
-#endif
-                        LOG_DBG("This is an ACK");
-                        if (dtcp_flow_ctrl(dtcp_cfg)) {
-                                return PDU_TYPE_ACK_AND_FC;
-                        }
-                        return PDU_TYPE_ACK;
-                }
-#if 0
-                if (seq > LWE) {
-                        /* FIXME: This should be a SEL ACK */
-                        LOG_DBG("This is a NACK, "
-                                "LWE couldn't be updated");
-                        if (dtcp_flow_ctrl(dtcp_cfg)) {
-                                return PDU_TYPE_NACK_AND_FC;
-                        }
-                        return PDU_TYPE_NACK;
-                }
-#endif
-                LOG_DBG("This is an ACK");
-                if (dtcp_flow_ctrl(dtcp_cfg)) {
-                        return PDU_TYPE_ACK_AND_FC;
-                }
-                return PDU_TYPE_ACK;
-        }
-        LOG_DBG("LWE already acked");
-        return 0;
-}
-
-static struct pdu * pdu_ctrl_generate(struct dtcp * dtcp, pdu_type_t type)
->>>>>>> integration-1.1.0
+struct pdu * pdu_ctrl_generate(struct dtcp * dtcp, pdu_type_t type)
 {
         struct pdu * pdu;
         struct pci * pci;
@@ -592,36 +496,6 @@ static struct pdu * pdu_ctrl_generate(struct dtcp * dtcp, pdu_type_t type)
 
         return pdu;
 }
-<<<<<<< HEAD
-EXPORT_SYMBOL(pdu_ctrl_ack_create);
-=======
-
-#ifdef CONFIG_RINA_DTCP_RCVR_ACK_ATIMER
-static int default_rcvr_ack_atimer(struct dtcp * dtcp, seq_num_t seq)
-{ return 0; }
-#endif
-
-static int default_sender_ack(struct dtcp * dtcp, seq_num_t seq_num)
-{
-        if (!dtcp) {
-                LOG_ERR("No instance passed, cannot run policy");
-                return -1;
-        }
-
-        if (dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
-                struct rtxq * q;
-
-                q = dt_rtxq(dtcp->parent);
-                if (!q) {
-                        LOG_ERR("Couldn't find the Retransmission queue");
-                        return -1;
-                }
-                rtxq_ack(q, seq_num, dt_sv_tr(dtcp->parent));
-        }
-
-        return 0;
-}
->>>>>>> integration-1.1.0
 
 /* not a policy according to specs */
 static int rcv_nack_ctl(struct dtcp * dtcp, seq_num_t seq_num)
@@ -767,17 +641,9 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         seq_num_t    seq_num;
         seq_num_t    seq;
         seq_num_t    last_ctrl;
-<<<<<<< HEAD
-        int ret;
-=======
         int          ret;
 
-        /*  VARIABLES FOR SYSTEM TIME DBG MESSAGE BELOW */
-        struct timeval te;
-        long long milliseconds;
-
         LOG_DBG("dtcp_common_rcv_control called");
->>>>>>> integration-1.1.0
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("PDU is not ok");
@@ -813,7 +679,6 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         seq_num = pci_sequence_number_get(pci);
         last_ctrl = last_rcv_ctrl_seq(dtcp);
 
-<<<<<<< HEAD
         if (seq_num > (last_ctrl + 1)) {
                 rcu_read_lock();
                 ps = container_of(rcu_dereference(dtcp->base.ps),
@@ -821,16 +686,6 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
                 ps->lost_control_pdu(ps);
                 rcu_read_unlock();
         }
-=======
-        /*  SYSTEM TIME DBG_MESSAGE */
-        do_gettimeofday(&te);
-        milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
-        LOG_DBG("DTCP Received Contrl PDU %d at %lld", seq_num, milliseconds);
-        dump_we(dtcp, pci);
-
-        if (seq_num > (last_ctrl + 1))
-                dtcp->policies->lost_control_pdu(dtcp);
->>>>>>> integration-1.1.0
 
         if (seq_num <= last_ctrl) {
                 switch (type) {
@@ -867,18 +722,13 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         switch (type) {
         case PDU_TYPE_ACK:
                 seq = pci_control_ack_seq_num(pci);
-<<<<<<< HEAD
 
                 rcu_read_lock();
                 ps = container_of(rcu_dereference(dtcp->base.ps),
                                   struct dtcp_ps, base);
                 ret = ps->sender_ack(ps, seq);
                 rcu_read_unlock();
-                return ret;
-=======
-                ret = dtcp->policies->sender_ack(dtcp, seq);
                 break;
->>>>>>> integration-1.1.0
         case PDU_TYPE_NACK:
                 seq = pci_control_ack_seq_num(pdu_pci_get_ro(pdu));
                 ret = rcv_nack_ctl(dtcp, seq);
@@ -898,7 +748,23 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         return ret;
 }
 
-<<<<<<< HEAD
+/*FIXME: wrapper to be called by dtp in the post_worker */
+int dtcp_sending_ack_policy(struct dtcp * dtcp)
+{
+        struct dtcp_ps *ps;
+
+        if (!dtcp) {
+                LOG_ERR("No DTCP passed...");
+                return -1;
+        }
+
+        rcu_read_lock();
+        ps = container_of(rcu_dereference(dtcp->base.ps), struct dtcp_ps, base);
+        rcu_read_unlock();
+
+        return ps->sending_ack(ps, 0);
+}
+
 pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
 {
         struct dtcp_config * dtcp_cfg;
@@ -906,55 +772,20 @@ pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
         bool flow_ctrl;
         seq_num_t    LWE;
         timeout_t    a;
-=======
-static int default_lost_control_pdu(struct dtcp * dtcp)
-{
-        if (!dtcp) {
-                LOG_ERR("No instance passed, cannot run policy");
-                return -1;
-        }
-
-        LOG_DBG("Default lost control pdu policy");
-
-        return 0;
-
-}
-
-/*FIXME: wrapper to be called by dtp in the post_worker */
-int dtcp_sending_ack_policy(struct dtcp * dtcp)
-{
-        if (!dtcp) {
-                LOG_ERR("No DTCP passed...");
-                return -1;
-        }
-
-        ASSERT(dtcp->policies);
-        if (!dtcp->policies->sending_ack) {
-                LOG_ERR("No sending_ack policy in dtcp");
-                return -1;
-        }
-
-        return dtcp->policies->sending_ack(dtcp);
-}
-
-static int default_sending_ack(struct dtcp * dtcp)
-{
-        struct dtp * dtp;
-        seq_num_t    seq_num;
->>>>>>> integration-1.1.0
 
         if (!dtcp) {
                 LOG_ERR("No DTCP passed...");
                 return -1;
         }
 
-        dtp = dt_dtp(dtcp->parent);
-        if (!dtp) {
-                LOG_ERR("No DTP from dtcp->parent");
+        if (!dtcp->parent) {
+                LOG_ERR("No DTCP parent passed...");
                 return -1;
         }
 
-<<<<<<< HEAD
+        dtcp_cfg = dtcp_config_get(dtcp);
+        ASSERT(dtcp_cfg);
+
         rcu_read_lock();
         ps = container_of(rcu_dereference(dtcp->base.ps), struct dtcp_ps, base);
         flow_ctrl = ps->flow_ctrl;
@@ -998,30 +829,12 @@ static int default_sending_ack(struct dtcp * dtcp)
                         return PDU_TYPE_ACK_AND_FC;
                 }
                 return PDU_TYPE_ACK;
-=======
-        /* Invoke delimiting and update left window edge */
-
-        seq_num = process_A_expiration(dtp, dtcp);
-        if ((int) seq_num < 0) {
-                LOG_ERR("Seq num returned by A-timer is negative, "
-                        "bailing out ...");
-                return -1;
->>>>>>> integration-1.1.0
         }
 
-        ASSERT(dtcp->policies);
-        if (!dtcp->policies->sv_update) {
-                LOG_ERR("No sv_update policy in dtcp");
-                return -1;
-        }
-
-	return dtcp->policies->sv_update(dtcp, seq_num);
+	return 0;
 }
 EXPORT_SYMBOL(pdu_ctrl_type_get);
 
-<<<<<<< HEAD
-void update_rt_wind_edge(struct dtcp * dtcp)
-=======
 int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
 {
         struct pdu *   pdu;
@@ -1070,44 +883,7 @@ int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
         return 0;
 }
 
-#ifdef CONFIG_RINA_DTCP_RCVR_ACK
-static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
-{ return dtcp_ack_flow_control_pdu_send(dtcp, seq); }
-#endif
-
-static int default_receiving_flow_control(struct dtcp * dtcp, seq_num_t seq)
-{
-        struct pdu * pdu;
-
-        /* VARIABLES FOR SYSTEM TIMESTAMP DBG MESSAGE BELOW*/
-        struct timeval te;
-        long long milliseconds;
-        seq_num_t dbg_seq_num;
-
-        if (!dtcp) {
-                LOG_ERR("No instance passed, cannot run policy");
-                return -1;
-        }
-        pdu = pdu_ctrl_generate(dtcp, PDU_TYPE_FC);
-        if (!pdu)
-                return -1;
-
-        dbg_seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
-        dump_we(dtcp, pdu_pci_get_rw(pdu));
-        if (pdu_send(dtcp, pdu))
-                return -1;
-
-        /* SYSTEM TIMESTAMP DBG MESSAGE */
-        do_gettimeofday(&te);
-        milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
-        LOG_DBG("DTCP Sending FC %d at %lld",
-                dbg_seq_num, milliseconds);
-
-        return 0;
-}
-
-static void update_rt_wind_edge(struct dtcp * dtcp)
->>>>>>> integration-1.1.0
+void update_rt_wind_edge(struct dtcp * dtcp)
 {
         seq_num_t seq;
 
@@ -1120,108 +896,7 @@ static void update_rt_wind_edge(struct dtcp * dtcp)
         dtcp->sv->rcvr_rt_wind_edge = seq;
         spin_unlock(&dtcp->sv->lock);
 }
-<<<<<<< HEAD
 EXPORT_SYMBOL(update_rt_wind_edge);
-=======
-
-static int default_rcvr_flow_control(struct dtcp * dtcp, seq_num_t seq)
-{
-        if (!dtcp) {
-                LOG_ERR("No instance passed, cannot run policy");
-                return -1;
-        }
-
-        update_rt_wind_edge(dtcp);
-
-        return 0;
-}
-
-static int default_rate_reduction(struct dtcp * instance)
-{
-        if (!instance) {
-                LOG_ERR("No instance passed, cannot run policy");
-                return -1;
-        }
-
-        LOG_MISSING;
-
-        return 0;
-}
-
-static int default_flow_control_overrun(struct dtcp * instance,
-                                        struct pdu * pdu)
-{
-        pdu_destroy(pdu);
-
-        return 0;
-}
-
-static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
-{
-        int                  retval = 0;
-        struct dtcp_config * dtcp_cfg;
-
-        bool                 flow_ctrl;
-        bool                 win_based;
-        bool                 rate_based;
-        bool                 rtx_ctrl;
-
-        if (!dtcp) {
-                LOG_ERR("No instance passed, cannot run policy");
-                return -1;
-        }
-
-        dtcp_cfg = dtcp_config_get(dtcp);
-        if (!dtcp_cfg)
-                return -1;
-
-        flow_ctrl  = dtcp_flow_ctrl(dtcp_cfg);
-        win_based  = dtcp_window_based_fctrl(dtcp_cfg);
-        rate_based = dtcp_rate_based_fctrl(dtcp_cfg);
-        rtx_ctrl   = dtcp_rtx_ctrl(dtcp_cfg);
-
-        LOG_DBG("SV Update Seq Num: %u", seq);
-
-        if (flow_ctrl) {
-                if (win_based) {
-                        if (dtcp->policies->rcvr_flow_control(dtcp, seq)) {
-                                LOG_ERR("Failed Rcvr Flow Control policy");
-                                retval = -1;
-                        }
-                }
-
-                if (rate_based) {
-                        LOG_DBG("Rate based fctrl invoked");
-                        if (dtcp->policies->rate_reduction(dtcp)) {
-                                LOG_ERR("Failed Rate Reduction policy");
-                                retval = -1;
-                        }
-                }
-
-                if (!rtx_ctrl) {
-                        LOG_DBG("Receiving flow ctrl invoked");
-                        if (dtcp->policies->receiving_flow_control(dtcp,
-                                                                   seq)) {
-                                LOG_ERR("Failed Receiving Flow Control "
-                                        "policy");
-                                retval = -1;
-                        }
-
-                        return retval;
-                }
-        }
-
-        if (rtx_ctrl) {
-                LOG_DBG("Retransmission ctrl invoked");
-                if (dtcp->policies->rcvr_ack(dtcp, seq)) {
-                        LOG_ERR("Failed Rcvr Ack policy");
-                        retval = -1;
-                }
-        }
-
-        return retval;
-}
->>>>>>> integration-1.1.0
 
 static struct dtcp_sv default_sv = {
         .pdus_per_time_unit     = 0,
@@ -1244,37 +919,6 @@ static struct dtcp_sv default_sv = {
         .flow_ctl               = 0,
 };
 
-<<<<<<< HEAD
-=======
-static struct dtcp_policies default_policies = {
-        .flow_init                   = NULL,
-        .sv_update                   = default_sv_update,
-        .lost_control_pdu            = default_lost_control_pdu,
-        .rtt_estimator               = NULL,
-        .retransmission_timer_expiry = NULL,
-        .received_retransmission     = NULL,
-        .sender_ack                  = default_sender_ack,
-        .sending_ack                 = default_sending_ack,
-        .receiving_ack_list          = NULL,
-        .initial_rate                = NULL,
-        .receiving_flow_control      = default_receiving_flow_control,
-        .update_credit               = NULL,
-        .flow_control_overrun        = default_flow_control_overrun,
-        .reconcile_flow_conflict     = NULL,
-#ifdef CONFIG_RINA_DTCP_RCVR_ACK
-        .rcvr_ack                    = default_rcvr_ack,
-#endif
-#ifdef CONFIG_RINA_DTCP_RCVR_ACK_ATIMER
-        .rcvr_ack                    = default_rcvr_ack_atimer,
-#endif
-        .rcvr_flow_control           = default_rcvr_flow_control,
-        .rate_reduction              = default_rate_reduction,
-        .rcvr_control_ack            = NULL,
-        .no_rate_slow_down           = NULL,
-        .no_override_default_peak    = NULL,
-};
-
->>>>>>> integration-1.1.0
 /* FIXME: this should be completed with other parameters from the config */
 static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
 {
