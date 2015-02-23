@@ -19,15 +19,82 @@ namespace mad{
 #define FLOWMANAGER_TIMEOUT_S 0
 #define FLOWMANAGER_TIMEOUT_NS 100000000
 
-/*
-* Flow worker
+/**
+* @brief Worker abstract class encpasulates the main I/O loop
 */
-void* FlowWorker::run(void* param){
+class Worker{
+
+public:
+
+	/**
+	* Destructor
+	*/
+	virtual ~Worker(void){};
+
+	/**
+	* Run I/O loop
+	*/
+	virtual void* run(void* param)=0;
+
+
+	//Trampoline
+	static void* run_trampoline(void* param){
+		Worker* w = static_cast<Worker*>(param);
+		return w->run(param);
+	}
+
+	/**
+	* Instruct the thread to stop.
+	*/
+	inline void stop(void){
+		keep_running = false;
+	}
+
+	inline pthread_t* getPthreadContext(){
+		return &ctx;
+	}
+
+protected:
+	//Pthread context
+	pthread_t ctx;
+
+	//Wether to stop the main I/O loop
+	volatile bool keep_running;
+
+	//Connection being handled
+	Connection con;
+};
+
+/**
+* @brief Active Worker - performs flow allocation
+*/
+class ActiveWorker : public Worker{
+
+public:
+	/**
+	* Constructor
+	*/
+	ActiveWorker(const Connection& _con){con = _con;};
+
+	/**
+	* Run I/O loop
+	*/
+	virtual void* run(void* param);
+
+	/**
+	* Destructor
+	*/
+	virtual ~ActiveWorker(){};
+};
+
+/*
+* Flow active worker
+*/
+void* ActiveWorker::run(void* param){
 
 	(void)param;
-	//Recover the port_id of the flow
-	keep_running = true;
 
+	keep_running = true;
 	while(keep_running == true){
 		//TODO: block for incoming messages
 		sleep(1);
@@ -74,14 +141,16 @@ void FlowManager_::runIOLoop(){
 			case rina::FLOW_ALLOCATION_REQUESTED_EVENT:
 				flow = rina::ipcManager->allocateFlowResponse(*dynamic_cast<rina::FlowRequestEvent*>(event), 0, true);
 				LOG_INFO("New flow allocated [port-id = %d]", flow->getPortId());
-				spawnWorker(*flow);
+				(void)flow;
+				//TODO: add pasive worker
 				break;
 
 			case rina::FLOW_DEALLOCATED_EVENT:
 				port_id = dynamic_cast<rina::FlowDeallocatedEvent*>(event)->portId;
 				rina::ipcManager->flowDeallocated(port_id);
 				LOG_INFO("Flow torn down remotely [port-id = %d]", port_id);
-				joinWorker(port_id);
+				//TODO: add pasive worker
+				//joinWorker(port_id);
 				break;
 
 			case rina::DEALLOCATE_FLOW_RESPONSE_EVENT:
@@ -89,7 +158,8 @@ void FlowManager_::runIOLoop(){
 				resp = dynamic_cast<rina::DeallocateFlowResponseEvent*>(event);
 				port_id = resp->portId;
 				rina::ipcManager->flowDeallocationResult(port_id, resp->result == 0);
-				joinWorker(port_id);
+				//TODO: add pasive worker
+				//joinWorker(port_id);
 				break;
 
 			default:
@@ -105,23 +175,49 @@ void FlowManager_::runIOLoop(){
 Singleton<FlowManager_> FlowManager;
 
 //Constructors destructors(singleton)
-FlowManager_::FlowManager_(){
+FlowManager_::FlowManager_() : next_id(1){
 
-	//TODO: register to flow events in librina and spawn workers
-	pthread_mutex_init(&mutex, NULL);
 }
 
 FlowManager_::~FlowManager_(){
-	pthread_mutex_destroy(&mutex);
+
 }
 
 //Initialization and destruction routines
 void FlowManager_::init(){
-	//TODO
 	LOG_DBG("Initialized");
 }
 void FlowManager_::destroy(){
-	//TODO
+
+	//Join all workers
+	std::map<unsigned int, Worker*>::iterator it = workers.begin();
+
+	while (it != workers.end()){
+		std::map<unsigned int, Worker*>::iterator to_delete = it;
+
+		//Stop and join
+		it->second->stop();
+
+		//Join
+		joinWorker(it->first);
+
+		//Remove
+		workers.erase(to_delete);
+		it++;
+	}
+}
+
+//Connect manager
+unsigned int FlowManager_::connectTo(const Connection& con){
+	Worker* w = new ActiveWorker(con);
+
+	//Launch worker and return handler
+	return spawnWorker(&w);
+}
+
+//Disconnect
+void FlowManager_::disconnectFrom(unsigned int worker_id){
+	joinWorker(worker_id);
 }
 
 //
@@ -132,97 +228,94 @@ void FlowManager_::destroy(){
 //
 
 //Workers
-void FlowManager_::spawnWorker(rina::Flow& flow){
+unsigned int FlowManager_::spawnWorker(Worker** w){
 
-	FlowWorker* w = NULL;
+	unsigned int id;
 	std::stringstream msg;
-	int port_id = flow.getPortId();
-	//Create worker object
-	try{
-		w = new FlowWorker();
-	}catch(std::bad_alloc& e){
-		msg <<std::string("ERROR: Unable to create worker context; out of memory? Dropping flow with port_id:")<<port_id<<std::endl;
-		goto SPAWN_ERROR;
+
+	//Scoped lock
+	rina::AccessGuard lock(mutex);
+
+	if(!*w){
+		assert(0);
+		msg <<std::string("Invalid worker")<<std::endl;
+		goto SPAWN_ERROR3;
 	}
 
-	pthread_mutex_lock(&mutex);
+	//Assign a unique id to this connection
+	id = next_id++;
 
-	//Double check that there is not an existing worker for that port_id
+	//Double check that there is not an existing worker for that id
 	//This should never happen
 	//TODO: evaluate whether to surround this with an ifdef DEBUG
-	if(workers.find(port_id) != workers.end()){
-		msg <<std::string("ERROR: Corrupted FlowManager internal state or double call to spawnWorker(). Dropping flow with port_id: ")<<port_id<<std::endl;
-		goto SPAWN_ERROR;
+	if(workers.find(id) != workers.end()){
+		msg <<std::string("ERROR: Corrupted FlowManager internal state or double call to spawnWorker().")<<id<<std::endl;
+		goto SPAWN_ERROR2;
 	}
 
 	//Add state to the workers map
 	try{
-		workers[port_id] = w;
+		workers[id] = *w;
 	}catch(...){
-		msg <<std::string("ERROR: Could not add the worker state to 'workers' FlowManager internal out of memory? Dropping flow with port_id: ")<<port_id<<std::endl;
+		msg <<std::string("ERROR: Could not add the worker state to 'workers' FlowManager internal out of memory? Dropping worker: ")<<id<<std::endl;
 		goto SPAWN_ERROR;
 	}
 
 	//Spawn pthread
-	if(pthread_create(w->getPthreadContext(), NULL,
-					w->run_trampoline, (void*)w) != 0){
-		msg <<std::string("ERROR: Could spawn pthread for flow with port_id: ")<<port_id<<std::endl;
+	if(pthread_create((*w)->getPthreadContext(), NULL,
+				(*w)->run_trampoline, (void*)(*w)) != 0){
+		msg <<std::string("ERROR: Could spawn pthread for worker id: ")<<id<<std::endl;
 		goto SPAWN_ERROR;
 	}
 
-	pthread_mutex_unlock(&mutex);
+	//Retain worker pointer
+	*w = NULL;
 
-	return;
+	return id;
 
 SPAWN_ERROR:
-	if(w){
-		if(workers.find(port_id) != workers.end())
-			workers.erase (port_id);
-		delete w;
-	}
-	assert(0);
-	pthread_mutex_unlock(&mutex);
+	if(workers.find(id) != workers.end()) workers.erase(id);
+SPAWN_ERROR2:
+	delete *w;
+SPAWN_ERROR3:
 	throw Exception(msg.str().c_str());
 }
 
 //Join
-void FlowManager_::joinWorker(int port_id){
+void FlowManager_::joinWorker(int id){
 
 	std::stringstream msg;
-	FlowWorker* w = NULL;
+	Worker* w = NULL;
 
-	pthread_mutex_lock(&mutex);
+	//Scoped lock
+	rina::AccessGuard lock(mutex);
 
-	if(workers.find(port_id) == workers.end()){
-		msg <<std::string("ERROR: Could not find the context offlow with port_id: ")<<port_id<<std::endl;
+	if(workers.find(id) == workers.end()){
+		msg <<std::string("ERROR: Could not find the context of worker id: ")<<id<<std::endl;
 		goto JOIN_ERROR;
 	}
 
 	//Recover FlowWorker object
-	w = workers[port_id];
+	w = workers[id];
 
 	//Signal
 	w->stop();
 
 	//Join
-	if(pthread_join(*w->getPthreadContext(), NULL) !=0){
-		msg <<std::string("ERROR: Could not join worker for flow id: ")<<port_id<<". Error: "<<strerror(errno)<<std::endl;
+	if(pthread_join(*(w->getPthreadContext()), NULL) !=0){
+		msg <<std::string("ERROR: Could not join worker with id: ")<<id<<". Error: "<<strerror(errno)<<std::endl;
 		goto JOIN_ERROR;
 	}
 
 	//Clean-up
-	workers.erase(port_id);
+	workers.erase(id);
 	delete w;
-
-	pthread_mutex_unlock(&mutex);
 
 	return;
 
 JOIN_ERROR:
 	assert(0);
-	pthread_mutex_unlock(&mutex);
 	throw Exception(msg.str().c_str());
-
 }
 
 }; //namespace mad

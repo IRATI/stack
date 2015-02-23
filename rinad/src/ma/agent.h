@@ -36,6 +36,16 @@ DECLARE_EXCEPTION_SUBCLASS(eNoNMDIF);
 
 
 /**
+* @brief Encapsulates the Connection state
+*/
+class Connection{
+
+public:
+	rina::ApplicationProcessNamingInformation rinfo;
+	/* TODO: add CDAP auth details*/
+};
+
+/**
 * @brief Management Agent singleton class
 */
 class ManagementAgent_{
@@ -66,6 +76,20 @@ public:
 	*/
 	void addNMSDIF(std::string& difName);
 
+
+	/**
+	* Set the Managers connection details
+	*
+	* TODO: improve this so that this method returns a handler, such that
+	* in the future connections to the Manager(s) can be removed and
+	* modified at runtime.
+	*/
+	void addManagerConnection(std::string& APName,
+				std::string APInstId = std::string(""),
+				std::string AEname = std::string(""),
+				std::string AEinst = std::string("")
+				/* TODO: add CDAP auth details*/);
+
 private:
 
 	/**
@@ -77,6 +101,11 @@ private:
 	* List of NMSDIFs
 	*/
 	std::list<std::string> nmsDIFs;
+
+	/**
+	* List of Manager connections
+	*/
+	std::list<Connection> connections;
 
 	ManagementAgent_();
 	~ManagementAgent_(void);
@@ -94,6 +123,11 @@ private:
 	* Register agent AP into the IPCManager
 	*/
 	void reg(void);
+
+	/**
+	* Connect to the Manager/s
+	*/
+	void connect(void);
 
 	friend class Singleton<ManagementAgent_>;
 };
