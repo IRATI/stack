@@ -54,7 +54,7 @@ default_max_q_policy_rx(struct rmt_ps * ps,
 
 static void
 default_rmt_q_monitor_policy_tx(struct rmt_ps * ps,
-                                struct p : NULLdu *    pdu,
+                                struct pdu *    pdu,
                                 struct rfifo *  queue)
 { }
 
