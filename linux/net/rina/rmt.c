@@ -345,7 +345,6 @@ static int n1_port_write(struct serdes * serdes,
                          struct rmt_n1_port * n1_port,
                          struct pdu * pdu)
 {
-        struct rmt *           tmp;
         struct sdu *           sdu;
         struct pdu_ser *       pdu_ser;
         port_id_t              port_id;
@@ -432,7 +431,6 @@ static void send_worker(unsigned long o)
         struct hlist_node *  ntmp;
         int                  bucket;
         int                  pending = 0;
-        bool                 sched_restart = true;
         struct rfifo *       queue;
         struct rmt_ps *      ps;
         bool                 sched_restart = true;
@@ -482,7 +480,7 @@ static void send_worker(unsigned long o)
                 for (;;) {
 
                         queue = ps->rmt_scheduling_policy_tx(ps,
-                                                             n1_port,
+                                                             entry,
                                                              sched_restart);
                         if (!queue) {
                                 /* No more queues to serve. */
@@ -1524,7 +1522,9 @@ int rmt_receive(struct rmt * instance,
         spin_lock_irqsave(&in_n1_port->lock, flags);
 
         rcu_read_lock();
-        ps = container_of(rcu_dereference(tmp->base.ps), struct rmt_ps, base);
+        ps = container_of(rcu_dereference(instance->base.ps),
+                          struct rmt_ps,
+                          base);
         if (!ps) {
                 rcu_read_unlock();
                 spin_unlock_irqrestore(&in_n1_port->lock, flags);
@@ -1556,7 +1556,9 @@ int rmt_receive(struct rmt * instance,
         /* FIXME-POLICY: check if this is the correct place for
          * rmt_q_monitor policy */
         rcu_read_lock();
-        ps = container_of(rcu_dereference(tmp->base.ps), struct rmt_ps, base);
+        ps = container_of(rcu_dereference(instance->base.ps),
+                          struct rmt_ps,
+                          base);
         if (ps) {
                 /* MaxQPolicy hook. */
                 if (ps->max_q_policy_rx && rfifo_length(queue) >= ps->max_q) {
