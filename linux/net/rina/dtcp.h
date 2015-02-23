@@ -61,7 +61,7 @@ int                  dtcp_snd_lf_win_set(struct dtcp * instance,
 
 struct dtcp_config * dtcp_config_get(struct dtcp * dtcp);
 
-<<<<<<< HEAD
+/* begin SDK */
 int          dtcp_select_policy_set(struct dtcp * dtcp, const string_t *path,
                                     const string_t * name);
 
@@ -88,9 +88,7 @@ struct pdu * pdu_ctrl_ack_create(struct dtcp * dtcp,
                                  seq_num_t     snd_left_wind_edge,
                                  seq_num_t     snd_rt_wind_edge);
 void update_rt_wind_edge(struct dtcp * dtcp);
-
-=======
+/* end SDK */
 /*FIXME: wrapper to be called by dtp in the post_worker */
 int                  dtcp_sending_ack_policy(struct dtcp * dtcp);
->>>>>>> integration-1.1.0
 #endif
