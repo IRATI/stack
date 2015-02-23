@@ -6,12 +6,14 @@
 #include <pthread.h>
 #include <cstdlib>
 #include <iostream>
+#include <list>
 #include <map>
 #include <vector>
 #include <utility>
 
 #include <librina/application.h>
 #include <librina/common.h>
+#include <librina/concurrency.h>
 #include <librina/ipc-manager.h>
 #include <librina/patterns.h>
 
@@ -27,47 +29,9 @@ namespace mad{
 * @brief Flow Manager
 */
 
-/**
-* @brief FlowWorker encpasulates the main I/O loop for CDAP message
-* receiving.
-*
-* In the current implementation there is one instance of this class per
-* allocated flow.
-*/
-class FlowWorker{
-
-public:
-	/**
-	* Run the main loop until keep_running == false
-	*/
-	void* run(void* param);
-
-	//Trampoline
-	static void* run_trampoline(void* param){
-		FlowWorker* w = (FlowWorker*)param;
-		return w->run(param);
-	}
-
-
-	/**
-	* Instruct the thread to stop.
-	*/
-	inline void stop(void){
-		keep_running = false;
-	}
-
-	inline pthread_t* getPthreadContext(){
-		return &ctx;
-	}
-
-protected:
-
-	//Pthread context
-	pthread_t ctx;
-
-	//Wether to stop the main I/O loop
-	volatile bool keep_running;
-};
+//Fwd decl
+class Connection;
+class Worker;
 
 /**
 * @brief Flow manager
@@ -76,33 +40,52 @@ class FlowManager_{
 
 public:
 	/**
-	* Initialize FlowManager running state
+	* @brief Initialize FlowManager running state
 	*/
 	void init(void);
 
 	/**
-	* Run the main I/O loop
+	* @brief Run the main I/O loop
 	*/
 	void runIOLoop(void);
 
 	/**
-	* Run the main I/O loop
+	* @brief Run the main I/O loop
 	*/
 	inline void stopIOLoop(void){
 		keep_running = false;
 	}
 
+	/**
+	* @brief Spawns a worker and attempts to connect to the Manager
+	*
+	* Method may throw an exception if a new thread cannot be spawned. No
+	* exception will be thrown if the connection to the Manager cannot be
+	* temporally stablished (will keep retrying).
+	*
+	* @param con Connection parameters
+	* @ret The connection worker handle; this handler is NOT the flow
+	* port-id neither any CDAP connection parameter. This identifies
+	* univocally the connection worker in the context of the FlowManager.
+	*/
+	unsigned int connectTo(const Connection& con);
+
+
+	/**
+	* @brief Disconnects (if connected), and joins working thread
+	*/
+	void disconnectFrom(unsigned int worker_id);
 
 	/**
 	* Destroy the running state
 	*/
 	void destroy(void);
 private:
-	//hashmap port_id/pthread_t
-	std::map<int, FlowWorker*> workers;
+	//hashmap worker handler <-> Worker association
+	std::map<unsigned int, Worker*> workers;
 
 	//Mutex
-	pthread_mutex_t mutex;
+	rina::Lockable mutex;
 
 	//Run flag
 	volatile bool keep_running;
@@ -110,12 +93,12 @@ private:
 	/*
 	* Create a worker
 	*/
-	void spawnWorker(rina::Flow& flow);
+	unsigned int spawnWorker(Worker** w);
 
 	/*
 	* Join worker
 	*/
-	void joinWorker(int port_id);
+	void joinWorker(int id);
 
 	//Constructors
 	FlowManager_(void);
@@ -123,6 +106,8 @@ private:
 
 	friend class Singleton<FlowManager_>;
 
+	//Worker handler id
+	int next_id;
 };
 
 //Singleton instance

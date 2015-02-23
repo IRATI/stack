@@ -19,10 +19,10 @@ namespace mad {
 //Singleton instance
 Singleton<ManagementAgent_> ManagementAgent;
 
-//Add NMS DIF
-void ManagementAgent_::addNMSDIF(std::string& difName){
-	nmsDIFs.push_back(difName);
-}
+//
+// Private methods
+//
+
 
 //Creates the NMS DIFs required by the MA
 void ManagementAgent_::bootstrapNMSDIFs(){
@@ -100,6 +100,51 @@ void ManagementAgent_::reg(){
 	*/
 }
 
+void ManagementAgent_::connect(void){
+
+	unsigned int w_id;
+	std::list<Connection>::const_iterator it;
+
+	for(it=connections.begin(); it!=connections.end(); ++it) {
+		//Nice trace
+		LOG_INFO("Connecting to manager application name '%s'",
+						it->rinfo.processName.c_str());
+
+		//Instruct flow manager to bootstrap an active connection
+		//worker
+		w_id = FlowManager->connectTo(*it);
+
+		//TODO: store this
+		(void)w_id;
+	}
+}
+
+//
+// Public methods
+//
+
+//Add NMS DIF
+void ManagementAgent_::addNMSDIF(std::string& difName){
+	nmsDIFs.push_back(difName);
+}
+
+//Add Manager connection
+void ManagementAgent_::addManagerConnection(std::string& APName,
+						std::string APInstId,
+						std::string AEname,
+						std::string AEinst
+					/* TODO: add CDAP auth details*/){
+
+	Connection con;
+
+	//TODO make it copyable..
+	con.rinfo.processName = APName;
+	con.rinfo.processInstance = APInstId;
+	con.rinfo.entityName = AEname;
+	con.rinfo.entityInstance = AEinst;
+
+	connections.push_back(con);
+}
 
 //Initialization and destruction routines
 void ManagementAgent_::init(const std::string& conf,
@@ -139,13 +184,17 @@ void ManagementAgent_::init(const std::string& conf,
 	//Bootstrap necessary NMS DIFs and shim-DIFs
 	bootstrapNMSDIFs();
 
+	LOG_INFO("Components initialized");
+
 	//Register agent AP into the IPCManager
 	reg();
 
-	LOG_INFO("Components initialized");
+	//Perform connection to the Manager(s)
+	connect();
 
 	/*
-	* Run the bg task manager loop in the main thread
+	* Run the bg task manager loop in the main thread to attend
+	* flow events
 	*/
 	FlowManager->runIOLoop();
 }
