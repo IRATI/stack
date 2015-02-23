@@ -1489,7 +1489,7 @@ int rmt_receive(struct rmt * instance,
         struct rmt_n1_port * in_n1_port;
         unsigned long        flags;
         bool                 sched_restart = true;
-        struct rfifo *       queue;
+        struct rfifo *       queue = NULL;
 
         if (!sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus SDU passed");
@@ -1523,15 +1523,28 @@ int rmt_receive(struct rmt * instance,
         spin_unlock_irqrestore(&in_n1_ports->lock, flags);
         spin_lock_irqsave(&in_n1_port->lock, flags);
 
+        rcu_read_lock();
         ps = container_of(rcu_dereference(tmp->base.ps), struct rmt_ps, base);
+        if (!ps) {
+                rcu_read_unlock();
+                spin_unlock_irqrestore(&in_n1_port->lock, flags);
+                LOG_ERR("No ps in rmt_receive");
+                return -1;
+        }
 
-        queue = ps->rmt_scheduling_policy_rx(ps, in_n1_port, sched_restart);
+        if (ps->max_q_policy_rx)
+                queue = ps->rmt_scheduling_policy_rx(ps,
+                                                     in_n1_port,
+                                                     sched_restart);
         if (!queue) {
+                rcu_read_unlock();
                 spin_unlock_irqrestore(&in_n1_port->lock, flags);
                 LOG_ERR("scheduling policy return no queue to check while"
                         "receiving");
                 return -1;
         }
+        rcu_read_unlock();
+
         sched_restart = false;
 
         if (rfifo_is_empty(queue)) {
@@ -1542,15 +1555,20 @@ int rmt_receive(struct rmt * instance,
 
         /* FIXME-POLICY: check if this is the correct place for
          * rmt_q_monitor policy */
-        /* MaxQPolicy hook. */
-        if (ps->max_q_policy_rx && rfifo_length(queue) >= ps->max_q) {
-                ps->max_q_policy_rx(ps, sdu, queue);
-        }
+        rcu_read_lock();
+        ps = container_of(rcu_dereference(tmp->base.ps), struct rmt_ps, base);
+        if (ps) {
+                /* MaxQPolicy hook. */
+                if (ps->max_q_policy_rx && rfifo_length(queue) >= ps->max_q) {
+                        ps->max_q_policy_rx(ps, sdu, queue);
+                }
 
-        /* RMTQMonitorPolicy hook. */
-        if (ps->rmt_q_monitor_policy_rx) {
-                ps->rmt_q_monitor_policy_rx(ps, sdu, queue);
+                /* RMTQMonitorPolicy hook. */
+                if (ps->rmt_q_monitor_policy_rx) {
+                        ps->rmt_q_monitor_policy_rx(ps, sdu, queue);
+                }
         }
+        rcu_read_unlock();
 
         if (rfifo_push_ni(queue, sdu)) {
                 spin_unlock_irqrestore(&in_n1_port->lock, flags);
