@@ -107,9 +107,9 @@ struct rmt * rmt_from_component(struct rina_component * component);
 
 /* Plugin support */
 enum flow_state {
-        PORT_STATE_ENABLED,
-        PORT_STATE_DISABLED,
-        PORT_STATE_BUSY
+        N1_PORT_STATE_ENABLED,
+        N1_PORT_STATE_DISABLED,
+        N1_PORT_STATE_BUSY
 };
 
 struct rmt_n1_port {

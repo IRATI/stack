@@ -72,7 +72,7 @@ static struct rmt_n1_port * n1_port_create(port_id_t id,
 
         tmp->port_id = id;
         tmp->n1_ipcp = n1_ipcp;
-        tmp->state   = PORT_STATE_ENABLED;
+        tmp->state   = N1_PORT_STATE_ENABLED;
         atomic_set(&tmp->n_sdus, 0);
         spin_lock_init(&tmp->lock);
 
@@ -469,7 +469,7 @@ static void send_worker(unsigned long o)
                 spin_unlock(&tmp->egress.n1_ports->lock);
 
                 spin_lock(&entry->lock);
-                if (entry->state == PORT_STATE_DISABLED ||
+                if (entry->state == N1_PORT_STATE_DISABLED ||
                     atomic_read(&entry->n_sdus) == 0) {
                         if (atomic_read(&entry->n_sdus) > 0)
                                 pending++;
@@ -496,7 +496,7 @@ static void send_worker(unsigned long o)
                                 LOG_DBG("No PDU to work in this queue ...");
                                 break;
                         }
-                        entry->state = PORT_STATE_BUSY;
+                        entry->state = N1_PORT_STATE_BUSY;
                         spin_unlock(&entry->lock);
 
                         n1_port_write(tmp->serdes, entry, pdu);
@@ -504,8 +504,8 @@ static void send_worker(unsigned long o)
                         spin_lock(&entry->lock);
                         if (atomic_read(&entry->n_sdus) <= 0) {
                                 atomic_set(&entry->n_sdus, 0);
-                                if (entry->state != PORT_STATE_DISABLED)
-                                        entry->state = PORT_STATE_ENABLED;
+                                if (entry->state != N1_PORT_STATE_DISABLED)
+                                        entry->state = N1_PORT_STATE_ENABLED;
                         } else {
                                 pending++;
                         }
@@ -579,10 +579,10 @@ int rmt_send_port_id(struct rmt * instance,
         /* */
         spin_lock_irqsave(&out_n1_port->lock, flags);
         atomic_inc(&out_n1_port->n_sdus);
-        if (out_n1_port->state == PORT_STATE_ENABLED &&
+        if (out_n1_port->state == N1_PORT_STATE_ENABLED &&
             atomic_read(&out_n1_port->n_sdus) == 1) {
                 int ret = 0;
-                out_n1_port->state = PORT_STATE_BUSY;
+                out_n1_port->state = N1_PORT_STATE_BUSY;
                 spin_unlock_irqrestore(&out_n1_port->lock, flags);
                 if (n1_port_write(instance->serdes, out_n1_port, pdu))
                         ret = -1;
@@ -590,9 +590,9 @@ int rmt_send_port_id(struct rmt * instance,
                 spin_lock_irqsave(&out_n1_port->lock, flags);
                 if (atomic_read(&out_n1_port->n_sdus) <= 0) {
                         atomic_set(&out_n1_port->n_sdus, 0);
-                        if (out_n1_port->state != PORT_STATE_DISABLED) {
+                        if (out_n1_port->state != N1_PORT_STATE_DISABLED) {
                                 LOG_DBG("Sent and enabling port");
-                                out_n1_port->state = PORT_STATE_ENABLED;
+                                out_n1_port->state = N1_PORT_STATE_ENABLED;
                         }
                 } else {
                         LOG_DBG("Sent and scheduling cause there are more"
@@ -601,7 +601,7 @@ int rmt_send_port_id(struct rmt * instance,
                 }
                 spin_unlock_irqrestore(&out_n1_port->lock, flags);
                 return ret;
-        } else if (out_n1_port->state == PORT_STATE_BUSY) {
+        } else if (out_n1_port->state == N1_PORT_STATE_BUSY) {
                 if (rfifo_push_ni(out_n1_port->queue, pdu)) {
                         spin_unlock_irqrestore(&out_n1_port->lock, flags);
                         pdu_destroy(pdu);
@@ -755,12 +755,12 @@ int rmt_enable_port_id(struct rmt * instance,
         spin_unlock(&instance->egress.n1_ports->lock);
 
         spin_lock(&n1_port->lock);
-        if (n1_port->state != PORT_STATE_DISABLED) {
+        if (n1_port->state != N1_PORT_STATE_DISABLED) {
                 spin_unlock(&n1_port->lock);
                 LOG_DBG("Nothing to do for port-id %d", id);
                 return 0;
         }
-        n1_port->state = PORT_STATE_ENABLED;
+        n1_port->state = N1_PORT_STATE_ENABLED;
         spin_unlock(&n1_port->lock);
 
         LOG_DBG("Changed state to ENABLED");
@@ -799,12 +799,12 @@ int rmt_disable_port_id(struct rmt * instance,
         spin_unlock(&instance->egress.n1_ports->lock);
 
         spin_lock(&n1_port->lock);
-        if (n1_port->state == PORT_STATE_DISABLED) {
+        if (n1_port->state == N1_PORT_STATE_DISABLED) {
                 spin_unlock(&n1_port->lock);
                 LOG_DBG("Nothing to do for port-id %d", id);
                 return 0;
         }
-        n1_port->state = PORT_STATE_DISABLED;
+        n1_port->state = N1_PORT_STATE_DISABLED;
         spin_unlock(&n1_port->lock);
         LOG_DBG("Changed state to DISABLED");
 
