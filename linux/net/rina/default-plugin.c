@@ -39,8 +39,8 @@ static int __init mod_init(void)
 {
         int ret;
 
-        strcpy(rmt_factory.name, RINA_PS_DEFAULT_NAME);
-        strcpy(dtp_factory.name, RINA_PS_DEFAULT_NAME);
+        strcpy(rmt_factory.name,  RINA_PS_DEFAULT_NAME);
+        strcpy(dtp_factory.name,  RINA_PS_DEFAULT_NAME);
         strcpy(dtcp_factory.name, RINA_PS_DEFAULT_NAME);
 
         ret = rmt_ps_publish(&rmt_factory);
