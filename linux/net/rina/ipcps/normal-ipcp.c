@@ -948,14 +948,12 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .pft_flush                 = normal_pft_flush,
 
         .ipcp_name                 = normal_ipcp_name,
-<<<<<<< HEAD
 
         .set_policy_set_param      = normal_set_policy_set_param,
         .select_policy_set         = normal_select_policy_set,
-=======
+
         .enable_write              = enable_write,
         .disable_write             = disable_write
->>>>>>> integration-1.1.0
 };
 
 static struct mgmt_data * normal_mgmt_data_create(void)

@@ -512,15 +512,6 @@ static bool is_connection_ok(const struct connection * connection)
         return true;
 }
 
-<<<<<<< HEAD
-/* FIXME This function has not been ported yet to use the DTCP policy set
- * parameters in place of struct dtcp_config. This because the code
- * tries to access "connection parameters" that are defined as DTCP
- * policies (in RINA) even if DTCP is not present. This has to
- * be fixed, because the DTCP policy set can exist only if DTCP
- * is present.
- */
-=======
 int efcp_enable_write(struct efcp * efcp)
 {
         if (!efcp                 ||
@@ -557,7 +548,13 @@ int efcp_disable_write(struct efcp * efcp)
         return 0;
 }
 
->>>>>>> integration-1.1.0
+/* FIXME This function has not been ported yet to use the DTCP policy set
+ * parameters in place of struct dtcp_config. This because the code
+ * tries to access "connection parameters" that are defined as DTCP
+ * policies (in RINA) even if DTCP is not present. This has to
+ * be fixed, because the DTCP policy set can exist only if DTCP
+ * is present.
+ */
 cep_id_t efcp_connection_create(struct efcp_container * container,
                                 struct ipcp_instance *  user_ipcp,
                                 struct connection *     connection)

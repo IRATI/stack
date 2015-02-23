@@ -275,6 +275,15 @@ public:
 			void * object_value, rina::CDAPSessionDescriptor * session_descriptor);
 
 private:
+
+  void initialize(IPCProcess * ipc_process, IFlowAllocator * flow_allocator,
+      int port_id);
+  void replyToIPCManager(rina::FlowRequestEvent & event, int result);
+  void releasePortId();
+
+  /// Release the port-id, unlock and remove the FAI from the FA
+  void releaseUnlockRemove();
+
 	IPCProcess * ipc_process_;
 	IFlowAllocator * flow_allocator_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
@@ -303,14 +312,6 @@ private:
 	int underlying_port_id_;
 	rina::Lockable * lock_;
 	rina::Timer * timer_;
-
-	void initialize(IPCProcess * ipc_process, IFlowAllocator * flow_allocator,
-			int port_id);
-	void replyToIPCManager(rina::FlowRequestEvent & event, int result);
-	void releasePortId();
-
-	/// Release the port-id, unlock and remove the FAI from the FA
-	void releaseUnlockRemove();
 };
 
 class TearDownFlowTimerTask: public rina::TimerTask {
