@@ -106,16 +106,20 @@ int          rmt_set_policy_set_param(struct rmt * rmt,
 struct rmt * rmt_from_component(struct rina_component * component);
 
 /* Plugin support */
-struct rmt_queue {
-        struct rfifo *    queue;
-        port_id_t         port_id;
-        struct hlist_node hlist;
+enum flow_state {
+        PORT_STATE_ENABLED,
+        PORT_STATE_DISABLED,
+        PORT_STATE_BUSY
 };
 
-struct rmt_qmap {
-        spinlock_t lock; /* FIXME: Has to be moved in the pipelines */
-
-        DECLARE_HASHTABLE(queues, 7);
+struct rmt_n1_port {
+        spinlock_t             lock;
+        /* this should be a list or hlist of rfifos */
+        struct rfifo *         queue;
+        port_id_t              port_id;
+        struct ipcp_instance * n1_ipcp;
+        struct hlist_node      hlist;
+        enum flow_state        state;
+        atomic_t               n_sdus;
 };
-
 #endif
