@@ -256,15 +256,13 @@ void cwq_deliver(struct cwq * queue,
         if (!dtcp)
                 return;
 
-<<<<<<< HEAD
         rcu_read_lock();
         rtx_ctrl = dtcp_ps_get(dtcp)->rtx_ctrl;
         rcu_read_unlock();
-=======
+
         dtp = dt_dtp(dt);
         if (!dtp)
                 return;
->>>>>>> integration-1.1.0
 
         spin_lock(&queue->lock);
         while (!rqueue_is_empty(queue->q) &&
@@ -858,12 +856,8 @@ int rtxq_nack(struct rtxq * q,
         rtxqueue_entries_nack(q->queue,
                               q->rmt,
                               seq_num,
-<<<<<<< HEAD
                               data_retransmit_max);
-=======
-                              dtcp_data_retransmit_max(dtcp_cfg));
 #if RTIMER_ENABLED
->>>>>>> integration-1.1.0
         if (rtimer_restart(q->r_timer, tr)) {
                 spin_unlock(&q->lock);
                 return -1;
