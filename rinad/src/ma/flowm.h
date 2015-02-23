@@ -30,7 +30,7 @@ namespace mad{
 */
 
 //Fwd decl
-class Connection;
+class AppConnection;
 class Worker;
 
 /**
@@ -68,7 +68,7 @@ public:
 	* port-id neither any CDAP connection parameter. This identifies
 	* univocally the connection worker in the context of the FlowManager.
 	*/
-	unsigned int connectTo(const Connection& con);
+	unsigned int connectTo(const AppConnection& con);
 
 
 	/**
@@ -89,6 +89,18 @@ private:
 
 	//Run flag
 	volatile bool keep_running;
+
+
+	/**
+	* Notify event to the worker
+	*
+	* Loop over all the workers and attempt to notify the event
+	* TODO: this is a waste of resources, but this is currently the only
+	* simple way to do this
+	*
+	* Being the simplest way to do it now, doesn't mean it is deep pain
+	*/
+	void notify(rina::IPCEvent** event);
 
 	/*
 	* Create a worker

@@ -37,12 +37,14 @@ DECLARE_EXCEPTION_SUBCLASS(eNoNMDIF);
 
 /**
 * @brief Encapsulates the Connection state
+*
+* FIXME: move to librina?
 */
-class Connection{
+class AppConnection{
 
 public:
-	rina::ApplicationProcessNamingInformation rinfo;
-	/* TODO: add CDAP auth details*/
+	rina::FlowInformation flow_info;
+	/* TODO: add CACEP auth details*/
 };
 
 /**
@@ -65,6 +67,13 @@ public:
 	void destroy(void);
 
 	/**
+	* Retrieve a **copy** of the AP naming information
+	*/
+	rina::ApplicationProcessNamingInformation getAPInfo(void){
+		return info;
+	}
+
+	/**
 	* Set RINA AP information
 	*/
 	void setAPInfo(rina::ApplicationProcessNamingInformation& _info){
@@ -72,23 +81,19 @@ public:
 	}
 
 	/**
-	* Set RINA AP information
+	* Add an NMS DIF
 	*/
 	void addNMSDIF(std::string& difName);
 
 
 	/**
-	* Set the Managers connection details
+	* Add a Manager connection
 	*
 	* TODO: improve this so that this method returns a handler, such that
 	* in the future connections to the Manager(s) can be removed and
 	* modified at runtime.
 	*/
-	void addManagerConnection(std::string& APName,
-				std::string APInstId = std::string(""),
-				std::string AEname = std::string(""),
-				std::string AEinst = std::string("")
-				/* TODO: add CDAP auth details*/);
+	void addManagerConnection(AppConnection& con);
 
 private:
 
@@ -102,10 +107,11 @@ private:
 	*/
 	std::list<std::string> nmsDIFs;
 
+
 	/**
 	* List of Manager connections
 	*/
-	std::list<Connection> connections;
+	std::list<AppConnection> connections;
 
 	ManagementAgent_();
 	~ManagementAgent_(void);

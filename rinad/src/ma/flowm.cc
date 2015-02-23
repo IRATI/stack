@@ -1,5 +1,6 @@
 #include "flowm.h"
 
+#include <algorithm>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -16,8 +17,13 @@
 namespace rinad{
 namespace mad{
 
+//General events timeout
 #define FLOWMANAGER_TIMEOUT_S 0
 #define FLOWMANAGER_TIMEOUT_NS 100000000
+
+//Flow allocation worker events
+#define FM_FALLOC_TIMEOUT_S 30
+#define FM_FALLOC_TIMEOUT_NS 0
 
 /**
 * @brief Worker abstract class encpasulates the main I/O loop
@@ -40,7 +46,44 @@ public:
 	//Trampoline
 	static void* run_trampoline(void* param){
 		Worker* w = static_cast<Worker*>(param);
-		return w->run(param);
+		return w->run(NULL);
+	}
+
+	/**
+	* Notify an event
+	*/
+	void notify(rina::IPCEvent** event){
+		//Do this in mutual exclusion
+		rina::AccessGuard lock(mutex);
+
+		//Check if this event is for this worker
+		if(std::find(pend_events.begin(), pend_events.end(),
+				(*event)->sequenceNumber) == pend_events.end())
+						return;
+
+		//Store and signal
+		events.push_back(*event);
+		cond.signal();
+		*event = NULL;
+	}
+
+	/**
+	* Wait for an event
+	*/
+	rina::IPCEvent* waitForEvent(long seconds=0, long nanoseconds=0){
+
+		cond.timedwait(seconds, nanoseconds);
+		rina::AccessGuard lock(mutex);
+		rina::IPCEvent* ev = *events.begin();
+		pend_events.pop_front();
+		return ev;
+	}
+
+	/**
+	* Set the id
+	*/
+	void setId(unsigned int _id){
+		id = _id;
 	}
 
 	/**
@@ -55,14 +98,29 @@ public:
 	}
 
 protected:
+	//Worker id
+	unsigned int id;
+
 	//Pthread context
 	pthread_t ctx;
+
+	//Mutex
+	rina::Lockable mutex;
+
+	//Pending events
+	std::list<rina::IPCEvent*> events;
+
+	//Pending transactions (sequence numbers)
+	std::list<unsigned int> pend_events;
+
+	//Condition variable
+	rina::ConditionVariable cond;
 
 	//Wether to stop the main I/O loop
 	volatile bool keep_running;
 
 	//Connection being handled
-	Connection con;
+	AppConnection con;
 };
 
 /**
@@ -74,7 +132,9 @@ public:
 	/**
 	* Constructor
 	*/
-	ActiveWorker(const Connection& _con){con = _con;};
+	ActiveWorker(const AppConnection& _con){
+		con = _con;
+	};
 
 	/**
 	* Run I/O loop
@@ -85,17 +145,101 @@ public:
 	* Destructor
 	*/
 	virtual ~ActiveWorker(){};
+
+protected:
+
+	/**
+	* Allocate a flow and return the Flow object or NULL
+	*/
+	rina::Flow* allocateFlow();
 };
 
-/*
-* Flow active worker
-*/
+
+//Allocate a flow
+rina::Flow* ActiveWorker::allocateFlow(){
+
+        unsigned int seqnum;
+	rina::Flow* flow = NULL;
+	rina::IPCEvent* event;
+        rina::AllocateFlowRequestResultEvent* rrevent;
+
+	//Setup necessary QoS
+	//TODO Quality of Service specification
+	//FIXME: Move to connection
+	rina::FlowSpecification qos;
+
+	{
+		//we must do this in mutual exclusion to prevent a race cond.
+		//between the next call and the storing of the seqnum
+		rina::AccessGuard lock(mutex);
+
+		//Perform the flow allocation
+		seqnum = rina::ipcManager->requestFlowAllocationInDIF(
+				ManagementAgent->getAPInfo(),
+				con.flow_info.remoteAppName,
+				con.flow_info.difName,
+				qos);
+
+		LOG_DBG("[w:%u] Waiting for event %u", id, seqnum);
+		pend_events.push_back(seqnum);
+	}
+
+	//Wait for the event
+	try{
+		event = waitForEvent(FM_FALLOC_TIMEOUT_S,
+							FM_FALLOC_TIMEOUT_NS);
+		LOG_DBG("[w:%u] Got event %u, waiting for %u", id,
+						event->sequenceNumber,
+						seqnum);
+	}catch(Exception& e){
+		//No reply... no flow
+		LOG_ERR("[w:%u] Failed to allocate a flow. Operation timed-out", id);
+		return NULL;
+	}
+
+	if(!event){
+		LOG_ERR("[w:%u] Failed to allocate a flow. Unknown error", id);
+		assert(0);
+		return NULL;
+	}
+
+	//Check if it is the right event for us
+	if(event->eventType == rina::ALLOCATE_FLOW_REQUEST_RESULT_EVENT
+                                && event->sequenceNumber == seqnum) {
+        	rrevent =
+		dynamic_cast<rina::AllocateFlowRequestResultEvent*>(event);
+	}else{
+		return NULL;
+	}
+
+	//Recover the flow
+        flow = rina::ipcManager->commitPendingFlow(rrevent->sequenceNumber,
+                                              rrevent->portId,
+                                              rrevent->difName);
+
+        if(!flow || flow->getPortId() == -1){
+		LOG_ERR("[w:%u] Failed to allocate a flow.", id);
+		return NULL;
+	}
+	LOG_INFO("[w:%u] Flow allocated, port id = %d", id, flow->getPortId());
+
+	return flow;
+}
+
+// Flow active worker
 void* ActiveWorker::run(void* param){
 
+	rina::Flow* flow;
+
+	//We don't use param
 	(void)param;
 
 	keep_running = true;
 	while(keep_running == true){
+
+		//Allocate the flow
+		flow = allocateFlow();
+		(void)flow;
 		//TODO: block for incoming messages
 		sleep(1);
 	}
@@ -138,11 +282,23 @@ void FlowManager_::runIOLoop(){
 					    dynamic_cast<rina::UnregisterApplicationResponseEvent*>(event)->result == 0);
 				break;
 
+
+			case rina::ALLOCATE_FLOW_REQUEST_RESULT_EVENT:
+				//Attempt first to notify the event to the
+				//active workers
+
+				notify(&event);
+				if(event){
+					assert(0);
+					delete event;
+				}
+				break;
 			case rina::FLOW_ALLOCATION_REQUESTED_EVENT:
-				flow = rina::ipcManager->allocateFlowResponse(*dynamic_cast<rina::FlowRequestEvent*>(event), 0, true);
-				LOG_INFO("New flow allocated [port-id = %d]", flow->getPortId());
-				(void)flow;
 				//TODO: add pasive worker
+				LOG_INFO("New flow allocated [port-id = %d]", flow->getPortId());
+
+				flow = rina::ipcManager->allocateFlowResponse(*dynamic_cast<rina::FlowRequestEvent*>(event), 0, true);
+				(void)flow;
 				break;
 
 			case rina::FLOW_DEALLOCATED_EVENT:
@@ -208,7 +364,7 @@ void FlowManager_::destroy(){
 }
 
 //Connect manager
-unsigned int FlowManager_::connectTo(const Connection& con){
+unsigned int FlowManager_::connectTo(const AppConnection& con){
 	Worker* w = new ActiveWorker(con);
 
 	//Launch worker and return handler
@@ -218,6 +374,23 @@ unsigned int FlowManager_::connectTo(const Connection& con){
 //Disconnect
 void FlowManager_::disconnectFrom(unsigned int worker_id){
 	joinWorker(worker_id);
+}
+
+//Notify
+void FlowManager_::notify(rina::IPCEvent** event){
+
+	std::map<unsigned int, Worker*>::iterator it;
+	//TODO: use rwlock
+	rina::AccessGuard lock(mutex);
+
+	for( it = workers.begin(); it!=workers.end(); ++it) {
+		//Notify current worker
+		it->second->notify(event);
+
+		//Check if this worker had consumed the event
+		if(!*event)
+			return;
+	}
 }
 
 //
@@ -233,7 +406,7 @@ unsigned int FlowManager_::spawnWorker(Worker** w){
 	unsigned int id;
 	std::stringstream msg;
 
-	//Scoped lock
+	//Scoped lock TODO use rwlock
 	rina::AccessGuard lock(mutex);
 
 	if(!*w){
@@ -260,6 +433,9 @@ unsigned int FlowManager_::spawnWorker(Worker** w){
 		msg <<std::string("ERROR: Could not add the worker state to 'workers' FlowManager internal out of memory? Dropping worker: ")<<id<<std::endl;
 		goto SPAWN_ERROR;
 	}
+
+	//Set the unique identifier
+	(*w)->setId(id);
 
 	//Spawn pthread
 	if(pthread_create((*w)->getPthreadContext(), NULL,

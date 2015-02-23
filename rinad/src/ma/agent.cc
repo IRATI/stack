@@ -103,12 +103,15 @@ void ManagementAgent_::reg(){
 void ManagementAgent_::connect(void){
 
 	unsigned int w_id;
-	std::list<Connection>::const_iterator it;
+	std::list<AppConnection>::iterator it;
 
 	for(it=connections.begin(); it!=connections.end(); ++it) {
 		//Nice trace
 		LOG_INFO("Connecting to manager application name '%s'",
-						it->rinfo.processName.c_str());
+			it->flow_info.remoteAppName.processName.c_str());
+
+		//Set our application name information
+		it->flow_info.localAppName = info;
 
 		//Instruct flow manager to bootstrap an active connection
 		//worker
@@ -129,20 +132,7 @@ void ManagementAgent_::addNMSDIF(std::string& difName){
 }
 
 //Add Manager connection
-void ManagementAgent_::addManagerConnection(std::string& APName,
-						std::string APInstId,
-						std::string AEname,
-						std::string AEinst
-					/* TODO: add CDAP auth details*/){
-
-	Connection con;
-
-	//TODO make it copyable..
-	con.rinfo.processName = APName;
-	con.rinfo.processInstance = APInstId;
-	con.rinfo.entityName = AEname;
-	con.rinfo.entityInstance = AEinst;
-
+void ManagementAgent_::addManagerConnection(AppConnection& con){
 	connections.push_back(con);
 }
 
