@@ -22,7 +22,7 @@ namespace mad{
 #define FLOWMANAGER_TIMEOUT_NS 100000000
 
 //Flow allocation worker events
-#define FM_FALLOC_TIMEOUT_S 30
+#define FM_FALLOC_TIMEOUT_S 10
 #define FM_FALLOC_TIMEOUT_NS 0
 
 /**
@@ -358,7 +358,6 @@ void FlowManager_::destroy(){
 		joinWorker(it->first);
 
 		//Remove
-		workers.erase(to_delete);
 		it++;
 	}
 }
