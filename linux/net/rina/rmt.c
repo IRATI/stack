@@ -81,8 +81,10 @@ static struct rmt_n1_port * n1_port_create(port_id_t id,
         return tmp;
 }
 
-static int n1_port_destroy(struct rmt_n1_port * n1p)
+static int n1_port_destroy(struct rmt_n1_port * n1p, bool unbind)
 {
+        struct ipcp_instance * n1_ipcp;
+
         ASSERT(n1p);
         ASSERT(n1p->queue);
 
@@ -91,6 +93,26 @@ static int n1_port_destroy(struct rmt_n1_port * n1p)
         hash_del(&n1p->hlist);
 
         if (n1p->queue) rfifo_destroy(n1p->queue, (void (*)(void *)) pdu_destroy);
+
+        n1_ipcp = n1p->n1_ipcp;
+        if (!n1_ipcp)
+                LOG_ERR("N-1 port in rmt has not n1_ipcp");
+
+        ASSERT(n1_ipcp);
+        ASSERT(n1_ipcp->ops);
+        ASSERT(n1_ipcp->data);
+        ASSERT(n1_ipcp->ops->flow_unbinding_user_ipcp);
+
+        if (unbind                              &&
+            n1_ipcp                             &&
+            n1_ipcp->ops                        &&
+            n1_ipcp->data                       &&
+            n1_ipcp->ops->flow_unbinding_user_ipcp) {
+                if (n1_ipcp->ops->flow_unbinding_user_ipcp(n1_ipcp->data,
+                                                           n1p->port_id)) {
+                        LOG_ERR("Could not unbind IPCP as user of an N-1 flow");
+                }
+        }
         rkfree(n1p);
 
         return 0;
@@ -116,7 +138,7 @@ static struct n1pmap * n1pmap_create(void)
         return tmp;
 }
 
-static int n1pmap_destroy(struct n1pmap * m)
+static int n1pmap_destroy(struct n1pmap * m, bool unbind)
 {
         struct rmt_n1_port * entry;
         struct hlist_node *  tmp;
@@ -127,7 +149,7 @@ static int n1pmap_destroy(struct n1pmap * m)
         hash_for_each_safe(m->n1_ports, bucket, tmp, entry, hlist) {
                 ASSERT(entry);
 
-                if (n1_port_destroy(entry)) {
+                if (n1_port_destroy(entry, unbind)) {
                         LOG_ERR("Could not destroy entry %pK", entry);
                         return -1;
                 }
@@ -276,13 +298,13 @@ int rmt_destroy(struct rmt * instance)
         }
 
         if (instance->ingress.n1_ports)
-                n1pmap_destroy(instance->ingress.n1_ports);
+                n1pmap_destroy(instance->ingress.n1_ports, false);
 
         tasklet_kill(&instance->ingress.ingress_tasklet);
         pft_cache_fini(&instance->ingress.cache);
 
         if (instance->egress.n1_ports)
-                n1pmap_destroy(instance->egress.n1_ports);
+                n1pmap_destroy(instance->egress.n1_ports, true);
         tasklet_kill(&instance->egress.egress_tasklet);
         pft_cache_fini(&instance->egress.cache);
 
@@ -836,7 +858,7 @@ static int rmt_n1_port_send_delete(struct rmt * instance,
                 return -1;
         }
 
-        return n1_port_destroy(q);
+        return n1_port_destroy(q, false);
 }
 
 static int __queue_recv_add(struct rmt * instance,
@@ -910,7 +932,7 @@ static int rmt_n1_port_recv_delete(struct rmt * instance,
                 return -1;
         }
 
-        return n1_port_destroy(q);
+        return n1_port_destroy(q, false);
 }
 
 int rmt_n1port_bind(struct rmt * instance,

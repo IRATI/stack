@@ -356,6 +356,32 @@ static int normal_flow_unbinding_ipcp(struct ipcp_instance_data * user_data,
         return 0;
 }
 
+static int normal_flow_unbinding_user_ipcp(struct ipcp_instance_data * data,
+                                           port_id_t                   pid)
+{
+        struct normal_flow * flow;
+
+        ASSERT(data);
+
+        spin_lock(&data->lock);
+        flow = find_flow(data, pid);
+        if (!flow || !flow->active) {
+                spin_unlock(&data->lock);
+                LOG_ERR("Could not find flow with port %d to unbind user IPCP",
+                        pid);
+                return -1;
+        }
+
+        if (efcp_container_unbind_user_ipcp(data->efcpc, flow->active)){
+                spin_unlock(&data->lock);
+                return -1;
+        }
+
+        spin_unlock(&data->lock);
+
+        return 0;
+}
+
 static int connection_destroy_request(struct ipcp_instance_data * data,
                                       cep_id_t                    src_cep_id)
 {
@@ -923,6 +949,7 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .flow_deallocate           = normal_deallocate,
         .flow_binding_ipcp         = ipcp_flow_binding,
         .flow_unbinding_ipcp       = normal_flow_unbinding_ipcp,
+        .flow_unbinding_user_ipcp  = normal_flow_unbinding_user_ipcp,
 
         .application_register      = NULL,
         .application_unregister    = NULL,

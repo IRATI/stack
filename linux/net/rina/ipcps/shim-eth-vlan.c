@@ -337,6 +337,25 @@ static int unbind_and_destroy_flow(struct ipcp_instance_data * data,
         return 0;
 }
 
+static int eth_vlan_unbind_user_ipcp(struct ipcp_instance_data * data,
+                                     port_id_t                   id)
+{
+        struct shim_eth_flow * flow;
+        unsigned long          flags;
+
+        flow = find_flow(data, id);
+        if (!flow)
+                return -1;
+
+        spin_lock_irqsave(&data->lock, flags);
+        if (flow->user_ipcp) {
+                flow->user_ipcp = NULL;
+        }
+        spin_unlock_irqrestore(&data->lock, flags);
+
+        return 0;
+}
+
 static void rinarp_resolve_handler(void *             opaque,
                                    const struct gpa * dest_pa,
                                    const struct gha * dest_ha)
@@ -1359,6 +1378,7 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .flow_deallocate           = eth_vlan_flow_deallocate,
         .flow_binding_ipcp         = NULL,
         .flow_unbinding_ipcp       = NULL,
+        .flow_unbinding_user_ipcp  = eth_vlan_unbind_user_ipcp,
 
         .application_register      = eth_vlan_application_register,
         .application_unregister    = eth_vlan_application_unregister,
