@@ -663,12 +663,47 @@ void parse_dif_configs(const Json::Value   & root,
                                                 .asUInt();
 
                                         apc.organization =
-                                                addrp[j].get("organization",
-                                                             string())
-                                                .asString();
+                                        		addrp[j].get("organization",
+                                        				string())
+                                        				.asString();
 
                                         props.addressPrefixes.push_back(apc);
                                 }
+                        }
+
+                        // rina::EnrollmentTaskConfiguration
+                        // enrollmentTaskConfiguration;
+                        Json::Value etc =
+                        		dif_configs[i]["enrollmentTaskConfiguration"];
+                        if (etc != 0) {
+                        	rina::EnrollmentTaskConfiguration et;
+
+                        	et.enrollment_timeout_in_ms_ =
+                        			etc.get("enrollTimeoutInMs",
+                        					et.enrollment_timeout_in_ms_)
+                        					.asInt();
+
+                        	et.watchdog_period_in_ms_ =
+                        			etc.get("watchdogPeriodInMs",
+                        					et.watchdog_period_in_ms_)
+                        					.asInt();
+
+                        	et.declared_dead_interval_in_ms_ =
+                        			etc.get("declaredDeadIntervalInMs",
+                        					et.declared_dead_interval_in_ms_)
+                        					.asInt();
+
+                        	et.max_number_of_enrollment_attempts_ =
+                        			etc.get("maxEnrollmentRetries",
+                        					et.max_number_of_enrollment_attempts_)
+                        					.asInt();
+
+                        	et.neighbor_enroller_period_in_ms_ =
+                        			etc.get("neighborsEnrollerPeriodInMs",
+                        					et.neighbor_enroller_period_in_ms_)
+                        					.asInt();
+
+                        	props.etConfiguration = et;
                         }
                 }
 
@@ -817,38 +852,6 @@ void parse_local_conf(const Json::Value &         root,
         if (local_conf != 0) {
                 local.consolePort = local_conf
                         .get("consolePort", local.consolePort)
-                        .asInt();
-                local.cdapTimeoutInMs = local_conf
-                        .get("cdapTimeoutInMs",
-                             local.cdapTimeoutInMs)
-                        .asInt();
-                local.enrollmentTimeoutInMs = local_conf
-                        .get("enrollmentTimeoutInMs",
-                             local.enrollmentTimeoutInMs)
-                        .asInt();
-                local.maxEnrollmentRetries = local_conf
-                        .get("maxEnrollmentRetries",
-                             local.maxEnrollmentRetries)
-                        .asInt();
-                local.flowAllocatorTimeoutInMs = local_conf
-                        .get("flowAllocatorTimeoutInMs",
-                             local.flowAllocatorTimeoutInMs)
-                        .asInt();
-                local.watchdogPeriodInMs = local_conf
-                        .get("watchdogPeriodInMs",
-                             local.watchdogPeriodInMs)
-                        .asInt();
-                local.declaredDeadIntervalInMs = local_conf
-                        .get("declaredDeadIntervalInMs",
-                             local.declaredDeadIntervalInMs)
-                        .asInt();
-                local.neighborsEnrollerPeriodInMs = local_conf
-                        .get("neighborsEnrollerPeriodInMs",
-                             local.neighborsEnrollerPeriodInMs)
-                        .asInt();
-                local.lengthOfFlowQueues = local_conf
-                        .get("lengthOfFlowQueues",
-                             local.lengthOfFlowQueues)
                         .asInt();
                 local.installationPath = local_conf
                         .get("installationPath",

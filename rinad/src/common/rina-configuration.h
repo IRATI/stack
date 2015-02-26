@@ -112,6 +112,7 @@ struct DIFProperties {
         rina::RMTConfiguration rmtConfiguration;
         std::map<std::string, std::string> policies;
         std::map<std::string, std::string> policyParameters;
+        rina::EnrollmentTaskConfiguration etConfiguration;
 
         /* Only for normal DIFs */
         NMinusOneFlowsConfiguration nMinusOneFlowsConfiguration;
@@ -174,54 +175,6 @@ struct LocalConfiguration {
          */
         int consolePort;
 
-        /*
-         * The maximum time the CDAP state machine of a session will wait
-         * for connect or release responses (in ms)
-         */
-        int cdapTimeoutInMs;
-
-        /*
-         * The maximum time to wait between steps of the enrollment
-         * sequence (in ms)
-         */
-        int enrollmentTimeoutInMs;
-
-        /*
-         * The maximum number of attempts to re-enroll with a neighbor
-         * with whom we've lost connectivity
-         */
-        int maxEnrollmentRetries;
-
-        /*
-         * The maximum time to wait to complete the flow allocation request
-         * once the process has been initiated (in ms)
-         */
-        int flowAllocatorTimeoutInMs;
-
-        /*
-         * The period of execution of the watchdog. The watchdog send an
-         * M_READ message over all the active CDAP connections to make
-         * sure they are still alive.
-         */
-        int watchdogPeriodInMs;
-
-        /*
-         * The period after which, if no keepAlive message from a neighbor
-         * IPC process has been received, it will be declared dead (and
-         * adequate action will be taken)
-         */
-        int declaredDeadIntervalInMs;
-
-        /*
-         * The period of execution of the neighbors enroller. This task
-         * looks for known neighbors in the RIB. If we're not enrolled to
-         * them, he is going to try to initiate the enrollment
-         */
-        int neighborsEnrollerPeriodInMs;
-
-        /* The length of Flow queues */
-        int lengthOfFlowQueues;
-
         /* The path to the RINA binaries installation in the system */
         std::string installationPath;
 
@@ -234,15 +187,7 @@ struct LocalConfiguration {
         std::string toString() const;
 
         LocalConfiguration() :
-                        consolePort(32766),
-                        cdapTimeoutInMs(10000),
-                        enrollmentTimeoutInMs(10000),
-                        maxEnrollmentRetries(3),
-                        flowAllocatorTimeoutInMs(15000),
-                        watchdogPeriodInMs(60000),
-                        declaredDeadIntervalInMs(120000),
-                        neighborsEnrollerPeriodInMs(10000),
-                        lengthOfFlowQueues(10) { }
+                        consolePort(32766){ }
 };
 
 /*
