@@ -114,16 +114,6 @@ string LocalConfiguration::toString() const
         ss << "\tLibrary path: " << libraryPath << endl;
         ss << "\tLog path: " << logPath << endl;
         ss << "\tConsole port: " << consolePort << endl;
-        ss << "\tCDAP timeout in ms: " << cdapTimeoutInMs << endl;
-        ss << "\tEnrollment timeout in ms: " <<
-                        enrollmentTimeoutInMs << endl;
-        ss << "\tFlow allocator timeout in ms:  " <<
-                        flowAllocatorTimeoutInMs << endl;
-        ss << "\tWatchdog period in ms: " << watchdogPeriodInMs << endl;
-        ss << "\tDeclared dead interval in ms: " <<
-                        declaredDeadIntervalInMs << endl;
-        ss << "\tNeighbors enroller period in ms: " <<
-                        neighborsEnrollerPeriodInMs << endl;
 
         return ss.str();
 }
