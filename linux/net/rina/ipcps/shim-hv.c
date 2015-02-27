@@ -476,9 +476,10 @@ shim_hv_flow_deallocate_common(struct ipcp_instance_data *priv,
         }
 
         user_ipcp = priv->vmpi.channels[ch].user_ipcp;
-        ASSERT(user_ipcp);
-        user_ipcp->ops->flow_unbinding_ipcp(user_ipcp->data,
-                                            port_id);
+        if(user_ipcp) {
+                user_ipcp->ops->flow_unbinding_ipcp(user_ipcp->data,
+                                                    port_id);
+        }
         priv->vmpi.channels[ch].state = CHANNEL_STATE_NULL;
         priv->vmpi.channels[ch].port_id = port_id_bad();
         priv->vmpi.channels[ch].user_ipcp = NULL;
@@ -523,6 +524,28 @@ shim_hv_flow_deallocate(struct ipcp_instance_data *priv, port_id_t port_id)
 
         return ret;
 }
+
+static int shim_hv_unbind_user_ipcp(struct ipcp_instance_data * priv,
+                                    port_id_t                   port_id)
+{
+        int ret = 0;
+        unsigned int ch;
+
+        if (unlikely(!priv->assigned)) {
+                LOG_ERR("%s: IPC process not ready", __func__);
+                return -ENOENT;
+        }
+
+        mutex_lock(&priv->vc_lock);
+
+        ch = port_id_to_channel(priv, port_id);
+        if (ch)
+                priv->vmpi.channels[ch].user_ipcp = NULL;
+
+        mutex_unlock(&priv->vc_lock);
+        return 0;
+}
+
 
 /* Handler invoked when receiving an ALLOCATE_REQ message from the control
  * channel.
@@ -1092,6 +1115,8 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .flow_allocate_response    = shim_hv_flow_allocate_response,
         .flow_deallocate           = shim_hv_flow_deallocate,
         .flow_binding_ipcp         = NULL,
+        .flow_unbinding_ipcp       = NULL,
+        .flow_unbinding_user_ipcp  = shim_hv_unbind_user_ipcp,
 
         .application_register      = shim_hv_application_register,
         .application_unregister    = shim_hv_application_unregister,

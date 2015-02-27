@@ -198,6 +198,28 @@ static struct efcp * efcp_create(void)
         return instance;
 }
 
+int efcp_container_unbind_user_ipcp(struct efcp_container * efcpc,
+                                    cep_id_t cep_id)
+{
+        struct efcp * efcp;
+        ASSERT(efcpc);
+
+        if (!is_cep_id_ok(cep_id)) {
+                LOG_ERR("Bad cep-id, cannot retrieve efcp instance");
+                return -1;
+        }
+
+        efcp = efcp_imap_find(efcpc->instances, cep_id);
+        if (efcp) {
+                LOG_ERR("There is no EFCP bound to this cep-id %d", cep_id);
+                return -1;
+        }
+
+        efcp->user_ipcp = NULL;
+        return 0;
+}
+EXPORT_SYMBOL(efcp_container_unbind_user_ipcp);
+
 static int efcp_destroy(struct efcp * instance)
 {
         if (!instance) {

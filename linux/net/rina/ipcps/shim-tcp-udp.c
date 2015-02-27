@@ -407,16 +407,37 @@ static int unbind_and_destroy_flow(struct ipcp_instance_data * data,
         ASSERT(data);
 
         ASSERT(flow);
-        ASSERT(flow->user_ipcp);
-        ASSERT(flow->user_ipcp->ops);
-        ASSERT(flow->user_ipcp->ops->flow_unbinding_ipcp);
 
-        flow->user_ipcp->ops->flow_unbinding_ipcp(flow->user_ipcp->data,
-                                                  flow->port_id);
+        if (flow->user_ipcp) {
+                ASSERT(flow->user_ipcp->ops);
+                ASSERT(flow->user_ipcp->ops->flow_unbinding_ipcp);
+
+                flow->user_ipcp->ops->flow_unbinding_ipcp(flow->user_ipcp->data,
+                                                          flow->port_id);
+        }
+
         if (flow_destroy(data, flow)) {
                 LOG_ERR("Failed to destroy a flow");
                 return -1;
         }
+
+        return 0;
+}
+
+static int tcp_udp_unbind_user_ipcp(struct ipcp_instance_data * data,
+                                    port_id_t                   id)
+{
+        struct shim_tcp_udp_flow * flow;
+
+        flow = find_flow_by_port(data, id);
+        if (!flow)
+                return -1;
+
+        spin_lock(&data->lock);
+        if (flow->user_ipcp) {
+                flow->user_ipcp = NULL;
+        }
+        spin_unlock(&data->lock);
 
         return 0;
 }
@@ -2385,6 +2406,8 @@ static struct ipcp_instance_ops tcp_udp_instance_ops = {
         .flow_allocate_response    = tcp_udp_flow_allocate_response,
         .flow_deallocate           = tcp_udp_flow_deallocate,
         .flow_binding_ipcp         = NULL,
+        .flow_unbinding_ipcp       = NULL,
+        .flow_unbinding_user_ipcp  = tcp_udp_unbind_user_ipcp,
 
         .application_register      = tcp_udp_application_register,
         .application_unregister    = tcp_udp_application_unregister,

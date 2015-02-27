@@ -741,6 +741,9 @@ static struct ipcp_instance_ops dummy_instance_ops = {
         .flow_allocate_response    = dummy_flow_allocate_response,
         .flow_deallocate           = dummy_flow_deallocate,
         .flow_binding_ipcp         = NULL,
+        .flow_unbinding_ipcp       = NULL,
+        /* NULL because shim-dummy is not updated */
+        .flow_unbinding_user_ipcp  = NULL,
 
         .application_register      = dummy_application_register,
         .application_unregister    = dummy_application_unregister,
