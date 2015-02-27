@@ -572,6 +572,7 @@ IPCManager::assign_to_dif(rina::IPCProcess * ipcp,
                         dif_config.pduft_generator_configuration_ =
                                 dif_props.pdufTableGeneratorConfiguration;
                         dif_config.rmt_configuration_ = dif_props.rmtConfiguration;
+                        dif_config.et_configuration_ = dif_props.etConfiguration;
                         dif_config.set_address(address);
                 }
 

@@ -4,13 +4,7 @@
         "libraryPath": "/usr/local/irati/lib",
     	"logPath": "/usr/local/irati/var/log",
         "consolePort": 32766,
-        "cdapTimeoutInMs": 10000,
-        "enrollmentTimeoutInMs": 10000,
-        "flowAllocatorTimeoutInMs": 15000,
-        "watchdogPeriodInMs": 60000,
-        "declaredDeadIntervalInMs": 120000,
-        "neighborsEnrollerPeriodInMs": 10000,
-        "lengthOfFlowQueues": 10
+        "cdapTimeoutInMs": 10000
     },
     "applicationToDIFMappings": [
         {
@@ -119,7 +113,14 @@
                     "waitUntilAgeIncrement": 997,
                     "routingAlgorithm": "Dijkstra"
                 }
-            }
+            },
+     		"enrollmentTaskConfiguration" : {
+       		    "enrollTimeoutInMs" : 10000,
+        		"watchdogPeriodInMs" : 30000,
+        		"declaredDeadIntervalInMs" : 120000,
+        		"neighborsEnrollerPeriodInMs" : 30000,
+        		"maxEnrollmentRetries" : 3
+     		}
         }
     ]
 }
