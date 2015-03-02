@@ -88,7 +88,7 @@ int wrapped_main(int argc, char** argv)
                                                        "server-apn",
                                                        "Application process name for the server",
                                                        false,
-                                                       "rina.apps.echotime.server",
+                                                       "rina.apps.cdapecho.server",
                                                        "string");
                 TCLAP::ValueArg<string> server_api_arg("",
                                                        "server-api",
@@ -100,7 +100,7 @@ int wrapped_main(int argc, char** argv)
                                                        "client-apn",
                                                        "Application process name for the client",
                                                        false,
-                                                       "rina.apps.echotime.client",
+                                                       "rina.apps.cdapecho.client",
                                                        "string");
                 TCLAP::ValueArg<string> client_api_arg("",
                                                        "client-api",
