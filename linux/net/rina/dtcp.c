@@ -974,6 +974,11 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
 
 struct dtcp_ps * dtcp_ps_get(struct dtcp * dtcp)
 {
+        if (!dtcp) {
+                LOG_ERR("Could not retrieve DTCP PS, NULL instance passed");
+                return NULL;
+        }
+
         return container_of(rcu_dereference(dtcp->base.ps),
                             struct dtcp_ps, base);
 }

@@ -554,12 +554,12 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         struct pdu *             pdu;
         bool                     in_order_del;
         bool                     incomplete_del;
-        bool                     rtx_ctrl;
+        bool                     rtx_ctrl = false;
         seq_num_t                max_sdu_gap;
         timeout_t                a;
         struct seq_queue_entry * pos, * n;
-        struct dtp_ps * ps;
-        struct dtcp_ps * dtcp_ps;
+        struct dtp_ps *          ps;
+        struct dtcp_ps *         dtcp_ps;
         seq_num_t                ret;
         unsigned long            flags;
         /*struct rqueue *          to_pos*/
@@ -585,8 +585,11 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         in_order_del   = ps->in_order_delivery;
         incomplete_del = ps->incomplete_delivery;
         max_sdu_gap    = ps->max_sdu_gap;
-        dtcp_ps = dtcp_ps_get(dtcp);
-        rtx_ctrl = dtcp_ps->rtx_ctrl;
+
+        if (dtcp) {
+                dtcp_ps = dtcp_ps_get(dtcp);
+                rtx_ctrl = dtcp_ps->rtx_ctrl;
+        }
         rcu_read_unlock();
 
         /* FIXME: Invoke delimiting */
@@ -1296,7 +1299,7 @@ int dtp_receive(struct dtp * instance,
         timeout_t        a;
         seq_num_t        LWE;
         bool             in_order;
-        bool             rtx_ctrl;
+        bool             rtx_ctrl = false;
         seq_num_t        max_sdu_gap;
         unsigned long    flags;
         /*struct rqueue *       to_post;*/
@@ -1345,8 +1348,10 @@ int dtp_receive(struct dtp * instance,
                           struct dtp_ps, base);
         in_order    = ps->in_order_delivery;
         max_sdu_gap = ps->max_sdu_gap;
-        dtcp_ps = dtcp_ps_get(dtcp);
-        rtx_ctrl = dtcp_ps->rtx_ctrl;
+        if (dtcp) {
+                dtcp_ps = dtcp_ps_get(dtcp);
+                rtx_ctrl = dtcp_ps->rtx_ctrl;
+        }
         rcu_read_unlock();
 #if DTP_INACTIVITY_TIMERS_ENABLE
         /* Stop ReceiverInactivityTimer */
