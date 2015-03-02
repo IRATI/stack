@@ -24,10 +24,12 @@
 #ifdef __cplusplus
 
 #include <librina/cdap.h>
-
+#include <librina/rib.h>
 
 /// @class Manager
-class Manager {
+class Manager
+{
+ public:
   Manager();
   ~Manager();
 
@@ -41,17 +43,21 @@ class Manager {
 
 /// @class CACEPStateMachine
 /// @brief The CACEP state machine
-class CACEPStateMachine {
-  enum Operation {
+class CACEPStateMachine
+{
+ public:
+  enum Operation
+  {
     SENT,
     RECEIVED
   };
-  enum State {
+  enum State
+  {
     NO_CONNECTION,
     WAIT_CONNECT_RESPONSE,
     CONNECT_REQUEST_RECEIVED,
     CONNECTED
-  }; ///< Possible states of the CACEP STATE Machines
+  };  ///< Possible states of the CACEP STATE Machines
 
   /// A Default Constructor
   CACEPStateMachine();
@@ -66,14 +72,15 @@ class CACEPStateMachine {
   bool changeState(rina::CDAPMessage::Opcode op_code, Operation op);
 
  private:
-  State cacep_state_; ///< The current state of the state machine.
+  State cacep_state_;  ///< The current state of the state machine.
 };
 
 class CACEPManagerFactory;
 
 /// @class CACEPManager
 /// Manages the CACEP between the MA and one Manager
-class CACEPManager: public rina::IApplicationConnectionHandler {
+class CACEPManager : public rina::IApplicationConnectionHandler
+{
   friend class CACEPManagerFactory;
  public:
   /// Initiate the CACEP.
@@ -116,10 +123,12 @@ class CACEPManager: public rina::IApplicationConnectionHandler {
   const Manager &manager_;
 };
 
-class CACEPManagerFactory {
+class CACEPManagerFactory
+{
  public:
   ~CACEPManagerFactory();
-  CACEPStateMachine::State getInstance(const Manager &manager, CACEPManager *cacep_manager);
+  CACEPStateMachine::State getInstance(const Manager &manager,
+                                       CACEPManager *cacep_manager);
   void destroyInstance(const Manager &manager);
   void destroyInstance(CACEPManager *cacep_manager);
  private:
@@ -128,9 +137,11 @@ class CACEPManagerFactory {
 
 /// @class EnrollmentStateMachine
 /// The Enrollment state machine
-class EnrollmentStateMachine {
+class EnrollmentStateMachine
+{
  public:
-  enum State {
+  enum State
+  {
     NO_ENROLLED,
     WAIT_START_RESPONSE,
     START_REQUEST_RECEIVED,
@@ -139,7 +150,7 @@ class EnrollmentStateMachine {
     WAIT_STOP_RESPONSE,
     STOP_REQUEST_RECEIVED,
     ENROLLED
-  };///< Possible states of the Enrollment STATE Machines
+  };  ///< Possible states of the Enrollment STATE Machines
 
   /// A default constructor.
   EnrollmentStateMachine();
@@ -154,12 +165,13 @@ class EnrollmentStateMachine {
   bool changeState(rina::CDAPMessage::Opcode op_code);
 
  private:
-  State enrollment_state_;///< The current state of the state machine.
+  State enrollment_state_;  ///< The current state of the state machine.
 };
 
 /// @class EnrollmentManager
 /// Manages the Enrollment between the MA and one Manager
-class EnrollmentManager {
+class EnrollmentManager
+{
  public:
   /// A default constructor
   EnrollmentManager();
@@ -201,7 +213,8 @@ class EnrollmentManager {
 
 /// @class ConmunicationManager
 /// Manages the Enrollment between the MA and one Manager.
-class CommunicationManager {
+class CommunicationManager
+{
  public:
   /// A default constructor.
   CommunicationManager();
@@ -211,8 +224,8 @@ class CommunicationManager {
   bool initiateCommunicationSession();
 
  private:
-  CACEPManager cacep_manager_; ///< The CACDEP manager.
-  EnrollmentManager enrollment_manager_; /// the enrollment manager.
+  CACEPManager *cacep_manager_;  ///< The CACEP manager.
+  EnrollmentManager enrollment_manager_;  /// the enrollment manager.
   Manager neighbor_;
 };
 #endif
