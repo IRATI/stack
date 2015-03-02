@@ -41,6 +41,10 @@ void ConfManager_::configure(){
 	ManagementAgent->setAPInfo(info);
 	ManagementAgent->addNMSDIF(difName); //TODO read and do for all DIFs
 
+
+	//Configure Manager connections
+	std::string ManagerAPname("Manager");
+	ManagementAgent->addManagerConnection(ManagerAPname);
 	//TODO
 }
 
