@@ -147,13 +147,6 @@ void Server::serveEchoFlow(Flow* flow)
         delete [] buffer;
 }
 
-static unsigned long
-timespec_diff_us(const struct timespec& before, const struct timespec& later)
-{
-        return ((later.tv_sec - before.tv_sec) * 1000000000 +
-                        (later.tv_nsec - before.tv_nsec))/1000;
-}
-
 void Server::destroyFlow(sigval_t val)
 {
         Flow *flow = (Flow *)val.sival_ptr;

@@ -25,7 +25,7 @@
 #include <time.h>
 #include <signal.h>
 
-#include "application.h"
+#include "cdap-echo-application.h"
 
 class Server: public Application
 {
