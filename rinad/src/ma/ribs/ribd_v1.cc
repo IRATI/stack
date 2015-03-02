@@ -23,47 +23,47 @@ RIBDaemonv1::RIBDaemonv1 (const rina::RIBSchema *schema): rina::RIBDaemon(schema
 {
 	try
 	{
-		addRIBObject(new SimplestRIBObj(this, "ROOT", "root"));
-		addRIBObject(new SimpleRIBObj(this, "DAF", "root, dafID", 1));
-		addRIBObject(new SimpleRIBObj(this, "ComputingSystem", "root, computingSystemID", 1));
-		addRIBObject(new SimpleRIBObj(this, "ProcessingSystem", "root, computingSystemID = 1, processingSystemID", 1));
-		addRIBObject(new SimplestRIBObj(this, "Software", "root, computingSystemID = 1, processingSystemID=1, software"));
-		addRIBObject(new SimplestRIBObj(this, "Hardware", "root, computingSystemID = 1, processingSystemID=1, hardware"));
-		addRIBObject(new SimplestRIBObj(this, "KernelApplicationProcess", "root, computingSystemID = 1, "
+		addRIBObject(new SimpleRIBObj(this, "ROOT", "root"));
+		addRIBObject(new SimpleRIBObj(this, "DAF", "root, dafID=1"));
+		addRIBObject(new SimpleRIBObj(this, "ComputingSystem", "root, computingSystemID=1"));
+		addRIBObject(new SimpleRIBObj(this, "ProcessingSystem", "root, computingSystemID = 1, processingSystemID=1"));
+		addRIBObject(new SimpleRIBObj(this, "Software", "root, computingSystemID = 1, processingSystemID=1, software"));
+		addRIBObject(new SimpleRIBObj(this, "Hardware", "root, computingSystemID = 1, processingSystemID=1, hardware"));
+		addRIBObject(new SimpleRIBObj(this, "KernelApplicationProcess", "root, computingSystemID = 1, "
 				"processingSystemID=1, kernelApplicationProcess"));
-		addRIBObject(new SimplestRIBObj(this, "OSApplicationProcess", "root, computingSystemID = 1, "
+		addRIBObject(new SimpleRIBObj(this, "OSApplicationProcess", "root, computingSystemID = 1, "
 				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess"));
 		addRIBObject(new SimpleRIBObj(this, "ManagementAgent", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID", 1));
+				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID=1"));
 		// IPCManagement branch
-		addRIBObject(new SimplestRIBObj(this, "IPCManagement", "root, computingSystemID = 1, "
+		addRIBObject(new SimpleRIBObj(this, "IPCManagement", "root, computingSystemID = 1, "
 				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement"));
-		addRIBObject(new SimplestRIBObj(this, "IPCResourceManager", "root, computingSystemID = 1, "
+		addRIBObject(new SimpleRIBObj(this, "IPCResourceManager", "root, computingSystemID = 1, "
 				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
 				"ipcResourceManager"));
-		addRIBObject(new SimplestRIBObj(this, "UnderlayingFlows", "root, computingSystemID = 1, "
+		addRIBObject(new SimpleRIBObj(this, "UnderlayingFlows", "root, computingSystemID = 1, "
 				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
 				"ipcResourceManager, underlayingFlows"));
-		addRIBObject(new SimplestRIBObj(this, "UnderlayingDIFs", "root, computingSystemID = 1, "
+		addRIBObject(new SimpleRIBObj(this, "UnderlayingDIFs", "root, computingSystemID = 1, "
 				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
 				"ipcResourceManager, underlayingDIFs"));
-		addRIBObject(new SimplestRIBObj(this, "QueryDIFAllocator", "root, computingSystemID = 1, "
+		addRIBObject(new SimpleRIBObj(this, "QueryDIFAllocator", "root, computingSystemID = 1, "
 				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
 				"ipcResourceManager, queryDIFAllocator"));
-		addRIBObject(new SimplestRIBObj(this, "UnderlayingRegistrations", "root, computingSystemID = 1, "
+		addRIBObject(new SimpleRIBObj(this, "UnderlayingRegistrations", "root, computingSystemID = 1, "
 				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
 				"ipcResourceManager, underlayingRegistrations"));
-		addRIBObject(new SimplestRIBObj(this, "SDUPRotection", "root, computingSystemID = 1, "
+		addRIBObject(new SimpleRIBObj(this, "SDUPRotection", "root, computingSystemID = 1, "
 				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
 				"sduProtection"));
 		// RIBDaemon branch
-		addRIBObject(new SimplestRIBObj(this, "RIBDaemon", "root, computingSystemID = 1, "
+		addRIBObject(new SimpleRIBObj(this, "RIBDaemon", "root, computingSystemID = 1, "
 				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ribDaemon"));
-		addRIBObject(new SimplestRIBObj(this, "Discriminators", "root, computingSystemID = 1, "
+		addRIBObject(new SimpleRIBObj(this, "Discriminators", "root, computingSystemID = 1, "
 				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ribDaemon"
 				", discriminators"));
 		// DIFManagement
-		addRIBObject(new SimplestRIBObj(this, "DIFManagement", "root, computingSystemID = 1, "
+		addRIBObject(new SimpleRIBObj(this, "DIFManagement", "root, computingSystemID = 1, "
 				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, difManagement"));
 	}
 	catch(Exception &e1)
@@ -86,21 +86,11 @@ void RIBDaemonv1::sendMessageSpecific(const rina::RemoteProcessId &remote_proc,
 }
 
 
-//CLASS SimplestRIBObj
-SimplestRIBObj::SimplestRIBObj(rina::IRIBDaemon *rib_daemon,	const std::string& object_class, const std::string& object_name):
+//CLASS SimpleRIBObj
+SimpleRIBObj::SimpleRIBObj(rina::IRIBDaemon *rib_daemon,	const std::string& object_class, const std::string& object_name):
 		rina::BaseRIBObject(rib_daemon, object_class, rina::objectInstanceGenerator->getObjectInstance(), object_name)
 {}
-const void* SimplestRIBObj::get_value() const
-{
-	return 0;
-}
 
-//CLASS SimpleRIBObj
-SimpleRIBObj::SimpleRIBObj(rina::IRIBDaemon *rib_daemon,	const std::string& object_class, const std::string& object_name, unsigned int id):
-		rina::BaseRIBObject(rib_daemon, object_class, rina::objectInstanceGenerator->getObjectInstance(), object_name)
-{
-	id_ = id;
-}
 const void* SimpleRIBObj::get_value() const
 {
 	return 0;

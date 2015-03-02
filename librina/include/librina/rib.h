@@ -595,13 +595,12 @@ enum rib_res
 class RIBSchemaObject
 {
  public:
-  RIBSchemaObject(const std::string& class_name, const std::string& name,
+  RIBSchemaObject(const std::string& class_name,
                   const bool mandatory, const unsigned max_objs);
   void addChild(RIBSchemaObject *object);
   const std::string& get_class_name() const;
   unsigned get_max_objs() const;
  private:
-  std::string name_;
   std::string class_name_;
   RIBSchemaObject *parent_;
   std::list<RIBSchemaObject*> children_;
@@ -615,23 +614,21 @@ class RIBSchema
 {
  public:
   friend class RIB;
-  RIBSchema(const rib_ver_t& version, char field_separator, char id_separator);
-  rib_res ribSchemaDefContRelation(const std::string& container_cn,
+  RIBSchema(const rib_ver_t& version, char separator);
+  rib_res ribSchemaDefContRelation(const std::string& cont_class_name,
                                    const std::string& class_name,
-                                   const std::string name, const bool mandatory,
+                                   const bool mandatory,
                                    const unsigned max_objs);
-  char get_field_separator() const;
-  char get_id_separator() const;
+  char get_separator() const;
  private:
-  bool validateAddObject(const BaseRIBObject* obj, const BaseRIBObject* parent);
+  bool validateAddObject(const BaseRIBObject* obj);
   bool validateRemoveObject(const BaseRIBObject* obj,
                             const BaseRIBObject* parent);
-  std::string parseName(const std::string& name);
-  std::string getParentName(const std::string& name);
+  //std::string parseName(const std::string& name);
+  //std::string getParentName(const std::string& name);
   rib_ver_t version_;
   std::map<std::string, RIBSchemaObject*> rib_schema_;
-  char field_separator_;
-  char id_separator_;
+  char separator_;
 };
 
 class RIBDaemon;
@@ -656,7 +653,7 @@ class RIB : public rina::Lockable
   BaseRIBObject* removeRIBObject(const std::string& objectName);
   BaseRIBObject* removeRIBObject(long instance);
   std::list<RIBObjectData> getRIBObjectsData();
-  char get_name_separator() const;
+  char get_separator() const;
   void addRIBObject(BaseRIBObject* ribObject);
   std::string get_parent_name(const std::string child_name) const;
   rib_ver_t version_;
@@ -735,6 +732,7 @@ class BaseRIBObject
   std::list<BaseRIBObject*> children_;
 };
 
+// FIXME: this class is only used in enrollment, it must go in a different file that rib
 class IApplicationConnectionHandler
 {
  public:

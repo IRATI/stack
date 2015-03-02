@@ -118,11 +118,11 @@ BaseRIBObject::BaseRIBObject(IRIBDaemon * rib_daemon,
 BaseRIBObject::~BaseRIBObject()
 {
   /*
-  // FIXME: Remove this when objects have two parents
-  while (children_.size() > 0) {
-    base_rib_daemon_->removeRIBObject(children_.front()->get_name());
-  }
-  */
+   // FIXME: Remove this when objects have two parents
+   while (children_.size() > 0) {
+   base_rib_daemon_->removeRIBObject(children_.front()->get_name());
+   }
+   */
   LOG_DBG("Object %s destroyed", name_.c_str());
 }
 
@@ -427,7 +427,8 @@ BaseRIBObject* RIB::getRIBObject(const std::string& object_class,
 {
   std::string norm_object_name = object_name;
   norm_object_name.erase(
-      std::remove_if(norm_object_name.begin(), norm_object_name.end(), ::isspace),
+      std::remove_if(norm_object_name.begin(), norm_object_name.end(),
+                     ::isspace),
       norm_object_name.end());
 
   BaseRIBObject* ribObject;
@@ -438,8 +439,8 @@ BaseRIBObject* RIB::getRIBObject(const std::string& object_class,
   unlock();
   if (it == rib_by_name_.end()) {
     std::stringstream ss;
-    ss<<"Could not find object "<< norm_object_name<<" of class "<<
-        object_class<<" in the RIB"<<std::endl;
+    ss << "Could not find object " << norm_object_name << " of class "
+       << object_class << " in the RIB" << std::endl;
     throw Exception(ss.str().c_str());
   }
 
@@ -463,8 +464,8 @@ BaseRIBObject* RIB::getRIBObject(const std::string& object_class, long instance,
 
   if (it == rib_by_instance_.end()) {
     std::stringstream ss;
-    ss<<"Could not find object instance "<< instance<<" of class "<<
-        object_class.c_str() <<" in the RIB"<<std::endl;
+    ss << "Could not find object instance " << instance << " of class "
+       << object_class.c_str() << " in the RIB" << std::endl;
     throw Exception(ss.str().c_str());
   }
 
@@ -485,8 +486,10 @@ void RIB::addRIBObject(BaseRIBObject* rib_object)
     lock();
     if (rib_by_name_.find(parent_name) == rib_by_name_.end()) {
       std::stringstream ss;
-      ss << "Exception in object "<<rib_object->get_name() <<". Parent name ("
-          << parent_name << ") is not in the RIB"<< std::endl;
+      ss << "Exception in object " << rib_object->get_name()
+         << ". Parent name (" << parent_name << ") is not in the RIB"
+         << std::endl;
+      unlock();
       throw Exception(ss.str().c_str());
     }
     parent = rib_by_name_[parent_name];
@@ -500,7 +503,7 @@ void RIB::addRIBObject(BaseRIBObject* rib_object)
     unlock();
     std::stringstream ss;
     ss << "Object with the same name (" << rib_object->get_name()
-       << ") already exists in the RIB"<< std::endl;
+       << ") already exists in the RIB" << std::endl;
     throw Exception(ss.str().c_str());
   }
   if (rib_by_instance_.find(rib_object->get_instance())
@@ -576,24 +579,19 @@ std::list<RIBObjectData> RIB::getRIBObjectsData()
   return result;
 }
 
-char RIB::get_name_separator() const
+char RIB::get_separator() const
 {
-  return rib_schema_->get_field_separator();
+  return rib_schema_->get_separator();
 }
 
 std::string RIB::get_parent_name(const std::string child_name) const
 {
-  size_t last_field_separator = child_name.find_last_of(
-      rib_schema_->field_separator_, std::string::npos);
-  size_t last_id_separator = child_name.find_last_of(
-      rib_schema_->id_separator_, std::string::npos);
-  if (last_field_separator == std::string::npos)
+  size_t last_separator = child_name.find_last_of(rib_schema_->separator_,
+                                                  std::string::npos);
+  if (last_separator == std::string::npos)
     return "";
 
-  if (last_id_separator < last_field_separator)
-    return child_name.substr(0, last_id_separator);
-  else
-    return child_name.substr(0, last_field_separator);
+  return child_name.substr(0, last_separator);
 
 }
 
@@ -625,16 +623,16 @@ void RIBDaemon::addRIBObject(BaseRIBObject * ribObject)
   if (!ribObject)
     throw Exception("Object is null");
 
-  try{
-  rib_->addRIBObject(ribObject);
-  }catch(Exception &e){
-    LOG_ERR("Error while adding initial rib objects for rib v1. Error: %s", e.what());
+  try {
+    rib_->addRIBObject(ribObject);
+  } catch (Exception &e) {
+    LOG_ERR("Error while adding initial rib objects for rib v1. Error: %s",
+            e.what());
     throw e;
   }
   LOG_INFO(
       "Object with name %s, class %s, instance %ld added to the RIB",
-      ribObject->get_name().c_str(), ribObject->get_class().c_str(),
-      ribObject->get_instance());
+      ribObject->get_name().c_str(), ribObject->get_class().c_str(), ribObject->get_instance());
 }
 
 void RIBDaemon::removeRIBObject(BaseRIBObject * ribObject)
@@ -682,14 +680,14 @@ void RIBDaemon::createObject(const std::string& objectClass,
   } catch (Exception &e) {
     //Delegate creation to the parent if the object is not there
     /*std::string::size_type position = objectName.rfind(
-        rib_->get_name_separator());
-    if (position == std::string::npos)
-      throw e;*/
+     rib_->get_name_separator());
+     if (position == std::string::npos)
+     throw e;*/
     //std::string parentObjectName = objectName.substr(0, position);
     std::string parentObjectName = rib_->get_parent_name(objectName);
-    try{
+    try {
       ribObject = rib_->getRIBObject(objectClass, parentObjectName, false);
-    }catch(Exception &e){
+    } catch (Exception &e) {
       LOG_ERR("Can not create the object in the RIB: %s", e.what());
       return;
     }
@@ -852,7 +850,7 @@ void RIBDaemon::processIncomingRequestMessage(
         } catch (Exception &e) {
           //Look for parent object, delegate creation there
           std::string::size_type position = cdapMessage->get_obj_name().rfind(
-              rib_->get_name_separator());
+              rib_->get_separator());
           if (position == std::string::npos) {
             throw e;
           }
@@ -1615,10 +1613,8 @@ void RIBDaemon::remoteStopObjectResponse(const std::string& object_class,
 
 // CLASS RIBSchemaObject
 RIBSchemaObject::RIBSchemaObject(const std::string& class_name,
-                                 const std::string& name, const bool mandatory,
-                                 const unsigned max_objs)
+                                 const bool mandatory, const unsigned max_objs)
 {
-  name_ = name;
   class_name_ = class_name;
   mandatory_ = mandatory;
   max_objs_ = max_objs;
@@ -1640,30 +1636,28 @@ unsigned RIBSchemaObject::get_max_objs() const
 }
 
 // CLASS RIBSchema
-RIBSchema::RIBSchema(const rib_ver_t& version, char field_separator,
-                     char id_separator)
+RIBSchema::RIBSchema(const rib_ver_t& version, char separator)
 {
   version_ = version;
-  field_separator_ = field_separator;
-  id_separator_ = id_separator;
+  separator_ = separator;
 }
 
-rib_res RIBSchema::ribSchemaDefContRelation(const std::string& container_cn,
+rib_res RIBSchema::ribSchemaDefContRelation(const std::string& cont_class_name,
                                             const std::string& class_name,
-                                            const std::string name,
                                             const bool mandatory,
                                             const unsigned max_objs)
 {
-  RIBSchemaObject *object = new RIBSchemaObject(class_name, name, mandatory,
+  RIBSchemaObject *object = new RIBSchemaObject(class_name, mandatory,
                                                 max_objs);
-  RIBSchemaObject *parent = rib_schema_[getParentName(name)];
+  std::map<std::string, RIBSchemaObject*>::iterator parent_it =
+      rib_schema_.find(cont_class_name);
 
-  if (parent->get_class_name().compare(container_cn) != 0)
+  if (parent_it == rib_schema_.end())
     return RIB_SCHEMA_FORMAT_ERR;
 
   std::pair<std::map<std::string, RIBSchemaObject*>::iterator, bool> ret =
       rib_schema_.insert(
-          std::pair<std::string, RIBSchemaObject*>(name, object));
+          std::pair<std::string, RIBSchemaObject*>(class_name, object));
 
   if (ret.second) {
     return RIB_SUCCESS;
@@ -1672,64 +1666,60 @@ rib_res RIBSchema::ribSchemaDefContRelation(const std::string& container_cn,
   }
 }
 
-bool RIBSchema::validateAddObject(const BaseRIBObject* obj,
-                                  const BaseRIBObject *parent)
+bool RIBSchema::validateAddObject(const BaseRIBObject* obj)
 {
-  std::string name_schema = parseName(obj->get_name());
-  RIBSchemaObject *schema_object = rib_schema_[name_schema];
-  // CHECKS REGION //
-  // Existance
-  if (schema_object == 0)
-    LOG_INFO();
-  return false;
-  // parent existance
-  std::string parent_name_schema = parseName(obj->get_parent_name());
-  RIBSchemaObject *parent_schema_object = rib_schema_[parent_name_schema];
-  if (parent_schema_object == 0)
-    return false;
-  // maximum number of objects
-  if (parent->get_children_size() >= schema_object->get_max_objs()) {
-    return false;
-  }
-
+  (void) obj;
+  /*
+   RIBSchemaObject *schema_object = rib_schema_.find(obj->get_class());
+   // CHECKS REGION //
+   // Existance
+   if (schema_object == 0)
+   LOG_INFO();
+   return false;
+   // parent existance
+   RIBSchemaObject *parent_schema_object = rib_schema_[obj->get_parent_class()];
+   if (parent_schema_object == 0)
+   return false;
+   // maximum number of objects
+   if (parent->get_children_size() >= schema_object->get_max_objs()) {
+   return false;
+   }
+   */
   return true;
 }
+/*
+ std::string RIBSchema::parseName(const std::string& name)
+ {
+ std::string name_schema = "";
+ int position = 0;
+ int field_separator_position = name.find(separator_, position);
 
-std::string RIBSchema::parseName(const std::string& name)
-{
-  std::string name_schema = "";
-  int position = 0;
-  int field_separator_position = name.find(field_separator_, position);
-  while (field_separator_position != -1) {
-    int id_separator_position = name.find(id_separator_, position);
-    if (id_separator_position < field_separator_position)
-      // field with value
-      name_schema.append(name, position, id_separator_position);
-    else
-      // field without value
-      name_schema.append(name, position, field_separator_position);
+ while (field_separator_position != -1) {
+ int id_separator_position = name.find(separator_, position);
+ if (id_separator_position < field_separator_position)
+ // field with value
+ name_schema.append(name, position, id_separator_position);
+ else
+ // field without value
+ name_schema.append(name, position, field_separator_position);
 
-    field_separator_position = name.find(field_separator_, position);
-  }
-  return name_schema;
-}
+ field_separator_position = name.find(field_separator_, position);
+ }
+ return name_schema;
+ }
 
-std::string RIBSchema::getParentName(const std::string& name)
+ std::string RIBSchema::getParentName(const std::string& name)
+ {
+ int field_separator_position = name.find_last_of(field_separator_, 0);
+ if (field_separator_position != -1) {
+ return name.substr(0, field_separator_position);
+ }
+ return "";
+ }
+ */
+char RIBSchema::get_separator() const
 {
-  int field_separator_position = name.find_last_of(field_separator_, 0);
-  if (field_separator_position != -1) {
-    return name.substr(0, field_separator_position);
-  }
-  return "";
-}
-
-char RIBSchema::get_field_separator() const
-{
-  return field_separator_;
-}
-char RIBSchema::get_id_separator() const
-{
-  return id_separator_;
+  return separator_;
 }
 
 }

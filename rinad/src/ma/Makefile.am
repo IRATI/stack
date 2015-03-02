@@ -17,6 +17,7 @@ mad_SOURCES  = 					\
 	confm.cc				\
 	flowm.cc				\
 	ribf.cc					\
+	commm.cc				\
 	main.cc
 
 mad_CPPFLAGS =					\

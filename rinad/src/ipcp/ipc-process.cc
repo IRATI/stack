@@ -77,7 +77,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	security_manager_ = new SecurityManager();
 	// RIB
   rina::rib_ver_t version;
-  rina::RIBSchema *schema = new rina::RIBSchema(version, '/', '=');
+  rina::RIBSchema *schema = new rina::RIBSchema(version, '/');
   rib_daemon_ = new IPCPRIBDaemonImpl(schema);
 
 	rib_daemon_->set_ipc_process(this);
