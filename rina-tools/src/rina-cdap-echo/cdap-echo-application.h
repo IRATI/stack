@@ -38,6 +38,7 @@ protected:
         std::string dif_name;
         std::string app_name;
         std::string app_instance;
+        const unsigned int max_sdu_size_in_bytes = 10000;
 
 };
 #endif

@@ -782,14 +782,6 @@ SerializedObject::~SerializedObject(){
         }
 }
 
-int SerializedObject::get_size() const {
-        return size_;
-}
-
-char* SerializedObject::get_message() const {
-        return message_;
-}
-
 /* INITIALIZATION OPERATIONS */
 
 bool librinaInitialized = false;

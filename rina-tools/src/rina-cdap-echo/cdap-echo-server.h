@@ -40,11 +40,11 @@ public:
 protected:
         void serveEchoFlow(rina::Flow * f);
         static void destroyFlow(sigval_t val);
-
+        bool cacep(rina::Flow *flow);
 private:
+        void startWorker(rina::Flow * f);
         int interval;
         int dw;
-        void startWorker(rina::Flow * f);
 };
 
 #endif

@@ -18,6 +18,7 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
+#include <cstring>
 #include <iostream>
 #include <thread>
 #include <time.h>
@@ -103,7 +104,50 @@ void Server::startWorker(Flow *flow)
 	t.detach();
 }
 
-void Server::serveEchoFlow(Flow* flow)
+bool Server::cacep(Flow *flow)
+{
+  rina::WireMessageProviderFactory wire_factory;
+  rina::CDAPSessionManagerFactory factory;
+  char buffer[max_sdu_size_in_bytes], *bytes_read;
+  int n_bytes_read;
+  const CDAPMessage *m_sent, *m_rcv;
+
+  rina::CDAPSessionManagerInterface *manager = factory.createCDAPSessionManager(
+      &wire_factory, 2000);
+  manager->createCDAPSession(flow->getPortId());
+
+  // M_CONNECT
+
+  try{
+    n_bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
+  }catch(rina::IPCException &e)
+  {
+    std::cout<<"CACEP not stablished. Exception while reading SDU: "<<e.what()<<std::endl;
+    return false;
+  }
+  bytes_read = new char[n_bytes_read];
+  memcpy(bytes_read, buffer, n_bytes_read);
+  SerializedObject ser_rec_m(bytes_read, n_bytes_read);
+  m_rcv = manager->messageReceived(ser_rec_m, flow->getPortId());
+  delete m_rcv;
+  std::cout<<"CACEP stablished"<<std::endl;
+
+  //M_CONNECT_R
+  AuthValue auth_value;
+  m_sent = manager->getOpenConnectionRequestMessage(
+      flow->getPortId(), CDAPMessage::AUTH_NONE, auth_value, "1", "B instance",
+      "1", "B", "1", "A instance", "1", "A");
+  const SerializedObject *ser_sent_m = manager
+      ->encodeNextMessageToBeSent(*m_sent, flow->getPortId());
+  manager->messageSent(*m_sent, flow->getPortId());
+  flow->writeSDU(ser_sent_m->message_, ser_sent_m->size_);
+
+  delete ser_sent_m;
+  delete m_sent;
+  return true;
+}
+
+void Server::serveEchoFlow(Flow *flow)
 {
         char *buffer = new char[max_buffer_size];
         struct sigevent event;
@@ -125,6 +169,7 @@ void Server::serveEchoFlow(Flow* flow)
 
                 timer_settime(timer_id, 0, &itime, NULL);
         }
+        cacep(flow);
 
         try {
                 for(;;) {

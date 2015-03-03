@@ -47,6 +47,7 @@ protected:
         rina::Flow* createFlow();
         void echoFlow(rina::Flow *flow);
         void destroyFlow(rina::Flow *flow);
+        bool cacep(rina::Flow *flow);
 
 private:
         std::string dif_name;
