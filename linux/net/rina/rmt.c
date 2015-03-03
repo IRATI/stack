@@ -1294,7 +1294,7 @@ static int receive_direct(struct rmt       * tmp,
                 case PDU_TYPE_MGMT:
                         return process_mgmt_pdu_ni(tmp, port_id, pdu);
 
-                case PDU_TYPE_CC:
+                case PDU_TYPE_CACK:
                 case PDU_TYPE_SACK:
                 case PDU_TYPE_NACK:
                 case PDU_TYPE_FC:
@@ -1463,7 +1463,7 @@ static void receive_worker(unsigned long o)
                                         process_mgmt_pdu_ni(tmp, port_id, pdu);
                                         break;
 
-                                case PDU_TYPE_CC:
+                                case PDU_TYPE_CACK:
                                 case PDU_TYPE_SACK:
                                 case PDU_TYPE_NACK:
                                 case PDU_TYPE_FC:

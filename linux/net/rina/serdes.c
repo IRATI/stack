@@ -624,7 +624,7 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
                         return NULL;
 
                 break;
-        case PDU_TYPE_CC:
+        case PDU_TYPE_CACK:
                 size = pci_size +
                         2 * CTRL_SEQ_NR +
                         4 * dt_cons->seq_num_length +
@@ -691,7 +691,7 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
                 }
 
                 break;
-        case PDU_TYPE_CC:
+        case PDU_TYPE_CACK:
                 if (serialize_ctrl_seq(instance, data, pci, pci_size) ||
                     serialize_cc_pci(instance, data, pci,
                                      pci_size + CTRL_SEQ_NR)) {
@@ -948,7 +948,7 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                 flags,
                 }
 
                 break;
-        case PDU_TYPE_CC:
+        case PDU_TYPE_CACK:
                 if (deserialize_ctrl_seq(instance, new_pci, &offset, ptr) ||
                     deserialize_cc_pci(instance, new_pci, &offset, ptr)) {
                         pci_destroy(new_pci);
