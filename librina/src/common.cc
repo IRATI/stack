@@ -777,7 +777,7 @@ SerializedObject::SerializedObject(char* message, int size){
 }
 SerializedObject::~SerializedObject(){
         if (message_) {
-                delete message_;
+                delete[] message_;
                 message_ = 0;
         }
 }

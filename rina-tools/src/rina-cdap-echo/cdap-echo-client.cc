@@ -63,7 +63,7 @@ static string durationToString(
 
 Client::Client(const string& dif_nm, const string& apn, const string& api,
                const string& server_apn, const string& server_api, bool q,
-               unsigned long count, bool registration, unsigned int size,
+               unsigned long count, bool registration,
                unsigned int w, int g, int dw)
     : Application(dif_nm, apn, api),
       dif_name(dif_nm),
@@ -72,7 +72,6 @@ Client::Client(const string& dif_nm, const string& apn, const string& api,
       quiet(q),
       echo_times(count),
       client_app_reg(registration),
-      data_size(size),
       wait(w),
       gap(g),
       dealloc_wait(dw)
@@ -162,44 +161,54 @@ bool Client::cacep(Flow *flow)
   int n_bytes_read;
   const CDAPMessage *m_sent, *m_rcv;
 
-  rina::CDAPSessionManagerInterface *manager = factory.createCDAPSessionManager(
-      &wire_factory, 2000);
-  manager->createCDAPSession(flow->getPortId());
+  manager_ = factory.createCDAPSessionManager(&wire_factory, 2000);
+  manager_->createCDAPSession(flow->getPortId());
 
   // M_CONNECT
   AuthValue auth_value;
-  m_sent = manager->getOpenConnectionRequestMessage(
-      flow->getPortId(), CDAPMessage::AUTH_NONE, auth_value, "1", "B instance",
-      "1", "B", "1", "A instance", "1", "A");
-  const SerializedObject *ser_sent_m = manager
-      ->encodeNextMessageToBeSent(*m_sent, flow->getPortId());
-  manager->messageSent(*m_sent, flow->getPortId());
+  m_sent = manager_->getOpenConnectionRequestMessage(flow->getPortId(),
+                                                     CDAPMessage::AUTH_NONE,
+                                                     auth_value, "1",
+                                                     "B instance", "1", "B",
+                                                     "1", "A instance", "1",
+                                                     "A");
+  const SerializedObject *ser_sent_m = manager_->encodeNextMessageToBeSent(
+      *m_sent, flow->getPortId());
+  manager_->messageSent(*m_sent, flow->getPortId());
   flow->writeSDU(ser_sent_m->message_, ser_sent_m->size_);
   delete ser_sent_m;
   delete m_sent;
 
   //M_CONNECT_R
-  try{
+  try {
     n_bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
-  }catch(rina::IPCException &e)
-  {
-    std::cout<<"CACEP not stablished. Exception while reading SDU: "<<e.what()<<std::endl;
+  } catch (rina::IPCException &e) {
+    std::cout << "CACEP not stablished. Exception while reading SDU: "
+              << e.what() << std::endl;
     return false;
   }
   bytes_read = new char[n_bytes_read];
   memcpy(bytes_read, buffer, n_bytes_read);
   SerializedObject ser_rec_m(bytes_read, n_bytes_read);
-  m_rcv = manager->messageReceived(ser_rec_m, flow->getPortId());
+  m_rcv = manager_->messageReceived(ser_rec_m, flow->getPortId());
   delete m_rcv;
-  std::cout<<"CACEP stablished"<<std::endl;
+  std::cout << "CACEP stablished" << std::endl;
 
+  return true;
+}
+
+bool Client::release(rina::Flow *flow)
+{
+  (void) flow;
   return true;
 }
 
 void Client::echoFlow(Flow* flow)
 {
-  char *buffer = new char[data_size];
-  char *buffer2 = new char[data_size];
+  int i = 0, n_bytes_read;
+  const CDAPMessage *m_sent, *m_rcv;
+  char buffer[max_sdu_size_in_bytes], *bytes_read;
+
   ulong n = 0;
   random_device rd;
   default_random_engine ran(rd());
@@ -219,27 +228,39 @@ void Client::echoFlow(Flow* flow)
       }
     } else if (n < echo_times) {
       std::chrono::high_resolution_clock::time_point begintp, endtp;
-      int bytes_read = 0;
 
-      for (uint i = 0; i < data_size; i++) {
-        buffer[i] = dis(ran);
-      }
       // CACEP
       cacep(flow);
 
-      // TODO CDAP creatio
+      // READ
+      m_sent = manager_->getReadObjectRequestMessage(flow->getPortId(), 0,
+                                                     CDAPMessage::NONE_FLAGS,
+                                                     "TEST class", 1,
+                                                     "TEST name", 1, i);
+      i++;
+      const SerializedObject *ser_sent_m = manager_->encodeNextMessageToBeSent(
+          *m_sent, flow->getPortId());
+      manager_->messageSent(*m_sent, flow->getPortId());
+      delete ser_sent_m;
+      delete m_sent;
 
+      // READ_R
       begintp = std::chrono::high_resolution_clock::now();
-      flow->writeSDU(buffer, data_size);
-      bytes_read = flow->readSDU(buffer2, data_size);
+      try {
+        n_bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
+      } catch (rina::IPCException &e) {
+        std::cout << "Exception while reading SDU: "
+                  << e.what() << std::endl;
+        break;
+      }
       endtp = std::chrono::high_resolution_clock::now();
-      cout << "SDU size = " << data_size << ", seq = " << n << ", RTT = "
+      bytes_read = new char[n_bytes_read];
+      memcpy(bytes_read, buffer, n_bytes_read);
+      SerializedObject ser_rec_m(bytes_read, n_bytes_read);
+      m_rcv = manager_->messageReceived(ser_rec_m, flow->getPortId());
+      cout << "Read response received with invoke id" << m_rcv->invoke_id_ << ", RTT = "
           << durationToString(endtp - begintp);
-      if (!((data_size == (uint) bytes_read)
-          && (memcmp(buffer, buffer2, data_size) == 0)))
-        cout << " [bad response]";
-      cout << endl;
-
+      delete m_rcv;
       n++;
       if (n < echo_times) {
         this_thread::sleep_for(std::chrono::milliseconds(wait));
@@ -248,9 +269,6 @@ void Client::echoFlow(Flow* flow)
       break;
     }
   }
-
-  delete[] buffer;
-  delete[] buffer2;
 }
 
 void Client::destroyFlow(Flow *flow)

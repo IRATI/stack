@@ -41,10 +41,12 @@ protected:
         void serveEchoFlow(rina::Flow * f);
         static void destroyFlow(sigval_t val);
         bool cacep(rina::Flow *flow);
+        bool release(rina::Flow *flow);
 private:
         void startWorker(rina::Flow * f);
         int interval;
         int dw;
+        rina::CDAPSessionManagerInterface *manager_;
 };
 
 #endif

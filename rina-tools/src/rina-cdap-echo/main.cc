@@ -42,7 +42,6 @@ int wrapped_main(int argc, char** argv)
         bool registration;
         bool quiet;
         unsigned int count;
-        unsigned int size;
         unsigned int wait;
         int gap;
         int dw;
@@ -72,12 +71,6 @@ int wrapped_main(int argc, char** argv)
                                                         false,
                                                         1,
                                                         "unsigned integer");
-                TCLAP::ValueArg<unsigned int> size_arg("s",
-                                                       "size",
-                                                       "Size of the packets to send",
-                                                       false,
-                                                       20,
-                                                       "unsigned integer");
                 TCLAP::ValueArg<unsigned int> wait_arg("w",
                                                        "wait-time",
                                                        "Time to wait between two packets (ms)",
@@ -130,7 +123,6 @@ int wrapped_main(int argc, char** argv)
                 cmd.add(count_arg);
                 cmd.add(registration_arg);
                 cmd.add(quiet_arg);
-                cmd.add(size_arg);
                 cmd.add(wait_arg);
                 cmd.add(server_apn_arg);
                 cmd.add(server_api_arg);
@@ -146,7 +138,6 @@ int wrapped_main(int argc, char** argv)
                 count = count_arg.getValue();
                 registration = registration_arg.getValue();
                 quiet = quiet_arg.getValue();
-                size = size_arg.getValue();
                 wait = wait_arg.getValue();
                 server_apn = server_apn_arg.getValue();
                 server_api = server_api_arg.getValue();
@@ -174,7 +165,7 @@ int wrapped_main(int argc, char** argv)
                 // Client mode
                 Client c(dif_name, client_apn, client_api,
                          server_apn, server_api, quiet, count,
-                         registration, size, wait, gap, dw);
+                         registration, wait, gap, dw);
 
                 c.run();
         }

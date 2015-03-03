@@ -38,7 +38,6 @@ public:
                bool  quiet,
                unsigned long count,
                bool  registration,
-               unsigned int size,
                unsigned int wait,
                int g,
                int dw);
@@ -48,6 +47,7 @@ protected:
         void echoFlow(rina::Flow *flow);
         void destroyFlow(rina::Flow *flow);
         bool cacep(rina::Flow *flow);
+        bool release(rina::Flow *flow);
 
 private:
         std::string dif_name;
@@ -56,9 +56,9 @@ private:
         bool quiet;
         unsigned long echo_times; // -1 is infinite
         bool client_app_reg;
-        unsigned int data_size;
         unsigned int wait;
         int gap;
         int dealloc_wait;
+        rina::CDAPSessionManagerInterface *manager_;
 };
 #endif//CLIENT_HPP
