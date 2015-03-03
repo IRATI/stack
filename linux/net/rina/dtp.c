@@ -788,7 +788,8 @@ int dtp_sv_init(struct dtp * dtp,
 struct dtp_ps *
 dtp_ps_get(struct dtp * dtp)
 {
-        return container_of(rcu_dereference(dtp->base.ps), struct dtp_ps, base);
+        return container_of(rcu_dereference(dtp->base.ps),
+                            struct dtp_ps, base);
 }
 
 struct dtp *
@@ -854,7 +855,8 @@ int dtp_set_policy_set_param(struct dtp* dtp,
 
                 /* The request addresses this DTP instance. */
                 rcu_read_lock();
-                ps = container_of(rcu_dereference(dtp->base.ps), struct dtp_ps, base);
+                ps = container_of(rcu_dereference(dtp->base.ps),
+                                  struct dtp_ps, base);
 
                 if (strcmp(name, "dtcp_present") == 0) {
                         ret = kstrtoint(value, 10, &bool_value);
@@ -1416,7 +1418,7 @@ int dtp_receive(struct dtp * instance,
         }
 
         if (dtcp && seq_num > dtcp_rcv_rt_win(dtcp)) {
-        	LOG_INFO("PDU Scep-id %u Dcep-id %u SeqN %u, RWE: %u",
+                LOG_INFO("PDU Scep-id %u Dcep-id %u SeqN %u, RWE: %u",
                          pci_cep_source(pci), pci_cep_destination(pci),
                          seq_num, dtcp_rcv_rt_win(dtcp));
         }
