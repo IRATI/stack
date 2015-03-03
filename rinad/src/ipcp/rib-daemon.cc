@@ -260,15 +260,15 @@ void IPCPRIBDaemonImpl::sendMessageSpecific(bool useAddress, const rina::CDAPMes
 					0, rina::ADataObject::A_DATA_OBJECT_NAME, 0);
 			ipc_process_->encoder_->encode(&adata, adataCDAPMessage);
 			sdu = cdsm->encodeCDAPMessage(*adataCDAPMessage);
-			rina::kernelIPCProcess->sendMgmgtSDUToAddress(sdu->get_message(), sdu->get_size(), address);
+			rina::kernelIPCProcess->sendMgmgtSDUToAddress(sdu->message_, sdu->size_, address);
 			LOG_DBG("Sent A-Data CDAP message to address %u: %s", address,
 					cdapMessage.to_string().c_str());
 			delete sdu;
 			delete adataCDAPMessage;
 		} else {
 			sdu = cdsm->encodeNextMessageToBeSent(cdapMessage, sessionId);
-			rina::kernelIPCProcess->writeMgmgtSDUToPortId(sdu->get_message(), sdu->get_size(), sessionId);
-			LOG_DBG("Sent CDAP message of size %d through port-id %d: %s" , sdu->get_size(), sessionId,
+			rina::kernelIPCProcess->writeMgmgtSDUToPortId(sdu->message_, sdu->size_, sessionId);
+			LOG_DBG("Sent CDAP message of size %d through port-id %d: %s" , sdu->size_, sessionId,
 					cdapMessage.to_string().c_str());
 
 			cdsm->messageSent(cdapMessage, sessionId);
