@@ -224,41 +224,10 @@ default_receiver_inactivity_timer(struct dtp_ps * ps)
         if (!dtcp)
                 return -1;
 
-        dt_sv_drf_flag_set(dt, true);
-        dtp_initial_sequence_number(dtp);
+        dtcp_rcv_rt_win_set(dtcp, 0);
+        dt_sv_rcv_lft_win_set(dt,0);
+        dtp_seq_queue_flush(dtp);
 
-        cfg = dtcp_config_get(dtcp);
-        if (!cfg)
-                return -1;
-
-        rcu_read_lock();
-        dtcp_ps = dtcp_ps_get(dtcp);
-
-        if (dtcp_ps->rtx_ctrl) {
-                struct rtxq * q;
-
-                q = dt_rtxq(dt);
-                if (!q) {
-                        LOG_ERR("Couldn't find the Retransmission queue");
-                        rcu_read_unlock();
-                        return -1;
-                }
-                rtxq_flush(q);
-        }
-        if (dtcp_ps->flow_ctrl) {
-                struct cwq * cwq;
-
-                cwq = dt_cwq(dt);
-                ASSERT(cwq);
-                if (cwq_flush(cwq)) {
-                        rcu_read_unlock();
-                        LOG_ERR("Coudln't flush cwq");
-                        return -1;
-                }
-        }
-        rcu_read_unlock();
-
-        /*FIXME: Missing sending the control ack pdu */
         return 0;
 }
 

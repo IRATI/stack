@@ -1275,7 +1275,7 @@ int dtcp_snd_lf_win_set(struct dtcp * instance, seq_num_t seq_num)
 {
         unsigned long flags;
 
-        if (!instance)
+        if (!instance || !instance->sv)
                 return -1;
 
         spin_lock_irqsave(&instance->sv->lock, flags);
@@ -1285,6 +1285,21 @@ int dtcp_snd_lf_win_set(struct dtcp * instance, seq_num_t seq_num)
         return 0;
 }
 EXPORT_SYMBOL(dtcp_snd_lf_win_set);
+
+int dtcp_rcv_rt_win_set(struct dtcp * instance, seq_num_t seq_num)
+{
+        unsigned long flags;
+
+        if (!instance || !instance->sv)
+                return -1;
+
+        spin_lock_irqsave(&instance->sv->lock, flags);
+        instance->sv->rcvr_rt_wind_edge = seq_num;
+        spin_unlock_irqrestore(&instance->sv->lock, flags);
+
+        return 0;
+}
+EXPORT_SYMBOL(dtcp_rcv_rt_win_set);
 
 int dtcp_ps_publish(struct ps_factory * factory)
 {

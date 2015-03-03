@@ -323,6 +323,24 @@ static int seq_queue_destroy(struct seq_queue * seq_queue)
         return 0;
 }
 
+void dtp_seq_queue_flush(struct dtp * dtp)
+{
+        struct seq_queue_entry * cur, * n;
+
+        if (!dtp)
+                return;
+
+        ASSERT(seq_queue);
+
+        list_for_each_entry_safe(cur, n, &seq_queue->head, next) {
+                list_del(&cur->next);
+                seq_queue_entry_destroy(cur);
+        }
+
+        return;
+}
+EXPORT_SYMBOL(dtp_seq_queue_flush);
+
 static struct pdu * seq_queue_pop(struct seq_queue * q)
 {
         struct seq_queue_entry * p;

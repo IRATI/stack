@@ -28,7 +28,7 @@
 #include "dt.h"
 #include "ps-factory.h"
 
-#define DTP_INACTIVITY_TIMERS_ENABLE 0
+#define DTP_INACTIVITY_TIMERS_ENABLE 1
 
 struct dtp * dtp_create(struct dt *         dt,
                         struct rmt *        rmt,
@@ -61,7 +61,8 @@ int          dtp_initial_sequence_number(struct dtp * instance);
 seq_num_t    dtp_sv_max_seq_nr_sent(struct dtp * instance);
 
 int          dtp_sv_max_seq_nr_set(struct dtp * instance, seq_num_t num);
-//seq_num_t    dtp_sv_last_nxt_seq_nr(struct dtp * instance);
+seq_num_t    dtp_sv_last_nxt_seq_nr(struct dtp * instance);
+void         dtp_seq_queue_flush(struct dtp * dtp);
 
 /* FIXME: temporal addition so that DTCP's sending ack can call this function
  * that was originally static */
