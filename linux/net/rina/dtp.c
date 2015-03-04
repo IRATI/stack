@@ -1312,14 +1312,20 @@ int dtp_mgmt_write(struct rmt * rmt,
 }
 
 void dtp_drf_required_set(struct dtp * dtp)
+{ dtp->sv->drf_required = true; }
+EXPORT_SYMBOL(dtp_drf_required_set);
+
+/*
+static bool is_drf_required(struct dtp * dtp)
 {
         unsigned long flags;
 
         spin_lock_irqsave(&dtp->sv->lock, flags);
-        dtp->sv->drf_required = true;
+        ret = dtp->sv->drf_required;
         spin_unlock_irqrestore(&dtp->sv->lock, flags);
+        return ret;
 }
-EXPORT_SYMBOL(dtp_drf_required_set);
+*/
 
 int dtp_receive(struct dtp * instance,
                 struct pdu * pdu)
@@ -1400,9 +1406,10 @@ int dtp_receive(struct dtp * instance,
 
         LOG_DBG("local_soft_irq_pending: %d", local_softirq_pending());
 
-        spin_lock_irqsave(&instance->seqq->lock, flags);
-        if (!(pci_flags_get(pci) ^ PDU_FLAGS_DATA_RUN) && instance->sv->drf_required) {
+        if ((pci_flags_get(pci) & PDU_FLAGS_DATA_RUN) &&
+            instance->sv->drf_required) {
                 instance->sv->drf_required = false;
+                spin_lock_irqsave(&instance->seqq->lock, flags);
                 dtp_squeue_flush(instance);
                 dt_sv_rcv_lft_win_set(dt, seq_num);
                 pdu_post(instance, pdu);
@@ -1417,7 +1424,6 @@ int dtp_receive(struct dtp * instance,
 
                 return 0;
         }
-        spin_unlock_irqrestore(&instance->seqq->lock, flags);
         /*
          * NOTE:
          *   no need to check presence of in_order or dtcp because in case
