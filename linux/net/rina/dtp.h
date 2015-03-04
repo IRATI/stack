@@ -62,7 +62,9 @@ seq_num_t    dtp_sv_max_seq_nr_sent(struct dtp * instance);
 
 int          dtp_sv_max_seq_nr_set(struct dtp * instance, seq_num_t num);
 seq_num_t    dtp_sv_last_nxt_seq_nr(struct dtp * instance);
-void         dtp_seq_queue_flush(struct dtp * dtp);
+void         dtp_squeue_flush(struct dtp * dtp);
+void         dtp_drf_required_set(struct dtp * dtp);
+struct rtimer * dtp_sender_inactivity_timer(struct dtp * instance);
 
 /* FIXME: temporal addition so that DTCP's sending ack can call this function
  * that was originally static */

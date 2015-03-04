@@ -58,6 +58,7 @@ struct dtp_sv {
         bool                rexmsn_ctrl;
         bool                rate_based;
         timeout_t           a;
+        bool                drf_required;
 };
 
 struct dtp {
@@ -90,6 +91,7 @@ static struct dtp_sv default_sv = {
         .rate_based                    = false,
         .window_based                  = false,
         .a                             = 0,
+        .drf_required                  = false,
 };
 
 struct dt * dtp_dt(struct dtp * dtp)
@@ -323,14 +325,17 @@ static int seq_queue_destroy(struct seq_queue * seq_queue)
         return 0;
 }
 
-void dtp_seq_queue_flush(struct dtp * dtp)
+void dtp_squeue_flush(struct dtp * dtp)
 {
         struct seq_queue_entry * cur, * n;
+        struct seq_queue *       seq_queue;
 
         if (!dtp)
                 return;
 
-        ASSERT(seq_queue);
+        ASSERT(dtp->seqq);
+
+        seq_queue = dtp->seqq->queue;
 
         list_for_each_entry_safe(cur, n, &seq_queue->head, next) {
                 list_del(&cur->next);
@@ -339,7 +344,7 @@ void dtp_seq_queue_flush(struct dtp * dtp)
 
         return;
 }
-EXPORT_SYMBOL(dtp_seq_queue_flush);
+EXPORT_SYMBOL(dtp_squeue_flush);
 
 static struct pdu * seq_queue_pop(struct seq_queue * q)
 {
@@ -1306,6 +1311,16 @@ int dtp_mgmt_write(struct rmt * rmt,
 
 }
 
+void dtp_drf_required_set(struct dtp * dtp)
+{
+        unsigned long flags;
+
+        spin_lock_irqsave(&dtp->sv->lock, flags);
+        dtp->sv->drf_required = true;
+        spin_unlock_irqrestore(&dtp->sv->lock, flags);
+}
+EXPORT_SYMBOL(dtp_drf_required_set);
+
 int dtp_receive(struct dtp * instance,
                 struct pdu * pdu)
 {
@@ -1385,26 +1400,24 @@ int dtp_receive(struct dtp * instance,
 
         LOG_DBG("local_soft_irq_pending: %d", local_softirq_pending());
 
-        if (!(pci_flags_get(pci) ^ PDU_FLAGS_DATA_RUN)) {
+        spin_lock_irqsave(&instance->seqq->lock, flags);
+        if (!(pci_flags_get(pci) ^ PDU_FLAGS_DATA_RUN) && instance->sv->drf_required) {
+                instance->sv->drf_required = false;
+                dtp_squeue_flush(instance);
+                dt_sv_rcv_lft_win_set(dt, seq_num);
+                pdu_post(instance, pdu);
+                spin_unlock_irqrestore(&instance->seqq->lock, flags);
                 LOG_DBG("Data run flag DRF");
-                /* This is wrong after discussions with John */
-                /* dt_sv_drf_flag_set(dt, true); */
-                rcu_read_lock();
-                ps = container_of(rcu_dereference(instance->base.ps),
-                                  struct dtp_ps, base);
-                ps->initial_sequence_number(ps);
-                rcu_read_unlock();
                 if (dtcp) {
                         if (dtcp_sv_update(dtcp, seq_num)) {
                                 LOG_ERR("Failed to update dtcp sv");
-                                pdu_destroy(pdu);
                                 return -1;
                         }
                 }
 
                 return 0;
         }
-
+        spin_unlock_irqrestore(&instance->seqq->lock, flags);
         /*
          * NOTE:
          *   no need to check presence of in_order or dtcp because in case
@@ -1538,16 +1551,22 @@ int dtp_receive(struct dtp * instance,
  exit:
 #if DTP_INACTIVITY_TIMERS_ENABLE
         /* Start ReceiverInactivityTimer */
-        if (dtcp && rtimer_restart(instance->timers.receiver_inactivity,
-                                   2 * (dt_sv_mpl(dt) +
-                                        dt_sv_r(dt)   +
-                                        dt_sv_a(dt)))) {
+        if (rtimer_restart(instance->timers.receiver_inactivity,
+                           2 * (dt_sv_mpl(dt) +
+                                dt_sv_r(dt)   +
+                                dt_sv_a(dt)))) {
                 LOG_ERR("Failed to start Receiver Inactivity timer");
                 return -1;
         }
 #endif
         return 0;
 }
+
+struct rtimer * dtp_sender_inactivity_timer(struct dtp * instance)
+{
+        return instance->timers.sender_inactivity;
+}
+EXPORT_SYMBOL(dtp_sender_inactivity_timer);
 
 int dtp_ps_publish(struct ps_factory * factory)
 {

@@ -28,6 +28,7 @@
 
 #include "logs.h"
 #include "rds/rmem.h"
+#include "rds/rtimer.h"
 #include "dtp-ps.h"
 #include "dtp.h"
 #include "dtcp.h"
@@ -39,9 +40,10 @@
 static int
 default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
 {
-        struct dtp * dtp = ps->dm;
-        struct dt  *  dt;
-        struct dtcp * dtcp;
+        struct dtp *    dtp = ps->dm;
+        struct dt  *    dt;
+        struct dtcp *   dtcp;
+        struct rtimer * Stimer;
 
         if (!dtp) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -58,12 +60,10 @@ default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
 
 #if DTP_INACTIVITY_TIMERS_ENABLE
         /* Start SenderInactivityTimer */
-        if (dtcp &&
-            rtimer_restart(dtp->timers.sender_inactivity,
-                           3 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
+        Stimer = dtp_sender_inactivity_timer(dtp);
+        if (rtimer_restart(Stimer,
+                           3 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt))))
                 LOG_ERR("Failed to start sender_inactiviy timer");
-                return 0;
-        }
 #endif
         /* Post SDU to RMT */
         LOG_DBG("defaultTxPolicy - sending to rmt");
@@ -209,8 +209,6 @@ default_receiver_inactivity_timer(struct dtp_ps * ps)
         struct dtp * dtp = ps->dm;
         struct dt *          dt;
         struct dtcp *        dtcp;
-        struct dtcp_config * cfg;
-        struct dtcp_ps * dtcp_ps;
 
         LOG_DBG("default_receiver_inactivity launched");
 
@@ -226,7 +224,8 @@ default_receiver_inactivity_timer(struct dtp_ps * ps)
 
         dtcp_rcv_rt_win_set(dtcp, 0);
         dt_sv_rcv_lft_win_set(dt,0);
-        dtp_seq_queue_flush(dtp);
+        dtp_squeue_flush(dtp);
+        dtp_drf_required_set(dtp);
 
         return 0;
 }
