@@ -41,7 +41,7 @@ protected:
         void serveEchoFlow(rina::Flow * f);
         static void destroyFlow(sigval_t val);
         bool cacep(rina::Flow *flow);
-        bool release(rina::Flow *flow);
+        bool release(rina::Flow *flow, int invoke_id);
 private:
         void startWorker(rina::Flow * f);
         int interval;

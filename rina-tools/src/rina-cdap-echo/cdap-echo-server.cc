@@ -145,35 +145,17 @@ bool Server::cacep(Flow *flow) {
   return true;
 }
 
-bool Server::release(rina::Flow *flow) {
-  char buffer[max_sdu_size_in_bytes], *bytes_read;
-  int n_bytes_read;
-  const CDAPMessage *m_sent, *m_rcv;
-
-  // M_RELEASE
-  try {
-    n_bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
-  } catch (rina::IPCException &e) {
-    std::cout << "RELEASE request problems. Exception while reading SDU: "
-              << e.what() << std::endl;
-    return false;
-  }
-  bytes_read = new char[n_bytes_read];
-  memcpy(bytes_read, buffer, n_bytes_read);
-  SerializedObject ser_rec_m(bytes_read, n_bytes_read);
-  m_rcv = manager_->messageReceived(ser_rec_m, flow->getPortId());
-  std::cout << "RELEASE connection received" << std::endl;
+bool Server::release(rina::Flow *flow, int invoke_id) {
+  const CDAPMessage *m_sent;
 
   //M_CONNECT_R
-  AuthValue auth_value;
   m_sent = manager_->getReleaseConnectionResponseMessage(
-      CDAPMessage::NONE_FLAGS, 1, "Ok", m_rcv->invoke_id_);
+      CDAPMessage::NONE_FLAGS, 1, "Ok", invoke_id);
   const SerializedObject *ser_sent_m = manager_->encodeNextMessageToBeSent(
       *m_sent, flow->getPortId());
   manager_->messageSent(*m_sent, flow->getPortId());
   flow->writeSDU(ser_sent_m->message_, ser_sent_m->size_);
-
-  delete m_rcv;
+  std::cout << "Connection released and RELEASE response sent"<<std::endl;
   delete ser_sent_m;
   delete m_sent;
   return true;
@@ -219,7 +201,10 @@ void Server::serveEchoFlow(Flow *flow) {
       m_rcv = manager_->messageReceived(ser_rec_m, flow->getPortId());
       if (m_rcv->op_code_ == CDAPMessage::M_RELEASE)
       {
-        release(flow);
+        std::cout << "Received RELEASE request with invoke id " << m_rcv->invoke_id_
+                  << std::endl;
+        release(flow, m_rcv->invoke_id_);
+        delete m_rcv;
         break;
       }
       std::cout << "Received READ request with invoke id " << m_rcv->invoke_id_
@@ -249,7 +234,7 @@ void Server::serveEchoFlow(Flow *flow) {
     // when the flow gets deallocated
   }
 
-  if (timer_id) {
+  if (dw > 0) {
     timer_delete(timer_id);
   }
 
