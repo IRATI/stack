@@ -241,6 +241,7 @@ void Client::echoFlow(Flow* flow)
       const SerializedObject *ser_sent_m = manager_->encodeNextMessageToBeSent(
           *m_sent, flow->getPortId());
       manager_->messageSent(*m_sent, flow->getPortId());
+      flow->writeSDU(ser_sent_m->message_, ser_sent_m->size_);
       delete ser_sent_m;
       delete m_sent;
 
