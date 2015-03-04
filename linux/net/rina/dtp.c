@@ -1406,23 +1406,27 @@ int dtp_receive(struct dtp * instance,
 
         LOG_DBG("local_soft_irq_pending: %d", local_softirq_pending());
 
-        if ((pci_flags_get(pci) & PDU_FLAGS_DATA_RUN) &&
-            instance->sv->drf_required) {
-                instance->sv->drf_required = false;
-                spin_lock_irqsave(&instance->seqq->lock, flags);
-                dtp_squeue_flush(instance);
-                dt_sv_rcv_lft_win_set(dt, seq_num);
-                pdu_post(instance, pdu);
-                spin_unlock_irqrestore(&instance->seqq->lock, flags);
-                LOG_DBG("Data run flag DRF");
-                if (dtcp) {
-                        if (dtcp_sv_update(dtcp, seq_num)) {
-                                LOG_ERR("Failed to update dtcp sv");
-                                return -1;
+         if (instance->sv->drf_required) {
+                if ((pci_flags_get(pci) & PDU_FLAGS_DATA_RUN)) {
+                        instance->sv->drf_required = false;
+                        spin_lock_irqsave(&instance->seqq->lock, flags);
+                        dtp_squeue_flush(instance);
+                        dt_sv_rcv_lft_win_set(dt, seq_num);
+                        pdu_post(instance, pdu);
+                        spin_unlock_irqrestore(&instance->seqq->lock, flags);
+                        LOG_DBG("Data run flag DRF");
+                        if (dtcp) {
+                                if (dtcp_sv_update(dtcp, seq_num)) {
+                                        LOG_ERR("Failed to update dtcp sv");
+                                        return -1;
+                                }
                         }
-                }
 
-                return 0;
+                        return 0;
+                }
+                LOG_DBG("Expecting DRF but not present, dropping PDU %d...",
+                        seq_num);
+                pdu_destroy(pdu);
         }
         /*
          * NOTE:
