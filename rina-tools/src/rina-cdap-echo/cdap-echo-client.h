@@ -27,38 +27,31 @@
 
 #include "cdap-echo-application.h"
 
+class Client : public Application {
+ public:
+  Client(const std::string& dif_name, const std::string& apn,
+         const std::string& api, const std::string& server_apn,
+         const std::string& server_api, bool quiet, unsigned long count,
+         bool registration, unsigned int wait, int g, int dw);
+  void run();
+  ~Client();
+ protected:
+  rina::Flow* createFlow();
+  void echoFlow(rina::Flow *flow);
+  void destroyFlow(rina::Flow *flow);
+  bool cacep(rina::Flow *flow);
+  bool release(rina::Flow *flow);
 
-class Client: public Application {
-public:
-        Client(const std::string& dif_name,
-               const std::string& apn,
-               const std::string& api,
-               const std::string& server_apn,
-               const std::string& server_api,
-               bool  quiet,
-               unsigned long count,
-               bool  registration,
-               unsigned int wait,
-               int g,
-               int dw);
-               void run();
-protected:
-        rina::Flow* createFlow();
-        void echoFlow(rina::Flow *flow);
-        void destroyFlow(rina::Flow *flow);
-        bool cacep(rina::Flow *flow);
-        bool release(rina::Flow *flow);
-
-private:
-        std::string dif_name;
-        std::string server_name;
-        std::string server_instance;
-        bool quiet;
-        unsigned long echo_times; // -1 is infinite
-        bool client_app_reg;
-        unsigned int wait;
-        int gap;
-        int dealloc_wait;
-        rina::CDAPSessionManagerInterface *manager_;
+ private:
+  std::string dif_name;
+  std::string server_name;
+  std::string server_instance;
+  bool quiet;
+  unsigned long echo_times;  // -1 is infinite
+  bool client_app_reg;
+  unsigned int wait;
+  int gap;
+  int dealloc_wait;
+  rina::CDAPSessionManagerInterface *manager_;
 };
 #endif//CLIENT_HPP

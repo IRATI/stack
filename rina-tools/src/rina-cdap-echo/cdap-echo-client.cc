@@ -76,6 +76,11 @@ Client::Client(const string& dif_nm, const string& apn, const string& api,
       dealloc_wait(dw) {
 }
 
+Client::~Client()
+{
+  delete manager_;
+}
+
 void Client::run() {
   Flow *flow;
 
