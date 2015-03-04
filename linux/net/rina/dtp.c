@@ -1059,6 +1059,7 @@ int dtp_write(struct dtp * instance,
         struct rtxq *         rtxq;
         struct pdu *          cpdu;
         struct dtp_ps * ps;
+        seq_num_t             sn;
 
         if (!sdu_is_ok(sdu))
                 return -1;
@@ -1094,7 +1095,7 @@ int dtp_write(struct dtp * instance,
 
 #if DTP_INACTIVITY_TIMERS_ENABLE
         /* Stop SenderInactivityTimer */
-        if (dtcp && rtimer_stop(instance->timers.sender_inactivity)) {
+        if (rtimer_stop(instance->timers.sender_inactivity)) {
                 LOG_ERR("Failed to stop timer");
                 /* sdu_destroy(sdu);
                    return -1; */
@@ -1137,8 +1138,9 @@ int dtp_write(struct dtp * instance,
                 sdu_destroy(sdu);
                 return -1;
         }
-
-        /* FIXME: Check if we need to set DRF */
+        sn = dtcp_snd_lf_win(dtcp);
+        if (dt_sv_drf_flag(dt) || (sn == (pci_sequence_number_get(pci) - 1)))
+                pci_flags_set(pci, PDU_FLAGS_DATA_RUN);
 
         pdu = pdu_create_ni();
         if (!pdu) {
