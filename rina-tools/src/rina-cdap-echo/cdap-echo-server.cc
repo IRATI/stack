@@ -217,6 +217,11 @@ void Server::serveEchoFlow(Flow *flow) {
       memcpy(bytes_read, buffer, n_bytes_read);
       SerializedObject ser_rec_m(bytes_read, n_bytes_read);
       m_rcv = manager_->messageReceived(ser_rec_m, flow->getPortId());
+      if (m_rcv->op_code_ == CDAPMessage::M_RELEASE)
+      {
+        release(flow);
+        break;
+      }
       std::cout << "Received READ request with invoke id " << m_rcv->invoke_id_
                 << std::endl;
 

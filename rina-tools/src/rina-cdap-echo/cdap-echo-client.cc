@@ -205,6 +205,8 @@ bool Client::release(rina::Flow *flow) {
       *m_sent, flow->getPortId());
   manager_->messageSent(*m_sent, flow->getPortId());
   flow->writeSDU(ser_sent_m->message_, ser_sent_m->size_);
+  std::cout << "Sent RELEASE request with invoke id " << m_sent->invoke_id_
+            << std::endl;
   delete ser_sent_m;
   delete m_sent;
 
