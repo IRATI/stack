@@ -1429,6 +1429,7 @@ int dtp_receive(struct dtp * instance,
                 LOG_DBG("Expecting DRF but not present, dropping PDU %d...",
                         seq_num);
                 pdu_destroy(pdu);
+                return 0;
         }
         /*
          * NOTE:
