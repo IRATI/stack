@@ -36,12 +36,10 @@ using namespace rina;
 Server::Server(const string& dif_name, const string& app_name,
                const string& app_instance, const int dealloc_wait)
     : Application(dif_name, app_name, app_instance),
-      dw(dealloc_wait)
-{
+      dw(dealloc_wait) {
 }
 
-void Server::run()
-{
+void Server::run() {
   applicationRegister();
 
   for (;;) {
@@ -96,8 +94,7 @@ void Server::run()
   }
 }
 
-void Server::startWorker(Flow *flow)
-{
+void Server::startWorker(Flow *flow) {
   void (Server::*server_function)(Flow *flow);
 
   server_function = &Server::serveEchoFlow;
@@ -106,8 +103,7 @@ void Server::startWorker(Flow *flow)
   t.detach();
 }
 
-bool Server::cacep(Flow *flow)
-{
+bool Server::cacep(Flow *flow) {
   rina::WireMessageProviderFactory wire_factory;
   rina::CDAPSessionManagerFactory factory;
   char buffer[max_sdu_size_in_bytes], *bytes_read;
@@ -149,14 +145,41 @@ bool Server::cacep(Flow *flow)
   return true;
 }
 
-bool Server::release(rina::Flow *flow)
-{
-  (void) flow;
+bool Server::release(rina::Flow *flow) {
+  char buffer[max_sdu_size_in_bytes], *bytes_read;
+  int n_bytes_read;
+  const CDAPMessage *m_sent, *m_rcv;
+
+  // M_RELEASE
+  try {
+    n_bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
+  } catch (rina::IPCException &e) {
+    std::cout << "RELEASE request problems. Exception while reading SDU: "
+              << e.what() << std::endl;
+    return false;
+  }
+  bytes_read = new char[n_bytes_read];
+  memcpy(bytes_read, buffer, n_bytes_read);
+  SerializedObject ser_rec_m(bytes_read, n_bytes_read);
+  m_rcv = manager_->messageReceived(ser_rec_m, flow->getPortId());
+  std::cout << "RELEASE connection received" << std::endl;
+
+  //M_CONNECT_R
+  AuthValue auth_value;
+  m_sent = manager_->getReleaseConnectionResponseMessage(
+      CDAPMessage::NONE_FLAGS, 1, "Ok", m_rcv->invoke_id_);
+  const SerializedObject *ser_sent_m = manager_->encodeNextMessageToBeSent(
+      *m_sent, flow->getPortId());
+  manager_->messageSent(*m_sent, flow->getPortId());
+  flow->writeSDU(ser_sent_m->message_, ser_sent_m->size_);
+
+  delete m_rcv;
+  delete ser_sent_m;
+  delete m_sent;
   return true;
 }
 
-void Server::serveEchoFlow(Flow *flow)
-{
+void Server::serveEchoFlow(Flow *flow) {
   char buffer[max_sdu_size_in_bytes], *bytes_read;
   int n_bytes_read;
   const CDAPMessage *m_sent, *m_rcv;
@@ -227,8 +250,7 @@ void Server::serveEchoFlow(Flow *flow)
 
 }
 
-void Server::destroyFlow(sigval_t val)
-{
+void Server::destroyFlow(sigval_t val) {
   Flow *flow = (Flow *) val.sival_ptr;
 
   if (flow->getState() != FlowState::FLOW_ALLOCATED)

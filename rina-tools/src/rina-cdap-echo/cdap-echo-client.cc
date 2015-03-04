@@ -41,8 +41,7 @@ static std::chrono::milliseconds thres_ms = std::chrono::milliseconds(9);
 static std::chrono::microseconds thres_us = std::chrono::microseconds(9);
 
 static string durationToString(
-    const std::chrono::high_resolution_clock::duration& dur)
-{
+    const std::chrono::high_resolution_clock::duration& dur) {
   std::stringstream ss;
 
   if (dur > thres_s)
@@ -63,8 +62,8 @@ static string durationToString(
 
 Client::Client(const string& dif_nm, const string& apn, const string& api,
                const string& server_apn, const string& server_api, bool q,
-               unsigned long count, bool registration,
-               unsigned int w, int g, int dw)
+               unsigned long count, bool registration, unsigned int w, int g,
+               int dw)
     : Application(dif_nm, apn, api),
       dif_name(dif_nm),
       server_name(server_apn),
@@ -74,12 +73,10 @@ Client::Client(const string& dif_nm, const string& apn, const string& api,
       client_app_reg(registration),
       wait(w),
       gap(g),
-      dealloc_wait(dw)
-{
+      dealloc_wait(dw) {
 }
 
-void Client::run()
-{
+void Client::run() {
   Flow *flow;
 
   if (client_app_reg) {
@@ -97,8 +94,7 @@ void Client::run()
   }
 }
 
-Flow* Client::createFlow()
-{
+Flow* Client::createFlow() {
   Flow* flow = 0;
   std::chrono::high_resolution_clock::time_point begintp =
       std::chrono::high_resolution_clock::now();
@@ -153,8 +149,7 @@ Flow* Client::createFlow()
   return flow;
 }
 
-bool Client::cacep(Flow *flow)
-{
+bool Client::cacep(Flow *flow) {
   rina::WireMessageProviderFactory wire_factory;
   rina::CDAPSessionManagerFactory factory;
   char buffer[max_sdu_size_in_bytes], *bytes_read;
@@ -197,30 +192,62 @@ bool Client::cacep(Flow *flow)
   return true;
 }
 
-bool Client::release(rina::Flow *flow)
-{
-  (void) flow;
+bool Client::release(rina::Flow *flow) {
+  char buffer[max_sdu_size_in_bytes], *bytes_read;
+  int n_bytes_read;
+  const CDAPMessage *m_sent, *m_rcv;
+
+  // M_RELEASE
+  m_sent = manager_->getReleaseConnectionRequestMessage(flow->getPortId(),
+                                                        CDAPMessage::NONE_FLAGS,
+                                                        true);
+  const SerializedObject *ser_sent_m = manager_->encodeNextMessageToBeSent(
+      *m_sent, flow->getPortId());
+  manager_->messageSent(*m_sent, flow->getPortId());
+  flow->writeSDU(ser_sent_m->message_, ser_sent_m->size_);
+  delete ser_sent_m;
+  delete m_sent;
+
+  //M_RELEASE_R
+  try {
+    n_bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
+  } catch (rina::IPCException &e) {
+    std::cout << "RELEASE response problems. Exception while reading SDU: "
+              << e.what() << std::endl;
+    return false;
+  }
+  bytes_read = new char[n_bytes_read];
+  memcpy(bytes_read, buffer, n_bytes_read);
+  SerializedObject ser_rec_m(bytes_read, n_bytes_read);
+  m_rcv = manager_->messageReceived(ser_rec_m, flow->getPortId());
+  delete m_rcv;
+  std::cout << "Connection released" << std::endl;
+
   return true;
 }
 
-void Client::echoFlow(Flow* flow)
-{
-  int i = 0, n_bytes_read;
+void Client::echoFlow(Flow* flow) {
+  int n_bytes_read;
   const CDAPMessage *m_sent, *m_rcv;
   char buffer[max_sdu_size_in_bytes], *bytes_read;
+  bool keep_running = true;
 
   ulong n = 0;
   random_device rd;
   default_random_engine ran(rd());
   uniform_int_distribution<int> dis(0, 255);
 
-  while (flow) {
+  // CACEP
+  cacep(flow);
+
+  while (keep_running) {
     IPCEvent* event = ipcEventProducer->eventPoll();
 
     if (event) {
       switch (event->eventType) {
         case FLOW_DEALLOCATED_EVENT:
           flow = 0;
+          keep_running = false;
           break;
         default:
           LOG_INFO("Client got new event %d", event->eventType);
@@ -229,51 +256,49 @@ void Client::echoFlow(Flow* flow)
     } else if (n < echo_times) {
       std::chrono::high_resolution_clock::time_point begintp, endtp;
 
-      // CACEP
-      cacep(flow);
-
       // READ
       m_sent = manager_->getReadObjectRequestMessage(flow->getPortId(), 0,
                                                      CDAPMessage::NONE_FLAGS,
                                                      "TEST class", 1,
-                                                     "TEST name", 1, i);
-      i++;
+                                                     "TEST name", 1, true);
       const SerializedObject *ser_sent_m = manager_->encodeNextMessageToBeSent(
           *m_sent, flow->getPortId());
       manager_->messageSent(*m_sent, flow->getPortId());
+
+      begintp = std::chrono::high_resolution_clock::now();
       flow->writeSDU(ser_sent_m->message_, ser_sent_m->size_);
+      std::cout << "Sent READ request with invoke id " << m_sent->invoke_id_
+                << std::endl;
       delete ser_sent_m;
       delete m_sent;
 
       // READ_R
-      begintp = std::chrono::high_resolution_clock::now();
       try {
         n_bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
+        endtp = std::chrono::high_resolution_clock::now();
       } catch (rina::IPCException &e) {
-        std::cout << "Exception while reading SDU: "
-                  << e.what() << std::endl;
+        std::cout << "Exception while reading SDU: " << e.what() << std::endl;
         break;
       }
-      endtp = std::chrono::high_resolution_clock::now();
       bytes_read = new char[n_bytes_read];
       memcpy(bytes_read, buffer, n_bytes_read);
       SerializedObject ser_rec_m(bytes_read, n_bytes_read);
       m_rcv = manager_->messageReceived(ser_rec_m, flow->getPortId());
-      cout << "Read response received with invoke id" << m_rcv->invoke_id_ << ", RTT = "
-          << durationToString(endtp - begintp);
+      cout << "READ response received with invoke id " << m_rcv->invoke_id_
+          << ", RTT = " << durationToString(endtp - begintp) << std::endl;
       delete m_rcv;
       n++;
       if (n < echo_times) {
         this_thread::sleep_for(std::chrono::milliseconds(wait));
       }
     } else {
-      break;
+      release(flow);
+      keep_running = false;
     }
   }
 }
 
-void Client::destroyFlow(Flow *flow)
-{
+void Client::destroyFlow(Flow *flow) {
   DeallocateFlowResponseEvent *resp = 0;
   unsigned int seqnum;
   IPCEvent* event;
