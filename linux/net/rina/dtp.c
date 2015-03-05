@@ -1174,6 +1174,9 @@ int dtp_write(struct dtp * instance,
         sdu_buffer_disown(sdu);
         sdu_destroy(sdu);
 
+        LOG_DBG("DTP Sending PDU %u (CPU: %d)",
+                pci_sequence_number_get(pci), smp_processor_id());
+
         if (dtcp) {
                 rcu_read_lock();
                 ps = container_of(rcu_dereference(instance->base.ps),
@@ -1415,6 +1418,9 @@ int dtp_receive(struct dtp * instance,
         seq_num = pci_sequence_number_get(pci);
 
         LOG_DBG("local_soft_irq_pending: %d", local_softirq_pending());
+        LOG_DBG("DTP Received PDU %u (CPU: %d)",
+                seq_num, smp_processor_id());
+
 
          if (instance->sv->drf_required) {
                 if ((pci_flags_get(pci) & PDU_FLAGS_DATA_RUN)) {
@@ -1519,23 +1525,13 @@ int dtp_receive(struct dtp * instance,
                 return -1;
         }
 
-        /*to_post = rqueue_create_ni();
-        if (!to_post) {
-                LOG_ERR("Could not create to_post list at reception");
-                pdu_destroy(pdu);
-                return -1;
-        }*/
         spin_lock_irqsave(&instance->seqq->lock, flags);
         LWE = dt_sv_rcv_lft_win(dt);
         LOG_DBG("DTP receive LWE: %u", LWE);
         while (pdu && (seq_num == LWE + 1)) {
                 dt_sv_rcv_lft_win_set(dt, seq_num);
 
-
-                /*spin_unlock(&instance->seqq->lock);*/
                 pdu_post(instance, pdu);
-                /*spin_lock(&instance->seqq->lock);
-                rqueue_tail_push_ni(to_post, pdu);*/
 
                 pdu     = seq_queue_pop(instance->seqq->queue);
                 LWE     = dt_sv_rcv_lft_win(dt);
@@ -1554,19 +1550,12 @@ int dtp_receive(struct dtp * instance,
                 rtimer_restart(instance->timers.a, a/AF);
         }
 
-        /*while (!rqueue_is_empty(to_post)) {
-                pdu = (struct pdu *) rqueue_head_pop(to_post);
-                if (pdu)
-                        pdu_post(instance, pdu);
-        }*/
-
         if (dtcp) {
                 if (dtcp_sv_update(dtcp, seq_num)) {
                         LOG_ERR("Failed to update dtcp sv");
                 }
         }
 
-        /*rqueue_destroy(to_post, (void (*)(void *)) pdu_destroy);*/
         LOG_DBG("DTP reveive ended...");
 
  exit:

@@ -210,11 +210,6 @@ default_receiving_flow_control(struct dtcp_ps * ps, seq_num_t seq)
         struct dtcp * dtcp = ps->dm;
         struct pdu * pdu;
 
-        /* VARIABLES FOR SYSTEM TIMESTAMP DBG MESSAGE BELOW*/
-        struct timeval te;
-        long long milliseconds;
-        seq_num_t dbg_seq_num;
-
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
                 return -1;
@@ -223,17 +218,11 @@ default_receiving_flow_control(struct dtcp_ps * ps, seq_num_t seq)
         if (!pdu)
                 return -1;
 
-        dbg_seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
+        LOG_DBG("DTCP Sending FC (CPU: %d)", smp_processor_id());
         dump_we(dtcp, pdu_pci_get_rw(pdu));
 
         if (pdu_send(dtcp, pdu))
                 return -1;
-
-        /* SYSTEM TIMESTAMP DBG MESSAGE */
-        do_gettimeofday(&te);
-        milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
-        LOG_DBG("DTCP Sending FC %d at %lld",
-                dbg_seq_num, milliseconds);
 
         return 0;
 }
