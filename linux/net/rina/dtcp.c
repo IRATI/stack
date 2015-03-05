@@ -760,7 +760,8 @@ int dtcp_sending_ack_policy(struct dtcp * dtcp)
         }
 
         rcu_read_lock();
-        ps = container_of(rcu_dereference(dtcp->base.ps), struct dtcp_ps, base);
+        ps = container_of(rcu_dereference(dtcp->base.ps),
+                          struct dtcp_ps, base);
         rcu_read_unlock();
 
         return ps->sending_ack(ps, 0);
@@ -788,7 +789,8 @@ pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
         ASSERT(dtcp_cfg);
 
         rcu_read_lock();
-        ps = container_of(rcu_dereference(dtcp->base.ps), struct dtcp_ps, base);
+        ps = container_of(rcu_dereference(dtcp->base.ps),
+                          struct dtcp_ps, base);
         flow_ctrl = ps->flow_ctrl;
         rcu_read_unlock();
 
@@ -832,7 +834,7 @@ pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
                 return PDU_TYPE_ACK;
         }
 
-	return 0;
+        return 0;
 }
 EXPORT_SYMBOL(pdu_ctrl_type_get);
 
@@ -974,6 +976,11 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
 
 struct dtcp_ps * dtcp_ps_get(struct dtcp * dtcp)
 {
+        if (!dtcp) {
+                LOG_ERR("Could not retrieve DTCP PS, NULL instance passed");
+                return NULL;
+        }
+
         return container_of(rcu_dereference(dtcp->base.ps),
                             struct dtcp_ps, base);
 }
@@ -1045,7 +1052,8 @@ int dtcp_set_policy_set_param(struct dtcp * dtcp,
         int ret = -1;
 
         if (!dtcp|| !path || !name || !value) {
-                LOG_ERRF("NULL arguments %p %p %p %p", dtcp, path, name, value);
+                LOG_ERRF("NULL arguments %p %p %p %p",
+                         dtcp, path, name, value);
                 return -1;
         }
 
@@ -1056,7 +1064,9 @@ int dtcp_set_policy_set_param(struct dtcp * dtcp,
 
                 /* The request addresses this DTP instance. */
                 rcu_read_lock();
-                ps = container_of(rcu_dereference(dtcp->base.ps), struct dtcp_ps, base);
+                ps = container_of(rcu_dereference(dtcp->base.ps),
+                                  struct dtcp_ps,
+                                  base);
                 if (strcmp(name, "flow_ctrl") == 0) {
                         ret = kstrtoint(value, 10, &bool_value);
                         if (ret == 0) {
