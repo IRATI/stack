@@ -81,14 +81,6 @@ typedef struct source_info
   std::string src_ap_name_;
 } src_info_t;
 
-typedef struct connection_handler
-{
-  int id_;
-  src_info_t src_;
-  dest_info_t dest_;
-  auth_info_t auth_;
-} con_handle_t;
-
 typedef struct flags
 {
   enum Flags
@@ -160,11 +152,20 @@ typedef struct version_info
   long version_;
 } vers_info_t;
 
+typedef struct connection_handler
+{
+  int id_;
+  src_info_t src_;
+  dest_info_t dest_;
+  auth_info_t auth_;
+  vers_info_t version_;
+} con_handle_t;
+
 class CDAPProvider
 {
  public:
-  con_handle_t open_connection(const src_info_t &src, const dest_info_t &dest,
-                               const auth_info &auth);
+  con_handle_t open_connection(const vers_info_t ver, const src_info_t &src,
+                               const dest_info_t &dest, const auth_info &auth);
   void close_connection(con_handle_t &con);
 
   void create_remote(const con_handle_t &con, const obj_info_t &obj,
