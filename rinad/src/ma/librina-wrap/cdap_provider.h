@@ -140,7 +140,6 @@ typedef struct result_info
   std::string result_reason_;
 } res_info_t;
 
-/// CDAP message parameters
 typedef struct version_info
 {
   /// Version (int32). Mandatory in connect request and response, optional otherwise.
@@ -166,38 +165,44 @@ class CDAPProvider
  public:
   con_handle_t open_connection(const vers_info_t ver, const src_info_t &src,
                                const dest_info_t &dest, const auth_info &auth);
-  void close_connection(con_handle_t &con);
+  int close_connection(con_handle_t &con);
 
-  void create_remote(const con_handle_t &con, const obj_info_t &obj,
+  int create_remote(const con_handle_t &con, const obj_info_t &obj,
                      const flags_t &flags, const filt_info_t &filt);
-  void delete_remote(const con_handle_t &con, const obj_info_t &obj,
+  int delete_remote(const con_handle_t &con, const obj_info_t &obj,
                      const flags_t &flags, const filt_info_t &filt);
-  void read_remote(const con_handle_t &con, const obj_info_t &obj,
+  int read_remote(const con_handle_t &con, const obj_info_t &obj,
                    const flags_t &flags, const filt_info_t &filt);
-  void cancel_read_remote(const con_handle_t &con, const obj_info_t &obj,
+  int cancel_read_remote(const con_handle_t &con, const obj_info_t &obj,
                           const flags_t &flags, const filt_info_t &filt);
-  void write_remote(const con_handle_t &con, const obj_info_t &obj,
+  int write_remote(const con_handle_t &con, const obj_info_t &obj,
                     const flags_t &flags, const filt_info_t &filt);
-  void start_remote(const con_handle_t &con, const obj_info_t &obj,
+  int start_remote(const con_handle_t &con, const obj_info_t &obj,
                     const flags_t &flags, const filt_info_t &filt);
-  void stop_remote(const con_handle_t &con, const obj_info_t &obj,
+  int stop_remote(const con_handle_t &con, const obj_info_t &obj,
                    const flags_t &flags, const filt_info_t &filt);
 
   void create_response(const con_handle_t &con, const obj_info_t &obj,
-                       const flags_t &flags, const res_info_t &res, int id);
+                       const flags_t &flags, const res_info_t &res,
+                       int message_id);
   void delete_response(const con_handle_t &con, const obj_info_t &obj,
-                       const flags_t &flags, const res_info_t &res, int id);
+                       const flags_t &flags, const res_info_t &res,
+                       int message_id);
   void read_response(const con_handle_t &con, const obj_info_t &obj,
-                     const flags_t &flags, const res_info_t &res, int id);
+                     const flags_t &flags, const res_info_t &res,
+                     int message_id);
   void cancel_read_response(const con_handle_t &con, const obj_info_t &obj,
                             const flags_t &flags, const res_info_t &res,
-                            int id);
+                            int message_id);
   void write_response(const con_handle_t &con, const obj_info_t &obj,
-                      const flags_t &flags, const res_info_t &res, int id);
+                      const flags_t &flags, const res_info_t &res,
+                      int message_id);
   void start_response(const con_handle_t &con, const obj_info_t &obj,
-                      const flags_t &flags, const res_info_t &res, int id);
+                      const flags_t &flags, const res_info_t &res,
+                      int message_id);
   void stop_response(const con_handle_t &con, const obj_info_t &obj,
-                     const flags_t &flags, const res_info_t &res, int id);
+                     const flags_t &flags, const res_info_t &res,
+                     int message_id);
 };
 
 }

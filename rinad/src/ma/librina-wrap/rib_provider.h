@@ -24,8 +24,162 @@
 
 namespace rib_api {
 
-class
-}
+/// Authentication information
+typedef struct auth_info
+{
+  enum AuthTypes
+  {
+    AUTH_NONE,
+    AUTH_PASSWD,
+    AUTH_SSHRSA,
+    AUTH_SSHDSA
+  };
+  /// AuthenticationMechanismName (authtypes), optional, not validated by CDAP.
+  /// Identification of the method to be used by the destination application to
+  /// authenticate the source application
+  AuthTypes auth_mech_;
+} auth_info_t;
 
+typedef struct destination_info
+{
+  /// DestinationApplication-Entity-Instance-Id (string), optional, not validated by CDAP.
+  /// Specific instance of the Application Entity that the source application
+  /// wishes to connect to in the destination application.
+  std::string dest_ae_inst_;
+  /// DestinationApplication-Entity-Name (string), mandatory (optional for the response).
+  /// Name of the Application Entity that the source application wishes
+  /// to connect to in the destination application.
+  std::string dest_ae_name_;
+  /// DestinationApplication-Process-Instance-Id (string), optional, not validated by CDAP.
+  /// Name of the Application Process Instance that the source wishes to
+  /// connect to a the destination.
+  std::string dest_ap_inst_;
+  /// DestinationApplication-Process-Name (string), mandatory (optional for the response).
+  /// Name of the application process that the source application wishes to connect to
+  /// in the destination application
+  std::string dest_ap_name_;
+} dest_info_t;
+
+typedef struct source_info
+{
+  /// DestinationApplication-Entity-Instance-Id (string), optional, not validated by CDAP.
+  /// Specific instance of the Application Entity that the source application
+  /// wishes to connect to in the destination application.
+  std::string src_ae_inst_;
+  /// DestinationApplication-Entity-Name (string), mandatory (optional for the response).
+  /// Name of the Application Entity that the source application wishes
+  /// to connect to in the destination application.
+  std::string src_ae_name_;
+  /// DestinationApplication-Process-Instance-Id (string), optional, not validated by CDAP.
+  /// Name of the Application Process Instance that the source wishes to
+  /// connect to a the destination.
+  std::string src_ap_inst_;
+  /// DestinationApplication-Process-Name (string), mandatory (optional for the response).
+  /// Name of the application process that the source application wishes to connect to
+  /// in the destination application
+  std::string src_ap_name_;
+} src_info_t;
+
+typedef struct version_info
+{
+  /// Version (int32). Mandatory in connect request and response, optional otherwise.
+  /// Version of RIB and object set_ to use in the conversation. Note that the
+  /// abstract syntax refers to the CDAP message syntax, while version refers to the
+  /// version of the AE RIB objects, their values, vocabulary of object id's, and
+  /// related behaviors that are subject to change over time. See text for details
+  /// of use.
+  long version_;
+} vers_info_t;
+
+typedef struct connection_handler
+{
+  int id_;
+  src_info_t src_;
+  dest_info_t dest_;
+  auth_info_t auth_;
+  vers_info_t version_;
+} con_handle_t;
+
+typedef struct object_info
+{
+  /// ObjectClass (string). Identifies the object class definition of the
+  /// addressed object.
+  std::string obj_class_;
+  /// ObjectInstance (int64). Object instance uniquely identifies a single object
+  /// with a specific ObjectClass and ObjectName in an application's RIB. Either
+  /// the ObjectClass and ObjectName or this value may be used, if the ObjectInstance
+  /// value is known. If a class and name are supplied in an operation,
+  /// an ObjectInstance value may be returned, and that may be used in future operations
+  /// in lieu of obj_class and obj_name for the duration of this connection.
+  long obj_inst_;
+  /// ObjectName (string). Identifies a named object that the operation is
+  /// to be applied to. Object names identify a unique object of the designated
+  /// ObjectClass within an application.
+  std::string obj_name_;
+  /// ObjectValueInterface (ObjectValueInterface). The value of the object.
+  void *obj_value_;
+  /// Result (int32). Mandatory in the responses, forbidden in the requests
+  /// The result of an operation, indicating its success (which has the value zero,
+  /// the default for this field), partial success in the case of
+  /// synchronized operations, or reason for failure
+} obj_info_t;
+
+typedef struct result_info
+{
+  /// Result of the operation
+  int result_;
+  /// Result-Reason (string), optional in the responses, forbidden in the requests
+  /// Additional explanation of the result_
+  std::string result_reason_;
+} res_info_t;
+
+typedef struct filtering_info
+{
+  /// Filter (bytes). Filter predicate function to be used to determine whether an operation
+  /// is to be applied to the designated object (s).
+  char* filter_;
+  /// Scope (int32). Specifies the depth of the object tree at
+  /// the destination application to which an operation (subject to filtering)
+  /// is to apply (if missing or present and having the value 0, the default,
+  /// only the target_ed application's objects are addressed)
+  int scope_;
+} filt_info_t;
+
+class RIBProvider
+{
+ public:
+  void openConnectionCallback(const con_handle_t &con, const result_info &res);
+  void closeConnectionCallback(const con_handle_t &con, const result_info &res);
+
+  void createRemoteCallback(const con_handle_t &con, const obj_info_t &obj,
+                            const res_info_t &res, int message_id);
+  void deleteRemoteCallback(const con_handle_t &con, const obj_info_t &obj,
+                            const res_info_t &res, int message_id);
+  void readRemoteCallback(const con_handle_t &con, const obj_info_t &obj,
+                          const res_info_t &res, int message_id);
+  void cancelReadRemote(const con_handle_t &con, const obj_info_t &obj,
+                        const res_info_t &res, int message_id);
+  void writeRemoteCallback(const con_handle_t &con, const obj_info_t &obj,
+                           const res_info_t &res, int message_id);
+  void startRemoteCallback(const con_handle_t &con, const obj_info_t &obj,
+                           const res_info_t &res, int message_id);
+  void stopRemoteCallback(const con_handle_t &con, const obj_info_t &obj,
+                          const res_info_t &res, int message_id);
+
+  void createObject(const con_handle_t &con, const obj_info_t &obj,
+                    const filt_info_t &filt);
+  void deleteObject(const con_handle_t &con, const obj_info_t &obj,
+                    const filt_info_t &filt);
+  void readObject(const con_handle_t &con, const obj_info_t &obj,
+                  const filt_info_t &filt);
+  void cancelReadObject(const con_handle_t &con, const obj_info_t &obj,
+                        const filt_info_t &filt);
+  void writeObject(const con_handle_t &con, const obj_info_t &obj,
+                   const filt_info_t &filt);
+  void startObject(const con_handle_t &con, const obj_info_t &obj,
+                   const filt_info_t &filt);
+  void stopObject(const con_handle_t &con, const obj_info_t &obj,
+                  const filt_info_t &filt);
+};
 
 #endif /* RIB_PROVIDER_H_ */
