@@ -196,10 +196,11 @@ default_initial_sequence_number(struct dtp_ps * ps)
         }
 
         get_random_bytes(&seq_num, sizeof(seq_num_t));
-        nxt_seq_reset(dtp_dtp_sv(dtp), seq_num);
+        if (nxt_seq_reset(dtp_dtp_sv(dtp), seq_num))
+                return -1;
 
         LOG_DBG("initial_seq_number reset");
-        return seq_num;
+        return 0;
 }
 
 

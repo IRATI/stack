@@ -954,7 +954,8 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
                         ps->rtx.data_retransmit_max;
 
         instance->sv->sndr_credit         = ps->flowctrl.window.initial_credit;
-        instance->sv->snd_rt_wind_edge    = ps->flowctrl.window.initial_credit;
+        instance->sv->snd_rt_wind_edge    = ps->flowctrl.window.initial_credit +
+                        dtp_sv_last_nxt_seq_nr(dt_dtp(instance->parent));
         instance->sv->rcvr_credit         = ps->flowctrl.window.initial_credit;
         instance->sv->rcvr_rt_wind_edge   = ps->flowctrl.window.initial_credit;
         rcu_read_unlock();

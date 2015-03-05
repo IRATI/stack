@@ -91,7 +91,7 @@ static struct dtp_sv default_sv = {
         .rate_based                    = false,
         .window_based                  = false,
         .a                             = 0,
-        .drf_required                  = false,
+        .drf_required                  = true,
 };
 
 struct dt * dtp_dt(struct dtp * dtp)
@@ -118,15 +118,16 @@ struct connection * dtp_sv_connection(struct dtp_sv * sv)
 }
 EXPORT_SYMBOL(dtp_sv_connection);
 
-void nxt_seq_reset(struct dtp_sv * sv, seq_num_t sn)
+int nxt_seq_reset(struct dtp_sv * sv, seq_num_t sn)
 {
-        ASSERT(sv);
+        if (!sv)
+                return -1;
 
         spin_lock(&sv->lock);
         sv->seq_nr_to_send = sn;
         spin_unlock(&sv->lock);
 
-        return;
+        return 0;
 }
 EXPORT_SYMBOL(nxt_seq_reset);
 
@@ -933,6 +934,7 @@ struct dtp * dtp_create(struct dt *         dt,
                 LOG_ERR("No DT passed, bailing out");
                 return NULL;
         }
+        dt_sv_drf_flag_set(dt, true);
 
         if (!rmt) {
                 LOG_ERR("No RMT passed, bailing out");
@@ -986,6 +988,12 @@ struct dtp * dtp_create(struct dt *         dt,
 
         /* Try to select the default policy-set. */
         if (dtp_select_policy_set(tmp, "", RINA_PS_DEFAULT_NAME)) {
+                dtp_destroy(tmp);
+                return NULL;
+        }
+
+        if (dtp_initial_sequence_number(tmp)) {
+                LOG_ERR("Could not create Sequencing queue");
                 dtp_destroy(tmp);
                 return NULL;
         }
@@ -1398,7 +1406,7 @@ int dtp_receive(struct dtp * instance,
         rcu_read_unlock();
 #if DTP_INACTIVITY_TIMERS_ENABLE
         /* Stop ReceiverInactivityTimer */
-        if (dtcp && rtimer_stop(instance->timers.receiver_inactivity)) {
+        if (rtimer_stop(instance->timers.receiver_inactivity)) {
                 LOG_ERR("Failed to stop timer");
                 /*pdu_destroy(pdu);
                   return -1;*/
@@ -1440,6 +1448,15 @@ int dtp_receive(struct dtp * instance,
                 pdu_destroy(pdu);
 
                 dropped_pdus_inc(sv);
+#if DTP_INACTIVITY_TIMERS_ENABLE
+                /* Start ReceiverInactivityTimer */
+                if (rtimer_restart(instance->
+                                   timers.receiver_inactivity,
+                                   3 * (dt_sv_mpl(dt) +
+                                        dt_sv_r(dt)   +
+                                        dt_sv_a(dt))))
+                        LOG_ERR("Failed restart RcvrInactivity timer");
+#endif
 
                 /* Send an ACK/Flow Control PDU with current window values */
                 if (dtcp) {
@@ -1448,15 +1465,6 @@ int dtp_receive(struct dtp * instance,
                                         "control pdu");
                                 return -1;
                         }
-#if DTP_INACTIVITY_TIMERS_ENABLE
-                        /* Start ReceiverInactivityTimer */
-                        if (rtimer_restart(instance->
-                                           timers.receiver_inactivity,
-                                           3 * (dt_sv_mpl(dt) +
-                                                dt_sv_r(dt)   +
-                                                dt_sv_a(dt))))
-                                LOG_ERR("Failed restart RcvrInactivity timer");
-#endif
                 }
                 return 0;
         }
