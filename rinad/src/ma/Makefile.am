@@ -4,7 +4,7 @@
 # Written by: Marc Sune <marc DOT sune AT bisdn DOT de>
 #
 
-SUBDIRS      = ribs
+SUBDIRS      = ribs librina-wrap
 
 EXTRA_DIST   =
 CLEANFILES   =

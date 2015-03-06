@@ -22,7 +22,7 @@
 #define RIB_PROVIDER_H_
 #include <string>
 
-namespace rib_api {
+namespace rib {
 
 /// Authentication information
 typedef struct auth_info
@@ -148,38 +148,53 @@ typedef struct filtering_info
 class RIBProvider
 {
  public:
-  void openConnectionCallback(const con_handle_t &con, const result_info &res);
-  void closeConnectionCallback(const con_handle_t &con, const result_info &res);
+  static void open_connection_result(const con_handle_t &con,
+                                     const result_info &res);
+  static void close_connection_result(const con_handle_t &con,
+                                      const result_info &res);
 
-  void createRemoteCallback(const con_handle_t &con, const obj_info_t &obj,
-                            const res_info_t &res, int message_id);
-  void deleteRemoteCallback(const con_handle_t &con, const obj_info_t &obj,
-                            const res_info_t &res, int message_id);
-  void readRemoteCallback(const con_handle_t &con, const obj_info_t &obj,
-                          const res_info_t &res, int message_id);
-  void cancelReadRemote(const con_handle_t &con, const obj_info_t &obj,
-                        const res_info_t &res, int message_id);
-  void writeRemoteCallback(const con_handle_t &con, const obj_info_t &obj,
-                           const res_info_t &res, int message_id);
-  void startRemoteCallback(const con_handle_t &con, const obj_info_t &obj,
-                           const res_info_t &res, int message_id);
-  void stopRemoteCallback(const con_handle_t &con, const obj_info_t &obj,
-                          const res_info_t &res, int message_id);
+  static void remote_create_result(const con_handle_t &con,
+                                   const obj_info_t &obj, const res_info_t &res,
+                                   int message_id);
+  static void remote_delete_result(const con_handle_t &con,
+                                   const obj_info_t &obj, const res_info_t &res,
+                                   int message_id);
+  static void remote_read_result(const con_handle_t &con, const obj_info_t &obj,
+                                 const res_info_t &res, int message_id);
+  static void remote_cancel_read_result(const con_handle_t &con,
+                                        const obj_info_t &obj,
+                                        const res_info_t &res, int message_id);
+  static void remote_write_result(const con_handle_t &con,
+                                  const obj_info_t &obj, const res_info_t &res,
+                                  int message_id);
+  static void remote_start_result(const con_handle_t &con,
+                                  const obj_info_t &obj, const res_info_t &res,
+                                  int message_id);
+  static void remote_stop_result(const con_handle_t &con, const obj_info_t &obj,
+                                 const res_info_t &res, int message_id);
 
-  void createObject(const con_handle_t &con, const obj_info_t &obj,
-                    const filt_info_t &filt);
-  void deleteObject(const con_handle_t &con, const obj_info_t &obj,
-                    const filt_info_t &filt);
-  void readObject(const con_handle_t &con, const obj_info_t &obj,
-                  const filt_info_t &filt);
-  void cancelReadObject(const con_handle_t &con, const obj_info_t &obj,
-                        const filt_info_t &filt);
-  void writeObject(const con_handle_t &con, const obj_info_t &obj,
-                   const filt_info_t &filt);
-  void startObject(const con_handle_t &con, const obj_info_t &obj,
-                   const filt_info_t &filt);
-  void stopObject(const con_handle_t &con, const obj_info_t &obj,
-                  const filt_info_t &filt);
+  static void remote_create_request(const con_handle_t &con,
+                                    const obj_info_t &obj,
+                                    const filt_info_t &filt);
+  static void remote_delete_request(const con_handle_t &con,
+                                    const obj_info_t &obj,
+                                    const filt_info_t &filt);
+  static void remote_read_request(const con_handle_t &con,
+                                  const obj_info_t &obj,
+                                  const filt_info_t &filt);
+  static void remote_cancel_read_request(const con_handle_t &con,
+                                         const obj_info_t &obj,
+                                         const filt_info_t &filt);
+  static void remote_write_request(const con_handle_t &con,
+                                   const obj_info_t &obj,
+                                   const filt_info_t &filt);
+  static void remote_start_request(const con_handle_t &con,
+                                   const obj_info_t &obj,
+                                   const filt_info_t &filt);
+  static void remote_stop_request(const con_handle_t &con,
+                                  const obj_info_t &obj,
+                                  const filt_info_t &filt);
 };
+}
 
 #endif /* RIB_PROVIDER_H_ */

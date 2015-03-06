@@ -22,8 +22,9 @@
 #ifndef CDAP_PROVIDER_H_
 #define CDAP_PROVIDER_H_
 #include <string>
+#include <librina/concurrency.h>
 
-namespace cdap_api {
+namespace cdap {
 
 /// Authentication information
 typedef struct auth_info
@@ -160,47 +161,45 @@ typedef struct connection_handler
   vers_info_t version_;
 } con_handle_t;
 
-class CDAPProvider
+class CDAPProvider : public rina::Lockable
 {
  public:
-  con_handle_t open_connection(const vers_info_t ver, const src_info_t &src,
+  static con_handle_t open_connection(const vers_info_t ver, const src_info_t &src,
                                const dest_info_t &dest, const auth_info &auth);
-  int close_connection(con_handle_t &con);
-
-  int create_remote(const con_handle_t &con, const obj_info_t &obj,
+  static int close_connection(con_handle_t &con);
+  static int remote_create(const con_handle_t &con, const obj_info_t &obj,
                      const flags_t &flags, const filt_info_t &filt);
-  int delete_remote(const con_handle_t &con, const obj_info_t &obj,
+  static int remote_delete(const con_handle_t &con, const obj_info_t &obj,
                      const flags_t &flags, const filt_info_t &filt);
-  int read_remote(const con_handle_t &con, const obj_info_t &obj,
+  static int remote_read(const con_handle_t &con, const obj_info_t &obj,
                    const flags_t &flags, const filt_info_t &filt);
-  int cancel_read_remote(const con_handle_t &con, const obj_info_t &obj,
+  static int remote_cancel_read(const con_handle_t &con, const obj_info_t &obj,
                           const flags_t &flags, const filt_info_t &filt);
-  int write_remote(const con_handle_t &con, const obj_info_t &obj,
+  static int remote_write(const con_handle_t &con, const obj_info_t &obj,
                     const flags_t &flags, const filt_info_t &filt);
-  int start_remote(const con_handle_t &con, const obj_info_t &obj,
+  static int remote_start(const con_handle_t &con, const obj_info_t &obj,
                     const flags_t &flags, const filt_info_t &filt);
-  int stop_remote(const con_handle_t &con, const obj_info_t &obj,
+  static int remote_stop(const con_handle_t &con, const obj_info_t &obj,
                    const flags_t &flags, const filt_info_t &filt);
-
-  void create_response(const con_handle_t &con, const obj_info_t &obj,
+  static void remote_create_response(const con_handle_t &con, const obj_info_t &obj,
                        const flags_t &flags, const res_info_t &res,
                        int message_id);
-  void delete_response(const con_handle_t &con, const obj_info_t &obj,
+  static void remote_delete_response(const con_handle_t &con, const obj_info_t &obj,
                        const flags_t &flags, const res_info_t &res,
                        int message_id);
-  void read_response(const con_handle_t &con, const obj_info_t &obj,
+  static void remote_read_response(const con_handle_t &con, const obj_info_t &obj,
                      const flags_t &flags, const res_info_t &res,
                      int message_id);
-  void cancel_read_response(const con_handle_t &con, const obj_info_t &obj,
+  static void remote_cancel_read_response(const con_handle_t &con, const obj_info_t &obj,
                             const flags_t &flags, const res_info_t &res,
                             int message_id);
-  void write_response(const con_handle_t &con, const obj_info_t &obj,
+  static void remote_write_response(const con_handle_t &con, const obj_info_t &obj,
                       const flags_t &flags, const res_info_t &res,
                       int message_id);
-  void start_response(const con_handle_t &con, const obj_info_t &obj,
+  static void remote_start_response(const con_handle_t &con, const obj_info_t &obj,
                       const flags_t &flags, const res_info_t &res,
                       int message_id);
-  void stop_response(const con_handle_t &con, const obj_info_t &obj,
+  static void remote_stop_response(const con_handle_t &con, const obj_info_t &obj,
                      const flags_t &flags, const res_info_t &res,
                      int message_id);
 };
