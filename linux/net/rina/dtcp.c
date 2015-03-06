@@ -520,8 +520,6 @@ void dump_we(struct dtcp * dtcp, struct pci *  pci)
 
         snd_rt_we = snd_rt_wind_edge(dtcp);
         snd_lf_we = dtcp_snd_lf_win(dtcp);
-        /* commented to avoid doing spin_lock_irqsave */
-        /* cwq_lf_we = cwq_peek(dt_cwq(dtcp->parent));*/
         rcv_rt_we = rcvr_rt_wind_edge(dtcp);
         rcv_lf_we = dt_sv_rcv_lft_win(dtcp->parent);
         new_rt_we = pci_control_new_rt_wind_edge(pci);
@@ -534,9 +532,9 @@ void dump_we(struct dtcp * dtcp, struct pci *  pci)
         LOG_DBG("SEQN: %u N/Ack: %u SndRWE: %u SndLWE: %u "
                 "RcvRWE: %u RcvLWE: %u "
                 "newRWE: %u newLWE: %u "
-                "myRWE: %u myLWE: %u cwqLWE: %u",
+                "myRWE: %u myLWE: %u",
                 pci_seqn, ack, snd_rt_we, snd_lf_we, rcv_rt_we, rcv_lf_we,
-                new_rt_we, new_lf_we, my_rt_we, my_lf_we, cwq_lf_we);
+                new_rt_we, new_lf_we, my_rt_we, my_lf_we);
 }
 EXPORT_SYMBOL(dump_we);
 
@@ -649,7 +647,6 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         struct pci *     pci;
 
         ASSERT(dtcp);
-        ASSERT(pci);
 
         pci = pdu_pci_get_rw(pdu);
         ASSERT(pci);
