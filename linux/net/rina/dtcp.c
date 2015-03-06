@@ -503,7 +503,6 @@ void dump_we(struct dtcp * dtcp, struct pci *  pci)
         struct dtp * dtp;
         seq_num_t    snd_rt_we;
         seq_num_t    snd_lf_we;
-        seq_num_t    cwq_lf_we = 0;
         seq_num_t    rcv_rt_we;
         seq_num_t    rcv_lf_we;
         seq_num_t    new_rt_we;
@@ -543,13 +542,14 @@ EXPORT_SYMBOL(dump_we);
 
 /* not a policy according to specs */
 static int rcv_nack_ctl(struct dtcp * dtcp,
-                        struct pci *  pdu)
+                        struct pdu *  pdu)
 {
         struct rtxq *    q;
         struct dtcp_ps * ps;
         seq_num_t        seq_num;
         struct pci *     pci;
 
+        pci     = pdu_pci_get_rw(pdu);
         seq_num = pci_control_ack_seq_num(pci);
 
         rcu_read_lock();
@@ -585,7 +585,7 @@ static int rcv_ack(struct dtcp * dtcp,
         ASSERT(dtcp);
         ASSERT(pdu);
 
-        pci = pdu_pci_get_ro(pdu);
+        pci = pdu_pci_get_rw(pdu);
         ASSERT(pci);
 
         seq = pci_control_ack_seq_num(pci);
@@ -604,7 +604,7 @@ static int rcv_ack(struct dtcp * dtcp,
 }
 
 static int rcv_flow_ctl(struct dtcp * dtcp,
-                        struct pci *  pdu)
+                        struct pdu *  pdu)
 {
         struct cwq * q;
         struct dtp * dtp;
@@ -642,7 +642,7 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
 }
 
 static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
-                                struct pci *  pdu)
+                                struct pdu *  pdu)
 {
         struct dtcp_ps * ps;
         seq_num_t        seq;
@@ -651,7 +651,7 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         ASSERT(dtcp);
         ASSERT(pci);
 
-        pci = pdu_pci_get_ro(pdu);
+        pci = pdu_pci_get_rw(pdu);
         ASSERT(pci);
 
         LOG_DBG("Updating Window Edges for DTCP: %pK", dtcp);
