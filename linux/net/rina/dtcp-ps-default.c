@@ -195,11 +195,6 @@ default_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
         /* Invoke delimiting and update left window edge */
 
         seq_num = process_A_expiration(dtp, dtcp);
-        if ((int) seq_num < 0) {
-                LOG_ERR("Seq num returned by A-timer is negative, "
-                        "bailing out ...");
-                return -1;
-        }
 
         return ps->sv_update(ps, seq_num);
 }
