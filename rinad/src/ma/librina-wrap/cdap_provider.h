@@ -167,9 +167,10 @@ typedef struct connection_handler
   vers_info_t version_;
 } con_handle_t;
 
-class CDAPProviderInterface : public rina::Lockable
+class CDAPProviderInterface
 {
  public:
+  virtual ~CDAPProviderInterface(){};
   virtual con_handle_t open_connection(const vers_info_t ver,
                                        const src_info_t &src,
                                        const dest_info_t &dest,
@@ -220,7 +221,7 @@ class CDAPProviderInterface : public rina::Lockable
 
 class CDAPProviderFactory {
  public:
-  CDAPProviderInterface* getCDAPProvider(const std::string &comm_protocol, long timeout);
+  CDAPProviderInterface* create(const std::string &comm_protocol, long timeout);
 };
 
 }

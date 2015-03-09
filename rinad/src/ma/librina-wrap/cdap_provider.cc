@@ -67,6 +67,7 @@ class CDAPProvider : public CDAPProviderInterface
   void remote_stop_response(const con_handle_t &con, const flags_t &flags, const res_info_t &res,
                             int message_id);
  private:
+  void send(const rina::CDAPMessage *m_sent, int port);
   rina::CDAPSessionManagerInterface *manager_;
 };
 
@@ -84,7 +85,6 @@ con_handle_t CDAPProvider::open_connection(const vers_info_t ver,
                                            const auth_info &auth, int port)
 {
   const rina::CDAPMessage *m_sent;
-  const rina::SerializedObject *ser_sent_m;
   con_handle_t con;
   rina::AuthValue *value;
 
@@ -111,14 +111,9 @@ con_handle_t CDAPProvider::open_connection(const vers_info_t ver,
       port, rina::CDAPMessage::AUTH_NONE, *value, dest.dest_ae_inst_,
       dest.dest_ae_name_, dest.dest_ap_inst_, dest.dest_ap_name_,
       src.src_ae_inst_, src.src_ae_name_, src.src_ap_inst_, src.src_ap_name_);
-  ser_sent_m = manager_->encodeNextMessageToBeSent(*m_sent, port);
-  manager_->messageSent(*m_sent, port);
-  rina::ipcManager->getAllocatedFlow(con.port_)->writeSDU(ser_sent_m->message_,
-                                                          ser_sent_m->size_);
+  send(m_sent, con.port_);
 
   delete value;
-  delete m_sent;
-  delete ser_sent_m;
 
   return con;
 }
@@ -132,13 +127,8 @@ int CDAPProvider::close_connection(con_handle_t &con)
   m_sent = manager_->getReleaseConnectionRequestMessage(
       con.port_, rina::CDAPMessage::NONE_FLAGS, true);
   invoke_id = m_sent->get_invoke_id();
-  const rina::SerializedObject *ser_sent_m =
-      manager_->encodeNextMessageToBeSent(*m_sent, con.port_);
-  manager_->messageSent(*m_sent, con.port_);
-  rina::ipcManager->getAllocatedFlow(con.port_)->writeSDU(ser_sent_m->message_,
-                                                          ser_sent_m->size_);
+  send(m_sent, con.port_);
 
-  delete ser_sent_m;
   delete m_sent;
 
   return invoke_id;
@@ -156,13 +146,8 @@ int CDAPProvider::remote_create(const con_handle_t &con, const obj_info_t &obj,
                                                  obj.class_, obj.inst_,
                                                  obj.name_, filt.scope_, true);
   invoke_id = m_sent->get_invoke_id();
-  const rina::SerializedObject *ser_sent_m =
-      manager_->encodeNextMessageToBeSent(*m_sent, con.port_);
-  manager_->messageSent(*m_sent, con.port_);
-  rina::ipcManager->getAllocatedFlow(con.port_)->writeSDU(ser_sent_m->message_,
-                                                          ser_sent_m->size_);
+  send(m_sent, con.port_);
 
-  delete ser_sent_m;
   delete m_sent;
 
   return invoke_id;
@@ -180,13 +165,8 @@ int CDAPProvider::remote_delete(const con_handle_t &con, const obj_info_t &obj,
                                                  obj.class_, obj.inst_,
                                                  obj.name_, filt.scope_, true);
   invoke_id = m_sent->get_invoke_id();
-  const rina::SerializedObject *ser_sent_m =
-      manager_->encodeNextMessageToBeSent(*m_sent, con.port_);
-  manager_->messageSent(*m_sent, con.port_);
-  rina::ipcManager->getAllocatedFlow(con.port_)->writeSDU(ser_sent_m->message_,
-                                                          ser_sent_m->size_);
+  send(m_sent, con.port_);
 
-  delete ser_sent_m;
   delete m_sent;
 
   return invoke_id;
@@ -204,13 +184,8 @@ int CDAPProvider::remote_read(const con_handle_t &con, const obj_info_t &obj,
                                                  obj.class_, obj.inst_,
                                                  obj.name_, filt.scope_, true);
   invoke_id = m_sent->get_invoke_id();
-  const rina::SerializedObject *ser_sent_m =
-      manager_->encodeNextMessageToBeSent(*m_sent, con.port_);
-  manager_->messageSent(*m_sent, con.port_);
-  rina::ipcManager->getAllocatedFlow(con.port_)->writeSDU(ser_sent_m->message_,
-                                                          ser_sent_m->size_);
+  send(m_sent, con.port_);
 
-  delete ser_sent_m;
   delete m_sent;
 
   return invoke_id;
@@ -223,12 +198,8 @@ int CDAPProvider::remote_cancel_read(const con_handle_t &con,
   // FIXME change CDAPMessage::NONE_FLAGS
   (void) flags;
   m_sent = manager_->getCancelReadRequestMessage(rina::CDAPMessage::NONE_FLAGS, invoke_id);
-  const rina::SerializedObject *ser_sent_m =
-      manager_->encodeNextMessageToBeSent(*m_sent, con.port_);
-  manager_->messageSent(*m_sent, con.port_);
-  rina::ipcManager->getAllocatedFlow(con.port_)->writeSDU(ser_sent_m->message_,
-                                                          ser_sent_m->size_);
-  delete ser_sent_m;
+  send(m_sent, con.port_);
+
   delete m_sent;
 
   return invoke_id;
@@ -246,13 +217,8 @@ int CDAPProvider::remote_write(const con_handle_t &con, const obj_info_t &obj,
                                                  obj.class_, obj.inst_,
                                                  obj.name_, filt.scope_, true);
   invoke_id = m_sent->get_invoke_id();
-  const rina::SerializedObject *ser_sent_m =
-      manager_->encodeNextMessageToBeSent(*m_sent, con.port_);
-  manager_->messageSent(*m_sent, con.port_);
-  rina::ipcManager->getAllocatedFlow(con.port_)->writeSDU(ser_sent_m->message_,
-                                                          ser_sent_m->size_);
+  send(m_sent, con.port_);
 
-  delete ser_sent_m;
   delete m_sent;
 
   return invoke_id;
@@ -270,13 +236,8 @@ int CDAPProvider::remote_start(const con_handle_t &con, const obj_info_t &obj,
                                                  obj.class_, obj.inst_,
                                                  obj.name_, filt.scope_, true);
   invoke_id = m_sent->get_invoke_id();
-  const rina::SerializedObject *ser_sent_m =
-      manager_->encodeNextMessageToBeSent(*m_sent, con.port_);
-  manager_->messageSent(*m_sent, con.port_);
-  rina::ipcManager->getAllocatedFlow(con.port_)->writeSDU(ser_sent_m->message_,
-                                                          ser_sent_m->size_);
+  send(m_sent, con.port_);
 
-  delete ser_sent_m;
   delete m_sent;
 
   return invoke_id;
@@ -294,13 +255,8 @@ int CDAPProvider::remote_stop(const con_handle_t &con, const obj_info_t &obj,
                                                  obj.class_, obj.inst_,
                                                  obj.name_, filt.scope_, true);
   invoke_id = m_sent->get_invoke_id();
-  const rina::SerializedObject *ser_sent_m =
-      manager_->encodeNextMessageToBeSent(*m_sent, con.port_);
-  manager_->messageSent(*m_sent, con.port_);
-  rina::ipcManager->getAllocatedFlow(con.port_)->writeSDU(ser_sent_m->message_,
-                                                          ser_sent_m->size_);
+  send(m_sent, con.port_);
 
-  delete ser_sent_m;
   delete m_sent;
 
   return invoke_id;
@@ -317,13 +273,8 @@ void CDAPProvider::remote_create_response(const con_handle_t &con,
   m_sent = manager_->getCreateObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
                                                  obj.class_, obj.inst_,
                                                  obj.name_, res.result_, res.result_reason_, message_id);
-  const rina::SerializedObject *ser_sent_m =
-      manager_->encodeNextMessageToBeSent(*m_sent, con.port_);
-  manager_->messageSent(*m_sent, con.port_);
-  rina::ipcManager->getAllocatedFlow(con.port_)->writeSDU(ser_sent_m->message_,
-                                                          ser_sent_m->size_);
+  send(m_sent, con.port_);
 
-  delete ser_sent_m;
   delete m_sent;
 }
 void CDAPProvider::remote_delete_response(const con_handle_t &con,
@@ -338,13 +289,8 @@ void CDAPProvider::remote_delete_response(const con_handle_t &con,
   m_sent = manager_->getDeleteObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
                                                  obj.class_, obj.inst_,
                                                  obj.name_, res.result_, res.result_reason_, message_id);
-  const rina::SerializedObject *ser_sent_m =
-      manager_->encodeNextMessageToBeSent(*m_sent, con.port_);
-  manager_->messageSent(*m_sent, con.port_);
-  rina::ipcManager->getAllocatedFlow(con.port_)->writeSDU(ser_sent_m->message_,
-                                                          ser_sent_m->size_);
+  send(m_sent, con.port_);
 
-  delete ser_sent_m;
   delete m_sent;
 }
 void CDAPProvider::remote_read_response(const con_handle_t &con,
@@ -359,13 +305,8 @@ void CDAPProvider::remote_read_response(const con_handle_t &con,
   m_sent = manager_->getReadObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
                                                  obj.class_, obj.inst_,
                                                  obj.name_, res.result_, res.result_reason_, message_id);
-  const rina::SerializedObject *ser_sent_m =
-      manager_->encodeNextMessageToBeSent(*m_sent, con.port_);
-  manager_->messageSent(*m_sent, con.port_);
-  rina::ipcManager->getAllocatedFlow(con.port_)->writeSDU(ser_sent_m->message_,
-                                                          ser_sent_m->size_);
+  send(m_sent, con.port_);
 
-  delete ser_sent_m;
   delete m_sent;
 }
 void CDAPProvider::remote_cancel_read_response(const con_handle_t &con,
@@ -378,13 +319,8 @@ void CDAPProvider::remote_cancel_read_response(const con_handle_t &con,
   // FIXME change CDAPMessage::NONE_FLAGS
   (void) flags;
   m_sent = manager_->getCancelReadResponseMessage(rina::CDAPMessage::NONE_FLAGS, message_id, res.result_, res.result_reason_);
-  const rina::SerializedObject *ser_sent_m =
-      manager_->encodeNextMessageToBeSent(*m_sent, con.port_);
-  manager_->messageSent(*m_sent, con.port_);
-  rina::ipcManager->getAllocatedFlow(con.port_)->writeSDU(ser_sent_m->message_,
-                                                          ser_sent_m->size_);
+  send(m_sent, con.port_);
 
-  delete ser_sent_m;
   delete m_sent;
 }
 void CDAPProvider::remote_write_response(const con_handle_t &con,
@@ -396,13 +332,8 @@ void CDAPProvider::remote_write_response(const con_handle_t &con,
   // FIXME change CDAPMessage::NONE_FLAGS
   (void) flags;
   m_sent = manager_->getWriteObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS, res.result_, res.result_reason_, message_id);
-  const rina::SerializedObject *ser_sent_m =
-      manager_->encodeNextMessageToBeSent(*m_sent, con.port_);
-  manager_->messageSent(*m_sent, con.port_);
-  rina::ipcManager->getAllocatedFlow(con.port_)->writeSDU(ser_sent_m->message_,
-                                                          ser_sent_m->size_);
+  send(m_sent, con.port_);
 
-  delete ser_sent_m;
   delete m_sent;
 }
 void CDAPProvider::remote_start_response(const con_handle_t &con,
@@ -417,13 +348,8 @@ void CDAPProvider::remote_start_response(const con_handle_t &con,
   m_sent = manager_->getStartObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
                                                  obj.class_, obj.inst_,
                                                  obj.name_, res.result_, res.result_reason_, message_id);
-  const rina::SerializedObject *ser_sent_m =
-      manager_->encodeNextMessageToBeSent(*m_sent, con.port_);
-  manager_->messageSent(*m_sent, con.port_);
-  rina::ipcManager->getAllocatedFlow(con.port_)->writeSDU(ser_sent_m->message_,
-                                                          ser_sent_m->size_);
+  send(m_sent, con.port_);
 
-  delete ser_sent_m;
   delete m_sent;
 }
 void CDAPProvider::remote_stop_response(const con_handle_t &con,
@@ -435,17 +361,22 @@ void CDAPProvider::remote_stop_response(const con_handle_t &con,
   // FIXME change CDAPMessage::NONE_FLAGS
   (void) flags;
   m_sent = manager_->getStopObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS, res.result_, res.result_reason_, message_id);
-  const rina::SerializedObject *ser_sent_m =
-      manager_->encodeNextMessageToBeSent(*m_sent, con.port_);
-  manager_->messageSent(*m_sent, con.port_);
-  rina::ipcManager->getAllocatedFlow(con.port_)->writeSDU(ser_sent_m->message_,
-                                                          ser_sent_m->size_);
+  send(m_sent, con.port_);
 
-  delete ser_sent_m;
   delete m_sent;
 }
 
-CDAPProviderInterface* CDAPProviderFactory::getCDAPProvider(
+void CDAPProvider::send(const rina::CDAPMessage *m_sent, int port)
+{
+  const rina::SerializedObject *ser_sent_m =
+      manager_->encodeNextMessageToBeSent(*m_sent, port);
+  manager_->messageSent(*m_sent, port);
+  rina::ipcManager->getAllocatedFlow(port)->writeSDU(ser_sent_m->message_,
+                                                          ser_sent_m->size_);
+  delete ser_sent_m;
+}
+
+CDAPProviderInterface* CDAPProviderFactory::create(
     const std::string &comm_protocol, long timeout)
 {
   (void) comm_protocol;
