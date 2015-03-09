@@ -390,7 +390,7 @@ static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
 
         if (list_empty(&q->head)) {
                 list_add(&tmp->next, &q->head);
-                LOG_DBG("First PDU with seqnum: %d push to seqq at: %pk",
+                LOG_DBG("First PDU with seqnum: %u push to seqq at: %pk",
                         csn, q);
                 return 0;
         }
@@ -413,7 +413,7 @@ static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
 
         if (csn > psn) {
                 list_add_tail(&tmp->next, &q->head);
-                LOG_DBG("Last PDU with seqnum: %d push to seqq at: %pk",
+                LOG_DBG("Last PDU with seqnum: %u push to seqq at: %pk",
                         csn, q);
                 return 0;
         }
@@ -429,7 +429,7 @@ static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
                 }
                 if (csn > psn) {
                         list_add(&tmp->next, &cur->next);
-                        LOG_DBG("Middle PDU with seqnum: %d push to "
+                        LOG_DBG("Middle PDU with seqnum: %u push to "
                                 "seqq at: %pk", csn, q);
                         return 0;
                 }
@@ -507,6 +507,7 @@ static void tf_sender_inactivity(void * data)
         struct dtp * dtp;
         struct dtp_ps * ps;
 
+        LOG_DBG("Running Stimer...");
         dtp = (struct dtp *) data;
         if (!dtp) {
                 LOG_ERR("No dtp to work with");
@@ -532,16 +533,14 @@ static void tf_sender_inactivity(void * data)
 static void tf_receiver_inactivity(void * data)
 {
         struct dtp * dtp;
-#if DTP_INACTIVITY_TIMERS_ENABLE
         struct dtp_ps * ps;
-#endif
 
+        LOG_DBG("Running Rtimer...");
         dtp = (struct dtp *) data;
         if (!dtp) {
                 LOG_ERR("No dtp to work with");
                 return;
         }
-#if DTP_INACTIVITY_TIMERS_ENABLE
         rcu_read_lock();
         ps = container_of(rcu_dereference(dtp->base.ps), struct dtp_ps, base);
         if (!ps->receiver_inactivity_timer) {
@@ -553,7 +552,7 @@ static void tf_receiver_inactivity(void * data)
         if (ps->receiver_inactivity_timer(ps))
                 LOG_ERR("Problems executing receiver inactivity policy");
         rcu_read_unlock();
-#endif
+
         return;
 }
 
