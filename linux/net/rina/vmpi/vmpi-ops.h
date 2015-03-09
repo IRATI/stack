@@ -21,6 +21,8 @@
 #ifndef __VMPI_OPS_H__
 #define __VMPI_OPS_H__
 
+#include <linux/aio.h>
+
 typedef void (*vmpi_read_cb_t)(void *opaque, unsigned int channel,
                                const char *buffer, int len);
 
