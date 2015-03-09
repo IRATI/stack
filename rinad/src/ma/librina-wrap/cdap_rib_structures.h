@@ -1,5 +1,5 @@
 /*
- * RIB South bound API
+ * RIB and CDAP common structures
  *
  *    Bernat Gastón <bernat.gaston@i2cat.net>
  *
