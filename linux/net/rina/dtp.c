@@ -646,9 +646,9 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
                 if (seq_num - LWE - 1 <= max_sdu_gap) {
 
-                        if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
+                        if (dt_sv_rcv_lft_win_set(dt, seq_num))
                                 LOG_ERR("Could not update LWE while A timer");
-                        }
+
                         pos->pdu = NULL;
                         list_del(&pos->next);
                         seq_queue_entry_destroy(pos);
@@ -658,7 +658,6 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         if (pdu_post(dtp, pdu)) {
                                 LOG_ERR("Could not post PDU %u while A timer"
                                         "(in-order)", seq_num);
-                                return -1;
                         }
 
                         LOG_DBG("Atimer: PDU %u posted", seq_num);
@@ -683,7 +682,6 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                 LOG_ERR("Failed to set new "
                                         "left window edge");
-                                ret = -1;
                                 goto finish;
                         }
                         pos->pdu = NULL;
@@ -694,7 +692,6 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         if (pdu_post(dtp, pdu)) {
                                 LOG_ERR("Could not post PDU %u while A timer"
                                         "(expiration)", seq_num);
-                                return -1;
                         }
 
                         /*spin_lock(&seqq->lock);
@@ -742,7 +739,6 @@ static void tf_a(void * o)
         struct dt *   dt;
         struct dtp *  dtp;
         struct dtcp * dtcp;
-        seq_num_t     seq_num_sv_update;
         timeout_t     a;
 
         LOG_DBG("A-timer handler started...");
@@ -764,12 +760,7 @@ static void tf_a(void * o)
                         return;
                 }
         } else {
-                seq_num_sv_update =  process_A_expiration(dtp, dtcp);
-                if (((int) seq_num_sv_update) < 0) {
-                        LOG_ERR("ULWE returned no seq num to update");
-                        rtimer_start(dtp->timers.a, a/AF);
-                        return;
-                }
+                process_A_expiration(dtp, dtcp);
 #if DTP_INACTIVITY_TIMERS_ENABLE
                 if (rtimer_restart(dtp->timers.sender_inactivity,
                                    2 * (dt_sv_mpl(dt) +
