@@ -36,6 +36,12 @@ typedef struct auth_info
     AUTH_SSHRSA,
     AUTH_SSHDSA
   };
+  /// Authentication name
+  std::string auth_name_;
+  /// Authentication password
+  std::string auth_password_;
+  /// Additional authentication information
+  std::string auth_other_;
   /// AuthenticationMechanismName (authtypes), optional, not validated by CDAP.
   /// Identification of the method to be used by the destination application to
   /// authenticate the source application
@@ -100,20 +106,20 @@ typedef struct object_info
 {
   /// ObjectClass (string). Identifies the object class definition of the
   /// addressed object.
-  std::string obj_class_;
+  std::string class_;
   /// ObjectInstance (int64). Object instance uniquely identifies a single object
   /// with a specific ObjectClass and ObjectName in an application's RIB. Either
   /// the ObjectClass and ObjectName or this value may be used, if the ObjectInstance
   /// value is known. If a class and name are supplied in an operation,
   /// an ObjectInstance value may be returned, and that may be used in future operations
   /// in lieu of obj_class and obj_name for the duration of this connection.
-  long obj_inst_;
+  long inst_;
   /// ObjectName (string). Identifies a named object that the operation is
   /// to be applied to. Object names identify a unique object of the designated
   /// ObjectClass within an application.
-  std::string obj_name_;
+  std::string name_;
   /// ObjectValueInterface (ObjectValueInterface). The value of the object.
-  void *obj_value_;
+  void *value_;
   /// Result (int32). Mandatory in the responses, forbidden in the requests
   /// The result of an operation, indicating its success (which has the value zero,
   /// the default for this field), partial success in the case of
@@ -154,54 +160,67 @@ typedef struct version_info
 
 typedef struct connection_handler
 {
-  int id_;
+  int port_;
   src_info_t src_;
   dest_info_t dest_;
   auth_info_t auth_;
   vers_info_t version_;
 } con_handle_t;
 
-class CDAPProvider : public rina::Lockable
+class CDAPProviderInterface : public rina::Lockable
 {
  public:
-  static con_handle_t open_connection(const vers_info_t ver, const src_info_t &src,
-                               const dest_info_t &dest, const auth_info &auth);
-  static int close_connection(con_handle_t &con);
-  static int remote_create(const con_handle_t &con, const obj_info_t &obj,
-                     const flags_t &flags, const filt_info_t &filt);
-  static int remote_delete(const con_handle_t &con, const obj_info_t &obj,
-                     const flags_t &flags, const filt_info_t &filt);
-  static int remote_read(const con_handle_t &con, const obj_info_t &obj,
-                   const flags_t &flags, const filt_info_t &filt);
-  static int remote_cancel_read(const con_handle_t &con, const obj_info_t &obj,
-                          const flags_t &flags, const filt_info_t &filt);
-  static int remote_write(const con_handle_t &con, const obj_info_t &obj,
-                    const flags_t &flags, const filt_info_t &filt);
-  static int remote_start(const con_handle_t &con, const obj_info_t &obj,
-                    const flags_t &flags, const filt_info_t &filt);
-  static int remote_stop(const con_handle_t &con, const obj_info_t &obj,
-                   const flags_t &flags, const filt_info_t &filt);
-  static void remote_create_response(const con_handle_t &con, const obj_info_t &obj,
-                       const flags_t &flags, const res_info_t &res,
-                       int message_id);
-  static void remote_delete_response(const con_handle_t &con, const obj_info_t &obj,
-                       const flags_t &flags, const res_info_t &res,
-                       int message_id);
-  static void remote_read_response(const con_handle_t &con, const obj_info_t &obj,
-                     const flags_t &flags, const res_info_t &res,
-                     int message_id);
-  static void remote_cancel_read_response(const con_handle_t &con, const obj_info_t &obj,
-                            const flags_t &flags, const res_info_t &res,
-                            int message_id);
-  static void remote_write_response(const con_handle_t &con, const obj_info_t &obj,
-                      const flags_t &flags, const res_info_t &res,
-                      int message_id);
-  static void remote_start_response(const con_handle_t &con, const obj_info_t &obj,
-                      const flags_t &flags, const res_info_t &res,
-                      int message_id);
-  static void remote_stop_response(const con_handle_t &con, const obj_info_t &obj,
-                     const flags_t &flags, const res_info_t &res,
-                     int message_id);
+  virtual con_handle_t open_connection(const vers_info_t ver,
+                                       const src_info_t &src,
+                                       const dest_info_t &dest,
+                                       const auth_info &auth,
+                                       int port) = 0;
+  virtual int close_connection(con_handle_t &con) = 0;
+  virtual int remote_create(const con_handle_t &con, const obj_info_t &obj,
+                            const flags_t &flags, const filt_info_t &filt) = 0;
+  virtual int remote_delete(const con_handle_t &con, const obj_info_t &obj,
+                            const flags_t &flags, const filt_info_t &filt) = 0;
+  virtual int remote_read(const con_handle_t &con, const obj_info_t &obj,
+                          const flags_t &flags, const filt_info_t &filt)= 0;
+  virtual int remote_cancel_read(const con_handle_t &con,
+                                 const flags_t &flags, int invoke_id) = 0;
+  virtual int remote_write(const con_handle_t &con, const obj_info_t &obj,
+                           const flags_t &flags, const filt_info_t &filt) = 0;
+  virtual int remote_start(const con_handle_t &con, const obj_info_t &obj,
+                           const flags_t &flags, const filt_info_t &filt) = 0;
+  virtual int remote_stop(const con_handle_t &con, const obj_info_t &obj,
+                          const flags_t &flags, const filt_info_t &filt) = 0;
+  virtual void remote_create_response(const con_handle_t &con,
+                                      const obj_info_t &obj,
+                                      const flags_t &flags,
+                                      const res_info_t &res,
+                                      int message_id) = 0;
+  virtual void remote_delete_response(const con_handle_t &con,
+                                      const obj_info_t &obj,
+                                      const flags_t &flags,
+                                      const res_info_t &res,
+                                      int message_id) = 0;
+  virtual void remote_read_response(const con_handle_t &con,
+                                    const obj_info_t &obj, const flags_t &flags,
+                                    const res_info_t &res, int message_id) = 0;
+  virtual void remote_cancel_read_response(const con_handle_t &con,
+                                           const flags_t &flags,
+                                           const res_info_t &res,
+                                           int message_id) = 0;
+  virtual void remote_write_response(const con_handle_t &con,
+                                     const flags_t &flags,
+                                     const res_info_t &res, int message_id) = 0;
+  virtual void remote_start_response(const con_handle_t &con,
+                                     const obj_info_t &obj,
+                                     const flags_t &flags,
+                                     const res_info_t &res, int message_id) = 0;
+  virtual void remote_stop_response(const con_handle_t &con, const flags_t &flags,
+                                    const res_info_t &res, int message_id) = 0;
+};
+
+class CDAPProviderFactory {
+ public:
+  CDAPProviderInterface* getCDAPProvider(const std::string &comm_protocol, long timeout);
 };
 
 }
