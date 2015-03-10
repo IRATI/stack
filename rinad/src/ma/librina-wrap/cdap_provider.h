@@ -100,10 +100,14 @@ class CDAPProviderInterface
                                     int message_id) = 0;
 };
 
+class IPCPCDAPProviderInterface: public CDAPProviderInterface{
+
+};
+
 class CDAPProviderFactory
 {
  public:
-  CDAPProviderInterface* create(const std::string &comm_protocol, long timeout);
+  CDAPProviderInterface* create(const std::string &comm_protocol, long timeout, bool is_IPCP);
 };
 
 }

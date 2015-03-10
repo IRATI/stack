@@ -88,9 +88,10 @@ class CDAPProvider : public CDAPProviderInterface
   void remote_stop_response(const cdap_rib::con_handle_t &con,
                             const cdap_rib::flags_t &flags,
                             const cdap_rib::res_info_t &res, int message_id);
- private:
-  void send(const rina::CDAPMessage *m_sent, int port);
+ protected:
   rina::CDAPSessionManagerInterface *manager_;
+ private:
+  virtual void send(const rina::CDAPMessage *m_sent, int port) = 0;
 };
 
 CDAPProvider::CDAPProvider(
@@ -414,7 +415,22 @@ void CDAPProvider::remote_stop_response(const cdap_rib::con_handle_t &con,
   delete m_sent;
 }
 
-void CDAPProvider::send(const rina::CDAPMessage *m_sent, int port)
+class AppCDAPProvider : public CDAPProvider
+{
+ public:
+  AppCDAPProvider(rina::WireMessageProviderFactory wire_provider_factory,
+                  long timeout);
+ private:
+  void send(const rina::CDAPMessage *m_sent, int port);
+};
+
+AppCDAPProvider::AppCDAPProvider(
+    rina::WireMessageProviderFactory wire_provider_factory, long timeout)
+    : CDAPProvider(wire_provider_factory, timeout)
+{
+}
+
+void AppCDAPProvider::send(const rina::CDAPMessage *m_sent, int port)
 {
   const rina::SerializedObject *ser_sent_m =
       manager_->encodeNextMessageToBeSent(*m_sent, port);
@@ -424,14 +440,42 @@ void CDAPProvider::send(const rina::CDAPMessage *m_sent, int port)
   delete ser_sent_m;
 }
 
+class IPCPCDAPProvider : public CDAPProvider
+{
+ public:
+  IPCPCDAPProvider(rina::WireMessageProviderFactory wire_provider_factory,
+                   long timeout);
+ private:
+  void send(const rina::CDAPMessage *m_sent, int port);
+};
+
+IPCPCDAPProvider::IPCPCDAPProvider(
+    rina::WireMessageProviderFactory wire_provider_factory, long timeout)
+    : CDAPProvider(wire_provider_factory, timeout)
+{
+}
+
+void IPCPCDAPProvider::send(const rina::CDAPMessage *m_sent, int port)
+{
+  const rina::SerializedObject *ser_sent_m =
+      manager_->encodeNextMessageToBeSent(*m_sent, port);
+  manager_->messageSent(*m_sent, port);
+  rina::kernelIPCProcess->writeMgmgtSDUToPortId(ser_sent_m->message_,
+                                                ser_sent_m->size_, port);
+  delete ser_sent_m;
+}
+
 CDAPProviderInterface* CDAPProviderFactory::create(
-    const std::string &comm_protocol, long timeout)
+    const std::string &comm_protocol, long timeout, bool is_IPCP)
 {
   (void) comm_protocol;
   // FIXME: call wire_provider_factory with a std::string and make a switch inside
   rina::WireMessageProviderFactory wire_provider_factory;
   // FIXME: remove wire_provider_factory as a member variable of CDAPManager
-  return new CDAPProvider(wire_provider_factory, timeout);
+  if (is_IPCP)
+    return new IPCPCDAPProvider(wire_provider_factory, timeout);
+  else
+    return new AppCDAPProvider(wire_provider_factory, timeout);
 }
 
 }
