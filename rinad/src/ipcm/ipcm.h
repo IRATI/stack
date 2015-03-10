@@ -266,19 +266,17 @@ public:
 	//
         std::string query_rib(const int ipcp_id);
 
-        int select_policy_set(rina::IPCProcess *ipcp,
+        int select_policy_set(const int ipcp_id,
                               const std::string& component_path,
                               const std::string& policy_set);
 
-        int set_policy_set_param(rina::IPCProcess *ipcp,
+        int set_policy_set_param(const int ipcp_id,
                                  const std::string& path,
                                  const std::string& name,
                                  const std::string& value);
 
-        int plugin_load(rina::IPCProcess *ipcp,
+        int plugin_load(const int ipcp_id,
                         const std::string& plugin_name, bool load);
-
-        std::string query_rib(rina::IPCProcess *ipcp);
 
 	//
 	// Get the current logging debug level

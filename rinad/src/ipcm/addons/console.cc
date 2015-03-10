@@ -617,7 +617,6 @@ IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
 int
 IPCMConsole::select_policy_set(std::vector<std::string>& args)
 {
-        rina::IPCProcess *ipcp = NULL;
         int ipcp_id;
         int ret;
 
@@ -632,12 +631,10 @@ IPCMConsole::select_policy_set(std::vector<std::string>& args)
                 return CMDRETCONT;
         }
 
-        ipcp = lookup_ipcp_by_id(ipcp_id);
-
-        if (!ipcp) {
+        if (!IPCManager->ipcp_exists(ipcp_id)) {
                 outstream << "No such IPC process id" << endl;
         } else {
-                ret = IPCManager->select_policy_set(ipcp, args[2], args[3]);
+                ret = IPCManager->select_policy_set(ipcp_id, args[2], args[3]);
                 if (ret) {
                         outstream << "select-policy-set operation failed"
                                         << endl;
@@ -653,7 +650,6 @@ IPCMConsole::select_policy_set(std::vector<std::string>& args)
 int
 IPCMConsole::set_policy_set_param(std::vector<std::string>& args)
 {
-        rina::IPCProcess *ipcp = NULL;
         int ipcp_id;
         int ret;
 
@@ -668,13 +664,12 @@ IPCMConsole::set_policy_set_param(std::vector<std::string>& args)
                 return CMDRETCONT;
         }
 
-        ipcp = lookup_ipcp_by_id(ipcp_id);
-
-        if (!ipcp) {
+        if (!IPCManager->ipcp_exists(ipcp_id)) {
                 outstream << "No such IPC process id" << endl;
         } else {
-                ret = IPCManager->set_policy_set_param(ipcp, args[2], args[3],
-                                                args[4]);
+                ret = IPCManager->set_policy_set_param(ipcp_id, args[2],
+								args[3],
+        	                                        	args[4]);
                 if (ret) {
                         outstream << "set-policy-set-param operation failed"
                                         << endl;
@@ -690,7 +685,6 @@ IPCMConsole::set_policy_set_param(std::vector<std::string>& args)
 int
 IPCMConsole::plugin_load_unload(std::vector<std::string>& args, bool load)
 {
-        rina::IPCProcess *ipcp = NULL;
         int ipcp_id;
         int ret;
 
@@ -705,9 +699,7 @@ IPCMConsole::plugin_load_unload(std::vector<std::string>& args, bool load)
                 return CMDRETCONT;
         }
 
-        ipcp = lookup_ipcp_by_id(ipcp_id);
-
-        if (!ipcp) {
+        if (!IPCManager->ipcp_exists(ipcp_id)) {
                 outstream << "No such IPC process id" << endl;
         } else {
                 string un;
@@ -716,7 +708,7 @@ IPCMConsole::plugin_load_unload(std::vector<std::string>& args, bool load)
                         un = "un";
                 }
 
-                ret = IPCManager->plugin_load(ipcp, args[2], load);
+                ret = IPCManager->plugin_load(ipcp_id, args[2], load);
                 if (ret) {
                         outstream << "Plugin " << un <<
                                 "loading failed" << endl;

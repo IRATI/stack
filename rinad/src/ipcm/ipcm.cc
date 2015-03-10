@@ -372,6 +372,7 @@ IPCManager_::assign_to_dif(const int ipcp_id,
 
 		if(!ipcp){
 			ss << "Invalid IPCP id "<< ipcp_id;
+                	FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
@@ -382,6 +383,7 @@ IPCManager_::assign_to_dif(const int ipcp_id,
 		if (!found) {
 			ss << "Cannot find properties for DIF "
 				<< dif_name.toString();
+                	FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
@@ -434,6 +436,7 @@ IPCManager_::assign_to_dif(const int ipcp_id,
 					ipcp->name.toString() <<
 					" in DIF " << dif_name.toString() <<
 					endl;
+                		FLUSH_LOG(ERR, ss);
 				throw Exception();
 			}
 			dif_config.set_efcp_configuration(efcp_config);
@@ -580,6 +583,7 @@ int IPCManager_::register_at_difs(const int ipcp_id,
 
 		if(!ipcp){
 			ss << "Invalid IPCP id "<< ipcp_id;
+                	FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
@@ -617,6 +621,7 @@ IPCManager_::enroll_to_dif(const int ipcp_id,
 
 		if(!ipcp){
 			ss << "Invalid IPCP id "<< ipcp_id;
+                	FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
@@ -671,6 +676,7 @@ int IPCManager_::enroll_to_difs(const int ipcp_id,
 
 		if(!ipcp){
 			ss << "Invalid IPCP id "<< ipcp_id;
+                	FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
@@ -780,6 +786,7 @@ IPCManager_::update_dif_configuration(int ipcp_id,
 
 		if(!ipcp){
 			ss << "Invalid IPCP id "<< ipcp_id;
+                	FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
@@ -834,6 +841,7 @@ IPCManager_::query_rib(const int ipcp_id)
 
 		if(!ipcp){
 			ss << "Invalid IPCP id "<< ipcp_id;
+                	FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
@@ -1421,7 +1429,7 @@ void IPCManager_::get_dif_properties_handler(rina::IPCEvent *event)
 }
 
 int
-IPCManager_::set_policy_set_param(rina::IPCProcess *ipcp,
+IPCManager_::set_policy_set_param(const int ipcp_id,
                                  const std::string& component_path,
                                  const std::string& param_name,
                                  const std::string& param_value)
@@ -1430,10 +1438,19 @@ IPCManager_::set_policy_set_param(rina::IPCProcess *ipcp,
         unsigned int seqnum;
         bool arrived = false;
         int ret = -1;
+	rina::IPCProcess *ipcp;
 
         concurrency.lock();
 
         try {
+		ipcp = lookup_ipcp_by_id(ipcp_id);
+
+		if(!ipcp){
+			ss << "Invalid IPCP id "<< ipcp_id;
+                	FLUSH_LOG(ERR, ss);
+			throw Exception();
+		}
+
                 seqnum = ipcp->setPolicySetParam(component_path,
                                                  param_name, param_value);
 
@@ -1461,7 +1478,7 @@ IPCManager_::set_policy_set_param(rina::IPCProcess *ipcp,
 }
 
 int
-IPCManager_::select_policy_set(rina::IPCProcess *ipcp,
+IPCManager_::select_policy_set(const int ipcp_id,
                               const std::string& component_path,
                               const std::string& ps_name)
 {
@@ -1469,10 +1486,19 @@ IPCManager_::select_policy_set(rina::IPCProcess *ipcp,
         unsigned int seqnum;
         bool arrived = false;
         int ret = -1;
+	rina::IPCProcess *ipcp;
 
         concurrency.lock();
 
         try {
+		ipcp = lookup_ipcp_by_id(ipcp_id);
+
+		if(!ipcp){
+			ss << "Invalid IPCP id "<< ipcp_id;
+                	FLUSH_LOG(ERR, ss);
+			throw Exception();
+		}
+
                 seqnum = ipcp->selectPolicySet(component_path, ps_name);
 
                 pending_select_policy_set_ops[seqnum] = ipcp;
@@ -1499,17 +1525,26 @@ IPCManager_::select_policy_set(rina::IPCProcess *ipcp,
 }
 
 int
-IPCManager_::plugin_load(rina::IPCProcess *ipcp,
+IPCManager_::plugin_load(const int ipcp_id,
                         const std::string& plugin_name, bool load)
 {
         ostringstream ss;
         unsigned int seqnum;
         bool arrived = false;
         int ret = -1;
+	rina::IPCProcess *ipcp;
 
         concurrency.lock();
 
         try {
+		ipcp = lookup_ipcp_by_id(ipcp_id);
+
+		if(!ipcp){
+			ss << "Invalid IPCP id "<< ipcp_id;
+                	FLUSH_LOG(ERR, ss);
+			throw Exception();
+		}
+
                 seqnum = ipcp->pluginLoad(plugin_name, load);
 
                 pending_plugin_load_ops[seqnum] = ipcp;
