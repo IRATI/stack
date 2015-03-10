@@ -1138,7 +1138,9 @@ int dtp_write(struct dtp * instance,
                 return -1;
         }
         sn = dtcp_snd_lf_win(dtcp);
-        if (dt_sv_drf_flag(dt) || (sn == (pci_sequence_number_get(pci) - 1)))
+        if (dt_sv_drf_flag(dt)                         ||
+            (sn == (pci_sequence_number_get(pci) - 1)) ||
+            !sv->rexmsn_ctrl)
                 pci_flags_set(pci, PDU_FLAGS_DATA_RUN);
 
         pdu = pdu_create_ni();
