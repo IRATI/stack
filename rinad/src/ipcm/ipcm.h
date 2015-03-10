@@ -99,45 +99,6 @@ struct PendingFlowAllocation {
 };
 
 //
-// @brief Validates the DIF configurations
-//
-// FIXME: Convert this into an abstract class and make all the subtypes
-// derive from the DIF abstract class (e.g. shimEth, ShimHV..)
-//
-class DIFConfigValidator {
-public:
-        enum Types{
-                NORMAL,
-                SHIM_ETH,
-                SHIM_DUMMY,
-                SHIM_TCP_UDP,
-                SHIM_HV,
-                SHIM_NOT_DEFINED
-        };
-        DIFConfigValidator(const rina::DIFConfiguration &dif_config,
-                        const rina::DIFInformation &dif_info, std::string type);
-        bool validateConfigs();
-private:
-        Types type_;
-        const rina::DIFConfiguration &dif_config_;
-        const rina::DIFInformation &dif_info_;
-
-	bool validateShimEth();
-	bool validateShimHv();
-	bool validateShimDummy();
-        bool validateShimTcpUdp();
-        bool validateNormal();
-	bool validateBasicDIFConfigs();
-	bool validateConfigParameters(const std::vector< std::string >&
-                                      expected_params);
-	bool dataTransferConstants();
-	bool qosCubes();
-	bool knownIPCProcessAddresses();
-	bool pdufTableGeneratorConfiguration();
-};
-
-
-//
 // @brief The IPCManager class is in charge of managing the IPC processes
 // life-cycle.
 //
@@ -521,6 +482,6 @@ protected:
 //Singleton instance
 extern Singleton<rinad::IPCManager_> IPCManager;
 
-}//rina namespace
+}//rinad namespace
 
 #endif  /* __IPCM_H__ */

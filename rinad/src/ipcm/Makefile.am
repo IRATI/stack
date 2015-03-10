@@ -59,6 +59,7 @@ ipcm_LDADD    =					\
 	$(builddir)/addons/libaddons.la		\
 	$(LIBRINA_LIBS)
 ipcm_SOURCES  =					\
+	dif-validator.cc			\
 	main.cc					\
 	ipcm.cc					\
 	configuration.cc			\
