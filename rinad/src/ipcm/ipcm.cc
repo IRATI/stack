@@ -1058,6 +1058,17 @@ void IPCManager_::run(){
 				case rina::IPC_PROCESS_DUMP_FT_RESPONSE:
 						ipc_process_dump_ft_response_handler(event);
 						break;
+
+				//Policies
+				case rina::IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE:
+					ipc_process_set_policy_set_param_response_handler(event);
+					break;
+				case rina::IPC_PROCESS_SELECT_POLICY_SET_RESPONSE:
+					ipc_process_select_policy_set_response_handler(event);
+					break;
+				case rina::IPC_PROCESS_PLUGIN_LOAD_RESPONSE:
+					ipc_process_plugin_load_response_handler(event);
+					break;
 			}
 
 			//Notify event
