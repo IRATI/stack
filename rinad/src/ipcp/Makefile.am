@@ -54,7 +54,8 @@ default_la_SOURCES =				\
 		default-plugin.cc		\
 		component.h			\
 		default-security-manager-ps.cc	\
-		default-flow-allocator-ps.cc
+		default-flow-allocator-ps.cc    \
+                default-namespace-manager-ps.cc
 
 plugins_LTLIBRARIES += default.la
 
