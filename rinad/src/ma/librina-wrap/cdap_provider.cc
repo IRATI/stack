@@ -22,6 +22,7 @@
 #include "cdap_provider.h"
 #include <librina/cdap.h>
 #include <librina/application.h>
+#include <librina/ipc-process.h>
 
 namespace cdap {
 
