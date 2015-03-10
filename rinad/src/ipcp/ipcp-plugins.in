@@ -1,0 +1,9 @@
+#!@SHELL@
+
+#
+# IPC Process daemon plugins helper
+#
+# Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
+#
+
+echo `PKG_CONFIG_PATH=$PKG_CONFIG_PATH:@PKG_CONFIG_PATH@ @PKG_CONFIG@ rinad-ipcp --variable=pluginsdir`

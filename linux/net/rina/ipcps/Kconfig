@@ -13,6 +13,19 @@ config RINA_NORMAL_IPCP
 
 if RINA_NORMAL_IPCP
 
+menu "DTCP"
+choice RINA_DTCP_RCVR_ACK
+       prompt "Received ACK policy"
+       default RINA_DTCP_RCVR_ACK
+
+config RINA_DTCP_RCVR_ACK
+       bool "Use rcvr-ack"
+
+config RINA_DTCP_RCVR_ACK_ATIMER
+       bool "Use to rcvr-ack ATIMER"
+endchoice
+endmenu
+
 config RINA_DUP
         bool "Enable system-wide DU protection"
         default n
@@ -102,6 +115,7 @@ config RINA_SHIM_TCP_UDP
 config RINA_SHIM_TCP_UDP_BUFFER_SIZE
         int "Buffer size"
 	default 1500
+        range 2 65535
         depends on RINA_SHIM_TCP_UDP
 	help
 	  No help for the time being

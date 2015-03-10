@@ -2,6 +2,7 @@
 // Security Manager
 //
 //    Eduard Grasa <eduard.grasa@i2cat.net>
+//    Vincenzo Maffione <v.maffione@nextworks.it>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -22,32 +23,35 @@
 
 #include <librina/logs.h>
 
-#include "security-manager.h"
+#include "ipcp/components.h"
 
 namespace rinad {
 
 //Class SecurityManager
 SecurityManager::SecurityManager() {
-	ipc_process_ = 0;
+	ipcp = 0;
 }
 
-void SecurityManager::set_ipc_process(IPCProcess * ipc_process) {
-	ipc_process_ = ipc_process;
+void SecurityManager::set_ipc_process(IPCProcess * ipc_process)
+{
+	ipcp = ipc_process;
 }
 
 void SecurityManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
 	LOG_DBG("Set dif configuration: %u", dif_configuration.address_);
 }
 
-bool SecurityManager::isAllowedToJoinDIF(const rina::Neighbor& newMember) {
-	LOG_DBG("Allowing IPC Process %s to join the DIF", newMember.name_.processName.c_str());
-	return true;
+int SecurityManager::select_policy_set(const std::string& path,
+                                       const std::string& name)
+{
+        return select_policy_set_common(ipcp, "security-manager", path, name);
 }
 
-bool SecurityManager::acceptFlow(const Flow& newFlow) {
-	LOG_DBG("Accepting flow from remote application %s",
-			newFlow.source_naming_info.getEncodedString().c_str());
-	return true;
+int SecurityManager::set_policy_set_param(const std::string& path,
+                                          const std::string& name,
+                                          const std::string& value)
+{
+        return set_policy_set_param_common(ipcp, path, name, value);
 }
 
 }

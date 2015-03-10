@@ -250,6 +250,17 @@ static struct nla_policy rmpfe_policy[RMPFE_ATTR_MAX + 1] = {
         [RMPFE_ATTR_MODE]    = NLA_INIT_U32,
 };
 
+static struct nla_policy ispsp_policy[ISPSP_ATTR_MAX + 1] = {
+        [ISPSP_ATTR_PATH] = NLA_INIT_STRING,
+        [ISPSP_ATTR_NAME] = NLA_INIT_STRING,
+        [ISPSP_ATTR_VALUE] = NLA_INIT_STRING,
+};
+
+static struct nla_policy isps_policy[ISPS_ATTR_MAX + 1] = {
+        [ISPS_ATTR_PATH] = NLA_INIT_STRING,
+        [ISPS_ATTR_NAME] = NLA_INIT_STRING,
+};
+
 #define DECL_NL_OP(COMMAND, POLICY) {           \
                 .cmd    = COMMAND,              \
                         .flags  = 0,            \
@@ -296,7 +307,11 @@ static struct genl_ops nl_ops[] = {
         DECL_NL_OP(RINA_C_IPCP_CONN_UPDATE_REQUEST, icurq_policy),
         DECL_NL_OP(RINA_C_IPCP_CONN_UPDATE_RESULT, NULL),
         DECL_NL_OP(RINA_C_IPCP_CONN_DESTROY_REQUEST, icdr_policy),
-        DECL_NL_OP(RINA_C_IPCP_CONN_DESTROY_RESULT, NULL)
+        DECL_NL_OP(RINA_C_IPCP_CONN_DESTROY_RESULT, NULL),
+        DECL_NL_OP(RINA_C_IPCP_SET_POLICY_SET_PARAM_REQUEST, ispsp_policy),
+        DECL_NL_OP(RINA_C_IPCP_SET_POLICY_SET_PARAM_RESPONSE, NULL),
+        DECL_NL_OP(RINA_C_IPCP_SELECT_POLICY_SET_REQUEST, isps_policy),
+        DECL_NL_OP(RINA_C_IPCP_SELECT_POLICY_SET_RESPONSE, NULL)
 };
 
 int rnl_handler_register(struct rnl_set *   set,

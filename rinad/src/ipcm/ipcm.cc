@@ -1136,8 +1136,153 @@ IPCManager_::assign_to_dif_response_event_handler(rina::IPCEvent * e)
 void
 IPCManager_::update_dif_config_request_event_handler(rina::IPCEvent *event)
 {
-	(void) event;  // Stop compiler barfs
+	(void)event;
 }
+
+#if 0
+void
+IPCManager_::assign_to_dif_response_event_handler(rina::IPCEvent * e)
+{
+        if (!ipcp)
+                return -1;
+
+        rinad::DIFProperties   dif_props;
+        rina::DIFInformation   dif_info;
+        rina::DIFConfiguration dif_config;
+        ostringstream          ss;
+        unsigned int           seqnum;
+        bool                   arrived = true;
+        bool                   found;
+        int                    ret = -1;
+
+        concurrency.lock();
+
+        try {
+
+                // Try to extract the DIF properties from the
+                // configuration.
+                found = config.lookup_dif_properties(dif_name,
+                                dif_props);
+                if (!found) {
+                        ss << "Cannot find properties for DIF "
+                                << dif_name.toString();
+                        throw Exception();
+                }
+
+                // Fill in the DIFConfiguration object.
+                if (ipcp->type == rina::NORMAL_IPC_PROCESS) {
+                        rina::EFCPConfiguration efcp_config;
+                        rina::NamespaceManagerConfiguration nsm_config;
+                        rina::AddressingConfiguration address_config;
+                        unsigned int address;
+
+                        // FIll in the EFCPConfiguration object.
+                        efcp_config.set_data_transfer_constants(
+                                        dif_props.dataTransferConstants);
+                        rina::QoSCube * qosCube = 0;
+                        for (list<rina::QoSCube>::iterator
+                                        qit = dif_props.qosCubes.begin();
+                                        qit != dif_props.qosCubes.end();
+                                        qit++) {
+                                qosCube = new rina::QoSCube(*qit);
+                                efcp_config.add_qos_cube(qosCube);
+                        }
+
+                        for (list<AddressPrefixConfiguration>::iterator
+                                        ait = dif_props.addressPrefixes.begin();
+                                        ait != dif_props.addressPrefixes.end();
+                                        ait ++) {
+                                rina::AddressPrefixConfiguration prefix;
+                                prefix.address_prefix_ = ait->addressPrefix;
+                                prefix.organization_ = ait->organization;
+                                address_config.address_prefixes_.push_back(prefix);
+                        }
+
+                        for (list<rinad::KnownIPCProcessAddress>::iterator
+                                        kit = dif_props.knownIPCProcessAddresses.begin();
+                                        kit != dif_props.knownIPCProcessAddresses.end();
+                                        kit ++) {
+                                rina::StaticIPCProcessAddress static_address;
+                                static_address.ap_name_ = kit->name.processName;
+                                static_address.ap_instance_ = kit->name.processInstance;
+                                static_address.address_ = kit->address;
+                                address_config.static_address_.push_back(static_address);
+                        }
+                        nsm_config.addressing_configuration_ = address_config;
+
+                        found = dif_props.
+                                lookup_ipcp_address(ipcp->name,
+                                                address);
+                        if (!found) {
+                                ss << "No address for IPC process " <<
+                                        ipcp->name.toString() <<
+                                        " in DIF " << dif_name.toString() <<
+                                        endl;
+                                throw Exception();
+                        }
+                        dif_config.set_efcp_configuration(efcp_config);
+                        dif_config.nsm_configuration_ = nsm_config;
+                        dif_config.pduft_generator_configuration_ =
+                                dif_props.pdufTableGeneratorConfiguration;
+                        dif_config.rmt_configuration_ = dif_props.rmtConfiguration;
+                        dif_config.et_configuration_ = dif_props.etConfiguration;
+                        dif_config.set_address(address);
+                }
+
+                for (map<string, string>::const_iterator
+                                pit = dif_props.configParameters.begin();
+                                pit != dif_props.configParameters.end();
+                                pit++) {
+                        dif_config.add_parameter
+                                (rina::Parameter(pit->first, pit->second));
+                }
+
+                // Fill in the DIFInformation object.
+                dif_info.set_dif_name(dif_name);
+                dif_info.set_dif_type(ipcp->type);
+                dif_info.set_dif_configuration(dif_config);
+
+                // Validate the parameters
+                DIFConfigValidator validator(dif_config, dif_info,
+                                ipcp->type);
+                if(!validator.validateConfigs())
+                        throw rina::BadConfigurationException("DIF configuration validator failed");
+
+                // Invoke librina to assign the IPC process to the
+                // DIF specified by dif_info.
+                seqnum = ipcp->assignToDIF(dif_info);
+
+                pending_ipcp_dif_assignments[seqnum] = ipcp;
+                ss << "Requested DIF assignment of IPC process " <<
+                        ipcp->name.toString() << " to DIF " <<
+                        dif_name.toString() << endl;
+                FLUSH_LOG(INFO, ss);
+                arrived = concurrency.wait_for_event(rina::ASSIGN_TO_DIF_RESPONSE_EVENT,
+                                                     seqnum, ret);
+        } catch (rina::AssignToDIFException) {
+                ss << "Error while assigning " <<
+                        ipcp->name.toString() <<
+                        " to DIF " << dif_name.toString() << endl;
+                FLUSH_LOG(ERR, ss);
+        } catch (rina::BadConfigurationException &e) {
+                LOG_ERR("DIF %s configuration failed", dif_name.toString().c_str());
+                throw e;
+        }
+        catch (Exception) {
+                FLUSH_LOG(ERR, ss);
+        }
+
+        concurrency.unlock();
+
+        if (!arrived) {
+                ss  << ": Timed out" << endl;
+                FLUSH_LOG(ERR, ss);
+                return -1;
+        }
+
+        return ret;
+}
+#endif
 
 void
 IPCManager_::update_dif_config_response_event_handler(rina::IPCEvent *e)
@@ -1273,6 +1418,121 @@ void IPCManager_::ipc_process_query_rib_handler(rina::IPCEvent *event)
 void IPCManager_::get_dif_properties_handler(rina::IPCEvent *event)
 {
 	(void) event;  // Stop compiler barfs
+}
+
+int
+IPCManager_::set_policy_set_param(rina::IPCProcess *ipcp,
+                                 const std::string& component_path,
+                                 const std::string& param_name,
+                                 const std::string& param_value)
+{
+        ostringstream ss;
+        unsigned int seqnum;
+        bool arrived = false;
+        int ret = -1;
+
+        concurrency.lock();
+
+        try {
+                seqnum = ipcp->setPolicySetParam(component_path,
+                                                 param_name, param_value);
+
+                pending_set_policy_set_param_ops[seqnum] = ipcp;
+                ss << "Issued set-policy-set-param to IPC process " <<
+                        ipcp->name.toString() << endl;
+                FLUSH_LOG(INFO, ss);
+                arrived = concurrency.wait_for_event(
+                                rina::IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE,
+                                seqnum, ret);
+        } catch (rina::SetPolicySetParamException) {
+                ss << "Error while issuing set-policy-set-param request "
+                        "to IPC Process " << ipcp->name.toString() << endl;
+                FLUSH_LOG(ERR, ss);
+        }
+
+        concurrency.unlock();
+
+        if (!arrived) {
+                ss  << ": Timed out" << endl;
+                FLUSH_LOG(ERR, ss);
+        }
+
+        return ret;
+}
+
+int
+IPCManager_::select_policy_set(rina::IPCProcess *ipcp,
+                              const std::string& component_path,
+                              const std::string& ps_name)
+{
+        ostringstream ss;
+        unsigned int seqnum;
+        bool arrived = false;
+        int ret = -1;
+
+        concurrency.lock();
+
+        try {
+                seqnum = ipcp->selectPolicySet(component_path, ps_name);
+
+                pending_select_policy_set_ops[seqnum] = ipcp;
+                ss << "Issued select-policy-set to IPC process " <<
+                        ipcp->name.toString() << endl;
+                FLUSH_LOG(INFO, ss);
+                arrived = concurrency.wait_for_event(
+                                rina::IPC_PROCESS_SELECT_POLICY_SET_RESPONSE,
+                                seqnum, ret);
+        } catch (rina::SelectPolicySetException) {
+                ss << "Error while issuing select-policy-set request "
+                        "to IPC Process " << ipcp->name.toString() << endl;
+                FLUSH_LOG(ERR, ss);
+        }
+
+        concurrency.unlock();
+
+        if (!arrived) {
+                ss  << ": Timed out" << endl;
+                FLUSH_LOG(ERR, ss);
+        }
+
+        return ret;
+}
+
+int
+IPCManager_::plugin_load(rina::IPCProcess *ipcp,
+                        const std::string& plugin_name, bool load)
+{
+        ostringstream ss;
+        unsigned int seqnum;
+        bool arrived = false;
+        int ret = -1;
+
+        concurrency.lock();
+
+        try {
+                seqnum = ipcp->pluginLoad(plugin_name, load);
+
+                pending_plugin_load_ops[seqnum] = ipcp;
+                ss << "Issued plugin-load to IPC process " <<
+                        ipcp->name.toString() << endl;
+                FLUSH_LOG(INFO, ss);
+                arrived = concurrency.wait_for_event(
+                                rina::IPC_PROCESS_PLUGIN_LOAD_RESPONSE,
+                                seqnum, ret);
+        } catch (rina::PluginLoadException) {
+                ss << "Error while issuing plugin-load request "
+                        "to IPC Process " << ipcp->name.toString() << endl;
+                FLUSH_LOG(ERR, ss);
+        }
+
+        concurrency.unlock();
+
+        if (!arrived) {
+                ss  << ": Timed out" << endl;
+                FLUSH_LOG(ERR, ss);
+        }
+
+        return ret;
 }
 
 void IPCManager_::get_dif_properties_response_event_handler(rina::IPCEvent *event)
@@ -1446,6 +1706,79 @@ void IPCManager_::ipc_process_dump_ft_response_handler(rina::IPCEvent * event)
 	(void) event;  // Stop compiler barfs
 }
 
+void IPCManager_::ipc_process_set_policy_set_param_response_handler(
+							rina::IPCEvent *e)
+{
+	DOWNCAST_DECL(e, rina::SetPolicySetParamResponseEvent, event);
+	std::map<unsigned int, rina::IPCProcess *>::iterator mit;
+	bool success = (event->result == 0);
+	ostringstream ss;
+	int ret = -1;
+
+	mit = pending_set_policy_set_param_ops.find(event->sequenceNumber);
+	if (mit != pending_set_policy_set_param_ops.end()) {
+		pending_set_policy_set_param_ops.erase(mit);
+		ss << "set-policy-set-param-op completed on IPC process "
+		<< mit->second->name.toString() <<
+		" [success=" << success << "]" << endl;
+		FLUSH_LOG(INFO, ss);
+		ret = event->result;
+	} else {
+		ss << "Warning: unmatched event received" << endl;
+		FLUSH_LOG(WARN, ss);
+	}
+
+	concurrency.set_event_result(ret);
+}
+
+void IPCManager_::ipc_process_plugin_load_response_handler(rina::IPCEvent *e)
+{
+        DOWNCAST_DECL(e, rina::PluginLoadResponseEvent, event);
+        map<unsigned int, rina::IPCProcess *>::iterator mit;
+        bool success = (event->result == 0);
+        ostringstream ss;
+        int ret = -1;
+
+        mit = pending_plugin_load_ops.find(event->sequenceNumber);
+        if (mit != pending_plugin_load_ops.end()) {
+                pending_plugin_load_ops.erase(mit);
+                ss << "plugin-load-op completed on IPC process "
+                       << mit->second->name.toString() <<
+                        " [success=" << success << "]" << endl;
+                FLUSH_LOG(INFO, ss);
+                ret = event->result;
+        } else {
+                ss << "Warning: unmatched event received" << endl;
+                FLUSH_LOG(WARN, ss);
+        }
+
+        concurrency.set_event_result(ret);
+}
+
+void IPCManager_::ipc_process_select_policy_set_response_handler(
+							rina::IPCEvent *e)
+{
+        DOWNCAST_DECL(e, rina::SelectPolicySetResponseEvent, event);
+        map<unsigned int, rina::IPCProcess *>::iterator mit;
+        bool success = (event->result == 0);
+        ostringstream ss;
+        int ret = -1;
+
+        mit = pending_select_policy_set_ops.find(event->sequenceNumber);
+        if (mit != pending_select_policy_set_ops.end()) {
+                pending_select_policy_set_ops.erase(mit);
+                ss << "select-policy-set-op completed on IPC process "
+                       << mit->second->name.toString() <<
+                        " [success=" << success << "]" << endl;
+                FLUSH_LOG(INFO, ss);
+                ret = event->result;
+        } else {
+                ss << "Warning: unmatched event received" << endl;
+                FLUSH_LOG(WARN, ss);
+        }
+
+        concurrency.set_event_result(ret);
+}
 
 //
 // DIFValidator class
@@ -1513,6 +1846,7 @@ bool DIFConfigValidator::validateShimDummy()
 {
 	return validateBasicDIFConfigs();
 }
+
 
 bool DIFConfigValidator::validateNormal()
 {
@@ -1618,7 +1952,6 @@ bool DIFConfigValidator::pdufTableGeneratorConfiguration()
 		pduft_generator_policy_.name_.compare("LinkState") == 0 &&
 		dif_config_.pduft_generator_configuration_.
 		pduft_generator_policy_.version_.compare("0") == 0;
-
 	if (!result)
 		LOG_ERR("PDUFT Generator configuration failed");
 

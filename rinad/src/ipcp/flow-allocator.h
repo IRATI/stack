@@ -176,6 +176,10 @@ public:
 	~FlowAllocator();
 	void set_ipc_process(IPCProcess * ipc_process);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+        int select_policy_set(const std::string& path, const std::string& name);
+        int set_policy_set_param(const std::string& path,
+                                 const std::string& name,
+                                 const std::string& value);
 	void createFlowRequestMessageReceived(Flow * flow, const std::string& object_name,
 			int invoke_id, int underlying_port_id);
 	void submitAllocateRequest(rina::FlowRequestEvent& flowRequestEvent);
@@ -188,6 +192,11 @@ public:
 			const rina::UpdateConnectionResponseEvent& event);
 	void submitDeallocate(const rina::FlowDeallocateRequestEvent& event);
 	void removeFlowAllocatorInstance(int portId);
+
+        // Plugin support
+	std::list<rina::QoSCube*> getQoSCubes();
+        Flow * createFlow() { return new Flow(); }
+        void destroyFlow(Flow *flow) { if (flow) delete flow; }
 
 private:
 	/// Flow allocator instances, each one associated to a port-id
@@ -204,35 +213,6 @@ private:
 
 	/// Reply to the IPC Manager
 	void replyToIPCManager(const rina::FlowRequestEvent& event, int result);
-};
-
-/// This policy is used to convert an Allocate Request is into a create_flow request.
-/// Its primary task is to translate the request into the proper QoS-class-set, flow set,
-/// and access control capabilities.
-class INewFlowRequetPolicy {
-public:
-	virtual ~INewFlowRequetPolicy() {
-	}
-	;
-	virtual Flow * generateFlowObject(IPCProcess * ipc_process,
-			const rina::FlowRequestEvent& flowRequestEvent) = 0;
-};
-
-class SimpleNewFlowRequestPolicy: public INewFlowRequetPolicy {
-public:
-	SimpleNewFlowRequestPolicy() {
-	}
-	;
-	~SimpleNewFlowRequestPolicy() {
-	}
-	;
-	Flow * generateFlowObject(IPCProcess * ipc_process,
-			const rina::FlowRequestEvent& flowRequestEvent);
-
-private:
-	rina::QoSCube * selectQoSCube(IPCProcess * ipc_process,
-			const rina::FlowSpecification& flowSpec);
-	std::list<rina::QoSCube*> getQoSCubes(IPCProcess * ipc_process);
 };
 
 ///Implementation of the FlowAllocatorInstance
@@ -295,6 +275,15 @@ public:
 			void * object_value, rina::CDAPSessionDescriptor * session_descriptor);
 
 private:
+
+  void initialize(IPCProcess * ipc_process, IFlowAllocator * flow_allocator,
+      int port_id);
+  void replyToIPCManager(rina::FlowRequestEvent & event, int result);
+  void releasePortId();
+
+  /// Release the port-id, unlock and remove the FAI from the FA
+  void releaseUnlockRemove();
+
 	IPCProcess * ipc_process_;
 	IFlowAllocator * flow_allocator_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
@@ -302,7 +291,6 @@ private:
 	IPCPRIBDaemon * rib_daemon_;
 	INamespaceManager * namespace_manager_;
 	ISecurityManager * security_manager_;
-	INewFlowRequetPolicy * new_flow_request_policy_;
 	FAIState state;
 
 	rina::Timer timer;
@@ -324,14 +312,6 @@ private:
 	int underlying_port_id_;
 	rina::Lockable * lock_;
 	rina::Timer * timer_;
-
-	void initialize(IPCProcess * ipc_process, IFlowAllocator * flow_allocator,
-			int port_id);
-	void replyToIPCManager(rina::FlowRequestEvent & event, int result);
-	void releasePortId();
-
-	/// Release the port-id, unlock and remove the FAI from the FA
-	void releaseUnlockRemove();
 };
 
 class TearDownFlowTimerTask: public rina::TimerTask {

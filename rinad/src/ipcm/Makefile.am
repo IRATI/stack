@@ -4,6 +4,8 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
+SUBDIRS      = include
+
 EXTRA_DIST   =
 CLEANFILES   =
 
@@ -49,7 +51,8 @@ ipcm_CPPFLAGS =					\
 	$(LIBRINA_CFLAGS)			\
 	-I$(srcdir)/..				\
 	-I$(srcdir)/../common			\
-	-I$(srcdir)/jsoncpp
+	-I$(srcdir)/jsoncpp			\
+	-DPLUGINSDIR=\"$(pkglibdir)/ipcm\"
 ipcm_LDADD    =					\
 	$(builddir)/../common/librinad.la	\
 	$(builddir)/libjsoncpp.la		\
@@ -78,3 +81,30 @@ XFAIL_TESTS =
 PASS_TESTS  = test-empty
 
 TESTS = $(PASS_TESTS) $(XFAIL_TESTS)
+
+
+edit = $(SED)						\
+	-e 's|@SHELL[@]|$(SHELL)|g'			\
+	-e 's|@PKG_CONFIG[@]|$(PKG_CONFIG)|g'		\
+	-e 's|@PKG_CONFIG_PATH[@]|$(PKG_CONFIG_PATH)|g'	\
+	-e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'	\
+	-e 's|@PACKAGE_URL[@]|$(PACKAGE_VERSION)|g'	\
+	-e 's|@prefix[@]|$(prefix)|g'			\
+	-e 's|@includedir[@]|$(includedir)|g'		\
+	-e 's|@pkgincludedir[@]|$(pkgincludedir)|g'	\
+	-e 's|@pkglibdir[@]|$(pkglibdir)|g'		\
+	-e 's|@libdir[@]|$(libdir)|g'
+
+rinad-ipcm.pc: Makefile rinad-ipcm.pc.in
+	rm -f $@ $@.tmp
+	srcdir=''; \
+	  test -f ./$@.in || srcdir=$(srcdir)/; \
+	  $(edit) $${srcdir}$@.in >$@.tmp
+	chmod a-w $@.tmp
+	mv $@.tmp $@
+
+EXTRA_DIST += rinad-ipcm.pc.in
+CLEANFILES += rinad-ipcm.pc
+
+pkgconfigdir   = $(libdir)/pkgconfig
+pkgconfig_DATA = rinad-ipcm.pc

@@ -672,6 +672,50 @@ public:
 	unsigned int queryRIB(const std::string& objectClass,
 			const std::string& objectName, unsigned long objectInstance,
 			unsigned int scope, const std::string& filter);
+
+	/**
+	 * Invoked by the IPC Manager to change a parameter value in a subcomponent
+         * of the IPC process. The parameter addressed by @path can be either a
+         * parametric policy or a policy-set-specific parameter.
+	 *
+	 * @param path The path of the addressed subcomponent (may be a policy-set)
+         *             in dotted notation
+         * @param name The name of the parameter to be changed
+         * @value value The value of the parameter to be changed
+	 * @throws SetPolicySetParamException if an error happens during
+         *         the process
+	 * @returns the handle to the response message
+	 */
+	unsigned int setPolicySetParam(const std::string& path,
+                                       const std::string& name,
+                                       const std::string& value);
+
+	/**
+	 * Invoked by the IPC Manager to select a policy-set for a subcomponent
+         * of the IPC process.
+         *
+	 * @param path The path of the addressed subcomponent (cannot be a
+         *             policy-set) in dotted notation
+         * @param name The name of the policy-set to select
+	 * @throws SelectPolicySetException if an error happens during
+         *         the process
+	 * @returns the handle to the response message
+	 */
+	unsigned int selectPolicySet(const std::string& path,
+                                     const std::string& name);
+
+	/**
+	 * Invoked by the IPC Manager to load or unload a plugin for an
+         * IPC process.
+	 *
+	 * @param name The name of the plugin to be loaded or unloaded
+         * @param load True if the plugin is to be loaded, false if the
+         *             plugin is to be unloaded
+	 * @throws PluginLoadException if an error happens during
+         *         the process
+	 * @returns the handle to the response message
+	 */
+	unsigned int pluginLoad(const std::string& name, bool load);
 };
 
 /**
@@ -970,7 +1014,6 @@ class TimerExpiredEvent: public IPCEvent {
 public:
         TimerExpiredEvent(unsigned int sequenceNumber);
 };
-
 
 }
 

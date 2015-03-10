@@ -45,9 +45,10 @@ using namespace std;
 using namespace TCLAP;
 
 
+#define WANT_PARACHUTE 0
+
 void handler(int signum)
 {
-
 	switch(signum){
 		case SIGSEGV:
 			LOG_CRIT("Got signal SIGSEGV");
@@ -142,18 +143,27 @@ int wrapped_main(int argc, char * argv[])
 	return EXIT_SUCCESS;
 }
 
-
 int main(int argc, char * argv[])
 {
 	int retval;
 
+#if WANT_PARACHUTE
 	//Configure signal  traps
 	if (signal(SIGSEGV, handler) == SIG_ERR) {
 		LOG_WARN("Could not install SIGSEGV handler!");
 	}
+        LOG_DBG("SIGSEGV handler installed successfully");
+#endif
 	if (signal(SIGINT, handler) == SIG_ERR) {
 		LOG_ERR("Could not install SIGINT handler!");
 	}
+        LOG_DBG("SIGINT handler installed successfully");
+
+	if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
+                LOG_WARN("Cannot ignore SIGPIPE, bailing out");
+                return EXIT_FAILURE;
+        }
+        LOG_DBG("SIGPIPE handler installed successfully");
 
 	//Launch wrapped main
 	try {

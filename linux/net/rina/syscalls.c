@@ -335,8 +335,9 @@ SYSCALL_DEFINE3(allocate_port,
 #endif
 }
 
-SYSCALL_DEFINE1(deallocate_port,
-                port_id_t, id)
+SYSCALL_DEFINE2(deallocate_port,
+                ipc_process_id_t,     ipcp_id,
+                port_id_t,            id)
 {
 #ifndef CONFIG_RINA
         (void) id;
@@ -347,7 +348,7 @@ SYSCALL_DEFINE1(deallocate_port,
 
         SYSCALL_DUMP_ENTER;
 
-        CALL_DEFAULT_PERSONALITY(retval, deallocate_port, id);
+        CALL_DEFAULT_PERSONALITY(retval, deallocate_port, ipcp_id, id);
 
         SYSCALL_DUMP_EXIT;
 

@@ -248,8 +248,10 @@ static void xenmpi_rx_action(struct vmpi_impl_info *vif)
                 len = buf->len;
                 buf->len = 0;
                 VMPI_RING_INC(ring->nr);
+#ifdef VMPI_TX_MUTEX
                 wake_up_interruptible_poll(&ring->wqh, POLLOUT |
                                            POLLWRNORM | POLLWRBAND);
+#endif
                 IFV(printk("%s: pushed %d bytes in the RX ring\n", __func__, len));
 
 		resp = make_rx_response(vif, vif->rx_meta[vif->rx_pending_cons].id,

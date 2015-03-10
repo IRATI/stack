@@ -1,0 +1,11 @@
+prefix=@prefix@
+libdir=@libdir@
+includedir=@pkgincludedir@/ipcp
+pluginsdir=@pkglibdir@/ipcp
+
+Name: RINAd IPCP
+Description: RINA IPC Process Daemon
+Version: @PACKAGE_VERSION@
+URL: @PACKAGE_URL@
+Requires: LibRINA >= @PACKAGE_VERSION@
+Libs: -L${libdir} -lrina

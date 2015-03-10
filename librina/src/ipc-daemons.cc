@@ -158,5 +158,26 @@ AssignToDIFResponseEvent::AssignToDIFResponseEvent(
                                         sequenceNumber) {
 }
 
+/* CLASS SET POLICY SET PARAM RESPONSE EVENT */
+SetPolicySetParamResponseEvent::SetPolicySetParamResponseEvent(
+                int result, unsigned int sequenceNumber) :
+			IPCEvent(IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE,
+                                         sequenceNumber)
+{ this->result = result; }
+
+/* CLASS SELECT POLICY SET RESPONSE EVENT */
+SelectPolicySetResponseEvent::SelectPolicySetResponseEvent(
+                int result, unsigned int sequenceNumber) :
+			IPCEvent(IPC_PROCESS_SELECT_POLICY_SET_RESPONSE,
+                                         sequenceNumber)
+{ this->result = result; }
+
+/* CLASS PLUGIN LOAD RESPONSE EVENT */
+PluginLoadResponseEvent::PluginLoadResponseEvent(
+                int result, unsigned int sequenceNumber) :
+			IPCEvent(IPC_PROCESS_PLUGIN_LOAD_RESPONSE,
+                                         sequenceNumber)
+{ this->result = result; }
+
 }
 

@@ -18,5 +18,8 @@ rina_echo_time_CPPFLAGS =			\
 	$(CPPFLAGS_EXTRA)			\
 	-std=c++11				\
 	-I$(srcdir)/../common
+rina_echo_time_CXXFLAGS =			\
+	$(CPPFLAGS_EXTRA)
+
 bin_PROGRAMS            += rina-echo-time
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += rina-echo-time

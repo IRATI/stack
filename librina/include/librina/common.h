@@ -246,6 +246,12 @@ enum IPCEventType {
 	IPC_PROCESS_CREATE_CONNECTION_RESULT,
 	IPC_PROCESS_DESTROY_CONNECTION_RESULT,
 	IPC_PROCESS_DUMP_FT_RESPONSE,
+        IPC_PROCESS_SET_POLICY_SET_PARAM,
+        IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE,
+        IPC_PROCESS_SELECT_POLICY_SET,
+        IPC_PROCESS_SELECT_POLICY_SET_RESPONSE,
+        IPC_PROCESS_PLUGIN_LOAD,
+        IPC_PROCESS_PLUGIN_LOAD_RESPONSE,
 	NO_EVENT
 };
 
@@ -590,8 +596,6 @@ public:
         SerializedObject(char* message, int size);
         ~SerializedObject();
         SerializedObject& operator=(const SerializedObject &other);
-        int get_size() const;
-        char* get_message() const;
         int size_;
         char* message_;
 

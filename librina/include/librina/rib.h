@@ -317,12 +317,10 @@ public:
 
         /// Causes a CDAP message to be sent. Takes ownership of the CDAPMessage
         /// @param cdapMessage the message to be sent
-        /// @param sessionId the CDAP session id
         /// @param address the address of the IPC Process to send the Message To
         /// @param cdapMessageHandler the class to be called when the response message is received (if required)
         /// @throws Exception
-        virtual void sendMessageToAddress(const CDAPMessage & cdapMessage,
-                                          int sessionId,
+        virtual void sendAData(const CDAPMessage & cdapMessage,
                                           unsigned int address,
                                           ICDAPResponseMessageHandler * cdapMessageHandler) = 0;
 
@@ -757,11 +755,10 @@ public:
                         const void* objectValue);
         void stopObject(const std::string& objectClass, const std::string& objectName,
                                 const void* objectValue);
-        void cdapMessageDelivered(char* message, int length, int portId);
         void sendMessage(const CDAPMessage & cdapMessage, int sessionId,
                                 ICDAPResponseMessageHandler * cdapMessageHandler);
-        void sendMessageToAddress(const CDAPMessage & cdapMessage, int sessionId,
-                        unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler);
+        void sendAData(const CDAPMessage & cdapMessage, unsigned int address,
+        		ICDAPResponseMessageHandler * cdapMessageHandler);
         void sendMessages(const std::list<const CDAPMessage*>& cdapMessages,
                                 const IUpdateStrategy& updateStrategy);
 
@@ -828,16 +825,16 @@ public:
         virtual void sendMessageSpecific(bool useAddress, const rina::CDAPMessage & cdapMessage, int sessionId,
                         unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler) = 0;
 
-        /// Lock to control that when sending a message requiring a reply the
-        /// CDAP Session manager has been updated before receiving the response message
-        rina::Lockable atomic_send_lock_;
+        void processIncomingCDAPMessage(const rina::CDAPMessage * cdapMessage,
+        		rina::CDAPSessionDescriptor * session_descriptor);
 
         /// CDAP Message handlers that have sent a CDAP message and are waiting for a reply
         ThreadSafeMapOfPointers<int, ICDAPResponseMessageHandler> handlers_waiting_for_reply_;
 
+        CDAPSessionManagerInterface * cdap_session_manager_;
+
 private:
         RIB rib_;
-        CDAPSessionManagerInterface * cdap_session_manager_;
         IEncoder * encoder_;
         IApplicationConnectionHandler * app_conn_handler_;
         std::string separator_;
@@ -864,6 +861,32 @@ private:
         void sendMessageToProcess(const rina::CDAPMessage & cdapMessage, const RemoteProcessId& remote_id,
                         ICDAPResponseMessageHandler * response_handler);
 
+};
+
+///Object exchanged between applications processes that
+///contains the source and destination addresses of the processes
+///and optional authentication information, as well as an
+///encoded CDAP Message. It is used to exchange CDAP messages
+///between APs without having a CDAP session previously established
+///(it can be seen as a one message session)
+class ADataObject {
+public:
+	static const std::string A_DATA;
+	static const std::string A_DATA_OBJECT_CLASS;
+	static const std::string A_DATA_OBJECT_NAME;
+
+	ADataObject();
+	ADataObject(unsigned int source_address,
+			unsigned int dest_address);
+	~ADataObject();
+
+	//The address of the source AP (or IPCP)
+	unsigned int source_address_;
+
+	//The address of the destination AP (or IPCP)
+	unsigned int dest_address_;
+
+	const SerializedObject * encoded_cdap_message_;
 };
 
 

@@ -266,6 +266,20 @@ public:
 	//
         std::string query_rib(const int ipcp_id);
 
+        int select_policy_set(rina::IPCProcess *ipcp,
+                              const std::string& component_path,
+                              const std::string& policy_set);
+
+        int set_policy_set_param(rina::IPCProcess *ipcp,
+                                 const std::string& path,
+                                 const std::string& name,
+                                 const std::string& value);
+
+        int plugin_load(rina::IPCProcess *ipcp,
+                        const std::string& plugin_name, bool load);
+
+        std::string query_rib(rina::IPCProcess *ipcp);
+
 	//
 	// Get the current logging debug level
 	//
@@ -412,6 +426,13 @@ protected:
 				 rina::IPCProcess *slave_ipcp,
 				 const rina::ApplicationProcessNamingInformation&);
 
+	//Plugins
+	void ipc_process_set_policy_set_param_response_handler(
+							rina::IPCEvent *e);
+	void ipc_process_plugin_load_response_handler(rina::IPCEvent *e);
+	void ipc_process_select_policy_set_response_handler(
+							rina::IPCEvent *e);
+
 	//
 	// TODO: revise
 	//
@@ -473,6 +494,17 @@ protected:
 	// RINA configuration internal state
 	//
         rinad::RINAConfiguration config;
+
+	/* FIXME REMOVE THIS*/
+        std::map<unsigned int,
+                 rina::IPCProcess *> pending_set_policy_set_param_ops;
+
+        std::map<unsigned int,
+                 rina::IPCProcess *> pending_select_policy_set_ops;
+
+        std::map<unsigned int,
+                 rina::IPCProcess *> pending_plugin_load_ops;
+	/* FIXME REMOVE THIS*/
 
 	//Script thread
         rina::Thread *script;

@@ -2,14 +2,7 @@
     "localConfiguration" : {
         "installationPath" : "/usr/local/irati/bin",
         "libraryPath" : "/usr/local/irati/lib",
-        "consolePort" : 32766,
-        "cdapTimeoutInMs" : 10000,
-        "enrollmentTimeoutInMs" : 10000,
-        "flowAllocatorTimeoutInMs" : 15000,
-        "watchdogPeriodInMs" : 60000,
-        "declaredDeadIntervalInMs" : 120000,
-        "neighborsEnrollerPeriodInMs" : 10000,
-        "lengthOfFlowQueues" : 10
+        "consolePort" : 32766
     },
     "applicationToDIFMappings" : [ {
         "encodedAppName" : "rina.apps.echotime.server---",
@@ -27,8 +20,8 @@
         "difName" : "test.DIF",
         "difType" : "shim-tcp-udp",
         "configParameters" : {
-         "hostname" : "10.1.1.2",
-         "dirEntry" : "1:25:rina.apps.echotime.server0:8:10.1.1.34:2426",
+         "hostname" : "84.88.40.131",
+         "dirEntry" : "1:25:rina.apps.echotime.server0:12:84.88.40.1314:2426",
          "expReg" : "1:25:rina.apps.echotime.server0:4:2426"
             }
      } ] 

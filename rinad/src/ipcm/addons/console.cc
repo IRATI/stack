@@ -101,6 +101,22 @@ IPCMConsole::IPCMConsole(rina::ThreadAttributes &ta,
         commands_map["query-rib"] =
                         ConsoleCmdInfo(&IPCMConsole::query_rib,
                                 "USAGE: query-rib <ipcp-id>");
+        commands_map["select-policy-set"] =
+                        ConsoleCmdInfo(&IPCMConsole::select_policy_set,
+                                "USAGE: select-policy-set <ipcp-id> "
+                                "<component-path> <policy-set-name> ");
+        commands_map["set-policy-set-param"] =
+                        ConsoleCmdInfo(&IPCMConsole::set_policy_set_param,
+                                "USAGE: set-policy-set-param <ipcp-id> "
+                                "<policy-path> <param-name> <param-value>");
+        commands_map["plugin-load"] =
+                        ConsoleCmdInfo(&IPCMConsole::plugin_load,
+                                "USAGE: plugin-load <ipcp-id> "
+                                "<plugin-name>");
+        commands_map["plugin-unload"] =
+                        ConsoleCmdInfo(&IPCMConsole::plugin_unload,
+                                "USAGE: plugin-unload <ipcp-id> "
+                                "<plugin-name>");
 
         worker = new rina::Thread(&ta, console_function, this);
 }
@@ -197,7 +213,10 @@ void IPCMConsole::body()
 
                 for (;;) {
                         outstream << "IPCM >>> ";
-                        flush_output(cfd);
+                        if (flush_output(cfd)) {
+                        	close(cfd);
+                        	break;
+                        }
 
                         n = read(cfd, cmdbuf, sizeof(cmdbuf));
                         if (n < 0) {
@@ -205,7 +224,7 @@ void IPCMConsole::body()
                                         "] calling read() " << endl;
                                 FLUSH_LOG(ERR, ss);
                                 close(cfd);
-                                continue;
+                                break;
                         }
 
                         cmdret = process_command(cfd, cmdbuf, n);
@@ -228,10 +247,16 @@ IPCMConsole::flush_output(int cfd)
 
         n = write(cfd, str.c_str(), str.size());
         if (n < 0) {
-                ss  << " Error [" << errno <<
-                        "] calling write() " << endl;
-                FLUSH_LOG(ERR, ss);
-                return -1;
+                if (errno != EPIPE) {
+                    ss  << " Error [" << errno <<
+                        "] calling write()" << endl;
+                    FLUSH_LOG(ERR, ss);
+                    return -1;
+                } else {
+                    ss  << " Console client disconnected" << endl;
+                    FLUSH_LOG(INFO, ss);
+                    return -1;
+                }
         }
 
         // Make the stringstream empty
@@ -261,7 +286,9 @@ IPCMConsole::process_command(int cfd, char *cmdbuf, int size)
         mit = commands_map.find(args[0]);
         if (mit == commands_map.end()) {
                 outstream << "Unknown command '" << args[0] << "'" << endl;
-                flush_output(cfd);
+                if (flush_output(cfd)) {
+                    return CMDRETSTOP;
+                }
                 return 0;
         }
 
@@ -269,7 +296,9 @@ IPCMConsole::process_command(int cfd, char *cmdbuf, int size)
         ret = (this->*fun)(args);
 
         outstream << endl;
-        flush_output(cfd);
+        if (flush_output(cfd)) {
+            return CMDRETSTOP;
+        }
 
         return ret;
 }
@@ -583,6 +612,133 @@ IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
         }
 
         return CMDRETCONT;
+}
+
+int
+IPCMConsole::select_policy_set(std::vector<std::string>& args)
+{
+        rina::IPCProcess *ipcp = NULL;
+        int ipcp_id;
+        int ret;
+
+        if (args.size() < 4) {
+                outstream << commands_map[args[0]].usage << endl;
+                return CMDRETCONT;
+        }
+
+        ret = string2int(args[1], ipcp_id);
+        if (ret) {
+                outstream << "Invalid IPC process id" << endl;
+                return CMDRETCONT;
+        }
+
+        ipcp = lookup_ipcp_by_id(ipcp_id);
+
+        if (!ipcp) {
+                outstream << "No such IPC process id" << endl;
+        } else {
+                ret = IPCManager->select_policy_set(ipcp, args[2], args[3]);
+                if (ret) {
+                        outstream << "select-policy-set operation failed"
+                                        << endl;
+                } else {
+                        outstream << "Policy-set selection succesfully "
+                                        "completed" << endl;
+                }
+        }
+
+        return CMDRETCONT;
+}
+
+int
+IPCMConsole::set_policy_set_param(std::vector<std::string>& args)
+{
+        rina::IPCProcess *ipcp = NULL;
+        int ipcp_id;
+        int ret;
+
+        if (args.size() < 5) {
+                outstream << commands_map[args[0]].usage << endl;
+                return CMDRETCONT;
+        }
+
+        ret = string2int(args[1], ipcp_id);
+        if (ret) {
+                outstream << "Invalid IPC process id" << endl;
+                return CMDRETCONT;
+        }
+
+        ipcp = lookup_ipcp_by_id(ipcp_id);
+
+        if (!ipcp) {
+                outstream << "No such IPC process id" << endl;
+        } else {
+                ret = IPCManager->set_policy_set_param(ipcp, args[2], args[3],
+                                                args[4]);
+                if (ret) {
+                        outstream << "set-policy-set-param operation failed"
+                                        << endl;
+                } else {
+                        outstream << "Policy-set parameter succesfully set"
+                                        << endl;
+                }
+        }
+
+        return CMDRETCONT;
+}
+
+int
+IPCMConsole::plugin_load_unload(std::vector<std::string>& args, bool load)
+{
+        rina::IPCProcess *ipcp = NULL;
+        int ipcp_id;
+        int ret;
+
+        if (args.size() < 3) {
+                outstream << commands_map[args[0]].usage << endl;
+                return CMDRETCONT;
+        }
+
+        ret = string2int(args[1], ipcp_id);
+        if (ret) {
+                outstream << "Invalid IPC process id" << endl;
+                return CMDRETCONT;
+        }
+
+        ipcp = lookup_ipcp_by_id(ipcp_id);
+
+        if (!ipcp) {
+                outstream << "No such IPC process id" << endl;
+        } else {
+                string un;
+
+                if (!load) {
+                        un = "un";
+                }
+
+                ret = IPCManager->plugin_load(ipcp, args[2], load);
+                if (ret) {
+                        outstream << "Plugin " << un <<
+                                "loading failed" << endl;
+                } else {
+                        outstream << "Plugin " << un <<
+                                "loaded succesfully" << endl;
+                }
+        }
+
+        return CMDRETCONT;
+}
+
+int
+IPCMConsole::plugin_load(std::vector<std::string>& args)
+{
+        return plugin_load_unload(args, true);
+}
+
+int
+IPCMConsole::plugin_unload(std::vector<std::string>& args)
+{
+        return plugin_load_unload(args, false);
 }
 
 }//namespace rinad

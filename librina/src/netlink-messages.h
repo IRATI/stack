@@ -68,22 +68,31 @@ enum RINANetlinkOperationCode{
 	RINA_C_IPCP_CONN_UPDATE_RESULT, /* 34 EFCP(kernel) -> IPC Process daemon */
 	RINA_C_IPCP_CONN_DESTROY_REQUEST, /* 35 IPC Process Daemon -> EFCP (Kernel) */
 	RINA_C_IPCP_CONN_DESTROY_RESULT, /* 36 EFCP(kernel) -> IPC Process daemon */
-	RINA_C_IPCM_IPC_PROCESS_INITIALIZED, /* 37 IPC Process -> IPC Manager */
-	RINA_C_APP_ALLOCATE_FLOW_REQUEST, /* 38 Allocate flow request, Application -> IPC Manager */
-	RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT, /* 39 Response to an application allocate flow request, IPC Manager -> Application */
-	RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED, /* 40 Allocate flow request from a remote application, IPC Manager -> Application */
-	RINA_C_APP_ALLOCATE_FLOW_RESPONSE, /* 41 Allocate flow response to an allocate request arrived operation, Application -> IPC Manager */
-	RINA_C_APP_DEALLOCATE_FLOW_REQUEST, /* 42 Application -> IPC Manager */
-	RINA_C_APP_DEALLOCATE_FLOW_RESPONSE, /* 43 IPC Manager -> Application */
-	RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION, /* 44 IPC Manager -> Application, flow deallocated without the application having requested it */
-	RINA_C_APP_REGISTER_APPLICATION_REQUEST, /* 45 Application -> IPC Manager */
-	RINA_C_APP_REGISTER_APPLICATION_RESPONSE, /* 46 IPC Manager -> Application */
-	RINA_C_APP_UNREGISTER_APPLICATION_REQUEST, /* 47 Application -> IPC Manager */
-	RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE, /* 48 IPC Manager -> Application */
-	RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION, /* 49 IPC Manager -> Application, application unregistered without the application having requested it */
-	RINA_C_APP_GET_DIF_PROPERTIES_REQUEST, /* 50 Application -> IPC Manager */
-	RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE, /* 51 IPC Manager -> Application */
-	RINA_C_IPCM_NEIGHBORS_MODIFIED_NOTIFICATION, /* 52 IPC Process -> IPC Manager */
+        RINA_C_IPCM_SET_POLICY_SET_PARAM_REQUEST, /* 37, IPC Manager -> IPC Process */
+        RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE, /* 38, IPC Process -> IPC Manager */
+        RINA_C_IPCM_SELECT_POLICY_SET_REQUEST, /* 39, IPC Manager -> IPC Process */
+        RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE, /* 40, IPC Process -> IPC Manager */
+
+        /* Userspace only messages MUST be after all the messages that are also
+         * handled by the kernel. */
+	RINA_C_IPCM_IPC_PROCESS_INITIALIZED, /* 41 IPC Process -> IPC Manager */
+	RINA_C_APP_ALLOCATE_FLOW_REQUEST, /* 42 Allocate flow request, Application -> IPC Manager */
+	RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT, /* 43 Response to an application allocate flow request, IPC Manager -> Application */
+	RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED, /* 44 Allocate flow request from a remote application, IPC Manager -> Application */
+	RINA_C_APP_ALLOCATE_FLOW_RESPONSE, /* 45 Allocate flow response to an allocate request arrived operation, Application -> IPC Manager */
+	RINA_C_APP_DEALLOCATE_FLOW_REQUEST, /* 46 Application -> IPC Manager */
+	RINA_C_APP_DEALLOCATE_FLOW_RESPONSE, /* 47 IPC Manager -> Application */
+	RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION, /* 48 IPC Manager -> Application, flow deallocated without the application having requested it */
+	RINA_C_APP_REGISTER_APPLICATION_REQUEST, /* 49 Application -> IPC Manager */
+	RINA_C_APP_REGISTER_APPLICATION_RESPONSE, /* 50 IPC Manager -> Application */
+	RINA_C_APP_UNREGISTER_APPLICATION_REQUEST, /* 51 Application -> IPC Manager */
+	RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE, /* 52 IPC Manager -> Application */
+	RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION, /* 53 IPC Manager -> Application, application unregistered without the application having requested it */
+	RINA_C_APP_GET_DIF_PROPERTIES_REQUEST, /* 54 Application -> IPC Manager */
+	RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE, /* 55 IPC Manager -> Application */
+	RINA_C_IPCM_NEIGHBORS_MODIFIED_NOTIFICATION, /* 56 IPC Process -> IPC Manager */
+        RINA_C_IPCM_PLUGIN_LOAD_REQUEST, /* 57, IPC Manager -> IPC Process */
+        RINA_C_IPCM_PLUGIN_LOAD_RESPONSE, /* 58, IPC Process -> IPC Manager */
 	__RINA_C_MAX,
  };
 
@@ -168,13 +177,13 @@ private:
 };
 
 class BaseNetlinkResponseMessage: public BaseNetlinkMessage {
+public:
 	/**
 	 * Result of the operation. 0 indicates success, a negative value an
 	 * error code.
 	 */
 	int result;
 
-public:
 	BaseNetlinkResponseMessage(RINANetlinkOperationCode operationCode);
 	int getResult() const;
 	void setResult(int result);
@@ -1014,6 +1023,99 @@ public:
 	void setRIBObjects(const std::list<RIBObjectData>& ribObjects);
 	void addRIBObject(const RIBObjectData& ribObject);
 	IPCEvent* toIPCEvent();
+};
+
+/**
+ * Used by the IPC Manager to ask an IPC process to modify a
+ * policy-set-specific parameter or a parametric policy
+ * IPC Manager -> IPC Process
+ */
+class IpcmSetPolicySetParamRequestMessage:
+		public BaseNetlinkMessage {
+public:
+        /** The path of the sybcomponent/policy-set to be addressed */
+	std::string path;
+
+	/** The name of the parameter being accessed */
+	std::string name;
+
+	/** The value to assign to the parameter */
+	std::string value;
+
+	IpcmSetPolicySetParamRequestMessage();
+	IPCEvent* toIPCEvent();
+};
+
+/**
+ * Reports the IPC Manager about the result of a set-policy-set-param
+ * request operation
+ * IPC Process -> IPC Manager
+ */
+class IpcmSetPolicySetParamResponseMessage:
+                public BaseNetlinkResponseMessage {
+public:
+        IpcmSetPolicySetParamResponseMessage();
+        IPCEvent* toIPCEvent();
+};
+
+/**
+ * Used by the IPC Manager to ask an IPC process to select a
+ * policy-set for a component
+ * IPC Manager -> IPC Process
+ */
+class IpcmSelectPolicySetRequestMessage:
+		public BaseNetlinkMessage {
+public:
+        /** The path of the sybcomponent to be addressed */
+	std::string path;
+
+	/** The name of the policy-set to be selected */
+	std::string name;
+
+	IpcmSelectPolicySetRequestMessage();
+	IPCEvent* toIPCEvent();
+};
+
+/**
+ * Reports the IPC Manager about the result of a select-policy-set
+ * request operation
+ * IPC Process -> IPC Manager
+ */
+class IpcmSelectPolicySetResponseMessage:
+                public BaseNetlinkResponseMessage {
+public:
+        IpcmSelectPolicySetResponseMessage();
+        IPCEvent* toIPCEvent();
+};
+
+/**
+ * Used by the IPC Manager to ask an IPC process to load or
+ * unload a plugin.
+ * IPC Manager -> IPC Process
+ */
+class IpcmPluginLoadRequestMessage:
+		public BaseNetlinkMessage {
+public:
+	/** The name of the plugin to be loaded or unloaded */
+	std::string name;
+
+	/** Specifies whether the plugin is to be loaded or unloaded */
+	bool load;
+
+	IpcmPluginLoadRequestMessage();
+	IPCEvent* toIPCEvent();
+};
+
+/**
+ * Reports the IPC Manager about the result of a plugin-load
+ * request operation
+ * IPC Process -> IPC Manager
+ */
+class IpcmPluginLoadResponseMessage:
+                public BaseNetlinkResponseMessage {
+public:
+        IpcmPluginLoadResponseMessage();
+        IPCEvent* toIPCEvent();
 };
 
 /**

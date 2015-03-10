@@ -70,6 +70,11 @@ int            kipcm_mgmt_sdu_read(struct kipcm *    kipcm,
 port_id_t      kipcm_allocate_port(struct kipcm *   kipcm,
                                    ipc_process_id_t ipc_id,
                                    struct name *    process_name);
+
+int            kipcm_deallocate_port(struct kipcm *   kipcm,
+                                     ipc_process_id_t ipc_id,
+                                     port_id_t        port_id);
+
 /*
  * The following functions represent the KIPCM southbound interface
  */
@@ -86,7 +91,9 @@ port_id_t      kipcm_allocate_port(struct kipcm *   kipcm,
  *       BEHAVIOR BURYING IT INTO THE CODE, WE WILL TRY TO GET RID OF IT
  *       ASAP
  */
-struct kfa *   kipcm_kfa(struct kipcm * kipcm);
+struct kfa *           kipcm_kfa(struct kipcm * kipcm);
+struct ipcp_instance * kipcm_find_ipcp(struct kipcm *   kipcm,
+                                       ipc_process_id_t ipc_id);
 
 struct ipcp_factory *
 kipcm_ipcp_factory_register(struct kipcm *             kipcm,
@@ -105,10 +112,6 @@ int            kipcm_flow_arrived(struct kipcm *     kipcm,
                                   struct flow_spec * fspec);
 
 /* On both source and destination */
-int            kipcm_flow_commit(struct kipcm *   kipcm,
-                                 ipc_process_id_t ipc_id,
-                                 port_id_t        id);
-
 int            kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
                                                   ipc_process_id_t id,
                                                   port_id_t        pid,
@@ -118,4 +121,7 @@ int            kipcm_notify_flow_dealloc(ipc_process_id_t ipc_id,
                                          uint_t           code,
                                          port_id_t        port_id,
                                          u32              nl_port_id);
+
+struct ipcp_instance * kipcm_find_ipcp_by_name(struct kipcm * kipcm,
+                                               struct name *  name);
 #endif

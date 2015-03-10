@@ -35,12 +35,10 @@ int                kfa_pmap_destroy(struct kfa_pmap * map);
 int                kfa_pmap_empty(struct kfa_pmap * map);
 int                kfa_pmap_add(struct kfa_pmap *  map,
                                 port_id_t          key,
-                                struct ipcp_flow * value_flow,
-                                ipc_process_id_t   value_id);
+                                struct ipcp_flow * value_flow);
 int                kfa_pmap_add_ni(struct kfa_pmap *  map,
                                    port_id_t          key,
-                                   struct ipcp_flow * value_flow,
-                                   ipc_process_id_t   value_id);
+                                   struct ipcp_flow * value_flow);
 struct ipcp_flow * kfa_pmap_find(struct kfa_pmap * map,
                                  port_id_t         key);
 int                kfa_pmap_update(struct kfa_pmap *  map,
@@ -48,7 +46,5 @@ int                kfa_pmap_update(struct kfa_pmap *  map,
                                    struct ipcp_flow * value_flow);
 int                kfa_pmap_remove(struct kfa_pmap * map,
                                    port_id_t         key);
-int                kfa_pmap_remove_all_for_id(struct kfa_pmap * map,
-                                              ipc_process_id_t  value_id);
 
 #endif

@@ -36,12 +36,15 @@
 #include "dt.h"
 #include "dtp.h"
 #include "dtcp.h"
+#include "dtcp-ps.h"
 #include "dtcp-utils.h"
 #include "rmt.h"
 #include "dt-utils.h"
+#include "dtp-ps.h"
 
 struct efcp {
         struct connection *     connection;
+        struct ipcp_instance *  user_ipcp;
         struct dt *             dt;
         struct efcp_container * container;
 };
@@ -53,6 +56,134 @@ struct efcp_container {
         struct rmt *         rmt;
         struct kfa *         kfa;
 };
+
+static int efcp_select_policy_set(struct efcp * efcp,
+                                  const string_t * path,
+                                  const string_t * ps_name)
+{
+        size_t cmplen;
+        size_t offset;
+
+        parse_component_id(path, &cmplen, &offset);
+
+        if (strncmp(path, "dtp", cmplen) == 0) {
+                return dtp_select_policy_set(dt_dtp(efcp->dt), path + offset,
+                                             ps_name);
+        } else if (strncmp(path, "dtcp", cmplen) == 0 && dt_dtcp(efcp->dt)) {
+                return dtcp_select_policy_set(dt_dtcp(efcp->dt), path + offset,
+                                             ps_name);
+        }
+
+        /* Currently there are no policy sets specified for EFCP (strictly
+         * speaking). */
+        LOG_ERR("The selected component does not exist");
+
+        return -1;
+}
+
+typedef const string_t *const_string;
+
+/* Helper function to parse the component id path for EFCP container. */
+struct efcp *
+efcp_container_parse_component_id(struct efcp_container * container,
+                                  const_string * path)
+{
+        struct efcp * efcp;
+        cep_id_t cep_id;
+        size_t cmplen;
+        size_t offset;
+        char numbuf[8];
+        int ret;
+
+        if (!*path) {
+                LOG_ERR("NULL path");
+                return NULL;
+        }
+
+        parse_component_id(*path, &cmplen, &offset);
+        if (cmplen > sizeof(numbuf)-1) {
+                LOG_ERR("Invalid cep-id' %s'", *path);
+                return NULL;
+        }
+
+        memcpy(numbuf, *path, cmplen);
+        numbuf[cmplen] = '\0';
+        ret = kstrtoint(numbuf, 10, &cep_id);
+        if (ret) {
+                LOG_ERR("Invalid cep-id '%s'", *path);
+                return NULL;
+        }
+
+        efcp = efcp_imap_find(container->instances, cep_id);
+        if (!efcp) {
+                LOG_ERR("No connection with cep-id %d", cep_id);
+                return NULL;
+        }
+
+        *path += offset;
+
+        return efcp;
+
+}
+
+int efcp_container_select_policy_set(struct efcp_container * container,
+                                     const string_t * path,
+                                     const string_t * ps_name)
+{
+        struct efcp * efcp;
+        const string_t * new_path = path;
+
+        efcp = efcp_container_parse_component_id(container, &new_path);
+        if (!efcp) {
+                return -1;
+        }
+
+        return efcp_select_policy_set(efcp, new_path, ps_name);
+}
+EXPORT_SYMBOL(efcp_container_select_policy_set);
+
+static int efcp_set_policy_set_param(struct efcp * efcp,
+                                     const char * path,
+                                     const char * name,
+                                     const char * value)
+{
+        size_t cmplen;
+        size_t offset;
+
+        parse_component_id(path, &cmplen, &offset);
+
+        if (strncmp(path, "dtp", cmplen) == 0) {
+                return dtp_set_policy_set_param(dt_dtp(efcp->dt),
+                                        path + offset, name, value);
+        } else if (strncmp(path, "dtcp", cmplen) == 0 && dt_dtcp(efcp->dt)) {
+                return dtcp_set_policy_set_param(dt_dtcp(efcp->dt),
+                                        path + offset, name, value);
+        }
+
+        /* Currently there are no parametric policies specified for EFCP
+         * (strictly speaking). */
+        LOG_ERR("No parametric policies for this EFCP component");
+
+        return -1;
+}
+EXPORT_SYMBOL(efcp_set_policy_set_param);
+
+int efcp_container_set_policy_set_param(struct efcp_container * container,
+                                        const char * path, const char * name,
+                                        const char * value)
+{
+
+        struct efcp * efcp;
+        const string_t * new_path = path;
+
+        efcp = efcp_container_parse_component_id(container, &new_path);
+        if (!efcp) {
+                return -1;
+        }
+
+        return efcp_set_policy_set_param(efcp, new_path, name, value);
+}
+EXPORT_SYMBOL(efcp_container_set_policy_set_param);
 
 static struct efcp * efcp_create(void)
 {
@@ -67,11 +198,39 @@ static struct efcp * efcp_create(void)
         return instance;
 }
 
+int efcp_container_unbind_user_ipcp(struct efcp_container * efcpc,
+                                    cep_id_t cep_id)
+{
+        struct efcp * efcp;
+        ASSERT(efcpc);
+
+        if (!is_cep_id_ok(cep_id)) {
+                LOG_ERR("Bad cep-id, cannot retrieve efcp instance");
+                return -1;
+        }
+
+        efcp = efcp_imap_find(efcpc->instances, cep_id);
+        if (efcp) {
+                LOG_ERR("There is no EFCP bound to this cep-id %d", cep_id);
+                return -1;
+        }
+
+        efcp->user_ipcp = NULL;
+        return 0;
+}
+EXPORT_SYMBOL(efcp_container_unbind_user_ipcp);
+
 static int efcp_destroy(struct efcp * instance)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
+        }
+
+        if (instance->user_ipcp) {
+                instance->user_ipcp->ops->flow_unbinding_ipcp(
+                                instance->user_ipcp->data,
+                                instance->connection->port_id);
         }
 
         if (instance->dt) {
@@ -86,18 +245,15 @@ static int efcp_destroy(struct efcp * instance)
                 struct rtxq * rtxq = dt_rtxq_unbind(instance->dt);
 
                 /* FIXME: We should watch for memleaks here ... */
-                if (rtxq) rtxq_destroy(rtxq);
-                if (instance->container->rmt)
-                        rmt_flush_work(instance->container->rmt);
                 if (dtp)  dtp_destroy(dtp);
-                if (instance->container->rmt)
-                        rmt_restart_work(instance->container->rmt);
+                if (rtxq) rtxq_destroy(rtxq);
                 if (dtcp) dtcp_destroy(dtcp);
                 if (cwq)  cwq_destroy(cwq);
 
                 dt_destroy(instance->dt);
         } else
                 LOG_WARN("No DT instance present");
+
 
         if (instance->connection) {
                 if (is_cep_id_ok(instance->connection->source_cep_id)) {
@@ -378,7 +534,52 @@ static bool is_connection_ok(const struct connection * connection)
         return true;
 }
 
+int efcp_enable_write(struct efcp * efcp)
+{
+        if (!efcp                 ||
+            !efcp->user_ipcp      ||
+            !efcp->user_ipcp->ops ||
+            !efcp->user_ipcp->data) {
+                LOG_ERR("No EFCP or user IPCP provided");
+                return -1;
+        }
+
+        if (efcp->user_ipcp->ops->enable_write(efcp->user_ipcp->data,
+                                               efcp->connection->port_id)) {
+                return -1;
+        }
+
+        return 0;
+}
+
+int efcp_disable_write(struct efcp * efcp)
+{
+        if (!efcp                 ||
+            !efcp->user_ipcp      ||
+            !efcp->user_ipcp->ops ||
+            !efcp->user_ipcp->data) {
+                LOG_ERR("No user IPCP provided");
+                return -1;
+        }
+
+        if (efcp->user_ipcp->ops->disable_write(efcp->user_ipcp->data,
+                                                efcp->connection->port_id)) {
+                return -1;
+        }
+
+        return 0;
+}
+EXPORT_SYMBOL(efcp_disable_write);
+
+/* FIXME This function has not been ported yet to use the DTCP policy set
+ * parameters in place of struct dtcp_config. This because the code
+ * tries to access "connection parameters" that are defined as DTCP
+ * policies (in RINA) even if DTCP is not present. This has to
+ * be fixed, because the DTCP policy set can exist only if DTCP
+ * is present.
+ */
 cep_id_t efcp_connection_create(struct efcp_container * container,
+                                struct ipcp_instance *  user_ipcp,
                                 struct connection *     connection)
 {
         struct efcp * tmp;
@@ -389,6 +590,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         struct rtxq * rtxq;
         uint_t        mfps, mfss;
         timeout_t     mpl, a, r = 0, tr = 0;
+        struct dtp_ps * dtp_ps;
 
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
@@ -404,6 +606,9 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         tmp = efcp_create();
         if (!tmp)
                 return cep_id_bad();
+
+        if (user_ipcp)
+                tmp->user_ipcp = user_ipcp;
 
         tmp->dt = dt_create();
         if (!tmp->dt) {
@@ -430,7 +635,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         /* FIXME: dtp_create() takes ownership of the connection parameter */
         dtp = dtp_create(tmp->dt,
                          container->rmt,
-                         container->kfa,
+                         tmp,
                          connection);
         if (!dtp) {
                 efcp_destroy(tmp);
@@ -447,14 +652,18 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
 
         dtcp = NULL;
 
-        if (connection->policies_params->dtcp_present) {
+        rcu_read_lock();
+        dtp_ps = dtp_ps_get(dtp);
+        if (dtp_ps->dtcp_present) {
                 dtcp = dtcp_create(tmp->dt, connection, container->rmt);
                 if (!dtcp) {
+                        rcu_read_unlock();
                         efcp_destroy(tmp);
                         return cep_id_bad();
                 }
 
                 if (dt_dtcp_bind(tmp->dt, dtcp)) {
+                        rcu_read_unlock();
                         dtcp_destroy(dtcp);
                         efcp_destroy(tmp);
                         return cep_id_bad();
@@ -465,10 +674,12 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 cwq = cwq_create();
                 if (!cwq) {
                         LOG_ERR("Failed to create closed window queue");
+                        rcu_read_unlock();
                         efcp_destroy(tmp);
                         return cep_id_bad();
                 }
                 if (dt_cwq_bind(tmp->dt, cwq)) {
+                        rcu_read_unlock();
                         cwq_destroy(cwq);
                         efcp_destroy(tmp);
                         return cep_id_bad();
@@ -479,14 +690,21 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 rtxq = rtxq_create(tmp->dt, container->rmt);
                 if (!rtxq) {
                         LOG_ERR("Failed to create rexmsn queue");
+                        rcu_read_unlock();
                         efcp_destroy(tmp);
                         return cep_id_bad();
                 }
                 if (dt_rtxq_bind(tmp->dt, rtxq)) {
+                        rcu_read_unlock();
                         rtxq_destroy(rtxq);
                         efcp_destroy(tmp);
                         return cep_id_bad();
                 }
+        }
+
+        if (dt_efcp_bind(tmp->dt, tmp)) {
+                efcp_destroy(tmp);
+                return cep_id_bad();
         }
 
         /* FIXME: This is crap and have to be rethinked */
@@ -499,7 +717,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         mfss = container->config->dt_cons->max_pdu_size;
         mpl  = container->config->dt_cons->max_pdu_life;
         /*a = msecs_to_jiffies(connection->policies_params->initial_a_timer); */
-        a    = connection->policies_params->initial_a_timer;
+        a = dtp_ps->initial_a_timer;
         if (dtcp && dtcp_rtx_ctrl(connection->policies_params->dtcp_cfg)) {
                 tr = dtcp_initial_tr(connection->policies_params->dtcp_cfg);
                 /* tr = msecs_to_jiffies(tr); */
@@ -514,6 +732,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
 
         if (dt_sv_init(tmp->dt, mfps, mfss, mpl, a, r, tr)) {
                 LOG_ERR("Could not init dt_sv");
+                rcu_read_unlock();
                 efcp_destroy(tmp);
                 return cep_id_bad();
         }
@@ -526,9 +745,11 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                                               ->dtcp_cfg),
                         a)) {
                 LOG_ERR("Could not init dtp_sv");
+                rcu_read_unlock();
                 efcp_destroy(tmp);
                 return cep_id_bad();
         }
+        rcu_read_unlock();
 
         /***/
 
@@ -595,6 +816,7 @@ int efcp_connection_destroy(struct efcp_container * container,
 EXPORT_SYMBOL(efcp_connection_destroy);
 
 int efcp_connection_update(struct efcp_container * container,
+                           struct ipcp_instance *  user_ipcp,
                            cep_id_t                from,
                            cep_id_t                to)
 {
@@ -620,6 +842,7 @@ int efcp_connection_update(struct efcp_container * container,
                 return -1;
         }
         tmp->connection->destination_cep_id = to;
+        tmp->user_ipcp = user_ipcp;
 
         LOG_DBG("Connection updated");
         LOG_DBG("  Source address:     %d",
@@ -665,3 +888,26 @@ int efcp_unbind_rmt(struct efcp_container * container)
         return 0;
 }
 EXPORT_SYMBOL(efcp_unbind_rmt);
+
+int efcp_enqueue(struct efcp * efcp,
+                 port_id_t     port,
+                 struct sdu *  sdu)
+{
+        if (!sdu_is_ok(sdu)) {
+                LOG_ERR("Bad sdu, cannot enqueue it");
+                return -1;
+        }
+        if (!efcp) {
+                LOG_ERR("Bogus efcp passed, bailing out");
+                sdu_destroy(sdu);
+                return -1;
+        }
+
+        if (efcp->user_ipcp->ops->sdu_enqueue(efcp->user_ipcp->data,
+                                              port,
+                                              sdu)) {
+                LOG_ERR("Upper ipcp could not enqueue sdu to port: %d", port);
+                return -1;
+        }
+        return 0;
+}

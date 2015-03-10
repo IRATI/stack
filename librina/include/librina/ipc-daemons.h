@@ -145,12 +145,92 @@ public:
 };
 
 /**
+ * Thrown when there are problems while modifying a policy-set-related
+ * parameter of an IPC Process
+ */
+class SetPolicySetParamException: public IPCException {
+public:
+	SetPolicySetParamException():
+		IPCException("Problems while modifying a policy-set related "
+                                "parameter of an IPC Process"){
+	}
+	SetPolicySetParamException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems while selectin a policy-set
+ * in an IPC Process component
+ */
+class SelectPolicySetException: public IPCException {
+public:
+	SelectPolicySetException():
+		IPCException("Problems while selecting a policy-set "
+                                "in an IPC Process component"){
+	}
+	SelectPolicySetException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems while trying to load or unload
+ * plugins
+ */
+class PluginLoadException: public IPCException {
+public:
+	PluginLoadException():
+		IPCException("Problems while loading or unloading "
+                                "a plugin for an IPC Process") {
+	}
+	PluginLoadException(const std::string& description):
+		IPCException(description) {
+	}
+};
+
+/**
  * Event informing about the result of an assign to DIF operation
  */
 class AssignToDIFResponseEvent: public BaseResponseEvent {
 public:
         AssignToDIFResponseEvent(
                         int result, unsigned int sequenceNumber);
+};
+
+/**
+ * An IPC process reports the result of the access of a policy-set-related
+ * parameter
+ */
+class SetPolicySetParamResponseEvent: public IPCEvent {
+public:
+        int result;
+
+	SetPolicySetParamResponseEvent(int result,
+                                       unsigned int sequenceNumber);
+};
+
+/**
+ * An IPC process reports the result of the selection of a policy-set
+ */
+class SelectPolicySetResponseEvent: public IPCEvent {
+public:
+        int result;
+
+	SelectPolicySetResponseEvent(int result,
+                                     unsigned int sequenceNumber);
+};
+
+/**
+ * An IPC process reports the result of the loading or
+ * unloading of a plugin
+ */
+class PluginLoadResponseEvent: public IPCEvent {
+public:
+        int result;
+
+	PluginLoadResponseEvent(int result,
+                                unsigned int sequenceNumber);
 };
 
 }

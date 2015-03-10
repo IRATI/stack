@@ -22,6 +22,8 @@
 
 #define RINA_PREFIX "dtcp"
 
+#include <linux/delay.h>
+
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
@@ -31,6 +33,12 @@
 #include "dtp.h"
 #include "dt-utils.h"
 #include "dtcp-utils.h"
+#include "ps-factory.h"
+#include "dtcp-ps.h"
+
+static struct policy_set_list policy_sets = {
+        .head = LIST_HEAD_INIT(policy_sets.head)
+};
 
 /* This is the DT-SV part maintained by DTCP */
 struct dtcp_sv {
@@ -131,29 +139,6 @@ struct dtcp_sv {
         uint_t       flow_ctl;
 };
 
-struct dtcp_policies {
-        int (* flow_init)(struct dtcp * instance);
-        int (* sv_update)(struct dtcp * instance, seq_num_t seq);
-        int (* lost_control_pdu)(struct dtcp * instance);
-        int (* rtt_estimator)(struct dtcp * instance);
-        int (* retransmission_timer_expiry)(struct dtcp * instance);
-        int (* received_retransmission)(struct dtcp * instance);
-        int (* rcvr_ack)(struct dtcp * instance, seq_num_t seq);
-        int (* sender_ack)(struct dtcp * instance, seq_num_t seq);
-        int (* sending_ack)(struct dtcp * instance, seq_num_t seq);
-        int (* receiving_ack_list)(struct dtcp * instance);
-        int (* initial_rate)(struct dtcp * instance);
-        int (* receiving_flow_control)(struct dtcp * instance, seq_num_t seq);
-        int (* update_credit)(struct dtcp * instance);
-        int (* flow_control_overrun)(struct dtcp * instance, struct pdu * pdu);
-        int (* reconcile_flow_conflict)(struct dtcp * instance);
-        int (* rcvr_flow_control)(struct dtcp * instance, seq_num_t seq);
-        int (* rate_reduction)(struct dtcp * instance);
-        int (* rcvr_control_ack)(struct dtcp * instance);
-        int (* no_rate_slow_down)(struct dtcp * instance);
-        int (* no_override_default_peak)(struct dtcp * instance);
-};
-
 struct dtcp {
         struct dt *            parent;
 
@@ -162,14 +147,18 @@ struct dtcp {
          *       no traffic
          */
         struct dtcp_sv *       sv; /* The state-vector */
-        struct dtcp_policies * policies;
+        struct rina_component  base;
         struct connection *    conn;
         struct rmt *           rmt;
 
-        /* FIXME: Add QUEUE(flow_control_queue, pdu) */
-        /* FIXME: Add QUEUE(closed_window_queue, pdu) */
-        /* FIXME: Add QUEUE(rx_control_queue, ...) */
+        atomic_t               cpdus_in_transit;
 };
+
+struct dt * dtcp_dt(struct dtcp * dtcp)
+{
+        return dtcp->parent;
+}
+EXPORT_SYMBOL(dtcp_dt);
 
 struct dtcp_config * dtcp_config_get(struct dtcp * dtcp)
 {
@@ -183,7 +172,7 @@ struct dtcp_config * dtcp_config_get(struct dtcp * dtcp)
 }
 EXPORT_SYMBOL(dtcp_config_get);
 
-static int pdu_send(struct dtcp * dtcp, struct pdu * pdu)
+int pdu_send(struct dtcp * dtcp, struct pdu * pdu)
 {
         ASSERT(dtcp);
         ASSERT(pdu);
@@ -196,6 +185,7 @@ static int pdu_send(struct dtcp * dtcp, struct pdu * pdu)
 
         return 0;
 }
+EXPORT_SYMBOL(pdu_send);
 
 static int last_rcv_ctrl_seq_set(struct dtcp * dtcp,
                                  seq_num_t     last_rcv_ctrl_seq)
@@ -210,7 +200,7 @@ static int last_rcv_ctrl_seq_set(struct dtcp * dtcp,
         return 0;
 }
 
-static seq_num_t last_rcv_ctrl_seq(struct dtcp * dtcp)
+seq_num_t last_rcv_ctrl_seq(struct dtcp * dtcp)
 {
         seq_num_t tmp;
 
@@ -223,6 +213,7 @@ static seq_num_t last_rcv_ctrl_seq(struct dtcp * dtcp)
 
         return tmp;
 }
+EXPORT_SYMBOL(last_rcv_ctrl_seq);
 
 static void flow_ctrl_inc(struct dtcp * dtcp)
 {
@@ -256,35 +247,39 @@ static int snd_rt_wind_edge_set(struct dtcp * dtcp, seq_num_t new_rt_win)
         return 0;
 }
 
-static seq_num_t snd_rt_wind_edge(struct dtcp * dtcp)
+seq_num_t snd_rt_wind_edge(struct dtcp * dtcp)
 {
-        seq_num_t tmp;
+        seq_num_t     tmp;
+        unsigned long flags;
 
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
-        spin_lock(&dtcp->sv->lock);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
         tmp = dtcp->sv->snd_rt_wind_edge;
-        spin_unlock(&dtcp->sv->lock);
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 
         return tmp;
 }
+EXPORT_SYMBOL(snd_rt_wind_edge);
 
-static seq_num_t snd_lft_win(struct dtcp * dtcp)
+seq_num_t snd_lft_win(struct dtcp * dtcp)
 {
-        seq_num_t tmp;
+        seq_num_t     tmp;
+        unsigned long flags;
 
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
-        spin_lock(&dtcp->sv->lock);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
         tmp = dtcp->sv->snd_lft_win;
-        spin_unlock(&dtcp->sv->lock);
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 
         return tmp;
 }
+EXPORT_SYMBOL(snd_lft_win);
 
-static seq_num_t rcvr_rt_wind_edge(struct dtcp * dtcp)
+seq_num_t rcvr_rt_wind_edge(struct dtcp * dtcp)
 {
         seq_num_t tmp;
 
@@ -297,6 +292,7 @@ static seq_num_t rcvr_rt_wind_edge(struct dtcp * dtcp)
 
         return tmp;
 }
+EXPORT_SYMBOL(rcvr_rt_wind_edge);
 
 static seq_num_t next_snd_ctl_seq(struct dtcp * dtcp)
 {
@@ -357,12 +353,15 @@ static int push_pdus_rmt(struct dtcp * dtcp)
         return 0;
 }
 
-static struct pdu * pdu_ctrl_create_ni(struct dtcp * dtcp, pdu_type_t type)
+struct pdu * pdu_ctrl_create_ni(struct dtcp * dtcp, pdu_type_t type)
 {
         struct pdu *    pdu;
         struct pci *    pci;
         struct buffer * buffer;
         seq_num_t       seq;
+
+        if (!pdu_type_is_control(type))
+                return NULL;
 
         buffer = buffer_create_ni(1);
         if (!buffer)
@@ -394,6 +393,12 @@ static struct pdu * pdu_ctrl_create_ni(struct dtcp * dtcp, pdu_type_t type)
                 return NULL;
         }
 
+        if (pci_control_last_seq_num_rcvd_set(pci,last_rcv_ctrl_seq(dtcp))) {
+                pci_destroy(pci);
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
         if (pdu_pci_set(pdu, pci)) {
                 pdu_destroy(pdu);
                 pci_destroy(pci);
@@ -407,77 +412,122 @@ static struct pdu * pdu_ctrl_create_ni(struct dtcp * dtcp, pdu_type_t type)
 
         return pdu;
 }
+EXPORT_SYMBOL(pdu_ctrl_create_ni);
 
-/* This is 0x8803 PDU type */
-/* NOTE: Specs do not detail it structure */
-static struct pdu * pdu_ctrl_ack_create(struct dtcp * dtcp,
-                                        seq_num_t     last_ctrl_seq_rcvd,
-                                        seq_num_t     snd_left_wind_edge,
-                                        seq_num_t     snd_rt_wind_edge)
+static int populate_ctrl_pci(struct pci *  pci,
+                             struct dtcp * dtcp)
+{
+        struct dtcp_config * dtcp_cfg;
+        seq_num_t snd_lft;
+        seq_num_t snd_rt;
+        seq_num_t LWE;
+
+        dtcp_cfg = dtcp_config_get(dtcp);
+        if (!dtcp_cfg) {
+                LOG_ERR("No dtcp cfg...");
+                return -1;
+        }
+
+        /*
+         * FIXME: Shouldn't we check if PDU_TYPE_ACK_AND_FC or
+         * PDU_TYPE_NACK_AND_FC ?
+         */
+        LWE = dt_sv_rcv_lft_win(dtcp->parent);
+        if (dtcp_flow_ctrl(dtcp_cfg)) {
+                if (dtcp_window_based_fctrl(dtcp_cfg)) {
+                        snd_lft = snd_lft_win(dtcp);
+                        snd_rt  = snd_rt_wind_edge(dtcp);
+
+                        pci_control_new_left_wind_edge_set(pci, LWE);
+                        pci_control_new_rt_wind_edge_set(pci,
+                                                         rcvr_rt_wind_edge(dtcp));
+                        pci_control_my_left_wind_edge_set(pci, snd_lft);
+                        pci_control_my_rt_wind_edge_set(pci, snd_rt);
+                }
+
+                if (dtcp_rate_based_fctrl(dtcp_cfg)) {
+                        LOG_MISSING;
+                }
+        }
+
+        switch (pci_type(pci)) {
+        case PDU_TYPE_ACK_AND_FC:
+        case PDU_TYPE_ACK:
+                if (pci_control_ack_seq_num_set(pci, LWE)) {
+                        LOG_ERR("Could not set sn to ACK");
+                        return -1;
+                }
+                return 0;
+        case PDU_TYPE_NACK_AND_FC:
+        case PDU_TYPE_NACK:
+                if (pci_control_ack_seq_num_set(pci, LWE + 1)) {
+                        LOG_ERR("Could not set sn to NACK");
+                        return -1;
+                }
+                return 0;
+        default:
+                break;
+        }
+
+        return 0;
+}
+
+struct pdu * pdu_ctrl_generate(struct dtcp * dtcp, pdu_type_t type)
 {
         struct pdu * pdu;
         struct pci * pci;
 
-        pdu = pdu_ctrl_create_ni(dtcp, PDU_TYPE_ACK_AND_FC);
-        if (!pdu)
+        if (!dtcp || !type) {
+                LOG_ERR("wrong parameters, can't generate ctrl PDU...");
                 return NULL;
+        }
+        pdu  = pdu_ctrl_create_ni(dtcp, type);
+        if (!pdu) {
+                LOG_ERR("No Ctrl PDU created...");
+                return NULL;
+        }
 
         pci = pdu_pci_get_rw(pdu);
-        if (!pci)
-                return NULL;
-
-        if (pci_control_last_seq_num_rcvd_set(pci, last_ctrl_seq_rcvd)) {
+        if (populate_ctrl_pci(pci, dtcp)) {
+                LOG_ERR("Could not populate ctrl PCI");
                 pdu_destroy(pdu);
                 return NULL;
         }
 
         return pdu;
 }
-
-static int default_sender_ack(struct dtcp * dtcp, seq_num_t seq_num)
-{
-        if (!dtcp) {
-                LOG_ERR("No instance passed, cannot run policy");
-                return -1;
-        }
-
-        if (dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
-                struct rtxq * q;
-
-                q = dt_rtxq(dtcp->parent);
-                if (!q) {
-                        LOG_ERR("Couldn't find the Retransmission queue");
-                        return -1;
-                }
-                rtxq_ack(q, seq_num, dt_sv_tr(dtcp->parent));
-        }
-
-        return 0;
-}
+EXPORT_SYMBOL(pdu_ctrl_generate);
 
 /* not a policy according to specs */
 static int rcv_nack_ctl(struct dtcp * dtcp, seq_num_t seq_num)
 {
         struct rtxq * q;
+        struct dtcp_ps * ps;
 
-        if (dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
+        rcu_read_lock();
+        ps = container_of(rcu_dereference(dtcp->base.ps),
+                          struct dtcp_ps, base);
+
+        if (ps->rtx_ctrl) {
                 q = dt_rtxq(dtcp->parent);
                 if (!q) {
+                        rcu_read_unlock();
                         LOG_ERR("Couldn't find the Retransmission queue");
                         return -1;
                 }
                 rtxq_nack(q, seq_num, dt_sv_tr(dtcp->parent));
         }
+        rcu_read_unlock();
+
         return 0;
 }
 
-static void dump_we(struct dtcp * dtcp,
-                    struct pci *  pci)
+void dump_we(struct dtcp * dtcp, struct pci *  pci)
 {
         struct dtp * dtp;
         seq_num_t    snd_rt_we;
         seq_num_t    snd_lf_we;
-        seq_num_t    cwq_lf_we;
+        seq_num_t    cwq_lf_we = 0;
         seq_num_t    rcv_rt_we;
         seq_num_t    rcv_lf_we;
         seq_num_t    new_rt_we;
@@ -485,6 +535,7 @@ static void dump_we(struct dtcp * dtcp,
         seq_num_t    pci_seqn;
         seq_num_t    my_rt_we;
         seq_num_t    my_lf_we;
+        seq_num_t    ack;
 
         ASSERT(dtcp);
         ASSERT(pci);
@@ -494,7 +545,8 @@ static void dump_we(struct dtcp * dtcp,
 
         snd_rt_we = snd_rt_wind_edge(dtcp);
         snd_lf_we = dtcp_snd_lf_win(dtcp);
-        cwq_lf_we = cwq_peek(dt_cwq(dtcp->parent));
+        /* commented to avoid doing spin_lock_irqsave */
+        /* cwq_lf_we = cwq_peek(dt_cwq(dtcp->parent));*/
         rcv_rt_we = rcvr_rt_wind_edge(dtcp);
         rcv_lf_we = dt_sv_rcv_lft_win(dtcp->parent);
         new_rt_we = pci_control_new_rt_wind_edge(pci);
@@ -502,13 +554,16 @@ static void dump_we(struct dtcp * dtcp,
         my_lf_we  = pci_control_my_left_wind_edge(pci);
         my_rt_we  = pci_control_my_rt_wind_edge(pci);
         pci_seqn  = pci_sequence_number_get(pci);
+        ack       = pci_control_ack_seq_num(pci);
 
-        LOG_INFO("SEQN: %u SndRWE: %u SndLWE: %u RcvRWE: %u RcvLWE: %u"
-                 " newRWE: %u newLWE: %u myRWE: %u myLWE: %u cwqLWE: %u",
-                 pci_seqn, snd_rt_we, snd_lf_we, rcv_rt_we, rcv_lf_we,
-                 new_rt_we, new_lf_we, my_rt_we, my_lf_we, cwq_lf_we);
-
+        LOG_DBG("SEQN: %u N/Ack: %u SndRWE: %u SndLWE: %u "
+                "RcvRWE: %u RcvLWE: %u "
+                "newRWE: %u newLWE: %u "
+                "myRWE: %u myLWE: %u cwqLWE: %u",
+                pci_seqn, ack, snd_rt_we, snd_lf_we, rcv_rt_we, rcv_lf_we,
+                new_rt_we, new_lf_we, my_rt_we, my_lf_we, cwq_lf_we);
 }
+EXPORT_SYMBOL(dump_we);
 
 static int rcv_flow_ctl(struct dtcp * dtcp,
                         struct pci *  pci,
@@ -521,7 +576,6 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
         ASSERT(pci);
         ASSERT(pdu);
 
-        dump_we(dtcp, pci);
         snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
         pdu_destroy(pdu);
         push_pdus_rmt(dtcp);
@@ -537,7 +591,7 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
                 return -1;
         }
         if (cwq_is_empty(q) &&
-            (dtp_sv_last_seq_nr_sent(dtp) < snd_rt_wind_edge(dtcp))) {
+            (dtp_sv_max_seq_nr_sent(dtp) < snd_rt_wind_edge(dtcp))) {
                 dt_sv_window_closed_set(dtcp->parent, false);
         }
 
@@ -548,6 +602,7 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
                                 struct pci *  pci,
                                 struct pdu *  pdu)
 {
+        struct dtcp_ps *ps;
         seq_num_t seq;
 
         ASSERT(dtcp);
@@ -556,13 +611,16 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
 
         LOG_DBG("Updating Window Edges for DTCP: %pK", dtcp);
 
-        dump_we(dtcp, pci);
         seq = pci_control_ack_seq_num(pci);
         LOG_DBG("Ack/Nack SEQ NUM: %u", seq);
 
+        rcu_read_lock();
+        ps = container_of(rcu_dereference(dtcp->base.ps),
+                          struct dtcp_ps, base);
         /* This updates sender LWE */
-        if (dtcp->policies->sender_ack(dtcp, seq))
+        if (ps->sender_ack(ps, seq))
                 LOG_ERR("Could not update RTXQ and LWE");
+        rcu_read_unlock();
 
         snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
         LOG_DBG("Right Window Edge: %d", snd_rt_wind_edge(dtcp));
@@ -578,11 +636,15 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
 
 int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 {
+        struct dtcp_ps *ps;
         struct pci * pci;
         pdu_type_t   type;
         seq_num_t    seq_num;
         seq_num_t    seq;
         seq_num_t    last_ctrl;
+        int          ret;
+
+        LOG_DBG("dtcp_common_rcv_control called");
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("PDU is not ok");
@@ -596,9 +658,12 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
                 return -1;
         }
 
+        atomic_inc(&dtcp->cpdus_in_transit);
+
         pci = pdu_pci_get_rw(pdu);
         if (!pci_is_ok(pci)) {
                 LOG_ERR("PCI couldn't be retrieved");
+                atomic_dec(&dtcp->cpdus_in_transit);
                 pdu_destroy(pdu);
                 return -1;
         }
@@ -607,6 +672,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         if (!pdu_type_is_control(type)) {
                 LOG_ERR("CommonRCVControl policy received a non-control PDU");
+                atomic_dec(&dtcp->cpdus_in_transit);
                 pdu_destroy(pdu);
                 return -1;
         }
@@ -614,8 +680,13 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         seq_num = pci_sequence_number_get(pci);
         last_ctrl = last_rcv_ctrl_seq(dtcp);
 
-        if (seq_num > (last_ctrl + 1))
-                dtcp->policies->lost_control_pdu(dtcp);
+        if (seq_num > (last_ctrl + 1)) {
+                rcu_read_lock();
+                ps = container_of(rcu_dereference(dtcp->base.ps),
+                                  struct dtcp_ps, base);
+                ps->lost_control_pdu(ps);
+                rcu_read_unlock();
+        }
 
         if (seq_num <= last_ctrl) {
                 switch (type) {
@@ -647,96 +718,81 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
          *        of this Ack and calculate the RTT with RTTEstimator policy
          */
 
+        LOG_DBG("dtcp_common_rcv_control sending to proper function...");
+
         switch (type) {
         case PDU_TYPE_ACK:
                 seq = pci_control_ack_seq_num(pci);
 
-                return dtcp->policies->sender_ack(dtcp,
-                                                  seq);
+                rcu_read_lock();
+                ps = container_of(rcu_dereference(dtcp->base.ps),
+                                  struct dtcp_ps, base);
+                ret = ps->sender_ack(ps, seq);
+                rcu_read_unlock();
+                break;
         case PDU_TYPE_NACK:
                 seq = pci_control_ack_seq_num(pdu_pci_get_ro(pdu));
-
-                return rcv_nack_ctl(dtcp,
-                                    seq);
+                ret = rcv_nack_ctl(dtcp, seq);
+                break;
         case PDU_TYPE_FC:
-                return rcv_flow_ctl(dtcp, pci, pdu);
+                ret = rcv_flow_ctl(dtcp, pci, pdu);
+                break;
         case PDU_TYPE_ACK_AND_FC:
-                return rcv_ack_and_flow_ctl(dtcp, pci, pdu);
+                ret = rcv_ack_and_flow_ctl(dtcp, pci, pdu);
+                break;
         default:
-                return -1;
+                ret = -1;
+                break;
         }
+
+        atomic_dec(&dtcp->cpdus_in_transit);
+        return ret;
 }
 
-static int default_lost_control_pdu(struct dtcp * dtcp)
+/*FIXME: wrapper to be called by dtp in the post_worker */
+int dtcp_sending_ack_policy(struct dtcp * dtcp)
 {
-        if (!dtcp) {
-                LOG_ERR("No instance passed, cannot run policy");
-                return -1;
-        }
-
-#if 0
-        struct pdu * pdu_ctrl;
-        seq_num_t last_rcv_ctrl, snd_lft, snd_rt;
-
-        last_rcv_ctrl = last_rcv_ctrl_seq(dtcp);
-        snd_lft       = snd_lft_win(dtcp);
-        snd_rt        = snd_rt_wind_edge(dtcp);
-        pdu_ctrl      = pdu_ctrl_ack_create(dtcp,
-                                            last_rcv_ctrl,
-                                            snd_lft,
-                                            snd_rt);
-        if (!pdu_ctrl) {
-                LOG_ERR("Failed Lost Control PDU policy");
-                return -1;
-        }
-
-        if (pdu_send(dtcp, pdu_ctrl))
-                return -1;
-#endif
-
-        LOG_DBG("Default lost control pdu policy");
-
-        return 0;
-
-}
-
-static int default_sending_ack(struct dtcp * dtcp, seq_num_t seq)
-{
-        struct pdu * pdu_ctrl;
-        seq_num_t    last_rcv_ctrl, snd_lft, snd_rt;
+        struct dtcp_ps *ps;
 
         if (!dtcp) {
-                LOG_ERR("No instance passed, cannot run policy");
+                LOG_ERR("No DTCP passed...");
                 return -1;
         }
 
-        last_rcv_ctrl = last_rcv_ctrl_seq(dtcp);
-        snd_lft       = snd_lft_win(dtcp);
-        snd_rt        = snd_rt_wind_edge(dtcp);
-        pdu_ctrl      = pdu_ctrl_ack_create(dtcp,
-                                            last_rcv_ctrl,
-                                            snd_lft,
-                                            snd_rt);
-        if (!pdu_ctrl)
-                return -1;
+        rcu_read_lock();
+        ps = container_of(rcu_dereference(dtcp->base.ps),
+                          struct dtcp_ps, base);
+        rcu_read_unlock();
 
-        if (pdu_send(dtcp, pdu_ctrl))
-                return -1;
-
-        return 0;
+        return ps->sending_ack(ps, 0);
 }
 
-static pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
+pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
 {
         struct dtcp_config * dtcp_cfg;
+        struct dtcp_ps *ps;
+        bool flow_ctrl;
         seq_num_t    LWE;
         timeout_t    a;
 
-        ASSERT(dtcp);
-        ASSERT(dtcp->parent);
+        if (!dtcp) {
+                LOG_ERR("No DTCP passed...");
+                return -1;
+        }
+
+        if (!dtcp->parent) {
+                LOG_ERR("No DTCP parent passed...");
+                return -1;
+        }
 
         dtcp_cfg = dtcp_config_get(dtcp);
         ASSERT(dtcp_cfg);
+
+        rcu_read_lock();
+        ps = container_of(rcu_dereference(dtcp->base.ps),
+                          struct dtcp_ps, base);
+        flow_ctrl = ps->flow_ctrl;
+        rcu_read_unlock();
 
         a = dt_sv_a(dtcp->parent);
 
@@ -748,14 +804,14 @@ static pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
                         if (seq > LWE) {
                                 LOG_DBG("This is a NACK, "
                                         "LWE couldn't be updated");
-                                if (dtcp_flow_ctrl(dtcp_cfg)) {
+                                if (flow_ctrl) {
                                         return PDU_TYPE_NACK_AND_FC;
                                 }
                                 return PDU_TYPE_NACK;
                         }
 #endif
                         LOG_DBG("This is an ACK");
-                        if (dtcp_flow_ctrl(dtcp_cfg)) {
+                        if (flow_ctrl) {
                                 return PDU_TYPE_ACK_AND_FC;
                         }
                         return PDU_TYPE_ACK;
@@ -765,14 +821,14 @@ static pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
                         /* FIXME: This should be a SEL ACK */
                         LOG_DBG("This is a NACK, "
                                 "LWE couldn't be updated");
-                        if (dtcp_flow_ctrl(dtcp_cfg)) {
+                        if (flow_ctrl) {
                                 return PDU_TYPE_NACK_AND_FC;
                         }
                         return PDU_TYPE_NACK;
                 }
 #endif
                 LOG_DBG("This is an ACK");
-                if (dtcp_flow_ctrl(dtcp_cfg)) {
+                if (flow_ctrl) {
                         return PDU_TYPE_ACK_AND_FC;
                 }
                 return PDU_TYPE_ACK;
@@ -780,128 +836,58 @@ static pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
 
         return 0;
 }
+EXPORT_SYMBOL(pdu_ctrl_type_get);
 
-static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
+int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
 {
-        struct pdu * pdu;
-        struct pci * pci;
-        struct dtcp_config * dtcp_cfg;
-        seq_num_t    LWE;
-        seq_num_t    snd_lft;
-        seq_num_t    snd_rt;
-        pdu_type_t   type;
+        struct pdu *   pdu;
+        pdu_type_t     type;
+
+        /* VARIABLES FOR SYSTEM TIMESTAMP DBG MESSAGE BELOW*/
+        struct timeval te;
+        long long      milliseconds;
+        seq_num_t      dbg_seq_num;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
                 return -1;
         }
 
-        dtcp_cfg = dtcp_config_get(dtcp);
-        if (!dtcp_cfg)
-                return -1;
+        atomic_inc(&dtcp->cpdus_in_transit);
 
-        LWE  = dt_sv_rcv_lft_win(dtcp->parent);
         type = pdu_ctrl_type_get(dtcp, seq);
-        if (!type)
+        if (!type) {
+                atomic_dec(&dtcp->cpdus_in_transit);
                 return 0;
+        }
 
-        pdu  = pdu_ctrl_create_ni(dtcp, type);
-        if (!pdu)
-                return -1;
-
-        pci = pdu_pci_get_rw(pdu);
-        if (!pci) {
-                pdu_destroy(pdu);
+        pdu  = pdu_ctrl_generate(dtcp, type);
+        if (!pdu) {
+                atomic_dec(&dtcp->cpdus_in_transit);
                 return -1;
         }
 
-        /*
-         * FIXME: Shouldn't we check if PDU_TYPE_ACK_AND_FC or
-         * PDU_TYPE_NACK_AND_FC ?
-         */
-        if (dtcp_flow_ctrl(dtcp_cfg)) {
-                if (dtcp_window_based_fctrl(dtcp_cfg)) {
-                        snd_lft = snd_lft_win(dtcp);
-                        snd_rt  = snd_rt_wind_edge(dtcp);
+        dbg_seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
 
-                        pci_control_new_left_wind_edge_set(pci, LWE);
-                        pci_control_new_rt_wind_edge_set(pci,
-                                                         rcvr_rt_wind_edge(dtcp));
-                        pci_control_my_left_wind_edge_set(pci, snd_lft);
-                        pci_control_my_rt_wind_edge_set(pci, snd_rt);
-                }
-
-                if (dtcp_rate_based_fctrl(dtcp_cfg)) {
-                        LOG_MISSING;
-                }
-        }
-
-        switch (pci_type(pci)) {
-        case PDU_TYPE_ACK_AND_FC:
-        case PDU_TYPE_ACK:
-                if (pci_control_ack_seq_num_set(pci, LWE)) {
-                        pdu_destroy(pdu);
-                        return -1;
-                }
-                dump_we(dtcp,pci);
-                if (pdu_send(dtcp, pdu))
-                        return -1;
-
-                return 0;
-        case PDU_TYPE_NACK_AND_FC:
-        case PDU_TYPE_NACK:
-                if (pci_control_ack_seq_num_set(pci, LWE + 1)) {
-                        pdu_destroy(pdu);
-                        return -1;
-                }
-                if (pdu_send(dtcp, pdu))
-                        return -1;
-
-                return 0;
-        default:
-                LOG_ERR("A PDU type not considered here has been produced");
-                break;
-        }
-
-        return -1;
-}
-
-static int default_receiving_flow_control(struct dtcp * dtcp, seq_num_t seq)
-{
-        struct pdu * pdu;
-        struct pci * pci;
-        seq_num_t    snd_lft, snd_rt, LWE;
-
-        if (!dtcp) {
-                LOG_ERR("No instance passed, cannot run policy");
-                return -1;
-        }
-        pdu = pdu_ctrl_create_ni(dtcp, PDU_TYPE_FC);
-        if (!pdu)
-                return -1;
-
-        pci = pdu_pci_get_rw(pdu);
-        if (!pci) {
-                pdu_destroy(pdu);
+        dump_we(dtcp, pdu_pci_get_rw(pdu));
+        if (pdu_send(dtcp, pdu)){
+                atomic_dec(&dtcp->cpdus_in_transit);
                 return -1;
         }
 
-        snd_lft = snd_lft_win(dtcp);
-        snd_rt  = snd_rt_wind_edge(dtcp);
-        LWE     = dt_sv_rcv_lft_win(dtcp->parent);
+        /* SYSTEM TIMESTAMP DBG MESSAGE */
+        do_gettimeofday(&te);
+        milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
+        LOG_DBG("DTCP Sending ACK %d at %lld",
+                dbg_seq_num, milliseconds);
 
-        pci_control_new_left_wind_edge_set(pci, LWE);
-        pci_control_new_rt_wind_edge_set(pci, rcvr_rt_wind_edge(dtcp));
-        pci_control_my_left_wind_edge_set(pci, snd_lft);
-        pci_control_my_rt_wind_edge_set(pci, snd_rt);
-
-        if (pdu_send(dtcp, pdu))
-                return -1;
+        atomic_dec(&dtcp->cpdus_in_transit);
 
         return 0;
 }
+EXPORT_SYMBOL(dtcp_ack_flow_control_pdu_send);
 
-static void update_rt_wind_edge(struct dtcp * dtcp)
+void update_rt_wind_edge(struct dtcp * dtcp)
 {
         seq_num_t seq;
 
@@ -914,108 +900,7 @@ static void update_rt_wind_edge(struct dtcp * dtcp)
         dtcp->sv->rcvr_rt_wind_edge = seq;
         spin_unlock(&dtcp->sv->lock);
 }
-
-static int default_rcvr_flow_control(struct dtcp * dtcp, seq_num_t seq)
-{
-        seq_num_t LWE;
-
-        if (!dtcp) {
-                LOG_ERR("No instance passed, cannot run policy");
-                return -1;
-        }
-
-        LWE = dt_sv_rcv_lft_win(dtcp->parent);
-        update_rt_wind_edge(dtcp);
-
-        LOG_DBG("DTCP: %pK", dtcp);
-        LOG_DBG("LWE: %u  RWE: %u", LWE, rcvr_rt_wind_edge(dtcp));
-
-        return 0;
-}
-
-static int default_rate_reduction(struct dtcp * instance)
-{
-        if (!instance) {
-                LOG_ERR("No instance passed, cannot run policy");
-                return -1;
-        }
-
-        LOG_MISSING;
-
-        return 0;
-}
-
-static int default_flow_control_overrun(struct dtcp * instance,
-                                        struct pdu * pdu)
-{
-        pdu_destroy(pdu);
-
-        return 0;
-}
-
-static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
-{
-        int                  retval = 0;
-        struct dtcp_config * dtcp_cfg;
-
-        bool                 flow_ctrl;
-        bool                 win_based;
-        bool                 rate_based;
-        bool                 rtx_ctrl;
-
-        if (!dtcp) {
-                LOG_ERR("No instance passed, cannot run policy");
-                return -1;
-        }
-
-        dtcp_cfg = dtcp_config_get(dtcp);
-        if (!dtcp_cfg)
-                return -1;
-
-        flow_ctrl  = dtcp_flow_ctrl(dtcp_cfg);
-        win_based  = dtcp_window_based_fctrl(dtcp_cfg);
-        rate_based = dtcp_rate_based_fctrl(dtcp_cfg);
-        rtx_ctrl   = dtcp_rtx_ctrl(dtcp_cfg);
-
-        if (flow_ctrl) {
-                if (win_based) {
-                        if (dtcp->policies->rcvr_flow_control(dtcp, seq)) {
-                                LOG_ERR("Failed Rcvr Flow Control policy");
-                                retval = -1;
-                        }
-                }
-
-                if (rate_based) {
-                        LOG_DBG("Rate based fctrl invoked");
-                        if (dtcp->policies->rate_reduction(dtcp)) {
-                                LOG_ERR("Failed Rate Reduction policy");
-                                retval = -1;
-                        }
-                }
-
-                if (!rtx_ctrl) {
-                        LOG_DBG("Receiving flow ctrl invoked");
-                        if (dtcp->policies->receiving_flow_control(dtcp,
-                                                                   seq)) {
-                                LOG_ERR("Failed Receiving Flow Control "
-                                        "policy");
-                                retval = -1;
-                        }
-
-                        return retval;
-                }
-        }
-
-        if (rtx_ctrl) {
-                LOG_DBG("Retransmission ctrl invoked");
-                if (dtcp->policies->rcvr_ack(dtcp, seq)) {
-                        LOG_ERR("Failed Rcvr Ack policy");
-                        retval = -1;
-                }
-        }
-
-        return retval;
-}
+EXPORT_SYMBOL(update_rt_wind_edge);
 
 static struct dtcp_sv default_sv = {
         .pdus_per_time_unit     = 0,
@@ -1038,33 +923,11 @@ static struct dtcp_sv default_sv = {
         .flow_ctl               = 0,
 };
 
-static struct dtcp_policies default_policies = {
-        .flow_init                   = NULL,
-        .sv_update                   = default_sv_update,
-        .lost_control_pdu            = default_lost_control_pdu,
-        .rtt_estimator               = NULL,
-        .retransmission_timer_expiry = NULL,
-        .received_retransmission     = NULL,
-        .sender_ack                  = default_sender_ack,
-        .sending_ack                 = default_sending_ack,
-        .receiving_ack_list          = NULL,
-        .initial_rate                = NULL,
-        .receiving_flow_control      = default_receiving_flow_control,
-        .update_credit               = NULL,
-        .flow_control_overrun        = default_flow_control_overrun,
-        .reconcile_flow_conflict     = NULL,
-        .rcvr_ack                    = default_rcvr_ack,
-        .rcvr_flow_control           = default_rcvr_flow_control,
-        .rate_reduction              = default_rate_reduction,
-        .rcvr_control_ack            = NULL,
-        .no_rate_slow_down           = NULL,
-        .no_override_default_peak    = NULL,
-};
-
 /* FIXME: this should be completed with other parameters from the config */
 static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
 {
         struct dtcp_config * cfg;
+        struct dtcp_ps * ps;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
@@ -1083,14 +946,18 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
         *instance->sv = sv;
         spin_lock_init(&instance->sv->lock);
 
-        if (dtcp_rtx_ctrl(cfg))
+        rcu_read_lock();
+        ps = container_of(rcu_dereference(instance->base.ps),
+                          struct dtcp_ps, base);
+        if (ps->rtx_ctrl)
                 instance->sv->data_retransmit_max =
-                        dtcp_data_retransmit_max(cfg);
+                        ps->rtx.data_retransmit_max;
 
-        instance->sv->sndr_credit         = dtcp_initial_credit(cfg);
-        instance->sv->snd_rt_wind_edge    = dtcp_initial_credit(cfg);
-        instance->sv->rcvr_credit         = dtcp_initial_credit(cfg);
-        instance->sv->rcvr_rt_wind_edge   = dtcp_initial_credit(cfg);
+        instance->sv->sndr_credit         = ps->flowctrl.window.initial_credit;
+        instance->sv->snd_rt_wind_edge    = ps->flowctrl.window.initial_credit;
+        instance->sv->rcvr_credit         = ps->flowctrl.window.initial_credit;
+        instance->sv->rcvr_rt_wind_edge   = ps->flowctrl.window.initial_credit;
+        rcu_read_unlock();
 
         LOG_DBG("DTCP SV initialized with dtcp_conf:");
         LOG_DBG("  data_retransmit_max: %d",
@@ -1106,6 +973,174 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
 
         return 0;
 }
+
+struct dtcp_ps * dtcp_ps_get(struct dtcp * dtcp)
+{
+        if (!dtcp) {
+                LOG_ERR("Could not retrieve DTCP PS, NULL instance passed");
+                return NULL;
+        }
+
+        return container_of(rcu_dereference(dtcp->base.ps),
+                            struct dtcp_ps, base);
+}
+EXPORT_SYMBOL(dtcp_ps_get);
+
+struct dtcp *
+dtcp_from_component(struct rina_component * component)
+{
+        return container_of(component, struct dtcp, base);
+}
+EXPORT_SYMBOL(dtcp_from_component);
+
+int dtcp_select_policy_set(struct dtcp * dtcp,
+                           const string_t * path,
+                           const string_t * name)
+{
+        struct dtcp_config * cfg = dtcp->conn->policies_params->dtcp_cfg;
+        struct dtcp_ps *ps;
+        int ret;
+
+        if (path && strcmp(path, "")) {
+                LOG_ERR("This component has no selectable subcomponents");
+                return -1;
+        }
+
+        ret = base_select_policy_set(&dtcp->base, &policy_sets, name);
+        if (ret) {
+                return ret;
+        }
+
+        /* Copy the connection parameter to the policy-set. From now on
+         * these connection parameters must be accessed by the DTCP policy set,
+         * and not from the struct connection. */
+        mutex_lock(&dtcp->base.ps_lock);
+        ps = container_of(dtcp->base.ps, struct dtcp_ps, base);
+        ps->flow_ctrl                   = dtcp_flow_ctrl(cfg);
+        ps->rtx_ctrl                    = dtcp_rtx_ctrl(cfg);
+        ps->flowctrl.window_based       = dtcp_window_based_fctrl(cfg);
+        ps->flowctrl.rate_based         = dtcp_rate_based_fctrl(cfg);
+        ps->flowctrl.sent_bytes_th      = dtcp_sent_bytes_th(cfg);
+        ps->flowctrl.sent_bytes_percent_th
+                                        = dtcp_sent_bytes_percent_th(cfg);
+        ps->flowctrl.sent_buffers_th    = dtcp_sent_buffers_th(cfg);
+        ps->flowctrl.rcvd_bytes_th      = dtcp_rcvd_bytes_th(cfg);
+        ps->flowctrl.rcvd_bytes_percent_th
+                                        = dtcp_rcvd_bytes_percent_th(cfg);
+        ps->flowctrl.rcvd_buffers_th    = dtcp_rcvd_buffers_th(cfg);
+        ps->rtx.max_time_retry          = dtcp_max_time_retry(cfg);
+        ps->rtx.data_retransmit_max     = dtcp_data_retransmit_max(cfg);
+        ps->rtx.initial_tr              = dtcp_initial_tr(cfg);
+        ps->flowctrl.window.max_closed_winq_length
+                                        = dtcp_max_closed_winq_length(cfg);
+        ps->flowctrl.window.initial_credit
+                                        = dtcp_initial_credit(cfg);
+        ps->flowctrl.rate.sending_rate  = dtcp_sending_rate(cfg);
+        ps->flowctrl.rate.time_period   = dtcp_time_period(cfg);
+        mutex_unlock(&dtcp->base.ps_lock);
+
+        return ret;
+}
+EXPORT_SYMBOL(dtcp_select_policy_set);
+
+int dtcp_set_policy_set_param(struct dtcp * dtcp,
+                              const char * path,
+                              const char * name,
+                              const char * value)
+{
+        struct dtcp_ps *ps;
+        int ret = -1;
+
+        if (!dtcp|| !path || !name || !value) {
+                LOG_ERRF("NULL arguments %p %p %p %p",
+                         dtcp, path, name, value);
+                return -1;
+        }
+
+        LOG_DBG("set-policy-set-param '%s' '%s' '%s'", path, name, value);
+
+        if (strcmp(path, "") == 0) {
+                int bool_value;
+
+                /* The request addresses this DTP instance. */
+                rcu_read_lock();
+                ps = container_of(rcu_dereference(dtcp->base.ps),
+                                  struct dtcp_ps,
+                                  base);
+                if (strcmp(name, "flow_ctrl") == 0) {
+                        ret = kstrtoint(value, 10, &bool_value);
+                        if (ret == 0) {
+                                ps->flow_ctrl = bool_value;
+                        }
+                } else if (strcmp(name, "rtx_ctrl") == 0) {
+                        ret = kstrtoint(value, 10, &bool_value);
+                        if (ret == 0) {
+                                ps->rtx_ctrl = bool_value;
+                        }
+                } else if (strcmp(name, "flowctrl.window_based") == 0) {
+                        ret = kstrtoint(value, 10, &bool_value);
+                        if (ret == 0) {
+                                ps->flowctrl.window_based = bool_value;
+                        }
+                } else if (strcmp(name, "flowctrl.rate_based") == 0) {
+                        ret = kstrtoint(value, 10, &bool_value);
+                        if (ret == 0) {
+                                ps->flowctrl.rate_based = bool_value;
+                        }
+                } else if (strcmp(name, "flowctrl.sent_bytes_th") == 0) {
+                        ret = kstrtouint(value, 10,
+                                         &ps->flowctrl.sent_bytes_th);
+                } else if (strcmp(name, "flowctrl.sent_bytes_percent_th")
+                                == 0) {
+                        ret = kstrtouint(value, 10,
+                                         &ps->flowctrl.sent_bytes_percent_th);
+                } else if (strcmp(name, "flowctrl.sent_buffers_th") == 0) {
+                        ret = kstrtouint(value, 10,
+                                         &ps->flowctrl.sent_buffers_th);
+                } else if (strcmp(name, "flowctrl.rcvd_bytes_th") == 0) {
+                        ret = kstrtouint(value, 10,
+                                         &ps->flowctrl.rcvd_bytes_th);
+                } else if (strcmp(name, "flowctrl.rcvd_bytes_percent_th")
+                                == 0) {
+                        ret = kstrtouint(value, 10,
+                                         &ps->flowctrl.rcvd_bytes_percent_th);
+                } else if (strcmp(name, "flowctrl.rcvd_buffers_th") == 0) {
+                        ret = kstrtouint(value, 10,
+                                         &ps->flowctrl.rcvd_buffers_th);
+                } else if (strcmp(name, "rtx.max_time_retry") == 0) {
+                        ret = kstrtouint(value, 10,
+                                         &ps->rtx.max_time_retry);
+                } else if (strcmp(name, "rtx.data_retransmit_max") == 0) {
+                        ret = kstrtouint(value, 10,
+                                         &ps->rtx.data_retransmit_max);
+                } else if (strcmp(name, "rtx.initial_tr") == 0) {
+                        ret = kstrtouint(value, 10, &ps->rtx.initial_tr);
+                } else if (strcmp(name,
+                                "flowctrl.window.max_closed_winq_length")
+                                        == 0) {
+                        ret = kstrtouint(value, 10,
+                                &ps->flowctrl.window.max_closed_winq_length);
+                } else if (strcmp(name, "flowctrl.window.initial_credit")
+                                == 0) {
+                        ret = kstrtouint(value, 10,
+                                &ps->flowctrl.window.initial_credit);
+                } else if (strcmp(name, "flowctrl.rate.sending_rate") == 0) {
+                        ret = kstrtouint(value, 10,
+                                         &ps->flowctrl.rate.sending_rate);
+                } else if (strcmp(name, "flowctrl.rate.time_period") == 0) {
+                        ret = kstrtouint(value, 10,
+                                         &ps->flowctrl.rate.time_period);
+                } else {
+                        LOG_ERR("Unknown DTP parameter policy '%s'", name);
+                }
+                rcu_read_unlock();
+        } else {
+                ret = base_set_policy_set_param(&dtcp->base, path, name, value);
+        }
+
+        return ret;
+}
+EXPORT_SYMBOL(dtcp_set_policy_set_param);
 
 struct dtcp * dtcp_create(struct dt *         dt,
                           struct connection * conn,
@@ -1140,15 +1175,18 @@ struct dtcp * dtcp_create(struct dt *         dt,
                 dtcp_destroy(tmp);
                 return NULL;
         }
-        tmp->policies = rkzalloc(sizeof(*tmp->policies), GFP_KERNEL);
-        if (!tmp->policies) {
-                LOG_ERR("Cannot create DTCP policies");
-                dtcp_destroy(tmp);
-                return NULL;
-        }
 
         tmp->conn = conn;
         tmp->rmt  = rmt;
+        atomic_set(&tmp->cpdus_in_transit, 0);
+
+        rina_component_init(&tmp->base);
+
+        /* Try to select the default policy-set. */
+        if (dtcp_select_policy_set(tmp, "", RINA_PS_DEFAULT_NAME)) {
+                dtcp_destroy(tmp);
+                return NULL;
+        }
 
         if (dtcp_sv_init(tmp, default_sv)) {
                 LOG_ERR("Could not load DTCP config in the SV");
@@ -1157,9 +1195,6 @@ struct dtcp * dtcp_create(struct dt *         dt,
         }
         /* FIXME: fixups to the state-vector should be placed here */
 
-        *tmp->policies = default_policies;
-        /* FIXME: fixups to the policies should be placed here */
-
         LOG_DBG("Instance %pK created successfully", tmp);
 
         return tmp;
@@ -1167,13 +1202,17 @@ struct dtcp * dtcp_create(struct dt *         dt,
 
 int dtcp_destroy(struct dtcp * instance)
 {
+        /* FIXME: this is horrible*/
+        while(atomic_read(&instance->cpdus_in_transit))
+                msleep(20);
+
         if (!instance) {
                 LOG_ERR("Bad instance passed, bailing out");
                 return -1;
         }
 
         if (instance->sv)       rkfree(instance->sv);
-        if (instance->policies) rkfree(instance->policies);
+        rina_component_fini(&instance->base);
         rkfree(instance);
 
         LOG_DBG("Instance %pK destroyed successfully", instance);
@@ -1184,28 +1223,36 @@ int dtcp_destroy(struct dtcp * instance)
 int dtcp_sv_update(struct dtcp * instance,
                    seq_num_t     seq)
 {
+        struct dtcp_ps * ps;
+
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
                 return -1;
         }
 
-        ASSERT(instance->policies);
-        ASSERT(instance->policies->sv_update);
+        rcu_read_lock();
+        ps = container_of(rcu_dereference(instance->base.ps),
+                          struct dtcp_ps, base);
 
-        if (instance->policies->sv_update(instance, seq))
+        ASSERT(ps);
+        ASSERT(ps->sv_update);
+
+        if (ps->sv_update(ps, seq)) {
+                rcu_read_unlock();
                 return -1;
+        }
+
+        rcu_read_unlock();
 
         return 0;
 }
 
-int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp)
+seq_num_t dtcp_rcv_rt_win(struct dtcp * dtcp)
 {
-        if (!dtcp)
+        if (!dtcp || !dtcp->sv)
                 return -1;
 
-        LOG_MISSING;
-
-        return 0;
+        return rcvr_rt_wind_edge(dtcp);
 }
 
 seq_num_t dtcp_snd_rt_win(struct dtcp * dtcp)
@@ -1226,12 +1273,31 @@ seq_num_t dtcp_snd_lf_win(struct dtcp * dtcp)
 
 int dtcp_snd_lf_win_set(struct dtcp * instance, seq_num_t seq_num)
 {
+        unsigned long flags;
+
         if (!instance)
                 return -1;
 
-        spin_lock(&instance->sv->lock);
+        spin_lock_irqsave(&instance->sv->lock, flags);
         instance->sv->snd_lft_win = seq_num;
-        spin_unlock(&instance->sv->lock);
+        spin_unlock_irqrestore(&instance->sv->lock, flags);
 
         return 0;
 }
+EXPORT_SYMBOL(dtcp_snd_lf_win_set);
+
+int dtcp_ps_publish(struct ps_factory * factory)
+{
+        if (factory == NULL) {
+                LOG_ERR("%s: NULL factory", __func__);
+                return -1;
+        }
+
+        return ps_publish(&policy_sets, factory);
+}
+EXPORT_SYMBOL(dtcp_ps_publish);
+
+int dtcp_ps_unpublish(const char * name)
+{ return ps_unpublish(&policy_sets, name); }
+EXPORT_SYMBOL(dtcp_ps_unpublish);
+

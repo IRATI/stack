@@ -265,53 +265,71 @@ const std::string BaseNetlinkMessage::operationCodeToString(RINANetlinkOperation
 	case RINA_C_IPCP_CONN_DESTROY_RESULT:
 		result = "36_DESTROY_EFCP_CONN_RESULT";
 		break;
+	case RINA_C_IPCM_SET_POLICY_SET_PARAM_REQUEST:
+		result = "37_SET_POLICY_SET_PARAM_REQUEST";
+		break;
+	case RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE:
+		result = "38_SET_POLICY_SET_RESPONSE";
+		break;
+	case RINA_C_IPCM_SELECT_POLICY_SET_REQUEST:
+		result = "39_SET_POLICY_SET_PARAM_REQUEST";
+		break;
+	case RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE:
+		result = "40_SET_POLICY_SET_RESPONSE";
+		break;
 	case RINA_C_IPCM_IPC_PROCESS_INITIALIZED:
-		result = "37_IPC_PROCESS_INITIALIZED";
+		result = "41_IPC_PROCESS_INITIALIZED";
 		break;
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST:
-		result = "38_APP_ALLOCATE_FLOW_REQUEST";
+		result = "42_APP_ALLOCATE_FLOW_REQUEST";
 		break;
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT:
-		result = "39_APP_ALLOCATE_FLOW_REQUEST_RESULT";
+		result = "43_APP_ALLOCATE_FLOW_REQUEST_RESULT";
 		break;
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED:
-		result = "40_APP_ALLOCATE_FLOW_REQUEST_ARRIVED";
+		result = "44_APP_ALLOCATE_FLOW_REQUEST_ARRIVED";
 		break;
 	case RINA_C_APP_ALLOCATE_FLOW_RESPONSE:
-		result = "41_APP_ALLOCATE_FLOW_RESPONSE";
+		result = "45_APP_ALLOCATE_FLOW_RESPONSE";
 		break;
 	case RINA_C_APP_DEALLOCATE_FLOW_REQUEST:
-		result = "42_APP_DEALLOCATE_FLOW_REQUEST";
+		result = "46_APP_DEALLOCATE_FLOW_REQUEST";
 		break;
 	case RINA_C_APP_DEALLOCATE_FLOW_RESPONSE:
-		result = "43_APP_DEALLOCATE_FLOW_RESPONSE";
+		result = "47_APP_DEALLOCATE_FLOW_RESPONSE";
 		break;
 	case RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION:
-		result = "44_APP_FLOW_DEALLOCATED_NOTIFICATION";
+		result = "48_APP_FLOW_DEALLOCATED_NOTIFICATION";
 		break;
 	case RINA_C_APP_REGISTER_APPLICATION_REQUEST:
-		result = "45_APP_REGISTER_REQUEST";
+		result = "49_APP_REGISTER_REQUEST";
 		break;
 	case RINA_C_APP_REGISTER_APPLICATION_RESPONSE:
-		result = "46_APP_REGISTER_RESPONSE";
+		result = "50_APP_REGISTER_RESPONSE";
 		break;
 	case RINA_C_APP_UNREGISTER_APPLICATION_REQUEST:
-		result = "47_APP_UNREGISTER_REQUEST";
+		result = "51_APP_UNREGISTER_REQUEST";
 		break;
 	case RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE:
-		result = "48_APP_UNREGISTER_RESPONSE";
+		result = "52_APP_UNREGISTER_RESPONSE";
 		break;
 	case RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION:
-		result = "49_APP_REGISTRATION_CANCELED_NOTIFICATION";
+		result = "53_APP_REGISTRATION_CANCELED_NOTIFICATION";
 		break;
 	case RINA_C_APP_GET_DIF_PROPERTIES_REQUEST:
-		result = "50_GET_DIF_PROPERTIES_REQUEST";
+		result = "54_GET_DIF_PROPERTIES_REQUEST";
 		break;
 	case RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE:
-		result = "51_GET_DIF_PROPERTIES_RESPONSE";
+		result = "55_GET_DIF_PROPERTIES_RESPONSE";
 		break;
 	case RINA_C_IPCM_NEIGHBORS_MODIFIED_NOTIFICATION:
-		result = "52_NEIGHBORS_MODIFIED_NOTIFICATION";
+		result = "56_NEIGHBORS_MODIFIED_NOTIFICATION";
+		break;
+	case RINA_C_IPCM_PLUGIN_LOAD_REQUEST:
+		result = "57_PLUGIN_LOAD_REQUEST";
+		break;
+	case RINA_C_IPCM_PLUGIN_LOAD_RESPONSE:
+		result = "58_PLUGIN_LOAD_RESPONSE";
 		break;
 	default:
 		result = "Unknown operation";
@@ -1555,6 +1573,72 @@ IPCEvent* IpcmDIFQueryRIBResponseMessage::toIPCEvent(){
                         ribObjects, getResult(),
                         getSequenceNumber());
         return event;
+}
+
+/* CLASS SET POLICY SET PARAM REQUEST MESSAGE */
+IpcmSetPolicySetParamRequestMessage::IpcmSetPolicySetParamRequestMessage():
+                BaseNetlinkMessage(RINA_C_IPCM_SET_POLICY_SET_PARAM_REQUEST) {
+}
+
+IPCEvent* IpcmSetPolicySetParamRequestMessage::toIPCEvent(){
+	IPCEvent * event = new SetPolicySetParamRequestEvent(path, name,
+			                        value, getSequenceNumber());
+	return event;
+}
+
+/* CLASS SET POLICY SET PARAM RESPONSE MESSAGE */
+IpcmSetPolicySetParamResponseMessage::IpcmSetPolicySetParamResponseMessage():
+                BaseNetlinkResponseMessage(RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE) {
+}
+
+IPCEvent* IpcmSetPolicySetParamResponseMessage::toIPCEvent(){
+	IPCEvent * event = new SetPolicySetParamResponseEvent(result,
+			                        getSequenceNumber());
+	return event;
+}
+
+/* CLASS SELECT POLICY SET REQUEST MESSAGE */
+IpcmSelectPolicySetRequestMessage::IpcmSelectPolicySetRequestMessage():
+                BaseNetlinkMessage(RINA_C_IPCM_SELECT_POLICY_SET_REQUEST) {
+}
+
+IPCEvent* IpcmSelectPolicySetRequestMessage::toIPCEvent(){
+	IPCEvent * event = new SelectPolicySetRequestEvent(path, name,
+			                        getSequenceNumber());
+	return event;
+}
+
+/* CLASS SELECT POLICY SET RESPONSE MESSAGE */
+IpcmSelectPolicySetResponseMessage::IpcmSelectPolicySetResponseMessage():
+        BaseNetlinkResponseMessage(RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE)
+{ }
+
+IPCEvent* IpcmSelectPolicySetResponseMessage::toIPCEvent(){
+	IPCEvent * event = new SelectPolicySetResponseEvent(result,
+			                        getSequenceNumber());
+	return event;
+}
+
+/* CLASS PLUGIN LOAD REQUEST MESSAGE */
+IpcmPluginLoadRequestMessage::IpcmPluginLoadRequestMessage():
+                BaseNetlinkMessage(RINA_C_IPCM_PLUGIN_LOAD_REQUEST) {
+}
+
+IPCEvent* IpcmPluginLoadRequestMessage::toIPCEvent(){
+	IPCEvent * event = new PluginLoadRequestEvent(name, load,
+			                              getSequenceNumber());
+	return event;
+}
+
+/* CLASS PLUGIN LOAD RESPONSE MESSAGE */
+IpcmPluginLoadResponseMessage::IpcmPluginLoadResponseMessage():
+                BaseNetlinkResponseMessage(RINA_C_IPCM_PLUGIN_LOAD_RESPONSE) {
+}
+
+IPCEvent* IpcmPluginLoadResponseMessage::toIPCEvent(){
+	IPCEvent * event = new PluginLoadResponseEvent(result,
+			                        getSequenceNumber());
+	return event;
 }
 
 /* CLASS IPCM SOCKET CLOSED NOTIFICATION MESSAGE */

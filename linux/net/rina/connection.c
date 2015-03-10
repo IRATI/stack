@@ -134,7 +134,9 @@ int connection_destroy(struct connection * conn)
         if (!conn)
                 return -1;
 
-        /* FIXME Here we should make sure that all the asynchronous users
+        /* FIXME: The following FIXME should be now obsolete */
+
+        /* FIXME: Here we should make sure that all the asynchronous users
          * of this connection (e.g. workqueues in the normal ipcp
          * implementation) are stopped before proceeding to destroy the
          * connection object. Setting the pointer to NULL is a workaround
@@ -145,7 +147,7 @@ int connection_destroy(struct connection * conn)
         if (conn->policies_params) {
                 if (conn_policies_destroy(conn->policies_params))
                         return -1;
-                conn->policies_params = NULL;
+                conn->policies_params = NULL; /* FIXME: Workaround */
         }
 
         rkfree(conn);

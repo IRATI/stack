@@ -4,6 +4,7 @@
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,24 +42,29 @@
 
 typedef uint8_t pdu_flags_t;
 
+/* Data Transfer PDUs */
 #define PDU_TYPE_DT            0x80 /* Data Transfer PDU */
-#define PDU_TYPE_CC            0xC3 /* Common Control PDU */
-#define PDU_TYPE_ACK           0xC4 /* ACK only */
-#define PDU_TYPE_NACK          0xC5 /* Forced Retransmission PDU (NACK) */
-#define PDU_TYPE_SACK          0xC6 /* Selective ACK */
-#define PDU_TYPE_SNACK         0xC7 /* Selective NACK */
-#define PDU_TYPE_FC            0xC8 /* Flow Control only */
-#define PDU_TYPE_ACK_AND_FC    0xCC /* ACK and Flow Control */
-#define PDU_TYPE_NACK_AND_FC   0xCD /* NACK and Flow Control */
-#define PDU_TYPE_SACK_AND_FC   0xCE /* Selective ACK and Flow Control */
-#define PDU_TYPE_SNACK_AND_FC  0xCF /* Selective NACK and Flow Control */
+/* Control PDUs */
+#define PDU_TYPE_CACK          0xC0 /* Control Ack PDU */
+/* Ack/Flow Control PDUs */
+#define PDU_TYPE_ACK           0xC1 /* ACK only */
+#define PDU_TYPE_NACK          0xC2 /* Forced Retransmission PDU (NACK) */
+#define PDU_TYPE_FC            0xC4 /* Flow Control only */
+#define PDU_TYPE_ACK_AND_FC    0xC5 /* ACK and Flow Control */
+#define PDU_TYPE_NACK_AND_FC   0xC6 /* NACK and Flow Control */
+/* Selective Ack/Nack PDUs */
+#define PDU_TYPE_SACK          0xC9 /* Selective ACK */
+#define PDU_TYPE_SNACK         0xCA /* Selective NACK */
+#define PDU_TYPE_SACK_AND_FC   0xCD /* Selective ACK and Flow Control */
+#define PDU_TYPE_SNACK_AND_FC  0xCE /* Selective NACK and Flow Control */
+/* Management PDUs */
 #define PDU_TYPE_MGMT          0x40 /* Management */
 
 typedef uint8_t pdu_type_t;
 
 #define pdu_type_is_ok(X)                               \
         ((X == PDU_TYPE_DT)         ? true :            \
-         ((X == PDU_TYPE_CC)         ? true :           \
+         ((X == PDU_TYPE_CACK)       ? true :           \
           ((X == PDU_TYPE_SACK)       ? true :          \
            ((X == PDU_TYPE_NACK)       ? true :         \
             ((X == PDU_TYPE_FC)         ? true :        \
@@ -70,7 +76,7 @@ typedef uint8_t pdu_type_t;
                   false))))))))))
 
 #define pdu_type_is_control(X)                          \
-        ((X == PDU_TYPE_CC)         ? true :            \
+        ((X == PDU_TYPE_CACK)       ? true :            \
          ((X == PDU_TYPE_SACK)       ? true :           \
           ((X == PDU_TYPE_NACK)       ? true :          \
            ((X == PDU_TYPE_FC)         ? true :         \

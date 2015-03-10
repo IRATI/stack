@@ -792,6 +792,82 @@ unsigned int IPCProcess::queryRIB(const std::string& objectClass,
 #endif
 }
 
+unsigned int IPCProcess::setPolicySetParam(const std::string& path,
+                        const std::string& name, const std::string& value)
+{
+#if STUB_API
+        (void)path;
+        (void)name;
+        (void)value;
+	return 0;
+#else
+	IpcmSetPolicySetParamRequestMessage message;
+        message.path = path;
+        message.name = name;
+        message.value = value;
+	message.setDestIpcProcessId(id);
+	message.setDestPortId(portId);
+	message.setRequestMessage(true);
+
+	try {
+	        rinaManager->sendMessage(&message);
+	} catch (NetlinkException &e) {
+	        throw SetPolicySetParamException(e.what());
+	}
+
+	return message.getSequenceNumber();
+#endif
+}
+
+unsigned int IPCProcess::selectPolicySet(const std::string& path,
+                                         const std::string& name)
+{
+#if STUB_API
+        (void)path;
+        (void)name;
+	return 0;
+#else
+	IpcmSelectPolicySetRequestMessage message;
+        message.path = path;
+        message.name = name;
+	message.setDestIpcProcessId(id);
+	message.setDestPortId(portId);
+	message.setRequestMessage(true);
+
+	try {
+	        rinaManager->sendMessage(&message);
+	} catch (NetlinkException &e) {
+	        throw SelectPolicySetException(e.what());
+	}
+
+	return message.getSequenceNumber();
+#endif
+}
+
+unsigned int IPCProcess::pluginLoad(const std::string& name, bool load)
+{
+#if STUB_API
+        (void)name;
+        (void)load;
+	return 0;
+#else
+	IpcmPluginLoadRequestMessage message;
+        message.name = name;
+        message.load = load;
+	message.setDestIpcProcessId(id);
+	message.setDestPortId(portId);
+	message.setRequestMessage(true);
+
+	try {
+	        rinaManager->sendMessage(&message);
+	} catch (NetlinkException &e) {
+	        throw PluginLoadException(e.what());
+	}
+
+	return message.getSequenceNumber();
+#endif
+}
+
 /** CLASS IPC PROCESS FACTORY */
 const std::string IPCProcessFactory::unknown_ipc_process_error =
 		"Could not find an IPC Process with the provided id";

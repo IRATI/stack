@@ -40,25 +40,7 @@ port_id_t    kfa_port_id_reserve(struct kfa *     instance,
 int          kfa_port_id_release(struct kfa * instance,
                                  port_id_t    port_id);
 
-/* Returns a port-id, the flow is uncommitted yet */
-int          kfa_flow_create(struct kfa *     instance,
-                             ipc_process_id_t id,
-                             port_id_t        pid);
-
-/* Commits the flow, binds the flow to a port-id */
-int          kfa_flow_bind(struct kfa *           instance,
-                           port_id_t              pid,
-                           struct ipcp_instance * ipc_process,
-                           ipc_process_id_t       ipc_id);
-
-int          kfa_flow_deallocate(struct kfa * instance,
-                                 port_id_t    id);
-
-int          kfa_remove_all_for_id(struct kfa *     instance,
-                                   ipc_process_id_t id);
-
-/* Once the flow is bound to a port, we can write/read SDUs */
-int          kfa_flow_sdu_write(struct kfa *  instance,
+int          kfa_flow_sdu_write(struct ipcp_instance_data * data,
                                 port_id_t     id,
                                 struct sdu *  sdu);
 
@@ -66,33 +48,16 @@ int          kfa_flow_sdu_read(struct kfa *  instance,
                                port_id_t     id,
                                struct sdu ** sdu);
 
-int          kfa_sdu_post(struct kfa * instance,
-                          port_id_t    id,
-                          struct sdu * sdu);
-
 #if 0
 struct ipcp_flow * kfa_flow_find_by_pid(struct kfa * instance,
                                         port_id_t    pid);
 #endif
 
-/*
- * Used by the RMT to push SDU intended for user
- * space apps, not to follow the flow through the DIF stack
- */
-int          kfa_sdu_post_to_user_space(struct kfa * instance,
-                                        struct sdu * sdu,
-                                        port_id_t    to);
-
-int          kfa_flow_ipcp_bind(struct kfa *           instance,
-                                port_id_t              pid,
-                                struct ipcp_instance * ipcp);
-
 struct rmt;
 
-int          kfa_flow_rmt_bind(struct kfa * instance,
-                               port_id_t    pid,
-                               struct rmt * rmt);
+int          kfa_flow_create(struct kfa *           instance,
+                             port_id_t              pid,
+                             struct ipcp_instance * ipcp);
 
-int          kfa_flow_rmt_unbind(struct kfa * instance,
-                                 port_id_t    pid);
+struct ipcp_instance * kfa_ipcp_instance(struct kfa * instance);
 #endif

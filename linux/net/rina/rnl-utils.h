@@ -487,6 +487,33 @@ enum rmt_pft_dump_resp {
 };
 #define RPFD_ATTR_MAX (__RPFD_ATTR_MAX -1)
 
+enum ipcp_set_policy_set_param_req_attrs_list {
+        ISPSP_ATTR_PATH = 1,
+        ISPSP_ATTR_NAME,
+        ISPSP_ATTR_VALUE,
+        __ISPSP_ATTR_MAX,
+};
+#define ISPSP_ATTR_MAX (__ISPSP_ATTR_MAX -1)
+
+enum ipcp_select_policy_set_req_attrs_list {
+        ISPS_ATTR_PATH = 1,
+        ISPS_ATTR_NAME,
+        __ISPS_ATTR_MAX,
+};
+#define ISPS_ATTR_MAX (__ISPS_ATTR_MAX -1)
+
+enum ipcm_set_policy_set_param_req_result_attrs_list {
+        ISPSPR_ATTR_RESULT = 1,
+        __ISPSPR_ATTR_MAX,
+};
+#define ISPSPR_ATTR_MAX (__ISPSPR_ATTR_MAX -1)
+
+enum ipcm_select_policy_set_req_result_attrs_list {
+        ISPSR_ATTR_RESULT = 1,
+        __ISPSR_ATTR_MAX,
+};
+#define ISPSR_ATTR_MAX (__ISPSR_ATTR_MAX -1)
+
 /* FIXME: Should be hidden by the API !!! */
 struct rina_msg_hdr {
         unsigned short src_ipc_id;
@@ -505,7 +532,9 @@ enum rnl_msg_attr_type {
         RNL_MSG_ATTRS_CONN_UPDATE_REQUEST,
         RNL_MSG_ATTRS_CONN_DESTROY_REQUEST,
         RNL_MSG_ATTRS_RMT_PFTE_MODIFY_REQUEST,
-        RNL_MSG_ATTRS_RMT_PFT_DUMP_REQUEST
+        RNL_MSG_ATTRS_RMT_PFT_DUMP_REQUEST,
+        RNL_MSG_ATTRS_SET_POLICY_SET_PARAM_REQUEST,
+        RNL_MSG_ATTRS_SELECT_POLICY_SET_REQUEST
 };
 
 struct rnl_msg {
@@ -717,6 +746,17 @@ struct rnl_rmt_dump_ft_reply_msg_attrs {
         struct list_head pft_entries;
 };
 
+struct rnl_ipcp_set_policy_set_param_req_msg_attrs {
+        string_t * path;
+        string_t * name;
+        string_t * value;
+};
+
+struct rnl_ipcp_select_policy_set_req_msg_attrs {
+        string_t * path;
+        string_t * name;
+};
+
 int rnl_parse_msg(struct genl_info * info,
                   struct rnl_msg *   msg);
 
@@ -797,4 +837,13 @@ int rnl_ipcp_pft_dump_resp_msg(ipc_process_id_t   ipc_id,
                                rnl_sn_t           seq_num,
                                u32                nl_port_id);
 
+int rnl_set_policy_set_param_response(ipc_process_id_t id,
+                                      uint_t           res,
+                                      rnl_sn_t         seq_num,
+                                      u32              nl_port_id);
+
+int rnl_select_policy_set_response(ipc_process_id_t id,
+                                   uint_t           res,
+                                   rnl_sn_t         seq_num,
+                                   u32              nl_port_id);
 #endif
