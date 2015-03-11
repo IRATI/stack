@@ -105,10 +105,6 @@ struct PendingFlowAllocation {
 class IPCManager_ {
 
 public:
-
-	IPCManager_();
-	virtual ~IPCManager_();
-
 	//
 	// Initialize the IPCManager
 	//
@@ -476,6 +472,12 @@ protected:
 
 	//Keep running flag
 	volatile bool keep_running;
+
+private:
+	//Singleton
+	IPCManager_();
+	virtual ~IPCManager_();
+	friend class Singleton<rinad::IPCManager_>;
 };
 
 
