@@ -387,13 +387,20 @@ static int connection_destroy_request(struct ipcp_instance_data * data,
 {
         struct normal_flow * flow;
 
-        if (efcp_connection_destroy(data->efcpc, src_cep_id))
+        if (!data) {
+                LOG_ERR("Bogus instance passed");
                 return -1;
-
-        if (!(&data->flows))
-                return -1;
+        }
 
         spin_lock(&data->lock);
+        if (efcp_connection_destroy(data->efcpc, src_cep_id))
+                LOG_ERR("Could not destroy EFCP instance: %d", src_cep_id);
+
+        if (!(&data->flows)) {
+                spin_unlock(&data->lock);
+                LOG_ERR("Could not destroy EFCP instance: %d", src_cep_id);
+                return -1;
+        }
         flow = find_flow_cepid(data, src_cep_id);
         if (!flow) {
                 spin_unlock(&data->lock);
