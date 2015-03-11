@@ -1540,8 +1540,6 @@ int rmt_receive(struct rmt * instance,
                 sdu_destroy(sdu);
                 return -1;
         }
-        spin_unlock_irqrestore(&in_n1_ports->lock, flags);
-        spin_lock_irqsave(&in_n1_port->lock, flags);
 
         rcu_read_lock();
         ps = container_of(rcu_dereference(instance->base.ps),
