@@ -23,7 +23,7 @@
 #include <map>
 #include <vector>
 
-#define RINA_PREFIX "ipcm"
+#define RINA_PREFIX "ipcm.app"
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
 #include <librina/logs.h>
@@ -35,6 +35,65 @@
 using namespace std;
 
 namespace rinad {
+
+void IPCManager_::os_process_finalized_handler(rina::IPCEvent *e)
+{
+	DOWNCAST_DECL(e, rina::OSProcessFinalizedEvent, event);
+	const vector<rina::IPCProcess *>& ipcps =
+		rina::ipcProcessFactory->listIPCProcesses();
+	const rina::ApplicationProcessNamingInformation& app_name =
+						event->applicationName;
+	list<rina::FlowInformation> involved_flows;
+	ostringstream ss;
+
+	ss  << "Application " << app_name.toString()
+			<< "terminated" << endl;
+	FLUSH_LOG(INFO, ss);
+
+	// Look if the terminating application has allocated flows
+	// with some IPC processes
+	collect_flows_by_application(app_name, involved_flows);
+	for (list<rina::FlowInformation>::iterator fit = involved_flows.begin();
+			fit != involved_flows.end(); fit++) {
+		rina::IPCProcess *ipcp = select_ipcp_by_dif(fit->difName);
+		rina::FlowDeallocateRequestEvent req_event(fit->portId, 0);
+
+		if (!ipcp) {
+			ss  << ": Cannot find the IPC process "
+				"that provides the flow with port-id " <<
+				fit->portId << endl;
+			FLUSH_LOG(ERR, ss);
+			continue;
+		}
+
+		IPCManager->deallocate_flow(ipcp->id, req_event);
+	}
+
+	// Look if the terminating application has pending registrations
+	// with some IPC processes
+	for (unsigned int i = 0; i < ipcps.size(); i++) {
+		if (application_is_registered_to_ipcp(app_name,
+							    ipcps[i])) {
+			// Build a structure that will be used during
+			// the unregistration process. The last argument
+			// is the request sequence number: 0 means that
+			// the unregistration response does not match
+			// an application request - this is indeed an
+			// unregistration forced by the IPCM.
+			rina::ApplicationUnregistrationRequestEvent
+				req_event(app_name, ipcps[i]->
+					getDIFInformation().dif_name_, 0);
+
+			IPCManager->unregister_app_from_ipcp(req_event, ipcps[i]->id);
+		}
+	}
+
+	if (event->ipcProcessId != 0) {
+		// TODO The process that crashed was an IPC Process daemon
+		// Should we destroy the state in the kernel? Or try to
+		// create another IPC Process in user space to bring it back?
+	}
+}
 
 int
 IPCManager_::unregister_app_from_ipcp(
@@ -76,63 +135,6 @@ IPCManager_::unregister_app_from_ipcp(
         return 0;
 }
 
-int
-IPCManager_::unregister_ipcp_from_ipcp(int ipcp_id,
-                                      int slave_ipcp_id)
-{
-        unsigned int seqnum;
-        bool arrived = true;
-        ostringstream ss;
-        rina::IPCProcess *ipcp, *slave_ipcp;
-	int ret;
-
-        try {
-
-		ipcp = lookup_ipcp_by_id(ipcp_id);
-
-		if(!ipcp){
-			ss << "Invalid IPCP id "<< ipcp_id;
-			FLUSH_LOG(ERR, ss);
-			throw Exception();
-		}
-		slave_ipcp = lookup_ipcp_by_id(slave_ipcp_id);
-
-		if (!slave_ipcp) {
-			ss << "Invalid IPCP id "<< slave_ipcp_id;
-			FLUSH_LOG(ERR, ss);
-			throw Exception();
-		}
-
-                // Forward the unregistration request to the IPC process
-                // that the client IPC process is registered to
-                seqnum = slave_ipcp->unregisterApplication(ipcp->name);
-                pending_ipcp_unregistrations[seqnum] =
-                                make_pair(ipcp, slave_ipcp);
-
-                ss << "Requested unregistration of IPC process " <<
-                        ipcp->name.toString() << " from IPC "
-                        "process " << slave_ipcp->name.toString() << endl;
-                FLUSH_LOG(INFO, ss);
-
-                arrived = concurrency.wait_for_event(
-                                rina::IPCM_UNREGISTER_APP_RESPONSE_EVENT,
-                                seqnum, ret);
-        } catch (rina::IpcmUnregisterApplicationException) {
-                ss  << ": Error while unregistering IPC process "
-                        << ipcp->name.toString() << " from IPC "
-                        "process " << slave_ipcp->name.toString() << endl;
-                FLUSH_LOG(ERR, ss);
-                return -1;
-        }
-
-        if (!arrived) {
-                ss  << ": Timed out" << endl;
-                FLUSH_LOG(ERR, ss);
-                return -1;
-        }
-
-        return 0;
-}
 
 void IPCManager_::application_registration_notify(
         const rina::ApplicationRegistrationRequestEvent& req_event,
@@ -258,55 +260,6 @@ bool IPCManager_::ipcm_register_response_common(
         return success;
 }
 
-int IPCManager_::ipcm_register_response_ipcp(
-        rina::IpcmRegisterApplicationResponseEvent *event,
-        map<unsigned int,
-            std::pair<rina::IPCProcess *, rina::IPCProcess *>
-           >::iterator mit)
-{
-        rina::IPCProcess *ipcp = mit->second.first;
-        rina::IPCProcess *slave_ipcp = mit->second.second;
-        const rina::ApplicationProcessNamingInformation&
-                slave_dif_name = slave_ipcp->
-                getDIFInformation().dif_name_;
-        ostringstream ss;
-        bool success;
-        int ret = -1;
-
-        success = ipcm_register_response_common(event, ipcp->name,
-                                        slave_ipcp, slave_dif_name);
-        if (success) {
-                // Notify the registered IPC process.
-                try {
-                        ipcp->notifyRegistrationToSupportingDIF(
-                                        slave_ipcp->name,
-                                        slave_dif_name
-                                        );
-                        ss << "IPC process " << ipcp->name.toString() <<
-                                " informed about its registration "
-                                "to N-1 DIF " <<
-                                slave_dif_name.toString() << endl;
-                        FLUSH_LOG(INFO, ss);
-                        ret = 0;
-                } catch (rina::NotifyRegistrationToDIFException) {
-                        ss  << ": Error while notifying "
-                                "IPC process " <<
-                                ipcp->name.toString() <<
-                                " about registration to N-1 DIF"
-                                << slave_dif_name.toString() << endl;
-                        FLUSH_LOG(ERR, ss);
-                }
-        } else {
-                ss  << "Cannot register IPC process "
-                        << ipcp->name.toString() <<
-                        " to DIF " << slave_dif_name.toString() << endl;
-                FLUSH_LOG(ERR, ss);
-        }
-
-        pending_ipcp_registrations.erase(mit);
-
-        return ret;
-}
 
 int IPCManager_::ipcm_register_response_app(
         rina::IpcmRegisterApplicationResponseEvent *event,
@@ -451,54 +404,6 @@ bool IPCManager_::ipcm_unregister_response_common(
         }
 
         return success;
-}
-
-int IPCManager_::ipcm_unregister_response_ipcp(
-                        rina::IpcmUnregisterApplicationResponseEvent *event,
-                        map<unsigned int,
-                            pair<rina::IPCProcess *, rina::IPCProcess *>
-                           >::iterator mit)
-{
-        rina::IPCProcess *ipcp = mit->second.first;
-        rina::IPCProcess *slave_ipcp = mit->second.second;
-        rina::ApplicationProcessNamingInformation slave_dif_name = slave_ipcp->
-                                                getDIFInformation().dif_name_;
-        ostringstream ss;
-        bool success;
-        int ret = -1;
-
-        // Inform the supporting IPC process
-        success = ipcm_unregister_response_common(event, slave_ipcp,
-                                                  ipcp->name);
-
-        try {
-                if (success) {
-                        // Notify the IPCP process that it has been unregistered
-                        // from the DIF
-                        ipcp->notifyUnregistrationFromSupportingDIF(
-                                                        slave_ipcp->name,
-                                                        slave_dif_name);
-                        ss << "IPC process " << ipcp->name.toString() <<
-                                " informed about its unregistration from DIF "
-                                << slave_dif_name.toString() << endl;
-                        FLUSH_LOG(INFO, ss);
-                        ret = 0;
-                } else {
-                        ss  << ": Cannot unregister IPC Process "
-                                << ipcp->name.toString() << " from DIF " <<
-                                slave_dif_name.toString() << endl;
-                        FLUSH_LOG(ERR, ss);
-                }
-        } catch (rina::NotifyRegistrationToDIFException) {
-                ss  << ": Error while reporing "
-                        "unregistration result for IPC process "
-                        << ipcp->name.toString() << endl;
-                FLUSH_LOG(ERR, ss);
-        }
-
-        pending_ipcp_unregistrations.erase(mit);
-
-        return ret;
 }
 
 int IPCManager_::ipcm_unregister_response_app(

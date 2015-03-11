@@ -27,7 +27,7 @@
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
 
-#define RINA_PREFIX "ipcm"
+#define RINA_PREFIX "ipcm.flow-alloc"
 #include <librina/logs.h>
 
 #include "rina-configuration.h"

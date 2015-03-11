@@ -59,12 +59,15 @@ ipcm_LDADD    =					\
 	$(builddir)/addons/libaddons.la		\
 	$(LIBRINA_LIBS)
 ipcm_SOURCES  =					\
+	app.cc					\
 	dif-validator.cc			\
 	main.cc					\
+	misc.cc					\
 	ipcm.cc					\
+	ipcp.cc					\
 	configuration.cc			\
-	registration.cc				\
-	flow-allocation.cc
+	flow-alloc.cc				\
+	policies.cc
 
 test_empty_SOURCES  =				\
 	test-empty.cc

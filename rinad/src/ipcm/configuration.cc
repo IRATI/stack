@@ -26,7 +26,7 @@
 #include <vector>
 #include <string>
 
-#define RINA_PREFIX "ipcm"
+#define RINA_PREFIX "ipcm.conf"
 
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
