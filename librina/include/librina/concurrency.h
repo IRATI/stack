@@ -176,6 +176,9 @@ private:
         pthread_rwlockattr_t rwlock_attr_;
 };
 
+/**
+* Scoped lock (RAI)
+*/
 class ScopedLock {
 public:
 ScopedLock(Lockable & guarded) :
@@ -192,6 +195,47 @@ ScopedLock(Lockable & guarded) :
 private:
         Lockable & guarded_;
 };
+
+/**
+* Read scoped lock (RAI)
+*/
+class ReadScopedLock {
+public:
+ReadScopedLock(ReadWriteLockable & rwlock) :
+        rwlock_(rwlock)
+        { rwlock_.readlock(); }
+
+        virtual ~ReadScopedLock() throw() {
+                try {
+                        rwlock_.unlock();
+                } catch (std::exception & e) {
+                }
+        }
+
+private:
+	ReadWriteLockable& rwlock_;
+};
+
+/**
+* Write scoped lock (RAI)
+*/
+class WriteScopedLock {
+public:
+WriteScopedLock(ReadWriteLockable & rwlock) :
+        rwlock_(rwlock)
+        { rwlock_.writelock(); }
+
+        virtual ~WriteScopedLock() throw() {
+                try {
+                        rwlock_.unlock();
+                } catch (std::exception & e) {
+                }
+        }
+
+private:
+	ReadWriteLockable& rwlock_;
+};
+
 
 /**
  * Wraps a Condition Variable as provided by the pthreads library
