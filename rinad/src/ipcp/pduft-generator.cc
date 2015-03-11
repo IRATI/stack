@@ -69,18 +69,6 @@ IPDUFTGeneratorPolicy * PDUForwardingTableGenerator::get_pdu_ft_generator_policy
 }
 
 //Class Flow State Object
-FlowStateObject::FlowStateObject(){
-	address_ = 0;
-	neighbor_address_ = 0;
-	cost_ = 0;
-	up_ = false;
-	sequence_number_ = 0;
-	age_ = 0;
-	modified_ = 0;
-	avoid_port_ = 0;
-	being_erased_ = false;
-}
-
 FlowStateObject::FlowStateObject(unsigned int address,
 		unsigned int neighbor_address, unsigned int cost, bool up,
 		int sequence_number, unsigned int age)
@@ -1279,13 +1267,9 @@ void FlowStateObjectEncoder::convertModelToGPB(
 FlowStateObject * FlowStateObjectEncoder::convertGPBToModel(
 		const rina::messages::flowStateObject_t & gpb_fso)
 {
-	FlowStateObject * fso = new FlowStateObject();
-	fso->address_ = gpb_fso.address();
-	fso->neighbor_address_ = gpb_fso.neighbor_address();
-	fso->cost_ = gpb_fso.cost();
-	fso->up_ = gpb_fso.state();
-	fso->sequence_number_ = gpb_fso.sequence_number();
-	fso->age_ = gpb_fso.age();
+	FlowStateObject * fso = new FlowStateObject(gpb_fso.address(),
+			gpb_fso.neighbor_address(), gpb_fso.cost(),
+			gpb_fso.state(), gpb_fso.sequence_number(), gpb_fso.age());
 
 	return fso;
 }
