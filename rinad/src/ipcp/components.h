@@ -60,8 +60,9 @@ class IPCProcessComponent {
 public:
         std::string selected_ps_name;
         IPolicySet *ps;
+        IPCProcess *ipcp;
 
-        IPCProcessComponent() : ps(NULL) { }
+        IPCProcessComponent() : ps(NULL), ipcp(NULL) { }
 	virtual ~IPCProcessComponent() { };
 	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
 	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
@@ -365,6 +366,23 @@ public:
 };
 
 /// Namespace Manager Interface
+class INamespaceManagerPs : public IPolicySet {
+// This class is used by the IPCP to access the plugin functionalities
+public:
+	/// Decides if a given address is valid or not
+	/// @param address
+	///	@return true if valid, false otherwise
+	virtual bool isValidAddress(unsigned int address, const std::string& ipcp_name,
+			const std::string& ipcp_instance) = 0;
+
+	/// Return a valid address for the IPC process that
+	/// wants to join the DIF
+	virtual unsigned int getValidAddress(const std::string& ipcp_name,
+				const std::string& ipcp_instance) = 0;
+
+	virtual ~INamespaceManagerPs() {}
+};
+
 class INamespaceManager : public IPCProcessComponent {
 public:
 	virtual ~INamespaceManager(){};
@@ -404,17 +422,6 @@ public:
 	/// @param event
 	virtual void processApplicationUnregistrationRequestEvent(
 			const rina::ApplicationUnregistrationRequestEvent& event) = 0;
-
-	/// Decides if a given address is valid or not
-	/// @param address
-	///	@return true if valid, false otherwise
-	virtual bool isValidAddress(unsigned int address, const std::string& ipcp_name,
-			const std::string& ipcp_instance) = 0;
-
-	/// Return a valid address for the IPC process that
-	/// wants to join the DIF
-	virtual unsigned int getValidAddress(const std::string& ipcp_name,
-				const std::string& ipcp_instance) = 0;
 
 	virtual unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name) = 0;
 };
@@ -550,8 +557,6 @@ public:
 
 class SecurityManager: public ISecurityManager {
 // Used by IPCP to access the functionalities of the security manager
-private:
-        IPCProcess *ipcp;
 public:
 	SecurityManager();
 	void set_ipc_process(IPCProcess * ipc_process);

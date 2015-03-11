@@ -14,11 +14,18 @@ createFlowAllocatorPs(IPCProcessComponent * context);
 extern "C" void
 destroyFlowAllocatorPs(IPolicySet * instance);
 
+extern "C" IPolicySet *
+createNamespaceManagerPs(IPCProcessComponent * context);
+
+extern "C" void
+destroyNamespaceManagerPs(IPolicySet * instance);
+
 extern "C" int
 init(IPCProcess * ipc_process, const std::string& plugin_name)
 {
         struct PsFactory sm_factory;
         struct PsFactory fa_factory;
+        struct PsFactory nsm_factory;
         int ret;
 
         sm_factory.plugin_name = plugin_name;
@@ -39,6 +46,17 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
         fa_factory.destroy = destroyFlowAllocatorPs;
 
         ret = ipc_process->psFactoryPublish(fa_factory);
+        if (ret) {
+                return ret;
+        }
+
+        nsm_factory.plugin_name = plugin_name;
+        nsm_factory.name = "default";
+        nsm_factory.component = "namespace-manager";
+        nsm_factory.create = createNamespaceManagerPs;
+        nsm_factory.destroy = destroyNamespaceManagerPs;
+
+        ret = ipc_process->psFactoryPublish(nsm_factory);
         if (ret) {
                 return ret;
         }

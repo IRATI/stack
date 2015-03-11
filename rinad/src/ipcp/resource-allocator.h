@@ -66,7 +66,6 @@ public:
 	IPDUForwardingTableGenerator * get_pdu_forwarding_table_generator() const;
 
 private:
-	IPCProcess * ipc_process_;
 	INMinusOneFlowManager * n_minus_one_flow_manager_;
 	IPDUForwardingTableGenerator * pdu_forwarding_table_generator_;
 };

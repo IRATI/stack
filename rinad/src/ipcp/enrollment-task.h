@@ -428,7 +428,6 @@ private:
 	/// @param resultReason
 	void nMinusOneFlowAllocationFailed(NMinusOneFlowAllocationFailedEvent * event);
 
-	IPCProcess * ipc_process_;
 	IPCPRIBDaemon * rib_daemon_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 	IResourceAllocator * resource_allocator_;

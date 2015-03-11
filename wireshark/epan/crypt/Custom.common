@@ -1,6 +1,0 @@
-##
-## $Id$
-## Here you can add custom crypto files
-#
-
-CUSTOM_CRYPTO_SRC = 
