@@ -50,7 +50,7 @@ const void* WhateverCastNameSetRIBObject::get_value() const {
 void WhateverCastNameSetRIBObject::remoteCreateObject(void * object_value,
 		const std::string& object_name, int invoke_id,
 		rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	(void) session_descriptor;
 	(void) invoke_id;
 	std::list<rina::WhatevercastName *> namesToCreate;

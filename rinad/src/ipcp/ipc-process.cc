@@ -212,27 +212,27 @@ const std::list<rina::Neighbor*> IPCProcessImpl::get_neighbors() const {
 }
 
 const IPCProcessOperationalState& IPCProcessImpl::get_operational_state() const {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	return state;
 }
 
 void IPCProcessImpl::set_operational_state(const IPCProcessOperationalState& operational_state) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	state = operational_state;
 }
 
 const rina::DIFInformation& IPCProcessImpl::get_dif_information() const {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	return dif_information_;
 }
 
 void IPCProcessImpl::set_dif_information(const rina::DIFInformation& dif_information) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	dif_information_ = dif_information;
 }
 
 unsigned int IPCProcessImpl::get_address() const {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	if (state != ASSIGNED_TO_DIF) {
 		return 0;
 	}
@@ -241,12 +241,12 @@ unsigned int IPCProcessImpl::get_address() const {
 }
 
 void IPCProcessImpl::set_address(unsigned int address) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	dif_information_.dif_configuration_.address_ = address;
 }
 
 void IPCProcessImpl::processAssignToDIFRequestEvent(const rina::AssignToDIFRequestEvent& event) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	if (state != INITIALIZED) {
 		//The IPC Process can only be assigned to a DIF once, reply with error message
@@ -268,7 +268,7 @@ void IPCProcessImpl::processAssignToDIFRequestEvent(const rina::AssignToDIFReque
 }
 
 void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResponseEvent& event) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	if (state == ASSIGNED_TO_DIF ) {
 		LOG_INFO("Got reply from the Kernel components regarding DIF assignment: %d",
@@ -380,7 +380,7 @@ static void parse_path(const std::string& path, std::string& component,
 
 void IPCProcessImpl::processSetPolicySetParamRequestEvent(
                         const rina::SetPolicySetParamRequestEvent& event) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
         std::string component, remainder;
         bool got_in_userspace = true;
         int result = -1;
@@ -441,7 +441,7 @@ void IPCProcessImpl::processSetPolicySetParamRequestEvent(
 
 void IPCProcessImpl::processSetPolicySetParamResponseEvent(
                         const rina::SetPolicySetParamResponseEvent& event) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	std::map<unsigned int,
                  rina::SetPolicySetParamRequestEvent>::iterator it;
 
@@ -480,7 +480,7 @@ void IPCProcessImpl::processSetPolicySetParamResponseEvent(
 
 void IPCProcessImpl::processSelectPolicySetRequestEvent(
                         const rina::SelectPolicySetRequestEvent& event) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
         std::string component, remainder;
         bool got_in_userspace = true;
         int result = -1;
@@ -536,7 +536,7 @@ void IPCProcessImpl::processSelectPolicySetRequestEvent(
 
 void IPCProcessImpl::processSelectPolicySetResponseEvent(
                         const rina::SelectPolicySetResponseEvent& event) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	std::map<unsigned int,
                  rina::SelectPolicySetRequestEvent>::iterator it;
 
@@ -575,7 +575,7 @@ void IPCProcessImpl::processSelectPolicySetResponseEvent(
 
 void IPCProcessImpl::processPluginLoadRequestEvent(
                         const rina::PluginLoadRequestEvent& event) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
         int result;
 
         if (event.load) {

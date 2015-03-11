@@ -176,13 +176,13 @@ private:
         pthread_rwlockattr_t rwlock_attr_;
 };
 
-class AccessGuard {
+class ScopedLock {
 public:
-AccessGuard(Lockable & guarded) :
+ScopedLock(Lockable & guarded) :
         guarded_(guarded)
         { guarded_.lock(); }
 
-        virtual ~AccessGuard() throw() {
+        virtual ~ScopedLock() throw() {
                 try {
                         guarded_.unlock();
                 } catch (std::exception & e) {
@@ -329,7 +329,7 @@ public:
         /// @param key
         /// @param value
         void put(K key, T* element) {
-                rina::AccessGuard g(*lock_);
+                rina::ScopedLock g(*lock_);
                 map[key] = element;
         }
 
@@ -341,7 +341,7 @@ public:
                 typename std::map<K, T*>::iterator iterator;
                 T* result;
 
-                rina::AccessGuard g(*lock_);
+                rina::ScopedLock g(*lock_);
                 iterator = map.find(key);
                 if (iterator == map.end()) {
                         result = 0;
@@ -360,7 +360,7 @@ public:
                 typename std::map<K, T*>::iterator iterator;
                 T* result;
 
-                rina::AccessGuard g(*lock_);
+                rina::ScopedLock g(*lock_);
                 iterator = map.find(key);
                 if (iterator == map.end()) {
                         result = 0;
@@ -377,7 +377,7 @@ public:
                 typename std::map<K, T*>::const_iterator iterator;
                 std::list<T*> result;
 
-                rina::AccessGuard g(*lock_);
+                rina::ScopedLock g(*lock_);
                 for(iterator = map.begin();
                                 iterator != map.end(); ++iterator){
                         result.push_back(iterator->second);
@@ -390,7 +390,7 @@ public:
         void deleteValues() {
                 typename std::map<K, T*>::const_iterator iterator;
 
-                rina::AccessGuard g(*lock_);
+                rina::ScopedLock g(*lock_);
                 for(iterator = map.begin();
                                 iterator != map.end(); ++iterator){
                         delete iterator->second;

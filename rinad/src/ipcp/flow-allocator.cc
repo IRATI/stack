@@ -585,7 +585,7 @@ unsigned int FlowAllocatorInstance::get_allocate_response_message_handle() const
   unsigned int t;
 
   {
-    rina::AccessGuard g(*lock_);
+    rina::ScopedLock g(*lock_);
     t = allocate_response_message_handle_;
   }
 
@@ -595,7 +595,7 @@ unsigned int FlowAllocatorInstance::get_allocate_response_message_handle() const
 void FlowAllocatorInstance::set_allocate_response_message_handle(
     unsigned int allocate_response_message_handle)
 {
-  rina::AccessGuard g(*lock_);
+  rina::ScopedLock g(*lock_);
   allocate_response_message_handle_ =
       allocate_response_message_handle;
 }
@@ -605,7 +605,7 @@ void FlowAllocatorInstance::submitAllocateRequest(
 {
   IFlowAllocatorPs * faps =
       dynamic_cast<IFlowAllocatorPs *>(flow_allocator_->ps);
-  rina::AccessGuard g(*lock_);
+  rina::ScopedLock g(*lock_);
 
   flow_request_event_ = event;
 
@@ -1004,7 +1004,7 @@ void FlowAllocatorInstance::processUpdateConnectionResponseEvent(
 void FlowAllocatorInstance::submitDeallocate(
     const rina::FlowDeallocateRequestEvent& event)
 {
-  rina::AccessGuard g(*lock_);
+  rina::ScopedLock g(*lock_);
 
   (void) event;  // Stop compiler barfs
 
@@ -1052,7 +1052,7 @@ void FlowAllocatorInstance::submitDeallocate(
 
 void FlowAllocatorInstance::deleteFlowRequestMessageReceived()
 {
-  rina::AccessGuard g(*lock_);
+  rina::ScopedLock g(*lock_);
 
   if (state != FLOW_ALLOCATED) {
     LOG_ERR(
