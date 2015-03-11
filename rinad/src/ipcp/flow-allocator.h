@@ -202,7 +202,6 @@ private:
 	/// Flow allocator instances, each one associated to a port-id
 	rina::ThreadSafeMapOfPointers<int, IFlowAllocatorInstance> flow_allocator_instances_;
 
-	IPCProcess * ipc_process_;
 	IPCPRIBDaemon * rib_daemon_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 	Encoder * encoder_;

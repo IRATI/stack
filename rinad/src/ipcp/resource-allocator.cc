@@ -313,7 +313,7 @@ std::list<rina::FlowInformation> NMinusOneFlowManager::getAllNMinusOneFlowInform
 ResourceAllocator::ResourceAllocator() {
 	n_minus_one_flow_manager_ = new NMinusOneFlowManager();
 	pdu_forwarding_table_generator_ = new PDUForwardingTableGenerator();
-	ipc_process_ = 0;
+	ipcp = 0;
 }
 
 ResourceAllocator::~ResourceAllocator() {
@@ -331,7 +331,7 @@ void ResourceAllocator::set_ipc_process(IPCProcess * ipc_process) {
 		return;
 	}
 
-	ipc_process_ = ipc_process;
+	ipcp = ipc_process;
 	if (n_minus_one_flow_manager_) {
 		n_minus_one_flow_manager_->set_ipc_process(ipc_process);
 	}
