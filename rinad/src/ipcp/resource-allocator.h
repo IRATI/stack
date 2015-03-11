@@ -66,7 +66,6 @@ public:
 	void set_ipc_process(IPCProcess * ipc_process);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	INMinusOneFlowManager * get_n_minus_one_flow_manager() const;
-	IPDUForwardingTableGenerator * get_pdu_forwarding_table_generator() const;
 	int select_policy_set(const std::string& path, const std::string& name);
 	int set_policy_set_param(const std::string& path,
 			const std::string& name,
@@ -74,7 +73,6 @@ public:
 
 private:
 	INMinusOneFlowManager * n_minus_one_flow_manager_;
-	IPDUForwardingTableGenerator * pdu_forwarding_table_generator_;
 };
 
 class DIFRegistrationRIBObject: public SimpleSetMemberIPCPRIBObject {

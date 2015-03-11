@@ -31,7 +31,7 @@
 #include "common/encoder.h"
 #include "ipcp/enrollment-task.h"
 #include "ipcp/flow-allocator.h"
-#include "ipcp/pduft-generator.h"
+#include "ipcp/link-state-routing-ps.h"
 
 bool test_flow (rinad::Encoder * encoder) {
 	rinad::Flow flow_to_encode;

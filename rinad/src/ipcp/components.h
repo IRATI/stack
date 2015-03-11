@@ -365,6 +365,30 @@ public:
         virtual void destroyFlow(Flow *) = 0;
 };
 
+class IRoutingPs : public IPolicySet {
+	// This class is used by the IPCP to access the plugin functionalities
+public:
+	virtual ~IRoutingPs() {};
+	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
+};
+
+class IRoutingComponent : public IPCProcessComponent {
+public:
+	virtual ~IRoutingComponent(){};
+};
+
+class RoutingComponent: public IRoutingComponent {
+public:
+		RoutingComponent();
+		void set_ipc_process(IPCProcess * ipc_process);
+		void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+        int select_policy_set(const std::string& path, const std::string& name);
+        int set_policy_set_param(const std::string& path,
+                                 const std::string& name,
+                                 const std::string& value);
+        ~RoutingComponent() {};
+};
+
 /// Namespace Manager Interface
 class INamespaceManagerPs : public IPolicySet {
 // This class is used by the IPCP to access the plugin functionalities
@@ -489,24 +513,6 @@ public:
 			const std::string& api) = 0;
 };
 
-/// Interface PDU Forwarding Table Generator Policy
-class IPDUFTGeneratorPolicy {
-public:
-	virtual ~IPDUFTGeneratorPolicy(){};
-	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
-	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
-};
-
-/// Interface PDU Forwarding Table Generator
-class IPDUForwardingTableGenerator {
-public:
-	virtual ~IPDUForwardingTableGenerator(){};
-	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
-	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
-	virtual IPDUFTGeneratorPolicy * get_pdu_ft_generator_policy() const = 0;
-};
-
-
 /// An entry of the routing table
 class RoutingTableEntry {
 public:
@@ -557,7 +563,6 @@ class IResourceAllocator: public IPCProcessComponent {
 public:
 	virtual ~IResourceAllocator(){};
 	virtual INMinusOneFlowManager * get_n_minus_one_flow_manager() const = 0;
-	virtual IPDUForwardingTableGenerator * get_pdu_forwarding_table_generator() const = 0;
 };
 
 /// Security Management � A DIF requires three security functions:
@@ -645,6 +650,7 @@ public:
 	INamespaceManager * namespace_manager_;
 	IResourceAllocator * resource_allocator_;
 	ISecurityManager * security_manager_;
+	IRoutingComponent * routing_component_;
 	IPCPRIBDaemon * rib_daemon_;
 	rina::ApplicationProcessNamingInformation name_;
 

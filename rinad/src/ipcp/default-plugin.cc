@@ -26,6 +26,12 @@ createResourceAllocatorPs(IPCProcessComponent * context);
 extern "C" void
 destroyResourceAllocatorPs(IPolicySet * instance);
 
+extern "C" IPolicySet *
+createRoutingComponentPs(IPCProcessComponent * context);
+
+extern "C" void
+destroyRoutingComponentPs(IPolicySet * instance);
+
 extern "C" int
 init(IPCProcess * ipc_process, const std::string& plugin_name)
 {
@@ -33,6 +39,7 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
         struct PsFactory fa_factory;
         struct PsFactory nsm_factory;
         struct PsFactory ra_factory;
+        struct PsFactory rc_factory;
         int ret;
 
         sm_factory.plugin_name = plugin_name;
@@ -77,6 +84,17 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
         ret = ipc_process->psFactoryPublish(ra_factory);
         if (ret) {
                 return ret;
+        }
+
+        rc_factory.plugin_name = plugin_name;
+        rc_factory.name = "link-state";
+        rc_factory.component = "routing";
+        rc_factory.create = createRoutingComponentPs;
+        rc_factory.destroy = destroyRoutingComponentPs;
+
+        ret = ipc_process->psFactoryPublish(rc_factory);
+        if (ret) {
+        	return ret;
         }
 
         return 0;

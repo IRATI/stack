@@ -27,7 +27,6 @@
 
 #include "events.h"
 #include "resource-allocator.h"
-#include "pduft-generator.h"
 
 namespace rinad {
 
@@ -341,17 +340,12 @@ unsigned int NMinusOneFlowManager::numberOfFlowsToNeighbour(const std::string& a
 //CLASS Resource Allocator
 ResourceAllocator::ResourceAllocator() {
 	n_minus_one_flow_manager_ = new NMinusOneFlowManager();
-	pdu_forwarding_table_generator_ = new PDUForwardingTableGenerator();
 	ipcp = 0;
 }
 
 ResourceAllocator::~ResourceAllocator() {
 	if (n_minus_one_flow_manager_) {
 		delete n_minus_one_flow_manager_;
-	}
-
-	if (pdu_forwarding_table_generator_) {
-		delete pdu_forwarding_table_generator_;
 	}
 }
 
@@ -364,28 +358,16 @@ void ResourceAllocator::set_ipc_process(IPCProcess * ipc_process) {
 	if (n_minus_one_flow_manager_) {
 		n_minus_one_flow_manager_->set_ipc_process(ipc_process);
 	}
-
-	if (pdu_forwarding_table_generator_) {
-		pdu_forwarding_table_generator_->set_ipc_process(ipc_process);
-	}
 }
 
 void ResourceAllocator::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
 	if (n_minus_one_flow_manager_) {
 		n_minus_one_flow_manager_->set_dif_configuration(dif_configuration);
 	}
-
-	if (pdu_forwarding_table_generator_) {
-		pdu_forwarding_table_generator_->set_dif_configuration(dif_configuration);
-	}
 }
 
 INMinusOneFlowManager * ResourceAllocator::get_n_minus_one_flow_manager() const {
 	return n_minus_one_flow_manager_;
-}
-
-IPDUForwardingTableGenerator * ResourceAllocator::get_pdu_forwarding_table_generator() const {
-	return pdu_forwarding_table_generator_;
 }
 
 int ResourceAllocator::select_policy_set(const std::string& path,

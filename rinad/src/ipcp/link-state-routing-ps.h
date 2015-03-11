@@ -1,5 +1,5 @@
 /*
- * PDU Forwarding Table Generator
+ * Link-state routing policy
  *
  *    Bernat Gaston <bernat.gaston@i2cat.net>
  *    Eduard Grasa <eduard.grasa@i2cat.net>
@@ -19,8 +19,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef IPCP_PDUFT_GENERATOR_HH
-#define IPCP_PDUFT_GENERATOR_HH
+#ifndef IPCP_LINK_STATE_ROUTING_HH
+#define IPCP_LINK_STATE_ROUTING_HH
 
 #ifdef __cplusplus
 
@@ -32,23 +32,21 @@
 
 namespace rinad {
 
-/// PDU Forwarding Table generation is the procedure by which the
-/// PDU forwarding table used by the RMT is created and maintained. There
-/// are many ways (policies) this can be achieved; the PDU forwarding table
-/// generator of this implementation uses a Flow State Database (FSDB)
-/// populated with Flow State Objects (FSOs) to compute the PDU forwarding table.
-class PDUForwardingTableGenerator : public IPDUForwardingTableGenerator {
-public:
-	static const std::string LINK_STATE_POLICY;
+class LinkStateRoutingPolicy;
 
-	PDUForwardingTableGenerator();
-	void set_ipc_process(IPCProcess * ipc_process);
-	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
-	IPDUFTGeneratorPolicy * get_pdu_ft_generator_policy() const;
+class LinkStateRoutingPs: public IRoutingPs {
+public:
+		static std::string LINK_STATE_POLICY;
+		LinkStateRoutingPs(IRoutingComponent * rc);
+		void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+		int set_policy_set_param(const std::string& name,
+			const std::string& value);
+		virtual ~LinkStateRoutingPs() {}
 
 private:
-	IPCProcess * ipc_process_;
-	IPDUFTGeneratorPolicy * pduftg_policy_;
+        // Data model of the routing component.
+        IRoutingComponent * rc;
+        LinkStateRoutingPolicy * lsr_policy;
 };
 
 /// The object exchanged between IPC Processes to disseminate the state of
@@ -192,15 +190,13 @@ private:
 	unsigned int getNextHop(unsigned int address, unsigned int sourceAddress);
 };
 
-class LinkStatePDUFTGeneratorPolicy;
-
 /// A group of flow state objects. This is the RIB target object
-/// when the PDU Forwarding Table Generator wants to send
+/// when routing wants to send
 /// information about more than one N-1 flow
 class FlowStateRIBObjectGroup: public BaseIPCPRIBObject {
 public:
 	FlowStateRIBObjectGroup(IPCProcess * ipc_process,
-			LinkStatePDUFTGeneratorPolicy * pduft_generator_policy);
+			LinkStateRoutingPolicy * lsr_policy);
 	const void* get_value() const;
 	void remoteWriteObject(void * object_value, int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
@@ -208,7 +204,7 @@ public:
 			const void* objectValue);
 
 private:
-	LinkStatePDUFTGeneratorPolicy * pduft_generator_policy_;
+	LinkStateRoutingPolicy * lsr_policy_;
 };
 
 /// The subset of the RIB that contains all the Flow State objects known by the IPC Process.
@@ -254,26 +250,26 @@ private:
 	FlowStateObject * getByAddress(unsigned int address);
 };
 
-class LinkStatePDUFTCDAPMessageHandler: public rina::BaseCDAPResponseMessageHandler {
+class LinkStateRoutingCDAPMessageHandler: public rina::BaseCDAPResponseMessageHandler {
 public:
-	LinkStatePDUFTCDAPMessageHandler(LinkStatePDUFTGeneratorPolicy * pduft_generator_policy);
+	LinkStateRoutingCDAPMessageHandler(LinkStateRoutingPolicy * lsr_policy);
 	void readResponse(int result, const std::string& result_reason,
 			void * object_value, const std::string& object_name,
 			rina::CDAPSessionDescriptor * session_descriptor);
 
 private:
-	LinkStatePDUFTGeneratorPolicy * pduft_generator_policy_;
+	LinkStateRoutingPolicy * lsr_policy_;
 };
 
-class ComputePDUFTTimerTask : public rina::TimerTask {
+class ComputeRoutingTimerTask : public rina::TimerTask {
 public:
-	ComputePDUFTTimerTask(LinkStatePDUFTGeneratorPolicy * pduft_generator_policy,
+	ComputeRoutingTimerTask(LinkStateRoutingPolicy * lsr_policy,
 			long delay);
-	~ComputePDUFTTimerTask() throw(){};
+	~ComputeRoutingTimerTask() throw(){};
 	void run();
 
 private:
-	LinkStatePDUFTGeneratorPolicy * pduft_generator_policy_;
+	LinkStateRoutingPolicy * lsr_policy_;
 	long delay_;
 };
 
@@ -292,29 +288,29 @@ private:
 
 class PropagateFSODBTimerTask : public rina::TimerTask {
 public:
-	PropagateFSODBTimerTask(LinkStatePDUFTGeneratorPolicy * pduft_generator_policy,
+	PropagateFSODBTimerTask(LinkStateRoutingPolicy * lsr_policy,
 			long delay);
 	~PropagateFSODBTimerTask() throw(){};
 	void run();
 
 private:
-	LinkStatePDUFTGeneratorPolicy * pduft_generator_policy_;
+	LinkStateRoutingPolicy * lsr_policy_;
 	long delay_;
 };
 
 class UpdateAgeTimerTask : public rina::TimerTask {
 public:
-	UpdateAgeTimerTask(LinkStatePDUFTGeneratorPolicy * pduft_generator_policy,
+	UpdateAgeTimerTask(LinkStateRoutingPolicy * lsr_policy,
 			long delay);
 	~UpdateAgeTimerTask() throw(){};
 	void run();
 
 private:
-	LinkStatePDUFTGeneratorPolicy * pduft_generator_policy_;
+	LinkStateRoutingPolicy * lsr_policy_;
 	long delay_;
 };
 
-/// This PDU forwarding table generator policy uses a Flow State Database
+/// This routing policy uses a Flow State Database
 /// (FSDB) populated with Flow State Objects (FSOs) to compute the PDU
 /// forwarding table. This database is updated based on local events notified
 /// by the Resource Allocator, or on remote operations on the Flow State Objects
@@ -332,10 +328,10 @@ private:
 /// leads to the next hop. This selection of the most appropriate N-1 flow can be
 /// performed more frequently in order to perform load-balancing or to quickly route
 /// around failed N-1 flows
-class LinkStatePDUFTGeneratorPolicy: public IPDUFTGeneratorPolicy, public EventListener {
+class LinkStateRoutingPolicy: public EventListener {
 public:
-	LinkStatePDUFTGeneratorPolicy();
-	~LinkStatePDUFTGeneratorPolicy();
+	LinkStateRoutingPolicy(IPCProcess * ipcp);
+	~LinkStateRoutingPolicy();
 	void set_ipc_process(IPCProcess * ipc_process);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	const std::list<rina::FlowInformation>& get_allocated_flows() const;
@@ -368,7 +364,7 @@ public:
 	/// flow is ÒupÓ. The forwarding table is computed according to the algorithm explained in
 	/// the Òalgorithm to compute the forwarding tableÓ section. If the FSDB is not marked as
 	/// ÒmodifiedÓ nothing happens.
-	void forwardingTableUpdate();
+	void routingTableUpdate();
 
 	/// All FSOs in the M_WRITE message are processed sequentially. If an FSO that matches
 	/// with the IPC processes addresses and port-ids contained in the message can be retrieved
@@ -462,7 +458,6 @@ public:
 			const rina::messages::flowStateObject_t & gpb_fso);
 };
 
-/// Encoder of a list of Flow State Objects
 class FlowStateObjectListEncoder: public rina::EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);

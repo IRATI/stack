@@ -1,5 +1,5 @@
 //
-// test-pduftg
+// test-link-state-routing
 //
 //    Bernat Gaston <bernat.gaston@i2cat.net>
 //    Eduard Grasa  <eduard.grasa@i2cat.net>
@@ -20,11 +20,11 @@
 // MA  02110-1301  USA
 //
 
-#define RINA_PREFIX "pduft-generator-tests"
+#define RINA_PREFIX "lsr-tests"
 
 #include <librina/logs.h>
 
-#include "ipcp/pduft-generator.h"
+#include "ipcp/link-state-routing-ps.h"
 
 class FakeEncoder: public rina::EncoderInterface {
 public:
@@ -736,7 +736,7 @@ int test_graph () {
 	return result;
 }
 
-int getPDUTForwardingTable_NoFSO_size0() {
+int getRoutingTable_NoFSO_size0() {
 	int result = 0;
 
 	rinad::IRoutingAlgorithm * routingAlgorithm =
@@ -754,7 +754,7 @@ int getPDUTForwardingTable_NoFSO_size0() {
 	return result;
 }
 
-int getPDUTForwardingTable_LinearGraphNumberOfEntries_2() {
+int getRoutingTable_LinearGraphNumberOfEntries_2() {
 	int result = 0;
 
 	std::list<rinad::FlowStateObject *> objects;
@@ -780,7 +780,7 @@ int getPDUTForwardingTable_LinearGraphNumberOfEntries_2() {
 	return result;
 }
 
-int getPDUTForwardingTable_StateFalseNoEntries_True() {
+int getRoutingTable_StateFalseNoEntries_True() {
 	int result = 0;
 
 	std::list<rinad::FlowStateObject *> objects;
@@ -802,7 +802,7 @@ int getPDUTForwardingTable_StateFalseNoEntries_True() {
 	return result;
 }
 
-int getPDUTForwardingTable_MultiGraphEntries_True() {
+int getRoutingTable_MultiGraphEntries_True() {
 	int result = 0;
 
 	std::list<rinad::FlowStateObject *> objects;
@@ -835,28 +835,28 @@ int getPDUTForwardingTable_MultiGraphEntries_True() {
 int test_dijkstra() {
 	int result = 0;
 
-	result = getPDUTForwardingTable_NoFSO_size0();
+	result = getRoutingTable_NoFSO_size0();
 	if (result < 0) {
 		LOG_ERR("getPDUTForwardingTable_NoFSO_size0 test failed");
 		return result;
 	}
 	LOG_INFO("getPDUTForwardingTable_NoFSO_size0 test passed");
 
-	result = getPDUTForwardingTable_LinearGraphNumberOfEntries_2();
+	result = getRoutingTable_LinearGraphNumberOfEntries_2();
 	if (result < 0) {
 		LOG_ERR("getPDUTForwardingTable_LinearGraphNumberOfEntries_2 test failed");
 		return result;
 	}
 	LOG_INFO("getPDUTForwardingTable_LinearGraphNumberOfEntries_2 test passed");
 
-	result = getPDUTForwardingTable_StateFalseNoEntries_True();
+	result = getRoutingTable_StateFalseNoEntries_True();
 	if (result < 0) {
 		LOG_ERR("getPDUTForwardingTable_StateFalseNoEntries_True test failed");
 		return result;
 	}
 	LOG_INFO("getPDUTForwardingTable_StateFalseNoEntries_True test passed");
 
-	result = getPDUTForwardingTable_MultiGraphEntries_True();
+	result = getRoutingTable_MultiGraphEntries_True();
 	if (result < 0) {
 		LOG_ERR("getPDUTForwardingTable_MultiGraphEntries_True test failed");
 		return result;
