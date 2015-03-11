@@ -592,7 +592,7 @@ bool test_neighbor_list(rinad::Encoder * encoder) {
 }
 
 bool test_flow_state_object(rinad::Encoder * encoder) {
-	rinad::FlowStateObject fso = rinad::FlowStateObject(23, 1, 34, 2, true, 123, 434);
+	rinad::FlowStateObject fso = rinad::FlowStateObject(23, 84, 2, true, 123, 450);
 	rinad::FlowStateObject * recovered_obj = 0;
 
 	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
@@ -603,32 +603,41 @@ bool test_flow_state_object(rinad::Encoder * encoder) {
 	recovered_obj = (rinad::FlowStateObject *) encoder->decode(&cdapMessage);
 
 	if (fso.address_ != recovered_obj->address_) {
-		return false;
-	}
-
-	if (fso.age_ != recovered_obj->age_) {
+		LOG_ERR("Addresses are different; original: %u, recovered: %u",
+				fso.address_, recovered_obj->address_);
 		return false;
 	}
 
 	if (fso.neighbor_address_ != recovered_obj->neighbor_address_) {
+		LOG_ERR("Neighbor addresses are different; original: %u, recovered: %u",
+				fso.neighbor_address_, recovered_obj->neighbor_address_);
 		return false;
 	}
 
-	if (fso.neighbor_port_id_ != recovered_obj->neighbor_port_id_) {
-		return false;
-	}
-
-	if (fso.port_id_ != recovered_obj->port_id_) {
+	if (fso.cost_ != recovered_obj->cost_) {
+		LOG_ERR("Costs are different; original: %u, recovered: %u",
+				fso.cost_, recovered_obj->cost_);
 		return false;
 	}
 
 	if (fso.sequence_number_ != recovered_obj->sequence_number_) {
+		LOG_ERR("Sequence numbers are different; original: %d, recovered: %d",
+				fso.sequence_number_, recovered_obj->sequence_number_);
 		return false;
 	}
 
 	if (fso.up_ != recovered_obj->up_) {
+		LOG_ERR("States are different; original: %d, recovered: %d",
+				fso.up_, recovered_obj->up_);
 		return false;
 	}
+
+	if (fso.age_ != recovered_obj->age_) {
+		LOG_ERR("Ages are different; original: %u, recovered: %u",
+				fso.age_, recovered_obj->age_);
+		return false;
+	}
+
 	delete recovered_obj;
 
 	LOG_INFO("Flow State Object Encoder tested successfully");
@@ -637,8 +646,8 @@ bool test_flow_state_object(rinad::Encoder * encoder) {
 
 bool test_flow_state_object_list(rinad::Encoder * encoder) {
 	std::list<rinad::FlowStateObject *> fso_list;
-	rinad::FlowStateObject fso1 = rinad::FlowStateObject(23, 1, 34, 2, true, 123, 434);
-	rinad::FlowStateObject fso2 = rinad::FlowStateObject(34, 2, 23, 1, true, 223, 434);
+	rinad::FlowStateObject fso1 = rinad::FlowStateObject(23, 1, 2, true, 123, 434);
+	rinad::FlowStateObject fso2 = rinad::FlowStateObject(34, 2, 1, true, 223, 434);
 	std::list<rinad::FlowStateObject*> * recovered_obj = 0;
 
 	fso_list.push_back(&fso1);
