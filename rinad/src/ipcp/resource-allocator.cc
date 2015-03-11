@@ -324,17 +324,18 @@ std::list<int> NMinusOneFlowManager::getNMinusOneFlowsToNeighbour(unsigned int a
 	return result;
 }
 
-bool NMinusOneFlowManager::hasNMinusOneFlowToNeighbour(const std::string& apn,
+unsigned int NMinusOneFlowManager::numberOfFlowsToNeighbour(const std::string& apn,
 		const std::string& api) {
 	std::vector<rina::Flow *> flows = rina::extendedIPCManager->getAllocatedFlows();
+	unsigned int result = 0;
 	for (unsigned int i=0; i<flows.size(); i++) {
 		if (flows[i]->getFlowInformation().remoteAppName.processName == apn &&
 				flows[i]->getFlowInformation().remoteAppName.processInstance == api) {
-			return true;
+			result ++;
 		}
 	}
 
-	return false;
+	return result;
 }
 
 //CLASS Resource Allocator

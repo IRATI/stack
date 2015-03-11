@@ -1029,9 +1029,11 @@ void LinkStatePDUFTGeneratorPolicy::processNeighborLostEvent(
 void LinkStatePDUFTGeneratorPolicy::processFlowAllocatedEvent(
 		NMinusOneFlowAllocatedEvent * event)
 {
+	LOG_DBG("Here");
+
 	if (ipc_process_->resource_allocator_->get_n_minus_one_flow_manager()->
-			hasNMinusOneFlowToNeighbour(event->flow_information_.remoteAppName.processName,
-					event->flow_information_.remoteAppName.processInstance)) {
+			numberOfFlowsToNeighbour(event->flow_information_.remoteAppName.processName,
+					event->flow_information_.remoteAppName.processInstance) > 1) {
 		LOG_DBG("Already had an N-1 flow with this neighbor IPCP");
 		//TODO update the cost of the FlowStateObject
 		return;

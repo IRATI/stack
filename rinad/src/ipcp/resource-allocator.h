@@ -44,7 +44,7 @@ public:
 	bool isSupportingDIF(const rina::ApplicationProcessNamingInformation& difName);
 	std::list<rina::FlowInformation> getAllNMinusOneFlowInformation() const;
 	std::list<int> getNMinusOneFlowsToNeighbour(unsigned int address);
-	bool hasNMinusOneFlowToNeighbour(const std::string& apn,
+	unsigned int numberOfFlowsToNeighbour(const std::string& apn,
 			const std::string& api);
 
 private:

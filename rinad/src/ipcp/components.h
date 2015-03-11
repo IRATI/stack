@@ -485,7 +485,7 @@ public:
 
 	virtual std::list<int> getNMinusOneFlowsToNeighbour(unsigned int address) = 0;
 
-	virtual bool hasNMinusOneFlowToNeighbour(const std::string& apn,
+	virtual unsigned int numberOfFlowsToNeighbour(const std::string& apn,
 			const std::string& api) = 0;
 };
 
