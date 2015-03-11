@@ -19,6 +19,7 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
+#include <assert.h>
 #include <climits>
 #include <sstream>
 
@@ -1153,38 +1154,10 @@ void LinkStatePDUFTGeneratorPolicy::forwardingTableUpdate()
 			routing_algorithm_->computeRoutingTable(flow_state_objects,
 					source_vertex_);
 
-	LOG_DBG("Got %d entries in the routing table", rt.size());
-	//Compute PDU Forwarding Table
-	std::list<rina::PDUForwardingTableEntry *> pduft;
-	std::list<RoutingTableEntry *>::const_iterator it;
-	rina::PDUForwardingTableEntry * entry;
-	std::list<int> flows;
-	for (it = rt.begin(); it!= rt.end(); ++it){
-		entry = new rina::PDUForwardingTableEntry();
-		entry->address = (*it)->address;
-		entry->qosId = (*it)->qosId;
-
-		LOG_DBG("Processing entry for destination %u", (*it)->address);
-		LOG_DBG("Next hop address %u", (*it)->nextHopAddresses.front());
-
-		flows = ipc_process_->resource_allocator_->get_n_minus_one_flow_manager()->
-				getNMinusOneFlowsToNeighbour((*it)->nextHopAddresses.front());
-
-		if (flows.size() == 0) {
-			delete entry;
-		} else {
-			LOG_DBG("N-1 port-id: %u", flows.front());
-			entry->portIds.push_back(flows.front());
-			pduft.push_back(entry);
-		}
-	}
-
-	try {
-		rina::kernelIPCProcess->modifyPDUForwardingTableEntries(pduft, 2);
-	} catch (Exception & e) {
-		LOG_ERR("Error setting PDU Forwarding Table in the kernel: %s",
-				e.what());
-	}
+    IResourceAllocatorPs *raps =
+    		dynamic_cast<IResourceAllocatorPs *>(ipc_process_->resource_allocator_->ps);
+    assert(raps);
+    raps->routingTableUpdated(rt);
 }
 
 void LinkStatePDUFTGeneratorPolicy::writeMessageReceived(

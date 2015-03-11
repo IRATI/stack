@@ -388,6 +388,20 @@ IPDUForwardingTableGenerator * ResourceAllocator::get_pdu_forwarding_table_gener
 	return pdu_forwarding_table_generator_;
 }
 
+int ResourceAllocator::select_policy_set(const std::string& path,
+                                     const std::string& name)
+{
+  return select_policy_set_common(ipcp, "resource-allocator",
+                                  path, name);
+}
+
+int ResourceAllocator::set_policy_set_param(const std::string& path,
+                                        const std::string& name,
+                                        const std::string& value)
+{
+  return set_policy_set_param_common(ipcp, path, name, value);
+}
+
 //Class DIF registration RIB Object
 DIFRegistrationRIBObject::DIFRegistrationRIBObject(IPCProcess* ipc_process,
 		const std::string& object_class,

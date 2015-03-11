@@ -148,23 +148,6 @@ private:
 	void init_edges();
 };
 
-class RoutingTableEntry {
-public:
-	/** The destination address */
-	unsigned int address;
-
-	/** The qos-id */
-	unsigned int qosId;
-
-	/** The cost */
-	unsigned int cost;
-
-	/** The next hop addresses */
-	std::list<unsigned int> nextHopAddresses;
-
-	RoutingTableEntry();
-};
-
 class IRoutingAlgorithm {
 public:
 	virtual ~IRoutingAlgorithm(){};

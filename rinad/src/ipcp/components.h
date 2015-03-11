@@ -506,6 +506,37 @@ public:
 	virtual IPDUFTGeneratorPolicy * get_pdu_ft_generator_policy() const = 0;
 };
 
+
+/// An entry of the routing table
+class RoutingTableEntry {
+public:
+	/** The destination address */
+	unsigned int address;
+
+	/** The qos-id */
+	unsigned int qosId;
+
+	/** The cost */
+	unsigned int cost;
+
+	/** The next hop addresses */
+	std::list<unsigned int> nextHopAddresses;
+
+	RoutingTableEntry();
+};
+
+/// Resource Allocator Policy Set Interface
+class IResourceAllocatorPs : public IPolicySet {
+// This class is used by the IPCP to access the plugin functionalities
+public:
+	/// The routing table has been updated; decide if
+	/// the PDU Forwarding Table has to be updated and do it
+	///	@return true if valid, false otherwise
+	virtual void routingTableUpdated(const std::list<RoutingTableEntry*>& routing_table) = 0;
+
+	virtual ~IResourceAllocatorPs() {}
+};
+
 /// Resource Allocator Interface
 /// The Resource Allocator (RA) is the core of management in the IPC Process.
 /// The degree of decentralization depends on the policies and how it is used. The RA has a set of meters

@@ -99,6 +99,11 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
                 throw Exception("Cannot create namespace manager policy-set");
         }
 
+        resource_allocator_->select_policy_set(std::string(), "default");
+        if (!resource_allocator_->ps) {
+                throw Exception("Cannot create resource allocator policy-set");
+        }
+
 	try {
 		rina::extendedIPCManager->notifyIPCProcessInitialized(name_);
 	} catch (Exception &e) {
@@ -148,6 +153,9 @@ IPCProcessImpl::~IPCProcessImpl() {
 	}
 
 	if (resource_allocator_) {
+		psDestroy("resource-allocator",
+					resource_allocator_->selected_ps_name,
+					resource_allocator_->ps);
 		delete resource_allocator_;
 	}
 

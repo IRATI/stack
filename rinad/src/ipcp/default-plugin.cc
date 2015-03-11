@@ -20,12 +20,19 @@ createNamespaceManagerPs(IPCProcessComponent * context);
 extern "C" void
 destroyNamespaceManagerPs(IPolicySet * instance);
 
+extern "C" IPolicySet *
+createResourceAllocatorPs(IPCProcessComponent * context);
+
+extern "C" void
+destroyResourceAllocatorPs(IPolicySet * instance);
+
 extern "C" int
 init(IPCProcess * ipc_process, const std::string& plugin_name)
 {
         struct PsFactory sm_factory;
         struct PsFactory fa_factory;
         struct PsFactory nsm_factory;
+        struct PsFactory ra_factory;
         int ret;
 
         sm_factory.plugin_name = plugin_name;
@@ -57,6 +64,17 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
         nsm_factory.destroy = destroyNamespaceManagerPs;
 
         ret = ipc_process->psFactoryPublish(nsm_factory);
+        if (ret) {
+                return ret;
+        }
+
+        ra_factory.plugin_name = plugin_name;
+        ra_factory.name = "default";
+        ra_factory.component = "resource-allocator";
+        ra_factory.create = createResourceAllocatorPs;
+        ra_factory.destroy = destroyResourceAllocatorPs;
+
+        ret = ipc_process->psFactoryPublish(ra_factory);
         if (ret) {
                 return ret;
         }
