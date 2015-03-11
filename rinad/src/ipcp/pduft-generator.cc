@@ -69,14 +69,13 @@ IPDUFTGeneratorPolicy * PDUForwardingTableGenerator::get_pdu_ft_generator_policy
 }
 
 //Class Flow State Object
-FlowStateObject::FlowStateObject(unsigned int address, int port_id,
-		unsigned int neighbor_address, int neighbor_port_id, bool up,
+FlowStateObject::FlowStateObject(unsigned int address,
+		unsigned int neighbor_address, unsigned int cost, bool up,
 		int sequence_number, int age)
 {
 	address_ = address;
-	port_id_ = port_id;
 	neighbor_address_ = neighbor_address;
-	neighbor_port_id_ = neighbor_port_id;
+	cost_ = cost;
 	up_ = up;
 	sequence_number_ = sequence_number;
 	age_ = age;
@@ -94,9 +93,7 @@ const std::string FlowStateObject::toString()
 {
 	std::stringstream ss;
 	ss << "Address: " << address_ << "; Neighbor address: " << neighbor_address_
-			<< std::endl;
-	ss << "Port-id: " << port_id_ << "; Neighbor port-id: " << neighbor_port_id_
-			<< std::endl;
+			<< "; cost: " << cost_ << std::endl;
 	ss << "Up: " << up_ << "; Sequence number: " << sequence_number_
 			<< "; Age: " + age_;
 
@@ -104,13 +101,10 @@ const std::string FlowStateObject::toString()
 }
 
 //Class Edge
-Edge::Edge(unsigned int address1, int portV1, unsigned int address2, int portV2,
-		int weight)
+Edge::Edge(unsigned int address1, unsigned int address2, int weight)
 {
 	address1_ = address1;
 	address2_ = address2;
-	port_v1_ = portV1;
-	port_v2_ = portV2;
 	weight_ = weight;
 }
 
@@ -264,16 +258,20 @@ void Graph::init_edges()
 		if (origin->connection_contains_address(dest->address_)
 				&& dest->connection_contains_address(origin->address_)) {
 			edges_.push_back(
-					new Edge(origin->address_, (*flowIt)->port_id_,
-							dest->address_, dest->port_id_, 1));
+					new Edge(origin->address_, dest->address_, 1));
 			origin->connections.remove(dest->address_);
 			dest->connections.remove(origin->address_);
 		} else {
-			origin->port_id_ = (*flowIt)->port_id_;
 			origin->connections.push_back(dest->address_);
 			dest->connections.push_back(origin->address_);
 		}
 	}
+}
+
+RoutingTableEntry::RoutingTableEntry(){
+	address = 0;
+	cost = 1;
+	qosId = 0;
 }
 
 Graph::CheckedVertex * Graph::get_checked_vertex(unsigned int address) const
@@ -289,20 +287,9 @@ Graph::CheckedVertex * Graph::get_checked_vertex(unsigned int address) const
 }
 
 //Class Predecessor Info
-PredecessorInfo::PredecessorInfo(unsigned int nPredecessor, Edge * edge)
-{
-	predecessor_ = nPredecessor;
-	if (edge->address1_ == nPredecessor) {
-		port_id_ = edge->port_v1_;
-	} else {
-		port_id_ = edge->port_v2_;
-	}
-}
-
 PredecessorInfo::PredecessorInfo(unsigned int nPredecessor)
 {
 	predecessor_ = nPredecessor;
-	port_id_ = -1;
 }
 
 //Class DijsktraAlgorithm
@@ -311,14 +298,14 @@ DijkstraAlgorithm::DijkstraAlgorithm()
 	graph_ = 0;
 }
 
-std::list<rina::PDUForwardingTableEntry *> DijkstraAlgorithm::computePDUTForwardingTable(
+std::list<RoutingTableEntry *> DijkstraAlgorithm::computeRoutingTable(
 		const std::list<FlowStateObject *>& fsoList,
 		unsigned int source_address)
 {
-	std::list<rina::PDUForwardingTableEntry *> result;
+	std::list<RoutingTableEntry *> result;
 	std::list<unsigned int>::iterator it;
 	PredecessorInfo * nextNode;
-	rina::PDUForwardingTableEntry * entry;
+	RoutingTableEntry * entry;
 
 	graph_ = new Graph(fsoList);
 
@@ -328,11 +315,14 @@ std::list<rina::PDUForwardingTableEntry *> DijkstraAlgorithm::computePDUTForward
 		if ((*it) != source_address) {
 			nextNode = getNextNode((*it), source_address);
 			if (nextNode) {
-				entry = new rina::PDUForwardingTableEntry();
-				entry->setAddress((*it));
-				entry->addPortId(nextNode->port_id_);
-				entry->setQosId(1);
+				entry = new RoutingTableEntry();
+				entry->address = (*it);
+				entry->nextHopAddresses.push_back(nextNode->predecessor_);
+				entry->qosId = 1;
+				entry->cost = 1;
 				result.push_back(entry);
+				LOG_DBG("Added entry to routing table: destination %u, next-hop %u",
+						entry->address, nextNode->predecessor_);
 			}
 		}
 	}
@@ -405,7 +395,7 @@ void DijkstraAlgorithm::findMinimalDistances(unsigned int node)
 			shortestDistance = getShortestDistance(node) + (*edgeIt)->weight_;
 			if (getShortestDistance(target) > shortestDistance) {
 				distances_[target] = shortestDistance;
-				predecessors_[target] = new PredecessorInfo(node, (*edgeIt));
+				predecessors_[target] = new PredecessorInfo(node);
 				unsettled_nodes_.insert(target);
 			}
 		}
@@ -533,11 +523,11 @@ void FlowStateDatabase::setAvoidPort(int avoidPort)
 	}
 }
 
-void FlowStateDatabase::addObjectToGroup(unsigned int address, int portId,
-		unsigned int neighborAddress, int neighborPortId)
+void FlowStateDatabase::addObjectToGroup(unsigned int address,
+		unsigned int neighborAddress, unsigned int cost, int avoid_port)
 {
-	FlowStateObject * newObject = new FlowStateObject(address, portId,
-			neighborAddress, neighborPortId, true, 1, 0);
+	FlowStateObject * newObject = new FlowStateObject(address,
+			neighborAddress, cost, true, 1, 0);
 
 	for (std::list<FlowStateObject *>::iterator it =
 			flow_state_objects_.begin(); it != flow_state_objects_.end();
@@ -545,7 +535,7 @@ void FlowStateDatabase::addObjectToGroup(unsigned int address, int portId,
 		if ((*it)->object_name_.compare(newObject->object_name_) == 0) {
 			delete newObject;
 			(*it)->age_ = 0;
-			(*it)->avoid_port_ = portId;
+			(*it)->avoid_port_ = avoid_port;
 			(*it)->being_erased_ = false;
 			(*it)->up_ = true;
 			(*it)->sequence_number_ = 1;
@@ -561,12 +551,12 @@ void FlowStateDatabase::addObjectToGroup(unsigned int address, int portId,
 	modified_ = true;
 }
 
-FlowStateObject * FlowStateDatabase::getByPortId(int portId)
+FlowStateObject * FlowStateDatabase::getByAddress(unsigned int address)
 {
 	std::list<FlowStateObject *>::iterator it;
 	for (it = flow_state_objects_.begin(); it != flow_state_objects_.end();
 			++it) {
-		if ((*it)->port_id_ == portId) {
+		if ((*it)->neighbor_address_ == address) {
 			return (*it);
 		}
 	}
@@ -574,9 +564,9 @@ FlowStateObject * FlowStateDatabase::getByPortId(int portId)
 	return 0;
 }
 
-void FlowStateDatabase::deprecateObject(int port_id)
+void FlowStateDatabase::deprecateObject(unsigned int address)
 {
-	FlowStateObject * fso = getByPortId(port_id);
+	FlowStateObject * fso = getByAddress(address);
 	if (!fso) {
 		return;
 	}
@@ -585,7 +575,6 @@ void FlowStateDatabase::deprecateObject(int port_id)
 	fso->up_ = false;
 	fso->age_ = *maximum_age_;
 	fso->sequence_number_ = fso->sequence_number_ + 1;
-	fso->avoid_port_ = port_id;
 	fso->modified_ = true;
 	modified_ = true;
 }
@@ -825,8 +814,7 @@ void KillFlowStateObjectTimerTask::run()
 		for (it = fs_db_->flow_state_objects_.begin();
 				it != fs_db_->flow_state_objects_.end(); ++it) {
 			if ((*it)->address_ == fso_->address_
-					&& (*it)->neighbor_address_ == fso_->neighbor_address_
-					&& (*it)->port_id_ == fso_->port_id_) {
+					&& (*it)->neighbor_address_ == fso_->neighbor_address_) {
 				fs_db_->flow_state_objects_.erase(it);
 				break;
 			}
@@ -946,6 +934,7 @@ void LinkStatePDUFTGeneratorPolicy::subscribeToEvents()
 	rib_daemon_->subscribeToEvent(IPCP_EVENT_N_MINUS_1_FLOW_DEALLOCATED, this);
 	rib_daemon_->subscribeToEvent(IPCP_EVENT_N_MINUS_1_FLOW_ALLOCATED, this);
 	rib_daemon_->subscribeToEvent(IPCP_EVENT_NEIGHBOR_ADDED, this);
+	rib_daemon_->subscribeToEvent(IPCP_EVENT_CONNECTIVITY_TO_NEIGHBOR_LOST, this);
 }
 
 void LinkStatePDUFTGeneratorPolicy::set_dif_configuration(
@@ -1010,6 +999,9 @@ void LinkStatePDUFTGeneratorPolicy::eventHappened(Event * event)
 	} else if (event->get_id() == IPCP_EVENT_NEIGHBOR_ADDED) {
 		NeighborAddedEvent * neighEvent = (NeighborAddedEvent *) event;
 		processNeighborAddedEvent(neighEvent);
+	} else if (event->get_id() == IPCP_EVENT_CONNECTIVITY_TO_NEIGHBOR_LOST) {
+		ConnectiviyToNeighborLostEvent * neighEvent = (ConnectiviyToNeighborLostEvent *) event;
+		processNeighborLostEvent(neighEvent);
 	}
 }
 
@@ -1025,17 +1017,31 @@ void LinkStatePDUFTGeneratorPolicy::processFlowDeallocatedEvent(
 		}
 	}
 
-	db_->deprecateObject(event->port_id_);
+	LOG_DBG("N-1 Flow with neighbor lost");
+	//TODO update cost
+}
+
+void LinkStatePDUFTGeneratorPolicy::processNeighborLostEvent(
+		ConnectiviyToNeighborLostEvent * event) {
+	db_->deprecateObject(event->neighbor_->address_);
 }
 
 void LinkStatePDUFTGeneratorPolicy::processFlowAllocatedEvent(
 		NMinusOneFlowAllocatedEvent * event)
 {
+	if (ipc_process_->resource_allocator_->get_n_minus_one_flow_manager()->
+			hasNMinusOneFlowToNeighbour(event->flow_information_.remoteAppName.processName,
+					event->flow_information_.remoteAppName.processInstance)) {
+		LOG_DBG("Already had an N-1 flow with this neighbor IPCP");
+		//TODO update the cost of the FlowStateObject
+		return;
+	}
+
 	try {
 		db_->addObjectToGroup(ipc_process_->get_address(),
-				event->flow_information_.portId,
 				ipc_process_->namespace_manager_->getAdressByname(
-						event->flow_information_.remoteAppName), 1);
+						event->flow_information_.remoteAppName), 1,
+						event->flow_information_.portId);
 	} catch (Exception &e) {
 		LOG_DBG("flow allocation waiting for enrollment");
 		allocated_flows_.push_back(event->flow_information_);
@@ -1054,9 +1060,9 @@ void LinkStatePDUFTGeneratorPolicy::processNeighborAddedEvent(
 			LOG_INFO(
 					"There was an allocation flow event waiting for enrollment, launching it");
 			try {
-				db_->addObjectToGroup(ipc_process_->get_address(), it->portId,
+				db_->addObjectToGroup(ipc_process_->get_address(),
 						ipc_process_->namespace_manager_->getAdressByname(
-								event->neighbor_->get_name()), 1);
+								event->neighbor_->get_name()), 1, it->portId);
 				allocated_flows_.erase(it);
 				break;
 			} catch (Exception &e) {
@@ -1141,9 +1147,30 @@ void LinkStatePDUFTGeneratorPolicy::forwardingTableUpdate()
 	db_->modified_ = false;
 	std::list<FlowStateObject *> flow_state_objects;
 	db_->getAllFSOs(flow_state_objects);
-	std::list<rina::PDUForwardingTableEntry *> pduft =
-			routing_algorithm_->computePDUTForwardingTable(flow_state_objects,
+	std::list<RoutingTableEntry *> rt =
+			routing_algorithm_->computeRoutingTable(flow_state_objects,
 					source_vertex_);
+
+	//Compute PDU Forwarding Table
+	std::list<rina::PDUForwardingTableEntry *> pduft;
+	std::list<RoutingTableEntry *>::const_iterator it;
+	rina::PDUForwardingTableEntry * entry;
+	std::list<int> flows;
+	for (it = rt.begin(); it!= rt.end(); ++it){
+		entry = new rina::PDUForwardingTableEntry();
+		entry->address = (*it)->address;
+		entry->qosId = (*it)->qosId;
+
+		flows = ipc_process_->resource_allocator_->get_n_minus_one_flow_manager()->
+				getNMinusOneFlowsToNeighbour((*it)->nextHopAddresses.front());
+		if (flows.size() == 0) {
+			delete entry;
+		} else {
+			entry->portIds.push_back(flows.front());
+			pduft.push_back(entry);
+		}
+	}
+
 	try {
 		rina::kernelIPCProcess->modifyPDUForwardingTableEntries(pduft, 2);
 	} catch (Exception & e) {
@@ -1222,10 +1249,9 @@ void FlowStateObjectEncoder::convertModelToGPB(
 	gpb_fso->set_address(fso->address_);
 	gpb_fso->set_age(fso->age_);
 	gpb_fso->set_neighbor_address(fso->neighbor_address_);
-	gpb_fso->set_neighbor_portid(fso->neighbor_port_id_);
-	gpb_fso->set_portid(fso->port_id_);
-	gpb_fso->set_sequence_number(fso->sequence_number_);
+	gpb_fso->set_cost(fso->cost_);
 	gpb_fso->set_state(fso->up_);
+	gpb_fso->set_sequence_number(fso->sequence_number_);
 
 	return;
 }
@@ -1234,8 +1260,8 @@ FlowStateObject * FlowStateObjectEncoder::convertGPBToModel(
 		const rina::messages::flowStateObject_t & gpb_fso)
 {
 	FlowStateObject * fso = new FlowStateObject(gpb_fso.address(),
-			gpb_fso.portid(), gpb_fso.neighbor_address(),
-			gpb_fso.neighbor_portid(), gpb_fso.state(),
+			gpb_fso.neighbor_address(),
+			gpb_fso.cost(), gpb_fso.state(),
 			gpb_fso.sequence_number(), gpb_fso.age());
 
 	return fso;

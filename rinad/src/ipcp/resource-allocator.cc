@@ -309,6 +309,34 @@ std::list<rina::FlowInformation> NMinusOneFlowManager::getAllNMinusOneFlowInform
 	return result;
 }
 
+std::list<int> NMinusOneFlowManager::getNMinusOneFlowsToNeighbour(unsigned int address) {
+	std::vector<rina::Flow *> flows = rina::extendedIPCManager->getAllocatedFlows();
+	std::list<int> result;
+	unsigned int target_address = 0;
+	for (unsigned int i=0; i<flows.size(); i++) {
+		target_address = ipc_process_->namespace_manager_->getAdressByname(
+				flows[i]->getFlowInformation().remoteAppName);
+		if (target_address == address) {
+			result.push_back(flows[i]->getPortId());
+		}
+	}
+
+	return result;
+}
+
+bool NMinusOneFlowManager::hasNMinusOneFlowToNeighbour(const std::string& apn,
+		const std::string& api) {
+	std::vector<rina::Flow *> flows = rina::extendedIPCManager->getAllocatedFlows();
+	for (unsigned int i=0; i<flows.size(); i++) {
+		if (flows[i]->getFlowInformation().remoteAppName.processName == apn &&
+				flows[i]->getFlowInformation().remoteAppName.processInstance == api) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 //CLASS Resource Allocator
 ResourceAllocator::ResourceAllocator() {
 	n_minus_one_flow_manager_ = new NMinusOneFlowManager();

@@ -482,6 +482,11 @@ public:
 	virtual bool isSupportingDIF(const rina::ApplicationProcessNamingInformation& difName) = 0;
 
 	virtual std::list<rina::FlowInformation> getAllNMinusOneFlowInformation() const = 0;
+
+	virtual std::list<int> getNMinusOneFlowsToNeighbour(unsigned int address) = 0;
+
+	virtual bool hasNMinusOneFlowToNeighbour(const std::string& apn,
+			const std::string& api) = 0;
 };
 
 /// Interface PDU Forwarding Table Generator Policy
