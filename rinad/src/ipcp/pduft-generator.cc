@@ -316,7 +316,7 @@ std::list<RoutingTableEntry *> DijkstraAlgorithm::computeRoutingTable(
 {
 	std::list<RoutingTableEntry *> result;
 	std::list<unsigned int>::iterator it;
-	PredecessorInfo * nextNode;
+	unsigned int nextHop;
 	RoutingTableEntry * entry;
 
 	graph_ = new Graph(fsoList);
@@ -325,16 +325,16 @@ std::list<RoutingTableEntry *> DijkstraAlgorithm::computeRoutingTable(
 
 	for (it = graph_->vertices_.begin(); it != graph_->vertices_.end(); ++it) {
 		if ((*it) != source_address) {
-			nextNode = getNextNode((*it), source_address);
-			if (nextNode) {
+			nextHop = getNextHop((*it), source_address);
+			if (nextHop != 0) {
 				entry = new RoutingTableEntry();
 				entry->address = (*it);
-				entry->nextHopAddresses.push_back(nextNode->predecessor_);
+				entry->nextHopAddresses.push_back(nextHop);
 				entry->qosId = 1;
 				entry->cost = 1;
 				result.push_back(entry);
 				LOG_DBG("Added entry to routing table: destination %u, next-hop %u",
-						entry->address, nextNode->predecessor_);
+						entry->address, nextHop);
 			}
 		}
 	}
@@ -438,11 +438,12 @@ bool DijkstraAlgorithm::isSettled(unsigned int node) const
 	return false;
 }
 
-PredecessorInfo * DijkstraAlgorithm::getNextNode(unsigned int target,
+unsigned int DijkstraAlgorithm::getNextHop(unsigned int target,
 		unsigned int source)
 {
 	std::map<unsigned int, PredecessorInfo *>::iterator it;
 	PredecessorInfo * step;
+	unsigned int nextHop = target;
 
 	it = predecessors_.find(target);
 	if (it == predecessors_.end()) {
@@ -453,6 +454,7 @@ PredecessorInfo * DijkstraAlgorithm::getNextNode(unsigned int target,
 
 	it = predecessors_.find(step->predecessor_);
 	while (it != predecessors_.end()) {
+		nextHop = step->predecessor_;
 		step = it->second;
 		if (step->predecessor_ == source) {
 			break;
@@ -465,7 +467,7 @@ PredecessorInfo * DijkstraAlgorithm::getNextNode(unsigned int target,
 		return 0;
 	}
 
-	return step;
+	return nextHop;
 }
 
 //Class FlowState RIB Object Group
@@ -1163,6 +1165,7 @@ void LinkStatePDUFTGeneratorPolicy::forwardingTableUpdate()
 			routing_algorithm_->computeRoutingTable(flow_state_objects,
 					source_vertex_);
 
+	LOG_DBG("Got %d entries in the routing table", rt.size());
 	//Compute PDU Forwarding Table
 	std::list<rina::PDUForwardingTableEntry *> pduft;
 	std::list<RoutingTableEntry *>::const_iterator it;
@@ -1173,11 +1176,16 @@ void LinkStatePDUFTGeneratorPolicy::forwardingTableUpdate()
 		entry->address = (*it)->address;
 		entry->qosId = (*it)->qosId;
 
+		LOG_DBG("Processing entry for destination %u", (*it)->address);
+		LOG_DBG("Next hop address %u", (*it)->nextHopAddresses.front());
+
 		flows = ipc_process_->resource_allocator_->get_n_minus_one_flow_manager()->
 				getNMinusOneFlowsToNeighbour((*it)->nextHopAddresses.front());
+
 		if (flows.size() == 0) {
 			delete entry;
 		} else {
+			LOG_DBG("N-1 port-id: %u", flows.front());
 			entry->portIds.push_back(flows.front());
 			pduft.push_back(entry);
 		}

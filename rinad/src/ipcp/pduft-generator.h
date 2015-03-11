@@ -207,7 +207,7 @@ private:
 	int getShortestDistance(unsigned int destination) const;
 	bool isNeighbor(Edge * edge, unsigned int node) const;
 	bool isSettled(unsigned int node) const;
-	PredecessorInfo * getNextNode(unsigned int address, unsigned int sourceAddress);
+	unsigned int getNextHop(unsigned int address, unsigned int sourceAddress);
 };
 
 class LinkStatePDUFTGeneratorPolicy;
