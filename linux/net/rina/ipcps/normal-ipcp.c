@@ -387,22 +387,29 @@ static int connection_destroy_request(struct ipcp_instance_data * data,
 {
         struct normal_flow * flow;
 
-        if (efcp_connection_destroy(data->efcpc, src_cep_id))
+        if (!data) {
+                LOG_ERR("Bogus instance passed");
                 return -1;
-
-        if (!(&data->flows))
-                return -1;
+        }
 
         spin_lock(&data->lock);
+        if (efcp_connection_destroy(data->efcpc, src_cep_id))
+                LOG_ERR("Could not destroy EFCP instance: %d", src_cep_id);
+
+        if (!(&data->flows)) {
+                spin_unlock(&data->lock);
+                LOG_ERR("Could not destroy EFCP instance: %d", src_cep_id);
+                return -1;
+        }
         flow = find_flow_cepid(data, src_cep_id);
         if (!flow) {
                 spin_unlock(&data->lock);
                 LOG_ERR("Could not retrieve flow by cep_id :%d", src_cep_id);
+                return -1;
         }
-        if (remove_cep_id_from_flow(flow, src_cep_id)) {
-                spin_unlock(&data->lock);
+        if (remove_cep_id_from_flow(flow, src_cep_id))
                 LOG_ERR("Could not remove cep_id: %d", src_cep_id);
-        }
+
         if (list_empty(&flow->cep_ids_list))
                 rkfree(flow);
         spin_unlock(&data->lock);
@@ -529,8 +536,10 @@ static int normal_deallocate(struct ipcp_instance_data * data,
                 return -1;
         }
 
+        spin_lock(&data->lock);
         flow = find_flow(data, port_id);
         if (!flow) {
+                spin_unlock(&data->lock);
                 LOG_ERR("Could not find flow %d to deallocate", port_id);
                 return -1;
         }
@@ -539,6 +548,8 @@ static int normal_deallocate(struct ipcp_instance_data * data,
 
         list_del(&flow->list);
         rkfree(flow);
+
+        spin_unlock(&data->lock);
 
         return 0;
 }
