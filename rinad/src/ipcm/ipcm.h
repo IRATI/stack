@@ -21,6 +21,7 @@
 #ifndef __IPCM_H__
 #define __IPCM_H__
 
+#include <assert.h>
 #include <cstdlib>
 #include <iostream>
 #include <map>
@@ -56,6 +57,24 @@
 #endif //FLUSH_LOG
 
 namespace rinad {
+
+
+//
+// This base class encapsulates the generics of any two-step, so requiring
+// interaction with the kernel, API call.
+//
+class TransactionState {
+
+public:
+	TransactionState(int _tid):tid(_tid){};
+	virtual ~TransactionState();
+
+	//Transaction id
+	int tid;
+
+	//Condition variable
+	rina::ConditionVariable wait_cond;
+};
 
 //
 //
@@ -388,6 +407,7 @@ protected:
 	void ipc_process_select_policy_set_response_handler(
 							rina::IPCEvent *e);
 
+/**********************************************************/
 	//
 	// TODO: revise
 	//
@@ -460,6 +480,59 @@ protected:
         std::map<unsigned int,
                  rina::IPCProcess *> pending_plugin_load_ops;
 	/* FIXME REMOVE THIS*/
+
+/**********************************************************/
+
+	/*
+	* Get the transaction state. Template parameter is the type of the
+	* specific state required for the type of transaction
+	*
+	* @ret A pointer to the state or NULL
+	* @warning This method does NOT throw exceptions.
+	*/
+	template<typename T>
+	T* get_transaction_state(int tid){
+		T* t;
+		TransactionState* state;
+
+		//Rwlock: read
+		if ( pend_transactions.find(tid) == pend_transactions.end() ) {
+			state = pend_transactions[tid];
+			assert(state->tid == tid);
+			try{
+				t = dynamic_cast<T*>(state);
+				return t;
+			}catch(...){
+				assert(0);
+				return NULL;
+			}
+		}
+		return NULL;
+	}
+
+	/*
+	* Add the transaction state. Template parameter is the type of the
+	* specific state required for the type of transaction
+	*
+	* @ret 0 if success -1 otherwise.
+	*/
+	int add_transaction_state(int tid, TransactionState* t);
+
+	/*
+	* Remove transaction state. Template parameter is the type of the
+	* specific state required for the type of transaction
+	*
+	* @ret 0 if success -1 otherwise.
+	*/
+	int remove_transaction_state(int tid);
+
+	/*
+	* This map encapsulates the existing transactions and their state
+	*
+	* The state of the transaction includes the input *and* the output
+	* parameters for the specific operation that was started
+	*/
+	std::map<int, TransactionState*> pend_transactions;
 
 	//Script thread
         rina::Thread *script;

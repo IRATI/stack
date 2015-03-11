@@ -1025,6 +1025,39 @@ IPCManager_::plugin_load(const int ipcp_id,
         return ret;
 }
 
+//State management routines
+int IPCManager_::add_transaction_state(int tid, TransactionState* t){
+	//Rwlock: write
+
+	//Check if exists already
+	if ( pend_transactions.find(tid) != pend_transactions.end() ){
+		assert(0); //Transaction id repeated
+		return -1;
+	}
+
+	//Just add and return
+	try{
+		pend_transactions[tid] = t;
+	}catch(...){
+		LOG_DBG("Could not add transaction %u. Out of memory?", tid);
+		assert(0);
+		return -1;
+	}
+	return 0;
+}
+
+int IPCManager_::remove_transaction_state(int tid){
+	//Rwlock: write
+
+	//Check if it really exists
+	if ( pend_transactions.find(tid) == pend_transactions.end() )
+		return -1;
+
+	pend_transactions.erase(tid);
+
+	return 0;
+}
+
 //Main I/O loop
 void IPCManager_::run(){
 
