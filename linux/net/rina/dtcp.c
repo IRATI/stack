@@ -537,6 +537,8 @@ void dump_we(struct dtcp * dtcp, struct pci *  pci)
         seq_num_t    my_lf_we;
         seq_num_t    ack;
 
+        (void)cwq_lf_we; /* avoid compiler barfs */
+
         ASSERT(dtcp);
         ASSERT(pci);
 

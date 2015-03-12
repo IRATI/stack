@@ -391,11 +391,10 @@ static int connection_destroy_request(struct ipcp_instance_data * data,
                 LOG_ERR("Bogus instance passed");
                 return -1;
         }
-
-        spin_lock(&data->lock);
         if (efcp_connection_destroy(data->efcpc, src_cep_id))
                 LOG_ERR("Could not destroy EFCP instance: %d", src_cep_id);
 
+        spin_lock(&data->lock);
         if (!(&data->flows)) {
                 spin_unlock(&data->lock);
                 LOG_ERR("Could not destroy EFCP instance: %d", src_cep_id);
@@ -543,13 +542,13 @@ static int normal_deallocate(struct ipcp_instance_data * data,
                 LOG_ERR("Could not find flow %d to deallocate", port_id);
                 return -1;
         }
+        spin_unlock(&data->lock);
+
         if (remove_all_cepid(data, flow))
                 LOG_ERR("Some efcp structures could not be destroyed");
 
         list_del(&flow->list);
         rkfree(flow);
-
-        spin_unlock(&data->lock);
 
         return 0;
 }
