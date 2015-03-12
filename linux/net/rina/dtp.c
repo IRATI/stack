@@ -1548,7 +1548,7 @@ int dtp_receive(struct dtp * instance,
                 }
         }
 
-        LOG_DBG("DTP reveive ended...");
+        LOG_DBG("DTP receive ended...");
 
  exit:
 #if DTP_INACTIVITY_TIMERS_ENABLE
