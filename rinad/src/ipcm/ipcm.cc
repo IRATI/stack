@@ -40,6 +40,10 @@
 #include "addons/scripting.h"
 //[+] Add more here...
 
+//Event transaction states
+#include "ipcp.h"
+#include "flow-alloc.h"
+#include "misc.h"
 
 //Timeouts for timed wait
 #define IPCMANAGER_TIMEOUT_S 0

@@ -519,8 +519,10 @@ protected:
 	int add_transaction_state(int tid, TransactionState* t);
 
 	/*
-	* Remove transaction state. Template parameter is the type of the
-	* specific state required for the type of transaction
+	* @Remove transaction state.
+	*
+	* Remove the transaction state from the pending transactions db. The
+	* method does NOT free (delete) the transaction pointer.
 	*
 	* @ret 0 if success -1 otherwise.
 	*/
@@ -530,9 +532,14 @@ protected:
 	* This map encapsulates the existing transactions and their state
 	*
 	* The state of the transaction includes the input *and* the output
-	* parameters for the specific operation that was started
+	* parameters for the specific operation that was started.
+	*
+	* key: transaction_id value: transaction state
 	*/
 	std::map<int, TransactionState*> pend_transactions;
+
+	//Rwlock for transactions
+	rina::ReadWriteLockable trans_rwlock;
 
 	//Script thread
         rina::Thread *script;

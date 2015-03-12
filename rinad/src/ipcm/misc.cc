@@ -32,7 +32,7 @@
 
 #include "rina-configuration.h"
 #include "helpers.h"
-#include "ipcm.h"
+#include "misc.h"
 
 using namespace std;
 
