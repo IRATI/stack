@@ -306,14 +306,14 @@ DijkstraAlgorithm::DijkstraAlgorithm()
 	graph_ = 0;
 }
 
-std::list<RoutingTableEntry *> DijkstraAlgorithm::computeRoutingTable(
+std::list<rina::RoutingTableEntry *> DijkstraAlgorithm::computeRoutingTable(
 		const std::list<FlowStateObject *>& fsoList,
 		unsigned int source_address)
 {
-	std::list<RoutingTableEntry *> result;
+	std::list<rina::RoutingTableEntry *> result;
 	std::list<unsigned int>::iterator it;
 	unsigned int nextHop;
-	RoutingTableEntry * entry;
+	rina::RoutingTableEntry * entry;
 
 	graph_ = new Graph(fsoList);
 
@@ -323,7 +323,7 @@ std::list<RoutingTableEntry *> DijkstraAlgorithm::computeRoutingTable(
 		if ((*it) != source_address) {
 			nextHop = getNextHop((*it), source_address);
 			if (nextHop != 0) {
-				entry = new RoutingTableEntry();
+				entry = new rina::RoutingTableEntry();
 				entry->address = (*it);
 				entry->nextHopAddresses.push_back(nextHop);
 				entry->qosId = 1;
@@ -469,12 +469,20 @@ unsigned int DijkstraAlgorithm::getNextHop(unsigned int target,
 //Class FlowState RIB Object Group
 FlowStateRIBObjectGroup::FlowStateRIBObjectGroup(IPCProcess * ipc_process,
 		LinkStateRoutingPolicy * lsr_policy) :
-		BaseIPCPRIBObject(ipc_process,
+		rina::BaseRIBObject(ipc_process->rib_daemon_,
 				EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
 				rina::objectInstanceGenerator->getObjectInstance(),
 				EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME)
 {
 	lsr_policy_ = lsr_policy;
+	ipc_process_ = ipc_process;
+	if (ipc_process) {
+		rib_daemon_ =  ipc_process->rib_daemon_;
+		encoder_ = ipc_process->encoder_;
+	} else {
+		rib_daemon_ = 0;
+		encoder_ = 0;
+	}
 }
 
 const void* FlowStateRIBObjectGroup::get_value() const
@@ -497,16 +505,57 @@ void FlowStateRIBObjectGroup::remoteWriteObject(void * object_value,
 void FlowStateRIBObjectGroup::createObject(const std::string& objectClass,
 		const std::string& objectName, const void* objectValue)
 {
-	SimpleSetMemberIPCPRIBObject * ribObject = new SimpleSetMemberIPCPRIBObject(
+	FlowStateRIBObject * ribObject = new FlowStateRIBObject(
 			ipc_process_, objectClass, objectName, objectValue);
 	add_child(ribObject);
 	rib_daemon_->addRIBObject(ribObject);
 }
 
+FlowStateRIBObject::FlowStateRIBObject(IPCProcess * ipc_process,
+		const std::string& objectClass,
+		const std::string& objectName, const void* object_value) :
+					rina::BaseRIBObject(ipc_process->rib_daemon_,
+							objectClass,
+							rina::objectInstanceGenerator->getObjectInstance(),
+							objectName){
+	ipc_process_ = ipc_process;
+	object_value_ = object_value;
+	if (ipc_process) {
+		rib_daemon_ =  ipc_process->rib_daemon_;
+		encoder_ = ipc_process->encoder_;
+	} else {
+		rib_daemon_ = 0;
+		encoder_ = 0;
+	}
+}
+
+const void* FlowStateRIBObject::get_value() const {
+	return object_value_;
+}
+
+void FlowStateRIBObject::writeObject(const void* object_value) {
+	object_value_ = object_value;
+}
+
+void FlowStateRIBObject::createObject(const std::string& objectClass, const std::string& objectName,
+		const void* objectValue) {
+	if (objectName.compare("") != 0 && objectClass.compare("") != 0) {
+		object_value_ = objectValue;
+	}
+}
+
+void FlowStateRIBObject::deleteObject(const void* objectValue)
+{
+        (void) objectValue; // Stop compiler barfs
+
+	parent_->remove_child(name_);
+	rib_daemon_->removeRIBObject(name_);
+}
+
 const int FlowStateDatabase::NO_AVOID_PORT = -1;
 const long FlowStateDatabase::WAIT_UNTIL_REMOVE_OBJECT = 23000;
 
-FlowStateDatabase::FlowStateDatabase(Encoder * encoder,
+FlowStateDatabase::FlowStateDatabase(rina::IMasterEncoder * encoder,
 		FlowStateRIBObjectGroup * flow_state_rib_object_group,
 		rina::Timer * timer, IPCPRIBDaemon *rib_daemon, unsigned int *maximum_age)
 {
@@ -855,9 +904,9 @@ LinkStateRoutingPolicy::LinkStateRoutingPolicy(IPCProcess * ipcp)
 {
 	test_ = false;
 	ipc_process_ = ipcp;
-	rib_daemon_ = 0;
-	encoder_ = 0;
-	cdap_session_manager_ = 0;
+	rib_daemon_ = ipc_process_->rib_daemon_;
+	encoder_ = ipc_process_->encoder_;
+	cdap_session_manager_ = ipc_process_->cdap_session_manager_;
 	fs_rib_group_ = 0;
 	routing_algorithm_ = 0;
 	source_vertex_ = 0;
@@ -866,10 +915,15 @@ LinkStateRoutingPolicy::LinkStateRoutingPolicy(IPCProcess * ipcp)
 	timer_ = new rina::Timer();
 	lock_ = new rina::Lockable();
 
-	ipcp->encoder_->addEncoder(EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
+	encoder_->addEncoder(EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
 			new FlowStateObjectEncoder());
-	ipcp->encoder_->addEncoder(EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
+	encoder_->addEncoder(EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
 			new FlowStateObjectListEncoder());
+
+	populateRIB();
+	subscribeToEvents();
+	db_ = new FlowStateDatabase(encoder_, fs_rib_group_, timer_, rib_daemon_,
+			&maximum_age_);
 }
 
 LinkStateRoutingPolicy::~LinkStateRoutingPolicy()
@@ -889,18 +943,6 @@ LinkStateRoutingPolicy::~LinkStateRoutingPolicy()
 	if (lock_) {
 		delete lock_;
 	}
-}
-
-void LinkStateRoutingPolicy::set_ipc_process(IPCProcess * ipc_process)
-{
-	ipc_process_ = ipc_process;
-	rib_daemon_ = ipc_process_->rib_daemon_;
-	encoder_ = ipc_process_->encoder_;
-	cdap_session_manager_ = ipc_process_->cdap_session_manager_;
-	populateRIB();
-	subscribeToEvents();
-	db_ = new FlowStateDatabase(encoder_, fs_rib_group_, timer_, rib_daemon_,
-			&maximum_age_);
 }
 
 void LinkStateRoutingPolicy::populateRIB()
@@ -1131,7 +1173,7 @@ void LinkStateRoutingPolicy::routingTableUpdate()
 	db_->modified_ = false;
 	std::list<FlowStateObject *> flow_state_objects;
 	db_->getAllFSOs(flow_state_objects);
-	std::list<RoutingTableEntry *> rt =
+	std::list<rina::RoutingTableEntry *> rt =
 			routing_algorithm_->computeRoutingTable(flow_state_objects,
 					source_vertex_);
 

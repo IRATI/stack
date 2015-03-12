@@ -30,7 +30,7 @@ namespace rinad {
 class ResourceAllocatorPs: public IResourceAllocatorPs {
 public:
 		ResourceAllocatorPs(IResourceAllocator * ra);
-		void routingTableUpdated(const std::list<RoutingTableEntry*>& routing_table);
+		void routingTableUpdated(const std::list<rina::RoutingTableEntry*>& routing_table);
 		int set_policy_set_param(const std::string& name, const std::string& value);
 		virtual ~ResourceAllocatorPs() {}
 
@@ -44,12 +44,12 @@ ResourceAllocatorPs::ResourceAllocatorPs(IResourceAllocator * ra) : res_alloc(ra
 
 
 void ResourceAllocatorPs::routingTableUpdated(
-		const std::list<RoutingTableEntry*>& rt)
+		const std::list<rina::RoutingTableEntry*>& rt)
 {
 	LOG_DBG("Got %d entries in the routing table", rt.size());
 	//Compute PDU Forwarding Table
 	std::list<rina::PDUForwardingTableEntry *> pduft;
-	std::list<RoutingTableEntry *>::const_iterator it;
+	std::list<rina::RoutingTableEntry *>::const_iterator it;
 	rina::PDUForwardingTableEntry * entry;
 	std::list<int> flows;
 	for (it = rt.begin(); it!= rt.end(); ++it){

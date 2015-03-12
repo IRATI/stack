@@ -513,24 +513,6 @@ public:
 			const std::string& api) = 0;
 };
 
-/// An entry of the routing table
-class RoutingTableEntry {
-public:
-	/** The destination address */
-	unsigned int address;
-
-	/** The qos-id */
-	unsigned int qosId;
-
-	/** The cost */
-	unsigned int cost;
-
-	/** The next hop addresses */
-	std::list<unsigned int> nextHopAddresses;
-
-	RoutingTableEntry();
-};
-
 /// Resource Allocator Policy Set Interface
 class IResourceAllocatorPs : public IPolicySet {
 // This class is used by the IPCP to access the plugin functionalities
@@ -538,7 +520,7 @@ public:
 	/// The routing table has been updated; decide if
 	/// the PDU Forwarding Table has to be updated and do it
 	///	@return true if valid, false otherwise
-	virtual void routingTableUpdated(const std::list<RoutingTableEntry*>& routing_table) = 0;
+	virtual void routingTableUpdated(const std::list<rina::RoutingTableEntry*>& routing_table) = 0;
 
 	virtual ~IResourceAllocatorPs() {}
 };
@@ -643,7 +625,7 @@ public:
 	static const int DEFAULT_MAX_SDU_SIZE_IN_BYTES;
 
 	IDelimiter * delimiter_;
-	Encoder * encoder_;
+	rina::IMasterEncoder * encoder_;
 	rina::CDAPSessionManagerInterface* cdap_session_manager_;
 	IEnrollmentTask * enrollment_task_;
 	IFlowAllocator * flow_allocator_;

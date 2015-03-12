@@ -153,7 +153,7 @@ public:
 	//Compute the next hop to other addresses. Ownership of
 	//PDUForwardingTableEntries in the list is passed to the
 	//caller
-	virtual std::list<RoutingTableEntry *> computeRoutingTable(const std::list<FlowStateObject *>& fsoList,
+	virtual std::list<rina::RoutingTableEntry *> computeRoutingTable(const std::list<FlowStateObject *>& fsoList,
 			unsigned int source_address) = 0;
 };
 
@@ -172,7 +172,7 @@ public:
 class DijkstraAlgorithm : public IRoutingAlgorithm {
 public:
 	DijkstraAlgorithm();
-	std::list<RoutingTableEntry *> computeRoutingTable(
+	std::list<rina::RoutingTableEntry *> computeRoutingTable(
 			const std::list<FlowStateObject *>& fsoList, unsigned int source_address);
 private:
 	Graph * graph_;
@@ -193,7 +193,7 @@ private:
 /// A group of flow state objects. This is the RIB target object
 /// when routing wants to send
 /// information about more than one N-1 flow
-class FlowStateRIBObjectGroup: public BaseIPCPRIBObject {
+class FlowStateRIBObjectGroup: public rina::BaseRIBObject {
 public:
 	FlowStateRIBObjectGroup(IPCProcess * ipc_process,
 			LinkStateRoutingPolicy * lsr_policy);
@@ -205,6 +205,27 @@ public:
 
 private:
 	LinkStateRoutingPolicy * lsr_policy_;
+	IPCProcess * ipc_process_;
+	IPCPRIBDaemon * rib_daemon_;
+};
+
+/// A single flow state object
+class FlowStateRIBObject: public rina::BaseRIBObject {
+public:
+	FlowStateRIBObject(IPCProcess * ipc_process,
+			const std::string& objectClass,
+			const std::string& objectName, const void* objectValue);
+	const void* get_value() const;
+	void writeObject(const void* object);
+	void createObject(const std::string& objectClass,
+			const std::string& objectName,
+			const void* objectValue);
+	void deleteObject(const void* objectValue);
+
+private:
+	IPCProcess * ipc_process_;
+	IPCPRIBDaemon * rib_daemon_;
+	const void* object_value_;
 };
 
 /// The subset of the RIB that contains all the Flow State objects known by the IPC Process.
@@ -222,7 +243,7 @@ public:
 	static const int NO_AVOID_PORT;
 	static const long WAIT_UNTIL_REMOVE_OBJECT;
 
-	FlowStateDatabase(Encoder * encoder, FlowStateRIBObjectGroup *
+	FlowStateDatabase(rina::IMasterEncoder * encoder, FlowStateRIBObjectGroup *
 			flow_state_rib_object_group, rina::Timer * timer, IPCPRIBDaemon *rib_daemon, unsigned int *maximum_age);
 	bool isEmpty() const;
 	void setAvoidPort(int avoidPort);
@@ -241,7 +262,7 @@ public:
 	std::list<FlowStateObject *> flow_state_objects_;
 
 private:
-	Encoder * encoder_;
+	rina::IMasterEncoder * encoder_;
 	FlowStateRIBObjectGroup * flow_state_rib_object_group_;
 	rina::Timer * timer_;
 	IPCPRIBDaemon *rib_daemon_;
@@ -396,7 +417,7 @@ private:
 	static const int MAXIMUM_BUFFER_SIZE;
 	IPCProcess * ipc_process_;
 	IPCPRIBDaemon * rib_daemon_;
-	Encoder * encoder_;
+	rina::IMasterEncoder * encoder_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 	FlowStateRIBObjectGroup * fs_rib_group_;
 	rina::PDUFTableGeneratorConfiguration pduft_generator_config_;

@@ -1,5 +1,5 @@
 package rina.messages;
-option java_package="rina.encoding.impl.googleprotobuf.flowstate";
+option optimize_for = LITE_RUNTIME;
 
 message flowStateObject_t{  			// Contains the information of a flow state object
 	optional uint64 address = 1;			// The address of the IPC Process

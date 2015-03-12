@@ -118,12 +118,6 @@ std::string Flow::toString() {
 	return ss.str();
 }
 
-RoutingTableEntry::RoutingTableEntry(){
-	address = 0;
-	cost = 1;
-	qosId = 0;
-}
-
 // Class BaseRIBObject
 BaseIPCPRIBObject::BaseIPCPRIBObject(IPCProcess * ipc_process, const std::string& object_class,
 		long object_instance, const std::string& object_name):
