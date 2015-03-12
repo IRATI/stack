@@ -27,6 +27,11 @@
 
 namespace cdap {
 
+typedef struct cdap_params{
+  long timeout_;
+  bool is_IPCP_;
+}cdap_params_t;
+
 class CDAPProviderInterface
 {
  public:
@@ -66,6 +71,14 @@ class CDAPProviderInterface
                           const cdap_rib::obj_info_t &obj,
                           const cdap_rib::flags_t &flags,
                           const cdap_rib::filt_info_t &filt) = 0;
+  virtual void open_connection_response(const cdap_rib::con_handle_t &con,
+                                        const cdap_rib::flags_t &flags,
+                                        const cdap_rib::res_info_t &res,
+                                        int message_id) = 0;
+  virtual void close_connection_response(const cdap_rib::con_handle_t &con,
+                                         const cdap_rib::flags_t &flags,
+                                         const cdap_rib::res_info_t &res,
+                                         int message_id) = 0;
   virtual void remote_create_response(const cdap_rib::con_handle_t &con,
                                       const cdap_rib::obj_info_t &obj,
                                       const cdap_rib::flags_t &flags,
@@ -100,14 +113,11 @@ class CDAPProviderInterface
                                     int message_id) = 0;
 };
 
-class IPCPCDAPProviderInterface: public CDAPProviderInterface{
-
-};
-
 class CDAPProviderFactory
 {
  public:
-  CDAPProviderInterface* create(const std::string &comm_protocol, long timeout, bool is_IPCP);
+  CDAPProviderInterface* create(const std::string &comm_protocol, long timeout,
+                                bool is_IPCP);
 };
 
 }

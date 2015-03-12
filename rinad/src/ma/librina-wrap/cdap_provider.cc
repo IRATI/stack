@@ -63,6 +63,14 @@ class CDAPProvider : public CDAPProviderInterface
                   const cdap_rib::obj_info_t &obj,
                   const cdap_rib::flags_t &flags,
                   const cdap_rib::filt_info_t &filt);
+  void open_connection_response(const cdap_rib::con_handle_t &con,
+                                const cdap_rib::flags_t &flags,
+                                const cdap_rib::res_info_t &res,
+                                int message_id);
+  void close_connection_response(const cdap_rib::con_handle_t &con,
+                                 const cdap_rib::flags_t &flags,
+                                 const cdap_rib::res_info_t &res,
+                                 int message_id);
   void remote_create_response(const cdap_rib::con_handle_t &con,
                               const cdap_rib::obj_info_t &obj,
                               const cdap_rib::flags_t &flags,
@@ -132,9 +140,9 @@ cdap_rib::con_handle_t CDAPProvider::open_connection(
   }
   // FIXME erase auth and flags from CDAPMessage
   m_sent = manager_->getOpenConnectionRequestMessage(
-      port, rina::CDAPMessage::AUTH_NONE, *value, dest.dest_ae_inst_,
-      dest.dest_ae_name_, dest.dest_ap_inst_, dest.dest_ap_name_,
-      src.src_ae_inst_, src.src_ae_name_, src.src_ap_inst_, src.src_ap_name_);
+      port, rina::CDAPMessage::AUTH_NONE, *value, dest.ae_inst_, dest.ae_name_,
+      dest.ap_inst_, dest.ap_name_, src.ae_inst_, src.ae_name_, src.ap_inst_,
+      src.ap_name_);
   send(m_sent, con.port_);
 
   delete value;
@@ -297,6 +305,57 @@ int CDAPProvider::remote_stop(const cdap_rib::con_handle_t &con,
 
   return invoke_id;
 }
+
+void CDAPProvider::open_connection_response(const cdap_rib::con_handle_t &con,
+                                            const cdap_rib::flags_t &flags,
+                                            const cdap_rib::res_info_t &res,
+                                            int message_id)
+{
+  const rina::CDAPMessage *m_sent;
+
+  // FIXME change CDAPMessage::NONE_FLAGS
+  (void) flags;
+  rina::AuthValue *value;
+  switch (con.auth_.auth_mech_) {
+    case cdap_rib::auth_info::AUTH_PASSWD:
+    case cdap_rib::auth_info::AUTH_SSHDSA:
+    case cdap_rib::auth_info::AUTH_SSHRSA:
+      value = new rina::AuthValue(con.auth_.auth_name_,
+                                  con.auth_.auth_password_,
+                                  con.auth_.auth_other_);
+      break;
+    case cdap_rib::auth_info::AUTH_NONE:
+    default:
+      value = new rina::AuthValue();
+      break;
+  }
+
+  m_sent = manager_->getOpenConnectionResponseMessage(
+      rina::CDAPMessage::AUTH_NONE, *value, con.dest_.ae_inst_,
+      con.dest_.ae_name_, con.dest_.ap_inst_, con.dest_.ap_name_, res.result_,
+      res.result_reason_, con.src_.ae_inst_, con.src_.ae_name_,
+      con.src_.ap_inst_, con.src_.ap_name_, message_id);
+  send(m_sent, con.port_);
+
+  delete m_sent;
+}
+void CDAPProvider::close_connection_response(const cdap_rib::con_handle_t &con,
+                                             const cdap_rib::flags_t &flags,
+                                             const cdap_rib::res_info_t &res,
+                                             int message_id)
+{
+  const rina::CDAPMessage *m_sent;
+
+  //FIXME: change flags
+  (void) flags;
+  m_sent = manager_->getCancelReadResponseMessage(rina::CDAPMessage::NONE_FLAGS,
+                                                  message_id, res.result_,
+                                                  res.result_reason_);
+  send(m_sent, con.port_);
+
+  delete m_sent;
+}
+
 void CDAPProvider::remote_create_response(const cdap_rib::con_handle_t &con,
                                           const cdap_rib::obj_info_t &obj,
                                           const cdap_rib::flags_t &flags,

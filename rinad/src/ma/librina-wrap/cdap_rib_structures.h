@@ -23,6 +23,7 @@
 #ifndef CDAP_RIB_STRUCTURES_H_
 #define CDAP_RIB_STRUCTURES_H_
 
+#include <string>
 
 namespace cdap_rib {
 /// Authentication information
@@ -52,19 +53,19 @@ typedef struct destination_info
   /// DestinationApplication-Entity-Instance-Id (string), optional, not validated by CDAP.
   /// Specific instance of the Application Entity that the source application
   /// wishes to connect to in the destination application.
-  std::string dest_ae_inst_;
+  std::string ae_inst_;
   /// DestinationApplication-Entity-Name (string), mandatory (optional for the response).
   /// Name of the Application Entity that the source application wishes
   /// to connect to in the destination application.
-  std::string dest_ae_name_;
+  std::string ae_name_;
   /// DestinationApplication-Process-Instance-Id (string), optional, not validated by CDAP.
   /// Name of the Application Process Instance that the source wishes to
   /// connect to a the destination.
-  std::string dest_ap_inst_;
+  std::string ap_inst_;
   /// DestinationApplication-Process-Name (string), mandatory (optional for the response).
   /// Name of the application process that the source application wishes to connect to
   /// in the destination application
-  std::string dest_ap_name_;
+  std::string ap_name_;
 } dest_info_t;
 
 typedef struct source_info
@@ -72,19 +73,19 @@ typedef struct source_info
   /// DestinationApplication-Entity-Instance-Id (string), optional, not validated by CDAP.
   /// Specific instance of the Application Entity that the source application
   /// wishes to connect to in the destination application.
-  std::string src_ae_inst_;
+  std::string ae_inst_;
   /// DestinationApplication-Entity-Name (string), mandatory (optional for the response).
   /// Name of the Application Entity that the source application wishes
   /// to connect to in the destination application.
-  std::string src_ae_name_;
+  std::string ae_name_;
   /// DestinationApplication-Process-Instance-Id (string), optional, not validated by CDAP.
   /// Name of the Application Process Instance that the source wishes to
   /// connect to a the destination.
-  std::string src_ap_inst_;
+  std::string ap_inst_;
   /// DestinationApplication-Process-Name (string), mandatory (optional for the response).
   /// Name of the application process that the source application wishes to connect to
   /// in the destination application
-  std::string src_ap_name_;
+  std::string ap_name_;
 } src_info_t;
 
 typedef struct flags
@@ -155,6 +156,7 @@ typedef struct version_info
   /// related behaviors that are subject to change over time. See text for details
   /// of use.
   long version_;
+
 } vers_info_t;
 
 typedef struct connection_handler
