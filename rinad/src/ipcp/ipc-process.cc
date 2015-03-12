@@ -94,6 +94,11 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
                 throw Exception("Cannot create flow allocator policy-set");
         }
 
+        namespace_manager_->select_policy_set(std::string(), "default");
+        if (!namespace_manager_->ps) {
+                throw Exception("Cannot create namespace manager policy-set");
+        }
+
 	try {
 		rina::extendedIPCManager->notifyIPCProcessInitialized(name_);
 	} catch (Exception &e) {
@@ -130,12 +135,15 @@ IPCProcessImpl::~IPCProcessImpl() {
 
 	if (flow_allocator_) {
 		psDestroy("flow-allocator",
-                                flow_allocator_->selected_ps_name,
-                                flow_allocator_->ps);
+                   flow_allocator_->selected_ps_name,
+                   flow_allocator_->ps);
 		delete flow_allocator_;
 	}
 
 	if (namespace_manager_) {
+		psDestroy("namespace-manager",
+                   namespace_manager_->selected_ps_name,
+                   namespace_manager_->ps);
 		delete namespace_manager_;
 	}
 
@@ -145,9 +153,9 @@ IPCProcessImpl::~IPCProcessImpl() {
 
 	if (security_manager_) {
 		psDestroy("security-manager",
-                                security_manager_->selected_ps_name,
-                                security_manager_->ps);
-                delete security_manager_;
+                   security_manager_->selected_ps_name,
+                   security_manager_->ps);
+        delete security_manager_;
 	}
 
 	if (rib_daemon_) {

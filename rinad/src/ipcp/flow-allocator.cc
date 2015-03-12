@@ -191,7 +191,7 @@ const void* QoSCubeSetRIBObject::get_value() const
 //Class Flow Allocator
 FlowAllocator::FlowAllocator()
 {
-  ipc_process_ = 0;
+  ipcp = 0;
   rib_daemon_ = 0;
   cdap_session_manager_ = 0;
   encoder_ = 0;
@@ -205,11 +205,11 @@ FlowAllocator::~FlowAllocator()
 
 void FlowAllocator::set_ipc_process(IPCProcess * ipc_process)
 {
-  ipc_process_ = ipc_process;
-  rib_daemon_ = ipc_process_->rib_daemon_;
-  encoder_ = ipc_process_->encoder_;
-  cdap_session_manager_ = ipc_process_->cdap_session_manager_;
-  namespace_manager_ = ipc_process_->namespace_manager_;
+  ipcp = ipc_process;
+  rib_daemon_ = ipcp->rib_daemon_;
+  encoder_ = ipcp->encoder_;
+  cdap_session_manager_ = ipcp->cdap_session_manager_;
+  namespace_manager_ = ipcp->namespace_manager_;
   populateRIB();
 }
 
@@ -236,7 +236,7 @@ void FlowAllocator::set_dif_configuration(
 int FlowAllocator::select_policy_set(const std::string& path,
                                      const std::string& name)
 {
-  return select_policy_set_common(ipc_process_, "flow-allocator",
+  return select_policy_set_common(ipcp, "flow-allocator",
                                   path, name);
 }
 
@@ -244,18 +244,18 @@ int FlowAllocator::set_policy_set_param(const std::string& path,
                                         const std::string& name,
                                         const std::string& value)
 {
-  return set_policy_set_param_common(ipc_process_, path, name, value);
+  return set_policy_set_param_common(ipcp, path, name, value);
 }
 
 void FlowAllocator::populateRIB()
 {
   try {
-    BaseIPCPRIBObject * object = new FlowSetRIBObject(ipc_process_,
+    BaseIPCPRIBObject * object = new FlowSetRIBObject(ipcp,
                                                       this);
     rib_daemon_->addRIBObject(object);
-    object = new QoSCubeSetRIBObject(ipc_process_);
+    object = new QoSCubeSetRIBObject(ipcp);
     rib_daemon_->addRIBObject(object);
-    object = new DataTransferConstantsRIBObject(ipc_process_);
+    object = new DataTransferConstantsRIBObject(ipcp);
     rib_daemon_->addRIBObject(object);
   } catch (Exception &e) {
     LOG_ERR("Problems adding object to the RIB : %s", e.what());
@@ -272,7 +272,7 @@ void FlowAllocator::createFlowRequestMessageReceived(
 
   unsigned int address = namespace_manager_->getDFTNextHop(
       flow->destination_naming_info);
-  myAddress = ipc_process_->get_address();
+  myAddress = ipcp->get_address();
   if (address == 0) {
     LOG_ERR(
         "The directory forwarding table returned no entries when looking up %s",
@@ -297,7 +297,7 @@ void FlowAllocator::createFlowRequestMessageReceived(
         "The destination application process is reachable through me. Assigning the local port-id %d to the flow",
         portId);
     flowAllocatorInstance = new FlowAllocatorInstance(
-        ipc_process_, this, cdap_session_manager_, portId);
+    		ipcp, this, cdap_session_manager_, portId);
     flow_allocator_instances_.put(portId, flowAllocatorInstance);
 
     //TODO check if this operation throws an exception an react accordingly
@@ -349,7 +349,7 @@ void FlowAllocator::submitAllocateRequest(
 
   event.portId = portId;
   flowAllocatorInstance = new FlowAllocatorInstance(
-      ipc_process_, this, cdap_session_manager_, portId);
+		  ipcp, this, cdap_session_manager_, portId);
   flow_allocator_instances_.put(portId, flowAllocatorInstance);
 
   try {
@@ -503,7 +503,7 @@ std::list<rina::QoSCube*> FlowAllocator::getQoSCubes()
   std::list<rina::BaseRIBObject *> children;
 
   rina::BaseRIBObject * ribObject = 0;
-  ribObject = ipc_process_->rib_daemon_->readObject(
+  ribObject = ipcp->rib_daemon_->readObject(
       EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS,
       EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME);
   if (ribObject != 0) {
