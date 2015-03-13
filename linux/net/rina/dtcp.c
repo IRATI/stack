@@ -1163,7 +1163,7 @@ struct dtcp * dtcp_create(struct dt *         dt,
                 return NULL;
         }
 
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
         if (!tmp) {
                 LOG_ERR("Cannot create DTCP state-vector");
                 return NULL;
@@ -1171,7 +1171,7 @@ struct dtcp * dtcp_create(struct dt *         dt,
 
         tmp->parent = dt;
 
-        tmp->sv = rkzalloc(sizeof(*tmp->sv), GFP_KERNEL);
+        tmp->sv = rkzalloc(sizeof(*tmp->sv), GFP_ATOMIC);
         if (!tmp->sv) {
                 LOG_ERR("Cannot create DTCP state-vector");
                 dtcp_destroy(tmp);

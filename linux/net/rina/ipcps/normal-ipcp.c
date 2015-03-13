@@ -542,6 +542,7 @@ static int normal_deallocate(struct ipcp_instance_data * data,
                 LOG_ERR("Could not find flow %d to deallocate", port_id);
                 return -1;
         }
+        flow->state = PORT_STATE_DEALLOCATED;
         spin_unlock(&data->lock);
 
         if (remove_all_cepid(data, flow))
