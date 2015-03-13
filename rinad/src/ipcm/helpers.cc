@@ -45,6 +45,8 @@ IPCManager_::select_ipcp_by_dif(
 	const vector<rina::IPCProcess *>& ipcps =
 		rina::ipcProcessFactory->listIPCProcesses();
 
+	//FIXME: rwlock guard over ipcs list
+
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
 		rina::DIFInformation dif_info = ipcps[i]->getDIFInformation();
 		rina::ApplicationProcessNamingInformation ipcp_name = ipcps[i]->name;
@@ -53,6 +55,7 @@ IPCManager_::select_ipcp_by_dif(
 				/* The following OR clause is a temporary hack useful
 				 * for testing with shim dummy. TODO It will go away. */
 				|| ipcp_name.processName == dif_name.processName) {
+			//FIXME: rwlock over ipcp
 			return ipcps[i];
 		}
 	}
@@ -68,6 +71,7 @@ IPCManager_::select_ipcp(bool read_lock)
 	const vector<rina::IPCProcess *>& ipcps =
 		rina::ipcProcessFactory->listIPCProcesses();
 
+	//FIXME: rwlock guard over ipcs list
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
 		if (ipcps[i]->type == rina::NORMAL_IPC_PROCESS) {
 			return ipcps[i];
@@ -75,6 +79,7 @@ IPCManager_::select_ipcp(bool read_lock)
 	}
 
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
+		//FIXME: rwlock over ipcp
 		return ipcps[i];
 	}
 
@@ -88,6 +93,7 @@ IPCManager_::application_is_registered_to_ipcp(
 {
 	const list<rina::ApplicationProcessNamingInformation>&
 		registered_apps = slave_ipcp->getRegisteredApplications();
+	//FIXME: rwlock guard over ipcs list
 
 	for (list<rina::ApplicationProcessNamingInformation>::const_iterator
 			it = registered_apps.begin();
@@ -107,8 +113,11 @@ IPCManager_::lookup_ipcp_by_port(unsigned int port_id, bool read_lock)
 		rina::ipcProcessFactory->listIPCProcesses();
 	rina::FlowInformation info;
 
+	//FIXME: rwlock guard over ipcs list
+
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
 		if (ipcps[i]->getFlowInformation(port_id, info)) {
+			//FIXME: rwlock over ipcp
 			return ipcps[i];
 		}
 	}
@@ -126,6 +135,7 @@ IPCManager_::collect_flows_by_application(
 
 	result.clear();
 
+	//FIXME: rwlock guard over ipcs list
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
 		const list<rina::FlowInformation>& flows =
 			ipcps[i]->getAllocatedFlows();
@@ -142,6 +152,7 @@ IPCManager_::collect_flows_by_application(
 rina::IPCProcess *
 IPCManager_::lookup_ipcp_by_id(unsigned int id, bool read_lock)
 {
+	//FIXME: rwlock guard over ipcs list
 	return rina::ipcProcessFactory->getIPCProcess(id);
 }
 
