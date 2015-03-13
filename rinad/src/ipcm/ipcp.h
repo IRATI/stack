@@ -42,8 +42,9 @@ namespace rinad {
 class IPCPTransState: public TransactionState{
 
 public:
-	IPCPTransState(int _tid, int _ipcp_id) : TransactionState(tid),
-							ipcp_id(_ipcp_id){}
+	IPCPTransState(const Addon* callee, const int _tid, int _ipcp_id)
+					: TransactionState(callee, tid),
+						ipcp_id(_ipcp_id){}
 	virtual ~IPCPTransState();
 
 	//IPCP identifier
@@ -56,10 +57,11 @@ public:
 class IPCPregTransState: public TransactionState{
 
 public:
-	IPCPregTransState(int _tid, int _ipcp_id, int _slave_ipcp_id) :
-						TransactionState(tid),
-						ipcp_id(_ipcp_id),
-						slave_ipcp_id(_slave_ipcp_id){}
+	IPCPregTransState(const Addon* callee, const int _tid,
+				int _ipcp_id, int _slave_ipcp_id) :
+					TransactionState(callee, tid),
+					ipcp_id(_ipcp_id),
+					slave_ipcp_id(_slave_ipcp_id){}
 	virtual ~IPCPregTransState();
 
 	//IPCP identifier

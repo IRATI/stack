@@ -20,6 +20,7 @@
  */
 
 #include <cstdlib>
+#include <algorithm>
 #include <iostream>
 #include <map>
 #include <vector>
@@ -163,56 +164,53 @@ IPCManager_::start_console_worker()
 	return 0;
 }
 
+/*
+*
+* Public API
+*
+*/
+
 int
-IPCManager_::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
-			const string& type)
+IPCManager_::create_ipcp(const Addon* callee,
+			const rina::ApplicationProcessNamingInformation& name,
+			const std::string& type)
 {
-	rina::IPCProcess *      ipcp = NULL;
-	bool		    wait = false;
-	ostringstream	   ss;
+	rina::IPCProcess *ipcp;
+	ostringstream ss;
 	rina::IPCProcessFactory fact;
-	std::list<std::string>  supportedDIFS;
-	bool		    difCorrect = false;
-	std::string	     s;
-	int ret = -1;
+	std::list<std::string> ipcp_types;
+	bool difCorrect = false;
+	std::string s;
+	int ret;
+	TransactionState* state;
 
 	concurrency.lock();
 
 	try {
 		// Check that the AP name is not empty
-		if (name.processName == std::string()) {
+		if (name.processName == std::string("")) {
 			ss << "Cannot create IPC process with an "
 				"empty AP name" << endl;
 			FLUSH_LOG(ERR, ss);
-
 			throw rina::CreateIPCProcessException();
 		}
 
-		// Check if @type is one of the supported DIF types.
-		supportedDIFS = fact.getSupportedIPCProcessTypes();
-		for (std::list<std::string>::iterator it =
-			     supportedDIFS.begin();
-		     it != supportedDIFS.end();
-		     ++it) {
-			if (type == *it)
-				difCorrect = true;
-
-			s.append(*it);
-			s.append(", ");
+		//Check if dif type exists
+		list_ipcp_types(ipcp_types);
+		if(std::find(ipcp_types.begin(), ipcp_types.end(), type)
+							== ipcp_types.end()){
+			ss << "IPCP type parameter "
+				   << name.toString()
+				   << " is wrong, options are: "
+				   << s;
+				FLUSH_LOG(ERR, ss);
+				throw rina::CreateIPCProcessException();
 		}
 
-		if (!difCorrect) {
-			ss << "difType parameter of DIF "
-			   << name.toString()
-			   << " is wrong, options are: "
-			   << s;
-			FLUSH_LOG(ERR, ss);
+		ipcp = rina::ipcProcessFactory->create(name, type);
 
-			throw rina::CreateIPCProcessException();
-		}
-
-		ipcp = rina::ipcProcessFactory->create(name,
-						       type);
+		//TODO: this should be moved to the factory
+		//Moreover the API should be homgenized such that the
 		if (type != rina::NORMAL_IPC_PROCESS) {
 			// Shim IPC processes are set as initialized
 			// immediately.
@@ -222,32 +220,75 @@ IPCManager_::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
 			// initialized only when the corresponding
 			// IPC process daemon is initialized, so we
 			// defer the operation.
-			pending_normal_ipcp_inits[ipcp->id] = ipcp;
-			wait = true;
+
+			//Add transaction state
+			state = new TransactionState(callee, ipcp->id);
+
+			//TODO: this is a botch that we have to do due to the
+			//way ipcmanager in librina works. Since we cannot make
+			//sure we add the transaction *before* the response is
+			//received (race condition), we simply try to add it
+			//and if the notification thread is first, just deduce
+			//that has been already notified.
+			//
+			//The only proper solution is combine the code of the
+			//IPCFactory here, since the state is basically the
+			//same and is the only way to prevent these nasty race
+			//conditions
+			if(add_syscall_transaction_state(ipcp->id, state) < 0){
+				delete state;
+				state = NULL;
+			}
 		}
+
+		//TODO: fix this accordingly (part of the botch)
+		if(state){
+			//We have to wait for the notification
+			if(callee){
+				//callback will be called
+				return ipcp->id;
+			}else{
+				//We have to synchronously wait
+				state->wait_cond.doWait(); //FIXME: timed wait
+				if(!state->ret < 0){
+					ss << "Failed to create IPC process '" <<
+						name.toString() << "' of type '" <<
+						type << "'" << endl;
+					FLUSH_LOG(ERR, ss);
+					return -1;
+				}
+			}
+		}else{
+			//The notification already arrived
+			state = get_syscall_transaction_state(ipcp->id);
+			if(!state){
+				assert(0);
+				ss << "Corrupted ipc create operation"<<endl;
+				FLUSH_LOG(ERR, ss);
+			}
+
+			if(callee){
+				if(state->ret < 0)
+					callee->callback_create_ipcp(
+								state->ret);
+				else
+					callee->callback_create_ipcp(
+								ipcp->id);
+			}
+		}
+
+		//Show a nice trace
 		ss << "IPC process " << name.toString() << " created "
 			"[id = " << ipcp->id << "]" << endl;
 		FLUSH_LOG(INFO, ss);
 
-		if (wait) {
-			int ret;
-			bool arrived = concurrency.wait_for_event(
-					rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT,
-					0, ret);
-
-			if (!arrived) {
-				ss << "Timed out while waiting for IPC process daemon"
-					"to initialize" << endl;
-				FLUSH_LOG(ERR, ss);
-			}
-		}
-		ret = ipcp->id;
 
 	} catch (rina::CreateIPCProcessException) {
 		ss << "Failed to create IPC process '" <<
 			name.toString() << "' of type '" <<
 			type << "'" << endl;
 		FLUSH_LOG(ERR, ss);
+		return -1;
 	}
 
 	concurrency.unlock();
@@ -256,7 +297,7 @@ IPCManager_::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
 }
 
 int
-IPCManager_::destroy_ipcp(unsigned int ipcp_id)
+IPCManager_::destroy_ipcp(const Addon* callee, unsigned int ipcp_id)
 {
 	ostringstream ss;
 	int ret = 0;
@@ -313,19 +354,12 @@ IPCManager_::ipcp_exists(const int ipcp_id){
 }
 
 int
-IPCManager_::list_ipcp_types(std::ostream& os)
+IPCManager_::list_ipcp_types(std::list<std::string>& types)
 {
 
 	concurrency.lock();
-
-	const list<string>& types = rina::ipcProcessFactory->
+	types = rina::ipcProcessFactory->
 					getSupportedIPCProcessTypes();
-
-	os << "Supported IPC process types:" << endl;
-	for (list<string>::const_iterator it = types.begin();
-					it != types.end(); it++) {
-		os << "    " << *it << endl;
-	}
 
 	concurrency.unlock();
 
@@ -739,7 +773,7 @@ IPCManager_::apply_configuration()
 			}
 
 			try {
-				ipcp_id = create_ipcp(cit->name, type);
+				ipcp_id = create_ipcp(NULL, cit->name, type);
 				if (ipcp_id < 0) {
 					continue;
 				}
@@ -1062,6 +1096,41 @@ int IPCManager_::remove_transaction_state(int tid){
 	return 0;
 }
 
+//Syscall state management routines
+int IPCManager_::add_syscall_transaction_state(int tid, TransactionState* t){
+	//Rwlock: write
+
+	//Check if exists already
+	if ( pend_sys_trans.find(tid) != pend_sys_trans.end() ){
+		assert(0); //Transaction id repeated
+		return -1;
+	}
+
+	//Just add and return
+	try{
+		pend_sys_trans[tid] = t;
+	}catch(...){
+		LOG_DBG("Could not add syscall transaction %u. Out of memory?",
+									 tid);
+		assert(0);
+		return -1;
+	}
+	return 0;
+}
+
+int IPCManager_::remove_syscall_transaction_state(int tid){
+	//Rwlock: write
+
+	//Check if it really exists
+	if ( pend_sys_trans.find(tid) == pend_sys_trans.end() )
+		return -1;
+
+	pend_sys_trans.erase(tid);
+
+	return 0;
+}
+
+
 //Main I/O loop
 void IPCManager_::run(){
 
@@ -1209,7 +1278,10 @@ void IPCManager_::run(){
 						break;
 
 				case rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT:
-						ipc_process_daemon_initialized_event_handler(event);
+						{
+						DOWNCAST_DECL(event, rina::IPCProcessDaemonInitializedEvent, e);
+						ipc_process_daemon_initialized_event_handler(e);
+						}
 						break;
 
 				case rina::TIMER_EXPIRED_EVENT:
@@ -1272,7 +1344,7 @@ void IPCManager_::run(){
 	std::vector<rina::IPCProcess *>::const_iterator it;
 
 	for(it = ipcps.begin(); it != ipcps.end(); ++it){
-		if(destroy_ipcp((*it)->id) < 0 ){
+		if(destroy_ipcp(NULL, (*it)->id) < 0 ){
 			LOG_WARN("Warning could not destroy IPCP id: %d\n",
 								(*it)->id);
 		}

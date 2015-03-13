@@ -39,31 +39,46 @@ using namespace std;
 
 namespace rinad {
 
-void IPCManager_::ipc_process_daemon_initialized_event_handler(rina::IPCEvent * e)
+void IPCManager_::ipc_process_daemon_initialized_event_handler(
+				rina::IPCProcessDaemonInitializedEvent * e)
 {
-	DOWNCAST_DECL(e, rina::IPCProcessDaemonInitializedEvent, event);
-	map<unsigned short, rina::IPCProcess *>::iterator mit;
 	ostringstream ss;
-	int ret = -1;
+	rina::IPCProcess* ipcp;
 
-	// Perform deferred "setInitiatialized()" of a normal IPC process, if
-	// needed.
-	mit = IPCManager->pending_normal_ipcp_inits.find(event->ipcProcessId);
-	if (mit != IPCManager->pending_normal_ipcp_inits.end()) {
-		mit->second->setInitialized();
-		IPCManager->pending_normal_ipcp_inits.erase(mit);
-		ss << "IPC process daemon initialized [id = " <<
-			event->ipcProcessId<< "]" << endl;
-		FLUSH_LOG(INFO, ss);
-		ret = 0;
-	} else {
+	//Recover the syscall transaction state and finalize the
+	TransactionState* trans = new TransactionState(NULL, e->ipcProcessId);
+	trans->ret = 0;
+
+	if(add_syscall_transaction_state(e->ipcProcessId, trans) < 0){
+		delete trans;
+		//Notify
+		trans = get_syscall_transaction_state(e->ipcProcessId);
+		trans->wait_cond.signal();
+	}else{
+		//Do nothing (we are the first ones)
+	};
+
+	//FIXME TODO XXX Rwlock
+
+	ipcp = lookup_ipcp_by_id(e->ipcProcessId);
+
+	//If the ipcp is not there, there is some corruption
+	if(!ipcp){
 		ss << ": Warning: IPCP daemon initialized, "
-			"but no pending normal IPC process initialization"
-			<< endl;
+				"but no pending normal IPC process initialization"
+				<< endl;
 		FLUSH_LOG(WARN, ss);
+		assert(0);
+		return;
 	}
 
-	IPCManager->concurrency.set_event_result(ret);
+	assert(ipcp->getType() == rina::NORMAL_IPC_PROCESS);
+
+	//Initialize
+	ipcp->setInitialized();
+	ss << "IPC process daemon initialized [id = " <<
+		e->ipcProcessId<< "]" << endl;
+	FLUSH_LOG(INFO, ss);
 }
 
 int IPCManager_::ipcm_register_response_ipcp(

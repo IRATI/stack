@@ -1,5 +1,5 @@
 /*
- * MISC transaction states
+ * Base class for an addon
  *
  *    Marc Sune <marc.sune (at) bisdn.de>
  *
@@ -18,8 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef __MISC_H__
-#define __MISC_H__
+#ifndef __ADDON_H__
+#define __ADDON_H__
 
 #include <assert.h>
 #include <cstdlib>
@@ -32,25 +32,51 @@
 #include <librina/ipc-manager.h>
 #include <librina/patterns.h>
 
-#include "ipcp.h"
-
 namespace rinad {
 
 /**
-* RIB query transaction state
+* Addon base class
 */
-class RIBqTransState: public IPCPTransState{
+class Addon{
 
 public:
-	RIBqTransState(const Addon* _callee, const int _tid, int _ipcp_id)
-					:IPCPTransState(_callee, tid,
-								_ipcp_id){}
-	virtual ~RIBqTransState();
 
-	//Output result
-	std::string result;
+	Addon(const std::string _name):name(_name){};
+	virtual ~Addon(){};
+
+	//
+	// Callback section
+	//
+
+	/**
+	* On an async call to IPCManager::create_ipcp(), this callback will be
+	* executed
+	*
+	* @param result 0 on success, -1 on failure
+	*/
+	virtual void callback_create_ipcp(const int result) const{
+		/* Do nothing */
+		(void)result;
+	};
+
+	/**
+	* On an async call to IPCManager::destroy_ipcp(), this callback will be
+	* executed
+	*
+	* @ret 0 on success, -1 on failure
+	*/
+	virtual void callback_destroy_ipcp(const int result) const{
+		/* Do nothing */
+		(void)result;
+	};
+
+	/**
+	* Addon name
+	*/
+	std::string name;
+
 };
 
 }//rinad namespace
 
-#endif  /* __MISC_H__ */
+#endif  /* __ADDON_H__ */

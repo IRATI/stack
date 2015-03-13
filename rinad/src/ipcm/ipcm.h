@@ -35,6 +35,7 @@
 #include "rina-configuration.h"
 
 //Addons
+#include "addon.h"
 #include "addons/console.h"
 #include "addons/scripting.h"
 //[+] Add more here...
@@ -66,11 +67,18 @@ namespace rinad {
 class TransactionState {
 
 public:
-	TransactionState(int _tid):tid(_tid){};
-	virtual ~TransactionState();
+	TransactionState(const Addon* _callee, const int _tid):
+						callee(_callee), tid(_tid){};
+	virtual ~TransactionState(){};
+
+	//Callee
+	const Addon* callee;
 
 	//Transaction id
-	int tid;
+	const int tid;
+
+	//Return value
+	int ret;
 
 	//Condition variable
 	rina::ConditionVariable wait_cond;
@@ -144,16 +152,6 @@ public:
 	//
         int apply_configuration();
 
-	//
-	// Creates an IPCP process
-	//
-        int create_ipcp(const rina::ApplicationProcessNamingInformation& name,
-                        const std::string& type);
-
-	//
-	// Destroys an IPCP process
-	//
-        int destroy_ipcp(unsigned int ipcp_id);
 
 	//
 	// List the existing IPCPs in the system
@@ -175,7 +173,22 @@ public:
 	//
 	// List the available IPCP types
 	//
-        int list_ipcp_types(std::ostream& os);
+        int list_ipcp_types(std::list<std::string>& types);
+
+
+	//
+	// Creates an IPCP process
+	//
+	// @ret -1 on failure, otherwise the IPCP id
+	//
+        int create_ipcp(const Addon* callee,
+			const rina::ApplicationProcessNamingInformation& name,
+                        const std::string& type);
+
+	//
+	// Destroys an IPCP process
+	//
+        int destroy_ipcp(const Addon* callee, const unsigned int ipcp_id);
 
 	//
 	// Assing an ipcp to a DIF
@@ -381,7 +394,8 @@ protected:
 
 	//Misc
 	void os_process_finalized_handler(rina::IPCEvent *e);
-	void ipc_process_daemon_initialized_event_handler(rina::IPCEvent * e);
+	void ipc_process_daemon_initialized_event_handler(
+				rina::IPCProcessDaemonInitializedEvent *e);
 	void timer_expired_event_handler(rina::IPCEvent *event);
 	bool ipcm_register_response_common(
 		rina::IpcmRegisterApplicationResponseEvent *event,
@@ -412,9 +426,6 @@ protected:
 	// TODO: revise
 	//
 	IPCMConcurrency concurrency;
-
-	//Pending IPCP initializations
-        std::map<unsigned short, rina::IPCProcess*> pending_normal_ipcp_inits;
 
 	//Pending IPCP DIF assignments
         std::map<unsigned int, rina::IPCProcess*> pending_ipcp_dif_assignments;
@@ -481,6 +492,12 @@ protected:
                  rina::IPCProcess *> pending_plugin_load_ops;
 	/* FIXME REMOVE THIS*/
 
+	//Script thread
+        rina::Thread *script;
+
+	//IPCM Console instance
+        IPCMConsole *console;
+
 /**********************************************************/
 
 	/*
@@ -538,14 +555,44 @@ protected:
 	*/
 	std::map<int, TransactionState*> pend_transactions;
 
+	//TODO unify syscalls and non-syscall state
+
+	/**
+	* Get syscall transaction state (waiting for a notification)
+	*/
+	TransactionState* get_syscall_transaction_state(int tid){
+		//Rwlock: read
+		if ( pend_sys_trans.find(tid) !=  pend_sys_trans.end() )
+			return pend_transactions[tid];
+
+		return NULL;
+	};
+
+	/**
+	* Add syscall transaction state (waiting for a notification)
+	*
+	* @ret 0 if success -1 otherwise.
+	*/
+	int add_syscall_transaction_state(int tid, TransactionState* t);
+
+	/*
+	* Remove syscall transaction state
+	*
+	* @ret 0 if success -1 otherwise.
+	*/
+	int remove_syscall_transaction_state(int tid);
+
+	/**
+	* Pending syscall states
+	*
+	* key: ipcp ID value: transaction state
+	*/
+        std::map<int, TransactionState*> pend_sys_trans;
+
 	//Rwlock for transactions
 	rina::ReadWriteLockable trans_rwlock;
 
-	//Script thread
-        rina::Thread *script;
-
-	//IPCM Console instance
-        IPCMConsole *console;
+	//TODO: map of addons
 
 	//Current logging level
         std::string log_level_;

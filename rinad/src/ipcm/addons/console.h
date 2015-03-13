@@ -39,12 +39,12 @@
 
 #include "rina-configuration.h"
 #include "helpers.h"
-#include "../ipcm.h"
+#include "../addon.h"
 
 
 namespace rinad {
 
-class IPCMConsole {
+class IPCMConsole : public Addon{
                 static const unsigned int CMDBUFSIZE = 120;
                 static const int CMDRETCONT = 0;
                 static const int CMDRETSTOP = 1;
