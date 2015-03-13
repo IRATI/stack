@@ -61,6 +61,7 @@ ipcm_LDADD    =					\
 ipcm_SOURCES  =					\
 	app.cc					\
 	dif-validator.cc			\
+	helpers.cc				\
 	main.cc					\
 	misc.cc					\
 	ipcm.cc					\

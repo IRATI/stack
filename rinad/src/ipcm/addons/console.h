@@ -38,7 +38,6 @@
 #include <librina/ipc-manager.h>
 
 #include "rina-configuration.h"
-#include "helpers.h"
 #include "../addon.h"
 
 

@@ -36,7 +36,6 @@
 #include <librina/logs.h>
 
 #include "rina-configuration.h"
-#include "helpers.h"
 #include "../ipcm.h"
 #include "console.h"
 
@@ -44,6 +43,22 @@ using namespace std;
 
 
 namespace rinad {
+
+
+int string2int(const string& s, int& ret)
+{
+	char *dummy;
+	const char *cstr = s.c_str();
+
+	ret = strtoul(cstr, &dummy, 10);
+	if (!s.size() || *dummy != '\0') {
+		ret = ~0U;
+		return -1;
+	}
+
+	return 0;
+}
+
 
 void *
 console_function(void *opaque)

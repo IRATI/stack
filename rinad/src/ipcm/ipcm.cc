@@ -32,7 +32,6 @@
 #include <librina/logs.h>
 
 #include "rina-configuration.h"
-#include "helpers.h"
 #include "ipcm.h"
 #include "dif-validator.h"
 
@@ -184,7 +183,7 @@ IPCManager_::create_ipcp(const Addon* callee,
 	int ret;
 	TransactionState* state;
 
-	concurrency.lock();
+	//TODO: check if rwlock is really necessary here
 
 	try {
 		// Check that the AP name is not empty
@@ -266,15 +265,6 @@ IPCManager_::create_ipcp(const Addon* callee,
 				ss << "Corrupted ipc create operation"<<endl;
 				FLUSH_LOG(ERR, ss);
 			}
-
-			if(callee){
-				if(state->ret < 0)
-					callee->callback_create_ipcp(
-								state->ret);
-				else
-					callee->callback_create_ipcp(
-								ipcp->id);
-			}
 		}
 
 		//Show a nice trace
@@ -291,7 +281,6 @@ IPCManager_::create_ipcp(const Addon* callee,
 		return -1;
 	}
 
-	concurrency.unlock();
 
 	return ret;
 }
@@ -302,8 +291,7 @@ IPCManager_::destroy_ipcp(const Addon* callee, unsigned int ipcp_id)
 	ostringstream ss;
 	int ret = 0;
 
-	concurrency.lock();
-
+	//TODO: check if rwlock is really necessary here
 	try {
 		rina::ipcProcessFactory->destroy(ipcp_id);
 		ss << "IPC process destroyed [id = " << ipcp_id
@@ -315,8 +303,6 @@ IPCManager_::destroy_ipcp(const Addon* callee, unsigned int ipcp_id)
 		FLUSH_LOG(ERR, ss);
 		ret = -1;
 	}
-
-	concurrency.unlock();
 
 	return ret;
 }

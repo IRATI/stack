@@ -31,7 +31,6 @@
 #include <librina/logs.h>
 
 #include "rina-configuration.h"
-#include "helpers.h"
 #include "flow-alloc.h"
 
 using namespace std;

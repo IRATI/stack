@@ -48,6 +48,7 @@ public:
 	// Callback section
 	//
 
+#if 0
 	/**
 	* On an async call to IPCManager::create_ipcp(), this callback will be
 	* executed
@@ -70,6 +71,7 @@ public:
 		(void)result;
 	};
 
+#endif
 	/**
 	* Addon name
 	*/

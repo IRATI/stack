@@ -90,21 +90,21 @@ public:
 //
 class IPCMConcurrency : public rina::ConditionVariable {
  public:
-        bool wait_for_event(rina::IPCEventType ty, unsigned int seqnum,
-                            int &result);
-        void notify_event(rina::IPCEvent *event);
-        void set_event_result(int result) { event_result = result; }
+	bool wait_for_event(rina::IPCEventType ty, unsigned int seqnum,
+			    int &result);
+	void notify_event(rina::IPCEvent *event);
+	void set_event_result(int result) { event_result = result; }
 
-        IPCMConcurrency(unsigned int wt) :
-                                wait_time(wt), event_waiting(false) { }
+	IPCMConcurrency(unsigned int wt) :
+				wait_time(wt), event_waiting(false) { }
 
 	void setWaitTime(unsigned int wt){wait_time = wt;}
  private:
-        unsigned int wait_time;
-        bool event_waiting;
-        rina::IPCEventType event_ty;
-        unsigned int event_sn;
-        int event_result;
+	unsigned int wait_time;
+	bool event_waiting;
+	rina::IPCEventType event_ty;
+	unsigned int event_sn;
+	int event_result;
 };
 
 //
@@ -113,16 +113,16 @@ class IPCMConcurrency : public rina::ConditionVariable {
 // TODO: revise
 //
 struct PendingFlowAllocation {
-        rina::IPCProcess *slave_ipcp;
-        rina::FlowRequestEvent req_event;
-        bool try_only_a_dif;
+	rina::IPCProcess *slave_ipcp;
+	rina::FlowRequestEvent req_event;
+	bool try_only_a_dif;
 
-        PendingFlowAllocation(): slave_ipcp(NULL),
-                                 try_only_a_dif(true) { }
-        PendingFlowAllocation(rina::IPCProcess *p,
-                        const rina::FlowRequestEvent& e, bool once)
-                                : slave_ipcp(p), req_event(e),
-                                        try_only_a_dif(once) { }
+	PendingFlowAllocation(): slave_ipcp(NULL),
+				 try_only_a_dif(true) { }
+	PendingFlowAllocation(rina::IPCProcess *p,
+			const rina::FlowRequestEvent& e, bool once)
+				: slave_ipcp(p), req_event(e),
+					try_only_a_dif(once) { }
 };
 
 //
@@ -135,28 +135,28 @@ public:
 	//
 	// Initialize the IPCManager
 	//
-        void init(unsigned int wait_time, const std::string& loglevel);
+	void init(unsigned int wait_time, const std::string& loglevel);
 
 	//
 	// Start the script worker thread
 	//
-        int start_script_worker();
+	int start_script_worker();
 
 	//
 	// Start the console worker thread
 	//
-        int start_console_worker();
+	int start_console_worker();
 
 	//
 	// TODO: XXX?????
 	//
-        int apply_configuration();
+	int apply_configuration();
 
 
 	//
 	// List the existing IPCPs in the system
 	//
-        int list_ipcps(std::ostream& os);
+	int list_ipcps(std::ostream& os);
 
 
 	//
@@ -173,7 +173,7 @@ public:
 	//
 	// List the available IPCP types
 	//
-        int list_ipcp_types(std::list<std::string>& types);
+	int list_ipcp_types(std::list<std::string>& types);
 
 
 	//
@@ -181,61 +181,61 @@ public:
 	//
 	// @ret -1 on failure, otherwise the IPCP id
 	//
-        int create_ipcp(const Addon* callee,
+	int create_ipcp(const Addon* callee,
 			const rina::ApplicationProcessNamingInformation& name,
-                        const std::string& type);
+			const std::string& type);
 
 	//
 	// Destroys an IPCP process
 	//
-        int destroy_ipcp(const Addon* callee, const unsigned int ipcp_id);
+	int destroy_ipcp(const Addon* callee, const unsigned int ipcp_id);
 
 	//
 	// Assing an ipcp to a DIF
 	//
-        int assign_to_dif(const int ipcp_id,
-                          const rina::ApplicationProcessNamingInformation&
-                          difName);
+	int assign_to_dif(const int ipcp_id,
+			  const rina::ApplicationProcessNamingInformation&
+			  difName);
 
 	//
 	// Register an IPCP to a single DIF
 	//
-        int register_at_dif(const int ipcp_id,
-                            const rina::ApplicationProcessNamingInformation&
-                            difName);
+	int register_at_dif(const int ipcp_id,
+			    const rina::ApplicationProcessNamingInformation&
+			    difName);
 
 	//
 	// Register an existing IPCP to multiple DIFs
 	//
-        int register_at_difs(const int ipcp_id, const
-                        std::list<rina::ApplicationProcessNamingInformation>&
-                             difs);
+	int register_at_difs(const int ipcp_id, const
+			std::list<rina::ApplicationProcessNamingInformation>&
+			     difs);
 
 	//
 	// Enroll IPCP to a single DIF
 	//
-        int enroll_to_dif(const int ipcp_id,
-                          const rinad::NeighborData& neighbor, bool sync);
+	int enroll_to_dif(const int ipcp_id,
+			  const rinad::NeighborData& neighbor, bool sync);
 	//
 	// Enroll IPCP to multiple DIFs
 	//
-        int enroll_to_difs(const int ipcp_id,
-                           const std::list<rinad::NeighborData>& neighbors);
+	int enroll_to_difs(const int ipcp_id,
+			   const std::list<rinad::NeighborData>& neighbors);
 
 	//TODO
-        int unregister_app_from_ipcp(
-                const rina::ApplicationUnregistrationRequestEvent& req_event,
-                int slave_ipcp_id);
+	int unregister_app_from_ipcp(
+		const rina::ApplicationUnregistrationRequestEvent& req_event,
+		int slave_ipcp_id);
 
 	//TODO
-        int unregister_ipcp_from_ipcp(const int ipcp_id,
+	int unregister_ipcp_from_ipcp(const int ipcp_id,
 						const int slave_ipcp_id);
 
 	//
 	// Get the IPCP identifier where the application is registered
 	// FIXME: return id instead?
 	//
-        bool lookup_dif_by_application(
+	bool lookup_dif_by_application(
 		const rina::ApplicationProcessNamingInformation& apName,
 		rina::ApplicationProcessNamingInformation& difName);
 
@@ -243,34 +243,34 @@ public:
 	// Update the DIF configuration
 	//TODO: What is really this for?
 	//
-        int update_dif_configuration(
-                const int ipcp_id,
-                const rina::DIFConfiguration& dif_config);
+	int update_dif_configuration(
+		const int ipcp_id,
+		const rina::DIFConfiguration& dif_config);
 
-        int deallocate_flow(const int ipcp_id,
-                            const rina::FlowDeallocateRequestEvent& event);
+	int deallocate_flow(const int ipcp_id,
+			    const rina::FlowDeallocateRequestEvent& event);
 
 	//
 	// Retrieve the IPCP RIB in the form of a string
 	//
-        std::string query_rib(const int ipcp_id);
+	std::string query_rib(const int ipcp_id);
 
-        int select_policy_set(const int ipcp_id,
-                              const std::string& component_path,
-                              const std::string& policy_set);
+	int select_policy_set(const int ipcp_id,
+			      const std::string& component_path,
+			      const std::string& policy_set);
 
-        int set_policy_set_param(const int ipcp_id,
-                                 const std::string& path,
-                                 const std::string& name,
-                                 const std::string& value);
+	int set_policy_set_param(const int ipcp_id,
+				 const std::string& path,
+				 const std::string& name,
+				 const std::string& value);
 
-        int plugin_load(const int ipcp_id,
-                        const std::string& plugin_name, bool load);
+	int plugin_load(const int ipcp_id,
+			const std::string& plugin_name, bool load);
 
 	//
 	// Get the current logging debug level
 	//
-        std::string get_log_level() const;
+	std::string get_log_level() const;
 
 	//
 	// Set the config
@@ -300,6 +300,65 @@ public:
 	}
 
 protected:
+
+	//
+	// Internal APIs
+	//
+
+	/**
+	* Get the IPCP by DIF name
+	*
+ 	* Recovers the IPCProcess pointer with the rwlock acquired to either
+	* read lock or write lock
+	*
+	* @param read_lock When true, the IPCProcess instance is recovered with
+	* the read lock acquired, otherwise the write lock is acquired.
+	*/
+	rina::IPCProcess* select_ipcp_by_dif(const
+			rina::ApplicationProcessNamingInformation& dif_name,
+			bool read_lock=true);
+
+	/**
+	* TODO????
+	*/
+	rina::IPCProcess* select_ipcp(bool read_lock=true);
+
+	/**
+	* Check application registration
+	*/
+	bool application_is_registered_to_ipcp(
+			const rina::ApplicationProcessNamingInformation&,
+			rina::IPCProcess *slave_ipcp);
+	/**
+	* Get the IPCP by port id
+	*
+ 	* Recovers the IPCProcess pointer with the rwlock acquired to either
+	* read lock or write lock
+	*
+	* @param read_lock When true, the IPCProcess instance is recovered with
+	* the read lock acquired, otherwise the write lock is acquired.
+	*/
+	rina::IPCProcess* lookup_ipcp_by_port(unsigned int port_id,
+						bool read_lock=true);
+
+	/**
+	* Collect flows for an application name
+	*/
+	void collect_flows_by_application(
+			const rina::ApplicationProcessNamingInformation& app_name,
+			std::list<rina::FlowInformation>& result);
+
+	/**
+	* Get the IPCP instance pointer
+	*
+	* Recovers the IPCProcess pointer with the rwlock acquired to either
+	* read lock or write lock
+	*
+	* @param read_lock When true, the IPCProcess instance is recovered with
+	* the read lock acquired, otherwise the write lock is acquired.
+	*/
+	rina::IPCProcess* lookup_ipcp_by_id(unsigned int id,
+							bool read_lock=true);
 	//
 	// Internal event API
 	//
@@ -341,8 +400,8 @@ protected:
 				rina::ApplicationRegistrationRequestEvent>
 		>::iterator mit);
 	void application_manager_app_unregistered(
-                rina::ApplicationUnregistrationRequestEvent event,
-                int result);
+		rina::ApplicationUnregistrationRequestEvent event,
+		int result);
 	int ipcm_unregister_response_app(
 			rina::IpcmUnregisterApplicationResponseEvent *event,
 			std::map<unsigned int,
@@ -428,75 +487,75 @@ protected:
 	IPCMConcurrency concurrency;
 
 	//Pending IPCP DIF assignments
-        std::map<unsigned int, rina::IPCProcess*> pending_ipcp_dif_assignments;
+	std::map<unsigned int, rina::IPCProcess*> pending_ipcp_dif_assignments;
 
 	//Pending query RIB
-        std::map<unsigned int, rina::IPCProcess*> pending_ipcp_query_rib_responses;
+	std::map<unsigned int, rina::IPCProcess*> pending_ipcp_query_rib_responses;
 
 	//Query RIB responses
-        std::map<unsigned int, std::string > query_rib_responses;
+	std::map<unsigned int, std::string > query_rib_responses;
 
 	//Pending IPCP registrations
-        std::map<unsigned int,
-                 std::pair<rina::IPCProcess*, rina::IPCProcess*>
-                > pending_ipcp_registrations;
+	std::map<unsigned int,
+		 std::pair<rina::IPCProcess*, rina::IPCProcess*>
+		> pending_ipcp_registrations;
 
 	//Pending IPCP unregistration
-        std::map<unsigned int,
-                 std::pair<rina::IPCProcess*, rina::IPCProcess*>
-                > pending_ipcp_unregistrations;
+	std::map<unsigned int,
+		 std::pair<rina::IPCProcess*, rina::IPCProcess*>
+		> pending_ipcp_unregistrations;
 
 	//Pending IPCP enrollments
-        std::map<unsigned int, rina::IPCProcess*> pending_ipcp_enrollments;
+	std::map<unsigned int, rina::IPCProcess*> pending_ipcp_enrollments;
 
 	//Pending AP registrations
-        std::map<unsigned int,
-                 std::pair<rina::IPCProcess*,
-                           rina::ApplicationRegistrationRequestEvent
-                          >
-                > pending_app_registrations;
+	std::map<unsigned int,
+		 std::pair<rina::IPCProcess*,
+			   rina::ApplicationRegistrationRequestEvent
+			  >
+		> pending_app_registrations;
 
 	//Pending AP unregistrations
-        std::map<unsigned int,
-                 std::pair<rina::IPCProcess*,
-                           rina::ApplicationUnregistrationRequestEvent
-                          >
-                > pending_app_unregistrations;
+	std::map<unsigned int,
+		 std::pair<rina::IPCProcess*,
+			   rina::ApplicationUnregistrationRequestEvent
+			  >
+		> pending_app_unregistrations;
 
 	//Pending DIF config updates
-        std::map<unsigned int, rina::IPCProcess *> pending_dif_config_updates;
+	std::map<unsigned int, rina::IPCProcess *> pending_dif_config_updates;
 
 	//Pending flow allocations
-        std::map<unsigned int, PendingFlowAllocation> pending_flow_allocations;
+	std::map<unsigned int, PendingFlowAllocation> pending_flow_allocations;
 
 	//Pending flow deallocations
-        std::map<unsigned int,
-                 std::pair<rina::IPCProcess *,
-                           rina::FlowDeallocateRequestEvent
-                          >
-                > pending_flow_deallocations;
+	std::map<unsigned int,
+		 std::pair<rina::IPCProcess *,
+			   rina::FlowDeallocateRequestEvent
+			  >
+		> pending_flow_deallocations;
 
 	//
 	// RINA configuration internal state
 	//
-        rinad::RINAConfiguration config;
+	rinad::RINAConfiguration config;
 
 	/* FIXME REMOVE THIS*/
-        std::map<unsigned int,
-                 rina::IPCProcess *> pending_set_policy_set_param_ops;
+	std::map<unsigned int,
+		 rina::IPCProcess *> pending_set_policy_set_param_ops;
 
-        std::map<unsigned int,
-                 rina::IPCProcess *> pending_select_policy_set_ops;
+	std::map<unsigned int,
+		 rina::IPCProcess *> pending_select_policy_set_ops;
 
-        std::map<unsigned int,
-                 rina::IPCProcess *> pending_plugin_load_ops;
+	std::map<unsigned int,
+		 rina::IPCProcess *> pending_plugin_load_ops;
 	/* FIXME REMOVE THIS*/
 
 	//Script thread
-        rina::Thread *script;
+	rina::Thread *script;
 
 	//IPCM Console instance
-        IPCMConsole *console;
+	IPCMConsole *console;
 
 /**********************************************************/
 
@@ -587,7 +646,7 @@ protected:
 	*
 	* key: ipcp ID value: transaction state
 	*/
-        std::map<int, TransactionState*> pend_sys_trans;
+	std::map<int, TransactionState*> pend_sys_trans;
 
 	//Rwlock for transactions
 	rina::ReadWriteLockable trans_rwlock;
@@ -595,7 +654,7 @@ protected:
 	//TODO: map of addons
 
 	//Current logging level
-        std::string log_level_;
+	std::string log_level_;
 
 	//Keep running flag
 	volatile bool keep_running;
