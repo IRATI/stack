@@ -168,9 +168,9 @@ IPCManager_::unregister_ipcp_from_ipcp(int ipcp_id,
                         "process " << slave_ipcp->name.toString() << endl;
                 FLUSH_LOG(INFO, ss);
 
-                arrived = concurrency.wait_for_event(
+                /*arrived = concurrency.wait_for_event(
                                 rina::IPCM_UNREGISTER_APP_RESPONSE_EVENT,
-                                seqnum, ret);
+                                seqnum, ret);*/
         } catch (rina::IpcmUnregisterApplicationException) {
                 ss  << ": Error while unregistering IPC process "
                         << ipcp->name.toString() << " from IPC "
@@ -431,7 +431,7 @@ IPCManager_::assign_to_dif_response_event_handler(rina::IPCEvent * e)
 		FLUSH_LOG(WARN, ss);
 	}
 
-	IPCManager->concurrency.set_event_result(ret);
+	//IPCManager->concurrency.set_event_result(ret);
 }
 
 void
@@ -477,7 +477,7 @@ IPCManager_::update_dif_config_response_event_handler(rina::IPCEvent *e)
 
 	IPCManager->pending_dif_config_updates.erase(mit);
 
-	IPCManager->concurrency.set_event_result(event->result);
+	//IPCManager->concurrency.set_event_result(event->result);
 }
 
 void
@@ -521,7 +521,7 @@ IPCManager_::enroll_to_dif_response_event_handler(rina::IPCEvent *e)
 		IPCManager->pending_ipcp_enrollments.erase(mit);
 	}
 
-	IPCManager->concurrency.set_event_result(ret);
+	//IPCManager->concurrency.set_event_result(ret);
 }
 
 void IPCManager_::neighbors_modified_notification_event_handler(rina::IPCEvent * e)

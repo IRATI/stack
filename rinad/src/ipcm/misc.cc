@@ -85,7 +85,7 @@ void IPCManager_::query_rib_response_event_handler(rina::IPCEvent *e)
 		IPCManager->pending_ipcp_query_rib_responses.erase(mit);
 	}
 
-	IPCManager->concurrency.set_event_result(ret);
+	//IPCManager->concurrency.set_event_result(ret);
 }
 
 void IPCManager_::timer_expired_event_handler(rina::IPCEvent *event)

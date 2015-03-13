@@ -320,7 +320,7 @@ void IPCManager_::ipcm_register_app_response_event_handler(rina::IPCEvent *e)
                 FLUSH_LOG(WARN, ss);
         }
 
-        concurrency.set_event_result(ret);
+        //concurrency.set_event_result(ret);
 }
 
 void IPCManager_::application_manager_app_unregistered(
@@ -454,7 +454,7 @@ void IPCManager_::ipcm_unregister_app_response_event_handler(rina::IPCEvent *e)
                 FLUSH_LOG(WARN, ss);
         }
 
-        concurrency.set_event_result(ret);
+        //concurrency.set_event_result(ret);
 }
 
 void IPCManager_::register_application_response_event_handler(rina::IPCEvent *event)

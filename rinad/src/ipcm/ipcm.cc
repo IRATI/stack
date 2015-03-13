@@ -53,6 +53,7 @@ using namespace std;
 
 namespace rinad {
 
+#if 0
 //
 //IPCMConcurrency
 //
@@ -90,6 +91,7 @@ IPCMConcurrency::notify_event(rina::IPCEvent *event)
 		event_waiting = false;
 	}
 }
+#endif
 
 
 //
@@ -99,7 +101,7 @@ IPCMConcurrency::notify_event(rina::IPCEvent *event)
 //Singleton instance
 Singleton<IPCManager_> IPCManager;
 
-IPCManager_::IPCManager_() : concurrency(0), script(NULL), console(NULL){ }
+IPCManager_::IPCManager_() : script(NULL), console(NULL){ }
 
 IPCManager_::~IPCManager_()
 {
@@ -116,9 +118,6 @@ IPCManager_::~IPCManager_()
 void IPCManager_::init(unsigned int wait_time, const std::string& loglevel)
 {
 	// Initialize the IPC manager infrastructure in librina.
-
-	//TODO remove this!
-	concurrency.setWaitTime(wait_time);
 
 	try {
 		rina::initializeIPCManager(1,
@@ -313,15 +312,13 @@ IPCManager_::list_ipcps(std::ostream& os)
 	const vector<rina::IPCProcess *>& ipcps =
 		rina::ipcProcessFactory->listIPCProcesses();
 
-	concurrency.lock();
+	//TODO: move this to a read_lock
 
 	os << "Current IPC processes:" << endl;
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
 		os << "    " << ipcps[i]->id << ": " <<
 			ipcps[i]->name.toString() << "\n";
 	}
-
-	concurrency.unlock();
 
 	return 0;
 }
@@ -330,11 +327,9 @@ bool
 IPCManager_::ipcp_exists(const int ipcp_id){
 
 	//TODO: move this to a read_lock
-	concurrency.lock();
 
 	bool exists = (lookup_ipcp_by_id(ipcp_id) != NULL);
 
-	concurrency.unlock();
 
 	return exists;
 }
@@ -343,11 +338,9 @@ int
 IPCManager_::list_ipcp_types(std::list<std::string>& types)
 {
 
-	concurrency.lock();
+	//TODO: move this to a read_lock
 	types = rina::ipcProcessFactory->
 					getSupportedIPCProcessTypes();
-
-	concurrency.unlock();
 
 	return 0;
 }
@@ -359,15 +352,13 @@ int IPCManager_::get_ipcp_by_dif_name(std::string& difName){
 	int ret;
 	rina::ApplicationProcessNamingInformation dif(difName, string());
 
-	concurrency.lock();
+	//TODO: move this to a read_lock
 
 	ipcp = select_ipcp_by_dif(dif);
 	if(!ipcp)
 		ret = -1;
 	else
 		ret = ipcp->id;
-
-	concurrency.unlock();
 
 	return ret;
 }
@@ -389,7 +380,7 @@ IPCManager_::assign_to_dif(const int ipcp_id,
 	int		    ret = -1;
 	rina::IPCProcess* ipcp;
 
-	concurrency.lock();
+	//TODO: move this to a write_lock over the IPCP
 
 	try {
 
@@ -500,8 +491,8 @@ IPCManager_::assign_to_dif(const int ipcp_id,
 			ipcp->name.toString() << " to DIF " <<
 			dif_name.toString() << endl;
 		FLUSH_LOG(INFO, ss);
-		arrived = concurrency.wait_for_event(rina::ASSIGN_TO_DIF_RESPONSE_EVENT,
-						     seqnum, ret);
+		//arrived = concurrency.wait_for_event(rina::ASSIGN_TO_DIF_RESPONSE_EVENT,
+		//				     seqnum, ret);
 	} catch (rina::AssignToDIFException) {
 		ss << "Error while assigning " <<
 			ipcp->name.toString() <<
@@ -514,8 +505,6 @@ IPCManager_::assign_to_dif(const int ipcp_id,
 	catch (Exception) {
 		FLUSH_LOG(ERR, ss);
 	}
-
-	concurrency.unlock();
 
 	if (!arrived) {
 		ss  << ": Timed out" << endl;
@@ -538,7 +527,7 @@ IPCManager_::register_at_dif(const int ipcp_id,
 	bool arrived = true;
 	int ret = -1;
 
-	concurrency.lock();
+	//TODO: move this to a write_lock over the IPCP
 
 	// Try to register @ipcp to the slave IPC process.
 	try {
@@ -574,15 +563,13 @@ IPCManager_::register_at_dif(const int ipcp_id,
 		   << endl;
 		FLUSH_LOG(INFO, ss);
 
-		arrived = concurrency.wait_for_event(
-			rina::IPCM_REGISTER_APP_RESPONSE_EVENT, seqnum, ret);
+		//arrived = concurrency.wait_for_event(
+		//	rina::IPCM_REGISTER_APP_RESPONSE_EVENT, seqnum, ret);
 	} catch (Exception) {
 		ss  << ": Error while requesting registration"
 		    << endl;
 		FLUSH_LOG(ERR, ss);
 	}
-
-	concurrency.unlock();
 
 	if (!arrived) {
 		ss  << ": Timed out" << endl;
@@ -601,7 +588,7 @@ int IPCManager_::register_at_difs(const int ipcp_id,
 	ostringstream ss;
 	int ret = 0;
 
-	concurrency.unlock();
+	//TODO: move this to a write_lock over the IPCP
 
 	try{
 		ipcp = lookup_ipcp_by_id(ipcp_id);
@@ -623,8 +610,6 @@ int IPCManager_::register_at_difs(const int ipcp_id,
 		ret = -1;
 	}
 
-	concurrency.unlock();
-
 	return ret;
 }
 
@@ -639,7 +624,7 @@ IPCManager_::enroll_to_dif(const int ipcp_id,
 	int ret = 0;
 	unsigned int seqnum;
 
-	concurrency.lock();
+	//TODO: move this to a write_lock over the IPCP
 
 	try {
 		ipcp = lookup_ipcp_by_id(ipcp_id);
@@ -662,10 +647,10 @@ IPCManager_::enroll_to_dif(const int ipcp_id,
 			neighbor.apName.toString() << endl;
 		FLUSH_LOG(INFO, ss);
 		if (sync) {
-			arrived =
-				concurrency.wait_for_event(rina::ENROLL_TO_DIF_RESPONSE_EVENT,
-							   seqnum,
-							   ret);
+			//arrived =
+			//	concurrency.wait_for_event(rina::ENROLL_TO_DIF_RESPONSE_EVENT,
+			//				   seqnum,
+			//				   ret);
 		} else {
 			ret = 0;
 		}
@@ -675,8 +660,6 @@ IPCManager_::enroll_to_dif(const int ipcp_id,
 			<< endl;
 		FLUSH_LOG(ERR, ss);
 	}
-
-	concurrency.unlock();
 
 	if (!arrived) {
 		ss  << ": Timed out" << endl;
@@ -694,7 +677,7 @@ int IPCManager_::enroll_to_difs(const int ipcp_id,
 	rina::IPCProcess *ipcp;
 	int ret = -1;
 
-	concurrency.unlock();
+	//TODO: move this to a write_lock over the IPCP
 
 	try{
 		ipcp = lookup_ipcp_by_id(ipcp_id);
@@ -717,12 +700,11 @@ int IPCManager_::enroll_to_difs(const int ipcp_id,
 		ret = -1;
 	}
 
-	concurrency.unlock();
-
 	return ret;
 }
 
 bool IPCManager_::lookup_dif_by_application(
+	//TODO: move this to a read_lock over the IPCP
 	const rina::ApplicationProcessNamingInformation& apName,
 	rina::ApplicationProcessNamingInformation& difName){
 	return config.lookup_dif_by_application(apName, difName);
@@ -736,7 +718,7 @@ IPCManager_::apply_configuration()
 	list<rinad::IPCProcessToCreate>::iterator cit;
 	list<int>::iterator pit;
 
-	concurrency.unlock();
+	//TODO: move this to a write_lock over the IPCP
 
 	try{
 		//FIXME TODO XXX this method needs to be heavily refactored
@@ -768,7 +750,6 @@ IPCManager_::apply_configuration()
 			} catch (Exception &e) {
 				LOG_ERR("Exception while applying configuration: %s",
 					e.what());
-				concurrency.unlock();
 				return -1;
 			}
 
@@ -784,10 +765,8 @@ IPCManager_::apply_configuration()
 	} catch (Exception &e) {
 		LOG_ERR("Exception while applying configuration: %s",
 								e.what());
-		concurrency.unlock();
 		return -1;
 	}
-	concurrency.unlock();
 
 	return 0;
 }
@@ -802,7 +781,7 @@ IPCManager_::update_dif_configuration(int ipcp_id,
 	unsigned int seqnum;
 	rina::IPCProcess *ipcp;
 
-	concurrency.lock();
+	//TODO: move this to a write_lock over the IPCP
 
 	try {
 		ipcp = lookup_ipcp_by_id(ipcp_id);
@@ -828,15 +807,13 @@ IPCManager_::update_dif_configuration(int ipcp_id,
 			ipcp->name.toString() << endl;
 		FLUSH_LOG(INFO, ss);
 
-		arrived = concurrency.wait_for_event(
-			rina::UPDATE_DIF_CONFIG_RESPONSE_EVENT, seqnum, ret);
+		/*arrived = concurrency.wait_for_event(
+			rina::UPDATE_DIF_CONFIG_RESPONSE_EVENT, seqnum, ret);*/
 	} catch (rina::UpdateDIFConfigurationException) {
 		ss  << ": Error while updating DIF configuration "
 			" for IPC process " << ipcp->name.toString() << endl;
 		FLUSH_LOG(ERR, ss);
 	}
-
-	concurrency.unlock();
 
 	if (!arrived) {
 		ss  << ": Timed out" << endl;
@@ -857,7 +834,7 @@ IPCManager_::query_rib(const int ipcp_id)
 	rina::IPCProcess *ipcp;
 
 
-	concurrency.lock();
+	//TODO: move this to a read_lock over the IPCP
 
 	try {
 		ipcp = lookup_ipcp_by_id(ipcp_id);
@@ -875,8 +852,8 @@ IPCManager_::query_rib(const int ipcp_id)
 		ss << "Requested query RIB of IPC process " <<
 			ipcp->name.toString() << endl;
 		FLUSH_LOG(INFO, ss);
-		arrived = concurrency.wait_for_event(rina::QUERY_RIB_RESPONSE_EVENT,
-					   seqnum, ret);
+		/*arrived = concurrency.wait_for_event(rina::QUERY_RIB_RESPONSE_EVENT,
+					   seqnum, ret);*/
 
 		std::map<unsigned int, std::string >::iterator mit;
 		mit = query_rib_responses.find(seqnum);
@@ -890,8 +867,6 @@ IPCManager_::query_rib(const int ipcp_id)
 			ipcp->name.toString() << endl;
 		FLUSH_LOG(ERR, ss);
 	}
-
-	concurrency.unlock();
 
 	if (!arrived) {
 		ss  << ": Timed out" << endl;
@@ -919,7 +894,7 @@ IPCManager_::set_policy_set_param(const int ipcp_id,
         int ret = -1;
 	rina::IPCProcess *ipcp;
 
-        concurrency.lock();
+	//TODO: move this to a write_lock over the IPCP
 
         try {
 		ipcp = lookup_ipcp_by_id(ipcp_id);
@@ -937,16 +912,14 @@ IPCManager_::set_policy_set_param(const int ipcp_id,
                 ss << "Issued set-policy-set-param to IPC process " <<
                         ipcp->name.toString() << endl;
                 FLUSH_LOG(INFO, ss);
-                arrived = concurrency.wait_for_event(
+                /*arrived = concurrency.wait_for_event(
                                 rina::IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE,
-                                seqnum, ret);
+                                seqnum, ret);*/
         } catch (rina::SetPolicySetParamException) {
                 ss << "Error while issuing set-policy-set-param request "
                         "to IPC Process " << ipcp->name.toString() << endl;
                 FLUSH_LOG(ERR, ss);
         }
-
-        concurrency.unlock();
 
         if (!arrived) {
                 ss  << ": Timed out" << endl;
@@ -967,8 +940,6 @@ IPCManager_::select_policy_set(const int ipcp_id,
         int ret = -1;
 	rina::IPCProcess *ipcp;
 
-        concurrency.lock();
-
         try {
 		ipcp = lookup_ipcp_by_id(ipcp_id);
 
@@ -984,16 +955,14 @@ IPCManager_::select_policy_set(const int ipcp_id,
                 ss << "Issued select-policy-set to IPC process " <<
                         ipcp->name.toString() << endl;
                 FLUSH_LOG(INFO, ss);
-                arrived = concurrency.wait_for_event(
+                /*arrived = concurrency.wait_for_event(
                                 rina::IPC_PROCESS_SELECT_POLICY_SET_RESPONSE,
-                                seqnum, ret);
+                                seqnum, ret);*/
         } catch (rina::SelectPolicySetException) {
                 ss << "Error while issuing select-policy-set request "
                         "to IPC Process " << ipcp->name.toString() << endl;
                 FLUSH_LOG(ERR, ss);
         }
-
-        concurrency.unlock();
 
         if (!arrived) {
                 ss  << ": Timed out" << endl;
@@ -1013,7 +982,7 @@ IPCManager_::plugin_load(const int ipcp_id,
         int ret = -1;
 	rina::IPCProcess *ipcp;
 
-        concurrency.lock();
+	//TODO: move this to a write_lock over the IPCP
 
         try {
 		ipcp = lookup_ipcp_by_id(ipcp_id);
@@ -1030,16 +999,14 @@ IPCManager_::plugin_load(const int ipcp_id,
                 ss << "Issued plugin-load to IPC process " <<
                         ipcp->name.toString() << endl;
                 FLUSH_LOG(INFO, ss);
-                arrived = concurrency.wait_for_event(
+                /*arrived = concurrency.wait_for_event(
                                 rina::IPC_PROCESS_PLUGIN_LOAD_RESPONSE,
-                                seqnum, ret);
+                                seqnum, ret);*/
         } catch (rina::PluginLoadException) {
                 ss << "Error while issuing plugin-load request "
                         "to IPC Process " << ipcp->name.toString() << endl;
                 FLUSH_LOG(ERR, ss);
         }
-
-        concurrency.unlock();
 
         if (!arrived) {
                 ss  << ": Timed out" << endl;
@@ -1143,8 +1110,7 @@ void IPCManager_::run(){
 		}
 
 		try {
-			//TODO: move locking to a smaller scope
-			concurrency.lock();
+			//TODO: Locking?
 
 			switch(event->eventType){
 				case rina::FLOW_ALLOCATION_REQUESTED_EVENT:
@@ -1306,16 +1272,9 @@ void IPCManager_::run(){
 					break;
 			}
 
-			//Notify event
-			concurrency.notify_event(event);
-
-			//TODO: move locking to a smaller scope
-			concurrency.unlock();
-
 		} catch (Exception &e) {
 			LOG_ERR("ERROR while processing event: %s", e.what());
 			//TODO: move locking to a smaller scope
-			concurrency.unlock();
 		}
 
 		delete event;
@@ -1329,6 +1288,7 @@ void IPCManager_::run(){
 		rina::ipcProcessFactory->listIPCProcesses();
 	std::vector<rina::IPCProcess *>::const_iterator it;
 
+	//Rwlock: write
 	for(it = ipcps.begin(); it != ipcps.end(); ++it){
 		if(destroy_ipcp(NULL, (*it)->id) < 0 ){
 			LOG_WARN("Warning could not destroy IPCP id: %d\n",

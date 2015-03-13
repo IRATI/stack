@@ -60,7 +60,7 @@ void IPCManager_::ipc_process_set_policy_set_param_response_handler(
 		FLUSH_LOG(WARN, ss);
 	}
 
-	concurrency.set_event_result(ret);
+	//concurrency.set_event_result(ret);
 }
 
 void IPCManager_::ipc_process_plugin_load_response_handler(rina::IPCEvent *e)
@@ -84,7 +84,7 @@ void IPCManager_::ipc_process_plugin_load_response_handler(rina::IPCEvent *e)
                 FLUSH_LOG(WARN, ss);
         }
 
-        concurrency.set_event_result(ret);
+        //concurrency.set_event_result(ret);
 }
 
 void IPCManager_::ipc_process_select_policy_set_response_handler(
@@ -109,7 +109,7 @@ void IPCManager_::ipc_process_select_policy_set_response_handler(
                 FLUSH_LOG(WARN, ss);
         }
 
-        concurrency.set_event_result(ret);
+        //concurrency.set_event_result(ret);
 }
 
 } //namespace rinad

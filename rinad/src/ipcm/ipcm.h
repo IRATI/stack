@@ -84,6 +84,7 @@ public:
 	rina::ConditionVariable wait_cond;
 };
 
+#if 0
 //
 //
 // TODO: revise
@@ -106,6 +107,7 @@ class IPCMConcurrency : public rina::ConditionVariable {
 	unsigned int event_sn;
 	int event_result;
 };
+#endif
 
 //
 // @brief Pending Flow allocation object
@@ -484,7 +486,7 @@ protected:
 	//
 	// TODO: revise
 	//
-	IPCMConcurrency concurrency;
+	//IPCMConcurrency concurrency;
 
 	//Pending IPCP DIF assignments
 	std::map<unsigned int, rina::IPCProcess*> pending_ipcp_dif_assignments;
