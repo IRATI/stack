@@ -45,7 +45,7 @@ public:
 	IPCPTransState(const Addon* callee, const int _tid, int _ipcp_id)
 					: TransactionState(callee, tid),
 						ipcp_id(_ipcp_id){}
-	virtual ~IPCPTransState();
+	virtual ~IPCPTransState(){};
 
 	//IPCP identifier
 	int ipcp_id;
@@ -62,7 +62,7 @@ public:
 					TransactionState(callee, tid),
 					ipcp_id(_ipcp_id),
 					slave_ipcp_id(_slave_ipcp_id){}
-	virtual ~IPCPregTransState();
+	virtual ~IPCPregTransState(){};
 
 	//IPCP identifier
 	int ipcp_id;

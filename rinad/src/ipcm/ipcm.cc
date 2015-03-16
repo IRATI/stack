@@ -247,7 +247,7 @@ IPCManager_::create_ipcp(const Addon* callee,
 				return ipcp->id;
 			}else{
 				//We have to synchronously wait
-				state->wait_cond.doWait(); //FIXME: timed wait
+				state->wait(); //FIXME: timed wait
 				if(!state->ret < 0){
 					ss << "Failed to create IPC process '" <<
 						name.toString() << "' of type '" <<
@@ -355,7 +355,7 @@ int IPCManager_::get_ipcp_by_dif_name(std::string& difName){
 
 
 int
-IPCManager_::assign_to_dif(const int ipcp_id,
+IPCManager_::assign_to_dif(const Addon* callee, const int ipcp_id,
 			  const rina::ApplicationProcessNamingInformation &
 			  dif_name)
 {
@@ -368,6 +368,7 @@ IPCManager_::assign_to_dif(const int ipcp_id,
 	bool		   found;
 	int		    ret = -1;
 	rina::IPCProcess* ipcp;
+	IPCPTransState* trans;
 
 	//TODO: move this to a write_lock over the IPCP
 
@@ -377,7 +378,6 @@ IPCManager_::assign_to_dif(const int ipcp_id,
 
 		if(!ipcp){
 			ss << "Invalid IPCP id "<< ipcp_id;
-                	FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
@@ -388,7 +388,6 @@ IPCManager_::assign_to_dif(const int ipcp_id,
 		if (!found) {
 			ss << "Cannot find properties for DIF "
 				<< dif_name.toString();
-                	FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
@@ -408,6 +407,11 @@ IPCManager_::assign_to_dif(const int ipcp_id,
 					qit != dif_props.qosCubes.end();
 					qit++) {
 				qosCube = new rina::QoSCube(*qit);
+				if(!qosCube){
+					ss << "Unable to allocate memory for the QoSCube object. Out of memory! "
+					<< dif_name.toString();
+					throw Exception();
+				}
 				efcp_config.add_qos_cube(qosCube);
 			}
 
@@ -441,7 +445,6 @@ IPCManager_::assign_to_dif(const int ipcp_id,
 					ipcp->name.toString() <<
 					" in DIF " << dif_name.toString() <<
 					endl;
-                		FLUSH_LOG(ERR, ss);
 				throw Exception();
 			}
 			dif_config.set_efcp_configuration(efcp_config);
@@ -474,32 +477,52 @@ IPCManager_::assign_to_dif(const int ipcp_id,
 		// Invoke librina to assign the IPC process to the
 		// DIF specified by dif_info.
 		seqnum = opaque_generator_.next();
+
+		//Create a transaction
+		IPCPTransState* trans = new IPCPTransState(callee, seqnum,
+							ipcp->id);
+		if(!trans){
+			ss << "Unable to allocate memory for the transaction object. Out of memory! "
+				<< dif_name.toString();
+			throw Exception();
+		}
+
+		//Store transaction
+		if(add_transaction_state(seqnum, trans) < 0){
+			ss << "Unable to add transaction; out of memory? "
+				<< dif_name.toString();
+			throw Exception();
+		}
+
 		ipcp->assignToDIF(dif_info, seqnum);
 
-		pending_ipcp_dif_assignments[seqnum] = ipcp;
 		ss << "Requested DIF assignment of IPC process " <<
 			ipcp->name.toString() << " to DIF " <<
 			dif_name.toString() << endl;
 		FLUSH_LOG(INFO, ss);
-		//arrived = concurrency.wait_for_event(rina::ASSIGN_TO_DIF_RESPONSE_EVENT,
-		//				     seqnum, ret);
 	} catch (rina::AssignToDIFException) {
 		ss << "Error while assigning " <<
 			ipcp->name.toString() <<
 			" to DIF " << dif_name.toString() << endl;
 		FLUSH_LOG(ERR, ss);
+		ret = -1;
 	} catch (rina::BadConfigurationException &e) {
-		LOG_ERR("DIF %s configuration failed", dif_name.toString().c_str());
-		throw e;
-	}
-	catch (Exception) {
 		FLUSH_LOG(ERR, ss);
+		LOG_ERR("DIF %s configuration failed", dif_name.toString().c_str());
+		ret = -1;
+	}catch (Exception) {
+		FLUSH_LOG(ERR, ss);
+		ret = -1;
 	}
 
-	if (!arrived) {
-		ss  << ": Timed out" << endl;
-		FLUSH_LOG(ERR, ss);
-		return -1;
+	//If it is a synchronous call, wait until it has been finished
+	if(!callee){
+		//Just wait in the condition variable
+		//TODO: move this to a timedwait
+		trans->wait();
+
+		//Callback
+		//TODO
 	}
 
 	return ret;
@@ -737,7 +760,7 @@ IPCManager_::apply_configuration()
 				if (ipcp_id < 0) {
 					continue;
 				}
-				assign_to_dif(ipcp_id, cit->difName);
+				assign_to_dif(NULL, ipcp_id, cit->difName);
 				register_at_difs(ipcp_id, cit->difsToRegisterAt);
 			} catch (Exception &e) {
 				LOG_ERR("Exception while applying configuration: %s",

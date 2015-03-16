@@ -45,7 +45,7 @@ public:
 	RIBqTransState(const Addon* _callee, const int _tid, int _ipcp_id)
 					:IPCPTransState(_callee, tid,
 								_ipcp_id){}
-	virtual ~RIBqTransState();
+	virtual ~RIBqTransState(){};
 
 	//Output result
 	std::string result;

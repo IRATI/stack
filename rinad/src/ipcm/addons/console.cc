@@ -449,7 +449,7 @@ IPCMConsole::assign_to_dif(std::vector<string>& args)
 	if (!IPCManager->ipcp_exists(ipcp_id)) {
 		outstream << "No such IPC process id" << endl;
 	} else {
-		ret = IPCManager->assign_to_dif(ipcp_id, dif_name);
+		ret = IPCManager->assign_to_dif(this, ipcp_id, dif_name);
 		if (ret) {
 			outstream << "DIF assignment failed" << endl;
 		} else {

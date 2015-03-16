@@ -41,6 +41,8 @@
 //[+] Add more here...
 
 
+//Constants
+#define TRANS_RETRY_NSEC 1000000
 
 #ifndef DOWNCAST_DECL
 	// Useful MACRO to perform downcasts in declarations.
@@ -68,8 +70,32 @@ class TransactionState {
 
 public:
 	TransactionState(const Addon* _callee, const int _tid):
-						callee(_callee), tid(_tid){};
+						callee(_callee), tid(_tid),
+						complete(false){};
 	virtual ~TransactionState(){};
+
+	//
+	// Wait (blocking)
+	//
+	void wait(void){
+		// Due to the async nature of the API, notifications (signal)
+		// the transaction can well end before the thread is waiting
+		// in the condition variable. As apposed to sempahores
+		// pthread_cond don't keep the "credit"
+		while(!complete){
+			try{
+				wait_cond.timedwait(0, TRANS_RETRY_NSEC);
+			}catch(...){};
+		}
+	};
+
+	//
+	// Wrap condition signal to properly set complete flag
+	//
+	void signal(){
+		complete = true;
+		wait_cond.signal();
+	}
 
 	//Callee
 	const Addon* callee;
@@ -80,6 +106,10 @@ public:
 	//Return value
 	int ret;
 
+	//Is the transaction finished
+	bool complete;
+
+private:
 	//Condition variable
 	rina::ConditionVariable wait_cond;
 };
@@ -195,7 +225,7 @@ public:
 	//
 	// Assing an ipcp to a DIF
 	//
-	int assign_to_dif(const int ipcp_id,
+	int assign_to_dif(const Addon* callee, const int ipcp_id,
 			  const rina::ApplicationProcessNamingInformation&
 			  difName);
 

@@ -51,7 +51,7 @@ public:
 					req_event(_req_e),
 					try_only_a_dif(once)
 					{}
-	virtual ~FlowAllocTransState();
+	virtual ~FlowAllocTransState(){};
 
         int slave_ipcp_id;
         rina::FlowRequestEvent req_event;
