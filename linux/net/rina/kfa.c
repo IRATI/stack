@@ -791,6 +791,7 @@ static int kfa_flow_ipcp_bind(struct ipcp_instance_data * data,
 {
         struct ipcp_flow * flow;
         struct kfa *       instance;
+        unsigned long      flags;
 
         IRQ_BARRIER;
 
@@ -820,11 +821,10 @@ static int kfa_flow_ipcp_bind(struct ipcp_instance_data * data,
                 return-1;
         }
 
-        /* FIXME: should this be irqsave? */
-        spin_lock(&instance->lock);
+        spin_lock_irqsave(&instance->lock, flags);
         flow = kfa_pmap_find(instance->flows, pid);
         if (!flow) {
-                spin_unlock(&instance->lock);
+                spin_unlock_irqrestore(&instance->lock, flags);
                 LOG_ERR("Cannot bind IPCP %pK to flow on port %d since "
                         "flow is missing on that port", ipcp, pid);
                 return -1;
@@ -836,13 +836,13 @@ static int kfa_flow_ipcp_bind(struct ipcp_instance_data * data,
         if (!flow->sdu_ready) {
                 kfa_pmap_remove(instance->flows, pid);
                 rkfree(flow);
-                spin_unlock(&instance->lock);
+                spin_unlock_irqrestore(&instance->lock, flags);
                 return -1;
         }
 
-        LOG_DBG("Flow bound to port-id %d", pid);
+        spin_unlock_irqrestore(&instance->lock, flags);
 
-        spin_unlock(&instance->lock);
+        LOG_DBG("Flow bound to port-id %d", pid);
 
         return 0;
 }
