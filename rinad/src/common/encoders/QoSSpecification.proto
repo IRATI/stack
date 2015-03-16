@@ -1,5 +1,5 @@
 package rina.messages;
-option java_package="rina.encoding.impl.googleprotobuf.qosspecification";
+option optimize_for = LITE_RUNTIME;
 import "CommonMessages.proto";
 
 message qosSpecification_t{									//The QoS parameters requested by an application for a certain flow

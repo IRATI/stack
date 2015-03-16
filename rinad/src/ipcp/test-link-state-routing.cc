@@ -1,5 +1,5 @@
 //
-// test-pduftg
+// test-link-state-routing
 //
 //    Bernat Gaston <bernat.gaston@i2cat.net>
 //    Eduard Grasa  <eduard.grasa@i2cat.net>
@@ -20,11 +20,11 @@
 // MA  02110-1301  USA
 //
 
-#define RINA_PREFIX "pduft-generator-tests"
+#define RINA_PREFIX "lsr-tests"
 
 #include <librina/logs.h>
 
-#include "ipcp/pduft-generator.h"
+#include "ipcp/link-state-routing-ps.h"
 
 class FakeEncoder: public rina::EncoderInterface {
 public:
@@ -451,6 +451,45 @@ public:
 		return neighbors_;
 	}
 
+    std::vector<rinad::PsFactory>::iterator
+                    psFactoryLookup(const std::string& component,
+                                   const std::string& name) {
+    	std::vector<rinad::PsFactory>::iterator response;
+    	(void) component;
+    	(void) name;
+    	return response;
+    }
+
+    int psFactoryPublish(const rinad::PsFactory& factory) {
+    	(void) factory;
+    	return 0;
+    }
+
+    int psFactoryUnpublish(const std::string& component,
+                                          const std::string& name){
+    	(void) component;
+    	(void) name;
+    	return 0;
+    }
+
+    rinad::IPolicySet * psCreate(const std::string& component,
+                                 const std::string& name,
+                                 rinad::IPCProcessComponent * context) {
+    	(void) component;
+    	(void) name;
+    	(void) context;
+    	return 0;
+    }
+
+    int psDestroy(const std::string& component,
+                                        const std::string& name,
+                                        rinad::IPolicySet * instance) {
+    	(void) component;
+    	(void) name;
+    	(void) instance;
+    	return 0;
+    }
+
 	rinad::IPCProcessOperationalState state_;
 	rina::DIFInformation dif_information_;
 	std::list<rina::Neighbor*> neighbors_;
@@ -546,8 +585,8 @@ int Graph_EmptyGraph_Empty() {
 
 int Graph_Contruct2Nodes_True() {
 	std::list<rinad::FlowStateObject *> objects;
-	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 1, 2, 1, true, 1, 1);
-	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, 1, true, 1, 1);
+	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
+	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, true, 1, 1);
 	objects.push_back(&fso1);
 	objects.push_back(&fso2);
     rinad::Graph g = rinad::Graph(objects);
@@ -572,8 +611,8 @@ int Graph_Contruct2Nodes_True() {
 
 int Graph_StateFalseisEmpty_True() {
 	std::list<rinad::FlowStateObject *> objects;
-	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 1, 2, 1, true, 1, 1);
-	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, 1, false, 1, 1);
+	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
+	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, false, 1, 1);
 	objects.push_back(&fso1);
 	objects.push_back(&fso2);
 	rinad::Graph g = rinad::Graph(objects);
@@ -587,9 +626,9 @@ int Graph_StateFalseisEmpty_True() {
 
 int Graph_NotConnected_True() {
 	std::list<rinad::FlowStateObject *> objects;
-	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 1, 2, 1, true, 1, 1);
-	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 2, 3, 2, false, 1, 1);
-	rinad::FlowStateObject fso3 = rinad::FlowStateObject(3, 1, 2, 1, false, 1, 1);
+	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
+	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 3, 1, false, 1, 1);
+	rinad::FlowStateObject fso3 = rinad::FlowStateObject(3, 2, 1, false, 1, 1);
 	objects.push_back(&fso1);
 	objects.push_back(&fso2);
 	rinad::Graph g = rinad::Graph(objects);
@@ -607,7 +646,7 @@ int Graph_NotConnected_True() {
 
 int Graph_ContructNoBiderectionalFlow_False() {
 	std::list<rinad::FlowStateObject *> objects;
-	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 1, 2, 1, true, 1, 1);
+	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
 	objects.push_back(&fso1);
 	rinad::Graph g = rinad::Graph(objects);
 
@@ -624,12 +663,12 @@ int Graph_ContructNoBiderectionalFlow_False() {
 
 int Graph_ContructTriangleGraph_True() {
 	std::list<rinad::FlowStateObject *> objects;
-	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 1, 2, 1, true, 1, 1);
-	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, 1, true, 1, 1);
-	rinad::FlowStateObject fso3 = rinad::FlowStateObject(1, 2, 3, 2, true, 1, 1);
-	rinad::FlowStateObject fso4 = rinad::FlowStateObject(3, 2, 1, 2, true, 1, 1);
-	rinad::FlowStateObject fso5 = rinad::FlowStateObject(2, 3, 3, 3, true, 1, 1);
-	rinad::FlowStateObject fso6 = rinad::FlowStateObject(3, 3, 2, 3, true, 1, 1);
+	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
+	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, true, 1, 1);
+	rinad::FlowStateObject fso3 = rinad::FlowStateObject(1, 3, 1, true, 1, 1);
+	rinad::FlowStateObject fso4 = rinad::FlowStateObject(3, 1, 1, true, 1, 1);
+	rinad::FlowStateObject fso5 = rinad::FlowStateObject(2, 3, 1, true, 1, 1);
+	rinad::FlowStateObject fso6 = rinad::FlowStateObject(3, 2, 1, true, 1, 1);
 	objects.push_back(&fso1);
 	objects.push_back(&fso2);
 	objects.push_back(&fso3);
@@ -697,17 +736,17 @@ int test_graph () {
 	return result;
 }
 
-int getPDUTForwardingTable_NoFSO_size0() {
+int getRoutingTable_NoFSO_size0() {
 	int result = 0;
 
 	rinad::IRoutingAlgorithm * routingAlgorithm =
 			new rinad::DijkstraAlgorithm();
 	std::list<rinad::FlowStateObject *> fsos;
 
-	std::list<rina::PDUForwardingTableEntry *> pduft =
-			routingAlgorithm->computePDUTForwardingTable(fsos, 1);
+	std::list<rina::RoutingTableEntry *> rtable =
+			routingAlgorithm->computeRoutingTable(fsos, 1);
 
-	if (pduft.size() != 0) {
+	if (rtable.size() != 0) {
 		result = -1;
 	}
 
@@ -715,14 +754,14 @@ int getPDUTForwardingTable_NoFSO_size0() {
 	return result;
 }
 
-int getPDUTForwardingTable_LinearGraphNumberOfEntries_2() {
+int getRoutingTable_LinearGraphNumberOfEntries_2() {
 	int result = 0;
 
 	std::list<rinad::FlowStateObject *> objects;
-	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 1, 2, 1, true, 1, 1);
-	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, 1, true, 1, 1);
-	rinad::FlowStateObject fso3 = rinad::FlowStateObject(2, 2, 3, 2, true, 1, 1);
-	rinad::FlowStateObject fso4 = rinad::FlowStateObject(3, 2, 2, 2, true, 1, 1);
+	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
+	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, true, 1, 1);
+	rinad::FlowStateObject fso3 = rinad::FlowStateObject(2, 3, 1, true, 1, 1);
+	rinad::FlowStateObject fso4 = rinad::FlowStateObject(3, 2, 1, true, 1, 1);
 	objects.push_back(&fso1);
 	objects.push_back(&fso2);
 	objects.push_back(&fso3);
@@ -730,44 +769,32 @@ int getPDUTForwardingTable_LinearGraphNumberOfEntries_2() {
 	rinad::IRoutingAlgorithm * routingAlgorithm =
 			new rinad::DijkstraAlgorithm();
 
-	std::list<rina::PDUForwardingTableEntry *> pduft =
-			routingAlgorithm->computePDUTForwardingTable(objects, 1);
+	std::list<rina::RoutingTableEntry *> rtable =
+			routingAlgorithm->computeRoutingTable(objects, 1);
 
-	if (pduft.size() != 2) {
+	if (rtable.size() != 2) {
 		result = -1;
-	}
-
-	std::list<rina::PDUForwardingTableEntry *>::const_iterator it;
-	for (it = pduft.begin(); it != pduft.end(); ++it){
-		if ((*it)->getAddress() == 2 && (*it)->getPortIds().front() == 1) {
-			continue;
-		} else if ((*it)->getAddress() == 3 && (*it)->getPortIds().front() == 1) {
-			continue;
-		} else {
-			result = -1;
-			break;
-		}
 	}
 
 	delete routingAlgorithm;
 	return result;
 }
 
-int getPDUTForwardingTable_StateFalseNoEntries_True() {
+int getRoutingTable_StateFalseNoEntries_True() {
 	int result = 0;
 
 	std::list<rinad::FlowStateObject *> objects;
-	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 1, 2, 1, true, 1, 1);
-	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, 1, false, 1, 1);
+	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
+	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, false, 1, 1);
 	objects.push_back(&fso1);
 	objects.push_back(&fso2);
 	rinad::IRoutingAlgorithm * routingAlgorithm =
 			new rinad::DijkstraAlgorithm();
 
-	std::list<rina::PDUForwardingTableEntry *> pduft =
-			routingAlgorithm->computePDUTForwardingTable(objects, 1);
+	std::list<rina::RoutingTableEntry *> rtable =
+			routingAlgorithm->computeRoutingTable(objects, 1);
 
-	if (pduft.size() != 0) {
+	if (rtable.size() != 0) {
 		result = -1;
 	}
 
@@ -775,16 +802,16 @@ int getPDUTForwardingTable_StateFalseNoEntries_True() {
 	return result;
 }
 
-int getPDUTForwardingTable_MultiGraphEntries_True() {
+int getRoutingTable_MultiGraphEntries_True() {
 	int result = 0;
 
 	std::list<rinad::FlowStateObject *> objects;
-	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 1, 2, 1, true, 1, 1);
-	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, 1, true, 1, 1);
-	rinad::FlowStateObject fso3 = rinad::FlowStateObject(1, 2, 3, 2, true, 1, 1);
-	rinad::FlowStateObject fso4 = rinad::FlowStateObject(3, 2, 1, 2, true, 1, 1);
-	rinad::FlowStateObject fso5 = rinad::FlowStateObject(2, 3, 3, 3, true, 1, 1);
-	rinad::FlowStateObject fso6 = rinad::FlowStateObject(3, 3, 2, 3, true, 1, 1);
+	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
+	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, true, 1, 1);
+	rinad::FlowStateObject fso3 = rinad::FlowStateObject(1, 3, 1, true, 1, 1);
+	rinad::FlowStateObject fso4 = rinad::FlowStateObject(3, 1, 1, true, 1, 1);
+	rinad::FlowStateObject fso5 = rinad::FlowStateObject(2, 3, 1, true, 1, 1);
+	rinad::FlowStateObject fso6 = rinad::FlowStateObject(3, 2, 1, true, 1, 1);
 	objects.push_back(&fso1);
 	objects.push_back(&fso2);
 	objects.push_back(&fso3);
@@ -794,23 +821,11 @@ int getPDUTForwardingTable_MultiGraphEntries_True() {
 	rinad::IRoutingAlgorithm * routingAlgorithm =
 			new rinad::DijkstraAlgorithm();
 
-	std::list<rina::PDUForwardingTableEntry *> pduft =
-			routingAlgorithm->computePDUTForwardingTable(objects, 1);
+	std::list<rina::RoutingTableEntry *> rtable =
+			routingAlgorithm->computeRoutingTable(objects, 1);
 
-	if (pduft.size() != 2) {
+	if (rtable.size() != 2) {
 		result = -1;
-	}
-
-	std::list<rina::PDUForwardingTableEntry *>::const_iterator it;
-	for (it = pduft.begin(); it != pduft.end(); ++it){
-		if ((*it)->getAddress() == 2 && (*it)->getPortIds().front() == 1) {
-			continue;
-		} else if ((*it)->getAddress() == 3 && (*it)->getPortIds().front() == 2) {
-			continue;
-		} else {
-			result = -1;
-			break;
-		}
 	}
 
 	delete routingAlgorithm;
@@ -820,74 +835,33 @@ int getPDUTForwardingTable_MultiGraphEntries_True() {
 int test_dijkstra() {
 	int result = 0;
 
-	result = getPDUTForwardingTable_NoFSO_size0();
+	result = getRoutingTable_NoFSO_size0();
 	if (result < 0) {
 		LOG_ERR("getPDUTForwardingTable_NoFSO_size0 test failed");
 		return result;
 	}
 	LOG_INFO("getPDUTForwardingTable_NoFSO_size0 test passed");
 
-	result = getPDUTForwardingTable_LinearGraphNumberOfEntries_2();
+	result = getRoutingTable_LinearGraphNumberOfEntries_2();
 	if (result < 0) {
 		LOG_ERR("getPDUTForwardingTable_LinearGraphNumberOfEntries_2 test failed");
 		return result;
 	}
 	LOG_INFO("getPDUTForwardingTable_LinearGraphNumberOfEntries_2 test passed");
 
-	result = getPDUTForwardingTable_StateFalseNoEntries_True();
+	result = getRoutingTable_StateFalseNoEntries_True();
 	if (result < 0) {
 		LOG_ERR("getPDUTForwardingTable_StateFalseNoEntries_True test failed");
 		return result;
 	}
 	LOG_INFO("getPDUTForwardingTable_StateFalseNoEntries_True test passed");
 
-	result = getPDUTForwardingTable_MultiGraphEntries_True();
+	result = getRoutingTable_MultiGraphEntries_True();
 	if (result < 0) {
 		LOG_ERR("getPDUTForwardingTable_MultiGraphEntries_True test failed");
 		return result;
 	}
 	LOG_INFO("getPDUTForwardingTable_MultiGraphEntries_True test passed");
-
-	return result;
-}
-
-int flowdeAllocated_DeAllocateFlow_True() {
-	rinad::LinkStatePDUFTGeneratorPolicy pduftgPolicy;
-	FakeIPCProcess ipcProcess;
-	rina::DIFConfiguration difConfiguration;
-	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.
-		set_routing_algorithm("Dijkstra");
-
-	pduftgPolicy.test_ = true;
-	pduftgPolicy.set_ipc_process(&ipcProcess);
-	pduftgPolicy.set_dif_configuration(difConfiguration);
-
-	rina::FlowInformation flowInfo;
-	flowInfo.portId = 3;
-	rinad::NMinusOneFlowAllocatedEvent event = rinad::NMinusOneFlowAllocatedEvent(4, flowInfo);
-	pduftgPolicy.eventHappened(&event);
-	if (pduftgPolicy.get_allocated_flows().size() != 1) {
-		return -1;
-	}
-
-	rinad::NMinusOneFlowDeallocatedEvent event2 = rinad::NMinusOneFlowDeallocatedEvent(3, 0);
-	pduftgPolicy.eventHappened(&event2);
-	if (pduftgPolicy.get_allocated_flows().size() != 0) {
-		return -1;
-	}
-
-	return 0;
-}
-
-int test_link_state_pduftg_policy() {
-	int result = 0;
-
-	result = flowdeAllocated_DeAllocateFlow_True();
-	if (result < 0) {
-		LOG_ERR("flowdeAllocated_DeAllocateFlow_True test failed");
-		return result;
-	}
-	LOG_INFO("flowdeAllocated_DeAllocateFlow_True test passed");
 
 	return result;
 }
@@ -916,13 +890,6 @@ int main()
 		return result;
 	}
 	LOG_INFO("test_dijkstra tests passed");
-
-	result = test_link_state_pduftg_policy();
-	if (result < 0) {
-		LOG_ERR("test_link_state_pduftg_policy tests failed");
-		return result;
-	}
-	LOG_INFO("test_link_state_pduftg_policy tests passed");
 
 	return 0;
 }

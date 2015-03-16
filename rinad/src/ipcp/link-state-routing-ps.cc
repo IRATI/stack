@@ -1,8 +1,8 @@
 //
-// PDU Forwarding Table Generator
+// Link-state policy set for Routing
 //
-//    Bernat Gaston <bernat.gaston@i2cat.net>
 //    Eduard Grasa <eduard.grasa@i2cat.net>
+//    Vincenzo Maffione <v.maffione@nextworks.it>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,64 +19,81 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
+#include <assert.h>
 #include <climits>
+#include <set>
 #include <sstream>
+#include <string>
 
-#define RINA_PREFIX "pduft-generator"
+#define RINA_PREFIX "routing-ps-link-state"
 
 #include <librina/logs.h>
+#include <librina/timer.h>
 
+#include "ipcp/components.h"
+#include "ipcp/link-state-routing-ps.h"
 #include "common/encoders/FlowStateGroupMessage.pb.h"
-#include "ipcp/pduft-generator.h"
 
 namespace rinad {
 
-//CLASS PDUFT Generator
-const std::string PDUForwardingTableGenerator::LINK_STATE_POLICY = "LinkState";
+std::string LinkStateRoutingPs::LINK_STATE_POLICY = "LinkState";
 
-PDUForwardingTableGenerator::PDUForwardingTableGenerator()
+LinkStateRoutingPs::LinkStateRoutingPs(IRoutingComponent * rc_) : rc(rc_)
 {
-	ipc_process_ = 0;
-	pduftg_policy_ = 0;
+	lsr_policy = 0;
 }
 
-void PDUForwardingTableGenerator::set_ipc_process(IPCProcess * ipc_process)
-{
-	ipc_process_ = ipc_process;
-}
-
-void PDUForwardingTableGenerator::set_dif_configuration(
-		const rina::DIFConfiguration& dif_configuration)
+void LinkStateRoutingPs::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
 {
 	rina::PDUFTableGeneratorConfiguration pduftgConfig =
 			dif_configuration.get_pduft_generator_configuration();
 
 	if (pduftgConfig.get_pduft_generator_policy().get_name().compare(
 			LINK_STATE_POLICY) != 0) {
-		LOG_WARN("Unsupported PDU Forwarding Table Generation policy: %s.",
+		LOG_WARN("Unsupported routing policy: %s.",
 				pduftgConfig.get_pduft_generator_policy().get_name().c_str());
-		throw Exception("Unknown PDU Forwarting Table Generator Policy");
+		throw Exception("Unknown routing Policy");
 	}
 
-	pduftg_policy_ = new LinkStatePDUFTGeneratorPolicy();
-	pduftg_policy_->set_ipc_process(ipc_process_);
-	pduftg_policy_->set_dif_configuration(dif_configuration);
+	lsr_policy = new LinkStateRoutingPolicy(rc->ipcp);
+	lsr_policy->set_dif_configuration(dif_configuration);
 }
 
-IPDUFTGeneratorPolicy * PDUForwardingTableGenerator::get_pdu_ft_generator_policy() const
+int LinkStateRoutingPs::set_policy_set_param(const std::string& name,
+                                            const std::string& value)
 {
-	return pduftg_policy_;
+        LOG_DBG("No policy-set-specific parameters to set (%s, %s)",
+                        name.c_str(), value.c_str());
+        return -1;
 }
 
-//Class Flow State Object
-FlowStateObject::FlowStateObject(unsigned int address, int port_id,
-		unsigned int neighbor_address, int neighbor_port_id, bool up,
-		int sequence_number, int age)
+extern "C" IPolicySet *
+createRoutingComponentPs(IPCProcessComponent * ctx)
+{
+		IRoutingComponent * rc = dynamic_cast<IRoutingComponent *>(ctx);
+
+		if (!rc) {
+			return NULL;
+		}
+
+		return new LinkStateRoutingPs(rc);
+}
+
+extern "C" void
+destroyRoutingComponentPs(IPolicySet * ps)
+{
+        if (ps) {
+                delete ps;
+        }
+}
+
+FlowStateObject::FlowStateObject(unsigned int address,
+		unsigned int neighbor_address, unsigned int cost, bool up,
+		int sequence_number, unsigned int age)
 {
 	address_ = address;
-	port_id_ = port_id;
 	neighbor_address_ = neighbor_address;
-	neighbor_port_id_ = neighbor_port_id;
+	cost_ = cost;
 	up_ = up;
 	sequence_number_ = sequence_number;
 	age_ = age;
@@ -94,23 +111,17 @@ const std::string FlowStateObject::toString()
 {
 	std::stringstream ss;
 	ss << "Address: " << address_ << "; Neighbor address: " << neighbor_address_
-			<< std::endl;
-	ss << "Port-id: " << port_id_ << "; Neighbor port-id: " << neighbor_port_id_
-			<< std::endl;
+			<< "; cost: " << cost_ << std::endl;
 	ss << "Up: " << up_ << "; Sequence number: " << sequence_number_
 			<< "; Age: " + age_;
 
 	return ss.str();
 }
 
-//Class Edge
-Edge::Edge(unsigned int address1, int portV1, unsigned int address2, int portV2,
-		int weight)
+Edge::Edge(unsigned int address1, unsigned int address2, int weight)
 {
 	address1_ = address1;
 	address2_ = address2;
-	port_v1_ = portV1;
-	port_v2_ = portV2;
 	weight_ = weight;
 }
 
@@ -179,7 +190,6 @@ const std::string Edge::toString() const
 	return ss.str();
 }
 
-//Class Graph
 Graph::Graph(const std::list<FlowStateObject *>& flow_state_objects)
 {
 	flow_state_objects_ = flow_state_objects;
@@ -264,12 +274,10 @@ void Graph::init_edges()
 		if (origin->connection_contains_address(dest->address_)
 				&& dest->connection_contains_address(origin->address_)) {
 			edges_.push_back(
-					new Edge(origin->address_, (*flowIt)->port_id_,
-							dest->address_, dest->port_id_, 1));
+					new Edge(origin->address_, dest->address_, 1));
 			origin->connections.remove(dest->address_);
 			dest->connections.remove(origin->address_);
 		} else {
-			origin->port_id_ = (*flowIt)->port_id_;
 			origin->connections.push_back(dest->address_);
 			dest->connections.push_back(origin->address_);
 		}
@@ -288,37 +296,24 @@ Graph::CheckedVertex * Graph::get_checked_vertex(unsigned int address) const
 	return 0;
 }
 
-//Class Predecessor Info
-PredecessorInfo::PredecessorInfo(unsigned int nPredecessor, Edge * edge)
-{
-	predecessor_ = nPredecessor;
-	if (edge->address1_ == nPredecessor) {
-		port_id_ = edge->port_v1_;
-	} else {
-		port_id_ = edge->port_v2_;
-	}
-}
-
 PredecessorInfo::PredecessorInfo(unsigned int nPredecessor)
 {
 	predecessor_ = nPredecessor;
-	port_id_ = -1;
 }
 
-//Class DijsktraAlgorithm
 DijkstraAlgorithm::DijkstraAlgorithm()
 {
 	graph_ = 0;
 }
 
-std::list<rina::PDUForwardingTableEntry *> DijkstraAlgorithm::computePDUTForwardingTable(
+std::list<rina::RoutingTableEntry *> DijkstraAlgorithm::computeRoutingTable(
 		const std::list<FlowStateObject *>& fsoList,
 		unsigned int source_address)
 {
-	std::list<rina::PDUForwardingTableEntry *> result;
+	std::list<rina::RoutingTableEntry *> result;
 	std::list<unsigned int>::iterator it;
-	PredecessorInfo * nextNode;
-	rina::PDUForwardingTableEntry * entry;
+	unsigned int nextHop;
+	rina::RoutingTableEntry * entry;
 
 	graph_ = new Graph(fsoList);
 
@@ -326,13 +321,16 @@ std::list<rina::PDUForwardingTableEntry *> DijkstraAlgorithm::computePDUTForward
 
 	for (it = graph_->vertices_.begin(); it != graph_->vertices_.end(); ++it) {
 		if ((*it) != source_address) {
-			nextNode = getNextNode((*it), source_address);
-			if (nextNode) {
-				entry = new rina::PDUForwardingTableEntry();
-				entry->setAddress((*it));
-				entry->addPortId(nextNode->port_id_);
-				entry->setQosId(1);
+			nextHop = getNextHop((*it), source_address);
+			if (nextHop != 0) {
+				entry = new rina::RoutingTableEntry();
+				entry->address = (*it);
+				entry->nextHopAddresses.push_back(nextHop);
+				entry->qosId = 1;
+				entry->cost = 1;
 				result.push_back(entry);
+				LOG_DBG("Added entry to routing table: destination %u, next-hop %u",
+						entry->address, nextHop);
 			}
 		}
 	}
@@ -405,7 +403,7 @@ void DijkstraAlgorithm::findMinimalDistances(unsigned int node)
 			shortestDistance = getShortestDistance(node) + (*edgeIt)->weight_;
 			if (getShortestDistance(target) > shortestDistance) {
 				distances_[target] = shortestDistance;
-				predecessors_[target] = new PredecessorInfo(node, (*edgeIt));
+				predecessors_[target] = new PredecessorInfo(node);
 				unsettled_nodes_.insert(target);
 			}
 		}
@@ -436,11 +434,12 @@ bool DijkstraAlgorithm::isSettled(unsigned int node) const
 	return false;
 }
 
-PredecessorInfo * DijkstraAlgorithm::getNextNode(unsigned int target,
+unsigned int DijkstraAlgorithm::getNextHop(unsigned int target,
 		unsigned int source)
 {
 	std::map<unsigned int, PredecessorInfo *>::iterator it;
 	PredecessorInfo * step;
+	unsigned int nextHop = target;
 
 	it = predecessors_.find(target);
 	if (it == predecessors_.end()) {
@@ -451,6 +450,7 @@ PredecessorInfo * DijkstraAlgorithm::getNextNode(unsigned int target,
 
 	it = predecessors_.find(step->predecessor_);
 	while (it != predecessors_.end()) {
+		nextHop = step->predecessor_;
 		step = it->second;
 		if (step->predecessor_ == source) {
 			break;
@@ -463,18 +463,26 @@ PredecessorInfo * DijkstraAlgorithm::getNextNode(unsigned int target,
 		return 0;
 	}
 
-	return step;
+	return nextHop;
 }
 
 //Class FlowState RIB Object Group
 FlowStateRIBObjectGroup::FlowStateRIBObjectGroup(IPCProcess * ipc_process,
-		LinkStatePDUFTGeneratorPolicy * pduft_generator_policy) :
-		BaseIPCPRIBObject(ipc_process,
+		LinkStateRoutingPolicy * lsr_policy) :
+		rina::BaseRIBObject(ipc_process->rib_daemon_,
 				EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
 				rina::objectInstanceGenerator->getObjectInstance(),
 				EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME)
 {
-	pduft_generator_policy_ = pduft_generator_policy;
+	lsr_policy_ = lsr_policy;
+	ipc_process_ = ipc_process;
+	if (ipc_process) {
+		rib_daemon_ =  ipc_process->rib_daemon_;
+		encoder_ = ipc_process->encoder_;
+	} else {
+		rib_daemon_ = 0;
+		encoder_ = 0;
+	}
 }
 
 const void* FlowStateRIBObjectGroup::get_value() const
@@ -489,7 +497,7 @@ void FlowStateRIBObjectGroup::remoteWriteObject(void * object_value,
 
 	std::list<FlowStateObject *> * objects =
 			(std::list<FlowStateObject *> *) object_value;
-	pduft_generator_policy_->writeMessageReceived(*objects,
+	lsr_policy_->writeMessageReceived(*objects,
 			cdapSessionDescriptor->get_port_id());
 	delete objects;
 }
@@ -497,17 +505,57 @@ void FlowStateRIBObjectGroup::remoteWriteObject(void * object_value,
 void FlowStateRIBObjectGroup::createObject(const std::string& objectClass,
 		const std::string& objectName, const void* objectValue)
 {
-	SimpleSetMemberIPCPRIBObject * ribObject = new SimpleSetMemberIPCPRIBObject(
+	FlowStateRIBObject * ribObject = new FlowStateRIBObject(
 			ipc_process_, objectClass, objectName, objectValue);
 	add_child(ribObject);
 	rib_daemon_->addRIBObject(ribObject);
 }
 
-//Class FlowStateDatabase
+FlowStateRIBObject::FlowStateRIBObject(IPCProcess * ipc_process,
+		const std::string& objectClass,
+		const std::string& objectName, const void* object_value) :
+					rina::BaseRIBObject(ipc_process->rib_daemon_,
+							objectClass,
+							rina::objectInstanceGenerator->getObjectInstance(),
+							objectName){
+	ipc_process_ = ipc_process;
+	object_value_ = object_value;
+	if (ipc_process) {
+		rib_daemon_ =  ipc_process->rib_daemon_;
+		encoder_ = ipc_process->encoder_;
+	} else {
+		rib_daemon_ = 0;
+		encoder_ = 0;
+	}
+}
+
+const void* FlowStateRIBObject::get_value() const {
+	return object_value_;
+}
+
+void FlowStateRIBObject::writeObject(const void* object_value) {
+	object_value_ = object_value;
+}
+
+void FlowStateRIBObject::createObject(const std::string& objectClass, const std::string& objectName,
+		const void* objectValue) {
+	if (objectName.compare("") != 0 && objectClass.compare("") != 0) {
+		object_value_ = objectValue;
+	}
+}
+
+void FlowStateRIBObject::deleteObject(const void* objectValue)
+{
+        (void) objectValue; // Stop compiler barfs
+
+	parent_->remove_child(name_);
+	rib_daemon_->removeRIBObject(name_);
+}
+
 const int FlowStateDatabase::NO_AVOID_PORT = -1;
 const long FlowStateDatabase::WAIT_UNTIL_REMOVE_OBJECT = 23000;
 
-FlowStateDatabase::FlowStateDatabase(Encoder * encoder,
+FlowStateDatabase::FlowStateDatabase(rina::IMasterEncoder * encoder,
 		FlowStateRIBObjectGroup * flow_state_rib_object_group,
 		rina::Timer * timer, IPCPRIBDaemon *rib_daemon, unsigned int *maximum_age)
 {
@@ -533,11 +581,11 @@ void FlowStateDatabase::setAvoidPort(int avoidPort)
 	}
 }
 
-void FlowStateDatabase::addObjectToGroup(unsigned int address, int portId,
-		unsigned int neighborAddress, int neighborPortId)
+void FlowStateDatabase::addObjectToGroup(unsigned int address,
+		unsigned int neighborAddress, unsigned int cost, int avoid_port)
 {
-	FlowStateObject * newObject = new FlowStateObject(address, portId,
-			neighborAddress, neighborPortId, true, 1, 0);
+	FlowStateObject * newObject = new FlowStateObject(address,
+			neighborAddress, cost, true, 1, 0);
 
 	for (std::list<FlowStateObject *>::iterator it =
 			flow_state_objects_.begin(); it != flow_state_objects_.end();
@@ -545,7 +593,7 @@ void FlowStateDatabase::addObjectToGroup(unsigned int address, int portId,
 		if ((*it)->object_name_.compare(newObject->object_name_) == 0) {
 			delete newObject;
 			(*it)->age_ = 0;
-			(*it)->avoid_port_ = portId;
+			(*it)->avoid_port_ = avoid_port;
 			(*it)->being_erased_ = false;
 			(*it)->up_ = true;
 			(*it)->sequence_number_ = 1;
@@ -561,12 +609,12 @@ void FlowStateDatabase::addObjectToGroup(unsigned int address, int portId,
 	modified_ = true;
 }
 
-FlowStateObject * FlowStateDatabase::getByPortId(int portId)
+FlowStateObject * FlowStateDatabase::getByAddress(unsigned int address)
 {
 	std::list<FlowStateObject *>::iterator it;
 	for (it = flow_state_objects_.begin(); it != flow_state_objects_.end();
 			++it) {
-		if ((*it)->port_id_ == portId) {
+		if ((*it)->neighbor_address_ == address) {
 			return (*it);
 		}
 	}
@@ -574,9 +622,9 @@ FlowStateObject * FlowStateDatabase::getByPortId(int portId)
 	return 0;
 }
 
-void FlowStateDatabase::deprecateObject(int port_id)
+void FlowStateDatabase::deprecateObject(unsigned int address)
 {
-	FlowStateObject * fso = getByPortId(port_id);
+	FlowStateObject * fso = getByAddress(address);
 	if (!fso) {
 		return;
 	}
@@ -585,7 +633,6 @@ void FlowStateDatabase::deprecateObject(int port_id)
 	fso->up_ = false;
 	fso->age_ = *maximum_age_;
 	fso->sequence_number_ = fso->sequence_number_ + 1;
-	fso->avoid_port_ = port_id;
 	fso->modified_ = true;
 	modified_ = true;
 }
@@ -645,30 +692,6 @@ std::map <int, std::list<FlowStateObject*> > FlowStateDatabase::prepareForPropag
     (*it)->modified_ = false;
     (*it)->avoid_port_ = NO_AVOID_PORT;
   }
-/*
-	int portId = 0;
-	for (fsosIterator = modifiedFSOs.begin();
-			fsosIterator != modifiedFSOs.end(); ++fsosIterator) {
-		LOG_DBG(
-				"Propagation: Check modified object %s with age %d and status %d",
-				(*fsosIterator)->object_name_.c_str(), (*fsosIterator)->age_, (*fsosIterator)->up_);
-
-		std::list<FlowStateObject*> group;
-
-		for (flowsIterator = flows.begin(); flowsIterator != flows.end();
-				++flowsIterator) {
-			portId = (*flowsIterator).portId;
-			if ((*fsosIterator)->avoid_port_ != portId) {
-				LOG_DBG("Object to be sent to port %d", portId);
-				group.push_back((*fsosIterator));
-			}
-		}
-
-		result.push_back(group);
-		(*fsosIterator)->modified_ = false;
-		(*fsosIterator)->avoid_port_ = NO_AVOID_PORT;
-	}
-*/
 	return result;
 }
 
@@ -764,14 +787,13 @@ void FlowStateDatabase::updateObjects(
 	}
 }
 
-//class LinkStatePDUForwardingTable MEssage Handler
-LinkStatePDUFTCDAPMessageHandler::LinkStatePDUFTCDAPMessageHandler(
-		LinkStatePDUFTGeneratorPolicy * pduft_generator_policy)
+LinkStateRoutingCDAPMessageHandler::LinkStateRoutingCDAPMessageHandler(
+		LinkStateRoutingPolicy * lsr_policy)
 {
-	pduft_generator_policy_ = pduft_generator_policy;
+	lsr_policy_ = lsr_policy;
 }
 
-void LinkStatePDUFTCDAPMessageHandler::readResponse(int result,
+void LinkStateRoutingCDAPMessageHandler::readResponse(int result,
 		const std::string& result_reason, void * object_value,
 		const std::string& object_name,
 		rina::CDAPSessionDescriptor * session_descriptor)
@@ -785,30 +807,28 @@ void LinkStatePDUFTCDAPMessageHandler::readResponse(int result,
 
 	std::list<FlowStateObject *> * objects =
 			(std::list<FlowStateObject *> *) object_value;
-	pduft_generator_policy_->writeMessageReceived(*objects,
+	lsr_policy_->writeMessageReceived(*objects,
 			session_descriptor->port_id_);
 	delete objects;
 }
 
-//Class ComputePDUFTTimerTask
-ComputePDUFTTimerTask::ComputePDUFTTimerTask(
-		LinkStatePDUFTGeneratorPolicy * pduft_generator_policy, long delay)
+ComputeRoutingTimerTask::ComputeRoutingTimerTask(
+		LinkStateRoutingPolicy * lsr_policy, long delay)
 {
-	pduft_generator_policy_ = pduft_generator_policy;
+	lsr_policy_ = lsr_policy;
 	delay_ = delay;
 }
 
-void ComputePDUFTTimerTask::run()
+void ComputeRoutingTimerTask::run()
 {
-	pduft_generator_policy_->forwardingTableUpdate();
+	lsr_policy_->routingTableUpdate();
 
 	//Re-schedule
-	ComputePDUFTTimerTask * task = new ComputePDUFTTimerTask(
-			pduft_generator_policy_, delay_);
-	pduft_generator_policy_->timer_->scheduleTask(task, delay_);
+	ComputeRoutingTimerTask * task = new ComputeRoutingTimerTask(
+			lsr_policy_, delay_);
+	lsr_policy_->timer_->scheduleTask(task, delay_);
 }
 
-//Class KillFlowStateObjectTimerTask
 KillFlowStateObjectTimerTask::KillFlowStateObjectTimerTask(
 		IPCPRIBDaemon * rib_daemon, FlowStateObject * fso,
 		FlowStateDatabase * fs_db)
@@ -825,8 +845,7 @@ void KillFlowStateObjectTimerTask::run()
 		for (it = fs_db_->flow_state_objects_.begin();
 				it != fs_db_->flow_state_objects_.end(); ++it) {
 			if ((*it)->address_ == fso_->address_
-					&& (*it)->neighbor_address_ == fso_->neighbor_address_
-					&& (*it)->port_id_ == fso_->port_id_) {
+					&& (*it)->neighbor_address_ == fso_->neighbor_address_) {
 				fs_db_->flow_state_objects_.erase(it);
 				break;
 			}
@@ -845,52 +864,49 @@ void KillFlowStateObjectTimerTask::run()
 	}
 }
 
-//Class PropagateFSODBTimerTask
 PropagateFSODBTimerTask::PropagateFSODBTimerTask(
-		LinkStatePDUFTGeneratorPolicy * pduft_generator_policy, long delay)
+		LinkStateRoutingPolicy * lsr_policy, long delay)
 {
-	pduft_generator_policy_ = pduft_generator_policy;
+	lsr_policy_ = lsr_policy;
 	delay_ = delay;
 }
 
 void PropagateFSODBTimerTask::run()
 {
-	pduft_generator_policy_->propagateFSDB();
+	lsr_policy_->propagateFSDB();
 
 	//Re-schedule
 	PropagateFSODBTimerTask * task = new PropagateFSODBTimerTask(
-			pduft_generator_policy_, delay_);
-	pduft_generator_policy_->timer_->scheduleTask(task, delay_);
+			lsr_policy_, delay_);
+	lsr_policy_->timer_->scheduleTask(task, delay_);
 }
 
-//Class UpdateAgeTimerTask
 UpdateAgeTimerTask::UpdateAgeTimerTask(
-		LinkStatePDUFTGeneratorPolicy * pduft_generator_policy, long delay)
+		LinkStateRoutingPolicy * lsr_policy, long delay)
 {
-	pduft_generator_policy_ = pduft_generator_policy;
+	lsr_policy_ = lsr_policy;
 	delay_ = delay;
 }
 
 void UpdateAgeTimerTask::run()
 {
-	pduft_generator_policy_->updateAge();
+	lsr_policy_->updateAge();
 
 	//Re-schedule
-	UpdateAgeTimerTask * task = new UpdateAgeTimerTask(pduft_generator_policy_,
+	UpdateAgeTimerTask * task = new UpdateAgeTimerTask(lsr_policy_,
 			delay_);
-	pduft_generator_policy_->timer_->scheduleTask(task, delay_);
+	lsr_policy_->timer_->scheduleTask(task, delay_);
 }
 
-//Class LinkStatePDUFTGPolicy
-const int LinkStatePDUFTGeneratorPolicy::MAXIMUM_BUFFER_SIZE = 4096;
+const int LinkStateRoutingPolicy::MAXIMUM_BUFFER_SIZE = 4096;
 
-LinkStatePDUFTGeneratorPolicy::LinkStatePDUFTGeneratorPolicy()
+LinkStateRoutingPolicy::LinkStateRoutingPolicy(IPCProcess * ipcp)
 {
 	test_ = false;
-	ipc_process_ = 0;
-	rib_daemon_ = 0;
-	encoder_ = 0;
-	cdap_session_manager_ = 0;
+	ipc_process_ = ipcp;
+	rib_daemon_ = ipc_process_->rib_daemon_;
+	encoder_ = ipc_process_->encoder_;
+	cdap_session_manager_ = ipc_process_->cdap_session_manager_;
 	fs_rib_group_ = 0;
 	routing_algorithm_ = 0;
 	source_vertex_ = 0;
@@ -898,9 +914,19 @@ LinkStatePDUFTGeneratorPolicy::LinkStatePDUFTGeneratorPolicy()
 	db_ = 0;
 	timer_ = new rina::Timer();
 	lock_ = new rina::Lockable();
+
+	encoder_->addEncoder(EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
+			new FlowStateObjectEncoder());
+	encoder_->addEncoder(EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
+			new FlowStateObjectListEncoder());
+
+	populateRIB();
+	subscribeToEvents();
+	db_ = new FlowStateDatabase(encoder_, fs_rib_group_, timer_, rib_daemon_,
+			&maximum_age_);
 }
 
-LinkStatePDUFTGeneratorPolicy::~LinkStatePDUFTGeneratorPolicy()
+LinkStateRoutingPolicy::~LinkStateRoutingPolicy()
 {
 	if (routing_algorithm_) {
 		delete routing_algorithm_;
@@ -919,19 +945,7 @@ LinkStatePDUFTGeneratorPolicy::~LinkStatePDUFTGeneratorPolicy()
 	}
 }
 
-void LinkStatePDUFTGeneratorPolicy::set_ipc_process(IPCProcess * ipc_process)
-{
-	ipc_process_ = ipc_process;
-	rib_daemon_ = ipc_process_->rib_daemon_;
-	encoder_ = ipc_process_->encoder_;
-	cdap_session_manager_ = ipc_process_->cdap_session_manager_;
-	populateRIB();
-	subscribeToEvents();
-	db_ = new FlowStateDatabase(encoder_, fs_rib_group_, timer_, rib_daemon_,
-			&maximum_age_);
-}
-
-void LinkStatePDUFTGeneratorPolicy::populateRIB()
+void LinkStateRoutingPolicy::populateRIB()
 {
 	try {
 		fs_rib_group_ = new FlowStateRIBObjectGroup(ipc_process_, this);
@@ -941,14 +955,15 @@ void LinkStatePDUFTGeneratorPolicy::populateRIB()
 	}
 }
 
-void LinkStatePDUFTGeneratorPolicy::subscribeToEvents()
+void LinkStateRoutingPolicy::subscribeToEvents()
 {
 	rib_daemon_->subscribeToEvent(IPCP_EVENT_N_MINUS_1_FLOW_DEALLOCATED, this);
 	rib_daemon_->subscribeToEvent(IPCP_EVENT_N_MINUS_1_FLOW_ALLOCATED, this);
 	rib_daemon_->subscribeToEvent(IPCP_EVENT_NEIGHBOR_ADDED, this);
+	rib_daemon_->subscribeToEvent(IPCP_EVENT_CONNECTIVITY_TO_NEIGHBOR_LOST, this);
 }
 
-void LinkStatePDUFTGeneratorPolicy::set_dif_configuration(
+void LinkStateRoutingPolicy::set_dif_configuration(
 		const rina::DIFConfiguration& dif_configuration)
 {
 	pduft_generator_config_ =
@@ -969,7 +984,7 @@ void LinkStatePDUFTGeneratorPolicy::set_dif_configuration(
 		// Task to compute PDUFT
 		delay =
 				pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_pduft_computation();
-		ComputePDUFTTimerTask * cttask = new ComputePDUFTTimerTask(this, delay);
+		ComputeRoutingTimerTask * cttask = new ComputeRoutingTimerTask(this, delay);
 		timer_->scheduleTask(cttask, delay);
 
 		// Task to increment age
@@ -987,12 +1002,12 @@ void LinkStatePDUFTGeneratorPolicy::set_dif_configuration(
 	}
 }
 
-const std::list<rina::FlowInformation>& LinkStatePDUFTGeneratorPolicy::get_allocated_flows() const
+const std::list<rina::FlowInformation>& LinkStateRoutingPolicy::get_allocated_flows() const
 {
 	return allocated_flows_;
 }
 
-void LinkStatePDUFTGeneratorPolicy::eventHappened(Event * event)
+void LinkStateRoutingPolicy::eventHappened(Event * event)
 {
 	if (!event)
 		return;
@@ -1010,10 +1025,13 @@ void LinkStatePDUFTGeneratorPolicy::eventHappened(Event * event)
 	} else if (event->get_id() == IPCP_EVENT_NEIGHBOR_ADDED) {
 		NeighborAddedEvent * neighEvent = (NeighborAddedEvent *) event;
 		processNeighborAddedEvent(neighEvent);
+	} else if (event->get_id() == IPCP_EVENT_CONNECTIVITY_TO_NEIGHBOR_LOST) {
+		ConnectiviyToNeighborLostEvent * neighEvent = (ConnectiviyToNeighborLostEvent *) event;
+		processNeighborLostEvent(neighEvent);
 	}
 }
 
-void LinkStatePDUFTGeneratorPolicy::processFlowDeallocatedEvent(
+void LinkStateRoutingPolicy::processFlowDeallocatedEvent(
 		NMinusOneFlowDeallocatedEvent * event)
 {
 	std::list<rina::FlowInformation>::iterator it;
@@ -1025,24 +1043,38 @@ void LinkStatePDUFTGeneratorPolicy::processFlowDeallocatedEvent(
 		}
 	}
 
-	db_->deprecateObject(event->port_id_);
+	LOG_DBG("N-1 Flow with neighbor lost");
+	//TODO update cost
 }
 
-void LinkStatePDUFTGeneratorPolicy::processFlowAllocatedEvent(
+void LinkStateRoutingPolicy::processNeighborLostEvent(
+		ConnectiviyToNeighborLostEvent * event) {
+	db_->deprecateObject(event->neighbor_->address_);
+}
+
+void LinkStateRoutingPolicy::processFlowAllocatedEvent(
 		NMinusOneFlowAllocatedEvent * event)
 {
+	if (ipc_process_->resource_allocator_->get_n_minus_one_flow_manager()->
+			numberOfFlowsToNeighbour(event->flow_information_.remoteAppName.processName,
+					event->flow_information_.remoteAppName.processInstance) > 1) {
+		LOG_DBG("Already had an N-1 flow with this neighbor IPCP");
+		//TODO update the cost of the FlowStateObject
+		return;
+	}
+
 	try {
 		db_->addObjectToGroup(ipc_process_->get_address(),
-				event->flow_information_.portId,
 				ipc_process_->namespace_manager_->getAdressByname(
-						event->flow_information_.remoteAppName), 1);
+						event->flow_information_.remoteAppName), 1,
+						event->flow_information_.portId);
 	} catch (Exception &e) {
 		LOG_DBG("flow allocation waiting for enrollment");
 		allocated_flows_.push_back(event->flow_information_);
 	}
 }
 
-void LinkStatePDUFTGeneratorPolicy::processNeighborAddedEvent(
+void LinkStateRoutingPolicy::processNeighborAddedEvent(
 		NeighborAddedEvent * event)
 {
 	std::list<rina::FlowInformation>::iterator it;
@@ -1054,9 +1086,9 @@ void LinkStatePDUFTGeneratorPolicy::processNeighborAddedEvent(
 			LOG_INFO(
 					"There was an allocation flow event waiting for enrollment, launching it");
 			try {
-				db_->addObjectToGroup(ipc_process_->get_address(), it->portId,
+				db_->addObjectToGroup(ipc_process_->get_address(),
 						ipc_process_->namespace_manager_->getAdressByname(
-								event->neighbor_->get_name()), 1);
+								event->neighbor_->get_name()), 1, it->portId);
 				allocated_flows_.erase(it);
 				break;
 			} catch (Exception &e) {
@@ -1089,7 +1121,7 @@ void LinkStatePDUFTGeneratorPolicy::processNeighborAddedEvent(
 	}
 }
 
-void LinkStatePDUFTGeneratorPolicy::propagateFSDB() const
+void LinkStateRoutingPolicy::propagateFSDB() const
 {
 	rina::ScopedLock g(*lock_);
 
@@ -1123,14 +1155,14 @@ void LinkStatePDUFTGeneratorPolicy::propagateFSDB() const
 	}
 }
 
-void LinkStatePDUFTGeneratorPolicy::updateAge()
+void LinkStateRoutingPolicy::updateAge()
 {
 	rina::ScopedLock g(*lock_);
 
 	db_->incrementAge();
 }
 
-void LinkStatePDUFTGeneratorPolicy::forwardingTableUpdate()
+void LinkStateRoutingPolicy::routingTableUpdate()
 {
 	rina::ScopedLock g(*lock_);
 
@@ -1141,18 +1173,17 @@ void LinkStatePDUFTGeneratorPolicy::forwardingTableUpdate()
 	db_->modified_ = false;
 	std::list<FlowStateObject *> flow_state_objects;
 	db_->getAllFSOs(flow_state_objects);
-	std::list<rina::PDUForwardingTableEntry *> pduft =
-			routing_algorithm_->computePDUTForwardingTable(flow_state_objects,
+	std::list<rina::RoutingTableEntry *> rt =
+			routing_algorithm_->computeRoutingTable(flow_state_objects,
 					source_vertex_);
-	try {
-		rina::kernelIPCProcess->modifyPDUForwardingTableEntries(pduft, 2);
-	} catch (Exception & e) {
-		LOG_ERR("Error setting PDU Forwarding Table in the kernel: %s",
-				e.what());
-	}
+
+    IResourceAllocatorPs *raps =
+    		dynamic_cast<IResourceAllocatorPs *>(ipc_process_->resource_allocator_->ps);
+    assert(raps);
+    raps->routingTableUpdated(rt);
 }
 
-void LinkStatePDUFTGeneratorPolicy::writeMessageReceived(
+void LinkStateRoutingPolicy::writeMessageReceived(
 		const std::list<FlowStateObject *> & flow_state_objects, int portId)
 {
 	rina::ScopedLock g(*lock_);
@@ -1165,7 +1196,7 @@ void LinkStatePDUFTGeneratorPolicy::writeMessageReceived(
 	}
 }
 
-void LinkStatePDUFTGeneratorPolicy::readMessageRecieved(int invoke_id,
+void LinkStateRoutingPolicy::readMessageRecieved(int invoke_id,
 		int portId) const
 {
 	rina::ScopedLock g(*lock_);
@@ -1186,7 +1217,6 @@ void LinkStatePDUFTGeneratorPolicy::readMessageRecieved(int invoke_id,
 	}
 }
 
-//Class FlowStateObjectEncoder
 const rina::SerializedObject* FlowStateObjectEncoder::encode(const void* object)
 {
 	FlowStateObject * fso = (FlowStateObject*) object;
@@ -1222,10 +1252,9 @@ void FlowStateObjectEncoder::convertModelToGPB(
 	gpb_fso->set_address(fso->address_);
 	gpb_fso->set_age(fso->age_);
 	gpb_fso->set_neighbor_address(fso->neighbor_address_);
-	gpb_fso->set_neighbor_portid(fso->neighbor_port_id_);
-	gpb_fso->set_portid(fso->port_id_);
-	gpb_fso->set_sequence_number(fso->sequence_number_);
+	gpb_fso->set_cost(fso->cost_);
 	gpb_fso->set_state(fso->up_);
+	gpb_fso->set_sequence_number(fso->sequence_number_);
 
 	return;
 }
@@ -1234,14 +1263,12 @@ FlowStateObject * FlowStateObjectEncoder::convertGPBToModel(
 		const rina::messages::flowStateObject_t & gpb_fso)
 {
 	FlowStateObject * fso = new FlowStateObject(gpb_fso.address(),
-			gpb_fso.portid(), gpb_fso.neighbor_address(),
-			gpb_fso.neighbor_portid(), gpb_fso.state(),
-			gpb_fso.sequence_number(), gpb_fso.age());
+			gpb_fso.neighbor_address(), gpb_fso.cost(),
+			gpb_fso.state(), gpb_fso.sequence_number(), gpb_fso.age());
 
 	return fso;
 }
 
-// Class FlowStateObjectListEncoder
 const rina::SerializedObject* FlowStateObjectListEncoder::encode(
 		const void* object)
 {

@@ -29,7 +29,6 @@
 #include "ipcp/flow-allocator.h"
 #include "ipcp/ipc-process.h"
 #include "ipcp/namespace-manager.h"
-#include "ipcp/pduft-generator.h"
 #include "ipcp/resource-allocator.h"
 #include "ipcp/rib-daemon.h"
 #include "ipcp/components.h"
@@ -74,6 +73,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	namespace_manager_ = new NamespaceManager();
 	resource_allocator_ = new ResourceAllocator();
 	security_manager_ = new SecurityManager();
+	routing_component_ = new RoutingComponent();
 	rib_daemon_ = new IPCPRIBDaemonImpl();
 
 	rib_daemon_->set_ipc_process(this);
@@ -82,6 +82,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	namespace_manager_->set_ipc_process(this);
 	flow_allocator_->set_ipc_process(this);
 	security_manager_->set_ipc_process(this);
+	routing_component_->set_ipc_process(this);
 
         // Select the default policy sets
         security_manager_->select_policy_set(std::string(), "default");
@@ -92,6 +93,21 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         flow_allocator_->select_policy_set(std::string(), "default");
         if (!flow_allocator_->ps) {
                 throw Exception("Cannot create flow allocator policy-set");
+        }
+
+        namespace_manager_->select_policy_set(std::string(), "default");
+        if (!namespace_manager_->ps) {
+                throw Exception("Cannot create namespace manager policy-set");
+        }
+
+        resource_allocator_->select_policy_set(std::string(), "default");
+        if (!resource_allocator_->ps) {
+                throw Exception("Cannot create resource allocator policy-set");
+        }
+
+        routing_component_->select_policy_set(std::string(), "link-state");
+        if (!routing_component_->ps) {
+                throw Exception("Cannot create routing component policy-set");
         }
 
 	try {
@@ -130,24 +146,37 @@ IPCProcessImpl::~IPCProcessImpl() {
 
 	if (flow_allocator_) {
 		psDestroy("flow-allocator",
-                                flow_allocator_->selected_ps_name,
-                                flow_allocator_->ps);
+                   flow_allocator_->selected_ps_name,
+                   flow_allocator_->ps);
 		delete flow_allocator_;
 	}
 
 	if (namespace_manager_) {
+		psDestroy("namespace-manager",
+                   namespace_manager_->selected_ps_name,
+                   namespace_manager_->ps);
 		delete namespace_manager_;
 	}
 
 	if (resource_allocator_) {
+		psDestroy("resource-allocator",
+					resource_allocator_->selected_ps_name,
+					resource_allocator_->ps);
 		delete resource_allocator_;
 	}
 
 	if (security_manager_) {
 		psDestroy("security-manager",
-                                security_manager_->selected_ps_name,
-                                security_manager_->ps);
-                delete security_manager_;
+                   security_manager_->selected_ps_name,
+                   security_manager_->ps);
+        delete security_manager_;
+	}
+
+	if (routing_component_) {
+		psDestroy("routing",
+				routing_component_->selected_ps_name,
+				routing_component_->ps);
+        delete routing_component_;
 	}
 
 	if (rib_daemon_) {
@@ -181,10 +210,6 @@ void IPCProcessImpl::init_encoder() {
 			new EnrollmentInformationRequestEncoder());
 	encoder_->addEncoder(EncoderConstants::FLOW_RIB_OBJECT_CLASS,
 			new FlowEncoder());
-	encoder_->addEncoder(EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
-			new FlowStateObjectEncoder());
-	encoder_->addEncoder(EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
-			new FlowStateObjectListEncoder());
 	encoder_->addEncoder(EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS,
 			new NeighborEncoder());
 	encoder_->addEncoder(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
@@ -314,6 +339,7 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 	try{
 		rib_daemon_->set_dif_configuration(dif_information_.dif_configuration_);
 		resource_allocator_->set_dif_configuration(dif_information_.dif_configuration_);
+		routing_component_->set_dif_configuration(dif_information_.dif_configuration_);
 		namespace_manager_->set_dif_configuration(dif_information_.dif_configuration_);
 		security_manager_->set_dif_configuration(dif_information_.dif_configuration_);
 		flow_allocator_->set_dif_configuration(dif_information_.dif_configuration_);
@@ -321,7 +347,7 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 	}
 	catch(Exception &e){
 		state = INITIALIZED;
-		LOG_ERR("Bad configutration error: %s", e.what());
+		LOG_ERR("Bad configuration error: %s", e.what());
 		rina::extendedIPCManager->assignToDIFResponse(requestEvent, -1);
 	}
 

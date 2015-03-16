@@ -528,7 +528,6 @@ shim_hv_flow_deallocate(struct ipcp_instance_data *priv, port_id_t port_id)
 static int shim_hv_unbind_user_ipcp(struct ipcp_instance_data * priv,
                                     port_id_t                   port_id)
 {
-        int ret = 0;
         unsigned int ch;
 
         if (unlikely(!priv->assigned)) {
@@ -543,6 +542,7 @@ static int shim_hv_unbind_user_ipcp(struct ipcp_instance_data * priv,
                 priv->vmpi.channels[ch].user_ipcp = NULL;
 
         mutex_unlock(&priv->vc_lock);
+
         return 0;
 }
 

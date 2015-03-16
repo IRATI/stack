@@ -1,5 +1,5 @@
 package rina.messages;
-option java_package="rina.encoding.impl.googleprotobuf.neighbor";
+option optimize_for = LITE_RUNTIME;
 import "NeighborMessage.proto";
 
 message neighbors_t{   //carries information about all the neighbors
