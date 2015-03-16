@@ -466,11 +466,10 @@ void RIBDaemon::remote_create_request(const cdap_rib::con_handle_t &con,
 {
   (void) filt;
   // FIXME add res and flags
-  cdap_rib::res_info_t res;
   cdap_rib::flags_t flags;
 
   RIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
-  ribObj->remoteCreateObject(obj.name_, obj.value_);
+  cdap_rib::res_info_t* res = ribObj->remoteCreateObject(obj.name_, obj.value_);
   cdap_manager_->remote_create_response(con, obj, flags, res, message_id);
 }
 void RIBDaemon::remote_delete_request(const cdap_rib::con_handle_t &con,
@@ -480,11 +479,10 @@ void RIBDaemon::remote_delete_request(const cdap_rib::con_handle_t &con,
 {
   (void) filt;
   // FIXME add res and flags
-  cdap_rib::res_info_t res;
   cdap_rib::flags_t flags;
 
   RIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
-  ribObj->remoteDeleteObject(obj.name_, obj.value_);
+  cdap_rib::res_info_t* res = ribObj->remoteDeleteObject(obj.name_, obj.value_);
   cdap_manager_->remote_delete_response(con, obj, flags, res, message_id);
 }
 void RIBDaemon::remote_read_request(const cdap_rib::con_handle_t &con,
@@ -494,11 +492,10 @@ void RIBDaemon::remote_read_request(const cdap_rib::con_handle_t &con,
 {
   (void) filt;
   // FIXME add res and flags
-  cdap_rib::res_info_t res;
   cdap_rib::flags_t flags;
 
   RIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
-  ribObj->remoteReadObject(obj.name_, obj.value_);
+  cdap_rib::res_info_t* res = ribObj->remoteReadObject(obj.name_, obj.value_);
   cdap_manager_->remote_read_response(con, obj, flags, res, message_id);
 }
 void RIBDaemon::remote_cancel_read_request(const cdap_rib::con_handle_t &con,
@@ -507,14 +504,12 @@ void RIBDaemon::remote_cancel_read_request(const cdap_rib::con_handle_t &con,
                                            int message_id)
 {
   (void) filt;
-  (void) filt;
 
   // FIXME add res and flags
-  cdap_rib::res_info_t res;
   cdap_rib::flags_t flags;
 
   RIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
-  ribObj->remoteCancelReadObject(obj.name_, obj.value_);
+  cdap_rib::res_info_t* res = ribObj->remoteCancelReadObject(obj.name_, obj.value_);
   cdap_manager_->remote_cancel_read_response(con, flags, res, message_id);
 }
 void RIBDaemon::remote_write_request(const cdap_rib::con_handle_t &con,
@@ -524,11 +519,10 @@ void RIBDaemon::remote_write_request(const cdap_rib::con_handle_t &con,
 {
   (void) filt;
   // FIXME add res and flags
-  cdap_rib::res_info_t res;
   cdap_rib::flags_t flags;
 
   RIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
-  ribObj->remoteWriteObject(obj.name_, obj.value_);
+  cdap_rib::res_info_t* res = ribObj->remoteWriteObject(obj.name_, obj.value_);
   cdap_manager_->remote_write_response(con, flags, res, message_id);
 }
 void RIBDaemon::remote_start_request(const cdap_rib::con_handle_t &con,
@@ -538,11 +532,10 @@ void RIBDaemon::remote_start_request(const cdap_rib::con_handle_t &con,
 {
   (void) filt;
   // FIXME add res and flags
-  cdap_rib::res_info_t res;
   cdap_rib::flags_t flags;
 
   RIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
-  ribObj->remoteStartObject(obj.name_, obj.value_);
+  cdap_rib::res_info_t* res = ribObj->remoteStartObject(obj.name_, obj.value_);
   cdap_manager_->remote_start_response(con, obj, flags, res, message_id);
 }
 void RIBDaemon::remote_stop_request(const cdap_rib::con_handle_t &con,
@@ -552,11 +545,10 @@ void RIBDaemon::remote_stop_request(const cdap_rib::con_handle_t &con,
 {
   (void) filt;
   // FIXME add res and flags
-  cdap_rib::res_info_t res;
   cdap_rib::flags_t flags;
 
   RIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
-  ribObj->remoteStopObject(obj.name_, obj.value_);
+  cdap_rib::res_info_t* res = ribObj->remoteStopObject(obj.name_, obj.value_);
   cdap_manager_->remote_stop_response(con, flags, res, message_id);
 }
 
@@ -712,60 +704,60 @@ bool RIBObject::stopObject(const void* object)
   return false;
 }
 
-bool RIBObject::remoteCreateObject(const std::string& name, void * value)
+cdap_rib::res_info_t* RIBObject::remoteCreateObject(const std::string& name, void* value)
 {
   (void) name;
   (void) value;
   operation_not_supported();
-  return false;
+  return 0;
 }
 
-bool RIBObject::remoteDeleteObject(const std::string& name, void * value)
+cdap_rib::res_info_t* RIBObject::remoteDeleteObject(const std::string& name, void* value)
 {
   (void) name;
   (void) value;
   operation_not_supported();
-  return false;
+  return 0;
 }
 
-bool RIBObject::remoteReadObject(const std::string& name, void * value)
+cdap_rib::res_info_t* RIBObject::remoteReadObject(const std::string& name, void* value)
 {
   (void) name;
   (void) value;
   operation_not_supported();
-  return false;
+  return 0;
 }
 
-bool RIBObject::remoteCancelReadObject(const std::string& name, void * value)
+cdap_rib::res_info_t* RIBObject::remoteCancelReadObject(const std::string& name, void* value)
 {
   (void) name;
   (void) value;
   operation_not_supported();
-  return false;
+  return 0;
 }
 
-bool RIBObject::remoteWriteObject(const std::string& name, void * value)
+cdap_rib::res_info_t* RIBObject::remoteWriteObject(const std::string& name, void * value)
 {
   (void) name;
   (void) value;
   operation_not_supported();
-  return false;
+  return 0;
 }
 
-bool RIBObject::remoteStartObject(const std::string& name, void * value)
+cdap_rib::res_info_t* RIBObject::remoteStartObject(const std::string& name, void* value)
 {
   (void) name;
   (void) value;
   operation_not_supported();
-  return false;
+  return 0;
 }
 
-bool RIBObject::remoteStopObject(const std::string& name, void * value)
+cdap_rib::res_info_t* RIBObject::remoteStopObject(const std::string& name, void* value)
 {
   (void) name;
   (void) value;
   operation_not_supported();
-  return false;
+  return 0;
 }
 
 const std::string& RIBObject::get_class() const
@@ -914,7 +906,6 @@ RIBDInterface* RIBDFactory::create(cacep::AppConHandlerInterface* app_callback,
   RIBSchema *schema = new RIBSchema(version, separator);
   RIBDInterface* ribd = new RIBDaemon(app_callback, app_resp_callbak,
                                       comm_protocol, params, schema);
-  delete params;
   return ribd;
 }
 

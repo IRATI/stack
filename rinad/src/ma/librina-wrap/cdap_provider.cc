@@ -74,29 +74,29 @@ class CDAPProvider : public CDAPProviderInterface
   void remote_create_response(const cdap_rib::con_handle_t &con,
                               const cdap_rib::obj_info_t &obj,
                               const cdap_rib::flags_t &flags,
-                              const cdap_rib::res_info_t &res, int message_id);
+                              const cdap_rib::res_info_t* res, int message_id);
   void remote_delete_response(const cdap_rib::con_handle_t &con,
                               const cdap_rib::obj_info_t &obj,
                               const cdap_rib::flags_t &flags,
-                              const cdap_rib::res_info_t &res, int message_id);
+                              const cdap_rib::res_info_t* res, int message_id);
   void remote_read_response(const cdap_rib::con_handle_t &con,
                             const cdap_rib::obj_info_t &obj,
                             const cdap_rib::flags_t &flags,
-                            const cdap_rib::res_info_t &res, int message_id);
+                            const cdap_rib::res_info_t* res, int message_id);
   void remote_cancel_read_response(const cdap_rib::con_handle_t &con,
                                    const cdap_rib::flags_t &flags,
-                                   const cdap_rib::res_info_t &res,
+                                   const cdap_rib::res_info_t* res,
                                    int message_id);
   void remote_write_response(const cdap_rib::con_handle_t &con,
                              const cdap_rib::flags_t &flags,
-                             const cdap_rib::res_info_t &res, int message_id);
+                             const cdap_rib::res_info_t* res, int message_id);
   void remote_start_response(const cdap_rib::con_handle_t &con,
                              const cdap_rib::obj_info_t &obj,
                              const cdap_rib::flags_t &flags,
-                             const cdap_rib::res_info_t &res, int message_id);
+                             const cdap_rib::res_info_t* res, int message_id);
   void remote_stop_response(const cdap_rib::con_handle_t &con,
                             const cdap_rib::flags_t &flags,
-                            const cdap_rib::res_info_t &res, int message_id);
+                            const cdap_rib::res_info_t* res, int message_id);
  protected:
   rina::CDAPSessionManagerInterface *manager_;
  private:
@@ -359,7 +359,7 @@ void CDAPProvider::close_connection_response(const cdap_rib::con_handle_t &con,
 void CDAPProvider::remote_create_response(const cdap_rib::con_handle_t &con,
                                           const cdap_rib::obj_info_t &obj,
                                           const cdap_rib::flags_t &flags,
-                                          const cdap_rib::res_info_t &res,
+                                          const cdap_rib::res_info_t* res,
                                           int message_id)
 {
   const rina::CDAPMessage *m_sent;
@@ -368,15 +368,16 @@ void CDAPProvider::remote_create_response(const cdap_rib::con_handle_t &con,
   (void) flags;
   m_sent = manager_->getCreateObjectResponseMessage(
       rina::CDAPMessage::NONE_FLAGS, obj.class_, obj.inst_, obj.name_,
-      res.result_, res.result_reason_, message_id);
+      res->result_, res->result_reason_, message_id);
   send(m_sent, con.port_);
 
+  delete res;
   delete m_sent;
 }
 void CDAPProvider::remote_delete_response(const cdap_rib::con_handle_t &con,
                                           const cdap_rib::obj_info_t &obj,
                                           const cdap_rib::flags_t &flags,
-                                          const cdap_rib::res_info_t &res,
+                                          const cdap_rib::res_info_t* res,
                                           int message_id)
 {
   const rina::CDAPMessage *m_sent;
@@ -385,15 +386,16 @@ void CDAPProvider::remote_delete_response(const cdap_rib::con_handle_t &con,
   (void) flags;
   m_sent = manager_->getDeleteObjectResponseMessage(
       rina::CDAPMessage::NONE_FLAGS, obj.class_, obj.inst_, obj.name_,
-      res.result_, res.result_reason_, message_id);
+      res->result_, res->result_reason_, message_id);
   send(m_sent, con.port_);
 
+  delete res;
   delete m_sent;
 }
 void CDAPProvider::remote_read_response(const cdap_rib::con_handle_t &con,
                                         const cdap_rib::obj_info_t &obj,
                                         const cdap_rib::flags_t &flags,
-                                        const cdap_rib::res_info_t &res,
+                                        const cdap_rib::res_info_t* res,
                                         int message_id)
 {
   const rina::CDAPMessage *m_sent;
@@ -402,31 +404,33 @@ void CDAPProvider::remote_read_response(const cdap_rib::con_handle_t &con,
   (void) flags;
   m_sent = manager_->getReadObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
                                                   obj.class_, obj.inst_,
-                                                  obj.name_, res.result_,
-                                                  res.result_reason_,
+                                                  obj.name_, res->result_,
+                                                  res->result_reason_,
                                                   message_id);
   send(m_sent, con.port_);
 
+  delete res;
   delete m_sent;
 }
 void CDAPProvider::remote_cancel_read_response(
     const cdap_rib::con_handle_t &con, const cdap_rib::flags_t &flags,
-    const cdap_rib::res_info_t &res, int message_id)
+    const cdap_rib::res_info_t* res, int message_id)
 {
   const rina::CDAPMessage *m_sent;
 
   // FIXME change CDAPMessage::NONE_FLAGS
   (void) flags;
   m_sent = manager_->getCancelReadResponseMessage(rina::CDAPMessage::NONE_FLAGS,
-                                                  message_id, res.result_,
-                                                  res.result_reason_);
+                                                  message_id, res->result_,
+                                                  res->result_reason_);
   send(m_sent, con.port_);
 
+  delete res;
   delete m_sent;
 }
 void CDAPProvider::remote_write_response(const cdap_rib::con_handle_t &con,
                                          const cdap_rib::flags_t &flags,
-                                         const cdap_rib::res_info_t &res,
+                                         const cdap_rib::res_info_t* res,
                                          int message_id)
 {
   const rina::CDAPMessage *m_sent;
@@ -434,16 +438,17 @@ void CDAPProvider::remote_write_response(const cdap_rib::con_handle_t &con,
   // FIXME change CDAPMessage::NONE_FLAGS
   (void) flags;
   m_sent = manager_->getWriteObjectResponseMessage(
-      rina::CDAPMessage::NONE_FLAGS, res.result_, res.result_reason_,
+      rina::CDAPMessage::NONE_FLAGS, res->result_, res->result_reason_,
       message_id);
   send(m_sent, con.port_);
 
+  delete res;
   delete m_sent;
 }
 void CDAPProvider::remote_start_response(const cdap_rib::con_handle_t &con,
                                          const cdap_rib::obj_info_t &obj,
                                          const cdap_rib::flags_t &flags,
-                                         const cdap_rib::res_info_t &res,
+                                         const cdap_rib::res_info_t* res,
                                          int message_id)
 {
   const rina::CDAPMessage *m_sent;
@@ -452,14 +457,15 @@ void CDAPProvider::remote_start_response(const cdap_rib::con_handle_t &con,
   (void) flags;
   m_sent = manager_->getStartObjectResponseMessage(
       rina::CDAPMessage::NONE_FLAGS, obj.class_, obj.inst_, obj.name_,
-      res.result_, res.result_reason_, message_id);
+      res->result_, res->result_reason_, message_id);
   send(m_sent, con.port_);
 
+  delete res;
   delete m_sent;
 }
 void CDAPProvider::remote_stop_response(const cdap_rib::con_handle_t &con,
                                         const cdap_rib::flags_t &flags,
-                                        const cdap_rib::res_info_t &res,
+                                        const cdap_rib::res_info_t* res,
                                         int message_id)
 {
   const rina::CDAPMessage *m_sent;
@@ -467,11 +473,12 @@ void CDAPProvider::remote_stop_response(const cdap_rib::con_handle_t &con,
   // FIXME change CDAPMessage::NONE_FLAGS
   (void) flags;
   m_sent = manager_->getStopObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
-                                                  res.result_,
-                                                  res.result_reason_,
+                                                  res->result_,
+                                                  res->result_reason_,
                                                   message_id);
   send(m_sent, con.port_);
 
+  delete res;
   delete m_sent;
 }
 

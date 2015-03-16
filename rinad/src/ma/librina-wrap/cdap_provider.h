@@ -77,34 +77,34 @@ class CDAPProviderInterface
   virtual void remote_create_response(const cdap_rib::con_handle_t &con,
                                       const cdap_rib::obj_info_t &obj,
                                       const cdap_rib::flags_t &flags,
-                                      const cdap_rib::res_info_t &res,
+                                      const cdap_rib::res_info_t *res,
                                       int message_id) = 0;
   virtual void remote_delete_response(const cdap_rib::con_handle_t &con,
                                       const cdap_rib::obj_info_t &obj,
                                       const cdap_rib::flags_t &flags,
-                                      const cdap_rib::res_info_t &res,
+                                      const cdap_rib::res_info_t* res,
                                       int message_id) = 0;
   virtual void remote_read_response(const cdap_rib::con_handle_t &con,
                                     const cdap_rib::obj_info_t &obj,
                                     const cdap_rib::flags_t &flags,
-                                    const cdap_rib::res_info_t &res,
+                                    const cdap_rib::res_info_t* res,
                                     int message_id) = 0;
   virtual void remote_cancel_read_response(const cdap_rib::con_handle_t &con,
                                            const cdap_rib::flags_t &flags,
-                                           const cdap_rib::res_info_t &res,
+                                           const cdap_rib::res_info_t* res,
                                            int message_id) = 0;
   virtual void remote_write_response(const cdap_rib::con_handle_t &con,
                                      const cdap_rib::flags_t &flags,
-                                     const cdap_rib::res_info_t &res,
+                                     const cdap_rib::res_info_t* res,
                                      int message_id) = 0;
   virtual void remote_start_response(const cdap_rib::con_handle_t &con,
                                      const cdap_rib::obj_info_t &obj,
                                      const cdap_rib::flags_t &flags,
-                                     const cdap_rib::res_info_t &res,
+                                     const cdap_rib::res_info_t* res,
                                      int message_id) = 0;
   virtual void remote_stop_response(const cdap_rib::con_handle_t &con,
                                     const cdap_rib::flags_t &flags,
-                                    const cdap_rib::res_info_t &res,
+                                    const cdap_rib::res_info_t* res,
                                     int message_id) = 0;
 };
 

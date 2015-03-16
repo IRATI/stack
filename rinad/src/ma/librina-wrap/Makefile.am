@@ -9,20 +9,20 @@ SUBDIRS      = test
 EXTRA_DIST   =
 CLEANFILES   =
 
-noinst_LTLIBRARIES = librinad_ma_ribs.la
+noinst_LTLIBRARIES = librina_cdap_rib.la
 
-librinad_ma_ribs_la_CFLAGS   =
-librinad_ma_ribs_la_CPPFLAGS =			\
+librina_cdap_rib_la_CFLAGS   =
+librina_cdap_rib_la_CPPFLAGS =			\
 	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)			\
 	$(LIBPROTOBUF_CFLAGS)			\
 	-I$(srcdir)/../../			\
 	-I$(srcdir)/../../common
 
-librinad_ma_ribs_la_LIBADD   =			\
+librina_cdap_rib_la_LIBADD   =			\
 	$(LIBRINA_LIBS)				\
 	$(LIBPROTOBUF_LIBS)
 
-librinad_ma_ribs_la_SOURCES  =			\
+librina_cdap_rib_la_SOURCES  =			\
 	rib_provider.cc						\
 	cdap_provider.cc

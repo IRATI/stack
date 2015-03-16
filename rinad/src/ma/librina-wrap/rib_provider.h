@@ -21,7 +21,6 @@
 #ifndef RIB_PROVIDER_H_
 #define RIB_PROVIDER_H_
 #include "cdap_rib_structures.h"
-#include <librina/exceptions.h>
 #include <string>
 #include <list>
 #include <map>
@@ -100,7 +99,7 @@ class RIBDSouthInterface
   virtual void remote_read_result(const cdap_rib::con_handle_t &con,
                                   const cdap_rib::res_info_t &res) = 0;
   virtual void remote_cancel_read_result(const cdap_rib::con_handle_t &con,
-                                         const cdap_rib::res_info_t &res);
+                                         const cdap_rib::res_info_t &res) = 0;
   virtual void remote_write_result(const cdap_rib::con_handle_t &con,
                                    const cdap_rib::res_info_t &res) = 0;
   virtual void remote_start_result(const cdap_rib::con_handle_t &con,
@@ -244,35 +243,26 @@ class RIBObject
   virtual bool stopObject(const void* object);
 
   /// Remote invocations, resulting from CDAP messages
-  virtual bool remoteCreateObject(const std::string& name, void * value);
-  virtual bool remoteDeleteObject(const std::string& name, void * value);
-  virtual bool remoteReadObject(const std::string& name, void * value);
-  virtual bool remoteCancelReadObject(const std::string& name, void * value);
-  virtual bool remoteWriteObject(const std::string& name, void * value);
-  virtual bool remoteStartObject(const std::string& name, void * value);
-  virtual bool remoteStopObject(const std::string& name, void * value);
+  virtual cdap_rib::res_info_t* remoteCreateObject(const std::string& name, void* value);
+  virtual cdap_rib::res_info_t* remoteDeleteObject(const std::string& name, void* value);
+  virtual cdap_rib::res_info_t* remoteReadObject(const std::string& name, void* value);
+  virtual cdap_rib::res_info_t* remoteCancelReadObject(const std::string& name, void * value);
+  virtual cdap_rib::res_info_t* remoteWriteObject(const std::string& name, void* value);
+  virtual cdap_rib::res_info_t* remoteStartObject(const std::string& name, void* value);
+  virtual cdap_rib::res_info_t* remoteStopObject(const std::string& name, void* value);
   const std::string& get_class() const;
   const std::string& get_name() const;
-//  const std::string& get_parent_name() const;
-//  const std::string& get_parent_class() const;
   long get_instance() const;
-  /*void get_children_value(
-      std::list<std::pair<std::string, const void *> > &values) const;
-  unsigned int get_children_size() const;
-*/
+  const ObjectValueInterface* get_value() const;
+  const void* get_value() const;
  private:
- // void set_parent(RIBObject* parent);
- // void add_child(RIBObject *child);
- // void remove_child(const std::string& name);
   /// Auxiliar functions
   void operation_not_supported();
 
   std::string class_;
   std::string name_;
   unsigned long instance_;
- // RIBObject *parent_;
- // RIBDNorthInterface *rib_daemon_;
- // std::list<RIBObject*> children_;
+  ObjectValueInterface* value;
   EncoderInterface *encoder_;
 };
 
@@ -291,7 +281,7 @@ class RIBDNorthInterface
   virtual RIBObject* getObject(unsigned long instance, const std::string& clas) const = 0;
 };
 
-class RIBDInterface : public RIBDNorthInterface, RIBDSouthInterface
+class RIBDInterface : public RIBDNorthInterface, public RIBDSouthInterface
 {
 };
 

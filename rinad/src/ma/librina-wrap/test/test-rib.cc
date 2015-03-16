@@ -22,6 +22,15 @@
 #include <string>
 #include <iostream>
 #include "../rib_provider.h"
+#include <librina/patterns.h>
+#include <librina/application.h>
+
+class Checker_
+{
+ public:
+  bool check;
+};
+Singleton<Checker_> Checker;
 
 class IdFactory
 {
@@ -63,6 +72,76 @@ class NewObject : public rib::RIBObject
   void* get_value() const
   {
     return 0;
+  }
+  cdap_rib::res_info_t* remoteCreateObject(const std::string& name, void* value)
+  {
+    (void) name;
+    (void) value;
+    cdap_rib::res_info_t *res = new cdap_rib::res_info_t;
+    res->result_ = 1;
+    res->result_reason_ = "Ok";
+    Checker->check = true;
+    return res;
+  }
+  cdap_rib::res_info_t* remoteDeleteObject(const std::string& name, void* value)
+  {
+    (void) name;
+    (void) value;
+    cdap_rib::res_info_t *res = new cdap_rib::res_info_t;
+    res->result_ = 1;
+    res->result_reason_ = "Ok";
+    Checker->check = true;
+    return res;
+  }
+  cdap_rib::res_info_t* remoteReadObject(const std::string& name, void* value)
+  {
+    (void) name;
+    (void) value;
+    cdap_rib::res_info_t *res = new cdap_rib::res_info_t;
+    res->result_ = 1;
+    res->result_reason_ = "Ok";
+    Checker->check = true;
+    return res;
+  }
+  cdap_rib::res_info_t* remoteCancelReadObject(const std::string& name, void * value)
+  {
+    (void) name;
+    (void) value;
+    cdap_rib::res_info_t *res = new cdap_rib::res_info_t;
+    res->result_ = 1;
+    res->result_reason_ = "Ok";
+    Checker->check = true;
+    return res;
+  }
+  cdap_rib::res_info_t* remoteWriteObject(const std::string& name, void* value)
+  {
+    (void) name;
+    (void) value;
+    cdap_rib::res_info_t *res = new cdap_rib::res_info_t;
+    res->result_ = 1;
+    res->result_reason_ = "Ok";
+    Checker->check = true;
+    return res;
+  }
+  cdap_rib::res_info_t* remoteStartObject(const std::string& name, void* value)
+  {
+    (void) name;
+    (void) value;
+    cdap_rib::res_info_t *res = new cdap_rib::res_info_t;
+    res->result_ = 1;
+    res->result_reason_ = "Ok";
+    Checker->check = true;
+    return res;
+  }
+  cdap_rib::res_info_t* remoteStopObject(const std::string& name, void* value)
+  {
+    (void) name;
+    (void) value;
+    cdap_rib::res_info_t *res = new cdap_rib::res_info_t;
+    res->result_ = 1;
+    res->result_reason_ = "Ok";
+    Checker->check = true;
+    return res;
   }
 };
 
@@ -160,6 +239,7 @@ class ConHandler : public cacep::AppConHandlerInterface
   }
 };
 
+
 class RespHandler : public rib::ResponseHandlerInterface
 {
   void createResponse(const cdap_rib::res_info_t &res,
@@ -167,44 +247,52 @@ class RespHandler : public rib::ResponseHandlerInterface
   {
     (void) res;
     (void) con;
+    Checker->check = true;
   }
   void deleteResponse(const cdap_rib::res_info_t &res,
                               const cdap_rib::con_handle_t &con)
   {
     (void) res;
     (void) con;
+    Checker->check = true;
   }
   void readResponse(const cdap_rib::res_info_t &res,
                             const cdap_rib::con_handle_t &con)
   {
     (void) res;
     (void) con;
+    Checker->check = true;
   }
   void cancelReadResponse(const cdap_rib::res_info_t &res,
                                   const cdap_rib::con_handle_t &con)
   {
     (void) res;
     (void) con;
+    Checker->check = true;
   }
   void writeResponse(const cdap_rib::res_info_t &res,
                              const cdap_rib::con_handle_t &con)
   {
     (void) res;
     (void) con;
+    Checker->check = true;
   }
   void startResponse(const cdap_rib::res_info_t &res,
                              const cdap_rib::con_handle_t &con)
   {
     (void) res;
     (void) con;
+    Checker->check = true;
   }
   void stopResponse(const cdap_rib::res_info_t &res,
                             const cdap_rib::con_handle_t &con)
   {
     (void) res;
     (void) con;
+    Checker->check = true;
   }
 };
+
 
 class CheckRIB
 {
@@ -234,9 +322,9 @@ class CheckRIB
                                OBJECT7_RIB_OBJECT_NAME, idFactory_, enc);
     object8_ = new NewObject(OBJECT8_RIB_OBJECT_CLASS,
                                OBJECT8_RIB_OBJECT_NAME, idFactory_, enc);
-  }
+  };
   ~CheckRIB()
-  {}
+  {};
   bool RIBDaemon_addRIBObject_create_true()
   {
     try {
@@ -252,7 +340,7 @@ class CheckRIB
       return false;
     }
     return true;
-  }
+  };
   bool RIBDaemon_addRIBObject_objectWithoutParent()
   {
     try {
@@ -263,7 +351,7 @@ class CheckRIB
       return true;
     }
     return false;
-  }
+  };
   bool RIBDaemon_addRIBObject_checkCreatedRelations()
   {
     try {
@@ -272,26 +360,250 @@ class CheckRIB
     } catch (Exception &e1) {
     }
     return true;
-  }
+  };
   bool RIBDaemon_readObject()
   {
     try {
       NewObject *object_recovered = (NewObject*) rib_daemon_->getObject(
-          OBJECT2_RIB_OBJECT_CLASS, OBJECT2_RIB_OBJECT_NAME);
+          OBJECT2_RIB_OBJECT_NAME, OBJECT2_RIB_OBJECT_CLASS);
       if (object2_ != object_recovered)
         return false;
       object_recovered = (NewObject*) rib_daemon_->getObject(
-          OBJECT5_RIB_OBJECT_CLASS, OBJECT5_RIB_OBJECT_NAME);
+          OBJECT5_RIB_OBJECT_NAME, OBJECT5_RIB_OBJECT_CLASS);
       if (object5_ != object_recovered)
         return false;
       object_recovered = (NewObject*) rib_daemon_->getObject(
-          OBJECT3_RIB_OBJECT_CLASS, OBJECT3_RIB_OBJECT_NAME);
+          OBJECT3_RIB_OBJECT_NAME, OBJECT3_RIB_OBJECT_CLASS);
     } catch (Exception &e1) {
       std::cout << e1.what();
       return false;
     }
     return true;
-  }
+  };
+  bool RIBDaemon_remote_create_result()
+  {
+    cdap_rib::con_handle_t con;
+    cdap_rib::res_info_t res;
+    res.result_ = 1;
+    Checker->check = false;
+    rib_daemon_->remote_create_result(con, res);
+    if (Checker->check)
+    {
+      return true;
+    }
+    else
+      return false;
+  };
+  bool RIBDaemon_remote_delete_result()
+  {
+    cdap_rib::con_handle_t con;
+    cdap_rib::res_info_t res;
+    res.result_ = 1;
+    Checker->check = false;
+    rib_daemon_->remote_delete_result(con, res);
+    if (Checker->check)
+    {
+      return true;
+    }
+    else
+      return false;
+  };
+  bool RIBDaemon_remote_read_result()
+  {
+    cdap_rib::con_handle_t con;
+    cdap_rib::res_info_t res;
+    res.result_ = 1;
+    Checker->check = false;
+    rib_daemon_->remote_read_result(con, res);
+    if (Checker->check)
+    {
+      return true;
+    }
+    else
+      return false;
+  };
+  bool RIBDaemon_remote_cancel_read_result()
+  {
+    cdap_rib::con_handle_t con;
+    cdap_rib::res_info_t res;
+    res.result_ = 1;
+    Checker->check = false;
+    rib_daemon_->remote_cancel_read_result(con, res);
+    if (Checker->check)
+    {
+      return true;
+    }
+    else
+      return false;
+  };
+  bool RIBDaemon_remote_write_result()
+  {
+    cdap_rib::con_handle_t con;
+    cdap_rib::res_info_t res;
+    res.result_ = 1;
+    Checker->check = false;
+    rib_daemon_->remote_write_result(con, res);
+    if (Checker->check)
+    {
+      return true;
+    }
+    else
+      return false;
+  };
+  bool RIBDaemon_remote_start_result()
+  {
+    cdap_rib::con_handle_t con;
+    cdap_rib::res_info_t res;
+    res.result_ = 1;
+    Checker->check = false;
+    rib_daemon_->remote_start_result(con, res);
+    if (Checker->check)
+    {
+      return true;
+    }
+    else
+      return false;
+  };
+  bool RIBDaemon_remote_stop_result()
+  {
+    cdap_rib::con_handle_t con;
+    cdap_rib::res_info_t res;
+    res.result_ = 1;
+    Checker->check = false;
+    rib_daemon_->remote_stop_result(con, res);
+    if (Checker->check)
+    {
+      return true;
+    }
+    else
+      return false;
+  };
+  bool RIBDaemon_remote_create_request()
+  {
+    cdap_rib::con_handle_t con;
+    cdap_rib::obj_info_t obj;
+    obj.class_ = OBJECT3_RIB_OBJECT_CLASS;
+    obj.name_ = OBJECT3_RIB_OBJECT_NAME;
+    cdap_rib::filt_info_t filt;
+    Checker->check = false;
+    try{
+      rib_daemon_->remote_create_request(con, obj, filt, 1);
+    }
+    catch(Exception &e1)
+    {
+      if (Checker->check)
+        return true;
+    }
+    return false;
+  };
+  bool RIBDaemon_remote_delete_request()
+  {
+    cdap_rib::con_handle_t con;
+    cdap_rib::obj_info_t obj;
+    obj.class_ = OBJECT3_RIB_OBJECT_CLASS;
+    obj.name_ = OBJECT3_RIB_OBJECT_NAME;
+    cdap_rib::filt_info_t filt;
+    Checker->check = false;
+    try{
+      rib_daemon_->remote_delete_request(con, obj, filt, 1);
+    }
+    catch(Exception &e1)
+    {
+      if (Checker->check)
+        return true;
+    }
+    return false;
+  };
+  bool RIBDaemon_remote_read_request()
+  {
+    cdap_rib::con_handle_t con;
+    cdap_rib::obj_info_t obj;
+    obj.class_ = OBJECT3_RIB_OBJECT_CLASS;
+    obj.name_ = OBJECT3_RIB_OBJECT_NAME;
+    cdap_rib::filt_info_t filt;
+    Checker->check = false;
+    try{
+      rib_daemon_->remote_read_request(con, obj, filt, 1);
+    }
+    catch(Exception &e1)
+    {
+      if (Checker->check)
+        return true;
+    }
+    return false;
+  };
+  bool RIBDaemon_remote_cancel_read_request()
+  {
+    cdap_rib::con_handle_t con;
+    cdap_rib::obj_info_t obj;
+    obj.class_ = OBJECT3_RIB_OBJECT_CLASS;
+    obj.name_ = OBJECT3_RIB_OBJECT_NAME;
+    cdap_rib::filt_info_t filt;
+    Checker->check = false;
+    try{
+      rib_daemon_->remote_cancel_read_request(con, obj, filt, 1);
+    }
+    catch(Exception &e1)
+    {
+      if (Checker->check)
+        return true;
+    }
+    return false;
+  };
+  bool RIBDaemon_remote_write_request()
+  {
+    cdap_rib::con_handle_t con;
+    cdap_rib::obj_info_t obj;
+    obj.class_ = OBJECT3_RIB_OBJECT_CLASS;
+    obj.name_ = OBJECT3_RIB_OBJECT_NAME;
+    cdap_rib::filt_info_t filt;
+    Checker->check = false;
+    try{
+      rib_daemon_->remote_write_request(con, obj, filt, 1);
+    }
+    catch(Exception &e1)
+    {
+      if (Checker->check)
+        return true;
+    }
+    return false;
+  };
+  bool RIBDaemon_remote_start_request()
+  {
+    cdap_rib::con_handle_t con;
+    cdap_rib::obj_info_t obj;
+    obj.class_ = OBJECT3_RIB_OBJECT_CLASS;
+    obj.name_ = OBJECT3_RIB_OBJECT_NAME;
+    cdap_rib::filt_info_t filt;
+    Checker->check = false;
+    try{
+      rib_daemon_->remote_start_request(con, obj, filt, 1);
+    }
+    catch(Exception &e1)
+    {
+      if (Checker->check)
+        return true;
+    }
+    return false;
+  };
+  bool RIBDaemon_remote_stop_request()
+  {
+    cdap_rib::con_handle_t con;
+    cdap_rib::obj_info_t obj;
+    obj.class_ = OBJECT3_RIB_OBJECT_CLASS;
+    obj.name_ = OBJECT3_RIB_OBJECT_NAME;
+    cdap_rib::filt_info_t filt;
+    Checker->check = false;
+    try{
+      rib_daemon_->remote_stop_request(con, obj, filt, 1);
+    }
+    catch(Exception &e1)
+    {
+      if (Checker->check)
+        return true;
+    }
+    return false;
+  };
  private:
   IdFactory idFactory_;
   rib::RIBDInterface *rib_daemon_;
@@ -304,6 +616,7 @@ class CheckRIB
   NewObject *object7_;
   NewObject *object8_;
 };
+
 
 int main()
 {
@@ -328,11 +641,11 @@ int main()
             << std::endl;
 
   if (!checks_rib.RIBDaemon_addRIBObject_create_true()) {
-    std::cout << "TEST FAILED" << std::endl;
+    std::cout << "TEST IBDaemon_addRIBObject_create_true FAILED" << std::endl;
     return -1;
   }
   if (!checks_rib.RIBDaemon_addRIBObject_objectWithoutParent()) {
-    std::cout << "TEST FAILED" << std::endl;
+    std::cout << "TEST RIBDaemon_addRIBObject_objectWithoutParent FAILED" << std::endl;
     return -1;
   }
 
@@ -341,7 +654,7 @@ int main()
             << std::endl << "///////////////////////////////////////"
             << std::endl;
   if (!checks_rib.RIBDaemon_addRIBObject_checkCreatedRelations()) {
-    std::cout << "TEST FAILED" << std::endl;
+    std::cout << "TEST RIBDaemon_addRIBObject_checkCreatedRelations FAILED" << std::endl;
     return -1;
   }
 
@@ -350,7 +663,68 @@ int main()
             << std::endl << "///////////////////////////////////////"
             << std::endl;
   if (!checks_rib.RIBDaemon_readObject()) {
-    std::cout << "TEST FAILED" << std::endl;
+    std::cout << "TEST RIBDaemon_readObject FAILED" << std::endl;
+    return -1;
+  }
+
+  std::cout << std::endl << "///////////////////////////////////////"
+            << std::endl << "//// test-rib TEST 4 : South Int //////"
+            << std::endl << "///////////////////////////////////////"
+            << std::endl;
+  if (!checks_rib.RIBDaemon_remote_create_result()) {
+    std::cout << "TEST RIBDaemon_remote_create_result FAILED" << std::endl;
+    return -1;
+  }
+  if (!checks_rib.RIBDaemon_remote_delete_result()) {
+    std::cout << "TEST RIBDaemon_remote_delete_result FAILED" << std::endl;
+    return -1;
+  }
+  if (!checks_rib.RIBDaemon_remote_read_result()) {
+    std::cout << "TEST RIBDaemon_remote_read_result FAILED" << std::endl;
+    return -1;
+  }
+  if (!checks_rib.RIBDaemon_remote_cancel_read_result()) {
+    std::cout << "TEST RIBDaemon_remote_cancel_read_result FAILED" << std::endl;
+    return -1;
+  }
+  if (!checks_rib.RIBDaemon_remote_write_result()) {
+    std::cout << "TEST RIBDaemon_remote_write_result FAILED" << std::endl;
+    return -1;
+  }
+  if (!checks_rib.RIBDaemon_remote_start_result()) {
+    std::cout << "TEST RIBDaemon_remote_start_result FAILED" << std::endl;
+    return -1;
+  }
+  if (!checks_rib.RIBDaemon_remote_stop_result()) {
+    std::cout << "TEST RIBDaemon_remote_stop_result FAILED" << std::endl;
+    return -1;
+  }
+  if (!checks_rib.RIBDaemon_remote_create_request()) {
+    std::cout << "TEST RIBDaemon_remote_create_request FAILED" << std::endl;
+    return -1;
+  }
+  if (!checks_rib.RIBDaemon_remote_delete_request()) {
+    std::cout << "TEST RIBDaemon_remote_delete_request FAILED" << std::endl;
+    return -1;
+  }
+  if (!checks_rib.RIBDaemon_remote_read_request()) {
+    std::cout << "TEST RIBDaemon_remote_read_request FAILED" << std::endl;
+    return -1;
+  }
+  if (!checks_rib.RIBDaemon_remote_cancel_read_request()) {
+    std::cout << "TEST RIBDaemon_remote_cancel_read_request FAILED" << std::endl;
+    return -1;
+  }
+  if (!checks_rib.RIBDaemon_remote_write_request()) {
+    std::cout << "TEST RIBDaemon_remote_write_request FAILED" << std::endl;
+    return -1;
+  }
+  if (!checks_rib.RIBDaemon_remote_start_request()) {
+    std::cout << "TEST RIBDaemon_remote_start_request FAILED" << std::endl;
+    return -1;
+  }
+  if (!checks_rib.RIBDaemon_remote_stop_request()) {
+    std::cout << "TEST RIBDaemon_remote_stop_request FAILED" << std::endl;
     return -1;
   }
 
