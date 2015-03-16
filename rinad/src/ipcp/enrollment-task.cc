@@ -86,7 +86,7 @@ const void* WatchdogRIBObject::get_value() const {
 }
 
 void WatchdogRIBObject::remoteReadObject(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	//1 Send M_READ_R message
 	try {
@@ -115,7 +115,7 @@ void WatchdogRIBObject::remoteReadObject(int invoke_id, rina::CDAPSessionDescrip
 }
 
 void WatchdogRIBObject::sendMessages() {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	neighbor_statistics_.clear();
 	rina::Time currentTime;
@@ -158,7 +158,7 @@ void WatchdogRIBObject::sendMessages() {
 void WatchdogRIBObject::readResponse(int result, const std::string& result_reason,
 		void * object_value, const std::string& object_name,
 		rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	(void) result;
 	(void) result_reason;
@@ -230,7 +230,7 @@ const void* NeighborSetRIBObject::get_value() const {
 
 void NeighborSetRIBObject::remoteCreateObject(void * object_value, const std::string& object_name,
 		int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	std::list<rina::Neighbor *> neighborsToCreate;
 
 	(void) invoke_id;  // Stop compiler barfs
@@ -464,7 +464,7 @@ bool BaseEnrollmentStateMachine::isValidPortId(const rina::CDAPSessionDescriptor
 
 void BaseEnrollmentStateMachine::release(int invoke_id,
 		rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	LOG_DBG("Releasing the CDAP connection");
 
 	if (!isValidPortId(session_descriptor)) {
@@ -495,7 +495,7 @@ void BaseEnrollmentStateMachine::release(int invoke_id,
 
 void BaseEnrollmentStateMachine::releaseResponse(int result, const std::string& result_reason,
 		rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	(void) result;
 	(void) result_reason;
@@ -510,7 +510,7 @@ void BaseEnrollmentStateMachine::releaseResponse(int result, const std::string& 
 }
 
 void BaseEnrollmentStateMachine::flowDeallocated(rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	LOG_INFO("The flow supporting the CDAP session identified by %d has been deallocated.",
 			cdapSessionDescriptor->port_id_);
 
@@ -672,7 +672,7 @@ EnrolleeStateMachine::~EnrolleeStateMachine() {
 }
 
 void EnrolleeStateMachine::initiateEnrollment(EnrollmentRequest * enrollmentRequest, int portId) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	enrollment_request_ = enrollmentRequest;
 	remote_peer_->address_ = enrollment_request_->neighbor_->address_;
@@ -710,7 +710,7 @@ void EnrolleeStateMachine::initiateEnrollment(EnrollmentRequest * enrollmentRequ
 
 void EnrolleeStateMachine::connectResponse(int result,
 		const std::string& result_reason) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	if (state != STATE_WAIT_CONNECT_RESPONSE) {
 		abortEnrollment(remote_peer_->name_, port_id_,
@@ -773,7 +773,7 @@ void EnrolleeStateMachine::connectResponse(int result,
 
 void EnrolleeStateMachine::startResponse(int result, const std::string& result_reason,
 		void * object_value, rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	if (!isValidPortId(session_descriptor)){
 		return;
@@ -819,7 +819,7 @@ void EnrolleeStateMachine::startResponse(int result, const std::string& result_r
 
 void EnrolleeStateMachine::stop(EnrollmentInformationRequest * eiRequest, int invoke_id,
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	if (!isValidPortId(cdapSessionDescriptor)){
 		return;
@@ -989,7 +989,7 @@ void EnrolleeStateMachine::enrollmentCompleted() {
 void EnrolleeStateMachine::readResponse(int result, const std::string& result_reason,
 		void * object_value, const std::string& object_name,
 		rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	if (!isValidPortId(session_descriptor)){
 		return;
@@ -1046,7 +1046,7 @@ void EnrolleeStateMachine::readResponse(int result, const std::string& result_re
 
 void EnrolleeStateMachine::start(int result, const std::string& result_reason,
 		rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	if (!isValidPortId(session_descriptor)){
 		return;
@@ -1095,7 +1095,7 @@ EnrollerStateMachine::~EnrollerStateMachine() {
 }
 
 void EnrollerStateMachine::connect(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
         ISecurityManagerPs *smps = dynamic_cast<ISecurityManagerPs *>(security_manager_->ps);
 
         assert(smps);
@@ -1175,7 +1175,7 @@ void EnrollerStateMachine::sendDIFStaticInformation() {
 
 void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int invoke_id,
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
     INamespaceManagerPs *nsmps = dynamic_cast<INamespaceManagerPs *>(namespace_manager_->ps);
     assert(nsmps);
@@ -1290,7 +1290,7 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int i
 
 void EnrollerStateMachine::stopResponse(int result, const std::string& result_reason,
 		void * object_value, rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	(void) object_value;
 
@@ -1501,7 +1501,7 @@ BaseEnrollmentStateMachine * EnrollmentTask::getEnrollmentStateMachine(
 }
 
 bool EnrollmentTask::isEnrolledTo(const std::string& processName) const {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	std::list<BaseEnrollmentStateMachine *> machines = state_machines_.getEntries();
 	std::list<BaseEnrollmentStateMachine *>::const_iterator it;

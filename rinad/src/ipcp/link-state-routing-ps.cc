@@ -1012,7 +1012,7 @@ void LinkStateRoutingPolicy::eventHappened(Event * event)
 	if (!event)
 		return;
 
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	if (event->get_id() == IPCP_EVENT_N_MINUS_1_FLOW_DEALLOCATED) {
 		NMinusOneFlowDeallocatedEvent * flowEvent =
@@ -1123,7 +1123,7 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(
 
 void LinkStateRoutingPolicy::propagateFSDB() const
 {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	std::list<rina::FlowInformation> nMinusOneFlows =
 			ipc_process_->resource_allocator_->get_n_minus_one_flow_manager()->getAllNMinusOneFlowInformation();
@@ -1157,14 +1157,14 @@ void LinkStateRoutingPolicy::propagateFSDB() const
 
 void LinkStateRoutingPolicy::updateAge()
 {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	db_->incrementAge();
 }
 
 void LinkStateRoutingPolicy::routingTableUpdate()
 {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	if (!db_->modified_) {
 		return;
@@ -1186,7 +1186,7 @@ void LinkStateRoutingPolicy::routingTableUpdate()
 void LinkStateRoutingPolicy::writeMessageReceived(
 		const std::list<FlowStateObject *> & flow_state_objects, int portId)
 {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	try {
 		db_->updateObjects(flow_state_objects, portId,
@@ -1199,7 +1199,7 @@ void LinkStateRoutingPolicy::writeMessageReceived(
 void LinkStateRoutingPolicy::readMessageRecieved(int invoke_id,
 		int portId) const
 {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	try {
 		rina::RIBObjectValue robject_value;
