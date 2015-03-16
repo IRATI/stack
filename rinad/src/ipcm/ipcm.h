@@ -209,6 +209,15 @@ public:
 
 
 	//
+	// Get the IPCP identifier where the application is registered
+	// FIXME: return id instead?
+	//
+	bool lookup_dif_by_application(
+		const rina::ApplicationProcessNamingInformation& apName,
+		rina::ApplicationProcessNamingInformation& difName);
+
+
+	//
 	// Creates an IPCP process
 	//
 	// @ret -1 on failure, otherwise the IPCP id
@@ -232,71 +241,61 @@ public:
 	//
 	// Register an IPCP to a single DIF
 	//
-	int register_at_dif(const int ipcp_id,
+	int register_at_dif(const Addon* callee, const int ipcp_id,
 			    const rina::ApplicationProcessNamingInformation&
 			    difName);
 
 	//
 	// Register an existing IPCP to multiple DIFs
 	//
-	int register_at_difs(const int ipcp_id, const
+	int register_at_difs(const Addon* callee, const int ipcp_id, const
 			std::list<rina::ApplicationProcessNamingInformation>&
 			     difs);
 
 	//
 	// Enroll IPCP to a single DIF
 	//
-	int enroll_to_dif(const int ipcp_id,
+	int enroll_to_dif(const Addon* callee, const int ipcp_id,
 			  const rinad::NeighborData& neighbor, bool sync);
 	//
 	// Enroll IPCP to multiple DIFs
 	//
-	int enroll_to_difs(const int ipcp_id,
+	int enroll_to_difs(const Addon* callee, const int ipcp_id,
 			   const std::list<rinad::NeighborData>& neighbors);
 
 	//TODO
-	int unregister_app_from_ipcp(
+	int unregister_app_from_ipcp(const Addon* callee,
 		const rina::ApplicationUnregistrationRequestEvent& req_event,
 		int slave_ipcp_id);
 
 	//TODO
-	int unregister_ipcp_from_ipcp(const int ipcp_id,
+	int unregister_ipcp_from_ipcp(const Addon* callee, const int ipcp_id,
 						const int slave_ipcp_id);
-
-	//
-	// Get the IPCP identifier where the application is registered
-	// FIXME: return id instead?
-	//
-	bool lookup_dif_by_application(
-		const rina::ApplicationProcessNamingInformation& apName,
-		rina::ApplicationProcessNamingInformation& difName);
-
 	//
 	// Update the DIF configuration
 	//TODO: What is really this for?
 	//
-	int update_dif_configuration(
-		const int ipcp_id,
+	int update_dif_configuration(const Addon* callee, const int ipcp_id,
 		const rina::DIFConfiguration& dif_config);
 
-	int deallocate_flow(const int ipcp_id,
+	int deallocate_flow(const Addon* callee, const int ipcp_id,
 			    const rina::FlowDeallocateRequestEvent& event);
 
 	//
 	// Retrieve the IPCP RIB in the form of a string
 	//
-	std::string query_rib(const int ipcp_id);
+	std::string query_rib(const Addon* callee, const int ipcp_id);
 
-	int select_policy_set(const int ipcp_id,
+	int select_policy_set(const Addon* callee, const int ipcp_id,
 			      const std::string& component_path,
 			      const std::string& policy_set);
 
-	int set_policy_set_param(const int ipcp_id,
+	int set_policy_set_param(const Addon* callee, const int ipcp_id,
 				 const std::string& path,
 				 const std::string& name,
 				 const std::string& value);
 
-	int plugin_load(const int ipcp_id,
+	int plugin_load(const Addon* callee, const int ipcp_id,
 			const std::string& plugin_name, bool load);
 
 	//

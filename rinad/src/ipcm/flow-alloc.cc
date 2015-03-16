@@ -31,6 +31,7 @@
 #include <librina/logs.h>
 
 #include "rina-configuration.h"
+#include "ipcp.h"
 #include "flow-alloc.h"
 
 using namespace std;
@@ -39,12 +40,13 @@ using namespace std;
 namespace rinad {
 
 int
-IPCManager_::deallocate_flow(const int ipcp_id,
+IPCManager_::deallocate_flow(const Addon* callee, const int ipcp_id,
                             const rina::FlowDeallocateRequestEvent& event)
 {
         ostringstream ss;
         unsigned int seqnum;
 	rina::IPCProcess* ipcp;
+	IPCPTransState* trans;
 
         try {
 		ipcp = lookup_ipcp_by_id(ipcp_id);
@@ -55,18 +57,41 @@ IPCManager_::deallocate_flow(const int ipcp_id,
 		}
 
 
+		//Create a transaction
+		seqnum = opaque_generator_.next();
+		trans = new IPCPTransState(callee, seqnum,
+							ipcp->id);
+		if(!trans){
+			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
+			throw Exception();
+		}
+
+		//Store transaction
+		if(add_transaction_state(seqnum, trans) < 0){
+			ss << "Unable to add transaction; out of memory? ";
+			throw Exception();
+		}
+
+
                 // Ask the IPC process to deallocate the flow
                 // specified by the port-id
-				seqnum = opaque_generator_.next();
                 ipcp->deallocateFlow(event.portId, seqnum);
-                pending_flow_deallocations[seqnum] =
-                                        make_pair(ipcp, event);
 
                 ss << "Application " << event.applicationName.toString() <<
                         " asks IPC process " << ipcp->name.toString() <<
                         " to deallocate flow [port-id = " << event.portId <<
                         "]" << endl;
                 FLUSH_LOG(INFO, ss);
+
+		//If it is a synchronous call, wait until it has been finished
+		if(!callee){
+			//Just wait in the condition variable
+			//TODO: move this to a timedwait
+			trans->wait();
+
+			//Callback
+			//TODO
+		}
         } catch (rina::IpcmDeallocateFlowException) {
                 ss  << ": Error while application " <<
                         event.applicationName.toString() << "asks IPC process "
@@ -378,7 +403,7 @@ void IPCManager_::flow_deallocation_requested_event_handler(rina::IPCEvent *e)
                 return;
         }
 
-        ret = deallocate_flow(ipcp->id, *event);
+        ret = deallocate_flow(NULL, ipcp->id, *event);
         if (ret) {
                 try {
                         // Inform the application about the deallocation

@@ -65,7 +65,7 @@ void IPCManager_::os_process_finalized_handler(rina::IPCEvent *e)
 			continue;
 		}
 
-		IPCManager->deallocate_flow(ipcp->id, req_event);
+		IPCManager->deallocate_flow(NULL, ipcp->id, req_event);
 	}
 
 	// Look if the terminating application has pending registrations
@@ -83,7 +83,7 @@ void IPCManager_::os_process_finalized_handler(rina::IPCEvent *e)
 				req_event(app_name, ipcps[i]->
 					getDIFInformation().dif_name_, 0);
 
-			IPCManager->unregister_app_from_ipcp(req_event, ipcps[i]->id);
+			IPCManager->unregister_app_from_ipcp(NULL, req_event, ipcps[i]->id);
 		}
 	}
 
@@ -92,47 +92,6 @@ void IPCManager_::os_process_finalized_handler(rina::IPCEvent *e)
 		// Should we destroy the state in the kernel? Or try to
 		// create another IPC Process in user space to bring it back?
 	}
-}
-
-int
-IPCManager_::unregister_app_from_ipcp(
-                const rina::ApplicationUnregistrationRequestEvent& req_event,
-                int slave_ipcp_id)
-{
-        ostringstream ss;
-        unsigned int seqnum;
-        rina::IPCProcess *slave_ipcp;
-
-        try {
-		slave_ipcp = lookup_ipcp_by_id(slave_ipcp_id);
-
-		if (!slave_ipcp) {
-			ss << "Cannot find any IPC process belonging "<<endl;
-			FLUSH_LOG(ERR, ss);
-			throw Exception();
-		}
-
-                // Forward the unregistration request to the IPC process
-                // that the application is registered to
-				seqnum = opaque_generator_.next();
-                slave_ipcp->unregisterApplication(req_event.applicationName,
-                                                  seqnum);
-                pending_app_unregistrations[seqnum] =
-                                make_pair(slave_ipcp, req_event);
-
-                ss << "Requested unregistration of application " <<
-                        req_event.applicationName.toString() << " from IPC "
-                        "process " << slave_ipcp->name.toString() << endl;
-                FLUSH_LOG(INFO, ss);
-        } catch (rina::IpcmUnregisterApplicationException) {
-                ss  << ": Error while unregistering application "
-                        << req_event.applicationName.toString() << " from IPC "
-                        "process " << slave_ipcp->name.toString() << endl;
-                FLUSH_LOG(ERR, ss);
-                return -1;
-        }
-
-        return 0;
 }
 
 
@@ -372,7 +331,7 @@ void IPCManager_::application_unregistration_request_event_handler(rina::IPCEven
                 return;
         }
 
-        err = unregister_app_from_ipcp(*event, slave_ipcp->id);
+        err = unregister_app_from_ipcp(NULL, *event, slave_ipcp->id);
         if (err) {
                 // Inform the unregistering application that the unregistration
                 // operation failed

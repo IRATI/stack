@@ -130,65 +130,6 @@ int IPCManager_::ipcm_register_response_ipcp(
         return ret;
 }
 
-int
-IPCManager_::unregister_ipcp_from_ipcp(int ipcp_id,
-                                      int slave_ipcp_id)
-{
-        unsigned int seqnum;
-        bool arrived = true;
-        ostringstream ss;
-        rina::IPCProcess *ipcp, *slave_ipcp;
-	int ret;
-
-        try {
-
-		ipcp = lookup_ipcp_by_id(ipcp_id);
-
-		if(!ipcp){
-			ss << "Invalid IPCP id "<< ipcp_id;
-			FLUSH_LOG(ERR, ss);
-			throw Exception();
-		}
-		slave_ipcp = lookup_ipcp_by_id(slave_ipcp_id);
-
-		if (!slave_ipcp) {
-			ss << "Invalid IPCP id "<< slave_ipcp_id;
-			FLUSH_LOG(ERR, ss);
-			throw Exception();
-		}
-
-                // Forward the unregistration request to the IPC process
-                // that the client IPC process is registered to
-				seqnum = opaque_generator_.next();
-                slave_ipcp->unregisterApplication(ipcp->name, seqnum);
-                pending_ipcp_unregistrations[seqnum] =
-                                make_pair(ipcp, slave_ipcp);
-
-                ss << "Requested unregistration of IPC process " <<
-                        ipcp->name.toString() << " from IPC "
-                        "process " << slave_ipcp->name.toString() << endl;
-                FLUSH_LOG(INFO, ss);
-
-                /*arrived = concurrency.wait_for_event(
-                                rina::IPCM_UNREGISTER_APP_RESPONSE_EVENT,
-                                seqnum, ret);*/
-        } catch (rina::IpcmUnregisterApplicationException) {
-                ss  << ": Error while unregistering IPC process "
-                        << ipcp->name.toString() << " from IPC "
-                        "process " << slave_ipcp->name.toString() << endl;
-                FLUSH_LOG(ERR, ss);
-                return -1;
-        }
-
-        if (!arrived) {
-                ss  << ": Timed out" << endl;
-                FLUSH_LOG(ERR, ss);
-                return -1;
-        }
-
-        return 0;
-}
-
 int IPCManager_::ipcm_unregister_response_ipcp(
                         rina::IpcmUnregisterApplicationResponseEvent *event,
                         map<unsigned int,
