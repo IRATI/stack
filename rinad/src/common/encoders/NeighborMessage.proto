@@ -1,5 +1,5 @@
 package rina.messages;
-option java_package="rina.encoding.impl.googleprotobuf.neighbor";
+option optimize_for = LITE_RUNTIME;
 
 message neighbor_t{   //carries information about a neighbor
         optional string applicationProcessName = 1;

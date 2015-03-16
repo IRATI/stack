@@ -853,6 +853,13 @@ const std::string Connection::toString() {
         return ss.str();
 }
 
+/* CLASS ROUTING TABLE ENTRE */
+RoutingTableEntry::RoutingTableEntry(){
+	address = 0;
+	cost = 1;
+	qosId = 0;
+}
+
 /* CLASS PDU FORWARDING TABLE ENTRY */
 PDUForwardingTableEntry::PDUForwardingTableEntry() {
         address = 0;

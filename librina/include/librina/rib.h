@@ -699,6 +699,29 @@ public:
         virtual void* decode(const rina::CDAPMessage * cdapMessage) = 0;
 };
 
+class IMasterEncoder: public rina::IEncoder {
+public:
+	virtual ~IMasterEncoder(){};
+	/// Set the class that serializes/unserializes an object class
+	/// @param objectClass The object class
+	/// @param serializer
+
+	virtual void addEncoder(const std::string& object_class, rina::EncoderInterface *encoder) = 0;
+	/// Converts an object of the type specified by "className" to a byte array.
+	/// @param object
+	/// @return
+
+	virtual void encode(const void* object, rina::CDAPMessage * cdapMessage) = 0;
+
+	/// Converts a byte array to an object of the type specified by "className"
+	/// @param serializedObject
+	/// @param The type of object to be decoded
+	/// @throws exception if the byte array is not an encoded in a way that the encoder can recognize, or the
+	/// byte array value doesn't correspond to an object of the type "className"
+	/// @return
+	virtual void* decode(const rina::CDAPMessage * cdapMessage) = 0;
+};
+
 class IApplicationConnectionHandler {
 public:
         virtual ~IApplicationConnectionHandler(){};

@@ -233,7 +233,7 @@ protected:
 	IPCProcess * ipc_process_;
 	IPCPRIBDaemon * rib_daemon_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
-	Encoder * encoder_;
+	rina::IMasterEncoder * encoder_;
 	IEnrollmentTask * enrollment_task_;
 	int timeout_;
 	rina::Timer * timer_;

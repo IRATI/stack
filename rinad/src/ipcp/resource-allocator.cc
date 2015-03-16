@@ -27,7 +27,6 @@
 
 #include "events.h"
 #include "resource-allocator.h"
-#include "pduft-generator.h"
 
 namespace rinad {
 
@@ -309,20 +308,44 @@ std::list<rina::FlowInformation> NMinusOneFlowManager::getAllNMinusOneFlowInform
 	return result;
 }
 
+std::list<int> NMinusOneFlowManager::getNMinusOneFlowsToNeighbour(unsigned int address) {
+	std::vector<rina::Flow *> flows = rina::extendedIPCManager->getAllocatedFlows();
+	std::list<int> result;
+	unsigned int target_address = 0;
+	for (unsigned int i=0; i<flows.size(); i++) {
+		target_address = ipc_process_->namespace_manager_->getAdressByname(
+				flows[i]->getFlowInformation().remoteAppName);
+		if (target_address == address) {
+			result.push_back(flows[i]->getPortId());
+		}
+	}
+
+	return result;
+}
+
+unsigned int NMinusOneFlowManager::numberOfFlowsToNeighbour(const std::string& apn,
+		const std::string& api) {
+	std::vector<rina::Flow *> flows = rina::extendedIPCManager->getAllocatedFlows();
+	unsigned int result = 0;
+	for (unsigned int i=0; i<flows.size(); i++) {
+		if (flows[i]->getFlowInformation().remoteAppName.processName == apn &&
+				flows[i]->getFlowInformation().remoteAppName.processInstance == api) {
+			result ++;
+		}
+	}
+
+	return result;
+}
+
 //CLASS Resource Allocator
 ResourceAllocator::ResourceAllocator() {
 	n_minus_one_flow_manager_ = new NMinusOneFlowManager();
-	pdu_forwarding_table_generator_ = new PDUForwardingTableGenerator();
 	ipcp = 0;
 }
 
 ResourceAllocator::~ResourceAllocator() {
 	if (n_minus_one_flow_manager_) {
 		delete n_minus_one_flow_manager_;
-	}
-
-	if (pdu_forwarding_table_generator_) {
-		delete pdu_forwarding_table_generator_;
 	}
 }
 
@@ -335,19 +358,11 @@ void ResourceAllocator::set_ipc_process(IPCProcess * ipc_process) {
 	if (n_minus_one_flow_manager_) {
 		n_minus_one_flow_manager_->set_ipc_process(ipc_process);
 	}
-
-	if (pdu_forwarding_table_generator_) {
-		pdu_forwarding_table_generator_->set_ipc_process(ipc_process);
-	}
 }
 
 void ResourceAllocator::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
 	if (n_minus_one_flow_manager_) {
 		n_minus_one_flow_manager_->set_dif_configuration(dif_configuration);
-	}
-
-	if (pdu_forwarding_table_generator_) {
-		pdu_forwarding_table_generator_->set_dif_configuration(dif_configuration);
 	}
 }
 
@@ -355,8 +370,18 @@ INMinusOneFlowManager * ResourceAllocator::get_n_minus_one_flow_manager() const 
 	return n_minus_one_flow_manager_;
 }
 
-IPDUForwardingTableGenerator * ResourceAllocator::get_pdu_forwarding_table_generator() const {
-	return pdu_forwarding_table_generator_;
+int ResourceAllocator::select_policy_set(const std::string& path,
+                                     const std::string& name)
+{
+  return select_policy_set_common(ipcp, "resource-allocator",
+                                  path, name);
+}
+
+int ResourceAllocator::set_policy_set_param(const std::string& path,
+                                        const std::string& name,
+                                        const std::string& value)
+{
+  return set_policy_set_param_common(ipcp, path, name, value);
 }
 
 //Class DIF registration RIB Object

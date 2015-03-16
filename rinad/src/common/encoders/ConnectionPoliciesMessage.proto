@@ -1,5 +1,5 @@
 package rina.messages;
-option java_package="rina.encoding.impl.googleprotobuf.connectionpolicies";
+option optimize_for = LITE_RUNTIME;
 import "PolicyDescriptorMessage.proto";
 
 message dtcpWindowBasedFlowControlConfig_t {  //the window-based flow control configuration of a connection
