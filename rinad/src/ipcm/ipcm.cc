@@ -312,7 +312,8 @@ IPCManager_::list_ipcps(std::ostream& os)
 	const vector<rina::IPCProcess *>& ipcps =
 		rina::ipcProcessFactory->listIPCProcesses();
 
-	//TODO: move this to a read_lock
+	//Prevent any insertion/deletion to happen
+	rina::ReadScopedLock readlock(ipcps_rwlock);
 
 	os << "Current IPC processes:" << endl;
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
@@ -325,23 +326,13 @@ IPCManager_::list_ipcps(std::ostream& os)
 
 bool
 IPCManager_::ipcp_exists(const int ipcp_id){
-
-	//TODO: move this to a read_lock
-
-	bool exists = (lookup_ipcp_by_id(ipcp_id) != NULL);
-
-
-	return exists;
+	return (lookup_ipcp_by_id(ipcp_id) != NULL);
 }
 
 int
 IPCManager_::list_ipcp_types(std::list<std::string>& types)
 {
-
-	//TODO: move this to a read_lock
-	types = rina::ipcProcessFactory->
-					getSupportedIPCProcessTypes();
-
+	types = rina::ipcProcessFactory->getSupportedIPCProcessTypes();
 	return 0;
 }
 
@@ -351,8 +342,6 @@ int IPCManager_::get_ipcp_by_dif_name(std::string& difName){
 	rina::IPCProcess* ipcp;
 	int ret;
 	rina::ApplicationProcessNamingInformation dif(difName, string());
-
-	//TODO: move this to a read_lock
 
 	ipcp = select_ipcp_by_dif(dif);
 	if(!ipcp)

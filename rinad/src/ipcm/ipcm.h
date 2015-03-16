@@ -653,6 +653,9 @@ protected:
 	//Rwlock for transactions
 	rina::ReadWriteLockable trans_rwlock;
 
+	//Rwlock for IPCP array reading
+	rina::ReadWriteLockable ipcps_rwlock;
+
 	//TODO: map of addons
 
 	//Current logging level
