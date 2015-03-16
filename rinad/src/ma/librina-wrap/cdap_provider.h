@@ -27,11 +27,6 @@
 
 namespace cdap {
 
-typedef struct cdap_params{
-  long timeout_;
-  bool is_IPCP_;
-}cdap_params_t;
-
 class CDAPProviderInterface
 {
  public:

@@ -4,7 +4,7 @@
 # Written by: Bernat Gastón <marc DOT sune AT bisdn DOT de>
 #
 
-SUBDIRS      =
+SUBDIRS      = test
 
 EXTRA_DIST   =
 CLEANFILES   =

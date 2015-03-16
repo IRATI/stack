@@ -138,6 +138,7 @@ AC_CONFIG_FILES([
     src/ma/Makefile
     src/ma/ribs/Makefile
     src/ma/librina-wrap/Makefile
+    src/ma/librina-wrap/test/Makefile
 
     doc/Makefile
     tools/Makefile

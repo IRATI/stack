@@ -26,6 +26,12 @@
 #include <string>
 
 namespace cdap_rib {
+
+typedef struct cdap_params{
+  long timeout_;
+  bool is_IPCP_;
+}cdap_params_t;
+
 /// Authentication information
 typedef struct auth_info
 {

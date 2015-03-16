@@ -21,6 +21,7 @@
 #ifndef RIB_PROVIDER_H_
 #define RIB_PROVIDER_H_
 #include "cdap_rib_structures.h"
+#include <librina/exceptions.h>
 #include <string>
 #include <list>
 #include <map>
@@ -137,50 +138,63 @@ class RIBDSouthInterface
                                    int message_id) = 0;
 };
 
-// Interface of the RIB to be used from the application
-class RIBDNorthInterface
+typedef struct SerializedObject
 {
- public:
-  virtual ~RIBDNorthInterface()
-  {
+  int size_;
+  char* message_;
+}ser_obj_t;
+
+
+class ObjectValueInterface {
+public:
+  enum types{
+    inttype,
+    sinttype,
+    longtype,
+    slongtype,
+    stringtype,
+    bytetype,
+    floattype,
+    doubletype,
+    booltype,
+  };
+  virtual ~ObjectValueInterface() {
   }
   ;
-
-  /// Create or update an object in the RIB
-  virtual void createObject(const cdap_rib::obj_info_t &obj) = 0;
-
-  /// Delete an object from the RIB
-  virtual void deleteObject(const cdap_rib::obj_info_t &obj) = 0;
-
-  /// Read an object from the RIB
-  virtual cdap_rib::obj_info_t* readObject(const std::string& clas,
-                                           const std::string& name) = 0;
-
-  /// Read an object from the RIB
-  virtual cdap_rib::obj_info_t* readObject(const std::string& clas,
-                                           long instance) = 0;
-
-  /// Update the value of an object in the RIB
-  virtual void writeObject(const cdap_rib::obj_info_t &obj) = 0;
-
-  /// Start an object at the RIB
-  virtual void startObject(const cdap_rib::obj_info_t &obj) = 0;
-
-  /// Stop an object at the RIB
-  virtual void stopObject(const cdap_rib::obj_info_t &obj) = 0;
+  virtual bool is_empty() const = 0;
+  virtual const void* get_value() const = 0;
+  virtual types isType() const = 0;
 };
+
 
 class EncoderInterface
 {
-
+ public:
+  virtual ~EncoderInterface()
+  {
+  }
+  /// Converts an object to a byte array, if this object is recognized by the encoder
+  /// @param object
+  /// @throws exception if the object is not recognized by the encoder
+  /// @return
+  virtual const SerializedObject* encode(const void* object) = 0;
+  /// Converts a byte array to an object of the type specified by "className"
+  /// @param byte[] serializedObject
+  /// @param objectClass The type of object to be decoded
+  /// @throws exception if the byte array is not an encoded in a way that the encoder can recognize, or the
+  /// byte array value doesn't correspond to an object of the type "className"
+  /// @return
+  virtual void* decode(
+      const ObjectValueInterface* serialized_object) const = 0;
 };
+
 
 /// Contains the data of an object in the RIB
 class RIBObjectData
 {
  public:
   RIBObjectData();
-  RIBObjectData(std::string clazz, std::string name, unsigned long instance,
+  RIBObjectData(std::string clas, std::string name, unsigned long instance,
                 std::string disp_value);
   virtual ~RIBObjectData()
   {
@@ -206,14 +220,14 @@ class RIBObjectData
   std::string displayable_value_;
 };
 
-class RIBDObjectInterface;
+class RIBDNorthInterface;
 /// Base RIB Object. API for the create/delete/read/write/start/stop RIB
 /// functionality for certain objects (identified by objectNames)
 class RIBObject
 {
  public:
-  RIBObject(RIBDObjectInterface *rib_daemon, const std::string& clas,
-            long instance, std::string name);
+  RIBObject(const std::string& clas,
+            long instance, std::string name, EncoderInterface *encoder);
   virtual ~RIBObject();
   virtual std::string get_displayable_value();
   virtual void* get_value() const = 0;
@@ -239,43 +253,45 @@ class RIBObject
   virtual bool remoteStopObject(const std::string& name, void * value);
   const std::string& get_class() const;
   const std::string& get_name() const;
-  const std::string& get_parent_name() const;
-  const std::string& get_parent_class() const;
+//  const std::string& get_parent_name() const;
+//  const std::string& get_parent_class() const;
   long get_instance() const;
-  void get_children_value(
+  /*void get_children_value(
       std::list<std::pair<std::string, const void *> > &values) const;
   unsigned int get_children_size() const;
+*/
  private:
-  void set_parent(RIBObject* parent);
-  void add_child(RIBObject *child);
-  void remove_child(const std::string& name);
+ // void set_parent(RIBObject* parent);
+ // void add_child(RIBObject *child);
+ // void remove_child(const std::string& name);
   /// Auxiliar functions
   void operation_not_supported();
 
   std::string class_;
   std::string name_;
   unsigned long instance_;
-  RIBObject *parent_;
-  RIBDObjectInterface *rib_daemon_;
-  std::list<RIBObject*> children_;
-  EncoderInterface *encoder;
+ // RIBObject *parent_;
+ // RIBDNorthInterface *rib_daemon_;
+ // std::list<RIBObject*> children_;
+  EncoderInterface *encoder_;
 };
 
 // RIB daemon Interface to be used by RIBObjects
-class RIBDObjectInterface
+class RIBDNorthInterface
 {
  public:
-  virtual ~RIBDObjectInterface()
+  virtual ~RIBDNorthInterface()
   {
   }
   ;
   virtual void addRIBObject(RIBObject *ribObject) = 0;
   virtual void removeRIBObject(RIBObject *ribObject) = 0;
-  virtual void removeRIBObject(const std::string& objectName) = 0;
+  virtual void removeRIBObject(const std::string& name) = 0;
+  virtual RIBObject* getObject(const std::string& name, const std::string& clas) const = 0;
+  virtual RIBObject* getObject(unsigned long instance, const std::string& clas) const = 0;
 };
 
-class RIBDInterface : public RIBDNorthInterface, RIBDSouthInterface,
-    RIBDObjectInterface
+class RIBDInterface : public RIBDNorthInterface, RIBDSouthInterface
 {
 };
 
@@ -319,7 +335,8 @@ class RIBSchema
 {
  public:
   friend class RIB;
-  RIBSchema(const cdap_rib::vers_info_t &version, char separator);
+  RIBSchema(const cdap_rib::vers_info_t *version, char separator);
+  ~RIBSchema();
   rib_schema_res ribSchemaDefContRelation(const std::string& cont_class_name,
                                           const std::string& class_name,
                                           const bool mandatory,
@@ -328,7 +345,7 @@ class RIBSchema
  private:
   bool validateAddObject(const RIBObject* obj);
   bool validateRemoveObject(const RIBObject* obj, const RIBObject* parent);
-  cdap_rib::vers_info_t version_;
+  const cdap_rib::vers_info_t *version_;
   std::map<std::string, RIBSchemaObject*> rib_schema_;
   char separator_;
 };
@@ -339,7 +356,7 @@ class RIBDFactory
   RIBDInterface* create(cacep::AppConHandlerInterface* app_callback,
                         ResponseHandlerInterface* app_resp_callbak,
                         const std::string &comm_protocol, void* comm_params,
-                        cdap_rib::version_info version, char separator);
+                        const cdap_rib::version_info *version, char separator);
 };
 }
 
