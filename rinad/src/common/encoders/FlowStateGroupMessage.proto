@@ -1,5 +1,5 @@
 package rina.messages;
-option java_package="rina.encoding.impl.googleprotobuf.flowstate";
+option optimize_for = LITE_RUNTIME;
 import "FlowStateMessage.proto";
 
 message flowStateObjectGroup_t{  //Contains the information of a flow service

@@ -29,7 +29,6 @@
 #include "ipcp/flow-allocator.h"
 #include "ipcp/ipc-process.h"
 #include "ipcp/namespace-manager.h"
-#include "ipcp/pduft-generator.h"
 #include "ipcp/resource-allocator.h"
 #include "ipcp/rib-daemon.h"
 #include "ipcp/components.h"
@@ -74,6 +73,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	namespace_manager_ = new NamespaceManager();
 	resource_allocator_ = new ResourceAllocator();
 	security_manager_ = new SecurityManager();
+	routing_component_ = new RoutingComponent();
 	rib_daemon_ = new IPCPRIBDaemonImpl();
 
 	rib_daemon_->set_ipc_process(this);
@@ -82,6 +82,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	namespace_manager_->set_ipc_process(this);
 	flow_allocator_->set_ipc_process(this);
 	security_manager_->set_ipc_process(this);
+	routing_component_->set_ipc_process(this);
 
         // Select the default policy sets
         security_manager_->select_policy_set(std::string(), "default");
@@ -97,6 +98,16 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         namespace_manager_->select_policy_set(std::string(), "default");
         if (!namespace_manager_->ps) {
                 throw Exception("Cannot create namespace manager policy-set");
+        }
+
+        resource_allocator_->select_policy_set(std::string(), "default");
+        if (!resource_allocator_->ps) {
+                throw Exception("Cannot create resource allocator policy-set");
+        }
+
+        routing_component_->select_policy_set(std::string(), "link-state");
+        if (!routing_component_->ps) {
+                throw Exception("Cannot create routing component policy-set");
         }
 
 	try {
@@ -148,6 +159,9 @@ IPCProcessImpl::~IPCProcessImpl() {
 	}
 
 	if (resource_allocator_) {
+		psDestroy("resource-allocator",
+					resource_allocator_->selected_ps_name,
+					resource_allocator_->ps);
 		delete resource_allocator_;
 	}
 
@@ -156,6 +170,13 @@ IPCProcessImpl::~IPCProcessImpl() {
                    security_manager_->selected_ps_name,
                    security_manager_->ps);
         delete security_manager_;
+	}
+
+	if (routing_component_) {
+		psDestroy("routing",
+				routing_component_->selected_ps_name,
+				routing_component_->ps);
+        delete routing_component_;
 	}
 
 	if (rib_daemon_) {
@@ -189,10 +210,6 @@ void IPCProcessImpl::init_encoder() {
 			new EnrollmentInformationRequestEncoder());
 	encoder_->addEncoder(EncoderConstants::FLOW_RIB_OBJECT_CLASS,
 			new FlowEncoder());
-	encoder_->addEncoder(EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
-			new FlowStateObjectEncoder());
-	encoder_->addEncoder(EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
-			new FlowStateObjectListEncoder());
 	encoder_->addEncoder(EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS,
 			new NeighborEncoder());
 	encoder_->addEncoder(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
@@ -220,27 +237,27 @@ const std::list<rina::Neighbor*> IPCProcessImpl::get_neighbors() const {
 }
 
 const IPCProcessOperationalState& IPCProcessImpl::get_operational_state() const {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	return state;
 }
 
 void IPCProcessImpl::set_operational_state(const IPCProcessOperationalState& operational_state) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	state = operational_state;
 }
 
 const rina::DIFInformation& IPCProcessImpl::get_dif_information() const {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	return dif_information_;
 }
 
 void IPCProcessImpl::set_dif_information(const rina::DIFInformation& dif_information) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	dif_information_ = dif_information;
 }
 
 unsigned int IPCProcessImpl::get_address() const {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	if (state != ASSIGNED_TO_DIF) {
 		return 0;
 	}
@@ -249,12 +266,12 @@ unsigned int IPCProcessImpl::get_address() const {
 }
 
 void IPCProcessImpl::set_address(unsigned int address) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	dif_information_.dif_configuration_.address_ = address;
 }
 
 void IPCProcessImpl::processAssignToDIFRequestEvent(const rina::AssignToDIFRequestEvent& event) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	if (state != INITIALIZED) {
 		//The IPC Process can only be assigned to a DIF once, reply with error message
@@ -276,7 +293,7 @@ void IPCProcessImpl::processAssignToDIFRequestEvent(const rina::AssignToDIFReque
 }
 
 void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResponseEvent& event) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	if (state == ASSIGNED_TO_DIF ) {
 		LOG_INFO("Got reply from the Kernel components regarding DIF assignment: %d",
@@ -322,6 +339,7 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 	try{
 		rib_daemon_->set_dif_configuration(dif_information_.dif_configuration_);
 		resource_allocator_->set_dif_configuration(dif_information_.dif_configuration_);
+		routing_component_->set_dif_configuration(dif_information_.dif_configuration_);
 		namespace_manager_->set_dif_configuration(dif_information_.dif_configuration_);
 		security_manager_->set_dif_configuration(dif_information_.dif_configuration_);
 		flow_allocator_->set_dif_configuration(dif_information_.dif_configuration_);
@@ -329,7 +347,7 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 	}
 	catch(Exception &e){
 		state = INITIALIZED;
-		LOG_ERR("Bad configutration error: %s", e.what());
+		LOG_ERR("Bad configuration error: %s", e.what());
 		rina::extendedIPCManager->assignToDIFResponse(requestEvent, -1);
 	}
 
@@ -388,7 +406,7 @@ static void parse_path(const std::string& path, std::string& component,
 
 void IPCProcessImpl::processSetPolicySetParamRequestEvent(
                         const rina::SetPolicySetParamRequestEvent& event) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
         std::string component, remainder;
         bool got_in_userspace = true;
         int result = -1;
@@ -449,7 +467,7 @@ void IPCProcessImpl::processSetPolicySetParamRequestEvent(
 
 void IPCProcessImpl::processSetPolicySetParamResponseEvent(
                         const rina::SetPolicySetParamResponseEvent& event) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	std::map<unsigned int,
                  rina::SetPolicySetParamRequestEvent>::iterator it;
 
@@ -488,7 +506,7 @@ void IPCProcessImpl::processSetPolicySetParamResponseEvent(
 
 void IPCProcessImpl::processSelectPolicySetRequestEvent(
                         const rina::SelectPolicySetRequestEvent& event) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
         std::string component, remainder;
         bool got_in_userspace = true;
         int result = -1;
@@ -544,7 +562,7 @@ void IPCProcessImpl::processSelectPolicySetRequestEvent(
 
 void IPCProcessImpl::processSelectPolicySetResponseEvent(
                         const rina::SelectPolicySetResponseEvent& event) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	std::map<unsigned int,
                  rina::SelectPolicySetRequestEvent>::iterator it;
 
@@ -583,7 +601,7 @@ void IPCProcessImpl::processSelectPolicySetResponseEvent(
 
 void IPCProcessImpl::processPluginLoadRequestEvent(
                         const rina::PluginLoadRequestEvent& event) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
         int result;
 
         if (event.load) {

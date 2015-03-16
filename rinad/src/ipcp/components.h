@@ -365,6 +365,30 @@ public:
         virtual void destroyFlow(Flow *) = 0;
 };
 
+class IRoutingPs : public IPolicySet {
+	// This class is used by the IPCP to access the plugin functionalities
+public:
+	virtual ~IRoutingPs() {};
+	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
+};
+
+class IRoutingComponent : public IPCProcessComponent {
+public:
+	virtual ~IRoutingComponent(){};
+};
+
+class RoutingComponent: public IRoutingComponent {
+public:
+		RoutingComponent();
+		void set_ipc_process(IPCProcess * ipc_process);
+		void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+        int select_policy_set(const std::string& path, const std::string& name);
+        int set_policy_set_param(const std::string& path,
+                                 const std::string& name,
+                                 const std::string& value);
+        ~RoutingComponent() {};
+};
+
 /// Namespace Manager Interface
 class INamespaceManagerPs : public IPolicySet {
 // This class is used by the IPCP to access the plugin functionalities
@@ -482,23 +506,23 @@ public:
 	virtual bool isSupportingDIF(const rina::ApplicationProcessNamingInformation& difName) = 0;
 
 	virtual std::list<rina::FlowInformation> getAllNMinusOneFlowInformation() const = 0;
+
+	virtual std::list<int> getNMinusOneFlowsToNeighbour(unsigned int address) = 0;
+
+	virtual unsigned int numberOfFlowsToNeighbour(const std::string& apn,
+			const std::string& api) = 0;
 };
 
-/// Interface PDU Forwarding Table Generator Policy
-class IPDUFTGeneratorPolicy {
+/// Resource Allocator Policy Set Interface
+class IResourceAllocatorPs : public IPolicySet {
+// This class is used by the IPCP to access the plugin functionalities
 public:
-	virtual ~IPDUFTGeneratorPolicy(){};
-	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
-	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
-};
+	/// The routing table has been updated; decide if
+	/// the PDU Forwarding Table has to be updated and do it
+	///	@return true if valid, false otherwise
+	virtual void routingTableUpdated(const std::list<rina::RoutingTableEntry*>& routing_table) = 0;
 
-/// Interface PDU Forwarding Table Generator
-class IPDUForwardingTableGenerator {
-public:
-	virtual ~IPDUForwardingTableGenerator(){};
-	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
-	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
-	virtual IPDUFTGeneratorPolicy * get_pdu_ft_generator_policy() const = 0;
+	virtual ~IResourceAllocatorPs() {}
 };
 
 /// Resource Allocator Interface
@@ -521,7 +545,6 @@ class IResourceAllocator: public IPCProcessComponent {
 public:
 	virtual ~IResourceAllocator(){};
 	virtual INMinusOneFlowManager * get_n_minus_one_flow_manager() const = 0;
-	virtual IPDUForwardingTableGenerator * get_pdu_forwarding_table_generator() const = 0;
 };
 
 /// Security Management � A DIF requires three security functions:
@@ -602,13 +625,14 @@ public:
 	static const int DEFAULT_MAX_SDU_SIZE_IN_BYTES;
 
 	IDelimiter * delimiter_;
-	Encoder * encoder_;
+	rina::IMasterEncoder * encoder_;
 	rina::CDAPSessionManagerInterface* cdap_session_manager_;
 	IEnrollmentTask * enrollment_task_;
 	IFlowAllocator * flow_allocator_;
 	INamespaceManager * namespace_manager_;
 	IResourceAllocator * resource_allocator_;
 	ISecurityManager * security_manager_;
+	IRoutingComponent * routing_component_;
 	IPCPRIBDaemon * rib_daemon_;
 	rina::ApplicationProcessNamingInformation name_;
 

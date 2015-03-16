@@ -1,5 +1,5 @@
 package rina.messages;
-option java_package="rina.encoding.impl.googleprotobuf.whatevercast";
+option optimize_for = LITE_RUNTIME;
 
 message whatevercastName_t{	
 	required string name = 1;	//The whatevercast name

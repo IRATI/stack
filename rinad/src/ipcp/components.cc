@@ -209,6 +209,7 @@ IPCProcess::IPCProcess()
 	resource_allocator_ = 0;
 	security_manager_ = 0;
 	rib_daemon_ = 0;
+	routing_component_ = 0;
 }
 
 //Class IPCProcessComponent
