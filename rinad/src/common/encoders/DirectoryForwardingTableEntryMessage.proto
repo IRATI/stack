@@ -1,5 +1,5 @@
 package rina.messages;
-option java_package="rina.encoding.impl.googleprotobuf.directoryforwardingtable";
+option optimize_for = LITE_RUNTIME;
 import "ApplicationProcessNamingInfoMessage.proto";
 
 message directoryForwardingTableEntry_t{ 			//information about a directoryforwardingtable entry

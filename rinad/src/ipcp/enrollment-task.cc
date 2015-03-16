@@ -86,7 +86,7 @@ const void* WatchdogRIBObject::get_value() const {
 }
 
 void WatchdogRIBObject::remoteReadObject(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	//1 Send M_READ_R message
 	try {
@@ -115,7 +115,7 @@ void WatchdogRIBObject::remoteReadObject(int invoke_id, rina::CDAPSessionDescrip
 }
 
 void WatchdogRIBObject::sendMessages() {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	neighbor_statistics_.clear();
 	rina::Time currentTime;
@@ -158,7 +158,7 @@ void WatchdogRIBObject::sendMessages() {
 void WatchdogRIBObject::readResponse(int result, const std::string& result_reason,
 		void * object_value, const std::string& object_name,
 		rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	(void) result;
 	(void) result_reason;
@@ -230,7 +230,7 @@ const void* NeighborSetRIBObject::get_value() const {
 
 void NeighborSetRIBObject::remoteCreateObject(void * object_value, const std::string& object_name,
 		int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	std::list<rina::Neighbor *> neighborsToCreate;
 
 	(void) invoke_id;  // Stop compiler barfs
@@ -464,7 +464,7 @@ bool BaseEnrollmentStateMachine::isValidPortId(const rina::CDAPSessionDescriptor
 
 void BaseEnrollmentStateMachine::release(int invoke_id,
 		rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	LOG_DBG("Releasing the CDAP connection");
 
 	if (!isValidPortId(session_descriptor)) {
@@ -495,7 +495,7 @@ void BaseEnrollmentStateMachine::release(int invoke_id,
 
 void BaseEnrollmentStateMachine::releaseResponse(int result, const std::string& result_reason,
 		rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	(void) result;
 	(void) result_reason;
@@ -510,7 +510,7 @@ void BaseEnrollmentStateMachine::releaseResponse(int result, const std::string& 
 }
 
 void BaseEnrollmentStateMachine::flowDeallocated(rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	LOG_INFO("The flow supporting the CDAP session identified by %d has been deallocated.",
 			cdapSessionDescriptor->port_id_);
 
@@ -672,7 +672,7 @@ EnrolleeStateMachine::~EnrolleeStateMachine() {
 }
 
 void EnrolleeStateMachine::initiateEnrollment(EnrollmentRequest * enrollmentRequest, int portId) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	enrollment_request_ = enrollmentRequest;
 	remote_peer_->address_ = enrollment_request_->neighbor_->address_;
@@ -710,7 +710,7 @@ void EnrolleeStateMachine::initiateEnrollment(EnrollmentRequest * enrollmentRequ
 
 void EnrolleeStateMachine::connectResponse(int result,
 		const std::string& result_reason) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	if (state != STATE_WAIT_CONNECT_RESPONSE) {
 		abortEnrollment(remote_peer_->name_, port_id_,
@@ -773,7 +773,7 @@ void EnrolleeStateMachine::connectResponse(int result,
 
 void EnrolleeStateMachine::startResponse(int result, const std::string& result_reason,
 		void * object_value, rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	if (!isValidPortId(session_descriptor)){
 		return;
@@ -819,7 +819,7 @@ void EnrolleeStateMachine::startResponse(int result, const std::string& result_r
 
 void EnrolleeStateMachine::stop(EnrollmentInformationRequest * eiRequest, int invoke_id,
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	if (!isValidPortId(cdapSessionDescriptor)){
 		return;
@@ -989,7 +989,7 @@ void EnrolleeStateMachine::enrollmentCompleted() {
 void EnrolleeStateMachine::readResponse(int result, const std::string& result_reason,
 		void * object_value, const std::string& object_name,
 		rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	if (!isValidPortId(session_descriptor)){
 		return;
@@ -1046,7 +1046,7 @@ void EnrolleeStateMachine::readResponse(int result, const std::string& result_re
 
 void EnrolleeStateMachine::start(int result, const std::string& result_reason,
 		rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	if (!isValidPortId(session_descriptor)){
 		return;
@@ -1095,7 +1095,7 @@ EnrollerStateMachine::~EnrollerStateMachine() {
 }
 
 void EnrollerStateMachine::connect(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
         ISecurityManagerPs *smps = dynamic_cast<ISecurityManagerPs *>(security_manager_->ps);
 
         assert(smps);
@@ -1175,7 +1175,10 @@ void EnrollerStateMachine::sendDIFStaticInformation() {
 
 void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int invoke_id,
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
+
+    INamespaceManagerPs *nsmps = dynamic_cast<INamespaceManagerPs *>(namespace_manager_->ps);
+    assert(nsmps);
 
 	if (!isValidPortId(cdapSessionDescriptor)){
 		return;
@@ -1197,7 +1200,7 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int i
 		requiresInitialization = true;
 	} else {
 		try {
-			if (!namespace_manager_->isValidAddress(eiRequest->address_, remote_peer_->name_.processName,
+			if (!nsmps->isValidAddress(eiRequest->address_, remote_peer_->name_.processName,
 					remote_peer_->name_.processInstance)) {
 				requiresInitialization = true;
 			}
@@ -1215,7 +1218,7 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int i
 	}
 
 	if (requiresInitialization){
-		unsigned int address = namespace_manager_->getValidAddress(remote_peer_->name_.processName,
+		unsigned int address = nsmps->getValidAddress(remote_peer_->name_.processName,
 				remote_peer_->name_.processInstance);
 
 		if (address == 0){
@@ -1287,7 +1290,7 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int i
 
 void EnrollerStateMachine::stopResponse(int result, const std::string& result_reason,
 		void * object_value, rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	(void) object_value;
 
@@ -1387,7 +1390,7 @@ void * doNeighborsEnrollerWork(void * arg) {
 
 //Class Enrollment Task
 EnrollmentTask::EnrollmentTask() {
-	ipc_process_ = 0;
+	ipcp = 0;
 	rib_daemon_ = 0;
 	resource_allocator_ = 0;
 	cdap_session_manager_ = 0;
@@ -1408,24 +1411,24 @@ EnrollmentTask::~EnrollmentTask() {
 }
 
 void EnrollmentTask::set_ipc_process(IPCProcess * ipc_process) {
-	ipc_process_ = ipc_process;
+	ipcp = ipc_process;
 	rib_daemon_ = ipc_process->rib_daemon_;
-	cdap_session_manager_ = ipc_process_->cdap_session_manager_;
-	resource_allocator_ = ipc_process_->resource_allocator_;
-	namespace_manager_ = ipc_process_->namespace_manager_;
+	cdap_session_manager_ = ipcp->cdap_session_manager_;
+	resource_allocator_ = ipcp->resource_allocator_;
+	namespace_manager_ = ipcp->namespace_manager_;
 	populateRIB();
 	subscribeToEvents();
 }
 
 void EnrollmentTask::populateRIB() {
 	try{
-		BaseIPCPRIBObject * ribObject = new NeighborSetRIBObject(ipc_process_);
+		BaseIPCPRIBObject * ribObject = new NeighborSetRIBObject(ipcp);
 		rib_daemon_->addRIBObject(ribObject);
-		ribObject = new EnrollmentRIBObject(ipc_process_);
+		ribObject = new EnrollmentRIBObject(ipcp);
 		rib_daemon_->addRIBObject(ribObject);
-		ribObject = new OperationalStatusRIBObject(ipc_process_);
+		ribObject = new OperationalStatusRIBObject(ipcp);
 		rib_daemon_->addRIBObject(ribObject);
-		ribObject = new AddressRIBObject(ipc_process_);
+		ribObject = new AddressRIBObject(ipcp);
 		rib_daemon_->addRIBObject(ribObject);
 	}catch(Exception &e){
 		LOG_ERR("Problems adding object to RIB Daemon: %s", e.what());
@@ -1444,7 +1447,7 @@ void EnrollmentTask::set_dif_configuration(const rina::DIFConfiguration& dif_con
 
 	//Add Watchdog RIB object to RIB
 	try{
-		BaseIPCPRIBObject * ribObject = new WatchdogRIBObject(ipc_process_, dif_configuration);
+		BaseIPCPRIBObject * ribObject = new WatchdogRIBObject(ipcp, dif_configuration);
 		rib_daemon_->addRIBObject(ribObject);
 	}catch(Exception &e){
 		LOG_ERR("Problems adding object to RIB Daemon: %s", e.what());
@@ -1454,7 +1457,7 @@ void EnrollmentTask::set_dif_configuration(const rina::DIFConfiguration& dif_con
 	rina::ThreadAttributes * threadAttributes = new rina::ThreadAttributes();
 	threadAttributes->setJoinable();
 	neighbors_enroller_ = new rina::Thread(threadAttributes,
-			&doNeighborsEnrollerWork, (void *) ipc_process_);
+			&doNeighborsEnrollerWork, (void *) ipcp);
 	LOG_DBG("Started Neighbors enroller thread");
 }
 
@@ -1498,7 +1501,7 @@ BaseEnrollmentStateMachine * EnrollmentTask::getEnrollmentStateMachine(
 }
 
 bool EnrollmentTask::isEnrolledTo(const std::string& processName) const {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 
 	std::list<BaseEnrollmentStateMachine *> machines = state_machines_.getEntries();
 	std::list<BaseEnrollmentStateMachine *>::const_iterator it;
@@ -1526,11 +1529,11 @@ const std::list<std::string> EnrollmentTask::get_enrolled_ipc_process_names() co
 
 void EnrollmentTask::processEnrollmentRequestEvent(rina::EnrollToDIFRequestEvent* event) {
 	//Can only accept enrollment requests if assigned to a DIF
-	if (ipc_process_->get_operational_state() != ASSIGNED_TO_DIF) {
+	if (ipcp->get_operational_state() != ASSIGNED_TO_DIF) {
 		LOG_ERR("Rejected enrollment request since IPC Process is not ASSIGNED to a DIF");
 		try {
 			rina::extendedIPCManager->enrollToDIFResponse(*event, -1,
-					std::list<rina::Neighbor>(), ipc_process_->get_dif_information());
+					std::list<rina::Neighbor>(), ipcp->get_dif_information());
 		}catch (Exception &e) {
 			LOG_ERR("Problems sending message to IPC Manager: %s", e.what());
 		}
@@ -1539,15 +1542,15 @@ void EnrollmentTask::processEnrollmentRequestEvent(rina::EnrollToDIFRequestEvent
 	}
 
 	//Check that the neighbor belongs to the same DIF as this IPC Process
-	if (ipc_process_->get_dif_information().get_dif_name().processName.
+	if (ipcp->get_dif_information().get_dif_name().processName.
 			compare(event->difName.processName) != 0) {
 		LOG_ERR("Was requested to enroll to a neighbor who is member of DIF %s, but I'm member of DIF %s",
-				ipc_process_->get_dif_information().get_dif_name().processName.c_str(),
+				ipcp->get_dif_information().get_dif_name().processName.c_str(),
 				event->difName.processName.c_str());
 
 		try {
 			rina::extendedIPCManager->enrollToDIFResponse(*event, -1,
-					std::list<rina::Neighbor>(), ipc_process_->get_dif_information());
+					std::list<rina::Neighbor>(), ipcp->get_dif_information());
 		}catch (Exception &e) {
 			LOG_ERR("Problems sending message to IPC Manager: %s", e.what());
 		}
@@ -1555,10 +1558,13 @@ void EnrollmentTask::processEnrollmentRequestEvent(rina::EnrollToDIFRequestEvent
 		return;
 	}
 
+    INamespaceManagerPs *nsmps = dynamic_cast<INamespaceManagerPs *>(namespace_manager_->ps);
+    assert(nsmps);
+
 	rina::Neighbor * neighbor = new rina::Neighbor();
 	neighbor->name_ = event->neighborName;
 	neighbor->supporting_dif_name_ = event->supportingDIFName;
-	unsigned int address = namespace_manager_->getValidAddress(neighbor->name_.processName,
+	unsigned int address = nsmps->getValidAddress(neighbor->name_.processName,
 			neighbor->name_.processInstance);
 	if (address != 0) {
 		neighbor->address_ = address;
@@ -1580,7 +1586,7 @@ void EnrollmentTask::initiateEnrollment(EnrollmentRequest * request) {
 	//FIXME not distinguishing between AEs
 	rina::FlowInformation flowInformation;
 	flowInformation.remoteAppName = request->neighbor_->name_;
-	flowInformation.localAppName = ipc_process_->name_;
+	flowInformation.localAppName = ipcp->name_;
 	flowInformation.difName = request->neighbor_->supporting_dif_name_;
 	unsigned int handle = -1;
 	try {
@@ -1591,7 +1597,7 @@ void EnrollmentTask::initiateEnrollment(EnrollmentRequest * request) {
 		if (request->ipcm_initiated_) {
 			try {
 				rina::extendedIPCManager->enrollToDIFResponse(request->event_, -1,
-						std::list<rina::Neighbor>(), ipc_process_->get_dif_information());
+						std::list<rina::Neighbor>(), ipcp->get_dif_information());
 			} catch (Exception &e) {
 				LOG_ERR("Problems sending message to IPC Manager: %s", e.what());
 			}
@@ -1619,13 +1625,13 @@ BaseEnrollmentStateMachine * EnrollmentTask::createEnrollmentStateMachine(
 	if (apNamingInfo.entityName.compare("") == 0 ||
 			apNamingInfo.entityName.compare(IPCProcess::MANAGEMENT_AE) == 0) {
 		if (enrollee){
-			stateMachine = new EnrolleeStateMachine(ipc_process_,
+			stateMachine = new EnrolleeStateMachine(ipcp,
 					apNamingInfo, timeout_);
 		}else{
 			rina::ApplicationProcessNamingInformation * sdname =
 					new rina::ApplicationProcessNamingInformation(supportingDifName.processName,
 							supportingDifName.processInstance);
-			stateMachine = new EnrollerStateMachine(ipc_process_,
+			stateMachine = new EnrollerStateMachine(ipcp,
 					apNamingInfo, timeout_, sdname);
 		}
 
@@ -1644,7 +1650,7 @@ BaseEnrollmentStateMachine * EnrollmentTask::createEnrollmentStateMachine(
 BaseEnrollmentStateMachine * EnrollmentTask::getEnrollmentStateMachine(
 		const rina::CDAPSessionDescriptor * cdapSessionDescriptor, bool remove) {
 	try {
-		if (ipc_process_->name_.processName.
+		if (ipcp->name_.processName.
 				compare(cdapSessionDescriptor->src_ap_name_) == 0) {
 			return getEnrollmentStateMachine(cdapSessionDescriptor->dest_ap_name_,
 					cdapSessionDescriptor->port_id_, remove);
@@ -1663,7 +1669,7 @@ void EnrollmentTask::connect(int invoke_id,
 			session_descriptor->port_id_);
 
 	//1 Find out if the sender is really connecting to us
-	if(session_descriptor->src_ap_name_.compare(ipc_process_->name_.processName)!= 0){
+	if(session_descriptor->src_ap_name_.compare(ipcp->name_.processName)!= 0){
 		LOG_WARN("Received an M_CONNECT message whose destination was not this IPC Process, ignoring it");
 		return;
 	}
@@ -1931,7 +1937,7 @@ void EnrollmentTask::nMinusOneFlowAllocationFailed(NMinusOneFlowAllocationFailed
 	if (request->ipcm_initiated_) {
 		try {
 			rina::extendedIPCManager->enrollToDIFResponse(request->event_, -1,
-					std::list<rina::Neighbor>(), ipc_process_->get_dif_information());
+					std::list<rina::Neighbor>(), ipcp->get_dif_information());
 		} catch(Exception &e) {
 			LOG_ERR("Could not send a message to the IPC Manager: %s", e.what());
 		}
@@ -1975,7 +1981,7 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 			if (request->ipcm_initiated_) {
 				try {
 					rina::extendedIPCManager->enrollToDIFResponse(request->event_, -1,
-							std::list<rina::Neighbor>(), ipc_process_->get_dif_information());
+							std::list<rina::Neighbor>(), ipcp->get_dif_information());
 				} catch (Exception &e) {
 					LOG_ERR("Problems sending message to IPC Manager: %s", e.what());
 				}

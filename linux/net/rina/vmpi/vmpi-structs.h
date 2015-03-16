@@ -25,6 +25,7 @@
 #include <linux/slab.h>
 #include <linux/mutex.h>
 #include <linux/spinlock.h>
+#include "vmpi-ops.h"
 
 
 struct vmpi_hdr {

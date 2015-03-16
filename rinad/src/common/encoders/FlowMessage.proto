@@ -1,5 +1,5 @@
 package rina.messages;
-option java_package="rina.encoding.impl.googleprotobuf.flow";
+option optimize_for = LITE_RUNTIME;
 import "ApplicationProcessNamingInfoMessage.proto";
 import "QoSSpecification.proto";
 import "ConnectionPoliciesMessage.proto";

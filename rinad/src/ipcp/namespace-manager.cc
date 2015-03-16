@@ -50,7 +50,7 @@ const void* WhateverCastNameSetRIBObject::get_value() const {
 void WhateverCastNameSetRIBObject::remoteCreateObject(void * object_value,
 		const std::string& object_name, int invoke_id,
 		rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::AccessGuard g(*lock_);
+	rina::ScopedLock g(*lock_);
 	(void) session_descriptor;
 	(void) invoke_id;
 	std::list<rina::WhatevercastName *> namesToCreate;
@@ -393,12 +393,12 @@ const void* DirectoryForwardingTableEntrySetRIBObject::get_value() const {
 
 //Class Namespace Manager
 NamespaceManager::NamespaceManager() {
-	ipc_process_ = 0;
+	ipcp = 0;
 	rib_daemon_ = 0;
 }
 
 void NamespaceManager::set_ipc_process(IPCProcess * ipc_process) {
-	ipc_process_ = ipc_process;
+	ipcp = ipc_process;
 	rib_daemon_ = ipc_process->rib_daemon_;
 	populateRIB();
 }
@@ -409,9 +409,9 @@ void NamespaceManager::set_dif_configuration(const rina::DIFConfiguration& dif_c
 
 void NamespaceManager::populateRIB() {
 	try {
-		BaseIPCPRIBObject * object = new DirectoryForwardingTableEntrySetRIBObject(ipc_process_);
+		BaseIPCPRIBObject * object = new DirectoryForwardingTableEntrySetRIBObject(ipcp);
 		rib_daemon_->addRIBObject(object);
-		object = new WhateverCastNameSetRIBObject(ipc_process_);
+		object = new WhateverCastNameSetRIBObject(ipcp);
 		rib_daemon_->addRIBObject(object);
 	} catch (Exception &e) {
 		LOG_ERR("Problems adding object to the RIB : %s", e.what());
@@ -495,7 +495,7 @@ void NamespaceManager::processApplicationRegistrationRequestEvent(
 	registration->ipcProcessId = event.applicationRegistrationInformation.ipcProcessId;
 	registrations_.put(appToRegister.getEncodedString(), registration);
 	LOG_INFO("Successfully registered application %s with IPC Process id %us",
-			appToRegister.getEncodedString().c_str(), ipc_process_->get_id());
+			appToRegister.getEncodedString().c_str(), ipcp->get_id());
 	result = replyToIPCManagerRegister(event, 0);
 	if (result == -1) {
 		registrations_.erase(appToRegister.getEncodedString());
@@ -505,7 +505,7 @@ void NamespaceManager::processApplicationRegistrationRequestEvent(
 
 	std::list<rina::DirectoryForwardingTableEntry *> entriesToCreate;
 	rina::DirectoryForwardingTableEntry * entry = new rina::DirectoryForwardingTableEntry();
-	entry->set_address(ipc_process_->get_address());
+	entry->set_address(ipcp->get_address());
 	entry->set_ap_naming_info(appToRegister);
 	entriesToCreate.push_back(entry);
 
@@ -572,118 +572,8 @@ void NamespaceManager::processApplicationUnregistrationRequestEvent(
 	delete unregisteredApp;
 }
 
-unsigned int NamespaceManager::getIPCProcessAddress(const std::string& process_name,
-			const std::string& process_instance, const rina::AddressingConfiguration& address_conf) {
-	std::list<rina::StaticIPCProcessAddress>::const_iterator it;
-	for (it = address_conf.static_address_.begin();
-			it != address_conf.static_address_.end(); ++it) {
-		if (it->ap_name_.compare(process_name) == 0 &&
-				it->ap_instance_.compare(process_instance) == 0) {
-			return it->address_;
-		}
-	}
-
-	return 0;
-
-}
-
-unsigned int NamespaceManager::getAddressPrefix(const std::string& process_name,
-		const rina::AddressingConfiguration& address_conf) {
-	std::list<rina::AddressPrefixConfiguration>::const_iterator it;
-	for (it = address_conf.address_prefixes_.begin();
-			it != address_conf.address_prefixes_.end(); ++it) {
-		if (process_name.find(it->organization_) != std::string::npos) {
-			return it->address_prefix_;
-		}
-	}
-
-	throw Exception("Unknown organization");
-}
-
-bool NamespaceManager::isAddressInUse(unsigned int address,
-		const std::string& ipcp_name) {
-	std::list<rina::Neighbor * >::const_iterator it;
-	std::list<rina::Neighbor *> neighbors = ipc_process_->get_neighbors();
-
-	for (it = neighbors.begin(); it != neighbors.end(); ++it) {
-		if ((*it)->address_ == address) {
-			if ((*it)->name_.processName.compare(ipcp_name) == 0) {
-				return false;
-			} else {
-				return true;
-			}
-		}
-	}
-
-	return false;
-}
-
-bool NamespaceManager::isValidAddress(unsigned int address, const std::string& ipcp_name,
-		const std::string& ipcp_instance) {
-	if (address == 0) {
-		return false;
-	}
-
-	//Check if we know the remote IPC Process address
-	rina::AddressingConfiguration configuration = ipc_process_->get_dif_information().
-			dif_configuration_.nsm_configuration_.addressing_configuration_;
-	unsigned int knownAddress = getIPCProcessAddress(ipcp_name, ipcp_instance, configuration);
-	if (knownAddress != 0) {
-		if (address == knownAddress) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	//Check the prefix information
-	try {
-		unsigned int prefix = getAddressPrefix(ipcp_name, configuration);
-
-		//Check if the address is within the range of the prefix
-		if (address < prefix || address >= prefix + rina::AddressPrefixConfiguration::MAX_ADDRESSES_PER_PREFIX){
-			return false;
-		}
-	} catch (Exception &e) {
-		//We don't know the organization of the IPC Process
-		return false;
-	}
-
-	return !isAddressInUse(address, ipcp_name);
-}
-
-unsigned int NamespaceManager::getValidAddress(const std::string& ipcp_name,
-				const std::string& ipcp_instance) {
-	rina::AddressingConfiguration configuration = ipc_process_->get_dif_information().
-				dif_configuration_.nsm_configuration_.addressing_configuration_;
-	unsigned int candidateAddress = getIPCProcessAddress(ipcp_name, ipcp_instance, configuration);
-	if (candidateAddress != 0) {
-		return candidateAddress;
-	}
-
-	unsigned int prefix = 0;
-
-	try {
-		prefix = getAddressPrefix(ipcp_name, configuration);
-	} catch (Exception &e) {
-		//We don't know the organization of the IPC Process
-		return 0;
-	}
-
-	candidateAddress = prefix;
-	while (candidateAddress < prefix + rina::AddressPrefixConfiguration::MAX_ADDRESSES_PER_PREFIX) {
-		if (isAddressInUse(candidateAddress, ipcp_name)) {
-			candidateAddress++;
-		} else {
-			return candidateAddress;
-		}
-	}
-
-	return 0;
-}
-
 unsigned int NamespaceManager::getAdressByname(const rina::ApplicationProcessNamingInformation& name) {
-	std::list<rina::Neighbor *> neighbors = ipc_process_->get_neighbors();
+	std::list<rina::Neighbor *> neighbors = ipcp->get_neighbors();
 	std::list<rina::Neighbor *>::const_iterator it;
 	for (it = neighbors.begin(); it != neighbors.end(); ++it) {
 		if ((*it)->name_.processName.compare(name.processName) == 0) {
@@ -692,6 +582,20 @@ unsigned int NamespaceManager::getAdressByname(const rina::ApplicationProcessNam
 	}
 
 	throw Exception("Unknown neighbor");
+}
+
+int NamespaceManager::select_policy_set(const std::string& path,
+                                     const std::string& name)
+{
+  return select_policy_set_common(ipcp, "namespace-manager",
+                                  path, name);
+}
+
+int NamespaceManager::set_policy_set_param(const std::string& path,
+                                        const std::string& name,
+                                        const std::string& value)
+{
+  return set_policy_set_param_common(ipcp, path, name, value);
 }
 
 }

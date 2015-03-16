@@ -1,5 +1,5 @@
 package rina.messages;
-option java_package="rina.encoding.impl.googleprotobuf.qoscube";
+option optimize_for = LITE_RUNTIME;
 import "ConnectionPoliciesMessage.proto";
 
 message qosCube_t{									//a QoS cube specification

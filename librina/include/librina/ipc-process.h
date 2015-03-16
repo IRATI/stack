@@ -822,6 +822,24 @@ public:
         const std::string toString();
 };
 
+/// Models an entry of the routing table
+class RoutingTableEntry {
+public:
+	/** The destination address */
+	unsigned int address;
+
+	/** The qos-id */
+	unsigned int qosId;
+
+	/** The cost */
+	unsigned int cost;
+
+	/** The next hop addresses */
+	std::list<unsigned int> nextHopAddresses;
+
+	RoutingTableEntry();
+};
+
 /**
  * Models an entry in the PDU Forwarding Table
  */

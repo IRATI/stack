@@ -1,5 +1,5 @@
 package rina.messages;
-option java_package="rina.encoding.impl.googleprotobuf.enrollment";
+option optimize_for = LITE_RUNTIME;
 
 message enrollmentInformation_t {	 // carries information about a member that requests enrollment to a DIF
 	optional uint64	address = 1;
