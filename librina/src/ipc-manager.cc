@@ -74,61 +74,31 @@ void initializeIPCManager(unsigned int        localPort,
 }
 
 /* CLASS IPC PROCESS*/
-const std::string IPCProcess::error_assigning_to_dif =
+const std::string IPCProcessProxy::error_assigning_to_dif =
 		"Error assigning IPC Process to DIF";
-const std::string IPCProcess::error_update_dif_config =
+const std::string IPCProcessProxy::error_update_dif_config =
                 "Error updating DIF Configuration";
-const std::string IPCProcess::error_registering_app =
+const std::string IPCProcessProxy::error_registering_app =
 		"Error registering application";
-const std::string IPCProcess::error_unregistering_app =
+const std::string IPCProcessProxy::error_unregistering_app =
 		"Error unregistering application";
-const std::string IPCProcess::error_not_a_dif_member =
+const std::string IPCProcessProxy::error_not_a_dif_member =
 		"Error: the IPC Process is not member of a DIF";
-const std::string IPCProcess::error_allocating_flow =
+const std::string IPCProcessProxy::error_allocating_flow =
 		"Error allocating flow";
-const std::string IPCProcess::error_deallocating_flow =
+const std::string IPCProcessProxy::error_deallocating_flow =
 		"Error deallocating flow";
-const std::string IPCProcess::error_querying_rib =
+const std::string IPCProcessProxy::error_querying_rib =
 		"Error querying rib";
 
-/** Return the information of a registration request */
-ApplicationProcessNamingInformation
-IPCProcess::getPendingRegistration(unsigned int seqNumber)
-{
-        std::map<unsigned int,
-                 ApplicationProcessNamingInformation>::iterator iterator;
 
-        iterator = pendingRegistrations.find(seqNumber);
-        if (iterator == pendingRegistrations.end()) {
-                throw IPCException("Could not find pending registration");
-        }
-
-        return iterator->second;
-}
-
-FlowInformation IPCProcess::getPendingFlowOperation(unsigned int seqNumber)
-{
-	std::map<unsigned int, FlowInformation>::iterator iterator;
-
-	iterator = pendingFlowOperations.find(seqNumber);
-	if (iterator == pendingFlowOperations.end()) {
-		throw IPCException("Could not find pending flow operation");
-	}
-
-	return iterator->second;
-}
-
-IPCProcess::IPCProcess() {
+IPCProcessProxy::IPCProcessProxy() {
 	id = 0;
 	portId = 0;
 	pid = 0;
-	difMember = false;
-	assignInProcess = false;
-	configureInProcess = false;
-	initialized = false;
 }
 
-IPCProcess::IPCProcess(unsigned short id, unsigned int portId,
+IPCProcessProxy::IPCProcessProxy(unsigned short id, unsigned int portId,
                        pid_t pid, const std::string& type,
                        const ApplicationProcessNamingInformation& name)
 {
@@ -137,71 +107,35 @@ IPCProcess::IPCProcess(unsigned short id, unsigned int portId,
 	this->pid = pid;
 	this->type = type;
 	this->name = name;
-	initialized = false;
-	difMember = false;
-	assignInProcess = false;
-	configureInProcess = false;
 }
 
-bool IPCProcess::isDIFMember() const
-{ return difMember; }
-
-void IPCProcess::setDIFMember(bool difMember)
-{ this->difMember = difMember; }
-
-unsigned short IPCProcess::getId() const
+unsigned short IPCProcessProxy::getId() const
 { return id; }
 
-const std::string& IPCProcess::getType() const
+const std::string& IPCProcessProxy::getType() const
 { return type; }
 
-const ApplicationProcessNamingInformation& IPCProcess::getName() const
+const ApplicationProcessNamingInformation& IPCProcessProxy::getName() const
 { return name; }
 
-unsigned int IPCProcess::getPortId() const
+unsigned int IPCProcessProxy::getPortId() const
 { return portId; }
 
-void IPCProcess::setPortId(unsigned int portId)
+void IPCProcessProxy::setPortId(unsigned int portId)
 { this->portId = portId; }
 
-pid_t IPCProcess::getPid() const
+pid_t IPCProcessProxy::getPid() const
 { return pid; }
 
-void IPCProcess::setPid(pid_t pid)
+void IPCProcessProxy::setPid(pid_t pid)
 { this->pid = pid; }
 
-const DIFInformation& IPCProcess::getDIFInformation() const
-{ return difInformation; }
-
-void IPCProcess::setDIFInformation(const DIFInformation& difInformation)
-{
-	this->difInformation = difInformation;
-	this->difMember = true;
-}
-
-void IPCProcess::setInitialized()
-{ initialized = true; }
-
-void IPCProcess::assignToDIF(const DIFInformation& difInformation,
+void IPCProcessProxy::assignToDIF(const DIFInformation& difInformation,
 		unsigned int opaque)
 {
-        if (!initialized)
-                throw AssignToDIFException("IPC Process not yet initialized");
-
-        std::string currentDIFName =
-                        this->difInformation.get_dif_name().processName;
-        LOG_DBG("Current DIF name is %s", currentDIFName.c_str());
-
-        if(difMember || assignInProcess) {
-                std::string message;
-                message =  message + "This IPC Process is already assigned "+
-                                "to the DIF " + currentDIFName;
-                LOG_ERR("%s", message.c_str());
-                throw AssignToDIFException(message);
-        }
-
 #if STUB_API
         //Do nothing
+		(void) difInformation;
         (void) opaque;
 #else
         IpcmAssignToDIFRequestMessage message;
@@ -220,50 +154,15 @@ void IPCProcess::assignToDIF(const DIFInformation& difInformation,
                 throw AssignToDIFException(e.what());
         }
 #endif
-
-	this->difInformation = difInformation;
-	assignInProcess = true;
-}
-
-void IPCProcess::assignToDIFResult(bool success)
-{
-        if (!assignInProcess) {
-                throw AssignToDIFException("There was no assignment operation "
-                                           "in process");
-        }
-
-        if (!success) {
-                ApplicationProcessNamingInformation noDIF;
-                difInformation.set_dif_name(noDIF);
-
-                DIFConfiguration noConfig;
-                difInformation.set_dif_configuration(noConfig);
-        } else {
-                difMember = true;
-        }
-
-        assignInProcess = false;
 }
 
 void
-IPCProcess::updateDIFConfiguration(const DIFConfiguration& difConfiguration,
+IPCProcessProxy::updateDIFConfiguration(const DIFConfiguration& difConfiguration,
 		unsigned int opaque)
 {
-		std::string currentDIFName =
-                        this->difInformation.get_dif_name().processName;
-        LOG_DBG("Current DIF name is %s", currentDIFName.c_str());
-
-        if(!difMember || configureInProcess) {
-                std::string message;
-                message =  message + "This IPC Process is not yet assigned "+
-                                "to any DIF, or a DIF configuration " +
-                                "operation is ongoing";
-                LOG_ERR("%s", message.c_str());
-                throw UpdateDIFConfigurationException(message);
-        }
-
 #if STUB_API
         //Do nothing
+		(void) difConfiguration;
         (void) opaque;
 #else
         IpcmUpdateDIFConfigurationRequestMessage message;
@@ -280,42 +179,16 @@ IPCProcess::updateDIFConfiguration(const DIFConfiguration& difConfiguration,
         }
 
 #endif
-        configureInProcess = true;
-        newConfiguration = difConfiguration;
 }
 
-void IPCProcess::updateDIFConfigurationResult(bool success)
-{
-
-        if(!configureInProcess) {
-                throw UpdateDIFConfigurationException(
-                                "No config operation in process");
-        }
-
-        if (success) {
-                difInformation.set_dif_configuration(newConfiguration);
-        }
-
-        newConfiguration = DIFConfiguration();
-        configureInProcess = false;
-}
-
-void IPCProcess::notifyRegistrationToSupportingDIF(
+void IPCProcessProxy::notifyRegistrationToSupportingDIF(
 		const ApplicationProcessNamingInformation& ipcProcessName,
 		const ApplicationProcessNamingInformation& difName)
 {
-        std::list<ApplicationProcessNamingInformation>::iterator it =
-                        std::find(nMinusOneDIFs.begin(),
-                                  nMinusOneDIFs.end(), difName);
-        if (it != nMinusOneDIFs.end()) {
-                throw NotifyRegistrationToDIFException(
-                                "IPCProcess already registered to N-1 DIF"
-                                + difName.processName);
-        }
-
 #if STUB_API
 	//Do nothing
         (void)ipcProcessName;
+        (void)difName;
 #else
 	IpcmDIFRegistrationNotification message;
 	message.setIpcProcessName(ipcProcessName);
@@ -331,25 +204,16 @@ void IPCProcess::notifyRegistrationToSupportingDIF(
 		throw NotifyRegistrationToDIFException(e.what());
 	}
 #endif
-	nMinusOneDIFs.push_back(difName);
 }
 
-void IPCProcess::notifyUnregistrationFromSupportingDIF(
+void IPCProcessProxy::notifyUnregistrationFromSupportingDIF(
 		const ApplicationProcessNamingInformation& ipcProcessName,
 		const ApplicationProcessNamingInformation& difName)
 {
-        std::list<ApplicationProcessNamingInformation>::iterator it =
-                        std::find(nMinusOneDIFs.begin(),
-                                        nMinusOneDIFs.end(), difName);
-        if (it == nMinusOneDIFs.end()) {
-                throw NotifyRegistrationToDIFException(
-                                "IPCProcess not registered to N-1 DIF"
-                                + difName.processName);
-        }
-
 #if STUB_API
 	//Do nothing
         (void)ipcProcessName;
+        (void)difName;
 #else
 	IpcmDIFRegistrationNotification message;
 	message.setIpcProcessName(ipcProcessName);
@@ -365,14 +229,9 @@ void IPCProcess::notifyUnregistrationFromSupportingDIF(
 		throw NotifyUnregistrationFromDIFException(e.what());
 	}
 #endif
-	nMinusOneDIFs.remove(difName);
 }
 
-std::list<ApplicationProcessNamingInformation>
-IPCProcess::getSupportingDIFs()
-{ return nMinusOneDIFs; }
-
-void IPCProcess::enroll(
+void IPCProcessProxy::enroll(
         const ApplicationProcessNamingInformation& difName,
         const ApplicationProcessNamingInformation& supportingDifName,
         const ApplicationProcessNamingInformation& neighborName,
@@ -402,30 +261,7 @@ void IPCProcess::enroll(
 #endif
 }
 
-void IPCProcess::addNeighbors(const std::list<Neighbor>& newNeighbors)
-{
-        std::list<Neighbor>::const_iterator iterator;
-        for (iterator = newNeighbors.begin();
-                        iterator != newNeighbors.end(); ++iterator) {
-                neighbors.push_back(*iterator);
-        }
-}
-
-void IPCProcess::removeNeighbors(const std::list<Neighbor>& toRemove)
-{
-        std::list<Neighbor>::const_iterator iterator;
-        for (iterator = toRemove.begin();
-                        iterator != toRemove.end(); ++iterator) {
-                neighbors.remove(*iterator);
-        }
-}
-
-std::list<Neighbor> IPCProcess::getNeighbors()
-{
-        return neighbors;
-}
-
-void IPCProcess::disconnectFromNeighbor(
+void IPCProcessProxy::disconnectFromNeighbor(
 		const ApplicationProcessNamingInformation& neighbor)
 {
 	LOG_DBG("IPCProcess::disconnect from neighbour called");
@@ -434,23 +270,22 @@ void IPCProcess::disconnectFromNeighbor(
 	throw IPCException(IPCException::operation_not_implemented_error);
 }
 
-void IPCProcess::registerApplication(
+void IPCProcessProxy::registerApplication(
 		const ApplicationProcessNamingInformation& applicationName,
-		unsigned short regIpcProcessId, unsigned int opaque)
+		unsigned short regIpcProcessId,
+		const ApplicationProcessNamingInformation& dif_name,
+		unsigned int opaque)
 {
-	if (!difMember) {
-		throw IpcmRegisterApplicationException(
-		                IPCProcess::error_not_a_dif_member);
-	}
-
 #if STUB_API
 	//Do nothing
+	(void)applicationName;
     (void)regIpcProcessId;
+    (void)dif_name;
     (void)opaque;
 #else
 	IpcmRegisterApplicationRequestMessage message;
 	message.setApplicationName(applicationName);
-	message.setDifName(difInformation.get_dif_name());
+	message.setDifName(dif_name);
 	message.setRegIpcProcessId(regIpcProcessId);
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
@@ -464,68 +299,23 @@ void IPCProcess::registerApplication(
 	}
 
 #endif
-	pendingRegistrations[opaque] = applicationName;
 }
 
-void IPCProcess::registerApplicationResult(
-                unsigned int sequenceNumber, bool success)
-{
-        if (!difMember) {
-                throw IpcmRegisterApplicationException(
-                                IPCProcess::error_not_a_dif_member);
-        }
-
-        ApplicationProcessNamingInformation appName;
-        try {
-                appName = getPendingRegistration(sequenceNumber);
-        } catch(IPCException &e) {
-                throw IpcmRegisterApplicationException(e.what());
-        }
-
-        pendingRegistrations.erase(sequenceNumber);
-        if (success)
-{
-                registeredApplications.push_back(appName);
-        }
-}
-
-std::list<ApplicationProcessNamingInformation>
-        IPCProcess::getRegisteredApplications()
-{
-        return registeredApplications;
-}
-
-void IPCProcess::unregisterApplication(
+void IPCProcessProxy::unregisterApplication(
 		const ApplicationProcessNamingInformation& applicationName,
+		const ApplicationProcessNamingInformation& dif_name,
 		unsigned int opaque)
 {
-        if (!difMember) {
-                throw IpcmUnregisterApplicationException(
-                                IPCProcess::error_not_a_dif_member);
-        }
-
-        bool found = false;
-        std::list<ApplicationProcessNamingInformation>::iterator iterator;
-        for (iterator = registeredApplications.begin();
-                        iterator != registeredApplications.end();
-                        iterator++) {
-              if (*iterator == applicationName) {
-                      found = true;
-                      break;
-              }
-        }
-
-        if (!found)
-                throw IpcmUnregisterApplicationException(
-                                "The application is not registered");
 
 #if STUB_API
 	//Do nothing
-        (void) opaque;
+	(void) applicationName;
+	(void) dif_name;
+    (void) opaque;
 #else
         IpcmUnregisterApplicationRequestMessage message;
         message.setApplicationName(applicationName);
-        message.setDifName(difInformation.get_dif_name());
+        message.setDifName(dif_name);
         message.setDestIpcProcessId(id);
         message.setDestPortId(portId);
         message.setRequestMessage(true);
@@ -538,40 +328,14 @@ void IPCProcess::unregisterApplication(
         	throw IpcmUnregisterApplicationException(e.what());
         }
 #endif
-        pendingRegistrations[opaque] = applicationName;
 }
 
-void IPCProcess::unregisterApplicationResult(unsigned int sequenceNumber, bool success)
-{
-        if (!difMember) {
-                throw IpcmRegisterApplicationException(
-                                IPCProcess::error_not_a_dif_member);
-        }
-
-        ApplicationProcessNamingInformation appName;
-        try {
-                appName = getPendingRegistration(sequenceNumber);
-        } catch(IPCException &e) {
-                throw IpcmRegisterApplicationException(e.what());
-        }
-
-        pendingRegistrations.erase(sequenceNumber);
-
-        if (success)
-{
-                registeredApplications.remove(appName);
-        }
-}
-
-void IPCProcess::allocateFlow(const FlowRequestEvent& flowRequest,
+void IPCProcessProxy::allocateFlow(const FlowRequestEvent& flowRequest,
 		unsigned int opaque)
 {
-	if (!difMember) {
-		throw AllocateFlowException(IPCProcess::error_not_a_dif_member);
-	}
-
 #if STUB_API
 	//Do nothing
+	(void) flowRequest;
 	(void) opaque;
 #else
 	IpcmAllocateFlowRequestMessage message;
@@ -593,58 +357,17 @@ void IPCProcess::allocateFlow(const FlowRequestEvent& flowRequest,
 	}
 
 #endif
-
-	FlowInformation flowInformation;
-	flowInformation.localAppName = flowRequest.localApplicationName;
-	flowInformation.remoteAppName = flowRequest.remoteApplicationName;
-	flowInformation.difName = difInformation.dif_name_;
-	flowInformation.flowSpecification = flowRequest.flowSpecification;
-	flowInformation.portId = flowRequest.portId;
-
-	pendingFlowOperations[opaque] = flowInformation;
 }
 
-void IPCProcess::allocateFlowResult(
-                unsigned int sequenceNumber, bool success, int portId)
-{
-	if (!difMember) {
-		throw AllocateFlowException(
-				IPCProcess::error_not_a_dif_member);
-	}
-
-	FlowInformation flowInformation;
-	try {
-		flowInformation = getPendingFlowOperation(sequenceNumber);
-		flowInformation.portId = portId;
-	} catch(IPCException &e) {
-		throw AllocateFlowException(e.what());
-	}
-
-	pendingFlowOperations.erase(sequenceNumber);
-	if (success) {
-		allocatedFlows.push_back(flowInformation);
-	}
-}
-
-void IPCProcess::allocateFlowResponse(const FlowRequestEvent& flowRequest,
+void IPCProcessProxy::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 		int result, bool notifySource, int flowAcceptorIpcProcessId)
 {
-
-	if (result == 0) {
-		FlowInformation flowInformation;
-		flowInformation.localAppName = flowRequest.localApplicationName;
-		flowInformation.remoteAppName = flowRequest.remoteApplicationName;
-		flowInformation.difName = difInformation.dif_name_;
-		flowInformation.flowSpecification = flowRequest.flowSpecification;
-		flowInformation.portId = flowRequest.portId;
-
-		allocatedFlows.push_back(flowInformation);
-	}
-
 #if STUB_API
 	//Do nothing
+		(void)flowRequest;
         (void)notifySource;
         (void)flowAcceptorIpcProcessId;
+        (void)result;
 #else
 	IpcmAllocateFlowResponseMessage responseMessage;
 	responseMessage.setResult(result);
@@ -661,41 +384,13 @@ void IPCProcess::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 		throw AllocateFlowException(e.what());
 	}
 #endif
-
 }
 
-std::list<FlowInformation> IPCProcess::getAllocatedFlows()
+void IPCProcessProxy::deallocateFlow(int flowPortId, unsigned int opaque)
 {
-	return allocatedFlows;
-}
-
-bool IPCProcess::getFlowInformation(int flowPortId, FlowInformation& result) {
-	std::list<FlowInformation>::const_iterator iterator;
-
-	for (iterator = allocatedFlows.begin();
-			iterator != allocatedFlows.end(); ++iterator) {
-                if (iterator->portId == flowPortId) {
-                        result = *iterator;
-                        return true;
-                }
-	}
-
-        return false;
-}
-
-void IPCProcess::deallocateFlow(int flowPortId, unsigned int opaque)
-{
-	FlowInformation flowInformation;
-    bool success;
-
-	success = getFlowInformation(flowPortId, flowInformation);
-        if (!success) {
-		LOG_ERR("Could not find flow with port-id %d", flowPortId);
-		throw IpcmDeallocateFlowException("Unknown flow");
-	}
-
 #if STUB_API
 	//Do nothing
+	(void) flowPortId;
     (void) opaque;
 #else
 	IpcmDeallocateFlowRequestMessage message;
@@ -711,41 +406,9 @@ void IPCProcess::deallocateFlow(int flowPortId, unsigned int opaque)
 	        throw IpcmDeallocateFlowException(e.what());
 	}
 #endif
-
-	pendingFlowOperations[opaque] = flowInformation;
 }
 
-void IPCProcess::deallocateFlowResult(unsigned int sequenceNumber, bool success)
-{
-	FlowInformation flowInformation;
-
-	try {
-		flowInformation = getPendingFlowOperation(sequenceNumber);
-	} catch(IPCException &e) {
-		throw IpcmDeallocateFlowException(e.what());
-	}
-
-	pendingFlowOperations.erase(sequenceNumber);
-	if (success) {
-		allocatedFlows.remove(flowInformation);
-	}
-}
-
-FlowInformation IPCProcess::flowDeallocated(int flowPortId)
-{
-	FlowInformation flowInformation;
-        bool success;
-
-        success = getFlowInformation(flowPortId, flowInformation);
-        if (!success) {
-                throw IpcmDeallocateFlowException("No flow for such port-id");
-        }
-        allocatedFlows.remove(flowInformation);
-
-        return flowInformation;
-}
-
-void IPCProcess::queryRIB(const std::string& objectClass,
+void IPCProcessProxy::queryRIB(const std::string& objectClass,
 		const std::string& objectName, unsigned long objectInstance,
 		unsigned int scope, const std::string& filter,
 		unsigned int opaque)
@@ -777,7 +440,7 @@ void IPCProcess::queryRIB(const std::string& objectClass,
 #endif
 }
 
-void IPCProcess::setPolicySetParam(const std::string& path,
+void IPCProcessProxy::setPolicySetParam(const std::string& path,
                         const std::string& name, const std::string& value,
                         unsigned int opaque)
 {
@@ -804,7 +467,7 @@ void IPCProcess::setPolicySetParam(const std::string& path,
 #endif
 }
 
-void IPCProcess::selectPolicySet(const std::string& path,
+void IPCProcessProxy::selectPolicySet(const std::string& path,
                                  const std::string& name,
                                  unsigned int opaque)
 {
@@ -829,7 +492,7 @@ void IPCProcess::selectPolicySet(const std::string& path,
 #endif
 }
 
-void IPCProcess::pluginLoad(const std::string& name, bool load,
+void IPCProcessProxy::pluginLoad(const std::string& name, bool load,
 		unsigned int opaque)
 {
 #if STUB_API
@@ -861,7 +524,7 @@ const std::string IPCProcessFactory::path_to_ipc_process_types =
 const std::string IPCProcessFactory::normal_ipc_process_type =
 		"normal";
 
-IPCProcessFactory::IPCProcessFactory(): Lockable() {
+IPCProcessFactory::IPCProcessFactory() {
 }
 
 IPCProcessFactory::~IPCProcessFactory() throw() {
@@ -891,20 +554,13 @@ std::list<std::string> IPCProcessFactory::getSupportedIPCProcessTypes() {
 	return result;
 }
 
-IPCProcess * IPCProcessFactory::create(
+IPCProcessProxy * IPCProcessFactory::create(
 		const ApplicationProcessNamingInformation& ipcProcessName,
-		const std::string& difType)
+		const std::string& difType,
+		unsigned short ipcProcessId)
 {
-	lock();
-	unsigned short ipcProcessId = 1;
 	unsigned int portId = 0;
 	pid_t pid=0;
-	for (unsigned short i = 1; i < 1000; i++) {
-		if (ipcProcesses.find(i) == ipcProcesses.end()) {
-			ipcProcessId = i;
-			break;
-		}
-	}
 
 #if STUB_API
 	//Do nothing
@@ -912,9 +568,7 @@ IPCProcess * IPCProcessFactory::create(
 	int result = syscallCreateIPCProcess(ipcProcessName,
                                              ipcProcessId,
                                              difType);
-	if (result != 0)
-	{
-	        unlock();
+	if (result != 0) {
 	        throw CreateIPCProcessException();
 	}
 
@@ -960,8 +614,6 @@ IPCProcess * IPCProcessFactory::create(
 			//This is the IPC Manager, and fork failed
 		        //Try to destroy the IPC Process in the kernel and return error
 		        syscallDestroyIPCProcess(ipcProcessId);
-
-			unlock();
 			throw CreateIPCProcessException();
 		}else{
 			//This is the IPC Manager, and fork was successful
@@ -971,44 +623,26 @@ IPCProcess * IPCProcessFactory::create(
 	}
 #endif
 
-	IPCProcess * ipcProcess = new IPCProcess(ipcProcessId, portId, pid, difType,
+	IPCProcessProxy * ipcProcess = new IPCProcessProxy(ipcProcessId, portId, pid, difType,
 			ipcProcessName);
-	ipcProcesses[ipcProcessId] = ipcProcess;
-	unlock();
-
 	return ipcProcess;
 }
 
-void IPCProcessFactory::destroy(unsigned short ipcProcessId)
+void IPCProcessFactory::destroy(IPCProcessProxy* ipcp)
 {
-	lock();
-
 	int resultUserSpace = 0;
 	int resultKernel = 0;
-	std::map<unsigned short, IPCProcess*>::iterator iterator;
-	iterator = ipcProcesses.find(ipcProcessId);
-	if (iterator == ipcProcesses.end())
-	{
-		unlock();
-		throw DestroyIPCProcessException(
-		                IPCProcessFactory::unknown_ipc_process_error);
-	}
 
 #if STUB_API
 	//Do nothing
 #else
-	IPCProcess * ipcProcess = iterator->second;
+	resultKernel = syscallDestroyIPCProcess(ipcp->id);
 
-	resultKernel = syscallDestroyIPCProcess(ipcProcessId);
-
-	if (ipcProcess->getType().compare(NORMAL_IPC_PROCESS) == 0)
-		resultUserSpace = kill(ipcProcess->getPid(), SIGKILL);
+	if (ipcp->getType().compare(NORMAL_IPC_PROCESS) == 0)
+		resultUserSpace = kill(ipcp->getPid(), SIGKILL);
 #endif
 
-	delete iterator->second;
-	ipcProcesses.erase(ipcProcessId);
-
-	unlock();
+	delete ipcp;
 
 	if (resultKernel || resultUserSpace)
 	{
@@ -1021,36 +655,6 @@ void IPCProcessFactory::destroy(unsigned short ipcProcessId)
 	        throw DestroyIPCProcessException(error);
 	}
 }
-
-std::vector<IPCProcess *> IPCProcessFactory::listIPCProcesses()
-{
-	std::vector<IPCProcess *> response;
-
-	lock();
-	for (std::map<unsigned short, IPCProcess*>::iterator it = ipcProcesses.begin();
-			it != ipcProcesses.end(); ++it) {
-		response.push_back(it->second);
-	}
-	unlock();
-
-	return response;
-}
-
-IPCProcess * IPCProcessFactory::getIPCProcess(unsigned short ipcProcessId)
-{
-        std::map<unsigned short, IPCProcess*>::iterator iterator;
-
-        lock();
-        iterator = ipcProcesses.find(ipcProcessId);
-        unlock();
-
-        if (iterator == ipcProcesses.end())
-                return NULL;
-
-        return iterator->second;
-}
-
-Singleton<IPCProcessFactory> ipcProcessFactory;
 
 /** CLASS APPLICATION MANAGER */
 void ApplicationManager::applicationRegistered(

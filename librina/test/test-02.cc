@@ -28,24 +28,12 @@
 
 using namespace rina;
 
-bool checkIPCProcesses(unsigned int expectedProcesses) {
-	std::vector<IPCProcess *> ipcProcesses = ipcProcessFactory
-			->listIPCProcesses();
-	if (ipcProcesses.size() != expectedProcesses) {
-		std::cout << "ERROR: Expected " << expectedProcesses
-				<< " IPC Processes, but only found " + ipcProcesses.size()
-				<< "\n";
-		return false;
-	}
-
-	return true;
-}
-
 int main() {
 	std::cout << "TESTING LIBRINA-IPCMANAGER\n";
 
+	IPCProcessFactory factory;
 	/* TEST LIST IPC PROCESS TYPES */
-	std::list<std::string> ipcProcessTypes = ipcProcessFactory->getSupportedIPCProcessTypes();
+	std::list<std::string> ipcProcessTypes = factory.getSupportedIPCProcessTypes();
 	std::list<std::string>::const_iterator iterator;
 	for (iterator = ipcProcessTypes.begin();
 			iterator != ipcProcessTypes.end();
@@ -68,37 +56,23 @@ int main() {
 	ApplicationProcessNamingInformation * difName =
 			new ApplicationProcessNamingInformation("/difs/Test.DIF", "");
 
-	IPCProcess * ipcProcess1 = ipcProcessFactory->create(*ipcProcessName1,
-			"normal");
-	IPCProcess * ipcProcess2 = ipcProcessFactory->create(*ipcProcessName2,
-			"shim-ethernet");
-
-	/* TEST LIST IPC PROCESSES */
-	if (!checkIPCProcesses(2)) {
-		return 1;
-	}
+	IPCProcessProxy * ipcProcess1 = factory.create(*ipcProcessName1,
+			"normal", 12);
+	IPCProcessProxy * ipcProcess2 = factory.create(*ipcProcessName2,
+			"shim-ethernet", 25);
 
 	/* TEST DESTROY */
-	ipcProcessFactory->destroy(ipcProcess2->getId());
-	if (!checkIPCProcesses(1)) {
-		return 1;
-	}
-
-	/* TEST INITIALIZE */
-	ipcProcess1->setInitialized();
+	factory.destroy(ipcProcess2);
 
 	/* TEST ASSIGN TO DIF */
 	DIFInformation * difInformation = new DIFInformation();
 	ipcProcess1->assignToDIF(*difInformation, 35);
-	ipcProcess1->assignToDIFResult(true);
 
 	/* TEST REGISTER APPLICATION */
-	ipcProcess1->registerApplication(*sourceName, 1, 45);
-	ipcProcess1->registerApplicationResult(45, true);
+	ipcProcess1->registerApplication(*sourceName, 1, *difName, 45);
 
 	/* TEST UNREGISTER APPLICATION */
-	ipcProcess1->unregisterApplication(*sourceName, 34);
-	ipcProcess1->unregisterApplicationResult(34, true);
+	ipcProcess1->unregisterApplication(*sourceName, *difName, 34);
 
 	/* TEST ALLOCATE FLOW */
 	FlowSpecification *flowSpec = new FlowSpecification();
@@ -129,10 +103,7 @@ int main() {
 			true, *sourceName, *destinationName, *difName, 3, 2323);
 	applicationManager->flowAllocated(*flowEvent);
 
-	ipcProcessFactory->destroy(ipcProcess1->getId());
-	if (!checkIPCProcesses(0)) {
-		return 1;
-	}
+	factory.destroy(ipcProcess1);
 
 	delete ipcProcessName1;
 	delete ipcProcessName2;

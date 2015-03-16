@@ -173,7 +173,7 @@ IPCManager_::create_ipcp(const Addon* callee,
 			const rina::ApplicationProcessNamingInformation& name,
 			const std::string& type)
 {
-	rina::IPCProcess *ipcp;
+	IPCMIPCProcess *ipcp;
 	ostringstream ss;
 	rina::IPCProcessFactory fact;
 	std::list<std::string> ipcp_types;
@@ -205,7 +205,7 @@ IPCManager_::create_ipcp(const Addon* callee,
 				throw rina::CreateIPCProcessException();
 		}
 
-		ipcp = rina::ipcProcessFactory->create(name, type);
+		ipcp = ipcp_factory_.create(name, type);
 
 		//TODO: this should be moved to the factory
 		//Moreover the API should be homgenized such that the
@@ -220,7 +220,7 @@ IPCManager_::create_ipcp(const Addon* callee,
 			// defer the operation.
 
 			//Add transaction state
-			state = new TransactionState(callee, ipcp->id);
+			state = new TransactionState(callee, ipcp->ipcp_proxy_->id);
 
 			//TODO: this is a botch that we have to do due to the
 			//way ipcmanager in librina works. Since we cannot make
@@ -233,7 +233,7 @@ IPCManager_::create_ipcp(const Addon* callee,
 			//IPCFactory here, since the state is basically the
 			//same and is the only way to prevent these nasty race
 			//conditions
-			if(add_syscall_transaction_state(ipcp->id, state) < 0){
+			if(add_syscall_transaction_state(ipcp->ipcp_proxy_->id, state) < 0){
 				delete state;
 				state = NULL;
 			}
@@ -244,7 +244,7 @@ IPCManager_::create_ipcp(const Addon* callee,
 			//We have to wait for the notification
 			if(callee){
 				//callback will be called
-				return ipcp->id;
+				return ipcp->ipcp_proxy_->id;
 			}else{
 				//We have to synchronously wait
 				state->wait_cond.doWait(); //FIXME: timed wait
@@ -258,7 +258,7 @@ IPCManager_::create_ipcp(const Addon* callee,
 			}
 		}else{
 			//The notification already arrived
-			state = get_syscall_transaction_state(ipcp->id);
+			state = get_syscall_transaction_state(ipcp->ipcp_proxy_->id);
 			if(!state){
 				assert(0);
 				ss << "Corrupted ipc create operation"<<endl;
@@ -268,7 +268,7 @@ IPCManager_::create_ipcp(const Addon* callee,
 
 		//Show a nice trace
 		ss << "IPC process " << name.toString() << " created "
-			"[id = " << ipcp->id << "]" << endl;
+			"[id = " << ipcp->ipcp_proxy_->id << "]" << endl;
 		FLUSH_LOG(INFO, ss);
 
 
@@ -292,7 +292,7 @@ IPCManager_::destroy_ipcp(const Addon* callee, unsigned int ipcp_id)
 
 	//TODO: check if rwlock is really necessary here
 	try {
-		rina::ipcProcessFactory->destroy(ipcp_id);
+		ipcp_factory_.destroy(ipcp_id);
 		ss << "IPC process destroyed [id = " << ipcp_id
 			<< "]" << endl;
 		FLUSH_LOG(INFO, ss);
@@ -309,16 +309,16 @@ IPCManager_::destroy_ipcp(const Addon* callee, unsigned int ipcp_id)
 int
 IPCManager_::list_ipcps(std::ostream& os)
 {
-	const vector<rina::IPCProcess *>& ipcps =
-		rina::ipcProcessFactory->listIPCProcesses();
+	const vector<IPCMIPCProcess *>& ipcps =
+		ipcp_factory_.listIPCProcesses();
 
 	//Prevent any insertion/deletion to happen
 	rina::ReadScopedLock readlock(ipcps_rwlock);
 
 	os << "Current IPC processes:" << endl;
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
-		os << "    " << ipcps[i]->id << ": " <<
-			ipcps[i]->name.toString() << "\n";
+		os << "    " << ipcps[i]->ipcp_proxy_->id << ": " <<
+			ipcps[i]->ipcp_proxy_->name.toString() << "\n";
 	}
 
 	return 0;
@@ -332,14 +332,14 @@ IPCManager_::ipcp_exists(const int ipcp_id){
 int
 IPCManager_::list_ipcp_types(std::list<std::string>& types)
 {
-	types = rina::ipcProcessFactory->getSupportedIPCProcessTypes();
+	types = ipcp_factory_.getSupportedIPCProcessTypes();
 	return 0;
 }
 
 //TODO this assumes single IPCP per DIF
 int IPCManager_::get_ipcp_by_dif_name(std::string& difName){
 
-	rina::IPCProcess* ipcp;
+	IPCMIPCProcess* ipcp;
 	int ret;
 	rina::ApplicationProcessNamingInformation dif(difName, string());
 
@@ -347,7 +347,7 @@ int IPCManager_::get_ipcp_by_dif_name(std::string& difName){
 	if(!ipcp)
 		ret = -1;
 	else
-		ret = ipcp->id;
+		ret = ipcp->ipcp_proxy_->id;
 
 	return ret;
 }
@@ -367,7 +367,7 @@ IPCManager_::assign_to_dif(const int ipcp_id,
 	bool		   arrived = true;
 	bool		   found;
 	int		    ret = -1;
-	rina::IPCProcess* ipcp;
+	IPCMIPCProcess* ipcp;
 
 	//TODO: move this to a write_lock over the IPCP
 
@@ -393,7 +393,7 @@ IPCManager_::assign_to_dif(const int ipcp_id,
 		}
 
 		// Fill in the DIFConfiguration object.
-		if (ipcp->type == rina::NORMAL_IPC_PROCESS) {
+		if (ipcp->ipcp_proxy_->type == rina::NORMAL_IPC_PROCESS) {
 			rina::EFCPConfiguration efcp_config;
 			rina::NamespaceManagerConfiguration nsm_config;
 			rina::AddressingConfiguration address_config;
@@ -434,11 +434,11 @@ IPCManager_::assign_to_dif(const int ipcp_id,
 			nsm_config.addressing_configuration_ = address_config;
 
 			found = dif_props.
-				lookup_ipcp_address(ipcp->name,
+				lookup_ipcp_address(ipcp->ipcp_proxy_->name,
 						address);
 			if (!found) {
 				ss << "No address for IPC process " <<
-					ipcp->name.toString() <<
+					ipcp->ipcp_proxy_->name.toString() <<
 					" in DIF " << dif_name.toString() <<
 					endl;
                 		FLUSH_LOG(ERR, ss);
@@ -462,12 +462,12 @@ IPCManager_::assign_to_dif(const int ipcp_id,
 
 		// Fill in the DIFInformation object.
 		dif_info.set_dif_name(dif_name);
-		dif_info.set_dif_type(ipcp->type);
+		dif_info.set_dif_type(ipcp->ipcp_proxy_->type);
 		dif_info.set_dif_configuration(dif_config);
 
 		// Validate the parameters
 		DIFConfigValidator validator(dif_config, dif_info,
-				ipcp->type);
+				ipcp->ipcp_proxy_->type);
 		if(!validator.validateConfigs())
 			throw rina::BadConfigurationException("DIF configuration validator failed");
 
@@ -478,14 +478,14 @@ IPCManager_::assign_to_dif(const int ipcp_id,
 
 		pending_ipcp_dif_assignments[seqnum] = ipcp;
 		ss << "Requested DIF assignment of IPC process " <<
-			ipcp->name.toString() << " to DIF " <<
+			ipcp->ipcp_proxy_->name.toString() << " to DIF " <<
 			dif_name.toString() << endl;
 		FLUSH_LOG(INFO, ss);
 		//arrived = concurrency.wait_for_event(rina::ASSIGN_TO_DIF_RESPONSE_EVENT,
 		//				     seqnum, ret);
 	} catch (rina::AssignToDIFException) {
 		ss << "Error while assigning " <<
-			ipcp->name.toString() <<
+			ipcp->ipcp_proxy_->name.toString() <<
 			" to DIF " << dif_name.toString() << endl;
 		FLUSH_LOG(ERR, ss);
 	} catch (rina::BadConfigurationException &e) {
@@ -511,7 +511,7 @@ IPCManager_::register_at_dif(const int ipcp_id,
 			    dif_name)
 {
 	// Select a slave (N-1) IPC process.
-	rina::IPCProcess *ipcp, *slave_ipcp;
+	IPCMIPCProcess *ipcp, *slave_ipcp;
 	ostringstream ss;
 	unsigned int seqnum;
 	bool arrived = true;
@@ -542,15 +542,15 @@ IPCManager_::register_at_dif(const int ipcp_id,
 
 		seqnum = opaque_generator_.next();
 		slave_ipcp->registerApplication(
-				ipcp->name, ipcp->id, seqnum);
+				ipcp->ipcp_proxy_->name, ipcp->ipcp_proxy_->id, seqnum);
 
 		pending_ipcp_registrations[seqnum] =
 			make_pair(ipcp, slave_ipcp);
 
 		ss << "Requested DIF registration of IPC process " <<
-			ipcp->name.toString() << " at DIF " <<
+			ipcp->ipcp_proxy_->name.toString() << " at DIF " <<
 			dif_name.toString() << " through IPC process "
-		   << slave_ipcp->name.toString()
+		   << slave_ipcp->ipcp_proxy_->name.toString()
 		   << endl;
 		FLUSH_LOG(INFO, ss);
 
@@ -575,7 +575,7 @@ int IPCManager_::register_at_difs(const int ipcp_id,
 		const list<rina::ApplicationProcessNamingInformation>& difs)
 {
 
-	rina::IPCProcess *ipcp;
+	IPCMIPCProcess *ipcp;
 	ostringstream ss;
 	int ret = 0;
 
@@ -610,7 +610,7 @@ IPCManager_::enroll_to_dif(const int ipcp_id,
 			  bool sync)
 {
 	ostringstream ss;
-	rina::IPCProcess *ipcp;
+	IPCMIPCProcess *ipcp;
 	bool arrived = true;
 	int ret = 0;
 	unsigned int seqnum;
@@ -632,7 +632,7 @@ IPCManager_::enroll_to_dif(const int ipcp_id,
 				neighbor.apName, seqnum);
 		pending_ipcp_enrollments[seqnum] = ipcp;
 		ss << "Requested enrollment of IPC process " <<
-			ipcp->name.toString() << " to DIF " <<
+			ipcp->ipcp_proxy_->name.toString() << " to DIF " <<
 			neighbor.difName.toString() << " through DIF "
 			<< neighbor.supportingDifName.toString() <<
 			" and neighbor IPC process " <<
@@ -666,7 +666,7 @@ int IPCManager_::enroll_to_difs(const int ipcp_id,
 			       const list<rinad::NeighborData>& neighbors)
 {
 	ostringstream ss;
-	rina::IPCProcess *ipcp;
+	IPCMIPCProcess *ipcp;
 	int ret = -1;
 
 	//TODO: move this to a write_lock over the IPCP
@@ -771,7 +771,7 @@ IPCManager_::update_dif_configuration(int ipcp_id,
 	bool arrived = true;
 	int ret = 0;
 	unsigned int seqnum;
-	rina::IPCProcess *ipcp;
+	IPCMIPCProcess *ipcp;
 
 	//TODO: move this to a write_lock over the IPCP
 
@@ -797,14 +797,14 @@ IPCManager_::update_dif_configuration(int ipcp_id,
 		pending_dif_config_updates[seqnum] = ipcp;
 
 		ss << "Requested configuration update for IPC process " <<
-			ipcp->name.toString() << endl;
+			ipcp->ipcp_proxy_->name.toString() << endl;
 		FLUSH_LOG(INFO, ss);
 
 		/*arrived = concurrency.wait_for_event(
 			rina::UPDATE_DIF_CONFIG_RESPONSE_EVENT, seqnum, ret);*/
 	} catch (rina::UpdateDIFConfigurationException) {
 		ss  << ": Error while updating DIF configuration "
-			" for IPC process " << ipcp->name.toString() << endl;
+			" for IPC process " << ipcp->ipcp_proxy_->name.toString() << endl;
 		FLUSH_LOG(ERR, ss);
 	}
 
@@ -824,7 +824,7 @@ IPCManager_::query_rib(const int ipcp_id)
 	ostringstream ss;
 	bool	  arrived = true;
 	int	   ret = -1;
-	rina::IPCProcess *ipcp;
+	IPCMIPCProcess *ipcp;
 
 
 	//TODO: move this to a read_lock over the IPCP
@@ -843,7 +843,7 @@ IPCManager_::query_rib(const int ipcp_id)
 
 		pending_ipcp_query_rib_responses[seqnum] = ipcp;
 		ss << "Requested query RIB of IPC process " <<
-			ipcp->name.toString() << endl;
+			ipcp->ipcp_proxy_->name.toString() << endl;
 		FLUSH_LOG(INFO, ss);
 		/*arrived = concurrency.wait_for_event(rina::QUERY_RIB_RESPONSE_EVENT,
 					   seqnum, ret);*/
@@ -857,7 +857,7 @@ IPCManager_::query_rib(const int ipcp_id)
 
 	} catch (rina::QueryRIBException) {
 		ss << "Error while querying RIB of IPC Process " <<
-			ipcp->name.toString() << endl;
+			ipcp->ipcp_proxy_->name.toString() << endl;
 		FLUSH_LOG(ERR, ss);
 	}
 
@@ -885,7 +885,7 @@ IPCManager_::set_policy_set_param(const int ipcp_id,
         unsigned int seqnum;
         bool arrived = false;
         int ret = -1;
-	rina::IPCProcess *ipcp;
+        IPCMIPCProcess *ipcp;
 
 	//TODO: move this to a write_lock over the IPCP
 
@@ -904,14 +904,14 @@ IPCManager_::set_policy_set_param(const int ipcp_id,
 
         	pending_set_policy_set_param_ops[seqnum] = ipcp;
         	ss << "Issued set-policy-set-param to IPC process " <<
-        			ipcp->name.toString() << endl;
+        			ipcp->ipcp_proxy_->name.toString() << endl;
         	FLUSH_LOG(INFO, ss);
         	/*arrived = concurrency.wait_for_event(
                                 rina::IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE,
                                 seqnum, ret);*/
         } catch (rina::SetPolicySetParamException) {
                 ss << "Error while issuing set-policy-set-param request "
-                        "to IPC Process " << ipcp->name.toString() << endl;
+                        "to IPC Process " << ipcp->ipcp_proxy_->name.toString() << endl;
                 FLUSH_LOG(ERR, ss);
         }
 
@@ -932,7 +932,7 @@ IPCManager_::select_policy_set(const int ipcp_id,
         unsigned int seqnum;
         bool arrived = false;
         int ret = -1;
-	rina::IPCProcess *ipcp;
+        IPCMIPCProcess *ipcp;
 
         try {
         	ipcp = lookup_ipcp_by_id(ipcp_id);
@@ -948,14 +948,14 @@ IPCManager_::select_policy_set(const int ipcp_id,
 
         	pending_select_policy_set_ops[seqnum] = ipcp;
         	ss << "Issued select-policy-set to IPC process " <<
-        			ipcp->name.toString() << endl;
+        			ipcp->ipcp_proxy_->name.toString() << endl;
         	FLUSH_LOG(INFO, ss);
         	/*arrived = concurrency.wait_for_event(
                                 rina::IPC_PROCESS_SELECT_POLICY_SET_RESPONSE,
                                 seqnum, ret);*/
         } catch (rina::SelectPolicySetException) {
                 ss << "Error while issuing select-policy-set request "
-                        "to IPC Process " << ipcp->name.toString() << endl;
+                        "to IPC Process " << ipcp->ipcp_proxy_->name.toString() << endl;
                 FLUSH_LOG(ERR, ss);
         }
 
@@ -975,7 +975,7 @@ IPCManager_::plugin_load(const int ipcp_id,
         unsigned int seqnum;
         bool arrived = false;
         int ret = -1;
-	rina::IPCProcess *ipcp;
+        IPCMIPCProcess *ipcp;
 
 	//TODO: move this to a write_lock over the IPCP
 
@@ -993,14 +993,14 @@ IPCManager_::plugin_load(const int ipcp_id,
 
         	pending_plugin_load_ops[seqnum] = ipcp;
         	ss << "Issued plugin-load to IPC process " <<
-        			ipcp->name.toString() << endl;
+        			ipcp->ipcp_proxy_->name.toString() << endl;
         	FLUSH_LOG(INFO, ss);
         	/*arrived = concurrency.wait_for_event(
                                 rina::IPC_PROCESS_PLUGIN_LOAD_RESPONSE,
                                 seqnum, ret);*/
         } catch (rina::PluginLoadException) {
                 ss << "Error while issuing plugin-load request "
-                        "to IPC Process " << ipcp->name.toString() << endl;
+                        "to IPC Process " << ipcp->ipcp_proxy_->name.toString() << endl;
                 FLUSH_LOG(ERR, ss);
         }
 
@@ -1280,15 +1280,14 @@ void IPCManager_::run(){
 	LOG_DBG("Stopping I/O loop and cleaning the house...");
 
 	//Destroy all IPCPs
-	const std::vector<rina::IPCProcess *>& ipcps =
-		rina::ipcProcessFactory->listIPCProcesses();
-	std::vector<rina::IPCProcess *>::const_iterator it;
+	const std::vector<IPCMIPCProcess *>& ipcps = ipcp_factory_.listIPCProcesses();
+	std::vector<IPCMIPCProcess *>::const_iterator it;
 
 	//Rwlock: write
 	for(it = ipcps.begin(); it != ipcps.end(); ++it){
-		if(destroy_ipcp(NULL, (*it)->id) < 0 ){
+		if(destroy_ipcp(NULL, (*it)->ipcp_proxy_->id) < 0 ){
 			LOG_WARN("Warning could not destroy IPCP id: %d\n",
-								(*it)->id);
+								(*it)->ipcp_proxy_->id);
 		}
 	}
 }

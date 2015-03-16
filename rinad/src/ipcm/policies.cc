@@ -42,7 +42,7 @@ void IPCManager_::ipc_process_set_policy_set_param_response_handler(
 							rina::IPCEvent *e)
 {
 	DOWNCAST_DECL(e, rina::SetPolicySetParamResponseEvent, event);
-	std::map<unsigned int, rina::IPCProcess *>::iterator mit;
+	std::map<unsigned int, IPCMIPCProcess *>::iterator mit;
 	bool success = (event->result == 0);
 	ostringstream ss;
 	int ret = -1;
@@ -51,7 +51,7 @@ void IPCManager_::ipc_process_set_policy_set_param_response_handler(
 	if (mit != pending_set_policy_set_param_ops.end()) {
 		pending_set_policy_set_param_ops.erase(mit);
 		ss << "set-policy-set-param-op completed on IPC process "
-		<< mit->second->name.toString() <<
+		<< mit->second->ipcp_proxy_->name.toString() <<
 		" [success=" << success << "]" << endl;
 		FLUSH_LOG(INFO, ss);
 		ret = event->result;
@@ -66,7 +66,7 @@ void IPCManager_::ipc_process_set_policy_set_param_response_handler(
 void IPCManager_::ipc_process_plugin_load_response_handler(rina::IPCEvent *e)
 {
         DOWNCAST_DECL(e, rina::PluginLoadResponseEvent, event);
-        map<unsigned int, rina::IPCProcess *>::iterator mit;
+        map<unsigned int, IPCMIPCProcess *>::iterator mit;
         bool success = (event->result == 0);
         ostringstream ss;
         int ret = -1;
@@ -75,7 +75,7 @@ void IPCManager_::ipc_process_plugin_load_response_handler(rina::IPCEvent *e)
         if (mit != pending_plugin_load_ops.end()) {
                 pending_plugin_load_ops.erase(mit);
                 ss << "plugin-load-op completed on IPC process "
-                       << mit->second->name.toString() <<
+                       << mit->second->ipcp_proxy_->name.toString() <<
                         " [success=" << success << "]" << endl;
                 FLUSH_LOG(INFO, ss);
                 ret = event->result;
@@ -91,7 +91,7 @@ void IPCManager_::ipc_process_select_policy_set_response_handler(
 							rina::IPCEvent *e)
 {
         DOWNCAST_DECL(e, rina::SelectPolicySetResponseEvent, event);
-        map<unsigned int, rina::IPCProcess *>::iterator mit;
+        map<unsigned int, IPCMIPCProcess *>::iterator mit;
         bool success = (event->result == 0);
         ostringstream ss;
         int ret = -1;
@@ -100,7 +100,7 @@ void IPCManager_::ipc_process_select_policy_set_response_handler(
         if (mit != pending_select_policy_set_ops.end()) {
                 pending_select_policy_set_ops.erase(mit);
                 ss << "select-policy-set-op completed on IPC process "
-                       << mit->second->name.toString() <<
+                       << mit->second->ipcp_proxy_->name.toString() <<
                         " [success=" << success << "]" << endl;
                 FLUSH_LOG(INFO, ss);
                 ret = event->result;

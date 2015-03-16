@@ -42,8 +42,8 @@ void IPCManager_::query_rib_response_event_handler(rina::IPCEvent *e)
 {
 	DOWNCAST_DECL(e, rina::QueryRIBResponseEvent, event);
 	ostringstream ss;
-	map<unsigned int, rina::IPCProcess *>::iterator mit;
-	rina::IPCProcess *ipcp = NULL;
+	map<unsigned int, IPCMIPCProcess *>::iterator mit;
+	IPCMIPCProcess *ipcp = NULL;
 	bool success = (event->result == 0);
 	int ret = -1;
 
@@ -63,7 +63,7 @@ void IPCManager_::query_rib_response_event_handler(rina::IPCEvent *e)
 			list<rina::RIBObjectData>::iterator lit;
 
 			ss << "Query RIB operation completed for IPC "
-				<< "process " << ipcp->name.toString() << endl;
+				<< "process " << ipcp->ipcp_proxy_->name.toString() << endl;
 			FLUSH_LOG(INFO, ss);
 			for (lit = event->ribObjects.begin(); lit != event->ribObjects.end();
 					++lit) {
@@ -77,7 +77,7 @@ void IPCManager_::query_rib_response_event_handler(rina::IPCEvent *e)
 			ret = 0;
 		} else {
 			ss  << ": Error: Query RIB operation of "
-				"process " << ipcp->name.toString() << " failed"
+				"process " << ipcp->ipcp_proxy_->name.toString() << " failed"
 				<< endl;
 			FLUSH_LOG(ERR, ss);
 		}

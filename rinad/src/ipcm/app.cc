@@ -38,8 +38,8 @@ namespace rinad {
 void IPCManager_::os_process_finalized_handler(rina::IPCEvent *e)
 {
 	DOWNCAST_DECL(e, rina::OSProcessFinalizedEvent, event);
-	const vector<rina::IPCProcess *>& ipcps =
-		rina::ipcProcessFactory->listIPCProcesses();
+	const vector<IPCMIPCProcess *>& ipcps =
+		ipcp_factory_.listIPCProcesses();
 	const rina::ApplicationProcessNamingInformation& app_name =
 						event->applicationName;
 	list<rina::FlowInformation> involved_flows;
@@ -54,7 +54,7 @@ void IPCManager_::os_process_finalized_handler(rina::IPCEvent *e)
 	collect_flows_by_application(app_name, involved_flows);
 	for (list<rina::FlowInformation>::iterator fit = involved_flows.begin();
 			fit != involved_flows.end(); fit++) {
-		rina::IPCProcess *ipcp = select_ipcp_by_dif(fit->difName);
+		IPCMIPCProcess *ipcp = select_ipcp_by_dif(fit->difName);
 		rina::FlowDeallocateRequestEvent req_event(fit->portId, 0);
 
 		if (!ipcp) {
@@ -65,7 +65,7 @@ void IPCManager_::os_process_finalized_handler(rina::IPCEvent *e)
 			continue;
 		}
 
-		IPCManager->deallocate_flow(ipcp->id, req_event);
+		IPCManager->deallocate_flow(ipcp->ipcp_proxy_->id, req_event);
 	}
 
 	// Look if the terminating application has pending registrations
@@ -80,10 +80,10 @@ void IPCManager_::os_process_finalized_handler(rina::IPCEvent *e)
 			// an application request - this is indeed an
 			// unregistration forced by the IPCM.
 			rina::ApplicationUnregistrationRequestEvent
-				req_event(app_name, ipcps[i]->
-					getDIFInformation().dif_name_, 0);
+				req_event(app_name, ipcps[i]->dif_name_, 0);
 
-			IPCManager->unregister_app_from_ipcp(req_event, ipcps[i]->id);
+			IPCManager->unregister_app_from_ipcp(req_event,
+					ipcps[i]->ipcp_proxy_->id);
 		}
 	}
 
@@ -101,7 +101,7 @@ IPCManager_::unregister_app_from_ipcp(
 {
         ostringstream ss;
         unsigned int seqnum;
-        rina::IPCProcess *slave_ipcp;
+        IPCMIPCProcess *slave_ipcp;
 
         try {
 		slave_ipcp = lookup_ipcp_by_id(slave_ipcp_id);
@@ -122,12 +122,12 @@ IPCManager_::unregister_app_from_ipcp(
 
                 ss << "Requested unregistration of application " <<
                         req_event.applicationName.toString() << " from IPC "
-                        "process " << slave_ipcp->name.toString() << endl;
+                        "process " << slave_ipcp->ipcp_proxy_->name.toString() << endl;
                 FLUSH_LOG(INFO, ss);
         } catch (rina::IpcmUnregisterApplicationException) {
                 ss  << ": Error while unregistering application "
                         << req_event.applicationName.toString() << " from IPC "
-                        "process " << slave_ipcp->name.toString() << endl;
+                        "process " << slave_ipcp->ipcp_proxy_->name.toString() << endl;
                 FLUSH_LOG(ERR, ss);
                 return -1;
         }
@@ -167,7 +167,7 @@ void IPCManager_::application_registration_request_event_handler(rina::IPCEvent 
                                 applicationRegistrationInformation;
         const rina::ApplicationProcessNamingInformation app_name =
                                 info.appName;
-        rina::IPCProcess *slave_ipcp = NULL;
+        IPCMIPCProcess *slave_ipcp = NULL;
         unsigned int seqnum;
         ostringstream ss;
 
@@ -224,7 +224,7 @@ void IPCManager_::application_registration_request_event_handler(rina::IPCEvent 
 
                 ss << "Requested registration of application " <<
                         app_name.toString() << " to IPC process " <<
-                        slave_ipcp->name.toString() << endl;
+                        slave_ipcp->ipcp_proxy_->name.toString() << endl;
                 FLUSH_LOG(INFO, ss);
         } catch (rina::IpcmRegisterApplicationException) {
                 pending_app_registrations.erase(seqnum);
@@ -233,14 +233,14 @@ void IPCManager_::application_registration_request_event_handler(rina::IPCEvent 
                 FLUSH_LOG(ERR, ss);
                 // Notify the application about the unsuccessful registration.
                 application_registration_notify(*event, app_name,
-                                                slave_ipcp->name, false);
+                                                slave_ipcp->ipcp_proxy_->name, false);
         }
 }
 
 bool IPCManager_::ipcm_register_response_common(
         rina::IpcmRegisterApplicationResponseEvent *event,
         const rina::ApplicationProcessNamingInformation& app_name,
-        rina::IPCProcess *slave_ipcp,
+        IPCMIPCProcess *slave_ipcp,
         const rina::ApplicationProcessNamingInformation& slave_dif_name)
 {
         bool success = (event->result == 0);
@@ -266,20 +266,19 @@ bool IPCManager_::ipcm_register_response_common(
 int IPCManager_::ipcm_register_response_app(
         rina::IpcmRegisterApplicationResponseEvent *event,
         map<unsigned int,
-            std::pair<rina::IPCProcess *,
+            std::pair<IPCMIPCProcess *,
                       rina::ApplicationRegistrationRequestEvent
                      >
            >::iterator mit)
 {
-        rina::IPCProcess *slave_ipcp = mit->second.first;
+		IPCMIPCProcess *slave_ipcp = mit->second.first;
         const rina::ApplicationRegistrationRequestEvent& req_event =
                         mit->second.second;
         const rina::ApplicationProcessNamingInformation& app_name =
                 req_event.applicationRegistrationInformation.
                 appName;
         const rina::ApplicationProcessNamingInformation&
-                slave_dif_name = slave_ipcp->
-                getDIFInformation().dif_name_;
+                slave_dif_name = slave_ipcp->dif_name_;
         ostringstream ss;
         bool success;
 
@@ -300,10 +299,10 @@ void IPCManager_::ipcm_register_app_response_event_handler(rina::IPCEvent *e)
 
         DOWNCAST_DECL(e, rina::IpcmRegisterApplicationResponseEvent, event);
         map<unsigned int,
-            std::pair<rina::IPCProcess *, rina::IPCProcess*>
+            std::pair<IPCMIPCProcess *, IPCMIPCProcess*>
            >::iterator it;
         map<unsigned int,
-            std::pair<rina::IPCProcess *,
+            std::pair<IPCMIPCProcess *,
                       rina::ApplicationRegistrationRequestEvent
                      >
            >::iterator jt;
@@ -356,7 +355,7 @@ void IPCManager_::application_unregistration_request_event_handler(rina::IPCEven
         DOWNCAST_DECL(e, rina::ApplicationUnregistrationRequestEvent, event);
         // Select any IPC process in the DIF from which the application
         // wants to unregister from
-        rina::IPCProcess *slave_ipcp = select_ipcp_by_dif(event->DIFName);
+        IPCMIPCProcess *slave_ipcp = select_ipcp_by_dif(event->DIFName);
         ostringstream ss;
         int err;
 
@@ -372,7 +371,7 @@ void IPCManager_::application_unregistration_request_event_handler(rina::IPCEven
                 return;
         }
 
-        err = unregister_app_from_ipcp(*event, slave_ipcp->id);
+        err = unregister_app_from_ipcp(*event, slave_ipcp->ipcp_proxy_->id);
         if (err) {
                 // Inform the unregistering application that the unregistration
                 // operation failed
@@ -382,7 +381,7 @@ void IPCManager_::application_unregistration_request_event_handler(rina::IPCEven
 
 bool IPCManager_::ipcm_unregister_response_common(
                         rina::IpcmUnregisterApplicationResponseEvent *event,
-                        rina::IPCProcess *slave_ipcp,
+                        IPCMIPCProcess *slave_ipcp,
                         const rina::ApplicationProcessNamingInformation&
                         app_name)
 {
@@ -393,7 +392,7 @@ bool IPCManager_::ipcm_unregister_response_common(
                 // Inform the IPC process about the application unregistration
                 slave_ipcp->unregisterApplicationResult(event->
                                 sequenceNumber, success);
-                ss << "IPC process " << slave_ipcp->name.toString() <<
+                ss << "IPC process " << slave_ipcp->ipcp_proxy_->name.toString() <<
                         " informed about unregistration of application "
                         << app_name.toString() << " [success = " << success
                         << "]" << endl;
@@ -411,7 +410,7 @@ bool IPCManager_::ipcm_unregister_response_common(
 int IPCManager_::ipcm_unregister_response_app(
                         rina::IpcmUnregisterApplicationResponseEvent *event,
                         map<unsigned int,
-                            pair<rina::IPCProcess *,
+                            pair<IPCMIPCProcess *,
                                  rina::ApplicationUnregistrationRequestEvent
                                 >
                            >::iterator mit)
@@ -436,11 +435,11 @@ void IPCManager_::ipcm_unregister_app_response_event_handler(rina::IPCEvent *e)
 {
         DOWNCAST_DECL(e, rina::IpcmUnregisterApplicationResponseEvent, event);
         map<unsigned int,
-            std::pair<rina::IPCProcess *,
+            std::pair<IPCMIPCProcess *,
                       rina::ApplicationUnregistrationRequestEvent>
            >::iterator it;
         map<unsigned int,
-            std::pair<rina::IPCProcess *, rina::IPCProcess *>
+            std::pair<IPCMIPCProcess *, IPCMIPCProcess *>
            >::iterator jt;
         ostringstream ss;
         int ret = -1;
