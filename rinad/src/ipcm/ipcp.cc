@@ -159,7 +159,8 @@ IPCManager_::unregister_ipcp_from_ipcp(int ipcp_id,
 
                 // Forward the unregistration request to the IPC process
                 // that the client IPC process is registered to
-                seqnum = slave_ipcp->unregisterApplication(ipcp->name);
+				seqnum = opaque_generator_.next();
+                slave_ipcp->unregisterApplication(ipcp->name, seqnum);
                 pending_ipcp_unregistrations[seqnum] =
                                 make_pair(ipcp, slave_ipcp);
 
