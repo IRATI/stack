@@ -57,7 +57,8 @@ IPCManager_::deallocate_flow(const int ipcp_id,
 
                 // Ask the IPC process to deallocate the flow
                 // specified by the port-id
-                seqnum = ipcp->deallocateFlow(event.portId);
+				seqnum = opaque_generator_.next();
+                ipcp->deallocateFlow(event.portId, seqnum);
                 pending_flow_deallocations[seqnum] =
                                         make_pair(ipcp, event);
 
@@ -141,7 +142,8 @@ void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
 
         try {
                 // Ask the IPC process to allocate a flow
-                seqnum = ipcp->allocateFlow(*event);
+        		seqnum = opaque_generator_.next();
+                ipcp->allocateFlow(*event, seqnum);
                 pending_flow_allocations[seqnum] =
                                         PendingFlowAllocation(ipcp, *event,
                                                               dif_specified);
@@ -185,11 +187,13 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
         try {
                 // Inform the local application that a remote application
                 // wants to allocate a flow
-                seqnum = rina::applicationManager->flowRequestArrived(
+        		seqnum = opaque_generator_.next();
+                rina::applicationManager->flowRequestArrived(
                                         event->localApplicationName,
                                         event->remoteApplicationName,
                                         event->flowSpecification,
-                                        event->DIFName, event->portId);
+                                        event->DIFName, event->portId,
+                                        seqnum);
                 pending_flow_allocations[seqnum] =
                                 PendingFlowAllocation(ipcp, *event, true);
 

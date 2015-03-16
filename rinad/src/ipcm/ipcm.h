@@ -664,6 +664,9 @@ protected:
 	//Keep running flag
 	volatile bool keep_running;
 
+	//Generator of opaque identifiers
+	rina::ConsecutiveUnsignedIntegerGenerator opaque_generator_;
+
 private:
 	//Singleton
 	IPCManager_();

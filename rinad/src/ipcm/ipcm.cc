@@ -473,7 +473,8 @@ IPCManager_::assign_to_dif(const int ipcp_id,
 
 		// Invoke librina to assign the IPC process to the
 		// DIF specified by dif_info.
-		seqnum = ipcp->assignToDIF(dif_info);
+		seqnum = opaque_generator_.next();
+		ipcp->assignToDIF(dif_info, seqnum);
 
 		pending_ipcp_dif_assignments[seqnum] = ipcp;
 		ss << "Requested DIF assignment of IPC process " <<
@@ -539,8 +540,9 @@ IPCManager_::register_at_dif(const int ipcp_id,
 		}
 
 
-		seqnum = slave_ipcp->registerApplication(
-				ipcp->name, ipcp->id);
+		seqnum = opaque_generator_.next();
+		slave_ipcp->registerApplication(
+				ipcp->name, ipcp->id, seqnum);
 
 		pending_ipcp_registrations[seqnum] =
 			make_pair(ipcp, slave_ipcp);
@@ -624,9 +626,10 @@ IPCManager_::enroll_to_dif(const int ipcp_id,
 			throw Exception();
 		}
 
-		seqnum = ipcp->enroll(neighbor.difName,
+		seqnum = opaque_generator_.next();
+		ipcp->enroll(neighbor.difName,
 				neighbor.supportingDifName,
-				neighbor.apName);
+				neighbor.apName, seqnum);
 		pending_ipcp_enrollments[seqnum] = ipcp;
 		ss << "Requested enrollment of IPC process " <<
 			ipcp->name.toString() << " to DIF " <<
@@ -789,7 +792,8 @@ IPCManager_::update_dif_configuration(int ipcp_id,
 		 * (which possibly contains more IPC process, both on the same
 		 * processing systems and on different processing systems) ?
 		 */
-		seqnum = ipcp->updateDIFConfiguration(dif_config);
+		seqnum = opaque_generator_.next();
+		ipcp->updateDIFConfiguration(dif_config, seqnum);
 		pending_dif_config_updates[seqnum] = ipcp;
 
 		ss << "Requested configuration update for IPC process " <<
@@ -834,8 +838,8 @@ IPCManager_::query_rib(const int ipcp_id)
 			throw Exception();
 		}
 
-
-		unsigned int seqnum = ipcp->queryRIB("", "", 0, 0, "");
+		unsigned int seqnum = opaque_generator_.next();
+		ipcp->queryRIB("", "", 0, 0, "", seqnum);
 
 		pending_ipcp_query_rib_responses[seqnum] = ipcp;
 		ss << "Requested query RIB of IPC process " <<
@@ -886,22 +890,23 @@ IPCManager_::set_policy_set_param(const int ipcp_id,
 	//TODO: move this to a write_lock over the IPCP
 
         try {
-		ipcp = lookup_ipcp_by_id(ipcp_id);
+        	ipcp = lookup_ipcp_by_id(ipcp_id);
 
-		if(!ipcp){
-			ss << "Invalid IPCP id "<< ipcp_id;
-                	FLUSH_LOG(ERR, ss);
-			throw Exception();
-		}
+        	if(!ipcp){
+        		ss << "Invalid IPCP id "<< ipcp_id;
+        		FLUSH_LOG(ERR, ss);
+        		throw Exception();
+        	}
 
-                seqnum = ipcp->setPolicySetParam(component_path,
-                                                 param_name, param_value);
+        	seqnum = opaque_generator_.next();
+        	ipcp->setPolicySetParam(component_path,
+        			param_name, param_value, seqnum);
 
-                pending_set_policy_set_param_ops[seqnum] = ipcp;
-                ss << "Issued set-policy-set-param to IPC process " <<
-                        ipcp->name.toString() << endl;
-                FLUSH_LOG(INFO, ss);
-                /*arrived = concurrency.wait_for_event(
+        	pending_set_policy_set_param_ops[seqnum] = ipcp;
+        	ss << "Issued set-policy-set-param to IPC process " <<
+        			ipcp->name.toString() << endl;
+        	FLUSH_LOG(INFO, ss);
+        	/*arrived = concurrency.wait_for_event(
                                 rina::IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE,
                                 seqnum, ret);*/
         } catch (rina::SetPolicySetParamException) {
@@ -930,21 +935,22 @@ IPCManager_::select_policy_set(const int ipcp_id,
 	rina::IPCProcess *ipcp;
 
         try {
-		ipcp = lookup_ipcp_by_id(ipcp_id);
+        	ipcp = lookup_ipcp_by_id(ipcp_id);
 
-		if(!ipcp){
-			ss << "Invalid IPCP id "<< ipcp_id;
-                	FLUSH_LOG(ERR, ss);
-			throw Exception();
-		}
+        	if(!ipcp){
+        		ss << "Invalid IPCP id "<< ipcp_id;
+        		FLUSH_LOG(ERR, ss);
+        		throw Exception();
+        	}
 
-                seqnum = ipcp->selectPolicySet(component_path, ps_name);
+        	seqnum = opaque_generator_.next();
+        	ipcp->selectPolicySet(component_path, ps_name, seqnum);
 
-                pending_select_policy_set_ops[seqnum] = ipcp;
-                ss << "Issued select-policy-set to IPC process " <<
-                        ipcp->name.toString() << endl;
-                FLUSH_LOG(INFO, ss);
-                /*arrived = concurrency.wait_for_event(
+        	pending_select_policy_set_ops[seqnum] = ipcp;
+        	ss << "Issued select-policy-set to IPC process " <<
+        			ipcp->name.toString() << endl;
+        	FLUSH_LOG(INFO, ss);
+        	/*arrived = concurrency.wait_for_event(
                                 rina::IPC_PROCESS_SELECT_POLICY_SET_RESPONSE,
                                 seqnum, ret);*/
         } catch (rina::SelectPolicySetException) {
@@ -974,21 +980,22 @@ IPCManager_::plugin_load(const int ipcp_id,
 	//TODO: move this to a write_lock over the IPCP
 
         try {
-		ipcp = lookup_ipcp_by_id(ipcp_id);
+        	ipcp = lookup_ipcp_by_id(ipcp_id);
 
-		if(!ipcp){
-			ss << "Invalid IPCP id "<< ipcp_id;
-                	FLUSH_LOG(ERR, ss);
-			throw Exception();
-		}
+        	if(!ipcp){
+        		ss << "Invalid IPCP id "<< ipcp_id;
+        		FLUSH_LOG(ERR, ss);
+        		throw Exception();
+        	}
 
-                seqnum = ipcp->pluginLoad(plugin_name, load);
+        	seqnum = opaque_generator_.next();
+        	ipcp->pluginLoad(plugin_name, load, seqnum);
 
-                pending_plugin_load_ops[seqnum] = ipcp;
-                ss << "Issued plugin-load to IPC process " <<
-                        ipcp->name.toString() << endl;
-                FLUSH_LOG(INFO, ss);
-                /*arrived = concurrency.wait_for_event(
+        	pending_plugin_load_ops[seqnum] = ipcp;
+        	ss << "Issued plugin-load to IPC process " <<
+        			ipcp->name.toString() << endl;
+        	FLUSH_LOG(INFO, ss);
+        	/*arrived = concurrency.wait_for_event(
                                 rina::IPC_PROCESS_PLUGIN_LOAD_RESPONSE,
                                 seqnum, ret);*/
         } catch (rina::PluginLoadException) {

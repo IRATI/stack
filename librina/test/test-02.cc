@@ -89,27 +89,27 @@ int main() {
 
 	/* TEST ASSIGN TO DIF */
 	DIFInformation * difInformation = new DIFInformation();
-	ipcProcess1->assignToDIF(*difInformation);
+	ipcProcess1->assignToDIF(*difInformation, 35);
 	ipcProcess1->assignToDIFResult(true);
 
 	/* TEST REGISTER APPLICATION */
-	unsigned int handle = ipcProcess1->registerApplication(*sourceName, 1);
-	ipcProcess1->registerApplicationResult(handle, true);
+	ipcProcess1->registerApplication(*sourceName, 1, 45);
+	ipcProcess1->registerApplicationResult(45, true);
 
 	/* TEST UNREGISTER APPLICATION */
-	handle = ipcProcess1->unregisterApplication(*sourceName);
-	ipcProcess1->unregisterApplicationResult(handle, true);
+	ipcProcess1->unregisterApplication(*sourceName, 34);
+	ipcProcess1->unregisterApplicationResult(34, true);
 
 	/* TEST ALLOCATE FLOW */
 	FlowSpecification *flowSpec = new FlowSpecification();
 	FlowRequestEvent * flowRequest = new FlowRequestEvent(*flowSpec,
 			true, *sourceName, *difName, 1234, 4545);
 	flowRequest->portId = 430;
-	ipcProcess1->allocateFlow(*flowRequest);
+	ipcProcess1->allocateFlow(*flowRequest, 23);
 
 	/* TEST QUERY RIB */
 	ipcProcess1->queryRIB("list of flows",
-			"/dif/management/flows/", 0, 0, "");
+			"/dif/management/flows/", 0, 0, "", 526);
 
 	/* TEST APPLICATION REGISTERED */
 	ApplicationRegistrationInformation appRegInfo =

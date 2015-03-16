@@ -114,8 +114,9 @@ IPCManager_::unregister_app_from_ipcp(
 
                 // Forward the unregistration request to the IPC process
                 // that the application is registered to
-                seqnum = slave_ipcp->unregisterApplication(req_event.
-                                                           applicationName);
+				seqnum = opaque_generator_.next();
+                slave_ipcp->unregisterApplication(req_event.applicationName,
+                                                  seqnum);
                 pending_app_unregistrations[seqnum] =
                                 make_pair(slave_ipcp, req_event);
 
@@ -214,8 +215,10 @@ void IPCManager_::application_registration_request_event_handler(rina::IPCEvent 
         }
 
         try {
-                seqnum = slave_ipcp->registerApplication(app_name,
-                                                info.ipcProcessId);
+        		seqnum = opaque_generator_.next();
+                slave_ipcp->registerApplication(app_name,
+                                                info.ipcProcessId,
+                                                seqnum);
                 pending_app_registrations[seqnum] =
                                         make_pair(slave_ipcp, *event);
 

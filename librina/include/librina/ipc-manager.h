@@ -403,11 +403,11 @@ public:
 	 * credentials, etc).
 	 *
 	 * @param difInformation The information of the DIF (name, type configuration)
+	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws AssignToDIFException if an error happens during the process
-	 * @returns the handle to the response message
 	 */
-	unsigned int assignToDIF(
-			const DIFInformation& difInformation);
+	void assignToDIF(
+			const DIFInformation& difInformation, unsigned int opaque);
 
 	/**
 	 * Update the internal data structures based on the result of the assignToDIF
@@ -423,11 +423,12 @@ public:
 	 * DIF membership, it just changes the configuration of the current DIF.
 	 *
 	 * @param difConfiguration The configuration of the DIF
+	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws UpdateDIFConfigurationException if an error happens during the process
-	 * @returns the handle to the response message
 	 */
-	unsigned int updateDIFConfiguration(
-	                const DIFConfiguration& difConfiguration);
+	void updateDIFConfiguration(
+	                const DIFConfiguration& difConfiguration,
+	                unsigned int opaque);
 
 	/**
 	 * Update the internal data structures based on the result of the updateConfig
@@ -483,12 +484,13 @@ public:
 	 * @param supportingDifName The supporting DIF used to contact the DIF to
 	 * join
 	 * @param neighborName The name of the neighbor we're enrolling to
-	 * @returns the handle to the response message
+	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws EnrollException if the enrollment is unsuccessful
 	 */
-	unsigned int enroll(const ApplicationProcessNamingInformation& difName,
+	void enroll(const ApplicationProcessNamingInformation& difName,
 			const ApplicationProcessNamingInformation& supportingDifName,
-			const ApplicationProcessNamingInformation& neighborName);
+			const ApplicationProcessNamingInformation& neighborName,
+			unsigned int opaque);
 
 	/**
 	 * Add new neighbors of the IPC Process
@@ -529,12 +531,12 @@ public:
 	 * @param applicationName The name of the application to be registered
 	 * @param regIpcProcessId The id of the registered IPC process (0 if it
 	 * is an application)
+	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws IpcmRegisterApplicationException if an error occurs
-	 * @returns the handle to the response message
 	 */
-	unsigned int registerApplication(
+	void registerApplication(
 			const ApplicationProcessNamingInformation& applicationName,
-			unsigned short regIpcProcessId);
+			unsigned short regIpcProcessId, unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to inform about the result of a registration
@@ -557,11 +559,12 @@ public:
 	 * an IPC Process.
 	 *
 	 * @param applicationName The name of the application to be unregistered
+	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws IpcmUnregisterApplicationException if an error occurs
-	 * @returns the handle to the response message
 	 */
-	unsigned int unregisterApplication(
-			const ApplicationProcessNamingInformation& applicationName);
+	void unregisterApplication(
+			const ApplicationProcessNamingInformation& applicationName,
+			unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to inform about the result of an unregistration
@@ -585,10 +588,10 @@ public:
 	 * flow
 	 * @param applicationPortId the port where the application that requested the
 	 * flow can be contacted
-	 * @returns the handle to the response message
+	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws AllocateFlowException if an error occurs
 	 */
-	unsigned int allocateFlow(const FlowRequestEvent& flowRequest);
+	void allocateFlow(const FlowRequestEvent& flowRequest, unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to inform about the result of an allocate
@@ -634,11 +637,11 @@ public:
 	/**
 	 * Tell the IPC Process to deallocate a flow
 	 * @param portId
+	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws IpcmDeallocateFlowException if there is an error during
 	 * the flow deallocation procedure
-	 * @returns the handle to the response message
 	 */
-	unsigned int deallocateFlow(int portId);
+	void deallocateFlow(int portId, unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to inform about the result of a deallocate
@@ -670,12 +673,13 @@ public:
 	 * base object - that are affected by the query
 	 * @param filter An expression evaluated for each object, to determine
 	 * wether the object should be returned by the query
-	 * @returns the handle to the response message
+	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws QueryRIBException
 	 */
-	unsigned int queryRIB(const std::string& objectClass,
+	void queryRIB(const std::string& objectClass,
 			const std::string& objectName, unsigned long objectInstance,
-			unsigned int scope, const std::string& filter);
+			unsigned int scope, const std::string& filter,
+			unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to change a parameter value in a subcomponent
@@ -686,13 +690,14 @@ public:
          *             in dotted notation
          * @param name The name of the parameter to be changed
          * @value value The value of the parameter to be changed
+         * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws SetPolicySetParamException if an error happens during
          *         the process
-	 * @returns the handle to the response message
 	 */
-	unsigned int setPolicySetParam(const std::string& path,
+	void setPolicySetParam(const std::string& path,
                                        const std::string& name,
-                                       const std::string& value);
+                                       const std::string& value,
+                                       unsigned int oapque);
 
 	/**
 	 * Invoked by the IPC Manager to select a policy-set for a subcomponent
@@ -701,12 +706,13 @@ public:
 	 * @param path The path of the addressed subcomponent (cannot be a
          *             policy-set) in dotted notation
          * @param name The name of the policy-set to select
+         * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws SelectPolicySetException if an error happens during
          *         the process
-	 * @returns the handle to the response message
 	 */
-	unsigned int selectPolicySet(const std::string& path,
-                                     const std::string& name);
+	void selectPolicySet(const std::string& path,
+                         const std::string& name,
+                         unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to load or unload a plugin for an
@@ -715,11 +721,12 @@ public:
 	 * @param name The name of the plugin to be loaded or unloaded
          * @param load True if the plugin is to be loaded, false if the
          *             plugin is to be unloaded
+         * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws PluginLoadException if an error happens during
          *         the process
-	 * @returns the handle to the response message
 	 */
-	unsigned int pluginLoad(const std::string& name, bool load);
+	void pluginLoad(const std::string& name, bool load,
+			unsigned int opaque);
 };
 
 /**
@@ -839,17 +846,17 @@ public:
 	 * @param flowSpec
 	 * @param difName
 	 * @param portId
+	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws AppFlowArrivedException if something goes wrong or the application
 	 * doesn't accept the flow
-	 * @returns the handle to be able to identify the applicaiton response when
-	 * it arrives
 	 */
-	unsigned int flowRequestArrived(
+	void flowRequestArrived(
 			const ApplicationProcessNamingInformation& localAppName,
 			const ApplicationProcessNamingInformation& remoteAppName,
 			const FlowSpecification& flowSpec,
 			const ApplicationProcessNamingInformation& difName,
-			int portId);
+			int portId,
+			unsigned int opaque);
 
 	/**
 	 * Inform the application about the result of a flow deallocation operation
