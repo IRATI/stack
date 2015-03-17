@@ -825,18 +825,10 @@ protected:
 	void ipc_process_create_connection_result_handler(rina::IPCEvent * event);
 	void ipc_process_destroy_connection_result_handler(rina::IPCEvent * event);
 
-#if 10
 	int ipcm_register_response_ipcp(
-		rina::IpcmRegisterApplicationResponseEvent *event,
-		std::map<unsigned int,
-			std::pair<IPCMIPCProcess *, IPCMIPCProcess *>
-		>::iterator mit);
+		rina::IpcmRegisterApplicationResponseEvent *event);
 	int ipcm_unregister_response_ipcp(
-				rina::IpcmUnregisterApplicationResponseEvent *event,
-				std::map<unsigned int,
-				    std::pair<IPCMIPCProcess *, IPCMIPCProcess *>
-				>::iterator mit);
-#endif
+				rina::IpcmUnregisterApplicationResponseEvent *event);
 
 	//DIF assignment mgmt
 	void assign_to_dif_request_event_handler(rina::IPCEvent * event);

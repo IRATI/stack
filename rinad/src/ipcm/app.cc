@@ -328,17 +328,8 @@ void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponse
 				ipcm_register_response_app(e, ipcp,
 								*t1->req);
 			}else{
-				t2 = get_transaction_state<IPCPregTransState>(trans->tid);
-				if(!t2){
-					//Corrupted state
-					ss << ": Warning: Could not complete application registration: "<<e->sequenceNumber<<
-					". Corrupted state!" << endl;
-					FLUSH_LOG(WARN, ss);
-					assert(0);
-					throw Exception();
-				}
-				//FIXME
-                		//ipcm_register_response_ipcp(e, it);
+				//IPCP registration
+                		ipcm_register_response_ipcp(e);
 
 			}
 			//Mark as completed
@@ -501,7 +492,6 @@ void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResp
 
 	//First check if this de-reg was a pending
 	APPUnregTransState* t1;
-	IPCPregTransState* t2;
 	IPCPTransState* trans = get_transaction_state<IPCPTransState>(e->sequenceNumber);
 	assert(trans->tid == e->sequenceNumber);
 
@@ -524,17 +514,7 @@ void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResp
 				//Application registration
 				ipcm_unregister_response_app(e, ipcp, *t1->req);
 			}else{
-				t2 = get_transaction_state<IPCPregTransState>(trans->tid);
-				if(!t2){
-					//Corrupted state
-					ss << ": Warning: Could not complete application unregistration: "<<e->sequenceNumber<<
-					". Corrupted state!" << endl;
-					FLUSH_LOG(WARN, ss);
-					assert(0);
-					throw Exception();
-				}
-				//FIXME
-                		//ipcm_unregister_response_ipcp(event, jt);
+                		ipcm_unregister_response_ipcp(e);
 
 			}
 			//Mark as completed

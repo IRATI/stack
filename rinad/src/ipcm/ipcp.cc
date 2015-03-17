@@ -81,21 +81,33 @@ void IPCManager_::ipc_process_daemon_initialized_event_handler(
 }
 
 int IPCManager_::ipcm_register_response_ipcp(
-        rina::IpcmRegisterApplicationResponseEvent *event,
-        map<unsigned int,
-            std::pair<IPCMIPCProcess *, IPCMIPCProcess *>
-           >::iterator mit)
+        rina::IpcmRegisterApplicationResponseEvent *e)
 {
-        rinad::IPCMIPCProcess *ipcp = mit->second.first;
-        rinad::IPCMIPCProcess *slave_ipcp = mit->second.second;
-        const rina::ApplicationProcessNamingInformation&
-                slave_dif_name = slave_ipcp->dif_name_;
         ostringstream ss;
         bool success;
         int ret = -1;
 
-        success = ipcm_register_response_common(event, ipcp->ipcp_proxy_->name,
+	IPCPregTransState* trans = get_transaction_state<IPCPregTransState>(e->sequenceNumber);
+
+	if(!trans){
+		assert(0);
+		return -1;
+	}
+
+	rinad::IPCMIPCProcess *ipcp = lookup_ipcp_by_id(trans->ipcp_id);
+        rinad::IPCMIPCProcess *slave_ipcp = lookup_ipcp_by_id(trans->slave_ipcp_id);
+        const rina::ApplicationProcessNamingInformation&
+                slave_dif_name = slave_ipcp->dif_name_;
+
+        success = ipcm_register_response_common(e, ipcp->ipcp_proxy_->name,
                                         slave_ipcp, slave_dif_name);
+
+	if(!ipcp || !slave_ipcp){
+		assert(0);
+		return -1;
+	}
+
+
         if (success) {
                 // Notify the registered IPC process.
                 try {
@@ -124,27 +136,31 @@ int IPCManager_::ipcm_register_response_ipcp(
                 FLUSH_LOG(ERR, ss);
         }
 
-        //pending_ipcp_registrations.erase(mit);
-
         return ret;
 }
 
 int IPCManager_::ipcm_unregister_response_ipcp(
-                        rina::IpcmUnregisterApplicationResponseEvent *event,
-                        map<unsigned int,
-                            pair<IPCMIPCProcess *, IPCMIPCProcess *>
-                           >::iterator mit)
+                        rina::IpcmUnregisterApplicationResponseEvent *e)
 {
-        IPCMIPCProcess *ipcp = mit->second.first;
-        IPCMIPCProcess *slave_ipcp = mit->second.second;
-        rina::ApplicationProcessNamingInformation slave_dif_name = slave_ipcp->
-                                                dif_name_;
-        ostringstream ss;
+	ostringstream ss;
         bool success;
         int ret = -1;
 
-        // Inform the supporting IPC process
-        success = ipcm_unregister_response_common(event, slave_ipcp,
+
+	IPCPregTransState* trans = get_transaction_state<IPCPregTransState>(e->sequenceNumber);
+
+	if(!trans){
+		assert(0);
+		return -1;
+	}
+
+	rinad::IPCMIPCProcess *ipcp = lookup_ipcp_by_id(trans->ipcp_id);
+        rinad::IPCMIPCProcess *slave_ipcp = lookup_ipcp_by_id(trans->slave_ipcp_id);
+        const rina::ApplicationProcessNamingInformation&
+                slave_dif_name = slave_ipcp->dif_name_;
+
+	// Inform the supporting IPC process
+        success = ipcm_unregister_response_common(e, slave_ipcp,
                                                   ipcp->ipcp_proxy_->name);
 
         try {
