@@ -90,10 +90,11 @@ public:
 	};
 
 	//
-	// Wrap condition signal to properly set complete flag
+	// This method and signals any existing  set complete flag
 	//
-	void signal(){
+	void completed(int _ret){
 		complete = true;
+		ret = _ret;
 		wait_cond.signal();
 	}
 

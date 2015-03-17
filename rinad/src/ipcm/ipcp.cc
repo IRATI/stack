@@ -52,7 +52,7 @@ void IPCManager_::ipc_process_daemon_initialized_event_handler(
 		delete trans;
 		//Notify
 		trans = get_syscall_transaction_state(e->ipcProcessId);
-		trans->signal();
+		trans->completed(0);
 	}else{
 		//Do nothing (we are the first ones)
 	};
