@@ -34,17 +34,17 @@ class RIBIntObject
 {
   friend class RIB;
  private:
-  RIBIntObject(RIBObjectInterface *object);
+  RIBIntObject(BaseRIBObject *object);
   ~RIBIntObject();
 
   void add_child(RIBIntObject *child);
   void remove_child(const std::string& name);
-  RIBObjectInterface* object_;
+  BaseRIBObject* object_;
   RIBIntObject* parent_;
   std::list<RIBIntObject*> children_;
 };
 
-RIBIntObject::RIBIntObject(RIBObjectInterface *object)
+RIBIntObject::RIBIntObject(BaseRIBObject *object)
 {
   object_ = object;
 }
@@ -93,14 +93,14 @@ class RIB : public rina::Lockable
   /// the RIBObject that corresponds to it
   /// @param objectName
   /// @return
-  RIBObjectInterface* getRIBObject(const std::string& clas, const std::string& name,
+  BaseRIBObject* getRIBObject(const std::string& clas, const std::string& name,
                           bool check);
-  RIBObjectInterface* getRIBObject(const std::string& clas, long instance, bool check);
-  RIBObjectInterface* removeRIBObject(const std::string& name);
-  RIBObjectInterface* removeRIBObject(long instance);
+  BaseRIBObject* getRIBObject(const std::string& clas, long instance, bool check);
+  BaseRIBObject* removeRIBObject(const std::string& name);
+  BaseRIBObject* removeRIBObject(long instance);
   std::list<RIBObjectData*> getRIBObjectsData();
   char get_separator() const;
-  void addRIBObject(RIBObjectInterface* ribObject);
+  void addRIBObject(BaseRIBObject* ribObject);
   std::string get_parent_name(const std::string child_name) const;
  private:
   std::map<std::string, RIBIntObject*> rib_by_name_;
@@ -130,7 +130,7 @@ RIB::~RIB() throw ()
   unlock();
 }
 
-RIBObjectInterface* RIB::getRIBObject(const std::string& clas, const std::string& name,
+BaseRIBObject* RIB::getRIBObject(const std::string& clas, const std::string& name,
                              bool check)
 {
   std::string norm_name = name;
@@ -158,7 +158,7 @@ RIBObjectInterface* RIB::getRIBObject(const std::string& clas, const std::string
   return rib_object->object_;
 }
 
-RIBObjectInterface* RIB::getRIBObject(const std::string& clas, long instance, bool check)
+BaseRIBObject* RIB::getRIBObject(const std::string& clas, long instance, bool check)
 {
   RIBIntObject* rib_object;
   std::map<long, RIBIntObject*>::iterator it;
@@ -183,7 +183,7 @@ RIBObjectInterface* RIB::getRIBObject(const std::string& clas, long instance, bo
   return rib_object->object_;
 }
 
-void RIB::addRIBObject(RIBObjectInterface* rib_object)
+void RIB::addRIBObject(BaseRIBObject* rib_object)
 {
   RIBIntObject *int_object = new RIBIntObject(rib_object);
   RIBIntObject *parent = 0;
@@ -233,7 +233,7 @@ void RIB::addRIBObject(RIBObjectInterface* rib_object)
   unlock();
 }
 
-RIBObjectInterface* RIB::removeRIBObject(const std::string& name)
+BaseRIBObject* RIB::removeRIBObject(const std::string& name)
 {
   std::map<std::string, RIBIntObject*>::iterator it;
   RIBIntObject* rib_object;
@@ -255,7 +255,7 @@ RIBObjectInterface* RIB::removeRIBObject(const std::string& name)
   return rib_object->object_;
 }
 
-RIBObjectInterface * RIB::removeRIBObject(long instance)
+BaseRIBObject * RIB::removeRIBObject(long instance)
 {
   std::map<long, RIBIntObject*>::iterator it;
   RIBIntObject* rib_object;
@@ -360,11 +360,11 @@ class RIBDaemon : public RIBDInterface
   void remote_stop_request(const cdap_rib::con_handle_t &con,
                            const cdap_rib::obj_info_t &obj,
                            const cdap_rib::filt_info_t &filt, int message_id);
-  void addRIBObject(RIBObjectInterface *ribObject);
-  void removeRIBObject(RIBObjectInterface *ribObject);
+  void addRIBObject(BaseRIBObject *ribObject);
+  void removeRIBObject(BaseRIBObject *ribObject);
   void removeRIBObject(const std::string& name);
-  RIBObjectInterface* getObject(const std::string& name, const std::string& clas) const;
-  RIBObjectInterface* getObject(unsigned long instance, const std::string& clas) const;
+  BaseRIBObject* getObject(const std::string& name, const std::string& clas) const;
+  BaseRIBObject* getObject(unsigned long instance, const std::string& clas) const;
 
  private:
   cacep::AppConHandlerInterface *app_con_callback_;
@@ -471,7 +471,7 @@ void RIBDaemon::remote_create_request(const cdap_rib::con_handle_t &con,
   // FIXME add res and flags
   cdap_rib::flags_t flags;
 
-  RIBObjectInterface* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
+  BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteCreateObject(obj.name_, obj.value_);
   cdap_manager_->remote_create_response(con, obj, flags, res, message_id);
 }
@@ -484,7 +484,7 @@ void RIBDaemon::remote_delete_request(const cdap_rib::con_handle_t &con,
   // FIXME add res and flags
   cdap_rib::flags_t flags;
 
-  RIBObjectInterface* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
+  BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteDeleteObject(obj.name_, obj.value_);
   cdap_manager_->remote_delete_response(con, obj, flags, res, message_id);
 }
@@ -497,7 +497,7 @@ void RIBDaemon::remote_read_request(const cdap_rib::con_handle_t &con,
   // FIXME add res and flags
   cdap_rib::flags_t flags;
 
-  RIBObjectInterface* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
+  BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteReadObject(obj.name_, obj.value_);
   cdap_manager_->remote_read_response(con, obj, flags, res, message_id);
 }
@@ -511,7 +511,7 @@ void RIBDaemon::remote_cancel_read_request(const cdap_rib::con_handle_t &con,
   // FIXME add res and flags
   cdap_rib::flags_t flags;
 
-  RIBObjectInterface* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
+  BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteCancelReadObject(obj.name_,
                                                              obj.value_);
   cdap_manager_->remote_cancel_read_response(con, flags, res, message_id);
@@ -525,7 +525,7 @@ void RIBDaemon::remote_write_request(const cdap_rib::con_handle_t &con,
   // FIXME add res and flags
   cdap_rib::flags_t flags;
 
-  RIBObjectInterface* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
+  BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteWriteObject(obj.name_, obj.value_);
   cdap_manager_->remote_write_response(con, flags, res, message_id);
 }
@@ -538,7 +538,7 @@ void RIBDaemon::remote_start_request(const cdap_rib::con_handle_t &con,
   // FIXME add res and flags
   cdap_rib::flags_t flags;
 
-  RIBObjectInterface* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
+  BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteStartObject(obj.name_, obj.value_);
   cdap_manager_->remote_start_response(con, obj, flags, res, message_id);
 }
@@ -551,16 +551,16 @@ void RIBDaemon::remote_stop_request(const cdap_rib::con_handle_t &con,
   // FIXME add res and flags
   cdap_rib::flags_t flags;
 
-  RIBObjectInterface* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
+  BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteStopObject(obj.name_, obj.value_);
   cdap_manager_->remote_stop_response(con, flags, res, message_id);
 }
 
-void RIBDaemon::addRIBObject(RIBObjectInterface *ribObject)
+void RIBDaemon::addRIBObject(BaseRIBObject *ribObject)
 {
   rib_->addRIBObject(ribObject);
 }
-void RIBDaemon::removeRIBObject(RIBObjectInterface *ribObject)
+void RIBDaemon::removeRIBObject(BaseRIBObject *ribObject)
 {
   rib_->removeRIBObject(ribObject->get_name());
 }
@@ -569,12 +569,12 @@ void RIBDaemon::removeRIBObject(const std::string& name)
   rib_->removeRIBObject(name);
 }
 
-RIBObjectInterface* RIBDaemon::getObject(const std::string& name,
+BaseRIBObject* RIBDaemon::getObject(const std::string& name,
                                 const std::string& clas) const
 {
   return rib_->getRIBObject(clas, name, true);
 }
-RIBObjectInterface* RIBDaemon::getObject(unsigned long instance,
+BaseRIBObject* RIBDaemon::getObject(unsigned long instance,
                                 const std::string& clas) const
 {
   return rib_->getRIBObject(clas, instance, true);
@@ -634,23 +634,20 @@ const std::string& RIBObjectData::get_displayable_value() const
 }
 
 //Class RIBObject
-/*
-template<class T>
-RIBObjectData* RIBObject<T>::get_data()
+
+RIBObjectData* BaseRIBObject::get_data()
 {
   RIBObjectData *result = new RIBObjectData(class_, name_, instance_,
                                             get_displayable_value());
   return result;
 }
 
-template<class T>
-std::string RIBObject<T>::get_displayable_value()
+std::string BaseRIBObject::get_displayable_value()
 {
   return "-";
 }
 
-template<class T>
-bool RIBObject<T>::createObject(const std::string& clas, const std::string& name,
+bool BaseRIBObject::createObject(const std::string& clas, const std::string& name,
                              const void* value)
 {
   (void) clas;
@@ -660,46 +657,40 @@ bool RIBObject<T>::createObject(const std::string& clas, const std::string& name
   return false;
 }
 
-template<class T>
-bool RIBObject<T>::deleteObject(const void* value)
+bool BaseRIBObject::deleteObject(const void* value)
 {
   (void) value;
   operation_not_supported();
   return false;
 }
 
-template<class T>
-RIBObject<T> * RIBObject<T>::readObject()
+BaseRIBObject* BaseRIBObject::readObject()
 {
   return this;
 }
 
-template<class T>
-bool RIBObject<T>::writeObject(const void* value)
+bool BaseRIBObject::writeObject(const void* value)
 {
   (void) value;
   operation_not_supported();
   return false;
 }
 
-template<class T>
-bool RIBObject<T>::startObject(const void* object)
+bool BaseRIBObject::startObject(const void* object)
 {
   (void) object;
   operation_not_supported();
   return false;
 }
 
-template<class T>
-bool RIBObject<T>::stopObject(const void* object)
+bool BaseRIBObject::stopObject(const void* object)
 {
   (void) object;
   operation_not_supported();
   return false;
 }
 
-template<class T>
-cdap_rib::res_info_t* RIBObject<T>::remoteCreateObject(const std::string& name,
+cdap_rib::res_info_t* BaseRIBObject::remoteCreateObject(const std::string& name,
                                                     void* value)
 {
   (void) name;
@@ -708,8 +699,7 @@ cdap_rib::res_info_t* RIBObject<T>::remoteCreateObject(const std::string& name,
   return 0;
 }
 
-template<class T>
-cdap_rib::res_info_t* RIBObject<T>::remoteDeleteObject(const std::string& name,
+cdap_rib::res_info_t* BaseRIBObject::remoteDeleteObject(const std::string& name,
                                                     void* value)
 {
   (void) name;
@@ -718,8 +708,7 @@ cdap_rib::res_info_t* RIBObject<T>::remoteDeleteObject(const std::string& name,
   return 0;
 }
 
-template<class T>
-cdap_rib::res_info_t* RIBObject<T>::remoteReadObject(const std::string& name,
+cdap_rib::res_info_t* BaseRIBObject::remoteReadObject(const std::string& name,
                                                   void* value)
 {
   (void) name;
@@ -728,8 +717,7 @@ cdap_rib::res_info_t* RIBObject<T>::remoteReadObject(const std::string& name,
   return 0;
 }
 
-template<class T>
-cdap_rib::res_info_t* RIBObject<T>::remoteCancelReadObject(const std::string& name,
+cdap_rib::res_info_t* BaseRIBObject::remoteCancelReadObject(const std::string& name,
                                                         void* value)
 {
   (void) name;
@@ -738,8 +726,7 @@ cdap_rib::res_info_t* RIBObject<T>::remoteCancelReadObject(const std::string& na
   return 0;
 }
 
-template<class T>
-cdap_rib::res_info_t* RIBObject<T>::remoteWriteObject(const std::string& name,
+cdap_rib::res_info_t* BaseRIBObject::remoteWriteObject(const std::string& name,
                                                    void* value)
 {
   (void) name;
@@ -748,8 +735,7 @@ cdap_rib::res_info_t* RIBObject<T>::remoteWriteObject(const std::string& name,
   return 0;
 }
 
-template<class T>
-cdap_rib::res_info_t* RIBObject<T>::remoteStartObject(const std::string& name,
+cdap_rib::res_info_t* BaseRIBObject::remoteStartObject(const std::string& name,
                                                    void* value)
 {
   (void) name;
@@ -758,8 +744,7 @@ cdap_rib::res_info_t* RIBObject<T>::remoteStartObject(const std::string& name,
   return 0;
 }
 
-template<class T>
-cdap_rib::res_info_t* RIBObject<T>::remoteStopObject(const std::string& name,
+cdap_rib::res_info_t* BaseRIBObject::remoteStopObject(const std::string& name,
                                                   void* value)
 {
   (void) name;
@@ -768,30 +753,26 @@ cdap_rib::res_info_t* RIBObject<T>::remoteStopObject(const std::string& name,
   return 0;
 }
 
-template<class T>
-const std::string& RIBObject<T>::get_class() const
+const std::string& BaseRIBObject::get_class() const
 {
   return class_;
 }
 
-template<class T>
-const std::string& RIBObject<T>::get_name() const
+const std::string& BaseRIBObject::get_name() const
 {
   return name_;
 }
 
-template<class T>
-long RIBObject<T>::get_instance() const
+long BaseRIBObject::get_instance() const
 {
   return instance_;
 }
 
-template<class T>
-void RIBObject<T>::operation_not_supported()
+void BaseRIBObject::operation_not_supported()
 {
   LOG_ERR("Operation not supported");
 }
-*/
+
 // CLASS RIBSchemaObject
 RIBSchemaObject::RIBSchemaObject(const std::string& class_name,
                                  const bool mandatory, const unsigned max_objs)
@@ -850,7 +831,7 @@ rib_schema_res RIBSchema::ribSchemaDefContRelation(
   }
 }
 
-bool RIBSchema::validateAddObject(const RIBObjectInterface* obj)
+bool RIBSchema::validateAddObject(const BaseRIBObject* obj)
 {
   (void) obj;
   /*

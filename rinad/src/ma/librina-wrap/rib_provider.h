@@ -212,48 +212,54 @@ class RIBObjectData
 class RIBDNorthInterface;
 /// Base RIB Object. API for the create/delete/read/write/start/stop RIB
 /// functionality for certain objects (identified by objectNames)
-class RIBObjectInterface
+class BaseRIBObject
 {
  public:
-  virtual ~RIBObjectInterface(){};
-  virtual std::string get_displayable_value() = 0;
+  virtual ~BaseRIBObject(){};
+  virtual std::string get_displayable_value();
   // FIXME fix object data displayable
-  virtual RIBObjectData* get_data() = 0;
+  virtual RIBObjectData* get_data();
 
   /// Local invocations
   virtual bool createObject(const std::string& clas, const std::string& name,
-                            const void* value) = 0;
-  virtual bool deleteObject(const void* value) = 0;
-  virtual RIBObjectInterface* readObject();
-  virtual bool writeObject(const void* value) = 0;
-  virtual bool startObject(const void* object) = 0;
-  virtual bool stopObject(const void* object) = 0;
+                            const void* value);
+  virtual bool deleteObject(const void* value);
+  virtual BaseRIBObject* readObject();
+  virtual bool writeObject(const void* value);
+  virtual bool startObject(const void* object);
+  virtual bool stopObject(const void* object);
 
   /// Remote invocations, resulting from CDAP messages
   virtual cdap_rib::res_info_t* remoteCreateObject(const std::string& name,
-                                                   void* value) = 0;
+                                                   void* value);
   virtual cdap_rib::res_info_t* remoteDeleteObject(const std::string& name,
-                                                   void* value) = 0;
+                                                   void* value);
   virtual cdap_rib::res_info_t* remoteReadObject(const std::string& name,
-                                                 void* value) = 0;
+                                                 void* value);
   virtual cdap_rib::res_info_t* remoteCancelReadObject(const std::string& name,
-                                                       void * value) = 0;
+                                                       void * value) ;
   virtual cdap_rib::res_info_t* remoteWriteObject(const std::string& name,
-                                                  void* value) = 0;
+                                                  void* value);
   virtual cdap_rib::res_info_t* remoteStartObject(const std::string& name,
-                                                  void* value) = 0;
+                                                  void* value);
   virtual cdap_rib::res_info_t* remoteStopObject(const std::string& name,
-                                                 void* value) = 0;
-  virtual const std::string& get_class() const = 0;
-  virtual const std::string& get_name() const = 0;
-  virtual long get_instance() const = 0;
+                                                 void* value);
+  virtual const std::string& get_class() const;
+  virtual const std::string& get_name() const;
+  virtual long get_instance() const;
+ protected:
+  std::string class_;
+  std::string name_;
+  unsigned long instance_;
+ private:
+  void operation_not_supported();
 };
 
 
 /// Base RIB Object. API for the create/delete/read/write/start/stop RIB
 /// functionality for certain objects (identified by objectNames)
 template<class T>
-class RIBObject : public RIBObjectInterface
+class RIBObject : public BaseRIBObject
 {
  public:
   RIBObject(const std::string& clas, long instance, std::string name,
@@ -278,130 +284,16 @@ class RIBObject : public RIBObjectInterface
   }
   virtual ~RIBObject()
   {}
-
-  virtual std::string get_displayable_value()
+  const T* get_value() const
   {
-    return "-";
+    return value_;
   }
-  // FIXME fix object data displayable
-  RIBObjectData* get_data()
-  {
-    RIBObjectData *result = new RIBObjectData(class_, name_, instance_,
-                                              get_displayable_value());
-    return result;
-  }
-
-  /// Local invocations
-  virtual bool createObject(const std::string& clas, const std::string& name,
-                            const void* value)
-  {
-    (void) clas;
-    (void) name;
-    (void) value;
-    return false;
-  }
-  virtual bool deleteObject(const void* value)
-  {
-    (void) value;
-    return false;
-  }
-  virtual RIBObject<T> * readObject()
-    {
-      return this;
-    }
-
-  virtual bool writeObject(const void* value)
-  {
-    (void) value;
-    return false;
-  }
-  virtual bool startObject(const void* object)
-  {
-    (void) object;
-    return false;
-  }
-  virtual bool stopObject(const void* object)
-  {
-    (void) object;
-    return false;
-  }
-
-  /// Remote invocations, resulting from CDAP messages
-  virtual cdap_rib::res_info_t* remoteCreateObject(const std::string& name,
-                                                   void* value)
-  {
-    (void) name;
-    (void) value;
-    return 0;
-  }
-  virtual cdap_rib::res_info_t* remoteDeleteObject(const std::string& name,
-                                                   void* value)
-  {
-    (void) name;
-    (void) value;
-    return 0;
-  }
-  virtual cdap_rib::res_info_t* remoteReadObject(const std::string& name,
-                                                 void* value)
-  {
-    (void) name;
-    (void) value;
-    return 0;
-  }
-  virtual cdap_rib::res_info_t* remoteCancelReadObject(const std::string& name,
-                                                       void * value)
-  {
-    (void) name;
-    (void) value;
-    return 0;
-  }
-
-  virtual cdap_rib::res_info_t* remoteWriteObject(const std::string& name,
-                                                  void* value)
-  {
-    (void) name;
-    (void) value;
-    return 0;
-  }
-
-  virtual cdap_rib::res_info_t* remoteStartObject(const std::string& name,
-                                                  void* value)
-  {
-    (void) name;
-    (void) value;
-    return 0;
-  }
-
-  virtual cdap_rib::res_info_t* remoteStopObject(const std::string& name,
-                                                 void* value)
-  {
-    (void) name;
-    (void) value;
-    return 0;
-  }
-
-  const std::string& get_class() const
-  {
-    return class_;
-  }
-  const std::string& get_name() const
-  {
-    return name_;
-  }
-  long get_instance() const
-  {
-    return instance_;
-  }
-  virtual const T* get_value() const = 0;
  protected:
   T* value_;
  private:
-
-  std::string class_;
-  std::string name_;
-  unsigned long instance_;
   EncoderInterface<T> *encoder_;
 };
+
 // RIB daemon Interface to be used by RIBObjects
 class RIBDNorthInterface
 {
@@ -410,12 +302,12 @@ class RIBDNorthInterface
   {
   }
   ;
-  virtual void addRIBObject(RIBObjectInterface *ribObject) = 0;
-  virtual void removeRIBObject(RIBObjectInterface *ribObject) = 0;
+  virtual void addRIBObject(BaseRIBObject *ribObject) = 0;
+  virtual void removeRIBObject(BaseRIBObject *ribObject) = 0;
   virtual void removeRIBObject(const std::string& name) = 0;
-  virtual RIBObjectInterface* getObject(const std::string& name,
+  virtual BaseRIBObject* getObject(const std::string& name,
                                const std::string& clas) const = 0;
-  virtual RIBObjectInterface* getObject(unsigned long instance,
+  virtual BaseRIBObject* getObject(unsigned long instance,
                                const std::string& clas) const = 0;
 };
 
@@ -471,8 +363,8 @@ class RIBSchema
                                           const unsigned max_objs);
   char get_separator() const;
  private:
-  bool validateAddObject(const RIBObjectInterface* obj);
-  bool validateRemoveObject(const RIBObjectInterface* obj, const RIBObjectInterface* parent);
+  bool validateAddObject(const BaseRIBObject* obj);
+  bool validateRemoveObject(const BaseRIBObject* obj, const BaseRIBObject* parent);
   const cdap_rib::vers_info_t *version_;
   std::map<std::string, RIBSchemaObject*> rib_schema_;
   char separator_;

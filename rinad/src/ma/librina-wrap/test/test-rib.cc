@@ -68,10 +68,6 @@ class IntRIBObject : public rib::RIBObject<int>
   IntRIBObject(const std::string& clas, std::string name, IdFactory &instance_gen, int* value, IntEncoder *encoder) :
     RIBObject(clas, instance_gen.get_id(), name, value, encoder)
   {}
-  const int* get_value() const
-  {
-    return value_;
-  }
   cdap_rib::res_info_t* remoteCreateObject(const std::string& name, void* value)
   {
     (void) name;
