@@ -1382,7 +1382,10 @@ void IPCManager_::run(){
 						break;
 
 				case rina::ALLOCATE_FLOW_RESPONSE_EVENT:
-						allocate_flow_response_event_handler(event);
+						{
+        					DOWNCAST_DECL(event, rina::AllocateFlowResponseEvent, e);
+						allocate_flow_response_event_handler(e);
+						}
 						break;
 
 				case rina::FLOW_DEALLOCATION_REQUESTED_EVENT:
@@ -1502,11 +1505,17 @@ void IPCManager_::run(){
 						break;
 
 				case rina::IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT:
-						ipcm_deallocate_flow_response_event_handler(event);
+						{
+        					DOWNCAST_DECL(event, rina::IpcmDeallocateFlowResponseEvent, e);
+						ipcm_deallocate_flow_response_event_handler(e);
+						}
 						break;
 
 				case rina::IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
-						ipcm_allocate_flow_request_result_handler(event);
+						{
+        					DOWNCAST_DECL(event, rina::IpcmAllocateFlowRequestResultEvent, e);
+						ipcm_allocate_flow_request_result_handler(e);
+						}
 						break;
 
 				case rina::QUERY_RIB_RESPONSE_EVENT:

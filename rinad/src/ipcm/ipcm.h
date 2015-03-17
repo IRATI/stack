@@ -138,7 +138,6 @@ class IPCMConcurrency : public rina::ConditionVariable {
 	unsigned int event_sn;
 	int event_result;
 };
-#endif
 
 //
 // @brief Pending Flow allocation object
@@ -157,6 +156,7 @@ struct PendingFlowAllocation {
 				: slave_ipcp(p), req_event(e),
 					try_only_a_dif(once) { }
 };
+#endif
 
 //
 // @brief The IPCManager class is in charge of managing the IPC processes
@@ -398,12 +398,12 @@ protected:
 	//Flow mgmt
 	void flow_allocation_requested_event_handler(rina::IPCEvent *event);
 	void allocate_flow_request_result_event_handler(rina::IPCEvent *event);
-	void allocate_flow_response_event_handler(rina::IPCEvent *event);
+	void allocate_flow_response_event_handler( rina::AllocateFlowResponseEvent *event);
 	void flow_deallocation_requested_event_handler(rina::IPCEvent *event);
 	void deallocate_flow_response_event_handler(rina::IPCEvent *event);
 	void flow_deallocated_event_handler(rina::IPCEvent *event);
-	void ipcm_deallocate_flow_response_event_handler(rina::IPCEvent *event);
-	void ipcm_allocate_flow_request_result_handler(rina::IPCEvent *event);
+	void ipcm_deallocate_flow_response_event_handler(rina::IpcmDeallocateFlowResponseEvent* event);
+	void ipcm_allocate_flow_request_result_handler(rina::IpcmAllocateFlowRequestResultEvent* event);
 	void application_flow_allocation_failed_notify(
 						rina::FlowRequestEvent *event);
 	void flow_allocation_requested_local(rina::FlowRequestEvent *event);

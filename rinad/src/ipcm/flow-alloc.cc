@@ -129,9 +129,10 @@ void IPCManager_::application_flow_allocation_failed_notify(rina::FlowRequestEve
 void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
 {
         rina::ApplicationProcessNamingInformation dif_name;
-        rina::IPCProcess *ipcp = NULL;
+        rina::IPCProcess *ipcp;
         bool dif_specified;
         unsigned int seqnum;
+	FlowAllocTransState* trans;
         ostringstream ss;
 
         // Find the name of the DIF that will provide the flow
@@ -167,11 +168,21 @@ void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
 
         try {
                 // Ask the IPC process to allocate a flow
-        		seqnum = opaque_generator_.next();
+        	seqnum = opaque_generator_.next();
+		trans = new FlowAllocTransState(NULL, seqnum, ipcp->id, *event,
+								dif_specified);
+		if(!trans){
+			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
+			throw Exception();
+		}
+
+		//Store transaction
+		if(add_transaction_state(seqnum, trans) < 0){
+			ss << "Unable to add transaction; out of memory? ";
+			throw Exception();
+		}
+
                 ipcp->allocateFlow(*event, seqnum);
-                pending_flow_allocations[seqnum] =
-                                        PendingFlowAllocation(ipcp, *event,
-                                                              dif_specified);
 
                 ss << "IPC process " << ipcp->name.toString() <<
                         " requested to allocate flow between " <<
@@ -194,13 +205,14 @@ void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
 void
 IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 {
-        // Retrieve the local IPC process involved in the flow allocation
-        // request coming from a remote application
-        rina::IPCProcess *ipcp = rina::ipcProcessFactory->
-                                        getIPCProcess(event->ipcProcessId);
+        rina::IPCProcess *ipcp;
         ostringstream ss;
         unsigned int seqnum;
+	FlowAllocTransState* trans;
 
+	// Retrieve the local IPC process involved in the flow allocation
+        // request coming from a remote application
+	ipcp = lookup_ipcp_by_id(event->ipcProcessId);
         if (!ipcp) {
                 ss  << ": Error: Could not retrieve IPC process "
                         "with id " << event->ipcProcessId << ", to serve "
@@ -212,15 +224,26 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
         try {
                 // Inform the local application that a remote application
                 // wants to allocate a flow
-        		seqnum = opaque_generator_.next();
+       		seqnum = opaque_generator_.next();
+		trans = new FlowAllocTransState(NULL, seqnum, ipcp->id, *event,
+									true);
+		if(!trans){
+			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
+			throw Exception();
+		}
+
+		//Store transaction
+		if(add_transaction_state(seqnum, trans) < 0){
+			ss << "Unable to add transaction; out of memory? ";
+			throw Exception();
+		}
+
                 rina::applicationManager->flowRequestArrived(
                                         event->localApplicationName,
                                         event->remoteApplicationName,
                                         event->flowSpecification,
                                         event->DIFName, event->portId,
                                         seqnum);
-                pending_flow_allocations[seqnum] =
-                                PendingFlowAllocation(ipcp, *event, true);
 
                 ss << "Arrived request for flow allocation between " <<
                         event->localApplicationName.toString()
@@ -233,6 +256,7 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
                         " about a flow request coming from remote application "
                         << event->remoteApplicationName.toString() << endl;
                 FLUSH_LOG(ERR, ss);
+		//FIXME: remove the transaction
                 try {
                         // Inform the IPC process that it was not possible
                         // to allocate the flow
@@ -265,27 +289,34 @@ void IPCManager_::flow_allocation_requested_event_handler(rina::IPCEvent *e)
         }
 }
 
-void IPCManager_::ipcm_allocate_flow_request_result_handler(rina::IPCEvent *e)
+void IPCManager_::ipcm_allocate_flow_request_result_handler( rina::IpcmAllocateFlowRequestResultEvent *event)
 {
-        DOWNCAST_DECL(e, rina::IpcmAllocateFlowRequestResultEvent, event);
-        map<unsigned int, PendingFlowAllocation>::iterator mit;
         bool success = (event->result == 0);
         ostringstream ss;
+	rina::IPCProcess *slave_ipcp;
+	int ret = 0;
+	FlowAllocTransState* trans =
+		get_transaction_state<FlowAllocTransState>(event->sequenceNumber);
 
-        mit = pending_flow_allocations.find(event->sequenceNumber);
-        if (mit == pending_flow_allocations.end()) {
+        if (!trans){
                 ss  << ": Warning: Flow allocation request result "
                         "received but no corresponding request" << endl;
                 FLUSH_LOG(WARN, ss);
                 return;
         }
+	rina::FlowRequestEvent& req_event = trans->req_event;
 
-        rina::IPCProcess *slave_ipcp = mit->second.slave_ipcp;
-        rina::FlowRequestEvent& req_event = mit->second.req_event;
+	try {
+		slave_ipcp = lookup_ipcp_by_id(trans->slave_ipcp_id);
+		if(!slave_ipcp){
+			ss << "Could not complete Flow allocation request result. Invalid IPCP id "<< slave_ipcp->id;
+			FLUSH_LOG(ERR, ss);
+			throw rina::AllocateFlowException();
+		}
 
-        req_event.portId = -1;
-        try {
-                // Inform the IPC process about the result of the
+		req_event.portId = -1;
+
+	        // Inform the IPC process about the result of the
                 // flow allocation operation
                 slave_ipcp->allocateFlowResult(event->sequenceNumber,
                                                success, event->portId);
@@ -313,6 +344,7 @@ void IPCManager_::ipcm_allocate_flow_request_result_handler(rina::IPCEvent *e)
                         " and " << req_event.remoteApplicationName.toString()
                         << endl;
                 FLUSH_LOG(ERR, ss);
+		ret = -1;
         }
 
         // Inform the Application Manager about the flow allocation
@@ -329,9 +361,22 @@ void IPCManager_::ipcm_allocate_flow_request_result_handler(rina::IPCEvent *e)
                         "Application Manager about flow allocation result"
                         << endl;
                 FLUSH_LOG(ERR, ss);
+		ret = -1;
         }
 
-        pending_flow_allocations.erase(mit);
+	//Mark as completed
+	trans->completed(ret);
+
+	//If there was a calle, invoke the callback and remove it. Otherwise
+	//transaction is fully complete and originator will clean up the state
+	if(trans->callee){
+		//Invoke callback
+		//FIXME
+
+		//Remove the transaction
+		remove_transaction_state(trans->tid);
+		delete trans;
+	}
 }
 
 void IPCManager_::allocate_flow_request_result_event_handler(rina::IPCEvent *e)
@@ -339,25 +384,32 @@ void IPCManager_::allocate_flow_request_result_event_handler(rina::IPCEvent *e)
         (void) e; // Stop compiler barfs
 }
 
-void IPCManager_::allocate_flow_response_event_handler(rina::IPCEvent *e)
+void IPCManager_::allocate_flow_response_event_handler(rina::AllocateFlowResponseEvent *event)
 {
-        DOWNCAST_DECL(e, rina::AllocateFlowResponseEvent, event);
-        map<unsigned int, PendingFlowAllocation>::iterator mit;
         bool success = (event->result == 0);
+        rina::IPCProcess *slave_ipcp;
         ostringstream ss;
+	int ret = 0;
+	FlowAllocTransState* trans =
+		get_transaction_state<FlowAllocTransState>(event->sequenceNumber);
 
-        mit = pending_flow_allocations.find(event->sequenceNumber);
-        if (mit == pending_flow_allocations.end()) {
-                ss  << ": Warning: Flow allocation response "
-                        "received but no corresponding request" << endl;
+
+        if (!trans){
+                ss  << ": Warning: Flow allocation received received but no corresponding request" << endl;
                 FLUSH_LOG(WARN, ss);
                 return;
         }
 
-        rina::IPCProcess *slave_ipcp = mit->second.slave_ipcp;
-        rina::FlowRequestEvent& req_event = mit->second.req_event;
+	rina::FlowRequestEvent& req_event = trans->req_event;
 
         try {
+		slave_ipcp = lookup_ipcp_by_id(trans->slave_ipcp_id);
+		if(!slave_ipcp){
+			ss << "Could not complete Flow allocation request result. Invalid IPCP id "<< slave_ipcp->id;
+			FLUSH_LOG(ERR, ss);
+			throw rina::AllocateFlowException();
+		}
+
                 // Inform the IPC process about the response of the flow
                 // allocation procedure
                 slave_ipcp->allocateFlowResponse(req_event, event->result,
@@ -383,9 +435,22 @@ void IPCManager_::allocate_flow_response_event_handler(rina::IPCEvent *e)
                         " about failed flow allocation" << endl;
                 FLUSH_LOG(ERR, ss);
                 req_event.portId = -1;
+		ret = -1;
         }
 
-        pending_flow_allocations.erase(mit);
+	//Mark as completed
+	trans->completed(ret);
+
+	//If there was a calle, invoke the callback and remove it. Otherwise
+	//transaction is fully complete and originator will clean up the state
+	if(trans->callee){
+		//Invoke callback
+		//FIXME
+
+		//Remove the transaction
+		remove_transaction_state(trans->tid);
+		delete trans;
+	}
 }
 
 void IPCManager_::flow_deallocation_requested_event_handler(rina::IPCEvent *e)
@@ -426,28 +491,32 @@ void IPCManager_::flow_deallocation_requested_event_handler(rina::IPCEvent *e)
         }
 }
 
-void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IPCEvent *e)
+void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IpcmDeallocateFlowResponseEvent* event)
 {
-        DOWNCAST_DECL(e, rina::IpcmDeallocateFlowResponseEvent, event);
-        std::map<unsigned int,
-                 std::pair<rina::IPCProcess *, rina::FlowDeallocateRequestEvent>
-                >::iterator mit;
         bool success = (event->result == 0);
         int result = event->result;
         ostringstream ss;
+	int ret = 0;
+	rina::IPCProcess* ipcp;
+	FlowDeallocTransState* trans =
+		get_transaction_state<FlowDeallocTransState>(event->sequenceNumber);
 
-        mit = pending_flow_deallocations.find(event->sequenceNumber);
-        if (mit == pending_flow_deallocations.end()) {
-                ss  << ": Warning: Flow deallocation response "
-                        "received but no corresponding request" << endl;
+        if (!trans){
+                ss  << ": Warning: Flow allocation received received but no corresponding request" << endl;
                 FLUSH_LOG(WARN, ss);
                 return;
         }
 
-        rina::IPCProcess *ipcp = mit->second.first;
-        rina::FlowDeallocateRequestEvent& req_event = mit->second.second;
+	rina::FlowDeallocateRequestEvent& req_event = trans->req_event;
 
         try {
+		ipcp = lookup_ipcp_by_id(trans->slave_ipcp_id);
+		if(!ipcp){
+			ss << "Could not complete Flow allocation request result. Invalid IPCP id "<< ipcp->id;
+			FLUSH_LOG(ERR, ss);
+        		throw rina::IpcmDeallocateFlowException();
+		}
+
                 // Inform the IPC process about the deallocation result
                 ipcp->deallocateFlowResult(event->sequenceNumber, success);
 
@@ -459,7 +528,7 @@ void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IPCEvent *e)
                 FLUSH_LOG(INFO, ss);
         } catch (rina::IpcmDeallocateFlowException) {
                 ss  << ": Error while informing IPC process "
-                        << ipcp->name.toString() << " about deallocation "
+                        << " about deallocation "
                         "of flow with port-id " << req_event.portId << endl;
                 FLUSH_LOG(ERR, ss);
                 result = -1;
@@ -488,7 +557,20 @@ void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IPCEvent *e)
                 FLUSH_LOG(ERR, ss);
         }
 
-        pending_flow_deallocations.erase(mit);
+	//Mark as completed
+	trans->completed(result);
+
+
+	//If there was a calle, invoke the callback and remove it. Otherwise
+	//transaction is fully complete and originator will clean up the state
+	if(trans->callee){
+		//Invoke callback
+		//FIXME
+
+		//Remove the transaction
+		remove_transaction_state(trans->tid);
+		delete trans;
+	}
 }
 
 void IPCManager_::flow_deallocated_event_handler(rina::IPCEvent *e)
@@ -538,4 +620,4 @@ void IPCManager_::deallocate_flow_response_event_handler(rina::IPCEvent *event)
         (void) event; // Stop compiler barfs
 }
 
-}
+} //namespace rinad

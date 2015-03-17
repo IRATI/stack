@@ -58,6 +58,25 @@ public:
         bool try_only_a_dif;
 };
 
+/**
+* Flow deallocation transaction state
+*/
+class FlowDeallocTransState: public TransactionState{
+
+public:
+	FlowDeallocTransState(const Addon* callee, const int tid,
+				int _slave_ipcp_id,
+				rina::FlowDeallocateRequestEvent& _req_e,
+				bool once):
+					TransactionState(callee, tid),
+					slave_ipcp_id(_slave_ipcp_id),
+					req_event(_req_e)
+					{}
+	virtual ~FlowDeallocTransState(){};
+
+        int slave_ipcp_id;
+	rina::FlowDeallocateRequestEvent req_event;
+};
 }//rinad namespace
 
 #endif  /* __FLOW_ALLOC_H__ */
