@@ -48,30 +48,29 @@ class IdFactory
   unsigned int id_;
 };
 
-class EspecificEncoder : public rib::EncoderInterface {
+class IntEncoder : public rib::EncoderInterface<int> {
  public:
-  const rib::SerializedObject* encode(const void* object)
+  const rib::SerializedObject* encode(const int &object)
   {
     (void) object;
     return 0;
   }
-  void* decode(
-      const rib::ObjectValueInterface* serialized_object) const
+  int* decode(const rib::SerializedObject &serialized_object) const
   {
     (void) serialized_object;
     return 0;
   }
 };
 
-class NewObject : public rib::RIBObject
+class IntRIBObject : public rib::RIBObject<int>
 {
  public:
-  NewObject(const std::string& clas, std::string name, IdFactory &instance_gen, rib::EncoderInterface *encoder) :
-    rib::RIBObject(clas, instance_gen.get_id(), name, encoder)
+  IntRIBObject(const std::string& clas, std::string name, IdFactory &instance_gen, int* value, IntEncoder *encoder) :
+    RIBObject(clas, instance_gen.get_id(), name, value, encoder)
   {}
-  void* get_value() const
+  const int* get_value() const
   {
-    return 0;
+    return value_;
   }
   cdap_rib::res_info_t* remoteCreateObject(const std::string& name, void* value)
   {
@@ -299,29 +298,29 @@ class CheckRIB
  public:
   CheckRIB()
   {
-    EspecificEncoder *enc = new EspecificEncoder();
+    IntEncoder *enc = new IntEncoder();
     rib::RIBDFactory daemon_factory;
     cdap_rib::cdap_params_t *params = new cdap_rib::cdap_params_t;
     params->is_IPCP_ = false;
     params->timeout_ = 2000;
     cdap_rib::version_info *version = new cdap_rib::version_info;
     rib_daemon_ = daemon_factory.create(new ConHandler(), new RespHandler(), "GPB", (void*) params, version, ',');
-    object1_ = new NewObject(OBJECT1_RIB_OBJECT_CLASS,
-                               OBJECT1_RIB_OBJECT_NAME, idFactory_, enc);
-    object2_ = new NewObject(OBJECT2_RIB_OBJECT_CLASS,
-                               OBJECT2_RIB_OBJECT_NAME, idFactory_, enc);
-    object3_ = new NewObject(OBJECT3_RIB_OBJECT_CLASS,
-                               OBJECT3_RIB_OBJECT_NAME, idFactory_, enc);
-    object4_ = new NewObject(OBJECT4_RIB_OBJECT_CLASS,
-                               OBJECT4_RIB_OBJECT_NAME, idFactory_, enc);
-    object5_ = new NewObject(OBJECT5_RIB_OBJECT_CLASS,
-                               OBJECT5_RIB_OBJECT_NAME, idFactory_, enc);
-    object6_ = new NewObject(OBJECT6_RIB_OBJECT_CLASS,
-                               OBJECT6_RIB_OBJECT_NAME, idFactory_, enc);
-    object7_ = new NewObject(OBJECT7_RIB_OBJECT_CLASS,
-                               OBJECT7_RIB_OBJECT_NAME, idFactory_, enc);
-    object8_ = new NewObject(OBJECT8_RIB_OBJECT_CLASS,
-                               OBJECT8_RIB_OBJECT_NAME, idFactory_, enc);
+    object1_ = new IntRIBObject(OBJECT1_RIB_OBJECT_CLASS,
+                               OBJECT1_RIB_OBJECT_NAME, idFactory_, new int(1), enc);
+    object2_ = new IntRIBObject(OBJECT2_RIB_OBJECT_CLASS,
+                               OBJECT2_RIB_OBJECT_NAME, idFactory_, new int(2), enc);
+    object3_ = new IntRIBObject(OBJECT3_RIB_OBJECT_CLASS,
+                               OBJECT3_RIB_OBJECT_NAME, idFactory_, new int(3), enc);
+    object4_ = new IntRIBObject(OBJECT4_RIB_OBJECT_CLASS,
+                               OBJECT4_RIB_OBJECT_NAME, idFactory_, new int(4), enc);
+    object5_ = new IntRIBObject(OBJECT5_RIB_OBJECT_CLASS,
+                               OBJECT5_RIB_OBJECT_NAME, idFactory_, new int(5), enc);
+    object6_ = new IntRIBObject(OBJECT6_RIB_OBJECT_CLASS,
+                               OBJECT6_RIB_OBJECT_NAME, idFactory_, new int(6), enc);
+    object7_ = new IntRIBObject(OBJECT7_RIB_OBJECT_CLASS,
+                               OBJECT7_RIB_OBJECT_NAME, idFactory_, new int(7), enc);
+    object8_ = new IntRIBObject(OBJECT8_RIB_OBJECT_CLASS,
+                               OBJECT8_RIB_OBJECT_NAME, idFactory_, new int(8), enc);
   };
   ~CheckRIB()
   {};
@@ -364,15 +363,15 @@ class CheckRIB
   bool RIBDaemon_readObject()
   {
     try {
-      NewObject *object_recovered = (NewObject*) rib_daemon_->getObject(
+      IntRIBObject *object_recovered = (IntRIBObject*) rib_daemon_->getObject(
           OBJECT2_RIB_OBJECT_NAME, OBJECT2_RIB_OBJECT_CLASS);
       if (object2_ != object_recovered)
         return false;
-      object_recovered = (NewObject*) rib_daemon_->getObject(
+      object_recovered = (IntRIBObject*) rib_daemon_->getObject(
           OBJECT5_RIB_OBJECT_NAME, OBJECT5_RIB_OBJECT_CLASS);
       if (object5_ != object_recovered)
         return false;
-      object_recovered = (NewObject*) rib_daemon_->getObject(
+      object_recovered = (IntRIBObject*) rib_daemon_->getObject(
           OBJECT3_RIB_OBJECT_NAME, OBJECT3_RIB_OBJECT_CLASS);
     } catch (Exception &e1) {
       std::cout << e1.what();
@@ -607,14 +606,14 @@ class CheckRIB
  private:
   IdFactory idFactory_;
   rib::RIBDInterface *rib_daemon_;
-  NewObject *object1_;
-  NewObject *object2_;
-  NewObject *object3_;
-  NewObject *object4_;
-  NewObject *object5_;
-  NewObject *object6_;
-  NewObject *object7_;
-  NewObject *object8_;
+  IntRIBObject *object1_;
+  IntRIBObject *object2_;
+  IntRIBObject *object3_;
+  IntRIBObject *object4_;
+  IntRIBObject *object5_;
+  IntRIBObject *object6_;
+  IntRIBObject *object7_;
+  IntRIBObject *object8_;
 };
 
 
