@@ -54,9 +54,9 @@ void IPCManager_::ipc_process_set_policy_set_param_response_handler(
 		return;
 	}
 
-	rina::IPCProcess* ipcp = lookup_ipcp_by_id(trans->ipcp_id);
+	IPCMIPCProcess* ipcp = lookup_ipcp_by_id(trans->ipcp_id);
 	if(!ipcp){
-		ss << "Could not complete policy set param. Invalid IPCP id "<< ipcp->id;
+		ss << "Could not complete policy set param. Invalid IPCP id "<< ipcp->ipcp_proxy_->id;
 		FLUSH_LOG(ERR, ss);
 		//XXX: destroy transaction
 		return;
@@ -64,7 +64,7 @@ void IPCManager_::ipc_process_set_policy_set_param_response_handler(
 
 
 	ss << "set-policy-set-param-op completed on IPC process "
-	<< ipcp->name.toString() <<
+	<< ipcp->ipcp_proxy_->name.toString() <<
 	" [success=" << success << "]" << endl;
 	FLUSH_LOG(INFO, ss);
 
@@ -99,9 +99,9 @@ void IPCManager_::ipc_process_plugin_load_response_handler(rina::PluginLoadRespo
 		return;
 	}
 
-	rina::IPCProcess* ipcp = lookup_ipcp_by_id(trans->ipcp_id);
+	IPCMIPCProcess* ipcp = lookup_ipcp_by_id(trans->ipcp_id);
 	if(!ipcp){
-		ss << "Could not complete policy set param. Invalid IPCP id "<< ipcp->id;
+		ss << "Could not complete policy set param. Invalid IPCP id "<< ipcp->ipcp_proxy_->id;
 		FLUSH_LOG(ERR, ss);
 		//XXX: destroy transaction
 		return;
@@ -109,7 +109,7 @@ void IPCManager_::ipc_process_plugin_load_response_handler(rina::PluginLoadRespo
 
 
 	ss << "plugin-load-op completed on IPC process "
-	       << ipcp->name.toString() <<
+	       << ipcp->ipcp_proxy_->name.toString() <<
 		" [success=" << success << "]" << endl;
 	FLUSH_LOG(INFO, ss);
 
@@ -144,16 +144,16 @@ void IPCManager_::ipc_process_select_policy_set_response_handler(
 		return;
 	}
 
-	rina::IPCProcess* ipcp = lookup_ipcp_by_id(trans->ipcp_id);
+	IPCMIPCProcess* ipcp = lookup_ipcp_by_id(trans->ipcp_id);
 	if(!ipcp){
-		ss << "Could not complete policy set param. Invalid IPCP id "<< ipcp->id;
+		ss << "Could not complete policy set param. Invalid IPCP id "<< ipcp->ipcp_proxy_->id;
 		FLUSH_LOG(ERR, ss);
 		//XXX: destroy transaction
 		return;
 	}
 
 	ss << "select-policy-set-op completed on IPC process "
-	       << ipcp->name.toString() <<
+	       << ipcp->ipcp_proxy_->name.toString() <<
 		" [success=" << success << "]" << endl;
 	FLUSH_LOG(INFO, ss);
 

@@ -37,7 +37,7 @@ namespace rinad {
 
 // Returns an IPC process assigned to the DIF specified by @dif_name,
 // if any.
-rina::IPCProcess *
+IPCMIPCProcess *
 IPCManager_::select_ipcp_by_dif(
 		const rina::ApplicationProcessNamingInformation& dif_name,
 		bool read_lock)
@@ -46,14 +46,13 @@ IPCManager_::select_ipcp_by_dif(
 	//Prevent any insertion/deletion to happen
 	rina::ReadScopedLock readlock(ipcps_rwlock);
 
-	const vector<rina::IPCProcess *>& ipcps =
-		rina::ipcProcessFactory->listIPCProcesses();
+	const vector<IPCMIPCProcess *>& ipcps = ipcp_factory_.listIPCProcesses();
 
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
-		rina::DIFInformation dif_info = ipcps[i]->getDIFInformation();
-		rina::ApplicationProcessNamingInformation ipcp_name = ipcps[i]->name;
+		rina::ApplicationProcessNamingInformation dif_name = ipcps[i]->dif_name_;
+		rina::ApplicationProcessNamingInformation ipcp_name = ipcps[i]->ipcp_proxy_->name;
 
-		if (dif_info.dif_name_.processName == dif_name.processName
+		if (dif_name.processName == dif_name.processName
 				/* The following OR clause is a temporary hack useful
 				 * for testing with shim dummy. TODO It will go away. */
 				|| ipcp_name.processName == dif_name.processName) {
@@ -67,18 +66,17 @@ IPCManager_::select_ipcp_by_dif(
 
 // Returns any IPC process in the system, giving priority to
 // normal IPC processes.
-rina::IPCProcess *
+IPCMIPCProcess *
 IPCManager_::select_ipcp(bool read_lock)
 {
 
 	//Prevent any insertion/deletion to happen
 	rina::ReadScopedLock readlock(ipcps_rwlock);
 
-	const vector<rina::IPCProcess *>& ipcps =
-		rina::ipcProcessFactory->listIPCProcesses();
+	const vector<IPCMIPCProcess *>& ipcps = ipcp_factory_.listIPCProcesses();
 
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
-		if (ipcps[i]->type == rina::NORMAL_IPC_PROCESS) {
+		if (ipcps[i]->ipcp_proxy_->type == rina::NORMAL_IPC_PROCESS) {
 			//FIXME: rwlock over ipcp
 			return ipcps[i];
 		}
@@ -95,13 +93,13 @@ IPCManager_::select_ipcp(bool read_lock)
 bool
 IPCManager_::application_is_registered_to_ipcp(
 		const rina::ApplicationProcessNamingInformation& app_name,
-		rina::IPCProcess *slave_ipcp)
+		IPCMIPCProcess *slave_ipcp)
 {
 	//Prevent any insertion/deletion to happen
 	rina::ReadScopedLock readlock(ipcps_rwlock);
 
 	const list<rina::ApplicationProcessNamingInformation>&
-		registered_apps = slave_ipcp->getRegisteredApplications();
+		registered_apps = slave_ipcp->registeredApplications;
 
 	for (list<rina::ApplicationProcessNamingInformation>::const_iterator
 			it = registered_apps.begin();
@@ -114,14 +112,13 @@ IPCManager_::application_is_registered_to_ipcp(
 	return false;
 }
 
-rina::IPCProcess *
+IPCMIPCProcess *
 IPCManager_::lookup_ipcp_by_port(unsigned int port_id, bool read_lock)
 {
 	//Prevent any insertion/deletion to happen
 	rina::ReadScopedLock readlock(ipcps_rwlock);
 
-	const vector<rina::IPCProcess *>& ipcps =
-		rina::ipcProcessFactory->listIPCProcesses();
+	const vector<IPCMIPCProcess *>& ipcps = ipcp_factory_.listIPCProcesses();
 	rina::FlowInformation info;
 
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
@@ -142,14 +139,13 @@ IPCManager_::collect_flows_by_application(
 	//Prevent any insertion/deletion to happen
 	rina::ReadScopedLock readlock(ipcps_rwlock);
 
-	const vector<rina::IPCProcess *>& ipcps =
-		rina::ipcProcessFactory->listIPCProcesses();
+	const vector<IPCMIPCProcess *>& ipcps = ipcp_factory_.listIPCProcesses();
 
 	result.clear();
 
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
 		const list<rina::FlowInformation>& flows =
-			ipcps[i]->getAllocatedFlows();
+			ipcps[i]->allocatedFlows;
 
 		for (list<rina::FlowInformation>::const_iterator it =
 			flows.begin(); it != flows.end(); it++) {
@@ -160,16 +156,16 @@ IPCManager_::collect_flows_by_application(
 	}
 }
 
-rina::IPCProcess *
+IPCMIPCProcess *
 IPCManager_::lookup_ipcp_by_id(unsigned int id, bool read_lock)
 {
-	rina::IPCProcess* ipcp;
+	IPCMIPCProcess * ipcp;
 
 	//Prevent any insertion/deletion to happen
 	rina::ReadScopedLock readlock(ipcps_rwlock);
 
 
-	ipcp = rina::ipcProcessFactory->getIPCProcess(id);
+	ipcp = ipcp_factory_.getIPCProcess(id);
 	//FIXME:lock over ipcp
 
 	return ipcp;

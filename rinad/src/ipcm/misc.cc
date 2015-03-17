@@ -41,7 +41,7 @@ namespace rinad {
 void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *e)
 {
 	ostringstream ss;
-	rina::IPCProcess *ipcp;
+	IPCMIPCProcess *ipcp;
 	list<rina::RIBObjectData>::iterator lit;
 	RIBqTransState* trans =
 		get_transaction_state<RIBqTransState>(e->sequenceNumber);
@@ -57,7 +57,7 @@ void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *
 
 	if(e->result < 0){
 		ss  << ": Error: Query RIB operation of "
-			"process " << ipcp->name.toString() << " failed"
+			"process " << ipcp->ipcp_proxy_->name.toString() << " failed"
 			<< endl;
 		FLUSH_LOG(ERR, ss);
 
@@ -71,7 +71,7 @@ void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *
 
 	ipcp = lookup_ipcp_by_id(trans->ipcp_id);
 	if(!ipcp){
-		ss << "Could not complete IPCP query RIB. Invalid IPCP id "<< ipcp->id;
+		ss << "Could not complete IPCP query RIB. Invalid IPCP id "<< ipcp->ipcp_proxy_->id;
 		FLUSH_LOG(ERR, ss);
 		if(trans->callee){
 			//XXX: invoke the callback
@@ -83,7 +83,7 @@ void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *
 
 
 	ss << "Query RIB operation completed for IPC "
-		<< "process " << ipcp->name.toString() << endl;
+		<< "process " << ipcp->ipcp_proxy_->name.toString() << endl;
 	FLUSH_LOG(INFO, ss);
 
 	for (lit = e->ribObjects.begin(); lit != e->ribObjects.end();
