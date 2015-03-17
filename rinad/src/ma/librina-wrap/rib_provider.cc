@@ -901,6 +901,88 @@ RIBDInterface* RIBDFactory::create(cacep::AppConHandlerInterface* app_callback,
                                       comm_protocol, params, schema);
   return ribd;
 }
+const cdap_rib::SerializedObject* IntEncoder::encode(const int &object)
+{
+  (void) object;
+  return 0;
+}
+int* IntEncoder::decode(const cdap_rib::SerializedObject &serialized_object) const
+{
+  (void) serialized_object;
+  return 0;
+}
+const cdap_rib::SerializedObject* SIntEncoder::encode(const short int &object)
+{
+  (void) object;
+  return 0;
+}
+short int* SIntEncoder::decode(const cdap_rib::SerializedObject &serialized_object) const
+{
+  (void) serialized_object;
+  return 0;
+}
+const cdap_rib::SerializedObject* LongEncoder::encode(const long long &object)
+{
+  (void) object;
+  return 0;
+}
+long long* LongEncoder::decode(const cdap_rib::SerializedObject &serialized_object) const
+{
+  (void) serialized_object;
+  return 0;
+}
+const cdap_rib::SerializedObject* SLongEncoder::encode(const long &object)
+{
+  (void) object;
+  return 0;
+}
+long* SLongEncoder::decode(const cdap_rib::SerializedObject &serialized_object) const
+{
+  (void) serialized_object;
+  return 0;
+}
+const cdap_rib::SerializedObject* StringEncoder::encode(const std::string &object)
+{
+  (void) object;
+  return 0;
+}
+std::string* StringEncoder::decode(const cdap_rib::SerializedObject &serialized_object) const
+{
+  (void) serialized_object;
+  return 0;
+}
+const cdap_rib::SerializedObject* FloatEncoder::encode(const float &object)
+{
+  (void) object;
+  return 0;
+}
+float* FloatEncoder::decode(const cdap_rib::SerializedObject &serialized_object) const
+{
+  (void) serialized_object;
+  return 0;
+}
+
+const cdap_rib::SerializedObject* DoubleEncoder::encode(const double &object)
+{
+  (void) object;
+  return 0;
+}
+double* DoubleEncoder::decode(const cdap_rib::SerializedObject &serialized_object) const
+{
+  (void) serialized_object;
+  return 0;
+}
+const cdap_rib::SerializedObject* BoolEncoder::encode(const bool &object)
+{
+  (void) object;
+  return 0;
+}
+bool* BoolEncoder::decode(const cdap_rib::SerializedObject &serialized_object) const
+{
+  (void) serialized_object;
+  return 0;
+}
+
 
 }
 

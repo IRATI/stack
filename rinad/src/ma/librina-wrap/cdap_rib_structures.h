@@ -27,6 +27,14 @@
 
 namespace cdap_rib {
 
+typedef struct SerializedObject
+{
+  int size_;
+  char* message_;
+} ser_obj_t;
+
+
+
 typedef struct cdap_params{
   long timeout_;
   bool is_IPCP_;

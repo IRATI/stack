@@ -50,12 +50,12 @@ class IdFactory
 
 class IntEncoder : public rib::EncoderInterface<int> {
  public:
-  const rib::SerializedObject* encode(const int &object)
+  const cdap_rib::SerializedObject* encode(const int &object)
   {
     (void) object;
     return 0;
   }
-  int* decode(const rib::SerializedObject &serialized_object) const
+  int* decode(const cdap_rib::SerializedObject &serialized_object) const
   {
     (void) serialized_object;
     return 0;
