@@ -1331,3 +1331,4 @@ module_exit(shim_hv_fini);
 MODULE_DESCRIPTION("RINA Shim IPC for Hypervisors");
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Vincenzo Maffione <v.maffione@nextworks.it>");
+MODULE_AUTHOR("Leonardo Bergesio  <leonardo.bergesio@i2cat.net>");

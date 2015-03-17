@@ -527,6 +527,7 @@ timeout_t dt_sv_mpl(struct dt * dt)
 
         return tmp;
 }
+EXPORT_SYMBOL(dt_sv_mpl);
 
 timeout_t dt_sv_r(struct dt * dt)
 {
@@ -542,6 +543,7 @@ timeout_t dt_sv_r(struct dt * dt)
 
         return tmp;
 }
+EXPORT_SYMBOL(dt_sv_r);
 
 timeout_t dt_sv_a(struct dt * dt)
 {
@@ -557,6 +559,7 @@ timeout_t dt_sv_a(struct dt * dt)
 
         return tmp;
 }
+EXPORT_SYMBOL(dt_sv_a);
 
 seq_num_t dt_sv_rcv_lft_win(struct dt * dt)
 {
@@ -587,6 +590,7 @@ int dt_sv_rcv_lft_win_set(struct dt * dt, seq_num_t rcv_lft_win)
 
         return 0;
 }
+EXPORT_SYMBOL(dt_sv_rcv_lft_win_set);
 
 bool dt_sv_window_closed(struct dt * dt)
 {

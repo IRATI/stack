@@ -475,7 +475,8 @@ int pft_nhop(struct pft * instance,
 
         tmp = pft_find(instance, destination, qos_id);
         if (!tmp) {
-                LOG_ERR("Could not find any entry");
+                LOG_ERR("Could not find any entry for dest address: %u and "
+                        "qos_id %d", destination, qos_id);
                 rcu_read_unlock();
                 return -1;
         }
