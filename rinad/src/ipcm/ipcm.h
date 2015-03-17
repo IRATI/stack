@@ -473,7 +473,7 @@ protected:
 	void get_dif_properties_response_event_handler(rina::IPCEvent *event);
 
 	//RIB queries
-	void query_rib_response_event_handler(rina::IPCEvent *e);
+	void query_rib_response_event_handler(rina::QueryRIBResponseEvent *e);
 	void ipc_process_dump_ft_response_handler(rina::IPCEvent * event);
 
 	//Misc

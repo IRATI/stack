@@ -38,54 +38,79 @@ using namespace std;
 
 namespace rinad {
 
-void IPCManager_::query_rib_response_event_handler(rina::IPCEvent *e)
+void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *e)
 {
-	DOWNCAST_DECL(e, rina::QueryRIBResponseEvent, event);
 	ostringstream ss;
-	map<unsigned int, rina::IPCProcess *>::iterator mit;
-	rina::IPCProcess *ipcp = NULL;
-	bool success = (event->result == 0);
-	int ret = -1;
+	rina::IPCProcess *ipcp;
+	list<rina::RIBObjectData>::iterator lit;
+	RIBqTransState* trans =
+		get_transaction_state<RIBqTransState>(e->sequenceNumber);
 
-	ss << "Query RIB response event arrived" << endl;
-	FLUSH_LOG(INFO, ss);
-
-	mit = IPCManager->pending_ipcp_query_rib_responses.find(event->sequenceNumber);
-	if (mit == IPCManager->pending_ipcp_query_rib_responses.end()) {
+	if(!trans){
 		ss  << ": Warning: IPC process query RIB "
 			"response received, but no corresponding pending "
 			"request" << endl;
 		FLUSH_LOG(WARN, ss);
-	} else {
-		ipcp = mit->second;
-		if (success) {
-			std::stringstream ss;
-			list<rina::RIBObjectData>::iterator lit;
-
-			ss << "Query RIB operation completed for IPC "
-				<< "process " << ipcp->name.toString() << endl;
-			FLUSH_LOG(INFO, ss);
-			for (lit = event->ribObjects.begin(); lit != event->ribObjects.end();
-					++lit) {
-				ss << "Name: " << lit->name_ <<
-					"; Class: "<< lit->class_;
-				ss << "; Instance: "<< lit->instance_ << endl;
-				ss << "Value: " << lit->displayable_value_ <<endl;
-				ss << "" << endl;
-			}
-			IPCManager->query_rib_responses[event->sequenceNumber] = ss.str();
-			ret = 0;
-		} else {
-			ss  << ": Error: Query RIB operation of "
-				"process " << ipcp->name.toString() << " failed"
-				<< endl;
-			FLUSH_LOG(ERR, ss);
-		}
-
-		IPCManager->pending_ipcp_query_rib_responses.erase(mit);
+		//XXX: invoke the callback
+		return;
 	}
 
-	//IPCManager->concurrency.set_event_result(ret);
+	if(e->result < 0){
+		ss  << ": Error: Query RIB operation of "
+			"process " << ipcp->name.toString() << " failed"
+			<< endl;
+		FLUSH_LOG(ERR, ss);
+
+		if(trans->callee){
+			//XXX: invoke the callback
+			remove_transaction_state(trans->tid);
+			delete trans;
+		}
+		return;
+	}
+
+	ipcp = lookup_ipcp_by_id(trans->ipcp_id);
+	if(!ipcp){
+		ss << "Could not complete IPCP query RIB. Invalid IPCP id "<< ipcp->id;
+		FLUSH_LOG(ERR, ss);
+		if(trans->callee){
+			//XXX: invoke the callback
+			remove_transaction_state(trans->tid);
+			delete trans;
+		}
+		return;
+	}
+
+
+	ss << "Query RIB operation completed for IPC "
+		<< "process " << ipcp->name.toString() << endl;
+	FLUSH_LOG(INFO, ss);
+
+	for (lit = e->ribObjects.begin(); lit != e->ribObjects.end();
+			++lit) {
+		ss << "Name: " << lit->name_ <<
+			"; Class: "<< lit->class_;
+		ss << "; Instance: "<< lit->instance_ << endl;
+		ss << "Value: " << lit->displayable_value_ <<endl;
+		ss << "" << endl;
+	}
+
+	//Set query RIB response
+	trans->result = ss.str();
+
+	//Mark as completed
+	trans->completed(0);
+
+	//If there was a calle, invoke the callback and remove it. Otherwise
+	//transaction is fully complete and originator will clean up the state
+	if(trans->callee){
+		//Invoke callback
+		//FIXME
+
+		//Remove the transaction
+		remove_transaction_state(trans->tid);
+		delete trans;
+	}
 }
 
 void IPCManager_::timer_expired_event_handler(rina::IPCEvent *event)

@@ -969,7 +969,7 @@ IPCManager_::query_rib(const Addon* callee, const int ipcp_id)
 	int ret = -1;
 	rina::IPCProcess *ipcp;
 	unsigned int seqnum;
-	IPCPTransState* trans;
+	RIBqTransState* trans;
 
 	//TODO: move this to a read_lock over the IPCP
 
@@ -983,7 +983,7 @@ IPCManager_::query_rib(const Addon* callee, const int ipcp_id)
 		}
 
 		seqnum = opaque_generator_.next();
-		trans = new IPCPTransState(callee, seqnum, ipcp->id);
+		trans = new RIBqTransState(callee, seqnum, ipcp->id);
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
 			throw Exception();
@@ -1009,6 +1009,16 @@ IPCManager_::query_rib(const Addon* callee, const int ipcp_id)
 
 			//Callback
 			//TODO
+
+			//Copy value
+			retstr = trans->result;
+
+			//Remove and destroy
+			remove_transaction_state(trans->tid);
+			delete trans;
+			return 	retstr;
+		}else{
+			return std::string("");
 		}
 	} catch (rina::QueryRIBException) {
 		ss << "Error while querying RIB of IPC Process " <<
@@ -1122,7 +1132,7 @@ IPCManager_::select_policy_set(const Addon* callee, const int ipcp_id,
 
         	ipcp->selectPolicySet(component_path, ps_name, seqnum);
 
-        	pending_select_policy_set_ops[seqnum] = ipcp;
+        	//pending_select_policy_set_ops[seqnum] = ipcp;
         	ss << "Issued select-policy-set to IPC process " <<
         			ipcp->name.toString() << endl;
         	FLUSH_LOG(INFO, ss);
@@ -1393,7 +1403,7 @@ void IPCManager_::run(){
 
 				case rina::APPLICATION_REGISTRATION_REQUEST_EVENT:
 						{
-        					DOWNCAST_DECL(e, rina::ApplicationRegistrationRequestEvent, event);
+        					DOWNCAST_DECL(event, rina::ApplicationRegistrationRequestEvent, e);
 						app_reg_req_handler(e);
 						}
 						break;
@@ -1447,7 +1457,10 @@ void IPCManager_::run(){
 						break;
 
 				case rina::IPC_PROCESS_QUERY_RIB:
-						ipc_process_query_rib_handler(event);
+						{
+						DOWNCAST_DECL(event, rina::QueryRIBResponseEvent, e);
+						ipc_process_query_rib_handler(e);
+						}
 						break;
 
 				case rina::GET_DIF_PROPERTIES:
@@ -1464,15 +1477,15 @@ void IPCManager_::run(){
 
 				case rina::IPCM_REGISTER_APP_RESPONSE_EVENT:
 						{
-        					DOWNCAST_DECL(e, rina::IpcmRegisterApplicationResponseEvent, event);
-						reg_app_response_handler(e);
+        					DOWNCAST_DECL(event, rina::IpcmRegisterApplicationResponseEvent, e);
+						app_reg_response_handler(e);
 						}
 						break;
 
 				case rina::IPCM_UNREGISTER_APP_RESPONSE_EVENT:
 						{
-        					DOWNCAST_DECL(e, rina::IpcmUnregisterApplicationResponseEvent, event);
-						unreg_app_response_handler(event);
+        					DOWNCAST_DECL(event, rina::IpcmUnregisterApplicationResponseEvent, e);
+						unreg_app_response_handler(e);
 						}
 						break;
 
@@ -1485,7 +1498,10 @@ void IPCManager_::run(){
 						break;
 
 				case rina::QUERY_RIB_RESPONSE_EVENT:
-						query_rib_response_event_handler(event);
+						{
+						DOWNCAST_DECL(event, rina::QueryRIBResponseEvent, e);
+						query_rib_response_event_handler(e);
+						}
 						break;
 
 				case rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT:
