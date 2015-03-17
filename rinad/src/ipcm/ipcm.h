@@ -140,19 +140,20 @@ class IPCMConcurrency : public rina::ConditionVariable {
 };
 #endif
 
+//fwd decl
+class IPCMIPCProcessFactory;
+
 /**
  * Encapsulates the state and operations that can be performed over
  * a single IPC Process (besides creation/destruction)
  */
 class IPCMIPCProcess: public rina::Lockable {
+
 public:
 	enum State{IPCM_IPCP_CREATED,
 			   IPCM_IPCP_INITIALIZED,
 			   IPCM_IPCP_ASSIGN_TO_DIF_IN_PROGRESS,
 			   IPCM_IPCP_ASSIGNED_TO_DIF};
-
-	/** The IPC Process proxy class */
-	rina::IPCProcessProxy* ipcp_proxy_;
 
 	/** The current information of the DIF where the IPC Process is assigned*/
 	rina::ApplicationProcessNamingInformation dif_name_;
@@ -163,10 +164,35 @@ public:
 	/** The list of applications registered in this IPC Process */
 	std::list<rina::ApplicationProcessNamingInformation> registeredApplications;
 
+	/** Rwlock */
+	rina::ReadWriteLockable rwlock;
+
+	//Constructors and destructurs
+
 	IPCMIPCProcess();
 	IPCMIPCProcess(rina::IPCProcessProxy* ipcp_proxy);
 	~IPCMIPCProcess() throw();
 
+	/**
+	* Get the IPCP id
+	*/
+	inline unsigned short get_id(void) const{
+		return proxy_->id;
+	}
+
+	/**
+	* Get the IPCP name
+	*/
+	inline rina::ApplicationProcessNamingInformation get_name(void) const{
+		return proxy_->name;
+	}
+
+	/**
+	* Get the IPCP type
+	*/
+	inline std::string get_type(void) const{
+		return proxy_->type;
+	}
 	const rina::ApplicationProcessNamingInformation& getDIFName() const;
 
 	/**
@@ -442,6 +468,13 @@ public:
 			unsigned int opaque);
 
 private:
+	/** The IPC Process proxy class */
+	rina::IPCProcessProxy* proxy_;
+
+	//Friendship relation to be able to destroy proxies from
+	//the IPCMIPCProcessFactory
+	friend class IPCMIPCProcessFactory;
+
 	/** State of the IPC Process */
 	State state_;
 
@@ -514,7 +547,7 @@ public:
 
 private:
 	//The underlying IPC Process Factory
-	rina::IPCProcessFactory ipcp_factory_;
+	rina::IPCProcessFactory proxy_factory_;
 
     /** The current IPC Processes in the system*/
     std::map<unsigned short, IPCMIPCProcess*> ipcProcesses;

@@ -50,7 +50,7 @@ IPCManager_::select_ipcp_by_dif(
 
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
 		rina::ApplicationProcessNamingInformation dif_name = ipcps[i]->dif_name_;
-		rina::ApplicationProcessNamingInformation ipcp_name = ipcps[i]->ipcp_proxy_->name;
+		rina::ApplicationProcessNamingInformation ipcp_name = ipcps[i]->get_name();
 
 		if (dif_name.processName == dif_name.processName
 				/* The following OR clause is a temporary hack useful
@@ -76,7 +76,7 @@ IPCManager_::select_ipcp(bool read_lock)
 	const vector<IPCMIPCProcess *>& ipcps = ipcp_factory_.listIPCProcesses();
 
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
-		if (ipcps[i]->ipcp_proxy_->type == rina::NORMAL_IPC_PROCESS) {
+		if (ipcps[i]->get_type() == rina::NORMAL_IPC_PROCESS) {
 			//FIXME: rwlock over ipcp
 			return ipcps[i];
 		}

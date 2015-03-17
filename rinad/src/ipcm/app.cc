@@ -65,7 +65,7 @@ void IPCManager_::os_process_finalized_handler(rina::IPCEvent *e)
 			continue;
 		}
 
-		IPCManager->deallocate_flow(NULL, ipcp->ipcp_proxy_->id, req_event);
+		IPCManager->deallocate_flow(NULL, ipcp->get_id(), req_event);
 	}
 
 	// Look if the terminating application has pending registrations
@@ -84,7 +84,7 @@ void IPCManager_::os_process_finalized_handler(rina::IPCEvent *e)
 
 			IPCManager->unregister_app_from_ipcp(NULL,
 						req_event,
-						ipcps[i]->ipcp_proxy_->id);
+						ipcps[i]->get_id());
 		}
 	}
 
@@ -175,7 +175,7 @@ void IPCManager_::app_reg_req_handler(
         try {
                 //Create a transaction
         	seqnum = opaque_generator_.next();
-		trans = new APPregTransState(NULL, seqnum, slave_ipcp->ipcp_proxy_->id,
+		trans = new APPregTransState(NULL, seqnum, slave_ipcp->get_id(),
 									event);
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! "
@@ -200,7 +200,7 @@ void IPCManager_::app_reg_req_handler(
 		*/
                 ss << "Requested registration of application " <<
                         app_name.toString() << " to IPC process " <<
-                        slave_ipcp->ipcp_proxy_->name.toString() << endl;
+                        slave_ipcp->get_name().toString() << endl;
                 FLUSH_LOG(INFO, ss);
         } catch (rina::IpcmRegisterApplicationException) {
                 if(trans)
@@ -212,7 +212,7 @@ void IPCManager_::app_reg_req_handler(
 
                 // Notify the application about the unsuccessful registration.
                 notify_app_reg(*event, app_name,
-                                                slave_ipcp->ipcp_proxy_->name, false);
+                                                slave_ipcp->get_name(), false);
         }
 }
 
@@ -406,7 +406,7 @@ void IPCManager_::application_unregistration_request_event_handler(rina::IPCEven
                 return;
         }
 
-        err = unregister_app_from_ipcp(NULL, *event, slave_ipcp->ipcp_proxy_->id);
+        err = unregister_app_from_ipcp(NULL, *event, slave_ipcp->get_id());
         if (err) {
                 // Inform the unregistering application that the unregistration
                 // operation failed
@@ -428,7 +428,7 @@ bool IPCManager_::ipcm_unregister_response_common(
                 // Inform the IPC process about the application unregistration
                 slave_ipcp->unregisterApplicationResult(event->
                                 sequenceNumber, success);
-                ss << "IPC process " << slave_ipcp->ipcp_proxy_->name.toString() <<
+                ss << "IPC process " << slave_ipcp->get_name().toString() <<
                         " informed about unregistration of application "
                         << app_name.toString() << " [success = " << success
                         << "]" << endl;

@@ -71,7 +71,7 @@ void IPCManager_::ipc_process_daemon_initialized_event_handler(
 		return;
 	}
 
-	assert(ipcp->ipcp_proxy_->getType() == rina::NORMAL_IPC_PROCESS);
+	assert(ipcp->get_type() == rina::NORMAL_IPC_PROCESS);
 
 	//Initialize
 	ipcp->setInitialized();
@@ -99,7 +99,7 @@ int IPCManager_::ipcm_register_response_ipcp(
         const rina::ApplicationProcessNamingInformation&
                 slave_dif_name = slave_ipcp->dif_name_;
 
-        success = ipcm_register_response_common(e, ipcp->ipcp_proxy_->name,
+        success = ipcm_register_response_common(e, ipcp->get_name(),
                                         slave_ipcp, slave_dif_name);
 
 	if(!ipcp || !slave_ipcp){
@@ -112,10 +112,10 @@ int IPCManager_::ipcm_register_response_ipcp(
                 // Notify the registered IPC process.
                 try {
                         ipcp->notifyRegistrationToSupportingDIF(
-                                        slave_ipcp->ipcp_proxy_->name,
+                                        slave_ipcp->get_name(),
                                         slave_dif_name
                                         );
-                        ss << "IPC process " << ipcp->ipcp_proxy_->name.toString() <<
+                        ss << "IPC process " << ipcp->get_name().toString() <<
                                 " informed about its registration "
                                 "to N-1 DIF " <<
                                 slave_dif_name.toString() << endl;
@@ -124,14 +124,14 @@ int IPCManager_::ipcm_register_response_ipcp(
                 } catch (rina::NotifyRegistrationToDIFException) {
                         ss  << ": Error while notifying "
                                 "IPC process " <<
-                                ipcp->ipcp_proxy_->name.toString() <<
+                                ipcp->get_name().toString() <<
                                 " about registration to N-1 DIF"
                                 << slave_dif_name.toString() << endl;
                         FLUSH_LOG(ERR, ss);
                 }
         } else {
                 ss  << "Cannot register IPC process "
-                        << ipcp->ipcp_proxy_->name.toString() <<
+                        << ipcp->get_name().toString() <<
                         " to DIF " << slave_dif_name.toString() << endl;
                 FLUSH_LOG(ERR, ss);
         }
@@ -161,30 +161,30 @@ int IPCManager_::ipcm_unregister_response_ipcp(
 
 	// Inform the supporting IPC process
         success = ipcm_unregister_response_common(e, slave_ipcp,
-                                                  ipcp->ipcp_proxy_->name);
+                                                  ipcp->get_name());
 
         try {
                 if (success) {
                         // Notify the IPCP process that it has been unregistered
                         // from the DIF
                         ipcp->notifyUnregistrationFromSupportingDIF(
-                                                        slave_ipcp->ipcp_proxy_->name,
+                                                        slave_ipcp->get_name(),
                                                         slave_dif_name);
-                        ss << "IPC process " << ipcp->ipcp_proxy_->name.toString() <<
+                        ss << "IPC process " << ipcp->get_name().toString() <<
                                 " informed about its unregistration from DIF "
                                 << slave_dif_name.toString() << endl;
                         FLUSH_LOG(INFO, ss);
                         ret = 0;
                 } else {
                         ss  << ": Cannot unregister IPC Process "
-                                << ipcp->ipcp_proxy_->name.toString() << " from DIF " <<
+                                << ipcp->get_name().toString() << " from DIF " <<
                                 slave_dif_name.toString() << endl;
                         FLUSH_LOG(ERR, ss);
                 }
         } catch (rina::NotifyRegistrationToDIFException) {
                 ss  << ": Error while reporing "
                         "unregistration result for IPC process "
-                        << ipcp->ipcp_proxy_->name.toString() << endl;
+                        << ipcp->get_name().toString() << endl;
                 FLUSH_LOG(ERR, ss);
         }
 
@@ -278,11 +278,11 @@ IPCManager_::assign_to_dif_response_event_handler(rina::IPCEvent * e)
                         nsm_config.addressing_configuration_ = address_config;
 
                         found = dif_props.
-                                lookup_ipcp_address(ipcp->ipcp_proxy_->name,
+                                lookup_ipcp_address(ipcp->get_name(),
                                                 address);
                         if (!found) {
                                 ss << "No address for IPC process " <<
-                                        ipcp->ipcp_proxy_->name.toString() <<
+                                        ipcp->get_name().toString() <<
                                         " in DIF " << dif_name.toString() <<
                                         endl;
                                 throw Exception();
@@ -321,14 +321,14 @@ IPCManager_::assign_to_dif_response_event_handler(rina::IPCEvent * e)
 
                 pending_ipcp_dif_assignments[seqnum] = ipcp;
                 ss << "Requested DIF assignment of IPC process " <<
-                        ipcp->ipcp_proxy_->name.toString() << " to DIF " <<
+                        ipcp->get_name().toString() << " to DIF " <<
                         dif_name.toString() << endl;
                 FLUSH_LOG(INFO, ss);
                 arrived = concurrency.wait_for_event(rina::ASSIGN_TO_DIF_RESPONSE_EVENT,
                                                      seqnum, ret);
         } catch (rina::AssignToDIFException) {
                 ss << "Error while assigning " <<
-                        ipcp->ipcp_proxy_->name.toString() <<
+                        ipcp->get_name().toString() <<
                         " to DIF " << dif_name.toString() << endl;
                 FLUSH_LOG(ERR, ss);
         } catch (rina::BadConfigurationException &e) {
@@ -381,14 +381,14 @@ IPCManager_::assign_to_dif_response_event_handler(rina::AssignToDIFResponseEvent
 		ipcp->assignToDIFResult(success);
 
 		ss << "DIF assignment operation completed for IPC "
-			<< "process " << ipcp->ipcp_proxy_->name.toString() <<
+			<< "process " << ipcp->get_name().toString() <<
 			" [success=" << success << "]" << endl;
 		FLUSH_LOG(INFO, ss);
 		ret = 0;
 	} catch (rina::AssignToDIFException) {
 		ss << ": Error while reporting DIF "
 			"assignment result for IPC process "
-			<< ipcp->ipcp_proxy_->name.toString() << endl;
+			<< ipcp->get_name().toString() << endl;
 		FLUSH_LOG(ERR, ss);
 	}
 
@@ -441,13 +441,13 @@ IPCManager_::update_dif_config_response_event_handler(rina::UpdateDIFConfigurati
 		// Inform the requesting IPC process about the result of
 		// the configuration update operation
 		ss << "Configuration update operation completed for IPC "
-			<< "process " << ipcp->ipcp_proxy_->name.toString() <<
+			<< "process " << ipcp->get_name().toString() <<
 			" [success=" << success << "]" << endl;
 		FLUSH_LOG(INFO, ss);
 	} catch (rina::UpdateDIFConfigurationException) {
 		ss  << ": Error while reporting DIF "
 			"configuration update for process " <<
-			ipcp->ipcp_proxy_->name.toString() << endl;
+			ipcp->get_name().toString() << endl;
 		FLUSH_LOG(ERR, ss);
 	}
 
@@ -496,12 +496,12 @@ IPCManager_::enroll_to_dif_response_event_handler(rina::EnrollToDIFResponseEvent
 	}else{
 		if (success) {
 			ss << "Enrollment operation completed for IPC "
-				<< "process " << ipcp->ipcp_proxy_->name.toString() << endl;
+				<< "process " << ipcp->get_name().toString() << endl;
 			FLUSH_LOG(INFO, ss);
 			ret = 0;
 		} else {
 			ss  << ": Error: Enrollment operation of "
-				"process " << ipcp->ipcp_proxy_->name.toString() << " failed"
+				"process " << ipcp->get_name().toString() << " failed"
 				<< endl;
 			FLUSH_LOG(ERR, ss);
 		}
@@ -551,7 +551,7 @@ void IPCManager_::neighbors_modified_notification_event_handler(rina::NeighborsM
 
 	ss << "Neighbors update [" << (event->added ? "+" : "-") <<
 		"#" << event->neighbors.size() << "]for IPC process " <<
-		ipcp->ipcp_proxy_->name.toString() <<  endl;
+		ipcp->get_name().toString() <<  endl;
 	FLUSH_LOG(INFO, ss);
 
 }
@@ -602,17 +602,18 @@ void IPCManager_::ipc_process_dump_ft_response_handler(rina::IPCEvent * event)
 }
 
 IPCMIPCProcess::IPCMIPCProcess() {
-	ipcp_proxy_ = 0;
+	proxy_ = NULL;
 	state_ = IPCM_IPCP_CREATED;
 }
 
 IPCMIPCProcess::~IPCMIPCProcess() throw(){
+
 }
 
 IPCMIPCProcess::IPCMIPCProcess(rina::IPCProcessProxy* ipcp_proxy)
 {
 	state_ = IPCM_IPCP_CREATED;
-	ipcp_proxy_ = ipcp_proxy;
+	proxy_ = ipcp_proxy;
 }
 
 /** Return the information of a registration request */
@@ -666,7 +667,7 @@ void IPCMIPCProcess::assignToDIF(const rina::DIFInformation& difInformation,
 	unlock();
 
 	try {
-        ipcp_proxy_->assignToDIF(difInformation, opaque);
+        proxy_->assignToDIF(difInformation, opaque);
 	}catch (Exception &e){
 		lock();
 		state_ = IPCM_IPCP_INITIALIZED;
@@ -706,21 +707,21 @@ IPCMIPCProcess::updateDIFConfiguration(const rina::DIFConfiguration& difConfigur
 	}
 
 	unlock();
-    ipcp_proxy_->updateDIFConfiguration(difConfiguration, opaque);
+    proxy_->updateDIFConfiguration(difConfiguration, opaque);
 }
 
 void IPCMIPCProcess::notifyRegistrationToSupportingDIF(
 		const rina::ApplicationProcessNamingInformation& ipcProcessName,
 		const rina::ApplicationProcessNamingInformation& difName)
 {
-	ipcp_proxy_->notifyRegistrationToSupportingDIF(ipcProcessName, difName);
+	proxy_->notifyRegistrationToSupportingDIF(ipcProcessName, difName);
 }
 
 void IPCMIPCProcess::notifyUnregistrationFromSupportingDIF(
 		const rina::ApplicationProcessNamingInformation& ipcProcessName,
 		const rina::ApplicationProcessNamingInformation& difName)
 {
-	ipcp_proxy_->notifyUnregistrationFromSupportingDIF(ipcProcessName, difName);
+	proxy_->notifyUnregistrationFromSupportingDIF(ipcProcessName, difName);
 }
 
 void IPCMIPCProcess::enroll(
@@ -729,13 +730,13 @@ void IPCMIPCProcess::enroll(
         const rina::ApplicationProcessNamingInformation& neighborName,
         unsigned int opaque)
 {
-	ipcp_proxy_->enroll(difName, supportingDifName, neighborName, opaque);
+	proxy_->enroll(difName, supportingDifName, neighborName, opaque);
 }
 
 void IPCMIPCProcess::disconnectFromNeighbor(
 		const rina::ApplicationProcessNamingInformation& neighbor)
 {
-	ipcp_proxy_->disconnectFromNeighbor(neighbor);
+	proxy_->disconnectFromNeighbor(neighbor);
 }
 
 void IPCMIPCProcess::registerApplication(
@@ -751,7 +752,7 @@ void IPCMIPCProcess::registerApplication(
 	}
 
 	try {
-		ipcp_proxy_->registerApplication(applicationName, regIpcProcessId,
+		proxy_->registerApplication(applicationName, regIpcProcessId,
 				dif_name_, opaque);
 	}catch (Exception &e) {
 		unlock();
@@ -792,7 +793,7 @@ void IPCMIPCProcess::unregisterApplication(
 	}
 
 	try {
-		ipcp_proxy_->unregisterApplication(applicationName, dif_name_, opaque);
+		proxy_->unregisterApplication(applicationName, dif_name_, opaque);
 	}catch (Exception &e) {
 		unlock();
 		throw e;
@@ -834,7 +835,7 @@ void IPCMIPCProcess::allocateFlow(const rina::FlowRequestEvent& flowRequest,
 	}
 
 	try {
-		ipcp_proxy_->allocateFlow(flowRequest, opaque);
+		proxy_->allocateFlow(flowRequest, opaque);
 	} catch (Exception &e) {
 		unlock();
 		throw e;
@@ -884,7 +885,7 @@ void IPCMIPCProcess::allocateFlowResponse(const rina::FlowRequestEvent& flowRequ
 	}
 
 	try{
-		ipcp_proxy_->allocateFlowResponse(flowRequest, result,
+		proxy_->allocateFlowResponse(flowRequest, result,
 				notifySource, flowAcceptorIpcProcessId);
 	} catch(Exception &e){
 		unlock();
@@ -935,7 +936,7 @@ void IPCMIPCProcess::deallocateFlow(int flowPortId, unsigned int opaque)
 	}
 
 	try {
-		ipcp_proxy_->deallocateFlow(flowPortId, opaque);
+		proxy_->deallocateFlow(flowPortId, opaque);
 	} catch (Exception &e) {
 		unlock();
 		throw e;
@@ -993,27 +994,27 @@ void IPCMIPCProcess::queryRIB(const std::string& objectClass,
 		unsigned int scope, const std::string& filter,
 		unsigned int opaque)
 {
-	ipcp_proxy_->queryRIB(objectClass, objectName, objectInstance, scope, filter, opaque);
+	proxy_->queryRIB(objectClass, objectName, objectInstance, scope, filter, opaque);
 }
 
 void IPCMIPCProcess::setPolicySetParam(const std::string& path,
                         const std::string& name, const std::string& value,
                         unsigned int opaque)
 {
-	ipcp_proxy_->setPolicySetParam(path, name, value, opaque);
+	proxy_->setPolicySetParam(path, name, value, opaque);
 }
 
 void IPCMIPCProcess::selectPolicySet(const std::string& path,
                                  const std::string& name,
                                  unsigned int opaque)
 {
-	ipcp_proxy_->selectPolicySet(path, name, opaque);
+	proxy_->selectPolicySet(path, name, opaque);
 }
 
 void IPCMIPCProcess::pluginLoad(const std::string& name, bool load,
 		unsigned int opaque)
 {
-	ipcp_proxy_->pluginLoad(name, load, opaque);
+	proxy_->pluginLoad(name, load, opaque);
 }
 
 IPCMIPCProcessFactory::IPCMIPCProcessFactory(){
@@ -1023,7 +1024,7 @@ IPCMIPCProcessFactory::~IPCMIPCProcessFactory() throw(){
 }
 
 std::list<std::string> IPCMIPCProcessFactory::getSupportedIPCProcessTypes() {
-	return ipcp_factory_.getSupportedIPCProcessTypes();
+	return proxy_factory_.getSupportedIPCProcessTypes();
 }
 
 IPCMIPCProcess * IPCMIPCProcessFactory::create(
@@ -1043,7 +1044,7 @@ IPCMIPCProcess * IPCMIPCProcessFactory::create(
 	}
 
 	try {
-		ipcp_proxy = ipcp_factory_.create(ipcProcessName,
+		ipcp_proxy = proxy_factory_.create(ipcProcessName,
 										  difType,
 										  ipcProcessId);
 	} catch (Exception & e){
@@ -1073,15 +1074,16 @@ void IPCMIPCProcessFactory::destroy(unsigned short ipcProcessId) {
 	}
 
 	ipcp = iterator->second;
-	ipcp_proxy = ipcp->ipcp_proxy_;
-	delete iterator->second;
-	ipcProcesses.erase(ipcProcessId);
+
 	try {
-		ipcp_factory_.destroy(ipcp_proxy);
+		if(ipcp->proxy_)
+			proxy_factory_.destroy(ipcp->proxy_);
 	}catch (Exception &e) {
-		unlock();
-		throw e;
+		assert(0);
 	}
+	delete ipcp;
+	ipcProcesses.erase(ipcProcessId);
+
 
 	unlock();
 }
