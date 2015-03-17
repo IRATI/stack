@@ -125,7 +125,7 @@ int IPCManager_::ipcm_register_response_ipcp(
                 FLUSH_LOG(ERR, ss);
         }
 
-        pending_ipcp_registrations.erase(mit);
+        //pending_ipcp_registrations.erase(mit);
 
         return ret;
 }
@@ -173,7 +173,7 @@ int IPCManager_::ipcm_unregister_response_ipcp(
                 FLUSH_LOG(ERR, ss);
         }
 
-        pending_ipcp_unregistrations.erase(mit);
+        //pending_ipcp_unregistrations.erase(mit);
 
         return ret;
 }
@@ -338,42 +338,58 @@ IPCManager_::assign_to_dif_response_event_handler(rina::IPCEvent * e)
 
 
 void
-IPCManager_::assign_to_dif_response_event_handler(rina::IPCEvent * e)
+IPCManager_::assign_to_dif_response_event_handler(rina::AssignToDIFResponseEvent* e)
 {
-	DOWNCAST_DECL(e, rina::AssignToDIFResponseEvent, event);
-	map<unsigned int, rina::IPCProcess*>::iterator mit;
 	ostringstream ss;
-	bool success = (event->result == 0);
+	bool success = (e->result == 0);
+        rina::IPCProcess* ipcp;
 	int ret = -1;
 
-	mit = IPCManager->pending_ipcp_dif_assignments.find(
-					event->sequenceNumber);
-	if (mit != IPCManager->pending_ipcp_dif_assignments.end()) {
-		rina::IPCProcess *ipcp = mit->second;
+	IPCPTransState* trans = get_transaction_state<IPCPTransState>(e->sequenceNumber);
 
-		// Inform the IPC process about the result of the
-		// DIF assignment operation
-		try {
-			ipcp->assignToDIFResult(success);
-			ss << "DIF assignment operation completed for IPC "
-				<< "process " << ipcp->name.toString() <<
-				" [success=" << success << "]" << endl;
-			FLUSH_LOG(INFO, ss);
-			ret = 0;
-		} catch (rina::AssignToDIFException) {
-			ss << ": Error while reporting DIF "
-				"assignment result for IPC process "
-				<< ipcp->name.toString() << endl;
-			FLUSH_LOG(ERR, ss);
-		}
-		IPCManager->pending_ipcp_dif_assignments.erase(mit);
-	} else {
-		ss << ": Warning: DIF assignment response "
-			"received, but no pending DIF assignment" << endl;
+	if(!trans){
+		ss << ": Warning: unknown assign to DIF response received: "<<e->sequenceNumber<<endl;
 		FLUSH_LOG(WARN, ss);
+		return;
 	}
 
-	//IPCManager->concurrency.set_event_result(ret);
+	// Inform the IPC process about the result of the
+	// DIF assignment operation
+	try {
+		ipcp = lookup_ipcp_by_id(trans->ipcp_id);
+		if(!ipcp){
+			ss << ": Warning: Could not complete assign to dif action: "<<e->sequenceNumber<<
+			"IPCP with id: "<<trans->ipcp_id<<"does not exist! Perhaps deleted?" << endl;
+			FLUSH_LOG(WARN, ss);
+			throw rina::AssignToDIFException();
+		}
+		ipcp->assignToDIFResult(success);
+
+		ss << "DIF assignment operation completed for IPC "
+			<< "process " << ipcp->name.toString() <<
+			" [success=" << success << "]" << endl;
+		FLUSH_LOG(INFO, ss);
+		ret = 0;
+	} catch (rina::AssignToDIFException) {
+		ss << ": Error while reporting DIF "
+			"assignment result for IPC process "
+			<< ipcp->name.toString() << endl;
+		FLUSH_LOG(ERR, ss);
+	}
+
+	//Mark as completed
+	trans->completed(ret);
+
+	//If there was a calle, invoke the callback and remove it. Otherwise
+	//transaction is fully complete and originator will clean up the state
+	if(trans->callee){
+		//Invoke callback
+		//FIXME
+
+		//Remove the transaction
+		remove_transaction_state(trans->tid);
+		delete trans;
+	}
 }
 
 void
@@ -383,25 +399,29 @@ IPCManager_::update_dif_config_request_event_handler(rina::IPCEvent *event)
 }
 
 void
-IPCManager_::update_dif_config_response_event_handler(rina::IPCEvent *e)
+IPCManager_::update_dif_config_response_event_handler(rina::UpdateDIFConfigurationResponseEvent* e)
 {
-	DOWNCAST_DECL(e, rina::UpdateDIFConfigurationResponseEvent, event);
-	map<unsigned int, rina::IPCProcess*>::iterator mit;
-	bool success = (event->result == 0);
-	rina::IPCProcess *ipcp = NULL;
 	ostringstream ss;
+	bool success = (e->result == 0);
+        rina::IPCProcess* ipcp;
+	int ret = -1;
 
-	mit = IPCManager->pending_dif_config_updates.find(event->sequenceNumber);
-	if (mit == IPCManager->pending_dif_config_updates.end()) {
-		ss  << ": Warning: DIF configuration update "
-			"response received, but no corresponding pending "
-			"request" << endl;
+	IPCPTransState* trans = get_transaction_state<IPCPTransState>(e->sequenceNumber);
+
+	if(!trans){
+		ss << ": Warning: unknown DIF config response received: "<<e->sequenceNumber<<endl;
 		FLUSH_LOG(WARN, ss);
 		return;
 	}
 
-	ipcp = mit->second;
 	try {
+		ipcp = lookup_ipcp_by_id(trans->ipcp_id);
+		if(!ipcp){
+			ss << ": Warning: Could not complete config to dif action: "<<e->sequenceNumber<<
+			"IPCP with id: "<<trans->ipcp_id<<"does not exist! Perhaps deleted?" << endl;
+			FLUSH_LOG(WARN, ss);
+			throw rina::UpdateDIFConfigurationException();
+		}
 
 		// Inform the requesting IPC process about the result of
 		// the configuration update operation
@@ -417,9 +437,19 @@ IPCManager_::update_dif_config_response_event_handler(rina::IPCEvent *e)
 		FLUSH_LOG(ERR, ss);
 	}
 
-	IPCManager->pending_dif_config_updates.erase(mit);
+	//Mark as completed
+	trans->completed(ret);
 
-	//IPCManager->concurrency.set_event_result(event->result);
+	//If there was a calle, invoke the callback and remove it. Otherwise
+	//transaction is fully complete and originator will clean up the state
+	if(trans->callee){
+		//Invoke callback
+		//FIXME
+
+		//Remove the transaction
+		remove_transaction_state(trans->tid);
+		delete trans;
+	}
 }
 
 void
@@ -429,23 +459,27 @@ IPCManager_::enroll_to_dif_request_event_handler(rina::IPCEvent *event)
 }
 
 void
-IPCManager_::enroll_to_dif_response_event_handler(rina::IPCEvent *e)
+IPCManager_::enroll_to_dif_response_event_handler(rina::EnrollToDIFResponseEvent *event)
 {
-	DOWNCAST_DECL(e, rina::EnrollToDIFResponseEvent, event);
-	map<unsigned int, rina::IPCProcess *>::iterator mit;
-	rina::IPCProcess *ipcp = NULL;
-	bool success = (event->result == 0);
 	ostringstream ss;
+	rina::IPCProcess *ipcp;
+	bool success = (event->result == 0);
 	int ret = -1;
 
-	mit = IPCManager->pending_ipcp_enrollments.find(event->sequenceNumber);
-	if (mit == IPCManager->pending_ipcp_enrollments.end()) {
-		ss  << ": Warning: IPC process enrollment "
-			"response received, but no corresponding pending "
-			"request" << endl;
+	IPCPTransState* trans = get_transaction_state<IPCPTransState>(event->sequenceNumber);
+
+	if(!trans){
+		ss << ": Warning: unknown enrollment to DIF response received: "<<event->sequenceNumber<<endl;
 		FLUSH_LOG(WARN, ss);
-	} else {
-		ipcp = mit->second;
+		return;
+	}
+
+	ipcp = lookup_ipcp_by_id(trans->ipcp_id);
+	if(!ipcp){
+		ss << ": Warning: Could not complete enroll to dif action: "<<event->sequenceNumber<<
+		"IPCP with id: "<<trans->ipcp_id<<" does not exist! Perhaps deleted?" << endl;
+		FLUSH_LOG(WARN, ss);
+	}else{
 		if (success) {
 			ipcp->addNeighbors(event->neighbors);
 			ipcp->setDIFInformation(event->difInformation);
@@ -459,20 +493,25 @@ IPCManager_::enroll_to_dif_response_event_handler(rina::IPCEvent *e)
 				<< endl;
 			FLUSH_LOG(ERR, ss);
 		}
-
-		IPCManager->pending_ipcp_enrollments.erase(mit);
 	}
 
-	//IPCManager->concurrency.set_event_result(ret);
+	//Mark as completed
+	trans->completed(ret);
+
+	//If there was a calle, invoke the callback and remove it. Otherwise
+	//transaction is fully complete and originator will clean up the state
+	if(trans->callee){
+		//Invoke callback
+		//FIXME
+
+		//Remove the transaction
+		remove_transaction_state(trans->tid);
+		delete trans;
+	}
 }
 
-void IPCManager_::neighbors_modified_notification_event_handler(rina::IPCEvent * e)
+void IPCManager_::neighbors_modified_notification_event_handler(rina::NeighborsModifiedNotificationEvent* event)
 {
-	DOWNCAST_DECL(e, rina::NeighborsModifiedNotificationEvent, event);
-
-	rina::IPCProcess *ipcp =
-		rina::ipcProcessFactory->
-		getIPCProcess(event->ipcProcessId);
 	ostringstream ss;
 
 	if (!event->neighbors.size()) {
@@ -482,20 +521,29 @@ void IPCManager_::neighbors_modified_notification_event_handler(rina::IPCEvent *
 		return;
 	}
 
-	if (!ipcp) {
+	IPCPTransState* trans = get_transaction_state<IPCPTransState>(event->sequenceNumber);
+
+	if(!trans){
+		ss << ": Warning: unknown enrollment to DIF response received: "<<event->sequenceNumber<<endl;
+		FLUSH_LOG(WARN, ss);
+		return;
+	}
+
+	rina::IPCProcess* ipcp = lookup_ipcp_by_id(trans->ipcp_id);
+	if(!ipcp){
 		ss  << ": Error: IPC process unexpectedly "
 			"went away" << endl;
 		FLUSH_LOG(ERR, ss);
 		return;
 	}
 
-	if (event->added) {
+	if (event->added)
 		// We have new neighbors
 		ipcp->addNeighbors(event->neighbors);
-	} else {
+	else
 		// We have lost some neighbors
 		ipcp->removeNeighbors(event->neighbors);
-	}
+
 	ss << "Neighbors update [" << (event->added ? "+" : "-") <<
 		"#" << event->neighbors.size() << "]for IPC process " <<
 		ipcp->name.toString() <<  endl;

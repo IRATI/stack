@@ -455,16 +455,16 @@ protected:
 
 	//DIF assignment mgmt
 	void assign_to_dif_request_event_handler(rina::IPCEvent * event);
-	void assign_to_dif_response_event_handler(rina::IPCEvent * e);
+	void assign_to_dif_response_event_handler(rina::AssignToDIFResponseEvent * e);
 
 	//DIF config mgmt
 	void update_dif_config_request_event_handler(rina::IPCEvent *event);
-	void update_dif_config_response_event_handler(rina::IPCEvent *e);
+	void update_dif_config_response_event_handler(rina::UpdateDIFConfigurationResponseEvent* e);
 
 	//Enrollment mgmt
 	void enroll_to_dif_request_event_handler(rina::IPCEvent *event);
-	void enroll_to_dif_response_event_handler(rina::IPCEvent *e);
-	void neighbors_modified_notification_event_handler(rina::IPCEvent * e);
+	void enroll_to_dif_response_event_handler(rina::EnrollToDIFResponseEvent *e);
+	void neighbors_modified_notification_event_handler(rina::NeighborsModifiedNotificationEvent* e);
 
 	//DIF misc TODO: revise
 	void ipc_process_dif_registration_notification_handler(rina::IPCEvent *event);

@@ -1429,7 +1429,10 @@ void IPCManager_::run(){
 						break;
 
 				case rina::ASSIGN_TO_DIF_RESPONSE_EVENT:
-						assign_to_dif_response_event_handler(event);
+						{
+        					DOWNCAST_DECL(event, rina::AssignToDIFResponseEvent, e);
+						assign_to_dif_response_event_handler(e);
+						}
 						break;
 
 				case rina::UPDATE_DIF_CONFIG_REQUEST_EVENT:
@@ -1437,7 +1440,10 @@ void IPCManager_::run(){
 						break;
 
 				case rina::UPDATE_DIF_CONFIG_RESPONSE_EVENT:
-						update_dif_config_response_event_handler(event);
+						{
+        					DOWNCAST_DECL(event, rina::UpdateDIFConfigurationResponseEvent, e);
+						update_dif_config_response_event_handler(e);
+						}
 						break;
 
 				case rina::ENROLL_TO_DIF_REQUEST_EVENT:
@@ -1445,11 +1451,17 @@ void IPCManager_::run(){
 						break;
 
 				case rina::ENROLL_TO_DIF_RESPONSE_EVENT:
-						enroll_to_dif_response_event_handler(event);
+						{
+        					DOWNCAST_DECL(event, rina::EnrollToDIFResponseEvent, e);
+						enroll_to_dif_response_event_handler(e);
+						}
 						break;
 
 				case rina::NEIGHBORS_MODIFIED_NOTIFICATION_EVENT:
-						neighbors_modified_notification_event_handler(event);
+						{
+        					DOWNCAST_DECL(event, rina::NeighborsModifiedNotificationEvent, e);
+						neighbors_modified_notification_event_handler(e);
+						}
 						break;
 
 				case rina::IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION:
