@@ -29,7 +29,7 @@
 #include <librina/logs.h>
 
 #include "rina-configuration.h"
-#include "ipcm.h"
+#include "app.h"
 
 using namespace std;
 
@@ -95,7 +95,7 @@ void IPCManager_::os_process_finalized_handler(rina::IPCEvent *e)
 }
 
 
-void IPCManager_::application_registration_notify(
+void IPCManager_::notify_app_reg(
         const rina::ApplicationRegistrationRequestEvent& req_event,
         const rina::ApplicationProcessNamingInformation& app_name,
         const rina::ApplicationProcessNamingInformation& slave_dif_name,
@@ -119,9 +119,9 @@ void IPCManager_::application_registration_notify(
         }
 }
 
-void IPCManager_::application_registration_request_event_handler(rina::IPCEvent *e)
+void IPCManager_::app_reg_req_handler(
+			rina::ApplicationRegistrationRequestEvent *event)
 {
-        DOWNCAST_DECL(e, rina::ApplicationRegistrationRequestEvent, event);
         const rina::ApplicationRegistrationInformation& info = event->
                                 applicationRegistrationInformation;
         const rina::ApplicationProcessNamingInformation app_name =
@@ -129,17 +129,15 @@ void IPCManager_::application_registration_request_event_handler(rina::IPCEvent 
         rina::IPCProcess *slave_ipcp = NULL;
         unsigned int seqnum;
         ostringstream ss;
+        rina::ApplicationProcessNamingInformation dif_name;
+	APPregTransState* trans;
 
+	//Prepare the registration information
         if (info.applicationRegistrationType ==
                         rina::APPLICATION_REGISTRATION_ANY_DIF) {
-                rina::ApplicationProcessNamingInformation dif_name;
-                bool found;
-
                 // See if the configuration specifies a mapping between
                 // the registering application and a DIF.
-                found = lookup_dif_by_application(app_name,
-                                                              dif_name);
-                if (found) {
+                if (lookup_dif_by_application(app_name, dif_name)){
                         // If a mapping exists, select an IPC process
                         // from the specified DIF.
                         slave_ipcp = select_ipcp_by_dif(dif_name);
@@ -158,7 +156,7 @@ void IPCManager_::application_registration_request_event_handler(rina::IPCEvent 
                 FLUSH_LOG(ERR, ss);
 
                 // Notify the application about the unsuccessful registration.
-                application_registration_notify(*event, app_name,
+                notify_app_reg(*event, app_name,
                         rina::ApplicationProcessNamingInformation(), false);
                 return;
         }
@@ -168,34 +166,58 @@ void IPCManager_::application_registration_request_event_handler(rina::IPCEvent 
                         "register application " << app_name.toString() << endl;
                 FLUSH_LOG(ERR, ss);
                 // Notify the application about the unsuccessful registration.
-                application_registration_notify(*event, app_name,
+                notify_app_reg(*event, app_name,
                         rina::ApplicationProcessNamingInformation(), false);
                 return;
         }
 
+	//Perform the registration
         try {
-        		seqnum = opaque_generator_.next();
-                slave_ipcp->registerApplication(app_name,
+                //Create a transaction
+        	seqnum = opaque_generator_.next();
+		trans = new APPregTransState(NULL, seqnum, slave_ipcp->id,
+									event);
+		if(!trans){
+			ss << "Unable to allocate memory for the transaction object. Out of memory! "
+				<< dif_name.toString();
+			throw rina::IpcmRegisterApplicationException();
+		}
+
+		//Store transaction
+		if(add_transaction_state(seqnum, trans) < 0){
+			ss << "Unable to add transaction; out of memory? "
+				<< dif_name.toString();
+			throw rina::IpcmRegisterApplicationException();
+		}
+
+		slave_ipcp->registerApplication(app_name,
                                                 info.ipcProcessId,
                                                 seqnum);
-                pending_app_registrations[seqnum] =
-                                        make_pair(slave_ipcp, *event);
 
+
+		/*pending_app_registrations[seqnum] =
+                                        make_pair(slave_ipcp, *event);
+		*/
                 ss << "Requested registration of application " <<
                         app_name.toString() << " to IPC process " <<
                         slave_ipcp->name.toString() << endl;
                 FLUSH_LOG(INFO, ss);
         } catch (rina::IpcmRegisterApplicationException) {
-                pending_app_registrations.erase(seqnum);
-                ss  << ": Error while registering application "
+                if(trans)
+			delete trans;
+
+		ss  << ": Error while registering application "
                         << app_name.toString() << endl;
                 FLUSH_LOG(ERR, ss);
+
                 // Notify the application about the unsuccessful registration.
-                application_registration_notify(*event, app_name,
+                notify_app_reg(*event, app_name,
                                                 slave_ipcp->name, false);
         }
 }
 
+
+/************************* TO BE REMOVED ************************************/
 bool IPCManager_::ipcm_register_response_common(
         rina::IpcmRegisterApplicationResponseEvent *event,
         const rina::ApplicationProcessNamingInformation& app_name,
@@ -224,41 +246,31 @@ bool IPCManager_::ipcm_register_response_common(
 
 int IPCManager_::ipcm_register_response_app(
         rina::IpcmRegisterApplicationResponseEvent *event,
-        map<unsigned int,
-            std::pair<rina::IPCProcess *,
-                      rina::ApplicationRegistrationRequestEvent
-                     >
-           >::iterator mit)
+        rina::IPCProcess * slave_ipcp,
+        rina::ApplicationRegistrationRequestEvent& req_event)
 {
-        rina::IPCProcess *slave_ipcp = mit->second.first;
-        const rina::ApplicationRegistrationRequestEvent& req_event =
-                        mit->second.second;
         const rina::ApplicationProcessNamingInformation& app_name =
                 req_event.applicationRegistrationInformation.
                 appName;
         const rina::ApplicationProcessNamingInformation&
                 slave_dif_name = slave_ipcp->
                 getDIFInformation().dif_name_;
-        ostringstream ss;
-        bool success;
 
-        success = ipcm_register_response_common(event, app_name, slave_ipcp,
+	bool success;
+
+	success = ipcm_register_response_common(event, app_name, slave_ipcp,
                                            slave_dif_name);
 
         // Notify the application about the (un)successful registration.
-        application_registration_notify(req_event, app_name,
-                                        slave_dif_name, success);
+        notify_app_reg(req_event, app_name, slave_dif_name, success);
 
-        pending_app_registrations.erase(mit);
-
-        return success ? 0 : -1;
+        return success;
 }
+/************************* TO BE REMOVED END ********************************/
 
-void IPCManager_::ipcm_register_app_response_event_handler(rina::IPCEvent *e)
+void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponseEvent* e)
 {
-
-        DOWNCAST_DECL(e, rina::IpcmRegisterApplicationResponseEvent, event);
-        map<unsigned int,
+/*        map<unsigned int,
             std::pair<rina::IPCProcess *, rina::IPCProcess*>
            >::iterator it;
         map<unsigned int,
@@ -283,6 +295,74 @@ void IPCManager_::ipcm_register_app_response_event_handler(rina::IPCEvent *e)
         }
 
         //concurrency.set_event_result(ret);
+*/
+
+        rina::IPCProcess* ipcp;
+        ostringstream ss;
+	APPregTransState* t1;
+	IPCPregTransState* t2;
+	IPCPTransState* trans = get_transaction_state<IPCPTransState>(e->sequenceNumber);
+	assert(trans->tid == e->sequenceNumber);
+
+	if(trans){
+		try{
+			//Recover IPCP
+			ipcp = lookup_ipcp_by_id(trans->ipcp_id);
+			if(!ipcp){
+				ss << ": Warning: Could not complete application registration: "<<e->sequenceNumber<<
+				"IPCP with id: "<<trans->ipcp_id<<"does not exist! Perhaps deleted?" << endl;
+				FLUSH_LOG(WARN, ss);
+				throw Exception();
+			}
+
+			//TODO  solve this mess. We have to do it this way
+			//because code is different from IPCP to an APP, but
+			//there is a single event
+			t1 = get_transaction_state<APPregTransState>(trans->tid);
+			if(t1){
+				//Application registration
+				ipcm_register_response_app(e, ipcp,
+								*t1->req);
+			}else{
+				t2 = get_transaction_state<IPCPregTransState>(trans->tid);
+				if(!t2){
+					//Corrupted state
+					ss << ": Warning: Could not complete application registration: "<<e->sequenceNumber<<
+					". Corrupted state!" << endl;
+					FLUSH_LOG(WARN, ss);
+					assert(0);
+					throw Exception();
+				}
+				//FIXME
+                		//ipcm_register_response_ipcp(e, it);
+
+			}
+			//Mark as completed
+			trans->completed(e->result);
+		}catch(...){
+			//Remove the transaction and return
+			remove_transaction_state(trans->tid);
+			delete trans;
+			return;
+		}
+	}else{
+		//Transacion was not found
+                ss << ": Warning: DIF assignment response "
+                        "received, but no pending DIF assignment. Perhaps the IPCP was deleted? " << endl;
+                FLUSH_LOG(WARN, ss);
+		return;
+	}
+
+	//If there was a calle, invoke the callback and remove it. Otherwise
+	//transaction is fully complete and originator will clean up the state
+	if(trans->callee){
+		//Invoke callback
+		//FIXME
+
+		//Remove the transaction
+		remove_transaction_state(trans->tid);
+		delete trans;
+	}
 }
 
 void IPCManager_::application_manager_app_unregistered(
@@ -292,22 +372,22 @@ void IPCManager_::application_manager_app_unregistered(
         ostringstream ss;
 
         // Inform the application about the unregistration result
-        try {
-                if (event.sequenceNumber > 0) {
-                        rina::applicationManager->
-                                        applicationUnregistered(event, result);
-                        ss << "Application " << event.applicationName.
-                                toString() << " informed about its "
-                                "unregistration [success = " << (!result) <<
-                                "]" << endl;
-                        FLUSH_LOG(INFO, ss);
-                }
-        } catch (rina::NotifyApplicationUnregisteredException) {
-                ss  << ": Error while notifying application "
-                        << event.applicationName.toString() << " about "
-                        "failed unregistration" << endl;
-                FLUSH_LOG(ERR, ss);
-        }
+	if (event.sequenceNumber == 0)
+		return;
+	try {
+		rina::applicationManager->applicationUnregistered(event,
+								result);
+		ss << "Application " << event.applicationName.
+		toString() << " informed about its "
+		"unregistration [success = " << (!result) <<
+		"]" << endl;
+		FLUSH_LOG(INFO, ss);
+	} catch (rina::NotifyApplicationUnregisteredException) {
+		ss  << ": Error while notifying application "
+		<< event.applicationName.toString() << " about "
+		"failed unregistration" << endl;
+		FLUSH_LOG(ERR, ss);
+	}
 }
 
 void IPCManager_::application_unregistration_request_event_handler(rina::IPCEvent *e)
@@ -339,6 +419,7 @@ void IPCManager_::application_unregistration_request_event_handler(rina::IPCEven
         }
 }
 
+/**************************** TO BE REMOVED ************************************/
 bool IPCManager_::ipcm_unregister_response_common(
                         rina::IpcmUnregisterApplicationResponseEvent *event,
                         rina::IPCProcess *slave_ipcp,
@@ -369,31 +450,24 @@ bool IPCManager_::ipcm_unregister_response_common(
 
 int IPCManager_::ipcm_unregister_response_app(
                         rina::IpcmUnregisterApplicationResponseEvent *event,
-                        map<unsigned int,
-                            pair<rina::IPCProcess *,
-                                 rina::ApplicationUnregistrationRequestEvent
-                                >
-                           >::iterator mit)
+                        rina::IPCProcess * ipcp,
+                        rina::ApplicationUnregistrationRequestEvent& req)
 {
-        rina::ApplicationUnregistrationRequestEvent& req_event =
-                                        mit->second.second;
-
         // Inform the supporting IPC process
-        ipcm_unregister_response_common(event, mit->second.first,
-                                        req_event.applicationName);
+        ipcm_unregister_response_common(event, ipcp,
+                                        req.applicationName);
 
         // Inform the application
-        application_manager_app_unregistered(req_event,
+        application_manager_app_unregistered(req,
                                              event->result);
-
-        pending_app_unregistrations.erase(mit);
 
         return 0;
 }
+/**************************** TO BE REMOVED END ********************************/
 
-void IPCManager_::ipcm_unregister_app_response_event_handler(rina::IPCEvent *e)
+void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResponseEvent *e)
 {
-        DOWNCAST_DECL(e, rina::IpcmUnregisterApplicationResponseEvent, event);
+#if 0
         map<unsigned int,
             std::pair<rina::IPCProcess *,
                       rina::ApplicationUnregistrationRequestEvent>
@@ -417,21 +491,92 @@ void IPCManager_::ipcm_unregister_app_response_event_handler(rina::IPCEvent *e)
         }
 
         //concurrency.set_event_result(ret);
+#endif
+	ostringstream ss;
+	rina::IPCProcess* ipcp;
+
+	//First check if this de-reg was a pending
+	APPUnregTransState* t1;
+	IPCPregTransState* t2;
+	IPCPTransState* trans = get_transaction_state<IPCPTransState>(e->sequenceNumber);
+	assert(trans->tid == e->sequenceNumber);
+
+	if(trans){
+		try{
+			//Recover IPCP
+			ipcp = lookup_ipcp_by_id(trans->ipcp_id);
+			if(!ipcp){
+				ss << ": Warning: Could not complete application unregistration: "<<e->sequenceNumber<<
+				"IPCP with id: "<<trans->ipcp_id<<"does not exist! Perhaps deleted?" << endl;
+				FLUSH_LOG(WARN, ss);
+				throw Exception();
+			}
+
+			//TODO  solve this mess. We have to do it this way
+			//because code is different from IPCP to an APP, but
+			//there is a single event
+			t1 = get_transaction_state<APPUnregTransState>(trans->tid);
+			if(t1){
+				//Application registration
+				ipcm_unregister_response_app(e, ipcp, *t1->req);
+			}else{
+				t2 = get_transaction_state<IPCPregTransState>(trans->tid);
+				if(!t2){
+					//Corrupted state
+					ss << ": Warning: Could not complete application unregistration: "<<e->sequenceNumber<<
+					". Corrupted state!" << endl;
+					FLUSH_LOG(WARN, ss);
+					assert(0);
+					throw Exception();
+				}
+				//FIXME
+                		//ipcm_unregister_response_ipcp(event, jt);
+
+			}
+			//Mark as completed
+			trans->completed(e->result);
+		}catch(...){
+			//Remove the transaction and return
+			remove_transaction_state(trans->tid);
+			delete trans;
+			return;
+		}
+	}else{
+		//Transacion was not found
+                ss << ": Warning: Application unregistration response "
+                        "received but unknown. Perhaps the IPCP was deleted? " << endl;
+                FLUSH_LOG(WARN, ss);
+		return;
+	}
+
+	//If there was a calle, invoke the callback and remove it. Otherwise
+	//transaction is fully complete and originator will clean up the state
+	if(trans->callee){
+		//Invoke callback
+		//FIXME
+
+		//Remove the transaction
+		remove_transaction_state(trans->tid);
+		delete trans;
+	}
 }
 
 void IPCManager_::register_application_response_event_handler(rina::IPCEvent *event)
 {
         (void) event; // Stop compiler barfs
+	//TODO
 }
 
 void IPCManager_::unregister_application_response_event_handler(rina::IPCEvent *event)
 {
         (void) event; // Stop compiler barfs
+	//TODO
 }
 
 void IPCManager_::application_registration_canceled_event_handler(rina::IPCEvent *event)
 {
         (void) event; // Stop compiler barfs
+	//TODO
 }
 
-}
+}//namespace rinad

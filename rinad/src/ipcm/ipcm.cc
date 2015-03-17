@@ -1392,7 +1392,10 @@ void IPCManager_::run(){
 						break;
 
 				case rina::APPLICATION_REGISTRATION_REQUEST_EVENT:
-						application_registration_request_event_handler(event);
+						{
+        					DOWNCAST_DECL(e, rina::ApplicationRegistrationRequestEvent, event);
+						app_reg_req_handler(e);
+						}
 						break;
 
 				case rina::REGISTER_APPLICATION_RESPONSE_EVENT:
@@ -1460,11 +1463,17 @@ void IPCManager_::run(){
 						break;
 
 				case rina::IPCM_REGISTER_APP_RESPONSE_EVENT:
-						ipcm_register_app_response_event_handler(event);
+						{
+        					DOWNCAST_DECL(e, rina::IpcmRegisterApplicationResponseEvent, event);
+						reg_app_response_handler(e);
+						}
 						break;
 
 				case rina::IPCM_UNREGISTER_APP_RESPONSE_EVENT:
-						ipcm_unregister_app_response_event_handler(event);
+						{
+        					DOWNCAST_DECL(e, rina::IpcmUnregisterApplicationResponseEvent, event);
+						unreg_app_response_handler(event);
+						}
 						break;
 
 				case rina::IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT:

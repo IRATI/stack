@@ -412,37 +412,30 @@ protected:
 
 
 	//Application registration mgmt
-	void application_registration_request_event_handler(rina::IPCEvent *e);
-	void ipcm_register_app_response_event_handler(rina::IPCEvent *e);
+	void app_reg_req_handler(rina::ApplicationRegistrationRequestEvent *e);
+	void app_reg_response_handler(rina::IpcmRegisterApplicationResponseEvent* e);
 	void application_unregistration_request_event_handler(rina::IPCEvent *e);
-	void ipcm_unregister_app_response_event_handler(rina::IPCEvent *e);
+	void unreg_app_response_handler(rina::IpcmUnregisterApplicationResponseEvent *e);
 	void register_application_response_event_handler(rina::IPCEvent *event);
 	void unregister_application_response_event_handler(rina::IPCEvent *event);
 	void application_registration_canceled_event_handler(rina::IPCEvent *event);
 	void application_unregistered_event_handler(rina::IPCEvent * event);
-	void application_registration_notify(
+	void notify_app_reg(
 		const rina::ApplicationRegistrationRequestEvent& req_event,
 		const rina::ApplicationProcessNamingInformation& app_name,
 		const rina::ApplicationProcessNamingInformation& slave_dif_name,
 		bool success);
-	int ipcm_register_response_app(
-		rina::IpcmRegisterApplicationResponseEvent *event,
-		std::map<unsigned int,
-			std::pair<rina::IPCProcess *,
-				rina::ApplicationRegistrationRequestEvent>
-		>::iterator mit);
 	void application_manager_app_unregistered(
 		rina::ApplicationUnregistrationRequestEvent event,
 		int result);
 	int ipcm_unregister_response_app(
 			rina::IpcmUnregisterApplicationResponseEvent *event,
-			std::map<unsigned int,
-				std::pair<rina::IPCProcess *,
-				rina::ApplicationUnregistrationRequestEvent
-				>
-			>::iterator mit);
-
-
+			rina::IPCProcess * ipcp,
+			rina::ApplicationUnregistrationRequestEvent& req);
+	int ipcm_register_response_app(
+		rina::IpcmRegisterApplicationResponseEvent *,
+		rina::IPCProcess * slave_ipcp,
+		rina::ApplicationRegistrationRequestEvent& req_event);
 
 	//IPCP mgmt
 	void ipc_process_create_connection_response_handler(rina::IPCEvent * event);
@@ -512,6 +505,7 @@ protected:
 	void ipc_process_select_policy_set_response_handler(
 							rina::IPCEvent *e);
 
+#if 0
 /**********************************************************/
 	//
 	// TODO: revise
@@ -567,11 +561,6 @@ protected:
 			  >
 		> pending_flow_deallocations;
 
-	//
-	// RINA configuration internal state
-	//
-	rinad::RINAConfiguration config;
-
 	/* FIXME REMOVE THIS*/
 	std::map<unsigned int,
 		 rina::IPCProcess *> pending_set_policy_set_param_ops;
@@ -582,6 +571,11 @@ protected:
 	std::map<unsigned int,
 		 rina::IPCProcess *> pending_plugin_load_ops;
 	/* FIXME REMOVE THIS*/
+#endif
+	//
+	// RINA configuration internal state
+	//
+	rinad::RINAConfiguration config;
 
 	//Script thread
 	rina::Thread *script;
