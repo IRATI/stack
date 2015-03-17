@@ -32,6 +32,7 @@
 
 #include "rina-configuration.h"
 #include "ipcm.h"
+#include "ipcp.h"
 
 using namespace std;
 
@@ -39,77 +40,137 @@ using namespace std;
 namespace rinad {
 
 void IPCManager_::ipc_process_set_policy_set_param_response_handler(
-							rina::IPCEvent *e)
+				rina::SetPolicySetParamResponseEvent *event)
 {
-	DOWNCAST_DECL(e, rina::SetPolicySetParamResponseEvent, event);
-	std::map<unsigned int, rina::IPCProcess *>::iterator mit;
 	bool success = (event->result == 0);
 	ostringstream ss;
 	int ret = -1;
 
-	mit = pending_set_policy_set_param_ops.find(event->sequenceNumber);
-	if (mit != pending_set_policy_set_param_ops.end()) {
-		pending_set_policy_set_param_ops.erase(mit);
-		ss << "set-policy-set-param-op completed on IPC process "
-		<< mit->second->name.toString() <<
-		" [success=" << success << "]" << endl;
-		FLUSH_LOG(INFO, ss);
-		ret = event->result;
-	} else {
-		ss << "Warning: unmatched event received" << endl;
+	IPCPTransState* trans = get_transaction_state<IPCPTransState>(event->sequenceNumber);
+
+	if(!trans){
+		ss << ": Warning: unknown policy set param response received: "<<event->sequenceNumber<<endl;
 		FLUSH_LOG(WARN, ss);
+		return;
 	}
 
-	//concurrency.set_event_result(ret);
+	rina::IPCProcess* ipcp = lookup_ipcp_by_id(trans->ipcp_id);
+	if(!ipcp){
+		ss << "Could not complete policy set param. Invalid IPCP id "<< ipcp->id;
+		FLUSH_LOG(ERR, ss);
+		//XXX: destroy transaction
+		return;
+	}
+
+
+	ss << "set-policy-set-param-op completed on IPC process "
+	<< ipcp->name.toString() <<
+	" [success=" << success << "]" << endl;
+	FLUSH_LOG(INFO, ss);
+
+	//Mark as completed
+	trans->completed(event->result);
+
+
+	//If there was a calle, invoke the callback and remove it. Otherwise
+	//transaction is fully complete and originator will clean up the state
+	if(trans->callee){
+		//Invoke callback
+		//FIXME
+
+		//Remove the transaction
+		remove_transaction_state(trans->tid);
+		delete trans;
+	}
+
 }
 
-void IPCManager_::ipc_process_plugin_load_response_handler(rina::IPCEvent *e)
+void IPCManager_::ipc_process_plugin_load_response_handler(rina::PluginLoadResponseEvent *event)
 {
-        DOWNCAST_DECL(e, rina::PluginLoadResponseEvent, event);
-        map<unsigned int, rina::IPCProcess *>::iterator mit;
         bool success = (event->result == 0);
         ostringstream ss;
         int ret = -1;
 
-        mit = pending_plugin_load_ops.find(event->sequenceNumber);
-        if (mit != pending_plugin_load_ops.end()) {
-                pending_plugin_load_ops.erase(mit);
-                ss << "plugin-load-op completed on IPC process "
-                       << mit->second->name.toString() <<
-                        " [success=" << success << "]" << endl;
-                FLUSH_LOG(INFO, ss);
-                ret = event->result;
-        } else {
-                ss << "Warning: unmatched event received" << endl;
-                FLUSH_LOG(WARN, ss);
-        }
+	IPCPTransState* trans = get_transaction_state<IPCPTransState>(event->sequenceNumber);
 
-        //concurrency.set_event_result(ret);
+	if(!trans){
+		ss << ": Warning: unknown plugin load response received: "<<event->sequenceNumber<<endl;
+		FLUSH_LOG(WARN, ss);
+		return;
+	}
+
+	rina::IPCProcess* ipcp = lookup_ipcp_by_id(trans->ipcp_id);
+	if(!ipcp){
+		ss << "Could not complete policy set param. Invalid IPCP id "<< ipcp->id;
+		FLUSH_LOG(ERR, ss);
+		//XXX: destroy transaction
+		return;
+	}
+
+
+	ss << "plugin-load-op completed on IPC process "
+	       << ipcp->name.toString() <<
+		" [success=" << success << "]" << endl;
+	FLUSH_LOG(INFO, ss);
+
+	//Mark as completed
+	trans->completed(event->result);
+
+
+	//If there was a calle, invoke the callback and remove it. Otherwise
+	//transaction is fully complete and originator will clean up the state
+	if(trans->callee){
+		//Invoke callback
+		//FIXME
+
+		//Remove the transaction
+		remove_transaction_state(trans->tid);
+		delete trans;
+	}
 }
 
 void IPCManager_::ipc_process_select_policy_set_response_handler(
-							rina::IPCEvent *e)
+					rina::SelectPolicySetResponseEvent *event)
 {
-        DOWNCAST_DECL(e, rina::SelectPolicySetResponseEvent, event);
-        map<unsigned int, rina::IPCProcess *>::iterator mit;
         bool success = (event->result == 0);
         ostringstream ss;
         int ret = -1;
 
-        mit = pending_select_policy_set_ops.find(event->sequenceNumber);
-        if (mit != pending_select_policy_set_ops.end()) {
-                pending_select_policy_set_ops.erase(mit);
-                ss << "select-policy-set-op completed on IPC process "
-                       << mit->second->name.toString() <<
-                        " [success=" << success << "]" << endl;
-                FLUSH_LOG(INFO, ss);
-                ret = event->result;
-        } else {
-                ss << "Warning: unmatched event received" << endl;
-                FLUSH_LOG(WARN, ss);
-        }
+	IPCPTransState* trans = get_transaction_state<IPCPTransState>(event->sequenceNumber);
 
-        //concurrency.set_event_result(ret);
+	if(!trans){
+		ss << ": Warning: unknown select policy response received: "<<event->sequenceNumber<<endl;
+		FLUSH_LOG(WARN, ss);
+		return;
+	}
+
+	rina::IPCProcess* ipcp = lookup_ipcp_by_id(trans->ipcp_id);
+	if(!ipcp){
+		ss << "Could not complete policy set param. Invalid IPCP id "<< ipcp->id;
+		FLUSH_LOG(ERR, ss);
+		//XXX: destroy transaction
+		return;
+	}
+
+	ss << "select-policy-set-op completed on IPC process "
+	       << ipcp->name.toString() <<
+		" [success=" << success << "]" << endl;
+	FLUSH_LOG(INFO, ss);
+
+	//Mark as completed
+	trans->completed(event->result);
+
+
+	//If there was a calle, invoke the callback and remove it. Otherwise
+	//transaction is fully complete and originator will clean up the state
+	if(trans->callee){
+		//Invoke callback
+		//FIXME
+
+		//Remove the transaction
+		remove_transaction_state(trans->tid);
+		delete trans;
+	}
 }
 
 } //namespace rinad

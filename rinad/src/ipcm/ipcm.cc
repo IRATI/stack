@@ -1558,13 +1558,22 @@ void IPCManager_::run(){
 
 				//Policies
 				case rina::IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE:
-					ipc_process_set_policy_set_param_response_handler(event);
+					{
+        				DOWNCAST_DECL(event, rina::SetPolicySetParamResponseEvent, e);
+					ipc_process_set_policy_set_param_response_handler(e);
+					}
 					break;
 				case rina::IPC_PROCESS_SELECT_POLICY_SET_RESPONSE:
-					ipc_process_select_policy_set_response_handler(event);
+					{
+        				DOWNCAST_DECL(event, rina::SelectPolicySetResponseEvent, e);
+					ipc_process_select_policy_set_response_handler(e);
+					}
 					break;
 				case rina::IPC_PROCESS_PLUGIN_LOAD_RESPONSE:
-					ipc_process_plugin_load_response_handler(event);
+					{
+        				DOWNCAST_DECL(event, rina::PluginLoadResponseEvent, e);
+					ipc_process_plugin_load_response_handler(e);
+					}
 					break;
 			}
 

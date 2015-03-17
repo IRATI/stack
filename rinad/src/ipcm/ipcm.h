@@ -500,10 +500,11 @@ protected:
 
 	//Plugins
 	void ipc_process_set_policy_set_param_response_handler(
-							rina::IPCEvent *e);
-	void ipc_process_plugin_load_response_handler(rina::IPCEvent *e);
+				rina::SetPolicySetParamResponseEvent *e);
+	void ipc_process_plugin_load_response_handler(
+				rina::PluginLoadResponseEvent *e);
 	void ipc_process_select_policy_set_response_handler(
-							rina::IPCEvent *e);
+					rina::SelectPolicySetResponseEvent *e);
 
 #if 0
 /**********************************************************/
