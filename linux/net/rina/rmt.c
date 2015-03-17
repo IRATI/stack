@@ -1377,7 +1377,7 @@ static void receive_worker(unsigned long o)
                         sdu = (struct sdu *) rfifo_pop(queue);
                         if (!sdu) {
                                 LOG_DBG("No SDU to work with in this queue");
-                                break;;
+                                break;
                         }
 
                         atomic_dec(&entry->n_sdus);
@@ -1490,8 +1490,6 @@ static void receive_worker(unsigned long o)
                                 atomic_set(&entry->n_sdus, 0);
                         spin_lock(&tmp->ingress.n1_ports->lock);
                 }
-                spin_unlock(&tmp->ingress.n1_ports->lock);
-                spin_lock(&tmp->ingress.n1_ports->lock);
         }
 
         spin_unlock(&tmp->ingress.n1_ports->lock);
