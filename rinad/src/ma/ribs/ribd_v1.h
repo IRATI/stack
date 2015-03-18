@@ -64,8 +64,8 @@ class RIBDaemonv1_
 {
   friend class Singleton<RIBDaemonv1_>;
  public:
-  const rib::ResponseHandlerInterface* getRespHandler();
-  const cacep::AppConHandlerInterface* getConnHandler();
+  rib::ResponseHandlerInterface* getRespHandler();
+  cacep::AppConHandlerInterface* getConnHandler();
   void initiateRIB(rib::RIBDInterface* ribd);
  private:
   RIBDaemonv1_();

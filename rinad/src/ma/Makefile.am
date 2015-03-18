@@ -24,10 +24,12 @@ mad_CPPFLAGS =					\
 	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)			\
 	-I$(srcdir)/../			\
-	-I$(srcdir)/../common   
+	-I$(srcdir)/../common 	\ 
+	-I$(srcdir)/librina-wrap  
 
 mad_LDADD = 					\
 	ribs/librinad_ma_ribs.la		\
+	librina-wrap/librina_cdap_rib.la		\
 	$(builddir)/../common/librinad.la	\
 	$(LIBRINA_LIBS)
 

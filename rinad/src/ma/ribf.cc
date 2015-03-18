@@ -54,6 +54,16 @@ RIBFactory_::~RIBFactory_() throw (){}
 * Inner API
 */
 void RIBFactory_::createRIB(uint64_t version){
+  // FIXME: change for config param
+  std::string com_prot = "GPB";
+  char separator = ',';
+  cdap_rib::cdap_params_t *params = new cdap_rib::cdap_params_t;
+  params->is_IPCP_ = false;
+  params->timeout_ = 2000;
+
+  cdap_rib::vers_info_t *vers = new cdap_rib::vers_info_t;
+  vers->version_ = (long) version;
+
 	//Serialize
 	lock();
 
@@ -67,7 +77,7 @@ void RIBFactory_::createRIB(uint64_t version){
 	switch(version)
 	{
 	case 1:
-		rib_inst_[version] = factory_.create()
+		rib_inst_[version] = factory_.create(RIBDaemonv1->getConnHandler(), RIBDaemonv1->getRespHandler(), com_prot , params, vers, separator);
 		break;
 	default:
 		break;
@@ -77,9 +87,9 @@ void RIBFactory_::createRIB(uint64_t version){
 	unlock();
 }
 
-rina::IRIBDaemon& RIBFactory_::getRIB(uint64_t version){
+rib::RIBDInterface& RIBFactory_::getRIB(uint64_t version){
 
-	rina::IRIBDaemon* rib;
+  rib::RIBDInterface* rib;
 
 	//Serialize
 	lock();
@@ -88,13 +98,13 @@ rina::IRIBDaemon& RIBFactory_::getRIB(uint64_t version){
 	//because removal of RIBs is NOT implemented. However this
 	//implementation already protects it
 	//Check if it exists
-	if( rib_inst.find(version) == rib_inst.end() ){
+	if( rib_inst_.find(version) == rib_inst_.end() ){
 		throw eRIBNotFound("RIB instance not found");
 	}
 
 	//TODO: reference count to avoid deletion while being used?
 
-	rib = rib_inst[version];
+	rib = rib_inst_[version];
 
 	//Unlock
 	unlock();

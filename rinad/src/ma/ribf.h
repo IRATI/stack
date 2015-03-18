@@ -21,6 +21,7 @@
 
 #include <list>
 #include <librina/concurrency.h>
+#include <inttypes.h>
 #include "librina-wrap/rib_provider.h"
 
 namespace rinad{
@@ -67,7 +68,7 @@ public:
 	* Get a reference to a RIB
 	* @throws eRIBNotFound
 	*/
-	rina::IRIBDaemon& getRIB(uint64_t version);
+	rib::RIBDInterface& getRIB(uint64_t version);
 
 #if 0
 	//TODO: if ever necessary

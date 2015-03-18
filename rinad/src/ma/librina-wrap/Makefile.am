@@ -1,7 +1,7 @@
 #
 # Makefile.am
 #
-# Written by: Bernat Gastón <marc DOT sune AT bisdn DOT de>
+# Written by: Bernat Gastón <bernat DOT gaston AT i2cat DOT net>
 #
 
 SUBDIRS      = test
@@ -10,6 +10,7 @@ EXTRA_DIST   =
 CLEANFILES   =
 
 noinst_LTLIBRARIES = librina_cdap_rib.la
+
 
 librina_cdap_rib_la_CFLAGS   =
 librina_cdap_rib_la_CPPFLAGS =			\

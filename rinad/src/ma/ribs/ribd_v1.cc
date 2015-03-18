@@ -85,11 +85,11 @@ RIBDaemonv1_::~RIBDaemonv1_()
   delete conn_handler_;
 }
 
-const rib::ResponseHandlerInterface* RIBDaemonv1_::getRespHandler()
+rib::ResponseHandlerInterface* RIBDaemonv1_::getRespHandler()
 {
   return resp_handler_;
 }
-const cacep::AppConHandlerInterface* RIBDaemonv1_::getConnHandler()
+cacep::AppConHandlerInterface* RIBDaemonv1_::getConnHandler()
 {
   return conn_handler_;
 }
