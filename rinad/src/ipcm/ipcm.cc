@@ -185,8 +185,6 @@ IPCManager_::create_ipcp(const Addon* callee,
 	int ret;
 	TransactionState* state;
 
-	//TODO: check if rwlock is really necessary here
-
 	try {
 		// Check that the AP name is not empty
 		if (name.processName == std::string("")) {
@@ -209,6 +207,10 @@ IPCManager_::create_ipcp(const Addon* callee,
 		}
 
 		ipcp = ipcp_factory_.create(name, type);
+
+		//Auto release the write lock
+		rina::WriteScopedLock writelock(ipcp->rwlock, false);
+
 
 		//TODO: this should be moved to the factory
 		//Moreover the API should be homgenized such that the
@@ -293,7 +295,6 @@ IPCManager_::destroy_ipcp(const Addon* callee, unsigned int ipcp_id)
 	ostringstream ss;
 	int ret = 0;
 
-	//TODO: check if rwlock is really necessary here
 	try {
 		ipcp_factory_.destroy(ipcp_id);
 		ss << "IPC process destroyed [id = " << ipcp_id
@@ -332,11 +333,10 @@ IPCManager_::ipcp_exists(const int ipcp_id){
 	return (lookup_ipcp_by_id(ipcp_id) != NULL);
 }
 
-int
+void
 IPCManager_::list_ipcp_types(std::list<std::string>& types)
 {
 	types = ipcp_factory_.getSupportedIPCProcessTypes();
-	return 0;
 }
 
 //TODO this assumes single IPCP per DIF
@@ -372,16 +372,19 @@ IPCManager_::assign_to_dif(const Addon* callee, const int ipcp_id,
 	IPCMIPCProcess* ipcp;
 	IPCPTransState* trans;
 
-	//TODO: move this to a write_lock over the IPCP
-
 	try {
 
-		ipcp = lookup_ipcp_by_id(ipcp_id);
+		ipcp = lookup_ipcp_by_id(ipcp_id, true);
+
 
 		if(!ipcp){
 			ss << "Invalid IPCP id "<< ipcp_id;
 			throw Exception();
 		}
+
+		//Auto release the write lock
+		rina::WriteScopedLock writelock(ipcp->rwlock, false);
+
 
 		// Try to extract the DIF properties from the
 		// configuration.
@@ -543,11 +546,9 @@ IPCManager_::register_at_dif(const Addon* callee, const int ipcp_id,
 	int ret = -1;
 	IPCPregTransState* trans;
 
-	//TODO: move this to a write_lock over the IPCP
-
 	// Try to register @ipcp to the slave IPC process.
 	try {
-		ipcp = lookup_ipcp_by_id(ipcp_id);
+		ipcp = lookup_ipcp_by_id(ipcp_id, true);
 
 		if(!ipcp){
 			ss << "Invalid IPCP id "<< ipcp_id;
@@ -555,7 +556,7 @@ IPCManager_::register_at_dif(const Addon* callee, const int ipcp_id,
 			throw Exception();
 		}
 
-		slave_ipcp = select_ipcp_by_dif(dif_name);
+		slave_ipcp = select_ipcp_by_dif(dif_name, true);
 
 		if (!slave_ipcp) {
 			ss << "Cannot find any IPC process belonging "
@@ -565,11 +566,14 @@ IPCManager_::register_at_dif(const Addon* callee, const int ipcp_id,
 			throw Exception();
 		}
 
+		//Auto release the write lock
+		rina::WriteScopedLock writelock(ipcp->rwlock, false);
+		rina::WriteScopedLock swritelock(slave_ipcp->rwlock, false);
+
 		//Create a transaction
 		seqnum = opaque_generator_.next();
 		trans = new IPCPregTransState(callee, seqnum, ipcp->get_id(),
 							slave_ipcp->get_id());
-
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! "
 				<< dif_name.toString();
@@ -617,21 +621,12 @@ int IPCManager_::register_at_difs(const Addon* callee, const int ipcp_id,
 		const list<rina::ApplicationProcessNamingInformation>& difs)
 {
 
-	IPCMIPCProcess *ipcp;
 	ostringstream ss;
 	int ret = 0;
 
 	//TODO: move this to a write_lock over the IPCP
 
 	try{
-		ipcp = lookup_ipcp_by_id(ipcp_id);
-
-		if(!ipcp){
-			ss << "Invalid IPCP id "<< ipcp_id;
-                	FLUSH_LOG(ERR, ss);
-			throw Exception();
-		}
-
 		for (list<rina::ApplicationProcessNamingInformation>::const_iterator
 				nit = difs.begin(); nit != difs.end(); nit++) {
 			register_at_dif(callee, ipcp_id, *nit);
@@ -666,6 +661,7 @@ IPCManager_::unregister_ipcp_from_ipcp(const Addon* callee, int ipcp_id,
 			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
+
 		slave_ipcp = lookup_ipcp_by_id(slave_ipcp_id);
 
 		if (!slave_ipcp) {
@@ -673,6 +669,10 @@ IPCManager_::unregister_ipcp_from_ipcp(const Addon* callee, int ipcp_id,
 			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
+
+		//Auto release the write lock
+		rina::WriteScopedLock writelock(ipcp->rwlock, false);
+		rina::WriteScopedLock swritelock(slave_ipcp->rwlock, false);
 
 		//Create a transaction
 		seqnum = opaque_generator_.next();
@@ -737,8 +737,6 @@ IPCManager_::enroll_to_dif(const Addon* callee, const int ipcp_id,
 	unsigned int seqnum;
 	IPCPTransState* trans;
 
-	//TODO: move this to a write_lock over the IPCP
-
 	try {
 		ipcp = lookup_ipcp_by_id(ipcp_id);
 
@@ -748,6 +746,8 @@ IPCManager_::enroll_to_dif(const Addon* callee, const int ipcp_id,
 			throw Exception();
 		}
 
+		//Auto release the write lock
+		rina::WriteScopedLock writelock(ipcp->rwlock, false);
 
 		//Create a transaction
 		seqnum = opaque_generator_.next();
@@ -802,20 +802,9 @@ int IPCManager_::enroll_to_difs(const Addon* callee, const int ipcp_id,
 			       const list<rinad::NeighborData>& neighbors)
 {
 	ostringstream ss;
-	IPCMIPCProcess *ipcp;
 	int ret = -1;
 
-	//TODO: move this to a write_lock over the IPCP
-
 	try{
-		ipcp = lookup_ipcp_by_id(ipcp_id);
-
-		if(!ipcp){
-			ss << "Invalid IPCP id "<< ipcp_id;
-                	FLUSH_LOG(ERR, ss);
-			throw Exception();
-		}
-
 		for (list<rinad::NeighborData>::const_iterator
 				nit = neighbors.begin();
 					nit != neighbors.end(); nit++) {
@@ -908,10 +897,8 @@ IPCManager_::update_dif_configuration(const Addon* callee, int ipcp_id,
 	IPCMIPCProcess *ipcp;
 	IPCPTransState* trans;
 
-	//TODO: move this to a write_lock over the IPCP
-
 	try {
-		ipcp = lookup_ipcp_by_id(ipcp_id);
+		ipcp = lookup_ipcp_by_id(ipcp_id, true);
 
 		if(!ipcp){
 			ss << "Invalid IPCP id "<< ipcp_id;
@@ -919,6 +906,8 @@ IPCManager_::update_dif_configuration(const Addon* callee, int ipcp_id,
 			throw Exception();
 		}
 
+		//Auto release the write lock
+		rina::WriteScopedLock writelock(ipcp->rwlock, false);
 
 		// Request a configuration update for the IPC process
 		/* FIXME The meaning of this operation is unclear: what
@@ -974,8 +963,6 @@ IPCManager_::query_rib(const Addon* callee, const int ipcp_id)
 	unsigned int seqnum;
 	RIBqTransState* trans;
 
-	//TODO: move this to a read_lock over the IPCP
-
 	try {
 		ipcp = lookup_ipcp_by_id(ipcp_id);
 
@@ -984,6 +971,10 @@ IPCManager_::query_rib(const Addon* callee, const int ipcp_id)
                 	FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
+
+		//Auto release the read lock
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
+
 
 		seqnum = opaque_generator_.next();
 		trans = new RIBqTransState(callee, seqnum, ipcp->get_id());
@@ -1050,8 +1041,6 @@ IPCManager_::set_policy_set_param(const Addon* callee, const int ipcp_id,
 	IPCPTransState* trans;
         IPCMIPCProcess *ipcp;
 
-	//TODO: move this to a write_lock over the IPCP
-
         try {
         	ipcp = lookup_ipcp_by_id(ipcp_id);
 
@@ -1060,6 +1049,9 @@ IPCManager_::set_policy_set_param(const Addon* callee, const int ipcp_id,
         		FLUSH_LOG(ERR, ss);
         		throw Exception();
         	}
+
+		//Auto release the read lock
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
 		seqnum = opaque_generator_.next();
 		trans = new IPCPTransState(callee, seqnum, ipcp->get_id());
@@ -1120,6 +1112,10 @@ IPCManager_::select_policy_set(const Addon* callee, const int ipcp_id,
         		throw Exception();
         	}
 
+		//Auto release the read lock
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
+
+
         	seqnum = opaque_generator_.next();
 		trans = new IPCPTransState(callee, seqnum, ipcp->get_id());
 		if(!trans){
@@ -1168,8 +1164,6 @@ IPCManager_::plugin_load(const Addon* callee, const int ipcp_id,
         IPCMIPCProcess *ipcp;
 	IPCPTransState* trans;
 
-	//TODO: move this to a write_lock over the IPCP
-
         try {
         	ipcp = lookup_ipcp_by_id(ipcp_id);
 
@@ -1178,6 +1172,9 @@ IPCManager_::plugin_load(const Addon* callee, const int ipcp_id,
         		FLUSH_LOG(ERR, ss);
         		throw Exception();
         	}
+
+		//Auto release the read lock
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
         	seqnum = opaque_generator_.next();
 		trans = new IPCPTransState(callee, seqnum, ipcp->get_id());
@@ -1225,13 +1222,16 @@ IPCManager_::unregister_app_from_ipcp(const Addon* callee,
 	IPCPTransState* trans;
 
         try {
-		slave_ipcp = lookup_ipcp_by_id(slave_ipcp_id);
+		slave_ipcp = lookup_ipcp_by_id(slave_ipcp_id, true);
 
 		if (!slave_ipcp) {
 			ss << "Cannot find any IPC process belonging "<<endl;
 			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
+
+		//Auto release the write lock
+		rina::WriteScopedLock writelock(slave_ipcp->rwlock, false);
 
                 // Forward the unregistration request to the IPC process
                 // that the application is registered to
@@ -1281,7 +1281,9 @@ IPCManager_::unregister_app_from_ipcp(const Addon* callee,
 
 //State management routines
 int IPCManager_::add_transaction_state(int tid, TransactionState* t){
-	//Rwlock: write
+
+	//Lock
+	rina::WriteScopedLock writelock(trans_rwlock);
 
 	//Check if exists already
 	if ( pend_transactions.find(tid) != pend_transactions.end() ){
@@ -1301,7 +1303,9 @@ int IPCManager_::add_transaction_state(int tid, TransactionState* t){
 }
 
 int IPCManager_::remove_transaction_state(int tid){
-	//Rwlock: write
+
+	//Lock
+	rina::WriteScopedLock writelock(trans_rwlock);
 
 	//Check if it really exists
 	if ( pend_transactions.find(tid) == pend_transactions.end() )
@@ -1335,7 +1339,9 @@ int IPCManager_::add_syscall_transaction_state(int tid, TransactionState* t){
 }
 
 int IPCManager_::remove_syscall_transaction_state(int tid){
-	//Rwlock: write
+
+	//Lock
+	rina::WriteScopedLock writelock(trans_rwlock);
 
 	//Check if it really exists
 	if ( pend_sys_trans.find(tid) == pend_sys_trans.end() )

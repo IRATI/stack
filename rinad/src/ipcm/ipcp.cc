@@ -449,6 +449,11 @@ IPCMIPCProcess * IPCMIPCProcessFactory::create(
 	}
 
 	ipcp = new IPCMIPCProcess(ipcp_proxy);
+
+	//Acquire lock to prevent any race condition
+	ipcp->rwlock.writelock();
+
+	//Now add to the list of IPCP processes
 	ipcProcesses[id] = ipcp;
 
 	return ipcp;

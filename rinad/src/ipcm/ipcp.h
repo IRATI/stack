@@ -407,7 +407,8 @@ public:
     /**
      * Invoked by the IPC Manager to instantiate a new IPC Process in the
      * system. The operation will block until the IPC Process is created or an
-     * error is returned.
+     * error is returned. The IPCMIPCProcess reference is always returned with
+     * the write lock acquired
      *
      * @param ipcProcessId An identifier that uniquely identifies an IPC Process
      * within a aystem.

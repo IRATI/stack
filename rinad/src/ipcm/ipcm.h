@@ -206,7 +206,7 @@ public:
 	//
 	// List the available IPCP types
 	//
-	int list_ipcp_types(std::list<std::string>& types);
+	void list_ipcp_types(std::list<std::string>& types);
 
 
 	//
@@ -593,7 +593,9 @@ protected:
 		T* t;
 		TransactionState* state;
 
-		//Rwlock: read
+		//Read lock
+		rina::ReadScopedLock readlock(trans_rwlock);
+
 		if ( pend_transactions.find(tid) == pend_transactions.end() ) {
 			state = pend_transactions[tid];
 			assert(state->tid == tid);
