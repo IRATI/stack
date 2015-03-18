@@ -29,7 +29,7 @@
 #include <librina/logs.h>
 
 #include "rina-configuration.h"
-#include "app.h"
+#include "app-handlers.h"
 
 using namespace std;
 

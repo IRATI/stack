@@ -40,10 +40,13 @@
 #include "addons/scripting.h"
 //[+] Add more here...
 
-//Event transaction states
+//IPCM IPCP
 #include "ipcp.h"
-#include "flow-alloc.h"
-#include "misc.h"
+
+//Handler specifics (transaction states)
+#include "ipcp-handlers.h"
+#include "flow-alloc-handlers.h"
+#include "misc-handlers.h"
 
 //Timeouts for timed wait
 #define IPCMANAGER_TIMEOUT_S 0

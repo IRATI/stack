@@ -32,7 +32,7 @@
 
 #include "rina-configuration.h"
 #include "ipcm.h"
-#include "ipcp.h"
+#include "ipcp-handlers.h"
 
 using namespace std;
 

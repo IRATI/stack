@@ -1,5 +1,5 @@
 /*
- * Base class for an addon
+ * IPCP transaction states
  *
  *    Marc Sune <marc.sune (at) bisdn.de>
  *
@@ -18,8 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef __ADDON_H__
-#define __ADDON_H__
+#ifndef __IPCP_HANDLERS_H__
+#define __IPCP_HANDLERS_H__
 
 #include <assert.h>
 #include <cstdlib>
@@ -32,55 +32,43 @@
 #include <librina/ipc-manager.h>
 #include <librina/patterns.h>
 
-#include "ipcp.h"
+#include "ipcm.h"
 
 namespace rinad {
 
 /**
-* Addon base class
+* Standard IPCP related transaction state
 */
-class Addon{
+class IPCPTransState: public TransactionState{
 
 public:
+	IPCPTransState(const Addon* callee, const int _tid, int _ipcp_id)
+					: TransactionState(callee, tid),
+						ipcp_id(_ipcp_id){}
+	virtual ~IPCPTransState(){};
 
-	Addon(const std::string _name):name(_name){};
-	virtual ~Addon(){};
+	//IPCP identifier
+	int ipcp_id;
+};
 
-	//
-	// Callback section
-	//
+/**
+* IPCP registration transaction state
+*/
+class IPCPregTransState: public TransactionState{
 
-#if 0
-	/**
-	* On an async call to IPCManager::create_ipcp(), this callback will be
-	* executed
-	*
-	* @param result 0 on success, -1 on failure
-	*/
-	virtual void callback_create_ipcp(const int result) const{
-		/* Do nothing */
-		(void)result;
-	};
+public:
+	IPCPregTransState(const Addon* callee, const int _tid,
+				int _ipcp_id, int _slave_ipcp_id) :
+					TransactionState(callee, tid),
+					ipcp_id(_ipcp_id),
+					slave_ipcp_id(_slave_ipcp_id){}
+	virtual ~IPCPregTransState(){};
 
-	/**
-	* On an async call to IPCManager::destroy_ipcp(), this callback will be
-	* executed
-	*
-	* @ret 0 on success, -1 on failure
-	*/
-	virtual void callback_destroy_ipcp(const int result) const{
-		/* Do nothing */
-		(void)result;
-	};
-
-#endif
-	/**
-	* Addon name
-	*/
-	std::string name;
-
+	//IPCP identifier
+	int ipcp_id;
+	int slave_ipcp_id;
 };
 
 }//rinad namespace
 
-#endif  /* __ADDON_H__ */
+#endif  /* __IPCP_HANDLERS_H__ */

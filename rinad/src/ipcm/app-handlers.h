@@ -1,5 +1,5 @@
 /*
- * MISC transaction states
+ * APP transaction states
  *
  *    Marc Sune <marc.sune (at) bisdn.de>
  *
@@ -18,8 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef __MISC_H__
-#define __MISC_H__
+#ifndef __APP_H__
+#define __APP_H__
 
 #include <assert.h>
 #include <cstdlib>
@@ -32,25 +32,44 @@
 #include <librina/ipc-manager.h>
 #include <librina/patterns.h>
 
-#include "ipcp.h"
+#include "ipcp-handlers.h"
 
 namespace rinad {
 
 /**
-* RIB query transaction state
+* Standard APP related transaction state
 */
-class RIBqTransState: public IPCPTransState{
+class APPregTransState: public IPCPTransState{
 
 public:
-	RIBqTransState(const Addon* _callee, const int _tid, int _ipcp_id)
-					:IPCPTransState(_callee, tid,
-								_ipcp_id){}
-	virtual ~RIBqTransState(){};
+	APPregTransState(const Addon* callee, const int _tid, int ipcp_id,
+			rina::ApplicationRegistrationRequestEvent* _req)
+				: IPCPTransState(callee, tid, ipcp_id),
+						req(_req){};
+	virtual ~APPregTransState(){};
 
-	//Output result
-	std::string result;
+	//Request
+	rina::ApplicationRegistrationRequestEvent* req;
 };
 
+/**
+* APP unregister related transaction state
+*/
+class APPUnregTransState: public IPCPTransState{
+
+public:
+	APPUnregTransState(const Addon* callee, const int _tid, int ipcp_id,
+			rina::ApplicationUnregistrationRequestEvent* _req)
+				: IPCPTransState(callee, tid, ipcp_id),
+						req(_req){};
+	virtual ~APPUnregTransState(){};
+
+	//Request
+	rina::ApplicationUnregistrationRequestEvent* req;
+
+	//APP identifier
+	int ipcp_id;
+};
 }//rinad namespace
 
-#endif  /* __MISC_H__ */
+#endif  /* __APP_H__ */

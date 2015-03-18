@@ -31,7 +31,7 @@
 #include <librina/logs.h>
 
 #include "rina-configuration.h"
-#include "misc.h"
+#include "misc-handlers.h"
 
 using namespace std;
 

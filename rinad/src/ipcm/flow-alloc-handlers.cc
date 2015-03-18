@@ -31,8 +31,8 @@
 #include <librina/logs.h>
 
 #include "rina-configuration.h"
-#include "ipcp.h"
-#include "flow-alloc.h"
+#include "ipcp-handlers.h"
+#include "flow-alloc-handlers.h"
 
 using namespace std;
 
