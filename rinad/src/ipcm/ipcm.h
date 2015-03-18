@@ -348,12 +348,12 @@ protected:
 	*/
 	IPCMIPCProcess* select_ipcp_by_dif(const
 			rina::ApplicationProcessNamingInformation& dif_name,
-			bool read_lock=true);
+			bool write_lock=false);
 
 	/**
 	* TODO????
 	*/
-	IPCMIPCProcess* select_ipcp(bool read_lock=true);
+	IPCMIPCProcess* select_ipcp(bool write_lock=false);
 
 	/**
 	* Check application registration
@@ -371,7 +371,7 @@ protected:
 	* the read lock acquired, otherwise the write lock is acquired.
 	*/
 	IPCMIPCProcess* lookup_ipcp_by_port(unsigned int port_id,
-						bool read_lock=true);
+						bool write_lock=false);
 
 	/**
 	* Collect flows for an application name
@@ -390,7 +390,7 @@ protected:
 	* the read lock acquired, otherwise the write lock is acquired.
 	*/
 	IPCMIPCProcess* lookup_ipcp_by_id(unsigned int id,
-							bool read_lock=true);
+							bool write_lock=false);
 	//
 	// Internal event API
 	//
@@ -672,9 +672,6 @@ protected:
 
 	//Rwlock for transactions
 	rina::ReadWriteLockable trans_rwlock;
-
-	//Rwlock for IPCP array reading
-	rina::ReadWriteLockable ipcps_rwlock;
 
 	//TODO: map of addons
 

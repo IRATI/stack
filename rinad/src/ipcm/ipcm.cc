@@ -316,7 +316,7 @@ IPCManager_::list_ipcps(std::ostream& os)
 		ipcp_factory_.listIPCProcesses();
 
 	//Prevent any insertion/deletion to happen
-	rina::ReadScopedLock readlock(ipcps_rwlock);
+	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
 
 	os << "Current IPC processes:" << endl;
 	for (unsigned int i = 0; i < ipcps.size(); i++) {

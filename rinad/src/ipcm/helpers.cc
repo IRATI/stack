@@ -40,11 +40,11 @@ namespace rinad {
 IPCMIPCProcess *
 IPCManager_::select_ipcp_by_dif(
 		const rina::ApplicationProcessNamingInformation& dif_name,
-		bool read_lock)
+		bool write_lock)
 {
 
 	//Prevent any insertion/deletion to happen
-	rina::ReadScopedLock readlock(ipcps_rwlock);
+	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
 
 	const vector<IPCMIPCProcess *>& ipcps = ipcp_factory_.listIPCProcesses();
 
@@ -56,7 +56,11 @@ IPCManager_::select_ipcp_by_dif(
 				/* The following OR clause is a temporary hack useful
 				 * for testing with shim dummy. TODO It will go away. */
 				|| ipcp_name.processName == dif_name.processName) {
-			//FIXME: rwlock over ipcp
+			//Acquire lock before leaving rwlock of the factory
+			if(write_lock)
+				ipcps[i]->rwlock.writelock();
+			else
+				ipcps[i]->rwlock.readlock();
 			return ipcps[i];
 		}
 	}
@@ -67,23 +71,33 @@ IPCManager_::select_ipcp_by_dif(
 // Returns any IPC process in the system, giving priority to
 // normal IPC processes.
 IPCMIPCProcess *
-IPCManager_::select_ipcp(bool read_lock)
+IPCManager_::select_ipcp(bool write_lock)
 {
 
 	//Prevent any insertion/deletion to happen
-	rina::ReadScopedLock readlock(ipcps_rwlock);
+	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
 
 	const vector<IPCMIPCProcess *>& ipcps = ipcp_factory_.listIPCProcesses();
 
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
 		if (ipcps[i]->get_type() == rina::NORMAL_IPC_PROCESS) {
-			//FIXME: rwlock over ipcp
+			//Acquire lock before leaving rwlock of the factory
+			if(write_lock)
+				ipcps[i]->rwlock.writelock();
+			else
+				ipcps[i]->rwlock.readlock();
+
 			return ipcps[i];
 		}
 	}
 
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
-		//FIXME: rwlock over ipcp
+		//Acquire lock before leaving rwlock of the factory
+		if(write_lock)
+			ipcps[i]->rwlock.writelock();
+		else
+			ipcps[i]->rwlock.readlock();
+
 		return ipcps[i];
 	}
 
@@ -96,7 +110,7 @@ IPCManager_::application_is_registered_to_ipcp(
 		IPCMIPCProcess *slave_ipcp)
 {
 	//Prevent any insertion/deletion to happen
-	rina::ReadScopedLock readlock(ipcps_rwlock);
+	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
 
 	const list<rina::ApplicationProcessNamingInformation>&
 		registered_apps = slave_ipcp->registeredApplications;
@@ -113,17 +127,22 @@ IPCManager_::application_is_registered_to_ipcp(
 }
 
 IPCMIPCProcess *
-IPCManager_::lookup_ipcp_by_port(unsigned int port_id, bool read_lock)
+IPCManager_::lookup_ipcp_by_port(unsigned int port_id, bool write_lock)
 {
 	//Prevent any insertion/deletion to happen
-	rina::ReadScopedLock readlock(ipcps_rwlock);
+	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
 
 	const vector<IPCMIPCProcess *>& ipcps = ipcp_factory_.listIPCProcesses();
 	rina::FlowInformation info;
 
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
 		if (ipcps[i]->getFlowInformation(port_id, info)) {
-			//FIXME: rwlock over ipcp
+			//Acquire lock before leaving rwlock of the factory
+			if(write_lock)
+				ipcps[i]->rwlock.writelock();
+			else
+				ipcps[i]->rwlock.readlock();
+
 			return ipcps[i];
 		}
 	}
@@ -137,7 +156,7 @@ IPCManager_::collect_flows_by_application(
 			app_name, list<rina::FlowInformation>& result)
 {
 	//Prevent any insertion/deletion to happen
-	rina::ReadScopedLock readlock(ipcps_rwlock);
+	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
 
 	const vector<IPCMIPCProcess *>& ipcps = ipcp_factory_.listIPCProcesses();
 
@@ -157,16 +176,16 @@ IPCManager_::collect_flows_by_application(
 }
 
 IPCMIPCProcess *
-IPCManager_::lookup_ipcp_by_id(unsigned int id, bool read_lock)
+IPCManager_::lookup_ipcp_by_id(unsigned int id, bool write_lock)
 {
 	IPCMIPCProcess * ipcp;
 
 	//Prevent any insertion/deletion to happen
-	rina::ReadScopedLock readlock(ipcps_rwlock);
-
-
+	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
 	ipcp = ipcp_factory_.getIPCProcess(id);
-	//FIXME:lock over ipcp
+
+	//Acquire lock before leaving rwlock of the factory
+	write_lock? ipcp->rwlock.writelock(): ipcp->rwlock.readlock();
 
 	return ipcp;
 }
