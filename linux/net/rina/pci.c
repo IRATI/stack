@@ -112,7 +112,7 @@ int pci_cep_source_set(struct pci * pci,
         if (!is_cep_id_ok(src_cep_id))
                 return -1;
 
-        pci->connection_id.destination = src_cep_id;
+        pci->connection_id.source = src_cep_id;
         return 0;
 }
 EXPORT_SYMBOL(pci_cep_source_set);
@@ -126,7 +126,7 @@ int pci_cep_destination_set(struct pci * pci,
         if (!is_cep_id_ok(dst_cep_id))
                 return -1;
 
-        pci->connection_id.source = dst_cep_id;
+        pci->connection_id.destination = dst_cep_id;
 
         return 0;
 }
@@ -231,8 +231,8 @@ int pci_format(struct pci * pci,
                qos_id_t     qos_id,
                pdu_type_t   type)
 {
-        if (pci_cep_destination_set(pci, src_cep_id)      ||
-            pci_cep_source_set(pci, dst_cep_id)           ||
+        if (pci_cep_destination_set(pci, dst_cep_id)      ||
+            pci_cep_source_set(pci, src_cep_id)           ||
             pci_destination_set(pci, dst_address)         ||
             pci_source_set(pci, src_address)              ||
             pci_sequence_number_set(pci, sequence_number) ||
