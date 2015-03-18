@@ -94,8 +94,9 @@ class RIB : public rina::Lockable
   /// @param objectName
   /// @return
   BaseRIBObject* getRIBObject(const std::string& clas, const std::string& name,
-                          bool check);
-  BaseRIBObject* getRIBObject(const std::string& clas, long instance, bool check);
+                              bool check);
+  BaseRIBObject* getRIBObject(const std::string& clas, long instance,
+                              bool check);
   BaseRIBObject* removeRIBObject(const std::string& name);
   BaseRIBObject* removeRIBObject(long instance);
   std::list<RIBObjectData*> getRIBObjectsData();
@@ -130,8 +131,8 @@ RIB::~RIB() throw ()
   unlock();
 }
 
-BaseRIBObject* RIB::getRIBObject(const std::string& clas, const std::string& name,
-                             bool check)
+BaseRIBObject* RIB::getRIBObject(const std::string& clas,
+                                 const std::string& name, bool check)
 {
   std::string norm_name = name;
   norm_name.erase(std::remove_if(norm_name.begin(), norm_name.end(), ::isspace),
@@ -158,7 +159,8 @@ BaseRIBObject* RIB::getRIBObject(const std::string& clas, const std::string& nam
   return rib_object->object_;
 }
 
-BaseRIBObject* RIB::getRIBObject(const std::string& clas, long instance, bool check)
+BaseRIBObject* RIB::getRIBObject(const std::string& clas, long instance,
+                                 bool check)
 {
   RIBIntObject* rib_object;
   std::map<long, RIBIntObject*>::iterator it;
@@ -363,8 +365,10 @@ class RIBDaemon : public RIBDInterface
   void addRIBObject(BaseRIBObject *ribObject);
   void removeRIBObject(BaseRIBObject *ribObject);
   void removeRIBObject(const std::string& name);
-  BaseRIBObject* getObject(const std::string& name, const std::string& clas) const;
-  BaseRIBObject* getObject(unsigned long instance, const std::string& clas) const;
+  BaseRIBObject* getObject(const std::string& name,
+                           const std::string& clas) const;
+  BaseRIBObject* getObject(unsigned long instance,
+                           const std::string& clas) const;
 
  private:
   cacep::AppConHandlerInterface *app_con_callback_;
@@ -570,12 +574,12 @@ void RIBDaemon::removeRIBObject(const std::string& name)
 }
 
 BaseRIBObject* RIBDaemon::getObject(const std::string& name,
-                                const std::string& clas) const
+                                    const std::string& clas) const
 {
   return rib_->getRIBObject(clas, name, true);
 }
 BaseRIBObject* RIBDaemon::getObject(unsigned long instance,
-                                const std::string& clas) const
+                                    const std::string& clas) const
 {
   return rib_->getRIBObject(clas, instance, true);
 }
@@ -647,8 +651,8 @@ std::string BaseRIBObject::get_displayable_value()
   return "-";
 }
 
-bool BaseRIBObject::createObject(const std::string& clas, const std::string& name,
-                             const void* value)
+bool BaseRIBObject::createObject(const std::string& clas,
+                                 const std::string& name, const void* value)
 {
   (void) clas;
   (void) name;
@@ -691,33 +695,6 @@ bool BaseRIBObject::stopObject(const void* object)
 }
 
 cdap_rib::res_info_t* BaseRIBObject::remoteCreateObject(const std::string& name,
-                                                    void* value)
-{
-  (void) name;
-  (void) value;
-  operation_not_supported();
-  return 0;
-}
-
-cdap_rib::res_info_t* BaseRIBObject::remoteDeleteObject(const std::string& name,
-                                                    void* value)
-{
-  (void) name;
-  (void) value;
-  operation_not_supported();
-  return 0;
-}
-
-cdap_rib::res_info_t* BaseRIBObject::remoteReadObject(const std::string& name,
-                                                  void* value)
-{
-  (void) name;
-  (void) value;
-  operation_not_supported();
-  return 0;
-}
-
-cdap_rib::res_info_t* BaseRIBObject::remoteCancelReadObject(const std::string& name,
                                                         void* value)
 {
   (void) name;
@@ -726,8 +703,35 @@ cdap_rib::res_info_t* BaseRIBObject::remoteCancelReadObject(const std::string& n
   return 0;
 }
 
+cdap_rib::res_info_t* BaseRIBObject::remoteDeleteObject(const std::string& name,
+                                                        void* value)
+{
+  (void) name;
+  (void) value;
+  operation_not_supported();
+  return 0;
+}
+
+cdap_rib::res_info_t* BaseRIBObject::remoteReadObject(const std::string& name,
+                                                      void* value)
+{
+  (void) name;
+  (void) value;
+  operation_not_supported();
+  return 0;
+}
+
+cdap_rib::res_info_t* BaseRIBObject::remoteCancelReadObject(
+    const std::string& name, void* value)
+{
+  (void) name;
+  (void) value;
+  operation_not_supported();
+  return 0;
+}
+
 cdap_rib::res_info_t* BaseRIBObject::remoteWriteObject(const std::string& name,
-                                                   void* value)
+                                                       void* value)
 {
   (void) name;
   (void) value;
@@ -736,7 +740,7 @@ cdap_rib::res_info_t* BaseRIBObject::remoteWriteObject(const std::string& name,
 }
 
 cdap_rib::res_info_t* BaseRIBObject::remoteStartObject(const std::string& name,
-                                                   void* value)
+                                                       void* value)
 {
   (void) name;
   (void) value;
@@ -745,7 +749,7 @@ cdap_rib::res_info_t* BaseRIBObject::remoteStartObject(const std::string& name,
 }
 
 cdap_rib::res_info_t* BaseRIBObject::remoteStopObject(const std::string& name,
-                                                  void* value)
+                                                      void* value)
 {
   (void) name;
   (void) value;
@@ -906,7 +910,8 @@ const cdap_rib::SerializedObject* IntEncoder::encode(const int &object)
   (void) object;
   return 0;
 }
-int* IntEncoder::decode(const cdap_rib::SerializedObject &serialized_object) const
+int* IntEncoder::decode(
+    const cdap_rib::SerializedObject &serialized_object) const
 {
   (void) serialized_object;
   return 0;
@@ -916,7 +921,8 @@ const cdap_rib::SerializedObject* SIntEncoder::encode(const short int &object)
   (void) object;
   return 0;
 }
-short int* SIntEncoder::decode(const cdap_rib::SerializedObject &serialized_object) const
+short int* SIntEncoder::decode(
+    const cdap_rib::SerializedObject &serialized_object) const
 {
   (void) serialized_object;
   return 0;
@@ -926,7 +932,8 @@ const cdap_rib::SerializedObject* LongEncoder::encode(const long long &object)
   (void) object;
   return 0;
 }
-long long* LongEncoder::decode(const cdap_rib::SerializedObject &serialized_object) const
+long long* LongEncoder::decode(
+    const cdap_rib::SerializedObject &serialized_object) const
 {
   (void) serialized_object;
   return 0;
@@ -936,17 +943,20 @@ const cdap_rib::SerializedObject* SLongEncoder::encode(const long &object)
   (void) object;
   return 0;
 }
-long* SLongEncoder::decode(const cdap_rib::SerializedObject &serialized_object) const
+long* SLongEncoder::decode(
+    const cdap_rib::SerializedObject &serialized_object) const
 {
   (void) serialized_object;
   return 0;
 }
-const cdap_rib::SerializedObject* StringEncoder::encode(const std::string &object)
+const cdap_rib::SerializedObject* StringEncoder::encode(
+    const std::string &object)
 {
   (void) object;
   return 0;
 }
-std::string* StringEncoder::decode(const cdap_rib::SerializedObject &serialized_object) const
+std::string* StringEncoder::decode(
+    const cdap_rib::SerializedObject &serialized_object) const
 {
   (void) serialized_object;
   return 0;
@@ -956,7 +966,8 @@ const cdap_rib::SerializedObject* FloatEncoder::encode(const float &object)
   (void) object;
   return 0;
 }
-float* FloatEncoder::decode(const cdap_rib::SerializedObject &serialized_object) const
+float* FloatEncoder::decode(
+    const cdap_rib::SerializedObject &serialized_object) const
 {
   (void) serialized_object;
   return 0;
@@ -967,7 +978,8 @@ const cdap_rib::SerializedObject* DoubleEncoder::encode(const double &object)
   (void) object;
   return 0;
 }
-double* DoubleEncoder::decode(const cdap_rib::SerializedObject &serialized_object) const
+double* DoubleEncoder::decode(
+    const cdap_rib::SerializedObject &serialized_object) const
 {
   (void) serialized_object;
   return 0;
@@ -977,12 +989,26 @@ const cdap_rib::SerializedObject* BoolEncoder::encode(const bool &object)
   (void) object;
   return 0;
 }
-bool* BoolEncoder::decode(const cdap_rib::SerializedObject &serialized_object) const
+bool* BoolEncoder::decode(
+    const cdap_rib::SerializedObject &serialized_object) const
 {
   (void) serialized_object;
   return 0;
 }
 
+const cdap_rib::SerializedObject* EmptyEncoder::encode(const empty &object)
+{
+  (void) object;
+  LOG_ERR("Can not encode an empty object");
+  return 0;
+}
+
+empty* EmptyEncoder::decode(const cdap_rib::SerializedObject &serialized_object) const
+{
+  (void) serialized_object;
+  LOG_ERR("Can not decode an empty object");
+  return 0;
+}
 
 }
 

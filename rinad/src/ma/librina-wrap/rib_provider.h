@@ -138,7 +138,7 @@ class RIBDSouthInterface
                                    int message_id) = 0;
 };
 
-template <class T>
+template<class T>
 class EncoderInterface
 {
  public:
@@ -156,7 +156,8 @@ class EncoderInterface
   /// @throws exception if the byte array is not an encoded in a way that the encoder can recognize, or the
   /// byte array value doesn't correspond to an object of the type "className"
   /// @return
-  virtual T* decode(const cdap_rib::SerializedObject &serialized_object) const = 0;
+  virtual T* decode(
+      const cdap_rib::SerializedObject &serialized_object) const = 0;
 };
 
 /// Contains the data of an object in the RIB
@@ -196,7 +197,10 @@ class RIBDNorthInterface;
 class BaseRIBObject
 {
  public:
-  virtual ~BaseRIBObject(){};
+  virtual ~BaseRIBObject()
+  {
+  }
+  ;
   virtual std::string get_displayable_value();
   // FIXME fix object data displayable
   virtual RIBObjectData* get_data();
@@ -218,7 +222,7 @@ class BaseRIBObject
   virtual cdap_rib::res_info_t* remoteReadObject(const std::string& name,
                                                  void* value);
   virtual cdap_rib::res_info_t* remoteCancelReadObject(const std::string& name,
-                                                       void * value) ;
+                                                       void * value);
   virtual cdap_rib::res_info_t* remoteWriteObject(const std::string& name,
                                                   void* value);
   virtual cdap_rib::res_info_t* remoteStartObject(const std::string& name,
@@ -236,18 +240,17 @@ class BaseRIBObject
   void operation_not_supported();
 };
 
-
 /// Base RIB Object. API for the create/delete/read/write/start/stop RIB
 /// functionality for certain objects (identified by objectNames)
 template<class T>
 class RIBObject : public BaseRIBObject
 {
  public:
-  RIBObject(const std::string& clas, long instance, std::string name,
-            T* value, EncoderInterface<T> *encoder)
+  RIBObject(const std::string& clas, long instance, std::string name, T* value,
+            EncoderInterface<T> *encoder)
   {
     name.erase(std::remove_if(name.begin(), name.end(), ::isspace), name.end());
-    name_ =  name;
+    name_ = name;
     class_ = clas;
     instance_ = instance;
     value_ = value;
@@ -257,14 +260,15 @@ class RIBObject : public BaseRIBObject
             cdap_rib::SerializedObject* value, EncoderInterface<T> *encoder)
   {
     name.erase(std::remove_if(name.begin(), name.end(), ::isspace), name.end());
-    name_ =  name;
+    name_ = name;
     class_ = clas;
     instance_ = instance;
     encoder_ = encoder;
     value_ = encoder->decode(value);
   }
   virtual ~RIBObject()
-  {}
+  {
+  }
   const T* get_value() const
   {
     return value_;
@@ -287,9 +291,9 @@ class RIBDNorthInterface
   virtual void removeRIBObject(BaseRIBObject *ribObject) = 0;
   virtual void removeRIBObject(const std::string& name) = 0;
   virtual BaseRIBObject* getObject(const std::string& name,
-                               const std::string& clas) const = 0;
+                                   const std::string& clas) const = 0;
   virtual BaseRIBObject* getObject(unsigned long instance,
-                               const std::string& clas) const = 0;
+                                   const std::string& clas) const = 0;
 };
 
 class RIBDInterface : public RIBDNorthInterface, public RIBDSouthInterface
@@ -345,7 +349,8 @@ class RIBSchema
   char get_separator() const;
  private:
   bool validateAddObject(const BaseRIBObject* obj);
-  bool validateRemoveObject(const BaseRIBObject* obj, const BaseRIBObject* parent);
+  bool validateRemoveObject(const BaseRIBObject* obj,
+                            const BaseRIBObject* parent);
   const cdap_rib::vers_info_t *version_;
   std::map<std::string, RIBSchemaObject*> rib_schema_;
   char separator_;
@@ -360,116 +365,161 @@ class RIBDFactory
                         const cdap_rib::version_info *version, char separator);
 };
 
-class IntEncoder : public rib::EncoderInterface<int> {
+class IntEncoder : public rib::EncoderInterface<int>
+{
  public:
   const cdap_rib::SerializedObject* encode(const int &object);
   int* decode(const cdap_rib::SerializedObject &serialized_object) const;
 };
 
-class SIntEncoder : public rib::EncoderInterface<short int> {
+class SIntEncoder : public rib::EncoderInterface<short int>
+{
  public:
   const cdap_rib::SerializedObject* encode(const short int &object);
   short int* decode(const cdap_rib::SerializedObject &serialized_object) const;
 };
 
-class LongEncoder : public rib::EncoderInterface<long long> {
+class LongEncoder : public rib::EncoderInterface<long long>
+{
  public:
   const cdap_rib::SerializedObject* encode(const long long &object);
   long long* decode(const cdap_rib::SerializedObject &serialized_object) const;
 };
 
-class SLongEncoder : public rib::EncoderInterface<long> {
+class SLongEncoder : public rib::EncoderInterface<long>
+{
  public:
   const cdap_rib::SerializedObject* encode(const long &object);
   long* decode(const cdap_rib::SerializedObject &serialized_object) const;
 };
 
-class StringEncoder : public rib::EncoderInterface<std::string> {
+class StringEncoder : public rib::EncoderInterface<std::string>
+{
  public:
   const cdap_rib::SerializedObject* encode(const std::string &object);
-  std::string* decode(const cdap_rib::SerializedObject &serialized_object) const;
+  std::string* decode(
+      const cdap_rib::SerializedObject &serialized_object) const;
 };
 
-class FloatEncoder : public rib::EncoderInterface<float> {
+class FloatEncoder : public rib::EncoderInterface<float>
+{
  public:
   const cdap_rib::SerializedObject* encode(const float &object);
   float* decode(const cdap_rib::SerializedObject &serialized_object) const;
 };
 
-class DoubleEncoder : public rib::EncoderInterface<double> {
+class DoubleEncoder : public rib::EncoderInterface<double>
+{
  public:
   const cdap_rib::SerializedObject* encode(const double &object);
   double* decode(const cdap_rib::SerializedObject &serialized_object) const;
 };
 
-class BoolEncoder : public rib::EncoderInterface<bool> {
+class BoolEncoder : public rib::EncoderInterface<bool>
+{
  public:
   const cdap_rib::SerializedObject* encode(const bool &object);
   bool* decode(const cdap_rib::SerializedObject &serialized_object) const;
 };
 
+class empty{
+};
+
+class EmptyEncoder : public rib::EncoderInterface<empty>
+{
+ public:
+  const cdap_rib::SerializedObject* encode(const empty &object);
+  empty* decode(const cdap_rib::SerializedObject &serialized_object) const;
+};
+
+
 class IntRIBObject : public rib::RIBObject<int>
 {
  public:
-  IntRIBObject(const std::string& clas, std::string name, long instance, int* value, IntEncoder *encoder) :
-    RIBObject(clas, instance, name, value, encoder)
-  {}
+  IntRIBObject(const std::string& clas, std::string name, long instance,
+               int* value, IntEncoder *encoder)
+      : RIBObject(clas, instance, name, value, encoder)
+  {
+  }
 };
 
 class SIntRIBObject : public rib::RIBObject<short int>
 {
  public:
-  SIntRIBObject(const std::string& clas, std::string name, long instance, short int* value, SIntEncoder *encoder) :
-    RIBObject(clas, instance, name, value, encoder)
-  {}
+  SIntRIBObject(const std::string& clas, std::string name, long instance,
+                short int* value, SIntEncoder *encoder)
+      : RIBObject(clas, instance, name, value, encoder)
+  {
+  }
 };
 
 class SLongRIBObject : public rib::RIBObject<long>
 {
  public:
-  SLongRIBObject(const std::string& clas, std::string name, long instance, long* value, SLongEncoder *encoder) :
-    RIBObject(clas, instance, name, value, encoder)
-  {}
+  SLongRIBObject(const std::string& clas, std::string name, long instance,
+                 long* value, SLongEncoder *encoder)
+      : RIBObject(clas, instance, name, value, encoder)
+  {
+  }
 };
 
 class LongRIBObject : public rib::RIBObject<long long>
 {
  public:
-  LongRIBObject(const std::string& clas, std::string name, long instance, long long* value, LongEncoder *encoder) :
-    RIBObject(clas, instance, name, value, encoder)
-  {}
+  LongRIBObject(const std::string& clas, std::string name, long instance,
+                long long* value, LongEncoder *encoder)
+      : RIBObject(clas, instance, name, value, encoder)
+  {
+  }
 };
 
 class StringRIBObject : public rib::RIBObject<std::string>
 {
  public:
-  StringRIBObject(const std::string& clas, std::string name, long instance, std::string* value, StringEncoder *encoder) :
-    RIBObject(clas, instance, name, value, encoder)
-  {}
+  StringRIBObject(const std::string& clas, std::string name, long instance,
+                  std::string* value, StringEncoder *encoder)
+      : RIBObject(clas, instance, name, value, encoder)
+  {
+  }
 };
 
 class FloatRIBObject : public rib::RIBObject<float>
 {
  public:
-  FloatRIBObject(const std::string& clas, std::string name, long instance, float* value, FloatEncoder *encoder) :
-    RIBObject(clas, instance, name, value, encoder)
-  {}
+  FloatRIBObject(const std::string& clas, std::string name, long instance,
+                 float* value, FloatEncoder *encoder)
+      : RIBObject(clas, instance, name, value, encoder)
+  {
+  }
 };
 
 class DoubleRIBObject : public rib::RIBObject<double>
 {
  public:
-  DoubleRIBObject(const std::string& clas, std::string name, long instance, double* value, DoubleEncoder *encoder) :
-    RIBObject(clas, instance, name, value, encoder)
-  {}
+  DoubleRIBObject(const std::string& clas, std::string name, long instance,
+                  double* value, DoubleEncoder *encoder)
+      : RIBObject(clas, instance, name, value, encoder)
+  {
+  }
 };
 
 class BoolRIBObject : public rib::RIBObject<bool>
 {
  public:
-  BoolRIBObject(const std::string& clas, std::string name, long instance, bool* value, BoolEncoder *encoder) :
-    RIBObject(clas, instance, name, value, encoder)
-  {}
+  BoolRIBObject(const std::string& clas, std::string name, long instance,
+                bool* value, BoolEncoder *encoder)
+      : RIBObject(clas, instance, name, value, encoder)
+  {
+  }
+};
+
+class EmptyRIBObject : public rib::RIBObject<empty>
+{
+ public:
+  EmptyRIBObject(const std::string& clas, std::string name, long instance, EmptyEncoder *encoder)
+      : RIBObject(clas, instance, name, (empty*) 0,  encoder)
+  {
+  }
 };
 
 }

@@ -58,7 +58,7 @@ void RIBFactory_::createRIB(uint64_t version){
 	lock();
 
 	//Check if it exists
-	if( rib_inst.find(version) != rib_inst.end() ){
+	if( rib_inst_.find(version) != rib_inst_.end() ){
 		unlock();
 		throw eDuplicatedRIB("An instance of the RIB with this version already exists");
 	}
@@ -67,7 +67,7 @@ void RIBFactory_::createRIB(uint64_t version){
 	switch(version)
 	{
 	case 1:
-		rib_inst[version] = new RIBDaemonv1(0);
+		rib_inst_[version] = factory_.create()
 		break;
 	default:
 		break;

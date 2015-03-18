@@ -2,7 +2,7 @@
 
 #ifndef __RINAD_RIBM_H__
 #define __RINAD_RIBM_H__
-
+/*
 #include <pthread.h>
 #include <cstdlib>
 #include <iostream>
@@ -17,6 +17,11 @@
 #include <librina/rib.h>
 
 #include "event-loop.h"
+*/
+
+#include <list>
+#include <librina/concurrency.h>
+#include "librina-wrap/rib_provider.h"
 
 namespace rinad{
 namespace mad{
@@ -86,7 +91,8 @@ protected:
 private:
 
 	//Map with the current RIB instances
-	std::map<uint64_t, rina::IRIBDaemon*> rib_inst;
+	std::map<uint64_t, rib::RIBDInterface*> rib_inst_;
+	rib::RIBDFactory factory_;
 
 	//Constructors
 	RIBFactory_(void);

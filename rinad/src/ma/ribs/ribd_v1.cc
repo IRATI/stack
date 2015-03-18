@@ -1,70 +1,145 @@
 #include "ribd_v1.h"
 
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <sstream>
-#include <assert.h>
-#include <string.h>
-#include <errno.h>
-#include <pthread.h>
-
 #define RINA_PREFIX "mad.ribd_v1"
 #include <librina/logs.h>
 
 namespace rinad{
 namespace mad{
 
-//TODO: change these const
-const unsigned int COMPUTING_SYSTEM_ID = 1;
+
+void ConHandler::connect(int message_id, const cdap_rib::con_handle_t &con)
+{
+  (void) message_id;
+  (void) con;
+}
+void ConHandler::connectResponse(const cdap_rib::res_info_t &res,
+                     const cdap_rib::con_handle_t &con)
+{
+  (void) res;
+  (void) con;
+}
+void ConHandler::release(int message_id, const cdap_rib::con_handle_t &con)
+{
+  (void) message_id;
+  (void) con;
+}
+void ConHandler::releaseResponse(const cdap_rib::res_info_t &res,
+                     const cdap_rib::con_handle_t &con)
+{
+  (void) res;
+  (void) con;
+}
+
+void RespHandler::createResponse(const cdap_rib::res_info_t &res,
+                    const cdap_rib::con_handle_t &con)
+{
+  (void) res;
+  (void) con;
+}
+void RespHandler::deleteResponse(const cdap_rib::res_info_t &res,
+                    const cdap_rib::con_handle_t &con)
+{
+  (void) res;
+  (void) con;
+}
+void RespHandler::readResponse(const cdap_rib::res_info_t &res,
+                  const cdap_rib::con_handle_t &con)
+{
+  (void) res;
+  (void) con;
+}
+void RespHandler::cancelReadResponse(const cdap_rib::res_info_t &res,
+                        const cdap_rib::con_handle_t &con)
+{
+  (void) res;
+  (void) con;
+}
+void RespHandler::writeResponse(const cdap_rib::res_info_t &res,
+                   const cdap_rib::con_handle_t &con)
+{
+  (void) res;
+  (void) con;
+}
+void RespHandler::startResponse(const cdap_rib::res_info_t &res,
+                   const cdap_rib::con_handle_t &con)
+{
+  (void) res;
+  (void) con;
+}
+void RespHandler::stopResponse(const cdap_rib::res_info_t &res,
+                  const cdap_rib::con_handle_t &con)
+{
+  (void) res;
+  (void) con;
+}
 
 // CLASS RIBDaemonv1
-RIBDaemonv1::RIBDaemonv1 (const rina::RIBSchema *schema): rina::RIBDaemon(schema)
+RIBDaemonv1_::RIBDaemonv1_()
+{
+  resp_handler_ =  new RespHandler();
+  conn_handler_ = new ConHandler();
+}
+RIBDaemonv1_::~RIBDaemonv1_()
+{
+  delete resp_handler_;
+  delete conn_handler_;
+}
+
+const rib::ResponseHandlerInterface* RIBDaemonv1_::getRespHandler()
+{
+  return resp_handler_;
+}
+const cacep::AppConHandlerInterface* RIBDaemonv1_::getConnHandler()
+{
+  return conn_handler_;
+}
+void RIBDaemonv1_::initiateRIB(rib::RIBDInterface* ribd)
 {
 	try
 	{
-		addRIBObject(new SimpleRIBObj(this, "ROOT", "root"));
-		addRIBObject(new SimpleRIBObj(this, "DAF", "root, dafID=1"));
-		addRIBObject(new SimpleRIBObj(this, "ComputingSystem", "root, computingSystemID=1"));
-		addRIBObject(new SimpleRIBObj(this, "ProcessingSystem", "root, computingSystemID = 1, processingSystemID=1"));
-		addRIBObject(new SimpleRIBObj(this, "Software", "root, computingSystemID = 1, processingSystemID=1, software"));
-		addRIBObject(new SimpleRIBObj(this, "Hardware", "root, computingSystemID = 1, processingSystemID=1, hardware"));
-		addRIBObject(new SimpleRIBObj(this, "KernelApplicationProcess", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess"));
-		addRIBObject(new SimpleRIBObj(this, "OSApplicationProcess", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess"));
-		addRIBObject(new SimpleRIBObj(this, "ManagementAgent", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID=1"));
+	  rib::EmptyEncoder *enc = new rib::EmptyEncoder();
+	  ribd->addRIBObject(new rib::EmptyRIBObject("ROOT", "root", intance_gen_.get_id(), enc));
+	  ribd->addRIBObject(new rib::EmptyRIBObject("DAF", "root, dafID=1", intance_gen_.get_id(), enc));
+	  ribd->addRIBObject(new rib::EmptyRIBObject("ComputingSystem", "root, computingSystemID=1", intance_gen_.get_id(), enc));
+	  ribd->addRIBObject(new rib::EmptyRIBObject("ProcessingSystem", "root, computingSystemID = 1, processingSystemID=1", intance_gen_.get_id(), enc));
+	  ribd->addRIBObject(new rib::EmptyRIBObject("Software", "root, computingSystemID = 1, processingSystemID=1, software", intance_gen_.get_id(), enc));
+	  ribd->addRIBObject(new rib::EmptyRIBObject("Hardware", "root, computingSystemID = 1, processingSystemID=1, hardware", intance_gen_.get_id(), enc));
+	  ribd->addRIBObject(new rib::EmptyRIBObject("KernelApplicationProcess", "root, computingSystemID = 1, "
+				"processingSystemID=1, kernelApplicationProcess", intance_gen_.get_id(), enc));
+	  ribd->addRIBObject(new rib::EmptyRIBObject("OSApplicationProcess", "root, computingSystemID = 1, "
+				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess", intance_gen_.get_id(), enc));
+	  ribd->addRIBObject(new rib::EmptyRIBObject("ManagementAgent", "root, computingSystemID = 1, "
+				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID=1", intance_gen_.get_id(), enc));
 		// IPCManagement branch
-		addRIBObject(new SimpleRIBObj(this, "IPCManagement", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement"));
-		addRIBObject(new SimpleRIBObj(this, "IPCResourceManager", "root, computingSystemID = 1, "
+	  ribd->addRIBObject(new rib::EmptyRIBObject("IPCManagement", "root, computingSystemID = 1, "
+				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement", intance_gen_.get_id(), enc));
+	  ribd->addRIBObject(new rib::EmptyRIBObject("IPCResourceManager", "root, computingSystemID = 1, "
 				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
-				"ipcResourceManager"));
-		addRIBObject(new SimpleRIBObj(this, "UnderlayingFlows", "root, computingSystemID = 1, "
+				"ipcResourceManager", intance_gen_.get_id(), enc));
+	  ribd->addRIBObject(new rib::EmptyRIBObject("UnderlayingFlows", "root, computingSystemID = 1, "
 				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
-				"ipcResourceManager, underlayingFlows"));
-		addRIBObject(new SimpleRIBObj(this, "UnderlayingDIFs", "root, computingSystemID = 1, "
+				"ipcResourceManager, underlayingFlows", intance_gen_.get_id(), enc));
+	  ribd->addRIBObject(new rib::EmptyRIBObject("UnderlayingDIFs", "root, computingSystemID = 1, "
 				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
-				"ipcResourceManager, underlayingDIFs"));
-		addRIBObject(new SimpleRIBObj(this, "QueryDIFAllocator", "root, computingSystemID = 1, "
+				"ipcResourceManager, underlayingDIFs", intance_gen_.get_id(), enc));
+	  ribd->addRIBObject(new rib::EmptyRIBObject("QueryDIFAllocator", "root, computingSystemID = 1, "
 				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
-				"ipcResourceManager, queryDIFAllocator"));
-		addRIBObject(new SimpleRIBObj(this, "UnderlayingRegistrations", "root, computingSystemID = 1, "
+				"ipcResourceManager, queryDIFAllocator", intance_gen_.get_id(), enc));
+	  ribd->addRIBObject(new rib::EmptyRIBObject("UnderlayingRegistrations", "root, computingSystemID = 1, "
 				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
-				"ipcResourceManager, underlayingRegistrations"));
-		addRIBObject(new SimpleRIBObj(this, "SDUPRotection", "root, computingSystemID = 1, "
+				"ipcResourceManager, underlayingRegistrations", intance_gen_.get_id(), enc));
+	  ribd->addRIBObject(new rib::EmptyRIBObject("SDUPRotection", "root, computingSystemID = 1, "
 				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
-				"sduProtection"));
+				"sduProtection", intance_gen_.get_id(), enc));
 		// RIBDaemon branch
-		addRIBObject(new SimpleRIBObj(this, "RIBDaemon", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ribDaemon"));
-		addRIBObject(new SimpleRIBObj(this, "Discriminators", "root, computingSystemID = 1, "
+	  ribd->addRIBObject(new rib::EmptyRIBObject("RIBDaemon", "root, computingSystemID = 1, "
+				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ribDaemon", intance_gen_.get_id(), enc));
+	  ribd->addRIBObject(new rib::EmptyRIBObject("Discriminators", "root, computingSystemID = 1, "
 				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ribDaemon"
-				", discriminators"));
+				", discriminators", intance_gen_.get_id(), enc));
 		// DIFManagement
-		addRIBObject(new SimpleRIBObj(this, "DIFManagement", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, difManagement"));
+	  ribd->addRIBObject(new rib::EmptyRIBObject("DIFManagement", "root, computingSystemID = 1, "
+				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, difManagement", intance_gen_.get_id(), enc));
 	}
 	catch(Exception &e1)
 	{
@@ -73,28 +148,6 @@ RIBDaemonv1::RIBDaemonv1 (const rina::RIBSchema *schema): rina::RIBDaemon(schema
 	}
 }
 
-void RIBDaemonv1::sendMessageSpecific(const rina::RemoteProcessId &remote_proc,
-		const rina::CDAPMessage & cdapMessage,
-		rina::ICDAPResponseMessageHandler *cdapMessageHandler){
-
-	//XXX FIXME: fill-in
-	(void)remote_proc.use_address_;
-	(void)cdapMessage;
-	(void)remote_proc.port_id_;
-	(void)remote_proc.address_;
-	(void)cdapMessageHandler;
-}
-
-
-//CLASS SimpleRIBObj
-SimpleRIBObj::SimpleRIBObj(rina::IRIBDaemon *rib_daemon,	const std::string& object_class, const std::string& object_name):
-		rina::BaseRIBObject(rib_daemon, object_class, rina::objectInstanceGenerator->getObjectInstance(), object_name)
-{}
-
-const void* SimpleRIBObj::get_value() const
-{
-	return 0;
-}
 
 }; //namespace mad
 }; //namespace rinad

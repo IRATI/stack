@@ -24,7 +24,7 @@ mad_CPPFLAGS =					\
 	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)			\
 	-I$(srcdir)/../			\
-	-I$(srcdir)/../common
+	-I$(srcdir)/../common   
 
 mad_LDADD = 					\
 	ribs/librinad_ma_ribs.la		\
