@@ -42,11 +42,10 @@ namespace rinad {
 class FlowAllocTransState: public TransactionState{
 
 public:
-	FlowAllocTransState(const Addon* callee, const int tid,
-				int _slave_ipcp_id,
+	FlowAllocTransState(const Addon* callee, int _slave_ipcp_id,
 				rina::FlowRequestEvent& _req_e,
 				bool once):
-					TransactionState(callee, tid),
+					TransactionState(callee),
 					slave_ipcp_id(_slave_ipcp_id),
 					req_event(_req_e),
 					try_only_a_dif(once)
@@ -64,11 +63,10 @@ public:
 class FlowDeallocTransState: public TransactionState{
 
 public:
-	FlowDeallocTransState(const Addon* callee, const int tid,
-				int _slave_ipcp_id,
+	FlowDeallocTransState(const Addon* callee, int _slave_ipcp_id,
 				rina::FlowDeallocateRequestEvent& _req_e,
 				bool once):
-					TransactionState(callee, tid),
+					TransactionState(callee),
 					slave_ipcp_id(_slave_ipcp_id),
 					req_event(_req_e)
 					{}

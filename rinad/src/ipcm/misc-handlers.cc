@@ -64,7 +64,6 @@ void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *
 		if(trans->callee){
 			//XXX: invoke the callback
 			remove_transaction_state(trans->tid);
-			delete trans;
 		}
 		return;
 	}
@@ -76,7 +75,6 @@ void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *
 		if(trans->callee){
 			//XXX: invoke the callback
 			remove_transaction_state(trans->tid);
-			delete trans;
 		}
 		return;
 	}
@@ -111,7 +109,6 @@ void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *
 
 		//Remove the transaction
 		remove_transaction_state(trans->tid);
-		delete trans;
 	}
 }
 

@@ -45,10 +45,11 @@ void IPCManager_::ipc_process_daemon_initialized_event_handler(
 	IPCMIPCProcess* ipcp;
 
 	//Recover the syscall transaction state and finalize the
-	TransactionState* trans = new TransactionState(NULL, e->ipcProcessId);
+	SyscallTransState* trans = new SyscallTransState(NULL,
+							e->ipcProcessId);
 	trans->ret = 0;
 
-	if(add_syscall_transaction_state(e->ipcProcessId, trans) < 0){
+	if(add_syscall_transaction_state(trans) < 0){
 		delete trans;
 		//Notify
 		trans = get_syscall_transaction_state(e->ipcProcessId);
@@ -207,8 +208,6 @@ int IPCManager_::ipcm_unregister_response_ipcp(
                         << ipcp->get_name().toString() << endl;
                 FLUSH_LOG(ERR, ss);
         }
-
-        //pending_ipcp_unregistrations.erase(mit);
 
         return ret;
 }
@@ -426,7 +425,6 @@ IPCManager_::assign_to_dif_response_event_handler(rina::AssignToDIFResponseEvent
 
 		//Remove the transaction
 		remove_transaction_state(trans->tid);
-		delete trans;
 	}
 }
 
@@ -488,7 +486,6 @@ IPCManager_::update_dif_config_response_event_handler(rina::UpdateDIFConfigurati
 
 		//Remove the transaction
 		remove_transaction_state(trans->tid);
-		delete trans;
 	}
 }
 
@@ -548,7 +545,6 @@ IPCManager_::enroll_to_dif_response_event_handler(rina::EnrollToDIFResponseEvent
 
 		//Remove the transaction
 		remove_transaction_state(trans->tid);
-		delete trans;
 	}
 }
 

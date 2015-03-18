@@ -69,9 +69,7 @@ namespace rinad {
 class TransactionState {
 
 public:
-	TransactionState(const Addon* _callee, const int _tid):
-						callee(_callee), tid(_tid),
-						complete(false){};
+	TransactionState(const Addon* _callee);
 	virtual ~TransactionState(){};
 
 	//
@@ -109,10 +107,25 @@ public:
 
 	//Is the transaction finished
 	bool complete;
+protected:
+	TransactionState(const Addon* _callee, const int tid_):
+							callee(_callee),
+							tid(tid_),
+							complete(false){};
 
 private:
 	//Condition variable
 	rina::ConditionVariable wait_cond;
+};
+
+//
+// Syscall specific transaction state
+//
+class SyscallTransState : public TransactionState {
+public:
+	SyscallTransState(const Addon* _callee, const int tid_) :
+					TransactionState(_callee, tid_){};
+	virtual ~SyscallTransState(){};
 };
 
 //
@@ -499,7 +512,7 @@ protected:
 	*
 	* @ret 0 if success -1 otherwise.
 	*/
-	int add_transaction_state(int tid, TransactionState* t);
+	int add_transaction_state(TransactionState* t);
 
 	/*
 	* @Remove transaction state.
@@ -526,10 +539,12 @@ protected:
 	/**
 	* Get syscall transaction state (waiting for a notification)
 	*/
-	TransactionState* get_syscall_transaction_state(int tid){
-		//Rwlock: read
+	SyscallTransState* get_syscall_transaction_state(int tid){
+		//Read lock
+		rina::ReadScopedLock readlock(trans_rwlock);
+
 		if ( pend_sys_trans.find(tid) !=  pend_sys_trans.end() )
-			return pend_transactions[tid];
+			return pend_sys_trans[tid];
 
 		return NULL;
 	};
@@ -539,7 +554,7 @@ protected:
 	*
 	* @ret 0 if success -1 otherwise.
 	*/
-	int add_syscall_transaction_state(int tid, TransactionState* t);
+	int add_syscall_transaction_state(SyscallTransState* t);
 
 	/*
 	* Remove syscall transaction state
@@ -547,6 +562,17 @@ protected:
 	* @ret 0 if success -1 otherwise.
 	*/
 	int remove_syscall_transaction_state(int tid);
+
+	/**
+	* Pending syscall states
+	*
+	* key: ipcp ID value: transaction state
+	*/
+	std::map<int, SyscallTransState*> pend_sys_trans;
+
+	//Rwlock for transactions
+	rina::ReadWriteLockable trans_rwlock;
+
 
 	//
 	// RINA configuration internal state
@@ -560,16 +586,6 @@ protected:
 	IPCMConsole *console;
 
 
-	/**
-	* Pending syscall states
-	*
-	* key: ipcp ID value: transaction state
-	*/
-	std::map<int, TransactionState*> pend_sys_trans;
-
-	//Rwlock for transactions
-	rina::ReadWriteLockable trans_rwlock;
-
 	//TODO: map of addons
 
 	//Current logging level
@@ -578,11 +594,11 @@ protected:
 	//Keep running flag
 	volatile bool keep_running;
 
-	//Generator of opaque identifiers
-	rina::ConsecutiveUnsignedIntegerGenerator opaque_generator_;
-
 	IPCMIPCProcessFactory ipcp_factory_;
 
+public:
+	//Generator of opaque identifiers
+	rina::ConsecutiveUnsignedIntegerGenerator __tid_gen;
 private:
 	//Singleton
 	IPCManager_();

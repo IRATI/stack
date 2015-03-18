@@ -44,7 +44,6 @@ IPCManager_::deallocate_flow(const Addon* callee, const int ipcp_id,
                             const rina::FlowDeallocateRequestEvent& event)
 {
         ostringstream ss;
-        unsigned int seqnum;
         IPCMIPCProcess* ipcp;
 	IPCPTransState* trans;
 
@@ -61,16 +60,14 @@ IPCManager_::deallocate_flow(const Addon* callee, const int ipcp_id,
 
 
 		//Create a transaction
-		seqnum = opaque_generator_.next();
-		trans = new IPCPTransState(callee, seqnum,
-							ipcp->get_id());
+		trans = new IPCPTransState(callee, ipcp->get_id());
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
 			throw Exception();
 		}
 
 		//Store transaction
-		if(add_transaction_state(seqnum, trans) < 0){
+		if(add_transaction_state(trans) < 0){
 			ss << "Unable to add transaction; out of memory? ";
 			throw Exception();
 		}
@@ -78,7 +75,7 @@ IPCManager_::deallocate_flow(const Addon* callee, const int ipcp_id,
 
                 // Ask the IPC process to deallocate the flow
                 // specified by the port-id
-                ipcp->deallocateFlow(event.portId, seqnum);
+                ipcp->deallocateFlow(event.portId, trans->tid);
 
                 ss << "Application " << event.applicationName.toString() <<
                         " asks IPC process " << ipcp->get_name().toString() <<
@@ -134,7 +131,6 @@ void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
         rina::ApplicationProcessNamingInformation dif_name;
         IPCMIPCProcess *ipcp;
         bool dif_specified;
-        unsigned int seqnum;
 	FlowAllocTransState* trans;
         ostringstream ss;
 
@@ -174,8 +170,7 @@ void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
 
         try {
                 // Ask the IPC process to allocate a flow
-        	seqnum = opaque_generator_.next();
-		trans = new FlowAllocTransState(NULL, seqnum, ipcp->get_id(), *event,
+		trans = new FlowAllocTransState(NULL, ipcp->get_id(), *event,
 								dif_specified);
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
@@ -183,12 +178,12 @@ void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
 		}
 
 		//Store transaction
-		if(add_transaction_state(seqnum, trans) < 0){
+		if(add_transaction_state(trans) < 0){
 			ss << "Unable to add transaction; out of memory? ";
 			throw Exception();
 		}
 
-                ipcp->allocateFlow(*event, seqnum);
+                ipcp->allocateFlow(*event, trans->tid);
 
                 ss << "IPC process " << ipcp->get_name().toString() <<
                         " requested to allocate flow between " <<
@@ -213,7 +208,6 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 {
 	IPCMIPCProcess *ipcp;
         ostringstream ss;
-        unsigned int seqnum;
 	FlowAllocTransState* trans;
 
 	// Retrieve the local IPC process involved in the flow allocation
@@ -233,8 +227,7 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
         try {
                 // Inform the local application that a remote application
                 // wants to allocate a flow
-       		seqnum = opaque_generator_.next();
-		trans = new FlowAllocTransState(NULL, seqnum, ipcp->get_id(), *event,
+		trans = new FlowAllocTransState(NULL, ipcp->get_id(), *event,
 									true);
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
@@ -242,7 +235,7 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 		}
 
 		//Store transaction
-		if(add_transaction_state(seqnum, trans) < 0){
+		if(add_transaction_state(trans) < 0){
 			ss << "Unable to add transaction; out of memory? ";
 			throw Exception();
 		}
@@ -252,7 +245,7 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
                                         event->remoteApplicationName,
                                         event->flowSpecification,
                                         event->DIFName, event->portId,
-                                        seqnum);
+                                        trans->tid);
 
                 ss << "Arrived request for flow allocation between " <<
                         event->localApplicationName.toString()
@@ -387,7 +380,6 @@ void IPCManager_::ipcm_allocate_flow_request_result_handler( rina::IpcmAllocateF
 
 		//Remove the transaction
 		remove_transaction_state(trans->tid);
-		delete trans;
 	}
 }
 
@@ -464,7 +456,6 @@ void IPCManager_::allocate_flow_response_event_handler(rina::AllocateFlowRespons
 
 		//Remove the transaction
 		remove_transaction_state(trans->tid);
-		delete trans;
 	}
 }
 
@@ -588,7 +579,6 @@ void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IpcmDealloca
 
 		//Remove the transaction
 		remove_transaction_state(trans->tid);
-		delete trans;
 	}
 }
 

@@ -136,7 +136,6 @@ void IPCManager_::app_reg_req_handler(
         const rina::ApplicationProcessNamingInformation app_name =
                                 info.appName;
         IPCMIPCProcess *slave_ipcp = NULL;
-        unsigned int seqnum;
         ostringstream ss;
         rina::ApplicationProcessNamingInformation dif_name;
 	APPregTransState* trans;
@@ -187,8 +186,7 @@ void IPCManager_::app_reg_req_handler(
 	//Perform the registration
         try {
                 //Create a transaction
-        	seqnum = opaque_generator_.next();
-		trans = new APPregTransState(NULL, seqnum, slave_ipcp->get_id(),
+		trans = new APPregTransState(NULL, slave_ipcp->get_id(),
 									event);
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! "
@@ -197,7 +195,7 @@ void IPCManager_::app_reg_req_handler(
 		}
 
 		//Store transaction
-		if(add_transaction_state(seqnum, trans) < 0){
+		if(add_transaction_state(trans) < 0){
 			ss << "Unable to add transaction; out of memory? "
 				<< dif_name.toString();
 			throw rina::IpcmRegisterApplicationException();
@@ -205,19 +203,16 @@ void IPCManager_::app_reg_req_handler(
 
 		slave_ipcp->registerApplication(app_name,
                                                 info.ipcProcessId,
-                                                seqnum);
+                                                trans->tid);
 
 
-		/*pending_app_registrations[seqnum] =
-                                        make_pair(slave_ipcp, *event);
-		*/
                 ss << "Requested registration of application " <<
                         app_name.toString() << " to IPC process " <<
                         slave_ipcp->get_name().toString() << endl;
                 FLUSH_LOG(INFO, ss);
         } catch (rina::IpcmRegisterApplicationException) {
-                if(trans)
-			delete trans;
+		//Remove the transaction and return
+		remove_transaction_state(trans->tid);
 
 		ss  << ": Error while registering application "
                         << app_name.toString() << endl;
@@ -321,7 +316,6 @@ void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponse
 		}catch(...){
 			//Remove the transaction and return
 			remove_transaction_state(trans->tid);
-			delete trans;
 			return;
 		}
 	}else{
@@ -340,7 +334,6 @@ void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponse
 
 		//Remove the transaction
 		remove_transaction_state(trans->tid);
-		delete trans;
 	}
 }
 
@@ -484,7 +477,6 @@ void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResp
 		}catch(...){
 			//Remove the transaction and return
 			remove_transaction_state(trans->tid);
-			delete trans;
 			return;
 		}
 	}else{
@@ -503,7 +495,6 @@ void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResp
 
 		//Remove the transaction
 		remove_transaction_state(trans->tid);
-		delete trans;
 	}
 }
 
