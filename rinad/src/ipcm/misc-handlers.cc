@@ -81,6 +81,8 @@ void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *
 		return;
 	}
 
+	//Auto release the read lock
+	rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
 	ss << "Query RIB operation completed for IPC "
 		<< "process " << ipcp->get_name().toString() << endl;

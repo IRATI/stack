@@ -62,6 +62,8 @@ void IPCManager_::ipc_process_set_policy_set_param_response_handler(
 		return;
 	}
 
+	//Auto release the read lock
+	rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
 	ss << "set-policy-set-param-op completed on IPC process "
 	<< ipcp->get_name().toString() <<
@@ -107,6 +109,8 @@ void IPCManager_::ipc_process_plugin_load_response_handler(rina::PluginLoadRespo
 		return;
 	}
 
+	//Auto release the read lock
+	rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
 	ss << "plugin-load-op completed on IPC process "
 	       << ipcp->get_name().toString() <<
@@ -151,6 +155,9 @@ void IPCManager_::ipc_process_select_policy_set_response_handler(
 		//XXX: destroy transaction
 		return;
 	}
+
+	//Auto release the read lock
+	rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
 	ss << "select-policy-set-op completed on IPC process "
 	       << ipcp->get_name().toString() <<

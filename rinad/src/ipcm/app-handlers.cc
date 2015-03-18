@@ -49,12 +49,21 @@ void IPCManager_::os_process_finalized_handler(rina::IPCEvent *e)
 			<< "terminated" << endl;
 	FLUSH_LOG(INFO, ss);
 
+	//Prevent any insertion/deletion to happen
+	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
+
 	// Look if the terminating application has allocated flows
 	// with some IPC processes
 	collect_flows_by_application(app_name, involved_flows);
 	for (list<rina::FlowInformation>::iterator fit = involved_flows.begin();
 			fit != involved_flows.end(); fit++) {
+
 		IPCMIPCProcess *ipcp = select_ipcp_by_dif(fit->difName);
+
+		//Auto release the read lock
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
+
+
 		rina::FlowDeallocateRequestEvent req_event(fit->portId, 0);
 
 		if (!ipcp) {
@@ -171,6 +180,10 @@ void IPCManager_::app_reg_req_handler(
                 return;
         }
 
+	//Auto release the read lock
+	rina::ReadScopedLock readlock(slave_ipcp->rwlock, false);
+
+
 	//Perform the registration
         try {
                 //Create a transaction
@@ -269,38 +282,6 @@ int IPCManager_::ipcm_register_response_app(
 
 void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponseEvent* e)
 {
-/*        map<unsigned int,
-            std::pair<IPCMIPCProcess *, IPCMIPCProcess*>
-=======
-
-        DOWNCAST_DECL(e, rina::IpcmRegisterApplicationResponseEvent, event);
-        map<unsigned int,
-            std::pair<IPCMIPCProcess *, IPCMIPCProcess*>
-           >::iterator it;
-        map<unsigned int,
-            std::pair<IPCMIPCProcess *,
-                      rina::ApplicationRegistrationRequestEvent
-                     >
-           >::iterator jt;
-        ostringstream ss;
-        int ret = -1;
-
-        it = pending_ipcp_registrations.find(event->sequenceNumber);
-        jt = pending_app_registrations.find(event->sequenceNumber);
-
-        if (it != pending_ipcp_registrations.end()) {
-                ret = ipcm_register_response_ipcp(event, it);
-        } else if (jt != pending_app_registrations.end()) {
-                ret = ipcm_register_response_app(event, jt);
-        } else {
-                ss << ": Warning: DIF assignment response "
-                        "received, but no pending DIF assignment " << endl;
-                FLUSH_LOG(WARN, ss);
-        }
-
-        //concurrency.set_event_result(ret);
-*/
-
         IPCMIPCProcess *ipcp;
         ostringstream ss;
 	APPregTransState* t1;
@@ -318,6 +299,9 @@ void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponse
 				FLUSH_LOG(WARN, ss);
 				throw Exception();
 			}
+
+			//Auto release the read lock
+			rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
 			//TODO  solve this mess. We have to do it this way
 			//because code is different from IPCP to an APP, but
@@ -462,31 +446,6 @@ int IPCManager_::ipcm_unregister_response_app(
 
 void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResponseEvent *e)
 {
-#if 0
-        map<unsigned int,
-            std::pair<IPCMIPCProcess *,
-                      rina::ApplicationUnregistrationRequestEvent>
-           >::iterator it;
-        map<unsigned int,
-            std::pair<IPCMIPCProcess *, IPCMIPCProcess *>
-           >::iterator jt;
-        ostringstream ss;
-        int ret = -1;
-
-        it = pending_app_unregistrations.find(event->sequenceNumber);
-        jt = pending_ipcp_unregistrations.find(event->sequenceNumber);
-        if (it != pending_app_unregistrations.end()) {
-                ret = ipcm_unregister_response_app(event, it);
-        } else if (jt != pending_ipcp_unregistrations.end()) {
-                ret = ipcm_unregister_response_ipcp(event, jt);
-        } else {
-                ss << ": Warning: Unregistration response "
-                        "received, but no pending DIF assignment " << endl;
-                FLUSH_LOG(WARN, ss);
-        }
-
-        //concurrency.set_event_result(ret);
-#endif
 	ostringstream ss;
 	IPCMIPCProcess* ipcp;
 
@@ -505,6 +464,9 @@ void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResp
 				FLUSH_LOG(WARN, ss);
 				throw Exception();
 			}
+
+			//Auto release the read lock
+			rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
 			//TODO  solve this mess. We have to do it this way
 			//because code is different from IPCP to an APP, but

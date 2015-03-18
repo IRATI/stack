@@ -57,8 +57,6 @@ void IPCManager_::ipc_process_daemon_initialized_event_handler(
 		//Do nothing (we are the first ones)
 	};
 
-	//FIXME TODO XXX Rwlock
-
 	ipcp = lookup_ipcp_by_id(e->ipcProcessId);
 
 	//If the ipcp is not there, there is some corruption
@@ -70,6 +68,9 @@ void IPCManager_::ipc_process_daemon_initialized_event_handler(
 		assert(0);
 		return;
 	}
+
+	//Auto release the read lock
+	rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
 	assert(ipcp->get_type() == rina::NORMAL_IPC_PROCESS);
 
@@ -95,18 +96,24 @@ int IPCManager_::ipcm_register_response_ipcp(
 	}
 
 	rinad::IPCMIPCProcess *ipcp = lookup_ipcp_by_id(trans->ipcp_id);
+	if(!ipcp){
+		return -1;
+	}
+	//Auto release the read lock
+	rina::ReadScopedLock readlock(ipcp->rwlock, false);
+
         rinad::IPCMIPCProcess *slave_ipcp = lookup_ipcp_by_id(trans->slave_ipcp_id);
-        const rina::ApplicationProcessNamingInformation&
+	if(!slave_ipcp){
+		return -1;
+	}
+	//Auto release the read lock
+	rina::ReadScopedLock sreadlock(slave_ipcp->rwlock, false);
+
+	const rina::ApplicationProcessNamingInformation&
                 slave_dif_name = slave_ipcp->dif_name_;
 
         success = ipcm_register_response_common(e, ipcp->get_name(),
                                         slave_ipcp, slave_dif_name);
-
-	if(!ipcp || !slave_ipcp){
-		assert(0);
-		return -1;
-	}
-
 
         if (success) {
                 // Notify the registered IPC process.
@@ -155,7 +162,20 @@ int IPCManager_::ipcm_unregister_response_ipcp(
 	}
 
 	rinad::IPCMIPCProcess *ipcp = lookup_ipcp_by_id(trans->ipcp_id);
+	if(!ipcp){
+		return -1;
+	}
+	//Auto release the read lock
+	rina::ReadScopedLock readlock(ipcp->rwlock, false);
+
         rinad::IPCMIPCProcess *slave_ipcp = lookup_ipcp_by_id(trans->slave_ipcp_id);
+	if(!slave_ipcp){
+		assert(0);
+		return -1;
+	}
+	//Auto release the read lock
+	rina::ReadScopedLock sreadlock(slave_ipcp->rwlock, false);
+
         const rina::ApplicationProcessNamingInformation&
                 slave_dif_name = slave_ipcp->dif_name_;
 
@@ -378,6 +398,9 @@ IPCManager_::assign_to_dif_response_event_handler(rina::AssignToDIFResponseEvent
 			FLUSH_LOG(WARN, ss);
 			throw rina::AssignToDIFException();
 		}
+		//Auto release the read lock
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
+
 		ipcp->assignToDIFResult(success);
 
 		ss << "DIF assignment operation completed for IPC "
@@ -437,6 +460,9 @@ IPCManager_::update_dif_config_response_event_handler(rina::UpdateDIFConfigurati
 			FLUSH_LOG(WARN, ss);
 			throw rina::UpdateDIFConfigurationException();
 		}
+		//Auto release the read lock
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
+
 
 		// Inform the requesting IPC process about the result of
 		// the configuration update operation
@@ -494,6 +520,10 @@ IPCManager_::enroll_to_dif_response_event_handler(rina::EnrollToDIFResponseEvent
 		"IPCP with id: "<<trans->ipcp_id<<" does not exist! Perhaps deleted?" << endl;
 		FLUSH_LOG(WARN, ss);
 	}else{
+		//Auto release the read lock
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
+
+
 		if (success) {
 			ss << "Enrollment operation completed for IPC "
 				<< "process " << ipcp->get_name().toString() << endl;
@@ -548,6 +578,10 @@ void IPCManager_::neighbors_modified_notification_event_handler(rina::NeighborsM
 		FLUSH_LOG(ERR, ss);
 		return;
 	}
+
+	//Auto release the read lock
+	rina::ReadScopedLock readlock(ipcp->rwlock, false);
+
 
 	ss << "Neighbors update [" << (event->added ? "+" : "-") <<
 		"#" << event->neighbors.size() << "]for IPC process " <<

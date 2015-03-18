@@ -56,6 +56,9 @@ IPCManager_::deallocate_flow(const Addon* callee, const int ipcp_id,
                         throw Exception();
 		}
 
+		//Auto release the read lock
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
+
 
 		//Create a transaction
 		seqnum = opaque_generator_.next();
@@ -95,7 +98,7 @@ IPCManager_::deallocate_flow(const Addon* callee, const int ipcp_id,
         } catch (rina::IpcmDeallocateFlowException) {
                 ss  << ": Error while application " <<
                         event.applicationName.toString() << "asks IPC process "
-                        << ipcp->get_name().toString() << " to deallocate the flow "
+                        << ipcp_id << " to deallocate the flow "
                         "with port-id " << event.portId << endl;
                 FLUSH_LOG(ERR, ss);
                 return -1;
@@ -166,6 +169,9 @@ void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
                 return;
         }
 
+	//Auto release the read lock
+	rina::ReadScopedLock readlock(ipcp->rwlock, false);
+
         try {
                 // Ask the IPC process to allocate a flow
         	seqnum = opaque_generator_.next();
@@ -220,6 +226,9 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
                 FLUSH_LOG(ERR, ss);
                 return;
         }
+
+	//Auto release the read lock
+	rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
         try {
                 // Inform the local application that a remote application
@@ -314,6 +323,9 @@ void IPCManager_::ipcm_allocate_flow_request_result_handler( rina::IpcmAllocateF
 			throw rina::AllocateFlowException();
 		}
 
+		//Auto release the read lock
+		rina::ReadScopedLock readlock(slave_ipcp->rwlock, false);
+
 		req_event.portId = -1;
 
 	        // Inform the IPC process about the result of the
@@ -338,7 +350,7 @@ void IPCManager_::ipcm_allocate_flow_request_result_handler( rina::IpcmAllocateF
                 FLUSH_LOG(INFO, ss);
         } catch (rina::AllocateFlowException) {
                 ss  << ": Error while informing the IPC process "
-                        << slave_ipcp->get_name().toString() << " about result of "
+                        << trans->slave_ipcp_id << " about result of "
                         "flow allocation between applications " <<
                         req_event.localApplicationName.toString() <<
                         " and " << req_event.remoteApplicationName.toString()
@@ -410,6 +422,9 @@ void IPCManager_::allocate_flow_response_event_handler(rina::AllocateFlowRespons
 			throw rina::AllocateFlowException();
 		}
 
+		//Auto release the read lock
+		rina::ReadScopedLock readlock(slave_ipcp->rwlock, false);
+
                 // Inform the IPC process about the response of the flow
                 // allocation procedure
                 slave_ipcp->allocateFlowResponse(req_event, event->result,
@@ -431,7 +446,7 @@ void IPCManager_::allocate_flow_response_event_handler(rina::AllocateFlowRespons
                 FLUSH_LOG(INFO, ss);
         } catch (rina::AllocateFlowException) {
                 ss  << ": Error while informing IPC "
-                        << "process " << slave_ipcp->get_name().toString() <<
+                        << "process " << trans->slave_ipcp_id <<
                         " about failed flow allocation" << endl;
                 FLUSH_LOG(ERR, ss);
                 req_event.portId = -1;
@@ -517,6 +532,9 @@ void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IpcmDealloca
 			FLUSH_LOG(ERR, ss);
         		throw rina::IpcmDeallocateFlowException();
 		}
+
+		//Auto release the read lock
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
                 // Inform the IPC process about the deallocation result
                 ipcp->deallocateFlowResult(event->sequenceNumber, success);

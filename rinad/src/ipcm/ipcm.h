@@ -115,49 +115,6 @@ private:
 	rina::ConditionVariable wait_cond;
 };
 
-#if 0
-//
-//
-// TODO: revise
-//
-class IPCMConcurrency : public rina::ConditionVariable {
- public:
-	bool wait_for_event(rina::IPCEventType ty, unsigned int seqnum,
-			    int &result);
-	void notify_event(rina::IPCEvent *event);
-	void set_event_result(int result) { event_result = result; }
-
-	IPCMConcurrency(unsigned int wt) :
-				wait_time(wt), event_waiting(false) { }
-
-	void setWaitTime(unsigned int wt){wait_time = wt;}
- private:
-	unsigned int wait_time;
-	bool event_waiting;
-	rina::IPCEventType event_ty;
-	unsigned int event_sn;
-	int event_result;
-};
-
-//
-// @brief Pending Flow allocation object
-//
-// TODO: revise
-//
-struct PendingFlowAllocation {
-	IPCMIPCProcess *slave_ipcp;
-	rina::FlowRequestEvent req_event;
-	bool try_only_a_dif;
-
-	PendingFlowAllocation(): slave_ipcp(NULL),
-				 try_only_a_dif(true) { }
-	PendingFlowAllocation(IPCMIPCProcess *p,
-			const rina::FlowRequestEvent& e, bool once)
-				: slave_ipcp(p), req_event(e),
-					try_only_a_dif(once) { }
-};
-#endif
-
 //
 // @brief The IPCManager class is in charge of managing the IPC processes
 // life-cycle.
@@ -501,86 +458,6 @@ protected:
 	void ipc_process_select_policy_set_response_handler(
 					rina::SelectPolicySetResponseEvent *e);
 
-#if 0
-/**********************************************************/
-	//
-	// TODO: revise
-	//
-	//IPCMConcurrency concurrency;
-
-	//Pending IPCP DIF assignments
-	std::map<unsigned int, IPCMIPCProcess*> pending_ipcp_dif_assignments;
-
-	//Pending query RIB
-	std::map<unsigned int, IPCMIPCProcess*> pending_ipcp_query_rib_responses;
-
-	//Query RIB responses
-	std::map<unsigned int, std::string > query_rib_responses;
-
-	//Pending IPCP registrations
-	std::map<unsigned int,
-		 std::pair<IPCMIPCProcess*, IPCMIPCProcess*>
-		> pending_ipcp_registrations;
-
-	//Pending IPCP unregistration
-	std::map<unsigned int,
-		 std::pair<IPCMIPCProcess*, IPCMIPCProcess*>
-		> pending_ipcp_unregistrations;
-
-	//Pending IPCP enrollments
-	std::map<unsigned int, IPCMIPCProcess*> pending_ipcp_enrollments;
-
-	//Pending AP registrations
-	std::map<unsigned int,
-		 std::pair<IPCMIPCProcess*,
-			   rina::ApplicationRegistrationRequestEvent
-			  >
-		> pending_app_registrations;
-
-	//Pending AP unregistrations
-	std::map<unsigned int,
-		 std::pair<IPCMIPCProcess*,
-			   rina::ApplicationUnregistrationRequestEvent
-			  >
-		> pending_app_unregistrations;
-
-	//Pending DIF config updates
-	std::map<unsigned int, IPCMIPCProcess*> pending_dif_config_updates;
-
-	//Pending flow allocations
-	std::map<unsigned int, PendingFlowAllocation> pending_flow_allocations;
-
-	//Pending flow deallocations
-	std::map<unsigned int,
-		 std::pair<IPCMIPCProcess *,
-			   rina::FlowDeallocateRequestEvent
-			  >
-		> pending_flow_deallocations;
-
-	/* FIXME REMOVE THIS*/
-	std::map<unsigned int,
-		IPCMIPCProcess *> pending_set_policy_set_param_ops;
-
-	std::map<unsigned int,
-		IPCMIPCProcess *> pending_select_policy_set_ops;
-
-	std::map<unsigned int,
-		IPCMIPCProcess *> pending_plugin_load_ops;
-	/* FIXME REMOVE THIS*/
-#endif
-	//
-	// RINA configuration internal state
-	//
-	rinad::RINAConfiguration config;
-
-	//Script thread
-	rina::Thread *script;
-
-	//IPCM Console instance
-	IPCMConsole *console;
-
-/**********************************************************/
-
 	/*
 	* Get the transaction state. Template parameter is the type of the
 	* specific state required for the type of transaction
@@ -664,6 +541,18 @@ protected:
 	* @ret 0 if success -1 otherwise.
 	*/
 	int remove_syscall_transaction_state(int tid);
+
+	//
+	// RINA configuration internal state
+	//
+	rinad::RINAConfiguration config;
+
+	//Script thread
+	rina::Thread *script;
+
+	//IPCM Console instance
+	IPCMConsole *console;
+
 
 	/**
 	* Pending syscall states
