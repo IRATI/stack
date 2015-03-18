@@ -1552,7 +1552,7 @@ int rmt_receive(struct rmt * instance,
                 return -1;
         }
 
-        if (ps->max_q_policy_rx)
+        if (ps->rmt_scheduling_policy_rx)
                 queue = ps->rmt_scheduling_policy_rx(ps,
                                                      in_n1_port,
                                                      sched_restart);
