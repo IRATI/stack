@@ -221,12 +221,16 @@ public:
 	int enroll_to_difs(const Addon* callee, const int ipcp_id,
 			   const std::list<rinad::NeighborData>& neighbors);
 
-	//TODO
+	//
+	// Unregister app from an ipcp
+	//
 	int unregister_app_from_ipcp(const Addon* callee,
 		const rina::ApplicationUnregistrationRequestEvent& req_event,
 		int slave_ipcp_id);
 
-	//TODO
+	//
+	// Unregister an ipcp from another one
+	//
 	int unregister_ipcp_from_ipcp(const Addon* callee, const int ipcp_id,
 						const int slave_ipcp_id);
 	//
@@ -308,7 +312,9 @@ protected:
 			bool write_lock=false);
 
 	/**
-	* TODO????
+	* Select a suitable IPCP
+	* @param read_lock When true, the IPCProcess instance is recovered with
+	* the read lock acquired, otherwise the write lock is acquired.
 	*/
 	IPCMIPCProcess* select_ipcp(bool write_lock=false);
 
@@ -418,7 +424,7 @@ protected:
 	void enroll_to_dif_response_event_handler(rina::EnrollToDIFResponseEvent *e);
 	void neighbors_modified_notification_event_handler(rina::NeighborsModifiedNotificationEvent* e);
 
-	//DIF misc TODO: revise
+	//DIF misc
 	void ipc_process_dif_registration_notification_handler(rina::IPCEvent *event);
 	void ipc_process_query_rib_handler(rina::IPCEvent *event);
 	void get_dif_properties_handler(rina::IPCEvent *event);
