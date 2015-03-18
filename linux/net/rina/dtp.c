@@ -1049,15 +1049,16 @@ static bool window_is_closed(struct dtp_sv * sv,
 int dtp_write(struct dtp * instance,
               struct sdu * sdu)
 {
-        struct pdu *          pdu;
-        struct pci *          pci;
-        struct dtp_sv *       sv;
-        struct dt *           dt;
-        struct dtcp *         dtcp;
-        struct rtxq *         rtxq;
-        struct pdu *          cpdu;
+        struct pdu *            pdu;
+        struct pci *            pci;
+        struct dtp_sv *         sv;
+        struct dt *             dt;
+        struct dtcp *           dtcp;
+        struct rtxq *           rtxq;
+        struct pdu *            cpdu;
         struct dtp_ps * ps;
-        seq_num_t             sn;
+        seq_num_t               sn;
+        struct efcp_container * efcpc;
 
         if (!sdu_is_ok(sdu))
                 return -1;
@@ -1239,6 +1240,20 @@ int dtp_write(struct dtp * instance,
                 return 0;
         }
 
+        /* Destination app is over the same IPCP, acting as loopback */
+        if (sv->connection->source_address ==
+            sv->connection->destination_address) {
+                efcpc = efcp_container_get(instance->efcp);
+                if (!efcpc) {
+                        LOG_ERR("Could not retrieve the EFCP container in"
+                        "loopback operation");
+                        pdu_destroy(pdu);
+                        return -1;
+                }
+                return efcp_container_receive(efcpc,
+                                              sv->connection->destination_cep_id,
+                                              pdu);
+        }
         /* Post SDU to RMT */
         return rmt_send(instance->rmt,
                         pci_destination(pci),

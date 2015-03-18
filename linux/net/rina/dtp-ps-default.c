@@ -40,19 +40,25 @@
 static int
 default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
 {
-        struct dtp *    dtp = ps->dm;
-        struct dt  *    dt;
-        struct dtcp *   dtcp;
-        struct rtimer * Stimer;
+        struct dtp *            dtp = ps->dm;
+        struct dt  *            dt;
+        struct dtcp *           dtcp;
+        struct rtimer *         Stimer;
+        struct efcp_container * efcpc;
+        struct pci *            pci;
+        cep_id_t                dst_cep;
+        address_t               src_addr, dst_addr;
 
         if (!dtp) {
                 LOG_ERR("No instance passed, cannot run policy");
+                pdu_destroy(pdu);
                 return -1;
         }
 
         dt = dtp_dt(dtp);
         if (!dt) {
                 LOG_ERR("Passed instance has no parent, cannot run policy");
+                pdu_destroy(pdu);
                 return -1;
         }
 
@@ -75,6 +81,36 @@ default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
 
         LOG_DBG("local_soft_irq_pending: %d", local_softirq_pending());
 
+        /* Destination app is over the same IPCP, acting as loopback */
+        pci = pdu_pci_get_rw(pdu);
+        if (!pci) {
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        dst_addr = pci_cep_destination(pci);
+        src_addr = pci_cep_source(pci);
+        dst_cep  = pci_cep_destination(pci);
+
+        if (!is_address_ok(dst_addr) ||
+            !is_address_ok(src_addr) ||
+            !is_cep_id_ok(dst_cep)) {
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        if (dst_addr == src_addr) {
+                efcpc = efcp_container_get(dt_efcp(dt));
+                if (!efcpc) {
+                        LOG_ERR("Could not retrieve the EFCP container in"
+                        "loopback operation");
+                        pdu_destroy(pdu);
+                        return -1;
+                }
+                return efcp_container_receive(efcpc,
+                                              dst_cep,
+                                              pdu);
+        }
         return rmt_send(dtp_rmt(dtp),
                         pci_destination(pdu_pci_get_ro(pdu)),
                         pci_qos_id(pdu_pci_get_ro(pdu)),
@@ -93,10 +129,12 @@ default_closed_window(struct dtp_ps * ps, struct pdu * pdu)
 
         if (!dtp) {
                 LOG_ERR("No instance passed, cannot run policy");
+                pdu_destroy(pdu);
                 return -1;
         }
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("PDU is not ok, cannot run policy");
+                pdu_destroy(pdu);
                 return -1;
         }
 

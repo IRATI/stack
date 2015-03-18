@@ -220,6 +220,14 @@ int efcp_container_unbind_user_ipcp(struct efcp_container * efcpc,
 }
 EXPORT_SYMBOL(efcp_container_unbind_user_ipcp);
 
+struct efcp_container * efcp_container_get(struct efcp * instance)
+{
+        if(!instance)
+                return NULL;
+        return instance->container;
+}
+EXPORT_SYMBOL(efcp_container_get);
+
 static int efcp_destroy(struct efcp * instance)
 {
         if (!instance) {

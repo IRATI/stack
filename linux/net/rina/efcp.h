@@ -70,6 +70,7 @@ struct efcp_config *    efcp_container_config(struct efcp_container * c);
 int                     efcp_bind_rmt(struct efcp_container * container,
                                       struct rmt *            rmt);
 int                     efcp_unbind_rmt(struct efcp_container * container);
+struct efcp_container * efcp_container_get(struct efcp * efcp);
 int                     efcp_enqueue(struct efcp * efcp,
                                      port_id_t     port,
                                      struct sdu *  sdu);
