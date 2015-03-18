@@ -41,7 +41,7 @@ class IPCMIPCProcessFactory;
  * Encapsulates the state and operations that can be performed over
  * a single IPC Process (besides creation/destruction)
  */
-class IPCMIPCProcess: public rina::Lockable {
+class IPCMIPCProcess {
 
 public:
 	enum State{IPCM_IPCP_CREATED,
@@ -388,10 +388,14 @@ private:
 /**
  * Factory for IPCMIPCProcess
  */
-class IPCMIPCProcessFactory: public rina::Lockable {
+class IPCMIPCProcessFactory{
+
 public:
-	IPCMIPCProcessFactory();
-	~IPCMIPCProcessFactory() throw();
+	~IPCMIPCProcessFactory() throw(){};
+
+	/** Rwlock */
+	rina::ReadWriteLockable rwlock;
+
 
     /**
      * Read the sysfs folder and get the list of IPC Process types supported
@@ -446,8 +450,8 @@ private:
 	//The underlying IPC Process Factory
 	rina::IPCProcessFactory proxy_factory_;
 
-    /** The current IPC Processes in the system*/
-    std::map<unsigned short, IPCMIPCProcess*> ipcProcesses;
+	/** The current IPC Processes in the system*/
+	std::map<unsigned short, IPCMIPCProcess*> ipcProcesses;
 };
 
 }//rinad namespace
