@@ -1046,6 +1046,47 @@ static bool window_is_closed(struct dtp_sv * sv,
         return retval;
 }
 
+static int pdu_send(struct dt *  dt,
+                    struct rmt * rmt,
+                    address_t    address,
+                    qos_id_t     qos_id,
+                    struct pdu * pdu)
+{
+        struct efcp_container * efcpc;
+        cep_id_t                dst_cep_id;
+        struct efcp *           efcp;
+
+        if (!dt)
+                return -1;
+
+        efcp = dt_efcp(dt);
+        if (!efcp)
+                return -1;
+
+        /* Destination app is over the same IPCP, acting as loopback */
+        dst_cep_id = efcp_loopback_cep_id(efcp);
+        if (!is_cep_id_ok(dst_cep_id)) {
+                if (rmt_send(rmt, address, qos_id, pdu)) {
+                                LOG_ERR("Problems sending PDU to RMT");
+                                return -1;
+                }
+                return 0;
+        }
+        efcpc = efcp_container_get(efcp);
+        if (!efcpc) {
+                LOG_ERR("Could not retrieve the EFCP container in"
+                "loopback operation");
+                pdu_destroy(pdu);
+                return -1;
+        }
+        if (efcp_container_receive(efcpc, dst_cep_id, pdu)) {
+                LOG_ERR("Problems sending PDU to loopback EFCP");
+                return -1;
+        }
+        return 0;
+}
+
+
 int dtp_write(struct dtp * instance,
               struct sdu * sdu)
 {
@@ -1058,12 +1099,11 @@ int dtp_write(struct dtp * instance,
         struct pdu *            cpdu;
         struct dtp_ps * ps;
         seq_num_t               sn;
-        struct efcp_container * efcpc;
 
         if (!sdu_is_ok(sdu))
                 return -1;
 
-        if (!instance) {
+        if (!instance || !instance->rmt) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 sdu_destroy(sdu);
                 return -1;
@@ -1240,22 +1280,8 @@ int dtp_write(struct dtp * instance,
                 return 0;
         }
 
-        /* Destination app is over the same IPCP, acting as loopback */
-        if (sv->connection->source_address ==
-            sv->connection->destination_address) {
-                efcpc = efcp_container_get(instance->efcp);
-                if (!efcpc) {
-                        LOG_ERR("Could not retrieve the EFCP container in"
-                        "loopback operation");
-                        pdu_destroy(pdu);
-                        return -1;
-                }
-                return efcp_container_receive(efcpc,
-                                              sv->connection->destination_cep_id,
-                                              pdu);
-        }
-        /* Post SDU to RMT */
-        return rmt_send(instance->rmt,
+        return pdu_send(dt,
+                        instance->rmt,
                         pci_destination(pci),
                         pci_qos_id(pci),
                         pdu);

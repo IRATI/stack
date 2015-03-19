@@ -172,7 +172,7 @@ struct dtcp_config * dtcp_config_get(struct dtcp * dtcp)
 }
 EXPORT_SYMBOL(dtcp_config_get);
 
-int pdu_send(struct dtcp * dtcp, struct pdu * pdu)
+int dtcp_pdu_send(struct dtcp * dtcp, struct pdu * pdu)
 {
         ASSERT(dtcp);
         ASSERT(pdu);
@@ -185,7 +185,7 @@ int pdu_send(struct dtcp * dtcp, struct pdu * pdu)
 
         return 0;
 }
-EXPORT_SYMBOL(pdu_send);
+EXPORT_SYMBOL(dtcp_pdu_send);
 
 static int last_rcv_ctrl_seq_set(struct dtcp * dtcp,
                                  seq_num_t     last_rcv_ctrl_seq)
@@ -904,7 +904,7 @@ int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
         LOG_DBG("DTCP Sending ACK (CPU: %d)", smp_processor_id());
         dump_we(dtcp, pdu_pci_get_rw(pdu));
 
-        if (pdu_send(dtcp, pdu)){
+        if (dtcp_pdu_send(dtcp, pdu)){
                 atomic_dec(&dtcp->cpdus_in_transit);
                 return -1;
         }
