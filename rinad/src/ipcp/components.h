@@ -250,6 +250,7 @@ public:
 	};
 
 	Flow();
+	Flow(const Flow& flow);
 	~Flow();
 	rina::Connection * getActiveConnection();
 	std::string toString();
@@ -303,6 +304,8 @@ public:
 	bool source;
 };
 
+class IFlowAllocatorInstance;
+
 class IFlowAllocatorPs : public IPolicySet {
 // This class is used by the IPCP to access the plugin functionalities
 public:
@@ -317,6 +320,8 @@ public:
 class IFlowAllocator : public IPCProcessComponent {
 public:
 	virtual ~IFlowAllocator(){};
+
+	virtual IFlowAllocatorInstance * getFAI(int portId) = 0;
 
 	/// The Flow Allocator is invoked when an Allocate_Request.submit is received.  The source Flow
 	/// Allocator determines if the request is well formed.  If not well-formed, an Allocate_Response.deliver
@@ -361,8 +366,8 @@ public:
 
         // Plugin support
 	virtual std::list<rina::QoSCube*> getQoSCubes() = 0;
-        virtual Flow * createFlow() = 0;
-        virtual void destroyFlow(Flow *) = 0;
+	virtual Flow * createFlow() = 0;
+	virtual void destroyFlow(Flow *) = 0;
 };
 
 class IRoutingPs : public IPolicySet {

@@ -57,6 +57,31 @@ Flow::Flow() {
 	access_control = 0;
 }
 
+Flow::Flow(const Flow& flow) {
+	source_naming_info = flow.source_naming_info;
+	destination_naming_info = flow.destination_naming_info;
+	flow_specification = flow.flow_specification;
+	source_port_id = flow.source_port_id;
+	destination_port_id = flow.destination_port_id;
+	source_address = flow.source_address;
+	destination_address = flow.destination_address;
+	current_connection_index = flow.current_connection_index;
+	max_create_flow_retries = flow.max_create_flow_retries;
+	create_flow_retries = flow.create_flow_retries;
+	hop_count = flow.hop_count;
+	source = flow.source;
+	state = flow.state;
+	access_control = 0;
+
+	std::list<rina::Connection*>::const_iterator it;
+	rina::Connection * current = 0;
+	for (it = flow.connections.begin();
+			it != flow.connections.end(); ++it) {
+		current = *it;
+		connections.push_back(new rina::Connection(*current));
+	}
+}
+
 Flow::~Flow() {
 	std::list<rina::Connection*>::iterator iterator;
 	for (iterator = connections.begin(); iterator != connections.end();
