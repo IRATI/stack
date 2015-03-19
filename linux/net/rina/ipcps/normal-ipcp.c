@@ -219,7 +219,6 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
         cep_id = efcp_connection_create(data->efcpc, NULL, conn);
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Failed EFCP connection creation");
-                connection_destroy(conn);
                 return cep_id_bad();
         }
 
@@ -453,7 +452,6 @@ connection_create_arrived(struct ipcp_instance_data * data,
         cep_id = efcp_connection_create(data->efcpc, user_ipcp, conn);
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Failed EFCP connection creation");
-                connection_destroy(conn);
                 return cep_id_bad();
         }
         LOG_DBG("Cep_id allocated for the arrived connection request: %d",
