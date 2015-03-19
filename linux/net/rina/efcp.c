@@ -276,6 +276,7 @@ static int efcp_destroy(struct efcp * instance)
 
 
         if (instance->connection) {
+                /* FIXME: Connection should release the cep id */
                 if (is_cep_id_ok(instance->connection->source_cep_id)) {
                         ASSERT(instance->container);
                         ASSERT(instance->container->cidm);
@@ -283,6 +284,8 @@ static int efcp_destroy(struct efcp * instance)
                         cidm_release(instance->container->cidm,
                                      instance->connection->source_cep_id);
                 }
+                /* FIXME: Should we release (actually the connection) release
+                 * the destination cep id? */
 
                 connection_destroy(instance->connection);
         }
@@ -533,13 +536,12 @@ int efcp_container_receive(struct efcp_container * container,
 }
 EXPORT_SYMBOL(efcp_container_receive);
 
-static bool is_connection_ok(const struct connection * connection)
+static bool is_candidate_connection_ok(const struct connection * connection)
 {
         /* FIXME: Add checks for policy params */
 
         if (!connection                                   ||
             !is_cep_id_ok(connection->source_cep_id)      ||
-            !is_cep_id_ok(connection->destination_cep_id) ||
             !is_port_id_ok(connection->port_id))
                 return false;
 
@@ -608,26 +610,33 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 LOG_ERR("Bogus container passed, bailing out");
                 return cep_id_bad();
         }
-        if (!is_connection_ok(connection)) {
-                LOG_ERR("Bogus connection passed, bailing out");
-                return cep_id_bad();
-        }
-
         ASSERT(connection);
 
         tmp = efcp_create();
-        if (!tmp)
+        if (!tmp) {
+                connection_destroy(connection);
                 return cep_id_bad();
+        }
 
         if (user_ipcp)
                 tmp->user_ipcp = user_ipcp;
 
         cep_id                    = cidm_allocate(container->cidm);
+        if (!is_cep_id_ok(cep_id)) {
+                LOG_ERR("CIDM generated wrong CEP ID");
+                connection_destroy(connection);
+                return cep_id_bad();
+        }
 
         /* We must ensure that the DTP is instantiated, at least ... */
         tmp->container            = container;
-
         connection->source_cep_id = cep_id;
+        if (!is_candidate_connection_ok(connection)) {
+                LOG_ERR("Bogus connection passed, bailing out");
+                connection_destroy(connection);
+                return cep_id_bad();
+        }
+
         tmp->connection           = connection;
 
         tmp->dt = dt_create();
