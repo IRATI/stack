@@ -722,7 +722,6 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(
 				  robject_value, 0, remote_id, this);
 
 		  underlying_port_id_ = cdapSessions[0];
-		  state = MESSAGE_TO_PEER_FAI_SENT;
 	  } catch (Exception &e) {
 		  LOG_ERR(
 				  "Problems sending M_CREATE <Flow> CDAP message to neighbor: %s",
@@ -738,6 +737,7 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(
 	  flow_allocator_->createFlowRequestMessageReceived(dest_flow, object_name_, 0, 0);
   }
 
+  state = MESSAGE_TO_PEER_FAI_SENT;
   lock_->unlock();
 }
 
