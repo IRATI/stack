@@ -268,6 +268,7 @@ class RIBObject : public BaseRIBObject
   }
   virtual ~RIBObject()
   {
+    delete value_;
   }
   const T* get_value() const
   {

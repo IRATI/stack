@@ -31,6 +31,7 @@ class CDAPProvider : public CDAPProviderInterface
  public:
   CDAPProvider(rina::WireMessageProviderFactory wire_provider_factory,
                long timeout);
+  ~CDAPProvider();
   cdap_rib::con_handle_t open_connection(const cdap_rib::vers_info_t ver,
                                          const cdap_rib::src_info_t &src,
                                          const cdap_rib::dest_info_t &dest,
@@ -109,6 +110,11 @@ CDAPProvider::CDAPProvider(
   rina::CDAPSessionManagerFactory cdap_factory;
   manager_ = cdap_factory.createCDAPSessionManager(&wire_provider_factory,
                                                    timeout);
+}
+
+CDAPProvider::~CDAPProvider()
+{
+  delete manager_;
 }
 
 cdap_rib::con_handle_t CDAPProvider::open_connection(
@@ -371,7 +377,6 @@ void CDAPProvider::remote_create_response(const cdap_rib::con_handle_t &con,
       res->result_, res->result_reason_, message_id);
   send(m_sent, con.port_);
 
-  delete res;
   delete m_sent;
 }
 void CDAPProvider::remote_delete_response(const cdap_rib::con_handle_t &con,
@@ -389,7 +394,6 @@ void CDAPProvider::remote_delete_response(const cdap_rib::con_handle_t &con,
       res->result_, res->result_reason_, message_id);
   send(m_sent, con.port_);
 
-  delete res;
   delete m_sent;
 }
 void CDAPProvider::remote_read_response(const cdap_rib::con_handle_t &con,
@@ -409,7 +413,6 @@ void CDAPProvider::remote_read_response(const cdap_rib::con_handle_t &con,
                                                   message_id);
   send(m_sent, con.port_);
 
-  delete res;
   delete m_sent;
 }
 void CDAPProvider::remote_cancel_read_response(
@@ -425,7 +428,6 @@ void CDAPProvider::remote_cancel_read_response(
                                                   res->result_reason_);
   send(m_sent, con.port_);
 
-  delete res;
   delete m_sent;
 }
 void CDAPProvider::remote_write_response(const cdap_rib::con_handle_t &con,
@@ -442,7 +444,6 @@ void CDAPProvider::remote_write_response(const cdap_rib::con_handle_t &con,
       message_id);
   send(m_sent, con.port_);
 
-  delete res;
   delete m_sent;
 }
 void CDAPProvider::remote_start_response(const cdap_rib::con_handle_t &con,
@@ -460,7 +461,6 @@ void CDAPProvider::remote_start_response(const cdap_rib::con_handle_t &con,
       res->result_, res->result_reason_, message_id);
   send(m_sent, con.port_);
 
-  delete res;
   delete m_sent;
 }
 void CDAPProvider::remote_stop_response(const cdap_rib::con_handle_t &con,
@@ -478,7 +478,6 @@ void CDAPProvider::remote_stop_response(const cdap_rib::con_handle_t &con,
                                                   message_id);
   send(m_sent, con.port_);
 
-  delete res;
   delete m_sent;
 }
 

@@ -21,6 +21,8 @@
 
 #define RINA_PREFIX "rib"
 #include <librina/logs.h>
+//FIXME iostream is only for debuging purposes
+//#include <iostream>
 
 #include "rib_provider.h"
 #include <librina/cdap.h>
@@ -117,13 +119,12 @@ RIB::RIB(const RIBSchema *schema)
 
 RIB::~RIB() throw ()
 {
-  lock();
   delete rib_schema_;
-
+  lock();
   for (std::map<std::string, RIBIntObject*>::iterator it = rib_by_name_.begin();
       it != rib_by_name_.end(); ++it) {
-    LOG_DBG("Object %s removed from the RIB",
-            it->second->object_->get_name().c_str());
+    LOG_INFO("Object %s removed from the RIB",
+             it->second->object_->get_name().c_str());
     delete it->second;
   }
   rib_by_name_.clear();
@@ -187,15 +188,14 @@ BaseRIBObject* RIB::getRIBObject(const std::string& clas, long instance,
 
 void RIB::addRIBObject(BaseRIBObject* rib_object)
 {
-  RIBIntObject *int_object = new RIBIntObject(rib_object);
   RIBIntObject *parent = 0;
 
-  std::string parent_name = get_parent_name(int_object->object_->get_name());
+  std::string parent_name = get_parent_name(rib_object->get_name());
   if (!parent_name.empty()) {
     lock();
     if (rib_by_name_.find(parent_name) == rib_by_name_.end()) {
       std::stringstream ss;
-      ss << "Exception in object " << int_object->object_->get_name()
+      ss << "Exception in object " << rib_object->get_name()
          << ". Parent name (" << parent_name << ") is not in the RIB"
          << std::endl;
       unlock();
@@ -208,24 +208,24 @@ void RIB::addRIBObject(BaseRIBObject* rib_object)
 //  if (rib_schema_->validateAddObject(rib_object, parent))
 //  {
   lock();
-  if (rib_by_name_.find(int_object->object_->get_name())
-      != rib_by_name_.end()) {
+  if (rib_by_name_.find(rib_object->get_name()) != rib_by_name_.end()) {
     unlock();
     std::stringstream ss;
-    ss << "Object with the same name (" << int_object->object_->get_name()
+    ss << "Object with the same name (" << rib_object->get_name()
        << ") already exists in the RIB" << std::endl;
     throw Exception(ss.str().c_str());
   }
-  if (rib_by_instance_.find(int_object->object_->get_instance())
+  if (rib_by_instance_.find(rib_object->get_instance())
       != rib_by_instance_.end()) {
     unlock();
     std::stringstream ss;
-    ss << "Object with the same instance ("
-       << int_object->object_->get_instance() << "already exists "
+    ss << "Object with the same instance (" << rib_object->get_instance()
+       << "already exists "
        "in the RIB"
        << std::endl;
     throw Exception(ss.str().c_str());
   }
+  RIBIntObject *int_object = new RIBIntObject(rib_object);
   if (parent != 0) {
     parent->add_child(int_object);
     int_object->parent_ = parent;
@@ -393,9 +393,10 @@ RIBDaemon::RIBDaemon(cacep::AppConHandlerInterface *app_con_callback,
 
 RIBDaemon::~RIBDaemon()
 {
-  delete rib_;
   delete app_con_callback_;
   delete app_resp_callback_;
+  delete rib_;
+  delete cdap_manager_;
 }
 
 void RIBDaemon::open_connection_result(const cdap_rib::con_handle_t &con,
@@ -477,7 +478,12 @@ void RIBDaemon::remote_create_request(const cdap_rib::con_handle_t &con,
 
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteCreateObject(obj.name_, obj.value_);
-  cdap_manager_->remote_create_response(con, obj, flags, res, message_id);
+  try {
+    cdap_manager_->remote_create_response(con, obj, flags, res, message_id);
+  } catch (Exception &e) {
+    LOG_ERR("Unable to send the response");
+  }
+  delete res;
 }
 void RIBDaemon::remote_delete_request(const cdap_rib::con_handle_t &con,
                                       const cdap_rib::obj_info_t &obj,
@@ -490,7 +496,12 @@ void RIBDaemon::remote_delete_request(const cdap_rib::con_handle_t &con,
 
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteDeleteObject(obj.name_, obj.value_);
-  cdap_manager_->remote_delete_response(con, obj, flags, res, message_id);
+  try {
+    cdap_manager_->remote_delete_response(con, obj, flags, res, message_id);
+  } catch (Exception &e) {
+    LOG_ERR("Unable to send the response");
+  }
+  delete res;
 }
 void RIBDaemon::remote_read_request(const cdap_rib::con_handle_t &con,
                                     const cdap_rib::obj_info_t &obj,
@@ -503,7 +514,12 @@ void RIBDaemon::remote_read_request(const cdap_rib::con_handle_t &con,
 
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteReadObject(obj.name_, obj.value_);
-  cdap_manager_->remote_read_response(con, obj, flags, res, message_id);
+  try {
+    cdap_manager_->remote_read_response(con, obj, flags, res, message_id);
+  } catch (Exception &e) {
+    LOG_ERR("Unable to send the response");
+  }
+  delete res;
 }
 void RIBDaemon::remote_cancel_read_request(const cdap_rib::con_handle_t &con,
                                            const cdap_rib::obj_info_t &obj,
@@ -518,7 +534,12 @@ void RIBDaemon::remote_cancel_read_request(const cdap_rib::con_handle_t &con,
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteCancelReadObject(obj.name_,
                                                              obj.value_);
-  cdap_manager_->remote_cancel_read_response(con, flags, res, message_id);
+  try {
+    cdap_manager_->remote_cancel_read_response(con, flags, res, message_id);
+  } catch (Exception &e) {
+    LOG_ERR("Unable to send the response");
+  }
+  delete res;
 }
 void RIBDaemon::remote_write_request(const cdap_rib::con_handle_t &con,
                                      const cdap_rib::obj_info_t &obj,
@@ -531,7 +552,12 @@ void RIBDaemon::remote_write_request(const cdap_rib::con_handle_t &con,
 
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteWriteObject(obj.name_, obj.value_);
-  cdap_manager_->remote_write_response(con, flags, res, message_id);
+  try {
+    cdap_manager_->remote_write_response(con, flags, res, message_id);
+  } catch (Exception &e) {
+    LOG_ERR("Unable to send the response");
+  }
+  delete res;
 }
 void RIBDaemon::remote_start_request(const cdap_rib::con_handle_t &con,
                                      const cdap_rib::obj_info_t &obj,
@@ -544,7 +570,12 @@ void RIBDaemon::remote_start_request(const cdap_rib::con_handle_t &con,
 
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteStartObject(obj.name_, obj.value_);
-  cdap_manager_->remote_start_response(con, obj, flags, res, message_id);
+  try {
+    cdap_manager_->remote_start_response(con, obj, flags, res, message_id);
+  } catch (Exception &e) {
+    LOG_ERR("Unable to send the response");
+  }
+  delete res;
 }
 void RIBDaemon::remote_stop_request(const cdap_rib::con_handle_t &con,
                                     const cdap_rib::obj_info_t &obj,
@@ -557,7 +588,12 @@ void RIBDaemon::remote_stop_request(const cdap_rib::con_handle_t &con,
 
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteStopObject(obj.name_, obj.value_);
-  cdap_manager_->remote_stop_response(con, flags, res, message_id);
+  try {
+    cdap_manager_->remote_stop_response(con, flags, res, message_id);
+  } catch (Exception &e) {
+    LOG_ERR("Unable to send the response");
+  }
+  delete res;
 }
 
 void RIBDaemon::addRIBObject(BaseRIBObject *ribObject)
@@ -1003,7 +1039,8 @@ const cdap_rib::SerializedObject* EmptyEncoder::encode(const empty &object)
   return 0;
 }
 
-empty* EmptyEncoder::decode(const cdap_rib::SerializedObject &serialized_object) const
+empty* EmptyEncoder::decode(
+    const cdap_rib::SerializedObject &serialized_object) const
 {
   (void) serialized_object;
   LOG_ERR("Can not decode an empty object");
