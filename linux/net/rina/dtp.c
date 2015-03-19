@@ -58,6 +58,7 @@ struct dtp_sv {
         bool                rexmsn_ctrl;
         bool                rate_based;
         timeout_t           a;
+        bool                drf_required;
 };
 
 struct dtp {
@@ -90,6 +91,7 @@ static struct dtp_sv default_sv = {
         .rate_based                    = false,
         .window_based                  = false,
         .a                             = 0,
+        .drf_required                  = true,
 };
 
 struct dt * dtp_dt(struct dtp * dtp)
@@ -116,15 +118,16 @@ struct connection * dtp_sv_connection(struct dtp_sv * sv)
 }
 EXPORT_SYMBOL(dtp_sv_connection);
 
-void nxt_seq_reset(struct dtp_sv * sv, seq_num_t sn)
+int nxt_seq_reset(struct dtp_sv * sv, seq_num_t sn)
 {
-        ASSERT(sv);
+        if (!sv)
+                return -1;
 
         spin_lock(&sv->lock);
         sv->seq_nr_to_send = sn;
         spin_unlock(&sv->lock);
 
-        return;
+        return 0;
 }
 EXPORT_SYMBOL(nxt_seq_reset);
 
@@ -323,6 +326,27 @@ static int seq_queue_destroy(struct seq_queue * seq_queue)
         return 0;
 }
 
+void dtp_squeue_flush(struct dtp * dtp)
+{
+        struct seq_queue_entry * cur, * n;
+        struct seq_queue *       seq_queue;
+
+        if (!dtp)
+                return;
+
+        ASSERT(dtp->seqq);
+
+        seq_queue = dtp->seqq->queue;
+
+        list_for_each_entry_safe(cur, n, &seq_queue->head, next) {
+                list_del(&cur->next);
+                seq_queue_entry_destroy(cur);
+        }
+
+        return;
+}
+EXPORT_SYMBOL(dtp_squeue_flush);
+
 static struct pdu * seq_queue_pop(struct seq_queue * q)
 {
         struct seq_queue_entry * p;
@@ -366,7 +390,7 @@ static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
 
         if (list_empty(&q->head)) {
                 list_add(&tmp->next, &q->head);
-                LOG_DBG("First PDU with seqnum: %d push to seqq at: %pk",
+                LOG_DBG("First PDU with seqnum: %u push to seqq at: %pk",
                         csn, q);
                 return 0;
         }
@@ -389,7 +413,7 @@ static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
 
         if (csn > psn) {
                 list_add_tail(&tmp->next, &q->head);
-                LOG_DBG("Last PDU with seqnum: %d push to seqq at: %pk",
+                LOG_DBG("Last PDU with seqnum: %u push to seqq at: %pk",
                         csn, q);
                 return 0;
         }
@@ -405,7 +429,7 @@ static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
                 }
                 if (csn > psn) {
                         list_add(&tmp->next, &cur->next);
-                        LOG_DBG("Middle PDU with seqnum: %d push to "
+                        LOG_DBG("Middle PDU with seqnum: %u push to "
                                 "seqq at: %pk", csn, q);
                         return 0;
                 }
@@ -483,6 +507,7 @@ static void tf_sender_inactivity(void * data)
         struct dtp * dtp;
         struct dtp_ps * ps;
 
+        LOG_DBG("Running Stimer...");
         dtp = (struct dtp *) data;
         if (!dtp) {
                 LOG_ERR("No dtp to work with");
@@ -508,16 +533,14 @@ static void tf_sender_inactivity(void * data)
 static void tf_receiver_inactivity(void * data)
 {
         struct dtp * dtp;
-#if DTP_INACTIVITY_TIMERS_ENABLE
         struct dtp_ps * ps;
-#endif
 
+        LOG_DBG("Running Rtimer...");
         dtp = (struct dtp *) data;
         if (!dtp) {
                 LOG_ERR("No dtp to work with");
                 return;
         }
-#if DTP_INACTIVITY_TIMERS_ENABLE
         rcu_read_lock();
         ps = container_of(rcu_dereference(dtp->base.ps), struct dtp_ps, base);
         if (!ps->receiver_inactivity_timer) {
@@ -529,7 +552,7 @@ static void tf_receiver_inactivity(void * data)
         if (ps->receiver_inactivity_timer(ps))
                 LOG_ERR("Problems executing receiver inactivity policy");
         rcu_read_unlock();
-#endif
+
         return;
 }
 
@@ -622,9 +645,9 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
                 if (seq_num - LWE - 1 <= max_sdu_gap) {
 
-                        if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
+                        if (dt_sv_rcv_lft_win_set(dt, seq_num))
                                 LOG_ERR("Could not update LWE while A timer");
-                        }
+
                         pos->pdu = NULL;
                         list_del(&pos->next);
                         seq_queue_entry_destroy(pos);
@@ -634,7 +657,6 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         if (pdu_post(dtp, pdu)) {
                                 LOG_ERR("Could not post PDU %u while A timer"
                                         "(in-order)", seq_num);
-                                return -1;
                         }
 
                         LOG_DBG("Atimer: PDU %u posted", seq_num);
@@ -659,7 +681,6 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                 LOG_ERR("Failed to set new "
                                         "left window edge");
-                                ret = -1;
                                 goto finish;
                         }
                         pos->pdu = NULL;
@@ -670,7 +691,6 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         if (pdu_post(dtp, pdu)) {
                                 LOG_ERR("Could not post PDU %u while A timer"
                                         "(expiration)", seq_num);
-                                return -1;
                         }
 
                         /*spin_lock(&seqq->lock);
@@ -718,7 +738,6 @@ static void tf_a(void * o)
         struct dt *   dt;
         struct dtp *  dtp;
         struct dtcp * dtcp;
-        seq_num_t     seq_num_sv_update;
         timeout_t     a;
 
         LOG_DBG("A-timer handler started...");
@@ -740,12 +759,7 @@ static void tf_a(void * o)
                         return;
                 }
         } else {
-                seq_num_sv_update =  process_A_expiration(dtp, dtcp);
-                if (((int) seq_num_sv_update) < 0) {
-                        LOG_ERR("ULWE returned no seq num to update");
-                        rtimer_start(dtp->timers.a, a/AF);
-                        return;
-                }
+                process_A_expiration(dtp, dtcp);
 #if DTP_INACTIVITY_TIMERS_ENABLE
                 if (rtimer_restart(dtp->timers.sender_inactivity,
                                    2 * (dt_sv_mpl(dt) +
@@ -910,6 +924,7 @@ struct dtp * dtp_create(struct dt *         dt,
                 LOG_ERR("No DT passed, bailing out");
                 return NULL;
         }
+        dt_sv_drf_flag_set(dt, true);
 
         if (!rmt) {
                 LOG_ERR("No RMT passed, bailing out");
@@ -963,6 +978,12 @@ struct dtp * dtp_create(struct dt *         dt,
 
         /* Try to select the default policy-set. */
         if (dtp_select_policy_set(tmp, "", RINA_PS_DEFAULT_NAME)) {
+                dtp_destroy(tmp);
+                return NULL;
+        }
+
+        if (dtp_initial_sequence_number(tmp)) {
+                LOG_ERR("Could not create Sequencing queue");
                 dtp_destroy(tmp);
                 return NULL;
         }
@@ -1036,6 +1057,7 @@ int dtp_write(struct dtp * instance,
         struct rtxq *         rtxq;
         struct pdu *          cpdu;
         struct dtp_ps * ps;
+        seq_num_t             sn;
 
         if (!sdu_is_ok(sdu))
                 return -1;
@@ -1071,7 +1093,7 @@ int dtp_write(struct dtp * instance,
 
 #if DTP_INACTIVITY_TIMERS_ENABLE
         /* Stop SenderInactivityTimer */
-        if (dtcp && rtimer_stop(instance->timers.sender_inactivity)) {
+        if (rtimer_stop(instance->timers.sender_inactivity)) {
                 LOG_ERR("Failed to stop timer");
                 /* sdu_destroy(sdu);
                    return -1; */
@@ -1114,8 +1136,11 @@ int dtp_write(struct dtp * instance,
                 sdu_destroy(sdu);
                 return -1;
         }
-
-        /* FIXME: Check if we need to set DRF */
+        sn = dtcp_snd_lf_win(dtcp);
+        if (dt_sv_drf_flag(dt)                         ||
+            (sn == (pci_sequence_number_get(pci) - 1)) ||
+            !sv->rexmsn_ctrl)
+                pci_flags_set(pci, PDU_FLAGS_DATA_RUN);
 
         pdu = pdu_create_ni();
         if (!pdu) {
@@ -1140,6 +1165,9 @@ int dtp_write(struct dtp * instance,
 
         sdu_buffer_disown(sdu);
         sdu_destroy(sdu);
+
+        LOG_DBG("DTP Sending PDU %u (CPU: %d)",
+                pci_sequence_number_get(pci), smp_processor_id());
 
         if (dtcp) {
                 rcu_read_lock();
@@ -1288,6 +1316,22 @@ int dtp_mgmt_write(struct rmt * rmt,
 
 }
 
+void dtp_drf_required_set(struct dtp * dtp)
+{ dtp->sv->drf_required = true; }
+EXPORT_SYMBOL(dtp_drf_required_set);
+
+/*
+static bool is_drf_required(struct dtp * dtp)
+{
+        unsigned long flags;
+
+        spin_lock_irqsave(&dtp->sv->lock, flags);
+        ret = dtp->sv->drf_required;
+        spin_unlock_irqrestore(&dtp->sv->lock, flags);
+        return ret;
+}
+*/
+
 int dtp_receive(struct dtp * instance,
                 struct pdu * pdu)
 {
@@ -1357,7 +1401,7 @@ int dtp_receive(struct dtp * instance,
         rcu_read_unlock();
 #if DTP_INACTIVITY_TIMERS_ENABLE
         /* Stop ReceiverInactivityTimer */
-        if (dtcp && rtimer_stop(instance->timers.receiver_inactivity)) {
+        if (rtimer_stop(instance->timers.receiver_inactivity)) {
                 LOG_ERR("Failed to stop timer");
                 /*pdu_destroy(pdu);
                   return -1;*/
@@ -1366,27 +1410,33 @@ int dtp_receive(struct dtp * instance,
         seq_num = pci_sequence_number_get(pci);
 
         LOG_DBG("local_soft_irq_pending: %d", local_softirq_pending());
+        LOG_DBG("DTP Received PDU %u (CPU: %d)",
+                seq_num, smp_processor_id());
 
-        if (!(pci_flags_get(pci) ^ PDU_FLAGS_DATA_RUN)) {
-                LOG_DBG("Data run flag DRF");
-                /* This is wrong after discussions with John */
-                /* dt_sv_drf_flag_set(dt, true); */
-                rcu_read_lock();
-                ps = container_of(rcu_dereference(instance->base.ps),
-                                  struct dtp_ps, base);
-                ps->initial_sequence_number(ps);
-                rcu_read_unlock();
-                if (dtcp) {
-                        if (dtcp_sv_update(dtcp, seq_num)) {
-                                LOG_ERR("Failed to update dtcp sv");
-                                pdu_destroy(pdu);
-                                return -1;
+
+         if (instance->sv->drf_required) {
+                if ((pci_flags_get(pci) & PDU_FLAGS_DATA_RUN)) {
+                        instance->sv->drf_required = false;
+                        spin_lock_irqsave(&instance->seqq->lock, flags);
+                        dtp_squeue_flush(instance);
+                        dt_sv_rcv_lft_win_set(dt, seq_num);
+                        pdu_post(instance, pdu);
+                        spin_unlock_irqrestore(&instance->seqq->lock, flags);
+                        LOG_DBG("Data run flag DRF");
+                        if (dtcp) {
+                                if (dtcp_sv_update(dtcp, seq_num)) {
+                                        LOG_ERR("Failed to update dtcp sv");
+                                        return -1;
+                                }
                         }
-                }
 
+                        return 0;
+                }
+                LOG_DBG("Expecting DRF but not present, dropping PDU %d...",
+                        seq_num);
+                pdu_destroy(pdu);
                 return 0;
         }
-
         /*
          * NOTE:
          *   no need to check presence of in_order or dtcp because in case
@@ -1396,6 +1446,15 @@ int dtp_receive(struct dtp * instance,
                 pdu_destroy(pdu);
 
                 dropped_pdus_inc(sv);
+#if DTP_INACTIVITY_TIMERS_ENABLE
+                /* Start ReceiverInactivityTimer */
+                if (rtimer_restart(instance->
+                                   timers.receiver_inactivity,
+                                   3 * (dt_sv_mpl(dt) +
+                                        dt_sv_r(dt)   +
+                                        dt_sv_a(dt))))
+                        LOG_ERR("Failed restart RcvrInactivity timer");
+#endif
 
                 /* Send an ACK/Flow Control PDU with current window values */
                 if (dtcp) {
@@ -1404,15 +1463,6 @@ int dtp_receive(struct dtp * instance,
                                         "control pdu");
                                 return -1;
                         }
-#if DTP_INACTIVITY_TIMERS_ENABLE
-                        /* Start ReceiverInactivityTimer */
-                        if (rtimer_restart(instance->
-                                           timers.receiver_inactivity,
-                                           3 * (dt_sv_mpl(dt) +
-                                                dt_sv_r(dt)   +
-                                                dt_sv_a(dt))))
-                                LOG_ERR("Failed restart RcvrInactivity timer");
-#endif
                 }
                 return 0;
         }
@@ -1467,23 +1517,13 @@ int dtp_receive(struct dtp * instance,
                 return -1;
         }
 
-        /*to_post = rqueue_create_ni();
-        if (!to_post) {
-                LOG_ERR("Could not create to_post list at reception");
-                pdu_destroy(pdu);
-                return -1;
-        }*/
         spin_lock_irqsave(&instance->seqq->lock, flags);
         LWE = dt_sv_rcv_lft_win(dt);
         LOG_DBG("DTP receive LWE: %u", LWE);
         while (pdu && (seq_num == LWE + 1)) {
                 dt_sv_rcv_lft_win_set(dt, seq_num);
 
-
-                /*spin_unlock(&instance->seqq->lock);*/
                 pdu_post(instance, pdu);
-                /*spin_lock(&instance->seqq->lock);
-                rqueue_tail_push_ni(to_post, pdu);*/
 
                 pdu     = seq_queue_pop(instance->seqq->queue);
                 LWE     = dt_sv_rcv_lft_win(dt);
@@ -1502,34 +1542,33 @@ int dtp_receive(struct dtp * instance,
                 rtimer_restart(instance->timers.a, a/AF);
         }
 
-        /*while (!rqueue_is_empty(to_post)) {
-                pdu = (struct pdu *) rqueue_head_pop(to_post);
-                if (pdu)
-                        pdu_post(instance, pdu);
-        }*/
-
         if (dtcp) {
                 if (dtcp_sv_update(dtcp, seq_num)) {
                         LOG_ERR("Failed to update dtcp sv");
                 }
         }
 
-        /*rqueue_destroy(to_post, (void (*)(void *)) pdu_destroy);*/
-        LOG_DBG("DTP reveive ended...");
+        LOG_DBG("DTP receive ended...");
 
  exit:
 #if DTP_INACTIVITY_TIMERS_ENABLE
         /* Start ReceiverInactivityTimer */
-        if (dtcp && rtimer_restart(instance->timers.receiver_inactivity,
-                                   2 * (dt_sv_mpl(dt) +
-                                        dt_sv_r(dt)   +
-                                        dt_sv_a(dt)))) {
+        if (rtimer_restart(instance->timers.receiver_inactivity,
+                           2 * (dt_sv_mpl(dt) +
+                                dt_sv_r(dt)   +
+                                dt_sv_a(dt)))) {
                 LOG_ERR("Failed to start Receiver Inactivity timer");
                 return -1;
         }
 #endif
         return 0;
 }
+
+struct rtimer * dtp_sender_inactivity_timer(struct dtp * instance)
+{
+        return instance->timers.sender_inactivity;
+}
+EXPORT_SYMBOL(dtp_sender_inactivity_timer);
 
 int dtp_ps_publish(struct ps_factory * factory)
 {

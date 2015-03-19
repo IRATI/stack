@@ -421,7 +421,7 @@ static int process(const struct sk_buff * skb,
                                 return -1;
 
                         if (tbl_add(tbl, tmp)) {
-                                LOG_ERR("AAAAAAARRggh can't add in table");
+                                LOG_ERR("Can't add in table");
                                 tble_destroy(tmp);
                                 gpa_destroy(tmp_spa);
                                 gpa_destroy(tmp_tpa);
