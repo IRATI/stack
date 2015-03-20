@@ -51,7 +51,6 @@ void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *
 			"response received, but no corresponding pending "
 			"request" << endl;
 		FLUSH_LOG(WARN, ss);
-		//XXX: invoke the callback
 		return;
 	}
 
@@ -64,6 +63,9 @@ void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *
 		if(trans->callee){
 			//XXX: invoke the callback
 			remove_transaction_state(trans->tid);
+		}else{
+			//Wake waiting
+			trans->signal();
 		}
 		return;
 	}
@@ -75,7 +77,11 @@ void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *
 		if(trans->callee){
 			//XXX: invoke the callback
 			remove_transaction_state(trans->tid);
+		}else{
+			//Wake waiting
+			trans->signal();
 		}
+
 		return;
 	}
 
@@ -109,6 +115,9 @@ void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *
 
 		//Remove the transaction
 		remove_transaction_state(trans->tid);
+	}else{
+		//Wake waiting
+		trans->signal();
 	}
 }
 

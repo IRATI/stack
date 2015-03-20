@@ -334,6 +334,9 @@ void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponse
 
 		//Remove the transaction
 		remove_transaction_state(trans->tid);
+	}else{
+		//Wake waiting
+		trans->signal();
 	}
 }
 
@@ -495,7 +498,11 @@ void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResp
 
 		//Remove the transaction
 		remove_transaction_state(trans->tid);
+	}else{
+		//Wake waiting
+		trans->signal();
 	}
+
 }
 
 void IPCManager_::register_application_response_event_handler(rina::IPCEvent *event)

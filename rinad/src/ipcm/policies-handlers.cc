@@ -82,6 +82,9 @@ void IPCManager_::ipc_process_set_policy_set_param_response_handler(
 
 		//Remove the transaction
 		remove_transaction_state(trans->tid);
+	}else{
+		//Wake waiting
+		trans->signal();
 	}
 
 }
@@ -128,7 +131,11 @@ void IPCManager_::ipc_process_plugin_load_response_handler(rina::PluginLoadRespo
 
 		//Remove the transaction
 		remove_transaction_state(trans->tid);
+	}else{
+		//Wake waiting
+		trans->signal();
 	}
+
 }
 
 void IPCManager_::ipc_process_select_policy_set_response_handler(
@@ -174,7 +181,11 @@ void IPCManager_::ipc_process_select_policy_set_response_handler(
 
 		//Remove the transaction
 		remove_transaction_state(trans->tid);
+	}else{
+		//Wake waiting
+		trans->signal();
 	}
+
 }
 
 } //namespace rinad

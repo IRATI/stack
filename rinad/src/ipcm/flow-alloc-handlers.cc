@@ -91,7 +91,11 @@ IPCManager_::deallocate_flow(const Addon* callee, const int ipcp_id,
 
 			//Callback
 			//TODO
+		}else{
+			//Wake waiting
+			trans->signal();
 		}
+
         } catch (rina::IpcmDeallocateFlowException) {
                 ss  << ": Error while application " <<
                         event.applicationName.toString() << "asks IPC process "
@@ -380,7 +384,11 @@ void IPCManager_::ipcm_allocate_flow_request_result_handler( rina::IpcmAllocateF
 
 		//Remove the transaction
 		remove_transaction_state(trans->tid);
+	}else{
+		//Wake waiting
+		trans->signal();
 	}
+
 }
 
 void IPCManager_::allocate_flow_request_result_event_handler(rina::IPCEvent *e)
@@ -456,7 +464,11 @@ void IPCManager_::allocate_flow_response_event_handler(rina::AllocateFlowRespons
 
 		//Remove the transaction
 		remove_transaction_state(trans->tid);
+	}else{
+		//Wake waiting
+		trans->signal();
 	}
+
 }
 
 void IPCManager_::flow_deallocation_requested_event_handler(rina::IPCEvent *e)
@@ -579,7 +591,11 @@ void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IpcmDealloca
 
 		//Remove the transaction
 		remove_transaction_state(trans->tid);
+	}else{
+		//Wake waiting
+		trans->signal();
 	}
+
 }
 
 void IPCManager_::flow_deallocated_event_handler(rina::IPCEvent *e)

@@ -425,6 +425,9 @@ IPCManager_::assign_to_dif_response_event_handler(rina::AssignToDIFResponseEvent
 
 		//Remove the transaction
 		remove_transaction_state(trans->tid);
+	}else{
+		//Wake waiting
+		trans->signal();
 	}
 }
 
@@ -486,6 +489,9 @@ IPCManager_::update_dif_config_response_event_handler(rina::UpdateDIFConfigurati
 
 		//Remove the transaction
 		remove_transaction_state(trans->tid);
+	}else{
+		//Wake waiting
+		trans->signal();
 	}
 }
 
@@ -545,7 +551,11 @@ IPCManager_::enroll_to_dif_response_event_handler(rina::EnrollToDIFResponseEvent
 
 		//Remove the transaction
 		remove_transaction_state(trans->tid);
+	}else{
+		//Wake waiting
+		trans->signal();
 	}
+
 }
 
 void IPCManager_::neighbors_modified_notification_event_handler(rina::NeighborsModifiedNotificationEvent* event)

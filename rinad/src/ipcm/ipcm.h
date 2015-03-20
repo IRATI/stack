@@ -93,6 +93,12 @@ public:
 	void completed(int _ret){
 		complete = true;
 		ret = _ret;
+	}
+
+	//
+	// wake the waiting thread
+	//
+	inline void signal(void){
 		wait_cond.signal();
 	}
 
