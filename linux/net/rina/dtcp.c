@@ -174,16 +174,38 @@ EXPORT_SYMBOL(dtcp_config_get);
 
 int dtcp_pdu_send(struct dtcp * dtcp, struct pdu * pdu)
 {
+        struct efcp *           efcp;
+        struct efcp_container * efcpc;
+        cep_id_t                dst_cep_id;
+
         ASSERT(dtcp);
+        ASSERT(dtcp->parent);
         ASSERT(pdu);
 
-        if (rmt_send(dtcp->rmt,
-                     dtcp->conn->destination_address,
-                     dtcp->conn->qos_id,
-                     pdu))
+        efcp = dt_efcp(dtcp->parent);
+        if (!efcp) {
+                LOG_ERR("Passed instance has no EFCP, dtcp_pdu_send bailing out");
+                pdu_destroy(pdu);
                 return -1;
-
-        return 0;
+        }
+        /* Destination app is over the same IPCP, acting as loopback */
+        dst_cep_id = efcp_loopback_cep_id(efcp);
+        LOG_DBG("DEBUG efcp_loopback_cep_id: %d", dst_cep_id);
+        if (!is_cep_id_ok(dst_cep_id)) {
+                return rmt_send(dtcp->rmt,
+                                dtcp->conn->destination_address,
+                                dtcp->conn->qos_id,
+                                pdu);
+        }
+        efcpc = efcp_container_get(efcp);
+        if (!efcpc) {
+                LOG_ERR("Could not get the EFCPC in loopback operation");
+                pdu_destroy(pdu);
+                return -1;
+        }
+        return efcp_container_receive(efcpc,
+                                      dst_cep_id,
+                                      pdu);
 }
 EXPORT_SYMBOL(dtcp_pdu_send);
 
