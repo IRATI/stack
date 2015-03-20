@@ -91,6 +91,8 @@ public:
 
 	/**
 	 * Invoked by the IPC Manager to set the IPC Process as initialized.
+	 * This method is NOT thread safe and must be called with the writelock
+	 * acquired
 	 */
 	void setInitialized();
 
@@ -101,6 +103,8 @@ public:
 	 * IPC Process with all the information required to operate in the DIF (DIF
 	 * name, data transfer constants, qos cubes, supported policies, address,
 	 * credentials, etc).
+	 * This method is NOT thread safe and must be called with the writelock
+	 * acquired
 	 *
 	 * @param difInformation The information of the DIF (name, type configuration)
 	 * @param opaque an opaque identifier to correlate requests and responses
@@ -112,6 +116,9 @@ public:
 	/**
 	 * Update the internal data structures based on the result of the assignToDIF
 	 * operation
+	 * This method is NOT thread safe and must be called with the writelock
+	 * acquired
+	 *
 	 * @param success true if the operation was successful, false otherwise
 	 * @throws AssignToDIFException if there was not an assingment operation ongoing
 	 */
@@ -121,6 +128,8 @@ public:
 	 * Invoked by the IPC Manager to modify the configuration of an existing IPC
 	 * process that is a member of a DIF. This oepration doesn't change the
 	 * DIF membership, it just changes the configuration of the current DIF.
+	 * This method is NOT thread safe and must be called with the writelock
+	 * acquired
 	 *
 	 * @param difConfiguration The configuration of the DIF
 	 * @param opaque an opaque identifier to correlate requests and responses
@@ -143,6 +152,9 @@ public:
 	 * in the system with a DIF, reachable through a certain N-1 DIF. The
 	 * operation blocks until the IPC Process has successfully enrolled or an
 	 * error occurs.
+	 * This method is NOT thread safe and must be called with the writelock
+	 * acquired
+	 *
 	 *
 	 * @param difName The DIF that the IPC Process will try to join
 	 * @param supportingDifName The supporting DIF used to contact the DIF to
@@ -161,6 +173,8 @@ public:
 	 * N-1 flows to a neighbor IPC Process (for example, because it has been
 	 * identified as a "rogue" member of the DIF). The operation blocks until the
 	 * IPC Process has successfully completed or an error is returned.
+	 * This method is NOT thread safe and must be called with the writelock
+	 * acquired
 	 *
 	 * @param neighbor The neighbor to disconnect from
 	 * @throws DisconnectFromNeighborException if an error occurs
@@ -171,6 +185,8 @@ public:
 	/**
 	 * Invoked by the IPC Manager to register an application in a DIF through
 	 * an IPC Process.
+	 * This method is NOT thread safe and must be called with the writelock
+	 * acquired
 	 *
 	 * @param applicationName The name of the application to be registered
 	 * @param regIpcProcessId The id of the registered IPC process (0 if it
@@ -186,6 +202,9 @@ public:
 	/**
 	 * Invoked by the IPC Manager to inform about the result of a registration
 	 * operation and update the internal data structures
+	 * This method is NOT thread safe and must be called with the writelock
+	 * acquired
+	 *
 	 * @param sequenceNumber the handle associated to the pending registration
 	 * @param success true if success, false otherwise
 	 * @throws IpcmRegisterApplicationException if the pending registration
@@ -196,6 +215,8 @@ public:
 	/**
 	 * Invoked by the IPC Manager to unregister an application in a DIF through
 	 * an IPC Process.
+	 * This method is NOT thread safe and must be called with the writelock
+	 * acquired
 	 *
 	 * @param applicationName The name of the application to be unregistered
 	 * @param opaque an opaque identifier to correlate requests and responses
@@ -208,6 +229,9 @@ public:
 	/**
 	 * Invoked by the IPC Manager to inform about the result of an unregistration
 	 * operation and update the internal data structures
+	 * This method is NOT thread safe and must be called with the writelock
+	 * acquired
+	 *
 	 * @param sequenceNumber the handle associated to the pending unregistration
 	 * @param success true if success, false otherwise
 	 * @throws IpcmUnregisterApplicationException if the pending unregistration
@@ -220,7 +244,8 @@ public:
 	 * flow. Since all flow allocation requests go through the IPC Manager, and
 	 * port_ids have to be unique within the whole system, the IPC Manager is
 	 * the best candidate for managing the port-id space.
-         * TODO parameter description out-dated
+	 * This method is NOT thread safe and must be called with the writelock
+	 * acquired
 	 *
 	 * @param flowRequest contains the names of source and destination
 	 * applications, the portId as well as the characteristics required for the
@@ -235,6 +260,9 @@ public:
 	/**
 	 * Invoked by the IPC Manager to inform about the result of an allocate
 	 * flow operation and update the internal data structures
+	 * This method is NOT thread safe and must be called with the writelock
+	 * acquired
+	 *
 	 * @param sequenceNumber the handle associated to the pending allocation
 	 * @param success true if success, false otherwise
 	 * @param portId the portId assigned to the flow
@@ -245,6 +273,9 @@ public:
 
 	/**
 	 * Get the information of the flow identified by portId
+	 * This method is NOT thread safe and must be called with the readlock
+	 * acquired
+	 *
          * @result will contain the flow identified by portId, if any
 	 * @return true if the flow is found, false otherwise
 	 */
@@ -254,6 +285,9 @@ public:
 	 * Reply an IPC Process about the fate of a flow allocation request (wether
 	 * it has been accepted or denied by the application). If it has been
 	 * accepted, communicate the portId to the IPC Process
+	 * This method is NOT thread safe and must be called with the writelock
+	 * acquired
+	 *
 	 * @param flowRequest
 	 * @param result 0 if the request is accepted, negative number indicating error
 	 * otherwise
@@ -269,6 +303,9 @@ public:
 
 	/**
 	 * Tell the IPC Process to deallocate a flow
+	 * This method is NOT thread safe and must be called with the writelock
+	 * acquired
+	 *
 	 * @param portId
 	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws IpcmDeallocateFlowException if there is an error during
@@ -279,6 +316,9 @@ public:
 	/**
 	 * Invoked by the IPC Manager to inform about the result of a deallocate
 	 * flow operation and update the internal data structures
+	 * This method is NOT thread safe and must be called with the writelock
+	 * acquired
+	 *
 	 * @param sequenceNumber the handle associated to the pending allocation
 	 * @param success true if success, false otherwise
 	 * @throws IpcmDeallocateFlowException if the pending deallocation
@@ -289,6 +329,9 @@ public:
 	/**
 	 * Invoked by the IPC Manager to notify that a flow has been remotely
 	 * deallocated, so that librina updates the internal data structures
+	 * This method is NOT thread safe and must be called with the writelock
+	 * acquired
+	 *
 	 * @returns the information of the flow deallocated
 	 * @throws IpcmDeallocateFlowException if now flow with the given
 	 * portId is found
@@ -298,6 +341,10 @@ public:
 	/**
 	 * Invoked by the IPC Manager to query a subset of the RIB of the IPC
 	 * Process.
+	 *
+	 * This method is NOT thread safe and must be called with the readlock
+	 * acquired
+	 *
 	 * @param objectClass the queried object class
 	 * @param objectName the queried object name
 	 * @param objectInstance the queried object instance (either objecClass +
@@ -318,6 +365,8 @@ public:
 	 * Invoked by the IPC Manager to change a parameter value in a subcomponent
          * of the IPC process. The parameter addressed by @path can be either a
          * parametric policy or a policy-set-specific parameter.
+	 * This method is NOT thread safe and must be called with the writelock
+	 * acquired
 	 *
 	 * @param path The path of the addressed subcomponent (may be a policy-set)
          *             in dotted notation
@@ -335,6 +384,8 @@ public:
 	/**
 	 * Invoked by the IPC Manager to select a policy-set for a subcomponent
          * of the IPC process.
+	 * This method is NOT thread safe and must be called with the writelock
+	 * acquired
          *
 	 * @param path The path of the addressed subcomponent (cannot be a
          *             policy-set) in dotted notation
@@ -350,6 +401,8 @@ public:
 	/**
 	 * Invoked by the IPC Manager to load or unload a plugin for an
          * IPC process.
+	 * This method is NOT thread safe and must be called with the writelock
+	 * acquired
 	 *
 	 * @param name The name of the plugin to be loaded or unloaded
          * @param load True if the plugin is to be loaded, false if the
@@ -438,6 +491,11 @@ public:
      * @return list<IPCProcess *> A list of the IPC Processes in the system
      */
     std::vector<IPCMIPCProcess *> listIPCProcesses();
+
+    /**
+     * Check if the ipcp exists
+     */
+    bool exists(const int id);
 
     /**
      * Returns a pointer to the IPCProcess identified by ipcProcessId

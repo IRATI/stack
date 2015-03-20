@@ -492,7 +492,7 @@ protected:
 		//Read lock
 		rina::ReadScopedLock readlock(trans_rwlock);
 
-		if ( pend_transactions.find(tid) == pend_transactions.end() ) {
+		if ( pend_transactions.find(tid) != pend_transactions.end() ) {
 			state = pend_transactions[tid];
 			assert(state->tid == tid);
 			try{

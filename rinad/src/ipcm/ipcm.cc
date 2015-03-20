@@ -142,7 +142,7 @@ IPCManager_::create_ipcp(const Addon* callee,
 	bool difCorrect = false;
 	std::string s;
 	int ret;
-	SyscallTransState* state;
+	SyscallTransState* state=NULL;
 
 	try {
 		// Check that the AP name is not empty
@@ -166,6 +166,7 @@ IPCManager_::create_ipcp(const Addon* callee,
 		}
 
 		ipcp = ipcp_factory_.create(name, type);
+		ret = ipcp->get_id();
 
 		//Auto release the write lock
 		rina::WriteScopedLock writelock(ipcp->rwlock, false);
@@ -201,35 +202,36 @@ IPCManager_::create_ipcp(const Addon* callee,
 				delete state;
 				state = NULL;
 			}
-		}
 
-		//TODO: fix this accordingly (part of the botch)
-		if(state){
-			//We have to wait for the notification
-			if(callee){
-				//callback will be called
-				return ipcp->get_id();
+			//TODO: fix this accordingly (part of the botch)
+			if(state){
+				//We have to wait for the notification
+				if(callee){
+					//callback will be called
+					return ipcp->get_id();
+				}else{
+					//We have to synchronously wait
+					state->wait(); //FIXME: timed wait
+					if(!state->ret < 0){
+						ss << "Failed to create IPC process '" <<
+							name.toString() << "' of type '" <<
+							type << "'" << endl;
+						FLUSH_LOG(ERR, ss);
+						remove_syscall_transaction_state(state->tid);
+						return -1;
+					}
+				}
 			}else{
-				//We have to synchronously wait
-				state->wait(); //FIXME: timed wait
-				if(!state->ret < 0){
-					ss << "Failed to create IPC process '" <<
-						name.toString() << "' of type '" <<
-						type << "'" << endl;
+				//The notification already arrived
+				state = get_syscall_transaction_state(ipcp->get_id());
+				if(!state){
+					assert(0);
+					ss << "Corrupted ipc create operation"<<endl;
 					FLUSH_LOG(ERR, ss);
 					return -1;
 				}
+				remove_syscall_transaction_state(state->tid);
 			}
-		}else{
-			//The notification already arrived
-			state = get_syscall_transaction_state(ipcp->get_id());
-			if(!state){
-				assert(0);
-				ss << "Corrupted ipc create operation"<<endl;
-				FLUSH_LOG(ERR, ss);
-			}
-
-			//XXX remove transaction
 		}
 
 		//Show a nice trace
@@ -238,7 +240,7 @@ IPCManager_::create_ipcp(const Addon* callee,
 		FLUSH_LOG(INFO, ss);
 
 
-	} catch (rina::CreateIPCProcessException) {
+	} catch(...) {
 		ss << "Failed to create IPC process '" <<
 			name.toString() << "' of type '" <<
 			type << "'" << endl;
@@ -291,7 +293,7 @@ IPCManager_::list_ipcps(std::ostream& os)
 
 bool
 IPCManager_::ipcp_exists(const int ipcp_id){
-	return (lookup_ipcp_by_id(ipcp_id) != NULL);
+	return ipcp_factory_.exists(ipcp_id);
 }
 
 void
@@ -323,12 +325,12 @@ IPCManager_::assign_to_dif(const Addon* callee, const int ipcp_id,
 			  const rina::ApplicationProcessNamingInformation &
 			  dif_name)
 {
-	rinad::DIFProperties   dif_props;
-	rina::DIFInformation   dif_info;
+	rinad::DIFProperties dif_props;
+	rina::DIFInformation dif_info;
 	rina::DIFConfiguration dif_config;
-	ostringstream	  ss;
-	bool		   found;
-	int		    ret = -1;
+	ostringstream ss;
+	bool found;
+	int ret = 0;
 	IPCMIPCProcess* ipcp;
 	IPCPTransState* trans;
 
@@ -343,6 +345,7 @@ IPCManager_::assign_to_dif(const Addon* callee, const int ipcp_id,
 		}
 
 		//Auto release the write lock
+		{
 		rina::WriteScopedLock writelock(ipcp->rwlock, false);
 
 
@@ -461,14 +464,20 @@ IPCManager_::assign_to_dif(const Addon* callee, const int ipcp_id,
 			dif_name.toString() << endl;
 		FLUSH_LOG(INFO, ss);
 
+		} //Write lock scope
+
 		//If it is a synchronous call, wait until it has been finished
 		if(!callee){
 			//Just wait in the condition variable
 			//TODO: move this to a timedwait
 			trans->wait();
 
+			//Recover the result
+			ret = trans->ret;
+
 			//Callback
 			//TODO
+			remove_transaction_state(trans->tid);
 		}
 	} catch (rina::AssignToDIFException) {
 		ss << "Error while assigning " <<
@@ -478,13 +487,19 @@ IPCManager_::assign_to_dif(const Addon* callee, const int ipcp_id,
 		ret = -1;
 	} catch (rina::BadConfigurationException &e) {
 		FLUSH_LOG(ERR, ss);
-		LOG_ERR("DIF %s configuration failed", dif_name.toString().c_str());
+		LOG_ERR("Asssign IPCP %d to dif %s failed. Bad configuration.",
+						ipcp_id,
+						dif_name.toString().c_str());
 		ret = -1;
 	}catch (Exception) {
+		LOG_ERR("Asssign IPCP %d to dif %s failed. Unknown error catched: %s:%d",
+						ipcp_id,
+						dif_name.toString().c_str(),
+						__FILE__,
+						__LINE__);
 		FLUSH_LOG(ERR, ss);
 		ret = -1;
 	}
-
 
 	return ret;
 }
@@ -557,8 +572,12 @@ IPCManager_::register_at_dif(const Addon* callee, const int ipcp_id,
 			//TODO: move this to a timedwait
 			trans->wait();
 
+			//Recover the result
+			ret = trans->ret;
+
 			//Callback
 			//TODO
+			remove_transaction_state(trans->tid);
 		}
 	} catch (Exception) {
 		ss  << ": Error while requesting registration"
@@ -658,8 +677,12 @@ IPCManager_::unregister_ipcp_from_ipcp(const Addon* callee, int ipcp_id,
 			//TODO: move this to a timedwait
 			trans->wait();
 
+			//Recover the result
+			ret = trans->ret;
+
 			//Callback
 			//TODO
+			remove_transaction_state(trans->tid);
 		}
         } catch (rina::IpcmUnregisterApplicationException) {
                 ss  << ": Error while unregistering IPC process "
@@ -734,8 +757,12 @@ IPCManager_::enroll_to_dif(const Addon* callee, const int ipcp_id,
 			//TODO: move this to a timedwait
 			trans->wait();
 
+			//Recover the result
+			ret = trans->ret;
+
 			//Callback
 			//TODO
+			remove_transaction_state(trans->tid);
 		}
 	} catch (rina::EnrollException) {
 		ss  << ": Error while enrolling "
@@ -889,8 +916,12 @@ IPCManager_::update_dif_configuration(const Addon* callee, int ipcp_id,
 			//TODO: move this to a timedwait
 			trans->wait();
 
+			//Recover the result
+			ret = trans->ret;
+
 			//Callback
 			//TODO
+			remove_transaction_state(trans->tid);
 		}
 	} catch (rina::UpdateDIFConfigurationException) {
 		ss  << ": Error while updating DIF configuration "
@@ -951,11 +982,10 @@ IPCManager_::query_rib(const Addon* callee, const int ipcp_id)
 			//TODO
 
 			//Copy value
-			retstr = trans->result;
+			retstr = trans->ret;
 
 			//Remove and destroy
 			remove_transaction_state(trans->tid);
-			delete trans;
 			return 	retstr;
 		}else{
 			return std::string("");
@@ -1023,8 +1053,12 @@ IPCManager_::set_policy_set_param(const Addon* callee, const int ipcp_id,
 			//TODO: move this to a timedwait
 			trans->wait();
 
+			//Recover the result
+			ret = trans->ret;
+
 			//Callback
 			//TODO
+			remove_transaction_state(trans->tid);
 		}
         } catch (rina::SetPolicySetParamException) {
                 ss << "Error while issuing set-policy-set-param request "
@@ -1082,8 +1116,12 @@ IPCManager_::select_policy_set(const Addon* callee, const int ipcp_id,
 			//TODO: move this to a timedwait
 			trans->wait();
 
+			//Recover the result
+			ret = trans->ret;
+
 			//Callback
 			//TODO
+			remove_transaction_state(trans->tid);
 		}
         } catch (rina::SelectPolicySetException) {
                 ss << "Error while issuing select-policy-set request "
@@ -1137,8 +1175,12 @@ IPCManager_::plugin_load(const Addon* callee, const int ipcp_id,
 			//TODO: move this to a timedwait
 			trans->wait();
 
+			//Recover the result
+			ret = trans->ret;
+
 			//Callback
 			//TODO
+			remove_transaction_state(trans->tid);
 		}
         } catch (rina::PluginLoadException) {
                 ss << "Error while issuing plugin-load request "
@@ -1158,6 +1200,7 @@ IPCManager_::unregister_app_from_ipcp(const Addon* callee,
         ostringstream ss;
         IPCMIPCProcess *slave_ipcp;
 	IPCPTransState* trans;
+	int ret = 0;
 
         try {
 		slave_ipcp = lookup_ipcp_by_id(slave_ipcp_id, true);
@@ -1196,8 +1239,12 @@ IPCManager_::unregister_app_from_ipcp(const Addon* callee,
 			//TODO: move this to a timedwait
 			trans->wait();
 
+			//Recover the result
+			ret = trans->ret;
+
 			//Callback
 			//TODO
+			remove_transaction_state(trans->tid);
 		}
         } catch (rina::IpcmUnregisterApplicationException) {
                 ss  << ": Error while unregistering application "
@@ -1207,7 +1254,7 @@ IPCManager_::unregister_app_from_ipcp(const Addon* callee,
                 return -1;
         }
 
-        return 0;
+        return ret;
 }
 
 //
@@ -1331,8 +1378,6 @@ void IPCManager_::run(){
 		}
 
 		try {
-			//TODO: Locking?
-
 			switch(event->eventType){
 				case rina::FLOW_ALLOCATION_REQUESTED_EVENT:
 						flow_allocation_requested_event_handler(event);

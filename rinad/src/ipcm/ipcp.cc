@@ -90,24 +90,19 @@ const rina::ApplicationProcessNamingInformation& IPCMIPCProcess::getDIFName() co
 
 void IPCMIPCProcess::setInitialized()
 {
-	rina::WriteScopedLock writelock(rwlock);
 	state_ = IPCM_IPCP_INITIALIZED;
 }
 
 void IPCMIPCProcess::assignToDIF(const rina::DIFInformation& difInformation,
 		unsigned int opaque)
 {
-	{
-		rina::WriteScopedLock writelock(rwlock);
+	if (state_ != IPCM_IPCP_INITIALIZED) {
+		throw rina::AssignToDIFException(
+				"IPC Process not yet initialized");
+	}
 
-		if (state_ != IPCM_IPCP_INITIALIZED) {
-			throw rina::AssignToDIFException(
-					"IPC Process not yet initialized");
-		}
-
-		state_ = IPCM_IPCP_ASSIGN_TO_DIF_IN_PROGRESS;
-		dif_name_ = difInformation.dif_name_;
-	} //Scope for the scoped lock
+	state_ = IPCM_IPCP_ASSIGN_TO_DIF_IN_PROGRESS;
+	dif_name_ = difInformation.dif_name_;
 
 	try {
         	proxy_->assignToDIF(difInformation, opaque);
@@ -120,8 +115,6 @@ void IPCMIPCProcess::assignToDIF(const rina::DIFInformation& difInformation,
 
 void IPCMIPCProcess::assignToDIFResult(bool success)
 {
-	rina::WriteScopedLock writelock(rwlock);
-
 	if (state_ != IPCM_IPCP_ASSIGN_TO_DIF_IN_PROGRESS)
 		throw rina::AssignToDIFException("IPC Process in bad state");
 
@@ -135,8 +128,6 @@ void
 IPCMIPCProcess::updateDIFConfiguration(const rina::DIFConfiguration& difConfiguration,
 		unsigned int opaque)
 {
-	rina::WriteScopedLock writelock(rwlock);
-
 	if (state_ != IPCM_IPCP_ASSIGNED_TO_DIF) {
 		std::string message;
 		message =  message + "This IPC Process is not yet assigned "+
@@ -152,7 +143,6 @@ void IPCMIPCProcess::notifyRegistrationToSupportingDIF(
 		const rina::ApplicationProcessNamingInformation& ipcProcessName,
 		const rina::ApplicationProcessNamingInformation& difName)
 {
-	rina::ReadScopedLock readlock(rwlock);
 	proxy_->notifyRegistrationToSupportingDIF(ipcProcessName, difName);
 }
 
@@ -160,7 +150,6 @@ void IPCMIPCProcess::notifyUnregistrationFromSupportingDIF(
 		const rina::ApplicationProcessNamingInformation& ipcProcessName,
 		const rina::ApplicationProcessNamingInformation& difName)
 {
-	rina::ReadScopedLock readlock(rwlock);
 	proxy_->notifyUnregistrationFromSupportingDIF(ipcProcessName, difName);
 }
 
@@ -170,14 +159,12 @@ void IPCMIPCProcess::enroll(
         const rina::ApplicationProcessNamingInformation& neighborName,
         unsigned int opaque)
 {
-	rina::WriteScopedLock writelock(rwlock);
 	proxy_->enroll(difName, supportingDifName, neighborName, opaque);
 }
 
 void IPCMIPCProcess::disconnectFromNeighbor(
 		const rina::ApplicationProcessNamingInformation& neighbor)
 {
-	rina::ReadScopedLock readlock(rwlock);
 	proxy_->disconnectFromNeighbor(neighbor);
 }
 
@@ -186,8 +173,6 @@ void IPCMIPCProcess::registerApplication(
 		unsigned short regIpcProcessId,
 		unsigned int opaque)
 {
-	rina::WriteScopedLock writelock(rwlock);
-
 	if (state_ != IPCM_IPCP_ASSIGNED_TO_DIF)
 		throw rina::IpcmRegisterApplicationException(
 				rina::IPCProcessProxy::error_not_a_dif_member);
@@ -206,7 +191,6 @@ void IPCMIPCProcess::registerApplicationResult(unsigned int sequenceNumber,
 		bool success) {
 
 	rina::ApplicationProcessNamingInformation appName;
-	rina::WriteScopedLock writelock(rwlock);
 
 	try {
 		appName = getPendingRegistration(sequenceNumber);
@@ -222,8 +206,6 @@ void IPCMIPCProcess::registerApplicationResult(unsigned int sequenceNumber,
 void IPCMIPCProcess::unregisterApplication(
 		const rina::ApplicationProcessNamingInformation& applicationName,
 		unsigned int opaque) {
-
-	rina::WriteScopedLock writelock(rwlock);
 
 	if (state_ != IPCM_IPCP_ASSIGNED_TO_DIF)
 		throw rina::IpcmRegisterApplicationException(
@@ -241,7 +223,6 @@ void IPCMIPCProcess::unregisterApplication(
 void IPCMIPCProcess::unregisterApplicationResult(unsigned int sequenceNumber,
 		bool success)
 {
-	rina::WriteScopedLock writelock(rwlock);
 	rina::ApplicationProcessNamingInformation appName;
 
 	try {
@@ -260,8 +241,6 @@ void IPCMIPCProcess::unregisterApplicationResult(unsigned int sequenceNumber,
 void IPCMIPCProcess::allocateFlow(const rina::FlowRequestEvent& flowRequest,
 		unsigned int opaque)
 {
-	rina::WriteScopedLock writelock(rwlock);
-
 	if (state_ != IPCM_IPCP_ASSIGNED_TO_DIF)
 		throw rina::IpcmRegisterApplicationException(
 				rina::IPCProcessProxy::error_not_a_dif_member);
@@ -284,8 +263,6 @@ void IPCMIPCProcess::allocateFlow(const rina::FlowRequestEvent& flowRequest,
 void IPCMIPCProcess::allocateFlowResult(
                 unsigned int sequenceNumber, bool success, int portId)
 {
-	rina::WriteScopedLock writelock(rwlock);
-
 	rina::FlowInformation flowInformation;
 	try {
 		flowInformation = getPendingFlowOperation(sequenceNumber);
@@ -302,8 +279,6 @@ void IPCMIPCProcess::allocateFlowResult(
 void IPCMIPCProcess::allocateFlowResponse(const rina::FlowRequestEvent& flowRequest,
 		int result, bool notifySource, int flowAcceptorIpcProcessId)
 {
-	rina::WriteScopedLock writelock(rwlock);
-
 	if (state_ != IPCM_IPCP_ASSIGNED_TO_DIF)
 		throw rina::IpcmRegisterApplicationException(
 				rina::IPCProcessProxy::error_not_a_dif_member);
@@ -329,7 +304,6 @@ void IPCMIPCProcess::allocateFlowResponse(const rina::FlowRequestEvent& flowRequ
 
 bool IPCMIPCProcess::getFlowInformation(int flowPortId, rina::FlowInformation& result) {
 
-	rina::ReadScopedLock readlock(rwlock);
 	std::list<rina::FlowInformation>::const_iterator iterator;
 
 	for (iterator = allocatedFlows.begin();
@@ -345,7 +319,6 @@ bool IPCMIPCProcess::getFlowInformation(int flowPortId, rina::FlowInformation& r
 void IPCMIPCProcess::deallocateFlow(int flowPortId, unsigned int opaque)
 {
 	rina::FlowInformation flowInformation;
-	rina::WriteScopedLock writelock(rwlock);
 
 	if (state_ != IPCM_IPCP_ASSIGNED_TO_DIF)
 		throw rina::IpcmRegisterApplicationException(
@@ -364,7 +337,6 @@ void IPCMIPCProcess::deallocateFlow(int flowPortId, unsigned int opaque)
 void IPCMIPCProcess::deallocateFlowResult(unsigned int sequenceNumber, bool success)
 {
 	rina::FlowInformation flowInformation;
-	rina::WriteScopedLock writelock(rwlock);
 
 	try {
 		flowInformation = getPendingFlowOperation(sequenceNumber);
@@ -380,7 +352,6 @@ void IPCMIPCProcess::deallocateFlowResult(unsigned int sequenceNumber, bool succ
 rina::FlowInformation IPCMIPCProcess::flowDeallocated(int flowPortId)
 {
 	rina::FlowInformation flowInformation;
-	rina::WriteScopedLock writelock(rwlock);
 
 	if (!getFlowInformation(flowPortId, flowInformation))
 		throw rina::IpcmDeallocateFlowException(
@@ -485,6 +456,18 @@ void IPCMIPCProcessFactory::destroy(unsigned short ipcProcessId) {
 	}
 	delete ipcp;
 	ipcProcesses.erase(ipcProcessId);
+}
+
+bool IPCMIPCProcessFactory::exists(const int id)
+{
+	std::map<unsigned short, IPCMIPCProcess*>::iterator iterator;
+	rina::ReadScopedLock readlock(rwlock);
+
+	iterator = ipcProcesses.find(id);
+	if (iterator == ipcProcesses.end())
+		return false;
+
+	return true;
 }
 
 std::vector<IPCMIPCProcess *> IPCMIPCProcessFactory::listIPCProcesses()

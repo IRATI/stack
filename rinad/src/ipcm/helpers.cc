@@ -184,6 +184,9 @@ IPCManager_::lookup_ipcp_by_id(unsigned int id, bool write_lock)
 	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
 	ipcp = ipcp_factory_.getIPCProcess(id);
 
+	if(!ipcp)
+		return NULL;
+
 	//Acquire lock before leaving rwlock of the factory
 	write_lock? ipcp->rwlock.writelock(): ipcp->rwlock.readlock();
 
