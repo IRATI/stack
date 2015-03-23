@@ -38,7 +38,6 @@ using namespace std;
 
 namespace rinad {
 
-
 //
 // IPCM IPCP process class
 //
@@ -497,5 +496,6 @@ IPCMIPCProcess * IPCMIPCProcessFactory::getIPCProcess(unsigned short ipcProcessI
 
         return iterator->second;
 }
+
 
 } //namespace rinad

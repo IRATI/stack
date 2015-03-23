@@ -63,7 +63,6 @@ void IPCManager_::os_process_finalized_handler(rina::IPCEvent *e)
 		//Auto release the read lock
 		rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
-
 		rina::FlowDeallocateRequestEvent req_event(fit->portId, 0);
 
 		if (!ipcp) {

@@ -61,7 +61,6 @@
 
 namespace rinad {
 
-
 //
 // This base class encapsulates the generics of any two-step, so requiring
 // interaction with the kernel, API call.
