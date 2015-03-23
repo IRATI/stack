@@ -49,8 +49,9 @@
 #include "misc-handlers.h"
 
 //Timeouts for timed wait
-#define IPCMANAGER_TIMEOUT_S 0
-#define IPCMANAGER_TIMEOUT_NS 100000000 //0.1 sec
+#define IPCM_EVENT_TIMEOUT_S 0
+#define IPCM_EVENT_TIMEOUT_NS 100000000 //0.1 sec
+#define IPCM_TRANS_TIMEOUT_S 7
 
 using namespace std;
 
@@ -142,7 +143,7 @@ IPCManager_::create_ipcp(const Addon* callee,
 	bool difCorrect = false;
 	std::string s;
 	int ret;
-	SyscallTransState* state=NULL;
+	SyscallTransState* trans=NULL;
 
 	try {
 		// Check that the AP name is not empty
@@ -185,7 +186,7 @@ IPCManager_::create_ipcp(const Addon* callee,
 			// defer the operation.
 
 			//Add transaction state
-			state = new SyscallTransState(callee, ipcp->get_id());
+			trans = new SyscallTransState(callee, ipcp->get_id());
 
 			//TODO: this is a botch that we have to do due to the
 			//way ipcmanager in librina works. Since we cannot make
@@ -198,39 +199,39 @@ IPCManager_::create_ipcp(const Addon* callee,
 			//IPCFactory here, since the state is basically the
 			//same and is the only way to prevent these nasty race
 			//conditions
-			if(add_syscall_transaction_state(state) < 0){
-				delete state;
-				state = NULL;
+			if(add_syscall_transaction_state(trans) < 0){
+				delete trans;
+				trans = NULL;
 			}
 
 			//TODO: fix this accordingly (part of the botch)
-			if(state){
+			if(trans){
 				//We have to wait for the notification
 				if(callee){
 					//callback will be called
 					return ipcp->get_id();
 				}else{
 					//We have to synchronously wait
-					state->wait(); //FIXME: timed wait
-					if(!state->ret < 0){
+					trans->timed_wait(IPCM_TRANS_TIMEOUT_S);
+					if(!trans->ret < 0){
 						ss << "Failed to create IPC process '" <<
 							name.toString() << "' of type '" <<
 							type << "'" << endl;
 						FLUSH_LOG(ERR, ss);
-						remove_syscall_transaction_state(state->tid);
+						remove_syscall_transaction_state(trans->tid);
 						return -1;
 					}
 				}
 			}else{
 				//The notification already arrived
-				state = get_syscall_transaction_state(ipcp->get_id());
-				if(!state){
+				trans = get_syscall_transaction_state(ipcp->get_id());
+				if(!trans){
 					assert(0);
 					ss << "Corrupted ipc create operation"<<endl;
 					FLUSH_LOG(ERR, ss);
 					return -1;
 				}
-				remove_syscall_transaction_state(state->tid);
+				remove_syscall_transaction_state(trans->tid);
 			}
 		}
 
@@ -240,6 +241,12 @@ IPCManager_::create_ipcp(const Addon* callee,
 		FLUSH_LOG(INFO, ss);
 
 
+	} catch(rina::ConcurrentException& e) {
+		ss << "Failed to create IPC process '" <<
+			name.toString() << "' of type '" <<
+			type << "'. Transaction timed out" << endl;
+		FLUSH_LOG(ERR, ss);
+		return -1;
 	} catch(...) {
 		ss << "Failed to create IPC process '" <<
 			name.toString() << "' of type '" <<
@@ -469,8 +476,7 @@ IPCManager_::assign_to_dif(const Addon* callee, const int ipcp_id,
 		//If it is a synchronous call, wait until it has been finished
 		if(!callee){
 			//Just wait in the condition variable
-			//TODO: move this to a timedwait
-			trans->wait();
+			trans->timed_wait(IPCM_TRANS_TIMEOUT_S);
 
 			//Recover the result
 			ret = trans->ret;
@@ -479,6 +485,13 @@ IPCManager_::assign_to_dif(const Addon* callee, const int ipcp_id,
 			//TODO
 			remove_transaction_state(trans->tid);
 		}
+	} catch(rina::ConcurrentException& e) {
+		ss << "Error while assigning " <<
+			ipcp->get_name().toString() <<
+			" to DIF " << dif_name.toString() <<
+			". Operation timedout"<< endl;
+		FLUSH_LOG(ERR, ss);
+		ret = -1;
 	} catch (rina::AssignToDIFException) {
 		ss << "Error while assigning " <<
 			ipcp->get_name().toString() <<
@@ -569,8 +582,7 @@ IPCManager_::register_at_dif(const Addon* callee, const int ipcp_id,
 		//If it is a synchronous call, wait until it has been finished
 		if(!callee){
 			//Just wait in the condition variable
-			//TODO: move this to a timedwait
-			trans->wait();
+			trans->timed_wait(IPCM_TRANS_TIMEOUT_S);
 
 			//Recover the result
 			ret = trans->ret;
@@ -579,6 +591,10 @@ IPCManager_::register_at_dif(const Addon* callee, const int ipcp_id,
 			//TODO
 			remove_transaction_state(trans->tid);
 		}
+	} catch(rina::ConcurrentException& e) {
+		ss  << ": Error while requesting registration. Operation timedout" << endl;
+		FLUSH_LOG(ERR, ss);
+		ret = -1;
 	} catch (Exception) {
 		ss  << ": Error while requesting registration"
 		    << endl;
@@ -674,8 +690,7 @@ IPCManager_::unregister_ipcp_from_ipcp(const Addon* callee, int ipcp_id,
 		//If it is a synchronous call, wait until it has been finished
 		if(!callee){
 			//Just wait in the condition variable
-			//TODO: move this to a timedwait
-			trans->wait();
+			trans->timed_wait(IPCM_TRANS_TIMEOUT_S);
 
 			//Recover the result
 			ret = trans->ret;
@@ -684,6 +699,13 @@ IPCManager_::unregister_ipcp_from_ipcp(const Addon* callee, int ipcp_id,
 			//TODO
 			remove_transaction_state(trans->tid);
 		}
+	} catch(rina::ConcurrentException& e) {
+                ss  << ": Error while unregistering IPC process "
+                        << ipcp->get_name().toString() << " from IPC "
+                        "process " << slave_ipcp->get_name().toString() <<
+			"The operation timedout"<< endl;
+                FLUSH_LOG(ERR, ss);
+                return -1;
         } catch (rina::IpcmUnregisterApplicationException) {
                 ss  << ": Error while unregistering IPC process "
                         << ipcp->get_name().toString() << " from IPC "
@@ -754,8 +776,7 @@ IPCManager_::enroll_to_dif(const Addon* callee, const int ipcp_id,
 		//If it is a synchronous call, wait until it has been finished
 		if(!callee){
 			//Just wait in the condition variable
-			//TODO: move this to a timedwait
-			trans->wait();
+			trans->timed_wait(IPCM_TRANS_TIMEOUT_S);
 
 			//Recover the result
 			ret = trans->ret;
@@ -764,7 +785,13 @@ IPCManager_::enroll_to_dif(const Addon* callee, const int ipcp_id,
 			//TODO
 			remove_transaction_state(trans->tid);
 		}
-	} catch (rina::EnrollException) {
+	} catch(rina::ConcurrentException& e) {
+		ss  << ": Error while enrolling "
+			<< "to DIF " << neighbor.difName.toString()
+			<<". Operation timedout"<< endl;
+		FLUSH_LOG(ERR, ss);
+		ret = -1;
+	}  catch (rina::EnrollException) {
 		ss  << ": Error while enrolling "
 			<< "to DIF " << neighbor.difName.toString()
 			<< endl;
@@ -913,8 +940,7 @@ IPCManager_::update_dif_configuration(const Addon* callee, int ipcp_id,
 		//If it is a synchronous call, wait until it has been finished
 		if(!callee){
 			//Just wait in the condition variable
-			//TODO: move this to a timedwait
-			trans->wait();
+			trans->timed_wait(IPCM_TRANS_TIMEOUT_S);
 
 			//Recover the result
 			ret = trans->ret;
@@ -923,10 +949,17 @@ IPCManager_::update_dif_configuration(const Addon* callee, int ipcp_id,
 			//TODO
 			remove_transaction_state(trans->tid);
 		}
-	} catch (rina::UpdateDIFConfigurationException) {
+	} catch(rina::ConcurrentException& e) {
+		ss  << ": Error while updating DIF configuration "
+			" for IPC process " << ipcp->get_name().toString() <<
+			"Operation timedout."<< endl;
+		FLUSH_LOG(ERR, ss);
+		ret = -1;
+	}  catch (rina::UpdateDIFConfigurationException) {
 		ss  << ": Error while updating DIF configuration "
 			" for IPC process " << ipcp->get_name().toString() << endl;
 		FLUSH_LOG(ERR, ss);
+		ret = -1;
 	}
 
 	return ret;
@@ -975,8 +1008,7 @@ IPCManager_::query_rib(const Addon* callee, const int ipcp_id)
 		//If it is a synchronous call, wait until it has been finished
 		if(!callee){
 			//Just wait in the condition variable
-			//TODO: move this to a timedwait
-			trans->wait();
+			trans->timed_wait(IPCM_TRANS_TIMEOUT_S);
 
 			//Callback
 			//TODO
@@ -990,6 +1022,12 @@ IPCManager_::query_rib(const Addon* callee, const int ipcp_id)
 		}else{
 			return std::string("");
 		}
+	} catch(rina::ConcurrentException& e) {
+		ss << "Error while querying RIB of IPC Process " <<
+			ipcp->get_name().toString() <<
+			". Operation timedout"<< endl;
+		FLUSH_LOG(ERR, ss);
+		ret = -1;
 	} catch (rina::QueryRIBException) {
 		ss << "Error while querying RIB of IPC Process " <<
 			ipcp->get_name().toString() << endl;
@@ -1050,8 +1088,7 @@ IPCManager_::set_policy_set_param(const Addon* callee, const int ipcp_id,
 		//If it is a synchronous call, wait until it has been finished
 		if(!callee){
 			//Just wait in the condition variable
-			//TODO: move this to a timedwait
-			trans->wait();
+			trans->timed_wait(IPCM_TRANS_TIMEOUT_S);
 
 			//Recover the result
 			ret = trans->ret;
@@ -1060,7 +1097,13 @@ IPCManager_::set_policy_set_param(const Addon* callee, const int ipcp_id,
 			//TODO
 			remove_transaction_state(trans->tid);
 		}
-        } catch (rina::SetPolicySetParamException) {
+        } catch(rina::ConcurrentException& e) {
+		ss << "Error while issuing set-policy-set-param request "
+                        "to IPC Process " << ipcp->get_name().toString()
+			<< ". Operation timedout"<< endl;
+		FLUSH_LOG(ERR, ss);
+		ret = -1;
+	} catch (rina::SetPolicySetParamException) {
                 ss << "Error while issuing set-policy-set-param request "
                         "to IPC Process " << ipcp->get_name().toString() << endl;
                 FLUSH_LOG(ERR, ss);
@@ -1113,8 +1156,7 @@ IPCManager_::select_policy_set(const Addon* callee, const int ipcp_id,
 
 		if(!callee){
 			//Just wait in the condition variable
-			//TODO: move this to a timedwait
-			trans->wait();
+			trans->timed_wait(IPCM_TRANS_TIMEOUT_S);
 
 			//Recover the result
 			ret = trans->ret;
@@ -1123,7 +1165,13 @@ IPCManager_::select_policy_set(const Addon* callee, const int ipcp_id,
 			//TODO
 			remove_transaction_state(trans->tid);
 		}
-        } catch (rina::SelectPolicySetException) {
+        } catch(rina::ConcurrentException& e) {
+		ss << "Error while issuing select-policy-set request "
+                        "to IPC Process " << ipcp->get_name().toString() <<
+			". Operation timedout."<< endl;
+		FLUSH_LOG(ERR, ss);
+		ret = -1;
+	} catch (rina::SelectPolicySetException) {
                 ss << "Error while issuing select-policy-set request "
                         "to IPC Process " << ipcp->get_name().toString() << endl;
                 FLUSH_LOG(ERR, ss);
@@ -1172,8 +1220,7 @@ IPCManager_::plugin_load(const Addon* callee, const int ipcp_id,
 
 		if(!callee){
 			//Just wait in the condition variable
-			//TODO: move this to a timedwait
-			trans->wait();
+			trans->timed_wait(IPCM_TRANS_TIMEOUT_S);
 
 			//Recover the result
 			ret = trans->ret;
@@ -1182,7 +1229,13 @@ IPCManager_::plugin_load(const Addon* callee, const int ipcp_id,
 			//TODO
 			remove_transaction_state(trans->tid);
 		}
-        } catch (rina::PluginLoadException) {
+        } catch(rina::ConcurrentException& e) {
+		ss << "Error while issuing plugin-load request "
+                        "to IPC Process " << ipcp->get_name().toString() <<
+			". Operation timedout"<< endl;
+		FLUSH_LOG(ERR, ss);
+		ret = -1;
+	} catch (rina::PluginLoadException) {
                 ss << "Error while issuing plugin-load request "
                         "to IPC Process " << ipcp->get_name().toString() << endl;
                 FLUSH_LOG(ERR, ss);
@@ -1236,8 +1289,7 @@ IPCManager_::unregister_app_from_ipcp(const Addon* callee,
 
 		if(!callee){
 			//Just wait in the condition variable
-			//TODO: move this to a timedwait
-			trans->wait();
+			trans->timed_wait(IPCM_TRANS_TIMEOUT_S);
 
 			//Recover the result
 			ret = trans->ret;
@@ -1246,7 +1298,14 @@ IPCManager_::unregister_app_from_ipcp(const Addon* callee,
 			//TODO
 			remove_transaction_state(trans->tid);
 		}
-        } catch (rina::IpcmUnregisterApplicationException) {
+        } catch(rina::ConcurrentException& e) {
+		ss  << ": Error while unregistering application "
+                        << req_event.applicationName.toString() << " from IPC "
+                        "process " << slave_ipcp->get_name().toString() <<
+			". Operation timedout."<< endl;
+		FLUSH_LOG(ERR, ss);
+		ret = -1;
+	} catch (rina::IpcmUnregisterApplicationException) {
                 ss  << ": Error while unregistering application "
                         << req_event.applicationName.toString() << " from IPC "
                         "process " << slave_ipcp->get_name().toString() << endl;
@@ -1363,8 +1422,8 @@ void IPCManager_::run(){
 
 	while(keep_running) {
 		event = rina::ipcEventProducer->eventTimedWait(
-						IPCMANAGER_TIMEOUT_S,
-						IPCMANAGER_TIMEOUT_NS);
+						IPCM_EVENT_TIMEOUT_S,
+						IPCM_EVENT_TIMEOUT_NS);
 		if(!event)
 			continue;
 

@@ -42,7 +42,7 @@
 
 
 //Constants
-#define TRANS_RETRY_NSEC 1000000
+#define TRANS_RETRY_NSEC 1000000 //1ms
 
 #ifndef DOWNCAST_DECL
 	// Useful MACRO to perform downcasts in declarations.
@@ -85,6 +85,24 @@ public:
 				wait_cond.timedwait(0, TRANS_RETRY_NSEC);
 			}catch(...){};
 		}
+	};
+
+	//
+	// Timed wait (blocking)
+	//
+	// Will throw an exception when the timeout expires
+	//
+	void timed_wait(const unsigned int seconds){
+
+		if(complete)
+			return;
+		try{
+			wait_cond.timedwait(seconds, 0);
+		}catch (rina::ConcurrentException& e) {
+			if(complete)
+				return;
+			throw e;
+		};
 	};
 
 	//

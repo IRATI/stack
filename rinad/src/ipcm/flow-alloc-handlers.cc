@@ -36,6 +36,7 @@
 
 using namespace std;
 
+#define IPCM_FA_TIMEOUT_S 1
 
 namespace rinad {
 
@@ -86,8 +87,7 @@ IPCManager_::deallocate_flow(const Addon* callee, const int ipcp_id,
 		//If it is a synchronous call, wait until it has been finished
 		if(!callee){
 			//Just wait in the condition variable
-			//TODO: move this to a timedwait
-			trans->wait();
+			trans->timed_wait(IPCM_FA_TIMEOUT_S);
 
 			//Callback
 			//TODO
@@ -96,6 +96,14 @@ IPCManager_::deallocate_flow(const Addon* callee, const int ipcp_id,
 			trans->signal();
 		}
 
+        } catch (rina::ConcurrentException& e) {
+                ss  << ": Error while application " <<
+                        event.applicationName.toString() << "asks IPC process "
+                        << ipcp_id << " to deallocate the flow "
+                        "with port-id " << event.portId <<
+			". Operation timedout" << endl;
+                FLUSH_LOG(ERR, ss);
+                return -1;
         } catch (rina::IpcmDeallocateFlowException) {
                 ss  << ": Error while application " <<
                         event.applicationName.toString() << "asks IPC process "
