@@ -221,6 +221,7 @@ IPCManager_::create_ipcp(const Addon* callee,
 						remove_syscall_transaction_state(trans->tid);
 						return -1;
 					}
+					remove_syscall_transaction_state(trans->tid);
 				}
 			}else{
 				//The notification already arrived
