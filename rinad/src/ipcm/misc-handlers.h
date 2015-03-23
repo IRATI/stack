@@ -32,7 +32,7 @@
 #include <librina/ipc-manager.h>
 #include <librina/patterns.h>
 
-#include "ipcp.h"
+#include "ipcp-handlers.h"
 
 namespace rinad {
 
@@ -42,10 +42,9 @@ namespace rinad {
 class RIBqTransState: public IPCPTransState{
 
 public:
-	RIBqTransState(const Addon* _callee, const int _tid, int _ipcp_id)
-					:IPCPTransState(_callee, tid,
-								_ipcp_id){}
-	virtual ~RIBqTransState();
+	RIBqTransState(const Addon* _callee, int _ipcp_id)
+					:IPCPTransState(_callee, _ipcp_id){}
+	virtual ~RIBqTransState(){};
 
 	//Output result
 	std::string result;

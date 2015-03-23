@@ -1,5 +1,5 @@
 /*
- * FLOW_ALLOC transaction states
+ * IPCP transaction states
  *
  *    Marc Sune <marc.sune (at) bisdn.de>
  *
@@ -18,8 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef __FLOW_ALLOC_H__
-#define __FLOW_ALLOC_H__
+#ifndef __IPCP_HANDLERS_H__
+#define __IPCP_HANDLERS_H__
 
 #include <assert.h>
 #include <cstdlib>
@@ -37,27 +37,38 @@
 namespace rinad {
 
 /**
-* Flow allocation transaction state
+* Standard IPCP related transaction state
 */
-class FlowAllocTransState: public TransactionState{
+class IPCPTransState: public TransactionState{
 
 public:
-	FlowAllocTransState(const Addon* callee, const int tid,
-				int _slave_ipcp_id,
-				rina::FlowRequestEvent& _req_e,
-				bool once):
-					TransactionState(callee, tid),
-					slave_ipcp_id(_slave_ipcp_id),
-					req_event(_req_e),
-					try_only_a_dif(once)
-					{}
-	virtual ~FlowAllocTransState();
+	IPCPTransState(const Addon* callee, int _ipcp_id)
+					: TransactionState(callee),
+						ipcp_id(_ipcp_id){}
+	virtual ~IPCPTransState(){};
 
-        int slave_ipcp_id;
-        rina::FlowRequestEvent req_event;
-        bool try_only_a_dif;
+	//IPCP identifier
+	int ipcp_id;
+};
+
+/**
+* IPCP registration transaction state
+*/
+class IPCPregTransState: public TransactionState{
+
+public:
+	IPCPregTransState(const Addon* callee, int _ipcp_id,
+					int _slave_ipcp_id) :
+					TransactionState(callee),
+					ipcp_id(_ipcp_id),
+					slave_ipcp_id(_slave_ipcp_id){}
+	virtual ~IPCPregTransState(){};
+
+	//IPCP identifier
+	int ipcp_id;
+	int slave_ipcp_id;
 };
 
 }//rinad namespace
 
-#endif  /* __FLOW_ALLOC_H__ */
+#endif  /* __IPCP_HANDLERS_H__ */

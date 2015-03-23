@@ -449,7 +449,7 @@ IPCMConsole::assign_to_dif(std::vector<string>& args)
 	if (!IPCManager->ipcp_exists(ipcp_id)) {
 		outstream << "No such IPC process id" << endl;
 	} else {
-		ret = IPCManager->assign_to_dif(ipcp_id, dif_name);
+		ret = IPCManager->assign_to_dif(NULL, ipcp_id, dif_name);
 		if (ret) {
 			outstream << "DIF assignment failed" << endl;
 		} else {
@@ -481,7 +481,7 @@ IPCMConsole::query_rib(std::vector<string>& args)
 	if (!IPCManager->ipcp_exists(ipcp_id)) {
 		outstream << "No such IPC process id" << endl;
 	} else {
-			outstream << IPCManager->query_rib(ipcp_id) << endl;
+		outstream << IPCManager->query_rib(NULL, ipcp_id) << endl;
 	}
 
 	return CMDRETCONT;
@@ -509,7 +509,7 @@ IPCMConsole::register_at_dif(vector<string>& args)
 	if (!IPCManager->ipcp_exists(ipcp_id)) {
 		outstream << "No such IPC process id" << endl;
 	} else {
-		ret = IPCManager->register_at_dif(ipcp_id, dif_name);
+		ret = IPCManager->register_at_dif(NULL, ipcp_id, dif_name);
 		if (ret) {
 			outstream << "Registration failed" << endl;
 		} else {
@@ -552,8 +552,8 @@ IPCMConsole::unregister_from_dif(std::vector<std::string>& args)
 	}
 
 	//Call IPCManager
-	ret = IPCManager->unregister_ipcp_from_ipcp(ipcp_id,
-							slave_ipcp_id);
+	ret = IPCManager->unregister_ipcp_from_ipcp(NULL, ipcp_id,
+								slave_ipcp_id);
 	if (ret) {
 		outstream << "Unregistration failed" << endl;
 	} else {
@@ -585,7 +585,8 @@ IPCMConsole::update_dif_config(std::vector<std::string>& args)
 	if (!IPCManager->ipcp_exists(ipcp_id)) {
 		outstream << "No such IPC process id" << endl;
 	} else {
-		ret = IPCManager->update_dif_configuration(ipcp_id, dif_config);
+		ret = IPCManager->update_dif_configuration(NULL, ipcp_id,
+								dif_config);
 		if (ret) {
 			outstream << "Configuration update failed" << endl;
 		} else {
@@ -625,7 +626,7 @@ IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
 	if (!IPCManager->ipcp_exists(ipcp_id)) {
 		outstream << "No such IPC process id" << endl;
 	} else {
-		ret = IPCManager->enroll_to_dif(ipcp_id, neighbor_data, true);
+		ret = IPCManager->enroll_to_dif(NULL, ipcp_id, neighbor_data, true);
 		if (ret) {
 			outstream << "Enrollment operation failed" << endl;
 		} else {
@@ -656,7 +657,8 @@ IPCMConsole::select_policy_set(std::vector<std::string>& args)
 	if (!IPCManager->ipcp_exists(ipcp_id)) {
 		outstream << "No such IPC process id" << endl;
 	} else {
-		ret = IPCManager->select_policy_set(ipcp_id, args[2], args[3]);
+		ret = IPCManager->select_policy_set(NULL,
+						ipcp_id, args[2], args[3]);
 		if (ret) {
 			outstream << "select-policy-set operation failed"
 					<< endl;
@@ -689,7 +691,7 @@ IPCMConsole::set_policy_set_param(std::vector<std::string>& args)
 	if (!IPCManager->ipcp_exists(ipcp_id)) {
 		outstream << "No such IPC process id" << endl;
 	} else {
-		ret = IPCManager->set_policy_set_param(ipcp_id, args[2],
+		ret = IPCManager->set_policy_set_param(NULL, ipcp_id, args[2],
 								args[3],
 								args[4]);
 		if (ret) {
@@ -730,7 +732,7 @@ IPCMConsole::plugin_load_unload(std::vector<std::string>& args, bool load)
 			un = "un";
 		}
 
-		ret = IPCManager->plugin_load(ipcp_id, args[2], load);
+		ret = IPCManager->plugin_load(NULL, ipcp_id, args[2], load);
 		if (ret) {
 			outstream << "Plugin " << un <<
 				"loading failed" << endl;

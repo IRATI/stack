@@ -40,59 +40,22 @@
 #include "addons/scripting.h"
 //[+] Add more here...
 
-//Event transaction states
+//IPCM IPCP
 #include "ipcp.h"
-#include "flow-alloc.h"
-#include "misc.h"
+
+//Handler specifics (transaction states)
+#include "ipcp-handlers.h"
+#include "flow-alloc-handlers.h"
+#include "misc-handlers.h"
 
 //Timeouts for timed wait
-#define IPCMANAGER_TIMEOUT_S 0
-#define IPCMANAGER_TIMEOUT_NS 100000000 //0.1 sec
+#define IPCM_EVENT_TIMEOUT_S 0
+#define IPCM_EVENT_TIMEOUT_NS 100000000 //0.1 sec
+#define IPCM_TRANS_TIMEOUT_S 7
 
 using namespace std;
 
 namespace rinad {
-
-#if 0
-//
-//IPCMConcurrency
-//
-bool
-IPCMConcurrency::wait_for_event(rina::IPCEventType ty, unsigned int seqnum,
-				int &result)
-{
-	bool arrived = false;
-
-	event_waiting = true;
-	event_ty      = ty;
-	event_sn      = seqnum;
-	event_result  = -1;
-
-	try {
-		timedwait(wait_time, 0);
-		arrived = true;
-	} catch (rina::ConcurrentException) {
-		event_waiting = false;
-		event_result = -1;
-	}
-
-	result = event_result;
-
-	return arrived;
-}
-
-void
-IPCMConcurrency::notify_event(rina::IPCEvent *event)
-{
-	if (event_waiting && event_ty == event->eventType
-			&& (event_sn == 0 ||
-			    event_sn == event->sequenceNumber)) {
-		signal();
-		event_waiting = false;
-	}
-}
-#endif
-
 
 //
 //IPCManager_
@@ -180,9 +143,7 @@ IPCManager_::create_ipcp(const Addon* callee,
 	bool difCorrect = false;
 	std::string s;
 	int ret;
-	TransactionState* state;
-
-	//TODO: check if rwlock is really necessary here
+	SyscallTransState* trans=NULL;
 
 	try {
 		// Check that the AP name is not empty
@@ -206,6 +167,11 @@ IPCManager_::create_ipcp(const Addon* callee,
 		}
 
 		ipcp = ipcp_factory_.create(name, type);
+		ret = ipcp->get_id();
+
+		//Auto release the write lock
+		rina::WriteScopedLock writelock(ipcp->rwlock, false);
+
 
 		//TODO: this should be moved to the factory
 		//Moreover the API should be homgenized such that the
@@ -220,7 +186,7 @@ IPCManager_::create_ipcp(const Addon* callee,
 			// defer the operation.
 
 			//Add transaction state
-			state = new TransactionState(callee, ipcp->ipcp_proxy_->id);
+			trans = new SyscallTransState(callee, ipcp->get_id());
 
 			//TODO: this is a botch that we have to do due to the
 			//way ipcmanager in librina works. Since we cannot make
@@ -233,46 +199,55 @@ IPCManager_::create_ipcp(const Addon* callee,
 			//IPCFactory here, since the state is basically the
 			//same and is the only way to prevent these nasty race
 			//conditions
-			if(add_syscall_transaction_state(ipcp->ipcp_proxy_->id, state) < 0){
-				delete state;
-				state = NULL;
+			if(add_syscall_transaction_state(trans) < 0){
+				delete trans;
+				trans = NULL;
 			}
-		}
 
-		//TODO: fix this accordingly (part of the botch)
-		if(state){
-			//We have to wait for the notification
-			if(callee){
-				//callback will be called
-				return ipcp->ipcp_proxy_->id;
+			//TODO: fix this accordingly (part of the botch)
+			if(trans){
+				//We have to wait for the notification
+				if(callee){
+					//callback will be called
+					return ipcp->get_id();
+				}else{
+					//We have to synchronously wait
+					trans->timed_wait(IPCM_TRANS_TIMEOUT_S);
+					if(!trans->ret < 0){
+						ss << "Failed to create IPC process '" <<
+							name.toString() << "' of type '" <<
+							type << "'" << endl;
+						FLUSH_LOG(ERR, ss);
+						remove_syscall_transaction_state(trans->tid);
+						return -1;
+					}
+				}
 			}else{
-				//We have to synchronously wait
-				state->wait_cond.doWait(); //FIXME: timed wait
-				if(!state->ret < 0){
-					ss << "Failed to create IPC process '" <<
-						name.toString() << "' of type '" <<
-						type << "'" << endl;
+				//The notification already arrived
+				trans = get_syscall_transaction_state(ipcp->get_id());
+				if(!trans){
+					assert(0);
+					ss << "Corrupted ipc create operation"<<endl;
 					FLUSH_LOG(ERR, ss);
 					return -1;
 				}
-			}
-		}else{
-			//The notification already arrived
-			state = get_syscall_transaction_state(ipcp->ipcp_proxy_->id);
-			if(!state){
-				assert(0);
-				ss << "Corrupted ipc create operation"<<endl;
-				FLUSH_LOG(ERR, ss);
+				remove_syscall_transaction_state(trans->tid);
 			}
 		}
 
 		//Show a nice trace
 		ss << "IPC process " << name.toString() << " created "
-			"[id = " << ipcp->ipcp_proxy_->id << "]" << endl;
+			"[id = " << ipcp->get_id() << "]" << endl;
 		FLUSH_LOG(INFO, ss);
 
 
-	} catch (rina::CreateIPCProcessException) {
+	} catch(rina::ConcurrentException& e) {
+		ss << "Failed to create IPC process '" <<
+			name.toString() << "' of type '" <<
+			type << "'. Transaction timed out" << endl;
+		FLUSH_LOG(ERR, ss);
+		return -1;
+	} catch(...) {
 		ss << "Failed to create IPC process '" <<
 			name.toString() << "' of type '" <<
 			type << "'" << endl;
@@ -290,7 +265,6 @@ IPCManager_::destroy_ipcp(const Addon* callee, unsigned int ipcp_id)
 	ostringstream ss;
 	int ret = 0;
 
-	//TODO: check if rwlock is really necessary here
 	try {
 		ipcp_factory_.destroy(ipcp_id);
 		ss << "IPC process destroyed [id = " << ipcp_id
@@ -313,12 +287,12 @@ IPCManager_::list_ipcps(std::ostream& os)
 		ipcp_factory_.listIPCProcesses();
 
 	//Prevent any insertion/deletion to happen
-	rina::ReadScopedLock readlock(ipcps_rwlock);
+	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
 
 	os << "Current IPC processes:" << endl;
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
-		os << "    " << ipcps[i]->ipcp_proxy_->id << ": " <<
-			ipcps[i]->ipcp_proxy_->name.toString() << "\n";
+		os << "    " << ipcps[i]->get_id() << ": " <<
+			ipcps[i]->get_name().toString() << "\n";
 	}
 
 	return 0;
@@ -326,14 +300,13 @@ IPCManager_::list_ipcps(std::ostream& os)
 
 bool
 IPCManager_::ipcp_exists(const int ipcp_id){
-	return (lookup_ipcp_by_id(ipcp_id) != NULL);
+	return ipcp_factory_.exists(ipcp_id);
 }
 
-int
+void
 IPCManager_::list_ipcp_types(std::list<std::string>& types)
 {
 	types = ipcp_factory_.getSupportedIPCProcessTypes();
-	return 0;
 }
 
 //TODO this assumes single IPCP per DIF
@@ -347,7 +320,7 @@ int IPCManager_::get_ipcp_by_dif_name(std::string& difName){
 	if(!ipcp)
 		ret = -1;
 	else
-		ret = ipcp->ipcp_proxy_->id;
+		ret = ipcp->get_id();
 
 	return ret;
 }
@@ -355,31 +328,33 @@ int IPCManager_::get_ipcp_by_dif_name(std::string& difName){
 
 
 int
-IPCManager_::assign_to_dif(const int ipcp_id,
+IPCManager_::assign_to_dif(const Addon* callee, const int ipcp_id,
 			  const rina::ApplicationProcessNamingInformation &
 			  dif_name)
 {
-	rinad::DIFProperties   dif_props;
-	rina::DIFInformation   dif_info;
+	rinad::DIFProperties dif_props;
+	rina::DIFInformation dif_info;
 	rina::DIFConfiguration dif_config;
-	ostringstream	  ss;
-	unsigned int	   seqnum;
-	bool		   arrived = true;
-	bool		   found;
-	int		    ret = -1;
+	ostringstream ss;
+	bool found;
+	int ret = 0;
 	IPCMIPCProcess* ipcp;
-
-	//TODO: move this to a write_lock over the IPCP
+	IPCPTransState* trans;
 
 	try {
 
-		ipcp = lookup_ipcp_by_id(ipcp_id);
+		ipcp = lookup_ipcp_by_id(ipcp_id, true);
+
 
 		if(!ipcp){
 			ss << "Invalid IPCP id "<< ipcp_id;
-                	FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
+
+		//Auto release the write lock
+		{
+		rina::WriteScopedLock writelock(ipcp->rwlock, false);
+
 
 		// Try to extract the DIF properties from the
 		// configuration.
@@ -388,12 +363,11 @@ IPCManager_::assign_to_dif(const int ipcp_id,
 		if (!found) {
 			ss << "Cannot find properties for DIF "
 				<< dif_name.toString();
-                	FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
 		// Fill in the DIFConfiguration object.
-		if (ipcp->ipcp_proxy_->type == rina::NORMAL_IPC_PROCESS) {
+		if (ipcp->get_type() == rina::NORMAL_IPC_PROCESS) {
 			rina::EFCPConfiguration efcp_config;
 			rina::NamespaceManagerConfiguration nsm_config;
 			rina::AddressingConfiguration address_config;
@@ -408,6 +382,11 @@ IPCManager_::assign_to_dif(const int ipcp_id,
 					qit != dif_props.qosCubes.end();
 					qit++) {
 				qosCube = new rina::QoSCube(*qit);
+				if(!qosCube){
+					ss << "Unable to allocate memory for the QoSCube object. Out of memory! "
+					<< dif_name.toString();
+					throw Exception();
+				}
 				efcp_config.add_qos_cube(qosCube);
 			}
 
@@ -434,14 +413,13 @@ IPCManager_::assign_to_dif(const int ipcp_id,
 			nsm_config.addressing_configuration_ = address_config;
 
 			found = dif_props.
-				lookup_ipcp_address(ipcp->ipcp_proxy_->name,
+				lookup_ipcp_address(ipcp->get_name(),
 						address);
 			if (!found) {
 				ss << "No address for IPC process " <<
-					ipcp->ipcp_proxy_->name.toString() <<
+					ipcp->get_name().toString() <<
 					" in DIF " << dif_name.toString() <<
 					endl;
-                		FLUSH_LOG(ERR, ss);
 				throw Exception();
 			}
 			dif_config.set_efcp_configuration(efcp_config);
@@ -462,66 +440,97 @@ IPCManager_::assign_to_dif(const int ipcp_id,
 
 		// Fill in the DIFInformation object.
 		dif_info.set_dif_name(dif_name);
-		dif_info.set_dif_type(ipcp->ipcp_proxy_->type);
+		dif_info.set_dif_type(ipcp->get_type());
 		dif_info.set_dif_configuration(dif_config);
 
 		// Validate the parameters
 		DIFConfigValidator validator(dif_config, dif_info,
-				ipcp->ipcp_proxy_->type);
+				ipcp->get_type());
 		if(!validator.validateConfigs())
 			throw rina::BadConfigurationException("DIF configuration validator failed");
 
-		// Invoke librina to assign the IPC process to the
-		// DIF specified by dif_info.
-		seqnum = opaque_generator_.next();
-		ipcp->assignToDIF(dif_info, seqnum);
+		//Create a transaction
+		trans = new IPCPTransState(callee, ipcp->get_id());
+		if(!trans){
+			ss << "Unable to allocate memory for the transaction object. Out of memory! "
+				<< dif_name.toString();
+			throw Exception();
+		}
 
-		pending_ipcp_dif_assignments[seqnum] = ipcp;
+		//Store transaction
+		if(add_transaction_state(trans) < 0){
+			ss << "Unable to add transaction; out of memory? "
+				<< dif_name.toString();
+			throw Exception();
+		}
+
+		ipcp->assignToDIF(dif_info, trans->tid);
+
 		ss << "Requested DIF assignment of IPC process " <<
-			ipcp->ipcp_proxy_->name.toString() << " to DIF " <<
+			ipcp->get_name().toString() << " to DIF " <<
 			dif_name.toString() << endl;
 		FLUSH_LOG(INFO, ss);
-		//arrived = concurrency.wait_for_event(rina::ASSIGN_TO_DIF_RESPONSE_EVENT,
-		//				     seqnum, ret);
+
+		} //Write lock scope
+
+		//If it is a synchronous call, wait until it has been finished
+		if(!callee){
+			//Just wait in the condition variable
+			trans->timed_wait(IPCM_TRANS_TIMEOUT_S);
+
+			//Recover the result
+			ret = trans->ret;
+
+			//Callback
+			//TODO
+			remove_transaction_state(trans->tid);
+		}
+	} catch(rina::ConcurrentException& e) {
+		ss << "Error while assigning " <<
+			ipcp->get_name().toString() <<
+			" to DIF " << dif_name.toString() <<
+			". Operation timedout"<< endl;
+		FLUSH_LOG(ERR, ss);
+		ret = -1;
 	} catch (rina::AssignToDIFException) {
 		ss << "Error while assigning " <<
-			ipcp->ipcp_proxy_->name.toString() <<
+			ipcp->get_name().toString() <<
 			" to DIF " << dif_name.toString() << endl;
 		FLUSH_LOG(ERR, ss);
+		ret = -1;
 	} catch (rina::BadConfigurationException &e) {
-		LOG_ERR("DIF %s configuration failed", dif_name.toString().c_str());
-		throw e;
-	}
-	catch (Exception) {
 		FLUSH_LOG(ERR, ss);
-	}
-
-	if (!arrived) {
-		ss  << ": Timed out" << endl;
+		LOG_ERR("Asssign IPCP %d to dif %s failed. Bad configuration.",
+						ipcp_id,
+						dif_name.toString().c_str());
+		ret = -1;
+	}catch (Exception) {
+		LOG_ERR("Asssign IPCP %d to dif %s failed. Unknown error catched: %s:%d",
+						ipcp_id,
+						dif_name.toString().c_str(),
+						__FILE__,
+						__LINE__);
 		FLUSH_LOG(ERR, ss);
-		return -1;
+		ret = -1;
 	}
 
 	return ret;
 }
 
 int
-IPCManager_::register_at_dif(const int ipcp_id,
+IPCManager_::register_at_dif(const Addon* callee, const int ipcp_id,
 			    const rina::ApplicationProcessNamingInformation&
 			    dif_name)
 {
 	// Select a slave (N-1) IPC process.
 	IPCMIPCProcess *ipcp, *slave_ipcp;
 	ostringstream ss;
-	unsigned int seqnum;
-	bool arrived = true;
 	int ret = -1;
-
-	//TODO: move this to a write_lock over the IPCP
+	IPCPregTransState* trans;
 
 	// Try to register @ipcp to the slave IPC process.
 	try {
-		ipcp = lookup_ipcp_by_id(ipcp_id);
+		ipcp = lookup_ipcp_by_id(ipcp_id, true);
 
 		if(!ipcp){
 			ss << "Invalid IPCP id "<< ipcp_id;
@@ -529,7 +538,7 @@ IPCManager_::register_at_dif(const int ipcp_id,
 			throw Exception();
 		}
 
-		slave_ipcp = select_ipcp_by_dif(dif_name);
+		slave_ipcp = select_ipcp_by_dif(dif_name, true);
 
 		if (!slave_ipcp) {
 			ss << "Cannot find any IPC process belonging "
@@ -539,60 +548,76 @@ IPCManager_::register_at_dif(const int ipcp_id,
 			throw Exception();
 		}
 
+		//Auto release the write lock
+		rina::WriteScopedLock writelock(ipcp->rwlock, false);
+		rina::WriteScopedLock swritelock(slave_ipcp->rwlock, false);
 
-		seqnum = opaque_generator_.next();
+		//Create a transaction
+		trans = new IPCPregTransState(callee, ipcp->get_id(),
+							slave_ipcp->get_id());
+		if(!trans){
+			ss << "Unable to allocate memory for the transaction object. Out of memory! "
+				<< dif_name.toString();
+			throw Exception();
+		}
+
+		//Store transaction
+		if(add_transaction_state(trans) < 0){
+			ss << "Unable to add transaction; out of memory? "
+				<< dif_name.toString();
+			throw Exception();
+		}
+
+		//Register
 		slave_ipcp->registerApplication(
-				ipcp->ipcp_proxy_->name, ipcp->ipcp_proxy_->id, seqnum);
-
-		pending_ipcp_registrations[seqnum] =
-			make_pair(ipcp, slave_ipcp);
+				ipcp->get_name(), ipcp->get_id(), trans->tid);
 
 		ss << "Requested DIF registration of IPC process " <<
-			ipcp->ipcp_proxy_->name.toString() << " at DIF " <<
+			ipcp->get_name().toString() << " at DIF " <<
 			dif_name.toString() << " through IPC process "
-		   << slave_ipcp->ipcp_proxy_->name.toString()
+		   << slave_ipcp->get_name().toString()
 		   << endl;
 		FLUSH_LOG(INFO, ss);
 
-		//arrived = concurrency.wait_for_event(
-		//	rina::IPCM_REGISTER_APP_RESPONSE_EVENT, seqnum, ret);
+		//If it is a synchronous call, wait until it has been finished
+		if(!callee){
+			//Just wait in the condition variable
+			trans->timed_wait(IPCM_TRANS_TIMEOUT_S);
+
+			//Recover the result
+			ret = trans->ret;
+
+			//Callback
+			//TODO
+			remove_transaction_state(trans->tid);
+		}
+	} catch(rina::ConcurrentException& e) {
+		ss  << ": Error while requesting registration. Operation timedout" << endl;
+		FLUSH_LOG(ERR, ss);
+		ret = -1;
 	} catch (Exception) {
 		ss  << ": Error while requesting registration"
 		    << endl;
 		FLUSH_LOG(ERR, ss);
-	}
-
-	if (!arrived) {
-		ss  << ": Timed out" << endl;
-		FLUSH_LOG(ERR, ss);
-		return -1;
+		ret = -1;
 	}
 
 	return ret;
 }
 
-int IPCManager_::register_at_difs(const int ipcp_id,
+int IPCManager_::register_at_difs(const Addon* callee, const int ipcp_id,
 		const list<rina::ApplicationProcessNamingInformation>& difs)
 {
 
-	IPCMIPCProcess *ipcp;
 	ostringstream ss;
 	int ret = 0;
 
 	//TODO: move this to a write_lock over the IPCP
 
 	try{
-		ipcp = lookup_ipcp_by_id(ipcp_id);
-
-		if(!ipcp){
-			ss << "Invalid IPCP id "<< ipcp_id;
-                	FLUSH_LOG(ERR, ss);
-			throw Exception();
-		}
-
 		for (list<rina::ApplicationProcessNamingInformation>::const_iterator
 				nit = difs.begin(); nit != difs.end(); nit++) {
-			register_at_dif(ipcp_id, *nit);
+			register_at_dif(callee, ipcp_id, *nit);
 		}
 	} catch (Exception) {
 		ss  << ": Unknown error while requesting registration at dif"
@@ -605,17 +630,108 @@ int IPCManager_::register_at_difs(const int ipcp_id,
 }
 
 int
-IPCManager_::enroll_to_dif(const int ipcp_id,
+IPCManager_::unregister_ipcp_from_ipcp(const Addon* callee, int ipcp_id,
+                                      int slave_ipcp_id)
+{
+        bool arrived = true;
+        ostringstream ss;
+        IPCMIPCProcess *ipcp, *slave_ipcp;
+	IPCPregTransState* trans;
+	int ret;
+
+        try {
+
+		ipcp = lookup_ipcp_by_id(ipcp_id);
+
+		if(!ipcp){
+			ss << "Invalid IPCP id "<< ipcp_id;
+			FLUSH_LOG(ERR, ss);
+			throw Exception();
+		}
+
+		slave_ipcp = lookup_ipcp_by_id(slave_ipcp_id);
+
+		if (!slave_ipcp) {
+			ss << "Invalid IPCP id "<< slave_ipcp_id;
+			FLUSH_LOG(ERR, ss);
+			throw Exception();
+		}
+
+		//Auto release the write lock
+		rina::WriteScopedLock writelock(ipcp->rwlock, false);
+		rina::WriteScopedLock swritelock(slave_ipcp->rwlock, false);
+
+		//Create a transaction
+		trans = new IPCPregTransState(callee, ipcp->get_id(),
+							slave_ipcp->get_id());
+
+		if(!trans){
+			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
+			throw Exception();
+		}
+
+		//Store transaction
+		if(add_transaction_state(trans) < 0){
+			ss << "Unable to add transaction; out of memory? ";
+			throw Exception();
+		}
+
+
+                // Forward the unregistration request to the IPC process
+                // that the client IPC process is registered to
+                slave_ipcp->unregisterApplication(ipcp->get_name(),
+								trans->tid);
+
+                ss << "Requested unregistration of IPC process " <<
+                        ipcp->get_name().toString() << " from IPC "
+                        "process " << slave_ipcp->get_name().toString() << endl;
+                FLUSH_LOG(INFO, ss);
+
+		//If it is a synchronous call, wait until it has been finished
+		if(!callee){
+			//Just wait in the condition variable
+			trans->timed_wait(IPCM_TRANS_TIMEOUT_S);
+
+			//Recover the result
+			ret = trans->ret;
+
+			//Callback
+			//TODO
+			remove_transaction_state(trans->tid);
+		}
+	} catch(rina::ConcurrentException& e) {
+                ss  << ": Error while unregistering IPC process "
+                        << ipcp->get_name().toString() << " from IPC "
+                        "process " << slave_ipcp->get_name().toString() <<
+			"The operation timedout"<< endl;
+                FLUSH_LOG(ERR, ss);
+                return -1;
+        } catch (rina::IpcmUnregisterApplicationException) {
+                ss  << ": Error while unregistering IPC process "
+                        << ipcp->get_name().toString() << " from IPC "
+                        "process " << slave_ipcp->get_name().toString() << endl;
+                FLUSH_LOG(ERR, ss);
+                return -1;
+        }
+
+        if (!arrived) {
+                ss  << ": Timed out" << endl;
+                FLUSH_LOG(ERR, ss);
+                return -1;
+        }
+
+        return 0;
+}
+
+int
+IPCManager_::enroll_to_dif(const Addon* callee, const int ipcp_id,
 			  const rinad::NeighborData& neighbor,
 			  bool sync)
 {
 	ostringstream ss;
 	IPCMIPCProcess *ipcp;
-	bool arrived = true;
 	int ret = 0;
-	unsigned int seqnum;
-
-	//TODO: move this to a write_lock over the IPCP
+	IPCPTransState* trans;
 
 	try {
 		ipcp = lookup_ipcp_by_id(ipcp_id);
@@ -626,64 +742,77 @@ IPCManager_::enroll_to_dif(const int ipcp_id,
 			throw Exception();
 		}
 
-		seqnum = opaque_generator_.next();
+		//Auto release the write lock
+		rina::WriteScopedLock writelock(ipcp->rwlock, false);
+
+		//Create a transaction
+		trans = new IPCPTransState(callee, ipcp->get_id());
+
+		if(!trans){
+			ss << "Unable to allocate memory for the transaction object. Out of memory! "
+				<< neighbor.difName.toString(); 
+			throw Exception();
+		}
+
+		//Store transaction
+		if(add_transaction_state(trans) < 0){
+			ss << "Unable to add transaction; out of memory? "
+				<< neighbor.difName.toString();
+			throw Exception();
+		}
+
 		ipcp->enroll(neighbor.difName,
 				neighbor.supportingDifName,
-				neighbor.apName, seqnum);
-		pending_ipcp_enrollments[seqnum] = ipcp;
+				neighbor.apName, trans->tid);
+
 		ss << "Requested enrollment of IPC process " <<
-			ipcp->ipcp_proxy_->name.toString() << " to DIF " <<
+			ipcp->get_name().toString() << " to DIF " <<
 			neighbor.difName.toString() << " through DIF "
 			<< neighbor.supportingDifName.toString() <<
 			" and neighbor IPC process " <<
 			neighbor.apName.toString() << endl;
 		FLUSH_LOG(INFO, ss);
-		if (sync) {
-			//arrived =
-			//	concurrency.wait_for_event(rina::ENROLL_TO_DIF_RESPONSE_EVENT,
-			//				   seqnum,
-			//				   ret);
-		} else {
-			ret = 0;
+
+		//If it is a synchronous call, wait until it has been finished
+		if(!callee){
+			//Just wait in the condition variable
+			trans->timed_wait(IPCM_TRANS_TIMEOUT_S);
+
+			//Recover the result
+			ret = trans->ret;
+
+			//Callback
+			//TODO
+			remove_transaction_state(trans->tid);
 		}
-	} catch (rina::EnrollException) {
+	} catch(rina::ConcurrentException& e) {
+		ss  << ": Error while enrolling "
+			<< "to DIF " << neighbor.difName.toString()
+			<<". Operation timedout"<< endl;
+		FLUSH_LOG(ERR, ss);
+		ret = -1;
+	}  catch (rina::EnrollException) {
 		ss  << ": Error while enrolling "
 			<< "to DIF " << neighbor.difName.toString()
 			<< endl;
 		FLUSH_LOG(ERR, ss);
-	}
-
-	if (!arrived) {
-		ss  << ": Timed out" << endl;
-		FLUSH_LOG(ERR, ss);
-		return -1;
+		ret = -1;
 	}
 
 	return ret;
 }
 
-int IPCManager_::enroll_to_difs(const int ipcp_id,
+int IPCManager_::enroll_to_difs(const Addon* callee, const int ipcp_id,
 			       const list<rinad::NeighborData>& neighbors)
 {
 	ostringstream ss;
-	IPCMIPCProcess *ipcp;
 	int ret = -1;
 
-	//TODO: move this to a write_lock over the IPCP
-
 	try{
-		ipcp = lookup_ipcp_by_id(ipcp_id);
-
-		if(!ipcp){
-			ss << "Invalid IPCP id "<< ipcp_id;
-                	FLUSH_LOG(ERR, ss);
-			throw Exception();
-		}
-
 		for (list<rinad::NeighborData>::const_iterator
 				nit = neighbors.begin();
 					nit != neighbors.end(); nit++) {
-			enroll_to_dif(ipcp_id, *nit, false);
+			enroll_to_dif(callee, ipcp_id, *nit, false);
 		}
 	} catch (Exception) {
 		ss  << ": Unknown error while enrolling to difs"
@@ -696,7 +825,6 @@ int IPCManager_::enroll_to_difs(const int ipcp_id,
 }
 
 bool IPCManager_::lookup_dif_by_application(
-	//TODO: move this to a read_lock over the IPCP
 	const rina::ApplicationProcessNamingInformation& apName,
 	rina::ApplicationProcessNamingInformation& difName){
 	return config.lookup_dif_by_application(apName, difName);
@@ -737,8 +865,8 @@ IPCManager_::apply_configuration()
 				if (ipcp_id < 0) {
 					continue;
 				}
-				assign_to_dif(ipcp_id, cit->difName);
-				register_at_difs(ipcp_id, cit->difsToRegisterAt);
+				assign_to_dif(NULL, ipcp_id, cit->difName);
+				register_at_difs(NULL, ipcp_id, cit->difsToRegisterAt);
 			} catch (Exception &e) {
 				LOG_ERR("Exception while applying configuration: %s",
 					e.what());
@@ -752,7 +880,7 @@ IPCManager_::apply_configuration()
 		for (pit = ipcps.begin(), cit = config.ipcProcessesToCreate.begin();
 		     pit != ipcps.end();
 		     pit++, cit++) {
-			enroll_to_difs(*pit, cit->neighbors);
+			enroll_to_difs(NULL, *pit, cit->neighbors);
 		}
 	} catch (Exception &e) {
 		LOG_ERR("Exception while applying configuration: %s",
@@ -764,19 +892,16 @@ IPCManager_::apply_configuration()
 }
 
 int
-IPCManager_::update_dif_configuration(int ipcp_id,
+IPCManager_::update_dif_configuration(const Addon* callee, int ipcp_id,
 				     const rina::DIFConfiguration & dif_config)
 {
 	ostringstream ss;
-	bool arrived = true;
 	int ret = 0;
-	unsigned int seqnum;
 	IPCMIPCProcess *ipcp;
-
-	//TODO: move this to a write_lock over the IPCP
+	IPCPTransState* trans;
 
 	try {
-		ipcp = lookup_ipcp_by_id(ipcp_id);
+		ipcp = lookup_ipcp_by_id(ipcp_id, true);
 
 		if(!ipcp){
 			ss << "Invalid IPCP id "<< ipcp_id;
@@ -784,6 +909,8 @@ IPCManager_::update_dif_configuration(int ipcp_id,
 			throw Exception();
 		}
 
+		//Auto release the write lock
+		rina::WriteScopedLock writelock(ipcp->rwlock, false);
 
 		// Request a configuration update for the IPC process
 		/* FIXME The meaning of this operation is unclear: what
@@ -792,42 +919,60 @@ IPCManager_::update_dif_configuration(int ipcp_id,
 		 * (which possibly contains more IPC process, both on the same
 		 * processing systems and on different processing systems) ?
 		 */
-		seqnum = opaque_generator_.next();
-		ipcp->updateDIFConfiguration(dif_config, seqnum);
-		pending_dif_config_updates[seqnum] = ipcp;
+		trans = new IPCPTransState(callee, ipcp->get_id());
+
+		if(!trans){
+			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
+			throw Exception();
+		}
+
+		//Store transaction
+		if(add_transaction_state(trans) < 0){
+			ss << "Unable to add transaction; out of memory? ";
+			throw Exception();
+		}
+		ipcp->updateDIFConfiguration(dif_config, trans->tid);
 
 		ss << "Requested configuration update for IPC process " <<
-			ipcp->ipcp_proxy_->name.toString() << endl;
+			ipcp->get_name().toString() << endl;
 		FLUSH_LOG(INFO, ss);
 
-		/*arrived = concurrency.wait_for_event(
-			rina::UPDATE_DIF_CONFIG_RESPONSE_EVENT, seqnum, ret);*/
-	} catch (rina::UpdateDIFConfigurationException) {
-		ss  << ": Error while updating DIF configuration "
-			" for IPC process " << ipcp->ipcp_proxy_->name.toString() << endl;
-		FLUSH_LOG(ERR, ss);
-	}
+		//If it is a synchronous call, wait until it has been finished
+		if(!callee){
+			//Just wait in the condition variable
+			trans->timed_wait(IPCM_TRANS_TIMEOUT_S);
 
-	if (!arrived) {
-		ss  << ": Timed out" << endl;
+			//Recover the result
+			ret = trans->ret;
+
+			//Callback
+			//TODO
+			remove_transaction_state(trans->tid);
+		}
+	} catch(rina::ConcurrentException& e) {
+		ss  << ": Error while updating DIF configuration "
+			" for IPC process " << ipcp->get_name().toString() <<
+			"Operation timedout."<< endl;
 		FLUSH_LOG(ERR, ss);
-		return -1;
+		ret = -1;
+	}  catch (rina::UpdateDIFConfigurationException) {
+		ss  << ": Error while updating DIF configuration "
+			" for IPC process " << ipcp->get_name().toString() << endl;
+		FLUSH_LOG(ERR, ss);
+		ret = -1;
 	}
 
 	return ret;
 }
 
 std::string
-IPCManager_::query_rib(const int ipcp_id)
+IPCManager_::query_rib(const Addon* callee, const int ipcp_id)
 {
-	std::string   retstr = "Query RIB operation was not successful";
+	std::string retstr = "Query RIB operation was not successful";
 	ostringstream ss;
-	bool	  arrived = true;
-	int	   ret = -1;
+	int ret = -1;
 	IPCMIPCProcess *ipcp;
-
-
-	//TODO: move this to a read_lock over the IPCP
+	RIBqTransState* trans;
 
 	try {
 		ipcp = lookup_ipcp_by_id(ipcp_id);
@@ -838,31 +983,54 @@ IPCManager_::query_rib(const int ipcp_id)
 			throw Exception();
 		}
 
-		unsigned int seqnum = opaque_generator_.next();
-		ipcp->queryRIB("", "", 0, 0, "", seqnum);
+		//Auto release the read lock
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
-		pending_ipcp_query_rib_responses[seqnum] = ipcp;
-		ss << "Requested query RIB of IPC process " <<
-			ipcp->ipcp_proxy_->name.toString() << endl;
-		FLUSH_LOG(INFO, ss);
-		/*arrived = concurrency.wait_for_event(rina::QUERY_RIB_RESPONSE_EVENT,
-					   seqnum, ret);*/
 
-		std::map<unsigned int, std::string >::iterator mit;
-		mit = query_rib_responses.find(seqnum);
-		if (mit != query_rib_responses.end()) {
-			retstr = mit->second;
-			query_rib_responses.erase(seqnum);
+		trans = new RIBqTransState(callee, ipcp->get_id());
+		if(!trans){
+			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
+			throw Exception();
 		}
 
+		//Store transaction
+		if(add_transaction_state(trans) < 0){
+			ss << "Unable to add transaction; out of memory? ";
+			throw Exception();
+		}
+
+		ipcp->queryRIB("", "", 0, 0, "", trans->tid);
+
+		ss << "Requested query RIB of IPC process " <<
+			ipcp->get_name().toString() << endl;
+		FLUSH_LOG(INFO, ss);
+
+		//If it is a synchronous call, wait until it has been finished
+		if(!callee){
+			//Just wait in the condition variable
+			trans->timed_wait(IPCM_TRANS_TIMEOUT_S);
+
+			//Callback
+			//TODO
+
+			//Copy value
+			retstr = trans->ret;
+
+			//Remove and destroy
+			remove_transaction_state(trans->tid);
+			return 	retstr;
+		}else{
+			return std::string("");
+		}
+	} catch(rina::ConcurrentException& e) {
+		ss << "Error while querying RIB of IPC Process " <<
+			ipcp->get_name().toString() <<
+			". Operation timedout"<< endl;
+		FLUSH_LOG(ERR, ss);
+		ret = -1;
 	} catch (rina::QueryRIBException) {
 		ss << "Error while querying RIB of IPC Process " <<
-			ipcp->ipcp_proxy_->name.toString() << endl;
-		FLUSH_LOG(ERR, ss);
-	}
-
-	if (!arrived) {
-		ss  << ": Timed out" << endl;
+			ipcp->get_name().toString() << endl;
 		FLUSH_LOG(ERR, ss);
 	}
 
@@ -876,18 +1044,15 @@ std::string IPCManager_::get_log_level() const
 
 
 int
-IPCManager_::set_policy_set_param(const int ipcp_id,
+IPCManager_::set_policy_set_param(const Addon* callee, const int ipcp_id,
                                  const std::string& component_path,
                                  const std::string& param_name,
                                  const std::string& param_value)
 {
         ostringstream ss;
-        unsigned int seqnum;
-        bool arrived = false;
-        int ret = -1;
+        int ret = 0;
+	IPCPTransState* trans;
         IPCMIPCProcess *ipcp;
-
-	//TODO: move this to a write_lock over the IPCP
 
         try {
         	ipcp = lookup_ipcp_by_id(ipcp_id);
@@ -898,41 +1063,65 @@ IPCManager_::set_policy_set_param(const int ipcp_id,
         		throw Exception();
         	}
 
-        	seqnum = opaque_generator_.next();
+		//Auto release the read lock
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
+
+		trans = new IPCPTransState(callee, ipcp->get_id());
+		if(!trans){
+			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
+			throw Exception();
+		}
+
+		//Store transaction
+		if(add_transaction_state(trans) < 0){
+			ss << "Unable to add transaction; out of memory? ";
+			throw Exception();
+		}
+
         	ipcp->setPolicySetParam(component_path,
-        			param_name, param_value, seqnum);
+        			param_name, param_value, trans->tid);
 
-        	pending_set_policy_set_param_ops[seqnum] = ipcp;
         	ss << "Issued set-policy-set-param to IPC process " <<
-        			ipcp->ipcp_proxy_->name.toString() << endl;
+        			ipcp->get_name().toString() << endl;
         	FLUSH_LOG(INFO, ss);
-        	/*arrived = concurrency.wait_for_event(
-                                rina::IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE,
-                                seqnum, ret);*/
-        } catch (rina::SetPolicySetParamException) {
-                ss << "Error while issuing set-policy-set-param request "
-                        "to IPC Process " << ipcp->ipcp_proxy_->name.toString() << endl;
-                FLUSH_LOG(ERR, ss);
-        }
 
-        if (!arrived) {
-                ss  << ": Timed out" << endl;
+		//If it is a synchronous call, wait until it has been finished
+		if(!callee){
+			//Just wait in the condition variable
+			trans->timed_wait(IPCM_TRANS_TIMEOUT_S);
+
+			//Recover the result
+			ret = trans->ret;
+
+			//Callback
+			//TODO
+			remove_transaction_state(trans->tid);
+		}
+        } catch(rina::ConcurrentException& e) {
+		ss << "Error while issuing set-policy-set-param request "
+                        "to IPC Process " << ipcp->get_name().toString()
+			<< ". Operation timedout"<< endl;
+		FLUSH_LOG(ERR, ss);
+		ret = -1;
+	} catch (rina::SetPolicySetParamException) {
+                ss << "Error while issuing set-policy-set-param request "
+                        "to IPC Process " << ipcp->get_name().toString() << endl;
                 FLUSH_LOG(ERR, ss);
+		ret = -1;
         }
 
         return ret;
 }
 
 int
-IPCManager_::select_policy_set(const int ipcp_id,
+IPCManager_::select_policy_set(const Addon* callee, const int ipcp_id,
                               const std::string& component_path,
                               const std::string& ps_name)
 {
         ostringstream ss;
-        unsigned int seqnum;
-        bool arrived = false;
-        int ret = -1;
+        int ret = 0;
         IPCMIPCProcess *ipcp;
+	IPCPTransState* trans;
 
         try {
         	ipcp = lookup_ipcp_by_id(ipcp_id);
@@ -943,41 +1132,63 @@ IPCManager_::select_policy_set(const int ipcp_id,
         		throw Exception();
         	}
 
-        	seqnum = opaque_generator_.next();
-        	ipcp->selectPolicySet(component_path, ps_name, seqnum);
+		//Auto release the read lock
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
-        	pending_select_policy_set_ops[seqnum] = ipcp;
+
+		trans = new IPCPTransState(callee, ipcp->get_id());
+		if(!trans){
+			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
+			throw Exception();
+		}
+
+		//Store transaction
+		if(add_transaction_state(trans) < 0){
+			ss << "Unable to add transaction; out of memory? ";
+			throw Exception();
+		}
+
+        	ipcp->selectPolicySet(component_path, ps_name, trans->tid);
+
         	ss << "Issued select-policy-set to IPC process " <<
-        			ipcp->ipcp_proxy_->name.toString() << endl;
+        			ipcp->get_name().toString() << endl;
         	FLUSH_LOG(INFO, ss);
-        	/*arrived = concurrency.wait_for_event(
-                                rina::IPC_PROCESS_SELECT_POLICY_SET_RESPONSE,
-                                seqnum, ret);*/
-        } catch (rina::SelectPolicySetException) {
-                ss << "Error while issuing select-policy-set request "
-                        "to IPC Process " << ipcp->ipcp_proxy_->name.toString() << endl;
-                FLUSH_LOG(ERR, ss);
-        }
 
-        if (!arrived) {
-                ss  << ": Timed out" << endl;
+		if(!callee){
+			//Just wait in the condition variable
+			trans->timed_wait(IPCM_TRANS_TIMEOUT_S);
+
+			//Recover the result
+			ret = trans->ret;
+
+			//Callback
+			//TODO
+			remove_transaction_state(trans->tid);
+		}
+        } catch(rina::ConcurrentException& e) {
+		ss << "Error while issuing select-policy-set request "
+                        "to IPC Process " << ipcp->get_name().toString() <<
+			". Operation timedout."<< endl;
+		FLUSH_LOG(ERR, ss);
+		ret = -1;
+	} catch (rina::SelectPolicySetException) {
+                ss << "Error while issuing select-policy-set request "
+                        "to IPC Process " << ipcp->get_name().toString() << endl;
                 FLUSH_LOG(ERR, ss);
+		ret = -1;
         }
 
         return ret;
 }
 
 int
-IPCManager_::plugin_load(const int ipcp_id,
+IPCManager_::plugin_load(const Addon* callee, const int ipcp_id,
                         const std::string& plugin_name, bool load)
 {
         ostringstream ss;
-        unsigned int seqnum;
-        bool arrived = false;
-        int ret = -1;
+        int ret = 0;
         IPCMIPCProcess *ipcp;
-
-	//TODO: move this to a write_lock over the IPCP
+	IPCPTransState* trans;
 
         try {
         	ipcp = lookup_ipcp_by_id(ipcp_id);
@@ -988,45 +1199,152 @@ IPCManager_::plugin_load(const int ipcp_id,
         		throw Exception();
         	}
 
-        	seqnum = opaque_generator_.next();
-        	ipcp->pluginLoad(plugin_name, load, seqnum);
+		//Auto release the read lock
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
-        	pending_plugin_load_ops[seqnum] = ipcp;
+		trans = new IPCPTransState(callee, ipcp->get_id());
+		if(!trans){
+			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
+			throw Exception();
+		}
+		//Store transaction
+		if(add_transaction_state(trans) < 0){
+			ss << "Unable to add transaction; out of memory? ";
+			throw Exception();
+		}
+        	ipcp->pluginLoad(plugin_name, load, trans->tid);
+
         	ss << "Issued plugin-load to IPC process " <<
-        			ipcp->ipcp_proxy_->name.toString() << endl;
+        			ipcp->get_name().toString() << endl;
         	FLUSH_LOG(INFO, ss);
-        	/*arrived = concurrency.wait_for_event(
-                                rina::IPC_PROCESS_PLUGIN_LOAD_RESPONSE,
-                                seqnum, ret);*/
-        } catch (rina::PluginLoadException) {
-                ss << "Error while issuing plugin-load request "
-                        "to IPC Process " << ipcp->ipcp_proxy_->name.toString() << endl;
-                FLUSH_LOG(ERR, ss);
-        }
 
-        if (!arrived) {
-                ss  << ": Timed out" << endl;
+		if(!callee){
+			//Just wait in the condition variable
+			trans->timed_wait(IPCM_TRANS_TIMEOUT_S);
+
+			//Recover the result
+			ret = trans->ret;
+
+			//Callback
+			//TODO
+			remove_transaction_state(trans->tid);
+		}
+        } catch(rina::ConcurrentException& e) {
+		ss << "Error while issuing plugin-load request "
+                        "to IPC Process " << ipcp->get_name().toString() <<
+			". Operation timedout"<< endl;
+		FLUSH_LOG(ERR, ss);
+		ret = -1;
+	} catch (rina::PluginLoadException) {
+                ss << "Error while issuing plugin-load request "
+                        "to IPC Process " << ipcp->get_name().toString() << endl;
                 FLUSH_LOG(ERR, ss);
+		ret = -1;
         }
 
         return ret;
 }
 
+int
+IPCManager_::unregister_app_from_ipcp(const Addon* callee,
+                const rina::ApplicationUnregistrationRequestEvent& req_event,
+                int slave_ipcp_id)
+{
+        ostringstream ss;
+        IPCMIPCProcess *slave_ipcp;
+	IPCPTransState* trans;
+	int ret = 0;
+
+        try {
+		slave_ipcp = lookup_ipcp_by_id(slave_ipcp_id, true);
+
+		if (!slave_ipcp) {
+			ss << "Cannot find any IPC process belonging "<<endl;
+			FLUSH_LOG(ERR, ss);
+			throw Exception();
+		}
+
+		//Auto release the write lock
+		rina::WriteScopedLock writelock(slave_ipcp->rwlock, false);
+
+                // Forward the unregistration request to the IPC process
+                // that the application is registered to
+		trans = new IPCPTransState(callee, slave_ipcp->get_id());
+		if(!trans){
+			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
+			throw Exception();
+		}
+
+		//Store transaction
+		if(add_transaction_state(trans) < 0){
+			ss << "Unable to add transaction; out of memory? ";
+			throw Exception();
+		}
+                slave_ipcp->unregisterApplication(req_event.applicationName,
+                                                  trans->tid);
+                ss << "Requested unregistration of application " <<
+                        req_event.applicationName.toString() << " from IPC "
+                        "process " << slave_ipcp->get_name().toString() << endl;
+                FLUSH_LOG(INFO, ss);
+
+		if(!callee){
+			//Just wait in the condition variable
+			trans->timed_wait(IPCM_TRANS_TIMEOUT_S);
+
+			//Recover the result
+			ret = trans->ret;
+
+			//Callback
+			//TODO
+			remove_transaction_state(trans->tid);
+		}
+        } catch(rina::ConcurrentException& e) {
+		ss  << ": Error while unregistering application "
+                        << req_event.applicationName.toString() << " from IPC "
+                        "process " << slave_ipcp->get_name().toString() <<
+			". Operation timedout."<< endl;
+		FLUSH_LOG(ERR, ss);
+		ret = -1;
+	} catch (rina::IpcmUnregisterApplicationException) {
+                ss  << ": Error while unregistering application "
+                        << req_event.applicationName.toString() << " from IPC "
+                        "process " << slave_ipcp->get_name().toString() << endl;
+                FLUSH_LOG(ERR, ss);
+                return -1;
+        }
+
+        return ret;
+}
+
+//
+// Transactions
+//
+
+TransactionState::TransactionState(const Addon* _callee):
+					callee(_callee),
+					tid(IPCManager->__tid_gen.next()),
+					complete(false){
+
+};
+
+
 //State management routines
-int IPCManager_::add_transaction_state(int tid, TransactionState* t){
-	//Rwlock: write
+int IPCManager_::add_transaction_state(TransactionState* t){
+
+	//Lock
+	rina::WriteScopedLock writelock(trans_rwlock);
 
 	//Check if exists already
-	if ( pend_transactions.find(tid) != pend_transactions.end() ){
+	if ( pend_transactions.find(t->tid) != pend_transactions.end() ){
 		assert(0); //Transaction id repeated
 		return -1;
 	}
 
 	//Just add and return
 	try{
-		pend_transactions[tid] = t;
+		pend_transactions[t->tid] = t;
 	}catch(...){
-		LOG_DBG("Could not add transaction %u. Out of memory?", tid);
+		LOG_DBG("Could not add transaction %u. Out of memory?", t->tid);
 		assert(0);
 		return -1;
 	}
@@ -1034,33 +1352,40 @@ int IPCManager_::add_transaction_state(int tid, TransactionState* t){
 }
 
 int IPCManager_::remove_transaction_state(int tid){
-	//Rwlock: write
+
+	TransactionState* t;
+	//Lock
+	rina::WriteScopedLock writelock(trans_rwlock);
 
 	//Check if it really exists
 	if ( pend_transactions.find(tid) == pend_transactions.end() )
 		return -1;
 
+	t = pend_transactions[tid];
 	pend_transactions.erase(tid);
+	delete t;
 
 	return 0;
 }
 
 //Syscall state management routines
-int IPCManager_::add_syscall_transaction_state(int tid, TransactionState* t){
-	//Rwlock: write
+int IPCManager_::add_syscall_transaction_state(SyscallTransState* t){
+
+	//Lock
+	rina::WriteScopedLock writelock(trans_rwlock);
 
 	//Check if exists already
-	if ( pend_sys_trans.find(tid) != pend_sys_trans.end() ){
+	if ( pend_sys_trans.find(t->tid) != pend_sys_trans.end() ){
 		assert(0); //Transaction id repeated
 		return -1;
 	}
 
 	//Just add and return
 	try{
-		pend_sys_trans[tid] = t;
+		pend_sys_trans[t->tid] = t;
 	}catch(...){
 		LOG_DBG("Could not add syscall transaction %u. Out of memory?",
-									 tid);
+								 t->tid);
 		assert(0);
 		return -1;
 	}
@@ -1068,13 +1393,19 @@ int IPCManager_::add_syscall_transaction_state(int tid, TransactionState* t){
 }
 
 int IPCManager_::remove_syscall_transaction_state(int tid){
-	//Rwlock: write
+
+	SyscallTransState* t;
+
+	//Lock
+	rina::WriteScopedLock writelock(trans_rwlock);
 
 	//Check if it really exists
 	if ( pend_sys_trans.find(tid) == pend_sys_trans.end() )
 		return -1;
 
+	t = pend_sys_trans[tid];
 	pend_sys_trans.erase(tid);
+	delete t;
 
 	return 0;
 }
@@ -1091,8 +1422,8 @@ void IPCManager_::run(){
 
 	while(keep_running) {
 		event = rina::ipcEventProducer->eventTimedWait(
-						IPCMANAGER_TIMEOUT_S,
-						IPCMANAGER_TIMEOUT_NS);
+						IPCM_EVENT_TIMEOUT_S,
+						IPCM_EVENT_TIMEOUT_NS);
 		if(!event)
 			continue;
 
@@ -1106,8 +1437,6 @@ void IPCManager_::run(){
 		}
 
 		try {
-			//TODO: Locking?
-
 			switch(event->eventType){
 				case rina::FLOW_ALLOCATION_REQUESTED_EVENT:
 						flow_allocation_requested_event_handler(event);
@@ -1118,7 +1447,10 @@ void IPCManager_::run(){
 						break;
 
 				case rina::ALLOCATE_FLOW_RESPONSE_EVENT:
-						allocate_flow_response_event_handler(event);
+						{
+        					DOWNCAST_DECL(event, rina::AllocateFlowResponseEvent, e);
+						allocate_flow_response_event_handler(e);
+						}
 						break;
 
 				case rina::FLOW_DEALLOCATION_REQUESTED_EVENT:
@@ -1138,7 +1470,10 @@ void IPCManager_::run(){
 						break;
 
 				case rina::APPLICATION_REGISTRATION_REQUEST_EVENT:
-						application_registration_request_event_handler(event);
+						{
+        					DOWNCAST_DECL(event, rina::ApplicationRegistrationRequestEvent, e);
+						app_reg_req_handler(e);
+						}
 						break;
 
 				case rina::REGISTER_APPLICATION_RESPONSE_EVENT:
@@ -1162,7 +1497,10 @@ void IPCManager_::run(){
 						break;
 
 				case rina::ASSIGN_TO_DIF_RESPONSE_EVENT:
-						assign_to_dif_response_event_handler(event);
+						{
+        					DOWNCAST_DECL(event, rina::AssignToDIFResponseEvent, e);
+						assign_to_dif_response_event_handler(e);
+						}
 						break;
 
 				case rina::UPDATE_DIF_CONFIG_REQUEST_EVENT:
@@ -1170,7 +1508,10 @@ void IPCManager_::run(){
 						break;
 
 				case rina::UPDATE_DIF_CONFIG_RESPONSE_EVENT:
-						update_dif_config_response_event_handler(event);
+						{
+        					DOWNCAST_DECL(event, rina::UpdateDIFConfigurationResponseEvent, e);
+						update_dif_config_response_event_handler(e);
+						}
 						break;
 
 				case rina::ENROLL_TO_DIF_REQUEST_EVENT:
@@ -1178,11 +1519,17 @@ void IPCManager_::run(){
 						break;
 
 				case rina::ENROLL_TO_DIF_RESPONSE_EVENT:
-						enroll_to_dif_response_event_handler(event);
+						{
+        					DOWNCAST_DECL(event, rina::EnrollToDIFResponseEvent, e);
+						enroll_to_dif_response_event_handler(e);
+						}
 						break;
 
 				case rina::NEIGHBORS_MODIFIED_NOTIFICATION_EVENT:
-						neighbors_modified_notification_event_handler(event);
+						{
+        					DOWNCAST_DECL(event, rina::NeighborsModifiedNotificationEvent, e);
+						neighbors_modified_notification_event_handler(e);
+						}
 						break;
 
 				case rina::IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION:
@@ -1190,7 +1537,10 @@ void IPCManager_::run(){
 						break;
 
 				case rina::IPC_PROCESS_QUERY_RIB:
-						ipc_process_query_rib_handler(event);
+						{
+						DOWNCAST_DECL(event, rina::QueryRIBResponseEvent, e);
+						ipc_process_query_rib_handler(e);
+						}
 						break;
 
 				case rina::GET_DIF_PROPERTIES:
@@ -1206,23 +1556,38 @@ void IPCManager_::run(){
 						break;
 
 				case rina::IPCM_REGISTER_APP_RESPONSE_EVENT:
-						ipcm_register_app_response_event_handler(event);
+						{
+        					DOWNCAST_DECL(event, rina::IpcmRegisterApplicationResponseEvent, e);
+						app_reg_response_handler(e);
+						}
 						break;
 
 				case rina::IPCM_UNREGISTER_APP_RESPONSE_EVENT:
-						ipcm_unregister_app_response_event_handler(event);
+						{
+        					DOWNCAST_DECL(event, rina::IpcmUnregisterApplicationResponseEvent, e);
+						unreg_app_response_handler(e);
+						}
 						break;
 
 				case rina::IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT:
-						ipcm_deallocate_flow_response_event_handler(event);
+						{
+        					DOWNCAST_DECL(event, rina::IpcmDeallocateFlowResponseEvent, e);
+						ipcm_deallocate_flow_response_event_handler(e);
+						}
 						break;
 
 				case rina::IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
-						ipcm_allocate_flow_request_result_handler(event);
+						{
+        					DOWNCAST_DECL(event, rina::IpcmAllocateFlowRequestResultEvent, e);
+						ipcm_allocate_flow_request_result_handler(e);
+						}
 						break;
 
 				case rina::QUERY_RIB_RESPONSE_EVENT:
-						query_rib_response_event_handler(event);
+						{
+						DOWNCAST_DECL(event, rina::QueryRIBResponseEvent, e);
+						query_rib_response_event_handler(e);
+						}
 						break;
 
 				case rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT:
@@ -1258,13 +1623,22 @@ void IPCManager_::run(){
 
 				//Policies
 				case rina::IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE:
-					ipc_process_set_policy_set_param_response_handler(event);
+					{
+        				DOWNCAST_DECL(event, rina::SetPolicySetParamResponseEvent, e);
+					ipc_process_set_policy_set_param_response_handler(e);
+					}
 					break;
 				case rina::IPC_PROCESS_SELECT_POLICY_SET_RESPONSE:
-					ipc_process_select_policy_set_response_handler(event);
+					{
+        				DOWNCAST_DECL(event, rina::SelectPolicySetResponseEvent, e);
+					ipc_process_select_policy_set_response_handler(e);
+					}
 					break;
 				case rina::IPC_PROCESS_PLUGIN_LOAD_RESPONSE:
-					ipc_process_plugin_load_response_handler(event);
+					{
+        				DOWNCAST_DECL(event, rina::PluginLoadResponseEvent, e);
+					ipc_process_plugin_load_response_handler(e);
+					}
 					break;
 			}
 
@@ -1285,9 +1659,9 @@ void IPCManager_::run(){
 
 	//Rwlock: write
 	for(it = ipcps.begin(); it != ipcps.end(); ++it){
-		if(destroy_ipcp(NULL, (*it)->ipcp_proxy_->id) < 0 ){
+		if(destroy_ipcp(NULL, (*it)->get_id()) < 0 ){
 			LOG_WARN("Warning could not destroy IPCP id: %d\n",
-								(*it)->ipcp_proxy_->id);
+								(*it)->get_id());
 		}
 	}
 }

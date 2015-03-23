@@ -1,5 +1,5 @@
 /*
- * Base class for an addon
+ * APP transaction states
  *
  *    Marc Sune <marc.sune (at) bisdn.de>
  *
@@ -18,8 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef __ADDON_H__
-#define __ADDON_H__
+#ifndef __APP_H__
+#define __APP_H__
 
 #include <assert.h>
 #include <cstdlib>
@@ -32,55 +32,44 @@
 #include <librina/ipc-manager.h>
 #include <librina/patterns.h>
 
-#include "ipcp.h"
+#include "ipcp-handlers.h"
 
 namespace rinad {
 
 /**
-* Addon base class
+* Standard APP related transaction state
 */
-class Addon{
+class APPregTransState: public IPCPTransState{
 
 public:
+	APPregTransState(const Addon* callee, int ipcp_id,
+			rina::ApplicationRegistrationRequestEvent* _req)
+				: IPCPTransState(callee, ipcp_id),
+						req(_req){};
+	virtual ~APPregTransState(){};
 
-	Addon(const std::string _name):name(_name){};
-	virtual ~Addon(){};
-
-	//
-	// Callback section
-	//
-
-#if 0
-	/**
-	* On an async call to IPCManager::create_ipcp(), this callback will be
-	* executed
-	*
-	* @param result 0 on success, -1 on failure
-	*/
-	virtual void callback_create_ipcp(const int result) const{
-		/* Do nothing */
-		(void)result;
-	};
-
-	/**
-	* On an async call to IPCManager::destroy_ipcp(), this callback will be
-	* executed
-	*
-	* @ret 0 on success, -1 on failure
-	*/
-	virtual void callback_destroy_ipcp(const int result) const{
-		/* Do nothing */
-		(void)result;
-	};
-
-#endif
-	/**
-	* Addon name
-	*/
-	std::string name;
-
+	//Request
+	rina::ApplicationRegistrationRequestEvent* req;
 };
 
+/**
+* APP unregister related transaction state
+*/
+class APPUnregTransState: public IPCPTransState{
+
+public:
+	APPUnregTransState(const Addon* callee, int ipcp_id,
+			rina::ApplicationUnregistrationRequestEvent* _req)
+				: IPCPTransState(callee, ipcp_id),
+						req(_req){};
+	virtual ~APPUnregTransState(){};
+
+	//Request
+	rina::ApplicationUnregistrationRequestEvent* req;
+
+	//APP identifier
+	int ipcp_id;
+};
 }//rinad namespace
 
-#endif  /* __ADDON_H__ */
+#endif  /* __APP_H__ */

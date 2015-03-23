@@ -325,9 +325,6 @@ public:
 	static const std::string error_deallocating_flow;
 	static const std::string error_querying_rib;
 
-	/** Rwlock */
-	rina::ReadWriteLockable rwlock;
-
 	IPCProcessProxy();
 	IPCProcessProxy(unsigned short id, unsigned int portId, pid_t pid, const std::string& type,
 			const ApplicationProcessNamingInformation& name);
