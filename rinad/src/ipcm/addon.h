@@ -77,7 +77,7 @@ public:
 	/**
 	* Addon name
 	*/
-	std::string name;
+	const std::string name;
 
 };
 
