@@ -27,6 +27,8 @@
 #include "du.h"
 #include "connection.h"
 
+struct ipcp_instance;
+
 enum ipcp_config_type {
         IPCP_CONFIG_UINT   = 1,
         IPCP_CONFIG_STRING,
@@ -124,11 +126,13 @@ struct ipcp_instance_data;
 
 struct ipcp_instance_ops {
         int  (* flow_allocate_request)(struct ipcp_instance_data * data,
+                                       struct ipcp_instance *      usr_ipcp,
                                        const struct name *         source,
                                        const struct name *         dest,
                                        const struct flow_spec *    flow_spec,
                                        port_id_t                   id);
         int  (* flow_allocate_response)(struct ipcp_instance_data * data,
+                                        struct ipcp_instance *      dest_usr_ipcp,
                                         port_id_t                   port_id,
                                         int                         result);
         int  (* flow_deallocate)(struct ipcp_instance_data * data,
@@ -158,6 +162,7 @@ struct ipcp_instance_ops {
                                        struct conn_policies *      cp_params);
 
         int      (* connection_update)(struct ipcp_instance_data * data,
+                                       struct ipcp_instance *      user_ipcp,
                                        port_id_t                   port_id,
                                        cep_id_t                    src_id,
                                        cep_id_t                    dst_id);
@@ -167,6 +172,7 @@ struct ipcp_instance_ops {
 
         cep_id_t
         (* connection_create_arrived)(struct ipcp_instance_data * data,
+                                      struct ipcp_instance *      user_ipcp,
                                       port_id_t                   port_id,
                                       address_t                   source,
                                       address_t                   dest,
@@ -174,11 +180,14 @@ struct ipcp_instance_ops {
                                       cep_id_t                    dst_cep_id,
                                       struct conn_policies *      cp_params);
 
-        int      (* flow_binding_ipcp)(struct ipcp_instance_data * data,
-                                       port_id_t                   port_id);
+        int      (* flow_binding_ipcp)(struct ipcp_instance_data * user_data,
+                                       port_id_t                   port_id,
+                                       struct ipcp_instance *      n1_ipcp);
 
-        int      (* flow_destroy)(struct ipcp_instance_data * data,
-                                  port_id_t                   port_id);
+        int      (* flow_unbinding_ipcp)(struct ipcp_instance_data * user_data,
+                                         port_id_t                   port_id);
+        int      (* flow_unbinding_user_ipcp)(struct ipcp_instance_data * user_data,
+                                              port_id_t                   port_id);
 
         int      (* sdu_enqueue)(struct ipcp_instance_data * data,
                                  port_id_t                   id,
@@ -225,6 +234,9 @@ struct ipcp_instance_ops {
         int (* select_policy_set)(struct ipcp_instance_data * data,
                                   const string_t * path,
                                   const string_t * ps_name);
+
+        int (* enable_write)(struct ipcp_instance_data * data, port_id_t id);
+        int (* disable_write)(struct ipcp_instance_data * data, port_id_t id);
 };
 
 /* FIXME: Should work on struct ipcp_instance, not on ipcp_instance_ops */

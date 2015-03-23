@@ -1547,7 +1547,7 @@ ApplicationRegistrationInformation * parseApplicationRegistrationInformation(
 	struct nla_policy attr_policy[ARIA_ATTR_MAX + 1];
 	attr_policy[ARIA_ATTR_APP_NAME].type = NLA_NESTED;
 	attr_policy[ARIA_ATTR_APP_NAME].minlen = 0;
-	attr_policy[ARIA_ATTR_APP_DIF_NAME].maxlen = 0;
+	attr_policy[ARIA_ATTR_APP_NAME].maxlen = 0;
 	attr_policy[ARIA_ATTR_APP_REG_TYPE].type = NLA_U32;
 	attr_policy[ARIA_ATTR_APP_REG_TYPE].minlen = 0;
 	attr_policy[ARIA_ATTR_APP_REG_TYPE].maxlen = 65535;

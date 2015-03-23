@@ -1,5 +1,5 @@
 package rina.messages;
-option java_package="rina.encoding.impl.googleprotobuf.policy";
+option optimize_for = LITE_RUNTIME;
 import "CommonMessages.proto";
 
 message policyDescriptor_t{											//Describes a policy

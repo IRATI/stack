@@ -1067,4 +1067,44 @@ void* WatchdogEncoder::decode(const rina::ObjectValueInterface * object_value) c
 	return result;
 }
 
+// Class AdataUnitEncoder
+// CLASS DataTransferConstantsEncoder
+const rina::SerializedObject* ADataObjectEncoder::encode(const void* object) {
+	rina::ADataObject *adata = (rina::ADataObject*) object;
+	rina::messages::a_data_t gpb_adata;
+
+	gpb_adata.set_sourceaddress(adata->source_address_);
+	gpb_adata.set_destaddress(adata->dest_address_);
+	gpb_adata.set_cdapmessage(adata->encoded_cdap_message_->message_,
+			adata->encoded_cdap_message_->size_);
+
+	int size = gpb_adata.ByteSize();
+	char *serialized_message = new char[size];
+	gpb_adata.SerializeToArray(serialized_message, size);
+	rina::SerializedObject *serialized_object =  new rina::SerializedObject(serialized_message,size);
+
+	return serialized_object;
+}
+
+void* ADataObjectEncoder::decode(
+	const rina::ObjectValueInterface * object_value) const {
+	rina::ADataObject *adata = new rina::ADataObject();
+	rina::messages::a_data_t gpb_adata;
+
+	rina::SerializedObject * serializedObject =
+			Encoder::get_serialized_object(object_value);
+
+	gpb_adata.ParseFromArray(serializedObject->message_, serializedObject->size_);
+
+	adata->source_address_ = gpb_adata.sourceaddress();
+	adata->dest_address_ = gpb_adata.destaddress();
+	char *cdap_message = new char[gpb_adata.cdapmessage().size()];
+	rina::SerializedObject * sr_message = new rina::SerializedObject(
+			cdap_message, gpb_adata.cdapmessage().size());
+	memcpy(cdap_message, gpb_adata.cdapmessage().data(), gpb_adata.cdapmessage().size());
+	adata->encoded_cdap_message_ = sr_message;
+
+	return (void*) adata;
+}
+
 }

@@ -14,11 +14,32 @@ createFlowAllocatorPs(IPCProcessComponent * context);
 extern "C" void
 destroyFlowAllocatorPs(IPolicySet * instance);
 
+extern "C" IPolicySet *
+createNamespaceManagerPs(IPCProcessComponent * context);
+
+extern "C" void
+destroyNamespaceManagerPs(IPolicySet * instance);
+
+extern "C" IPolicySet *
+createResourceAllocatorPs(IPCProcessComponent * context);
+
+extern "C" void
+destroyResourceAllocatorPs(IPolicySet * instance);
+
+extern "C" IPolicySet *
+createRoutingComponentPs(IPCProcessComponent * context);
+
+extern "C" void
+destroyRoutingComponentPs(IPolicySet * instance);
+
 extern "C" int
 init(IPCProcess * ipc_process, const std::string& plugin_name)
 {
         struct PsFactory sm_factory;
         struct PsFactory fa_factory;
+        struct PsFactory nsm_factory;
+        struct PsFactory ra_factory;
+        struct PsFactory rc_factory;
         int ret;
 
         sm_factory.plugin_name = plugin_name;
@@ -41,6 +62,39 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
         ret = ipc_process->psFactoryPublish(fa_factory);
         if (ret) {
                 return ret;
+        }
+
+        nsm_factory.plugin_name = plugin_name;
+        nsm_factory.name = "default";
+        nsm_factory.component = "namespace-manager";
+        nsm_factory.create = createNamespaceManagerPs;
+        nsm_factory.destroy = destroyNamespaceManagerPs;
+
+        ret = ipc_process->psFactoryPublish(nsm_factory);
+        if (ret) {
+                return ret;
+        }
+
+        ra_factory.plugin_name = plugin_name;
+        ra_factory.name = "default";
+        ra_factory.component = "resource-allocator";
+        ra_factory.create = createResourceAllocatorPs;
+        ra_factory.destroy = destroyResourceAllocatorPs;
+
+        ret = ipc_process->psFactoryPublish(ra_factory);
+        if (ret) {
+                return ret;
+        }
+
+        rc_factory.plugin_name = plugin_name;
+        rc_factory.name = "link-state";
+        rc_factory.component = "routing";
+        rc_factory.create = createRoutingComponentPs;
+        rc_factory.destroy = destroyRoutingComponentPs;
+
+        ret = ipc_process->psFactoryPublish(rc_factory);
+        if (ret) {
+        	return ret;
         }
 
         return 0;

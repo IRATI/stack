@@ -694,7 +694,7 @@ void ExtendedIPCManager::deallocatePortId(int portId) {
 
         return;
 #else
-        int result = syscallDeallocatePortId(portId);
+        int result = syscallDeallocatePortId(ipcProcessId, portId);
         if (result < 0) {
                 throw PortAllocationException();
         }
@@ -851,6 +851,13 @@ const std::string Connection::toString() {
         ss<<"; Flow user IPC Process id: "<<flowUserIpcProcessId<<std::endl;
         ss<<"Policies: "<<policies.toString();
         return ss.str();
+}
+
+/* CLASS ROUTING TABLE ENTRE */
+RoutingTableEntry::RoutingTableEntry(){
+	address = 0;
+	cost = 1;
+	qosId = 0;
 }
 
 /* CLASS PDU FORWARDING TABLE ENTRY */

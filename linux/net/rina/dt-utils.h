@@ -36,6 +36,9 @@ struct cwq *    cwq_create(void);
 struct cwq *    cwq_create_ni(void);
 int             cwq_destroy(struct cwq * q);
 
+bool            cwq_write_enable(struct cwq * queue);
+void            cwq_write_enable_set(struct cwq * queue,
+                                     bool         flag);
 int             cwq_push(struct cwq * q,
                          struct pdu * pdu);
 struct pdu *    cwq_pop(struct cwq * q);

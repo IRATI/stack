@@ -32,7 +32,7 @@
 
 struct sched_substate {
         int last_bucket;
-        struct rmt_queue * last_queue;
+        struct rfifo * last_queue;
 };
 
 struct sched_state {
@@ -64,7 +64,14 @@ default_rmt_q_monitor_policy_rx(struct rmt_ps * ps,
                                 struct rfifo *  queue)
 { }
 
+static struct rfifo *
+rmt_scheduling_policy_common(struct sched_substate * sss,
+                             struct rmt_n1_port * n1_port, bool restart)
+{ return restart ? n1_port->queue : NULL; }
+
+/* NOTE: To be used when rmt_n1_port struct has several queues */
 /* Round robin scheduler. */
+/*
 static struct rmt_queue *
 rmt_scheduling_policy_common(struct sched_substate * sss,
                              struct rmt_qmap * qmap, bool restart)
@@ -98,8 +105,8 @@ rmt_scheduling_policy_common(struct sched_substate * sss,
                 if (selected_queue) {
                         break;
                 } else {
-                        /* When the bucket changes we must invalidate
-                         * sss->last_queue. */
+                        // When the bucket changes we must invalidate
+                        // sss->last_queue.
                         sss->last_queue = NULL;
                 }
         }
@@ -112,26 +119,26 @@ rmt_scheduling_policy_common(struct sched_substate * sss,
 
         return selected_queue;
 }
+*/
 
-
-static struct rmt_queue *
+static struct rfifo *
 default_rmt_scheduling_policy_tx(struct rmt_ps * ps,
-                                 struct rmt_qmap * qmap,
+                                 struct rmt_n1_port * n1_port,
                                  bool restart)
 {
         struct sched_state * ss = ps->priv;
 
-        return rmt_scheduling_policy_common(&ss->tx, qmap, restart);
+        return rmt_scheduling_policy_common(&ss->tx, n1_port, restart);
 }
 
-static struct rmt_queue *
+static struct rfifo *
 default_rmt_scheduling_policy_rx(struct rmt_ps * ps,
-                                 struct rmt_qmap * qmap,
+                                 struct rmt_n1_port * n1_port,
                                  bool restart)
 {
         struct sched_state * ss = ps->priv;
 
-        return rmt_scheduling_policy_common(&ss->rx, qmap, restart);
+        return rmt_scheduling_policy_common(&ss->rx, n1_port, restart);
 }
 
 static int

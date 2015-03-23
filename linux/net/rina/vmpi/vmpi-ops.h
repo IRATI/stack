@@ -21,6 +21,8 @@
 #ifndef __VMPI_OPS_H__
 #define __VMPI_OPS_H__
 
+#include <linux/aio.h>
+
 typedef void (*vmpi_read_cb_t)(void *opaque, unsigned int channel,
                                const char *buffer, int len);
 
@@ -37,5 +39,8 @@ struct vmpi_ops {
 
 unsigned int vmpi_get_num_channels(void);
 unsigned int vmpi_get_max_payload_size(void);
+
+/* Use mutexes on the TX datapath (in place of spinlocks). */
+// #define VMPI_TX_MUTEX
 
 #endif  /* __VMPI_OPS_H__ */

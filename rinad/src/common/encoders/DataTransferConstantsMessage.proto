@@ -1,5 +1,5 @@
 package rina.messages;
-option java_package="rina.encoding.impl.googleprotobuf.datatransferconstants";
+option optimize_for = LITE_RUNTIME;
 
 message dataTransferConstants_t{					//Specifies the constants for EFCP to use
 	optional uint32 maxPDUSize = 1;					//The maximum size of a PDU, in bytes

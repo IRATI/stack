@@ -777,17 +777,9 @@ SerializedObject::SerializedObject(char* message, int size){
 }
 SerializedObject::~SerializedObject(){
         if (message_) {
-                delete message_;
+                delete[] message_;
                 message_ = 0;
         }
-}
-
-int SerializedObject::get_size() const {
-        return size_;
-}
-
-char* SerializedObject::get_message() const {
-        return message_;
 }
 
 /* INITIALIZATION OPERATIONS */

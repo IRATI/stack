@@ -2,6 +2,7 @@
  * Shim IPC process for hypervisors
  *
  *   Vincenzo Maffione <v.maffione@nextworks.it>
+ *   Leonardo Bergesio <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,12 +66,14 @@ enum channel_state {
 
 struct shim_hv_channel {
         /* Internal state associated to the channel. */
-        enum channel_state state;
+        enum channel_state   state;
         /* In ALLOCATED state, this is the port-id supported by the channel. */
-        port_id_t          port_id;
+        port_id_t            port_id;
         /* In PENDING or ALLOCATED state, this is the application that
            currently holds the channel. */
-        struct name        application_name;
+        struct name          application_name;
+        /* The user IPCP that uses this channel */
+        struct ipcp_instance *user_ipcp;
 };
 
 enum shim_hv_command {
@@ -266,6 +269,7 @@ shim_hv_send_deallocate(struct ipcp_instance_data *priv, unsigned int ch)
  */
 static int
 shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
+                              struct ipcp_instance      *user_ipcp,
                               const struct name *src_application,
                               const struct name *dst_application,
                               const struct flow_spec *fspec,
@@ -284,6 +288,7 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
         ASSERT(priv);
         ASSERT(src_application);
         ASSERT(dst_application);
+        ASSERT(user_ipcp);
 
         if (unlikely(!priv->assigned)) {
                 LOG_ERR("%s: IPC process not ready", __func__);
@@ -344,6 +349,7 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
         err = 0;
         priv->vmpi.channels[ch].state = CHANNEL_STATE_PENDING;
         priv->vmpi.channels[ch].port_id = port_id;
+        priv->vmpi.channels[ch].user_ipcp = user_ipcp;
         name_cpy(src_application, &priv->vmpi.channels[ch].application_name);
 
         LOG_DBGF("channel %d --> PENDING", ch);
@@ -355,13 +361,6 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
         rkfree(src_name);
  src_name_alloc:
         mutex_unlock(&priv->vc_lock);
-        if (err) {
-                /* The flow was allocated outside this module. Are we
-                 * in charge of deallocate it this method fails?
-                 */
-                if (kfa_flow_deallocate(priv->kfa, port_id))
-                        LOG_ERR("%s: kfa_flow_deallocate() failed", __func__);
-        }
 
         return err;
 }
@@ -371,14 +370,25 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
  */
 static int
 shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
+                               struct ipcp_instance      *user_ipcp,
                                port_id_t port_id, int result)
 {
         unsigned int ch;
-        int ret;
         int response = RESP_KO;
+        struct ipcp_instance * ipcp;
+
+        ASSERT(priv);
+        ASSERT(is_port_id_ok(port_id));
+
+        if (!user_ipcp) {
+                LOG_ERR("Wrong user_ipcp passed, bailing out");
+                kfa_port_id_release(priv->kfa, port_id);
+                return -1;
+        }
 
         if (unlikely(!priv->assigned)) {
                 LOG_ERR("%s: IPC process not ready", __func__);
+                kfa_port_id_release(priv->kfa, port_id);
                 return -ENOENT;
         }
 
@@ -389,6 +399,7 @@ shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
         if (!ch) {
                 LOG_ERR("%s: unknown port-id %d", __func__, port_id);
                 mutex_unlock(&priv->vc_lock);
+                kfa_port_id_release(priv->kfa, port_id);
                 return -1;
         }
 
@@ -400,25 +411,34 @@ shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
 
         if (result == 0) {
                 /* Positive response */
-                ret = kipcm_flow_commit(default_kipcm, priv->id, port_id);
-                if (ret) {
-                        LOG_ERR("%s: kipcm_flow_commit() failed", __func__);
+                ipcp = kipcm_find_ipcp(default_kipcm, priv->id);
+                if (!ipcp) {
+                        LOG_ERR("KIPCM could not retrieve this IPCP");
                         goto resp;
                 }
-
+                ASSERT(user_ipcp);
+                priv->vmpi.channels[ch].user_ipcp = user_ipcp;
+                ASSERT(user_ipcp->ops);
+                ASSERT(user_ipcp->ops->flow_binding_ipcp);
+                if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
+                                                      port_id,
+                                                      ipcp)) {
+                        LOG_ERR("Could not bind flow with user_ipcp");
+                        goto resp;
+                }
                 /* Let's do the transition to the ALLOCATED state. */
                 priv->vmpi.channels[ch].state = CHANNEL_STATE_ALLOCATED;
                 response = RESP_OK;
                 LOG_DBGF("channel %d --> ALLOCATED", ch);
         } else {
                 /* Negative response */
-                kfa_flow_deallocate(priv->kfa, port_id);
+                kfa_port_id_release(priv->kfa, port_id);
                 /* XXX The following call should be useless because of the last
                  * call.
                  */
-                kfa_port_id_release(priv->kfa, port_id);
                 priv->vmpi.channels[ch].state = CHANNEL_STATE_NULL;
                 priv->vmpi.channels[ch].port_id = port_id_bad();
+                priv->vmpi.channels[ch].user_ipcp = NULL;
                 name_fini(&priv->vmpi.channels[ch].application_name);
                 LOG_DBGF("channel %d --> NULL", ch);
         }
@@ -427,6 +447,8 @@ shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
 
         shim_hv_send_allocate_resp(priv, ch, response);
 
+        if (response != RESP_OK)
+                kfa_port_id_release(priv->kfa, port_id);
         return (response == RESP_OK) ? 0 : -1;
 }
 
@@ -436,6 +458,7 @@ shim_hv_flow_deallocate_common(struct ipcp_instance_data *priv,
 {
         int ret = 0;
         port_id_t port_id;
+        struct ipcp_instance * user_ipcp;
 
         if (!ch || ch >= vmpi_num_channels) {
                 LOG_ERR("%s: invalid channel %u", __func__, ch);
@@ -452,15 +475,17 @@ shim_hv_flow_deallocate_common(struct ipcp_instance_data *priv,
                 goto out;
         }
 
+        user_ipcp = priv->vmpi.channels[ch].user_ipcp;
+        if(user_ipcp) {
+                user_ipcp->ops->flow_unbinding_ipcp(user_ipcp->data,
+                                                    port_id);
+        }
         priv->vmpi.channels[ch].state = CHANNEL_STATE_NULL;
         priv->vmpi.channels[ch].port_id = port_id_bad();
+        priv->vmpi.channels[ch].user_ipcp = NULL;
         name_fini(&priv->vmpi.channels[ch].application_name);
         LOG_DBGF("channel %d --> NULL", ch);
 
-        ret = kfa_flow_deallocate(priv->kfa, port_id);
-        if (ret) {
-                LOG_ERR("%s: kfa_flow_deallocate() failed", __func__);
-        }
  out:
         if (locked)
                 mutex_unlock(&priv->vc_lock);
@@ -500,6 +525,28 @@ shim_hv_flow_deallocate(struct ipcp_instance_data *priv, port_id_t port_id)
         return ret;
 }
 
+static int shim_hv_unbind_user_ipcp(struct ipcp_instance_data * priv,
+                                    port_id_t                   port_id)
+{
+        unsigned int ch;
+
+        if (unlikely(!priv->assigned)) {
+                LOG_ERR("%s: IPC process not ready", __func__);
+                return -ENOENT;
+        }
+
+        mutex_lock(&priv->vc_lock);
+
+        ch = port_id_to_channel(priv, port_id);
+        if (ch)
+                priv->vmpi.channels[ch].user_ipcp = NULL;
+
+        mutex_unlock(&priv->vc_lock);
+
+        return 0;
+}
+
+
 /* Handler invoked when receiving an ALLOCATE_REQ message from the control
  * channel.
  */
@@ -513,6 +560,7 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
         port_id_t port_id;
         uint32_t ch;
         int err = -1;
+        struct ipcp_instance * ipcp, * user_ipcp;
 
         if (des_uint32(&msg, &ch, &len)) {
                 LOG_ERR("%s: truncated msg: while reading channel", __func__);
@@ -559,16 +607,28 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
                 goto dst_app;
         }
 
+        user_ipcp = kipcm_find_ipcp_by_name(default_kipcm,
+                                            dst_application);
+        if (!user_ipcp)
+                user_ipcp = kfa_ipcp_instance(priv->kfa);
+        ipcp = kipcm_find_ipcp(default_kipcm, priv->id);
+        if (!user_ipcp || !ipcp) {
+                LOG_ERR("Could not find required ipcps");
+                goto port_alloc;
+        }
+
         port_id = kfa_port_id_reserve(priv->kfa, priv->id);
         if (!is_port_id_ok(port_id)) {
                 LOG_ERR("%s: kfa_port_id_reserve() failed", __func__);
                 goto port_alloc;
         }
 
-        err = kfa_flow_create(priv->kfa, priv->id, port_id);
-        if (err) {
-                LOG_ERR("%s: kfa_flow_create() failed", __func__);
-                goto flow_alloc;
+        if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
+                LOG_DBG("This flow goes for an app");
+                if (kfa_flow_create(priv->kfa, port_id, ipcp)) {
+                        LOG_ERR("Could not create flow in KFA");
+                        goto flow_arrived;
+                }
         }
 
         err = kipcm_flow_arrived(default_kipcm, priv->id, port_id,
@@ -589,9 +649,6 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
         LOG_DBGF("channel %d --> PENDING", ch);
 
  flow_arrived:
-        if (err)
-                kfa_flow_deallocate(priv->kfa, port_id);
- flow_alloc:
         if (err)
                 kfa_port_id_release(priv->kfa, port_id);
  port_alloc:
@@ -618,6 +675,8 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
         uint8_t response;
         port_id_t port_id;
         int ret = -1;
+        struct ipcp_instance * ipcp;
+        struct ipcp_instance * user_ipcp;
 
         if (des_uint32(&msg, &ch, &len)) {
                 LOG_ERR("%s: truncated msg: while reading channel", __func__);
@@ -645,6 +704,8 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
                 goto out;
         }
         port_id = priv->vmpi.channels[ch].port_id;
+        user_ipcp = priv->vmpi.channels[ch].user_ipcp;
+        ASSERT(user_ipcp);
 
         if (response == RESP_OK) {
                 /* Everything is ok: Let's do the transition to the ALLOCATED
@@ -659,9 +720,19 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
                 wmb();
         }
 
-        ret = kipcm_flow_commit(default_kipcm, priv->id, port_id);
-        if (ret) {
-                LOG_ERR("%s: kipcm_flow_commit() failed", __func__);
+        ipcp = kipcm_find_ipcp(default_kipcm, priv->id);
+        if (!ipcp) {
+                LOG_ERR("KIPCM could not retrieve this IPCP");
+                response = RESP_KO;
+                goto resp_ko;
+        }
+        ASSERT(user_ipcp->ops);
+        ASSERT(user_ipcp->ops->flow_binding_ipcp);
+        if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
+                                              port_id,
+                                              ipcp)) {
+                LOG_ERR("Could not bind flow with user_ipcp");
+                response = RESP_KO;
                 goto resp_ko;
         }
 
@@ -677,11 +748,12 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
         if (ret || response == RESP_KO) {
                 priv->vmpi.channels[ch].state = CHANNEL_STATE_NULL;
                 priv->vmpi.channels[ch].port_id = port_id_bad();
+                priv->vmpi.channels[ch].user_ipcp = NULL;
                 name_fini(&priv->vmpi.channels[ch].application_name);
                 LOG_DBGF("channel %d --> NULL", ch);
-
-                if (kfa_flow_deallocate(priv->kfa, port_id))
-                        LOG_ERR("%s: kfa_flow_deallocate() failed", __func__);
+                kfa_port_id_release(priv->kfa, port_id);
+                user_ipcp->ops->flow_unbinding_ipcp(user_ipcp->data,
+                                                    port_id);
         }
  out:
         mutex_unlock(&priv->vc_lock);
@@ -704,6 +776,7 @@ static void shim_hv_handle_deallocate(struct ipcp_instance_data *priv,
 
         LOG_DBGF("received DEALLOCATE(ch = %d)", ch);
 
+        kfa_port_id_release(priv->kfa, priv->vmpi.channels[ch].port_id);
         shim_hv_flow_deallocate_common(priv, ch, 1);
 }
 
@@ -745,6 +818,7 @@ shim_hv_recv_callback(void *opaque, unsigned int ch, const char *data, int len)
         port_id_t port_id;
         struct sdu *sdu;
         struct buffer *buf;
+        struct shim_hv_channel channel;
         int ret = 0;
 
         if (unlikely(ch == 0)) {
@@ -766,7 +840,8 @@ shim_hv_recv_callback(void *opaque, unsigned int ch, const char *data, int len)
                 return;
         }
 
-        port_id = priv->vmpi.channels[ch].port_id;
+        channel = priv->vmpi.channels[ch];
+        port_id = channel.port_id;
 
         buf = buffer_create_from(data, len);
         if (unlikely(buf == NULL)) {
@@ -781,9 +856,13 @@ shim_hv_recv_callback(void *opaque, unsigned int ch, const char *data, int len)
                 return;
         }
 
-        ret = kfa_sdu_post(priv->kfa, port_id, sdu);
+        ASSERT(channel.user_ipcp->ops);
+        ASSERT(channel.user_ipcp->ops->sdu_enqueue);
+        ret = channel.user_ipcp->ops->sdu_enqueue(channel.user_ipcp->data,
+                                                  port_id,
+                                                  sdu);
         if (unlikely(ret)) {
-                LOG_ERR("%s: kfa_sdu_post() failed", __func__);
+                LOG_ERR("%s: sdu_enqueue() failed", __func__);
                 return;
         }
         LOG_DBGF("SDU received");
@@ -1036,7 +1115,8 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .flow_allocate_response    = shim_hv_flow_allocate_response,
         .flow_deallocate           = shim_hv_flow_deallocate,
         .flow_binding_ipcp         = NULL,
-        .flow_destroy              = NULL,
+        .flow_unbinding_ipcp       = NULL,
+        .flow_unbinding_user_ipcp  = shim_hv_unbind_user_ipcp,
 
         .application_register      = shim_hv_application_register,
         .application_unregister    = shim_hv_application_unregister,
@@ -1251,3 +1331,4 @@ module_exit(shim_hv_fini);
 MODULE_DESCRIPTION("RINA Shim IPC for Hypervisors");
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Vincenzo Maffione <v.maffione@nextworks.it>");
+MODULE_AUTHOR("Leonardo Bergesio  <leonardo.bergesio@i2cat.net>");

@@ -32,12 +32,13 @@
 namespace rinad {
 
 //Class Flow RIB Object
-FlowRIBObject::FlowRIBObject(IPCProcess * ipc_process,
-                             const std::string& object_name,
-                             const std::string& object_class,
-                             IFlowAllocatorInstance * flow_allocator_instance)
-    : SimpleSetMemberIPCPRIBObject(ipc_process, object_class, object_name,
-                                   flow_allocator_instance->get_flow())
+FlowRIBObject::FlowRIBObject(
+    IPCProcess * ipc_process, const std::string& object_name,
+    const std::string& object_class,
+    IFlowAllocatorInstance * flow_allocator_instance)
+    : SimpleSetMemberIPCPRIBObject(
+        ipc_process, object_class, object_name,
+        flow_allocator_instance->get_flow())
 {
   flow_allocator_instance_ = flow_allocator_instance;
 }
@@ -58,17 +59,17 @@ std::string FlowRIBObject::get_displayable_value()
 //Class Flow Set RIB Object
 FlowSetRIBObject::FlowSetRIBObject(IPCProcess * ipc_process,
                                    IFlowAllocator * flow_allocator)
-    : BaseIPCPRIBObject(ipc_process,
-                        EncoderConstants::FLOW_SET_RIB_OBJECT_CLASS,
-                        rina::objectInstanceGenerator->getObjectInstance(),
-                        EncoderConstants::FLOW_SET_RIB_OBJECT_NAME)
+    : BaseIPCPRIBObject(
+        ipc_process, EncoderConstants::FLOW_SET_RIB_OBJECT_CLASS,
+        rina::objectInstanceGenerator->getObjectInstance(),
+        EncoderConstants::FLOW_SET_RIB_OBJECT_NAME)
 {
   flow_allocator_ = flow_allocator;
 }
 
 void FlowSetRIBObject::remoteCreateObject(
-    void * object_value, const std::string& object_name, int invoke_id,
-    rina::CDAPSessionDescriptor * session_descriptor)
+    void * object_value, const std::string& object_name,
+    int invoke_id, rina::CDAPSessionDescriptor * session_descriptor)
 {
   flow_allocator_->createFlowRequestMessageReceived(
       (Flow *) object_value, object_name, invoke_id,
@@ -82,8 +83,10 @@ void FlowSetRIBObject::createObject(const std::string& objectClass,
   FlowRIBObject * flowRIBObject;
 
   void * fai = const_cast<void *>(objectValue);
-  flowRIBObject = new FlowRIBObject(ipc_process_, objectName, objectClass,
+  flowRIBObject = new FlowRIBObject(ipc_process_, objectName,
+                                    objectClass,
                                     (FlowAllocatorInstance *) fai);
+  add_child(flowRIBObject);
   rib_daemon_->addRIBObject(flowRIBObject);
 }
 
@@ -97,7 +100,8 @@ QoSCubeRIBObject::QoSCubeRIBObject(IPCProcess* ipc_process,
                                    const std::string& object_class,
                                    const std::string& object_name,
                                    const rina::QoSCube* cube)
-    : SimpleSetMemberIPCPRIBObject(ipc_process, object_class, object_name, cube)
+    : SimpleSetMemberIPCPRIBObject(ipc_process, object_class,
+                                   object_name, cube)
 {
 }
 
@@ -105,18 +109,20 @@ std::string QoSCubeRIBObject::get_displayable_value()
 {
   const rina::QoSCube * cube = (const rina::QoSCube *) get_value();
   std::stringstream ss;
-  ss << "Name: " << get_name() << "; Id: " << cube->id_;
+  ss << "Name: " << name_ << "; Id: " << cube->id_;
   ss << "; Jitter: " << cube->jitter_ << "; Delay: " << cube->delay_
      << std::endl;
   ss << "In oder delivery: " << cube->ordered_delivery_;
-  ss << "; Partial delivery allowed: " << cube->partial_delivery_ << std::endl;
+  ss << "; Partial delivery allowed: " << cube->partial_delivery_
+     << std::endl;
   ss << "Max allowed gap between SDUs: " << cube->max_allowable_gap_;
-  ss << "; Undetected bit error rate: " << cube->undetected_bit_error_rate_
-     << std::endl;
+  ss << "; Undetected bit error rate: "
+     << cube->undetected_bit_error_rate_ << std::endl;
   ss << "Average bandwidth (bytes/s): " << cube->average_bandwidth_;
-  ss << "; Average SDU bandwidth (bytes/s): " << cube->average_sdu_bandwidth_
-     << std::endl;
-  ss << "Peak bandwidth duration (ms): " << cube->peak_bandwidth_duration_;
+  ss << "; Average SDU bandwidth (bytes/s): "
+     << cube->average_sdu_bandwidth_ << std::endl;
+  ss << "Peak bandwidth duration (ms): "
+     << cube->peak_bandwidth_duration_;
   ss << "; Peak SDU bandwidth duration (ms): "
      << cube->peak_sdu_bandwidth_duration_ << std::endl;
   rina::ConnectionPolicies con = cube->efcp_policies_;
@@ -126,16 +132,16 @@ std::string QoSCubeRIBObject::get_displayable_value()
 
 //Class QoS Cube Set RIB Object
 QoSCubeSetRIBObject::QoSCubeSetRIBObject(IPCProcess * ipc_process)
-    : BaseIPCPRIBObject(ipc_process,
-                        EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS,
-                        rina::objectInstanceGenerator->getObjectInstance(),
-                        EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME)
+    : BaseIPCPRIBObject(
+        ipc_process, EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS,
+        rina::objectInstanceGenerator->getObjectInstance(),
+        EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME)
 {
 }
 
 void QoSCubeSetRIBObject::remoteCreateObject(
-    void * object_value, const std::string& object_name, int invoke_id,
-    rina::CDAPSessionDescriptor * session_descriptor)
+    void * object_value, const std::string& object_name,
+    int invoke_id, rina::CDAPSessionDescriptor * session_descriptor)
 {
   //TODO, depending on IEncoder
   (void) object_value;
@@ -152,6 +158,7 @@ void QoSCubeSetRIBObject::createObject(const std::string& objectClass,
   QoSCubeRIBObject * ribObject = new QoSCubeRIBObject(
       ipc_process_, objectClass, objectName,
       (const rina::QoSCube*) objectValue);
+  add_child(ribObject);
   rib_daemon_->addRIBObject(ribObject);
 }
 
@@ -161,11 +168,18 @@ void QoSCubeSetRIBObject::deleteObject(const void* objectValue)
     LOG_WARN("Object value should have been NULL");
   }
 
-  std::list<std::pair<std::string, const void *> > values;
-  get_children_value(values);
-  for (std::list<std::pair<std::string, const void *> >::iterator it = values
-      .begin(); it != values.end(); ++it) {
-    rib_daemon_->removeRIBObject(it->first);
+  std::list<std::string> childNames;
+  std::list<BaseRIBObject*>::const_iterator childrenIt;
+  std::list<std::string>::const_iterator namesIt;
+
+  for (childrenIt = get_children().begin();
+      childrenIt != get_children().end(); ++childrenIt) {
+    childNames.push_back((*childrenIt)->name_);
+  }
+
+  for (namesIt = childNames.begin(); namesIt != childNames.end();
+      ++namesIt) {
+    remove_child(*namesIt);
   }
 }
 
@@ -177,7 +191,7 @@ const void* QoSCubeSetRIBObject::get_value() const
 //Class Flow Allocator
 FlowAllocator::FlowAllocator()
 {
-  ipc_process_ = 0;
+  ipcp = 0;
   rib_daemon_ = 0;
   cdap_session_manager_ = 0;
   encoder_ = 0;
@@ -191,11 +205,11 @@ FlowAllocator::~FlowAllocator()
 
 void FlowAllocator::set_ipc_process(IPCProcess * ipc_process)
 {
-  ipc_process_ = ipc_process;
-  rib_daemon_ = ipc_process_->rib_daemon_;
-  encoder_ = ipc_process_->encoder_;
-  cdap_session_manager_ = ipc_process_->cdap_session_manager_;
-  namespace_manager_ = ipc_process_->namespace_manager_;
+  ipcp = ipc_process;
+  rib_daemon_ = ipcp->rib_daemon_;
+  encoder_ = ipcp->encoder_;
+  cdap_session_manager_ = ipcp->cdap_session_manager_;
+  namespace_manager_ = ipcp->namespace_manager_;
   populateRIB();
 }
 
@@ -205,14 +219,15 @@ void FlowAllocator::set_dif_configuration(
   //Create QoS cubes RIB objects
   std::list<rina::QoSCube*>::const_iterator it;
   std::stringstream ss;
-  const std::list<rina::QoSCube*>& cubes = dif_configuration.efcp_configuration_
-      .qos_cubes_;
+  const std::list<rina::QoSCube*>& cubes = dif_configuration
+      .efcp_configuration_.qos_cubes_;
   for (it = cubes.begin(); it != cubes.end(); ++it) {
     ss << EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME
        << EncoderConstants::SEPARATOR;
     ss << (*it)->name_;
-    rib_daemon_->createObject(EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS,
-                              ss.str(), (*it), 0);
+    rib_daemon_->createObject(
+        EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS, ss.str(), (*it),
+        0);
     ss.str(std::string());
     ss.clear();
   }
@@ -221,24 +236,26 @@ void FlowAllocator::set_dif_configuration(
 int FlowAllocator::select_policy_set(const std::string& path,
                                      const std::string& name)
 {
-  return select_policy_set_common(ipc_process_, "flow-allocator", path, name);
+  return select_policy_set_common(ipcp, "flow-allocator",
+                                  path, name);
 }
 
 int FlowAllocator::set_policy_set_param(const std::string& path,
                                         const std::string& name,
                                         const std::string& value)
 {
-  return set_policy_set_param_common(ipc_process_, path, name, value);
+  return set_policy_set_param_common(ipcp, path, name, value);
 }
 
 void FlowAllocator::populateRIB()
 {
   try {
-    BaseIPCPRIBObject * object = new FlowSetRIBObject(ipc_process_, this);
+    BaseIPCPRIBObject * object = new FlowSetRIBObject(ipcp,
+                                                      this);
     rib_daemon_->addRIBObject(object);
-    object = new QoSCubeSetRIBObject(ipc_process_);
+    object = new QoSCubeSetRIBObject(ipcp);
     rib_daemon_->addRIBObject(object);
-    object = new DataTransferConstantsRIBObject(ipc_process_);
+    object = new DataTransferConstantsRIBObject(ipcp);
     rib_daemon_->addRIBObject(object);
   } catch (Exception &e) {
     LOG_ERR("Problems adding object to the RIB : %s", e.what());
@@ -255,7 +272,7 @@ void FlowAllocator::createFlowRequestMessageReceived(
 
   unsigned int address = namespace_manager_->getDFTNextHop(
       flow->destination_naming_info);
-  myAddress = ipc_process_->get_address();
+  myAddress = ipcp->get_address();
   if (address == 0) {
     LOG_ERR(
         "The directory forwarding table returned no entries when looking up %s",
@@ -279,15 +296,13 @@ void FlowAllocator::createFlowRequestMessageReceived(
     LOG_DBG(
         "The destination application process is reachable through me. Assigning the local port-id %d to the flow",
         portId);
-    flowAllocatorInstance = new FlowAllocatorInstance(ipc_process_, this,
-                                                      cdap_session_manager_,
-                                                      portId);
+    flowAllocatorInstance = new FlowAllocatorInstance(
+    		ipcp, this, cdap_session_manager_, portId);
     flow_allocator_instances_.put(portId, flowAllocatorInstance);
 
     //TODO check if this operation throws an exception an react accordingly
-    flowAllocatorInstance->createFlowRequestMessageReceived(flow, object_name,
-                                                            invoke_id,
-                                                            underlyingPortId);
+    flowAllocatorInstance->createFlowRequestMessageReceived(
+        flow, object_name, invoke_id, underlyingPortId);
     return;
   }
 
@@ -303,17 +318,20 @@ void FlowAllocator::createFlowRequestMessageReceived(
   LOG_ERR("Missing code");
 }
 
-void FlowAllocator::replyToIPCManager(const rina::FlowRequestEvent& event,
-                                      int result)
+void FlowAllocator::replyToIPCManager(
+    const rina::FlowRequestEvent& event, int result)
 {
   try {
-    rina::extendedIPCManager->allocateFlowRequestResult(event, result);
+    rina::extendedIPCManager->allocateFlowRequestResult(event,
+                                                        result);
   } catch (Exception &e) {
-    LOG_ERR("Problems communicating with the IPC Manager Daemon: %s", e.what());
+    LOG_ERR("Problems communicating with the IPC Manager Daemon: %s",
+            e.what());
   }
 }
 
-void FlowAllocator::submitAllocateRequest(rina::FlowRequestEvent& event)
+void FlowAllocator::submitAllocateRequest(
+    rina::FlowRequestEvent& event)
 {
   int portId = 0;
   IFlowAllocatorInstance * flowAllocatorInstance;
@@ -330,9 +348,8 @@ void FlowAllocator::submitAllocateRequest(rina::FlowRequestEvent& event)
   }
 
   event.portId = portId;
-  flowAllocatorInstance = new FlowAllocatorInstance(ipc_process_, this,
-                                                    cdap_session_manager_,
-                                                    portId);
+  flowAllocatorInstance = new FlowAllocatorInstance(
+		  ipcp, this, cdap_session_manager_, portId);
   flow_allocator_instances_.put(portId, flowAllocatorInstance);
 
   try {
@@ -356,9 +373,11 @@ void FlowAllocator::processCreateConnectionResponseEvent(
 {
   IFlowAllocatorInstance * flowAllocatorInstance;
 
-  flowAllocatorInstance = flow_allocator_instances_.find(event.getPortId());
+  flowAllocatorInstance = flow_allocator_instances_.find(
+      event.getPortId());
   if (flowAllocatorInstance) {
-    flowAllocatorInstance->processCreateConnectionResponseEvent(event);
+    flowAllocatorInstance->processCreateConnectionResponseEvent(
+        event);
   } else {
     LOG_ERR(
         "Received create connection response event associated to unknown port-id %d",
@@ -395,14 +414,17 @@ void FlowAllocator::processCreateConnectionResultEvent(
 {
   IFlowAllocatorInstance * flowAllocatorInstance;
 
-  flowAllocatorInstance = flow_allocator_instances_.find(event.getPortId());
+  flowAllocatorInstance = flow_allocator_instances_.find(
+      event.getPortId());
   if (!flowAllocatorInstance) {
-    LOG_ERR("Problems looking for FAI at portId %d", event.getPortId());
+    LOG_ERR("Problems looking for FAI at portId %d",
+            event.getPortId());
     try {
       rina::extendedIPCManager->deallocatePortId(event.getPortId());
     } catch (Exception &e) {
-      LOG_ERR( "Problems requesting IPC Manager to deallocate port-id %d: %s",
-              event.getPortId(), e.what());
+      LOG_ERR(
+          "Problems requesting IPC Manager to deallocate port-id %d: %s",
+          event.getPortId(), e.what());
     }
   } else {
     flowAllocatorInstance->processCreateConnectionResultEvent(event);
@@ -414,17 +436,21 @@ void FlowAllocator::processUpdateConnectionResponseEvent(
 {
   IFlowAllocatorInstance * flowAllocatorInstance;
 
-  flowAllocatorInstance = flow_allocator_instances_.find(event.getPortId());
+  flowAllocatorInstance = flow_allocator_instances_.find(
+      event.getPortId());
   if (!flowAllocatorInstance) {
-    LOG_ERR("Problems looking for FAI at portId %d", event.getPortId());
+    LOG_ERR("Problems looking for FAI at portId %d",
+            event.getPortId());
     try {
       rina::extendedIPCManager->deallocatePortId(event.getPortId());
     } catch (Exception &e) {
-      LOG_ERR( "Problems requesting IPC Manager to deallocate port-id %d: %s",
-              event.getPortId(), e.what());
+      LOG_ERR(
+          "Problems requesting IPC Manager to deallocate port-id %d: %s",
+          event.getPortId(), e.what());
     }
   } else {
-    flowAllocatorInstance->processUpdateConnectionResponseEvent(event);
+    flowAllocatorInstance->processUpdateConnectionResponseEvent(
+        event);
   }
 }
 
@@ -433,34 +459,39 @@ void FlowAllocator::submitDeallocate(
 {
   IFlowAllocatorInstance * flowAllocatorInstance;
 
-  flowAllocatorInstance = flow_allocator_instances_.find(event.portId);
+  flowAllocatorInstance = flow_allocator_instances_.find(
+      event.portId);
   if (!flowAllocatorInstance) {
     LOG_ERR("Problems looking for FAI at portId %d", event.portId);
     try {
       rina::extendedIPCManager->deallocatePortId(event.portId);
     } catch (Exception &e) {
-      LOG_ERR( "Problems requesting IPC Manager to deallocate port-id %d: %s",
-              event.portId, e.what());
+      LOG_ERR(
+          "Problems requesting IPC Manager to deallocate port-id %d: %s",
+          event.portId, e.what());
     }
 
     try {
       rina::extendedIPCManager->notifyflowDeallocated(event, -1);
     } catch (Exception &e) {
-      LOG_ERR("Error communicating with the IPC Manager: %s", e.what());
+      LOG_ERR("Error communicating with the IPC Manager: %s",
+              e.what());
     }
   } else {
     flowAllocatorInstance->submitDeallocate(event);
     try {
       rina::extendedIPCManager->notifyflowDeallocated(event, 0);
     } catch (Exception &e) {
-      LOG_ERR("Error communicating with the IPC Manager: %s", e.what());
+      LOG_ERR("Error communicating with the IPC Manager: %s",
+              e.what());
     }
   }
 }
 
 void FlowAllocator::removeFlowAllocatorInstance(int portId)
 {
-  IFlowAllocatorInstance * fai = flow_allocator_instances_.erase(portId);
+  IFlowAllocatorInstance * fai = flow_allocator_instances_.erase(
+      portId);
   if (fai) {
     delete fai;
   }
@@ -472,16 +503,14 @@ std::list<rina::QoSCube*> FlowAllocator::getQoSCubes()
   std::list<rina::BaseRIBObject *> children;
 
   rina::BaseRIBObject * ribObject = 0;
-  ribObject = ipc_process_->rib_daemon_->readObject(
+  ribObject = ipcp->rib_daemon_->readObject(
       EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS,
       EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME);
-
   if (ribObject != 0) {
-    std::list<std::pair<std::string, const void *> > values;
-    ribObject->get_children_value(values);
-    for (std::list<std::pair<std::string, const void *> >::iterator it = values
-        .begin(); it != values.end(); ++it) {
-      qosCubes.push_back((rina::QoSCube *) it->second);
+    children = ribObject->get_children();
+    for (std::list<rina::BaseRIBObject *>::const_iterator it =
+        children.begin(); it != children.end(); ++it) {
+      qosCubes.push_back((rina::QoSCube *) (*it)->get_value());
     }
   }
 
@@ -491,7 +520,8 @@ std::list<rina::QoSCube*> FlowAllocator::getQoSCubes()
 //Class Flow Allocator Instance
 FlowAllocatorInstance::FlowAllocatorInstance(
     IPCProcess * ipc_process, IFlowAllocator * flow_allocator,
-    rina::CDAPSessionManagerInterface * cdap_session_manager, int port_id)
+    rina::CDAPSessionManagerInterface * cdap_session_manager,
+    int port_id)
 {
   initialize(ipc_process, flow_allocator, port_id);
   cdap_session_manager_ = cdap_session_manager;
@@ -500,9 +530,9 @@ FlowAllocatorInstance::FlowAllocatorInstance(
       port_id);
 }
 
-FlowAllocatorInstance::FlowAllocatorInstance(IPCProcess * ipc_process,
-                                             IFlowAllocator * flow_allocator,
-                                             int port_id)
+FlowAllocatorInstance::FlowAllocatorInstance(
+    IPCProcess * ipc_process, IFlowAllocator * flow_allocator,
+    int port_id)
 {
   initialize(ipc_process, flow_allocator, port_id);
   LOG_DBG(
@@ -512,21 +542,14 @@ FlowAllocatorInstance::FlowAllocatorInstance(IPCProcess * ipc_process,
 
 FlowAllocatorInstance::~FlowAllocatorInstance()
 {
-  if (flow_) {
-    delete flow_;
-  }
-  if (lock_) {
-    delete lock_;
-  }
-
-  if (timer_) {
-    delete timer_;
-  }
+  delete flow_;
+  delete lock_;
+  delete timer_;
 }
 
-void FlowAllocatorInstance::initialize(IPCProcess * ipc_process,
-                                       IFlowAllocator * flow_allocator,
-                                       int port_id)
+void FlowAllocatorInstance::initialize(
+    IPCProcess * ipc_process, IFlowAllocator * flow_allocator,
+    int port_id)
 {
   flow_allocator_ = flow_allocator;
   ipc_process_ = ipc_process;
@@ -562,7 +585,7 @@ unsigned int FlowAllocatorInstance::get_allocate_response_message_handle() const
   unsigned int t;
 
   {
-    rina::AccessGuard g(*lock_);
+    rina::ScopedLock g(*lock_);
     t = allocate_response_message_handle_;
   }
 
@@ -572,8 +595,9 @@ unsigned int FlowAllocatorInstance::get_allocate_response_message_handle() const
 void FlowAllocatorInstance::set_allocate_response_message_handle(
     unsigned int allocate_response_message_handle)
 {
-  rina::AccessGuard g(*lock_);
-  allocate_response_message_handle_ = allocate_response_message_handle;
+  rina::ScopedLock g(*lock_);
+  allocate_response_message_handle_ =
+      allocate_response_message_handle;
 }
 
 void FlowAllocatorInstance::submitAllocateRequest(
@@ -581,9 +605,10 @@ void FlowAllocatorInstance::submitAllocateRequest(
 {
   IFlowAllocatorPs * faps =
       dynamic_cast<IFlowAllocatorPs *>(flow_allocator_->ps);
-  rina::AccessGuard g(*lock_);
+  rina::ScopedLock g(*lock_);
 
   flow_request_event_ = event;
+
   flow_ = faps->newFlowRequest(ipc_process_, flow_request_event_);
 
   LOG_DBG("Generated flow object");
@@ -608,7 +633,8 @@ void FlowAllocatorInstance::submitAllocateRequest(
   flow_->source_port_id = port_id_;
   std::stringstream ss;
   ss << EncoderConstants::FLOW_SET_RIB_OBJECT_NAME;
-  ss << EncoderConstants::SEPARATOR << sourceAddress << "-" << port_id_;
+  ss << EncoderConstants::SEPARATOR << sourceAddress << "-"
+     << port_id_;
   object_name_ = ss.str();
   if (destinationAddress == sourceAddress) {
     // At the moment we don't support allocation of flows between applications at the
@@ -619,19 +645,22 @@ void FlowAllocatorInstance::submitAllocateRequest(
 
   //3 Request the creation of the connection(s) in the Kernel
   state = CONNECTION_CREATE_REQUESTED;
-  rina::kernelIPCProcess->createConnection(*(flow_->getActiveConnection()));
+  rina::kernelIPCProcess->createConnection(
+      *(flow_->getActiveConnection()));
   LOG_DBG(
       "Requested the creation of a connection to the kernel, for flow with port-id %d",
       port_id_);
 }
 
-void FlowAllocatorInstance::replyToIPCManager(rina::FlowRequestEvent & event,
-                                              int result)
+void FlowAllocatorInstance::replyToIPCManager(
+    rina::FlowRequestEvent & event, int result)
 {
   try {
-    rina::extendedIPCManager->allocateFlowRequestResult(event, result);
+    rina::extendedIPCManager->allocateFlowRequestResult(event,
+                                                        result);
   } catch (Exception &e) {
-    LOG_ERR("Problems communicating with the IPC Manager Daemon: %s", e.what());
+    LOG_ERR("Problems communicating with the IPC Manager Daemon: %s",
+            e.what());
   }
 }
 
@@ -690,15 +719,16 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(
     robject_value.complex_value_ = flow_;
 
     //6 Encode the flow object and send it to the destination IPC process
-    rib_daemon_->remoteCreateObject(EncoderConstants::FLOW_RIB_OBJECT_CLASS,
-                                    object_name_, robject_value, 0, remote_id,
-                                    this);
+    rib_daemon_->remoteCreateObject(
+        EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_,
+        robject_value, 0, remote_id, this);
 
     underlying_port_id_ = cdapSessions[0];
     state = MESSAGE_TO_PEER_FAI_SENT;
   } catch (Exception &e) {
-    LOG_ERR("Problems sending M_CREATE <Flow> CDAP message to neighbor: %s",
-            e.what());
+    LOG_ERR(
+        "Problems sending M_CREATE <Flow> CDAP message to neighbor: %s",
+        e.what());
     replyToIPCManager(flow_request_event_, -1);
     releaseUnlockRemove();
     return;
@@ -718,7 +748,8 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(
 
   lock_->lock();
 
-  LOG_DBG("Create flow request received: %s", flow->toString().c_str());
+  LOG_DBG("Create flow request received: %s",
+          flow->toString().c_str());
   flow_ = flow;
   if (flow_->destination_address == 0) {
     flow_->destination_address = ipc_process_->get_address();
@@ -736,7 +767,8 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(
   connection->setDestAddress(aux);
   connection->setDestCepId(connection->getSourceCepId());
   connection->setFlowUserIpcProcessId(
-      namespace_manager_->getRegIPCProcessId(flow_->destination_naming_info));
+      namespace_manager_->getRegIPCProcessId(
+          flow_->destination_naming_info));
   LOG_DBG("Target application IPC Process id is %d",
           connection->getFlowUserIpcProcessId());
 
@@ -758,8 +790,10 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(
       robject_value.complex_value_ = flow_;
 
       rib_daemon_->remoteCreateObjectResponse(
-          EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_, robject_value,
-          -1, "EncoderConstants::FLOW_RIB_OBJECT_CLASS", invoke_id_, remote_id);
+          EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_,
+          robject_value, -1,
+          "EncoderConstants::FLOW_RIB_OBJECT_CLASS", invoke_id_,
+          remote_id);
     } catch (Exception &e) {
       LOG_ERR("Problems sending CDAP message: %s", e.what());
     }
@@ -779,7 +813,8 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(
         "Requested the creation of a connection to the kernel to support flow with port-id %d",
         port_id_);
   } catch (Exception &e) {
-    LOG_ERR("Problems requesting a connection to the kernel: %s ", e.what());
+    LOG_ERR("Problems requesting a connection to the kernel: %s ",
+            e.what());
     releaseUnlockRemove();
     return;
   }
@@ -800,19 +835,21 @@ void FlowAllocatorInstance::processCreateConnectionResultEvent(
     return;
   }
 
-  if (event.getSourceCepId() < 0) {
+  if (event.sourceCepId < 0) {
     LOG_ERR("Create connection operation was unsuccessful: %d",
-            event.getSourceCepId());
+            event.sourceCepId);
     releaseUnlockRemove();
     return;
   }
 
   try {
+    flow_->getActiveConnection()->sourceCepId = event.sourceCepId;
     state = APP_NOTIFIED_OF_INCOMING_FLOW;
     allocate_response_message_handle_ = rina::extendedIPCManager
         ->allocateFlowRequestArrived(flow_->destination_naming_info,
                                      flow_->source_naming_info,
-                                     flow_->flow_specification, port_id_);
+                                     flow_->flow_specification,
+                                     port_id_);
     LOG_DBG(
         "Informed IPC Manager about incoming flow allocation request, got handle: %ud",
         allocate_response_message_handle_);
@@ -853,16 +890,18 @@ void FlowAllocatorInstance::submitAllocateResponse(
       robject_value.complex_value_ = flow_;
 
       rib_daemon_->remoteCreateObjectResponse(
-          EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_, robject_value,
-          0, "", invoke_id_, remote_id);
+          EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_,
+          robject_value, 0, "", invoke_id_, remote_id);
     } catch (Exception &e) {
-      LOG_ERR("Problems requesting RIB Daemon to send CDAP Message: %s",
-              e.what());
+      LOG_ERR(
+          "Problems requesting RIB Daemon to send CDAP Message: %s",
+          e.what());
 
       try {
         rina::extendedIPCManager->flowDeallocated(port_id_);
       } catch (Exception &e) {
-        LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+        LOG_ERR("Problems communicating with the IPC Manager: %s",
+                e.what());
       }
 
       releaseUnlockRemove();
@@ -871,8 +910,9 @@ void FlowAllocatorInstance::submitAllocateResponse(
 
     try {
       flow_->state = Flow::ALLOCATED;
-      rib_daemon_->createObject(EncoderConstants::FLOW_RIB_OBJECT_CLASS,
-                                object_name_, this, 0);
+      rib_daemon_->createObject(
+          EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_, this,
+          0);
     } catch (Exception &e) {
       LOG_WARN("Error creating Flow Rib object: %s", e.what());
     }
@@ -894,8 +934,9 @@ void FlowAllocatorInstance::submitAllocateResponse(
     robject_value.complex_value_ = flow_;
 
     rib_daemon_->remoteCreateObjectResponse(
-        EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_, robject_value,
-        -1, "Application rejected the flow", invoke_id_, remote_id);
+        EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_,
+        robject_value, -1, "Application rejected the flow",
+        invoke_id_, remote_id);
   } catch (Exception &e) {
     LOG_ERR("Problems requesting RIB Daemon to send CDAP Message: %s",
             e.what());
@@ -924,10 +965,11 @@ void FlowAllocatorInstance::processUpdateConnectionResponseEvent(
 
     try {
       flow_request_event_.portId = -1;
-      rina::extendedIPCManager->allocateFlowRequestResult(flow_request_event_,
-                                                          event.getResult());
+      rina::extendedIPCManager->allocateFlowRequestResult(
+          flow_request_event_, event.getResult());
     } catch (Exception &e) {
-      LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+      LOG_ERR("Problems communicating with the IPC Manager: %s",
+              e.what());
     }
 
     releaseUnlockRemove();
@@ -940,17 +982,20 @@ void FlowAllocatorInstance::processUpdateConnectionResponseEvent(
     rib_daemon_->createObject(EncoderConstants::FLOW_RIB_OBJECT_CLASS,
                               object_name_, this, 0);
   } catch (Exception &e) {
-    LOG_WARN( "Problems requesting the RIB Daemon to create a RIB object: %s",
-             e.what());
+    LOG_WARN(
+        "Problems requesting the RIB Daemon to create a RIB object: %s",
+        e.what());
   }
 
   state = FLOW_ALLOCATED;
 
   try {
     flow_request_event_.portId = port_id_;
-    rina::extendedIPCManager->allocateFlowRequestResult(flow_request_event_, 0);
+    rina::extendedIPCManager->allocateFlowRequestResult(
+        flow_request_event_, 0);
   } catch (Exception &e) {
-    LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+    LOG_ERR("Problems communicating with the IPC Manager: %s",
+            e.what());
   }
 
   lock_->unlock();
@@ -959,7 +1004,7 @@ void FlowAllocatorInstance::processUpdateConnectionResponseEvent(
 void FlowAllocatorInstance::submitDeallocate(
     const rina::FlowDeallocateRequestEvent& event)
 {
-  rina::AccessGuard g(*lock_);
+  rina::ScopedLock g(*lock_);
 
   (void) event;  // Stop compiler barfs
 
@@ -986,27 +1031,28 @@ void FlowAllocatorInstance::submitDeallocate(
         remote_id.address_ = flow_->source_address;
       }
 
-      rib_daemon_->remoteDeleteObject(EncoderConstants::FLOW_RIB_OBJECT_CLASS,
-                                      object_name_, 0, remote_id, 0);
+      rib_daemon_->remoteDeleteObject(
+          EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_, 0,
+          remote_id, 0);
       ;
     } catch (Exception &e) {
       LOG_ERR("Problems sending M_DELETE flow request: %s", e.what());
     }
 
     //3 Wait 2*MPL before tearing down the flow
-    TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(this,
-                                                                  object_name_,
-                                                                  true);
+    TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(
+        this, object_name_, true);
     timer_->scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
   } catch (Exception &e) {
-    LOG_ERR("Problems processing flow deallocation request: %s", +e.what());
+    LOG_ERR("Problems processing flow deallocation request: %s",
+            +e.what());
   }
 
 }
 
 void FlowAllocatorInstance::deleteFlowRequestMessageReceived()
 {
-  rina::AccessGuard g(*lock_);
+  rina::ScopedLock g(*lock_);
 
   if (state != FLOW_ALLOCATED) {
     LOG_ERR(
@@ -1020,9 +1066,8 @@ void FlowAllocatorInstance::deleteFlowRequestMessageReceived()
   state = WAITING_2_MPL_BEFORE_TEARING_DOWN;
 
   //3 Wait 2*MPL before tearing down the flow
-  TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(this,
-                                                                object_name_,
-                                                                true);
+  TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(
+      this, object_name_, true);
   timer_->scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
 
   //4 Inform IPC Manager
@@ -1078,16 +1123,18 @@ void FlowAllocatorInstance::createResponse(
 
   //Flow allocation unsuccessful
   if (result != 0) {
-    LOG_DBG( "Unsuccessful create flow response message received for flow %s",
-            object_name_.c_str());
+    LOG_DBG(
+        "Unsuccessful create flow response message received for flow %s",
+        object_name_.c_str());
 
     //Answer IPC Manager
     try {
       flow_request_event_.portId = -1;
-      rina::extendedIPCManager->allocateFlowRequestResult(flow_request_event_,
-                                                          result);
+      rina::extendedIPCManager->allocateFlowRequestResult(
+          flow_request_event_, result);
     } catch (Exception &e) {
-      LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+      LOG_ERR("Problems communicating with the IPC Manager: %s",
+              e.what());
     }
 
     releaseUnlockRemove();
@@ -1102,23 +1149,26 @@ void FlowAllocatorInstance::createResponse(
       Flow * receivedFlow = (Flow *) object_value;
       flow_->destination_port_id = receivedFlow->destination_port_id;
       flow_->getActiveConnection()->setDestCepId(
-          receivedFlow->getActiveConnection()->getDestCepId());
+          receivedFlow->getActiveConnection()->getSourceCepId());
 
       delete receivedFlow;
     }
     state = CONNECTION_UPDATE_REQUESTED;
-    rina::kernelIPCProcess->updateConnection(*(flow_->getActiveConnection()));
+    rina::kernelIPCProcess->updateConnection(
+        *(flow_->getActiveConnection()));
     lock_->unlock();
   } catch (Exception &e) {
-    LOG_ERR("Problems requesting kernel to update connection: %s", e.what());
+    LOG_ERR("Problems requesting kernel to update connection: %s",
+            e.what());
 
     //Answer IPC Manager
     try {
       flow_request_event_.portId = -1;
-      rina::extendedIPCManager->allocateFlowRequestResult(flow_request_event_,
-                                                          result);
+      rina::extendedIPCManager->allocateFlowRequestResult(
+          flow_request_event_, result);
     } catch (Exception &e) {
-      LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+      LOG_ERR("Problems communicating with the IPC Manager: %s",
+              e.what());
     }
 
     releaseUnlockRemove();
@@ -1140,15 +1190,16 @@ TearDownFlowTimerTask::TearDownFlowTimerTask(
 
 void TearDownFlowTimerTask::run()
 {
-  flow_allocator_instance_->destroyFlowAllocatorInstance(flow_object_name_,
-                                                         requestor_);
+  flow_allocator_instance_->destroyFlowAllocatorInstance(
+      flow_object_name_, requestor_);
 }
 
 //Class DatatransferConstantsRIBObject
 DataTransferConstantsRIBObject::DataTransferConstantsRIBObject(
     IPCProcess * ipc_process)
     : BaseIPCPRIBObject(
-        ipc_process, EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS,
+        ipc_process,
+        EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS,
         rina::objectInstanceGenerator->getObjectInstance(),
         EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME)
 {
@@ -1156,7 +1207,8 @@ DataTransferConstantsRIBObject::DataTransferConstantsRIBObject(
 }
 
 void DataTransferConstantsRIBObject::remoteReadObject(
-    int invoke_id, rina::CDAPSessionDescriptor * cdapSessionDescriptor)
+    int invoke_id,
+    rina::CDAPSessionDescriptor * cdapSessionDescriptor)
 {
   try {
     rina::RemoteProcessId remote_id;
@@ -1171,13 +1223,14 @@ void DataTransferConstantsRIBObject::remoteReadObject(
         EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME,
         robject_value, 0, "", invoke_id, false, remote_id);
   } catch (Exception &e) {
-    LOG_ERR("Problems generating or sending CDAP Message: %s", e.what());
+    LOG_ERR("Problems generating or sending CDAP Message: %s",
+            e.what());
   }
 }
 
 void DataTransferConstantsRIBObject::remoteCreateObject(
-    void * object_value, const std::string& object_name, int invoke_id,
-    rina::CDAPSessionDescriptor * session_descriptor)
+    void * object_value, const std::string& object_name,
+    int invoke_id, rina::CDAPSessionDescriptor * session_descriptor)
 {
   //Ignore, since Data Transfer Constants must be set before enrollment (via assign to DIF)
   (void) object_value;
@@ -1195,7 +1248,8 @@ void DataTransferConstantsRIBObject::createObject(
   writeObject(objectValue);
 }
 
-void DataTransferConstantsRIBObject::writeObject(const void* objectValue)
+void DataTransferConstantsRIBObject::writeObject(
+    const void* objectValue)
 {
   (void) objectValue;
 }
@@ -1208,8 +1262,9 @@ const void* DataTransferConstantsRIBObject::get_value() const
 
 std::string DataTransferConstantsRIBObject::get_displayable_value()
 {
-  rina::DataTransferConstants dtc = ipc_process_->get_dif_information()
-      .dif_configuration_.efcp_configuration_.data_transfer_constants_;
+  rina::DataTransferConstants dtc =
+      ipc_process_->get_dif_information().dif_configuration_
+          .efcp_configuration_.data_transfer_constants_;
   return dtc.toString();
 }
 
@@ -1221,7 +1276,8 @@ const rina::SerializedObject* FlowEncoder::encode(const void* object)
 
   // SourceNamingInfo
   gpf_flow.set_allocated_sourcenaminginfo(
-      Encoder::get_applicationProcessNamingInfo_t(flow->source_naming_info));
+      Encoder::get_applicationProcessNamingInfo_t(
+          flow->source_naming_info));
   // DestinationNamingInfo
   gpf_flow.set_allocated_destinationnaminginfo(
       Encoder::get_applicationProcessNamingInfo_t(
@@ -1235,10 +1291,10 @@ const rina::SerializedObject* FlowEncoder::encode(const void* object)
   //destinationAddress
   gpf_flow.set_destinationaddress(flow->destination_address);
   //connectionIds
-  for (std::list<rina::Connection*>::const_iterator it =
-      flow->connections.begin(); it != flow->connections.end(); ++it) {
-    rina::messages::connectionId_t *gpf_connection =
-        gpf_flow.add_connectionids();
+  for (std::list<rina::Connection*>::const_iterator it = flow
+      ->connections.begin(); it != flow->connections.end(); ++it) {
+    rina::messages::connectionId_t *gpf_connection = gpf_flow
+        .add_connectionids();
     //qosId
     gpf_connection->set_qosid((*it)->getQosId());
     //sourceCEPId
@@ -1247,7 +1303,8 @@ const rina::SerializedObject* FlowEncoder::encode(const void* object)
     gpf_connection->set_destinationcepid((*it)->getDestCepId());
   }
   //currentConnectionIdIndex
-  gpf_flow.set_currentconnectionidindex(flow->current_connection_index);
+  gpf_flow.set_currentconnectionidindex(
+      flow->current_connection_index);
   //state
   gpf_flow.set_state(flow->state);
   //qosParameters
@@ -1270,22 +1327,24 @@ const rina::SerializedObject* FlowEncoder::encode(const void* object)
   int size = gpf_flow.ByteSize();
   char *serialized_message = new char[size];
   gpf_flow.SerializeToArray(serialized_message, size);
-  rina::SerializedObject *serialized_object = new rina::SerializedObject(
-      serialized_message, size);
+  rina::SerializedObject *serialized_object =
+      new rina::SerializedObject(serialized_message, size);
 
   return serialized_object;
 }
 
-void* FlowEncoder::decode(const rina::ObjectValueInterface * object_value) const
+void* FlowEncoder::decode(
+    const rina::ObjectValueInterface * object_value) const
 {
   Flow *flow = new Flow();
   rina::Connection * connection;
   rina::messages::Flow gpf_flow;
 
-  rina::SerializedObject * serializedObject = Encoder::get_serialized_object(
-      object_value);
+  rina::SerializedObject * serializedObject =
+      Encoder::get_serialized_object(object_value);
 
-  gpf_flow.ParseFromArray(serializedObject->message_, serializedObject->size_);
+  gpf_flow.ParseFromArray(serializedObject->message_,
+                          serializedObject->size_);
 
   rina::ApplicationProcessNamingInformation *src_app =
       Encoder::get_ApplicationProcessNamingInformation(
@@ -1312,21 +1371,24 @@ void* FlowEncoder::decode(const rina::ObjectValueInterface * object_value) const
     connection->destAddress = flow->destination_address;
     flow->connections.push_back(connection);
   }
-  flow->current_connection_index = gpf_flow.currentconnectionidindex();
-  flow->state = static_cast<rinad::Flow::IPCPFlowState>(gpf_flow.state());
+  flow->current_connection_index =
+      gpf_flow.currentconnectionidindex();
+  flow->state =
+      static_cast<rinad::Flow::IPCPFlowState>(gpf_flow.state());
   rina::FlowSpecification *fs = Encoder::get_FlowSpecification(
       gpf_flow.qosparameters());
   flow->flow_specification = *fs;
   delete fs;
   fs = 0;
 
-  rina::ConnectionPolicies *conn_polc = Encoder::get_ConnectionPolicies(
-      gpf_flow.connectionpolicies());
+  rina::ConnectionPolicies *conn_polc =
+      Encoder::get_ConnectionPolicies(gpf_flow.connectionpolicies());
   flow->getActiveConnection()->setPolicies(*conn_polc);
   delete conn_polc;
   conn_polc = 0;
 
-  flow->access_control = const_cast<char*>(gpf_flow.accesscontrol().c_str());
+  flow->access_control = const_cast<char*>(gpf_flow.accesscontrol()
+      .c_str());
   flow->max_create_flow_retries = gpf_flow.maxcreateflowretries();
   flow->create_flow_retries = gpf_flow.createflowretries();
   flow->hop_count = gpf_flow.hopcount();

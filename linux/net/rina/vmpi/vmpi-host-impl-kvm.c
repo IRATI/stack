@@ -347,8 +347,10 @@ handle_guest_rx(struct vmpi_impl_info *vi)
                 VMPI_RING_INC(ring->np);
                 VMPI_RING_INC(ring->nr);
 
+#ifdef VMPI_TX_MUTEX
                 wake_up_interruptible_poll(&ring->wqh, POLLOUT |
                                            POLLWRNORM | POLLWRBAND);
+#endif
                 IFV(printk("pushed %d bytes in the RX ring\n", (int)len));
                 vi->stats->txres++;
 
@@ -746,10 +748,18 @@ vhost_mpi_poll(struct file *file, poll_table *wait)
          * Are there host resources for the guest to receive
          * (e.g. pending rx packets)?
          */
+#ifdef VMPI_TX_MUTEX
         mutex_lock(&write->lock);
+#else
+        spin_lock(&write->lock);
+#endif
         if (vmpi_ring_pending(write))
                 mask |= POLLIN | POLLRDNORM;
+#ifdef VMPI_TX_MUTEX
         mutex_unlock(&write->lock);
+#else
+        spin_unlock(&write->lock);
+#endif
 
         /*
          * Are there host resources for the guest to send

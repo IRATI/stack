@@ -113,11 +113,13 @@ namespace rina {
 
         /**
          * Wrappert of the deallocate port-is system call
+         * @param ipcProcessId The id of the IPC Process that is providing
+         * the flow
          * @param portId the port-id to be deallocated
          * @return 0 if everything was ok, negative number indicating error
          *         otherwise
          */
-        int syscallDeallocatePortId(int portId);
+        int syscallDeallocatePortId(unsigned short ipcProcessId, int portId);
 
 }
 

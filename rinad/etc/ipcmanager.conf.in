@@ -3,15 +3,7 @@
     "installationPath" : "@prefix@/bin",
     "libraryPath" : "@libdir@",
     "logPath" : "@localstatedir@/log",
-    "consolePort" : 32766,
-    "cdapTimeoutInMs" : 10000,
-    "enrollmentTimeoutInMs" : 10000,
-    "flowAllocatorTimeoutInMs" : 15000,
-    "watchdogPeriodInMs" : 60000,
-    "declaredDeadIntervalInMs" : 120000,
-    "neighborsEnrollerPeriodInMs" : 10000,
-    "maxEnrollmentRetries" : 3,
-    "lengthOfFlowQueues" : 10
+    "consolePort" : 32766
   },
   "applicationToDIFMappings" : [ {
     "encodedAppName" : "rina.utils.apps.echo.server-1--",
@@ -58,49 +50,52 @@
     	"maxPduLifetime" : 30
     },
     "qosCubes" : [ {
-         "name" : "unreliablewithflowcontrol",
-         "id" : 1, 
+		 "name" : "unreliablewithflowcontrol",
+         "id" : 1,
          "partialDelivery" : false,
-         "orderedDelivery" : false,
+         "orderedDelivery" : true,
          "efcpPolicies" : {
-           "dtcpPresent" : true,
-           "dtcpConfiguration" : {
-             "rtxControl" : false,
-             "flowControl" : true,
-             "flowControlConfig" : {
-               "rateBased" : false,
-               "windowBased" : true,
-               "windowBasedConfig" : {
-                 "maxClosedWindowQueueLength" : 200,
-                 "initialCredit" : 50
-               }
-             }
-           }
-         } 
+              "initialATimer" : 300,
+              "dtcpPresent" : true,
+              "dtcpConfiguration" : {
+                   "rtxControl" : false,
+                   "flowControl" : true,
+                   "flowControlConfig" : {
+                       "rateBased" : false,
+                       "windowBased" : true,
+                       "windowBasedConfig" : {
+                         "maxClosedWindowQueueLength" : 50,
+                         "initialCredit" : 50
+                        }
+                   }
+              }
+          } 
        }, { 
      	 "name" : "reliablewithflowcontrol",
-         "id" : 2, 
+         "id" : 2,
          "partialDelivery" : false,
-         "orderedDelivery" : false,
+         "orderedDelivery" : true,
+         "maxAllowableGap": 0,
          "efcpPolicies" : {
-           "dtcpPresent" : true,
-           "dtcpConfiguration" : {
-             "rtxControl" : true,
-             "rtxControlConfig" : {
-               "dataRxmsNmax" : 5,
-               "initialRtxTime" : 20
-             },
-             "flowControl" : true,
-             "flowControlConfig" : {
-               "rateBased" : false,
-               "windowBased" : true,
-               "windowBasedConfig" : {
-                 "maxClosedWindowQueueLength" : 200,
-                 "initialCredit" : 50
-               }
-             }
-           }
-         } 
+              "initialATimer" : 300,
+              "dtcpPresent" : true,
+              "dtcpConfiguration" : {
+                   "rtxControl" : true,
+                   "rtxControlConfig" : {
+                       "dataRxmsNmax" : 5,
+                       "initialRtxTime" : 1000
+                   },
+                   "flowControl" : true,
+                   "flowControlConfig" : {
+                       "rateBased" : false,
+                       "windowBased" : true,
+                       "windowBasedConfig" : {
+                         "maxClosedWindowQueueLength" : 50,
+                         "initialCredit" : 50
+               		    }
+             		}
+           	  }
+         }
      } ], 
      "knownIPCProcessAddresses" : [ {
     	 "apName" : "test1.IRATI",
@@ -132,6 +127,13 @@
           "waitUntilAgeIncrement" : 997, 
           "routingAlgorithm" : "Dijkstra"
         }
+     },
+     "enrollmentTaskConfiguration" : {
+        "enrollTimeoutInMs" : 10000,
+        "watchdogPeriodInMs" : 30000,
+        "declaredDeadIntervalInMs" : 120000,
+        "neighborsEnrollerPeriodInMs" : 30000,
+        "maxEnrollmentRetries" : 3
      }
   } ]
 }

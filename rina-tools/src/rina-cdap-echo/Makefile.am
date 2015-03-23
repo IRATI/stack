@@ -7,7 +7,10 @@
 bin_PROGRAMS                       =
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT =
 
-rina_cdap_echo_SOURCES  =			\
+rina_cdap_echo_SOURCES  =				\
+	cdap-echo-application.cc         cdap-echo-application.h		\
+	cdap-echo-server.cc              cdap-echo-server.h			\
+	cdap-echo-client.cc              cdap-echo-client.h			\
 	main.cc
 rina_cdap_echo_LDADD    = $(LIBRINA_LIBS) -lrt
 rina_cdap_echo_CPPFLAGS =			\

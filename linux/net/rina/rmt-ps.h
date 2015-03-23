@@ -45,10 +45,10 @@ struct rmt_ps {
         void (* rmt_q_monitor_policy_rx)(struct rmt_ps *,
                                  struct sdu *,
                                  struct rfifo *);
-        struct rmt_queue * (* rmt_scheduling_policy_tx)(struct rmt_ps *,
-                                        struct rmt_qmap *, bool restart);
-        struct rmt_queue * (* rmt_scheduling_policy_rx)(struct rmt_ps *,
-                                        struct rmt_qmap *, bool restart);
+        struct rfifo * (* rmt_scheduling_policy_tx)(struct rmt_ps *,
+                                        struct rmt_n1_port *, bool restart);
+        struct rfifo * (* rmt_scheduling_policy_rx)(struct rmt_ps *,
+                                        struct rmt_n1_port *, bool restart);
 
         /* Parametric policies. */
         int          max_q;

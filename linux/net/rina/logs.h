@@ -30,24 +30,32 @@
 /* The global logs prefix */
 #define __GPFX "rina-"
 
-#define __LOG(PFX, LVL, FMT, ARGS...)                                   \
-        do { printk(LVL __GPFX PFX ": " FMT "\n", ##ARGS); } while (0)
+#define __LOG(PFX, LVL, BAN, FMT, ARGS...)                                   \
+        do { printk(LVL __GPFX PFX "(" BAN "): " FMT "\n", ##ARGS); } while (0)
 
 /* Sorted by "urgency" (high to low) */
-#define LOG_EMERG(FMT, ARGS...) __LOG(RINA_PREFIX, KERN_EMERG,   FMT, ##ARGS)
-#define LOG_ALERT(FMT, ARGS...) __LOG(RINA_PREFIX, KERN_ALERT,   FMT, ##ARGS)
-#define LOG_CRIT(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_CRIT,    FMT, ##ARGS)
-#define LOG_ERR(FMT,   ARGS...) __LOG(RINA_PREFIX, KERN_ERR,     FMT, ##ARGS)
-#define LOG_WARN(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_WARNING, FMT, ##ARGS)
-#define LOG_NOTE(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_NOTICE,  FMT, ##ARGS)
-#define LOG_INFO(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_INFO,    FMT, ##ARGS)
+#define LOG_EMERG(FMT, ARGS...) __LOG(RINA_PREFIX, KERN_EMERG,      \
+                                      "EMER", FMT, ##ARGS)
+#define LOG_ALERT(FMT, ARGS...) __LOG(RINA_PREFIX, KERN_ALERT,      \
+                                      "ALRT", FMT, ##ARGS)
+#define LOG_CRIT(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_CRIT,       \
+                                      "CRIT", FMT, ##ARGS)
+#define LOG_ERR(FMT,   ARGS...) __LOG(RINA_PREFIX, KERN_ERR,        \
+                                      "ERR",  FMT, ##ARGS)
+#define LOG_WARN(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_WARNING,    \
+                                      "WARN", FMT, ##ARGS)
+#define LOG_NOTE(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_NOTICE,     \
+                                      "NOTE", FMT, ##ARGS)
+#define LOG_INFO(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_INFO,       \
+                                      "INFO", FMT, ##ARGS)
 
 #ifdef CONFIG_RINA_DEBUG
 #ifdef CONFIG_RINA_SUPPRESS_DEBUG_LOGS
 #warning Debugging logs WILL BE suppressed
 #define LOG_DBG(FMT,   ARGS...) do { } while (0)
 #else
-#define LOG_DBG(FMT,   ARGS...) __LOG(RINA_PREFIX, KERN_DEBUG,   FMT, ##ARGS)
+#define LOG_DBG(FMT,   ARGS...) __LOG(RINA_PREFIX, KERN_DEBUG,      \
+                                      "DBG", FMT, ##ARGS)
 #endif
 #else
 #define LOG_DBG(FMT,   ARGS...) do { } while (0)
