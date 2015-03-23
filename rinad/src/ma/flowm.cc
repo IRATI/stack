@@ -54,7 +54,7 @@ public:
 	*/
 	void notify(rina::IPCEvent** event){
 		//Do this in mutual exclusion
-		rina::AccessGuard lock(mutex);
+		rina::ScopedLock lock(mutex);
 
 		//Check if this event is for this worker
 		if(std::find(pend_events.begin(), pend_events.end(),
@@ -73,7 +73,7 @@ public:
 	rina::IPCEvent* waitForEvent(long seconds=0, long nanoseconds=0){
 
 		cond.timedwait(seconds, nanoseconds);
-		rina::AccessGuard lock(mutex);
+		rina::ScopedLock lock(mutex);
 		rina::IPCEvent* ev = *events.begin();
 		pend_events.pop_front();
 		return ev;
@@ -171,7 +171,7 @@ rina::Flow* ActiveWorker::allocateFlow(){
 	{
 		//we must do this in mutual exclusion to prevent a race cond.
 		//between the next call and the storing of the seqnum
-		rina::AccessGuard lock(mutex);
+	  rina::ScopedLock lock(mutex);
 
 		//Perform the flow allocation
 		seqnum = rina::ipcManager->requestFlowAllocationInDIF(
@@ -380,7 +380,7 @@ void FlowManager_::notify(rina::IPCEvent** event){
 
 	std::map<unsigned int, Worker*>::iterator it;
 	//TODO: use rwlock
-	rina::AccessGuard lock(mutex);
+	rina::ScopedLock lock(mutex);
 
 	for( it = workers.begin(); it!=workers.end(); ++it) {
 		//Notify current worker
@@ -406,7 +406,7 @@ unsigned int FlowManager_::spawnWorker(Worker** w){
 	std::stringstream msg;
 
 	//Scoped lock TODO use rwlock
-	rina::AccessGuard lock(mutex);
+	rina::ScopedLock lock(mutex);
 
 	if(!*w){
 		assert(0);
@@ -463,7 +463,7 @@ void FlowManager_::joinWorker(int id){
 	Worker* w = NULL;
 
 	//Scoped lock
-	rina::AccessGuard lock(mutex);
+	rina::ScopedLock lock(mutex);
 
 	if(workers.find(id) == workers.end()){
 		msg <<std::string("ERROR: Could not find the context of worker id: ")<<id<<std::endl;
