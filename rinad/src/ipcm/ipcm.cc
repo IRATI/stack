@@ -291,8 +291,7 @@ IPCManager_::list_ipcps(std::ostream& os)
 
 	os << "Current IPC processes:" << endl;
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
-		os << "    " << ipcps[i]->get_id() << ": " <<
-			ipcps[i]->get_name().toString() << "\n";
+		ipcps[i]->get_description(os);
 	}
 
 	return 0;

@@ -87,6 +87,30 @@ rina::FlowInformation IPCMIPCProcess::getPendingFlowOperation(unsigned int seqNu
 const rina::ApplicationProcessNamingInformation& IPCMIPCProcess::getDIFName() const
 { return dif_name_; }
 
+void IPCMIPCProcess::get_description(std::ostream& os) {
+	os << "    " << get_id() << " " <<
+				get_name().toString() << " ";
+	rina::ReadScopedLock readlock(rwlock);
+	switch (state_) {
+	case IPCM_IPCP_CREATED:
+		os << "CREATED";
+		break;
+	case IPCM_IPCP_INITIALIZED:
+		os << "INITIALIZED";
+		break;
+	case IPCM_IPCP_ASSIGN_TO_DIF_IN_PROGRESS:
+		os << "ASSIGN TO DIF IN PROGRESS";
+		break;
+	case IPCM_IPCP_ASSIGNED_TO_DIF:
+		os << "ASSIGNED TO DIF " << dif_name_.processName;
+		break;
+	default:
+		os << "UNKNOWN STATE";
+	}
+
+	os << "\n";
+}
+
 void IPCMIPCProcess::setInitialized()
 {
 	state_ = IPCM_IPCP_INITIALIZED;
