@@ -73,13 +73,13 @@ test_encoders_SOURCES  =			\
 test_encoders_CPPFLAGS = $(testsCPPFLAGS)
 test_encoders_LDADD    = $(testsLIBS)
 
-test_pduftg_SOURCES  =				\
+test_link_state_routing_SOURCES  =				\
 	test-link-state-routing.cc				\
 	components.cc	   components.h		\
 	events.cc          events.h		\
 	link-state-routing-ps.cc link-state-routing-ps.h
-test_pduftg_CPPFLAGS = $(testsCPPFLAGS)
-test_pduftg_LDADD    = $(testsLIBS)
+test_link_state_routing_CPPFLAGS = $(testsCPPFLAGS)
+test_link_state_routing_LDADD    = $(testsLIBS)
 
 check_PROGRAMS =				\
 	test-encoders				\
