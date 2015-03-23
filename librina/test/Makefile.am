@@ -105,10 +105,6 @@ test_cdap_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_cdap_CXXFLAGS = $(COMMONCXXFLAGS)
 test_cdap_LDFLAGS  = $(FUNCTIONALLDFLAGS)
 
-test_rib_SOURCES  = test-rib.cc
-test_rib_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src -w
-test_rib_LDFLAGS  = $(FUNCTIONALLDFLAGS)
-
 check_PROGRAMS =				\
 	test-01					\
 	test-02					\
@@ -118,8 +114,7 @@ check_PROGRAMS =				\
 	test-concurrency			\
 	test-syscalls				\
 	test-timer				\
-	test-cdap				\
-	test-rib
+	test-cdap				
 
 XFAIL_TESTS =					\
 	test-03
@@ -136,8 +131,7 @@ FUNCTIONAL_PASS_TESTS = \
 	test-concurrency \
 	test-syscalls \
 	test-timer \
-	test-cdap \
-	test-rib
+	test-cdap
 
 FUNCTIONAL_XFAIL_TESTS =
 
