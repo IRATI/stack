@@ -20,6 +20,7 @@
 // MA  02110-1301  USA
 //
 
+#include <climits>
 #include <ostream>
 #include <sstream>
 
@@ -780,6 +781,24 @@ SerializedObject::~SerializedObject(){
                 delete[] message_;
                 message_ = 0;
         }
+}
+
+//Class ConsecutiveUnsignedIntegerGenerator
+ConsecutiveUnsignedIntegerGenerator::ConsecutiveUnsignedIntegerGenerator() {
+	counter_ = 0;
+}
+
+unsigned int ConsecutiveUnsignedIntegerGenerator::next(){
+	unsigned int result = 0;
+	lock_.lock();
+	if (counter_ == UINT_MAX) {
+		counter_ = 0;
+	}
+	counter_++;
+	result = counter_;
+	lock_.unlock();
+
+	return result;
 }
 
 /* INITIALIZATION OPERATIONS */

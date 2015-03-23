@@ -299,10 +299,7 @@ public:
  * Encapsulates the state and operations that can be performed over
  * a single IPC Process (besides creation/destruction)
  */
-class IPCProcess {
-	/** The current information of the DIF where the IPC Process is assigned*/
-	DIFInformation difInformation;
-
+class IPCProcessProxy {
 public:
 	/** The identifier of the IPC Process, unique within the system */
 	unsigned short id;
@@ -319,47 +316,6 @@ public:
 	/** The name of the IPC Process */
 	ApplicationProcessNamingInformation name;
 
-	/** True if the IPC Process is initialized and can start processing operations*/
-	bool initialized;
-
-	/** True if the IPC Process is a member of the DIF, false otherwise */
-	bool difMember;
-
-	/** True if an assign to DIF operation is in process */
-	bool assignInProcess;
-
-	/** True if a configure operation is in process */
-	bool configureInProcess;
-
-	/** The configuration that is in progress to be setup */
-	DIFConfiguration newConfiguration;
-
-	/** The list of applications registered in this IPC Process */
-	std::list<ApplicationProcessNamingInformation> registeredApplications;
-
-	/** The map of pending registrations */
-	std::map<unsigned int, ApplicationProcessNamingInformation>
-	        pendingRegistrations;
-
-	/** The list of flows currently allocated in this IPC Process */
-	std::list<FlowInformation> allocatedFlows;
-
-	/** The map of pending flow operations */
-	std::map<unsigned int, FlowInformation> pendingFlowOperations;
-
-	/** The N-1 DIFs where this IPC Process is registered at */
-	std::list<ApplicationProcessNamingInformation> nMinusOneDIFs;
-
-	/** The list of neighbors of this IPC Process */
-	std::list<Neighbor> neighbors;
-
-	/** Return the information of a registration request */
-	ApplicationProcessNamingInformation getPendingRegistration(
-	                unsigned int seqNumber);
-
-	/** Return the information of a flow operation */
-	FlowInformation getPendingFlowOperation(unsigned int seqNumber);
-
 	static const std::string error_assigning_to_dif;
 	static const std::string error_update_dif_config;
 	static const std::string error_registering_app;
@@ -368,8 +324,9 @@ public:
 	static const std::string error_allocating_flow;
 	static const std::string error_deallocating_flow;
 	static const std::string error_querying_rib;
-	IPCProcess();
-	IPCProcess(unsigned short id, unsigned int portId, pid_t pid, const std::string& type,
+
+	IPCProcessProxy();
+	IPCProcessProxy(unsigned short id, unsigned int portId, pid_t pid, const std::string& type,
 			const ApplicationProcessNamingInformation& name);
 #ifndef SWIG
 	unsigned short getId() const;
@@ -379,16 +336,7 @@ public:
 	void setPortId(unsigned int portId);
 	pid_t getPid() const;
 	void setPid(pid_t pid);
-	bool isDIFMember() const;
-	void setDIFMember(bool difMember);
 #endif
-	const DIFInformation& getDIFInformation() const;
-	void setDIFInformation(const DIFInformation& difInformation);
-
-	/**
-	 * Invoked by the IPC Manager to set the IPC Process as initialized.
-	 */
-	void setInitialized();
 
 	/**
 	 * Invoked by the IPC Manager to make an existing IPC Process a member of a
@@ -399,19 +347,11 @@ public:
 	 * credentials, etc).
 	 *
 	 * @param difInformation The information of the DIF (name, type configuration)
+	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws AssignToDIFException if an error happens during the process
-	 * @returns the handle to the response message
 	 */
-	unsigned int assignToDIF(
-			const DIFInformation& difInformation);
-
-	/**
-	 * Update the internal data structures based on the result of the assignToDIF
-	 * operation
-	 * @param success true if the operation was successful, false otherwise
-	 * @throws AssignToDIFException if there was not an assingment operation ongoing
-	 */
-	void assignToDIFResult(bool success);
+	void assignToDIF(
+			const DIFInformation& difInformation, unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to modify the configuration of an existing IPC
@@ -419,20 +359,12 @@ public:
 	 * DIF membership, it just changes the configuration of the current DIF.
 	 *
 	 * @param difConfiguration The configuration of the DIF
+	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws UpdateDIFConfigurationException if an error happens during the process
-	 * @returns the handle to the response message
 	 */
-	unsigned int updateDIFConfiguration(
-	                const DIFConfiguration& difConfiguration);
-
-	/**
-	 * Update the internal data structures based on the result of the updateConfig
-	 * operation
-	 * @param success true if the operation was successful, false otherwise
-	 * @throws  UpdateDIFConfigurationException if there was no update config
-	 * operation ongoing
-	 */
-	void updateDIFConfigurationResult(bool success);
+	void updateDIFConfiguration(
+	                const DIFConfiguration& difConfiguration,
+	                unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to notify an IPC Process that he has been
@@ -464,12 +396,6 @@ public:
 			const ApplicationProcessNamingInformation& difName);
 
 	/**
-	 * Return the list of supporting DIFs where this IPC Process is registered at
-	 * @return
-	 */
-	std::list<ApplicationProcessNamingInformation> getSupportingDIFs();
-
-	/**
 	 * Invoked by the IPC Manager to trigger the enrollment of an IPC Process
 	 * in the system with a DIF, reachable through a certain N-1 DIF. The
 	 * operation blocks until the IPC Process has successfully enrolled or an
@@ -479,32 +405,13 @@ public:
 	 * @param supportingDifName The supporting DIF used to contact the DIF to
 	 * join
 	 * @param neighborName The name of the neighbor we're enrolling to
-	 * @returns the handle to the response message
+	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws EnrollException if the enrollment is unsuccessful
 	 */
-	unsigned int enroll(const ApplicationProcessNamingInformation& difName,
+	void enroll(const ApplicationProcessNamingInformation& difName,
 			const ApplicationProcessNamingInformation& supportingDifName,
-			const ApplicationProcessNamingInformation& neighborName);
-
-	/**
-	 * Add new neighbors of the IPC Process
-	 * operation
-	 * @param neighbors the new neighbors of the IPC Process
-	 */
-	void addNeighbors(const std::list<Neighbor>& neighbors);
-
-	/**
-	 * Remove existing neighbors of the IPC Process
-	 * @param neighbors the neighbors to be removed
-	 */
-	void removeNeighbors(const std::list<Neighbor>& neighbors);
-
-	/**
-	 * Returns the list of neighbors that this IPC Process is currently enrolled
-	 * to
-	 * @return
-	 */
-	std::list<Neighbor> getNeighbors();
+			const ApplicationProcessNamingInformation& neighborName,
+			unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to force an IPC Process to deallocate all the
@@ -525,49 +432,27 @@ public:
 	 * @param applicationName The name of the application to be registered
 	 * @param regIpcProcessId The id of the registered IPC process (0 if it
 	 * is an application)
+	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws IpcmRegisterApplicationException if an error occurs
-	 * @returns the handle to the response message
 	 */
-	unsigned int registerApplication(
+	void registerApplication(
 			const ApplicationProcessNamingInformation& applicationName,
-			unsigned short regIpcProcessId);
-
-	/**
-	 * Invoked by the IPC Manager to inform about the result of a registration
-	 * operation and update the internal data structures
-	 * @param sequenceNumber the handle associated to the pending registration
-	 * @param success true if success, false otherwise
-	 * @throws IpcmRegisterApplicationException if the pending registration
-	 * is not found
-	 */
-	void registerApplicationResult(unsigned int sequenceNumber, bool success);
-
-	/**
-	 * Return the list of applications registered in this IPC Process
-	 * @return
-	 */
-	std::list<ApplicationProcessNamingInformation> getRegisteredApplications();
+			unsigned short regIpcProcessId,
+			const ApplicationProcessNamingInformation& dif_name,
+			unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to unregister an application in a DIF through
 	 * an IPC Process.
 	 *
 	 * @param applicationName The name of the application to be unregistered
+	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws IpcmUnregisterApplicationException if an error occurs
-	 * @returns the handle to the response message
 	 */
-	unsigned int unregisterApplication(
-			const ApplicationProcessNamingInformation& applicationName);
-
-	/**
-	 * Invoked by the IPC Manager to inform about the result of an unregistration
-	 * operation and update the internal data structures
-	 * @param sequenceNumber the handle associated to the pending unregistration
-	 * @param success true if success, false otherwise
-	 * @throws IpcmUnregisterApplicationException if the pending unregistration
-	 * is not found
-	 */
-	void unregisterApplicationResult(unsigned int sequenceNumber, bool success);
+	void unregisterApplication(
+			const ApplicationProcessNamingInformation& applicationName,
+			const ApplicationProcessNamingInformation& dif_name,
+			unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to request an IPC Process the allocation of a
@@ -581,21 +466,10 @@ public:
 	 * flow
 	 * @param applicationPortId the port where the application that requested the
 	 * flow can be contacted
-	 * @returns the handle to the response message
+	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws AllocateFlowException if an error occurs
 	 */
-	unsigned int allocateFlow(const FlowRequestEvent& flowRequest);
-
-	/**
-	 * Invoked by the IPC Manager to inform about the result of an allocate
-	 * flow operation and update the internal data structures
-	 * @param sequenceNumber the handle associated to the pending allocation
-	 * @param success true if success, false otherwise
-	 * @param portId the portId assigned to the flow
-	 * @throws AllocateFlowException if the pending allocation
-	 * is not found
-	 */
-	void allocateFlowResult(unsigned int sequenceNumber, bool success, int portId);
+	void allocateFlow(const FlowRequestEvent& flowRequest, unsigned int opaque);
 
 	/**
 	 * Reply an IPC Process about the fate of a flow allocation request (wether
@@ -615,45 +489,13 @@ public:
 			int flowAcceptorIpcProcessId);
 
 	/**
-	 * Return the list of flows allocated by this IPC Process
-	 * @return
-	 */
-	std::list<FlowInformation> getAllocatedFlows();
-
-	/**
-	 * Get the information of the flow identified by portId
-         * @result will contain the flow identified by portId, if any
-	 * @return true if the flow is found, false otherwise
-	 */
-	bool getFlowInformation(int portId, FlowInformation& result);
-
-	/**
 	 * Tell the IPC Process to deallocate a flow
 	 * @param portId
+	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws IpcmDeallocateFlowException if there is an error during
 	 * the flow deallocation procedure
-	 * @returns the handle to the response message
 	 */
-	unsigned int deallocateFlow(int portId);
-
-	/**
-	 * Invoked by the IPC Manager to inform about the result of a deallocate
-	 * flow operation and update the internal data structures
-	 * @param sequenceNumber the handle associated to the pending allocation
-	 * @param success true if success, false otherwise
-	 * @throws IpcmDeallocateFlowException if the pending deallocation
-	 * is not found
-	 */
-	void deallocateFlowResult(unsigned int sequenceNumber, bool success);
-
-	/**
-	 * Invoked by the IPC Manager to notify that a flow has been remotely
-	 * deallocated, so that librina updates the internal data structures
-	 * @returns the information of the flow deallocated
-	 * @throws IpcmDeallocateFlowException if now flow with the given
-	 * portId is found
-	 */
-	FlowInformation flowDeallocated(int portId);
+	void deallocateFlow(int portId, unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to query a subset of the RIB of the IPC
@@ -666,12 +508,13 @@ public:
 	 * base object - that are affected by the query
 	 * @param filter An expression evaluated for each object, to determine
 	 * wether the object should be returned by the query
-	 * @returns the handle to the response message
+	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws QueryRIBException
 	 */
-	unsigned int queryRIB(const std::string& objectClass,
+	void queryRIB(const std::string& objectClass,
 			const std::string& objectName, unsigned long objectInstance,
-			unsigned int scope, const std::string& filter);
+			unsigned int scope, const std::string& filter,
+			unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to change a parameter value in a subcomponent
@@ -682,13 +525,14 @@ public:
          *             in dotted notation
          * @param name The name of the parameter to be changed
          * @value value The value of the parameter to be changed
+         * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws SetPolicySetParamException if an error happens during
          *         the process
-	 * @returns the handle to the response message
 	 */
-	unsigned int setPolicySetParam(const std::string& path,
+	void setPolicySetParam(const std::string& path,
                                        const std::string& name,
-                                       const std::string& value);
+                                       const std::string& value,
+                                       unsigned int oapque);
 
 	/**
 	 * Invoked by the IPC Manager to select a policy-set for a subcomponent
@@ -697,12 +541,13 @@ public:
 	 * @param path The path of the addressed subcomponent (cannot be a
          *             policy-set) in dotted notation
          * @param name The name of the policy-set to select
+         * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws SelectPolicySetException if an error happens during
          *         the process
-	 * @returns the handle to the response message
 	 */
-	unsigned int selectPolicySet(const std::string& path,
-                                     const std::string& name);
+	void selectPolicySet(const std::string& path,
+                         const std::string& name,
+                         unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to load or unload a plugin for an
@@ -711,21 +556,19 @@ public:
 	 * @param name The name of the plugin to be loaded or unloaded
          * @param load True if the plugin is to be loaded, false if the
          *             plugin is to be unloaded
+         * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws PluginLoadException if an error happens during
          *         the process
-	 * @returns the handle to the response message
 	 */
-	unsigned int pluginLoad(const std::string& name, bool load);
+	void pluginLoad(const std::string& name, bool load,
+			unsigned int opaque);
 };
 
 /**
  * Provides functions to create, destroy and list IPC processes in the
  * system. This class is a singleton.
  */
-class IPCProcessFactory: public Lockable {
-
-        /** The current IPC Processes in the system*/
-        std::map<unsigned short, IPCProcess*> ipcProcesses;
+class IPCProcessFactory {
 
 public:
         static const std::string unknown_ipc_process_error;
@@ -754,9 +597,10 @@ public:
          * @return a pointer to a data structure holding the IPC Process state
          * @throws CreateIPCProcessException if an error happens during the creation
          */
-        IPCProcess * create(
+        IPCProcessProxy * create(
                         const ApplicationProcessNamingInformation& ipcProcessName,
-                        const std::string& difType);
+                        const std::string& difType,
+                        unsigned short ipcProcessId);
 
         /**
          * Invoked by the IPC Manager to delete an IPC Process from the system. The
@@ -766,29 +610,8 @@ public:
          * @param ipcProcessId The identifier of the IPC Process to be destroyed
          * @throws DestroyIPCProcessException if an error happens during the operation execution
          */
-        void destroy(unsigned short ipcProcessId);
-
-        /**
-         * Returns a list to all the IPC Processes that are currently running in
-         * the system.
-         *
-         * @return list<IPCProcess *> A list of the IPC Processes in the system
-         */
-        std::vector<IPCProcess *> listIPCProcesses();
-
-        /**
-         * Returns a pointer to the IPCProcess identified by ipcProcessId
-         * @param ipcProcessId
-         * @return a pointer to an IPC Process or NULL if no IPC Process
-         * with the specified id is found
-         */
-        IPCProcess * getIPCProcess(unsigned short ipcProcessId);
+        void destroy(IPCProcessProxy* ipcp);
 };
-
-/**
- * Make IPC Process Factory singleton
- */
-extern Singleton<IPCProcessFactory> ipcProcessFactory;
 
 /**
  * Class to interact with application processes
@@ -835,17 +658,17 @@ public:
 	 * @param flowSpec
 	 * @param difName
 	 * @param portId
+	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws AppFlowArrivedException if something goes wrong or the application
 	 * doesn't accept the flow
-	 * @returns the handle to be able to identify the applicaiton response when
-	 * it arrives
 	 */
-	unsigned int flowRequestArrived(
+	void flowRequestArrived(
 			const ApplicationProcessNamingInformation& localAppName,
 			const ApplicationProcessNamingInformation& remoteAppName,
 			const FlowSpecification& flowSpec,
 			const ApplicationProcessNamingInformation& difName,
-			int portId);
+			int portId,
+			unsigned int opaque);
 
 	/**
 	 * Inform the application about the result of a flow deallocation operation

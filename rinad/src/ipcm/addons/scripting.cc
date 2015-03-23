@@ -1,7 +1,6 @@
 /*
- * Configuration reader for IPC Manager
+ * IPC Manager console
  *
- *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *    Vincenzo Maffione     <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -19,15 +18,44 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef __IPCM_CONFIGURATION_H__
-#define __IPCM_CONFIGURATION_H__
+#include <cstdlib>
+#include <iostream>
+#include <map>
+#include <vector>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <cstring>
+#include <cerrno>
+#include <sstream>
 
-#include <string>
+#define RINA_PREFIX     "ipcm.scripting"
+#include <librina/common.h>
+#include <librina/ipc-manager.h>
+#include <librina/logs.h>
+
+#include "rina-configuration.h"
+#include "../ipcm.h"
+#include "scripting.h"
+
+using namespace std;
 
 
 namespace rinad {
 
-bool parse_configuration(std::string& file_loc);
+void * script_function(void *opaque){
 
+	(void)opaque;
+
+        LOG_DBG("script starts");
+
+        IPCManager->apply_configuration();
+
+        LOG_DBG("script stops");
+
+        return NULL;
 }
-#endif  /* __IPCM_CONFIGURATION_H__ */
+
+
+}//namespace rinad

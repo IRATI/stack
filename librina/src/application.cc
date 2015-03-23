@@ -275,7 +275,7 @@ unsigned int IPCManager::internalRequestFlowAllocation(
         message.setRequestMessage(true);
 
         try{
-                rinaManager->sendMessage(&message);
+                rinaManager->sendMessage(&message, true);
         }catch(NetlinkException &e){
                 throw FlowAllocationException(e.what());
         }
@@ -313,7 +313,7 @@ unsigned int IPCManager::internalRequestFlowAllocationInDIF(
         message.setRequestMessage(true);
 
         try{
-                rinaManager->sendMessage(&message);
+                rinaManager->sendMessage(&message, true);
         }catch(NetlinkException &e){
                 throw FlowAllocationException(e.what());
         }
@@ -342,7 +342,7 @@ Flow * IPCManager::internalAllocateFlowResponse(
         responseMessage.setSequenceNumber(flowRequestEvent.sequenceNumber);
         responseMessage.setResponseMessage(true);
         try{
-                rinaManager->sendMessage(&responseMessage);
+                rinaManager->sendMessage(&responseMessage, false);
         }catch(NetlinkException &e){
                 throw FlowAllocationException(e.what());
         }
@@ -377,7 +377,7 @@ unsigned int IPCManager::getDIFProperties(
 	message.setRequestMessage(true);
 
 	try{
-		rinaManager->sendMessage(&message);
+		rinaManager->sendMessage(&message, true);
 	}catch(NetlinkException &e){
 		throw GetDIFPropertiesException(e.what());
 	}
@@ -397,7 +397,7 @@ unsigned int IPCManager::requestApplicationRegistration(
 	message.setRequestMessage(true);
 
 	try{
-	        rinaManager->sendMessage(&message);
+	        rinaManager->sendMessage(&message, true);
 	}catch(NetlinkException &e){
 	        throw ApplicationRegistrationException(e.what());
 	}
@@ -501,7 +501,7 @@ unsigned int IPCManager::requestApplicationUnregistration(
 	message.setRequestMessage(true);
 
 	try{
-	        rinaManager->sendMessage(&message);
+	        rinaManager->sendMessage(&message, true);
 	}catch(NetlinkException &e){
 	        unlock();
 	        throw ApplicationUnregistrationException(e.what());
@@ -659,7 +659,7 @@ unsigned int IPCManager::requestFlowDeallocation(int portId) {
 	message.setRequestMessage(true);
 
 	try{
-	        rinaManager->sendMessage(&message);
+	        rinaManager->sendMessage(&message, true);
 	}catch(NetlinkException &e){
 	        unlock();
 	        throw FlowDeallocationException(e.what());

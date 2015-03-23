@@ -603,6 +603,14 @@ private:
         void initialize(const SerializedObject& other );
 };
 
+class ConsecutiveUnsignedIntegerGenerator {
+public:
+	ConsecutiveUnsignedIntegerGenerator();
+	unsigned int next();
+	unsigned int counter_;
+	Lockable lock_;
+};
+
 /**
  * Thrown when there are problems initializing librina
  */
