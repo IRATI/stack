@@ -54,6 +54,7 @@ void IPCManager_::ipc_process_daemon_initialized_event_handler(
 		//Notify
 		trans = get_syscall_transaction_state(e->ipcProcessId);
 		trans->completed(0);
+		trans->signal();
 	}else{
 		//Do nothing (we are the first ones)
 	};
