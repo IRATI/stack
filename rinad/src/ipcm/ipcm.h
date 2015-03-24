@@ -42,7 +42,9 @@
 
 
 //Constants
-#define PROMISE_RETRY_NSEC 1000000 //1ms
+#define PROMISE_TIMEOUT_S 5
+#define PROMISE_RETRY_NSEC 10000000 //1ms
+#define _PROMISE_1_SEC_NSEC 1000000000
 
 #ifndef DOWNCAST_DECL
 	// Useful MACRO to perform downcasts in declarations.
@@ -91,16 +93,22 @@ public:
 	// Wait (blocking)
 	//
 	ipcm_res_t wait(void){
+		unsigned int i;
 		// Due to the async nature of the API, notifications (signal)
 		// the transaction can well end before the thread is waiting
 		// in the condition variable. As apposed to sempahores
 		// pthread_cond don't keep the "credit"
-		while(ret != IPCM_PENDING){
+		for(i=0; i < PROMISE_TIMEOUT_S *
+				(_PROMISE_1_SEC_NSEC/ PROMISE_RETRY_NSEC) ;++i){
 			try{
+				if(ret != IPCM_PENDING)
+					return ret;
 				wait_cond.timedwait(0, PROMISE_RETRY_NSEC);
 			}catch(...){};
 		}
 
+		//hard timeout expired
+		ret = IPCM_FAILURE;
 		return ret;
 	};
 
