@@ -1372,6 +1372,17 @@ static const struct name * eth_vlan_ipcp_name(struct ipcp_instance_data * data)
         return data->name;
 }
 
+static int eth_vlan_query_rib(struct ipcp_instance_data * data,
+                 struct list_head *          entries,
+                 const string_t * object_class,
+                 const string_t * object_name,
+                 uint64_t object_instance,
+                 uint32_t scope,
+                 const string_t * filter) {
+	//TODO implement properly
+	return -1;
+}
+
 static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .flow_allocate_request     = eth_vlan_flow_allocate_request,
         .flow_allocate_response    = eth_vlan_flow_allocate_response,
@@ -1402,6 +1413,8 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .pft_remove                = NULL,
         .pft_dump                  = NULL,
         .pft_flush                 = NULL,
+
+        .query_rib				   = eth_vlan_query_rib,
 
         .ipcp_name                 = eth_vlan_ipcp_name,
 

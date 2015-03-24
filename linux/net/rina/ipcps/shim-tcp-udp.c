@@ -2401,6 +2401,17 @@ static const struct name * tcp_udp_ipcp_name(struct ipcp_instance_data * data)
         return data->name;
 }
 
+static int tcp_udp_query_rib(struct ipcp_instance_data * data,
+                 struct list_head *          entries,
+                 const string_t * object_class,
+                 const string_t * object_name,
+                 uint64_t object_instance,
+                 uint32_t scope,
+                 const string_t * filter) {
+	//TODO implement properly
+	return -1;
+}
+
 static struct ipcp_instance_ops tcp_udp_instance_ops = {
         .flow_allocate_request     = tcp_udp_flow_allocate_request,
         .flow_allocate_response    = tcp_udp_flow_allocate_response,
@@ -2431,6 +2442,8 @@ static struct ipcp_instance_ops tcp_udp_instance_ops = {
         .pft_remove                = NULL,
         .pft_dump                  = NULL,
         .pft_flush                 = NULL,
+
+        .query_rib				   = tcp_udp_query_rib,
 
         .ipcp_name                 = tcp_udp_ipcp_name,
 

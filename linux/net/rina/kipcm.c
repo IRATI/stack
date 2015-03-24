@@ -1302,6 +1302,7 @@ static int notify_ipcm_query_rib(void *             data,
 {
         struct kipcm *         kipcm;
         struct rnl_msg *       msg;
+        struct rnl_ipcm_query_rib_msg_attrs * attrs;
         struct ipcp_instance * ipc_process;
         ipc_process_id_t       ipc_id = 0;
         int                    result = -1;
@@ -1324,6 +1325,8 @@ static int notify_ipcm_query_rib(void *             data,
         if (!msg)
                 goto end;
 
+        attrs = msg->attrs;
+
         if (rnl_parse_msg(info, msg))
                 goto end;
 
@@ -1335,9 +1338,18 @@ static int notify_ipcm_query_rib(void *             data,
         }
 
         INIT_LIST_HEAD(&entries);
-        //TODO add query RIB operation to the IPC process interface
-        //for now just fail
-        result = -1;
+        if (ipc_process->ops->query_rib(ipc_process->data,
+        		&entries,
+        		attrs->object_class,
+        		attrs->object_name,
+        		attrs->object_instance,
+        		attrs->scope,
+        		attrs->filter)) {
+        	LOG_ERR("Could not query RIB, unsupported operation");
+        	goto end;
+        }
+
+        result = 0;
 
  end:
         return ipcm_query_rib_free_and_reply(msg,
