@@ -342,26 +342,28 @@ enum ipcm_unreg_app_resp_attrs_list {
 #define UNREG_APP_RESP_ERR_DESC_1 "FAILED"
 
 enum ipcm_query_rib_req_attrs_list {
-        IDQR_ATTR_OBJECT = 1,
-        IDQR_ATTR_SCOPE,
-        IDQR_ATTR_FILTER,
+		IDQR_ATTR_OBJECT_CLASS = 1,
+		IDQR_ATTR_OBJECT_NAME,
+		IDQR_ATTR_OBJECT_INSTANCE,
+		IDQR_ATTR_SCOPE,
+		IDQR_ATTR_FILTER,
         __IDQR_ATTR_MAX,
 };
 #define IDQR_ATTR_MAX (__IDQR_ATTR_MAX -1)
 
 enum rib_object_attrs_list {
-        RIBO_ATTR_OBJECT_CLASS = 1,
-        RIBO_ATTR_OBJECT_NAME,
-        RIBO_ATTR_OBJECT_INSTANCE,
-        __RIBO_ATTR_MAX,
+		RIBO_ATTR_OBJECT_CLASS = 1,
+		RIBO_ATTR_OBJECT_NAME,
+		RIBO_ATTR_OBJECT_INSTANCE,
+		RIBO_ATTR_OBJECT_DISPLAY_VALUE,
+		__RIBO_ATTR_MAX,
 };
 #define RIBO_ATTR_MAX (__RIBO_ATTR_MAX -1)
 
 enum ipcm_query_rib_resp_attrs_list {
-        IDQRE_ATTR_RESULT = 1,
-        IDQRE_ATTR_COUNT,
-        IDQRE_ATTR_RIB_OBJECTS,
-        __IDQRE_ATTR_MAX,
+		IDQRE_ATTR_RESULT = 1,
+		IDQRE_ATTR_RIB_OBJECTS,
+		__IDQRE_ATTR_MAX,
 };
 #define IDQRE_ATTR_MAX (__IDQRE_ATTR_MAX -1)
 
@@ -533,6 +535,7 @@ enum rnl_msg_attr_type {
         RNL_MSG_ATTRS_CONN_DESTROY_REQUEST,
         RNL_MSG_ATTRS_RMT_PFTE_MODIFY_REQUEST,
         RNL_MSG_ATTRS_RMT_PFT_DUMP_REQUEST,
+        RNL_MSG_ATTRS_QUERY_RIB_REQUEST,
         RNL_MSG_ATTRS_SET_POLICY_SET_PARAM_REQUEST,
         RNL_MSG_ATTRS_SELECT_POLICY_SET_REQUEST
 };
@@ -724,18 +727,6 @@ struct rnl_ipcm_unreg_app_resp_msg_attrs {
         uint_t result;
 };
 
-struct rnl_ipcm_query_rib_req_msg_attrs {
-        struct rib_object * rib_obj;
-        uint_t            scope;
-        string_t          * filter;
-};
-
-struct rnl_ipcm_query_rib_resp_msg_attrs {
-        uint_t            result;
-        uint_t            count;
-        struct rib_object * rib_objs;
-};
-
 struct rnl_rmt_mod_pfte_msg_attrs {
         int32_t   mode;
         struct list_head pft_entries;
@@ -744,6 +735,14 @@ struct rnl_rmt_mod_pfte_msg_attrs {
 struct rnl_rmt_dump_ft_reply_msg_attrs {
         uint_t           result;
         struct list_head pft_entries;
+};
+
+struct rnl_ipcm_query_rib_msg_attrs {
+        string_t * object_class;
+        string_t * object_name;
+        uint64_t   object_instance;
+        uint32_t   scope;
+        string_t * filter;
 };
 
 struct rnl_ipcp_set_policy_set_param_req_msg_attrs {
@@ -836,6 +835,12 @@ int rnl_ipcp_pft_dump_resp_msg(ipc_process_id_t   ipc_id,
                                struct list_head * entries,
                                rnl_sn_t           seq_num,
                                u32                nl_port_id);
+
+int rnl_ipcm_query_rib_resp_msg(ipc_process_id_t   ipc_id,
+                                int                result,
+                                struct list_head * entries,
+                                rnl_sn_t           seq_num,
+                                u32                nl_port_id);
 
 int rnl_set_policy_set_param_response(ipc_process_id_t id,
                                       uint_t           res,

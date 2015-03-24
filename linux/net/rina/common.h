@@ -149,11 +149,12 @@ enum rib_object_class_t {
         EMPTY,
 };
 
-/* FIXME: Remove rib_obj_ prefix, it's unneeded */
-struct rib_object {
-        enum rib_object_class_t rib_obj_class;
-        string_t *              rib_obj_name;
-        long unsigned int       rib_obj_instance;
+struct rib_object_entry {
+        string_t * 				class;
+        string_t *              name;
+        long unsigned int       instance;
+        string_t *				display_value;
+        struct list_head next;
 };
 
 struct pdu_ft_entry {

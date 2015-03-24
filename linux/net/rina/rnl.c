@@ -146,6 +146,7 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
 
 #define __NLA_INIT(TYPE, LEN) { .type = TYPE, .len = LEN }
 
+#define NLA_INIT_U64    __NLA_INIT(NLA_U64,    8)
 #define NLA_INIT_U32    __NLA_INIT(NLA_U32,    4)
 #define NLA_INIT_U16    __NLA_INIT(NLA_U16,    2)
 #define NLA_INIT_NESTED __NLA_INIT(NLA_NESTED, 0)
@@ -240,9 +241,11 @@ static struct nla_policy iuar_policy[IUAR_ATTR_MAX + 1] = {
 };
 
 static struct nla_policy idqr_policy[IDQR_ATTR_MAX + 1] = {
-        [IDQR_ATTR_OBJECT] = NLA_INIT_NESTED,
-        [IDQR_ATTR_SCOPE]  = NLA_INIT_U32,
-        [IDQR_ATTR_FILTER] = NLA_INIT_STRING,
+        [IDQR_ATTR_OBJECT_CLASS]    = NLA_INIT_STRING,
+        [IDQR_ATTR_OBJECT_NAME]     = NLA_INIT_STRING,
+        [IDQR_ATTR_OBJECT_INSTANCE] = NLA_INIT_U64,
+        [IDQR_ATTR_SCOPE]           = NLA_INIT_U32,
+        [IDQR_ATTR_FILTER] 			= NLA_INIT_STRING,
 };
 
 static struct nla_policy rmpfe_policy[RMPFE_ATTR_MAX + 1] = {

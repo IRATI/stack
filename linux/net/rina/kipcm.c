@@ -1275,6 +1275,79 @@ static int notify_ipcp_dump_pft(void *             data,
                                             info->snd_portid);
 }
 
+static int ipcm_query_rib_free_and_reply(struct rnl_msg *   msg,
+                                         ipc_process_id_t   ipc_id,
+                                         uint_t             result,
+                                         struct list_head * entries,
+                                         rnl_sn_t           seq_num,
+                                         u32                nl_port_id)
+{
+        rnl_msg_destroy(msg);
+
+        if (rnl_ipcm_query_rib_resp_msg(ipc_id,
+                                        result,
+                                        entries,
+                                        seq_num,
+                                        nl_port_id)) {
+                LOG_ERR("Could not send ipcm_query_rib_resp_msg");
+                return -1;
+        }
+
+        return 0;
+}
+
+static int notify_ipcm_query_rib(void *             data,
+                                struct sk_buff *   buff,
+                                struct genl_info * info)
+{
+        struct kipcm *         kipcm;
+        struct rnl_msg *       msg;
+        struct ipcp_instance * ipc_process;
+        ipc_process_id_t       ipc_id = 0;
+        int                    result = -1;
+        struct list_head       entries;
+
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
+
+        kipcm = (struct kipcm *) data;
+
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
+
+        ipc_id = 0;
+        msg    = rnl_msg_create(RNL_MSG_ATTRS_QUERY_RIB_REQUEST);
+        if (!msg)
+                goto end;
+
+        if (rnl_parse_msg(info, msg))
+                goto end;
+
+        ipc_id      = msg->header.dst_ipc_id;
+        ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+        if (!ipc_process) {
+                LOG_ERR("IPC process %d not found", ipc_id);
+                goto end;
+        }
+
+        INIT_LIST_HEAD(&entries);
+        //TODO add query RIB operation to the IPC process interface
+        //for now just fail
+        result = -1;
+
+ end:
+        return ipcm_query_rib_free_and_reply(msg,
+                                            ipc_id,
+                                            result,
+                                            &entries,
+                                            info->snd_seq,
+                                            info->snd_portid);
+}
+
 static int notify_ipcp_set_policy_set_param(void *             data,
                                             struct sk_buff *   buff,
                                             struct genl_info * info)
@@ -1461,6 +1534,8 @@ static int netlink_handlers_register(struct kipcm * kipcm)
                 notify_ipcp_modify_pfte;
         kipcm_handlers[RINA_C_RMT_DUMP_FT_REQUEST]                 =
                 notify_ipcp_dump_pft;
+        kipcm_handlers[RINA_C_IPCM_QUERY_RIB_REQUEST]      		   =
+        		notify_ipcm_query_rib;
         kipcm_handlers[RINA_C_IPCP_SET_POLICY_SET_PARAM_REQUEST]   =
                 notify_ipcp_set_policy_set_param;
         kipcm_handlers[RINA_C_IPCP_SELECT_POLICY_SET_REQUEST]      =
