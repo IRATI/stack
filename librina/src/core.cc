@@ -460,9 +460,6 @@ void * doNetlinkMessageReaderWork(void * arg)
       continue;
     }
 
-    LOG_DBG("Received Netlink message. %s ",
-            incomingMessage->toString().c_str());
-
     //Process the message
     if (incomingMessage->getOperationCode()
         == RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION) {
