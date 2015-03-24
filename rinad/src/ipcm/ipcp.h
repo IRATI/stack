@@ -89,6 +89,8 @@ public:
 	}
 	const rina::ApplicationProcessNamingInformation& getDIFName() const;
 
+	void get_description(std::ostream& os);
+
 	/**
 	 * Invoked by the IPC Manager to set the IPC Process as initialized.
 	 * This method is NOT thread safe and must be called with the writelock

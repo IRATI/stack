@@ -28,6 +28,7 @@
 
 #include "logs.h"
 #include "rds/rmem.h"
+#include "rds/rtimer.h"
 #include "dtp-ps.h"
 #include "dtp.h"
 #include "dtcp.h"
@@ -39,9 +40,10 @@
 static int
 default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
 {
-        struct dtp * dtp = ps->dm;
-        struct dt  *  dt;
-        struct dtcp * dtcp;
+        struct dtp *    dtp = ps->dm;
+        struct dt  *    dt;
+        struct dtcp *   dtcp;
+        struct rtimer * Stimer;
 
         if (!dtp) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -58,12 +60,10 @@ default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
 
 #if DTP_INACTIVITY_TIMERS_ENABLE
         /* Start SenderInactivityTimer */
-        if (dtcp &&
-            rtimer_restart(dtp->timers.sender_inactivity,
-                           3 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
+        Stimer = dtp_sender_inactivity_timer(dtp);
+        if (rtimer_restart(Stimer,
+                           3 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt))))
                 LOG_ERR("Failed to start sender_inactiviy timer");
-                return 0;
-        }
 #endif
         /* Post SDU to RMT */
         LOG_DBG("defaultTxPolicy - sending to rmt");
@@ -196,10 +196,13 @@ default_initial_sequence_number(struct dtp_ps * ps)
         }
 
         get_random_bytes(&seq_num, sizeof(seq_num_t));
-        nxt_seq_reset(dtp_dtp_sv(dtp), seq_num);
+        if (seq_num == 0)
+                seq_num = 1;
+        if (nxt_seq_reset(dtp_dtp_sv(dtp), seq_num))
+                return -1;
 
         LOG_DBG("initial_seq_number reset");
-        return seq_num;
+        return 0;
 }
 
 
@@ -209,8 +212,6 @@ default_receiver_inactivity_timer(struct dtp_ps * ps)
         struct dtp * dtp = ps->dm;
         struct dt *          dt;
         struct dtcp *        dtcp;
-        struct dtcp_config * cfg;
-        struct dtcp_ps * dtcp_ps;
 
         LOG_DBG("default_receiver_inactivity launched");
 
@@ -224,41 +225,11 @@ default_receiver_inactivity_timer(struct dtp_ps * ps)
         if (!dtcp)
                 return -1;
 
-        dt_sv_drf_flag_set(dt, true);
-        dtp_initial_sequence_number(dtp);
+        dtcp_rcv_rt_win_set(dtcp, 0);
+        dt_sv_rcv_lft_win_set(dt,0);
+        dtp_squeue_flush(dtp);
+        dtp_drf_required_set(dtp);
 
-        cfg = dtcp_config_get(dtcp);
-        if (!cfg)
-                return -1;
-
-        rcu_read_lock();
-        dtcp_ps = dtcp_ps_get(dtcp);
-
-        if (dtcp_ps->rtx_ctrl) {
-                struct rtxq * q;
-
-                q = dt_rtxq(dt);
-                if (!q) {
-                        LOG_ERR("Couldn't find the Retransmission queue");
-                        rcu_read_unlock();
-                        return -1;
-                }
-                rtxq_flush(q);
-        }
-        if (dtcp_ps->flow_ctrl) {
-                struct cwq * cwq;
-
-                cwq = dt_cwq(dt);
-                ASSERT(cwq);
-                if (cwq_flush(cwq)) {
-                        rcu_read_unlock();
-                        LOG_ERR("Coudln't flush cwq");
-                        return -1;
-                }
-        }
-        rcu_read_unlock();
-
-        /*FIXME: Missing sending the control ack pdu */
         return 0;
 }
 

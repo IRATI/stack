@@ -591,6 +591,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         uint_t        mfps, mfss;
         timeout_t     mpl, a, r = 0, tr = 0;
         struct dtp_ps * dtp_ps;
+        bool          dtcp_present;
 
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
@@ -654,16 +655,18 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
 
         rcu_read_lock();
         dtp_ps = dtp_ps_get(dtp);
-        if (dtp_ps->dtcp_present) {
+        /*a = msecs_to_jiffies(connection->policies_params->initial_a_timer); */
+        a = dtp_ps->initial_a_timer;
+        dtcp_present = dtp_ps->dtcp_present;
+        rcu_read_unlock();
+        if (dtcp_present) {
                 dtcp = dtcp_create(tmp->dt, connection, container->rmt);
                 if (!dtcp) {
-                        rcu_read_unlock();
                         efcp_destroy(tmp);
                         return cep_id_bad();
                 }
 
                 if (dt_dtcp_bind(tmp->dt, dtcp)) {
-                        rcu_read_unlock();
                         dtcp_destroy(dtcp);
                         efcp_destroy(tmp);
                         return cep_id_bad();
@@ -674,12 +677,10 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 cwq = cwq_create();
                 if (!cwq) {
                         LOG_ERR("Failed to create closed window queue");
-                        rcu_read_unlock();
                         efcp_destroy(tmp);
                         return cep_id_bad();
                 }
                 if (dt_cwq_bind(tmp->dt, cwq)) {
-                        rcu_read_unlock();
                         cwq_destroy(cwq);
                         efcp_destroy(tmp);
                         return cep_id_bad();
@@ -690,12 +691,10 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 rtxq = rtxq_create(tmp->dt, container->rmt);
                 if (!rtxq) {
                         LOG_ERR("Failed to create rexmsn queue");
-                        rcu_read_unlock();
                         efcp_destroy(tmp);
                         return cep_id_bad();
                 }
                 if (dt_rtxq_bind(tmp->dt, rtxq)) {
-                        rcu_read_unlock();
                         rtxq_destroy(rtxq);
                         efcp_destroy(tmp);
                         return cep_id_bad();
@@ -716,8 +715,6 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         mfps = container->config->dt_cons->max_pdu_size;
         mfss = container->config->dt_cons->max_pdu_size;
         mpl  = container->config->dt_cons->max_pdu_life;
-        /*a = msecs_to_jiffies(connection->policies_params->initial_a_timer); */
-        a = dtp_ps->initial_a_timer;
         if (dtcp && dtcp_rtx_ctrl(connection->policies_params->dtcp_cfg)) {
                 tr = dtcp_initial_tr(connection->policies_params->dtcp_cfg);
                 /* tr = msecs_to_jiffies(tr); */
@@ -732,7 +729,6 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
 
         if (dt_sv_init(tmp->dt, mfps, mfss, mpl, a, r, tr)) {
                 LOG_ERR("Could not init dt_sv");
-                rcu_read_unlock();
                 efcp_destroy(tmp);
                 return cep_id_bad();
         }
@@ -745,11 +741,9 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                                               ->dtcp_cfg),
                         a)) {
                 LOG_ERR("Could not init dtp_sv");
-                rcu_read_unlock();
                 efcp_destroy(tmp);
                 return cep_id_bad();
         }
-        rcu_read_unlock();
 
         /***/
 

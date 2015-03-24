@@ -1377,7 +1377,7 @@ static void receive_worker(unsigned long o)
                         sdu = (struct sdu *) rfifo_pop(queue);
                         if (!sdu) {
                                 LOG_DBG("No SDU to work with in this queue");
-                                break;;
+                                break;
                         }
 
                         atomic_dec(&entry->n_sdus);
@@ -1490,8 +1490,6 @@ static void receive_worker(unsigned long o)
                                 atomic_set(&entry->n_sdus, 0);
                         spin_lock(&tmp->ingress.n1_ports->lock);
                 }
-                spin_unlock(&tmp->ingress.n1_ports->lock);
-                spin_lock(&tmp->ingress.n1_ports->lock);
         }
 
         spin_unlock(&tmp->ingress.n1_ports->lock);
@@ -1554,7 +1552,7 @@ int rmt_receive(struct rmt * instance,
                 return -1;
         }
 
-        if (ps->max_q_policy_rx)
+        if (ps->rmt_scheduling_policy_rx)
                 queue = ps->rmt_scheduling_policy_rx(ps,
                                                      in_n1_port,
                                                      sched_restart);
