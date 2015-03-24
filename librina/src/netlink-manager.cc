@@ -179,8 +179,7 @@ void NetlinkManager::_sendMessage(BaseNetlinkMessage * message, struct nl_msg* n
                 throw NetlinkException(
                                 NetlinkException::error_sending_netlink_message);
         }
-        LOG_DBG("NL msg TX. %s", result,
-                        message->toString().c_str());
+        LOG_DBG("NL msg TX. %s", message->toString().c_str());
         //Cleanup
         nlmsg_free(netlinkMessage);
 }

@@ -549,7 +549,7 @@ static int netlink_notify_callback(struct notifier_block * nb,
         }
 
         //Only consider messages of the Generic Netlink protocol
-        if (notify->protocol != 16) {
+        if (notify->protocol != NETLINK_GENERIC) {
         	return NOTIFY_DONE;
         }
 

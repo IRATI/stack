@@ -137,14 +137,21 @@ void BaseNetlinkMessage::setResponseMessage(bool responseMessage) {
 
 const std::string BaseNetlinkMessage::toString(){
 	std::stringstream ss;
+	std::string type;
+	if (requestMessage) {
+		type = "Request";
+	} else if (responseMessage) {
+		type = "Response";
+	} else if (notificationMessage) {
+		type = "Notification";
+	}
+
 	ss << "Fam: " << family << "; Opcode: "
 			<< BaseNetlinkMessage::operationCodeToString(operationCode)
 			<< "; Sport: " << sourcePortId
 			<< "; Dport: " << destPortId
 			<< "; Seqnum: " << sequenceNumber
-			<< "; Req? " << requestMessage
-			<< "; Resp? " << responseMessage
-			<< "; Notif? " << notificationMessage
+			<< "; " << type
 			<< "; SIPCP: " << sourceIPCProcessId
 			<< "; DIPCP: " << destIPCProcessId;
 	return ss.str();
