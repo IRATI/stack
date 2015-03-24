@@ -306,24 +306,21 @@ std::string RIB::get_parent_name(const std::string child_name) const
 }
 
 /// Interface that provides the RIB Daemon API
-class RIBDaemon : public RIBDInterface
+class RIBDaemon : public RIBDNorthInterface, cdap::CDAPCallbackInterface
 {
  public:
   RIBDaemon(cacep::AppConHandlerInterface *app_con_callback,
-            ResponseHandlerInterface* app_resp_callbak,
-            const std::string &comm_protocol, cdap_rib::cdap_params_t *params,
-            const RIBSchema *schema);
+            ResponseHandlerInterface* app_resp_callback,
+            cdap_rib::cdap_params *params, const RIBSchema *schema);
   ~RIBDaemon();
   void open_connection_result(const cdap_rib::con_handle_t &con,
                               const cdap_rib::result_info &res);
   void open_connection(const cdap_rib::con_handle_t &con,
-                       const cdap_rib::flags_t &flags,
-                       const cdap_rib::result_info &res, int message_id);
+                       const cdap_rib::flags_t &flags, int message_id);
   void close_connection_result(const cdap_rib::con_handle_t &con,
                                const cdap_rib::result_info &res);
   void close_connection(const cdap_rib::con_handle_t &con,
-                        const cdap_rib::flags_t &flags,
-                        const cdap_rib::result_info &res, int message_id);
+                        const cdap_rib::flags_t &flags, int message_id);
 
   void remote_create_result(const cdap_rib::con_handle_t &con,
                             const cdap_rib::res_info_t &res);
@@ -373,21 +370,19 @@ class RIBDaemon : public RIBDInterface
  private:
   cacep::AppConHandlerInterface *app_con_callback_;
   ResponseHandlerInterface *app_resp_callback_;
-  cdap::CDAPProviderInterface *cdap_manager_;
+  cdap::CDAPProviderInterface *cdap_provider_;
   RIB *rib_;
 };
 
 RIBDaemon::RIBDaemon(cacep::AppConHandlerInterface *app_con_callback,
                      ResponseHandlerInterface* app_resp_callback,
-                     const std::string &comm_protocol,
-                     cdap_rib::cdap_params_t *params, const RIBSchema *schema)
+                     cdap_rib::cdap_params *params, const RIBSchema *schema)
 {
-  cdap::CDAPProviderFactory factory;
   app_con_callback_ = app_con_callback;
   app_resp_callback_ = app_resp_callback;
   rib_ = new RIB(schema);
-  cdap_manager_ = factory.create(comm_protocol, params->timeout_,
-                                 params->is_IPCP_);
+  cdap_provider_ = cdap::CDAPProviderFactory->create(params->timeout_,
+                                                     params->is_IPCP_, this);
   delete params;
 }
 
@@ -396,7 +391,7 @@ RIBDaemon::~RIBDaemon()
   delete app_con_callback_;
   delete app_resp_callback_;
   delete rib_;
-  delete cdap_manager_;
+  delete cdap_provider_;
 }
 
 void RIBDaemon::open_connection_result(const cdap_rib::con_handle_t &con,
@@ -408,12 +403,13 @@ void RIBDaemon::open_connection_result(const cdap_rib::con_handle_t &con,
 }
 
 void RIBDaemon::open_connection(const cdap_rib::con_handle_t &con,
-                                const cdap_rib::flags_t &flags,
-                                const cdap_rib::result_info &res,
-                                int message_id)
+                                const cdap_rib::flags_t &flags, int message_id)
 {
+  // FIXME add result
+  cdap_rib::result_info res;
+  (void) res;
   app_con_callback_->connect(message_id, con);
-  cdap_manager_->open_connection_response(con, flags, res, message_id);
+  cdap_provider_->open_connection_response(con, flags, res, message_id);
 }
 
 void RIBDaemon::close_connection_result(const cdap_rib::con_handle_t &con,
@@ -423,12 +419,13 @@ void RIBDaemon::close_connection_result(const cdap_rib::con_handle_t &con,
 }
 
 void RIBDaemon::close_connection(const cdap_rib::con_handle_t &con,
-                                 const cdap_rib::flags_t &flags,
-                                 const cdap_rib::result_info &res,
-                                 int message_id)
+                                 const cdap_rib::flags_t &flags, int message_id)
 {
+  // FIXME add result
+  cdap_rib::result_info res;
+  (void) res;
   app_con_callback_->release(message_id, con);
-  cdap_manager_->close_connection_response(con, flags, res, message_id);
+  cdap_provider_->close_connection_response(con, flags, res, message_id);
 }
 
 void RIBDaemon::remote_create_result(const cdap_rib::con_handle_t &con,
@@ -479,7 +476,7 @@ void RIBDaemon::remote_create_request(const cdap_rib::con_handle_t &con,
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteCreateObject(obj.name_, obj.value_);
   try {
-    cdap_manager_->remote_create_response(con, obj, flags, res, message_id);
+    cdap_provider_->remote_create_response(con, obj, flags, res, message_id);
   } catch (Exception &e) {
     LOG_ERR("Unable to send the response");
   }
@@ -497,7 +494,7 @@ void RIBDaemon::remote_delete_request(const cdap_rib::con_handle_t &con,
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteDeleteObject(obj.name_, obj.value_);
   try {
-    cdap_manager_->remote_delete_response(con, obj, flags, res, message_id);
+    cdap_provider_->remote_delete_response(con, obj, flags, res, message_id);
   } catch (Exception &e) {
     LOG_ERR("Unable to send the response");
   }
@@ -515,7 +512,7 @@ void RIBDaemon::remote_read_request(const cdap_rib::con_handle_t &con,
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteReadObject(obj.name_, obj.value_);
   try {
-    cdap_manager_->remote_read_response(con, obj, flags, res, message_id);
+    cdap_provider_->remote_read_response(con, obj, flags, res, message_id);
   } catch (Exception &e) {
     LOG_ERR("Unable to send the response");
   }
@@ -535,7 +532,7 @@ void RIBDaemon::remote_cancel_read_request(const cdap_rib::con_handle_t &con,
   cdap_rib::res_info_t* res = ribObj->remoteCancelReadObject(obj.name_,
                                                              obj.value_);
   try {
-    cdap_manager_->remote_cancel_read_response(con, flags, res, message_id);
+    cdap_provider_->remote_cancel_read_response(con, flags, res, message_id);
   } catch (Exception &e) {
     LOG_ERR("Unable to send the response");
   }
@@ -553,7 +550,7 @@ void RIBDaemon::remote_write_request(const cdap_rib::con_handle_t &con,
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteWriteObject(obj.name_, obj.value_);
   try {
-    cdap_manager_->remote_write_response(con, flags, res, message_id);
+    cdap_provider_->remote_write_response(con, flags, res, message_id);
   } catch (Exception &e) {
     LOG_ERR("Unable to send the response");
   }
@@ -571,7 +568,7 @@ void RIBDaemon::remote_start_request(const cdap_rib::con_handle_t &con,
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteStartObject(obj.name_, obj.value_);
   try {
-    cdap_manager_->remote_start_response(con, obj, flags, res, message_id);
+    cdap_provider_->remote_start_response(con, obj, flags, res, message_id);
   } catch (Exception &e) {
     LOG_ERR("Unable to send the response");
   }
@@ -589,7 +586,7 @@ void RIBDaemon::remote_stop_request(const cdap_rib::con_handle_t &con,
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteStopObject(obj.name_, obj.value_);
   try {
-    cdap_manager_->remote_stop_response(con, flags, res, message_id);
+    cdap_provider_->remote_stop_response(con, flags, res, message_id);
   } catch (Exception &e) {
     LOG_ERR("Unable to send the response");
   }
@@ -928,17 +925,15 @@ char RIBSchema::get_separator() const
 }
 
 // CLASS RIBDFactory
-RIBDInterface* RIBDFactory::create(cacep::AppConHandlerInterface* app_callback,
-                                   ResponseHandlerInterface* app_resp_callbak,
-                                   const std::string &comm_protocol,
-                                   void* comm_params,
-                                   const cdap_rib::version_info *version,
-                                   char separator)
+RIBDNorthInterface* RIBDFactory::create(
+    cacep::AppConHandlerInterface* app_callback,
+    ResponseHandlerInterface* app_resp_callbak, void* comm_params,
+    const cdap_rib::version_info *version, char separator)
 {
   cdap_rib::cdap_params_t *params = (cdap_rib::cdap_params_t*) comm_params;
   RIBSchema *schema = new RIBSchema(version, separator);
-  RIBDInterface* ribd = new RIBDaemon(app_callback, app_resp_callbak,
-                                      comm_protocol, params, schema);
+  RIBDNorthInterface* ribd = new RIBDaemon(app_callback, app_resp_callbak,
+                                           params, schema);
   return ribd;
 }
 const cdap_rib::SerializedObject* IntEncoder::encode(const int &object)

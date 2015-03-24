@@ -93,7 +93,7 @@ cacep::AppConHandlerInterface* RIBDaemonv1_::getConnHandler()
 {
   return conn_handler_;
 }
-void RIBDaemonv1_::initiateRIB(rib::RIBDInterface* ribd)
+void RIBDaemonv1_::initiateRIB(rib::RIBDNorthInterface* ribd)
 {
 	try
 	{

@@ -68,7 +68,7 @@ public:
 	* Get a reference to a RIB
 	* @throws eRIBNotFound
 	*/
-	rib::RIBDInterface& getRIB(uint64_t version);
+	rib::RIBDNorthInterface& getRIB(uint64_t version);
 
 #if 0
 	//TODO: if ever necessary
@@ -92,7 +92,7 @@ protected:
 private:
 
 	//Map with the current RIB instances
-	std::map<uint64_t, rib::RIBDInterface*> rib_inst_;
+	std::map<uint64_t, rib::RIBDNorthInterface*> rib_inst_;
 	rib::RIBDFactory factory_;
 
 	//Constructors

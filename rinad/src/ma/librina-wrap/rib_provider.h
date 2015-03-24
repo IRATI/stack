@@ -72,72 +72,6 @@ class ResponseHandlerInterface
                             const cdap_rib::con_handle_t &con) = 0;
 };
 
-// Interface of the RIB to be used from the communication protocol
-class RIBDSouthInterface
-{
- public:
-  virtual ~RIBDSouthInterface()
-  {
-  }
-  ;
-  virtual void open_connection_result(const cdap_rib::con_handle_t &con,
-                                      const cdap_rib::result_info &res) = 0;
-  virtual void open_connection(const cdap_rib::con_handle_t &con,
-                               const cdap_rib::flags_t &flags,
-                               const cdap_rib::result_info &res,
-                               int message_id) = 0;
-  virtual void close_connection_result(const cdap_rib::con_handle_t &con,
-                                       const cdap_rib::result_info &res) = 0;
-  virtual void close_connection(const cdap_rib::con_handle_t &con,
-                                const cdap_rib::flags_t &flags,
-                                const cdap_rib::result_info &res,
-                                int message_id) = 0;
-
-  virtual void remote_create_result(const cdap_rib::con_handle_t &con,
-                                    const cdap_rib::res_info_t &res) = 0;
-  virtual void remote_delete_result(const cdap_rib::con_handle_t &con,
-                                    const cdap_rib::res_info_t &res) = 0;
-  virtual void remote_read_result(const cdap_rib::con_handle_t &con,
-                                  const cdap_rib::res_info_t &res) = 0;
-  virtual void remote_cancel_read_result(const cdap_rib::con_handle_t &con,
-                                         const cdap_rib::res_info_t &res) = 0;
-  virtual void remote_write_result(const cdap_rib::con_handle_t &con,
-                                   const cdap_rib::res_info_t &res) = 0;
-  virtual void remote_start_result(const cdap_rib::con_handle_t &con,
-                                   const cdap_rib::res_info_t &res) = 0;
-  virtual void remote_stop_result(const cdap_rib::con_handle_t &con,
-                                  const cdap_rib::res_info_t &res) = 0;
-
-  virtual void remote_create_request(const cdap_rib::con_handle_t &con,
-                                     const cdap_rib::obj_info_t &obj,
-                                     const cdap_rib::filt_info_t &filt,
-                                     int message_id) = 0;
-  virtual void remote_delete_request(const cdap_rib::con_handle_t &con,
-                                     const cdap_rib::obj_info_t &obj,
-                                     const cdap_rib::filt_info_t &filt,
-                                     int message_id) = 0;
-  virtual void remote_read_request(const cdap_rib::con_handle_t &con,
-                                   const cdap_rib::obj_info_t &obj,
-                                   const cdap_rib::filt_info_t &filt,
-                                   int message_id) = 0;
-  virtual void remote_cancel_read_request(const cdap_rib::con_handle_t &con,
-                                          const cdap_rib::obj_info_t &obj,
-                                          const cdap_rib::filt_info_t &filt,
-                                          int message_id) = 0;
-  virtual void remote_write_request(const cdap_rib::con_handle_t &con,
-                                    const cdap_rib::obj_info_t &obj,
-                                    const cdap_rib::filt_info_t &filt,
-                                    int message_id) = 0;
-  virtual void remote_start_request(const cdap_rib::con_handle_t &con,
-                                    const cdap_rib::obj_info_t &obj,
-                                    const cdap_rib::filt_info_t &filt,
-                                    int message_id) = 0;
-  virtual void remote_stop_request(const cdap_rib::con_handle_t &con,
-                                   const cdap_rib::obj_info_t &obj,
-                                   const cdap_rib::filt_info_t &filt,
-                                   int message_id) = 0;
-};
-
 template<class T>
 class EncoderInterface
 {
@@ -297,10 +231,6 @@ class RIBDNorthInterface
                                    const std::string& clas) const = 0;
 };
 
-class RIBDInterface : public RIBDNorthInterface, public RIBDSouthInterface
-{
-};
-
 /**
  * RIB library result codes
  */
@@ -360,10 +290,11 @@ class RIBSchema
 class RIBDFactory
 {
  public:
-  RIBDInterface* create(cacep::AppConHandlerInterface* app_callback,
-                        ResponseHandlerInterface* app_resp_callbak,
-                        const std::string &comm_protocol, void* comm_params,
-                        const cdap_rib::version_info *version, char separator);
+  RIBDNorthInterface* create(cacep::AppConHandlerInterface* app_callback,
+                             ResponseHandlerInterface* app_resp_callbak,
+                             void* comm_params,
+                             const cdap_rib::version_info *version,
+                             char separator);
 };
 
 class IntEncoder : public rib::EncoderInterface<int>
@@ -423,7 +354,8 @@ class BoolEncoder : public rib::EncoderInterface<bool>
   bool* decode(const cdap_rib::SerializedObject &serialized_object) const;
 };
 
-class empty{
+class empty
+{
 };
 
 class EmptyEncoder : public rib::EncoderInterface<empty>
@@ -432,7 +364,6 @@ class EmptyEncoder : public rib::EncoderInterface<empty>
   const cdap_rib::SerializedObject* encode(const empty &object);
   empty* decode(const cdap_rib::SerializedObject &serialized_object) const;
 };
-
 
 class IntRIBObject : public rib::RIBObject<int>
 {
@@ -517,8 +448,9 @@ class BoolRIBObject : public rib::RIBObject<bool>
 class EmptyRIBObject : public rib::RIBObject<empty>
 {
  public:
-  EmptyRIBObject(const std::string& clas, std::string name, long instance, EmptyEncoder *encoder)
-      : RIBObject(clas, instance, name, (empty*) 0,  encoder)
+  EmptyRIBObject(const std::string& clas, std::string name, long instance,
+                 EmptyEncoder *encoder)
+      : RIBObject(clas, instance, name, (empty*) 0, encoder)
   {
   }
 };

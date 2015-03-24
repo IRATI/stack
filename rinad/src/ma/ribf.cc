@@ -54,8 +54,6 @@ RIBFactory_::~RIBFactory_() throw (){}
 * Inner API
 */
 void RIBFactory_::createRIB(uint64_t version){
-  // FIXME: change for config param
-  std::string com_prot = "GPB";
   char separator = ',';
   cdap_rib::cdap_params_t *params = new cdap_rib::cdap_params_t;
   params->is_IPCP_ = false;
@@ -77,7 +75,7 @@ void RIBFactory_::createRIB(uint64_t version){
 	switch(version)
 	{
 	case 1:
-		rib_inst_[version] = factory_.create(RIBDaemonv1->getConnHandler(), RIBDaemonv1->getRespHandler(), com_prot , params, vers, separator);
+		rib_inst_[version] = factory_.create(RIBDaemonv1->getConnHandler(), RIBDaemonv1->getRespHandler(), params, vers, separator);
 		break;
 	default:
 		break;
@@ -87,9 +85,9 @@ void RIBFactory_::createRIB(uint64_t version){
 	unlock();
 }
 
-rib::RIBDInterface& RIBFactory_::getRIB(uint64_t version){
+rib::RIBDNorthInterface& RIBFactory_::getRIB(uint64_t version){
 
-  rib::RIBDInterface* rib;
+  rib::RIBDNorthInterface* rib;
 
 	//Serialize
 	lock();

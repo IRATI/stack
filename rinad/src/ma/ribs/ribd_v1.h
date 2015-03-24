@@ -66,7 +66,7 @@ class RIBDaemonv1_
  public:
   rib::ResponseHandlerInterface* getRespHandler();
   cacep::AppConHandlerInterface* getConnHandler();
-  void initiateRIB(rib::RIBDInterface* ribd);
+  void initiateRIB(rib::RIBDNorthInterface* ribd);
  private:
   RIBDaemonv1_();
   ~RIBDaemonv1_();

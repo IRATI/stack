@@ -29,7 +29,8 @@
 
 #define RINA_PREFIX     "cdap-echo-client"
 #include <librina/logs.h>
-#include <librina/cdap.h>
+#include "cdap_provider.h"
+#include "rib_provider.h"
 
 #include "cdap-echo-client.h"
 
@@ -39,6 +40,79 @@ using namespace rina;
 static std::chrono::seconds thres_s = std::chrono::seconds(9);
 static std::chrono::milliseconds thres_ms = std::chrono::milliseconds(9);
 static std::chrono::microseconds thres_us = std::chrono::microseconds(9);
+
+class APPcallback: public rib::RIBDSouthInterface
+{
+ public:
+  void open_connection_result(const cdap_rib::con_handle_t &con,
+                                      const cdap_rib::result_info &res)
+  {}
+  void open_connection(const cdap_rib::con_handle_t &con,
+                               const cdap_rib::flags_t &flags,
+                               const cdap_rib::result_info &res,
+                               int message_id)
+  {}
+  void close_connection_result(const cdap_rib::con_handle_t &con,
+                                       const cdap_rib::result_info &res)
+  {}
+  void close_connection(const cdap_rib::con_handle_t &con,
+                                const cdap_rib::flags_t &flags,
+                                const cdap_rib::result_info &res,
+                                int message_id)
+  {}
+
+  void remote_create_result(const cdap_rib::con_handle_t &con,
+                                    const cdap_rib::res_info_t &res)
+  {}
+  void remote_delete_result(const cdap_rib::con_handle_t &con,
+                                    const cdap_rib::res_info_t &res)
+  {}
+  void remote_read_result(const cdap_rib::con_handle_t &con,
+                                  const cdap_rib::res_info_t &res)
+  {}
+  void remote_cancel_read_result(const cdap_rib::con_handle_t &con,
+                                         const cdap_rib::res_info_t &res)
+  {}
+  void remote_write_result(const cdap_rib::con_handle_t &con,
+                                   const cdap_rib::res_info_t &res)
+  {}
+  void remote_start_result(const cdap_rib::con_handle_t &con,
+                                   const cdap_rib::res_info_t &res)
+  {}
+  void remote_stop_result(const cdap_rib::con_handle_t &con,
+                                  const cdap_rib::res_info_t &res)
+  {}
+  void remote_create_request(const cdap_rib::con_handle_t &con,
+                                     const cdap_rib::obj_info_t &obj,
+                                     const cdap_rib::filt_info_t &filt,
+                                     int message_id){}
+  void remote_delete_request(const cdap_rib::con_handle_t &con,
+                                     const cdap_rib::obj_info_t &obj,
+                                     const cdap_rib::filt_info_t &filt,
+                                     int message_id)
+  {}
+  void remote_read_request(const cdap_rib::con_handle_t &con,
+                                   const cdap_rib::obj_info_t &obj,
+                                   const cdap_rib::filt_info_t &filt,
+                                   int message_id)
+  {}
+  void remote_cancel_read_request(const cdap_rib::con_handle_t &con,
+                                          const cdap_rib::obj_info_t &obj,
+                                          const cdap_rib::filt_info_t &filt,
+                                          int message_id){}
+  void remote_write_request(const cdap_rib::con_handle_t &con,
+                                    const cdap_rib::obj_info_t &obj,
+                                    const cdap_rib::filt_info_t &filt,
+                                    int message_id){}
+  void remote_start_request(const cdap_rib::con_handle_t &con,
+                                    const cdap_rib::obj_info_t &obj,
+                                    const cdap_rib::filt_info_t &filt,
+                                    int message_id){}
+  void remote_stop_request(const cdap_rib::con_handle_t &con,
+                                   const cdap_rib::obj_info_t &obj,
+                                   const cdap_rib::filt_info_t &filt,
+                                   int message_id){}
+};
 
 static string durationToString(
     const std::chrono::high_resolution_clock::duration& dur) {
@@ -154,6 +228,28 @@ Flow* Client::createFlow() {
   return flow;
 }
 
+
+bool Client::cacep(Flow *flow) {
+  cdap::CDAPProviderInterface* cdap_prov = cdap::CDAPProviderFactory->create("GPB", 2000, false);
+  cdap_rib::vers_info_t ver;
+  ver.version_ = 1;
+  cdap_rib::src_info_t src;
+  src.ap_name_ = flow->getLocalApplicationName();
+  src.ae_name_ = "A instance";
+  src.ap_inst_ = 1;
+  src.ae_inst_ = 1;
+  cdap_rib::dest_info_t dest;
+  dest.ap_name_ = flow->getRemoteApplcationName();
+  dest.ae_name_ = "B instance";
+  dest.ap_inst_ = 1;
+  dest.ae_inst_ = 1;
+  cdap_rib::auth_info auth;
+  auth.auth_mech_ = auth.AUTH_NONE;
+  int port = flow->getPortId();
+  cdap_prov->open_connection(ver, src, dest, auth, port);
+}
+
+/*
 bool Client::cacep(Flow *flow) {
   rina::WireMessageProviderFactory wire_factory;
   rina::CDAPSessionManagerFactory factory;
@@ -196,7 +292,7 @@ bool Client::cacep(Flow *flow) {
 
   return true;
 }
-
+*/
 bool Client::release(rina::Flow *flow) {
   char buffer[max_sdu_size_in_bytes], *bytes_read;
   int n_bytes_read;

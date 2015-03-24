@@ -1,5 +1,5 @@
 /*
- * CDAP North bound API
+ * CDAP implementation
  *
  *    Bernat Gastón <bernat.gaston@i2cat.net>
  *
@@ -19,20 +19,483 @@
  * MA  02110-1301  USA
  */
 
-#include "cdap_provider.h"
+#define RINA_PREFIX "cdap"
+#include <librina/logs.h>
 #include <librina/cdap.h>
 #include <librina/application.h>
 #include <librina/ipc-process.h>
+#include <librina/timer.h>
+#include <algorithm>
+#include "CDAP.pb.h"
+
+#include "cdap_provider.h"
 
 namespace cdap {
+
+Singleton<CDAPProviderFactory_> CDAPProviderFactory;
+
+class CDAPMessageFactory
+{
+ public:
+  static cdap_m_t* getOpenConnectionRequestMessage(cdap_rib::con_handle_t &con,
+                                                   int invoke_id);
+  static cdap_m_t* getOpenConnectionResponseMessage(cdap_rib::con_handle_t &con,
+                                                    cdap_rib::res_info_t &res,
+                                                    int invoke_id);
+  static cdap_m_t* getReleaseConnectionRequestMessage(cdap_rib::flags_t &flags);
+  static cdap_m_t* getReleaseConnectionResponseMessage(
+      cdap_rib::flags_t &flags, cdap_rib::res_info_t &res, int invoke_id);
+  static cdap_m_t* getCreateObjectRequestMessage(cdap_rib::filt_info_t &filt,
+                                                 cdap_rib::flags_t &flags,
+                                                 cdap_rib::obj_info_t &obj);
+  static cdap_m_t* getCreateObjectResponseMessage(cdap_rib::flags_t &flags,
+                                                  cdap_rib::obj_info_t &obj,
+                                                  cdap_rib::res_info_t &res,
+                                                  int invoke_id);
+  static cdap_m_t* getDeleteObjectRequestMessage(cdap_rib::filt_info_t &filt,
+                                                 cdap_rib::flags_t &flags,
+                                                 cdap_rib::obj_info_t &obj);
+  static cdap_m_t* getDeleteObjectResponseMessage(cdap_rib::flags_t &flags,
+                                                  cdap_rib::obj_info_t &obj,
+                                                  cdap_rib::res_info_t &res,
+                                                  int invoke_id);
+  static cdap_m_t* getStartObjectRequestMessage(cdap_rib::filt_info_t &filt,
+                                                cdap_rib::flags_t &flags,
+                                                cdap_rib::obj_info_t &obj);
+  static cdap_m_t* getStartObjectResponseMessage(cdap_rib::flags_t &flags,
+                                                 cdap_rib::res_info_t &res,
+                                                 int invoke_id);
+  static cdap_m_t* getStartObjectResponseMessage(cdap_rib::flags_t &flags,
+                                                 cdap_rib::obj_info_t &obj,
+                                                 cdap_rib::res_info_t &res,
+                                                 int invoke_id);
+  static cdap_m_t* getStopObjectRequestMessage(cdap_rib::filt_info_t &filt,
+                                               cdap_rib::flags_t &flags,
+                                               cdap_rib::obj_info_t &obj);
+  static cdap_m_t* getStopObjectResponseMessage(cdap_rib::flags_t &flags,
+                                                cdap_rib::res_info_t &res,
+                                                int invoke_id);
+  static cdap_m_t* getReadObjectRequestMessage(cdap_rib::filt_info_t &filt,
+                                               cdap_rib::flags_t &flags,
+                                               cdap_rib::obj_info_t &obj);
+  static cdap_m_t* getReadObjectResponseMessage(cdap_rib::flags_t &flags,
+                                                cdap_rib::obj_info_t &obj,
+                                                cdap_rib::res_info_t &res,
+                                                int invoke_id);
+  static cdap_m_t* getWriteObjectRequestMessage(cdap_rib::filt_info_t &filt,
+                                                cdap_rib::flags_t &flags,
+                                                cdap_rib::obj_info_t &obj);
+  static cdap_m_t* getWriteObjectResponseMessage(cdap_rib::flags_t &flags,
+                                                 cdap_rib::res_info_t &res,
+                                                 int invoke_id);
+  static cdap_m_t* getCancelReadRequestMessage(cdap_rib::flags_t &flags,
+                                               int invoke_id);
+  static cdap_m_t* getCancelReadResponseMessage(cdap_rib::flags_t &flags,
+                                                cdap_rib::res_info_t &res,
+                                                int invoke_id);
+ private:
+  static const int ABSTRACT_SYNTAX_VERSION;
+  ;
+};
+
+const int CDAPMessageFactory::ABSTRACT_SYNTAX_VERSION = 0x0073;
+
+class ResetStablishmentTimerTask;
+class ReleaseConnectionTimerTask;
+class CDAPSession;
+/// Implements the CDAP connection state machine
+class ConnectionStateMachine : public rina::Lockable
+{
+ public:
+  ConnectionStateMachine(CDAPSession* cdap_session, long timeout);
+  ~ConnectionStateMachine() throw ();
+  bool is_connected() const;
+  /// Checks if a the CDAP connection can be opened (i.e. an M_CONNECT message can be sent)
+  /// @throws rina::CDAPException
+  void checkConnect();
+  void connectSentOrReceived(bool sent);
+  /// Checks if the CDAP M_CONNECT_R message can be sent
+  /// @throws rina::CDAPException
+  void checkConnectResponse();
+  void connectResponseSentOrReceived(bool sent);
+  /// Checks if the CDAP M_RELEASE message can be sent
+  /// @throws rina::CDAPException
+  void checkRelease();
+  void releaseSentOrReceived(const cdap_m_t &cdap_message, bool sent);
+  /// Checks if the CDAP M_RELEASE_R message can be sent
+  /// @throws rina::CDAPException
+  void checkReleaseResponse();
+  void releaseResponseSentOrReceived(bool sent);
+ private:
+  enum ConnectionState
+  {
+    NONE,
+    AWAITCON,
+    CONNECTED,
+    AWAITCLOSE
+  };
+  void resetConnection();
+  void noConnectionResponse();
+  /// The AE has sent an M_CONNECT message
+  /// @throws rina::CDAPException
+  void connect();
+  /// An M_CONNECT message has been received, update the state
+  /// @param message
+  void connectReceived();
+  /// The AE has sent an M_CONNECT_R  message
+  /// @param openConnectionResponseMessage
+  /// @throws rina::CDAPException
+  void connectResponse();
+  /// An M_CONNECT_R message has been received
+  /// @param message
+  void connectResponseReceived();
+  /// The AE has sent an M_RELEASE message
+  /// @param releaseConnectionRequestMessage
+  /// @throws rina::CDAPException
+  void release(const cdap_m_t &cdap_m_t);
+  /// An M_RELEASE message has been received
+  /// @param message
+  void releaseReceived(const cdap_m_t &message);
+  /// The AE has called the close response operation
+  /// @param releaseConnectionRequestMessage
+  /// @throws rina::CDAPException
+  void releaseResponse();
+  /// An M_RELEASE_R message has been received
+  /// @param message
+  void releaseResponseReceived();
+  /// The maximum time the CDAP state machine of a session will wait for connect or release responses (in ms)
+  long timeout_;
+  /// The flow that this CDAP connection operates over
+  CDAPSession *cdap_session_;
+  /// The state of the CDAP connection, drives the CDAP connection
+  /// state machine
+  ConnectionState connection_state_;
+  rina::Timer *open_timer_;
+  rina::Timer *close_timer_;
+  friend class ResetStablishmentTimerTask;
+  friend class ReleaseConnectionTimerTask;
+};
+
+/// It will always try to use short invokeIds (as close to 1 as possible)
+class CDAPInvokeIdManagerImpl : rina::Lockable
+{
+ public:
+  CDAPInvokeIdManagerImpl();
+  ~CDAPInvokeIdManagerImpl() throw ();
+  void freeInvokeId(int invoke_id, bool sent);
+  int newInvokeId(bool sent);
+  void reserveInvokeId(int invoke_id, bool sent);
+ private:
+  std::list<int> used_invoke_sent_ids_;
+  std::list<int> used_invoke_recv_ids_;
+};
+
+/// Encapsulates an operation state
+class CDAPOperationState
+{
+ public:
+  CDAPOperationState(cdap_m_t::Opcode op_code, bool sender);
+  ~CDAPOperationState();
+  cdap_m_t::Opcode get_op_code() const;
+  bool is_sender() const;
+ private:
+  /// The opcode of the message
+  cdap_m_t::Opcode op_code_;
+  /// Tells if sender or receiver
+  bool sender_;
+};
+
+// TODO: make these two classes one
+class ResetStablishmentTimerTask : public rina::TimerTask
+{
+ public:
+  ResetStablishmentTimerTask(ConnectionStateMachine *con_state_machine);
+  void run();
+ private:
+  ConnectionStateMachine *con_state_machine_;
+};
+
+class ReleaseConnectionTimerTask : public rina::TimerTask
+{
+ public:
+  ReleaseConnectionTimerTask(ConnectionStateMachine *con_state_machine);
+  void run();
+ private:
+  ConnectionStateMachine *con_state_machine_;
+};
+
+/// Validates that a CDAP message is well formed
+class CDAPMessageValidator
+{
+ public:
+  /// Validates a CDAP message
+  /// @param message
+  /// @throws CDAPException thrown if the CDAP message is not valid, indicating the reason
+  static void validate(const cdap_m_t *message);
+ private:
+  static void validateAbsSyntax(const cdap_m_t *message);
+  static void validateAuthMech(const cdap_m_t *message);
+  static void validateAuthValue(const cdap_m_t *message);
+  static void validateDestAEInst(const cdap_m_t *message);
+  static void validateDestAEName(const cdap_m_t *message);
+  static void validateDestApInst(const cdap_m_t *message);
+  static void validateDestApName(const cdap_m_t *message);
+  static void validateFilter(const cdap_m_t *message);
+  static void validateInvokeID(const cdap_m_t *message);
+  static void validateObjClass(const cdap_m_t *message);
+  static void validateObjInst(const cdap_m_t *message);
+  static void validateObjName(const cdap_m_t *message);
+  static void validateObjValue(const cdap_m_t *message);
+  static void validateOpcode(const cdap_m_t *message);
+  static void validateResult(const cdap_m_t *message);
+  static void validateResultReason(const cdap_m_t *message);
+  static void validateScope(const cdap_m_t *message);
+  static void validateSrcAEInst(const cdap_m_t *message);
+  static void validateSrcAEName(const cdap_m_t *message);
+  static void validateSrcApInst(const cdap_m_t *message);
+  static void validateSrcApName(const cdap_m_t *message);
+  static void validateVersion(const cdap_m_t *message);
+};
+
+///Describes a CDAPSession, by identifying the source and destination application processes.
+///Note that "source" and "destination" are just placeholders, as both parties in a CDAP exchange have
+///the same role, because the CDAP session is bidirectional.
+typedef struct CDAPSessionDescriptor
+{
+ public:
+  /// AbstractSyntaxID (int32), mandatory. The specific version of the
+  /// CDAP protocol message declarations that the message conforms to
+  ///
+  int abs_syntax_;
+  /// AuthenticationMechanismName (authtypes), optional, not validated by CDAP.
+  /// Identification of the method to be used by the destination application to
+  /// authenticate the source application
+  cdap_rib::auth_info_t::AuthTypes auth_mech_;
+  /**
+   * AuthenticationValue (authvalue), optional, not validated by CDAP.
+   * Authentication information accompanying auth_mech, format and value
+   * appropiate to the selected auth_mech
+   */
+  rina::AuthValue auth_value_;
+  /// DestinationApplication-Entity-Instance-Id (string), optional, not validated by CDAP.
+  /// Specific instance of the Application Entity that the source application
+  /// wishes to connect to in the destination application.
+  std::string dest_ae_inst_;
+  /// DestinationApplication-Entity-Name (string), mandatory (optional for the response).
+  /// Name of the Application Entity that the source application wishes
+  /// to connect to in the destination application.
+  std::string dest_ae_name_;
+  /// DestinationApplication-Process-Instance-Id (string), optional, not validated by CDAP.
+  /// Name of the Application Process Instance that the source wishes to
+  /// connect to a the destination.
+  std::string dest_ap_inst_;
+  /// DestinationApplication-Process-Name (string), mandatory (optional for the response).
+  /// Name of the application process that the source application wishes to connect to
+  /// in the destination application
+  std::string dest_ap_name_;
+  /// SourceApplication-Entity-Instance-Id (string).
+  /// AE instance within the application originating the message
+  std::string src_ae_inst_;
+  /// SourceApplication-Entity-Name (string).
+  /// Name of the AE within the application originating the message
+  std::string src_ae_name_;
+  /// SourceApplication-Process-Instance-Id (string), optional, not validated by CDAP.
+  /// Application instance originating the message
+  std::string src_ap_inst_;
+  /// SourceApplicatio-Process-Name (string), mandatory (optional in the response).
+  /// Name of the application originating the message
+  std::string src_ap_name_;
+  /// Version (int32). Mandatory in connect request and response, optional otherwise.
+  /// Version of RIB and object set_ to use in the conversation. Note that the
+  /// abstract syntax refers to the CDAP message syntax, while version refers to the
+  /// version of the AE RIB objects, their values, vocabulary of object id's, and
+  /// related behaviors that are subject to change over time. See text for details
+  /// of use.
+  long version_;
+  /// Uniquely identifies this CDAP session in this IPC process. It matches the port_id
+  /// of the (N-1) flow that supports the CDAP Session
+  int port_id_;
+
+  rina::ApplicationProcessNamingInformation ap_naming_info_;
+} cdap_session_t;
+
+/// Implements a CDAP session. Has the necessary logic to ensure that a
+/// the operation of the CDAP protocol is consistent (correct states and proper
+/// invocation of operations)
+class CDAPSessionManager;
+class CDAPSession
+{
+ public:
+  CDAPSession(CDAPSessionManager *cdap_session_manager, long timeout,
+              SerializerInterface *serializer,
+              CDAPInvokeIdManagerImpl *invoke_id_manager);
+  ~CDAPSession() throw ();
+  //const CDAPSessionInvokeIdManagerInterface* getInvokeIdManager();
+  //bool isConnected() const;
+  const cdap_rib::SerializedObject* encodeNextMessageToBeSent(
+      const cdap_m_t &cdap_message);
+  void messageSent(const cdap_m_t &cdap_message);
+  const cdap_m_t* messageReceived(const cdap_rib::SerializedObject &message);
+  void messageReceived(const cdap_m_t &cdap_message);
+  void set_session_descriptor(cdap_session_t *session_descriptor);
+  int get_port_id() const;
+  cdap_session_t* get_session_descriptor() const;
+  CDAPInvokeIdManagerImpl* get_invoke_id_manager() const;
+  void stopConnection();
+ private:
+  void messageSentOrReceived(const cdap_m_t &cdap_message, bool sent);
+  void freeOrReserveInvokeId(const cdap_m_t &cdap_message, bool sent);
+  void checkIsConnected() const;
+  void checkInvokeIdNotExists(const cdap_m_t &cdap_message, bool sent) const;
+  void checkCanSendOrReceiveCancelReadRequest(const cdap_m_t &cdap_message,
+                                              bool sent) const;
+  void requestMessageSentOrReceived(const cdap_m_t &cdap_message,
+                                    cdap_m_t::Opcode op_code, bool sent);
+  void cancelReadMessageSentOrReceived(const cdap_m_t &cdap_message,
+                                       bool sender);
+  void checkCanSendOrReceiveResponse(const cdap_m_t &cdap_message,
+                                     cdap_m_t::Opcode op_code,
+                                     bool sender) const;
+  void checkCanSendOrReceiveCancelReadResponse(const cdap_m_t &cdap_message,
+                                               bool send) const;
+  void responseMessageSentOrReceived(const cdap_m_t &cdap_message,
+                                     cdap_m_t::Opcode op_code, bool sent);
+  void cancelReadResponseMessageSentOrReceived(const cdap_m_t &cdap_message,
+                                               bool sent);
+  const cdap_rib::SerializedObject* serializeMessage(
+      const cdap_m_t &cdap_message) const;
+  const cdap_m_t* deserializeMessage(
+      const cdap_rib::SerializedObject &message) const;
+  void populateSessionDescriptor(const cdap_m_t &cdap_message, bool send);
+  void emptySessionDescriptor();
+  /// This map contains the invokeIds of the messages that
+  /// have requested a response, except for the M_CANCELREADs
+  std::map<int, CDAPOperationState*> pending_messages_sent_;
+  std::map<int, CDAPOperationState*> pending_messages_recv_;
+  std::map<int, CDAPOperationState*> cancel_read_pending_messages_;
+  /// Deals with the connection establishment and deletion messages and states
+  ConnectionStateMachine *connection_state_machine_;
+  /// This map contains the invokeIds of the messages that
+  /// have requested a response, except for the M_CANCELREADs
+  //std::map<int, CDAPOperationState> pending_messages_;
+  //std::map<int, CDAPOperationState> cancel_read_pending_messages_;
+  SerializerInterface *serializer_;
+  cdap_session_t *session_descriptor_;
+  CDAPSessionManager *cdap_session_manager_;
+  CDAPInvokeIdManagerImpl *invoke_id_manager_;
+};
+
+/// Implements a CDAP session manager.
+class CDAPSessionManager
+{
+ public:
+  static const long DEFAULT_TIMEOUT_IN_MS = 10000;
+  CDAPSessionManager();
+  CDAPSessionManager(SerializerInterface *serializer_factory);
+  CDAPSessionManager(SerializerInterface *serializer_factory, long timeout);
+  ~CDAPSessionManager() throw ();
+  CDAPSession* createCDAPSession(int port_id);
+  void getAllCDAPSessionIds(std::vector<int> &vector);
+  CDAPSession* get_cdap_session(int port_id);
+  const cdap_rib::SerializedObject* encodeCDAPMessage(
+      const cdap_m_t &cdap_message);
+  const cdap_m_t* decodeCDAPMessage(
+      const cdap_rib::SerializedObject &cdap_message);
+  void removeCDAPSession(int portId);
+  const cdap_rib::SerializedObject* encodeNextMessageToBeSent(
+      const cdap_m_t &cdap_message, int port_id);
+  const cdap_m_t* messageReceived(
+      const cdap_rib::SerializedObject &encodedcdap_m_t, int portId);
+  void messageSent(const cdap_m_t &cdap_message, int port_id);
+  int get_port_id(std::string destination_application_process_name);
+  cdap_m_t* getOpenConnectionRequestMessage(cdap_rib::con_handle_t &con);
+  cdap_m_t* getOpenConnectionResponseMessage(cdap_rib::con_handle_t &con,
+                                             cdap_rib::res_info_t &res,
+                                             int invoke_id);
+  cdap_m_t* getReleaseConnectionRequestMessage(int port_id,
+                                               cdap_rib::flags_t &flags,
+                                               bool invoke_id);
+  cdap_m_t* getReleaseConnectionResponseMessage(cdap_rib::flags_t &flags,
+                                                cdap_rib::res_info_t &res,
+                                                int invoke_id);
+  cdap_m_t* getCreateObjectRequestMessage(int port_id,
+                                          cdap_rib::filt_info_t &filt,
+                                          cdap_rib::flags_t &flags,
+                                          cdap_rib::obj_info_t &obj,
+                                          bool invoke_id);
+  cdap_m_t* getCreateObjectResponseMessage(cdap_rib::flags_t &flags,
+                                           cdap_rib::obj_info_t &obj,
+                                           cdap_rib::res_info_t &res,
+                                           int invoke_id);
+  cdap_m_t* getDeleteObjectRequestMessage(int port_id,
+                                          cdap_rib::filt_info_t &filt,
+                                          cdap_rib::flags_t &flags,
+                                          cdap_rib::obj_info_t &obj,
+                                          bool invoke_id);
+  cdap_m_t* getDeleteObjectResponseMessage(cdap_rib::flags_t &flags,
+                                           cdap_rib::obj_info_t &obj,
+                                           cdap_rib::res_info_t &res,
+                                           int invoke_id);
+  cdap_m_t* getStartObjectRequestMessage(int port_id,
+                                         cdap_rib::filt_info_t &filt,
+                                         cdap_rib::flags_t &flags,
+                                         cdap_rib::obj_info_t &obj,
+                                         bool invoke_id);
+  cdap_m_t* getStartObjectResponseMessage(cdap_rib::flags_t &flags,
+                                          cdap_rib::res_info_t &res,
+                                          int invoke_id);
+  cdap_m_t* getStartObjectResponseMessage(cdap_rib::flags_t &flags,
+                                          cdap_rib::obj_info_t &obj,
+                                          cdap_rib::res_info_t &res,
+                                          int invoke_id);
+  cdap_m_t* getStopObjectRequestMessage(int port_id,
+                                        cdap_rib::filt_info_t &filt,
+                                        cdap_rib::flags_t &flags,
+                                        cdap_rib::obj_info_t &obj,
+                                        bool invoke_id);
+  cdap_m_t* getStopObjectResponseMessage(cdap_rib::flags_t &flags,
+                                         cdap_rib::res_info_t &res,
+                                         int invoke_id);
+  cdap_m_t* getReadObjectRequestMessage(int port_id,
+                                        cdap_rib::filt_info_t &filt,
+                                        cdap_rib::flags_t &flags,
+                                        cdap_rib::obj_info_t &obj,
+                                        bool invoke_id);
+  cdap_m_t* getReadObjectResponseMessage(cdap_rib::flags_t &flags,
+                                         cdap_rib::obj_info_t &obj,
+                                         cdap_rib::res_info_t &res,
+                                         int invoke_id);
+  cdap_m_t* getWriteObjectRequestMessage(int port_id,
+                                         cdap_rib::filt_info_t &filt,
+                                         cdap_rib::flags_t &flags,
+                                         cdap_rib::obj_info_t &obj,
+                                         bool invoke_id);
+  cdap_m_t* getWriteObjectResponseMessage(cdap_rib::flags_t &flags,
+                                          cdap_rib::res_info_t &res,
+                                          int invoke_id);
+  cdap_m_t* getCancelReadRequestMessage(cdap_rib::flags_t &flags,
+                                        int invoke_id);
+  cdap_m_t* getCancelReadResponseMessage(cdap_rib::flags_t &flags,
+                                         cdap_rib::res_info_t &res,
+                                         int invoke_id);
+ private:
+  void assignInvokeId(cdap_m_t &cdap_message, bool invoke_id, int port_id,
+                      bool sent);
+  std::map<int, CDAPSession*> cdap_sessions_;
+  /// Used by the serialize and unserialize operations
+  SerializerInterface *serializer_;
+  /// The maximum time the CDAP state machine of a session will wait for connect or release responses (in ms)
+  long timeout_;
+  CDAPInvokeIdManagerImpl *invoke_id_manager_;
+};
 
 class CDAPProvider : public CDAPProviderInterface
 {
  public:
-  CDAPProvider(rina::WireMessageProviderFactory wire_provider_factory,
-               long timeout);
+  CDAPProvider(SerializerInterface *serializer, long timeout,
+               cdap::CDAPCallbackInterface *callback);
   ~CDAPProvider();
-  cdap_rib::con_handle_t open_connection(const cdap_rib::vers_info_t ver,
+  cdap_rib::con_handle_t open_connection(const cdap_rib::vers_info_t &ver,
                                          const cdap_rib::src_info_t &src,
                                          const cdap_rib::dest_info_t &dest,
                                          const cdap_rib::auth_info &auth,
@@ -98,18 +561,2021 @@ class CDAPProvider : public CDAPProviderInterface
   void remote_stop_response(const cdap_rib::con_handle_t &con,
                             const cdap_rib::flags_t &flags,
                             const cdap_rib::res_info_t* res, int message_id);
+  void new_message(cdap_rib::SerializedObject &message, int port);
  protected:
-  rina::CDAPSessionManagerInterface *manager_;
+  CDAPSessionManager *manager_;
+  cdap::CDAPCallbackInterface *callback_;
  private:
-  virtual void send(const rina::CDAPMessage *m_sent, int port) = 0;
+  virtual void send(const cdap_m_t *m_sent, int port) = 0;
 };
 
-CDAPProvider::CDAPProvider(
-    rina::WireMessageProviderFactory wire_provider_factory, long timeout)
+class AppCDAPProvider : public CDAPProvider
 {
-  rina::CDAPSessionManagerFactory cdap_factory;
-  manager_ = cdap_factory.createCDAPSessionManager(&wire_provider_factory,
-                                                   timeout);
+ public:
+  AppCDAPProvider(SerializerInterface *serializer, long timeout,
+                  cdap::CDAPCallbackInterface *callback);
+ private:
+  void send(const cdap_m_t *m_sent, int port);
+};
+
+class IPCPCDAPProvider : public CDAPProvider
+{
+ public:
+  IPCPCDAPProvider(SerializerInterface *serializer, long timeout,
+                   cdap::CDAPCallbackInterface *callback);
+ private:
+  void send(const cdap_m_t *m_sent, int port);
+};
+
+/// Google Protocol Buffers Wire Message Provider
+class GPBSerializer : public SerializerInterface
+{
+ public:
+  const cdap_m_t* deserializeMessage(const cdap_rib::SerializedObject &message);
+  const cdap_rib::SerializedObject* serializeMessage(
+      const cdap_m_t &cdapMessage);
+};
+
+// CLASS CDAPMessageFactory
+cdap_m_t* CDAPMessageFactory::getOpenConnectionRequestMessage(
+    cdap_rib::con_handle_t &con, int invoke_id)
+{
+  cdap_m_t *cdap_message = new cdap_m_t();
+  cdap_message->abs_syntax_ = ABSTRACT_SYNTAX_VERSION;
+  cdap_message->op_code_ = cdap_m_t::M_CONNECT;
+  cdap_message->auth_mech_ = con.auth_.auth_mech_;
+  rina::AuthValue auth_value;
+  auth_value.auth_name_ = con.auth_.auth_name_;
+  auth_value.auth_other_ = con.auth_.auth_other_;
+  auth_value.auth_password_ = con.auth_.auth_password_;
+  cdap_message->auth_value_ = auth_value;
+  cdap_message->dest_ae_inst_ = con.dest_.ae_inst_;
+  cdap_message->dest_ae_name_ = con.dest_.ae_name_;
+  cdap_message->dest_ap_inst_ = con.dest_.ap_inst_;
+  cdap_message->dest_ap_name_ = con.dest_.ap_name_;
+  cdap_message->invoke_id_ = invoke_id;
+  cdap_message->src_ae_inst_ = con.src_.ae_inst_;
+  cdap_message->src_ae_name_ = con.src_.ae_name_;
+  cdap_message->src_ap_inst_ = con.src_.ap_inst_;
+  cdap_message->src_ap_name_ = con.src_.ap_name_;
+  cdap_message->version_ = 1;
+  return cdap_message;
+}
+cdap_m_t* CDAPMessageFactory::getOpenConnectionResponseMessage(
+    cdap_rib::con_handle_t &con, cdap_rib::res_info_t &res, int invoke_id)
+{
+  cdap_m_t *cdap_message = new cdap_m_t();
+  cdap_message->abs_syntax_ = ABSTRACT_SYNTAX_VERSION;
+  cdap_message->op_code_ = cdap_m_t::M_CONNECT_R;
+  cdap_message->auth_mech_ = con.auth_.auth_mech_;
+  rina::AuthValue auth_value;
+  auth_value.auth_name_ = con.auth_.auth_name_;
+  auth_value.auth_other_ = con.auth_.auth_other_;
+  auth_value.auth_password_ = con.auth_.auth_password_;
+  cdap_message->auth_value_ = auth_value;
+  cdap_message->dest_ae_inst_ = con.dest_.ae_inst_;
+  cdap_message->dest_ae_name_ = con.dest_.ae_name_;
+  cdap_message->dest_ap_inst_ = con.dest_.ap_inst_;
+  cdap_message->dest_ap_name_ = con.dest_.ap_name_;
+  cdap_message->invoke_id_ = invoke_id;
+  cdap_message->src_ae_inst_ = con.src_.ae_inst_;
+  cdap_message->src_ae_name_ = con.src_.ae_name_;
+  cdap_message->src_ap_inst_ = con.src_.ap_inst_;
+  cdap_message->src_ap_name_ = con.src_.ap_name_;
+  cdap_message->version_ = 1;
+  cdap_message->result_ = res.result_;
+  cdap_message->result_reason_ = res.result_reason_;
+
+  return cdap_message;
+}
+
+cdap_m_t* CDAPMessageFactory::getReleaseConnectionRequestMessage(
+    cdap_rib::flags_t &flags)
+{
+  cdap_m_t *cdap_message = new cdap_m_t();
+  cdap_message->op_code_ = cdap_m_t::M_RELEASE;
+  cdap_message->flags_ = flags.flags_;
+  return cdap_message;
+}
+
+cdap_m_t* CDAPMessageFactory::getReleaseConnectionResponseMessage(
+    cdap_rib::flags_t &flags, cdap_rib::res_info_t &res, int invoke_id)
+{
+  cdap_m_t *cdap_message = new cdap_m_t();
+  cdap_message->op_code_ = cdap_m_t::M_RELEASE_R;
+  cdap_message->flags_ = flags.flags_;
+  cdap_message->invoke_id_ = invoke_id;
+  cdap_message->result_ = res.result_;
+  cdap_message->result_reason_ = res.result_reason_;
+  return cdap_message;
+}
+
+cdap_m_t* CDAPMessageFactory::getCreateObjectRequestMessage(
+    cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
+    cdap_rib::obj_info_t &obj)
+{
+  cdap_m_t *cdap_message = new cdap_m_t();
+  cdap_message->op_code_ = cdap_m_t::M_CREATE;
+  cdap_message->filter_ = filt.filter_;
+  cdap_message->scope_ = filt.scope_;
+  cdap_message->flags_ = flags.flags_;
+  cdap_message->obj_class_ = obj.class_;
+  cdap_message->obj_inst_ = obj.inst_;
+  cdap_message->obj_name_ = obj.name_;
+
+  return cdap_message;
+}
+cdap_m_t* CDAPMessageFactory::getCreateObjectResponseMessage(
+    cdap_rib::flags_t &flags, cdap_rib::obj_info_t &obj,
+    cdap_rib::res_info_t &res, int invoke_id)
+{
+  cdap_m_t *cdap_message = new cdap_m_t();
+  cdap_message->op_code_ = cdap_m_t::M_CREATE_R;
+  cdap_message->flags_ = flags.flags_;
+  cdap_message->invoke_id_ = invoke_id;
+  cdap_message->obj_class_ = obj.class_;
+  cdap_message->obj_inst_ = obj.inst_;
+  cdap_message->obj_name_ = obj.name_;
+  cdap_message->result_ = res.result_;
+  cdap_message->result_reason_ = res.result_reason_;
+
+  return cdap_message;
+}
+cdap_m_t* CDAPMessageFactory::getDeleteObjectRequestMessage(
+    cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
+    cdap_rib::obj_info_t &obj)
+{
+  cdap_m_t *cdap_message = new cdap_m_t();
+  cdap_message->op_code_ = cdap_m_t::M_DELETE;
+  cdap_message->filter_ = filt.filter_;
+  cdap_message->scope_ = filt.scope_;
+  cdap_message->flags_ = flags.flags_;
+  cdap_message->obj_class_ = obj.class_;
+  cdap_message->obj_inst_ = obj.inst_;
+  cdap_message->obj_name_ = obj.name_;
+
+  return cdap_message;
+}
+cdap_m_t* CDAPMessageFactory::getDeleteObjectResponseMessage(
+    cdap_rib::flags_t &flags, cdap_rib::obj_info_t &obj,
+    cdap_rib::res_info_t &res, int invoke_id)
+{
+  cdap_m_t *cdap_message = new cdap_m_t();
+  cdap_message->op_code_ = cdap_m_t::M_DELETE_R;
+  cdap_message->flags_ = flags.flags_;
+  cdap_message->invoke_id_ = invoke_id;
+  cdap_message->obj_class_ = obj.class_;
+  cdap_message->obj_inst_ = obj.inst_;
+  cdap_message->obj_name_ = obj.name_;
+  cdap_message->result_ = res.result_;
+  cdap_message->result_reason_ = res.result_reason_;
+  return cdap_message;
+}
+cdap_m_t* CDAPMessageFactory::getStartObjectRequestMessage(
+    cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
+    cdap_rib::obj_info_t &obj)
+{
+  cdap_m_t *cdap_message = new cdap_m_t();
+  cdap_message->op_code_ = cdap_m_t::M_START;
+  cdap_message->filter_ = filt.filter_;
+  cdap_message->scope_ = filt.scope_;
+  cdap_message->flags_ = flags.flags_;
+  cdap_message->obj_class_ = obj.class_;
+  cdap_message->obj_inst_ = obj.inst_;
+  cdap_message->obj_name_ = obj.name_;
+  return cdap_message;
+}
+cdap_m_t* CDAPMessageFactory::getStartObjectResponseMessage(
+    cdap_rib::flags_t &flags, cdap_rib::res_info_t &res, int invoke_id)
+{
+  cdap_m_t *cdap_message = new cdap_m_t();
+  cdap_message->op_code_ = cdap_m_t::M_START_R;
+  cdap_message->flags_ = flags.flags_;
+  cdap_message->invoke_id_ = invoke_id;
+  cdap_message->result_ = res.result_;
+  cdap_message->result_reason_ = res.result_reason_;
+  return cdap_message;
+}
+cdap_m_t* CDAPMessageFactory::getStartObjectResponseMessage(
+    cdap_rib::flags_t &flags, cdap_rib::obj_info_t &obj,
+    cdap_rib::res_info_t &res, int invoke_id)
+{
+  cdap_m_t *cdap_message = new cdap_m_t();
+  cdap_message->op_code_ = cdap_m_t::M_START_R;
+  cdap_message->flags_ = flags.flags_;
+  cdap_message->invoke_id_ = invoke_id;
+  cdap_message->result_ = res.result_;
+  cdap_message->result_reason_ = res.result_reason_;
+  cdap_message->obj_class_ = obj.class_;
+  cdap_message->obj_inst_ = obj.inst_;
+  cdap_message->obj_name_ = obj.name_;
+  return cdap_message;
+}
+cdap_m_t* CDAPMessageFactory::getStopObjectRequestMessage(
+    cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
+    cdap_rib::obj_info_t &obj)
+{
+  cdap_m_t *cdap_message = new cdap_m_t();
+  cdap_message->op_code_ = cdap_m_t::M_STOP;
+  cdap_message->filter_ = filt.filter_;
+  cdap_message->scope_ = filt.scope_;
+  cdap_message->flags_ = flags.flags_;
+  cdap_message->obj_class_ = obj.class_;
+  cdap_message->obj_inst_ = obj.inst_;
+  cdap_message->obj_name_ = obj.name_;
+  return cdap_message;
+}
+cdap_m_t* CDAPMessageFactory::getStopObjectResponseMessage(
+    cdap_rib::flags_t &flags, cdap_rib::res_info_t &res, int invoke_id)
+{
+  cdap_m_t *cdap_message = new cdap_m_t();
+  cdap_message->op_code_ = cdap_m_t::M_STOP_R;
+  cdap_message->flags_ = flags.flags_;
+  cdap_message->invoke_id_ = invoke_id;
+  cdap_message->result_ = res.result_;
+  cdap_message->result_reason_ = res.result_reason_;
+  return cdap_message;
+}
+cdap_m_t* CDAPMessageFactory::getReadObjectRequestMessage(
+    cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
+    cdap_rib::obj_info_t &obj)
+{
+  cdap_m_t *cdap_message = new cdap_m_t();
+  cdap_message->op_code_ = cdap_m_t::M_READ;
+  cdap_message->filter_ = filt.filter_;
+  cdap_message->scope_ = filt.scope_;
+  cdap_message->flags_ = flags.flags_;
+  cdap_message->obj_class_ = obj.class_;
+  cdap_message->obj_inst_ = obj.inst_;
+  cdap_message->obj_name_ = obj.name_;
+  return cdap_message;
+}
+
+cdap_m_t* CDAPMessageFactory::getReadObjectResponseMessage(
+    cdap_rib::flags_t &flags, cdap_rib::obj_info_t &obj,
+    cdap_rib::res_info_t &res, int invoke_id)
+{
+  cdap_m_t *cdap_message = new cdap_m_t();
+  cdap_message->op_code_ = cdap_m_t::M_READ_R;
+  cdap_message->flags_ = flags.flags_;
+  cdap_message->invoke_id_ = invoke_id;
+  cdap_message->obj_class_ = obj.class_;
+  cdap_message->obj_inst_ = obj.inst_;
+  cdap_message->obj_name_ = obj.name_;
+  cdap_message->result_ = res.result_;
+  cdap_message->result_reason_ = res.result_reason_;
+  return cdap_message;
+}
+
+cdap_m_t* CDAPMessageFactory::getWriteObjectRequestMessage(
+    cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
+    cdap_rib::obj_info_t &obj)
+{
+  cdap_m_t *cdap_message = new cdap_m_t();
+  cdap_message->op_code_ = cdap_m_t::M_WRITE;
+  cdap_message->filter_ = filt.filter_;
+  cdap_message->scope_ = filt.scope_;
+  cdap_message->flags_ = flags.flags_;
+  cdap_message->obj_class_ = obj.class_;
+  cdap_message->obj_inst_ = obj.inst_;
+  cdap_message->obj_name_ = obj.name_;
+  return cdap_message;
+}
+cdap_m_t* CDAPMessageFactory::getWriteObjectResponseMessage(
+    cdap_rib::flags_t &flags, cdap_rib::res_info_t &res, int invoke_id)
+{
+  cdap_m_t *cdap_message = new cdap_m_t();
+  cdap_message->op_code_ = cdap_m_t::M_WRITE_R;
+  cdap_message->flags_ = flags.flags_;
+  cdap_message->invoke_id_ = invoke_id;
+  cdap_message->result_ = res.result_;
+  cdap_message->result_reason_ = res.result_reason_;
+  return cdap_message;
+}
+cdap_m_t* CDAPMessageFactory::getCancelReadRequestMessage(
+    cdap_rib::flags_t &flags, int invoke_id)
+{
+  cdap_m_t *cdap_message = new cdap_m_t();
+  cdap_message->op_code_ = cdap_m_t::M_CANCELREAD;
+  cdap_message->flags_ = flags.flags_;
+  cdap_message->invoke_id_ = invoke_id;
+  return cdap_message;
+}
+cdap_m_t* CDAPMessageFactory::getCancelReadResponseMessage(
+    cdap_rib::flags_t &flags, cdap_rib::res_info_t &res, int invoke_id)
+{
+  cdap_m_t *cdap_message = new cdap_m_t();
+  cdap_message->op_code_ = cdap_m_t::M_CANCELREAD_R;
+  cdap_message->flags_ = flags.flags_;
+  cdap_message->invoke_id_ = invoke_id;
+  cdap_message->result_ = res.result_;
+  cdap_message->result_reason_ = res.result_reason_;
+  return cdap_message;
+}
+
+// CLASS CDAPSessionInvokeIdManagerImpl
+CDAPInvokeIdManagerImpl::CDAPInvokeIdManagerImpl()
+{
+}
+CDAPInvokeIdManagerImpl::~CDAPInvokeIdManagerImpl() throw ()
+{
+  used_invoke_sent_ids_.clear();
+  used_invoke_recv_ids_.clear();
+}
+void CDAPInvokeIdManagerImpl::freeInvokeId(int invoke_id, bool sent)
+{
+  lock();
+  if (!sent)
+    used_invoke_sent_ids_.remove(invoke_id);
+  else
+    used_invoke_recv_ids_.remove(invoke_id);
+  unlock();
+}
+int CDAPInvokeIdManagerImpl::newInvokeId(bool sent)
+{
+  lock();
+  int candidate = 1;
+  std::list<int> * invoke_ids;
+  if (sent)
+    invoke_ids = &used_invoke_sent_ids_;
+  else
+    invoke_ids = &used_invoke_recv_ids_;
+  while (std::find(invoke_ids->begin(), invoke_ids->end(), candidate)
+      != invoke_ids->end()) {
+    candidate = candidate + 1;
+  }
+  invoke_ids->push_back(candidate);
+  unlock();
+  return candidate;
+}
+void CDAPInvokeIdManagerImpl::reserveInvokeId(int invoke_id, bool sent)
+{
+  lock();
+  if (sent)
+    used_invoke_sent_ids_.push_back(invoke_id);
+  else
+    used_invoke_recv_ids_.push_back(invoke_id);
+  unlock();
+}
+
+// CLASS CDAPOperationState
+CDAPOperationState::CDAPOperationState(cdap_m_t::Opcode op_code, bool sender)
+{
+  op_code_ = op_code;
+  sender_ = sender;
+}
+CDAPOperationState::~CDAPOperationState()
+{
+}
+cdap_m_t::Opcode CDAPOperationState::get_op_code() const
+{
+  return op_code_;
+}
+bool CDAPOperationState::is_sender() const
+{
+  return sender_;
+}
+
+// CLASS ConnectionStateMachine
+ConnectionStateMachine::ConnectionStateMachine(CDAPSession *cdap_session,
+                                               long timeout)
+{
+  cdap_session_ = cdap_session;
+  timeout_ = timeout;
+  lock();
+  connection_state_ = NONE;
+  unlock();
+  open_timer_ = 0;
+  close_timer_ = 0;
+}
+ConnectionStateMachine::~ConnectionStateMachine() throw ()
+{
+  delete open_timer_;
+  open_timer_ = 0;
+  delete close_timer_;
+  close_timer_ = 0;
+}
+bool ConnectionStateMachine::is_connected() const
+{
+  return connection_state_ == CONNECTED;
+}
+void ConnectionStateMachine::checkConnect()
+{
+  lock();
+  if (connection_state_ != NONE) {
+    std::stringstream ss;
+    ss << "Cannot open a new connection because "
+       << "this CDAP session is currently in " << connection_state_ << " state";
+    unlock();
+    throw rina::CDAPException(ss.str());
+  }
+  unlock();
+}
+void ConnectionStateMachine::connectSentOrReceived(bool sent)
+{
+  if (sent) {
+    connect();
+  } else {
+    connectReceived();
+  }
+}
+void ConnectionStateMachine::checkConnectResponse()
+{
+  lock();
+  if (connection_state_ != AWAITCON) {
+    std::stringstream ss;
+    ss << "Cannot send a connection response because this CDAP session is currently in "
+       << connection_state_ << " state";
+    unlock();
+    throw rina::CDAPException(ss.str());
+  }
+  unlock();
+}
+void ConnectionStateMachine::connectResponseSentOrReceived(bool sent)
+{
+  if (sent) {
+    connectResponse();
+  } else {
+    connectResponseReceived();
+  }
+}
+void ConnectionStateMachine::checkRelease()
+{
+  lock();
+  if (connection_state_ != CONNECTED) {
+    std::stringstream ss;
+    ss << "Cannot close a connection because " << "this CDAP session is "
+       << "currently in " << connection_state_ << " state";
+    unlock();
+    throw rina::CDAPException(ss.str());
+  }
+  unlock();
+}
+void ConnectionStateMachine::releaseSentOrReceived(const cdap_m_t &cdap_message,
+                                                   bool sent)
+{
+  if (sent) {
+    release(cdap_message);
+  } else {
+    releaseReceived(cdap_message);
+  }
+}
+void ConnectionStateMachine::checkReleaseResponse()
+{
+  lock();
+  if (connection_state_ != AWAITCLOSE) {
+    std::stringstream ss;
+    ss << "Cannot send a release connection response message because this CDAP session is currently in "
+       << connection_state_ << " state";
+    unlock();
+    throw rina::CDAPException(ss.str());
+  }
+  unlock();
+}
+void ConnectionStateMachine::releaseResponseSentOrReceived(bool sent)
+{
+  if (sent) {
+    releaseResponse();
+  } else {
+    releaseResponseReceived();
+  }
+}
+void ConnectionStateMachine::resetConnection()
+{
+  connection_state_ = NONE;
+  unlock();
+  cdap_session_->stopConnection();
+}
+void ConnectionStateMachine::connect()
+{
+  checkConnect();
+  lock();
+  connection_state_ = AWAITCON;
+  unlock();
+  LOG_DBG("Waiting timeout %d to receive a connection response", timeout_);
+  open_timer_ = new rina::Timer();
+  ResetStablishmentTimerTask *reset = new ResetStablishmentTimerTask(this);
+  open_timer_->scheduleTask(reset, timeout_);
+}
+void ConnectionStateMachine::connectReceived()
+{
+  lock();
+  if (connection_state_ != NONE) {
+    std::stringstream ss;
+    ss << "Cannot open a new connection because this CDAP session is currently in"
+       << connection_state_ << " state";
+    unlock();
+    throw rina::CDAPException(ss.str());
+  }
+  connection_state_ = AWAITCON;
+  unlock();
+}
+void ConnectionStateMachine::connectResponse()
+{
+  checkConnectResponse();
+  lock();
+  connection_state_ = CONNECTED;
+  unlock();
+}
+void ConnectionStateMachine::connectResponseReceived()
+{
+  lock();
+  if (connection_state_ != AWAITCON) {
+    std::stringstream ss;
+    ss << "Received an M_CONNECT_R message, but this CDAP session is currently in "
+           + connection_state_
+       << " state";
+    unlock();
+    throw rina::CDAPException(ss.str());
+  }
+  LOG_DBG("Connection response received");
+  delete open_timer_;
+  open_timer_ = 0;
+  connection_state_ = CONNECTED;
+  unlock();
+}
+void ConnectionStateMachine::release(const cdap_m_t &cdap_message)
+{
+  checkRelease();
+  lock();
+  connection_state_ = AWAITCLOSE;
+  unlock();
+  if (cdap_message.invoke_id_ != 0) {
+    close_timer_ = new rina::Timer();
+    ReleaseConnectionTimerTask *reset = new ReleaseConnectionTimerTask(this);
+    LOG_DBG("Waiting timeout %d to receive a release response", timeout_);
+    close_timer_->scheduleTask(reset, timeout_);
+  }
+
+}
+void ConnectionStateMachine::releaseReceived(const cdap_m_t &message)
+{
+  lock();
+  if (connection_state_ != CONNECTED && connection_state_ != AWAITCLOSE) {
+    std::stringstream ss;
+    ss << "Cannot close the connection because this CDAP session is currently in "
+       << connection_state_ << " state";
+    unlock();
+    throw rina::CDAPException(ss.str());
+  }
+  if (message.invoke_id_ != 0 && connection_state_ != AWAITCLOSE) {
+    connection_state_ = AWAITCLOSE;
+  } else {
+    connection_state_ = NONE;
+    cdap_session_->stopConnection();
+  }
+  unlock();
+}
+void ConnectionStateMachine::releaseResponse()
+{
+  checkReleaseResponse();
+  lock();
+  connection_state_ = NONE;
+  unlock();
+}
+void ConnectionStateMachine::releaseResponseReceived()
+{
+  if (connection_state_ != AWAITCLOSE) {
+    std::stringstream ss;
+    ss << "Received an M_RELEASE_R message, but this CDAP session is currently in "
+       << connection_state_ << " state";
+    throw rina::CDAPException(ss.str());
+  }
+  LOG_DBG("Release response received");
+  delete close_timer_;
+  close_timer_ = 0;
+}
+
+// CLASS ResetStablishmentTimerTask
+ResetStablishmentTimerTask::ResetStablishmentTimerTask(
+    ConnectionStateMachine *con_state_machine)
+{
+  con_state_machine_ = con_state_machine;
+}
+void ResetStablishmentTimerTask::run()
+{
+  con_state_machine_->lock();
+  if (con_state_machine_->connection_state_
+      == ConnectionStateMachine::AWAITCON) {
+    LOG_ERR(
+        "M_CONNECT_R message not received within %d ms. Reseting the connection",
+        con_state_machine_->timeout_);
+    con_state_machine_->resetConnection();
+  } else
+    con_state_machine_->unlock();
+}
+
+// CLASS ReleaseConnectionTimerTask
+ReleaseConnectionTimerTask::ReleaseConnectionTimerTask(
+    ConnectionStateMachine *con_state_machine)
+{
+  con_state_machine_ = con_state_machine;
+}
+void ReleaseConnectionTimerTask::run()
+{
+  con_state_machine_->lock();
+  if (con_state_machine_->connection_state_
+      == ConnectionStateMachine::AWAITCLOSE) {
+    LOG_ERR(
+        "M_RELEASE_R message not received within %d ms. Reseting the connection",
+        con_state_machine_->timeout_);
+    con_state_machine_->resetConnection();
+  } else
+    con_state_machine_->unlock();
+}
+
+/* CLASS CDAPMessageValidator */
+void CDAPMessageValidator::validate(const cdap_m_t *message)
+{
+  validateAbsSyntax(message);
+  validateAuthMech(message);
+  validateAuthValue(message);
+  validateDestAEInst(message);
+  validateDestAEName(message);
+  validateDestApInst(message);
+  validateDestApName(message);
+  validateFilter(message);
+  validateInvokeID(message);
+  validateObjClass(message);
+  validateObjInst(message);
+  validateObjName(message);
+  validateObjValue(message);
+  validateOpcode(message);
+  validateResult(message);
+  validateResultReason(message);
+  validateScope(message);
+  validateSrcAEInst(message);
+  validateSrcAEName(message);
+  validateSrcApInst(message);
+  validateSrcApName(message);
+  validateVersion(message);
+}
+
+void CDAPMessageValidator::validateAbsSyntax(const cdap_m_t *message)
+{
+  if (message->abs_syntax_ == 0) {
+    if (message->op_code_ == cdap_m_t::M_CONNECT
+        || message->op_code_ == cdap_m_t::M_CONNECT_R) {
+      throw rina::CDAPException(
+          "AbsSyntax must be set for M_CONNECT and M_CONNECT_R messages");
+    }
+  } else {
+    if ((message->op_code_ != cdap_m_t::M_CONNECT)
+        && (message->op_code_ != cdap_m_t::M_CONNECT_R)) {
+      throw rina::CDAPException(
+          "AbsSyntax can only be set for M_CONNECT and M_CONNECT_R messages");
+    }
+  }
+}
+
+void CDAPMessageValidator::validateAuthMech(const cdap_m_t *message)
+{
+  if (message->auth_mech_ != cdap_rib::auth_info_t::AUTH_NONE) {
+    if ((message->op_code_ != cdap_m_t::M_CONNECT)
+        && message->op_code_ != cdap_m_t::M_CONNECT_R) {
+      throw rina::CDAPException(
+          "AuthMech can only be set for M_CONNECT and M_CONNECT_R messages");
+    }
+  }
+}
+
+void CDAPMessageValidator::validateAuthValue(const cdap_m_t *message)
+{
+  if (!message->auth_value_.is_empty()) {
+    if ((message->op_code_ != cdap_m_t::M_CONNECT)
+        && (message->op_code_ != cdap_m_t::M_CONNECT_R)) {
+      throw rina::CDAPException(
+          "AuthValue can only be set for M_CONNECT and M_CONNECT_R messages");
+    }
+  }
+}
+
+void CDAPMessageValidator::validateDestAEInst(const cdap_m_t *message)
+{
+  if (!message->dest_ae_inst_.empty()) {
+    if ((message->op_code_ != cdap_m_t::M_CONNECT)
+        && (message->op_code_ != cdap_m_t::M_CONNECT_R)) {
+      throw rina::CDAPException(
+          "dest_ae_inst can only be set for M_CONNECT and M_CONNECT_R messages");
+    }
+  }
+}
+
+void CDAPMessageValidator::validateDestAEName(const cdap_m_t *message)
+{
+  if (!message->dest_ae_name_.empty()) {
+    if ((message->op_code_ != cdap_m_t::M_CONNECT)
+        && (message->op_code_ != cdap_m_t::M_CONNECT_R)) {
+      throw rina::CDAPException(
+          "DestAEName can only be set for M_CONNECT and M_CONNECT_R messages");
+    }
+  }
+}
+
+void CDAPMessageValidator::validateDestApInst(const cdap_m_t *message)
+{
+  if (!message->dest_ap_inst_.empty()) {
+    if (message->op_code_ != cdap_m_t::M_CONNECT
+        && message->op_code_ != cdap_m_t::M_CONNECT_R) {
+      throw rina::CDAPException(
+          "DestApInst can only be set for M_CONNECT and M_CONNECT_R messages");
+    }
+  }
+}
+
+void CDAPMessageValidator::validateDestApName(const cdap_m_t *message)
+{
+  if (message->dest_ap_name_.empty()) {
+    if (message->op_code_ == cdap_m_t::M_CONNECT) {
+      throw rina::CDAPException(
+          "DestApName must be set for the M_CONNECT message");
+    } else if (message->op_code_ == cdap_m_t::M_CONNECT_R) {
+      //TODO not sure what to do
+    }
+  } else {
+    if (message->op_code_ != cdap_m_t::M_CONNECT
+        && message->op_code_ != cdap_m_t::M_CONNECT_R) {
+      throw rina::CDAPException(
+          "DestApName can only be set for M_CONNECT and M_CONNECT_R messages");
+    }
+  }
+}
+
+void CDAPMessageValidator::validateFilter(const cdap_m_t *message)
+{
+  if (message->filter_ != 0) {
+    if (message->op_code_ != cdap_m_t::M_CREATE
+        && message->op_code_ != cdap_m_t::M_DELETE
+        && message->op_code_ != cdap_m_t::M_READ
+        && message->op_code_ != cdap_m_t::M_WRITE
+        && message->op_code_ != cdap_m_t::M_START
+        && message->op_code_ != cdap_m_t::M_STOP) {
+      throw rina::CDAPException(
+          "The filter parameter can only be set for M_CREATE, M_DELETE, M_READ, M_WRITE, M_START or M_STOP messages");
+    }
+  }
+}
+
+void CDAPMessageValidator::validateInvokeID(const cdap_m_t *message)
+{
+  if (message->invoke_id_ == 0) {
+    if (message->op_code_ == cdap_m_t::M_CONNECT
+        || message->op_code_ == cdap_m_t::M_CONNECT_R
+        || message->op_code_ == cdap_m_t::M_RELEASE_R
+        || message->op_code_ == cdap_m_t::M_CREATE_R
+        || message->op_code_ == cdap_m_t::M_DELETE_R
+        || message->op_code_ == cdap_m_t::M_READ_R
+        || message->op_code_ == cdap_m_t::M_CANCELREAD
+        || message->op_code_ == cdap_m_t::M_CANCELREAD_R
+        || message->op_code_ == cdap_m_t::M_WRITE_R
+        || message->op_code_ == cdap_m_t::M_START_R
+        || message->op_code_ == cdap_m_t::M_STOP_R) {
+      throw rina::CDAPException("The invoke id parameter cannot be 0");
+    }
+  }
+}
+
+void CDAPMessageValidator::validateObjClass(const cdap_m_t *message)
+{
+  if (!message->obj_class_.empty()) {
+    if (message->obj_name_.empty()) {
+      throw rina::CDAPException(
+          "If the objClass parameter is set, the objName parameter also has to be set");
+    }
+    if (message->op_code_ != cdap_m_t::M_CREATE
+        && message->op_code_ != cdap_m_t::M_CREATE_R
+        && message->op_code_ != cdap_m_t::M_DELETE
+        && message->op_code_ != cdap_m_t::M_DELETE_R
+        && message->op_code_ != cdap_m_t::M_READ
+        && message->op_code_ != cdap_m_t::M_READ_R
+        && message->op_code_ != cdap_m_t::M_WRITE
+        && message->op_code_ != cdap_m_t::M_WRITE_R
+        && message->op_code_ != cdap_m_t::M_START
+        && message->op_code_ != cdap_m_t::M_STOP
+        && message->op_code_ != cdap_m_t::M_START_R
+        && message->op_code_ != cdap_m_t::M_STOP_R) {
+      throw rina::CDAPException(
+          "The objClass parameter can only be set for M_CREATE, M_CREATE_R, M_DELETE, M_DELETE_R, M_READ, M_READ_R, M_WRITE, M_WRITE_R, M_START, M_STOP, M_START_R, M_STOP_R messages");
+    }
+  }
+}
+
+void CDAPMessageValidator::validateObjInst(const cdap_m_t *message)
+{
+  if (message->obj_inst_ != 0) {
+    if (message->op_code_ != cdap_m_t::M_CREATE
+        && message->op_code_ != cdap_m_t::M_CREATE_R
+        && message->op_code_ != cdap_m_t::M_DELETE
+        && message->op_code_ != cdap_m_t::M_DELETE_R
+        && message->op_code_ != cdap_m_t::M_READ
+        && message->op_code_ != cdap_m_t::M_READ_R
+        && message->op_code_ != cdap_m_t::M_WRITE
+        && message->op_code_ != cdap_m_t::M_WRITE_R
+        && message->op_code_ != cdap_m_t::M_START
+        && message->op_code_ != cdap_m_t::M_STOP
+        && message->op_code_ != cdap_m_t::M_START_R
+        && message->op_code_ != cdap_m_t::M_STOP_R) {
+      throw rina::CDAPException(
+          "The objInst parameter can only be set for M_CREATE, M_CREATE_R, M_DELETE, M_DELETE_R, M_READ, M_READ_R, M_WRITE, M_WRITE_R, M_START, M_START_R, M_STOP and M_STOP_R messages");
+    }
+  }
+}
+
+void CDAPMessageValidator::validateObjName(const cdap_m_t *message)
+{
+  if (!message->obj_name_.empty()) {
+    if (message->obj_class_.empty()) {
+      throw new rina::CDAPException(
+          "If the objName parameter is set, the objClass parameter also has to be set");
+    }
+    if (message->op_code_ != cdap_m_t::M_CREATE
+        && message->op_code_ != cdap_m_t::M_CREATE_R
+        && message->op_code_ != cdap_m_t::M_DELETE
+        && message->op_code_ != cdap_m_t::M_DELETE_R
+        && message->op_code_ != cdap_m_t::M_READ
+        && message->op_code_ != cdap_m_t::M_READ_R
+        && message->op_code_ != cdap_m_t::M_WRITE
+        && message->op_code_ != cdap_m_t::M_WRITE_R
+        && message->op_code_ != cdap_m_t::M_START
+        && message->op_code_ != cdap_m_t::M_STOP
+        && message->op_code_ != cdap_m_t::M_START_R
+        && message->op_code_ != cdap_m_t::M_STOP_R) {
+      throw rina::CDAPException(
+          "The objName parameter can only be set for M_CREATE, M_CREATE_R, M_DELETE, M_DELETE_R, M_READ, M_READ_R, M_WRITE, M_WRITE_R, M_START, M_STOP, M_START_R and M_STOP_R messages");
+    }
+  }
+}
+
+void CDAPMessageValidator::validateObjValue(const cdap_m_t *message)
+{
+  if (message->obj_value_ == 0) {
+    if (message->op_code_ == cdap_m_t::M_WRITE) {
+      throw rina::CDAPException(
+          "The objValue parameter must be set for M_WRITE messages");
+    }
+  } else {
+    if (message->op_code_ != cdap_m_t::M_CREATE
+        && message->op_code_ != cdap_m_t::M_CREATE_R
+        && message->op_code_ != cdap_m_t::M_READ_R
+        && message->op_code_ != cdap_m_t::M_WRITE
+        && message->op_code_ != cdap_m_t::M_START
+        && message->op_code_ != cdap_m_t::M_STOP
+        && message->op_code_ != cdap_m_t::M_START_R
+        && message->op_code_ != cdap_m_t::M_STOP_R
+        && message->op_code_ != cdap_m_t::M_WRITE_R
+        && message->op_code_ != cdap_m_t::M_DELETE
+        && message->op_code_ != cdap_m_t::M_READ) {
+      throw rina::CDAPException(
+          "The objValue parameter can only be set for M_CREATE, M_DELETE, M_CREATE_R, M_READ_R, M_WRITE, M_START, M_START_R, M_STOP, M_STOP_R and M_WRITE_R messages");
+    }
+  }
+}
+
+void CDAPMessageValidator::validateOpcode(const cdap_m_t *message)
+{
+  if (message->op_code_ == cdap_m_t::NONE_OPCODE) {
+    throw rina::CDAPException("The opcode must be set for all the messages");
+  }
+}
+
+void CDAPMessageValidator::validateResult(const cdap_m_t *message)
+{
+  /* FIXME: Do something with sense */
+  (void) message->abs_syntax_;
+}
+
+void CDAPMessageValidator::validateResultReason(const cdap_m_t *message)
+{
+  if (!message->result_reason_.empty()) {
+    if (message->op_code_ != cdap_m_t::M_CREATE_R
+        && message->op_code_ != cdap_m_t::M_DELETE_R
+        && message->op_code_ != cdap_m_t::M_READ_R
+        && message->op_code_ != cdap_m_t::M_WRITE_R
+        && message->op_code_ != cdap_m_t::M_CONNECT_R
+        && message->op_code_ != cdap_m_t::M_RELEASE_R
+        && message->op_code_ != cdap_m_t::M_CANCELREAD
+        && message->op_code_ != cdap_m_t::M_CANCELREAD_R
+        && message->op_code_ != cdap_m_t::M_START_R
+        && message->op_code_ != cdap_m_t::M_STOP_R) {
+      throw rina::CDAPException(
+          "The resultReason parameter can only be set for M_CREATE_R, M_DELETE_R, M_READ_R, M_WRITE_R, M_START_R, M_STOP_R, M_CONNECT_R, M_RELEASE_R, M_CANCELREAD and M_CANCELREAD_R messages");
+    }
+  }
+}
+
+void CDAPMessageValidator::validateScope(const cdap_m_t *message)
+{
+  if (message->scope_ != 0) {
+    if (message->op_code_ != cdap_m_t::M_CREATE
+        && message->op_code_ != cdap_m_t::M_DELETE
+        && message->op_code_ != cdap_m_t::M_READ
+        && message->op_code_ != cdap_m_t::M_WRITE
+        && message->op_code_ != cdap_m_t::M_START
+        && message->op_code_ != cdap_m_t::M_STOP) {
+      throw rina::CDAPException(
+          "The scope parameter can only be set for M_CREATE, M_DELETE, M_READ, M_WRITE, M_START or M_STOP messages");
+    }
+  }
+}
+
+void CDAPMessageValidator::validateSrcAEInst(const cdap_m_t *message)
+{
+  if (!message->src_ae_inst_.empty()) {
+    if (message->op_code_ != cdap_m_t::M_CONNECT
+        && message->op_code_ != cdap_m_t::M_CONNECT_R) {
+      throw rina::CDAPException(
+          "SrcAEInst can only be set for M_CONNECT and M_CONNECT_R messages");
+    }
+  }
+}
+
+void CDAPMessageValidator::validateSrcAEName(const cdap_m_t *message)
+{
+  if (!message->src_ae_name_.empty()) {
+    if (message->op_code_ != cdap_m_t::M_CONNECT
+        && message->op_code_ != cdap_m_t::M_CONNECT_R) {
+      throw rina::CDAPException(
+          "SrcAEName can only be set for M_CONNECT and M_CONNECT_R messages");
+    }
+  }
+}
+
+void CDAPMessageValidator::validateSrcApInst(const cdap_m_t *message)
+{
+  if (!message->src_ap_inst_.empty()) {
+    if (message->op_code_ != cdap_m_t::M_CONNECT
+        && message->op_code_ != cdap_m_t::M_CONNECT_R) {
+      throw rina::CDAPException(
+          "SrcApInst can only be set for M_CONNECT and M_CONNECT_R messages");
+    }
+  }
+}
+
+void CDAPMessageValidator::validateSrcApName(const cdap_m_t *message)
+{
+  if (message->src_ap_name_.empty()) {
+    if (message->op_code_ == cdap_m_t::M_CONNECT) {
+      throw rina::CDAPException(
+          "SrcApName must be set for the M_CONNECT message");
+    } else if (message->op_code_ == cdap_m_t::M_CONNECT_R) {
+      //TODO not sure what to do
+    }
+  } else {
+    if (message->op_code_ != cdap_m_t::M_CONNECT
+        && message->op_code_ != cdap_m_t::M_CONNECT_R) {
+      throw rina::CDAPException(
+          "SrcApName can only be set for M_CONNECT and M_CONNECT_R messages");
+    }
+  }
+}
+
+void CDAPMessageValidator::validateVersion(const cdap_m_t *message)
+{
+  if (message->version_ == 0) {
+    if (message->op_code_ == cdap_m_t::M_CONNECT
+        || message->op_code_ == cdap_m_t::M_CONNECT_R) {
+      throw rina::CDAPException(
+          "Version must be set for M_CONNECT and M_CONNECT_R messages");
+    }
+  }
+}
+
+// CLASS CDAPSession
+CDAPSession::CDAPSession(CDAPSessionManager *cdap_session_manager, long timeout,
+                         SerializerInterface *serializer,
+                         CDAPInvokeIdManagerImpl *invoke_id_manager)
+{
+  cdap_session_manager_ = cdap_session_manager;
+  connection_state_machine_ = new ConnectionStateMachine(this, timeout);
+  serializer_ = serializer;
+  invoke_id_manager_ = invoke_id_manager;
+  session_descriptor_ = 0;
+}
+
+CDAPSession::~CDAPSession() throw ()
+{
+  delete connection_state_machine_;
+  connection_state_machine_ = 0;
+  delete session_descriptor_;
+  session_descriptor_ = 0;
+  for (std::map<int, CDAPOperationState*>::iterator iter =
+      pending_messages_sent_.begin(); iter != pending_messages_sent_.end();
+      ++iter) {
+    delete iter->second;
+  }
+  pending_messages_sent_.clear();
+  for (std::map<int, CDAPOperationState*>::iterator iter =
+      pending_messages_recv_.begin(); iter != pending_messages_recv_.end();
+      ++iter) {
+    delete iter->second;
+  }
+  pending_messages_recv_.clear();
+  for (std::map<int, CDAPOperationState*>::iterator iter =
+      cancel_read_pending_messages_.begin();
+      iter != cancel_read_pending_messages_.end(); ++iter) {
+    delete iter->second;
+    iter->second = 0;
+  }
+  cancel_read_pending_messages_.clear();
+}
+const cdap_rib::SerializedObject* CDAPSession::encodeNextMessageToBeSent(
+    const cdap_m_t &cdap_message)
+{
+  CDAPMessageValidator::validate(&cdap_message);
+
+  switch (cdap_message.op_code_) {
+    case cdap_m_t::M_CONNECT:
+      connection_state_machine_->checkConnect();
+      break;
+    case cdap_m_t::M_CONNECT_R:
+      connection_state_machine_->checkConnectResponse();
+      break;
+    case cdap_m_t::M_RELEASE:
+      connection_state_machine_->checkRelease();
+      break;
+    case cdap_m_t::M_RELEASE_R:
+      connection_state_machine_->checkReleaseResponse();
+      break;
+    case cdap_m_t::M_CREATE:
+      checkIsConnected();
+      checkInvokeIdNotExists(cdap_message, true);
+      break;
+    case cdap_m_t::M_CREATE_R:
+      checkIsConnected();
+      checkCanSendOrReceiveResponse(cdap_message, cdap_m_t::M_CREATE, true);
+      break;
+    case cdap_m_t::M_DELETE:
+      checkIsConnected();
+      checkInvokeIdNotExists(cdap_message, true);
+      break;
+    case cdap_m_t::M_DELETE_R:
+      checkIsConnected();
+      checkCanSendOrReceiveResponse(cdap_message, cdap_m_t::M_DELETE, true);
+      break;
+    case cdap_m_t::M_START:
+      checkIsConnected();
+      checkInvokeIdNotExists(cdap_message, true);
+      break;
+    case cdap_m_t::M_START_R:
+      checkIsConnected();
+      checkCanSendOrReceiveResponse(cdap_message, cdap_m_t::M_START, true);
+      break;
+    case cdap_m_t::M_STOP:
+      checkIsConnected();
+      checkInvokeIdNotExists(cdap_message, true);
+      break;
+    case cdap_m_t::M_STOP_R:
+      checkIsConnected();
+      checkCanSendOrReceiveResponse(cdap_message, cdap_m_t::M_STOP, true);
+      break;
+    case cdap_m_t::M_WRITE:
+      checkIsConnected();
+      checkInvokeIdNotExists(cdap_message, true);
+      break;
+    case cdap_m_t::M_WRITE_R:
+      checkIsConnected();
+      checkCanSendOrReceiveResponse(cdap_message, cdap_m_t::M_WRITE, true);
+      break;
+    case cdap_m_t::M_READ:
+      checkIsConnected();
+      checkInvokeIdNotExists(cdap_message, true);
+      break;
+    case cdap_m_t::M_READ_R:
+      checkIsConnected();
+      checkCanSendOrReceiveResponse(cdap_message, cdap_m_t::M_READ, true);
+      break;
+    case cdap_m_t::M_CANCELREAD:
+      checkIsConnected();
+      checkCanSendOrReceiveCancelReadRequest(cdap_message, true);
+      break;
+    case cdap_m_t::M_CANCELREAD_R:
+      checkIsConnected();
+      checkCanSendOrReceiveCancelReadResponse(cdap_message, true);
+      break;
+    default:
+      std::stringstream ss;
+      ss << "Unrecognized operation code: " << cdap_message.op_code_;
+      throw rina::CDAPException(ss.str());
+  }
+
+  return serializeMessage(cdap_message);
+}
+void CDAPSession::messageSent(const cdap_m_t &cdap_message)
+{
+  messageSentOrReceived(cdap_message, true);
+}
+const cdap_m_t* CDAPSession::messageReceived(
+    const cdap_rib::SerializedObject &message)
+{
+  const cdap_m_t *cdap_message = deserializeMessage(message);
+  messageSentOrReceived(*cdap_message, false);
+  return cdap_message;
+}
+void CDAPSession::messageReceived(const cdap_m_t &cdap_message)
+{
+  messageSentOrReceived(cdap_message, false);
+}
+void CDAPSession::set_session_descriptor(cdap_session_t *session_descriptor)
+{
+  session_descriptor_ = session_descriptor;
+}
+int CDAPSession::get_port_id() const
+{
+  return session_descriptor_->port_id_;
+}
+cdap_session_t* CDAPSession::get_session_descriptor() const
+{
+  return session_descriptor_;
+}
+CDAPInvokeIdManagerImpl* CDAPSession::get_invoke_id_manager() const
+{
+  return invoke_id_manager_;
+}
+void CDAPSession::stopConnection()
+{
+  cdap_session_manager_->removeCDAPSession(get_port_id());
+}
+void CDAPSession::messageSentOrReceived(const cdap_m_t &cdap_message, bool sent)
+{
+  switch (cdap_message.op_code_) {
+    case cdap_m_t::M_CONNECT:
+      connection_state_machine_->connectSentOrReceived(sent);
+      populateSessionDescriptor(cdap_message, sent);
+      break;
+    case cdap_m_t::M_CONNECT_R:
+      connection_state_machine_->connectResponseSentOrReceived(sent);
+      break;
+    case cdap_m_t::M_RELEASE:
+      connection_state_machine_->releaseSentOrReceived(cdap_message, sent);
+      break;
+    case cdap_m_t::M_RELEASE_R:
+      connection_state_machine_->releaseResponseSentOrReceived(sent);
+      break;
+    case cdap_m_t::M_CREATE:
+      requestMessageSentOrReceived(cdap_message, cdap_m_t::M_CREATE, sent);
+      break;
+    case cdap_m_t::M_CREATE_R:
+      responseMessageSentOrReceived(cdap_message, cdap_m_t::M_CREATE, sent);
+      break;
+    case cdap_m_t::M_DELETE:
+      requestMessageSentOrReceived(cdap_message, cdap_m_t::M_DELETE, sent);
+      break;
+    case cdap_m_t::M_DELETE_R:
+      responseMessageSentOrReceived(cdap_message, cdap_m_t::M_DELETE, sent);
+      break;
+    case cdap_m_t::M_START:
+      requestMessageSentOrReceived(cdap_message, cdap_m_t::M_START, sent);
+      break;
+    case cdap_m_t::M_START_R:
+      responseMessageSentOrReceived(cdap_message, cdap_m_t::M_START, sent);
+      break;
+    case cdap_m_t::M_STOP:
+      requestMessageSentOrReceived(cdap_message, cdap_m_t::M_STOP, sent);
+      break;
+    case cdap_m_t::M_STOP_R:
+      responseMessageSentOrReceived(cdap_message, cdap_m_t::M_STOP, sent);
+      break;
+    case cdap_m_t::M_WRITE:
+      requestMessageSentOrReceived(cdap_message, cdap_m_t::M_WRITE, sent);
+      break;
+    case cdap_m_t::M_WRITE_R:
+      responseMessageSentOrReceived(cdap_message, cdap_m_t::M_WRITE, sent);
+      break;
+    case cdap_m_t::M_READ:
+      requestMessageSentOrReceived(cdap_message, cdap_m_t::M_READ, sent);
+      break;
+    case cdap_m_t::M_READ_R:
+      responseMessageSentOrReceived(cdap_message, cdap_m_t::M_READ, sent);
+      break;
+    case cdap_m_t::M_CANCELREAD:
+      cancelReadMessageSentOrReceived(cdap_message, sent);
+      break;
+    case cdap_m_t::M_CANCELREAD_R:
+      cancelReadResponseMessageSentOrReceived(cdap_message, sent);
+      break;
+    default:
+      std::stringstream ss;
+      ss << "Unrecognized operation code: " << cdap_message.op_code_;
+      throw rina::CDAPException(ss.str());
+  }
+  CDAPMessageValidator::validate(&cdap_message);
+  freeOrReserveInvokeId(cdap_message, sent);
+}
+void CDAPSession::freeOrReserveInvokeId(const cdap_m_t &cdap_message, bool sent)
+{
+  cdap_m_t::Opcode op_code = cdap_message.op_code_;
+  if (op_code == cdap_m_t::M_CONNECT_R || op_code == cdap_m_t::M_RELEASE_R
+      || op_code == cdap_m_t::M_CREATE_R || op_code == cdap_m_t::M_DELETE_R
+      || op_code == cdap_m_t::M_START_R || op_code == cdap_m_t::M_STOP_R
+      || op_code == cdap_m_t::M_WRITE_R || op_code == cdap_m_t::M_CANCELREAD_R
+      || (op_code == cdap_m_t::M_READ_R
+          && cdap_message.flags_ == cdap_rib::flags_t::NONE_FLAGS)
+      || cdap_message.flags_ != cdap_rib::flags_t::F_RD_INCOMPLETE) {
+    invoke_id_manager_->freeInvokeId(cdap_message.invoke_id_, sent);
+  }
+
+  if (cdap_message.invoke_id_ != 0) {
+    if (op_code == cdap_m_t::M_CONNECT || op_code == cdap_m_t::M_RELEASE
+        || op_code == cdap_m_t::M_CREATE || op_code == cdap_m_t::M_DELETE
+        || op_code == cdap_m_t::M_START || op_code == cdap_m_t::M_STOP
+        || op_code == cdap_m_t::M_WRITE || op_code == cdap_m_t::M_CANCELREAD
+        || op_code == cdap_m_t::M_READ) {
+      invoke_id_manager_->reserveInvokeId(cdap_message.invoke_id_, sent);
+    }
+  }
+}
+void CDAPSession::checkIsConnected() const
+{
+  if (!connection_state_machine_->is_connected()) {
+    throw rina::CDAPException(
+        "Cannot send a message because the CDAP session is not in CONNECTED state");
+  }
+}
+void CDAPSession::checkInvokeIdNotExists(const cdap_m_t &cdap_message,
+                                         bool sent) const
+{
+  const std::map<int, CDAPOperationState*>* pending_messages;
+  if (sent)
+    pending_messages = &pending_messages_sent_;
+  else
+    pending_messages = &pending_messages_recv_;
+
+  if (pending_messages->find(cdap_message.invoke_id_)
+      != pending_messages->end()) {
+    std::stringstream ss;
+    ss << cdap_message.invoke_id_;
+    throw rina::CDAPException("The invokeid " + ss.str() + " already exists");
+  }
+}
+void CDAPSession::checkCanSendOrReceiveCancelReadRequest(
+    const cdap_m_t &cdap_message, bool sent) const
+{
+  bool validationFailed = false;
+  const std::map<int, CDAPOperationState*>* pending_messages;
+  if (sent)
+    pending_messages = &pending_messages_sent_;
+  else
+    pending_messages = &pending_messages_recv_;
+
+  if (pending_messages->find(cdap_message.invoke_id_)
+      != pending_messages->end()) {
+    CDAPOperationState *state = pending_messages->find(cdap_message.invoke_id_)
+        ->second;
+    if (state->get_op_code() == cdap_m_t::M_READ) {
+      validationFailed = true;
+    }
+    if (sent && !state->is_sender()) {
+      validationFailed = true;
+    }
+    if (!sent && state->is_sender()) {
+      validationFailed = true;
+    }
+    if (validationFailed) {
+      std::stringstream ss;
+      ss << cdap_message.invoke_id_;
+      throw rina::CDAPException(
+          "Cannot set an M_CANCELREAD message because there is no READ transaction associated to the invoke id "
+              + ss.str());
+    }
+  } else {
+    std::stringstream ss;
+    ss << cdap_message.invoke_id_;
+    throw rina::CDAPException(
+        "Cannot set an M_CANCELREAD message because there is no READ transaction associated to the invoke id "
+            + ss.str());
+  }
+}
+void CDAPSession::requestMessageSentOrReceived(const cdap_m_t &cdap_message,
+                                               cdap_m_t::Opcode op_code,
+                                               bool sent)
+{
+  checkIsConnected();
+  checkInvokeIdNotExists(cdap_message, sent);
+
+  std::map<int, CDAPOperationState*>* pending_messages;
+  if (sent)
+    pending_messages = &pending_messages_sent_;
+  else
+    pending_messages = &pending_messages_recv_;
+
+  if (cdap_message.invoke_id_ != 0) {
+    CDAPOperationState *new_operation_state = new CDAPOperationState(op_code,
+                                                                     sent);
+    pending_messages->insert(
+        std::pair<int, CDAPOperationState*>(cdap_message.invoke_id_,
+                                            new_operation_state));
+  }
+}
+void CDAPSession::cancelReadMessageSentOrReceived(const cdap_m_t &cdap_message,
+                                                  bool sender)
+{
+  checkCanSendOrReceiveCancelReadRequest(cdap_message, sender);
+  CDAPOperationState *new_operation_state = new CDAPOperationState(
+      cdap_m_t::M_CANCELREAD, sender);
+  cancel_read_pending_messages_.insert(
+      std::pair<int, CDAPOperationState*>(cdap_message.invoke_id_,
+                                          new_operation_state));
+}
+void CDAPSession::checkCanSendOrReceiveResponse(const cdap_m_t &cdap_message,
+                                                cdap_m_t::Opcode op_code,
+                                                bool sender) const
+{
+  bool validation_failed = false;
+  const std::map<int, CDAPOperationState*>* pending_messages;
+  if (!sender)
+    pending_messages = &pending_messages_sent_;
+  else
+    pending_messages = &pending_messages_recv_;
+
+  std::map<int, CDAPOperationState*>::const_iterator iterator;
+  iterator = pending_messages->find(cdap_message.invoke_id_);
+  if (iterator == pending_messages->end()) {
+    std::stringstream ss;
+    ss << "Cannot send a response for the " << op_code
+       << " operation with invokeId " << cdap_message.invoke_id_ << std::endl;
+    ss << "There are " << pending_messages->size() << " entries";
+    throw rina::CDAPException(ss.str());
+  }
+  CDAPOperationState* state = iterator->second;
+  if (state->get_op_code() != op_code) {
+    validation_failed = true;
+  }
+  if (sender && state->is_sender()) {
+    validation_failed = true;
+  }
+  if (!sender && !state->is_sender()) {
+    validation_failed = true;
+  }
+  if (validation_failed) {
+    std::stringstream ss;
+    ss << "Cannot send a response for the " << op_code
+       << " operation with invokeId " << cdap_message.invoke_id_;
+    throw rina::CDAPException(ss.str());
+  }
+}
+void CDAPSession::checkCanSendOrReceiveCancelReadResponse(
+    const cdap_m_t &cdap_message, bool send) const
+{
+  bool validation_failed = false;
+
+  if (cancel_read_pending_messages_.find(cdap_message.invoke_id_)
+      == cancel_read_pending_messages_.end()) {
+    std::stringstream ss;
+    ss << "Cannot send a response for the " << cdap_m_t::M_CANCELREAD
+       << " operation with invokeId " << cdap_message.invoke_id_;
+    throw rina::CDAPException(ss.str());
+  }
+  CDAPOperationState *state = cancel_read_pending_messages_.find(
+      cdap_message.invoke_id_)->second;
+  if (state->get_op_code() != cdap_m_t::M_CANCELREAD) {
+    validation_failed = true;
+  }
+  if (send && state->is_sender()) {
+    validation_failed = true;
+  }
+  if (!send && !state->is_sender()) {
+    validation_failed = true;
+  }
+  if (validation_failed) {
+    std::stringstream ss;
+    ss << "Cannot send a response for the " << cdap_m_t::M_CANCELREAD
+       << " operation with invokeId " << cdap_message.invoke_id_;
+    throw rina::CDAPException(ss.str());
+  }
+}
+void CDAPSession::responseMessageSentOrReceived(const cdap_m_t &cdap_message,
+                                                cdap_m_t::Opcode op_code,
+                                                bool sent)
+{
+  checkIsConnected();
+  checkCanSendOrReceiveResponse(cdap_message, op_code, sent);
+  bool operation_complete = true;
+  std::map<int, CDAPOperationState*>* pending_messages;
+  if (!sent)
+    pending_messages = &pending_messages_sent_;
+  else
+    pending_messages = &pending_messages_recv_;
+
+  if (op_code != cdap_m_t::M_READ) {
+    if (cdap_message.flags_ != cdap_rib::flags_t::NONE_FLAGS
+        && cdap_message.flags_ != cdap_rib::flags_t::F_RD_INCOMPLETE) {
+      operation_complete = false;
+    }
+  }
+  if (operation_complete) {
+    std::map<int, CDAPOperationState*>::iterator it = pending_messages->find(
+        cdap_message.invoke_id_);
+    delete it->second;
+    pending_messages->erase(it);
+  }
+  // check for M_READ_R and M_CANCELREAD race condition
+  if (!sent) {
+    if (op_code != cdap_m_t::M_READ) {
+      cancel_read_pending_messages_.erase(cdap_message.invoke_id_);
+    }
+  }
+}
+void CDAPSession::cancelReadResponseMessageSentOrReceived(
+    const cdap_m_t &cdap_message, bool sent)
+{
+  checkIsConnected();
+  checkCanSendOrReceiveCancelReadResponse(cdap_message, sent);
+  cancel_read_pending_messages_.erase(cdap_message.invoke_id_);
+  if (sent)
+    pending_messages_sent_.erase(cdap_message.invoke_id_);
+  else
+    pending_messages_recv_.erase(cdap_message.invoke_id_);
+}
+const cdap_rib::SerializedObject* CDAPSession::serializeMessage(
+    const cdap_m_t &cdap_message) const
+{
+  return serializer_->serializeMessage(cdap_message);
+}
+const cdap_m_t* CDAPSession::deserializeMessage(
+    const cdap_rib::SerializedObject &message) const
+{
+  return serializer_->deserializeMessage(message);
+}
+void CDAPSession::populateSessionDescriptor(const cdap_m_t &cdap_message,
+                                            bool send)
+{
+  session_descriptor_->abs_syntax_ = cdap_message.abs_syntax_;
+  session_descriptor_->auth_mech_ = cdap_message.auth_mech_;
+  session_descriptor_->auth_value_ = cdap_message.auth_value_;
+
+  if (send) {
+    session_descriptor_->dest_ae_inst_ = cdap_message.dest_ae_inst_;
+    session_descriptor_->dest_ae_name_ = cdap_message.dest_ae_name_;
+    session_descriptor_->dest_ap_inst_ = cdap_message.dest_ap_inst_;
+    session_descriptor_->dest_ap_name_ = cdap_message.dest_ap_name_;
+    session_descriptor_->src_ae_inst_ = cdap_message.src_ae_inst_;
+    session_descriptor_->src_ae_name_ = cdap_message.src_ae_name_;
+    session_descriptor_->src_ap_inst_ = cdap_message.src_ap_inst_;
+    session_descriptor_->src_ap_name_ = cdap_message.src_ap_name_;
+  } else {
+    session_descriptor_->dest_ae_inst_ = cdap_message.src_ae_inst_;
+    session_descriptor_->dest_ae_name_ = cdap_message.src_ae_name_;
+    session_descriptor_->dest_ap_inst_ = cdap_message.src_ap_inst_;
+    session_descriptor_->dest_ap_name_ = cdap_message.src_ap_name_;
+    session_descriptor_->src_ae_inst_ = cdap_message.dest_ae_inst_;
+    session_descriptor_->src_ae_name_ = cdap_message.dest_ae_name_;
+    session_descriptor_->src_ap_inst_ = cdap_message.dest_ap_inst_;
+    session_descriptor_->src_ap_name_ = cdap_message.dest_ap_name_;
+  }
+  session_descriptor_->version_ = cdap_message.version_;
+}
+void CDAPSession::emptySessionDescriptor()
+{
+  cdap_session_t *new_session = new cdap_session_t;
+  new_session->port_id_ = session_descriptor_->port_id_;
+  new_session->ap_naming_info_ = session_descriptor_->ap_naming_info_;
+  delete session_descriptor_;
+  session_descriptor_ = 0;
+  session_descriptor_ = new_session;
+}
+
+// CLASS CDAPSessionManager
+CDAPSessionManager::CDAPSessionManager()
+{
+  throw rina::CDAPException(
+      "Not allowed default constructor of CDAPSessionManager has been called.");
+}
+
+CDAPSessionManager::CDAPSessionManager(SerializerInterface *serializer)
+{
+  timeout_ = DEFAULT_TIMEOUT_IN_MS;
+  serializer_ = serializer;
+  invoke_id_manager_ = new CDAPInvokeIdManagerImpl();
+}
+
+CDAPSessionManager::CDAPSessionManager(SerializerInterface *serializer,
+                                       long timeout)
+{
+  timeout_ = timeout;
+  serializer_ = serializer;
+  invoke_id_manager_ = new CDAPInvokeIdManagerImpl();
+}
+
+CDAPSession* CDAPSessionManager::createCDAPSession(int port_id)
+{
+  if (cdap_sessions_.find(port_id) != cdap_sessions_.end()) {
+    return cdap_sessions_.find(port_id)->second;
+  } else {
+    CDAPSession *cdap_session = new CDAPSession(this, timeout_, serializer_,
+                                                invoke_id_manager_);
+    cdap_session_t *descriptor = new cdap_session_t;
+    descriptor->port_id_ = port_id;
+    cdap_session->set_session_descriptor(descriptor);
+    cdap_sessions_.insert(std::pair<int, CDAPSession*>(port_id, cdap_session));
+    return cdap_session;
+  }
+}
+CDAPSessionManager::~CDAPSessionManager() throw ()
+{
+  delete invoke_id_manager_;
+  invoke_id_manager_ = 0;
+  for (std::map<int, CDAPSession*>::iterator iter = cdap_sessions_.begin();
+      iter != cdap_sessions_.end(); ++iter) {
+    delete iter->second;
+    iter->second = 0;
+  }
+  cdap_sessions_.clear();
+  delete serializer_;
+}
+void CDAPSessionManager::getAllCDAPSessionIds(std::vector<int> &vector)
+{
+  vector.clear();
+  for (std::map<int, CDAPSession*>::iterator it = cdap_sessions_.begin();
+      it != cdap_sessions_.end(); ++it) {
+    vector.push_back(it->first);
+  }
+}
+CDAPSession* CDAPSessionManager::get_cdap_session(int port_id)
+{
+  std::map<int, CDAPSession*>::iterator itr = cdap_sessions_.find(port_id);
+  if (itr != cdap_sessions_.end())
+    return cdap_sessions_.find(port_id)->second;
+  else
+    return 0;
+}
+const cdap_rib::SerializedObject* CDAPSessionManager::encodeCDAPMessage(
+    const cdap_m_t &cdap_message)
+{
+  return serializer_->serializeMessage(cdap_message);
+}
+const CDAPMessage* CDAPSessionManager::decodeCDAPMessage(
+    const cdap_rib::SerializedObject &cdap_message)
+{
+  return serializer_->deserializeMessage(cdap_message);
+}
+void CDAPSessionManager::removeCDAPSession(int port_id)
+{
+  std::map<int, CDAPSession*>::iterator itr = cdap_sessions_.find(port_id);
+  delete itr->second;
+  itr->second = 0;
+  cdap_sessions_.erase(itr);
+}
+const cdap_rib::SerializedObject* CDAPSessionManager::encodeNextMessageToBeSent(
+    const CDAPMessage &cdap_message, int port_id)
+{
+  std::map<int, CDAPSession*>::iterator it = cdap_sessions_.find(port_id);
+  CDAPSession *cdap_session;
+
+  if (it == cdap_sessions_.end()) {
+    if (cdap_message.op_code_ == CDAPMessage::M_CONNECT) {
+      cdap_session = createCDAPSession(port_id);
+    } else {
+      std::stringstream ss;
+      ss << "There are no open CDAP sessions associated to the flow identified by "
+         << port_id << " right now";
+      throw rina::CDAPException(ss.str());
+    }
+  } else {
+    cdap_session = it->second;
+  }
+
+  return cdap_session->encodeNextMessageToBeSent(cdap_message);
+}
+const cdap_m_t* CDAPSessionManager::messageReceived(
+    const cdap_rib::SerializedObject &encoded_cdap_message, int port_id)
+{
+  const CDAPMessage *cdap_message = decodeCDAPMessage(encoded_cdap_message);
+  CDAPSession *cdap_session = get_cdap_session(port_id);
+  switch (cdap_message->op_code_) {
+    case CDAPMessage::M_CONNECT:
+      if (cdap_session == 0) {
+        cdap_session = createCDAPSession(port_id);
+        cdap_session->messageReceived(*cdap_message);
+        LOG_DBG("Created a new CDAP session for port %d", port_id);
+      } else {
+        throw rina::CDAPException(
+            "M_CONNECT received on an already open CDAP Session, over flow "
+                + port_id);
+      }
+      break;
+    default:
+      if (cdap_session != 0) {
+        cdap_session->messageReceived(*cdap_message);
+      } else {
+        std::stringstream ss;
+        ss << "Receive a " << cdap_message->op_code_
+           << " CDAP message on a CDAP session that is not open, over flow "
+           << port_id;
+        throw rina::CDAPException(ss.str());
+      }
+      if (cdap_message->op_code_ == CDAPMessage::M_RELEASE_R) {
+        removeCDAPSession(port_id);
+      }
+      break;
+  }
+  return cdap_message;
+}
+void CDAPSessionManager::messageSent(const CDAPMessage &cdap_message,
+                                     int port_id)
+{
+  CDAPSession *cdap_session = get_cdap_session(port_id);
+  if (cdap_session == 0 && cdap_message.op_code_ == CDAPMessage::M_CONNECT) {
+    cdap_session = createCDAPSession(port_id);
+  } else if (cdap_session == 0
+      && cdap_message.op_code_ != CDAPMessage::M_CONNECT) {
+    std::stringstream ss;
+    ss << "There are no open CDAP sessions associated to the flow identified by "
+       << port_id << " right now";
+    throw rina::CDAPException(ss.str());
+  }
+  cdap_session->messageSent(cdap_message);
+}
+int CDAPSessionManager::get_port_id(
+    std::string destination_application_process_name)
+{
+  std::map<int, CDAPSession*>::iterator itr = cdap_sessions_.begin();
+  CDAPSession *current_session;
+  while (itr != cdap_sessions_.end()) {
+    current_session = itr->second;
+    if (current_session->get_session_descriptor()->dest_ap_name_
+        == (destination_application_process_name)) {
+      return current_session->get_port_id();
+    }
+  }
+  std::stringstream ss;
+  ss << "Don't have a running CDAP sesion to "
+     << destination_application_process_name;
+  throw rina::CDAPException(ss.str());
+}
+
+cdap_m_t* CDAPSessionManager::getOpenConnectionRequestMessage(
+    cdap_rib::con_handle_t &con)
+{
+  CDAPSession *cdap_session = get_cdap_session(con.port_);
+  if (cdap_session == 0) {
+    cdap_session = createCDAPSession(con.port_);
+  }
+  return CDAPMessageFactory::getOpenConnectionRequestMessage(
+      con, cdap_session->get_invoke_id_manager()->newInvokeId(true));
+}
+
+cdap_m_t* CDAPSessionManager::getOpenConnectionResponseMessage(
+    cdap_rib::con_handle_t &con, cdap_rib::res_info_t &res, int invoke_id)
+{
+  return CDAPMessageFactory::getOpenConnectionResponseMessage(con, res,
+                                                              invoke_id);
+}
+
+cdap_m_t* CDAPSessionManager::getReleaseConnectionRequestMessage(
+    int port_id, cdap_rib::flags_t &flags, bool invoke_id)
+{
+  cdap_m_t *cdap_message =
+      CDAPMessageFactory::getReleaseConnectionRequestMessage(flags);
+  assignInvokeId(*cdap_message, invoke_id, port_id, true);
+  return cdap_message;
+}
+
+cdap_m_t* CDAPSessionManager::getReleaseConnectionResponseMessage(
+    cdap_rib::flags_t &flags, cdap_rib::res_info_t &res, int invoke_id)
+{
+  return CDAPMessageFactory::getReleaseConnectionResponseMessage(flags, res,
+                                                                 invoke_id);
+}
+cdap_m_t* CDAPSessionManager::getCreateObjectRequestMessage(
+    int port_id, cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
+    cdap_rib::obj_info_t &obj, bool invoke_id)
+{
+
+  cdap_m_t *cdap_message = CDAPMessageFactory::getCreateObjectRequestMessage(
+      filt, flags, obj);
+  assignInvokeId(*cdap_message, invoke_id, port_id, true);
+  return cdap_message;
+
+}
+
+cdap_m_t* CDAPSessionManager::getCreateObjectResponseMessage(
+    cdap_rib::flags_t &flags, cdap_rib::obj_info_t &obj,
+    cdap_rib::res_info_t &res, int invoke_id)
+{
+  return CDAPMessageFactory::getCreateObjectResponseMessage(flags, obj, res,
+                                                            invoke_id);
+}
+
+cdap_m_t* CDAPSessionManager::getDeleteObjectRequestMessage(
+    int port_id, cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
+    cdap_rib::obj_info_t &obj, bool invoke_id)
+{
+  cdap_m_t *cdap_message = CDAPMessageFactory::getDeleteObjectRequestMessage(
+      filt, flags, obj);
+  assignInvokeId(*cdap_message, invoke_id, port_id, true);
+  return cdap_message;
+}
+
+cdap_m_t* CDAPSessionManager::getDeleteObjectResponseMessage(
+    cdap_rib::flags_t &flags, cdap_rib::obj_info_t &obj,
+    cdap_rib::res_info_t &res, int invoke_id)
+{
+  return CDAPMessageFactory::getDeleteObjectResponseMessage(flags, obj, res,
+                                                            invoke_id);
+}
+
+cdap_m_t* CDAPSessionManager::getStartObjectRequestMessage(
+    int port_id, cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
+    cdap_rib::obj_info_t &obj, bool invoke_id)
+{
+  cdap_m_t *cdap_message = CDAPMessageFactory::getStartObjectRequestMessage(
+      filt, flags, obj);
+  assignInvokeId(*cdap_message, invoke_id, port_id, true);
+  return cdap_message;
+}
+
+cdap_m_t* CDAPSessionManager::getStartObjectResponseMessage(
+    cdap_rib::flags_t &flags, cdap_rib::res_info_t &res, int invoke_id)
+{
+  return CDAPMessageFactory::getStartObjectResponseMessage(flags, res,
+                                                           invoke_id);
+}
+
+cdap_m_t* CDAPSessionManager::getStartObjectResponseMessage(
+    cdap_rib::flags_t &flags, cdap_rib::obj_info_t &obj,
+    cdap_rib::res_info_t &res, int invoke_id)
+{
+  return CDAPMessageFactory::getStartObjectResponseMessage(flags, obj, res,
+                                                           invoke_id);
+}
+
+cdap_m_t* CDAPSessionManager::getStopObjectRequestMessage(
+    int port_id, cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
+    cdap_rib::obj_info_t &obj, bool invoke_id)
+{
+  cdap_m_t *cdap_message = CDAPMessageFactory::getStopObjectRequestMessage(
+      filt, flags, obj);
+  assignInvokeId(*cdap_message, invoke_id, port_id, true);
+  return cdap_message;
+}
+
+cdap_m_t* CDAPSessionManager::getStopObjectResponseMessage(
+    cdap_rib::flags_t &flags, cdap_rib::res_info_t &res, int invoke_id)
+{
+  return CDAPMessageFactory::getStopObjectResponseMessage(flags, res, invoke_id);
+}
+
+cdap_m_t* CDAPSessionManager::getReadObjectRequestMessage(
+    int port_id, cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
+    cdap_rib::obj_info_t &obj, bool invoke_id)
+{
+  cdap_m_t *cdap_message = CDAPMessageFactory::getReadObjectRequestMessage(
+      filt, flags, obj);
+  assignInvokeId(*cdap_message, invoke_id, port_id, true);
+  return cdap_message;
+}
+
+cdap_m_t* CDAPSessionManager::getReadObjectResponseMessage(
+    cdap_rib::flags_t &flags, cdap_rib::obj_info_t &obj,
+    cdap_rib::res_info_t &res, int invoke_id)
+{
+  return CDAPMessageFactory::getReadObjectResponseMessage(flags, obj, res,
+                                                          invoke_id);
+}
+
+cdap_m_t* CDAPSessionManager::getWriteObjectRequestMessage(
+    int port_id, cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
+    cdap_rib::obj_info_t &obj, bool invoke_id)
+{
+  cdap_m_t *cdap_message = CDAPMessageFactory::getWriteObjectRequestMessage(
+      filt, flags, obj);
+  assignInvokeId(*cdap_message, invoke_id, port_id, true);
+  return cdap_message;
+}
+
+cdap_m_t* CDAPSessionManager::getWriteObjectResponseMessage(
+    cdap_rib::flags_t &flags, cdap_rib::res_info_t &res, int invoke_id)
+{
+  return CDAPMessageFactory::getWriteObjectResponseMessage(flags, res,
+                                                           invoke_id);
+}
+
+cdap_m_t* CDAPSessionManager::getCancelReadRequestMessage(
+    cdap_rib::flags_t &flags, int invoke_id)
+{
+  return CDAPMessageFactory::getCancelReadRequestMessage(flags, invoke_id);
+}
+
+cdap_m_t* CDAPSessionManager::getCancelReadResponseMessage(
+    cdap_rib::flags_t &flags, cdap_rib::res_info_t &res, int invoke_id)
+{
+  return CDAPMessageFactory::getCancelReadResponseMessage(flags, res, invoke_id);
+}
+void CDAPSessionManager::assignInvokeId(cdap_m_t &cdap_message, bool invoke_id,
+                                        int port_id, bool sent)
+{
+  CDAPSession *cdap_session = 0;
+
+  if (invoke_id) {
+    cdap_session = get_cdap_session(port_id);
+    if (cdap_session) {
+      cdap_message.invoke_id_ = cdap_session->get_invoke_id_manager()
+          ->newInvokeId(sent);
+    }
+  }
+}
+
+// CLASS GPBWireMessageProvider
+const cdap_m_t* GPBSerializer::deserializeMessage(
+    const cdap_rib::SerializedObject &message)
+{
+  cdap::impl::googleprotobuf::CDAPMessage gpfCDAPMessage;
+  cdap_m_t *cdapMessage = new cdap_m_t;
+
+  gpfCDAPMessage.ParseFromArray(message.message_, message.size_);
+  cdapMessage->set_abs_syntax(gpfCDAPMessage.abssyntax());
+  int auth_type_val = gpfCDAPMessage.authmech();
+  CDAPMessage::AuthTypes auth_type =
+      static_cast<CDAPMessage::AuthTypes>(auth_type_val);
+  cdapMessage->set_auth_mech(auth_type);
+  AuthValue auth_value(gpfCDAPMessage.authvalue().authname(),
+                       gpfCDAPMessage.authvalue().authpassword(),
+                       gpfCDAPMessage.authvalue().authother());
+  cdapMessage->set_auth_value(auth_value);
+  if (gpfCDAPMessage.has_destaeinst())
+    cdapMessage->set_dest_ae_inst(gpfCDAPMessage.destaeinst());
+  if (gpfCDAPMessage.has_destaename())
+    cdapMessage->set_dest_ae_name(gpfCDAPMessage.destaename());
+  if (gpfCDAPMessage.has_destapinst())
+    cdapMessage->set_dest_ap_inst(gpfCDAPMessage.destapinst());
+  if (gpfCDAPMessage.has_destapname())
+    cdapMessage->set_dest_ap_name(gpfCDAPMessage.destapname());
+  if (gpfCDAPMessage.has_filter()) {
+    char *filter = new char[gpfCDAPMessage.filter().size() + 1];
+    strcpy(filter, gpfCDAPMessage.filter().c_str());
+    ;
+    cdapMessage->set_filter(filter);
+  }
+  int flag_value = gpfCDAPMessage.flags();
+  CDAPMessage::Flags flags = static_cast<CDAPMessage::Flags>(flag_value);
+  cdapMessage->set_flags(flags);
+  cdapMessage->set_invoke_id(gpfCDAPMessage.invokeid());
+  if (gpfCDAPMessage.has_objclass())
+    cdapMessage->set_obj_class(gpfCDAPMessage.objclass());
+  cdapMessage->set_obj_inst(gpfCDAPMessage.objinst());
+  if (gpfCDAPMessage.has_objname())
+    cdapMessage->set_obj_name(gpfCDAPMessage.objname());
+
+  cdap::impl::googleprotobuf::objVal_t obj_val_t = gpfCDAPMessage.objvalue();
+  if (obj_val_t.has_intval()) {
+    cdapMessage->set_obj_value(new IntObjectValue(obj_val_t.intval()));
+  }
+  if (obj_val_t.has_sintval()) {
+    cdapMessage->set_obj_value(new SIntObjectValue(obj_val_t.sintval()));
+  }
+  if (obj_val_t.has_int64val()) {
+    cdapMessage->set_obj_value(new LongObjectValue(obj_val_t.int64val()));
+  }
+  if (obj_val_t.has_sint64val()) {
+    cdapMessage->set_obj_value(new SLongObjectValue(obj_val_t.sint64val()));
+  }
+  if (obj_val_t.has_strval()) {
+    cdapMessage->set_obj_value(new StringObjectValue(obj_val_t.strval()));
+  }
+  if (obj_val_t.has_floatval()) {
+    cdapMessage->set_obj_value(new FloatObjectValue(obj_val_t.floatval()));
+  }
+  if (obj_val_t.has_doubleval()) {
+    cdapMessage->set_obj_value(new DoubleObjectValue(obj_val_t.doubleval()));
+  }
+  if (obj_val_t.has_boolval()) {
+    cdapMessage->set_obj_value(new BooleanObjectValue(obj_val_t.boolval()));
+  }
+  if (obj_val_t.has_byteval()) {
+    char *byte_val = new char[obj_val_t.byteval().size()];
+    SerializedObject sr_message(byte_val, obj_val_t.byteval().size());
+    memcpy(byte_val, obj_val_t.byteval().data(), obj_val_t.byteval().size());
+    cdapMessage->set_obj_value(new ByteArrayObjectValue(sr_message));
+  }
+
+  int opcode_val = gpfCDAPMessage.opcode();
+  CDAPMessage::Opcode opcode = static_cast<CDAPMessage::Opcode>(opcode_val);
+  cdapMessage->set_op_code(opcode);
+  cdapMessage->set_result(gpfCDAPMessage.result());
+  if (gpfCDAPMessage.has_resultreason())
+    cdapMessage->set_result_reason(gpfCDAPMessage.resultreason());
+  cdapMessage->set_scope(gpfCDAPMessage.scope());
+  if (gpfCDAPMessage.has_srcaeinst())
+    cdapMessage->set_src_ae_inst(gpfCDAPMessage.srcaeinst());
+  if (gpfCDAPMessage.has_srcaename())
+    cdapMessage->set_src_ae_name(gpfCDAPMessage.srcaename());
+  if (gpfCDAPMessage.has_srcapinst())
+    cdapMessage->set_src_ap_inst(gpfCDAPMessage.srcapinst());
+  if (gpfCDAPMessage.has_srcapname())
+    cdapMessage->set_src_ap_name(gpfCDAPMessage.srcapname());
+  cdapMessage->set_version(gpfCDAPMessage.version());
+
+  return cdapMessage;
+}
+const cdap_rib::SerializedObject* GPBSerializer::serializeMessage(
+    const cdap_m_t &cdapMessage)
+{
+  cdap::impl::googleprotobuf::CDAPMessage gpfCDAPMessage;
+  gpfCDAPMessage.set_abssyntax(cdapMessage.get_abs_syntax());
+  if (!cdap::impl::googleprotobuf::authTypes_t_IsValid(
+      cdapMessage.get_auth_mech())) {
+    throw CDAPException("Serializing Message: Not a valid AuthType");
+  }
+  gpfCDAPMessage.set_authmech(
+      (cdap::impl::googleprotobuf::authTypes_t) cdapMessage.get_auth_mech());
+  cdap::impl::googleprotobuf::authValue_t *gpb_auth_value =
+      new cdap::impl::googleprotobuf::authValue_t();
+  AuthValue auth_value = cdapMessage.get_auth_value();
+  gpb_auth_value->set_authname(auth_value.get_auth_name());
+  gpb_auth_value->set_authother(auth_value.get_auth_other());
+  gpb_auth_value->set_authpassword(auth_value.get_auth_password());
+  gpfCDAPMessage.set_allocated_authvalue(gpb_auth_value);
+  gpfCDAPMessage.set_destaeinst(cdapMessage.get_dest_ae_inst());
+  gpfCDAPMessage.set_destaename(cdapMessage.get_dest_ae_name());
+  gpfCDAPMessage.set_destapinst(cdapMessage.get_dest_ap_inst());
+  gpfCDAPMessage.set_destapname(cdapMessage.get_dest_ap_name());
+  if (cdapMessage.get_filter() != 0) {
+    gpfCDAPMessage.set_filter(cdapMessage.get_filter());
+  }
+  gpfCDAPMessage.set_invokeid(cdapMessage.get_invoke_id());
+  gpfCDAPMessage.set_objclass(cdapMessage.get_obj_class());
+  gpfCDAPMessage.set_objinst(cdapMessage.get_obj_inst());
+  gpfCDAPMessage.set_objname(cdapMessage.get_obj_name());
+
+  if (cdapMessage.get_obj_value() != 0
+      && !cdapMessage.get_obj_value()->is_empty()) {
+    cdap::impl::googleprotobuf::objVal_t *gpb_obj_val =
+        new cdap::impl::googleprotobuf::objVal_t();
+    switch (cdapMessage.get_obj_value()->isType()) {
+      case ObjectValueInterface::inttype:
+        gpb_obj_val->set_intval(
+            *(int*) cdapMessage.get_obj_value()->get_value());
+        break;
+      case ObjectValueInterface::sinttype:
+        gpb_obj_val->set_sintval(
+            *(short int*) cdapMessage.get_obj_value()->get_value());
+        break;
+      case ObjectValueInterface::longtype:
+        gpb_obj_val->set_int64val(
+            *(long long*) cdapMessage.get_obj_value()->get_value());
+        break;
+      case ObjectValueInterface::slongtype:
+        gpb_obj_val->set_sint64val(
+            *(long*) cdapMessage.get_obj_value()->get_value());
+        break;
+      case ObjectValueInterface::stringtype:
+        gpb_obj_val->set_strval(
+            *(std::string*) cdapMessage.get_obj_value()->get_value());
+        break;
+      case ObjectValueInterface::bytetype: {
+        SerializedObject * serialized_object = (SerializedObject*) cdapMessage
+            .get_obj_value()->get_value();
+        gpb_obj_val->set_byteval(serialized_object->message_,
+                                 serialized_object->size_);
+        break;
+      }
+      case ObjectValueInterface::floattype:
+        gpb_obj_val->set_floatval(
+            *(float*) cdapMessage.get_obj_value()->get_value());
+        break;
+      case ObjectValueInterface::doubletype:
+        gpb_obj_val->set_doubleval(
+            *(double*) cdapMessage.get_obj_value()->get_value());
+        break;
+      case ObjectValueInterface::booltype:
+        gpb_obj_val->set_boolval(
+            *(bool*) cdapMessage.get_obj_value()->get_value());
+        break;
+    }
+    gpfCDAPMessage.set_allocated_objvalue(gpb_obj_val);
+  }
+
+  if (!cdap::impl::googleprotobuf::opCode_t_IsValid(
+      cdapMessage.get_op_code())) {
+    throw CDAPException("Serializing Message: Not a valid OpCode");
+  }
+
+  gpfCDAPMessage.set_opcode(
+      (cdap::impl::googleprotobuf::opCode_t) cdapMessage.get_op_code());
+  gpfCDAPMessage.set_result(cdapMessage.get_result());
+  gpfCDAPMessage.set_resultreason(cdapMessage.get_result_reason());
+  gpfCDAPMessage.set_scope(cdapMessage.get_scope());
+  gpfCDAPMessage.set_srcaeinst(cdapMessage.get_src_ae_inst());
+  gpfCDAPMessage.set_srcaename(cdapMessage.get_src_ae_name());
+  gpfCDAPMessage.set_srcapname(cdapMessage.get_src_ap_name());
+  gpfCDAPMessage.set_srcapinst(cdapMessage.get_src_ap_inst());
+  gpfCDAPMessage.set_version(cdapMessage.get_version());
+
+  int size = gpfCDAPMessage.ByteSize();
+  char *serialized_message = new char[size];
+  gpfCDAPMessage.SerializeToArray(serialized_message, size);
+  SerializedObject *serialized_class = new SerializedObject(serialized_message,
+                                                            size);
+
+  return serialized_class;
+}
+
+// CLASS CDAPProvider
+CDAPProvider::CDAPProvider(SerializerInterface *serializer, long timeout,
+                           cdap::CDAPCallbackInterface *callback)
+{
+  manager_ = new CDAPSessionManager(serializer, timeout);
+  callback_ = callback;
 }
 
 CDAPProvider::~CDAPProvider()
@@ -118,11 +2584,11 @@ CDAPProvider::~CDAPProvider()
 }
 
 cdap_rib::con_handle_t CDAPProvider::open_connection(
-    const cdap_rib::vers_info_t ver, const cdap_rib::src_info_t &src,
+    const cdap_rib::vers_info_t &ver, const cdap_rib::src_info_t &src,
     const cdap_rib::dest_info_t &dest, const cdap_rib::auth_info &auth,
     int port)
 {
-  const rina::CDAPMessage *m_sent;
+  const cdap_m_t *m_sent;
   cdap_rib::con_handle_t con;
   rina::AuthValue *value;
 
@@ -144,11 +2610,11 @@ cdap_rib::con_handle_t CDAPProvider::open_connection(
       value = new rina::AuthValue();
       break;
   }
-  // FIXME erase auth and flags from CDAPMessage
+  // FIXME erase auth and flags from cdap_m_t
   m_sent = manager_->getOpenConnectionRequestMessage(
-      port, rina::CDAPMessage::AUTH_NONE, *value, dest.ae_inst_, dest.ae_name_,
-      dest.ap_inst_, dest.ap_name_, src.ae_inst_, src.ae_name_, src.ap_inst_,
-      src.ap_name_);
+      port, cdap_rib::auth_info::AUTH_NONE, *value, dest.ae_inst_,
+      dest.ae_name_, dest.ap_inst_, dest.ap_name_, src.ae_inst_, src.ae_name_,
+      src.ap_inst_, src.ap_name_);
   send(m_sent, con.port_);
 
   delete value;
@@ -159,12 +2625,12 @@ cdap_rib::con_handle_t CDAPProvider::open_connection(
 int CDAPProvider::close_connection(cdap_rib::con_handle_t &con)
 {
   int invoke_id;
-  const rina::CDAPMessage *m_sent;
+  const cdap_m_t *m_sent;
 
-  // FIXME change CDAPMessage::NONE_FLAGS
+  // FIXME change cdap_rib::flags_t::NONE_FLAGS
   m_sent = manager_->getReleaseConnectionRequestMessage(
-      con.port_, rina::CDAPMessage::NONE_FLAGS, true);
-  invoke_id = m_sent->get_invoke_id();
+      con.port_, cdap_rib::flags_t::NONE_FLAGS, true);
+  invoke_id = m_sent->invoke_id_;
   send(m_sent, con.port_);
 
   delete m_sent;
@@ -177,14 +2643,14 @@ int CDAPProvider::remote_create(const cdap_rib::con_handle_t &con,
                                 const cdap_rib::filt_info_t &filt)
 {
   int invoke_id;
-  const rina::CDAPMessage *m_sent;
+  const cdap_m_t *m_sent;
 
-  // FIXME change CDAPMessage::NONE_FLAGS
+  // FIXME change cdap_rib::flags_t::NONE_FLAGS
   (void) flags;
   m_sent = manager_->getCreateObjectRequestMessage(
-      con.port_, filt.filter_, rina::CDAPMessage::NONE_FLAGS, obj.class_,
+      con.port_, filt.filter_, cdap_rib::flags_t::NONE_FLAGS, obj.class_,
       obj.inst_, obj.name_, filt.scope_, true);
-  invoke_id = m_sent->get_invoke_id();
+  invoke_id = m_sent->invoke_id_;
   send(m_sent, con.port_);
 
   delete m_sent;
@@ -197,14 +2663,14 @@ int CDAPProvider::remote_delete(const cdap_rib::con_handle_t &con,
                                 const cdap_rib::filt_info_t &filt)
 {
   int invoke_id;
-  const rina::CDAPMessage *m_sent;
+  const cdap_m_t *m_sent;
 
-  // FIXME change CDAPMessage::NONE_FLAGS
+  // FIXME change cdap_rib::flags_t::NONE_FLAGS
   (void) flags;
   m_sent = manager_->getDeleteObjectRequestMessage(
-      con.port_, filt.filter_, rina::CDAPMessage::NONE_FLAGS, obj.class_,
+      con.port_, filt.filter_, cdap_rib::flags_t::NONE_FLAGS, obj.class_,
       obj.inst_, obj.name_, filt.scope_, true);
-  invoke_id = m_sent->get_invoke_id();
+  invoke_id = m_sent->invoke_id_;
   send(m_sent, con.port_);
 
   delete m_sent;
@@ -217,15 +2683,15 @@ int CDAPProvider::remote_read(const cdap_rib::con_handle_t &con,
                               const cdap_rib::filt_info_t &filt)
 {
   int invoke_id;
-  const rina::CDAPMessage *m_sent;
+  const cdap_m_t *m_sent;
 
-  // FIXME change CDAPMessage::NONE_FLAGS
+  // FIXME change cdap_rib::flags_t::NONE_FLAGS
   (void) flags;
   m_sent = manager_->getReadObjectRequestMessage(con.port_, filt.filter_,
-                                                 rina::CDAPMessage::NONE_FLAGS,
+                                                 cdap_rib::flags_t::NONE_FLAGS,
                                                  obj.class_, obj.inst_,
                                                  obj.name_, filt.scope_, true);
-  invoke_id = m_sent->get_invoke_id();
+  invoke_id = m_sent->invoke_id_;
   send(m_sent, con.port_);
 
   delete m_sent;
@@ -236,11 +2702,11 @@ int CDAPProvider::remote_cancel_read(const cdap_rib::con_handle_t &con,
                                      const cdap_rib::flags_t &flags,
                                      int invoke_id)
 {
-  const rina::CDAPMessage *m_sent;
+  const cdap_m_t *m_sent;
 
-  // FIXME change CDAPMessage::NONE_FLAGS
+  // FIXME change cdap_rib::flags_t::NONE_FLAGS
   (void) flags;
-  m_sent = manager_->getCancelReadRequestMessage(rina::CDAPMessage::NONE_FLAGS,
+  m_sent = manager_->getCancelReadRequestMessage(cdap_rib::flags_t::NONE_FLAGS,
                                                  invoke_id);
   send(m_sent, con.port_);
 
@@ -254,15 +2720,15 @@ int CDAPProvider::remote_write(const cdap_rib::con_handle_t &con,
                                const cdap_rib::filt_info_t &filt)
 {
   int invoke_id;
-  const rina::CDAPMessage *m_sent;
+  const cdap_m_t *m_sent;
 
-  // FIXME change CDAPMessage::NONE_FLAGS
+  // FIXME change cdap_rib::flags_t::NONE_FLAGS
   (void) flags;
   m_sent = manager_->getWriteObjectRequestMessage(con.port_, filt.filter_,
-                                                  rina::CDAPMessage::NONE_FLAGS,
+                                                  cdap_rib::flags_t::NONE_FLAGS,
                                                   obj.class_, obj.inst_,
                                                   obj.name_, filt.scope_, true);
-  invoke_id = m_sent->get_invoke_id();
+  invoke_id = m_sent->invoke_id_;
   send(m_sent, con.port_);
 
   delete m_sent;
@@ -275,15 +2741,15 @@ int CDAPProvider::remote_start(const cdap_rib::con_handle_t &con,
                                const cdap_rib::filt_info_t &filt)
 {
   int invoke_id;
-  const rina::CDAPMessage *m_sent;
+  const cdap_m_t *m_sent;
 
-  // FIXME change CDAPMessage::NONE_FLAGS
+  // FIXME change cdap_rib::flags_t::NONE_FLAGS
   (void) flags;
   m_sent = manager_->getStartObjectRequestMessage(con.port_, filt.filter_,
-                                                  rina::CDAPMessage::NONE_FLAGS,
+                                                  cdap_rib::flags_t::NONE_FLAGS,
                                                   obj.class_, obj.inst_,
                                                   obj.name_, filt.scope_, true);
-  invoke_id = m_sent->get_invoke_id();
+  invoke_id = m_sent->invoke_id_;
   send(m_sent, con.port_);
 
   delete m_sent;
@@ -296,15 +2762,15 @@ int CDAPProvider::remote_stop(const cdap_rib::con_handle_t &con,
                               const cdap_rib::filt_info_t &filt)
 {
   int invoke_id;
-  const rina::CDAPMessage *m_sent;
+  const cdap_m_t *m_sent;
 
-  // FIXME change CDAPMessage::NONE_FLAGS
+  // FIXME change cdap_rib::flags_t::NONE_FLAGS
   (void) flags;
   m_sent = manager_->getStopObjectRequestMessage(con.port_, filt.filter_,
-                                                 rina::CDAPMessage::NONE_FLAGS,
+                                                 cdap_rib::flags_t::NONE_FLAGS,
                                                  obj.class_, obj.inst_,
                                                  obj.name_, filt.scope_, true);
-  invoke_id = m_sent->get_invoke_id();
+  invoke_id = m_sent->invoke_id_;
   send(m_sent, con.port_);
 
   delete m_sent;
@@ -317,9 +2783,9 @@ void CDAPProvider::open_connection_response(const cdap_rib::con_handle_t &con,
                                             const cdap_rib::res_info_t &res,
                                             int message_id)
 {
-  const rina::CDAPMessage *m_sent;
+  const cdap_m_t *m_sent;
 
-  // FIXME change CDAPMessage::NONE_FLAGS
+  // FIXME change cdap_rib::flags_t::NONE_FLAGS
   (void) flags;
   rina::AuthValue *value;
   switch (con.auth_.auth_mech_) {
@@ -337,7 +2803,7 @@ void CDAPProvider::open_connection_response(const cdap_rib::con_handle_t &con,
   }
 
   m_sent = manager_->getOpenConnectionResponseMessage(
-      rina::CDAPMessage::AUTH_NONE, *value, con.dest_.ae_inst_,
+      cdap_rib::auth_info_t::AUTH_NONE, *value, con.dest_.ae_inst_,
       con.dest_.ae_name_, con.dest_.ap_inst_, con.dest_.ap_name_, res.result_,
       res.result_reason_, con.src_.ae_inst_, con.src_.ae_name_,
       con.src_.ap_inst_, con.src_.ap_name_, message_id);
@@ -350,11 +2816,11 @@ void CDAPProvider::close_connection_response(const cdap_rib::con_handle_t &con,
                                              const cdap_rib::res_info_t &res,
                                              int message_id)
 {
-  const rina::CDAPMessage *m_sent;
+  const cdap_m_t *m_sent;
 
   //FIXME: change flags
   (void) flags;
-  m_sent = manager_->getCancelReadResponseMessage(rina::CDAPMessage::NONE_FLAGS,
+  m_sent = manager_->getCancelReadResponseMessage(cdap_rib::flags_t::NONE_FLAGS,
                                                   message_id, res.result_,
                                                   res.result_reason_);
   send(m_sent, con.port_);
@@ -368,12 +2834,12 @@ void CDAPProvider::remote_create_response(const cdap_rib::con_handle_t &con,
                                           const cdap_rib::res_info_t* res,
                                           int message_id)
 {
-  const rina::CDAPMessage *m_sent;
+  const cdap_m_t *m_sent;
 
-  // FIXME change CDAPMessage::NONE_FLAGS
+  // FIXME change cdap_rib::flags_t::NONE_FLAGS
   (void) flags;
   m_sent = manager_->getCreateObjectResponseMessage(
-      rina::CDAPMessage::NONE_FLAGS, obj.class_, obj.inst_, obj.name_,
+      cdap_rib::flags_t::NONE_FLAGS, obj.class_, obj.inst_, obj.name_,
       res->result_, res->result_reason_, message_id);
   send(m_sent, con.port_);
 
@@ -385,12 +2851,12 @@ void CDAPProvider::remote_delete_response(const cdap_rib::con_handle_t &con,
                                           const cdap_rib::res_info_t* res,
                                           int message_id)
 {
-  const rina::CDAPMessage *m_sent;
+  const cdap_m_t *m_sent;
 
-  // FIXME change CDAPMessage::NONE_FLAGS
+  // FIXME change cdap_rib::flags_t::NONE_FLAGS
   (void) flags;
   m_sent = manager_->getDeleteObjectResponseMessage(
-      rina::CDAPMessage::NONE_FLAGS, obj.class_, obj.inst_, obj.name_,
+      cdap_rib::flags_t::NONE_FLAGS, obj.class_, obj.inst_, obj.name_,
       res->result_, res->result_reason_, message_id);
   send(m_sent, con.port_);
 
@@ -402,11 +2868,11 @@ void CDAPProvider::remote_read_response(const cdap_rib::con_handle_t &con,
                                         const cdap_rib::res_info_t* res,
                                         int message_id)
 {
-  const rina::CDAPMessage *m_sent;
+  const cdap_m_t *m_sent;
 
-  // FIXME change CDAPMessage::NONE_FLAGS
+  // FIXME change cdap_rib::flags_t::NONE_FLAGS
   (void) flags;
-  m_sent = manager_->getReadObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
+  m_sent = manager_->getReadObjectResponseMessage(cdap_rib::flags_t::NONE_FLAGS,
                                                   obj.class_, obj.inst_,
                                                   obj.name_, res->result_,
                                                   res->result_reason_,
@@ -419,11 +2885,11 @@ void CDAPProvider::remote_cancel_read_response(
     const cdap_rib::con_handle_t &con, const cdap_rib::flags_t &flags,
     const cdap_rib::res_info_t* res, int message_id)
 {
-  const rina::CDAPMessage *m_sent;
+  const cdap_m_t *m_sent;
 
-  // FIXME change CDAPMessage::NONE_FLAGS
+  // FIXME change cdap_rib::flags_t::NONE_FLAGS
   (void) flags;
-  m_sent = manager_->getCancelReadResponseMessage(rina::CDAPMessage::NONE_FLAGS,
+  m_sent = manager_->getCancelReadResponseMessage(cdap_rib::flags_t::NONE_FLAGS,
                                                   message_id, res->result_,
                                                   res->result_reason_);
   send(m_sent, con.port_);
@@ -435,12 +2901,12 @@ void CDAPProvider::remote_write_response(const cdap_rib::con_handle_t &con,
                                          const cdap_rib::res_info_t* res,
                                          int message_id)
 {
-  const rina::CDAPMessage *m_sent;
+  const cdap_m_t *m_sent;
 
-  // FIXME change CDAPMessage::NONE_FLAGS
+  // FIXME change cdap_rib::flags_t::NONE_FLAGS
   (void) flags;
   m_sent = manager_->getWriteObjectResponseMessage(
-      rina::CDAPMessage::NONE_FLAGS, res->result_, res->result_reason_,
+      cdap_rib::flags_t::NONE_FLAGS, res->result_, res->result_reason_,
       message_id);
   send(m_sent, con.port_);
 
@@ -452,12 +2918,12 @@ void CDAPProvider::remote_start_response(const cdap_rib::con_handle_t &con,
                                          const cdap_rib::res_info_t* res,
                                          int message_id)
 {
-  const rina::CDAPMessage *m_sent;
+  const cdap_m_t *m_sent;
 
-  // FIXME change CDAPMessage::NONE_FLAGS
+  // FIXME change cdap_rib::flags_t::NONE_FLAGS
   (void) flags;
   m_sent = manager_->getStartObjectResponseMessage(
-      rina::CDAPMessage::NONE_FLAGS, obj.class_, obj.inst_, obj.name_,
+      cdap_rib::flags_t::NONE_FLAGS, obj.class_, obj.inst_, obj.name_,
       res->result_, res->result_reason_, message_id);
   send(m_sent, con.port_);
 
@@ -468,11 +2934,11 @@ void CDAPProvider::remote_stop_response(const cdap_rib::con_handle_t &con,
                                         const cdap_rib::res_info_t* res,
                                         int message_id)
 {
-  const rina::CDAPMessage *m_sent;
+  const cdap_m_t *m_sent;
 
-  // FIXME change CDAPMessage::NONE_FLAGS
+  // FIXME change cdap_rib::flags_t::NONE_FLAGS
   (void) flags;
-  m_sent = manager_->getStopObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
+  m_sent = manager_->getStopObjectResponseMessage(cdap_rib::flags_t::NONE_FLAGS,
                                                   res->result_,
                                                   res->result_reason_,
                                                   message_id);
@@ -481,67 +2947,156 @@ void CDAPProvider::remote_stop_response(const cdap_rib::con_handle_t &con,
   delete m_sent;
 }
 
-class AppCDAPProvider : public CDAPProvider
+void CDAPProvider::new_message(cdap_rib::SerializedObject &message, int port)
 {
- public:
-  AppCDAPProvider(rina::WireMessageProviderFactory wire_provider_factory,
-                  long timeout);
- private:
-  void send(const rina::CDAPMessage *m_sent, int port);
-};
+  const cdap_m_t *m_rcv;
+  m_rcv = manager_->messageReceived(message, port);
+  // Fill structures
+  cdap_rib::con_handle_t con;
+  // Auth
+  con.auth_.auth_mech_ = m_rcv->auth_mech_;
+  con.auth_.auth_name_ = m_rcv->auth_value_.auth_name_;
+  con.auth_.auth_password_ = m_rcv->auth_value_.auth_password_;
+  con.auth_.auth_other_ = m_rcv->auth_value_.auth_other_;
+  // Src
+  con.src_.ae_name_ = m_rcv->src_ae_name_;
+  con.src_.ae_inst_ = m_rcv->src_ae_inst_;
+  con.src_.ap_name_ = m_rcv->src_ap_name_;
+  con.src_.ae_inst_ = m_rcv->src_ae_inst_;
+  // Dest
+  con.dest_.ae_name_ = m_rcv->dest_ae_name_;
+  con.dest_.ae_inst_ = m_rcv->dest_ae_inst_;
+  con.dest_.ap_name_ = m_rcv->dest_ap_name_;
+  con.dest_.ae_inst_ = m_rcv->dest_ae_inst_;
+  // Port
+  con.port_ = port;
+  // Version
+  con.version_.version_ = m_rcv->version_;
+  // Flags
+  cdap_rib::flags_t flags;
+  flags.flags_ = m_rcv->flags_;
+  // Object
+  cdap_rib::obj_info_t obj;
+  obj.class_ = m_rcv->obj_class_;
+  obj.inst_ = m_rcv->obj_inst_;
+  obj.name_ = m_rcv->obj_name_;
+  obj.value_ = (void*) m_rcv->obj_value_;
+  // Filter
+  cdap_rib::filt_info_t filt;
+  filt.filter_ = m_rcv->filter_;
+  filt.scope_ = m_rcv->scope_;
+  // Invoke id
+  int message_id = m_rcv->invoke_id_;
+  // Result
+  cdap_rib::res_info_t res;
+  res.result_ = m_rcv->result_;
+  res.result_reason_ = m_rcv->result_reason_;
 
-AppCDAPProvider::AppCDAPProvider(
-    rina::WireMessageProviderFactory wire_provider_factory, long timeout)
-    : CDAPProvider(wire_provider_factory, timeout)
+  switch (m_rcv->op_code_) {
+    case cdap_m_t::M_CONNECT:
+      callback_->open_connection(con, flags, message_id);
+      break;
+    case cdap_m_t::M_CONNECT_R:
+      callback_->open_connection_result(con, res);
+      break;
+    case cdap_m_t::M_RELEASE:
+      callback_->close_connection(con, flags, message_id);
+      break;
+    case cdap_m_t::M_RELEASE_R:
+      callback_->close_connection_result(con, res);
+      break;
+    case cdap_m_t::M_CREATE:
+      callback_->remote_create_request(con, obj, filt, message_id);
+      break;
+    case cdap_m_t::M_CREATE_R:
+      callback_->remote_create_result(con, res);
+      break;
+    case cdap_m_t::M_DELETE:
+      callback_->remote_delete_request(con, obj, filt, message_id);
+      break;
+    case cdap_m_t::M_DELETE_R:
+      callback_->remote_delete_result(con, res);
+      break;
+    case cdap_m_t::M_READ:
+      callback_->remote_read_request(con, obj, filt, message_id);
+      break;
+    case cdap_m_t::M_READ_R:
+      callback_->remote_read_result(con, res);
+      break;
+    case cdap_m_t::M_CANCELREAD:
+      callback_->remote_cancel_read_request(con, obj, filt, message_id);
+      break;
+    case cdap_m_t::M_CANCELREAD_R:
+      callback_->remote_cancel_read_result(con, res);
+      break;
+    case cdap_m_t::M_WRITE:
+      callback_->remote_write_request(con, obj, filt, message_id);
+      break;
+    case cdap_m_t::M_WRITE_R:
+      callback_->remote_write_result(con, res);
+      break;
+    case cdap_m_t::M_START:
+      callback_->remote_start_request(con, obj, filt, message_id);
+      break;
+    case cdap_m_t::M_START_R:
+      callback_->remote_start_result(con, res);
+      break;
+    case cdap_m_t::M_STOP:
+      callback_->remote_stop_request(con, obj, filt, message_id);
+      break;
+    case cdap_m_t::M_STOP_R:
+      callback_->remote_stop_result(con, res);
+      break;
+    default:
+      LOG_ERR("Operation not recognized");
+      break;
+  }
+
+  delete m_rcv;
+}
+
+AppCDAPProvider::AppCDAPProvider(SerializerInterface *serializer, long timeout,
+                                 cdap::CDAPCallbackInterface *callback)
+    : CDAPProvider(serializer, timeout, callback)
 {
 }
 
-void AppCDAPProvider::send(const rina::CDAPMessage *m_sent, int port)
+void AppCDAPProvider::send(const cdap_m_t *m_sent, int port)
 {
-  const rina::SerializedObject *ser_sent_m =
-      manager_->encodeNextMessageToBeSent(*m_sent, port);
+  const cdap_rib::SerializedObject *ser_sent_m = manager_
+      ->encodeNextMessageToBeSent(*m_sent, port);
   manager_->messageSent(*m_sent, port);
   rina::ipcManager->getAllocatedFlow(port)->writeSDU(ser_sent_m->message_,
                                                      ser_sent_m->size_);
   delete ser_sent_m;
 }
 
-class IPCPCDAPProvider : public CDAPProvider
-{
- public:
-  IPCPCDAPProvider(rina::WireMessageProviderFactory wire_provider_factory,
-                   long timeout);
- private:
-  void send(const rina::CDAPMessage *m_sent, int port);
-};
-
-IPCPCDAPProvider::IPCPCDAPProvider(
-    rina::WireMessageProviderFactory wire_provider_factory, long timeout)
-    : CDAPProvider(wire_provider_factory, timeout)
+IPCPCDAPProvider::IPCPCDAPProvider(SerializerInterface *serializer,
+                                   long timeout,
+                                   cdap::CDAPCallbackInterface *callback)
+    : CDAPProvider(serializer, timeout, callback)
 {
 }
 
-void IPCPCDAPProvider::send(const rina::CDAPMessage *m_sent, int port)
+void IPCPCDAPProvider::send(const cdap_m_t *m_sent, int port)
 {
-  const rina::SerializedObject *ser_sent_m =
-      manager_->encodeNextMessageToBeSent(*m_sent, port);
+  const cdap_rib::SerializedObject *ser_sent_m = manager_
+      ->encodeNextMessageToBeSent(*m_sent, port);
   manager_->messageSent(*m_sent, port);
   rina::kernelIPCProcess->writeMgmgtSDUToPortId(ser_sent_m->message_,
                                                 ser_sent_m->size_, port);
   delete ser_sent_m;
 }
 
-CDAPProviderInterface* CDAPProviderFactory::create(
-    const std::string &comm_protocol, long timeout, bool is_IPCP)
+CDAPProviderInterface* CDAPProviderFactory_::create(
+    long timeout, bool is_IPCP, cdap::CDAPCallbackInterface *callback)
 {
-  (void) comm_protocol;
-  // FIXME: call wire_provider_factory with a std::string and make a switch inside
-  rina::WireMessageProviderFactory wire_provider_factory;
-  // FIXME: remove wire_provider_factory as a member variable of CDAPManager
+  SerializerInterface *serializer = new GPBSerializer();
+
   if (is_IPCP)
-    return new IPCPCDAPProvider(wire_provider_factory, timeout);
+    return new IPCPCDAPProvider(serializer, timeout, callback);
   else
-    return new AppCDAPProvider(wire_provider_factory, timeout);
+    return new AppCDAPProvider(serializer, timeout, callback);
 }
 
 }
