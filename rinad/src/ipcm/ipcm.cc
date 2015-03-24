@@ -169,7 +169,9 @@ IPCManager_::create_ipcp(CreateIPCPPromise* promise,
 		rina::WriteScopedLock writelock(ipcp->rwlock, false);
 
 		//Set the promise
-		promise->ipcp_id = ipcp->get_id();
+		if (promise){
+			promise->ipcp_id = ipcp->get_id();
+		}
 
 		//TODO: this should be moved to the factory
 		//Moreover the API should be homgenized such that the
@@ -179,8 +181,10 @@ IPCManager_::create_ipcp(CreateIPCPPromise* promise,
 			ipcp->setInitialized();
 
 			//And mark the promise as completed
-			promise->ret = IPCM_SUCCESS;
-			promise->signal();
+			if (promise) {
+				promise->ret = IPCM_SUCCESS;
+				promise->signal();
+			}
 
 			//Show a nice trace
 			ss << "IPC process " << name.toString() << " created "
@@ -1189,7 +1193,9 @@ IPCManager_::unregister_app_from_ipcp(Promise* promise,
 TransactionState::TransactionState(Promise* _promise):
 					promise(_promise),
 					tid(IPCManager->__tid_gen.next()){
-	promise->ret = IPCM_PENDING;
+	if (promise) {
+		promise->ret = IPCM_PENDING;
+	}
 };
 
 
