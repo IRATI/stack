@@ -144,6 +144,8 @@ const std::string BaseNetlinkMessage::toString(){
 		type = "Response";
 	} else if (notificationMessage) {
 		type = "Notification";
+	} else {
+		type = "Unknown";
 	}
 
 	ss << "Fam: " << family << "; Opcode: "
