@@ -92,7 +92,6 @@ void IPCManager_::ipc_process_daemon_initialized_event_handler(
 
 	//Set return value, mark as completed and signal
 	trans->completed(IPCM_SUCCESS);
-	trans->signal();
 	remove_transaction_state(trans->tid);
 
 	return;
@@ -159,7 +158,6 @@ int IPCManager_::ipcm_register_response_ipcp(
 
 	//Set return value, mark as completed and signal
 	trans->completed(ret);
-	trans->signal();
 	remove_transaction_state(trans->tid);
 
 	return -(ret == IPCM_SUCCESS);
@@ -226,7 +224,6 @@ int IPCManager_::ipcm_unregister_response_ipcp(
 
 	//Set return value, mark as completed and signal
 	trans->completed(ret);
-	trans->signal();
 	remove_transaction_state(trans->tid);
 
 	return -(ret == IPCM_SUCCESS);
@@ -289,7 +286,6 @@ IPCManager_::assign_to_dif_response_event_handler(rina::AssignToDIFResponseEvent
 	}
 	//Mark as completed
 	trans->completed(ret);
-	trans->signal();
 	remove_transaction_state(trans->tid);
 }
 
@@ -343,7 +339,6 @@ IPCManager_::update_dif_config_response_event_handler(rina::UpdateDIFConfigurati
 	}
 	//Mark as completed
 	trans->completed(ret);
-	trans->signal();
 	remove_transaction_state(trans->tid);
 }
 
@@ -395,7 +390,6 @@ IPCManager_::enroll_to_dif_response_event_handler(rina::EnrollToDIFResponseEvent
 
 	//Mark as completed
 	trans->completed(ret);
-	trans->signal();
 	remove_transaction_state(trans->tid);
 }
 

@@ -61,7 +61,6 @@ void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *
 			<< endl;
 
 		trans->completed(IPCM_FAILURE);
-		trans->signal();
 		remove_transaction_state(trans->tid);
 		return;
 	}
@@ -72,7 +71,6 @@ void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *
 		FLUSH_LOG(ERR, ss);
 
 		trans->completed(IPCM_FAILURE);
-		trans->signal();
 		remove_transaction_state(trans->tid);
 		return;
 	}
@@ -99,7 +97,6 @@ void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *
 	if(!promise){
 		assert(0);
 		trans->completed(IPCM_FAILURE);
-		trans->signal();
 		remove_transaction_state(trans->tid);
 		return;
 	}
@@ -107,7 +104,6 @@ void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *
 	//Mark as completed
 	promise->serialized_rib = ss.str();
 	trans->completed(IPCM_SUCCESS);
-	trans->signal();
 	remove_transaction_state(trans->tid);
 
 	return;

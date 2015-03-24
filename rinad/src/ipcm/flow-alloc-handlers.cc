@@ -103,7 +103,6 @@ IPCManager_::deallocate_flow(const int ipcp_id,
 	}
 
 	trans->completed(IPCM_FAILURE);
-	trans->signal();
 	remove_transaction_state(trans->tid);
 }
 
@@ -375,7 +374,6 @@ void IPCManager_::ipcm_allocate_flow_request_result_handler( rina::IpcmAllocateF
 	}
 
 	trans->completed(ret);
-	trans->signal();
 	remove_transaction_state(trans->tid);
 }
 
@@ -442,7 +440,6 @@ void IPCManager_::allocate_flow_response_event_handler(rina::AllocateFlowRespons
 		ret = IPCM_FAILURE;
 	}
 	trans->completed(ret);
-	trans->signal();
 	remove_transaction_state(trans->tid);
 }
 
@@ -558,7 +555,6 @@ void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IpcmDealloca
 	}
 
 	trans->completed(ret);
-	trans->signal();
 	remove_transaction_state(trans->tid);
 }
 

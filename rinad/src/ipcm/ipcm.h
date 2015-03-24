@@ -194,16 +194,8 @@ public:
 			return;
 
 		promise->ret = _ret;
-	}
-
-	//
-	// wake the waiting thread
-	//
-	inline void signal(void){
-		if(!promise)
-			return;
-
 		promise->signal();
+
 	}
 
 	//Promise
@@ -291,7 +283,12 @@ public:
 	//
 	// Creates an IPCP process
 	//
-	// @ret -1 on failure, otherwise the IPCP id
+	// @param promise Promise object containing the future result of the
+	// operation. The promise shall always be accessible until the
+	// operation has been finished, so promise->ret value is different than
+	// IPCM_PENDING.
+	//
+	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	//
 	ipcm_res_t create_ipcp(CreateIPCPPromise* promise,
 			const rina::ApplicationProcessNamingInformation& name,
@@ -300,10 +297,21 @@ public:
 	//
 	// Destroys an IPCP process
 	//
+	// This method is blocking
+	//
+	// @ret IPCM_SUCCESS on success IPCM_FAILURE
+	//
 	ipcm_res_t destroy_ipcp(const unsigned int ipcp_id);
 
 	//
 	// Assing an ipcp to a DIF
+	//
+	// @param promise Promise object containing the future result of the
+	// operation. The promise shall always be accessible until the
+	// operation has been finished, so promise->ret value is different than
+	// IPCM_PENDING.
+	//
+	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	//
 	ipcm_res_t assign_to_dif(Promise* promise, const int ipcp_id,
 			  const rina::ApplicationProcessNamingInformation&
@@ -312,6 +320,12 @@ public:
 	//
 	// Register an IPCP to a single DIF
 	//
+	// @param promise Promise object containing the future result of the
+	// operation. The promise shall always be accessible until the
+	// operation has been finished, so promise->ret value is different than
+	// IPCM_PENDING.
+	//
+	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t register_at_dif(Promise* promise, const int ipcp_id,
 			    const rina::ApplicationProcessNamingInformation&
 			    difName);
@@ -319,6 +333,12 @@ public:
 	//
 	// Register an existing IPCP to multiple DIFs
 	//
+	// @param promise Promise object containing the future result of the
+	// operation. The promise shall always be accessible until the
+	// operation has been finished, so promise->ret value is different than
+	// IPCM_PENDING.
+	//
+	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t register_at_difs(Promise* promise, const int ipcp_id,
 			const
 			std::list<rina::ApplicationProcessNamingInformation>&
@@ -327,17 +347,35 @@ public:
 	//
 	// Enroll IPCP to a single DIF
 	//
+	// @param promise Promise object containing the future result of the
+	// operation. The promise shall always be accessible until the
+	// operation has been finished, so promise->ret value is different than
+	// IPCM_PENDING.
+	//
+	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t enroll_to_dif(Promise* promise, const int ipcp_id,
 			  const rinad::NeighborData& neighbor, bool sync);
 	//
 	// Enroll IPCP to multiple DIFs
 	//
+	// @param promise Promise object containing the future result of the
+	// operation. The promise shall always be accessible until the
+	// operation has been finished, so promise->ret value is different than
+	// IPCM_PENDING.
+	//
+	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t enroll_to_difs(Promise* promise, const int ipcp_id,
 			   const std::list<rinad::NeighborData>& neighbors);
 
 	//
 	// Unregister app from an ipcp
 	//
+	// @param promise Promise object containing the future result of the
+	// operation. The promise shall always be accessible until the
+	// operation has been finished, so promise->ret value is different than
+	// IPCM_PENDING.
+	//
+	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t unregister_app_from_ipcp(Promise* promise,
 		const rina::ApplicationUnregistrationRequestEvent& req_event,
 		int slave_ipcp_id);
@@ -345,6 +383,12 @@ public:
 	//
 	// Unregister an ipcp from another one
 	//
+	// @param promise Promise object containing the future result of the
+	// operation. The promise shall always be accessible until the
+	// operation has been finished, so promise->ret value is different than
+	// IPCM_PENDING.
+	//
+	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t unregister_ipcp_from_ipcp(Promise* promise,
 						const int ipcp_id,
 						const int slave_ipcp_id);
@@ -352,6 +396,12 @@ public:
 	// Update the DIF configuration
 	//TODO: What is really this for?
 	//
+	// @param promise Promise object containing the future result of the
+	// operation. The promise shall always be accessible until the
+	// operation has been finished, so promise->ret value is different than
+	// IPCM_PENDING.
+	//
+	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t update_dif_configuration(Promise* promise,
 				const int ipcp_id,
 				const rina::DIFConfiguration& dif_config);
@@ -359,17 +409,48 @@ public:
 	//
 	// Retrieve the IPCP RIB in the form of a string
 	//
+	// @param promise Promise object containing the future result of the
+	// operation. The promise shall always be accessible until the
+	// operation has been finished, so promise->ret value is different than
+	// IPCM_PENDING.
+	//
+	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t query_rib(QueryRIBPromise* promise, const int ipcp_id);
 
+	//
+	// Select a policy set
+	//
+	// @param promise Promise object containing the future result of the
+	// operation. The promise shall always be accessible until the
+	// operation has been finished, so promise->ret value is different than
+	// IPCM_PENDING.
+	//
+	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t select_policy_set(Promise* promise, const int ipcp_id,
 					const std::string& component_path,
 					const std::string& policy_set);
-
+	//
+	// Set a policy "set-param"
+	//
+	// @param promise Promise object containing the future result of the
+	// operation. The promise shall always be accessible until the
+	// operation has been finished, so promise->ret value is different than
+	// IPCM_PENDING.
+	//
+	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t set_policy_set_param(Promise* promise, const int ipcp_id,
 						const std::string& path,
 						const std::string& name,
 						const std::string& value);
-
+	//
+	// Load policy plugin
+	//
+	// @param promise Promise object containing the future result of the
+	// operation. The promise shall always be accessible until the
+	// operation has been finished, so promise->ret value is different than
+	// IPCM_PENDING.
+	//
+	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t plugin_load(Promise* promise, const int ipcp_id,
 						const std::string& plugin_name,
 						bool load);

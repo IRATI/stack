@@ -322,7 +322,6 @@ void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponse
 	}
 
 	trans->completed(ret);
-	trans->signal();
 	remove_transaction_state(trans->tid);
 }
 
@@ -472,7 +471,6 @@ void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResp
 	}
 
 	trans->completed(ret);
-	trans->signal();
 	remove_transaction_state(trans->tid);
 }
 

@@ -59,7 +59,6 @@ void IPCManager_::ipc_process_set_policy_set_param_response_handler(
 		FLUSH_LOG(ERR, ss);
 
 		trans->completed(IPCM_FAILURE);
-		trans->signal();
 		remove_transaction_state(trans->tid);
 		return;
 	}
@@ -73,7 +72,6 @@ void IPCManager_::ipc_process_set_policy_set_param_response_handler(
 
 	//Mark as completed
 	trans->completed(IPCM_SUCCESS);
-	trans->signal();
 	remove_transaction_state(trans->tid);
 }
 
@@ -98,7 +96,6 @@ void IPCManager_::ipc_process_plugin_load_response_handler(rina::PluginLoadRespo
 		FLUSH_LOG(ERR, ss);
 
 		trans->completed(IPCM_FAILURE);
-		trans->signal();
 		remove_transaction_state(trans->tid);
 		return;
 	}
@@ -113,7 +110,6 @@ void IPCManager_::ipc_process_plugin_load_response_handler(rina::PluginLoadRespo
 
 	//Mark as completed
 	trans->completed(IPCM_SUCCESS);
-	trans->signal();
 	remove_transaction_state(trans->tid);
 }
 
@@ -138,7 +134,6 @@ void IPCManager_::ipc_process_select_policy_set_response_handler(
 		FLUSH_LOG(ERR, ss);
 
 		trans->completed(IPCM_FAILURE);
-		trans->signal();
 		remove_transaction_state(trans->tid);
 		return;
 	}
@@ -153,7 +148,6 @@ void IPCManager_::ipc_process_select_policy_set_response_handler(
 
 	//Mark as completed
 	trans->completed(IPCM_SUCCESS);
-	trans->signal();
 	remove_transaction_state(trans->tid);
 }
 
