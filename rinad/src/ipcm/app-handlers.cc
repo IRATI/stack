@@ -73,7 +73,7 @@ void IPCManager_::os_process_finalized_handler(rina::IPCEvent *e)
 			continue;
 		}
 
-		IPCManager->deallocate_flow(NULL, ipcp->get_id(), req_event);
+		IPCManager->deallocate_flow(ipcp->get_id(), req_event);
 	}
 
 	// Look if the terminating application has pending registrations
@@ -280,44 +280,10 @@ void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponse
         ostringstream ss;
 	APPregTransState* t1;
 	IPCPregTransState* t2;
+	ipcm_res_t ret = IPCM_SUCCESS;
 	IPCPTransState* trans = get_transaction_state<IPCPTransState>(e->sequenceNumber);
-	assert(trans->tid == e->sequenceNumber);
 
-	if(trans){
-		try{
-			//Recover IPCP
-			ipcp = lookup_ipcp_by_id(trans->ipcp_id);
-			if(!ipcp){
-				ss << ": Warning: Could not complete application registration: "<<e->sequenceNumber<<
-				"IPCP with id: "<<trans->ipcp_id<<"does not exist! Perhaps deleted?" << endl;
-				FLUSH_LOG(WARN, ss);
-				throw Exception();
-			}
-
-			//Auto release the read lock
-			rina::ReadScopedLock readlock(ipcp->rwlock, false);
-
-			//TODO  solve this mess. We have to do it this way
-			//because code is different from IPCP to an APP, but
-			//there is a single event
-			t1 = get_transaction_state<APPregTransState>(trans->tid);
-			if(t1){
-				//Application registration
-				ipcm_register_response_app(e, ipcp,
-								*t1->req);
-			}else{
-				//IPCP registration
-                		ipcm_register_response_ipcp(e);
-
-			}
-			//Mark as completed
-			trans->completed(e->result);
-		}catch(...){
-			//Remove the transaction and return
-			remove_transaction_state(trans->tid);
-			return;
-		}
-	}else{
+	if(!trans){
 		//Transacion was not found
                 ss << ": Warning: DIF assignment response "
                         "received, but no pending DIF assignment. Perhaps the IPCP was deleted? " << endl;
@@ -325,18 +291,39 @@ void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponse
 		return;
 	}
 
-	//If there was a calle, invoke the callback and remove it. Otherwise
-	//transaction is fully complete and originator will clean up the state
-	if(trans->callee){
-		//Invoke callback
-		//FIXME
+	try{
+		//Recover IPCP
+		ipcp = lookup_ipcp_by_id(trans->ipcp_id);
+		if(!ipcp){
+			ss << ": Warning: Could not complete application registration: "<<e->sequenceNumber<<
+			"IPCP with id: "<<trans->ipcp_id<<"does not exist! Perhaps deleted?" << endl;
+			FLUSH_LOG(WARN, ss);
+			throw Exception();
+		}
 
-		//Remove the transaction
-		remove_transaction_state(trans->tid);
-	}else{
-		//Wake waiting
-		trans->signal();
+		//Auto release the read lock
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
+
+		//TODO  solve this mess. We have to do it this way
+		//because code is different from IPCP to an APP, but
+		//there is a single event
+		t1 = get_transaction_state<APPregTransState>(trans->tid);
+		if(t1){
+			//Application registration
+			ipcm_register_response_app(e, ipcp,
+							*t1->req);
+		}else{
+			//IPCP registration
+			ipcm_register_response_ipcp(e);
+
+		}
+	}catch(...){
+		ret = IPCM_FAILURE;
 	}
+
+	trans->completed(ret);
+	trans->signal();
+	remove_transaction_state(trans->tid);
 }
 
 void IPCManager_::application_manager_app_unregistered(
@@ -443,45 +430,13 @@ void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResp
 {
 	ostringstream ss;
 	IPCMIPCProcess* ipcp;
+	ipcm_res_t ret = IPCM_SUCCESS;
 
 	//First check if this de-reg was a pending
 	APPUnregTransState* t1;
 	IPCPTransState* trans = get_transaction_state<IPCPTransState>(e->sequenceNumber);
-	assert(trans->tid == e->sequenceNumber);
 
-	if(trans){
-		try{
-			//Recover IPCP
-			ipcp = lookup_ipcp_by_id(trans->ipcp_id);
-			if(!ipcp){
-				ss << ": Warning: Could not complete application unregistration: "<<e->sequenceNumber<<
-				"IPCP with id: "<<trans->ipcp_id<<"does not exist! Perhaps deleted?" << endl;
-				FLUSH_LOG(WARN, ss);
-				throw Exception();
-			}
-
-			//Auto release the read lock
-			rina::ReadScopedLock readlock(ipcp->rwlock, false);
-
-			//TODO  solve this mess. We have to do it this way
-			//because code is different from IPCP to an APP, but
-			//there is a single event
-			t1 = get_transaction_state<APPUnregTransState>(trans->tid);
-			if(t1){
-				//Application registration
-				ipcm_unregister_response_app(e, ipcp, *t1->req);
-			}else{
-                		ipcm_unregister_response_ipcp(e);
-
-			}
-			//Mark as completed
-			trans->completed(e->result);
-		}catch(...){
-			//Remove the transaction and return
-			remove_transaction_state(trans->tid);
-			return;
-		}
-	}else{
+	if(!trans){
 		//Transacion was not found
                 ss << ": Warning: Application unregistration response "
                         "received but unknown. Perhaps the IPCP was deleted? " << endl;
@@ -489,19 +444,36 @@ void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResp
 		return;
 	}
 
-	//If there was a calle, invoke the callback and remove it. Otherwise
-	//transaction is fully complete and originator will clean up the state
-	if(trans->callee){
-		//Invoke callback
-		//FIXME
+	try{
+		//Recover IPCP
+		ipcp = lookup_ipcp_by_id(trans->ipcp_id);
+		if(!ipcp){
+			ss << ": Warning: Could not complete application unregistration: "<<e->sequenceNumber<<
+			"IPCP with id: "<<trans->ipcp_id<<"does not exist! Perhaps deleted?" << endl;
+			FLUSH_LOG(WARN, ss);
+			throw Exception();
+		}
 
-		//Remove the transaction
-		remove_transaction_state(trans->tid);
-	}else{
-		//Wake waiting
-		trans->signal();
+		//Auto release the read lock
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
+
+		//TODO  solve this mess. We have to do it this way
+		//because code is different from IPCP to an APP, but
+		//there is a single event
+		t1 = get_transaction_state<APPUnregTransState>(trans->tid);
+
+		//Application registration
+		if(t1)
+			ipcm_unregister_response_app(e, ipcp, *t1->req);
+		else
+			ipcm_unregister_response_ipcp(e);
+	}catch(...){
+		ret = IPCM_FAILURE;
 	}
 
+	trans->completed(ret);
+	trans->signal();
+	remove_transaction_state(trans->tid);
 }
 
 void IPCManager_::register_application_response_event_handler(rina::IPCEvent *event)

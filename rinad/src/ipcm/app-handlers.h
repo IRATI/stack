@@ -42,9 +42,9 @@ namespace rinad {
 class APPregTransState: public IPCPTransState{
 
 public:
-	APPregTransState(const Addon* callee, int ipcp_id,
+	APPregTransState(Promise* promise, int ipcp_id,
 			rina::ApplicationRegistrationRequestEvent* _req)
-				: IPCPTransState(callee, ipcp_id),
+				: IPCPTransState(promise, ipcp_id),
 						req(_req){};
 	virtual ~APPregTransState(){};
 
@@ -58,9 +58,9 @@ public:
 class APPUnregTransState: public IPCPTransState{
 
 public:
-	APPUnregTransState(const Addon* callee, int ipcp_id,
+	APPUnregTransState(Promise* promise, int ipcp_id,
 			rina::ApplicationUnregistrationRequestEvent* _req)
-				: IPCPTransState(callee, ipcp_id),
+				: IPCPTransState(promise, ipcp_id),
 						req(_req){};
 	virtual ~APPUnregTransState(){};
 

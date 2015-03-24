@@ -42,7 +42,7 @@
 
 
 //Constants
-#define TRANS_RETRY_NSEC 1000000 //1ms
+#define PROMISE_RETRY_NSEC 1000000 //1ms
 
 #ifndef DOWNCAST_DECL
 	// Useful MACRO to perform downcasts in declarations.
@@ -62,83 +62,160 @@
 namespace rinad {
 
 //
+// Return codes
+//
+typedef enum ipcm_res{
+	//Success
+	IPCM_SUCCESS = 0,
+
+	//Return value will be deferred
+	IPCM_PENDING = 1,
+
+	//Generic failure
+	IPCM_FAILURE = -1,
+
+	//TODO: add more codes here...
+}ipcm_res_t;
+
+
+
+//
+// Promise base class
+//
+class Promise {
+
+public:
+	virtual ~Promise(){};
+
+	//
+	// Wait (blocking)
+	//
+	ipcm_res_t wait(void){
+		// Due to the async nature of the API, notifications (signal)
+		// the transaction can well end before the thread is waiting
+		// in the condition variable. As apposed to sempahores
+		// pthread_cond don't keep the "credit"
+		while(ret != IPCM_PENDING){
+			try{
+				wait_cond.timedwait(0, PROMISE_RETRY_NSEC);
+			}catch(...){};
+		}
+
+		return ret;
+	};
+
+	//
+	// Signal the condition
+	//
+	inline void signal(void){
+		wait_cond.signal();
+	}
+
+	//
+	// Timed wait (blocking)
+	//
+	// Return SUCCESS or IPCM_PENDING if the operation did not finally
+	// succeed
+	//
+	ipcm_res_t timed_wait(const unsigned int seconds){
+
+		if(ret != IPCM_PENDING)
+			return ret;
+		try{
+			wait_cond.timedwait(seconds, 0);
+		}catch (rina::ConcurrentException& e) {
+			if(ret != IPCM_PENDING)
+				return ret;
+			return IPCM_PENDING;
+		};
+		return ret;
+	};
+
+	//
+	// Return code
+	//
+	ipcm_res_t ret;
+
+protected:
+	//Condition variable
+	rina::ConditionVariable wait_cond;
+};
+
+//
+// Create IPCP promise
+//
+class CreateIPCPPromise : public Promise {
+
+
+public:
+	int ipcp_id;
+};
+
+//
+// Query RIB promise
+//
+class QueryRIBPromise : public Promise {
+
+public:
+	std::string serialized_rib;
+};
+
+//
 // This base class encapsulates the generics of any two-step, so requiring
 // interaction with the kernel, API call.
 //
 class TransactionState {
 
 public:
-	TransactionState(const Addon* _callee);
+	TransactionState(Promise* promise);
 	virtual ~TransactionState(){};
 
 	//
-	// Wait (blocking)
+	// Used to recover the promise from the transaction
 	//
-	void wait(void){
-		// Due to the async nature of the API, notifications (signal)
-		// the transaction can well end before the thread is waiting
-		// in the condition variable. As apposed to sempahores
-		// pthread_cond don't keep the "credit"
-		while(!complete){
-			try{
-				wait_cond.timedwait(0, TRANS_RETRY_NSEC);
-			}catch(...){};
-		}
-	};
-
+	// @arg Template T: type of the promise
 	//
-	// Timed wait (blocking)
-	//
-	// Will throw an exception when the timeout expires
-	//
-	void timed_wait(const unsigned int seconds){
-
-		if(complete)
-			return;
+	template<typename T>
+	T* get_promise(){
 		try{
-			wait_cond.timedwait(seconds, 0);
-		}catch (rina::ConcurrentException& e) {
-			if(complete)
-				return;
-			throw e;
-		};
-	};
+			T* t = dynamic_cast<T*>(promise);
+			return t;
+		}catch(...){
+			assert(0);
+			return NULL;
+		}
+	}
 
 	//
-	// This method and signals any existing  set complete flag
+	// This method and signals any existing set complete flag
 	//
-	void completed(int _ret){
-		complete = true;
-		ret = _ret;
+	void completed(ipcm_res_t _ret){
+		if(!promise)
+			return;
+
+		promise->ret = _ret;
 	}
 
 	//
 	// wake the waiting thread
 	//
 	inline void signal(void){
-		wait_cond.signal();
+		if(!promise)
+			return;
+
+		promise->signal();
 	}
 
-	//Callee
-	const Addon* callee;
+	//Promise
+	Promise* promise;
 
 	//Transaction id
 	const int tid;
 
-	//Return value
-	int ret;
-
-	//Is the transaction finished
-	bool complete;
 protected:
-	TransactionState(const Addon* _callee, const int tid_):
-							callee(_callee),
-							tid(tid_),
-							complete(false){};
-
-private:
-	//Condition variable
-	rina::ConditionVariable wait_cond;
+	TransactionState(Promise* promise_, const int tid_):
+							promise(promise_),
+							tid(tid_){};
 };
 
 //
@@ -146,8 +223,8 @@ private:
 //
 class SyscallTransState : public TransactionState {
 public:
-	SyscallTransState(const Addon* _callee, const int tid_) :
-					TransactionState(_callee, tid_){};
+	SyscallTransState(Promise* promise_, const int tid_) :
+					TransactionState(promise_, tid_){};
 	virtual ~SyscallTransState(){};
 };
 
@@ -166,23 +243,23 @@ public:
 	//
 	// Start the script worker thread
 	//
-	int start_script_worker();
+	ipcm_res_t start_script_worker();
 
 	//
 	// Start the console worker thread
 	//
-	int start_console_worker();
+	ipcm_res_t start_console_worker();
 
 	//
 	// TODO: XXX?????
 	//
-	int apply_configuration();
+	ipcm_res_t apply_configuration();
 
 
 	//
 	// List the existing IPCPs in the system
 	//
-	int list_ipcps(std::ostream& os);
+	void list_ipcps(std::ostream& os);
 
 
 	//
@@ -216,85 +293,86 @@ public:
 	//
 	// @ret -1 on failure, otherwise the IPCP id
 	//
-	int create_ipcp(const Addon* callee,
+	ipcm_res_t create_ipcp(CreateIPCPPromise* promise,
 			const rina::ApplicationProcessNamingInformation& name,
 			const std::string& type);
 
 	//
 	// Destroys an IPCP process
 	//
-	int destroy_ipcp(const Addon* callee, const unsigned int ipcp_id);
+	ipcm_res_t destroy_ipcp(const unsigned int ipcp_id);
 
 	//
 	// Assing an ipcp to a DIF
 	//
-	int assign_to_dif(const Addon* callee, const int ipcp_id,
+	ipcm_res_t assign_to_dif(Promise* promise, const int ipcp_id,
 			  const rina::ApplicationProcessNamingInformation&
 			  difName);
 
 	//
 	// Register an IPCP to a single DIF
 	//
-	int register_at_dif(const Addon* callee, const int ipcp_id,
+	ipcm_res_t register_at_dif(Promise* promise, const int ipcp_id,
 			    const rina::ApplicationProcessNamingInformation&
 			    difName);
 
 	//
 	// Register an existing IPCP to multiple DIFs
 	//
-	int register_at_difs(const Addon* callee, const int ipcp_id, const
+	ipcm_res_t register_at_difs(Promise* promise, const int ipcp_id,
+			const
 			std::list<rina::ApplicationProcessNamingInformation>&
-			     difs);
+			difs);
 
 	//
 	// Enroll IPCP to a single DIF
 	//
-	int enroll_to_dif(const Addon* callee, const int ipcp_id,
+	ipcm_res_t enroll_to_dif(Promise* promise, const int ipcp_id,
 			  const rinad::NeighborData& neighbor, bool sync);
 	//
 	// Enroll IPCP to multiple DIFs
 	//
-	int enroll_to_difs(const Addon* callee, const int ipcp_id,
+	ipcm_res_t enroll_to_difs(Promise* promise, const int ipcp_id,
 			   const std::list<rinad::NeighborData>& neighbors);
 
 	//
 	// Unregister app from an ipcp
 	//
-	int unregister_app_from_ipcp(const Addon* callee,
+	ipcm_res_t unregister_app_from_ipcp(Promise* promise,
 		const rina::ApplicationUnregistrationRequestEvent& req_event,
 		int slave_ipcp_id);
 
 	//
 	// Unregister an ipcp from another one
 	//
-	int unregister_ipcp_from_ipcp(const Addon* callee, const int ipcp_id,
+	ipcm_res_t unregister_ipcp_from_ipcp(Promise* promise,
+						const int ipcp_id,
 						const int slave_ipcp_id);
 	//
 	// Update the DIF configuration
 	//TODO: What is really this for?
 	//
-	int update_dif_configuration(const Addon* callee, const int ipcp_id,
-		const rina::DIFConfiguration& dif_config);
-
-	int deallocate_flow(const Addon* callee, const int ipcp_id,
-			    const rina::FlowDeallocateRequestEvent& event);
+	ipcm_res_t update_dif_configuration(Promise* promise,
+				const int ipcp_id,
+				const rina::DIFConfiguration& dif_config);
 
 	//
 	// Retrieve the IPCP RIB in the form of a string
 	//
-	std::string query_rib(const Addon* callee, const int ipcp_id);
+	ipcm_res_t query_rib(QueryRIBPromise* promise, const int ipcp_id);
 
-	int select_policy_set(const Addon* callee, const int ipcp_id,
-			      const std::string& component_path,
-			      const std::string& policy_set);
+	ipcm_res_t select_policy_set(Promise* promise, const int ipcp_id,
+					const std::string& component_path,
+					const std::string& policy_set);
 
-	int set_policy_set_param(const Addon* callee, const int ipcp_id,
-				 const std::string& path,
-				 const std::string& name,
-				 const std::string& value);
+	ipcm_res_t set_policy_set_param(Promise* promise, const int ipcp_id,
+						const std::string& path,
+						const std::string& name,
+						const std::string& value);
 
-	int plugin_load(const Addon* callee, const int ipcp_id,
-			const std::string& plugin_name, bool load);
+	ipcm_res_t plugin_load(Promise* promise, const int ipcp_id,
+						const std::string& plugin_name,
+						bool load);
 
 	//
 	// Get the current logging debug level
@@ -408,6 +486,9 @@ protected:
 	void flow_allocation_requested_local(rina::FlowRequestEvent *event);
 
 	void flow_allocation_requested_remote(rina::FlowRequestEvent *event);
+	ipcm_res_t deallocate_flow(const int ipcp_id,
+			    const rina::FlowDeallocateRequestEvent& event);
+
 
 
 	//Application registration mgmt
