@@ -210,7 +210,7 @@ int efcp_container_unbind_user_ipcp(struct efcp_container * efcpc,
         }
 
         efcp = efcp_imap_find(efcpc->instances, cep_id);
-        if (efcp) {
+        if (!efcp) {
                 LOG_ERR("There is no EFCP bound to this cep-id %d", cep_id);
                 return -1;
         }
