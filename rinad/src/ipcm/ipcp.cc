@@ -88,8 +88,9 @@ const rina::ApplicationProcessNamingInformation& IPCMIPCProcess::getDIFName() co
 { return dif_name_; }
 
 void IPCMIPCProcess::get_description(std::ostream& os) {
-	os << "    " << get_id() << " " <<
-				get_name().toString() << " ";
+	os << "    " << get_id() << " | " <<
+				get_name().toString() << " | " <<
+				get_type() << " | ";
 	rina::ReadScopedLock readlock(rwlock);
 	switch (state_) {
 	case IPCM_IPCP_CREATED:
@@ -108,9 +109,9 @@ void IPCMIPCProcess::get_description(std::ostream& os) {
 		os << "UNKNOWN STATE";
 	}
 
+	os << " | ";
 	if (registeredApplications.size() > 0) {
 		std::list<rina::ApplicationProcessNamingInformation>::const_iterator it;
-		os << " Registered apps: ";
 		for (it = registeredApplications.begin();
 				it != registeredApplications.end(); ++it) {
 			if (it != registeredApplications.begin()) {
@@ -118,11 +119,13 @@ void IPCMIPCProcess::get_description(std::ostream& os) {
 			}
 			os << it->getEncodedString();
 		}
+	} else {
+		os << "-";
 	}
 
+	os << " | ";
 	if (allocatedFlows.size () > 0) {
 		std::list<rina::FlowInformation>::const_iterator it;
-		os << " Port-ids of flows provided: ";
 		for (it = allocatedFlows.begin();
 				it != allocatedFlows.end(); ++it) {
 			if (it != allocatedFlows.begin()) {
@@ -130,6 +133,8 @@ void IPCMIPCProcess::get_description(std::ostream& os) {
 			}
 			os << it->portId;
 		}
+	} else {
+		os << "-";
 	}
 
 	os << "\n";

@@ -290,7 +290,7 @@ IPCManager_::list_ipcps(std::ostream& os)
 	//Prevent any insertion/deletion to happen
 	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
 
-	os << "Current IPC processes:" << endl;
+	os << "Current IPC processes (id | name | type | state | Registered applications | Port-ids of flows provided)" << endl;
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
 		ipcps[i]->get_description(os);
 	}
