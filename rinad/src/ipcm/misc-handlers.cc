@@ -51,6 +51,7 @@ void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *
 			"response received, but no corresponding pending "
 			"request" << endl;
 		FLUSH_LOG(WARN, ss);
+		assert(0);
 		return;
 	}
 
@@ -58,15 +59,9 @@ void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *
 		ss  << ": Error: Query RIB operation of "
 			"process " << ipcp->get_name().toString() << " failed"
 			<< endl;
-		FLUSH_LOG(ERR, ss);
 
-		if(trans->callee){
-			//XXX: invoke the callback
-			remove_transaction_state(trans->tid);
-		}else{
-			//Wake waiting
-			trans->signal();
-		}
+		trans->completed(IPCM_FAILURE);
+		remove_transaction_state(trans->tid);
 		return;
 	}
 
@@ -74,14 +69,9 @@ void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *
 	if(!ipcp){
 		ss << "Could not complete IPCP query RIB. Invalid IPCP id "<< ipcp->get_id();
 		FLUSH_LOG(ERR, ss);
-		if(trans->callee){
-			//XXX: invoke the callback
-			remove_transaction_state(trans->tid);
-		}else{
-			//Wake waiting
-			trans->signal();
-		}
 
+		trans->completed(IPCM_FAILURE);
+		remove_transaction_state(trans->tid);
 		return;
 	}
 
@@ -102,23 +92,21 @@ void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *
 	}
 
 	//Set query RIB response
-	trans->result = ss.str();
+	QueryRIBPromise* promise = trans->get_promise<QueryRIBPromise>();
+
+	if(!promise){
+		assert(0);
+		trans->completed(IPCM_FAILURE);
+		remove_transaction_state(trans->tid);
+		return;
+	}
 
 	//Mark as completed
-	trans->completed(0);
+	promise->serialized_rib = ss.str();
+	trans->completed(IPCM_SUCCESS);
+	remove_transaction_state(trans->tid);
 
-	//If there was a calle, invoke the callback and remove it. Otherwise
-	//transaction is fully complete and originator will clean up the state
-	if(trans->callee){
-		//Invoke callback
-		//FIXME
-
-		//Remove the transaction
-		remove_transaction_state(trans->tid);
-	}else{
-		//Wake waiting
-		trans->signal();
-	}
+	return;
 }
 
 void IPCManager_::timer_expired_event_handler(rina::IPCEvent *event)

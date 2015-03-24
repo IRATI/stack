@@ -46,34 +46,6 @@ public:
 	Addon(const std::string _name):name(_name){};
 	virtual ~Addon(){};
 
-	//
-	// Callback section
-	//
-
-#if 0
-	/**
-	* On an async call to IPCManager::create_ipcp(), this callback will be
-	* executed
-	*
-	* @param result 0 on success, -1 on failure
-	*/
-	virtual void callback_create_ipcp(const int result) const{
-		/* Do nothing */
-		(void)result;
-	};
-
-	/**
-	* On an async call to IPCManager::destroy_ipcp(), this callback will be
-	* executed
-	*
-	* @ret 0 on success, -1 on failure
-	*/
-	virtual void callback_destroy_ipcp(const int result) const{
-		/* Do nothing */
-		(void)result;
-	};
-
-#endif
 	/**
 	* Addon name
 	*/

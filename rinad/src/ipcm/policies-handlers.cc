@@ -42,15 +42,14 @@ namespace rinad {
 void IPCManager_::ipc_process_set_policy_set_param_response_handler(
 				rina::SetPolicySetParamResponseEvent *event)
 {
-	bool success = (event->result == 0);
 	ostringstream ss;
-	int ret = -1;
 
 	IPCPTransState* trans = get_transaction_state<IPCPTransState>(event->sequenceNumber);
 
 	if(!trans){
 		ss << ": Warning: unknown policy set param response received: "<<event->sequenceNumber<<endl;
 		FLUSH_LOG(WARN, ss);
+		assert(0);
 		return;
 	}
 
@@ -58,7 +57,9 @@ void IPCManager_::ipc_process_set_policy_set_param_response_handler(
 	if(!ipcp){
 		ss << "Could not complete policy set param. Invalid IPCP id "<< ipcp->get_id();
 		FLUSH_LOG(ERR, ss);
-		//XXX: destroy transaction
+
+		trans->completed(IPCM_FAILURE);
+		remove_transaction_state(trans->tid);
 		return;
 	}
 
@@ -66,27 +67,12 @@ void IPCManager_::ipc_process_set_policy_set_param_response_handler(
 	rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
 	ss << "set-policy-set-param-op completed on IPC process "
-	<< ipcp->get_name().toString() <<
-	" [success=" << success << "]" << endl;
+	<< ipcp->get_name().toString() << endl;
 	FLUSH_LOG(INFO, ss);
 
 	//Mark as completed
-	trans->completed(event->result);
-
-
-	//If there was a calle, invoke the callback and remove it. Otherwise
-	//transaction is fully complete and originator will clean up the state
-	if(trans->callee){
-		//Invoke callback
-		//FIXME
-
-		//Remove the transaction
-		remove_transaction_state(trans->tid);
-	}else{
-		//Wake waiting
-		trans->signal();
-	}
-
+	trans->completed(IPCM_SUCCESS);
+	remove_transaction_state(trans->tid);
 }
 
 void IPCManager_::ipc_process_plugin_load_response_handler(rina::PluginLoadResponseEvent *event)
@@ -100,6 +86,7 @@ void IPCManager_::ipc_process_plugin_load_response_handler(rina::PluginLoadRespo
 	if(!trans){
 		ss << ": Warning: unknown plugin load response received: "<<event->sequenceNumber<<endl;
 		FLUSH_LOG(WARN, ss);
+		assert(0);
 		return;
 	}
 
@@ -107,7 +94,9 @@ void IPCManager_::ipc_process_plugin_load_response_handler(rina::PluginLoadRespo
 	if(!ipcp){
 		ss << "Could not complete policy set param. Invalid IPCP id "<< ipcp->get_id();
 		FLUSH_LOG(ERR, ss);
-		//XXX: destroy transaction
+
+		trans->completed(IPCM_FAILURE);
+		remove_transaction_state(trans->tid);
 		return;
 	}
 
@@ -120,22 +109,8 @@ void IPCManager_::ipc_process_plugin_load_response_handler(rina::PluginLoadRespo
 	FLUSH_LOG(INFO, ss);
 
 	//Mark as completed
-	trans->completed(event->result);
-
-
-	//If there was a calle, invoke the callback and remove it. Otherwise
-	//transaction is fully complete and originator will clean up the state
-	if(trans->callee){
-		//Invoke callback
-		//FIXME
-
-		//Remove the transaction
-		remove_transaction_state(trans->tid);
-	}else{
-		//Wake waiting
-		trans->signal();
-	}
-
+	trans->completed(IPCM_SUCCESS);
+	remove_transaction_state(trans->tid);
 }
 
 void IPCManager_::ipc_process_select_policy_set_response_handler(
@@ -157,7 +132,9 @@ void IPCManager_::ipc_process_select_policy_set_response_handler(
 	if(!ipcp){
 		ss << "Could not complete policy set param. Invalid IPCP id "<< ipcp->get_id();
 		FLUSH_LOG(ERR, ss);
-		//XXX: destroy transaction
+
+		trans->completed(IPCM_FAILURE);
+		remove_transaction_state(trans->tid);
 		return;
 	}
 
@@ -170,22 +147,8 @@ void IPCManager_::ipc_process_select_policy_set_response_handler(
 	FLUSH_LOG(INFO, ss);
 
 	//Mark as completed
-	trans->completed(event->result);
-
-
-	//If there was a calle, invoke the callback and remove it. Otherwise
-	//transaction is fully complete and originator will clean up the state
-	if(trans->callee){
-		//Invoke callback
-		//FIXME
-
-		//Remove the transaction
-		remove_transaction_state(trans->tid);
-	}else{
-		//Wake waiting
-		trans->signal();
-	}
-
+	trans->completed(IPCM_SUCCESS);
+	remove_transaction_state(trans->tid);
 }
 
 } //namespace rinad
