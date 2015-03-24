@@ -108,6 +108,30 @@ void IPCMIPCProcess::get_description(std::ostream& os) {
 		os << "UNKNOWN STATE";
 	}
 
+	if (registeredApplications.size() > 0) {
+		std::list<rina::ApplicationProcessNamingInformation>::const_iterator it;
+		os << " Registered apps: ";
+		for (it = registeredApplications.begin();
+				it != registeredApplications.end(); ++it) {
+			if (it != registeredApplications.begin()) {
+				os << ", ";
+			}
+			os << it->getEncodedString();
+		}
+	}
+
+	if (allocatedFlows.size () > 0) {
+		std::list<rina::FlowInformation>::const_iterator it;
+		os << " Port-ids of flows provided: ";
+		for (it = allocatedFlows.begin();
+				it != allocatedFlows.end(); ++it) {
+			if (it != allocatedFlows.begin()) {
+				os << ", ";
+			}
+			os << it->portId;
+		}
+	}
+
 	os << "\n";
 }
 
