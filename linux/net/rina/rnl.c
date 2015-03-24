@@ -548,6 +548,11 @@ static int netlink_notify_callback(struct notifier_block * nb,
                 return NOTIFY_BAD;
         }
 
+        //Only consider messages of the Generic Netlink protocol
+        if (notify->protocol != NETLINK_GENERIC) {
+        	return NOTIFY_DONE;
+        }
+
         port = rnl_get_ipc_manager_port();
         if (port) {
                 /* Check if the IPC Manager is the process that died */

@@ -179,8 +179,7 @@ void NetlinkManager::_sendMessage(BaseNetlinkMessage * message, struct nl_msg* n
                 throw NetlinkException(
                                 NetlinkException::error_sending_netlink_message);
         }
-        LOG_DBG("Sent message of %d bytes. %s", result,
-                        message->toString().c_str());
+        LOG_DBG("NL msg TX. %s", message->toString().c_str());
         //Cleanup
         nlmsg_free(netlinkMessage);
 }
@@ -235,8 +234,6 @@ BaseNetlinkMessage * NetlinkManager::getMessage() {
 				NetlinkException::error_receiving_netlink_message);
 	}
 
-	LOG_DBG("Received %d bytes, parsing the message", numBytes);
-
 	hdr = (struct nlmsghdr *) buf;
 	nlhdr = (genlmsghdr *) nlmsg_data(hdr);
 	msg = nlmsg_convert(hdr);
@@ -247,10 +244,6 @@ BaseNetlinkMessage * NetlinkManager::getMessage() {
 	}
 
 	nlmsg_set_src(msg, &nla);
-
-	LOG_DBG("Source: %d, Netlink family: %d; Version: %d; Operation code: %d; Flags: %d; Sequence number: %d",
-			nla.nl_pid, hdr->nlmsg_type, nlhdr->version, nlhdr->cmd,
-			hdr->nlmsg_flags, hdr->nlmsg_seq);
 
 	if (creds) {
 		nlmsg_set_creds(msg, creds);
@@ -298,6 +291,9 @@ BaseNetlinkMessage * NetlinkManager::getMessage() {
 	nlmsg_free(msg);
 	free(buf);
 	free(creds);
+
+    LOG_DBG("NL msg RX. %s ", result->toString().c_str());
+
 	return result;
 }
 
