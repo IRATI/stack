@@ -647,8 +647,7 @@ IPCManager_::unregister_ipcp_from_ipcp(Promise* promise, int ipcp_id,
 
 ipcm_res_t
 IPCManager_::enroll_to_dif(Promise* promise, const int ipcp_id,
-			  const rinad::NeighborData& neighbor,
-			  bool sync)
+			  const rinad::NeighborData& neighbor)
 {
 	ostringstream ss;
 	IPCMIPCProcess *ipcp;

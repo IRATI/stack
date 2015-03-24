@@ -362,7 +362,7 @@ public:
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t enroll_to_dif(Promise* promise, const int ipcp_id,
-			  const rinad::NeighborData& neighbor, bool sync);
+			  const rinad::NeighborData& neighbor);
 	//
 	// Enroll IPCP to multiple DIFs
 	//
