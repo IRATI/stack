@@ -285,9 +285,10 @@ void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponse
 
 	if(!trans){
 		//Transacion was not found
-                ss << ": Warning: application registration response "
-                        "received, but no pending application registration. Perhaps the IPCP was deleted? " << endl;
-                FLUSH_LOG(WARN, ss);
+		ss << ": Warning: application registration response " <<
+		      "received, but no pending transaction with id " <<
+			   e->sequenceNumber << endl;
+		FLUSH_LOG(WARN, ss);
 		return;
 	}
 
@@ -315,7 +316,6 @@ void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponse
 		}else{
 			//IPCP registration
 			ipcm_register_response_ipcp(e);
-
 		}
 	}catch(...){
 		ret = IPCM_FAILURE;

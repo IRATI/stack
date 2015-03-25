@@ -315,18 +315,15 @@ IPCManager_::assign_to_dif(Promise* promise, const int ipcp_id,
 	IPCPTransState* trans;
 
 	try {
-
 		ipcp = lookup_ipcp_by_id(ipcp_id, true);
-
-
 		if(!ipcp){
 			ss << "Invalid IPCP id "<< ipcp_id;
+			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
 		//Auto release the write lock
 		rina::WriteScopedLock writelock(ipcp->rwlock, false);
-
 
 		// Try to extract the DIF properties from the
 		// configuration.
@@ -544,8 +541,8 @@ IPCManager_::register_at_dif(Promise* promise, const int ipcp_id,
 		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
 	} catch (Exception& e) {
-		ss  << ": Error while requesting registration"
-		    << endl;
+		ss  << ": Error while requesting registration: "
+		    << e.what() << endl;
 		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
 	}
@@ -1228,6 +1225,7 @@ int IPCManager_::add_transaction_state(TransactionState* t){
 		assert(0);
 		return -1;
 	}
+
 	return 0;
 }
 

@@ -54,18 +54,16 @@ public:
 /**
 * IPCP registration transaction state
 */
-class IPCPregTransState: public TransactionState{
+class IPCPregTransState: public IPCPTransState {
 
 public:
 	IPCPregTransState(Promise* promise, int _ipcp_id,
 					int _slave_ipcp_id) :
-					TransactionState(promise),
-					ipcp_id(_ipcp_id),
+					IPCPTransState(promise, _ipcp_id),
 					slave_ipcp_id(_slave_ipcp_id){}
 	virtual ~IPCPregTransState(){};
 
 	//IPCP identifier
-	int ipcp_id;
 	int slave_ipcp_id;
 };
 
