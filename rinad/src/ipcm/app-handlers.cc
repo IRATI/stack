@@ -297,7 +297,7 @@ void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponse
 			ss << ": Warning: Could not complete application registration: "<<e->sequenceNumber<<
 			"IPCP with id: "<<trans->ipcp_id<<"does not exist! Perhaps deleted?" << endl;
 			FLUSH_LOG(WARN, ss);
-			throw Exception();
+			throw rina::Exception();
 		}
 
 		//Auto release the read lock
@@ -455,7 +455,7 @@ void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResp
 			ss << ": Warning: Could not complete application unregistration: "<<e->sequenceNumber<<
 			"IPCP with id: "<<trans->ipcp_id<<"does not exist! Perhaps deleted?" << endl;
 			FLUSH_LOG(WARN, ss);
-			throw Exception();
+			throw rina::Exception();
 		}
 
 		//Auto release the read lock

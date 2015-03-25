@@ -66,7 +66,7 @@ Flow * FlowAllocatorPs::newFlowRequest(IPCProcess * ipc_process,
 	std::list<rina::Connection*> connections;
 	try {
 		qosCube = selectQoSCube(event.flowSpecification);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		dm->destroyFlow(flow);
 		throw e;
 	}
@@ -116,7 +116,7 @@ rina::QoSCube * FlowAllocatorPs::selectQoSCube(
 		}
 	}
 
-	throw Exception("Could not find a QoS Cube");
+	throw rina::Exception("Could not find a QoS Cube");
 }
 
 int FlowAllocatorPs::set_policy_set_param(const std::string& name,

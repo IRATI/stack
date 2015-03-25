@@ -75,7 +75,7 @@ EventLoop::run()
                 	if (post_function) {
                 		post_function(event, data_model);
                 	}
-                } catch (Exception &e) {
+                } catch (rina::Exception &e) {
                 	LOG_ERR("Problems processing event: %s", e.what());
                 }
 
