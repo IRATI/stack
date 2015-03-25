@@ -588,7 +588,8 @@ protected:
 	int ipcm_register_response_ipcp(
 		rina::IpcmRegisterApplicationResponseEvent *event);
 	int ipcm_unregister_response_ipcp(
-				rina::IpcmUnregisterApplicationResponseEvent *event);
+				rina::IpcmUnregisterApplicationResponseEvent *event,
+				TransactionState *trans);
 
 	//DIF assignment mgmt
 	void assign_to_dif_response_event_handler(rina::AssignToDIFResponseEvent * e);

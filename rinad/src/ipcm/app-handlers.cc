@@ -235,7 +235,7 @@ bool IPCManager_::ipcm_register_response_common(
                 // Notify the N-1 IPC process.
                 slave_ipcp->registerApplicationResult(
                                         event->sequenceNumber, success);
-        } catch (rina::IpcmRegisterApplicationException) {
+        } catch (rina::IpcmRegisterApplicationException& e) {
                 ss << ": Error while reporting "
                         "registration result of application "
                         << app_name.toString() <<
@@ -337,7 +337,7 @@ void IPCManager_::application_manager_app_unregistered(
 		"unregistration [success = " << (!result) <<
 		"]" << endl;
 		FLUSH_LOG(INFO, ss);
-	} catch (rina::NotifyApplicationUnregisteredException) {
+	} catch (rina::NotifyApplicationUnregisteredException& e) {
 		ss  << ": Error while notifying application "
 		<< event.applicationName.toString() << " about "
 		"failed unregistration" << endl;
@@ -393,7 +393,7 @@ bool IPCManager_::ipcm_unregister_response_common(
                         << app_name.toString() << " [success = " << success
                         << "]" << endl;
                 FLUSH_LOG(INFO, ss);
-        } catch (rina::IpcmRegisterApplicationException) {
+        } catch (rina::IpcmRegisterApplicationException& e) {
                 ss  << ": Error while reporing "
                         "unregistration result for application "
                         << app_name.toString() << endl;
@@ -428,6 +428,7 @@ void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResp
 
 	//First check if this de-reg was a pending
 	APPUnregTransState* t1;
+	IPCPregTransState* t2;
 	IPCPTransState* trans = get_transaction_state<IPCPTransState>(e->sequenceNumber);
 
 	if(!trans){
@@ -457,10 +458,19 @@ void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResp
 		t1 = get_transaction_state<APPUnregTransState>(trans->tid);
 
 		//Application registration
-		if(t1)
+		if(t1) {
 			ipcm_unregister_response_app(e, ipcp, t1->req);
-		else
-			ipcm_unregister_response_ipcp(e);
+		} else {
+			t2 = get_transaction_state<IPCPregTransState>(e->sequenceNumber);
+			if (t2){
+				ipcm_unregister_response_ipcp(e, t2);
+			}
+			else {
+				//This is the case when the app unreg has been requested by the IPCM
+				bool success = (e->result == 0);
+				ipcp->unregisterApplicationResult(e->sequenceNumber, success);
+			}
+		}
 	}catch(...){
 		ret = IPCM_FAILURE;
 	}

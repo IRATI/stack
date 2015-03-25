@@ -141,7 +141,7 @@ int IPCManager_::ipcm_register_response_ipcp(
 
 			ret = IPCM_SUCCESS;
 
-		} catch (rina::NotifyRegistrationToDIFException) {
+		} catch (rina::NotifyRegistrationToDIFException& e) {
 			ss  << ": Error while notifying "
 				"IPC process " <<
 				ipcp->get_name().toString() <<
@@ -164,16 +164,14 @@ int IPCManager_::ipcm_register_response_ipcp(
 }
 
 int IPCManager_::ipcm_unregister_response_ipcp(
-			rina::IpcmUnregisterApplicationResponseEvent *e)
+			rina::IpcmUnregisterApplicationResponseEvent *e,
+			TransactionState *t)
 {
 	ostringstream ss;
 	bool success;
 	ipcm_res_t ret = IPCM_FAILURE;
-
-	IPCPregTransState* trans = get_transaction_state<IPCPregTransState>(e->sequenceNumber);
-
+	IPCPregTransState *trans = dynamic_cast<IPCPregTransState*>(t);
 	if(!trans){
-		assert(0);
 		return -1;
 	}
 
@@ -209,7 +207,7 @@ int IPCManager_::ipcm_unregister_response_ipcp(
 			FLUSH_LOG(INFO, ss);
 
 			ret = IPCM_SUCCESS;
-		} catch (rina::NotifyRegistrationToDIFException) {
+		} catch (rina::NotifyRegistrationToDIFException& e) {
 			ss  << ": Error while reporing "
 				"unregistration result for IPC process "
 				<< ipcp->get_name().toString() << endl;
@@ -265,7 +263,7 @@ IPCManager_::assign_to_dif_response_event_handler(rina::AssignToDIFResponseEvent
 			" [success=" << success << "]" << endl;
 		FLUSH_LOG(INFO, ss);
 		ret = (success)? IPCM_SUCCESS : IPCM_FAILURE;
-	} catch (rina::AssignToDIFException) {
+	} catch (rina::AssignToDIFException& e) {
 		ss << ": Error while reporting DIF "
 			"assignment result for IPC process "
 			<< ipcp->get_name().toString() << endl;
@@ -312,7 +310,7 @@ IPCManager_::update_dif_config_response_event_handler(rina::UpdateDIFConfigurati
 			" [success=" << success << "]" << endl;
 		FLUSH_LOG(INFO, ss);
 		ret = IPCM_SUCCESS;
-	} catch (rina::UpdateDIFConfigurationException) {
+	} catch (rina::UpdateDIFConfigurationException& e) {
 		ss  << ": Error while reporting DIF "
 			"configuration update for process " <<
 			ipcp->get_name().toString() << endl;
