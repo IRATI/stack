@@ -29,8 +29,8 @@
 
 #define RINA_PREFIX     "cdap-echo-client"
 #include <librina/logs.h>
-#include "cdap_provider.h"
-#include "rib_provider.h"
+#include <librina/cdap_rib_structures.h>
+#include <librina/cdap_v2.h>
 
 #include "cdap-echo-client.h"
 
@@ -41,14 +41,13 @@ static std::chrono::seconds thres_s = std::chrono::seconds(9);
 static std::chrono::milliseconds thres_ms = std::chrono::milliseconds(9);
 static std::chrono::microseconds thres_us = std::chrono::microseconds(9);
 
-class APPcallback: public rib::RIBDSouthInterface
+class APPcallback: public cdap::CDAPCallbackInterface
 {
  public:
   void open_connection_result(const cdap_rib::con_handle_t &con,
                                       const cdap_rib::result_info &res)
   {}
   void open_connection(const cdap_rib::con_handle_t &con,
-                               const cdap_rib::flags_t &flags,
                                const cdap_rib::result_info &res,
                                int message_id)
   {}
@@ -230,7 +229,8 @@ Flow* Client::createFlow() {
 
 
 bool Client::cacep(Flow *flow) {
-  cdap::CDAPProviderInterface* cdap_prov = cdap::CDAPProviderFactory->create("GPB", 2000, false);
+  APPcallback callback = new APPcallback();
+  cdap::CDAPProviderInterface* cdap_prov = cdap::CDAPProviderFactory->create(2000, false, )("GPB", 2000, false);
   cdap_rib::vers_info_t ver;
   ver.version_ = 1;
   cdap_rib::src_info_t src;

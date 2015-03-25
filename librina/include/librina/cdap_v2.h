@@ -28,6 +28,70 @@
 namespace rina{
 namespace cdap {
 
+// Interface of the RIB to be used from the communication protocol
+class CDAPCallbackInterface
+{
+ public:
+  virtual ~CDAPCallbackInterface()
+  {
+  }
+  ;
+  virtual void open_connection_result(const cdap_rib::con_handle_t &con,
+                                      const cdap_rib::result_info &res) = 0;
+  virtual void open_connection(const cdap_rib::con_handle_t &con,
+                               const cdap_rib::flags_t &flags,
+                               int message_id) = 0;
+  virtual void close_connection_result(const cdap_rib::con_handle_t &con,
+                                       const cdap_rib::result_info &res) = 0;
+  virtual void close_connection(const cdap_rib::con_handle_t &con,
+                                const cdap_rib::flags_t &flags,
+                                int message_id) = 0;
+
+  virtual void remote_create_result(const cdap_rib::con_handle_t &con,
+                                    const cdap_rib::res_info_t &res) = 0;
+  virtual void remote_delete_result(const cdap_rib::con_handle_t &con,
+                                    const cdap_rib::res_info_t &res) = 0;
+  virtual void remote_read_result(const cdap_rib::con_handle_t &con,
+                                  const cdap_rib::res_info_t &res) = 0;
+  virtual void remote_cancel_read_result(const cdap_rib::con_handle_t &con,
+                                         const cdap_rib::res_info_t &res) = 0;
+  virtual void remote_write_result(const cdap_rib::con_handle_t &con,
+                                   const cdap_rib::res_info_t &res) = 0;
+  virtual void remote_start_result(const cdap_rib::con_handle_t &con,
+                                   const cdap_rib::res_info_t &res) = 0;
+  virtual void remote_stop_result(const cdap_rib::con_handle_t &con,
+                                  const cdap_rib::res_info_t &res) = 0;
+
+  virtual void remote_create_request(const cdap_rib::con_handle_t &con,
+                                     const cdap_rib::obj_info_t &obj,
+                                     const cdap_rib::filt_info_t &filt,
+                                     int message_id) = 0;
+  virtual void remote_delete_request(const cdap_rib::con_handle_t &con,
+                                     const cdap_rib::obj_info_t &obj,
+                                     const cdap_rib::filt_info_t &filt,
+                                     int message_id) = 0;
+  virtual void remote_read_request(const cdap_rib::con_handle_t &con,
+                                   const cdap_rib::obj_info_t &obj,
+                                   const cdap_rib::filt_info_t &filt,
+                                   int message_id) = 0;
+  virtual void remote_cancel_read_request(const cdap_rib::con_handle_t &con,
+                                          const cdap_rib::obj_info_t &obj,
+                                          const cdap_rib::filt_info_t &filt,
+                                          int message_id) = 0;
+  virtual void remote_write_request(const cdap_rib::con_handle_t &con,
+                                    const cdap_rib::obj_info_t &obj,
+                                    const cdap_rib::filt_info_t &filt,
+                                    int message_id) = 0;
+  virtual void remote_start_request(const cdap_rib::con_handle_t &con,
+                                    const cdap_rib::obj_info_t &obj,
+                                    const cdap_rib::filt_info_t &filt,
+                                    int message_id) = 0;
+  virtual void remote_stop_request(const cdap_rib::con_handle_t &con,
+                                   const cdap_rib::obj_info_t &obj,
+                                   const cdap_rib::filt_info_t &filt,
+                                   int message_id) = 0;
+};
+
 class CDAPProviderInterface
 {
  public:
