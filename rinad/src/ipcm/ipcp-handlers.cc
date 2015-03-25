@@ -230,18 +230,6 @@ int IPCManager_::ipcm_unregister_response_ipcp(
 }
 
 void
-IPCManager_::application_unregistered_event_handler(rina::IPCEvent * event)
-{
-	(void) event;  // Stop compiler barfs
-}
-
-void
-IPCManager_::assign_to_dif_request_event_handler(rina::IPCEvent * event)
-{
-	(void) event;  // Stop compiler barfs
-}
-
-void
 IPCManager_::assign_to_dif_response_event_handler(rina::AssignToDIFResponseEvent* e)
 {
 	ostringstream ss;
@@ -290,12 +278,6 @@ IPCManager_::assign_to_dif_response_event_handler(rina::AssignToDIFResponseEvent
 }
 
 void
-IPCManager_::update_dif_config_request_event_handler(rina::IPCEvent *event)
-{
-	(void)event;
-}
-
-void
 IPCManager_::update_dif_config_response_event_handler(rina::UpdateDIFConfigurationResponseEvent* e)
 {
 	ostringstream ss;
@@ -340,12 +322,6 @@ IPCManager_::update_dif_config_response_event_handler(rina::UpdateDIFConfigurati
 	//Mark as completed
 	trans->completed(ret);
 	remove_transaction_state(trans->tid);
-}
-
-void
-IPCManager_::enroll_to_dif_request_event_handler(rina::IPCEvent *event)
-{
-	(void) event; // Stop compiler barfs
 }
 
 void
@@ -428,51 +404,6 @@ void IPCManager_::neighbors_modified_notification_event_handler(rina::NeighborsM
 		ipcp->get_name().toString() <<  endl;
 	FLUSH_LOG(INFO, ss);
 
-}
-
-void IPCManager_::ipc_process_dif_registration_notification_handler(rina::IPCEvent *event)
-{
-	(void) event;  // Stop compiler barfs
-}
-
-void IPCManager_::ipc_process_query_rib_handler(rina::IPCEvent *event)
-{
-	(void) event;  // Stop compiler barfs
-}
-
-void IPCManager_::get_dif_properties_handler(rina::IPCEvent *event)
-{
-	(void) event;  // Stop compiler barfs
-}
-
-void IPCManager_::get_dif_properties_response_event_handler(rina::IPCEvent *event)
-{
-	(void) event;  // Stop compiler barfs
-}
-
-void IPCManager_::ipc_process_create_connection_response_handler(rina::IPCEvent * event)
-{
-	(void) event;  // Stop compiler barfs
-}
-
-void IPCManager_::ipc_process_update_connection_response_handler(rina::IPCEvent * event)
-{
-	(void) event;  // Stop compiler barfs
-}
-
-void IPCManager_::ipc_process_create_connection_result_handler(rina::IPCEvent * event)
-{
-	(void) event;  // Stop compiler barfs
-}
-
-void IPCManager_::ipc_process_destroy_connection_result_handler(rina::IPCEvent * event)
-{
-	(void) event;  // Stop compiler barfs
-}
-
-void IPCManager_::ipc_process_dump_ft_response_handler(rina::IPCEvent * event)
-{
-	(void) event;  // Stop compiler barfs
 }
 
 } //namespace rinad

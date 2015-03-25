@@ -474,22 +474,4 @@ void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResp
 	remove_transaction_state(trans->tid);
 }
 
-void IPCManager_::register_application_response_event_handler(rina::IPCEvent *event)
-{
-        (void) event; // Stop compiler barfs
-	//TODO
-}
-
-void IPCManager_::unregister_application_response_event_handler(rina::IPCEvent *event)
-{
-        (void) event; // Stop compiler barfs
-	//TODO
-}
-
-void IPCManager_::application_registration_canceled_event_handler(rina::IPCEvent *event)
-{
-        (void) event; // Stop compiler barfs
-	//TODO
-}
-
 }//namespace rinad

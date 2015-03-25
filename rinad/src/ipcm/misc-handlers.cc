@@ -109,9 +109,4 @@ void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *
 	return;
 }
 
-void IPCManager_::timer_expired_event_handler(rina::IPCEvent *event)
-{
-	(void) event;  // Stop compiler barfs
-}
-
 } //namespace rinad

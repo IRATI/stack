@@ -1312,10 +1312,6 @@ void IPCManager_::run(){
 						flow_allocation_requested_event_handler(event);
 						break;
 
-				case rina::ALLOCATE_FLOW_REQUEST_RESULT_EVENT:
-						allocate_flow_request_result_event_handler(event);
-						break;
-
 				case rina::ALLOCATE_FLOW_RESPONSE_EVENT:
 						{
         					DOWNCAST_DECL(event, rina::AllocateFlowResponseEvent, e);
@@ -1327,18 +1323,9 @@ void IPCManager_::run(){
 						flow_deallocation_requested_event_handler(event);
 						break;
 
-				case rina::DEALLOCATE_FLOW_RESPONSE_EVENT:
-						deallocate_flow_response_event_handler(event);
-						break;
-
-				case rina::APPLICATION_UNREGISTERED_EVENT:
-						application_unregistered_event_handler(event);
-						break;
-
 				case rina::FLOW_DEALLOCATED_EVENT:
 						IPCManager->flow_deallocated_event_handler(event);
 						break;
-
 				case rina::APPLICATION_REGISTRATION_REQUEST_EVENT:
 						{
         					DOWNCAST_DECL(event, rina::ApplicationRegistrationRequestEvent, e);
@@ -1346,24 +1333,8 @@ void IPCManager_::run(){
 						}
 						break;
 
-				case rina::REGISTER_APPLICATION_RESPONSE_EVENT:
-						register_application_response_event_handler(event);
-						break;
-
 				case rina::APPLICATION_UNREGISTRATION_REQUEST_EVENT:
 						application_unregistration_request_event_handler(event);
-						break;
-
-				case rina::UNREGISTER_APPLICATION_RESPONSE_EVENT:
-						unregister_application_response_event_handler(event);
-						break;
-
-				case rina::APPLICATION_REGISTRATION_CANCELED_EVENT:
-						application_registration_canceled_event_handler(event);
-						break;
-
-				case rina::ASSIGN_TO_DIF_REQUEST_EVENT:
-						assign_to_dif_request_event_handler(event);
 						break;
 
 				case rina::ASSIGN_TO_DIF_RESPONSE_EVENT:
@@ -1373,19 +1344,11 @@ void IPCManager_::run(){
 						}
 						break;
 
-				case rina::UPDATE_DIF_CONFIG_REQUEST_EVENT:
-						update_dif_config_request_event_handler(event);
-						break;
-
 				case rina::UPDATE_DIF_CONFIG_RESPONSE_EVENT:
 						{
         					DOWNCAST_DECL(event, rina::UpdateDIFConfigurationResponseEvent, e);
 						update_dif_config_response_event_handler(e);
 						}
-						break;
-
-				case rina::ENROLL_TO_DIF_REQUEST_EVENT:
-						enroll_to_dif_request_event_handler(event);
 						break;
 
 				case rina::ENROLL_TO_DIF_RESPONSE_EVENT:
@@ -1400,25 +1363,6 @@ void IPCManager_::run(){
         					DOWNCAST_DECL(event, rina::NeighborsModifiedNotificationEvent, e);
 						neighbors_modified_notification_event_handler(e);
 						}
-						break;
-
-				case rina::IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION:
-						ipc_process_dif_registration_notification_handler(event);
-						break;
-
-				case rina::IPC_PROCESS_QUERY_RIB:
-						{
-						DOWNCAST_DECL(event, rina::QueryRIBResponseEvent, e);
-						ipc_process_query_rib_handler(e);
-						}
-						break;
-
-				case rina::GET_DIF_PROPERTIES:
-						get_dif_properties_handler(event);
-						break;
-
-				case rina::GET_DIF_PROPERTIES_RESPONSE_EVENT:
-						get_dif_properties_response_event_handler(event);
 						break;
 
 				case rina::OS_PROCESS_FINALIZED:
@@ -1465,30 +1409,6 @@ void IPCManager_::run(){
 						DOWNCAST_DECL(event, rina::IPCProcessDaemonInitializedEvent, e);
 						ipc_process_daemon_initialized_event_handler(e);
 						}
-						break;
-
-				case rina::TIMER_EXPIRED_EVENT:
-						timer_expired_event_handler(event);
-						break;
-
-				case rina::IPC_PROCESS_CREATE_CONNECTION_RESPONSE:
-						ipc_process_create_connection_response_handler(event);
-						break;
-
-				case rina::IPC_PROCESS_UPDATE_CONNECTION_RESPONSE:
-						ipc_process_update_connection_response_handler(event);
-						break;
-
-				case rina::IPC_PROCESS_CREATE_CONNECTION_RESULT:
-						ipc_process_create_connection_result_handler(event);
-						break;
-
-				case rina::IPC_PROCESS_DESTROY_CONNECTION_RESULT:
-						ipc_process_destroy_connection_result_handler(event);
-						break;
-
-				case rina::IPC_PROCESS_DUMP_FT_RESPONSE:
-						ipc_process_dump_ft_response_handler(event);
 						break;
 
 				//Policies

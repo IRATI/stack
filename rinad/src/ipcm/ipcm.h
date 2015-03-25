@@ -574,10 +574,8 @@ protected:
 
 	//Flow mgmt
 	void flow_allocation_requested_event_handler(rina::IPCEvent *event);
-	void allocate_flow_request_result_event_handler(rina::IPCEvent *event);
 	void allocate_flow_response_event_handler( rina::AllocateFlowResponseEvent *event);
 	void flow_deallocation_requested_event_handler(rina::IPCEvent *event);
-	void deallocate_flow_response_event_handler(rina::IPCEvent *event);
 	void flow_deallocated_event_handler(rina::IPCEvent *event);
 	void ipcm_deallocate_flow_response_event_handler(rina::IpcmDeallocateFlowResponseEvent* event);
 	void ipcm_allocate_flow_request_result_handler(rina::IpcmAllocateFlowRequestResultEvent* event);
@@ -596,10 +594,6 @@ protected:
 	void app_reg_response_handler(rina::IpcmRegisterApplicationResponseEvent* e);
 	void application_unregistration_request_event_handler(rina::IPCEvent *e);
 	void unreg_app_response_handler(rina::IpcmUnregisterApplicationResponseEvent *e);
-	void register_application_response_event_handler(rina::IPCEvent *event);
-	void unregister_application_response_event_handler(rina::IPCEvent *event);
-	void application_registration_canceled_event_handler(rina::IPCEvent *event);
-	void application_unregistered_event_handler(rina::IPCEvent * event);
 	void notify_app_reg(
 		const rina::ApplicationRegistrationRequestEvent& req_event,
 		const rina::ApplicationProcessNamingInformation& app_name,
@@ -618,44 +612,28 @@ protected:
 		rina::ApplicationRegistrationRequestEvent& req_event);
 
 	//IPCP mgmt
-	void ipc_process_create_connection_response_handler(rina::IPCEvent * event);
-	void ipc_process_update_connection_response_handler(rina::IPCEvent * event);
-	void ipc_process_create_connection_result_handler(rina::IPCEvent * event);
-	void ipc_process_destroy_connection_result_handler(rina::IPCEvent * event);
-
 	int ipcm_register_response_ipcp(
 		rina::IpcmRegisterApplicationResponseEvent *event);
 	int ipcm_unregister_response_ipcp(
 				rina::IpcmUnregisterApplicationResponseEvent *event);
 
 	//DIF assignment mgmt
-	void assign_to_dif_request_event_handler(rina::IPCEvent * event);
 	void assign_to_dif_response_event_handler(rina::AssignToDIFResponseEvent * e);
 
 	//DIF config mgmt
-	void update_dif_config_request_event_handler(rina::IPCEvent *event);
 	void update_dif_config_response_event_handler(rina::UpdateDIFConfigurationResponseEvent* e);
 
 	//Enrollment mgmt
-	void enroll_to_dif_request_event_handler(rina::IPCEvent *event);
 	void enroll_to_dif_response_event_handler(rina::EnrollToDIFResponseEvent *e);
 	void neighbors_modified_notification_event_handler(rina::NeighborsModifiedNotificationEvent* e);
 
-	//DIF misc
-	void ipc_process_dif_registration_notification_handler(rina::IPCEvent *event);
-	void ipc_process_query_rib_handler(rina::IPCEvent *event);
-	void get_dif_properties_handler(rina::IPCEvent *event);
-	void get_dif_properties_response_event_handler(rina::IPCEvent *event);
-
 	//RIB queries
 	void query_rib_response_event_handler(rina::QueryRIBResponseEvent *e);
-	void ipc_process_dump_ft_response_handler(rina::IPCEvent * event);
 
 	//Misc
 	void os_process_finalized_handler(rina::IPCEvent *e);
 	void ipc_process_daemon_initialized_event_handler(
 				rina::IPCProcessDaemonInitializedEvent *e);
-	void timer_expired_event_handler(rina::IPCEvent *event);
 	bool ipcm_register_response_common(
 		rina::IpcmRegisterApplicationResponseEvent *event,
 		const rina::ApplicationProcessNamingInformation& app_name,

@@ -377,11 +377,6 @@ void IPCManager_::ipcm_allocate_flow_request_result_handler( rina::IpcmAllocateF
 	remove_transaction_state(trans->tid);
 }
 
-void IPCManager_::allocate_flow_request_result_event_handler(rina::IPCEvent *e)
-{
-	(void) e; // Stop compiler barfs
-}
-
 void IPCManager_::allocate_flow_response_event_handler(rina::AllocateFlowResponseEvent *event)
 {
 	bool success = (event->result == 0);
@@ -598,11 +593,6 @@ void IPCManager_::flow_deallocated_event_handler(rina::IPCEvent *e)
 			" has been remotely deallocated" << endl;
 		FLUSH_LOG(ERR, ss);
 	}
-}
-
-void IPCManager_::deallocate_flow_response_event_handler(rina::IPCEvent *event)
-{
-	(void) event; // Stop compiler barfs
 }
 
 } //namespace rinad
