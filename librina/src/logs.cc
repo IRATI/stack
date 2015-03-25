@@ -1,9 +1,10 @@
 //
 // Logging facilities
 //
-//    Eduard Grasa	  <eduard.grasa@i2cat.net>
+//    Eduard Grasa          <eduard.grasa@i2cat.net>
 //    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
 //    Francesco Salvestrini <f.salvestrini@nextworks.it>
+//    Marc Sune             <marc.sune (at) bisdn.de>
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -89,7 +90,7 @@ int setLogFile(const std::string& pathToFile)
 }
 
 //Process Id
-int processId = -1;
+static int processId = -1;
 
 static inline int getProcessId()
 {
@@ -109,7 +110,7 @@ void log(LOG_LEVEL level, const char * fmt, ...)
 		return;
 
 	va_list args;
-	time_t now= time(0);
+	time_t now = time(0);
 
 	fprintf(stream, "%d(%ld)", getProcessId(), now);
 
