@@ -933,29 +933,6 @@ const DIFInformation&
 EnrollToDIFResponseEvent::getDIFInformation() const
 { return difInformation; }
 
-/* CLASS NEIGHBORS MODIFIED NOTIFICATION EVENT */
-NeighborsModifiedNotificationEvent::NeighborsModifiedNotificationEvent(
-                        unsigned short ipcProcessId,
-                        const std::list<Neighbor> & neighbors,
-                        bool added, unsigned int sequenceNumber) :
-                                IPCEvent(NEIGHBORS_MODIFIED_NOTIFICATION_EVENT,
-                                                sequenceNumber)
-{
-        this->ipcProcessId = ipcProcessId;
-        this->neighbors = neighbors;
-        this->added = added;
-}
-
-const std::list<Neighbor>&
-NeighborsModifiedNotificationEvent::getNeighbors() const
-{ return neighbors; }
-
-bool NeighborsModifiedNotificationEvent::isAdded() const
-{ return added; }
-
-unsigned short NeighborsModifiedNotificationEvent::getIpcProcessId() const
-{ return ipcProcessId; }
-
 /* CLASS IPC PROCESS DAEMON INITIALIZED EVENT */
 IPCProcessDaemonInitializedEvent::IPCProcessDaemonInitializedEvent(
                 unsigned short ipcProcessId,

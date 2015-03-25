@@ -1385,13 +1385,6 @@ void IPCManager_::run(){
 						}
 						break;
 
-				case rina::NEIGHBORS_MODIFIED_NOTIFICATION_EVENT:
-						{
-        					DOWNCAST_DECL(event, rina::NeighborsModifiedNotificationEvent, e);
-						neighbors_modified_notification_event_handler(e);
-						}
-						break;
-
 				case rina::OS_PROCESS_FINALIZED:
 						{
 						DOWNCAST_DECL(event, rina::OSProcessFinalizedEvent, e);

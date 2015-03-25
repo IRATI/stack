@@ -445,30 +445,6 @@ void ExtendedIPCManager::enrollToDIFResponse(const EnrollToDIFRequestEvent& even
 #endif
 }
 
-void ExtendedIPCManager::notifyNeighborsModified(bool added,
-                        const std::list<Neighbor> &   neighbors) {
-#if STUB_API
-        // Do nothing
-
-        (void) added;
-        (void) neighbors;
-#else
-        IpcmNotifyNeighborsModifiedMessage message;
-        message.setAdded(added);
-        message.setNeighbors(neighbors);
-        message.setSourceIpcProcessId(ipcProcessId);
-        message.setDestPortId(ipcManagerPort);
-        message.setSequenceNumber(0);
-        message.setNotificationMessage(true);
-
-        try {
-                rinaManager->sendMessage(&message, false);
-        } catch (NetlinkException &e) {
-                throw EnrollException(e.what());
-        }
-#endif
-}
-
 void ExtendedIPCManager::registerApplicationResponse(
 		const ApplicationRegistrationRequestEvent& event, int result) {
 #if STUB_API

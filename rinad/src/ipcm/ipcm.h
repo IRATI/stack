@@ -599,7 +599,6 @@ protected:
 
 	//Enrollment mgmt
 	void enroll_to_dif_response_event_handler(rina::EnrollToDIFResponseEvent *e);
-	void neighbors_modified_notification_event_handler(rina::NeighborsModifiedNotificationEvent* e);
 
 	//RIB queries
 	void query_rib_response_event_handler(rina::QueryRIBResponseEvent *e);
