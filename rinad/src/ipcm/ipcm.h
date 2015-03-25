@@ -82,13 +82,6 @@ class Promise {
 
 public:
 
-//This should not be necessary, and would force users to have to create
-//a new promise everytime
-#if 0
-	Promise() {
-		ret = IPCM_PENDING;
-	}
-#endif
 	virtual ~Promise(){};
 
 	//
@@ -342,20 +335,6 @@ public:
 	ipcm_res_t register_at_dif(Promise* promise, const int ipcp_id,
 			    const rina::ApplicationProcessNamingInformation&
 			    difName);
-
-	//
-	// Register an existing IPCP to multiple DIFs
-	//
-	// @param promise Promise object containing the future result of the
-	// operation. The promise shall always be accessible until the
-	// operation has been finished, so promise->ret value is different than
-	// IPCM_PENDING.
-	//
-	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t register_at_difs(Promise* promise, const int ipcp_id,
-			const
-			std::list<rina::ApplicationProcessNamingInformation>&
-			difs);
 
 	//
 	// Enroll IPCP to a single DIF

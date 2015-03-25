@@ -255,7 +255,7 @@ IPCManager_::destroy_ipcp(unsigned int ipcp_id)
 		ss << "IPC process destroyed [id = " << ipcp_id
 			<< "]" << endl;
 		FLUSH_LOG(INFO, ss);
-	} catch (rina::DestroyIPCProcessException) {
+	} catch (rina::DestroyIPCProcessException& e) {
 		ss  << ": Error while destroying IPC "
 			"process with id " << ipcp_id << endl;
 		FLUSH_LOG(ERR, ss);
@@ -323,18 +323,15 @@ IPCManager_::assign_to_dif(Promise* promise, const int ipcp_id,
 	IPCPTransState* trans;
 
 	try {
-
 		ipcp = lookup_ipcp_by_id(ipcp_id, true);
-
-
 		if(!ipcp){
 			ss << "Invalid IPCP id "<< ipcp_id;
+			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
 		//Auto release the write lock
 		rina::WriteScopedLock writelock(ipcp->rwlock, false);
-
 
 		// Try to extract the DIF properties from the
 		// configuration.
@@ -343,6 +340,7 @@ IPCManager_::assign_to_dif(Promise* promise, const int ipcp_id,
 		if (!found) {
 			ss << "Cannot find properties for DIF "
 				<< dif_name.toString();
+			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
@@ -365,6 +363,7 @@ IPCManager_::assign_to_dif(Promise* promise, const int ipcp_id,
 				if(!qosCube){
 					ss << "Unable to allocate memory for the QoSCube object. Out of memory! "
 					<< dif_name.toString();
+					FLUSH_LOG(ERR, ss);
 					throw Exception();
 				}
 				efcp_config.add_qos_cube(qosCube);
@@ -400,6 +399,7 @@ IPCManager_::assign_to_dif(Promise* promise, const int ipcp_id,
 					ipcp->get_name().toString() <<
 					" in DIF " << dif_name.toString() <<
 					endl;
+				FLUSH_LOG(ERR, ss);
 				throw Exception();
 			}
 			dif_config.set_efcp_configuration(efcp_config);
@@ -434,6 +434,7 @@ IPCManager_::assign_to_dif(Promise* promise, const int ipcp_id,
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! "
 				<< dif_name.toString();
+			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
@@ -441,6 +442,7 @@ IPCManager_::assign_to_dif(Promise* promise, const int ipcp_id,
 		if(add_transaction_state(trans) < 0){
 			ss << "Unable to add transaction; out of memory? "
 				<< dif_name.toString();
+			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
@@ -457,25 +459,23 @@ IPCManager_::assign_to_dif(Promise* promise, const int ipcp_id,
 			". Operation timedout"<< endl;
 		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
-	} catch (rina::AssignToDIFException) {
+	} catch (rina::AssignToDIFException& e) {
 		ss << "Error while assigning " <<
 			ipcp->get_name().toString() <<
 			" to DIF " << dif_name.toString() << endl;
 		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
-	} catch (rina::BadConfigurationException &e) {
+	} catch (rina::BadConfigurationException& e) {
 		LOG_ERR("Asssign IPCP %d to dif %s failed. Bad configuration.",
 						ipcp_id,
 						dif_name.toString().c_str());
-		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
-	}catch (Exception) {
+	}catch (Exception &e) {
 		LOG_ERR("Asssign IPCP %d to dif %s failed. Unknown error catched: %s:%d",
 						ipcp_id,
 						dif_name.toString().c_str(),
 						__FILE__,
 						__LINE__);
-		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
 	}
 
@@ -522,6 +522,7 @@ IPCManager_::register_at_dif(Promise* promise, const int ipcp_id,
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! "
 				<< dif_name.toString();
+			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
@@ -529,6 +530,7 @@ IPCManager_::register_at_dif(Promise* promise, const int ipcp_id,
 		if(add_transaction_state(trans) < 0){
 			ss << "Unable to add transaction; out of memory? "
 				<< dif_name.toString();
+			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
@@ -546,9 +548,9 @@ IPCManager_::register_at_dif(Promise* promise, const int ipcp_id,
 		ss  << ": Error while requesting registration. Operation timedout" << endl;
 		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
-	} catch (Exception) {
-		ss  << ": Error while requesting registration"
-		    << endl;
+	} catch (Exception& e) {
+		ss  << ": Error while requesting registration: "
+		    << e.what() << endl;
 		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
 	}
@@ -557,37 +559,14 @@ IPCManager_::register_at_dif(Promise* promise, const int ipcp_id,
 }
 
 ipcm_res_t
-IPCManager_::register_at_difs(Promise* promise, const int ipcp_id,
-		const list<rina::ApplicationProcessNamingInformation>& difs)
-{
-
-	ostringstream ss;
-
-	try{
-		for (list<rina::ApplicationProcessNamingInformation>::const_iterator
-				nit = difs.begin(); nit != difs.end(); nit++) {
-			//TODO: this should return a list of promises
-			register_at_dif(promise, ipcp_id, *nit);
-		}
-	} catch (Exception) {
-		ss  << ": Unknown error while requesting registration at dif"
-		    << endl;
-		FLUSH_LOG(ERR, ss);
-		return IPCM_FAILURE;
-	}
-
-	return IPCM_SUCCESS;
-}
-
-ipcm_res_t
 IPCManager_::unregister_ipcp_from_ipcp(Promise* promise, int ipcp_id,
-                                      int slave_ipcp_id)
+		int slave_ipcp_id)
 {
-        ostringstream ss;
-        IPCMIPCProcess *ipcp, *slave_ipcp;
+	ostringstream ss;
+	IPCMIPCProcess *ipcp, *slave_ipcp;
 	IPCPregTransState* trans;
 
-        try {
+	try {
 
 		ipcp = lookup_ipcp_by_id(ipcp_id);
 
@@ -611,45 +590,46 @@ IPCManager_::unregister_ipcp_from_ipcp(Promise* promise, int ipcp_id,
 
 		//Create a transaction
 		trans = new IPCPregTransState(promise, ipcp->get_id(),
-							slave_ipcp->get_id());
+				slave_ipcp->get_id());
 
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
+			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
 		//Store transaction
 		if(add_transaction_state(trans) < 0){
 			ss << "Unable to add transaction; out of memory? ";
+			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
+		// Forward the unregistration request to the IPC process
+		// that the client IPC process is registered to
+		slave_ipcp->unregisterApplication(ipcp->get_name(),
+				trans->tid);
 
-                // Forward the unregistration request to the IPC process
-                // that the client IPC process is registered to
-                slave_ipcp->unregisterApplication(ipcp->get_name(),
-								trans->tid);
-
-                ss << "Requested unregistration of IPC process " <<
-                        ipcp->get_name().toString() << " from IPC "
-                        "process " << slave_ipcp->get_name().toString() << endl;
-                FLUSH_LOG(INFO, ss);
+		ss << "Requested unregistration of IPC process " <<
+				ipcp->get_name().toString() << " from IPC "
+				"process " << slave_ipcp->get_name().toString() << endl;
+		FLUSH_LOG(INFO, ss);
 	} catch(rina::ConcurrentException& e) {
-                ss  << ": Error while unregistering IPC process "
-                        << ipcp->get_name().toString() << " from IPC "
-                        "process " << slave_ipcp->get_name().toString() <<
-			"The operation timedout"<< endl;
-                FLUSH_LOG(ERR, ss);
+		ss  << ": Error while unregistering IPC process "
+				<< ipcp->get_name().toString() << " from IPC "
+				"process " << slave_ipcp->get_name().toString() <<
+				"The operation timedout"<< endl;
+		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
-        } catch (rina::IpcmUnregisterApplicationException) {
-                ss  << ": Error while unregistering IPC process "
-                        << ipcp->get_name().toString() << " from IPC "
-                        "process " << slave_ipcp->get_name().toString() << endl;
-                FLUSH_LOG(ERR, ss);
+	} catch (rina::IpcmUnregisterApplicationException& e) {
+		ss  << ": Error while unregistering IPC process "
+				<< ipcp->get_name().toString() << " from IPC "
+				"process " << slave_ipcp->get_name().toString() << endl;
+		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
-        } catch (Exception) {
+	} catch (Exception& e) {
 		ss  << ": Unknown error while requesting unregistering IPCP"
-		    << endl;
+				<< endl;
 		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
 	}
@@ -682,7 +662,8 @@ IPCManager_::enroll_to_dif(Promise* promise, const int ipcp_id,
 
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! "
-				<< neighbor.difName.toString(); 
+				<< neighbor.difName.toString();
+			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
@@ -690,6 +671,7 @@ IPCManager_::enroll_to_dif(Promise* promise, const int ipcp_id,
 		if(add_transaction_state(trans) < 0){
 			ss << "Unable to add transaction; out of memory? "
 				<< neighbor.difName.toString();
+			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
@@ -710,13 +692,13 @@ IPCManager_::enroll_to_dif(Promise* promise, const int ipcp_id,
 			<<". Operation timedout"<< endl;
 		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
-	}  catch (rina::EnrollException) {
+	}  catch (rina::EnrollException& e) {
 		ss  << ": Error while enrolling "
 			<< "to DIF " << neighbor.difName.toString()
 			<< endl;
 		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
-	} catch (Exception) {
+	} catch (Exception& e) {
 		ss  << ": Unknown error while enrolling IPCP"
 		    << endl;
 		FLUSH_LOG(ERR, ss);
@@ -739,7 +721,7 @@ IPCManager_::enroll_to_difs(Promise* promise, const int ipcp_id,
 			//FIXME: this should be a set of promises
 			enroll_to_dif(promise, ipcp_id, *nit);
 		}
-	} catch (Exception) {
+	} catch (Exception& e) {
 		ss  << ": Unknown error while enrolling to difs"
 		    << endl;
 		FLUSH_LOG(ERR, ss);
@@ -773,11 +755,12 @@ IPCManager_::apply_configuration()
 		// Examine all the IPCProcesses that are going to be created
 		// according to the configuration file.
 		ipcm_res_t result;
+		CreateIPCPPromise c_promise;
+		Promise promise;
 		for (cit = config.ipcProcessesToCreate.begin();
 		     cit != config.ipcProcessesToCreate.end(); cit++) {
 			std::string	type;
 			ostringstream      ss;
-			CreateIPCPPromise promise;
 
 			if (!config.lookup_type_by_dif(cit->difName, type)) {
 				ss << "Failed to retrieve DIF type for "
@@ -787,19 +770,33 @@ IPCManager_::apply_configuration()
 			}
 
 			try {
-				if (create_ipcp(&promise, cit->name, type) == IPCM_FAILURE ||
-						promise.wait() != IPCM_SUCCESS) {
+				if (create_ipcp(&c_promise, cit->name, type) == IPCM_FAILURE ||
+						c_promise.wait() != IPCM_SUCCESS) {
 					continue;
 				}
-				assign_to_dif(NULL, promise.ipcp_id, cit->difName);
-				register_at_difs(NULL, promise.ipcp_id, cit->difsToRegisterAt);
+				ipcps.push_back(c_promise.ipcp_id);
+
+				if (assign_to_dif(&promise, c_promise.ipcp_id, cit->difName) == IPCM_FAILURE ||
+						promise.wait() != IPCM_SUCCESS) {
+					ss << "Problems assigning IPCP " << c_promise.ipcp_id
+						<< " to DIF " << cit->difName.processName <<endl;
+					FLUSH_LOG(ERR, ss);
+				}
+				for (list<rina::ApplicationProcessNamingInformation>::const_iterator
+						nit = cit->difsToRegisterAt.begin();
+						nit != cit->difsToRegisterAt.end(); nit++) {
+					if (register_at_dif(&promise, c_promise.ipcp_id, *nit) == IPCM_FAILURE ||
+							promise.wait() != IPCM_SUCCESS) {
+						ss << "Problems registering IPCP " << c_promise.ipcp_id
+								<< " to DIF " << nit->processName << endl;
+						FLUSH_LOG(ERR, ss);
+					}
+				}
 			} catch (Exception &e) {
 				LOG_ERR("Exception while applying configuration: %s",
 					e.what());
-				return IPCM_FAILURE;
+				continue;
 			}
-
-			ipcps.push_back(promise.ipcp_id);
 		}
 
 		// Perform all the enrollments specified by the configuration file.
@@ -856,12 +853,14 @@ IPCManager_::update_dif_configuration(Promise* promise, int ipcp_id,
 
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
+			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
 		//Store transaction
 		if(add_transaction_state(trans) < 0){
 			ss << "Unable to add transaction; out of memory? ";
+			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 		ipcp->updateDIFConfiguration(dif_config, trans->tid);
@@ -875,12 +874,12 @@ IPCManager_::update_dif_configuration(Promise* promise, int ipcp_id,
 			"Operation timedout."<< endl;
 		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
-	}  catch (rina::UpdateDIFConfigurationException) {
+	}  catch (rina::UpdateDIFConfigurationException& e) {
 		ss  << ": Error while updating DIF configuration "
 			" for IPC process " << ipcp->get_name().toString() << endl;
 		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
-	} catch (Exception) {
+	} catch (Exception& e) {
 		ss  << ": Unknown error while update configuration"
 		    << endl;
 		FLUSH_LOG(ERR, ss);
@@ -912,12 +911,14 @@ IPCManager_::query_rib(QueryRIBPromise* promise, const int ipcp_id)
 		trans = new RIBqTransState(promise, ipcp->get_id());
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
+			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
 		//Store transaction
 		if(add_transaction_state(trans) < 0){
 			ss << "Unable to add transaction; out of memory? ";
+			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
@@ -932,11 +933,11 @@ IPCManager_::query_rib(QueryRIBPromise* promise, const int ipcp_id)
 			". Operation timedout"<< endl;
 		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
-	} catch (rina::QueryRIBException) {
+	} catch (rina::QueryRIBException& e) {
 		ss << "Error while querying RIB of IPC Process " <<
 			ipcp->get_name().toString() << endl;
 		return IPCM_FAILURE;
-	}catch (Exception) {
+	}catch (Exception& e) {
 		ss  << ": Unknown error while query RIB"
 		    << endl;
 		FLUSH_LOG(ERR, ss);
@@ -951,25 +952,24 @@ std::string IPCManager_::get_log_level() const
 	return log_level_;
 }
 
-
 ipcm_res_t
 IPCManager_::set_policy_set_param(Promise* promise, const int ipcp_id,
-                                 const std::string& component_path,
-                                 const std::string& param_name,
-                                 const std::string& param_value)
+		const std::string& component_path,
+		const std::string& param_name,
+		const std::string& param_value)
 {
-        ostringstream ss;
+	ostringstream ss;
 	IPCPTransState* trans = NULL;
-        IPCMIPCProcess *ipcp;
+	IPCMIPCProcess *ipcp;
 
-        try {
-        	ipcp = lookup_ipcp_by_id(ipcp_id);
+	try {
+		ipcp = lookup_ipcp_by_id(ipcp_id);
 
-        	if(!ipcp){
-        		ss << "Invalid IPCP id "<< ipcp_id;
-        		FLUSH_LOG(ERR, ss);
-        		throw rina::SetPolicySetParamException();
-        	}
+		if(!ipcp){
+			ss << "Invalid IPCP id "<< ipcp_id;
+			FLUSH_LOG(ERR, ss);
+			throw rina::SetPolicySetParamException();
+		}
 
 		//Auto release the read lock
 		rina::ReadScopedLock readlock(ipcp->rwlock, false);
@@ -977,36 +977,38 @@ IPCManager_::set_policy_set_param(Promise* promise, const int ipcp_id,
 		trans = new IPCPTransState(promise, ipcp->get_id());
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
-        		throw rina::SetPolicySetParamException();
+			FLUSH_LOG(ERR, ss);
+			throw rina::SetPolicySetParamException();
 		}
 
 		//Store transaction
 		if(add_transaction_state(trans) < 0){
 			ss << "Unable to add transaction; out of memory? ";
-        		throw rina::SetPolicySetParamException();
+			FLUSH_LOG(ERR, ss);
+			throw rina::SetPolicySetParamException();
 		}
 
-        	ipcp->setPolicySetParam(component_path,
-        			param_name, param_value, trans->tid);
+		ipcp->setPolicySetParam(component_path,
+				param_name, param_value, trans->tid);
 
-        	ss << "Issued set-policy-set-param to IPC process " <<
-        			ipcp->get_name().toString() << endl;
-        	FLUSH_LOG(INFO, ss);
+		ss << "Issued set-policy-set-param to IPC process " <<
+				ipcp->get_name().toString() << endl;
+		FLUSH_LOG(INFO, ss);
 
-        } catch(rina::ConcurrentException& e) {
+	} catch(rina::ConcurrentException& e) {
 		ss << "Error while issuing set-policy-set-param request "
-                        "to IPC Process " << ipcp->get_name().toString()
-			<< ". Operation timedout"<< endl;
+				"to IPC Process " << ipcp->get_name().toString()
+				<< ". Operation timedout"<< endl;
 		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
-	} catch (rina::SetPolicySetParamException) {
-                ss << "Error while issuing set-policy-set-param request "
-                        "to IPC Process " << ipcp->get_name().toString() << endl;
-                FLUSH_LOG(ERR, ss);
+	} catch (rina::SetPolicySetParamException& e) {
+		ss << "Error while issuing set-policy-set-param request "
+				"to IPC Process " << ipcp->get_name().toString() << endl;
+		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
-        }catch (Exception) {
+	}catch (Exception& e) {
 		ss  << ": Unknown error while issuing set-policy-set-param request"
-		    << endl;
+				<< endl;
 		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
 	}
@@ -1016,21 +1018,21 @@ IPCManager_::set_policy_set_param(Promise* promise, const int ipcp_id,
 
 ipcm_res_t
 IPCManager_::select_policy_set(Promise* promise, const int ipcp_id,
-                              const std::string& component_path,
-                              const std::string& ps_name)
+		const std::string& component_path,
+		const std::string& ps_name)
 {
-        ostringstream ss;
-        IPCMIPCProcess *ipcp;
+	ostringstream ss;
+	IPCMIPCProcess *ipcp;
 	IPCPTransState* trans;
 
-        try {
-        	ipcp = lookup_ipcp_by_id(ipcp_id);
+	try {
+		ipcp = lookup_ipcp_by_id(ipcp_id);
 
-        	if(!ipcp){
-        		ss << "Invalid IPCP id "<< ipcp_id;
-        		FLUSH_LOG(ERR, ss);
-        		throw Exception();
-        	}
+		if(!ipcp){
+			ss << "Invalid IPCP id "<< ipcp_id;
+			FLUSH_LOG(ERR, ss);
+			throw Exception();
+		}
 
 		//Auto release the read lock
 		rina::ReadScopedLock readlock(ipcp->rwlock, false);
@@ -1039,34 +1041,36 @@ IPCManager_::select_policy_set(Promise* promise, const int ipcp_id,
 		trans = new IPCPTransState(promise, ipcp->get_id());
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
+			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
 		//Store transaction
 		if(add_transaction_state(trans) < 0){
 			ss << "Unable to add transaction; out of memory? ";
+			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
-        	ipcp->selectPolicySet(component_path, ps_name, trans->tid);
+		ipcp->selectPolicySet(component_path, ps_name, trans->tid);
 
-        	ss << "Issued select-policy-set to IPC process " <<
-        			ipcp->get_name().toString() << endl;
-        	FLUSH_LOG(INFO, ss);
-        } catch(rina::ConcurrentException& e) {
+		ss << "Issued select-policy-set to IPC process " <<
+				ipcp->get_name().toString() << endl;
+		FLUSH_LOG(INFO, ss);
+	} catch(rina::ConcurrentException& e) {
 		ss << "Error while issuing select-policy-set request "
-                        "to IPC Process " << ipcp->get_name().toString() <<
-			". Operation timedout."<< endl;
+				"to IPC Process " << ipcp->get_name().toString() <<
+				". Operation timedout."<< endl;
 		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
-	} catch (rina::SelectPolicySetException) {
-                ss << "Error while issuing select-policy-set request "
-                        "to IPC Process " << ipcp->get_name().toString() << endl;
-                FLUSH_LOG(ERR, ss);
+	} catch (rina::SelectPolicySetException& e) {
+		ss << "Error while issuing select-policy-set request "
+				"to IPC Process " << ipcp->get_name().toString() << endl;
+		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
-        }catch (Exception) {
+	}catch (Exception& e) {
 		ss  << ": Unknown error while issuing select-policy-set request"
-		    << endl;
+				<< endl;
 		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
 	}
@@ -1076,20 +1080,20 @@ IPCManager_::select_policy_set(Promise* promise, const int ipcp_id,
 
 ipcm_res_t
 IPCManager_::plugin_load(Promise* promise, const int ipcp_id,
-                        const std::string& plugin_name, bool load)
+		const std::string& plugin_name, bool load)
 {
-        ostringstream ss;
-        IPCMIPCProcess *ipcp;
+	ostringstream ss;
+	IPCMIPCProcess *ipcp;
 	IPCPTransState* trans;
 
-        try {
-        	ipcp = lookup_ipcp_by_id(ipcp_id);
+	try {
+		ipcp = lookup_ipcp_by_id(ipcp_id);
 
-        	if(!ipcp){
-        		ss << "Invalid IPCP id "<< ipcp_id;
-        		FLUSH_LOG(ERR, ss);
-        		throw Exception();
-        	}
+		if(!ipcp){
+			ss << "Invalid IPCP id "<< ipcp_id;
+			FLUSH_LOG(ERR, ss);
+			throw Exception();
+		}
 
 		//Auto release the read lock
 		rina::ReadScopedLock readlock(ipcp->rwlock, false);
@@ -1097,32 +1101,34 @@ IPCManager_::plugin_load(Promise* promise, const int ipcp_id,
 		trans = new IPCPTransState(promise, ipcp->get_id());
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
+			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 		//Store transaction
 		if(add_transaction_state(trans) < 0){
 			ss << "Unable to add transaction; out of memory? ";
+			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
-        	ipcp->pluginLoad(plugin_name, load, trans->tid);
+		ipcp->pluginLoad(plugin_name, load, trans->tid);
 
-        	ss << "Issued plugin-load to IPC process " <<
-        			ipcp->get_name().toString() << endl;
-        	FLUSH_LOG(INFO, ss);
-        } catch(rina::ConcurrentException& e) {
+		ss << "Issued plugin-load to IPC process " <<
+				ipcp->get_name().toString() << endl;
+		FLUSH_LOG(INFO, ss);
+	} catch(rina::ConcurrentException& e) {
 		ss << "Error while issuing plugin-load request "
-                        "to IPC Process " << ipcp->get_name().toString() <<
-			". Operation timedout"<< endl;
+				"to IPC Process " << ipcp->get_name().toString() <<
+				". Operation timedout"<< endl;
 		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
-	} catch (rina::PluginLoadException) {
-                ss << "Error while issuing plugin-load request "
-                        "to IPC Process " << ipcp->get_name().toString() << endl;
-                FLUSH_LOG(ERR, ss);
-  		return IPCM_FAILURE;
-        } catch (Exception) {
+	} catch (rina::PluginLoadException& e) {
+		ss << "Error while issuing plugin-load request "
+				"to IPC Process " << ipcp->get_name().toString() << endl;
+		FLUSH_LOG(ERR, ss);
+		return IPCM_FAILURE;
+	} catch (Exception& e) {
 		ss  << ": Unknown error while issuing plugin-load request "
-		    << endl;
+				<< endl;
 		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
 	}
@@ -1132,14 +1138,14 @@ IPCManager_::plugin_load(Promise* promise, const int ipcp_id,
 
 ipcm_res_t
 IPCManager_::unregister_app_from_ipcp(Promise* promise,
-                const rina::ApplicationUnregistrationRequestEvent& req_event,
-                int slave_ipcp_id)
+		const rina::ApplicationUnregistrationRequestEvent& req_event,
+		int slave_ipcp_id)
 {
-        ostringstream ss;
-        IPCMIPCProcess *slave_ipcp;
+	ostringstream ss;
+	IPCMIPCProcess *slave_ipcp;
 	IPCPTransState* trans;
 
-        try {
+	try {
 		slave_ipcp = lookup_ipcp_by_id(slave_ipcp_id, true);
 
 		if (!slave_ipcp) {
@@ -1151,42 +1157,44 @@ IPCManager_::unregister_app_from_ipcp(Promise* promise,
 		//Auto release the write lock
 		rina::WriteScopedLock writelock(slave_ipcp->rwlock, false);
 
-                // Forward the unregistration request to the IPC process
-                // that the application is registered to
+		// Forward the unregistration request to the IPC process
+		// that the application is registered to
 		trans = new IPCPTransState(promise, slave_ipcp->get_id());
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
+			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
 
 		//Store transaction
 		if(add_transaction_state(trans) < 0){
 			ss << "Unable to add transaction; out of memory? ";
+			FLUSH_LOG(ERR, ss);
 			throw Exception();
 		}
-                slave_ipcp->unregisterApplication(req_event.applicationName,
-                                                  trans->tid);
-                ss << "Requested unregistration of application " <<
-                        req_event.applicationName.toString() << " from IPC "
-                        "process " << slave_ipcp->get_name().toString() << endl;
-                FLUSH_LOG(INFO, ss);
 
-        } catch(rina::ConcurrentException& e) {
+		slave_ipcp->unregisterApplication(req_event.applicationName,
+				trans->tid);
+		ss << "Requested unregistration of application " <<
+				req_event.applicationName.toString() << " from IPC "
+				"process " << slave_ipcp->get_name().toString() << endl;
+		FLUSH_LOG(INFO, ss);
+	} catch(rina::ConcurrentException& e) {
 		ss  << ": Error while unregistering application "
-                        << req_event.applicationName.toString() << " from IPC "
-                        "process " << slave_ipcp->get_name().toString() <<
-			". Operation timedout."<< endl;
+				<< req_event.applicationName.toString() << " from IPC "
+				"process " << slave_ipcp->get_name().toString() <<
+				". Operation timedout."<< endl;
 		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
-	} catch (rina::IpcmUnregisterApplicationException) {
-                ss  << ": Error while unregistering application "
-                        << req_event.applicationName.toString() << " from IPC "
-                        "process " << slave_ipcp->get_name().toString() << endl;
-                FLUSH_LOG(ERR, ss);
+	} catch (rina::IpcmUnregisterApplicationException& e) {
+		ss  << ": Error while unregistering application "
+				<< req_event.applicationName.toString() << " from IPC "
+				"process " << slave_ipcp->get_name().toString() << endl;
+		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
-        } catch (Exception) {
+	} catch (Exception& e) {
 		ss  << ": Unknown error while unregistering application "
-		    << endl;
+				<< endl;
 		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
 	}
@@ -1204,7 +1212,6 @@ TransactionState::TransactionState(Promise* _promise):
 	if (promise)
 		promise->ret = IPCM_PENDING;
 };
-
 
 //State management routines
 int IPCManager_::add_transaction_state(TransactionState* t){
@@ -1226,6 +1233,7 @@ int IPCManager_::add_transaction_state(TransactionState* t){
 		assert(0);
 		return -1;
 	}
+
 	return 0;
 }
 
