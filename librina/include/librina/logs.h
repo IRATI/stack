@@ -27,6 +27,10 @@
 
 #include <cstdio>
 #include <string>
+#include <time.h>
+#include <sys/types.h>
+#include <unistd.h>
+
 
 #ifndef RINA_PREFIX
 #error You must define RINA_PREFIX before including this file
@@ -92,11 +96,11 @@ void log(LOG_LEVEL level, const char * fmt, ...);
 
 #define __STRINGIZE(x) #x
 
-#define __LOG(PREFIX, LEVEL, FMT, ARGS...)                              \
-        do {                                                            \
-		log(LEVEL,                                              \
-                    "#" PREFIX " (" __STRINGIZE(LEVEL) "): " FMT "\n",  \
-                    ##ARGS);                                            \
+#define __LOG(PREFIX, LEVEL, FMT, ARGS...)                                    \
+        do {                                                                  \
+		log(LEVEL,                                                    \
+                    "%d(%ld)#" PREFIX " (" __STRINGIZE(LEVEL) "): " FMT "\n", \
+                    getpid(), time(0), ##ARGS);                               \
 	} while (0)
 
 #define LOG_EMERG(FMT, ARGS...) __LOG(RINA_PREFIX, EMERG, FMT, ##ARGS)
@@ -108,11 +112,11 @@ void log(LOG_LEVEL level, const char * fmt, ...);
 #define LOG_INFO(FMT,  ARGS...) __LOG(RINA_PREFIX, INFO,  FMT, ##ARGS)
 #define LOG_DBG(FMT,   ARGS...) __LOG(RINA_PREFIX, DBG,   FMT, ##ARGS)
 
-#define __LOGF(PREFIX, LEVEL, FMT, ARGS...)                                \
-        do {                                                               \
-		log(LEVEL,                                                 \
-                    "#" PREFIX " (" __STRINGIZE(LEVEL) ")[%s]: " FMT "\n", \
-                    __func__, ##ARGS);                                     \
+#define __LOGF(PREFIX, LEVEL, FMT, ARGS...)                                       \
+        do {                                                                      \
+		log(LEVEL,                                                        \
+                    "%d(%ld)#" PREFIX " (" __STRINGIZE(LEVEL) ")[%s]: " FMT "\n", \
+                    getpid(), time(0), __func__, ##ARGS);                         \
 	} while (0)
 
 #define LOGF_EMERG(FMT, ARGS...) __LOGF(RINA_PREFIX, EMERG, FMT, ##ARGS)
@@ -124,6 +128,6 @@ void log(LOG_LEVEL level, const char * fmt, ...);
 #define LOGF_INFO(FMT,  ARGS...) __LOGF(RINA_PREFIX, INFO,  FMT, ##ARGS)
 #define LOGF_DBG(FMT,   ARGS...) __LOGF(RINA_PREFIX, DBG,   FMT, ##ARGS)
 
-#endif
+#endif //__cplusplus
 
-#endif
+#endif //LIBRINA_LOGS_H
