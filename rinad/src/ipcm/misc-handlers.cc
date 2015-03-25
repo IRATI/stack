@@ -56,10 +56,7 @@ void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *
 	}
 
 	if(e->result < 0){
-		ss  << ": Error: Query RIB operation of "
-			"process " << ipcp->get_name().toString() << " failed"
-			<< endl;
-
+		ss  << ": Error: Query RIB operation of failed" << endl;
 		trans->completed(IPCM_FAILURE);
 		remove_transaction_state(trans->tid);
 		return;
