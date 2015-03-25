@@ -27,6 +27,8 @@
 
 #include <stdexcept>
 
+namespace rina {
+
 class Exception : public std::exception {
 public:
         Exception() { }
@@ -39,6 +41,8 @@ public:
 private:
         std::string description_;
 };
+
+}
 
 #endif
 

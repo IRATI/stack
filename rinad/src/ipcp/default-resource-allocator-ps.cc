@@ -74,7 +74,7 @@ void ResourceAllocatorPs::routingTableUpdated(
 
 	try {
 		rina::kernelIPCProcess->modifyPDUForwardingTableEntries(pduft, 2);
-	} catch (Exception & e) {
+	} catch (rina::Exception & e) {
 		LOG_ERR("Error setting PDU Forwarding Table in the kernel: %s",
 				e.what());
 	}
