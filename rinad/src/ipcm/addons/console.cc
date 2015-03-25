@@ -689,7 +689,7 @@ IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
 		return CMDRETCONT;
 	}
 
-	ret = IPCManager->enroll_to_dif(NULL, ipcp_id, neighbor_data, true);
+	ret = IPCManager->enroll_to_dif(&promise, ipcp_id, neighbor_data);
 
 	if(ret == IPCM_FAILURE) {
 		outstream << "Enrollment operation failed" << endl;

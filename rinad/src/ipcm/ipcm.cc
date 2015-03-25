@@ -729,7 +729,7 @@ IPCManager_::enroll_to_difs(Promise* promise, const int ipcp_id,
 				nit = neighbors.begin();
 					nit != neighbors.end(); nit++) {
 			//FIXME: this should be a set of promises
-			enroll_to_dif(promise, ipcp_id, *nit, false);
+			enroll_to_dif(promise, ipcp_id, *nit);
 		}
 	} catch (Exception) {
 		ss  << ": Unknown error while enrolling to difs"
@@ -764,11 +764,12 @@ IPCManager_::apply_configuration()
 
 		// Examine all the IPCProcesses that are going to be created
 		// according to the configuration file.
+		CreateIPCPPromise promise;
+		ipcm_res_t result;
 		for (cit = config.ipcProcessesToCreate.begin();
 		     cit != config.ipcProcessesToCreate.end(); cit++) {
 			std::string	type;
 			ostringstream      ss;
-			int ipcp_id;
 
 			if (!config.lookup_type_by_dif(cit->difName, type)) {
 				ss << "Failed to retrieve DIF type for "
@@ -778,19 +779,23 @@ IPCManager_::apply_configuration()
 			}
 
 			try {
-				ipcp_id = create_ipcp(NULL, cit->name, type);
-				if (ipcp_id < 0) {
+				result = create_ipcp(&promise, cit->name, type);
+				if (result < 0) {
 					continue;
 				}
-				assign_to_dif(NULL, ipcp_id, cit->difName);
-				register_at_difs(NULL, ipcp_id, cit->difsToRegisterAt);
+				promise.wait();
+				if (promise.ret != IPCM_SUCCESS) {
+					continue;
+				}
+				assign_to_dif(NULL, promise.ipcp_id, cit->difName);
+				register_at_difs(NULL, promise.ipcp_id, cit->difsToRegisterAt);
 			} catch (Exception &e) {
 				LOG_ERR("Exception while applying configuration: %s",
 					e.what());
 				return IPCM_FAILURE;
 			}
 
-			ipcps.push_back(ipcp_id);
+			ipcps.push_back(promise.ipcp_id);
 		}
 
 		// Perform all the enrollments specified by the configuration file.
