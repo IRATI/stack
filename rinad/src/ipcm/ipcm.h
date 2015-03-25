@@ -87,9 +87,14 @@ typedef enum ipcm_res{
 class Promise {
 
 public:
+
+//This should not be necessary, and would force users to have to create
+//a new promise everytime
+#if 0
 	Promise() {
 		ret = IPCM_PENDING;
 	}
+#endif
 	virtual ~Promise(){};
 
 	//
