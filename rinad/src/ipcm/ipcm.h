@@ -87,6 +87,9 @@ typedef enum ipcm_res{
 class Promise {
 
 public:
+	Promise() {
+		ret = IPCM_PENDING;
+	}
 	virtual ~Promise(){};
 
 	//
