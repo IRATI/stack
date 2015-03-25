@@ -41,39 +41,43 @@ using namespace std;
 namespace rinad {
 
 ipcm_res_t
-IPCManager_::deallocate_flow(const int ipcp_id,
+IPCManager_::deallocate_flow(Promise * promise, const int ipcp_id,
 			    const rina::FlowDeallocateRequestEvent& event)
 {
 	ostringstream ss;
 	IPCMIPCProcess* ipcp;
-	IPCPTransState* trans;
-	ipcm_res_t ret = IPCM_SUCCESS;
+	FlowDeallocTransState* trans;
+	ipcm_res_t ret = IPCM_PENDING;
 
 	try {
 		ipcp = lookup_ipcp_by_id(ipcp_id);
 
 		if(!ipcp){
 			ss << "Invalid IPCP id "<< ipcp_id;
+			FLUSH_LOG(ERR, ss);
 			throw rina::IpcmDeallocateFlowException();
 		}
 
 		//Auto release the read lock
-		rina::ReadScopedLock readlock(ipcp->rwlock, false);
-
+		rina::WriteScopedLock writelock(ipcp->rwlock, false);
 
 		//Create a transaction
-		trans = new IPCPTransState(NULL, ipcp->get_id());
+		trans = new FlowDeallocTransState(promise, ipcp->get_id(), event);
+		if (event.sequenceNumber == 0) {
+			trans->req_by_ipcm = true;
+		}
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
+			FLUSH_LOG(ERR, ss);
 			throw rina::IpcmDeallocateFlowException();
 		}
 
 		//Store transaction
 		if(add_transaction_state(trans) < 0){
 			ss << "Unable to add transaction; out of memory? ";
+			FLUSH_LOG(ERR, ss);
 			throw rina::IpcmDeallocateFlowException();
 		}
-
 
 		// Ask the IPC process to deallocate the flow
 		// specified by the port-id
@@ -84,7 +88,6 @@ IPCManager_::deallocate_flow(const int ipcp_id,
 			" to deallocate flow [port-id = " << event.portId <<
 			"]" << endl;
 		FLUSH_LOG(INFO, ss);
-
 	} catch (rina::ConcurrentException& e) {
 		ss  << ": Error while application " <<
 			event.applicationName.toString() << "asks IPC process "
@@ -93,7 +96,7 @@ IPCManager_::deallocate_flow(const int ipcp_id,
 			". Operation timedout" << endl;
 		FLUSH_LOG(ERR, ss);
 		ret = IPCM_FAILURE;
-	} catch (rina::IpcmDeallocateFlowException) {
+	} catch (rina::IpcmDeallocateFlowException& e) {
 		ss  << ": Error while application " <<
 			event.applicationName.toString() << "asks IPC process "
 			<< ipcp_id << " to deallocate the flow "
@@ -102,8 +105,7 @@ IPCManager_::deallocate_flow(const int ipcp_id,
 		ret = IPCM_FAILURE;
 	}
 
-	trans->completed(IPCM_FAILURE);
-	remove_transaction_state(trans->tid);
+	return ret;
 }
 
 void IPCManager_::application_flow_allocation_failed_notify(rina::FlowRequestEvent *event)
@@ -120,7 +122,7 @@ void IPCManager_::application_flow_allocation_failed_notify(rina::FlowRequestEve
 			<< " and " << event->remoteApplicationName.toString()
 			<< " failed: applications informed" << endl;
 		FLUSH_LOG(INFO, ss);
-	} catch (rina::NotifyFlowAllocatedException) {
+	} catch (rina::NotifyFlowAllocatedException& e) {
 		ss  << ": Error while notifying the "
 			"Application Manager about flow allocation "
 			"result" << endl;
@@ -190,7 +192,7 @@ void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
 			<< " and " << event->remoteApplicationName.toString()
 			<< endl;
 		FLUSH_LOG(INFO, ss);
-	} catch (rina::AllocateFlowException) {
+	} catch (rina::AllocateFlowException& e) {
 		ss  << ": Error while requesting IPC process "
 			<< ipcp->get_name().toString() << " to allocate a flow "
 			"between " << event->localApplicationName.toString()
@@ -253,7 +255,7 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 			<< " and " << event->remoteApplicationName.toString()
 			<< endl;
 		FLUSH_LOG(INFO, ss);
-	} catch (rina::AppFlowArrivedException) {
+	} catch (rina::AppFlowArrivedException& e) {
 		ss  << ": Error while informing application "
 			<< event->localApplicationName.toString() <<
 			" about a flow request coming from remote application "
@@ -343,7 +345,7 @@ void IPCManager_::ipcm_allocate_flow_request_result_handler( rina::IpcmAllocateF
 		FLUSH_LOG(INFO, ss);
 
 		ret = (success)? IPCM_SUCCESS : IPCM_FAILURE;
-	} catch (rina::AllocateFlowException) {
+	} catch (rina::AllocateFlowException& e) {
 		ss  << ": Error while informing the IPC process "
 			<< trans->slave_ipcp_id << " about result of "
 			"flow allocation between applications " <<
@@ -363,7 +365,7 @@ void IPCManager_::ipcm_allocate_flow_request_result_handler( rina::IpcmAllocateF
 			<< req_event.remoteApplicationName.toString()
 			<< " informed about flow allocation result" << endl;
 		FLUSH_LOG(INFO, ss);
-	} catch (rina::NotifyFlowAllocatedException) {
+	} catch (rina::NotifyFlowAllocatedException& e) {
 		ss  << ": Error while notifying the "
 			"Application Manager about flow allocation result"
 			<< endl;
@@ -424,7 +426,7 @@ void IPCManager_::allocate_flow_response_event_handler(rina::AllocateFlowRespons
 		FLUSH_LOG(INFO, ss);
 
 		ret = (success)? IPCM_SUCCESS : IPCM_FAILURE;
-	} catch (rina::AllocateFlowException) {
+	} catch (rina::AllocateFlowException& e) {
 		ss  << ": Error while informing IPC "
 			<< "process " << trans->slave_ipcp_id <<
 			" about failed flow allocation" << endl;
@@ -450,9 +452,9 @@ void IPCManager_::flow_deallocation_requested_event_handler(rina::FlowDeallocate
 		return;
 	}
 
-	ret = deallocate_flow(ipcp->get_id(), *event);
+	ret = deallocate_flow(NULL, ipcp->get_id(), *event);
 
-	if (ret) {
+	if (ret && event->sequenceNumber != 0) {
 		try {
 			// Inform the application about the deallocation
 			// failure
@@ -463,7 +465,7 @@ void IPCManager_::flow_deallocation_requested_event_handler(rina::FlowDeallocate
 				"failure of flow identified by port-id " <<
 				event->portId << endl;
 			FLUSH_LOG(INFO, ss);
-		} catch (rina::NotifyFlowDeallocatedException) {
+		} catch (rina::NotifyFlowDeallocatedException& e) {
 			ss  << ": Error while informing "
 				"application " << event->applicationName.
 				toString() << " about deallocation of flow "
@@ -485,7 +487,7 @@ void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IpcmDealloca
 		get_transaction_state<FlowDeallocTransState>(event->sequenceNumber);
 
 	if (!trans){
-		ss  << ": Warning: Flow allocation received received but no corresponding request" << endl;
+		ss  << ": Warning: Flow deallocation response received but no corresponding request" << endl;
 		FLUSH_LOG(WARN, ss);
 		return;
 	}
@@ -501,12 +503,12 @@ void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IpcmDealloca
 		}
 
 		//Auto release the read lock
-		rina::ReadScopedLock readlock(ipcp->rwlock, false);
+		rina::WriteScopedLock writelock(ipcp->rwlock, false);
 
 		// Inform the IPC process about the deallocation result
 		ipcp->deallocateFlowResult(event->sequenceNumber, success);
 
-		ss << "Deallocating flow "
+		ss << "Deallocated flow "
 			<< "identified by port-id " <<
 			req_event.portId << " from IPC process " <<
 			ipcp->get_name().toString() << " [success = " <<
@@ -514,36 +516,39 @@ void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IpcmDealloca
 		FLUSH_LOG(INFO, ss);
 
 		ret = (success)? IPCM_SUCCESS : IPCM_FAILURE;
-	} catch (rina::IpcmDeallocateFlowException) {
+	} catch (rina::IpcmDeallocateFlowException& e) {
 		ss  << ": Error while informing IPC process "
 			<< " about deallocation "
-			"of flow with port-id " << req_event.portId << endl;
+			"of flow with port-id " << req_event.portId <<
+			"because " << e.what() << endl;
 		FLUSH_LOG(ERR, ss);
 		ret = IPCM_FAILURE;
 	}
 
-	try {
-		// Inform the application about the deallocation
-		// result
-		if (req_event.sequenceNumber > 0) {
-			rina::applicationManager->
+	if (!trans->req_by_ipcm) {
+		try {
+			// Inform the application about the deallocation
+			// result
+			if (req_event.sequenceNumber > 0) {
+				rina::applicationManager->
 				flowDeallocated(req_event, result);
 
-			ss << "Application " << req_event.applicationName.
-				toString() << " informed about deallocation "
-				"of flow identified by port-id " <<
-				req_event.portId << "[success = " <<
-				(!result) << "]" << endl;
-			FLUSH_LOG(INFO, ss);
+				ss << "Application " << req_event.applicationName.
+						toString() << " informed about deallocation "
+						"of flow identified by port-id " <<
+						req_event.portId << "[success = " <<
+						(!result) << "]" << endl;
+				FLUSH_LOG(INFO, ss);
+			}
+		} catch (rina::NotifyFlowDeallocatedException& e) {
+			ss  << ": Error while informing "
+					"application " << req_event.applicationName.
+					toString() << " about deallocation of flow "
+					"identified by port-id " << req_event.portId
+					<< endl;
+			FLUSH_LOG(ERR, ss);
+			//ret = IPCM_FAILURE; <= should this be marked as error?
 		}
-	} catch (rina::NotifyFlowDeallocatedException) {
-		ss  << ": Error while informing "
-			"application " << req_event.applicationName.
-			toString() << " about deallocation of flow "
-			"identified by port-id " << req_event.portId
-			<< endl;
-		FLUSH_LOG(ERR, ss);
-		//ret = IPCM_FAILURE; <= should this be marked as error?
 	}
 
 	trans->completed(ret);
@@ -578,11 +583,11 @@ void IPCManager_::flow_deallocated_event_handler(rina::FlowDeallocatedEvent* eve
 			<< event->portId << " has been deallocated remotely "
 			<< endl;
 		FLUSH_LOG(INFO, ss);
-	} catch (rina::IpcmDeallocateFlowException) {
+	} catch (rina::IpcmDeallocateFlowException& e) {
 		ss  << ": Cannot find a flow with port-id "
 			<< event->portId << endl;
 		FLUSH_LOG(ERR, ss);
-	} catch (rina::NotifyFlowDeallocatedException) {
+	} catch (rina::NotifyFlowDeallocatedException& e) {
 		ss  << ": Error while informing application "
 			<< info.localAppName.toString() <<
 			" that flow with port-id " << event->portId <<

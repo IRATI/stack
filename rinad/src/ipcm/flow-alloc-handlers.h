@@ -64,16 +64,20 @@ class FlowDeallocTransState: public TransactionState{
 
 public:
 	FlowDeallocTransState(Promise* promise, int _slave_ipcp_id,
-				rina::FlowDeallocateRequestEvent& _req_e,
-				bool once):
+				const rina::FlowDeallocateRequestEvent& _req_e):
 					TransactionState(promise),
 					slave_ipcp_id(_slave_ipcp_id),
-					req_event(_req_e)
+					req_event(_req_e),
+					req_by_ipcm(false)
 					{}
 	virtual ~FlowDeallocTransState(){};
 
-        int slave_ipcp_id;
+    int slave_ipcp_id;
 	rina::FlowDeallocateRequestEvent req_event;
+
+	// True if the flow deallocation was requested by the IPCM
+	// reacting to an OS process finalized event
+	bool req_by_ipcm;
 };
 }//rinad namespace
 

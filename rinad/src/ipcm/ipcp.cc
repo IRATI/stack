@@ -460,7 +460,7 @@ IPCMIPCProcess * IPCMIPCProcessFactory::create(
 	rina::WriteScopedLock writelock(rwlock);
 
 	//Try to maximize reusage
-	for (id = 0; id < 0xFFFF; ++id) {
+	for (id = 1; id < 0xFFFF; ++id) {
 		if (ipcProcesses.find(id) == ipcProcesses.end())
 			break;
 	}

@@ -39,7 +39,7 @@ namespace rinad {
 // if any.
 IPCMIPCProcess *
 IPCManager_::select_ipcp_by_dif(
-		const rina::ApplicationProcessNamingInformation& dif_name,
+		const rina::ApplicationProcessNamingInformation& target_dif_name,
 		bool write_lock)
 {
 
@@ -52,10 +52,10 @@ IPCManager_::select_ipcp_by_dif(
 		rina::ApplicationProcessNamingInformation dif_name = ipcps[i]->dif_name_;
 		rina::ApplicationProcessNamingInformation ipcp_name = ipcps[i]->get_name();
 
-		if (dif_name.processName == dif_name.processName
+		if (dif_name.processName == target_dif_name.processName
 				/* The following OR clause is a temporary hack useful
 				 * for testing with shim dummy. TODO It will go away. */
-				|| ipcp_name.processName == dif_name.processName) {
+				|| ipcp_name.processName == target_dif_name.processName) {
 			//Acquire lock before leaving rwlock of the factory
 			if(write_lock)
 				ipcps[i]->rwlock.writelock();

@@ -73,7 +73,7 @@ void IPCManager_::os_process_finalized_handler(
 			continue;
 		}
 
-		IPCManager->deallocate_flow(ipcp->get_id(), req_event);
+		IPCManager->deallocate_flow(NULL, ipcp->get_id(), req_event);
 	}
 
 	// Look if the terminating application has pending registrations

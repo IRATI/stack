@@ -557,7 +557,7 @@ protected:
 	void flow_allocation_requested_local(rina::FlowRequestEvent *event);
 
 	void flow_allocation_requested_remote(rina::FlowRequestEvent *event);
-	ipcm_res_t deallocate_flow(const int ipcp_id,
+	ipcm_res_t deallocate_flow(Promise* promise, const int ipcp_id,
 			    const rina::FlowDeallocateRequestEvent& event);
 
 
