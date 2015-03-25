@@ -24,10 +24,11 @@
 //FIXME iostream is only for debuging purposes
 //#include <iostream>
 
-#include "rib_provider.h"
-#include <librina/cdap.h>
-#include "cdap_provider.h"
+#include "librina/rib_v2.h"
+#include "librina/cdap.h"
+#include "librina/cdap_v2.h"
 
+namespace rina {
 namespace rib {
 
 class RIB;
@@ -408,8 +409,9 @@ void RIBDaemon::open_connection(const cdap_rib::con_handle_t &con,
   // FIXME add result
   cdap_rib::result_info res;
   (void) res;
+  (void) flags;
   app_con_callback_->connect(message_id, con);
-  cdap_provider_->open_connection_response(con, flags, res, message_id);
+  cdap_provider_->open_connection_response(con, res, message_id);
 }
 
 void RIBDaemon::close_connection_result(const cdap_rib::con_handle_t &con,
@@ -476,7 +478,7 @@ void RIBDaemon::remote_create_request(const cdap_rib::con_handle_t &con,
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteCreateObject(obj.name_, obj.value_);
   try {
-    cdap_provider_->remote_create_response(con, obj, flags, res, message_id);
+    cdap_provider_->remote_create_response(con, obj, flags, *res, message_id);
   } catch (Exception &e) {
     LOG_ERR("Unable to send the response");
   }
@@ -494,7 +496,7 @@ void RIBDaemon::remote_delete_request(const cdap_rib::con_handle_t &con,
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteDeleteObject(obj.name_, obj.value_);
   try {
-    cdap_provider_->remote_delete_response(con, obj, flags, res, message_id);
+    cdap_provider_->remote_delete_response(con, obj, flags, *res, message_id);
   } catch (Exception &e) {
     LOG_ERR("Unable to send the response");
   }
@@ -512,7 +514,7 @@ void RIBDaemon::remote_read_request(const cdap_rib::con_handle_t &con,
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteReadObject(obj.name_, obj.value_);
   try {
-    cdap_provider_->remote_read_response(con, obj, flags, res, message_id);
+    cdap_provider_->remote_read_response(con, obj, flags, *res, message_id);
   } catch (Exception &e) {
     LOG_ERR("Unable to send the response");
   }
@@ -532,7 +534,7 @@ void RIBDaemon::remote_cancel_read_request(const cdap_rib::con_handle_t &con,
   cdap_rib::res_info_t* res = ribObj->remoteCancelReadObject(obj.name_,
                                                              obj.value_);
   try {
-    cdap_provider_->remote_cancel_read_response(con, flags, res, message_id);
+    cdap_provider_->remote_cancel_read_response(con, flags, *res, message_id);
   } catch (Exception &e) {
     LOG_ERR("Unable to send the response");
   }
@@ -550,7 +552,7 @@ void RIBDaemon::remote_write_request(const cdap_rib::con_handle_t &con,
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteWriteObject(obj.name_, obj.value_);
   try {
-    cdap_provider_->remote_write_response(con, flags, res, message_id);
+    cdap_provider_->remote_write_response(con, flags, *res, message_id);
   } catch (Exception &e) {
     LOG_ERR("Unable to send the response");
   }
@@ -568,7 +570,7 @@ void RIBDaemon::remote_start_request(const cdap_rib::con_handle_t &con,
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteStartObject(obj.name_, obj.value_);
   try {
-    cdap_provider_->remote_start_response(con, obj, flags, res, message_id);
+    cdap_provider_->remote_start_response(con, obj, flags, *res, message_id);
   } catch (Exception &e) {
     LOG_ERR("Unable to send the response");
   }
@@ -586,7 +588,7 @@ void RIBDaemon::remote_stop_request(const cdap_rib::con_handle_t &con,
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteStopObject(obj.name_, obj.value_);
   try {
-    cdap_provider_->remote_stop_response(con, flags, res, message_id);
+    cdap_provider_->remote_stop_response(con, flags, *res, message_id);
   } catch (Exception &e) {
     LOG_ERR("Unable to send the response");
   }
@@ -728,7 +730,7 @@ bool BaseRIBObject::stopObject(const void* object)
 }
 
 cdap_rib::res_info_t* BaseRIBObject::remoteCreateObject(const std::string& name,
-                                                        void* value)
+                                                        const cdap_rib::SerializedObject &value)
 {
   (void) name;
   (void) value;
@@ -737,7 +739,7 @@ cdap_rib::res_info_t* BaseRIBObject::remoteCreateObject(const std::string& name,
 }
 
 cdap_rib::res_info_t* BaseRIBObject::remoteDeleteObject(const std::string& name,
-                                                        void* value)
+                                                        const cdap_rib::SerializedObject &value)
 {
   (void) name;
   (void) value;
@@ -746,7 +748,7 @@ cdap_rib::res_info_t* BaseRIBObject::remoteDeleteObject(const std::string& name,
 }
 
 cdap_rib::res_info_t* BaseRIBObject::remoteReadObject(const std::string& name,
-                                                      void* value)
+                                                      const cdap_rib::SerializedObject &value)
 {
   (void) name;
   (void) value;
@@ -755,7 +757,7 @@ cdap_rib::res_info_t* BaseRIBObject::remoteReadObject(const std::string& name,
 }
 
 cdap_rib::res_info_t* BaseRIBObject::remoteCancelReadObject(
-    const std::string& name, void* value)
+    const std::string& name, const cdap_rib::SerializedObject &value)
 {
   (void) name;
   (void) value;
@@ -764,7 +766,7 @@ cdap_rib::res_info_t* BaseRIBObject::remoteCancelReadObject(
 }
 
 cdap_rib::res_info_t* BaseRIBObject::remoteWriteObject(const std::string& name,
-                                                       void* value)
+                                                       const cdap_rib::SerializedObject &value)
 {
   (void) name;
   (void) value;
@@ -773,7 +775,7 @@ cdap_rib::res_info_t* BaseRIBObject::remoteWriteObject(const std::string& name,
 }
 
 cdap_rib::res_info_t* BaseRIBObject::remoteStartObject(const std::string& name,
-                                                       void* value)
+                                                       const cdap_rib::SerializedObject &value)
 {
   (void) name;
   (void) value;
@@ -782,7 +784,7 @@ cdap_rib::res_info_t* BaseRIBObject::remoteStartObject(const std::string& name,
 }
 
 cdap_rib::res_info_t* BaseRIBObject::remoteStopObject(const std::string& name,
-                                                      void* value)
+                                                      const cdap_rib::SerializedObject &value)
 {
   (void) name;
   (void) value;
@@ -1041,6 +1043,6 @@ empty* EmptyEncoder::decode(
   LOG_ERR("Can not decode an empty object");
   return 0;
 }
-
+}
 }
 

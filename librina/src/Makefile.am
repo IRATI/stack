@@ -29,7 +29,9 @@ allsources =							\
         ipc-process.cc						\
         faux-sockets.cc						\
         cdap.cc							\
+        cdap_v2.cc							\
         rib.cc							\
+        rib_v2.cc							\
         sdu-protection.cc					\
         netlink-messages.cc  netlink-messages.h			\
         netlink-parsers.cc   netlink-parsers.h			\

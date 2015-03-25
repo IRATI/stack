@@ -25,6 +25,7 @@
 
 #include <string>
 
+namespace rina{
 namespace cdap_rib {
 
 typedef struct SerializedObject
@@ -133,7 +134,7 @@ typedef struct object_info
   /// ObjectClass within an application.
   std::string name_;
   /// ObjectValueInterface (ObjectValueInterface). The value of the object.
-  void *value_;
+  SerializedObject value_;
   /// Result (int32). Mandatory in the responses, forbidden in the requests
   /// The result of an operation, indicating its success (which has the value zero,
   /// the default for this field), partial success in the case of
@@ -250,5 +251,5 @@ class CDAPCallbackInterface
                                    int message_id) = 0;
 };
 }
-
+}
 #endif /* CDAP_RIB_STRUCTURES_H_ */

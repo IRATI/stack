@@ -26,6 +26,7 @@
 #include <map>
 #include <algorithm>
 
+namespace rina{
 namespace cacep {
 // FIXME: this class is only used in enrollment, it must go in a different file that rib
 class AppConHandlerInterface
@@ -150,19 +151,19 @@ class BaseRIBObject
 
   /// Remote invocations, resulting from CDAP messages
   virtual cdap_rib::res_info_t* remoteCreateObject(const std::string& name,
-                                                   void* value);
+                                                   const cdap_rib::SerializedObject &value);
   virtual cdap_rib::res_info_t* remoteDeleteObject(const std::string& name,
-                                                   void* value);
+                                                   const cdap_rib::SerializedObject &value);
   virtual cdap_rib::res_info_t* remoteReadObject(const std::string& name,
-                                                 void* value);
+                                                 const cdap_rib::SerializedObject &value);
   virtual cdap_rib::res_info_t* remoteCancelReadObject(const std::string& name,
-                                                       void * value);
+                                                       const cdap_rib::SerializedObject &value);
   virtual cdap_rib::res_info_t* remoteWriteObject(const std::string& name,
-                                                  void* value);
+                                                  const cdap_rib::SerializedObject &value);
   virtual cdap_rib::res_info_t* remoteStartObject(const std::string& name,
-                                                  void* value);
+                                                  const cdap_rib::SerializedObject &value);
   virtual cdap_rib::res_info_t* remoteStopObject(const std::string& name,
-                                                 void* value);
+                                                 const cdap_rib::SerializedObject &value);
   virtual const std::string& get_class() const;
   virtual const std::string& get_name() const;
   virtual long get_instance() const;
@@ -456,5 +457,5 @@ class EmptyRIBObject : public rib::RIBObject<empty>
 };
 
 }
-
+}
 #endif /* RIB_PROVIDER_H_ */

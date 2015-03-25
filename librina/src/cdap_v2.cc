@@ -20,78 +20,95 @@
  */
 
 #define RINA_PREFIX "cdap"
-#include <librina/logs.h>
-#include <librina/cdap.h>
-#include <librina/application.h>
-#include <librina/ipc-process.h>
-#include <librina/timer.h>
+#include "librina/logs.h"
+#include "librina/cdap.h"
+#include "librina/application.h"
+#include "librina/ipc-process.h"
+#include "librina/timer.h"
+#include "librina/cdap_v2.h"
+
 #include <algorithm>
 #include "CDAP.pb.h"
 
-#include "cdap_provider.h"
-
+namespace rina {
 namespace cdap {
+
+// STRUCT CDAPMessage
+CDAPMessage::CDAPMessage()
+{
+  abs_syntax_ = 0;
+  auth_mech_ = cdap_rib::auth_info_t::AUTH_NONE;
+  filter_ = 0;
+  flags_ = cdap_rib::flags_t::NONE_FLAGS;
+  invoke_id_ = 0;
+  obj_inst_ = 0;
+  obj_value_.size_ = 0;
+  op_code_ = NONE_OPCODE;
+  result_ = 0;
+  scope_ = 0;
+  version_ = 0;
+}
 
 Singleton<CDAPProviderFactory_> CDAPProviderFactory;
 
 class CDAPMessageFactory
 {
  public:
-  static cdap_m_t* getOpenConnectionRequestMessage(cdap_rib::con_handle_t &con,
+  static cdap_m_t* getOpenConnectionRequestMessage(const cdap_rib::con_handle_t &con,
                                                    int invoke_id);
-  static cdap_m_t* getOpenConnectionResponseMessage(cdap_rib::con_handle_t &con,
-                                                    cdap_rib::res_info_t &res,
+  static cdap_m_t* getOpenConnectionResponseMessage(const cdap_rib::con_handle_t &con,
+                                                    const cdap_rib::res_info_t &res,
                                                     int invoke_id);
-  static cdap_m_t* getReleaseConnectionRequestMessage(cdap_rib::flags_t &flags);
+  static cdap_m_t* getReleaseConnectionRequestMessage(const cdap_rib::flags_t &flags);
   static cdap_m_t* getReleaseConnectionResponseMessage(
-      cdap_rib::flags_t &flags, cdap_rib::res_info_t &res, int invoke_id);
-  static cdap_m_t* getCreateObjectRequestMessage(cdap_rib::filt_info_t &filt,
-                                                 cdap_rib::flags_t &flags,
-                                                 cdap_rib::obj_info_t &obj);
-  static cdap_m_t* getCreateObjectResponseMessage(cdap_rib::flags_t &flags,
-                                                  cdap_rib::obj_info_t &obj,
-                                                  cdap_rib::res_info_t &res,
+      const cdap_rib::flags_t &flags, const cdap_rib::res_info_t &res, int invoke_id);
+  static cdap_m_t* getCreateObjectRequestMessage(const cdap_rib::filt_info_t &filt,
+                                                 const cdap_rib::flags_t &flags,
+                                                 const cdap_rib::obj_info_t &obj);
+  static cdap_m_t* getCreateObjectResponseMessage(const cdap_rib::flags_t &flags,
+                                                  const cdap_rib::obj_info_t &obj,
+                                                  const cdap_rib::res_info_t &res,
                                                   int invoke_id);
-  static cdap_m_t* getDeleteObjectRequestMessage(cdap_rib::filt_info_t &filt,
-                                                 cdap_rib::flags_t &flags,
-                                                 cdap_rib::obj_info_t &obj);
-  static cdap_m_t* getDeleteObjectResponseMessage(cdap_rib::flags_t &flags,
-                                                  cdap_rib::obj_info_t &obj,
-                                                  cdap_rib::res_info_t &res,
+  static cdap_m_t* getDeleteObjectRequestMessage(const cdap_rib::filt_info_t &filt,
+                                                 const cdap_rib::flags_t &flags,
+                                                 const cdap_rib::obj_info_t &obj);
+  static cdap_m_t* getDeleteObjectResponseMessage(const cdap_rib::flags_t &flags,
+                                                  const cdap_rib::obj_info_t &obj,
+                                                  const cdap_rib::res_info_t &res,
                                                   int invoke_id);
-  static cdap_m_t* getStartObjectRequestMessage(cdap_rib::filt_info_t &filt,
-                                                cdap_rib::flags_t &flags,
-                                                cdap_rib::obj_info_t &obj);
-  static cdap_m_t* getStartObjectResponseMessage(cdap_rib::flags_t &flags,
-                                                 cdap_rib::res_info_t &res,
+  static cdap_m_t* getStartObjectRequestMessage(const cdap_rib::filt_info_t &filt,
+                                                const cdap_rib::flags_t &flags,
+                                                const cdap_rib::obj_info_t &obj);
+  static cdap_m_t* getStartObjectResponseMessage(const cdap_rib::flags_t &flags,
+                                                 const cdap_rib::res_info_t &res,
                                                  int invoke_id);
-  static cdap_m_t* getStartObjectResponseMessage(cdap_rib::flags_t &flags,
-                                                 cdap_rib::obj_info_t &obj,
-                                                 cdap_rib::res_info_t &res,
+  static cdap_m_t* getStartObjectResponseMessage(const cdap_rib::flags_t &flags,
+                                                 const cdap_rib::obj_info_t &obj,
+                                                 const cdap_rib::res_info_t &res,
                                                  int invoke_id);
-  static cdap_m_t* getStopObjectRequestMessage(cdap_rib::filt_info_t &filt,
-                                               cdap_rib::flags_t &flags,
-                                               cdap_rib::obj_info_t &obj);
-  static cdap_m_t* getStopObjectResponseMessage(cdap_rib::flags_t &flags,
-                                                cdap_rib::res_info_t &res,
+  static cdap_m_t* getStopObjectRequestMessage(const cdap_rib::filt_info_t &filt,
+                                               const cdap_rib::flags_t &flags,
+                                               const cdap_rib::obj_info_t &obj);
+  static cdap_m_t* getStopObjectResponseMessage(const cdap_rib::flags_t &flags,
+                                                const cdap_rib::res_info_t &res,
                                                 int invoke_id);
-  static cdap_m_t* getReadObjectRequestMessage(cdap_rib::filt_info_t &filt,
-                                               cdap_rib::flags_t &flags,
-                                               cdap_rib::obj_info_t &obj);
-  static cdap_m_t* getReadObjectResponseMessage(cdap_rib::flags_t &flags,
-                                                cdap_rib::obj_info_t &obj,
-                                                cdap_rib::res_info_t &res,
+  static cdap_m_t* getReadObjectRequestMessage(const cdap_rib::filt_info_t &filt,
+                                               const cdap_rib::flags_t &flags,
+                                               const cdap_rib::obj_info_t &obj);
+  static cdap_m_t* getReadObjectResponseMessage(const cdap_rib::flags_t &flags,
+                                                const cdap_rib::obj_info_t &obj,
+                                                const cdap_rib::res_info_t &res,
                                                 int invoke_id);
-  static cdap_m_t* getWriteObjectRequestMessage(cdap_rib::filt_info_t &filt,
-                                                cdap_rib::flags_t &flags,
-                                                cdap_rib::obj_info_t &obj);
-  static cdap_m_t* getWriteObjectResponseMessage(cdap_rib::flags_t &flags,
-                                                 cdap_rib::res_info_t &res,
+  static cdap_m_t* getWriteObjectRequestMessage(const cdap_rib::filt_info_t &filt,
+                                                const cdap_rib::flags_t &flags,
+                                                const cdap_rib::obj_info_t &obj);
+  static cdap_m_t* getWriteObjectResponseMessage(const cdap_rib::flags_t &flags,
+                                                 const cdap_rib::res_info_t &res,
                                                  int invoke_id);
-  static cdap_m_t* getCancelReadRequestMessage(cdap_rib::flags_t &flags,
+  static cdap_m_t* getCancelReadRequestMessage(const cdap_rib::flags_t &flags,
                                                int invoke_id);
-  static cdap_m_t* getCancelReadResponseMessage(cdap_rib::flags_t &flags,
-                                                cdap_rib::res_info_t &res,
+  static cdap_m_t* getCancelReadResponseMessage(const cdap_rib::flags_t &flags,
+                                                const cdap_rib::res_info_t &res,
                                                 int invoke_id);
  private:
   static const int ABSTRACT_SYNTAX_VERSION;
@@ -408,75 +425,75 @@ class CDAPSessionManager
       const cdap_rib::SerializedObject &encodedcdap_m_t, int portId);
   void messageSent(const cdap_m_t &cdap_message, int port_id);
   int get_port_id(std::string destination_application_process_name);
-  cdap_m_t* getOpenConnectionRequestMessage(cdap_rib::con_handle_t &con);
-  cdap_m_t* getOpenConnectionResponseMessage(cdap_rib::con_handle_t &con,
-                                             cdap_rib::res_info_t &res,
+  cdap_m_t* getOpenConnectionRequestMessage(const cdap_rib::con_handle_t &con);
+  cdap_m_t* getOpenConnectionResponseMessage(const cdap_rib::con_handle_t &con,
+                                             const cdap_rib::res_info_t &res,
                                              int invoke_id);
   cdap_m_t* getReleaseConnectionRequestMessage(int port_id,
-                                               cdap_rib::flags_t &flags,
+                                               const cdap_rib::flags_t &flags,
                                                bool invoke_id);
-  cdap_m_t* getReleaseConnectionResponseMessage(cdap_rib::flags_t &flags,
-                                                cdap_rib::res_info_t &res,
+  cdap_m_t* getReleaseConnectionResponseMessage(const cdap_rib::flags_t &flags,
+                                                const cdap_rib::res_info_t &res,
                                                 int invoke_id);
   cdap_m_t* getCreateObjectRequestMessage(int port_id,
-                                          cdap_rib::filt_info_t &filt,
-                                          cdap_rib::flags_t &flags,
-                                          cdap_rib::obj_info_t &obj,
+                                          const cdap_rib::filt_info_t &filt,
+                                          const cdap_rib::flags_t &flags,
+                                          const cdap_rib::obj_info_t &obj,
                                           bool invoke_id);
-  cdap_m_t* getCreateObjectResponseMessage(cdap_rib::flags_t &flags,
-                                           cdap_rib::obj_info_t &obj,
-                                           cdap_rib::res_info_t &res,
+  cdap_m_t* getCreateObjectResponseMessage(const cdap_rib::flags_t &flags,
+                                           const cdap_rib::obj_info_t &obj,
+                                           const cdap_rib::res_info_t &res,
                                            int invoke_id);
   cdap_m_t* getDeleteObjectRequestMessage(int port_id,
-                                          cdap_rib::filt_info_t &filt,
-                                          cdap_rib::flags_t &flags,
-                                          cdap_rib::obj_info_t &obj,
+                                          const cdap_rib::filt_info_t &filt,
+                                          const cdap_rib::flags_t &flags,
+                                          const cdap_rib::obj_info_t &obj,
                                           bool invoke_id);
-  cdap_m_t* getDeleteObjectResponseMessage(cdap_rib::flags_t &flags,
-                                           cdap_rib::obj_info_t &obj,
-                                           cdap_rib::res_info_t &res,
+  cdap_m_t* getDeleteObjectResponseMessage(const cdap_rib::flags_t &flags,
+                                           const cdap_rib::obj_info_t &obj,
+                                           const cdap_rib::res_info_t &res,
                                            int invoke_id);
   cdap_m_t* getStartObjectRequestMessage(int port_id,
-                                         cdap_rib::filt_info_t &filt,
-                                         cdap_rib::flags_t &flags,
-                                         cdap_rib::obj_info_t &obj,
+                                         const cdap_rib::filt_info_t &filt,
+                                         const cdap_rib::flags_t &flags,
+                                         const cdap_rib::obj_info_t &obj,
                                          bool invoke_id);
-  cdap_m_t* getStartObjectResponseMessage(cdap_rib::flags_t &flags,
-                                          cdap_rib::res_info_t &res,
+  cdap_m_t* getStartObjectResponseMessage(const cdap_rib::flags_t &flags,
+                                          const cdap_rib::res_info_t &res,
                                           int invoke_id);
-  cdap_m_t* getStartObjectResponseMessage(cdap_rib::flags_t &flags,
-                                          cdap_rib::obj_info_t &obj,
-                                          cdap_rib::res_info_t &res,
+  cdap_m_t* getStartObjectResponseMessage(const cdap_rib::flags_t &flags,
+                                          const cdap_rib::obj_info_t &obj,
+                                          const cdap_rib::res_info_t &res,
                                           int invoke_id);
   cdap_m_t* getStopObjectRequestMessage(int port_id,
-                                        cdap_rib::filt_info_t &filt,
-                                        cdap_rib::flags_t &flags,
-                                        cdap_rib::obj_info_t &obj,
+                                        const cdap_rib::filt_info_t &filt,
+                                        const cdap_rib::flags_t &flags,
+                                        const cdap_rib::obj_info_t &obj,
                                         bool invoke_id);
-  cdap_m_t* getStopObjectResponseMessage(cdap_rib::flags_t &flags,
-                                         cdap_rib::res_info_t &res,
+  cdap_m_t* getStopObjectResponseMessage(const cdap_rib::flags_t &flags,
+                                         const cdap_rib::res_info_t &res,
                                          int invoke_id);
   cdap_m_t* getReadObjectRequestMessage(int port_id,
-                                        cdap_rib::filt_info_t &filt,
-                                        cdap_rib::flags_t &flags,
-                                        cdap_rib::obj_info_t &obj,
+                                        const cdap_rib::filt_info_t &filt,
+                                        const cdap_rib::flags_t &flags,
+                                        const cdap_rib::obj_info_t &obj,
                                         bool invoke_id);
-  cdap_m_t* getReadObjectResponseMessage(cdap_rib::flags_t &flags,
-                                         cdap_rib::obj_info_t &obj,
-                                         cdap_rib::res_info_t &res,
+  cdap_m_t* getReadObjectResponseMessage(const cdap_rib::flags_t &flags,
+                                         const cdap_rib::obj_info_t &obj,
+                                         const cdap_rib::res_info_t &res,
                                          int invoke_id);
   cdap_m_t* getWriteObjectRequestMessage(int port_id,
-                                         cdap_rib::filt_info_t &filt,
-                                         cdap_rib::flags_t &flags,
-                                         cdap_rib::obj_info_t &obj,
+                                         const cdap_rib::filt_info_t &filt,
+                                         const cdap_rib::flags_t &flags,
+                                         const cdap_rib::obj_info_t &obj,
                                          bool invoke_id);
-  cdap_m_t* getWriteObjectResponseMessage(cdap_rib::flags_t &flags,
-                                          cdap_rib::res_info_t &res,
+  cdap_m_t* getWriteObjectResponseMessage(const cdap_rib::flags_t &flags,
+                                          const cdap_rib::res_info_t &res,
                                           int invoke_id);
-  cdap_m_t* getCancelReadRequestMessage(cdap_rib::flags_t &flags,
+  cdap_m_t* getCancelReadRequestMessage(const cdap_rib::flags_t &flags,
                                         int invoke_id);
-  cdap_m_t* getCancelReadResponseMessage(cdap_rib::flags_t &flags,
-                                         cdap_rib::res_info_t &res,
+  cdap_m_t* getCancelReadResponseMessage(const cdap_rib::flags_t &flags,
+                                         const cdap_rib::res_info_t &res,
                                          int invoke_id);
  private:
   void assignInvokeId(cdap_m_t &cdap_message, bool invoke_id, int port_id,
@@ -528,7 +545,6 @@ class CDAPProvider : public CDAPProviderInterface
                   const cdap_rib::flags_t &flags,
                   const cdap_rib::filt_info_t &filt);
   void open_connection_response(const cdap_rib::con_handle_t &con,
-                                const cdap_rib::flags_t &flags,
                                 const cdap_rib::res_info_t &res,
                                 int message_id);
   void close_connection_response(const cdap_rib::con_handle_t &con,
@@ -538,29 +554,29 @@ class CDAPProvider : public CDAPProviderInterface
   void remote_create_response(const cdap_rib::con_handle_t &con,
                               const cdap_rib::obj_info_t &obj,
                               const cdap_rib::flags_t &flags,
-                              const cdap_rib::res_info_t* res, int message_id);
+                              const cdap_rib::res_info_t &res, int message_id);
   void remote_delete_response(const cdap_rib::con_handle_t &con,
                               const cdap_rib::obj_info_t &obj,
                               const cdap_rib::flags_t &flags,
-                              const cdap_rib::res_info_t* res, int message_id);
+                              const cdap_rib::res_info_t &res, int message_id);
   void remote_read_response(const cdap_rib::con_handle_t &con,
                             const cdap_rib::obj_info_t &obj,
                             const cdap_rib::flags_t &flags,
-                            const cdap_rib::res_info_t* res, int message_id);
+                            const cdap_rib::res_info_t &res, int message_id);
   void remote_cancel_read_response(const cdap_rib::con_handle_t &con,
                                    const cdap_rib::flags_t &flags,
-                                   const cdap_rib::res_info_t* res,
+                                   const cdap_rib::res_info_t &res,
                                    int message_id);
   void remote_write_response(const cdap_rib::con_handle_t &con,
                              const cdap_rib::flags_t &flags,
-                             const cdap_rib::res_info_t* res, int message_id);
+                             const cdap_rib::res_info_t &res, int message_id);
   void remote_start_response(const cdap_rib::con_handle_t &con,
                              const cdap_rib::obj_info_t &obj,
                              const cdap_rib::flags_t &flags,
-                             const cdap_rib::res_info_t* res, int message_id);
+                             const cdap_rib::res_info_t &res, int message_id);
   void remote_stop_response(const cdap_rib::con_handle_t &con,
                             const cdap_rib::flags_t &flags,
-                            const cdap_rib::res_info_t* res, int message_id);
+                            const cdap_rib::res_info_t &res, int message_id);
   void new_message(cdap_rib::SerializedObject &message, int port);
  protected:
   CDAPSessionManager *manager_;
@@ -598,7 +614,7 @@ class GPBSerializer : public SerializerInterface
 
 // CLASS CDAPMessageFactory
 cdap_m_t* CDAPMessageFactory::getOpenConnectionRequestMessage(
-    cdap_rib::con_handle_t &con, int invoke_id)
+    const cdap_rib::con_handle_t &con, int invoke_id)
 {
   cdap_m_t *cdap_message = new cdap_m_t();
   cdap_message->abs_syntax_ = ABSTRACT_SYNTAX_VERSION;
@@ -622,7 +638,7 @@ cdap_m_t* CDAPMessageFactory::getOpenConnectionRequestMessage(
   return cdap_message;
 }
 cdap_m_t* CDAPMessageFactory::getOpenConnectionResponseMessage(
-    cdap_rib::con_handle_t &con, cdap_rib::res_info_t &res, int invoke_id)
+    const cdap_rib::con_handle_t &con, const cdap_rib::res_info_t &res, int invoke_id)
 {
   cdap_m_t *cdap_message = new cdap_m_t();
   cdap_message->abs_syntax_ = ABSTRACT_SYNTAX_VERSION;
@@ -650,7 +666,7 @@ cdap_m_t* CDAPMessageFactory::getOpenConnectionResponseMessage(
 }
 
 cdap_m_t* CDAPMessageFactory::getReleaseConnectionRequestMessage(
-    cdap_rib::flags_t &flags)
+    const cdap_rib::flags_t &flags)
 {
   cdap_m_t *cdap_message = new cdap_m_t();
   cdap_message->op_code_ = cdap_m_t::M_RELEASE;
@@ -659,7 +675,7 @@ cdap_m_t* CDAPMessageFactory::getReleaseConnectionRequestMessage(
 }
 
 cdap_m_t* CDAPMessageFactory::getReleaseConnectionResponseMessage(
-    cdap_rib::flags_t &flags, cdap_rib::res_info_t &res, int invoke_id)
+    const cdap_rib::flags_t &flags, const cdap_rib::res_info_t &res, int invoke_id)
 {
   cdap_m_t *cdap_message = new cdap_m_t();
   cdap_message->op_code_ = cdap_m_t::M_RELEASE_R;
@@ -671,8 +687,8 @@ cdap_m_t* CDAPMessageFactory::getReleaseConnectionResponseMessage(
 }
 
 cdap_m_t* CDAPMessageFactory::getCreateObjectRequestMessage(
-    cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
-    cdap_rib::obj_info_t &obj)
+    const cdap_rib::filt_info_t &filt, const cdap_rib::flags_t &flags,
+    const cdap_rib::obj_info_t &obj)
 {
   cdap_m_t *cdap_message = new cdap_m_t();
   cdap_message->op_code_ = cdap_m_t::M_CREATE;
@@ -682,12 +698,13 @@ cdap_m_t* CDAPMessageFactory::getCreateObjectRequestMessage(
   cdap_message->obj_class_ = obj.class_;
   cdap_message->obj_inst_ = obj.inst_;
   cdap_message->obj_name_ = obj.name_;
+  cdap_message->obj_value_ = obj.value_;
 
   return cdap_message;
 }
 cdap_m_t* CDAPMessageFactory::getCreateObjectResponseMessage(
-    cdap_rib::flags_t &flags, cdap_rib::obj_info_t &obj,
-    cdap_rib::res_info_t &res, int invoke_id)
+    const cdap_rib::flags_t &flags, const cdap_rib::obj_info_t &obj,
+    const cdap_rib::res_info_t &res, int invoke_id)
 {
   cdap_m_t *cdap_message = new cdap_m_t();
   cdap_message->op_code_ = cdap_m_t::M_CREATE_R;
@@ -696,14 +713,15 @@ cdap_m_t* CDAPMessageFactory::getCreateObjectResponseMessage(
   cdap_message->obj_class_ = obj.class_;
   cdap_message->obj_inst_ = obj.inst_;
   cdap_message->obj_name_ = obj.name_;
+  cdap_message->obj_value_ = obj.value_;
   cdap_message->result_ = res.result_;
   cdap_message->result_reason_ = res.result_reason_;
 
   return cdap_message;
 }
 cdap_m_t* CDAPMessageFactory::getDeleteObjectRequestMessage(
-    cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
-    cdap_rib::obj_info_t &obj)
+    const cdap_rib::filt_info_t &filt, const cdap_rib::flags_t &flags,
+    const cdap_rib::obj_info_t &obj)
 {
   cdap_m_t *cdap_message = new cdap_m_t();
   cdap_message->op_code_ = cdap_m_t::M_DELETE;
@@ -717,8 +735,8 @@ cdap_m_t* CDAPMessageFactory::getDeleteObjectRequestMessage(
   return cdap_message;
 }
 cdap_m_t* CDAPMessageFactory::getDeleteObjectResponseMessage(
-    cdap_rib::flags_t &flags, cdap_rib::obj_info_t &obj,
-    cdap_rib::res_info_t &res, int invoke_id)
+    const cdap_rib::flags_t &flags, const cdap_rib::obj_info_t &obj,
+    const cdap_rib::res_info_t &res, int invoke_id)
 {
   cdap_m_t *cdap_message = new cdap_m_t();
   cdap_message->op_code_ = cdap_m_t::M_DELETE_R;
@@ -732,8 +750,8 @@ cdap_m_t* CDAPMessageFactory::getDeleteObjectResponseMessage(
   return cdap_message;
 }
 cdap_m_t* CDAPMessageFactory::getStartObjectRequestMessage(
-    cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
-    cdap_rib::obj_info_t &obj)
+    const cdap_rib::filt_info_t &filt, const cdap_rib::flags_t &flags,
+    const cdap_rib::obj_info_t &obj)
 {
   cdap_m_t *cdap_message = new cdap_m_t();
   cdap_message->op_code_ = cdap_m_t::M_START;
@@ -743,10 +761,11 @@ cdap_m_t* CDAPMessageFactory::getStartObjectRequestMessage(
   cdap_message->obj_class_ = obj.class_;
   cdap_message->obj_inst_ = obj.inst_;
   cdap_message->obj_name_ = obj.name_;
+  cdap_message->obj_value_ = obj.value_;
   return cdap_message;
 }
 cdap_m_t* CDAPMessageFactory::getStartObjectResponseMessage(
-    cdap_rib::flags_t &flags, cdap_rib::res_info_t &res, int invoke_id)
+    const cdap_rib::flags_t &flags, const cdap_rib::res_info_t &res, int invoke_id)
 {
   cdap_m_t *cdap_message = new cdap_m_t();
   cdap_message->op_code_ = cdap_m_t::M_START_R;
@@ -757,8 +776,8 @@ cdap_m_t* CDAPMessageFactory::getStartObjectResponseMessage(
   return cdap_message;
 }
 cdap_m_t* CDAPMessageFactory::getStartObjectResponseMessage(
-    cdap_rib::flags_t &flags, cdap_rib::obj_info_t &obj,
-    cdap_rib::res_info_t &res, int invoke_id)
+    const cdap_rib::flags_t &flags, const cdap_rib::obj_info_t &obj,
+    const cdap_rib::res_info_t &res, int invoke_id)
 {
   cdap_m_t *cdap_message = new cdap_m_t();
   cdap_message->op_code_ = cdap_m_t::M_START_R;
@@ -769,11 +788,12 @@ cdap_m_t* CDAPMessageFactory::getStartObjectResponseMessage(
   cdap_message->obj_class_ = obj.class_;
   cdap_message->obj_inst_ = obj.inst_;
   cdap_message->obj_name_ = obj.name_;
+  cdap_message->obj_value_ = obj.value_;
   return cdap_message;
 }
 cdap_m_t* CDAPMessageFactory::getStopObjectRequestMessage(
-    cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
-    cdap_rib::obj_info_t &obj)
+    const cdap_rib::filt_info_t &filt, const cdap_rib::flags_t &flags,
+    const cdap_rib::obj_info_t &obj)
 {
   cdap_m_t *cdap_message = new cdap_m_t();
   cdap_message->op_code_ = cdap_m_t::M_STOP;
@@ -783,10 +803,11 @@ cdap_m_t* CDAPMessageFactory::getStopObjectRequestMessage(
   cdap_message->obj_class_ = obj.class_;
   cdap_message->obj_inst_ = obj.inst_;
   cdap_message->obj_name_ = obj.name_;
+  cdap_message->obj_value_ = obj.value_;
   return cdap_message;
 }
 cdap_m_t* CDAPMessageFactory::getStopObjectResponseMessage(
-    cdap_rib::flags_t &flags, cdap_rib::res_info_t &res, int invoke_id)
+    const cdap_rib::flags_t &flags, const cdap_rib::res_info_t &res, int invoke_id)
 {
   cdap_m_t *cdap_message = new cdap_m_t();
   cdap_message->op_code_ = cdap_m_t::M_STOP_R;
@@ -797,8 +818,8 @@ cdap_m_t* CDAPMessageFactory::getStopObjectResponseMessage(
   return cdap_message;
 }
 cdap_m_t* CDAPMessageFactory::getReadObjectRequestMessage(
-    cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
-    cdap_rib::obj_info_t &obj)
+    const cdap_rib::filt_info_t &filt, const cdap_rib::flags_t &flags,
+    const cdap_rib::obj_info_t &obj)
 {
   cdap_m_t *cdap_message = new cdap_m_t();
   cdap_message->op_code_ = cdap_m_t::M_READ;
@@ -812,8 +833,8 @@ cdap_m_t* CDAPMessageFactory::getReadObjectRequestMessage(
 }
 
 cdap_m_t* CDAPMessageFactory::getReadObjectResponseMessage(
-    cdap_rib::flags_t &flags, cdap_rib::obj_info_t &obj,
-    cdap_rib::res_info_t &res, int invoke_id)
+    const cdap_rib::flags_t &flags, const cdap_rib::obj_info_t &obj,
+    const cdap_rib::res_info_t &res, int invoke_id)
 {
   cdap_m_t *cdap_message = new cdap_m_t();
   cdap_message->op_code_ = cdap_m_t::M_READ_R;
@@ -828,8 +849,8 @@ cdap_m_t* CDAPMessageFactory::getReadObjectResponseMessage(
 }
 
 cdap_m_t* CDAPMessageFactory::getWriteObjectRequestMessage(
-    cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
-    cdap_rib::obj_info_t &obj)
+    const cdap_rib::filt_info_t &filt, const cdap_rib::flags_t &flags,
+    const cdap_rib::obj_info_t &obj)
 {
   cdap_m_t *cdap_message = new cdap_m_t();
   cdap_message->op_code_ = cdap_m_t::M_WRITE;
@@ -839,10 +860,11 @@ cdap_m_t* CDAPMessageFactory::getWriteObjectRequestMessage(
   cdap_message->obj_class_ = obj.class_;
   cdap_message->obj_inst_ = obj.inst_;
   cdap_message->obj_name_ = obj.name_;
+  cdap_message->obj_value_ = obj.value_;
   return cdap_message;
 }
 cdap_m_t* CDAPMessageFactory::getWriteObjectResponseMessage(
-    cdap_rib::flags_t &flags, cdap_rib::res_info_t &res, int invoke_id)
+    const cdap_rib::flags_t &flags, const cdap_rib::res_info_t &res, int invoke_id)
 {
   cdap_m_t *cdap_message = new cdap_m_t();
   cdap_message->op_code_ = cdap_m_t::M_WRITE_R;
@@ -853,7 +875,7 @@ cdap_m_t* CDAPMessageFactory::getWriteObjectResponseMessage(
   return cdap_message;
 }
 cdap_m_t* CDAPMessageFactory::getCancelReadRequestMessage(
-    cdap_rib::flags_t &flags, int invoke_id)
+    const cdap_rib::flags_t &flags, int invoke_id)
 {
   cdap_m_t *cdap_message = new cdap_m_t();
   cdap_message->op_code_ = cdap_m_t::M_CANCELREAD;
@@ -862,7 +884,7 @@ cdap_m_t* CDAPMessageFactory::getCancelReadRequestMessage(
   return cdap_message;
 }
 cdap_m_t* CDAPMessageFactory::getCancelReadResponseMessage(
-    cdap_rib::flags_t &flags, cdap_rib::res_info_t &res, int invoke_id)
+    const cdap_rib::flags_t &flags, const cdap_rib::res_info_t &res, int invoke_id)
 {
   cdap_m_t *cdap_message = new cdap_m_t();
   cdap_message->op_code_ = cdap_m_t::M_CANCELREAD_R;
@@ -1408,7 +1430,7 @@ void CDAPMessageValidator::validateObjName(const cdap_m_t *message)
 
 void CDAPMessageValidator::validateObjValue(const cdap_m_t *message)
 {
-  if (message->obj_value_ == 0) {
+  if (message->obj_value_.size_ == 0) {
     if (message->op_code_ == cdap_m_t::M_WRITE) {
       throw rina::CDAPException(
           "The objValue parameter must be set for M_WRITE messages");
@@ -2204,7 +2226,7 @@ int CDAPSessionManager::get_port_id(
 }
 
 cdap_m_t* CDAPSessionManager::getOpenConnectionRequestMessage(
-    cdap_rib::con_handle_t &con)
+    const cdap_rib::con_handle_t &con)
 {
   CDAPSession *cdap_session = get_cdap_session(con.port_);
   if (cdap_session == 0) {
@@ -2215,14 +2237,14 @@ cdap_m_t* CDAPSessionManager::getOpenConnectionRequestMessage(
 }
 
 cdap_m_t* CDAPSessionManager::getOpenConnectionResponseMessage(
-    cdap_rib::con_handle_t &con, cdap_rib::res_info_t &res, int invoke_id)
+    const cdap_rib::con_handle_t &con, const cdap_rib::res_info_t &res, int invoke_id)
 {
   return CDAPMessageFactory::getOpenConnectionResponseMessage(con, res,
                                                               invoke_id);
 }
 
 cdap_m_t* CDAPSessionManager::getReleaseConnectionRequestMessage(
-    int port_id, cdap_rib::flags_t &flags, bool invoke_id)
+    int port_id, const cdap_rib::flags_t &flags, bool invoke_id)
 {
   cdap_m_t *cdap_message =
       CDAPMessageFactory::getReleaseConnectionRequestMessage(flags);
@@ -2231,14 +2253,14 @@ cdap_m_t* CDAPSessionManager::getReleaseConnectionRequestMessage(
 }
 
 cdap_m_t* CDAPSessionManager::getReleaseConnectionResponseMessage(
-    cdap_rib::flags_t &flags, cdap_rib::res_info_t &res, int invoke_id)
+    const cdap_rib::flags_t &flags, const cdap_rib::res_info_t &res, int invoke_id)
 {
   return CDAPMessageFactory::getReleaseConnectionResponseMessage(flags, res,
                                                                  invoke_id);
 }
 cdap_m_t* CDAPSessionManager::getCreateObjectRequestMessage(
-    int port_id, cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
-    cdap_rib::obj_info_t &obj, bool invoke_id)
+    int port_id, const cdap_rib::filt_info_t &filt, const cdap_rib::flags_t &flags,
+    const cdap_rib::obj_info_t &obj, bool invoke_id)
 {
 
   cdap_m_t *cdap_message = CDAPMessageFactory::getCreateObjectRequestMessage(
@@ -2249,16 +2271,16 @@ cdap_m_t* CDAPSessionManager::getCreateObjectRequestMessage(
 }
 
 cdap_m_t* CDAPSessionManager::getCreateObjectResponseMessage(
-    cdap_rib::flags_t &flags, cdap_rib::obj_info_t &obj,
-    cdap_rib::res_info_t &res, int invoke_id)
+    const cdap_rib::flags_t &flags, const cdap_rib::obj_info_t &obj,
+    const cdap_rib::res_info_t &res, int invoke_id)
 {
   return CDAPMessageFactory::getCreateObjectResponseMessage(flags, obj, res,
                                                             invoke_id);
 }
 
 cdap_m_t* CDAPSessionManager::getDeleteObjectRequestMessage(
-    int port_id, cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
-    cdap_rib::obj_info_t &obj, bool invoke_id)
+    int port_id, const cdap_rib::filt_info_t &filt, const cdap_rib::flags_t &flags,
+    const cdap_rib::obj_info_t &obj, bool invoke_id)
 {
   cdap_m_t *cdap_message = CDAPMessageFactory::getDeleteObjectRequestMessage(
       filt, flags, obj);
@@ -2267,16 +2289,16 @@ cdap_m_t* CDAPSessionManager::getDeleteObjectRequestMessage(
 }
 
 cdap_m_t* CDAPSessionManager::getDeleteObjectResponseMessage(
-    cdap_rib::flags_t &flags, cdap_rib::obj_info_t &obj,
-    cdap_rib::res_info_t &res, int invoke_id)
+    const cdap_rib::flags_t &flags, const cdap_rib::obj_info_t &obj,
+    const cdap_rib::res_info_t &res, int invoke_id)
 {
   return CDAPMessageFactory::getDeleteObjectResponseMessage(flags, obj, res,
                                                             invoke_id);
 }
 
 cdap_m_t* CDAPSessionManager::getStartObjectRequestMessage(
-    int port_id, cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
-    cdap_rib::obj_info_t &obj, bool invoke_id)
+    int port_id, const cdap_rib::filt_info_t &filt, const cdap_rib::flags_t &flags,
+    const cdap_rib::obj_info_t &obj, bool invoke_id)
 {
   cdap_m_t *cdap_message = CDAPMessageFactory::getStartObjectRequestMessage(
       filt, flags, obj);
@@ -2285,23 +2307,23 @@ cdap_m_t* CDAPSessionManager::getStartObjectRequestMessage(
 }
 
 cdap_m_t* CDAPSessionManager::getStartObjectResponseMessage(
-    cdap_rib::flags_t &flags, cdap_rib::res_info_t &res, int invoke_id)
+    const cdap_rib::flags_t &flags, const cdap_rib::res_info_t &res, int invoke_id)
 {
   return CDAPMessageFactory::getStartObjectResponseMessage(flags, res,
                                                            invoke_id);
 }
 
 cdap_m_t* CDAPSessionManager::getStartObjectResponseMessage(
-    cdap_rib::flags_t &flags, cdap_rib::obj_info_t &obj,
-    cdap_rib::res_info_t &res, int invoke_id)
+    const cdap_rib::flags_t &flags, const cdap_rib::obj_info_t &obj,
+    const cdap_rib::res_info_t &res, int invoke_id)
 {
   return CDAPMessageFactory::getStartObjectResponseMessage(flags, obj, res,
                                                            invoke_id);
 }
 
 cdap_m_t* CDAPSessionManager::getStopObjectRequestMessage(
-    int port_id, cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
-    cdap_rib::obj_info_t &obj, bool invoke_id)
+    int port_id, const cdap_rib::filt_info_t &filt, const cdap_rib::flags_t &flags,
+    const cdap_rib::obj_info_t &obj, bool invoke_id)
 {
   cdap_m_t *cdap_message = CDAPMessageFactory::getStopObjectRequestMessage(
       filt, flags, obj);
@@ -2310,14 +2332,14 @@ cdap_m_t* CDAPSessionManager::getStopObjectRequestMessage(
 }
 
 cdap_m_t* CDAPSessionManager::getStopObjectResponseMessage(
-    cdap_rib::flags_t &flags, cdap_rib::res_info_t &res, int invoke_id)
+    const cdap_rib::flags_t &flags, const cdap_rib::res_info_t &res, int invoke_id)
 {
   return CDAPMessageFactory::getStopObjectResponseMessage(flags, res, invoke_id);
 }
 
 cdap_m_t* CDAPSessionManager::getReadObjectRequestMessage(
-    int port_id, cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
-    cdap_rib::obj_info_t &obj, bool invoke_id)
+    int port_id, const cdap_rib::filt_info_t &filt, const cdap_rib::flags_t &flags,
+    const cdap_rib::obj_info_t &obj, bool invoke_id)
 {
   cdap_m_t *cdap_message = CDAPMessageFactory::getReadObjectRequestMessage(
       filt, flags, obj);
@@ -2326,16 +2348,16 @@ cdap_m_t* CDAPSessionManager::getReadObjectRequestMessage(
 }
 
 cdap_m_t* CDAPSessionManager::getReadObjectResponseMessage(
-    cdap_rib::flags_t &flags, cdap_rib::obj_info_t &obj,
-    cdap_rib::res_info_t &res, int invoke_id)
+    const cdap_rib::flags_t &flags, const cdap_rib::obj_info_t &obj,
+    const cdap_rib::res_info_t &res, int invoke_id)
 {
   return CDAPMessageFactory::getReadObjectResponseMessage(flags, obj, res,
                                                           invoke_id);
 }
 
 cdap_m_t* CDAPSessionManager::getWriteObjectRequestMessage(
-    int port_id, cdap_rib::filt_info_t &filt, cdap_rib::flags_t &flags,
-    cdap_rib::obj_info_t &obj, bool invoke_id)
+    int port_id, const cdap_rib::filt_info_t &filt, const cdap_rib::flags_t &flags,
+    const cdap_rib::obj_info_t &obj, bool invoke_id)
 {
   cdap_m_t *cdap_message = CDAPMessageFactory::getWriteObjectRequestMessage(
       filt, flags, obj);
@@ -2344,20 +2366,20 @@ cdap_m_t* CDAPSessionManager::getWriteObjectRequestMessage(
 }
 
 cdap_m_t* CDAPSessionManager::getWriteObjectResponseMessage(
-    cdap_rib::flags_t &flags, cdap_rib::res_info_t &res, int invoke_id)
+    const cdap_rib::flags_t &flags, const cdap_rib::res_info_t &res, int invoke_id)
 {
   return CDAPMessageFactory::getWriteObjectResponseMessage(flags, res,
                                                            invoke_id);
 }
 
 cdap_m_t* CDAPSessionManager::getCancelReadRequestMessage(
-    cdap_rib::flags_t &flags, int invoke_id)
+    const cdap_rib::flags_t &flags, int invoke_id)
 {
   return CDAPMessageFactory::getCancelReadRequestMessage(flags, invoke_id);
 }
 
 cdap_m_t* CDAPSessionManager::getCancelReadResponseMessage(
-    cdap_rib::flags_t &flags, cdap_rib::res_info_t &res, int invoke_id)
+    const cdap_rib::flags_t &flags, const cdap_rib::res_info_t &res, int invoke_id)
 {
   return CDAPMessageFactory::getCancelReadResponseMessage(flags, res, invoke_id);
 }
@@ -2383,191 +2405,259 @@ const cdap_m_t* GPBSerializer::deserializeMessage(
   cdap_m_t *cdapMessage = new cdap_m_t;
 
   gpfCDAPMessage.ParseFromArray(message.message_, message.size_);
-  cdapMessage->set_abs_syntax(gpfCDAPMessage.abssyntax());
-  int auth_type_val = gpfCDAPMessage.authmech();
-  CDAPMessage::AuthTypes auth_type =
-      static_cast<CDAPMessage::AuthTypes>(auth_type_val);
-  cdapMessage->set_auth_mech(auth_type);
-  AuthValue auth_value(gpfCDAPMessage.authvalue().authname(),
-                       gpfCDAPMessage.authvalue().authpassword(),
-                       gpfCDAPMessage.authvalue().authother());
-  cdapMessage->set_auth_value(auth_value);
+  // ABS_SYNTAX
+  if (gpfCDAPMessage.has_abssyntax())
+    cdapMessage->abs_syntax_ = gpfCDAPMessage.abssyntax();
+  // AUTH_MECH
+  if (gpfCDAPMessage.has_authmech()) {
+    int auth_type_val = gpfCDAPMessage.authmech();
+    cdap_rib::auth_info_t::AuthTypes auth_mech =
+        static_cast<cdap_rib::auth_info_t::AuthTypes>(auth_type_val);
+    cdapMessage->auth_mech_ = auth_mech;
+  }
+  // AUTH_VALUE
+  if (gpfCDAPMessage.has_authvalue()) {
+    AuthValue auth_value(gpfCDAPMessage.authvalue().authname(),
+                         gpfCDAPMessage.authvalue().authpassword(),
+                         gpfCDAPMessage.authvalue().authother());
+    cdapMessage->auth_value_ = auth_value;
+  }
+  // DEST_AE_INST
   if (gpfCDAPMessage.has_destaeinst())
-    cdapMessage->set_dest_ae_inst(gpfCDAPMessage.destaeinst());
+    cdapMessage->dest_ae_inst_ = gpfCDAPMessage.destaeinst();
+  // DEST_AE_NAME
   if (gpfCDAPMessage.has_destaename())
-    cdapMessage->set_dest_ae_name(gpfCDAPMessage.destaename());
+    cdapMessage->dest_ae_name_ = gpfCDAPMessage.destaename();
+  // DEST_AP_INST
   if (gpfCDAPMessage.has_destapinst())
-    cdapMessage->set_dest_ap_inst(gpfCDAPMessage.destapinst());
+    cdapMessage->dest_ap_inst_ = gpfCDAPMessage.destapinst();
+  // DEST_AP_NAME
   if (gpfCDAPMessage.has_destapname())
-    cdapMessage->set_dest_ap_name(gpfCDAPMessage.destapname());
+    cdapMessage->dest_ap_name_ = gpfCDAPMessage.destapname();
+  // FILTER
   if (gpfCDAPMessage.has_filter()) {
     char *filter = new char[gpfCDAPMessage.filter().size() + 1];
     strcpy(filter, gpfCDAPMessage.filter().c_str());
-    ;
-    cdapMessage->set_filter(filter);
+    cdapMessage->filter_ = filter;
   }
-  int flag_value = gpfCDAPMessage.flags();
-  CDAPMessage::Flags flags = static_cast<CDAPMessage::Flags>(flag_value);
-  cdapMessage->set_flags(flags);
-  cdapMessage->set_invoke_id(gpfCDAPMessage.invokeid());
+  // FLAGS
+  if (gpfCDAPMessage.has_flags()) {
+    int flag_value = gpfCDAPMessage.flags();
+    cdap_rib::flags_t::Flags flags =
+        static_cast<cdap_rib::flags_t::Flags>(flag_value);
+    cdapMessage->flags_ = flags;
+  }
+  // INVOKE_ID
+  if (gpfCDAPMessage.has_invokeid())
+    cdapMessage->invoke_id_ = gpfCDAPMessage.invokeid();
+  // OBJECT_CLASS
   if (gpfCDAPMessage.has_objclass())
-    cdapMessage->set_obj_class(gpfCDAPMessage.objclass());
-  cdapMessage->set_obj_inst(gpfCDAPMessage.objinst());
+    cdapMessage->obj_class_ = gpfCDAPMessage.objclass();
+  // OBJ_INSTANCE
+  if (gpfCDAPMessage.has_objinst())
+    cdapMessage->obj_inst_ = gpfCDAPMessage.objinst();
+  // OBJ_NAME
   if (gpfCDAPMessage.has_objname())
-    cdapMessage->set_obj_name(gpfCDAPMessage.objname());
-
-  cdap::impl::googleprotobuf::objVal_t obj_val_t = gpfCDAPMessage.objvalue();
-  if (obj_val_t.has_intval()) {
-    cdapMessage->set_obj_value(new IntObjectValue(obj_val_t.intval()));
-  }
-  if (obj_val_t.has_sintval()) {
-    cdapMessage->set_obj_value(new SIntObjectValue(obj_val_t.sintval()));
-  }
-  if (obj_val_t.has_int64val()) {
-    cdapMessage->set_obj_value(new LongObjectValue(obj_val_t.int64val()));
-  }
-  if (obj_val_t.has_sint64val()) {
-    cdapMessage->set_obj_value(new SLongObjectValue(obj_val_t.sint64val()));
-  }
-  if (obj_val_t.has_strval()) {
-    cdapMessage->set_obj_value(new StringObjectValue(obj_val_t.strval()));
-  }
-  if (obj_val_t.has_floatval()) {
-    cdapMessage->set_obj_value(new FloatObjectValue(obj_val_t.floatval()));
-  }
-  if (obj_val_t.has_doubleval()) {
-    cdapMessage->set_obj_value(new DoubleObjectValue(obj_val_t.doubleval()));
-  }
-  if (obj_val_t.has_boolval()) {
-    cdapMessage->set_obj_value(new BooleanObjectValue(obj_val_t.boolval()));
-  }
-  if (obj_val_t.has_byteval()) {
+    cdapMessage->obj_name_ = gpfCDAPMessage.objname();
+  // OBJ_VALUE
+  if (gpfCDAPMessage.has_objvalue()) {
+    cdap::impl::googleprotobuf::objVal_t obj_val_t = gpfCDAPMessage.objvalue();
     char *byte_val = new char[obj_val_t.byteval().size()];
-    SerializedObject sr_message(byte_val, obj_val_t.byteval().size());
     memcpy(byte_val, obj_val_t.byteval().data(), obj_val_t.byteval().size());
-    cdapMessage->set_obj_value(new ByteArrayObjectValue(sr_message));
+    cdapMessage->obj_value_.message_ = byte_val;
+    cdapMessage->obj_value_.size_ = obj_val_t.byteval().size();
   }
-
-  int opcode_val = gpfCDAPMessage.opcode();
-  CDAPMessage::Opcode opcode = static_cast<CDAPMessage::Opcode>(opcode_val);
-  cdapMessage->set_op_code(opcode);
-  cdapMessage->set_result(gpfCDAPMessage.result());
+  /*
+   if (obj_val_t.has_intval()) {
+   cdapMessage->obj_value_ = new IntObjectValue(obj_val_t.intval());
+   }
+   if (obj_val_t.has_sintval()) {
+   cdapMessage->obj_value_ = new SIntObjectValue(obj_val_t.sintval());
+   }
+   if (obj_val_t.has_int64val()) {
+   cdapMessage->obj_value_ = new LongObjectValue(obj_val_t.int64val());
+   }
+   if (obj_val_t.has_sint64val()) {
+   cdapMessage->obj_value_ = new SLongObjectValue(obj_val_t.sint64val());
+   }
+   if (obj_val_t.has_strval()) {
+   cdapMessage->obj_value_ = new StringObjectValue(obj_val_t.strval());
+   }
+   if (obj_val_t.has_floatval()) {
+   cdapMessage->obj_value_ = new FloatObjectValue(obj_val_t.floatval());
+   }
+   if (obj_val_t.has_doubleval()) {
+   cdapMessage->obj_value_ = new DoubleObjectValue(obj_val_t.doubleval());
+   }
+   if (obj_val_t.has_boolval()) {
+   cdapMessage->obj_value_ = new BooleanObjectValue(obj_val_t.boolval());
+   }
+   if (obj_val_t.has_byteval()) {
+   char *byte_val = new char[obj_val_t.byteval().size()];
+   SerializedObject sr_message(byte_val, obj_val_t.byteval().size());
+   memcpy(byte_val, obj_val_t.byteval().data(), obj_val_t.byteval().size());
+   cdapMessage->set_obj_value(new ByteArrayObjectValue(sr_message));
+   }
+   */
+  // OP_CODE
+  if (gpfCDAPMessage.has_opcode()) {
+    int opcode_val = gpfCDAPMessage.opcode();
+    CDAPMessage::Opcode opcode = static_cast<CDAPMessage::Opcode>(opcode_val);
+    cdapMessage->op_code_ = opcode;
+  }
+  // RESULT
+  if (gpfCDAPMessage.has_result())
+    cdapMessage->result_ = gpfCDAPMessage.result();
+  // RESULT_REASON
   if (gpfCDAPMessage.has_resultreason())
-    cdapMessage->set_result_reason(gpfCDAPMessage.resultreason());
-  cdapMessage->set_scope(gpfCDAPMessage.scope());
+    cdapMessage->result_reason_ = gpfCDAPMessage.resultreason();
+  // SCOPE
+  if (gpfCDAPMessage.has_scope())
+    cdapMessage->scope_ = gpfCDAPMessage.scope();
+  // SRC_AE_INST
   if (gpfCDAPMessage.has_srcaeinst())
-    cdapMessage->set_src_ae_inst(gpfCDAPMessage.srcaeinst());
+    cdapMessage->src_ae_inst_ = gpfCDAPMessage.srcaeinst();
+  // SRC_AE_NAME
   if (gpfCDAPMessage.has_srcaename())
-    cdapMessage->set_src_ae_name(gpfCDAPMessage.srcaename());
+    cdapMessage->src_ae_name_ = gpfCDAPMessage.srcaename();
+  // SRC_AP_INST
   if (gpfCDAPMessage.has_srcapinst())
-    cdapMessage->set_src_ap_inst(gpfCDAPMessage.srcapinst());
+    cdapMessage->src_ap_inst_ = gpfCDAPMessage.srcapinst();
+  // SRC_AP_NAME
   if (gpfCDAPMessage.has_srcapname())
-    cdapMessage->set_src_ap_name(gpfCDAPMessage.srcapname());
-  cdapMessage->set_version(gpfCDAPMessage.version());
+    cdapMessage->src_ap_name_ = gpfCDAPMessage.srcapname();
+  // VERISON
+  if (gpfCDAPMessage.has_version())
+    cdapMessage->version_ = gpfCDAPMessage.version();
 
   return cdapMessage;
 }
+// FIXME: check existanc of fields before seting
 const cdap_rib::SerializedObject* GPBSerializer::serializeMessage(
     const cdap_m_t &cdapMessage)
 {
   cdap::impl::googleprotobuf::CDAPMessage gpfCDAPMessage;
-  gpfCDAPMessage.set_abssyntax(cdapMessage.get_abs_syntax());
+  // ABS_SYNTAX
+  gpfCDAPMessage.set_abssyntax(cdapMessage.abs_syntax_);
+  // AUTH_MECH
   if (!cdap::impl::googleprotobuf::authTypes_t_IsValid(
-      cdapMessage.get_auth_mech())) {
+      cdapMessage.auth_mech_)) {
     throw CDAPException("Serializing Message: Not a valid AuthType");
   }
   gpfCDAPMessage.set_authmech(
-      (cdap::impl::googleprotobuf::authTypes_t) cdapMessage.get_auth_mech());
+      (cdap::impl::googleprotobuf::authTypes_t) cdapMessage.auth_mech_);
   cdap::impl::googleprotobuf::authValue_t *gpb_auth_value =
       new cdap::impl::googleprotobuf::authValue_t();
-  AuthValue auth_value = cdapMessage.get_auth_value();
+  // AUTH_VALUE
+  AuthValue auth_value = cdapMessage.auth_value_;
   gpb_auth_value->set_authname(auth_value.get_auth_name());
   gpb_auth_value->set_authother(auth_value.get_auth_other());
   gpb_auth_value->set_authpassword(auth_value.get_auth_password());
   gpfCDAPMessage.set_allocated_authvalue(gpb_auth_value);
-  gpfCDAPMessage.set_destaeinst(cdapMessage.get_dest_ae_inst());
-  gpfCDAPMessage.set_destaename(cdapMessage.get_dest_ae_name());
-  gpfCDAPMessage.set_destapinst(cdapMessage.get_dest_ap_inst());
-  gpfCDAPMessage.set_destapname(cdapMessage.get_dest_ap_name());
-  if (cdapMessage.get_filter() != 0) {
-    gpfCDAPMessage.set_filter(cdapMessage.get_filter());
+  // DEST_AE_INST
+  gpfCDAPMessage.set_destaeinst(cdapMessage.dest_ae_inst_);
+  // DEST_AE_NAME
+  gpfCDAPMessage.set_destaename(cdapMessage.dest_ae_name_);
+  // DEST_AP_INST
+  gpfCDAPMessage.set_destapinst(cdapMessage.dest_ap_inst_);
+  // DEST_AP_NAME
+  gpfCDAPMessage.set_destapname(cdapMessage.dest_ap_name_);
+  // FILTER
+  if (cdapMessage.filter_ != 0) {
+    gpfCDAPMessage.set_filter(cdapMessage.filter_);
   }
-  gpfCDAPMessage.set_invokeid(cdapMessage.get_invoke_id());
-  gpfCDAPMessage.set_objclass(cdapMessage.get_obj_class());
-  gpfCDAPMessage.set_objinst(cdapMessage.get_obj_inst());
-  gpfCDAPMessage.set_objname(cdapMessage.get_obj_name());
-
-  if (cdapMessage.get_obj_value() != 0
-      && !cdapMessage.get_obj_value()->is_empty()) {
+  // INVOKE_ID
+  gpfCDAPMessage.set_invokeid(cdapMessage.invoke_id_);
+  // OBJ_CLASS
+  gpfCDAPMessage.set_objclass(cdapMessage.obj_class_);
+  // OBJ_INST
+  gpfCDAPMessage.set_objinst(cdapMessage.obj_inst_);
+  // OBJ_NAME
+  gpfCDAPMessage.set_objname(cdapMessage.obj_name_);
+  // OBJ_VALUE
+  if (cdapMessage.obj_value_.size_ > 0) {
     cdap::impl::googleprotobuf::objVal_t *gpb_obj_val =
         new cdap::impl::googleprotobuf::objVal_t();
-    switch (cdapMessage.get_obj_value()->isType()) {
-      case ObjectValueInterface::inttype:
-        gpb_obj_val->set_intval(
-            *(int*) cdapMessage.get_obj_value()->get_value());
-        break;
-      case ObjectValueInterface::sinttype:
-        gpb_obj_val->set_sintval(
-            *(short int*) cdapMessage.get_obj_value()->get_value());
-        break;
-      case ObjectValueInterface::longtype:
-        gpb_obj_val->set_int64val(
-            *(long long*) cdapMessage.get_obj_value()->get_value());
-        break;
-      case ObjectValueInterface::slongtype:
-        gpb_obj_val->set_sint64val(
-            *(long*) cdapMessage.get_obj_value()->get_value());
-        break;
-      case ObjectValueInterface::stringtype:
-        gpb_obj_val->set_strval(
-            *(std::string*) cdapMessage.get_obj_value()->get_value());
-        break;
-      case ObjectValueInterface::bytetype: {
-        SerializedObject * serialized_object = (SerializedObject*) cdapMessage
-            .get_obj_value()->get_value();
-        gpb_obj_val->set_byteval(serialized_object->message_,
-                                 serialized_object->size_);
-        break;
-      }
-      case ObjectValueInterface::floattype:
-        gpb_obj_val->set_floatval(
-            *(float*) cdapMessage.get_obj_value()->get_value());
-        break;
-      case ObjectValueInterface::doubletype:
-        gpb_obj_val->set_doubleval(
-            *(double*) cdapMessage.get_obj_value()->get_value());
-        break;
-      case ObjectValueInterface::booltype:
-        gpb_obj_val->set_boolval(
-            *(bool*) cdapMessage.get_obj_value()->get_value());
-        break;
-    }
-    gpfCDAPMessage.set_allocated_objvalue(gpb_obj_val);
+    gpb_obj_val->set_byteval(cdapMessage.obj_value_.message_,
+                             cdapMessage.obj_value_.size_);
   }
-
-  if (!cdap::impl::googleprotobuf::opCode_t_IsValid(
-      cdapMessage.get_op_code())) {
+  /*
+   switch (cdapMessage.get_obj_value()->isType()) {
+   case ObjectValueInterface::inttype:
+   gpb_obj_val->set_intval(
+   *(int*) cdapMessage.get_obj_value()->get_value());
+   break;
+   case ObjectValueInterface::sinttype:
+   gpb_obj_val->set_sintval(
+   *(short int*) cdapMessage.get_obj_value()->get_value());
+   break;
+   case ObjectValueInterface::longtype:
+   gpb_obj_val->set_int64val(
+   *(long long*) cdapMessage.get_obj_value()->get_value());
+   break;
+   case ObjectValueInterface::slongtype:
+   gpb_obj_val->set_sint64val(
+   *(long*) cdapMessage.get_obj_value()->get_value());
+   break;
+   case ObjectValueInterface::stringtype:
+   gpb_obj_val->set_strval(
+   *(std::string*) cdapMessage.get_obj_value()->get_value());
+   break;
+   case ObjectValueInterface::bytetype: {
+   SerializedObject * serialized_object = (SerializedObject*) cdapMessage
+   .get_obj_value()->get_value();
+   gpb_obj_val->set_byteval(serialized_object->message_,
+   serialized_object->size_);
+   break;
+   }
+   case ObjectValueInterface::floattype:
+   gpb_obj_val->set_floatval(
+   *(float*) cdapMessage.get_obj_value()->get_value());
+   break;
+   case ObjectValueInterface::doubletype:
+   gpb_obj_val->set_doubleval(
+   *(double*) cdapMessage.get_obj_value()->get_value());
+   break;
+   case ObjectValueInterface::booltype:
+   gpb_obj_val->set_boolval(
+   *(bool*) cdapMessage.get_obj_value()->get_value());
+   break;
+   }
+   gpfCDAPMessage.set_allocated_objvalue(gpb_obj_val);
+   }
+   */
+  // OP_CODE
+  if (!cdap::impl::googleprotobuf::opCode_t_IsValid(cdapMessage.op_code_)) {
     throw CDAPException("Serializing Message: Not a valid OpCode");
   }
-
   gpfCDAPMessage.set_opcode(
-      (cdap::impl::googleprotobuf::opCode_t) cdapMessage.get_op_code());
-  gpfCDAPMessage.set_result(cdapMessage.get_result());
-  gpfCDAPMessage.set_resultreason(cdapMessage.get_result_reason());
-  gpfCDAPMessage.set_scope(cdapMessage.get_scope());
-  gpfCDAPMessage.set_srcaeinst(cdapMessage.get_src_ae_inst());
-  gpfCDAPMessage.set_srcaename(cdapMessage.get_src_ae_name());
-  gpfCDAPMessage.set_srcapname(cdapMessage.get_src_ap_name());
-  gpfCDAPMessage.set_srcapinst(cdapMessage.get_src_ap_inst());
-  gpfCDAPMessage.set_version(cdapMessage.get_version());
+      (cdap::impl::googleprotobuf::opCode_t) cdapMessage.op_code_);
+  // RESULT
+  gpfCDAPMessage.set_result(cdapMessage.result_);
+  // RESULT_REASON
+  gpfCDAPMessage.set_resultreason(cdapMessage.result_reason_);
+  // SCOPE
+  gpfCDAPMessage.set_scope(cdapMessage.scope_);
+  // SRC_AE_INST
+  gpfCDAPMessage.set_srcaeinst(cdapMessage.src_ae_inst_);
+  // SRC_AE_NAME
+  gpfCDAPMessage.set_srcaename(cdapMessage.src_ae_name_);
+  // SRC_AP_NAME
+  gpfCDAPMessage.set_srcapname(cdapMessage.src_ap_name_);
+  // SRC_AP_INST
+  gpfCDAPMessage.set_srcapinst(cdapMessage.src_ap_inst_);
+  // VERSION
+  gpfCDAPMessage.set_version(cdapMessage.version_);
 
   int size = gpfCDAPMessage.ByteSize();
-  char *serialized_message = new char[size];
-  gpfCDAPMessage.SerializeToArray(serialized_message, size);
-  SerializedObject *serialized_class = new SerializedObject(serialized_message,
-                                                            size);
+  char *buffer = new char[size];
+  gpfCDAPMessage.SerializeToArray(buffer, size);
+  cdap_rib::SerializedObject *serialized_message =
+      new cdap_rib::SerializedObject;
+  serialized_message->message_ = buffer;
+  serialized_message->size_ = size;
 
-  return serialized_class;
+  return serialized_message;
 }
 
 // CLASS CDAPProvider
@@ -2590,7 +2680,6 @@ cdap_rib::con_handle_t CDAPProvider::open_connection(
 {
   const cdap_m_t *m_sent;
   cdap_rib::con_handle_t con;
-  rina::AuthValue *value;
 
   con.port_ = port;
   con.version_ = ver;
@@ -2598,26 +2687,8 @@ cdap_rib::con_handle_t CDAPProvider::open_connection(
   con.dest_ = dest;
   con.auth_ = auth;
 
-  switch (auth.auth_mech_) {
-    case cdap_rib::auth_info::AUTH_PASSWD:
-    case cdap_rib::auth_info::AUTH_SSHDSA:
-    case cdap_rib::auth_info::AUTH_SSHRSA:
-      value = new rina::AuthValue(auth.auth_name_, auth.auth_password_,
-                                  auth.auth_other_);
-      break;
-    case cdap_rib::auth_info::AUTH_NONE:
-    default:
-      value = new rina::AuthValue();
-      break;
-  }
-  // FIXME erase auth and flags from cdap_m_t
-  m_sent = manager_->getOpenConnectionRequestMessage(
-      port, cdap_rib::auth_info::AUTH_NONE, *value, dest.ae_inst_,
-      dest.ae_name_, dest.ap_inst_, dest.ap_name_, src.ae_inst_, src.ae_name_,
-      src.ap_inst_, src.ap_name_);
+  m_sent = manager_->getOpenConnectionRequestMessage(con);
   send(m_sent, con.port_);
-
-  delete value;
 
   return con;
 }
@@ -2628,8 +2699,10 @@ int CDAPProvider::close_connection(cdap_rib::con_handle_t &con)
   const cdap_m_t *m_sent;
 
   // FIXME change cdap_rib::flags_t::NONE_FLAGS
+  cdap_rib::flags_t flags;
+  flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
   m_sent = manager_->getReleaseConnectionRequestMessage(
-      con.port_, cdap_rib::flags_t::NONE_FLAGS, true);
+      con.port_, flags, true);
   invoke_id = m_sent->invoke_id_;
   send(m_sent, con.port_);
 
@@ -2645,11 +2718,7 @@ int CDAPProvider::remote_create(const cdap_rib::con_handle_t &con,
   int invoke_id;
   const cdap_m_t *m_sent;
 
-  // FIXME change cdap_rib::flags_t::NONE_FLAGS
-  (void) flags;
-  m_sent = manager_->getCreateObjectRequestMessage(
-      con.port_, filt.filter_, cdap_rib::flags_t::NONE_FLAGS, obj.class_,
-      obj.inst_, obj.name_, filt.scope_, true);
+  m_sent = manager_->getCreateObjectRequestMessage(con.port_, filt, flags, obj, true);
   invoke_id = m_sent->invoke_id_;
   send(m_sent, con.port_);
 
@@ -2665,11 +2734,8 @@ int CDAPProvider::remote_delete(const cdap_rib::con_handle_t &con,
   int invoke_id;
   const cdap_m_t *m_sent;
 
-  // FIXME change cdap_rib::flags_t::NONE_FLAGS
-  (void) flags;
   m_sent = manager_->getDeleteObjectRequestMessage(
-      con.port_, filt.filter_, cdap_rib::flags_t::NONE_FLAGS, obj.class_,
-      obj.inst_, obj.name_, filt.scope_, true);
+      con.port_, filt, flags, obj, true);
   invoke_id = m_sent->invoke_id_;
   send(m_sent, con.port_);
 
@@ -2685,12 +2751,7 @@ int CDAPProvider::remote_read(const cdap_rib::con_handle_t &con,
   int invoke_id;
   const cdap_m_t *m_sent;
 
-  // FIXME change cdap_rib::flags_t::NONE_FLAGS
-  (void) flags;
-  m_sent = manager_->getReadObjectRequestMessage(con.port_, filt.filter_,
-                                                 cdap_rib::flags_t::NONE_FLAGS,
-                                                 obj.class_, obj.inst_,
-                                                 obj.name_, filt.scope_, true);
+  m_sent = manager_->getReadObjectRequestMessage(con.port_, filt, flags, obj, true);
   invoke_id = m_sent->invoke_id_;
   send(m_sent, con.port_);
 
@@ -2704,10 +2765,7 @@ int CDAPProvider::remote_cancel_read(const cdap_rib::con_handle_t &con,
 {
   const cdap_m_t *m_sent;
 
-  // FIXME change cdap_rib::flags_t::NONE_FLAGS
-  (void) flags;
-  m_sent = manager_->getCancelReadRequestMessage(cdap_rib::flags_t::NONE_FLAGS,
-                                                 invoke_id);
+  m_sent = manager_->getCancelReadRequestMessage(flags, invoke_id);
   send(m_sent, con.port_);
 
   delete m_sent;
@@ -2722,12 +2780,7 @@ int CDAPProvider::remote_write(const cdap_rib::con_handle_t &con,
   int invoke_id;
   const cdap_m_t *m_sent;
 
-  // FIXME change cdap_rib::flags_t::NONE_FLAGS
-  (void) flags;
-  m_sent = manager_->getWriteObjectRequestMessage(con.port_, filt.filter_,
-                                                  cdap_rib::flags_t::NONE_FLAGS,
-                                                  obj.class_, obj.inst_,
-                                                  obj.name_, filt.scope_, true);
+  m_sent = manager_->getWriteObjectRequestMessage(con.port_, filt, flags, obj, true);
   invoke_id = m_sent->invoke_id_;
   send(m_sent, con.port_);
 
@@ -2743,12 +2796,7 @@ int CDAPProvider::remote_start(const cdap_rib::con_handle_t &con,
   int invoke_id;
   const cdap_m_t *m_sent;
 
-  // FIXME change cdap_rib::flags_t::NONE_FLAGS
-  (void) flags;
-  m_sent = manager_->getStartObjectRequestMessage(con.port_, filt.filter_,
-                                                  cdap_rib::flags_t::NONE_FLAGS,
-                                                  obj.class_, obj.inst_,
-                                                  obj.name_, filt.scope_, true);
+  m_sent = manager_->getStartObjectRequestMessage(con.port_, filt, flags, obj, true);
   invoke_id = m_sent->invoke_id_;
   send(m_sent, con.port_);
 
@@ -2764,12 +2812,7 @@ int CDAPProvider::remote_stop(const cdap_rib::con_handle_t &con,
   int invoke_id;
   const cdap_m_t *m_sent;
 
-  // FIXME change cdap_rib::flags_t::NONE_FLAGS
-  (void) flags;
-  m_sent = manager_->getStopObjectRequestMessage(con.port_, filt.filter_,
-                                                 cdap_rib::flags_t::NONE_FLAGS,
-                                                 obj.class_, obj.inst_,
-                                                 obj.name_, filt.scope_, true);
+  m_sent = manager_->getStopObjectRequestMessage(con.port_, filt, flags, obj, true);
   invoke_id = m_sent->invoke_id_;
   send(m_sent, con.port_);
 
@@ -2779,34 +2822,12 @@ int CDAPProvider::remote_stop(const cdap_rib::con_handle_t &con,
 }
 
 void CDAPProvider::open_connection_response(const cdap_rib::con_handle_t &con,
-                                            const cdap_rib::flags_t &flags,
                                             const cdap_rib::res_info_t &res,
                                             int message_id)
 {
   const cdap_m_t *m_sent;
 
-  // FIXME change cdap_rib::flags_t::NONE_FLAGS
-  (void) flags;
-  rina::AuthValue *value;
-  switch (con.auth_.auth_mech_) {
-    case cdap_rib::auth_info::AUTH_PASSWD:
-    case cdap_rib::auth_info::AUTH_SSHDSA:
-    case cdap_rib::auth_info::AUTH_SSHRSA:
-      value = new rina::AuthValue(con.auth_.auth_name_,
-                                  con.auth_.auth_password_,
-                                  con.auth_.auth_other_);
-      break;
-    case cdap_rib::auth_info::AUTH_NONE:
-    default:
-      value = new rina::AuthValue();
-      break;
-  }
-
-  m_sent = manager_->getOpenConnectionResponseMessage(
-      cdap_rib::auth_info_t::AUTH_NONE, *value, con.dest_.ae_inst_,
-      con.dest_.ae_name_, con.dest_.ap_inst_, con.dest_.ap_name_, res.result_,
-      res.result_reason_, con.src_.ae_inst_, con.src_.ae_name_,
-      con.src_.ap_inst_, con.src_.ap_name_, message_id);
+  m_sent = manager_->getOpenConnectionResponseMessage(con, res, message_id);
   send(m_sent, con.port_);
 
   delete m_sent;
@@ -2820,9 +2841,7 @@ void CDAPProvider::close_connection_response(const cdap_rib::con_handle_t &con,
 
   //FIXME: change flags
   (void) flags;
-  m_sent = manager_->getCancelReadResponseMessage(cdap_rib::flags_t::NONE_FLAGS,
-                                                  message_id, res.result_,
-                                                  res.result_reason_);
+  m_sent = manager_->getCancelReadResponseMessage(flags, res, message_id);
   send(m_sent, con.port_);
 
   delete m_sent;
@@ -2831,16 +2850,14 @@ void CDAPProvider::close_connection_response(const cdap_rib::con_handle_t &con,
 void CDAPProvider::remote_create_response(const cdap_rib::con_handle_t &con,
                                           const cdap_rib::obj_info_t &obj,
                                           const cdap_rib::flags_t &flags,
-                                          const cdap_rib::res_info_t* res,
+                                          const cdap_rib::res_info_t &res,
                                           int message_id)
 {
   const cdap_m_t *m_sent;
 
   // FIXME change cdap_rib::flags_t::NONE_FLAGS
   (void) flags;
-  m_sent = manager_->getCreateObjectResponseMessage(
-      cdap_rib::flags_t::NONE_FLAGS, obj.class_, obj.inst_, obj.name_,
-      res->result_, res->result_reason_, message_id);
+  m_sent = manager_->getCreateObjectResponseMessage(flags, obj, res, message_id);
   send(m_sent, con.port_);
 
   delete m_sent;
@@ -2848,16 +2865,14 @@ void CDAPProvider::remote_create_response(const cdap_rib::con_handle_t &con,
 void CDAPProvider::remote_delete_response(const cdap_rib::con_handle_t &con,
                                           const cdap_rib::obj_info_t &obj,
                                           const cdap_rib::flags_t &flags,
-                                          const cdap_rib::res_info_t* res,
+                                          const cdap_rib::res_info_t &res,
                                           int message_id)
 {
   const cdap_m_t *m_sent;
 
   // FIXME change cdap_rib::flags_t::NONE_FLAGS
   (void) flags;
-  m_sent = manager_->getDeleteObjectResponseMessage(
-      cdap_rib::flags_t::NONE_FLAGS, obj.class_, obj.inst_, obj.name_,
-      res->result_, res->result_reason_, message_id);
+  m_sent = manager_->getDeleteObjectResponseMessage(flags, obj, res, message_id);
   send(m_sent, con.port_);
 
   delete m_sent;
@@ -2865,49 +2880,41 @@ void CDAPProvider::remote_delete_response(const cdap_rib::con_handle_t &con,
 void CDAPProvider::remote_read_response(const cdap_rib::con_handle_t &con,
                                         const cdap_rib::obj_info_t &obj,
                                         const cdap_rib::flags_t &flags,
-                                        const cdap_rib::res_info_t* res,
+                                        const cdap_rib::res_info_t &res,
                                         int message_id)
 {
   const cdap_m_t *m_sent;
 
   // FIXME change cdap_rib::flags_t::NONE_FLAGS
   (void) flags;
-  m_sent = manager_->getReadObjectResponseMessage(cdap_rib::flags_t::NONE_FLAGS,
-                                                  obj.class_, obj.inst_,
-                                                  obj.name_, res->result_,
-                                                  res->result_reason_,
-                                                  message_id);
+  m_sent = manager_->getReadObjectResponseMessage(flags, obj, res, message_id);
   send(m_sent, con.port_);
 
   delete m_sent;
 }
 void CDAPProvider::remote_cancel_read_response(
     const cdap_rib::con_handle_t &con, const cdap_rib::flags_t &flags,
-    const cdap_rib::res_info_t* res, int message_id)
+    const cdap_rib::res_info_t &res, int message_id)
 {
   const cdap_m_t *m_sent;
 
   // FIXME change cdap_rib::flags_t::NONE_FLAGS
   (void) flags;
-  m_sent = manager_->getCancelReadResponseMessage(cdap_rib::flags_t::NONE_FLAGS,
-                                                  message_id, res->result_,
-                                                  res->result_reason_);
+  m_sent = manager_->getCancelReadResponseMessage(flags, res, message_id);
   send(m_sent, con.port_);
 
   delete m_sent;
 }
 void CDAPProvider::remote_write_response(const cdap_rib::con_handle_t &con,
                                          const cdap_rib::flags_t &flags,
-                                         const cdap_rib::res_info_t* res,
+                                         const cdap_rib::res_info_t &res,
                                          int message_id)
 {
   const cdap_m_t *m_sent;
 
   // FIXME change cdap_rib::flags_t::NONE_FLAGS
   (void) flags;
-  m_sent = manager_->getWriteObjectResponseMessage(
-      cdap_rib::flags_t::NONE_FLAGS, res->result_, res->result_reason_,
-      message_id);
+  m_sent = manager_->getWriteObjectResponseMessage(flags, res, message_id);
   send(m_sent, con.port_);
 
   delete m_sent;
@@ -2915,33 +2922,28 @@ void CDAPProvider::remote_write_response(const cdap_rib::con_handle_t &con,
 void CDAPProvider::remote_start_response(const cdap_rib::con_handle_t &con,
                                          const cdap_rib::obj_info_t &obj,
                                          const cdap_rib::flags_t &flags,
-                                         const cdap_rib::res_info_t* res,
+                                         const cdap_rib::res_info_t &res,
                                          int message_id)
 {
   const cdap_m_t *m_sent;
 
   // FIXME change cdap_rib::flags_t::NONE_FLAGS
   (void) flags;
-  m_sent = manager_->getStartObjectResponseMessage(
-      cdap_rib::flags_t::NONE_FLAGS, obj.class_, obj.inst_, obj.name_,
-      res->result_, res->result_reason_, message_id);
+  m_sent = manager_->getStartObjectResponseMessage(flags, obj, res, message_id);
   send(m_sent, con.port_);
 
   delete m_sent;
 }
 void CDAPProvider::remote_stop_response(const cdap_rib::con_handle_t &con,
                                         const cdap_rib::flags_t &flags,
-                                        const cdap_rib::res_info_t* res,
+                                        const cdap_rib::res_info_t &res,
                                         int message_id)
 {
   const cdap_m_t *m_sent;
 
   // FIXME change cdap_rib::flags_t::NONE_FLAGS
   (void) flags;
-  m_sent = manager_->getStopObjectResponseMessage(cdap_rib::flags_t::NONE_FLAGS,
-                                                  res->result_,
-                                                  res->result_reason_,
-                                                  message_id);
+  m_sent = manager_->getStopObjectResponseMessage(flags, res, message_id);
   send(m_sent, con.port_);
 
   delete m_sent;
@@ -2980,7 +2982,9 @@ void CDAPProvider::new_message(cdap_rib::SerializedObject &message, int port)
   obj.class_ = m_rcv->obj_class_;
   obj.inst_ = m_rcv->obj_inst_;
   obj.name_ = m_rcv->obj_name_;
-  obj.value_ = (void*) m_rcv->obj_value_;
+  obj.value_.size_ = m_rcv->obj_value_.size_;
+  memcpy(obj.value_.message_, m_rcv->obj_value_.message_, m_rcv->obj_value_.size_);
+
   // Filter
   cdap_rib::filt_info_t filt;
   filt.filter_ = m_rcv->filter_;
@@ -3099,4 +3103,5 @@ CDAPProviderInterface* CDAPProviderFactory_::create(
     return new AppCDAPProvider(serializer, timeout, callback);
 }
 
+}
 }

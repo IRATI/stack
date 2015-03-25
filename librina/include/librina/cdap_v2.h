@@ -25,6 +25,7 @@
 #include <librina/concurrency.h>
 #include "cdap_rib_structures.h"
 
+namespace rina{
 namespace cdap {
 
 class CDAPProviderInterface
@@ -67,7 +68,6 @@ class CDAPProviderInterface
                           const cdap_rib::flags_t &flags,
                           const cdap_rib::filt_info_t &filt) = 0;
   virtual void open_connection_response(const cdap_rib::con_handle_t &con,
-                                        const cdap_rib::flags_t &flags,
                                         const cdap_rib::res_info_t &res,
                                         int message_id) = 0;
   virtual void close_connection_response(const cdap_rib::con_handle_t &con,
@@ -77,36 +77,36 @@ class CDAPProviderInterface
   virtual void remote_create_response(const cdap_rib::con_handle_t &con,
                                       const cdap_rib::obj_info_t &obj,
                                       const cdap_rib::flags_t &flags,
-                                      const cdap_rib::res_info_t *res,
+                                      const cdap_rib::res_info_t &res,
                                       int message_id) = 0;
   virtual void remote_delete_response(const cdap_rib::con_handle_t &con,
                                       const cdap_rib::obj_info_t &obj,
                                       const cdap_rib::flags_t &flags,
-                                      const cdap_rib::res_info_t* res,
+                                      const cdap_rib::res_info_t &res,
                                       int message_id) = 0;
   virtual void remote_read_response(const cdap_rib::con_handle_t &con,
                                     const cdap_rib::obj_info_t &obj,
                                     const cdap_rib::flags_t &flags,
-                                    const cdap_rib::res_info_t* res,
+                                    const cdap_rib::res_info_t &res,
                                     int message_id) = 0;
   virtual void remote_cancel_read_response(const cdap_rib::con_handle_t &con,
                                            const cdap_rib::flags_t &flags,
-                                           const cdap_rib::res_info_t* res,
+                                           const cdap_rib::res_info_t &res,
                                            int message_id) = 0;
   virtual void remote_write_response(const cdap_rib::con_handle_t &con,
                                      const cdap_rib::flags_t &flags,
-                                     const cdap_rib::res_info_t* res,
+                                     const cdap_rib::res_info_t &res,
                                      int message_id) = 0;
   virtual void remote_start_response(const cdap_rib::con_handle_t &con,
                                      const cdap_rib::obj_info_t &obj,
                                      const cdap_rib::flags_t &flags,
-                                     const cdap_rib::res_info_t* res,
+                                     const cdap_rib::res_info_t &res,
                                      int message_id) = 0;
   virtual void remote_stop_response(const cdap_rib::con_handle_t &con,
                                     const cdap_rib::flags_t &flags,
-                                    const cdap_rib::res_info_t* res,
+                                    const cdap_rib::res_info_t &res,
                                     int message_id) = 0;
-  virtual void new_message(cdap_rib::SerializedObject &message, int port);
+  virtual void new_message(cdap_rib::SerializedObject &message, int port) = 0;
 };
 
 typedef struct CDAPMessage
@@ -186,7 +186,7 @@ typedef struct CDAPMessage
   /// ObjectClass within an application.
   std::string obj_name_;
   /// ObjectValueInterface (ObjectValueInterface). The value of the object.
-  void* obj_value_;
+  cdap_rib::SerializedObject obj_value_;
   /// Opcode (enum, int32), mandatory.
   /// Message type of this message.
   Opcode op_code_;
@@ -222,6 +222,7 @@ typedef struct CDAPMessage
   /// related behaviors that are subject to change over time. See text for details
   /// of use.
   long version_;
+  CDAPMessage();
 } cdap_m_t;
 
 
@@ -252,5 +253,5 @@ class CDAPProviderFactory_
 
 extern Singleton<CDAPProviderFactory_> CDAPProviderFactory;
 }
-
+}
 #endif /* CDAP_PROVIDER_H_ */
