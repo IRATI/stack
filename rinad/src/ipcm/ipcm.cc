@@ -765,11 +765,11 @@ IPCManager_::apply_configuration()
 		// Examine all the IPCProcesses that are going to be created
 		// according to the configuration file.
 		ipcm_res_t result;
+		CreateIPCPPromise promise;
 		for (cit = config.ipcProcessesToCreate.begin();
 		     cit != config.ipcProcessesToCreate.end(); cit++) {
 			std::string	type;
 			ostringstream      ss;
-			CreateIPCPPromise promise;
 
 			if (!config.lookup_type_by_dif(cit->difName, type)) {
 				ss << "Failed to retrieve DIF type for "
