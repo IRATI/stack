@@ -285,10 +285,8 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 	}
 }
 
-void IPCManager_::flow_allocation_requested_event_handler(rina::IPCEvent *e)
+void IPCManager_::flow_allocation_requested_event_handler(rina::FlowRequestEvent* event)
 {
-	DOWNCAST_DECL(e, rina::FlowRequestEvent, event);
-
 	if (event->localRequest)
 		flow_allocation_requested_local(event);
 	else
@@ -438,9 +436,8 @@ void IPCManager_::allocate_flow_response_event_handler(rina::AllocateFlowRespons
 	remove_transaction_state(trans->tid);
 }
 
-void IPCManager_::flow_deallocation_requested_event_handler(rina::IPCEvent *e)
+void IPCManager_::flow_deallocation_requested_event_handler(rina::FlowDeallocateRequestEvent* event)
 {
-	DOWNCAST_DECL(e, rina::FlowDeallocateRequestEvent, event);
 	IPCMIPCProcess *ipcp = lookup_ipcp_by_port(event->portId);
 	ostringstream ss;
 	int ret;
@@ -553,9 +550,8 @@ void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IpcmDealloca
 	remove_transaction_state(trans->tid);
 }
 
-void IPCManager_::flow_deallocated_event_handler(rina::IPCEvent *e)
+void IPCManager_::flow_deallocated_event_handler(rina::FlowDeallocatedEvent* event)
 {
-	DOWNCAST_DECL(e, rina::FlowDeallocatedEvent, event);
 	IPCMIPCProcess *ipcp = lookup_ipcp_by_port(event->portId);
 	rina::FlowInformation info;
 	ostringstream ss;

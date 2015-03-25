@@ -53,6 +53,14 @@
 #define IPCM_EVENT_TIMEOUT_NS 100000000 //0.1 sec
 #define IPCM_TRANS_TIMEOUT_S 7
 
+//Downcast MACRO
+#ifndef DOWNCAST_DECL
+	// Useful MACRO to perform downcasts in declarations.
+	#define DOWNCAST_DECL(_var,_class,_name)\
+		_class *_name = dynamic_cast<_class*>(_var);
+#endif //DOWNCAST_DECL
+
+
 using namespace std;
 
 namespace rinad {
@@ -1309,7 +1317,10 @@ void IPCManager_::run(){
 		try {
 			switch(event->eventType){
 				case rina::FLOW_ALLOCATION_REQUESTED_EVENT:
-						flow_allocation_requested_event_handler(event);
+						{
+						DOWNCAST_DECL(event, rina::FlowRequestEvent, e);
+						flow_allocation_requested_event_handler(e);
+						}
 						break;
 
 				case rina::ALLOCATE_FLOW_RESPONSE_EVENT:
@@ -1320,11 +1331,17 @@ void IPCManager_::run(){
 						break;
 
 				case rina::FLOW_DEALLOCATION_REQUESTED_EVENT:
-						flow_deallocation_requested_event_handler(event);
+						{
+						DOWNCAST_DECL(event, rina::FlowDeallocateRequestEvent, e);
+						flow_deallocation_requested_event_handler(e);
+						}
 						break;
 
 				case rina::FLOW_DEALLOCATED_EVENT:
-						IPCManager->flow_deallocated_event_handler(event);
+						{
+						DOWNCAST_DECL(event, rina::FlowDeallocatedEvent, e);
+						IPCManager->flow_deallocated_event_handler(e);
+						}
 						break;
 				case rina::APPLICATION_REGISTRATION_REQUEST_EVENT:
 						{
@@ -1334,7 +1351,10 @@ void IPCManager_::run(){
 						break;
 
 				case rina::APPLICATION_UNREGISTRATION_REQUEST_EVENT:
-						application_unregistration_request_event_handler(event);
+						{
+        					DOWNCAST_DECL(event, rina::ApplicationUnregistrationRequestEvent, e);
+						application_unregistration_request_event_handler(e);
+						}
 						break;
 
 				case rina::ASSIGN_TO_DIF_RESPONSE_EVENT:
@@ -1366,7 +1386,10 @@ void IPCManager_::run(){
 						break;
 
 				case rina::OS_PROCESS_FINALIZED:
-						os_process_finalized_handler(event);
+						{
+						DOWNCAST_DECL(event, rina::OSProcessFinalizedEvent, e);
+						os_process_finalized_handler(e);
+						}
 						break;
 
 				case rina::IPCM_REGISTER_APP_RESPONSE_EVENT:

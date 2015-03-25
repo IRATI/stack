@@ -35,9 +35,9 @@ using namespace std;
 
 namespace rinad {
 
-void IPCManager_::os_process_finalized_handler(rina::IPCEvent *e)
+void IPCManager_::os_process_finalized_handler(
+					rina::OSProcessFinalizedEvent *event)
 {
-	DOWNCAST_DECL(e, rina::OSProcessFinalizedEvent, event);
 	const vector<IPCMIPCProcess *>& ipcps =
 		ipcp_factory_.listIPCProcesses();
 	const rina::ApplicationProcessNamingInformation& app_name =
@@ -350,9 +350,9 @@ void IPCManager_::application_manager_app_unregistered(
 	}
 }
 
-void IPCManager_::application_unregistration_request_event_handler(rina::IPCEvent *e)
+void IPCManager_::application_unregistration_request_event_handler(
+			rina::ApplicationUnregistrationRequestEvent* event)
 {
-        DOWNCAST_DECL(e, rina::ApplicationUnregistrationRequestEvent, event);
         // Select any IPC process in the DIF from which the application
         // wants to unregister from
         IPCMIPCProcess *slave_ipcp = select_ipcp_by_dif(event->DIFName);

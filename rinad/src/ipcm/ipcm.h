@@ -46,12 +46,6 @@
 #define PROMISE_RETRY_NSEC 10000000 //1ms
 #define _PROMISE_1_SEC_NSEC 1000000000
 
-#ifndef DOWNCAST_DECL
-	// Useful MACRO to perform downcasts in declarations.
-	#define DOWNCAST_DECL(_var,_class,_name)\
-		_class *_name = dynamic_cast<_class*>(_var);
-#endif //DOWNCAST_DECL
-
 #ifndef FLUSH_LOG
 	//Force log flushing
 	#define FLUSH_LOG(_lev_, _ss_)\
@@ -573,10 +567,10 @@ protected:
 	//
 
 	//Flow mgmt
-	void flow_allocation_requested_event_handler(rina::IPCEvent *event);
+	void flow_allocation_requested_event_handler(rina::FlowRequestEvent* event);
 	void allocate_flow_response_event_handler( rina::AllocateFlowResponseEvent *event);
-	void flow_deallocation_requested_event_handler(rina::IPCEvent *event);
-	void flow_deallocated_event_handler(rina::IPCEvent *event);
+	void flow_deallocation_requested_event_handler(rina::FlowDeallocateRequestEvent* event);
+	void flow_deallocated_event_handler(rina::FlowDeallocatedEvent* event);
 	void ipcm_deallocate_flow_response_event_handler(rina::IpcmDeallocateFlowResponseEvent* event);
 	void ipcm_allocate_flow_request_result_handler(rina::IpcmAllocateFlowRequestResultEvent* event);
 	void application_flow_allocation_failed_notify(
@@ -592,7 +586,7 @@ protected:
 	//Application registration mgmt
 	void app_reg_req_handler(rina::ApplicationRegistrationRequestEvent *e);
 	void app_reg_response_handler(rina::IpcmRegisterApplicationResponseEvent* e);
-	void application_unregistration_request_event_handler(rina::IPCEvent *e);
+	void application_unregistration_request_event_handler(rina::ApplicationUnregistrationRequestEvent* event);
 	void unreg_app_response_handler(rina::IpcmUnregisterApplicationResponseEvent *e);
 	void notify_app_reg(
 		const rina::ApplicationRegistrationRequestEvent& req_event,
@@ -631,7 +625,7 @@ protected:
 	void query_rib_response_event_handler(rina::QueryRIBResponseEvent *e);
 
 	//Misc
-	void os_process_finalized_handler(rina::IPCEvent *e);
+	void os_process_finalized_handler(rina::OSProcessFinalizedEvent *event);
 	void ipc_process_daemon_initialized_event_handler(
 				rina::IPCProcessDaemonInitializedEvent *e);
 	bool ipcm_register_response_common(
