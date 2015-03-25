@@ -1193,9 +1193,8 @@ IPCManager_::unregister_app_from_ipcp(Promise* promise,
 TransactionState::TransactionState(Promise* _promise):
 					promise(_promise),
 					tid(IPCManager->__tid_gen.next()){
-	if (promise) {
+	if (promise)
 		promise->ret = IPCM_PENDING;
-	}
 };
 
 

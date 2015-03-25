@@ -215,7 +215,10 @@ public:
 protected:
 	TransactionState(Promise* promise_, const int tid_):
 							promise(promise_),
-							tid(tid_){};
+							tid(tid_){
+		if(promise)
+			promise->ret = IPCM_PENDING;
+	};
 };
 
 //
