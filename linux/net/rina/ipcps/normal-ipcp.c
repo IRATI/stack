@@ -544,11 +544,11 @@ static int normal_deallocate(struct ipcp_instance_data * data,
                 return -1;
         }
         flow->state = PORT_STATE_DEALLOCATED;
+        spin_unlock_irqrestore(&data->lock, flags);
 
         remove_all_cepid(data, flow);
 
         list_del(&flow->list);
-        spin_unlock_irqrestore(&data->lock, flags);
 
         rkfree(flow);
 
