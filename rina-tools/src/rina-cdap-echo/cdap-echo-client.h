@@ -24,10 +24,27 @@
 #include <string>
 #include <chrono>
 #include <librina/librina.h>
+#include <librina/cdap_v2.h>
 
 #include "cdap-echo-application.h"
 
+class Client;
+class APPcallback: public rina::cdap::CDAPCallbackInterface
+{
+ public:
+  APPcallback(Client *client);
+  void open_connection_result(const rina::cdap_rib::con_handle_t &con,
+                                      const rina::cdap_rib::result_info &res);
+  void close_connection_result(const rina::cdap_rib::con_handle_t &con,
+                                       const rina::cdap_rib::result_info &res);
+  void remote_read_result(const rina::cdap_rib::con_handle_t &con,
+                                  const rina::cdap_rib::res_info_t &res);
+ private:
+  Client *client_;
+};
+
 class Client : public Application {
+  friend class APPcallback;
  public:
   Client(const std::string& dif_name, const std::string& apn,
          const std::string& api, const std::string& server_apn,
@@ -36,11 +53,11 @@ class Client : public Application {
   void run();
   ~Client();
  protected:
-  rina::Flow* createFlow();
-  void echoFlow(rina::Flow *flow);
-  void destroyFlow(rina::Flow *flow);
-  bool cacep(rina::Flow *flow);
-  bool release(rina::Flow *flow);
+  void createFlow();
+  void cacep();
+  void sendReadRMessage();
+  void release();
+  void destroyFlow();
 
  private:
   std::string dif_name;
@@ -52,6 +69,10 @@ class Client : public Application {
   unsigned int wait;
   int gap;
   int dealloc_wait;
-  rina::CDAPSessionManagerInterface *manager_;
+  rina::Flow* flow_;
+  rina::cdap::CDAPCallbackInterface *callback_;
+  rina::cdap::CDAPProviderInterface* cdap_prov_;
+  rina::cdap_rib::con_handle_t con_;
+  unsigned long count_;
 };
 #endif//CLIENT_HPP

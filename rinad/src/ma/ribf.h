@@ -22,7 +22,7 @@
 #include <list>
 #include <librina/concurrency.h>
 #include <inttypes.h>
-#include "librina-wrap/rib_provider.h"
+#include <librina/rib_v2.h>
 
 namespace rinad{
 namespace mad{
@@ -68,7 +68,7 @@ public:
 	* Get a reference to a RIB
 	* @throws eRIBNotFound
 	*/
-	rib::RIBDNorthInterface& getRIB(uint64_t version);
+	rina::rib::RIBDNorthInterface& getRIB(uint64_t version);
 
 #if 0
 	//TODO: if ever necessary
@@ -92,8 +92,8 @@ protected:
 private:
 
 	//Map with the current RIB instances
-	std::map<uint64_t, rib::RIBDNorthInterface*> rib_inst_;
-	rib::RIBDFactory factory_;
+	std::map<uint64_t, rina::rib::RIBDNorthInterface*> rib_inst_;
+	rina::rib::RIBDFactory factory_;
 
 	//Constructors
 	RIBFactory_(void);

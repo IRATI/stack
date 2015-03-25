@@ -55,11 +55,11 @@ RIBFactory_::~RIBFactory_() throw (){}
 */
 void RIBFactory_::createRIB(uint64_t version){
   char separator = ',';
-  cdap_rib::cdap_params_t *params = new cdap_rib::cdap_params_t;
+  rina::cdap_rib::cdap_params_t *params = new rina::cdap_rib::cdap_params_t;
   params->is_IPCP_ = false;
   params->timeout_ = 2000;
 
-  cdap_rib::vers_info_t *vers = new cdap_rib::vers_info_t;
+  rina::cdap_rib::vers_info_t *vers = new rina::cdap_rib::vers_info_t;
   vers->version_ = (long) version;
 
 	//Serialize
@@ -85,9 +85,9 @@ void RIBFactory_::createRIB(uint64_t version){
 	unlock();
 }
 
-rib::RIBDNorthInterface& RIBFactory_::getRIB(uint64_t version){
+rina::rib::RIBDNorthInterface& RIBFactory_::getRIB(uint64_t version){
 
-  rib::RIBDNorthInterface* rib;
+  rina::rib::RIBDNorthInterface* rib;
 
 	//Serialize
 	lock();

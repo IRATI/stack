@@ -137,8 +137,6 @@ AC_CONFIG_FILES([
     src/ipcm/include/ipcm/Makefile
     src/ma/Makefile
     src/ma/ribs/Makefile
-    src/ma/librina-wrap/Makefile
-    src/ma/librina-wrap/test/Makefile
 
     doc/Makefile
     tools/Makefile

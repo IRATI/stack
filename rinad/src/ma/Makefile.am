@@ -4,7 +4,7 @@
 # Written by: Marc Sune <marc DOT sune AT bisdn DOT de>
 #
 
-SUBDIRS      = ribs librina-wrap
+SUBDIRS      = ribs
 
 EXTRA_DIST   =
 CLEANFILES   =
@@ -24,12 +24,10 @@ mad_CPPFLAGS =					\
 	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)			\
 	-I$(srcdir)/../			\
-	-I$(srcdir)/../common 	\ 
-	-I$(srcdir)/librina-wrap  
+	-I$(srcdir)/../common 	
 
 mad_LDADD = 					\
 	ribs/librinad_ma_ribs.la		\
-	librina-wrap/librina_cdap_rib.la		\
 	$(builddir)/../common/librinad.la	\
 	$(LIBRINA_LIBS)
 
