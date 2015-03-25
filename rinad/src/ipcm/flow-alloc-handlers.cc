@@ -442,7 +442,6 @@ void IPCManager_::flow_deallocation_requested_event_handler(rina::FlowDeallocate
 {
 	IPCMIPCProcess *ipcp = lookup_ipcp_by_port(event->portId);
 	ostringstream ss;
-	int ret;
 
 	if (!ipcp) {
 		ss  << ": Cannot find the IPC process that "
@@ -452,28 +451,7 @@ void IPCManager_::flow_deallocation_requested_event_handler(rina::FlowDeallocate
 		return;
 	}
 
-	ret = deallocate_flow(NULL, ipcp->get_id(), *event);
-
-	if (ret && event->sequenceNumber != 0) {
-		try {
-			// Inform the application about the deallocation
-			// failure
-			rina::applicationManager->flowDeallocated(*event, -1);
-
-			ss << "Application " << event->applicationName.
-				toString() << " informed about deallocation "
-				"failure of flow identified by port-id " <<
-				event->portId << endl;
-			FLUSH_LOG(INFO, ss);
-		} catch (rina::NotifyFlowDeallocatedException& e) {
-			ss  << ": Error while informing "
-				"application " << event->applicationName.
-				toString() << " about deallocation of flow "
-				"identified by port-id " << event->portId
-				<< endl;
-			FLUSH_LOG(ERR, ss);
-		}
-	}
+	deallocate_flow(NULL, ipcp->get_id(), *event);
 }
 
 void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IpcmDeallocateFlowResponseEvent* event)
@@ -547,7 +525,6 @@ void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IpcmDealloca
 					"identified by port-id " << req_event.portId
 					<< endl;
 			FLUSH_LOG(ERR, ss);
-			//ret = IPCM_FAILURE; <= should this be marked as error?
 		}
 	}
 
