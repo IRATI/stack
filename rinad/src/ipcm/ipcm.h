@@ -582,7 +582,7 @@ protected:
 	int ipcm_register_response_app(
 		rina::IpcmRegisterApplicationResponseEvent *,
 		IPCMIPCProcess * slave_ipcp,
-		rina::ApplicationRegistrationRequestEvent& req_event);
+		const rina::ApplicationRegistrationRequestEvent& req_event);
 
 	//IPCP mgmt
 	int ipcm_register_response_ipcp(

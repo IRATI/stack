@@ -43,13 +43,13 @@ class APPregTransState: public IPCPTransState{
 
 public:
 	APPregTransState(Promise* promise, int ipcp_id,
-			rina::ApplicationRegistrationRequestEvent* _req)
+			const rina::ApplicationRegistrationRequestEvent& _req)
 				: IPCPTransState(promise, ipcp_id),
-						req(_req){};
+				  req(_req){};
 	virtual ~APPregTransState(){};
 
-	//Request
-	rina::ApplicationRegistrationRequestEvent* req;
+	//Request information
+	rina::ApplicationRegistrationRequestEvent req;
 };
 
 /**
@@ -59,16 +59,13 @@ class APPUnregTransState: public IPCPTransState{
 
 public:
 	APPUnregTransState(Promise* promise, int ipcp_id,
-			rina::ApplicationUnregistrationRequestEvent* _req)
+			const rina::ApplicationUnregistrationRequestEvent& _req)
 				: IPCPTransState(promise, ipcp_id),
 						req(_req){};
 	virtual ~APPUnregTransState(){};
 
-	//Request
-	rina::ApplicationUnregistrationRequestEvent* req;
-
-	//APP identifier
-	int ipcp_id;
+	//Request event
+	rina::ApplicationUnregistrationRequestEvent req;
 };
 }//rinad namespace
 

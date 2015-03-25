@@ -119,7 +119,7 @@ void IPCManager_::notify_app_reg(
                         "to N-1 DIF " << slave_dif_name.toString() <<
                         " [success = " << success << "]" << endl;
                 FLUSH_LOG(INFO, ss);
-        } catch (rina::NotifyApplicationRegisteredException) {
+        } catch (rina::NotifyApplicationRegisteredException& e) {
                 ss  << "Error while notifying application "
                         << app_name.toString() << " about registration "
                         "to DIF " << slave_dif_name.toString() << endl;
@@ -128,99 +128,96 @@ void IPCManager_::notify_app_reg(
 }
 
 void IPCManager_::app_reg_req_handler(
-			rina::ApplicationRegistrationRequestEvent *event)
+		rina::ApplicationRegistrationRequestEvent *event)
 {
-        const rina::ApplicationRegistrationInformation& info = event->
-                                applicationRegistrationInformation;
-        const rina::ApplicationProcessNamingInformation app_name =
-                                info.appName;
-        IPCMIPCProcess *slave_ipcp = NULL;
-        ostringstream ss;
-        rina::ApplicationProcessNamingInformation dif_name;
+	const rina::ApplicationRegistrationInformation& info = event->
+			applicationRegistrationInformation;
+	const rina::ApplicationProcessNamingInformation app_name =
+			info.appName;
+	IPCMIPCProcess *slave_ipcp = NULL;
+	ostringstream ss;
+	rina::ApplicationProcessNamingInformation dif_name;
 	APPregTransState* trans;
 
 	//Prepare the registration information
-        if (info.applicationRegistrationType ==
-                        rina::APPLICATION_REGISTRATION_ANY_DIF) {
-                // See if the configuration specifies a mapping between
-                // the registering application and a DIF.
-                if (lookup_dif_by_application(app_name, dif_name)){
-                        // If a mapping exists, select an IPC process
-                        // from the specified DIF.
-                        slave_ipcp = select_ipcp_by_dif(dif_name);
-                } else {
-                        // Otherwise select any IPC process.
-                        slave_ipcp = select_ipcp();
-                }
-        } else if (info.applicationRegistrationType ==
-                        rina::APPLICATION_REGISTRATION_SINGLE_DIF) {
-                // Select an IPC process from the DIF specified in the
-                // registration request.
-                slave_ipcp = select_ipcp_by_dif(info.difName);
-        } else {
-                ss  << ": Unsupported registration type: "
-                        << info.applicationRegistrationType << endl;
-                FLUSH_LOG(ERR, ss);
+	if (info.applicationRegistrationType ==
+			rina::APPLICATION_REGISTRATION_ANY_DIF) {
+		// See if the configuration specifies a mapping between
+		// the registering application and a DIF.
+		if (lookup_dif_by_application(app_name, dif_name)){
+			// If a mapping exists, select an IPC process
+			// from the specified DIF.
+			slave_ipcp = select_ipcp_by_dif(dif_name);
+		} else {
+			// Otherwise select any IPC process.
+			slave_ipcp = select_ipcp();
+		}
+	} else if (info.applicationRegistrationType ==
+			rina::APPLICATION_REGISTRATION_SINGLE_DIF) {
+		// Select an IPC process from the DIF specified in the
+		// registration request.
+		slave_ipcp = select_ipcp_by_dif(info.difName);
+	} else {
+		ss  << ": Unsupported registration type: "
+				<< info.applicationRegistrationType << endl;
+		FLUSH_LOG(ERR, ss);
 
-                // Notify the application about the unsuccessful registration.
-                notify_app_reg(*event, app_name,
-                        rina::ApplicationProcessNamingInformation(), false);
-                return;
-        }
+		// Notify the application about the unsuccessful registration.
+		notify_app_reg(*event, app_name,
+				rina::ApplicationProcessNamingInformation(), false);
+		return;
+	}
 
-        if (!slave_ipcp) {
-                ss  << ": Cannot find a suitable DIF to "
-                        "register application " << app_name.toString() << endl;
-                FLUSH_LOG(ERR, ss);
-                // Notify the application about the unsuccessful registration.
-                notify_app_reg(*event, app_name,
-                        rina::ApplicationProcessNamingInformation(), false);
-                return;
-        }
+	if (!slave_ipcp) {
+		ss  << ": Cannot find a suitable DIF to "
+				"register application " << app_name.toString() << endl;
+		FLUSH_LOG(ERR, ss);
+		// Notify the application about the unsuccessful registration.
+		notify_app_reg(*event, app_name,
+				rina::ApplicationProcessNamingInformation(), false);
+		return;
+	}
 
 	//Auto release the read lock
 	rina::ReadScopedLock readlock(slave_ipcp->rwlock, false);
 
-
 	//Perform the registration
-        try {
-                //Create a transaction
-		trans = new APPregTransState(NULL, slave_ipcp->get_id(),
-									event);
+	try {
+		//Create a transaction
+		trans = new APPregTransState(NULL, slave_ipcp->get_id(), *event);
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! "
-				<< dif_name.toString();
+					<< dif_name.toString();
 			throw rina::IpcmRegisterApplicationException();
 		}
 
 		//Store transaction
 		if(add_transaction_state(trans) < 0){
 			ss << "Unable to add transaction; out of memory? "
-				<< dif_name.toString();
+					<< dif_name.toString();
 			throw rina::IpcmRegisterApplicationException();
 		}
 
 		slave_ipcp->registerApplication(app_name,
-                                                info.ipcProcessId,
-                                                trans->tid);
+				info.ipcProcessId,
+				trans->tid);
 
-
-                ss << "Requested registration of application " <<
-                        app_name.toString() << " to IPC process " <<
-                        slave_ipcp->get_name().toString() << endl;
-                FLUSH_LOG(INFO, ss);
-        } catch (rina::IpcmRegisterApplicationException) {
+		ss << "Requested registration of application " <<
+				app_name.toString() << " to IPC process " <<
+				slave_ipcp->get_name().toString() << endl;
+		FLUSH_LOG(INFO, ss);
+	} catch (rina::IpcmRegisterApplicationException& e) {
 		//Remove the transaction and return
 		remove_transaction_state(trans->tid);
 
 		ss  << ": Error while registering application "
-                        << app_name.toString() << endl;
-                FLUSH_LOG(ERR, ss);
+				<< app_name.toString() << endl;
+		FLUSH_LOG(ERR, ss);
 
-                // Notify the application about the unsuccessful registration.
-                notify_app_reg(*event, app_name,
-                                                slave_ipcp->get_name(), false);
-        }
+		// Notify the application about the unsuccessful registration.
+		notify_app_reg(*event, app_name,
+				slave_ipcp->get_name(), false);
+	}
 }
 
 
@@ -252,25 +249,24 @@ bool IPCManager_::ipcm_register_response_common(
 
 
 int IPCManager_::ipcm_register_response_app(
-        rina::IpcmRegisterApplicationResponseEvent *event,
-        IPCMIPCProcess * slave_ipcp,
-        rina::ApplicationRegistrationRequestEvent& req_event)
+		rina::IpcmRegisterApplicationResponseEvent *event,
+		IPCMIPCProcess * slave_ipcp,
+		const rina::ApplicationRegistrationRequestEvent& req_event)
 {
-        const rina::ApplicationProcessNamingInformation& app_name =
-                req_event.applicationRegistrationInformation.
-                appName;
-        const rina::ApplicationProcessNamingInformation&
-                slave_dif_name = slave_ipcp->dif_name_;
+	const rina::ApplicationProcessNamingInformation& app_name =
+			req_event.applicationRegistrationInformation.appName;
+	const rina::ApplicationProcessNamingInformation&
+	slave_dif_name = slave_ipcp->dif_name_;
 
 	bool success;
 
 	success = ipcm_register_response_common(event, app_name, slave_ipcp,
-                                           slave_dif_name);
+			slave_dif_name);
 
-        // Notify the application about the (un)successful registration.
-        notify_app_reg(req_event, app_name, slave_dif_name, success);
+	// Notify the application about the (un)successful registration.
+	notify_app_reg(req_event, app_name, slave_dif_name, success);
 
-        return success;
+	return success;
 }
 /************************* TO BE REMOVED END ********************************/
 
@@ -311,8 +307,7 @@ void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponse
 		t1 = get_transaction_state<APPregTransState>(trans->tid);
 		if(t1){
 			//Application registration
-			ipcm_register_response_app(e, ipcp,
-							*t1->req);
+			ipcm_register_response_app(e, ipcp, t1->req);
 		}else{
 			//IPCP registration
 			ipcm_register_response_ipcp(e);
@@ -463,7 +458,7 @@ void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResp
 
 		//Application registration
 		if(t1)
-			ipcm_unregister_response_app(e, ipcp, *t1->req);
+			ipcm_unregister_response_app(e, ipcp, t1->req);
 		else
 			ipcm_unregister_response_ipcp(e);
 	}catch(...){

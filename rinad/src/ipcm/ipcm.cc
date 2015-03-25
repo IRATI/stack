@@ -1296,7 +1296,6 @@ int IPCManager_::remove_syscall_transaction_state(int tid){
 	return 0;
 }
 
-
 //Main I/O loop
 void IPCManager_::run(){
 
