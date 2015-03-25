@@ -549,29 +549,6 @@ IPCManager_::register_at_dif(Promise* promise, const int ipcp_id,
 }
 
 ipcm_res_t
-IPCManager_::register_at_difs(Promise* promise, const int ipcp_id,
-		const list<rina::ApplicationProcessNamingInformation>& difs)
-{
-
-	ostringstream ss;
-
-	try{
-		for (list<rina::ApplicationProcessNamingInformation>::const_iterator
-				nit = difs.begin(); nit != difs.end(); nit++) {
-			//TODO: this should return a list of promises
-			register_at_dif(promise, ipcp_id, *nit);
-		}
-	} catch (Exception) {
-		ss  << ": Unknown error while requesting registration at dif"
-		    << endl;
-		FLUSH_LOG(ERR, ss);
-		return IPCM_FAILURE;
-	}
-
-	return IPCM_SUCCESS;
-}
-
-ipcm_res_t
 IPCManager_::unregister_ipcp_from_ipcp(Promise* promise, int ipcp_id,
                                       int slave_ipcp_id)
 {
@@ -765,7 +742,8 @@ IPCManager_::apply_configuration()
 		// Examine all the IPCProcesses that are going to be created
 		// according to the configuration file.
 		ipcm_res_t result;
-		CreateIPCPPromise promise;
+		CreateIPCPPromise c_promise;
+		Promise promise;
 		for (cit = config.ipcProcessesToCreate.begin();
 		     cit != config.ipcProcessesToCreate.end(); cit++) {
 			std::string	type;
@@ -779,19 +757,33 @@ IPCManager_::apply_configuration()
 			}
 
 			try {
-				if (create_ipcp(&promise, cit->name, type) == IPCM_FAILURE ||
-						promise.wait() != IPCM_SUCCESS) {
+				if (create_ipcp(&c_promise, cit->name, type) == IPCM_FAILURE ||
+						c_promise.wait() != IPCM_SUCCESS) {
 					continue;
 				}
-				assign_to_dif(NULL, promise.ipcp_id, cit->difName);
-				register_at_difs(NULL, promise.ipcp_id, cit->difsToRegisterAt);
+				if (assign_to_dif(&promise, c_promise.ipcp_id, cit->difName) == IPCM_FAILURE ||
+						promise.wait() != IPCM_SUCCESS) {
+					ss << "Problems assigning IPCP " << c_promise.ipcp_id
+						<< " to DIF " << cit->difName.processName <<endl;
+					FLUSH_LOG(ERR, ss);
+				}
+				for (list<rina::ApplicationProcessNamingInformation>::const_iterator
+						nit = cit->difsToRegisterAt.begin();
+						nit != cit->difsToRegisterAt.end(); nit++) {
+					if (register_at_dif(&promise, c_promise.ipcp_id, *nit) == IPCM_FAILURE ||
+							promise.wait() != IPCM_SUCCESS) {
+						ss << "Problems registering IPCP " << c_promise.ipcp_id
+								<< " to DIF " << nit->processName << endl;
+						FLUSH_LOG(ERR, ss);
+					}
+				}
 			} catch (Exception &e) {
 				LOG_ERR("Exception while applying configuration: %s",
 					e.what());
-				return IPCM_FAILURE;
+				continue;
 			}
 
-			ipcps.push_back(promise.ipcp_id);
+			ipcps.push_back(c_promise.ipcp_id);
 		}
 
 		// Perform all the enrollments specified by the configuration file.

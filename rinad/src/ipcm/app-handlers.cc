@@ -285,7 +285,7 @@ void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponse
 
 	if(!trans){
 		//Transacion was not found
-                ss << ": Warning: DIF assignment response "
+                ss << ": Warning: application registration response "
                         "received, but no pending DIF assignment. Perhaps the IPCP was deleted? " << endl;
                 FLUSH_LOG(WARN, ss);
 		return;
