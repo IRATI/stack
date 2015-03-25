@@ -4,6 +4,7 @@
 //    Eduard Grasa          <eduard.grasa@i2cat.net>
 //    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
 //    Francesco Salvestrini <f.salvestrini@nextworks.it>
+//    Marc Sune             <marc.sune (at) bisdn.de>
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -32,38 +33,35 @@
 
 #define RINA_PREFIX "logs"
 
+#include "librina/likely.h"
 #include "librina/logs.h"
 
-LOG_LEVEL        logLevel         = DBG;
-FILE *           logOutputStream  = stdout;
-pthread_rwlock_t outputStreamLock = PTHREAD_RWLOCK_INITIALIZER;
-pthread_rwlock_t logLevelLock     = PTHREAD_RWLOCK_INITIALIZER;
+LOG_LEVEL logLevel = DBG;
+FILE* logStream = stdout;
+
+static pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void setLogLevel(const std::string& newLogLevel)
 {
-        LOG_DBG("New log level: %s", newLogLevel.c_str());
-
-	pthread_rwlock_wrlock(&logLevelLock);
+	LOG_DBG("New log level: %s", newLogLevel.c_str());
 
 	if (LOG_LEVEL_DBG.compare(newLogLevel) == 0) {
-	        logLevel = DBG;
+		logLevel = DBG;
 	} else if (LOG_LEVEL_INFO.compare(newLogLevel) == 0) {
-	        logLevel = INFO;
+		logLevel = INFO;
 	} else if (LOG_LEVEL_NOTE.compare(newLogLevel) == 0) {
-                logLevel = NOTE;
-        } else if (LOG_LEVEL_WARN.compare(newLogLevel) == 0) {
-                logLevel = WARN;
-        } else if (LOG_LEVEL_ERR.compare(newLogLevel) == 0) {
-                logLevel = ERR;
-        } else if (LOG_LEVEL_CRIT.compare(newLogLevel) == 0) {
-                logLevel = CRIT;
-        } else if (LOG_LEVEL_ALERT.compare(newLogLevel) == 0) {
-                logLevel = ALERT;
-        } else if (LOG_LEVEL_EMERG.compare(newLogLevel) == 0) {
-                logLevel = EMERG;
-        }
-
-	pthread_rwlock_unlock(&logLevelLock);
+		logLevel = NOTE;
+	} else if (LOG_LEVEL_WARN.compare(newLogLevel) == 0) {
+		logLevel = WARN;
+	} else if (LOG_LEVEL_ERR.compare(newLogLevel) == 0) {
+		logLevel = ERR;
+	} else if (LOG_LEVEL_CRIT.compare(newLogLevel) == 0) {
+		logLevel = CRIT;
+	} else if (LOG_LEVEL_ALERT.compare(newLogLevel) == 0) {
+		logLevel = ALERT;
+	} else if (LOG_LEVEL_EMERG.compare(newLogLevel) == 0) {
+		logLevel = EMERG;
+	}
 }
 
 int setLogFile(const std::string& pathToFile)
@@ -74,122 +72,36 @@ int setLogFile(const std::string& pathToFile)
 		return result;
 	}
 
-	pthread_rwlock_wrlock(&outputStreamLock);
-	if (logOutputStream != stdout) {
-	        result = -1;
+	pthread_mutex_lock(&log_mutex);
+
+	if (logStream != stdout) {
+		result = -1;
 	} else {
-	        logOutputStream = fopen(pathToFile.c_str(), "w");
-	        if (!logOutputStream) {
-	                logOutputStream = stdout;
-	                result = -1;
-	        }
+		logStream = fopen(pathToFile.c_str(), "w");
+		if (!logStream) {
+			logStream = stdout;
+			result = -1;
+		}
 	}
-	pthread_rwlock_unlock(&outputStreamLock);
+
+	pthread_mutex_unlock(&log_mutex);
 
 	return result;
 }
 
-int processId = -1;
-
-int getProcessId()
-{
-	if (processId == -1){
-		processId = getpid();
-	}
-
-	return processId;
-}
-
-static bool shouldLog(LOG_LEVEL level)
-{
-	switch (level) {
-	case EMERG:
-		return true;
-	case ALERT:
-		if (logLevel == EMERG) {
-			return false;
-		} else {
-			return true;
-		}
-	case CRIT:
-		if (logLevel == EMERG || logLevel == ALERT) {
-			return false;
-		} else {
-			return true;
-		}
-	case ERR:
-		if (logLevel == EMERG ||
-                    logLevel == ALERT ||
-                    logLevel == CRIT) {
-			return false;
-		} else {
-			return true;
-		}
-	case WARN:
-		if (logLevel == EMERG ||
-                    logLevel == ALERT ||
-                    logLevel == CRIT
-                    || logLevel == ERR) {
-			return false;
-		} else {
-			return true;
-		}
-	case NOTE:
-		if (logLevel == NOTE || logLevel == INFO || logLevel == DBG) {
-			return true;
-		} else {
-			return false;
-		}
-	case INFO:
-		if (logLevel == INFO || logLevel == DBG) {
-			return true;
-		} else {
-			return false;
-		}
-	case DBG:
-		if (logLevel == DBG) {
-			return true;
-		} else {
-			return false;
-		}
-	default:
-		return false;
-	}
-}
-
 void log(LOG_LEVEL level, const char * fmt, ...)
 {
-        bool goon;
-        pthread_rwlock_rdlock(&logLevelLock);
-        goon = shouldLog(level);
-        pthread_rwlock_unlock(&logLevelLock);
+	//Avoid to use locking
+	FILE* stream = logStream;
 
-        if (!goon)
-                return;
+	if(level > logLevel)
+		return;
 
-        va_list args;
+	va_list args;
 
-        pthread_rwlock_rdlock(&outputStreamLock);
+	va_start(args, fmt);
+	vfprintf(stream, fmt, args);
+	va_end(args);
 
-        time_t now= time(0);
-
-        if (logOutputStream != stdout) {
-                fprintf(logOutputStream, "%d(%ld)", getProcessId(), now);
-
-                va_start(args, fmt);
-                vfprintf(logOutputStream, fmt, args);
-                va_end(args);
-
-                fflush(logOutputStream);
-        }
-
-        fprintf(stdout, "%d(%ld)", getProcessId(), now);
-
-        va_start(args, fmt);
-        vfprintf(stdout, fmt, args);
-        va_end(args);
-
-        fflush(stdout);
-
-        pthread_rwlock_unlock(&outputStreamLock);
+	fflush(stream);
 }
