@@ -779,12 +779,8 @@ IPCManager_::apply_configuration()
 			}
 
 			try {
-				result = create_ipcp(&promise, cit->name, type);
-				if (result < 0) {
-					continue;
-				}
-				promise.wait();
-				if (promise.ret != IPCM_SUCCESS) {
+				if (create_ipcp(&promise, cit->name, type) == IPCM_FAILURE ||
+						promise.wait() != IPCM_SUCCESS) {
 					continue;
 				}
 				assign_to_dif(NULL, promise.ipcp_id, cit->difName);
