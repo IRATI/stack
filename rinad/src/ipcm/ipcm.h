@@ -347,17 +347,6 @@ public:
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t enroll_to_dif(Promise* promise, const int ipcp_id,
 			  const rinad::NeighborData& neighbor);
-	//
-	// Enroll IPCP to multiple DIFs
-	//
-	// @param promise Promise object containing the future result of the
-	// operation. The promise shall always be accessible until the
-	// operation has been finished, so promise->ret value is different than
-	// IPCM_PENDING.
-	//
-	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t enroll_to_difs(Promise* promise, const int ipcp_id,
-			   const std::list<rinad::NeighborData>& neighbors);
 
 	//
 	// Unregister app from an ipcp

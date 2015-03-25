@@ -100,7 +100,7 @@ void IPCManager_::init(unsigned int wait_time, const std::string& loglevel)
 		LOG_DBG("       library path: %s",
 			config.local.libraryPath.c_str());
 		LOG_DBG("       log folder: %s", config.local.logPath.c_str());
-	} catch (rina::InitializationException) {
+	} catch (rina::InitializationException& e) {
 		LOG_ERR("Error while initializing librina-ipc-manager");
 		exit(EXIT_FAILURE);
 	}
@@ -708,29 +708,6 @@ IPCManager_::enroll_to_dif(Promise* promise, const int ipcp_id,
 	return IPCM_PENDING;
 }
 
-ipcm_res_t
-IPCManager_::enroll_to_difs(Promise* promise, const int ipcp_id,
-			       const list<rinad::NeighborData>& neighbors)
-{
-	ostringstream ss;
-
-	try{
-		for (list<rinad::NeighborData>::const_iterator
-				nit = neighbors.begin();
-					nit != neighbors.end(); nit++) {
-			//FIXME: this should be a set of promises
-			enroll_to_dif(promise, ipcp_id, *nit);
-		}
-	} catch (Exception& e) {
-		ss  << ": Unknown error while enrolling to difs"
-		    << endl;
-		FLUSH_LOG(ERR, ss);
-		return IPCM_FAILURE;
-	}
-
-	return IPCM_SUCCESS;
-}
-
 bool IPCManager_::lookup_dif_by_application(
 	const rina::ApplicationProcessNamingInformation& apName,
 	rina::ApplicationProcessNamingInformation& difName){
@@ -801,16 +778,26 @@ IPCManager_::apply_configuration()
 
 		// Perform all the enrollments specified by the configuration file.
 		for (pit = ipcps.begin(), cit = config.ipcProcessesToCreate.begin();
-		     pit != ipcps.end();
-		     pit++, cit++) {
+				pit != ipcps.end();
+				pit++, cit++) {
 			Promise promise;
-
-			//Wait
-			if(enroll_to_difs(&promise, *pit, cit->neighbors) == IPCM_FAILURE ||
-				promise.wait() != IPCM_SUCCESS){
-
-				LOG_ERR("Exception while applying configuration: could not enroll to dif!");
-				return IPCM_FAILURE;
+			try{
+				for (list<rinad::NeighborData>::const_iterator
+						nit = cit->neighbors.begin();
+						nit != cit->neighbors.end(); nit++) {
+					if (enroll_to_dif(&promise, *pit, *nit) == IPCM_FAILURE ||
+							promise.wait() != IPCM_SUCCESS) {
+						ss  << ": Unknown error while enrolling IPCP " << *pit
+							<< " to neighbour " << nit->apName.getEncodedString() << endl;
+						FLUSH_LOG(ERR, ss);
+						continue;
+					}
+				}
+			} catch (Exception& e) {
+				ss  << ": Unknown error while enrolling IPCP "<<
+						*pit << " to neighbours." << endl;
+				FLUSH_LOG(ERR, ss);
+				continue;
 			}
 		}
 	} catch (Exception &e) {
