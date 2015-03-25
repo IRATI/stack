@@ -89,18 +89,6 @@ int setLogFile(const std::string& pathToFile)
 	return result;
 }
 
-//Process Id
-static int processId = -1;
-
-static inline int getProcessId()
-{
-	if(unlikely(processId == -1)){
-		processId = getpid();
-	}
-
-	return processId;
-}
-
 void log(LOG_LEVEL level, const char * fmt, ...)
 {
 	//Avoid to use locking
@@ -110,9 +98,6 @@ void log(LOG_LEVEL level, const char * fmt, ...)
 		return;
 
 	va_list args;
-	time_t now = time(0);
-
-	fprintf(stream, "%d(%ld)", getProcessId(), now);
 
 	va_start(args, fmt);
 	vfprintf(stream, fmt, args);
