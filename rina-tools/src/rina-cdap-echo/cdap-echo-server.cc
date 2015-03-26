@@ -34,7 +34,7 @@ using namespace std;
 using namespace rina;
 
 ConnectionCallback::ConnectionCallback(bool *keep_serving,
-                                       rina::cdap::CDAPProviderInterface *prov)
+                                       rina::cdap::CDAPProviderInterface **prov)
 {
   keep_serving_ = keep_serving;
   prov_ = prov;
@@ -47,7 +47,8 @@ void ConnectionCallback::open_connection(
   cdap_rib::res_info_t res;
   res.result_ = 1;
   res.result_reason_ = "Ok";
-  prov_->open_connection_response(con, res, message_id);
+  std::cout<<"open conection request CDAP message received"<<std::endl;
+  (*prov_)->open_connection_response(con, res, message_id);
 }
 void ConnectionCallback::remote_read_request(
     const rina::cdap_rib::con_handle_t &con,
@@ -60,7 +61,7 @@ void ConnectionCallback::remote_read_request(
   cdap_rib::res_info_t res;
   res.result_ = 1;
   res.result_reason_ = "Ok";
-  prov_->remote_start_response(con, obj, flags, res, message_id);
+  (*prov_)->remote_start_response(con, obj, flags, res, message_id);
 }
 
 void ConnectionCallback::close_connection(const rina::cdap_rib::con_handle_t &con,
@@ -69,7 +70,7 @@ void ConnectionCallback::close_connection(const rina::cdap_rib::con_handle_t &co
   cdap_rib::res_info_t res;
   res.result_ = 1;
   res.result_reason_ = "Ok";
-  prov_->close_connection_response(con, flags, res, message_id);
+  (*prov_)->close_connection_response(con, flags, res, message_id);
   *keep_serving_ = false;
 }
 
@@ -148,16 +149,21 @@ void Server::startWorker(Flow *flow)
 
 void Server::serveEchoFlow(rina::Flow* flow)
 {
-  (void) flow;
   bool keep_serving = true;
+  char buffer[max_sdu_size_in_bytes];
   rina::cdap_rib::con_handle_t con;
   rina::cdap::CDAPProviderInterface *cdap_prov = 0;
-  ConnectionCallback callback(&keep_serving, cdap_prov);
+  ConnectionCallback callback(&keep_serving, &cdap_prov);
+  std::cout<<"cdap_prov created"<<std::endl;
   cdap_prov = cdap::CDAPProviderFactory->create(2000, false, &callback);
   while (keep_serving) {
+    int bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
+    cdap_rib::SerializedObject message;
+    message.message_ = buffer;
+    message.size_ = bytes_read;
+    cdap_prov->new_message(message, flow->getPortId());
   }
   delete cdap_prov;
-
 }
 /*
 void Server::destroyFlow(sigval_t val)

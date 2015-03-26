@@ -32,7 +32,7 @@ class ConnectionCallback : public rina::cdap::CDAPCallbackInterface
 {
  public:
   ConnectionCallback(bool *keep_serving,
-                     rina::cdap::CDAPProviderInterface *prov);
+                     rina::cdap::CDAPProviderInterface **prov);
   void open_connection(const rina::cdap_rib::con_handle_t &con,
                        const rina::cdap_rib::flags_t &flags, int message_id);
   void remote_read_request(const rina::cdap_rib::con_handle_t &con,
@@ -43,7 +43,7 @@ class ConnectionCallback : public rina::cdap::CDAPCallbackInterface
                         const rina::cdap_rib::flags_t &flags, int message_id);
  private:
   bool *keep_serving_;
-  rina::cdap::CDAPProviderInterface *prov_;
+  rina::cdap::CDAPProviderInterface **prov_;
 };
 
 class Server : public Application
