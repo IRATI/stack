@@ -163,6 +163,7 @@ seq_num_t dtp_sv_last_nxt_seq_nr(struct dtp * instance)
 
         return tmp;
 }
+EXPORT_SYMBOL(dtp_sv_last_nxt_seq_nr);
 
 seq_num_t dtp_sv_max_seq_nr_sent(struct dtp * instance)
 {
@@ -183,6 +184,7 @@ seq_num_t dtp_sv_max_seq_nr_sent(struct dtp * instance)
 
         return tmp;
 }
+EXPORT_SYMBOL(dtp_sv_max_seq_nr_sent);
 
 int dtp_sv_max_seq_nr_set(struct dtp * instance, seq_num_t num)
 {
@@ -795,6 +797,10 @@ int dtp_sv_init(struct dtp * dtp,
         dtp->sv->rate_based   = rate_based;
         dtp->sv->a            = a;
 
+        /* Init seq numbers */
+        dtp->sv->max_seq_nr_sent = dtp->sv->seq_nr_to_send;
+        dtp->sv->max_seq_nr_rcv  = 0;
+
         return 0;
 }
 
@@ -1370,14 +1376,7 @@ int dtp_receive(struct dtp * instance,
                 rtx_ctrl = dtcp_ps->rtx_ctrl;
         }
         rcu_read_unlock();
-#if DTP_INACTIVITY_TIMERS_ENABLE
-        /* Stop ReceiverInactivityTimer */
-        if (rtimer_stop(instance->timers.receiver_inactivity)) {
-                LOG_ERR("Failed to stop timer");
-                /*pdu_destroy(pdu);
-                  return -1;*/
-        }
-#endif
+
         seq_num = pci_sequence_number_get(pci);
 
         LOG_DBG("local_soft_irq_pending: %d", local_softirq_pending());
@@ -1386,6 +1385,17 @@ int dtp_receive(struct dtp * instance,
 
 
          if (instance->sv->drf_required) {
+#if DTP_INACTIVITY_TIMERS_ENABLE
+                /* Start ReceiverInactivityTimer */
+                if (rtimer_restart(instance->timers.receiver_inactivity,
+                                   2 * (dt_sv_mpl(dt) +
+                                        dt_sv_r(dt)   +
+                                        dt_sv_a(dt)))) {
+                        LOG_ERR("Failed to start Receiver Inactivity timer");
+                        pdu_destroy(pdu);
+                        return -1;
+                }
+#endif
                 if ((pci_flags_get(pci) & PDU_FLAGS_DATA_RUN)) {
                         instance->sv->drf_required = false;
                         spin_lock_irqsave(&instance->seqq->lock, flags);
@@ -1417,10 +1427,11 @@ int dtp_receive(struct dtp * instance,
                 pdu_destroy(pdu);
 
                 dropped_pdus_inc(sv);
+
+                /*FIXME: Rtimer should not be restarted here, to be deleted */
 #if DTP_INACTIVITY_TIMERS_ENABLE
                 /* Start ReceiverInactivityTimer */
-                if (rtimer_restart(instance->
-                                   timers.receiver_inactivity,
+                if (rtimer_restart(instance->timers.receiver_inactivity,
                                    3 * (dt_sv_mpl(dt) +
                                         dt_sv_r(dt)   +
                                         dt_sv_a(dt))))
@@ -1438,12 +1449,24 @@ int dtp_receive(struct dtp * instance,
                 return 0;
         }
 
+        /*NOTE: Just for debugging */
         if (dtcp && seq_num > dtcp_rcv_rt_win(dtcp)) {
                 LOG_INFO("PDU Scep-id %u Dcep-id %u SeqN %u, RWE: %u",
                          pci_cep_source(pci), pci_cep_destination(pci),
                          seq_num, dtcp_rcv_rt_win(dtcp));
         }
 
+#if DTP_INACTIVITY_TIMERS_ENABLE
+        /* Start ReceiverInactivityTimer */
+        if (rtimer_restart(instance->timers.receiver_inactivity,
+                           2 * (dt_sv_mpl(dt) +
+                                dt_sv_r(dt)   +
+                                dt_sv_a(dt)))) {
+                LOG_ERR("Failed to start Receiver Inactivity timer");
+                pdu_destroy(pdu);
+                return -1;
+        }
+#endif
         if (!a) {
                 bool set_lft_win_edge;
 
@@ -1454,7 +1477,7 @@ int dtp_receive(struct dtp * instance,
                         if (pdu_post(instance, pdu))
                                 return -1;
 
-                        goto exit;
+                        return 0;
                 }
 
                 set_lft_win_edge = !(dtcp_rtx_ctrl(dtcp_config_get(dtcp)) &&
@@ -1474,14 +1497,14 @@ int dtp_receive(struct dtp * instance,
                         }
                         if (!set_lft_win_edge) {
                                 pdu_destroy(pdu);
-                                goto exit;
+                                return 0;
                         }
                 }
 
                 if (pdu_post(instance, pdu))
                         return -1;
 
-                goto exit;
+                return 0;
 
         fail:
                 pdu_destroy(pdu);
@@ -1520,18 +1543,6 @@ int dtp_receive(struct dtp * instance,
         }
 
         LOG_DBG("DTP receive ended...");
-
- exit:
-#if DTP_INACTIVITY_TIMERS_ENABLE
-        /* Start ReceiverInactivityTimer */
-        if (rtimer_restart(instance->timers.receiver_inactivity,
-                           2 * (dt_sv_mpl(dt) +
-                                dt_sv_r(dt)   +
-                                dt_sv_a(dt)))) {
-                LOG_ERR("Failed to start Receiver Inactivity timer");
-                return -1;
-        }
-#endif
         return 0;
 }
 

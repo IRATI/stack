@@ -259,12 +259,13 @@ static void acks_inc(struct dtcp * dtcp)
 
 static int snd_rt_wind_edge_set(struct dtcp * dtcp, seq_num_t new_rt_win)
 {
+        unsigned long flags;
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
-        spin_lock(&dtcp->sv->lock);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
         dtcp->sv->snd_rt_wind_edge = new_rt_win;
-        spin_unlock(&dtcp->sv->lock);
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 
         return 0;
 }
@@ -1013,13 +1014,13 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
         LOG_DBG("DTCP SV initialized with dtcp_conf:");
         LOG_DBG("  data_retransmit_max: %d",
                 instance->sv->data_retransmit_max);
-        LOG_DBG("  sndr_credit:         %d",
+        LOG_DBG("  sndr_credit:         %u",
                 instance->sv->sndr_credit);
-        LOG_DBG("  snd_rt_wind_edge:    %d",
+        LOG_DBG("  snd_rt_wind_edge:    %u",
                 instance->sv->snd_rt_wind_edge);
-        LOG_DBG("  rcvr_credit:         %d",
+        LOG_DBG("  rcvr_credit:         %u",
                 instance->sv->rcvr_credit);
-        LOG_DBG("  rcvr_rt_wind_edge:   %d",
+        LOG_DBG("  rcvr_rt_wind_edge:   %u",
                 instance->sv->rcvr_rt_wind_edge);
 
         return 0;
@@ -1313,6 +1314,16 @@ seq_num_t dtcp_snd_rt_win(struct dtcp * dtcp)
 
         return snd_rt_wind_edge(dtcp);
 }
+EXPORT_SYMBOL(dtcp_snd_rt_win);
+
+int dtcp_snd_rt_win_set(struct dtcp * dtcp, seq_num_t rt_win_edge)
+{
+        if (!dtcp || !dtcp->sv)
+                return -1;
+
+        return snd_rt_wind_edge_set(dtcp, rt_win_edge);
+}
+EXPORT_SYMBOL(dtcp_snd_rt_win_set);
 
 seq_num_t dtcp_snd_lf_win(struct dtcp * dtcp)
 {
