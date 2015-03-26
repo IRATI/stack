@@ -323,6 +323,18 @@ std::list<int> NMinusOneFlowManager::getNMinusOneFlowsToNeighbour(unsigned int a
 	return result;
 }
 
+int NMinusOneFlowManager::getManagementFlowToNeighbour(unsigned int address) {
+	const std::list<rina::Neighbor*> neighbors = ipc_process_->get_neighbors();
+	for (std::list<rina::Neighbor*>::const_iterator it = neighbors.begin();
+			it != neighbors.end(); ++it) {
+		if ((*it)->address_ == address) {
+			return (*it)->underlying_port_id_;
+		}
+	}
+
+	return -1;
+}
+
 unsigned int NMinusOneFlowManager::numberOfFlowsToNeighbour(const std::string& apn,
 		const std::string& api) {
 	std::vector<rina::Flow *> flows = rina::extendedIPCManager->getAllocatedFlows();

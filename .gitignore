@@ -1,2 +1,6 @@
 /build
 /inst
+rina-tools/.cproject
+rina-tools/.project
+tests/.cproject
+tests/.project
