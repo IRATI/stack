@@ -1024,7 +1024,6 @@ IPCManager_::select_policy_set(Promise* promise, const int ipcp_id,
 		//Auto release the read lock
 		rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
-
 		trans = new IPCPTransState(promise, ipcp->get_id());
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";

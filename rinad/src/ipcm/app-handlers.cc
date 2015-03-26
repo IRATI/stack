@@ -355,6 +355,7 @@ void IPCManager_::application_unregistration_request_event_handler(
         IPCMIPCProcess *slave_ipcp = select_ipcp_by_dif(event->DIFName);
         ostringstream ss;
         int err;
+        unsigned short ipcp_id;
 
         if (!slave_ipcp) {
                 ss  << ": Error: Application " <<
@@ -368,7 +369,13 @@ void IPCManager_::application_unregistration_request_event_handler(
                 return;
         }
 
-        err = unregister_app_from_ipcp(NULL, *event, slave_ipcp->get_id());
+		{
+			//Auto release the read lock
+			rina::ReadScopedLock readlock(slave_ipcp->rwlock, false);
+			ipcp_id = slave_ipcp->get_id();
+		}
+
+        err = unregister_app_from_ipcp(NULL, *event, ipcp_id);
         if (err) {
                 // Inform the unregistering application that the unregistration
                 // operation failed
