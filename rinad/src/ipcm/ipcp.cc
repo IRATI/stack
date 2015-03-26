@@ -522,18 +522,14 @@ bool IPCMIPCProcessFactory::exists(const int id)
 	return true;
 }
 
-std::vector<IPCMIPCProcess *> IPCMIPCProcessFactory::listIPCProcesses()
+void IPCMIPCProcessFactory::listIPCProcesses(std::vector<IPCMIPCProcess *>& result)
 {
-	std::vector<IPCMIPCProcess *> response;
-
 	rina::ReadScopedLock readlock(rwlock);
 
 	for (std::map<unsigned short, IPCMIPCProcess*>::iterator it = ipcProcesses.begin();
 			it != ipcProcesses.end(); ++it) {
-		response.push_back(it->second);
-	}
-
-	return response;
+		result.push_back(it->second);
+	};
 }
 
 IPCMIPCProcess * IPCMIPCProcessFactory::getIPCProcess(unsigned short ipcProcessId)

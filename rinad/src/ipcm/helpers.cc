@@ -46,7 +46,8 @@ IPCManager_::select_ipcp_by_dif(
 	//Prevent any insertion/deletion to happen
 	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
 
-	const vector<IPCMIPCProcess *>& ipcps = ipcp_factory_.listIPCProcesses();
+	vector<IPCMIPCProcess *> ipcps;
+	ipcp_factory_.listIPCProcesses(ipcps);
 
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
 		rina::ApplicationProcessNamingInformation dif_name = ipcps[i]->dif_name_;
@@ -77,7 +78,8 @@ IPCManager_::select_ipcp(bool write_lock)
 	//Prevent any insertion/deletion to happen
 	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
 
-	const vector<IPCMIPCProcess *>& ipcps = ipcp_factory_.listIPCProcesses();
+	vector<IPCMIPCProcess *> ipcps;
+	ipcp_factory_.listIPCProcesses(ipcps);
 
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
 		if (ipcps[i]->get_type() == rina::NORMAL_IPC_PROCESS) {
@@ -132,7 +134,8 @@ IPCManager_::lookup_ipcp_by_port(unsigned int port_id, bool write_lock)
 	//Prevent any insertion/deletion to happen
 	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
 
-	const vector<IPCMIPCProcess *>& ipcps = ipcp_factory_.listIPCProcesses();
+	vector<IPCMIPCProcess *> ipcps;
+	ipcp_factory_.listIPCProcesses(ipcps);
 	rina::FlowInformation info;
 
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
@@ -158,7 +161,8 @@ IPCManager_::collect_flows_by_application(
 	//Prevent any insertion/deletion to happen
 	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
 
-	const vector<IPCMIPCProcess *>& ipcps = ipcp_factory_.listIPCProcesses();
+	vector<IPCMIPCProcess *> ipcps;
+	ipcp_factory_.listIPCProcesses(ipcps);
 
 	result.clear();
 

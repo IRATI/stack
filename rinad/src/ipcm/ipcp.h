@@ -490,9 +490,9 @@ public:
      * Returns a list to all the IPC Processes that are currently running in
      * the system.
      *
-     * @return list<IPCProcess *> A list of the IPC Processes in the system
+     * @param list<IPCProcess *> A reference to a list of the IPC Processes in the system
      */
-    std::vector<IPCMIPCProcess *> listIPCProcesses();
+    void listIPCProcesses(std::vector<IPCMIPCProcess *>& result);
 
     /**
      * Check if the ipcp exists

@@ -717,10 +717,7 @@ protected:
 	//Rwlock for transactions
 	rina::ReadWriteLockable trans_rwlock;
 
-
-	//
 	// RINA configuration internal state
-	//
 	rinad::RINAConfiguration config;
 
 	//Script thread
@@ -728,7 +725,6 @@ protected:
 
 	//IPCM Console instance
 	IPCMConsole *console;
-
 
 	//TODO: map of addons
 

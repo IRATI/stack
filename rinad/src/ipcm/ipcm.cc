@@ -268,11 +268,11 @@ IPCManager_::destroy_ipcp(unsigned int ipcp_id)
 void
 IPCManager_::list_ipcps(std::ostream& os)
 {
-	const vector<IPCMIPCProcess *>& ipcps =
-		ipcp_factory_.listIPCProcesses();
-
 	//Prevent any insertion/deletion to happen
 	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
+
+	vector<IPCMIPCProcess *> ipcps;
+	ipcp_factory_.listIPCProcesses(ipcps);
 
 	os << "Current IPC processes (id | name | type | state | Registered applications | Port-ids of flows provided)" << endl;
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
@@ -1299,6 +1299,9 @@ void IPCManager_::run(){
 		if(!event)
 			continue;
 
+		if (!keep_running)
+			break;
+
 		LOG_DBG("Got event of type %s and sequence number %u",
 		rina::IPCEvent::eventTypeToString(event->eventType).c_str(),
 							event->sequenceNumber);
@@ -1454,7 +1457,8 @@ void IPCManager_::run(){
 	LOG_DBG("Stopping I/O loop and cleaning the house...");
 
 	//Destroy all IPCPs
-	const std::vector<IPCMIPCProcess *>& ipcps = ipcp_factory_.listIPCProcesses();
+	std::vector<IPCMIPCProcess *> ipcps;
+	ipcp_factory_.listIPCProcesses(ipcps);
 	std::vector<IPCMIPCProcess *>::const_iterator it;
 
 	//Rwlock: write
