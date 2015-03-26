@@ -1137,8 +1137,6 @@ void register_handlers_all(EventLoop& loop) {
 			ipc_process_default_handler);
 	loop.register_event(rina::ENROLL_TO_DIF_RESPONSE_EVENT,
 			ipc_process_default_handler);
-	loop.register_event(rina::NEIGHBORS_MODIFIED_NOTIFICATION_EVENT,
-			ipc_process_default_handler);
 	loop.register_event(rina::GET_DIF_PROPERTIES,
 			ipc_process_default_handler);
 	loop.register_event(rina::GET_DIF_PROPERTIES_RESPONSE_EVENT,

@@ -985,6 +985,8 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .pft_dump                  = normal_pft_dump,
         .pft_flush                 = normal_pft_flush,
 
+        .query_rib		   = NULL,
+
         .ipcp_name                 = normal_ipcp_name,
 
         .set_policy_set_param      = normal_set_policy_set_param,

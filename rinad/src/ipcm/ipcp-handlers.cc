@@ -367,41 +367,4 @@ IPCManager_::enroll_to_dif_response_event_handler(rina::EnrollToDIFResponseEvent
 	remove_transaction_state(trans->tid);
 }
 
-void IPCManager_::neighbors_modified_notification_event_handler(rina::NeighborsModifiedNotificationEvent* event)
-{
-	ostringstream ss;
-
-	if (!event->neighbors.size()) {
-		ss  << ": Warning: Empty neighbors-modified "
-			"notification received" << endl;
-		FLUSH_LOG(WARN, ss);
-		return;
-	}
-
-	IPCPTransState* trans = get_transaction_state<IPCPTransState>(event->sequenceNumber);
-
-	if(!trans){
-		ss << ": Warning: unknown enrollment to DIF response received: "<<event->sequenceNumber<<endl;
-		FLUSH_LOG(WARN, ss);
-		return;
-	}
-
-	IPCMIPCProcess* ipcp = lookup_ipcp_by_id(trans->ipcp_id);
-	if(!ipcp){
-		ss  << ": Error: IPC process unexpectedly "
-			"went away" << endl;
-		FLUSH_LOG(ERR, ss);
-		return;
-	}
-
-	//Auto release the read lock
-	rina::ReadScopedLock readlock(ipcp->rwlock, false);
-
-	ss << "Neighbors update [" << (event->added ? "+" : "-") <<
-		"#" << event->neighbors.size() << "]for IPC process " <<
-		ipcp->get_name().toString() <<  endl;
-	FLUSH_LOG(INFO, ss);
-
-}
-
 } //namespace rinad

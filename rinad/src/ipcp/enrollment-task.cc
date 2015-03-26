@@ -1336,14 +1336,6 @@ void EnrollerStateMachine::enrollmentCompleted() {
 
 	enrollment_task_->enrollmentCompleted(remote_peer_, false);
 
-	try {
-		std::list<rina::Neighbor> neighbors;
-		neighbors.push_back(*remote_peer_);
-		rina::extendedIPCManager->notifyNeighborsModified(true, neighbors);
-	} catch (Exception &e) {
-		LOG_ERR("Problems sending message to IPC Manager: %s", e.what());
-	}
-
 	LOG_INFO("Remote IPC Process enrolled!");
 }
 
@@ -1874,18 +1866,6 @@ void EnrollmentTask::nMinusOneFlowDeallocated(NMinusOneFlowDeallocatedEvent  * e
 		if ((*it2)->name_.processName.compare(event->cdap_session_descriptor_.dest_ap_name_) == 0) {
 			ConnectiviyToNeighborLostEvent * event2 = new ConnectiviyToNeighborLostEvent((*it2));
 			rib_daemon_->deliverEvent(event2);
-
-			//Notify the IPC Manager that we've lost a neighbor
-			LOG_DBG("Notifying IPC Manager about dead neighbor %s",
-					event->cdap_session_descriptor_.dest_ap_name_.c_str());
-			std::list<rina::Neighbor> lostNeighbors;
-			lostNeighbors.push_back(*(*it2));
-			try {
-				rina::extendedIPCManager->notifyNeighborsModified(false, lostNeighbors);
-			} catch (Exception &e) {
-				LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
-			}
-
 			return;
 		}
 	}

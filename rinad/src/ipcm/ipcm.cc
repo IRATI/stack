@@ -100,7 +100,7 @@ void IPCManager_::init(unsigned int wait_time, const std::string& loglevel)
 		LOG_DBG("       library path: %s",
 			config.local.libraryPath.c_str());
 		LOG_DBG("       log folder: %s", config.local.logPath.c_str());
-	} catch (rina::InitializationException) {
+	} catch (rina::InitializationException& e) {
 		LOG_ERR("Error while initializing librina-ipc-manager");
 		exit(EXIT_FAILURE);
 	}
@@ -268,11 +268,11 @@ IPCManager_::destroy_ipcp(unsigned int ipcp_id)
 void
 IPCManager_::list_ipcps(std::ostream& os)
 {
-	const vector<IPCMIPCProcess *>& ipcps =
-		ipcp_factory_.listIPCProcesses();
-
 	//Prevent any insertion/deletion to happen
 	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
+
+	vector<IPCMIPCProcess *> ipcps;
+	ipcp_factory_.listIPCProcesses(ipcps);
 
 	os << "Current IPC processes (id | name | type | state | Registered applications | Port-ids of flows provided)" << endl;
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
@@ -708,29 +708,6 @@ IPCManager_::enroll_to_dif(Promise* promise, const int ipcp_id,
 	return IPCM_PENDING;
 }
 
-ipcm_res_t
-IPCManager_::enroll_to_difs(Promise* promise, const int ipcp_id,
-			       const list<rinad::NeighborData>& neighbors)
-{
-	ostringstream ss;
-
-	try{
-		for (list<rinad::NeighborData>::const_iterator
-				nit = neighbors.begin();
-					nit != neighbors.end(); nit++) {
-			//FIXME: this should be a set of promises
-			enroll_to_dif(promise, ipcp_id, *nit);
-		}
-	} catch (Exception& e) {
-		ss  << ": Unknown error while enrolling to difs"
-		    << endl;
-		FLUSH_LOG(ERR, ss);
-		return IPCM_FAILURE;
-	}
-
-	return IPCM_SUCCESS;
-}
-
 bool IPCManager_::lookup_dif_by_application(
 	const rina::ApplicationProcessNamingInformation& apName,
 	rina::ApplicationProcessNamingInformation& difName){
@@ -801,16 +778,26 @@ IPCManager_::apply_configuration()
 
 		// Perform all the enrollments specified by the configuration file.
 		for (pit = ipcps.begin(), cit = config.ipcProcessesToCreate.begin();
-		     pit != ipcps.end();
-		     pit++, cit++) {
+				pit != ipcps.end();
+				pit++, cit++) {
 			Promise promise;
-
-			//Wait
-			if(enroll_to_difs(&promise, *pit, cit->neighbors) == IPCM_FAILURE ||
-				promise.wait() != IPCM_SUCCESS){
-
-				LOG_ERR("Exception while applying configuration: could not enroll to dif!");
-				return IPCM_FAILURE;
+			try{
+				for (list<rinad::NeighborData>::const_iterator
+						nit = cit->neighbors.begin();
+						nit != cit->neighbors.end(); nit++) {
+					if (enroll_to_dif(&promise, *pit, *nit) == IPCM_FAILURE ||
+							promise.wait() != IPCM_SUCCESS) {
+						ss  << ": Unknown error while enrolling IPCP " << *pit
+							<< " to neighbour " << nit->apName.getEncodedString() << endl;
+						FLUSH_LOG(ERR, ss);
+						continue;
+					}
+				}
+			} catch (Exception& e) {
+				ss  << ": Unknown error while enrolling IPCP "<<
+						*pit << " to neighbours." << endl;
+				FLUSH_LOG(ERR, ss);
+				continue;
 			}
 		}
 	} catch (Exception &e) {
@@ -1312,6 +1299,9 @@ void IPCManager_::run(){
 		if(!event)
 			continue;
 
+		if (!keep_running)
+			break;
+
 		LOG_DBG("Got event of type %s and sequence number %u",
 		rina::IPCEvent::eventTypeToString(event->eventType).c_str(),
 							event->sequenceNumber);
@@ -1382,13 +1372,6 @@ void IPCManager_::run(){
 						{
         					DOWNCAST_DECL(event, rina::EnrollToDIFResponseEvent, e);
 						enroll_to_dif_response_event_handler(e);
-						}
-						break;
-
-				case rina::NEIGHBORS_MODIFIED_NOTIFICATION_EVENT:
-						{
-        					DOWNCAST_DECL(event, rina::NeighborsModifiedNotificationEvent, e);
-						neighbors_modified_notification_event_handler(e);
 						}
 						break;
 
@@ -1474,7 +1457,8 @@ void IPCManager_::run(){
 	LOG_DBG("Stopping I/O loop and cleaning the house...");
 
 	//Destroy all IPCPs
-	const std::vector<IPCMIPCProcess *>& ipcps = ipcp_factory_.listIPCProcesses();
+	std::vector<IPCMIPCProcess *> ipcps;
+	ipcp_factory_.listIPCProcesses(ipcps);
 	std::vector<IPCMIPCProcess *>::const_iterator it;
 
 	//Rwlock: write

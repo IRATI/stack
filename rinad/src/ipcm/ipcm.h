@@ -347,17 +347,6 @@ public:
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t enroll_to_dif(Promise* promise, const int ipcp_id,
 			  const rinad::NeighborData& neighbor);
-	//
-	// Enroll IPCP to multiple DIFs
-	//
-	// @param promise Promise object containing the future result of the
-	// operation. The promise shall always be accessible until the
-	// operation has been finished, so promise->ret value is different than
-	// IPCM_PENDING.
-	//
-	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t enroll_to_difs(Promise* promise, const int ipcp_id,
-			   const std::list<rinad::NeighborData>& neighbors);
 
 	//
 	// Unregister app from an ipcp
@@ -599,7 +588,6 @@ protected:
 
 	//Enrollment mgmt
 	void enroll_to_dif_response_event_handler(rina::EnrollToDIFResponseEvent *e);
-	void neighbors_modified_notification_event_handler(rina::NeighborsModifiedNotificationEvent* e);
 
 	//RIB queries
 	void query_rib_response_event_handler(rina::QueryRIBResponseEvent *e);
@@ -729,10 +717,7 @@ protected:
 	//Rwlock for transactions
 	rina::ReadWriteLockable trans_rwlock;
 
-
-	//
 	// RINA configuration internal state
-	//
 	rinad::RINAConfiguration config;
 
 	//Script thread
@@ -740,7 +725,6 @@ protected:
 
 	//IPCM Console instance
 	IPCMConsole *console;
-
 
 	//TODO: map of addons
 

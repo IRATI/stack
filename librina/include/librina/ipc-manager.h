@@ -792,27 +792,6 @@ public:
 };
 
 /**
- * Event informing about new neighbors being added or existing
- * neighbors being removed
- */
-class NeighborsModifiedNotificationEvent: public IPCEvent {
-public:
-        unsigned short ipcProcessId;
-        std::list<Neighbor> neighbors;
-        bool added;
-
-        NeighborsModifiedNotificationEvent(
-                        unsigned short ipcProcessId,
-                        const std::list<Neighbor> & neighbors,
-                        bool added, unsigned int sequenceNumber);
-#ifndef SWIG
-        const std::list<Neighbor>& getNeighbors() const;
-        bool isAdded() const;
-        unsigned short getIpcProcessId() const;
-#endif
-};
-
-/**
  * Event informing about the successful initialization of an IPC Process
  * Daemon
  */
