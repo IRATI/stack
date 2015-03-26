@@ -1110,13 +1110,13 @@ shim_hv_ipcp_name(struct ipcp_instance_data *priv)
 }
 
 static int shim_hv_query_rib(struct ipcp_instance_data * data,
-                 struct list_head *          entries,
-                 const string_t * object_class,
-                 const string_t * object_name,
-                 uint64_t object_instance,
-                 uint32_t scope,
-                 const string_t * filter) {
-	//TODO: implement properly
+                             struct list_head *          entries,
+                             const string_t *            object_class,
+                             const string_t *            object_name,
+                             uint64_t                    object_instance,
+                             uint32_t                    scope,
+                             const string_t *            filter) {
+	LOG_MISSING;
 	return -1;
 }
 
@@ -1152,7 +1152,7 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .pft_dump                  = NULL,
         .pft_flush                 = NULL,
 
-        .query_rib				   = shim_hv_query_rib,
+        .query_rib		   = shim_hv_query_rib,
 
         .ipcp_name                 = shim_hv_ipcp_name,
 

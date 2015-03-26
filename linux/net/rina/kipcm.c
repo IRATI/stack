@@ -1339,12 +1339,12 @@ static int notify_ipcm_query_rib(void *             data,
 
         INIT_LIST_HEAD(&entries);
         if (ipc_process->ops->query_rib(ipc_process->data,
-        		&entries,
-        		attrs->object_class,
-        		attrs->object_name,
-        		attrs->object_instance,
-        		attrs->scope,
-        		attrs->filter)) {
+        		                &entries,
+        		                attrs->object_class,
+        		                attrs->object_name,
+        		                attrs->object_instance,
+        	 	                attrs->scope,
+        		                attrs->filter)) {
         	LOG_ERR("Could not query RIB, unsupported operation");
         	goto end;
         }
@@ -1353,11 +1353,11 @@ static int notify_ipcm_query_rib(void *             data,
 
  end:
         return ipcm_query_rib_free_and_reply(msg,
-                                            ipc_id,
-                                            result,
-                                            &entries,
-                                            info->snd_seq,
-                                            info->snd_portid);
+                                             ipc_id,
+                                             result,
+                                             &entries,
+                                             info->snd_seq,
+                                             info->snd_portid);
 }
 
 static int notify_ipcp_set_policy_set_param(void *             data,
@@ -1546,8 +1546,8 @@ static int netlink_handlers_register(struct kipcm * kipcm)
                 notify_ipcp_modify_pfte;
         kipcm_handlers[RINA_C_RMT_DUMP_FT_REQUEST]                 =
                 notify_ipcp_dump_pft;
-        kipcm_handlers[RINA_C_IPCM_QUERY_RIB_REQUEST]      		   =
-        		notify_ipcm_query_rib;
+        kipcm_handlers[RINA_C_IPCM_QUERY_RIB_REQUEST]      	   =
+        	notify_ipcm_query_rib;
         kipcm_handlers[RINA_C_IPCP_SET_POLICY_SET_PARAM_REQUEST]   =
                 notify_ipcp_set_policy_set_param;
         kipcm_handlers[RINA_C_IPCP_SELECT_POLICY_SET_REQUEST]      =

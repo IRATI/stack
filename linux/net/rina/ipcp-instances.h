@@ -226,12 +226,12 @@ struct ipcp_instance_ops {
         int (* pft_flush)(struct ipcp_instance_data * data);
 
         int (* query_rib)(struct ipcp_instance_data * data,
-                         struct list_head *          entries,
-                         const string_t * object_class,
-                         const string_t * object_name,
-                         uint64_t object_instance,
-                         uint32_t scope,
-                         const string_t * filter);
+                          struct list_head *          entries,
+                          const string_t *            object_class,
+                          const string_t *            object_name,
+                          uint64_t                    object_instance,
+                          uint32_t                    scope,
+                          const string_t *            filter);
 
         const struct name * (* ipcp_name)(struct ipcp_instance_data * data);
 

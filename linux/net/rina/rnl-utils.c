@@ -623,8 +623,10 @@ static int
 rnl_ipcp_set_policy_set_param_msg_attrs_destroy(
                 struct rnl_ipcp_set_policy_set_param_req_msg_attrs * attrs)
 {
-        if (!attrs)
+        if (!attrs) {
+		LOG_ERR("Bogus attributes passed, bailing out");
                 return -1;
+	}
 
         if (attrs->path)
                 rkfree(attrs->path);
@@ -2058,8 +2060,8 @@ rnl_parse_ipcm_query_rib_req_msg(struct genl_info * info,
                                  struct rnl_ipcm_query_rib_msg_attrs * msg_attrs)
 {
     	if (info->attrs[IDQR_ATTR_OBJECT_CLASS])
-    			msg_attrs->object_class = nla_dup_string(info->attrs[IDQR_ATTR_OBJECT_CLASS],
-            										     GFP_KERNEL);
+    		msg_attrs->object_class = nla_dup_string(info->attrs[IDQR_ATTR_OBJECT_CLASS],
+            						 GFP_KERNEL);
 
     	if (info->attrs[IDQR_ATTR_OBJECT_NAME])
     	        msg_attrs->object_name = nla_dup_string(info->attrs[IDQR_ATTR_OBJECT_NAME],
@@ -2074,7 +2076,7 @@ rnl_parse_ipcm_query_rib_req_msg(struct genl_info * info,
                         nla_get_u32(info->attrs[IDQR_ATTR_SCOPE]);
 
         if (info->attrs[IDQR_ATTR_FILTER])
-        		msg_attrs->filter = nla_dup_string(info->attrs[IDQR_ATTR_FILTER],
+        	msg_attrs->filter = nla_dup_string(info->attrs[IDQR_ATTR_FILTER],
             	                                   GFP_KERNEL);
 
         return 0;
@@ -2872,14 +2874,14 @@ static int format_ro_entries_list(struct list_head * entries,
                 }
 
                 if (nla_put_string(skb_out,
-                				 	RIBO_ATTR_OBJECT_CLASS,
-                				 	pos->class)                         ||
+                		   RIBO_ATTR_OBJECT_CLASS,
+                		   pos->class)             ||
                      nla_put_string(skb_out,
-                    		 	 	RIBO_ATTR_OBJECT_NAME,
-                    		 	 	pos->name)   						||
+                    		    RIBO_ATTR_OBJECT_NAME,
+                    		    pos->name)   	   ||
                      nla_put_string(skb_out,
-                    		 	 	RIBO_ATTR_OBJECT_DISPLAY_VALUE,
-                    		 	 	pos->display_value) 				||
+                    		    RIBO_ATTR_OBJECT_DISPLAY_VALUE,
+                    		    pos->display_value)    ||
                      nla_put_u64(skb_out,
                     		 RIBO_ATTR_OBJECT_INSTANCE,
                     		 pos->instance))

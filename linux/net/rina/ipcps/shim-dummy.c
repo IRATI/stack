@@ -737,13 +737,14 @@ static const struct name * dummy_ipcp_name(struct ipcp_instance_data * data)
 }
 
 static int dummy_query_rib(struct ipcp_instance_data * data,
-                 struct list_head *          entries,
-                 const string_t * object_class,
-                 const string_t * object_name,
-                 uint64_t object_instance,
-                 uint32_t scope,
-                 const string_t * filter) {
-	//Nothing to be done
+                           struct list_head *          entries,
+                           const string_t *            object_class,
+                           const string_t *            object_name,
+                           uint64_t                    object_instance,
+                           uint32_t                    scope,
+                           const string_t *            filter) 
+{
+	LOG_MISSING;
 	return -1;
 }
 
@@ -779,7 +780,7 @@ static struct ipcp_instance_ops dummy_instance_ops = {
         .pft_dump                  = NULL,
         .pft_flush                 = NULL,
 
-        .query_rib 				   = dummy_query_rib,
+        .query_rib 		   = dummy_query_rib,
 
         .ipcp_name                 = dummy_ipcp_name,
 

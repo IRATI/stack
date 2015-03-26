@@ -150,11 +150,11 @@ enum rib_object_class_t {
 };
 
 struct rib_object_entry {
-        string_t * 				class;
-        string_t *              name;
-        long unsigned int       instance;
-        string_t *				display_value;
-        struct list_head next;
+        string_t *        class;
+        string_t *        name;
+        long unsigned int instance;
+        string_t *	  display_value;
+        struct list_head  next;
 };
 
 struct pdu_ft_entry {

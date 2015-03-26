@@ -245,7 +245,7 @@ static struct nla_policy idqr_policy[IDQR_ATTR_MAX + 1] = {
         [IDQR_ATTR_OBJECT_NAME]     = NLA_INIT_STRING,
         [IDQR_ATTR_OBJECT_INSTANCE] = NLA_INIT_U64,
         [IDQR_ATTR_SCOPE]           = NLA_INIT_U32,
-        [IDQR_ATTR_FILTER] 			= NLA_INIT_STRING,
+        [IDQR_ATTR_FILTER] 	    = NLA_INIT_STRING,
 };
 
 static struct nla_policy rmpfe_policy[RMPFE_ATTR_MAX + 1] = {
