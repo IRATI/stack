@@ -309,7 +309,7 @@ public:
 class CDAPProviderFactory_
 {
  public:
-  CDAPProviderFactory_(){};
+  ~CDAPProviderFactory_();
   CDAPProviderInterface* create(long timeout, bool is_IPCP, cdap::CDAPCallbackInterface *callback);
 };
 

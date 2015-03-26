@@ -33,13 +33,55 @@
 using namespace std;
 using namespace rina;
 
+ConnectionCallback::ConnectionCallback(bool *keep_serving,
+                                       rina::cdap::CDAPProviderInterface *prov)
+{
+  keep_serving_ = keep_serving;
+  prov_ = prov;
+}
+void ConnectionCallback::open_connection(
+    const rina::cdap_rib::con_handle_t &con,
+    const rina::cdap_rib::flags_t &flags, int message_id)
+{
+  (void) flags;
+  cdap_rib::res_info_t res;
+  res.result_ = 1;
+  res.result_reason_ = "Ok";
+  prov_->open_connection_response(con, res, message_id);
+}
+void ConnectionCallback::remote_read_request(
+    const rina::cdap_rib::con_handle_t &con,
+    const rina::cdap_rib::obj_info_t &obj,
+    const rina::cdap_rib::filt_info_t &filt, int message_id)
+{
+  (void) filt;
+  cdap_rib::flags_t flags;
+  flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
+  cdap_rib::res_info_t res;
+  res.result_ = 1;
+  res.result_reason_ = "Ok";
+  prov_->remote_start_response(con, obj, flags, res, message_id);
+}
+
+void ConnectionCallback::close_connection(const rina::cdap_rib::con_handle_t &con,
+                      const rina::cdap_rib::flags_t &flags, int message_id)
+{
+  cdap_rib::res_info_t res;
+  res.result_ = 1;
+  res.result_reason_ = "Ok";
+  prov_->close_connection_response(con, flags, res, message_id);
+  *keep_serving_ = false;
+}
+
 Server::Server(const string& dif_name, const string& app_name,
                const string& app_instance, const int dealloc_wait)
     : Application(dif_name, app_name, app_instance),
-      dw(dealloc_wait) {
+      dw(dealloc_wait)
+{
 }
 
-void Server::run() {
+void Server::run()
+{
   applicationRegister();
 
   for (;;) {
@@ -70,7 +112,7 @@ void Server::run() {
         flow = ipcManager->allocateFlowResponse(
             *dynamic_cast<FlowRequestEvent*>(event), 0, true);
         LOG_INFO("New flow allocated [port-id = %d]", flow->getPortId());
-        startWorker(flow);
+        startWorker (flow);
         break;
 
       case FLOW_DEALLOCATED_EVENT:
@@ -94,7 +136,8 @@ void Server::run() {
   }
 }
 
-void Server::startWorker(Flow *flow) {
+void Server::startWorker(Flow *flow)
+{
   void (Server::*server_function)(Flow *flow);
 
   server_function = &Server::serveEchoFlow;
@@ -103,144 +146,22 @@ void Server::startWorker(Flow *flow) {
   t.detach();
 }
 
-bool Server::cacep(Flow *flow) {
-  rina::WireMessageProviderFactory wire_factory;
-  rina::CDAPSessionManagerFactory factory;
-  char buffer[max_sdu_size_in_bytes], *bytes_read;
-  int n_bytes_read;
-  const CDAPMessage *m_sent, *m_rcv;
-
-  manager_ = factory.createCDAPSessionManager(&wire_factory, 2000);
-
-  // M_CONNECT
-  try {
-    n_bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
-  } catch (rina::IPCException &e) {
-    std::cout << "CACEP not stablished. Exception while reading SDU: "
-              << e.what() << std::endl;
-    return false;
+void Server::serveEchoFlow(rina::Flow* flow)
+{
+  (void) flow;
+  bool keep_serving = true;
+  rina::cdap_rib::con_handle_t con;
+  rina::cdap::CDAPProviderInterface *cdap_prov = 0;
+  ConnectionCallback callback(&keep_serving, cdap_prov);
+  cdap_prov = cdap::CDAPProviderFactory->create(2000, false, &callback);
+  while (keep_serving) {
   }
-  bytes_read = new char[n_bytes_read];
-  memcpy(bytes_read, buffer, n_bytes_read);
-  SerializedObject ser_rec_m(bytes_read, n_bytes_read);
-  m_rcv = manager_->messageReceived(ser_rec_m, flow->getPortId());
-  std::cout << "CACEP stablished" << std::endl;
-
-  //M_CONNECT_R
-  AuthValue auth_value;
-  m_sent = manager_->getOpenConnectionResponseMessage(CDAPMessage::AUTH_NONE,
-                                                      auth_value, "1",
-                                                      "A instance", "1", "A", 1,
-                                                      "OK", "1", "B instance",
-                                                      "1", "B",
-                                                      m_rcv->invoke_id_);
-  const SerializedObject *ser_sent_m = manager_->encodeNextMessageToBeSent(
-      *m_sent, flow->getPortId());
-  manager_->messageSent(*m_sent, flow->getPortId());
-  flow->writeSDU(ser_sent_m->message_, ser_sent_m->size_);
-
-  delete m_rcv;
-  delete ser_sent_m;
-  delete m_sent;
-  return true;
-}
-
-bool Server::release(rina::Flow *flow, int invoke_id) {
-  const CDAPMessage *m_sent;
-
-  //M_CONNECT_R
-  m_sent = manager_->getReleaseConnectionResponseMessage(
-      CDAPMessage::NONE_FLAGS, 1, "Ok", invoke_id);
-  const SerializedObject *ser_sent_m = manager_->encodeNextMessageToBeSent(
-      *m_sent, flow->getPortId());
-  manager_->messageSent(*m_sent, flow->getPortId());
-  flow->writeSDU(ser_sent_m->message_, ser_sent_m->size_);
-  std::cout << "Connection released and RELEASE response sent"<<std::endl;
-  delete ser_sent_m;
-  delete m_sent;
-  return true;
-}
-
-void Server::serveEchoFlow(Flow *flow) {
-  char buffer[max_sdu_size_in_bytes], *bytes_read;
-  int n_bytes_read;
-  const CDAPMessage *m_sent, *m_rcv;
-  struct sigevent event;
-  struct itimerspec itime;
-  timer_t timer_id;
-
-  // Setup a timer if dealloc_wait option is set */
-  if (dw > 0) {
-    event.sigev_notify = SIGEV_THREAD;
-    event.sigev_value.sival_ptr = flow;
-    event.sigev_notify_function = &destroyFlow;
-
-    timer_create(CLOCK_REALTIME, &event, &timer_id);
-
-    itime.it_interval.tv_sec = 0;
-    itime.it_interval.tv_nsec = 0;
-    itime.it_value.tv_sec = dw;
-    itime.it_value.tv_nsec = 0;
-
-    timer_settime(timer_id, 0, &itime, NULL);
-  }
-  cacep(flow);
-
-  try {
-    for (;;) {
-      // Receive READ request
-      try {
-        n_bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
-      } catch (rina::IPCException &e) {
-        std::cout << "Exception while reading SDU: " << e.what() << std::endl;
-        break;
-      }
-      bytes_read = new char[n_bytes_read];
-      memcpy(bytes_read, buffer, n_bytes_read);
-      SerializedObject ser_rec_m(bytes_read, n_bytes_read);
-      m_rcv = manager_->messageReceived(ser_rec_m, flow->getPortId());
-      if (m_rcv->op_code_ == CDAPMessage::M_RELEASE)
-      {
-        std::cout << "Received RELEASE request with invoke id " << m_rcv->invoke_id_
-                  << std::endl;
-        release(flow, m_rcv->invoke_id_);
-        delete m_rcv;
-        break;
-      }
-      std::cout << "Received READ request with invoke id " << m_rcv->invoke_id_
-                << std::endl;
-
-      // Send READ responses
-      m_sent = manager_->getReadObjectResponseMessage(CDAPMessage::NONE_FLAGS,
-                                                      m_rcv->obj_class_,
-                                                      m_rcv->obj_inst_,
-                                                      m_rcv->obj_name_, 1,
-                                                      "good",
-                                                      m_rcv->invoke_id_);
-      const SerializedObject *ser_sent_m = manager_->encodeNextMessageToBeSent(
-          *m_sent, flow->getPortId());
-      manager_->messageSent(*m_sent, flow->getPortId());
-      flow->writeSDU(ser_sent_m->message_, ser_sent_m->size_);
-
-      delete m_rcv;
-      delete ser_sent_m;
-      delete m_sent;
-
-      if (dw > 0)
-        timer_settime(timer_id, 0, &itime, NULL);
-    }
-  } catch (rina::IPCException e) {
-    // This thread was blocked in the readSDU() function
-    // when the flow gets deallocated
-  }
-
-  if (dw > 0) {
-    timer_delete(timer_id);
-  }
+  delete cdap_prov;
 
 }
-
-void Server::destroyFlow(sigval_t val) {
+/*
+void Server::destroyFlow(sigval_t val)
+{
   Flow *flow = (Flow *) val.sival_ptr;
 
   if (flow->getState() != FlowState::FLOW_ALLOCATED)
@@ -252,3 +173,4 @@ void Server::destroyFlow(sigval_t val) {
   // requestFlowDeallocation() and match it in the event loop
   ipcManager->requestFlowDeallocation(port_id);
 }
+*/

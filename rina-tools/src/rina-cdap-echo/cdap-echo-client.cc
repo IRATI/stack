@@ -37,62 +37,6 @@
 using namespace std;
 using namespace rina;
 
-static std::chrono::seconds thres_s = std::chrono::seconds(9);
-static std::chrono::milliseconds thres_ms = std::chrono::milliseconds(9);
-static std::chrono::microseconds thres_us = std::chrono::microseconds(9);
-
-APPcallback::APPcallback(Client *client)
-{
-  client_ = client;
-}
-void APPcallback::open_connection_result(const cdap_rib::con_handle_t &con,
-                                         const cdap_rib::result_info &res)
-{
-  (void) con;
-  (void) res;
-  std::cout << "CACEP success" << std::endl;
-  client_->sendReadRMessage();
-}
-void APPcallback::remote_read_result(const rina::cdap_rib::con_handle_t &con,
-                                const rina::cdap_rib::res_info_t &res)
-{
-  (void) con;
-  (void) res;
-  std::cout<<"Remote Read Result received"<<std::endl;
-  client_->sendReadRMessage();
-}
-
-void APPcallback::close_connection_result(const cdap_rib::con_handle_t &con,
-                                          const cdap_rib::result_info &res)
-{
-  (void) con;
-  (void) res;
-  std::cout<<"Connection closed"<<std::endl;
-  client_->destroyFlow();
-}
-
-
-
-static string durationToString(
-    const std::chrono::high_resolution_clock::duration& dur)
-{
-  std::stringstream ss;
-
-  if (dur > thres_s)
-    ss << std::chrono::duration_cast < std::chrono::seconds
-        > (dur).count() << "s";
-  else if (dur > thres_ms)
-    ss << std::chrono::duration_cast < std::chrono::milliseconds
-        > (dur).count() << "ms";
-  else if (dur > thres_us)
-    ss << std::chrono::duration_cast < std::chrono::microseconds
-        > (dur).count() << "us";
-  else
-    ss << std::chrono::duration_cast < std::chrono::nanoseconds
-        > (dur).count() << "ns";
-
-  return ss.str();
-}
 
 Client::Client(const string& dif_nm, const string& apn, const string& api,
                const string& server_apn, const string& server_api, bool q,
@@ -126,21 +70,11 @@ void Client::run()
     // CACEP
     cacep();
   }
-  /*
-   if (flow) {
-   if (dealloc_wait > 0) {
-   sleep(dealloc_wait);
-   }
-   destroyFlow(flow);
-   }
-   */
 }
 
 void Client::createFlow()
 {
   flow_ = 0;
-  std::chrono::high_resolution_clock::time_point begintp =
-      std::chrono::high_resolution_clock::now();
   AllocateFlowRequestResultEvent* afrrevent;
   FlowSpecification qosspec;
   IPCEvent* event;
@@ -180,20 +114,11 @@ void Client::createFlow()
   } else {
     LOG_DBG("[DEBUG] Port id = %d", flow_->getPortId());
   }
-
-  std::chrono::high_resolution_clock::time_point eindtp =
-      std::chrono::high_resolution_clock::now();
-  std::chrono::high_resolution_clock::duration dur = eindtp - begintp;
-
-  if (!quiet) {
-    cout << "Flow allocation time = " << durationToString(dur) << endl;
-  }
 }
 
 void Client::cacep()
 {
-  callback_ = new APPcallback(this);
-  cdap_prov_ = cdap::CDAPProviderFactory->create(2000, false, callback_);
+  cdap_prov_ = cdap::CDAPProviderFactory->create(2000, false, this);
   cdap_rib::vers_info_t ver;
   ver.version_ = 1;
   cdap_rib::src_info_t src;
@@ -212,40 +137,68 @@ void Client::cacep()
   con_ = cdap_prov_->open_connection(ver, src, dest, auth, port);
 }
 
+void Client::open_connection_result(const cdap_rib::con_handle_t &con,
+                                         const cdap_rib::result_info &res)
+{
+  (void) con;
+  (void) res;
+  std::cout << "CACEP success" << std::endl;
+  sendReadRMessage();
+}
+void Client::remote_read_result(const rina::cdap_rib::con_handle_t &con,
+                                const rina::cdap_rib::res_info_t &res)
+{
+  (void) con;
+  (void) res;
+  std::cout<<"Remote Read Result received"<<std::endl;
+  sendReadRMessage();
+}
+
+void Client::close_connection_result(const cdap_rib::con_handle_t &con,
+                                          const cdap_rib::result_info &res)
+{
+  (void) con;
+  (void) res;
+  std::cout<<"Connection closed"<<std::endl;
+  destroyFlow();
+}
+
 
 void Client::sendReadRMessage()
 {
-  if (count_ >= echo_times)
-  {
-    IPCEvent* event = ipcEventProducer->eventPoll();
+  IPCEvent* event = ipcEventProducer->eventPoll();
 
-    if (event) {
-      switch (event->eventType) {
-        case FLOW_DEALLOCATED_EVENT:
-          destroyFlow();
-          break;
-        default:
-          LOG_INFO("Client got new event %d", event->eventType);
-          break;
-      }
-    } else {
-
-      // READ
-      cdap_rib::obj_info_t obj;
-      obj.name_ = "test name";
-      obj.class_ = "test class";
-      cdap_rib::flags_t flags;
-      flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
-      cdap_rib::filt_info_t filt;
-      filt.filter_ = 0;
-      filt.scope_ = 0;
-
-      cdap_prov_->remote_read(con_, obj, flags, filt);
-      count_++;
+  if (event) {
+    switch (event->eventType) {
+      case FLOW_DEALLOCATED_EVENT:
+        destroyFlow();
+        break;
+      default:
+        LOG_INFO("Client got new event %d", event->eventType);
+        break;
     }
   }
   else
-    release();
+  {
+    if (count_ >= echo_times)
+    {
+
+        // READ
+        cdap_rib::obj_info_t obj;
+        obj.name_ = "test name";
+        obj.class_ = "test class";
+        cdap_rib::flags_t flags;
+        flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
+        cdap_rib::filt_info_t filt;
+        filt.filter_ = 0;
+        filt.scope_ = 0;
+
+        cdap_prov_->remote_read(con_, obj, flags, filt);
+        count_++;
+      }
+    else
+      release();
+  }
 }
 
 void Client::release()

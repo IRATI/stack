@@ -29,21 +29,8 @@
 #include "cdap-echo-application.h"
 
 class Client;
-class APPcallback: public rina::cdap::CDAPCallbackInterface
-{
- public:
-  APPcallback(Client *client);
-  void open_connection_result(const rina::cdap_rib::con_handle_t &con,
-                                      const rina::cdap_rib::result_info &res);
-  void close_connection_result(const rina::cdap_rib::con_handle_t &con,
-                                       const rina::cdap_rib::result_info &res);
-  void remote_read_result(const rina::cdap_rib::con_handle_t &con,
-                                  const rina::cdap_rib::res_info_t &res);
- private:
-  Client *client_;
-};
 
-class Client : public Application {
+class Client : public Application, public rina::cdap::CDAPCallbackInterface {
   friend class APPcallback;
  public:
   Client(const std::string& dif_name, const std::string& apn,
@@ -52,6 +39,12 @@ class Client : public Application {
          bool registration, unsigned int wait, int g, int dw);
   void run();
   ~Client();
+  void open_connection_result(const rina::cdap_rib::con_handle_t &con,
+                                      const rina::cdap_rib::result_info &res);
+  void close_connection_result(const rina::cdap_rib::con_handle_t &con,
+                                       const rina::cdap_rib::result_info &res);
+  void remote_read_result(const rina::cdap_rib::con_handle_t &con,
+                                  const rina::cdap_rib::res_info_t &res);
  protected:
   void createFlow();
   void cacep();
@@ -70,7 +63,6 @@ class Client : public Application {
   int gap;
   int dealloc_wait;
   rina::Flow* flow_;
-  rina::cdap::CDAPCallbackInterface *callback_;
   rina::cdap::CDAPProviderInterface* cdap_prov_;
   rina::cdap_rib::con_handle_t con_;
   unsigned long count_;

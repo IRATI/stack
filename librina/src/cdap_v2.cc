@@ -508,8 +508,8 @@ class CDAPSessionManager
 class CDAPProvider : public CDAPProviderInterface
 {
  public:
-  CDAPProvider(SerializerInterface *serializer, long timeout,
-               cdap::CDAPCallbackInterface *callback);
+  CDAPProvider(cdap::CDAPCallbackInterface *callback,
+               CDAPSessionManager *manager);
   ~CDAPProvider();
   cdap_rib::con_handle_t open_connection(const cdap_rib::vers_info_t &ver,
                                          const cdap_rib::src_info_t &src,
@@ -587,8 +587,8 @@ class CDAPProvider : public CDAPProviderInterface
 class AppCDAPProvider : public CDAPProvider
 {
  public:
-  AppCDAPProvider(SerializerInterface *serializer, long timeout,
-                  cdap::CDAPCallbackInterface *callback);
+  AppCDAPProvider(cdap::CDAPCallbackInterface *callback,
+                  CDAPSessionManager *manager);
  private:
   void send(const cdap_m_t *m_sent, int port);
 };
@@ -596,8 +596,8 @@ class AppCDAPProvider : public CDAPProvider
 class IPCPCDAPProvider : public CDAPProvider
 {
  public:
-  IPCPCDAPProvider(SerializerInterface *serializer, long timeout,
-                   cdap::CDAPCallbackInterface *callback);
+  IPCPCDAPProvider(cdap::CDAPCallbackInterface *callback,
+                   CDAPSessionManager *manager);
  private:
   void send(const cdap_m_t *m_sent, int port);
 };
@@ -2100,7 +2100,6 @@ CDAPSession* CDAPSessionManager::createCDAPSession(int port_id)
 CDAPSessionManager::~CDAPSessionManager() throw ()
 {
   delete invoke_id_manager_;
-  invoke_id_manager_ = 0;
   for (std::map<int, CDAPSession*>::iterator iter = cdap_sessions_.begin();
       iter != cdap_sessions_.end(); ++iter) {
     delete iter->second;
@@ -2678,16 +2677,16 @@ const cdap_rib::SerializedObject* GPBSerializer::serializeMessage(
 }
 
 // CLASS CDAPProvider
-CDAPProvider::CDAPProvider(SerializerInterface *serializer, long timeout,
-                           cdap::CDAPCallbackInterface *callback)
+CDAPProvider::CDAPProvider(cdap::CDAPCallbackInterface *callback,
+                           CDAPSessionManager *manager)
 {
-  manager_ = new CDAPSessionManager(serializer, timeout);
   callback_ = callback;
+  manager_ = manager;
 }
 
 CDAPProvider::~CDAPProvider()
 {
-  delete manager_;
+  delete callback_;
 }
 
 cdap_rib::con_handle_t CDAPProvider::open_connection(
@@ -3083,9 +3082,9 @@ void CDAPProvider::new_message(cdap_rib::SerializedObject &message, int port)
   delete m_rcv;
 }
 
-AppCDAPProvider::AppCDAPProvider(SerializerInterface *serializer, long timeout,
-                                 cdap::CDAPCallbackInterface *callback)
-    : CDAPProvider(serializer, timeout, callback)
+AppCDAPProvider::AppCDAPProvider(cdap::CDAPCallbackInterface *callback,
+                                 CDAPSessionManager *manager)
+    : CDAPProvider(callback, manager)
 {
 }
 
@@ -3099,10 +3098,9 @@ void AppCDAPProvider::send(const cdap_m_t *m_sent, int port)
   delete ser_sent_m;
 }
 
-IPCPCDAPProvider::IPCPCDAPProvider(SerializerInterface *serializer,
-                                   long timeout,
-                                   cdap::CDAPCallbackInterface *callback)
-    : CDAPProvider(serializer, timeout, callback)
+IPCPCDAPProvider::IPCPCDAPProvider(cdap::CDAPCallbackInterface *callback,
+                                   CDAPSessionManager *manager)
+    : CDAPProvider(callback, manager)
 {
 }
 
@@ -3116,15 +3114,21 @@ void IPCPCDAPProvider::send(const cdap_m_t *m_sent, int port)
   delete ser_sent_m;
 }
 
+// CLASS CDAPProviderFactory_
+CDAPProviderFactory_::~CDAPProviderFactory_()
+{
+
+}
 CDAPProviderInterface* CDAPProviderFactory_::create(
     long timeout, bool is_IPCP, cdap::CDAPCallbackInterface *callback)
 {
-  SerializerInterface *serializer = new GPBSerializer();
+  static SerializerInterface *serializer = new GPBSerializer();
+  static CDAPSessionManager *manager = new CDAPSessionManager(serializer, timeout);
 
   if (is_IPCP)
-    return new IPCPCDAPProvider(serializer, timeout, callback);
+    return new IPCPCDAPProvider(callback, manager);
   else
-    return new AppCDAPProvider(serializer, timeout, callback);
+    return new AppCDAPProvider(callback, manager);
 }
 
 // CLASS CDAPCallbackInterface
