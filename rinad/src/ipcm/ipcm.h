@@ -269,7 +269,7 @@ public:
 	//
 	// Checks if an IPCP exists by its ID
 	//
-	bool ipcp_exists(const int ipcp_id);
+	bool ipcp_exists(const unsigned short ipcp_id);
 
 	//
 	// List the available IPCP types
@@ -307,7 +307,7 @@ public:
 	//
 	// @ret IPCM_SUCCESS on success IPCM_FAILURE
 	//
-	ipcm_res_t destroy_ipcp(const unsigned int ipcp_id);
+	ipcm_res_t destroy_ipcp(const unsigned short ipcp_id);
 
 	//
 	// Assing an ipcp to a DIF
@@ -319,7 +319,7 @@ public:
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	//
-	ipcm_res_t assign_to_dif(Promise* promise, const int ipcp_id,
+	ipcm_res_t assign_to_dif(Promise* promise, const unsigned short ipcp_id,
 			  const rina::ApplicationProcessNamingInformation&
 			  difName);
 
@@ -332,7 +332,7 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t register_at_dif(Promise* promise, const int ipcp_id,
+	ipcm_res_t register_at_dif(Promise* promise, const unsigned short ipcp_id,
 			    const rina::ApplicationProcessNamingInformation&
 			    difName);
 
@@ -345,7 +345,7 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t enroll_to_dif(Promise* promise, const int ipcp_id,
+	ipcm_res_t enroll_to_dif(Promise* promise, const unsigned short ipcp_id,
 			  const rinad::NeighborData& neighbor);
 
 	//
@@ -359,7 +359,7 @@ public:
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t unregister_app_from_ipcp(Promise* promise,
 		const rina::ApplicationUnregistrationRequestEvent& req_event,
-		int slave_ipcp_id);
+		const unsigned short slave_ipcp_id);
 
 	//
 	// Unregister an ipcp from another one
@@ -371,8 +371,8 @@ public:
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t unregister_ipcp_from_ipcp(Promise* promise,
-						const int ipcp_id,
-						const int slave_ipcp_id);
+						const unsigned short ipcp_id,
+						const unsigned short slave_ipcp_id);
 	//
 	// Update the DIF configuration
 	//TODO: What is really this for?
@@ -384,7 +384,7 @@ public:
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t update_dif_configuration(Promise* promise,
-				const int ipcp_id,
+				const unsigned short ipcp_id,
 				const rina::DIFConfiguration& dif_config);
 
 	//
@@ -396,7 +396,7 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t query_rib(QueryRIBPromise* promise, const int ipcp_id);
+	ipcm_res_t query_rib(QueryRIBPromise* promise, const unsigned short ipcp_id);
 
 	//
 	// Select a policy set
@@ -407,7 +407,7 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t select_policy_set(Promise* promise, const int ipcp_id,
+	ipcm_res_t select_policy_set(Promise* promise, const unsigned short ipcp_id,
 					const std::string& component_path,
 					const std::string& policy_set);
 	//
@@ -419,7 +419,7 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t set_policy_set_param(Promise* promise, const int ipcp_id,
+	ipcm_res_t set_policy_set_param(Promise* promise, const unsigned short ipcp_id,
 						const std::string& path,
 						const std::string& name,
 						const std::string& value);
@@ -432,7 +432,7 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t plugin_load(Promise* promise, const int ipcp_id,
+	ipcm_res_t plugin_load(Promise* promise, const unsigned short ipcp_id,
 						const std::string& plugin_name,
 						bool load);
 
@@ -528,7 +528,7 @@ protected:
 	* @param read_lock When true, the IPCProcess instance is recovered with
 	* the read lock acquired, otherwise the write lock is acquired.
 	*/
-	IPCMIPCProcess* lookup_ipcp_by_id(unsigned int id,
+	IPCMIPCProcess* lookup_ipcp_by_id(const unsigned short id,
 							bool write_lock=false);
 	//
 	// Internal event API

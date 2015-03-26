@@ -180,7 +180,7 @@ IPCManager_::collect_flows_by_application(
 }
 
 IPCMIPCProcess *
-IPCManager_::lookup_ipcp_by_id(unsigned int id, bool write_lock)
+IPCManager_::lookup_ipcp_by_id(unsigned short id, bool write_lock)
 {
 	IPCMIPCProcess * ipcp;
 

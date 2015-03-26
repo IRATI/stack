@@ -246,7 +246,7 @@ IPCManager_::create_ipcp(CreateIPCPPromise* promise,
 }
 
 ipcm_res_t
-IPCManager_::destroy_ipcp(unsigned int ipcp_id)
+IPCManager_::destroy_ipcp(unsigned short ipcp_id)
 {
 	ostringstream ss;
 
@@ -281,7 +281,7 @@ IPCManager_::list_ipcps(std::ostream& os)
 }
 
 bool
-IPCManager_::ipcp_exists(const int ipcp_id){
+IPCManager_::ipcp_exists(const unsigned short ipcp_id){
 	return ipcp_factory_.exists(ipcp_id);
 }
 
@@ -307,10 +307,8 @@ int IPCManager_::get_ipcp_by_dif_name(std::string& difName){
 	return ret;
 }
 
-
-
 ipcm_res_t
-IPCManager_::assign_to_dif(Promise* promise, const int ipcp_id,
+IPCManager_::assign_to_dif(Promise* promise, const unsigned short ipcp_id,
 			  const rina::ApplicationProcessNamingInformation &
 			  dif_name)
 {
@@ -483,7 +481,7 @@ IPCManager_::assign_to_dif(Promise* promise, const int ipcp_id,
 }
 
 ipcm_res_t
-IPCManager_::register_at_dif(Promise* promise, const int ipcp_id,
+IPCManager_::register_at_dif(Promise* promise, const unsigned short ipcp_id,
 			    const rina::ApplicationProcessNamingInformation&
 			    dif_name)
 {
@@ -559,8 +557,8 @@ IPCManager_::register_at_dif(Promise* promise, const int ipcp_id,
 }
 
 ipcm_res_t
-IPCManager_::unregister_ipcp_from_ipcp(Promise* promise, int ipcp_id,
-		int slave_ipcp_id)
+IPCManager_::unregister_ipcp_from_ipcp(Promise* promise, const unsigned short ipcp_id,
+		const unsigned short slave_ipcp_id)
 {
 	ostringstream ss;
 	IPCMIPCProcess *ipcp, *slave_ipcp;
@@ -638,7 +636,7 @@ IPCManager_::unregister_ipcp_from_ipcp(Promise* promise, int ipcp_id,
 }
 
 ipcm_res_t
-IPCManager_::enroll_to_dif(Promise* promise, const int ipcp_id,
+IPCManager_::enroll_to_dif(Promise* promise, const unsigned short ipcp_id,
 			  const rinad::NeighborData& neighbor)
 {
 	ostringstream ss;
@@ -810,7 +808,7 @@ IPCManager_::apply_configuration()
 }
 
 ipcm_res_t
-IPCManager_::update_dif_configuration(Promise* promise, int ipcp_id,
+IPCManager_::update_dif_configuration(Promise* promise, const unsigned short ipcp_id,
 				     const rina::DIFConfiguration & dif_config)
 {
 	ostringstream ss;
@@ -877,7 +875,7 @@ IPCManager_::update_dif_configuration(Promise* promise, int ipcp_id,
 }
 
 ipcm_res_t
-IPCManager_::query_rib(QueryRIBPromise* promise, const int ipcp_id)
+IPCManager_::query_rib(QueryRIBPromise* promise, const unsigned short ipcp_id)
 {
 	ostringstream ss;
 	IPCMIPCProcess *ipcp;
@@ -940,7 +938,8 @@ std::string IPCManager_::get_log_level() const
 }
 
 ipcm_res_t
-IPCManager_::set_policy_set_param(Promise* promise, const int ipcp_id,
+IPCManager_::set_policy_set_param(Promise* promise,
+		const unsigned short ipcp_id,
 		const std::string& component_path,
 		const std::string& param_name,
 		const std::string& param_value)
@@ -1004,7 +1003,8 @@ IPCManager_::set_policy_set_param(Promise* promise, const int ipcp_id,
 }
 
 ipcm_res_t
-IPCManager_::select_policy_set(Promise* promise, const int ipcp_id,
+IPCManager_::select_policy_set(Promise* promise,
+		const unsigned short ipcp_id,
 		const std::string& component_path,
 		const std::string& ps_name)
 {
@@ -1065,7 +1065,7 @@ IPCManager_::select_policy_set(Promise* promise, const int ipcp_id,
 }
 
 ipcm_res_t
-IPCManager_::plugin_load(Promise* promise, const int ipcp_id,
+IPCManager_::plugin_load(Promise* promise, const unsigned short ipcp_id,
 		const std::string& plugin_name, bool load)
 {
 	ostringstream ss;
@@ -1125,7 +1125,7 @@ IPCManager_::plugin_load(Promise* promise, const int ipcp_id,
 ipcm_res_t
 IPCManager_::unregister_app_from_ipcp(Promise* promise,
 		const rina::ApplicationUnregistrationRequestEvent& req_event,
-		int slave_ipcp_id)
+		const unsigned short slave_ipcp_id)
 {
 	ostringstream ss;
 	IPCMIPCProcess *slave_ipcp;
