@@ -1888,6 +1888,7 @@ void CDAPSession::requestMessageSentOrReceived(const cdap_m_t &cdap_message,
   if (cdap_message.invoke_id_ != 0) {
     CDAPOperationState *new_operation_state = new CDAPOperationState(op_code,
                                                                      sent);
+    LOG_ERR("[DEBUG] Inserting the invokeid %d", cdap_message.invoke_id_);
     pending_messages->insert(
         std::pair<int, CDAPOperationState*>(cdap_message.invoke_id_,
                                             new_operation_state));
@@ -1915,6 +1916,7 @@ void CDAPSession::checkCanSendOrReceiveResponse(const cdap_m_t &cdap_message,
     pending_messages = &pending_messages_recv_;
 
   std::map<int, CDAPOperationState*>::const_iterator iterator;
+  LOG_ERR("[DEBUG] There are %d pending messages", pending_messages->size());
   iterator = pending_messages->find(cdap_message.invoke_id_);
   if (iterator == pending_messages->end()) {
     std::stringstream ss;
@@ -3019,6 +3021,7 @@ void CDAPProvider::new_message(cdap_rib::SerializedObject &message, int port)
   res.result_ = m_rcv->result_;
   res.result_reason_ = m_rcv->result_reason_;
 
+  LOG_ERR("Received opcode is %d", m_rcv->op_code_);
   switch (m_rcv->op_code_) {
     case cdap_m_t::M_CONNECT:
       callback_->open_connection(con, flags, message_id);
@@ -3095,7 +3098,7 @@ void AppCDAPProvider::send(const cdap_m_t *m_sent, int port)
   manager_->messageSent(*m_sent, port);
   rina::ipcManager->getAllocatedFlow(port)->writeSDU(ser_sent_m->message_,
                                                      ser_sent_m->size_);
-  LOG_INFO("Message sent to port %d", port);
+  LOG_ERR("[DEBUG] Message sent to port %d", port);
   delete ser_sent_m;
 }
 

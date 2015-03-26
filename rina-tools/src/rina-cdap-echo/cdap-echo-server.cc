@@ -63,7 +63,7 @@ void ConnectionCallback::remote_read_request(
   res.result_ = 1;
   res.result_reason_ = "Ok";
   std::cout<<"read request CDAP message received"<<std::endl;
-  (*prov_)->remote_start_response(con, obj, flags, res, message_id);
+  (*prov_)->remote_read_response(con, obj, flags, res, message_id);
   std::cout<<"read response CDAP message sent"<<std::endl;
 }
 
