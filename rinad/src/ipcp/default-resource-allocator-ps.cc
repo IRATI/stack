@@ -51,7 +51,7 @@ void ResourceAllocatorPs::routingTableUpdated(
 	std::list<rina::PDUForwardingTableEntry *> pduft;
 	std::list<rina::RoutingTableEntry *>::const_iterator it;
 	rina::PDUForwardingTableEntry * entry;
-	std::list<int> flows;
+	int port_id = 0;
 	for (it = rt.begin(); it!= rt.end(); ++it){
 		entry = new rina::PDUForwardingTableEntry();
 		entry->address = (*it)->address;
@@ -60,14 +60,14 @@ void ResourceAllocatorPs::routingTableUpdated(
 		LOG_DBG("Processing entry for destination %u", (*it)->address);
 		LOG_DBG("Next hop address %u", (*it)->nextHopAddresses.front());
 
-		flows = res_alloc->get_n_minus_one_flow_manager()->
-				getNMinusOneFlowsToNeighbour((*it)->nextHopAddresses.front());
+		port_id = res_alloc->get_n_minus_one_flow_manager()->
+				getManagementFlowToNeighbour((*it)->nextHopAddresses.front());
 
-		if (flows.size() == 0) {
+		if (port_id == -1) {
 			delete entry;
 		} else {
-			LOG_DBG("N-1 port-id: %u", flows.front());
-			entry->portIds.push_back(flows.front());
+			LOG_DBG("N-1 port-id: %u", port_id);
+			entry->portIds.push_back(port_id);
 			pduft.push_back(entry);
 		}
 	}
