@@ -37,7 +37,6 @@
 using namespace std;
 using namespace rina;
 
-
 Client::Client(const string& dif_nm, const string& apn, const string& api,
                const string& server_apn, const string& server_api, bool q,
                unsigned long count, bool registration, unsigned int w, int g,
@@ -70,9 +69,8 @@ void Client::run()
   if (flow_) {
     // CACEP
     cacep();
-  }
-  while (keep_running_)
-  {
+
+    sendReadRMessage();
   }
 }
 
@@ -132,14 +130,18 @@ void Client::cacep()
   src.ap_inst_ = flow_->getLocalApplicationName().processInstance;
   src.ae_inst_ = flow_->getLocalApplicationName().entityInstance;
   cdap_rib::dest_info_t dest;
-  dest.ap_name_ = flow_->getRemoteApplcationName().processName;;
-  dest.ae_name_ = flow_->getRemoteApplcationName().entityName;;
-  dest.ap_inst_ = flow_->getRemoteApplcationName().processInstance;;
-  dest.ae_inst_ = flow_->getRemoteApplcationName().entityInstance;;
+  dest.ap_name_ = flow_->getRemoteApplcationName().processName;
+  ;
+  dest.ae_name_ = flow_->getRemoteApplcationName().entityName;
+  ;
+  dest.ap_inst_ = flow_->getRemoteApplcationName().processInstance;
+  ;
+  dest.ae_inst_ = flow_->getRemoteApplcationName().entityInstance;
+  ;
   cdap_rib::auth_info auth;
   auth.auth_mech_ = auth.AUTH_NONE;
 
-  std::cout<<"open conection request CDAP message sent"<<std::endl;
+  std::cout << "open conection request CDAP message sent" << std::endl;
   con_ = cdap_prov_->open_connection(ver, src, dest, auth, flow_->getPortId());
   int bytes_read = flow_->readSDU(buffer, max_sdu_size_in_bytes);
   cdap_rib::SerializedObject message;
@@ -149,72 +151,67 @@ void Client::cacep()
 }
 
 void Client::open_connection_result(const cdap_rib::con_handle_t &con,
-                                         const cdap_rib::result_info &res)
+                                    const cdap_rib::result_info &res)
 {
   (void) con;
   (void) res;
-  std::cout<<"open conection response CDAP message received"<<std::endl;
-  sendReadRMessage();
+  std::cout << "open conection response CDAP message received" << std::endl;
 }
 void Client::remote_read_result(const rina::cdap_rib::con_handle_t &con,
                                 const rina::cdap_rib::res_info_t &res)
 {
   (void) con;
   (void) res;
-  std::cout<<"read response CDAP message received"<<std::endl;
-  sendReadRMessage();
+  std::cout << "read response CDAP message received" << std::endl;
 }
 
 void Client::close_connection_result(const cdap_rib::con_handle_t &con,
-                                          const cdap_rib::result_info &res)
+                                     const cdap_rib::result_info &res)
 {
   (void) con;
   (void) res;
-  std::cout<<"Connection closed"<<std::endl;
+  std::cout << "Connection closed" << std::endl;
   destroyFlow();
 }
 
-
 void Client::sendReadRMessage()
 {
-  IPCEvent* event = ipcEventProducer->eventPoll();
-  char buffer[max_sdu_size_in_bytes];
-  if (event) {
-    switch (event->eventType) {
-      case FLOW_DEALLOCATED_EVENT:
-        destroyFlow();
-        break;
-      default:
-        LOG_INFO("Client got new event %d", event->eventType);
-        break;
+  while (count_ < echo_times)
+  {
+    IPCEvent* event = ipcEventProducer->eventPoll();
+    char buffer[max_sdu_size_in_bytes];
+    if (event) {
+      switch (event->eventType) {
+        case FLOW_DEALLOCATED_EVENT:
+          destroyFlow();
+          break;
+        default:
+          LOG_INFO("Client got new event %d", event->eventType);
+          break;
+      }
+    } else {
+
+      // READ
+      cdap_rib::obj_info_t obj;
+      obj.name_ = "test name";
+      obj.class_ = "test class";
+      cdap_rib::flags_t flags;
+      flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
+      cdap_rib::filt_info_t filt;
+      filt.filter_ = 0;
+      filt.scope_ = 0;
+      cdap_prov_->remote_read(con_, obj, flags, filt);
+      std::cout << "read request CDAP message sent" << std::endl;
+      int bytes_read = flow_->readSDU(buffer, max_sdu_size_in_bytes);
+      cdap_rib::SerializedObject message;
+      message.message_ = buffer;
+      message.size_ = bytes_read;
+      cdap_prov_->new_message(message, flow_->getPortId());
+      count_++;
+      std::cout << "count: " << count_ << std::endl;
     }
   }
-  else
-  {
-    if (count_ < echo_times)
-    {
-
-        // READ
-        cdap_rib::obj_info_t obj;
-        obj.name_ = "test name";
-        obj.class_ = "test class";
-        cdap_rib::flags_t flags;
-        flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
-        cdap_rib::filt_info_t filt;
-        filt.filter_ = 0;
-        filt.scope_ = 0;
-        cdap_prov_->remote_read(con_, obj, flags, filt);
-        std::cout<<"read request CDAP message sent"<<std::endl;
-        int bytes_read = flow_->readSDU(buffer, max_sdu_size_in_bytes);
-        cdap_rib::SerializedObject message;
-        message.message_ = buffer;
-        message.size_ = bytes_read;
-        cdap_prov_->new_message(message, flow_->getPortId());
-        count_++;
-      }
-    else
-      release();
-  }
+  release();
 }
 
 void Client::release()
@@ -224,23 +221,23 @@ void Client::release()
 
 void Client::destroyFlow()
 {
-DeallocateFlowResponseEvent *resp = 0;
-unsigned int seqnum;
-IPCEvent* event;
-int port_id = flow_->getPortId();
+  DeallocateFlowResponseEvent *resp = 0;
+  unsigned int seqnum;
+  IPCEvent* event;
+  int port_id = flow_->getPortId();
 
-seqnum = ipcManager->requestFlowDeallocation(port_id);
+  seqnum = ipcManager->requestFlowDeallocation(port_id);
 
-for (;;) {
-  event = ipcEventProducer->eventWait();
-  if (event && event->eventType == DEALLOCATE_FLOW_RESPONSE_EVENT
-      && event->sequenceNumber == seqnum) {
-    break;
+  for (;;) {
+    event = ipcEventProducer->eventWait();
+    if (event && event->eventType == DEALLOCATE_FLOW_RESPONSE_EVENT
+        && event->sequenceNumber == seqnum) {
+      break;
+    }
+    LOG_DBG("Client got new event %d", event->eventType);
   }
-  LOG_DBG("Client got new event %d", event->eventType);
-}
-resp = dynamic_cast<DeallocateFlowResponseEvent*>(event);
-assert(resp);
+  resp = dynamic_cast<DeallocateFlowResponseEvent*>(event);
+  assert(resp);
 
-ipcManager->flowDeallocationResult(port_id, resp->result == 0);
+  ipcManager->flowDeallocationResult(port_id, resp->result == 0);
 }
