@@ -170,7 +170,7 @@ void Client::close_connection_result(const cdap_rib::con_handle_t &con,
 {
   (void) con;
   (void) res;
-  std::cout << "Connection closed" << std::endl;
+  std::cout << "release response CDAP message received" << std::endl;
   destroyFlow();
 }
 
@@ -216,6 +216,7 @@ void Client::sendReadRMessage()
 
 void Client::release()
 {
+  std::cout << "release request CDAP message sent" << std::endl;
   cdap_prov_->close_connection(con_);
 }
 
