@@ -66,5 +66,6 @@ class Client : public Application, public rina::cdap::CDAPCallbackInterface {
   rina::cdap::CDAPProviderInterface* cdap_prov_;
   rina::cdap_rib::con_handle_t con_;
   unsigned long count_;
+  bool keep_running_;
 };
 #endif//CLIENT_HPP

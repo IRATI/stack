@@ -62,6 +62,7 @@ Client::~Client()
 
 void Client::run()
 {
+  keep_running_ = true;
   if (client_app_reg) {
     applicationRegister();
   }
@@ -69,6 +70,9 @@ void Client::run()
   if (flow_) {
     // CACEP
     cacep();
+  }
+  while (keep_running_)
+  {
   }
 }
 
@@ -134,6 +138,7 @@ void Client::cacep()
   cdap_rib::auth_info auth;
   auth.auth_mech_ = auth.AUTH_NONE;
   int port = flow_->getPortId();
+  std::cout << "CACEP started" << std::endl;
   con_ = cdap_prov_->open_connection(ver, src, dest, auth, port);
 }
 
