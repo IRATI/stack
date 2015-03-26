@@ -53,7 +53,7 @@ public:
 	/// M_CREATE request with the flow object and send it to the appropriate IPC process (search the
 	/// directory and the directory forwarding table if needed)
 	/// @param flowRequestEvent The flow allocation request
-	/// @throws Exception if there are not enough resources to fulfill the allocate request
+	/// @throws rina::Exception if there are not enough resources to fulfill the allocate request
 	virtual void submitAllocateRequest(const rina::FlowRequestEvent& event) = 0;
 
 	virtual void processCreateConnectionResponseEvent(

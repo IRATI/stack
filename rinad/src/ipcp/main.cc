@@ -71,7 +71,7 @@ int wrapped_main(int argc, char * argv[])
 
         try {
         	loop.run();
-        } catch (Exception &e) {
+        } catch (rina::Exception &e) {
         	LOG_ERR("Problems running event loop: %s", e.what());
         } catch (std::exception &e1) {
         	LOG_ERR("Problems running event loop: %s", e1.what());

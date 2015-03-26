@@ -54,7 +54,7 @@ void NMinusOneFlowManager::populateRIB(){
 		rib_daemon_->addRIBObject(object);
 		object = new NMinusOneFlowSetRIBObject(ipc_process_);
 		rib_daemon_->addRIBObject(object);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems adding object to the RIB : %s", e.what());
 	}
 }
@@ -63,7 +63,7 @@ const rina::FlowInformation& NMinusOneFlowManager::getNMinus1FlowInformation(int
 const {
 	rina::Flow * flow = rina::extendedIPCManager->getAllocatedFlow(portId);
 	if (flow == 0) {
-		throw Exception("Unknown N-1 flow");
+		throw rina::Exception("Unknown N-1 flow");
 	}
 
 	return flow->getFlowInformation();
@@ -77,7 +77,7 @@ unsigned int NMinusOneFlowManager::allocateNMinus1Flow(const rina::FlowInformati
 				flowInformation.remoteAppName, flowInformation.difName,
 				flowInformation.flowSpecification);
 	} catch(rina::FlowAllocationException &e) {
-		throw Exception(e.what());
+		throw rina::Exception(e.what());
 	}
 
 	LOG_INFO("Requested the allocation of N-1 flow to application %s-%s through DIF %s",
@@ -106,7 +106,7 @@ void NMinusOneFlowManager::allocateRequestResult(const rina::AllocateFlowRequest
 		ss<<EncoderConstants::SEPARATOR<<event.portId;
 		rib_daemon_->createObject(EncoderConstants::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
 				ss.str(), &(flow->getFlowInformation()), 0);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems creating RIB object: %s", e.what());
 	}
 
@@ -125,7 +125,7 @@ void NMinusOneFlowManager::flowAllocationRequested(const rina::FlowRequestEvent&
 				event.remoteApplicationName.processInstance.c_str());
 		try {
 			rina::extendedIPCManager->allocateFlowResponse(event, -1, true);
-		} catch (Exception &e) {
+		} catch (rina::Exception &e) {
 			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		}
 		return;
@@ -136,7 +136,7 @@ void NMinusOneFlowManager::flowAllocationRequested(const rina::FlowRequestEvent&
 		LOG_ERR("Rejecting flow request since the IPC Process is not ASSIGNED to a DIF");
 		try {
 			rina::extendedIPCManager->allocateFlowResponse(event, -1, true);
-		} catch (Exception &e) {
+		} catch (rina::Exception &e) {
 			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		}
 		return;
@@ -151,7 +151,7 @@ void NMinusOneFlowManager::flowAllocationRequested(const rina::FlowRequestEvent&
 				event.remoteApplicationName.processInstance.c_str());
 		try {
 			rina::extendedIPCManager->allocateFlowResponse(event, -1, true);
-		} catch (Exception &e) {
+		} catch (rina::Exception &e) {
 			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		}
 		return;
@@ -160,7 +160,7 @@ void NMinusOneFlowManager::flowAllocationRequested(const rina::FlowRequestEvent&
 	rina::Flow * flow = 0;
 	try {
 		flow = rina::extendedIPCManager->allocateFlowResponse(event, 0, true);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		if (!flow) {
 			return;
@@ -176,7 +176,7 @@ void NMinusOneFlowManager::flowAllocationRequested(const rina::FlowRequestEvent&
 		ss<<EncoderConstants::SEPARATOR<<event.portId;
 		rib_daemon_->createObject(EncoderConstants::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
 				ss.str(), &(flow->getFlowInformation()), 0);
-	} catch (Exception &e){
+	} catch (rina::Exception &e){
 		LOG_ERR("Error creating RIB object: %s", e.what());
 	}
 
@@ -200,7 +200,7 @@ void NMinusOneFlowManager::deallocateFlowResponse(
 
 	try {
 		rina::extendedIPCManager->flowDeallocationResult(event.portId, success);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 	}
 
@@ -210,7 +210,7 @@ void NMinusOneFlowManager::deallocateFlowResponse(
 void NMinusOneFlowManager::flowDeallocatedRemotely(const rina::FlowDeallocatedEvent& event) {
 	try {
 		rina::extendedIPCManager->flowDeallocated(event.portId);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 	}
 
@@ -223,7 +223,7 @@ void NMinusOneFlowManager::cleanFlowAndNotify(int portId) {
 		ss<<EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
 		ss<<EncoderConstants::SEPARATOR<<portId;
 		rib_daemon_->deleteObject(EncoderConstants::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS, ss.str(), 0, 0);
-	}catch(Exception &e) {
+	}catch(rina::Exception &e) {
 		LOG_ERR("Problems deleting object from the RIB: %s", e.what());
 	}
 
@@ -243,7 +243,7 @@ void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProces
 	if (event.isRegistered()) {
 		try {
 			rina::extendedIPCManager->appRegistered(event.getIPCProcessName(), event.getDIFName());
-		} catch (Exception &e) {
+		} catch (rina::Exception &e) {
 			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		}
 
@@ -256,7 +256,7 @@ void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProces
 			std::string * dif_name = new std::string(event.getDIFName().processName);
 			rib_daemon_->createObject(EncoderConstants::DIF_REGISTRATION_RIB_OBJECT_CLASS, ss.str(),
 					dif_name, 0);
-		}catch(Exception &e){
+		}catch(rina::Exception &e){
 			LOG_ERR("Problems creating RIB object: %s", e.what());;
 		}
 
@@ -265,7 +265,7 @@ void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProces
 
 	try {
 		rina::extendedIPCManager->appUnregistered(event.getIPCProcessName(), event.getDIFName());
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 	}
 
@@ -277,7 +277,7 @@ void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProces
 		ss<<EncoderConstants::DIF_REGISTRATION_SET_RIB_OBJECT_NAME;
 		ss<<EncoderConstants::SEPARATOR<<event.getDIFName().processName;
 		rib_daemon_->deleteObject(EncoderConstants::DIF_REGISTRATION_RIB_OBJECT_CLASS, ss.str(), 0, 0);
-	}catch (Exception &e) {
+	}catch (rina::Exception &e) {
 		LOG_ERR("Problems deleting object from RIB: %s", e.what());
 	}
 }

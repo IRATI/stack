@@ -513,7 +513,7 @@ IPCManager::assign_to_dif(rina::IPCProcess * ipcp,
                 if (!found) {
                         ss << "Cannot find properties for DIF "
                                 << dif_name.toString();
-                        throw Exception();
+                        throw rina::Exception();
                 }
 
                 // Fill in the DIFConfiguration object.
@@ -565,7 +565,7 @@ IPCManager::assign_to_dif(rina::IPCProcess * ipcp,
                                         ipcp->name.toString() <<
                                         " in DIF " << dif_name.toString() <<
                                         endl;
-                                throw Exception();
+                                throw rina::Exception();
                         }
                         dif_config.set_efcp_configuration(efcp_config);
                         dif_config.nsm_configuration_ = nsm_config;
@@ -615,7 +615,7 @@ IPCManager::assign_to_dif(rina::IPCProcess * ipcp,
                 LOG_ERR("DIF %s configuration failed", dif_name.toString().c_str());
                 throw e;
         }
-        catch (Exception) {
+        catch (rina::Exception) {
                 FLUSH_LOG(ERR, ss);
         }
 
@@ -669,7 +669,7 @@ IPCManager::register_at_dif(rina::IPCProcess *ipcp,
 
                 arrived = concurrency.wait_for_event(
                         rina::IPCM_REGISTER_APP_RESPONSE_EVENT, seqnum, ret);
-        } catch (Exception) {
+        } catch (rina::Exception) {
                 ss  << ": Error while requesting registration"
                     << endl;
                 FLUSH_LOG(ERR, ss);
@@ -790,8 +790,8 @@ IPCManager::apply_configuration()
                         }
                         assign_to_dif(ipcp, cit->difName);
                         register_at_difs(ipcp, cit->difsToRegisterAt);
-                } catch (Exception &e) {
-                        LOG_ERR("Exception while applying configuration: %s",
+                } catch (rina::Exception &e) {
+                        LOG_ERR("rina::Exception while applying configuration: %s",
                                 e.what());
                 }
 

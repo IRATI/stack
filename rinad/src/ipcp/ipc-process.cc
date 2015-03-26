@@ -49,7 +49,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 		rina::extendedIPCManager->ipcProcessId = id;
 		rina::kernelIPCProcess->ipcProcessId = id;
 		LOG_INFO("Librina initialized");
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
         std::cerr << "Cannot initialize librina" << std::endl;
         exit(EXIT_FAILURE);
 	}
@@ -60,7 +60,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 
         // Load the default pluggable components
         if (plugin_load("default")) {
-                throw Exception("Failed to load default plugin");
+                throw rina::Exception("Failed to load default plugin");
         }
 
 	// Initialize subcomponents
@@ -87,32 +87,32 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         // Select the default policy sets
         security_manager_->select_policy_set(std::string(), "default");
         if (!security_manager_->ps) {
-                throw Exception("Cannot create security manager policy-set");
+                throw rina::Exception("Cannot create security manager policy-set");
         }
 
         flow_allocator_->select_policy_set(std::string(), "default");
         if (!flow_allocator_->ps) {
-                throw Exception("Cannot create flow allocator policy-set");
+                throw rina::Exception("Cannot create flow allocator policy-set");
         }
 
         namespace_manager_->select_policy_set(std::string(), "default");
         if (!namespace_manager_->ps) {
-                throw Exception("Cannot create namespace manager policy-set");
+                throw rina::Exception("Cannot create namespace manager policy-set");
         }
 
         resource_allocator_->select_policy_set(std::string(), "default");
         if (!resource_allocator_->ps) {
-                throw Exception("Cannot create resource allocator policy-set");
+                throw rina::Exception("Cannot create resource allocator policy-set");
         }
 
         routing_component_->select_policy_set(std::string(), "link-state");
         if (!routing_component_->ps) {
-                throw Exception("Cannot create routing component policy-set");
+                throw rina::Exception("Cannot create routing component policy-set");
         }
 
 	try {
 		rina::extendedIPCManager->notifyIPCProcessInitialized(name_);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems communicating with IPC Manager: %s. Exiting... ", e.what());
 		exit(EXIT_FAILURE);
 	}
@@ -286,7 +286,7 @@ void IPCProcessImpl::processAssignToDIFRequestEvent(const rina::AssignToDIFReque
 		pending_events_.insert(std::pair<unsigned int,
 				rina::AssignToDIFRequestEvent>(handle, event));
 		state = ASSIGN_TO_DIF_IN_PROCESS;
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems sending DIF Assignment request to the kernel: %s", e.what());
 		rina::extendedIPCManager->assignToDIFResponse(event, -1);
 	}
@@ -327,7 +327,7 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 
 		try {
 			rina::extendedIPCManager->assignToDIFResponse(requestEvent, -1);
-		} catch (Exception &e) {
+		} catch (rina::Exception &e) {
 			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		}
 
@@ -345,7 +345,7 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 		flow_allocator_->set_dif_configuration(dif_information_.dif_configuration_);
 		enrollment_task_->set_dif_configuration(dif_information_.dif_configuration_);
 	}
-	catch(Exception &e){
+	catch(rina::Exception &e){
 		state = INITIALIZED;
 		LOG_ERR("Bad configuration error: %s", e.what());
 		rina::extendedIPCManager->assignToDIFResponse(requestEvent, -1);
@@ -355,7 +355,7 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 
 	try {
 		rina::extendedIPCManager->assignToDIFResponse(requestEvent, 0);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 	}
 }
@@ -363,7 +363,7 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 void IPCProcessImpl::requestPDUFTEDump() {
 	try{
 		rina::kernelIPCProcess->dumptPDUFT();
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_WARN("Error requesting IPC Process to Dump PDU Forwarding Table: %s", e.what());
 	}
 }
@@ -458,7 +458,7 @@ void IPCProcessImpl::processSetPolicySetParamRequestEvent(
 		pending_set_policy_set_param_events.insert(
                         std::pair<unsigned int,
 			rina::SetPolicySetParamRequestEvent>(handle, event));
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems sending set-policy-set-param request "
                         "to the kernel: %s", e.what());
 		rina::extendedIPCManager->setPolicySetParamResponse(event, -1);
@@ -487,7 +487,7 @@ void IPCProcessImpl::processSetPolicySetParamResponseEvent(
 
 		try {
 			rina::extendedIPCManager->setPolicySetParamResponse(it->second, -1);
-		} catch (Exception &e) {
+		} catch (rina::Exception &e) {
 			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		}
 
@@ -499,7 +499,7 @@ void IPCProcessImpl::processSetPolicySetParamResponseEvent(
 
 	try {
 		rina::extendedIPCManager->setPolicySetParamResponse(requestEvent, 0);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 	}
 }
@@ -553,7 +553,7 @@ void IPCProcessImpl::processSelectPolicySetRequestEvent(
 		pending_select_policy_set_events.insert(
                         std::pair<unsigned int,
 			rina::SelectPolicySetRequestEvent>(handle, event));
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems sending select-policy-set request "
                         "to the kernel: %s", e.what());
 		rina::extendedIPCManager->selectPolicySetResponse(event, -1);
@@ -582,7 +582,7 @@ void IPCProcessImpl::processSelectPolicySetResponseEvent(
 
 		try {
 			rina::extendedIPCManager->selectPolicySetResponse(it->second, -1);
-		} catch (Exception &e) {
+		} catch (rina::Exception &e) {
 			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		}
 
@@ -594,7 +594,7 @@ void IPCProcessImpl::processSelectPolicySetResponseEvent(
 
 	try {
 		rina::extendedIPCManager->selectPolicySetResponse(requestEvent, 0);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 	}
 }

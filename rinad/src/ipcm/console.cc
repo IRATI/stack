@@ -142,7 +142,7 @@ IPCMConsole::init()
                 if (sfd < 0) {
                         ss  << " Error [" << errno <<
                                 "] calling socket() " << endl;
-                        throw Exception();
+                        throw rina::Exception();
                 }
 
                 ret = setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR,
@@ -159,16 +159,16 @@ IPCMConsole::init()
                 if (ret < 0) {
                         ss  << " Error [" << errno <<
                                 "] calling bind() " << endl;
-                        throw Exception();
+                        throw rina::Exception();
                 }
 
                 ret = listen(sfd, 5);
                 if (ret < 0) {
                         ss  << " Error [" << errno <<
                                 "] calling listen() " << endl;
-                        throw Exception();
+                        throw rina::Exception();
                 }
-        } catch (Exception) {
+        } catch (rina::Exception) {
                 FLUSH_LOG(ERR, ss);
                 if (sfd >= 0) {
                         close(sfd);
