@@ -139,7 +139,7 @@ void Client::cacep()
   cdap_rib::auth_info auth;
   auth.auth_mech_ = auth.AUTH_NONE;
 
-  std::cout << "CACEP started" << std::endl;
+  std::cout<<"open conection request CDAP message sent"<<std::endl;
   con_ = cdap_prov_->open_connection(ver, src, dest, auth, flow_->getPortId());
   int bytes_read = flow_->readSDU(buffer, max_sdu_size_in_bytes);
   cdap_rib::SerializedObject message;
@@ -153,7 +153,7 @@ void Client::open_connection_result(const cdap_rib::con_handle_t &con,
 {
   (void) con;
   (void) res;
-  std::cout << "CACEP success" << std::endl;
+  std::cout<<"open conection response CDAP message received"<<std::endl;
   sendReadRMessage();
 }
 void Client::remote_read_result(const rina::cdap_rib::con_handle_t &con,
@@ -161,7 +161,7 @@ void Client::remote_read_result(const rina::cdap_rib::con_handle_t &con,
 {
   (void) con;
   (void) res;
-  std::cout<<"Remote Read Result received"<<std::endl;
+  std::cout<<"read response CDAP message received"<<std::endl;
   sendReadRMessage();
 }
 
@@ -178,7 +178,7 @@ void Client::close_connection_result(const cdap_rib::con_handle_t &con,
 void Client::sendReadRMessage()
 {
   IPCEvent* event = ipcEventProducer->eventPoll();
-
+  char buffer[max_sdu_size_in_bytes];
   if (event) {
     switch (event->eventType) {
       case FLOW_DEALLOCATED_EVENT:
@@ -203,8 +203,13 @@ void Client::sendReadRMessage()
         cdap_rib::filt_info_t filt;
         filt.filter_ = 0;
         filt.scope_ = 0;
-        std::cout<<"Send a read request message"<<std::endl;
+        std::cout<<"read request CDAP message sent"<<std::endl;
         cdap_prov_->remote_read(con_, obj, flags, filt);
+        int bytes_read = flow_->readSDU(buffer, max_sdu_size_in_bytes);
+        cdap_rib::SerializedObject message;
+        message.message_ = buffer;
+        message.size_ = bytes_read;
+        cdap_prov_->new_message(message, flow_->getPortId());
         count_++;
       }
     else

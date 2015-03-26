@@ -49,7 +49,7 @@ void ConnectionCallback::open_connection(
   res.result_reason_ = "Ok";
   std::cout<<"open conection request CDAP message received"<<std::endl;
   (*prov_)->open_connection_response(con, res, message_id);
-  std::cout<<"open conection response CDAP message received"<<std::endl;
+  std::cout<<"open conection response CDAP message sent"<<std::endl;
 }
 void ConnectionCallback::remote_read_request(
     const rina::cdap_rib::con_handle_t &con,
@@ -62,9 +62,9 @@ void ConnectionCallback::remote_read_request(
   cdap_rib::res_info_t res;
   res.result_ = 1;
   res.result_reason_ = "Ok";
-  std::cout<<"start request CDAP message received"<<std::endl;
+  std::cout<<"read request CDAP message received"<<std::endl;
   (*prov_)->remote_start_response(con, obj, flags, res, message_id);
-  std::cout<<"start response CDAP message sent"<<std::endl;
+  std::cout<<"read response CDAP message sent"<<std::endl;
 }
 
 void ConnectionCallback::close_connection(const rina::cdap_rib::con_handle_t &con,
