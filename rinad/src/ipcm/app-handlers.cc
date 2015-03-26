@@ -60,19 +60,20 @@ void IPCManager_::os_process_finalized_handler(
 
 		IPCMIPCProcess *ipcp = select_ipcp_by_dif(fit->difName);
 
-		//Auto release the read lock
-		rina::ReadScopedLock readlock(ipcp->rwlock, false);
+		{
+			//Auto release the read lock
+			rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
-		rina::FlowDeallocateRequestEvent req_event(fit->portId, 0);
-
-		if (!ipcp) {
-			ss  << ": Cannot find the IPC process "
-				"that provides the flow with port-id " <<
-				fit->portId << endl;
-			FLUSH_LOG(ERR, ss);
-			continue;
+			if (!ipcp) {
+				ss  << ": Cannot find the IPC process "
+						"that provides the flow with port-id " <<
+						fit->portId << endl;
+				FLUSH_LOG(ERR, ss);
+				continue;
+			}
 		}
 
+		rina::FlowDeallocateRequestEvent req_event(fit->portId, 0);
 		IPCManager->deallocate_flow(NULL, ipcp->get_id(), req_event);
 	}
 
