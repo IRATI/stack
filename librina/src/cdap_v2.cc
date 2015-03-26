@@ -3095,6 +3095,7 @@ void AppCDAPProvider::send(const cdap_m_t *m_sent, int port)
   manager_->messageSent(*m_sent, port);
   rina::ipcManager->getAllocatedFlow(port)->writeSDU(ser_sent_m->message_,
                                                      ser_sent_m->size_);
+  LOG_INFO("Message sent to port %d", port);
   delete ser_sent_m;
 }
 

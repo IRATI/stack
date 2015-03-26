@@ -122,6 +122,7 @@ void Client::createFlow()
 
 void Client::cacep()
 {
+  char buffer[max_sdu_size_in_bytes];
   cdap_prov_ = cdap::CDAPProviderFactory->create(2000, false, this);
   cdap_rib::vers_info_t ver;
   ver.version_ = 1;
@@ -137,9 +138,14 @@ void Client::cacep()
   dest.ae_inst_ = flow_->getRemoteApplcationName().entityInstance;;
   cdap_rib::auth_info auth;
   auth.auth_mech_ = auth.AUTH_NONE;
-  int port = flow_->getPortId();
+
   std::cout << "CACEP started" << std::endl;
-  con_ = cdap_prov_->open_connection(ver, src, dest, auth, port);
+  con_ = cdap_prov_->open_connection(ver, src, dest, auth, flow_->getPortId());
+  int bytes_read = flow_->readSDU(buffer, max_sdu_size_in_bytes);
+  cdap_rib::SerializedObject message;
+  message.message_ = buffer;
+  message.size_ = bytes_read;
+  cdap_prov_->new_message(message, flow_->getPortId());
 }
 
 void Client::open_connection_result(const cdap_rib::con_handle_t &con,
@@ -185,7 +191,7 @@ void Client::sendReadRMessage()
   }
   else
   {
-    if (count_ >= echo_times)
+    if (count_ < echo_times)
     {
 
         // READ
@@ -197,7 +203,7 @@ void Client::sendReadRMessage()
         cdap_rib::filt_info_t filt;
         filt.filter_ = 0;
         filt.scope_ = 0;
-
+        std::cout<<"Send a read request message"<<std::endl;
         cdap_prov_->remote_read(con_, obj, flags, filt);
         count_++;
       }
