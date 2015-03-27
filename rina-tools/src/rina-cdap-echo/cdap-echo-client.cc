@@ -183,6 +183,7 @@ void Client::sendReadRMessage()
     if (event) {
       switch (event->eventType) {
         case FLOW_DEALLOCATED_EVENT:
+          std::cout<<"Client received a flow deallocation event"<<std::endl;
           destroyFlow();
           break;
         default:
@@ -216,8 +217,14 @@ void Client::sendReadRMessage()
 
 void Client::release()
 {
+  char buffer[max_sdu_size_in_bytes];
   std::cout << "release request CDAP message sent" << std::endl;
   cdap_prov_->close_connection(con_);
+  int bytes_read = flow_->readSDU(buffer, max_sdu_size_in_bytes);
+  cdap_rib::SerializedObject message;
+  message.message_ = buffer;
+  message.size_ = bytes_read;
+  cdap_prov_->new_message(message, flow_->getPortId());
 }
 
 void Client::destroyFlow()
