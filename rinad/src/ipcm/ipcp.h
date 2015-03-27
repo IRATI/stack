@@ -497,7 +497,7 @@ public:
     /**
      * Check if the ipcp exists
      */
-    bool exists(const int id);
+    bool exists(const unsigned short id);
 
     /**
      * Returns a pointer to the IPCProcess identified by ipcProcessId

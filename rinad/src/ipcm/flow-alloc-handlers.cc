@@ -59,7 +59,7 @@ IPCManager_::deallocate_flow(Promise * promise, const int ipcp_id,
 		}
 
 		//Auto release the read lock
-		rina::WriteScopedLock writelock(ipcp->rwlock, false);
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
 		//Create a transaction
 		trans = new FlowDeallocTransState(promise, ipcp->get_id(), event);
@@ -441,6 +441,7 @@ void IPCManager_::allocate_flow_response_event_handler(rina::AllocateFlowRespons
 void IPCManager_::flow_deallocation_requested_event_handler(rina::FlowDeallocateRequestEvent* event)
 {
 	IPCMIPCProcess *ipcp = lookup_ipcp_by_port(event->portId);
+	unsigned short ipcp_id = 0;
 	ostringstream ss;
 
 	if (!ipcp) {
@@ -451,7 +452,13 @@ void IPCManager_::flow_deallocation_requested_event_handler(rina::FlowDeallocate
 		return;
 	}
 
-	deallocate_flow(NULL, ipcp->get_id(), *event);
+	{
+		//Auto release the read lock
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
+		ipcp_id = ipcp->get_id();
+	}
+
+	deallocate_flow(NULL, ipcp_id, *event);
 }
 
 void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IpcmDeallocateFlowResponseEvent* event)
@@ -481,7 +488,7 @@ void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IpcmDealloca
 		}
 
 		//Auto release the read lock
-		rina::WriteScopedLock writelock(ipcp->rwlock, false);
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
 		// Inform the IPC process about the deallocation result
 		ipcp->deallocateFlowResult(event->sequenceNumber, success);
@@ -545,6 +552,9 @@ void IPCManager_::flow_deallocated_event_handler(rina::FlowDeallocatedEvent* eve
 		FLUSH_LOG(ERR, ss);
 		return;
 	}
+
+	//Auto release the write lock
+	rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
 	try {
 		// Inform the IPC process that the flow corresponding to

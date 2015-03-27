@@ -74,6 +74,8 @@ typedef enum ipcm_res{
 }ipcm_res_t;
 
 
+//fwd decl
+class TransactionState;
 
 //
 // Promise base class
@@ -87,25 +89,7 @@ public:
 	//
 	// Wait (blocking)
 	//
-	ipcm_res_t wait(void){
-		unsigned int i;
-		// Due to the async nature of the API, notifications (signal)
-		// the transaction can well end before the thread is waiting
-		// in the condition variable. As apposed to sempahores
-		// pthread_cond don't keep the "credit"
-		for(i=0; i < PROMISE_TIMEOUT_S *
-				(_PROMISE_1_SEC_NSEC/ PROMISE_RETRY_NSEC) ;++i){
-			try{
-				if(ret != IPCM_PENDING)
-					return ret;
-				wait_cond.timedwait(0, PROMISE_RETRY_NSEC);
-			}catch(...){};
-		}
-
-		//hard timeout expired
-		ret = IPCM_FAILURE;
-		return ret;
-	};
+	ipcm_res_t wait(void);
 
 	//
 	// Signal the condition
@@ -120,19 +104,7 @@ public:
 	// Return SUCCESS or IPCM_PENDING if the operation did not finally
 	// succeed
 	//
-	ipcm_res_t timed_wait(const unsigned int seconds){
-
-		if(ret != IPCM_PENDING)
-			return ret;
-		try{
-			wait_cond.timedwait(seconds, 0);
-		}catch (rina::ConcurrentException& e) {
-			if(ret != IPCM_PENDING)
-				return ret;
-			return IPCM_PENDING;
-		};
-		return ret;
-	};
+	ipcm_res_t timed_wait(const unsigned int seconds);
 
 	//
 	// Return code
@@ -140,6 +112,12 @@ public:
 	ipcm_res_t ret;
 
 protected:
+	//Protect setting of trans
+	friend TransactionState;
+
+	//Transaction back reference
+	TransactionState* trans;
+
 	//Condition variable
 	rina::ConditionVariable wait_cond;
 };
@@ -193,12 +171,16 @@ public:
 	// This method and signals any existing set complete flag
 	//
 	void completed(ipcm_res_t _ret){
+		rina::ScopedLock slock(mutex);
+
+		if(finalised)
+			return;
+
 		if(!promise)
 			return;
 
 		promise->ret = _ret;
 		promise->signal();
-
 	}
 
 	//Promise
@@ -208,12 +190,46 @@ public:
 	const int tid;
 
 protected:
+	//Protect abort call
+	friend Promise;
+
+	//
+	// @brief Abort the transaction (hard timeout)
+	//
+	// This particular method aborts the transaction due to a wait in the
+	// promise that has timedout
+	//
+	// @ret On success, the transaction has been aborted. On failure, a
+	// completed() call has successfully finished the transaction
+	//
+	bool abort(void){
+		rina::ScopedLock slock(mutex);
+
+		if(finalised)
+			return false;
+
+		return finalised = true;
+	}
+
+
+	//
+	// Constructor only used
+	//
 	TransactionState(Promise* promise_, const int tid_):
 							promise(promise_),
-							tid(tid_){
-		if(promise)
+							tid(tid_),
+							finalised(false){
+		if(promise){
 			promise->ret = IPCM_PENDING;
+			promise->trans = this;
+		}
 	};
+
+	//Completed flag
+	bool finalised;
+
+	// Mutex
+	rina::Lockable mutex;
 };
 
 //
@@ -269,7 +285,7 @@ public:
 	//
 	// Checks if an IPCP exists by its ID
 	//
-	bool ipcp_exists(const int ipcp_id);
+	bool ipcp_exists(const unsigned short ipcp_id);
 
 	//
 	// List the available IPCP types
@@ -307,7 +323,7 @@ public:
 	//
 	// @ret IPCM_SUCCESS on success IPCM_FAILURE
 	//
-	ipcm_res_t destroy_ipcp(const unsigned int ipcp_id);
+	ipcm_res_t destroy_ipcp(const unsigned short ipcp_id);
 
 	//
 	// Assing an ipcp to a DIF
@@ -319,7 +335,7 @@ public:
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	//
-	ipcm_res_t assign_to_dif(Promise* promise, const int ipcp_id,
+	ipcm_res_t assign_to_dif(Promise* promise, const unsigned short ipcp_id,
 			  const rina::ApplicationProcessNamingInformation&
 			  difName);
 
@@ -332,7 +348,7 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t register_at_dif(Promise* promise, const int ipcp_id,
+	ipcm_res_t register_at_dif(Promise* promise, const unsigned short ipcp_id,
 			    const rina::ApplicationProcessNamingInformation&
 			    difName);
 
@@ -345,7 +361,7 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t enroll_to_dif(Promise* promise, const int ipcp_id,
+	ipcm_res_t enroll_to_dif(Promise* promise, const unsigned short ipcp_id,
 			  const rinad::NeighborData& neighbor);
 
 	//
@@ -359,7 +375,7 @@ public:
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t unregister_app_from_ipcp(Promise* promise,
 		const rina::ApplicationUnregistrationRequestEvent& req_event,
-		int slave_ipcp_id);
+		const unsigned short slave_ipcp_id);
 
 	//
 	// Unregister an ipcp from another one
@@ -371,8 +387,8 @@ public:
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t unregister_ipcp_from_ipcp(Promise* promise,
-						const int ipcp_id,
-						const int slave_ipcp_id);
+						const unsigned short ipcp_id,
+						const unsigned short slave_ipcp_id);
 	//
 	// Update the DIF configuration
 	//TODO: What is really this for?
@@ -384,7 +400,7 @@ public:
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t update_dif_configuration(Promise* promise,
-				const int ipcp_id,
+				const unsigned short ipcp_id,
 				const rina::DIFConfiguration& dif_config);
 
 	//
@@ -396,7 +412,7 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t query_rib(QueryRIBPromise* promise, const int ipcp_id);
+	ipcm_res_t query_rib(QueryRIBPromise* promise, const unsigned short ipcp_id);
 
 	//
 	// Select a policy set
@@ -407,7 +423,7 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t select_policy_set(Promise* promise, const int ipcp_id,
+	ipcm_res_t select_policy_set(Promise* promise, const unsigned short ipcp_id,
 					const std::string& component_path,
 					const std::string& policy_set);
 	//
@@ -419,7 +435,7 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t set_policy_set_param(Promise* promise, const int ipcp_id,
+	ipcm_res_t set_policy_set_param(Promise* promise, const unsigned short ipcp_id,
 						const std::string& path,
 						const std::string& name,
 						const std::string& value);
@@ -432,7 +448,7 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t plugin_load(Promise* promise, const int ipcp_id,
+	ipcm_res_t plugin_load(Promise* promise, const unsigned short ipcp_id,
 						const std::string& plugin_name,
 						bool load);
 
@@ -528,7 +544,7 @@ protected:
 	* @param read_lock When true, the IPCProcess instance is recovered with
 	* the read lock acquired, otherwise the write lock is acquired.
 	*/
-	IPCMIPCProcess* lookup_ipcp_by_id(unsigned int id,
+	IPCMIPCProcess* lookup_ipcp_by_id(const unsigned short id,
 							bool write_lock=false);
 	//
 	// Internal event API

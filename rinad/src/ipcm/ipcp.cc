@@ -510,7 +510,7 @@ void IPCMIPCProcessFactory::destroy(unsigned short ipcProcessId) {
 	ipcProcesses.erase(ipcProcessId);
 }
 
-bool IPCMIPCProcessFactory::exists(const int id)
+bool IPCMIPCProcessFactory::exists(const unsigned short id)
 {
 	std::map<unsigned short, IPCMIPCProcess*>::iterator iterator;
 	rina::ReadScopedLock readlock(rwlock);
