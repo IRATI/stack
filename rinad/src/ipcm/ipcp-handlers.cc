@@ -347,7 +347,6 @@ IPCManager_::enroll_to_dif_response_event_handler(rina::EnrollToDIFResponseEvent
 		//Auto release the read lock
 		rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
-
 		if (success) {
 			ss << "Enrollment operation completed for IPC "
 				<< "process " << ipcp->get_name().toString() << endl;

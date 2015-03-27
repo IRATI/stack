@@ -653,7 +653,7 @@ IPCManager_::enroll_to_dif(Promise* promise, const unsigned short ipcp_id,
 		}
 
 		//Auto release the write lock
-		rina::WriteScopedLock writelock(ipcp->rwlock, false);
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
 		//Create a transaction
 		trans = new IPCPTransState(promise, ipcp->get_id());
