@@ -382,8 +382,8 @@ RIBDaemon::RIBDaemon(cacep::AppConHandlerInterface *app_con_callback,
   app_con_callback_ = app_con_callback;
   app_resp_callback_ = app_resp_callback;
   rib_ = new RIB(schema);
-  cdap_provider_ = cdap::CDAPProviderFactory->create(params->timeout_,
-                                                     params->is_IPCP_, this);
+  cdap::CDAPProviderFactory::init(params->timeout_);
+  cdap_provider_ = cdap::CDAPProviderFactory::create(params->is_IPCP_, this);
   delete params;
 }
 
@@ -393,6 +393,7 @@ RIBDaemon::~RIBDaemon()
   delete app_resp_callback_;
   delete rib_;
   delete cdap_provider_;
+  cdap::CDAPProviderFactory::finit();
 }
 
 void RIBDaemon::open_connection_result(const cdap_rib::con_handle_t &con,

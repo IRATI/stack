@@ -49,8 +49,6 @@ CDAPMessage::CDAPMessage()
   version_ = 0;
 }
 
-Singleton<CDAPProviderFactory_> CDAPProviderFactory;
-
 class CDAPMessageFactory
 {
  public:
@@ -410,6 +408,7 @@ class CDAPSessionManager
   CDAPSessionManager(SerializerInterface *serializer_factory);
   CDAPSessionManager(SerializerInterface *serializer_factory, long timeout);
   ~CDAPSessionManager() throw ();
+  void set_timeout(long timeout);
   CDAPSession* createCDAPSession(int port_id);
   void getAllCDAPSessionIds(std::vector<int> &vector);
   CDAPSession* get_cdap_session(int port_id);
@@ -1146,6 +1145,7 @@ void ConnectionStateMachine::releaseReceived(const cdap_m_t &message)
     throw rina::CDAPException(ss.str());
   }
   if (message.invoke_id_ != 0 && connection_state_ != AWAITCLOSE) {
+    LOG_ERR("[DEBUG] Connection state is AWAITCLOSE");
     connection_state_ = AWAITCLOSE;
   } else {
     connection_state_ = NONE;
@@ -2108,6 +2108,10 @@ CDAPSessionManager::~CDAPSessionManager() throw ()
   cdap_sessions_.clear();
   delete serializer_;
 }
+void CDAPSessionManager::set_timeout(long timeout)
+{
+  timeout_ = timeout;
+}
 void CDAPSessionManager::getAllCDAPSessionIds(std::vector<int> &vector)
 {
   vector.clear();
@@ -2676,6 +2680,35 @@ const cdap_rib::SerializedObject* GPBSerializer::serializeMessage(
   return serialized_message;
 }
 
+// CDAPProviderFactory
+namespace CDAPProviderFactory{
+
+static SerializerInterface *serializer = new GPBSerializer();
+static CDAPSessionManager *manager = new CDAPSessionManager(serializer);
+
+void init(long timeout){
+  manager->set_timeout(timeout);
+}
+
+CDAPProviderInterface* create(bool is_IPCP, cdap::CDAPCallbackInterface *callback)
+{
+  if (is_IPCP)
+    return new IPCPCDAPProvider(callback, manager);
+  else
+    return new AppCDAPProvider(callback, manager);
+}
+
+void destroy(int port)
+{
+  manager->removeCDAPSession(port);
+}
+void finit()
+{
+  delete manager;
+  delete serializer;
+}
+}
+
 // CLASS CDAPProvider
 CDAPProvider::CDAPProvider(cdap::CDAPCallbackInterface *callback,
                            CDAPSessionManager *manager)
@@ -3112,23 +3145,6 @@ void IPCPCDAPProvider::send(const cdap_m_t *m_sent, int port)
   rina::kernelIPCProcess->writeMgmgtSDUToPortId(ser_sent_m->message_,
                                                 ser_sent_m->size_, port);
   delete ser_sent_m;
-}
-
-// CLASS CDAPProviderFactory_
-CDAPProviderFactory_::~CDAPProviderFactory_()
-{
-
-}
-CDAPProviderInterface* CDAPProviderFactory_::create(
-    long timeout, bool is_IPCP, cdap::CDAPCallbackInterface *callback)
-{
-  static SerializerInterface *serializer = new GPBSerializer();
-  static CDAPSessionManager *manager = new CDAPSessionManager(serializer, timeout);
-
-  if (is_IPCP)
-    return new IPCPCDAPProvider(callback, manager);
-  else
-    return new AppCDAPProvider(callback, manager);
 }
 
 // CLASS CDAPCallbackInterface

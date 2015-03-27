@@ -121,7 +121,8 @@ void Client::createFlow()
 void Client::cacep()
 {
   char buffer[max_sdu_size_in_bytes];
-  cdap_prov_ = cdap::CDAPProviderFactory->create(2000, false, this);
+  cdap::CDAPProviderFactory::init(2000);
+  cdap_prov_ = cdap::CDAPProviderFactory::create(false, this);
   cdap_rib::vers_info_t ver;
   ver.version_ = 1;
   cdap_rib::src_info_t src;
@@ -233,7 +234,7 @@ void Client::destroyFlow()
   unsigned int seqnum;
   IPCEvent* event;
   int port_id = flow_->getPortId();
-
+  cdap::CDAPProviderFactory::destroy(port_id);
   seqnum = ipcManager->requestFlowDeallocation(port_id);
 
   for (;;) {
@@ -248,4 +249,6 @@ void Client::destroyFlow()
   assert(resp);
 
   ipcManager->flowDeallocationResult(port_id, resp->result == 0);
+  cdap::CDAPProviderFactory::finit();
+  delete cdap_prov_;
 }

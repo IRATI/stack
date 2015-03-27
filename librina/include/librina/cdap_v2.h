@@ -306,14 +306,14 @@ public:
   virtual const cdap_rib::SerializedObject* serializeMessage(const cdap_m_t &cdapMessage) = 0;
 };
 
-class CDAPProviderFactory_
-{
- public:
-  ~CDAPProviderFactory_();
-  CDAPProviderInterface* create(long timeout, bool is_IPCP, cdap::CDAPCallbackInterface *callback);
-};
+namespace CDAPProviderFactory{
 
-extern Singleton<CDAPProviderFactory_> CDAPProviderFactory;
+extern void init(long timeout);
+extern CDAPProviderInterface* create(bool is_IPCP, cdap::CDAPCallbackInterface *callback);
+extern void destroy(int port);
+extern void finit();
+}
+
 }
 }
 #endif /* CDAP_PROVIDER_H_ */
