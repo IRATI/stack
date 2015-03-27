@@ -546,13 +546,14 @@ RINAManager::~RINAManager()
   delete eventQueue;
 }
 
-void RINAManager::sendMessage(BaseNetlinkMessage * netlinkMessage)
+void RINAManager::sendMessage(BaseNetlinkMessage * netlinkMessage,
+		bool fill_seq_num)
 {
   sendReceiveLock.lock();
 
   try {
     netlinkPortIdMap.updateMessageOrPortIdMap(netlinkMessage, true);
-    if (netlinkMessage->isRequestMessage()) {
+    if (fill_seq_num) {
       netlinkMessage->setSequenceNumber(netlinkManager->getSequenceNumber());
     }
     netlinkManager->sendMessage(netlinkMessage);
@@ -565,13 +566,13 @@ void RINAManager::sendMessage(BaseNetlinkMessage * netlinkMessage)
 }
 
 void RINAManager::sendMessageOfMaxSize(BaseNetlinkMessage * netlinkMessage,
-                                       size_t maxSize)
+                                       size_t maxSize, bool fill_seq_num)
 {
   sendReceiveLock.lock();
 
   try {
     netlinkPortIdMap.updateMessageOrPortIdMap(netlinkMessage, true);
-    if (netlinkMessage->isRequestMessage()) {
+    if (fill_seq_num) {
       netlinkMessage->setSequenceNumber(netlinkManager->getSequenceNumber());
     }
     netlinkManager->sendMessageOfMaxSize(netlinkMessage, maxSize);

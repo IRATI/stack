@@ -1,8 +1,7 @@
 /*
- * Configuration reader for IPC Manager
+ * MISC transaction states
  *
- *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
- *    Vincenzo Maffione     <v.maffione@nextworks.it>
+ *    Marc Sune <marc.sune (at) bisdn.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,15 +18,38 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef __IPCM_CONFIGURATION_H__
-#define __IPCM_CONFIGURATION_H__
+#ifndef __MISC_H__
+#define __MISC_H__
 
-#include <string>
+#include <assert.h>
+#include <cstdlib>
+#include <iostream>
+#include <map>
+#include <vector>
+#include <utility>
 
+#include <librina/common.h>
+#include <librina/ipc-manager.h>
+#include <librina/patterns.h>
+
+#include "ipcp-handlers.h"
 
 namespace rinad {
 
-bool parse_configuration(std::string& file_loc);
+/**
+* RIB query transaction state
+*/
+class RIBqTransState: public IPCPTransState{
 
-}
-#endif  /* __IPCM_CONFIGURATION_H__ */
+public:
+	RIBqTransState(Promise* _promise, int _ipcp_id)
+					:IPCPTransState(_promise, _ipcp_id){}
+	virtual ~RIBqTransState(){};
+
+	//Output result
+	std::string result;
+};
+
+}//rinad namespace
+
+#endif  /* __MISC_H__ */

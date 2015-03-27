@@ -1,8 +1,7 @@
 /*
- * Configuration reader for IPC Manager
+ * Base class for an addon
  *
- *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
- *    Vincenzo Maffione     <v.maffione@nextworks.it>
+ *    Marc Sune <marc.sune (at) bisdn.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,15 +18,41 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef __IPCM_CONFIGURATION_H__
-#define __IPCM_CONFIGURATION_H__
+#ifndef __ADDON_H__
+#define __ADDON_H__
 
-#include <string>
+#include <assert.h>
+#include <cstdlib>
+#include <iostream>
+#include <map>
+#include <vector>
+#include <utility>
 
+#include <librina/common.h>
+#include <librina/ipc-manager.h>
+#include <librina/patterns.h>
+
+#include "ipcp.h"
 
 namespace rinad {
 
-bool parse_configuration(std::string& file_loc);
+/**
+* Addon base class
+*/
+class Addon{
 
-}
-#endif  /* __IPCM_CONFIGURATION_H__ */
+public:
+
+	Addon(const std::string _name):name(_name){};
+	virtual ~Addon(){};
+
+	/**
+	* Addon name
+	*/
+	const std::string name;
+
+};
+
+}//rinad namespace
+
+#endif  /* __ADDON_H__ */
