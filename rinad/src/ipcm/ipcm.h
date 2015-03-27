@@ -74,6 +74,8 @@ typedef enum ipcm_res{
 }ipcm_res_t;
 
 
+//fwd decl
+class TransactionState;
 
 //
 // Promise base class
@@ -87,25 +89,7 @@ public:
 	//
 	// Wait (blocking)
 	//
-	ipcm_res_t wait(void){
-		unsigned int i;
-		// Due to the async nature of the API, notifications (signal)
-		// the transaction can well end before the thread is waiting
-		// in the condition variable. As apposed to sempahores
-		// pthread_cond don't keep the "credit"
-		for(i=0; i < PROMISE_TIMEOUT_S *
-				(_PROMISE_1_SEC_NSEC/ PROMISE_RETRY_NSEC) ;++i){
-			try{
-				if(ret != IPCM_PENDING)
-					return ret;
-				wait_cond.timedwait(0, PROMISE_RETRY_NSEC);
-			}catch(...){};
-		}
-
-		//hard timeout expired
-		ret = IPCM_FAILURE;
-		return ret;
-	};
+	ipcm_res_t wait(void);
 
 	//
 	// Signal the condition
@@ -120,19 +104,7 @@ public:
 	// Return SUCCESS or IPCM_PENDING if the operation did not finally
 	// succeed
 	//
-	ipcm_res_t timed_wait(const unsigned int seconds){
-
-		if(ret != IPCM_PENDING)
-			return ret;
-		try{
-			wait_cond.timedwait(seconds, 0);
-		}catch (rina::ConcurrentException& e) {
-			if(ret != IPCM_PENDING)
-				return ret;
-			return IPCM_PENDING;
-		};
-		return ret;
-	};
+	ipcm_res_t timed_wait(const unsigned int seconds);
 
 	//
 	// Return code
@@ -140,6 +112,12 @@ public:
 	ipcm_res_t ret;
 
 protected:
+	//Protect setting of trans
+	friend TransactionState;
+
+	//Transaction back reference
+	TransactionState* trans;
+
 	//Condition variable
 	rina::ConditionVariable wait_cond;
 };
@@ -193,12 +171,16 @@ public:
 	// This method and signals any existing set complete flag
 	//
 	void completed(ipcm_res_t _ret){
+		rina::ScopedLock slock(mutex);
+
+		if(finalised)
+			return;
+
 		if(!promise)
 			return;
 
 		promise->ret = _ret;
 		promise->signal();
-
 	}
 
 	//Promise
@@ -208,12 +190,46 @@ public:
 	const int tid;
 
 protected:
+	//Protect abort call
+	friend Promise;
+
+	//
+	// @brief Abort the transaction (hard timeout)
+	//
+	// This particular method aborts the transaction due to a wait in the
+	// promise that has timedout
+	//
+	// @ret On success, the transaction has been aborted. On failure, a
+	// completed() call has successfully finished the transaction
+	//
+	bool abort(void){
+		rina::ScopedLock slock(mutex);
+
+		if(finalised)
+			return false;
+
+		return finalised = true;
+	}
+
+
+	//
+	// Constructor only used
+	//
 	TransactionState(Promise* promise_, const int tid_):
 							promise(promise_),
-							tid(tid_){
-		if(promise)
+							tid(tid_),
+							finalised(false){
+		if(promise){
 			promise->ret = IPCM_PENDING;
+			promise->trans = this;
+		}
 	};
+
+	//Completed flag
+	bool finalised;
+
+	// Mutex
+	rina::Lockable mutex;
 };
 
 //

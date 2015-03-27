@@ -1188,15 +1188,60 @@ IPCManager_::unregister_app_from_ipcp(Promise* promise,
 	return IPCM_PENDING;
 }
 
+
+//
+// Promises
+//
+ipcm_res_t Promise::wait(void){
+	unsigned int i;
+	// Due to the async nature of the API, notifications (signal)
+	// the transaction can well end before the thread is waiting
+	// in the condition variable. As apposed to sempahores
+	// pthread_cond don't keep the "credit"
+	for(i=0; i < PROMISE_TIMEOUT_S *
+			(_PROMISE_1_SEC_NSEC/ PROMISE_RETRY_NSEC) ;++i){
+		try{
+			if(ret != IPCM_PENDING)
+				return ret;
+			wait_cond.timedwait(0, PROMISE_RETRY_NSEC);
+		}catch(...){};
+	}
+
+	//hard timeout expired
+	if(!trans->abort())
+		//The transaction ended at the very last second
+		return ret;
+	ret = IPCM_FAILURE;
+	return ret;
+}
+
+ipcm_res_t Promise::timed_wait(const unsigned int seconds){
+
+	if(ret != IPCM_PENDING)
+		return ret;
+	try{
+		wait_cond.timedwait(seconds, 0);
+	}catch (rina::ConcurrentException& e) {
+		if(ret != IPCM_PENDING)
+			return ret;
+		return IPCM_PENDING;
+	};
+	return ret;
+}
+
+
 //
 // Transactions
 //
 
 TransactionState::TransactionState(Promise* _promise):
 					promise(_promise),
-					tid(IPCManager->__tid_gen.next()){
-	if (promise)
+					tid(IPCManager->__tid_gen.next()),
+					finalised(false){
+	if (promise){
 		promise->ret = IPCM_PENDING;
+		promise->trans = this;
+	}
 };
 
 //State management routines
