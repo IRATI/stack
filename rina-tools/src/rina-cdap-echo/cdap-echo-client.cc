@@ -57,6 +57,7 @@ Client::Client(const string& dif_nm, const string& apn, const string& api,
 
 Client::~Client()
 {
+  delete cdap_prov_;
 }
 
 void Client::run()
@@ -225,7 +226,9 @@ void Client::release()
   cdap_rib::SerializedObject message;
   message.message_ = buffer;
   message.size_ = bytes_read;
+  std::cout<<"Esperant el release response"<<std::endl;
   cdap_prov_->new_message(message, flow_->getPortId());
+  std::cout<<"Finalitzant funció"<<std::endl;
 }
 
 void Client::destroyFlow()
@@ -250,5 +253,4 @@ void Client::destroyFlow()
 
   ipcManager->flowDeallocationResult(port_id, resp->result == 0);
   cdap::CDAPProviderFactory::finit();
-  delete cdap_prov_;
 }

@@ -51,7 +51,6 @@ class Server : public Application
  public:
   Server(const std::string& dif_name, const std::string& app_name,
          const std::string& app_instance, const int dealloc_wait);
-
   void run();
 
  protected:

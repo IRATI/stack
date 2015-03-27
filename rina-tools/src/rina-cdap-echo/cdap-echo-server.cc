@@ -85,7 +85,6 @@ Server::Server(const string& dif_name, const string& app_name,
       dw(dealloc_wait)
 {
 }
-
 void Server::run()
 {
   applicationRegister();
@@ -170,6 +169,7 @@ void Server::serveEchoFlow(rina::Flow* flow)
   }
   cdap::CDAPProviderFactory::destroy(flow->getPortId());
   delete cdap_prov;
+  delete callback;
 }
 /*
 void Server::destroyFlow(sigval_t val)

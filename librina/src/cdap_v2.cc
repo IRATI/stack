@@ -1581,6 +1581,7 @@ CDAPSession::CDAPSession(CDAPSessionManager *cdap_session_manager, long timeout,
 
 CDAPSession::~CDAPSession() throw ()
 {
+  LOG_ERR("[DEBUG] Cridem al CDAPSessionDestructor");
   delete connection_state_machine_;
   connection_state_machine_ = 0;
   delete session_descriptor_;
@@ -2193,9 +2194,6 @@ const cdap_m_t* CDAPSessionManager::messageReceived(
            << port_id;
         throw rina::CDAPException(ss.str());
       }
-      if (cdap_message->op_code_ == CDAPMessage::M_RELEASE_R) {
-        removeCDAPSession(port_id);
-      }
       break;
   }
   return cdap_message;
@@ -2705,7 +2703,6 @@ void destroy(int port)
 void finit()
 {
   delete manager;
-  delete serializer;
 }
 }
 
@@ -2719,7 +2716,6 @@ CDAPProvider::CDAPProvider(cdap::CDAPCallbackInterface *callback,
 
 CDAPProvider::~CDAPProvider()
 {
-  delete callback_;
 }
 
 cdap_rib::con_handle_t CDAPProvider::open_connection(
