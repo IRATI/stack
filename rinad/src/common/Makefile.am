@@ -15,6 +15,9 @@ librinad_la_CPPFLAGS =				\
 	$(LIBPROTOBUF_CFLAGS)			\
 	-I$(srcdir)/tclap			\
 	-I$(srcdir)/..
+librinad_la_CXXFLAGS =				\
+	-std=c++98				\
+	$(CXXFLAGS_EXTRA)
 librinad_la_LIBADD   =				\
 	$(LIBRINA_LIBS)				\
 	$(LIBPROTOBUF_LIBS)			\

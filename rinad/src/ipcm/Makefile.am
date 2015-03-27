@@ -53,6 +53,9 @@ ipcm_CPPFLAGS =					\
 	-I$(srcdir)/../common			\
 	-I$(srcdir)/jsoncpp			\
 	-DPLUGINSDIR=\"$(pkglibdir)/ipcm\"
+ipcm_CXXFLAGS =					\
+	-std=c++98				\
+	$(CXXFLAGS_EXTRA)
 ipcm_LDADD    =					\
 	$(builddir)/../common/librinad.la	\
 	$(builddir)/libjsoncpp.la		\
@@ -78,6 +81,9 @@ test_empty_CPPFLAGS =				\
 	$(LIBRINA_CFLAGS)			\
 	-I$(srcdir)/..				\
 	-I$(srcdir)/../common
+test_empty_CXXFLAGS =				\
+	-std=c++98				\
+	$(CXXFLAGS_EXTRA)
 test_empty_LDADD    = $(builddir)/../common/librinad.la $(LIBRINA_LIBS)
 
 check_PROGRAMS =				\

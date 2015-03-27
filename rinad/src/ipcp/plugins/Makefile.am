@@ -19,6 +19,9 @@ plugins_LTLIBRARIES =
 sm_passwd_la_CFLAGS   =
 sm_passwd_la_CPPFLAGS =				\
 	$(COMMONCPPFLAGS)
+sm_passwd_la_CXXFLAGS =				\
+	-std=c++98				\
+	$(CXXFLAGS_EXTRA)
 sm_passwd_la_LIBADD   =
 sm_passwd_la_LDFLAGS  = -module
 sm_passwd_la_SOURCES  =				\
