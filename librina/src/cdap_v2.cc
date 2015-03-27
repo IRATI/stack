@@ -1145,7 +1145,6 @@ void ConnectionStateMachine::releaseReceived(const cdap_m_t &message)
     throw rina::CDAPException(ss.str());
   }
   if (message.invoke_id_ != 0 && connection_state_ != AWAITCLOSE) {
-    LOG_ERR("[DEBUG] Connection state is AWAITCLOSE");
     connection_state_ = AWAITCLOSE;
   } else {
     connection_state_ = NONE;
@@ -1581,7 +1580,6 @@ CDAPSession::CDAPSession(CDAPSessionManager *cdap_session_manager, long timeout,
 
 CDAPSession::~CDAPSession() throw ()
 {
-  LOG_ERR("[DEBUG] Cridem al CDAPSessionDestructor");
   delete connection_state_machine_;
   connection_state_machine_ = 0;
   delete session_descriptor_;
@@ -1786,7 +1784,6 @@ void CDAPSession::messageSentOrReceived(const cdap_m_t &cdap_message, bool sent)
       ss << "Unrecognized operation code: " << cdap_message.op_code_;
       throw rina::CDAPException(ss.str());
   }
-  CDAPMessageValidator::validate(&cdap_message);
   freeOrReserveInvokeId(cdap_message, sent);
 }
 void CDAPSession::freeOrReserveInvokeId(const cdap_m_t &cdap_message, bool sent)
@@ -2735,6 +2732,8 @@ cdap_rib::con_handle_t CDAPProvider::open_connection(
   m_sent = manager_->getOpenConnectionRequestMessage(con);
   send(m_sent, con.port_);
 
+  delete m_sent;
+
   return con;
 }
 
@@ -3124,6 +3123,7 @@ void AppCDAPProvider::send(const cdap_m_t *m_sent, int port)
   manager_->messageSent(*m_sent, port);
   rina::ipcManager->getAllocatedFlow(port)->writeSDU(ser_sent_m->message_,
                                                      ser_sent_m->size_);
+  delete[] ser_sent_m->message_;
   delete ser_sent_m;
 }
 
@@ -3140,6 +3140,7 @@ void IPCPCDAPProvider::send(const cdap_m_t *m_sent, int port)
   manager_->messageSent(*m_sent, port);
   rina::kernelIPCProcess->writeMgmgtSDUToPortId(ser_sent_m->message_,
                                                 ser_sent_m->size_, port);
+  delete[] ser_sent_m->message_;
   delete ser_sent_m;
 }
 

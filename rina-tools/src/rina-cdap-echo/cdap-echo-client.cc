@@ -198,6 +198,7 @@ void Client::sendReadRMessage()
       cdap_rib::obj_info_t obj;
       obj.name_ = "test name";
       obj.class_ = "test class";
+      obj.inst_ = 1;
       cdap_rib::flags_t flags;
       flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
       cdap_rib::filt_info_t filt;
