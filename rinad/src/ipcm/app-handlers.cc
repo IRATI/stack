@@ -101,6 +101,9 @@ void IPCManager_::os_process_finalized_handler(
 	}
 
 	if (event->ipcProcessId != 0) {
+		//TODO if the IPCP was supporting flows or had
+		//registered applications, notify them
+
 		// Cleanup IPC Process state in the kernel
 		if(IPCManager->destroy_ipcp(event->ipcProcessId) < 0 ){
 			LOG_WARN("Problems cleaning up state of IPCP with id: %d\n",
