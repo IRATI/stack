@@ -1188,7 +1188,6 @@ IPCManager_::unregister_app_from_ipcp(Promise* promise,
 	return IPCM_PENDING;
 }
 
-
 //
 // Promises
 //
