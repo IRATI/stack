@@ -46,7 +46,7 @@ void * doManagementSDUReaderWork(void* arg)
 	while (true) {
 		try {
 		result = rina::kernelIPCProcess->readManagementSDU(buffer, data->max_sdu_size_);
-		} catch (Exception &e) {
+		} catch (rina::Exception &e) {
 			LOG_ERR("Problems reading management SDU: %s", e.what());
 			continue;
 		}
@@ -220,7 +220,7 @@ void IPCPRIBDaemonImpl::processQueryRIBRequestEvent(const rina::QueryRIBRequestE
 
 	try {
 		rina::extendedIPCManager->queryRIBResponse(event, 0, result);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems sending query RIB response to IPC Manager: %s",
 				e.what());
 	}
@@ -245,7 +245,7 @@ void IPCPRIBDaemonImpl::sendMessageSpecific(bool useAddress, const rina::CDAPMes
 			&& cdapMessage.get_op_code() != rina::CDAPMessage::M_DELETE_R
 			&& cdapMessage.get_op_code() != rina::CDAPMessage::M_START_R
 			&& cdapMessage.get_op_code() != rina::CDAPMessage::M_STOP_R) {
-		throw Exception("Requested a response message but message handler is null");
+		throw rina::Exception("Requested a response message but message handler is null");
 	}
 
 	atomic_send_lock_.lock();
@@ -274,7 +274,7 @@ void IPCPRIBDaemonImpl::sendMessageSpecific(bool useAddress, const rina::CDAPMes
 			cdsm->messageSent(cdapMessage, sessionId);
 		    delete sdu;
 		}
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		if (sdu) {
 			delete sdu;
 		}
@@ -319,7 +319,7 @@ void IPCPRIBDaemonImpl::cdapMessageDelivered(char* message, int length, int port
     try {
             rina::SerializedObject serializedMessage = rina::SerializedObject(message, length);
             cdapMessage = cdap_session_manager_->messageReceived(serializedMessage, portId);
-    } catch (Exception &e) {
+    } catch (rina::Exception &e) {
             atomic_send_lock_.unlock();
             LOG_ERR("Error decoding CDAP message: %s", e.what());
             return;
@@ -348,7 +348,7 @@ void IPCPRIBDaemonImpl::cdapMessageDelivered(char* message, int length, int port
     		delete cdapSessionDescriptor;
     		delete cdapMessage;
     		return;
-    	} catch (Exception &e) {
+    	} catch (rina::Exception &e) {
     		atomic_send_lock_.unlock();
     		LOG_ERR("Error processing A-data message: %s", e.what());
     		return;

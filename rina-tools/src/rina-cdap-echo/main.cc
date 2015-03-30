@@ -179,7 +179,7 @@ int main(int argc, char * argv[])
 
         //try {
                 retval = wrapped_main(argc, argv);
-       /* } catch (Exception& e) {
+       /* } catch (rina::Exception& e) {
                 LOG_ERR("%s", e.what());
                 return EXIT_FAILURE;
 

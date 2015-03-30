@@ -37,6 +37,8 @@
 /**
 * Exception base class
 */
+namespace rina {
+
 class Exception : public std::exception {
 public:
         Exception() { }
@@ -61,6 +63,8 @@ public:\
         virtual ~ TYPE() throw() { };\
 }
 
-#endif
+}//namespace rina
 
-#endif
+#endif //__cplusplus
+
+#endif //LIBRINA_EXCEPTIONS_H

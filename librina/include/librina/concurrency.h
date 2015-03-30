@@ -181,9 +181,9 @@ private:
 */
 class ScopedLock {
 public:
-ScopedLock(Lockable & guarded) :
+ScopedLock(Lockable & guarded, bool lock=true) :
         guarded_(guarded)
-        { guarded_.lock(); }
+        { if(lock) guarded_.lock(); }
 
         virtual ~ScopedLock() throw() {
                 try {
@@ -197,13 +197,13 @@ private:
 };
 
 /**
-* Read scoped lock (RAI)
+* Read scoped lock (RAII)
 */
 class ReadScopedLock {
 public:
-ReadScopedLock(ReadWriteLockable & rwlock) :
+ReadScopedLock(ReadWriteLockable & rwlock, bool lock=true) :
         rwlock_(rwlock)
-        { rwlock_.readlock(); }
+        { if(lock) rwlock_.readlock(); }
 
         virtual ~ReadScopedLock() throw() {
                 try {
@@ -217,13 +217,13 @@ private:
 };
 
 /**
-* Write scoped lock (RAI)
+* Write scoped lock (RAII)
 */
 class WriteScopedLock {
 public:
-WriteScopedLock(ReadWriteLockable & rwlock) :
+WriteScopedLock(ReadWriteLockable & rwlock, bool lock=true) :
         rwlock_(rwlock)
-        { rwlock_.writelock(); }
+        { if(lock) rwlock_.writelock(); }
 
         virtual ~WriteScopedLock() throw() {
                 try {

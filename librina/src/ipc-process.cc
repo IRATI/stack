@@ -330,7 +330,7 @@ void ExtendedIPCManager::notifyIPCProcessInitialized(
         message.setNotificationMessage(true);
 
         try {
-                rinaManager->sendMessage(&message);
+                rinaManager->sendMessage(&message, false);
         } catch(NetlinkException &e) {
                 unlock();
                 throw IPCException(e.what());
@@ -411,7 +411,7 @@ void ExtendedIPCManager::assignToDIFResponse(
         responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
 	try {
-		rinaManager->sendMessage(&responseMessage);
+		rinaManager->sendMessage(&responseMessage, false);
 	} catch (NetlinkException &e) {
 		throw AssignToDIFResponseException(e.what());
 	}
@@ -438,31 +438,7 @@ void ExtendedIPCManager::enrollToDIFResponse(const EnrollToDIFRequestEvent& even
         responseMessage.setSequenceNumber(event.sequenceNumber);
         responseMessage.setResponseMessage(true);
         try {
-                rinaManager->sendMessage(&responseMessage);
-        } catch (NetlinkException &e) {
-                throw EnrollException(e.what());
-        }
-#endif
-}
-
-void ExtendedIPCManager::notifyNeighborsModified(bool added,
-                        const std::list<Neighbor> &   neighbors) {
-#if STUB_API
-        // Do nothing
-
-        (void) added;
-        (void) neighbors;
-#else
-        IpcmNotifyNeighborsModifiedMessage message;
-        message.setAdded(added);
-        message.setNeighbors(neighbors);
-        message.setSourceIpcProcessId(ipcProcessId);
-        message.setDestPortId(ipcManagerPort);
-        message.setSequenceNumber(0);
-        message.setNotificationMessage(true);
-
-        try {
-                rinaManager->sendMessage(&message);
+                rinaManager->sendMessage(&responseMessage, false);
         } catch (NetlinkException &e) {
                 throw EnrollException(e.what());
         }
@@ -484,7 +460,7 @@ void ExtendedIPCManager::registerApplicationResponse(
 	responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
 	try {
-		rinaManager->sendMessage(&responseMessage);
+		rinaManager->sendMessage(&responseMessage, false);
 	} catch(NetlinkException &e) {
 		throw RegisterApplicationResponseException(e.what());
 	}
@@ -506,7 +482,7 @@ void ExtendedIPCManager::unregisterApplicationResponse(
 	responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
 	try {
-		rinaManager->sendMessage(&responseMessage);
+		rinaManager->sendMessage(&responseMessage, false);
 	} catch (NetlinkException &e) {
 		throw UnregisterApplicationResponseException(e.what());
 	}
@@ -531,7 +507,7 @@ void ExtendedIPCManager::allocateFlowRequestResult(
 	responseMessage.setResponseMessage(true);
 
 	try {
-		rinaManager->sendMessage(&responseMessage);
+		rinaManager->sendMessage(&responseMessage, false);
 	} catch(NetlinkException &e) {
 		throw AllocateFlowResponseException(e.what());
 	}
@@ -562,7 +538,7 @@ unsigned int ExtendedIPCManager::allocateFlowRequestArrived(
 	message.setRequestMessage(true);
 
 	try {
-	        rinaManager->sendMessage(&message);
+	        rinaManager->sendMessage(&message, true);
 	} catch (NetlinkException &e) {
 	        throw AllocateFlowRequestArrivedException(e.what());
 	}
@@ -613,7 +589,7 @@ void ExtendedIPCManager::notifyflowDeallocated(
 	responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
 	try {
-		rinaManager->sendMessage(&responseMessage);
+		rinaManager->sendMessage(&responseMessage, false);
 	} catch (NetlinkException &e) {
 		throw DeallocateFlowResponseException(e.what());
 	}
@@ -635,7 +611,7 @@ void ExtendedIPCManager::flowDeallocatedRemotely(
 	message.setDestPortId(ipcManagerPort);
 	message.setNotificationMessage(true);
 	try {
-		rinaManager->sendMessage(&message);
+		rinaManager->sendMessage(&message, false);
 	} catch (NetlinkException &e) {
 		throw DeallocateFlowResponseException(e.what());
 	}
@@ -662,7 +638,8 @@ void ExtendedIPCManager::queryRIBResponse(
 	try {
 	        //FIXME, compute maximum message size dynamically
 		rinaManager->sendMessageOfMaxSize(&responseMessage,
-                                                  5 * get_page_size());
+                                          5 * get_page_size(),
+                                          false);
 	} catch (NetlinkException &e) {
 		throw QueryRIBResponseException(e.what());
 	}
@@ -715,7 +692,7 @@ void ExtendedIPCManager::setPolicySetParamResponse(
         responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
 	try {
-		rinaManager->sendMessage(&responseMessage);
+		rinaManager->sendMessage(&responseMessage, false);
 	} catch (NetlinkException &e) {
 		throw SetPolicySetParamException(e.what());
 	}
@@ -736,7 +713,7 @@ void ExtendedIPCManager::selectPolicySetResponse(
         responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
 	try {
-		rinaManager->sendMessage(&responseMessage);
+		rinaManager->sendMessage(&responseMessage, false);
 	} catch (NetlinkException &e) {
 		throw SelectPolicySetException(e.what());
 	}
@@ -757,7 +734,7 @@ void ExtendedIPCManager::pluginLoadResponse(
         responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
 	try {
-		rinaManager->sendMessage(&responseMessage);
+		rinaManager->sendMessage(&responseMessage, false);
 	} catch (NetlinkException &e) {
 		throw PluginLoadException(e.what());
 	}
@@ -973,7 +950,7 @@ unsigned int KernelIPCProcess::assignToDIF(
         message.setRequestMessage(true);
 
         try {
-                rinaManager->sendMessage(&message);
+                rinaManager->sendMessage(&message, true);
         } catch (NetlinkException &e) {
                 throw AssignToDIFException(e.what());
         }
@@ -1000,7 +977,7 @@ unsigned int KernelIPCProcess::updateDIFConfiguration(
         message.setRequestMessage(true);
 
         try {
-                rinaManager->sendMessage(&message);
+                rinaManager->sendMessage(&message, true);
         } catch (NetlinkException &e) {
                 throw UpdateDIFConfigurationException(e.what());
         }
@@ -1026,7 +1003,7 @@ unsigned int KernelIPCProcess::createConnection(const Connection& connection) {
         message.setRequestMessage(true);
 
         try {
-                rinaManager->sendMessage(&message);
+                rinaManager->sendMessage(&message, true);
         } catch (NetlinkException &e) {
                 throw CreateConnectionException(e.what());
         }
@@ -1056,7 +1033,7 @@ unsigned int KernelIPCProcess::updateConnection(const Connection& connection) {
         message.setRequestMessage(true);
 
         try {
-                rinaManager->sendMessage(&message);
+                rinaManager->sendMessage(&message, true);
         } catch (NetlinkException &e) {
                 throw UpdateConnectionException(e.what());
         }
@@ -1084,7 +1061,7 @@ createConnectionArrived(const Connection& connection) {
         message.setRequestMessage(true);
 
         try {
-                rinaManager->sendMessage(&message);
+                rinaManager->sendMessage(&message, true);
         } catch (NetlinkException &e) {
                 throw CreateConnectionException(e.what());
         }
@@ -1112,7 +1089,7 @@ destroyConnection(const Connection& connection) {
         message.setRequestMessage(true);
 
         try {
-                rinaManager->sendMessage(&message);
+                rinaManager->sendMessage(&message, true);
         } catch (NetlinkException &e) {
                 throw DestroyConnectionException(e.what());
         }
@@ -1141,7 +1118,7 @@ modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry *>& entr
         message.setRequestMessage(true);
 
         try {
-                rinaManager->sendMessage(&message);
+                rinaManager->sendMessage(&message, true);
         } catch (NetlinkException &e) {
                 throw PDUForwardingTableException(e.what());
         }
@@ -1161,7 +1138,7 @@ unsigned int KernelIPCProcess::dumptPDUFT() {
         message.setRequestMessage(true);
 
         try {
-                rinaManager->sendMessage(&message);
+                rinaManager->sendMessage(&message, true);
         } catch (NetlinkException &e) {
                 throw PDUForwardingTableException(e.what());
         }
@@ -1195,7 +1172,7 @@ unsigned int KernelIPCProcess::setPolicySetParam(
         message.setRequestMessage(true);
 
         try {
-                rinaManager->sendMessage(&message);
+                rinaManager->sendMessage(&message, true);
         } catch (NetlinkException &e) {
                 throw SetPolicySetParamException(e.what());
         }
@@ -1226,7 +1203,7 @@ unsigned int KernelIPCProcess::selectPolicySet(
         message.setRequestMessage(true);
 
         try {
-                rinaManager->sendMessage(&message);
+                rinaManager->sendMessage(&message, true);
         } catch (NetlinkException &e) {
                 throw SelectPolicySetException(e.what());
         }

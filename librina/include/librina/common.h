@@ -228,7 +228,6 @@ enum IPCEventType {
 	UPDATE_DIF_CONFIG_RESPONSE_EVENT,
 	ENROLL_TO_DIF_REQUEST_EVENT,
 	ENROLL_TO_DIF_RESPONSE_EVENT,
-	NEIGHBORS_MODIFIED_NOTIFICATION_EVENT,
 	IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION,
 	IPC_PROCESS_QUERY_RIB,
 	GET_DIF_PROPERTIES,
@@ -601,6 +600,14 @@ public:
 
 private:
         void initialize(const SerializedObject& other );
+};
+
+class ConsecutiveUnsignedIntegerGenerator {
+public:
+	ConsecutiveUnsignedIntegerGenerator();
+	unsigned int next();
+	unsigned int counter_;
+	Lockable lock_;
 };
 
 /**

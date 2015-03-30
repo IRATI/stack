@@ -33,23 +33,17 @@
 #include <cerrno>
 #include <sstream>
 
-#define RINA_PREFIX     "ipcm"
-
 #include <librina/concurrency.h>
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
-#include <librina/logs.h>
 
 #include "rina-configuration.h"
-#include "helpers.h"
-#include "ipcm.h"
+#include "../addon.h"
 
 
 namespace rinad {
 
-class IPCManager;
-
-class IPCMConsole {
+class IPCMConsole : public Addon{
                 static const unsigned int CMDBUFSIZE = 120;
                 static const int CMDRETCONT = 0;
                 static const int CMDRETSTOP = 1;
@@ -66,13 +60,12 @@ class IPCMConsole {
                                                         : fun(f), usage(u) { }
                 };
 
-                IPCManager& ipcm;
                 rina::Thread *worker;
 
                 std::map<std::string, ConsoleCmdInfo> commands_map;
                 std::ostringstream outstream;
 
-                int init();
+                int init(void);
                 int process_command(int cfd, char *cmdbuf, int size);
                 int flush_output(int cfd);
                 int plugin_load_unload(std::vector<std::string>& args,
@@ -97,9 +90,13 @@ class IPCMConsole {
                 int plugin_unload(std::vector<std::string>& args);
 
         public:
-                IPCMConsole(IPCManager& r, rina::ThreadAttributes &ta);
+                IPCMConsole(rina::ThreadAttributes &ta,
+					const unsigned int port);
                 void body();
                 virtual ~IPCMConsole() throw();
+	private:
+		//Local console port
+		const unsigned int port;
 };
 
 }
