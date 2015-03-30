@@ -141,10 +141,10 @@ void RIBDaemonv1_::initiateRIB(rina::rib::RIBDNorthInterface* ribd)
 	  ribd->addRIBObject(new rina::rib::EmptyRIBObject("DIFManagement", "root, computingSystemID = 1, "
 				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, difManagement", intance_gen_.get_id(), enc));
 	}
-	catch(Exception &e1)
+	catch(rina::Exception &e1)
 	{
 		LOG_ERR("RIB basic objects were not created because %s", e1.what());
-		throw Exception("Finish application");
+		throw rina::Exception("Finish application");
 	}
 }
 

@@ -56,7 +56,7 @@ private:
 * Utility MACRO to define a (simple) derived exception class
 */
 #define DECLARE_EXCEPTION_SUBCLASS(TYPE)\
-class TYPE : public Exception {\
+class TYPE : public rina::Exception {\
 public:\
         TYPE () { };\
         TYPE (const char* s) : Exception(s) {};\
