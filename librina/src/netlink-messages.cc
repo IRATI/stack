@@ -137,16 +137,25 @@ void BaseNetlinkMessage::setResponseMessage(bool responseMessage) {
 
 const std::string BaseNetlinkMessage::toString(){
 	std::stringstream ss;
-	ss << "Family: " << family << "; Operation code: "
+	std::string type;
+	if (requestMessage) {
+		type = "Request";
+	} else if (responseMessage) {
+		type = "Response";
+	} else if (notificationMessage) {
+		type = "Notification";
+	} else {
+		type = "Unknown";
+	}
+
+	ss << "Fam: " << family << "; Opcode: "
 			<< BaseNetlinkMessage::operationCodeToString(operationCode)
-			<< "; Source port: " << sourcePortId
-			<< "; Destination port: " << destPortId
-			<< "; Sequence Number: " << sequenceNumber << "\n"
-			<< "Is request message? " << requestMessage
-			<< "; Is response message? " << responseMessage
-			<< "; Is notification message? " << notificationMessage << "\n"
-			<< "Source IPC Process: " << sourceIPCProcessId
-			<< "; Destination IPC Process: " << destIPCProcessId;
+			<< "; Sport: " << sourcePortId
+			<< "; Dport: " << destPortId
+			<< "; Seqnum: " << sequenceNumber
+			<< "; " << type
+			<< "; SIPCP: " << sourceIPCProcessId
+			<< "; DIPCP: " << destIPCProcessId;
 	return ss.str();
 }
 
@@ -158,178 +167,175 @@ const std::string BaseNetlinkMessage::operationCodeToString(RINANetlinkOperation
 		result = "0_Unespecified operation";
 		break;
 	case RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST:
-		result = "1_ASSIGN_TO_DIF_REQUEST";
+		result = "1_ASSIGN_TO_DIF_REQ";
 		break;
 	case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE:
-		result = "2_ASSIGN_TO_DIF_RESPONSE";
+		result = "2_ASSIGN_TO_DIF_RESP";
 		break;
 	case RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST:
-		result = "3_UPDATE_DIF_CONFIG REQUEST";
+		result = "3_UPDATE_DIF_CONF_REQ";
 		break;
 	case RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE:
-		result = "4_UPDATE_DIF_CONFIG_RESPONSE";
+		result = "4_UPDATE_DIF_CONFIG_RESP";
 		break;
 	case RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION:
-		result = "5_DIF_REGISTRATION_NOTIFICATION";
+		result = "5_DIF_REG_NOT";
 		break;
 	case RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION:
-		result = "6_DIF_UNREGISTRATION_NOTIFICATION";
+		result = "6_DIF_UNREG_NOT";
 		break;
 	case RINA_C_IPCM_ENROLL_TO_DIF_REQUEST:
-		result = "7_ENROLL_TO_DIF_REQUEST";
+		result = "7_ENROLL_TO_DIF_REQ";
 		break;
 	case RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE:
-		result = "8_ENROLL_TO_DIF_RESPONSE";
+		result = "8_ENROLL_TO_DIF_RESP";
 		break;
 	case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST:
-		result = "9_DISCONNECT_FROM_NEIGHBOR_REQUEST";
+		result = "9_DISC_FROM_NEIGH_REQ";
 		break;
 	case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE:
-		result = "10_DISCONNECT_FROM_NEIGHBOR_RESPONSE";
+		result = "10_DISC_FROM_NEIGH_RESP";
 		break;
 	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST:
-		result = "11_IPCM_ALLOCATE_FLOW_REQUEST";
+		result = "11_IPCM_ALLOC_FLOW_REQ";
 		break;
 	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED:
-		result = "12_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED";
+		result = "12_IPCM_ALLOC_FLOW_RESP_ARR";
 		break;
 	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
-		result = "13_IPCM_ALLOCATE_FLOW_REQUEST_RESULT";
+		result = "13_IPCM_ALLOC_FLOW_REQ_RES";
 		break;
 	case RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE:
-		result = "14_IPCM_ALLOCATE_FLOW_RESPONSE";
+		result = "14_IPCM_ALLOC_FLOW_RESP";
 		break;
 	case RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST:
-		result = "15_IPCM_DEALLOCATE_FLOW_REQUEST";
+		result = "15_IPCM_DEALLOC_FLOW_REQ";
 		break;
 	case RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE:
-		result = "16_ICPM_DEALLOCATE_FLOW_RESPONSE";
+		result = "16_ICPM_DEALLOC_FLOW_RESP";
 		break;
 	case RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION:
-		result = "17_IPCM_FLOW_DEALLOCATED_NOTIFICATION";
+		result = "17_IPCM_FLOW_DEALLOC_NOT";
 		break;
 	case RINA_C_IPCM_REGISTER_APPLICATION_REQUEST:
-		result = "18_IPCM_REGISTER_APP_REQUEST";
+		result = "18_IPCM_REG_APP_REQ";
 		break;
 	case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE:
-		result = "19_ICPM_REGISTER_APP_RESPONSE";
+		result = "19_ICPM_REG_APP_RESP";
 		break;
 	case RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST:
-		result = "20_IPCM_UNREGISTER_APP_REQUEST";
+		result = "20_IPCM_UNREG_APP_REQ";
 		break;
 	case RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE:
-		result = "21_IPCM_UNREGISTER_APP_RESPONSE";
+		result = "21_IPCM_UNREG_APP_RESP";
 		break;
 	case RINA_C_IPCM_QUERY_RIB_REQUEST:
-		result = "22_QUERY_RIB_REQUEST";
+		result = "22_QUERY_RIB_REQ";
 		break;
 	case RINA_C_IPCM_QUERY_RIB_RESPONSE:
-		result = "23_QUERY_RIB_RESPONSE";
+		result = "23_QUERY_RIB_RESP";
 		break;
 	case RINA_C_RMT_MODIFY_FTE_REQUEST:
-		result = "24_MODIFY_FT_REQUEST";
+		result = "24_MODIFY_FT_REQ";
 		break;
 	case RINA_C_RMT_DUMP_FT_REQUEST:
-		result = "25_DUMP_FT_REQUEST";
+		result = "25_DUMP_FT_REQ";
 		break;
 	case RINA_C_RMT_DUMP_FT_REPLY:
-		result = "26_DUMP_FT_REPLY";
+		result = "26_DUMP_FT_RESP";
 		break;
 	case RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION:
-		result = "27_SOCKET_CLOSED_NOTIFICATION";
+		result = "27_SOCK_CLOSED_NOT";
 		break;
 	case RINA_C_IPCM_IPC_MANAGER_PRESENT:
-		result = "28_IPC_MANAGER_PRESENT";
+		result = "28_IPCM_PRESENT";
 		break;
 	case RINA_C_IPCP_CONN_CREATE_REQUEST:
-		result = "29_CREATE_EFCP_CONN_REQUEST";
+		result = "29_CREATE_EFCP_CONN_REQ";
 		break;
 	case RINA_C_IPCP_CONN_CREATE_RESPONSE:
-		result = "30_CREATE_EFCP_CONN_RESPONSE";
+		result = "30_CREATE_EFCP_CONN_RESP";
 		break;
 	case RINA_C_IPCP_CONN_CREATE_ARRIVED:
-		result = "31_CREATE_EFCP_CONN_ARRIVED";
+		result = "31_CREATE_EFCP_CONN_ARR";
 		break;
 	case RINA_C_IPCP_CONN_CREATE_RESULT:
-		result = "32_CREATE_EFCP_CONN_RESULT";
+		result = "32_CREATE_EFCP_CONN_RES";
 		break;
 	case RINA_C_IPCP_CONN_UPDATE_REQUEST:
-		result = "33_UPDATE_EFCP_CONN_REQUEST";
+		result = "33_UPDATE_EFCP_CONN_REQ";
 		break;
 	case RINA_C_IPCP_CONN_UPDATE_RESULT:
-		result = "34_UPDATE_EFCP_CONN_RESULT";
+		result = "34_UPDATE_EFCP_CONN_RES";
 		break;
 	case RINA_C_IPCP_CONN_DESTROY_REQUEST:
-		result = "35_DESTROY_EFCP_CONN_REQUEST";
+		result = "35_DESTROY_EFCP_CONN_REQ";
 		break;
 	case RINA_C_IPCP_CONN_DESTROY_RESULT:
-		result = "36_DESTROY_EFCP_CONN_RESULT";
+		result = "36_DESTROY_EFCP_CONN_RES";
 		break;
 	case RINA_C_IPCM_SET_POLICY_SET_PARAM_REQUEST:
-		result = "37_SET_POLICY_SET_PARAM_REQUEST";
+		result = "37_SET_POL_SET_PARAM_REQ";
 		break;
 	case RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE:
-		result = "38_SET_POLICY_SET_RESPONSE";
+		result = "38_SET_POL_SET_PARAM_RESP";
 		break;
 	case RINA_C_IPCM_SELECT_POLICY_SET_REQUEST:
-		result = "39_SET_POLICY_SET_PARAM_REQUEST";
+		result = "39_SET_POL_SET_REQ";
 		break;
 	case RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE:
-		result = "40_SET_POLICY_SET_RESPONSE";
+		result = "40_SET_POL_SET_RESP";
 		break;
 	case RINA_C_IPCM_IPC_PROCESS_INITIALIZED:
-		result = "41_IPC_PROCESS_INITIALIZED";
+		result = "41_IPCP_INIT";
 		break;
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST:
-		result = "42_APP_ALLOCATE_FLOW_REQUEST";
+		result = "42_APP_ALLOC_FLOW_REQ";
 		break;
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT:
-		result = "43_APP_ALLOCATE_FLOW_REQUEST_RESULT";
+		result = "43_APP_ALLOC_FLOW_REQ_RES";
 		break;
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED:
-		result = "44_APP_ALLOCATE_FLOW_REQUEST_ARRIVED";
+		result = "44_APP_ALLOC_FLOW_REQ_ARR";
 		break;
 	case RINA_C_APP_ALLOCATE_FLOW_RESPONSE:
-		result = "45_APP_ALLOCATE_FLOW_RESPONSE";
+		result = "45_APP_ALLOC_FLOW_RESP";
 		break;
 	case RINA_C_APP_DEALLOCATE_FLOW_REQUEST:
-		result = "46_APP_DEALLOCATE_FLOW_REQUEST";
+		result = "46_APP_DEALLOC_FLOW_REQ";
 		break;
 	case RINA_C_APP_DEALLOCATE_FLOW_RESPONSE:
-		result = "47_APP_DEALLOCATE_FLOW_RESPONSE";
+		result = "47_APP_DEALLOC_FLOW_RESP";
 		break;
 	case RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION:
-		result = "48_APP_FLOW_DEALLOCATED_NOTIFICATION";
+		result = "48_APP_FLOW_DEALLOC_NOT";
 		break;
 	case RINA_C_APP_REGISTER_APPLICATION_REQUEST:
-		result = "49_APP_REGISTER_REQUEST";
+		result = "49_APP_REG_REQ";
 		break;
 	case RINA_C_APP_REGISTER_APPLICATION_RESPONSE:
-		result = "50_APP_REGISTER_RESPONSE";
+		result = "50_APP_REG_RESP";
 		break;
 	case RINA_C_APP_UNREGISTER_APPLICATION_REQUEST:
-		result = "51_APP_UNREGISTER_REQUEST";
+		result = "51_APP_UNREG_REQ";
 		break;
 	case RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE:
-		result = "52_APP_UNREGISTER_RESPONSE";
+		result = "52_APP_UNREG_RESP";
 		break;
 	case RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION:
-		result = "53_APP_REGISTRATION_CANCELED_NOTIFICATION";
+		result = "53_APP_REG_CANC_NOT";
 		break;
 	case RINA_C_APP_GET_DIF_PROPERTIES_REQUEST:
-		result = "54_GET_DIF_PROPERTIES_REQUEST";
+		result = "54_GET_DIF_PROPS_REQ";
 		break;
 	case RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE:
-		result = "55_GET_DIF_PROPERTIES_RESPONSE";
-		break;
-	case RINA_C_IPCM_NEIGHBORS_MODIFIED_NOTIFICATION:
-		result = "56_NEIGHBORS_MODIFIED_NOTIFICATION";
+		result = "55_GET_DIF_PROPS_RESP";
 		break;
 	case RINA_C_IPCM_PLUGIN_LOAD_REQUEST:
-		result = "57_PLUGIN_LOAD_REQUEST";
+		result = "56_PLUGIN_LOAD_REQ";
 		break;
 	case RINA_C_IPCM_PLUGIN_LOAD_RESPONSE:
-		result = "58_PLUGIN_LOAD_RESPONSE";
+		result = "57_PLUGIN_LOAD_RESP";
 		break;
 	default:
 		result = "Unknown operation";
@@ -1172,44 +1178,6 @@ IPCEvent* IpcmEnrollToDIFResponseMessage::toIPCEvent(){
         EnrollToDIFResponseEvent * event =
                         new EnrollToDIFResponseEvent(neighbors, difInformation,
                                         getResult(), getSequenceNumber());
-        return event;
-}
-
-/* CLASS IPCM NEIGHBORS MODIFIED MESSAGE */
-IpcmNotifyNeighborsModifiedMessage::
-IpcmNotifyNeighborsModifiedMessage():
-        BaseNetlinkMessage(RINA_C_IPCM_NEIGHBORS_MODIFIED_NOTIFICATION) {
-        added = true;
-}
-
-const std::list<Neighbor>&
-IpcmNotifyNeighborsModifiedMessage::getNeighbors() const {
-        return neighbors;
-}
-
-void IpcmNotifyNeighborsModifiedMessage::setNeighbors(
-                const std::list<Neighbor>& neighbors) {
-        this->neighbors = neighbors;
-}
-
-void IpcmNotifyNeighborsModifiedMessage::addNeighbor(
-                const Neighbor& neighbor) {
-        neighbors.push_back(neighbor);
-}
-
-bool IpcmNotifyNeighborsModifiedMessage::isAdded() const {
-        return added;
-}
-
-void IpcmNotifyNeighborsModifiedMessage::setAdded(bool added) {
-        this->added = added;
-}
-
-IPCEvent* IpcmNotifyNeighborsModifiedMessage::toIPCEvent() {
-        NeighborsModifiedNotificationEvent * event =
-                        new NeighborsModifiedNotificationEvent(
-                                        getSourceIpcProcessId(), neighbors,
-                                        added, getSequenceNumber());
         return event;
 }
 

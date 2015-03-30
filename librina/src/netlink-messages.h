@@ -90,9 +90,8 @@ enum RINANetlinkOperationCode{
 	RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION, /* 53 IPC Manager -> Application, application unregistered without the application having requested it */
 	RINA_C_APP_GET_DIF_PROPERTIES_REQUEST, /* 54 Application -> IPC Manager */
 	RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE, /* 55 IPC Manager -> Application */
-	RINA_C_IPCM_NEIGHBORS_MODIFIED_NOTIFICATION, /* 56 IPC Process -> IPC Manager */
-        RINA_C_IPCM_PLUGIN_LOAD_REQUEST, /* 57, IPC Manager -> IPC Process */
-        RINA_C_IPCM_PLUGIN_LOAD_RESPONSE, /* 58, IPC Process -> IPC Manager */
+        RINA_C_IPCM_PLUGIN_LOAD_REQUEST, /* 56, IPC Manager -> IPC Process */
+        RINA_C_IPCM_PLUGIN_LOAD_RESPONSE, /* 57, IPC Process -> IPC Manager */
 	__RINA_C_MAX,
  };
 
@@ -756,30 +755,6 @@ public:
         void addNeighbor(const Neighbor& qosCube);
         void setDIFInformation(const DIFInformation& difInformation);
         const DIFInformation& getDIFInformation() const;
-        IPCEvent* toIPCEvent();
-};
-
-/**
- * Notify the IPC Manager that the IPC Process has one or more new neighbors
- * IPC Process -> IPC Manager.
- */
-class IpcmNotifyNeighborsModifiedMessage:
-                public BaseNetlinkMessage {
-        /** The new neighbors of the IPC Process */
-        std::list<Neighbor> neighbors;
-
-        /**
-         * True if the neighbors have been added, false if they have
-         * been removed
-         */
-        bool added;
-public:
-        IpcmNotifyNeighborsModifiedMessage();
-        const std::list<Neighbor>& getNeighbors() const;
-        void setNeighbors(const std::list<Neighbor>& neighbors);
-        void addNeighbor(const Neighbor& qosCube);
-        bool isAdded() const;
-        void setAdded(bool added);
         IPCEvent* toIPCEvent();
 };
 

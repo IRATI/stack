@@ -564,17 +564,6 @@ public:
 	                const DIFInformation& difInformation);
 
 	/**
-	 * Inform the IPC Manager about new neighbors being added or existing
-	 * neighbors that have been removed
-	 * @param added true if the neighbors have been added, false if removed
-	 * @param neighbors
-	 * @throws EnrollException if there are problems communicating with the
-	 * IPC Manager
-	 */
-	void notifyNeighborsModified(bool added,
-	                const std::list<Neighbor> & neighbors);
-
-	/**
 	 * Reply to the IPC Manager, informing it about the result of a "register
 	 * application request" operation
 	 * @param event

@@ -23,12 +23,11 @@
 #define __IPCM_CONFIGURATION_H__
 
 #include <string>
-#include "ipcm.h"
 
 
 namespace rinad {
 
-bool parse_configuration(std::string file_loc, IPCManager *ipcm);
+bool parse_configuration(std::string& file_loc);
 
 }
 #endif  /* __IPCM_CONFIGURATION_H__ */

@@ -546,9 +546,17 @@ FlowAllocatorInstance::FlowAllocatorInstance(
 
 FlowAllocatorInstance::~FlowAllocatorInstance()
 {
-  delete flow_;
-  delete lock_;
-  delete timer_;
+	if (flow_) {
+		delete flow_;
+	}
+
+	if (lock_) {
+		delete lock_;
+	}
+
+	if (timer_) {
+		delete timer_;
+	}
 }
 
 void FlowAllocatorInstance::initialize(
@@ -565,6 +573,7 @@ void FlowAllocatorInstance::initialize(
   state = NO_STATE;
   allocate_response_message_handle_ = 0;
   underlying_port_id_ = 0;
+  flow_ = 0;
   lock_ = new rina::Lockable();
   timer_ = new rina::Timer();
 }
