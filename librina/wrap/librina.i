@@ -355,6 +355,8 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 #include "librina/concurrency.h"
 #include "librina/common.h"
 #include "librina/application.h"
+#include "librina/cdap_rib_structures.h"
+#include "librina/cdap_v2.h"
 %}
 
 %rename(differs) rina::ApplicationProcessNamingInformation::operator!=(const ApplicationProcessNamingInformation &other) const;
@@ -375,12 +377,17 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(differs) rina::Policy::operator!=(const Policy &other) const;
 %rename(equals) rina::FlowInformation::operator==(const FlowInformation &other) const;
 %rename(differs) rina::FlowInformation::operator!=(const FlowInformation &other) const;
+%rename(equals) rina::rib::RIBObjectData::operator==(const RIBObjectData &other) const;
+%rename(differs) rina::rib::RIBObjectData::operator!=(const RIBObjectData &other) const;
+
 
 %include "librina/exceptions.h"
 %include "librina/patterns.h"
 %include "librina/concurrency.h"
 %include "librina/common.h"
 %include "librina/application.h"
+%include "librina/cdap_rib_structures.h"
+%include "librina/cdap_v2.h"
 
 /* Macro for defining collection iterators */
 %define MAKE_COLLECTION_ITERABLE( ITERATORNAME, JTYPE, CPPCOLLECTION, CPPTYPE )
