@@ -928,7 +928,6 @@ int efcp_connection_update(struct efcp_container * container,
                 }
                 return 0;
         }
-        spin_unlock_irqrestore(&container->lock, flags);
         tmp->connection->destination_cep_id = to;
         tmp->user_ipcp = user_ipcp;
         spin_unlock_irqrestore(&container->lock, flags);
