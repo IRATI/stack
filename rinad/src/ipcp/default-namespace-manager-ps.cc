@@ -81,7 +81,7 @@ bool NamespaceManagerPs::isValidAddress(unsigned int address, const std::string&
 			if (address < prefix || address >= prefix + rina::AddressPrefixConfiguration::MAX_ADDRESSES_PER_PREFIX){
 				return false;
 			}
-		} catch (Exception &e) {
+		} catch (rina::Exception &e) {
 			//We don't know the organization of the IPC Process
 			return false;
 		}
@@ -104,7 +104,7 @@ unsigned int NamespaceManagerPs::getValidAddress(const std::string& ipcp_name,
 
 		try {
 			prefix = getAddressPrefix(ipcp_name, configuration);
-		} catch (Exception &e) {
+		} catch (rina::Exception &e) {
 			//We don't know the organization of the IPC Process
 			return 0;
 		}
@@ -147,7 +147,7 @@ unsigned int NamespaceManagerPs::getAddressPrefix(const std::string& process_nam
 		}
 	}
 
-	throw Exception("Unknown organization");
+	throw rina::Exception("Unknown organization");
 }
 
 bool NamespaceManagerPs::isAddressInUse(unsigned int address,

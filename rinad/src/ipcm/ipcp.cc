@@ -158,7 +158,7 @@ void IPCMIPCProcess::assignToDIF(const rina::DIFInformation& difInformation,
 
 	try {
         	proxy_->assignToDIF(difInformation, opaque);
-	}catch (Exception &e){
+	}catch (rina::Exception &e){
 		rina::WriteScopedLock writelock(rwlock);
 		state_ = IPCM_IPCP_INITIALIZED;
 		throw e;
@@ -232,7 +232,7 @@ void IPCMIPCProcess::registerApplication(
 	try {
 		proxy_->registerApplication(applicationName, regIpcProcessId,
 				dif_name_, opaque);
-	}catch (Exception &e) {
+	}catch (rina::Exception &e) {
 		throw e;
 	}
 
@@ -265,7 +265,7 @@ void IPCMIPCProcess::unregisterApplication(
 
 	try {
 		proxy_->unregisterApplication(applicationName, dif_name_, opaque);
-	}catch (Exception &e) {
+	}catch (rina::Exception &e) {
 		throw e;
 	}
 
@@ -299,7 +299,7 @@ void IPCMIPCProcess::allocateFlow(const rina::FlowRequestEvent& flowRequest,
 
 	try {
 		proxy_->allocateFlow(flowRequest, opaque);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		throw e;
 	}
 
@@ -338,7 +338,7 @@ void IPCMIPCProcess::allocateFlowResponse(const rina::FlowRequestEvent& flowRequ
 	try{
 		proxy_->allocateFlowResponse(flowRequest, result,
 				notifySource, flowAcceptorIpcProcessId);
-	} catch(Exception &e){
+	} catch(rina::Exception &e){
 		throw e;
 	}
 
@@ -378,7 +378,7 @@ void IPCMIPCProcess::deallocateFlow(int flowPortId, unsigned int opaque)
 
 	try {
 		proxy_->deallocateFlow(flowPortId, opaque);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		throw e;
 	}
 
@@ -467,7 +467,7 @@ IPCMIPCProcess * IPCMIPCProcessFactory::create(
 	try {
 		ipcp_proxy = proxy_factory_.create(ipcProcessName, difType,
 									  id);
-	} catch (Exception & e){
+	} catch (rina::Exception & e){
 		throw e;
 	}
 
@@ -503,7 +503,7 @@ void IPCMIPCProcessFactory::destroy(unsigned short ipcProcessId) {
 	try {
 		if(ipcp->proxy_)
 			proxy_factory_.destroy(ipcp->proxy_);
-	}catch (Exception &e) {
+	}catch (rina::Exception &e) {
 		assert(0);
 	}
 	delete ipcp;
