@@ -6,6 +6,8 @@
 namespace rinad{
 namespace mad{
 
+//Singleton instance
+Singleton<RIBDaemonv1_> RIBDaemonv1;
 
 void ConHandler::connect(int message_id, const rina::cdap_rib::con_handle_t &con)
 {
