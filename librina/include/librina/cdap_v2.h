@@ -168,7 +168,7 @@ class CDAPProviderInterface
                                     const cdap_rib::flags_t &flags,
                                     const cdap_rib::res_info_t &res,
                                     int message_id) = 0;
-  virtual void new_message(cdap_rib::SerializedObject &message, int port) = 0;
+  virtual void process_message(cdap_rib::SerializedObject &message, int port) = 0;
 };
 
 typedef struct CDAPMessage

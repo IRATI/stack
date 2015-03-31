@@ -165,7 +165,7 @@ void Server::serveEchoFlow(rina::Flow* flow)
     cdap_rib::SerializedObject message;
     message.message_ = buffer;
     message.size_ = bytes_read;
-    cdap_prov->new_message(message, flow->getPortId());
+    cdap_prov->process_message(message, flow->getPortId());
   }
   cdap::CDAPProviderFactory::destroy(flow->getPortId());
   delete cdap_prov;
