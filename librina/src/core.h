@@ -136,10 +136,11 @@ public:
 	~RINAManager();
 
 	/** Sends a NL message of default maximum size (PAGE SIZE) */
-	void sendMessage(BaseNetlinkMessage * netlinkMessage);
+	void sendMessage(BaseNetlinkMessage * netlinkMessage, bool fill_seq_num);
 
 	/** Sends a NL message of specified maximum size */
-	void sendMessageOfMaxSize(BaseNetlinkMessage * netlinkMessage, size_t maxSize);
+	void sendMessageOfMaxSize(BaseNetlinkMessage * netlinkMessage,
+			size_t maxSize, bool fill_seq_num);
 
 	/**
 	 * Notify about the reception of a Netlink message

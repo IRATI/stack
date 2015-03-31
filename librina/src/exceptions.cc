@@ -21,5 +21,9 @@
 
 #include "librina/exceptions.h"
 
+namespace rina {
+
 const char * Exception::what() const throw()
 { return description_.c_str(); }
+
+}

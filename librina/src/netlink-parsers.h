@@ -764,21 +764,6 @@ int putIpcmEnrollToDIFResponseMessageObject(nl_msg* netlinkMessage,
 IpcmEnrollToDIFResponseMessage *
         parseIpcmEnrollToDIFResponseMessage(nlmsghdr *hdr);
 
-/* IpcmNotifyNeighborsModifiedMessage CLASS*/
-enum IpcmNotifyNeighborsModifiedMessageAttributes {
-        INNMM_ATTR_ADDED = 1,
-        INNMM_ATTR_NEIGHBORS,
-        __INNMM_ATTR_MAX,
-};
-
-#define INNMM_ATTR_MAX (__INNMM_ATTR_MAX -1)
-
-int putIpcmNotifyNeighborsModifiedMessageObject(nl_msg* netlinkMessage,
-                const IpcmNotifyNeighborsModifiedMessage& object);
-
-IpcmNotifyNeighborsModifiedMessage *
-        parseIpcmNotifyNeighborsModifiedMessage(nlmsghdr *hdr);
-
 /* IpcmAllocateFlowRequestMessage CLASS*/
 enum IpcmAllocateFlowRequestMessageAttributes {
 	IAFRM_ATTR_SOURCE_APP_NAME = 1,

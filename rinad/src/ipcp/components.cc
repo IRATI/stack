@@ -83,7 +83,7 @@ rina::Connection * Flow::getActiveConnection() {
 		}
 	}
 
-	throw Exception("No active connection is currently defined");
+	throw rina::Exception("No active connection is currently defined");
 }
 
 std::string Flow::toString() {
@@ -101,8 +101,8 @@ std::string Flow::toString() {
 	ss << "* Source port id: " << source_port_id << std::endl;
 	ss << "* Destination AP Naming Info: "
 			<< destination_naming_info.toString();
-	ss << "* Destination addres: " + destination_address << std::endl;
-	ss << "* Destination port id: " + destination_port_id << std::endl;
+	ss << "* Destination addres: " << destination_address << std::endl;
+	ss << "* Destination port id: " << destination_port_id << std::endl;
 	if (connections.size() > 0) {
 		ss << "* Connection ids of the connection supporting this flow: +\n";
 		for (std::list<rina::Connection*>::const_iterator iterator =
@@ -171,7 +171,7 @@ SimpleSetIPCPRIBObject::SimpleSetIPCPRIBObject(IPCProcess * ipc_process, const s
 void SimpleSetIPCPRIBObject::createObject(const std::string& objectClass, const std::string& objectName,
 		const void* objectValue) {
 	if (set_member_object_class_.compare(objectClass) != 0) {
-		throw Exception("Class of set member does not match the expected value");
+		throw rina::Exception("Class of set member does not match the expected value");
 	}
 
 	SimpleSetMemberIPCPRIBObject * ribObject = new SimpleSetMemberIPCPRIBObject(ipc_process_, objectClass,
@@ -213,7 +213,7 @@ IPCProcess::IPCProcess()
 }
 
 //Class IPCProcessComponent
-int IPCProcessComponent::select_policy_set_common(struct IPCProcess * ipcp,
+int IPCProcessComponent::select_policy_set_common(IPCProcess * ipcp,
                                            const std::string& component,
                                            const std::string& path,
                                            const std::string& ps_name)

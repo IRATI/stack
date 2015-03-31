@@ -52,7 +52,7 @@ void LinkStateRoutingPs::set_dif_configuration(const rina::DIFConfiguration& dif
 			LINK_STATE_POLICY) != 0) {
 		LOG_WARN("Unsupported routing policy: %s.",
 				pduftgConfig.get_pduft_generator_policy().get_name().c_str());
-		throw Exception("Unknown routing Policy");
+		throw rina::Exception("Unknown routing Policy");
 	}
 
 	lsr_policy = new LinkStateRoutingPolicy(rc->ipcp);
@@ -113,7 +113,7 @@ const std::string FlowStateObject::toString()
 	ss << "Address: " << address_ << "; Neighbor address: " << neighbor_address_
 			<< "; cost: " << cost_ << std::endl;
 	ss << "Up: " << up_ << "; Sequence number: " << sequence_number_
-			<< "; Age: " + age_;
+			<< "; Age: " << age_;
 
 	return ss.str();
 }
@@ -781,7 +781,7 @@ void FlowStateDatabase::updateObjects(
 			flow_state_rib_object_group_->createObject(
 					EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
 					(*newIt)->object_name_, (*newIt));
-		} catch (Exception &e) {
+		} catch (rina::Exception &e) {
 			LOG_ERR("Problems creating RIB object: %s", e.what());
 		}
 	}
@@ -857,7 +857,7 @@ void KillFlowStateObjectTimerTask::run()
 							EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
 							fso_->object_name_);
 			fs_rib_o->deleteObject(fso_);
-		} catch (Exception &e) {
+		} catch (rina::Exception &e) {
 			LOG_ERR("Object could not be removed from the RIB");
 		}
 		delete fso_;
@@ -950,7 +950,7 @@ void LinkStateRoutingPolicy::populateRIB()
 	try {
 		fs_rib_group_ = new FlowStateRIBObjectGroup(ipc_process_, this);
 		rib_daemon_->addRIBObject(fs_rib_group_);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems adding object to RIB: %s", e.what());
 	}
 }
@@ -1068,7 +1068,7 @@ void LinkStateRoutingPolicy::processFlowAllocatedEvent(
 				ipc_process_->namespace_manager_->getAdressByname(
 						event->flow_information_.remoteAppName), 1,
 						event->flow_information_.portId);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_DBG("flow allocation waiting for enrollment");
 		allocated_flows_.push_back(event->flow_information_);
 	}
@@ -1091,7 +1091,7 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(
 								event->neighbor_->get_name()), 1, it->portId);
 				allocated_flows_.erase(it);
 				break;
-			} catch (Exception &e) {
+			} catch (rina::Exception &e) {
 				LOG_ERR("Could not allocate the flow, no neighbor found");
 			}
 		}
@@ -1116,7 +1116,7 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(
 				EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME,
 				robject_value, 0, remote_id, 0);
 		db_->setAvoidPort(portId);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 	}
 }
@@ -1148,7 +1148,7 @@ void LinkStateRoutingPolicy::propagateFSDB() const
           EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
           EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME,
           robject_value, 0, remote_id, 0);
-      } catch (Exception &e) {
+      } catch (rina::Exception &e) {
         LOG_ERR("Errors sending message: %s", e.what());
       }
 	  }
@@ -1191,7 +1191,7 @@ void LinkStateRoutingPolicy::writeMessageReceived(
 	try {
 		db_->updateObjects(flow_state_objects, portId,
 				ipc_process_->get_address());
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems decoding Flow State Object Group: %s", e.what());
 	}
 }
@@ -1212,7 +1212,7 @@ void LinkStateRoutingPolicy::readMessageRecieved(int invoke_id,
 		rib_daemon_->remoteReadObjectResponse(fs_rib_group_->class_,
 				fs_rib_group_->name_, robject_value, 0, "", invoke_id, false,
 				remote_id);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 	}
 }

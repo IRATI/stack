@@ -82,7 +82,7 @@ public:
                 return -1;
         }
 
-        int select_policy_set_common(struct IPCProcess * ipcp,
+        int select_policy_set_common(IPCProcess * ipcp,
                                      const std::string& component,
                                      const std::string& path,
                                      const std::string& ps_name);
@@ -508,6 +508,8 @@ public:
 	virtual std::list<rina::FlowInformation> getAllNMinusOneFlowInformation() const = 0;
 
 	virtual std::list<int> getNMinusOneFlowsToNeighbour(unsigned int address) = 0;
+
+	virtual int getManagementFlowToNeighbour(unsigned int address) = 0;
 
 	virtual unsigned int numberOfFlowsToNeighbour(const std::string& apn,
 			const std::string& api) = 0;

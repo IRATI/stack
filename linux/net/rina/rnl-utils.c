@@ -276,6 +276,18 @@ rnl_rmt_mod_pfte_msg_attrs_create(void)
         return tmp;
 }
 
+static struct rnl_ipcm_query_rib_msg_attrs *
+rnl_ipcm_query_rib_msg_attrs_create(void)
+{
+        struct rnl_ipcm_query_rib_msg_attrs * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if  (!tmp)
+                return NULL;
+
+        return tmp;
+}
+
 static struct rnl_ipcp_set_policy_set_param_req_msg_attrs *
 rnl_ipcp_set_policy_set_param_req_msg_attrs_create(void)
 {
@@ -401,6 +413,14 @@ struct rnl_msg * rnl_msg_create(enum rnl_msg_attr_type type)
                 break;
         case RNL_MSG_ATTRS_RMT_PFT_DUMP_REQUEST:
                 tmp->attrs = NULL;
+                break;
+        case RNL_MSG_ATTRS_QUERY_RIB_REQUEST:
+                tmp->attrs =
+                        rnl_ipcm_query_rib_msg_attrs_create();
+                if (!tmp->attrs) {
+                        rkfree(tmp);
+                        return NULL;
+                }
                 break;
         case RNL_MSG_ATTRS_SET_POLICY_SET_PARAM_REQUEST:
                 tmp->attrs =
@@ -577,11 +597,36 @@ rnl_rmt_mod_pfte_msg_attrs_destroy(struct rnl_rmt_mod_pfte_msg_attrs * attrs)
 }
 
 static int
-rnl_ipcp_set_policy_set_param_msg_attrs_destroy(
-                struct rnl_ipcp_set_policy_set_param_req_msg_attrs * attrs)
+rnl_ipcm_query_rib_msg_attrs_destroy(
+                struct rnl_ipcm_query_rib_msg_attrs * attrs)
 {
         if (!attrs)
                 return -1;
+
+        if (attrs->object_class)
+                rkfree(attrs->object_class);
+
+        if (attrs->object_name)
+                rkfree(attrs->object_name);
+
+        if (attrs->filter)
+                rkfree(attrs->filter);
+
+        LOG_DBG("rnl_ipcm_query_rib_req_msg_attrs "
+                "destroyed correctly");
+        rkfree(attrs);
+
+        return 0;
+}
+
+static int
+rnl_ipcp_set_policy_set_param_msg_attrs_destroy(
+                struct rnl_ipcp_set_policy_set_param_req_msg_attrs * attrs)
+{
+        if (!attrs) {
+		LOG_ERR("Bogus attributes passed, bailing out");
+                return -1;
+	}
 
         if (attrs->path)
                 rkfree(attrs->path);
@@ -656,6 +701,9 @@ int rnl_msg_destroy(struct rnl_msg * msg)
                 break;
         case RNL_MSG_ATTRS_RMT_PFTE_MODIFY_REQUEST:
                 rnl_rmt_mod_pfte_msg_attrs_destroy(msg->attrs);
+                break;
+        case RNL_MSG_ATTRS_QUERY_RIB_REQUEST:
+                rnl_ipcm_query_rib_msg_attrs_destroy(msg->attrs);
                 break;
         case RNL_MSG_ATTRS_SET_POLICY_SET_PARAM_REQUEST:
                 rnl_ipcp_set_policy_set_param_msg_attrs_destroy(msg->attrs);
@@ -1323,36 +1371,6 @@ static int parse_dif_info(struct nlattr *   dif_config_attr,
  parse_fail:
         LOG_ERR(BUILD_STRERROR_BY_MTYPE("dif info attribute"));
         return -1;
-}
-
-static int parse_rib_object(struct nlattr     * rib_obj_attr,
-                            struct rib_object * rib_obj_struct)
-{
-        struct nla_policy attr_policy[RIBO_ATTR_MAX + 1];
-        struct nlattr *attrs[RIBO_ATTR_MAX + 1];
-
-        attr_policy[RIBO_ATTR_OBJECT_CLASS].type    = NLA_U32;
-        attr_policy[RIBO_ATTR_OBJECT_CLASS].len     = 4;
-        attr_policy[RIBO_ATTR_OBJECT_NAME].type     = NLA_STRING;
-        attr_policy[RIBO_ATTR_OBJECT_INSTANCE].type = NLA_U32;
-        attr_policy[RIBO_ATTR_OBJECT_INSTANCE].len  = 4;
-
-        if (nla_parse_nested(attrs,
-                             RIBO_ATTR_MAX, rib_obj_attr, attr_policy) < 0)
-                return -1;
-
-        if (attrs[RIBO_ATTR_OBJECT_CLASS])
-                rib_obj_struct->rib_obj_class =
-                        nla_get_u32(&rib_obj_attr[RIBO_ATTR_OBJECT_CLASS]);
-
-        if (attrs[RIBO_ATTR_OBJECT_NAME])
-                nla_strlcpy(rib_obj_struct->rib_obj_name,
-                            attrs[RIBO_ATTR_OBJECT_NAME],
-                            sizeof(attrs[RIBO_ATTR_OBJECT_NAME]));
-        if (attrs[RIBO_ATTR_OBJECT_INSTANCE])
-                rib_obj_struct->rib_obj_instance =
-                        nla_get_u32(&rib_obj_attr[RIBO_ATTR_OBJECT_INSTANCE]);
-        return 0;
 }
 
 static int parse_dtcp_wb_fctrl_config(struct nlattr * attr,
@@ -2039,23 +2057,29 @@ static int rnl_parse_ipcm_unreg_app_req_msg(struct genl_info * info,
 
 static int
 rnl_parse_ipcm_query_rib_req_msg(struct genl_info * info,
-                                 struct rnl_ipcm_query_rib_req_msg_attrs * msg_attrs)
+                                 struct rnl_ipcm_query_rib_msg_attrs * msg_attrs)
 {
-        if (parse_rib_object(info->attrs[IDQR_ATTR_OBJECT],
-                             msg_attrs->rib_obj))
-                goto parse_fail;
+    	if (info->attrs[IDQR_ATTR_OBJECT_CLASS])
+    		msg_attrs->object_class = nla_dup_string(info->attrs[IDQR_ATTR_OBJECT_CLASS],
+            						 GFP_KERNEL);
+
+    	if (info->attrs[IDQR_ATTR_OBJECT_NAME])
+    	        msg_attrs->object_name = nla_dup_string(info->attrs[IDQR_ATTR_OBJECT_NAME],
+    	                                             	GFP_KERNEL);
+
+        if (info->attrs[IDQR_ATTR_OBJECT_INSTANCE])
+                msg_attrs->object_instance =
+                        nla_get_u64(info->attrs[IDQR_ATTR_OBJECT_INSTANCE]);
+
         if (info->attrs[IDQR_ATTR_SCOPE])
                 msg_attrs->scope =
                         nla_get_u32(info->attrs[IDQR_ATTR_SCOPE]);
-        if (info->attrs[IDQR_ATTR_FILTER])
-                nla_strlcpy(msg_attrs->filter,
-                            info->attrs[IDQR_ATTR_FILTER],
-                            sizeof(info->attrs[IDQR_ATTR_FILTER]));
-        return 0;
 
- parse_fail:
-        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_QUERY_RIB_REQUEST"));
-        return -1;
+        if (info->attrs[IDQR_ATTR_FILTER])
+        	msg_attrs->filter = nla_dup_string(info->attrs[IDQR_ATTR_FILTER],
+            	                                   GFP_KERNEL);
+
+        return 0;
 }
 
 static int parse_list_pfte_conf_e(struct nlattr *     nested_attr,
@@ -2828,6 +2852,79 @@ static int rnl_format_ipcm_pft_dump_resp_msg(int                result,
         return 0;
 }
 
+static int format_ro_entries_list(struct list_head * entries,
+                                   struct sk_buff *   skb_out)
+{
+        struct nlattr * msg_entry;
+        struct rib_object_entry * pos, *nxt;
+        int i = 0;
+
+        if (!skb_out) {
+                LOG_ERR("Bogus input parameter(s), bailing out");
+                return -1;
+        }
+
+        list_for_each_entry_safe(pos, nxt, entries, next) {
+                i++;
+                if (!(msg_entry =
+                      nla_nest_start(skb_out, i))) {
+                        nla_nest_cancel(skb_out, msg_entry);
+                        LOG_ERR(BUILD_STRERROR("ro entries list attribute"));
+                        return format_fail("rnl_ipcm_query_rib_resp_msg");
+                }
+
+                if (nla_put_string(skb_out,
+                		   RIBO_ATTR_OBJECT_CLASS,
+                		   pos->class)             ||
+                     nla_put_string(skb_out,
+                    		    RIBO_ATTR_OBJECT_NAME,
+                    		    pos->name)   	   ||
+                     nla_put_string(skb_out,
+                    		    RIBO_ATTR_OBJECT_DISPLAY_VALUE,
+                    		    pos->display_value)    ||
+                     nla_put_u64(skb_out,
+                    		 RIBO_ATTR_OBJECT_INSTANCE,
+                    		 pos->instance))
+                        return format_fail("rnl_ipcm_query_rib_resp_msg");
+
+                nla_nest_end(skb_out, msg_entry);
+                list_del(&pos->next);
+                rkfree(pos->class);
+                rkfree(pos->name);
+                rkfree(pos->display_value);
+                rkfree(pos);
+        }
+
+        return 0;
+}
+
+static int rnl_format_ipcm_query_rib_resp_msg(int                result,
+                                              struct list_head * entries,
+                                              struct sk_buff *   skb_out)
+{
+        struct nlattr * msg_entries;
+
+        if (!skb_out) {
+                LOG_ERR("Bogus input parameter(s), bailing out");
+                return -1;
+        }
+
+        if (nla_put_u32(skb_out, IDQRE_ATTR_RESULT, result) < 0)
+                return format_fail("rnl_ipcm_pft_dump_resp_msg");
+
+        if (!(msg_entries =
+              nla_nest_start(skb_out, IDQRE_ATTR_RIB_OBJECTS))) {
+                nla_nest_cancel(skb_out, msg_entries);
+                LOG_ERR(BUILD_STRERROR("rib object list attribute"));
+                return format_fail("rnl_ipcm_query_rib_resp_msg");
+        }
+        if (format_ro_entries_list(entries, skb_out))
+                return format_fail("rnl_ipcm_query_rib_resp_msg");
+        nla_nest_end(skb_out, msg_entries);
+
+        return 0;
+}
+
 static int rnl_format_ipcp_set_policy_set_param_resp_msg(
                                                 uint_t           result,
                                                 struct sk_buff * skb_out)
@@ -3516,6 +3613,57 @@ int rnl_ipcp_pft_dump_resp_msg(ipc_process_id_t   ipc_id,
         return 0;
 }
 EXPORT_SYMBOL(rnl_ipcp_pft_dump_resp_msg);
+
+int rnl_ipcm_query_rib_resp_msg(ipc_process_id_t   ipc_id,
+                                int                result,
+                                struct list_head * entries,
+                                rnl_sn_t           seq_num,
+                                u32                nl_port_id)
+{
+        struct sk_buff * out_msg;
+        struct rina_msg_hdr * out_hdr;
+
+        /* FIXME: Maybe size should be obtained somehow */
+        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
+        if (!out_msg) {
+                LOG_ERR("Could not allocate memory for message");
+                return -1;
+        }
+
+        out_hdr = (struct rina_msg_hdr *)
+                genlmsg_put(out_msg,
+                            0,
+                            seq_num,
+                            &rnl_nl_family,
+                            0,
+                            RINA_C_IPCM_QUERY_RIB_RESPONSE);
+        if (!out_hdr) {
+                LOG_ERR("Could not use genlmsg_put");
+                nlmsg_free(out_msg);
+                return -1;
+        }
+
+        out_hdr->src_ipc_id = ipc_id; /* This IPC process */
+        out_hdr->dst_ipc_id = 0;
+
+        if (rnl_format_ipcm_query_rib_resp_msg(result, entries, out_msg)) {
+                nlmsg_free(out_msg);
+                return -1;
+        }
+
+        result = genlmsg_end(out_msg, out_hdr);
+        if (result) {
+                LOG_DBG("Result of genlmesg_end: %d", result);
+        }
+
+        result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
+        if (result) {
+                LOG_ERR("Could not send unicast msg: %d", result);
+                return -1;
+        }
+        return 0;
+}
+EXPORT_SYMBOL(rnl_ipcm_query_rib_resp_msg);
 
 int rnl_set_policy_set_param_response(ipc_process_id_t id,
                                       uint_t           res,

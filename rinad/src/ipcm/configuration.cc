@@ -26,7 +26,7 @@
 #include <vector>
 #include <string>
 
-#define RINA_PREFIX "ipcm"
+#define RINA_PREFIX "ipcm.conf"
 
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
@@ -874,8 +874,7 @@ void parse_local_conf(const Json::Value &         root,
         }
 }
 
-bool parse_configuration(string       file_loc,
-                         IPCManager * ipcm)
+bool parse_configuration(std::string& file_loc)
 {
         // General note: Params should be checked before they are used
         // Some can be NULL
@@ -910,7 +909,7 @@ bool parse_configuration(string       file_loc,
         parse_app_to_dif(root, config.applicationToDIFMappings);
         parse_ipc_to_create(root, config.ipcProcessesToCreate);
         parse_dif_configs(root, config.difConfigurations);
-        ipcm->config = config;
+        IPCManager->loadConfig(config);
 
         return true;
 }
