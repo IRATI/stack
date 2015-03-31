@@ -90,10 +90,12 @@ unsigned int NMinusOneFlowManager::allocateNMinus1Flow(const rina::FlowInformati
 
 void NMinusOneFlowManager::allocateRequestResult(const rina::AllocateFlowRequestResultEvent& event) {
 	if (event.portId <= 0) {
+		std::stringstream ss;
+		ss << event.portId;
 		LOG_ERR("Allocation of N-1 flow denied. Error code: %d", event.portId);
 		rina::FlowInformation flowInformation = rina::extendedIPCManager->withdrawPendingFlow(event.sequenceNumber);
 		Event * flowFailedEvent = new NMinusOneFlowAllocationFailedEvent(event.sequenceNumber,
-				flowInformation, ""+event.portId);
+				flowInformation, ss.str());
 		rib_daemon_->deliverEvent(flowFailedEvent);
 		return;
 	}
