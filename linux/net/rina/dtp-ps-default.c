@@ -258,7 +258,6 @@ default_sender_inactivity_timer(struct dtp_ps * ps)
         struct dtcp_ps *     dtcp_ps;
         struct dtcp_config * cfg;
         seq_num_t            max_sent, snd_rt_win, init_credit, next_send;
-        int                  credit;
 
         LOG_DBG("default_sender_inactivity launched");
 
@@ -311,20 +310,12 @@ default_sender_inactivity_timer(struct dtp_ps * ps)
         max_sent    = dtp_sv_max_seq_nr_sent(dtp);
         snd_rt_win  = dtcp_snd_rt_win(dtcp);
         next_send   = dtp_sv_last_nxt_seq_nr(dtp);
-        credit      = (int) (snd_rt_win - max_sent);
 
-        LOG_DBG("Current values:\n\tactual credit: %d, init_credit: %u "
+        LOG_DBG("Current values:\n\tinit_credit: %u "
                 "max_sent: %u snd_rt_win: %u next_send: %u",
-                credit, init_credit, max_sent, snd_rt_win, next_send);
+                init_credit, max_sent, snd_rt_win, next_send);
 
-        /* NO credit */
-        if (credit < 0 || ((seq_num_t) credit > init_credit)) {
-                LOG_ERR("There was not remaining credit...");
-                dtcp_snd_rt_win_set(dtcp, next_send);
-                return 0;
-        }
-
-        dtcp_snd_rt_win_set(dtcp, next_send + credit);
+        dtcp_snd_rt_win_set(dtcp, next_send + init_credit);
         LOG_DBG("Resulting snd_rt_win_edge: %u", dtcp_snd_rt_win(dtcp));
 
         /*FIXME: Missing sending the control ack pdu */
