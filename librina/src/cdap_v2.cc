@@ -575,7 +575,7 @@ class CDAPProvider : public CDAPProviderInterface
   void remote_stop_response(const cdap_rib::con_handle_t &con,
                             const cdap_rib::flags_t &flags,
                             const cdap_rib::res_info_t &res, int message_id);
-  void new_message(cdap_rib::SerializedObject &message, int port);
+  void process_message(cdap_rib::SerializedObject &message, int port);
  protected:
   CDAPSessionManager *manager_;
   cdap::CDAPCallbackInterface *callback_;
@@ -3000,7 +3000,7 @@ void CDAPProvider::remote_stop_response(const cdap_rib::con_handle_t &con,
   delete m_sent;
 }
 
-void CDAPProvider::new_message(cdap_rib::SerializedObject &message, int port)
+void CDAPProvider::process_message(cdap_rib::SerializedObject &message, int port)
 {
   const cdap_m_t *m_rcv;
   m_rcv = manager_->messageReceived(message, port);

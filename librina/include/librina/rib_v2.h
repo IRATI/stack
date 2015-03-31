@@ -230,7 +230,7 @@ class RIBDNorthInterface
                                    const std::string& clas) const = 0;
   virtual BaseRIBObject* getObject(unsigned long instance,
                                    const std::string& clas) const = 0;
-  virtual void new_message(cdap_rib::SerializedObject &message, int port) = 0;
+  virtual void process_message(cdap_rib::SerializedObject &message, int port) = 0;
 };
 
 /**

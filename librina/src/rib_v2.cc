@@ -367,7 +367,7 @@ class RIBDaemon : public RIBDNorthInterface, cdap::CDAPCallbackInterface
                            const std::string& clas) const;
   BaseRIBObject* getObject(unsigned long instance,
                            const std::string& clas) const;
-  void new_message(cdap_rib::SerializedObject &message, int port);
+  void process_message(cdap_rib::SerializedObject &message, int port);
 
  private:
   cacep::AppConHandlerInterface *app_con_callback_;
@@ -620,10 +620,9 @@ BaseRIBObject* RIBDaemon::getObject(unsigned long instance,
 {
   return rib_->getRIBObject(clas, instance, true);
 }
-
-void RIBDaemon::new_message(cdap_rib::SerializedObject &message, int port)
+void RIBDaemon::process_message(cdap_rib::SerializedObject &message, int port)
 {
-  cdap_provider_->new_message(message, port);
+  cdap_provider_->process_message(message, port);
 }
 
 // Class RIBObjectData

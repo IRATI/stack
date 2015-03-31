@@ -149,7 +149,7 @@ void Client::cacep()
   cdap_rib::SerializedObject message;
   message.message_ = buffer;
   message.size_ = bytes_read;
-  cdap_prov_->new_message(message, flow_->getPortId());
+  cdap_prov_->process_message(message, flow_->getPortId());
 }
 
 void Client::open_connection_result(const cdap_rib::con_handle_t &con,
@@ -210,7 +210,7 @@ void Client::sendReadRMessage()
       cdap_rib::SerializedObject message;
       message.message_ = buffer;
       message.size_ = bytes_read;
-      cdap_prov_->new_message(message, flow_->getPortId());
+      cdap_prov_->process_message(message, flow_->getPortId());
       count_++;
       std::cout << "count: " << count_ << std::endl;
     }
@@ -228,7 +228,7 @@ void Client::release()
   message.message_ = buffer;
   message.size_ = bytes_read;
   std::cout<<"Esperant el release response"<<std::endl;
-  cdap_prov_->new_message(message, flow_->getPortId());
+  cdap_prov_->process_message(message, flow_->getPortId());
   std::cout<<"Finalitzant funció"<<std::endl;
 }
 

@@ -250,7 +250,7 @@ void* ActiveWorker::run(void* param){
     message.message_ = buffer;
     message.size_ = bytes_read;
     rina::rib::RIBDNorthInterface &rib = RIBFactory->getRIB(*rib_version);
-    rib.new_message(message, flow->getPortId());
+    rib.process_message(message, flow->getPortId());
 		sleep(1);
 	}
 
