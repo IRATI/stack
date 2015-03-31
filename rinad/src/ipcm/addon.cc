@@ -15,7 +15,8 @@ namespace rinad {
 /**
 * Factory
 */
-Addon* Addon::factory(const std::string& name, const std::string& params){
+Addon* Addon::factory(rinad::RINAConfiguration& conf, const std::string& name,
+						const std::string& params){
 
 	Addon* addon;
 
@@ -25,13 +26,16 @@ Addon* Addon::factory(const std::string& name, const std::string& params){
 		if(name == "mad"){
 			addon = new mad::ManagementAgent(params);
 			return addon;
+		}else if(name == "console"){
+			addon = new IPCMConsole(conf.local.consolePort);
+			return addon;
 		}else{
 			//TODO add other types
+			LOG_EMERG("Uknown addon name '%s'. Ignoring...", name.c_str());
 			assert(0);
-			LOG_ERR("Uknown addon name '%s'. Ignoring...", name.c_str());
 		}
 	}catch(...){
-		LOG_CRIT("Unable to bootstrap addon '%s'", name.c_str());
+		LOG_EMERG("Unable to bootstrap addon '%s'", name.c_str());
 	}
 	return NULL;
 }

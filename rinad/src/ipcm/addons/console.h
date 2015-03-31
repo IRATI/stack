@@ -90,8 +90,7 @@ class IPCMConsole : public Addon{
                 int plugin_unload(std::vector<std::string>& args);
 
         public:
-                IPCMConsole(rina::ThreadAttributes &ta,
-					const unsigned int port);
+                IPCMConsole(const unsigned int port);
                 void body();
                 virtual ~IPCMConsole() throw();
 	private:

@@ -252,25 +252,26 @@ public:
 	//
 	// Initialize the IPCManager
 	//
-	void init(unsigned int wait_time, const std::string& loglevel);
+	void init(const std::string& loglevel);
 
 //-------------------------------------- REMOVE
 	//
 	// Start the script worker thread
 	//
 	ipcm_res_t start_script_worker();
-
+#if 0
 	//
 	// Start the console worker thread
 	//
 	ipcm_res_t start_console_worker();
+#endif
 //-------------------------------------- REMOVE
 
 	//
 	// Load the specified addons
 	//
 	// @param addons Comma separated list of addons
-	ipcm_res_t load_addons(const std::string& addons,
+	void load_addons(const std::string& addon_list,
 						const std::string& params);
 
 	//
@@ -759,7 +760,11 @@ protected:
 	//Keep running flag
 	volatile bool keep_running;
 
+	//IPCM factory
 	IPCMIPCProcessFactory ipcp_factory_;
+
+	//List of running addons
+	std::list<Addon*> addons;
 
 public:
 	//Generator of opaque identifiers

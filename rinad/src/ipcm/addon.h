@@ -31,6 +31,7 @@
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
 #include <librina/patterns.h>
+#include "rina-configuration.h"
 
 #include "ipcp.h"
 
@@ -54,7 +55,8 @@ public:
 	/**
 	* Factory
 	*/
-	static Addon* factory(const std::string& name,
+	static Addon* factory(rinad::RINAConfiguration& conf,
+						const std::string& name,
 						const std::string& params);
 
 private:

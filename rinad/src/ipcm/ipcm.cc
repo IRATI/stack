@@ -84,7 +84,7 @@ IPCManager_::~IPCManager_()
 		delete script;
 }
 
-void IPCManager_::init(unsigned int wait_time, const std::string& loglevel)
+void IPCManager_::init(const std::string& loglevel)
 {
 	// Initialize the IPC manager infrastructure in librina.
 
@@ -118,6 +118,7 @@ IPCManager_::start_script_worker()
 	return IPCM_SUCCESS;
 }
 
+#if 0
 ipcm_res_t
 IPCManager_::start_console_worker()
 {
@@ -129,16 +130,36 @@ IPCManager_::start_console_worker()
 
 	return IPCM_SUCCESS;
 }
+#endif
 
-ipcm_res_t
-IPCManager_::load_addons(const std::string& addons, const std::string& params){
+void
+IPCManager_::load_addons(const std::string& addon_list,
+						const std::string& params){
+	std::string al = addon_list;
 
-	//TODO: remove this
-	std::string mad = "mad";
+	if(al == "")
+		al = std::string("console");
 
-	Addon* addon = Addon::factory(mad, params);
+	//Convert the list of addons to lowercase
+	std::transform(al.begin(), al.end(), al.begin(), ::tolower);
 
-	(void)addon;
+	//Split comma based, and remove extra chars (spaces)
+	std::stringstream ss(al);
+	std::string t;
+	while(std::getline(ss, t, ',')) {
+		//Remove whitespaces
+		t.erase(std::remove_if( t.begin(), t.end(), ::isspace ),
+								t.end() );
+		Addon* addon = Addon::factory(config, t, params);
+
+		if(!addon){
+			LOG_CRIT("Unable to bootstrap addon '%s'. Aborting...",
+									t.c_str());
+			exit(EXIT_FAILURE);
+		}
+
+		addons.push_back(addon);
+	}
 }
 
 /*
@@ -1509,6 +1530,16 @@ void IPCManager_::run(){
 
 	//TODO: probably move this to a private method if it starts to grow
 	LOG_DBG("Stopping I/O loop and cleaning the house...");
+
+	std::list<Addon*>::iterator addon_it;
+
+	addon_it = addons.begin();
+	do{
+		LOG_DBG("Destroying addon: %s(%p)", (*addon_it)->name.c_str(),
+							*addon_it);
+		delete *addon_it;
+		addons.erase(addon_it++);
+	}while(addon_it != addons.end());
 
 	//Destroy all IPCPs
 	std::vector<IPCMIPCProcess *> ipcps;

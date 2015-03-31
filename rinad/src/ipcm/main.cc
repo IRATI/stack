@@ -128,13 +128,16 @@ int wrapped_main(int argc, char * argv[])
 	}
 
 	//Initialize IPCM
-	rinad::IPCManager->init(wait_time, loglevel);
+	rinad::IPCManager->init(loglevel);
 
 	//Dump the config
 	rinad::IPCManager->dumpConfig();
 
+	//Load addons
+	rinad::IPCManager->load_addons(std::string(""), std::string(""));
+
 	//TODO make this configurable
-	rinad::IPCManager->start_console_worker();
+	//rinad::IPCManager->start_console_worker();
 	rinad::IPCManager->start_script_worker();
 
 	//Run the loop
