@@ -48,7 +48,10 @@ RIBFactory_::RIBFactory_(){
 	//TODO: register to flow events in librina and spawn workers
 }
 
-RIBFactory_::~RIBFactory_() throw (){}
+RIBFactory_::~RIBFactory_() throw ()
+    {
+  // FIXME destroy con handlers and resp handlers
+    }
 
 /*
 * Inner API
@@ -75,7 +78,7 @@ void RIBFactory_::createRIB(uint64_t version){
 	switch(version)
 	{
 	case 1:
-		rib_inst_[version] = factory_.create(RIBDaemonv1->getConnHandler(), RIBDaemonv1->getRespHandler(), params, vers, separator);
+		rib_inst_[version] = factory_.create(new rib_v1::RIBConHandler_v1(), new rib_v1::RIBRespHandler_v1(), params, vers, separator);
 		break;
 	default:
 		break;

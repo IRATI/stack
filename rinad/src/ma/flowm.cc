@@ -12,6 +12,7 @@
 #include "agent.h"
 #define RINA_PREFIX "mad.flowm"
 #include <librina/logs.h>
+#include <librina/cdap_rib_structures.h>
 
 
 namespace rinad{
@@ -24,6 +25,8 @@ namespace mad{
 //Flow allocation worker events
 #define FM_FALLOC_TIMEOUT_S 10
 #define FM_FALLOC_TIMEOUT_NS 0
+
+const unsigned int max_sdu_size_in_bytes = 10000;
 
 /**
 * @brief Worker abstract class encpasulates the main I/O loop
@@ -239,8 +242,12 @@ void* ActiveWorker::run(void* param){
 
 		//Allocate the flow
 		flow = allocateFlow();
-		(void)flow;
-		//TODO: block for incoming messages
+	  char buffer[max_sdu_size_in_bytes];
+    int bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
+    rina::cdap_rib::SerializedObject message;
+    message.message_ = buffer;
+    message.size_ = bytes_read;
+    (void) message;
 		sleep(1);
 	}
 
