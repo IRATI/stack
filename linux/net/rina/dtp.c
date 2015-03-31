@@ -764,7 +764,7 @@ static void tf_a(void * o)
                 process_A_expiration(dtp, dtcp);
 #if DTP_INACTIVITY_TIMERS_ENABLE
                 if (rtimer_restart(dtp->timers.sender_inactivity,
-                                   2 * (dt_sv_mpl(dt) +
+                                   3 * (dt_sv_mpl(dt) +
                                         dt_sv_r(dt)   +
                                         dt_sv_a(dt)))) {
                         LOG_ERR("Failed to start sender_inactiviy timer");
@@ -1274,7 +1274,7 @@ int dtp_write(struct dtp * instance,
 #if DTP_INACTIVITY_TIMERS_ENABLE
                 /* Start SenderInactivityTimer */
                 if (rtimer_restart(instance->timers.sender_inactivity,
-                                   2 * (dt_sv_mpl(dt) +
+                                   3 * (dt_sv_mpl(dt) +
                                         dt_sv_r(dt)   +
                                         dt_sv_a(dt)))) {
                         LOG_ERR("Failed to start sender_inactiviy timer");

@@ -42,7 +42,6 @@ default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
 {
         struct dtp *            dtp = ps->dm;
         struct dt  *            dt;
-        struct rtimer *         Stimer;
         struct efcp *           efcp;
         struct efcp_container * efcpc;
         cep_id_t                dst_cep_id;
@@ -67,13 +66,6 @@ default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
                 return -1;
         }
 
-#if DTP_INACTIVITY_TIMERS_ENABLE
-        /* Start SenderInactivityTimer */
-        Stimer = dtp_sender_inactivity_timer(dtp);
-        if (rtimer_restart(Stimer,
-                           3 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt))))
-                LOG_ERR("Failed to start sender_inactiviy timer");
-#endif
         /* Post SDU to RMT */
         LOG_DBG("defaultTxPolicy - sending to rmt");
         if (dtp_sv_max_seq_nr_set(dtp,
