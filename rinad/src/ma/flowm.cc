@@ -194,7 +194,7 @@ rina::Flow* ActiveWorker::allocateFlow(){
 		LOG_DBG("[w:%u] Got event %u, waiting for %u", id,
 						event->sequenceNumber,
 						seqnum);
-	}catch(Exception& e){
+	}catch(rina::Exception& e){
 		//No reply... no flow
 		LOG_ERR("[w:%u] Failed to allocate a flow. Operation timed-out", id);
 		return NULL;
@@ -460,7 +460,7 @@ SPAWN_ERROR:
 SPAWN_ERROR2:
 	delete *w;
 SPAWN_ERROR3:
-	throw Exception(msg.str().c_str());
+	throw rina::Exception(msg.str().c_str());
 }
 
 //Join
@@ -497,7 +497,7 @@ void FlowManager_::joinWorker(int id){
 
 JOIN_ERROR:
 	assert(0);
-	throw Exception(msg.str().c_str());
+	throw rina::Exception(msg.str().c_str());
 }
 
 }; //namespace mad
