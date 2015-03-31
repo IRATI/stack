@@ -396,7 +396,7 @@ public:
 	}
 	unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name) {
 		if (name.processName.compare("") == 0) {
-			throw Exception();
+			throw rina::Exception();
 		}
 		return 0;
 	}
@@ -442,7 +442,7 @@ public:
 		state_ = operational_state;
 	}
 	rina::DIFInformation& get_dif_information() const {
-		throw Exception();
+		throw rina::Exception();
 	}
 	void set_dif_information(const rina::DIFInformation& dif_information) {
 		dif_information_ = dif_information;

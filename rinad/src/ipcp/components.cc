@@ -108,7 +108,7 @@ rina::Connection * Flow::getActiveConnection() {
 		}
 	}
 
-	throw Exception("No active connection is currently defined");
+	throw rina::Exception("No active connection is currently defined");
 }
 
 std::string Flow::toString() {
@@ -196,7 +196,7 @@ SimpleSetIPCPRIBObject::SimpleSetIPCPRIBObject(IPCProcess * ipc_process, const s
 void SimpleSetIPCPRIBObject::createObject(const std::string& objectClass, const std::string& objectName,
 		const void* objectValue) {
 	if (set_member_object_class_.compare(objectClass) != 0) {
-		throw Exception("Class of set member does not match the expected value");
+		throw rina::Exception("Class of set member does not match the expected value");
 	}
 
 	SimpleSetMemberIPCPRIBObject * ribObject = new SimpleSetMemberIPCPRIBObject(ipc_process_, objectClass,

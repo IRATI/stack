@@ -261,7 +261,7 @@ void FlowAllocator::populateRIB()
     rib_daemon_->addRIBObject(object);
     object = new DataTransferConstantsRIBObject(ipcp);
     rib_daemon_->addRIBObject(object);
-  } catch (Exception &e) {
+  } catch (rina::Exception &e) {
     LOG_ERR("Problems adding object to the RIB : %s", e.what());
   }
 }
@@ -290,7 +290,7 @@ void FlowAllocator::createFlowRequestMessageReceived(
     try {
       portId = rina::extendedIPCManager->allocatePortId(
           flow->destination_naming_info);
-    } catch (Exception &e) {
+    } catch (rina::Exception &e) {
       LOG_ERR(
           "Problems requesting an available port-id: %s. Ignoring the Flow allocation request",
           e.what());
@@ -328,7 +328,7 @@ void FlowAllocator::replyToIPCManager(
   try {
     rina::extendedIPCManager->allocateFlowRequestResult(event,
                                                         result);
-  } catch (Exception &e) {
+  } catch (rina::Exception &e) {
     LOG_ERR("Problems communicating with the IPC Manager Daemon: %s",
             e.what());
   }
@@ -344,7 +344,7 @@ void FlowAllocator::submitAllocateRequest(
     portId = rina::extendedIPCManager->allocatePortId(
         event.localApplicationName);
     LOG_DBG("Got assigned port-id %d", portId);
-  } catch (Exception &e) {
+  } catch (rina::Exception &e) {
     LOG_ERR(
         "Problems requesting an available port-id to the Kernel IPC Manager: %s",
         e.what());
@@ -358,14 +358,14 @@ void FlowAllocator::submitAllocateRequest(
 
   try {
     flowAllocatorInstance->submitAllocateRequest(event);
-  } catch (Exception &e) {
+  } catch (rina::Exception &e) {
     LOG_ERR("Problems allocating flow: %s", e.what());
     flow_allocator_instances_.erase(portId);
     delete flowAllocatorInstance;
 
     try {
       rina::extendedIPCManager->deallocatePortId(portId);
-    } catch (Exception &e) {
+    } catch (rina::Exception &e) {
       LOG_ERR("Problems releasing port-id %d: %s", portId, e.what());
     }
     replyToIPCManager(event, -1);
@@ -425,7 +425,7 @@ void FlowAllocator::processCreateConnectionResultEvent(
             event.getPortId());
     try {
       rina::extendedIPCManager->deallocatePortId(event.getPortId());
-    } catch (Exception &e) {
+    } catch (rina::Exception &e) {
       LOG_ERR(
           "Problems requesting IPC Manager to deallocate port-id %d: %s",
           event.getPortId(), e.what());
@@ -447,7 +447,7 @@ void FlowAllocator::processUpdateConnectionResponseEvent(
             event.getPortId());
     try {
       rina::extendedIPCManager->deallocatePortId(event.getPortId());
-    } catch (Exception &e) {
+    } catch (rina::Exception &e) {
       LOG_ERR(
           "Problems requesting IPC Manager to deallocate port-id %d: %s",
           event.getPortId(), e.what());
@@ -469,7 +469,7 @@ void FlowAllocator::submitDeallocate(
     LOG_ERR("Problems looking for FAI at portId %d", event.portId);
     try {
       rina::extendedIPCManager->deallocatePortId(event.portId);
-    } catch (Exception &e) {
+    } catch (rina::Exception &e) {
       LOG_ERR(
           "Problems requesting IPC Manager to deallocate port-id %d: %s",
           event.portId, e.what());
@@ -477,7 +477,7 @@ void FlowAllocator::submitDeallocate(
 
     try {
       rina::extendedIPCManager->notifyflowDeallocated(event, -1);
-    } catch (Exception &e) {
+    } catch (rina::Exception &e) {
       LOG_ERR("Error communicating with the IPC Manager: %s",
               e.what());
     }
@@ -485,7 +485,7 @@ void FlowAllocator::submitDeallocate(
     flowAllocatorInstance->submitDeallocate(event);
     try {
       rina::extendedIPCManager->notifyflowDeallocated(event, 0);
-    } catch (Exception &e) {
+    } catch (rina::Exception &e) {
       LOG_ERR("Error communicating with the IPC Manager: %s",
               e.what());
     }
@@ -637,7 +637,7 @@ void FlowAllocatorInstance::submitAllocateRequest(
     std::stringstream ss;
     ss << "Could not find entry in DFT for application ";
     ss << event.remoteApplicationName.toString();
-    throw Exception(ss.str().c_str());
+    throw rina::Exception(ss.str().c_str());
   }
 
   unsigned int sourceAddress = ipc_process_->get_address();
@@ -664,7 +664,7 @@ void FlowAllocatorInstance::replyToIPCManager(
   try {
     rina::extendedIPCManager->allocateFlowRequestResult(event,
                                                         result);
-  } catch (Exception &e) {
+  } catch (rina::Exception &e) {
     LOG_ERR("Problems communicating with the IPC Manager Daemon: %s",
             e.what());
   }
@@ -674,7 +674,7 @@ void FlowAllocatorInstance::releasePortId()
 {
   try {
     rina::extendedIPCManager->deallocatePortId(port_id_);
-  } catch (Exception &e) {
+  } catch (rina::Exception &e) {
     LOG_ERR("Problems releasing port-id %d", port_id_);
   }
 }
@@ -731,7 +731,7 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(
 				  robject_value, 0, remote_id, this);
 
 		  underlying_port_id_ = cdapSessions[0];
-	  } catch (Exception &e) {
+	  } catch (rina::Exception &e) {
 		  LOG_ERR(
 				  "Problems sending M_CREATE <Flow> CDAP message to neighbor: %s",
 				  e.what());
@@ -808,7 +808,7 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(
     				robject_value, -1,
     				"EncoderConstants::FLOW_RIB_OBJECT_CLASS", invoke_id_,
     				remote_id);
-    	} catch (Exception &e) {
+    	} catch (rina::Exception &e) {
     		LOG_ERR("Problems sending CDAP message: %s", e.what());
     	}
     } else {
@@ -829,7 +829,7 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(
     LOG_DBG(
         "Requested the creation of a connection to the kernel to support flow with port-id %d",
         port_id_);
-  } catch (Exception &e) {
+  } catch (rina::Exception &e) {
     LOG_ERR("Problems requesting a connection to the kernel: %s ",
             e.what());
     releaseUnlockRemove();
@@ -870,7 +870,7 @@ void FlowAllocatorInstance::processCreateConnectionResultEvent(
     LOG_DBG(
         "Informed IPC Manager about incoming flow allocation request, got handle: %ud",
         allocate_response_message_handle_);
-  } catch (Exception &e) {
+  } catch (rina::Exception &e) {
     LOG_ERR(
         "Problems informing the IPC Manager about an incoming flow allocation request: %s",
         e.what());
@@ -910,14 +910,14 @@ void FlowAllocatorInstance::submitAllocateResponse(
 			  rib_daemon_->remoteCreateObjectResponse(
 					  EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_,
 					  robject_value, 0, "", invoke_id_, remote_id);
-		  } catch (Exception &e) {
+		  } catch (rina::Exception &e) {
 			  LOG_ERR(
 					  "Problems requesting RIB Daemon to send CDAP Message: %s",
 					  e.what());
 
 			  try {
 				  rina::extendedIPCManager->flowDeallocated(port_id_);
-			  } catch (Exception &e) {
+			  } catch (rina::Exception &e) {
 				  LOG_ERR("Problems communicating with the IPC Manager: %s",
 						  e.what());
 			  }
@@ -933,7 +933,7 @@ void FlowAllocatorInstance::submitAllocateResponse(
 		if (fai == 0) {
 			try {
 				rina::extendedIPCManager->flowDeallocated(port_id_);
-			} catch (Exception &e) {
+			} catch (rina::Exception &e) {
 				LOG_ERR("Problems locating FAI associated to port-id: %d",
 						flow_->source_port_id);
 			}
@@ -951,7 +951,7 @@ void FlowAllocatorInstance::submitAllocateResponse(
       rib_daemon_->createObject(
           EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_, this,
           0);
-    } catch (Exception &e) {
+    } catch (rina::Exception &e) {
       LOG_WARN("Error creating Flow Rib object: %s", e.what());
     }
 
@@ -976,7 +976,7 @@ void FlowAllocatorInstance::submitAllocateResponse(
 				  EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_,
 				  robject_value, -1, "Application rejected the flow",
 				  invoke_id_, remote_id);
-	  } catch (Exception &e) {
+	  } catch (rina::Exception &e) {
 		  LOG_ERR("Problems requesting RIB Daemon to send CDAP Message: %s",
 				  e.what());
 	  }
@@ -988,7 +988,7 @@ void FlowAllocatorInstance::submitAllocateResponse(
 		if (fai == 0) {
 			try {
 				rina::extendedIPCManager->flowDeallocated(port_id_);
-			} catch (Exception &e) {
+			} catch (rina::Exception &e) {
 				LOG_ERR("Problems locating FAI associated to port-id: %d",
 						flow_->source_port_id);
 			}
@@ -1025,7 +1025,7 @@ void FlowAllocatorInstance::processUpdateConnectionResponseEvent(
       flow_request_event_.portId = -1;
       rina::extendedIPCManager->allocateFlowRequestResult(
           flow_request_event_, event.getResult());
-    } catch (Exception &e) {
+    } catch (rina::Exception &e) {
       LOG_ERR("Problems communicating with the IPC Manager: %s",
               e.what());
     }
@@ -1039,7 +1039,7 @@ void FlowAllocatorInstance::processUpdateConnectionResponseEvent(
     flow_->state = Flow::ALLOCATED;
     rib_daemon_->createObject(EncoderConstants::FLOW_RIB_OBJECT_CLASS,
                               object_name_, this, 0);
-  } catch (Exception &e) {
+  } catch (rina::Exception &e) {
     LOG_WARN(
         "Problems requesting the RIB Daemon to create a RIB object: %s",
         e.what());
@@ -1051,7 +1051,7 @@ void FlowAllocatorInstance::processUpdateConnectionResponseEvent(
     flow_request_event_.portId = port_id_;
     rina::extendedIPCManager->allocateFlowRequestResult(
         flow_request_event_, 0);
-  } catch (Exception &e) {
+  } catch (rina::Exception &e) {
     LOG_ERR("Problems communicating with the IPC Manager: %s",
             e.what());
   }
@@ -1094,7 +1094,7 @@ void FlowAllocatorInstance::submitDeallocate(
     				EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_, 0,
     				remote_id, 0);
     		;
-    	} catch (Exception &e) {
+    	} catch (rina::Exception &e) {
     		LOG_ERR("Problems sending M_DELETE flow request: %s", e.what());
     	}
     } else {
@@ -1110,7 +1110,7 @@ void FlowAllocatorInstance::submitDeallocate(
     TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(
         this, object_name_, true);
     timer_->scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
-  } catch (Exception &e) {
+  } catch (rina::Exception &e) {
     LOG_ERR("Problems processing flow deallocation request: %s",
             +e.what());
   }
@@ -1140,7 +1140,7 @@ void FlowAllocatorInstance::deleteFlowRequestMessageReceived()
   //4 Inform IPC Manager
   try {
     rina::extendedIPCManager->flowDeallocatedRemotely(port_id_, 0);
-  } catch (Exception &e) {
+  } catch (rina::Exception &e) {
     LOG_ERR("Error communicating with the IPC Manager: %s", e.what());
   }
 }
@@ -1164,7 +1164,7 @@ void FlowAllocatorInstance::destroyFlowAllocatorInstance(
   try {
     rib_daemon_->deleteObject(EncoderConstants::FLOW_RIB_OBJECT_CLASS,
                               object_name_, 0, 0);
-  } catch (Exception &e) {
+  } catch (rina::Exception &e) {
     LOG_ERR("Problems deleting object from RIB: %s", e.what());
   }
 
@@ -1199,7 +1199,7 @@ void FlowAllocatorInstance::createResponse(
       flow_request_event_.portId = -1;
       rina::extendedIPCManager->allocateFlowRequestResult(
           flow_request_event_, result);
-    } catch (Exception &e) {
+    } catch (rina::Exception &e) {
       LOG_ERR("Problems communicating with the IPC Manager: %s",
               e.what());
     }
@@ -1224,7 +1224,7 @@ void FlowAllocatorInstance::createResponse(
     rina::kernelIPCProcess->updateConnection(
         *(flow_->getActiveConnection()));
     lock_->unlock();
-  } catch (Exception &e) {
+  } catch (rina::Exception &e) {
     LOG_ERR("Problems requesting kernel to update connection: %s",
             e.what());
 
@@ -1233,7 +1233,7 @@ void FlowAllocatorInstance::createResponse(
       flow_request_event_.portId = -1;
       rina::extendedIPCManager->allocateFlowRequestResult(
           flow_request_event_, result);
-    } catch (Exception &e) {
+    } catch (rina::Exception &e) {
       LOG_ERR("Problems communicating with the IPC Manager: %s",
               e.what());
     }
@@ -1289,7 +1289,7 @@ void DataTransferConstantsRIBObject::remoteReadObject(
         EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS,
         EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME,
         robject_value, 0, "", invoke_id, false, remote_id);
-  } catch (Exception &e) {
+  } catch (rina::Exception &e) {
     LOG_ERR("Problems generating or sending CDAP Message: %s",
             e.what());
   }
