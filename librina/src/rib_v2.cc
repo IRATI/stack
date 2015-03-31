@@ -826,6 +826,7 @@ RIBSchemaObject::RIBSchemaObject(const std::string& class_name,
   class_name_ = class_name;
   mandatory_ = mandatory;
   max_objs_ = max_objs;
+  (void)parent_;
 }
 
 void RIBSchemaObject::addChild(RIBSchemaObject *object)

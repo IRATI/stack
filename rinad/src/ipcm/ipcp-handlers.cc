@@ -106,19 +106,18 @@ int IPCManager_::ipcm_register_response_ipcp(
 	IPCPregTransState* trans = get_transaction_state<IPCPregTransState>(e->sequenceNumber);
 
 	if(!trans){
-		assert(0);
-		return -1;
+		return ret;
 	}
 
 	rinad::IPCMIPCProcess *ipcp = lookup_ipcp_by_id(trans->ipcp_id);
 	if(!ipcp)
-		return -1;
+		return ret;
 	//Auto release the read lock
 	rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
 	rinad::IPCMIPCProcess *slave_ipcp = lookup_ipcp_by_id(trans->slave_ipcp_id);
 	if(!slave_ipcp)
-		return -1;
+		return ret;
 	//Auto release the read lock
 	rina::ReadScopedLock sreadlock(slave_ipcp->rwlock, false);
 
@@ -140,7 +139,6 @@ int IPCManager_::ipcm_register_response_ipcp(
 			FLUSH_LOG(INFO, ss);
 
 			ret = IPCM_SUCCESS;
-
 		} catch (rina::NotifyRegistrationToDIFException& e) {
 			ss  << ": Error while notifying "
 				"IPC process " <<
@@ -156,11 +154,7 @@ int IPCManager_::ipcm_register_response_ipcp(
 		FLUSH_LOG(ERR, ss);
 	}
 
-	//Set return value, mark as completed and signal
-	trans->completed(ret);
-	remove_transaction_state(trans->tid);
-
-	return -(ret == IPCM_SUCCESS);
+	return ret;
 }
 
 int IPCManager_::ipcm_unregister_response_ipcp(

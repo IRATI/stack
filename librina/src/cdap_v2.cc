@@ -1109,7 +1109,7 @@ void ConnectionStateMachine::connectResponseReceived()
   if (connection_state_ != AWAITCON) {
     std::stringstream ss;
     ss << "Received an M_CONNECT_R message, but this CDAP session is currently in "
-           + connection_state_
+           << connection_state_
        << " state";
     unlock();
     throw rina::CDAPException(ss.str());
@@ -2176,9 +2176,10 @@ const cdap_m_t* CDAPSessionManager::messageReceived(
         cdap_session->messageReceived(*cdap_message);
         LOG_DBG("Created a new CDAP session for port %d", port_id);
       } else {
-        throw rina::CDAPException(
-            "M_CONNECT received on an already open CDAP Session, over flow "
-                + port_id);
+        std::stringstream ss;
+	ss << "M_CONNECT received on an already open CDAP Session, over flow "
+		<< port_id;
+        throw rina::CDAPException(ss.str());
       }
       break;
     default:
