@@ -81,6 +81,7 @@ bool CACEPStateMachine::changeState(rina::CDAPMessage::Opcode op_code,
 CACEPManager::CACEPManager(const Manager &manager)
     : manager_(manager)
 {
+  (void)manager_;
 }
 
 CACEPManager::~CACEPManager()

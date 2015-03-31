@@ -3,30 +3,28 @@
 #include <signal.h>
 #include <unistd.h>
 
-#define RINA_PREFIX "mad.bg"
+#define RINA_PREFIX "ipcm.mad.bg"
 #include <librina/logs.h>
 #include <flowm.h>
 
 namespace rinad {
 namespace mad {
 
-//Singleton instance
-Singleton<BGTaskManager_> BGTaskManager;
-
-
 /**
 * Signal handlers
 */
 
+/*
 //Handler to stop ciosrv
 void interrupt_handler(int sig) {
 	(void) sig;
 	//Signal background task manager to stop
-	FlowManager->stopIOLoop();
+	flow_manager->stopIOLoop();
 }
+*/
 
 //Main I/O loop
-void* BGTaskManager_::run(void* unused){
+void* BGTaskManager::run(void* unused){
 
 	(void)unused;
 
@@ -41,23 +39,15 @@ void* BGTaskManager_::run(void* unused){
 	return NULL;
 }
 
-//Public init/destroy APIs
-void BGTaskManager_::init(){
+//Constructors destructors(singleton)
+BGTaskManager::BGTaskManager():keep_running(true){
 	//Program signal handlee (capture control+C)
-	signal(SIGINT, interrupt_handler);
+	//signal(SIGINT, interrupt_handler);
 	LOG_DBG("Initialized");
 }
 
-void BGTaskManager_::destroy(){
-}
 
-//Constructors destructors(singleton)
-BGTaskManager_::BGTaskManager_():keep_running(true){
-
-}
-
-
-BGTaskManager_::~BGTaskManager_(void){
+BGTaskManager::~BGTaskManager(void){
 
 }
 

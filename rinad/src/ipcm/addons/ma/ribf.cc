@@ -10,7 +10,7 @@
 #include <pthread.h>
 
 #include "agent.h"
-#define RINA_PREFIX "mad.ribf"
+#define RINA_PREFIX "ipcm.mad.ribf"
 #include <librina/logs.h>
 
 #include "ribs/ribd_v1.h"
@@ -22,12 +22,9 @@ namespace mad{
 * RIBFactory
 */
 
-//Singleton instance
-Singleton<RIBFactory_> RIBFactory;
 
-
-//Initialization and destruction routines
-void RIBFactory_::init(std::list<uint64_t> supported_versions){
+//Constructors destructors
+RIBFactory::RIBFactory(std::list<uint64_t> supported_versions){
 	for (std::list<uint64_t>::iterator it = supported_versions.begin();
 			it != supported_versions.end(); it++)
 	{
@@ -35,25 +32,15 @@ void RIBFactory_::init(std::list<uint64_t> supported_versions){
 	}
 
 	LOG_DBG("Initialized");
-}
-
-void RIBFactory_::destroy(void){
 
 }
 
-
-
-//Constructors destructors
-RIBFactory_::RIBFactory_(){
-	//TODO: register to flow events in librina and spawn workers
-}
-
-RIBFactory_::~RIBFactory_() throw (){}
+RIBFactory::~RIBFactory() throw (){}
 
 /*
 * Inner API
 */
-void RIBFactory_::createRIB(uint64_t version){
+void RIBFactory::createRIB(uint64_t version){
   char separator = ',';
   rina::cdap_rib::cdap_params_t *params = new rina::cdap_rib::cdap_params_t;
   params->is_IPCP_ = false;
@@ -85,7 +72,7 @@ void RIBFactory_::createRIB(uint64_t version){
 	unlock();
 }
 
-rina::rib::RIBDNorthInterface& RIBFactory_::getRIB(uint64_t version){
+rina::rib::RIBDNorthInterface& RIBFactory::getRIB(uint64_t version){
 
   rina::rib::RIBDNorthInterface* rib;
 

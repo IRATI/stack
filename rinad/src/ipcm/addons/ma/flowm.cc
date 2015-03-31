@@ -10,7 +10,7 @@
 #include <errno.h>
 
 #include "agent.h"
-#define RINA_PREFIX "mad.flowm"
+#define RINA_PREFIX "ipcm.mad.flowm"
 #include <librina/logs.h>
 
 
@@ -31,6 +31,11 @@ namespace mad{
 class Worker{
 
 public:
+
+	/**
+	* Constructor
+	*/
+	Worker(FlowManager* fm) : flow_manager(fm){};
 
 	/**
 	* Destructor
@@ -121,6 +126,9 @@ protected:
 
 	//Connection being handled
 	AppConnection con;
+
+	//Back reference
+	FlowManager* flow_manager;
 };
 
 /**
@@ -132,7 +140,7 @@ public:
 	/**
 	* Constructor
 	*/
-	ActiveWorker(const AppConnection& _con){
+	ActiveWorker(FlowManager* fm, const AppConnection& _con) : Worker(fm){
 		con = _con;
 	};
 
@@ -175,7 +183,7 @@ rina::Flow* ActiveWorker::allocateFlow(){
 
 		//Perform the flow allocation
 		seqnum = rina::ipcManager->requestFlowAllocationInDIF(
-				ManagementAgent->getAPInfo(),
+				flow_manager->getAPInfo(),
 				con.flow_info.remoteAppName,
 				con.flow_info.difName,
 				qos);
@@ -250,7 +258,7 @@ void* ActiveWorker::run(void* param){
 /*
 * FlowManager
 */
-void FlowManager_::runIOLoop(){
+void FlowManager::runIOLoop(){
 
 	rina::IPCEvent *event;
 	rina::Flow *flow;
@@ -327,30 +335,16 @@ void FlowManager_::runIOLoop(){
 	}
 }
 
-//Singleton instance
-Singleton<FlowManager_> FlowManager;
-
 //Constructors destructors(singleton)
-FlowManager_::FlowManager_() : next_id(1){
-
-}
-
-FlowManager_::~FlowManager_(){
-
-}
-
-//Initialization and destruction routines
-void FlowManager_::init(){
+FlowManager::FlowManager(ManagementAgent* agent_) : next_id(1), agent(agent_){
 	LOG_DBG("Initialized");
 }
-void FlowManager_::destroy(){
 
+FlowManager::~FlowManager(){
 	//Join all workers
 	std::map<unsigned int, Worker*>::iterator it = workers.begin();
 
 	while (it != workers.end()){
-		std::map<unsigned int, Worker*>::iterator to_delete = it;
-
 		//Stop and join
 		it->second->stop();
 
@@ -362,21 +356,26 @@ void FlowManager_::destroy(){
 	}
 }
 
+
 //Connect manager
-unsigned int FlowManager_::connectTo(const AppConnection& con){
-	Worker* w = new ActiveWorker(con);
+unsigned int FlowManager::connectTo(const AppConnection& con){
+	Worker* w = new ActiveWorker(this, con);
 
 	//Launch worker and return handler
 	return spawnWorker(&w);
 }
 
+rina::ApplicationProcessNamingInformation FlowManager::getAPInfo(void){
+	return agent->getAPInfo();
+}
+
 //Disconnect
-void FlowManager_::disconnectFrom(unsigned int worker_id){
+void FlowManager::disconnectFrom(unsigned int worker_id){
 	joinWorker(worker_id);
 }
 
 //Notify
-void FlowManager_::notify(rina::IPCEvent** event){
+void FlowManager::notify(rina::IPCEvent** event){
 
 	std::map<unsigned int, Worker*>::iterator it;
 	//TODO: use rwlock
@@ -400,7 +399,7 @@ void FlowManager_::notify(rina::IPCEvent** event){
 //
 
 //Workers
-unsigned int FlowManager_::spawnWorker(Worker** w){
+unsigned int FlowManager::spawnWorker(Worker** w){
 
 	unsigned int id;
 	std::stringstream msg;
@@ -457,7 +456,7 @@ SPAWN_ERROR3:
 }
 
 //Join
-void FlowManager_::joinWorker(int id){
+void FlowManager::joinWorker(int id){
 
 	std::stringstream msg;
 	Worker* w = NULL;

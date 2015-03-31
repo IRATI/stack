@@ -134,10 +134,10 @@ AC_CONFIG_FILES([
     src/ipcp/plugins/Makefile
     src/ipcm/Makefile
     src/ipcm/addons/Makefile
+    src/ipcm/addons/ma/Makefile
+    src/ipcm/addons/ma/ribs/Makefile
     src/ipcm/include/Makefile
     src/ipcm/include/ipcm/Makefile
-    src/ma/Makefile
-    src/ma/ribs/Makefile
 
     doc/Makefile
     tools/Makefile
