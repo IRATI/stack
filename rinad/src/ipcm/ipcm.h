@@ -113,7 +113,7 @@ public:
 
 protected:
 	//Protect setting of trans
-	friend TransactionState;
+	friend class TransactionState;
 
 	//Transaction back reference
 	TransactionState* trans;
@@ -191,7 +191,7 @@ public:
 
 protected:
 	//Protect abort call
-	friend Promise;
+	friend class Promise;
 
 	//
 	// @brief Abort the transaction (hard timeout)
@@ -585,7 +585,7 @@ protected:
 			IPCMIPCProcess * ipcp,
 			rina::ApplicationUnregistrationRequestEvent& req);
 	int ipcm_register_response_app(
-		rina::IpcmRegisterApplicationResponseEvent *,
+		rina::IpcmRegisterApplicationResponseEvent * event,
 		IPCMIPCProcess * slave_ipcp,
 		const rina::ApplicationRegistrationRequestEvent& req_event);
 

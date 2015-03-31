@@ -113,7 +113,7 @@ const std::string FlowStateObject::toString()
 	ss << "Address: " << address_ << "; Neighbor address: " << neighbor_address_
 			<< "; cost: " << cost_ << std::endl;
 	ss << "Up: " << up_ << "; Sequence number: " << sequence_number_
-			<< "; Age: " + age_;
+			<< "; Age: " << age_;
 
 	return ss.str();
 }
