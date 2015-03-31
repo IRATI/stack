@@ -101,8 +101,8 @@ std::string Flow::toString() {
 	ss << "* Source port id: " << source_port_id << std::endl;
 	ss << "* Destination AP Naming Info: "
 			<< destination_naming_info.toString();
-	ss << "* Destination addres: " + destination_address << std::endl;
-	ss << "* Destination port id: " + destination_port_id << std::endl;
+	ss << "* Destination addres: " << destination_address << std::endl;
+	ss << "* Destination port id: " << destination_port_id << std::endl;
 	if (connections.size() > 0) {
 		ss << "* Connection ids of the connection supporting this flow: +\n";
 		for (std::list<rina::Connection*>::const_iterator iterator =
@@ -213,7 +213,7 @@ IPCProcess::IPCProcess()
 }
 
 //Class IPCProcessComponent
-int IPCProcessComponent::select_policy_set_common(struct IPCProcess * ipcp,
+int IPCProcessComponent::select_policy_set_common(IPCProcess * ipcp,
                                            const std::string& component,
                                            const std::string& path,
                                            const std::string& ps_name)
