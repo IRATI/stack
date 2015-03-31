@@ -69,7 +69,7 @@ void WhateverCastNameSetRIBObject::remoteCreateObject(void * object_value,
 			rina::WhatevercastName * name = (rina::WhatevercastName *) object_value;
 			namesToCreate.push_back(name);
 		}
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Error decoding CDAP object value: %s", e.what());
 	}
 
@@ -81,7 +81,7 @@ void WhateverCastNameSetRIBObject::remoteCreateObject(void * object_value,
 	try {
 		rib_daemon_->createObject(EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS,
 				EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_NAME, &namesToCreate, 0);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems creating RIB object: %s", e.what());
 	}
 }
@@ -114,7 +114,7 @@ void WhateverCastNameSetRIBObject::createName(rina::WhatevercastName * name) {
 	add_child(ribObject);
 	try {
 		rib_daemon_->addRIBObject(ribObject);
-	} catch(Exception &e){
+	} catch(rina::Exception &e){
 		LOG_ERR("Problems adding object to the RIB: %s", e.what());
 	}
 }
@@ -138,7 +138,7 @@ void DirectoryForwardingTableEntryRIBObject::remoteCreateObject(void * object_va
 
 	try {
 		entry = (rina::DirectoryForwardingTableEntry *) object_value;
-	} catch (Exception & e){
+	} catch (rina::Exception & e){
 		LOG_ERR("Problems decoding message: %s", e.what());
 		return;
 	}
@@ -158,7 +158,7 @@ void DirectoryForwardingTableEntryRIBObject::remoteCreateObject(void * object_va
 		try {
 			rib_daemon_->createObject(EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS, object_name,
 					currentEntry, &notificationPolicy);
-		} catch (Exception &e) {
+		} catch (rina::Exception &e) {
 			LOG_ERR("Problems creating RIB object: %s", e.what());
 		}
 	}
@@ -187,7 +187,7 @@ void DirectoryForwardingTableEntryRIBObject::remoteDeleteObject(int invoke_id,
 	rina::NotificationPolicy notificationPolicy = rina::NotificationPolicy(cdapSessionIds);
 	try {
 		rib_daemon_->deleteObject(class_, name_, 0, &notificationPolicy);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems deleting RIB object: %s", e.what());
 	}
 }
@@ -270,7 +270,7 @@ void DirectoryForwardingTableEntrySetRIBObject::remoteCreateObject(void * object
 					(rina::DirectoryForwardingTableEntry *) object_value;
 			populateEntriesToCreateList(receivedEntry, &entriesToCreateOrUpdate);
 		}
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Error decoding CDAP object value: %s", e.what());
 	}
 
@@ -287,7 +287,7 @@ void DirectoryForwardingTableEntrySetRIBObject::remoteCreateObject(void * object
 		rib_daemon_->createObject(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
 				EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME, &entriesToCreateOrUpdate,
 				&notificationPolicy);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems creating RIB object: %s", e.what());
 	}
 }
@@ -332,7 +332,7 @@ void DirectoryForwardingTableEntrySetRIBObject::createObject(const std::string& 
 		add_child(ribObject);
 		try {
 			rib_daemon_->addRIBObject(ribObject);
-		} catch(Exception &e){
+		} catch(rina::Exception &e){
 			LOG_ERR("Problems adding object to the RIB: %s", e.what());
 		}
 	}
@@ -364,7 +364,7 @@ void DirectoryForwardingTableEntrySetRIBObject::deleteObject(const void* objectV
 			remove_child(ribObject->name_);
 			try {
 				rib_daemon_->removeRIBObject(ribObject->name_);
-			} catch (Exception &e) {
+			} catch (rina::Exception &e) {
 				LOG_ERR("Problems removing object from the RIB: %s", e.what());
 			}
 		} else {
@@ -413,7 +413,7 @@ void NamespaceManager::populateRIB() {
 		rib_daemon_->addRIBObject(object);
 		object = new WhateverCastNameSetRIBObject(ipcp);
 		rib_daemon_->addRIBObject(object);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems adding object to the RIB : %s", e.what());
 	}
 }
@@ -465,7 +465,7 @@ int NamespaceManager::replyToIPCManagerRegister(const rina::ApplicationRegistrat
 		int result) {
 	try {
 		rina::extendedIPCManager->registerApplicationResponse(event, result);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		return -1;
 	}
@@ -516,7 +516,7 @@ void NamespaceManager::processApplicationRegistrationRequestEvent(
 		rib_daemon_->createObject(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
 				EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME, &entriesToCreate,
 				&notificationPolicy);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems creating RIB object: %s", e.what());
 	}
 }
@@ -525,7 +525,7 @@ int NamespaceManager::replyToIPCManagerUnregister(const rina::ApplicationUnregis
 		int result) {
 	try {
 		rina::extendedIPCManager->unregisterApplicationResponse(event, result);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		return -1;
 	}
@@ -565,7 +565,7 @@ void NamespaceManager::processApplicationUnregistrationRequestEvent(
 		ss<<EncoderConstants::SEPARATOR<< unregisteredApp->appName.getEncodedString();
 		rib_daemon_->deleteObject(EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS,
 				ss.str(), 0, &notificationPolicy);
-	} catch (Exception &e) {
+	} catch (rina::Exception &e) {
 		LOG_ERR("Problems creating RIB object: %s", e.what());
 	}
 
@@ -581,7 +581,7 @@ unsigned int NamespaceManager::getAdressByname(const rina::ApplicationProcessNam
 		}
 	}
 
-	throw Exception("Unknown neighbor");
+	throw rina::Exception("Unknown neighbor");
 }
 
 int NamespaceManager::select_policy_set(const std::string& path,
