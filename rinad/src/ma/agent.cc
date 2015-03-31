@@ -155,6 +155,8 @@ void ManagementAgent_::init(const std::string& conf,
 	//Create RIBs
 	//TODO charge from configuration
 	std::list<uint64_t> supported_versions;
+	uint64_t v1 = 1;
+	supported_versions.push_back(v1);
 	RIBFactory->init(supported_versions);
 
 	//TODO

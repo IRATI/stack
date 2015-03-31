@@ -8,11 +8,13 @@
 #include <assert.h>
 #include <string.h>
 #include <errno.h>
+#include <stdint.h>
 
 #include "agent.h"
+#include "ribf.h"
 #define RINA_PREFIX "mad.flowm"
 #include <librina/logs.h>
-#include <librina/cdap_rib_structures.h>
+#include <librina/rib_v2.h>
 
 
 namespace rinad{
@@ -235,7 +237,7 @@ void* ActiveWorker::run(void* param){
 	rina::Flow* flow;
 
 	//We don't use param
-	(void)param;
+	uint64_t* rib_version = (uint64_t*) param;
 
 	keep_running = true;
 	while(keep_running == true){
@@ -247,7 +249,8 @@ void* ActiveWorker::run(void* param){
     rina::cdap_rib::SerializedObject message;
     message.message_ = buffer;
     message.size_ = bytes_read;
-    (void) message;
+    rina::rib::RIBDNorthInterface &rib = RIBFactory->getRIB(*rib_version);
+    rib.new_message(message, flow->getPortId());
 		sleep(1);
 	}
 

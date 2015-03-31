@@ -79,6 +79,7 @@ void RIBFactory_::createRIB(uint64_t version){
 	{
 	case 1:
 		rib_inst_[version] = factory_.create(new rib_v1::RIBConHandler_v1(), new rib_v1::RIBRespHandler_v1(), params, vers, separator);
+		rib_v1::initiateRIB(rib_inst_[version]);
 		break;
 	default:
 		break;
