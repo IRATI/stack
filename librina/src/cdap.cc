@@ -876,7 +876,7 @@ std::string CDAPMessage::to_string() const {
 	if (!obj_name_.empty())
 		ss << "Object name: " << obj_name_ << std::endl;
 	if (obj_inst_ != 0)
-		ss << "Object instance: " + obj_inst_ << std::endl;
+		ss << "Object instance: " << obj_inst_ << std::endl;
 	if (obj_value_ != 0 && !obj_value_->is_empty())
 		ss << "Object value: " << obj_value_ << std::endl;
 	if (op_code_ == CDAPMessage::M_CONNECT_R

@@ -43,7 +43,9 @@ private:
 };
 
 SecurityManagerPs::SecurityManagerPs(ISecurityManager * dm_) : dm(dm_)
-{ }
+{
+	(void)dm;
+}
 
 
 bool SecurityManagerPs::isAllowedToJoinDIF(const rina::Neighbor& newMember)
