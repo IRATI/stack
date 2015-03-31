@@ -585,7 +585,7 @@ protected:
 			IPCMIPCProcess * ipcp,
 			rina::ApplicationUnregistrationRequestEvent& req);
 	int ipcm_register_response_app(
-		rina::IpcmRegisterApplicationResponseEvent *,
+		rina::IpcmRegisterApplicationResponseEvent * event,
 		IPCMIPCProcess * slave_ipcp,
 		const rina::ApplicationRegistrationRequestEvent& req_event);
 

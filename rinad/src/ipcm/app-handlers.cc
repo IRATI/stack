@@ -47,61 +47,68 @@ void IPCManager_::os_process_finalized_handler(
 			<< "terminated" << endl;
 	FLUSH_LOG(INFO, ss);
 
-	//Prevent any insertion/deletion to happen
-	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
+	{
+		//Prevent any insertion/deletion to happen
+		rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
 
-	// Look if the terminating application has allocated flows
-	// with some IPC processes
-	collect_flows_by_application(app_name, involved_flows);
-	unsigned short ipcp_id = 0;
-	for (list<rina::FlowInformation>::iterator fit = involved_flows.begin();
-			fit != involved_flows.end(); fit++) {
+		// Look if the terminating application has allocated flows
+		// with some IPC processes
+		collect_flows_by_application(app_name, involved_flows);
+		unsigned short ipcp_id = 0;
+		for (list<rina::FlowInformation>::iterator fit = involved_flows.begin();
+				fit != involved_flows.end(); fit++) {
 
-		IPCMIPCProcess *ipcp = select_ipcp_by_dif(fit->difName);
-		if (!ipcp) {
-			ss  << ": Cannot find the IPC process "
-					"that provides the flow with port-id " <<
-					fit->portId << endl;
-			FLUSH_LOG(ERR, ss);
-			continue;
+			IPCMIPCProcess *ipcp = select_ipcp_by_dif(fit->difName);
+			if (!ipcp) {
+				ss  << ": Cannot find the IPC process "
+						"that provides the flow with port-id " <<
+						fit->portId << endl;
+				FLUSH_LOG(ERR, ss);
+				continue;
+			}
+
+			{
+				//Auto release the read lock
+				rina::ReadScopedLock readlock(ipcp->rwlock, false);
+				ipcp_id = ipcp->get_id();
+			}
+
+			rina::FlowDeallocateRequestEvent req_event(fit->portId, 0);
+			IPCManager->deallocate_flow(NULL, ipcp_id, req_event);
 		}
 
-		{
-			//Auto release the read lock
-			rina::ReadScopedLock readlock(ipcp->rwlock, false);
-			ipcp_id = ipcp->get_id();
-		}
-
-		rina::FlowDeallocateRequestEvent req_event(fit->portId, 0);
-		IPCManager->deallocate_flow(NULL, ipcp_id, req_event);
-	}
-
-	// Look if the terminating application has pending registrations
-	// with some IPC processes
-	vector<IPCMIPCProcess *> ipcps;
-	ipcp_factory_.listIPCProcesses(ipcps);
-	for (unsigned int i = 0; i < ipcps.size(); i++) {
-		if (application_is_registered_to_ipcp(app_name,
-							    ipcps[i])) {
-			// Build a structure that will be used during
-			// the unregistration process. The last argument
-			// is the request sequence number: 0 means that
-			// the unregistration response does not match
-			// an application request - this is indeed an
-			// unregistration forced by the IPCM.
-			rina::ApplicationUnregistrationRequestEvent
+		// Look if the terminating application has pending registrations
+		// with some IPC processes
+		vector<IPCMIPCProcess *> ipcps;
+		ipcp_factory_.listIPCProcesses(ipcps);
+		for (unsigned int i = 0; i < ipcps.size(); i++) {
+			if (application_is_registered_to_ipcp(app_name,
+					ipcps[i])) {
+				// Build a structure that will be used during
+				// the unregistration process. The last argument
+				// is the request sequence number: 0 means that
+				// the unregistration response does not match
+				// an application request - this is indeed an
+				// unregistration forced by the IPCM.
+				rina::ApplicationUnregistrationRequestEvent
 				req_event(app_name, ipcps[i]->dif_name_, 0);
 
-			IPCManager->unregister_app_from_ipcp(NULL,
+				IPCManager->unregister_app_from_ipcp(NULL,
 						req_event,
 						ipcps[i]->get_id());
+			}
 		}
 	}
 
 	if (event->ipcProcessId != 0) {
-		// TODO The process that crashed was an IPC Process daemon
-		// Should we destroy the state in the kernel? Or try to
-		// create another IPC Process in user space to bring it back?
+		//TODO if the IPCP was supporting flows or had
+		//registered applications, notify them
+
+		// Cleanup IPC Process state in the kernel
+		if(IPCManager->destroy_ipcp(event->ipcProcessId) < 0 ){
+			LOG_WARN("Problems cleaning up state of IPCP with id: %d\n",
+					event->ipcProcessId);
+		}
 	}
 }
 
@@ -297,7 +304,7 @@ void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponse
 			ss << ": Warning: Could not complete application registration: "<<e->sequenceNumber<<
 			"IPCP with id: "<<trans->ipcp_id<<"does not exist! Perhaps deleted?" << endl;
 			FLUSH_LOG(WARN, ss);
-			throw Exception();
+			throw rina::Exception();
 		}
 
 		//Auto release the read lock
@@ -455,7 +462,7 @@ void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResp
 			ss << ": Warning: Could not complete application unregistration: "<<e->sequenceNumber<<
 			"IPCP with id: "<<trans->ipcp_id<<"does not exist! Perhaps deleted?" << endl;
 			FLUSH_LOG(WARN, ss);
-			throw Exception();
+			throw rina::Exception();
 		}
 
 		//Auto release the read lock

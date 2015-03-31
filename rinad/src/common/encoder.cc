@@ -132,12 +132,12 @@ void Encoder::addEncoder(const std::string& object_class, rina::EncoderInterface
 void Encoder::encode(const void* object, rina::CDAPMessage * cdapMessage) {
 	rina::EncoderInterface* encoder = get_encoder(cdapMessage->obj_class_);
 	if (!encoder) {
-		throw Exception("Could not find encoder");
+		throw rina::Exception("Could not find encoder");
 	}
 
 	const rina::SerializedObject * encodedObject =  encoder->encode(object);
 	if (!encodedObject) {
-		throw Exception("The encoder returned a null pointer");
+		throw rina::Exception("The encoder returned a null pointer");
 	}
 
 	cdapMessage->obj_value_ =  new rina::ByteArrayObjectValue(
@@ -149,12 +149,12 @@ void Encoder::encode(const void* object, rina::CDAPMessage * cdapMessage) {
 }
 void* Encoder::decode(const rina::CDAPMessage * cdapMessage) {
 	if (!cdapMessage->obj_value_) {
-		throw Exception ("Object value is null");
+		throw rina::Exception ("Object value is null");
 	}
 
 	rina::EncoderInterface* encoder = get_encoder(cdapMessage->obj_class_);
 	if (!encoder) {
-		throw Exception("Could not find encoder");
+		throw rina::Exception("Could not find encoder");
 	}
 	return encoder->decode(cdapMessage->obj_value_);
 }
@@ -162,7 +162,7 @@ void* Encoder::decode(const rina::CDAPMessage * cdapMessage) {
 rina::EncoderInterface * Encoder::get_encoder(const std::string& object_class) {
 	std::map<std::string, rina::EncoderInterface*>::iterator it = encoders_.find(object_class);
 	if (it == encoders_.end()) {
-		throw Exception("Could not find an Encoder associated to object class");
+		throw rina::Exception("Could not find an Encoder associated to object class");
 	}
 
 	return it->second;
@@ -171,14 +171,14 @@ rina::EncoderInterface * Encoder::get_encoder(const std::string& object_class) {
 rina::SerializedObject * Encoder::get_serialized_object(
 		const rina::ObjectValueInterface * object_value) {
 	if (!object_value) {
-		throw Exception ("Object value is null");
+		throw rina::Exception ("Object value is null");
 	}
 
 	rina::ByteArrayObjectValue * value =
 			(rina::ByteArrayObjectValue*) object_value;
 
 	if (!value) {
-		throw Exception("Object value is not of type Byte Array Object Value");
+		throw rina::Exception("Object value is not of type Byte Array Object Value");
 	}
 
 	return (rina::SerializedObject *) value->get_value();
