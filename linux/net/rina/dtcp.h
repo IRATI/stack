@@ -58,6 +58,8 @@ seq_num_t            dtcp_snd_rt_win(struct dtcp * instance);
 seq_num_t            dtcp_snd_lf_win(struct dtcp * instance);
 int                  dtcp_snd_lf_win_set(struct dtcp * instance,
                                          seq_num_t     seq_num);
+int                  dtcp_snd_rt_win_set(struct dtcp * dtcp,
+                                         seq_num_t rt_win_edge);
 int                  dtcp_rcv_rt_win_set(struct dtcp * instance,
                                          seq_num_t     seq_num);
 
