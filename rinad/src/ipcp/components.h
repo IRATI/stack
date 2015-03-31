@@ -82,7 +82,7 @@ public:
                 return -1;
         }
 
-        int select_policy_set_common(struct IPCProcess * ipcp,
+        int select_policy_set_common(IPCProcess * ipcp,
                                      const std::string& component,
                                      const std::string& path,
                                      const std::string& ps_name);
