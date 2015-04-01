@@ -104,7 +104,7 @@ class RIB : public rina::Lockable
   BaseRIBObject* removeRIBObject(long instance);
   std::list<RIBObjectData*> getRIBObjectsData();
   char get_separator() const;
-  void addRIBObject(BaseRIBObject* ribObject);
+  void addRIBObject(BaseRIBObject* rib_object);
   std::string get_parent_name(const std::string child_name) const;
  private:
   std::map<std::string, RIBIntObject*> rib_by_name_;
@@ -360,8 +360,8 @@ class RIBDaemon : public RIBDNorthInterface, cdap::CDAPCallbackInterface
   void remote_stop_request(const cdap_rib::con_handle_t &con,
                            const cdap_rib::obj_info_t &obj,
                            const cdap_rib::filt_info_t &filt, int message_id);
-  void addRIBObject(BaseRIBObject *ribObject);
-  void removeRIBObject(BaseRIBObject *ribObject);
+  void addRIBObject(BaseRIBObject *rib_object);
+  void removeRIBObject(BaseRIBObject *rib_object);
   void removeRIBObject(const std::string& name);
   BaseRIBObject* getObject(const std::string& name,
                            const std::string& clas) const;
@@ -374,6 +374,7 @@ class RIBDaemon : public RIBDNorthInterface, cdap::CDAPCallbackInterface
   ResponseHandlerInterface *app_resp_callback_;
   cdap::CDAPProviderInterface *cdap_provider_;
   RIB *rib_;
+  std::map<std::string, AbstractEncoder*> encoders_;
 };
 
 RIBDaemon::RIBDaemon(cacep::AppConHandlerInterface *app_con_callback,
@@ -392,6 +393,11 @@ RIBDaemon::~RIBDaemon()
 {
   delete app_con_callback_;
   delete app_resp_callback_;
+  for (std::map<std::string, AbstractEncoder*>::iterator it = encoders_.begin(); it != encoders_.end(); it++)
+  {
+    delete it->second;
+  }
+  encoders_.clear();
   delete rib_;
   delete cdap_provider_;
   cdap::CDAPProviderFactory::finit();
@@ -597,13 +603,15 @@ void RIBDaemon::remote_stop_request(const cdap_rib::con_handle_t &con,
   delete res;
 }
 
-void RIBDaemon::addRIBObject(BaseRIBObject *ribObject)
+void RIBDaemon::addRIBObject(BaseRIBObject *rib_object)
 {
-  rib_->addRIBObject(ribObject);
+  if (encoders_.find(rib_object->get_encoder()->get_type()) != encoders_.end())
+    encoders_[rib_object->get_encoder()->get_type()] = rib_object->get_encoder();
+  rib_->addRIBObject(rib_object);
 }
-void RIBDaemon::removeRIBObject(BaseRIBObject *ribObject)
+void RIBDaemon::removeRIBObject(BaseRIBObject *rib_object)
 {
-  rib_->removeRIBObject(ribObject->get_name());
+  rib_->removeRIBObject(rib_object->get_name());
 }
 void RIBDaemon::removeRIBObject(const std::string& name)
 {
@@ -625,6 +633,23 @@ void RIBDaemon::process_message(cdap_rib::SerializedObject &message, int port)
   cdap_provider_->process_message(message, port);
 }
 
+// CLASS AbstractEncoder
+AbstractEncoder::~AbstractEncoder()
+{}
+bool AbstractEncoder::operator=(const AbstractEncoder &other) const
+{
+  if (get_type() == other.get_type())
+    return true;
+  else
+    return false;
+}
+bool AbstractEncoder::operator!=(const AbstractEncoder &other) const
+{
+  if (get_type() != other.get_type())
+    return true;
+  else
+    return false;
+}
 // Class RIBObjectData
 RIBObjectData::RIBObjectData()
 {
@@ -945,67 +970,103 @@ RIBDNorthInterface* RIBDFactory::create(
                                            params, schema);
   return ribd;
 }
+
 const cdap_rib::SerializedObject* IntEncoder::encode(const int &object)
 {
   (void) object;
   return 0;
 }
+
 int* IntEncoder::decode(
     const cdap_rib::SerializedObject &serialized_object) const
 {
   (void) serialized_object;
   return 0;
 }
+std::string IntEncoder::get_type() const
+{
+  return "int";
+}
+
 const cdap_rib::SerializedObject* SIntEncoder::encode(const short int &object)
 {
   (void) object;
   return 0;
 }
+
 short int* SIntEncoder::decode(
     const cdap_rib::SerializedObject &serialized_object) const
 {
   (void) serialized_object;
   return 0;
 }
+
+std::string SIntEncoder::get_type() const
+{
+  return "sint";
+}
+
 const cdap_rib::SerializedObject* LongEncoder::encode(const long long &object)
 {
   (void) object;
   return 0;
 }
+
 long long* LongEncoder::decode(
     const cdap_rib::SerializedObject &serialized_object) const
 {
   (void) serialized_object;
   return 0;
 }
+
+std::string LongEncoder::get_type() const
+{
+  return "long";
+}
+
 const cdap_rib::SerializedObject* SLongEncoder::encode(const long &object)
 {
   (void) object;
   return 0;
 }
+
 long* SLongEncoder::decode(
     const cdap_rib::SerializedObject &serialized_object) const
 {
   (void) serialized_object;
   return 0;
 }
+
+std::string SLongEncoder::get_type() const
+{
+  return "slong";
+}
+
 const cdap_rib::SerializedObject* StringEncoder::encode(
     const std::string &object)
 {
   (void) object;
   return 0;
 }
+
 std::string* StringEncoder::decode(
     const cdap_rib::SerializedObject &serialized_object) const
 {
   (void) serialized_object;
   return 0;
 }
+
+std::string StringEncoder::get_type() const
+{
+  return "string";
+}
+
 const cdap_rib::SerializedObject* FloatEncoder::encode(const float &object)
 {
   (void) object;
   return 0;
 }
+
 float* FloatEncoder::decode(
     const cdap_rib::SerializedObject &serialized_object) const
 {
@@ -1013,27 +1074,46 @@ float* FloatEncoder::decode(
   return 0;
 }
 
+std::string FloatEncoder::get_type() const
+{
+  return "float";
+}
+
 const cdap_rib::SerializedObject* DoubleEncoder::encode(const double &object)
 {
   (void) object;
   return 0;
 }
+
 double* DoubleEncoder::decode(
     const cdap_rib::SerializedObject &serialized_object) const
 {
   (void) serialized_object;
   return 0;
 }
+
+std::string DoubleEncoder::get_type() const
+{
+  return "double";
+}
+
+
 const cdap_rib::SerializedObject* BoolEncoder::encode(const bool &object)
 {
   (void) object;
   return 0;
 }
+
 bool* BoolEncoder::decode(
     const cdap_rib::SerializedObject &serialized_object) const
 {
   (void) serialized_object;
   return 0;
+}
+
+std::string BoolEncoder::get_type() const
+{
+  return "bool";
 }
 
 const cdap_rib::SerializedObject* EmptyEncoder::encode(const empty &object)
@@ -1050,6 +1130,12 @@ empty* EmptyEncoder::decode(
   LOG_ERR("Can not decode an empty object");
   return 0;
 }
+
+std::string EmptyEncoder::get_type() const
+{
+  return "empty";
+}
+
 }
 }
 
