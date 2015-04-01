@@ -1,6 +1,8 @@
 //
 // Rina CDAP echo main
 //
+// Addy Bombeke <addy.bombeke@ugent.be>
+// Vincenzo Maffione <v.maffione@nextworks.it>
 // Bernat Gastón <bernat.gaston@i2cat.net>
 //
 // This program is free software; you can redistribute it and/or modify
