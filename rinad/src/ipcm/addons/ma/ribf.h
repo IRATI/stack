@@ -51,18 +51,12 @@ DECLARE_EXCEPTION_SUBCLASS(eRIBNotFound);
 /**
 * @brief RIB manager
 */
-class RIBFactory_ :public rina::Lockable {
+class RIBFactory :public rina::Lockable {
 
 public:
-	/**
-	* Initialize running state
-	*/
-	void init(std::list<uint64_t> supported_versions);
-
-	/**
-	* Destroy the running state
-	*/
-	void destroy(void);
+	//Constructors
+	RIBFactory(std::list<uint64_t> supported_versions);
+	virtual ~RIBFactory(void) throw();
 
 	/**
 	* Get a reference to a RIB
@@ -95,20 +89,11 @@ private:
 	std::map<uint64_t, rina::rib::RIBDNorthInterface*> rib_inst_;
 	rina::rib::RIBDFactory factory_;
 
-	//Constructors
-	RIBFactory_(void);
-	virtual ~RIBFactory_(void) throw();
-
 	/*
 	* Internal methods
 	*/
 	//TODO
-
-	friend class Singleton<RIBFactory_>;
 };
-
-//Singleton instance
-extern Singleton<RIBFactory_> RIBFactory;
 
 }; //namespace mad
 }; //namespace rinad

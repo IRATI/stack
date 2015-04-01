@@ -20,39 +20,34 @@
 namespace rinad{
 namespace mad{
 
+//fwd decl
+class ManagementAgent;
+
 /**
 * @brief MAD configuration manager component
 */
-class ConfManager_{
+class ConfManager{
 
 public:
 	/**
 	* Initialize running state
 	*/
-	void init(const std::string& conf,
-					const std::string& cl_logfile,
-					const std::string& cl_loglevel);
+	ConfManager(const std::string& params);
+
 	/**
 	* Destroy the running state
 	*/
-	void destroy(void);
+	~ConfManager(void);
 
 	/**
 	* Reads the configuration source (e.g. a config file) and configures
 	* the rest of the modules
 	*/
-	void configure(void);
+	void configure(ManagementAgent& agent);
 
 private:
-	ConfManager_(void);
-	~ConfManager_(void);
-
-	friend class Singleton<ConfManager_>;
 
 };
-
-//Singleton instance
-extern Singleton<ConfManager_> ConfManager;
 
 
 }; //namespace mad

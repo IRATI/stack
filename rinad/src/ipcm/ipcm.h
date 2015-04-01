@@ -254,6 +254,7 @@ public:
 	//
 	void init(unsigned int wait_time, const std::string& loglevel);
 
+//-------------------------------------- REMOVE
 	//
 	// Start the script worker thread
 	//
@@ -263,6 +264,14 @@ public:
 	// Start the console worker thread
 	//
 	ipcm_res_t start_console_worker();
+//-------------------------------------- REMOVE
+
+	//
+	// Load the specified addons
+	//
+	// @param addons Comma separated list of addons
+	ipcm_res_t load_addons(const std::string& addons,
+						const std::string& params);
 
 	//
 	// TODO: XXX?????

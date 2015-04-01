@@ -4,12 +4,10 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-SUBDIRS      = include
+SUBDIRS      = include addons
 
 EXTRA_DIST   =
 CLEANFILES   =
-
-SUBDIRS=addons
 
 #
 #Libs
@@ -59,6 +57,7 @@ ipcm_LDADD    =					\
 	$(builddir)/addons/libaddons.la		\
 	$(LIBRINA_LIBS)
 ipcm_SOURCES  =					\
+	addon.cc				\
 	app-handlers.cc				\
 	dif-validator.cc			\
 	helpers.cc				\

@@ -17,8 +17,6 @@
 #include <librina/ipc-manager.h>
 #include <librina/patterns.h>
 
-#include "event-loop.h"
-
 namespace rinad{
 namespace mad{
 
@@ -32,17 +30,18 @@ namespace mad{
 //Fwd decl
 class AppConnection;
 class Worker;
+class ManagementAgent;
 
 /**
 * @brief Flow manager
 */
-class FlowManager_{
+class FlowManager{
 
 public:
-	/**
-	* @brief Initialize FlowManager running state
-	*/
-	void init(void);
+
+	//Constructors
+	FlowManager(ManagementAgent* agent_);
+	~FlowManager(void);
 
 	/**
 	* @brief Run the main I/O loop
@@ -55,6 +54,11 @@ public:
 	inline void stopIOLoop(void){
 		keep_running = false;
 	}
+
+	/**
+	* Retrieve a **copy** of the AP naming information
+	*/
+	rina::ApplicationProcessNamingInformation getAPInfo(void);
 
 	/**
 	* @brief Spawns a worker and attempts to connect to the Manager
@@ -76,10 +80,6 @@ public:
 	*/
 	void disconnectFrom(unsigned int worker_id);
 
-	/**
-	* Destroy the running state
-	*/
-	void destroy(void);
 private:
 	//hashmap worker handler <-> Worker association
 	std::map<unsigned int, Worker*> workers;
@@ -112,18 +112,13 @@ private:
 	*/
 	void joinWorker(int id);
 
-	//Constructors
-	FlowManager_(void);
-	~FlowManager_(void);
-
-	friend class Singleton<FlowManager_>;
-
 	//Worker handler id
 	int next_id;
+
+	//Back reference
+	ManagementAgent* agent_;
 };
 
-//Singleton instance
-extern Singleton<FlowManager_> FlowManager;
 
 }; //namespace mad
 }; //namespace rinad

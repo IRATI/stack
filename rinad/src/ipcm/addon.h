@@ -51,6 +51,14 @@ public:
 	*/
 	const std::string name;
 
+	/**
+	* Factory
+	*/
+	static Addon* factory(const std::string& name,
+						const std::string& params);
+
+private:
+
 };
 
 }//rinad namespace

@@ -17,7 +17,11 @@
 #include <librina/ipc-manager.h>
 #include <librina/patterns.h>
 
-#include "event-loop.h"
+#include "../../addon.h"
+#include "flowm.h"
+
+//Name of the MAD addon
+#define MAD_NAME "mad"
 
 namespace rinad{
 namespace mad{
@@ -47,24 +51,21 @@ public:
 	/* TODO: add CACEP auth details*/
 };
 
+//Submodule classes fwd decl
+class ConfManager;
+class FlowManager;
+class RIBFactory;
+class BGTaskManager;
+
 /**
 * @brief Management Agent singleton class
 */
-class ManagementAgent_{
-
+class ManagementAgent : public Addon{
 public:
 
-	/**
-	* Initialize the management agent components
-	*/
-	void init(const std::string& conf,
-					const std::string& cl_logfile,
-					const std::string& cl_loglevel);
-
-	/**
-	* Destroy management agent and components state
-	*/
-	void destroy(void);
+	//Constructor and destructor
+	ManagementAgent(const std::string& params);
+	~ManagementAgent(void);
 
 	/**
 	* Retrieve a **copy** of the AP naming information
@@ -95,7 +96,34 @@ public:
 	*/
 	void addManagerConnection(AppConnection& con);
 
+	RIBFactory* get_rib() const;
+
 private:
+
+  //
+  // Internal methods
+  //
+
+  /**
+  * Bootstrap necessary NMS DIFs and shim-DIFs
+  */
+  void bootstrapNMSDIFs(void);
+
+  /**
+  * Register agent AP into the IPCManager
+  */
+  void reg(void);
+
+  /**
+  * Connect to the Manager/s
+  */
+  void connect(void);
+
+	//Submodules
+	ConfManager* conf_manager;
+	FlowManager* flow_manager;
+	RIBFactory* rib_factory;
+	BGTaskManager* bg_task_manager;
 
 	/**
 	* RINA AP information
@@ -113,33 +141,7 @@ private:
 	*/
 	std::list<AppConnection> connections;
 
-	ManagementAgent_();
-	~ManagementAgent_(void);
-
-	//
-	// Internal methods
-	//
-
-	/**
-	* Bootstrap necessary NMS DIFs and shim-DIFs
-	*/
-	void bootstrapNMSDIFs(void);
-
-	/**
-	* Register agent AP into the IPCManager
-	*/
-	void reg(void);
-
-	/**
-	* Connect to the Manager/s
-	*/
-	void connect(void);
-
-	friend class Singleton<ManagementAgent_>;
 };
-
-//Singleton instance
-extern Singleton<ManagementAgent_> ManagementAgent;
 
 }; //namespace mad
 }; //namespace rinad

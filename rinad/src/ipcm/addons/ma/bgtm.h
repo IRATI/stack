@@ -12,8 +12,6 @@
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
 
-#include "event-loop.h"
-
 namespace rinad{
 namespace mad{
 
@@ -28,18 +26,12 @@ namespace mad{
 /**
 * @brief A background task manager. This runs on the main loop
 */
-class BGTaskManager_ {
+class BGTaskManager {
 
 public:
-	/**
-	* Initialize running state
-	*/
-	void init(void);
-
-	/**
-	* Destroy the running state
-	*/
-	void destroy(void);
+	//Constructors
+	BGTaskManager(void);
+	~BGTaskManager(void);
 
 	//Methods
 	void* run(void* unused);
@@ -47,16 +39,8 @@ public:
 	//Run flag
 	volatile bool keep_running;
 private:
-	//Constructors
-	BGTaskManager_(void);
-	~BGTaskManager_(void);
 
-	friend class Singleton<BGTaskManager_>;
 };
-
-//Singleton instance
-extern Singleton<BGTaskManager_> BGTaskManager;
-
 
 }; //namespace mad
 }; //namespace rinad

@@ -73,11 +73,20 @@ class ResponseHandlerInterface
                             const cdap_rib::con_handle_t &con) = 0;
 };
 
-template<class T>
-class EncoderInterface
+class AbstractEncoder
 {
  public:
-  virtual ~EncoderInterface()
+  virtual ~AbstractEncoder();
+  virtual std::string get_type() const = 0;
+  bool operator=(const AbstractEncoder &other) const;
+  bool operator!=(const AbstractEncoder &other) const;
+};
+
+template<class T>
+class Encoder: public AbstractEncoder
+{
+ public:
+  virtual ~Encoder()
   {
   }
   /// Converts an object to a byte array, if this object is recognized by the encoder
@@ -167,6 +176,7 @@ class BaseRIBObject
   virtual const std::string& get_class() const;
   virtual const std::string& get_name() const;
   virtual long get_instance() const;
+  virtual AbstractEncoder* get_encoder() const = 0;
  protected:
   std::string class_;
   std::string name_;
@@ -182,7 +192,7 @@ class RIBObject : public BaseRIBObject
 {
  public:
   RIBObject(const std::string& clas, long instance, std::string name, T* value,
-            EncoderInterface<T> *encoder)
+            Encoder<T> *encoder)
   {
     name.erase(std::remove_if(name.begin(), name.end(), ::isspace), name.end());
     name_ = name;
@@ -192,7 +202,7 @@ class RIBObject : public BaseRIBObject
     encoder_ = encoder;
   }
   RIBObject(const std::string& clas, long instance, std::string name,
-            cdap_rib::SerializedObject* value, EncoderInterface<T> *encoder)
+            cdap_rib::SerializedObject* value, Encoder<T> *encoder)
   {
     name.erase(std::remove_if(name.begin(), name.end(), ::isspace), name.end());
     name_ = name;
@@ -209,10 +219,14 @@ class RIBObject : public BaseRIBObject
   {
     return value_;
   }
+  AbstractEncoder* get_encoder() const
+  {
+    return encoder_;
+  }
  protected:
   T* value_;
  private:
-  EncoderInterface<T> *encoder_;
+  Encoder<T> *encoder_;
 };
 
 // RIB daemon Interface to be used by RIBObjects
@@ -299,72 +313,80 @@ class RIBDFactory
                              char separator);
 };
 
-class IntEncoder : public rib::EncoderInterface<int>
+class IntEncoder : public rib::Encoder<int>
 {
  public:
   const cdap_rib::SerializedObject* encode(const int &object);
   int* decode(const cdap_rib::SerializedObject &serialized_object) const;
+  std::string get_type() const;
 };
 
-class SIntEncoder : public rib::EncoderInterface<short int>
+class SIntEncoder : public rib::Encoder<short int>
 {
  public:
   const cdap_rib::SerializedObject* encode(const short int &object);
   short int* decode(const cdap_rib::SerializedObject &serialized_object) const;
+  std::string get_type() const;
 };
 
-class LongEncoder : public rib::EncoderInterface<long long>
+class LongEncoder : public rib::Encoder<long long>
 {
  public:
   const cdap_rib::SerializedObject* encode(const long long &object);
   long long* decode(const cdap_rib::SerializedObject &serialized_object) const;
+  std::string get_type() const;
 };
 
-class SLongEncoder : public rib::EncoderInterface<long>
+class SLongEncoder : public rib::Encoder<long>
 {
  public:
   const cdap_rib::SerializedObject* encode(const long &object);
   long* decode(const cdap_rib::SerializedObject &serialized_object) const;
-};
+  std::string get_type() const;};
 
-class StringEncoder : public rib::EncoderInterface<std::string>
+class StringEncoder : public rib::Encoder<std::string>
 {
  public:
   const cdap_rib::SerializedObject* encode(const std::string &object);
   std::string* decode(
       const cdap_rib::SerializedObject &serialized_object) const;
+  std::string get_type() const;
 };
 
-class FloatEncoder : public rib::EncoderInterface<float>
+class FloatEncoder : public rib::Encoder<float>
 {
  public:
   const cdap_rib::SerializedObject* encode(const float &object);
   float* decode(const cdap_rib::SerializedObject &serialized_object) const;
+  std::string get_type() const;
 };
 
-class DoubleEncoder : public rib::EncoderInterface<double>
+class DoubleEncoder : public rib::Encoder<double>
 {
  public:
   const cdap_rib::SerializedObject* encode(const double &object);
   double* decode(const cdap_rib::SerializedObject &serialized_object) const;
+  std::string get_type() const;
 };
 
-class BoolEncoder : public rib::EncoderInterface<bool>
+class BoolEncoder : public rib::Encoder<bool>
 {
  public:
   const cdap_rib::SerializedObject* encode(const bool &object);
   bool* decode(const cdap_rib::SerializedObject &serialized_object) const;
+  std::string get_type() const;
 };
 
 class empty
 {
 };
 
-class EmptyEncoder : public rib::EncoderInterface<empty>
+class EmptyEncoder : public rib::Encoder<empty>
 {
  public:
   const cdap_rib::SerializedObject* encode(const empty &object);
   empty* decode(const cdap_rib::SerializedObject &serialized_object) const;
+  std::string get_type() const;
 };
 
 class IntRIBObject : public rib::RIBObject<int>
