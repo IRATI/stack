@@ -187,10 +187,10 @@ int dtcp_pdu_send(struct dtcp * dtcp, struct pdu * pdu)
         }
 
         return common_efcp_pdu_send(efcp,
-        							dtcp->rmt,
-        							dtcp->conn->destination_address,
-        							dtcp->conn->qos_id,
-        							pdu);
+        			    dtcp->rmt,
+        			    dtcp->conn->destination_address,
+        			    dtcp->conn->qos_id,
+        			    pdu);
 }
 EXPORT_SYMBOL(dtcp_pdu_send);
 

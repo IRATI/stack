@@ -75,10 +75,10 @@ default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
         LOG_DBG("local_soft_irq_pending: %d", local_softirq_pending());
 
         return common_efcp_pdu_send(efcp,
-        							dtp_rmt(dtp),
-        							pci_destination(pdu_pci_get_ro(pdu)),
-        							pci_qos_id(pdu_pci_get_ro(pdu)),
-        							pdu);
+        			    dtp_rmt(dtp),
+        			    pci_destination(pdu_pci_get_ro(pdu)),
+        			    pci_qos_id(pdu_pci_get_ro(pdu)),
+        		            pdu);
 }
 
 static int

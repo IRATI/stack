@@ -161,6 +161,6 @@ seq_num_t             pci_control_my_left_wind_edge(const struct pci * pci);
 seq_num_t             pci_control_last_seq_num_rcvd(const struct pci * pci);
 
 /* Returns -1 if error, 0 if local flow, 1 if remote flow */
-int 				  pci_belongs_to_local_flow(const struct pci * pci);
+int 		      pci_belongs_to_local_flow(const struct pci * pci);
 
 #endif
