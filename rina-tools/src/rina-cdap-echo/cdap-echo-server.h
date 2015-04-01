@@ -1,6 +1,7 @@
 //
 // Echo CDAP Server
 //
+// Addy Bombeke <addy.bombeke@ugent.be>
 // Bernat Gastón <bernat.gaston@i2cat.net>e>
 //
 // This program is free software; you can redistribute it and/or modify
