@@ -231,15 +231,13 @@ static void enable_write(struct cwq * cwq,
         return;
 }
 
-static int pdu_send(struct dt *  dt,
-                    struct rmt * rmt,
-                    address_t    address,
-                    qos_id_t     qos_id,
-                    struct pdu * pdu)
+int dt_pdu_send(struct dt *  dt,
+                struct rmt * rmt,
+                address_t    address,
+                qos_id_t     qos_id,
+                struct pdu * pdu)
 {
-        struct efcp_container * efcpc;
-        cep_id_t                dst_cep_id;
-        struct efcp *           efcp;
+        struct efcp * efcp;
 
         if (!dt)
                 return -1;
@@ -248,29 +246,9 @@ static int pdu_send(struct dt *  dt,
         if (!efcp)
                 return -1;
 
-        /* Destination app is over the same IPCP, acting as loopback */
-        dst_cep_id = efcp_loopback_cep_id(efcp);
-        if (!is_cep_id_ok(dst_cep_id)) {
-                if (rmt_send(rmt, address, qos_id, pdu)) {
-                                LOG_ERR("Problems sending PDU to RMT");
-                                return -1;
-                }
-                return 0;
-        }
-        efcpc = efcp_container_get(efcp);
-        if (!efcpc) {
-                LOG_ERR("Could not retrieve the EFCP container in"
-                "loopback operation");
-                pdu_destroy(pdu);
-                return -1;
-        }
-        if (efcp_container_receive(efcpc, dst_cep_id, pdu)) {
-                LOG_ERR("Problems sending PDU to loopback EFCP");
-                return -1;
-        }
-        return 0;
-
+        return common_efcp_pdu_send(efcp, rmt, address, qos_id, pdu);
 }
+EXPORT_SYMBOL(dt_pdu_send);
 
 void cwq_deliver(struct cwq * queue,
                  struct dt *  dt,
@@ -336,7 +314,7 @@ void cwq_deliver(struct cwq * queue,
                                           pci_sequence_number_get(pci)))
                         LOG_ERR("Problems setting sender left window edge");
 
-                pdu_send(dt, rmt, address, qos_id, pdu);
+                dt_pdu_send(dt, rmt, address, qos_id, pdu);
         }
         spin_unlock(&queue->lock);
 
@@ -538,11 +516,11 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
                         }
 
                         tmp = pdu_dup_ni(cur->pdu);
-                        if (pdu_send(dt,
-                                     rmt,
-                                     pci_destination(pdu_pci_get_ro(tmp)),
-                                     pci_qos_id(pdu_pci_get_ro(tmp)),
-                                     tmp))
+                        if (dt_pdu_send(dt,
+                                        rmt,
+                                        pci_destination(pdu_pci_get_ro(tmp)),
+                                        pci_qos_id(pdu_pci_get_ro(tmp)),
+                                        tmp))
                                 continue;
                 } else
                         return 0;
@@ -650,11 +628,11 @@ static int rtxqueue_rtx(struct rtxqueue * q,
                                 continue;
                         }
                         tmp = pdu_dup_ni(cur->pdu);
-                        if (pdu_send(dt,
-                                     rmt,
-                                     pci_destination(pdu_pci_get_ro(tmp)),
-                                     pci_qos_id(pdu_pci_get_ro(tmp)),
-                                     tmp))
+                        if (dt_pdu_send(dt,
+                                        rmt,
+                                        pci_destination(pdu_pci_get_ro(tmp)),
+                                        pci_qos_id(pdu_pci_get_ro(tmp)),
+                                        tmp))
                                 continue;
                 } else {
                         LOG_DBG("RTX timer: from here PDUs still have time,"
@@ -912,3 +890,52 @@ int rtxq_nack(struct rtxq * q,
 
         return 0;
 }
+
+int common_efcp_pdu_send(struct efcp *      efcp,
+        				 struct rmt *       rmt,
+        				 address_t          address,
+                         qos_id_t           qos_id,
+						 struct pdu *       pdu)
+{
+		const struct pci *		pci;
+		struct efcp_container * efcpc;
+		cep_id_t				dest_cep_id;
+		int    					result;
+
+		if (!pdu)
+				return -1;
+
+		pci = pdu_pci_get_ro(pdu);
+		if (!pci)
+				return -1;
+
+		result = pci_belongs_to_local_flow(pci);
+	    if (result == -1)
+	            return -1;
+
+	    /* Remote flow case */
+	    if (result == 1) {
+	            if (rmt_send(rmt, address, qos_id, pdu)) {
+	            		LOG_ERR("Problems sending PDU to RMT");
+	                    return -1;
+	            }
+	            return 0;
+	    }
+
+	    /* Local flow case */
+	    dest_cep_id = pci_cep_destination(pci);
+	    efcpc = efcp_container_get(efcp);
+	    if (!efcpc) {
+	            LOG_ERR("Could not retrieve the EFCP container in"
+	            "loopback operation");
+	            pdu_destroy(pdu);
+	            return -1;
+	    }
+	    if (efcp_container_receive(efcpc, dest_cep_id, pdu)) {
+	            LOG_ERR("Problems sending PDU to loopback EFCP");
+	            return -1;
+	    }
+
+	    return 0;
+}
+EXPORT_SYMBOL(common_efcp_pdu_send);

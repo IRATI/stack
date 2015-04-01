@@ -40,11 +40,9 @@
 static int
 default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
 {
-        struct dtp *            dtp = ps->dm;
-        struct dt  *            dt;
-        struct efcp *           efcp;
-        struct efcp_container * efcpc;
-        cep_id_t                dst_cep_id;
+        struct dtp *  dtp = ps->dm;
+        struct dt  *  dt;
+        struct efcp * efcp;
 
         if (!dtp) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -76,23 +74,11 @@ default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
 
         LOG_DBG("local_soft_irq_pending: %d", local_softirq_pending());
 
-        /* Destination app is over the same IPCP, acting as loopback */
-        dst_cep_id = efcp_loopback_cep_id(efcp);
-        if (!is_cep_id_ok(dst_cep_id)) {
-                return rmt_send(dtp_rmt(dtp),
-                                pci_destination(pdu_pci_get_ro(pdu)),
-                                pci_qos_id(pdu_pci_get_ro(pdu)),
-                                pdu);
-        }
-        efcpc = efcp_container_get(efcp);
-        if (!efcpc) {
-                LOG_ERR("Could not get the EFCPC in loopback operation");
-                pdu_destroy(pdu);
-                return -1;
-        }
-        return efcp_container_receive(efcpc,
-                                      dst_cep_id,
-                                      pdu);
+        return common_efcp_pdu_send(efcp,
+        							dtp_rmt(dtp),
+        							pci_destination(pdu_pci_get_ro(pdu)),
+        							pci_qos_id(pdu_pci_get_ro(pdu)),
+        							pdu);
 }
 
 static int

@@ -47,7 +47,6 @@ struct efcp {
         struct ipcp_instance *  user_ipcp;
         struct dt *             dt;
         struct efcp_container * container;
-        cep_id_t                loopback_cep_id;
 };
 
 struct efcp_container {
@@ -194,21 +193,10 @@ static struct efcp * efcp_create(void)
         if (!instance)
                 return NULL;
 
-        instance->loopback_cep_id = cep_id_bad();
-
         LOG_DBG("Instance %pK initialized successfully", instance);
 
         return instance;
 }
-
-cep_id_t efcp_loopback_cep_id(struct efcp * efcp)
-{
-        if (!efcp)
-                return cep_id_bad();
-
-        return efcp->loopback_cep_id;
-}
-EXPORT_SYMBOL(efcp_loopback_cep_id);
 
 int efcp_container_unbind_user_ipcp(struct efcp_container * efcpc,
                                     cep_id_t cep_id)
@@ -648,11 +636,6 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         ASSERT(tmp->dt);
         /* FIXME: Initialization of dt required */
 
-        if (tmp->connection->source_address ==
-            tmp->connection->destination_address) {
-                tmp->loopback_cep_id = tmp->connection->destination_cep_id;
-        }
-
         /* FIXME: dtp_create() takes ownership of the connection parameter */
         dtp = dtp_create(tmp->dt,
                          container->rmt,
@@ -857,11 +840,6 @@ int efcp_connection_update(struct efcp_container * container,
         }
         tmp->connection->destination_cep_id = to;
         tmp->user_ipcp = user_ipcp;
-
-        if (tmp->connection->source_address ==
-            tmp->connection->destination_address) {
-                tmp->loopback_cep_id = to;
-        }
 
         LOG_DBG("Connection updated");
         LOG_DBG("  Source address:     %d",

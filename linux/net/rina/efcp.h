@@ -59,7 +59,6 @@ int                     efcp_container_unbind_user_ipcp(struct efcp_container * 
 
 struct efcp;
 
-cep_id_t                efcp_loopback_cep_id(struct efcp * efcp);
 struct efcp *           efcp_container_find(struct efcp_container * container,
                                             cep_id_t                id);
 struct efcp_config *    efcp_container_config(struct efcp_container * c);
