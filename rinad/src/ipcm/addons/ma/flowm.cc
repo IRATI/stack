@@ -259,7 +259,6 @@ void* ActiveWorker::run(void* param){
     message.size_ = bytes_read;
     // FIXME change this when multiple rib versions (need librina rib and cdap refactor)
     rib_factory_->getRIB(1).process_message(message, flow->getPortId());
-		sleep(1);
 	}
 
 	return NULL;
