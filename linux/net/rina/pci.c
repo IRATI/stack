@@ -491,18 +491,3 @@ seq_num_t pci_control_last_seq_num_rcvd(const struct pci * pci)
 { return pci ? pci->control.last_ctrl_seq_num_rcvd : 0; }
 EXPORT_SYMBOL(pci_control_last_seq_num_rcvd);
 
-int pci_belongs_to_local_flow(const struct pci * pci)
-{
-	if (!pci) {
-		LOG_ERR("Bogus PCI, bailing out");
-		return -1;
-	}
-
-	if (pci_source(pci) == pci_destination(pci)) {
-		return 0;
-	} else {
-		return 1;
-	}
-}
-EXPORT_SYMBOL(pci_belongs_to_local_flow);
-

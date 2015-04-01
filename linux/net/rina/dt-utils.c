@@ -900,7 +900,6 @@ int common_efcp_pdu_send(struct efcp * efcp,
         const struct pci *	pci;
 	struct efcp_container * efcpc;
 	cep_id_t		dest_cep_id;
-	int    			result;
 
 	if (!pdu)
 	        return -1;
@@ -909,18 +908,14 @@ int common_efcp_pdu_send(struct efcp * efcp,
 	if (!pci)
 		return -1;
 
-	result = pci_belongs_to_local_flow(pci);
-	if (result == -1)
-	        return -1;
-
 	/* Remote flow case */
-	if (result == 1) {
+	if (pci_source(pci) != pci_destination(pci)) {
 	        if (rmt_send(rmt, address, qos_id, pdu)) {
 	                LOG_ERR("Problems sending PDU to RMT");
 	                return -1;
 	        }
 	        return 0;
-	    }
+	}
 
 	/* Local flow case */
 	dest_cep_id = pci_cep_destination(pci);
