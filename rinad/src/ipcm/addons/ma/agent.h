@@ -18,6 +18,7 @@
 #include <librina/patterns.h>
 
 #include "../../addon.h"
+#include "flowm.h"
 
 //Name of the MAD addon
 #define MAD_NAME "mad"
@@ -60,8 +61,6 @@ class BGTaskManager;
 * @brief Management Agent singleton class
 */
 class ManagementAgent : public Addon{
-  friend unsigned int FlowManager::spawnWorker(Worker** w);
-
 public:
 
 	//Constructor and destructor
@@ -96,6 +95,8 @@ public:
 	* modified at runtime.
 	*/
 	void addManagerConnection(AppConnection& con);
+
+	RIBFactory* get_rib() const;
 
 private:
 

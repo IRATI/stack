@@ -40,7 +40,7 @@ public:
 	/**
 	* Constructor
 	*/
-	Worker(FlowManager* fm, RIBFactory rib_factory) : flow_manager(fm), rib_factory_(rib_factory){};
+	Worker(FlowManager* fm, RIBFactory *rib_factory) : flow_manager(fm), rib_factory_(rib_factory){};
 
 	/**
 	* Destructor
@@ -136,7 +136,7 @@ protected:
 	FlowManager* flow_manager;
 
 	//RIBFactory
-	RIBFactory rib_factory_;
+	RIBFactory* rib_factory_;
 };
 
 /**
@@ -148,7 +148,7 @@ public:
 	/**
 	* Constructor
 	*/
-	ActiveWorker(FlowManager* fm, RIBFactory rib_factory, const AppConnection& _con) : Worker(fm, rib_factory){
+	ActiveWorker(FlowManager* fm, RIBFactory* rib_factory, const AppConnection& _con) : Worker(fm, rib_factory){
 		con = _con;
 	};
 
@@ -245,7 +245,7 @@ rina::Flow* ActiveWorker::allocateFlow(){
 // Flow active worker
 void* ActiveWorker::run(void* param){
 
-  (void*) param;
+  (void) param;
   //Allocate the flow
 	rina::Flow* flow =allocateFlow();
 
@@ -257,7 +257,8 @@ void* ActiveWorker::run(void* param){
     rina::cdap_rib::SerializedObject message;
     message.message_ = buffer;
     message.size_ = bytes_read;
-    rib->process_message(message, flow->getPortId());
+    // FIXME change this when multiple rib versions (need librina rib and cdap refactor)
+    rib_factory_->getRIB(1).process_message(message, flow->getPortId());
 		sleep(1);
 	}
 
@@ -345,7 +346,7 @@ void FlowManager::runIOLoop(){
 }
 
 //Constructors destructors(singleton)
-FlowManager::FlowManager(ManagementAgent* agent_) : next_id(1), agent(agent_){
+FlowManager::FlowManager(ManagementAgent* agent) : next_id(1), agent_(agent){
 	LOG_DBG("Initialized");
 }
 
@@ -368,14 +369,14 @@ FlowManager::~FlowManager(){
 
 //Connect manager
 unsigned int FlowManager::connectTo(const AppConnection& con){
-	Worker* w = new ActiveWorker(this, con);
+	Worker* w = new ActiveWorker(this, agent_->get_rib(), con);
 
 	//Launch worker and return handler
 	return spawnWorker(&w);
 }
 
 rina::ApplicationProcessNamingInformation FlowManager::getAPInfo(void){
-	return agent->getAPInfo();
+	return agent_->getAPInfo();
 }
 
 //Disconnect

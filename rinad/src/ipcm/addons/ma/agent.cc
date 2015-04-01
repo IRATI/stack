@@ -133,6 +133,11 @@ void ManagementAgent::addManagerConnection(AppConnection& con){
 	connections.push_back(con);
 }
 
+RIBFactory* ManagementAgent::get_rib() const
+{
+  return rib_factory;
+}
+
 //Initialization and destruction routines
 ManagementAgent::ManagementAgent(const std::string& params) : Addon(MAD_NAME){
 
