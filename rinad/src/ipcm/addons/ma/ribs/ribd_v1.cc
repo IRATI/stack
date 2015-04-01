@@ -1,6 +1,6 @@
 #include "ribd_v1.h"
 
-#define RINA_PREFIX "mad.ribd_v1"
+#define RINA_PREFIX "ipcm.mad.ribd_v1"
 #include <librina/logs.h>
 #include <librina/exceptions.h>
 

@@ -38,7 +38,7 @@ class Manager
   rina::ApplicationProcessNamingInformation name_;  ///< The IPC Process name of the neighbor
   rina::ApplicationProcessNamingInformation supporting_dif_name_;  ///< The name of the supporting DIF used to exchange data
   std::list<rina::ApplicationProcessNamingInformation> supporting_difs_;  ///< The names of all the supporting DIFs of this neighbor
-  unsigned int address_;  ///< The address
+  //unsigned int address_;  ///< The address
 };
 
 /// @class CACEPStateMachine
@@ -224,7 +224,7 @@ class CommunicationManager
   bool initiateCommunicationSession();
 
  private:
-  CACEPManager *cacep_manager_;  ///< The CACEP manager.
+  //CACEPManager *cacep_manager_;  ///< The CACEP manager.
   EnrollmentManager enrollment_manager_;  /// the enrollment manager.
   Manager neighbor_;
 };
