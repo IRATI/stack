@@ -37,6 +37,7 @@ void ManagementAgent::bootstrapNMSDIFs(){
 //Registers the application in the IPCManager
 void ManagementAgent::reg(){
 
+#if 0
         unsigned int seqnum;
 	rina::ApplicationRegistrationInformation ari;
 	std::list<std::string>::const_iterator it;
@@ -95,6 +96,7 @@ void ManagementAgent::reg(){
 		//TODO FIXME XXX: call ipcmanager to register MA to this DIF
 	}
 	*/
+#endif
 }
 
 void ManagementAgent::connect(void){
@@ -133,8 +135,16 @@ void ManagementAgent::addManagerConnection(AppConnection& con){
 	connections.push_back(con);
 }
 
+//Process event
+void ManagementAgent::process_event(rina::IPCEvent** event){
+	flow_manager->process_event(event);
+}
+
+
+
 //Initialization and destruction routines
-ManagementAgent::ManagementAgent(const std::string& params) : Addon(MAD_NAME){
+ManagementAgent::ManagementAgent(const std::string& params) :
+							AppAddon(MAD_NAME){
 
 	//Nice trace
 	LOG_INFO("Initializing components...");
@@ -176,12 +186,6 @@ ManagementAgent::ManagementAgent(const std::string& params) : Addon(MAD_NAME){
 
 	//Perform connection to the Manager(s)
 	connect();
-
-	/*
-	* Run the bg task manager loop in the main thread to attend
-	* flow events
-	*/
-	flow_manager->runIOLoop();
 }
 
 ManagementAgent::~ManagementAgent(){

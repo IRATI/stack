@@ -1349,11 +1349,6 @@ void IPCManager_::run(){
 		rina::IPCEvent::eventTypeToString(event->eventType).c_str(),
 							event->sequenceNumber);
 
-		if (!event) {
-			std::cerr << "Null event received" << std::endl;
-			continue;
-		}
-
 		try {
 			switch(event->eventType){
 				case rina::FLOW_ALLOCATION_REQUESTED_EVENT:
@@ -1485,6 +1480,12 @@ void IPCManager_::run(){
         				DOWNCAST_DECL(event, rina::PluginLoadResponseEvent, e);
 					ipc_process_plugin_load_response_handler(e);
 					}
+					break;
+
+				//Addon specific events
+				default:
+					Addon::distribute_event(event);
+					continue;
 					break;
 			}
 

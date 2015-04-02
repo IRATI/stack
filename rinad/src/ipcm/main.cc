@@ -70,6 +70,7 @@ int wrapped_main(int argc, char * argv[])
 	std::string conf;
 	std::string logfile;
 	std::string loglevel;
+	bool dump;
 
 	// Wrap everything in a try block.  Do this every time,
 	// because exceptions will be thrown for problems.
@@ -100,9 +101,16 @@ int wrapped_main(int argc, char * argv[])
 				     false,
 				     "INFO",
 				     "string");
+		TCLAP::SwitchArg
+			dump_arg("d",
+				     "dump",
+				     "Dump configuration on startup",
+				     false);
+
 		cmd.add(addons_arg);
 		cmd.add(conf_arg);
 		cmd.add(loglevel_arg);
+		cmd.add(dump_arg);
 
 		// Parse the args.
 		cmd.parse(argc, argv);
@@ -111,6 +119,7 @@ int wrapped_main(int argc, char * argv[])
 		addons = addons_arg.getValue();
 		conf     = conf_arg.getValue();
 		loglevel = loglevel_arg.getValue();
+		dump = dump_arg.getValue();
 
 		LOG_DBG("Config file is: %s", conf.c_str());
 
@@ -131,7 +140,8 @@ int wrapped_main(int argc, char * argv[])
 	rinad::IPCManager->init(loglevel);
 
 	//Dump the config
-	rinad::IPCManager->dumpConfig();
+	if(dump)
+		rinad::IPCManager->dumpConfig();
 
 	//Load addons
 	rinad::IPCManager->load_addons(addons);

@@ -59,7 +59,7 @@ class BGTaskManager;
 /**
 * @brief Management Agent singleton class
 */
-class ManagementAgent : public Addon{
+class ManagementAgent : public AppAddon{
 
 public:
 
@@ -95,6 +95,10 @@ public:
 	* modified at runtime.
 	*/
 	void addManagerConnection(AppConnection& con);
+
+protected:
+	//Process event
+	virtual void process_event(rina::IPCEvent** event);
 
 private:
 

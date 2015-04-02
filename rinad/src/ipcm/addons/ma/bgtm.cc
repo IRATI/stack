@@ -33,7 +33,7 @@ void* BGTaskManager::run(void* unused){
 		//TODO: launch monitoring and other bg tasks
 
 		sleep(1); //XXX: remove
-		fprintf(stderr, "Iteration\n");
+		//fprintf(stderr, "Iteration\n");
 	}
 
 	return NULL;
