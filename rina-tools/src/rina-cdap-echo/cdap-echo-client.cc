@@ -31,7 +31,6 @@
 
 #define RINA_PREFIX     "cdap-echo-client"
 #include <librina/logs.h>
-#include <librina/cdap_rib_structures.h>
 #include <librina/cdap_v2.h>
 
 #include "cdap-echo-client.h"

@@ -27,7 +27,7 @@
 #include <signal.h>
 #include <librina/cdap_v2.h>
 
-#include "cdap-echo-application.h"
+#include "common/cdap-echo-application.h"
 
 class ConnectionCallback : public rina::cdap::CDAPCallbackInterface
 {
