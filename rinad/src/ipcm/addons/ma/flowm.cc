@@ -218,6 +218,8 @@ rina::Flow* ActiveWorker::allocateFlow(){
 	//Wait for the event
 	try{
 		event = flow_manager->wait_event(seqnum);
+		if(!event)
+			return NULL;
 		LOG_DBG("[w:%u] Got event %u, waiting for %u", id,
 						event->sequenceNumber,
 						seqnum);
@@ -307,10 +309,8 @@ void FlowManager::process_event(rina::IPCEvent** event_){
 			//This is likely because the event arrived before the
 			//callee has invoked wait()
 			//Store and continue
-			
-
-
-			event_ = NULL;
+			store_event(event);
+			*event_ = NULL;
 			return; //Do not delete
 		case rina::FLOW_ALLOCATION_REQUESTED_EVENT:
 			//TODO: add pasive worker
@@ -343,7 +343,7 @@ void FlowManager::process_event(rina::IPCEvent** event_){
 	}
 
 	delete event;
-	event_ = NULL;
+	*event_ = NULL;
 }
 
 //Constructors destructors(singleton)
@@ -387,27 +387,6 @@ void FlowManager::disconnectFrom(unsigned int worker_id){
 	joinWorker(worker_id);
 }
 
-
-// Checks whether an operation has already finalised
-rina::IPCEvent* FlowManager::get_event(unsigned int seqnum){
-
-	rina::IPCEvent* event = NULL;
-
-	//Lock to access the map
-	//NOTE: this is confusing and ugly as hell. wait_cond is also Lockable
-	//(mutex).
-	//Blame the author who made ConditionVariable inherit from
-	//Lockable(mutex) instead of mutex being a member.
-	rina::ScopedLock lock(wait_cond);
-
-	if(pending_events.find(seqnum) != pending_events.end()){
-		event = pending_events[seqnum];
-		pending_events.erase(seqnum);
-	}
-
-	return event;
-}
-
 //Stores and notifies an event
 void FlowManager::store_event(rina::IPCEvent* event){
 
@@ -439,6 +418,26 @@ void FlowManager::store_event(rina::IPCEvent* event){
 	};
 
 	wait_cond.unlock();
+}
+
+// Checks whether an operation has already finalised
+rina::IPCEvent* FlowManager::get_event(unsigned int seqnum){
+
+	rina::IPCEvent* event = NULL;
+
+	//Lock to access the map
+	//NOTE: this is confusing and ugly as hell. wait_cond is also Lockable
+	//(mutex).
+	//Blame the author who made ConditionVariable inherit from
+	//Lockable(mutex) instead of mutex being a member.
+	rina::ScopedLock lock(wait_cond);
+
+	if(pending_events.find(seqnum) != pending_events.end()){
+		event = pending_events[seqnum];
+		pending_events.erase(seqnum);
+	}
+
+	return event;
 }
 
 //Blocks until the operation has finalised, or hard timeout is reached
