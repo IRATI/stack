@@ -1509,7 +1509,7 @@ enum {
 #define IXGBE_VMVIR_VLANA_DEFAULT 0x40000000 /* Always use default VLAN */
 #define IXGBE_VMVIR_VLANA_NEVER   0x80000000 /* Never insert VLAN tag */
 
-#define IXGBE_ETHERNET_IEEE_VLAN_TYPE ETH_P_8021Q  /* 802.1q protocol */
+#define IXGBE_ETHERNET_IEEE_VLAN_TYPE 0x8100  /* 802.1q protocol */
 
 /* STATUS Bit Masks */
 #define IXGBE_STATUS_LAN_ID         0x0000000C /* LAN ID */

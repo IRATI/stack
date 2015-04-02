@@ -478,7 +478,7 @@ void e1000_io_write(struct e1000_hw *hw, unsigned long port, u32 value);
 #define VLAN_TAG_SIZE  4	/* 802.3ac tag (not DMAed) */
 
 /* Ethertype field values */
-#define ETHERNET_IEEE_VLAN_TYPE ETH_P_8021Q	/* 802.3ac packet */
+#define ETHERNET_IEEE_VLAN_TYPE 0x8100	/* 802.3ac packet */
 #define ETHERNET_IP_TYPE        0x0800	/* IP packets */
 #define ETHERNET_ARP_TYPE       0x0806	/* Address Resolution Protocol (ARP) */
 
