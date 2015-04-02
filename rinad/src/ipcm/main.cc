@@ -4,6 +4,7 @@
 //    Francesco Salvestrini <f.salvestrini@nextworks.it>
 //    Vincenzo Maffione     <v.maffione@nextworks.it>
 //    Sander Vrijders       <sander.vrijders@intec.ugent.be>
+//    Marc Sune             <marc.sune (at) bisdn.de>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by

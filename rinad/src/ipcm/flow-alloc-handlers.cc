@@ -2,6 +2,8 @@
  * IPC Manager - Flow allocation/deallocation
  *
  *    Vincenzo Maffione     <v.maffione@nextworks.it>
+ *    Marc Sune             <marc.sune (at) bisdn.de>
+ *    Eduard Grasa          <eduard.grasa@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

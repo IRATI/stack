@@ -2,6 +2,8 @@
  * IPC Manager
  *
  *    Vincenzo Maffione <v.maffione@nextworks.it>
+ *    Eduard Grasa          <eduard.grasa@i2cat.net>
+ *    Marc Sune         <marc.sune (at) bisdn.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
