@@ -72,16 +72,13 @@ namespace rinad {
 //Singleton instance
 Singleton<IPCManager_> IPCManager;
 
-IPCManager_::IPCManager_() : script(NULL), console(NULL){ }
+IPCManager_::IPCManager_(){
+
+}
 
 IPCManager_::~IPCManager_()
 {
-	if (console)
-		delete console;
 
-	//TODO: Maybe we should join here
-	if (script)
-		delete script;
 }
 
 void IPCManager_::init(const std::string& loglevel)
@@ -106,39 +103,13 @@ void IPCManager_::init(const std::string& loglevel)
 	}
 }
 
-ipcm_res_t
-IPCManager_::start_script_worker()
-{
-	if (script)
-		return IPCM_FAILURE;
-
-	rina::ThreadAttributes ta;
-	script = new rina::Thread(&ta, script_function, this);
-
-	return IPCM_SUCCESS;
-}
-
-#if 0
-ipcm_res_t
-IPCManager_::start_console_worker()
-{
-	if (console)
-		return IPCM_FAILURE;
-
-	rina::ThreadAttributes ta;
-	console = new IPCMConsole(ta, config.local.consolePort);
-
-	return IPCM_SUCCESS;
-}
-#endif
-
 void
 IPCManager_::load_addons(const std::string& addon_list,
 						const std::string& params){
 	std::string al = addon_list;
 
 	if(al == "")
-		al = std::string("console");
+		al = std::string("console, scripting");
 
 	//Convert the list of addons to lowercase
 	std::transform(al.begin(), al.end(), al.begin(), ::tolower);

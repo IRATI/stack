@@ -133,12 +133,8 @@ int wrapped_main(int argc, char * argv[])
 	//Dump the config
 	rinad::IPCManager->dumpConfig();
 
-	//Load addons
+	//Load addons TODO parse them
 	rinad::IPCManager->load_addons(std::string(""), std::string(""));
-
-	//TODO make this configurable
-	//rinad::IPCManager->start_console_worker();
-	rinad::IPCManager->start_script_worker();
 
 	//Run the loop
 	rinad::IPCManager->run();

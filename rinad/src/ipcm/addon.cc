@@ -18,17 +18,17 @@ namespace rinad {
 Addon* Addon::factory(rinad::RINAConfiguration& conf, const std::string& name,
 						const std::string& params){
 
-	Addon* addon;
+	Addon* addon = NULL;
 
 	try{
 		//TODO this is a transitory solution. A proper auto-registering
 		// to the factory would be the right way to go
 		if(name == "mad"){
 			addon = new mad::ManagementAgent(params);
-			return addon;
 		}else if(name == "console"){
 			addon = new IPCMConsole(conf.local.consolePort);
-			return addon;
+		}else if(name == "scripting"){
+			addon = new ScriptingEngine();
 		}else{
 			//TODO add other types
 			LOG_EMERG("Uknown addon name '%s'. Ignoring...", name.c_str());
@@ -37,7 +37,7 @@ Addon* Addon::factory(rinad::RINAConfiguration& conf, const std::string& name,
 	}catch(...){
 		LOG_EMERG("Unable to bootstrap addon '%s'", name.c_str());
 	}
-	return NULL;
+	return addon;
 }
 
 

@@ -254,19 +254,6 @@ public:
 	//
 	void init(const std::string& loglevel);
 
-//-------------------------------------- REMOVE
-	//
-	// Start the script worker thread
-	//
-	ipcm_res_t start_script_worker();
-#if 0
-	//
-	// Start the console worker thread
-	//
-	ipcm_res_t start_console_worker();
-#endif
-//-------------------------------------- REMOVE
-
 	//
 	// Load the specified addons
 	//
@@ -745,14 +732,6 @@ protected:
 
 	// RINA configuration internal state
 	rinad::RINAConfiguration config;
-
-	//Script thread
-	rina::Thread *script;
-
-	//IPCM Console instance
-	IPCMConsole *console;
-
-	//TODO: map of addons
 
 	//Current logging level
 	std::string log_level_;

@@ -33,10 +33,20 @@
 #include <cerrno>
 #include <sstream>
 
+#include "../addon.h"
+
 namespace rinad {
 
-//TODO: use addon class
-void * script_function(void *opaque);
 
-}
+class ScriptingEngine : public Addon{
+
+public:
+	ScriptingEngine(void);
+	virtual ~ScriptingEngine(void);
+
+
+};
+
+} //namespace rinad
+
 #endif  /* __IPCM_SCRIPTING_H__ */
