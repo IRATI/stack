@@ -27,7 +27,7 @@
 #include <librina/librina.h>
 #include <librina/cdap_v2.h>
 
-#include "common/cdap-echo-application.h"
+#include "application.h"
 
 class Client;
 
@@ -68,5 +68,7 @@ class Client : public Application, public rina::cdap::CDAPCallbackInterface {
   rina::cdap_rib::con_handle_t con_;
   unsigned long count_;
   bool keep_running_;
+  const unsigned int max_sdu_size_in_bytes = 10000;
+
 };
 #endif//CLIENT_HPP
