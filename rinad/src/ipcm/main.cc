@@ -66,10 +66,10 @@ void handler(int signum)
 
 int wrapped_main(int argc, char * argv[])
 {
+	std::string addons;
 	std::string conf;
 	std::string logfile;
 	std::string loglevel;
-	unsigned int wait_time;
 
 	// Wrap everything in a try block.  Do this every time,
 	// because exceptions will be thrown for problems.
@@ -77,6 +77,14 @@ int wrapped_main(int argc, char * argv[])
 	try {
 		// Define the command line object.
 		TCLAP::CmdLine cmd("IPC Manager", ' ', PACKAGE_VERSION);
+
+		TCLAP::ValueArg<std::string>
+			addons_arg("a",
+				 "addons",
+				 "Load listed addons; default \"console, scripting\"",
+				 false,
+				 "console, scripting",
+				 "string");
 
 		TCLAP::ValueArg<std::string>
 			conf_arg("c",
@@ -92,25 +100,17 @@ int wrapped_main(int argc, char * argv[])
 				     false,
 				     "INFO",
 				     "string");
-		TCLAP::ValueArg<unsigned int>
-			wait_time_arg("w",
-				     "wait-time",
-				     "Maximum time (in seconds) to wait for an event response",
-				     false,
-				     10,
-				     "unsigned int");
-
+		cmd.add(addons_arg);
 		cmd.add(conf_arg);
 		cmd.add(loglevel_arg);
-		cmd.add(wait_time_arg);
 
 		// Parse the args.
 		cmd.parse(argc, argv);
 
 		// Get the value parsed by each arg.
+		addons = addons_arg.getValue();
 		conf     = conf_arg.getValue();
 		loglevel = loglevel_arg.getValue();
-		wait_time = wait_time_arg.getValue();
 
 		LOG_DBG("Config file is: %s", conf.c_str());
 
@@ -133,8 +133,8 @@ int wrapped_main(int argc, char * argv[])
 	//Dump the config
 	rinad::IPCManager->dumpConfig();
 
-	//Load addons TODO parse them
-	rinad::IPCManager->load_addons(std::string(""), std::string(""));
+	//Load addons
+	rinad::IPCManager->load_addons(addons);
 
 	//Run the loop
 	rinad::IPCManager->run();

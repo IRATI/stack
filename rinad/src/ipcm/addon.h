@@ -56,8 +56,7 @@ public:
 	* Factory
 	*/
 	static Addon* factory(rinad::RINAConfiguration& conf,
-						const std::string& name,
-						const std::string& params);
+						const std::string& name);
 
 private:
 

@@ -104,12 +104,9 @@ void IPCManager_::init(const std::string& loglevel)
 }
 
 void
-IPCManager_::load_addons(const std::string& addon_list,
-						const std::string& params){
-	std::string al = addon_list;
+IPCManager_::load_addons(const std::string& addon_list){
 
-	if(al == "")
-		al = std::string("console, scripting");
+	std::string al = addon_list;
 
 	//Convert the list of addons to lowercase
 	std::transform(al.begin(), al.end(), al.begin(), ::tolower);
@@ -121,7 +118,7 @@ IPCManager_::load_addons(const std::string& addon_list,
 		//Remove whitespaces
 		t.erase(std::remove_if( t.begin(), t.end(), ::isspace ),
 								t.end() );
-		Addon* addon = Addon::factory(config, t, params);
+		Addon* addon = Addon::factory(config, t);
 
 		if(!addon){
 			LOG_CRIT("Unable to bootstrap addon '%s'. Aborting...",
