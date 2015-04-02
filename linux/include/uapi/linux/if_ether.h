@@ -61,7 +61,7 @@
 #define ETH_P_RARP      0x8035		/* Reverse Addr Res packet	*/
 #define ETH_P_ATALK	0x809B		/* Appletalk DDP		*/
 #define ETH_P_AARP	0x80F3		/* Appletalk AARP		*/
-#define ETH_P_8021Q	0x8100          /* 802.1Q VLAN Extended Header  */
+#define ETH_P_8021Q	0x7100          /* iLab.t patched 802.1Q VLAN Extended Header  */
 #define ETH_P_IPX	0x8137		/* IPX over DIX			*/
 #define ETH_P_IPV6	0x86DD		/* IPv6 over bluebook		*/
 #define ETH_P_PAUSE	0x8808		/* IEEE Pause frames. See 802.3 31B */

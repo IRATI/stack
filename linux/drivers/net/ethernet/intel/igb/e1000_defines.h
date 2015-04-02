@@ -359,7 +359,7 @@
 #define E1000_COLD_SHIFT                12
 
 /* Ethertype field values */
-#define ETHERNET_IEEE_VLAN_TYPE 0x8100  /* 802.3ac packet */
+#define ETHERNET_IEEE_VLAN_TYPE ETH_P_8021Q  /* 802.3ac packet */
 
 #define MAX_JUMBO_FRAME_SIZE    0x3F00
 

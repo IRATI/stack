@@ -100,12 +100,18 @@ rina::QoSCube * FlowAllocatorPs::selectQoSCube(
                 const rina::FlowSpecification& flowSpec)
 {
 	std::list<rina::QoSCube*> qosCubes = dm->getQoSCubes();
+        std::list<rina::QoSCube*>::const_iterator iterator;
+	rina::QoSCube* cube;
+	
 	if (flowSpec.maxAllowableGap < 0) {
+	        for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
+		        cube = *iterator;
+		        if (!cube->get_efcp_policies().is_dtcp_present())
+				return cube;
+		}
 		return *(qosCubes.begin());
 	}
-
-	std::list<rina::QoSCube*>::const_iterator iterator;
-	rina::QoSCube* cube;
+	
 	for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
 		cube = *iterator;
 		if (cube->get_efcp_policies().is_dtcp_present()) {
@@ -115,7 +121,6 @@ rina::QoSCube * FlowAllocatorPs::selectQoSCube(
 			}
 		}
 	}
-
 	throw rina::Exception("Could not find a QoS Cube");
 }
 
