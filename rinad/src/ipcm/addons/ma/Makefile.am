@@ -6,28 +6,22 @@
 
 SUBDIRS      = ribs
 
-EXTRA_DIST   =
-CLEANFILES   =
+noinst_LTLIBRARIES = libaddons_ma.la
 
-sbin_PROGRAMS = mad
-
-mad_SOURCES  = 					\
+libaddons_ma_la_SOURCES  = 			\
 	agent.cc				\
 	bgtm.cc					\
 	confm.cc				\
 	flowm.cc				\
-	ribf.cc					\
-	commm.cc				\
-	main.cc
+	ribf.cc					
 
-mad_CPPFLAGS =					\
+libaddons_ma_la_CPPFLAGS =			\
 	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)			\
-	-I$(srcdir)/../			\
-	-I$(srcdir)/../common 	
+	-I$(srcdir)/../				\
+	-I$(srcdir)/../common
 
-mad_LDADD = 					\
+libaddons_ma_la_LIBADD = 			\
 	ribs/librinad_ma_ribs.la		\
-	$(builddir)/../common/librinad.la	\
 	$(LIBRINA_LIBS)
 

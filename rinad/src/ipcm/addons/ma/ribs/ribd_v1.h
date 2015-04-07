@@ -11,11 +11,13 @@
 
 #include <librina/rib_v2.h>
 #include <librina/patterns.h>
+#include <librina/common.h>
 
 namespace rinad{
 namespace mad{
+namespace rib_v1{
 
-class RespHandler : public rina::rib::ResponseHandlerInterface
+class RIBRespHandler_v1 : public rina::rib::ResponseHandlerInterface
 {
   void createResponse(const rina::cdap_rib::res_info_t &res,
                       const rina::cdap_rib::con_handle_t &con);
@@ -33,7 +35,7 @@ class RespHandler : public rina::rib::ResponseHandlerInterface
                     const rina::cdap_rib::con_handle_t &con);
 };
 
-class ConHandler : public rina::cacep::AppConHandlerInterface
+class RIBConHandler_v1 : public rina::cacep::AppConHandlerInterface
 {
   void connect(int message_id, const rina::cdap_rib::con_handle_t &con);
   void connectResponse(const rina::cdap_rib::res_info_t &res,
@@ -43,41 +45,11 @@ class ConHandler : public rina::cacep::AppConHandlerInterface
                        const rina::cdap_rib::con_handle_t &con);
 };
 
-class InstanceGenerator
-{
- public:
-  InstanceGenerator()
-  {
-    id_ = 0;
-  }
-  long get_id()
-  {
-    id_++;
-    return id_;
-  }
- private:
-  long id_;
-};
+void initiateRIB(rina::rib::RIBDNorthInterface* ribd);
 
+extern Singleton<rina::ConsecutiveUnsignedIntegerGenerator> InstanceGenerator;
 
-class RIBDaemonv1_
-{
-  friend class Singleton<RIBDaemonv1_>;
- public:
-  rina::rib::ResponseHandlerInterface* getRespHandler();
-  rina::cacep::AppConHandlerInterface* getConnHandler();
-  void initiateRIB(rina::rib::RIBDNorthInterface* ribd);
- private:
-  RIBDaemonv1_();
-  ~RIBDaemonv1_();
-  rina::rib::ResponseHandlerInterface* resp_handler_;
-  rina::cacep::AppConHandlerInterface* conn_handler_;
-  InstanceGenerator intance_gen_;
-};
-
-//Singleton instance
-extern Singleton<RIBDaemonv1_> RIBDaemonv1;
-
+}; //namespace rib_v1
 }; //namespace mad
 }; //namespace rinad
 

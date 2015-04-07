@@ -130,6 +130,17 @@ IPCManager_::start_console_worker()
 	return IPCM_SUCCESS;
 }
 
+ipcm_res_t
+IPCManager_::load_addons(const std::string& addons, const std::string& params){
+
+	//TODO: remove this
+	std::string mad = "mad";
+
+	Addon* addon = Addon::factory(mad, params);
+
+	(void)addon;
+}
+
 /*
 *
 * Public API

@@ -7,7 +7,7 @@
 #include "ribf.h"
 #include "ribs/ribd_v1.h"
 
-#define RINA_PREFIX "mad"
+#define RINA_PREFIX "ipcm.mad"
 #include <librina/logs.h>
 
 // std libraries
@@ -16,16 +16,13 @@
 namespace rinad {
 namespace mad {
 
-//Singleton instance
-Singleton<ManagementAgent_> ManagementAgent;
-
 //
 // Private methods
 //
 
 
 //Creates the NMS DIFs required by the MA
-void ManagementAgent_::bootstrapNMSDIFs(){
+void ManagementAgent::bootstrapNMSDIFs(){
 	//TODO FIXME XXX
 	std::list<std::string>::const_iterator it;
 
@@ -38,7 +35,7 @@ void ManagementAgent_::bootstrapNMSDIFs(){
 
 }
 //Registers the application in the IPCManager
-void ManagementAgent_::reg(){
+void ManagementAgent::reg(){
 
         unsigned int seqnum;
 	rina::ApplicationRegistrationInformation ari;
@@ -100,7 +97,7 @@ void ManagementAgent_::reg(){
 	*/
 }
 
-void ManagementAgent_::connect(void){
+void ManagementAgent::connect(void){
 
 	unsigned int w_id;
 	std::list<AppConnection>::iterator it;
@@ -115,7 +112,7 @@ void ManagementAgent_::connect(void){
 
 		//Instruct flow manager to bootstrap an active connection
 		//worker
-		w_id = FlowManager->connectTo(*it);
+		w_id = flow_manager->connectTo(*it);
 
 		//TODO: store this
 		(void)w_id;
@@ -127,19 +124,22 @@ void ManagementAgent_::connect(void){
 //
 
 //Add NMS DIF
-void ManagementAgent_::addNMSDIF(std::string& difName){
+void ManagementAgent::addNMSDIF(std::string& difName){
 	nmsDIFs.push_back(difName);
 }
 
 //Add Manager connection
-void ManagementAgent_::addManagerConnection(AppConnection& con){
+void ManagementAgent::addManagerConnection(AppConnection& con){
 	connections.push_back(con);
 }
 
+RIBFactory* ManagementAgent::get_rib() const
+{
+  return rib_factory;
+}
+
 //Initialization and destruction routines
-void ManagementAgent_::init(const std::string& conf,
-					const std::string& cl_logfile,
-					const std::string& cl_loglevel){
+ManagementAgent::ManagementAgent(const std::string& params) : Addon(MAD_NAME){
 
 	//Nice trace
 	LOG_INFO("Initializing components...");
@@ -147,7 +147,7 @@ void ManagementAgent_::init(const std::string& conf,
 	//ConfManager must be initialized first, to
 	//proper configure the logging according to the cli level
 	//or the config file
-	ConfManager->init(conf, cl_logfile, cl_loglevel);
+	conf_manager = new ConfManager(params);
 
 	/*
 	* Initialize subsystems
@@ -155,21 +155,23 @@ void ManagementAgent_::init(const std::string& conf,
 	//Create RIBs
 	//TODO charge from configuration
 	std::list<uint64_t> supported_versions;
-	RIBFactory->init(supported_versions);
+	uint64_t v1 = 1;
+	supported_versions.push_back(v1);
+	rib_factory = new RIBFactory(supported_versions);
 
 	//TODO
 	//FlowManager
-	FlowManager->init();
+	flow_manager = new FlowManager(this);
 
 
 	//Background task manager; MUST be the last one
 	//Will not return until SIGINT is sent
-	BGTaskManager->init();
+	bg_task_manager = new BGTaskManager();
 
 	/*
 	* Load configuration
 	*/
-	ConfManager->configure();
+	conf_manager->configure(*this);
 
 	//Bootstrap necessary NMS DIFs and shim-DIFs
 	bootstrapNMSDIFs();
@@ -186,10 +188,10 @@ void ManagementAgent_::init(const std::string& conf,
 	* Run the bg task manager loop in the main thread to attend
 	* flow events
 	*/
-	FlowManager->runIOLoop();
+	flow_manager->runIOLoop();
 }
 
-void ManagementAgent_::destroy(){
+ManagementAgent::~ManagementAgent(){
 	/*
 	* Destroy all subsystems
 	*/
@@ -197,25 +199,17 @@ void ManagementAgent_::destroy(){
 	//TODO
 
 	//FlowManager
-	FlowManager->destroy();
+	delete flow_manager;
 
 	//Bg
-	BGTaskManager->destroy();
+	delete bg_task_manager;
 
 	//Conf Manager
-	ConfManager->destroy();
+	delete conf_manager;
 
 	LOG_INFO("Goodbye!");
 }
 
-
-//Constructors destructors (singleton only)
-ManagementAgent_::ManagementAgent_(){
-}
-
-
-ManagementAgent_::~ManagementAgent_(void){
-}
 
 }; //namespace mad
 }; //namespace rinad
