@@ -134,13 +134,9 @@ void Client::cacep()
   src.ae_inst_ = flow_->getLocalApplicationName().entityInstance;
   cdap_rib::dest_info_t dest;
   dest.ap_name_ = flow_->getRemoteApplcationName().processName;
-  ;
   dest.ae_name_ = flow_->getRemoteApplcationName().entityName;
-  ;
   dest.ap_inst_ = flow_->getRemoteApplcationName().processInstance;
-  ;
   dest.ae_inst_ = flow_->getRemoteApplcationName().entityInstance;
-  ;
   cdap_rib::auth_info auth;
   auth.auth_mech_ = auth.AUTH_NONE;
 
@@ -228,9 +224,9 @@ void Client::release()
   cdap_rib::SerializedObject message;
   message.message_ = buffer;
   message.size_ = bytes_read;
-  std::cout<<"Esperant el release response"<<std::endl;
+  std::cout<<"Waiting for release response"<<std::endl;
   cdap_prov_->process_message(message, flow_->getPortId());
-  std::cout<<"Finalitzant funció"<<std::endl;
+  std::cout<<"Release completed"<<std::endl;
 }
 
 void Client::destroyFlow()
