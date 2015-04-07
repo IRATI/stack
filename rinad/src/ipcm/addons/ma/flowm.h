@@ -166,7 +166,7 @@ private:
 	int next_id;
 
 	//Back reference
-	ManagementAgent* agent;
+	ManagementAgent* agent_;
 };
 
 

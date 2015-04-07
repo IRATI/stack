@@ -162,6 +162,11 @@ void ManagementAgent::process_event(rina::IPCEvent** event){
 
 
 
+RIBFactory* ManagementAgent::get_rib() const
+{
+  return rib_factory;
+}
+
 //Initialization and destruction routines
 ManagementAgent::ManagementAgent(const std::string& params) :
 							AppAddon(MAD_NAME){
@@ -180,6 +185,8 @@ ManagementAgent::ManagementAgent(const std::string& params) :
 	//Create RIBs
 	//TODO charge from configuration
 	std::list<uint64_t> supported_versions;
+	uint64_t v1 = 1;
+	supported_versions.push_back(v1);
 	rib_factory = new RIBFactory(supported_versions);
 
 	//TODO

@@ -13,8 +13,7 @@ libaddons_ma_la_SOURCES  = 			\
 	bgtm.cc					\
 	confm.cc				\
 	flowm.cc				\
-	ribf.cc					\
-	commm.cc
+	ribf.cc					
 
 libaddons_ma_la_CPPFLAGS =			\
 	$(CPPFLAGS_EXTRA)			\

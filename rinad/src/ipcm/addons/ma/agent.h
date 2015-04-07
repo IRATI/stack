@@ -36,6 +36,7 @@
 #include <librina/patterns.h>
 
 #include "../../addon.h"
+#include "flowm.h"
 
 //Name of the MAD addon
 #define MAD_NAME "mad"
@@ -78,7 +79,6 @@ class BGTaskManager;
 * @brief Management Agent singleton class
 */
 class ManagementAgent : public AppAddon{
-
 public:
 
 	//Constructor and destructor
@@ -118,7 +118,31 @@ protected:
 	//Process event
 	virtual void process_event(rina::IPCEvent** event);
 
+	//TODO remove this
+	RIBFactory* get_rib() const;
+
+
+	friend class FlowManager;
 private:
+
+  //
+  // Internal methods
+  //
+
+  /**
+  * Bootstrap necessary NMS DIFs and shim-DIFs
+  */
+  void bootstrapNMSDIFs(void);
+
+  /**
+  * Register agent AP into the IPCManager
+  */
+  void reg(void);
+
+  /**
+  * Connect to the Manager/s
+  */
+  void connect(void);
 
 	//Submodules
 	ConfManager* conf_manager;
@@ -141,25 +165,6 @@ private:
 	* List of Manager connections
 	*/
 	std::list<AppConnection> connections;
-
-	//
-	// Internal methods
-	//
-
-	/**
-	* Bootstrap necessary NMS DIFs and shim-DIFs
-	*/
-	void bootstrapNMSDIFs(void);
-
-	/**
-	* Register agent AP into the IPCManager
-	*/
-	void reg(void);
-
-	/**
-	* Connect to the Manager/s
-	*/
-	void connect(void);
 
 };
 

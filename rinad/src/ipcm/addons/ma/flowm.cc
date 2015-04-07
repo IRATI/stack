@@ -29,10 +29,13 @@
 #include <assert.h>
 #include <string.h>
 #include <errno.h>
+#include <stdint.h>
 
 #include "agent.h"
+#include "ribf.h"
 #define RINA_PREFIX "ipcm.mad.flowm"
 #include <librina/logs.h>
+#include <librina/rib_v2.h>
 
 
 namespace rinad{
@@ -48,6 +51,8 @@ namespace mad{
 #define FM_FALLOC_TIMEOUT_S 10
 #define FM_FALLOC_TIMEOUT_NS 0
 
+const unsigned int max_sdu_size_in_bytes = 10000;
+
 /**
 * @brief Worker abstract class encpasulates the main I/O loop
 */
@@ -58,7 +63,7 @@ public:
 	/**
 	* Constructor
 	*/
-	Worker(FlowManager* fm) : flow_manager(fm){};
+	Worker(FlowManager* fm, RIBFactory *rib_factory) : flow_manager(fm), rib_factory_(rib_factory){};
 
 	/**
 	* Destructor
@@ -152,6 +157,9 @@ protected:
 
 	//Back reference
 	FlowManager* flow_manager;
+
+	//RIBFactory
+	RIBFactory* rib_factory_;
 };
 
 /**
@@ -163,7 +171,7 @@ public:
 	/**
 	* Constructor
 	*/
-	ActiveWorker(FlowManager* fm, const AppConnection& _con) : Worker(fm){
+	ActiveWorker(FlowManager* fm, RIBFactory* rib_factory, const AppConnection& _con) : Worker(fm, rib_factory){
 		con = _con;
 	};
 
@@ -261,19 +269,20 @@ rina::Flow* ActiveWorker::allocateFlow(){
 // Flow active worker
 void* ActiveWorker::run(void* param){
 
-	rina::Flow* flow;
-
-	//We don't use param
-	(void)param;
+  (void) param;
+  //Allocate the flow
+	rina::Flow* flow =allocateFlow();
 
 	keep_running = true;
 	while(keep_running == true){
 
-		//Allocate the flow
-		flow = allocateFlow();
-		(void)flow;
-		//TODO: block for incoming messages
-		sleep(1);
+	  char buffer[max_sdu_size_in_bytes];
+    int bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
+    rina::cdap_rib::SerializedObject message;
+    message.message_ = buffer;
+    message.size_ = bytes_read;
+    // FIXME change this when multiple rib versions (need librina rib and cdap refactor)
+    rib_factory_->getRIB(1).process_message(message, flow->getPortId());
 	}
 
 	return NULL;
@@ -347,7 +356,7 @@ void FlowManager::process_event(rina::IPCEvent** event_){
 }
 
 //Constructors destructors(singleton)
-FlowManager::FlowManager(ManagementAgent* agent_) : next_id(1), agent(agent_){
+FlowManager::FlowManager(ManagementAgent* agent) : next_id(1), agent_(agent){
 	LOG_DBG("Initialized");
 }
 
@@ -372,14 +381,14 @@ FlowManager::~FlowManager(){
 
 //Connect manager
 unsigned int FlowManager::connectTo(const AppConnection& con){
-	Worker* w = new ActiveWorker(this, con);
+	Worker* w = new ActiveWorker(this, agent_->get_rib(), con);
 
 	//Launch worker and return handler
 	return spawnWorker(&w);
 }
 
 rina::ApplicationProcessNamingInformation FlowManager::getAPInfo(void){
-	return agent->getAPInfo();
+	return agent_->getAPInfo();
 }
 
 //Disconnect
