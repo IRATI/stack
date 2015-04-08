@@ -247,7 +247,8 @@ static void buffer_assign(struct buffer * buffer,
 }
 
 /* FIXME: To be heavily hammered, it is temporary (lastin' forever, sigh) */
-int buffer_head_grow(struct buffer * buffer,
+int buffer_head_grow(gfp_t           flags,
+                     struct buffer * buffer,
                      size_t          bytes)
 {
         char * new_data;
@@ -257,7 +258,7 @@ int buffer_head_grow(struct buffer * buffer,
         if (!bytes)
                 return 0; /* This is a NO-OP */
 
-        new_data = rkmalloc(buffer->size + bytes, GFP_KERNEL);
+        new_data = rkmalloc(buffer->size + bytes, flags);
         if (!new_data)
                 return -1;
 
@@ -270,7 +271,8 @@ int buffer_head_grow(struct buffer * buffer,
 EXPORT_SYMBOL(buffer_head_grow);
 
 /* FIXME: To be heavily hammered, it is temporary (lastin' forever, sigh) */
-int buffer_head_shrink(struct buffer * buffer,
+int buffer_head_shrink(gfp_t           flags,
+                       struct buffer * buffer,
                        size_t          bytes)
 {
         char * new_data;
@@ -280,7 +282,7 @@ int buffer_head_shrink(struct buffer * buffer,
         if (!bytes)
                 return 0; /* This is a NO-OP */
 
-        new_data = rkmalloc(buffer->size - bytes, GFP_KERNEL);
+        new_data = rkmalloc(buffer->size - bytes, flags);
         if (!new_data)
                 return -1;
 
