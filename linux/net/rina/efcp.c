@@ -42,11 +42,18 @@
 #include "dt-utils.h"
 #include "dtp-ps.h"
 
+enum efcp_state {
+        EFCP_ALLOCATED = 1,
+        EFCP_DEALLOCATED
+};
+
 struct efcp {
         struct connection *     connection;
         struct ipcp_instance *  user_ipcp;
         struct dt *             dt;
         struct efcp_container * container;
+        enum efcp_state         state;
+        atomic_t                pending_ops;
 };
 
 struct efcp_container {
@@ -55,6 +62,7 @@ struct efcp_container {
         struct efcp_config * config;
         struct rmt *         rmt;
         struct kfa *         kfa;
+        spinlock_t           lock;
 };
 
 static int efcp_select_policy_set(struct efcp * efcp,
@@ -193,15 +201,20 @@ static struct efcp * efcp_create(void)
         if (!instance)
                 return NULL;
 
+        instance->state = EFCP_ALLOCATED;
+        atomic_set(&instance->pending_ops, 0);
+
         LOG_DBG("Instance %pK initialized successfully", instance);
 
         return instance;
 }
 
 int efcp_container_unbind_user_ipcp(struct efcp_container * efcpc,
-                                    cep_id_t cep_id)
+                                    cep_id_t                cep_id)
 {
         struct efcp * efcp;
+        unsigned long flags;
+
         ASSERT(efcpc);
 
         if (!is_cep_id_ok(cep_id)) {
@@ -209,13 +222,16 @@ int efcp_container_unbind_user_ipcp(struct efcp_container * efcpc,
                 return -1;
         }
 
+        spin_lock_irqsave(&efcpc->lock, flags);
         efcp = efcp_imap_find(efcpc->instances, cep_id);
         if (!efcp) {
+                spin_unlock_irqrestore(&efcpc->lock, flags);
                 LOG_ERR("There is no EFCP bound to this cep-id %d", cep_id);
                 return -1;
         }
-
         efcp->user_ipcp = NULL;
+        spin_unlock_irqrestore(&efcpc->lock, flags);
+
         return 0;
 }
 EXPORT_SYMBOL(efcp_container_unbind_user_ipcp);
@@ -308,6 +324,7 @@ struct efcp_container * efcp_container_create(struct kfa * kfa)
         }
 
         container->kfa = kfa;
+        spin_lock_init(&container->lock);
 
         return container;
 }
@@ -334,6 +351,9 @@ EXPORT_SYMBOL(efcp_container_destroy);
 struct efcp * efcp_container_find(struct efcp_container * container,
                                   cep_id_t                id)
 {
+        struct efcp * tmp = NULL;
+        unsigned long flags;
+
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
                 return NULL;
@@ -343,7 +363,11 @@ struct efcp * efcp_container_find(struct efcp_container * container,
                 return NULL;
         }
 
-        return efcp_imap_find(container->instances, id);
+        spin_lock_irqsave(&container->lock, flags);
+        tmp = efcp_imap_find(container->instances, id);
+        spin_unlock_irqrestore(&container->lock, flags);
+
+        return tmp;
 }
 EXPORT_SYMBOL(efcp_container_find);
 
@@ -416,6 +440,8 @@ int efcp_container_write(struct efcp_container * container,
                          struct sdu *            sdu)
 {
         struct efcp * tmp;
+        unsigned long flags;
+        int           ret;
 
         if (!container || !sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus input parameters, cannot write into container");
@@ -428,17 +454,37 @@ int efcp_container_write(struct efcp_container * container,
                 return -1;
         }
 
+        spin_lock_irqsave(&container->lock, flags);
         tmp = efcp_imap_find(container->instances, cep_id);
         if (!tmp) {
+                spin_unlock_irqrestore(&container->lock, flags);
                 LOG_ERR("There is no EFCP bound to this cep-id %d", cep_id);
                 sdu_destroy(sdu);
                 return -1;
         }
+        if (tmp->state == EFCP_DEALLOCATED) {
+                spin_unlock_irqrestore(&container->lock, flags);
+                sdu_destroy(sdu);
+                LOG_DBG("EFCP already deallocated");
 
-        if (efcp_write(tmp, sdu))
-                return -1;
+                return 0;
+        }
+        atomic_inc(&tmp->pending_ops);
+        spin_unlock_irqrestore(&container->lock, flags);
 
-        return 0;
+        ret = efcp_write(tmp, sdu);
+
+        spin_lock_irqsave(&container->lock, flags);
+        if (atomic_dec_and_test(&tmp->pending_ops) &&
+            tmp->state == EFCP_DEALLOCATED) {
+                spin_unlock_irqrestore(&container->lock, flags);
+                efcp_destroy(tmp);
+
+                return ret;
+        }
+        spin_unlock_irqrestore(&container->lock, flags);
+
+        return ret;
 }
 EXPORT_SYMBOL(efcp_container_write);
 
@@ -496,6 +542,8 @@ int efcp_container_receive(struct efcp_container * container,
                            struct pdu *            pdu)
 {
         struct efcp * tmp;
+        unsigned long flags;
+        int           ret = 0;
 
         if (!container || !pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus input parameters");
@@ -508,19 +556,39 @@ int efcp_container_receive(struct efcp_container * container,
                 return -1;
         }
 
+        spin_lock_irqsave(&container->lock, flags);
         tmp = efcp_imap_find(container->instances, cep_id);
         if (!tmp) {
+                spin_unlock_irqrestore(&container->lock, flags);
                 LOG_ERR("Cannot find the requested instance cep-id: %d",
                         cep_id);
                 /* FIXME: It should call unknown_flow policy of EFCP */
                 pdu_destroy(pdu);
                 return -1;
         }
+        if (tmp->state == EFCP_DEALLOCATED) {
+                spin_unlock_irqrestore(&container->lock, flags);
+                pdu_destroy(pdu);
+                LOG_DBG("EFCP already deallocated");
 
-        if (efcp_receive(tmp, pdu))
-                return -1;
+                return 0;
+        }
+        atomic_inc(&tmp->pending_ops);
+        spin_unlock_irqrestore(&container->lock, flags);
 
-        return 0;
+        ret = efcp_receive(tmp, pdu);
+
+        spin_lock_irqsave(&container->lock, flags);
+        if (atomic_dec_and_test(&tmp->pending_ops) &&
+            tmp->state == EFCP_DEALLOCATED) {
+                spin_unlock_irqrestore(&container->lock, flags);
+                efcp_destroy(tmp);
+
+                return ret;
+        }
+        spin_unlock_irqrestore(&container->lock, flags);
+
+        return ret;
 }
 EXPORT_SYMBOL(efcp_container_receive);
 
@@ -594,6 +662,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         timeout_t     mpl, a, r = 0, tr = 0;
         struct dtp_ps * dtp_ps;
         bool          dtcp_present;
+        unsigned long flags;
 
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
@@ -750,15 +819,18 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
 
         /***/
 
+        spin_lock_irqsave(&container->lock, flags);
         if (efcp_imap_add(container->instances,
                           connection->source_cep_id,
                           tmp)) {
+                spin_unlock_irqrestore(&container->lock, flags);
                 LOG_ERR("Cannot add a new instance into container %pK",
                         container);
 
                 efcp_destroy(tmp);
                 return cep_id_bad();
         }
+        spin_unlock_irqrestore(&container->lock, flags);
 
         LOG_DBG("Connection created ("
                 "Source address %d,"
@@ -778,6 +850,7 @@ int efcp_connection_destroy(struct efcp_container * container,
                             cep_id_t                id)
 {
         struct efcp * tmp;
+        unsigned long flags;
 
         LOG_DBG("EFCP connection destroy called");
 
@@ -790,23 +863,31 @@ int efcp_connection_destroy(struct efcp_container * container,
                 return -1;
         }
 
+        spin_lock_irqsave(&container->lock, flags);
         tmp = efcp_imap_find(container->instances, id);
         if (!tmp) {
+                spin_unlock_irqrestore(&container->lock, flags);
                 LOG_ERR("Cannot find instance %d in container %pK",
                         id, container);
                 return -1;
         }
 
         if (efcp_imap_remove(container->instances, id)) {
+                spin_unlock_irqrestore(&container->lock, flags);
                 LOG_ERR("Cannot remove instance %d from container %pK",
                         id, container);
                 return -1;
         }
-
-        if (efcp_destroy(tmp)) {
-                LOG_ERR("Cannot destroy instance %d, instance lost", id);
-                return -1;
+        tmp->state = EFCP_DEALLOCATED;
+        if (atomic_read(&tmp->pending_ops) == 0) {
+                spin_unlock_irqrestore(&container->lock, flags);
+                if (efcp_destroy(tmp)) {
+                        LOG_ERR("Cannot destroy instance %d, instance lost", id);
+                        return -1;
+                }
+                return 0;
         }
+        spin_unlock_irqrestore(&container->lock, flags);
 
         return 0;
 }
@@ -818,6 +899,7 @@ int efcp_connection_update(struct efcp_container * container,
                            cep_id_t                to)
 {
         struct efcp * tmp;
+        unsigned long flags;
 
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
@@ -832,14 +914,26 @@ int efcp_connection_update(struct efcp_container * container,
                 return -1;
         }
 
+        spin_lock_irqsave(&container->lock, flags);
         tmp = efcp_imap_find(container->instances, from);
         if (!tmp) {
+                spin_unlock_irqrestore(&container->lock, flags);
                 LOG_ERR("Cannot get instance %d from container %pK",
                         from, container);
                 return -1;
         }
+        if (atomic_read(&tmp->pending_ops) == 0 &&
+            tmp->state == EFCP_DEALLOCATED) {
+                spin_unlock_irqrestore(&container->lock, flags);
+                if (efcp_destroy(tmp)) {
+                        LOG_ERR("Cannot destroy instance %d, instance lost", from);
+                        return -1;
+                }
+                return 0;
+        }
         tmp->connection->destination_cep_id = to;
         tmp->user_ipcp = user_ipcp;
+        spin_unlock_irqrestore(&container->lock, flags);
 
         LOG_DBG("Connection updated");
         LOG_DBG("  Source address:     %d",

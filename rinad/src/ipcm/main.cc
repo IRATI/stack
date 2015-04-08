@@ -20,6 +20,9 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
 #include <assert.h>
 #include <signal.h>
 
@@ -146,6 +149,12 @@ int wrapped_main(int argc, char * argv[])
 int main(int argc, char * argv[])
 {
 	int retval;
+
+	if(geteuid() != 0){
+		fprintf(stderr, "\nERROR: Root permissions are required to run %s\n",
+								RINA_PREFIX);
+		exit(EXIT_FAILURE);
+	}
 
 #if WANT_PARACHUTE
 	//Configure signal  traps
