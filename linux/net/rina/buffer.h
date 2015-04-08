@@ -47,8 +47,10 @@ struct buffer * buffer_dup(const struct buffer * b);
 struct buffer * buffer_dup_ni(const struct buffer * b);
 bool            buffer_is_ok(const struct buffer * b);
 
-int             buffer_head_grow(struct buffer * b, size_t bytes);
-int             buffer_head_shrink(struct buffer * b, size_t bytes);
+int             buffer_head_grow(gfp_t flags, struct buffer * b, size_t bytes);
+int             buffer_head_shrink(gfp_t           flags,
+                                   struct buffer * b,
+                                   size_t          bytes);
 int             buffer_tail_grow(struct buffer * b, size_t bytes);
 int             buffer_tail_shrink(struct buffer * b, size_t bytes);
 
