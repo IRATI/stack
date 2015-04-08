@@ -16,11 +16,27 @@ namespace rib_v1{
 const std::string IPCPObj::class_name = "IPCProcess";
 
 
+//Encoder
+void IPCPEncoder::encode(const IPCPObj &obj,
+                               rina::cdap_rib::SerializedObject& serobj) const{
 
+  (void)serobj;
+  (void)obj;
+}
+
+void IPCPEncoder::decode(const rina::cdap_rib::SerializedObject &serobj,
+                                            IPCPObj& des_obj) const{
+
+  (void)serobj;
+  (void)des_obj;
+}
+
+
+//Class
 
 IPCPObj::IPCPObj(std::string name, long instance, int ipcp_id):
-                IntRIBObject(class_name, name, instance, &processID_, &encoder),
-                processID_(ipcp_id){
+             RIBObject<IPCPObj>(class_name, instance, name, this, &encoder),
+             processID_(ipcp_id){
 
 }
 

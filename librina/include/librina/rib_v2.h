@@ -86,22 +86,23 @@ template<class T>
 class Encoder: public AbstractEncoder
 {
  public:
-  virtual ~Encoder()
-  {
-  }
+  virtual ~Encoder(){}
+
   /// Converts an object to a byte array, if this object is recognized by the encoder
   /// @param object
   /// @throws exception if the object is not recognized by the encoder
   /// @return
-  virtual const cdap_rib::SerializedObject* encode(const T &object) = 0;
+  virtual void encode(const T &obj, cdap_rib::SerializedObject& serobj)
+                                                                    const = 0;
   /// Converts a byte array to an object of the type specified by "className"
   /// @param byte[] serializedObject
   /// @param objectClass The type of object to be decoded
-  /// @throws exception if the byte array is not an encoded in a way that the encoder can recognize, or the
-  /// byte array value doesn't correspond to an object of the type "className"
+  /// @throws exception if the byte array is not an encoded in a way that the
+  /// encoder can recognize, or the byte array value doesn't correspond to an
+  /// object of the type "className"
   /// @return
-  virtual T* decode(
-      const cdap_rib::SerializedObject &serialized_object) const = 0;
+  virtual void decode(const cdap_rib::SerializedObject &serobj,
+                                            T& des_obj) const = 0;
 };
 
 /// Contains the data of an object in the RIB
@@ -313,6 +314,10 @@ class RIBDFactory
                              char separator);
 };
 
+
+//Uncomment this when implemented
+#if 0
+
 class IntEncoder : public rib::Encoder<int>
 {
  public:
@@ -377,6 +382,8 @@ class BoolEncoder : public rib::Encoder<bool>
   std::string get_type() const;
 };
 
+#endif
+
 class empty
 {
 };
@@ -384,10 +391,23 @@ class empty
 class EmptyEncoder : public rib::Encoder<empty>
 {
  public:
-  const cdap_rib::SerializedObject* encode(const empty &object);
-  empty* decode(const cdap_rib::SerializedObject &serialized_object) const;
-  std::string get_type() const;
+  virtual void encode(const empty &obj, cdap_rib::SerializedObject& serobj)
+                                                                      const {
+    (void)serobj;
+    (void)obj;
+  };
+  virtual void decode(const cdap_rib::SerializedObject &serobj,
+                                            empty& des_obj) const{
+    (void)serobj;
+    (void)des_obj;
+  };
+  std::string get_type() const{
+    return "empty";
+  };
 };
+
+//Uncomment this when implemented
+#if 0
 
 class IntRIBObject : public rib::RIBObject<int>
 {
@@ -468,6 +488,7 @@ class BoolRIBObject : public rib::RIBObject<bool>
   {
   }
 };
+#endif
 
 class EmptyRIBObject : public rib::RIBObject<empty>
 {
@@ -478,6 +499,7 @@ class EmptyRIBObject : public rib::RIBObject<empty>
   {
   }
 };
+
 
 }
 }
