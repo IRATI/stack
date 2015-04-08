@@ -17,10 +17,26 @@ namespace rinad{
 namespace mad{
 namespace rib_v1{
 
+
+//fwd decl
+class IPCPObj;
+
+/**
+* Encoder
+*/
+class IPCPEncoder : public rina::rib::Encoder<IPCPObj>{
+  virtual void encode(const IPCPObj &obj,
+                              rina::cdap_rib::SerializedObject& serobj) const;
+  virtual void decode(const rina::cdap_rib::SerializedObject &serobj,
+                                            IPCPObj& des_obj) const;
+
+  virtual std::string get_type() const{ return "ipcp"; };
+};
+
 /**
 * IPCP object
 */
-class IPCPObj : public rina::rib::IntRIBObject{
+class IPCPObj : public rina::rib::RIBObject<IPCPObj>{
 
 public:
   IPCPObj(std::string name, long instance, int ipcp_id);
@@ -34,7 +50,7 @@ public:
 
 private:
   int processID_;
-  rina::rib::IntEncoder encoder;
+  IPCPEncoder encoder;
 };
 
 

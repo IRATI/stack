@@ -972,6 +972,8 @@ RIBDNorthInterface* RIBDFactory::create(
   return ribd;
 }
 
+//Uncomment this when implemented
+#if 0
 const cdap_rib::SerializedObject* IntEncoder::encode(const int &object)
 {
   (void) object;
@@ -1124,18 +1126,7 @@ const cdap_rib::SerializedObject* EmptyEncoder::encode(const empty &object)
   return 0;
 }
 
-empty* EmptyEncoder::decode(
-    const cdap_rib::SerializedObject &serialized_object) const
-{
-  (void) serialized_object;
-  LOG_ERR("Can not decode an empty object");
-  return 0;
-}
-
-std::string EmptyEncoder::get_type() const
-{
-  return "empty";
-}
+#endif
 
 }
 }
