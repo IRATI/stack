@@ -147,10 +147,7 @@ BaseRIBObject* RIB::getRIBObject(const std::string& clas,
   it = rib_by_name_.find(norm_name);
   unlock();
   if (it == rib_by_name_.end()) {
-    std::stringstream ss;
-    ss << "Could not find object " << norm_name << " of class " << clas
-       << " in the RIB" << std::endl;
-    throw Exception(ss.str().c_str());
+    return NULL;
   }
 
   rib_object = it->second;
@@ -172,10 +169,7 @@ BaseRIBObject* RIB::getRIBObject(const std::string& clas, long instance,
   unlock();
 
   if (it == rib_by_instance_.end()) {
-    std::stringstream ss;
-    ss << "Could not find object instance " << instance << " of class "
-       << clas.c_str() << " in the RIB" << std::endl;
-    throw Exception(ss.str().c_str());
+    return NULL;
   }
 
   rib_object = it->second;
@@ -483,8 +477,14 @@ void RIBDaemon::remote_create_request(const cdap_rib::con_handle_t &con,
   // FIXME add res and flags
   cdap_rib::flags_t flags;
 
-  BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
-  cdap_rib::res_info_t* res = ribObj->remoteCreateObject(obj.name_, obj.value_);
+  BaseRIBObject* rib_obj = rib_->getRIBObject(obj.class_, obj.name_, true);
+  if (rib_obj == NULL)
+  {
+    // DELEGATE CREATION TO PARENT
+    std::string parent_name = rib_->get_parent_name(obj.name_);
+    rib_obj = rib_->getRIBObject("", parent_name, false);
+  }
+  cdap_rib::res_info_t* res = rib_obj->remoteCreateObject(obj.name_, obj.value_);
   try {
     cdap_provider_->remote_create_response(con, obj, flags, *res, message_id);
   } catch (Exception &e) {
@@ -492,6 +492,7 @@ void RIBDaemon::remote_create_request(const cdap_rib::con_handle_t &con,
   }
   delete res;
 }
+
 void RIBDaemon::remote_delete_request(const cdap_rib::con_handle_t &con,
                                       const cdap_rib::obj_info_t &obj,
                                       const cdap_rib::filt_info_t &filt,
