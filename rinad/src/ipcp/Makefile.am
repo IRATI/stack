@@ -25,6 +25,9 @@ ipcp_CFLAGS   =
 ipcp_CPPFLAGS =					\
 	$(COMMONCPPFLAGS)			\
 	-DPLUGINSDIR=\"$(pkglibdir)/ipcp\"
+ipcp_CXXFLAGS =					\
+	-std=c++98				\
+	$(CXXFLAGS_EXTRA)
 ipcp_LDADD    = $(COMMONLIBS) -ldl
 ipcp_SOURCES  =						\
 	main.cc						\
@@ -48,6 +51,9 @@ plugins_LTLIBRARIES =
 default_la_CFLAGS =
 default_la_CPPFLAGS =				\
 	$(COMMONCPPFLAGS)
+default_la_CXXFLAGS =				\
+	-std=c++98				\
+	$(CXXFLAGS_EXTRA)
 default_la_LIBADD = $(COMMONLIBS) -ldl
 default_la_LDFLAGS = -module
 default_la_SOURCES =				\
@@ -71,6 +77,9 @@ test_encoders_SOURCES  =			\
 	enrollment-task.cc   enrollment-task.h	\
     link-state-routing-ps.cc   link-state-routing-ps.h
 test_encoders_CPPFLAGS = $(testsCPPFLAGS)
+test_encoders_CXXFLAGS =			\
+	-std=c++98				\
+	$(CXXFLAGS_EXTRA)
 test_encoders_LDADD    = $(testsLIBS)
 
 test_pduftg_SOURCES  =				\
@@ -79,6 +88,9 @@ test_pduftg_SOURCES  =				\
 	events.cc          events.h		\
 	link-state-routing-ps.cc link-state-routing-ps.h
 test_pduftg_CPPFLAGS = $(testsCPPFLAGS)
+test_pduftg_CXXFLAGS =				\
+	-std=c++98				\
+	$(CXXFLAGS_EXTRA)
 test_pduftg_LDADD    = $(testsLIBS)
 
 check_PROGRAMS =				\

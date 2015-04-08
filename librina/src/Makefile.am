@@ -53,6 +53,7 @@ librina_la_CPPFLAGS =				\
 	$(LIBPROTOBUF_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)
 librina_la_CXXFLAGS =				\
+	-std=c++98				\
 	$(CXXFLAGS_EXTRA)
 
 librina_stubbed_la_SOURCES  = $(allsources)
@@ -70,6 +71,7 @@ librina_stubbed_la_CPPFLAGS =			\
 	$(LIBPROTOBUF_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)
 librina_stubbed_la_CXXFLAGS =			\
+	-std=c++98				\
 	$(CXXFLAGS_EXTRA)
 
 lib_LTLIBRARIES    = librina.la
