@@ -17,11 +17,12 @@ librinad_ma_ribs_la_CPPFLAGS =			\
 	$(LIBRINA_CFLAGS)			\
 	$(LIBPROTOBUF_CFLAGS)			\
 	-I$(srcdir)/../../			\
-	-I$(srcdir)/../../common
+	-I$(srcdir)/../../../../common
 
 librinad_ma_ribs_la_LIBADD   =			\
 	$(LIBRINA_LIBS)				\
 	$(LIBPROTOBUF_LIBS)
 
 librinad_ma_ribs_la_SOURCES  =			\
+	ipcp_obj.cc                       \
 	ribd_v1.cc
