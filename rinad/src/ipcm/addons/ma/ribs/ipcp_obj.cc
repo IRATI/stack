@@ -48,24 +48,30 @@ void IPCPEncoder::decode(const rina::cdap_rib::SerializedObject &serobj,
 
 //Class
 
-IPCPObj::IPCPObj(std::string name, long instance, int ipcp_id):
-             RIBObject<ipcp_msg_t>(class_name, instance, name, (ipcp_msg_t*)NULL, &encoder),
-             processID_(ipcp_id){
+IPCPObj::IPCPObj(std::string name, long instance, int ipcp_id) :
+              RIBObject<ipcp_msg_t>(class_name, instance, name,
+                            (ipcp_msg_t*)NULL, &encoder), processID_(ipcp_id){
 
 }
 
 //We only support deletion
-bool IPCPObj::deleteObject(const void* value){
-
+rina::cdap_rib::res_info_t* IPCPObj::remoteDeleteObject(
+                              const std::string& name,
+                              const rina::cdap_rib::SerializedObject &value){
+  (void)name;
   (void)value;
+  rina::cdap_rib::res_info_t* r = new rina::cdap_rib::res_info_t;
+
+  //Fill in the response
+  r->result_ = 0;
 
   //Call the IPCManager and return
 	if(IPCManager->destroy_ipcp(processID_) != IPCM_SUCCESS){
 		LOG_ERR("Unable to destroy IPCP with id %d", processID_);
-    return false;
+    r->result_ = -1;
   }
 
-  return true;
+  return r;
 }
 
 }; //namespace rib_v1

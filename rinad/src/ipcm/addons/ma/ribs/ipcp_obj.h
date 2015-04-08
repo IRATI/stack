@@ -55,7 +55,8 @@ public:
   virtual ~IPCPObj(){};
 
   //We only support deletion
-  virtual bool deleteObject(const void* value);
+  rina::cdap_rib::res_info_t* remoteDeleteObject(const std::string& name,
+                                const rina::cdap_rib::SerializedObject &value);
 
   //Name of the class
   const static std::string class_name;
