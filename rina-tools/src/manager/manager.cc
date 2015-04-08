@@ -31,6 +31,12 @@
 using namespace std;
 using namespace rina;
 
+typedef struct IPCConfig{
+  std::string process_name;
+  unsigned int process_instance;
+  std::string process_type;
+};
+
 Client::Client(const std::string& dif_name, const std::string& apn,
                  const std::string& api, bool quiet, unsigned int wait)
     : Application(dif_name, apn, api),
