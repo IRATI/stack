@@ -2,6 +2,7 @@
  * IPC Manager console
  *
  *    Vincenzo Maffione     <v.maffione@nextworks.it>
+ *    Marc Sune             <marc.sune (at) bisdn.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,10 +34,20 @@
 #include <cerrno>
 #include <sstream>
 
+#include "../addon.h"
+
 namespace rinad {
 
-//TODO: use addon class
-void * script_function(void *opaque);
 
-}
+class ScriptingEngine : public Addon{
+
+public:
+	ScriptingEngine(void);
+	virtual ~ScriptingEngine(void);
+
+
+};
+
+} //namespace rinad
+
 #endif  /* __IPCM_SCRIPTING_H__ */

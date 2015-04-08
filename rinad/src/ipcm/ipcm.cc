@@ -3,6 +3,8 @@
  *
  *    Vincenzo Maffione     <v.maffione@nextworks.it>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Eduard Grasa          <eduard.grasa@i2cat.net>
+ *    Marc Sune             <marc.sune (at) bisdn.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,19 +74,16 @@ namespace rinad {
 //Singleton instance
 Singleton<IPCManager_> IPCManager;
 
-IPCManager_::IPCManager_() : script(NULL), console(NULL){ }
+IPCManager_::IPCManager_(){
+
+}
 
 IPCManager_::~IPCManager_()
 {
-	if (console)
-		delete console;
 
-	//TODO: Maybe we should join here
-	if (script)
-		delete script;
 }
 
-void IPCManager_::init(unsigned int wait_time, const std::string& loglevel)
+void IPCManager_::init(const std::string& loglevel)
 {
 	// Initialize the IPC manager infrastructure in librina.
 
@@ -106,39 +105,31 @@ void IPCManager_::init(unsigned int wait_time, const std::string& loglevel)
 	}
 }
 
-ipcm_res_t
-IPCManager_::start_script_worker()
-{
-	if (script)
-		return IPCM_FAILURE;
+void
+IPCManager_::load_addons(const std::string& addon_list){
 
-	rina::ThreadAttributes ta;
-	script = new rina::Thread(&ta, script_function, this);
+	std::string al = addon_list;
 
-	return IPCM_SUCCESS;
-}
+	//Convert the list of addons to lowercase
+	std::transform(al.begin(), al.end(), al.begin(), ::tolower);
 
-ipcm_res_t
-IPCManager_::start_console_worker()
-{
-	if (console)
-		return IPCM_FAILURE;
+	//Split comma based, and remove extra chars (spaces)
+	std::stringstream ss(al);
+	std::string t;
+	while(std::getline(ss, t, ',')) {
+		//Remove whitespaces
+		t.erase(std::remove_if( t.begin(), t.end(), ::isspace ),
+								t.end() );
+		Addon* addon = Addon::factory(config, t);
 
-	rina::ThreadAttributes ta;
-	console = new IPCMConsole(ta, config.local.consolePort);
+		if(!addon){
+			LOG_CRIT("Unable to bootstrap addon '%s'. Aborting...",
+									t.c_str());
+			exit(EXIT_FAILURE);
+		}
 
-	return IPCM_SUCCESS;
-}
-
-ipcm_res_t
-IPCManager_::load_addons(const std::string& addons, const std::string& params){
-
-	//TODO: remove this
-	std::string mad = "mad";
-
-	Addon* addon = Addon::factory(mad, params);
-
-	(void)addon;
+		addons.push_back(addon);
+	}
 }
 
 /*
@@ -1360,11 +1351,6 @@ void IPCManager_::run(){
 		rina::IPCEvent::eventTypeToString(event->eventType).c_str(),
 							event->sequenceNumber);
 
-		if (!event) {
-			std::cerr << "Null event received" << std::endl;
-			continue;
-		}
-
 		try {
 			switch(event->eventType){
 				case rina::FLOW_ALLOCATION_REQUESTED_EVENT:
@@ -1497,6 +1483,12 @@ void IPCManager_::run(){
 					ipc_process_plugin_load_response_handler(e);
 					}
 					break;
+
+				//Addon specific events
+				default:
+					Addon::distribute_event(event);
+					continue;
+					break;
 			}
 
 		} catch (rina::Exception &e) {
@@ -1509,6 +1501,16 @@ void IPCManager_::run(){
 
 	//TODO: probably move this to a private method if it starts to grow
 	LOG_DBG("Stopping I/O loop and cleaning the house...");
+
+	std::list<Addon*>::iterator addon_it;
+
+	addon_it = addons.begin();
+	do{
+		LOG_DBG("Destroying addon: %s(%p)", (*addon_it)->name.c_str(),
+							*addon_it);
+		delete *addon_it;
+		addons.erase(addon_it++);
+	}while(addon_it != addons.end());
 
 	//Destroy all IPCPs
 	std::vector<IPCMIPCProcess *> ipcps;

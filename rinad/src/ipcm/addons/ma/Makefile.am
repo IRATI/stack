@@ -18,8 +18,8 @@ libaddons_ma_la_SOURCES  = 			\
 libaddons_ma_la_CPPFLAGS =			\
 	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)			\
-	-I$(srcdir)/../				\
-	-I$(srcdir)/../common
+	-I$(srcdir)/../../../			\
+	-I$(srcdir)/../../../common
 
 libaddons_ma_la_LIBADD = 			\
 	ribs/librinad_ma_ribs.la		\

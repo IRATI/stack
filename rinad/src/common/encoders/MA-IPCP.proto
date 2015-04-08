@@ -1,0 +1,8 @@
+package rinad.messages;
+option optimize_for = LITE_RUNTIME;
+
+//Contains the information of an IPCP
+message ipcp{
+	required uint32 processId = 1;		//Process ID
+	required string processName = 2;	//Process name
+}

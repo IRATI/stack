@@ -35,8 +35,8 @@
 #include <librina/ipc-manager.h>
 #include <librina/logs.h>
 
-#include "rina-configuration.h"
 #include "../ipcm.h"
+#include "rina-configuration.h"
 #include "scripting.h"
 
 using namespace std;
@@ -44,18 +44,19 @@ using namespace std;
 
 namespace rinad {
 
-void * script_function(void *opaque){
+ScriptingEngine::ScriptingEngine() : Addon("scripting"){
 
-	(void)opaque;
+	//TODO: create another thread when necessary
 
-        LOG_DBG("script starts");
+	LOG_DBG("Starting...");
 
-        IPCManager->apply_configuration();
+	IPCManager->apply_configuration();
 
-        LOG_DBG("script stops");
-
-        return NULL;
+	LOG_DBG("Finalizing...");
 }
 
+ScriptingEngine::~ScriptingEngine(){
 
-}//namespace rinad
+}
+
+} //namespace rinad

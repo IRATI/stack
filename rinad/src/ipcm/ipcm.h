@@ -2,6 +2,8 @@
  * IPC Manager
  *
  *    Vincenzo Maffione <v.maffione@nextworks.it>
+ *    Eduard Grasa          <eduard.grasa@i2cat.net>
+ *    Marc Sune         <marc.sune (at) bisdn.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,7 +45,7 @@
 
 //Constants
 #define PROMISE_TIMEOUT_S 5
-#define PROMISE_RETRY_NSEC 10000000 //1ms
+#define PROMISE_RETRY_NSEC 10000000 //10ms
 #define _PROMISE_1_SEC_NSEC 1000000000
 
 #ifndef FLUSH_LOG
@@ -252,26 +254,13 @@ public:
 	//
 	// Initialize the IPCManager
 	//
-	void init(unsigned int wait_time, const std::string& loglevel);
-
-//-------------------------------------- REMOVE
-	//
-	// Start the script worker thread
-	//
-	ipcm_res_t start_script_worker();
-
-	//
-	// Start the console worker thread
-	//
-	ipcm_res_t start_console_worker();
-//-------------------------------------- REMOVE
+	void init(const std::string& loglevel);
 
 	//
 	// Load the specified addons
 	//
 	// @param addons Comma separated list of addons
-	ipcm_res_t load_addons(const std::string& addons,
-						const std::string& params);
+	void load_addons(const std::string& addon_list);
 
 	//
 	// TODO: XXX?????
@@ -745,21 +734,17 @@ protected:
 	// RINA configuration internal state
 	rinad::RINAConfiguration config;
 
-	//Script thread
-	rina::Thread *script;
-
-	//IPCM Console instance
-	IPCMConsole *console;
-
-	//TODO: map of addons
-
 	//Current logging level
 	std::string log_level_;
 
 	//Keep running flag
 	volatile bool keep_running;
 
+	//IPCM factory
 	IPCMIPCProcessFactory ipcp_factory_;
+
+	//List of running addons
+	std::list<Addon*> addons;
 
 public:
 	//Generator of opaque identifiers

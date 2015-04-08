@@ -1,4 +1,22 @@
-//TODO
+/*
+ * Flow Manager
+ *
+ *    Marc Sune <marc.sune (at) bisdn.de>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
 
 #ifndef __RINAD_FLOW_H__
 #define __RINAD_FLOW_H__
@@ -44,18 +62,6 @@ public:
 	~FlowManager(void);
 
 	/**
-	* @brief Run the main I/O loop
-	*/
-	void runIOLoop(void);
-
-	/**
-	* @brief Run the main I/O loop
-	*/
-	inline void stopIOLoop(void){
-		keep_running = false;
-	}
-
-	/**
 	* Retrieve a **copy** of the AP naming information
 	*/
 	rina::ApplicationProcessNamingInformation getAPInfo(void);
@@ -80,27 +86,71 @@ public:
 	*/
 	void disconnectFrom(unsigned int worker_id);
 
+
+	/**
+	* Distribute the event to the active workers.
+	*
+	* Shall only be called by the ManagementAgent
+	*/
+	void process_event(rina::IPCEvent** event);
+
+	/**
+	* Checks whether an operation has already finalised
+	*
+	* @param seqnum Sequence number of the operation
+	*
+	* @ret The event or NULL. The callee is responible to free the returned
+	* event
+	*
+	* TODO: deprecate when librina-application is improved
+	*/
+	rina::IPCEvent* get_event(unsigned int seqnum);
+
+	/**
+	* Blocks until the operation has finalised, or hard timeout is reached
+	*
+	* @param seqnum Sequence number of the operation
+	*
+	* @ret The event or NULL if the operation has (hard timeout).
+	* The callee is responible to free the returned event
+	*
+	* TODO: deprecate when librina-application is improved
+	*/
+	rina::IPCEvent* wait_event(unsigned int seqnum);
+
+	/**
+	* Blocks until the operation has finalised, or timeout is reached
+	*
+	* @param seqnum Sequence number of the operation
+	*
+	* @ret The event or NULL if the operation has (hard timeout).
+	* The callee is responible to free the returned event
+	*
+	* TODO: deprecate when librina-application is improved
+	*/
+	rina::IPCEvent* timed_wait_event(unsigned int seqnum,
+							unsigned int sec,
+							unsigned int nsec);
+
 private:
+
+	//Stores and notifies the event
+	void store_event(rina::IPCEvent* event);
+
+	// Pending events  seqnum <-> event
+	std::map<unsigned int, rina::IPCEvent*> pending_events;
+
 	//hashmap worker handler <-> Worker association
 	std::map<unsigned int, Worker*> workers;
 
 	//Mutex
 	rina::Lockable mutex;
 
-	//Run flag
-	volatile bool keep_running;
-
-
 	/**
-	* Notify event to the worker
-	*
-	* Loop over all the workers and attempt to notify the event
-	* TODO: this is a waste of resources, but this is currently the only
-	* simple way to do this
-	*
-	* Being the simplest way to do it now, doesn't mean it is deep pain
+	* Wait condition (+mutex)
 	*/
-	void notify(rina::IPCEvent** event);
+	rina::ConditionVariable wait_cond;
+
 
 	/*
 	* Create a worker

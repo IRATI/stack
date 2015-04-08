@@ -1,3 +1,24 @@
+/*
+ * Flow Manager
+ *
+ *    Marc Sune             <marc.sune (at) bisdn.de>
+ *    Bernat Gaston         <bernat.gaston@i2cat.net>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
 #include "flowm.h"
 
 #include <algorithm>
@@ -21,8 +42,10 @@ namespace rinad{
 namespace mad{
 
 //General events timeout
-#define FLOWMANAGER_TIMEOUT_S 0
-#define FLOWMANAGER_TIMEOUT_NS 100000000
+#define FM_TIMEOUT_S 5
+#define FM_RETRY_NSEC 10000000 //10ms
+#define _FM_1_SEC_NSEC 1000000000
+
 
 //Flow allocation worker events
 #define FM_FALLOC_TIMEOUT_S 10
@@ -202,8 +225,9 @@ rina::Flow* ActiveWorker::allocateFlow(){
 
 	//Wait for the event
 	try{
-		event = waitForEvent(FM_FALLOC_TIMEOUT_S,
-							FM_FALLOC_TIMEOUT_NS);
+		event = flow_manager->wait_event(seqnum);
+		if(!event)
+			return NULL;
 		LOG_DBG("[w:%u] Got event %u, waiting for %u", id,
 						event->sequenceNumber,
 						seqnum);
@@ -264,84 +288,71 @@ void* ActiveWorker::run(void* param){
 	return NULL;
 }
 
-/*
-* FlowManager
-*/
-void FlowManager::runIOLoop(){
+//Process an event coming from librina
+void FlowManager::process_event(rina::IPCEvent** event_){
 
-	rina::IPCEvent *event;
 	rina::Flow *flow;
 	unsigned int port_id;
 	rina::DeallocateFlowResponseEvent *resp;
 
-	keep_running = true;
+	//Make it easy
+	rina::IPCEvent* event = *event_;
 
-	//wait for events
-	while(keep_running){
-		event = rina::ipcEventProducer->eventTimedWait(
-						FLOWMANAGER_TIMEOUT_S,
-						FLOWMANAGER_TIMEOUT_NS);
-		flow = NULL;
-		resp = NULL;
+	if(!event)
+		return;
 
-		if(!event){
-			continue;
-		}
-
-		switch(event->eventType) {
-			case rina::REGISTER_APPLICATION_RESPONSE_EVENT:
-				rina::ipcManager->commitPendingRegistration(event->sequenceNumber,
-					     dynamic_cast<rina::RegisterApplicationResponseEvent*>(event)->DIFName);
-				break;
-
-			case rina::UNREGISTER_APPLICATION_RESPONSE_EVENT:
-				rina::ipcManager->appUnregistrationResult(event->sequenceNumber,
-					    dynamic_cast<rina::UnregisterApplicationResponseEvent*>(event)->result == 0);
-				break;
-
-
-			case rina::ALLOCATE_FLOW_REQUEST_RESULT_EVENT:
-				//Attempt first to notify the event to the
-				//active workers
-
-				notify(&event);
-				if(event){
-					assert(0);
-					delete event;
-				}
-				break;
-			case rina::FLOW_ALLOCATION_REQUESTED_EVENT:
-				//TODO: add pasive worker
-				LOG_INFO("New flow allocated [port-id = %d]", flow->getPortId());
-
-				flow = rina::ipcManager->allocateFlowResponse(*dynamic_cast<rina::FlowRequestEvent*>(event), 0, true);
-				(void)flow;
-				break;
-
-			case rina::FLOW_DEALLOCATED_EVENT:
-				port_id = dynamic_cast<rina::FlowDeallocatedEvent*>(event)->portId;
-				rina::ipcManager->flowDeallocated(port_id);
-				LOG_INFO("Flow torn down remotely [port-id = %d]", port_id);
-				//TODO: add pasive worker
-				//joinWorker(port_id);
-				break;
-
-			case rina::DEALLOCATE_FLOW_RESPONSE_EVENT:
-				LOG_INFO("Destroying the flow after time-out");
-				resp = dynamic_cast<rina::DeallocateFlowResponseEvent*>(event);
-				port_id = resp->portId;
-				rina::ipcManager->flowDeallocationResult(port_id, resp->result == 0);
-				//TODO: add pasive worker
-				//joinWorker(port_id);
-				break;
-
-			default:
-				assert(0);
-				LOG_ERR("Got unknown event %d",
-							event->eventType);
+	switch(event->eventType) {
+		case rina::REGISTER_APPLICATION_RESPONSE_EVENT:
+			rina::ipcManager->commitPendingRegistration(event->sequenceNumber,
+				     dynamic_cast<rina::RegisterApplicationResponseEvent*>(event)->DIFName);
 			break;
-		}
+
+		case rina::UNREGISTER_APPLICATION_RESPONSE_EVENT:
+			rina::ipcManager->appUnregistrationResult(event->sequenceNumber,
+				    dynamic_cast<rina::UnregisterApplicationResponseEvent*>(event)->result == 0);
+			break;
+
+
+		case rina::ALLOCATE_FLOW_REQUEST_RESULT_EVENT:
+			//The event could not be distributed at first
+			//This is likely because the event arrived before the
+			//callee has invoked wait()
+			//Store and continue
+			store_event(event);
+			*event_ = NULL;
+			return; //Do not delete
+		case rina::FLOW_ALLOCATION_REQUESTED_EVENT:
+			//TODO: add pasive worker
+			flow = rina::ipcManager->allocateFlowResponse(*dynamic_cast<rina::FlowRequestEvent*>(event), 0, true);
+			LOG_INFO("New flow allocated [port-id = %d]", flow->getPortId());
+			break;
+
+		case rina::FLOW_DEALLOCATED_EVENT:
+			port_id = dynamic_cast<rina::FlowDeallocatedEvent*>(event)->portId;
+			rina::ipcManager->flowDeallocated(port_id);
+			LOG_INFO("Flow torn down remotely [port-id = %d]", port_id);
+			//TODO: add pasive worker
+			//joinWorker(port_id);
+			break;
+
+		case rina::DEALLOCATE_FLOW_RESPONSE_EVENT:
+			LOG_INFO("Destroying the flow after time-out");
+			resp = dynamic_cast<rina::DeallocateFlowResponseEvent*>(event);
+			port_id = resp->portId;
+			rina::ipcManager->flowDeallocationResult(port_id, resp->result == 0);
+			//TODO: add pasive worker
+			//joinWorker(port_id);
+			break;
+
+		default:
+			assert(0);
+			LOG_ERR("Got unknown event %d",
+						event->eventType);
+		break;
 	}
+
+	delete event;
+	*event_ = NULL;
 }
 
 //Constructors destructors(singleton)
@@ -350,6 +361,7 @@ FlowManager::FlowManager(ManagementAgent* agent) : next_id(1), agent_(agent){
 }
 
 FlowManager::~FlowManager(){
+
 	//Join all workers
 	std::map<unsigned int, Worker*>::iterator it = workers.begin();
 
@@ -363,6 +375,7 @@ FlowManager::~FlowManager(){
 		//Remove
 		it++;
 	}
+
 }
 
 
@@ -383,23 +396,132 @@ void FlowManager::disconnectFrom(unsigned int worker_id){
 	joinWorker(worker_id);
 }
 
-//Notify
-void FlowManager::notify(rina::IPCEvent** event){
+//Stores and notifies an event
+void FlowManager::store_event(rina::IPCEvent* event){
 
-	std::map<unsigned int, Worker*>::iterator it;
-	//TODO: use rwlock
-	rina::ScopedLock lock(mutex);
+	unsigned int seqnum = event->sequenceNumber;
 
-	for( it = workers.begin(); it!=workers.end(); ++it) {
-		//Notify current worker
-		it->second->notify(event);
+	//Lock to access the map
+	//NOTE: this is confusing and ugly as hell. wait_cond is also Lockable
+	//(mutex).
+	//Blame the author who made ConditionVariable inherit from
+	//Lockable(mutex) instead of mutex being a member.
+	wait_cond.lock();
 
-		//Check if this worker had consumed the event
-		if(!*event)
-			return;
-	}
+	try{
+		//Check if already exists
+		if (pending_events.find(seqnum) != pending_events.end()){
+			LOG_WARN("Duplicated seqnum '%u' for event of type '%s. Overwritting previous event...",
+				seqnum,
+				rina::IPCEvent::eventTypeToString(event->eventType).c_str());
+			assert(0);
+		}
+		pending_events[seqnum] = event;
+	}catch(...){
+		wait_cond.unlock();
+		LOG_WARN("Unable to store event of type %s and sequence number %u. Destroying...",
+				rina::IPCEvent::eventTypeToString(event->eventType).c_str(),
+				seqnum);
+		delete event;
+		return;
+	};
+
+	wait_cond.unlock();
 }
 
+// Checks whether an operation has already finalised
+rina::IPCEvent* FlowManager::get_event(unsigned int seqnum){
+
+	rina::IPCEvent* event = NULL;
+
+	//Lock to access the map
+	//NOTE: this is confusing and ugly as hell. wait_cond is also Lockable
+	//(mutex).
+	//Blame the author who made ConditionVariable inherit from
+	//Lockable(mutex) instead of mutex being a member.
+	rina::ScopedLock lock(wait_cond);
+
+	if(pending_events.find(seqnum) != pending_events.end()){
+		event = pending_events[seqnum];
+		pending_events.erase(seqnum);
+	}
+
+	return event;
+}
+
+//Blocks until the operation has finalised, or hard timeout is reached
+rina::IPCEvent* FlowManager::wait_event(unsigned int seqnum){
+
+	int i;
+	rina::IPCEvent* event = NULL;
+
+	//Lock to access the map
+	//NOTE: this is confusing and ugly as hell. wait_cond is also Lockable
+	//(mutex).
+	//Blame the author who made ConditionVariable inherit from
+	//Lockable(mutex) instead of mutex being a member.
+	wait_cond.lock();
+
+	//This is here in purpose. The event could have arrived BEFORE
+	//we actually are waiting for it
+	if(pending_events.find(seqnum) != pending_events.end()){
+		event = pending_events[seqnum];
+		pending_events.erase(seqnum);
+		wait_cond.unlock();
+		return event;
+	}
+
+	for(i=0; i < FM_TIMEOUT_S *(_FM_1_SEC_NSEC/ FM_RETRY_NSEC) ;++i){
+		try{
+			//Just wait
+			wait_cond.timedwait(0, FM_RETRY_NSEC);
+			if(pending_events.find(seqnum) != pending_events.end()){
+				event = pending_events[seqnum];
+				pending_events.erase(seqnum);
+				break;
+			}
+		}catch(...){};
+	}
+
+	wait_cond.unlock();
+
+	return event;
+}
+
+// Blocks until the operation has finalised, or timeout is reached
+rina::IPCEvent* FlowManager::timed_wait_event(unsigned int seqnum, unsigned int sec,
+							unsigned int nsec){
+
+	rina::IPCEvent* event = NULL;
+
+	//Lock to access the map
+	//NOTE: this is confusing and ugly as hell. wait_cond is also Lockable
+	//(mutex).
+	//Blame the author who made ConditionVariable inherit from
+	//Lockable(mutex) instead of mutex being a member.
+	wait_cond.lock();
+
+	//This is here in purpose. The event could have arrived BEFORE
+	//we actually are waiting for it
+	if(pending_events.find(seqnum) != pending_events.end()){
+		event = pending_events[seqnum];
+		pending_events.erase(seqnum);
+		wait_cond.unlock();
+		return event;
+	}
+
+	//Perform wait
+	wait_cond.timedwait(sec, nsec);
+
+	if(pending_events.find(seqnum) != pending_events.end()){
+		event = get_event(seqnum);
+		pending_events.erase(seqnum);
+	}
+
+	wait_cond.unlock();
+
+	return event;
+}
 //
 // FIXME: spawning a thread per flow is a waste of resources in general
 // but currently there is no functionality like select/poll/epoll to wait for

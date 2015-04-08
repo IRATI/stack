@@ -2,6 +2,8 @@
  * IPC Manager console
  *
  *    Vincenzo Maffione     <v.maffione@nextworks.it>
+ *    Marc Sune             <marc.sune (at) bisdn.de>
+ *    Eduard Grasa          <eduard.grasa@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -70,8 +72,7 @@ console_function(void *opaque)
 	return NULL;
 }
 
-IPCMConsole::IPCMConsole(rina::ThreadAttributes &ta,
-					const unsigned int port_) :
+IPCMConsole::IPCMConsole(const unsigned int port_) :
 		Addon("console"),
 		port(port_)
 {
@@ -134,6 +135,7 @@ IPCMConsole::IPCMConsole(rina::ThreadAttributes &ta,
 				"USAGE: plugin-unload <ipcp-id> "
 				"<plugin-name>");
 
+	rina::ThreadAttributes ta;
 	worker = new rina::Thread(&ta, console_function, this);
 }
 

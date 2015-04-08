@@ -1,3 +1,23 @@
+/*
+ * RIB factory
+ *
+ *    Bernat Gaston         <bernat.gaston@i2cat.net>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
 #include "ribd_v1.h"
 
 #define RINA_PREFIX "ipcm.mad.ribd_v1"
@@ -75,6 +95,8 @@ void RIBRespHandler_v1::stopResponse(const rina::cdap_rib::res_info_t &res,
   (void) res;
   (void) con;
 }
+
+// Initializes the RIB with the current status
 void initiateRIB(rina::rib::RIBDNorthInterface* ribd)
 {
 	try
@@ -91,37 +113,37 @@ void initiateRIB(rina::rib::RIBDNorthInterface* ribd)
 	  ribd->addRIBObject(new rina::rib::EmptyRIBObject("OSApplicationProcess", "root, computingSystemID = 1, "
 				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess", InstanceGenerator->next(), enc));
 	  ribd->addRIBObject(new rina::rib::EmptyRIBObject("ManagementAgent", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID=1", InstanceGenerator->next(), enc));
+				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgentID=1", InstanceGenerator->next(), enc));
 		// IPCManagement branch
 	  ribd->addRIBObject(new rina::rib::EmptyRIBObject("IPCManagement", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement", InstanceGenerator->next(), enc));
+				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgentID = 1, ipcManagement", InstanceGenerator->next(), enc));
 	  ribd->addRIBObject(new rina::rib::EmptyRIBObject("IPCResourceManager", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
+				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgentID = 1, ipcManagement, "
 				"ipcResourceManager", InstanceGenerator->next(), enc));
 	  ribd->addRIBObject(new rina::rib::EmptyRIBObject("UnderlayingFlows", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
+				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgentID = 1, ipcManagement, "
 				"ipcResourceManager, underlayingFlows", InstanceGenerator->next(), enc));
 	  ribd->addRIBObject(new rina::rib::EmptyRIBObject("UnderlayingDIFs", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
+				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgentID = 1, ipcManagement, "
 				"ipcResourceManager, underlayingDIFs", InstanceGenerator->next(), enc));
 	  ribd->addRIBObject(new rina::rib::EmptyRIBObject("QueryDIFAllocator", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
+				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgentID = 1, ipcManagement, "
 				"ipcResourceManager, queryDIFAllocator", InstanceGenerator->next(), enc));
 	  ribd->addRIBObject(new rina::rib::EmptyRIBObject("UnderlayingRegistrations", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
+				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgentID = 1, ipcManagement, "
 				"ipcResourceManager, underlayingRegistrations", InstanceGenerator->next(), enc));
 	  ribd->addRIBObject(new rina::rib::EmptyRIBObject("SDUPRotection", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
+				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgentID = 1, ipcManagement, "
 				"sduProtection", InstanceGenerator->next(), enc));
 		// RIBDaemon branch
 	  ribd->addRIBObject(new rina::rib::EmptyRIBObject("RIBDaemon", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ribDaemon", InstanceGenerator->next(), enc));
+				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgentID = 1, ribDaemon", InstanceGenerator->next(), enc));
 	  ribd->addRIBObject(new rina::rib::EmptyRIBObject("Discriminators", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ribDaemon"
+				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgentID = 1, ribDaemon"
 				", discriminators", InstanceGenerator->next(), enc));
 		// DIFManagement
 	  ribd->addRIBObject(new rina::rib::EmptyRIBObject("DIFManagement", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, difManagement", InstanceGenerator->next(), enc));
+				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgentID = 1, difManagement", InstanceGenerator->next(), enc));
 	}
 	catch(rina::Exception &e1)
 	{
