@@ -17,25 +17,39 @@ const std::string IPCPObj::class_name = "IPCProcess";
 
 
 //Encoder
-void IPCPEncoder::encode(const IPCPObj &obj,
+void IPCPEncoder::encode(const ipcp_msg_t &obj,
                                rina::cdap_rib::SerializedObject& serobj) const{
 
-  (void)serobj;
-  (void)obj;
+  rinad::messages::ipcp m;
+  m.set_processid(obj.process_id);
+  //TODO add name
+
+  //Allocate memory
+  serobj.size_ = m.ByteSize();
+  serobj.message_ = new char[serobj.size_];
+
+  if(!serobj.message_)
+    throw rina::Exception("out of memory"); //TODO improve this
+
+  //Serialize and return
+  m.SerializeToArray(serobj.message_, serobj.size_);
 }
 
 void IPCPEncoder::decode(const rina::cdap_rib::SerializedObject &serobj,
-                                            IPCPObj& des_obj) const{
+                                             ipcp_msg_t& des_obj) const{
 
-  (void)serobj;
-  (void)des_obj;
+  rinad::messages::ipcp m;
+  if(!m.ParseFromArray(serobj.message_, serobj.size_))
+    throw rina::Exception("Could not be parsed");
+
+  des_obj.process_id =  m.processid();
 }
 
 
 //Class
 
 IPCPObj::IPCPObj(std::string name, long instance, int ipcp_id):
-             RIBObject<IPCPObj>(class_name, instance, name, this, &encoder),
+             RIBObject<ipcp_msg_t>(class_name, instance, name, (ipcp_msg_t*)NULL, &encoder),
              processID_(ipcp_id){
 
 }
