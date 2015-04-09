@@ -18,12 +18,15 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
 #include <signal.h>
 
 #include <cstdlib>
 #include <sstream>
 
-#define RINA_PREFIX "ipcp-main"
+#define RINA_PREFIX "ipcp"
 
 #include <librina/common.h>
 #include <librina/logs.h>
@@ -32,6 +35,13 @@
 
 int wrapped_main(int argc, char * argv[])
 {
+
+	if(geteuid() != 0){
+		fprintf(stderr, "\nERROR: Root permissions are required to run %s\n",
+								RINA_PREFIX);
+		exit(EXIT_FAILURE);
+	}
+
         if (argc != 7) {
                 LOG_ERR("Wrong number of arguments: expected 7, got %d", argc);
                 return EXIT_FAILURE;

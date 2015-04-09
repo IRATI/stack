@@ -1307,6 +1307,7 @@ int IPCManager_::add_syscall_transaction_state(SyscallTransState* t){
 		assert(0);
 		return -1;
 	}
+
 	return 0;
 }
 

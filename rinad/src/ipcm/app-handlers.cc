@@ -101,7 +101,8 @@ void IPCManager_::os_process_finalized_handler(
 		}
 	}
 
-	if (event->ipcProcessId != 0) {
+	if (IPCManager->ipcp_exists(event->ipcProcessId)) {
+		//An IPCP OS process has crashed, we need to clean up state
 		//TODO if the IPCP was supporting flows or had
 		//registered applications, notify them
 

@@ -94,7 +94,7 @@ void IPCManager_::ipc_process_daemon_initialized_event_handler(
 
 	//Set return value, mark as completed and signal
 	trans->completed(IPCM_SUCCESS);
-	remove_transaction_state(trans->tid);
+	remove_syscall_transaction_state(trans->tid);
 
 	return;
 }
