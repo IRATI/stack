@@ -21,35 +21,50 @@ namespace rib_v1{
 //fwd decl
 class IPCPObj;
 
+
+//Struct containing the message
+//It is a bit redundant, but hold GPB in the encoder only
+typedef struct ipcp_msg{
+  int32_t process_id;
+  std::string name;
+  //TODO: add missing info
+}ipcp_msg_t;
+
 /**
 * Encoder
 */
-class IPCPEncoder : public rina::rib::Encoder<IPCPObj>{
-  virtual void encode(const IPCPObj &obj,
+class IPCPEncoder : public rina::rib::Encoder<ipcp_msg_t>{
+  virtual void encode(const ipcp_msg_t &obj,
                               rina::cdap_rib::SerializedObject& serobj) const;
   virtual void decode(const rina::cdap_rib::SerializedObject &serobj,
-                                            IPCPObj& des_obj) const;
+                                            ipcp_msg_t& des_obj) const;
 
   virtual std::string get_type() const{ return "ipcp"; };
 };
 
+
+
+
 /**
 * IPCP object
 */
-class IPCPObj : public rina::rib::RIBObject<IPCPObj>{
+class IPCPObj : public rina::rib::RIBObject<ipcp_msg_t>{
 
 public:
   IPCPObj(std::string name, long instance, int ipcp_id);
   virtual ~IPCPObj(){};
 
   //We only support deletion
-  virtual bool deleteObject(const void* value);
+  rina::cdap_rib::res_info_t* remoteDeleteObject(const std::string& name,
+                                const rina::cdap_rib::SerializedObject &value);
 
   //Name of the class
   const static std::string class_name;
 
-private:
+  //Process ID
   int processID_;
+
+private:
   IPCPEncoder encoder;
 };
 
