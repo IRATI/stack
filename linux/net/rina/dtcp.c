@@ -318,26 +318,29 @@ static seq_num_t next_snd_ctl_seq(struct dtcp * dtcp)
 
 static seq_num_t last_snd_data_ack(struct dtcp * dtcp)
 {
-        seq_num_t tmp;
+        seq_num_t     tmp;
+        unsigned long flags;
 
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
-        spin_lock(&dtcp->sv->lock);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
         tmp = dtcp->sv->last_snd_data_ack;
-        spin_unlock(&dtcp->sv->lock);
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 
         return tmp;
 }
 
 static void last_snd_data_ack_set(struct dtcp * dtcp, seq_num_t seq_num)
 {
+        unsigned long flags;
+
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
-        spin_lock(&dtcp->sv->lock);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
         dtcp->sv->last_snd_data_ack = seq_num;
-        spin_unlock(&dtcp->sv->lock);
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 }
 
 static int push_pdus_rmt(struct dtcp * dtcp)
