@@ -331,6 +331,39 @@ EXTRA_DIST +=                                   \
 protoSOURCES += FlowStateMessage.pb.cc FlowStateMessage.pb.h
 
 
+IpcpConfig.stamp: IpcpConfig.proto
+	rm -f IpcpConfig.tmp
+	touch IpcpConfig.tmp
+	$(PROTOC) -I$(builddir) -I$(srcdir)	\
+		--cpp_out=$(builddir)		\
+		$(srcdir)/IpcpConfig.proto
+	mv -f IpcpConfig.tmp $@
+
+IpcpConfig.pb.h IpcpConfig.pb.cc: IpcpConfig.stamp
+	if test -f $@; then :; else \
+	  trap 'rm -rf IpcpConfig.lock IpcpConfig.stamp' 1 2 13 15; \
+	  if mkdir IpcpConfig.lock 2>/dev/null; then \
+	    rm -f IpcpConfig.stamp; \
+	    $(MAKE) $(AM_MAKEFLAGS) IpcpConfig.stamp; \
+	    result=$$?; rm -rf IpcpConfig.lock; exit $$result; \
+	  else \
+	    while test -d IpcpConfig.lock; do sleep 1; done; \
+	    test -f IpcpConfig.stamp; \
+	  fi; \
+	fi
+
+DISTCLEANFILES +=                               \
+        IpcpConfig.pb.h IpcpConfig.pb.cc IpcpConfig.stamp
+
+MOSTLYCLEANFILES +=                             \
+        IpcpConfig.tmp
+
+EXTRA_DIST +=                                   \
+        IpcpConfig.proto
+
+protoSOURCES += IpcpConfig.pb.cc IpcpConfig.pb.h
+
+
 MA-IPCP.stamp: MA-IPCP.proto
 	rm -f MA-IPCP.tmp
 	touch MA-IPCP.tmp

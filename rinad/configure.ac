@@ -138,6 +138,7 @@ AC_CONFIG_FILES([
     src/ipcm/addons/ma/ribs/Makefile
     src/ipcm/include/Makefile
     src/ipcm/include/ipcm/Makefile
+    src/manager/Makefile
 
     doc/Makefile
     tools/Makefile
