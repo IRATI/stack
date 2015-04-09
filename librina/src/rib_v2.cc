@@ -477,16 +477,23 @@ void RIBDaemon::remote_create_request(const cdap_rib::con_handle_t &con,
   // FIXME add res and flags
   cdap_rib::flags_t flags;
 
+  //Reply object set to empty
+  cdap_rib::obj_info_t obj_reply;
+  obj_reply.value_.size_ = 0;
+
   BaseRIBObject* rib_obj = rib_->getRIBObject(obj.class_, obj.name_, true);
-  if (rib_obj == NULL)
-  {
-    // DELEGATE CREATION TO PARENT
+  if (rib_obj == NULL) {
     std::string parent_name = rib_->get_parent_name(obj.name_);
     rib_obj = rib_->getRIBObject("", parent_name, false);
   }
-  cdap_rib::res_info_t* res = rib_obj->remoteCreateObject(obj.name_, obj.value_);
+
+  //Call the application
+  cdap_rib::res_info_t* res = rib_obj->remoteCreate(obj.name_, obj.value_,
+                                                             obj_reply.value_);
+
   try {
-    cdap_provider_->remote_create_response(con, obj, flags, *res, message_id);
+    cdap_provider_->remote_create_response(con, obj_reply, flags, *res,
+                                                                  message_id);
   } catch (Exception &e) {
     LOG_ERR("Unable to send the response");
   }
@@ -503,7 +510,7 @@ void RIBDaemon::remote_delete_request(const cdap_rib::con_handle_t &con,
   cdap_rib::flags_t flags;
 
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
-  cdap_rib::res_info_t* res = ribObj->remoteDeleteObject(obj.name_, obj.value_);
+  cdap_rib::res_info_t* res = ribObj->remoteDelete(obj.name_);
   try {
     cdap_provider_->remote_delete_response(con, obj, flags, *res, message_id);
   } catch (Exception &e) {
@@ -520,8 +527,13 @@ void RIBDaemon::remote_read_request(const cdap_rib::con_handle_t &con,
   // FIXME add res and flags
   cdap_rib::flags_t flags;
 
+  //Reply object set to empty
+  cdap_rib::obj_info_t obj_reply;
+  obj_reply.value_.size_ = 0;
+
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
-  cdap_rib::res_info_t* res = ribObj->remoteReadObject(obj.name_, obj.value_);
+  cdap_rib::res_info_t* res = ribObj->remoteRead(obj.name_, obj_reply.value_);
+
   try {
     cdap_provider_->remote_read_response(con, obj, flags, *res, message_id);
   } catch (Exception &e) {
@@ -540,8 +552,8 @@ void RIBDaemon::remote_cancel_read_request(const cdap_rib::con_handle_t &con,
   cdap_rib::flags_t flags;
 
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
-  cdap_rib::res_info_t* res = ribObj->remoteCancelReadObject(obj.name_,
-                                                             obj.value_);
+  cdap_rib::res_info_t* res = ribObj->remoteCancelRead(obj.name_);
+
   try {
     cdap_provider_->remote_cancel_read_response(con, flags, *res, message_id);
   } catch (Exception &e) {
@@ -558,8 +570,13 @@ void RIBDaemon::remote_write_request(const cdap_rib::con_handle_t &con,
   // FIXME add res and flags
   cdap_rib::flags_t flags;
 
+  //Reply object set to empty
+  cdap_rib::obj_info_t obj_reply;
+  obj_reply.value_.size_ = 0;
+
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
-  cdap_rib::res_info_t* res = ribObj->remoteWriteObject(obj.name_, obj.value_);
+  cdap_rib::res_info_t* res = ribObj->remoteWrite(obj.name_, obj.value_,
+                                                            obj_reply.value_);
   try {
     cdap_provider_->remote_write_response(con, flags, *res, message_id);
   } catch (Exception &e) {
@@ -576,8 +593,14 @@ void RIBDaemon::remote_start_request(const cdap_rib::con_handle_t &con,
   // FIXME add res and flags
   cdap_rib::flags_t flags;
 
+  //Reply object set to empty
+  cdap_rib::obj_info_t obj_reply;
+  obj_reply.value_.size_ = 0;
+
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
-  cdap_rib::res_info_t* res = ribObj->remoteStartObject(obj.name_, obj.value_);
+  cdap_rib::res_info_t* res = ribObj->remoteStart(obj.name_, obj.value_,
+                                                             obj_reply.value_);
+
   try {
     cdap_provider_->remote_start_response(con, obj, flags, *res, message_id);
   } catch (Exception &e) {
@@ -594,8 +617,14 @@ void RIBDaemon::remote_stop_request(const cdap_rib::con_handle_t &con,
   // FIXME add res and flags
   cdap_rib::flags_t flags;
 
+  //Reply object set to empty
+  cdap_rib::obj_info_t obj_reply;
+  obj_reply.value_.size_ = 0;
+
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
-  cdap_rib::res_info_t* res = ribObj->remoteStopObject(obj.name_, obj.value_);
+  cdap_rib::res_info_t* res = ribObj->remoteStop(obj.name_, obj.value_,
+                                                             obj_reply.value_);
+
   try {
     cdap_provider_->remote_stop_response(con, flags, *res, message_id);
   } catch (Exception &e) {
@@ -761,67 +790,73 @@ bool BaseRIBObject::stopObject(const void* object)
   return false;
 }
 
-cdap_rib::res_info_t* BaseRIBObject::remoteCreateObject(const std::string& name,
-                                                        const cdap_rib::SerializedObject &value)
+
+cdap_rib::res_info_t* BaseRIBObject::remoteCreate(const std::string& name,
+                                  const cdap_rib::SerializedObject &obj_req,
+                                  cdap_rib::SerializedObject &obj_reply)
 {
   (void) name;
-  (void) value;
+  (void) obj_req;
+  (void) obj_reply;
   operation_not_supported();
-  return 0;
+  return NULL;
 }
 
-cdap_rib::res_info_t* BaseRIBObject::remoteDeleteObject(const std::string& name,
-                                                        const cdap_rib::SerializedObject &value)
+cdap_rib::res_info_t* BaseRIBObject::remoteDelete(const std::string& name)
 {
   (void) name;
-  (void) value;
   operation_not_supported();
-  return 0;
+  return NULL;
 }
 
-cdap_rib::res_info_t* BaseRIBObject::remoteReadObject(const std::string& name,
-                                                      const cdap_rib::SerializedObject &value)
+cdap_rib::res_info_t* BaseRIBObject::remoteRead(const std::string& name,
+                                        cdap_rib::SerializedObject &obj_reply)
 {
   (void) name;
-  (void) value;
+  (void) obj_reply;
   operation_not_supported();
-  return 0;
+  return NULL;
 }
 
-cdap_rib::res_info_t* BaseRIBObject::remoteCancelReadObject(
-    const std::string& name, const cdap_rib::SerializedObject &value)
+
+cdap_rib::res_info_t* BaseRIBObject::remoteCancelRead(const std::string& name)
 {
   (void) name;
-  (void) value;
   operation_not_supported();
-  return 0;
+  return NULL;
 }
 
-cdap_rib::res_info_t* BaseRIBObject::remoteWriteObject(const std::string& name,
-                                                       const cdap_rib::SerializedObject &value)
+cdap_rib::res_info_t* BaseRIBObject::remoteWrite(const std::string& name,
+                                 const cdap_rib::SerializedObject &obj_req,
+                                 cdap_rib::SerializedObject &obj_reply)
 {
   (void) name;
-  (void) value;
+  (void) obj_req;
+  (void) obj_reply;
   operation_not_supported();
-  return 0;
+  return NULL;
 }
 
-cdap_rib::res_info_t* BaseRIBObject::remoteStartObject(const std::string& name,
-                                                       const cdap_rib::SerializedObject &value)
+cdap_rib::res_info_t* BaseRIBObject::remoteStart(const std::string& name,
+                                 const cdap_rib::SerializedObject &obj_req,
+                                 cdap_rib::SerializedObject &obj_reply)
 {
   (void) name;
-  (void) value;
+  (void) obj_req;
+  (void) obj_reply;
   operation_not_supported();
-  return 0;
+  return NULL;
 }
 
-cdap_rib::res_info_t* BaseRIBObject::remoteStopObject(const std::string& name,
-                                                      const cdap_rib::SerializedObject &value)
+cdap_rib::res_info_t* BaseRIBObject::remoteStop(const std::string& name,
+                                 const cdap_rib::SerializedObject &obj_req,
+                                 cdap_rib::SerializedObject &obj_reply)
 {
   (void) name;
-  (void) value;
+  (void) obj_req;
+  (void) obj_reply;
   operation_not_supported();
-  return 0;
+  return NULL;
 }
 
 const std::string& BaseRIBObject::get_class() const

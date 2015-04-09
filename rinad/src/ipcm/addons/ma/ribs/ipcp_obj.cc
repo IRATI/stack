@@ -18,7 +18,7 @@ const std::string IPCPObj::class_name = "IPCProcess";
 
 //Encoder
 void IPCPEncoder::encode(const ipcp_msg_t &obj,
-                               rina::cdap_rib::SerializedObject& serobj) const{
+                               rina::cdap_rib::SerializedObject& serobj) {
 
   rinad::messages::ipcp m;
   m.set_processid(obj.process_id);
@@ -36,7 +36,7 @@ void IPCPEncoder::encode(const ipcp_msg_t &obj,
 }
 
 void IPCPEncoder::decode(const rina::cdap_rib::SerializedObject &serobj,
-                                             ipcp_msg_t& des_obj) const{
+                                             ipcp_msg_t& des_obj) {
 
   rinad::messages::ipcp m;
   if(!m.ParseFromArray(serobj.message_, serobj.size_))
@@ -54,12 +54,26 @@ IPCPObj::IPCPObj(std::string name, long instance, int ipcp_id) :
 
 }
 
+rina::cdap_rib::res_info_t* IPCPObj::remoteRead(const std::string& name,
+                               rina::cdap_rib::SerializedObject &obj_reply){
+
+  (void) name;
+  rina::cdap_rib::res_info_t* r = new rina::cdap_rib::res_info_t;
+  r->result_ = 0;
+
+  ipcp_msg_t info;
+  info.process_id = processID_;
+  //TODO add name
+
+  encoder_->encode(info, obj_reply);
+  return r;
+}
+
 //We only support deletion
-rina::cdap_rib::res_info_t* IPCPObj::remoteDeleteObject(
-                              const std::string& name,
-                              const rina::cdap_rib::SerializedObject &value){
+rina::cdap_rib::res_info_t* IPCPObj::remoteDelete(
+                              const std::string& name){
+
   (void)name;
-  (void)value;
   rina::cdap_rib::res_info_t* r = new rina::cdap_rib::res_info_t;
 
   //Fill in the response

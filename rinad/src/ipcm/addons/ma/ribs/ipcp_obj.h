@@ -35,9 +35,9 @@ typedef struct ipcp_msg{
 */
 class IPCPEncoder : public rina::rib::Encoder<ipcp_msg_t>{
   virtual void encode(const ipcp_msg_t &obj,
-                              rina::cdap_rib::SerializedObject& serobj) const;
+                              rina::cdap_rib::SerializedObject& serobj);
   virtual void decode(const rina::cdap_rib::SerializedObject &serobj,
-                                            ipcp_msg_t& des_obj) const;
+                                            ipcp_msg_t& des_obj);
 
   virtual std::string get_type() const{ return "ipcp"; };
 };
@@ -54,9 +54,13 @@ public:
   IPCPObj(std::string name, long instance, int ipcp_id);
   virtual ~IPCPObj(){};
 
-  //We only support deletion
-  rina::cdap_rib::res_info_t* remoteDeleteObject(const std::string& name,
-                                const rina::cdap_rib::SerializedObject &value);
+  //Read
+  rina::cdap_rib::res_info_t* remoteRead(const std::string& name,
+                                rina::cdap_rib::SerializedObject &obj_reply);
+
+  //Deletion
+  rina::cdap_rib::res_info_t* remoteDelete(
+                                const std::string& name);
 
   //Name of the class
   const static std::string class_name;

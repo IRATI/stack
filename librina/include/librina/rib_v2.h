@@ -92,8 +92,7 @@ class Encoder: public AbstractEncoder
   /// @param object
   /// @throws exception if the object is not recognized by the encoder
   /// @return
-  virtual void encode(const T &obj, cdap_rib::SerializedObject& serobj)
-                                                                    const = 0;
+  virtual void encode(const T &obj, cdap_rib::SerializedObject& serobj) = 0;
   /// Converts a byte array to an object of the type specified by "className"
   /// @param byte[] serializedObject
   /// @param objectClass The type of object to be decoded
@@ -102,7 +101,7 @@ class Encoder: public AbstractEncoder
   /// object of the type "className"
   /// @return
   virtual void decode(const cdap_rib::SerializedObject &serobj,
-                                            T& des_obj) const = 0;
+                                            T& des_obj) = 0;
 };
 
 /// Contains the data of an object in the RIB
@@ -159,21 +158,92 @@ class BaseRIBObject
   virtual bool startObject(const void* object);
   virtual bool stopObject(const void* object);
 
+  ///
   /// Remote invocations, resulting from CDAP messages
-  virtual cdap_rib::res_info_t* remoteCreateObject(const std::string& name,
-                                                   const cdap_rib::SerializedObject &value);
-  virtual cdap_rib::res_info_t* remoteDeleteObject(const std::string& name,
-                                                   const cdap_rib::SerializedObject &value);
-  virtual cdap_rib::res_info_t* remoteReadObject(const std::string& name,
-                                                 const cdap_rib::SerializedObject &value);
-  virtual cdap_rib::res_info_t* remoteCancelReadObject(const std::string& name,
-                                                       const cdap_rib::SerializedObject &value);
-  virtual cdap_rib::res_info_t* remoteWriteObject(const std::string& name,
-                                                  const cdap_rib::SerializedObject &value);
-  virtual cdap_rib::res_info_t* remoteStartObject(const std::string& name,
-                                                  const cdap_rib::SerializedObject &value);
-  virtual cdap_rib::res_info_t* remoteStopObject(const std::string& name,
-                                                 const cdap_rib::SerializedObject &value);
+  ///
+
+  ///
+  /// Process a remote create
+  ///
+  /// @param name FQN of the object
+  /// @param obj_req Optional serialized object from the request.
+  ///                Shall only be decoded if size != 0
+  /// @param obj_reply Optional serialized object to be returned.
+  ///                  Shall only be decoded if size != 0
+  ///                  Initialized to size = 0 by default.
+  ///
+  virtual cdap_rib::res_info_t* remoteCreate(const std::string& name,
+                                  const cdap_rib::SerializedObject &obj_req,
+                                  cdap_rib::SerializedObject &obj_reply);
+  ///
+  /// Process a remote delete operation
+  ///
+  /// @param name FQN of the object
+  ///
+  virtual cdap_rib::res_info_t* remoteDelete(const std::string& name);
+
+  ///
+  ///
+  /// Process a remote read operation
+  ///
+  /// @param name FQN of the object
+  /// @obj_reply Serialized object to be returned.
+  ///
+  virtual cdap_rib::res_info_t* remoteRead(const std::string& name,
+                                        cdap_rib::SerializedObject &obj_reply);
+
+  ///
+  ///
+  /// Process a cancel remote read operation
+  ///
+  /// @param name FQN of the object
+  ///
+  virtual cdap_rib::res_info_t* remoteCancelRead(const std::string& name);
+
+  ///
+  ///
+  /// Process a remote write operation
+  ///
+  /// @param name FQN of the object
+  /// @param obj_req Serialized object from the request
+  /// @param obj_reply Optional serialized object to be returned.
+  ///                  Will only be decoded by the RIB library if size != 0.
+  ///                  Initialized to size = 0 by default.
+  ///
+  virtual cdap_rib::res_info_t* remoteWrite(const std::string& name,
+                                 const cdap_rib::SerializedObject &obj_req,
+                                 cdap_rib::SerializedObject &obj_reply);
+
+  ///
+  ///
+  /// Process a remote read operation
+  ///
+  /// @param name FQN of the object
+  /// @param obj_req Optional serialized object from the request.
+  ///                Shall only be decoded if size != 0
+  /// @param obj_reply Optional serialized object to be returned.
+  ///                  Shall only be decoded if size != 0
+  ///                  Initialized to size = 0 by default.
+  ///
+  virtual cdap_rib::res_info_t* remoteStart(const std::string& name,
+                                 const cdap_rib::SerializedObject &obj_req,
+                                 cdap_rib::SerializedObject &obj_reply);
+
+  ///
+  ///
+  /// Process a remote read operation
+  ///
+  /// @param name FQN of the object
+  /// @param obj_req Optional serialized object from the request.
+  ///                Shall only be decoded if size != 0
+  /// @param obj_reply Optional serialized object to be returned.
+  ///                  Shall only be decoded if size != 0
+  ///                  Initialized to size = 0 by default.
+  ///
+  virtual cdap_rib::res_info_t* remoteStop(const std::string& name,
+                                 const cdap_rib::SerializedObject &obj_req,
+                                 cdap_rib::SerializedObject &obj_reply);
+
   virtual const std::string& get_class() const;
   virtual const std::string& get_name() const;
   virtual long get_instance() const;
@@ -212,6 +282,7 @@ class RIBObject : public BaseRIBObject
     encoder_ = encoder;
     value_ = encoder->decode(value);
   }
+
   virtual ~RIBObject()
   {
     delete value_;
@@ -226,7 +297,6 @@ class RIBObject : public BaseRIBObject
   }
  protected:
   T* value_;
- private:
   Encoder<T> *encoder_;
 };
 
@@ -391,13 +461,12 @@ class empty
 class EmptyEncoder : public rib::Encoder<empty>
 {
  public:
-  virtual void encode(const empty &obj, cdap_rib::SerializedObject& serobj)
-                                                                      const {
+  virtual void encode(const empty &obj, cdap_rib::SerializedObject& serobj){
     (void)serobj;
     (void)obj;
   };
   virtual void decode(const cdap_rib::SerializedObject &serobj,
-                                            empty& des_obj) const{
+                                            empty& des_obj){
     (void)serobj;
     (void)des_obj;
   };
