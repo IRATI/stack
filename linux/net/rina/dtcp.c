@@ -197,26 +197,29 @@ EXPORT_SYMBOL(dtcp_pdu_send);
 static int last_rcv_ctrl_seq_set(struct dtcp * dtcp,
                                  seq_num_t     last_rcv_ctrl_seq)
 {
+        unsigned long flags;
+
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
-        spin_lock(&dtcp->sv->lock);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
         dtcp->sv->last_rcv_ctl_seq = last_rcv_ctrl_seq;
-        spin_unlock(&dtcp->sv->lock);
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 
         return 0;
 }
 
 seq_num_t last_rcv_ctrl_seq(struct dtcp * dtcp)
 {
-        seq_num_t tmp;
+        seq_num_t     tmp;
+        unsigned long flags;
 
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
-        spin_lock(&dtcp->sv->lock);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
         tmp = dtcp->sv->last_rcv_ctl_seq;
-        spin_unlock(&dtcp->sv->lock);
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 
         return tmp;
 }
@@ -224,22 +227,26 @@ EXPORT_SYMBOL(last_rcv_ctrl_seq);
 
 static void flow_ctrl_inc(struct dtcp * dtcp)
 {
+        unsigned long flags;
+
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
-        spin_lock(&dtcp->sv->lock);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
         dtcp->sv->flow_ctl++;
-        spin_unlock(&dtcp->sv->lock);
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 }
 
 static void acks_inc(struct dtcp * dtcp)
 {
+        unsigned long flags;
+
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
-        spin_lock(&dtcp->sv->lock);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
         dtcp->sv->acks++;
-        spin_unlock(&dtcp->sv->lock);
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 }
 
 static int snd_rt_wind_edge_set(struct dtcp * dtcp, seq_num_t new_rt_win)
@@ -289,14 +296,15 @@ EXPORT_SYMBOL(snd_lft_win);
 
 seq_num_t rcvr_rt_wind_edge(struct dtcp * dtcp)
 {
-        seq_num_t tmp;
+        unsigned long flags;
+        seq_num_t     tmp;
 
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
-        spin_lock(&dtcp->sv->lock);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
         tmp = dtcp->sv->rcvr_rt_wind_edge;
-        spin_unlock(&dtcp->sv->lock);
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 
         return tmp;
 }
