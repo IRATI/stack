@@ -120,12 +120,14 @@ EXPORT_SYMBOL(dtp_sv_connection);
 
 int nxt_seq_reset(struct dtp_sv * sv, seq_num_t sn)
 {
+        unsigned long flags;
+
         if (!sv)
                 return -1;
 
-        spin_lock(&sv->lock);
+        spin_lock_irqsave(&sv->lock, flags);
         sv->seq_nr_to_send = sn;
-        spin_unlock(&sv->lock);
+        spin_unlock_irqrestore(&sv->lock, flags);
 
         return 0;
 }
@@ -149,6 +151,7 @@ seq_num_t dtp_sv_last_nxt_seq_nr(struct dtp * instance)
 {
         seq_num_t       tmp;
         struct dtp_sv * sv;
+        unsigned long   flags;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
@@ -157,9 +160,9 @@ seq_num_t dtp_sv_last_nxt_seq_nr(struct dtp * instance)
         sv = instance->sv;
         ASSERT(sv);
 
-        spin_lock(&sv->lock);
+        spin_lock_irqsave(&sv->lock, flags);
         tmp = sv->seq_nr_to_send;
-        spin_unlock(&sv->lock);
+        spin_unlock_irqrestore(&sv->lock, flags);
 
         return tmp;
 }
@@ -224,11 +227,13 @@ static uint_t dropped_pdus(struct dtp_sv * sv)
 
 static void dropped_pdus_inc(struct dtp_sv * sv)
 {
+        unsigned long flags;
+
         ASSERT(sv);
 
-        spin_lock(&sv->lock);
+        spin_lock_irqsave(&sv->lock, flags);
         sv->dropped_pdus++;
-        spin_unlock(&sv->lock);
+        spin_unlock_irqrestore(&sv->lock, flags);
 }
 
 int dtp_initial_sequence_number(struct dtp * instance)
