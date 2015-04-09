@@ -312,14 +312,16 @@ EXPORT_SYMBOL(rcvr_rt_wind_edge);
 
 static seq_num_t next_snd_ctl_seq(struct dtcp * dtcp)
 {
-        seq_num_t tmp;
+        seq_num_t     tmp;
+        unsigned long flags;
+
 
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
-        spin_lock(&dtcp->sv->lock);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
         tmp = ++dtcp->sv->next_snd_ctl_seq;
-        spin_unlock(&dtcp->sv->lock);
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 
         return tmp;
 }
@@ -936,16 +938,17 @@ EXPORT_SYMBOL(dtcp_ack_flow_control_pdu_send);
 
 void update_rt_wind_edge(struct dtcp * dtcp)
 {
-        seq_num_t seq;
+        seq_num_t     seq;
+        unsigned long flags;
 
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
         seq = dt_sv_rcv_lft_win(dtcp->parent);
-        spin_lock(&dtcp->sv->lock);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
         seq += dtcp->sv->rcvr_credit;
         dtcp->sv->rcvr_rt_wind_edge = seq;
-        spin_unlock(&dtcp->sv->lock);
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 }
 EXPORT_SYMBOL(update_rt_wind_edge);
 
