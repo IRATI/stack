@@ -22,6 +22,11 @@
             "difName": "hv.1.DIF"
         },
         {
+            "apName": "h.hv.2.IPCP",
+            "apInstance": "1",
+            "difName": "hv.2.DIF"
+        },
+        {
             "apName": "h.n.1.IPCP",
             "apInstance": "1",
             "difName": "n.DIF",
