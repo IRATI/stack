@@ -490,3 +490,4 @@ EXPORT_SYMBOL(pci_control_my_left_wind_edge);
 seq_num_t pci_control_last_seq_num_rcvd(const struct pci * pci)
 { return pci ? pci->control.last_ctrl_seq_num_rcvd : 0; }
 EXPORT_SYMBOL(pci_control_last_seq_num_rcvd);
+

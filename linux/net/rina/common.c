@@ -39,7 +39,7 @@ EXPORT_SYMBOL(is_port_id_ok);
 #define CEP_ID_WRONG -1
 
 bool is_cep_id_ok(cep_id_t id)
-{ return true; /* FIXME: Bummer, add it */ }
+{ return id >= 0 ? true : false; }
 EXPORT_SYMBOL(is_cep_id_ok);
 
 cep_id_t cep_id_bad(void)

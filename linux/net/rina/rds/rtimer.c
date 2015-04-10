@@ -100,12 +100,13 @@ static int __rtimer_start(struct rtimer * timer,
 
 
         LOG_DBG("Previously %s Timer %pK restarted (function = %pK, data = %pK, "
-                "expires = %ld",
+                "expires = %ld (%u)",
                 status ? "active" : "inactive",
                 timer,
                 (void *) timer->tl.function,
                 (void *) timer->tl.data,
-                timer->tl.expires);
+                timer->tl.expires,
+                millisecs);
 
         return 0;
 }

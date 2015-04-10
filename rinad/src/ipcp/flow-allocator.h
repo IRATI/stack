@@ -32,7 +32,7 @@
 namespace rinad {
 
 /// Flow Allocator Instance Interface
-class IFlowAllocatorInstance {
+class IFlowAllocatorInstance : public rina::BaseCDAPResponseMessageHandler {
 public:
 	virtual ~IFlowAllocatorInstance() {
 	}
@@ -174,6 +174,7 @@ class FlowAllocator: public IFlowAllocator {
 public:
 	FlowAllocator();
 	~FlowAllocator();
+	IFlowAllocatorInstance * getFAI(int portId);
 	void set_ipc_process(IPCProcess * ipc_process);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
         int select_policy_set(const std::string& path, const std::string& name);
@@ -215,8 +216,7 @@ private:
 };
 
 ///Implementation of the FlowAllocatorInstance
-class FlowAllocatorInstance: public IFlowAllocatorInstance,
-		public rina::BaseCDAPResponseMessageHandler {
+class FlowAllocatorInstance: public IFlowAllocatorInstance {
 public:
 	enum FAIState {
 		NO_STATE,

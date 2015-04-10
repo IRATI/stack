@@ -69,13 +69,6 @@ config RINA_PFT_REGRESSION_TESTS
 
 endif
 
-config RINA_SHIM_DUMMY
-	tristate "Shim IPC Dummy (loopback)"
-	default m
-        depends on RINA_PERSONALITY_DEFAULT && RINA_DEBUG
-	help
-	  No help for the time being
-
 config RINA_SHIM_ETH_VLAN
 	tristate "Shim IPC over Ethernet (using VLANs) support"
 	default m

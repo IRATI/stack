@@ -203,6 +203,10 @@ FlowAllocator::~FlowAllocator()
   flow_allocator_instances_.deleteValues();
 }
 
+IFlowAllocatorInstance * FlowAllocator::getFAI(int portId) {
+	return flow_allocator_instances_.find(portId);
+}
+
 void FlowAllocator::set_ipc_process(IPCProcess * ipc_process)
 {
   ipcp = ipc_process;
@@ -636,7 +640,6 @@ void FlowAllocatorInstance::submitAllocateRequest(
     throw rina::Exception(ss.str().c_str());
   }
 
-  //2 Check if the destination address is this IPC process (then invoke degenerated form of IPC)
   unsigned int sourceAddress = ipc_process_->get_address();
   flow_->source_address = sourceAddress;
   flow_->source_port_id = port_id_;
@@ -645,12 +648,6 @@ void FlowAllocatorInstance::submitAllocateRequest(
   ss << EncoderConstants::SEPARATOR << sourceAddress << "-"
      << port_id_;
   object_name_ = ss.str();
-  if (destinationAddress == sourceAddress) {
-    // At the moment we don't support allocation of flows between applications at the
-    // same processing system
-    throw rina::Exception(
-        "Allocation of flows between local applications not supported yet");
-  }
 
   //3 Request the creation of the connection(s) in the Kernel
   state = CONNECTION_CREATE_REQUESTED;
@@ -714,35 +711,42 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(
   LOG_DBG("Created connection with cep-id %d", event.getCepId());
   flow_->getActiveConnection()->setSourceCepId(event.getCepId());
 
-  try {
-    //5 get the portId of any open CDAP session
-    std::vector<int> cdapSessions;
-    cdap_session_manager_->getAllCDAPSessionIds(cdapSessions);
-    rina::RemoteProcessId remote_id;
-    remote_id.port_id_ = cdapSessions[0];
-    remote_id.use_address_ = true;
-    remote_id.address_ = flow_->destination_address;
+  if (flow_->destination_address != flow_->source_address) {
+	  try {
+		  //5 get the portId of any open CDAP session
+		  std::vector<int> cdapSessions;
+		  cdap_session_manager_->getAllCDAPSessionIds(cdapSessions);
+		  rina::RemoteProcessId remote_id;
+		  remote_id.port_id_ = cdapSessions[0];
+		  remote_id.use_address_ = true;
+		  remote_id.address_ = flow_->destination_address;
 
-    rina::RIBObjectValue robject_value;
-    robject_value.type_ = rina::RIBObjectValue::complextype;
-    robject_value.complex_value_ = flow_;
+		  rina::RIBObjectValue robject_value;
+		  robject_value.type_ = rina::RIBObjectValue::complextype;
+		  robject_value.complex_value_ = flow_;
 
-    //6 Encode the flow object and send it to the destination IPC process
-    rib_daemon_->remoteCreateObject(
-        EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_,
-        robject_value, 0, remote_id, this);
+		  //6 Encode the flow object and send it to the destination IPC process
+		  rib_daemon_->remoteCreateObject(
+				  EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_,
+				  robject_value, 0, remote_id, this);
 
-    underlying_port_id_ = cdapSessions[0];
-    state = MESSAGE_TO_PEER_FAI_SENT;
-  } catch (rina::Exception &e) {
-    LOG_ERR(
-        "Problems sending M_CREATE <Flow> CDAP message to neighbor: %s",
-        e.what());
-    replyToIPCManager(flow_request_event_, -1);
-    releaseUnlockRemove();
-    return;
+		  underlying_port_id_ = cdapSessions[0];
+	  } catch (rina::Exception &e) {
+		  LOG_ERR(
+				  "Problems sending M_CREATE <Flow> CDAP message to neighbor: %s",
+				  e.what());
+		  replyToIPCManager(flow_request_event_, -1);
+		  releaseUnlockRemove();
+		  return;
+	  }
+  } else {
+	  //Destination application is registered at this IPC Process
+	  //Bypass RIB Daemon and call Flow Allocator directly
+	  Flow * dest_flow = new Flow(*flow_);
+	  flow_allocator_->createFlowRequestMessageReceived(dest_flow, object_name_, 0, 0);
   }
 
+  state = MESSAGE_TO_PEER_FAI_SENT;
   lock_->unlock();
 }
 
@@ -788,23 +792,27 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(
         "Security Manager denied incoming flow request from application %s",
         flow_->source_naming_info.getEncodedString().c_str());
 
-    try {
-      rina::RemoteProcessId remote_id;
-      remote_id.port_id_ = underlying_port_id_;
-      remote_id.use_address_ = true;
-      remote_id.address_ = flow_->source_address;
+    if (flow_->source_address != flow_->destination_address) {
+    	try {
+    		rina::RemoteProcessId remote_id;
+    		remote_id.port_id_ = underlying_port_id_;
+    		remote_id.use_address_ = true;
+    		remote_id.address_ = flow_->source_address;
 
-      rina::RIBObjectValue robject_value;
-      robject_value.type_ = rina::RIBObjectValue::complextype;
-      robject_value.complex_value_ = flow_;
+    		rina::RIBObjectValue robject_value;
+    		robject_value.type_ = rina::RIBObjectValue::complextype;
+    		robject_value.complex_value_ = flow_;
 
-      rib_daemon_->remoteCreateObjectResponse(
-          EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_,
-          robject_value, -1,
-          "EncoderConstants::FLOW_RIB_OBJECT_CLASS", invoke_id_,
-          remote_id);
-    } catch (rina::Exception &e) {
-      LOG_ERR("Problems sending CDAP message: %s", e.what());
+    		rib_daemon_->remoteCreateObjectResponse(
+    				EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_,
+    				robject_value, -1,
+    				"EncoderConstants::FLOW_RIB_OBJECT_CLASS", invoke_id_,
+    				remote_id);
+    	} catch (rina::Exception &e) {
+    		LOG_ERR("Problems sending CDAP message: %s", e.what());
+    	}
+    } else {
+    	//TODO notify source FAI
     }
 
     releaseUnlockRemove();
@@ -887,35 +895,56 @@ void FlowAllocatorInstance::submitAllocateResponse(
   }
 
   if (event.result == 0) {
-    //Flow has been accepted
-    try {
-      rina::RemoteProcessId remote_id;
-      remote_id.port_id_ = underlying_port_id_;
-      remote_id.use_address_ = true;
-      remote_id.address_ = flow_->source_address;
+	  //Flow has been accepted
+	  if (flow_->source_address != flow_->destination_address) {
+		  try {
+			  rina::RemoteProcessId remote_id;
+			  remote_id.port_id_ = underlying_port_id_;
+			  remote_id.use_address_ = true;
+			  remote_id.address_ = flow_->source_address;
 
-      rina::RIBObjectValue robject_value;
-      robject_value.type_ = rina::RIBObjectValue::complextype;
-      robject_value.complex_value_ = flow_;
+			  rina::RIBObjectValue robject_value;
+			  robject_value.type_ = rina::RIBObjectValue::complextype;
+			  robject_value.complex_value_ = flow_;
 
-      rib_daemon_->remoteCreateObjectResponse(
-          EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_,
-          robject_value, 0, "", invoke_id_, remote_id);
-    } catch (rina::Exception &e) {
-      LOG_ERR(
-          "Problems requesting RIB Daemon to send CDAP Message: %s",
-          e.what());
+			  rib_daemon_->remoteCreateObjectResponse(
+					  EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_,
+					  robject_value, 0, "", invoke_id_, remote_id);
+		  } catch (rina::Exception &e) {
+			  LOG_ERR(
+					  "Problems requesting RIB Daemon to send CDAP Message: %s",
+					  e.what());
 
-      try {
-        rina::extendedIPCManager->flowDeallocated(port_id_);
-      } catch (rina::Exception &e) {
-        LOG_ERR("Problems communicating with the IPC Manager: %s",
-                e.what());
-      }
+			  try {
+				  rina::extendedIPCManager->flowDeallocated(port_id_);
+			  } catch (rina::Exception &e) {
+				  LOG_ERR("Problems communicating with the IPC Manager: %s",
+						  e.what());
+			  }
 
-      releaseUnlockRemove();
-      return;
-    }
+			  releaseUnlockRemove();
+			  return;
+		  }
+	} else {
+		//Both source and destination apps are registered at the same DIF
+		//Locate source FAI
+		IFlowAllocatorInstance * fai = flow_allocator_->getFAI(flow_->source_port_id);
+
+		if (fai == 0) {
+			try {
+				rina::extendedIPCManager->flowDeallocated(port_id_);
+			} catch (rina::Exception &e) {
+				LOG_ERR("Problems locating FAI associated to port-id: %d",
+						flow_->source_port_id);
+			}
+
+			releaseUnlockRemove();
+			return;
+		}
+
+		Flow * source_flow = new Flow(*flow_);
+		fai->createResponse(0, "", source_flow , 0);
+	}
 
     try {
       flow_->state = Flow::ALLOCATED;
@@ -932,23 +961,43 @@ void FlowAllocatorInstance::submitAllocateResponse(
   }
 
   //Flow has been rejected
-  try {
-    rina::RemoteProcessId remote_id;
-    remote_id.port_id_ = underlying_port_id_;
-    remote_id.use_address_ = true;
-    remote_id.address_ = flow_->source_address;
+  if (flow_->source_address != flow_->destination_address) {
+	  try {
+		  rina::RemoteProcessId remote_id;
+		  remote_id.port_id_ = underlying_port_id_;
+		  remote_id.use_address_ = true;
+		  remote_id.address_ = flow_->source_address;
 
-    rina::RIBObjectValue robject_value;
-    robject_value.type_ = rina::RIBObjectValue::complextype;
-    robject_value.complex_value_ = flow_;
+		  rina::RIBObjectValue robject_value;
+		  robject_value.type_ = rina::RIBObjectValue::complextype;
+		  robject_value.complex_value_ = flow_;
 
-    rib_daemon_->remoteCreateObjectResponse(
-        EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_,
-        robject_value, -1, "Application rejected the flow",
-        invoke_id_, remote_id);
-  } catch (rina::Exception &e) {
-    LOG_ERR("Problems requesting RIB Daemon to send CDAP Message: %s",
-            e.what());
+		  rib_daemon_->remoteCreateObjectResponse(
+				  EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_,
+				  robject_value, -1, "Application rejected the flow",
+				  invoke_id_, remote_id);
+	  } catch (rina::Exception &e) {
+		  LOG_ERR("Problems requesting RIB Daemon to send CDAP Message: %s",
+				  e.what());
+	  }
+  } else {
+		//Both source and destination apps are registered at the same DIF
+		//Locate source FAI
+		IFlowAllocatorInstance * fai = flow_allocator_->getFAI(flow_->source_port_id);
+
+		if (fai == 0) {
+			try {
+				rina::extendedIPCManager->flowDeallocated(port_id_);
+			} catch (rina::Exception &e) {
+				LOG_ERR("Problems locating FAI associated to port-id: %d",
+						flow_->source_port_id);
+			}
+
+			releaseUnlockRemove();
+			return;
+		}
+
+		fai->createResponse(-1, "Application rejected the flow", 0 , 0);
   }
 
   releaseUnlockRemove();
@@ -1030,22 +1079,31 @@ void FlowAllocatorInstance::submitDeallocate(
     state = WAITING_2_MPL_BEFORE_TEARING_DOWN;
 
     //2 Send M_DELETE
-    try {
-      rina::RemoteProcessId remote_id;
-      remote_id.port_id_ = underlying_port_id_;
-      remote_id.use_address_ = true;
-      if (ipc_process_->get_address() == flow_->source_address) {
-        remote_id.address_ = flow_->destination_address;
-      } else {
-        remote_id.address_ = flow_->source_address;
-      }
+    if (flow_->source_address != flow_->destination_address) {
+    	try {
+    		rina::RemoteProcessId remote_id;
+    		remote_id.port_id_ = underlying_port_id_;
+    		remote_id.use_address_ = true;
+    		if (ipc_process_->get_address() == flow_->source_address) {
+    			remote_id.address_ = flow_->destination_address;
+    		} else {
+    			remote_id.address_ = flow_->source_address;
+    		}
 
-      rib_daemon_->remoteDeleteObject(
-          EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_, 0,
-          remote_id, 0);
-      ;
-    } catch (rina::Exception &e) {
-      LOG_ERR("Problems sending M_DELETE flow request: %s", e.what());
+    		rib_daemon_->remoteDeleteObject(
+    				EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_, 0,
+    				remote_id, 0);
+    		;
+    	} catch (rina::Exception &e) {
+    		LOG_ERR("Problems sending M_DELETE flow request: %s", e.what());
+    	}
+    } else {
+    	IFlowAllocatorInstance * fai = flow_allocator_->getFAI(flow_->destination_port_id);
+    	if (!fai){
+    		LOG_ERR("Problems locating destination Flow Allocator instance");
+    	}
+
+    	fai->deleteFlowRequestMessageReceived();
     }
 
     //3 Wait 2*MPL before tearing down the flow

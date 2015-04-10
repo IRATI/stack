@@ -212,12 +212,13 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
         conn->source_address      = source;
         conn->port_id             = port_id;
         conn->qos_id              = qos_id;
+        conn->source_cep_id       = cep_id_bad(); /* init value */
+        conn->destination_cep_id  = cep_id_bad(); /* init velue */
         conn->policies_params     = cp_params;  /* Take the ownership. */
 
         cep_id = efcp_connection_create(data->efcpc, NULL, conn);
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Failed EFCP connection creation");
-                connection_destroy(conn);
                 return cep_id_bad();
         }
 
@@ -443,13 +444,13 @@ connection_create_arrived(struct ipcp_instance_data * data,
         conn->source_address      = source;
         conn->port_id             = port_id;
         conn->qos_id              = qos_id;
+        conn->source_cep_id       = cep_id_bad(); /* init values */
         conn->destination_cep_id  = dst_cep_id;
         conn->policies_params     = cp_params;  /* Take the ownership. */
 
         cep_id = efcp_connection_create(data->efcpc, user_ipcp, conn);
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Failed EFCP connection creation");
-                connection_destroy(conn);
                 return cep_id_bad();
         }
         LOG_DBG("Cep_id allocated for the arrived connection request: %d",
