@@ -143,7 +143,7 @@ int efcp_imap_add(struct efcp_imap * map,
 
         ASSERT(map);
 
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
         if (!tmp)
                 return -1;
 
