@@ -29,19 +29,19 @@ void ConfManager::configure(ManagementAgent& agent){
 	//Configure the AP nameand instance ID
 	//XXX get it from the configuration source (e.g. config file)
 	//Configure the MA
-	rina::ApplicationProcessNamingInformation info("mad_node1", "1");
+	rina::ApplicationProcessNamingInformation info("rina.apps.mad", "1");
 	agent.setAPInfo(info);
 
 
 	//NMS
-	std::string dif("NMS-DIF");
+	std::string dif("normal.DIF");
 	agent.addNMSDIF(dif);
 
 
 	//Configure Manager connections
 	AppConnection ap_con;
 	ap_con.flow_info.remoteAppName =
-		rina::ApplicationProcessNamingInformation("Manager", "");
+		rina::ApplicationProcessNamingInformation("rina.apps.manager", "");
 	ap_con.flow_info.difName =
 		rina::ApplicationProcessNamingInformation(dif, "");
 

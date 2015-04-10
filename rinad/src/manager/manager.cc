@@ -209,64 +209,30 @@ void Manager::sendCreateIPCP()
 {
   char buffer[max_sdu_size_in_bytes];
   mad_manager::structures::ipcp_config_t ipc_config;
+
   ipc_config.process_instance = 1;
   ipc_config.process_name = "test1.IRATI";
   ipc_config.process_type = "normal.IPC";
+  ipc_config.dif_to_register = "400";
+  ipc_config.dif_to_assign = "normal.DIF";
+
   cdap_rib::obj_info_t obj;
   obj.name_ =
       "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcessID=1";
   obj.class_ = "IPCProcess";
   obj.inst_ = 0;
   mad_manager::encoders::IPCPConfigEncoder().encode(ipc_config, obj.value_);
-  cdap_rib::flags_t flags;
-  flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
-  cdap_rib::filt_info_t filt;
-  filt.filter_ = 0;
-  filt.scope_ = 0;
-  cdap_prov_->remote_create(con_, obj, flags, filt);
-  std::cout << "create IPC request CDAP message sent" << std::endl;
-  int bytes_read = flow_->readSDU(buffer, max_sdu_size_in_bytes);
-  cdap_rib::SerializedObject message;
-  message.message_ = buffer;
-  message.size_ = bytes_read;
-  cdap_prov_->process_message(message, flow_->getPortId());
-}
 
-void Manager::sendRegisterAtDIF()
-{
-  char buffer[max_sdu_size_in_bytes];
-  cdap_rib::obj_info_t obj;
-  obj.name_ = "test name";
-  obj.class_ = "test class";
-  obj.inst_ = 1;
   cdap_rib::flags_t flags;
   flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
-  cdap_rib::filt_info_t filt;
-  filt.filter_ = 0;
-  filt.scope_ = 0;
-  cdap_prov_->remote_create(con_, obj, flags, filt);
-  std::cout << "create IPC request CDAP message sent" << std::endl;
-  int bytes_read = flow_->readSDU(buffer, max_sdu_size_in_bytes);
-  cdap_rib::SerializedObject message;
-  message.message_ = buffer;
-  message.size_ = bytes_read;
-  cdap_prov_->process_message(message, flow_->getPortId());
-}
 
-void Manager::sendAssignToDIF()
-{
-  char buffer[max_sdu_size_in_bytes];
-  cdap_rib::obj_info_t obj;
-  obj.name_ = "test name";
-  obj.class_ = "test class";
-  obj.inst_ = 1;
-  cdap_rib::flags_t flags;
-  flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
   cdap_rib::filt_info_t filt;
   filt.filter_ = 0;
   filt.scope_ = 0;
+
   cdap_prov_->remote_create(con_, obj, flags, filt);
   std::cout << "create IPC request CDAP message sent" << std::endl;
+
   int bytes_read = flow_->readSDU(buffer, max_sdu_size_in_bytes);
   cdap_rib::SerializedObject message;
   message.message_ = buffer;

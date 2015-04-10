@@ -29,6 +29,8 @@ typedef struct IPCPConfig{
   std::string process_name;
   unsigned int process_instance;
   std::string process_type;
+  std::string dif_to_register;
+  std::string dif_to_assign;
 }ipcp_config_t;
 }
 

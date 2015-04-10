@@ -31,7 +31,8 @@ void IPCPConfigEncoder::encode (const structures::ipcp_config_t &obj, rina::cdap
   gpf_obj.set_process_name(obj.process_name);
   gpf_obj.set_process_instance(obj.process_instance);
   gpf_obj.set_process_type(obj.process_type);
-
+  gpf_obj.set_dif_to_register(obj.dif_to_register);
+  gpf_obj.set_dif_to_assign(obj.dif_to_assign);
   if (ser_obj.size_ != 0 && ser_obj.message_ != 0)
   {
     delete ser_obj.message_;
@@ -48,6 +49,8 @@ void IPCPConfigEncoder::decode(const rina::cdap_rib::ser_obj_t &ser_obj,
   obj.process_name = gpf_obj.process_name();
   obj.process_instance = gpf_obj.process_instance();
   obj.process_type = gpf_obj.process_type();
+  obj.dif_to_register = gpf_obj.dif_to_register();
+  obj.dif_to_assign = gpf_obj.dif_to_assign();
 }
 std::string IPCPConfigEncoder::get_type() const
 {
