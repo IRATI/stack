@@ -110,7 +110,8 @@ rina::QoSCube * FlowAllocatorPs::selectQoSCube(
 	        for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
 		        cube = *iterator;
 		        if (cube->get_efcp_policies().is_dtcp_present()
-			    && !cube->get_efcp_policies().get_dtcp_configuration().is_rtx_control())				return cube;
+			    && !cube->get_efcp_policies().get_dtcp_configuration().is_rtx_control())
+			        return cube;
 		}
 		for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
 		        cube = *iterator;
