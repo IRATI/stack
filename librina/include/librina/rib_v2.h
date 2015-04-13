@@ -172,7 +172,7 @@ class BaseRIBObject
   ///                  Shall only be decoded if size != 0
   ///                  Initialized to size = 0 by default.
   ///
-  virtual cdap_rib::res_info_t* remoteCreate(const std::string& name,
+  virtual cdap_rib::res_info_t* remoteCreate(const std::string& name, const std::string clas,
                                   const cdap_rib::SerializedObject &obj_req,
                                   cdap_rib::SerializedObject &obj_reply);
   ///

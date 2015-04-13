@@ -488,7 +488,7 @@ void RIBDaemon::remote_create_request(const cdap_rib::con_handle_t &con,
   }
 
   //Call the application
-  cdap_rib::res_info_t* res = rib_obj->remoteCreate(obj.name_, obj.value_,
+  cdap_rib::res_info_t* res = rib_obj->remoteCreate(obj.name_, obj.class_, obj.value_,
                                                              obj_reply.value_);
 
   try {
@@ -791,11 +791,12 @@ bool BaseRIBObject::stopObject(const void* object)
 }
 
 
-cdap_rib::res_info_t* BaseRIBObject::remoteCreate(const std::string& name,
+cdap_rib::res_info_t* BaseRIBObject::remoteCreate(const std::string& name, const std::string clas,
                                   const cdap_rib::SerializedObject &obj_req,
                                   cdap_rib::SerializedObject &obj_reply)
 {
   (void) name;
+  (void) clas;
   (void) obj_req;
   (void) obj_reply;
   operation_not_supported();

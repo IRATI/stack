@@ -17,6 +17,7 @@ namespace rinad{
 namespace mad{
 namespace rib_v1{
 
+extern Singleton<rina::ConsecutiveUnsignedIntegerGenerator> InstanceGenerator;
 
 //fwd decl
 class IPCPObj;
@@ -34,6 +35,7 @@ typedef struct ipcp_msg{
 * Encoder
 */
 class IPCPEncoder : public rina::rib::Encoder<ipcp_msg_t>{
+ public:
   virtual void encode(const ipcp_msg_t &obj,
                               rina::cdap_rib::SerializedObject& serobj);
   virtual void decode(const rina::cdap_rib::SerializedObject &serobj,
@@ -52,6 +54,7 @@ class IPCPObj : public rina::rib::RIBObject<ipcp_msg_t>{
 
 public:
   IPCPObj(std::string name, long instance, int ipcp_id);
+  IPCPObj(std::string name, long instance, const rina::cdap_rib::SerializedObject &object_value);
   virtual ~IPCPObj(){};
 
   //Read
@@ -72,6 +75,21 @@ private:
   IPCPEncoder encoder;
 };
 
+
+/**
+* OSApplicationProcess object
+*/
+class OSApplicationProcessObj : public rina::rib::EmptyRIBObject
+{
+ public:
+  OSApplicationProcessObj(const std::string& clas, std::string name, long instance, rina::rib::RIBDNorthInterface* ribd);
+  rina::cdap_rib::res_info_t* remoteCreate(const std::string& name, const std::string clas,
+                    const rina::cdap_rib::SerializedObject &obj_req,
+                    rina::cdap_rib::SerializedObject &obj_reply);
+ private:
+  rina::rib::RIBDNorthInterface* ribd_;
+  rina::rib::EmptyEncoder encoder_;
+};
 
 }; //namespace rib_v1
 }; //namespace mad

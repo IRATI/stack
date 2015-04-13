@@ -1,10 +1,9 @@
 /**
-* @file ribdv1.h
-* @author Bernat Gaston <bernat (dot) gaston (at) i2cat (dot) net>
-*
-* @brief Management Agent RIB daemon v1
-*/
-
+ * @file ribdv1.h
+ * @author Bernat Gaston <bernat (dot) gaston (at) i2cat (dot) net>
+ *
+ * @brief Management Agent RIB daemon v1
+ */
 
 #ifndef __RINAD_RIBD_V1_H__
 #define __RINAD_RIBD_V1_H__
@@ -13,9 +12,9 @@
 #include <librina/patterns.h>
 #include <librina/common.h>
 
-namespace rinad{
-namespace mad{
-namespace rib_v1{
+namespace rinad {
+namespace mad {
+namespace rib_v1 {
 
 class RIBRespHandler_v1 : public rina::rib::ResponseHandlerInterface
 {
@@ -47,11 +46,8 @@ class RIBConHandler_v1 : public rina::cacep::AppConHandlerInterface
 
 void initiateRIB(rina::rib::RIBDNorthInterface* ribd);
 
-extern Singleton<rina::ConsecutiveUnsignedIntegerGenerator> InstanceGenerator;
-
-}; //namespace rib_v1
-}; //namespace mad
-}; //namespace rinad
-
+};//namespace rib_v1
+};//namespace mad
+};//namespace rinad
 
 #endif  /* __RINAD_RIBD_V1_H__ */
