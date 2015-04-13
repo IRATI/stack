@@ -34,6 +34,7 @@
 #include "agent.h"
 #include "ribf.h"
 #define RINA_PREFIX "ipcm.mad.flowm"
+#include <librina/likely.h>
 #include <librina/logs.h>
 #include <librina/rib_v2.h>
 
@@ -43,13 +44,14 @@ namespace mad{
 
 //General events timeout
 #define FM_TIMEOUT_S 5
-#define FM_RETRY_NSEC 10000000 //10ms
+#define FM_RETRY_NSEC 100000000 //100ms
 #define _FM_1_SEC_NSEC 1000000000
 
 
 //Flow allocation worker events
 #define FM_FALLOC_TIMEOUT_S 10
 #define FM_FALLOC_TIMEOUT_NS 0
+#define FM_FALLOC_ALLOC_RETRY_US 400000 //400ms
 
 const unsigned int max_sdu_size_in_bytes = 10000;
 
@@ -207,21 +209,15 @@ rina::Flow* ActiveWorker::allocateFlow(){
 	//FIXME: Move to connection
 	rina::FlowSpecification qos;
 
-	{
-		//we must do this in mutual exclusion to prevent a race cond.
-		//between the next call and the storing of the seqnum
-	  rina::ScopedLock lock(mutex);
+	//Perform the flow allocation
+	seqnum = rina::ipcManager->requestFlowAllocationInDIF(
+			flow_manager->getAPInfo(),
+			con.flow_info.remoteAppName,
+			con.flow_info.difName,
+			qos);
 
-		//Perform the flow allocation
-		seqnum = rina::ipcManager->requestFlowAllocationInDIF(
-				flow_manager->getAPInfo(),
-				con.flow_info.remoteAppName,
-				con.flow_info.difName,
-				qos);
-
-		LOG_DBG("[w:%u] Waiting for event %u", id, seqnum);
-		pend_events.push_back(seqnum);
-	}
+	LOG_DBG("[w:%u] Waiting for event %u", id, seqnum);
+	pend_events.push_back(seqnum);
 
 	//Wait for the event
 	try{
@@ -269,20 +265,30 @@ rina::Flow* ActiveWorker::allocateFlow(){
 // Flow active worker
 void* ActiveWorker::run(void* param){
 
-  (void) param;
-  //Allocate the flow
-	rina::Flow* flow =allocateFlow();
+	(void) param;
+	//Allocate the flow
+	rina::Flow* flow = NULL;
 
 	keep_running = true;
 	while(keep_running == true){
 
-	  char buffer[max_sdu_size_in_bytes];
-    int bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
-    rina::cdap_rib::SerializedObject message;
-    message.message_ = buffer;
-    message.size_ = bytes_read;
-    // FIXME change this when multiple rib versions (need librina rib and cdap refactor)
-    rib_factory_->getRIB(1).process_message(message, flow->getPortId());
+		//Allocate the flow
+		flow = allocateFlow();
+
+		if(!flow){
+			usleep(FM_FALLOC_ALLOC_RETRY_US);
+			continue;
+		}
+
+		char buffer[max_sdu_size_in_bytes];
+		int bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
+		rina::cdap_rib::SerializedObject message;
+		message.message_ = buffer;
+		message.size_ = bytes_read;
+		// FIXME change this when multiple rib versions
+		//(need librina rib and cdap refactor)
+		rib_factory_->getRIB(1).process_message(message,
+							flow->getPortId());
 	}
 
 	return NULL;
@@ -357,10 +363,13 @@ void FlowManager::process_event(rina::IPCEvent** event_){
 
 //Constructors destructors(singleton)
 FlowManager::FlowManager(ManagementAgent* agent) : next_id(1), agent_(agent){
+	keep_running = true;
 	LOG_DBG("Initialized");
 }
 
 FlowManager::~FlowManager(){
+
+	keep_running = false;
 
 	//Join all workers
 	std::map<unsigned int, Worker*>::iterator it = workers.begin();
@@ -471,8 +480,11 @@ rina::IPCEvent* FlowManager::wait_event(unsigned int seqnum){
 		return event;
 	}
 
-	for(i=0; i < FM_TIMEOUT_S *(_FM_1_SEC_NSEC/ FM_RETRY_NSEC) ;++i){
+	for(i=0; i < FM_TIMEOUT_S *(_FM_1_SEC_NSEC/ FM_RETRY_NSEC); ++i){
 		try{
+			if(unlikely(keep_running == false))
+				break;
+
 			//Just wait
 			wait_cond.timedwait(0, FM_RETRY_NSEC);
 			if(pending_events.find(seqnum) != pending_events.end()){

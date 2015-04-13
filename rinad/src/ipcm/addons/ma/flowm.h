@@ -165,6 +165,9 @@ private:
 	//Worker handler id
 	int next_id;
 
+	//Fast exit from event wait for workers
+	bool keep_running;
+
 	//Back reference
 	ManagementAgent* agent_;
 };
