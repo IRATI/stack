@@ -50,6 +50,7 @@ namespace mad{
 //Flow allocation worker events
 #define FM_FALLOC_TIMEOUT_S 10
 #define FM_FALLOC_TIMEOUT_NS 0
+#define FM_FALLOC_ALLOC_RETRY_US 400000 //400ms
 
 const unsigned int max_sdu_size_in_bytes = 10000;
 
@@ -207,21 +208,15 @@ rina::Flow* ActiveWorker::allocateFlow(){
 	//FIXME: Move to connection
 	rina::FlowSpecification qos;
 
-	{
-		//we must do this in mutual exclusion to prevent a race cond.
-		//between the next call and the storing of the seqnum
-	  rina::ScopedLock lock(mutex);
+	//Perform the flow allocation
+	seqnum = rina::ipcManager->requestFlowAllocationInDIF(
+			flow_manager->getAPInfo(),
+			con.flow_info.remoteAppName,
+			con.flow_info.difName,
+			qos);
 
-		//Perform the flow allocation
-		seqnum = rina::ipcManager->requestFlowAllocationInDIF(
-				flow_manager->getAPInfo(),
-				con.flow_info.remoteAppName,
-				con.flow_info.difName,
-				qos);
-
-		LOG_DBG("[w:%u] Waiting for event %u", id, seqnum);
-		pend_events.push_back(seqnum);
-	}
+	LOG_DBG("[w:%u] Waiting for event %u", id, seqnum);
+	pend_events.push_back(seqnum);
 
 	//Wait for the event
 	try{
@@ -269,20 +264,30 @@ rina::Flow* ActiveWorker::allocateFlow(){
 // Flow active worker
 void* ActiveWorker::run(void* param){
 
-  (void) param;
-  //Allocate the flow
-	rina::Flow* flow =allocateFlow();
+	(void) param;
+	//Allocate the flow
+	rina::Flow* flow = NULL;
 
 	keep_running = true;
 	while(keep_running == true){
 
-	  char buffer[max_sdu_size_in_bytes];
-    int bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
-    rina::cdap_rib::SerializedObject message;
-    message.message_ = buffer;
-    message.size_ = bytes_read;
-    // FIXME change this when multiple rib versions (need librina rib and cdap refactor)
-    rib_factory_->getRIB(1).process_message(message, flow->getPortId());
+		//Allocate the flow
+		flow = allocateFlow();
+
+		if(!flow){
+			usleep(FM_FALLOC_ALLOC_RETRY_US);
+			continue;
+		}
+
+		char buffer[max_sdu_size_in_bytes];
+		int bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
+		rina::cdap_rib::SerializedObject message;
+		message.message_ = buffer;
+		message.size_ = bytes_read;
+		// FIXME change this when multiple rib versions
+		//(need librina rib and cdap refactor)
+		rib_factory_->getRIB(1).process_message(message,
+							flow->getPortId());
 	}
 
 	return NULL;
