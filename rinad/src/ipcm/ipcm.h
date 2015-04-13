@@ -753,6 +753,17 @@ private:
 	//Singleton
 	IPCManager_();
 	virtual ~IPCManager_();
+
+	//I/O loop main thread
+	rina::Thread* io_thread;
+	rina::ThreadAttributes io_thread_attrs;
+
+	//Trampoline for the pthread_create
+	static void* io_loop_trampoline(void* param);
+
+	//Main I/O loop thread
+	void io_loop(void);
+
 	friend class Singleton<rinad::IPCManager_>;
 };
 

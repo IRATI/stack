@@ -74,7 +74,7 @@ namespace rinad {
 //Singleton instance
 Singleton<IPCManager_> IPCManager;
 
-IPCManager_::IPCManager_(){
+IPCManager_::IPCManager_() : io_thread(NULL){
 
 }
 
@@ -99,6 +99,11 @@ void IPCManager_::init(const std::string& loglevel)
 		LOG_DBG("       library path: %s",
 			config.local.libraryPath.c_str());
 		LOG_DBG("       log folder: %s", config.local.logPath.c_str());
+
+		//Initialize the I/O thread
+		io_thread = new rina::Thread(&io_thread_attrs,
+							io_loop_trampoline,
+							NULL);
 	} catch (rina::InitializationException& e) {
 		LOG_ERR("Error while initializing librina-ipc-manager");
 		exit(EXIT_FAILURE);
@@ -1332,6 +1337,49 @@ int IPCManager_::remove_syscall_transaction_state(int tid){
 //Main I/O loop
 void IPCManager_::run(){
 
+	void* status;
+
+	//Join the I/O loop thread
+	io_thread->join(&status);
+
+	//Cleanup
+	LOG_DBG("Cleaning the house...");
+
+	//I/O thread
+	delete io_thread;
+
+	std::list<Addon*>::iterator addon_it;
+
+	addon_it = addons.begin();
+	do{
+		LOG_DBG("Destroying addon: %s(%p)", (*addon_it)->name.c_str(),
+							*addon_it);
+		delete *addon_it;
+		addons.erase(addon_it++);
+	}while(addon_it != addons.end());
+
+	//Destroy all IPCPs
+	std::vector<IPCMIPCProcess *> ipcps;
+	ipcp_factory_.listIPCProcesses(ipcps);
+	std::vector<IPCMIPCProcess *>::const_iterator it;
+
+	//Rwlock: write
+	for(it = ipcps.begin(); it != ipcps.end(); ++it){
+		if(destroy_ipcp((*it)->get_id()) < 0 ){
+			LOG_WARN("Warning could not destroy IPCP id: %d\n",
+								(*it)->get_id());
+		}
+	}
+}
+
+//static
+void* IPCManager_::io_loop_trampoline(void* param){
+	(void)param;
+	IPCManager->io_loop();
+	return NULL;
+}
+
+void IPCManager_::io_loop(){
 	rina::IPCEvent *event;
 
 	keep_running = true;
@@ -1501,30 +1549,8 @@ void IPCManager_::run(){
 	}
 
 	//TODO: probably move this to a private method if it starts to grow
-	LOG_DBG("Stopping I/O loop and cleaning the house...");
+	LOG_DBG("Stopping I/O loop...");
 
-	std::list<Addon*>::iterator addon_it;
-
-	addon_it = addons.begin();
-	do{
-		LOG_DBG("Destroying addon: %s(%p)", (*addon_it)->name.c_str(),
-							*addon_it);
-		delete *addon_it;
-		addons.erase(addon_it++);
-	}while(addon_it != addons.end());
-
-	//Destroy all IPCPs
-	std::vector<IPCMIPCProcess *> ipcps;
-	ipcp_factory_.listIPCProcesses(ipcps);
-	std::vector<IPCMIPCProcess *>::const_iterator it;
-
-	//Rwlock: write
-	for(it = ipcps.begin(); it != ipcps.end(); ++it){
-		if(destroy_ipcp((*it)->get_id()) < 0 ){
-			LOG_WARN("Warning could not destroy IPCP id: %d\n",
-								(*it)->get_id());
-		}
-	}
 }
 
 } //rinad namespace
