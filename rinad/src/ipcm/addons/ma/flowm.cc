@@ -34,6 +34,7 @@
 #include "agent.h"
 #include "ribf.h"
 #define RINA_PREFIX "ipcm.mad.flowm"
+#include <librina/likely.h>
 #include <librina/logs.h>
 #include <librina/rib_v2.h>
 
@@ -43,7 +44,7 @@ namespace mad{
 
 //General events timeout
 #define FM_TIMEOUT_S 5
-#define FM_RETRY_NSEC 10000000 //10ms
+#define FM_RETRY_NSEC 100000000 //100ms
 #define _FM_1_SEC_NSEC 1000000000
 
 
@@ -362,10 +363,13 @@ void FlowManager::process_event(rina::IPCEvent** event_){
 
 //Constructors destructors(singleton)
 FlowManager::FlowManager(ManagementAgent* agent) : next_id(1), agent_(agent){
+	keep_running = true;
 	LOG_DBG("Initialized");
 }
 
 FlowManager::~FlowManager(){
+
+	keep_running = false;
 
 	//Join all workers
 	std::map<unsigned int, Worker*>::iterator it = workers.begin();
@@ -476,8 +480,11 @@ rina::IPCEvent* FlowManager::wait_event(unsigned int seqnum){
 		return event;
 	}
 
-	for(i=0; i < FM_TIMEOUT_S *(_FM_1_SEC_NSEC/ FM_RETRY_NSEC) ;++i){
+	for(i=0; i < FM_TIMEOUT_S *(_FM_1_SEC_NSEC/ FM_RETRY_NSEC); ++i){
 		try{
+			if(unlikely(keep_running == false))
+				break;
+
 			//Just wait
 			wait_cond.timedwait(0, FM_RETRY_NSEC);
 			if(pending_events.find(seqnum) != pending_events.end()){
