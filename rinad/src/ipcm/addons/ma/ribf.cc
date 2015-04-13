@@ -44,91 +44,86 @@ namespace mad {
  */
 
 //Constructors destructors
-RIBFactory::RIBFactory(std::list<uint64_t> supported_versions)
-{
-  for (std::list<uint64_t>::iterator it = supported_versions.begin();
-      it != supported_versions.end(); it++) {
-    createRIB(*it);
-  }
+RIBFactory::RIBFactory(std::list<uint64_t> supported_versions){
 
-  LOG_DBG("Initialized");
+	for (std::list<uint64_t>::iterator it = supported_versions.begin();
+			it != supported_versions.end(); it++) {
+		createRIB(*it);
+	}
+
+	LOG_DBG("Initialized");
 
 }
 
-RIBFactory::~RIBFactory() throw ()
-{
-  // FIXME destroy con handlers and resp handlers
+RIBFactory::~RIBFactory() throw (){
+
+	// FIXME destroy con handlers and resp handlers
 }
 
 /*
  * Inner API
  */
-void RIBFactory::createRIB(uint64_t version)
-{
-  char separator = ',';
-  rina::cdap_rib::cdap_params_t *params = new rina::cdap_rib::cdap_params_t;
-  params->is_IPCP_ = false;
-  params->timeout_ = 2000;
+void RIBFactory::createRIB(uint64_t version){
 
-  rina::cdap_rib::vers_info_t *vers = new rina::cdap_rib::vers_info_t;
-  vers->version_ = (long) version;
+	char separator = ',';
+	rina::cdap_rib::cdap_params_t *params = new rina::cdap_rib::cdap_params_t;
+	params->is_IPCP_ = false;
+	params->timeout_ = 2000;
 
-  //Serialize
-  lock();
+	rina::cdap_rib::vers_info_t *vers = new rina::cdap_rib::vers_info_t;
+	vers->version_ = (long) version;
 
-  //Check if it exists
-  if (rib_inst_.find(version) != rib_inst_.end()) {
-    unlock();
-    throw eDuplicatedRIB(
-        "An instance of the RIB with this version already exists");
-  }
+	//Serialize
+	lock();
 
-  //Create object
-  switch (version) {
-    case 1:
-      rib_inst_[version] = factory_.create(new rib_v1::RIBConHandler_v1(),
-                                           new rib_v1::RIBRespHandler_v1(),
-                                           params, vers, separator);
-      rib_v1::initiateRIB(rib_inst_[version]);
-      break;
-    default:
-      break;
-  }
+	//Check if it exists
+	if (rib_inst_.find(version) != rib_inst_.end()) {
+		unlock();
+		throw eDuplicatedRIB(
+				"An instance of the RIB with this version already exists");
+	}
 
-  //Unlock
-  unlock();
+	//Create object
+	switch (version) {
+		case 1:
+			rib_inst_[version] = factory_.create(new rib_v1::RIBConHandler_v1(),
+					new rib_v1::RIBRespHandler_v1(),
+					params, vers, separator);
+			rib_v1::initiateRIB(rib_inst_[version]);
+			break;
+		default:
+			break;
+	}
+
+	//Unlock
+	unlock();
 }
 
-rina::rib::RIBDNorthInterface& RIBFactory::getRIB(uint64_t version)
-{
+rina::rib::RIBDNorthInterface& RIBFactory::getRIB(uint64_t version){
 
-  rina::rib::RIBDNorthInterface* rib;
 
-  //Serialize
-  lock();
+	rina::rib::RIBDNorthInterface* rib;
 
-  //Note: it is safe to recover the RIB reference without a RD lock
-  //because removal of RIBs is NOT implemented. However this
-  //implementation already protects it
-  //Check if it exists
-  if (rib_inst_.find(version) == rib_inst_.end()) {
-    throw eRIBNotFound("RIB instance not found");
-  }
+	//Serialize
+	lock();
 
-  //TODO: reference count to avoid deletion while being used?
+	//Note: it is safe to recover the RIB reference without a RD lock
+	//because removal of RIBs is NOT implemented. However this
+	//implementation already protects it
+	//Check if it exists
+	if (rib_inst_.find(version) == rib_inst_.end()) {
+		throw eRIBNotFound("RIB instance not found");
+	}
 
-  rib = rib_inst_[version];
+	//TODO: reference count to avoid deletion while being used?
 
-  //Unlock
-  unlock();
+	rib = rib_inst_[version];
 
-  return *rib;
+	//Unlock
+	unlock();
+
+	return *rib;
 }
 
-}
-;
-//namespace mad
-}
-;
-//namespace rinad
-
+};//namespace mad
+};//namespace rinad

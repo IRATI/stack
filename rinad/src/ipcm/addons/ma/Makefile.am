@@ -22,6 +22,7 @@ libaddons_ma_la_CPPFLAGS =			\
 	-I$(srcdir)/../../../common
 
 libaddons_ma_la_LIBADD = 			\
+	$(builddir)/../../../common/librinad.la	\
 	ribs/librinad_ma_ribs.la		\
 	$(LIBRINA_LIBS)
 
