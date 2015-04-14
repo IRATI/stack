@@ -54,48 +54,49 @@ DECLARE_EXCEPTION_SUBCLASS(eRIBNotFound);
 /**
  * @brief RIB manager
  */
-class RIBFactory :public rina::Lockable {
+class RIBFactory{
 
-	public:
-		//Constructors
-		RIBFactory(std::list<uint64_t> supported_versions);
-		virtual ~RIBFactory(void) throw();
+public:
+	//Constructors
+	RIBFactory(std::list<uint64_t> supported_versions);
+	virtual ~RIBFactory(void) throw();
 
-		/**
-		 * Get a reference to a RIB
-		 * @throws eRIBNotFound
-		 */
-		rina::rib::RIBDNorthInterface& getRIB(uint64_t version);
+	/**
+	 * Get a reference to a RIB
+	 * @throws eRIBNotFound
+	 */
+	rina::rib::RIBDNorthInterface& getRIB(uint64_t version);
 
 #if 0
-		//TODO: if ever necessary
+	//TODO: if ever necessary
 
-		/**
-		 * @brief Destroy a RIB instance
-		 *
-		 * This call will stop all communications that are using this RIB
-		 * instance
-		 */
-		void destroyRIB(uint64_t version);
+	/**
+	 * @brief Destroy a RIB instance
+	 *
+	 * This call will stop all communications that are using this RIB
+	 * instance
+	 */
+	void destroyRIB(uint64_t version);
 #endif
 
-	protected:
-		/**
-		 * Create a RIB instance
-		 * @throwseDuplicatedRIB
-		 */
-		void createRIB(uint64_t version);
+protected:
+	/**
+	 * Create a RIB instance
+	 * @throwseDuplicatedRIB
+	 */
+	void createRIB(uint64_t version);
 
-	private:
+	//Mutex
+	rina::Lockable mutex;
 
-		//Map with the current RIB instances
-		std::map<uint64_t, rina::rib::RIBDNorthInterface*> rib_inst_;
-		rina::rib::RIBDFactory factory_;
+	//Map with the current RIB instances
+	std::map<uint64_t, rina::rib::RIBDNorthInterface*> rib_inst_;
+	rina::rib::RIBDFactory factory_;
 
-		/*
-		 * Internal methods
-		 */
-		//TODO
+	/*
+	 * Internal methods
+	 */
+	//TODO
 };
 
 }; //namespace mad

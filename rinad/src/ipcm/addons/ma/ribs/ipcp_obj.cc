@@ -112,17 +112,30 @@ rina::cdap_rib::res_info_t* OSApplicationProcessObj::remoteCreate(
 		const rina::cdap_rib::SerializedObject &obj_req,
 		rina::cdap_rib::SerializedObject &obj_reply){
 
+	(void) obj_reply;
 	rina::cdap_rib::res_info_t* res = new rina::cdap_rib::res_info_t;
+
 	if (clas == IPCPObj::class_name) {
-		ribd_->addRIBObject(new IPCPObj(name, inst_gen->next(),
-								obj_req));
+
+		IPCPObj* ipcp;
+
+		try{
+			ipcp = new IPCPObj(name, inst_gen->next(), obj_req);
+		}catch(...){
+			LOG_ERR("Unable to create an IPCP object '%s'; out of memory?",
+								name.c_str());
+			res->result_ = -1;
+			return res;
+		}
+
+		ribd_->addRIBObject(ipcp);
 		res->result_ = 1;
-		(void) obj_reply;
 	} else {
 		LOG_ERR("Create object %s is not implemented as a child of OSApplicationProcess object",
 								name.c_str());
 		res->result_ = -1;
 	}
+
 	return res;
 }
 
