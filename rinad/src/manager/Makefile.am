@@ -21,7 +21,8 @@ COMMONLIBS =					\
 
 manager_CFLAGS   =
 manager_CPPFLAGS =					\
-	$(COMMONCPPFLAGS)			
+	$(COMMONCPPFLAGS)	\
+	-std=c++11		
 manager_LDADD    = $(COMMONLIBS) -ldl
 manager_SOURCES  =						\
 	main.cc						\

@@ -142,7 +142,7 @@ void Server::run()
   }
 }
 
-void Server::startWorker(Flow *flow)
+void Server::startWorker(rina::Flow *flow)
 {
   void (Server::*server_function)(Flow *flow);
 
