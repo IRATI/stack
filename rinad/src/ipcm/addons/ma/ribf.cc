@@ -73,15 +73,13 @@ void RIBFactory::createRIB(uint64_t version){
 	rina::cdap_rib::vers_info_t *vers = new rina::cdap_rib::vers_info_t;
 	vers->version_ = (long) version;
 
-	//Serialize
-	lock();
+	//Scoped lock
+	rina::ScopedLock slock(mutex);
 
 	//Check if it exists
-	if (rib_inst_.find(version) != rib_inst_.end()) {
-		unlock();
+	if (rib_inst_.find(version) != rib_inst_.end())
 		throw eDuplicatedRIB(
 				"An instance of the RIB with this version already exists");
-	}
 
 	//Create object
 	switch (version) {
@@ -94,9 +92,6 @@ void RIBFactory::createRIB(uint64_t version){
 		default:
 			break;
 	}
-
-	//Unlock
-	unlock();
 }
 
 rina::rib::RIBDNorthInterface& RIBFactory::getRIB(uint64_t version){
@@ -104,23 +99,19 @@ rina::rib::RIBDNorthInterface& RIBFactory::getRIB(uint64_t version){
 
 	rina::rib::RIBDNorthInterface* rib;
 
-	//Serialize
-	lock();
+	//Scoped lock
+	rina::ScopedLock slock(mutex);
 
 	//Note: it is safe to recover the RIB reference without a RD lock
 	//because removal of RIBs is NOT implemented. However this
 	//implementation already protects it
 	//Check if it exists
-	if (rib_inst_.find(version) == rib_inst_.end()) {
+	if (rib_inst_.find(version) == rib_inst_.end())
 		throw eRIBNotFound("RIB instance not found");
-	}
 
 	//TODO: reference count to avoid deletion while being used?
 
 	rib = rib_inst_[version];
-
-	//Unlock
-	unlock();
 
 	return *rib;
 }
