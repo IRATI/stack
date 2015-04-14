@@ -73,7 +73,7 @@ int wrapped_main(int argc, char** argv)
                 cmd.parse(argc, argv);
 
                 manager_apn = manager_apn_arg.getValue();
-                manager_api = manager_apn_arg.getValue();
+                manager_api = manager_api_arg.getValue();
                 quiet = quiet_arg.getValue();
                 dif_name = dif_arg.getValue();
 

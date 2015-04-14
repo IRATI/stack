@@ -90,6 +90,9 @@ Manager::Manager(const std::string& dif_name, const std::string& apn,
     : Application(dif_name, apn, api),
       quiet_(quiet)
 {
+  keep_running_ = true;
+  cdap::CDAPProviderFactory::init(2000);
+  cdap_prov_ = cdap::CDAPProviderFactory::create(false, this);
 }
 
 Manager::~Manager()
@@ -99,7 +102,6 @@ Manager::~Manager()
 
 void Manager::run()
 {
-  keep_running_ = true;
   applicationRegister();
   createFlow();
   if (flow_) {
@@ -155,8 +157,6 @@ void Manager::createFlow()
 void Manager::cacep()
 {
   char buffer[max_sdu_size_in_bytes];
-  cdap::CDAPProviderFactory::init(2000);
-  cdap_prov_ = cdap::CDAPProviderFactory::create(false, this);
   cdap_rib::vers_info_t ver;
   ver.version_ = 1;
   cdap_rib::src_info_t src;
