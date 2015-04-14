@@ -53,7 +53,7 @@ Flow * FlowAllocatorPs::newFlowRequest(IPCProcess * ipc_process,
                                        event)
 {
 	Flow* flow;
-	rina::QoSCube * qosCube = 0;
+	rina::QoSCube * qosCube = NULL;
 
 	flow = dm->createFlow();
 	flow->destination_naming_info = event.remoteApplicationName;
@@ -99,24 +99,38 @@ Flow * FlowAllocatorPs::newFlowRequest(IPCProcess * ipc_process,
 rina::QoSCube * FlowAllocatorPs::selectQoSCube(
                 const rina::FlowSpecification& flowSpec)
 {
-	std::list<rina::QoSCube*> qosCubes = dm->getQoSCubes();
+        std::list<rina::QoSCube*> qosCubes = dm->getQoSCubes();
+        std::list<rina::QoSCube*>::const_iterator iterator;
+        rina::QoSCube* cube;
+
+	if (*(qosCubes.begin())==NULL)
+	    throw rina::Exception("No QoSCubes defined.");
+
 	if (flowSpec.maxAllowableGap < 0) {
+	        for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
+		        cube = *iterator;
+		        if (cube->get_efcp_policies().is_dtcp_present()
+			    && !cube->get_efcp_policies().get_dtcp_configuration().is_rtx_control())
+			        return cube;
+		}
+		for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
+		        cube = *iterator;
+		        if (!cube->get_efcp_policies().is_dtcp_present()) {
+				return cube;
+			}
+		}
 		return *(qosCubes.begin());
 	}
-
-	std::list<rina::QoSCube*>::const_iterator iterator;
-	rina::QoSCube* cube;
+        //flowSpec.maxAllowableGap >=0
 	for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
 		cube = *iterator;
 		if (cube->get_efcp_policies().is_dtcp_present()) {
-			if (flowSpec.maxAllowableGap >= 0
-					&& cube->get_efcp_policies().get_dtcp_configuration().is_rtx_control()) {
+			if (cube->get_efcp_policies().get_dtcp_configuration().is_rtx_control()) {
 				return cube;
 			}
 		}
 	}
-
-	throw rina::Exception("Could not find a QoS Cube");
+	throw rina::Exception("Could not find a suitable QoS Cube.");
 }
 
 int FlowAllocatorPs::set_policy_set_param(const std::string& name,
