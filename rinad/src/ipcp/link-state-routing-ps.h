@@ -152,13 +152,18 @@ class IRoutingAlgorithm {
 public:
 	virtual ~IRoutingAlgorithm(){};
 
-	//Compute the next hop to other addresses. Ownership of
-	//PDUForwardingTableEntries in the list is passed to the
-	//caller
+	//Compute the next hop for the node identified by source_address
+	//towards all the other nodes
 	virtual std::list<rina::RoutingTableEntry *> computeRoutingTable(
 			const Graph& graph,
 			const std::list<FlowStateObject *>& fsoList,
 			unsigned int source_address) = 0;
+
+	//Compute the distance of the shortest path between the node identified
+	//by source_address and all the other nodes
+	virtual void computeShortestDistances(const Graph& graph,
+				unsigned int source_address,
+				std::map<unsigned int, int>& distances) = 0;
 };
 
 /// Contains the information of a predecessor, needed by the Dijkstra Algorithm
