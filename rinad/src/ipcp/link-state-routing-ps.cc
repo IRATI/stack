@@ -48,8 +48,7 @@ void LinkStateRoutingPs::set_dif_configuration(const rina::DIFConfiguration& dif
 	rina::PDUFTableGeneratorConfiguration pduftgConfig =
 			dif_configuration.get_pduft_generator_configuration();
 
-	if (pduftgConfig.get_pduft_generator_policy().get_name().compare(
-			LINK_STATE_POLICY) != 0) {
+	if (pduftgConfig.get_pduft_generator_policy().get_name() != LINK_STATE_POLICY) {
 		LOG_WARN("Unsupported routing policy: %s.",
 				pduftgConfig.get_pduft_generator_policy().get_name().c_str());
 		throw rina::Exception("Unknown routing Policy");
@@ -968,8 +967,8 @@ void LinkStateRoutingPolicy::set_dif_configuration(
 {
 	pduft_generator_config_ =
 			dif_configuration.get_pduft_generator_configuration();
-	if (pduft_generator_config_.get_link_state_routing_configuration().get_routing_algorithm().compare(
-			"Dijkstra") != 0) {
+	if (pduft_generator_config_.get_link_state_routing_configuration().get_routing_algorithm() !=
+		        "Dijkstra") {
 		LOG_WARN("Unsupported routing algorithm, using Dijkstra instead");
 	}
 
@@ -977,27 +976,22 @@ void LinkStateRoutingPolicy::set_dif_configuration(
 	source_vertex_ = dif_configuration.get_address();
 
 	if (!test_) {
-		maximum_age_ =
-				pduft_generator_config_.get_link_state_routing_configuration().get_object_maximum_age();
+		maximum_age_ = pduft_generator_config_.get_link_state_routing_configuration().get_object_maximum_age();
 		long delay = 0;
 
 		// Task to compute PDUFT
-		delay =
-				pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_pduft_computation();
+		delay = pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_pduft_computation();
 		ComputeRoutingTimerTask * cttask = new ComputeRoutingTimerTask(this, delay);
 		timer_->scheduleTask(cttask, delay);
 
 		// Task to increment age
-		delay =
-				pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_age_increment();
+		delay = pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_age_increment();
 		UpdateAgeTimerTask * uattask = new UpdateAgeTimerTask(this, delay);
 		timer_->scheduleTask(uattask, delay);
 
 		// Task to propagate modified FSO
-		delay =
-				pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_fsodb_propagation();
-		PropagateFSODBTimerTask * pfttask = new PropagateFSODBTimerTask(this,
-				delay);
+		delay = pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_fsodb_propagation();
+		PropagateFSODBTimerTask * pfttask = new PropagateFSODBTimerTask(this, delay);
 		timer_->scheduleTask(pfttask, delay);
 	}
 }
@@ -1083,8 +1077,7 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(
 		if (it->portId == event->neighbor_->underlying_port_id_)
 				/*it->remoteAppName.processName.compare(
 				event->neighbor_->get_name().processName) == 0) */{
-			LOG_INFO(
-					"There was an allocation flow event waiting for enrollment, launching it");
+			LOG_INFO("There was an allocation flow event waiting for enrollment, launching it");
 			try {
 				db_->addObjectToGroup(ipc_process_->get_address(),
 						ipc_process_->namespace_manager_->getAdressByname(
