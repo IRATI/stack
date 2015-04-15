@@ -23,6 +23,9 @@
 #define RINA_PREFIX "ipcm.mad.ribd_v1"
 #include <librina/logs.h>
 #include <librina/exceptions.h>
+
+#include "../../../ipcm.h"
+
 #include "ipcp_obj.h"
 
 namespace rinad {
@@ -218,6 +221,24 @@ void initiateRIB(rina::rib::RIBDNorthInterface* ribd)
 					"root, computingSystemID = 1, "
 					"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgentID = 1, difManagement",
 					inst_gen->next(), enc));
+
+		//
+		//Add the IPCPs
+		//
+		std::list<int> ipcps;
+		IPCManager->list_ipcps(ipcps);
+
+		std::list<int>::const_iterator it;
+		for(it=ipcps.begin(); it != ipcps.end(); ++it){
+			std::stringstream ss;
+			ss << "root, computingSystemID = 1, processingSystemID = 1, kernelApplicationProcess, osApplicationProcess, ";
+			ss << "processID = "<< (*it);
+			ribd->addRIBObject(
+				new IPCPObj(ss.str(), inst_gen->next(),
+								(*it)));
+
+		}
+
 	} catch (rina::Exception &e1) {
 		LOG_ERR("RIB basic objects were not created because %s", e1.what());
 		throw rina::Exception("Finish application");

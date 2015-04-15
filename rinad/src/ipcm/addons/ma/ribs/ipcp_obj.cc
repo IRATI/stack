@@ -47,7 +47,8 @@ rina::cdap_rib::res_info_t* IPCPObj::remoteRead(
 
 	mad_manager::structures::ipcp_t info;
 	info.process_id = processID_;
-	//TODO add name
+	info.name = IPCManager->get_ipcp_name(processID_);
+	//TODO: Add missing stuff...
 
 	encoder_->encode(info, obj_reply);
 	return r;
