@@ -140,6 +140,8 @@ Manager::Manager(const std::string& dif_name, const std::string& apn,
     : Application(dif_name, apn, api),
       quiet_(quiet)
 {
+  (void)quiet_;
+  (void)client_app_reg_;
 }
 
 Manager::~Manager()
