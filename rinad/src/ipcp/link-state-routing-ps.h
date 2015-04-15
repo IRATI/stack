@@ -114,6 +114,9 @@ public:
 	std::list<Edge *> edges_;
 	std::list<unsigned int> vertices_;
 
+	bool contains_vertex(unsigned int address) const;
+	bool contains_edge(unsigned int address1, unsigned int address2) const;
+
 private:
 	struct CheckedVertex {
 		unsigned int address_;
@@ -140,7 +143,6 @@ private:
 	std::list<FlowStateObject *> flow_state_objects_;
 	std::list<CheckedVertex *> checked_vertices_;
 
-	bool contains_vertex(unsigned int address) const;
 	void init_vertices();
 	CheckedVertex * get_checked_vertex(unsigned int address) const;
 	void init_edges();
@@ -191,6 +193,22 @@ private:
 	bool isNeighbor(Edge * edge, unsigned int node) const;
 	bool isSettled(unsigned int node) const;
 	unsigned int getNextHop(unsigned int address, unsigned int sourceAddress);
+};
+
+class IResiliencyAlgorithm {
+public:
+	virtual ~IResiliencyAlgorithm(){};
+
+	// Starting from the routing table computed by the routing algorithm,
+	// try to add (for each target nod) different next hops in addition to the
+	// existing ones, in order to improve resilency of the source node
+	virtual void fortifyRoutingTable(const Graph& graph, unsigned int source_address,
+					 std::list<rina::RoutingTableEntry *>& rt) = 0;
+};
+
+class LoopFreeAlternateAlgorithm : public IResiliencyAlgorithm {
+	void fortifyRoutingTable(const Graph& graph, unsigned int source_address,
+					 std::list<rina::RoutingTableEntry *>& rt);
 };
 
 /// A group of flow state objects. This is the RIB target object
@@ -425,6 +443,7 @@ private:
 	FlowStateRIBObjectGroup * fs_rib_group_;
 	rina::PDUFTableGeneratorConfiguration pduft_generator_config_;
 	IRoutingAlgorithm * routing_algorithm_;
+	IResiliencyAlgorithm * resiliency_algorithm;
 	unsigned int source_vertex_;
 	unsigned int maximum_age_;
 

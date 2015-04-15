@@ -236,6 +236,18 @@ bool Graph::contains_vertex(unsigned int address) const
 	return false;
 }
 
+bool Graph::contains_edge(unsigned int address1, unsigned int address2) const
+{
+	for(std::list<Edge *>::const_iterator eit = edges_.begin();
+					eit != edges_.end(); ++eit) {
+		if (*(*eit) == Edge(address1, address2, (*eit)->weight_)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 void Graph::init_edges()
 {
 	std::list<unsigned int>::const_iterator it;
@@ -463,6 +475,23 @@ unsigned int DijkstraAlgorithm::getNextHop(unsigned int target,
 	}
 
 	return nextHop;
+}
+
+
+void
+LoopFreeAlternateAlgorithm::fortifyRoutingTable(const Graph& graph,
+						unsigned int source_address,
+						std::list<rina::RoutingTableEntry *>& rt)
+{
+	(void)rt;
+
+	//For each node other than than the source node and its neighbors
+	for (std::list<unsigned int>::const_iterator it = graph.vertices_.begin();
+						it != graph.vertices_.end(); ++it) {
+		if ((*it) == source_address || graph.contains_edge(source_address, *it)) {
+			continue;
+		}
+	}
 }
 
 //Class FlowState RIB Object Group
