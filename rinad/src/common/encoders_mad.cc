@@ -19,43 +19,75 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <librina/exceptions.h>
 #include "encoders_mad.h"
-#include "common/encoders/IpcpConfig.pb.h"
+#include "common/encoders/MA-IPCP.pb.h"
 
+namespace rinad {
 namespace mad_manager {
 namespace encoders {
-/// Encoder of IPCPConfig
-void IPCPConfigEncoder::encode (const structures::ipcp_config_t &obj, rina::cdap_rib::ser_obj_t& ser_obj)
-{
-  messages::ipcp_config gpf_obj;
-  gpf_obj.set_process_name(obj.process_name);
-  gpf_obj.set_process_instance(obj.process_instance);
-  gpf_obj.set_process_type(obj.process_type);
-  gpf_obj.set_dif_to_register(obj.dif_to_register);
-  gpf_obj.set_dif_to_assign(obj.dif_to_assign);
-  if (ser_obj.size_ != 0 && ser_obj.message_ != 0)
-  {
-    delete ser_obj.message_;
-    ser_obj.size_ = 0;
-  }
-  gpf_obj.SerializeToArray(ser_obj.message_, ser_obj.size_);
 
-}
-void IPCPConfigEncoder::decode(const rina::cdap_rib::ser_obj_t &ser_obj,
-                    structures::ipcp_config_t& obj)
-{
-  messages::ipcp_config gpf_obj;
-  gpf_obj.ParseFromArray(ser_obj.message_, ser_obj.size_);
-  obj.process_name = gpf_obj.process_name();
-  obj.process_instance = gpf_obj.process_instance();
-  obj.process_type = gpf_obj.process_type();
-  obj.dif_to_register = gpf_obj.dif_to_register();
-  obj.dif_to_assign = gpf_obj.dif_to_assign();
-}
-std::string IPCPConfigEncoder::get_type() const
-{
-  return "ipcp_config_t";
+//
+// Encoder of IPCPConfig
+//
+void IPCPConfigEncoder::encode(const structures::ipcp_config_t& obj,
+					rina::cdap_rib::ser_obj_t& ser_obj){
+	messages::ipcp_config gpf_obj;
+	gpf_obj.set_process_name(obj.process_name);
+	gpf_obj.set_process_instance(obj.process_instance);
+	gpf_obj.set_process_type(obj.process_type);
+	gpf_obj.set_dif_to_register(obj.dif_to_register);
+	gpf_obj.set_dif_to_assign(obj.dif_to_assign);
+	if (ser_obj.size_ != 0 && ser_obj.message_ != 0){
+		delete ser_obj.message_;
+		ser_obj.size_ = 0;
+	}
+	gpf_obj.SerializeToArray(ser_obj.message_, ser_obj.size_);
 }
 
+void IPCPConfigEncoder::decode(const rina::cdap_rib::ser_obj_t& ser_obj,
+                    structures::ipcp_config_t& obj){
+	messages::ipcp_config gpf_obj;
+	gpf_obj.ParseFromArray(ser_obj.message_, ser_obj.size_);
+	obj.process_name = gpf_obj.process_name();
+	obj.process_instance = gpf_obj.process_instance();
+	obj.process_type = gpf_obj.process_type();
+	obj.dif_to_register = gpf_obj.dif_to_register();
+	obj.dif_to_assign = gpf_obj.dif_to_assign();
 }
+
+//
+//IPCP encoder (read)
+//
+void IPCPEncoder::encode(const structures::ipcp_t& obj,
+		rina::cdap_rib::SerializedObject& serobj){
+
+	messages::ipcp m;
+	m.set_processid(obj.process_id);
+	//TODO add name
+
+	//Allocate memory
+	serobj.size_ = m.ByteSize();
+	serobj.message_ = new char[serobj.size_];
+
+	if (!serobj.message_)
+		throw rina::Exception("out of memory");  //TODO improve this
+
+	//Serialize and return
+	m.SerializeToArray(serobj.message_, serobj.size_);
 }
+
+void IPCPEncoder::decode(const rina::cdap_rib::SerializedObject& serobj,
+		structures::ipcp_t& des_obj){
+
+	messages::ipcp m;
+	if (!m.ParseFromArray(serobj.message_, serobj.size_))
+		throw rina::Exception("Could not be parsed");
+
+	des_obj.process_id = m.processid();
+}
+
+
+} //namespace encoders
+} //namespace mad_manager
+} //namespace rinad

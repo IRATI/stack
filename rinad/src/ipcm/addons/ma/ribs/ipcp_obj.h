@@ -13,6 +13,9 @@
 #include <librina/patterns.h>
 #include <librina/common.h>
 
+//Encoders and structs
+#include "encoders_mad.h"
+
 namespace rinad{
 namespace mad{
 namespace rib_v1{
@@ -20,35 +23,11 @@ namespace rib_v1{
 //fwd decl
 class IPCPObj;
 
-
-//Struct containing the message
-//It is a bit redundant, but hold GPB in the encoder only
-typedef struct ipcp_msg{
-	int32_t process_id;
-	std::string name;
-	//TODO: add missing info
-}ipcp_msg_t;
-
-/**
- * Encoder
- */
-class IPCPEncoder : public rina::rib::Encoder<ipcp_msg_t>{
-public:
-	virtual void encode(const ipcp_msg_t &obj,
-			rina::cdap_rib::SerializedObject& serobj);
-	virtual void decode(const rina::cdap_rib::SerializedObject &serobj,
-			ipcp_msg_t& des_obj);
-
-	virtual std::string get_type() const{ return "ipcp"; };
-};
-
-
-
-
 /**
  * IPCP object
  */
-class IPCPObj : public rina::rib::RIBObject<ipcp_msg_t>{
+class IPCPObj : public rina::rib::RIBObject
+					<mad_manager::structures::ipcp_t>{
 
 public:
 	IPCPObj(std::string name, long instance, int ipcp_id);
@@ -71,7 +50,7 @@ public:
 	int processID_;
 
 private:
-	IPCPEncoder encoder;
+	mad_manager::encoders::IPCPEncoder encoder;
 };
 
 

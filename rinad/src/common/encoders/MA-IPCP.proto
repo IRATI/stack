@@ -1,4 +1,4 @@
-package mad_manager.messages;
+package rinad.mad_manager.messages;
 
 option optimize_for = LITE_RUNTIME;
 

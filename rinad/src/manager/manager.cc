@@ -33,6 +33,7 @@
 
 using namespace std;
 using namespace rina;
+using namespace rinad;
 
 const std::string Manager::mad_name = "mad";
 const std::string Manager::mad_instance = "1";
