@@ -27,6 +27,34 @@ namespace rinad {
 namespace mad_manager {
 namespace encoders {
 
+
+//
+// Simple types
+//
+void StringEncoder::encode(const std::string& obj,
+					rina::cdap_rib::ser_obj_t& serobj){
+	messages::str s;
+	s.set_value(obj);
+
+	//Allocate memory
+	serobj.size_ = s.ByteSize();
+	serobj.message_ = new char[serobj.size_];
+
+	if (!serobj.message_)
+		throw rina::Exception("out of memory");  //TODO improve this
+
+
+	s.SerializeToArray(serobj.message_, serobj.size_);
+}
+
+void StringEncoder::decode(const rina::cdap_rib::ser_obj_t& ser_obj,
+                    std::string& obj){
+	messages::str s;
+	s.ParseFromArray(ser_obj.message_, ser_obj.size_);
+
+	obj = s.value();
+}
+
 //
 // Encoder of IPCPConfig
 //
@@ -38,10 +66,14 @@ void IPCPConfigEncoder::encode(const structures::ipcp_config_t& obj,
 	gpf_obj.set_process_type(obj.process_type);
 	gpf_obj.set_dif_to_register(obj.dif_to_register);
 	gpf_obj.set_dif_to_assign(obj.dif_to_assign);
-	if (ser_obj.size_ != 0 && ser_obj.message_ != 0){
-		delete ser_obj.message_;
-		ser_obj.size_ = 0;
-	}
+
+	//Allocate memory
+	ser_obj.size_ = gpf_obj.ByteSize();
+	ser_obj.message_ = new char[ser_obj.size_];
+
+	if (!ser_obj.message_)
+		throw rina::Exception("out of memory");  //TODO improve this
+
 	gpf_obj.SerializeToArray(ser_obj.message_, ser_obj.size_);
 }
 
@@ -64,6 +96,7 @@ void IPCPEncoder::encode(const structures::ipcp_t& obj,
 
 	messages::ipcp m;
 	m.set_processid(obj.process_id);
+	m.set_processname(obj.name);
 	//TODO add name
 
 	//Allocate memory

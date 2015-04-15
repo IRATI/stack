@@ -2,16 +2,23 @@ package rinad.mad_manager.messages;
 
 option optimize_for = LITE_RUNTIME;
 
+
+//Simple types
+message str{
+	required string value = 1;  //Serialized string
+}
+
 //Contains the information of an IPCP
 message ipcp{
 	required uint32 processId = 1;		//Process ID
 	required string processName = 2;	//Process name
 }
 
-message ipcp_config{  //Contains the information to setup a new IPCP Process
-	required string process_name = 1;  			//the name of the process
+//Contains the information to setup a new IPCP Process
+message ipcp_config{
+	required string process_name = 1;  		//the name of the process
 	required uint32 process_instance = 2;  		//the instance of the process
-	required string process_type = 3;  			//the type of the process
+	required string process_type = 3;  		//the type of the process
 	required string dif_to_register = 4;  		//the DIF to register the IPCP
 	required string dif_to_assign = 5;  		//the DIF to assign the IPCP
 }

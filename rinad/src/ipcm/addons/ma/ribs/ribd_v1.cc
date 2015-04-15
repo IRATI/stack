@@ -29,6 +29,7 @@
 //Object definitions
 #include "ipcp_obj.h"
 #include "os_proc_obj.h"
+#include "ribd_obj.h"
 
 namespace rinad {
 namespace mad {
@@ -231,6 +232,11 @@ void initiateRIB(rina::rib::RIBDNorthInterface* ribd)
 
 		std::list<int>::const_iterator it;
 		for(it=ipcps.begin(); it != ipcps.end(); ++it){
+
+			//FIXME: this should be simplified. Object constructors
+			//should contain inner objects
+
+			//Add the IPCP and add the RIBDaemon
 			std::stringstream ss;
 			ss << "root, computingSystemID = 1, processingSystemID = 1, kernelApplicationProcess, osApplicationProcess, ";
 			ss << "processID = "<< (*it);
@@ -238,6 +244,11 @@ void initiateRIB(rina::rib::RIBDNorthInterface* ribd)
 				new IPCPObj(ss.str(), inst_gen->next(),
 								(*it)));
 
+			ss << ", ribdaemon";
+			ribd->addRIBObject(
+					new RIBDaemonObj(ss.str(),
+							inst_gen->next(),
+							(*it)));
 		}
 
 	} catch (rina::Exception &e1) {
