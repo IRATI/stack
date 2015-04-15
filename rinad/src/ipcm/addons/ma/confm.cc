@@ -50,4 +50,6 @@ void ConfManager::configure(ManagementAgent& agent){
 }
 
 }; //namespace mad
-}; //namespace rinad
+}
+;
+//namespace rinad

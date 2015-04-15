@@ -38,501 +38,546 @@
 #include <librina/logs.h>
 #include <librina/rib_v2.h>
 
-
-namespace rinad{
-namespace mad{
+namespace rinad {
+namespace mad {
 
 //General events timeout
 #define FM_TIMEOUT_S 5
 #define FM_RETRY_NSEC 100000000 //100ms
 #define _FM_1_SEC_NSEC 1000000000
 
-
 //Flow allocation worker events
 #define FM_FALLOC_TIMEOUT_S 10
 #define FM_FALLOC_TIMEOUT_NS 0
 #define FM_FALLOC_ALLOC_RETRY_US 400000 //400ms
-
 const unsigned int max_sdu_size_in_bytes = 10000;
 
 /**
-* @brief Worker abstract class encpasulates the main I/O loop
-*/
-class Worker{
+ * @brief Worker abstract class encpasulates the main I/O loop
+ */
+class Worker
+{
 
-public:
+ public:
 
-	/**
-	* Constructor
-	*/
-	Worker(FlowManager* fm, RIBFactory *rib_factory) : flow_manager(fm), rib_factory_(rib_factory){};
+        /**
+         * Constructor
+         */
+        Worker(FlowManager* fm, RIBFactory *rib_factory)
+                        : flow_manager(fm),
+                          rib_factory_(rib_factory)
+        {
+        }
+        ;
 
-	/**
-	* Destructor
-	*/
-	virtual ~Worker(void){};
+        /**
+         * Destructor
+         */
+        virtual ~Worker(void)
+        {
+        }
+        ;
 
-	/**
-	* Run I/O loop
-	*/
-	virtual void* run(void* param)=0;
+        /**
+         * Run I/O loop
+         */
+        virtual void* run(void* param)=0;
 
+        //Trampoline
+        static void* run_trampoline(void* param)
+        {
+                Worker* w = static_cast<Worker*>(param);
+                return w->run(NULL);
+        }
 
-	//Trampoline
-	static void* run_trampoline(void* param){
-		Worker* w = static_cast<Worker*>(param);
-		return w->run(NULL);
-	}
+        /**
+         * Notify an event
+         */
+        void notify(rina::IPCEvent** event)
+        {
+                //Do this in mutual exclusion
+                rina::ScopedLock lock(mutex);
 
-	/**
-	* Notify an event
-	*/
-	void notify(rina::IPCEvent** event){
-		//Do this in mutual exclusion
-		rina::ScopedLock lock(mutex);
+                //Check if this event is for this worker
+                if (std::find(pend_events.begin(), pend_events.end(),
+                              (*event)->sequenceNumber) == pend_events.end())
+                        return;
 
-		//Check if this event is for this worker
-		if(std::find(pend_events.begin(), pend_events.end(),
-				(*event)->sequenceNumber) == pend_events.end())
-						return;
+                //Store and signal
+                events.push_back(*event);
+                cond.signal();
+                *event = NULL;
+        }
 
-		//Store and signal
-		events.push_back(*event);
-		cond.signal();
-		*event = NULL;
-	}
+        /**
+         * Wait for an event
+         */
+        rina::IPCEvent* waitForEvent(long seconds = 0, long nanoseconds = 0)
+        {
 
-	/**
-	* Wait for an event
-	*/
-	rina::IPCEvent* waitForEvent(long seconds=0, long nanoseconds=0){
+                cond.timedwait(seconds, nanoseconds);
+                rina::ScopedLock lock(mutex);
+                rina::IPCEvent* ev = *events.begin();
+                pend_events.pop_front();
+                return ev;
+        }
 
-		cond.timedwait(seconds, nanoseconds);
-		rina::ScopedLock lock(mutex);
-		rina::IPCEvent* ev = *events.begin();
-		pend_events.pop_front();
-		return ev;
-	}
+        /**
+         * Set the id
+         */
+        void setId(unsigned int _id)
+        {
+                id = _id;
+        }
 
-	/**
-	* Set the id
-	*/
-	void setId(unsigned int _id){
-		id = _id;
-	}
+        /**
+         * Instruct the thread to stop.
+         */
+        inline void stop(void)
+        {
+                keep_running = false;
+        }
 
-	/**
-	* Instruct the thread to stop.
-	*/
-	inline void stop(void){
-		keep_running = false;
-	}
+        inline pthread_t* getPthreadContext()
+        {
+                return &ctx;
+        }
 
-	inline pthread_t* getPthreadContext(){
-		return &ctx;
-	}
+ protected:
+        //Worker id
+        unsigned int id;
 
-protected:
-	//Worker id
-	unsigned int id;
+        //Pthread context
+        pthread_t ctx;
 
-	//Pthread context
-	pthread_t ctx;
+        //Mutex
+        rina::Lockable mutex;
 
-	//Mutex
-	rina::Lockable mutex;
+        //Pending events
+        std::list<rina::IPCEvent*> events;
 
-	//Pending events
-	std::list<rina::IPCEvent*> events;
+        //Pending transactions (sequence numbers)
+        std::list<unsigned int> pend_events;
 
-	//Pending transactions (sequence numbers)
-	std::list<unsigned int> pend_events;
+        //Condition variable
+        rina::ConditionVariable cond;
 
-	//Condition variable
-	rina::ConditionVariable cond;
+        //Wether to stop the main I/O loop
+        volatile bool keep_running;
 
-	//Wether to stop the main I/O loop
-	volatile bool keep_running;
+        //Connection being handled
+        AppConnection con;
 
-	//Connection being handled
-	AppConnection con;
+        //Back reference
+        FlowManager* flow_manager;
 
-	//Back reference
-	FlowManager* flow_manager;
-
-	//RIBFactory
-	RIBFactory* rib_factory_;
+        //RIBFactory
+        RIBFactory* rib_factory_;
 };
 
 /**
-* @brief Active Worker - performs flow allocation
-*/
-class ActiveWorker : public Worker{
+ * @brief Active Worker - performs flow allocation
+ */
+class ActiveWorker : public Worker
+{
 
-public:
-	/**
-	* Constructor
-	*/
-	ActiveWorker(FlowManager* fm, RIBFactory* rib_factory, const AppConnection& _con) : Worker(fm, rib_factory){
-		con = _con;
-	};
+ public:
+        /**
+         * Constructor
+         */
+        ActiveWorker(FlowManager* fm, RIBFactory* rib_factory,
+                     const AppConnection& _con)
+                        : Worker(fm, rib_factory)
+        {
+                con = _con;
+        }
+        ;
 
-	/**
-	* Run I/O loop
-	*/
-	virtual void* run(void* param);
+        /**
+         * Run I/O loop
+         */
+        virtual void* run(void* param);
 
-	/**
-	* Destructor
-	*/
-	virtual ~ActiveWorker(){};
+        /**
+         * Destructor
+         */
+        virtual ~ActiveWorker()
+        {
+        }
+        ;
 
-protected:
+ protected:
 
-	/**
-	* Allocate a flow and return the Flow object or NULL
-	*/
-	rina::Flow* allocateFlow();
+        /**
+         * Allocate a flow and return the Flow object or NULL
+         */
+        rina::Flow* allocateFlow();
 };
 
-
 //Allocate a flow
-rina::Flow* ActiveWorker::allocateFlow(){
+rina::Flow* ActiveWorker::allocateFlow()
+{
 
         unsigned int seqnum;
-	rina::Flow* flow = NULL;
-	rina::IPCEvent* event;
+        rina::Flow* flow = NULL;
+        rina::IPCEvent* event;
         rina::AllocateFlowRequestResultEvent* rrevent;
 
-	//Setup necessary QoS
-	//TODO Quality of Service specification
-	//FIXME: Move to connection
-	rina::FlowSpecification qos;
+        //Setup necessary QoS
+        //TODO Quality of Service specification
+        //FIXME: Move to connection
+        rina::FlowSpecification qos;
 
-	//Perform the flow allocation
-	seqnum = rina::ipcManager->requestFlowAllocationInDIF(
-			flow_manager->getAPInfo(),
-			con.flow_info.remoteAppName,
-			con.flow_info.difName,
-			qos);
+        //Perform the flow allocation
+        seqnum = rina::ipcManager->requestFlowAllocationInDIF(
+                        flow_manager->getAPInfo(), con.flow_info.remoteAppName,
+                        con.flow_info.difName, qos);
 
-	LOG_DBG("[w:%u] Waiting for event %u", id, seqnum);
-	pend_events.push_back(seqnum);
+        LOG_DBG("[w:%u] Waiting for event %u", id, seqnum);
+        pend_events.push_back(seqnum);
 
-	//Wait for the event
-	try{
-		event = flow_manager->wait_event(seqnum);
-		if(!event)
-			return NULL;
-		LOG_DBG("[w:%u] Got event %u, waiting for %u", id,
-						event->sequenceNumber,
-						seqnum);
-	}catch(rina::Exception& e){
-		//No reply... no flow
-		LOG_ERR("[w:%u] Failed to allocate a flow. Operation timed-out", id);
-		return NULL;
-	}
+        //Wait for the event
+        try {
+                event = flow_manager->wait_event(seqnum);
+                if (!event)
+                        return NULL;
+                LOG_DBG("[w:%u] Got event %u, waiting for %u", id,
+                        event->sequenceNumber, seqnum);
+        } catch (rina::Exception& e) {
+                //No reply... no flow
+                LOG_ERR("[w:%u] Failed to allocate a flow. Operation timed-out",
+                        id);
+                return NULL;
+        }
 
-	if(!event){
-		LOG_ERR("[w:%u] Failed to allocate a flow. Unknown error", id);
-		assert(0);
-		return NULL;
-	}
+        if (!event) {
+                LOG_ERR("[w:%u] Failed to allocate a flow. Unknown error", id);
+                assert(0);
+                return NULL;
+        }
 
-	//Check if it is the right event for us
-	if(event->eventType == rina::ALLOCATE_FLOW_REQUEST_RESULT_EVENT
-                                && event->sequenceNumber == seqnum) {
-        	rrevent =
-		dynamic_cast<rina::AllocateFlowRequestResultEvent*>(event);
-	}else{
-		return NULL;
-	}
+        //Check if it is the right event for us
+        if (event->eventType == rina::ALLOCATE_FLOW_REQUEST_RESULT_EVENT
+                        && event->sequenceNumber == seqnum) {
+                rrevent =
+                                dynamic_cast<rina::AllocateFlowRequestResultEvent*>(event);
+        } else {
+                return NULL;
+        }
 
-	//Recover the flow
+        //Recover the flow
         flow = rina::ipcManager->commitPendingFlow(rrevent->sequenceNumber,
-                                              rrevent->portId,
-                                              rrevent->difName);
+                                                   rrevent->portId,
+                                                   rrevent->difName);
 
-        if(!flow || flow->getPortId() == -1){
-		LOG_ERR("[w:%u] Failed to allocate a flow.", id);
-		return NULL;
-	}
-	LOG_INFO("[w:%u] Flow allocated, port id = %d", id, flow->getPortId());
+        if (!flow || flow->getPortId() == -1) {
+                LOG_ERR("[w:%u] Failed to allocate a flow.", id);
+                return NULL;
+        }
+        LOG_INFO("[w:%u] Flow allocated, port id = %d", id, flow->getPortId());
 
-	return flow;
+        return flow;
 }
 
 // Flow active worker
-void* ActiveWorker::run(void* param){
+void* ActiveWorker::run(void* param)
+{
 
-	(void) param;
-	//Allocate the flow
-	rina::Flow* flow = NULL;
+        (void) param;
+        //Allocate the flow
+        rina::Flow* flow = NULL;
 
-	keep_running = true;
-	while(keep_running == true){
+        keep_running = true;
+        while (keep_running == true) {
 
-		//Allocate the flow
-		flow = allocateFlow();
+                //Allocate the flow
+                flow = allocateFlow();
 
-		if(!flow){
-			usleep(FM_FALLOC_ALLOC_RETRY_US);
-			continue;
-		}
+                if (!flow) {
+                        usleep(FM_FALLOC_ALLOC_RETRY_US);
+                        continue;
+                }
 
-		char buffer[max_sdu_size_in_bytes];
-		int bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
-		rina::cdap_rib::SerializedObject message;
-		message.message_ = buffer;
-		message.size_ = bytes_read;
-		// FIXME change this when multiple rib versions
-		//(need librina rib and cdap refactor)
-		rib_factory_->getRIB(1).process_message(message,
-							flow->getPortId());
-	}
+                char buffer[max_sdu_size_in_bytes];
+                int bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
+                rina::cdap_rib::SerializedObject message;
+                message.message_ = buffer;
+                message.size_ = bytes_read;
+                // FIXME change this when multiple rib versions
+                //(need librina rib and cdap refactor)
+                rib_factory_->getRIB(1).process_message(message,
+                                                        flow->getPortId());
+        }
 
-	return NULL;
+        return NULL;
 }
 
 //Process an event coming from librina
-void FlowManager::process_event(rina::IPCEvent** event_){
+void FlowManager::process_event(rina::IPCEvent** event_)
+{
 
-	rina::Flow *flow;
-	unsigned int port_id;
-	rina::DeallocateFlowResponseEvent *resp;
+        rina::Flow *flow;
+        unsigned int port_id;
+        rina::DeallocateFlowResponseEvent *resp;
 
-	//Make it easy
-	rina::IPCEvent* event = *event_;
+        //Make it easy
+        rina::IPCEvent* event = *event_;
 
-	if(!event)
-		return;
+        if (!event)
+                return;
 
-	switch(event->eventType) {
-		case rina::REGISTER_APPLICATION_RESPONSE_EVENT:
-			rina::ipcManager->commitPendingRegistration(event->sequenceNumber,
-				     dynamic_cast<rina::RegisterApplicationResponseEvent*>(event)->DIFName);
-			break;
+        switch (event->eventType) {
+                case rina::REGISTER_APPLICATION_RESPONSE_EVENT:
+                        rina::ipcManager->commitPendingRegistration(
+                                        event->sequenceNumber,
+                                        dynamic_cast<rina::RegisterApplicationResponseEvent*>(event)
+                                                        ->DIFName);
+                        break;
 
-		case rina::UNREGISTER_APPLICATION_RESPONSE_EVENT:
-			rina::ipcManager->appUnregistrationResult(event->sequenceNumber,
-				    dynamic_cast<rina::UnregisterApplicationResponseEvent*>(event)->result == 0);
-			break;
+                case rina::UNREGISTER_APPLICATION_RESPONSE_EVENT:
+                        rina::ipcManager->appUnregistrationResult(
+                                        event->sequenceNumber,
+                                        dynamic_cast<rina::UnregisterApplicationResponseEvent*>(event)
+                                                        ->result == 0);
+                        break;
 
+                case rina::ALLOCATE_FLOW_REQUEST_RESULT_EVENT:
+                        //The event could not be distributed at first
+                        //This is likely because the event arrived before the
+                        //callee has invoked wait()
+                        //Store and continue
+                        store_event(event);
+                        *event_ = NULL;
+                        return;  //Do not delete
+                case rina::FLOW_ALLOCATION_REQUESTED_EVENT:
+                        //TODO: add pasive worker
+                        flow =
+                                        rina::ipcManager->allocateFlowResponse(
+                                                        *dynamic_cast<rina::FlowRequestEvent*>(event),
+                                                        0, true);
+                        LOG_INFO("New flow allocated [port-id = %d]",
+                                 flow->getPortId());
+                        break;
 
-		case rina::ALLOCATE_FLOW_REQUEST_RESULT_EVENT:
-			//The event could not be distributed at first
-			//This is likely because the event arrived before the
-			//callee has invoked wait()
-			//Store and continue
-			store_event(event);
-			*event_ = NULL;
-			return; //Do not delete
-		case rina::FLOW_ALLOCATION_REQUESTED_EVENT:
-			//TODO: add pasive worker
-			flow = rina::ipcManager->allocateFlowResponse(*dynamic_cast<rina::FlowRequestEvent*>(event), 0, true);
-			LOG_INFO("New flow allocated [port-id = %d]", flow->getPortId());
-			break;
+                case rina::FLOW_DEALLOCATED_EVENT:
+                        port_id =
+                                        dynamic_cast<rina::FlowDeallocatedEvent*>(event)
+                                                        ->portId;
+                        rina::ipcManager->flowDeallocated(port_id);
+                        LOG_INFO("Flow torn down remotely [port-id = %d]",
+                                 port_id);
+                        //TODO: add pasive worker
+                        //joinWorker(port_id);
+                        break;
 
-		case rina::FLOW_DEALLOCATED_EVENT:
-			port_id = dynamic_cast<rina::FlowDeallocatedEvent*>(event)->portId;
-			rina::ipcManager->flowDeallocated(port_id);
-			LOG_INFO("Flow torn down remotely [port-id = %d]", port_id);
-			//TODO: add pasive worker
-			//joinWorker(port_id);
-			break;
+                case rina::DEALLOCATE_FLOW_RESPONSE_EVENT:
+                        LOG_INFO("Destroying the flow after time-out");
+                        resp =
+                                        dynamic_cast<rina::DeallocateFlowResponseEvent*>(event);
+                        port_id = resp->portId;
+                        rina::ipcManager->flowDeallocationResult(
+                                        port_id, resp->result == 0);
+                        //TODO: add pasive worker
+                        //joinWorker(port_id);
+                        break;
 
-		case rina::DEALLOCATE_FLOW_RESPONSE_EVENT:
-			LOG_INFO("Destroying the flow after time-out");
-			resp = dynamic_cast<rina::DeallocateFlowResponseEvent*>(event);
-			port_id = resp->portId;
-			rina::ipcManager->flowDeallocationResult(port_id, resp->result == 0);
-			//TODO: add pasive worker
-			//joinWorker(port_id);
-			break;
+                default:
+                        assert(0);
+                        LOG_ERR("Got unknown event %d", event->eventType);
+                        break;
+        }
 
-		default:
-			assert(0);
-			LOG_ERR("Got unknown event %d",
-						event->eventType);
-		break;
-	}
-
-	delete event;
-	*event_ = NULL;
+        delete event;
+        *event_ = NULL;
 }
 
 //Constructors destructors(singleton)
-FlowManager::FlowManager(ManagementAgent* agent) : next_id(1), agent_(agent){
-	keep_running = true;
-	LOG_DBG("Initialized");
+FlowManager::FlowManager(ManagementAgent* agent)
+                : next_id(1),
+                  agent_(agent)
+{
+        keep_running = true;
+        LOG_DBG("Initialized");
 }
 
-FlowManager::~FlowManager(){
+FlowManager::~FlowManager()
+{
 
-	keep_running = false;
+        keep_running = false;
 
-	//Join all workers
-	std::map<unsigned int, Worker*>::iterator it = workers.begin();
+        //Join all workers
+        std::map<unsigned int, Worker*>::iterator it = workers.begin();
 
-	while (it != workers.end()){
-		//Stop and join
-		it->second->stop();
+        while (it != workers.end()) {
+                //Stop and join
+                it->second->stop();
 
-		//Join
-		joinWorker(it->first);
+                //Join
+                joinWorker(it->first);
 
-		//Remove
-		it++;
-	}
+                //Remove
+                it++;
+        }
 
 }
-
 
 //Connect manager
-unsigned int FlowManager::connectTo(const AppConnection& con){
-	Worker* w = new ActiveWorker(this, agent_->get_rib(), con);
+unsigned int FlowManager::connectTo(const AppConnection& con)
+{
+        Worker* w = new ActiveWorker(this, agent_->get_rib(), con);
 
-	//Launch worker and return handler
-	return spawnWorker(&w);
+        //Launch worker and return handler
+        return spawnWorker(&w);
 }
 
-rina::ApplicationProcessNamingInformation FlowManager::getAPInfo(void){
-	return agent_->getAPInfo();
+rina::ApplicationProcessNamingInformation FlowManager::getAPInfo(void)
+{
+        return agent_->getAPInfo();
 }
 
 //Disconnect
-void FlowManager::disconnectFrom(unsigned int worker_id){
-	joinWorker(worker_id);
+void FlowManager::disconnectFrom(unsigned int worker_id)
+{
+        joinWorker(worker_id);
 }
 
 //Stores and notifies an event
-void FlowManager::store_event(rina::IPCEvent* event){
+void FlowManager::store_event(rina::IPCEvent* event)
+{
 
-	unsigned int seqnum = event->sequenceNumber;
+        unsigned int seqnum = event->sequenceNumber;
 
-	//Lock to access the map
-	//NOTE: this is confusing and ugly as hell. wait_cond is also Lockable
-	//(mutex).
-	//Blame the author who made ConditionVariable inherit from
-	//Lockable(mutex) instead of mutex being a member.
-	wait_cond.lock();
+        //Lock to access the map
+        //NOTE: this is confusing and ugly as hell. wait_cond is also Lockable
+        //(mutex).
+        //Blame the author who made ConditionVariable inherit from
+        //Lockable(mutex) instead of mutex being a member.
+        wait_cond.lock();
 
-	try{
-		//Check if already exists
-		if (pending_events.find(seqnum) != pending_events.end()){
-			LOG_WARN("Duplicated seqnum '%u' for event of type '%s. Overwritting previous event...",
-				seqnum,
-				rina::IPCEvent::eventTypeToString(event->eventType).c_str());
-			assert(0);
-		}
-		pending_events[seqnum] = event;
-	}catch(...){
-		wait_cond.unlock();
-		LOG_WARN("Unable to store event of type %s and sequence number %u. Destroying...",
-				rina::IPCEvent::eventTypeToString(event->eventType).c_str(),
-				seqnum);
-		delete event;
-		return;
-	};
+        try {
+                //Check if already exists
+                if (pending_events.find(seqnum) != pending_events.end()) {
+                        LOG_WARN("Duplicated seqnum '%u' for event of type '%s. Overwritting previous event...",
+                                 seqnum,
+                                 rina::IPCEvent::eventTypeToString(
+                                                 event->eventType).c_str());
+                        assert(0);
+                }
+                pending_events[seqnum] = event;
+        } catch (...) {
+                wait_cond.unlock();
+                LOG_WARN("Unable to store event of type %s and sequence number %u. Destroying...",
+                         rina::IPCEvent::eventTypeToString(event->eventType)
+                                         .c_str(),
+                         seqnum);
+                delete event;
+                return;
+        };
 
-	wait_cond.unlock();
+        wait_cond.unlock();
 }
 
 // Checks whether an operation has already finalised
-rina::IPCEvent* FlowManager::get_event(unsigned int seqnum){
+rina::IPCEvent* FlowManager::get_event(unsigned int seqnum)
+{
 
-	rina::IPCEvent* event = NULL;
+        rina::IPCEvent* event = NULL;
 
-	//Lock to access the map
-	//NOTE: this is confusing and ugly as hell. wait_cond is also Lockable
-	//(mutex).
-	//Blame the author who made ConditionVariable inherit from
-	//Lockable(mutex) instead of mutex being a member.
-	rina::ScopedLock lock(wait_cond);
+        //Lock to access the map
+        //NOTE: this is confusing and ugly as hell. wait_cond is also Lockable
+        //(mutex).
+        //Blame the author who made ConditionVariable inherit from
+        //Lockable(mutex) instead of mutex being a member.
+        rina::ScopedLock lock(wait_cond);
 
-	if(pending_events.find(seqnum) != pending_events.end()){
-		event = pending_events[seqnum];
-		pending_events.erase(seqnum);
-	}
+        if (pending_events.find(seqnum) != pending_events.end()) {
+                event = pending_events[seqnum];
+                pending_events.erase(seqnum);
+        }
 
-	return event;
+        return event;
 }
 
 //Blocks until the operation has finalised, or hard timeout is reached
-rina::IPCEvent* FlowManager::wait_event(unsigned int seqnum){
+rina::IPCEvent* FlowManager::wait_event(unsigned int seqnum)
+{
 
-	int i;
-	rina::IPCEvent* event = NULL;
+        int i;
+        rina::IPCEvent* event = NULL;
 
-	//Lock to access the map
-	//NOTE: this is confusing and ugly as hell. wait_cond is also Lockable
-	//(mutex).
-	//Blame the author who made ConditionVariable inherit from
-	//Lockable(mutex) instead of mutex being a member.
-	wait_cond.lock();
+        //Lock to access the map
+        //NOTE: this is confusing and ugly as hell. wait_cond is also Lockable
+        //(mutex).
+        //Blame the author who made ConditionVariable inherit from
+        //Lockable(mutex) instead of mutex being a member.
+        wait_cond.lock();
 
-	//This is here in purpose. The event could have arrived BEFORE
-	//we actually are waiting for it
-	if(pending_events.find(seqnum) != pending_events.end()){
-		event = pending_events[seqnum];
-		pending_events.erase(seqnum);
-		wait_cond.unlock();
-		return event;
-	}
+        //This is here in purpose. The event could have arrived BEFORE
+        //we actually are waiting for it
+        if (pending_events.find(seqnum) != pending_events.end()) {
+                event = pending_events[seqnum];
+                pending_events.erase(seqnum);
+                wait_cond.unlock();
+                return event;
+        }
 
-	for(i=0; i < FM_TIMEOUT_S *(_FM_1_SEC_NSEC/ FM_RETRY_NSEC); ++i){
-		try{
-			if(unlikely(keep_running == false))
-				break;
+        for (i = 0; i < FM_TIMEOUT_S * (_FM_1_SEC_NSEC / FM_RETRY_NSEC); ++i) {
+                try {
+                        if (unlikely(keep_running == false))
+                                break;
 
-			//Just wait
-			wait_cond.timedwait(0, FM_RETRY_NSEC);
-			if(pending_events.find(seqnum) != pending_events.end()){
-				event = pending_events[seqnum];
-				pending_events.erase(seqnum);
-				break;
-			}
-		}catch(...){};
-	}
+                        //Just wait
+                        wait_cond.timedwait(0, FM_RETRY_NSEC);
+                        if (pending_events.find(seqnum)
+                                        != pending_events.end()) {
+                                event = pending_events[seqnum];
+                                pending_events.erase(seqnum);
+                                break;
+                        }
+                } catch (...) {
+                };
+        }
 
-	wait_cond.unlock();
+        wait_cond.unlock();
 
-	return event;
+        return event;
 }
 
 // Blocks until the operation has finalised, or timeout is reached
-rina::IPCEvent* FlowManager::timed_wait_event(unsigned int seqnum, unsigned int sec,
-							unsigned int nsec){
+rina::IPCEvent* FlowManager::timed_wait_event(unsigned int seqnum,
+                                              unsigned int sec,
+                                              unsigned int nsec)
+{
 
-	rina::IPCEvent* event = NULL;
+        rina::IPCEvent* event = NULL;
 
-	//Lock to access the map
-	//NOTE: this is confusing and ugly as hell. wait_cond is also Lockable
-	//(mutex).
-	//Blame the author who made ConditionVariable inherit from
-	//Lockable(mutex) instead of mutex being a member.
-	wait_cond.lock();
+        //Lock to access the map
+        //NOTE: this is confusing and ugly as hell. wait_cond is also Lockable
+        //(mutex).
+        //Blame the author who made ConditionVariable inherit from
+        //Lockable(mutex) instead of mutex being a member.
+        wait_cond.lock();
 
-	//This is here in purpose. The event could have arrived BEFORE
-	//we actually are waiting for it
-	if(pending_events.find(seqnum) != pending_events.end()){
-		event = pending_events[seqnum];
-		pending_events.erase(seqnum);
-		wait_cond.unlock();
-		return event;
-	}
+        //This is here in purpose. The event could have arrived BEFORE
+        //we actually are waiting for it
+        if (pending_events.find(seqnum) != pending_events.end()) {
+                event = pending_events[seqnum];
+                pending_events.erase(seqnum);
+                wait_cond.unlock();
+                return event;
+        }
 
-	//Perform wait
-	wait_cond.timedwait(sec, nsec);
+        //Perform wait
+        wait_cond.timedwait(sec, nsec);
 
-	if(pending_events.find(seqnum) != pending_events.end()){
-		event = get_event(seqnum);
-		pending_events.erase(seqnum);
-	}
+        if (pending_events.find(seqnum) != pending_events.end()) {
+                event = get_event(seqnum);
+                pending_events.erase(seqnum);
+        }
 
-	wait_cond.unlock();
+        wait_cond.unlock();
 
-	return event;
+        return event;
 }
 //
 // FIXME: spawning a thread per flow is a waste of resources in general
@@ -542,100 +587,111 @@ rina::IPCEvent* FlowManager::timed_wait_event(unsigned int seqnum, unsigned int 
 //
 
 //Workers
-unsigned int FlowManager::spawnWorker(Worker** w){
+unsigned int FlowManager::spawnWorker(Worker** w)
+{
 
-	unsigned int id;
-	std::stringstream msg;
+        unsigned int id;
+        std::stringstream msg;
 
-	//Scoped lock TODO use rwlock
-	rina::ScopedLock lock(mutex);
+        //Scoped lock TODO use rwlock
+        rina::ScopedLock lock(mutex);
 
-	if(!*w){
-		assert(0);
-		msg <<std::string("Invalid worker")<<std::endl;
-		goto SPAWN_ERROR3;
-	}
+        if (!*w) {
+                assert(0);
+                msg << std::string("Invalid worker") << std::endl;
+                goto SPAWN_ERROR3;
+        }
 
-	//Assign a unique id to this connection
-	id = next_id++;
+        //Assign a unique id to this connection
+        id = next_id++;
 
-	//Double check that there is not an existing worker for that id
-	//This should never happen
-	//TODO: evaluate whether to surround this with an ifdef DEBUG
-	if(workers.find(id) != workers.end()){
-		msg <<std::string("ERROR: Corrupted FlowManager internal state or double call to spawnWorker().")<<id<<std::endl;
-		goto SPAWN_ERROR2;
-	}
+        //Double check that there is not an existing worker for that id
+        //This should never happen
+        //TODO: evaluate whether to surround this with an ifdef DEBUG
+        if (workers.find(id) != workers.end()) {
+                msg << std::string(
+                                "ERROR: Corrupted FlowManager internal state or double call to spawnWorker().")
+                    << id << std::endl;
+                goto SPAWN_ERROR2;
+        }
 
-	//Add state to the workers map
-	try{
-		workers[id] = *w;
-	}catch(...){
-		msg <<std::string("ERROR: Could not add the worker state to 'workers' FlowManager internal out of memory? Dropping worker: ")<<id<<std::endl;
-		goto SPAWN_ERROR;
-	}
+        //Add state to the workers map
+        try {
+                workers[id] = *w;
+        } catch (...) {
+                msg << std::string(
+                                "ERROR: Could not add the worker state to 'workers' FlowManager internal out of memory? Dropping worker: ")
+                    << id << std::endl;
+                goto SPAWN_ERROR;
+        }
 
-	//Set the unique identifier
-	(*w)->setId(id);
+        //Set the unique identifier
+        (*w)->setId(id);
 
-	//Spawn pthread
-	if(pthread_create((*w)->getPthreadContext(), NULL,
-				(*w)->run_trampoline, (void*)(*w)) != 0){
-		msg <<std::string("ERROR: Could spawn pthread for worker id: ")<<id<<std::endl;
-		goto SPAWN_ERROR;
-	}
+        //Spawn pthread
+        if (pthread_create((*w)->getPthreadContext(), NULL,
+                           (*w)->run_trampoline, (void*) (*w)) != 0) {
+                msg << std::string("ERROR: Could spawn pthread for worker id: ")
+                    << id << std::endl;
+                goto SPAWN_ERROR;
+        }
 
-	//Retain worker pointer
-	*w = NULL;
+        //Retain worker pointer
+        *w = NULL;
 
-	return id;
+        return id;
 
-SPAWN_ERROR:
-	if(workers.find(id) != workers.end()) workers.erase(id);
-SPAWN_ERROR2:
-	delete *w;
-SPAWN_ERROR3:
-	throw rina::Exception(msg.str().c_str());
+        SPAWN_ERROR: if (workers.find(id) != workers.end())
+                workers.erase(id);
+        SPAWN_ERROR2: delete *w;
+        SPAWN_ERROR3: throw rina::Exception(msg.str().c_str());
 }
 
 //Join
-void FlowManager::joinWorker(int id){
+void FlowManager::joinWorker(int id)
+{
 
-	std::stringstream msg;
-	Worker* w = NULL;
+        std::stringstream msg;
+        Worker* w = NULL;
 
-	//Scoped lock
-	rina::ScopedLock lock(mutex);
+        //Scoped lock
+        rina::ScopedLock lock(mutex);
 
-	if(workers.find(id) == workers.end()){
-		msg <<std::string("ERROR: Could not find the context of worker id: ")<<id<<std::endl;
-		goto JOIN_ERROR;
-	}
+        if (workers.find(id) == workers.end()) {
+                msg << std::string(
+                                "ERROR: Could not find the context of worker id: ")
+                    << id << std::endl;
+                goto JOIN_ERROR;
+        }
 
-	//Recover FlowWorker object
-	w = workers[id];
+        //Recover FlowWorker object
+        w = workers[id];
 
-	//Signal
-	w->stop();
+        //Signal
+        w->stop();
 
-	//Join
-	if(pthread_join(*(w->getPthreadContext()), NULL) !=0){
-		msg <<std::string("ERROR: Could not join worker with id: ")<<id<<". Error: "<<strerror(errno)<<std::endl;
-		goto JOIN_ERROR;
-	}
+        //Join
+        if (pthread_join(*(w->getPthreadContext()), NULL) != 0) {
+                msg << std::string("ERROR: Could not join worker with id: ")
+                    << id << ". Error: " << strerror(errno) << std::endl;
+                goto JOIN_ERROR;
+        }
 
-	//Clean-up
-	workers.erase(id);
-	delete w;
+        //Clean-up
+        workers.erase(id);
+        delete w;
 
-	return;
+        return;
 
-JOIN_ERROR:
-	assert(0);
-	throw rina::Exception(msg.str().c_str());
+        JOIN_ERROR:
+        assert(0);
+        throw rina::Exception(msg.str().c_str());
 }
 
-}; //namespace mad
-}; //namespace rinad
-
+}
+;
+//namespace mad
+}
+;
+//namespace rinad
 

@@ -31,57 +31,56 @@ static const unsigned int max_sdu_size_in_bytes = 10000;
 class Application
 {
  public:
-  Application(const std::string& dif_name_, const std::string & app_name_,
-              const std::string & app_instance_);
+        Application(const std::string& dif_name_, const std::string & app_name_,
+                    const std::string & app_instance_);
 
-  static const uint max_buffer_size;
+        static const uint max_buffer_size;
 
  protected:
-  void applicationRegister();
+        void applicationRegister();
 
-  std::string dif_name;
-  std::string app_name;
-  std::string app_instance;
+        std::string dif_name;
+        std::string app_name;
+        std::string app_instance;
 
 };
 
 class ConnectionCallback : public rina::cdap::CDAPCallbackInterface
 {
  public:
-  ConnectionCallback(rina::cdap::CDAPProviderInterface **prov);
-  void open_connection(const rina::cdap_rib::con_handle_t &con,
-                       const rina::cdap_rib::flags_t &flags, int message_id);
-  void remote_create_result(const rina::cdap_rib::con_handle_t &con,
-                                    const rina::cdap_rib::res_info_t &res);
+        ConnectionCallback(rina::cdap::CDAPProviderInterface **prov);
+        void open_connection(const rina::cdap_rib::con_handle_t &con,
+                             const rina::cdap_rib::flags_t &flags,
+                             int message_id);
+        void remote_create_result(const rina::cdap_rib::con_handle_t &con,
+                                  const rina::cdap_rib::res_info_t &res);
  private:
-  rina::cdap::CDAPProviderInterface **prov_;
+        rina::cdap::CDAPProviderInterface **prov_;
 };
 
 class Manager : public Application
 {
  public:
-  Manager(const std::string& dif_name, const std::string& apn,
-          const std::string& api, bool quiet);
-  void run();
-  ~Manager();
+        Manager(const std::string& dif_name, const std::string& apn,
+                const std::string& api, bool quiet);
+        void run();
+        ~Manager();
  protected:
-  void startWorker(rina::Flow *flow);
-  void createIPCP(rina::Flow *flow);
+        void startWorker(rina::Flow *flow);
+        void createIPCP(rina::Flow *flow);
 
-
-  //void cacep();
-  //void sendAssignToDIF();
-  //void sendRegisterAtDIF();
-  //void sendQueryRIB();
-  //void release();
-  //void destroyFlow();
+        //void cacep();
+        //void sendAssignToDIF();
+        //void sendRegisterAtDIF();
+        //void sendQueryRIB();
+        //void release();
+        //void destroyFlow();
 
  private:
-  std::string dif_name_;
-  bool quiet_;
-  bool client_app_reg_;
-  rina::cdap_rib::con_handle_t con_;
-  static const std::string mad_name;
-  static const std::string mad_instance;
+        std::string dif_name_;
+        bool client_app_reg_;
+        rina::cdap_rib::con_handle_t con_;
+        static const std::string mad_name;
+        static const std::string mad_instance;
 };
 #endif//MANAGER_HPP
