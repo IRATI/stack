@@ -180,6 +180,9 @@ public:
 			const Graph& graph,
 			const std::list<FlowStateObject *>& fsoList,
 			unsigned int source_address);
+	void computeShortestDistances(const Graph& graph,
+				      unsigned int source_address,
+				      std::map<unsigned int, int>& distances);
 private:
 	std::set<unsigned int> settled_nodes_;
 	std::set<unsigned int> unsettled_nodes_;
@@ -193,6 +196,7 @@ private:
 	bool isNeighbor(Edge * edge, unsigned int node) const;
 	bool isSettled(unsigned int node) const;
 	unsigned int getNextHop(unsigned int address, unsigned int sourceAddress);
+	void clear();
 };
 
 class IResiliencyAlgorithm {

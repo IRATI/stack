@@ -316,6 +316,26 @@ DijkstraAlgorithm::DijkstraAlgorithm()
 {
 }
 
+void DijkstraAlgorithm::clear()
+{
+	unsettled_nodes_.clear();
+	settled_nodes_.clear();
+	predecessors_.clear();
+	distances_.clear();
+}
+
+void DijkstraAlgorithm::computeShortestDistances(const Graph& graph,
+					unsigned int source_address,
+					std::map<unsigned int, int>& distances)
+{
+	execute(graph, source_address);
+
+	// Write back the result
+	distances = distances_;
+
+	clear();
+}
+
 std::list<rina::RoutingTableEntry *> DijkstraAlgorithm::computeRoutingTable(
                 const Graph& graph,
 		const std::list<FlowStateObject *>& fsoList,
@@ -346,10 +366,7 @@ std::list<rina::RoutingTableEntry *> DijkstraAlgorithm::computeRoutingTable(
 		}
 	}
 
-	unsettled_nodes_.clear();
-	settled_nodes_.clear();
-	predecessors_.clear();
-	distances_.clear();
+	clear();
 
 	return result;
 }
