@@ -525,7 +525,7 @@ void LoopFreeAlternateAlgorithm::extendRoutingTableEntry(
 		return;
 	}
 
-	//Found the involved routing table entry, try to extend it
+	//Find the involved routing table entry, try to extend it
 	for (std::list<unsigned int>::iterator
 			hit = (*rit)->nextHopAddresses.begin();
 				hit != (*rit)->nextHopAddresses.end(); hit++) {
@@ -546,7 +546,6 @@ void LoopFreeAlternateAlgorithm::fortifyRoutingTable(const Graph& graph,
 						unsigned int source_address,
 						std::list<rina::RoutingTableEntry *>& rt)
 {
-	std::set<unsigned int> neighbors;
 	std::map<unsigned int, std::map< unsigned int, int > > neighbors_dist_trees;
 	std::map<unsigned int, int> dist_map;
 
@@ -554,11 +553,10 @@ void LoopFreeAlternateAlgorithm::fortifyRoutingTable(const Graph& graph,
 	routing_algorithm.computeShortestDistances(graph, source_address, dist_map);
 
 	// Collect all the neighbors, and for each one use the routing algorithm to
-	// compute the distance map rooted at that neighbor
+	// compute the shortest distance map rooted at that neighbor
 	for (std::list<unsigned int>::const_iterator it = graph.vertices_.begin();
 						it != graph.vertices_.end(); ++it) {
 		if ((*it) != source_address && graph.contains_edge(source_address, *it)) {
-			neighbors.insert(*it);
 			neighbors_dist_trees.insert(
 				make_pair(*it, std::map<unsigned int, int>()));
 			routing_algorithm.computeShortestDistances(graph,
@@ -569,24 +567,25 @@ void LoopFreeAlternateAlgorithm::fortifyRoutingTable(const Graph& graph,
 	// For each node other than than the source node and its neighbors
 	for (std::list<unsigned int>::const_iterator it = graph.vertices_.begin();
 						it != graph.vertices_.end(); ++it) {
-		if ((*it) == source_address || neighbors.count(*it)) {
+		if ((*it) == source_address || neighbors_dist_trees.count(*it)) {
 			continue;
 		}
 
 		// For each neighbor of the source node
-		for (std::set<unsigned int>::iterator nit = neighbors.begin();
-						nit != neighbors.end(); nit++) {
+		for (std::map<unsigned int, std::map<unsigned int, int> >::iterator
+			nit = neighbors_dist_trees.begin();
+				nit != neighbors_dist_trees.end(); nit++) {
 			// If this neighbor is a LFA node for the current
 			// destination (*it) extend the routing table to take it
 			// into account
-			std::map< unsigned int, int>& neigh_dist_map =
-							neighbors_dist_trees[*nit];
+			std::map< unsigned int, int>& neigh_dist_map = nit->second;
+			unsigned int neigh = nit->first;
 
 			// dist(neigh, target) < dist(neigh, source) + dist(source, target)
-			if (neigh_dist_map[*it] < dist_map[*nit] + dist_map[*it]) {
+			if (neigh_dist_map[*it] < dist_map[neigh] + dist_map[*it]) {
 				LOG_DBG("Node %u is a possible LFA for destination %u",
-					*nit, *it);
-				extendRoutingTableEntry(rt, *it, *nit);
+					neigh, *it);
+				extendRoutingTableEntry(rt, *it, neigh);
 			}
 		}
 	}
