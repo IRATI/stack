@@ -206,6 +206,7 @@ private:
 
 class IResiliencyAlgorithm {
 public:
+	IResiliencyAlgorithm(IRoutingAlgorithm& ra);
 	virtual ~IResiliencyAlgorithm(){};
 
 	// Starting from the routing table computed by the routing algorithm,
@@ -213,10 +214,14 @@ public:
 	// existing ones, in order to improve resilency of the source node
 	virtual void fortifyRoutingTable(const Graph& graph, unsigned int source_address,
 					 std::list<rina::RoutingTableEntry *>& rt) = 0;
+
+private:
+	IRoutingAlgorithm& routing_algorithm;
 };
 
 class LoopFreeAlternateAlgorithm : public IResiliencyAlgorithm {
 public:
+	LoopFreeAlternateAlgorithm(IRoutingAlgorithm& ra);
 	void fortifyRoutingTable(const Graph& graph, unsigned int source_address,
 					 std::list<rina::RoutingTableEntry *>& rt);
 private:

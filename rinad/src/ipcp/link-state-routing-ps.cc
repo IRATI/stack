@@ -494,7 +494,18 @@ unsigned int DijkstraAlgorithm::getNextHop(unsigned int target,
 	return nextHop;
 }
 
+//Class IResiliencyAlgorithm
+IResiliencyAlgorithm::IResiliencyAlgorithm(IRoutingAlgorithm& ra)
+						: routing_algorithm(ra)
+{
+}
+
 //Class LoopFreeAlternateAlgorithm
+LoopFreeAlternateAlgorithm::LoopFreeAlternateAlgorithm(IRoutingAlgorithm& ra)
+						: IResiliencyAlgorithm(ra)
+{
+}
+
 void LoopFreeAlternateAlgorithm::extendRoutingTableEntry(
 			std::list<rina::RoutingTableEntry *>& rt,
 			unsigned int target_address, unsigned int nexthop)
@@ -1080,7 +1091,7 @@ void LinkStateRoutingPolicy::set_dif_configuration(
 	routing_algorithm_ = new DijkstraAlgorithm();
 	source_vertex_ = dif_configuration.get_address();
 #if 0
-	resiliency_algorithm_ = new LoopFreeAlternateAlgorithm();
+	resiliency_algorithm_ = new LoopFreeAlternateAlgorithm(*routing_algorithm_);
 #endif
 
 	if (!test_) {
