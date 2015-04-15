@@ -207,8 +207,12 @@ public:
 };
 
 class LoopFreeAlternateAlgorithm : public IResiliencyAlgorithm {
+public:
 	void fortifyRoutingTable(const Graph& graph, unsigned int source_address,
 					 std::list<rina::RoutingTableEntry *>& rt);
+private:
+	void extendRoutingTableEntry(std::list<rina::RoutingTableEntry *>& rt,
+				     unsigned int target_address, unsigned int nexthop);
 };
 
 /// A group of flow state objects. This is the RIB target object

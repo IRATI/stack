@@ -477,19 +477,73 @@ unsigned int DijkstraAlgorithm::getNextHop(unsigned int target,
 	return nextHop;
 }
 
+//Class LoopFreeAlternateAlgorithm
+void LoopFreeAlternateAlgorithm::extendRoutingTableEntry(
+			std::list<rina::RoutingTableEntry *>& rt,
+			unsigned int target_address, unsigned int nexthop)
+{
+	std::list<rina::RoutingTableEntry *>::iterator rit;
+	bool found = false;
 
-void
-LoopFreeAlternateAlgorithm::fortifyRoutingTable(const Graph& graph,
+	for (rit = rt.begin(); rit != rt.end(); rit++) {
+		if ((*rit)->address == target_address) {
+			break;
+		}
+	}
+
+	if (rit == rt.end()) {
+		LOG_WARN("LFA: Couldn't find routing table entry for "
+			 "target address %u", target_address);
+		return;
+	}
+
+	//Found the involved routing table entry, try to extend it
+	for (std::list<unsigned int>::iterator
+			hit = (*rit)->nextHopAddresses.begin();
+				hit != (*rit)->nextHopAddresses.end(); hit++) {
+		if (*hit == nexthop) {
+			found = true;
+			break;
+		}
+	}
+
+	if (!found) {
+		(*rit)->nextHopAddresses.push_back(nexthop);
+		LOG_DBG("Node %u selected as loop back alternate towards the "
+			 "destination node %u", nexthop, target_address);
+	}
+}
+
+void LoopFreeAlternateAlgorithm::fortifyRoutingTable(const Graph& graph,
 						unsigned int source_address,
 						std::list<rina::RoutingTableEntry *>& rt)
 {
-	(void)rt;
+	std::set<unsigned int> neighbors;
+
+	//Collect all the neighbors
+	for (std::list<unsigned int>::const_iterator it = graph.vertices_.begin();
+						it != graph.vertices_.end(); ++it) {
+		if ((*it) != source_address && graph.contains_edge(source_address, *it)) {
+			neighbors.insert(*it);
+		}
+	}
 
 	//For each node other than than the source node and its neighbors
 	for (std::list<unsigned int>::const_iterator it = graph.vertices_.begin();
 						it != graph.vertices_.end(); ++it) {
-		if ((*it) == source_address || graph.contains_edge(source_address, *it)) {
+		if ((*it) == source_address || neighbors.count(*it)) {
 			continue;
+		}
+
+		// For each neighbor of the source node
+		for (std::set<unsigned int>::iterator sit = neighbors.begin();
+						sit != neighbors.end(); sit++) {
+			//If this neighbor is a LFA node for the current
+			//destination (*it) extend the routing table to take it
+			// into account
+			if (false) { // TODO
+				extendRoutingTableEntry(rt, *it, *sit);
+			}
 		}
 	}
 }
