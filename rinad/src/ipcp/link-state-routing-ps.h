@@ -447,7 +447,7 @@ private:
 	FlowStateRIBObjectGroup * fs_rib_group_;
 	rina::PDUFTableGeneratorConfiguration pduft_generator_config_;
 	IRoutingAlgorithm * routing_algorithm_;
-	IResiliencyAlgorithm * resiliency_algorithm;
+	IResiliencyAlgorithm * resiliency_algorithm_;
 	unsigned int source_vertex_;
 	unsigned int maximum_age_;
 

@@ -991,6 +991,7 @@ LinkStateRoutingPolicy::LinkStateRoutingPolicy(IPCProcess * ipcp)
 	cdap_session_manager_ = ipc_process_->cdap_session_manager_;
 	fs_rib_group_ = 0;
 	routing_algorithm_ = 0;
+	resiliency_algorithm_ = 0;
 	source_vertex_ = 0;
 	maximum_age_ = UINT_MAX;
 	db_ = 0;
@@ -1012,6 +1013,10 @@ LinkStateRoutingPolicy::~LinkStateRoutingPolicy()
 {
 	if (routing_algorithm_) {
 		delete routing_algorithm_;
+	}
+
+	if (resiliency_algorithm_) {
+		delete resiliency_algorithm_;
 	}
 
 	if (db_) {
@@ -1057,6 +1062,9 @@ void LinkStateRoutingPolicy::set_dif_configuration(
 
 	routing_algorithm_ = new DijkstraAlgorithm();
 	source_vertex_ = dif_configuration.get_address();
+#if 0
+	resiliency_algorithm_ = new LoopFreeAlternateAlgorithm();
+#endif
 
 	if (!test_) {
 		maximum_age_ = pduft_generator_config_.get_link_state_routing_configuration().get_object_maximum_age();
@@ -1262,6 +1270,12 @@ void LinkStateRoutingPolicy::routingTableUpdate()
 	std::list<rina::RoutingTableEntry *> rt =
 			routing_algorithm_->computeRoutingTable(*graph,
 					flow_state_objects, source_vertex_);
+
+	// Run the resiliency algorithm, if any, to extend the routing table
+	if (resiliency_algorithm_) {
+		resiliency_algorithm_->fortifyRoutingTable(*graph,
+						source_vertex_, rt);
+	}
 
 	delete graph;
 
