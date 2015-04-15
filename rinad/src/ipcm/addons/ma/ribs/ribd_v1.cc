@@ -26,7 +26,9 @@
 
 #include "../../../ipcm.h"
 
+//Object definitions
 #include "ipcp_obj.h"
+#include "os_proc_obj.h"
 
 namespace rinad {
 namespace mad {

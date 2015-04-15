@@ -15,9 +15,6 @@ extern Singleton<rina::ConsecutiveUnsignedIntegerGenerator> inst_gen;
 
 //Static class names
 const std::string IPCPObj::class_name = "IPCProcess";
-const std::string OSApplicationProcessObj::class_name = "OSApplicationProcess";
-
-
 
 //Class
 IPCPObj::IPCPObj(std::string name, long instance, int ipcp_id)
@@ -73,46 +70,6 @@ rina::cdap_rib::res_info_t* IPCPObj::remoteDelete(const std::string& name){
 
 	return r;
 }
-
-OSApplicationProcessObj::OSApplicationProcessObj(std::string name,
-		long instance, rina::rib::RIBDNorthInterface* ribd)
-	: rina::rib::EmptyRIBObject(class_name, name, instance, &encoder_){
-
-	ribd_ = ribd;
-}
-
-rina::cdap_rib::res_info_t* OSApplicationProcessObj::remoteCreate(
-		const std::string& name, const std::string clas,
-		const rina::cdap_rib::SerializedObject &obj_req,
-		rina::cdap_rib::SerializedObject &obj_reply){
-
-	(void) obj_reply;
-	rina::cdap_rib::res_info_t* res = new rina::cdap_rib::res_info_t;
-
-	if (clas == IPCPObj::class_name) {
-
-		IPCPObj* ipcp;
-
-		try{
-			ipcp = new IPCPObj(name, inst_gen->next(), obj_req);
-		}catch(...){
-			LOG_ERR("Unable to create an IPCP object '%s'; out of memory?",
-								name.c_str());
-			res->result_ = -1;
-			return res;
-		}
-
-		ribd_->addRIBObject(ipcp);
-		res->result_ = 1;
-	} else {
-		LOG_ERR("Create object %s is not implemented as a child of OSApplicationProcess object",
-								name.c_str());
-		res->result_ = -1;
-	}
-
-	return res;
-}
-
 };//namespace rib_v1
 };//namespace mad
 };//namespace rinad

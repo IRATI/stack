@@ -53,27 +53,6 @@ private:
 	mad_manager::encoders::IPCPEncoder encoder;
 };
 
-
-/**
- * OSApplicationProcess object
- */
-class OSApplicationProcessObj : public rina::rib::EmptyRIBObject{
-
-public:
-	OSApplicationProcessObj(std::string name, long instance,
-					rina::rib::RIBDNorthInterface* ribd);
-	rina::cdap_rib::res_info_t* remoteCreate(const std::string& name,
-			const std::string clas,
-			const rina::cdap_rib::SerializedObject &obj_req,
-			rina::cdap_rib::SerializedObject &obj_reply);
-private:
-	rina::rib::RIBDNorthInterface* ribd_;
-	rina::rib::EmptyEncoder encoder_;
-
-	//Name of the class
-	const static std::string class_name;
-};
-
 }; //namespace rib_v1
 }; //namespace mad
 }; //namespace rinad
