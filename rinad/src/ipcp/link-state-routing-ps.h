@@ -215,7 +215,7 @@ public:
 	virtual void fortifyRoutingTable(const Graph& graph, unsigned int source_address,
 					 std::list<rina::RoutingTableEntry *>& rt) = 0;
 
-private:
+protected:
 	IRoutingAlgorithm& routing_algorithm;
 };
 
