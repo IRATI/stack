@@ -146,9 +146,8 @@ void ConnectionCallback::remote_create_result(
 }
 
 Manager::Manager(const std::string& dif_name, const std::string& apn,
-                 const std::string& api, bool quiet)
-                : Application(dif_name, apn, api),
-                  quiet_(quiet)
+                 const std::string& api)
+                : Application(dif_name, apn, api)
 {
 }
 

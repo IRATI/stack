@@ -62,7 +62,7 @@ class Manager : public Application
 {
  public:
         Manager(const std::string& dif_name, const std::string& apn,
-                const std::string& api, bool quiet);
+                const std::string& api);
         void run();
         ~Manager();
  protected:
