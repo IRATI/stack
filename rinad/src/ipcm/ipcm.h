@@ -270,9 +270,21 @@ public:
 
 	//
 	// List the existing IPCPs in the system
+	// TODO: deprecate this console only stuff
 	//
 	void list_ipcps(std::ostream& os);
 
+	//
+	// Get the list of IPCPs in the system (IPCP id)
+	//
+	// @param list The list will be filled here
+	//
+	void list_ipcps(std::list<int>& list);
+
+	//
+	// Get the IPCP name
+	//
+	std::string get_ipcp_name(int ipcp_id);
 
 	//
 	// Get the IPCP ID given a difName

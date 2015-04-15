@@ -33,6 +33,7 @@
 
 using namespace std;
 using namespace rina;
+using namespace rinad;
 
 const std::string Manager::mad_name = "mad";
 const std::string Manager::mad_instance = "1";
@@ -149,6 +150,8 @@ Manager::Manager(const std::string& dif_name, const std::string& apn,
                  const std::string& api)
                 : Application(dif_name, apn, api)
 {
+  (void)quiet_;
+  (void)client_app_reg_;
 }
 
 Manager::~Manager()
