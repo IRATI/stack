@@ -153,7 +153,9 @@ public:
 	//Compute the next hop to other addresses. Ownership of
 	//PDUForwardingTableEntries in the list is passed to the
 	//caller
-	virtual std::list<rina::RoutingTableEntry *> computeRoutingTable(const std::list<FlowStateObject *>& fsoList,
+	virtual std::list<rina::RoutingTableEntry *> computeRoutingTable(
+			const Graph& graph,
+			const std::list<FlowStateObject *>& fsoList,
 			unsigned int source_address) = 0;
 };
 
@@ -173,17 +175,18 @@ class DijkstraAlgorithm : public IRoutingAlgorithm {
 public:
 	DijkstraAlgorithm();
 	std::list<rina::RoutingTableEntry *> computeRoutingTable(
-			const std::list<FlowStateObject *>& fsoList, unsigned int source_address);
+			const Graph& graph,
+			const std::list<FlowStateObject *>& fsoList,
+			unsigned int source_address);
 private:
-	Graph * graph_;
 	std::set<unsigned int> settled_nodes_;
 	std::set<unsigned int> unsettled_nodes_;
 	std::map<unsigned int, PredecessorInfo *> predecessors_;
 	std::map<unsigned int, int> distances_;
 
-	void execute(unsigned int source);
+	void execute(const Graph& graph, unsigned int source);
 	unsigned int getMinimum() const;
-	void findMinimalDistances (unsigned int node);
+	void findMinimalDistances (const Graph& graph, unsigned int node);
 	int getShortestDistance(unsigned int destination) const;
 	bool isNeighbor(Edge * edge, unsigned int node) const;
 	bool isSettled(unsigned int node) const;

@@ -303,23 +303,23 @@ PredecessorInfo::PredecessorInfo(unsigned int nPredecessor)
 
 DijkstraAlgorithm::DijkstraAlgorithm()
 {
-	graph_ = 0;
 }
 
 std::list<rina::RoutingTableEntry *> DijkstraAlgorithm::computeRoutingTable(
+                const Graph& graph,
 		const std::list<FlowStateObject *>& fsoList,
 		unsigned int source_address)
 {
 	std::list<rina::RoutingTableEntry *> result;
-	std::list<unsigned int>::iterator it;
+	std::list<unsigned int>::const_iterator it;
 	unsigned int nextHop;
 	rina::RoutingTableEntry * entry;
 
-	graph_ = new Graph(fsoList);
+	(void)fsoList; // avoid compiler barfs
 
-	execute(source_address);
+	execute(graph, source_address);
 
-	for (it = graph_->vertices_.begin(); it != graph_->vertices_.end(); ++it) {
+	for (it = graph.vertices_.begin(); it != graph.vertices_.end(); ++it) {
 		if ((*it) != source_address) {
 			nextHop = getNextHop((*it), source_address);
 			if (nextHop != 0) {
@@ -335,7 +335,6 @@ std::list<rina::RoutingTableEntry *> DijkstraAlgorithm::computeRoutingTable(
 		}
 	}
 
-	delete graph_;
 	unsettled_nodes_.clear();
 	settled_nodes_.clear();
 	predecessors_.clear();
@@ -344,7 +343,7 @@ std::list<rina::RoutingTableEntry *> DijkstraAlgorithm::computeRoutingTable(
 	return result;
 }
 
-void DijkstraAlgorithm::execute(unsigned int source)
+void DijkstraAlgorithm::execute(const Graph& graph, unsigned int source)
 {
 	distances_[source] = 0;
 	unsettled_nodes_.insert(source);
@@ -354,7 +353,7 @@ void DijkstraAlgorithm::execute(unsigned int source)
 		node = getMinimum();
 		settled_nodes_.insert(node);
 		unsettled_nodes_.erase(node);
-		findMinimalDistances(node);
+		findMinimalDistances(graph, node);
 	}
 }
 
@@ -389,14 +388,15 @@ int DijkstraAlgorithm::getShortestDistance(unsigned int destination) const
 	return distance;
 }
 
-void DijkstraAlgorithm::findMinimalDistances(unsigned int node)
+void DijkstraAlgorithm::findMinimalDistances(const Graph& graph,
+					     unsigned int node)
 {
 	std::list<unsigned int> adjacentNodes;
-	std::list<Edge *>::iterator edgeIt;
+	std::list<Edge *>::const_iterator edgeIt;
 
 	unsigned int target = 0;
 	int shortestDistance;
-	for (edgeIt = graph_->edges_.begin(); edgeIt != graph_->edges_.end();
+	for (edgeIt = graph.edges_.begin(); edgeIt != graph.edges_.end();
 			++edgeIt) {
 		if (isNeighbor((*edgeIt), node)) {
 			target = (*edgeIt)->getOtherEndpoint(node);
@@ -1165,6 +1165,7 @@ void LinkStateRoutingPolicy::updateAge()
 void LinkStateRoutingPolicy::routingTableUpdate()
 {
 	rina::ScopedLock g(*lock_);
+	Graph *graph;
 
 	if (!db_->modified_) {
 		return;
@@ -1173,14 +1174,26 @@ void LinkStateRoutingPolicy::routingTableUpdate()
 	db_->modified_ = false;
 	std::list<FlowStateObject *> flow_state_objects;
 	db_->getAllFSOs(flow_state_objects);
-	std::list<rina::RoutingTableEntry *> rt =
-			routing_algorithm_->computeRoutingTable(flow_state_objects,
-					source_vertex_);
 
-    IResourceAllocatorPs *raps =
-    		dynamic_cast<IResourceAllocatorPs *>(ipc_process_->resource_allocator_->ps);
-    assert(raps);
-    raps->routingTableUpdated(rt);
+	// Build a graph out of the FSO database
+	graph = new Graph(flow_state_objects);
+
+	// Invoke the routing algorithm to compute the routing table
+	// Main arguments are the graph and the source vertex.
+	// The list of FSOs may be useless, but has been left there
+	// for the moment (and it is currently unused by the Dijkstra
+	// algorithm).
+	std::list<rina::RoutingTableEntry *> rt =
+			routing_algorithm_->computeRoutingTable(*graph,
+					flow_state_objects, source_vertex_);
+
+	delete graph;
+
+	// Invoke the resource allocator to compute the PDUFT from the routing table
+	IResourceAllocatorPs *raps =
+		dynamic_cast<IResourceAllocatorPs *>(ipc_process_->resource_allocator_->ps);
+	assert(raps);
+	raps->routingTableUpdated(rt);
 }
 
 void LinkStateRoutingPolicy::writeMessageReceived(
