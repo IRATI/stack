@@ -13,7 +13,9 @@ namespace rib_v1 {
 //Instance generator
 extern Singleton<rina::ConsecutiveUnsignedIntegerGenerator> inst_gen;
 
+//Static class names
 const std::string IPCPObj::class_name = "IPCProcess";
+const std::string OSApplicationProcessObj::class_name = "OSApplicationProcess";
 
 
 
@@ -72,10 +74,9 @@ rina::cdap_rib::res_info_t* IPCPObj::remoteDelete(const std::string& name){
 	return r;
 }
 
-OSApplicationProcessObj::OSApplicationProcessObj(
-		const std::string& clas, std::string name, long instance,
-		rina::rib::RIBDNorthInterface* ribd)
-	: rina::rib::EmptyRIBObject(clas, name, instance, &encoder_){
+OSApplicationProcessObj::OSApplicationProcessObj(std::string name,
+		long instance, rina::rib::RIBDNorthInterface* ribd)
+	: rina::rib::EmptyRIBObject(class_name, name, instance, &encoder_){
 
 	ribd_ = ribd;
 }

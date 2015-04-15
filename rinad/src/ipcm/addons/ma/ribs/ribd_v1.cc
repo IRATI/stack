@@ -141,7 +141,6 @@ void initiateRIB(rina::rib::RIBDNorthInterface* ribd)
 					inst_gen->next(), enc));
 		ribd->addRIBObject(
 				new OSApplicationProcessObj(
-					"OSApplicationProcess",
 					"root, computingSystemID = 1, "
 					"processingSystemID=1, kernelApplicationProcess, osApplicationProcess",
 					inst_gen->next(), ribd));

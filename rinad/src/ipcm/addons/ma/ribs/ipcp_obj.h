@@ -60,8 +60,8 @@ private:
 class OSApplicationProcessObj : public rina::rib::EmptyRIBObject{
 
 public:
-	OSApplicationProcessObj(const std::string& clas, std::string name,
-			long instance, rina::rib::RIBDNorthInterface* ribd);
+	OSApplicationProcessObj(std::string name, long instance,
+					rina::rib::RIBDNorthInterface* ribd);
 	rina::cdap_rib::res_info_t* remoteCreate(const std::string& name,
 			const std::string clas,
 			const rina::cdap_rib::SerializedObject &obj_req,
@@ -69,6 +69,9 @@ public:
 private:
 	rina::rib::RIBDNorthInterface* ribd_;
 	rina::rib::EmptyEncoder encoder_;
+
+	//Name of the class
+	const static std::string class_name;
 };
 
 }; //namespace rib_v1
