@@ -195,7 +195,7 @@ void IPCManager_::app_reg_req_handler(
 	//Perform the registration
 	try {
 		//Create a transaction
-		trans = new APPregTransState(NULL, slave_ipcp->get_id(), *event);
+		trans = new APPregTransState(NULL, NULL, slave_ipcp->get_id(), *event);
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! "
 					<< dif_name.toString();

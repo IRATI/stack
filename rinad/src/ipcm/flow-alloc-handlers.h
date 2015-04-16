@@ -43,10 +43,10 @@ namespace rinad {
 class FlowAllocTransState: public TransactionState{
 
 public:
-	FlowAllocTransState(Promise* promise, int _slave_ipcp_id,
+	FlowAllocTransState(Addon* callee, Promise* promise, int _slave_ipcp_id,
 				rina::FlowRequestEvent& _req_e,
 				bool once):
-					TransactionState(promise),
+					TransactionState(callee, promise),
 					slave_ipcp_id(_slave_ipcp_id),
 					req_event(_req_e),
 					try_only_a_dif(once)
@@ -64,9 +64,10 @@ public:
 class FlowDeallocTransState: public TransactionState{
 
 public:
-	FlowDeallocTransState(Promise* promise, int _slave_ipcp_id,
+	FlowDeallocTransState(Addon* callee, Promise* promise,
+				int _slave_ipcp_id,
 				const rina::FlowDeallocateRequestEvent& _req_e):
-					TransactionState(promise),
+					TransactionState(callee, promise),
 					slave_ipcp_id(_slave_ipcp_id),
 					req_event(_req_e),
 					req_by_ipcm(false)

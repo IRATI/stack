@@ -150,7 +150,7 @@ public:
 class TransactionState {
 
 public:
-	TransactionState(Promise* promise);
+	TransactionState(Addon* addon, Promise* promise);
 	virtual ~TransactionState(){};
 
 	//
@@ -191,6 +191,9 @@ public:
 	//Transaction id
 	const int tid;
 
+	//Callee that generated the transaction
+	Addon* callee;
+
 protected:
 	//Protect abort call
 	friend class Promise;
@@ -217,9 +220,10 @@ protected:
 	//
 	// Constructor only used
 	//
-	TransactionState(Promise* promise_, const int tid_):
+	TransactionState(Addon* callee_, Promise* promise_, const int tid_):
 							promise(promise_),
 							tid(tid_),
+							callee(callee_),
 							finalised(false){
 		if(promise){
 			promise->ret = IPCM_PENDING;
@@ -239,8 +243,8 @@ protected:
 //
 class SyscallTransState : public TransactionState {
 public:
-	SyscallTransState(Promise* promise_, const int tid_) :
-					TransactionState(promise_, tid_){};
+	SyscallTransState(Addon* callee, Promise* promise_, const int tid_) :
+				TransactionState(callee, promise_, tid_){};
 	virtual ~SyscallTransState(){};
 };
 

@@ -200,6 +200,11 @@ IPCManager_::create_ipcp(Addon* callee, CreateIPCPPromise* promise,
 				"[id = " << ipcp->get_id() << "]" << endl;
 			FLUSH_LOG(INFO, ss);
 
+			//Distribute the event to the addons
+			IPCMEvent addon_e(callee, IPCM_IPCP_CREATED,
+							ipcp->get_id());
+			Addon::distribute_ipcm_event(addon_e);
+
 			return IPCM_SUCCESS;
 		} else {
 			// Normal IPC processes can be set as
@@ -208,7 +213,8 @@ IPCManager_::create_ipcp(Addon* callee, CreateIPCPPromise* promise,
 			// defer the operation.
 
 			//Add transaction state
-			trans = new SyscallTransState(promise, ipcp->get_id());
+			trans = new SyscallTransState(callee, promise,
+							ipcp->get_id());
 			if(!trans){
 				assert(0);
 				ss << "Failed to create IPC process '" <<
@@ -227,6 +233,7 @@ IPCManager_::create_ipcp(Addon* callee, CreateIPCPPromise* promise,
 			ss << "IPC process " << name.toString() << " created and waiting for initialization"
 				"[id = " << ipcp->get_id() << "]" << endl;
 			FLUSH_LOG(INFO, ss);
+
 		}
 	} catch(rina::ConcurrentException& e) {
 		ss << "Failed to create IPC process '" <<
@@ -464,7 +471,7 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 			throw rina::BadConfigurationException("DIF configuration validator failed");
 
 		//Create a transaction
-		trans = new IPCPTransState(promise, ipcp->get_id());
+		trans = new IPCPTransState(callee, promise, ipcp->get_id());
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! "
 				<< dif_name.toString();
@@ -552,7 +559,7 @@ IPCManager_::register_at_dif(Addon* callee, Promise* promise,
 		rina::WriteScopedLock swritelock(slave_ipcp->rwlock, false);
 
 		//Create a transaction
-		trans = new IPCPregTransState(promise, ipcp->get_id(),
+		trans = new IPCPregTransState(callee, promise, ipcp->get_id(),
 							slave_ipcp->get_id());
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! "
@@ -624,7 +631,7 @@ IPCManager_::unregister_ipcp_from_ipcp(Addon* callee, Promise* promise, const un
 		rina::WriteScopedLock swritelock(slave_ipcp->rwlock, false);
 
 		//Create a transaction
-		trans = new IPCPregTransState(promise, ipcp->get_id(),
+		trans = new IPCPregTransState(callee, promise, ipcp->get_id(),
 				slave_ipcp->get_id());
 
 		if(!trans){
@@ -693,7 +700,7 @@ IPCManager_::enroll_to_dif(Addon* callee, Promise* promise, const unsigned short
 		rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
 		//Create a transaction
-		trans = new IPCPTransState(promise, ipcp->get_id());
+		trans = new IPCPTransState(callee, promise, ipcp->get_id());
 
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! "
@@ -871,7 +878,7 @@ IPCManager_::update_dif_configuration(Addon* callee, Promise* promise, const uns
 		 * (which possibly contains more IPC process, both on the same
 		 * processing systems and on different processing systems) ?
 		 */
-		trans = new IPCPTransState(promise, ipcp->get_id());
+		trans = new IPCPTransState(callee, promise, ipcp->get_id());
 
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
@@ -930,7 +937,7 @@ IPCManager_::query_rib(Addon* callee, QueryRIBPromise* promise, const unsigned s
 		//Auto release the read lock
 		rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
-		trans = new RIBqTransState(promise, ipcp->get_id());
+		trans = new RIBqTransState(callee, promise, ipcp->get_id());
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
 			FLUSH_LOG(ERR, ss);
@@ -997,7 +1004,7 @@ IPCManager_::set_policy_set_param(Addon* callee, Promise* promise,
 		//Auto release the read lock
 		rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
-		trans = new IPCPTransState(promise, ipcp->get_id());
+		trans = new IPCPTransState(callee, promise, ipcp->get_id());
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
 			FLUSH_LOG(ERR, ss);
@@ -1061,7 +1068,7 @@ IPCManager_::select_policy_set(Addon* callee, Promise* promise,
 		//Auto release the read lock
 		rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
-		trans = new IPCPTransState(promise, ipcp->get_id());
+		trans = new IPCPTransState(callee, promise, ipcp->get_id());
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
 			FLUSH_LOG(ERR, ss);
@@ -1122,7 +1129,7 @@ IPCManager_::plugin_load(Addon* callee, Promise* promise,
 		//Auto release the read lock
 		rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
-		trans = new IPCPTransState(promise, ipcp->get_id());
+		trans = new IPCPTransState(callee, promise, ipcp->get_id());
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
 			FLUSH_LOG(ERR, ss);
@@ -1183,7 +1190,8 @@ IPCManager_::unregister_app_from_ipcp(Addon* callee, Promise* promise,
 
 		// Forward the unregistration request to the IPC process
 		// that the application is registered to
-		trans = new IPCPTransState(promise, slave_ipcp->get_id());
+		trans = new IPCPTransState(callee, promise,
+							slave_ipcp->get_id());
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
 			FLUSH_LOG(ERR, ss);
@@ -1271,9 +1279,10 @@ ipcm_res_t Promise::timed_wait(const unsigned int seconds){
 // Transactions
 //
 
-TransactionState::TransactionState(Promise* _promise):
+TransactionState::TransactionState(Addon* callee_, Promise* _promise):
 					promise(_promise),
 					tid(IPCManager->__tid_gen.next()),
+					callee(callee_),
 					finalised(false){
 	if (promise){
 		promise->ret = IPCM_PENDING;

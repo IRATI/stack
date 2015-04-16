@@ -41,24 +41,40 @@ namespace rinad {
 //fwd decl
 class Addon;
 
+/**
+* Events to be distributed to the addons
+*/
+enum event_type {
+
+	//Addon related events
+	IPCM_ADDON_LOADED,
+
+	//General events
+	IPCM_IPCP_CREATED,
+	IPCM_IPCP_TO_BE_DESTROYED,
+	IPCM_IPCP_UPDATED,
+
+};
+
+
 class IPCMEvent{
 
 public:
 	/**
-	* Events to be distributed to the addons
+	* IPCP general constructor
 	*/
-	enum event_type {
+	IPCMEvent(Addon* c, enum event_type t, int ipcp_id_) : type(t),
+							callee(c),
+							ipcp_id(ipcp_id_),
+							addon(""){};
 
-		//Addon related events
-		IPCM_ADDON_LOADED,
-
-		//General events
-		IPCM_IPCP_CREATED,
-		IPCM_IPCP_TO_BE_DESTROYED,
-		IPCM_IPCP_UPDATED,
-
-	};
-
+	/**
+	* Addon loaded constructor
+	*/
+	IPCMEvent(Addon* c, std::string addon_name) : type(IPCM_ADDON_LOADED),
+							callee(c),
+							ipcp_id(-1),
+							addon(addon_name){};
 
 	/**
 	* Type of the event

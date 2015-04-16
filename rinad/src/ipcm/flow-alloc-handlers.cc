@@ -64,7 +64,8 @@ IPCManager_::deallocate_flow(Promise * promise, const int ipcp_id,
 		rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
 		//Create a transaction
-		trans = new FlowDeallocTransState(promise, ipcp->get_id(), event);
+		trans = new FlowDeallocTransState(NULL, promise,
+							ipcp->get_id(), event);
 		if (event.sequenceNumber == 0) {
 			trans->req_by_ipcm = true;
 		}
@@ -173,7 +174,8 @@ void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
 
 	try {
 		// Ask the IPC process to allocate a flow
-		trans = new FlowAllocTransState(NULL, ipcp->get_id(), *event,
+		trans = new FlowAllocTransState(NULL, NULL, ipcp->get_id(),
+								*event,
 								dif_specified);
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
@@ -230,7 +232,8 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 	try {
 		// Inform the local application that a remote application
 		// wants to allocate a flow
-		trans = new FlowAllocTransState(NULL, ipcp->get_id(), *event,
+		trans = new FlowAllocTransState(NULL, NULL, ipcp->get_id(),
+									*event,
 									true);
 		if(!trans){
 			ss  << ": Error: Could not allocate memory to serve "

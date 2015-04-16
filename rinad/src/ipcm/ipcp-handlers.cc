@@ -92,6 +92,12 @@ void IPCManager_::ipc_process_daemon_initialized_event_handler(
 		e->ipcProcessId<< "]" << endl;
 	FLUSH_LOG(INFO, ss);
 
+	//Distribute the event to the addons
+	IPCMEvent addon_e(trans->callee, IPCM_IPCP_CREATED,
+					ipcp->get_id());
+	Addon::distribute_ipcm_event(addon_e);
+
+
 	//Set return value, mark as completed and signal
 	trans->completed(IPCM_SUCCESS);
 	remove_syscall_transaction_state(trans->tid);
