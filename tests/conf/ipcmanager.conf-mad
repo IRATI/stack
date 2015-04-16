@@ -1,8 +1,8 @@
 {
     "localConfiguration": {
-        "installationPath": "/home/vmaffione/irati/local/bin",
-        "libraryPath": "/home/vmaffione/irati/local/lib",
-        "logPath": "/home/vmaffione/irati/local/log",
+        "installationPath": "/usr/local/irati/bin",
+        "libraryPath": "/usr/local/irati/lib",
+        "logPath": "/usr/local/irati/var/log",
         "consolePort": 32766
     },
     "applicationToDIFMappings": [
@@ -127,7 +127,7 @@
     ],
     "addons" : {
         "mad" : {
-            "managerAppName" : "mad-1--",
+            "managerAppName" : "rina.apps.mad-1--",
             "NMSDIFs" : [
                 {
                     "DIF": "normal.DIF"
