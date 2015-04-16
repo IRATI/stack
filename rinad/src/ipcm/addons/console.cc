@@ -36,6 +36,7 @@
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
 #include <librina/logs.h>
+#include <debug.h>
 
 #include "rina-configuration.h"
 #include "../ipcm.h"
