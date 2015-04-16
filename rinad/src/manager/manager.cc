@@ -150,7 +150,6 @@ Manager::Manager(const std::string& dif_name, const std::string& apn,
                  const std::string& api)
                 : Application(dif_name, apn, api)
 {
-  (void)quiet_;
   (void)client_app_reg_;
 }
 
@@ -164,7 +163,7 @@ void Manager::run()
 
         for (;;) {
                 IPCEvent* event = ipcEventProducer->eventWait();
-                Flow *flow = 0;
+                rina::Flow *flow = 0;
                 unsigned int port_id;
                 DeallocateFlowResponseEvent *resp = 0;
 

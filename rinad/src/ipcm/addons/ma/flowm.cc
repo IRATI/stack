@@ -525,15 +525,14 @@ rina::IPCEvent* FlowManager::wait_event(unsigned int seqnum)
                 try {
                         if (unlikely(keep_running == false))
                                 break;
-
-                        //Just wait
-                        wait_cond.timedwait(0, FM_RETRY_NSEC);
                         if (pending_events.find(seqnum)
                                         != pending_events.end()) {
                                 event = pending_events[seqnum];
                                 pending_events.erase(seqnum);
                                 break;
                         }
+                        //Just wait
+                        wait_cond.timedwait(0, FM_RETRY_NSEC);
                 } catch (...) {
                 };
         }
