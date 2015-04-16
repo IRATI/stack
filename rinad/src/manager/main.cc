@@ -38,17 +38,12 @@ using namespace std;
 
 int wrapped_main(int argc, char** argv)
 {
-        bool quiet;
         string manager_apn;
         string manager_api;
         string dif_name;
 
         try {
                 TCLAP::CmdLine cmd("manager", ' ', PACKAGE_VERSION);
-                TCLAP::SwitchArg quiet_arg("q",
-                                           "quiet",
-                                           "Suppress some output",
-                                           false);
                 TCLAP::ValueArg<string> manager_apn_arg("",
                                                        "manager-apn",
                                                        "Application process name for the manager",
@@ -67,14 +62,12 @@ int wrapped_main(int argc, char** argv)
                                                 false,
                                                 "",
                                                 "string");
-                cmd.add(quiet_arg);
                 cmd.add(dif_arg);
 
                 cmd.parse(argc, argv);
 
                 manager_apn = manager_apn_arg.getValue();
                 manager_api = manager_api_arg.getValue();
-                quiet = quiet_arg.getValue();
                 dif_name = dif_arg.getValue();
 
         } catch (TCLAP::ArgException &e) {
@@ -85,7 +78,7 @@ int wrapped_main(int argc, char** argv)
         }
 
         rina::initialize("INFO", "");
-        Manager m(dif_name, manager_apn, manager_api, quiet);
+        Manager m(dif_name, manager_apn, manager_api);
         m.run();
 
         return EXIT_SUCCESS;
