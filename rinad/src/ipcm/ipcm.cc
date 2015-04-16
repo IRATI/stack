@@ -144,7 +144,7 @@ IPCManager_::load_addons(const std::string& addon_list){
 */
 
 ipcm_res_t
-IPCManager_::create_ipcp(CreateIPCPPromise* promise,
+IPCManager_::create_ipcp(Addon* callee, CreateIPCPPromise* promise,
 			const rina::ApplicationProcessNamingInformation& name,
 			const std::string& type)
 {
@@ -253,7 +253,7 @@ IPCManager_::create_ipcp(CreateIPCPPromise* promise,
 }
 
 ipcm_res_t
-IPCManager_::destroy_ipcp(unsigned short ipcp_id)
+IPCManager_::destroy_ipcp(Addon* callee, unsigned short ipcp_id)
 {
 	ostringstream ss;
 
@@ -349,9 +349,10 @@ int IPCManager_::get_ipcp_by_dif_name(std::string& difName){
 }
 
 ipcm_res_t
-IPCManager_::assign_to_dif(Promise* promise, const unsigned short ipcp_id,
-			  const rina::ApplicationProcessNamingInformation &
-			  dif_name)
+IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
+			const unsigned short ipcp_id,
+			const rina::ApplicationProcessNamingInformation &
+								  dif_name)
 {
 	rinad::DIFProperties dif_props;
 	rina::DIFInformation dif_info;
@@ -522,8 +523,9 @@ IPCManager_::assign_to_dif(Promise* promise, const unsigned short ipcp_id,
 }
 
 ipcm_res_t
-IPCManager_::register_at_dif(Promise* promise, const unsigned short ipcp_id,
-			    const rina::ApplicationProcessNamingInformation&
+IPCManager_::register_at_dif(Addon* callee, Promise* promise,
+			const unsigned short ipcp_id,
+			const rina::ApplicationProcessNamingInformation&
 			    dif_name)
 {
 	// Select a slave (N-1) IPC process.
@@ -598,7 +600,7 @@ IPCManager_::register_at_dif(Promise* promise, const unsigned short ipcp_id,
 }
 
 ipcm_res_t
-IPCManager_::unregister_ipcp_from_ipcp(Promise* promise, const unsigned short ipcp_id,
+IPCManager_::unregister_ipcp_from_ipcp(Addon* callee, Promise* promise, const unsigned short ipcp_id,
 		const unsigned short slave_ipcp_id)
 {
 	ostringstream ss;
@@ -677,7 +679,7 @@ IPCManager_::unregister_ipcp_from_ipcp(Promise* promise, const unsigned short ip
 }
 
 ipcm_res_t
-IPCManager_::enroll_to_dif(Promise* promise, const unsigned short ipcp_id,
+IPCManager_::enroll_to_dif(Addon* callee, Promise* promise, const unsigned short ipcp_id,
 			  const rinad::NeighborData& neighbor)
 {
 	ostringstream ss;
@@ -786,13 +788,13 @@ IPCManager_::apply_configuration()
 			}
 
 			try {
-				if (create_ipcp(&c_promise, cit->name, type) == IPCM_FAILURE ||
+				if (create_ipcp(NULL, &c_promise, cit->name, type) == IPCM_FAILURE ||
 						c_promise.wait() != IPCM_SUCCESS) {
 					continue;
 				}
 				ipcps.push_back(c_promise.ipcp_id);
 
-				if (assign_to_dif(&promise, c_promise.ipcp_id, cit->difName) == IPCM_FAILURE ||
+				if (assign_to_dif(NULL, &promise, c_promise.ipcp_id, cit->difName) == IPCM_FAILURE ||
 						promise.wait() != IPCM_SUCCESS) {
 					ss << "Problems assigning IPCP " << c_promise.ipcp_id
 						<< " to DIF " << cit->difName.processName <<endl;
@@ -801,7 +803,7 @@ IPCManager_::apply_configuration()
 				for (list<rina::ApplicationProcessNamingInformation>::const_iterator
 						nit = cit->difsToRegisterAt.begin();
 						nit != cit->difsToRegisterAt.end(); nit++) {
-					if (register_at_dif(&promise, c_promise.ipcp_id, *nit) == IPCM_FAILURE ||
+					if (register_at_dif(NULL, &promise, c_promise.ipcp_id, *nit) == IPCM_FAILURE ||
 							promise.wait() != IPCM_SUCCESS) {
 						ss << "Problems registering IPCP " << c_promise.ipcp_id
 								<< " to DIF " << nit->processName << endl;
@@ -824,7 +826,7 @@ IPCManager_::apply_configuration()
 				for (list<rinad::NeighborData>::const_iterator
 						nit = cit->neighbors.begin();
 						nit != cit->neighbors.end(); nit++) {
-					if (enroll_to_dif(&promise, *pit, *nit) == IPCM_FAILURE ||
+					if (enroll_to_dif(NULL, &promise, *pit, *nit) == IPCM_FAILURE ||
 							promise.wait() != IPCM_SUCCESS) {
 						ss  << ": Unknown error while enrolling IPCP " << *pit
 							<< " to neighbour " << nit->apName.getEncodedString() << endl;
@@ -849,7 +851,7 @@ IPCManager_::apply_configuration()
 }
 
 ipcm_res_t
-IPCManager_::update_dif_configuration(Promise* promise, const unsigned short ipcp_id,
+IPCManager_::update_dif_configuration(Addon* callee, Promise* promise, const unsigned short ipcp_id,
 				     const rina::DIFConfiguration & dif_config)
 {
 	ostringstream ss;
@@ -916,7 +918,7 @@ IPCManager_::update_dif_configuration(Promise* promise, const unsigned short ipc
 }
 
 ipcm_res_t
-IPCManager_::query_rib(QueryRIBPromise* promise, const unsigned short ipcp_id)
+IPCManager_::query_rib(Addon* callee, QueryRIBPromise* promise, const unsigned short ipcp_id)
 {
 	ostringstream ss;
 	IPCMIPCProcess *ipcp;
@@ -979,7 +981,7 @@ std::string IPCManager_::get_log_level() const
 }
 
 ipcm_res_t
-IPCManager_::set_policy_set_param(Promise* promise,
+IPCManager_::set_policy_set_param(Addon* callee, Promise* promise,
 		const unsigned short ipcp_id,
 		const std::string& component_path,
 		const std::string& param_name,
@@ -1044,7 +1046,7 @@ IPCManager_::set_policy_set_param(Promise* promise,
 }
 
 ipcm_res_t
-IPCManager_::select_policy_set(Promise* promise,
+IPCManager_::select_policy_set(Addon* callee, Promise* promise,
 		const unsigned short ipcp_id,
 		const std::string& component_path,
 		const std::string& ps_name)
@@ -1106,7 +1108,8 @@ IPCManager_::select_policy_set(Promise* promise,
 }
 
 ipcm_res_t
-IPCManager_::plugin_load(Promise* promise, const unsigned short ipcp_id,
+IPCManager_::plugin_load(Addon* callee, Promise* promise,
+		const unsigned short ipcp_id,
 		const std::string& plugin_name, bool load)
 {
 	ostringstream ss;
@@ -1164,7 +1167,7 @@ IPCManager_::plugin_load(Promise* promise, const unsigned short ipcp_id,
 }
 
 ipcm_res_t
-IPCManager_::unregister_app_from_ipcp(Promise* promise,
+IPCManager_::unregister_app_from_ipcp(Addon* callee, Promise* promise,
 		const rina::ApplicationUnregistrationRequestEvent& req_event,
 		const unsigned short slave_ipcp_id)
 {
@@ -1399,7 +1402,7 @@ void IPCManager_::run(){
 
 	//Rwlock: write
 	for(it = ipcps.begin(); it != ipcps.end(); ++it){
-		if(destroy_ipcp((*it)->get_id()) < 0 ){
+		if(destroy_ipcp(NULL, (*it)->get_id()) < 0 ){
 			LOG_WARN("Warning could not destroy IPCP id: %d\n",
 								(*it)->get_id());
 		}

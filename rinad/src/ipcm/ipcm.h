@@ -322,7 +322,7 @@ public:
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	//
-	ipcm_res_t create_ipcp(CreateIPCPPromise* promise,
+	ipcm_res_t create_ipcp(Addon* callee, CreateIPCPPromise* promise,
 			const rina::ApplicationProcessNamingInformation& name,
 			const std::string& type);
 
@@ -333,7 +333,7 @@ public:
 	//
 	// @ret IPCM_SUCCESS on success IPCM_FAILURE
 	//
-	ipcm_res_t destroy_ipcp(const unsigned short ipcp_id);
+	ipcm_res_t destroy_ipcp(Addon* callee, const unsigned short ipcp_id);
 
 	//
 	// Assing an ipcp to a DIF
@@ -345,9 +345,10 @@ public:
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	//
-	ipcm_res_t assign_to_dif(Promise* promise, const unsigned short ipcp_id,
-			  const rina::ApplicationProcessNamingInformation&
-			  difName);
+	ipcm_res_t assign_to_dif(Addon* callee, Promise* promise,
+			const unsigned short ipcp_id,
+			const rina::ApplicationProcessNamingInformation&
+				difName);
 
 	//
 	// Register an IPCP to a single DIF
@@ -358,8 +359,9 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t register_at_dif(Promise* promise, const unsigned short ipcp_id,
-			    const rina::ApplicationProcessNamingInformation&
+	ipcm_res_t register_at_dif(Addon* callee, Promise* promise,
+			const unsigned short ipcp_id,
+			const rina::ApplicationProcessNamingInformation&
 			    difName);
 
 	//
@@ -371,8 +373,9 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t enroll_to_dif(Promise* promise, const unsigned short ipcp_id,
-			  const rinad::NeighborData& neighbor);
+	ipcm_res_t enroll_to_dif(Addon* callee, Promise* promise,
+			const unsigned short ipcp_id,
+			const rinad::NeighborData& neighbor);
 
 	//
 	// Unregister app from an ipcp
@@ -383,7 +386,8 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t unregister_app_from_ipcp(Promise* promise,
+	ipcm_res_t unregister_app_from_ipcp(Addon* callee,
+		Promise* promise,
 		const rina::ApplicationUnregistrationRequestEvent& req_event,
 		const unsigned short slave_ipcp_id);
 
@@ -396,9 +400,9 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t unregister_ipcp_from_ipcp(Promise* promise,
-						const unsigned short ipcp_id,
-						const unsigned short slave_ipcp_id);
+	ipcm_res_t unregister_ipcp_from_ipcp(Addon* callee, Promise* promise,
+					const unsigned short ipcp_id,
+					const unsigned short slave_ipcp_id);
 	//
 	// Update the DIF configuration
 	//TODO: What is really this for?
@@ -409,7 +413,7 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t update_dif_configuration(Promise* promise,
+	ipcm_res_t update_dif_configuration(Addon* callee, Promise* promise,
 				const unsigned short ipcp_id,
 				const rina::DIFConfiguration& dif_config);
 
@@ -422,7 +426,8 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t query_rib(QueryRIBPromise* promise, const unsigned short ipcp_id);
+	ipcm_res_t query_rib(Addon* callee, QueryRIBPromise* promise,
+						const unsigned short ipcp_id);
 
 	//
 	// Select a policy set
@@ -433,7 +438,8 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t select_policy_set(Promise* promise, const unsigned short ipcp_id,
+	ipcm_res_t select_policy_set(Addon* callee, Promise* promise,
+					const unsigned short ipcp_id,
 					const std::string& component_path,
 					const std::string& policy_set);
 	//
@@ -445,7 +451,8 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t set_policy_set_param(Promise* promise, const unsigned short ipcp_id,
+	ipcm_res_t set_policy_set_param(Addon* callee, Promise* promise,
+						const unsigned short ipcp_id,
 						const std::string& path,
 						const std::string& name,
 						const std::string& value);
@@ -458,7 +465,8 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t plugin_load(Promise* promise, const unsigned short ipcp_id,
+	ipcm_res_t plugin_load(Addon* callee, Promise* promise,
+						const unsigned short ipcp_id,
 						const std::string& plugin_name,
 						bool load);
 

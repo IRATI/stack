@@ -36,6 +36,9 @@
 namespace rinad {
 namespace mad {
 
+//Static members
+ManagementAgent* ManagementAgent::inst = NULL;
+
 //
 // Private methods
 //
@@ -170,6 +173,10 @@ RIBFactory* ManagementAgent::get_rib() const
 //Initialization and destruction routines
 ManagementAgent::ManagementAgent(const std::string& params) :
 							AppAddon(MAD_NAME){
+
+	//Set ourselves as the instance
+	assert(inst == NULL);
+	inst = this;
 
 	//Nice trace
 	LOG_INFO("Initializing components...");

@@ -94,7 +94,7 @@ void IPCManager_::os_process_finalized_handler(
 				rina::ApplicationUnregistrationRequestEvent
 				req_event(app_name, ipcps[i]->dif_name_, 0);
 
-				IPCManager->unregister_app_from_ipcp(NULL,
+				IPCManager->unregister_app_from_ipcp(NULL, NULL,
 						req_event,
 						ipcps[i]->get_id());
 			}
@@ -107,7 +107,7 @@ void IPCManager_::os_process_finalized_handler(
 		//registered applications, notify them
 
 		// Cleanup IPC Process state in the kernel
-		if(IPCManager->destroy_ipcp(event->ipcProcessId) < 0 ){
+		if(IPCManager->destroy_ipcp(NULL, event->ipcProcessId) < 0 ){
 			LOG_WARN("Problems cleaning up state of IPCP with id: %d\n",
 					event->ipcProcessId);
 		}
@@ -384,7 +384,7 @@ void IPCManager_::application_unregistration_request_event_handler(
 			ipcp_id = slave_ipcp->get_id();
 		}
 
-        err = unregister_app_from_ipcp(NULL, *event, ipcp_id);
+        err = unregister_app_from_ipcp(NULL, NULL, *event, ipcp_id);
         if (err) {
                 // Inform the unregistering application that the unregistration
                 // operation failed

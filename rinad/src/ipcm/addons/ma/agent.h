@@ -114,6 +114,12 @@ public:
 	*/
 	void addManagerConnection(AppConnection& con);
 
+
+	/**
+	* Instantance pointer; there can only be an instance
+	*/
+	static ManagementAgent* inst;
+
 protected:
 	//Process event
 	virtual void process_flow_event(rina::IPCEvent** event);
