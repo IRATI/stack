@@ -23,6 +23,7 @@
 
 #include <assert.h>
 #include <string>
+#include <list>
 #include <librina/application.h>
 #include <librina/common.h>
 
@@ -65,6 +66,17 @@ public:
 
 private:
 
+        struct ManagerConnInfo {
+                rina::ApplicationProcessNamingInformation manager_name;
+                std::string manager_dif;
+        };
+
+        /**
+        * Internal variables containing MAD configuration
+        */
+        rina::ApplicationProcessNamingInformation app_name;
+        std::list<std::string> nms_difs;
+        std::list<ManagerConnInfo> manager_connections;
 };
 
 
