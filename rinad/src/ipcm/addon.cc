@@ -37,7 +37,9 @@ rina::Lockable Addon::mutex;
 std::list<Addon*> Addon::event_subscribers;
 
 //Factory
-Addon* Addon::factory(rinad::RINAConfiguration& conf, const std::string& name){
+Addon* Addon::factory(rinad::RINAConfiguration& conf,
+		      const std::string& conf_file,
+		      const std::string& name){
 
 	Addon* addon = NULL;
 

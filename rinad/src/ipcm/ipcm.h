@@ -260,7 +260,8 @@ public:
 	// Load the specified addons
 	//
 	// @param addons Comma separated list of addons
-	void load_addons(const std::string& addon_list);
+	void load_addons(const std::string& addon_list,
+			 const std::string& conf_file);
 
 	//
 	// TODO: XXX?????

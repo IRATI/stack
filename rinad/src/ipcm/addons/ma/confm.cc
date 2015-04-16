@@ -4,6 +4,8 @@
 #define RINA_PREFIX "ipcm.mad.conf"
 #include <librina/logs.h>
 
+#include "json/json.h"
+
 namespace rinad{
 namespace mad{
 
