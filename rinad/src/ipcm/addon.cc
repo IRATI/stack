@@ -47,7 +47,7 @@ Addon* Addon::factory(rinad::RINAConfiguration& conf,
 		//TODO this is a transitory solution. A proper auto-registering
 		// to the factory would be the right way to go
 		if(name == "mad"){
-			addon = new mad::ManagementAgent(std::string(""));
+			addon = new mad::ManagementAgent(conf_file);
 		}else if(name == "console"){
 			addon = new IPCMConsole(conf.local.consolePort);
 		}else if(name == "scripting"){

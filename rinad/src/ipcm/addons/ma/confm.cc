@@ -3,6 +3,10 @@
 
 #define RINA_PREFIX "ipcm.mad.conf"
 #include <librina/logs.h>
+#include <debug.h>
+
+#include <fstream>
+#include <sstream>
 
 #include "json/json.h"
 
@@ -13,10 +17,31 @@ namespace mad{
 Singleton<ConfManager> ConfManager;
 
 //Public constructor destructor
-ConfManager::ConfManager(const std::string& params){
+ConfManager::ConfManager(const std::string& conf_file){
 
-	(void)params;
 	//TODO: read config and get logging level and file
+
+	Json::Reader reader;
+	Json::Value  root;
+	std::ifstream     fin;
+
+	fin.open(conf_file.c_str());
+	if (fin.fail()) {
+		LOG_ERR("Failed to open config file");
+		return;
+	}
+
+	if (!reader.parse(fin, root, false)) {
+		std::stringstream ss;
+
+		ss << "Failed to parse JSON configuration" << std::endl
+			<< reader.getFormatedErrorMessages() << std::endl;
+		FLUSH_LOG(ERR, ss);
+
+		return;
+	}
+
+	fin.close();
 
 	LOG_DBG("Initialized");
 }

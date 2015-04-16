@@ -50,7 +50,7 @@ public:
 	/**
 	* Initialize running state
 	*/
-	ConfManager(const std::string& params);
+	ConfManager(const std::string& conf_file);
 
 	/**
 	* Destroy the running state
