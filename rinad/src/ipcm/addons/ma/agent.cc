@@ -38,6 +38,7 @@ namespace mad {
 
 //Static members
 ManagementAgent* ManagementAgent::inst = NULL;
+const std::string ManagementAgent::NAME = "mad";
 
 //
 // Private methods

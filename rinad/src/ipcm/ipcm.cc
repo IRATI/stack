@@ -125,15 +125,9 @@ IPCManager_::load_addons(const std::string& addon_list){
 		//Remove whitespaces
 		t.erase(std::remove_if( t.begin(), t.end(), ::isspace ),
 								t.end() );
-		Addon* addon = Addon::factory(config, t);
 
-		if(!addon){
-			LOG_CRIT("Unable to bootstrap addon '%s'. Aborting...",
-									t.c_str());
-			exit(EXIT_FAILURE);
-		}
-
-		addons.push_back(addon);
+		//Call the factory
+		Addon::factory(config, t);
 	}
 }
 
@@ -1385,15 +1379,8 @@ void IPCManager_::run(){
 	//I/O thread
 	delete io_thread;
 
-	std::list<Addon*>::iterator addon_it;
-
-	addon_it = addons.begin();
-	do{
-		LOG_DBG("Destroying addon: %s(%p)", (*addon_it)->name.c_str(),
-							*addon_it);
-		delete *addon_it;
-		addons.erase(addon_it++);
-	}while(addon_it != addons.end());
+	//Destroy all addons (stop them)
+	Addon::destroy_all();
 
 	//Destroy all IPCPs
 	std::vector<IPCMIPCProcess *> ipcps;

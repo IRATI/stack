@@ -88,7 +88,7 @@ class Addon{
 
 public:
 
-	Addon(const std::string _name):name(_name){};
+	Addon(const std::string _name);
 	virtual ~Addon(){};
 
 	/**
@@ -108,21 +108,42 @@ public:
 	static void distribute_flow_event(rina::IPCEvent* event);
 
 	/**
+	* Distributes the events to all the addons except callee (if any)
+	*
+	* Note that IPCMEvent ipcp_id is only valid for IPCP events, and
+	* "addon" is only valid for "IPCM_ADDON_LOADED"
+	*
+	* @warning: the callback shall NEVER block or it will interfere with
+	* the IPCM operation.
+	*/
+	static void distribute_ipcm_event(const IPCMEvent& event);
+
+	/**
 	* Factory
 	*/
-	static Addon* factory(rinad::RINAConfiguration& conf,
+	static void factory(rinad::RINAConfiguration& conf,
 						const std::string& name);
+
+	/**
+	* Destroy all
+	*/
+	static void destroy_all(void);
 
 protected:
 
 	/**
-	* Process event callback
+	* Process flow event callback
 	*
 	* @param event The event to process
-	*
-	* @ret NULL if consumed otherwise event
 	*/
 	virtual void process_flow_event(rina::IPCEvent** event){(void)event;};
+
+	/**
+	* Process IPCM event callback
+	*
+	* @param event The event to process
+	*/
+	virtual void process_ipcm_event(const IPCMEvent& event){(void)event;};
 
 	//Register to receive events
 	static void subscribe(Addon* addon);
@@ -134,7 +155,12 @@ private:
 	/**
 	* Mutex
 	*/
-	static rina::Lockable mutex;
+	static rina::ReadWriteLockable rwlock;
+
+	/**
+	* List of all the current running addons
+	*/
+	static std::map<std::string, Addon*> addons;
 
 	/**
 	* Event subscribers
@@ -161,6 +187,8 @@ protected:
 	// Event processing routine
 	virtual void process_flow_event(rina::IPCEvent** event)=0;
 
+	//IPCM event processing routine
+	virtual void process_ipcm_event(const IPCMEvent& event){(void)event;};
 };
 
 }//rinad namespace

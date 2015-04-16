@@ -120,6 +120,9 @@ public:
 	*/
 	static ManagementAgent* inst;
 
+	//Addon name
+	static const std::string NAME;
+
 protected:
 	//Process event
 	virtual void process_flow_event(rina::IPCEvent** event);

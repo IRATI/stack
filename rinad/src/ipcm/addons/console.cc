@@ -46,6 +46,8 @@ using namespace std;
 
 namespace rinad {
 
+//Static members
+const std::string IPCMConsole::NAME = "console";
 
 int string2int(const string& s, int& ret)
 {
@@ -73,7 +75,7 @@ console_function(void *opaque)
 }
 
 IPCMConsole::IPCMConsole(const unsigned int port_) :
-		Addon("console"),
+		Addon(IPCMConsole::NAME),
 		port(port_)
 {
 	commands_map["help"] = ConsoleCmdInfo(&IPCMConsole::help,

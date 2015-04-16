@@ -95,6 +95,7 @@ class IPCMConsole : public Addon{
                 IPCMConsole(const unsigned int port);
                 void body();
                 virtual ~IPCMConsole() throw();
+		static const std::string NAME;
 	private:
 		//Local console port
 		const unsigned int port;

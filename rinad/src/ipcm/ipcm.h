@@ -763,9 +763,6 @@ protected:
 	//IPCM factory
 	IPCMIPCProcessFactory ipcp_factory_;
 
-	//List of running addons
-	std::list<Addon*> addons;
-
 public:
 	//Generator of opaque identifiers
 	rina::ConsecutiveUnsignedIntegerGenerator __tid_gen;
