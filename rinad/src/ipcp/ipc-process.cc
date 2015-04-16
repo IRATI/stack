@@ -146,35 +146,35 @@ IPCProcessImpl::~IPCProcessImpl() {
 	}
 
 	if (flow_allocator_) {
-		psDestroy("flow-allocator",
+		psDestroy(IPCProcessComponent::FLOW_ALLOCATOR_AE_NAME,
                    flow_allocator_->selected_ps_name,
                    flow_allocator_->ps);
 		delete flow_allocator_;
 	}
 
 	if (namespace_manager_) {
-		psDestroy("namespace-manager",
+		psDestroy(IPCProcessComponent::NAMESPACE_MANAGER_AE_NAME,
                    namespace_manager_->selected_ps_name,
                    namespace_manager_->ps);
 		delete namespace_manager_;
 	}
 
 	if (resource_allocator_) {
-		psDestroy("resource-allocator",
+		psDestroy(IPCProcessComponent::RESOURCE_ALLOCATOR_AE_NAME,
 					resource_allocator_->selected_ps_name,
 					resource_allocator_->ps);
 		delete resource_allocator_;
 	}
 
 	if (security_manager_) {
-		psDestroy("security-manager",
+		psDestroy(IPCProcessComponent::SECURITY_MANAGER_AE_NAME,
                    security_manager_->selected_ps_name,
                    security_manager_->ps);
         delete security_manager_;
 	}
 
 	if (routing_component_) {
-		psDestroy("routing",
+		psDestroy(IPCProcessComponent::ROUTING_COMPONENT_AE_NAME,
 				routing_component_->selected_ps_name,
 				routing_component_->ps);
         delete routing_component_;

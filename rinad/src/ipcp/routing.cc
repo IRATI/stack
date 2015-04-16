@@ -32,7 +32,15 @@ namespace rinad {
 //Class RoutingComponent
 void RoutingComponent::set_application_process(rina::ApplicationProcess * ap)
 {
+	if (!ap)
+			return;
+
 	app = ap;
+	ipcp = dynamic_cast<IPCProcess*>(app);
+	if (!ipcp) {
+			LOG_ERR("Bogus instance of IPCP passed, return");
+			return;
+	}
 }
 
 void RoutingComponent::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {

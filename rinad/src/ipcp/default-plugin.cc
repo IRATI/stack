@@ -43,7 +43,7 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
         int ret;
 
         sm_factory.plugin_name = plugin_name;
-        sm_factory.name = "default";
+        sm_factory.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;
         sm_factory.app_entity = IPCProcessComponent::SECURITY_MANAGER_AE_NAME;
         sm_factory.create = createSecurityManagerPs;
         sm_factory.destroy = destroySecurityManagerPs;
@@ -54,7 +54,7 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
         }
 
         fa_factory.plugin_name = plugin_name;
-        fa_factory.name = "default";
+        fa_factory.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;
         fa_factory.app_entity = IPCProcessComponent::FLOW_ALLOCATOR_AE_NAME;
         fa_factory.create = createFlowAllocatorPs;
         fa_factory.destroy = destroyFlowAllocatorPs;
@@ -65,7 +65,7 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
         }
 
         nsm_factory.plugin_name = plugin_name;
-        nsm_factory.name = "default";
+        nsm_factory.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;
         nsm_factory.app_entity = IPCProcessComponent::NAMESPACE_MANAGER_AE_NAME;
         nsm_factory.create = createNamespaceManagerPs;
         nsm_factory.destroy = destroyNamespaceManagerPs;
@@ -76,7 +76,7 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
         }
 
         ra_factory.plugin_name = plugin_name;
-        ra_factory.name = "default";
+        ra_factory.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;
         ra_factory.app_entity = IPCProcessComponent::RESOURCE_ALLOCATOR_AE_NAME;
         ra_factory.create = createResourceAllocatorPs;
         ra_factory.destroy = destroyResourceAllocatorPs;
