@@ -132,7 +132,15 @@ void Addon::distribute_flow_event(rina::IPCEvent* event){
 // Distribute an ipcm event to the addons
 void Addon::distribute_ipcm_event(const IPCMEvent& event){
 
+	std::map<std::string, Addon*>::iterator it;
+
+	//Prevent creation/destruction of addons during loop
 	rina::ReadScopedLock rlock(rwlock);
+
+	for(it = addons.begin(); it != addons.end(); ++it){
+		if(event.callee != it->second)
+			it->second->process_ipcm_event(event);
+	}
 
 }
 
