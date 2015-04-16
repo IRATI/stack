@@ -191,14 +191,16 @@ decode_apnameinfo(const std::string &encodedString)
                 elems.push_back(elem);
         }
 
-        if (elems.size() != 4) {
+        if (elems.size() < 3) {
                 return ret;
         }
 
         ret.processName = elems[0];
         ret.processInstance = elems[1];
         ret.entityName = elems[2];
-        ret.entityInstance = elems[3];
+        if (elems.size() >= 4) {
+                ret.entityInstance = elems[3];
+        }
 
         return ret;
 }
