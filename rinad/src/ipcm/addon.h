@@ -51,6 +51,7 @@ enum event_type {
 
 	//General events
 	IPCM_IPCP_CREATED,
+	IPCM_IPCP_CRASHED, //oops
 	IPCM_IPCP_TO_BE_DESTROYED,
 	IPCM_IPCP_UPDATED,
 

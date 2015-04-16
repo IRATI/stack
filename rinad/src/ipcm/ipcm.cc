@@ -258,6 +258,11 @@ IPCManager_::destroy_ipcp(Addon* callee, unsigned short ipcp_id)
 {
 	ostringstream ss;
 
+	//Distribute the event to the addons
+	IPCMEvent addon_e(callee, IPCM_IPCP_TO_BE_DESTROYED,
+					ipcp_id);
+	Addon::distribute_ipcm_event(addon_e);
+
 	try {
 		ipcp_factory_.destroy(ipcp_id);
 		ss << "IPC process destroyed [id = " << ipcp_id

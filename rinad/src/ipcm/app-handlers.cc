@@ -106,6 +106,11 @@ void IPCManager_::os_process_finalized_handler(
 		//TODO if the IPCP was supporting flows or had
 		//registered applications, notify them
 
+		//Distribute the event to the addons
+		IPCMEvent addon_e(NULL, IPCM_IPCP_CRASHED,
+						event->ipcProcessId);
+		Addon::distribute_ipcm_event(addon_e);
+
 		// Cleanup IPC Process state in the kernel
 		if(IPCManager->destroy_ipcp(NULL, event->ipcProcessId) < 0 ){
 			LOG_WARN("Problems cleaning up state of IPCP with id: %d\n",
