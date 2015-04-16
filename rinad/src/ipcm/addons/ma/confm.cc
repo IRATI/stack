@@ -52,10 +52,11 @@ ConfManager::ConfManager(const std::string& conf_file){
         mad_conf = root["addons"]["mad"];
         if (mad_conf != 0) {
                 Json::Value nms_difs_conf = mad_conf["NMSDIFs"];
-                Json::Value mad_conns_conf = mad_conf["ManagerConnections"];
+                Json::Value mad_conns_conf = mad_conf["managerConnections"];
                 std::string app_name_enc;
 
-                app_name_enc = mad_conf.get("appName", app_name_enc).asString();
+                app_name_enc = mad_conf.get("managerAppName",
+                                        app_name_enc).asString();
                 if (app_name_enc != std::string()) {
                         app_name = rina::decode_apnameinfo(app_name_enc);
                 }
@@ -76,8 +77,9 @@ ConfManager::ConfManager(const std::string& conf_file){
                                 std::string app_name_enc;
                                 std::string dif;
 
-                                app_name_enc = mad_conns_conf[i].get("appName",
-                                                app_name_enc).asString();
+                                app_name_enc = mad_conns_conf[i]
+                                               .get("managerAppName",
+                                               app_name_enc).asString();
                                 dif = mad_conns_conf[i].get("DIF", dif)
                                                        .asString();
 
