@@ -111,32 +111,35 @@ ConfManager::ConfManager(const std::string& conf_file){
 }
 
 ConfManager::~ConfManager(){
-	//TODO
 }
 
 //Module configuration routine
 void ConfManager::configure(ManagementAgent& agent){
 
-	//Configure the AP nameand instance ID
-	//XXX get it from the configuration source (e.g. config file)
-	//Configure the MA
+	//Configure the AP name and instance ID
 	rina::ApplicationProcessNamingInformation info("rina.apps.mad", "1");
-	agent.setAPInfo(info);
-
+	agent.setAPInfo(app_name);
 
 	//NMS
-	std::string dif("normal.DIF");
-	agent.addNMSDIF(dif);
-
+        for (std::list<std::string>::iterator it = nms_difs.begin();
+                                        it != nms_difs.end(); it++) {
+	        agent.addNMSDIF(*it);
+        }
 
 	//Configure Manager connections
-	AppConnection ap_con;
-	ap_con.flow_info.remoteAppName =
-		rina::ApplicationProcessNamingInformation("rina.apps.manager", "1");
-	ap_con.flow_info.difName =
-		rina::ApplicationProcessNamingInformation(dif, "");
+        for (std::list<ManagerConnInfo>::iterator
+                        it = manager_connections.begin();
+                                it != manager_connections.end(); it++) {
+                AppConnection ap_con;
 
-	agent.addManagerConnection(ap_con);
+                ap_con.flow_info.remoteAppName = it->manager_name;
+                ap_con.flow_info.difName =
+                        rina::ApplicationProcessNamingInformation(
+                                        it->manager_dif, std::string());
+
+	        agent.addManagerConnection(ap_con);
+        }
+
 	//TODO
 }
 
