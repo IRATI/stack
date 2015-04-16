@@ -41,7 +41,7 @@ void ConfManager::configure(ManagementAgent& agent){
 	//Configure Manager connections
 	AppConnection ap_con;
 	ap_con.flow_info.remoteAppName =
-		rina::ApplicationProcessNamingInformation("rina.apps.manager", "");
+		rina::ApplicationProcessNamingInformation("rina.apps.manager", "1");
 	ap_con.flow_info.difName =
 		rina::ApplicationProcessNamingInformation(dif, "");
 
@@ -50,4 +50,6 @@ void ConfManager::configure(ManagementAgent& agent){
 }
 
 }; //namespace mad
-}; //namespace rinad
+}
+;
+//namespace rinad
