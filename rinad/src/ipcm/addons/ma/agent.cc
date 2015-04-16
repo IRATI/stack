@@ -156,8 +156,8 @@ void ManagementAgent::addManagerConnection(AppConnection& con){
 }
 
 //Process event
-void ManagementAgent::process_event(rina::IPCEvent** event){
-	flow_manager->process_event(event);
+void ManagementAgent::process_flow_event(rina::IPCEvent** event){
+	flow_manager->process_flow_event(event);
 }
 
 

@@ -116,7 +116,7 @@ public:
 
 protected:
 	//Process event
-	virtual void process_event(rina::IPCEvent** event);
+	virtual void process_flow_event(rina::IPCEvent** event);
 
 	//TODO remove this
 	RIBFactory* get_rib() const;

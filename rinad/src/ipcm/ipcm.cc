@@ -1569,7 +1569,7 @@ void IPCManager_::io_loop(){
 
 				//Addon specific events
 				default:
-					Addon::distribute_event(event);
+					Addon::distribute_flow_event(event);
 					continue;
 					break;
 			}

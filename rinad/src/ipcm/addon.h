@@ -38,6 +38,49 @@
 
 namespace rinad {
 
+//fwd decl
+class Addon;
+
+class IPCMEvent{
+
+public:
+	/**
+	* Events to be distributed to the addons
+	*/
+	enum event_type {
+
+		//Addon related events
+		IPCM_ADDON_LOADED,
+
+		//General events
+		IPCM_IPCP_CREATED,
+		IPCM_IPCP_TO_BE_DESTROYED,
+		IPCM_IPCP_UPDATED,
+
+	};
+
+
+	/**
+	* Type of the event
+	*/
+	enum event_type type;
+
+	/**
+	* Callee that originated the event or null
+	*/
+	Addon* callee;
+
+	/**
+	* IPCP id that the event is related to, or -1 otherwise.
+	*/
+	int ipcp_id;
+
+	/**
+	* Loaded addon or "" otherwise
+	*/
+	std::string addon;
+};
+
 /**
 * Addon base class
 */
@@ -62,7 +105,7 @@ public:
 	*
 	* TODO: deprecate when librina-application is improved
 	*/
-	static void distribute_event(rina::IPCEvent* event);
+	static void distribute_flow_event(rina::IPCEvent* event);
 
 	/**
 	* Factory
@@ -79,7 +122,7 @@ protected:
 	*
 	* @ret NULL if consumed otherwise event
 	*/
-	virtual void process_event(rina::IPCEvent** event){(void)event;};
+	virtual void process_flow_event(rina::IPCEvent** event){(void)event;};
 
 	//Register to receive events
 	static void subscribe(Addon* addon);
@@ -116,7 +159,7 @@ public:
 
 protected:
 	// Event processing routine
-	virtual void process_event(rina::IPCEvent** event)=0;
+	virtual void process_flow_event(rina::IPCEvent** event)=0;
 
 };
 

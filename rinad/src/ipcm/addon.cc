@@ -63,7 +63,7 @@ Addon* Addon::factory(rinad::RINAConfiguration& conf, const std::string& name){
 
 
 // Distribute a librina event to the addons
-void Addon::distribute_event(rina::IPCEvent* event){
+void Addon::distribute_flow_event(rina::IPCEvent* event){
 
 	unsigned int seqnum;
 	std::list<Addon*>::const_iterator it;
@@ -78,7 +78,7 @@ void Addon::distribute_event(rina::IPCEvent* event){
 
 	for(it = event_subscribers.begin(); it != event_subscribers.end();
 								 ++it){
-		(*it)->process_event(&event);
+		(*it)->process_flow_event(&event);
 		if(!event)
 			return;
 	}
