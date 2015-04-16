@@ -810,4 +810,86 @@ GetDIFPropertiesResponseEvent::GetDIFPropertiesResponseEvent(
         this->difProperties = difProperties;
 }
 
+// DAF Related classes, with support for policies
+
+// Class ApplicationEntityInstance
+ApplicationEntityInstance::ApplicationEntityInstance(const std::string& instance_id)
+{
+	instance_id_ = instance_id;
+}
+
+const std::string& ApplicationEntityInstance::get_instance_id() const
+{
+	return instance_id_;
+}
+
+// Class ApplicationEntity
+ApplicationEntity::ApplicationEntity(const std::string& name)
+{
+		name_ = name;
+}
+
+ApplicationEntity::~ApplicationEntity()
+{
+		instances.deleteValues();
+}
+
+const std::string& ApplicationEntity::get_name() const
+{
+		return name_;
+}
+
+void ApplicationEntity::add_instance(const std::string& instance_id,
+									 ApplicationEntityInstance * instance)
+{
+		instances.put(instance_id, instance);
+}
+
+ApplicationEntityInstance * ApplicationEntity::remove_instance(const std::string& instance_id)
+{
+		return instances.erase(instance_id);
+}
+
+ApplicationEntityInstance * ApplicationEntity::get_instance(const std::string& instance_id)
+{
+		return instances.find(instance_id);
+}
+
+//Class Application Process
+ApplicationProcess::ApplicationProcess(const std::string& name, const std::string& instance)
+{
+		name_ = name;
+		instance_ = instance;
+}
+
+ApplicationProcess::~ApplicationProcess()
+{
+	entities.deleteValues();
+}
+
+const std::string& ApplicationProcess::get_name() const
+{
+		return name_;
+}
+
+const std::string& ApplicationProcess::get_instance() const
+{
+		return instance_;
+}
+
+void ApplicationProcess::add_entity(const std::string& name, ApplicationEntity * entity)
+{
+		entities.put(name, entity);
+}
+
+ApplicationEntity * ApplicationProcess::remove_entity(const std::string& name)
+{
+		return entities.erase(name);
+}
+
+ApplicationEntity * ApplicationProcess::get_entity(const std::string& name)
+{
+		return entities.find(name);
+}
+
 }

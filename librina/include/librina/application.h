@@ -35,13 +35,16 @@
 #include "librina/concurrency.h"
 
 /**
- * The librina-application library provides the native RINA API,
- * allowing applications to i) express their availability to be
- * accessed through one or more DIFS (application registration);
- * ii) allocate and deallocate flows to destination applications
- * (flow allocation and deallocation); iii) read and write data
- * from/to allocated flows (in the form of Service Data Units or
- * SDUs) and iv) query the DIFs available in the system and
+ * The librina-application library provides the native IPC API,
+ * and a set of classes to facilitate the creation of distributed
+ * applications based on the DAF model.
+ *
+ * The IPC API allows applications to i) express their
+ * availability to be accessed through one or more DIFS (application
+ * registration); ii) allocate and deallocate flows to destination
+ * applications (flow allocation and deallocation); iii) read and
+ * write data from/to allocated flows (in the form of Service Data
+ * Units or SDUs) and iv) query the DIFs available in the system and
  * their properties.
  *
  * For the "slow-path" operations, librina-application interacts
@@ -59,6 +62,8 @@
  * (event_wait and event_poll).
  */
 namespace rina {
+
+// IPC API
 
 enum FlowState {
 	FLOW_ALLOCATED, FLOW_DEALLOCATION_REQUESTED, FLOW_DEALLOCATED
@@ -599,6 +604,64 @@ public:
                         const ApplicationProcessNamingInformation& appName,
                         const std::list<DIFProperties>& difProperties,
                         int result, unsigned int sequenceNumber);
+};
+
+// DAF Related classes, with support for policies
+
+// An instance of an application entity
+class ApplicationEntityInstance {
+public:
+		ApplicationEntityInstance(const std::string& instance_id);
+		virtual ~ApplicationEntityInstance(){};
+		const std::string& get_instance_id() const;
+
+protected:
+		//The AE Instance, immutable during the AE's lifetime
+		std::string instance_id_;
+};
+
+// A type of component of an application process, manages all the instances
+// of this type
+class ApplicationEntity {
+public:
+		ApplicationEntity(const std::string& name);
+		virtual ~ApplicationEntity();
+		const std::string& get_name() const;
+		void add_instance(const std::string& instance_id, ApplicationEntityInstance * instance);
+		ApplicationEntityInstance * remove_instance(const std::string& instance_id);
+		ApplicationEntityInstance * get_instance(const std::string& instance_id);
+
+protected:
+		//The Application Entity name, immutable during the AE's lifetime
+		std::string name_;
+
+private:
+		// The Application entity instances in this application entity
+		ThreadSafeMapOfPointers<std::string, ApplicationEntityInstance> instances;
+};
+
+// The base class for an Application Process that is member of a
+// distributed application
+class ApplicationProcess {
+public:
+		ApplicationProcess(const std::string& name, const std::string& instance);
+		virtual ~ApplicationProcess();
+		const std::string& get_name() const;
+		const std::string& get_instance() const;
+		void add_entity(const std::string& name, ApplicationEntity * entity);
+		ApplicationEntity * remove_entity(const std::string& name);
+		ApplicationEntity * get_entity(const std::string& name);
+
+protected:
+		// The ApplicationProcess name, immutable during the AP's lifetime
+		std::string name_;
+
+		// The ApplicationProcess instance, immutable during the AP's lifetime
+		std::string instance_;
+
+private:
+		// The Application entities in this application process
+		ThreadSafeMapOfPointers<std::string, ApplicationEntity> entities;
 };
 
 }
