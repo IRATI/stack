@@ -288,6 +288,40 @@ IPCManager_::list_ipcps(std::ostream& os)
 	}
 }
 
+
+//NOTE: this assumes an empty name is invalid as a return value for
+//could not complete the operation
+std::string
+IPCManager_::get_ipcp_name(int ipcp_id)
+{
+	//Prevent any insertion/deletion to happen
+	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
+
+	IPCMIPCProcess* ipcp = lookup_ipcp_by_id(ipcp_id, true);
+
+	if(!ipcp)
+		return std::string("");
+
+	return ipcp->get_name().processName;
+}
+
+
+void
+IPCManager_::list_ipcps(std::list<int>& list)
+{
+	//Prevent any insertion/deletion to happen
+	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
+
+	//Call the factory
+	std::vector<IPCMIPCProcess*> ipcps;
+	ipcp_factory_.listIPCProcesses(ipcps);
+
+	//Compose the list
+	std::vector<IPCMIPCProcess*>::const_iterator it;
+	for(it = ipcps.begin(); it != ipcps.end(); ++it)
+		list.push_back((*it)->get_id());
+}
+
 bool
 IPCManager_::ipcp_exists(const unsigned short ipcp_id){
 	return ipcp_factory_.exists(ipcp_id);

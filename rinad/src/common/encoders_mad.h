@@ -52,9 +52,28 @@ typedef struct ipcp_config{
 
 namespace encoders {
 
+// Generic (simple) types
 
 /**
- * Encoder
+ * String encoder
+ */
+class StringEncoder : public rina::rib::Encoder<std::string>{
+public:
+	virtual void encode(const std::string &obj,
+			rina::cdap_rib::SerializedObject& serobj);
+	virtual void decode(const rina::cdap_rib::SerializedObject &serobj,
+			std::string& des_obj);
+
+	std::string get_type() const{ return "string"; };
+};
+
+
+
+
+//Specific
+
+/**
+ * Encoder IPCP
  */
 class IPCPEncoder : public rina::rib::Encoder<structures::ipcp_t>{
 public:
