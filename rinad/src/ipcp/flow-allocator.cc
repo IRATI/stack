@@ -189,7 +189,7 @@ const void* QoSCubeSetRIBObject::get_value() const
 }
 
 //Class Flow Allocator
-FlowAllocator::FlowAllocator()
+FlowAllocator::FlowAllocator() : IFlowAllocator()
 {
   ipcp = 0;
   rib_daemon_ = 0;
@@ -207,9 +207,16 @@ IFlowAllocatorInstance * FlowAllocator::getFAI(int portId) {
 	return flow_allocator_instances_.find(portId);
 }
 
-void FlowAllocator::set_ipc_process(IPCProcess * ipc_process)
-{
-  ipcp = ipc_process;
+void FlowAllocator::set_application_process(rina::ApplicationProcess * ap) {
+	if (!ap)
+			return;
+
+	app = ap;
+	ipcp = dynamic_cast<IPCProcess*>(app);
+	if (!ipcp) {
+			LOG_ERR("Bogus instance of IPCP passed, return");
+			return;
+	}
   rib_daemon_ = ipcp->rib_daemon_;
   encoder_ = ipcp->encoder_;
   cdap_session_manager_ = ipcp->cdap_session_manager_;
@@ -240,15 +247,14 @@ void FlowAllocator::set_dif_configuration(
 int FlowAllocator::select_policy_set(const std::string& path,
                                      const std::string& name)
 {
-  return select_policy_set_common(ipcp, "flow-allocator",
-                                  path, name);
+  return select_policy_set_common(get_name(), path, name);
 }
 
 int FlowAllocator::set_policy_set_param(const std::string& path,
                                         const std::string& name,
                                         const std::string& value)
 {
-  return set_policy_set_param_common(ipcp, path, name, value);
+  return set_policy_set_param_common(path, name, value);
 }
 
 void FlowAllocator::populateRIB()

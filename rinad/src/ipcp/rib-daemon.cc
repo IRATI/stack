@@ -65,9 +65,6 @@ void * doManagementSDUReaderWork(void* arg)
 }
 
 // Class BaseRIBDaemon
-BaseRIBDaemon::BaseRIBDaemon()
-{ }
-
 void BaseRIBDaemon::subscribeToEvent(const IPCProcessEventType& eventId,
                                      EventListener * eventListener)
 {
@@ -151,24 +148,32 @@ void BaseRIBDaemon::deliverEvent(Event * event)
 ///Class RIBDaemon
 IPCPRIBDaemonImpl::IPCPRIBDaemonImpl()
 {
-	ipc_process_ = 0;
 	management_sdu_reader_ = 0;
 	n_minus_one_flow_manager_ = 0;
 }
 
-void IPCPRIBDaemonImpl::set_ipc_process(IPCProcess * ipc_process)
+void IPCPRIBDaemonImpl::set_application_process(rina::ApplicationProcess * ap)
 {
-        initialize(EncoderConstants::SEPARATOR, ipc_process->encoder_,
-                        ipc_process->cdap_session_manager_, ipc_process->enrollment_task_);
-	ipc_process_ = ipc_process;
-	n_minus_one_flow_manager_ = ipc_process->resource_allocator_->get_n_minus_one_flow_manager();
+		if (!ap)
+				return;
 
-	subscribeToEvents();
+		app = ap;
+		ipcp = dynamic_cast<IPCProcess*>(app);
+		if (!ipcp) {
+				LOG_ERR("Bogus instance of IPCP passed, return");
+				return;
+		}
 
-	rina::ThreadAttributes * threadAttributes = new rina::ThreadAttributes();
-	threadAttributes->setJoinable();
-	ManagementSDUReaderData * data = new ManagementSDUReaderData(this, max_sdu_size_in_bytes);
-	management_sdu_reader_ = new rina::Thread(threadAttributes,
+        initialize(EncoderConstants::SEPARATOR, ipcp->encoder_,
+                        ipcp->cdap_session_manager_, ipcp->enrollment_task_);
+        n_minus_one_flow_manager_ = ipcp->resource_allocator_->get_n_minus_one_flow_manager();
+
+        subscribeToEvents();
+
+        rina::ThreadAttributes * threadAttributes = new rina::ThreadAttributes();
+        threadAttributes->setJoinable();
+        ManagementSDUReaderData * data = new ManagementSDUReaderData(this, max_sdu_size_in_bytes);
+        management_sdu_reader_ = new rina::Thread(threadAttributes,
 			&doManagementSDUReaderWork, (void *) data);
 }
 
@@ -197,7 +202,7 @@ void IPCPRIBDaemonImpl::eventHappened(Event * event)
 }
 
 void IPCPRIBDaemonImpl::nMinusOneFlowDeallocated(int portId) {
-        rina::CDAPSessionManagerInterface * cdsm = ipc_process_->cdap_session_manager_;
+        rina::CDAPSessionManagerInterface * cdsm = ipcp->cdap_session_manager_;
 	cdsm->removeCDAPSession(portId);
 }
 
@@ -231,7 +236,7 @@ void IPCPRIBDaemonImpl::sendMessageSpecific(bool useAddress, const rina::CDAPMes
 	const rina::SerializedObject * sdu;
 	rina::ADataObject adata;
 	rina::CDAPMessage * adataCDAPMessage;
-	rina::CDAPSessionManagerInterface * cdsm = ipc_process_->cdap_session_manager_;
+	rina::CDAPSessionManagerInterface * cdsm = ipcp->cdap_session_manager_;
 
 	if (!cdapMessageHandler && cdapMessage.get_invoke_id() != 0
 			&& cdapMessage.get_op_code() != rina::CDAPMessage::M_CONNECT
@@ -252,13 +257,13 @@ void IPCPRIBDaemonImpl::sendMessageSpecific(bool useAddress, const rina::CDAPMes
     sdu = 0;
 	try {
 		if (useAddress) {
-			adata.source_address_ = ipc_process_->get_address();
+			adata.source_address_ = ipcp->get_address();
 			adata.dest_address_ = address;
 			adata.encoded_cdap_message_ = cdsm->encodeCDAPMessage(cdapMessage);
 			adataCDAPMessage = rina::CDAPMessage::getWriteObjectRequestMessage(0,
 					rina::CDAPMessage::NONE_FLAGS, rina::ADataObject::A_DATA_OBJECT_CLASS,
 					0, rina::ADataObject::A_DATA_OBJECT_NAME, 0);
-			ipc_process_->encoder_->encode(&adata, adataCDAPMessage);
+			ipcp->encoder_->encode(&adata, adataCDAPMessage);
 			sdu = cdsm->encodeCDAPMessage(*adataCDAPMessage);
 			rina::kernelIPCProcess->sendMgmgtSDUToAddress(sdu->message_, sdu->size_, address);
 			LOG_DBG("Sent A-Data CDAP message to address %u: %s", address,
@@ -328,7 +333,7 @@ void IPCPRIBDaemonImpl::cdapMessageDelivered(char* message, int length, int port
     //2 If it is an A-Data PDU extract the real message
     if (cdapMessage->obj_name_ == rina::ADataObject::A_DATA_OBJECT_NAME) {
     	try {
-    		adata = (rina::ADataObject *) ipc_process_->encoder_->decode(cdapMessage);
+    		adata = (rina::ADataObject *) ipcp->encoder_->decode(cdapMessage);
     		if (!adata) {
     			delete cdapMessage;
     			atomic_send_lock_.unlock();

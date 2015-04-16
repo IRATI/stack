@@ -64,7 +64,7 @@ class ResourceAllocator: public IResourceAllocator {
 public:
 	ResourceAllocator();
 	~ResourceAllocator();
-	void set_ipc_process(IPCProcess * ipc_process);
+	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	INMinusOneFlowManager * get_n_minus_one_flow_manager() const;
 	int select_policy_set(const std::string& path, const std::string& name);

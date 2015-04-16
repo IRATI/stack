@@ -49,6 +49,8 @@ public:
 		void processAssignToDIFResponseEvent(const rina::AssignToDIFResponseEvent& event);
 		void requestPDUFTEDump();
 		void logPDUFTE(const rina::DumpFTResponseEvent& event);
+
+		// Policy Management
         void processSetPolicySetParamRequestEvent(
                 const rina::SetPolicySetParamRequestEvent& event);
         void processSetPolicySetParamResponseEvent(
@@ -60,18 +62,18 @@ public:
         void processPluginLoadRequestEvent(
                 const rina::PluginLoadRequestEvent& event);
 
-        std::vector<PsFactory>::iterator
-                        psFactoryLookup(const std::string& component,
-                                       const std::string& name);
-        int psFactoryPublish(const PsFactory& factory);
-        int psFactoryUnpublish(const std::string& component,
-                                              const std::string& name);
-        IPolicySet * psCreate(const std::string& component,
-                                            const std::string& name,
-                                            IPCProcessComponent* context);
-        int psDestroy(const std::string& component,
+        std::vector<rina::PsFactory>::iterator
+        psFactoryLookup(const std::string& ae_name,
+                        const std::string& name);
+        int psFactoryPublish(const rina::PsFactory& factory);
+        int psFactoryUnpublish(const std::string& ae_name,
+                               const std::string& name);
+        rina::IPolicySet * psCreate(const std::string& ae_name,
                                     const std::string& name,
-                                    IPolicySet * instance);
+                                    rina::ApplicationEntity * context);
+        int psDestroy(const std::string& ae_name,
+                      const std::string& name,
+                      rina::IPolicySet * instance);
 
 private:
         void init_cdap_session_manager();
@@ -88,7 +90,7 @@ private:
         rina::Lockable * lock_;
 		rina::DIFInformation dif_information_;
         std::map< std::string, void * > plugins_handles;
-        std::vector<PsFactory> components_factories;
+        std::vector<rina::PsFactory> ae_policy_factories;
 };
 
 void register_handlers_all(EventLoop& loop);

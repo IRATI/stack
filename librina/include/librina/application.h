@@ -2,7 +2,7 @@
  * Application
  *
  *    Eduard Grasa          <eduard.grasa@i2cat.net>
- *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Vincenzo Maffione     <v.maffione@nextworks.it>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -26,631 +26,163 @@
 #ifdef __cplusplus
 
 #include <map>
-#include <list>
-#include <vector>
 #include <string>
 
-#include "librina/common.h"
 #include "librina/patterns.h"
 #include "librina/concurrency.h"
+#include "librina/ipc-api.h"
 
 /**
- * The librina-application library provides the native IPC API,
- * and a set of classes to facilitate the creation of distributed
- * applications based on the DAF model.
+ * The librina-application library provides a set of classes to
+ * facilitate the creation of distributed applications based on the
+ * DAF model.
  *
- * The IPC API allows applications to i) express their
- * availability to be accessed through one or more DIFS (application
- * registration); ii) allocate and deallocate flows to destination
- * applications (flow allocation and deallocation); iii) read and
- * write data from/to allocated flows (in the form of Service Data
- * Units or SDUs) and iv) query the DIFs available in the system and
- * their properties.
- *
- * For the "slow-path" operations, librina-application interacts
- * with the RINA daemons in by exchanging messages over Netlink
- * sockets. In the case of the "fast-path" operations - i.e. those
- * that need to be invoked for every single SDU: read and write -
- * librina-application communicates directly with the services
- * provided by the kernel through the use of system calls.
- *
- * The librina-application API is event-based; that is: the API
- * provides a different method for each action that can be invoked
- * (allocate_flow, register_application and so on), but only two
- * methods - one blocking, the other non-blocking - to get the
- * results of the operations and SDUs available to be read
- * (event_wait and event_poll).
+ * The entities of that applications are programmable via policies.
+ * librina-application provides the base classes of the user-space
+ * RINA plugin infrastructure (uRPI)
  */
 namespace rina {
 
-// IPC API
-
-enum FlowState {
-	FLOW_ALLOCATED, FLOW_DEALLOCATION_REQUESTED, FLOW_DEALLOCATED
-};
-
-/**
- * Thrown when some operation is invoked in a flow that is not allocated
- */
-class FlowNotAllocatedException: public IPCException {
+// A set of policies for a specific application entity
+class IPolicySet {
 public:
-	FlowNotAllocatedException():
-		IPCException(
-				"Invalid operation invoked when the flow is not allocated "){
-	}
-	FlowNotAllocatedException(const std::string& description):
-		IPCException(description){
-	}
+        virtual int set_policy_set_param(const std::string& name,
+                                         const std::string& value) = 0;
+        virtual ~IPolicySet() {}
+
+        static const std::string DEFAULT_PS_SET_NAME;
 };
 
-/**
- * Thrown when there are problems reading SDUs
- */
-class ReadSDUException: public IPCException {
-public:
-	ReadSDUException():
-		IPCException("Problems reading SDU from flow"){
-	}
-	ReadSDUException(const std::string& description):
-		IPCException(description){
-	}
-};
-
-/**
- * Thrown when there are problems writing SDUs
- */
-class WriteSDUException: public IPCException {
-public:
-	WriteSDUException():
-		IPCException("Problems writing SDU to flow"){
-	}
-	WriteSDUException(const std::string& description):
-		IPCException(description){
-	}
-};
-
-/**
- * Thrown when there are problems registering an application to a DIF
- */
-class ApplicationRegistrationException: public IPCException {
-public:
-	ApplicationRegistrationException():
-		IPCException("Problems registering application to DIF"){
-	}
-	ApplicationRegistrationException(const std::string& description):
-		IPCException(description){
-	}
-};
-
-/**
- * Thrown when there are problems unregistering an application from a DIF
- */
-class ApplicationUnregistrationException: public IPCException {
-public:
-	ApplicationUnregistrationException():
-		IPCException("Problems unregistering application from DIF"){
-	}
-	ApplicationUnregistrationException(const std::string& description):
-		IPCException(description){
-	}
-};
-
-/**
- * Thrown when there are problems allocating a flow
- */
-class FlowAllocationException: public IPCException {
-public:
-	FlowAllocationException():
-		IPCException("Problems allocating flow"){
-	}
-	FlowAllocationException(const std::string& description):
-		IPCException(description){
-	}
-};
-
-/**
- * Thrown when there are problems deallocating a flow
- */
-class FlowDeallocationException: public IPCException {
-public:
-	FlowDeallocationException():
-		IPCException("Problems deallocating flow"){
-	}
-	FlowDeallocationException(const std::string& description):
-		IPCException(description){
-	}
-};
-
-/**
- * Thrown when there are problems querying DIF properties
- */
-class GetDIFPropertiesException: public IPCException {
-public:
-	GetDIFPropertiesException():
-		IPCException("Problems getting DIF properties"){
-	}
-	GetDIFPropertiesException(const std::string& description):
-		IPCException(description){
-	}
-};
-
-/**
- * Represents a flow between two application processes, and encapsulates
- * the services that the flow provides.
- */
-class Flow {
-	/** The state of the flow */
-	FlowState flowState;
-
-	/** A summary of the flow information */
-	FlowInformation flowInformation;
-
-	Flow(const ApplicationProcessNamingInformation& localApplicationName,
-	     const ApplicationProcessNamingInformation& remoteApplicationName,
-	     const FlowSpecification& flowSpecification, FlowState flowState);
-
-	Flow(const ApplicationProcessNamingInformation& localApplicationName,
-	     const ApplicationProcessNamingInformation& remoteApplicationName,
-	     const FlowSpecification& flowSpecification, FlowState flowState,
-	     const ApplicationProcessNamingInformation& DIFName, int portId);
-
-	void setPortId(int portId);
-	void setDIFName(const ApplicationProcessNamingInformation& DIFName);
-	void setState(FlowState flowState);
-
-public:
-	Flow();
-	const FlowState& getState() const;
-	int getPortId() const;
-	const ApplicationProcessNamingInformation& getDIFName() const;
-	const ApplicationProcessNamingInformation& getLocalApplicationName() const;
-	const ApplicationProcessNamingInformation& getRemoteApplcationName() const;
-	const FlowSpecification& getFlowSpecification() const;
-	bool isAllocated() const;
-	const FlowInformation& getFlowInformation() const;
-
-	/**
-	 * Reads an SDU from the flow. This function will block until there is an
-	 * SDU available.
-	 *
-	 * @param sdu A buffer to store the SDU data
-	 * @param maxBytes The maximum number of bytes to read
-	 * @return int The number of bytes read
-	 * @throws IPCException if the flow is not in the ALLOCATED state
-	 */
-	int readSDU(void * sdu, int maxBytes) throw(Exception);
-
-	/**
-	 * Writes an SDU to the flow
-	 *
-	 * @param sdu A buffer that contains the SDU data
-	 * @param size The size of the SDU data, in bytes
-	 * @throws IPCException if the flow is not in the ALLOCATED state or
-	 * there are problems writing to the flow
-	 */
-	void writeSDU(void * sdu, int size) throw(Exception);
-
-	friend class IPCManager;
-};
-
-/**
- * Contains the information about a registered application: its
- * name and the DIFs where it is registered
- */
-class ApplicationRegistration {
-public:
-	/** The registered application name */
-	ApplicationProcessNamingInformation applicationName;
-
-	/** The list of one or more DIFs in which the application is registered */
-	std::list<ApplicationProcessNamingInformation> DIFNames;
-
-	ApplicationRegistration(
-			const ApplicationProcessNamingInformation& applicationName);
-	void addDIFName(const ApplicationProcessNamingInformation& DIFName);
-	void removeDIFName(const ApplicationProcessNamingInformation& DIFName);
-};
-
-/**
- * Point of entry to the IPC functionality available in the system. This class
- * is a singleton.
- */
-class IPCManager : public Lockable{
-	/** The flows that are currently allocated */
-	std::map<int, Flow*> allocatedFlows;
-
-	/** The flows that are pending to be allocated or deallocated*/
-	std::map<unsigned int, Flow*> pendingFlows;
-
-	/** The applications that are pending to be registered or unregistered */
-	std::map<unsigned int, ApplicationRegistrationInformation>
-	        registrationInformation;
-
-	/** The applications that are currently registered in one or more DIFs */
-	std::map<ApplicationProcessNamingInformation,
-	        ApplicationRegistration*> applicationRegistrations;
-
-protected:
-	/** Return the pending flow at sequenceNumber */
-	Flow * getPendingFlow(unsigned int seqNumber);
-
-	/** Return the information of a registration request */
-	ApplicationRegistrationInformation getRegistrationInfo(
-	                unsigned int seqNumber);
-
-	ApplicationRegistration * getApplicationRegistration(
-	                const ApplicationProcessNamingInformation& appName);
-
-	void putApplicationRegistration(
-	                const ApplicationProcessNamingInformation& key,
-	                ApplicationRegistration * value);
-
-	void removeApplicationRegistration(
-	                const ApplicationProcessNamingInformation& key);
-
-	unsigned int internalRequestFlowAllocation(
-	        const ApplicationProcessNamingInformation& localAppName,
-	        const ApplicationProcessNamingInformation& remoteAppName,
-	        const FlowSpecification& flow,
-	        unsigned short sourceIPCProcessId);
-
-	unsigned int internalRequestFlowAllocationInDIF(
-	        const ApplicationProcessNamingInformation& localAppName,
-	        const ApplicationProcessNamingInformation& remoteAppName,
-	        const ApplicationProcessNamingInformation& difName,
-	        unsigned short sourceIPCProcessId,
-	        const FlowSpecification& flow);
-
-	Flow * internalAllocateFlowResponse(
-	        const FlowRequestEvent& flowRequestEvent,
-	        int result, bool notifySource, unsigned short ipcProcessId);
-
-public:
-	IPCManager();
-	~IPCManager() throw();
-	static const std::string application_registered_error;
-	static const std::string application_not_registered_error;
-	static const std::string unknown_flow_error;
-	static const std::string error_registering_application;
-	static const std::string error_unregistering_application;
-	static const std::string error_requesting_flow_allocation;
-	static const std::string error_requesting_flow_deallocation;
-	static const std::string error_getting_dif_properties;
-	static const std::string wrong_flow_state;
-
-	/** Return the allocated flow at portId */
-	Flow * getAllocatedFlow(int portId);
-
-	/** Return a flow allocated to the remote application name */
-	Flow * getFlowToRemoteApp(
-			ApplicationProcessNamingInformation remoteAppName);
-
-	/**
-	 * Retrieves the names and characteristics of a single DIF or of all the
-	 * DIFs available to the application.
-	 *
-	 * @param applicationName The name of the application that wants to query
-	 * the properties of one or more DIFs
-	 * @param DIFName If provided, the function will return the information of
-	 * the requested DIF, otherwise it will return the properties of all the
-	 * DIFs available to the application.
-	 * @return A handler to be able to identify the proper response event
-	 * @throws GetDIFPropertiesException
-	 */
-	unsigned int getDIFProperties(
-			const ApplicationProcessNamingInformation& applicationName,
-			const ApplicationProcessNamingInformation& DIFName);
-
-	/**
-	 * Requests an application to be registered in a DIF
-	 *
-	 * @param appRegistrationInfo Information about the registration request
-	 * (what application, how many DIFs, what specific DIFs)
-	 * @throws ApplicationRegistrationException
-	 * @return A handler to be able to identify the proper response event
-	 */
-	unsigned int requestApplicationRegistration(
-			const ApplicationRegistrationInformation& appRegistrationInfo);
-
-	/**
-	 * The application registration has been successful,
-	 * update data structures
-	 * @param seqNumber the id of the registration request
-	 * @param DIFName the DIF where the application has been registered
-	 * @throws ApplicationRegistrationException if there are issues
-	 * registering the application
-	 * @return the information on the application registration
-	 */
-	ApplicationRegistration * commitPendingRegistration(
-	                unsigned int seqNumber,
-	                const ApplicationProcessNamingInformation& DIFName);
-
-	/**
-	 * The application registration has been unsuccessful,
-	 * update data structures
-	 * @param seqNumber the if of the registration request
-	 * @throws ApplicationRegistrationException if the pending registration
-	 * is not found
-	 */
-	void withdrawPendingRegistration(unsigned int seqNumber);
-
-	/**
-	 * Requests an application to be unregistered from a DIF
-	 *
-	 * @param applicationName The name of the application to be unregistered
-	 * @param DIFName Then name of the DIF where the application has to be
-	 * unregistered from
-	 * @return A handler to be able to identify the proper response event
-	 * @throws ApplicationUnregistrationException
-	 */
-	unsigned int requestApplicationUnregistration(
-			const ApplicationProcessNamingInformation& applicationName,
-			const ApplicationProcessNamingInformation& DIFName);
-
-	/**
-	 * Inform about the result of a pending application unregistration request
-	 * @param seqNumber the id of the request
-	 * @param success true if request was successful, false otherwise
-	 */
-	 void appUnregistrationResult(unsigned int seqNumber, bool success);
-
-	/**
-	 * Requests the allocation of a Flow
-	 *
-	 * @param localAppName The naming information of the local application
-	 * @param remoteAppName The naming information of the remote application
-	 * @param flowSpecifiction The characteristics required for the flow
-	 * @return A handler to be able to identify the proper response event
-	 * @throws FlowAllocationException if there are problems during the flow allocation
-	 */
-	virtual unsigned int requestFlowAllocation(
-			const ApplicationProcessNamingInformation& localAppName,
-			const ApplicationProcessNamingInformation& remoteAppName,
-			const FlowSpecification& flow);
-
-	/**
-	 * Requests the allocation of a flow using a speficif dIF
-         * @param localAppName The naming information of the local application
-         * @param remoteAppName The naming information of the remote application
-         * @param flowSpecifiction The characteristics required for the flow
-         * @param difName The DIF through which we want the flow allocated
-         * @return A handler to be able to identify the proper response event
-         * @throws FlowAllocationException if there are problems during the flow allocation
-	 */
-	virtual unsigned int requestFlowAllocationInDIF(
-	                const ApplicationProcessNamingInformation& localAppName,
-	                const ApplicationProcessNamingInformation& remoteAppName,
-	                const ApplicationProcessNamingInformation& difName,
-	                const FlowSpecification& flow);
-
-	/**
-	 * Tell the IPC Manager that a pending flow has been allocated, and
-	 * get the flow structure
-	 * @param sequenceNumber the handler of the pending flow
-	 * @param portId the portId that has been allocated to the pending flow
-	 * @param DIFName the name of the DIF where the flow has been allocated
-	 * @return the flow, ready to be used
-	 * @throws FlowAllocationException if the pending flow is not found
-	 */
-	Flow * commitPendingFlow(unsigned int sequenceNumber, int portId,
-	                const ApplicationProcessNamingInformation& DIFName);
-
-	/**
-	 * Tell the IPC Manager that a pending flow allocation has been denied
-	 * @param sequenceNumber the handler of the pending flow
-	 * @returns the information of the flow that has been withdrawn
-	 * @throws FlowAllocationException if the pending flow is not found
-	 */
-	FlowInformation withdrawPendingFlow(unsigned int sequenceNumber);
-
-	/**
-	 * Confirms or denies the request for a flow to this application.
-	 *
-	 * @param flowRequestEvent information of the flow request
-	 * @param result 0 means the flow is accepted, a different number
-	 * indicates the deny code
-	 * @param notifySource if true the source IPC Process will get
-	 * the allocate flow response message back, otherwise it will be ignored
-	 * @return Flow If the flow is accepted, returns the flow object
-	 * @throws FlowAllocationException If there are problems
-	 * confirming/denying the flow
-	 */
-	virtual Flow * allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
-			int result, bool notifySource);
-
-	/**
-	 * Requests the deallocation of a flow
-	 *
-	 * @param portId, the portId of the flow to be deallocated
-	 * @throws FlowDeallocationException if the flow is not in
-	 * the ALLOCATED state or there are problems deallocating the flow
-	 */
-	unsigned int requestFlowDeallocation(int portId);
-
-	/**
-	 * Inform about the success/failure of a flow deallocation request
-	 * @param success true if request has been successful, false otherwise
-	 * @param portId the portId of the flow to be deallocated
-	 * @throws flowDeallocationException if there are problems
-	 */
-	void flowDeallocationResult(int portId, bool success);
-
-	/**
-	 * Inform the IPC Manager that a flow has been deallocated remotely,
-	 * so that the local data structures can be updated
-	 * @param portId the portId of the flow deallocated
-	 * @throws FlowDeallocationException if no flow with the provided
-	 * portId was allocated
-	 */
-	void flowDeallocated(int portId);
-
-	/**
-	 * Returns the flows that are currently allocated
-	 *
-	 * @return the flows allocated
-	 */
-	std::vector<Flow *> getAllocatedFlows();
-
-	/**
-	 * Returns the applications that are currently registered in one or more
-	 * DIFs.
-	 *
-	 * @return the registered applications
-	 */
-	std::vector<ApplicationRegistration *> getRegisteredApplications();
-};
-
-/**
- * Make IPCManager singleton
- */
-extern Singleton<IPCManager> ipcManager;
-
-/**
- * Event informing that an application has been unregistered from a DIF,
- * without the application having requested it
- */
-class ApplicationUnregisteredEvent: public IPCEvent {
-public:
-	/** The application that has been unregistered */
-	ApplicationProcessNamingInformation applicationName;
-
-	/** The DIF from which the application has been unregistered */
-	ApplicationProcessNamingInformation DIFName;
-
-	ApplicationUnregisteredEvent(
-			const ApplicationProcessNamingInformation& appName,
-			const ApplicationProcessNamingInformation& DIFName,
-			unsigned int sequenceNumber);
-};
-
-/**
- * Event informing that an application registration has been canceled
- * without the application having requested it
- */
-class AppRegistrationCanceledEvent: public IPCEvent {
-public:
-	/** The application whose registration has been canceled */
-	ApplicationProcessNamingInformation applicationName;
-
-	/** The name of the DIF */
-	ApplicationProcessNamingInformation difName;
-
-	/** An error code indicating why the flow was deallocated */
-	int code;
-
-	/** Optional explanation giving more details about why the application registration has been canceled */
-	std::string reason;
-
-	AppRegistrationCanceledEvent(int code, const std::string& reason,
-			const ApplicationProcessNamingInformation& difName,
-			unsigned int sequenceNumber);
-};
-
-/**
- * Event informing about the result of a flow allocation request
- */
-class AllocateFlowRequestResultEvent: public IPCEvent {
-public:
-        /** The application that requested the flow allocation */
-        ApplicationProcessNamingInformation sourceAppName;
-
-        /**
-         * The port-id assigned to the flow, or error code if the value is
-         * negative
-         */
-        int portId;
-
-        /**
-         * The DIF where the flow has been allocated
-         */
-        ApplicationProcessNamingInformation difName;
-
-        AllocateFlowRequestResultEvent(
-                        const ApplicationProcessNamingInformation& appName,
-                        const ApplicationProcessNamingInformation& difName,
-                        int portId, unsigned int sequenceNumber);
-};
-
-/**
- * Event informing about the result of a flow deallocation request
- */
-class DeallocateFlowResponseEvent: public BaseResponseEvent {
-public:
-        /** The application that requested the flow deallocation */
-        ApplicationProcessNamingInformation appName;
-
-        /** The portId of the flow */
-        int portId;
-
-        DeallocateFlowResponseEvent(
-                        const ApplicationProcessNamingInformation& appName,
-                        int portId, int result, unsigned int sequenceNumber);
-};
-
-/**
- * Event informing about the result of a get DIF properties operation
- */
-class GetDIFPropertiesResponseEvent: public BaseResponseEvent {
-public:
-        /**
-         * The name of the application that is querying the DIF properties
-         */
-        ApplicationProcessNamingInformation applicationName;
-
-        /** The properties of zero or more DIFs */
-        std::list<DIFProperties> difProperties;
-
-        GetDIFPropertiesResponseEvent(
-                        const ApplicationProcessNamingInformation& appName,
-                        const std::list<DIFProperties>& difProperties,
-                        int result, unsigned int sequenceNumber);
-};
-
-// DAF Related classes, with support for policies
+class ApplicationEntity;
 
 // An instance of an application entity
 class ApplicationEntityInstance {
 public:
-		ApplicationEntityInstance(const std::string& instance_id);
+		ApplicationEntityInstance(const std::string& instance_id)
+			: instance_id_(instance_id), ae(NULL) { };
 		virtual ~ApplicationEntityInstance(){};
 		const std::string& get_instance_id() const;
+		virtual void set_application_entity(ApplicationEntity * ae) = 0;
 
 protected:
 		//The AE Instance, immutable during the AE's lifetime
 		std::string instance_id_;
+
+		//The Application Entity this instance is part of
+		ApplicationEntity * ae;
 };
+
+class ApplicationProcess;
 
 // A type of component of an application process, manages all the instances
 // of this type
 class ApplicationEntity {
 public:
-		ApplicationEntity(const std::string& name);
+		ApplicationEntity(const std::string& name)
+						: ps(NULL), name_(name), app(NULL) { };
 		virtual ~ApplicationEntity();
 		const std::string& get_name() const;
-		void add_instance(const std::string& instance_id, ApplicationEntityInstance * instance);
+		virtual void set_application_process(ApplicationProcess * ap) = 0;
+		void add_instance(ApplicationEntityInstance * instance);
 		ApplicationEntityInstance * remove_instance(const std::string& instance_id);
 		ApplicationEntityInstance * get_instance(const std::string& instance_id);
+
+        virtual int select_policy_set(const std::string& path,
+                                      const std::string& name) {
+                // TODO it will be pure virtual as soon as overridden
+                // by all existing components
+                (void) (path+name);
+                return -1;
+        }
+        virtual int set_policy_set_param(const std::string& path,
+                                         const std::string& name,
+                                         const std::string& value) {
+                // TODO it will be pure virtual as soon as overridden
+                // by all existing components
+                (void) (path+name+value);
+                return -1;
+        }
+
+        int select_policy_set_common(const std::string& component,
+                                     const std::string& path,
+                                     const std::string& ps_name);
+        int set_policy_set_param_common(const std::string& path,
+                                        const std::string& param_name,
+                                        const std::string& param_value);
+
+		//The policy set of this AE
+		IPolicySet * ps;
+
+		//The name of the selected policy set
+		std::string selected_ps_name;
 
 protected:
 		//The Application Entity name, immutable during the AE's lifetime
 		std::string name_;
+
+		//A reference to the application process that hosts the AE
+		ApplicationProcess * app;
 
 private:
 		// The Application entity instances in this application entity
 		ThreadSafeMapOfPointers<std::string, ApplicationEntityInstance> instances;
 };
 
+extern "C" {
+        typedef IPolicySet *(*app_entity_factory_create_t)(
+                                                ApplicationEntity * ctx);
+        typedef void (*app_entity_factory_destroy_t)(IPolicySet * ps);
+        typedef int (*plugin_init_function_t)(ApplicationProcess * app_process,
+                                              const std::string& plugin_name);
+}
+
+struct PsFactory {
+        // Name of this pluggable policy set.
+        std::string name;
+
+        // Name of the AE where this plugin applies.
+        std::string app_entity;
+
+        // Name of the plugin that published this policy set
+        std::string plugin_name;
+
+        // Constructor method for instances of this pluggable policy set.
+        app_entity_factory_create_t create;
+
+        // Destructor method for instances of this pluggable policy set.
+        app_entity_factory_destroy_t destroy;
+
+        // Reference counter for the number of policy sets created
+        // by this factory
+        unsigned int refcnt;
+};
+
 // The base class for an Application Process that is member of a
 // distributed application
 class ApplicationProcess {
 public:
-		ApplicationProcess(const std::string& name, const std::string& instance);
+		ApplicationProcess(const std::string& name, const std::string& instance)
+						: name_(name), instance_(instance) { };
 		virtual ~ApplicationProcess();
 		const std::string& get_name() const;
 		const std::string& get_instance() const;
-		void add_entity(const std::string& name, ApplicationEntity * entity);
+		void add_entity(ApplicationEntity * entity);
 		ApplicationEntity * remove_entity(const std::string& name);
 		ApplicationEntity * get_entity(const std::string& name);
+
+		//Policy management
+        virtual std::vector<PsFactory>::iterator
+                        psFactoryLookup(const std::string& ae_name,
+                                        const std::string& name) = 0;
+        virtual int psFactoryPublish(const PsFactory& factory) = 0;
+        virtual int psFactoryUnpublish(const std::string& ae_name,
+                                       const std::string& name) = 0;
+        virtual IPolicySet * psCreate(const std::string& ae_name,
+                                      const std::string& name,
+                                      ApplicationEntity * context) = 0;
+        virtual int psDestroy(const std::string& ae_name,
+                              const std::string& name,
+                              IPolicySet * instance) = 0;
 
 protected:
 		// The ApplicationProcess name, immutable during the AP's lifetime

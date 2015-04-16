@@ -48,77 +48,22 @@ enum IPCProcessOperationalState {
 
 class IPCProcess;
 
-class IPolicySet {
+/// IPC process component
+class IPCProcessComponent: public rina::ApplicationEntity {
 public:
-        virtual int set_policy_set_param(const std::string& name,
-                                         const std::string& value) = 0;
-        virtual ~IPolicySet() {}
-};
+        IPCProcessComponent(const std::string& name) : rina::ApplicationEntity(name), ipcp(NULL) { };
+        virtual ~IPCProcessComponent() { };
+        virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
 
-/// IPC process component interface
-class IPCProcessComponent {
-public:
-        std::string selected_ps_name;
-        IPolicySet *ps;
-        IPCProcess *ipcp;
+        IPCProcess * ipcp;
 
-        IPCProcessComponent() : ps(NULL), ipcp(NULL) { }
-	virtual ~IPCProcessComponent() { };
-	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
-	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
-        virtual int select_policy_set(const std::string& path,
-                                      const std::string& name) {
-                // TODO it will be pure virtual as soon as overridden
-                // by all existing components
-                (void) (path+name);
-                return -1;
-        }
-        virtual int set_policy_set_param(const std::string& path,
-                                         const std::string& name,
-                                         const std::string& value) {
-                // TODO it will be pure virtual as soon as overridden
-                // by all existing components
-                (void) (path+name+value);
-                return -1;
-        }
-
-        int select_policy_set_common(IPCProcess * ipcp,
-                                     const std::string& component,
-                                     const std::string& path,
-                                     const std::string& ps_name);
-        int set_policy_set_param_common(IPCProcess * ipcp,
-                                        const std::string& path,
-                                        const std::string& param_name,
-                                        const std::string& param_value);
-};
-
-extern "C" {
-        typedef IPolicySet *(*component_factory_create_t)(
-                                                IPCProcessComponent * ctx);
-        typedef void (*component_factory_destroy_t)(IPolicySet * ps);
-        typedef int (*plugin_init_function_t)(IPCProcess * ipc_process,
-                                              const std::string& plugin_name);
-}
-
-struct PsFactory {
-        // Name of this pluggable policy set.
-        std::string name;
-
-        // Name of the component where this plugin applies.
-        std::string component;
-
-        // Name of the plugin that published this policy set
-        std::string plugin_name;
-
-        // Constructor method for instances of this pluggable policy set.
-        component_factory_create_t create;
-
-        // Destructor method for instances of this pluggable policy set.
-        component_factory_destroy_t destroy;
-
-        // Reference counter for the number of policy sets created
-        // by this factory
-        unsigned int refcnt;
+        static const std::string ENROLLMENT_TASK_AE_NAME;
+        static const std::string FLOW_ALLOCATOR_AE_NAME;
+        static const std::string NAMESPACE_MANAGER_AE_NAME;
+        static const std::string RESOURCE_ALLOCATOR_AE_NAME;
+        static const std::string SECURITY_MANAGER_AE_NAME;
+        static const std::string ROUTING_COMPONENT_AE_NAME;
+        static const std::string RIB_DAEMON_AE_NAME;
 };
 
 /// Interface
@@ -171,6 +116,7 @@ public:
 /// the behavior of an enrollment task
 class IEnrollmentTask : public IPCProcessComponent, public rina::IApplicationConnectionHandler {
 public:
+	IEnrollmentTask() : IPCProcessComponent(IPCProcessComponent::ENROLLMENT_TASK_AE_NAME) { };
 	virtual ~IEnrollmentTask(){};
 	virtual const std::list<rina::Neighbor *> get_neighbors() const = 0;
 	virtual const std::list<std::string> get_enrolled_ipc_process_names() const = 0;
@@ -306,7 +252,7 @@ public:
 
 class IFlowAllocatorInstance;
 
-class IFlowAllocatorPs : public IPolicySet {
+class IFlowAllocatorPs : public rina::IPolicySet {
 // This class is used by the IPCP to access the plugin functionalities
 public:
         virtual Flow *newFlowRequest(IPCProcess * ipc_process,
@@ -319,6 +265,7 @@ public:
 /// the behavior of a Flow Allocator task
 class IFlowAllocator : public IPCProcessComponent {
 public:
+	IFlowAllocator() : IPCProcessComponent(IPCProcessComponent::FLOW_ALLOCATOR_AE_NAME) { };
 	virtual ~IFlowAllocator(){};
 
 	virtual IFlowAllocatorInstance * getFAI(int portId) = 0;
@@ -370,7 +317,7 @@ public:
 	virtual void destroyFlow(Flow *) = 0;
 };
 
-class IRoutingPs : public IPolicySet {
+class IRoutingPs : public rina::IPolicySet {
 	// This class is used by the IPCP to access the plugin functionalities
 public:
 	virtual ~IRoutingPs() {};
@@ -379,13 +326,14 @@ public:
 
 class IRoutingComponent : public IPCProcessComponent {
 public:
+	IRoutingComponent() : IPCProcessComponent(IPCProcessComponent::ROUTING_COMPONENT_AE_NAME) { };
 	virtual ~IRoutingComponent(){};
 };
 
 class RoutingComponent: public IRoutingComponent {
 public:
-		RoutingComponent();
-		void set_ipc_process(IPCProcess * ipc_process);
+		RoutingComponent() : IRoutingComponent() { };
+		void set_application_process(rina::ApplicationProcess * ap);
 		void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
         int select_policy_set(const std::string& path, const std::string& name);
         int set_policy_set_param(const std::string& path,
@@ -395,7 +343,7 @@ public:
 };
 
 /// Namespace Manager Interface
-class INamespaceManagerPs : public IPolicySet {
+class INamespaceManagerPs : public rina::IPolicySet {
 // This class is used by the IPCP to access the plugin functionalities
 public:
 	/// Decides if a given address is valid or not
@@ -414,6 +362,7 @@ public:
 
 class INamespaceManager : public IPCProcessComponent {
 public:
+	INamespaceManager() : IPCProcessComponent(IPCProcessComponent::NAMESPACE_MANAGER_AE_NAME) { };
 	virtual ~INamespaceManager(){};
 
 	/// Returns the address of the IPC process where the application process is, or
@@ -521,7 +470,7 @@ public:
 };
 
 /// Resource Allocator Policy Set Interface
-class IResourceAllocatorPs : public IPolicySet {
+class IResourceAllocatorPs : public rina::IPolicySet {
 // This class is used by the IPCP to access the plugin functionalities
 public:
 	/// The routing table has been updated; decide if
@@ -550,6 +499,7 @@ public:
 ///     Forwarding Table Generator Output
 class IResourceAllocator: public IPCProcessComponent {
 public:
+	IResourceAllocator() : IPCProcessComponent(IPCProcessComponent::RESOURCE_ALLOCATOR_AE_NAME) { };
 	virtual ~IResourceAllocator(){};
 	virtual INMinusOneFlowManager * get_n_minus_one_flow_manager() const = 0;
 };
@@ -567,7 +517,7 @@ public:
 /// these security functions are a matter of policy. SDU Protection provides confidentiality
 /// and integrity
 
-class ISecurityManagerPs : public IPolicySet {
+class ISecurityManagerPs : public rina::IPolicySet {
 // This class is used by the IPCP to access the plugin functionalities
 public:
 	/// Decide if an IPC Process is allowed to join a DIF
@@ -582,15 +532,16 @@ public:
 class ISecurityManager: public IPCProcessComponent {
 // This class is used by the plugins to access the IPCP functionalities
 public:
+		ISecurityManager() : IPCProcessComponent(IPCProcessComponent::SECURITY_MANAGER_AE_NAME) { };
         virtual ~ISecurityManager() {}
 };
 
 class SecurityManager: public ISecurityManager {
 // Used by IPCP to access the functionalities of the security manager
 public:
-	SecurityManager();
-	void set_ipc_process(IPCProcess * ipc_process);
-	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+		SecurityManager() : ISecurityManager() { };
+		void set_application_process(rina::ApplicationProcess * ap);
+		void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
         int select_policy_set(const std::string& path, const std::string& name);
         int set_policy_set_param(const std::string& path,
                                  const std::string& name,
@@ -617,6 +568,7 @@ public:
 /// Interface that provides the RIB Daemon API
 class IPCPRIBDaemon : public rina::RIBDaemon, public IPCProcessComponent, public EventManager {
 public:
+	IPCPRIBDaemon() : IPCProcessComponent(IPCProcessComponent::RIB_DAEMON_AE_NAME) { };
 	virtual ~IPCPRIBDaemon(){};
 
 	/// Process a Query RIB Request from the IPC Manager
@@ -625,7 +577,7 @@ public:
 };
 
 /// IPC Process interface
-class IPCProcess {
+class IPCProcess : public rina::ApplicationProcess {
 public:
 	static const std::string MANAGEMENT_AE;
 	static const std::string DATA_TRANSFER_AE;
@@ -641,9 +593,8 @@ public:
 	ISecurityManager * security_manager_;
 	IRoutingComponent * routing_component_;
 	IPCPRIBDaemon * rib_daemon_;
-	rina::ApplicationProcessNamingInformation name_;
 
-        IPCProcess();
+    IPCProcess(const std::string& name, const std::string& instance);
 	virtual ~IPCProcess(){};
 	virtual unsigned short get_id() = 0;
 	virtual unsigned int get_address() const = 0;
@@ -653,20 +604,6 @@ public:
 	virtual const rina::DIFInformation& get_dif_information() const = 0;
 	virtual void set_dif_information(const rina::DIFInformation& dif_information) = 0;
 	virtual const std::list<rina::Neighbor*> get_neighbors() const = 0;
-
-        virtual std::vector<PsFactory>::iterator
-                        psFactoryLookup(const std::string& component,
-                                       const std::string& name) = 0;
-        virtual int psFactoryPublish(const PsFactory& factory) = 0;
-        virtual int psFactoryUnpublish(const std::string& component,
-                                              const std::string& name) = 0;
-        virtual IPolicySet * psCreate(
-                                        const std::string& component,
-                                        const std::string& name,
-                                        IPCProcessComponent * context) = 0;
-        virtual int psDestroy(const std::string& component,
-                                            const std::string& name,
-                                            IPolicySet * instance) = 0;
 };
 
 /// A simple RIB object that just acts as a wrapper. Represents an object in the RIB that just

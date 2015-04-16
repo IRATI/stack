@@ -175,7 +175,7 @@ public:
 	FlowAllocator();
 	~FlowAllocator();
 	IFlowAllocatorInstance * getFAI(int portId);
-	void set_ipc_process(IPCProcess * ipc_process);
+	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
         int select_policy_set(const std::string& path, const std::string& name);
         int set_policy_set_param(const std::string& path,

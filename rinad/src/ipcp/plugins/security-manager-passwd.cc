@@ -66,8 +66,8 @@ int SecurityManagerPasswdPs::set_policy_set_param(const std::string& name,
         return 0;
 }
 
-extern "C" IPolicySet *
-createSecurityManagerPasswdPs(IPCProcessComponent * ctx)
+extern "C" rina::IPolicySet *
+createSecurityManagerPasswdPs(rina::ApplicationEntity * ctx)
 {
         ISecurityManager * sm = dynamic_cast<ISecurityManager *>(ctx);
 
@@ -79,7 +79,7 @@ createSecurityManagerPasswdPs(IPCProcessComponent * ctx)
 }
 
 extern "C" void
-destroySecurityManagerPasswdPs(IPolicySet * ps)
+destroySecurityManagerPasswdPs(rina::IPolicySet * ps)
 {
         if (ps) {
                 delete ps;
@@ -89,12 +89,12 @@ destroySecurityManagerPasswdPs(IPolicySet * ps)
 extern "C" int
 init(IPCProcess * ipc_process, const std::string& plugin_name)
 {
-        struct PsFactory factory;
+        struct rina::PsFactory factory;
         int ret;
 
         factory.plugin_name = plugin_name;
         factory.name = "passwd";
-        factory.component = "security-manager";
+        factory.app_entity = IPCProcessComponent::SECURITY_MANAGER_AE_NAME;
         factory.create = createSecurityManagerPasswdPs;
         factory.destroy = destroySecurityManagerPasswdPs;
 

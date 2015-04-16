@@ -365,7 +365,7 @@ class EnrollmentTask: public IEnrollmentTask, public EventListener {
 public:
 	EnrollmentTask();
 	~EnrollmentTask();
-	void set_ipc_process(IPCProcess * ipc_process);
+	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	const std::list<rina::Neighbor *> get_neighbors() const;
 	BaseEnrollmentStateMachine * getEnrollmentStateMachine(const std::string& apName,

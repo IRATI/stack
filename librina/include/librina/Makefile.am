@@ -8,6 +8,7 @@ nobase_pkginclude_HEADERS =			\
 	librina.h				\
 	logs.h					\
 	common.h				\
+	ipc-api.h                               \
 	application.h				\
 	configuration.h				\
 	ipc-daemons.h				\

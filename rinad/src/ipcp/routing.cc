@@ -30,13 +30,9 @@
 namespace rinad {
 
 //Class RoutingComponent
-RoutingComponent::RoutingComponent() {
-	ipcp = 0;
-}
-
-void RoutingComponent::set_ipc_process(IPCProcess * ipc_process)
+void RoutingComponent::set_application_process(rina::ApplicationProcess * ap)
 {
-	ipcp = ipc_process;
+	app = ap;
 }
 
 void RoutingComponent::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
@@ -52,14 +48,14 @@ void RoutingComponent::set_dif_configuration(const rina::DIFConfiguration& dif_c
 int RoutingComponent::select_policy_set(const std::string& path,
                                        const std::string& name)
 {
-        return select_policy_set_common(ipcp, "routing", path, name);
+        return select_policy_set_common(get_name(), path, name);
 }
 
 int RoutingComponent::set_policy_set_param(const std::string& path,
                                           const std::string& name,
                                           const std::string& value)
 {
-        return set_policy_set_param_common(ipcp, path, name, value);
+        return set_policy_set_param_common(path, name, value);
 }
 
 }

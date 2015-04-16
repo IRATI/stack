@@ -46,7 +46,7 @@ void * doManagementSDUReaderWork(void* data);
 
 class BaseRIBDaemon: public IPCPRIBDaemon {
 public:
-        BaseRIBDaemon();
+        BaseRIBDaemon() : IPCPRIBDaemon() { };
         void subscribeToEvent(const IPCProcessEventType& eventId, EventListener * eventListener);
         void unsubscribeFromEvent(const IPCProcessEventType& eventId, EventListener * eventListener);
         void deliverEvent(Event * event);
@@ -60,7 +60,7 @@ private:
 class IPCPRIBDaemonImpl : public BaseRIBDaemon, public EventListener {
 public:
         IPCPRIBDaemonImpl();
-	void set_ipc_process(IPCProcess * ipc_process);
+        void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	void eventHappened(Event * event);
 	void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event);
@@ -69,7 +69,6 @@ public:
 	void cdapMessageDelivered(char* message, int length, int portId);
 
 private:
-	IPCProcess * ipc_process_;
 	INMinusOneFlowManager * n_minus_one_flow_manager_;
 	rina::Thread * management_sdu_reader_;
 
