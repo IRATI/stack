@@ -309,7 +309,13 @@ IPCManager_::get_ipcp_name(int ipcp_id)
 	//Prevent any insertion/deletion to happen
 	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
 
-	IPCMIPCProcess* ipcp = lookup_ipcp_by_id(ipcp_id, true);
+	IPCMIPCProcess* ipcp = lookup_ipcp_by_id(ipcp_id, false);
+
+	if(!ipcp)
+		return "";
+
+	//Prevent any insertion/deletion to happen
+	rina::ReadScopedLock rreadlock(ipcp->rwlock, false);
 
 	if(!ipcp)
 		return std::string("");
