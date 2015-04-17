@@ -32,6 +32,7 @@
 
 #define RINA_PREFIX "ipcm"
 #include <librina/logs.h>
+#include <debug.h>
 
 #include "rina-configuration.h"
 #include "ipcm.h"

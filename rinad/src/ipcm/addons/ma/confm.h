@@ -23,8 +23,10 @@
 
 #include <assert.h>
 #include <string>
+#include <list>
 #include <librina/application.h>
 #include <librina/common.h>
+#include <rina-configuration.h>
 
 /**
 * @file configuration.h
@@ -50,7 +52,7 @@ public:
 	/**
 	* Initialize running state
 	*/
-	ConfManager(const std::string& params);
+	ConfManager(const rinad::RINAConfiguration& config);
 
 	/**
 	* Destroy the running state
@@ -65,6 +67,17 @@ public:
 
 private:
 
+        struct ManagerConnInfo {
+                rina::ApplicationProcessNamingInformation manager_name;
+                std::string manager_dif;
+        };
+
+        /**
+        * Internal variables containing MAD configuration
+        */
+        rina::ApplicationProcessNamingInformation app_name;
+        std::list<std::string> nms_difs;
+        std::list<ManagerConnInfo> manager_connections;
 };
 
 

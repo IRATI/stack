@@ -31,6 +31,7 @@
 
 #define RINA_PREFIX "ipcm.misc"
 #include <librina/logs.h>
+#include <debug.h>
 
 #include "rina-configuration.h"
 #include "misc-handlers.h"

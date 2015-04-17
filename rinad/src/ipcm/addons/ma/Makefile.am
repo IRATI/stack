@@ -19,7 +19,8 @@ libaddons_ma_la_CPPFLAGS =			\
 	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)			\
 	-I$(srcdir)/../../../			\
-	-I$(srcdir)/../../../common
+	-I$(srcdir)/../../../common		\
+	-I${srcdir}/../../jsoncpp
 
 libaddons_ma_la_LIBADD = 			\
 	$(builddir)/../../../common/librinad.la	\

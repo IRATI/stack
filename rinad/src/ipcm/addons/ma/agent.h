@@ -82,7 +82,7 @@ class ManagementAgent : public AppAddon{
 public:
 
 	//Constructor and destructor
-	ManagementAgent(const std::string& params);
+	ManagementAgent(const rinad::RINAConfiguration& config);
 	~ManagementAgent(void);
 
 	/**

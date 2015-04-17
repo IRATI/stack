@@ -104,6 +104,9 @@ public:
 	std::string entityInstance;
 };
 
+ApplicationProcessNamingInformation
+decode_apnameinfo(const std::string &encodedString);
+
 /**
  * This class defines the characteristics of a flow
  */
