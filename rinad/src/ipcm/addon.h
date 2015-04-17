@@ -143,6 +143,9 @@ public:
 
 	/**
 	* Destroy all
+	*
+	* This is not thread-safe and shall never be called if there can come
+	* events to process
 	*/
 	static void destroy_all(void);
 

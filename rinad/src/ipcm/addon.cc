@@ -71,8 +71,6 @@ void Addon::destroy_all(){
 
 	std::map<std::string, Addon*>::iterator it;
 
-	rina::WriteScopedLock wlock(rwlock);
-
 	it = addons.begin();
 	do{
 		LOG_DBG("Destroying addon: %s(%p)", (it)->second->name.c_str(),
