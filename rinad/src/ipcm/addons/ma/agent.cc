@@ -30,6 +30,8 @@
 #define RINA_PREFIX "ipcm.mad"
 #include <librina/logs.h>
 
+#include "../../ipcm.h"
+
 // std libraries
 #include <list>
 
@@ -162,6 +164,45 @@ void ManagementAgent::addManagerConnection(AppConnection& con){
 //Process event
 void ManagementAgent::process_flow_event(rina::IPCEvent** event){
 	flow_manager->process_flow_event(event);
+}
+
+void ManagementAgent::process_ipcm_event(const IPCMEvent& event){
+
+	std::string ipcp_name;
+
+	if(event.ipcp_id != -1)
+		ipcp_name = IPCManager->get_ipcp_name(event.ipcp_id);
+
+	switch(event.type){
+		//Addon related events
+		case IPCM_ADDON_LOADED:
+			LOG_DBG("The addon '%s' has been loaded",
+							event.addon.c_str());
+				break;
+
+		//General events
+		case IPCM_IPCP_CREATED:
+				LOG_DBG("The IPCP '%s'(%d) has been created",
+							ipcp_name.c_str(),
+							event.ipcp_id);
+				break;
+		case IPCM_IPCP_CRASHED:
+				LOG_DBG("IPCP '%s'(%d) has CRASHED!",
+							ipcp_name.c_str(),
+							event.ipcp_id);
+				break;
+		case IPCM_IPCP_TO_BE_DESTROYED:
+				LOG_DBG("IPCP '%s'(%d) is about to be destroyed...",
+							ipcp_name.c_str(),
+							event.ipcp_id);
+				break;
+		case IPCM_IPCP_UPDATED:
+				LOG_DBG("The configuration of the IPCP '%s'(%d) has been updated",
+							ipcp_name.c_str(),
+							event.ipcp_id);
+				break;
+	}
+
 }
 
 
