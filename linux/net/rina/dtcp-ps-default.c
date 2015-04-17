@@ -126,7 +126,7 @@ default_lost_control_pdu(struct dtcp_ps * ps)
                 return -1;
         }
 
-        if (pdu_send(dtcp, pdu_ctrl))
+        if (dtcp_pdu_send(dtcp, pdu_ctrl))
                 return -1;
 #endif
 
@@ -216,7 +216,7 @@ default_receiving_flow_control(struct dtcp_ps * ps, seq_num_t seq)
         LOG_DBG("DTCP Sending FC (CPU: %d)", smp_processor_id());
         dump_we(dtcp, pdu_pci_get_rw(pdu));
 
-        if (pdu_send(dtcp, pdu))
+        if (dtcp_pdu_send(dtcp, pdu))
                 return -1;
 
         return 0;

@@ -620,6 +620,7 @@ int dt_sv_window_closed_set(struct dt * dt, bool closed)
 
         return 0;
 }
+EXPORT_SYMBOL(dt_sv_window_closed_set);
 
 timeout_t dt_sv_tr(struct dt * dt)
 {

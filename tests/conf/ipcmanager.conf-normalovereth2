@@ -58,7 +58,7 @@
                 "qosIdLength": 2,
                 "sequenceNumberLength": 4,
                 "maxPduSize": 10000,
-                "maxPduLifetime": 30
+                "maxPduLifetime": 60000
             },
             "configParameters": {
                 "bar": "foo"

@@ -28,14 +28,18 @@
 namespace rinad {
 
 //Class SecurityManager
-SecurityManager::SecurityManager()
-{
-  ipcp = 0;
-}
 
-void SecurityManager::set_ipc_process(IPCProcess * ipc_process)
+void SecurityManager::set_application_process(rina::ApplicationProcess * ap)
 {
-  ipcp = ipc_process;
+	if (!ap)
+			return;
+
+	app = ap;
+	ipcp = dynamic_cast<IPCProcess*>(app);
+	if (!ipcp) {
+			LOG_ERR("Bogus instance of IPCP passed, return");
+			return;
+	}
 }
 
 void SecurityManager::set_dif_configuration(
@@ -47,14 +51,14 @@ void SecurityManager::set_dif_configuration(
 int SecurityManager::select_policy_set(const std::string& path,
                                        const std::string& name)
 {
-  return select_policy_set_common(ipcp, "security-manager", path, name);
+        return select_policy_set_common(get_name(), path, name);
 }
 
 int SecurityManager::set_policy_set_param(const std::string& path,
                                           const std::string& name,
                                           const std::string& value)
 {
-  return set_policy_set_param_common(ipcp, path, name, value);
+        return set_policy_set_param_common(path, name, value);
 }
 
 }
