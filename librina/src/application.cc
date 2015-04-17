@@ -74,6 +74,11 @@ ApplicationEntityInstance * ApplicationEntity::get_instance(const std::string& i
 		return instances.find(instance_id);
 }
 
+std::list<ApplicationEntityInstance*> ApplicationEntity::get_all_instances()
+{
+		return instances.getEntries();
+}
+
 int ApplicationEntity::select_policy_set_common(const std::string& component,
                                            	   const std::string& path,
                                            	   const std::string& ps_name)
@@ -182,6 +187,11 @@ ApplicationEntity * ApplicationProcess::remove_entity(const std::string& name)
 ApplicationEntity * ApplicationProcess::get_entity(const std::string& name)
 {
 		return entities.find(name);
+}
+
+std::list<ApplicationEntity*> ApplicationProcess::get_all_entities()
+{
+		return entities.getEntries();
 }
 
 }

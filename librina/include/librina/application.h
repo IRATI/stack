@@ -27,6 +27,7 @@
 
 #include <map>
 #include <string>
+#include <list>
 
 #include "librina/patterns.h"
 #include "librina/concurrency.h"
@@ -86,6 +87,7 @@ public:
 		void add_instance(ApplicationEntityInstance * instance);
 		ApplicationEntityInstance * remove_instance(const std::string& instance_id);
 		ApplicationEntityInstance * get_instance(const std::string& instance_id);
+		std::list<ApplicationEntityInstance*> get_all_instances();
 
         virtual int select_policy_set(const std::string& path,
                                       const std::string& name) {
@@ -169,6 +171,7 @@ public:
 		void add_entity(ApplicationEntity * entity);
 		ApplicationEntity * remove_entity(const std::string& name);
 		ApplicationEntity * get_entity(const std::string& name);
+		std::list<ApplicationEntity*> get_all_entities();
 
 		//Policy management
         virtual std::vector<PsFactory>::iterator
