@@ -119,9 +119,9 @@ void NMinusOneFlowManager::allocateRequestResult(const rina::AllocateFlowRequest
 
 void NMinusOneFlowManager::flowAllocationRequested(const rina::FlowRequestEvent& event) {
 	if (event.localApplicationName.processName.compare(
-			ipc_process_->name_.processName) != 0 ||
+			ipc_process_->get_name()) != 0 ||
 			event.localApplicationName.processInstance.compare(
-					ipc_process_->name_.processInstance) != 0) {
+					ipc_process_->get_instance()) != 0) {
 		LOG_ERR("Rejected flow request from %s-%s since this IPC Process is not the intended target of this flow",
 				event.remoteApplicationName.processName.c_str(),
 				event.remoteApplicationName.processInstance.c_str());
@@ -352,7 +352,7 @@ unsigned int NMinusOneFlowManager::numberOfFlowsToNeighbour(const std::string& a
 }
 
 //CLASS Resource Allocator
-ResourceAllocator::ResourceAllocator() {
+ResourceAllocator::ResourceAllocator() : IResourceAllocator() {
 	n_minus_one_flow_manager_ = new NMinusOneFlowManager();
 	ipcp = 0;
 }
@@ -363,14 +363,20 @@ ResourceAllocator::~ResourceAllocator() {
 	}
 }
 
-void ResourceAllocator::set_ipc_process(IPCProcess * ipc_process) {
-	if (!ipc_process) {
-		return;
+void ResourceAllocator::set_application_process(rina::ApplicationProcess * ap)
+{
+	if (!ap)
+			return;
+
+	app = ap;
+	ipcp = dynamic_cast<IPCProcess*>(app);
+	if (!ipcp) {
+			LOG_ERR("Bogus instance of IPCP passed, return");
+			return;
 	}
 
-	ipcp = ipc_process;
 	if (n_minus_one_flow_manager_) {
-		n_minus_one_flow_manager_->set_ipc_process(ipc_process);
+		n_minus_one_flow_manager_->set_ipc_process(ipcp);
 	}
 }
 
@@ -387,15 +393,14 @@ INMinusOneFlowManager * ResourceAllocator::get_n_minus_one_flow_manager() const 
 int ResourceAllocator::select_policy_set(const std::string& path,
                                      const std::string& name)
 {
-  return select_policy_set_common(ipcp, "resource-allocator",
-                                  path, name);
+  return select_policy_set_common(get_name(), path, name);
 }
 
 int ResourceAllocator::set_policy_set_param(const std::string& path,
                                         const std::string& name,
                                         const std::string& value)
 {
-  return set_policy_set_param_common(ipcp, path, name, value);
+  return set_policy_set_param_common(path, name, value);
 }
 
 //Class DIF registration RIB Object

@@ -22,6 +22,7 @@ allsources =							\
         exceptions.cc						\
         librina.cc						\
         common.cc						\
+        ipc-api.cc                                              \
         application.cc						\
         configuration.cc					\
         ipc-daemons.cc						\

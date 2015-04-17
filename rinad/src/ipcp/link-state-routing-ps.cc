@@ -67,8 +67,8 @@ int LinkStateRoutingPs::set_policy_set_param(const std::string& name,
         return -1;
 }
 
-extern "C" IPolicySet *
-createRoutingComponentPs(IPCProcessComponent * ctx)
+extern "C" rina::IPolicySet *
+createRoutingComponentPs(rina::ApplicationEntity * ctx)
 {
 		IRoutingComponent * rc = dynamic_cast<IRoutingComponent *>(ctx);
 
@@ -80,7 +80,7 @@ createRoutingComponentPs(IPCProcessComponent * ctx)
 }
 
 extern "C" void
-destroyRoutingComponentPs(IPolicySet * ps)
+destroyRoutingComponentPs(rina::IPolicySet * ps)
 {
         if (ps) {
                 delete ps;

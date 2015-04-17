@@ -141,8 +141,8 @@ int FlowAllocatorPs::set_policy_set_param(const std::string& name,
         return -1;
 }
 
-extern "C" IPolicySet *
-createFlowAllocatorPs(IPCProcessComponent * ctx)
+extern "C" rina::IPolicySet *
+createFlowAllocatorPs(rina::ApplicationEntity * ctx)
 {
         IFlowAllocator * sm = dynamic_cast<IFlowAllocator *>(ctx);
 
@@ -154,7 +154,7 @@ createFlowAllocatorPs(IPCProcessComponent * ctx)
 }
 
 extern "C" void
-destroyFlowAllocatorPs(IPolicySet * ps)
+destroyFlowAllocatorPs(rina::IPolicySet * ps)
 {
         if (ps) {
                 delete ps;

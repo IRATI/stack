@@ -439,7 +439,9 @@ public:
                 rina::ScopedLock g(*lock_);
                 for(iterator = map.begin();
                                 iterator != map.end(); ++iterator){
-                        delete iterator->second;
+                		if (iterator->second) {
+                				delete iterator->second;
+                		}
                 }
         }
 

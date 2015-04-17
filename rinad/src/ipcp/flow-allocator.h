@@ -32,8 +32,11 @@
 namespace rinad {
 
 /// Flow Allocator Instance Interface
-class IFlowAllocatorInstance : public rina::BaseCDAPResponseMessageHandler {
+class IFlowAllocatorInstance : public rina::BaseCDAPResponseMessageHandler,
+							   public rina::ApplicationEntityInstance {
 public:
+	IFlowAllocatorInstance(const std::string& instance_id) :
+		rina::ApplicationEntityInstance(instance_id) { };
 	virtual ~IFlowAllocatorInstance() {
 	}
 	;
@@ -173,9 +176,9 @@ public:
 class FlowAllocator: public IFlowAllocator {
 public:
 	FlowAllocator();
-	~FlowAllocator();
+	~FlowAllocator() { };
 	IFlowAllocatorInstance * getFAI(int portId);
-	void set_ipc_process(IPCProcess * ipc_process);
+	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
         int select_policy_set(const std::string& path, const std::string& name);
         int set_policy_set_param(const std::string& path,
@@ -200,9 +203,6 @@ public:
         void destroyFlow(Flow *flow) { if (flow) delete flow; }
 
 private:
-	/// Flow allocator instances, each one associated to a port-id
-	rina::ThreadSafeMapOfPointers<int, IFlowAllocatorInstance> flow_allocator_instances_;
-
 	IPCPRIBDaemon * rib_daemon_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 	rina::IMasterEncoder * encoder_;
@@ -233,10 +233,12 @@ public:
 	FlowAllocatorInstance(IPCProcess * ipc_process,
 			IFlowAllocator * flow_allocator,
 			rina::CDAPSessionManagerInterface * cdap_session_manager,
-			int port_id);
+			int port_id, const std::string& instance_id);
 	FlowAllocatorInstance(IPCProcess * ipc_process,
-			IFlowAllocator * flow_allocator, int port_id);
+			IFlowAllocator * flow_allocator, int port_id,
+			const std::string& instance_id);
 	~FlowAllocatorInstance();
+	void set_application_entity(rina::ApplicationEntity * ae);
 	int get_port_id() const;
 	Flow * get_flow() const;
 	bool isFinished() const;

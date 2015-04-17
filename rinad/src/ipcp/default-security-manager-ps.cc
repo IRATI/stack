@@ -69,8 +69,8 @@ int SecurityManagerPs::set_policy_set_param(const std::string& name,
         return -1;
 }
 
-extern "C" IPolicySet *
-createSecurityManagerPs(IPCProcessComponent * ctx)
+extern "C" rina::IPolicySet *
+createSecurityManagerPs(rina::ApplicationEntity * ctx)
 {
         ISecurityManager * sm = dynamic_cast<ISecurityManager *>(ctx);
 
@@ -82,7 +82,7 @@ createSecurityManagerPs(IPCProcessComponent * ctx)
 }
 
 extern "C" void
-destroySecurityManagerPs(IPolicySet * ps)
+destroySecurityManagerPs(rina::IPolicySet * ps)
 {
         if (ps) {
                 delete ps;

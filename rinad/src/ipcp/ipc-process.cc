@@ -40,67 +40,67 @@ namespace rinad {
 //Class IPCProcessImpl
 IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& nm,
 		unsigned short id, unsigned int ipc_manager_port,
-		std::string log_level, std::string log_file) {
-	try {
-		std::stringstream ss;
-		ss << IPCP_LOG_FILE_PREFIX << "-" << id;
-		rina::initialize(log_level, log_file);
-		rina::extendedIPCManager->ipcManagerPort = ipc_manager_port;
-		rina::extendedIPCManager->ipcProcessId = id;
-		rina::kernelIPCProcess->ipcProcessId = id;
-		LOG_INFO("Librina initialized");
-	} catch (rina::Exception &e) {
-        std::cerr << "Cannot initialize librina" << std::endl;
-        exit(EXIT_FAILURE);
-	}
+		std::string log_level, std::string log_file) : IPCProcess(nm.processName, nm.processInstance)
+{
+		try {
+				std::stringstream ss;
+				ss << IPCP_LOG_FILE_PREFIX << "-" << id;
+				rina::initialize(log_level, log_file);
+				rina::extendedIPCManager->ipcManagerPort = ipc_manager_port;
+				rina::extendedIPCManager->ipcProcessId = id;
+				rina::kernelIPCProcess->ipcProcessId = id;
+				LOG_INFO("Librina initialized");
+		} catch (rina::Exception &e) {
+			std::cerr << "Cannot initialize librina" << std::endl;
+			exit(EXIT_FAILURE);
+		}
 
-	name_ = nm;
-	state = NOT_INITIALIZED;
-	lock_ = new rina::Lockable();
+		state = NOT_INITIALIZED;
+		lock_ = new rina::Lockable();
 
-        // Load the default pluggable components
+        	// Load the default pluggable components
         if (plugin_load("default")) {
-                throw rina::Exception("Failed to load default plugin");
+        		throw rina::Exception("Failed to load default plugin");
         }
 
-	// Initialize subcomponents
-	init_cdap_session_manager();
-	init_encoder();
+        // Initialize application entities
+        init_cdap_session_manager();
+        init_encoder();
 
-	delimiter_ = 0; //TODO initialize Delimiter once it is implemented
-	enrollment_task_ = new EnrollmentTask();
-	flow_allocator_ = new FlowAllocator();
-	namespace_manager_ = new NamespaceManager();
-	resource_allocator_ = new ResourceAllocator();
-	security_manager_ = new SecurityManager();
-	routing_component_ = new RoutingComponent();
-	rib_daemon_ = new IPCPRIBDaemonImpl();
+        delimiter_ = 0; //TODO initialize Delimiter once it is implemented
+        enrollment_task_ = new EnrollmentTask();
+        flow_allocator_ = new FlowAllocator();
+        namespace_manager_ = new NamespaceManager();
+        resource_allocator_ = new ResourceAllocator();
+        security_manager_ = new SecurityManager();
+        routing_component_ = new RoutingComponent();
+        rib_daemon_ = new IPCPRIBDaemonImpl();
 
-	rib_daemon_->set_ipc_process(this);
-	enrollment_task_->set_ipc_process(this);
-	resource_allocator_->set_ipc_process(this);
-	namespace_manager_->set_ipc_process(this);
-	flow_allocator_->set_ipc_process(this);
-	security_manager_->set_ipc_process(this);
-	routing_component_->set_ipc_process(this);
+		add_entity(rib_daemon_);
+		add_entity(enrollment_task_);
+		add_entity(resource_allocator_);
+		add_entity(namespace_manager_);
+		add_entity(flow_allocator_);
+		add_entity(security_manager_);
+		add_entity(routing_component_);
 
         // Select the default policy sets
-        security_manager_->select_policy_set(std::string(), "default");
+        security_manager_->select_policy_set(std::string(), rina::IPolicySet::DEFAULT_PS_SET_NAME);
         if (!security_manager_->ps) {
                 throw rina::Exception("Cannot create security manager policy-set");
         }
 
-        flow_allocator_->select_policy_set(std::string(), "default");
+        flow_allocator_->select_policy_set(std::string(), rina::IPolicySet::DEFAULT_PS_SET_NAME);
         if (!flow_allocator_->ps) {
                 throw rina::Exception("Cannot create flow allocator policy-set");
         }
 
-        namespace_manager_->select_policy_set(std::string(), "default");
+        namespace_manager_->select_policy_set(std::string(), rina::IPolicySet::DEFAULT_PS_SET_NAME);
         if (!namespace_manager_->ps) {
                 throw rina::Exception("Cannot create namespace manager policy-set");
         }
 
-        resource_allocator_->select_policy_set(std::string(), "default");
+        resource_allocator_->select_policy_set(std::string(), rina::IPolicySet::DEFAULT_PS_SET_NAME);
         if (!resource_allocator_->ps) {
                 throw rina::Exception("Cannot create resource allocator policy-set");
         }
@@ -110,17 +110,18 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
                 throw rina::Exception("Cannot create routing component policy-set");
         }
 
-	try {
-		rina::extendedIPCManager->notifyIPCProcessInitialized(name_);
-	} catch (rina::Exception &e) {
-		LOG_ERR("Problems communicating with IPC Manager: %s. Exiting... ", e.what());
-		exit(EXIT_FAILURE);
-	}
+        try {
+        		rina::ApplicationProcessNamingInformation naming_info(name_, instance_);
+        		rina::extendedIPCManager->notifyIPCProcessInitialized(naming_info);
+        } catch (rina::Exception &e) {
+        		LOG_ERR("Problems communicating with IPC Manager: %s. Exiting... ", e.what());
+        		exit(EXIT_FAILURE);
+        }
 
-	state = INITIALIZED;
+        state = INITIALIZED;
 
-	LOG_INFO("Initialized IPC Process with name: %s, instance %s, id %hu ",
-			name_.processName.c_str(), name_.processInstance.c_str(), id);
+        LOG_INFO("Initialized IPC Process with name: %s, instance %s, id %hu ",
+        		name_.c_str(), instance_.c_str(), id);
 }
 
 IPCProcessImpl::~IPCProcessImpl() {
@@ -145,35 +146,35 @@ IPCProcessImpl::~IPCProcessImpl() {
 	}
 
 	if (flow_allocator_) {
-		psDestroy("flow-allocator",
+		psDestroy(IPCProcessComponent::FLOW_ALLOCATOR_AE_NAME,
                    flow_allocator_->selected_ps_name,
                    flow_allocator_->ps);
 		delete flow_allocator_;
 	}
 
 	if (namespace_manager_) {
-		psDestroy("namespace-manager",
+		psDestroy(IPCProcessComponent::NAMESPACE_MANAGER_AE_NAME,
                    namespace_manager_->selected_ps_name,
                    namespace_manager_->ps);
 		delete namespace_manager_;
 	}
 
 	if (resource_allocator_) {
-		psDestroy("resource-allocator",
+		psDestroy(IPCProcessComponent::RESOURCE_ALLOCATOR_AE_NAME,
 					resource_allocator_->selected_ps_name,
 					resource_allocator_->ps);
 		delete resource_allocator_;
 	}
 
 	if (security_manager_) {
-		psDestroy("security-manager",
+		psDestroy(IPCProcessComponent::SECURITY_MANAGER_AE_NAME,
                    security_manager_->selected_ps_name,
                    security_manager_->ps);
         delete security_manager_;
 	}
 
 	if (routing_component_) {
-		psDestroy("routing",
+		psDestroy(IPCProcessComponent::ROUTING_COMPONENT_AE_NAME,
 				routing_component_->selected_ps_name,
 				routing_component_->ps);
         delete routing_component_;
@@ -618,7 +619,7 @@ int IPCProcessImpl::plugin_load(const std::string& plugin_name)
 {
         std::string plugin_path = PLUGINSDIR;
         void *handle = NULL;
-        plugin_init_function_t init_func;
+        rina::plugin_init_function_t init_func;
         char *errstr;
         int ret;
 
@@ -641,7 +642,7 @@ int IPCProcessImpl::plugin_load(const std::string& plugin_name)
         dlerror();
 
         /* Try to load the init() function. */
-        init_func = (plugin_init_function_t)dlsym(handle, "init");
+        init_func = (rina::plugin_init_function_t)dlsym(handle, "init");
 
         /* Check if an error occurred in dlsym(). */
         errstr = dlerror();
@@ -672,7 +673,7 @@ int IPCProcessImpl::plugin_load(const std::string& plugin_name)
 int IPCProcessImpl::plugin_unload(const std::string& plugin_name)
 {
         std::map< std::string, void * >::iterator mit;
-        std::vector< std::vector<PsFactory>::iterator > unpublish_list;
+        std::vector< std::vector<rina::PsFactory>::iterator > unpublish_list;
 
         mit = plugins_handles.find(plugin_name);
         if (mit == plugins_handles.end()) {
@@ -683,9 +684,9 @@ int IPCProcessImpl::plugin_unload(const std::string& plugin_name)
         // Look for all the policy-sets published by the plugin
         // Note: Here we assume the plugin name is used as the "name"
         // argument in the psFactoryPublish() calls.
-        for (std::vector<PsFactory>::iterator
-                it = components_factories.begin();
-                        it != components_factories.end(); it++) {
+        for (std::vector<rina::PsFactory>::iterator
+                it = ae_policy_factories.begin();
+                        it != ae_policy_factories.end(); it++) {
                 if (it->plugin_name == plugin_name) {
                         if (it->refcnt > 0) {
                                 LOG_ERR("Cannot unload plugin %s: it is "
@@ -698,7 +699,7 @@ int IPCProcessImpl::plugin_unload(const std::string& plugin_name)
 
         // Unpublish all the policy sets published by this plugin
         for (unsigned int i = 0; i < unpublish_list.size(); i++) {
-                psFactoryUnpublish(unpublish_list[i]->component,
+                psFactoryUnpublish(unpublish_list[i]->app_entity,
                                    unpublish_list[i]->name);
         }
 
@@ -709,54 +710,54 @@ int IPCProcessImpl::plugin_unload(const std::string& plugin_name)
         return 0;
 }
 
-std::vector<PsFactory>::iterator
-IPCProcessImpl::psFactoryLookup(const std::string& component,
-                                       const std::string& name)
+std::vector<rina::PsFactory>::iterator
+IPCProcessImpl::psFactoryLookup(const std::string& ae_name,
+                                const std::string& name)
 {
-        for (std::vector<PsFactory>::iterator
-                it = components_factories.begin();
-                        it != components_factories.end(); it++) {
-                if (it->component == component &&
+        for (std::vector<rina::PsFactory>::iterator
+                it = ae_policy_factories.begin();
+                        it != ae_policy_factories.end(); it++) {
+                if (it->app_entity == ae_name &&
                                 it->name == name) {
                         return it;
                 }
         }
 
-        return components_factories.end();
+        return ae_policy_factories.end();
 }
 
-int IPCProcessImpl::psFactoryPublish(const PsFactory& factory)
+int IPCProcessImpl::psFactoryPublish(const rina::PsFactory& factory)
 {
         // TODO check that factory.component is an existing component
 
         // Check if the (name, component) couple specified by 'factory'
         // has not already been published.
-        if (psFactoryLookup(factory.component, factory.name) !=
-                                                components_factories.end()) {
+        if (psFactoryLookup(factory.app_entity, factory.name) !=
+        							ae_policy_factories.end()) {
                 LOG_ERR("Factory %s for component %s already "
                                 "published", factory.name.c_str(),
-                                factory.component.c_str());
+                                factory.app_entity.c_str());
                 return -1;
         }
 
         // Add the new factory
-        components_factories.push_back(factory);
-        components_factories.back().refcnt = 0;
+        ae_policy_factories.push_back(factory);
+        ae_policy_factories.back().refcnt = 0;
 
         LOG_INFO("Pluggable component '%s'/'%s' [%s] published",
-                 factory.component.c_str(), factory.name.c_str(),
+                 factory.app_entity.c_str(), factory.name.c_str(),
                  factory.plugin_name.c_str());
 
         return 0;
 }
 
 int IPCProcessImpl::psFactoryUnpublish(const std::string& component,
-                                              const std::string& name)
+                                       const std::string& name)
 {
-        std::vector<PsFactory>::iterator fi;
+        std::vector<rina::PsFactory>::iterator fi;
 
         fi = psFactoryLookup(component, name);
-        if (fi == components_factories.end()) {
+        if (fi == ae_policy_factories.end()) {
                 LOG_ERR("Factory %s for component %s not "
                                 "published", name.c_str(),
                                 component.c_str());
@@ -764,24 +765,24 @@ int IPCProcessImpl::psFactoryUnpublish(const std::string& component,
         }
 
         LOG_INFO("Pluggable component '%s'/'%s' [%s] unpublished",
-                 fi->component.c_str(), fi->name.c_str(),
+                 fi->app_entity.c_str(), fi->name.c_str(),
                  fi->plugin_name.c_str());
 
-        components_factories.erase(fi);
+        ae_policy_factories.erase(fi);
 
         return 0;
 }
 
-IPolicySet *
+rina::IPolicySet *
 IPCProcessImpl::psCreate(const std::string& component,
-                                       const std::string& name,
-                                       IPCProcessComponent * context)
+                         const std::string& name,
+                         rina::ApplicationEntity * context)
 {
-        std::vector<PsFactory>::iterator it;
-        IPolicySet *ps = NULL;
+        std::vector<rina::PsFactory>::iterator it;
+        rina::IPolicySet *ps = NULL;
 
         it = psFactoryLookup(component, name);
-        if (it == components_factories.end()) {
+        if (it == ae_policy_factories.end()) {
                 LOG_ERR("Pluggable component %s/%s not found",
                         component.c_str(), name.c_str());
                 return NULL;
@@ -796,13 +797,13 @@ IPCProcessImpl::psCreate(const std::string& component,
 }
 
 int IPCProcessImpl::psDestroy(const std::string& component,
-                                            const std::string& name,
-                                            IPolicySet * instance)
+                              const std::string& name,
+                              rina::IPolicySet * instance)
 {
-        std::vector<PsFactory>::iterator it;
+        std::vector<rina::PsFactory>::iterator it;
 
         it = psFactoryLookup(component, name);
-        if (it == components_factories.end()) {
+        if (it == ae_policy_factories.end()) {
                 LOG_ERR("Pluggable component %s/%s not found",
                         component.c_str(), name.c_str());
                 return -1;
