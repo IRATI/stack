@@ -337,6 +337,16 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 
 	//TODO do stuff
 	LOG_DBG("The kernel processed successfully the Assign to DIF request");
+
+        std::list<rina::Parameter>& policy_sets_config =
+                                dif_information_.dif_configuration_.policy_sets;
+        for (std::list<rina::Parameter>::iterator
+                        it = policy_sets_config.begin();
+                                it != policy_sets_config.end(); it++) {
+                LOG_DBG("POLICY SET CONFIG: Component=%s, PSName=%s",
+                                it->name.c_str(), it->value.c_str());
+        }
+
 	try{
 		rib_daemon_->set_dif_configuration(dif_information_.dif_configuration_);
 		resource_allocator_->set_dif_configuration(dif_information_.dif_configuration_);
