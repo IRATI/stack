@@ -108,6 +108,7 @@ public:
 	char get_separator() const;
 	void addRIBObject(BaseRIBObject* rib_object);
 	std::string get_parent_name(const std::string child_name) const;
+  const cdap_rib::vers_info_t& get_version() const;
 private:
 	std::map<std::string, RIBIntObject*> rib_by_name_;
 	std::map<long, RIBIntObject*> rib_by_instance_;
@@ -302,6 +303,11 @@ std::string RIB::get_parent_name(const std::string child_name) const{
 
 }
 
+const cdap_rib::vers_info_t& RIB::get_version() const
+{
+  return rib_schema_->get_version();
+}
+
 /// Interface that provides the RIB Daemon API
 class RIBDaemon : public RIBDNorthInterface, cdap::CDAPCallbackInterface {
 
@@ -364,6 +370,9 @@ public:
 	BaseRIBObject* getObject(unsigned long instance,
 			const std::string& clas) const;
 	void process_message(cdap_rib::SerializedObject &message, int port);
+  void remote_open_connection(const cdap_rib::src_info_t &src,
+                              const cdap_rib::dest_info_t &dest, const cdap_rib::auth_info &auth,
+                              int port);
 
 private:
 	cacep::AppConHandlerInterface *app_con_callback_;
@@ -665,6 +674,12 @@ void RIBDaemon::process_message(cdap_rib::SerializedObject &message, int port){
 	cdap_provider_->process_message(message, port);
 }
 
+void RIBDaemon::remote_open_connection(const cdap_rib::src_info_t &src,
+                                       const cdap_rib::dest_info_t &dest, const cdap_rib::auth_info &auth,
+                                       int port)
+{
+  cdap_provider_->remote_open_connection(rib_->get_version(), src, dest, auth, port);
+}
 // CLASS AbstractEncoder
 AbstractEncoder::~AbstractEncoder()
 {}
@@ -995,6 +1010,11 @@ return "";
 char RIBSchema::get_separator() const{
 
 	return separator_;
+}
+
+const cdap_rib::vers_info_t& RIBSchema::get_version() const
+{
+  return *version_;
 }
 
 // CLASS RIBDFactory

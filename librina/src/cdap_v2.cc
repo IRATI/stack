@@ -510,12 +510,12 @@ class CDAPProvider : public CDAPProviderInterface
   CDAPProvider(cdap::CDAPCallbackInterface *callback,
                CDAPSessionManager *manager);
   ~CDAPProvider();
-  cdap_rib::con_handle_t open_connection(const cdap_rib::vers_info_t &ver,
+  cdap_rib::con_handle_t remote_open_connection(const cdap_rib::vers_info_t &ver,
                                          const cdap_rib::src_info_t &src,
                                          const cdap_rib::dest_info_t &dest,
                                          const cdap_rib::auth_info &auth,
                                          int port);
-  int close_connection(cdap_rib::con_handle_t &con);
+  int remote_close_connection(int port_id);
   int remote_create(const cdap_rib::con_handle_t &con,
                     const cdap_rib::obj_info_t &obj,
                     const cdap_rib::flags_t &flags,
@@ -2717,7 +2717,7 @@ CDAPProvider::~CDAPProvider()
 {
 }
 
-cdap_rib::con_handle_t CDAPProvider::open_connection(
+cdap_rib::con_handle_t CDAPProvider::remote_open_connection(
     const cdap_rib::vers_info_t &ver, const cdap_rib::src_info_t &src,
     const cdap_rib::dest_info_t &dest, const cdap_rib::auth_info &auth,
     int port)
@@ -2739,7 +2739,7 @@ cdap_rib::con_handle_t CDAPProvider::open_connection(
   return con;
 }
 
-int CDAPProvider::close_connection(cdap_rib::con_handle_t &con)
+int CDAPProvider::remote_close_connection(int port_id)
 {
   int invoke_id;
   const cdap_m_t *m_sent;
@@ -2747,9 +2747,9 @@ int CDAPProvider::close_connection(cdap_rib::con_handle_t &con)
   // FIXME change cdap_rib::flags_t::NONE_FLAGS
   cdap_rib::flags_t flags;
   flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
-  m_sent = manager_->getReleaseConnectionRequestMessage(con.port_, flags, true);
+  m_sent = manager_->getReleaseConnectionRequestMessage(port_id, flags, true);
   invoke_id = m_sent->invoke_id_;
-  send(m_sent, con.port_);
+  send(m_sent, port_id);
 
   delete m_sent;
 

@@ -97,11 +97,11 @@ class CDAPProviderInterface
   {
   }
   ;
-  virtual cdap_rib::con_handle_t open_connection(
+  virtual cdap_rib::con_handle_t remote_open_connection(
       const cdap_rib::vers_info_t &ver, const cdap_rib::src_info_t &src,
       const cdap_rib::dest_info_t &dest, const cdap_rib::auth_info &auth,
       int port) = 0;
-  virtual int close_connection(cdap_rib::con_handle_t &con) = 0;
+  virtual int remote_close_connection(int port_id) = 0;
   virtual int remote_create(const cdap_rib::con_handle_t &con,
                             const cdap_rib::obj_info_t &obj,
                             const cdap_rib::flags_t &flags,

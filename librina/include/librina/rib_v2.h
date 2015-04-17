@@ -318,6 +318,9 @@ public:
 	virtual BaseRIBObject* getObject(unsigned long instance,
 			const std::string& clas) const = 0;
 	virtual void process_message(cdap_rib::SerializedObject &message, int port) = 0;
+  virtual void remote_open_connection(const cdap_rib::src_info_t &src,
+                                      const cdap_rib::dest_info_t &dest, const cdap_rib::auth_info &auth,
+                                      int port) = 0;
 };
 
 /**
@@ -367,6 +370,7 @@ public:
 			const bool mandatory,
 			const unsigned max_objs);
 	char get_separator() const;
+	const cdap_rib::vers_info_t& get_version() const;
 private:
 	bool validateAddObject(const BaseRIBObject* obj);
 	bool validateRemoveObject(const BaseRIBObject* obj,

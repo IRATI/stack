@@ -292,21 +292,46 @@ void* ActiveWorker::run(void* param)
 
                 //Allocate the flow
                 flow = allocateFlow();
+                if(flow)
+                {
+                        char buffer[max_sdu_size_in_bytes];
+                        rina::cdap_rib::src_info_t src;
+                        src.ap_name_ = flow->getLocalApplicationName().processName;
+                        src.ae_name_ = flow->getLocalApplicationName().entityName;
+                        src.ap_inst_ = flow->getLocalApplicationName().processInstance;
+                        src.ae_inst_ = flow->getLocalApplicationName().entityInstance;
+                        rina::cdap_rib::dest_info_t dest;
+                        dest.ap_name_ = flow->getRemoteApplcationName().processName;
+                        dest.ae_name_ = flow->getRemoteApplcationName().entityName;
+                        dest.ap_inst_ = flow->getRemoteApplcationName().processInstance;
+                        dest.ae_inst_ = flow->getRemoteApplcationName().entityInstance;
+                        rina::cdap_rib::auth_info auth;
+                        auth.auth_mech_ = auth.AUTH_NONE;
 
-                if (!flow) {
-                        usleep(FM_FALLOC_ALLOC_RETRY_US);
-                        continue;
+                        std::cout << "open conection request CDAP message sent" << std::endl;
+                        rib_factory_->getRIB(1).remote_open_connection(src, dest, auth,
+                                                           flow->getPortId());
+                        int bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
+                        rina::cdap_rib::SerializedObject message;
+                        message.message_ = buffer;
+                        message.size_ = bytes_read;
+                        rib_factory_->getRIB(1).process_message(message, flow->getPortId());
+                        std::cout << "open conection response CDAP message received" << std::endl;
                 }
-
-                char buffer[max_sdu_size_in_bytes];
-                int bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
-                rina::cdap_rib::SerializedObject message;
-                message.message_ = buffer;
-                message.size_ = bytes_read;
-                // FIXME change this when multiple rib versions
-                //(need librina rib and cdap refactor)
-                rib_factory_->getRIB(1).process_message(message,
-                                                        flow->getPortId());
+                while(flow)
+                {
+                        char buffer[max_sdu_size_in_bytes];
+                        int bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
+                        LOG_INFO("[DEBUG] received the create message");
+                        rina::cdap_rib::SerializedObject message;
+                        message.message_ = buffer;
+                        message.size_ = bytes_read;
+                        // FIXME change this when multiple rib versions
+                        //(need librina rib and cdap refactor)
+                        rib_factory_->getRIB(1).process_message(message,
+                                                                flow->getPortId());
+                }
+                usleep(FM_FALLOC_ALLOC_RETRY_US);
         }
 
         return NULL;
