@@ -168,7 +168,7 @@ RIBFactory* ManagementAgent::get_rib() const
 }
 
 //Initialization and destruction routines
-ManagementAgent::ManagementAgent(const std::string& conf_file) :
+ManagementAgent::ManagementAgent(const rinad::RINAConfiguration& config) :
 							AppAddon(MAD_NAME){
 
 	//Nice trace
@@ -177,7 +177,7 @@ ManagementAgent::ManagementAgent(const std::string& conf_file) :
 	//ConfManager must be initialized first, to
 	//proper configure the logging according to the cli level
 	//or the config file
-	conf_manager = new ConfManager(conf_file);
+	conf_manager = new ConfManager(config);
 
 	/*
 	* Initialize subsystems

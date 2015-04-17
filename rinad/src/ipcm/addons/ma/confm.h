@@ -26,6 +26,7 @@
 #include <list>
 #include <librina/application.h>
 #include <librina/common.h>
+#include <rina-configuration.h>
 
 /**
 * @file configuration.h
@@ -51,7 +52,7 @@ public:
 	/**
 	* Initialize running state
 	*/
-	ConfManager(const std::string& conf_file);
+	ConfManager(const rinad::RINAConfiguration& config);
 
 	/**
 	* Destroy the running state

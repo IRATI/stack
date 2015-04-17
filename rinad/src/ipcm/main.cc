@@ -148,7 +148,7 @@ int wrapped_main(int argc, char * argv[])
 		rinad::IPCManager->dumpConfig();
 
 	//Load addons
-	rinad::IPCManager->load_addons(addons, conf);
+	rinad::IPCManager->load_addons(addons);
 
 	//Run the loop
 	rinad::IPCManager->run();

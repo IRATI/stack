@@ -18,14 +18,14 @@ namespace mad{
 Singleton<ConfManager> ConfManager;
 
 //Public constructor destructor
-ConfManager::ConfManager(const std::string& conf_file){
+ConfManager::ConfManager(const rinad::RINAConfiguration& config){
 
 	Json::Reader    reader;
 	Json::Value     root;
         Json::Value     mad_conf;
 	std::ifstream   fin;
 
-	fin.open(conf_file.c_str());
+	fin.open(config.configuration_file.c_str());
 	if (fin.fail()) {
 		LOG_ERR("Failed to open config file");
 		return;

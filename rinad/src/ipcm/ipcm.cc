@@ -112,8 +112,7 @@ void IPCManager_::init(const std::string& loglevel)
 }
 
 void
-IPCManager_::load_addons(const std::string& addon_list,
-			 const string& conf_file){
+IPCManager_::load_addons(const std::string& addon_list){
 
 	std::string al = addon_list;
 
@@ -127,7 +126,7 @@ IPCManager_::load_addons(const std::string& addon_list,
 		//Remove whitespaces
 		t.erase(std::remove_if( t.begin(), t.end(), ::isspace ),
 								t.end() );
-		Addon* addon = Addon::factory(config, conf_file, t);
+		Addon* addon = Addon::factory(config, t);
 
 		if(!addon){
 			LOG_CRIT("Unable to bootstrap addon '%s'. Aborting...",

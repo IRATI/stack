@@ -37,8 +37,7 @@ rina::Lockable Addon::mutex;
 std::list<Addon*> Addon::event_subscribers;
 
 //Factory
-Addon* Addon::factory(rinad::RINAConfiguration& conf,
-		      const std::string& conf_file,
+Addon* Addon::factory(rinad::RINAConfiguration& config,
 		      const std::string& name){
 
 	Addon* addon = NULL;
@@ -47,9 +46,9 @@ Addon* Addon::factory(rinad::RINAConfiguration& conf,
 		//TODO this is a transitory solution. A proper auto-registering
 		// to the factory would be the right way to go
 		if(name == "mad"){
-			addon = new mad::ManagementAgent(conf_file);
+			addon = new mad::ManagementAgent(config);
 		}else if(name == "console"){
-			addon = new IPCMConsole(conf.local.consolePort);
+			addon = new IPCMConsole(config.local.consolePort);
 		}else if(name == "scripting"){
 			addon = new ScriptingEngine();
 		}else{

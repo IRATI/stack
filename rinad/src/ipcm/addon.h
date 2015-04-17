@@ -68,7 +68,6 @@ public:
 	* Factory
 	*/
 	static Addon* factory(rinad::RINAConfiguration& conf,
-			      const std::string& conf_name,
 			      const std::string& name);
 
 protected:
