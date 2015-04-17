@@ -452,12 +452,12 @@ void parse_dif_configs(const Json::Value   & root,
                                      j < members.size();
                                      j++) {
                                         string value =
-                                                policy_sets.get(members[i],
+                                                policy_sets.get(members[j],
                                                              string())
                                                 .asString();
                                         props.policySets.insert
                                                 (pair<string, string>
-                                                 (members[i], value));
+                                                 (members[j], value));
                                 }
                         }
 
@@ -471,11 +471,11 @@ void parse_dif_configs(const Json::Value   & root,
                                      j < members.size();
                                      j++) {
                                         string value = policy_set_params
-							.get(members[i],
+							.get(members[j],
                                                         string()).asString();
                                         props.policySetParameters.insert
                                                 (pair<string, string>
-                                                 (members[i], value));
+                                                 (members[j], value));
                                 }
                         }
 
