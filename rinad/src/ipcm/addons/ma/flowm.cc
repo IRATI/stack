@@ -308,7 +308,6 @@ void* ActiveWorker::run(void* param)
                         rina::cdap_rib::auth_info auth;
                         auth.auth_mech_ = auth.AUTH_NONE;
 
-                        std::cout << "open conection request CDAP message sent" << std::endl;
                         rib_factory_->getRIB(1).remote_open_connection(src, dest, auth,
                                                            flow->getPortId());
                         int bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
@@ -316,13 +315,13 @@ void* ActiveWorker::run(void* param)
                         message.message_ = buffer;
                         message.size_ = bytes_read;
                         rib_factory_->getRIB(1).process_message(message, flow->getPortId());
-                        std::cout << "open conection response CDAP message received" << std::endl;
+                        LOG_DBG("Connection stablished between MAD and Manager");
                 }
                 while(flow)
                 {
                         char buffer[max_sdu_size_in_bytes];
                         int bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
-                        LOG_INFO("[DEBUG] received the create message");
+
                         rina::cdap_rib::SerializedObject message;
                         message.message_ = buffer;
                         message.size_ = bytes_read;
