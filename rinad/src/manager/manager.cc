@@ -99,7 +99,7 @@ ConnectionCallback::ConnectionCallback(rina::cdap::CDAPProviderInterface **prov)
         prov_ = prov;
 }
 
-void ConnectionCallback::remote_open_connection(
+void ConnectionCallback::open_connection(
                 const rina::cdap_rib::con_handle_t &con,
                 const rina::cdap_rib::flags_t &flags, int message_id)
 {
