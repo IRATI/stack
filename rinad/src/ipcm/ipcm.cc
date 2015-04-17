@@ -149,6 +149,7 @@ IPCManager_::create_ipcp(Addon* callee, CreateIPCPPromise* promise,
 	bool difCorrect = false;
 	std::string s;
 	SyscallTransState* trans;
+	int ipcp_id = -1;
 
 	try {
 		// Check that the AP name is not empty
@@ -174,13 +175,12 @@ IPCManager_::create_ipcp(Addon* callee, CreateIPCPPromise* promise,
 		//Call the factory
 		ipcp = ipcp_factory_.create(name, type);
 
-		//Auto release the write lock
-		rina::WriteScopedLock writelock(ipcp->rwlock, false);
+		//Get the ipcp_id and reduce locking scope
+		ipcp_id = ipcp->get_id();
 
 		//Set the promise
-		if (promise){
-			promise->ipcp_id = ipcp->get_id();
-		}
+		if (promise)
+			promise->ipcp_id = ipcp_id;
 
 		//TODO: this should be moved to the factory
 		//Moreover the API should be homgenized such that the
@@ -188,6 +188,9 @@ IPCManager_::create_ipcp(Addon* callee, CreateIPCPPromise* promise,
 			// Shim IPC processes are set as initialized
 			// immediately.
 			ipcp->setInitialized();
+
+			//Release the lock asap
+			ipcp->rwlock.unlock();
 
 			//And mark the promise as completed
 			if (promise) {
@@ -197,16 +200,20 @@ IPCManager_::create_ipcp(Addon* callee, CreateIPCPPromise* promise,
 
 			//Show a nice trace
 			ss << "IPC process " << name.toString() << " created "
-				"[id = " << ipcp->get_id() << "]" << endl;
+				"[id = " << ipcp_id << "]" << endl;
 			FLUSH_LOG(INFO, ss);
 
 			//Distribute the event to the addons
 			IPCMEvent addon_e(callee, IPCM_IPCP_CREATED,
-							ipcp->get_id());
+							ipcp_id);
 			Addon::distribute_ipcm_event(addon_e);
 
 			return IPCM_SUCCESS;
 		} else {
+
+			//Release the lock asap
+			ipcp->rwlock.unlock();
+
 			// Normal IPC processes can be set as
 			// initialized only when the corresponding
 			// IPC process daemon is initialized, so we
@@ -214,7 +221,7 @@ IPCManager_::create_ipcp(Addon* callee, CreateIPCPPromise* promise,
 
 			//Add transaction state
 			trans = new SyscallTransState(callee, promise,
-							ipcp->get_id());
+							ipcp_id);
 			if(!trans){
 				assert(0);
 				ss << "Failed to create IPC process '" <<
@@ -231,7 +238,7 @@ IPCManager_::create_ipcp(Addon* callee, CreateIPCPPromise* promise,
 			}
 			//Show a nice trace
 			ss << "IPC process " << name.toString() << " created and waiting for initialization"
-				"[id = " << ipcp->get_id() << "]" << endl;
+				"[id = " << ipcp_id << "]" << endl;
 			FLUSH_LOG(INFO, ss);
 
 		}
