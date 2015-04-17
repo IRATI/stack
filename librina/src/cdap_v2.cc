@@ -2596,6 +2596,7 @@ const cdap_rib::SerializedObject* GPBSerializer::serializeMessage(
         new cdap::impl::googleprotobuf::objVal_t();
     gpb_obj_val->set_byteval(cdapMessage.obj_value_.message_,
                              cdapMessage.obj_value_.size_);
+    gpfCDAPMessage.set_allocated_objvalue(gpb_obj_val);
   }
   /*
    switch (cdapMessage.get_obj_value()->isType()) {

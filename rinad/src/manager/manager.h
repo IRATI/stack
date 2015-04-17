@@ -49,7 +49,7 @@ class ConnectionCallback : public rina::cdap::CDAPCallbackInterface
 {
  public:
         ConnectionCallback(rina::cdap::CDAPProviderInterface **prov);
-        void open_connection(const rina::cdap_rib::con_handle_t &con,
+        void remote_open_connection(const rina::cdap_rib::con_handle_t &con,
                              const rina::cdap_rib::flags_t &flags,
                              int message_id);
         void remote_create_result(const rina::cdap_rib::con_handle_t &con,
