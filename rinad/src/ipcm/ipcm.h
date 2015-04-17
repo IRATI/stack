@@ -48,15 +48,6 @@
 #define PROMISE_RETRY_NSEC 10000000 //10ms
 #define _PROMISE_1_SEC_NSEC 1000000000
 
-#ifndef FLUSH_LOG
-	//Force log flushing
-	#define FLUSH_LOG(_lev_, _ss_)\
-			do{\
-				LOGF_##_lev_ ("%s", (_ss_).str().c_str());\
-				ss.str(string());\
-			}while (0)
-#endif //FLUSH_LOG
-
 namespace rinad {
 
 //
