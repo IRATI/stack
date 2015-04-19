@@ -178,6 +178,21 @@ string RINAConfiguration::toString() const
                                 pit != it->configParameters.end(); pit++) {
                         ss << "\t\t" << pit->first << ":" << pit->second << endl;
                 }
+
+                ss << "\tDUProtection configs:" << endl;
+                for (map<string, rina::DUProtectionConfiguration>::const_iterator
+                       dup_it = it->duProtectionConfs.begin();
+                       dup_it != it->duProtectionConfs.end(); dup_it++){
+                    ss << "\t\tN-1 DIF: " << dup_it->second.dif_name << endl;
+                    ss << "\t\tTTL: " << dup_it->second.TTL << endl;
+                    if (dup_it->second.enable_CRC)
+                        ss << "\t\tCRC: enabled" << endl;
+                    else
+                        ss << "\t\tCRC: disabled" << endl;
+                    ss << "\t\tenc: " << dup_it->second.encryption_cipher << endl;
+                    ss << "\t\tmac: " << dup_it->second.message_digest << endl;
+                    ss << "\t\tkey: " << dup_it->second.key << endl;
+                }
         }
 
         ss << "Application --> DIF mappings:" << endl;

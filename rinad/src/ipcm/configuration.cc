@@ -721,6 +721,31 @@ void parse_dif_configs(const Json::Value   & root,
                         }
                 }
 
+                //sduProtectionConfiguration
+                Json::Value duProtectionConfs = dif_configs[i]["duProtectionConfigurations"];
+                if (duProtectionConfs != 0){
+                        Json::Value::Members members =
+                                duProtectionConfs.getMemberNames();
+                        for (unsigned int j = 0; j < members.size(); j++) {
+                            rina::DUProtectionConfiguration& duconf = props.duProtectionConfs[members[j]];
+                            Json::Value duProtectionConf = duProtectionConfs[members[j]];
+
+                            duconf.dif_name = duProtectionConf
+                                .get("dif_name", duconf.dif_name).asString();
+                            duconf.TTL = duProtectionConf
+                                .get("TTL", duconf.TTL).asInt();
+                            duconf.enable_CRC = duProtectionConf
+                                .get("enable_CRC", duconf.enable_CRC).asBool();
+                            duconf.encryption_cipher = duProtectionConf
+                                .get("enc", duconf.encryption_cipher).asString();
+                            duconf.message_digest = duProtectionConf
+                                .get("mac", duconf.message_digest).asString();
+                            duconf.key = duProtectionConf
+                                .get("key", duconf.key).asString();
+                        }
+                }
+
+
                 difConfigurations.push_back(props);
         }
 }
@@ -800,6 +825,7 @@ void parse_ipc_to_create(const Json::Value          root,
                                                                      value));
                         }
                 }
+
 
                 // parameters
                 Json::Value params = ipc_processes[i]["parameters"];
