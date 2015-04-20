@@ -140,6 +140,7 @@
                 "security-manager" : "default",
                 "flow-allocator" : "default",
                 "namespace-manager" : "default",
+                "routing" : "link-state",
                 "resource-allocator" : "default"
             }
         }

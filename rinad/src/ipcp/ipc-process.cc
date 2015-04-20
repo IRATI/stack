@@ -463,6 +463,10 @@ void IPCProcessImpl::processSetPolicySetParamRequestEvent(
                 result = rib_daemon_->set_policy_set_param(remainder,
                                                           event.name,
                                                           event.value);
+        } else if (component == "routing") {
+                result = routing_component_->set_policy_set_param(remainder,
+                                                                  event.name,
+                                                                  event.value);
         } else {
                 got_in_userspace = false;
         }
@@ -559,6 +563,9 @@ int IPCProcessImpl::dispatchSelectPolicySet(const std::string& path,
         } else if (component == "rib-daemon") {
                 result = rib_daemon_->select_policy_set(remainder,
                                                         name);
+        } else if (component == "routing") {
+                result = routing_component_->select_policy_set(remainder,
+                                                               name);
         } else {
                 got_in_userspace = false;
         }
