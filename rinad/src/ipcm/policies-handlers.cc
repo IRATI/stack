@@ -81,36 +81,41 @@ void IPCManager_::ipc_process_plugin_load_response_handler(rina::PluginLoadRespo
         ostringstream ss;
         int ret = -1;
 
-	IPCPTransState* trans = get_transaction_state<IPCPTransState>(event->sequenceNumber);
+        IPCPTransState* trans = get_transaction_state<IPCPTransState>(event->sequenceNumber);
 
-	if(!trans){
-		ss << ": Warning: unknown plugin load response received: "<<event->sequenceNumber<<endl;
-		FLUSH_LOG(WARN, ss);
-		assert(0);
-		return;
-	}
+        if(!trans){
+        		ss << ": Warning: unknown plugin load response received: "
+        		   << event->sequenceNumber << endl;
+        		FLUSH_LOG(WARN, ss);
+        		assert(0);
+        		return;
+        }
 
-	IPCMIPCProcess* ipcp = lookup_ipcp_by_id(trans->ipcp_id);
-	if(!ipcp){
-		ss << "Could not complete policy set param. Invalid IPCP id "<< ipcp->get_id();
-		FLUSH_LOG(ERR, ss);
+        IPCMIPCProcess* ipcp = lookup_ipcp_by_id(trans->ipcp_id);
+        if(!ipcp){
+        		ss << "Could not complete policy set param. Invalid IPCP id "
+        		   << ipcp->get_id();
+        		FLUSH_LOG(ERR, ss);
 
-		trans->completed(IPCM_FAILURE);
-		remove_transaction_state(trans->tid);
-		return;
-	}
+        		trans->completed(IPCM_FAILURE);
+        		remove_transaction_state(trans->tid);
+        		return;
+        }
 
-	//Auto release the read lock
-	rina::ReadScopedLock readlock(ipcp->rwlock, false);
+        //Auto release the read lock
+        rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
-	ss << "plugin-load-op completed on IPC process "
-	       << ipcp->get_name().toString() <<
-		" [success=" << success << "]" << endl;
-	FLUSH_LOG(INFO, ss);
+        ss << "plugin-load-op completed on IPC process "
+	       << ipcp->get_name().toString()
+	       << " [success=" << success << "]" << endl;
+        FLUSH_LOG(INFO, ss);
 
-	//Mark as completed
-	trans->completed(IPCM_SUCCESS);
-	remove_transaction_state(trans->tid);
+        //Mark as completed
+        if (success)
+        		trans->completed(IPCM_SUCCESS);
+        else
+        		trans->completed(IPCM_FAILURE);
+        remove_transaction_state(trans->tid);
 }
 
 void IPCManager_::ipc_process_select_policy_set_response_handler(
