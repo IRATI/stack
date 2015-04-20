@@ -3,6 +3,7 @@
  *
  *    Eduard Grasa          <eduard.grasa@i2cat.net>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Marc Sune             <marc.sune (at) bisdn.de>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,10 +24,8 @@
 #ifndef LIBRINA_LOGS_H
 #define LIBRINA_LOGS_H
 
-#ifdef __cplusplus
-
-#include <cstdio>
-#include <string>
+#include <stdio.h>
+#include <string.h>
 #include <time.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -50,32 +49,30 @@ enum LOG_LEVEL {
 	DBG
 };
 
-const std::string LOG_LEVEL_DBG   = "DBG";
-const std::string LOG_LEVEL_INFO  = "INFO";
-const std::string LOG_LEVEL_NOTE  = "NOTE";
-const std::string LOG_LEVEL_WARN  = "WARN";
-const std::string LOG_LEVEL_ERR   = "ERR";
-const std::string LOG_LEVEL_CRIT  = "CRIT";
-const std::string LOG_LEVEL_ALERT = "ALERT";
-const std::string LOG_LEVEL_EMERG = "EMERG";
-
 /**
  * Global log level, default is INFO
  */
-extern LOG_LEVEL logLevel;
+extern enum LOG_LEVEL logLevel;
 
 /**
  * The stream where to print the log. If none is provided,
- * it sill be printed to stdout
+ * it will still be printed to stdout
  */
 extern FILE * logOutputStream;
+
+
+
+//Extern C
+#ifdef __cplusplus
+extern "C" {
+#endif //__cplusplus
 
 /**
  * Set the log level
  *
  * @param logLevel the new log level
  */
-void setLogLevel(const std::string & logLevel);
+void setLogLevel(const char* logLevel);
 
 /**
  * Set the output stream.
@@ -83,7 +80,7 @@ void setLogLevel(const std::string & logLevel);
  * @param pathToFile Path to the log file
  * @returns 0 if successful, -1 if there is an error
  */
-int setLogFile(const std::string & pathToFile);
+int setLogFile(const char* pathToFile);
 
 /**
  * Prints a log statement to the output stream, in case it can be done
@@ -92,13 +89,19 @@ int setLogFile(const std::string & pathToFile);
  * @param fmt a string with the print statement
  * @param ... multiple arguments for the string
  */
-void log(LOG_LEVEL level, const char * fmt, ...);
+void logFunc(enum LOG_LEVEL level, const char * fmt, ...);
+
+//Extern C
+#ifdef __cplusplus
+}
+#endif //__cplusplus
+
 
 #define __STRINGIZE(x) #x
 
 #define __LOG(PREFIX, LEVEL, FMT, ARGS...)                                    \
         do {                                                                  \
-		log(LEVEL,                                                    \
+		logFunc(LEVEL,                                                    \
                     "%d(%ld)#" PREFIX " (" __STRINGIZE(LEVEL) "): " FMT "\n", \
                     getpid(), time(0), ##ARGS);                               \
 	} while (0)
@@ -114,7 +117,7 @@ void log(LOG_LEVEL level, const char * fmt, ...);
 
 #define __LOGF(PREFIX, LEVEL, FMT, ARGS...)                                       \
         do {                                                                      \
-		log(LEVEL,                                                        \
+		logFunc(LEVEL,                                                        \
                     "%d(%ld)#" PREFIX " (" __STRINGIZE(LEVEL) ")[%s]: " FMT "\n", \
                     getpid(), time(0), __func__, ##ARGS);                         \
 	} while (0)
@@ -127,7 +130,5 @@ void log(LOG_LEVEL level, const char * fmt, ...);
 #define LOGF_NOTE(FMT,  ARGS...) __LOGF(RINA_PREFIX, NOTE,  FMT, ##ARGS)
 #define LOGF_INFO(FMT,  ARGS...) __LOGF(RINA_PREFIX, INFO,  FMT, ##ARGS)
 #define LOGF_DBG(FMT,   ARGS...) __LOGF(RINA_PREFIX, DBG,   FMT, ##ARGS)
-
-#endif //__cplusplus
 
 #endif //LIBRINA_LOGS_H

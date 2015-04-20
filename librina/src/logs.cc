@@ -22,27 +22,39 @@
 // MA  02110-1301  USA
 //
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <cstdio>
 #include <pthread.h>
-#include <unistd.h>
 #include <time.h>
+#include <string>
 
 #define RINA_PREFIX "librina.logs"
 
 #include "librina/likely.h"
 #include "librina/logs.h"
 
-LOG_LEVEL logLevel = DBG;
+enum LOG_LEVEL logLevel = DBG;
 FILE* logStream = stdout;
+
+//To str
+const std::string LOG_LEVEL_DBG   = "DBG";
+const std::string LOG_LEVEL_INFO  = "INFO";
+const std::string LOG_LEVEL_NOTE  = "NOTE";
+const std::string LOG_LEVEL_WARN  = "WARN";
+const std::string LOG_LEVEL_ERR   = "ERR";
+const std::string LOG_LEVEL_CRIT  = "CRIT";
+const std::string LOG_LEVEL_ALERT = "ALERT";
+const std::string LOG_LEVEL_EMERG = "EMERG";
+
 
 static pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-void setLogLevel(const std::string& newLogLevel)
+void setLogLevel(const char* level)
 {
+	std::string newLogLevel(level);
+
 	LOG_DBG("New log level: %s", newLogLevel.c_str());
 
 	if (LOG_LEVEL_DBG.compare(newLogLevel) == 0) {
@@ -64,9 +76,10 @@ void setLogLevel(const std::string& newLogLevel)
 	}
 }
 
-int setLogFile(const std::string& pathToFile)
+int setLogFile(const char* file)
 {
 	int result = 0;
+	std::string pathToFile(file);
 
 	if (pathToFile.compare("") == 0) {
 		return result;
@@ -89,7 +102,7 @@ int setLogFile(const std::string& pathToFile)
 	return result;
 }
 
-void log(LOG_LEVEL level, const char * fmt, ...)
+void logFunc(enum LOG_LEVEL level, const char * fmt, ...)
 {
 	//Avoid to use locking
 	FILE* stream = logStream;
