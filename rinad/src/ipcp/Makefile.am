@@ -4,7 +4,7 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-SUBDIRS      = include plugins
+SUBDIRS      = plugins
 
 EXTRA_DIST   =
 CLEANFILES   =
