@@ -33,38 +33,71 @@
 namespace rinad {
 
 //Static members
-rina::Lockable Addon::mutex;
+rina::ReadWriteLockable Addon::rwlock;
+std::map<std::string, Addon*> Addon::addons;
 std::list<Addon*> Addon::event_subscribers;
 
 //Factory
-Addon* Addon::factory(rinad::RINAConfiguration& config,
-		      const std::string& name){
+void Addon::factory(rinad::RINAConfiguration& conf, const std::string& name){
 
 	Addon* addon = NULL;
 
 	try{
 		//TODO this is a transitory solution. A proper auto-registering
 		// to the factory would be the right way to go
-		if(name == "mad"){
-			addon = new mad::ManagementAgent(config);
-		}else if(name == "console"){
-			addon = new IPCMConsole(config.local.consolePort);
-		}else if(name == "scripting"){
+		if(name == mad::ManagementAgent::NAME){
+			addon = new mad::ManagementAgent(conf);
+		}else if(name == IPCMConsole::NAME){
+			addon = new IPCMConsole(conf.local.consolePort);
+		}else if(name == ScriptingEngine::NAME){
 			addon = new ScriptingEngine();
 		}else{
 			//TODO add other types
 			LOG_EMERG("Uknown addon name '%s'. Ignoring...", name.c_str());
 			assert(0);
 		}
+
+		if(!addon){
+			std::stringstream ss;
+			ss << "FATAL: Unable to bootstrap addon name '"<< name <<"'.";
+			rina::Exception(ss.str().c_str());
+		}
 	}catch(...){
 		LOG_EMERG("Unable to bootstrap addon '%s'", name.c_str());
 	}
-	return addon;
 }
 
+void Addon::destroy_all(){
+
+	std::map<std::string, Addon*>::iterator it;
+
+	it = addons.begin();
+	do{
+		LOG_DBG("Destroying addon: %s(%p)", (it)->second->name.c_str(),
+								it->second);
+		delete it->second;
+		addons.erase(it++);
+	}while(it != addons.end());
+}
+
+Addon::Addon(const std::string _name):name(_name){
+
+	rina::WriteScopedLock wlock(rwlock);
+
+	//Check if it already exists
+	if(addons.find(name) != addons.end()){
+		std::stringstream ss;
+		ss << "Addon name '"<< name <<"' already present. FATAL...";
+		LOG_EMERG("%s", ss.str().c_str());
+		throw rina::Exception(ss.str().c_str());
+	}
+
+	//Add to the addons list
+	addons[name] = this;
+}
 
 // Distribute a librina event to the addons
-void Addon::distribute_event(rina::IPCEvent* event){
+void Addon::distribute_flow_event(rina::IPCEvent* event){
 
 	unsigned int seqnum;
 	std::list<Addon*>::const_iterator it;
@@ -75,11 +108,11 @@ void Addon::distribute_event(rina::IPCEvent* event){
 
 	seqnum = event->sequenceNumber;
 
-	rina::ScopedLock lock(mutex);
+	rina::ReadScopedLock rlock(rwlock);
 
 	for(it = event_subscribers.begin(); it != event_subscribers.end();
 								 ++it){
-		(*it)->process_event(&event);
+		(*it)->process_flow_event(&event);
 		if(!event)
 			return;
 	}
@@ -94,10 +127,26 @@ void Addon::distribute_event(rina::IPCEvent* event){
 	}
 }
 
+// Distribute an ipcm event to the addons
+void Addon::distribute_ipcm_event(const IPCMEvent& event){
+
+	std::map<std::string, Addon*>::iterator it;
+
+	//Prevent creation/destruction of addons during loop
+	rina::ReadScopedLock rlock(rwlock);
+
+	for(it = addons.begin(); it != addons.end(); ++it){
+		if(event.callee != it->second)
+			it->second->process_ipcm_event(event);
+	}
+
+}
+
 //Register to receive events
 void Addon::subscribe(Addon* addon){
 
-	rina::ScopedLock lock(mutex);
+	rina::WriteScopedLock wlock(rwlock);
+
 	try{
 		event_subscribers.push_back(addon);
 	}catch(...){
@@ -111,7 +160,7 @@ void Addon::subscribe(Addon* addon){
 //Unregister from receiving events
 void Addon::unsubscribe(Addon* addon){
 
-	rina::ScopedLock lock(mutex);
+	rina::WriteScopedLock wlock(rwlock);
 
 	try{
 		event_subscribers.remove(addon);

@@ -7,6 +7,7 @@
 //Encoders and structs
 #include "encoders_mad.h"
 
+#include "../agent.h"
 #include "../../../ipcm.h"
 
 namespace rinad {
@@ -32,7 +33,7 @@ rina::cdap_rib::res_info_t* RIBDaemonObj::remoteRead(const std::string& name,
 	r->result_ = 0;
 
 	//Perform the query
-	if (IPCManager->query_rib(&promise, ipcp_id) == IPCM_FAILURE ||
+	if (IPCManager->query_rib(ManagementAgent::inst, &promise, ipcp_id) == IPCM_FAILURE ||
 			promise.wait() != IPCM_SUCCESS){
 		r->result_ = -1;
 		return r;

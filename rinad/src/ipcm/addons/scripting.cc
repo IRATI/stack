@@ -44,7 +44,10 @@ using namespace std;
 
 namespace rinad {
 
-ScriptingEngine::ScriptingEngine() : Addon("scripting"){
+//Static members
+const std::string ScriptingEngine::NAME = "scripting";
+
+ScriptingEngine::ScriptingEngine() : Addon(ScriptingEngine::NAME){
 
 	//TODO: create another thread when necessary
 

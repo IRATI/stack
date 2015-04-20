@@ -44,8 +44,7 @@ class ScriptingEngine : public Addon{
 public:
 	ScriptingEngine(void);
 	virtual ~ScriptingEngine(void);
-
-
+	static const std::string NAME;
 };
 
 } //namespace rinad
