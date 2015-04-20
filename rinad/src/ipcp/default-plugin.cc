@@ -2,49 +2,49 @@
 
 namespace rinad {
 
-extern "C" IPolicySet *
-createSecurityManagerPs(IPCProcessComponent * context);
+extern "C" rina::IPolicySet *
+createSecurityManagerPs(rina::ApplicationEntity * context);
 
 extern "C" void
-destroySecurityManagerPs(IPolicySet * instance);
+destroySecurityManagerPs(rina::IPolicySet * instance);
 
-extern "C" IPolicySet *
-createFlowAllocatorPs(IPCProcessComponent * context);
-
-extern "C" void
-destroyFlowAllocatorPs(IPolicySet * instance);
-
-extern "C" IPolicySet *
-createNamespaceManagerPs(IPCProcessComponent * context);
+extern "C" rina::IPolicySet *
+createFlowAllocatorPs(rina::ApplicationEntity * context);
 
 extern "C" void
-destroyNamespaceManagerPs(IPolicySet * instance);
+destroyFlowAllocatorPs(rina::IPolicySet * instance);
 
-extern "C" IPolicySet *
-createResourceAllocatorPs(IPCProcessComponent * context);
-
-extern "C" void
-destroyResourceAllocatorPs(IPolicySet * instance);
-
-extern "C" IPolicySet *
-createRoutingComponentPs(IPCProcessComponent * context);
+extern "C" rina::IPolicySet *
+createNamespaceManagerPs(rina::ApplicationEntity * context);
 
 extern "C" void
-destroyRoutingComponentPs(IPolicySet * instance);
+destroyNamespaceManagerPs(rina::IPolicySet * instance);
+
+extern "C" rina::IPolicySet *
+createResourceAllocatorPs(rina::ApplicationEntity * context);
+
+extern "C" void
+destroyResourceAllocatorPs(rina::IPolicySet * instance);
+
+extern "C" rina::IPolicySet *
+createRoutingComponentPs(rina::ApplicationEntity * context);
+
+extern "C" void
+destroyRoutingComponentPs(rina::IPolicySet * instance);
 
 extern "C" int
 init(IPCProcess * ipc_process, const std::string& plugin_name)
 {
-        struct PsFactory sm_factory;
-        struct PsFactory fa_factory;
-        struct PsFactory nsm_factory;
-        struct PsFactory ra_factory;
-        struct PsFactory rc_factory;
+        struct rina::PsFactory sm_factory;
+        struct rina::PsFactory fa_factory;
+        struct rina::PsFactory nsm_factory;
+        struct rina::PsFactory ra_factory;
+        struct rina::PsFactory rc_factory;
         int ret;
 
         sm_factory.plugin_name = plugin_name;
-        sm_factory.name = "default";
-        sm_factory.component = "security-manager";
+        sm_factory.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;
+        sm_factory.app_entity = IPCProcessComponent::SECURITY_MANAGER_AE_NAME;
         sm_factory.create = createSecurityManagerPs;
         sm_factory.destroy = destroySecurityManagerPs;
 
@@ -54,8 +54,8 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
         }
 
         fa_factory.plugin_name = plugin_name;
-        fa_factory.name = "default";
-        fa_factory.component = "flow-allocator";
+        fa_factory.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;
+        fa_factory.app_entity = IPCProcessComponent::FLOW_ALLOCATOR_AE_NAME;
         fa_factory.create = createFlowAllocatorPs;
         fa_factory.destroy = destroyFlowAllocatorPs;
 
@@ -65,8 +65,8 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
         }
 
         nsm_factory.plugin_name = plugin_name;
-        nsm_factory.name = "default";
-        nsm_factory.component = "namespace-manager";
+        nsm_factory.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;
+        nsm_factory.app_entity = IPCProcessComponent::NAMESPACE_MANAGER_AE_NAME;
         nsm_factory.create = createNamespaceManagerPs;
         nsm_factory.destroy = destroyNamespaceManagerPs;
 
@@ -76,8 +76,8 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
         }
 
         ra_factory.plugin_name = plugin_name;
-        ra_factory.name = "default";
-        ra_factory.component = "resource-allocator";
+        ra_factory.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;
+        ra_factory.app_entity = IPCProcessComponent::RESOURCE_ALLOCATOR_AE_NAME;
         ra_factory.create = createResourceAllocatorPs;
         ra_factory.destroy = destroyResourceAllocatorPs;
 
@@ -88,7 +88,7 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
 
         rc_factory.plugin_name = plugin_name;
         rc_factory.name = "link-state";
-        rc_factory.component = "routing";
+        rc_factory.app_entity = IPCProcessComponent::ROUTING_COMPONENT_AE_NAME;
         rc_factory.create = createRoutingComponentPs;
         rc_factory.destroy = destroyRoutingComponentPs;
 

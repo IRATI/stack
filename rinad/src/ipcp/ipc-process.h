@@ -32,23 +32,28 @@ namespace rinad {
 
 class IPCProcessImpl: public IPCProcess, public EventLoopData {
 public:
-		IPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,
-			unsigned short id, unsigned int ipc_manager_port,
-			std::string log_level, std::string log_file);
-		~IPCProcessImpl();
-		unsigned short get_id();
-		const std::list<rina::Neighbor*> get_neighbors() const;
-		const IPCProcessOperationalState& get_operational_state() const;
-		void set_operational_state(const IPCProcessOperationalState& operational_state);
-		const rina::DIFInformation& get_dif_information() const;
-		void set_dif_information(const rina::DIFInformation& dif_information);
-		unsigned int get_address() const;
-		void set_address(unsigned int address);
-		unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name);
-		void processAssignToDIFRequestEvent(const rina::AssignToDIFRequestEvent& event);
-		void processAssignToDIFResponseEvent(const rina::AssignToDIFResponseEvent& event);
-		void requestPDUFTEDump();
-		void logPDUFTE(const rina::DumpFTResponseEvent& event);
+        IPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,
+                        unsigned short id, unsigned int ipc_manager_port,
+                        std::string log_level, std::string log_file);
+        ~IPCProcessImpl();
+        unsigned short get_id();
+        const std::list<rina::Neighbor*> get_neighbors() const;
+        const IPCProcessOperationalState& get_operational_state() const;
+        void set_operational_state(const IPCProcessOperationalState& operational_state);
+        const rina::DIFInformation& get_dif_information() const;
+        void set_dif_information(const rina::DIFInformation& dif_information);
+        unsigned int get_address() const;
+        void set_address(unsigned int address);
+        unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name);
+        void processAssignToDIFRequestEvent(const rina::AssignToDIFRequestEvent& event);
+        void processAssignToDIFResponseEvent(const rina::AssignToDIFResponseEvent& event);
+        void requestPDUFTEDump();
+        void logPDUFTE(const rina::DumpFTResponseEvent& event);
+
+	// Policy Management
+        int dispatchSelectPolicySet(const std::string& path,
+                                    const std::string& name,
+                                    bool& got_in_userspace);
         void processSetPolicySetParamRequestEvent(
                 const rina::SetPolicySetParamRequestEvent& event);
         void processSetPolicySetParamResponseEvent(
@@ -60,18 +65,18 @@ public:
         void processPluginLoadRequestEvent(
                 const rina::PluginLoadRequestEvent& event);
 
-        std::vector<PsFactory>::iterator
-                        psFactoryLookup(const std::string& component,
-                                       const std::string& name);
-        int psFactoryPublish(const PsFactory& factory);
-        int psFactoryUnpublish(const std::string& component,
-                                              const std::string& name);
-        IPolicySet * psCreate(const std::string& component,
-                                            const std::string& name,
-                                            IPCProcessComponent* context);
-        int psDestroy(const std::string& component,
+        std::vector<rina::PsFactory>::iterator
+        psFactoryLookup(const std::string& ae_name,
+                        const std::string& name);
+        int psFactoryPublish(const rina::PsFactory& factory);
+        int psFactoryUnpublish(const std::string& ae_name,
+                               const std::string& name);
+        rina::IPolicySet * psCreate(const std::string& ae_name,
                                     const std::string& name,
-                                    IPolicySet * instance);
+                                    rina::ApplicationEntity * context);
+        int psDestroy(const std::string& ae_name,
+                      const std::string& name,
+                      rina::IPolicySet * instance);
 
 private:
         void init_cdap_session_manager();
@@ -88,7 +93,7 @@ private:
         rina::Lockable * lock_;
 		rina::DIFInformation dif_information_;
         std::map< std::string, void * > plugins_handles;
-        std::vector<PsFactory> components_factories;
+        std::vector<rina::PsFactory> ae_policy_factories;
 };
 
 void register_handlers_all(EventLoop& loop);

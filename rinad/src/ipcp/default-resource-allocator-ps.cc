@@ -88,8 +88,8 @@ int ResourceAllocatorPs::set_policy_set_param(const std::string& name,
         return -1;
 }
 
-extern "C" IPolicySet *
-createResourceAllocatorPs(IPCProcessComponent * ctx)
+extern "C" rina::IPolicySet *
+createResourceAllocatorPs(rina::ApplicationEntity * ctx)
 {
 		IResourceAllocator * ra = dynamic_cast<IResourceAllocator *>(ctx);
 
@@ -101,7 +101,7 @@ createResourceAllocatorPs(IPCProcessComponent * ctx)
 }
 
 extern "C" void
-destroyResourceAllocatorPs(IPolicySet * ps)
+destroyResourceAllocatorPs(rina::IPolicySet * ps)
 {
         if (ps) {
                 delete ps;

@@ -23,6 +23,7 @@ sm_passwd_la_LIBADD   =
 sm_passwd_la_LDFLAGS  = -module
 sm_passwd_la_SOURCES  =				\
 	security-manager-passwd.cc		\
-	component.h
+	../components.h				\
+	../components.cc
 
 plugins_LTLIBRARIES += sm-passwd.la

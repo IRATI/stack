@@ -176,8 +176,8 @@ int NamespaceManagerPs::set_policy_set_param(const std::string& name,
         return -1;
 }
 
-extern "C" IPolicySet *
-createNamespaceManagerPs(IPCProcessComponent * ctx)
+extern "C" rina::IPolicySet *
+createNamespaceManagerPs(rina::ApplicationEntity * ctx)
 {
 		INamespaceManager * nsm = dynamic_cast<INamespaceManager *>(ctx);
 
@@ -189,7 +189,7 @@ createNamespaceManagerPs(IPCProcessComponent * ctx)
 }
 
 extern "C" void
-destroyNamespaceManagerPs(IPolicySet * ps)
+destroyNamespaceManagerPs(rina::IPolicySet * ps)
 {
         if (ps) {
                 delete ps;

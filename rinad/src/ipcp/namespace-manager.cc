@@ -392,14 +392,22 @@ const void* DirectoryForwardingTableEntrySetRIBObject::get_value() const {
 }
 
 //Class Namespace Manager
-NamespaceManager::NamespaceManager() {
-	ipcp = 0;
+NamespaceManager::NamespaceManager() : INamespaceManager() {
 	rib_daemon_ = 0;
 }
 
-void NamespaceManager::set_ipc_process(IPCProcess * ipc_process) {
-	ipcp = ipc_process;
-	rib_daemon_ = ipc_process->rib_daemon_;
+void NamespaceManager::set_application_process(rina::ApplicationProcess * ap) {
+	if (!ap)
+			return;
+
+	app = ap;
+	ipcp = dynamic_cast<IPCProcess*>(app);
+	if (!ipcp) {
+			LOG_ERR("Bogus instance of IPCP passed, return");
+			return;
+	}
+
+	rib_daemon_ = ipcp->rib_daemon_;
 	populateRIB();
 }
 
@@ -587,15 +595,14 @@ unsigned int NamespaceManager::getAdressByname(const rina::ApplicationProcessNam
 int NamespaceManager::select_policy_set(const std::string& path,
                                      const std::string& name)
 {
-  return select_policy_set_common(ipcp, "namespace-manager",
-                                  path, name);
+  return select_policy_set_common(get_name(), path, name);
 }
 
 int NamespaceManager::set_policy_set_param(const std::string& path,
                                         const std::string& name,
                                         const std::string& value)
 {
-  return set_policy_set_param_common(ipcp, path, name, value);
+  return set_policy_set_param_common(path, name, value);
 }
 
 }

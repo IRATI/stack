@@ -305,7 +305,7 @@ void NeighborSetRIBObject::createObject(const std::string& objectClass,
 
 void NeighborSetRIBObject::createNeighbor(rina::Neighbor * neighbor) {
 	//Avoid creating myself as a neighbor
-	if (neighbor->name_.processName.compare(ipc_process_->name_.processName) == 0) {
+	if (neighbor->name_.processName.compare(ipc_process_->get_name()) == 0) {
 		return;
 	}
 
@@ -605,7 +605,8 @@ void BaseEnrollmentStateMachine::sendNeighbors() {
 
 		myself = new rina::Neighbor();
 		myself->address_ = ipc_process_->get_address();
-		myself->name_ = ipc_process_->name_;
+		myself->name_.processName = ipc_process_->get_name();
+		myself->name_.processInstance = ipc_process_->get_instance();
 		registrations = rina::extendedIPCManager->getRegisteredApplications();
 		for (unsigned int i=0; i<registrations.size(); i++) {
 			for(it2 = registrations[i]->DIFNames.begin();
@@ -691,8 +692,8 @@ void EnrolleeStateMachine::initiateEnrollment(EnrollmentRequest * enrollmentRequ
 
 		rib_daemon_->openApplicationConnection(rina::CDAPMessage::AUTH_NONE, rina::AuthValue(), "", IPCProcess::MANAGEMENT_AE,
 				remote_peer_->name_.processInstance, remote_peer_->name_.processName, "",
-				IPCProcess::MANAGEMENT_AE, ipc_process_->name_.processInstance,
-				ipc_process_->name_.processName, remote_id);
+				IPCProcess::MANAGEMENT_AE, ipc_process_->get_instance(),
+				ipc_process_->get_name(), remote_id);
 
 		port_id_ = portId;
 
@@ -1381,8 +1382,7 @@ void * doNeighborsEnrollerWork(void * arg) {
 }
 
 //Class Enrollment Task
-EnrollmentTask::EnrollmentTask() {
-	ipcp = 0;
+EnrollmentTask::EnrollmentTask() : IEnrollmentTask() {
 	rib_daemon_ = 0;
 	resource_allocator_ = 0;
 	cdap_session_manager_ = 0;
@@ -1402,9 +1402,18 @@ EnrollmentTask::~EnrollmentTask() {
 	}
 }
 
-void EnrollmentTask::set_ipc_process(IPCProcess * ipc_process) {
-	ipcp = ipc_process;
-	rib_daemon_ = ipc_process->rib_daemon_;
+void EnrollmentTask::set_application_process(rina::ApplicationProcess * ap)
+{
+	if (!ap)
+			return;
+
+	app = ap;
+	ipcp = dynamic_cast<IPCProcess*>(app);
+	if (!ipcp) {
+			LOG_ERR("Bogus instance of IPCP passed, return");
+			return;
+	}
+	rib_daemon_ = ipcp->rib_daemon_;
 	cdap_session_manager_ = ipcp->cdap_session_manager_;
 	resource_allocator_ = ipcp->resource_allocator_;
 	namespace_manager_ = ipcp->namespace_manager_;
@@ -1578,7 +1587,8 @@ void EnrollmentTask::initiateEnrollment(EnrollmentRequest * request) {
 	//FIXME not distinguishing between AEs
 	rina::FlowInformation flowInformation;
 	flowInformation.remoteAppName = request->neighbor_->name_;
-	flowInformation.localAppName = ipcp->name_;
+	flowInformation.localAppName.processName = ipcp->get_name();
+	flowInformation.localAppName.processInstance = ipcp->get_instance();
 	flowInformation.difName = request->neighbor_->supporting_dif_name_;
 	unsigned int handle = -1;
 	try {
@@ -1642,8 +1652,7 @@ BaseEnrollmentStateMachine * EnrollmentTask::createEnrollmentStateMachine(
 BaseEnrollmentStateMachine * EnrollmentTask::getEnrollmentStateMachine(
 		const rina::CDAPSessionDescriptor * cdapSessionDescriptor, bool remove) {
 	try {
-		if (ipcp->name_.processName.
-				compare(cdapSessionDescriptor->src_ap_name_) == 0) {
+		if (ipcp->get_name().compare(cdapSessionDescriptor->src_ap_name_) == 0) {
 			return getEnrollmentStateMachine(cdapSessionDescriptor->dest_ap_name_,
 					cdapSessionDescriptor->port_id_, remove);
 		} else {
@@ -1661,7 +1670,7 @@ void EnrollmentTask::connect(int invoke_id,
 			session_descriptor->port_id_);
 
 	//1 Find out if the sender is really connecting to us
-	if(session_descriptor->src_ap_name_.compare(ipcp->name_.processName)!= 0){
+	if(session_descriptor->src_ap_name_.compare(ipcp->get_name())!= 0){
 		LOG_WARN("Received an M_CONNECT message whose destination was not this IPC Process, ignoring it");
 		return;
 	}

@@ -891,6 +891,9 @@ public:
 	/// Configuration of the security manager
 	SecurityManagerConfiguration sm_configuration_;
 
+        /// Policy sets
+        std::list<Parameter> policy_sets;
+
 	/// Other configuration parameters of the DIF
 	std::list<Parameter> parameters_;
 

@@ -50,15 +50,16 @@ default_la_CPPFLAGS =				\
 	$(COMMONCPPFLAGS)
 default_la_LIBADD = $(COMMONLIBS) -ldl
 default_la_LDFLAGS = -module
-default_la_SOURCES =				\
-		default-plugin.cc		\
-		components.h			\
-		default-security-manager-ps.cc	\
-		default-flow-allocator-ps.cc    \
-        default-namespace-manager-ps.cc \
-        default-resource-allocator-ps.cc \
-        link-state-routing-ps.h \
-        link-state-routing-ps.cc
+default_la_SOURCES =				 \
+		default-plugin.cc		 \
+		components.h			 \
+		components.cc			 \
+		default-security-manager-ps.cc	 \
+		default-flow-allocator-ps.cc     \
+        	default-namespace-manager-ps.cc  \
+        	default-resource-allocator-ps.cc \
+        	link-state-routing-ps.h 	 \
+        	link-state-routing-ps.cc
 
 plugins_LTLIBRARIES += default.la
 
