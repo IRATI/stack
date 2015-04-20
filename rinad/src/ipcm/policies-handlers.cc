@@ -84,22 +84,22 @@ void IPCManager_::ipc_process_plugin_load_response_handler(rina::PluginLoadRespo
         IPCPTransState* trans = get_transaction_state<IPCPTransState>(event->sequenceNumber);
 
         if(!trans){
-        		ss << ": Warning: unknown plugin load response received: "
-        		   << event->sequenceNumber << endl;
-        		FLUSH_LOG(WARN, ss);
-        		assert(0);
-        		return;
+        	ss << ": Warning: unknown plugin load response received: "
+        	   << event->sequenceNumber << endl;
+        	FLUSH_LOG(WARN, ss);
+        	assert(0);
+        	return;
         }
 
         IPCMIPCProcess* ipcp = lookup_ipcp_by_id(trans->ipcp_id);
         if(!ipcp){
-        		ss << "Could not complete policy set param. Invalid IPCP id "
-        		   << ipcp->get_id();
-        		FLUSH_LOG(ERR, ss);
+        	ss << "Could not complete policy set param. Invalid IPCP id "
+        	   << ipcp->get_id();
+        	FLUSH_LOG(ERR, ss);
 
-        		trans->completed(IPCM_FAILURE);
-        		remove_transaction_state(trans->tid);
-        		return;
+        	trans->completed(IPCM_FAILURE);
+        	remove_transaction_state(trans->tid);
+        	return;
         }
 
         //Auto release the read lock
@@ -112,9 +112,9 @@ void IPCManager_::ipc_process_plugin_load_response_handler(rina::PluginLoadRespo
 
         //Mark as completed
         if (success)
-        		trans->completed(IPCM_SUCCESS);
+        	trans->completed(IPCM_SUCCESS);
         else
-        		trans->completed(IPCM_FAILURE);
+        	trans->completed(IPCM_FAILURE);
         remove_transaction_state(trans->tid);
 }
 
