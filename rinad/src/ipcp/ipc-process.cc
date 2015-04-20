@@ -42,23 +42,23 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 		unsigned short id, unsigned int ipc_manager_port,
 		std::string log_level, std::string log_file) : IPCProcess(nm.processName, nm.processInstance)
 {
-		try {
-				std::stringstream ss;
-				ss << IPCP_LOG_FILE_PREFIX << "-" << id;
-				rina::initialize(log_level, log_file);
-				rina::extendedIPCManager->ipcManagerPort = ipc_manager_port;
-				rina::extendedIPCManager->ipcProcessId = id;
-				rina::kernelIPCProcess->ipcProcessId = id;
-				LOG_INFO("Librina initialized");
-		} catch (rina::Exception &e) {
-			std::cerr << "Cannot initialize librina" << std::endl;
-			exit(EXIT_FAILURE);
-		}
+        try {
+                std::stringstream ss;
+                ss << IPCP_LOG_FILE_PREFIX << "-" << id;
+                rina::initialize(log_level, log_file);
+                rina::extendedIPCManager->ipcManagerPort = ipc_manager_port;
+                rina::extendedIPCManager->ipcProcessId = id;
+                rina::kernelIPCProcess->ipcProcessId = id;
+                LOG_INFO("Librina initialized");
+        } catch (rina::Exception &e) {
+                std::cerr << "Cannot initialize librina" << std::endl;
+                exit(EXIT_FAILURE);
+        }
 
-		state = NOT_INITIALIZED;
-		lock_ = new rina::Lockable();
+        state = NOT_INITIALIZED;
+        lock_ = new rina::Lockable();
 
-        	// Load the default pluggable components
+        // Load the default pluggable components
         if (plugin_load("default")) {
         		throw rina::Exception("Failed to load default plugin");
         }
@@ -76,13 +76,13 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         routing_component_ = new RoutingComponent();
         rib_daemon_ = new IPCPRIBDaemonImpl();
 
-		add_entity(rib_daemon_);
-		add_entity(enrollment_task_);
-		add_entity(resource_allocator_);
-		add_entity(namespace_manager_);
-		add_entity(flow_allocator_);
-		add_entity(security_manager_);
-		add_entity(routing_component_);
+        add_entity(rib_daemon_);
+        add_entity(enrollment_task_);
+        add_entity(resource_allocator_);
+        add_entity(namespace_manager_);
+        add_entity(flow_allocator_);
+        add_entity(security_manager_);
+        add_entity(routing_component_);
 
         // Select the default policy sets
         security_manager_->select_policy_set(std::string(), rina::IPolicySet::DEFAULT_PS_SET_NAME);
@@ -111,8 +111,8 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         }
 
         try {
-        		rina::ApplicationProcessNamingInformation naming_info(name_, instance_);
-        		rina::extendedIPCManager->notifyIPCProcessInitialized(naming_info);
+                rina::ApplicationProcessNamingInformation naming_info(name_, instance_);
+                rina::extendedIPCManager->notifyIPCProcessInitialized(naming_info);
         } catch (rina::Exception &e) {
         		LOG_ERR("Problems communicating with IPC Manager: %s. Exiting... ", e.what());
         		exit(EXIT_FAILURE);
