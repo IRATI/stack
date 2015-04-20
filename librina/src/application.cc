@@ -96,7 +96,8 @@ int ApplicationEntity::select_policy_set_common(const std::string& component,
         }
 
         if (ps_name == selected_ps_name) {
-                LOG_INFO("policy set %s already selected", ps_name.c_str());
+                LOG_INFO("policy set %s already selected for component %s",
+                         ps_name.c_str(), component.c_str());
                 return 0;
         }
 

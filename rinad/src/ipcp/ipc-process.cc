@@ -42,23 +42,23 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 		unsigned short id, unsigned int ipc_manager_port,
 		std::string log_level, std::string log_file) : IPCProcess(nm.processName, nm.processInstance)
 {
-		try {
-				std::stringstream ss;
-				ss << IPCP_LOG_FILE_PREFIX << "-" << id;
-				rina::initialize(log_level, log_file);
-				rina::extendedIPCManager->ipcManagerPort = ipc_manager_port;
-				rina::extendedIPCManager->ipcProcessId = id;
-				rina::kernelIPCProcess->ipcProcessId = id;
-				LOG_INFO("Librina initialized");
-		} catch (rina::Exception &e) {
-			std::cerr << "Cannot initialize librina" << std::endl;
-			exit(EXIT_FAILURE);
-		}
+        try {
+                std::stringstream ss;
+                ss << IPCP_LOG_FILE_PREFIX << "-" << id;
+                rina::initialize(log_level, log_file);
+                rina::extendedIPCManager->ipcManagerPort = ipc_manager_port;
+                rina::extendedIPCManager->ipcProcessId = id;
+                rina::kernelIPCProcess->ipcProcessId = id;
+                LOG_INFO("Librina initialized");
+        } catch (rina::Exception &e) {
+                std::cerr << "Cannot initialize librina" << std::endl;
+                exit(EXIT_FAILURE);
+        }
 
-		state = NOT_INITIALIZED;
-		lock_ = new rina::Lockable();
+        state = NOT_INITIALIZED;
+        lock_ = new rina::Lockable();
 
-        	// Load the default pluggable components
+        // Load the default pluggable components
         if (plugin_load("default")) {
         		throw rina::Exception("Failed to load default plugin");
         }
@@ -76,13 +76,13 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         routing_component_ = new RoutingComponent();
         rib_daemon_ = new IPCPRIBDaemonImpl();
 
-		add_entity(rib_daemon_);
-		add_entity(enrollment_task_);
-		add_entity(resource_allocator_);
-		add_entity(namespace_manager_);
-		add_entity(flow_allocator_);
-		add_entity(security_manager_);
-		add_entity(routing_component_);
+        add_entity(rib_daemon_);
+        add_entity(enrollment_task_);
+        add_entity(resource_allocator_);
+        add_entity(namespace_manager_);
+        add_entity(flow_allocator_);
+        add_entity(security_manager_);
+        add_entity(routing_component_);
 
         // Select the default policy sets
         security_manager_->select_policy_set(std::string(), rina::IPolicySet::DEFAULT_PS_SET_NAME);
@@ -111,8 +111,8 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         }
 
         try {
-        		rina::ApplicationProcessNamingInformation naming_info(name_, instance_);
-        		rina::extendedIPCManager->notifyIPCProcessInitialized(naming_info);
+                rina::ApplicationProcessNamingInformation naming_info(name_, instance_);
+                rina::extendedIPCManager->notifyIPCProcessInitialized(naming_info);
         } catch (rina::Exception &e) {
         		LOG_ERR("Problems communicating with IPC Manager: %s. Exiting... ", e.what());
         		exit(EXIT_FAILURE);
@@ -337,6 +337,29 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 
 	//TODO do stuff
 	LOG_DBG("The kernel processed successfully the Assign to DIF request");
+
+        // Select the policy-sets specified in the DIF configuration, for
+        // userspace IPCP components
+        std::list<rina::Parameter>& policy_sets_config =
+                                dif_information_.dif_configuration_.policy_sets;
+        for (std::list<rina::Parameter>::iterator
+                        it = policy_sets_config.begin();
+                                it != policy_sets_config.end(); it++) {
+                std::string path = it->name;
+                std::string name = it->value;
+                bool got_in_userspace;
+                int result;
+
+                result = dispatchSelectPolicySet(path, name, got_in_userspace);
+                if (result) {
+                        LOG_ERR("Failed to select policy set %s for component %s",
+                                name.c_str(), path.c_str());
+                } else if (!got_in_userspace) {
+                        LOG_ERR("Component %s is not an userspace IPCP component",
+                                path.c_str());
+                }
+        }
+
 	try{
 		rib_daemon_->set_dif_configuration(dif_information_.dif_configuration_);
 		resource_allocator_->set_dif_configuration(dif_information_.dif_configuration_);
@@ -440,6 +463,10 @@ void IPCProcessImpl::processSetPolicySetParamRequestEvent(
                 result = rib_daemon_->set_policy_set_param(remainder,
                                                           event.name,
                                                           event.value);
+        } else if (component == "routing") {
+                result = routing_component_->set_policy_set_param(remainder,
+                                                                  event.name,
+                                                                  event.value);
         } else {
                 got_in_userspace = false;
         }
@@ -505,38 +532,52 @@ void IPCProcessImpl::processSetPolicySetParamResponseEvent(
 	}
 }
 
-void IPCProcessImpl::processSelectPolicySetRequestEvent(
-                        const rina::SelectPolicySetRequestEvent& event) {
-	rina::ScopedLock g(*lock_);
+int IPCProcessImpl::dispatchSelectPolicySet(const std::string& path,
+                                            const std::string& name,
+                                            bool& got_in_userspace)
+{
         std::string component, remainder;
-        bool got_in_userspace = true;
-        int result = -1;
+        int result = 0;
 
-        parse_path(event.path, component, remainder);
+        got_in_userspace = true;
+
+        parse_path(path, component, remainder);
 
         // First check if the request should be served by this daemon
         // or should be forwarded to kernelspace
         if (component == "security-manager") {
                 result = security_manager_->select_policy_set(remainder,
-                                                             event.name);
+                                                              name);
         } else if (component == "enrollment") {
                 result = enrollment_task_->select_policy_set(remainder,
-                                                            event.name);
+                                                             name);
         } else if (component == "flow-allocator") {
                 result = flow_allocator_->select_policy_set(remainder,
-                                                           event.name);
+                                                            name);
         } else if (component == "namespace-manager") {
                 result = namespace_manager_->select_policy_set(remainder,
-                                                              event.name);
+                                                               name);
         } else if (component == "resource-allocator") {
                 result = resource_allocator_->select_policy_set(remainder,
-                                                               event.name);
+                                                                name);
         } else if (component == "rib-daemon") {
                 result = rib_daemon_->select_policy_set(remainder,
-                                                       event.name);
+                                                        name);
+        } else if (component == "routing") {
+                result = routing_component_->select_policy_set(remainder,
+                                                               name);
         } else {
                 got_in_userspace = false;
         }
+
+        return result;
+}
+
+void IPCProcessImpl::processSelectPolicySetRequestEvent(
+                        const rina::SelectPolicySetRequestEvent& event) {
+	rina::ScopedLock g(*lock_);
+        bool got_in_userspace;
+        int result = dispatchSelectPolicySet(event.path, event.name, got_in_userspace);
 
         if (got_in_userspace) {
                 // Event managed without going through kernelspace. Notify
