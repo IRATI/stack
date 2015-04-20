@@ -4,6 +4,8 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
+SUBDIRS      = include plugins
+
 EXTRA_DIST   =
 CLEANFILES   =
 
@@ -46,8 +48,7 @@ test_encoders_SOURCES  =			\
 	events.cc            events.h		\
 	rib-daemon.cc        rib-daemon.h	\
 	flow-allocator.cc    flow-allocator.h	\
-	enrollment-task.cc   enrollment-task.h	\
-    link-state-routing-ps.cc   link-state-routing-ps.h
+	enrollment-task.cc   enrollment-task.h	
 test_encoders_CPPFLAGS = $(testsCPPFLAGS)
 test_encoders_LDADD    = $(testsLIBS)
 
@@ -98,5 +99,3 @@ ipcp-plugins: Makefile ipcp-plugins.in
 
 EXTRA_DIST += ipcp-plugins.in
 CLEANFILES += ipcp-plugins
-
-SUBDIRS      = include plugins

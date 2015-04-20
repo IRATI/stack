@@ -1,7 +1,7 @@
 #
 # Makefile.am
 #
-# Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
+# Written by: Vincenzo Maffione <v DOT maffione AT nextworks DOT it>
 #
 
 EXTRA_DIST   =
@@ -12,6 +12,10 @@ COMMONCPPFLAGS =				\
 	$(LIBRINA_CFLAGS)			\
 	-I$(top_srcdir)/src			\
 	-I$(top_srcdir)/src/common
+	
+COMMONLIBS =								\
+	$(builddir)/../../../common/librinad.la	\
+	$(LIBRINA_LIBS)
 
 pluginsdir          = $(pkglibdir)/ipcp
 plugins_LTLIBRARIES = 
@@ -35,9 +39,7 @@ default_la_SOURCES =			 \
 plugins_LTLIBRARIES += default.la
 
 testsCPPFLAGS = $(COMMONCPPFLAGS)
-testLIBS =									\
-	$(builddir)/../../../common/librinad.la	\
-	$(LIBRINA_LIBS)
+testsLIBS =	$(COMMONLIBS)
 	
 test_routing_SOURCES  =					    \
 	test-routing.cc							\
@@ -47,10 +49,18 @@ test_routing_SOURCES  =					    \
 test_routing_CPPFLAGS = $(testsCPPFLAGS)
 test_routing_LDADD    = $(testsLIBS)
 
+test_encoders_SOURCES  =			\
+	test-encoders.cc			\
+	../../components.cc	 ../../components.h \
+	../../events.cc      ../../events.h	    \
+    routing-ps.cc 	     routing-ps.h
+test_encoders_CPPFLAGS = $(testsCPPFLAGS)
+test_encoders_LDADD    = $(testsLIBS)
+
 check_PROGRAMS =				\
-	test-routing
+	test-routing test-encoders
 
 XFAIL_TESTS =
-PASS_TESTS  = test-routing
+PASS_TESTS  = test-routing test-encoders
 
 TESTS = $(PASS_TESTS) $(XFAIL_TESTS)
