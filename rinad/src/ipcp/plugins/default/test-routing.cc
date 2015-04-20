@@ -24,7 +24,7 @@
 
 #include <librina/logs.h>
 
-#include "ipcp/link-state-routing-ps.h"
+#include "routing-ps.h"
 
 class FakeEncoder: public rina::EncoderInterface {
 public:
@@ -64,8 +64,8 @@ public:
 			return;
 		}
 	}
-	void set_ipc_process(rinad::IPCProcess * ipc_process){
-		ipc_process_ = ipc_process;
+	void set_application_process(rina::ApplicationProcess * ap) {
+		ipc_process_ = dynamic_cast<rinad::IPCProcess *>(ap);
 	}
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
 		LOG_DBG("DIF Configuration set: %u", dif_configuration.address_);
@@ -348,8 +348,8 @@ private:
 
 class FakeNamespaceManager: public rinad::INamespaceManager {
 public:
-	void set_ipc_process(rinad::IPCProcess * ipc_process){
-		ipc_process_ = ipc_process;
+	void set_application_process(rina::ApplicationProcess * ap) {
+		ipc_process_ = dynamic_cast<rinad::IPCProcess *>(ap);
 	}
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
 		LOG_DBG("DIF Configuration set: %u", dif_configuration.address_);
@@ -408,7 +408,7 @@ private:
 
 class FakeIPCProcess: public rinad::IPCProcess {
 public:
-	FakeIPCProcess() {
+	FakeIPCProcess() : IPCProcess("test", "1") {
 		encoder_ = new rinad::Encoder();
 		encoder_->addEncoder(rinad::EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
 				new FakeEncoder());
@@ -451,16 +451,16 @@ public:
 		return neighbors_;
 	}
 
-    std::vector<rinad::PsFactory>::iterator
+    std::vector<rina::PsFactory>::iterator
                     psFactoryLookup(const std::string& component,
                                    const std::string& name) {
-    	std::vector<rinad::PsFactory>::iterator response;
+    	std::vector<rina::PsFactory>::iterator response;
     	(void) component;
     	(void) name;
     	return response;
     }
 
-    int psFactoryPublish(const rinad::PsFactory& factory) {
+    int psFactoryPublish(const rina::PsFactory& factory) {
     	(void) factory;
     	return 0;
     }
@@ -472,9 +472,9 @@ public:
     	return 0;
     }
 
-    rinad::IPolicySet * psCreate(const std::string& component,
+    rina::IPolicySet * psCreate(const std::string& component,
                                  const std::string& name,
-                                 rinad::IPCProcessComponent * context) {
+                                 rina::ApplicationEntity * context) {
     	(void) component;
     	(void) name;
     	(void) context;
@@ -483,7 +483,7 @@ public:
 
     int psDestroy(const std::string& component,
                                         const std::string& name,
-                                        rinad::IPolicySet * instance) {
+                                        rina::IPolicySet * instance) {
     	(void) component;
     	(void) name;
     	(void) instance;
