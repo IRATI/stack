@@ -149,7 +149,13 @@
         		"declaredDeadIntervalInMs" : 120000,
         		"neighborsEnrollerPeriodInMs" : 30000,
         		"maxEnrollmentRetries" : 3
-     		}
+     		},
+            "policySets" : {
+                "security-manager" : "default",
+                "flow-allocator" : "default",
+                "namespace-manager" : "default",
+                "resource-allocator" : "default"
+            }
         }
     ]
 }
