@@ -20,7 +20,7 @@
 
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
 
-#define RINA_PREFIX "encoder"
+#define RINA_PREFIX "rinad.encoder"
 
 #include <librina/logs.h>
 
