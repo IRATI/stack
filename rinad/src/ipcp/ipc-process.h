@@ -50,7 +50,10 @@ public:
 		void requestPDUFTEDump();
 		void logPDUFTE(const rina::DumpFTResponseEvent& event);
 
-		// Policy Management
+	// Policy Management
+        int dispatchSelectPolicySet(const std::string& path,
+                                    const std::string& name,
+                                    bool& got_in_userspace);
         void processSetPolicySetParamRequestEvent(
                 const rina::SetPolicySetParamRequestEvent& event);
         void processSetPolicySetParamResponseEvent(

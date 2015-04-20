@@ -338,13 +338,26 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 	//TODO do stuff
 	LOG_DBG("The kernel processed successfully the Assign to DIF request");
 
+        // Select the policy-sets specified in the DIF configuration, for
+        // userspace IPCP components
         std::list<rina::Parameter>& policy_sets_config =
                                 dif_information_.dif_configuration_.policy_sets;
         for (std::list<rina::Parameter>::iterator
                         it = policy_sets_config.begin();
                                 it != policy_sets_config.end(); it++) {
-                LOG_DBG("POLICY SET CONFIG: Component=%s, PSName=%s",
-                                it->name.c_str(), it->value.c_str());
+                std::string path = it->name;
+                std::string name = it->value;
+                bool got_in_userspace;
+                int result;
+
+                result = dispatchSelectPolicySet(path, name, got_in_userspace);
+                if (result) {
+                        LOG_ERR("Failed to select policy set %s for component %s",
+                                name.c_str(), path.c_str());
+                } else if (!got_in_userspace) {
+                        LOG_ERR("Component %s is not an userspace IPCP component",
+                                path.c_str());
+                }
         }
 
 	try{
@@ -515,38 +528,49 @@ void IPCProcessImpl::processSetPolicySetParamResponseEvent(
 	}
 }
 
-void IPCProcessImpl::processSelectPolicySetRequestEvent(
-                        const rina::SelectPolicySetRequestEvent& event) {
-	rina::ScopedLock g(*lock_);
+int IPCProcessImpl::dispatchSelectPolicySet(const std::string& path,
+                                            const std::string& name,
+                                            bool& got_in_userspace)
+{
         std::string component, remainder;
-        bool got_in_userspace = true;
-        int result = -1;
+        int result = 0;
 
-        parse_path(event.path, component, remainder);
+        got_in_userspace = true;
+
+        parse_path(path, component, remainder);
 
         // First check if the request should be served by this daemon
         // or should be forwarded to kernelspace
         if (component == "security-manager") {
                 result = security_manager_->select_policy_set(remainder,
-                                                             event.name);
+                                                              name);
         } else if (component == "enrollment") {
                 result = enrollment_task_->select_policy_set(remainder,
-                                                            event.name);
+                                                             name);
         } else if (component == "flow-allocator") {
                 result = flow_allocator_->select_policy_set(remainder,
-                                                           event.name);
+                                                            name);
         } else if (component == "namespace-manager") {
                 result = namespace_manager_->select_policy_set(remainder,
-                                                              event.name);
+                                                               name);
         } else if (component == "resource-allocator") {
                 result = resource_allocator_->select_policy_set(remainder,
-                                                               event.name);
+                                                                name);
         } else if (component == "rib-daemon") {
                 result = rib_daemon_->select_policy_set(remainder,
-                                                       event.name);
+                                                        name);
         } else {
                 got_in_userspace = false;
         }
+
+        return result;
+}
+
+void IPCProcessImpl::processSelectPolicySetRequestEvent(
+                        const rina::SelectPolicySetRequestEvent& event) {
+	rina::ScopedLock g(*lock_);
+        bool got_in_userspace;
+        int result = dispatchSelectPolicySet(event.path, event.name, got_in_userspace);
 
         if (got_in_userspace) {
                 // Event managed without going through kernelspace. Notify
