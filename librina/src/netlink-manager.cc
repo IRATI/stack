@@ -25,7 +25,7 @@
 #include <netlink/genl/ctrl.h>
 #include <netlink/socket.h>
 
-#define RINA_PREFIX "netlink-manager"
+#define RINA_PREFIX "librina.nl-manager"
 
 #include "librina/logs.h"
 #include "netlink-manager.h"

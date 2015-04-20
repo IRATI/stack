@@ -2,7 +2,8 @@
 /// Created on: May 22, 2014
 /// Author: bernat
 
-#define RINA_PREFIX "cdap-manager"
+#define RINA_PREFIX "librina.cdap-manager"
+#include "librina/logs.h"
 #include "cdap-impl.h"
 #include "CDAP.pb.h"
 

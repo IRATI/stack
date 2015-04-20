@@ -23,7 +23,7 @@
 #include <cerrno>
 #include <unistd.h>
 
-#define RINA_PREFIX "concurrency"
+#define RINA_PREFIX "librina.concurrency"
 
 #include "librina/concurrency.h"
 #include "librina/logs.h"

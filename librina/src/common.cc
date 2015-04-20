@@ -24,7 +24,7 @@
 #include <ostream>
 #include <sstream>
 
-#define RINA_PREFIX "common"
+#define RINA_PREFIX "librina.common"
 
 #include "librina/logs.h"
 #include "config.h"

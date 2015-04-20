@@ -58,7 +58,7 @@
 #error No management_sdu_write syscall defined
 #endif
 
-#define RINA_PREFIX "syscalls"
+#define RINA_PREFIX "librina.syscalls"
 
 #include "librina/logs.h"
 #include "utils.h"

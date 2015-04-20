@@ -31,7 +31,7 @@
 #include <unistd.h>
 #include <time.h>
 
-#define RINA_PREFIX "logs"
+#define RINA_PREFIX "librina.logs"
 
 #include "librina/likely.h"
 #include "librina/logs.h"
