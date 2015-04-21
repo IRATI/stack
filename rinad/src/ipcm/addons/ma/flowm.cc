@@ -265,6 +265,8 @@ void ActiveWorker::allocateFlow()
                         && event->sequenceNumber == seqnum) {
                 rrevent =
                                 dynamic_cast<rina::AllocateFlowRequestResultEvent*>(event);
+                if (rrevent->portId < 0)
+                        return;
         } else {
                 return;
         }
@@ -273,7 +275,6 @@ void ActiveWorker::allocateFlow()
         flow_ = rina::ipcManager->commitPendingFlow(rrevent->sequenceNumber,
                                                    rrevent->portId,
                                                    rrevent->difName);
-
         if (!flow_ || flow_->getPortId() == -1) {
                 LOG_ERR("[w:%u] Failed to allocate a flow.", id);
                 return;
