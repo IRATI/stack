@@ -30,7 +30,7 @@
 
 #include <cstdlib>
 
-#define RINA_PREFIX "ipc-manager"
+#define RINA_PREFIX "librina.ipc-manager"
 
 #include "librina/logs.h"
 

@@ -26,6 +26,7 @@ ipcp_CPPFLAGS =					\
 	$(COMMONCPPFLAGS)			\
 	-DPLUGINSDIR=\"$(pkglibdir)/ipcp\"
 ipcp_LDADD    = $(COMMONLIBS)
+ipcp_LDFLAGS = -Wl,--export-dynamic
 ipcp_SOURCES  =						\
 	main.cc						\
 	components.cc		components.h		\

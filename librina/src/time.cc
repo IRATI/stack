@@ -19,9 +19,6 @@
 // MA  02110-1301  USA
 //
 
-#define RINA_PREFIX "time"
-
-#include "librina/logs.h"
 #include "librina/time.h"
 
 namespace rina {

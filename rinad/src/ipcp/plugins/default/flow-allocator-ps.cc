@@ -18,9 +18,8 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
-#define RINA_PREFIX "flow-allocator-ps-default"
-
-#include <librina/logs.h>
+#define IPCP_MODULE "flow-allocator-ps-default"
+#include "../../ipcp-logging.h"
 #include <string>
 #include <climits>
 
@@ -70,7 +69,7 @@ Flow * FlowAllocatorPs::newFlowRequest(IPCProcess * ipc_process,
 		dm->destroyFlow(flow);
 		throw e;
 	}
-	LOG_DBG("Selected qos cube with name %s", qosCube->get_name().c_str());
+	LOG_IPCP_DBG("Selected qos cube with name %s", qosCube->get_name().c_str());
 
 	rina::Connection * connection = new rina::Connection();
 	connection->portId = event.portId;
@@ -136,7 +135,7 @@ rina::QoSCube * FlowAllocatorPs::selectQoSCube(
 int FlowAllocatorPs::set_policy_set_param(const std::string& name,
                                             const std::string& value)
 {
-        LOG_DBG("No policy-set-specific parameters to set (%s, %s)",
+        LOG_IPCP_DBG("No policy-set-specific parameters to set (%s, %s)",
                         name.c_str(), value.c_str());
         return -1;
 }

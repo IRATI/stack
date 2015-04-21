@@ -22,9 +22,6 @@
 #include <sstream>
 #include <iostream>
 
-#define RINA_PREFIX "ipcp-components"
-#include <librina/logs.h>
-
 #include "components.h"
 
 namespace rinad {

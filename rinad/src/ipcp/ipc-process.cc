@@ -21,9 +21,9 @@
 #include <cstdlib>
 #include <sstream>
 
-#define RINA_PREFIX "ipc-process"
+#define IPCP_MODULE "core"
+#include "ipcp-logging.h"
 
-#include <librina/logs.h>
 #include "ipcp/enrollment-task.h"
 #include "ipcp/flow-allocator.h"
 #include "ipcp/ipc-process.h"
@@ -34,7 +34,7 @@
 
 namespace rinad {
 
-#define IPCP_LOG_FILE_PREFIX "/tmp/ipcp-log-file"
+#define IPCP_LOG_IPCP_FILE_PREFIX "/tmp/ipcp-log-file"
 
 //Class IPCProcessImpl
 IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& nm,
@@ -43,12 +43,12 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 {
         try {
                 std::stringstream ss;
-                ss << IPCP_LOG_FILE_PREFIX << "-" << id;
+                ss << IPCP_LOG_IPCP_FILE_PREFIX << "-" << id;
                 rina::initialize(log_level, log_file);
                 rina::extendedIPCManager->ipcManagerPort = ipc_manager_port;
                 rina::extendedIPCManager->ipcProcessId = id;
                 rina::kernelIPCProcess->ipcProcessId = id;
-                LOG_INFO("Librina initialized");
+                LOG_IPCP_INFO("Librina initialized");
         } catch (rina::Exception &e) {
                 std::cerr << "Cannot initialize librina" << std::endl;
                 exit(EXIT_FAILURE);
@@ -115,13 +115,13 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
                 rina::ApplicationProcessNamingInformation naming_info(name_, instance_);
                 rina::extendedIPCManager->notifyIPCProcessInitialized(naming_info);
         } catch (rina::Exception &e) {
-        		LOG_ERR("Problems communicating with IPC Manager: %s. Exiting... ", e.what());
+        		LOG_IPCP_ERR("Problems communicating with IPC Manager: %s. Exiting... ", e.what());
         		exit(EXIT_FAILURE);
         }
 
         state = INITIALIZED;
 
-        LOG_INFO("Initialized IPC Process with name: %s, instance %s, id %hu ",
+        LOG_IPCP_INFO("Initialized IPC Process with name: %s, instance %s, id %hu ",
         		name_.c_str(), instance_.c_str(), id);
 }
 
@@ -275,7 +275,7 @@ void IPCProcessImpl::processAssignToDIFRequestEvent(const rina::AssignToDIFReque
 
 	if (state != INITIALIZED) {
 		//The IPC Process can only be assigned to a DIF once, reply with error message
-		LOG_ERR("Got a DIF assignment request while not in INITIALIZED state. Current state is: %d",
+		LOG_IPCP_ERR("Got a DIF assignment request while not in INITIALIZED state. Current state is: %d",
 				state);
 		rina::extendedIPCManager->assignToDIFResponse(event, -1);
 		return;
@@ -287,7 +287,7 @@ void IPCProcessImpl::processAssignToDIFRequestEvent(const rina::AssignToDIFReque
 				rina::AssignToDIFRequestEvent>(handle, event));
 		state = ASSIGN_TO_DIF_IN_PROCESS;
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems sending DIF Assignment request to the kernel: %s", e.what());
+		LOG_IPCP_ERR("Problems sending DIF Assignment request to the kernel: %s", e.what());
 		rina::extendedIPCManager->assignToDIFResponse(event, -1);
 	}
 }
@@ -296,13 +296,13 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 	rina::ScopedLock g(*lock_);
 
 	if (state == ASSIGNED_TO_DIF ) {
-		LOG_INFO("Got reply from the Kernel components regarding DIF assignment: %d",
+		LOG_IPCP_INFO("Got reply from the Kernel components regarding DIF assignment: %d",
 				event.result);
 		return;
 	}
 
 	if (state != ASSIGN_TO_DIF_IN_PROCESS) {
-		LOG_ERR("Got a DIF assignment response while not in ASSIGN_TO_DIF_IN_PROCESS state. State is %d ",
+		LOG_IPCP_ERR("Got a DIF assignment response while not in ASSIGN_TO_DIF_IN_PROCESS state. State is %d ",
 				state);
 		return;
 	}
@@ -310,7 +310,7 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 	std::map<unsigned int, rina::AssignToDIFRequestEvent>::iterator it;
 	it = pending_events_.find(event.sequenceNumber);
 	if (it == pending_events_.end()) {
-		LOG_ERR("Couldn't find an Assign to DIF request event associated to the handle %u",
+		LOG_IPCP_ERR("Couldn't find an Assign to DIF request event associated to the handle %u",
 				event.sequenceNumber);
 		return;
 	}
@@ -319,23 +319,23 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 	dif_information_ = requestEvent.difInformation;
 	pending_events_.erase(it);
 	if (event.result != 0) {
-		LOG_ERR("The kernel couldn't successfully process the Assign to DIF Request: %d",
+		LOG_IPCP_ERR("The kernel couldn't successfully process the Assign to DIF Request: %d",
 				event.result);
-		LOG_ERR("Could not assign IPC Process to DIF %s",
+		LOG_IPCP_ERR("Could not assign IPC Process to DIF %s",
 				it->second.difInformation.dif_name_.processName.c_str());
 		state = INITIALIZED;
 
 		try {
 			rina::extendedIPCManager->assignToDIFResponse(requestEvent, -1);
 		} catch (rina::Exception &e) {
-			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		}
 
 		return;
 	}
 
 	//TODO do stuff
-	LOG_DBG("The kernel processed successfully the Assign to DIF request");
+	LOG_IPCP_DBG("The kernel processed successfully the Assign to DIF request");
 
         // Select the policy-sets specified in the DIF configuration, for
         // userspace IPCP components
@@ -351,10 +351,10 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 
                 result = dispatchSelectPolicySet(path, name, got_in_userspace);
                 if (result) {
-                        LOG_ERR("Failed to select policy set %s for component %s",
+                        LOG_IPCP_ERR("Failed to select policy set %s for component %s",
                                 name.c_str(), path.c_str());
                 } else if (!got_in_userspace) {
-                        LOG_ERR("Component %s is not an userspace IPCP component",
+                        LOG_IPCP_ERR("Component %s is not an userspace IPCP component",
                                 path.c_str());
                 }
         }
@@ -370,7 +370,7 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 	}
 	catch(rina::Exception &e){
 		state = INITIALIZED;
-		LOG_ERR("Bad configuration error: %s", e.what());
+		LOG_IPCP_ERR("Bad configuration error: %s", e.what());
 		rina::extendedIPCManager->assignToDIFResponse(requestEvent, -1);
 	}
 
@@ -379,7 +379,7 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 	try {
 		rina::extendedIPCManager->assignToDIFResponse(requestEvent, 0);
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
 	}
 }
 
@@ -387,13 +387,13 @@ void IPCProcessImpl::requestPDUFTEDump() {
 	try{
 		rina::kernelIPCProcess->dumptPDUFT();
 	} catch (rina::Exception &e) {
-		LOG_WARN("Error requesting IPC Process to Dump PDU Forwarding Table: %s", e.what());
+		LOG_IPCP_WARN("Error requesting IPC Process to Dump PDU Forwarding Table: %s", e.what());
 	}
 }
 
 void IPCProcessImpl::logPDUFTE(const rina::DumpFTResponseEvent& event) {
 	if (event.result != 0) {
-		LOG_WARN("Dump PDU FT operation returned error, error code: %d",
+		LOG_IPCP_WARN("Dump PDU FT operation returned error, error code: %d",
 				event.getResult());
 		return;
 	}
@@ -411,7 +411,7 @@ void IPCProcessImpl::logPDUFTE(const rina::DumpFTResponseEvent& event) {
 		ss << std::endl;
 	}
 
-	LOG_INFO("%s", ss.str().c_str());
+	LOG_IPCP_INFO("%s", ss.str().c_str());
 }
 
 static void parse_path(const std::string& path, std::string& component,
@@ -486,7 +486,7 @@ void IPCProcessImpl::processSetPolicySetParamRequestEvent(
                         std::pair<unsigned int,
 			rina::SetPolicySetParamRequestEvent>(handle, event));
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems sending set-policy-set-param request "
+		LOG_IPCP_ERR("Problems sending set-policy-set-param request "
                         "to the kernel: %s", e.what());
 		rina::extendedIPCManager->setPolicySetParamResponse(event, -1);
 	}
@@ -500,7 +500,7 @@ void IPCProcessImpl::processSetPolicySetParamResponseEvent(
 
 	it = pending_set_policy_set_param_events.find(event.sequenceNumber);
 	if (it == pending_set_policy_set_param_events.end()) {
-		LOG_ERR("Couldn't find a set-policy-set-param request event "
+		LOG_IPCP_ERR("Couldn't find a set-policy-set-param request event "
                         "associated to the handle %u", event.sequenceNumber);
 		return;
 	}
@@ -509,25 +509,25 @@ void IPCProcessImpl::processSetPolicySetParamResponseEvent(
 
 	pending_set_policy_set_param_events.erase(it);
 	if (event.result != 0) {
-		LOG_ERR("The kernel couldn't successfully process the "
+		LOG_IPCP_ERR("The kernel couldn't successfully process the "
                         "set-policy-set-param Request: %d", event.result);
 
 		try {
 			rina::extendedIPCManager->setPolicySetParamResponse(it->second, -1);
 		} catch (rina::Exception &e) {
-			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		}
 
 		return;
 	}
 
-	LOG_DBG("The kernel processed successfully the "
+	LOG_IPCP_DBG("The kernel processed successfully the "
                 "set-policy-set-param request");
 
 	try {
 		rina::extendedIPCManager->setPolicySetParamResponse(requestEvent, 0);
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
 	}
 }
 
@@ -595,7 +595,7 @@ void IPCProcessImpl::processSelectPolicySetRequestEvent(
                         std::pair<unsigned int,
 			rina::SelectPolicySetRequestEvent>(handle, event));
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems sending select-policy-set request "
+		LOG_IPCP_ERR("Problems sending select-policy-set request "
                         "to the kernel: %s", e.what());
 		rina::extendedIPCManager->selectPolicySetResponse(event, -1);
 	}
@@ -609,7 +609,7 @@ void IPCProcessImpl::processSelectPolicySetResponseEvent(
 
 	it = pending_select_policy_set_events.find(event.sequenceNumber);
 	if (it == pending_select_policy_set_events.end()) {
-		LOG_ERR("Couldn't find a select-policy-set request event "
+		LOG_IPCP_ERR("Couldn't find a select-policy-set request event "
                         "associated to the handle %u", event.sequenceNumber);
 		return;
 	}
@@ -618,25 +618,25 @@ void IPCProcessImpl::processSelectPolicySetResponseEvent(
 
 	pending_select_policy_set_events.erase(it);
 	if (event.result != 0) {
-		LOG_ERR("The kernel couldn't successfully process the "
+		LOG_IPCP_ERR("The kernel couldn't successfully process the "
                         "select-policy-set Request: %d", event.result);
 
 		try {
 			rina::extendedIPCManager->selectPolicySetResponse(it->second, -1);
 		} catch (rina::Exception &e) {
-			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		}
 
 		return;
 	}
 
-	LOG_DBG("The kernel processed successfully the "
+	LOG_IPCP_DBG("The kernel processed successfully the "
                 "set-policy-set-param request");
 
 	try {
 		rina::extendedIPCManager->selectPolicySetResponse(requestEvent, 0);
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
 	}
 }
 
@@ -836,7 +836,7 @@ ipc_process_destroy_connection_result_handler(rina::IPCEvent *e,
 	(void) opaque;
 
 	if (event->result != 0){
-		LOG_WARN("Problems destroying connection with associated to port-id %d",
+		LOG_IPCP_WARN("Problems destroying connection with associated to port-id %d",
 				event->portId);
 	}
 }
@@ -912,7 +912,7 @@ ipc_process_default_handler(rina::IPCEvent *e,
 {
 	(void) opaque;
 
-	LOG_WARN("Received unsupported event: %d", e->eventType);
+	LOG_IPCP_WARN("Received unsupported event: %d", e->eventType);
 }
 
 void register_handlers_all(EventLoop& loop) {

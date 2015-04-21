@@ -19,9 +19,9 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
-#define RINA_PREFIX "namespace-manager-ps-default"
+#define IPCP_MODULE "namespace-manager-ps-default"
 
-#include <librina/logs.h>
+#include "../../ipcp-logging.h"
 #include <string>
 
 #include "ipcp/components.h"
@@ -171,7 +171,7 @@ bool NamespaceManagerPs::isAddressInUse(unsigned int address,
 int NamespaceManagerPs::set_policy_set_param(const std::string& name,
                                             const std::string& value)
 {
-        LOG_DBG("No policy-set-specific parameters to set (%s, %s)",
+        LOG_IPCP_DBG("No policy-set-specific parameters to set (%s, %s)",
                         name.c_str(), value.c_str());
         return -1;
 }

@@ -21,7 +21,7 @@
 
 #include <sstream>
 
-#define RINA_PREFIX "ipc-daemons"
+#define RINA_PREFIX "librina.ipc-daemons"
 
 #include "librina/logs.h"
 #include "librina/ipc-daemons.h"
