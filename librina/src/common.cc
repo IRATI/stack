@@ -24,7 +24,7 @@
 #include <ostream>
 #include <sstream>
 
-#define RINA_PREFIX "common"
+#define RINA_PREFIX "librina.common"
 
 #include "librina/logs.h"
 #include "config.h"
@@ -839,8 +839,8 @@ void initialize(unsigned int localPort, const std::string& logLevel,
         }
 
 	setNetlinkPortId(localPort);
-	setLogLevel(logLevel);
-	if (setLogFile(pathToLogFile) != 0) {
+	setLogLevel(logLevel.c_str());
+	if (setLogFile(pathToLogFile.c_str()) != 0) {
 	        LOG_WARN("Error setting log file, using stdout only");
 	}
 	rinaManager->getNetlinkManager();
@@ -858,8 +858,8 @@ void initialize(const std::string& logLevel,
                 throw InitializationException("Librina already initialized");
         }
 
-        setLogLevel(logLevel);
-        if (setLogFile(pathToLogFile) != 0) {
+        setLogLevel(logLevel.c_str());
+        if (setLogFile(pathToLogFile.c_str()) != 0) {
                 LOG_WARN("Error setting log file, using stdout only");
         }
 

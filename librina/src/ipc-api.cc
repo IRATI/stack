@@ -24,7 +24,7 @@
 #include <cstring>
 #include <stdexcept>
 
-#define RINA_PREFIX "ipc-api"
+#define RINA_PREFIX "librina.ipc-api"
 
 #include "librina/logs.h"
 #include "core.h"

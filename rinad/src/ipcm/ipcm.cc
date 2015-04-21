@@ -451,6 +451,15 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 			}
 			nsm_config.addressing_configuration_ = address_config;
 
+                        // Copy the por-component policy set names from the configuration
+                        // structure to the dif_config struct
+                        for (map<string, string>::iterator
+                                        it = dif_props.policySets.begin();
+                                        it != dif_props.policySets.end(); it++) {
+                                dif_config.policy_sets.push_back(
+                                                rina::Parameter(it->first, it->second));
+                        }
+
 			found = dif_props.
 				lookup_ipcp_address(ipcp->get_name(),
 						address);

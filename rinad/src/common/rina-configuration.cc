@@ -18,7 +18,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "rina-configuration"
+#define RINA_PREFIX "rinad.rina-configuration"
 
 #include <librina/common.h>
 #include <librina/logs.h>

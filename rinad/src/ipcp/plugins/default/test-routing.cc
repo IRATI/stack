@@ -20,11 +20,12 @@
 // MA  02110-1301  USA
 //
 
-#define RINA_PREFIX "lsr-tests"
+#define IPCP_MODULE "lsr-tests"
+#include "../../ipcp-logging.h"
 
-#include <librina/logs.h>
+#include "routing-ps.h"
 
-#include "ipcp/link-state-routing-ps.h"
+int ipcp_id = 1;
 
 class FakeEncoder: public rina::EncoderInterface {
 public:
@@ -38,7 +39,7 @@ public:
 	}
 
 	void* decode(const rina::ObjectValueInterface * object_value) const {
-		LOG_DBG("%p", object_value);
+		LOG_IPCP_DBG("%p", object_value);
 		return 0;
 	}
 };
@@ -50,25 +51,25 @@ public:
 		if (!eventListener) {
 			return;
 		}
-		LOG_DBG("%d", eventId);
+		LOG_IPCP_DBG("%d", eventId);
 	}
 	void unsubscribeFromEvent(const rinad::IPCProcessEventType& eventId,
 			rinad::EventListener * eventListener) {
 		if (!eventListener) {
 			return;
 		}
-		LOG_DBG("%d", eventId);
+		LOG_IPCP_DBG("%d", eventId);
 	}
 	void deliverEvent(rinad::Event * event) {
 		if (!event) {
 			return;
 		}
 	}
-	void set_ipc_process(rinad::IPCProcess * ipc_process){
-		ipc_process_ = ipc_process;
+	void set_application_process(rina::ApplicationProcess * ap) {
+		ipc_process_ = dynamic_cast<rinad::IPCProcess *>(ap);
 	}
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
-		LOG_DBG("DIF Configuration set: %u", dif_configuration.address_);
+		LOG_IPCP_DBG("DIF Configuration set: %u", dif_configuration.address_);
 	}
 	void addRIBObject(rina::BaseRIBObject * ribObject){
 		if (!ribObject) {
@@ -81,7 +82,7 @@ public:
 		}
 	}
 	void removeRIBObject(const std::string& objectName){
-		LOG_DBG("Removing object with name %s", objectName.c_str());
+		LOG_IPCP_DBG("Removing object with name %s", objectName.c_str());
 	}
         void sendMessageSpecific(bool useAddress, const rina::CDAPMessage & cdapMessage, int sessionId,
                         unsigned int address, rina::ICDAPResponseMessageHandler * cdapMessageHandler) {
@@ -93,14 +94,14 @@ public:
         }
 	void sendMessages(const std::list<const rina::CDAPMessage*>& cdapMessages,
 				const rina::IUpdateStrategy& updateStrategy){
-		LOG_DBG("%d, %p", cdapMessages.size(), &updateStrategy);
+		LOG_IPCP_DBG("%d, %p", cdapMessages.size(), &updateStrategy);
 	}
 	void sendMessage(const rina::CDAPMessage & cdapMessage,
 	            int sessionId, rina::ICDAPResponseMessageHandler * cdapMessageHandler){
 		if (!cdapMessageHandler)  {
 			return;
 		}
-		LOG_DBG("%d, %d ", cdapMessage.op_code_, sessionId);
+		LOG_IPCP_DBG("%d, %d ", cdapMessage.op_code_, sessionId);
 	}
 	void sendMessageToAddress(const rina::CDAPMessage & cdapMessage,
 	            int sessionId, unsigned int address,
@@ -108,14 +109,14 @@ public:
 		if (!cdapMessageHandler) {
 			return;
 		}
-		LOG_DBG("%d, %d, %ud", cdapMessage.op_code_, sessionId, address);
+		LOG_IPCP_DBG("%d, %d, %ud", cdapMessage.op_code_, sessionId, address);
 	}
 	void cdapMessageDelivered(char* message, int length, int portId){
 		if (!message) {
 			return;
 		}
 
-		LOG_DBG("Message delivered: %d, %d", length, portId);
+		LOG_IPCP_DBG("Message delivered: %d, %d", length, portId);
 	}
 	void createObject(const std::string& objectClass, const std::string& objectName,
 	             const void* objectValue, const rina::NotificationPolicy * notificationPolicy){
@@ -152,7 +153,7 @@ public:
 		operationCalled(objectClass, objectName, objectValue);
 	}
 	void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event){
-		LOG_DBG("Event: %d", event.eventType);
+		LOG_IPCP_DBG("Event: %d", event.eventType);
 	}
 	std::list<rina::BaseRIBObject *> getRIBObjects() {
 		std::list<rina::BaseRIBObject *> result;
@@ -340,7 +341,7 @@ private:
 		if (!objectValue){
 			return;
 		}
-		LOG_DBG("operation called, %s, %s", objectClass.c_str(),
+		LOG_IPCP_DBG("operation called, %s, %s", objectClass.c_str(),
 				objectName.c_str());
 	}
 	rinad::IPCProcess * ipc_process_;
@@ -348,11 +349,11 @@ private:
 
 class FakeNamespaceManager: public rinad::INamespaceManager {
 public:
-	void set_ipc_process(rinad::IPCProcess * ipc_process){
-		ipc_process_ = ipc_process;
+	void set_application_process(rina::ApplicationProcess * ap) {
+		ipc_process_ = dynamic_cast<rinad::IPCProcess *>(ap);
 	}
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
-		LOG_DBG("DIF Configuration set: %u", dif_configuration.address_);
+		LOG_IPCP_DBG("DIF Configuration set: %u", dif_configuration.address_);
 	}
 	unsigned int getDFTNextHop(const rina::ApplicationProcessNamingInformation& apNamingInfo) {
 		(void) apNamingInfo;
@@ -408,7 +409,7 @@ private:
 
 class FakeIPCProcess: public rinad::IPCProcess {
 public:
-	FakeIPCProcess() {
+	FakeIPCProcess() : IPCProcess("test", "1") {
 		encoder_ = new rinad::Encoder();
 		encoder_->addEncoder(rinad::EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
 				new FakeEncoder());
@@ -451,16 +452,16 @@ public:
 		return neighbors_;
 	}
 
-    std::vector<rinad::PsFactory>::iterator
+    std::vector<rina::PsFactory>::iterator
                     psFactoryLookup(const std::string& component,
                                    const std::string& name) {
-    	std::vector<rinad::PsFactory>::iterator response;
+    	std::vector<rina::PsFactory>::iterator response;
     	(void) component;
     	(void) name;
     	return response;
     }
 
-    int psFactoryPublish(const rinad::PsFactory& factory) {
+    int psFactoryPublish(const rina::PsFactory& factory) {
     	(void) factory;
     	return 0;
     }
@@ -472,9 +473,9 @@ public:
     	return 0;
     }
 
-    rinad::IPolicySet * psCreate(const std::string& component,
+    rina::IPolicySet * psCreate(const std::string& component,
                                  const std::string& name,
-                                 rinad::IPCProcessComponent * context) {
+                                 rina::ApplicationEntity * context) {
     	(void) component;
     	(void) name;
     	(void) context;
@@ -483,7 +484,7 @@ public:
 
     int psDestroy(const std::string& component,
                                         const std::string& name,
-                                        rinad::IPolicySet * instance) {
+                                        rina::IPolicySet * instance) {
     	(void) component;
     	(void) name;
     	(void) instance;
@@ -546,24 +547,24 @@ int test_flow_state_object_db () {
 
 	result = addObjectToGroup_NoObjectCheckModified_False();
 	if (result < 0) {
-		LOG_ERR("addObjectToGroup_NoObjectCheckModified_False test failed");
+		LOG_IPCP_ERR("addObjectToGroup_NoObjectCheckModified_False test failed");
 		return result;
 	}
-	LOG_INFO("addObjectToGroup_NoObjectCheckModified_False test passed");
+	LOG_IPCP_INFO("addObjectToGroup_NoObjectCheckModified_False test passed");
 
 	result = addObjectToGroup_AddObjectCheckModified_True();
 	if (result < 0) {
-		LOG_ERR("addObjectToGroup_AddObjectCheckModified_True test failed");
+		LOG_IPCP_ERR("addObjectToGroup_AddObjectCheckModified_True test failed");
 		return result;
 	}
-	LOG_INFO("addObjectToGroup_AddObjectCheckModified_True test passed");
+	LOG_IPCP_INFO("addObjectToGroup_AddObjectCheckModified_True test passed");
 
 	result = incrementAge_AddObjectCheckModified_False();
 	if (result < 0) {
-		LOG_ERR("addObjectToGroup_AddObjectCheckModified_True test failed");
+		LOG_IPCP_ERR("addObjectToGroup_AddObjectCheckModified_True test failed");
 		return result;
 	}
-	LOG_INFO("incrementAge_AddObjectCheckModified_False test passed");
+	LOG_IPCP_INFO("incrementAge_AddObjectCheckModified_False test passed");
 
 	return result;
 }
@@ -693,45 +694,45 @@ int test_graph () {
 
 	result = Graph_EmptyGraph_Empty();
 	if (result < 0) {
-		LOG_ERR("Graph_EmptyGraph_Empty test failed");
+		LOG_IPCP_ERR("Graph_EmptyGraph_Empty test failed");
 		return result;
 	}
-	LOG_INFO("Graph_EmptyGraph_Empty test passed");
+	LOG_IPCP_INFO("Graph_EmptyGraph_Empty test passed");
 
 	result = Graph_Contruct2Nodes_True();
 	if (result < 0) {
-		LOG_ERR("Graph_Contruct2Nodes_True test failed");
+		LOG_IPCP_ERR("Graph_Contruct2Nodes_True test failed");
 		return result;
 	}
-	LOG_INFO("Graph_Contruct2Nodes_True test passed");
+	LOG_IPCP_INFO("Graph_Contruct2Nodes_True test passed");
 
 	result = Graph_StateFalseisEmpty_True();
 	if (result < 0) {
-		LOG_ERR("Graph_StateFalseisEmpty_True test failed");
+		LOG_IPCP_ERR("Graph_StateFalseisEmpty_True test failed");
 		return result;
 	}
-	LOG_INFO("Graph_StateFalseisEmpty_True test passed");
+	LOG_IPCP_INFO("Graph_StateFalseisEmpty_True test passed");
 
 	result = Graph_NotConnected_True();
 	if (result < 0) {
-		LOG_ERR("Graph_NotConnected_True test failed");
+		LOG_IPCP_ERR("Graph_NotConnected_True test failed");
 		return result;
 	}
-	LOG_INFO("Graph_NotConnected_True test passed");
+	LOG_IPCP_INFO("Graph_NotConnected_True test passed");
 
 	result = Graph_ContructNoBiderectionalFlow_False();
 	if (result < 0) {
-		LOG_ERR("Graph_ContructNoBiderectionalFlow_False test failed");
+		LOG_IPCP_ERR("Graph_ContructNoBiderectionalFlow_False test failed");
 		return result;
 	}
-	LOG_INFO("Graph_ContructNoBiderectionalFlow_False test passed");
+	LOG_IPCP_INFO("Graph_ContructNoBiderectionalFlow_False test passed");
 
 	result = Graph_ContructTriangleGraph_True();
 	if (result < 0) {
-		LOG_ERR("Graph_ContructTriangleGraph_True test failed");
+		LOG_IPCP_ERR("Graph_ContructTriangleGraph_True test failed");
 		return result;
 	}
-	LOG_INFO("Graph_ContructTriangleGraph_True test passed");
+	LOG_IPCP_INFO("Graph_ContructTriangleGraph_True test passed");
 
 	return result;
 }
@@ -837,31 +838,31 @@ int test_dijkstra() {
 
 	result = getRoutingTable_NoFSO_size0();
 	if (result < 0) {
-		LOG_ERR("getPDUTForwardingTable_NoFSO_size0 test failed");
+		LOG_IPCP_ERR("getPDUTForwardingTable_NoFSO_size0 test failed");
 		return result;
 	}
-	LOG_INFO("getPDUTForwardingTable_NoFSO_size0 test passed");
+	LOG_IPCP_INFO("getPDUTForwardingTable_NoFSO_size0 test passed");
 
 	result = getRoutingTable_LinearGraphNumberOfEntries_2();
 	if (result < 0) {
-		LOG_ERR("getPDUTForwardingTable_LinearGraphNumberOfEntries_2 test failed");
+		LOG_IPCP_ERR("getPDUTForwardingTable_LinearGraphNumberOfEntries_2 test failed");
 		return result;
 	}
-	LOG_INFO("getPDUTForwardingTable_LinearGraphNumberOfEntries_2 test passed");
+	LOG_IPCP_INFO("getPDUTForwardingTable_LinearGraphNumberOfEntries_2 test passed");
 
 	result = getRoutingTable_StateFalseNoEntries_True();
 	if (result < 0) {
-		LOG_ERR("getPDUTForwardingTable_StateFalseNoEntries_True test failed");
+		LOG_IPCP_ERR("getPDUTForwardingTable_StateFalseNoEntries_True test failed");
 		return result;
 	}
-	LOG_INFO("getPDUTForwardingTable_StateFalseNoEntries_True test passed");
+	LOG_IPCP_INFO("getPDUTForwardingTable_StateFalseNoEntries_True test passed");
 
 	result = getRoutingTable_MultiGraphEntries_True();
 	if (result < 0) {
-		LOG_ERR("getPDUTForwardingTable_MultiGraphEntries_True test failed");
+		LOG_IPCP_ERR("getPDUTForwardingTable_MultiGraphEntries_True test failed");
 		return result;
 	}
-	LOG_INFO("getPDUTForwardingTable_MultiGraphEntries_True test passed");
+	LOG_IPCP_INFO("getPDUTForwardingTable_MultiGraphEntries_True test passed");
 
 	return result;
 }
@@ -872,24 +873,24 @@ int main()
 
 	result = test_flow_state_object_db();
 	if (result < 0) {
-		LOG_ERR("test_flow_state_object_db tests failed");
+		LOG_IPCP_ERR("test_flow_state_object_db tests failed");
 		return result;
 	}
-	LOG_INFO("test_flow_state_object_db tests passed");
+	LOG_IPCP_INFO("test_flow_state_object_db tests passed");
 
 	result = test_graph();
 	if (result < 0) {
-		LOG_ERR("test_graph tests failed");
+		LOG_IPCP_ERR("test_graph tests failed");
 		return result;
 	}
-	LOG_INFO("test_graph tests passed");
+	LOG_IPCP_INFO("test_graph tests passed");
 
 	result = test_dijkstra();
 	if (result < 0) {
-		LOG_ERR("test_dijkstra tests failed");
+		LOG_IPCP_ERR("test_dijkstra tests failed");
 		return result;
 	}
-	LOG_INFO("test_dijkstra tests passed");
+	LOG_IPCP_INFO("test_dijkstra tests passed");
 
 	return 0;
 }

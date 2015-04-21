@@ -26,54 +26,40 @@
 #include <cstdlib>
 #include <sstream>
 
-#define RINA_PREFIX "ipcp"
+//No ipcp module
+#include "ipcp-logging.h"
 
 #include <librina/common.h>
-#include <librina/logs.h>
 #include "ipcp/ipc-process.h"
 #include "common/debug.h"
 
+//IPCP id
+int ipcp_id;
+
 int wrapped_main(int argc, char * argv[])
 {
-
-	if(geteuid() != 0){
-		fprintf(stderr, "\nERROR: Root permissions are required to run %s\n",
-								RINA_PREFIX);
-		exit(EXIT_FAILURE);
-	}
-
-        if (argc != 7) {
-                LOG_ERR("Wrong number of arguments: expected 7, got %d", argc);
-                return EXIT_FAILURE;
-        }
+	(void)argc;
         std::string log_level = argv[5];
         std::string log_file = argv[6];
 
         rina::ApplicationProcessNamingInformation name(argv[1], argv[2]);
 
-        unsigned short ipcp_id   = 0;
         unsigned int   ipcm_port = 0;
-
-        std::stringstream ss(argv[3]);
-        if (! (ss >> ipcp_id)) {
-                LOG_ERR("Problems converting string to unsigned short");
-                return EXIT_FAILURE;
-        }
 
         std::stringstream ss2(argv[4]);
         if (! (ss2 >> ipcm_port)) {
-                LOG_ERR("Problems converting string to unsigned int");
+                LOG_IPCP_ERR("Problems converting string to unsigned int");
                 return EXIT_FAILURE;
         }
 
         rinad::IPCProcessImpl ipcp(name, ipcp_id, ipcm_port, log_level, log_file);
 
-        LOG_INFO("IPC Process name:     %s", argv[1]);
-        LOG_INFO("IPC Process instance: %s", argv[2]);
-        LOG_INFO("IPC Process id:       %u", ipcp_id);
-        LOG_INFO("IPC Manager port:     %u", ipcm_port);
+        LOG_IPCP_INFO("IPC Process name:     %s", argv[1]);
+        LOG_IPCP_INFO("IPC Process instance: %s", argv[2]);
+        LOG_IPCP_INFO("IPC Process id:       %u", ipcp_id);
+        LOG_IPCP_INFO("IPC Manager port:     %u", ipcm_port);
 
-        LOG_INFO("IPC Process initialized, executing event loop...");
+        LOG_IPCP_INFO("IPC Process initialized, executing event loop...");
 
         rinad::EventLoop loop(&ipcp);
 
@@ -82,12 +68,12 @@ int wrapped_main(int argc, char * argv[])
         try {
         	loop.run();
         } catch (rina::Exception &e) {
-        	LOG_ERR("Problems running event loop: %s", e.what());
+        	LOG_IPCP_ERR("Problems running event loop: %s", e.what());
         } catch (std::exception &e1) {
-        	LOG_ERR("Problems running event loop: %s", e1.what());
+        	LOG_IPCP_ERR("Problems running event loop: %s", e1.what());
         }
 
-        LOG_DBG("Exited event loop");
+        LOG_IPCP_DBG("Exited event loop");
 
         return EXIT_SUCCESS;
 }
@@ -97,7 +83,7 @@ int wrapped_main(int argc, char * argv[])
 #if WANT_PARACHUTE
 void sighandler_segv(int signum)
 {
-        LOG_CRIT("Got signal %d", signum);
+        LOG_IPCP_CRIT("Got signal %d", signum);
 
         if (signum == SIGSEGV) {
                 dump_backtrace();
@@ -110,22 +96,40 @@ int main(int argc, char * argv[])
 {
         int retval;
 
-#if WANT_PARACHUTE
-        if (signal(SIGSEGV, sighandler_segv) == SIG_ERR) {
-                LOG_WARN("Cannot install SIGSEGV handler!");
-        }
-        LOG_DBG("SIGSEGV handler installed successfully");
-#endif
-        if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
-                LOG_WARN("Cannot ignore SIGPIPE, bailing out");
+	//Check first things first
+	if(geteuid() != 0){
+		fprintf(stderr, "\nERROR: Root permissions are required to run an IPCP\n");
+		exit(EXIT_FAILURE);
+	}
+
+        if (argc != 7) {
+                LOG_IPCP_ERR("Wrong number of arguments: expected 7, got %d", argc);
                 return EXIT_FAILURE;
         }
-        LOG_DBG("SIGPIPE handler installed successfully");
+
+	//Parse ipcp-id asap
+        std::stringstream ss(argv[3]);
+        if (! (ss >> ipcp_id)) {
+                LOG_IPCP_ERR("Problems converting string to unsigned short");
+                return EXIT_FAILURE;
+        }
+
+#if WANT_PARACHUTE
+        if (signal(SIGSEGV, sighandler_segv) == SIG_ERR) {
+                LOG_IPCP_WARN("Cannot install SIGSEGV handler!");
+        }
+        LOG_IPCP_DBG("SIGSEGV handler installed successfully");
+#endif
+        if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
+                LOG_IPCP_WARN("Cannot ignore SIGPIPE, bailing out");
+                return EXIT_FAILURE;
+        }
+        LOG_IPCP_DBG("SIGPIPE handler installed successfully");
 
         try {
                 retval = wrapped_main(argc, argv);
         } catch (std::exception & e) {
-                LOG_ERR("Got unhandled exception (%s)", e.what());
+                LOG_IPCP_ERR("Got unhandled exception (%s)", e.what());
                 retval = EXIT_FAILURE;
         }
 

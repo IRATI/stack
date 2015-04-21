@@ -650,6 +650,7 @@ enum DIFConfigurationAttributes {
 	DCONF_ATTR_ET_CONF,
 	DCONF_ATTR_NSM_CONF,
 	DCONF_ATTR_SM_CONF,
+        DCONF_ATTR_POLICY_SETS,
 	__DCONF_ATTR_MAX,
 };
 

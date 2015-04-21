@@ -21,7 +21,7 @@
 // MA  02110-1301  USA
 //
 
-#define RINA_PREFIX "netlink-parsers"
+#define RINA_PREFIX "librina.nl-parsers"
 
 #include "librina/logs.h"
 #include "netlink-parsers.h"
@@ -1324,6 +1324,31 @@ int parseListOfDIFConfigurationParameters(nlattr *nested,
 			return -1;
 		}
 		difConfiguration->add_parameter(*parameter);
+		delete parameter;
+	}
+
+	if (rem > 0){
+		LOG_WARN("Missing bits to parse");
+	}
+
+	return 0;
+}
+
+int parseListOfDIFConfigurationPolicySets(nlattr *nested,
+		DIFConfiguration * difConfiguration){
+	nlattr * nla;
+	int rem;
+	Parameter * parameter;
+
+	for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
+		     nla_ok(nla, rem);
+		     nla = nla_next(nla, &(rem))){
+		/* validate & parse attribute */
+		parameter = parseParameter(nla);
+		if (parameter == 0){
+			return -1;
+		}
+		difConfiguration->policy_sets.push_back(*parameter);
 		delete parameter;
 	}
 
@@ -3977,7 +4002,7 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
                 const DIFConfiguration& object,
                 bool normalIPCProcess){
 	struct nlattr *parameters, *efcpConfig, *rmtConfig, *smConfig,
-		*etConfig, *faConfig, *nsmConfig, *pduftConfig;
+		*etConfig, *faConfig, *nsmConfig, *pduftConfig, *policySets;
 
 	if  (object.get_parameters().size() > 0) {
 	        if (!(parameters = nla_nest_start(
@@ -4061,6 +4086,19 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
 	        	goto nla_put_failure;
 	        }
 	        nla_nest_end(netlinkMessage, smConfig);
+
+                if  (object.policy_sets.size() > 0) {
+                        if (!(policySets = nla_nest_start(netlinkMessage,
+                                                        DCONF_ATTR_POLICY_SETS))) {
+                                goto nla_put_failure;
+                        }
+                        if (putListOfParameters(netlinkMessage,
+                                                object.policy_sets) < 0) {
+                                goto nla_put_failure;
+                        }
+                        nla_nest_end(netlinkMessage, policySets);
+                }
+
 	}
 
 	NLA_PUT_U32(netlinkMessage, DCONF_ATTR_ADDRESS,
@@ -6779,13 +6817,15 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 	attr_policy[DCONF_ATTR_SM_CONF].type = NLA_NESTED;
 	attr_policy[DCONF_ATTR_SM_CONF].minlen = 0;
 	attr_policy[DCONF_ATTR_SM_CONF].maxlen = 0;
+	attr_policy[DCONF_ATTR_POLICY_SETS].type = NLA_NESTED;
+	attr_policy[DCONF_ATTR_POLICY_SETS].minlen = 0;
+	attr_policy[DCONF_ATTR_POLICY_SETS].maxlen = 0;
 	struct nlattr *attrs[DCONF_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, DCONF_ATTR_MAX, nested, attr_policy);
 	if (err < 0) {
-		LOG_ERR(
-				"Error parsing DIFConfiguration information from Netlink message: %d",
-				err);
+		LOG_ERR("Error parsing DIFConfiguration information from Netlink message: %d",
+			err);
 		return 0;
 	}
 
@@ -6895,6 +6935,15 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 		} else {
 			result->sm_configuration_ = *smConfig;
 			delete smConfig;
+		}
+	}
+
+	if (attrs[DCONF_ATTR_POLICY_SETS]) {
+		status = parseListOfDIFConfigurationPolicySets(
+				attrs[DCONF_ATTR_POLICY_SETS], result);
+		if (status != 0){
+			delete result;
+			return 0;
 		}
 	}
 

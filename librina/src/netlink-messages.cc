@@ -24,7 +24,7 @@
 #include <sstream>
 #include <unistd.h>
 
-#define RINA_PREFIX "netlink-messages"
+#define RINA_PREFIX "librina.nl-messages"
 
 #include "librina/logs.h"
 #include "netlink-messages.h"

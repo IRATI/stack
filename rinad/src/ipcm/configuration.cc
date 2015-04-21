@@ -443,40 +443,39 @@ void parse_dif_configs(const Json::Value   & root,
                                 props.rmtConfiguration = rc;
                         }
 
-                        // std::map<std::string, std::string> policies
-                        Json::Value policies = dif_configs[i]["policies"];
-                        if (policies != 0) {
+                        // std::map<std::string, std::string> policy_sets
+                        Json::Value policy_sets = dif_configs[i]["policySets"];
+                        if (policy_sets != 0) {
                                 Json::Value::Members members =
-                                        policies.getMemberNames();
+                                        policy_sets.getMemberNames();
                                 for (unsigned int j = 0;
                                      j < members.size();
                                      j++) {
                                         string value =
-                                                policies.get(members[i],
+                                                policy_sets.get(members[j],
                                                              string())
                                                 .asString();
-                                        props.policies.insert
+                                        props.policySets.insert
                                                 (pair<string, string>
-                                                 (members[i], value));
+                                                 (members[j], value));
                                 }
                         }
 
                         // std::map<std::string, std::string> policyParameters
-                        Json::Value policyParams =
+                        Json::Value policy_set_params =
                                 dif_configs[i]["policyParameters"];
-                        if (policyParams != 0) {
+                        if (policy_set_params != 0) {
                                 Json::Value::Members members =
-                                        policyParams.getMemberNames();
+                                        policy_set_params.getMemberNames();
                                 for (unsigned int j = 0;
                                      j < members.size();
                                      j++) {
-                                        string value =
-                                                policyParams.get(members[i],
-                                                                 string())
-                                                .asString();
-                                        props.policyParameters.insert
+                                        string value = policy_set_params
+							.get(members[j],
+                                                        string()).asString();
+                                        props.policySetParameters.insert
                                                 (pair<string, string>
-                                                 (members[i], value));
+                                                 (members[j], value));
                                 }
                         }
 

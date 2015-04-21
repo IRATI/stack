@@ -19,9 +19,8 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
-#define RINA_PREFIX "security-manager"
-
-#include <librina/logs.h>
+#define IPCP_MODULE "security-manager"
+#include "ipcp-logging.h"
 
 #include "ipcp/components.h"
 
@@ -37,15 +36,13 @@ void SecurityManager::set_application_process(rina::ApplicationProcess * ap)
 	app = ap;
 	ipcp = dynamic_cast<IPCProcess*>(app);
 	if (!ipcp) {
-			LOG_ERR("Bogus instance of IPCP passed, return");
+			LOG_IPCP_ERR("Bogus instance of IPCP passed, return");
 			return;
 	}
 }
 
-void SecurityManager::set_dif_configuration(
-    const rina::DIFConfiguration& dif_configuration)
-{
-  LOG_DBG("Set dif configuration: %u", dif_configuration.address_);
+void SecurityManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
+	LOG_IPCP_DBG("Set dif configuration: %u", dif_configuration.address_);
 }
 
 int SecurityManager::select_policy_set(const std::string& path,

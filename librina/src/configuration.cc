@@ -21,7 +21,7 @@
 
 #include <sstream>
 
-#define RINA_PREFIX "configuration"
+#define RINA_PREFIX "librina.configuration"
 
 #include "librina/configuration.h"
 #include "librina/logs.h"
