@@ -487,10 +487,12 @@ void RIBDaemon::remote_create_request(const cdap_rib::con_handle_t &con,
 	(void) filt;
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
+	flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
 
 	//Reply object set to empty
 	cdap_rib::obj_info_t obj_reply;
 	obj_reply.value_.size_ = 0;
+        obj_reply.inst_ = 0;
 
 	BaseRIBObject* rib_obj = rib_->getRIBObject(obj.class_, obj.name_, true);
 	if (rib_obj == NULL) {
