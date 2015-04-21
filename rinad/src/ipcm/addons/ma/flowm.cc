@@ -431,17 +431,23 @@ FlowManager::~FlowManager()
         keep_running = false;
 
         //Join all workers
-        std::map<unsigned int, Worker*>::iterator it = workers.begin();
+        std::map<unsigned int, Worker*>::iterator it, next;
+
+	it = workers.begin();
 
         while (it != workers.end()) {
                 //Stop and join
                 it->second->stop();
 
+		//Keep next
+		next = it;
+		next++;
+
                 //Join
                 joinWorker(it->first);
 
                 //Remove
-                it++;
+                it = next;
         }
 
 }
