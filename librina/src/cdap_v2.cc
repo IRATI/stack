@@ -3035,9 +3035,8 @@ void CDAPProvider::process_message(cdap_rib::SerializedObject &message, int port
   obj.inst_ = m_rcv->obj_inst_;
   obj.name_ = m_rcv->obj_name_;
   obj.value_.size_ = m_rcv->obj_value_.size_;
-  memcpy(obj.value_.message_, m_rcv->obj_value_.message_,
-         m_rcv->obj_value_.size_);
-
+  if (obj.value_.size_ > 0)
+          obj.value_.message_ = m_rcv->obj_value_.message_;
   // Filter
   cdap_rib::filt_info_t filt;
   filt.filter_ = m_rcv->filter_;
