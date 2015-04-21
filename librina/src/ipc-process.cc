@@ -24,7 +24,7 @@
 #include <ostream>
 #include <sstream>
 
-#define RINA_PREFIX "ipc-process"
+#define RINA_PREFIX "librina.ipc-process"
 
 #include "librina/logs.h"
 #include "core.h"

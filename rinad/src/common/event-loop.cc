@@ -21,7 +21,7 @@
 #include <iostream>
 #include <map>
 
-#define RINA_PREFIX     "event-loop"
+#define RINA_PREFIX "rinad.event-loop"
 
 #include <librina/common.h>
 #include <librina/logs.h>

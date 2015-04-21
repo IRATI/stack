@@ -21,9 +21,8 @@
 
 #include <sstream>
 
-#define RINA_PREFIX "resource-allocator"
-
-#include <librina/logs.h>
+#define IPCP_MODULE "resource-allocator"
+#include "ipcp-logging.h"
 
 #include "events.h"
 #include "resource-allocator.h"
@@ -45,7 +44,7 @@ void NMinusOneFlowManager::set_ipc_process(IPCProcess * ipc_process) {
 }
 
 void NMinusOneFlowManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
-	LOG_DBG("DIF configuration set %u", dif_configuration.address_);
+	LOG_IPCP_DBG("DIF configuration set %u", dif_configuration.address_);
 }
 
 void NMinusOneFlowManager::populateRIB(){
@@ -55,19 +54,19 @@ void NMinusOneFlowManager::populateRIB(){
 		object = new NMinusOneFlowSetRIBObject(ipc_process_);
 		rib_daemon_->addRIBObject(object);
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems adding object to the RIB : %s", e.what());
+		LOG_IPCP_ERR("Problems adding object to the RIB : %s", e.what());
 	}
 }
 
 const rina::FlowInformation& NMinusOneFlowManager::getNMinus1FlowInformation(int portId)
-const {
-	rina::Flow * flow = rina::extendedIPCManager->getAllocatedFlow(portId);
-	if (flow == 0) {
-		throw rina::Exception("Unknown N-1 flow");
-	}
+	const {
+		rina::Flow * flow = rina::extendedIPCManager->getAllocatedFlow(portId);
+		if (flow == 0) {
+			throw rina::Exception("Unknown N-1 flow");
+		}
 
-	return flow->getFlowInformation();
-}
+		return flow->getFlowInformation();
+	}
 
 unsigned int NMinusOneFlowManager::allocateNMinus1Flow(const rina::FlowInformation& flowInformation) {
 	unsigned int handle = 0;
@@ -80,7 +79,7 @@ unsigned int NMinusOneFlowManager::allocateNMinus1Flow(const rina::FlowInformati
 		throw rina::Exception(e.what());
 	}
 
-	LOG_INFO("Requested the allocation of N-1 flow to application %s-%s through DIF %s",
+	LOG_IPCP_INFO("Requested the allocation of N-1 flow to application %s-%s through DIF %s",
 			flowInformation.remoteAppName.processName.c_str(),
 			flowInformation.remoteAppName.processInstance.c_str(),
 			flowInformation.difName.processName.c_str());
@@ -92,7 +91,7 @@ void NMinusOneFlowManager::allocateRequestResult(const rina::AllocateFlowRequest
 	if (event.portId <= 0) {
 		std::stringstream ss;
 		ss << event.portId;
-		LOG_ERR("Allocation of N-1 flow denied. Error code: %d", event.portId);
+		LOG_IPCP_ERR("Allocation of N-1 flow denied. Error code: %d", event.portId);
 		rina::FlowInformation flowInformation = rina::extendedIPCManager->withdrawPendingFlow(event.sequenceNumber);
 		Event * flowFailedEvent = new NMinusOneFlowAllocationFailedEvent(event.sequenceNumber,
 				flowInformation, ss.str());
@@ -101,7 +100,7 @@ void NMinusOneFlowManager::allocateRequestResult(const rina::AllocateFlowRequest
 	}
 
 	rina::Flow * flow = rina::extendedIPCManager->commitPendingFlow(event.sequenceNumber,
-				event.portId, event.difName);
+			event.portId, event.difName);
 	try {
 		std::stringstream ss;
 		ss<<EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
@@ -109,7 +108,7 @@ void NMinusOneFlowManager::allocateRequestResult(const rina::AllocateFlowRequest
 		rib_daemon_->createObject(EncoderConstants::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
 				ss.str(), &(flow->getFlowInformation()), 0);
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems creating RIB object: %s", e.what());
+		LOG_IPCP_ERR("Problems creating RIB object: %s", e.what());
 	}
 
 	Event * flowAllocatedEvent = new NMinusOneFlowAllocatedEvent(event.sequenceNumber,
@@ -119,27 +118,27 @@ void NMinusOneFlowManager::allocateRequestResult(const rina::AllocateFlowRequest
 
 void NMinusOneFlowManager::flowAllocationRequested(const rina::FlowRequestEvent& event) {
 	if (event.localApplicationName.processName.compare(
-			ipc_process_->get_name()) != 0 ||
+				ipc_process_->get_name()) != 0 ||
 			event.localApplicationName.processInstance.compare(
-					ipc_process_->get_instance()) != 0) {
-		LOG_ERR("Rejected flow request from %s-%s since this IPC Process is not the intended target of this flow",
+				ipc_process_->get_instance()) != 0) {
+		LOG_IPCP_ERR("Rejected flow request from %s-%s since this IPC Process is not the intended target of this flow",
 				event.remoteApplicationName.processName.c_str(),
 				event.remoteApplicationName.processInstance.c_str());
 		try {
 			rina::extendedIPCManager->allocateFlowResponse(event, -1, true);
 		} catch (rina::Exception &e) {
-			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		}
 		return;
 	}
 
 	//In this implementation we cannot accept flows if the IPC Process is not assigned to a DIF
 	if (ipc_process_->get_operational_state() != ASSIGNED_TO_DIF) {
-		LOG_ERR("Rejecting flow request since the IPC Process is not ASSIGNED to a DIF");
+		LOG_IPCP_ERR("Rejecting flow request since the IPC Process is not ASSIGNED to a DIF");
 		try {
 			rina::extendedIPCManager->allocateFlowResponse(event, -1, true);
 		} catch (rina::Exception &e) {
-			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		}
 		return;
 	}
@@ -148,13 +147,13 @@ void NMinusOneFlowManager::flowAllocationRequested(const rina::FlowRequestEvent&
 	//is both used for data transfer and management purposes
 
 	if (rina::extendedIPCManager->getFlowToRemoteApp(event.remoteApplicationName) != 0) {
-		LOG_INFO("Rejecting flow request since we already have a flow to the remote IPC Process: %s-%s",
+		LOG_IPCP_INFO("Rejecting flow request since we already have a flow to the remote IPC Process: %s-%s",
 				event.remoteApplicationName.processName.c_str(),
 				event.remoteApplicationName.processInstance.c_str());
 		try {
 			rina::extendedIPCManager->allocateFlowResponse(event, -1, true);
 		} catch (rina::Exception &e) {
-			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		}
 		return;
 	}
@@ -163,13 +162,13 @@ void NMinusOneFlowManager::flowAllocationRequested(const rina::FlowRequestEvent&
 	try {
 		flow = rina::extendedIPCManager->allocateFlowResponse(event, 0, true);
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		if (!flow) {
 			return;
 		}
 	}
 
-	LOG_INFO("Accepted new flow from IPC Process %s-%s",
+	LOG_IPCP_INFO("Accepted new flow from IPC Process %s-%s",
 			event.remoteApplicationName.processName.c_str(),
 			event.remoteApplicationName.processInstance.c_str());
 	try {
@@ -179,7 +178,7 @@ void NMinusOneFlowManager::flowAllocationRequested(const rina::FlowRequestEvent&
 		rib_daemon_->createObject(EncoderConstants::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
 				ss.str(), &(flow->getFlowInformation()), 0);
 	} catch (rina::Exception &e){
-		LOG_ERR("Error creating RIB object: %s", e.what());
+		LOG_IPCP_ERR("Error creating RIB object: %s", e.what());
 	}
 
 	Event * flowAllocatedEvent = new NMinusOneFlowAllocatedEvent(event.sequenceNumber,
@@ -203,7 +202,7 @@ void NMinusOneFlowManager::deallocateFlowResponse(
 	try {
 		rina::extendedIPCManager->flowDeallocationResult(event.portId, success);
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
 	}
 
 	cleanFlowAndNotify(event.portId);
@@ -213,7 +212,7 @@ void NMinusOneFlowManager::flowDeallocatedRemotely(const rina::FlowDeallocatedEv
 	try {
 		rina::extendedIPCManager->flowDeallocated(event.portId);
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
 	}
 
 	cleanFlowAndNotify(event.portId);
@@ -226,7 +225,7 @@ void NMinusOneFlowManager::cleanFlowAndNotify(int portId) {
 		ss<<EncoderConstants::SEPARATOR<<portId;
 		rib_daemon_->deleteObject(EncoderConstants::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS, ss.str(), 0, 0);
 	}catch(rina::Exception &e) {
-		LOG_ERR("Problems deleting object from the RIB: %s", e.what());
+		LOG_IPCP_ERR("Problems deleting object from the RIB: %s", e.what());
 	}
 
 	//Notify about the event
@@ -237,7 +236,7 @@ void NMinusOneFlowManager::cleanFlowAndNotify(int portId) {
 	}
 
 	NMinusOneFlowDeallocatedEvent * flowDeEvent =
-			new NMinusOneFlowDeallocatedEvent(portId, *cdapSessionDescriptor);
+		new NMinusOneFlowDeallocatedEvent(portId, *cdapSessionDescriptor);
 	rib_daemon_->deliverEvent(flowDeEvent);
 }
 
@@ -246,11 +245,11 @@ void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProces
 		try {
 			rina::extendedIPCManager->appRegistered(event.getIPCProcessName(), event.getDIFName());
 		} catch (rina::Exception &e) {
-			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		}
 
-		LOG_INFO("IPC Process registered to N-1 DIF %s",
-					event.getDIFName().processName.c_str());
+		LOG_IPCP_INFO("IPC Process registered to N-1 DIF %s",
+				event.getDIFName().processName.c_str());
 		try{
 			std::stringstream ss;
 			ss<<EncoderConstants::DIF_REGISTRATION_SET_RIB_OBJECT_NAME;
@@ -259,7 +258,7 @@ void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProces
 			rib_daemon_->createObject(EncoderConstants::DIF_REGISTRATION_RIB_OBJECT_CLASS, ss.str(),
 					dif_name, 0);
 		}catch(rina::Exception &e){
-			LOG_ERR("Problems creating RIB object: %s", e.what());;
+			LOG_IPCP_ERR("Problems creating RIB object: %s", e.what());;
 		}
 
 		return;
@@ -268,10 +267,10 @@ void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProces
 	try {
 		rina::extendedIPCManager->appUnregistered(event.getIPCProcessName(), event.getDIFName());
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
 	}
 
-	LOG_INFO("IPC Process unregistered from N-1 DIF %s",
+	LOG_IPCP_INFO("IPC Process unregistered from N-1 DIF %s",
 			event.getDIFName().processName.c_str());
 
 	try {
@@ -280,7 +279,7 @@ void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProces
 		ss<<EncoderConstants::SEPARATOR<<event.getDIFName().processName;
 		rib_daemon_->deleteObject(EncoderConstants::DIF_REGISTRATION_RIB_OBJECT_CLASS, ss.str(), 0, 0);
 	}catch (rina::Exception &e) {
-		LOG_ERR("Problems deleting object from RIB: %s", e.what());
+		LOG_IPCP_ERR("Problems deleting object from RIB: %s", e.what());
 	}
 }
 
@@ -366,13 +365,13 @@ ResourceAllocator::~ResourceAllocator() {
 void ResourceAllocator::set_application_process(rina::ApplicationProcess * ap)
 {
 	if (!ap)
-			return;
+		return;
 
 	app = ap;
 	ipcp = dynamic_cast<IPCProcess*>(app);
 	if (!ipcp) {
-			LOG_ERR("Bogus instance of IPCP passed, return");
-			return;
+		LOG_IPCP_ERR("Bogus instance of IPCP passed, return");
+		return;
 	}
 
 	if (n_minus_one_flow_manager_) {
@@ -391,16 +390,16 @@ INMinusOneFlowManager * ResourceAllocator::get_n_minus_one_flow_manager() const 
 }
 
 int ResourceAllocator::select_policy_set(const std::string& path,
-                                     const std::string& name)
+		const std::string& name)
 {
-  return select_policy_set_common(get_name(), path, name);
+	return select_policy_set_common(get_name(), path, name);
 }
 
 int ResourceAllocator::set_policy_set_param(const std::string& path,
-                                        const std::string& name,
-                                        const std::string& value)
+		const std::string& name,
+		const std::string& value)
 {
-  return set_policy_set_param_common(path, name, value);
+	return set_policy_set_param_common(path, name, value);
 }
 
 //Class DIF registration RIB Object
@@ -408,19 +407,19 @@ DIFRegistrationRIBObject::DIFRegistrationRIBObject(IPCProcess* ipc_process,
 		const std::string& object_class,
 		const std::string& object_name,
 		const std::string* dif_name) : SimpleSetMemberIPCPRIBObject(ipc_process,
-				object_class, object_name, dif_name) {
-}
+			object_class, object_name, dif_name) {
+		}
 
 std::string DIFRegistrationRIBObject::get_displayable_value() {
-    const std::string * dif_name = (const std::string *) get_value();
-    std::stringstream ss;
-    ss << "N-1 DIF name: " << *dif_name;
+	const std::string * dif_name = (const std::string *) get_value();
+	std::stringstream ss;
+	ss << "N-1 DIF name: " << *dif_name;
 
-    return ss.str();
+	return ss.str();
 }
 
 void DIFRegistrationRIBObject::deleteObject(const void* objectValue) {
-        (void) objectValue; // Stop compiler barfs
+	(void) objectValue; // Stop compiler barfs
 
 	parent_->remove_child(name_);
 	rib_daemon_->removeRIBObject(name_);
@@ -433,15 +432,15 @@ DIFRegistrationSetRIBObject::DIFRegistrationSetRIBObject(IPCProcess * ipc_proces
 	BaseIPCPRIBObject(ipc_process, EncoderConstants::DIF_REGISTRATION_SET_RIB_OBJECT_CLASS,
 			rina::objectInstanceGenerator->getObjectInstance(),
 			EncoderConstants::DIF_REGISTRATION_SET_RIB_OBJECT_NAME){
-}
+	}
 
 const void* DIFRegistrationSetRIBObject::get_value() const {
 	return 0;
 }
 
 void DIFRegistrationSetRIBObject::createObject(const std::string& objectClass,
-                      const std::string& objectName,
-                      const void* objectValue) {
+		const std::string& objectName,
+		const void* objectValue) {
 	DIFRegistrationRIBObject * ribObject = new DIFRegistrationRIBObject(ipc_process_, objectClass,
 			objectName, (const std::string *) objectValue);
 	add_child(ribObject);
@@ -453,22 +452,22 @@ NMinusOneFlowRIBObject::NMinusOneFlowRIBObject(IPCProcess* ipc_process,
 		const std::string& object_class,
 		const std::string& object_name,
 		const rina::FlowInformation* flow_info) : SimpleSetMemberIPCPRIBObject(ipc_process,
-				object_class, object_name, flow_info) {
-}
+			object_class, object_name, flow_info) {
+		}
 
 std::string NMinusOneFlowRIBObject::get_displayable_value() {
-    const rina::FlowInformation * flow_info = (const rina::FlowInformation *) get_value();
-    std::stringstream ss;
-    rina::ApplicationProcessNamingInformation name;
-    name = flow_info->localAppName;
-    ss << "Local app name: " << name.getEncodedString();
-    name = flow_info->remoteAppName;
-    ss << "Remote app name: " << name.getEncodedString() << std::endl;
-    ss << "N-1 DIF name: " << flow_info->difName.processName;
-    ss << "; port-id: " << flow_info->portId << std::endl;
-    rina::FlowSpecification flowSpec = flow_info->flowSpecification;
-    ss << "Flow characteristics: " << flowSpec.toString();
-    return ss.str();
+	const rina::FlowInformation * flow_info = (const rina::FlowInformation *) get_value();
+	std::stringstream ss;
+	rina::ApplicationProcessNamingInformation name;
+	name = flow_info->localAppName;
+	ss << "Local app name: " << name.getEncodedString();
+	name = flow_info->remoteAppName;
+	ss << "Remote app name: " << name.getEncodedString() << std::endl;
+	ss << "N-1 DIF name: " << flow_info->difName.processName;
+	ss << "; port-id: " << flow_info->portId << std::endl;
+	rina::FlowSpecification flowSpec = flow_info->flowSpecification;
+	ss << "Flow characteristics: " << flowSpec.toString();
+	return ss.str();
 }
 
 // Class N-1 Flow set RIB Object
@@ -476,15 +475,15 @@ NMinusOneFlowSetRIBObject::NMinusOneFlowSetRIBObject(IPCProcess * ipc_process):
 	BaseIPCPRIBObject(ipc_process, EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_CLASS,
 			rina::objectInstanceGenerator->getObjectInstance(),
 			EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME){
-}
+	}
 
 const void* NMinusOneFlowSetRIBObject::get_value() const {
 	return 0;
 }
 
 void NMinusOneFlowSetRIBObject::createObject(const std::string& objectClass,
-                      const std::string& objectName,
-                      const void* objectValue) {
+		const std::string& objectName,
+		const void* objectValue) {
 	NMinusOneFlowRIBObject * ribObject = new NMinusOneFlowRIBObject(ipc_process_, objectClass,
 			objectName, (const rina::FlowInformation *) objectValue);
 	add_child(ribObject);

@@ -20,7 +20,7 @@
 // MA  02110-1301  USA
 //
 
-#define RINA_PREFIX "application"
+#define RINA_PREFIX "librina.application"
 
 #include "librina/logs.h"
 #include "core.h"

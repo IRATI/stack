@@ -19,7 +19,7 @@
 // MA  02110-1301  USA
 //
 
-#define RINA_PREFIX "rib"
+#define RINA_PREFIX "librina.rib"
 
 #include <librina/logs.h>
 #include "librina/rib.h"

@@ -23,13 +23,14 @@
 #include <list>
 #include <iostream>
 
-#define RINA_PREFIX "encoders-tests"
-
-#include <librina/logs.h>
+#define IPCP_MODULE "encoders-tests"
+#include "../../ipcp-logging.h"
 
 #include <librina/configuration.h>
 #include "common/encoder.h"
 #include "routing-ps.h"
+
+int ipcp_id = 1;
 
 bool test_flow_state_object(rinad::Encoder * encoder) {
 	rinad::FlowStateObject fso = rinad::FlowStateObject(23, 84, 2, true, 123, 450);
@@ -43,44 +44,44 @@ bool test_flow_state_object(rinad::Encoder * encoder) {
 	recovered_obj = (rinad::FlowStateObject *) encoder->decode(&cdapMessage);
 
 	if (fso.address_ != recovered_obj->address_) {
-		LOG_ERR("Addresses are different; original: %u, recovered: %u",
+		LOG_IPCP_ERR("Addresses are different; original: %u, recovered: %u",
 				fso.address_, recovered_obj->address_);
 		return false;
 	}
 
 	if (fso.neighbor_address_ != recovered_obj->neighbor_address_) {
-		LOG_ERR("Neighbor addresses are different; original: %u, recovered: %u",
+		LOG_IPCP_ERR("Neighbor addresses are different; original: %u, recovered: %u",
 				fso.neighbor_address_, recovered_obj->neighbor_address_);
 		return false;
 	}
 
 	if (fso.cost_ != recovered_obj->cost_) {
-		LOG_ERR("Costs are different; original: %u, recovered: %u",
+		LOG_IPCP_ERR("Costs are different; original: %u, recovered: %u",
 				fso.cost_, recovered_obj->cost_);
 		return false;
 	}
 
 	if (fso.sequence_number_ != recovered_obj->sequence_number_) {
-		LOG_ERR("Sequence numbers are different; original: %d, recovered: %d",
+		LOG_IPCP_ERR("Sequence numbers are different; original: %d, recovered: %d",
 				fso.sequence_number_, recovered_obj->sequence_number_);
 		return false;
 	}
 
 	if (fso.up_ != recovered_obj->up_) {
-		LOG_ERR("States are different; original: %d, recovered: %d",
+		LOG_IPCP_ERR("States are different; original: %d, recovered: %d",
 				fso.up_, recovered_obj->up_);
 		return false;
 	}
 
 	if (fso.age_ != recovered_obj->age_) {
-		LOG_ERR("Ages are different; original: %u, recovered: %u",
+		LOG_IPCP_ERR("Ages are different; original: %u, recovered: %u",
 				fso.age_, recovered_obj->age_);
 		return false;
 	}
 
 	delete recovered_obj;
 
-	LOG_INFO("Flow State Object Encoder tested successfully");
+	LOG_IPCP_INFO("Flow State Object Encoder tested successfully");
 	return true;
 }
 
@@ -106,7 +107,7 @@ bool test_flow_state_object_list(rinad::Encoder * encoder) {
 
 	delete recovered_obj;
 
-	LOG_INFO("Flow State Object List Encoder tested successfully");
+	LOG_IPCP_INFO("Flow State Object List Encoder tested successfully");
 	return true;
 }
 
@@ -120,13 +121,13 @@ int main()
 
 	bool result = test_flow_state_object(&encoder);
 	if (!result) {
-		LOG_ERR("Problems testing Flow State Object Encoder");
+		LOG_IPCP_ERR("Problems testing Flow State Object Encoder");
 		return -1;
 	}
 
 	result = test_flow_state_object_list(&encoder);
 	if (!result) {
-		LOG_ERR("Problems testing Flow State Object List Encoder");
+		LOG_IPCP_ERR("Problems testing Flow State Object List Encoder");
 		return -1;
 	}
 
