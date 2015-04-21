@@ -25,7 +25,7 @@
 
 #ifdef __cplusplus
 
-#include "common.h"
+#include "application.h"
 #include "cdap.h"
 
 namespace rina {
@@ -277,8 +277,9 @@ public:
 };
 
 /// Interface that provides the RIB Daemon API
-class IRIBDaemon {
+class IRIBDaemon : public ApplicationEntity {
 public:
+		IRIBDaemon() : ApplicationEntity(ApplicationEntity::RIB_DAEMON_AE_NAME) { };
         virtual ~IRIBDaemon(){};
 
         /// Add an object to the RIB
@@ -884,6 +885,20 @@ private:
         void sendMessageToProcess(const rina::CDAPMessage & cdapMessage, const RemoteProcessId& remote_id,
                         ICDAPResponseMessageHandler * response_handler);
 
+};
+
+/// Base RIB Object. API for the create/delete/read/write/start/stop RIB
+/// functionality for certain objects (identified by objectNames)
+class BaseAppRIBObject: public BaseRIBObject {
+public:
+		virtual ~BaseAppRIBObject(){};
+		BaseAppRIBObject(ApplicationProcess * application,
+                      const std::string& object_class,
+                      long object_instance,
+                      const std::string& object_name);
+
+		ApplicationProcess * app;
+		IRIBDaemon * rib_daemon_;
 };
 
 ///Object exchanged between applications processes that

@@ -32,6 +32,7 @@
 
 #include <librina/ipc-process.h>
 #include <librina/internal-events.h>
+#include <librina/irm.h>
 
 #include "common/encoder.h"
 
@@ -404,7 +405,7 @@ public:
 };
 
 ///N-1 Flow Manager interface
-class INMinusOneFlowManager {
+class INMinusOneFlowManager : public rina::IPCResourceManager {
 public:
 	virtual ~INMinusOneFlowManager(){};
 
@@ -412,53 +413,10 @@ public:
 
 	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
 
-	/// Allocate an N-1 Flow with the requested QoS to the destination
-	/// IPC Process
-	/// @param flowInformation contains the destination IPC Process and requested
-    /// QoS information
-	/// @return handle to the flow request
-	virtual unsigned int allocateNMinus1Flow(const rina::FlowInformation& flowInformation) = 0;
-
-	/// Process the result of an allocate request event
-	/// @param event
-	/// @throws IPCException
-	virtual void allocateRequestResult(const rina::AllocateFlowRequestResultEvent& event) = 0;
-
-	/// Process a flow allocation request
-	/// @param event
-	/// @throws IPCException if something goes wrong
-	virtual void flowAllocationRequested(const rina::FlowRequestEvent& event) = 0;
-
-	/// Deallocate the N-1 Flow identified by portId
-	/// @param portId
-	/// @throws IPCException if no N-1 Flow identified by portId exists
-	virtual void deallocateNMinus1Flow(int portId) = 0;
-
-	/// Process the response of a flow deallocation request
-	/// @throws IPCException
-	virtual void deallocateFlowResponse(const rina::DeallocateFlowResponseEvent& event) = 0;
-
-	/// A flow has been deallocated remotely, process
-	/// @param portId
-	virtual void flowDeallocatedRemotely(const rina::FlowDeallocatedEvent& event) = 0;
-
-	/// Return the N-1 Flow descriptor associated to the flow identified by portId
-	/// @param portId
-	/// @return the N-1 Flow information
-    /// @throws IPCException if no N-1 Flow identified by portId exists
-	virtual const rina::FlowInformation& getNMinus1FlowInformation(int portId) const = 0;
-
 	/// The IPC Process has been unregistered from or registered to an N-1 DIF
 	/// @param evet
 	/// @throws IPCException
 	virtual void processRegistrationNotification(const rina::IPCProcessDIFRegistrationEvent& event) = 0;
-
-	/// True if the DIF name is a supoprting DIF, false otherwise
-	/// @param difName
-	/// @return
-	virtual bool isSupportingDIF(const rina::ApplicationProcessNamingInformation& difName) = 0;
-
-	virtual std::list<rina::FlowInformation> getAllNMinusOneFlowInformation() const = 0;
 
 	virtual std::list<int> getNMinusOneFlowsToNeighbour(unsigned int address) = 0;
 
@@ -566,11 +524,9 @@ public:
 };
 
 /// Interface that provides the RIB Daemon API
-class IPCPRIBDaemon : public rina::RIBDaemon, public IPCProcessComponent,
-					  public rina::ApplicationEntity {
+class IPCPRIBDaemon : public rina::RIBDaemon, public IPCProcessComponent {
 public:
-		static const std::string RIB_DAEMON_AE_NAME;
-		IPCPRIBDaemon() : rina::ApplicationEntity(RIB_DAEMON_AE_NAME) { };
+		IPCPRIBDaemon() { };
 		virtual ~IPCPRIBDaemon(){};
 
 		/// Process a Query RIB Request from the IPC Manager

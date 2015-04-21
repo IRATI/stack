@@ -32,6 +32,7 @@ allsources =							\
         faux-sockets.cc						\
         cdap.cc							\
         rib.cc							\
+        irm.cc							\
         sdu-protection.cc					\
         netlink-messages.cc  netlink-messages.h			\
         netlink-parsers.cc   netlink-parsers.h			\

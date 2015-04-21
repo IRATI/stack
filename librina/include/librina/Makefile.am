@@ -19,6 +19,7 @@ nobase_pkginclude_HEADERS = \
 	cdap.h					\
 	likely.h				\
 	rib.h                   \
+	irm.h					\
 	sdu-protection.h		\
 	patterns.h				\
 	exceptions.h			\
