@@ -114,9 +114,21 @@ public:
 	*/
 	void addManagerConnection(AppConnection& con);
 
+
+	/**
+	* Instantance pointer; there can only be an instance
+	*/
+	static ManagementAgent* inst;
+
+	//Addon name
+	static const std::string NAME;
+
 protected:
-	//Process event
-	virtual void process_event(rina::IPCEvent** event);
+	//Process flow event
+	void process_flow_event(rina::IPCEvent** event);
+
+	//Process ipcm event
+	void process_ipcm_event(const IPCMEvent& event);
 
 	//TODO remove this
 	RIBFactory* get_rib() const;

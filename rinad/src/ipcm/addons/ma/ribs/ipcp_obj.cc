@@ -4,6 +4,7 @@
 #include <librina/logs.h>
 #include <librina/exceptions.h>
 
+#include "../agent.h"
 #include "../../../ipcm.h"
 
 namespace rinad {
@@ -62,7 +63,7 @@ rina::cdap_rib::res_info_t* IPCPObj::remoteDelete(const std::string& name){
 	r->result_ = 0;
 
 	//Call the IPCManager and return
-	if (IPCManager->destroy_ipcp(processID_) != IPCM_SUCCESS) {
+	if (IPCManager->destroy_ipcp(ManagementAgent::inst, processID_) != IPCM_SUCCESS) {
 		LOG_ERR("Unable to destroy IPCP with id %d", processID_);
 		r->result_ = -1;
 	}
