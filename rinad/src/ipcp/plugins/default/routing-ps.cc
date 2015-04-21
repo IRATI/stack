@@ -31,7 +31,7 @@
 #include <librina/timer.h>
 
 #include "ipcp/components.h"
-#include "ipcp/link-state-routing-ps.h"
+#include "routing-ps.h"
 #include "common/encoders/FlowStateGroupMessage.pb.h"
 
 namespace rinad {
