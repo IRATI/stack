@@ -646,8 +646,8 @@ void RIBDaemon::remote_stop_request(const cdap_rib::con_handle_t &con,
 
 void RIBDaemon::addRIBObject(BaseRIBObject *rib_object){
 
-	if (encoders_.find(rib_object->get_encoder()->get_type()) != encoders_.end())
-		encoders_[rib_object->get_encoder()->get_type()] = rib_object->get_encoder();
+	//if (encoders_.find(rib_object->get_encoder()->get_type()) != encoders_.end())
+	//	encoders_[rib_object->get_encoder()->get_type()] = rib_object->get_encoder();
 	rib_->addRIBObject(rib_object);
 }
 void RIBDaemon::removeRIBObject(BaseRIBObject *rib_object){
