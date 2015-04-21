@@ -28,7 +28,6 @@ ipcp_CPPFLAGS =					\
 ipcp_LDADD    = $(COMMONLIBS)
 ipcp_SOURCES  =						\
 	main.cc						\
-	events.cc		events.h		\
 	components.cc		components.h		\
 	rib-daemon.cc		rib-daemon.h		\
 	enrollment-task.cc	enrollment-task.h	\
@@ -45,7 +44,6 @@ testsLIBS     = $(COMMONLIBS)
 test_encoders_SOURCES  =			\
 	test-encoders.cc			\
 	components.cc	     components.h	\
-	events.cc            events.h		\
 	rib-daemon.cc        rib-daemon.h	\
 	flow-allocator.cc    flow-allocator.h	\
 	enrollment-task.cc   enrollment-task.h	

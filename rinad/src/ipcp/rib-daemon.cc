@@ -64,87 +64,6 @@ void * doManagementSDUReaderWork(void* arg)
 	return 0;
 }
 
-// Class BaseRIBDaemon
-void BaseRIBDaemon::subscribeToEvent(const IPCProcessEventType& eventId,
-                                     EventListener * eventListener)
-{
-        if (!eventListener)
-                return;
-
-        events_lock_.lock();
-
-        std::map<IPCProcessEventType, std::list<EventListener*> >::iterator it = event_listeners_.find(eventId);
-        if (it == event_listeners_.end()) {
-                std::list<EventListener *> listenersList;
-                listenersList.push_back(eventListener);
-                event_listeners_[eventId] = listenersList;
-        } else {
-                std::list<EventListener *>::iterator listIterator;
-                for (listIterator=it->second.begin(); listIterator != it->second.end(); ++listIterator) {
-                        if (*listIterator == eventListener) {
-                                events_lock_.unlock();
-                                return;
-                        }
-                }
-
-                it->second.push_back(eventListener);
-        }
-
-        LOG_INFO("EventListener subscribed to event %s",
-                        BaseEvent::eventIdToString(eventId).c_str());
-        events_lock_.unlock();
-}
-
-void BaseRIBDaemon::unsubscribeFromEvent(const IPCProcessEventType& eventId,
-                                         EventListener *            eventListener)
-{
-        if (!eventListener)
-                return;
-
-        events_lock_.lock();
-        std::map<IPCProcessEventType, std::list<EventListener*> >::iterator it = event_listeners_.find(eventId);
-        if (it == event_listeners_.end()) {
-                events_lock_.unlock();
-                return;
-        }
-
-        it->second.remove(eventListener);
-        if (it->second.size() == 0) {
-                event_listeners_.erase(it);
-        }
-
-        LOG_INFO("EventListener unsubscribed from event %s",
-                        BaseEvent::eventIdToString(eventId).c_str());
-        events_lock_.unlock();
-}
-
-void BaseRIBDaemon::deliverEvent(Event * event)
-{
-        if (!event)
-                return;
-
-        LOG_INFO("Event %s has just happened. Notifying event listeners.",
-                        BaseEvent::eventIdToString(event->get_id()).c_str());
-
-        events_lock_.lock();
-        std::map<IPCProcessEventType, std::list<EventListener*> >::iterator it = event_listeners_.find(event->get_id());
-        if (it == event_listeners_.end()) {
-                events_lock_.unlock();
-                delete event;
-                return;
-        }
-
-        events_lock_.unlock();
-        std::list<EventListener *>::iterator listIterator;
-        for (listIterator=it->second.begin(); listIterator != it->second.end(); ++listIterator) {
-                (*listIterator)->eventHappened(event);
-        }
-
-        if (event) {
-                delete event;
-        }
-}
-
 ///Class RIBDaemon
 IPCPRIBDaemonImpl::IPCPRIBDaemonImpl()
 {
@@ -177,36 +96,39 @@ void IPCPRIBDaemonImpl::set_application_process(rina::ApplicationProcess * ap)
 			&doManagementSDUReaderWork, (void *) data);
 }
 
-void IPCPRIBDaemonImpl::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
-	LOG_DBG("Configuration set: %u", dif_configuration.address_);
+void IPCPRIBDaemonImpl::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
+{
+		LOG_DBG("Configuration set: %u", dif_configuration.address_);
 }
 
 void IPCPRIBDaemonImpl::subscribeToEvents()
 {
-	subscribeToEvent(IPCP_EVENT_N_MINUS_1_FLOW_ALLOCATED, this);
-	subscribeToEvent(IPCP_EVENT_N_MINUS_1_FLOW_DEALLOCATED, this);
+		ipcp->internal_event_manager_->subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED, this);
+		ipcp->internal_event_manager_->subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED, this);
 }
 
-void IPCPRIBDaemonImpl::eventHappened(Event * event)
+void IPCPRIBDaemonImpl::eventHappened(rina::InternalEvent * event)
 {
-	if (!event)
-		return;
+		if (!event)
+				return;
 
-	if (event->get_id() == IPCP_EVENT_N_MINUS_1_FLOW_DEALLOCATED) {
-		NMinusOneFlowDeallocatedEvent * flowEvent = (NMinusOneFlowDeallocatedEvent *) event;
-		nMinusOneFlowDeallocated(flowEvent->port_id_);
-	} else if (event->get_id() == IPCP_EVENT_N_MINUS_1_FLOW_ALLOCATED) {
-		NMinusOneFlowAllocatedEvent * flowEvent = (NMinusOneFlowAllocatedEvent *) event;
-		nMinusOneFlowAllocated(flowEvent);
-	}
+		if (event->type == rina::InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED) {
+				rina::NMinusOneFlowDeallocatedEvent * flowEvent =
+						(rina::NMinusOneFlowDeallocatedEvent *) event;
+				nMinusOneFlowDeallocated(flowEvent->port_id_);
+		} else if (event->type == rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED) {
+				rina::NMinusOneFlowAllocatedEvent * flowEvent =
+						(rina::NMinusOneFlowAllocatedEvent *) event;
+				nMinusOneFlowAllocated(flowEvent);
+		}
 }
 
-void IPCPRIBDaemonImpl::nMinusOneFlowDeallocated(int portId) {
-        rina::CDAPSessionManagerInterface * cdsm = ipcp->cdap_session_manager_;
-	cdsm->removeCDAPSession(portId);
+void IPCPRIBDaemonImpl::nMinusOneFlowDeallocated(int portId)
+{
+        ipcp->cdap_session_manager_->removeCDAPSession(portId);
 }
 
-void IPCPRIBDaemonImpl::nMinusOneFlowAllocated(NMinusOneFlowAllocatedEvent * event)
+void IPCPRIBDaemonImpl::nMinusOneFlowAllocated(rina::NMinusOneFlowAllocatedEvent * event)
 {
 	if (!event)
 		return;

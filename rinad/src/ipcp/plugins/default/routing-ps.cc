@@ -957,10 +957,14 @@ void LinkStateRoutingPolicy::populateRIB()
 
 void LinkStateRoutingPolicy::subscribeToEvents()
 {
-	rib_daemon_->subscribeToEvent(IPCP_EVENT_N_MINUS_1_FLOW_DEALLOCATED, this);
-	rib_daemon_->subscribeToEvent(IPCP_EVENT_N_MINUS_1_FLOW_ALLOCATED, this);
-	rib_daemon_->subscribeToEvent(IPCP_EVENT_NEIGHBOR_ADDED, this);
-	rib_daemon_->subscribeToEvent(IPCP_EVENT_CONNECTIVITY_TO_NEIGHBOR_LOST, this);
+		ipc_process_->internal_event_manager_->
+			subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED, this);
+		ipc_process_->internal_event_manager_->
+			subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED, this);
+		ipc_process_->internal_event_manager_->
+			subscribeToEvent(rina::InternalEvent::APP_NEIGHBOR_ADDED, this);
+		ipc_process_->internal_event_manager_->
+			subscribeToEvent(rina::InternalEvent::APP_CONNECTIVITY_TO_NEIGHBOR_LOST, this);
 }
 
 void LinkStateRoutingPolicy::set_dif_configuration(
@@ -1007,32 +1011,33 @@ const std::list<rina::FlowInformation>& LinkStateRoutingPolicy::get_allocated_fl
 	return allocated_flows_;
 }
 
-void LinkStateRoutingPolicy::eventHappened(Event * event)
+void LinkStateRoutingPolicy::eventHappened(rina::InternalEvent * event)
 {
 	if (!event)
 		return;
 
 	rina::ScopedLock g(*lock_);
 
-	if (event->get_id() == IPCP_EVENT_N_MINUS_1_FLOW_DEALLOCATED) {
-		NMinusOneFlowDeallocatedEvent * flowEvent =
-				(NMinusOneFlowDeallocatedEvent *) event;
-		processFlowDeallocatedEvent(flowEvent);
-	} else if (event->get_id() == IPCP_EVENT_N_MINUS_1_FLOW_ALLOCATED) {
-		NMinusOneFlowAllocatedEvent * flowEvent =
-				(NMinusOneFlowAllocatedEvent *) event;
-		processFlowAllocatedEvent(flowEvent);
-	} else if (event->get_id() == IPCP_EVENT_NEIGHBOR_ADDED) {
-		NeighborAddedEvent * neighEvent = (NeighborAddedEvent *) event;
-		processNeighborAddedEvent(neighEvent);
-	} else if (event->get_id() == IPCP_EVENT_CONNECTIVITY_TO_NEIGHBOR_LOST) {
-		ConnectiviyToNeighborLostEvent * neighEvent = (ConnectiviyToNeighborLostEvent *) event;
-		processNeighborLostEvent(neighEvent);
+	if (event->type == rina::InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED) {
+			rina::NMinusOneFlowDeallocatedEvent * flowEvent =
+				(rina::NMinusOneFlowDeallocatedEvent *) event;
+			processFlowDeallocatedEvent(flowEvent);
+	} else if (event->type == rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED) {
+			rina::NMinusOneFlowAllocatedEvent * flowEvent =
+				(rina::NMinusOneFlowAllocatedEvent *) event;
+			processFlowAllocatedEvent(flowEvent);
+	} else if (event->type == rina::InternalEvent::APP_NEIGHBOR_ADDED) {
+			rina::NeighborAddedEvent * neighEvent = (rina::NeighborAddedEvent *) event;
+			processNeighborAddedEvent(neighEvent);
+	} else if (event->type == rina::InternalEvent::APP_CONNECTIVITY_TO_NEIGHBOR_LOST) {
+			rina::ConnectiviyToNeighborLostEvent * neighEvent =
+					(rina::ConnectiviyToNeighborLostEvent *) event;
+			processNeighborLostEvent(neighEvent);
 	}
 }
 
 void LinkStateRoutingPolicy::processFlowDeallocatedEvent(
-		NMinusOneFlowDeallocatedEvent * event)
+		rina::NMinusOneFlowDeallocatedEvent * event)
 {
 	std::list<rina::FlowInformation>::iterator it;
 
@@ -1048,12 +1053,12 @@ void LinkStateRoutingPolicy::processFlowDeallocatedEvent(
 }
 
 void LinkStateRoutingPolicy::processNeighborLostEvent(
-		ConnectiviyToNeighborLostEvent * event) {
+		rina::ConnectiviyToNeighborLostEvent * event) {
 	db_->deprecateObject(event->neighbor_->address_);
 }
 
 void LinkStateRoutingPolicy::processFlowAllocatedEvent(
-		NMinusOneFlowAllocatedEvent * event)
+		rina::NMinusOneFlowAllocatedEvent * event)
 {
 	if (ipc_process_->resource_allocator_->get_n_minus_one_flow_manager()->
 			numberOfFlowsToNeighbour(event->flow_information_.remoteAppName.processName,
@@ -1075,7 +1080,7 @@ void LinkStateRoutingPolicy::processFlowAllocatedEvent(
 }
 
 void LinkStateRoutingPolicy::processNeighborAddedEvent(
-		NeighborAddedEvent * event)
+		rina::NeighborAddedEvent * event)
 {
 	std::list<rina::FlowInformation>::iterator it;
 

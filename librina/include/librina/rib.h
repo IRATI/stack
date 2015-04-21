@@ -756,7 +756,7 @@ public:
 // /A RIB Daemon partial implementation, that internally uses the RIB
 /// implementation provided by the RIB class. Complete implementations have
 /// to extend this class to adapt it to the environment they are operating
-class RIBDaemon : public IRIBDaemon{
+class RIBDaemon : public IRIBDaemon {
 public:
         RIBDaemon();
         void initialize(const std::string& separator, IEncoder * encoder,

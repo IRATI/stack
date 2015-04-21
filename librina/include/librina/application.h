@@ -44,7 +44,7 @@
  */
 namespace rina {
 
-// A set of policies for a specific application entity
+/// A set of policies for a specific application entity
 class IPolicySet {
 public:
         virtual int set_policy_set_param(const std::string& name,
@@ -56,7 +56,7 @@ public:
 
 class ApplicationEntity;
 
-// An instance of an application entity
+/// An instance of an application entity
 class ApplicationEntityInstance {
 public:
 		ApplicationEntityInstance(const std::string& instance_id)
@@ -66,10 +66,10 @@ public:
 		virtual void set_application_entity(ApplicationEntity * ae) = 0;
 
 protected:
-		//The AE Instance, immutable during the AE's lifetime
+		/// The AE Instance, immutable during the AE's lifetime
 		std::string instance_id_;
 
-		//The Application Entity this instance is part of
+		/// The Application Entity this instance is part of
 		ApplicationEntity * ae;
 };
 
@@ -77,8 +77,8 @@ class AppPolicyManager;
 
 class ApplicationProcess;
 
-// Contains all the data and functions required to access
-// and configure the AE Policy Set
+/// Contains all the data and functions required to access
+/// and configure the AE Policy Set
 class AEPolicySet {
 public:
 		AEPolicySet() : ps(NULL) { };
@@ -106,15 +106,15 @@ public:
                                         		const std::string& param_name,
                                         		const std::string& param_value) = 0;
 
-		//The policy set of this AE
+        /// The policy set of this AE
 		IPolicySet * ps;
 
-		//The name of the selected policy set
+		/// The name of the selected policy set
 		std::string selected_ps_name;
 };
 
-// A type of component of an application process, manages all the instances
-// of this type
+/// A type of component of an application process, manages all the instances
+/// of this type
 class ApplicationEntity : public AEPolicySet {
 public:
 		ApplicationEntity(const std::string& name)
@@ -134,15 +134,21 @@ public:
                                         const std::string& param_name,
                                         const std::string& param_value);
 
+		///Constants
+		static const std::string IRM_AE_NAME;
+		static const std::string RIB_DAEMON_AE_NAME;
+		static const std::string ENROLLMENT_TASK_AE_NAME;
+		static const std::string INTERNAL_EVENT_MANAGER_AE_NAME;
+
 protected:
-		//The Application Entity name, immutable during the AE's lifetime
+        /// The Application Entity name, immutable during the AE's lifetime
 		std::string name_;
 
-		//A reference to the application process that hosts the AE
+		/// A reference to the application process that hosts the AE
 		ApplicationProcess * app;
 
 private:
-		// The Application entity instances in this application entity
+		/// The Application entity instances in this application entity
 		ThreadSafeMapOfPointers<std::string, ApplicationEntityInstance> instances;
 };
 
@@ -155,27 +161,27 @@ extern "C" {
 }
 
 struct PsFactory {
-        // Name of this pluggable policy set.
+		/// Name of this pluggable policy set.
         std::string name;
 
-        // Name of the AE where this plugin applies.
+        /// Name of the AE where this plugin applies.
         std::string app_entity;
 
-        // Name of the plugin that published this policy set
+        /// Name of the plugin that published this policy set
         std::string plugin_name;
 
-        // Constructor method for instances of this pluggable policy set.
+        /// Constructor method for instances of this pluggable policy set.
         app_entity_factory_create_t create;
 
-        // Destructor method for instances of this pluggable policy set.
+        /// Destructor method for instances of this pluggable policy set.
         app_entity_factory_destroy_t destroy;
 
-        // Reference counter for the number of policy sets created
-        // by this factory
+        /// Reference counter for the number of policy sets created
+        /// by this factory
         unsigned int refcnt;
 };
 
-// A class that can manage the policies of an application process
+/// A class that can manage the policies of an application process
 class AppPolicyManager {
 public:
 		AppPolicyManager() { };
@@ -216,6 +222,13 @@ public:
 		ApplicationEntity * remove_entity(const std::string& name);
 		ApplicationEntity * get_entity(const std::string& name);
 		std::list<ApplicationEntity*> get_all_entities();
+
+		/// Helper methods to facilitate getting general AEs, which may be
+		/// present or not in this Application Process
+		ApplicationEntity * get_ipc_resource_manager();
+		ApplicationEntity * get_rib_daemon();
+		ApplicationEntity * get_enrollment_task();
+		ApplicationEntity * get_internal_event_manager();
 
 protected:
 		// The ApplicationProcess name, immutable during the AP's lifetime

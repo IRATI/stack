@@ -216,9 +216,11 @@ std::string DirectoryForwardingTableEntryRIBObject::get_displayable_value() {
 DirectoryForwardingTableEntrySetRIBObject::DirectoryForwardingTableEntrySetRIBObject(IPCProcess * ipc_process):
 		BaseIPCPRIBObject(ipc_process, EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
 				rina::objectInstanceGenerator->getObjectInstance(),
-				EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME) {
-	namespace_manager_ = ipc_process_->namespace_manager_;
-	rib_daemon_->subscribeToEvent(IPCP_EVENT_CONNECTIVITY_TO_NEIGHBOR_LOST, this);
+				EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME)
+{
+		namespace_manager_ = ipc_process_->namespace_manager_;
+		ipc_process->internal_event_manager_->subscribeToEvent(
+				rina::InternalEvent::APP_CONNECTIVITY_TO_NEIGHBOR_LOST, this);
 }
 
 void DirectoryForwardingTableEntrySetRIBObject::deleteObjects(
@@ -230,23 +232,24 @@ void DirectoryForwardingTableEntrySetRIBObject::deleteObjects(
 	}
 }
 
-void DirectoryForwardingTableEntrySetRIBObject::eventHappened(Event * event) {
-	if (event->get_id() != IPCP_EVENT_CONNECTIVITY_TO_NEIGHBOR_LOST) {
-		return;
-	}
+void DirectoryForwardingTableEntrySetRIBObject::eventHappened(rina::InternalEvent * event)
+{
+		if (event->type != rina::InternalEvent::APP_CONNECTIVITY_TO_NEIGHBOR_LOST)
+				return;
 
-	ConnectiviyToNeighborLostEvent * conEvent = (ConnectiviyToNeighborLostEvent *) event;
-	std::list<std::string> objectsToDelete;
+		rina::ConnectiviyToNeighborLostEvent * conEvent =
+				(rina::ConnectiviyToNeighborLostEvent *) event;
+		std::list<std::string> objectsToDelete;
 
-	rina::DirectoryForwardingTableEntry * entry;
-	std::list<BaseRIBObject *>::const_iterator iterator;
-	for (iterator = get_children().begin(); iterator != get_children().end(); ++iterator) {
-		entry = (rina::DirectoryForwardingTableEntry *) (*iterator)->get_value();
-		LOG_DBG("Entry pointer: %p", entry);
-		if (entry->get_address() == conEvent->neighbor_->get_address()) {
-			objectsToDelete.push_back((*iterator)->name_);
+		rina::DirectoryForwardingTableEntry * entry;
+		std::list<BaseRIBObject *>::const_iterator iterator;
+		for (iterator = get_children().begin(); iterator != get_children().end(); ++iterator) {
+				entry = (rina::DirectoryForwardingTableEntry *) (*iterator)->get_value();
+				LOG_DBG("Entry pointer: %p", entry);
+				if (entry->get_address() == conEvent->neighbor_->get_address()) {
+						objectsToDelete.push_back((*iterator)->name_);
+				}
 		}
-	}
 }
 
 void DirectoryForwardingTableEntrySetRIBObject::remoteCreateObject(void * object_value,

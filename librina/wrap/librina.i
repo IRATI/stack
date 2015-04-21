@@ -375,6 +375,8 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(differs) rina::Policy::operator!=(const Policy &other) const;
 %rename(equals) rina::FlowInformation::operator==(const FlowInformation &other) const;
 %rename(differs) rina::FlowInformation::operator!=(const FlowInformation &other) const;
+%rename(equals) rina::Neighbor::operator==(const Neighbor &other) const;
+%rename(differs) rina::Neighbor::operator!=(const Neighbor &other) const;
 
 %include "librina/exceptions.h"
 %include "librina/patterns.h"

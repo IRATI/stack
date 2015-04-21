@@ -67,6 +67,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         init_encoder();
 
         delimiter_ = 0; //TODO initialize Delimiter once it is implemented
+        internal_event_manager_ = new rina::SimpleInternalEventManager();
         enrollment_task_ = new EnrollmentTask();
         flow_allocator_ = new FlowAllocator();
         namespace_manager_ = new NamespaceManager();
@@ -75,6 +76,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         routing_component_ = new RoutingComponent();
         rib_daemon_ = new IPCPRIBDaemonImpl();
 
+        add_entity(internal_event_manager_);
         add_entity(rib_daemon_);
         add_entity(enrollment_task_);
         add_entity(resource_allocator_);
@@ -136,6 +138,10 @@ IPCProcessImpl::~IPCProcessImpl() {
 		delete encoder_;
 	}
 
+	if (internal_event_manager_) {
+		delete internal_event_manager_;
+	}
+
 	if (cdap_session_manager_) {
 		delete cdap_session_manager_;
 	}
@@ -145,35 +151,35 @@ IPCProcessImpl::~IPCProcessImpl() {
 	}
 
 	if (flow_allocator_) {
-		psDestroy(IPCProcessComponent::FLOW_ALLOCATOR_AE_NAME,
+		psDestroy(IFlowAllocator::FLOW_ALLOCATOR_AE_NAME,
                    flow_allocator_->selected_ps_name,
                    flow_allocator_->ps);
 		delete flow_allocator_;
 	}
 
 	if (namespace_manager_) {
-		psDestroy(IPCProcessComponent::NAMESPACE_MANAGER_AE_NAME,
+		psDestroy(INamespaceManager::NAMESPACE_MANAGER_AE_NAME,
                    namespace_manager_->selected_ps_name,
                    namespace_manager_->ps);
 		delete namespace_manager_;
 	}
 
 	if (resource_allocator_) {
-		psDestroy(IPCProcessComponent::RESOURCE_ALLOCATOR_AE_NAME,
+		psDestroy(IResourceAllocator::RESOURCE_ALLOCATOR_AE_NAME,
 					resource_allocator_->selected_ps_name,
 					resource_allocator_->ps);
 		delete resource_allocator_;
 	}
 
 	if (security_manager_) {
-		psDestroy(IPCProcessComponent::SECURITY_MANAGER_AE_NAME,
+		psDestroy(ISecurityManager::SECURITY_MANAGER_AE_NAME,
                    security_manager_->selected_ps_name,
                    security_manager_->ps);
         delete security_manager_;
 	}
 
 	if (routing_component_) {
-		psDestroy(IPCProcessComponent::ROUTING_COMPONENT_AE_NAME,
+		psDestroy(IRoutingComponent::ROUTING_COMPONENT_AE_NAME,
 				routing_component_->selected_ps_name,
 				routing_component_->ps);
         delete routing_component_;

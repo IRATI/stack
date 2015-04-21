@@ -24,6 +24,7 @@ allsources =							\
         common.cc						\
         ipc-api.cc                                              \
         application.cc						\
+        internal-events.cc					\
         configuration.cc					\
         ipc-daemons.cc						\
         ipc-manager.cc						\

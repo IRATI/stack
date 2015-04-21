@@ -25,6 +25,8 @@
 #ifdef __cplusplus
 
 #include <librina/ipc-process.h>
+#include <librina/internal-events.h>
+
 #include "common/concurrency.h"
 #include "ipcp/components.h"
 
@@ -64,13 +66,14 @@ private:
 	rina::ApplicationProcessNamingInformation ap_name_entry_;
 };
 
-class DirectoryForwardingTableEntrySetRIBObject: public BaseIPCPRIBObject, public EventListener {
+class DirectoryForwardingTableEntrySetRIBObject:
+		public BaseIPCPRIBObject, public rina::InternalEventListener {
 public:
 	DirectoryForwardingTableEntrySetRIBObject(IPCProcess * ipc_process);
 
 	/// Called when the connectivity to a neighbor has been lost. All the
 	/// applications registered from that neighbor have to be removed from the directory
-	void eventHappened(Event * event);
+	void eventHappened(rina::InternalEvent * event);
 
 	/// A routing update with new and/or updated entries has been received -or
 	/// during enrollment-. See what parts of the update we didn't now, and tell the

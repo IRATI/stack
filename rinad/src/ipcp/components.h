@@ -31,9 +31,9 @@
 #include <string>
 
 #include <librina/ipc-process.h>
+#include <librina/internal-events.h>
 
 #include "common/encoder.h"
-#include "events.h"
 
 namespace rinad {
 
@@ -49,21 +49,13 @@ enum IPCProcessOperationalState {
 class IPCProcess;
 
 /// IPC process component
-class IPCProcessComponent: public rina::ApplicationEntity {
+class IPCProcessComponent {
 public:
-        IPCProcessComponent(const std::string& name) : rina::ApplicationEntity(name), ipcp(NULL) { };
+        IPCProcessComponent() : ipcp(NULL) { };
         virtual ~IPCProcessComponent() { };
         virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
 
         IPCProcess * ipcp;
-
-        static const std::string ENROLLMENT_TASK_AE_NAME;
-        static const std::string FLOW_ALLOCATOR_AE_NAME;
-        static const std::string NAMESPACE_MANAGER_AE_NAME;
-        static const std::string RESOURCE_ALLOCATOR_AE_NAME;
-        static const std::string SECURITY_MANAGER_AE_NAME;
-        static const std::string ROUTING_COMPONENT_AE_NAME;
-        static const std::string RIB_DAEMON_AE_NAME;
 };
 
 /// Interface
@@ -114,9 +106,12 @@ public:
 
 /// Interface that must be implementing by classes that provide
 /// the behavior of an enrollment task
-class IEnrollmentTask : public IPCProcessComponent, public rina::IApplicationConnectionHandler {
+class IEnrollmentTask : public IPCProcessComponent, public rina::ApplicationEntity,
+						public rina::IApplicationConnectionHandler {
 public:
-	IEnrollmentTask() : IPCProcessComponent(IPCProcessComponent::ENROLLMENT_TASK_AE_NAME) { };
+	static const std::string ENROLLMENT_TASK_AE_NAME;
+
+	IEnrollmentTask() : rina::ApplicationEntity(ENROLLMENT_TASK_AE_NAME) { };
 	virtual ~IEnrollmentTask(){};
 	virtual const std::list<rina::Neighbor *> get_neighbors() const = 0;
 	virtual const std::list<std::string> get_enrolled_ipc_process_names() const = 0;
@@ -263,9 +258,11 @@ public:
 
 /// Interface that must be implementing by classes that provide
 /// the behavior of a Flow Allocator task
-class IFlowAllocator : public IPCProcessComponent {
+class IFlowAllocator : public IPCProcessComponent, public rina::ApplicationEntity {
 public:
-	IFlowAllocator() : IPCProcessComponent(IPCProcessComponent::FLOW_ALLOCATOR_AE_NAME) { };
+	static const std::string FLOW_ALLOCATOR_AE_NAME;
+
+	IFlowAllocator() : rina::ApplicationEntity(FLOW_ALLOCATOR_AE_NAME) { };
 	virtual ~IFlowAllocator(){};
 
 	virtual IFlowAllocatorInstance * getFAI(int portId) = 0;
@@ -324,10 +321,11 @@ public:
 	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
 };
 
-class IRoutingComponent : public IPCProcessComponent {
+class IRoutingComponent : public IPCProcessComponent, public rina::ApplicationEntity {
 public:
-	IRoutingComponent() : IPCProcessComponent(IPCProcessComponent::ROUTING_COMPONENT_AE_NAME) { };
-	virtual ~IRoutingComponent(){};
+		static const std::string ROUTING_COMPONENT_AE_NAME;
+		IRoutingComponent() : rina::ApplicationEntity(ROUTING_COMPONENT_AE_NAME) { };
+		virtual ~IRoutingComponent(){};
 };
 
 class RoutingComponent: public IRoutingComponent {
@@ -360,9 +358,10 @@ public:
 	virtual ~INamespaceManagerPs() {}
 };
 
-class INamespaceManager : public IPCProcessComponent {
+class INamespaceManager : public IPCProcessComponent, public rina::ApplicationEntity {
 public:
-	INamespaceManager() : IPCProcessComponent(IPCProcessComponent::NAMESPACE_MANAGER_AE_NAME) { };
+	static const std::string NAMESPACE_MANAGER_AE_NAME;
+	INamespaceManager() : rina::ApplicationEntity(NAMESPACE_MANAGER_AE_NAME) { };
 	virtual ~INamespaceManager(){};
 
 	/// Returns the address of the IPC process where the application process is, or
@@ -497,11 +496,12 @@ public:
 ///     Creation/Deletion of (N-1)-flows
 ///     Assignment of RMT Queues to (N-1)-flows
 ///     Forwarding Table Generator Output
-class IResourceAllocator: public IPCProcessComponent {
+class IResourceAllocator: public IPCProcessComponent, public rina::ApplicationEntity {
 public:
-	IResourceAllocator() : IPCProcessComponent(IPCProcessComponent::RESOURCE_ALLOCATOR_AE_NAME) { };
-	virtual ~IResourceAllocator(){};
-	virtual INMinusOneFlowManager * get_n_minus_one_flow_manager() const = 0;
+		static const std::string RESOURCE_ALLOCATOR_AE_NAME;
+		IResourceAllocator() : rina::ApplicationEntity(RESOURCE_ALLOCATOR_AE_NAME) { };
+		virtual ~IResourceAllocator(){};
+		virtual INMinusOneFlowManager * get_n_minus_one_flow_manager() const = 0;
 };
 
 /// Security Management � A DIF requires three security functions:
@@ -516,7 +516,6 @@ public:
 /// Control is performed by the Flow Allocator. The particular security procedures used for
 /// these security functions are a matter of policy. SDU Protection provides confidentiality
 /// and integrity
-
 class ISecurityManagerPs : public rina::IPolicySet {
 // This class is used by the IPCP to access the plugin functionalities
 public:
@@ -529,10 +528,11 @@ public:
         virtual ~ISecurityManagerPs() {}
 };
 
-class ISecurityManager: public IPCProcessComponent {
+class ISecurityManager: public IPCProcessComponent, public rina::ApplicationEntity {
 // This class is used by the plugins to access the IPCP functionalities
 public:
-		ISecurityManager() : IPCProcessComponent(IPCProcessComponent::SECURITY_MANAGER_AE_NAME) { };
+		static const std::string SECURITY_MANAGER_AE_NAME;
+		ISecurityManager() : rina::ApplicationEntity(SECURITY_MANAGER_AE_NAME) { };
         virtual ~ISecurityManager() {}
 };
 
@@ -566,14 +566,16 @@ public:
 };
 
 /// Interface that provides the RIB Daemon API
-class IPCPRIBDaemon : public rina::RIBDaemon, public IPCProcessComponent, public EventManager {
+class IPCPRIBDaemon : public rina::RIBDaemon, public IPCProcessComponent,
+					  public rina::ApplicationEntity {
 public:
-	IPCPRIBDaemon() : IPCProcessComponent(IPCProcessComponent::RIB_DAEMON_AE_NAME) { };
-	virtual ~IPCPRIBDaemon(){};
+		static const std::string RIB_DAEMON_AE_NAME;
+		IPCPRIBDaemon() : rina::ApplicationEntity(RIB_DAEMON_AE_NAME) { };
+		virtual ~IPCPRIBDaemon(){};
 
-	/// Process a Query RIB Request from the IPC Manager
-	/// @param event
-	virtual void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event) = 0;
+		/// Process a Query RIB Request from the IPC Manager
+		/// @param event
+		virtual void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event) = 0;
 };
 
 /// IPC Process interface
@@ -586,6 +588,7 @@ public:
 	IDelimiter * delimiter_;
 	rina::IMasterEncoder * encoder_;
 	rina::CDAPSessionManagerInterface* cdap_session_manager_;
+	rina::InternalEventManager * internal_event_manager_;
 	IEnrollmentTask * enrollment_task_;
 	IFlowAllocator * flow_allocator_;
 	INamespaceManager * namespace_manager_;

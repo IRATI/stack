@@ -610,6 +610,70 @@ public:
 	Lockable lock_;
 };
 
+/// Represents an IPC Process with whom we're enrolled
+class Neighbor {
+
+public:
+        Neighbor();
+        bool operator==(const Neighbor &other) const;
+        bool operator!=(const Neighbor &other) const;
+#ifndef SWIG
+        const ApplicationProcessNamingInformation& get_name() const;
+        void set_name(const ApplicationProcessNamingInformation& name);
+        const ApplicationProcessNamingInformation&
+                get_supporting_dif_name() const;
+        void set_supporting_dif_name(
+                const ApplicationProcessNamingInformation& supporting_dif_name);
+        const std::list<ApplicationProcessNamingInformation>& get_supporting_difs();
+        void set_supporting_difs(
+                        const std::list<ApplicationProcessNamingInformation>& supporting_difs);
+        void add_supporting_dif(const ApplicationProcessNamingInformation& supporting_dif);
+        unsigned int get_address() const;
+        void set_address(unsigned int address);
+        unsigned int get_average_rtt_in_ms() const;
+        void set_average_rtt_in_ms(unsigned int average_rtt_in_ms);
+        bool is_enrolled() const;
+        void set_enrolled(bool enrolled);
+        int get_last_heard_from_time_in_ms() const;
+        void set_last_heard_from_time_in_ms(int last_heard_from_time_in_ms_);
+        int get_underlying_port_id() const;
+        void set_underlying_port_id(int underlying_port_id);
+        unsigned int get_number_of_enrollment_attempts() const;
+        void set_number_of_enrollment_attempts(
+                        unsigned int number_of_enrollment_attempts);
+#endif
+        const std::string toString();
+
+        /// The IPC Process name of the neighbor
+        ApplicationProcessNamingInformation name_;
+
+        /// The name of the supporting DIF used to exchange data
+        ApplicationProcessNamingInformation supporting_dif_name_;
+
+        /// The names of all the supporting DIFs of this neighbor
+        std::list<ApplicationProcessNamingInformation> supporting_difs_;
+
+        /// The address
+        unsigned int address_;
+
+        /// Tells if it is enrolled or not
+        bool enrolled_;
+
+        /// The average RTT in ms
+        unsigned int average_rtt_in_ms_;
+
+        /// The underlying portId used to communicate with this neighbor
+        int underlying_port_id_;
+
+        /// The last time a KeepAlive message was received from
+        /// that neighbor, in ms
+        int last_heard_from_time_in_ms_;
+
+        /// The number of times we have tried to re-enroll with the
+        /// neighbor after the connectivity has been lost
+        unsigned int number_of_enrollment_attempts_;
+};
+
 /**
  * Thrown when there are problems initializing librina
  */

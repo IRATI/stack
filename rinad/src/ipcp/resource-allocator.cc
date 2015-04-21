@@ -23,9 +23,9 @@
 
 #define RINA_PREFIX "resource-allocator"
 
+#include <librina/internal-events.h>
 #include <librina/logs.h>
 
-#include "events.h"
 #include "resource-allocator.h"
 
 namespace rinad {
@@ -89,107 +89,109 @@ unsigned int NMinusOneFlowManager::allocateNMinus1Flow(const rina::FlowInformati
 }
 
 void NMinusOneFlowManager::allocateRequestResult(const rina::AllocateFlowRequestResultEvent& event) {
-	if (event.portId <= 0) {
-		std::stringstream ss;
-		ss << event.portId;
-		LOG_ERR("Allocation of N-1 flow denied. Error code: %d", event.portId);
-		rina::FlowInformation flowInformation = rina::extendedIPCManager->withdrawPendingFlow(event.sequenceNumber);
-		Event * flowFailedEvent = new NMinusOneFlowAllocationFailedEvent(event.sequenceNumber,
-				flowInformation, ss.str());
-		rib_daemon_->deliverEvent(flowFailedEvent);
-		return;
-	}
+		if (event.portId <= 0) {
+				std::stringstream ss;
+				ss << event.portId;
+				LOG_ERR("Allocation of N-1 flow denied. Error code: %d", event.portId);
+				rina::FlowInformation flowInformation =
+						rina::extendedIPCManager->withdrawPendingFlow(event.sequenceNumber);
+				rina::InternalEvent * flowFailedEvent =
+						new rina::NMinusOneFlowAllocationFailedEvent(event.sequenceNumber,
+																	 flowInformation, ss.str());
+			ipc_process_->internal_event_manager_->deliverEvent(flowFailedEvent);
+			return;
+		}
 
-	rina::Flow * flow = rina::extendedIPCManager->commitPendingFlow(event.sequenceNumber,
-				event.portId, event.difName);
-	try {
-		std::stringstream ss;
-		ss<<EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
-		ss<<EncoderConstants::SEPARATOR<<event.portId;
-		rib_daemon_->createObject(EncoderConstants::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
-				ss.str(), &(flow->getFlowInformation()), 0);
-	} catch (rina::Exception &e) {
-		LOG_ERR("Problems creating RIB object: %s", e.what());
-	}
+		rina::Flow * flow = rina::extendedIPCManager->commitPendingFlow(event.sequenceNumber,
+																		event.portId,
+																		event.difName);
+		try {
+				std::stringstream ss;
+				ss<<EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
+				ss<<EncoderConstants::SEPARATOR<<event.portId;
+				rib_daemon_->createObject(EncoderConstants::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
+										  ss.str(), &(flow->getFlowInformation()), 0);
+		} catch (rina::Exception &e) {
+				LOG_ERR("Problems creating RIB object: %s", e.what());
+		}
 
-	Event * flowAllocatedEvent = new NMinusOneFlowAllocatedEvent(event.sequenceNumber,
-			flow->getFlowInformation());
-	rib_daemon_->deliverEvent(flowAllocatedEvent);
+		rina::InternalEvent * flowAllocatedEvent =
+				new rina::NMinusOneFlowAllocatedEvent(event.sequenceNumber,
+													  flow->getFlowInformation());
+		ipc_process_->internal_event_manager_->deliverEvent(flowAllocatedEvent);
 }
 
 void NMinusOneFlowManager::flowAllocationRequested(const rina::FlowRequestEvent& event) {
-	if (event.localApplicationName.processName.compare(
-			ipc_process_->get_name()) != 0 ||
-			event.localApplicationName.processInstance.compare(
-					ipc_process_->get_instance()) != 0) {
-		LOG_ERR("Rejected flow request from %s-%s since this IPC Process is not the intended target of this flow",
+		if (event.localApplicationName.processName.compare(ipc_process_->get_name()) != 0 ||
+			event.localApplicationName.processInstance.compare(ipc_process_->get_instance()) != 0) {
+				LOG_ERR("Rejected flow request from %s-%s since this IPC Process is not the intended target of this flow",
 				event.remoteApplicationName.processName.c_str(),
 				event.remoteApplicationName.processInstance.c_str());
+				try {
+						rina::extendedIPCManager->allocateFlowResponse(event, -1, true);
+				} catch (rina::Exception &e) {
+						LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+				}
+				return;
+		}
+
+		//In this implementation we cannot accept flows if the IPC Process is not assigned to a DIF
+		if (ipc_process_->get_operational_state() != ASSIGNED_TO_DIF) {
+				LOG_ERR("Rejecting flow request since the IPC Process is not ASSIGNED to a DIF");
+				try {
+						rina::extendedIPCManager->allocateFlowResponse(event, -1, true);
+				} catch (rina::Exception &e) {
+						LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+				}
+				return;
+		}
+
+		//TODO deal with the different AEs (Management vs. Data transfer), right now assuming the flow
+		//is both used for data transfer and management purposes
+
+		if (rina::extendedIPCManager->getFlowToRemoteApp(event.remoteApplicationName) != 0) {
+				LOG_INFO("Rejecting flow request since we already have a flow to the remote IPC Process: %s-%s",
+					 event.remoteApplicationName.processName.c_str(),
+					 event.remoteApplicationName.processInstance.c_str());
+				try {
+						rina::extendedIPCManager->allocateFlowResponse(event, -1, true);
+				} catch (rina::Exception &e) {
+						LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+				}
+				return;
+		}
+
+		rina::Flow * flow = 0;
 		try {
-			rina::extendedIPCManager->allocateFlowResponse(event, -1, true);
+				flow = rina::extendedIPCManager->allocateFlowResponse(event, 0, true);
 		} catch (rina::Exception &e) {
-			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+				LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+				if (!flow) {
+						return;
+				}
 		}
-		return;
-	}
 
-	//In this implementation we cannot accept flows if the IPC Process is not assigned to a DIF
-	if (ipc_process_->get_operational_state() != ASSIGNED_TO_DIF) {
-		LOG_ERR("Rejecting flow request since the IPC Process is not ASSIGNED to a DIF");
+		LOG_INFO("Accepted new flow from IPC Process %s-%s",
+				  event.remoteApplicationName.processName.c_str(),
+			      event.remoteApplicationName.processInstance.c_str());
 		try {
-			rina::extendedIPCManager->allocateFlowResponse(event, -1, true);
-		} catch (rina::Exception &e) {
-			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+				std::stringstream ss;
+				ss<<EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
+				ss<<EncoderConstants::SEPARATOR<<event.portId;
+				rib_daemon_->createObject(EncoderConstants::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
+										  ss.str(), &(flow->getFlowInformation()), 0);
+		} catch (rina::Exception &e){
+				LOG_ERR("Error creating RIB object: %s", e.what());
 		}
+
+		rina::InternalEvent * flowAllocatedEvent = new rina::NMinusOneFlowAllocatedEvent(event.sequenceNumber,
+																						 flow->getFlowInformation());
+		ipc_process_->internal_event_manager_->deliverEvent(flowAllocatedEvent);
 		return;
-	}
-
-	//TODO deal with the different AEs (Management vs. Data transfer), right now assuming the flow
-	//is both used for data transfer and management purposes
-
-	if (rina::extendedIPCManager->getFlowToRemoteApp(event.remoteApplicationName) != 0) {
-		LOG_INFO("Rejecting flow request since we already have a flow to the remote IPC Process: %s-%s",
-				event.remoteApplicationName.processName.c_str(),
-				event.remoteApplicationName.processInstance.c_str());
-		try {
-			rina::extendedIPCManager->allocateFlowResponse(event, -1, true);
-		} catch (rina::Exception &e) {
-			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
-		}
-		return;
-	}
-
-	rina::Flow * flow = 0;
-	try {
-		flow = rina::extendedIPCManager->allocateFlowResponse(event, 0, true);
-	} catch (rina::Exception &e) {
-		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
-		if (!flow) {
-			return;
-		}
-	}
-
-	LOG_INFO("Accepted new flow from IPC Process %s-%s",
-			event.remoteApplicationName.processName.c_str(),
-			event.remoteApplicationName.processInstance.c_str());
-	try {
-		std::stringstream ss;
-		ss<<EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
-		ss<<EncoderConstants::SEPARATOR<<event.portId;
-		rib_daemon_->createObject(EncoderConstants::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
-				ss.str(), &(flow->getFlowInformation()), 0);
-	} catch (rina::Exception &e){
-		LOG_ERR("Error creating RIB object: %s", e.what());
-	}
-
-	Event * flowAllocatedEvent = new NMinusOneFlowAllocatedEvent(event.sequenceNumber,
-			flow->getFlowInformation());
-	rib_daemon_->deliverEvent(flowAllocatedEvent);
-	return;
 }
 
 void NMinusOneFlowManager::deallocateNMinus1Flow(int portId) {
-	rina::extendedIPCManager->requestFlowDeallocation(portId);
+		rina::extendedIPCManager->requestFlowDeallocation(portId);
 }
 
 void NMinusOneFlowManager::deallocateFlowResponse(
@@ -220,25 +222,25 @@ void NMinusOneFlowManager::flowDeallocatedRemotely(const rina::FlowDeallocatedEv
 }
 
 void NMinusOneFlowManager::cleanFlowAndNotify(int portId) {
-	try{
-		std::stringstream ss;
-		ss<<EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
-		ss<<EncoderConstants::SEPARATOR<<portId;
-		rib_daemon_->deleteObject(EncoderConstants::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS, ss.str(), 0, 0);
-	}catch(rina::Exception &e) {
-		LOG_ERR("Problems deleting object from the RIB: %s", e.what());
-	}
+		try{
+			std::stringstream ss;
+			ss<<EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
+			ss<<EncoderConstants::SEPARATOR<<portId;
+			rib_daemon_->deleteObject(EncoderConstants::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS, ss.str(), 0, 0);
+		}catch(rina::Exception &e) {
+			LOG_ERR("Problems deleting object from the RIB: %s", e.what());
+		}
 
-	//Notify about the event
-	const rina::CDAPSessionInterface * cdapSession = cdap_session_manager_->get_cdap_session(portId);
-	rina::CDAPSessionDescriptor * cdapSessionDescriptor = 0;
-	if (cdapSession) {
-		cdapSessionDescriptor = cdapSession->get_session_descriptor();
-	}
+		//Notify about the event
+		const rina::CDAPSessionInterface * cdapSession = cdap_session_manager_->get_cdap_session(portId);
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor = 0;
+		if (cdapSession) {
+				cdapSessionDescriptor = cdapSession->get_session_descriptor();
+		}
 
-	NMinusOneFlowDeallocatedEvent * flowDeEvent =
-			new NMinusOneFlowDeallocatedEvent(portId, *cdapSessionDescriptor);
-	rib_daemon_->deliverEvent(flowDeEvent);
+		rina::NMinusOneFlowDeallocatedEvent * flowDeEvent =
+				new rina::NMinusOneFlowDeallocatedEvent(portId, *cdapSessionDescriptor);
+		ipc_process_->internal_event_manager_->deliverEvent(flowDeEvent);
 }
 
 void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProcessDIFRegistrationEvent& event) {
