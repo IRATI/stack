@@ -20,6 +20,8 @@
 // MA  02110-1301  USA
 //
 
+#include <dlfcn.h>
+
 #define RINA_PREFIX "application"
 
 #include "librina/logs.h"
@@ -146,6 +148,216 @@ int ApplicationEntity::set_policy_set_param_common(const std::string& path,
         LOG_ERR("No such parameter '%s' exists", param_name.c_str());
 
         return -1;
+}
+
+//Class App Policy Manager
+AppPolicyManager::~AppPolicyManager()
+{
+		for (std::map<std::string, void *>::iterator
+                it = plugins_handles.begin();
+                it != plugins_handles.end(); it++) {
+				plugin_unload(it->first);
+		}
+}
+
+std::vector<rina::PsFactory>::iterator
+AppPolicyManager::psFactoryLookup(const std::string& ae_name,
+                                  const std::string& name)
+{
+        for (std::vector<PsFactory>::iterator
+                it = ae_policy_factories.begin();
+                it != ae_policy_factories.end(); it++) {
+                if (it->app_entity == ae_name &&
+                                it->name == name) {
+                        return it;
+                }
+        }
+
+        return ae_policy_factories.end();
+}
+
+int AppPolicyManager::psFactoryPublish(const PsFactory& factory)
+{
+        // TODO check that factory.component is an existing component
+
+        // Check if the (name, component) couple specified by 'factory'
+        // has not already been published.
+        if (psFactoryLookup(factory.app_entity, factory.name) !=
+        							ae_policy_factories.end()) {
+                LOG_ERR("Factory %s for component %s already "
+                                "published", factory.name.c_str(),
+                                factory.app_entity.c_str());
+                return -1;
+        }
+
+        // Add the new factory
+        ae_policy_factories.push_back(factory);
+        ae_policy_factories.back().refcnt = 0;
+
+        LOG_INFO("Pluggable component '%s'/'%s' [%s] published",
+                 factory.app_entity.c_str(), factory.name.c_str(),
+                 factory.plugin_name.c_str());
+
+        return 0;
+}
+
+int AppPolicyManager::psFactoryUnpublish(const std::string& component,
+                                         const std::string& name)
+{
+        std::vector<PsFactory>::iterator fi;
+
+        fi = psFactoryLookup(component, name);
+        if (fi == ae_policy_factories.end()) {
+                LOG_ERR("Factory %s for component %s not "
+                                "published", name.c_str(),
+                                component.c_str());
+                return -1;
+        }
+
+        LOG_INFO("Pluggable component '%s'/'%s' [%s] unpublished",
+                 fi->app_entity.c_str(), fi->name.c_str(),
+                 fi->plugin_name.c_str());
+
+        ae_policy_factories.erase(fi);
+
+        return 0;
+}
+
+IPolicySet * AppPolicyManager::psCreate(const std::string& component,
+                         	 	 	 	const std::string& name,
+                         	 	 	 	ApplicationEntity * ae)
+{
+        std::vector<PsFactory>::iterator it;
+        IPolicySet *ps = NULL;
+
+        it = psFactoryLookup(component, name);
+        if (it == ae_policy_factories.end()) {
+                LOG_ERR("Pluggable component %s/%s not found",
+                        component.c_str(), name.c_str());
+                return NULL;
+        }
+
+        ps = it->create(ae);
+        if (ps) {
+                it->refcnt++;
+        }
+
+        return ps;
+}
+
+int AppPolicyManager::psDestroy(const std::string& component,
+                              	const std::string& name,
+                                IPolicySet * instance)
+{
+        std::vector<PsFactory>::iterator it;
+
+        it = psFactoryLookup(component, name);
+        if (it == ae_policy_factories.end()) {
+                LOG_ERR("Pluggable component %s/%s not found",
+                        component.c_str(), name.c_str());
+                return -1;
+        }
+
+        it->destroy(instance);
+        it->refcnt--;
+
+        return 0;
+}
+
+int AppPolicyManager::plugin_load(const std::string& plugin_dir,
+								  const std::string& plugin_name)
+{
+		std::string plugin_path = plugin_dir;
+        void *handle = NULL;
+        rina::plugin_init_function_t init_func;
+        char *errstr;
+        int ret;
+
+        if (plugins_handles.count(plugin_name)) {
+                LOG_INFO("Plugin '%s' already loaded", plugin_name.c_str());
+                return 0;
+        }
+
+        plugin_path += "/";
+        plugin_path += plugin_name + ".so";
+
+        handle = dlopen(plugin_path.c_str(), RTLD_NOW);
+        if (!handle) {
+                LOG_ERR("Cannot load plugin %s: %s", plugin_name.c_str(),
+                        dlerror());
+                return -1;
+        }
+
+        /* Clear any pending error conditions. */
+        dlerror();
+
+        /* Try to load the init() function. */
+        init_func = (plugin_init_function_t)dlsym(handle, "init");
+
+        /* Check if an error occurred in dlsym(). */
+        errstr = dlerror();
+        if (errstr) {
+                dlclose(handle);
+                LOG_ERR("Failed to link the init() function for plugin %s: %s",
+                        plugin_name.c_str(), errstr);
+                return -1;
+        }
+
+        /* Invoke the plugin initialization function, that will publish
+         * pluggable components. */
+        ret = init_func(this, plugin_name);
+        if (ret) {
+                dlclose(handle);
+                LOG_ERR("Failed to initialize plugin %s",
+                        plugin_name.c_str());
+                return -1;
+        }
+
+        plugins_handles[plugin_name] = handle;
+
+        LOG_INFO("Plugin %s loaded successfully", plugin_name.c_str());
+
+        return 0;
+}
+
+int AppPolicyManager::plugin_unload(const std::string& plugin_name)
+{
+        std::map< std::string, void * >::iterator mit;
+        std::vector< std::vector<PsFactory>::iterator > unpublish_list;
+
+        mit = plugins_handles.find(plugin_name);
+        if (mit == plugins_handles.end()) {
+                LOG_ERR("plugin %s not found", plugin_name.c_str());
+                return -1;
+        }
+
+        // Look for all the policy-sets published by the plugin
+        // Note: Here we assume the plugin name is used as the "name"
+        // argument in the psFactoryPublish() calls.
+        for (std::vector<PsFactory>::iterator
+                it = ae_policy_factories.begin();
+                        it != ae_policy_factories.end(); it++) {
+                if (it->plugin_name == plugin_name) {
+                        if (it->refcnt > 0) {
+                                LOG_ERR("Cannot unload plugin %s: it is "
+                                                "in use", plugin_name.c_str());
+                                return -1;
+                        }
+                        unpublish_list.push_back(it);
+                }
+        }
+
+        // Unpublish all the policy sets published by this plugin
+        for (unsigned int i = 0; i < unpublish_list.size(); i++) {
+                psFactoryUnpublish(unpublish_list[i]->app_entity,
+                                   unpublish_list[i]->name);
+        }
+
+        /* Unload the plugin only if */
+        dlclose(mit->second);
+        plugins_handles.erase(mit);
+
+        return 0;
 }
 
 //Class Application Process

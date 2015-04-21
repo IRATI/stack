@@ -20,7 +20,6 @@
 
 #include <cstdlib>
 #include <sstream>
-#include <dlfcn.h>
 
 #define RINA_PREFIX "ipc-process"
 
@@ -59,7 +58,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         lock_ = new rina::Lockable();
 
         // Load the default pluggable components
-        if (plugin_load("default")) {
+        if (plugin_load(PLUGINSDIR, "default")) {
         		throw rina::Exception("Failed to load default plugin");
         }
 
@@ -183,12 +182,6 @@ IPCProcessImpl::~IPCProcessImpl() {
 	if (rib_daemon_) {
 		delete rib_daemon_;
 	}
-
-        for (std::map<std::string, void *>::iterator
-                        it = plugins_handles.begin();
-                                it != plugins_handles.end(); it++) {
-                plugin_unload(it->first);
-        }
 }
 
 void IPCProcessImpl::init_cdap_session_manager() {
@@ -643,217 +636,17 @@ void IPCProcessImpl::processSelectPolicySetResponseEvent(
 
 void IPCProcessImpl::processPluginLoadRequestEvent(
                         const rina::PluginLoadRequestEvent& event) {
-	rina::ScopedLock g(*lock_);
+		rina::ScopedLock g(*lock_);
         int result;
 
         if (event.load) {
-                result = plugin_load(event.name);
+                result = plugin_load(PLUGINSDIR, event.name);
         } else {
                 result = plugin_unload(event.name);
         }
         rina::extendedIPCManager->pluginLoadResponse(event, result);
 
         return;
-}
-
-int IPCProcessImpl::plugin_load(const std::string& plugin_name)
-{
-        std::string plugin_path = PLUGINSDIR;
-        void *handle = NULL;
-        rina::plugin_init_function_t init_func;
-        char *errstr;
-        int ret;
-
-        if (plugins_handles.count(plugin_name)) {
-                LOG_INFO("Plugin '%s' already loaded", plugin_name.c_str());
-                return 0;
-        }
-
-        plugin_path += "/";
-        plugin_path += plugin_name + ".so";
-
-        handle = dlopen(plugin_path.c_str(), RTLD_NOW);
-        if (!handle) {
-                LOG_ERR("Cannot load plugin %s: %s", plugin_name.c_str(),
-                        dlerror());
-                return -1;
-        }
-
-        /* Clear any pending error conditions. */
-        dlerror();
-
-        /* Try to load the init() function. */
-        init_func = (rina::plugin_init_function_t)dlsym(handle, "init");
-
-        /* Check if an error occurred in dlsym(). */
-        errstr = dlerror();
-        if (errstr) {
-                dlclose(handle);
-                LOG_ERR("Failed to link the init() function for plugin %s: %s",
-                        plugin_name.c_str(), errstr);
-                return -1;
-        }
-
-        /* Invoke the plugin initialization function, that will publish
-         * pluggable components. */
-        ret = init_func(this, plugin_name);
-        if (ret) {
-                dlclose(handle);
-                LOG_ERR("Failed to initialize plugin %s",
-                        plugin_name.c_str());
-                return -1;
-        }
-
-        plugins_handles[plugin_name] = handle;
-
-        LOG_INFO("Plugin %s loaded successfully", plugin_name.c_str());
-
-        return 0;
-}
-
-int IPCProcessImpl::plugin_unload(const std::string& plugin_name)
-{
-        std::map< std::string, void * >::iterator mit;
-        std::vector< std::vector<rina::PsFactory>::iterator > unpublish_list;
-
-        mit = plugins_handles.find(plugin_name);
-        if (mit == plugins_handles.end()) {
-                LOG_ERR("plugin %s not found", plugin_name.c_str());
-                return -1;
-        }
-
-        // Look for all the policy-sets published by the plugin
-        // Note: Here we assume the plugin name is used as the "name"
-        // argument in the psFactoryPublish() calls.
-        for (std::vector<rina::PsFactory>::iterator
-                it = ae_policy_factories.begin();
-                        it != ae_policy_factories.end(); it++) {
-                if (it->plugin_name == plugin_name) {
-                        if (it->refcnt > 0) {
-                                LOG_ERR("Cannot unload plugin %s: it is "
-                                                "in use", plugin_name.c_str());
-                                return -1;
-                        }
-                        unpublish_list.push_back(it);
-                }
-        }
-
-        // Unpublish all the policy sets published by this plugin
-        for (unsigned int i = 0; i < unpublish_list.size(); i++) {
-                psFactoryUnpublish(unpublish_list[i]->app_entity,
-                                   unpublish_list[i]->name);
-        }
-
-        /* Unload the plugin only if */
-        dlclose(mit->second);
-        plugins_handles.erase(mit);
-
-        return 0;
-}
-
-std::vector<rina::PsFactory>::iterator
-IPCProcessImpl::psFactoryLookup(const std::string& ae_name,
-                                const std::string& name)
-{
-        for (std::vector<rina::PsFactory>::iterator
-                it = ae_policy_factories.begin();
-                        it != ae_policy_factories.end(); it++) {
-                if (it->app_entity == ae_name &&
-                                it->name == name) {
-                        return it;
-                }
-        }
-
-        return ae_policy_factories.end();
-}
-
-int IPCProcessImpl::psFactoryPublish(const rina::PsFactory& factory)
-{
-        // TODO check that factory.component is an existing component
-
-        // Check if the (name, component) couple specified by 'factory'
-        // has not already been published.
-        if (psFactoryLookup(factory.app_entity, factory.name) !=
-        							ae_policy_factories.end()) {
-                LOG_ERR("Factory %s for component %s already "
-                                "published", factory.name.c_str(),
-                                factory.app_entity.c_str());
-                return -1;
-        }
-
-        // Add the new factory
-        ae_policy_factories.push_back(factory);
-        ae_policy_factories.back().refcnt = 0;
-
-        LOG_INFO("Pluggable component '%s'/'%s' [%s] published",
-                 factory.app_entity.c_str(), factory.name.c_str(),
-                 factory.plugin_name.c_str());
-
-        return 0;
-}
-
-int IPCProcessImpl::psFactoryUnpublish(const std::string& component,
-                                       const std::string& name)
-{
-        std::vector<rina::PsFactory>::iterator fi;
-
-        fi = psFactoryLookup(component, name);
-        if (fi == ae_policy_factories.end()) {
-                LOG_ERR("Factory %s for component %s not "
-                                "published", name.c_str(),
-                                component.c_str());
-                return -1;
-        }
-
-        LOG_INFO("Pluggable component '%s'/'%s' [%s] unpublished",
-                 fi->app_entity.c_str(), fi->name.c_str(),
-                 fi->plugin_name.c_str());
-
-        ae_policy_factories.erase(fi);
-
-        return 0;
-}
-
-rina::IPolicySet *
-IPCProcessImpl::psCreate(const std::string& component,
-                         const std::string& name,
-                         rina::ApplicationEntity * context)
-{
-        std::vector<rina::PsFactory>::iterator it;
-        rina::IPolicySet *ps = NULL;
-
-        it = psFactoryLookup(component, name);
-        if (it == ae_policy_factories.end()) {
-                LOG_ERR("Pluggable component %s/%s not found",
-                        component.c_str(), name.c_str());
-                return NULL;
-        }
-
-        ps = it->create(context);
-        if (ps) {
-                it->refcnt++;
-        }
-
-        return ps;
-}
-
-int IPCProcessImpl::psDestroy(const std::string& component,
-                              const std::string& name,
-                              rina::IPolicySet * instance)
-{
-        std::vector<rina::PsFactory>::iterator it;
-
-        it = psFactoryLookup(component, name);
-        if (it == ae_policy_factories.end()) {
-                LOG_ERR("Pluggable component %s/%s not found",
-                        component.c_str(), name.c_str());
-                return -1;
-        }
-
-        it->destroy(instance);
-        it->refcnt--;
-
-        return 0;
 }
 
 //Event loop handlers

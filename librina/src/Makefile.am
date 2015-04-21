@@ -41,10 +41,11 @@ allsources =							\
 
 librina_la_SOURCES  = $(allsources)
 librina_la_LDFLAGS  =
-librina_la_LIBADD   =				\
+librina_la_LIBADD   =			\
 	$(LIBNL3_LIBS)				\
 	$(LIBNLGENL3_LIBS)			\
-	$(LIBPROTOBUF_LIBS)
+	$(LIBPROTOBUF_LIBS)			\
+	-ldl
 librina_la_CPPFLAGS =				\
 	$(CXX_SYSINCLUDES)			\
 	-DSTUB_API=0				\
@@ -58,10 +59,11 @@ librina_la_CXXFLAGS =				\
 
 librina_stubbed_la_SOURCES  = $(allsources)
 librina_stubbed_la_LDFLAGS  =
-librina_stubbed_la_LIBADD   =			\
+librina_stubbed_la_LIBADD   =	\
 	$(LIBNL3_LIBS)				\
 	$(LIBNLGENL3_LIBS)			\
-	$(LIBPROTOBUF_LIBS)
+	$(LIBPROTOBUF_LIBS)			\
+	-ldl
 librina_stubbed_la_CPPFLAGS =			\
 	$(CXX_SYSINCLUDES)			\
 	-DSTUB_API=1				\
@@ -89,10 +91,11 @@ test_linking_CPPFLAGS =				\
 	$(CPPFLAGS_EXTRA)
 test_linking_CXXFLAGS =				\
 	$(CXXFLAGS_EXTRA)
-test_linking_LDADD    =				\
+test_linking_LDADD    =			\
 	$(LIBNL3_LIBS)				\
 	$(LIBNLGENL3_LIBS)			\
 	$(LIBPROTOBUF_LIBS)			\
+	-ldl						\
 	librina.la
 
 check-local: test-linking
