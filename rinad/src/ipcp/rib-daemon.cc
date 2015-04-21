@@ -19,9 +19,9 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
-#define RINA_PREFIX "rib-daemon"
+#define IPCP_MODULE "rib-daemon"
+#include "ipcp-logging.h"
 
-#include <librina/logs.h>
 #include <librina/common.h>
 #include "rib-daemon.h"
 
@@ -42,12 +42,12 @@ void * doManagementSDUReaderWork(void* arg)
 	char* sdu;
 
 	rina::ReadManagementSDUResult result;
-	LOG_INFO("Starting Management SDU reader ...");
+	LOG_IPCP_INFO("Starting Management SDU reader ...");
 	while (true) {
 		try {
 		result = rina::kernelIPCProcess->readManagementSDU(buffer, data->max_sdu_size_);
 		} catch (rina::Exception &e) {
-			LOG_ERR("Problems reading management SDU: %s", e.what());
+			LOG_IPCP_ERR("Problems reading management SDU: %s", e.what());
 			continue;
 		}
 
@@ -90,7 +90,7 @@ void BaseRIBDaemon::subscribeToEvent(const IPCProcessEventType& eventId,
                 it->second.push_back(eventListener);
         }
 
-        LOG_INFO("EventListener subscribed to event %s",
+        LOG_IPCP_INFO("EventListener subscribed to event %s",
                         BaseEvent::eventIdToString(eventId).c_str());
         events_lock_.unlock();
 }
@@ -113,7 +113,7 @@ void BaseRIBDaemon::unsubscribeFromEvent(const IPCProcessEventType& eventId,
                 event_listeners_.erase(it);
         }
 
-        LOG_INFO("EventListener unsubscribed from event %s",
+        LOG_IPCP_INFO("EventListener unsubscribed from event %s",
                         BaseEvent::eventIdToString(eventId).c_str());
         events_lock_.unlock();
 }
@@ -123,7 +123,7 @@ void BaseRIBDaemon::deliverEvent(Event * event)
         if (!event)
                 return;
 
-        LOG_INFO("Event %s has just happened. Notifying event listeners.",
+        LOG_IPCP_INFO("Event %s has just happened. Notifying event listeners.",
                         BaseEvent::eventIdToString(event->get_id()).c_str());
 
         events_lock_.lock();
@@ -160,7 +160,7 @@ void IPCPRIBDaemonImpl::set_application_process(rina::ApplicationProcess * ap)
 		app = ap;
 		ipcp = dynamic_cast<IPCProcess*>(app);
 		if (!ipcp) {
-				LOG_ERR("Bogus instance of IPCP passed, return");
+				LOG_IPCP_ERR("Bogus instance of IPCP passed, return");
 				return;
 		}
 
@@ -178,7 +178,7 @@ void IPCPRIBDaemonImpl::set_application_process(rina::ApplicationProcess * ap)
 }
 
 void IPCPRIBDaemonImpl::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
-	LOG_DBG("Configuration set: %u", dif_configuration.address_);
+	LOG_IPCP_DBG("Configuration set: %u", dif_configuration.address_);
 }
 
 void IPCPRIBDaemonImpl::subscribeToEvents()
@@ -219,14 +219,14 @@ void IPCPRIBDaemonImpl::processQueryRIBRequestEvent(const rina::QueryRIBRequestE
 
 	std::list<rina::BaseRIBObject*>::iterator it;
 	for (it = ribObjects.begin(); it != ribObjects.end(); ++it) {
-		LOG_DBG("Object name: %s", (*it)->name_.c_str());
+		LOG_IPCP_DBG("Object name: %s", (*it)->name_.c_str());
 		result.push_back((*it)->get_data());
 	}
 
 	try {
 		rina::extendedIPCManager->queryRIBResponse(event, 0, result);
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems sending query RIB response to IPC Manager: %s",
+		LOG_IPCP_ERR("Problems sending query RIB response to IPC Manager: %s",
 				e.what());
 	}
 }
@@ -266,14 +266,14 @@ void IPCPRIBDaemonImpl::sendMessageSpecific(bool useAddress, const rina::CDAPMes
 			ipcp->encoder_->encode(&adata, adataCDAPMessage);
 			sdu = cdsm->encodeCDAPMessage(*adataCDAPMessage);
 			rina::kernelIPCProcess->sendMgmgtSDUToAddress(sdu->message_, sdu->size_, address);
-			LOG_DBG("Sent A-Data CDAP message to address %u: %s", address,
+			LOG_IPCP_DBG("Sent A-Data CDAP message to address %u: %s", address,
 					cdapMessage.to_string().c_str());
 			delete sdu;
 			delete adataCDAPMessage;
 		} else {
 			sdu = cdsm->encodeNextMessageToBeSent(cdapMessage, sessionId);
 			rina::kernelIPCProcess->writeMgmgtSDUToPortId(sdu->message_, sdu->size_, sessionId);
-			LOG_DBG("Sent CDAP message of size %d through port-id %d: %s" , sdu->size_, sessionId,
+			LOG_IPCP_DBG("Sent CDAP message of size %d through port-id %d: %s" , sdu->size_, sessionId,
 					cdapMessage.to_string().c_str());
 
 			cdsm->messageSent(cdapMessage, sessionId);
@@ -326,7 +326,7 @@ void IPCPRIBDaemonImpl::cdapMessageDelivered(char* message, int length, int port
             cdapMessage = cdap_session_manager_->messageReceived(serializedMessage, portId);
     } catch (rina::Exception &e) {
             atomic_send_lock_.unlock();
-            LOG_ERR("Error decoding CDAP message: %s", e.what());
+            LOG_IPCP_ERR("Error decoding CDAP message: %s", e.what());
             return;
     }
 
@@ -343,7 +343,7 @@ void IPCPRIBDaemonImpl::cdapMessageDelivered(char* message, int length, int port
     		aDataCDAPMessage = cdap_session_manager_->decodeCDAPMessage(*adata->encoded_cdap_message_);
     		cdapSessionDescriptor = new rina::CDAPSessionDescriptor();
 
-    	    LOG_DBG("Received A-Data CDAP message from address %u : %s", adata->source_address_,
+    	    LOG_IPCP_DBG("Received A-Data CDAP message from address %u : %s", adata->source_address_,
     	    		aDataCDAPMessage->to_string().c_str());
 
     		atomic_send_lock_.unlock();
@@ -355,7 +355,7 @@ void IPCPRIBDaemonImpl::cdapMessageDelivered(char* message, int length, int port
     		return;
     	} catch (rina::Exception &e) {
     		atomic_send_lock_.unlock();
-    		LOG_ERR("Error processing A-data message: %s", e.what());
+    		LOG_IPCP_ERR("Error processing A-data message: %s", e.what());
     		return;
     	}
     }
@@ -363,13 +363,13 @@ void IPCPRIBDaemonImpl::cdapMessageDelivered(char* message, int length, int port
     cdapSession = cdap_session_manager_->get_cdap_session(portId);
     if (!cdapSession) {
             atomic_send_lock_.unlock();
-            LOG_ERR("Could not find open CDAP session related to portId %d", portId);
+            LOG_IPCP_ERR("Could not find open CDAP session related to portId %d", portId);
             delete cdapMessage;
             return;
     }
 
     cdapSessionDescriptor = cdapSession->get_session_descriptor();
-    LOG_DBG("Received CDAP message through portId %d: %s", portId,
+    LOG_IPCP_DBG("Received CDAP message through portId %d: %s", portId,
                     cdapMessage->to_string().c_str());
     atomic_send_lock_.unlock();
 

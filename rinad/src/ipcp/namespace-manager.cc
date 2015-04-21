@@ -21,9 +21,8 @@
 
 #include <sstream>
 
-#define RINA_PREFIX "namespace-manager"
-
-#include <librina/logs.h>
+#define IPCP_MODULE "namespace-manager"
+#include "ipcp-logging.h"
 
 #include "namespace-manager.h"
 
@@ -70,11 +69,11 @@ void WhateverCastNameSetRIBObject::remoteCreateObject(void * object_value,
 			namesToCreate.push_back(name);
 		}
 	} catch (rina::Exception &e) {
-		LOG_ERR("Error decoding CDAP object value: %s", e.what());
+		LOG_IPCP_ERR("Error decoding CDAP object value: %s", e.what());
 	}
 
 	if (namesToCreate.size() == 0) {
-		LOG_DBG("No whatevercast name entries to create or update");
+		LOG_IPCP_DBG("No whatevercast name entries to create or update");
 		return;
 	}
 
@@ -82,7 +81,7 @@ void WhateverCastNameSetRIBObject::remoteCreateObject(void * object_value,
 		rib_daemon_->createObject(EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS,
 				EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_NAME, &namesToCreate, 0);
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems creating RIB object: %s", e.what());
+		LOG_IPCP_ERR("Problems creating RIB object: %s", e.what());
 	}
 }
 
@@ -115,7 +114,7 @@ void WhateverCastNameSetRIBObject::createName(rina::WhatevercastName * name) {
 	try {
 		rib_daemon_->addRIBObject(ribObject);
 	} catch(rina::Exception &e){
-		LOG_ERR("Problems adding object to the RIB: %s", e.what());
+		LOG_IPCP_ERR("Problems adding object to the RIB: %s", e.what());
 	}
 }
 
@@ -139,12 +138,12 @@ void DirectoryForwardingTableEntryRIBObject::remoteCreateObject(void * object_va
 	try {
 		entry = (rina::DirectoryForwardingTableEntry *) object_value;
 	} catch (rina::Exception & e){
-		LOG_ERR("Problems decoding message: %s", e.what());
+		LOG_IPCP_ERR("Problems decoding message: %s", e.what());
 		return;
 	}
 
 	if (entry->getKey().compare(ap_name_entry_.getEncodedString()) != 0){
-		LOG_ERR("Keys of the received and existing entries are different, cannot update");
+		LOG_IPCP_ERR("Keys of the received and existing entries are different, cannot update");
 		delete entry;
 		return;
 	}
@@ -159,7 +158,7 @@ void DirectoryForwardingTableEntryRIBObject::remoteCreateObject(void * object_va
 			rib_daemon_->createObject(EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS, object_name,
 					currentEntry, &notificationPolicy);
 		} catch (rina::Exception &e) {
-			LOG_ERR("Problems creating RIB object: %s", e.what());
+			LOG_IPCP_ERR("Problems creating RIB object: %s", e.what());
 		}
 	}
 
@@ -188,7 +187,7 @@ void DirectoryForwardingTableEntryRIBObject::remoteDeleteObject(int invoke_id,
 	try {
 		rib_daemon_->deleteObject(class_, name_, 0, &notificationPolicy);
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems deleting RIB object: %s", e.what());
+		LOG_IPCP_ERR("Problems deleting RIB object: %s", e.what());
 	}
 }
 
@@ -242,7 +241,7 @@ void DirectoryForwardingTableEntrySetRIBObject::eventHappened(Event * event) {
 	std::list<BaseRIBObject *>::const_iterator iterator;
 	for (iterator = get_children().begin(); iterator != get_children().end(); ++iterator) {
 		entry = (rina::DirectoryForwardingTableEntry *) (*iterator)->get_value();
-		LOG_DBG("Entry pointer: %p", entry);
+		LOG_IPCP_DBG("Entry pointer: %p", entry);
 		if (entry->get_address() == conEvent->neighbor_->get_address()) {
 			objectsToDelete.push_back((*iterator)->name_);
 		}
@@ -271,11 +270,11 @@ void DirectoryForwardingTableEntrySetRIBObject::remoteCreateObject(void * object
 			populateEntriesToCreateList(receivedEntry, &entriesToCreateOrUpdate);
 		}
 	} catch (rina::Exception &e) {
-		LOG_ERR("Error decoding CDAP object value: %s", e.what());
+		LOG_IPCP_ERR("Error decoding CDAP object value: %s", e.what());
 	}
 
 	if (entriesToCreateOrUpdate.size() == 0) {
-		LOG_DBG("No DFT entries to create or update");
+		LOG_IPCP_DBG("No DFT entries to create or update");
 		return;
 	}
 
@@ -288,7 +287,7 @@ void DirectoryForwardingTableEntrySetRIBObject::remoteCreateObject(void * object
 				EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME, &entriesToCreateOrUpdate,
 				&notificationPolicy);
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems creating RIB object: %s", e.what());
+		LOG_IPCP_ERR("Problems creating RIB object: %s", e.what());
 	}
 }
 
@@ -333,7 +332,7 @@ void DirectoryForwardingTableEntrySetRIBObject::createObject(const std::string& 
 		try {
 			rib_daemon_->addRIBObject(ribObject);
 		} catch(rina::Exception &e){
-			LOG_ERR("Problems adding object to the RIB: %s", e.what());
+			LOG_IPCP_ERR("Problems adding object to the RIB: %s", e.what());
 		}
 	}
 }
@@ -365,10 +364,10 @@ void DirectoryForwardingTableEntrySetRIBObject::deleteObject(const void* objectV
 			try {
 				rib_daemon_->removeRIBObject(ribObject->name_);
 			} catch (rina::Exception &e) {
-				LOG_ERR("Problems removing object from the RIB: %s", e.what());
+				LOG_IPCP_ERR("Problems removing object from the RIB: %s", e.what());
 			}
 		} else {
-			LOG_WARN("Could not find object to delete in the PDU FT");
+			LOG_IPCP_WARN("Could not find object to delete in the PDU FT");
 		}
 	}
 }
@@ -403,7 +402,7 @@ void NamespaceManager::set_application_process(rina::ApplicationProcess * ap) {
 	app = ap;
 	ipcp = dynamic_cast<IPCProcess*>(app);
 	if (!ipcp) {
-			LOG_ERR("Bogus instance of IPCP passed, return");
+			LOG_IPCP_ERR("Bogus instance of IPCP passed, return");
 			return;
 	}
 
@@ -412,7 +411,7 @@ void NamespaceManager::set_application_process(rina::ApplicationProcess * ap) {
 }
 
 void NamespaceManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
-	LOG_DBG("DIF configuration set: %u", dif_configuration.address_);
+	LOG_IPCP_DBG("DIF configuration set: %u", dif_configuration.address_);
 }
 
 void NamespaceManager::populateRIB() {
@@ -422,7 +421,7 @@ void NamespaceManager::populateRIB() {
 		object = new WhateverCastNameSetRIBObject(ipcp);
 		rib_daemon_->addRIBObject(object);
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems adding object to the RIB : %s", e.what());
+		LOG_IPCP_ERR("Problems adding object to the RIB : %s", e.what());
 	}
 }
 
@@ -439,7 +438,7 @@ unsigned int NamespaceManager::getDFTNextHop(const rina::ApplicationProcessNamin
 
 void NamespaceManager::addDFTEntry(rina::DirectoryForwardingTableEntry * entry) {
 	dft_.put(entry->getKey(), entry);
-	LOG_DBG("Added entry to DFT: %s", entry->toString().c_str());
+	LOG_IPCP_DBG("Added entry to DFT: %s", entry->toString().c_str());
 }
 
 rina::DirectoryForwardingTableEntry * NamespaceManager::getDFTEntry(
@@ -451,7 +450,7 @@ void NamespaceManager::removeDFTEntry(const rina::ApplicationProcessNamingInform
 	rina::DirectoryForwardingTableEntry * entry =
 			dft_.erase(apNamingInfo.getEncodedString());
 	if (entry) {
-		LOG_DBG("Removed entry form DFT: %s", entry->toString().c_str());
+		LOG_IPCP_DBG("Removed entry form DFT: %s", entry->toString().c_str());
 		delete entry;
 	}
 }
@@ -461,7 +460,7 @@ unsigned short NamespaceManager::getRegIPCProcessId(const rina::ApplicationProce
 
 	regInfo = registrations_.find(apNamingInfo.getEncodedString());
 	if (!regInfo) {
-		LOG_DBG("Could not find a registered application with code : %s"
+		LOG_IPCP_DBG("Could not find a registered application with code : %s"
 				, apNamingInfo.getEncodedString().c_str());
 		return 0;
 	}
@@ -474,7 +473,7 @@ int NamespaceManager::replyToIPCManagerRegister(const rina::ApplicationRegistrat
 	try {
 		rina::extendedIPCManager->registerApplicationResponse(event, result);
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		return -1;
 	}
 
@@ -488,7 +487,7 @@ void NamespaceManager::processApplicationRegistrationRequestEvent(
 	rina::ApplicationProcessNamingInformation appToRegister =
 			event.applicationRegistrationInformation.appName;
 	if (registrations_.find(appToRegister.getEncodedString())) {
-		LOG_ERR("Application % is already registered in this IPC Process",
+		LOG_IPCP_ERR("Application % is already registered in this IPC Process",
 				appToRegister.getEncodedString().c_str());
 
 		replyToIPCManagerRegister(event, -1);
@@ -502,7 +501,7 @@ void NamespaceManager::processApplicationRegistrationRequestEvent(
 	registration->difName = event.applicationRegistrationInformation.difName;
 	registration->ipcProcessId = event.applicationRegistrationInformation.ipcProcessId;
 	registrations_.put(appToRegister.getEncodedString(), registration);
-	LOG_INFO("Successfully registered application %s with IPC Process id %us",
+	LOG_IPCP_INFO("Successfully registered application %s with IPC Process id %us",
 			appToRegister.getEncodedString().c_str(), ipcp->get_id());
 	result = replyToIPCManagerRegister(event, 0);
 	if (result == -1) {
@@ -525,7 +524,7 @@ void NamespaceManager::processApplicationRegistrationRequestEvent(
 				EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME, &entriesToCreate,
 				&notificationPolicy);
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems creating RIB object: %s", e.what());
+		LOG_IPCP_ERR("Problems creating RIB object: %s", e.what());
 	}
 }
 
@@ -534,7 +533,7 @@ int NamespaceManager::replyToIPCManagerUnregister(const rina::ApplicationUnregis
 	try {
 		rina::extendedIPCManager->unregisterApplicationResponse(event, result);
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		return -1;
 	}
 
@@ -549,13 +548,13 @@ void NamespaceManager::processApplicationUnregistrationRequestEvent(
 			registrations_.erase(event.applicationName.getEncodedString());
 
 	if (!unregisteredApp) {
-		LOG_ERR("Application %s is not registered in this IPC Process",
+		LOG_IPCP_ERR("Application %s is not registered in this IPC Process",
 				event.applicationName.getEncodedString().c_str());
 		replyToIPCManagerUnregister(event, -1);
 		return;
 	}
 
-	LOG_INFO("Successfully unregistered application %s ",
+	LOG_IPCP_INFO("Successfully unregistered application %s ",
 			 unregisteredApp->appName.getEncodedString().c_str());
 
 	result = replyToIPCManagerUnregister(event, 0);
@@ -574,7 +573,7 @@ void NamespaceManager::processApplicationUnregistrationRequestEvent(
 		rib_daemon_->deleteObject(EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS,
 				ss.str(), 0, &notificationPolicy);
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems creating RIB object: %s", e.what());
+		LOG_IPCP_ERR("Problems creating RIB object: %s", e.what());
 	}
 
 	delete unregisteredApp;

@@ -23,14 +23,16 @@
 #include <list>
 #include <iostream>
 
-#define RINA_PREFIX "encoders-tests"
+#define IPCP_MODULE "encoders-tests"
 
-#include <librina/logs.h>
+#include "ipcp-logging.h"
 
 #include <librina/configuration.h>
 #include "common/encoder.h"
 #include "ipcp/enrollment-task.h"
 #include "ipcp/flow-allocator.h"
+
+int ipcp_id = 1;
 
 bool test_flow (rinad::Encoder * encoder) {
 	rinad::Flow flow_to_encode;
@@ -152,7 +154,7 @@ bool test_flow (rinad::Encoder * encoder) {
 		}
 	}
 
-	LOG_INFO("Flow Encoder tested successfully");
+	LOG_IPCP_INFO("Flow Encoder tested successfully");
 
 	delete pflow_decoded;
 
@@ -183,7 +185,7 @@ bool test_data_transfer_constants(rinad::Encoder * encoder) {
 	}
 
 	if (dtc.cep_id_length_ != recovered_obj->cep_id_length_) {
-		LOG_DBG("Aqui");
+		LOG_IPCP_DBG("Aqui");
 		return false;
 	}
 
@@ -217,7 +219,7 @@ bool test_data_transfer_constants(rinad::Encoder * encoder) {
 
 	delete recovered_obj;
 
-	LOG_INFO("Data Transfer Constants Encoder tested successfully");
+	LOG_IPCP_INFO("Data Transfer Constants Encoder tested successfully");
 
 	return true;
 }
@@ -269,7 +271,7 @@ bool test_directory_forwarding_table_entry(rinad::Encoder * encoder) {
 
 	delete recovered_obj;
 
-	LOG_INFO("Directory Forwarding Table Entry Encoder tested successfully");
+	LOG_IPCP_INFO("Directory Forwarding Table Entry Encoder tested successfully");
 	return true;
 }
 
@@ -307,7 +309,7 @@ bool test_directory_forwarding_table_entry_list(rinad::Encoder * encoder) {
 
 	delete recovered_obj;
 
-	LOG_INFO("Directory Forwarding Table Entry List Encoder tested successfully");
+	LOG_IPCP_INFO("Directory Forwarding Table Entry List Encoder tested successfully");
 	return true;
 }
 
@@ -341,7 +343,7 @@ bool test_enrollment_information_request(rinad::Encoder * encoder) {
 
 	delete recovered_obj;
 
-	LOG_INFO("Enrollment Information Request Encoder tested successfully");
+	LOG_IPCP_INFO("Enrollment Information Request Encoder tested successfully");
 	return true;
 }
 
@@ -435,7 +437,7 @@ bool test_qos_cube(rinad::Encoder * encoder) {
 
 	delete recovered_obj;
 
-	LOG_INFO("QoS Cube Encoder tested successfully");
+	LOG_IPCP_INFO("QoS Cube Encoder tested successfully");
 	return true;
 }
 
@@ -461,7 +463,7 @@ bool test_qos_cube_list(rinad::Encoder * encoder) {
 
 	delete recovered_obj;
 
-	LOG_INFO("QoS Cube List Encoder tested successfully");
+	LOG_IPCP_INFO("QoS Cube List Encoder tested successfully");
 	return true;
 }
 
@@ -495,7 +497,7 @@ bool test_whatevercast_name(rinad::Encoder * encoder) {
 
 	delete recovered_obj;
 
-	LOG_INFO("Whatevercast Name Encoder tested successfully");
+	LOG_IPCP_INFO("Whatevercast Name Encoder tested successfully");
 	return true;
 }
 
@@ -521,7 +523,7 @@ bool test_whatevercast_name_list(rinad::Encoder * encoder) {
 
 	delete recovered_obj;
 
-	LOG_INFO("Whatevercast Name List Encoder tested successfully");
+	LOG_IPCP_INFO("Whatevercast Name List Encoder tested successfully");
 	return true;
 }
 
@@ -560,7 +562,7 @@ bool test_neighbor(rinad::Encoder * encoder) {
 
 	delete recovered_obj;
 
-	LOG_INFO("Neighbor Encoder tested successfully");
+	LOG_IPCP_INFO("Neighbor Encoder tested successfully");
 	return true;
 }
 
@@ -586,7 +588,7 @@ bool test_neighbor_list(rinad::Encoder * encoder) {
 
 	delete recovered_obj;
 
-	LOG_INFO("Neighbor List Encoder tested successfully");
+	LOG_IPCP_INFO("Neighbor List Encoder tested successfully");
 	return true;
 }
 
@@ -608,7 +610,7 @@ bool test_watchdog(rinad::Encoder * encoder) {
 
 	delete recovered_obj;
 
-	LOG_INFO("Watchdog Encoder tested successfully");
+	LOG_IPCP_INFO("Watchdog Encoder tested successfully");
 	return true;
 }
 
@@ -644,73 +646,73 @@ int main()
 
 	bool result = test_data_transfer_constants(&encoder);
 	if (!result) {
-		LOG_ERR("Problems testing Data Transfer Constants Encoder");
+		LOG_IPCP_ERR("Problems testing Data Transfer Constants Encoder");
 		return -1;
 	}
 
 	result = test_directory_forwarding_table_entry(&encoder);
 	if (!result) {
-		LOG_ERR("Problems testing Directory Forwarding Table Entry Encoder");
+		LOG_IPCP_ERR("Problems testing Directory Forwarding Table Entry Encoder");
 		return -1;
 	}
 
 	result = test_directory_forwarding_table_entry_list(&encoder);
 	if (!result) {
-		LOG_ERR("Problems testing Directory Forwarding Table Entry List Encoder");
+		LOG_IPCP_ERR("Problems testing Directory Forwarding Table Entry List Encoder");
 		return -1;
 	}
 
 	result = test_enrollment_information_request(&encoder);
 	if (!result) {
-		LOG_ERR("Problems testing Enrollment Information Request Encoder");
+		LOG_IPCP_ERR("Problems testing Enrollment Information Request Encoder");
 		return -1;
 	}
 
 	result = test_flow(&encoder);
 	if (!result) {
-		LOG_ERR("Problems testing Flow Encoder");
+		LOG_IPCP_ERR("Problems testing Flow Encoder");
 		return -1;
 	}
 
 	result = test_neighbor(&encoder);
 	if (!result) {
-		LOG_ERR("Problems testing Neighbor Encoder");
+		LOG_IPCP_ERR("Problems testing Neighbor Encoder");
 		return -1;
 	}
 
 	result = test_neighbor_list(&encoder);
 	if (!result) {
-		LOG_ERR("Problems testing Neighbor List Encoder");
+		LOG_IPCP_ERR("Problems testing Neighbor List Encoder");
 		return -1;
 	}
 
 	result = test_qos_cube(&encoder);
 	if (!result) {
-		LOG_ERR("Problems testing QoS Cube Encoder");
+		LOG_IPCP_ERR("Problems testing QoS Cube Encoder");
 		return -1;
 	}
 
 	result = test_qos_cube_list(&encoder);
 	if (!result) {
-		LOG_ERR("Problems testing QoS Cube List Encoder");
+		LOG_IPCP_ERR("Problems testing QoS Cube List Encoder");
 		return -1;
 	}
 
 	result = test_whatevercast_name(&encoder);
 	if (!result) {
-		LOG_ERR("Problems testing Whatevercast Name Encoder");
+		LOG_IPCP_ERR("Problems testing Whatevercast Name Encoder");
 		return -1;
 	}
 
 	result = test_whatevercast_name_list(&encoder);
 	if (!result) {
-		LOG_ERR("Problems testing Whatevercast Name List Encoder");
+		LOG_IPCP_ERR("Problems testing Whatevercast Name List Encoder");
 		return -1;
 	}
 
 	result = test_watchdog(&encoder);
 	if (!result) {
-		LOG_ERR("Problems testing Watchdog Encoder");
+		LOG_IPCP_ERR("Problems testing Watchdog Encoder");
 		return -1;
 	}
 

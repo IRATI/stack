@@ -67,7 +67,7 @@
 
 #define DEBUG_SYSCALLS 1
 #if DEBUG_SYSCALLS
-#define DUMP_SYSCALL(X, Y) LOG_DBG("Gonna call syscall %s (%d)", X, Y);
+#define DUMP_SYSCALL(X, Y) LOG_DBG("Invoking %s (%d)", X, Y);
 #else
 #define DUMP_SYSCALL(X, Y) do { } while (0);
 #endif
