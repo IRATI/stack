@@ -957,14 +957,14 @@ void LinkStateRoutingPolicy::populateRIB()
 
 void LinkStateRoutingPolicy::subscribeToEvents()
 {
-		ipc_process_->internal_event_manager_->
-			subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED, this);
-		ipc_process_->internal_event_manager_->
-			subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED, this);
-		ipc_process_->internal_event_manager_->
-			subscribeToEvent(rina::InternalEvent::APP_NEIGHBOR_ADDED, this);
-		ipc_process_->internal_event_manager_->
-			subscribeToEvent(rina::InternalEvent::APP_CONNECTIVITY_TO_NEIGHBOR_LOST, this);
+	ipc_process_->internal_event_manager_->
+		subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED, this);
+	ipc_process_->internal_event_manager_->
+		subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED, this);
+	ipc_process_->internal_event_manager_->
+		subscribeToEvent(rina::InternalEvent::APP_NEIGHBOR_ADDED, this);
+	ipc_process_->internal_event_manager_->
+		subscribeToEvent(rina::InternalEvent::APP_CONNECTIVITY_TO_NEIGHBOR_LOST, this);
 }
 
 void LinkStateRoutingPolicy::set_dif_configuration(
@@ -982,24 +982,24 @@ void LinkStateRoutingPolicy::set_dif_configuration(
 
 	if (!test_) {
 		maximum_age_ =
-				pduft_generator_config_.get_link_state_routing_configuration().get_object_maximum_age();
+			pduft_generator_config_.get_link_state_routing_configuration().get_object_maximum_age();
 		long delay = 0;
 
 		// Task to compute PDUFT
 		delay =
-				pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_pduft_computation();
+			pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_pduft_computation();
 		ComputeRoutingTimerTask * cttask = new ComputeRoutingTimerTask(this, delay);
 		timer_->scheduleTask(cttask, delay);
 
 		// Task to increment age
 		delay =
-				pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_age_increment();
+			pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_age_increment();
 		UpdateAgeTimerTask * uattask = new UpdateAgeTimerTask(this, delay);
 		timer_->scheduleTask(uattask, delay);
 
 		// Task to propagate modified FSO
 		delay =
-				pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_fsodb_propagation();
+			pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_fsodb_propagation();
 		PropagateFSODBTimerTask * pfttask = new PropagateFSODBTimerTask(this,
 				delay);
 		timer_->scheduleTask(pfttask, delay);

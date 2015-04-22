@@ -33,29 +33,29 @@ namespace rinad {
 //Class NMinusOneFlowManager
 NMinusOneFlowManager::NMinusOneFlowManager()
 {
-		rib_daemon_ = 0;
-		ipc_process_ = 0;
-		cdap_session_manager_ = 0;
-		flow_acceptor_ = 0;
+	rib_daemon_ = 0;
+	ipc_process_ = 0;
+	cdap_session_manager_ = 0;
+	flow_acceptor_ = 0;
 }
 
 NMinusOneFlowManager::~NMinusOneFlowManager()
 {
-		if (flow_acceptor_) {
-				delete flow_acceptor_;
-		}
+	if (flow_acceptor_) {
+		delete flow_acceptor_;
+	}
 }
 
 void NMinusOneFlowManager::set_ipc_process(IPCProcess * ipc_process)
 {
-		app = ipc_process;
-		ipc_process_ = ipc_process;
-		rib_daemon_ = ipc_process->rib_daemon_;
-		cdap_session_manager_ = ipc_process->cdap_session_manager_;
-		event_manager_ = ipc_process->internal_event_manager_;
-		flow_acceptor_ = new IPCPFlowAcceptor(ipc_process_);
-		set_flow_acceptor(flow_acceptor_);
-		populateRIB();
+	app = ipc_process;
+	ipc_process_ = ipc_process;
+	rib_daemon_ = ipc_process->rib_daemon_;
+	cdap_session_manager_ = ipc_process->cdap_session_manager_;
+	event_manager_ = ipc_process->internal_event_manager_;
+	flow_acceptor_ = new IPCPFlowAcceptor(ipc_process_);
+	set_flow_acceptor(flow_acceptor_);
+	populateRIB();
 }
 
 void NMinusOneFlowManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
@@ -150,20 +150,20 @@ unsigned int NMinusOneFlowManager::numberOfFlowsToNeighbour(const std::string& a
 //Class IPCP Flow Acceptor
 bool IPCPFlowAcceptor::accept_flow(const rina::FlowRequestEvent& event)
 {
-		if (ipcp_->get_operational_state() != ASSIGNED_TO_DIF) {
-				return false;
-		}
+	if (ipcp_->get_operational_state() != ASSIGNED_TO_DIF) {
+		return false;
+	}
 
-		//TODO deal with the different AEs (Management vs. Data transfer), right now assuming the flow
-		//is both used for data transfer and management purposes
-		if (rina::extendedIPCManager->getFlowToRemoteApp(event.remoteApplicationName) != 0) {
-				LOG_IPCP_INFO("Rejecting flow request since we already have a flow to the remote IPC Process: %s-%s",
-							   event.remoteApplicationName.processName.c_str(),
-							   event.remoteApplicationName.processInstance.c_str());
-				return false;
-		}
+	//TODO deal with the different AEs (Management vs. Data transfer), right now assuming the flow
+	//is both used for data transfer and management purposes
+	if (rina::extendedIPCManager->getFlowToRemoteApp(event.remoteApplicationName) != 0) {
+		LOG_IPCP_INFO("Rejecting flow request since we already have a flow to the remote IPC Process: %s-%s",
+			       event.remoteApplicationName.processName.c_str(),
+			       event.remoteApplicationName.processInstance.c_str());
+		return false;
+	}
 
-		return true;
+	return true;
 }
 
 //CLASS Resource Allocator

@@ -35,9 +35,9 @@ namespace rinad {
 /// passes them to the RIB Daemon
 class ManagementSDUReaderData {
 public:
-		ManagementSDUReaderData(IPCPRIBDaemon * rib_daemon, unsigned int max_sdu_size);
-		IPCPRIBDaemon * rib_daemon_;
-		unsigned int max_sdu_size_;
+	ManagementSDUReaderData(IPCPRIBDaemon * rib_daemon, unsigned int max_sdu_size);
+	IPCPRIBDaemon * rib_daemon_;
+	unsigned int max_sdu_size_;
 };
 
 /// The RIB Daemon will start a thread that continuously tries to retrieve management
@@ -47,7 +47,7 @@ void * doManagementSDUReaderWork(void* data);
 ///Full implementation of the RIB Daemon
 class IPCPRIBDaemonImpl : public IPCPRIBDaemon, public rina::InternalEventListener {
 public:
-        IPCPRIBDaemonImpl();
+	IPCPRIBDaemonImpl();
         void set_application_process(rina::ApplicationProcess * ap);
         void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
         void eventHappened(rina::InternalEvent * event);

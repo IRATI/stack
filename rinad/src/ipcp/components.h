@@ -324,16 +324,16 @@ public:
 
 class IRoutingComponent : public IPCProcessComponent, public rina::ApplicationEntity {
 public:
-		static const std::string ROUTING_COMPONENT_AE_NAME;
-		IRoutingComponent() : rina::ApplicationEntity(ROUTING_COMPONENT_AE_NAME) { };
-		virtual ~IRoutingComponent(){};
+	static const std::string ROUTING_COMPONENT_AE_NAME;
+	IRoutingComponent() : rina::ApplicationEntity(ROUTING_COMPONENT_AE_NAME) { };
+	virtual ~IRoutingComponent(){};
 };
 
 class RoutingComponent: public IRoutingComponent {
 public:
-		RoutingComponent() : IRoutingComponent() { };
-		void set_application_process(rina::ApplicationProcess * ap);
-		void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+	RoutingComponent() : IRoutingComponent() { };
+	void set_application_process(rina::ApplicationProcess * ap);
+	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
         int select_policy_set(const std::string& path, const std::string& name);
         int set_policy_set_param(const std::string& path,
                                  const std::string& name,
@@ -457,10 +457,10 @@ public:
 ///     Forwarding Table Generator Output
 class IResourceAllocator: public IPCProcessComponent, public rina::ApplicationEntity {
 public:
-		static const std::string RESOURCE_ALLOCATOR_AE_NAME;
-		IResourceAllocator() : rina::ApplicationEntity(RESOURCE_ALLOCATOR_AE_NAME) { };
-		virtual ~IResourceAllocator(){};
-		virtual INMinusOneFlowManager * get_n_minus_one_flow_manager() const = 0;
+	static const std::string RESOURCE_ALLOCATOR_AE_NAME;
+	IResourceAllocator() : rina::ApplicationEntity(RESOURCE_ALLOCATOR_AE_NAME) { };
+	virtual ~IResourceAllocator(){};
+	virtual INMinusOneFlowManager * get_n_minus_one_flow_manager() const = 0;
 };
 
 /// Security Management � A DIF requires three security functions:
@@ -490,17 +490,17 @@ public:
 class ISecurityManager: public IPCProcessComponent, public rina::ApplicationEntity {
 // This class is used by the plugins to access the IPCP functionalities
 public:
-		static const std::string SECURITY_MANAGER_AE_NAME;
-		ISecurityManager() : rina::ApplicationEntity(SECURITY_MANAGER_AE_NAME) { };
+	static const std::string SECURITY_MANAGER_AE_NAME;
+	ISecurityManager() : rina::ApplicationEntity(SECURITY_MANAGER_AE_NAME) { };
         virtual ~ISecurityManager() {}
 };
 
 class SecurityManager: public ISecurityManager {
 // Used by IPCP to access the functionalities of the security manager
 public:
-		SecurityManager() : ISecurityManager() { };
-		void set_application_process(rina::ApplicationProcess * ap);
-		void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+	SecurityManager() : ISecurityManager() { };
+	void set_application_process(rina::ApplicationProcess * ap);
+	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
         int select_policy_set(const std::string& path, const std::string& name);
         int set_policy_set_param(const std::string& path,
                                  const std::string& name,
@@ -527,12 +527,12 @@ public:
 /// Interface that provides the RIB Daemon API
 class IPCPRIBDaemon : public rina::RIBDaemon, public IPCProcessComponent {
 public:
-		IPCPRIBDaemon() { };
-		virtual ~IPCPRIBDaemon(){};
+	IPCPRIBDaemon() { };
+	virtual ~IPCPRIBDaemon(){};
 
-		/// Process a Query RIB Request from the IPC Manager
-		/// @param event
-		virtual void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event) = 0;
+	/// Process a Query RIB Request from the IPC Manager
+	/// @param event
+	virtual void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event) = 0;
 };
 
 /// IPC Process interface
@@ -554,7 +554,7 @@ public:
 	IRoutingComponent * routing_component_;
 	IPCPRIBDaemon * rib_daemon_;
 
-    IPCProcess(const std::string& name, const std::string& instance);
+	IPCProcess(const std::string& name, const std::string& instance);
 	virtual ~IPCProcess(){};
 	virtual unsigned short get_id() = 0;
 	virtual unsigned int get_address() const = 0;

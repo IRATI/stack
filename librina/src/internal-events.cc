@@ -36,11 +36,11 @@ const std::string InternalEvent::APP_NEIGHBOR_ADDED = "NEIGHBOR_ADDED";
 // Class SimpleInternalEventManager
 void SimpleInternalEventManager::set_application_process(ApplicationProcess * ap)
 {
-		app = ap;
+	app = ap;
 }
 
 void SimpleInternalEventManager::subscribeToEvent(const std::string& type,
-                                     	 	 	  InternalEventListener * eventListener)
+                                     	 	  InternalEventListener * eventListener)
 {
         if (!eventListener)
                 return;
@@ -70,7 +70,7 @@ void SimpleInternalEventManager::subscribeToEvent(const std::string& type,
 }
 
 void SimpleInternalEventManager::unsubscribeFromEvent(const std::string& type,
-                                         	 	 	  InternalEventListener * eventListener)
+                                         	      InternalEventListener * eventListener)
 {
         if (!eventListener)
                 return;
@@ -124,37 +124,37 @@ void SimpleInternalEventManager::deliverEvent(InternalEvent * event)
 NMinusOneFlowAllocationFailedEvent::NMinusOneFlowAllocationFailedEvent(unsigned int handle,
 			const rina::FlowInformation& flow_information,
 			const std::string& result_reason):
-					InternalEvent(InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATION_FAILED)
+				InternalEvent(InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATION_FAILED)
 {
-		handle_ = handle;
-		flow_information_ = flow_information;
-		result_reason_ = result_reason;
+	handle_ = handle;
+	flow_information_ = flow_information;
+	result_reason_ = result_reason;
 }
 
 const std::string NMinusOneFlowAllocationFailedEvent::toString()
 {
-		std::stringstream ss;
-		ss<<"Event id: "<<type<<"; Handle: "<<handle_;
-		ss<<"; Result reason: "<<result_reason_<<std::endl;
-		ss<<"Flow description: "<<flow_information_.toString();
-		return ss.str();
+	std::stringstream ss;
+	ss<<"Event id: "<<type<<"; Handle: "<<handle_;
+	ss<<"; Result reason: "<<result_reason_<<std::endl;
+	ss<<"Flow description: "<<flow_information_.toString();
+	return ss.str();
 }
 
 //CLASS NMinusOneFlowAllocatedEvent
 NMinusOneFlowAllocatedEvent::NMinusOneFlowAllocatedEvent(unsigned int handle,
 			const rina::FlowInformation& flow_information):
-					InternalEvent(InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED)
+				InternalEvent(InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED)
 {
-		handle_ = handle;
-		flow_information_ = flow_information;
+	handle_ = handle;
+	flow_information_ = flow_information;
 }
 
 const std::string NMinusOneFlowAllocatedEvent::toString()
 {
-		std::stringstream ss;
-		ss<<"Event id: "<<type<<"; Handle: "<<handle_<<std::endl;
-		ss<<"Flow description: "<<flow_information_.toString();
-		return ss.str();
+	std::stringstream ss;
+	ss<<"Event id: "<<type<<"; Handle: "<<handle_<<std::endl;
+	ss<<"Flow description: "<<flow_information_.toString();
+	return ss.str();
 }
 
 //CLASS NMinusOneFlowDeallocated Event
@@ -162,67 +162,67 @@ NMinusOneFlowDeallocatedEvent::NMinusOneFlowDeallocatedEvent(int port_id,
 			const rina::CDAPSessionDescriptor & cdap_session_descriptor):
 				InternalEvent(InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED)
 {
-		port_id_ = port_id;
-		cdap_session_descriptor_ = cdap_session_descriptor;
-		management_flow_ = true;
+	port_id_ = port_id;
+	cdap_session_descriptor_ = cdap_session_descriptor;
+	management_flow_ = true;
 }
 
 NMinusOneFlowDeallocatedEvent::NMinusOneFlowDeallocatedEvent(int port_id):
 				InternalEvent(InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED)
 {
-		port_id_ = port_id;
-		management_flow_ = false;
+	port_id_ = port_id;
+	management_flow_ = false;
 }
 
 const std::string NMinusOneFlowDeallocatedEvent::toString()
 {
-		std::stringstream ss;
-		ss<<"Event id: "<<type<<"; Port-id: "<<port_id_<<std::endl;
-		return ss.str();
+	std::stringstream ss;
+	ss<<"Event id: "<<type<<"; Port-id: "<<port_id_<<std::endl;
+	return ss.str();
 }
 
 //CLASS Connectivity to Neighbor lost
 ConnectiviyToNeighborLostEvent::ConnectiviyToNeighborLostEvent(rina::Neighbor* neighbor):
 		InternalEvent(InternalEvent::APP_CONNECTIVITY_TO_NEIGHBOR_LOST)
 {
-		neighbor_ = neighbor;
+	neighbor_ = neighbor;
 }
 
 const std::string ConnectiviyToNeighborLostEvent::toString()
 {
-		std::stringstream ss;
-		ss<<"Event id: "<<type<<"; Neighbor: "<<neighbor_->toString()<<std::endl;
-		return ss.str();
+	std::stringstream ss;
+	ss<<"Event id: "<<type<<"; Neighbor: "<<neighbor_->toString()<<std::endl;
+	return ss.str();
 }
 
 //CLASS NeighborAddedEvent
 NeighborAddedEvent::NeighborAddedEvent(rina::Neighbor * neighbor, bool enrollee):
 		InternalEvent(InternalEvent::APP_NEIGHBOR_ADDED)
 {
-		neighbor_ = neighbor;
-		enrollee_ = enrollee;
+	neighbor_ = neighbor;
+	enrollee_ = enrollee;
 }
 
 const std::string NeighborAddedEvent::toString()
 {
-		std::stringstream ss;
-		ss<<"Event id: "<<type<<"; Neighbor: "<<neighbor_->toString()<<std::endl;
-		ss<<"Enrollee: "<<enrollee_<<std::endl;
-		return ss.str();
+	std::stringstream ss;
+	ss<<"Event id: "<<type<<"; Neighbor: "<<neighbor_->toString()<<std::endl;
+	ss<<"Enrollee: "<<enrollee_<<std::endl;
+	return ss.str();
 }
 
 /// A connectivity to a neighbor has been lost
 NeighborDeclaredDeadEvent::NeighborDeclaredDeadEvent(rina::Neighbor * neighbor):
 		InternalEvent(InternalEvent::APP_NEIGHBOR_DECLARED_DEAD)
 {
-		neighbor_ = neighbor;
+	neighbor_ = neighbor;
 }
 
 const std::string NeighborDeclaredDeadEvent::toString()
 {
-		std::stringstream ss;
-		ss<<"Event id: "<<type<<"; Neighbor: "<<neighbor_->toString()<<std::endl;
-		return ss.str();
+	std::stringstream ss;
+	ss<<"Event id: "<<type<<"; Neighbor: "<<neighbor_->toString()<<std::endl;
+	return ss.str();
 }
 
 

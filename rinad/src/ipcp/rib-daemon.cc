@@ -73,15 +73,15 @@ IPCPRIBDaemonImpl::IPCPRIBDaemonImpl()
 
 void IPCPRIBDaemonImpl::set_application_process(rina::ApplicationProcess * ap)
 {
-		if (!ap)
-				return;
+	if (!ap)
+		return;
 
-		app = ap;
-		ipcp = dynamic_cast<IPCProcess*>(app);
-		if (!ipcp) {
-				LOG_IPCP_ERR("Bogus instance of IPCP passed, return");
-				return;
-		}
+	app = ap;
+	ipcp = dynamic_cast<IPCProcess*>(app);
+	if (!ipcp) {
+		LOG_IPCP_ERR("Bogus instance of IPCP passed, return");
+		return;
+	}
 
         initialize(EncoderConstants::SEPARATOR, ipcp->encoder_,
                         ipcp->cdap_session_manager_, ipcp->enrollment_task_);
@@ -97,29 +97,29 @@ void IPCPRIBDaemonImpl::set_application_process(rina::ApplicationProcess * ap)
 }
 
 void IPCPRIBDaemonImpl::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
-		LOG_IPCP_DBG("Configuration set: %u", dif_configuration.address_);
+	LOG_IPCP_DBG("Configuration set: %u", dif_configuration.address_);
 }
 
 void IPCPRIBDaemonImpl::subscribeToEvents()
 {
-		ipcp->internal_event_manager_->subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED, this);
-		ipcp->internal_event_manager_->subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED, this);
+	ipcp->internal_event_manager_->subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED, this);
+	ipcp->internal_event_manager_->subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED, this);
 }
 
 void IPCPRIBDaemonImpl::eventHappened(rina::InternalEvent * event)
 {
-		if (!event)
-				return;
+	if (!event)
+		return;
 
-		if (event->type == rina::InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED) {
-				rina::NMinusOneFlowDeallocatedEvent * flowEvent =
-						(rina::NMinusOneFlowDeallocatedEvent *) event;
-				nMinusOneFlowDeallocated(flowEvent->port_id_);
-		} else if (event->type == rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED) {
-				rina::NMinusOneFlowAllocatedEvent * flowEvent =
-						(rina::NMinusOneFlowAllocatedEvent *) event;
-				nMinusOneFlowAllocated(flowEvent);
-		}
+	if (event->type == rina::InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED) {
+		rina::NMinusOneFlowDeallocatedEvent * flowEvent =
+			(rina::NMinusOneFlowDeallocatedEvent *) event;
+		nMinusOneFlowDeallocated(flowEvent->port_id_);
+	} else if (event->type == rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED) {
+		rina::NMinusOneFlowAllocatedEvent * flowEvent =
+			(rina::NMinusOneFlowAllocatedEvent *) event;
+		nMinusOneFlowAllocated(flowEvent);
+	}
 }
 
 void IPCPRIBDaemonImpl::nMinusOneFlowDeallocated(int portId)

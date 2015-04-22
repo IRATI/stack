@@ -42,48 +42,48 @@ const std::string& ApplicationEntityInstance::get_instance_id() const
 // Class ApplicationEntity
 ApplicationEntity::~ApplicationEntity()
 {
-		instances.deleteValues();
+	instances.deleteValues();
 }
 
 const std::string& ApplicationEntity::get_name() const
 {
-		return name_;
+	return name_;
 }
 
 void ApplicationEntity::add_instance(ApplicationEntityInstance * instance)
 {
-		if (!instance) {
-				LOG_ERR("Bogus AE instance passed, returning");
-				return;
-		}
+	if (!instance) {
+		LOG_ERR("Bogus AE instance passed, returning");
+		return;
+	}
 
-		instance->set_application_entity(this);
-		instances.put(instance->get_instance_id(), instance);
+	instance->set_application_entity(this);
+	instances.put(instance->get_instance_id(), instance);
 }
 
 ApplicationEntityInstance * ApplicationEntity::remove_instance(const std::string& instance_id)
 {
-		ApplicationEntityInstance * aei = instances.erase(instance_id);
-		if (aei) {
-				aei->set_application_entity(NULL);
-		}
+	ApplicationEntityInstance * aei = instances.erase(instance_id);
+	if (aei) {
+		aei->set_application_entity(NULL);
+	}
 
-		return aei;
+	return aei;
 }
 
 ApplicationEntityInstance * ApplicationEntity::get_instance(const std::string& instance_id)
 {
-		return instances.find(instance_id);
+	return instances.find(instance_id);
 }
 
 std::list<ApplicationEntityInstance*> ApplicationEntity::get_all_instances()
 {
-		return instances.getEntries();
+	return instances.getEntries();
 }
 
 int ApplicationEntity::select_policy_set_common(const std::string& component,
-                                           	   const std::string& path,
-                                           	   const std::string& ps_name)
+                                           	const std::string& path,
+                                           	const std::string& ps_name)
 {
         IPolicySet *candidate = NULL;
 
@@ -158,11 +158,11 @@ const std::string ApplicationEntity::INTERNAL_EVENT_MANAGER_AE_NAME = "event-man
 //Class App Policy Manager
 AppPolicyManager::~AppPolicyManager()
 {
-		for (std::map<std::string, void *>::iterator
+	for (std::map<std::string, void *>::iterator
                 it = plugins_handles.begin();
                 it != plugins_handles.end(); it++) {
-				plugin_unload(it->first);
-		}
+		plugin_unload(it->first);
+	}
 }
 
 std::vector<rina::PsFactory>::iterator
@@ -174,7 +174,7 @@ AppPolicyManager::psFactoryLookup(const std::string& ae_name,
                 it != ae_policy_factories.end(); it++) {
                 if (it->app_entity == ae_name &&
                                 it->name == name) {
-                        return it;
+                	return it;
                 }
         }
 
@@ -188,7 +188,7 @@ int AppPolicyManager::psFactoryPublish(const PsFactory& factory)
         // Check if the (name, component) couple specified by 'factory'
         // has not already been published.
         if (psFactoryLookup(factory.app_entity, factory.name) !=
-        							ae_policy_factories.end()) {
+        				ae_policy_factories.end()) {
                 LOG_ERR("Factory %s for component %s already "
                                 "published", factory.name.c_str(),
                                 factory.app_entity.c_str());
@@ -270,9 +270,9 @@ int AppPolicyManager::psDestroy(const std::string& component,
 }
 
 int AppPolicyManager::plugin_load(const std::string& plugin_dir,
-								  const std::string& plugin_name)
+				  const std::string& plugin_name)
 {
-		std::string plugin_path = plugin_dir;
+	std::string plugin_path = plugin_dir;
         void *handle = NULL;
         rina::plugin_init_function_t init_func;
         char *errstr;
@@ -373,63 +373,63 @@ ApplicationProcess::~ApplicationProcess()
 
 const std::string& ApplicationProcess::get_name() const
 {
-		return name_;
+	return name_;
 }
 
 const std::string& ApplicationProcess::get_instance() const
 {
-		return instance_;
+	return instance_;
 }
 
 void ApplicationProcess::add_entity(ApplicationEntity * entity)
 {
-		if (!entity) {
-				LOG_ERR("Bogus entity passed, returning");
-				return;
-		}
+	if (!entity) {
+		LOG_ERR("Bogus entity passed, returning");
+		return;
+	}
 
-		entity->set_application_process(this);
-		entities.put(entity->get_name(), entity);
+	entity->set_application_process(this);
+	entities.put(entity->get_name(), entity);
 }
 
 ApplicationEntity * ApplicationProcess::remove_entity(const std::string& name)
 {
-		ApplicationEntity * ae = entities.erase(name);
-		if (ae) {
-				ae->set_application_process(NULL);
-		}
+	ApplicationEntity * ae = entities.erase(name);
+	if (ae) {
+		ae->set_application_process(NULL);
+	}
 
-		return ae;
+	return ae;
 }
 
 ApplicationEntity * ApplicationProcess::get_entity(const std::string& name)
 {
-		return entities.find(name);
+	return entities.find(name);
 }
 
 std::list<ApplicationEntity*> ApplicationProcess::get_all_entities()
 {
-		return entities.getEntries();
+	return entities.getEntries();
 }
 
 ApplicationEntity * ApplicationProcess::get_ipc_resource_manager()
 {
-		return get_entity(ApplicationEntity::IRM_AE_NAME);
+	return get_entity(ApplicationEntity::IRM_AE_NAME);
 }
 
 ApplicationEntity * ApplicationProcess::get_rib_daemon()
 {
-		return get_entity(ApplicationEntity::RIB_DAEMON_AE_NAME);
+	return get_entity(ApplicationEntity::RIB_DAEMON_AE_NAME);
 }
 
 ApplicationEntity * ApplicationProcess::get_enrollment_task()
 {
-		return get_entity(ApplicationEntity::ENROLLMENT_TASK_AE_NAME);
+	return get_entity(ApplicationEntity::ENROLLMENT_TASK_AE_NAME);
 }
 
 ApplicationEntity * ApplicationProcess::get_internal_event_manager()
 {
-		return get_entity(ApplicationEntity::INTERNAL_EVENT_MANAGER_AE_NAME);
+	return get_entity(ApplicationEntity::INTERNAL_EVENT_MANAGER_AE_NAME);
 }
 
 }

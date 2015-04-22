@@ -32,11 +32,11 @@ namespace rina {
 
 class RIBNamingConstants {
 public:
-		static const std::string DAF;
-		static const std::string DIF_REGISTRATIONS;
-		static const std::string IRM;
-		static const std::string N_MINUS_ONE_FLOWS;
-		static const std::string SEPARATOR;
+	static const std::string DAF;
+	static const std::string DIF_REGISTRATIONS;
+	static const std::string IRM;
+	static const std::string N_MINUS_ONE_FLOWS;
+	static const std::string SEPARATOR;
 };
 
 /// Encodes and Decodes an object to/from bytes)
@@ -288,7 +288,7 @@ public:
 /// Interface that provides the RIB Daemon API
 class IRIBDaemon : public ApplicationEntity {
 public:
-		IRIBDaemon() : ApplicationEntity(ApplicationEntity::RIB_DAEMON_AE_NAME) { };
+	IRIBDaemon() : ApplicationEntity(ApplicationEntity::RIB_DAEMON_AE_NAME) { };
         virtual ~IRIBDaemon(){};
 
         /// Add an object to the RIB
@@ -894,20 +894,6 @@ private:
         void sendMessageToProcess(const rina::CDAPMessage & cdapMessage, const RemoteProcessId& remote_id,
                         ICDAPResponseMessageHandler * response_handler);
 
-};
-
-/// Base RIB Object. API for the create/delete/read/write/start/stop RIB
-/// functionality for certain objects (identified by objectNames)
-class BaseAppRIBObject: public BaseRIBObject {
-public:
-		virtual ~BaseAppRIBObject(){};
-		BaseAppRIBObject(ApplicationProcess * application,
-                      const std::string& object_class,
-                      long object_instance,
-                      const std::string& object_name);
-
-		ApplicationProcess * app;
-		IRIBDaemon * rib_daemon_;
 };
 
 ///Object exchanged between applications processes that

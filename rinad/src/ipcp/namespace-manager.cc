@@ -217,9 +217,9 @@ DirectoryForwardingTableEntrySetRIBObject::DirectoryForwardingTableEntrySetRIBOb
 				rina::objectInstanceGenerator->getObjectInstance(),
 				EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME)
 {
-		namespace_manager_ = ipc_process_->namespace_manager_;
-		ipc_process->internal_event_manager_->subscribeToEvent(
-				rina::InternalEvent::APP_CONNECTIVITY_TO_NEIGHBOR_LOST, this);
+	namespace_manager_ = ipc_process_->namespace_manager_;
+	ipc_process->internal_event_manager_->subscribeToEvent(
+			rina::InternalEvent::APP_CONNECTIVITY_TO_NEIGHBOR_LOST, this);
 }
 
 void DirectoryForwardingTableEntrySetRIBObject::deleteObjects(
@@ -233,22 +233,22 @@ void DirectoryForwardingTableEntrySetRIBObject::deleteObjects(
 
 void DirectoryForwardingTableEntrySetRIBObject::eventHappened(rina::InternalEvent * event)
 {
-		if (event->type != rina::InternalEvent::APP_CONNECTIVITY_TO_NEIGHBOR_LOST)
-				return;
+	if (event->type != rina::InternalEvent::APP_CONNECTIVITY_TO_NEIGHBOR_LOST)
+		return;
 
-		rina::ConnectiviyToNeighborLostEvent * conEvent =
-				(rina::ConnectiviyToNeighborLostEvent *) event;
-		std::list<std::string> objectsToDelete;
+	rina::ConnectiviyToNeighborLostEvent * conEvent =
+		(rina::ConnectiviyToNeighborLostEvent *) event;
+	std::list<std::string> objectsToDelete;
 
-		rina::DirectoryForwardingTableEntry * entry;
+	rina::DirectoryForwardingTableEntry * entry;
 		std::list<BaseRIBObject *>::const_iterator iterator;
-		for (iterator = get_children().begin(); iterator != get_children().end(); ++iterator) {
-				entry = (rina::DirectoryForwardingTableEntry *) (*iterator)->get_value();
-				LOG_IPCP_DBG("Entry pointer: %p", entry);
-				if (entry->get_address() == conEvent->neighbor_->get_address()) {
-						objectsToDelete.push_back((*iterator)->name_);
-				}
+	for (iterator = get_children().begin(); iterator != get_children().end(); ++iterator) {
+		entry = (rina::DirectoryForwardingTableEntry *) (*iterator)->get_value();
+		LOG_IPCP_DBG("Entry pointer: %p", entry);
+		if (entry->get_address() == conEvent->neighbor_->get_address()) {
+			objectsToDelete.push_back((*iterator)->name_);
 		}
+	}
 }
 
 void DirectoryForwardingTableEntrySetRIBObject::remoteCreateObject(void * object_value,
@@ -295,7 +295,8 @@ void DirectoryForwardingTableEntrySetRIBObject::remoteCreateObject(void * object
 }
 
 void DirectoryForwardingTableEntrySetRIBObject::populateEntriesToCreateList(rina::DirectoryForwardingTableEntry* entry,
-		std::list<rina::DirectoryForwardingTableEntry *> * list) {
+		std::list<rina::DirectoryForwardingTableEntry *> * list)
+{
 	rina::DirectoryForwardingTableEntry * currentEntry;
 
 	currentEntry = namespace_manager_->getDFTEntry(entry->get_ap_naming_info());
@@ -341,7 +342,8 @@ void DirectoryForwardingTableEntrySetRIBObject::createObject(const std::string& 
 }
 
 void DirectoryForwardingTableEntrySetRIBObject::populateEntriesToDeleteList(rina::DirectoryForwardingTableEntry* entry,
-		std::list<rina::DirectoryForwardingTableEntry *> * list) {
+		std::list<rina::DirectoryForwardingTableEntry *> * list)
+{
 	rina::DirectoryForwardingTableEntry * currentEntry;
 
 	currentEntry = namespace_manager_->getDFTEntry(entry->get_ap_naming_info());
@@ -375,7 +377,8 @@ void DirectoryForwardingTableEntrySetRIBObject::deleteObject(const void* objectV
 	}
 }
 
-rina::BaseRIBObject * DirectoryForwardingTableEntrySetRIBObject::getObject(const std::string& candidateKey) {
+rina::BaseRIBObject * DirectoryForwardingTableEntrySetRIBObject::getObject(const std::string& candidateKey)
+{
 	rina::DirectoryForwardingTableEntry * entry;
 	std::list<BaseRIBObject *>::const_iterator iterator;
 
@@ -389,35 +392,40 @@ rina::BaseRIBObject * DirectoryForwardingTableEntrySetRIBObject::getObject(const
 	return 0;
 }
 
-const void* DirectoryForwardingTableEntrySetRIBObject::get_value() const {
+const void* DirectoryForwardingTableEntrySetRIBObject::get_value() const
+{
 	return 0;
 }
 
 //Class Namespace Manager
-NamespaceManager::NamespaceManager() : INamespaceManager() {
+NamespaceManager::NamespaceManager() : INamespaceManager()
+{
 	rib_daemon_ = 0;
 }
 
-void NamespaceManager::set_application_process(rina::ApplicationProcess * ap) {
+void NamespaceManager::set_application_process(rina::ApplicationProcess * ap)
+{
 	if (!ap)
-			return;
+		return;
 
 	app = ap;
 	ipcp = dynamic_cast<IPCProcess*>(app);
 	if (!ipcp) {
-			LOG_IPCP_ERR("Bogus instance of IPCP passed, return");
-			return;
+		LOG_IPCP_ERR("Bogus instance of IPCP passed, return");
+		return;
 	}
 
 	rib_daemon_ = ipcp->rib_daemon_;
 	populateRIB();
 }
 
-void NamespaceManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
+void NamespaceManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
+{
 	LOG_IPCP_DBG("DIF configuration set: %u", dif_configuration.address_);
 }
 
-void NamespaceManager::populateRIB() {
+void NamespaceManager::populateRIB()
+{
 	try {
 		BaseIPCPRIBObject * object = new DirectoryForwardingTableEntrySetRIBObject(ipcp);
 		rib_daemon_->addRIBObject(object);
@@ -428,7 +436,8 @@ void NamespaceManager::populateRIB() {
 	}
 }
 
-unsigned int NamespaceManager::getDFTNextHop(const rina::ApplicationProcessNamingInformation& apNamingInfo) {
+unsigned int NamespaceManager::getDFTNextHop(const rina::ApplicationProcessNamingInformation& apNamingInfo)
+{
 	rina::DirectoryForwardingTableEntry * nextHop;
 
 	nextHop = dft_.find(apNamingInfo.getEncodedString());
@@ -439,17 +448,20 @@ unsigned int NamespaceManager::getDFTNextHop(const rina::ApplicationProcessNamin
 	return 0;
 }
 
-void NamespaceManager::addDFTEntry(rina::DirectoryForwardingTableEntry * entry) {
+void NamespaceManager::addDFTEntry(rina::DirectoryForwardingTableEntry * entry)
+{
 	dft_.put(entry->getKey(), entry);
 	LOG_IPCP_DBG("Added entry to DFT: %s", entry->toString().c_str());
 }
 
 rina::DirectoryForwardingTableEntry * NamespaceManager::getDFTEntry(
-			const rina::ApplicationProcessNamingInformation& apNamingInfo) {
+			const rina::ApplicationProcessNamingInformation& apNamingInfo)
+{
 	return dft_.find(apNamingInfo.getEncodedString());
 }
 
-void NamespaceManager::removeDFTEntry(const rina::ApplicationProcessNamingInformation& apNamingInfo){
+void NamespaceManager::removeDFTEntry(const rina::ApplicationProcessNamingInformation& apNamingInfo)
+{
 	rina::DirectoryForwardingTableEntry * entry =
 			dft_.erase(apNamingInfo.getEncodedString());
 	if (entry) {
@@ -458,7 +470,8 @@ void NamespaceManager::removeDFTEntry(const rina::ApplicationProcessNamingInform
 	}
 }
 
-unsigned short NamespaceManager::getRegIPCProcessId(const rina::ApplicationProcessNamingInformation& apNamingInfo) {
+unsigned short NamespaceManager::getRegIPCProcessId(const rina::ApplicationProcessNamingInformation& apNamingInfo)
+{
 	rina::ApplicationRegistrationInformation * regInfo;
 
 	regInfo = registrations_.find(apNamingInfo.getEncodedString());
@@ -472,7 +485,8 @@ unsigned short NamespaceManager::getRegIPCProcessId(const rina::ApplicationProce
 }
 
 int NamespaceManager::replyToIPCManagerRegister(const rina::ApplicationRegistrationRequestEvent& event,
-		int result) {
+		int result)
+{
 	try {
 		rina::extendedIPCManager->registerApplicationResponse(event, result);
 	} catch (rina::Exception &e) {
@@ -484,7 +498,8 @@ int NamespaceManager::replyToIPCManagerRegister(const rina::ApplicationRegistrat
 }
 
 void NamespaceManager::processApplicationRegistrationRequestEvent(
-		const rina::ApplicationRegistrationRequestEvent& event) {
+		const rina::ApplicationRegistrationRequestEvent& event)
+{
 	int result = 0;
 
 	rina::ApplicationProcessNamingInformation appToRegister =
@@ -532,7 +547,8 @@ void NamespaceManager::processApplicationRegistrationRequestEvent(
 }
 
 int NamespaceManager::replyToIPCManagerUnregister(const rina::ApplicationUnregistrationRequestEvent& event,
-		int result) {
+		int result)
+{
 	try {
 		rina::extendedIPCManager->unregisterApplicationResponse(event, result);
 	} catch (rina::Exception &e) {
@@ -544,7 +560,8 @@ int NamespaceManager::replyToIPCManagerUnregister(const rina::ApplicationUnregis
 }
 
 void NamespaceManager::processApplicationUnregistrationRequestEvent(
-		const rina::ApplicationUnregistrationRequestEvent& event) {
+		const rina::ApplicationUnregistrationRequestEvent& event)
+{
 	int result = 0;
 
 	rina::ApplicationRegistrationInformation * unregisteredApp =
@@ -582,7 +599,8 @@ void NamespaceManager::processApplicationUnregistrationRequestEvent(
 	delete unregisteredApp;
 }
 
-unsigned int NamespaceManager::getAdressByname(const rina::ApplicationProcessNamingInformation& name) {
+unsigned int NamespaceManager::getAdressByname(const rina::ApplicationProcessNamingInformation& name)
+{
 	std::list<rina::Neighbor *> neighbors = ipcp->get_neighbors();
 	std::list<rina::Neighbor *>::const_iterator it;
 	for (it = neighbors.begin(); it != neighbors.end(); ++it) {
@@ -597,14 +615,14 @@ unsigned int NamespaceManager::getAdressByname(const rina::ApplicationProcessNam
 int NamespaceManager::select_policy_set(const std::string& path,
                                      const std::string& name)
 {
-  return select_policy_set_common(get_name(), path, name);
+	return select_policy_set_common(get_name(), path, name);
 }
 
 int NamespaceManager::set_policy_set_param(const std::string& path,
                                         const std::string& name,
                                         const std::string& value)
 {
-  return set_policy_set_param_common(path, name, value);
+	return set_policy_set_param_common(path, name, value);
 }
 
 }
