@@ -30,6 +30,15 @@
 
 namespace rina {
 
+class RIBNamingConstants {
+public:
+		static const std::string DAF;
+		static const std::string DIF_REGISTRATIONS;
+		static const std::string IRM;
+		static const std::string N_MINUS_ONE_FLOWS;
+		static const std::string SEPARATOR;
+};
+
 /// Encodes and Decodes an object to/from bytes)
 class EncoderInterface {
 public:

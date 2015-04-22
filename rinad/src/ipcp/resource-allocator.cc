@@ -31,18 +31,31 @@
 namespace rinad {
 
 //Class NMinusOneFlowManager
-NMinusOneFlowManager::NMinusOneFlowManager() {
-	rib_daemon_ = 0;
-	ipc_process_ = 0;
-	cdap_session_manager_ = 0;
+NMinusOneFlowManager::NMinusOneFlowManager()
+{
+		rib_daemon_ = 0;
+		ipc_process_ = 0;
+		cdap_session_manager_ = 0;
+		flow_acceptor_ = 0;
 }
 
-void NMinusOneFlowManager::set_ipc_process(IPCProcess * ipc_process) {
-	ipc_process_ = ipc_process;
-	rib_daemon_ = ipc_process->rib_daemon_;
-	cdap_session_manager_ = ipc_process->cdap_session_manager_;
-	event_manager_ = ipc_process->internal_event_manager_;
-	populateRIB();
+NMinusOneFlowManager::~NMinusOneFlowManager()
+{
+		if (flow_acceptor_) {
+				delete flow_acceptor_;
+		}
+}
+
+void NMinusOneFlowManager::set_ipc_process(IPCProcess * ipc_process)
+{
+		app = ipc_process;
+		ipc_process_ = ipc_process;
+		rib_daemon_ = ipc_process->rib_daemon_;
+		cdap_session_manager_ = ipc_process->cdap_session_manager_;
+		event_manager_ = ipc_process->internal_event_manager_;
+		flow_acceptor_ = new IPCPFlowAcceptor(ipc_process_);
+		set_flow_acceptor(flow_acceptor_);
+		populateRIB();
 }
 
 void NMinusOneFlowManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
@@ -61,11 +74,11 @@ void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProces
 				event.getDIFName().processName.c_str());
 		try{
 			std::stringstream ss;
-			ss<<EncoderConstants::DIF_REGISTRATION_SET_RIB_OBJECT_NAME;
-			ss<<EncoderConstants::SEPARATOR<<event.getDIFName().processName;
+			ss<<rina::DIFRegistrationSetRIBObject::DIF_REGISTRATION_SET_RIB_OBJECT_NAME;
+			ss<<rina::RIBNamingConstants::SEPARATOR<<event.getDIFName().processName;
 			std::string * dif_name = new std::string(event.getDIFName().processName);
-			rib_daemon_->createObject(EncoderConstants::DIF_REGISTRATION_RIB_OBJECT_CLASS, ss.str(),
-					dif_name, 0);
+			rib_daemon_->createObject(rina::DIFRegistrationSetRIBObject::DIF_REGISTRATION_RIB_OBJECT_CLASS,
+					ss.str(), dif_name, 0);
 		}catch(rina::Exception &e){
 			LOG_IPCP_ERR("Problems creating RIB object: %s", e.what());;
 		}
@@ -84,9 +97,10 @@ void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProces
 
 	try {
 		std::stringstream ss;
-		ss<<EncoderConstants::DIF_REGISTRATION_SET_RIB_OBJECT_NAME;
-		ss<<EncoderConstants::SEPARATOR<<event.getDIFName().processName;
-		rib_daemon_->deleteObject(EncoderConstants::DIF_REGISTRATION_RIB_OBJECT_CLASS, ss.str(), 0, 0);
+		ss<<rina::DIFRegistrationSetRIBObject::DIF_REGISTRATION_SET_RIB_OBJECT_NAME;
+		ss<<rina::RIBNamingConstants::SEPARATOR<<event.getDIFName().processName;
+		rib_daemon_->deleteObject(rina::DIFRegistrationSetRIBObject::DIF_REGISTRATION_RIB_OBJECT_CLASS,
+								  ss.str(), 0, 0);
 	}catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems deleting object from RIB: %s", e.what());
 	}
@@ -131,6 +145,17 @@ unsigned int NMinusOneFlowManager::numberOfFlowsToNeighbour(const std::string& a
 	}
 
 	return result;
+}
+
+//Class IPCP Flow Acceptor
+bool IPCPFlowAcceptor::accept_flow(const rina::FlowRequestEvent& event)
+{
+		(void) event;
+		if (ipcp_->get_operational_state() != ASSIGNED_TO_DIF) {
+				return false;
+		}
+
+		return true;
 }
 
 //CLASS Resource Allocator

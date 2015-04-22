@@ -118,7 +118,7 @@ void IPCResourceManager::allocateRequestResult(const AllocateFlowRequestResultEv
 		try {
 				std::stringstream ss;
 				ss<<NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
-				ss<<"/"<<event.portId;
+				ss<<RIBNamingConstants::SEPARATOR<<event.portId;
 				rib_daemon_->createObject(NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
 										  ss.str(), &(flow->getFlowInformation()), 0);
 		} catch (Exception &e) {
@@ -146,10 +146,16 @@ void IPCResourceManager::flowAllocationRequested(const FlowRequestEvent& event)
 				return;
 		}
 
-		/// Check optional extra conditions to accept the flow
+		// Check optional extra conditions to accept the flow
 		if (flow_acceptor_) {
 				if (!flow_acceptor_->accept_flow(event)) {
-						LOG_ERR("Flow acceptor rejected the flow");
+						try {
+								ipcManager->allocateFlowResponse(event, -1, true);
+						} catch (Exception &e) {
+								LOG_ERR("Problems communicating with the IPC Manager: %s",
+										 e.what());
+						}
+						LOG_INFO("Flow acceptor rejected the flow");
 						return;
 				}
 		}
@@ -185,7 +191,7 @@ void IPCResourceManager::flowAllocationRequested(const FlowRequestEvent& event)
 		try {
 				std::stringstream ss;
 				ss<<NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
-				ss<<"/"<<event.portId;
+				ss<<RIBNamingConstants::SEPARATOR<<event.portId;
 				rib_daemon_->createObject(NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
 										  ss.str(), &(flow->getFlowInformation()), 0);
 		} catch (Exception &e){
@@ -236,7 +242,7 @@ void IPCResourceManager::cleanFlowAndNotify(int portId)
 		try{
 				std::stringstream ss;
 				ss<<NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
-				ss<<"/"<<portId;
+				ss<<RIBNamingConstants::SEPARATOR<<portId;
 				rib_daemon_->deleteObject(NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
 								  	      ss.str(), 0, 0);
 		}catch(Exception &e) {
@@ -315,7 +321,8 @@ const std::string DIFRegistrationSetRIBObject::DIF_REGISTRATION_SET_RIB_OBJECT_C
 const std::string DIFRegistrationSetRIBObject::DIF_REGISTRATION_RIB_OBJECT_CLASS =
 		"DIF registration";
 const std::string DIFRegistrationSetRIBObject::DIF_REGISTRATION_SET_RIB_OBJECT_NAME =
-		"/daf/irm/difregistrations";
+		RIBNamingConstants::SEPARATOR + RIBNamingConstants::DAF + RIBNamingConstants::SEPARATOR +
+		RIBNamingConstants::IRM + RIBNamingConstants::SEPARATOR + RIBNamingConstants::DIF_REGISTRATIONS;
 
 DIFRegistrationSetRIBObject::DIFRegistrationSetRIBObject(IRIBDaemon* rib_daemon):
 			BaseRIBObject(rib_daemon, DIF_REGISTRATION_SET_RIB_OBJECT_CLASS,
@@ -370,7 +377,8 @@ const std::string NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_CLA
 const std::string NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS =
 		"nminusone flow";
 const std::string NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME =
-		"/daf/irm/nminusoneflows";
+		RIBNamingConstants::SEPARATOR + RIBNamingConstants::DAF + RIBNamingConstants::SEPARATOR +
+		RIBNamingConstants::IRM + RIBNamingConstants::SEPARATOR + RIBNamingConstants::N_MINUS_ONE_FLOWS;
 
 NMinusOneFlowSetRIBObject::NMinusOneFlowSetRIBObject(IRIBDaemon * rib_daemon):
 			BaseRIBObject(rib_daemon, N_MINUS_ONE_FLOW_SET_RIB_OBJECT_CLASS,

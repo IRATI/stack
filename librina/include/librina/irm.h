@@ -33,7 +33,7 @@ namespace rina {
 /// Decides wether accept or reject a flow
 class FlowAcceptor {
 public:
-		virtual ~FlowAcceptor();
+		virtual ~FlowAcceptor() { };
 		virtual bool accept_flow(const FlowRequestEvent& event) = 0;
 };
 

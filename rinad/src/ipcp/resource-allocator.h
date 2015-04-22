@@ -31,6 +31,7 @@ namespace rinad {
 class NMinusOneFlowManager: public INMinusOneFlowManager {
 public:
 	NMinusOneFlowManager();
+	~NMinusOneFlowManager();
 	void set_ipc_process(IPCProcess * ipc_process);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	void processRegistrationNotification(const rina::IPCProcessDIFRegistrationEvent& event);;
@@ -41,6 +42,16 @@ public:
 
 private:
 	IPCProcess * ipc_process_;
+	rina::FlowAcceptor * flow_acceptor_;
+};
+
+class IPCPFlowAcceptor : public rina::FlowAcceptor {
+public:
+		IPCPFlowAcceptor(IPCProcess * ipcp) : ipcp_(ipcp) { };
+		~IPCPFlowAcceptor() { };
+		bool accept_flow(const rina::FlowRequestEvent& event);
+
+		IPCProcess * ipcp_;
 };
 
 class ResourceAllocator: public IResourceAllocator {
