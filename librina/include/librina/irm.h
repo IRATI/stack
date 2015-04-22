@@ -43,9 +43,8 @@ public:
 /// in creating new DIFs (for more detail, see Part 2, Chapter 2)
 class IPCResourceManager: public ApplicationEntity {
 public:
-		IPCResourceManager() : ApplicationEntity(ApplicationEntity::IRM_AE_NAME),
-				rib_daemon_(NULL), cdap_session_manager_(NULL) ,
-				event_manager_(NULL), flow_acceptor_(NULL){ };
+		IPCResourceManager();
+		IPCResourceManager(bool isIPCP);
 		virtual ~IPCResourceManager() { };
 		virtual void set_application_process(ApplicationProcess * ap);
 		void set_flow_acceptor(FlowAcceptor * fa);
@@ -64,6 +63,9 @@ protected:
 		CDAPSessionManagerInterface * cdap_session_manager_;
 		InternalEventManager * event_manager_;
 		FlowAcceptor * flow_acceptor_;
+
+		/// true if the IRM is used by an IPC Process, false otherwise
+		bool ipcp;
 
 		///Populate the IPC Process RIB with the objects related to N-1 Flow Management
 		void populateRIB();

@@ -150,8 +150,16 @@ unsigned int NMinusOneFlowManager::numberOfFlowsToNeighbour(const std::string& a
 //Class IPCP Flow Acceptor
 bool IPCPFlowAcceptor::accept_flow(const rina::FlowRequestEvent& event)
 {
-		(void) event;
 		if (ipcp_->get_operational_state() != ASSIGNED_TO_DIF) {
+				return false;
+		}
+
+		//TODO deal with the different AEs (Management vs. Data transfer), right now assuming the flow
+		//is both used for data transfer and management purposes
+		if (rina::extendedIPCManager->getFlowToRemoteApp(event.remoteApplicationName) != 0) {
+				LOG_IPCP_INFO("Rejecting flow request since we already have a flow to the remote IPC Process: %s-%s",
+							   event.remoteApplicationName.processName.c_str(),
+							   event.remoteApplicationName.processInstance.c_str());
 				return false;
 		}
 

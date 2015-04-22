@@ -407,6 +407,7 @@ public:
 ///N-1 Flow Manager interface
 class INMinusOneFlowManager : public rina::IPCResourceManager {
 public:
+	INMinusOneFlowManager() : rina::IPCResourceManager(true) { };
 	virtual ~INMinusOneFlowManager(){};
 
 	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;

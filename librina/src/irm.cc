@@ -1,5 +1,7 @@
 //
-// IPC Resource Manager
+// IPC Resource Manager. Requires that the application process is
+// part of has a RIB Daemon, a CDAP Session Manager and an Internal
+// Event Manager.
 //
 //    Eduard Grasa <eduard.grasa@i2cat.net>
 //
@@ -23,8 +25,21 @@
 
 #include "librina/logs.h"
 #include "librina/irm.h"
+#include "librina/ipc-process.h"
 
 namespace rina {
+
+IPCResourceManager::IPCResourceManager() : ApplicationEntity(ApplicationEntity::IRM_AE_NAME),
+				rib_daemon_(NULL), cdap_session_manager_(NULL) ,
+				event_manager_(NULL), flow_acceptor_(NULL), ipcp(false)
+{
+}
+
+IPCResourceManager::IPCResourceManager(bool isIPCP) : ApplicationEntity(ApplicationEntity::IRM_AE_NAME),
+				rib_daemon_(NULL), cdap_session_manager_(NULL) ,
+				event_manager_(NULL), flow_acceptor_(NULL), ipcp(isIPCP)
+{
+}
 
 void IPCResourceManager::set_application_process(rina::ApplicationProcess * ap)
 {
@@ -70,9 +85,15 @@ void IPCResourceManager::populateRIB()
 
 const rina::FlowInformation& IPCResourceManager::getNMinus1FlowInformation(int portId) const
 {
-		rina::Flow * flow = rina::ipcManager->getAllocatedFlow(portId);
+		rina::Flow * flow = 0;
+		if (ipcp) {
+				flow = extendedIPCManager->getAllocatedFlow(portId);
+		} else {
+				flow = ipcManager->getAllocatedFlow(portId);
+		}
+
 		if (flow == 0) {
-			throw Exception("Unknown N-1 flow");
+				throw Exception("Unknown N-1 flow");
 		}
 
 		return flow->getFlowInformation();
@@ -83,9 +104,15 @@ unsigned int IPCResourceManager::allocateNMinus1Flow(const FlowInformation& flow
 		unsigned int handle = 0;
 
 		try {
-				handle = ipcManager->requestFlowAllocationInDIF(flowInformation.localAppName,
-							flowInformation.remoteAppName, flowInformation.difName,
-							flowInformation.flowSpecification);
+				if (ipcp) {
+						handle = extendedIPCManager->requestFlowAllocationInDIF(flowInformation.localAppName,
+										flowInformation.remoteAppName, flowInformation.difName,
+										flowInformation.flowSpecification);
+				} else {
+						handle = ipcManager->requestFlowAllocationInDIF(flowInformation.localAppName,
+								 	 	 flowInformation.remoteAppName, flowInformation.difName,
+										 flowInformation.flowSpecification);
+				}
 		} catch(FlowAllocationException &e) {
 				throw Exception(e.what());
 		}
@@ -104,7 +131,12 @@ void IPCResourceManager::allocateRequestResult(const AllocateFlowRequestResultEv
 				std::stringstream ss;
 				ss << event.portId;
 				LOG_ERR("Allocation of N-1 flow denied. Error code: %d", event.portId);
-				FlowInformation flowInformation = ipcManager->withdrawPendingFlow(event.sequenceNumber);
+				FlowInformation flowInformation;
+				if (ipcp) {
+						flowInformation = extendedIPCManager->withdrawPendingFlow(event.sequenceNumber);
+				} else {
+						flowInformation = ipcManager->withdrawPendingFlow(event.sequenceNumber);
+				}
 				InternalEvent * flowFailedEvent =
 						new NMinusOneFlowAllocationFailedEvent(event.sequenceNumber,
 																	 flowInformation, ss.str());
@@ -112,9 +144,17 @@ void IPCResourceManager::allocateRequestResult(const AllocateFlowRequestResultEv
 				return;
 		}
 
-		Flow * flow = ipcManager->commitPendingFlow(event.sequenceNumber,
-													event.portId,
-													event.difName);
+		Flow * flow = 0;
+		if (ipcp) {
+				flow = extendedIPCManager->commitPendingFlow(event.sequenceNumber,
+															 event.portId,
+															 event.difName);
+		} else {
+				flow = ipcManager->commitPendingFlow(event.sequenceNumber,
+													 event.portId,
+												     event.difName);
+		}
+
 		try {
 				std::stringstream ss;
 				ss<<NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
@@ -139,7 +179,11 @@ void IPCResourceManager::flowAllocationRequested(const FlowRequestEvent& event)
 				event.remoteApplicationName.processName.c_str(),
 				event.remoteApplicationName.processInstance.c_str());
 				try {
-						ipcManager->allocateFlowResponse(event, -1, true);
+						if (ipcp) {
+								extendedIPCManager->allocateFlowResponse(event, -1, true);
+						} else {
+								ipcManager->allocateFlowResponse(event, -1, true);
+						}
 				} catch (Exception &e) {
 						LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 				}
@@ -150,7 +194,11 @@ void IPCResourceManager::flowAllocationRequested(const FlowRequestEvent& event)
 		if (flow_acceptor_) {
 				if (!flow_acceptor_->accept_flow(event)) {
 						try {
-								ipcManager->allocateFlowResponse(event, -1, true);
+								if (ipcp) {
+										extendedIPCManager->allocateFlowResponse(event, -1, true);
+								} else {
+										ipcManager->allocateFlowResponse(event, -1, true);
+								}
 						} catch (Exception &e) {
 								LOG_ERR("Problems communicating with the IPC Manager: %s",
 										 e.what());
@@ -160,24 +208,13 @@ void IPCResourceManager::flowAllocationRequested(const FlowRequestEvent& event)
 				}
 		}
 
-		//TODO deal with the different AEs (Management vs. Data transfer), right now assuming the flow
-		//is both used for data transfer and management purposes
-
-		if (ipcManager->getFlowToRemoteApp(event.remoteApplicationName) != 0) {
-				LOG_INFO("Rejecting flow request since we already have a flow to the remote IPC Process: %s-%s",
-					 event.remoteApplicationName.processName.c_str(),
-					 event.remoteApplicationName.processInstance.c_str());
-				try {
-						ipcManager->allocateFlowResponse(event, -1, true);
-				} catch (Exception &e) {
-						LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
-				}
-				return;
-		}
-
 		Flow * flow = 0;
 		try {
-				flow = ipcManager->allocateFlowResponse(event, 0, true);
+				if (ipcp) {
+						flow = extendedIPCManager->allocateFlowResponse(event, 0, true);
+				} else {
+						flow = ipcManager->allocateFlowResponse(event, 0, true);
+				}
 		} catch (Exception &e) {
 				LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 				if (!flow) {
@@ -206,7 +243,11 @@ void IPCResourceManager::flowAllocationRequested(const FlowRequestEvent& event)
 
 void IPCResourceManager::deallocateNMinus1Flow(int portId)
 {
-		rina::ipcManager->requestFlowDeallocation(portId);
+		if (ipcp) {
+				extendedIPCManager->requestFlowDeallocation(portId);
+		} else {
+				ipcManager->requestFlowDeallocation(portId);
+		}
 }
 
 void IPCResourceManager::deallocateFlowResponse(const DeallocateFlowResponseEvent& event)
@@ -218,7 +259,11 @@ void IPCResourceManager::deallocateFlowResponse(const DeallocateFlowResponseEven
 		}
 
 		try {
-				ipcManager->flowDeallocationResult(event.portId, success);
+				if (ipcp) {
+						extendedIPCManager->flowDeallocationResult(event.portId, success);
+				} else {
+						ipcManager->flowDeallocationResult(event.portId, success);
+				}
 		} catch (Exception &e) {
 				LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		}
@@ -229,7 +274,11 @@ void IPCResourceManager::deallocateFlowResponse(const DeallocateFlowResponseEven
 void IPCResourceManager::flowDeallocatedRemotely(const FlowDeallocatedEvent& event)
 {
 		try {
-				ipcManager->flowDeallocated(event.portId);
+				if (ipcp) {
+						extendedIPCManager->flowDeallocated(event.portId);
+				} else {
+						ipcManager->flowDeallocated(event.portId);
+				}
 		} catch (Exception &e) {
 				LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		}
@@ -263,7 +312,12 @@ void IPCResourceManager::cleanFlowAndNotify(int portId)
 
 bool IPCResourceManager::isSupportingDIF(const ApplicationProcessNamingInformation& difName)
 {
-		std::vector<ApplicationRegistration*> registrations = ipcManager->getRegisteredApplications();
+		std::vector<ApplicationRegistration*> registrations;
+		if (ipcp) {
+				registrations = extendedIPCManager->getRegisteredApplications();
+		} else {
+				registrations = ipcManager->getRegisteredApplications();
+		}
 		std::list<ApplicationProcessNamingInformation> namesList;
 		for(unsigned int i=0; i<registrations.size(); i++) {
 				namesList = registrations[i]->DIFNames;
@@ -280,7 +334,12 @@ bool IPCResourceManager::isSupportingDIF(const ApplicationProcessNamingInformati
 
 std::list<FlowInformation> IPCResourceManager::getAllNMinusOneFlowInformation() const
 {
-		std::vector<Flow *> flows = ipcManager->getAllocatedFlows();
+		std::vector<Flow *> flows;
+		if (ipcp) {
+				flows = extendedIPCManager->getAllocatedFlows();
+		} else {
+				flows = ipcManager->getAllocatedFlows();
+		}
 		std::list<FlowInformation> result;
 		for (unsigned int i=0; i<flows.size(); i++) {
 				result.push_back(flows[i]->getFlowInformation());
