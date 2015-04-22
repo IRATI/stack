@@ -21,9 +21,8 @@
 
 #include <assert.h>
 
-#define RINA_PREFIX "routing"
-
-#include <librina/logs.h>
+#define IPCP_MODULE "routing"
+#include "ipcp-logging.h"
 
 #include "ipcp/components.h"
 
@@ -38,7 +37,7 @@ void RoutingComponent::set_application_process(rina::ApplicationProcess * ap)
 	app = ap;
 	ipcp = dynamic_cast<IPCProcess*>(app);
 	if (!ipcp) {
-			LOG_ERR("Bogus instance of IPCP passed, return");
+			LOG_IPCP_ERR("Bogus instance of IPCP passed, return");
 			return;
 	}
 }

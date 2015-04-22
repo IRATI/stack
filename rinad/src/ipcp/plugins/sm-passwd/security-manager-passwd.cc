@@ -1,8 +1,8 @@
-#define RINA_PREFIX "security-manager-ps-passwd"
+#define IPCP_MODULE "security-manager-ps-passwd"
+#include "../../ipcp-logging.h"
 
 #include <string>
 #include <sstream>
-#include <librina/logs.h>
 
 #include "ipcp/components.h"
 
@@ -32,13 +32,13 @@ SecurityManagerPasswdPs::SecurityManagerPasswdPs(ISecurityManager * dm_) : dm(dm
 
 bool SecurityManagerPasswdPs::isAllowedToJoinDIF(const rina::Neighbor& newMember)
 {
-	LOG_DBG("Allowing IPC Process %s to join the DIF", newMember.name_.processName.c_str());
+	LOG_IPCP_DBG("Allowing IPC Process %s to join the DIF", newMember.name_.processName.c_str());
 	return true;
 }
 
 bool SecurityManagerPasswdPs::acceptFlow(const Flow& newFlow)
 {
-	LOG_DBG("Accepting flow from remote application %s",
+	LOG_IPCP_DBG("Accepting flow from remote application %s",
 			newFlow.source_naming_info.getEncodedString().c_str());
 	return true;
 }
@@ -53,13 +53,13 @@ int SecurityManagerPasswdPs::set_policy_set_param(const std::string& name,
                 ss << value;
                 ss >> x;
                 if (ss.fail()) {
-                        LOG_ERR("Invalid value '%s'", value.c_str());
+                        LOG_IPCP_ERR("Invalid value '%s'", value.c_str());
                         return -1;
                 }
 
                 max_retries = x;
         } else {
-                LOG_ERR("Unknown parameter '%s'", name.c_str());
+                LOG_IPCP_ERR("Unknown parameter '%s'", name.c_str());
                 return -1;
         }
 

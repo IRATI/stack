@@ -21,7 +21,7 @@
 // MA  02110-1301  USA
 //
 
-#define RINA_PREFIX "netlink-parsers"
+#define RINA_PREFIX "librina.nl-parsers"
 
 #include "librina/logs.h"
 #include "netlink-parsers.h"

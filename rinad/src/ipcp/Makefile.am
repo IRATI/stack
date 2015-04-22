@@ -4,7 +4,7 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-SUBDIRS      = include plugins
+SUBDIRS      = plugins
 
 EXTRA_DIST   =
 CLEANFILES   =
@@ -14,7 +14,7 @@ bin_PROGRAMS = ipcp
 COMMONCPPFLAGS =				\
 	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)			\
-	-I$(srcdir)/..				\
+	-I$(srcdir)/../				\
 	-I$(srcdir)/../common
 
 COMMONLIBS =					\
@@ -26,6 +26,7 @@ ipcp_CPPFLAGS =					\
 	$(COMMONCPPFLAGS)			\
 	-DPLUGINSDIR=\"$(pkglibdir)/ipcp\"
 ipcp_LDADD    = $(COMMONLIBS) -ldl
+ipcp_LDFLAGS = -Wl,--export-dynamic
 ipcp_SOURCES  =						\
 	main.cc						\
 	events.cc		events.h		\
@@ -42,53 +43,21 @@ ipcp_SOURCES  =						\
 testsCPPFLAGS = $(COMMONCPPFLAGS)
 testsLIBS     = $(COMMONLIBS)
 
-pluginsdir          = $(pkglibdir)/ipcp
-plugins_LTLIBRARIES = 
-
-default_la_CFLAGS =
-default_la_CPPFLAGS =				\
-	$(COMMONCPPFLAGS)
-default_la_LIBADD = $(COMMONLIBS) -ldl
-default_la_LDFLAGS = -module
-default_la_SOURCES =				 \
-		default-plugin.cc		 \
-		components.h			 \
-		components.cc			 \
-		default-security-manager-ps.cc	 \
-		default-flow-allocator-ps.cc     \
-        	default-namespace-manager-ps.cc  \
-        	default-resource-allocator-ps.cc \
-        	link-state-routing-ps.h 	 \
-        	link-state-routing-ps.cc
-
-plugins_LTLIBRARIES += default.la
-
 test_encoders_SOURCES  =			\
 	test-encoders.cc			\
 	components.cc	     components.h	\
 	events.cc            events.h		\
 	rib-daemon.cc        rib-daemon.h	\
 	flow-allocator.cc    flow-allocator.h	\
-	enrollment-task.cc   enrollment-task.h	\
-    link-state-routing-ps.cc   link-state-routing-ps.h
+	enrollment-task.cc   enrollment-task.h	
 test_encoders_CPPFLAGS = $(testsCPPFLAGS)
 test_encoders_LDADD    = $(testsLIBS)
 
-test_pduftg_SOURCES  =				\
-	test-link-state-routing.cc				\
-	components.cc	   components.h		\
-	events.cc          events.h		\
-	link-state-routing-ps.cc link-state-routing-ps.h
-test_pduftg_CPPFLAGS = $(testsCPPFLAGS)
-test_pduftg_LDADD    = $(testsLIBS)
-
 check_PROGRAMS =				\
-	test-encoders				\
-	test-link-state-routing
+	test-encoders		
 
 XFAIL_TESTS =
-PASS_TESTS  = test-encoders   \
-              test-link-state-routing
+PASS_TESTS  = test-encoders 
 
 TESTS = $(PASS_TESTS) $(XFAIL_TESTS)
 
