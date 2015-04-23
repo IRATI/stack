@@ -40,6 +40,12 @@ struct sched_state {
         struct sched_substate tx;
 };
 
+struct rmt_ps_data {
+        struct sched_state * ss;
+        struct rmt_queues *  inq;
+        struct rmt_queues *  outq;
+};
+
 static void
 default_max_q_policy_tx(struct rmt_ps * ps,
                         struct pdu *    pdu,
@@ -126,9 +132,9 @@ default_rmt_scheduling_policy_tx(struct rmt_ps * ps,
                                  struct rmt_n1_port * n1_port,
                                  bool restart)
 {
-        struct sched_state * ss = ps->priv;
+        struct rmt_ps_data * data = ps->priv;
 
-        return rmt_scheduling_policy_common(&ss->tx, n1_port, restart);
+        return rmt_scheduling_policy_common(&data->ss->tx, n1_port, restart);
 }
 
 static struct rfifo *
@@ -136,9 +142,9 @@ default_rmt_scheduling_policy_rx(struct rmt_ps * ps,
                                  struct rmt_n1_port * n1_port,
                                  bool restart)
 {
-        struct sched_state * ss = ps->priv;
+        struct rmt_ps_data * data = ps->priv;
 
-        return rmt_scheduling_policy_common(&ss->rx, n1_port, restart);
+        return rmt_scheduling_policy_common(&data->ss->rx, n1_port, restart);
 }
 
 static int
@@ -170,19 +176,35 @@ rmt_ps_default_create(struct rina_component * component)
 {
         struct rmt * rmt = rmt_from_component(component);
         struct rmt_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
-        struct sched_state *ss;
+        struct rmt_ps_data * data = rkzalloc(sizeof(*data), GFP_KERNEL);
 
-        if (!ps) {
+        if (!ps || !data) {
                 return NULL;
         }
 
         /* Allocate policy-set private data. */
-        ss = rkzalloc(sizeof(*ss), GFP_KERNEL);
-        if (!ss) {
+        data->ss = rkzalloc(sizeof(*data->ss), GFP_KERNEL);
+        if (!data->ss) {
                 rkfree(ps);
+                rkfree(data);
                 return NULL;
         }
-        ps->priv = ss;
+        data->inq = rmt_queues_create();
+        if (!data->inq) {
+                rkfree(data->ss);
+                rkfree(ps);
+                rkfree(data);
+                return NULL;
+        }
+        data->outq = rmt_queues_create();
+        if (!data->outq) {
+                rkfree(data->ss);
+                rmt_queues_destroy(data->inq);
+                rkfree(ps);
+                rkfree(data);
+                return NULL;
+        }
+        ps->priv = data;
 
         ps->base.set_policy_set_param = rmt_ps_set_policy_set_param;
         ps->dm          = rmt;
