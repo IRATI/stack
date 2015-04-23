@@ -94,7 +94,7 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
 
         factory.plugin_name = plugin_name;
         factory.name = "passwd";
-        factory.app_entity = IPCProcessComponent::SECURITY_MANAGER_AE_NAME;
+        factory.app_entity = ISecurityManager::SECURITY_MANAGER_AE_NAME;
         factory.create = createSecurityManagerPasswdPs;
         factory.destroy = destroySecurityManagerPasswdPs;
 

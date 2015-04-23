@@ -25,6 +25,7 @@
 #ifdef __cplusplus
 
 #include <set>
+#include <librina/internal-events.h>
 #include <librina/timer.h>
 
 #include "ipcp/components.h"
@@ -388,7 +389,7 @@ private:
 /// leads to the next hop. This selection of the most appropriate N-1 flow can be
 /// performed more frequently in order to perform load-balancing or to quickly route
 /// around failed N-1 flows
-class LinkStateRoutingPolicy: public EventListener {
+class LinkStateRoutingPolicy: public rina::InternalEventListener {
 public:
 	LinkStateRoutingPolicy(IPCProcess * ipcp);
 	~LinkStateRoutingPolicy();
@@ -397,7 +398,7 @@ public:
 	const std::list<rina::FlowInformation>& get_allocated_flows() const;
 
 	/// N-1 Flow allocated, N-1 Flow deallocated or enrollment to neighbor completed
-	void eventHappened(Event * event);
+	void eventHappened(rina::InternalEvent * event);
 
 	/// Invoked periodically by a timer. Every FSO that needs to be propagated is retrieved,
 	/// together with the list of port-ids it should be sent on. For every port-id, an
@@ -484,7 +485,7 @@ private:
 	/// incremented by 1. The FSO is marked for propagation (ÔpropagateÕ is set to true)
 	/// and the list of port-ids associated with this FSO is filled with the port-ids of
 	/// all N-1 management flows. The FSDB is marked as ÒmodifiedÓ if it wasnÕt already.
-	void processFlowDeallocatedEvent(NMinusOneFlowDeallocatedEvent * event);
+	void processFlowDeallocatedEvent(rina::NMinusOneFlowDeallocatedEvent * event);
 
 	/// The Resource Allocator has allocated a new N-1 flow dedicated to data transfer.
 	/// If no neighbour is found, an entry has to be created and added into the list
@@ -495,7 +496,7 @@ private:
 	/// propagation, and associated with a new list of port-ids, which is filled with the
 	/// port-ids of all N-1 management flows. The FSDB is marked as ÒmodifiedÓ if it wasnÕt
 	/// already.
-	void processFlowAllocatedEvent(NMinusOneFlowAllocatedEvent * event);
+	void processFlowAllocatedEvent(rina::NMinusOneFlowAllocatedEvent * event);
 
 	/// The Enrollment Task has completed the enrollment procedure with a new neighbor IPC
 	/// Process. If there are pending flow allocations over the enrolled neighbour, they have
@@ -503,9 +504,9 @@ private:
 	/// Local data transfer N-1 flow allocated. Then, the full FSDB is sent to the IPC process
 	/// that a flow has been allocated to, in one or more CDAP M_WRITE messages targeting the
 	/// /dif/management/routing/flowstateobjectgroup/ object.
-	void processNeighborAddedEvent(NeighborAddedEvent * event);
+	void processNeighborAddedEvent(rina::NeighborAddedEvent * event);
 
-	void processNeighborLostEvent(ConnectiviyToNeighborLostEvent * event);
+	void processNeighborLostEvent(rina::ConnectiviyToNeighborLostEvent * event);
 };
 
 /// Encoder of Flow State object

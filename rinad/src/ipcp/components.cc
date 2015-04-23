@@ -26,13 +26,12 @@
 
 namespace rinad {
 
-const std::string IPCProcessComponent::ENROLLMENT_TASK_AE_NAME = "enrollment task";
-const std::string IPCProcessComponent::FLOW_ALLOCATOR_AE_NAME = "flow-allocator";
-const std::string IPCProcessComponent::NAMESPACE_MANAGER_AE_NAME = "namespace-manager";
-const std::string IPCProcessComponent::RESOURCE_ALLOCATOR_AE_NAME = "resource-allocator";
-const std::string IPCProcessComponent::SECURITY_MANAGER_AE_NAME = "security-manager";
-const std::string IPCProcessComponent::ROUTING_COMPONENT_AE_NAME = "routing";
-const std::string IPCProcessComponent::RIB_DAEMON_AE_NAME = "rib daemon";
+const std::string ISecurityManager::SECURITY_MANAGER_AE_NAME = "security-manager";
+const std::string IResourceAllocator::RESOURCE_ALLOCATOR_AE_NAME = "resource-allocator";
+const std::string INamespaceManager::NAMESPACE_MANAGER_AE_NAME = "namespace-manager";
+const std::string IRoutingComponent::ROUTING_COMPONENT_AE_NAME = "routing";
+const std::string IFlowAllocator::FLOW_ALLOCATOR_AE_NAME = "flow-allocator";
+const std::string IEnrollmentTask::ENROLLMENT_TASK_AE_NAME = "enrollment task";
 
 //	CLASS EnrollmentRequest
 EnrollmentRequest::EnrollmentRequest(rina::Neighbor * neighbor) {
@@ -234,6 +233,7 @@ IPCProcess::IPCProcess(const std::string& name, const std::string& instance)
 	delimiter_ = 0;
 	encoder_ = 0;
 	cdap_session_manager_ = 0;
+	internal_event_manager_ = 0;
 	enrollment_task_ = 0;
 	flow_allocator_ = 0;
 	namespace_manager_ = 0;

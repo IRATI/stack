@@ -137,8 +137,8 @@ void WatchdogRIBObject::sendMessages() {
 		//dead and fire a NEIGHBOR_DECLARED_DEAD event
 		if ((*it)->last_heard_from_time_in_ms_ != 0 &&
 				(*it)->last_heard_from_time_in_ms_ + declared_dead_interval_ < currentTimeInMs) {
-			NeighborDeclaredDeadEvent * event = new NeighborDeclaredDeadEvent((*it));
-			rib_daemon_->deliverEvent(event);
+			rina::NeighborDeclaredDeadEvent * event = new rina::NeighborDeclaredDeadEvent((*it));
+			ipc_process_->internal_event_manager_->deliverEvent(event);
 			continue;
 		}
 
@@ -1437,10 +1437,14 @@ void EnrollmentTask::populateRIB() {
 }
 
 void EnrollmentTask::subscribeToEvents() {
-	rib_daemon_->subscribeToEvent(IPCP_EVENT_N_MINUS_1_FLOW_DEALLOCATED, this);
-	rib_daemon_->subscribeToEvent(IPCP_EVENT_N_MINUS_1_FLOW_ALLOCATED, this);
-	rib_daemon_->subscribeToEvent(IPCP_EVENT_N_MINUS_1_FLOW_ALLOCATION_FAILED, this);
-	rib_daemon_->subscribeToEvent(IPCP_EVENT_NEIGHBOR_DECLARED_DEAD, this);
+	ipcp->internal_event_manager_->
+		subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED, this);
+	ipcp->internal_event_manager_->
+		subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED, this);
+	ipcp->internal_event_manager_->
+		subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATION_FAILED, this);
+	ipcp->internal_event_manager_->
+		subscribeToEvent(rina::InternalEvent::APP_NEIGHBOR_DECLARED_DEAD, this);
 }
 
 void EnrollmentTask::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
@@ -1802,23 +1806,27 @@ void EnrollmentTask::releaseResponse(int result, const std::string& result_reaso
 	}
 }
 
-void EnrollmentTask::eventHappened(Event * event) {
-	if (event->get_id() == IPCP_EVENT_N_MINUS_1_FLOW_DEALLOCATED){
-		NMinusOneFlowDeallocatedEvent * flowEvent = (NMinusOneFlowDeallocatedEvent *) event;
+void EnrollmentTask::eventHappened(rina::InternalEvent * event) {
+	if (event->type == rina::InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED){
+		rina::NMinusOneFlowDeallocatedEvent * flowEvent =
+				(rina::NMinusOneFlowDeallocatedEvent *) event;
 		nMinusOneFlowDeallocated(flowEvent);
-	}else if (event->get_id() == IPCP_EVENT_N_MINUS_1_FLOW_ALLOCATED){
-		NMinusOneFlowAllocatedEvent * flowEvent = (NMinusOneFlowAllocatedEvent *) event;
+	}else if (event->type == rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED){
+		rina::NMinusOneFlowAllocatedEvent * flowEvent =
+				(rina::NMinusOneFlowAllocatedEvent *) event;
 		nMinusOneFlowAllocated(flowEvent);
-	}else if (event->get_id() == IPCP_EVENT_N_MINUS_1_FLOW_ALLOCATION_FAILED){
-		NMinusOneFlowAllocationFailedEvent * flowEvent = (NMinusOneFlowAllocationFailedEvent *) event;
+	}else if (event->type == rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATION_FAILED){
+		rina::NMinusOneFlowAllocationFailedEvent * flowEvent =
+				(rina::NMinusOneFlowAllocationFailedEvent *) event;
 		nMinusOneFlowAllocationFailed(flowEvent);
-	}else if (event->get_id() == IPCP_EVENT_NEIGHBOR_DECLARED_DEAD) {
-		NeighborDeclaredDeadEvent * deadEvent = (NeighborDeclaredDeadEvent *) event;
+	}else if (event->type == rina::InternalEvent::APP_NEIGHBOR_DECLARED_DEAD) {
+		rina::NeighborDeclaredDeadEvent * deadEvent =
+				(rina::NeighborDeclaredDeadEvent *) event;
 		neighborDeclaredDead(deadEvent);
 	}
 }
 
-void EnrollmentTask::neighborDeclaredDead(NeighborDeclaredDeadEvent * deadEvent) {
+void EnrollmentTask::neighborDeclaredDead(rina::NeighborDeclaredDeadEvent * deadEvent) {
 	try{
 		resource_allocator_->get_n_minus_one_flow_manager()->getNMinus1FlowInformation(
 				deadEvent->neighbor_->underlying_port_id_);
@@ -1836,7 +1844,7 @@ void EnrollmentTask::neighborDeclaredDead(NeighborDeclaredDeadEvent * deadEvent)
 	}
 }
 
-void EnrollmentTask::nMinusOneFlowDeallocated(NMinusOneFlowDeallocatedEvent  * event) {
+void EnrollmentTask::nMinusOneFlowDeallocated(rina::NMinusOneFlowDeallocatedEvent  * event) {
 	//1 Check if the flow deallocated was a management flow
 	if(!event->management_flow_){
 		return;
@@ -1873,14 +1881,15 @@ void EnrollmentTask::nMinusOneFlowDeallocated(NMinusOneFlowDeallocatedEvent  * e
 	std::list<rina::Neighbor *>::const_iterator it2;
 	for (it2 = neighbors.begin(); it2 != neighbors.end(); ++it2) {
 		if ((*it2)->name_.processName.compare(event->cdap_session_descriptor_.dest_ap_name_) == 0) {
-			ConnectiviyToNeighborLostEvent * event2 = new ConnectiviyToNeighborLostEvent((*it2));
-			rib_daemon_->deliverEvent(event2);
+			rina::ConnectiviyToNeighborLostEvent * event2 =
+					new rina::ConnectiviyToNeighborLostEvent((*it2));
+			ipcp->internal_event_manager_->deliverEvent(event2);
 			return;
 		}
 	}
 }
 
-void EnrollmentTask::nMinusOneFlowAllocated(NMinusOneFlowAllocatedEvent * flowEvent) {
+void EnrollmentTask::nMinusOneFlowAllocated(rina::NMinusOneFlowAllocatedEvent * flowEvent) {
 	EnrollmentRequest * request =
 			port_ids_pending_to_be_allocated_.erase(flowEvent->handle_);
 
@@ -1911,7 +1920,7 @@ void EnrollmentTask::nMinusOneFlowAllocated(NMinusOneFlowAllocatedEvent * flowEv
 	}
 }
 
-void EnrollmentTask::nMinusOneFlowAllocationFailed(NMinusOneFlowAllocationFailedEvent * event) {
+void EnrollmentTask::nMinusOneFlowAllocationFailed(rina::NMinusOneFlowAllocationFailedEvent * event) {
 	EnrollmentRequest * request =
 			port_ids_pending_to_be_allocated_.erase(event->handle_);
 
@@ -1982,8 +1991,8 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 }
 
 void EnrollmentTask::enrollmentCompleted(rina::Neighbor * neighbor, bool enrollee) {
-	NeighborAddedEvent * event = new NeighborAddedEvent(neighbor, enrollee);
-	rib_daemon_->deliverEvent(event);
+	rina::NeighborAddedEvent * event = new rina::NeighborAddedEvent(neighbor, enrollee);
+	ipcp->internal_event_manager_->deliverEvent(event);
 }
 
 //Class EnrollmentRIBObject

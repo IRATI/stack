@@ -26,6 +26,12 @@
 
 namespace rina {
 
+const std::string RIBNamingConstants::DAF = "daf";
+const std::string RIBNamingConstants::DIF_REGISTRATIONS = "difregistrations";
+const std::string RIBNamingConstants::IRM = "irm";
+const std::string RIBNamingConstants::N_MINUS_ONE_FLOWS = "nminusoneflows";
+const std::string RIBNamingConstants::SEPARATOR = "/";
+
 /* Class RIBObjectData*/
 RIBObjectData::RIBObjectData(){
         instance_ = 0;
