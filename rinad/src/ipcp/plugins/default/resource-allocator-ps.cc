@@ -51,23 +51,35 @@ void ResourceAllocatorPs::routingTableUpdated(
 	std::list<rina::PDUForwardingTableEntry *> pduft;
 	std::list<rina::RoutingTableEntry *>::const_iterator it;
 	rina::PDUForwardingTableEntry * entry;
-	int port_id = 0;
-	for (it = rt.begin(); it!= rt.end(); ++it){
+
+	for (it = rt.begin(); it!= rt.end(); ++it) {
 		entry = new rina::PDUForwardingTableEntry();
 		entry->address = (*it)->address;
 		entry->qosId = (*it)->qosId;
 
 		LOG_IPCP_DBG("Processing entry for destination %u", (*it)->address);
-		LOG_IPCP_DBG("Next hop address %u", (*it)->nextHopAddresses.front());
 
-		port_id = res_alloc->get_n_minus_one_flow_manager()->
-				getManagementFlowToNeighbour((*it)->nextHopAddresses.front());
+		for (std::list<unsigned int>::iterator
+				nh = (*it)->nextHopAddresses.begin();
+				nh != (*it)->nextHopAddresses.end(); nh++) {
+			int port_id;
 
-		if (port_id == -1) {
+			LOG_IPCP_DBG("Next hop address %u", *nh);
+
+			port_id = res_alloc->get_n_minus_one_flow_manager()->
+				             getManagementFlowToNeighbour(*nh);
+
+			if (port_id == -1) {
+				LOG_IPCP_WARN("No port-id for this next hop");
+			} else {
+				LOG_IPCP_DBG("N-1 port-id: %u", port_id);
+				entry->portIds.push_back(port_id);
+			}
+		}
+
+		if (!entry->portIds.size()) {
 			delete entry;
 		} else {
-			LOG_IPCP_DBG("N-1 port-id: %u", port_id);
-			entry->portIds.push_back(port_id);
 			pduft.push_back(entry);
 		}
 	}
