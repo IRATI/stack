@@ -185,6 +185,158 @@ struct pft_cache {
         size_t      count; /* Entries in the pids array */
 };
 
+/* RMT DATA MODELS FOR RMT PS */
+
+struct rmt_kqueue * rmt_kqueue_create(unsigned int key)
+{
+        struct rmt_kqueue * tmp;
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+        tmp->queue = rfifo_create();
+        if (!tmp->queue) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        tmp->key = key;
+        INIT_HLIST_NODE(&tmp->hlist);
+
+        return tmp;
+}
+EXPORT_SYMBOL(rmt_kqueue_create);
+
+int rmt_kqueue_destroy(struct rmt_kqueue * q)
+{
+        if (!q) {
+                LOG_ERR("No RMT Key-queue to destroy...");
+                return -1;
+        }
+
+        hash_del(&q->hlist);
+
+        if (q->queue) rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
+
+        rkfree(q);
+
+        return 0;
+}
+EXPORT_SYMBOL(rmt_kqueue_destroy);
+
+struct rmt_qgroup * rmt_qgroup_create(void)
+{
+        struct rmt_qgroup * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        hash_init(tmp->queues);
+
+        return tmp;
+}
+EXPORT_SYMBOL(rmt_qgroup_create);
+
+int rmt_qgroup_destroy(struct rmt_qgroup * g)
+{
+        struct rmt_kqueue * entry;
+        struct hlist_node * tmp;
+        int                 bucket;
+
+        ASSERT(g);
+
+        hash_for_each_safe(g->queues, bucket, tmp, entry, hlist) {
+                ASSERT(entry);
+
+                if (rmt_kqueue_destroy(entry)) {
+                        LOG_ERR("Could not destroy entry %pK", entry);
+                        return -1;
+                }
+        }
+
+        rkfree(g);
+
+        return 0;
+}
+EXPORT_SYMBOL(rmt_qgroup_destroy);
+
+struct rmt_kqueue * rmt_qgroup_find(struct rmt_qgroup * g,
+                                    unsigned int        key)
+{
+        struct rmt_kqueue * entry;
+        const struct hlist_head * head;
+
+        ASSERT(g);
+
+        head = &g->queues[rmap_hash(g->queues, key)];
+        hlist_for_each_entry(entry, head, hlist) {
+                if (entry->key == key)
+                        return entry;
+        }
+
+        return NULL;
+}
+EXPORT_SYMBOL(rmt_qgroup_find);
+
+struct rmt_queues * rmt_queues_create(void)
+{
+        struct rmt_queues * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        hash_init(tmp->qgroups);
+        spin_lock_init(&tmp->lock);
+
+        return tmp;
+}
+EXPORT_SYMBOL(rmt_queues_create);
+
+int rmt_queues_destroy(struct rmt_queues * q)
+{
+        struct rmt_qgroup * entry;
+        struct hlist_node * tmp;
+        int                 bucket;
+
+        ASSERT(q);
+
+        hash_for_each_safe(q->qgroups, bucket, tmp, entry, hlist) {
+                ASSERT(entry);
+
+                if (rmt_qgroup_destroy(entry)) {
+                        LOG_ERR("Could not destroy entry %pK", entry);
+                        return -1;
+                }
+        }
+
+        rkfree(q);
+
+        return 0;
+}
+EXPORT_SYMBOL(rmt_queues_destroy);
+
+struct rmt_qgroup * rmt_queues_find(struct rmt_queues * queues,
+                                    port_id_t           pid)
+{
+        struct rmt_qgroup * entry;
+        const struct hlist_head * head;
+
+        ASSERT(queues);
+
+        head = &queues->qgroups[rmap_hash(queues->qgroups, pid)];
+
+        hlist_for_each_entry(entry, head, hlist) {
+                if (entry->pid == pid)
+                        return entry;
+        }
+
+        return NULL;
+}
+EXPORT_SYMBOL(rmt_queues_find);
+
+/* RMT DATAMODEL FOR RMT PS END */
+
 static int pft_cache_init(struct pft_cache * c)
 {
         ASSERT(c);

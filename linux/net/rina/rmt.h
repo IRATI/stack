@@ -106,6 +106,9 @@ int          rmt_set_policy_set_param(struct rmt * rmt,
 struct rmt * rmt_from_component(struct rina_component * component);
 
 /* Plugin support */
+
+#define RMT_PS_HASHSIZE 7
+
 enum flow_state {
         N1_PORT_STATE_ENABLED,
         N1_PORT_STATE_DISABLED,
@@ -122,4 +125,33 @@ struct rmt_n1_port {
         enum flow_state        state;
         atomic_t               n_sdus;
 };
+
+/* The key in this struct is used to filter by cep_ids, qos_id, address... */
+struct rmt_kqueue {
+        struct rfifo *    queue;
+        unsigned int      key;
+        struct hlist_node hlist;
+};
+
+struct rmt_qgroup {
+        port_id_t         pid;
+        struct hlist_node hlist;
+        DECLARE_HASHTABLE(queues, RMT_PS_HASHSIZE);
+};
+
+struct rmt_queues {
+        spinlock_t lock;
+        DECLARE_HASHTABLE(qgroups, RMT_PS_HASHSIZE);
+};
+
+struct rmt_kqueue *     rmt_kqueue_create(unsigned int key);
+int                     rmt_kqueue_destroy(struct rmt_kqueue * q);
+struct rmt_qgroup *     rmt_qgroup_create(void);
+int                     rmt_qgroup_destroy(struct rmt_qgroup* g);
+struct rmt_kqueue *     rmt_qgroup_find(struct rmt_qgroup * g,
+                                        unsigned int        key);
+struct rmt_queues *     rmt_queues_create(void);
+int                     rmt_queues_destroy(struct rmt_queues * q);
+struct rmt_qgroup *     rmt_queues_find(struct rmt_queues * queues,
+                                        port_id_t           pid);
 #endif
