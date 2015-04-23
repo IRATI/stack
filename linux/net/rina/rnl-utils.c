@@ -2120,7 +2120,7 @@ static int parse_list_pfte_conf_e(struct nlattr *     nested_attr,
                         continue;
                 }
 
-                list_add(&entry->next, &msg->pft_entries);
+                list_add_tail(&entry->next, &msg->pft_entries);
         }
 
         if (rem > 0) {
