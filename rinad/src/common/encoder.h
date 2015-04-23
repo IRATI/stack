@@ -84,9 +84,6 @@ public:
 	static const std::string DFT_ENTRY_SET_RIB_OBJECT_NAME;
 	static const std::string DFT_ENTRY_SET_RIB_OBJECT_CLASS;
 	static const std::string DFT_ENTRY_RIB_OBJECT_CLASS;
-	static const std::string DIF_REGISTRATION_SET_RIB_OBJECT_CLASS;
-	static const std::string DIF_REGISTRATION_RIB_OBJECT_CLASS;
-	static const std::string DIF_REGISTRATION_SET_RIB_OBJECT_NAME;
 	static const std::string ENROLLMENT_INFO_OBJECT_NAME;
 	static const std::string ENROLLMENT_INFO_OBJECT_CLASS;
 	static const std::string FLOW_SET_RIB_OBJECT_NAME;
@@ -95,9 +92,6 @@ public:
 	static const std::string FLOW_STATE_OBJECT_RIB_OBJECT_CLASS;
 	static const std::string FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS;
 	static const std::string FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME;
-	static const std::string N_MINUS_ONE_FLOW_SET_RIB_OBJECT_CLASS;
-	static const std::string N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS;
-	static const std::string N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
 	static const std::string NEIGHBOR_SET_RIB_OBJECT_CLASS;
 	static const std::string NEIGHBOR_RIB_OBJECT_CLASS;
 	static const std::string NEIGHBOR_SET_RIB_OBJECT_NAME;
