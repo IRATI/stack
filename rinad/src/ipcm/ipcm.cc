@@ -75,7 +75,7 @@ namespace rinad {
 //Singleton instance
 Singleton<IPCManager_> IPCManager;
 
-IPCManager_::IPCManager_() : io_thread(NULL){
+IPCManager_::IPCManager_() : req_to_stop(false), io_thread(NULL){
 
 }
 
@@ -1407,14 +1407,11 @@ void IPCManager_::run(){
 
 	void* status;
 
-	//Join the I/O loop thread
-	io_thread->join(&status);
+	//Wait for the request to stop
+	stop_cond.doWait();
 
 	//Cleanup
 	LOG_DBG("Cleaning the house...");
-
-	//I/O thread
-	delete io_thread;
 
 	//Destroy all addons (stop them)
 	Addon::destroy_all();
@@ -1431,6 +1428,13 @@ void IPCManager_::run(){
 								(*it)->get_id());
 		}
 	}
+
+	//Join the I/O loop thread
+	keep_running = false;
+	io_thread->join(&status);
+
+	//I/O thread
+	delete io_thread;
 }
 
 //static
@@ -1453,6 +1457,12 @@ void IPCManager_::io_loop(){
 						IPCM_EVENT_TIMEOUT_NS);
 		if(!event)
 			continue;
+
+		if(req_to_stop){
+			//Signal the main thread to start
+			//the stop procedure
+			stop_cond.signal();
+		}
 
 		if (!keep_running)
 			break;
