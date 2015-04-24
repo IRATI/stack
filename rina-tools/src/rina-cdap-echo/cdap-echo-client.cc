@@ -202,7 +202,6 @@ void Client::sendReadRMessage()
                                         break;
                         }
                 } else {
-
                         // READ
                         cdap_rib::obj_info_t obj;
                         obj.name_ = "test name";
@@ -213,7 +212,7 @@ void Client::sendReadRMessage()
                         cdap_rib::filt_info_t filt;
                         filt.filter_ = 0;
                         filt.scope_ = 0;
-                        cdap_prov_->remote_read(con_, obj, flags, filt);
+                        cdap_prov_->remote_read(con_.port_, obj, flags, filt);
                         std::cout << "read request CDAP message sent"
                                   << std::endl;
                         int bytes_read = flow_->readSDU(buffer,
