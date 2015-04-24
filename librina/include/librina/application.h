@@ -160,8 +160,24 @@ extern "C" {
                                               const std::string& plugin_name);
 }
 
+/// Info about a policy set
+struct PsInfo {
+	/// Name of this pluggable policy set
+	std::string name;
+
+	/// Name of the AE (or component) that this policy set is for
+	std::string app_entity;
+
+	/// Versioning information for this policy set
+	std::string version;
+
+	PsInfo() { }
+	PsInfo(const std::string& n, const std::string& c,
+	       const std::string& v) : name(n), app_entity(c), version(v) { }
+};
+
 struct PsFactory {
-		/// Name of this pluggable policy set.
+	/// Name of this pluggable policy set.
         std::string name;
 
         /// Name of the AE where this plugin applies.
