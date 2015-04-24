@@ -43,7 +43,7 @@
 
 namespace rinad {
 
-class IPCMConsole : public Addon{
+class IPCMConsole : public Addon {
                 static const unsigned int CMDBUFSIZE = 120;
                 static const int CMDRETCONT = 0;
                 static const int CMDRETSTOP = 1;
@@ -88,6 +88,7 @@ class IPCMConsole : public Addon{
                 int set_policy_set_param(std::vector<std::string>& args);
                 int plugin_load(std::vector<std::string>& args);
                 int plugin_unload(std::vector<std::string>& args);
+                int plugin_get_info(std::vector<std::string>& args);
 
         public:
                 IPCMConsole(rina::ThreadAttributes &ta,

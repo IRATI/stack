@@ -41,13 +41,12 @@ namespace rinad {
 ipcm_res_t
 IPCManager_::plugin_get_info(const std::string& plugin_name)
 {
-        string plugin_path = IPCPPLUGINSDIR + plugin_name + ".manifest";
-
-        // Parse config file with jsoncpp
+        string plugin_path = string(IPCPPLUGINSDIR) + "/" +
+                             plugin_name + ".manifest";
+        ifstream     manifest;
         Json::Value  root;
         Json::Reader reader;
         Json::Value  v;
-        ifstream     manifest;
 
         manifest.open(plugin_path.c_str());
         if (manifest.fail()) {
