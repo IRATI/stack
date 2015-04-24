@@ -41,18 +41,18 @@ struct rmt_ps {
                                  struct rfifo *);
         void (* rmt_q_monitor_policy_tx)(struct rmt_ps *,
                                  struct pdu *,
-                                 struct rfifo *);
+                                 struct rmt_n1_port *);
         void (* rmt_q_monitor_policy_rx)(struct rmt_ps *,
                                  struct sdu *,
-                                 struct rfifo *);
-        struct rfifo * (* rmt_scheduling_policy_tx)(struct rmt_ps *,
-                                        struct rmt_n1_port *, bool restart);
-        struct rfifo * (* rmt_scheduling_policy_rx)(struct rmt_ps *,
-                                        struct rmt_n1_port *, bool restart);
-        int (* rmt_scheduling_create_policy_tx)(struct rmt_ps ,
-                                                struct rmt_n1_port * n1_port);
-        int (* rmt_scheduling_create_policy_rx)(struct rmt_ps ,
-                                                struct rmt_n1_port * n1_port);
+                                 struct rmt_n1_port *);
+        int (* rmt_scheduling_policy_tx)(struct rmt_ps *,
+                                         struct rmt_n1_port *, struct pdu *);
+        int (* rmt_scheduling_policy_rx)(struct rmt_ps *,
+                                         struct rmt_n1_port *, struct sdu *);
+        int (* rmt_scheduling_create_policy_tx)(struct rmt_ps *,
+                                                struct rmt_n1_port *);
+        int (* rmt_scheduling_create_policy_rx)(struct rmt_ps *,
+                                                struct rmt_n1_port *);
 
         /* Parametric policies. */
         int          max_q;
