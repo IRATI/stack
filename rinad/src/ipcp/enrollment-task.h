@@ -29,6 +29,7 @@
 #include "common/concurrency.h"
 #include "ipcp/components.h"
 #include <librina/cdap.h>
+#include <librina/internal-events.h>
 #include <librina/timer.h>
 
 namespace rinad {
@@ -361,7 +362,7 @@ private:
 	INamespaceManager * namespace_manager_;
 };
 
-class EnrollmentTask: public IEnrollmentTask, public EventListener {
+class EnrollmentTask: public IEnrollmentTask, public rina::InternalEventListener {
 public:
 	EnrollmentTask();
 	~EnrollmentTask();
@@ -382,7 +383,7 @@ public:
 			rina::CDAPSessionDescriptor * session_descriptor);
 	void releaseResponse(int result, const std::string& result_reason,
 			rina::CDAPSessionDescriptor * session_descriptor);
-	void eventHappened(Event * event);
+	void eventHappened(rina::InternalEvent * event);
 	void enrollmentFailed(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
 			int portId, const std::string& reason, bool enrolle, bool sendReleaseMessage);
 	void enrollmentCompleted(rina::Neighbor * neighbor, bool enrollee);
@@ -411,22 +412,22 @@ private:
 
 	///  If the N-1 flow with the neighbor is still allocated, request its deallocation
 	/// @param deadEvent
-	void neighborDeclaredDead(NeighborDeclaredDeadEvent * deadEvent);
+	void neighborDeclaredDead(rina::NeighborDeclaredDeadEvent * deadEvent);
 
 	/// Called by the RIB Daemon when the flow supporting the CDAP session with the remote peer
 	/// has been deallocated
 	/// @param event
-	void nMinusOneFlowDeallocated(NMinusOneFlowDeallocatedEvent  * event);
+	void nMinusOneFlowDeallocated(rina::NMinusOneFlowDeallocatedEvent  * event);
 
 	/// Called when a new N-1 flow has been allocated
 	// @param portId
-	void nMinusOneFlowAllocated(NMinusOneFlowAllocatedEvent * flowEvent);
+	void nMinusOneFlowAllocated(rina::NMinusOneFlowAllocatedEvent * flowEvent);
 
 	/// Called when a new N-1 flow allocation has failed
 	/// @param portId
 	/// @param flowService
 	/// @param resultReason
-	void nMinusOneFlowAllocationFailed(NMinusOneFlowAllocationFailedEvent * event);
+	void nMinusOneFlowAllocationFailed(rina::NMinusOneFlowAllocationFailedEvent * event);
 
 	IPCPRIBDaemon * rib_daemon_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;

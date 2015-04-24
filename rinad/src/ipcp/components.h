@@ -31,9 +31,10 @@
 #include <string>
 
 #include <librina/ipc-process.h>
+#include <librina/internal-events.h>
+#include <librina/irm.h>
 
 #include "common/encoder.h"
-#include "events.h"
 
 namespace rinad {
 
@@ -49,21 +50,13 @@ enum IPCProcessOperationalState {
 class IPCProcess;
 
 /// IPC process component
-class IPCProcessComponent: public rina::ApplicationEntity {
+class IPCProcessComponent {
 public:
-        IPCProcessComponent(const std::string& name) : rina::ApplicationEntity(name), ipcp(NULL) { };
+        IPCProcessComponent() : ipcp(NULL) { };
         virtual ~IPCProcessComponent() { };
         virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
 
         IPCProcess * ipcp;
-
-        static const std::string ENROLLMENT_TASK_AE_NAME;
-        static const std::string FLOW_ALLOCATOR_AE_NAME;
-        static const std::string NAMESPACE_MANAGER_AE_NAME;
-        static const std::string RESOURCE_ALLOCATOR_AE_NAME;
-        static const std::string SECURITY_MANAGER_AE_NAME;
-        static const std::string ROUTING_COMPONENT_AE_NAME;
-        static const std::string RIB_DAEMON_AE_NAME;
 };
 
 /// Interface
@@ -114,9 +107,12 @@ public:
 
 /// Interface that must be implementing by classes that provide
 /// the behavior of an enrollment task
-class IEnrollmentTask : public IPCProcessComponent, public rina::IApplicationConnectionHandler {
+class IEnrollmentTask : public IPCProcessComponent, public rina::ApplicationEntity,
+						public rina::IApplicationConnectionHandler {
 public:
-	IEnrollmentTask() : IPCProcessComponent(IPCProcessComponent::ENROLLMENT_TASK_AE_NAME) { };
+	static const std::string ENROLLMENT_TASK_AE_NAME;
+
+	IEnrollmentTask() : rina::ApplicationEntity(ENROLLMENT_TASK_AE_NAME) { };
 	virtual ~IEnrollmentTask(){};
 	virtual const std::list<rina::Neighbor *> get_neighbors() const = 0;
 	virtual const std::list<std::string> get_enrolled_ipc_process_names() const = 0;
@@ -263,9 +259,11 @@ public:
 
 /// Interface that must be implementing by classes that provide
 /// the behavior of a Flow Allocator task
-class IFlowAllocator : public IPCProcessComponent {
+class IFlowAllocator : public IPCProcessComponent, public rina::ApplicationEntity {
 public:
-	IFlowAllocator() : IPCProcessComponent(IPCProcessComponent::FLOW_ALLOCATOR_AE_NAME) { };
+	static const std::string FLOW_ALLOCATOR_AE_NAME;
+
+	IFlowAllocator() : rina::ApplicationEntity(FLOW_ALLOCATOR_AE_NAME) { };
 	virtual ~IFlowAllocator(){};
 
 	virtual IFlowAllocatorInstance * getFAI(int portId) = 0;
@@ -324,17 +322,18 @@ public:
 	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
 };
 
-class IRoutingComponent : public IPCProcessComponent {
+class IRoutingComponent : public IPCProcessComponent, public rina::ApplicationEntity {
 public:
-	IRoutingComponent() : IPCProcessComponent(IPCProcessComponent::ROUTING_COMPONENT_AE_NAME) { };
+	static const std::string ROUTING_COMPONENT_AE_NAME;
+	IRoutingComponent() : rina::ApplicationEntity(ROUTING_COMPONENT_AE_NAME) { };
 	virtual ~IRoutingComponent(){};
 };
 
 class RoutingComponent: public IRoutingComponent {
 public:
-		RoutingComponent() : IRoutingComponent() { };
-		void set_application_process(rina::ApplicationProcess * ap);
-		void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+	RoutingComponent() : IRoutingComponent() { };
+	void set_application_process(rina::ApplicationProcess * ap);
+	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
         int select_policy_set(const std::string& path, const std::string& name);
         int set_policy_set_param(const std::string& path,
                                  const std::string& name,
@@ -360,9 +359,10 @@ public:
 	virtual ~INamespaceManagerPs() {}
 };
 
-class INamespaceManager : public IPCProcessComponent {
+class INamespaceManager : public IPCProcessComponent, public rina::ApplicationEntity {
 public:
-	INamespaceManager() : IPCProcessComponent(IPCProcessComponent::NAMESPACE_MANAGER_AE_NAME) { };
+	static const std::string NAMESPACE_MANAGER_AE_NAME;
+	INamespaceManager() : rina::ApplicationEntity(NAMESPACE_MANAGER_AE_NAME) { };
 	virtual ~INamespaceManager(){};
 
 	/// Returns the address of the IPC process where the application process is, or
@@ -405,61 +405,19 @@ public:
 };
 
 ///N-1 Flow Manager interface
-class INMinusOneFlowManager {
+class INMinusOneFlowManager : public rina::IPCResourceManager {
 public:
+	INMinusOneFlowManager() : rina::IPCResourceManager(true) { };
 	virtual ~INMinusOneFlowManager(){};
 
 	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
 
 	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
 
-	/// Allocate an N-1 Flow with the requested QoS to the destination
-	/// IPC Process
-	/// @param flowInformation contains the destination IPC Process and requested
-    /// QoS information
-	/// @return handle to the flow request
-	virtual unsigned int allocateNMinus1Flow(const rina::FlowInformation& flowInformation) = 0;
-
-	/// Process the result of an allocate request event
-	/// @param event
-	/// @throws IPCException
-	virtual void allocateRequestResult(const rina::AllocateFlowRequestResultEvent& event) = 0;
-
-	/// Process a flow allocation request
-	/// @param event
-	/// @throws IPCException if something goes wrong
-	virtual void flowAllocationRequested(const rina::FlowRequestEvent& event) = 0;
-
-	/// Deallocate the N-1 Flow identified by portId
-	/// @param portId
-	/// @throws IPCException if no N-1 Flow identified by portId exists
-	virtual void deallocateNMinus1Flow(int portId) = 0;
-
-	/// Process the response of a flow deallocation request
-	/// @throws IPCException
-	virtual void deallocateFlowResponse(const rina::DeallocateFlowResponseEvent& event) = 0;
-
-	/// A flow has been deallocated remotely, process
-	/// @param portId
-	virtual void flowDeallocatedRemotely(const rina::FlowDeallocatedEvent& event) = 0;
-
-	/// Return the N-1 Flow descriptor associated to the flow identified by portId
-	/// @param portId
-	/// @return the N-1 Flow information
-    /// @throws IPCException if no N-1 Flow identified by portId exists
-	virtual const rina::FlowInformation& getNMinus1FlowInformation(int portId) const = 0;
-
 	/// The IPC Process has been unregistered from or registered to an N-1 DIF
 	/// @param evet
 	/// @throws IPCException
 	virtual void processRegistrationNotification(const rina::IPCProcessDIFRegistrationEvent& event) = 0;
-
-	/// True if the DIF name is a supoprting DIF, false otherwise
-	/// @param difName
-	/// @return
-	virtual bool isSupportingDIF(const rina::ApplicationProcessNamingInformation& difName) = 0;
-
-	virtual std::list<rina::FlowInformation> getAllNMinusOneFlowInformation() const = 0;
 
 	virtual std::list<int> getNMinusOneFlowsToNeighbour(unsigned int address) = 0;
 
@@ -497,9 +455,10 @@ public:
 ///     Creation/Deletion of (N-1)-flows
 ///     Assignment of RMT Queues to (N-1)-flows
 ///     Forwarding Table Generator Output
-class IResourceAllocator: public IPCProcessComponent {
+class IResourceAllocator: public IPCProcessComponent, public rina::ApplicationEntity {
 public:
-	IResourceAllocator() : IPCProcessComponent(IPCProcessComponent::RESOURCE_ALLOCATOR_AE_NAME) { };
+	static const std::string RESOURCE_ALLOCATOR_AE_NAME;
+	IResourceAllocator() : rina::ApplicationEntity(RESOURCE_ALLOCATOR_AE_NAME) { };
 	virtual ~IResourceAllocator(){};
 	virtual INMinusOneFlowManager * get_n_minus_one_flow_manager() const = 0;
 };
@@ -516,7 +475,6 @@ public:
 /// Control is performed by the Flow Allocator. The particular security procedures used for
 /// these security functions are a matter of policy. SDU Protection provides confidentiality
 /// and integrity
-
 class ISecurityManagerPs : public rina::IPolicySet {
 // This class is used by the IPCP to access the plugin functionalities
 public:
@@ -529,19 +487,20 @@ public:
         virtual ~ISecurityManagerPs() {}
 };
 
-class ISecurityManager: public IPCProcessComponent {
+class ISecurityManager: public IPCProcessComponent, public rina::ApplicationEntity {
 // This class is used by the plugins to access the IPCP functionalities
 public:
-		ISecurityManager() : IPCProcessComponent(IPCProcessComponent::SECURITY_MANAGER_AE_NAME) { };
+	static const std::string SECURITY_MANAGER_AE_NAME;
+	ISecurityManager() : rina::ApplicationEntity(SECURITY_MANAGER_AE_NAME) { };
         virtual ~ISecurityManager() {}
 };
 
 class SecurityManager: public ISecurityManager {
 // Used by IPCP to access the functionalities of the security manager
 public:
-		SecurityManager() : ISecurityManager() { };
-		void set_application_process(rina::ApplicationProcess * ap);
-		void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+	SecurityManager() : ISecurityManager() { };
+	void set_application_process(rina::ApplicationProcess * ap);
+	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
         int select_policy_set(const std::string& path, const std::string& name);
         int set_policy_set_param(const std::string& path,
                                  const std::string& name,
@@ -566,9 +525,9 @@ public:
 };
 
 /// Interface that provides the RIB Daemon API
-class IPCPRIBDaemon : public rina::RIBDaemon, public IPCProcessComponent, public EventManager {
+class IPCPRIBDaemon : public rina::RIBDaemon, public IPCProcessComponent {
 public:
-	IPCPRIBDaemon() : IPCProcessComponent(IPCProcessComponent::RIB_DAEMON_AE_NAME) { };
+	IPCPRIBDaemon() { };
 	virtual ~IPCPRIBDaemon(){};
 
 	/// Process a Query RIB Request from the IPC Manager
@@ -586,6 +545,7 @@ public:
 	IDelimiter * delimiter_;
 	rina::IMasterEncoder * encoder_;
 	rina::CDAPSessionManagerInterface* cdap_session_manager_;
+	rina::InternalEventManager * internal_event_manager_;
 	IEnrollmentTask * enrollment_task_;
 	IFlowAllocator * flow_allocator_;
 	INamespaceManager * namespace_manager_;
@@ -594,7 +554,7 @@ public:
 	IRoutingComponent * routing_component_;
 	IPCPRIBDaemon * rib_daemon_;
 
-    IPCProcess(const std::string& name, const std::string& instance);
+	IPCProcess(const std::string& name, const std::string& instance);
 	virtual ~IPCProcess(){};
 	virtual unsigned short get_id() = 0;
 	virtual unsigned int get_address() const = 0;
