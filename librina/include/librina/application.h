@@ -223,6 +223,7 @@ protected:
 private:
 	std::vector<rina::PsFactory> ae_policy_factories;
 	std::map< std::string, void * > plugins_handles;
+	std::list<PsInfo> manifest_policy_sets;
 };
 
 // The base class for an Application Process that is member of a

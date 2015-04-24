@@ -28,6 +28,7 @@
 #include "core.h"
 #include "rina-syscalls.h"
 #include "librina/application.h"
+#include "librina/plugin-info.h"
 
 namespace rina {
 
@@ -183,6 +184,8 @@ AppPolicyManager::psFactoryLookup(const std::string& ae_name,
 
 int AppPolicyManager::psFactoryPublish(const PsFactory& factory)
 {
+	bool declared = false;
+
         // TODO check that factory.component is an existing component
 
         // Check if the (name, component) couple specified by 'factory'
@@ -194,6 +197,25 @@ int AppPolicyManager::psFactoryPublish(const PsFactory& factory)
                                 factory.app_entity.c_str());
                 return -1;
         }
+
+	// Check if this policy set factory has been declared in the
+	// plugin manifest file
+	for (std::list<PsInfo>::iterator mi = manifest_policy_sets.begin();
+				mi != manifest_policy_sets.end(); mi++) {
+		if (mi->name == factory.name &&
+				mi->app_entity == factory.app_entity) {
+			declared = true;
+			break;
+		}
+	}
+
+	if (!declared) {
+		LOG_ERR("Pluggable component '%s'/'%s' not declared "
+			"in manifest file for plugin %s",
+			factory.app_entity.c_str(), factory.name.c_str(),
+			factory.plugin_name.c_str());
+		return -1;
+	}
 
         // Add the new factory
         ae_policy_factories.push_back(factory);
@@ -282,6 +304,14 @@ int AppPolicyManager::plugin_load(const std::string& plugin_dir,
                 LOG_INFO("Plugin '%s' already loaded", plugin_name.c_str());
                 return 0;
         }
+
+	// Load the manifest (will overwrite the existing manifest)
+	ret = plugin_get_info(plugin_name, plugin_dir, manifest_policy_sets);
+	if (ret) {
+		LOG_ERR("Failed to load manifest for plugin %s",
+			plugin_name.c_str());
+		return ret;
+	}
 
         plugin_path += "/";
         plugin_path += plugin_name + ".so";

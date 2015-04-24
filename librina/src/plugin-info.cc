@@ -24,11 +24,11 @@
 #include <string>
 #include <fstream>
 
-#include <librina/common.h>
-#include <librina/ipc-manager.h>
+#include "librina/common.h"
+#include "librina/ipc-manager.h"
 
-#define RINA_PREFIX "ipcm"
-#include <librina/logs.h>
+#define RINA_PREFIX "plugin-info"
+#include "librina/logs.h"
 
 #include "json/json.h"
 
