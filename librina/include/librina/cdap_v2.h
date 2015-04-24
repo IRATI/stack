@@ -101,13 +101,8 @@ class CDAPProviderInterface
       const cdap_rib::vers_info_t &ver, const cdap_rib::src_info_t &src,
       const cdap_rib::dest_info_t &dest, const cdap_rib::auth_info &auth,
       int port) = 0;
-<<<<<<< HEAD
-  virtual int remote_close_connection(int port_id) = 0;
-  virtual int remote_create(const cdap_rib::con_handle_t &con,
-=======
   virtual int close_connection(unsigned int port) = 0;
   virtual int remote_create(unsigned int port,
->>>>>>> b101d3ea37bedd82430c40cb5f974e818f2dd742
                             const cdap_rib::obj_info_t &obj,
                             const cdap_rib::flags_t &flags,
                             const cdap_rib::filt_info_t &filt) = 0;

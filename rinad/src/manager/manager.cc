@@ -111,31 +111,6 @@ void ConnectionCallback::open_connection(
                   << std::endl;
         (*prov_)->open_connection_response(con, res, message_id);
         std::cout << "open conection response CDAP message sent" << std::endl;
-
-        mad_manager::structures::ipcp_config_t ipc_config;
-        ipc_config.process_instance = 1;
-        ipc_config.process_name = "test1.IRATI";
-        ipc_config.process_type = "normal.IPC";
-        ipc_config.dif_to_register = "400";
-        ipc_config.dif_to_assign = "normal.DIF";
-
-        cdap_rib::obj_info_t obj;
-        obj.name_ =
-                        "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcessID=1";
-        obj.class_ = "IPCProcess";
-        obj.inst_ = 0;
-        mad_manager::encoders::IPCPConfigEncoder().encode(ipc_config,
-                                                          obj.value_);
-
-        cdap_rib::flags_t flags_res;
-        flags_res.flags_ = cdap_rib::flags_t::NONE_FLAGS;
-
-        cdap_rib::filt_info_t filt;
-        filt.filter_ = 0;
-        filt.scope_ = 0;
-
-        (*prov_)->remote_create(con, obj, flags_res, filt);
-        std::cout << "create IPC request CDAP message sent" << std::endl;
 }
 
 void ConnectionCallback::remote_create_result(
@@ -146,11 +121,20 @@ void ConnectionCallback::remote_create_result(
         std::cout << "Result code is: " << res.result_ << std::endl;
 }
 
+void remote_read_result(const rina::cdap_rib::con_handle_t &con,
+                        const rina::cdap_rib::obj_info_t &obj,
+                        const rina::cdap_rib::res_info_t &res)
+{
+        // decode object value
+        // print object value
+}
+
 Manager::Manager(const std::string& dif_name, const std::string& apn,
                  const std::string& api)
                 : Application(dif_name, apn, api)
 {
   (void)client_app_reg_;
+  cdap_prov_ = 0;
 }
 
 Manager::~Manager()
@@ -227,7 +211,7 @@ void Manager::startWorker(rina::Flow *flow)
 {
         void (Manager::*server_function)(Flow *flow);
 
-        server_function = &Manager::createIPCP;
+        server_function = &Manager::operate;
 
         thread t(server_function, this, flow);
         t.detach();
@@ -235,11 +219,19 @@ void Manager::startWorker(rina::Flow *flow)
 
 void Manager::operate(rina::Flow* flow)
 {
-        cdap_prov_ = 0;
-        ConnectionCallback callback(&cdap_prov);
+        ConnectionCallback callback(&cdap_prov_);
         std::cout << "cdap_prov created" << std::endl;
         cdap::CDAPProviderFactory::init(2000);
         cdap_prov_ = cdap::CDAPProviderFactory::create(false, &callback);
+        // CACEP
+        cacep(flow);
+        // CREATE IPCP
+        createIPCP(flow);
+        // QUERY RIB
+        queryRIB(flow);
+        // FINISH
+        cdap::CDAPProviderFactory::destroy(flow->getPortId());
+        delete cdap_prov_;
 }
 
 void Manager::cacep(rina::Flow* flow)
@@ -255,6 +247,32 @@ void Manager::cacep(rina::Flow* flow)
 void Manager::createIPCP(rina::Flow* flow)
 {
         char buffer[max_sdu_size_in_bytes];
+
+        mad_manager::structures::ipcp_config_t ipc_config;
+        ipc_config.process_instance = 1;
+        ipc_config.process_name = "test1.IRATI";
+        ipc_config.process_type = "normal.IPC";
+        ipc_config.dif_to_register = "400";
+        ipc_config.dif_to_assign = "normal.DIF";
+
+        cdap_rib::obj_info_t obj;
+        obj.name_ =
+                        "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcessID=1";
+        obj.class_ = "IPCProcess";
+        obj.inst_ = 0;
+        mad_manager::encoders::IPCPConfigEncoder().encode(ipc_config,
+                                                          obj.value_);
+
+        cdap_rib::flags_t flags;
+        flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
+
+        cdap_rib::filt_info_t filt;
+        filt.filter_ = 0;
+        filt.scope_ = 0;
+
+        cdap_prov_->remote_create(flow->getPortId(), obj, flags, filt);
+        std::cout << "create IPC request CDAP message sent" << std::endl;
+
         int bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
         cdap_rib::SerializedObject message;
         message.message_ = buffer;
@@ -264,50 +282,28 @@ void Manager::createIPCP(rina::Flow* flow)
 
 void Manager::queryRIB(rina::Flow *flow)
 {
+        char buffer[max_sdu_size_in_bytes];
 
+        cdap_rib::obj_info_t obj;
+        obj.name_ =
+                        "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcessID=1, RIBDaemonID=1";
+        obj.class_ = "RIBDaemon";
+        obj.inst_ = 0;
+        obj.value_ = 0;
+
+        cdap_rib::flags_t flags;
+        flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
+
+        cdap_rib::filt_info_t filt;
+        filt.filter_ = 0;
+        filt.scope_ = 0;
+
+        cdap_prov_->remote_read(flow->getPortId(), obj, flags, filt);
+        std::cout << "Read RIBDaemon request CDAP message sent" << std::endl;
+
+        int bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
+        cdap_rib::SerializedObject message;
+        message.message_ = buffer;
+        message.size_ = bytes_read;
+        cdap_prov_->process_message(message, flow->getPortId());
 }
-
-void Manager::finish(rina::Flow *flow)
-{
-        cdap::CDAPProviderFactory::destroy(flow->getPortId());
-        delete cdap_prov_;
-}
-/*
- void Manager::release()
- {
- char buffer[max_sdu_size_in_bytes];
- std::cout << "release request CDAP message sent" << std::endl;
- cdap_prov_->close_connection(con_);
- int bytes_read = flow_->readSDU(buffer, max_sdu_size_in_bytes);
- cdap_rib::SerializedObject message;
- message.message_ = buffer;
- message.size_ = bytes_read;
- std::cout << "Waiting for release response" << std::endl;
- cdap_prov_->process_message(message, flow_->getPortId());
- std::cout << "Release completed" << std::endl;
- }
-
- void Manager::destroyFlow()
- {
- DeallocateFlowResponseEvent *resp = 0;
- unsigned int seqnum;
- IPCEvent* event;
- int port_id = flow_->getPortId();
- cdap::CDAPProviderFactory::destroy(port_id);
- seqnum = ipcManager->requestFlowDeallocation(port_id);
-
- for (;;) {
- event = ipcEventProducer->eventWait();
- if (event && event->eventType == DEALLOCATE_FLOW_RESPONSE_EVENT
- && event->sequenceNumber == seqnum) {
- break;
- }
- LOG_DBG("Client got new event %d", event->eventType);
- }
- resp = dynamic_cast<DeallocateFlowResponseEvent*>(event);
- assert(resp);
-
- ipcManager->flowDeallocationResult(port_id, resp->result == 0);
- cdap::CDAPProviderFactory::finit();
- }
- */

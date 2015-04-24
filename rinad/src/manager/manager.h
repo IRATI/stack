@@ -54,6 +54,9 @@ class ConnectionCallback : public rina::cdap::CDAPCallbackInterface
                              int message_id);
         void remote_create_result(const rina::cdap_rib::con_handle_t &con,
                                   const rina::cdap_rib::res_info_t &res);
+        void remote_read_result(const rina::cdap_rib::con_handle_t &con,
+                                const rina::cdap_rib::obj_info_t &obj,
+                                const rina::cdap_rib::res_info_t &res);
  private:
         rina::cdap::CDAPProviderInterface **prov_;
 };
@@ -67,14 +70,10 @@ class Manager : public Application
         ~Manager();
  protected:
         void startWorker(rina::Flow *flow);
+        void operate(rina::Flow* flow);
+        void cacep(rina::Flow* flow);
         void createIPCP(rina::Flow *flow);
         void queryRIB(rina::Flow *flow);
-
-        //void cacep();
-        //void sendAssignToDIF();
-        //void sendRegisterAtDIF();
-        //void release();
-        //void destroyFlow();
 
  private:
         std::string dif_name_;

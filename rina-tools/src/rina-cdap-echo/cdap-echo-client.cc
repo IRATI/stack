@@ -233,7 +233,7 @@ void Client::release()
 {
         char buffer[max_sdu_size_in_bytes];
         std::cout << "release request CDAP message sent" << std::endl;
-        cdap_prov_->remote_close_connection(con_.port_);
+        cdap_prov_->close_connection(con_.port_);
         int bytes_read = flow_->readSDU(buffer, max_sdu_size_in_bytes);
         cdap_rib::SerializedObject message;
         message.message_ = buffer;
