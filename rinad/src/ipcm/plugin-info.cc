@@ -20,7 +20,7 @@
 
 #include <cstdlib>
 #include <iostream>
-#include <vector>
+#include <list>
 #include <string>
 #include <fstream>
 
@@ -39,7 +39,8 @@ using namespace std;
 namespace rinad {
 
 ipcm_res_t
-IPCManager_::plugin_get_info(const std::string& plugin_name)
+IPCManager_::plugin_get_info(const std::string& plugin_name,
+			     std::list<rina::PsInfo>& result)
 {
         string plugin_path = string(IPCPPLUGINSDIR) + "/" +
                              plugin_name + ".manifest";
@@ -89,14 +90,15 @@ IPCManager_::plugin_get_info(const std::string& plugin_name)
                 return IPCM_SUCCESS;
         }
 
+	result.clear();
+
         for (unsigned int i = 0; i < v.size(); i++) {
                 string ps_name = v[i].get("Name", string()).asString();
                 string ps_component = v[i].get("Component", string())
                                           .asString();
                 string ps_version = v[i].get("Version", string()).asString();
 
-                LOG_INFO("Found %s %s %s", ps_name.c_str(), ps_component.c_str(),
-                         ps_version.c_str());
+		result.push_back(rina::PsInfo(ps_name, ps_component, ps_version));
         }
 
         return IPCM_SUCCESS;

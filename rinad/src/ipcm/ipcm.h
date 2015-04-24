@@ -452,7 +452,16 @@ public:
 						const std::string& plugin_name,
 						bool load);
 
-        ipcm_res plugin_get_info(const std::string& plugin_name);
+	//
+	// Get information about plugin
+	//
+	// @param plugin_name The name of the plugin to get info from
+	// @param result A list that is filled in with information about
+	//               the policy sets supported by the plugin
+	//
+	// @ret IPCM_FAILURE on failure, otherwise the IPCM_SUCCESS
+        ipcm_res plugin_get_info(const std::string& plugin_name,
+				 std::list<rina::PsInfo>& result);
 
 	//
 	// Get the current logging debug level

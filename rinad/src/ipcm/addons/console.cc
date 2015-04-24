@@ -770,11 +770,19 @@ IPCMConsole::plugin_get_info(std::vector<std::string>& args)
 	}
 
         const std::string& plugin_name = args[1];
+	std::list<rina::PsInfo> policy_sets;
 
-	if (IPCManager->plugin_get_info(plugin_name) == IPCM_FAILURE) {
+	if (IPCManager->plugin_get_info(plugin_name, policy_sets) == IPCM_FAILURE) {
 		outstream << "Failed to get information about plugin "
                                 << plugin_name << endl;
 		return CMDRETCONT;
+	}
+
+	for (std::list<rina::PsInfo>::iterator lit = policy_sets.begin();
+					lit != policy_sets.end(); lit++) {
+                outstream << "Policy set: Name='" << lit->name <<
+			     "', Component='" << lit->app_entity <<
+			     "', Version='" << lit->version << "'" << endl;
 	}
 
 	return CMDRETCONT;
