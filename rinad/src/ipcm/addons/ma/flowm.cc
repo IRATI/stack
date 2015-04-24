@@ -67,6 +67,7 @@ class Worker
                         : flow_manager(fm),
                           rib_factory_(rib_factory)
         {
+                flow_ = NULL;
         }
         ;
 
@@ -136,7 +137,14 @@ class Worker
         inline void stop(void)
         {
                 keep_running = false;
-                delete flow_;
+                if (flow_)
+                {
+                        if (flow_->isAllocated())
+                        {
+                                rina::ipcManager->requestFlowDeallocation(flow_->getPortId());
+                                delete flow_;
+                        }
+                }
         }
 
         inline pthread_t* getPthreadContext()
@@ -223,7 +231,6 @@ void ActiveWorker::allocateFlow()
 {
 
         unsigned int seqnum;
-        flow_ = NULL;
         rina::IPCEvent* event;
         rina::AllocateFlowRequestResultEvent* rrevent;
 
@@ -243,43 +250,34 @@ void ActiveWorker::allocateFlow()
         //Wait for the event
         try {
                 event = flow_manager->wait_event(seqnum);
-                if (!event)
-                        return;
-                LOG_DBG("[w:%u] Got event %u, waiting for %u", id,
-                        event->sequenceNumber, seqnum);
         } catch (rina::Exception& e) {
                 //No reply... no flow
                 LOG_ERR("[w:%u] Failed to allocate a flow. Operation timed-out",
                         id);
+                rina::ipcManager->withdrawPendingFlow(seqnum);
                 return;
         }
-
         if (!event) {
                 LOG_ERR("[w:%u] Failed to allocate a flow. Unknown error", id);
+                rina::ipcManager->withdrawPendingFlow(seqnum);
                 assert(0);
                 return;
         }
+        LOG_DBG("[w:%u] Got event %u, waiting for %u", id,
+                event->sequenceNumber, seqnum);
 
         //Check if it is the right event for us
-        if (event->eventType == rina::ALLOCATE_FLOW_REQUEST_RESULT_EVENT
-                        && event->sequenceNumber == seqnum) {
-                rrevent =
-                                dynamic_cast<rina::AllocateFlowRequestResultEvent*>(event);
-                if (rrevent->portId < 0)
-                        return;
-        } else {
-                return;
+        rrevent = dynamic_cast<rina::AllocateFlowRequestResultEvent*>(event);
+        if (!rrevent || rrevent->portId < 0)
+                rina::ipcManager->withdrawPendingFlow(seqnum);
+        else
+        {
+                //Recover the flow
+                flow_ = rina::ipcManager->commitPendingFlow(rrevent->sequenceNumber,
+                                                           rrevent->portId,
+                                                           rrevent->difName);
+                LOG_INFO("[w:%u] Flow allocated, port id = %d", id, flow_->getPortId());
         }
-
-        //Recover the flow
-        flow_ = rina::ipcManager->commitPendingFlow(rrevent->sequenceNumber,
-                                                   rrevent->portId,
-                                                   rrevent->difName);
-        if (!flow_ || flow_->getPortId() == -1) {
-                LOG_ERR("[w:%u] Failed to allocate a flow.", id);
-                return;
-        }
-        LOG_INFO("[w:%u] Flow allocated, port id = %d", id, flow_->getPortId());
 }
 
 // Flow active worker
@@ -293,45 +291,53 @@ void* ActiveWorker::run(void* param)
 
                 //Allocate the flow
                 allocateFlow();
-                if(flow_)
+                try
                 {
-                        char buffer[max_sdu_size_in_bytes];
-                        rina::cdap_rib::src_info_t src;
-                        src.ap_name_ = flow_->getLocalApplicationName().processName;
-                        src.ae_name_ = flow_->getLocalApplicationName().entityName;
-                        src.ap_inst_ = flow_->getLocalApplicationName().processInstance;
-                        src.ae_inst_ = flow_->getLocalApplicationName().entityInstance;
-                        rina::cdap_rib::dest_info_t dest;
-                        dest.ap_name_ = flow_->getRemoteApplcationName().processName;
-                        dest.ae_name_ = flow_->getRemoteApplcationName().entityName;
-                        dest.ap_inst_ = flow_->getRemoteApplcationName().processInstance;
-                        dest.ae_inst_ = flow_->getRemoteApplcationName().entityInstance;
-                        rina::cdap_rib::auth_info auth;
-                        auth.auth_mech_ = auth.AUTH_NONE;
+                        if(flow_)
+                        {
+                                char buffer[max_sdu_size_in_bytes];
+                                rina::cdap_rib::src_info_t src;
+                                src.ap_name_ = flow_->getLocalApplicationName().processName;
+                                src.ae_name_ = flow_->getLocalApplicationName().entityName;
+                                src.ap_inst_ = flow_->getLocalApplicationName().processInstance;
+                                src.ae_inst_ = flow_->getLocalApplicationName().entityInstance;
+                                rina::cdap_rib::dest_info_t dest;
+                                dest.ap_name_ = flow_->getRemoteApplcationName().processName;
+                                dest.ae_name_ = flow_->getRemoteApplcationName().entityName;
+                                dest.ap_inst_ = flow_->getRemoteApplcationName().processInstance;
+                                dest.ae_inst_ = flow_->getRemoteApplcationName().entityInstance;
+                                rina::cdap_rib::auth_info auth;
+                                auth.auth_mech_ = auth.AUTH_NONE;
 
-                        rib_factory_->getRIB(1).remote_open_connection(src, dest, auth,
-                                                           flow_->getPortId());
-                        int bytes_read = flow_->readSDU(buffer, max_sdu_size_in_bytes);
-                        rina::cdap_rib::SerializedObject message;
-                        message.message_ = buffer;
-                        message.size_ = bytes_read;
-                        rib_factory_->getRIB(1).process_message(message, flow_->getPortId());
-                        LOG_DBG("Connection stablished between MAD and Manager");
-                }
-                while(flow_)
+                                rib_factory_->getRIB(1).remote_open_connection(src, dest, auth,
+                                                                   flow_->getPortId());
+                                int bytes_read = flow_->readSDU(buffer, max_sdu_size_in_bytes);
+                                rina::cdap_rib::SerializedObject message;
+                                message.message_ = buffer;
+                                message.size_ = bytes_read;
+                                rib_factory_->getRIB(1).process_message(message, flow_->getPortId());
+                                LOG_DBG("Connection stablished between MAD and Manager");
+                        }
+                        while(flow_)
+                        {
+                                char buffer[max_sdu_size_in_bytes];
+                                int bytes_read = flow_->readSDU(buffer, max_sdu_size_in_bytes);
+
+                                rina::cdap_rib::SerializedObject message;
+                                message.message_ = buffer;
+                                message.size_ = bytes_read;
+                                // FIXME change this when multiple rib versions
+                                //(need librina rib and cdap refactor)
+                                rib_factory_->getRIB(1).process_message(message,
+                                                                        flow_->getPortId());
+                        }
+                        usleep(FM_FALLOC_ALLOC_RETRY_US);
+                }catch(rina::ReadSDUException &e)
                 {
-                        char buffer[max_sdu_size_in_bytes];
-                        int bytes_read = flow_->readSDU(buffer, max_sdu_size_in_bytes);
-
-                        rina::cdap_rib::SerializedObject message;
-                        message.message_ = buffer;
-                        message.size_ = bytes_read;
-                        // FIXME change this when multiple rib versions
-                        //(need librina rib and cdap refactor)
-                        rib_factory_->getRIB(1).process_message(message,
-                                                                flow_->getPortId());
+                        LOG_ERR("Can not read from flow anymore");
+                        // FIXME assuming that we have killed the flow to avoid read sdu blocking, then we leave
+                        keep_running = false;
                 }
-                usleep(FM_FALLOC_ALLOC_RETRY_US);
         }
 
         return NULL;
@@ -437,7 +443,7 @@ FlowManager::~FlowManager()
 
         while (it != workers.end()) {
                 //Stop and join
-                it->second->stop();
+                //it->second->stop();
 
 		//Keep next
 		next = it;
@@ -706,7 +712,6 @@ void FlowManager::joinWorker(int id)
                     << id << ". Error: " << strerror(errno) << std::endl;
                 goto JOIN_ERROR;
         }
-
         //Clean-up
         workers.erase(id);
         delete w;

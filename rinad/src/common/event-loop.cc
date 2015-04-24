@@ -53,7 +53,14 @@ void
 EventLoop::run()
 {
         for (;;) {
-                rina::IPCEvent *event = rina::ipcEventProducer->eventWait();
+                rina::IPCEvent *event;
+                try{
+                        event = rina::ipcEventProducer->eventWait();
+                } catch(rina::ConcurrentException &e)
+                {
+                        LOG_ERR("Error waiting for event. Error is %s", e.what());
+                        continue;
+                }
                 rina::IPCEventType ty;
                 LOG_DBG("Got event of type %s and sequence number %u",
                 		rina::IPCEvent::eventTypeToString(event->eventType).c_str(),
