@@ -52,5 +52,4 @@ librinad_la_SOURCES  =					\
 	rina-configuration.cc rina-configuration.h	\
 	event-loop.cc	      event-loop.h		\
 	encoder.cc	      encoder.h			\
-	plugin-info.cc	      plugin-info.h		\
 			      concurrency.h

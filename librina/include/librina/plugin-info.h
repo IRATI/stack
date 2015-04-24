@@ -26,12 +26,12 @@
 #include <librina/common.h>
 #include <librina/application.h>
 
-namespace rinad {
+namespace rina {
 
 int plugin_get_info(const std::string& plugin_name,
 		    const std::string& plugins_path,
 		    std::list<rina::PsInfo>& result);
 
-} // namespace rinad
+} // namespace rina
 
 #endif  /* __PLUGIN_INFO__ */

@@ -25,4 +25,5 @@ nobase_pkginclude_HEADERS = \
 	exceptions.h			\
 	concurrency.h			\
 	time.h					\
-	timer.h
+	timer.h					\
+	plugin-info.h

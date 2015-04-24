@@ -35,7 +35,7 @@
 
 using namespace std;
 
-namespace rinad {
+namespace rina {
 
 int
 plugin_get_info(const std::string& plugin_name,
@@ -104,4 +104,4 @@ plugin_get_info(const std::string& plugin_name,
         return 0;
 }
 
-} //rinad namespace
+} //rina namespace
