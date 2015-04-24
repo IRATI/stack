@@ -76,6 +76,29 @@ IPCManager_::plugin_get_info(const std::string& plugin_name)
                 return IPCM_FAILURE;
         }
 
+        v = root["Version"];
+        if (v == 0) {
+                LOG_WARN("Couldn't find Version for plugin %s",
+                         plugin_name.c_str());
+        }
+
+        v = root["PolicySets"];
+        if (v == 0) {
+                LOG_WARN("Plugin %s does not declare any policy sets",
+                                plugin_name.c_str());
+                return IPCM_SUCCESS;
+        }
+
+        for (unsigned int i = 0; i < v.size(); i++) {
+                string ps_name = v[i].get("Name", string()).asString();
+                string ps_component = v[i].get("Component", string())
+                                          .asString();
+                string ps_version = v[i].get("Version", string()).asString();
+
+                LOG_INFO("Found %s %s %s", ps_name.c_str(), ps_component.c_str(),
+                         ps_version.c_str());
+        }
+
         return IPCM_SUCCESS;
 }
 

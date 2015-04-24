@@ -8,24 +8,24 @@
                         "Version" : "1"
                 },
                 {
-                        "name": "default",
-                        "component": "flow-allocator",
-                        "version" : "1"
+                        "Name": "default",
+                        "Component": "flow-allocator",
+                        "Version" : "1"
                 },
                 {
-                        "name": "default",
-                        "component": "namespace-manager",
-                        "version" : "1"
+                        "Name": "default",
+                        "Component": "namespace-manager",
+                        "Version" : "1"
                 },
                 {
-                        "name": "default",
-                        "component": "resource-allocator",
-                        "version" : "1"
+                        "Name": "default",
+                        "Component": "resource-allocator",
+                        "Version" : "1"
                 },
                 {
-                        "name": "link-state",
-                        "component": "routing",
-                        "version" : "1"
+                        "Name": "link-state",
+                        "Component": "routing",
+                        "Version" : "1"
                 }
         ]
 }
