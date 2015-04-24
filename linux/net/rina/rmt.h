@@ -3,6 +3,7 @@
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -117,8 +118,6 @@ enum flow_state {
 
 struct rmt_n1_port {
         spinlock_t             lock;
-        /* this should be a list or hlist of rfifos */
-        struct rfifo *         queue;
         port_id_t              port_id;
         struct ipcp_instance * n1_ipcp;
         struct hlist_node      hlist;
@@ -139,7 +138,7 @@ struct rmt_qgroup {
         DECLARE_HASHTABLE(queues, RMT_PS_HASHSIZE);
 };
 
-struct rmt_queues {
+struct rmt_queue_set {
         spinlock_t lock;
         DECLARE_HASHTABLE(qgroups, RMT_PS_HASHSIZE);
 };
@@ -150,8 +149,8 @@ struct rmt_qgroup *     rmt_qgroup_create(void);
 int                     rmt_qgroup_destroy(struct rmt_qgroup* g);
 struct rmt_kqueue *     rmt_qgroup_find(struct rmt_qgroup * g,
                                         unsigned int        key);
-struct rmt_queues *     rmt_queues_create(void);
-int                     rmt_queues_destroy(struct rmt_queues * q);
-struct rmt_qgroup *     rmt_queues_find(struct rmt_queues * queues,
-                                        port_id_t           pid);
+struct rmt_queue_set *  rmt_queue_set_create(void);
+int                     rmt_queue_set_destroy(struct rmt_queue_set * qs);
+struct rmt_qgroup *     rmt_queue_set_find(struct rmt_queue_set * qs,
+                                           port_id_t              pid);
 #endif

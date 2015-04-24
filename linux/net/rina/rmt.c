@@ -190,10 +190,10 @@ struct pft_cache {
 struct rmt_kqueue * rmt_kqueue_create(unsigned int key)
 {
         struct rmt_kqueue * tmp;
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
         if (!tmp)
                 return NULL;
-        tmp->queue = rfifo_create();
+        tmp->queue = rfifo_create_ni();
         if (!tmp->queue) {
                 rkfree(tmp);
                 return NULL;
@@ -227,11 +227,11 @@ struct rmt_qgroup * rmt_qgroup_create(void)
 {
         struct rmt_qgroup * tmp;
 
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
         if (!tmp)
                 return NULL;
 
-        hash_init(tmp->queues);
+        hash_init(tmp->queue);
 
         return tmp;
 }
@@ -278,11 +278,11 @@ struct rmt_kqueue * rmt_qgroup_find(struct rmt_qgroup * g,
 }
 EXPORT_SYMBOL(rmt_qgroup_find);
 
-struct rmt_queues * rmt_queues_create(void)
+struct rmt_queue_set * rmt_queues_create(void)
 {
-        struct rmt_queues * tmp;
+        struct rmt_queue_set * tmp;
 
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
         if (!tmp)
                 return NULL;
 
@@ -291,17 +291,17 @@ struct rmt_queues * rmt_queues_create(void)
 
         return tmp;
 }
-EXPORT_SYMBOL(rmt_queues_create);
+EXPORT_SYMBOL(rmt_queue_set_create);
 
-int rmt_queues_destroy(struct rmt_queues * q)
+int rmt_queue_set_destroy(struct rmt_queue_set * qs)
 {
         struct rmt_qgroup * entry;
         struct hlist_node * tmp;
         int                 bucket;
 
-        ASSERT(q);
+        ASSERT(qs);
 
-        hash_for_each_safe(q->qgroups, bucket, tmp, entry, hlist) {
+        hash_for_each_safe(qs->qgroups, bucket, tmp, entry, hlist) {
                 ASSERT(entry);
 
                 if (rmt_qgroup_destroy(entry)) {
@@ -310,21 +310,21 @@ int rmt_queues_destroy(struct rmt_queues * q)
                 }
         }
 
-        rkfree(q);
+        rkfree(qs);
 
         return 0;
 }
-EXPORT_SYMBOL(rmt_queues_destroy);
+EXPORT_SYMBOL(rmt_queue_set_destroy);
 
-struct rmt_qgroup * rmt_queues_find(struct rmt_queues * queues,
-                                    port_id_t           pid)
+struct rmt_qgroup * rmt_queue_set_find(struct rmt_queue_set * qs,
+                                       port_id_t              pid)
 {
         struct rmt_qgroup * entry;
         const struct hlist_head * head;
 
-        ASSERT(queues);
+        ASSERT(qs);
 
-        head = &queues->qgroups[rmap_hash(queues->qgroups, pid)];
+        head = &qs->qgroups[rmap_hash(qs->qgroups, pid)];
 
         hlist_for_each_entry(entry, head, hlist) {
                 if (entry->pid == pid)
@@ -333,7 +333,7 @@ struct rmt_qgroup * rmt_queues_find(struct rmt_queues * queues,
 
         return NULL;
 }
-EXPORT_SYMBOL(rmt_queues_find);
+EXPORT_SYMBOL(rmt_queue_set_find);
 
 /* RMT DATAMODEL FOR RMT PS END */
 
@@ -864,6 +864,14 @@ static int __queue_send_add(struct rmt * instance,
 
         hash_add(instance->egress.n1_ports->n1_ports, &tmp->hlist, id);
 
+        rcu_read_lock();
+        ps = container_of(rcu_dereference(instance->base.ps), struct rmt_ps, base);
+        if (ps && ps->rmt_scheduling_create_policy_tx) {
+                if (ps->rmt_scheduling_create_policy_tx(ps, tmp)
+                        return -1;
+        }
+        rcu_read_unlock();
+
         LOG_DBG("Added send queue to rmt instance %pK for port-id %d",
                 instance, id);
 
@@ -1024,6 +1032,14 @@ static int __queue_recv_add(struct rmt * instance,
                 return -1;
 
         hash_add(instance->ingress.n1_ports->n1_ports, &tmp->hlist, id);
+
+        rcu_read_lock();
+        ps = container_of(rcu_dereference(instance->base.ps), struct rmt_ps, base);
+        if (ps && ps->rmt_scheduling_create_policy_rx) {
+                if (ps->rmt_scheduling_create_policy_rx(ps, tmp)
+                        return -1;
+        }
+        rcu_read_unlock();
 
         LOG_DBG("Added receive queue to rmt instance %pK for port-id %d",
                 instance, id);
