@@ -58,18 +58,23 @@ class ResponseHandlerInterface
   }
 
   virtual void createResponse(const cdap_rib::res_info_t &res,
+                              const cdap_rib::obj_info_t &obj,
                               const cdap_rib::con_handle_t &con) = 0;
   virtual void deleteResponse(const cdap_rib::res_info_t &res,
                               const cdap_rib::con_handle_t &con) = 0;
   virtual void readResponse(const cdap_rib::res_info_t &res,
+                            const cdap_rib::obj_info_t &obj,
                             const cdap_rib::con_handle_t &con) = 0;
   virtual void cancelReadResponse(const cdap_rib::res_info_t &res,
                                   const cdap_rib::con_handle_t &con) = 0;
   virtual void writeResponse(const cdap_rib::res_info_t &res,
+                             const cdap_rib::obj_info_t &obj,
                              const cdap_rib::con_handle_t &con) = 0;
   virtual void startResponse(const cdap_rib::res_info_t &res,
+                             const cdap_rib::obj_info_t &obj,
                              const cdap_rib::con_handle_t &con) = 0;
   virtual void stopResponse(const cdap_rib::res_info_t &res,
+                            const cdap_rib::obj_info_t &obj,
                             const cdap_rib::con_handle_t &con) = 0;
 };
 

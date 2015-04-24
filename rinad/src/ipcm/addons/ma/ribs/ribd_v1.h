@@ -20,18 +20,23 @@ namespace rib_v1{
 class RIBRespHandler_v1 : public rina::rib::ResponseHandlerInterface
 {
   void createResponse(const rina::cdap_rib::res_info_t &res,
+                      const rina::cdap_rib::obj_info_t &obj,
                       const rina::cdap_rib::con_handle_t &con);
   void deleteResponse(const rina::cdap_rib::res_info_t &res,
                       const rina::cdap_rib::con_handle_t &con);
   void readResponse(const rina::cdap_rib::res_info_t &res,
+                    const rina::cdap_rib::obj_info_t &obj,
                     const rina::cdap_rib::con_handle_t &con);
   void cancelReadResponse(const rina::cdap_rib::res_info_t &res,
                           const rina::cdap_rib::con_handle_t &con);
   void writeResponse(const rina::cdap_rib::res_info_t &res,
+                     const rina::cdap_rib::obj_info_t &obj,
                      const rina::cdap_rib::con_handle_t &con);
   void startResponse(const rina::cdap_rib::res_info_t &res,
+                     const rina::cdap_rib::obj_info_t &obj,
                      const rina::cdap_rib::con_handle_t &con);
   void stopResponse(const rina::cdap_rib::res_info_t &res,
+                    const rina::cdap_rib::obj_info_t &obj,
                     const rina::cdap_rib::con_handle_t &con);
 };
 
