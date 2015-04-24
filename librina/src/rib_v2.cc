@@ -429,7 +429,7 @@ void RIBDaemon::close_connection(const cdap_rib::con_handle_t &con,
   cdap_rib::result_info res;
   (void) res;
   app_con_callback_->release(message_id, con);
-  cdap_provider_->close_connection_response(con, flags, res, message_id);
+  cdap_provider_->close_connection_response(con.port_, flags, res, message_id);
 }
 
 void RIBDaemon::remote_create_result(const cdap_rib::con_handle_t &con,
@@ -486,7 +486,7 @@ void RIBDaemon::remote_create_request(const cdap_rib::con_handle_t &con,
   }
   cdap_rib::res_info_t* res = rib_obj->remoteCreateObject(obj.name_, obj.value_);
   try {
-    cdap_provider_->remote_create_response(con, obj, flags, *res, message_id);
+    cdap_provider_->remote_create_response(con.port_, obj, flags, *res, message_id);
   } catch (Exception &e) {
     LOG_ERR("Unable to send the response");
   }
@@ -505,7 +505,7 @@ void RIBDaemon::remote_delete_request(const cdap_rib::con_handle_t &con,
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteDeleteObject(obj.name_, obj.value_);
   try {
-    cdap_provider_->remote_delete_response(con, obj, flags, *res, message_id);
+    cdap_provider_->remote_delete_response(con.port_, obj, flags, *res, message_id);
   } catch (Exception &e) {
     LOG_ERR("Unable to send the response");
   }
@@ -523,7 +523,7 @@ void RIBDaemon::remote_read_request(const cdap_rib::con_handle_t &con,
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteReadObject(obj.name_, obj.value_);
   try {
-    cdap_provider_->remote_read_response(con, obj, flags, *res, message_id);
+    cdap_provider_->remote_read_response(con.port_, obj, flags, *res, message_id);
   } catch (Exception &e) {
     LOG_ERR("Unable to send the response");
   }
@@ -543,7 +543,7 @@ void RIBDaemon::remote_cancel_read_request(const cdap_rib::con_handle_t &con,
   cdap_rib::res_info_t* res = ribObj->remoteCancelReadObject(obj.name_,
                                                              obj.value_);
   try {
-    cdap_provider_->remote_cancel_read_response(con, flags, *res, message_id);
+    cdap_provider_->remote_cancel_read_response(con.port_, flags, *res, message_id);
   } catch (Exception &e) {
     LOG_ERR("Unable to send the response");
   }
@@ -561,7 +561,7 @@ void RIBDaemon::remote_write_request(const cdap_rib::con_handle_t &con,
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteWriteObject(obj.name_, obj.value_);
   try {
-    cdap_provider_->remote_write_response(con, flags, *res, message_id);
+    cdap_provider_->remote_write_response(con.port_, flags, *res, message_id);
   } catch (Exception &e) {
     LOG_ERR("Unable to send the response");
   }
@@ -579,7 +579,7 @@ void RIBDaemon::remote_start_request(const cdap_rib::con_handle_t &con,
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteStartObject(obj.name_, obj.value_);
   try {
-    cdap_provider_->remote_start_response(con, obj, flags, *res, message_id);
+    cdap_provider_->remote_start_response(con.port_, obj, flags, *res, message_id);
   } catch (Exception &e) {
     LOG_ERR("Unable to send the response");
   }
@@ -597,7 +597,7 @@ void RIBDaemon::remote_stop_request(const cdap_rib::con_handle_t &con,
   BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
   cdap_rib::res_info_t* res = ribObj->remoteStopObject(obj.name_, obj.value_);
   try {
-    cdap_provider_->remote_stop_response(con, flags, *res, message_id);
+    cdap_provider_->remote_stop_response(con.port_, flags, *res, message_id);
   } catch (Exception &e) {
     LOG_ERR("Unable to send the response");
   }

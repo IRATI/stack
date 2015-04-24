@@ -101,74 +101,74 @@ class CDAPProviderInterface
       const cdap_rib::vers_info_t &ver, const cdap_rib::src_info_t &src,
       const cdap_rib::dest_info_t &dest, const cdap_rib::auth_info &auth,
       int port) = 0;
-  virtual int close_connection(cdap_rib::con_handle_t &con) = 0;
-  virtual int remote_create(const cdap_rib::con_handle_t &con,
+  virtual int close_connection(unsigned int port) = 0;
+  virtual int remote_create(unsigned int port,
                             const cdap_rib::obj_info_t &obj,
                             const cdap_rib::flags_t &flags,
                             const cdap_rib::filt_info_t &filt) = 0;
-  virtual int remote_delete(const cdap_rib::con_handle_t &con,
+  virtual int remote_delete(unsigned int port,
                             const cdap_rib::obj_info_t &obj,
                             const cdap_rib::flags_t &flags,
                             const cdap_rib::filt_info_t &filt) = 0;
-  virtual int remote_read(const cdap_rib::con_handle_t &con,
+  virtual int remote_read(unsigned int port,
                           const cdap_rib::obj_info_t &obj,
                           const cdap_rib::flags_t &flags,
                           const cdap_rib::filt_info_t &filt)= 0;
-  virtual int remote_cancel_read(const cdap_rib::con_handle_t &con,
+  virtual int remote_cancel_read(unsigned int port,
                                  const cdap_rib::flags_t &flags,
                                  int invoke_id) = 0;
-  virtual int remote_write(const cdap_rib::con_handle_t &con,
+  virtual int remote_write(unsigned int port,
                            const cdap_rib::obj_info_t &obj,
                            const cdap_rib::flags_t &flags,
                            const cdap_rib::filt_info_t &filt) = 0;
-  virtual int remote_start(const cdap_rib::con_handle_t &con,
+  virtual int remote_start(unsigned int port,
                            const cdap_rib::obj_info_t &obj,
                            const cdap_rib::flags_t &flags,
                            const cdap_rib::filt_info_t &filt) = 0;
-  virtual int remote_stop(const cdap_rib::con_handle_t &con,
+  virtual int remote_stop(unsigned int port,
                           const cdap_rib::obj_info_t &obj,
                           const cdap_rib::flags_t &flags,
                           const cdap_rib::filt_info_t &filt) = 0;
   virtual void open_connection_response(const cdap_rib::con_handle_t &con,
                                         const cdap_rib::res_info_t &res,
                                         int message_id) = 0;
-  virtual void close_connection_response(const cdap_rib::con_handle_t &con,
+  virtual void close_connection_response(unsigned int port,
                                          const cdap_rib::flags_t &flags,
                                          const cdap_rib::res_info_t &res,
                                          int message_id) = 0;
-  virtual void remote_create_response(const cdap_rib::con_handle_t &con,
+  virtual void remote_create_response(unsigned int port,
                                       const cdap_rib::obj_info_t &obj,
                                       const cdap_rib::flags_t &flags,
                                       const cdap_rib::res_info_t &res,
                                       int message_id) = 0;
-  virtual void remote_delete_response(const cdap_rib::con_handle_t &con,
+  virtual void remote_delete_response(unsigned int port,
                                       const cdap_rib::obj_info_t &obj,
                                       const cdap_rib::flags_t &flags,
                                       const cdap_rib::res_info_t &res,
                                       int message_id) = 0;
-  virtual void remote_read_response(const cdap_rib::con_handle_t &con,
+  virtual void remote_read_response(unsigned int port,
                                     const cdap_rib::obj_info_t &obj,
                                     const cdap_rib::flags_t &flags,
                                     const cdap_rib::res_info_t &res,
                                     int message_id) = 0;
-  virtual void remote_cancel_read_response(const cdap_rib::con_handle_t &con,
+  virtual void remote_cancel_read_response(unsigned int port,
                                            const cdap_rib::flags_t &flags,
                                            const cdap_rib::res_info_t &res,
                                            int message_id) = 0;
-  virtual void remote_write_response(const cdap_rib::con_handle_t &con,
+  virtual void remote_write_response(unsigned int port,
                                      const cdap_rib::flags_t &flags,
                                      const cdap_rib::res_info_t &res,
                                      int message_id) = 0;
-  virtual void remote_start_response(const cdap_rib::con_handle_t &con,
+  virtual void remote_start_response(unsigned int port,
                                      const cdap_rib::obj_info_t &obj,
                                      const cdap_rib::flags_t &flags,
                                      const cdap_rib::res_info_t &res,
                                      int message_id) = 0;
-  virtual void remote_stop_response(const cdap_rib::con_handle_t &con,
+  virtual void remote_stop_response(unsigned int port,
                                     const cdap_rib::flags_t &flags,
                                     const cdap_rib::res_info_t &res,
                                     int message_id) = 0;
-  virtual void process_message(cdap_rib::SerializedObject &message, int port) = 0;
+  virtual void process_message(cdap_rib::SerializedObject &message, unsigned int port) = 0;
 };
 
 typedef struct CDAPMessage

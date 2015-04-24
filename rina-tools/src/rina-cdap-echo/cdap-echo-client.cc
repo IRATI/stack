@@ -206,7 +206,7 @@ void Client::sendReadRMessage()
       cdap_rib::filt_info_t filt;
       filt.filter_ = 0;
       filt.scope_ = 0;
-      cdap_prov_->remote_read(con_, obj, flags, filt);
+      cdap_prov_->remote_read(con_.port_, obj, flags, filt);
       std::cout << "read request CDAP message sent" << std::endl;
       int bytes_read = flow_->readSDU(buffer, max_sdu_size_in_bytes);
       cdap_rib::SerializedObject message;
@@ -224,7 +224,7 @@ void Client::release()
 {
   char buffer[max_sdu_size_in_bytes];
   std::cout << "release request CDAP message sent" << std::endl;
-  cdap_prov_->close_connection(con_);
+  cdap_prov_->close_connection(con_.port_);
   int bytes_read = flow_->readSDU(buffer, max_sdu_size_in_bytes);
   cdap_rib::SerializedObject message;
   message.message_ = buffer;
