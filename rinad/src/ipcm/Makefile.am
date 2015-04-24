@@ -52,7 +52,8 @@ ipcm_CPPFLAGS =					\
 	-I$(srcdir)/..				\
 	-I$(srcdir)/../common			\
 	-I$(srcdir)/jsoncpp			\
-	-DPLUGINSDIR=\"$(pkglibdir)/ipcm\"
+	-DPLUGINSDIR=\"$(pkglibdir)/ipcm\"	\
+	-DIPCPPLUGINSDIR=\"$(pkglibdir)/ipcp\"
 ipcm_LDADD    =					\
 	$(builddir)/../common/librinad.la	\
 	$(builddir)/libjsoncpp.la		\
@@ -69,7 +70,8 @@ ipcm_SOURCES  =					\
 	ipcp-handlers.cc			\
 	configuration.cc			\
 	flow-alloc-handlers.cc			\
-	policies-handlers.cc
+	policies-handlers.cc			\
+	plugin-info.cc
 
 test_empty_SOURCES  =				\
 	test-empty.cc

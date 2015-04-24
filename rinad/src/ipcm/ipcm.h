@@ -452,6 +452,8 @@ public:
 						const std::string& plugin_name,
 						bool load);
 
+        ipcm_res plugin_get_info(const std::string& plugin_name);
+
 	//
 	// Get the current logging debug level
 	//
