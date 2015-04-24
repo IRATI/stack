@@ -641,8 +641,7 @@ int rmt_send_port_id(struct rmt * instance,
 EXPORT_SYMBOL(rmt_send_port_id);
 
 int rmt_send(struct rmt * instance,
-             address_t    address,
-             qos_id_t     qos_id,
+             struct pci * pci,
              struct pdu * pdu)
 {
         int          i;
@@ -657,8 +656,7 @@ int rmt_send(struct rmt * instance,
         }
 
         if (pft_nhop(instance->pft,
-                     address,
-                     qos_id,
+                     pci,
                      &(instance->egress.cache.pids),
                      &(instance->egress.cache.count))) {
                 LOG_ERR("Cannot get the NHOP for this PDU");
@@ -1095,8 +1093,7 @@ static int process_dt_pdu(struct rmt * rmt,
 
 static int forward_pdu(struct rmt * rmt,
                        port_id_t    port_id,
-                       address_t    dst_addr,
-                       qos_id_t     qos_id,
+                       struct pci * pci,
                        struct pdu * pdu)
 {
         int                i;
@@ -1106,14 +1103,8 @@ static int forward_pdu(struct rmt * rmt,
         struct serdes *    serdes;
         struct rmt_n1_port * queue;
 
-        if (!is_address_ok(dst_addr)) {
+        if (!pci_is_ok(pci)) {
                 LOG_ERR("PDU has Wrong destination address");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        if (!is_qos_id_ok(qos_id)) {
-                LOG_ERR("QOS id is wrong...");
                 pdu_destroy(pdu);
                 return -1;
         }
@@ -1154,8 +1145,7 @@ static int forward_pdu(struct rmt * rmt,
         ASSERT(rmt->address != dst_addr);
 
         if (pft_nhop(rmt->pft,
-                     dst_addr,
-                     qos_id,
+                     pci,
                      &(rmt->ingress.cache.pids),
                      &(rmt->ingress.cache.count))) {
                 LOG_ERR("Cannot get NHOP");
@@ -1211,15 +1201,15 @@ static int receive_direct(struct rmt       * tmp,
                           struct rmt_n1_port * entry,
                           struct sdu * sdu)
 {
-        port_id_t           port_id;
-        pdu_type_t          pdu_type;
-        const struct pci *  pci;
-        struct pdu_ser *    pdu_ser;
-        struct pdu *        pdu;
-        address_t           dst_addr;
-        qos_id_t            qos_id;
-        struct serdes *     serdes;
-        struct buffer *     buf;
+        port_id_t        port_id;
+        pdu_type_t       pdu_type;
+        struct pci *     pci;
+        struct pdu_ser * pdu_ser;
+        struct pdu *     pdu;
+        address_t        dst_addr;
+        qos_id_t         qos_id;
+        struct serdes *  serdes;
+        struct buffer *  buf;
 
         port_id = entry->port_id;
 
@@ -1255,7 +1245,7 @@ static int receive_direct(struct rmt       * tmp,
                 return -1;
         }
 
-        pci = pdu_pci_get_ro(pdu);
+        pci = pdu_pci_get_rw(pdu);
         if (!pci) {
                 LOG_ERR("No PCI to work with, dropping SDU!");
                 pdu_destroy(pdu);
@@ -1284,8 +1274,7 @@ static int receive_direct(struct rmt       * tmp,
                 } else {
                         return forward_pdu(tmp,
                                            port_id,
-                                           dst_addr,
-                                           qos_id,
+                                           pci,
                                            pdu);
                 }
         } else {
@@ -1329,7 +1318,7 @@ static void receive_worker(unsigned long o)
 
         port_id_t            port_id;
         pdu_type_t           pdu_type;
-        const struct pci *   pci;
+        struct pci *         pci;
         struct pdu_ser *     pdu_ser;
         struct pdu *         pdu;
         address_t            dst_addr;
@@ -1421,7 +1410,7 @@ static void receive_worker(unsigned long o)
                                 break;
                         }
 
-                        pci = pdu_pci_get_ro(pdu);
+                        pci = pdu_pci_get_rw(pdu);
                         if (!pci) {
                                 LOG_ERR("No PCI to work with, dropping SDU!");
                                 pdu_destroy(pdu);
@@ -1452,8 +1441,7 @@ static void receive_worker(unsigned long o)
                                 } else {
                                         forward_pdu(tmp,
                                                     port_id,
-                                                    dst_addr,
-                                                    qos_id,
+                                                    pci,
                                                     pdu);
                                 }
                         } else {

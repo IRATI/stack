@@ -25,8 +25,18 @@
 
 #include "common.h"
 #include "qos.h"
+#include "ps-factory.h"
 
 struct pft;
+struct pci;
+
+/* FIXME: This representation is crappy and MUST be changed */
+struct pft_entry {
+        address_t        destination;
+        qos_id_t         qos_id;
+        struct list_head ports;
+        struct list_head next;
+};
 
 struct pft * pft_create(void);
 int          pft_destroy(struct pft * instance);
@@ -48,11 +58,23 @@ int          pft_remove(struct pft *       instance,
 
 /* NOTE: ports and entries are in-out parms */
 int          pft_nhop(struct pft * instance,
-                      address_t    destination,
-                      qos_id_t     qos_id,
+                      struct pci * pci,
                       port_id_t ** ports,
                       size_t *     count);
 
 int          pft_dump(struct pft *       instance,
                       struct list_head * entries);
+
+struct pft_entry * pft_find(struct pft * instance,
+                            address_t    destination,
+                            qos_id_t     qos_id);
+
+int pfte_ports_copy(struct pft_entry * entry,
+                    port_id_t **       port_ids,
+                    size_t *           entries);
+
+struct pft_ps * pft_ps_get(struct pft * pft);
+
+struct pft * pft_from_component(struct rina_component * component);
+
 #endif
