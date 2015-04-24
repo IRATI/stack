@@ -45,8 +45,9 @@ struct rmt_ps {
         void (* rmt_q_monitor_policy_rx)(struct rmt_ps *,
                                  struct sdu *,
                                  struct rmt_n1_port *);
-        int (* rmt_scheduling_policy_tx)(struct rmt_ps *,
-                                         struct rmt_n1_port *, struct pdu *);
+        struct pdu * (* rmt_scheduling_policy_tx)(struct rmt_ps *,
+                                                  struct rmt_n1_port *,
+                                                  struct pdu *);
         int (* rmt_scheduling_policy_rx)(struct rmt_ps *,
                                          struct rmt_n1_port *, struct sdu *);
         int (* rmt_scheduling_create_policy_tx)(struct rmt_ps *,

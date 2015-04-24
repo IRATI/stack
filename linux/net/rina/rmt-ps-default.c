@@ -201,7 +201,7 @@ static void send_worker(unsigned long o)
         rmt = ps->dm;
         ASSERT(rmt);
 
-        spin_lock(&ps->data->egress.n1_ports->lock);
+        spin_lock(&rmt->egress.n1_ports->lock);
         hash_for_each_safe(tmp->egress.n1_ports->n1_ports,
                            bucket,
                            ntmp,
@@ -219,7 +219,7 @@ static void send_worker(unsigned long o)
                         if (atomic_read(&entry->n_sdus) > 0)
                                 pending++;
                         spin_unlock(&entry->lock);
-                        spin_lock(&tmp->egress.n1_ports->lock);
+                        spin_lock(&rmt->egress.n1_ports->lock);
                         LOG_DBG("Port state is DISABLED or empty");
                         continue;
                 }
@@ -268,41 +268,42 @@ static void send_worker(unsigned long o)
 }
 */
 
-static int
+static struct pdu *
 default_rmt_scheduling_policy_tx(struct rmt_ps *      ps,
                                  struct rmt_n1_port * n1_port,
                                  struct pdu *         pdu)
 {
-        unsigned long flags;
-        struct rmt_kqueue * q;
-        struct rmt_qgroup * qg;
+        unsigned long        flags;
+        struct rmt_kqueue *  q;
+        struct rmt_qgroup *  qg;
         struct rmt_ps_data * data = ps->priv;
+        struct pdu *         ret_pdu;
 
         /*FIXME: add checks */
         spin_lock_irqsave(&n1_port->lock, flags);
         qg = rmt_queue_set_find(data->outqs, n1_port->port_id);
         if (!qg) {
+                spin_unlock_irqrestore(&n1_port->lock, flags);
                 LOG_ERR("Could not find queue group for n1_port %u",
                         n1_port->port_id);
                 pdu_destroy(pdu);
-                return -1;
+                return NULL;
         }
         q = rmt_qgroup_find(qg, 0);
         if (!qg) {
+                spin_unlock_irqrestore(&n1_port->lock, flags);
                 LOG_ERR("Could not find queue in the group for n1_port %u",
                         n1_port->port_id);
                 pdu_destroy(pdu);
-                return -1;
+                return NULL;
         }
         atomic_inc(&n1_port->n_sdus);
         if (n1_port->state == N1_PORT_STATE_ENABLED &&
             /*FIXME check if queue length can be used instead */
             atomic_read(&n1_port->n_sdus) == 1) {
-                int ret = 0;
                 n1_port->state = N1_PORT_STATE_BUSY;
                 spin_unlock_irqrestore(&n1_port->lock, flags);
-                if (rmt_n1_port_write(ps->dm, n1_port, pdu))
-                        ret = -1;
+                ret_pdu = pdu;
 
                 spin_lock_irqsave(&n1_port->lock, flags);
                 if (atomic_read(&n1_port->n_sdus) <= 0) {
@@ -317,23 +318,24 @@ default_rmt_scheduling_policy_tx(struct rmt_ps *      ps,
                         tasklet_hi_schedule(&data->egress_tasklet);
                 }
                 spin_unlock_irqrestore(&n1_port->lock, flags);
-                return ret;
+                return ret_pdu;
         } else if (n1_port->state == N1_PORT_STATE_BUSY) {
                 if (rfifo_push_ni(q->queue, pdu)) {
                         spin_unlock_irqrestore(&n1_port->lock, flags);
                         pdu_destroy(pdu);
-                        return -1;
+                        return NULL;
                 }
                 LOG_DBG("Port was busy, enqueuing PDU..");
         } else {
+                spin_unlock_irqrestore(&n1_port->lock, flags);
                 LOG_ERR("Port state deallocated, discarding PDU");
                 pdu_destroy(pdu);
-                return -1;
+                return NULL;
         }
 
         spin_unlock_irqrestore(&n1_port->lock, flags);
 
-        return 0;
+        return NULL;
 }
 
 static void receive_worker(unsigned long o)

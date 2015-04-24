@@ -502,11 +502,10 @@ int rmt_dt_cons_set(struct rmt *     instance,
 }
 EXPORT_SYMBOL(rmt_dt_cons_set);
 
-int rmt_n1_port_write(struct rmt *         rmt,
-                      struct rmt_n1_port * n1_port,
-                      struct pdu * pdu)
+static int n1_port_write(struct serdes *      serdes,
+                         struct rmt_n1_port * n1_port,
+                         struct pdu * pdu)
 {
-        struct serdes *        serdes;
         struct sdu *           sdu;
         struct pdu_ser *       pdu_ser;
         port_id_t              port_id;
@@ -516,15 +515,12 @@ int rmt_n1_port_write(struct rmt *         rmt,
         size_t                 ttl;
 
         ASSERT(n1_port);
-        ASSERT(rmt);
+        ASSERT(serdes);
 
         if (!pdu) {
                 LOG_DBG("No PDU to work in this queue ...");
                 return -1;
         }
-
-        serdes = rmt->serdes;
-        ASSERT(serdes);
 
         port_id = n1_port->port_id;
         n1_ipcp = n1_port->n1_ipcp;
@@ -588,7 +584,6 @@ int rmt_n1_port_write(struct rmt *         rmt,
         atomic_dec(&n1_port->n_sdus);
         return 0;
 }
-EXPORT_SYMBOL(rmt_n1_port_write);
 
 int rmt_send_port_id(struct rmt * instance,
                      port_id_t    id,
@@ -635,9 +630,15 @@ int rmt_send_port_id(struct rmt * instance,
                 if (ps->rmt_q_monitor_policy_tx) {
                         ps->rmt_q_monitor_policy_tx(ps, pdu, out_n1_port);
                 }
+
+                if (ps->rmt_scheduling_policy_tx)
+                        pdu = ps->rmt_scheduling_policy_tx(ps,
+                                                           out_n1_port,
+                                                           pdu);
         }
         rcu_read_unlock();
-        /* */
+        if (pdu)
+                return n1_port_write(instance->serdes, out_n1_port, pdu);
 
         return 0;
 }

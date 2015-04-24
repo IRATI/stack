@@ -134,9 +134,6 @@ int          rmt_send(struct rmt * instance,
 int          rmt_send_port_id(struct rmt *  instance,
                               port_id_t     id,
                               struct pdu *  pdu);
-int          rmt_n1_port_write(struct rmt *         rmt,
-                               struct rmt_n1_port * n1_port,
-                               struct pdu *         pdu);
 int          rmt_receive(struct rmt * instance,
                          struct sdu * sdu,
                          port_id_t    from);
