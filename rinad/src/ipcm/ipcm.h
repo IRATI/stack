@@ -494,7 +494,7 @@ public:
 	// Stop I/O loop
 	//
 	inline void stop(void){
-		keep_running = false;
+		req_to_stop = true;
 	}
 
 protected:
@@ -755,6 +755,9 @@ protected:
 	//Keep running flag
 	volatile bool keep_running;
 
+	//Flag to indicate we have been requested to stop
+	volatile bool req_to_stop;
+
 	//IPCM factory
 	IPCMIPCProcessFactory ipcp_factory_;
 
@@ -769,6 +772,9 @@ private:
 	//I/O loop main thread
 	rina::Thread* io_thread;
 	rina::ThreadAttributes io_thread_attrs;
+
+	//Stop condition
+	rina::ConditionVariable stop_cond;
 
 	//Trampoline for the pthread_create
 	static void* io_loop_trampoline(void* param);
