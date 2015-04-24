@@ -429,16 +429,31 @@ std::list<BaseRIBObject*> RIB::getRIBObjects()
 RIBDaemon::RIBDaemon(){
         cdap_session_manager_ = 0;
         encoder_ = 0;
-        app_conn_handler_ = 0;
+        cacep_handler_ = 0;
 }
 
 void RIBDaemon::initialize(const std::string& separator, IEncoder * encoder,
                 CDAPSessionManagerInterface * cdap_session_manager,
-                IApplicationConnectionHandler * app_conn_handler) {
+                CACEPHandler * cacep_handler) {
+	if (!cdap_session_manager) {
+		LOG_ERR("Bogus CDAP Session Manager passed");
+		throw Exception("Bogus CDAP Session Manager passed");
+	}
         cdap_session_manager_ = cdap_session_manager;
+
+        if (!encoder) {
+        	LOG_ERR("Bogus Encoder passed");
+        	throw Exception("Bogus Encoder passed");
+        }
         encoder_ = encoder;
+
+        if (!cacep_handler) {
+        	LOG_ERR("Bogus CACEP Handler passed");
+        	throw Exception("Bogus CACEP Handler passed");
+        }
+        cacep_handler_ = cacep_handler;
+
         separator_ = separator;
-        app_conn_handler_ = app_conn_handler;
 }
 
 void RIBDaemon::addRIBObject(BaseRIBObject * ribObject)
@@ -789,71 +804,114 @@ void RIBDaemon::processIncomingResponseMessage(const rina::CDAPMessage * cdapMes
 }
 
 void RIBDaemon::processIncomingCDAPMessage(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor){
-        rina::CDAPMessage::Opcode opcode = cdapMessage->get_op_code();
+					   rina::CDAPSessionDescriptor * descriptor,
+		        		   const std::string& session_state)
+{
+	rina::CDAPMessage::Opcode opcode = cdapMessage->get_op_code();
+
+	if (session_state == rina::CDAPSessionInterface::SESSION_STATE_NONE) {
+		if (opcode == rina::CDAPMessage::M_CONNECT) {
+			cacep_handler_->connect(cdapMessage->invoke_id_,
+			                        descriptor);
+		} else {
+			LOG_ERR("Ignoring invalid CDAP opcode for NONE CDAP session state: %s",
+				 cdapMessage->to_string().c_str());
+		}
+
+		return;
+	}
+
+	if (session_state == rina::CDAPSessionInterface::SESSION_STATE_AWAIT_CON) {
+		//TODO These must be authentication messages, delegate to CACEPHandler
+		//who will delegate to the authentication policy
+		return;
+	}
+
+	if (session_state == rina::CDAPSessionInterface::SESSION_STATE_AWAIT_CLOSE) {
+		if (opcode == rina::CDAPMessage::M_RELEASE_R) {
+                	cacep_handler_->releaseResponse(cdapMessage->result_,
+                					cdapMessage->result_reason_,
+                					descriptor);
+		} else {
+			LOG_ERR("Ignoring invalid CDAP opcode for AWAIT_CLOSE CDAP session state: %s",
+				 cdapMessage->to_string().c_str());
+		}
+	}
+
         try {
                 switch (opcode) {
-                case rina::CDAPMessage::M_CONNECT:
-                        app_conn_handler_->connect(cdapMessage->invoke_id_, cdapSessionDescriptor);
-                        break;
                 case rina::CDAPMessage::M_CONNECT_R:
-                        app_conn_handler_->connectResponse(cdapMessage->result_, cdapMessage->result_reason_,
-                                        cdapSessionDescriptor);
+                	cacep_handler_->connectResponse(cdapMessage->result_,
+                					cdapMessage->result_reason_,
+                					descriptor);
                         break;
                 case rina::CDAPMessage::M_RELEASE:
-                        app_conn_handler_->release(cdapMessage->invoke_id_, cdapSessionDescriptor);
-                        break;
-                case rina::CDAPMessage::M_RELEASE_R:
-                        app_conn_handler_->releaseResponse(cdapMessage->result_, cdapMessage->result_reason_,
-                                        cdapSessionDescriptor);
+                	cacep_handler_->release(cdapMessage->invoke_id_,
+                				descriptor);
                         break;
                 case rina::CDAPMessage::M_CREATE:
-                        processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
+                        processIncomingRequestMessage(cdapMessage,
+                        			      descriptor);
                         break;
                 case rina::CDAPMessage::M_CREATE_R:
-                        processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
+                        processIncomingResponseMessage(cdapMessage,
+                        			       descriptor);
                         break;
                 case rina::CDAPMessage::M_DELETE:
-                        processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
+                        processIncomingRequestMessage(cdapMessage,
+                        			      descriptor);
                         break;
                 case rina::CDAPMessage::M_DELETE_R:
-                        processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
+                        processIncomingResponseMessage(cdapMessage,
+                        			       descriptor);
                         break;
                 case rina::CDAPMessage::M_START:
-                        processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
+                        processIncomingRequestMessage(cdapMessage,
+                        			      descriptor);
                         break;
                 case rina::CDAPMessage::M_START_R:
-                        processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
+                        processIncomingResponseMessage(cdapMessage,
+                        			       descriptor);
                         break;
                 case rina::CDAPMessage::M_STOP:
-                        processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
+                        processIncomingRequestMessage(cdapMessage,
+                        			      descriptor);
                         break;
                 case rina::CDAPMessage::M_STOP_R:
-                        processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
+                        processIncomingResponseMessage(cdapMessage,
+                        			       descriptor);
                         break;
                 case rina::CDAPMessage::M_READ:
-                        processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
+                        processIncomingRequestMessage(cdapMessage,
+                        			      descriptor);
                         break;
                 case rina::CDAPMessage::M_READ_R:
-                        processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
+                        processIncomingResponseMessage(cdapMessage,
+                        			       descriptor);
                         break;
                 case rina::CDAPMessage::M_CANCELREAD:
-                        processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
+                        processIncomingRequestMessage(cdapMessage,
+                        			      descriptor);
                         break;
                 case rina::CDAPMessage::M_CANCELREAD_R:
-                        processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
+                        processIncomingResponseMessage(cdapMessage,
+                        			       descriptor);
                         break;
                 case rina::CDAPMessage::M_WRITE:
-                        processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
+                        processIncomingRequestMessage(cdapMessage,
+                        			      descriptor);
                         break;
                 case rina::CDAPMessage::M_WRITE_R:
-                        processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
+                        processIncomingResponseMessage(cdapMessage,
+                        		               descriptor);
                         break;
                 default:
-                        LOG_ERR("Unrecognized CDAP operation code: %d", cdapMessage->get_op_code());
+                        LOG_ERR("Unrecognized CDAP operation code: %d",
+                        	 cdapMessage->get_op_code());
                 }
         } catch(Exception &e) {
-                LOG_ERR("Problems processing incoming CDAP message: %s", e.what());
+                LOG_ERR("Problems processing incoming CDAP message: %s",
+                	 e.what());
         }
 }
 

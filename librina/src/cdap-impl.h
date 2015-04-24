@@ -43,7 +43,7 @@ class ConnectionStateMachine: public Lockable {
 public:
 	ConnectionStateMachine(CDAPSessionImpl* cdap_session, long timeout);
 	~ConnectionStateMachine() throw();
-	bool is_connected() const;
+	bool is_connected();
 	/// Checks if a the CDAP connection can be opened (i.e. an M_CONNECT message can be sent)
 	/// @throws CDAPException
 	void checkConnect();
@@ -60,6 +60,7 @@ public:
 	/// @throws CDAPException
 	void checkReleaseResponse();
 	void releaseResponseSentOrReceived(bool sent);
+	std::string get_state();
 private:
 	enum ConnectionState {
 		NONE, AWAITCON, CONNECTED, AWAITCLOSE
@@ -154,6 +155,7 @@ public:
 	CDAPSessionDescriptor* get_session_descriptor() const;
 	CDAPInvokeIdManagerImpl* get_invoke_id_manager() const;
 	void stopConnection();
+	std::string get_session_state() const;
 private:
 	void messageSentOrReceived(const CDAPMessage &cdap_message, bool sent);
 	void freeOrReserveInvokeId(const CDAPMessage &cdap_message, bool sent);

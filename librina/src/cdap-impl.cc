@@ -62,9 +62,16 @@ ConnectionStateMachine::~ConnectionStateMachine() throw () {
   delete close_timer_;
   close_timer_ = 0;
 }
-bool ConnectionStateMachine::is_connected() const {
-  return connection_state_ == CONNECTED;
+
+bool ConnectionStateMachine::is_connected()
+{
+	bool result = false;
+	lock();
+	result = connection_state_ == CONNECTED;
+	unlock();
+	return result;
 }
+
 void ConnectionStateMachine::checkConnect() {
   lock();
   if (connection_state_ != NONE) {
@@ -138,6 +145,33 @@ void ConnectionStateMachine::releaseResponseSentOrReceived(bool sent) {
     releaseResponseReceived();
   }
 }
+
+std::string ConnectionStateMachine::get_state()
+{
+	std::string result;
+	lock();
+
+	switch (connection_state_) {
+	case NONE:
+		result = CDAPSessionInterface::SESSION_STATE_NONE;
+		break;
+	case AWAITCON:
+		result = CDAPSessionInterface::SESSION_STATE_AWAIT_CON;
+		break;
+	case CONNECTED:
+		result = CDAPSessionInterface::SESSION_STATE_CON;
+		break;
+	case AWAITCLOSE:
+		result = CDAPSessionInterface::SESSION_STATE_AWAIT_CLOSE;
+		break;
+	default:
+		result = "Unknown state";
+	}
+
+	unlock();
+	return result;
+}
+
 void ConnectionStateMachine::resetConnection() {
   connection_state_ = NONE;
   unlock();
@@ -436,6 +470,13 @@ CDAPInvokeIdManagerImpl* CDAPSessionImpl::get_invoke_id_manager() const {
 void CDAPSessionImpl::stopConnection() {
   cdap_session_manager_->removeCDAPSession(get_port_id());
 }
+
+std::string CDAPSessionImpl::get_session_state() const
+{
+	return connection_state_machine_->get_state();
+
+}
+
 void CDAPSessionImpl::messageSentOrReceived(const CDAPMessage &cdap_message,
                                             bool sent) {
   switch (cdap_message.get_op_code()) {

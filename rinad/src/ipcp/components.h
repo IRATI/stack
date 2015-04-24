@@ -33,6 +33,7 @@
 #include <librina/ipc-process.h>
 #include <librina/internal-events.h>
 #include <librina/irm.h>
+#include <librina/cacep.h>
 
 #include "common/encoder.h"
 
@@ -108,7 +109,7 @@ public:
 /// Interface that must be implementing by classes that provide
 /// the behavior of an enrollment task
 class IEnrollmentTask : public IPCProcessComponent, public rina::ApplicationEntity,
-						public rina::IApplicationConnectionHandler {
+						public rina::CACEPHandler {
 public:
 	static const std::string ENROLLMENT_TASK_AE_NAME;
 

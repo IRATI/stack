@@ -31,6 +31,7 @@ allsources =							\
         ipc-process.cc						\
         faux-sockets.cc						\
         cdap.cc							\
+        cacep.cc						\
         rib.cc							\
         irm.cc							\
         sdu-protection.cc					\

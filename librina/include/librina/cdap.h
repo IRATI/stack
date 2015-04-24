@@ -611,9 +611,12 @@ public:
 ///     a) call the messageReceived operation
 ///     b) if successful, you can already use the cdap message; if not, look at the exception
 class CDAPSessionInterface {
-
-	/*	Constructors and Destructors	*/
 public:
+	static const std::string SESSION_STATE_NONE;
+	static const std::string SESSION_STATE_AWAIT_CON;
+	static const std::string SESSION_STATE_CON;
+	static const std::string SESSION_STATE_AWAIT_CLOSE;
+
 	virtual ~CDAPSessionInterface() throw () {
 	}
 	;
@@ -651,6 +654,8 @@ public:
 	///Return the descriptor of this session
 	virtual CDAPSessionDescriptor* get_session_descriptor() const = 0;
 
+	//Return the state of this session (NONE, AWAIT_CON, CON or AWAIT_CLOSE)
+	virtual std::string get_session_state() const = 0;
 };
 
 /// Manages the creation/deletion of CDAP sessions within an IPC process

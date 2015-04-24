@@ -237,7 +237,7 @@ void IPCPRIBDaemonImpl::cdapMessageDelivered(char* message, int length, int port
     const rina::CDAPMessage * cdapMessage;
     const rina::CDAPMessage * aDataCDAPMessage;
     const rina::CDAPSessionInterface * cdapSession;
-    rina::CDAPSessionDescriptor  * cdapSessionDescriptor;
+    rina::CDAPSessionDescriptor * descriptor;
     rina::ADataObject * adata;
 
     //1 Decode the message and obtain the CDAP session descriptor
@@ -262,16 +262,17 @@ void IPCPRIBDaemonImpl::cdapMessageDelivered(char* message, int length, int port
     		}
 
     		aDataCDAPMessage = cdap_session_manager_->decodeCDAPMessage(*adata->encoded_cdap_message_);
-    		cdapSessionDescriptor = new rina::CDAPSessionDescriptor();
+    		descriptor = new rina::CDAPSessionDescriptor();
 
-    	    LOG_IPCP_DBG("Received A-Data CDAP message from address %u : %s", adata->source_address_,
+    		LOG_IPCP_DBG("Received A-Data CDAP message from address %u : %s", adata->source_address_,
     	    		aDataCDAPMessage->to_string().c_str());
 
     		atomic_send_lock_.unlock();
-    		processIncomingCDAPMessage(aDataCDAPMessage, cdapSessionDescriptor);
+    		processIncomingCDAPMessage(aDataCDAPMessage, descriptor,
+    					   rina::CDAPSessionInterface::SESSION_STATE_CON);
     		delete aDataCDAPMessage;
     		delete adata;
-    		delete cdapSessionDescriptor;
+    		delete descriptor;
     		delete cdapMessage;
     		return;
     	} catch (rina::Exception &e) {
@@ -289,12 +290,13 @@ void IPCPRIBDaemonImpl::cdapMessageDelivered(char* message, int length, int port
             return;
     }
 
-    cdapSessionDescriptor = cdapSession->get_session_descriptor();
+    descriptor = cdapSession->get_session_descriptor();
     LOG_IPCP_DBG("Received CDAP message through portId %d: %s", portId,
                     cdapMessage->to_string().c_str());
     atomic_send_lock_.unlock();
 
-    processIncomingCDAPMessage(cdapMessage, cdapSessionDescriptor);
+    processIncomingCDAPMessage(cdapMessage, descriptor,
+		    	       cdapSession->get_session_state());
     delete cdapMessage;
 }
 
