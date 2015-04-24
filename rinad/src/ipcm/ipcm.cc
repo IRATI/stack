@@ -34,6 +34,7 @@
 #include "rina-configuration.h"
 #include "ipcm.h"
 #include "dif-validator.h"
+#include "plugin-info.h"
 
 //Addons
 #include "addons/console.h"
@@ -1129,6 +1130,15 @@ IPCManager_::plugin_load(Promise* promise, const unsigned short ipcp_id,
 	}
 
 	return IPCM_PENDING;
+}
+
+ipcm_res_t
+IPCManager_::plugin_get_info(const std::string& plugin_name,
+			     std::list<rina::PsInfo>& result)
+{
+	int ret = rinad::plugin_get_info(plugin_name, IPCPPLUGINSDIR, result);
+
+	return ret ? IPCM_FAILURE : IPCM_SUCCESS;
 }
 
 ipcm_res_t

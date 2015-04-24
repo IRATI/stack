@@ -39,8 +39,10 @@ librinad_la_CPPFLAGS =				\
 	$(LIBRINA_CFLAGS)			\
 	$(LIBPROTOBUF_CFLAGS)			\
 	-I$(srcdir)/tclap			\
+	-I$(srcdir)/jsoncpp			\
 	-I$(srcdir)/..
 librinad_la_LIBADD   =				\
+	$(builddir)/libjsoncpp.la		\
 	$(LIBRINA_LIBS)				\
 	$(LIBPROTOBUF_LIBS)			\
 	-Lencoders -lencoders
@@ -50,4 +52,5 @@ librinad_la_SOURCES  =					\
 	rina-configuration.cc rina-configuration.h	\
 	event-loop.cc	      event-loop.h		\
 	encoder.cc	      encoder.h			\
+	plugin-info.cc	      plugin-info.h		\
 			      concurrency.h

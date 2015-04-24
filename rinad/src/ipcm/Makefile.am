@@ -45,8 +45,7 @@ ipcm_SOURCES  =					\
 	ipcp-handlers.cc			\
 	configuration.cc			\
 	flow-alloc-handlers.cc			\
-	policies-handlers.cc			\
-	plugin-info.cc
+	policies-handlers.cc
 
 test_empty_SOURCES  =				\
 	test-empty.cc
