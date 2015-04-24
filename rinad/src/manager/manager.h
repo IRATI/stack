@@ -68,11 +68,11 @@ class Manager : public Application
  protected:
         void startWorker(rina::Flow *flow);
         void createIPCP(rina::Flow *flow);
+        void queryRIB(rina::Flow *flow);
 
         //void cacep();
         //void sendAssignToDIF();
         //void sendRegisterAtDIF();
-        //void sendQueryRIB();
         //void release();
         //void destroyFlow();
 
@@ -82,5 +82,6 @@ class Manager : public Application
         rina::cdap_rib::con_handle_t con_;
         static const std::string mad_name;
         static const std::string mad_instance;
+        rina::cdap::CDAPProviderInterface *cdap_prov_;
 };
 #endif//MANAGER_HPP

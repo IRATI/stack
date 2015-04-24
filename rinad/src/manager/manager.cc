@@ -233,30 +233,44 @@ void Manager::startWorker(rina::Flow *flow)
         t.detach();
 }
 
-void Manager::createIPCP(rina::Flow* flow)
+void Manager::operate(rina::Flow* flow)
 {
-        char buffer[max_sdu_size_in_bytes];
-        rina::cdap::CDAPProviderInterface *cdap_prov = 0;
+        cdap_prov_ = 0;
         ConnectionCallback callback(&cdap_prov);
         std::cout << "cdap_prov created" << std::endl;
         cdap::CDAPProviderFactory::init(2000);
-        cdap_prov = cdap::CDAPProviderFactory::create(false, &callback);
+        cdap_prov_ = cdap::CDAPProviderFactory::create(false, &callback);
+}
 
-        // CACEP
+void Manager::cacep(rina::Flow* flow)
+{
+        char buffer[max_sdu_size_in_bytes];
         int bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
         cdap_rib::SerializedObject message;
         message.message_ = buffer;
         message.size_ = bytes_read;
-        cdap_prov->process_message(message, flow->getPortId());
+        cdap_prov_->process_message(message, flow->getPortId());
+}
 
-        // CREATE RESPONSE
-        bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
+void Manager::createIPCP(rina::Flow* flow)
+{
+        char buffer[max_sdu_size_in_bytes];
+        int bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
+        cdap_rib::SerializedObject message;
         message.message_ = buffer;
         message.size_ = bytes_read;
-        cdap_prov->process_message(message, flow->getPortId());
+        cdap_prov_->process_message(message, flow->getPortId());
+}
 
+void Manager::queryRIB(rina::Flow *flow)
+{
+
+}
+
+void Manager::finish(rina::Flow *flow)
+{
         cdap::CDAPProviderFactory::destroy(flow->getPortId());
-        delete cdap_prov;
+        delete cdap_prov_;
 }
 /*
  void Manager::release()
