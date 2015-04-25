@@ -71,6 +71,17 @@ enum ipcp_config_entry_attrs_list {
 };
 #define IPCP_CONFIG_ENTRY_ATTR_MAX (__IPCP_CONFIG_ENTRY_ATTR_MAX - 1)
 
+enum dup_config_entry_attrs_list{
+        DUP_CONFIG_ENTRY_ATTR_DIF_NAME = 1,
+        DUP_CONFIG_ENTRY_ATTR_TTL,
+        DUP_CONFIG_ENTRY_ATTR_ENABLE_CRC,
+        DUP_CONFIG_ENTRY_ATTR_ENC_CIPHER,
+        DUP_CONFIG_ENTRY_ATTR_MSG_DIGEST,
+        DUP_CONFIG_ENTRY_ATTR_KEY,
+        __DUP_CONFIG_ENTRY_ATTR_MAX,
+};
+#define DUP_CONFIG_ENTRY_ATTR_MAX (__DUP_CONFIG_ENTRY_ATTR_MAX - 1)
+
 enum policy_param_attrs_list {
         PPA_ATTR_NAME = 1,
         PPA_ATTR_VALUE,
@@ -414,6 +425,7 @@ enum dif_config_attrs_list {
         DCONF_ATTR_ADDRESS,
         DCONF_ATTR_EFCPC,
         DCONF_ATTR_RMTC,
+        DCONF_ATTR_DUP_CONFS,
         __DCONF_ATTR_MAX,
 };
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)

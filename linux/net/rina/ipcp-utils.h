@@ -116,6 +116,9 @@ struct name * string_toname_ni(const string_t * s);
 struct ipcp_config * ipcp_config_create(void);
 int                  ipcp_config_destroy(struct ipcp_config * cfg);
 
+struct dup_config * dup_config_create(void);
+int                 dup_config_destroy(struct dup_config * cfg);
+
 struct efcp_config * efcp_config_create(void);
 int                  efcp_config_destroy(struct efcp_config * efcp_config);
 struct dif_config *  dif_config_create(void);

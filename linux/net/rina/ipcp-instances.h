@@ -49,6 +49,20 @@ struct ipcp_config {
         struct ipcp_config_entry * entry;
 };
 
+struct dup_config_entry {
+    string_t * dif_name;
+    u_int32_t  ttl;
+    bool       enable_crc;
+    string_t * encryption_cipher;
+    string_t * message_digest;
+    string_t * key;
+};
+
+struct dup_config {
+    struct list_head          next;
+    struct dup_config_entry * entry;
+};
+
 struct dt_cons {
         /* The length of the address field in the DTP PCI, in bytes */
         u_int16_t address_length;
@@ -107,6 +121,9 @@ struct dif_config {
 
         /* The address of the IPC Process*/
         address_t           address;
+
+        /* List of Data Unit Protection configuration entries */
+        struct list_head    dup_config_entries;
 };
 
 /* Represents the information about a DIF (name, type, configuration) */

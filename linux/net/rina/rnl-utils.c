@@ -1036,6 +1036,124 @@ static int parse_list_of_ipcp_config_entries(struct nlattr *     nested_attr,
         return 0;
 }
 
+static int parse_dup_config_entry(struct nlattr *           nl_entry,
+                                  struct dup_config_entry * entry)
+{
+        struct nla_policy attr_policy[DUP_CONFIG_ENTRY_ATTR_MAX + 1];
+        struct nlattr *   attrs[DUP_CONFIG_ENTRY_ATTR_MAX + 1];
+
+        if (!nl_entry) {
+                LOG_ERR("Bogus attribute passed, bailing out");
+                return -1;
+        }
+
+        if (!entry) {
+                LOG_ERR("Bogus entry passed, bailing out");
+                return -1;
+        }
+
+        attr_policy[DUP_CONFIG_ENTRY_ATTR_DIF_NAME].type  = NLA_STRING;
+        attr_policy[DUP_CONFIG_ENTRY_ATTR_DIF_NAME].len   = 0;
+
+        attr_policy[DUP_CONFIG_ENTRY_ATTR_TTL].type  = NLA_U32;
+        attr_policy[DUP_CONFIG_ENTRY_ATTR_TTL].len   = 4;
+
+        attr_policy[DUP_CONFIG_ENTRY_ATTR_ENABLE_CRC].type  = NLA_FLAG;
+        attr_policy[DUP_CONFIG_ENTRY_ATTR_ENABLE_CRC].len   = 0;
+
+        attr_policy[DUP_CONFIG_ENTRY_ATTR_ENC_CIPHER].type  = NLA_STRING;
+        attr_policy[DUP_CONFIG_ENTRY_ATTR_ENC_CIPHER].len   = 0;
+
+        attr_policy[DUP_CONFIG_ENTRY_ATTR_MSG_DIGEST].type  = NLA_STRING;
+        attr_policy[DUP_CONFIG_ENTRY_ATTR_MSG_DIGEST].len   = 0;
+
+        attr_policy[DUP_CONFIG_ENTRY_ATTR_KEY].type  = NLA_STRING;
+        attr_policy[DUP_CONFIG_ENTRY_ATTR_KEY].len   = 0;
+
+        if (nla_parse_nested(attrs, DUP_CONFIG_ENTRY_ATTR_MAX,
+                             nl_entry, attr_policy) < 0)
+                return -1;
+
+        if (attrs[DUP_CONFIG_ENTRY_ATTR_DIF_NAME])
+                entry->dif_name = nla_dup_string(attrs[DUP_CONFIG_ENTRY_ATTR_DIF_NAME], GFP_KERNEL);
+
+        if (attrs[DUP_CONFIG_ENTRY_ATTR_TTL])
+                entry->ttl = nla_get_u32(attrs[DUP_CONFIG_ENTRY_ATTR_TTL]);
+
+        entry->enable_crc = nla_get_flag(attrs[DUP_CONFIG_ENTRY_ATTR_ENABLE_CRC]);
+
+        if (attrs[DUP_CONFIG_ENTRY_ATTR_ENC_CIPHER])
+                entry->encryption_cipher = nla_dup_string(attrs[DUP_CONFIG_ENTRY_ATTR_ENC_CIPHER], GFP_KERNEL);
+
+        if (attrs[DUP_CONFIG_ENTRY_ATTR_MSG_DIGEST])
+                entry->message_digest = nla_dup_string(attrs[DUP_CONFIG_ENTRY_ATTR_MSG_DIGEST], GFP_KERNEL);
+
+        if (attrs[DUP_CONFIG_ENTRY_ATTR_KEY])
+                entry->key = nla_dup_string(attrs[DUP_CONFIG_ENTRY_ATTR_KEY], GFP_KERNEL);
+
+        return 0;
+}
+
+static int parse_list_of_dup_confs(struct nlattr *     nested_attr,
+                                   struct dif_config * dif_config)
+{
+        struct nlattr *            nla;
+        struct dup_config_entry *  entry;
+        struct dup_config *        config;
+        int                        rem                   = 0;
+        int                        entries_with_problems = 0;
+        int                        total_entries         = 0;
+
+        if (!nested_attr) {
+                LOG_ERR("Bogus attribute passed, bailing out");
+                return -1;
+        }
+
+        if (!dif_config) {
+                LOG_ERR("Bogus dif_config passed, bailing out");
+                return -1;
+        }
+
+        for (nla = (struct nlattr*) nla_data(nested_attr),
+                     rem = nla_len(nested_attr);
+             nla_ok(nla, rem);
+             nla = nla_next(nla, &(rem))) {
+                total_entries++;
+
+                entry = rkzalloc(sizeof(*entry), GFP_KERNEL);
+                if (!entry) {
+                        entries_with_problems++;
+                        continue;
+                }
+
+                if (parse_dup_config_entry(nla, entry) < 0) {
+                        rkfree(entry);
+                        entries_with_problems++;
+                        continue;
+                }
+
+                config = dup_config_create();
+                if (!config) {
+                        rkfree(entry);
+                        entries_with_problems++;
+                        continue;
+                }
+                config->entry = entry;
+                list_add(&config->next, &dif_config->dup_config_entries);
+        }
+
+        if (rem > 0) {
+                LOG_WARN("Missing bits to parse");
+        }
+
+        if (entries_with_problems > 0)
+                LOG_WARN("Problems parsing %d out of %d parameters",
+                         entries_with_problems,
+                         total_entries);
+
+        return 0;
+}
+
 static int parse_policy_param(struct nlattr * attr, struct policy_parm * param)
 {
         struct nla_policy attr_policy[PPA_ATTR_MAX + 1];
@@ -1293,6 +1411,8 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
         attr_policy[DCONF_ATTR_EFCPC].len                = 0;
         attr_policy[DCONF_ATTR_RMTC].type                = NLA_NESTED;
         attr_policy[DCONF_ATTR_RMTC].len                 = 0;
+        attr_policy[DCONF_ATTR_DUP_CONFS].type           = NLA_NESTED;
+        attr_policy[DCONF_ATTR_DUP_CONFS].len            = 0;
 
         if (nla_parse_nested(attrs,
                              DCONF_ATTR_MAX,
@@ -1316,6 +1436,12 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
 
                 if (parse_efcp_config(attrs[DCONF_ATTR_EFCPC],
                                       dif_config->efcp_config))
+                        goto parse_fail;
+        }
+
+        if (attrs[DCONF_ATTR_DUP_CONFS]) {
+                if (parse_list_of_dup_confs(attrs[DCONF_ATTR_DUP_CONFS],
+                                            dif_config) < 0)
                         goto parse_fail;
         }
 

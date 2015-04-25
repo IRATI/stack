@@ -422,6 +422,44 @@ int ipcp_config_destroy(struct ipcp_config * cfg)
         return 0;
 }
 
+struct dup_config * dup_config_create(void)
+{
+        struct dup_config * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->entry = NULL;
+
+        INIT_LIST_HEAD(&tmp->next);
+
+        return tmp;
+}
+
+int dup_config_destroy(struct dup_config * cfg)
+{
+        if (!cfg)
+                return -1;
+
+        if (!cfg->entry)
+                return -1;
+
+        if (cfg->entry->dif_name) rkfree(cfg->entry->dif_name);
+
+        if (cfg->entry->encryption_cipher) rkfree(cfg->entry->encryption_cipher);
+
+        if (cfg->entry->message_digest) rkfree(cfg->entry->message_digest);
+
+        if (cfg->entry->key) rkfree(cfg->entry->key);
+
+        rkfree(cfg->entry);
+
+        rkfree(cfg);
+
+        return 0;
+}
+
 struct flow_spec * flow_spec_dup(const struct flow_spec * fspec)
 {
         struct flow_spec * tmp;
@@ -490,6 +528,7 @@ struct dif_config * dif_config_create(void)
 
         tmp->efcp_config = NULL;
         INIT_LIST_HEAD(&(tmp->ipcp_config_entries));
+        INIT_LIST_HEAD(&(tmp->dup_config_entries));
 
         return tmp;
 }
@@ -498,6 +537,7 @@ EXPORT_SYMBOL(dif_config_create);
 int dif_config_destroy(struct dif_config * dif_config)
 {
         struct ipcp_config * pos, * nxt;
+        struct dup_config * dup_pos, * dup_nxt;
 
         if (!dif_config)
                 return -1;
@@ -507,6 +547,13 @@ int dif_config_destroy(struct dif_config * dif_config)
                                  next) {
                 list_del(&pos->next);
                 ipcp_config_destroy(pos);
+        }
+
+        list_for_each_entry_safe(dup_pos, dup_nxt,
+                                 &dif_config->dup_config_entries,
+                                 next) {
+                list_del(&dup_pos->next);
+                dup_config_destroy(dup_pos);
         }
 
         rkfree(dif_config);
