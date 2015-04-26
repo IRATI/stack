@@ -2401,6 +2401,16 @@ static const struct name * tcp_udp_ipcp_name(struct ipcp_instance_data * data)
         return data->name;
 }
 
+static const struct name * tcp_udp_dif_name(struct ipcp_instance_data * data)
+{
+        LOG_HBEAT;
+
+        ASSERT(data);
+        ASSERT(name_is_ok(data->dif_name));
+
+        return data->dif_name;
+}
+
 static int tcp_udp_query_rib(struct ipcp_instance_data * data,
                              struct list_head *          entries,
                              const string_t *            object_class,
@@ -2447,9 +2457,11 @@ static struct ipcp_instance_ops tcp_udp_instance_ops = {
         .query_rib	           = tcp_udp_query_rib,
 
         .ipcp_name                 = tcp_udp_ipcp_name,
+        .dif_name                  = tcp_udp_dif_name,
 
         .set_policy_set_param      = NULL,
         .select_policy_set         = NULL,
+        .find_dup_config           = NULL,
 };
 
 static struct ipcp_factory_data {

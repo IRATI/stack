@@ -1041,6 +1041,7 @@ static int parse_dup_config_entry(struct nlattr *           nl_entry,
 {
         struct nla_policy attr_policy[DUP_CONFIG_ENTRY_ATTR_MAX + 1];
         struct nlattr *   attrs[DUP_CONFIG_ENTRY_ATTR_MAX + 1];
+        string_t * dif_name;
 
         if (!nl_entry) {
                 LOG_ERR("Bogus attribute passed, bailing out");
@@ -1074,8 +1075,16 @@ static int parse_dup_config_entry(struct nlattr *           nl_entry,
                              nl_entry, attr_policy) < 0)
                 return -1;
 
-        if (attrs[DUP_CONFIG_ENTRY_ATTR_DIF_NAME])
-                entry->dif_name = nla_dup_string(attrs[DUP_CONFIG_ENTRY_ATTR_DIF_NAME], GFP_KERNEL);
+        if (attrs[DUP_CONFIG_ENTRY_ATTR_DIF_NAME]){
+                entry->dif_name = name_create();
+                if (!entry->dif_name)
+                    return -1;
+
+                dif_name = nla_get_string(attrs[DUP_CONFIG_ENTRY_ATTR_DIF_NAME]);
+                if (!name_init_from(entry->dif_name,
+                                    dif_name, NULL, NULL, NULL))
+                    return -1;
+        }
 
         if (attrs[DUP_CONFIG_ENTRY_ATTR_TTL])
                 entry->ttl = nla_get_u32(attrs[DUP_CONFIG_ENTRY_ATTR_TTL]);
@@ -1139,7 +1148,7 @@ static int parse_list_of_dup_confs(struct nlattr *     nested_attr,
                         continue;
                 }
                 config->entry = entry;
-                list_add(&config->next, &dif_config->dup_config_entries);
+                list_add(&config->next, &dif_config->dup_confs);
         }
 
         if (rem > 0) {

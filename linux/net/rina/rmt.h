@@ -65,6 +65,7 @@ struct rmt_n1_port {
         struct hlist_node      hlist;
         enum flow_state        state;
         atomic_t               n_sdus;
+        struct dup_config_entry * dup_config;
 };
 
 /* The key in this struct is used to filter by cep_ids, qos_id, address... */

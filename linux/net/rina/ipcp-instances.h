@@ -50,7 +50,7 @@ struct ipcp_config {
 };
 
 struct dup_config_entry {
-    string_t * dif_name;
+    struct name * dif_name;
     u_int32_t  ttl;
     bool       enable_crc;
     string_t * encryption_cipher;
@@ -123,7 +123,7 @@ struct dif_config {
         address_t           address;
 
         /* List of Data Unit Protection configuration entries */
-        struct list_head    dup_config_entries;
+        struct list_head    dup_confs;
 };
 
 /* Represents the information about a DIF (name, type, configuration) */
@@ -251,6 +251,7 @@ struct ipcp_instance_ops {
                           const string_t *            filter);
 
         const struct name * (* ipcp_name)(struct ipcp_instance_data * data);
+        const struct name * (* dif_name)(struct ipcp_instance_data * data);
 
         int (* set_policy_set_param)(struct ipcp_instance_data * data,
                                      const string_t * path,
@@ -262,6 +263,8 @@ struct ipcp_instance_ops {
 
         int (* enable_write)(struct ipcp_instance_data * data, port_id_t id);
         int (* disable_write)(struct ipcp_instance_data * data, port_id_t id);
+        struct dup_config_entry * (* find_dup_config)(struct ipcp_instance_data * data,
+                                                      struct name * dif_name);
 };
 
 /* FIXME: Should work on struct ipcp_instance, not on ipcp_instance_ops */

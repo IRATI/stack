@@ -54,7 +54,8 @@ static struct policy_set_list policy_sets = {
 
 
 static struct rmt_n1_port * n1_port_create(port_id_t id,
-                                           struct ipcp_instance * n1_ipcp)
+                                           struct ipcp_instance * n1_ipcp,
+                                           struct dup_config_entry * dup_config)
 {
         struct rmt_n1_port * tmp;
 
@@ -69,6 +70,7 @@ static struct rmt_n1_port * n1_port_create(port_id_t id,
         tmp->port_id = id;
         tmp->n1_ipcp = n1_ipcp;
         tmp->state   = N1_PORT_STATE_ENABLED;
+        tmp->dup_config = dup_config;
         atomic_set(&tmp->n_sdus, 0);
         spin_lock_init(&tmp->lock);
 
@@ -797,8 +799,18 @@ static int __queue_send_add(struct rmt * instance,
 {
         struct rmt_n1_port * tmp;
         struct rmt_ps *      ps;
+        struct name * dif_name;
+        struct dup_config_entry * dup_config;
 
-        tmp = n1_port_create(id, n1_ipcp);
+        dif_name = n1_ipcp->ops->dif_name(n1_ipcp->data);
+
+        if (instance->parent->ops->find_dup_config)
+            dup_config = instance->parent->ops->find_dup_config(
+                    instance->parent->data, dif_name);
+        else
+            dup_config = NULL;
+
+        tmp = n1_port_create(id, n1_ipcp, dup_config);
         if (!tmp)
                 return -1;
 

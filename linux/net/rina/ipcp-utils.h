@@ -128,4 +128,12 @@ int                  dif_info_destroy(struct dif_info * dif_info);
 
 struct flow_spec *   flow_spec_dup(const struct flow_spec * fspec);
 
+//TODO fill missing ones
+struct dup_config * dup_config_create(void);
+int                 dup_config_destroy(struct dup_config * cfg);
+int                 dup_config_entry_destroy(struct dup_config_entry * entry);
+int                 dup_config_entry_cpy(const struct dup_config_entry * src,
+                                         struct dup_config_entry * dst);
+struct dup_config_entry * dup_config_entry_dup(const struct dup_config_entry * src);
+
 #endif
