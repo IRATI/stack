@@ -238,6 +238,23 @@ struct pft {
         struct rina_component base;
 };
 
+
+int pft_select_policy_set(struct pft * pft,
+                          const string_t * path,
+                          const string_t * name)
+{
+        struct pft_ps * ps;
+        int ret;
+
+        if (path && strcmp(path, "")) {
+                LOG_ERR("This component has no selectable subcomponents");
+                return -1;
+        }
+
+        return base_select_policy_set(&pft->base, &policy_sets, name);
+}
+EXPORT_SYMBOL(pft_select_policy_set);
+
 /* Must be called under RCU read lock. */
 struct pft_ps *
 pft_ps_get(struct pft * pft)
@@ -266,6 +283,12 @@ static struct pft * pft_create_gfp(gfp_t flags)
         INIT_LIST_HEAD(&tmp->entries);
 
         rina_component_init(&tmp->base);
+
+        /* Try to select the default policy-set. */
+        if (pft_select_policy_set(tmp, "", RINA_PS_DEFAULT_NAME)) {
+                pft_destroy(tmp);
+                return NULL;
+        }
 
         return tmp;
 }
