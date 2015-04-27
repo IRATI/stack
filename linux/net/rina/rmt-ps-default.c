@@ -48,8 +48,6 @@ struct rmt_ps_data {
         struct sched_state *   ss;
         struct rmt_queue_set * inqs;
         struct rmt_queue_set * outqs;
-        struct tasklet_struct  ingress_tasklet;
-        struct tasklet_struct  egress_tasklet;
 };
 
 static void
@@ -177,344 +175,77 @@ rmt_scheduling_policy_common(struct sched_substate * sss,
 }
 */
 
-static void send_worker(unsigned long o)
-{ }
-/*
+static int
+default_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
+                                         struct rmt_n1_port * n1_port,
+                                         struct pdu *         pdu)
 {
-        struct rmt *         rmt;
-        struct rmt_n1_port * entry;
-        struct hlist_node *  ntmp;
-        int                  bucket;
-        int                  pending = 0;
-        struct rfifo *       queue;
-        struct rmt_ps *      ps;
-        bool                 sched_restart = true;
+        struct rmt_kqueue *  q;
+        struct rmt_qgroup *  qg;
+        struct rmt_ps_data * data = ps->priv;
 
-        LOG_DBG("Send worker called");
-
-        ps = (struct rmt_ps *) o;
-        if (!tmp) {
-                LOG_ERR("No instance passed to send worker !!!");
-                return;
+        if (!ps || !n1_port || !pdu) {
+                LOG_ERR("Wrong input parameters for "
+                        "rmt_enqueu_scheduling_policy_tx");
+                return -1;
         }
 
-        rmt = ps->dm;
-        ASSERT(rmt);
-
-        spin_lock(&rmt->egress.n1_ports->lock);
-        hash_for_each_safe(tmp->egress.n1_ports->n1_ports,
-                           bucket,
-                           ntmp,
-                           entry,
-                           hlist) {
-                struct pdu * pdu;
-
-                ASSERT(entry);
-
-                spin_unlock(&tmp->egress.n1_ports->lock);
-
-                spin_lock(&entry->lock);
-                if (entry->state == N1_PORT_STATE_DISABLED ||
-                    atomic_read(&entry->n_sdus) == 0) {
-                        if (atomic_read(&entry->n_sdus) > 0)
-                                pending++;
-                        spin_unlock(&entry->lock);
-                        spin_lock(&rmt->egress.n1_ports->lock);
-                        LOG_DBG("Port state is DISABLED or empty");
-                        continue;
-                }
-
-                for (;;) {
-
-                        queue = ps->rmt_scheduling_policy_tx(ps,
-                                                             entry,
-                                                             sched_restart);
-                        if (!queue) {
-                                break;
-                        }
-                        sched_restart = false;
-
-                        pdu = (struct pdu *) rfifo_pop(queue);
-                        if (!pdu) {
-                                spin_unlock(&entry->lock);
-                                LOG_DBG("No PDU to work in this queue ...");
-                                break;
-                        }
-                        entry->state = N1_PORT_STATE_BUSY;
-                        spin_unlock(&entry->lock);
-
-                        n1_port_write(tmp->serdes, entry, pdu);
-
-                        spin_lock(&entry->lock);
-                        if (atomic_read(&entry->n_sdus) <= 0) {
-                                atomic_set(&entry->n_sdus, 0);
-                                if (entry->state != N1_PORT_STATE_DISABLED)
-                                        entry->state = N1_PORT_STATE_ENABLED;
-                        } else {
-                                pending++;
-                        }
-                }
-                spin_unlock(&entry->lock);
-                spin_lock(&tmp->egress.n1_ports->lock);
+        /* NOTE: The policy is called with the n1_port lock taken */
+        qg = rmt_queue_set_find(data->outqs, n1_port->port_id);
+        if (!qg) {
+                LOG_ERR("Could not find queue group for n1_port %u",
+                        n1_port->port_id);
+                pdu_destroy(pdu);
+                return -1;
         }
-        spin_unlock(&tmp->egress.n1_ports->lock);
-
-        if (pending) {
-                LOG_DBG("RMT worker scheduling tasklet...");
-                tasklet_hi_schedule(&tmp->egress.egress_tasklet);
+        q = rmt_qgroup_find(qg, 0);
+        if (!qg) {
+                LOG_ERR("Could not find queue in the group for n1_port %u",
+                        n1_port->port_id);
+                pdu_destroy(pdu);
+                return -1;
         }
 
-        return;
+        rfifo_push_ni(q->queue, pdu);
+        return 0;
 }
-*/
 
 static struct pdu *
-default_rmt_scheduling_policy_tx(struct rmt_ps *      ps,
-                                 struct rmt_n1_port * n1_port,
-                                 struct pdu *         pdu)
+default_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
+                                     struct rmt_n1_port * n1_port)
 {
-        unsigned long        flags;
         struct rmt_kqueue *  q;
         struct rmt_qgroup *  qg;
         struct rmt_ps_data * data = ps->priv;
         struct pdu *         ret_pdu;
 
-        /*FIXME: add checks */
-        spin_lock_irqsave(&n1_port->lock, flags);
+        if (!ps || !n1_port) {
+                LOG_ERR("Wrong input parameters for "
+                        "rmt_next_scheduled_policy_tx");
+                return NULL;
+        }
+
+        /* NOTE: The policy is called with the n1_port lock taken */
         qg = rmt_queue_set_find(data->outqs, n1_port->port_id);
         if (!qg) {
-                spin_unlock_irqrestore(&n1_port->lock, flags);
                 LOG_ERR("Could not find queue group for n1_port %u",
                         n1_port->port_id);
-                pdu_destroy(pdu);
                 return NULL;
         }
         q = rmt_qgroup_find(qg, 0);
         if (!qg) {
-                spin_unlock_irqrestore(&n1_port->lock, flags);
                 LOG_ERR("Could not find queue in the group for n1_port %u",
                         n1_port->port_id);
-                pdu_destroy(pdu);
-                return NULL;
-        }
-        atomic_inc(&n1_port->n_sdus);
-        if (n1_port->state == N1_PORT_STATE_ENABLED &&
-            /*FIXME check if queue length can be used instead */
-            atomic_read(&n1_port->n_sdus) == 1) {
-                n1_port->state = N1_PORT_STATE_BUSY;
-                spin_unlock_irqrestore(&n1_port->lock, flags);
-                ret_pdu = pdu;
-
-                spin_lock_irqsave(&n1_port->lock, flags);
-                if (atomic_read(&n1_port->n_sdus) <= 0) {
-                        atomic_set(&n1_port->n_sdus, 0);
-                        if (n1_port->state != N1_PORT_STATE_DISABLED) {
-                                LOG_DBG("Sent and enabling port");
-                                n1_port->state = N1_PORT_STATE_ENABLED;
-                        }
-                } else {
-                        LOG_DBG("Sent and scheduling cause there are more"
-                                " pdus in the port");
-                        tasklet_hi_schedule(&data->egress_tasklet);
-                }
-                spin_unlock_irqrestore(&n1_port->lock, flags);
-                return ret_pdu;
-        } else if (n1_port->state == N1_PORT_STATE_BUSY) {
-                if (rfifo_push_ni(q->queue, pdu)) {
-                        spin_unlock_irqrestore(&n1_port->lock, flags);
-                        pdu_destroy(pdu);
-                        return NULL;
-                }
-                LOG_DBG("Port was busy, enqueuing PDU..");
-        } else {
-                spin_unlock_irqrestore(&n1_port->lock, flags);
-                LOG_ERR("Port state deallocated, discarding PDU");
-                pdu_destroy(pdu);
                 return NULL;
         }
 
-        spin_unlock_irqrestore(&n1_port->lock, flags);
-
-        return NULL;
+        ret_pdu = rfifo_pop(q->queue);
+        if (!ret_pdu) {
+                LOG_ERR("Could not dequeue scheduled pdu");
+                return NULL;
+        }
+        return ret_pdu;
 }
-
-static void receive_worker(unsigned long o)
-{ }
-/*
-{
-        struct rmt *         tmp;
-        struct rfifo *       queue;
-        struct rmt_ps *      ps;
-        bool                 sched_restart = true;
-        struct rmt_n1_port * entry;
-        int                  bucket;
-        struct hlist_node *  ntmp;
-
-        port_id_t            port_id;
-        pdu_type_t           pdu_type;
-        const struct pci *   pci;
-        struct pdu_ser *     pdu_ser;
-        struct pdu *         pdu;
-        address_t            dst_addr;
-        qos_id_t             qos_id;
-        struct serdes *      serdes;
-        struct buffer *      buf;
-        struct sdu *         sdu;
-
-        LOG_DBG("RMT tasklet receive worker called");
-
-        tmp = (struct rmt *) o;
-        if (!tmp) {
-                LOG_ERR("No instance passed to receive worker !!!");
-                return;
-        }
-
-        rcu_read_lock();
-        ps = container_of(rcu_dereference(tmp->base.ps),
-                          struct rmt_ps,
-                          base);
-        if (!ps) {
-                LOG_ERR("No ps in the receive_worker");
-                rcu_read_unlock();
-                return;
-        }
-        rcu_read_unlock();
-
-        spin_lock(&tmp->ingress.n1_ports->lock);
-        hash_for_each_safe(tmp->ingress.n1_ports->n1_ports,
-                           bucket,
-                           ntmp,
-                           entry,
-                           hlist) {
-                ASSERT(entry);
-
-                for (;;) {
-                        queue = ps->rmt_scheduling_policy_rx(ps,
-                                        entry, sched_restart);
-                        if (!queue) {
-                                // No more queues to serve.
-                                break;
-                        }
-                        sched_restart = false;
-
-                        sdu = (struct sdu *) rfifo_pop(queue);
-                        if (!sdu) {
-                                LOG_DBG("No SDU to work with in this queue");
-                                break;
-                        }
-
-                        atomic_dec(&entry->n_sdus);
-
-                        port_id = entry->port_id;
-                        spin_unlock(&tmp->ingress.n1_ports->lock);
-
-                        buf = sdu_buffer_rw(sdu);
-                        if (!buf) {
-                                LOG_DBG("No buffer present");
-                                sdu_destroy(sdu);
-                                spin_lock(&tmp->ingress.n1_ports->lock);
-                                break;
-                        }
-
-                        if (sdu_buffer_disown(sdu)) {
-                                LOG_DBG("Could not disown SDU");
-                                sdu_destroy(sdu);
-                                spin_lock(&tmp->ingress.n1_ports->lock);
-                                break;
-                        }
-
-                        sdu_destroy(sdu);
-
-                        pdu_ser = pdu_ser_create_buffer_with_ni(buf);
-                        if (!pdu_ser) {
-                                LOG_DBG("No ser PDU to work with");
-                                buffer_destroy(buf);
-                                spin_lock(&tmp->ingress.n1_ports->lock);
-                                break;
-                        }
-
-                        serdes = tmp->serdes;
-                        ASSERT(serdes);
-
-                        pdu = pdu_deserialize_ni(serdes, pdu_ser);
-                        if (!pdu) {
-                                LOG_ERR("Failed to deserialize PDU!");
-                                pdu_ser_destroy(pdu_ser);
-                                spin_lock(&tmp->ingress.n1_ports->lock);
-                                break;
-                        }
-
-                        pci = pdu_pci_get_ro(pdu);
-                        if (!pci) {
-                                LOG_ERR("No PCI to work with, dropping SDU!");
-                                pdu_destroy(pdu);
-                                spin_lock(&tmp->ingress.n1_ports->lock);
-                                break;
-                        }
-
-                        ASSERT(pdu_is_ok(pdu));
-
-                        pdu_type = pci_type(pci);
-                        dst_addr = pci_destination(pci);
-                        qos_id   = pci_qos_id(pci);
-                        if (!pdu_type_is_ok(pdu_type) ||
-                            !is_address_ok(dst_addr)  ||
-                            !is_qos_id_ok(qos_id)) {
-                                LOG_ERR("Wrong PDU type, dst address or qos_id,"
-                                        " dropping SDU! %u, %u, %u",
-                                        pdu_type, dst_addr, qos_id);
-                                pdu_destroy(pdu);
-                                spin_lock(&tmp->ingress.n1_ports->lock);
-                                break;
-                        }
-
-                        // pdu is not for me
-                        if (tmp->address != dst_addr) {
-                                if (!dst_addr) {
-                                        process_mgmt_pdu_ni(tmp, port_id, pdu);
-                                } else {
-                                        forward_pdu(tmp,
-                                                    port_id,
-                                                    dst_addr,
-                                                    qos_id,
-                                                    pdu);
-                                }
-                        } else {
-                                // pdu is for me
-                                switch (pdu_type) {
-                                case PDU_TYPE_MGMT:
-                                        process_mgmt_pdu_ni(tmp, port_id, pdu);
-                                        break;
-
-                                case PDU_TYPE_CACK:
-                                case PDU_TYPE_SACK:
-                                case PDU_TYPE_NACK:
-                                case PDU_TYPE_FC:
-                                case PDU_TYPE_ACK:
-                                case PDU_TYPE_ACK_AND_FC:
-                                case PDU_TYPE_DT:
-                                        process_dt_pdu(tmp, port_id, pdu);
-                                        LOG_DBG("Finishing  process_dt_sdu");
-                                        break;
-
-                                default:
-                                        LOG_ERR("Unknown PDU type %d", pdu_type);
-                                        pdu_destroy(pdu);
-                                        break;
-                                }
-                        }
-                        if (atomic_read(&entry->n_sdus) <= 0)
-                                atomic_set(&entry->n_sdus, 0);
-                        spin_lock(&tmp->ingress.n1_ports->lock);
-                }
-        }
-
-        spin_unlock(&tmp->ingress.n1_ports->lock);
-        tasklet_hi_schedule(&tmp->ingress.ingress_tasklet);
-
-        return;
-}
-*/
 
 static int
 default_rmt_scheduling_policy_rx(struct rmt_ps *      ps,
@@ -594,22 +325,15 @@ rmt_ps_default_create(struct rina_component * component)
         ps->base.set_policy_set_param = rmt_ps_set_policy_set_param;
         ps->dm          = rmt;
 
-
-        tasklet_init(&data->ingress_tasklet,
-                     receive_worker,
-                     (unsigned long) ps);
-        tasklet_init(&data->egress_tasklet,
-                     send_worker,
-                     (unsigned long) ps);
-
-        ps->max_q_policy_tx                 = default_max_q_policy_tx;
-        ps->max_q_policy_rx                 = default_max_q_policy_rx;
-        ps->rmt_q_monitor_policy_tx         = default_rmt_q_monitor_policy_tx;
-        ps->rmt_q_monitor_policy_rx         = default_rmt_q_monitor_policy_rx;
-        ps->rmt_scheduling_policy_tx        = default_rmt_scheduling_policy_tx;
-        ps->rmt_scheduling_policy_rx        = default_rmt_scheduling_policy_rx;
-        ps->rmt_scheduling_create_policy_tx = default_rmt_scheduling_create_policy_tx;
-        ps->rmt_scheduling_create_policy_rx = default_rmt_scheduling_create_policy_rx;
+        ps->max_q_policy_tx                  = default_max_q_policy_tx;
+        ps->max_q_policy_rx                  = default_max_q_policy_rx;
+        ps->rmt_q_monitor_policy_tx          = default_rmt_q_monitor_policy_tx;
+        ps->rmt_q_monitor_policy_rx          = default_rmt_q_monitor_policy_rx;
+        ps->rmt_next_scheduled_policy_tx     = default_rmt_next_scheduled_policy_tx;
+        ps->rmt_enqueue_scheduling_policy_tx = default_rmt_enqueue_scheduling_policy_tx;
+        ps->rmt_scheduling_policy_rx         = default_rmt_scheduling_policy_rx;
+        ps->rmt_scheduling_create_policy_tx  = default_rmt_scheduling_create_policy_tx;
+        ps->rmt_scheduling_create_policy_rx  = default_rmt_scheduling_create_policy_rx;
 
         ps->max_q       = 256;
 
@@ -629,8 +353,6 @@ rmt_ps_default_destroy(struct ps_base * bps)
                         if (data->outqs) rmt_queue_set_destroy(data->outqs);
                         rkfree(data);
                 }
-                tasklet_kill(&data->ingress_tasklet);
-                tasklet_kill(&data->egress_tasklet);
                 rkfree(ps);
         }
 }

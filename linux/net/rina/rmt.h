@@ -56,7 +56,6 @@ struct rmt;
 enum flow_state {
         N1_PORT_STATE_ENABLED,
         N1_PORT_STATE_DISABLED,
-        N1_PORT_STATE_BUSY
 };
 
 struct rmt_n1_port {
@@ -83,7 +82,6 @@ struct rmt_qgroup {
 };
 
 struct rmt_queue_set {
-        spinlock_t lock;
         DECLARE_HASHTABLE(qgroups, RMT_PS_HASHSIZE);
 };
 
@@ -130,7 +128,6 @@ int          rmt_send(struct rmt * instance,
                       address_t    address,
                       qos_id_t     qos_id,
                       struct pdu * pdu);
-
 int          rmt_send_port_id(struct rmt *  instance,
                               port_id_t     id,
                               struct pdu *  pdu);
