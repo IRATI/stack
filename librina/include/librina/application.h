@@ -177,11 +177,7 @@ struct PsInfo {
 };
 
 struct PsFactory {
-	/// Name of this pluggable policy set.
-        std::string name;
-
-        /// Name of the AE where this plugin applies.
-        std::string app_entity;
+	struct PsInfo info;
 
         /// Name of the plugin that published this policy set
         std::string plugin_name;
@@ -203,11 +199,9 @@ public:
 	AppPolicyManager() { };
 	virtual ~AppPolicyManager();
 	virtual std::vector<PsFactory>::iterator
-                  psFactoryLookup(const std::string& ae_name,
-                                  const std::string& name);
+                  psFactoryLookup(const PsInfo& ps_info);
 	virtual int psFactoryPublish(const PsFactory& factory);
-	virtual int psFactoryUnpublish(const std::string& ae_name,
-                                       const std::string& name);
+	virtual int psFactoryUnpublish(const PsInfo& ps_info);
 	virtual IPolicySet * psCreate(const std::string& ae_name,
                                       const std::string& name,
                                       ApplicationEntity * context);
