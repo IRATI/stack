@@ -27,7 +27,7 @@
 
 #ifdef __cplusplus
 
-#include "rib.h"
+#include "irm.h"
 #include "timer.h"
 
 namespace rina {
@@ -119,7 +119,7 @@ public:
 	IEnrollmentTask() : rina::ApplicationEntity(ApplicationEntity::ENROLLMENT_TASK_AE_NAME) { };
 	virtual ~IEnrollmentTask(){};
 	virtual const std::list<Neighbor *> get_neighbors() const = 0;
-	virtual const std::list<std::string> get_enrolled_ipc_process_names() const = 0;
+	virtual const std::list<std::string> get_enrolled_app_names() const = 0;
 
 	/// Process a request to initiate enrollment with a new Neighbor, triggered by the IPC Manager
 	/// @param event
@@ -160,6 +160,7 @@ public:
 
 // The common elements of an enrollment state machine
 class IEnrollmentStateMachine : public BaseCDAPResponseMessageHandler {
+	friend class EnrollmentFailedTimerTask;
 public:
 	static const std::string STATE_NULL;
 	static const std::string STATE_ENROLLED;
@@ -220,6 +221,84 @@ protected:
 	int port_id_;
 	TimerTask * last_scheduled_task_;
 	bool isIPCP_;
+};
+
+class EnrollmentFailedTimerTask: public rina::TimerTask {
+public:
+	EnrollmentFailedTimerTask(IEnrollmentStateMachine * state_machine,
+			const std::string& reason, bool enrollee);
+	~EnrollmentFailedTimerTask() throw() {};
+	void run();
+
+	IEnrollmentStateMachine * state_machine_;
+	std::string reason_;
+	bool enrollee_;
+};
+
+class BaseEnrollmentTask: public IEnrollmentTask, public InternalEventListener {
+public:
+	BaseEnrollmentTask(int timeout);
+	~BaseEnrollmentTask();
+	virtual void set_application_process(rina::ApplicationProcess * ap);
+	const std::list<Neighbor *> get_neighbors() const;
+	IEnrollmentStateMachine * getEnrollmentStateMachine(const std::string& apName,
+			int portId, bool remove);
+	bool isEnrolledTo(const std::string& applicationProcessName) const;
+	const std::list<std::string> get_enrolled_app_names() const;
+	virtual void initiateEnrollment(EnrollmentRequest * request);
+	virtual void release(int invoke_id, CDAPSessionDescriptor * session_descriptor);
+	virtual void releaseResponse(int result, const std::string& result_reason,
+			CDAPSessionDescriptor * session_descriptor);
+	void eventHappened(rina::InternalEvent * event);
+	virtual void enrollmentFailed(const ApplicationProcessNamingInformation& remotePeerNamingInfo,
+			int portId, const std::string& reason, bool enrolle, bool sendReleaseMessage);
+	void enrollmentCompleted(Neighbor * neighbor, bool enrollee);
+
+protected:
+	virtual void populateRIB();
+	virtual void subscribeToEvents();
+	void deallocateFlow(int portId);
+
+	/// Returns the enrollment state machine associated to the cdap descriptor.
+	/// @param cdapSessionDescriptor
+	/// @param remove
+	/// @return
+	IEnrollmentStateMachine * getEnrollmentStateMachine(
+			const CDAPSessionDescriptor * cdapSessionDescriptor, bool remove);
+
+	///  If the N-1 flow with the neighbor is still allocated, request its deallocation
+	/// @param deadEvent
+	virtual void neighborDeclaredDead(NeighborDeclaredDeadEvent * deadEvent);
+
+	/// Called by the RIB Daemon when the flow supporting the CDAP session with the remote peer
+	/// has been deallocated
+	/// @param event
+	virtual void nMinusOneFlowDeallocated(NMinusOneFlowDeallocatedEvent  * event);
+
+	/// Called when a new N-1 flow has been allocated
+	// @param portId
+	virtual void nMinusOneFlowAllocated(NMinusOneFlowAllocatedEvent * flowEvent) = 0;
+
+	/// Called when a new N-1 flow allocation has failed
+	/// @param portId
+	/// @param flowService
+	/// @param resultReason
+	virtual void nMinusOneFlowAllocationFailed(NMinusOneFlowAllocationFailedEvent * event);
+
+	IRIBDaemon * rib_daemon_;
+	InternalEventManager * event_manager_;
+	IPCResourceManager * irm_;
+
+	Lockable * lock_;
+
+	/// The maximum time to wait between steps of the enrollment sequence (in ms)
+	int timeout_;
+
+	/// Stores the enrollment state machines, one per remote IPC process that this IPC
+	/// process is enrolled to.
+	rina::ThreadSafeMapOfPointers<std::string, rina::IEnrollmentStateMachine> state_machines_;
+
+	rina::ThreadSafeMapOfPointers<unsigned int, rina::EnrollmentRequest> port_ids_pending_to_be_allocated_;
 };
 
 }

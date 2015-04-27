@@ -97,9 +97,9 @@ public:
 /// Interface that must be implementing by classes that provide
 /// the behavior of an enrollment task
 class IPCPEnrollmentTask : public IPCProcessComponent,
-			   public rina::IEnrollmentTask {
+			   public rina::BaseEnrollmentTask {
 public:
-	IPCPEnrollmentTask() { };
+	IPCPEnrollmentTask(int timeout) : BaseEnrollmentTask(timeout) { };
 	virtual ~IPCPEnrollmentTask(){};
 };
 

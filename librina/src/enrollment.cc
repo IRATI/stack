@@ -425,5 +425,388 @@ void IEnrollmentStateMachine::sendCreateInformation(const std::string& objectCla
 	}
 }
 
+//Class EnrollmentFailedTimerTask
+EnrollmentFailedTimerTask::EnrollmentFailedTimerTask(IEnrollmentStateMachine * state_machine,
+		const std::string& reason, bool enrollee) {
+	state_machine_ = state_machine;
+	reason_ = reason;
+	enrollee_ = enrollee;
+}
+
+void EnrollmentFailedTimerTask::run() {
+	try {
+		state_machine_->abortEnrollment(state_machine_->remote_peer_->name_, state_machine_->port_id_,
+				reason_, enrollee_, true);
+	} catch(rina::Exception &e) {
+		LOG_ERR("Problems aborting enrollment: %s", e.what());
+	}
+}
+
+//Class Enrollment Task
+BaseEnrollmentTask::BaseEnrollmentTask(int timeout)
+{
+	rib_daemon_ = 0;
+	irm_ = 0;
+	event_manager_ = 0;
+	timeout_ = timeout;
+	lock_ = new Lockable();
+}
+
+BaseEnrollmentTask::~BaseEnrollmentTask()
+{
+	if (lock_) {
+		delete lock_;
+	}
+}
+
+void BaseEnrollmentTask::set_application_process(rina::ApplicationProcess * ap)
+{
+	if (!ap)
+		return;
+
+	app = ap;
+	rib_daemon_ = dynamic_cast<IRIBDaemon*>(app->get_rib_daemon());
+	irm_ = dynamic_cast<IPCResourceManager*>(app->get_ipc_resource_manager());
+	event_manager_ = dynamic_cast<InternalEventManager*>(app->get_internal_event_manager());
+	populateRIB();
+	subscribeToEvents();
+}
+
+void BaseEnrollmentTask::populateRIB()
+{
+	try{
+		BaseRIBObject * ribObject = new NeighborSetRIBObject(app, rib_daemon_);
+		rib_daemon_->addRIBObject(ribObject);
+	}catch(Exception &e){
+		LOG_ERR("Problems adding object to RIB Daemon: %s", e.what());
+	}
+}
+
+void BaseEnrollmentTask::subscribeToEvents()
+{
+	event_manager_->subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED,
+					 this);
+	event_manager_->subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED,
+					 this);
+	event_manager_->subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATION_FAILED,
+					 this);
+	event_manager_->subscribeToEvent(rina::InternalEvent::APP_NEIGHBOR_DECLARED_DEAD,
+					 this);
+}
+
+const std::list<Neighbor *> BaseEnrollmentTask::get_neighbors() const
+{
+	std::list<Neighbor *> result;
+	BaseRIBObject * ribObject = 0;
+
+	try{
+		ribObject = rib_daemon_->readObject(NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_CLASS,
+						    NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_NAME);
+	} catch (Exception &e) {
+		LOG_ERR("Problems reading RIB object: %s", e.what());
+		return result;
+	}
+
+	if (!ribObject) {
+		return result;
+	}
+
+	std::list<BaseRIBObject *>::const_iterator it;
+	for (it = ribObject->get_children().begin();
+			it != ribObject->get_children().end(); ++it) {
+		result.push_back((Neighbor *) (*it)->get_value());
+	}
+
+	return result;
+}
+
+IEnrollmentStateMachine * BaseEnrollmentTask::getEnrollmentStateMachine(
+		const std::string& apName, int portId, bool remove)
+{
+	std::stringstream ss;
+	ss<<apName<<"-"<<portId;
+
+	if (remove) {
+		LOG_DBG("Removing enrollment state machine associated to %s %d",
+				apName.c_str(), portId);
+		return state_machines_.erase(ss.str());
+	} else {
+		return state_machines_.find(ss.str());
+	}
+}
+
+bool BaseEnrollmentTask::isEnrolledTo(const std::string& processName) const
+{
+	ScopedLock g(*lock_);
+
+	std::list<IEnrollmentStateMachine *> machines = state_machines_.getEntries();
+	std::list<IEnrollmentStateMachine *>::const_iterator it;
+	for (it = machines.begin(); it != machines.end(); ++it) {
+		if ((*it)->remote_peer_->name_.processName.compare(processName) == 0 &&
+				(*it)->state_ != IEnrollmentStateMachine::STATE_NULL) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+const std::list<std::string> BaseEnrollmentTask::get_enrolled_app_names() const
+{
+	std::list<std::string> result;
+
+	std::list<IEnrollmentStateMachine *> machines = state_machines_.getEntries();
+	std::list<IEnrollmentStateMachine *>::const_iterator it;
+	for (it = machines.begin(); it != machines.end(); ++it) {
+		result.push_back((*it)->remote_peer_->name_.processName);
+	}
+
+	return result;
+}
+
+void BaseEnrollmentTask::initiateEnrollment(EnrollmentRequest * request)
+{
+	if (isEnrolledTo(request->neighbor_->name_.processName)) {
+		LOG_ERR("Already enrolled to IPC Process %s", request->neighbor_->name_.processName.c_str());
+		return;
+	}
+
+	//Request the allocation of a new N-1 Flow to the destination IPC Process,
+	//dedicated to layer management
+	//FIXME not providing FlowSpec information
+	//FIXME not distinguishing between AEs
+	FlowInformation flowInformation;
+	flowInformation.remoteAppName = request->neighbor_->name_;
+	flowInformation.localAppName.processName = app->get_name();
+	flowInformation.localAppName.processInstance = app->get_instance();
+	flowInformation.difName = request->neighbor_->supporting_dif_name_;
+	unsigned int handle = -1;
+	try {
+		handle = irm_->allocateNMinus1Flow(flowInformation);
+	} catch (Exception &e) {
+		LOG_ERR("Problems allocating N-1 flow: %s", e.what());
+		return;
+	}
+
+	port_ids_pending_to_be_allocated_.put(handle, request);
+}
+
+void BaseEnrollmentTask::deallocateFlow(int portId)
+{
+	try {
+		irm_->deallocateNMinus1Flow(portId);
+	} catch (Exception &e) {
+		LOG_ERR("Problems deallocating N-1 flow: %s", e.what());
+	}
+}
+
+IEnrollmentStateMachine * BaseEnrollmentTask::getEnrollmentStateMachine(
+		const CDAPSessionDescriptor * cdapSessionDescriptor, bool remove)
+{
+	try {
+		if (app->get_name().compare(cdapSessionDescriptor->src_ap_name_) == 0) {
+			return getEnrollmentStateMachine(cdapSessionDescriptor->dest_ap_name_,
+					cdapSessionDescriptor->port_id_, remove);
+		} else {
+			return 0;
+		}
+	} catch (Exception &e) {
+		LOG_ERR("Problems retrieving state machine: &s", e.what());
+		return 0;
+	}
+}
+
+void BaseEnrollmentTask::release(int invoke_id, CDAPSessionDescriptor * session_descriptor)
+{
+	LOG_DBG("Received M_RELEASE cdapMessage from portId %d",
+			session_descriptor->port_id_);
+
+	try{
+		IEnrollmentStateMachine * stateMachine =
+				getEnrollmentStateMachine(session_descriptor, false);
+		stateMachine->release(invoke_id, session_descriptor);
+	}catch(Exception &e){
+		//Error getting the enrollment state machine
+		LOG_ERR("Problems getting enrollment state machine: %s", e.what());
+
+		try {
+			RemoteProcessId remote_id;
+			remote_id.port_id_ = session_descriptor->port_id_;
+
+			rib_daemon_->closeApplicationConnection(remote_id, 0);
+		} catch (Exception &e) {
+			LOG_ERR("Problems closing application connection: %s", e.what());
+		}
+
+		deallocateFlow(session_descriptor->port_id_);
+	}
+}
+
+void BaseEnrollmentTask::releaseResponse(int result, const std::string& result_reason,
+		CDAPSessionDescriptor * session_descriptor)
+{
+	LOG_DBG("Received M_RELEASE_R cdapMessage from portId %d",
+			session_descriptor->port_id_);
+
+	try{
+		IEnrollmentStateMachine * stateMachine =
+				getEnrollmentStateMachine(session_descriptor, false);
+		stateMachine->releaseResponse(result, result_reason, session_descriptor);
+	}catch(Exception &e){
+		//Error getting the enrollment state machine
+		LOG_ERR("Problems getting enrollment state machine: %s", e.what());
+
+		try {
+			RemoteProcessId remote_id;
+			remote_id.port_id_ = session_descriptor->port_id_;
+
+			rib_daemon_->closeApplicationConnection(remote_id, 0);
+		} catch (Exception &e) {
+			LOG_ERR("Problems closing application connection: %s", e.what());
+		}
+
+		deallocateFlow(session_descriptor->port_id_);
+	}
+}
+
+void BaseEnrollmentTask::eventHappened(InternalEvent * event)
+{
+	if (event->type == InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED){
+		NMinusOneFlowDeallocatedEvent * flowEvent =
+				(NMinusOneFlowDeallocatedEvent *) event;
+		nMinusOneFlowDeallocated(flowEvent);
+	}else if (event->type == InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED){
+		rina::NMinusOneFlowAllocatedEvent * flowEvent =
+				(NMinusOneFlowAllocatedEvent *) event;
+		nMinusOneFlowAllocated(flowEvent);
+	}else if (event->type == InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATION_FAILED){
+		NMinusOneFlowAllocationFailedEvent * flowEvent =
+				(NMinusOneFlowAllocationFailedEvent *) event;
+		nMinusOneFlowAllocationFailed(flowEvent);
+	}else if (event->type == InternalEvent::APP_NEIGHBOR_DECLARED_DEAD) {
+		NeighborDeclaredDeadEvent * deadEvent =
+				(NeighborDeclaredDeadEvent *) event;
+		neighborDeclaredDead(deadEvent);
+	}
+}
+
+void BaseEnrollmentTask::neighborDeclaredDead(NeighborDeclaredDeadEvent * deadEvent)
+{
+	try{
+		irm_->getNMinus1FlowInformation(deadEvent->neighbor_->underlying_port_id_);
+	} catch(Exception &e){
+		LOG_INFO("The N-1 flow with the dead neighbor has already been deallocated");
+		return;
+	}
+
+	try{
+		LOG_INFO("Requesting the deallocation of the N-1 flow with the dead neibhor");
+		irm_->deallocateNMinus1Flow(deadEvent->neighbor_->underlying_port_id_);
+	} catch (rina::Exception &e){
+		LOG_ERR("Problems requesting the deallocation of a N-1 flow: %s", e.what());
+	}
+}
+
+void BaseEnrollmentTask::nMinusOneFlowDeallocated(NMinusOneFlowDeallocatedEvent  * event)
+{
+	//1 Check if the flow deallocated was a management flow
+	if(!event->management_flow_){
+		return;
+	}
+
+	//2 Remove the enrollment state machine from the list
+	try{
+		IEnrollmentStateMachine * enrollmentStateMachine =
+				getEnrollmentStateMachine(&(event->cdap_session_descriptor_), true);
+		if (!enrollmentStateMachine){
+			//Do nothing, we had already cleaned up
+			return;
+		}else{
+			enrollmentStateMachine->flowDeallocated(&(event->cdap_session_descriptor_));
+			delete enrollmentStateMachine;
+		}
+	}catch(Exception &e){
+		LOG_ERR("Problems: %s", e.what());
+	}
+
+	//3 Check if we still have connectivity to the neighbor, if not, issue a ConnectivityLostEvent
+	std::list<IEnrollmentStateMachine *> machines = state_machines_.getEntries();
+	std::list<IEnrollmentStateMachine *>::const_iterator it;
+	for (it = machines.begin(); it!= machines.end(); ++it) {
+		if ((*it)->remote_peer_->name_.processName.compare(
+				event->cdap_session_descriptor_.dest_ap_name_) == 0){
+			//We still have connectivity with the neighbor, return
+			return;
+		}
+	}
+
+	//We don't have connectivity to the neighbor, issue a Connectivity lost event
+	std::list<rina::Neighbor *> neighbors = get_neighbors();
+	std::list<rina::Neighbor *>::const_iterator it2;
+	for (it2 = neighbors.begin(); it2 != neighbors.end(); ++it2) {
+		if ((*it2)->name_.processName.compare(event->cdap_session_descriptor_.dest_ap_name_) == 0) {
+			rina::ConnectiviyToNeighborLostEvent * event2 =
+					new rina::ConnectiviyToNeighborLostEvent((*it2));
+			event_manager_->deliverEvent(event2);
+			return;
+		}
+	}
+}
+
+void BaseEnrollmentTask::nMinusOneFlowAllocationFailed(NMinusOneFlowAllocationFailedEvent * event)
+{
+	rina::EnrollmentRequest * request =
+			port_ids_pending_to_be_allocated_.erase(event->handle_);
+
+	if (!request){
+		return;
+	}
+
+	LOG_WARN("The allocation of management flow identified by handle %u has failed. Error code: %d",
+			event->handle_, event->flow_information_.portId);
+
+	delete request;
+}
+
+void BaseEnrollmentTask::enrollmentFailed(const ApplicationProcessNamingInformation& remotePeerNamingInfo,
+		int portId, const std::string& reason, bool enrollee, bool sendReleaseMessage)
+{
+	LOG_ERR("An error happened during enrollment of remote IPC Process %s because of %s",
+			remotePeerNamingInfo.getEncodedString().c_str(), reason.c_str());
+
+	(void) enrollee;
+
+	//1 Remove enrollment state machine from the store
+	IEnrollmentStateMachine * stateMachine =
+			getEnrollmentStateMachine(remotePeerNamingInfo.processName, portId, true);
+	if (!stateMachine) {
+		LOG_ERR("Could not find the enrollment state machine associated to neighbor %s and portId %d",
+				remotePeerNamingInfo.processName.c_str(), portId);
+		return;
+	}
+
+	//2 Send message and deallocate flow if required
+	if(sendReleaseMessage){
+		try {
+			RemoteProcessId remote_id;
+			remote_id.port_id_ = portId;
+
+			rib_daemon_->closeApplicationConnection(remote_id, 0);
+		} catch (Exception &e) {
+			LOG_ERR("Problems closing application connection: %s", e.what());
+		}
+
+		deallocateFlow(portId);
+	}
+
+	delete stateMachine;
+}
+
+void BaseEnrollmentTask::enrollmentCompleted(Neighbor * neighbor, bool enrollee)
+{
+	NeighborAddedEvent * event = new NeighborAddedEvent(neighbor, enrollee);
+	event_manager_->deliverEvent(event);
+}
+
 }
 
