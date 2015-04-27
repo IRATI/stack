@@ -265,6 +265,8 @@ static struct pft * pft_create_gfp(gfp_t flags)
 
         INIT_LIST_HEAD(&tmp->entries);
 
+        rina_component_init(&tmp->base);
+
         return tmp;
 }
 
@@ -336,6 +338,8 @@ int pft_destroy(struct pft * instance)
         __pft_flush(instance);
 
         mutex_unlock(&instance->write_lock);
+
+        rina_component_fini(&instance->base);
 
         rkfree(instance);
 
