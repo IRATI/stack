@@ -811,46 +811,34 @@ void RIBDaemon::processIncomingCDAPMessage(const rina::CDAPMessage * cdapMessage
 {
 	rina::CDAPMessage::Opcode opcode = cdapMessage->get_op_code();
 
-	if (session_state == rina::CDAPSessionInterface::SESSION_STATE_NONE) {
+	if (session_state == rina::CDAPSessionInterface::SESSION_STATE_AWAIT_CON) {
 		if (opcode == rina::CDAPMessage::M_CONNECT) {
 			cacep_handler_->connect(cdapMessage->invoke_id_,
 			                        descriptor);
 		} else {
-			LOG_ERR("Ignoring invalid CDAP opcode for NONE CDAP session state: %s",
-				 cdapMessage->to_string().c_str());
+			//TODO These must be authentication messages, delegate to CACEPHandler
+			//who will delegate to the authentication policy
 		}
 
 		return;
-	}
-
-	if (session_state == rina::CDAPSessionInterface::SESSION_STATE_AWAIT_CON) {
-		//TODO These must be authentication messages, delegate to CACEPHandler
-		//who will delegate to the authentication policy
-		return;
-	}
-
-	if (session_state == rina::CDAPSessionInterface::SESSION_STATE_AWAIT_CLOSE) {
-		if (opcode == rina::CDAPMessage::M_RELEASE_R) {
-                	cacep_handler_->releaseResponse(cdapMessage->result_,
-                					cdapMessage->result_reason_,
-                					descriptor);
-		} else {
-			LOG_ERR("Ignoring invalid CDAP opcode for AWAIT_CLOSE CDAP session state: %s",
-				 cdapMessage->to_string().c_str());
-		}
 	}
 
         try {
                 switch (opcode) {
                 case rina::CDAPMessage::M_CONNECT_R:
                 	cacep_handler_->connectResponse(cdapMessage->result_,
-                					cdapMessage->result_reason_,
-                					descriptor);
-                        break;
+                	                		cdapMessage->result_reason_,
+                	                		descriptor);
+                	break;
                 case rina::CDAPMessage::M_RELEASE:
                 	cacep_handler_->release(cdapMessage->invoke_id_,
                 				descriptor);
                         break;
+                case rina::CDAPMessage::M_RELEASE_R:
+                	cacep_handler_->releaseResponse(cdapMessage->result_,
+                					cdapMessage->result_reason_,
+                					descriptor);
+                	break;
                 case rina::CDAPMessage::M_CREATE:
                         processIncomingRequestMessage(cdapMessage,
                         			      descriptor);
