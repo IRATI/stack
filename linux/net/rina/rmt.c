@@ -367,12 +367,6 @@ struct rmt {
         struct serdes *           serdes;
 
         struct {
-                struct tasklet_struct ingress_tasklet;
-                struct n1pmap *       n1_ports;
-                struct pft_cache      cache;
-        } ingress;
-
-        struct {
                 struct tasklet_struct egress_tasklet;
                 struct n1pmap *       n1_ports;
                 struct pft_cache      cache;
@@ -440,11 +434,6 @@ int rmt_destroy(struct rmt * instance)
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
         }
-
-        if (instance->ingress.n1_ports)
-                n1pmap_destroy(instance->ingress.n1_ports, false);
-        tasklet_kill(&instance->ingress.ingress_tasklet);
-        pft_cache_fini(&instance->ingress.cache);
 
         if (instance->egress.n1_ports)
                 n1pmap_destroy(instance->egress.n1_ports, true);
@@ -784,10 +773,10 @@ int rmt_send(struct rmt * instance,
 
                 pid = instance->egress.cache.pids[i];
 
-                if (instance->egress.cache.count > 1)
-                        p = pdu_dup(pdu);
-                else
+                if (i == instance->egress.cache.count -1)
                         p = pdu;
+                else
+                        p = pdu_dup(pdu);
 
                 LOG_DBG("Gonna send PDU to port-id: %d", pid);
                 if (rmt_send_port_id(instance, pid, p))
@@ -969,100 +958,12 @@ static int rmt_n1_port_send_delete(struct rmt * instance,
         return n1_port_destroy(q, false);
 }
 
-static int __queue_recv_add(struct rmt * instance,
-                            port_id_t    id,
-                            struct ipcp_instance * n1_ipcp)
-{
-        struct rmt_n1_port * tmp;
-        struct rmt_ps *      ps;
-
-        tmp = n1_port_create(id, n1_ipcp);
-        if (!tmp)
-                return -1;
-
-        hash_add(instance->ingress.n1_ports->n1_ports, &tmp->hlist, id);
-
-        rcu_read_lock();
-        ps = container_of(rcu_dereference(instance->base.ps), struct rmt_ps, base);
-        if (ps && ps->rmt_scheduling_create_policy_rx) {
-                if (ps->rmt_scheduling_create_policy_rx(ps, tmp))
-                        return -1;
-        }
-        rcu_read_unlock();
-
-        LOG_DBG("Added receive queue to rmt instance %pK for port-id %d",
-                instance, id);
-
-        return 0;
-}
-
-static int rmt_n1_port_recv_add(struct rmt *                instance,
-                              port_id_t                   id,
-                              struct ipcp_instance * n1_ipcp)
-{
-        if (!instance) {
-                LOG_ERR("Bogus instance passed");
-                return -1;
-        }
-
-        if (!is_port_id_ok(id)) {
-                LOG_ERR("Wrong port-id %d", id);
-                return -1;
-        }
-
-        if (!instance->ingress.n1_ports) {
-                LOG_ERR("Invalid RMT");
-                return -1;
-        }
-
-        if (n1pmap_find(instance->ingress.n1_ports, id)) {
-                LOG_ERR("Queue already exists");
-                return -1;
-        }
-
-        return __queue_recv_add(instance, id, n1_ipcp);
-}
-
-static int rmt_n1_port_recv_delete(struct rmt * instance,
-                                 port_id_t    id)
-{
-        struct rmt_n1_port * q;
-
-        if (!instance) {
-                LOG_ERR("Bogus instance passed");
-                return -1;
-        }
-
-        if (!instance->ingress.n1_ports) {
-                LOG_ERR("Bogus egress instance passed");
-                return -1;
-        }
-
-        if (!is_port_id_ok(id)) {
-                LOG_ERR("Wrong port-id %d", id);
-                return -1;
-        }
-
-        q = n1pmap_find(instance->ingress.n1_ports, id);
-        if (!q) {
-                LOG_ERR("Queue does not exist");
-                return -1;
-        }
-
-        return n1_port_destroy(q, false);
-}
-
 int rmt_n1port_bind(struct rmt * instance,
                     port_id_t    id,
                     struct ipcp_instance * n1_ipcp)
 {
         if (rmt_n1_port_send_add(instance, id, n1_ipcp))
                 return -1;
-
-        if (rmt_n1_port_recv_add(instance, id, n1_ipcp)) {
-                rmt_n1_port_send_delete(instance, id);
-                return -1;
-        }
 
         return 0;
 }
@@ -1074,9 +975,6 @@ int rmt_n1port_unbind(struct rmt * instance,
         int retval = 0;
 
         if (rmt_n1_port_send_delete(instance, id))
-                retval = -1;
-
-        if (rmt_n1_port_recv_delete(instance, id))
                 retval = -1;
 
         return retval;
@@ -1210,125 +1108,10 @@ static int process_dt_pdu(struct rmt * rmt,
         return 0;
 }
 
-static int forward_pdu(struct rmt * rmt,
-                       port_id_t    port_id,
-                       address_t    dst_addr,
-                       qos_id_t     qos_id,
-                       struct pdu * pdu)
+int rmt_receive(struct rmt * rmt,
+                struct sdu * sdu,
+                port_id_t    from)
 {
-        int                i;
-        struct sdu *       sdu;
-        struct pdu_ser *   pdu_ser;
-        struct buffer *    buffer;
-        struct serdes *    serdes;
-        struct rmt_n1_port * queue;
-
-        if (!is_address_ok(dst_addr)) {
-                LOG_ERR("PDU has Wrong destination address");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        if (!is_qos_id_ok(qos_id)) {
-                LOG_ERR("QOS id is wrong...");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        serdes = rmt->serdes;
-        ASSERT(serdes);
-
-        pdu_ser = pdu_serialize_ni(serdes, pdu);
-        if (!pdu_ser) {
-                LOG_ERR("Error creating serialized PDU");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        buffer = pdu_ser_buffer(pdu_ser);
-        if (!buffer_is_ok(buffer)) {
-                LOG_ERR("Buffer is not okay");
-                pdu_ser_destroy(pdu_ser);
-                return -1;
-        }
-
-        if (pdu_ser_buffer_disown(pdu_ser)) {
-                LOG_ERR("Could not disown buffer");
-                pdu_ser_destroy(pdu_ser);
-                return -1;
-        }
-
-        pdu_ser_destroy(pdu_ser);
-
-        sdu = sdu_create_buffer_with_ni(buffer);
-        if (!sdu) {
-                LOG_ERR("Error creating SDU from serialized PDU, "
-                        "dropping PDU!");
-                buffer_destroy(buffer);
-                return -1;
-        }
-
-        ASSERT(rmt->address != dst_addr);
-
-        if (pft_nhop(rmt->pft,
-                     dst_addr,
-                     qos_id,
-                     &(rmt->ingress.cache.pids),
-                     &(rmt->ingress.cache.count))) {
-                LOG_ERR("Cannot get NHOP");
-                sdu_destroy(sdu);
-                return -1;
-        }
-
-        if (rmt->ingress.cache.count > 0) {
-                for (i = 1; i < rmt->ingress.cache.count; i++) {
-                        struct sdu * tmp;
-
-                        tmp = sdu_dup(sdu);
-                        if (!tmp)
-                                continue;
-
-                        queue = n1pmap_find(rmt->ingress.n1_ports,
-                                            rmt->ingress.cache.pids[i]);
-                        if (!queue)
-                                continue;
-
-                        ASSERT(queue->n1_ipcp);
-                        ASSERT(queue->n1_ipcp->ops->sdu_write);
-                        if (queue->n1_ipcp->ops->sdu_write(queue->n1_ipcp->data,
-                                                           rmt->ingress.cache.pids[i],
-                                                           tmp))
-                                LOG_ERR("Cannot write SDU to N-1 IPCP port-id %d",
-                                        rmt->ingress.cache.pids[i]);
-                }
-
-                queue = n1pmap_find(rmt->ingress.n1_ports,
-                                    rmt->ingress.cache.pids[0]);
-                if (!queue)
-                        /* FIXME: As in the continue before, some port could not
-                         * be used */
-                        return 0;
-
-                ASSERT(queue->n1_ipcp);
-                ASSERT(queue->n1_ipcp->ops->sdu_write);
-                if (queue->n1_ipcp->ops->sdu_write(queue->n1_ipcp->data,
-                                                   rmt->ingress.cache.pids[0],
-                                                   sdu))
-                        LOG_ERR("Cannot write SDU to N-1 IPCP port-id %d",
-                                rmt->ingress.cache.pids[0]);
-        } else {
-                LOG_DBG("Could not forward PDU");
-                sdu_destroy(sdu);
-        }
-
-        return 0;
-}
-
-static int receive_direct(struct rmt       * tmp,
-                          struct rmt_n1_port * entry,
-                          struct sdu * sdu)
-{
-        port_id_t           port_id;
         pdu_type_t          pdu_type;
         const struct pci *  pci;
         struct pdu_ser *    pdu_ser;
@@ -1338,7 +1121,20 @@ static int receive_direct(struct rmt       * tmp,
         struct serdes *     serdes;
         struct buffer *     buf;
 
-        port_id = entry->port_id;
+        if (!sdu_is_ok(sdu)) {
+                LOG_ERR("Bogus SDU passed");
+                return -1;
+        }
+        if (!rmt) {
+                LOG_ERR("No RMT passed");
+                sdu_destroy(sdu);
+                return -1;
+        }
+        if (!is_port_id_ok(from)) {
+                LOG_ERR("Wrong port-id %d", from);
+                sdu_destroy(sdu);
+                return -1;
+        }
 
         buf = sdu_buffer_rw(sdu);
         if (!buf) {
@@ -1362,7 +1158,7 @@ static int receive_direct(struct rmt       * tmp,
                 return -1;
         }
 
-        serdes = tmp->serdes;
+        serdes = rmt->serdes;
         ASSERT(serdes);
 
         pdu = pdu_deserialize_ni(serdes, pdu_ser);
@@ -1395,21 +1191,21 @@ static int receive_direct(struct rmt       * tmp,
         }
 
         /* pdu is not for me */
-        if (tmp->address != dst_addr) {
+        if (rmt->address != dst_addr) {
                 if (!dst_addr) {
-                        return process_mgmt_pdu_ni(tmp, port_id, pdu);
+                        return process_mgmt_pdu_ni(rmt, from, pdu);
                 } else {
-                        return forward_pdu(tmp,
-                                           port_id,
-                                           dst_addr,
-                                           qos_id,
-                                           pdu);
+                        /* Forward PDU */
+                        return rmt_send(rmt,
+                                        dst_addr,
+                                        qos_id,
+                                        pdu);
                 }
         } else {
                 /* pdu is for me */
                 switch (pdu_type) {
                 case PDU_TYPE_MGMT:
-                        return process_mgmt_pdu_ni(tmp, port_id, pdu);
+                        return process_mgmt_pdu_ni(rmt, from, pdu);
 
                 case PDU_TYPE_CACK:
                 case PDU_TYPE_SACK:
@@ -1424,7 +1220,7 @@ static int receive_direct(struct rmt       * tmp,
                  * enqueue PDU in pdus_dt[dest-addr, qos-id]
                  * don't process it now ...
                  */
-                        return process_dt_pdu(tmp, port_id, pdu);
+                        return process_dt_pdu(rmt, from, pdu);
 
                default:
                         LOG_ERR("Unknown PDU type %d", pdu_type);
@@ -1432,225 +1228,6 @@ static int receive_direct(struct rmt       * tmp,
                         return -1;
                 }
        }
-}
-
-static void receive_worker(unsigned long o)
-{ }
-/*
-{
-        struct rmt *         tmp;
-        struct rfifo *       queue;
-        struct rmt_ps *      ps;
-        bool                 sched_restart = true;
-        struct rmt_n1_port * entry;
-        int                  bucket;
-        struct hlist_node *  ntmp;
-
-        port_id_t            port_id;
-        pdu_type_t           pdu_type;
-        const struct pci *   pci;
-        struct pdu_ser *     pdu_ser;
-        struct pdu *         pdu;
-        address_t            dst_addr;
-        qos_id_t             qos_id;
-        struct serdes *      serdes;
-        struct buffer *      buf;
-        struct sdu *         sdu;
-
-        LOG_DBG("RMT tasklet receive worker called");
-
-        tmp = (struct rmt *) o;
-        if (!tmp) {
-                LOG_ERR("No instance passed to receive worker !!!");
-                return;
-        }
-
-        rcu_read_lock();
-        ps = container_of(rcu_dereference(tmp->base.ps),
-                          struct rmt_ps,
-                          base);
-        if (!ps) {
-                LOG_ERR("No ps in the receive_worker");
-                rcu_read_unlock();
-                return;
-        }
-        rcu_read_unlock();
-
-        spin_lock(&tmp->ingress.n1_ports->lock);
-        hash_for_each_safe(tmp->ingress.n1_ports->n1_ports,
-                           bucket,
-                           ntmp,
-                           entry,
-                           hlist) {
-                ASSERT(entry);
-
-                for (;;) {
-                        queue = ps->rmt_scheduling_policy_rx(ps,
-                                        entry, sched_restart);
-                        if (!queue) {
-                                // No more queues to serve.
-                                break;
-                        }
-                        sched_restart = false;
-
-                        sdu = (struct sdu *) rfifo_pop(queue);
-                        if (!sdu) {
-                                LOG_DBG("No SDU to work with in this queue");
-                                break;
-                        }
-
-                        atomic_dec(&entry->n_sdus);
-
-                        port_id = entry->port_id;
-                        spin_unlock(&tmp->ingress.n1_ports->lock);
-
-                        buf = sdu_buffer_rw(sdu);
-                        if (!buf) {
-                                LOG_DBG("No buffer present");
-                                sdu_destroy(sdu);
-                                spin_lock(&tmp->ingress.n1_ports->lock);
-                                break;
-                        }
-
-                        if (sdu_buffer_disown(sdu)) {
-                                LOG_DBG("Could not disown SDU");
-                                sdu_destroy(sdu);
-                                spin_lock(&tmp->ingress.n1_ports->lock);
-                                break;
-                        }
-
-                        sdu_destroy(sdu);
-
-                        pdu_ser = pdu_ser_create_buffer_with_ni(buf);
-                        if (!pdu_ser) {
-                                LOG_DBG("No ser PDU to work with");
-                                buffer_destroy(buf);
-                                spin_lock(&tmp->ingress.n1_ports->lock);
-                                break;
-                        }
-
-                        serdes = tmp->serdes;
-                        ASSERT(serdes);
-
-                        pdu = pdu_deserialize_ni(serdes, pdu_ser);
-                        if (!pdu) {
-                                LOG_ERR("Failed to deserialize PDU!");
-                                pdu_ser_destroy(pdu_ser);
-                                spin_lock(&tmp->ingress.n1_ports->lock);
-                                break;
-                        }
-
-                        pci = pdu_pci_get_ro(pdu);
-                        if (!pci) {
-                                LOG_ERR("No PCI to work with, dropping SDU!");
-                                pdu_destroy(pdu);
-                                spin_lock(&tmp->ingress.n1_ports->lock);
-                                break;
-                        }
-
-                        ASSERT(pdu_is_ok(pdu));
-
-                        pdu_type = pci_type(pci);
-                        dst_addr = pci_destination(pci);
-                        qos_id   = pci_qos_id(pci);
-                        if (!pdu_type_is_ok(pdu_type) ||
-                            !is_address_ok(dst_addr)  ||
-                            !is_qos_id_ok(qos_id)) {
-                                LOG_ERR("Wrong PDU type, dst address or qos_id,"
-                                        " dropping SDU! %u, %u, %u",
-                                        pdu_type, dst_addr, qos_id);
-                                pdu_destroy(pdu);
-                                spin_lock(&tmp->ingress.n1_ports->lock);
-                                break;
-                        }
-
-                        // pdu is not for me
-                        if (tmp->address != dst_addr) {
-                                if (!dst_addr) {
-                                        process_mgmt_pdu_ni(tmp, port_id, pdu);
-                                } else {
-                                        forward_pdu(tmp,
-                                                    port_id,
-                                                    dst_addr,
-                                                    qos_id,
-                                                    pdu);
-                                }
-                        } else {
-                                // pdu is for me
-                                switch (pdu_type) {
-                                case PDU_TYPE_MGMT:
-                                        process_mgmt_pdu_ni(tmp, port_id, pdu);
-                                        break;
-
-                                case PDU_TYPE_CACK:
-                                case PDU_TYPE_SACK:
-                                case PDU_TYPE_NACK:
-                                case PDU_TYPE_FC:
-                                case PDU_TYPE_ACK:
-                                case PDU_TYPE_ACK_AND_FC:
-                                case PDU_TYPE_DT:
-                                        process_dt_pdu(tmp, port_id, pdu);
-                                        LOG_DBG("Finishing  process_dt_sdu");
-                                        break;
-
-                                default:
-                                        LOG_ERR("Unknown PDU type %d", pdu_type);
-                                        pdu_destroy(pdu);
-                                        break;
-                                }
-                        }
-                        if (atomic_read(&entry->n_sdus) <= 0)
-                                atomic_set(&entry->n_sdus, 0);
-                        spin_lock(&tmp->ingress.n1_ports->lock);
-                }
-        }
-
-        spin_unlock(&tmp->ingress.n1_ports->lock);
-        tasklet_hi_schedule(&tmp->ingress.ingress_tasklet);
-
-        return;
-}
-*/
-
-int rmt_receive(struct rmt * instance,
-                struct sdu * sdu,
-                port_id_t    from)
-{
-        struct n1pmap *      in_n1_ports;
-        struct rmt_n1_port * in_n1_port;
-        unsigned long        flags;
-
-        if (!sdu_is_ok(sdu)) {
-                LOG_ERR("Bogus SDU passed");
-                return -1;
-        }
-        if (!instance) {
-                LOG_ERR("No RMT passed");
-                sdu_destroy(sdu);
-                return -1;
-        }
-        if (!is_port_id_ok(from)) {
-                LOG_ERR("Wrong port-id %d", from);
-                sdu_destroy(sdu);
-                return -1;
-        }
-        if (!instance->ingress.n1_ports) {
-                LOG_ERR("No ingress n1_ports in RMT instance %pK", instance);
-                sdu_destroy(sdu);
-                return -1;
-        }
-
-        in_n1_ports = instance->ingress.n1_ports;
-
-        spin_lock_irqsave(&in_n1_ports->lock, flags);
-        in_n1_port = n1pmap_find(in_n1_ports, from);
-        if (!in_n1_port) {
-                spin_unlock_irqrestore(&in_n1_ports->lock, flags);
-                sdu_destroy(sdu);
-                return -1;
-        }
-        spin_unlock_irqrestore(&in_n1_ports->lock, flags);
-        return receive_direct(instance, in_n1_port, sdu);
 }
 EXPORT_SYMBOL(rmt_receive);
 
@@ -1677,17 +1254,10 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
         if (!tmp->pft)
                 goto fail;
 
-        tmp->ingress.n1_ports = n1pmap_create();
-        if (!tmp->ingress.n1_ports || pft_cache_init(&tmp->ingress.cache))
-                goto fail;
-
         tmp->egress.n1_ports = n1pmap_create();
         if (!tmp->egress.n1_ports || pft_cache_init(&tmp->egress.cache))
                 goto fail;
 
-        tasklet_init(&tmp->ingress.ingress_tasklet,
-                     receive_worker,
-                     (unsigned long) tmp);
         tasklet_init(&tmp->egress.egress_tasklet,
                      send_worker,
                      (unsigned long) tmp);
@@ -1998,174 +1568,6 @@ static bool regression_tests_process_mgmt_pdu(struct rmt * rmt,
                 LOG_DBG("Cannot destroy SDU something bad happened");
                 return false;
         }
-
-        return true;
-}
-
-static bool regression_tests_ingress_queue(void)
-{
-        struct rmt *       rmt;
-        struct rmt_n1_port * tmp;
-        port_id_t          id;
-        struct sdu *       sdu;
-        struct pdu *       pdu;
-        address_t          address;
-        const char *       name;
-        bool               nothing_to_do;
-
-        address = 17;
-
-        rmt = rkzalloc(sizeof(*rmt), GFP_KERNEL);
-        if (!rmt) {
-                LOG_DBG("Could not malloc memory for RMT");
-                return false;
-        }
-
-        LOG_DBG("Creating a qmap instance for ingress");
-        rmt->ingress.n1_ports = n1pmap_create();
-        if (!rmt->ingress.n1_ports) {
-                LOG_DBG("Failed to create qmap");
-                rmt_destroy(rmt);
-                return false;
-        }
-
-        LOG_DBG("Creating rmt-ingress-wq");
-        name = create_name("ingress-wq", rmt);
-        if (!name) {
-                rmt_destroy(rmt);
-                return false;
-        }
-        rmt->ingress.wq = rwq_create_hp(name);
-        if (!rmt->ingress.wq) {
-                rmt_destroy(rmt);
-                return false;
-        }
-
-        id = 1;
-        if (rmt_n1_port_recv_add(rmt, id)) {
-                LOG_DBG("Failed to add queue");
-                rmt_destroy(rmt);
-                return false;
-        }
-        LOG_DBG("Added to qmap");
-
-        tmp = n1pmap_find(rmt->ingress.n1_ports, id);
-        if (!tmp) {
-                LOG_DBG("Failed to retrieve queue");
-                rmt_destroy(rmt);
-                return false;
-        }
-        tmp = NULL;
-
-        pdu = regression_tests_pdu_create(address);
-        if (!pdu) {
-                LOG_DBG("Failed to create pdu");
-                rmt_destroy(rmt);
-                return false;
-        }
-
-        sdu = sdu_create_pdu_with(pdu);
-        if (!sdu) {
-                LOG_DBG("Failed to create SDU");
-                pdu_destroy(pdu);
-                rmt_destroy(rmt);
-                return false;
-        }
-        spin_lock(&rmt->ingress.n1_ports->lock);
-        tmp = n1pmap_find(rmt->ingress.n1_ports, id);
-        if (!tmp) {
-                spin_unlock(&rmt->ingress.n1_ports->lock);
-                sdu_destroy(sdu);
-                rmt_destroy(rmt);
-                return false;
-        }
-
-        if (rfifo_push_ni(tmp->queue, sdu)) {
-                spin_unlock(&rmt->ingress.n1_ports->lock);
-                sdu_destroy(sdu);
-                rmt_destroy(rmt);
-                return false;
-        }
-        spin_unlock(&rmt->ingress.n1_ports->lock);
-
-        nothing_to_do = false;
-        while (!nothing_to_do) {
-                struct rmt_n1_port *  entry;
-                int                 bucket;
-                struct hlist_node * ntmp;
-
-                nothing_to_do = true;
-                hash_for_each_safe(rmt->ingress.n1_ports->n1_ports,
-                                   bucket,
-                                   ntmp,
-                                   entry,
-                                   hlist) {
-                        struct sdu * sdu;
-                        port_id_t    pid;
-                        pdu_type_t   pdu_type;
-                        struct pci * pci;
-
-                        ASSERT(entry);
-
-                        spin_lock(&rmt->ingress.n1_ports->lock);
-                        sdu     = (struct sdu *) rfifo_pop(entry->queue);
-                        pid = entry->port_id;
-                        spin_unlock(&rmt->ingress.n1_ports->lock);
-
-                        if (!sdu) {
-                                LOG_DBG("No SDU to work with");
-                                break;
-                        }
-
-                        nothing_to_do = false;
-                        pci = sdu_pci_copy(sdu);
-                        if (!pci) {
-                                LOG_DBG("No PCI to work with");
-                                break;
-                        }
-
-                        pdu_type = pci_type(pci);
-                        if (!pdu_type_is_ok(pdu_type)) {
-                                LOG_ERR("Wrong PDU type");
-                                pci_destroy(pci);
-                                sdu_destroy(sdu);
-                                break;
-                        }
-                        LOG_DBG("PDU type: %X", pdu_type);
-                        switch (pdu_type) {
-                        case PDU_TYPE_MGMT:
-                                regression_tests_process_mgmt_pdu(rmt,
-                                                                  pid,
-                                                                  sdu);
-                                break;
-                        case PDU_TYPE_DT:
-                                /*
-                                 * (FUTURE)
-                                 *
-                                 * enqueue PDU in pdus_dt[dest-addr, qos-id]
-                                 * don't process it now ...
-                                 *
-                                 * process_dt_pdu(rmt, port_id, sdu);
-                                 */
-                                break;
-                        default:
-                                LOG_ERR("Unknown PDU type %d", pdu_type);
-                                sdu_destroy(sdu);
-                                break;
-                        }
-                        pci_destroy(pci);
-
-                        /* (FUTURE) foreach_end() */
-                }
-        }
-
-        if (n1_port_destroy(tmp)) {
-                LOG_DBG("Failed to destroy queue");
-                rmt_destroy(rmt);
-                return false;
-        }
-
-        rmt_destroy(rmt);
 
         return true;
 }
