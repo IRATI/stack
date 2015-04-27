@@ -72,6 +72,22 @@ bool ConnectionStateMachine::is_connected()
 	return result;
 }
 
+bool ConnectionStateMachine::can_send_or_receive_messages()
+{
+	bool result = false;
+	lock();
+
+	//Messages can be sent or received after the M_CONNECT
+	//since there might be authentication messages exchanged
+	//before the M_CONNECT_R
+	if (connection_state_ == CONNECTED ||
+			connection_state_ == AWAITCON) {
+		result = true;
+	}
+	unlock();
+	return result;
+}
+
 void ConnectionStateMachine::checkConnect() {
   lock();
   if (connection_state_ != NONE) {
@@ -574,6 +590,14 @@ void CDAPSessionImpl::checkIsConnected() const {
         "Cannot send a message because the CDAP session is not in CONNECTED state");
   }
 }
+
+void CDAPSessionImpl::check_can_send_or_receive_messages() const
+{
+	if (!connection_state_machine_->can_send_or_receive_messages()) {
+		throw CDAPException("The CDAP session is not in CONN or AWAITCON state");
+	}
+}
+
 void CDAPSessionImpl::checkInvokeIdNotExists(const CDAPMessage &cdap_message,
                                              bool sent) const {
   const std::map<int, CDAPOperationState*>* pending_messages;
@@ -626,25 +650,28 @@ void CDAPSessionImpl::checkCanSendOrReceiveCancelReadRequest(
             + ss.str());
   }
 }
+
 void CDAPSessionImpl::requestMessageSentOrReceived(
-    const CDAPMessage &cdap_message, CDAPMessage::Opcode op_code, bool sent) {
-  checkIsConnected();
-  checkInvokeIdNotExists(cdap_message, sent);
+    const CDAPMessage &cdap_message, CDAPMessage::Opcode op_code, bool sent)
+{
+	check_can_send_or_receive_messages();
+	checkInvokeIdNotExists(cdap_message, sent);
 
-  std::map<int, CDAPOperationState*>* pending_messages;
-  if (sent)
-    pending_messages = &pending_messages_sent_;
-  else
-    pending_messages = &pending_messages_recv_;
+	std::map<int, CDAPOperationState*>* pending_messages;
+	if (sent)
+		pending_messages = &pending_messages_sent_;
+	else
+		pending_messages = &pending_messages_recv_;
 
-  if (cdap_message.get_invoke_id() != 0) {
-    CDAPOperationState *new_operation_state = new CDAPOperationState(op_code,
-                                                                     sent);
-    pending_messages->insert(
-        std::pair<int, CDAPOperationState*>(cdap_message.get_invoke_id(),
-                                            new_operation_state));
-  }
+	if (cdap_message.get_invoke_id() != 0) {
+		CDAPOperationState *new_operation_state =
+				new CDAPOperationState(op_code, sent);
+		pending_messages->insert(
+				std::pair<int, CDAPOperationState*>(cdap_message.get_invoke_id(),
+								    new_operation_state));
+	}
 }
+
 void CDAPSessionImpl::cancelReadMessageSentOrReceived(
     const CDAPMessage &cdap_message, bool sender) {
   checkCanSendOrReceiveCancelReadRequest(cdap_message, sender);
@@ -720,37 +747,42 @@ void CDAPSessionImpl::checkCanSendOrReceiveCancelReadResponse(
     throw CDAPException(ss.str());
   }
 }
-void CDAPSessionImpl::responseMessageSentOrReceived(
-    const CDAPMessage &cdap_message, CDAPMessage::Opcode op_code, bool sent) {
-  checkIsConnected();
-  checkCanSendOrReceiveResponse(cdap_message, op_code, sent);
-  bool operation_complete = true;
-  std::map<int, CDAPOperationState*>* pending_messages;
-  if (!sent)
-    pending_messages = &pending_messages_sent_;
-  else
-    pending_messages = &pending_messages_recv_;
 
-  if (op_code != CDAPMessage::M_READ) {
-    CDAPMessage::Flags flags = cdap_message.get_flags();
-    if (flags != CDAPMessage::NONE_FLAGS
-        && flags != CDAPMessage::F_RD_INCOMPLETE) {
-      operation_complete = false;
-    }
-  }
-  if (operation_complete) {
-    std::map<int, CDAPOperationState*>::iterator it = pending_messages->find(
-        cdap_message.get_invoke_id());
-    delete it->second;
-    pending_messages->erase(it);
-  }
-  // check for M_READ_R and M_CANCELREAD race condition
-  if (!sent) {
-    if (op_code != CDAPMessage::M_READ) {
-      cancel_read_pending_messages_.erase(cdap_message.get_invoke_id());
-    }
-  }
+void CDAPSessionImpl::responseMessageSentOrReceived(
+    const CDAPMessage &cdap_message, CDAPMessage::Opcode op_code, bool sent)
+{
+	check_can_send_or_receive_messages();
+	checkCanSendOrReceiveResponse(cdap_message, op_code, sent);
+
+	bool operation_complete = true;
+	std::map<int, CDAPOperationState*>* pending_messages;
+	if (!sent)
+		pending_messages = &pending_messages_sent_;
+	else
+		pending_messages = &pending_messages_recv_;
+
+	if (op_code != CDAPMessage::M_READ) {
+		CDAPMessage::Flags flags = cdap_message.get_flags();
+		if (flags != CDAPMessage::NONE_FLAGS
+				&& flags != CDAPMessage::F_RD_INCOMPLETE) {
+			operation_complete = false;
+		}
+	}
+
+	if (operation_complete) {
+		std::map<int, CDAPOperationState*>::iterator it =
+				pending_messages->find(cdap_message.get_invoke_id());
+		delete it->second;
+		pending_messages->erase(it);
+	}
+	// check for M_READ_R and M_CANCELREAD race condition
+	if (!sent) {
+		if (op_code != CDAPMessage::M_READ) {
+			cancel_read_pending_messages_.erase(cdap_message.get_invoke_id());
+		}
+	}
 }
+
 void CDAPSessionImpl::cancelReadResponseMessageSentOrReceived(
     const CDAPMessage &cdap_message, bool sent) {
   checkIsConnected();

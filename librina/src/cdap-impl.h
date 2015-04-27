@@ -44,6 +44,7 @@ public:
 	ConnectionStateMachine(CDAPSessionImpl* cdap_session, long timeout);
 	~ConnectionStateMachine() throw();
 	bool is_connected();
+	bool can_send_or_receive_messages();
 	/// Checks if a the CDAP connection can be opened (i.e. an M_CONNECT message can be sent)
 	/// @throws CDAPException
 	void checkConnect();
@@ -160,6 +161,7 @@ private:
 	void messageSentOrReceived(const CDAPMessage &cdap_message, bool sent);
 	void freeOrReserveInvokeId(const CDAPMessage &cdap_message, bool sent);
 	void checkIsConnected() const;
+	void check_can_send_or_receive_messages() const;
 	void checkInvokeIdNotExists(const CDAPMessage &cdap_message, bool sent) const;
 	void checkCanSendOrReceiveCancelReadRequest(const CDAPMessage &cdap_message,
 			bool sent) const;
