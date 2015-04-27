@@ -89,34 +89,6 @@ private:
 	rina::Lockable * lock_;
 };
 
-class NeighborRIBObject: public SimpleSetMemberIPCPRIBObject {
-public:
-	NeighborRIBObject(IPCProcess* ipc_process,
-			const std::string& object_class,
-			const std::string& object_name,
-			const rina::Neighbor* neighbor);
-	std::string get_displayable_value();
-};
-
-class NeighborSetRIBObject: public BaseIPCPRIBObject {
-public:
-	NeighborSetRIBObject(IPCProcess * ipc_process);
-	~NeighborSetRIBObject();
-	const void* get_value() const;
-	void remoteCreateObject(void * object_value, const std::string& object_name,
-			int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
-	void createObject(const std::string& objectClass,
-			const std::string& objectName,
-			const void* objectValue);
-
-private:
-	void populateNeighborsToCreateList(rina::Neighbor * neighbor,
-			std::list<rina::Neighbor *> * list);
-	void createNeighbor(rina::Neighbor * neighbor);
-
-	rina::Lockable * lock_;
-};
-
 /// Handles the operations related to the "daf.management.naming.currentsynonym" objects
 class AddressRIBObject: public BaseIPCPRIBObject {
 public:
@@ -235,7 +207,7 @@ protected:
 	IPCPRIBDaemon * rib_daemon_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 	rina::IMasterEncoder * encoder_;
-	IEnrollmentTask * enrollment_task_;
+	rina::IEnrollmentTask * enrollment_task_;
 	int timeout_;
 	rina::Timer * timer_;
 	rina::Lockable * lock_;
@@ -257,7 +229,7 @@ public:
 	/// @param enrollment request contains information on the neighbor and on the
 	/// enrollment request event
 	/// @param portId
-	void initiateEnrollment(EnrollmentRequest * enrollmentRequest, int portId);
+	void initiateEnrollment(rina::EnrollmentRequest * enrollmentRequest, int portId);
 
 	/// Called by the EnrollmentTask when it got an M_CONNECT_R message
 	/// @param result
@@ -284,7 +256,7 @@ public:
 	void start(int result, const std::string& result_reason,
 			rina::CDAPSessionDescriptor * session_descriptor);
 
-	EnrollmentRequest * enrollment_request_;
+	rina::EnrollmentRequest * enrollment_request_;
 
 private:
 	/// See if more information is required for enrollment, or if we can
@@ -362,7 +334,7 @@ private:
 	INamespaceManager * namespace_manager_;
 };
 
-class EnrollmentTask: public IEnrollmentTask, public rina::InternalEventListener {
+class EnrollmentTask: public IPCPEnrollmentTask, public rina::InternalEventListener {
 public:
 	EnrollmentTask();
 	~EnrollmentTask();
@@ -373,8 +345,8 @@ public:
 			int portId, bool remove);
 	bool isEnrolledTo(const std::string& applicationProcessName) const;
 	const std::list<std::string> get_enrolled_ipc_process_names() const;
-	void processEnrollmentRequestEvent(rina::EnrollToDIFRequestEvent * event);
-	void initiateEnrollment(EnrollmentRequest * request);
+	void processEnrollmentRequestEvent(rina::EnrollToDAFRequestEvent * event);
+	void initiateEnrollment(rina::EnrollmentRequest * request);
 	void connect(int invoke_id,
 			rina::CDAPSessionDescriptor * session_descriptor);
 	void connectResponse(int result, const std::string& result_reason,
@@ -443,7 +415,7 @@ private:
 	/// process is enrolled to.
 	rina::ThreadSafeMapOfPointers<std::string, BaseEnrollmentStateMachine> state_machines_;
 
-	rina::ThreadSafeMapOfPointers<unsigned int, EnrollmentRequest> port_ids_pending_to_be_allocated_;
+	rina::ThreadSafeMapOfPointers<unsigned int, rina::EnrollmentRequest> port_ids_pending_to_be_allocated_;
 };
 
 /// Handles the operations related to the "daf.management.enrollment" objects

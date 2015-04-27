@@ -92,9 +92,6 @@ public:
 	static const std::string FLOW_STATE_OBJECT_RIB_OBJECT_CLASS;
 	static const std::string FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS;
 	static const std::string FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME;
-	static const std::string NEIGHBOR_SET_RIB_OBJECT_CLASS;
-	static const std::string NEIGHBOR_RIB_OBJECT_CLASS;
-	static const std::string NEIGHBOR_SET_RIB_OBJECT_NAME;
 	static const std::string OPERATIONAL_STATUS_RIB_OBJECT_NAME;
 	static const std::string OPERATIONAL_STATUS_RIB_OBJECT_CLASS;
 	static const std::string PDU_FORWARDING_TABLE_RIB_OBJECT_CLASS;

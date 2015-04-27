@@ -79,6 +79,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         add_entity(internal_event_manager_);
         add_entity(rib_daemon_);
         add_entity(enrollment_task_);
+        add_entity(resource_allocator_->get_n_minus_one_flow_manager());
         add_entity(resource_allocator_);
         add_entity(namespace_manager_);
         add_entity(flow_allocator_);
@@ -210,9 +211,9 @@ void IPCProcessImpl::init_encoder() {
 			new EnrollmentInformationRequestEncoder());
 	encoder_->addEncoder(EncoderConstants::FLOW_RIB_OBJECT_CLASS,
 			new FlowEncoder());
-	encoder_->addEncoder(EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS,
+	encoder_->addEncoder(rina::NeighborSetRIBObject::NEIGHBOR_RIB_OBJECT_CLASS,
 			new NeighborEncoder());
-	encoder_->addEncoder(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
+	encoder_->addEncoder(rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_CLASS,
 			new NeighborListEncoder());
 	encoder_->addEncoder(EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS,
 			new QoSCubeEncoder());
@@ -741,7 +742,7 @@ static void
 enroll_to_dif_request_event_handler(rina::IPCEvent *e,
 		EventLoopData *opaque)
 {
-	DOWNCAST_DECL(e, rina::EnrollToDIFRequestEvent, event);
+	DOWNCAST_DECL(e, rina::EnrollToDAFRequestEvent, event);
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
 	ipcp->enrollment_task_->processEnrollmentRequestEvent(event);

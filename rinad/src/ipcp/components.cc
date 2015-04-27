@@ -31,20 +31,6 @@ const std::string IResourceAllocator::RESOURCE_ALLOCATOR_AE_NAME = "resource-all
 const std::string INamespaceManager::NAMESPACE_MANAGER_AE_NAME = "namespace-manager";
 const std::string IRoutingComponent::ROUTING_COMPONENT_AE_NAME = "routing";
 const std::string IFlowAllocator::FLOW_ALLOCATOR_AE_NAME = "flow-allocator";
-const std::string IEnrollmentTask::ENROLLMENT_TASK_AE_NAME = "enrollment task";
-
-//	CLASS EnrollmentRequest
-EnrollmentRequest::EnrollmentRequest(rina::Neighbor * neighbor) {
-	neighbor_ = neighbor;
-	ipcm_initiated_ = false;
-}
-
-EnrollmentRequest::EnrollmentRequest(
-		rina::Neighbor * neighbor, const rina::EnrollToDIFRequestEvent & event) {
-	neighbor_ = neighbor;
-	event_ = event;
-	ipcm_initiated_ = true;
-}
 
 //	CLASS Flow
 Flow::Flow() {

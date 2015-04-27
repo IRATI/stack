@@ -33,6 +33,7 @@ allsources =							\
         cdap.cc							\
         cacep.cc						\
         rib.cc							\
+        enrollment.cc						\
         irm.cc							\
         sdu-protection.cc					\
         netlink-messages.cc  netlink-messages.h			\

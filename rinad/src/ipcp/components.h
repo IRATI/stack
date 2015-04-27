@@ -94,91 +94,13 @@ public:
   virtual std::list<char*>& getRawSdus(char delimitedSdus[]) = 0;
 };
 
-/// Contains the objects needed to request the Enrollment
-class EnrollmentRequest
-{
-public:
-	EnrollmentRequest(rina::Neighbor * neighbor);
-	EnrollmentRequest(rina::Neighbor * neighbor,
-                          const rina::EnrollToDIFRequestEvent & event);
-	rina::Neighbor * neighbor_;
-	rina::EnrollToDIFRequestEvent event_;
-	bool ipcm_initiated_;
-};
-
 /// Interface that must be implementing by classes that provide
 /// the behavior of an enrollment task
-class IEnrollmentTask : public IPCProcessComponent, public rina::ApplicationEntity,
-						public rina::CACEPHandler {
+class IPCPEnrollmentTask : public IPCProcessComponent,
+			   public rina::IEnrollmentTask {
 public:
-	static const std::string ENROLLMENT_TASK_AE_NAME;
-
-	IEnrollmentTask() : rina::ApplicationEntity(ENROLLMENT_TASK_AE_NAME) { };
-	virtual ~IEnrollmentTask(){};
-	virtual const std::list<rina::Neighbor *> get_neighbors() const = 0;
-	virtual const std::list<std::string> get_enrolled_ipc_process_names() const = 0;
-
-	/// A remote IPC process Connect request has been received.
-	/// @param invoke_id the id of the connect message
-	/// @param session_descriptor
-	virtual void connect(int invoke_id,
-			rina::CDAPSessionDescriptor * session_descriptor) = 0;
-
-	/// A remote IPC process Connect response has been received.
-	/// @param result
-	/// @param result_reason
-	/// @param session_descriptor
-	virtual void connectResponse(int result, const std::string& result_reason,
-			rina::CDAPSessionDescriptor * session_descriptor) = 0;
-
-	/// A remote IPC process Release request has been received.
-	/// @param invoke_id the id of the release message
-	/// @param session_descriptor
-	virtual void release(int invoke_id,
-			rina::CDAPSessionDescriptor * session_descriptor) = 0;
-
-	/// A remote IPC process Release response has been received.
-	/// @param result
-	/// @param result_reason
-	/// @param session_descriptor
-	virtual void releaseResponse(int result, const std::string& result_reason,
-			rina::CDAPSessionDescriptor * session_descriptor) = 0;
-
-	/// Process a request to initiate enrollment with a new Neighbor, triggered by the IPC Manager
-	/// @param event
-	virtual void processEnrollmentRequestEvent(rina::EnrollToDIFRequestEvent * event) = 0;
-
-	/// Starts the enrollment program
-	/// @param cdapMessage
-	/// @param cdapSessionDescriptor
-	virtual void initiateEnrollment(EnrollmentRequest * request) = 0;
-
-	/// Called by the enrollment state machine when the enrollment request has been completed,
-	/// either successfully or unsuccessfully
-	/// @param candidate the IPC process we were trying to enroll to
-	/// @param enrollee true if this IPC process is the one that initiated the
-	/// enrollment sequence (i.e. it is the application process that wants to
-	/// join the DIF)
-	virtual void enrollmentCompleted(rina::Neighbor * neighbor,
-                                         bool enrollee) = 0;
-
-	/// Called by the enrollment state machine when the enrollment sequence fails
-	/// @param remotePeer
-	/// @param portId
-	/// @param enrollee
-	/// @param sendMessage
-	/// @param reason
-	virtual void enrollmentFailed(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
-                                      int portId,
-                                      const std::string& reason,
-                                      bool enrolle,
-                                      bool sendReleaseMessage) = 0;
-
-	/// Finds out if the ICP process is already enrolled to the IPC process identified by
-	/// the provided apNamingInfo
-	/// @param apNamingInfo
-	/// @return
-	virtual bool isEnrolledTo(const std::string& applicationProcessName) const = 0;
+	IPCPEnrollmentTask() { };
+	virtual ~IPCPEnrollmentTask(){};
 };
 
 /// Encapsulates all the information required to manage a Flow
@@ -547,7 +469,7 @@ public:
 	rina::IMasterEncoder * encoder_;
 	rina::CDAPSessionManagerInterface* cdap_session_manager_;
 	rina::InternalEventManager * internal_event_manager_;
-	IEnrollmentTask * enrollment_task_;
+	IPCPEnrollmentTask * enrollment_task_;
 	IFlowAllocator * flow_allocator_;
 	INamespaceManager * namespace_manager_;
 	IResourceAllocator * resource_allocator_;

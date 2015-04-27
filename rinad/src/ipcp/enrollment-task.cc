@@ -189,158 +189,6 @@ void WatchdogRIBObject::readResponse(int result, const std::string& result_reaso
 	}
 }
 
-// Class Neighbor RIB object
-NeighborRIBObject::NeighborRIBObject(IPCProcess* ipc_process,
-		const std::string& object_class, const std::string& object_name,
-		const rina::Neighbor* neighbor) :
-				SimpleSetMemberIPCPRIBObject(ipc_process, object_class,
-						object_name, neighbor) {
-};
-
-std::string NeighborRIBObject::get_displayable_value() {
-    const rina::Neighbor * nei = (const rina::Neighbor *) get_value();
-    std::stringstream ss;
-    ss << "Name: " << nei->name_.getEncodedString();
-    ss << "; Address: " << nei->address_;
-    ss << "; Enrolled: " << nei->enrolled_ << std::endl;
-    ss << "; Supporting DIF Name: " << nei->supporting_dif_name_.processName;
-    ss << "; Underlying port-id: " << nei->underlying_port_id_;
-    ss << "; Number of enroll. attempts: " << nei->number_of_enrollment_attempts_;
-
-    return ss.str();
-}
-
-// Class Neighbor Set RIB Object
-NeighborSetRIBObject::NeighborSetRIBObject(IPCProcess * ipc_process) :
-	BaseIPCPRIBObject(ipc_process, EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
-			rina::objectInstanceGenerator->getObjectInstance(),
-			EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME){
-	lock_ = new rina::Lockable();
-}
-
-NeighborSetRIBObject::~NeighborSetRIBObject() {
-	if (lock_) {
-		delete lock_;
-	}
-}
-
-const void* NeighborSetRIBObject::get_value() const {
-	return 0;
-}
-
-void NeighborSetRIBObject::remoteCreateObject(void * object_value, const std::string& object_name,
-		int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::ScopedLock g(*lock_);
-	std::list<rina::Neighbor *> neighborsToCreate;
-
-	(void) invoke_id;  // Stop compiler barfs
-	(void) session_descriptor; // Stop compiler barfs
-
-	try {
-		if (object_name.compare(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME) == 0) {
-			std::list<rina::Neighbor *> * neighbors =
-					(std::list<rina::Neighbor *> *) object_value;
-			std::list<rina::Neighbor *>::const_iterator iterator;
-			for(iterator = neighbors->begin(); iterator != neighbors->end(); ++iterator) {
-				populateNeighborsToCreateList(*iterator, &neighborsToCreate);
-			}
-
-			delete neighbors;
-		} else {
-			rina::Neighbor * neighbor = (rina::Neighbor *) object_value;
-			populateNeighborsToCreateList(neighbor, &neighborsToCreate);
-		}
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Error decoding CDAP object value: %s", e.what());
-	}
-
-	if (neighborsToCreate.size() == 0) {
-		LOG_IPCP_DBG("No neighbors entries to create or update");
-		return;
-	}
-
-	try {
-		rib_daemon_->createObject(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
-				EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME, &neighborsToCreate, 0);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems creating RIB object: %s", e.what());
-	}
-}
-
-void NeighborSetRIBObject::populateNeighborsToCreateList(rina::Neighbor* neighbor,
-		std::list<rina::Neighbor *> * list) {
-	const rina::Neighbor * candidate;
-	std::list<BaseRIBObject*>::const_iterator it;
-	bool found = false;
-
-	for(it = get_children().begin(); it != get_children().end(); ++it) {
-		candidate = (const rina::Neighbor *) (*it)->get_value();
-		if (candidate->get_name().processName.compare(neighbor->name_.processName) == 0)
-			found = true;
-	}
-	if (!found)
-		list->push_back(neighbor);
-	else
-		delete neighbor;
-}
-
-void NeighborSetRIBObject::createObject(const std::string& objectClass,
-			const std::string& objectName,
-			const void* objectValue) {
-	(void) objectClass; // Stop compiler barfs
-
-	if (objectName.compare(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME) == 0) {
-		std::list<rina::Neighbor *>::const_iterator iterator;
-		std::list<rina::Neighbor *> * neighbors =
-				(std::list<rina::Neighbor *> *) objectValue;
-
-		for (iterator = neighbors->begin(); iterator != neighbors->end(); ++iterator) {
-			createNeighbor((*iterator));
-		}
-	} else {
-		rina::Neighbor * currentNeighbor = (rina::Neighbor *) objectValue;
-		createNeighbor(currentNeighbor);
-	}
-}
-
-void NeighborSetRIBObject::createNeighbor(rina::Neighbor * neighbor) {
-	//Avoid creating myself as a neighbor
-	if (neighbor->name_.processName.compare(ipc_process_->get_name()) == 0) {
-		return;
-	}
-
-	//Only create neighbours with whom I have an N-1 DIF in common
-	std::list<rina::ApplicationProcessNamingInformation>::const_iterator it;
-	INMinusOneFlowManager * nMinusOneFlowManager =
-			ipc_process_->resource_allocator_->get_n_minus_one_flow_manager();
-	bool supportingDifInCommon = false;
-	for(it = neighbor->supporting_difs_.begin(); it != neighbor->supporting_difs_.end(); ++it) {
-		if (nMinusOneFlowManager->isSupportingDIF((*it))) {
-			neighbor->supporting_dif_name_ = (*it);
-			supportingDifInCommon = true;
-			break;
-		}
-	}
-
-	if (!supportingDifInCommon) {
-		LOG_IPCP_INFO("Ignoring neighbor %s because we don't have an N-1 DIF in common",
-				neighbor->name_.processName.c_str());
-		return;
-	}
-
-	std::stringstream ss;
-	ss<<EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME<<EncoderConstants::SEPARATOR;
-	ss<<neighbor->name_.processName;
-	BaseRIBObject * ribObject = new NeighborRIBObject(ipc_process_,
-			EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS, ss.str(), neighbor);
-	add_child(ribObject);
-	try {
-		rib_daemon_->addRIBObject(ribObject);
-	} catch(rina::Exception &e){
-		LOG_IPCP_ERR("Problems adding object to the RIB: %s", e.what());
-	}
-}
-
 //Class AddressRIBObject
 AddressRIBObject::AddressRIBObject(IPCProcess * ipc_process):
 	BaseIPCPRIBObject(ipc_process, EncoderConstants::ADDRESS_RIB_OBJECT_CLASS,
@@ -540,9 +388,9 @@ void BaseEnrollmentStateMachine::createOrUpdateNeighborInformation(bool enrolled
 
 	try {
 		std::stringstream ss;
-		ss<<EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME<<EncoderConstants::SEPARATOR;
+		ss<<rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_NAME<<EncoderConstants::SEPARATOR;
 		ss<<remote_peer_->name_.processName;
-		rib_daemon_->createObject(EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS, ss.str(),
+		rib_daemon_->createObject(rina::NeighborSetRIBObject::NEIGHBOR_RIB_OBJECT_CLASS, ss.str(),
 				remote_peer_, 0);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems creating RIB object: %s", e.what());
@@ -596,8 +444,8 @@ void BaseEnrollmentStateMachine::sendNeighbors() {
 	std::vector<rina::ApplicationRegistration *> registrations;
 	std::list<rina::ApplicationProcessNamingInformation>::const_iterator it2;
 	try {
-		neighborSet = rib_daemon_->readObject(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
-				EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME);
+		neighborSet = rib_daemon_->readObject(rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_CLASS,
+				rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_NAME);
 		for (it = neighborSet->get_children().begin();
 				it != neighborSet->get_children().end(); ++it) {
 			neighbors.push_back((rina::Neighbor*) (*it)->get_value());
@@ -622,8 +470,9 @@ void BaseEnrollmentStateMachine::sendNeighbors() {
 		rina::RemoteProcessId remote_id;
 		remote_id.port_id_ = port_id_;
 
-		rib_daemon_->remoteCreateObject(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
-				EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME, robject_value, 0, remote_id, 0);
+		rib_daemon_->remoteCreateObject(rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_CLASS,
+				rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_NAME, robject_value,
+				0, remote_id, 0);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems sending neighbors: %s", e.what());
 	}
@@ -672,7 +521,9 @@ EnrolleeStateMachine::EnrolleeStateMachine(IPCProcess * ipc_process,
 EnrolleeStateMachine::~EnrolleeStateMachine() {
 }
 
-void EnrolleeStateMachine::initiateEnrollment(EnrollmentRequest * enrollmentRequest, int portId) {
+void EnrolleeStateMachine::initiateEnrollment(rina::EnrollmentRequest * enrollmentRequest,
+					      int portId)
+{
 	rina::ScopedLock g(*lock_);
 
 	enrollment_request_ = enrollmentRequest;
@@ -745,7 +596,7 @@ void EnrolleeStateMachine::connectResponse(int result,
 			eiRequest.address_ = ipc_process_->get_address();
 		} else {
 			rina::DIFInformation difInformation;
-			difInformation.dif_name_ = enrollment_request_->event_.difName;
+			difInformation.dif_name_ = enrollment_request_->event_.dafName;
 			ipc_process_->set_dif_information(difInformation);
 		}
 
@@ -921,8 +772,8 @@ bool EnrolleeStateMachine::sendNextObjectRequired() {
 		object_name = EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME;
 		result = true;
 	}else if (ipc_process_->get_neighbors().size() == 0){
-		object_class = EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS;
-		object_name = EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME;
+		object_class = rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_CLASS;
+		object_name = rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_NAME;
 		result = true;
 	}
 
@@ -1028,12 +879,13 @@ void EnrolleeStateMachine::readResponse(int result, const std::string& result_re
 		}catch(rina::Exception &e){
 			LOG_IPCP_ERR("Problems creating RIB object: %s", e.what());
 		}
-	}else if (object_name.compare(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME) == 0){
+	}else if (object_name.compare(rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_NAME) == 0){
 		try{
 			std::list<rina::Neighbor *> * neighbors =
 					(std::list<rina::Neighbor *> *) object_value;
-			rib_daemon_->createObject(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
-					EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME, neighbors, 0);
+			rib_daemon_->createObject(rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_CLASS,
+					rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_NAME,
+					neighbors, 0);
 		}catch(rina::Exception &e){
 			LOG_IPCP_ERR("Problems creating RIB object: %s", e.what());
 		}
@@ -1343,7 +1195,7 @@ void EnrollerStateMachine::enrollmentCompleted() {
 //Main function of the Neighbor Enroller thread
 void * doNeighborsEnrollerWork(void * arg) {
 	IPCProcess * ipcProcess = (IPCProcess *) arg;
-	IEnrollmentTask * enrollmentTask = ipcProcess->enrollment_task_;
+	rina::IEnrollmentTask * enrollmentTask = ipcProcess->enrollment_task_;
 	std::list<rina::Neighbor*> neighbors;
 	std::list<rina::Neighbor*>::const_iterator it;
 	rina::EnrollmentTaskConfiguration configuration = ipcProcess->get_dif_information().
@@ -1361,14 +1213,15 @@ void * doNeighborsEnrollerWork(void * arg) {
 			if ((*it)->number_of_enrollment_attempts_ <
 					configuration.max_number_of_enrollment_attempts_) {
 				(*it)->number_of_enrollment_attempts_++;
-				EnrollmentRequest * request = new EnrollmentRequest((*it));
+				rina::EnrollmentRequest * request = new rina::EnrollmentRequest((*it));
 				enrollmentTask->initiateEnrollment(request);
 			} else {
 				try {
 					std::stringstream ss;
-					ss<<EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME<<EncoderConstants::SEPARATOR;
+					ss << rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_NAME
+					   << EncoderConstants::SEPARATOR;
 					ss<<(*it)->name_.processName;
-					ipcProcess->rib_daemon_->deleteObject(EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS,
+					ipcProcess->rib_daemon_->deleteObject(rina::NeighborSetRIBObject::NEIGHBOR_RIB_OBJECT_CLASS,
 							ss.str(), 0, 0);
 				} catch (rina::Exception &e){
 				}
@@ -1382,7 +1235,7 @@ void * doNeighborsEnrollerWork(void * arg) {
 }
 
 //Class Enrollment Task
-EnrollmentTask::EnrollmentTask() : IEnrollmentTask() {
+EnrollmentTask::EnrollmentTask() {
 	rib_daemon_ = 0;
 	resource_allocator_ = 0;
 	cdap_session_manager_ = 0;
@@ -1423,7 +1276,8 @@ void EnrollmentTask::set_application_process(rina::ApplicationProcess * ap)
 
 void EnrollmentTask::populateRIB() {
 	try{
-		BaseIPCPRIBObject * ribObject = new NeighborSetRIBObject(ipcp);
+		rina::BaseRIBObject * ribObject = new rina::NeighborSetRIBObject(ipcp,
+									         ipcp->rib_daemon_);
 		rib_daemon_->addRIBObject(ribObject);
 		ribObject = new EnrollmentRIBObject(ipcp);
 		rib_daemon_->addRIBObject(ribObject);
@@ -1471,8 +1325,8 @@ const std::list<rina::Neighbor *> EnrollmentTask::get_neighbors() const{
 	rina::BaseRIBObject * ribObject = 0;
 
 	try{
-		ribObject = rib_daemon_->readObject(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
-				EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME);
+		ribObject = rib_daemon_->readObject(rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_CLASS,
+						    rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_NAME);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems reading RIB object: %s", e.what());
 		return result;
@@ -1532,7 +1386,7 @@ const std::list<std::string> EnrollmentTask::get_enrolled_ipc_process_names() co
 	return result;
 }
 
-void EnrollmentTask::processEnrollmentRequestEvent(rina::EnrollToDIFRequestEvent* event) {
+void EnrollmentTask::processEnrollmentRequestEvent(rina::EnrollToDAFRequestEvent* event) {
 	//Can only accept enrollment requests if assigned to a DIF
 	if (ipcp->get_operational_state() != ASSIGNED_TO_DIF) {
 		LOG_IPCP_ERR("Rejected enrollment request since IPC Process is not ASSIGNED to a DIF");
@@ -1548,10 +1402,10 @@ void EnrollmentTask::processEnrollmentRequestEvent(rina::EnrollToDIFRequestEvent
 
 	//Check that the neighbor belongs to the same DIF as this IPC Process
 	if (ipcp->get_dif_information().get_dif_name().processName.
-			compare(event->difName.processName) != 0) {
+			compare(event->dafName.processName) != 0) {
 		LOG_IPCP_ERR("Was requested to enroll to a neighbor who is member of DIF %s, but I'm member of DIF %s",
 				ipcp->get_dif_information().get_dif_name().processName.c_str(),
-				event->difName.processName.c_str());
+				event->dafName.processName.c_str());
 
 		try {
 			rina::extendedIPCManager->enrollToDIFResponse(*event, -1,
@@ -1575,11 +1429,11 @@ void EnrollmentTask::processEnrollmentRequestEvent(rina::EnrollToDIFRequestEvent
 		neighbor->address_ = address;
 	}
 
-	EnrollmentRequest * request = new EnrollmentRequest(neighbor, *event);
+	rina::EnrollmentRequest * request = new rina::EnrollmentRequest(neighbor, *event);
 	initiateEnrollment(request);
 }
 
-void EnrollmentTask::initiateEnrollment(EnrollmentRequest * request) {
+void EnrollmentTask::initiateEnrollment(rina::EnrollmentRequest * request) {
 	if (isEnrolledTo(request->neighbor_->name_.processName)) {
 		LOG_IPCP_ERR("Already enrolled to IPC Process %s", request->neighbor_->name_.processName.c_str());
 		return;
@@ -1890,7 +1744,7 @@ void EnrollmentTask::nMinusOneFlowDeallocated(rina::NMinusOneFlowDeallocatedEven
 }
 
 void EnrollmentTask::nMinusOneFlowAllocated(rina::NMinusOneFlowAllocatedEvent * flowEvent) {
-	EnrollmentRequest * request =
+	rina::EnrollmentRequest * request =
 			port_ids_pending_to_be_allocated_.erase(flowEvent->handle_);
 
 	if (!request){
@@ -1921,7 +1775,7 @@ void EnrollmentTask::nMinusOneFlowAllocated(rina::NMinusOneFlowAllocatedEvent * 
 }
 
 void EnrollmentTask::nMinusOneFlowAllocationFailed(rina::NMinusOneFlowAllocationFailedEvent * event) {
-	EnrollmentRequest * request =
+	rina::EnrollmentRequest * request =
 			port_ids_pending_to_be_allocated_.erase(event->handle_);
 
 	if (!request){
@@ -1974,7 +1828,7 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 
 	//3 In the case of the enrollee state machine, reply to the IPC Manager
 	if (enrollee) {
-		EnrollmentRequest * request = ((EnrolleeStateMachine *) stateMachine)->enrollment_request_;
+		rina::EnrollmentRequest * request = ((EnrolleeStateMachine *) stateMachine)->enrollment_request_;
 		if (request) {
 			if (request->ipcm_initiated_) {
 				try {
