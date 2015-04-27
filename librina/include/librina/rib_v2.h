@@ -52,27 +52,32 @@ public:
 
 namespace rib {
 
-class ResponseHandlerInterface {
+class ResponseHandlerInterface
+{
+ public:
+  virtual ~ResponseHandlerInterface()
+  {
+  }
 
-public:
-	virtual ~ResponseHandlerInterface()
-	{
-	}
-
-	virtual void createResponse(const cdap_rib::res_info_t &res,
-			const cdap_rib::con_handle_t &con) = 0;
-	virtual void deleteResponse(const cdap_rib::res_info_t &res,
-			const cdap_rib::con_handle_t &con) = 0;
-	virtual void readResponse(const cdap_rib::res_info_t &res,
-			const cdap_rib::con_handle_t &con) = 0;
-	virtual void cancelReadResponse(const cdap_rib::res_info_t &res,
-			const cdap_rib::con_handle_t &con) = 0;
-	virtual void writeResponse(const cdap_rib::res_info_t &res,
-			const cdap_rib::con_handle_t &con) = 0;
-	virtual void startResponse(const cdap_rib::res_info_t &res,
-			const cdap_rib::con_handle_t &con) = 0;
-	virtual void stopResponse(const cdap_rib::res_info_t &res,
-			const cdap_rib::con_handle_t &con) = 0;
+  virtual void createResponse(const cdap_rib::res_info_t &res,
+                              const cdap_rib::obj_info_t &obj,
+                              const cdap_rib::con_handle_t &con) = 0;
+  virtual void deleteResponse(const cdap_rib::res_info_t &res,
+                              const cdap_rib::con_handle_t &con) = 0;
+  virtual void readResponse(const cdap_rib::res_info_t &res,
+                            const cdap_rib::obj_info_t &obj,
+                            const cdap_rib::con_handle_t &con) = 0;
+  virtual void cancelReadResponse(const cdap_rib::res_info_t &res,
+                                  const cdap_rib::con_handle_t &con) = 0;
+  virtual void writeResponse(const cdap_rib::res_info_t &res,
+                             const cdap_rib::obj_info_t &obj,
+                             const cdap_rib::con_handle_t &con) = 0;
+  virtual void startResponse(const cdap_rib::res_info_t &res,
+                             const cdap_rib::obj_info_t &obj,
+                             const cdap_rib::con_handle_t &con) = 0;
+  virtual void stopResponse(const cdap_rib::res_info_t &res,
+                            const cdap_rib::obj_info_t &obj,
+                            const cdap_rib::con_handle_t &con) = 0;
 };
 
 class AbstractEncoder {
@@ -318,7 +323,7 @@ public:
 	virtual BaseRIBObject* getObject(unsigned long instance,
 			const std::string& clas) const = 0;
 	virtual void process_message(cdap_rib::SerializedObject &message, int port) = 0;
-  virtual void remote_open_connection(const cdap_rib::src_info_t &src,
+	virtual void remote_open_connection(const cdap_rib::src_info_t &src,
                                       const cdap_rib::dest_info_t &dest, const cdap_rib::auth_info &auth,
                                       int port) = 0;
 };

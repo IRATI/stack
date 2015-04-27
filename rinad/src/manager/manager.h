@@ -53,6 +53,7 @@ class ConnectionCallback : public rina::cdap::CDAPCallbackInterface
                              const rina::cdap_rib::flags_t &flags,
                              int message_id);
         void remote_create_result(const rina::cdap_rib::con_handle_t &con,
+                                  const rina::cdap_rib::obj_info_t &obj,
                                   const rina::cdap_rib::res_info_t &res);
         void remote_read_result(const rina::cdap_rib::con_handle_t &con,
                                 const rina::cdap_rib::obj_info_t &obj,

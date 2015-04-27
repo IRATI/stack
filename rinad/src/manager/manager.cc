@@ -115,18 +115,23 @@ void ConnectionCallback::open_connection(
 
 void ConnectionCallback::remote_create_result(
                 const rina::cdap_rib::con_handle_t &con,
+                const rina::cdap_rib::obj_info_t &obj,
                 const rina::cdap_rib::res_info_t &res)
 {
         (void) con;
+        (void) obj;
         std::cout << "Result code is: " << res.result_ << std::endl;
 }
 
-void remote_read_result(const rina::cdap_rib::con_handle_t &con,
+void ConnectionCallback::remote_read_result(const rina::cdap_rib::con_handle_t &con,
                         const rina::cdap_rib::obj_info_t &obj,
                         const rina::cdap_rib::res_info_t &res)
 {
         // decode object value
         // print object value
+        (void) con;
+        (void) obj;
+        (void) res;
 }
 
 Manager::Manager(const std::string& dif_name, const std::string& apn,
@@ -250,7 +255,7 @@ void Manager::createIPCP(rina::Flow* flow)
 
         mad_manager::structures::ipcp_config_t ipc_config;
         ipc_config.process_instance = 1;
-        ipc_config.process_name = "test1.IRATI";
+        ipc_config.process_name = "test2.IRATI";
         ipc_config.process_type = "normal.IPC";
         ipc_config.dif_to_register = "400";
         ipc_config.dif_to_assign = "normal.DIF";
@@ -289,7 +294,6 @@ void Manager::queryRIB(rina::Flow *flow)
                         "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcessID=1, RIBDaemonID=1";
         obj.class_ = "RIBDaemon";
         obj.inst_ = 0;
-        obj.value_ = 0;
 
         cdap_rib::flags_t flags;
         flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
