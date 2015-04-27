@@ -24,6 +24,7 @@
 #include <librina/logs.h>
 #include "librina/enrollment.h"
 #include "librina/irm.h"
+#include "librina/ipc-process.h"
 
 namespace rina {
 
@@ -192,6 +193,237 @@ void NeighborSetRIBObject::createNeighbor(rina::Neighbor * neighbor) {
 	}
 }
 
+//Class IEnrollmentStateMachine
+const std::string IEnrollmentStateMachine::STATE_NULL = "NULL";
+const std::string IEnrollmentStateMachine::STATE_ENROLLED = "ENROLLED";
+
+IEnrollmentStateMachine::IEnrollmentStateMachine(ApplicationProcess * app, bool isIPCP,
+		const rina::ApplicationProcessNamingInformation& remote_naming_info,
+		int timeout, rina::ApplicationProcessNamingInformation * supporting_dif_name)
+{
+	if (!app) {
+		throw Exception("Bogus Application Process instance passed");
+	}
+
+	app_ = app;
+	isIPCP_ = isIPCP;
+	rib_daemon_ = dynamic_cast<IRIBDaemon*>(app->get_rib_daemon());
+	enrollment_task_ = dynamic_cast<IEnrollmentTask*>(app->get_enrollment_task());
+	timeout_ = timeout;
+	timer_ = new Timer();
+	lock_ = new Lockable();
+	remote_peer_ = new rina::Neighbor();
+	remote_peer_->name_ = remote_naming_info;
+	if (supporting_dif_name) {
+		remote_peer_->supporting_dif_name_ = *supporting_dif_name;
+		delete supporting_dif_name;
+	}
+	port_id_ = 0;
+	last_scheduled_task_ = 0;
+	state_ = STATE_NULL;
+	enroller_ = false;
+}
+
+IEnrollmentStateMachine::~IEnrollmentStateMachine()
+{
+	if (timer_) {
+		delete timer_;
+	}
+
+	if (lock_) {
+		delete lock_;
+	}
+}
+
+void IEnrollmentStateMachine::release(int invoke_id, CDAPSessionDescriptor * session_descriptor)
+{
+	ScopedLock g(*lock_);
+	LOG_DBG("Releasing the CDAP connection");
+
+	if (!isValidPortId(session_descriptor)) {
+		return;
+	}
+
+	createOrUpdateNeighborInformation(false);
+
+	state_ = STATE_NULL;
+	if (timer_) {
+		delete timer_;
+		timer_ = 0;
+	}
+
+	if (invoke_id == 0) {
+		return;
+	}
+
+	try {
+		rina::RemoteProcessId remote_id;
+		remote_id.port_id_ = port_id_;
+
+		rib_daemon_->closeApplicationConnectionResponse(0, "", invoke_id, remote_id);
+	} catch (Exception &e) {
+		LOG_ERR("Problems generating or sending CDAP Message: %s", e.what());
+	}
+}
+
+void IEnrollmentStateMachine::releaseResponse(int result, const std::string& result_reason,
+					      CDAPSessionDescriptor * session_descriptor)
+{
+	ScopedLock g(*lock_);
+
+	(void) result;
+	(void) result_reason;
+
+	if (!isValidPortId(session_descriptor)) {
+		return;
+	}
+
+	if (state_ != STATE_NULL) {
+		state_ = STATE_NULL;
+	}
+}
+
+void IEnrollmentStateMachine::flowDeallocated(CDAPSessionDescriptor * cdapSessionDescriptor)
+{
+	ScopedLock g(*lock_);
+	LOG_INFO("The flow supporting the CDAP session identified by %d has been deallocated.",
+			cdapSessionDescriptor->port_id_);
+
+	if (!isValidPortId(cdapSessionDescriptor)){
+		return;
+	}
+
+	createOrUpdateNeighborInformation(false);
+
+	state_ = STATE_NULL;
+	if (timer_) {
+		delete timer_;
+		timer_ = 0;
+	}
+}
+
+bool IEnrollmentStateMachine::isValidPortId(const CDAPSessionDescriptor * cdapSessionDescriptor)
+{
+	if (cdapSessionDescriptor->port_id_ != port_id_) {
+		LOG_ERR("Received a CDAP message form port-id %d, but was expecting it form port-id %d",
+				cdapSessionDescriptor->port_id_, port_id_);
+		return false;
+	}
+
+	return true;
+}
+
+void IEnrollmentStateMachine::abortEnrollment(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
+			int portId, const std::string& reason, bool enrollee, bool sendReleaseMessage)
+{
+	if (timer_) {
+		delete timer_;
+		timer_ = 0;
+	}
+
+	state_ = STATE_NULL;
+
+	enrollment_task_->enrollmentFailed(remotePeerNamingInfo, portId, reason, enrollee, sendReleaseMessage);
+}
+
+void IEnrollmentStateMachine::createOrUpdateNeighborInformation(bool enrolled)
+{
+	remote_peer_->enrolled_ = enrolled;
+	remote_peer_->number_of_enrollment_attempts_ = 0;
+	Time currentTime;
+	remote_peer_->last_heard_from_time_in_ms_ = currentTime.get_current_time_in_ms();
+	if (enrolled) {
+		remote_peer_->underlying_port_id_ = port_id_;
+	} else {
+		remote_peer_->underlying_port_id_ = 0;
+	}
+
+	try {
+		std::stringstream ss;
+		ss<<NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_NAME<<RIBNamingConstants::SEPARATOR;
+		ss<<remote_peer_->name_.processName;
+		rib_daemon_->createObject(NeighborSetRIBObject::NEIGHBOR_RIB_OBJECT_CLASS,
+					  ss.str(),remote_peer_, 0);
+	} catch (Exception &e) {
+		LOG_ERR("Problems creating RIB object: %s", e.what());
+	}
+}
+
+void IEnrollmentStateMachine::sendNeighbors()
+{
+	BaseRIBObject * neighborSet;
+	std::list<BaseRIBObject *>::const_iterator it;
+	std::list<Neighbor *> neighbors;
+	Neighbor * myself = 0;
+	std::vector<ApplicationRegistration *> registrations;
+	std::list<ApplicationProcessNamingInformation>::const_iterator it2;
+	try {
+		neighborSet = rib_daemon_->readObject(NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_CLASS,
+						      NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_NAME);
+		for (it = neighborSet->get_children().begin();
+				it != neighborSet->get_children().end(); ++it) {
+			neighbors.push_back((Neighbor*) (*it)->get_value());
+		}
+
+		myself = new Neighbor();
+		myself->address_ = app_->get_address();
+		myself->name_.processName = app_->get_name();
+		myself->name_.processInstance = app_->get_instance();
+		if (isIPCP_) {
+			registrations = extendedIPCManager->getRegisteredApplications();
+		} else {
+			registrations = ipcManager->getRegisteredApplications();
+		}
+		for (unsigned int i=0; i<registrations.size(); i++) {
+			for(it2 = registrations[i]->DIFNames.begin();
+					it2 != registrations[i]->DIFNames.end(); ++it2) {
+				myself->add_supporting_dif((*it2));
+			}
+		}
+		neighbors.push_back(myself);
+
+		RIBObjectValue robject_value;
+		robject_value.type_ = RIBObjectValue::complextype;
+		robject_value.complex_value_ = &neighbors;
+		RemoteProcessId remote_id;
+		remote_id.port_id_ = port_id_;
+
+		rib_daemon_->remoteCreateObject(rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_CLASS,
+				rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_NAME, robject_value,
+				0, remote_id, 0);
+	} catch (Exception &e) {
+		LOG_ERR("Problems sending neighbors: %s", e.what());
+	}
+
+	delete myself;
+}
+
+void IEnrollmentStateMachine::sendCreateInformation(const std::string& objectClass,
+		const std::string& objectName)
+{
+	rina::BaseRIBObject * ribObject = 0;
+
+	try {
+		ribObject = rib_daemon_->readObject(objectClass, objectName);
+	} catch (Exception &e) {
+		LOG_ERR("Problems reading object from RIB: %s", e.what());
+		return;
+	}
+
+	if (ribObject->get_value()) {
+		try {
+			RIBObjectValue robject_value;
+			robject_value.type_ = RIBObjectValue::complextype;
+			robject_value.complex_value_ = const_cast<void*> (ribObject->get_value());
+			RemoteProcessId remote_id;
+			remote_id.port_id_ = port_id_;
+
+			rib_daemon_->remoteCreateObject(objectClass, objectName, robject_value, 0, remote_id, 0);
+		} catch (Exception &e) {
+			LOG_ERR("Problems generating or sending CDAP message: %s", e.what());
+		}
+	}
+}
 
 }
 

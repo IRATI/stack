@@ -480,7 +480,6 @@ public:
 	IPCProcess(const std::string& name, const std::string& instance);
 	virtual ~IPCProcess(){};
 	virtual unsigned short get_id() = 0;
-	virtual unsigned int get_address() const = 0;
 	virtual void set_address(unsigned int address) = 0;
 	virtual const IPCProcessOperationalState& get_operational_state() const = 0;
 	virtual void set_operational_state(const IPCProcessOperationalState& operational_state) = 0;

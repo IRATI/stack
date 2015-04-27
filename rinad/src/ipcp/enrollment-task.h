@@ -30,7 +30,6 @@
 #include "ipcp/components.h"
 #include <librina/cdap.h>
 #include <librina/internal-events.h>
-#include <librina/timer.h>
 
 namespace rinad {
 
@@ -119,7 +118,7 @@ public:
 /// The base class that contains the common aspects of both
 /// enrollment state machines: the enroller side and the enrolle
 /// side
-class BaseEnrollmentStateMachine : public rina::BaseCDAPResponseMessageHandler {
+class BaseEnrollmentStateMachine : public rina::IEnrollmentStateMachine {
 	friend class EnrollmentFailedTimerTask;
 public:
 	static const std::string CONNECT_RESPONSE_TIMEOUT;
@@ -140,54 +139,19 @@ public:
 	static const std::string STOP_ENROLLMENT_RESPONSE_TIMEOUT;
 	static const std::string STOP_RESPONSE_IN_BAD_STATE;
 
-	enum State {
-		STATE_NULL,
-		STATE_WAIT_CONNECT_RESPONSE,
-		STATE_WAIT_START_ENROLLMENT_RESPONSE,
-		STATE_WAIT_READ_RESPONSE,
-		STATE_WAIT_START,
-		STATE_ENROLLED,
-		STATE_WAIT_START_ENROLLMENT,
-		STATE_WAIT_STOP_ENROLLMENT_RESPONSE
-	};
+	static const std::string STATE_WAIT_CONNECT_RESPONSE;
+	static const std::string STATE_WAIT_START_ENROLLMENT_RESPONSE;
+	static const std::string STATE_WAIT_READ_RESPONSE;
+	static const std::string STATE_WAIT_START;
+	static const std::string STATE_WAIT_START_ENROLLMENT;
+	static const std::string STATE_WAIT_STOP_ENROLLMENT_RESPONSE;
 
-	~BaseEnrollmentStateMachine();
-
-	/// Called by the EnrollmentTask when it got an M_RELEASE message
-	/// @param invoke_id the invoke_id of the release message
-	/// @param cdapSessionDescriptor
-	void release(int invoke_id,
-			rina::CDAPSessionDescriptor * session_descriptor);
-
-	/// Called by the EnrollmentTask when it got an M_RELEASE_R message
-	/// @param result
-	/// @param result_reason
-	/// @param session_descriptor
-	void releaseResponse(int result, const std::string& result_reason,
-			rina::CDAPSessionDescriptor * session_descriptor);
-
-	/// Called by the EnrollmentTask when the flow supporting the CDAP session with the remote peer
-	/// has been deallocated
-	/// @param cdapSessionDescriptor
-	void flowDeallocated(rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-
-	State state;
-	rina::Neighbor * remote_peer_;
-	bool enroller_;
+	~BaseEnrollmentStateMachine(){};
 
 protected:
 	BaseEnrollmentStateMachine(IPCProcess * ipc_process,
 			const rina::ApplicationProcessNamingInformation& remote_naming_info,
 			int timeout, rina::ApplicationProcessNamingInformation * supporting_dif_name);
-	bool isValidPortId(const rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-
-	/// Called by the enrollment state machine when the enrollment sequence fails
-	void abortEnrollment(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
-			int portId, const std::string& reason, bool enrollee, bool sendReleaseMessage);
-
-	/// Create or update the neighbor information in the RIB
-	/// @param enrolled true if the neighbor is enrolled, false otherwise
-	void createOrUpdateNeighborInformation(bool enrolled);
 
 	/// Sends all the DIF dynamic information
 	void sendDIFDynamicInformation();
@@ -195,24 +159,9 @@ protected:
 	/// Send the entries in the DFT (if any)
 	void sendDFTEntries();
 
-	/// Send the neighbors (if any)
-	void sendNeighbors();
-
-	/// Gets the object value from the RIB and send it as a CDAP Mesage
-	/// @param objectClass the class of the object to be send
-	/// @param objectName the name of the object to be send
-	void sendCreateInformation(const std::string& objectClass, const std::string& objectName);
-
 	IPCProcess * ipc_process_;
-	IPCPRIBDaemon * rib_daemon_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 	rina::IMasterEncoder * encoder_;
-	rina::IEnrollmentTask * enrollment_task_;
-	int timeout_;
-	rina::Timer * timer_;
-	rina::Lockable * lock_;
-	int port_id_;
-	rina::TimerTask * last_scheduled_task_;
 };
 
 /// The state machine of the party that wants to

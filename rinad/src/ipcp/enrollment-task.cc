@@ -236,165 +236,63 @@ void EnrollmentFailedTimerTask::run() {
 }
 
 //Class BaseEnrollmentStateMachine
-const std::string BaseEnrollmentStateMachine::CONNECT_RESPONSE_TIMEOUT = "Timeout waiting for connect response";
-const std::string BaseEnrollmentStateMachine::START_RESPONSE_TIMEOUT = "Timeout waiting for start response";
-const std::string BaseEnrollmentStateMachine::START_IN_BAD_STATE = "Received a START message in a wrong state";
-const std::string BaseEnrollmentStateMachine::STOP_ENROLLMENT_TIMEOUT = "Timeout waiting for stop enrolment response";
-const std::string BaseEnrollmentStateMachine::STOP_IN_BAD_STATE = "Received a STOP message in a wrong state";
-const std::string BaseEnrollmentStateMachine::STOP_WITH_NO_OBJECT_VALUE = "Received STOP message with null object value";
-const std::string BaseEnrollmentStateMachine::READ_RESPONSE_TIMEOUT = "Timeout waiting for read response";
-const std::string BaseEnrollmentStateMachine::PROBLEMS_COMMITTING_ENROLLMENT_INFO = "Problems commiting enrollment information";
-const std::string BaseEnrollmentStateMachine::START_TIMEOUT = "Timeout waiting for start";
-const std::string BaseEnrollmentStateMachine::READ_RESPONSE_IN_BAD_STATE = "Received a READ_RESPONSE message in a wrong state";
+const std::string BaseEnrollmentStateMachine::CONNECT_RESPONSE_TIMEOUT =
+		"Timeout waiting for connect response";
+const std::string BaseEnrollmentStateMachine::START_RESPONSE_TIMEOUT =
+		"Timeout waiting for start response";
+const std::string BaseEnrollmentStateMachine::START_IN_BAD_STATE =
+		"Received a START message in a wrong state";
+const std::string BaseEnrollmentStateMachine::STOP_ENROLLMENT_TIMEOUT =
+		"Timeout waiting for stop enrolment response";
+const std::string BaseEnrollmentStateMachine::STOP_IN_BAD_STATE =
+		"Received a STOP message in a wrong state";
+const std::string BaseEnrollmentStateMachine::STOP_WITH_NO_OBJECT_VALUE =
+		"Received STOP message with null object value";
+const std::string BaseEnrollmentStateMachine::READ_RESPONSE_TIMEOUT =
+		"Timeout waiting for read response";
+const std::string BaseEnrollmentStateMachine::PROBLEMS_COMMITTING_ENROLLMENT_INFO =
+		"Problems commiting enrollment information";
+const std::string BaseEnrollmentStateMachine::START_TIMEOUT =
+		"Timeout waiting for start";
+const std::string BaseEnrollmentStateMachine::READ_RESPONSE_IN_BAD_STATE =
+		"Received a READ_RESPONSE message in a wrong state";
 const std::string BaseEnrollmentStateMachine::UNSUCCESSFULL_READ_RESPONSE =
 		"Received an unsuccessful read response or a read response with a null object value";
-const std::string BaseEnrollmentStateMachine::UNSUCCESSFULL_START = "Received unsuccessful start request";
-const std::string BaseEnrollmentStateMachine::CONNECT_IN_NOT_NULL = "Received a CONNECT message while not in NULL state";
-const std::string BaseEnrollmentStateMachine::ENROLLMENT_NOT_ALLOWED = "Enrollment rejected by security manager";
-const std::string BaseEnrollmentStateMachine::START_ENROLLMENT_TIMEOUT = "Timeout waiting for start enrollment request";
-const std::string BaseEnrollmentStateMachine::STOP_ENROLLMENT_RESPONSE_TIMEOUT = "Timeout waiting for stop enrollment response";
-const std::string BaseEnrollmentStateMachine::STOP_RESPONSE_IN_BAD_STATE = "Received a STOP Response message in a wrong state";
+const std::string BaseEnrollmentStateMachine::UNSUCCESSFULL_START =
+		"Received unsuccessful start request";
+const std::string BaseEnrollmentStateMachine::CONNECT_IN_NOT_NULL =
+		"Received a CONNECT message while not in NULL state";
+const std::string BaseEnrollmentStateMachine::ENROLLMENT_NOT_ALLOWED =
+		"Enrollment rejected by security manager";
+const std::string BaseEnrollmentStateMachine::START_ENROLLMENT_TIMEOUT =
+		"Timeout waiting for start enrollment request";
+const std::string BaseEnrollmentStateMachine::STOP_ENROLLMENT_RESPONSE_TIMEOUT =
+		"Timeout waiting for stop enrollment response";
+const std::string BaseEnrollmentStateMachine::STOP_RESPONSE_IN_BAD_STATE =
+		"Received a STOP Response message in a wrong state";
+
+const std::string BaseEnrollmentStateMachine::STATE_WAIT_CONNECT_RESPONSE =
+		"WAIT_CONNECT_RESPONSE";
+const std::string BaseEnrollmentStateMachine::STATE_WAIT_START_ENROLLMENT_RESPONSE =
+		"WAIT_START_ENROLLMENT_RESPONSE";
+const std::string BaseEnrollmentStateMachine::STATE_WAIT_READ_RESPONSE =
+		"WAIT_READ_RESPONSE";
+const std::string BaseEnrollmentStateMachine::STATE_WAIT_START =
+		"WAIT_START";
+const std::string BaseEnrollmentStateMachine::STATE_WAIT_START_ENROLLMENT =
+		"WAIT_START_ENROLLMENT";
+const std::string BaseEnrollmentStateMachine::STATE_WAIT_STOP_ENROLLMENT_RESPONSE =
+		"WAIT_STOP_ENROLLMENT_RESPONSE";
 
 BaseEnrollmentStateMachine::BaseEnrollmentStateMachine(IPCProcess * ipc_process,
 			const rina::ApplicationProcessNamingInformation& remote_naming_info,
-			int timeout, rina::ApplicationProcessNamingInformation * supporting_dif_name) {
+			int timeout, rina::ApplicationProcessNamingInformation * supporting_dif_name) :
+				rina::IEnrollmentStateMachine(ipc_process, true, remote_naming_info,
+						timeout, supporting_dif_name)
+{
 	ipc_process_ = ipc_process;
-	rib_daemon_ = ipc_process->rib_daemon_;
 	cdap_session_manager_ = ipc_process->cdap_session_manager_;
 	encoder_ = ipc_process->encoder_;
-	enrollment_task_ = ipc_process->enrollment_task_;
-	timeout_ = timeout;
-	timer_ = new rina::Timer();
-	lock_ = new rina::Lockable();
-	remote_peer_ = new rina::Neighbor();
-	remote_peer_->name_ = remote_naming_info;
-	if (supporting_dif_name) {
-		remote_peer_->supporting_dif_name_ = *supporting_dif_name;
-		delete supporting_dif_name;
-	}
-	port_id_ = 0;
-	last_scheduled_task_ = 0;
-	state = STATE_NULL;
-	enroller_ = false;
-}
-
-BaseEnrollmentStateMachine::~BaseEnrollmentStateMachine() {
-	if (timer_) {
-		delete timer_;
-	}
-
-	if (lock_) {
-		delete lock_;
-	}
-}
-
-void BaseEnrollmentStateMachine::abortEnrollment(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
-			int portId, const std::string& reason, bool enrollee, bool sendReleaseMessage) {
-	if (timer_) {
-		delete timer_;
-		timer_ = 0;
-	}
-
-	state = STATE_NULL;
-
-	enrollment_task_->enrollmentFailed(remotePeerNamingInfo, portId, reason, enrollee, sendReleaseMessage);
-}
-
-bool BaseEnrollmentStateMachine::isValidPortId(const rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	if (cdapSessionDescriptor->port_id_ != port_id_) {
-		LOG_IPCP_ERR("Received a CDAP message form port-id %d, but was expecting it form port-id %d",
-				cdapSessionDescriptor->port_id_, port_id_);
-		return false;
-	}
-
-	return true;
-}
-
-void BaseEnrollmentStateMachine::release(int invoke_id,
-		rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::ScopedLock g(*lock_);
-	LOG_IPCP_DBG("Releasing the CDAP connection");
-
-	if (!isValidPortId(session_descriptor)) {
-		return;
-	}
-
-	createOrUpdateNeighborInformation(false);
-
-	state = STATE_NULL;
-	if (timer_) {
-		delete timer_;
-		timer_ = 0;
-	}
-
-	if (invoke_id == 0) {
-		return;
-	}
-
-	try {
-		rina::RemoteProcessId remote_id;
-		remote_id.port_id_ = port_id_;
-
-		rib_daemon_->closeApplicationConnectionResponse(0, "", invoke_id, remote_id);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems generating or sending CDAP Message: %s", e.what());
-	}
-}
-
-void BaseEnrollmentStateMachine::releaseResponse(int result, const std::string& result_reason,
-		rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::ScopedLock g(*lock_);
-
-	(void) result;
-	(void) result_reason;
-
-	if (!isValidPortId(session_descriptor)) {
-		return;
-	}
-
-	if (state != STATE_NULL) {
-		state = STATE_NULL;
-	}
-}
-
-void BaseEnrollmentStateMachine::flowDeallocated(rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	rina::ScopedLock g(*lock_);
-	LOG_IPCP_INFO("The flow supporting the CDAP session identified by %d has been deallocated.",
-			cdapSessionDescriptor->port_id_);
-
-	if (!isValidPortId(cdapSessionDescriptor)){
-		return;
-	}
-
-	createOrUpdateNeighborInformation(false);
-
-	state = STATE_NULL;
-	if (timer_) {
-		delete timer_;
-		timer_ = 0;
-	}
-}
-
-void BaseEnrollmentStateMachine::createOrUpdateNeighborInformation(bool enrolled) {
-	remote_peer_->enrolled_ = enrolled;
-	remote_peer_->number_of_enrollment_attempts_ = 0;
-	rina::Time currentTime;
-	remote_peer_->last_heard_from_time_in_ms_ = currentTime.get_current_time_in_ms();
-	if (enrolled) {
-		remote_peer_->underlying_port_id_ = port_id_;
-	} else {
-		remote_peer_->underlying_port_id_ = 0;
-	}
-
-	try {
-		std::stringstream ss;
-		ss<<rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_NAME<<EncoderConstants::SEPARATOR;
-		ss<<remote_peer_->name_.processName;
-		rib_daemon_->createObject(rina::NeighborSetRIBObject::NEIGHBOR_RIB_OBJECT_CLASS, ss.str(),
-				remote_peer_, 0);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems creating RIB object: %s", e.what());
-	}
 }
 
 void BaseEnrollmentStateMachine::sendDIFDynamicInformation() {
@@ -436,76 +334,6 @@ void BaseEnrollmentStateMachine::sendDFTEntries() {
 	}
 }
 
-void BaseEnrollmentStateMachine::sendNeighbors() {
-	rina::BaseRIBObject * neighborSet;
-	std::list<rina::BaseRIBObject *>::const_iterator it;
-	std::list<rina::Neighbor *> neighbors;
-	rina::Neighbor * myself = 0;
-	std::vector<rina::ApplicationRegistration *> registrations;
-	std::list<rina::ApplicationProcessNamingInformation>::const_iterator it2;
-	try {
-		neighborSet = rib_daemon_->readObject(rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_CLASS,
-				rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_NAME);
-		for (it = neighborSet->get_children().begin();
-				it != neighborSet->get_children().end(); ++it) {
-			neighbors.push_back((rina::Neighbor*) (*it)->get_value());
-		}
-
-		myself = new rina::Neighbor();
-		myself->address_ = ipc_process_->get_address();
-		myself->name_.processName = ipc_process_->get_name();
-		myself->name_.processInstance = ipc_process_->get_instance();
-		registrations = rina::extendedIPCManager->getRegisteredApplications();
-		for (unsigned int i=0; i<registrations.size(); i++) {
-			for(it2 = registrations[i]->DIFNames.begin();
-					it2 != registrations[i]->DIFNames.end(); ++it2) {
-				myself->add_supporting_dif((*it2));
-			}
-		}
-		neighbors.push_back(myself);
-
-		rina::RIBObjectValue robject_value;
-		robject_value.type_ = rina::RIBObjectValue::complextype;
-		robject_value.complex_value_ = &neighbors;
-		rina::RemoteProcessId remote_id;
-		remote_id.port_id_ = port_id_;
-
-		rib_daemon_->remoteCreateObject(rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_CLASS,
-				rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_NAME, robject_value,
-				0, remote_id, 0);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems sending neighbors: %s", e.what());
-	}
-
-	delete myself;
-}
-
-void BaseEnrollmentStateMachine::sendCreateInformation(const std::string& objectClass,
-		const std::string& objectName) {
-	rina::BaseRIBObject * ribObject = 0;
-
-	try {
-		ribObject = rib_daemon_->readObject(objectClass, objectName);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems reading object from RIB: %s", e.what());
-		return;
-	}
-
-	if (ribObject->get_value()) {
-		try {
-			rina::RIBObjectValue robject_value;
-			robject_value.type_ = rina::RIBObjectValue::complextype;
-			robject_value.complex_value_ = const_cast<void*> (ribObject->get_value());
-			rina::RemoteProcessId remote_id;
-			remote_id.port_id_ = port_id_;
-
-			rib_daemon_->remoteCreateObject(objectClass, objectName, robject_value, 0, remote_id, 0);
-		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Problems generating or sending CDAP message: %s", e.what());
-		}
-	}
-}
-
 // Class EnrolleeStateMachine
 EnrolleeStateMachine::EnrolleeStateMachine(IPCProcess * ipc_process,
 		const rina::ApplicationProcessNamingInformation& remote_naming_info,
@@ -533,7 +361,7 @@ void EnrolleeStateMachine::initiateEnrollment(rina::EnrollmentRequest * enrollme
 	remote_peer_->underlying_port_id_ = enrollment_request_->neighbor_->underlying_port_id_;
 	remote_peer_->supporting_difs_ = enrollment_request_->neighbor_->supporting_difs_;
 
-	if (state != STATE_NULL) {
+	if (state_ != STATE_NULL) {
 		throw rina::Exception("Enrollee state machine not in NULL state");
 	}
 
@@ -553,7 +381,7 @@ void EnrolleeStateMachine::initiateEnrollment(rina::EnrollmentRequest * enrollme
 		timer_->scheduleTask(last_scheduled_task_, timeout_);
 
 		//Update state
-		state = STATE_WAIT_CONNECT_RESPONSE;
+		state_ = STATE_WAIT_CONNECT_RESPONSE;
 	}catch(rina::Exception &e){
 		LOG_IPCP_ERR("Problems sending M_CONNECT message: %s", e.what());
 		abortEnrollment(remote_peer_->name_, port_id_, std::string(e.what()), true, false);
@@ -564,7 +392,7 @@ void EnrolleeStateMachine::connectResponse(int result,
 		const std::string& result_reason) {
 	rina::ScopedLock g(*lock_);
 
-	if (state != STATE_WAIT_CONNECT_RESPONSE) {
+	if (state_ != STATE_WAIT_CONNECT_RESPONSE) {
 		abortEnrollment(remote_peer_->name_, port_id_,
 				"Message received in wrong order", true, true);
 		return;
@@ -572,7 +400,7 @@ void EnrolleeStateMachine::connectResponse(int result,
 
 	timer_->cancelTask(last_scheduled_task_);
 	if (result != 0) {
-		state = STATE_NULL;
+		state_ = STATE_NULL;
 		enrollment_task_->enrollmentFailed(remote_peer_->get_name(), port_id_,
 				result_reason, true, true);
 		return;
@@ -616,7 +444,7 @@ void EnrolleeStateMachine::connectResponse(int result,
 		timer_->scheduleTask(last_scheduled_task_, timeout_);
 
 		//Update state
-		state = STATE_WAIT_START_ENROLLMENT_RESPONSE;
+		state_ = STATE_WAIT_START_ENROLLMENT_RESPONSE;
 	}catch(rina::Exception &e){
 		LOG_IPCP_ERR("Problems sending M_START request message: %s", e.what());
 		//TODO what to do?
@@ -631,7 +459,7 @@ void EnrolleeStateMachine::startResponse(int result, const std::string& result_r
 		return;
 	}
 
-	if (state != STATE_WAIT_START_ENROLLMENT_RESPONSE) {
+	if (state_ != STATE_WAIT_START_ENROLLMENT_RESPONSE) {
 		abortEnrollment(remote_peer_->name_, port_id_,
 				START_IN_BAD_STATE, true, true);
 		return;
@@ -639,7 +467,7 @@ void EnrolleeStateMachine::startResponse(int result, const std::string& result_r
 
 	timer_->cancelTask(last_scheduled_task_);
 	if (result != 0) {
-		state = STATE_NULL;
+		state_ = STATE_NULL;
 		enrollment_task_->enrollmentFailed(remote_peer_->get_name(), port_id_,
 				result_reason, true, true);
 		return;
@@ -666,7 +494,7 @@ void EnrolleeStateMachine::startResponse(int result, const std::string& result_r
 	timer_->scheduleTask(last_scheduled_task_, timeout_);
 
 	//Update state
-	state = STATE_WAIT_STOP_ENROLLMENT_RESPONSE;
+	state_ = STATE_WAIT_STOP_ENROLLMENT_RESPONSE;
 }
 
 void EnrolleeStateMachine::stop(EnrollmentInformationRequest * eiRequest, int invoke_id,
@@ -677,7 +505,7 @@ void EnrolleeStateMachine::stop(EnrollmentInformationRequest * eiRequest, int in
 		return;
 	}
 
-	if (state != STATE_WAIT_STOP_ENROLLMENT_RESPONSE) {
+	if (state_ != STATE_WAIT_STOP_ENROLLMENT_RESPONSE) {
 		abortEnrollment(remote_peer_->name_, port_id_,
 				STOP_IN_BAD_STATE, true, true);
 		return;
@@ -714,7 +542,7 @@ void EnrolleeStateMachine::requestMoreInformationOrStart() {
 		timer_->scheduleTask(last_scheduled_task_, timeout_);
 
 		//Update state
-		state = STATE_WAIT_READ_RESPONSE;
+		state_ = STATE_WAIT_READ_RESPONSE;
 		return;
 	}
 
@@ -752,7 +580,7 @@ void EnrolleeStateMachine::requestMoreInformationOrStart() {
 
 	last_scheduled_task_ = new EnrollmentFailedTimerTask(this, START_TIMEOUT, true);
 	timer_->scheduleTask(last_scheduled_task_, timeout_);
-	state = STATE_WAIT_START;
+	state_ = STATE_WAIT_START;
 }
 
 bool EnrolleeStateMachine::sendNextObjectRequired() {
@@ -800,7 +628,7 @@ void EnrolleeStateMachine::commitEnrollment() {
 void EnrolleeStateMachine::enrollmentCompleted() {
 	delete timer_;
 	timer_ = 0;
-	state = STATE_ENROLLED;
+	state_ = STATE_ENROLLED;
 
 	//Create or update the neighbor information in the RIB
 	createOrUpdateNeighborInformation(true);
@@ -847,7 +675,7 @@ void EnrolleeStateMachine::readResponse(int result, const std::string& result_re
 		return;
 	}
 
-	if (state != STATE_WAIT_READ_RESPONSE) {
+	if (state_ != STATE_WAIT_READ_RESPONSE) {
 		abortEnrollment(remote_peer_->name_, port_id_,
 				READ_RESPONSE_IN_BAD_STATE, true, true);
 		return;
@@ -905,11 +733,11 @@ void EnrolleeStateMachine::start(int result, const std::string& result_reason,
 		return;
 	}
 
-	if (state == STATE_ENROLLED) {
+	if (state_ == STATE_ENROLLED) {
 		return;
 	}
 
-	if (state != STATE_WAIT_START) {
+	if (state_ != STATE_WAIT_START) {
 		abortEnrollment(remote_peer_->name_, port_id_,
 				START_IN_BAD_STATE, true, true);
 		return;
@@ -953,7 +781,7 @@ void EnrollerStateMachine::connect(int invoke_id, rina::CDAPSessionDescriptor * 
 
         assert(smps);
 
-	if (state != STATE_NULL) {
+	if (state_ != STATE_NULL) {
 		abortEnrollment(remote_peer_->name_, session_descriptor->port_id_,
 				CONNECT_IN_NOT_NULL, false, true);
 		return;
@@ -991,7 +819,7 @@ void EnrollerStateMachine::connect(int invoke_id, rina::CDAPSessionDescriptor * 
 		timer_->scheduleTask(last_scheduled_task_, timeout_);
 		LOG_IPCP_DBG("M_CONNECT_R sent to portID %d. Waiting for start enrollment request message", port_id_);
 
-		state = STATE_WAIT_START_ENROLLMENT;
+		state_ = STATE_WAIT_START_ENROLLMENT;
 	}catch(rina::Exception &e){
 		LOG_IPCP_ERR("Problems sending CDAP message: %s", e.what());
 		abortEnrollment(remote_peer_->name_, port_id_,
@@ -1037,7 +865,7 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int i
 		return;
 	}
 
-	if (state != STATE_WAIT_START_ENROLLMENT) {
+	if (state_ != STATE_WAIT_START_ENROLLMENT) {
 		abortEnrollment(remote_peer_->name_, port_id_,
 				START_IN_BAD_STATE, false, true);
 		return;
@@ -1138,7 +966,7 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int i
 	timer_->scheduleTask(last_scheduled_task_, timeout_);
 
 	LOG_IPCP_DBG("Waiting for stop enrollment response message");
-	state = STATE_WAIT_STOP_ENROLLMENT_RESPONSE;
+	state_ = STATE_WAIT_STOP_ENROLLMENT_RESPONSE;
 }
 
 void EnrollerStateMachine::stopResponse(int result, const std::string& result_reason,
@@ -1151,7 +979,7 @@ void EnrollerStateMachine::stopResponse(int result, const std::string& result_re
 		return;
 	}
 
-	if (state != STATE_WAIT_STOP_ENROLLMENT_RESPONSE) {
+	if (state_ != STATE_WAIT_STOP_ENROLLMENT_RESPONSE) {
 		abortEnrollment(remote_peer_->name_, port_id_,
 				STOP_RESPONSE_IN_BAD_STATE, false, true);
 		return;
@@ -1159,7 +987,7 @@ void EnrollerStateMachine::stopResponse(int result, const std::string& result_re
 
 	timer_->cancelTask(last_scheduled_task_);
 	if (result != 0){
-		state = STATE_NULL;
+		state_ = STATE_NULL;
 		enrollment_task_->enrollmentFailed(remote_peer_->name_, port_id_,
 				result_reason, false, true);
 		return;
@@ -1183,7 +1011,7 @@ void EnrollerStateMachine::enrollmentCompleted() {
 	delete timer_;
 	timer_ = 0;
 
-	state = STATE_ENROLLED;
+	state_ = STATE_ENROLLED;
 
 	createOrUpdateNeighborInformation(true);
 
@@ -1366,7 +1194,7 @@ bool EnrollmentTask::isEnrolledTo(const std::string& processName) const {
 	std::list<BaseEnrollmentStateMachine *>::const_iterator it;
 	for (it = machines.begin(); it != machines.end(); ++it) {
 		if ((*it)->remote_peer_->name_.processName.compare(processName) == 0 &&
-				(*it)->state != BaseEnrollmentStateMachine::STATE_NULL) {
+				(*it)->state_ != BaseEnrollmentStateMachine::STATE_NULL) {
 			return true;
 		}
 	}

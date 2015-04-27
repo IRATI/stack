@@ -28,6 +28,7 @@
 #ifdef __cplusplus
 
 #include "rib.h"
+#include "timer.h"
 
 namespace rina {
 
@@ -155,6 +156,70 @@ public:
 	/// @param apNamingInfo
 	/// @return
 	virtual bool isEnrolledTo(const std::string& applicationProcessName) const = 0;
+};
+
+// The common elements of an enrollment state machine
+class IEnrollmentStateMachine : public BaseCDAPResponseMessageHandler {
+public:
+	static const std::string STATE_NULL;
+	static const std::string STATE_ENROLLED;
+
+	IEnrollmentStateMachine(ApplicationProcess * app, bool isIPCP,
+			const rina::ApplicationProcessNamingInformation& remote_naming_info,
+			int timeout, rina::ApplicationProcessNamingInformation * supporting_dif_name);
+	~IEnrollmentStateMachine();
+
+	/// Called by the EnrollmentTask when it got an M_RELEASE message
+	/// @param invoke_id the invoke_id of the release message
+	/// @param cdapSessionDescriptor
+	void release(int invoke_id,
+			rina::CDAPSessionDescriptor * session_descriptor);
+
+	/// Called by the EnrollmentTask when it got an M_RELEASE_R message
+	/// @param result
+	/// @param result_reason
+	/// @param session_descriptor
+	void releaseResponse(int result, const std::string& result_reason,
+			rina::CDAPSessionDescriptor * session_descriptor);
+
+	/// Called by the EnrollmentTask when the flow supporting the CDAP session with the remote peer
+	/// has been deallocated
+	/// @param cdapSessionDescriptor
+	void flowDeallocated(rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+
+	rina::Neighbor * remote_peer_;
+	bool enroller_;
+	std::string state_;
+
+protected:
+	bool isValidPortId(const rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+
+	/// Called by the enrollment state machine when the enrollment sequence fails
+	void abortEnrollment(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
+			     int portId, const std::string& reason, bool enrollee,
+			     bool sendReleaseMessage);
+
+	/// Create or update the neighbor information in the RIB
+	/// @param enrolled true if the neighbor is enrolled, false otherwise
+	void createOrUpdateNeighborInformation(bool enrolled);
+
+	/// Send the neighbors (if any)
+	void sendNeighbors();
+
+	/// Gets the object value from the RIB and send it as a CDAP Mesage
+	/// @param objectClass the class of the object to be send
+	/// @param objectName the name of the object to be send
+	void sendCreateInformation(const std::string& objectClass, const std::string& objectName);
+
+	ApplicationProcess * app_;
+	IRIBDaemon * rib_daemon_;
+	IEnrollmentTask * enrollment_task_;
+	int timeout_;
+	Timer * timer_;
+	Lockable * lock_;
+	int port_id_;
+	TimerTask * last_scheduled_task_;
+	bool isIPCP_;
 };
 
 }

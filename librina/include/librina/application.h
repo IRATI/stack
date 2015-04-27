@@ -218,6 +218,7 @@ public:
 	virtual ~ApplicationProcess();
 	const std::string& get_name() const;
 	const std::string& get_instance() const;
+	virtual unsigned int get_address() const = 0;
 	void add_entity(ApplicationEntity * entity);
 	ApplicationEntity * remove_entity(const std::string& name);
 	ApplicationEntity * get_entity(const std::string& name);
