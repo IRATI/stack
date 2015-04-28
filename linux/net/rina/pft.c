@@ -243,7 +243,6 @@ int pft_select_policy_set(struct pft * pft,
                           const string_t * path,
                           const string_t * name)
 {
-        struct pft_ps * ps;
         int ret;
 
         if (path && strcmp(path, "")) {
@@ -251,7 +250,9 @@ int pft_select_policy_set(struct pft * pft,
                 return -1;
         }
 
-        return base_select_policy_set(&pft->base, &policy_sets, name);
+        ret = base_select_policy_set(&pft->base, &policy_sets, name);
+
+        return ret;
 }
 EXPORT_SYMBOL(pft_select_policy_set);
 
@@ -439,6 +440,40 @@ int pft_add(struct pft *      instance,
 
         return 0;
 }
+
+int pft_set_policy_set_param(struct pft * pft,
+                             const char * path,
+                             const char * name,
+                             const char * value)
+{
+        struct pft_ps * ps;
+        int ret = -1;
+
+        if (!pft || !path || !name || !value) {
+           LOG_ERRF("NULL arguments %p %p %p %p", pft, path, name, value);
+           return -1;
+        }
+
+        LOG_DBG("set-policy-set-param '%s' '%s' '%s'", path, name, value);
+
+        if (strcmp(path, "") == 0) {
+                /* The request addresses this PFT instance. */
+                rcu_read_lock();
+                ps = container_of(rcu_dereference(pft->base.ps), struct pft_ps, base);
+                if (!ps) {
+                        LOG_ERR("No policy-set selected for this RMT");
+                } else {
+                        LOG_ERR("Unknown PFT parameter policy '%s'", name);
+                }
+                rcu_read_unlock();
+
+        } else {
+           ret = base_set_policy_set_param(&pft->base, path, name, value);
+        }
+
+        return ret;
+}
+EXPORT_SYMBOL(pft_set_policy_set_param);
 
 int pft_remove(struct pft *      instance,
                address_t         destination,

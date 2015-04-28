@@ -77,4 +77,13 @@ struct pft_ps * pft_ps_get(struct pft * pft);
 
 struct pft * pft_from_component(struct rina_component * component);
 
+int pft_select_policy_set(struct pft * pft,
+                          const string_t * path,
+                          const string_t * name);
+
+int          pft_set_policy_set_param(struct pft *     pft,
+                                      const string_t * path,
+                                      const string_t * name,
+                                      const string_t * value);
+
 #endif

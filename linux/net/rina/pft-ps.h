@@ -37,7 +37,7 @@ struct pft_ps {
                          port_id_t **    ports,
                          size_t *        count);
 
-        /* Reference used to access the DTP data model. */
+        /* Reference used to access the PFT data model. */
         struct pft * dm;
 
         /* Data private to the policy-set implementation. */
