@@ -110,13 +110,6 @@ PKG_CHECK_MODULES(LIBNLGENL3, [libnl-genl-3.0 >= $LIBNL_MIN_VERSION],, [
     AC_MSG_ERROR([Your system lacks of libnl-genl-3 support (>= $LIBNL_MIN_VERSION)])
 ])
 
-LIBJSONCPP_MIN_VERSION=0.6.0
-AC_SUBST(LIBJSONCPP_MIN_VERSION, $LIBJSONCPP_MIN_VERSION)
-
-PKG_CHECK_MODULES(LIBJSONCPP, [jsoncpp >= $LIBJSONCPP_MIN_VERSION],, [
-    AC_MSG_ERROR([Your system lacks of jsoncpp support (>= $LIBJSONCPP_MIN_VERSION)])
-])
-
 AC_CHECK_LIB([pthread],[pthread_create],,[
     AC_MSG_ERROR([Your system lacks of libpthread support])
 ])

@@ -26,12 +26,10 @@ ipcm_CPPFLAGS =					\
 	$(LIBRINA_CFLAGS)			\
 	-I$(srcdir)/..				\
 	-I$(srcdir)/../common			\
-	$(LIBJSONCPP_CFLAGS)			\
 	-DPLUGINSDIR=\"$(pkglibdir)/ipcm\"	\
 	-DIPCPPLUGINSDIR=\"$(pkglibdir)/ipcp\"
 ipcm_LDADD    =					\
 	$(builddir)/../common/librinad.la	\
-	$(LIBJSONCPP_LIBS)			\
 	$(builddir)/addons/libaddons.la		\
 	$(LIBRINA_LIBS)
 ipcm_SOURCES  =					\
@@ -71,9 +69,6 @@ edit = $(SED)						\
 	-e 's|@PKG_CONFIG_PATH[@]|$(PKG_CONFIG_PATH)|g'	\
 	-e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'	\
 	-e 's|@PACKAGE_URL[@]|$(PACKAGE_VERSION)|g'	\
-	-e 's|@LIBJSONCPP_MIN_VERSION[@]|$(LIBJSONCPP_MIN_VERSION)|g'	\
-	-e 's|@LIBJSONCPP_CFLAGS[@]|$(LIBJSONCPP_CFLAGS)|g'		\
-	-e 's|@LIBJSONCPP_LIBS[@]|$(LIBJSONCPP_LIBS)|g'			\
 	-e 's|@prefix[@]|$(prefix)|g'			\
 	-e 's|@includedir[@]|$(includedir)|g'		\
 	-e 's|@pkgincludedir[@]|$(pkgincludedir)|g'	\

@@ -7,7 +7,7 @@ Name: RINAd IPCM
 Description: RINA IPC Manager Daemon
 Version: @PACKAGE_VERSION@
 URL: @PACKAGE_URL@
-Requires: LibRINA >= @PACKAGE_VERSION@, jsoncpp >= @LIBJSONCPP_MIN_VERSION@
+Requires: LibRINA >= @PACKAGE_VERSION@
 Libs: -L${libdir} -lrina
-Libs.private: -lpthread @LIBJSONCPP_LIBS@
-Cflags: -I${includedir} @LIBJSONCPP_CFLAGS@
+Libs.private: -lpthread
+Cflags: -I${includedir}
