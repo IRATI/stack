@@ -857,6 +857,7 @@ cdap_m_t* CDAPMessageFactory::getReadObjectResponseMessage(
         cdap_message->obj_class_ = obj.class_;
         cdap_message->obj_inst_ = obj.inst_;
         cdap_message->obj_name_ = obj.name_;
+        cdap_message->obj_value_ = obj.value_;
         cdap_message->result_ = res.result_;
         cdap_message->result_reason_ = res.result_reason_;
         return cdap_message;
@@ -2577,38 +2578,6 @@ const cdap_m_t* GPBSerializer::deserializeMessage(
                 cdapMessage->obj_value_.message_ = byte_val;
                 cdapMessage->obj_value_.size_ = obj_val_t.byteval().size();
         }
-        /*
-         if (obj_val_t.has_intval()) {
-         cdapMessage->obj_value_ = new IntObjectValue(obj_val_t.intval());
-         }
-         if (obj_val_t.has_sintval()) {
-         cdapMessage->obj_value_ = new SIntObjectValue(obj_val_t.sintval());
-         }
-         if (obj_val_t.has_int64val()) {
-         cdapMessage->obj_value_ = new LongObjectValue(obj_val_t.int64val());
-         }
-         if (obj_val_t.has_sint64val()) {
-         cdapMessage->obj_value_ = new SLongObjectValue(obj_val_t.sint64val());
-         }
-         if (obj_val_t.has_strval()) {
-         cdapMessage->obj_value_ = new StringObjectValue(obj_val_t.strval());
-         }
-         if (obj_val_t.has_floatval()) {
-         cdapMessage->obj_value_ = new FloatObjectValue(obj_val_t.floatval());
-         }
-         if (obj_val_t.has_doubleval()) {
-         cdapMessage->obj_value_ = new DoubleObjectValue(obj_val_t.doubleval());
-         }
-         if (obj_val_t.has_boolval()) {
-         cdapMessage->obj_value_ = new BooleanObjectValue(obj_val_t.boolval());
-         }
-         if (obj_val_t.has_byteval()) {
-         char *byte_val = new char[obj_val_t.byteval().size()];
-         SerializedObject sr_message(byte_val, obj_val_t.byteval().size());
-         memcpy(byte_val, obj_val_t.byteval().data(), obj_val_t.byteval().size());
-         cdapMessage->set_obj_value(new ByteArrayObjectValue(sr_message));
-         }
-         */
         // OP_CODE
         if (gpfCDAPMessage.has_opcode()) {
                 int opcode_val = gpfCDAPMessage.opcode();
@@ -2693,52 +2662,8 @@ const cdap_rib::SerializedObject* GPBSerializer::serializeMessage(
                                 new cdap::impl::googleprotobuf::objVal_t();
                 gpb_obj_val->set_byteval(cdapMessage.obj_value_.message_,
                                          cdapMessage.obj_value_.size_);
+                gpfCDAPMessage.set_allocated_objvalue(gpb_obj_val);
         }
-        /*
-         switch (cdapMessage.get_obj_value()->isType()) {
-         case ObjectValueInterface::inttype:
-         gpb_obj_val->set_intval(
-         *(int*) cdapMessage.get_obj_value()->get_value());
-         break;
-         case ObjectValueInterface::sinttype:
-         gpb_obj_val->set_sintval(
-         *(short int*) cdapMessage.get_obj_value()->get_value());
-         break;
-         case ObjectValueInterface::longtype:
-         gpb_obj_val->set_int64val(
-         *(long long*) cdapMessage.get_obj_value()->get_value());
-         break;
-         case ObjectValueInterface::slongtype:
-         gpb_obj_val->set_sint64val(
-         *(long*) cdapMessage.get_obj_value()->get_value());
-         break;
-         case ObjectValueInterface::stringtype:
-         gpb_obj_val->set_strval(
-         *(std::string*) cdapMessage.get_obj_value()->get_value());
-         break;
-         case ObjectValueInterface::bytetype: {
-         SerializedObject * serialized_object = (SerializedObject*) cdapMessage
-         .get_obj_value()->get_value();
-         gpb_obj_val->set_byteval(serialized_object->message_,
-         serialized_object->size_);
-         break;
-         }
-         case ObjectValueInterface::floattype:
-         gpb_obj_val->set_floatval(
-         *(float*) cdapMessage.get_obj_value()->get_value());
-         break;
-         case ObjectValueInterface::doubletype:
-         gpb_obj_val->set_doubleval(
-         *(double*) cdapMessage.get_obj_value()->get_value());
-         break;
-         case ObjectValueInterface::booltype:
-         gpb_obj_val->set_boolval(
-         *(bool*) cdapMessage.get_obj_value()->get_value());
-         break;
-         }
-         gpfCDAPMessage.set_allocated_objvalue(gpb_obj_val);
-         }
-         */
         // OP_CODE
         if (!cdap::impl::googleprotobuf::opCode_t_IsValid(
                         cdapMessage.op_code_)) {
@@ -3145,6 +3070,7 @@ void CDAPProvider::process_message(cdap_rib::SerializedObject &message,
         obj.inst_ = m_rcv->obj_inst_;
         obj.name_ = m_rcv->obj_name_;
         obj.value_.size_ = m_rcv->obj_value_.size_;
+        obj.value_.message_ = new char[obj.value_.size_];
         memcpy(obj.value_.message_, m_rcv->obj_value_.message_,
                m_rcv->obj_value_.size_);
 

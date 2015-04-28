@@ -13,6 +13,8 @@
 #include <librina/patterns.h>
 #include <librina/common.h>
 
+#include "encoders_mad.h"
+
 namespace rinad{
 namespace mad{
 namespace rib_v1{
@@ -35,6 +37,10 @@ private:
 
 	//Name of the class
 	const static std::string class_name;
+
+	int createIPCP(rinad::mad_manager::structures::ipcp_config_t &object);
+        bool assignToDIF(rinad::mad_manager::structures::ipcp_config_t &object, int ipcp_id);
+        bool registerAtDIF(rinad::mad_manager::structures::ipcp_config_t &object, int ipcp_id);
 };
 
 }; //namespace rib_v1

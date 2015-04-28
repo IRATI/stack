@@ -41,7 +41,7 @@ typedef struct ipcp{
 */
 typedef struct ipcp_config{
 	std::string process_name;
-	unsigned int process_instance;
+	std::string process_instance;
 	std::string process_type;
 	std::string dif_to_register;
 	std::string dif_to_assign;

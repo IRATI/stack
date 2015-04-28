@@ -31,9 +31,7 @@ IPCPObj::IPCPObj(std::string name, long instance,
 	: RIBObject<mad_manager::structures::ipcp_t>(class_name, instance, name,
 					(mad_manager::structures::ipcp_t*) NULL,
 					&encoder){
-
-	mad_manager::structures::ipcp_config_t object;
-	rinad::mad_manager::encoders::IPCPConfigEncoder().decode(object_value, object);
+        (void) object_value;
 }
 
 rina::cdap_rib::res_info_t* IPCPObj::remoteRead(

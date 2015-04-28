@@ -232,7 +232,7 @@ void RIB::addRIBObject(BaseRIBObject* rib_object)
                 unlock();
                 std::stringstream ss;
                 ss << "Object with the same instance ("
-                   << rib_object->get_instance() << "already exists "
+                   << rib_object->get_instance() << ") already exists "
                    "in the RIB"
                    << std::endl;
                 throw Exception(ss.str().c_str());
@@ -551,7 +551,6 @@ void RIBDaemon::remote_create_request(const cdap_rib::con_handle_t &con,
         cdap_rib::res_info_t* res = rib_obj->remoteCreate(obj.name_, obj.class_,
                                                           obj.value_,
                                                           obj_reply.value_);
-
         try {
                 cdap_provider_->remote_create_response(con.port_, obj_reply,
                                                        flags, *res, message_id);
@@ -599,8 +598,9 @@ void RIBDaemon::remote_read_request(const cdap_rib::con_handle_t &con,
         cdap_rib::res_info_t* res = ribObj->remoteRead(obj.name_,
                                                        obj_reply.value_);
 
+        LOG_DBG("Object Sizeeee %d", obj_reply.value_.size_);
         try {
-                cdap_provider_->remote_read_response(con.port_, obj, flags,
+                cdap_provider_->remote_read_response(con.port_, obj_reply, flags,
                                                      *res, message_id);
         } catch (Exception &e) {
                 LOG_ERR("Unable to send the response");

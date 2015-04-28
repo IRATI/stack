@@ -130,8 +130,10 @@ void ConnectionCallback::remote_read_result(const rina::cdap_rib::con_handle_t &
         // decode object value
         // print object value
         (void) con;
-        (void) obj;
-        (void) res;
+        std::cout<<"Query Rib operation returned result "<<res.result_<<std::endl;
+        std::string query_rib;
+        rinad::mad_manager::encoders::StringEncoder().decode(obj.value_, query_rib);
+        std::cout<<"QueryRIB:"<<std::endl<<query_rib<<std::endl;
 }
 
 Manager::Manager(const std::string& dif_name, const std::string& apn,
@@ -254,10 +256,9 @@ void Manager::createIPCP(rina::Flow* flow)
         char buffer[max_sdu_size_in_bytes];
 
         mad_manager::structures::ipcp_config_t ipc_config;
-        ipc_config.process_instance = 1;
+        ipc_config.process_instance = "1";
         ipc_config.process_name = "test2.IRATI";
-        ipc_config.process_type = "normal.IPC";
-        ipc_config.dif_to_register = "400";
+        ipc_config.process_type = "normal-ipc";
         ipc_config.dif_to_assign = "normal.DIF";
 
         cdap_rib::obj_info_t obj;
@@ -267,6 +268,8 @@ void Manager::createIPCP(rina::Flow* flow)
         obj.inst_ = 0;
         mad_manager::encoders::IPCPConfigEncoder().encode(ipc_config,
                                                           obj.value_);
+        mad_manager::structures::ipcp_config_t object;
+        mad_manager::encoders::IPCPConfigEncoder().decode(obj.value_, object);
 
         cdap_rib::flags_t flags;
         flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
@@ -291,7 +294,7 @@ void Manager::queryRIB(rina::Flow *flow)
 
         cdap_rib::obj_info_t obj;
         obj.name_ =
-                        "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcessID=1, RIBDaemonID=1";
+                        "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcessID=1, RIBDaemon";
         obj.class_ = "RIBDaemon";
         obj.inst_ = 0;
 
