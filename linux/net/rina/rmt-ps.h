@@ -54,8 +54,6 @@ struct rmt_ps {
                                          struct rmt_n1_port *, struct sdu *);
         int (* rmt_scheduling_create_policy_tx)(struct rmt_ps *,
                                                 struct rmt_n1_port *);
-        int (* rmt_scheduling_create_policy_rx)(struct rmt_ps *,
-                                                struct rmt_n1_port *);
 
         /* Parametric policies. */
         int          max_q;

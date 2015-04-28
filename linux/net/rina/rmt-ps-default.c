@@ -46,7 +46,6 @@ struct sched_state {
 
 struct rmt_ps_data {
         struct sched_state *   ss;
-        struct rmt_queue_set * inqs;
         struct rmt_queue_set * outqs;
 };
 
@@ -110,17 +109,6 @@ default_rmt_scheduling_create_policy_tx(struct rmt_ps * ps,
         return default_rmt_scheduling_create_policy_common(ps,
                                                            n1_port,
                                                            data->outqs);
-}
-
-static int
-default_rmt_scheduling_create_policy_rx(struct rmt_ps * ps,
-                                        struct rmt_n1_port * n1_port)
-{
-        struct rmt_ps_data * data;
-        data = ps->priv;
-        return default_rmt_scheduling_create_policy_common(ps,
-                                                           n1_port,
-                                                           data->inqs);
 }
 
 /* NOTE: To be used when rmt_n1_port struct has several queues */
@@ -252,8 +240,8 @@ default_rmt_scheduling_policy_rx(struct rmt_ps *      ps,
                                  struct rmt_n1_port * n1_port,
                                  struct sdu *         sdu)
 {
-        struct rmt_ps_data * data = ps->priv;
 /*
+        struct rmt_ps_data * data = ps->priv;
         atomic_inc(&in_n1_port->n_sdus);
 
         tasklet_hi_schedule(&instance->ingress.ingress_tasklet);
@@ -305,17 +293,9 @@ rmt_ps_default_create(struct rina_component * component)
                 rkfree(data);
                 return NULL;
         }
-        data->inqs = rmt_queue_set_create();
-        if (!data->inqs) {
-                rkfree(data->ss);
-                rkfree(ps);
-                rkfree(data);
-                return NULL;
-        }
         data->outqs = rmt_queue_set_create();
         if (!data->outqs) {
                 rkfree(data->ss);
-                rmt_queue_set_destroy(data->inqs);
                 rkfree(ps);
                 rkfree(data);
                 return NULL;
@@ -333,7 +313,6 @@ rmt_ps_default_create(struct rina_component * component)
         ps->rmt_enqueue_scheduling_policy_tx = default_rmt_enqueue_scheduling_policy_tx;
         ps->rmt_scheduling_policy_rx         = default_rmt_scheduling_policy_rx;
         ps->rmt_scheduling_create_policy_tx  = default_rmt_scheduling_create_policy_tx;
-        ps->rmt_scheduling_create_policy_rx  = default_rmt_scheduling_create_policy_rx;
 
         ps->max_q       = 256;
 
@@ -349,7 +328,6 @@ rmt_ps_default_destroy(struct ps_base * bps)
         if (bps) {
                 if (data) {
                         if (data->ss)    rkfree(data->ss);
-                        if (data->inqs)  rmt_queue_set_destroy(data->inqs);
                         if (data->outqs) rmt_queue_set_destroy(data->outqs);
                         rkfree(data);
                 }
