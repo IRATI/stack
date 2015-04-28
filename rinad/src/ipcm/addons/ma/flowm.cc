@@ -55,8 +55,7 @@ const unsigned int max_sdu_size_in_bytes = 10000;
 /**
  * @brief Worker abstract class encpasulates the main I/O loop
  */
-class Worker
-{
+class Worker {
 
  public:
 
@@ -69,15 +68,11 @@ class Worker
 	{
 		flow_ = NULL;
 	}
-	;
 
 	/**
 	 * Destructor
 	 */
-	virtual ~Worker(void)
-	{
-	}
-	;
+	virtual ~Worker(void) {}
 
 	/**
 	 * Run I/O loop
@@ -85,8 +80,7 @@ class Worker
 	virtual void* run(void* param)=0;
 
 	//Trampoline
-	static void* run_trampoline(void* param)
-	{
+	static void* run_trampoline(void* param){
 		Worker* w = static_cast<Worker*>(param);
 		return w->run(NULL);
 	}
@@ -94,8 +88,8 @@ class Worker
 	/**
 	 * Notify an event
 	 */
-	void notify(rina::IPCEvent** event)
-	{
+	void notify(rina::IPCEvent** event){
+
 		//Do this in mutual exclusion
 		rina::ScopedLock lock(mutex);
 
@@ -113,8 +107,7 @@ class Worker
 	/**
 	 * Wait for an event
 	 */
-	rina::IPCEvent* waitForEvent(long seconds = 0, long nanoseconds = 0)
-	{
+	rina::IPCEvent* waitForEvent(long seconds = 0, long nanoseconds = 0) {
 
 		cond.timedwait(seconds, nanoseconds);
 		rina::ScopedLock lock(mutex);
@@ -126,29 +119,26 @@ class Worker
 	/**
 	 * Set the id
 	 */
-	void setId(unsigned int _id)
-	{
+	void setId(unsigned int _id){
 		id = _id;
 	}
 
 	/**
 	 * Instruct the thread to stop.
 	 */
-	inline void stop(void)
-	{
+	inline void stop(void){
+
 		keep_running = false;
-		if (flow_)
-		{
-			if (flow_->isAllocated())
-			{
+
+		if (flow_) {
+			if (flow_->isAllocated()) {
 				rina::ipcManager->requestFlowDeallocation(flow_->getPortId());
 				delete flow_;
 			}
 		}
 	}
 
-	inline pthread_t* getPthreadContext()
-	{
+	inline pthread_t* getPthreadContext() {
 		return &ctx;
 	}
 
@@ -190,8 +180,7 @@ class Worker
 /**
  * @brief Active Worker - performs flow allocation
  */
-class ActiveWorker : public Worker
-{
+class ActiveWorker : public Worker {
 
  public:
 	/**
@@ -203,7 +192,6 @@ class ActiveWorker : public Worker
 	{
 		con = _con;
 	}
-	;
 
 	/**
 	 * Run I/O loop
@@ -213,10 +201,7 @@ class ActiveWorker : public Worker
 	/**
 	 * Destructor
 	 */
-	virtual ~ActiveWorker()
-	{
-	}
-	;
+	virtual ~ActiveWorker() {}
 
  protected:
 
@@ -268,10 +253,9 @@ void ActiveWorker::allocateFlow()
 
 	//Check if it is the right event for us
 	rrevent = dynamic_cast<rina::AllocateFlowRequestResultEvent*>(event);
-	if (!rrevent || rrevent->portId < 0)
+	if (!rrevent || rrevent->portId < 0) {
 		rina::ipcManager->withdrawPendingFlow(seqnum);
-	else
-	{
+	}else{
 		//Recover the flow
 		flow_ = rina::ipcManager->commitPendingFlow(rrevent->sequenceNumber,
 							   rrevent->portId,
@@ -291,10 +275,12 @@ void* ActiveWorker::run(void* param)
 	(void) param;
 
 	keep_running = true;
-	while (keep_running == true) {
+
+	while(keep_running) {
 
 		//Allocate the flow
 		allocateFlow();
+
 		try {
 			if(!flow_) {
 				usleep(FM_FALLOC_ALLOC_RETRY_US);
@@ -334,14 +320,14 @@ void* ActiveWorker::run(void* param)
 			message.message_ = buffer;
 			message.size_ = bytes_read;
 
-			//TODO: remove this. The API should NOT require a RIB
-			//instance for calling the remote API
+			// FIXME this should be injected through the
+			// CDAP library not the RIB
 			rib_factory_->getRIB(1).process_message(message,
 							port_id);
 			LOG_DBG("Connection stablished between MAD and Manager (port id: %u)", port_id);
 
 			//I/O loop
-			while(true){
+			while(true) {
 				bytes_read = flow_->readSDU(buffer,
 							max_sdu_size_in_bytes);
 
@@ -349,8 +335,8 @@ void* ActiveWorker::run(void* param)
 				message.message_ = buffer;
 				message.size_ = bytes_read;
 
-				// FIXME change this when multiple rib versions
-				//(need librina rib and cdap refactor)
+				// FIXME this should be injected through the
+				// CDAP library not the RIB
 				rib_factory_->getRIB(1).process_message(message,
 							port_id);
 			}
@@ -532,7 +518,7 @@ void FlowManager::store_event(rina::IPCEvent* event)
 			 seqnum);
 		delete event;
 		return;
-	};
+	}
 
 	wait_cond.unlock();
 }
@@ -594,7 +580,7 @@ rina::IPCEvent* FlowManager::wait_event(unsigned int seqnum)
 			//Just wait
 			wait_cond.timedwait(0, FM_RETRY_NSEC);
 		} catch (...) {
-		};
+		}
 	}
 
 	wait_cond.unlock();
@@ -746,10 +732,5 @@ void FlowManager::joinWorker(int id)
 	throw rina::Exception(msg.str().c_str());
 }
 
-}
-;
-//namespace mad
-}
-;
-//namespace rinad
-
+}//namespace mad
+}//namespace rinad
