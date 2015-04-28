@@ -54,7 +54,7 @@ public:
 	void deallocateNMinus1Flow(int portId);
 	void deallocateFlowResponse(const DeallocateFlowResponseEvent& event);
 	void flowDeallocatedRemotely(const FlowDeallocatedEvent& event);
-	const FlowInformation& getNMinus1FlowInformation(int portId) const;
+	FlowInformation getNMinus1FlowInformation(int portId) const;
 	bool isSupportingDIF(const ApplicationProcessNamingInformation& difName);
 	std::list<FlowInformation> getAllNMinusOneFlowInformation() const;
 
@@ -104,6 +104,7 @@ public:
 			       const std::string& object_name,
 			       const rina::FlowInformation* flow_info);
 	std::string get_displayable_value();
+	void deleteObject(const void* objectValue);
 };
 
 class NMinusOneFlowSetRIBObject: public BaseRIBObject {

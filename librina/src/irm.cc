@@ -83,20 +83,13 @@ void IPCResourceManager::populateRIB()
 	}
 }
 
-const rina::FlowInformation& IPCResourceManager::getNMinus1FlowInformation(int portId) const
+FlowInformation IPCResourceManager::getNMinus1FlowInformation(int portId) const
 {
-	rina::Flow * flow = 0;
 	if (ipcp) {
-		flow = extendedIPCManager->getAllocatedFlow(portId);
+		return extendedIPCManager->getFlowInformation(portId);
 	} else {
-		flow = ipcManager->getAllocatedFlow(portId);
+		return ipcManager->getFlowInformation(portId);
 	}
-
-	if (flow == 0) {
-		throw Exception("Unknown N-1 flow");
-	}
-
-	return flow->getFlowInformation();
 }
 
 unsigned int IPCResourceManager::allocateNMinus1Flow(const FlowInformation& flowInformation)
@@ -146,7 +139,8 @@ void IPCResourceManager::allocateRequestResult(const AllocateFlowRequestResultEv
 		return;
 	}
 
-	Flow * flow = 0;
+	FlowInformation * flowInformation = 0;
+	FlowInformation flow;
 	if (ipcp) {
 		flow = extendedIPCManager->commitPendingFlow(event.sequenceNumber,
 							     event.portId,
@@ -161,15 +155,22 @@ void IPCResourceManager::allocateRequestResult(const AllocateFlowRequestResultEv
 		std::stringstream ss;
 		ss<<NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
 		ss<<RIBNamingConstants::SEPARATOR<<event.portId;
+		flowInformation = new FlowInformation();
+		flowInformation->localAppName = flow.localAppName;
+		flowInformation->remoteAppName = flow.remoteAppName;
+		flowInformation->difName = flow.difName;
+		flowInformation->flowSpecification = flow.flowSpecification;
+		flowInformation->state = flow.state;
+		flowInformation->portId = flow.portId;
 		rib_daemon_->createObject(NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
-					  ss.str(), &(flow->getFlowInformation()), 0);
+					  ss.str(), flowInformation, 0);
 	} catch (Exception &e) {
 		LOG_ERR("Problems creating RIB object: %s", e.what());
 	}
 
 	InternalEvent * flowAllocatedEvent =
 			new NMinusOneFlowAllocatedEvent(event.sequenceNumber,
-							flow->getFlowInformation());
+							*flowInformation);
 	event_manager_->deliverEvent(flowAllocatedEvent);
 }
 
@@ -210,7 +211,8 @@ void IPCResourceManager::flowAllocationRequested(const FlowRequestEvent& event)
 		}
 	}
 
-	Flow * flow = 0;
+	FlowInformation * flowInformation = 0;
+	FlowInformation flow;
 	try {
 		if (ipcp) {
 			flow = extendedIPCManager->allocateFlowResponse(event, 0, true);
@@ -219,9 +221,7 @@ void IPCResourceManager::flowAllocationRequested(const FlowRequestEvent& event)
 		}
 	} catch (Exception &e) {
 		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
-		if (!flow) {
-			return;
-		}
+		return;
 	}
 
 	LOG_INFO("Accepted new flow from IPC Process %s-%s",
@@ -231,14 +231,21 @@ void IPCResourceManager::flowAllocationRequested(const FlowRequestEvent& event)
 		std::stringstream ss;
 		ss<<NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
 		ss<<RIBNamingConstants::SEPARATOR<<event.portId;
+		flowInformation = new FlowInformation();
+		flowInformation->localAppName = flow.localAppName;
+		flowInformation->remoteAppName = flow.remoteAppName;
+		flowInformation->difName = flow.difName;
+		flowInformation->flowSpecification = flow.flowSpecification;
+		flowInformation->state = flow.state;
+		flowInformation->portId = flow.portId;
 		rib_daemon_->createObject(NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
-					  ss.str(), &(flow->getFlowInformation()), 0);
+					  ss.str(), flowInformation, 0);
 	} catch (Exception &e){
 		LOG_ERR("Error creating RIB object: %s", e.what());
 	}
 
 	InternalEvent * flowAllocatedEvent =
-			new NMinusOneFlowAllocatedEvent(event.sequenceNumber,flow->getFlowInformation());
+			new NMinusOneFlowAllocatedEvent(event.sequenceNumber,*flowInformation);
 	event_manager_->deliverEvent(flowAllocatedEvent);
 }
 
@@ -335,7 +342,7 @@ bool IPCResourceManager::isSupportingDIF(const ApplicationProcessNamingInformati
 
 std::list<FlowInformation> IPCResourceManager::getAllNMinusOneFlowInformation() const
 {
-	std::vector<Flow *> flows;
+	std::vector<FlowInformation> flows;
 	if (ipcp) {
 		flows = extendedIPCManager->getAllocatedFlows();
 	} else {
@@ -343,7 +350,7 @@ std::list<FlowInformation> IPCResourceManager::getAllNMinusOneFlowInformation() 
 	}
 	std::list<FlowInformation> result;
 	for (unsigned int i=0; i<flows.size(); i++) {
-		result.push_back(flows[i]->getFlowInformation());
+		result.push_back(flows[i]);
 	}
 
 	return result;
@@ -432,6 +439,19 @@ std::string NMinusOneFlowRIBObject::get_displayable_value()
 	FlowSpecification flowSpec = flow_info->flowSpecification;
 	ss << "Flow characteristics: " << flowSpec.toString();
 	return ss.str();
+}
+
+void NMinusOneFlowRIBObject::deleteObject(const void* objectValue)
+{
+	(void) objectValue; // Stop compiler barfs
+
+	parent_->remove_child(name_);
+	base_rib_daemon_->removeRIBObject(name_);
+	const FlowInformation * flow_info =
+				(const FlowInformation *) get_value();
+	if (flow_info) {
+		delete flow_info;
+	}
 }
 
 // Class N-1 Flow set RIB Object

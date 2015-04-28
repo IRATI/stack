@@ -166,6 +166,13 @@ public:
  */
 class FlowInformation {
 public:
+	enum FlowState {
+		FLOW_ALLOCATION_REQUESTED,
+		FLOW_ALLOCATED,
+		FLOW_DEALLOCATION_REQUESTED,
+		FLOW_DEALLOCATED
+	};
+
 	/** The local application name */
 	ApplicationProcessNamingInformation localAppName;
 
@@ -180,6 +187,8 @@ public:
 
 	/** The name of the DIF where the flow has been allocated */
 	ApplicationProcessNamingInformation difName;
+
+	FlowState state;
 
 	bool operator==(const FlowInformation &other) const;
 	bool operator!=(const FlowInformation &other) const;
