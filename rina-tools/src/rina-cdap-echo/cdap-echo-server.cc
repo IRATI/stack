@@ -71,7 +71,7 @@ void Server::run() {
         flow = ipcManager->allocateFlowResponse(
             *dynamic_cast<FlowRequestEvent*>(event), 0, true);
         LOG_INFO("New flow allocated [port-id = %d]", flow.portId);
-        startWorker(flow);
+        startWorker(flow.portId);
         break;
 
       case FLOW_DEALLOCATED_EVENT:
@@ -96,7 +96,7 @@ void Server::run() {
 }
 
 void Server::startWorker(int port_id) {
-  void (Server::*server_function)(FlowInformation flow);
+  void (Server::*server_function)(int port_id);
 
   server_function = &Server::serveEchoFlow;
 
@@ -173,7 +173,7 @@ void Server::serveEchoFlow(int port_id) {
   // Setup a timer if dealloc_wait option is set */
   if (dw > 0) {
     event.sigev_notify = SIGEV_THREAD;
-    event.sigev_value.sival_ptr = port_id;
+    event.sigev_value.sival_int = port_id;
     event.sigev_notify_function = &destroyFlow;
 
     timer_create(CLOCK_REALTIME, &event, &timer_id);
@@ -185,7 +185,7 @@ void Server::serveEchoFlow(int port_id) {
 
     timer_settime(timer_id, 0, &itime, NULL);
   }
-  cacep(flow);
+  cacep(port_id);
 
   try {
     for (;;) {
@@ -239,4 +239,17 @@ void Server::serveEchoFlow(int port_id) {
     timer_delete(timer_id);
   }
 
+}
+
+void Server::destroyFlow(sigval_t val)
+{
+        int port_id = val.sival_int;
+
+        // TODO here we should store the seqnum (handle) returned by
+        // requestFlowDeallocation() and match it in the event loop
+        try {
+        	ipcManager->requestFlowDeallocation(port_id);
+        } catch(rina::Exception &e) {
+        	//Ignore, flow was already deallocated
+        }
 }

@@ -72,35 +72,36 @@ Client::Client(const string& t_type,
         quiet(q), echo_times(count),
         client_app_reg(registration), data_size(size), wait(w), gap(g),
         dealloc_wait(dw)
-{ }
+{
+}
 
 void Client::run()
 {
-        Flow *flow;
-
+	int port_id = 0;
         if (client_app_reg) {
                 applicationRegister();
         }
-        flow = createFlow();
-        if (flow) {
-                if (test_type == "ping")
-                        pingFlow(flow);
-                else if (test_type == "perf")
-                        perfFlow(flow);
-                else
-                        LOG_ERR("Unknown test type '%s'", test_type.c_str());
+        port_id = createFlow();
+        if (port_id < 0) {
+        	LOG_ERR("Problems creating flow, exiting");
+        	return;
         }
-        if (flow) {
-                if (dealloc_wait > 0) {
-                        sleep(dealloc_wait);
-                }
-                destroyFlow(flow);
+
+        if (test_type == "ping")
+        	pingFlow(port_id);
+        else if (test_type == "perf")
+        	perfFlow(port_id);
+        else
+        	LOG_ERR("Unknown test type '%s'", test_type.c_str());
+
+        if (dealloc_wait > 0) {
+        	sleep(dealloc_wait);
         }
+        destroyFlow(port_id);
 }
 
-Flow* Client::createFlow()
+int Client::createFlow()
 {
-        Flow* flow = nullptr;
         std::chrono::high_resolution_clock::time_point begintp =
                 std::chrono::high_resolution_clock::now();
         AllocateFlowRequestResultEvent* afrrevent;
@@ -135,14 +136,14 @@ Flow* Client::createFlow()
 
         afrrevent = dynamic_cast<AllocateFlowRequestResultEvent*>(event);
 
-        flow = ipcManager->commitPendingFlow(afrrevent->sequenceNumber,
-                                              afrrevent->portId,
-                                              afrrevent->difName);
-        if (!flow || flow->getPortId() == -1) {
+        rina::FlowInformation flow = ipcManager->commitPendingFlow(afrrevent->sequenceNumber,
+                                              	      	           afrrevent->portId,
+                                              	      	           afrrevent->difName);
+        if (flow.portId < 0) {
                 LOG_ERR("Failed to allocate a flow");
-                return nullptr;
+                return flow.portId;
         } else {
-                LOG_DBG("[DEBUG] Port id = %d", flow->getPortId());
+                LOG_DBG("[DEBUG] Port id = %d", flow.portId);
         }
 
         std::chrono::high_resolution_clock::time_point eindtp =
@@ -153,10 +154,10 @@ Flow* Client::createFlow()
                 cout << "Flow allocation time = " << durationToString(dur) << endl;
         }
 
-        return flow;
+        return flow.portId;
 }
 
-void Client::pingFlow(Flow* flow)
+void Client::pingFlow(int port_id)
 {
         char *buffer = new char[data_size];
         char *buffer2 = new char[data_size];
@@ -164,14 +165,15 @@ void Client::pingFlow(Flow* flow)
         random_device rd;
         default_random_engine ran(rd());
         uniform_int_distribution<int> dis(0, 255);
+        bool end = false;
 
-        while (flow) {
+        while (!end) {
                 IPCEvent* event = ipcEventProducer->eventPoll();
 
                 if (event) {
                         switch(event->eventType) {
                         case FLOW_DEALLOCATED_EVENT:
-                                flow = nullptr;
+                                end = true;
                                 break;
                         default:
                                 LOG_INFO("Client got new event %d", event->eventType);
@@ -186,8 +188,8 @@ void Client::pingFlow(Flow* flow)
                                 }
 
                                 begintp = std::chrono::high_resolution_clock::now();
-                                flow->writeSDU(buffer, data_size);
-                                bytes_read = flow->readSDU(buffer2, data_size);
+                                ipcManager->writeSDU(port_id, buffer, data_size);
+                                bytes_read = ipcManager->readSDU(port_id, buffer2, data_size);
                                 endtp = std::chrono::high_resolution_clock::now();
                                 cout << "SDU size = " << data_size << ", seq = " << n <<
                                         ", RTT = " << durationToString(endtp - begintp);
@@ -209,7 +211,7 @@ void Client::pingFlow(Flow* flow)
         delete [] buffer2;
 }
 
-void Client::perfFlow(Flow* flow)
+void Client::perfFlow(int port_id)
 {
         char *buffer;
         unsigned long n = 0;
@@ -226,19 +228,18 @@ void Client::perfFlow(Flow* flow)
         }
 
         while (n < echo_times) {
-                flow->writeSDU(buffer, data_size);
+                ipcManager->writeSDU(port_id, buffer, data_size);
                 n++;
         }
 
         delete [] buffer;
 }
 
-void Client::destroyFlow(Flow *flow)
+void Client::destroyFlow(int port_id)
 {
         DeallocateFlowResponseEvent *resp = nullptr;
         unsigned int seqnum;
         IPCEvent* event;
-        int port_id = flow->getPortId();
 
         seqnum = ipcManager->requestFlowDeallocation(port_id);
 

@@ -93,7 +93,7 @@ int main() {
 	FlowInformation flow = ipcManager->commitPendingFlow(seqNumber, 23, difName);
 	std::cout << "Flow allocated, portId is " << flow.portId
 			<< "; DIF name is: " << flow.difName.processName
-			<< "\n";
+			<< "; state is: "<<flow.state << "\n";
 
 	/* TEST WRITE SDU */
 	unsigned char sdu[] = { 45, 34, 2, 36, 8 };
@@ -105,7 +105,7 @@ int main() {
 	FlowInformation flow2 = ipcManager->allocateFlowResponse(flowRequestEvent, 0, true);
 	std::cout << "Accepted flow allocation, portId is " << flow2.portId
 			<< "; DIF name is: " << flow2.difName.processName
-			<< "\n";
+			<< "; state is: " << flow2.state << "\n";
 
 	/* TEST READ SDU */
 	int bytesRead = ipcManager->readSDU(flow2.portId, (void*)sdu, 7);
