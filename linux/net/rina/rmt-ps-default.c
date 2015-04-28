@@ -74,12 +74,20 @@ default_rmt_q_monitor_policy_rx(struct rmt_ps *      ps,
 { }
 
 static int
-default_rmt_scheduling_create_policy_common(struct rmt_ps *        ps,
-                                            struct rmt_n1_port *   n1_port,
-                                            struct rmt_queue_set * qs)
+default_rmt_scheduling_create_policy_tx(struct rmt_ps *        ps,
+                                        struct rmt_n1_port *   n1_port)
 {
-        struct rmt_qgroup * qgroup;
-        struct rmt_kqueue * kqueue;
+        struct rmt_qgroup *  qgroup;
+        struct rmt_kqueue *  kqueue;
+        struct rmt_ps_data * data;
+
+        if (!ps || !n1_port || !ps->priv) {
+                LOG_ERR("Wrong input parameters for "
+                        "rmt_scheduling_create_policy_common");
+                return -1;
+        }
+
+        data = ps->priv;
 
         qgroup = rmt_qgroup_create();
         if (!qgroup) {
@@ -87,7 +95,7 @@ default_rmt_scheduling_create_policy_common(struct rmt_ps *        ps,
                         n1_port->port_id);
                 return -1;
         }
-        hash_add(qs->qgroups, &qgroup->hlist, n1_port->port_id);
+        hash_add(data->outqs->qgroups, &qgroup->hlist, n1_port->port_id);
 
         kqueue = rmt_kqueue_create(0);
         if (!kqueue) {
@@ -101,14 +109,30 @@ default_rmt_scheduling_create_policy_common(struct rmt_ps *        ps,
 }
 
 static int
-default_rmt_scheduling_create_policy_tx(struct rmt_ps * ps,
-                                        struct rmt_n1_port * n1_port)
+default_rmt_scheduling_destroy_policy_tx(struct rmt_ps *        ps,
+                                         struct rmt_n1_port *   n1_port)
 {
+        struct rmt_qgroup *  qgroup;
         struct rmt_ps_data * data;
+
+        if (!ps || !n1_port || !ps->priv) {
+                LOG_ERR("Wrong input parameters for "
+                        "rmt_scheduling_destroy_policy_common");
+                return -1;
+        }
+
         data = ps->priv;
-        return default_rmt_scheduling_create_policy_common(ps,
-                                                           n1_port,
-                                                           data->outqs);
+
+        qgroup = rmt_queue_set_find(data->outqs, n1_port->port_id);
+        if (!qgroup) {
+                LOG_ERR("Could not find queues group for n1_port %u",
+                        n1_port->port_id);
+                return -1;
+        }
+        hash_del(&qgroup->hlist);
+        rmt_qgroup_destroy(qgroup);
+
+        return 0;
 }
 
 /* NOTE: To be used when rmt_n1_port struct has several queues */
@@ -313,6 +337,7 @@ rmt_ps_default_create(struct rina_component * component)
         ps->rmt_enqueue_scheduling_policy_tx = default_rmt_enqueue_scheduling_policy_tx;
         ps->rmt_scheduling_policy_rx         = default_rmt_scheduling_policy_rx;
         ps->rmt_scheduling_create_policy_tx  = default_rmt_scheduling_create_policy_tx;
+        ps->rmt_scheduling_destroy_policy_tx = default_rmt_scheduling_destroy_policy_tx;
 
         ps->max_q       = 256;
 
