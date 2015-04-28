@@ -160,12 +160,24 @@ extern "C" {
                                               const std::string& plugin_name);
 }
 
-struct PsFactory {
-		/// Name of this pluggable policy set.
-        std::string name;
+/// Info about a policy set
+struct PsInfo {
+	/// Name of this pluggable policy set
+	std::string name;
 
-        /// Name of the AE where this plugin applies.
-        std::string app_entity;
+	/// Name of the AE (or component) that this policy set is for
+	std::string app_entity;
+
+	/// Versioning information for this policy set
+	std::string version;
+
+	PsInfo() { }
+	PsInfo(const std::string& n, const std::string& c,
+	       const std::string& v) : name(n), app_entity(c), version(v) { }
+};
+
+struct PsFactory {
+	struct PsInfo info;
 
         /// Name of the plugin that published this policy set
         std::string plugin_name;
@@ -187,11 +199,9 @@ public:
 	AppPolicyManager() { };
 	virtual ~AppPolicyManager();
 	virtual std::vector<PsFactory>::iterator
-                  psFactoryLookup(const std::string& ae_name,
-                                  const std::string& name);
+                  psFactoryLookup(const PsInfo& ps_info);
 	virtual int psFactoryPublish(const PsFactory& factory);
-	virtual int psFactoryUnpublish(const std::string& ae_name,
-                                       const std::string& name);
+	virtual int psFactoryUnpublish(const PsInfo& ps_info);
 	virtual IPolicySet * psCreate(const std::string& ae_name,
                                       const std::string& name,
                                       ApplicationEntity * context);
@@ -207,6 +217,7 @@ protected:
 private:
 	std::vector<rina::PsFactory> ae_policy_factories;
 	std::map< std::string, void * > plugins_handles;
+	std::list<PsInfo> manifest_policy_sets;
 };
 
 // The base class for an Application Process that is member of a

@@ -6,7 +6,11 @@
 
 SUBDIRS = tclap encoders
 
+#
+#Libs
+#
 noinst_LTLIBRARIES = librinad.la
+
 
 librinad_la_CFLAGS   =
 librinad_la_CPPFLAGS =				\
