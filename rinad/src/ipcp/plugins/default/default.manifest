@@ -23,6 +23,11 @@
                         "Version" : "1"
                 },
                 {
+                        "Name": "default",
+                        "Component": "enrollment-task",
+                        "Version" : "1"
+                },
+                {
                         "Name": "link-state",
                         "Component": "routing",
                         "Version" : "1"

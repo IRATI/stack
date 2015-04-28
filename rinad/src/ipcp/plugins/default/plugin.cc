@@ -94,8 +94,8 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
         }
 
         et_factory.plugin_name = plugin_name;
-        et_factory.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;
-        et_factory.app_entity = rina::ApplicationEntity::ENROLLMENT_TASK_AE_NAME;
+        et_factory.info.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;
+        et_factory.info.app_entity = rina::ApplicationEntity::ENROLLMENT_TASK_AE_NAME;
         et_factory.create = createEnrollmentTaskPs;
         et_factory.destroy = destroyEnrollmentTaskPs;
 
