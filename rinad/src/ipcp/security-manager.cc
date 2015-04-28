@@ -44,17 +44,4 @@ void SecurityManager::set_dif_configuration(const rina::DIFConfiguration& dif_co
 	LOG_IPCP_DBG("Set dif configuration: %u", dif_configuration.address_);
 }
 
-int SecurityManager::select_policy_set(const std::string& path,
-                                       const std::string& name)
-{
-        return select_policy_set_common(get_name(), path, name);
-}
-
-int SecurityManager::set_policy_set_param(const std::string& path,
-                                          const std::string& name,
-                                          const std::string& value)
-{
-        return set_policy_set_param_common(path, name, value);
-}
-
 }

@@ -26,6 +26,8 @@
 #include <iostream>
 
 namespace rina {
+//CLASS CDAP Error Code
+const int CDAPErrorCodes::CONNECTION_REJECTED_ERROR = -1;
 
 // CLASS AuthValue
 AuthValue::AuthValue() {

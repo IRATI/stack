@@ -314,7 +314,7 @@ bool IEnrollmentStateMachine::isValidPortId(const CDAPSessionDescriptor * cdapSe
 }
 
 void IEnrollmentStateMachine::abortEnrollment(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
-			int portId, const std::string& reason, bool enrollee, bool sendReleaseMessage)
+			int portId, const std::string& reason, bool sendReleaseMessage)
 {
 	if (timer_) {
 		delete timer_;
@@ -323,7 +323,7 @@ void IEnrollmentStateMachine::abortEnrollment(const rina::ApplicationProcessNami
 
 	state_ = STATE_NULL;
 
-	enrollment_task_->enrollmentFailed(remotePeerNamingInfo, portId, reason, enrollee, sendReleaseMessage);
+	enrollment_task_->enrollmentFailed(remotePeerNamingInfo, portId, reason, sendReleaseMessage);
 }
 
 void IEnrollmentStateMachine::createOrUpdateNeighborInformation(bool enrolled)
@@ -427,22 +427,21 @@ void IEnrollmentStateMachine::sendCreateInformation(const std::string& objectCla
 
 //Class EnrollmentFailedTimerTask
 EnrollmentFailedTimerTask::EnrollmentFailedTimerTask(IEnrollmentStateMachine * state_machine,
-		const std::string& reason, bool enrollee) {
+		const std::string& reason) {
 	state_machine_ = state_machine;
 	reason_ = reason;
-	enrollee_ = enrollee;
 }
 
 void EnrollmentFailedTimerTask::run() {
 	try {
 		state_machine_->abortEnrollment(state_machine_->remote_peer_->name_, state_machine_->port_id_,
-				reason_, enrollee_, true);
+				reason_, true);
 	} catch(rina::Exception &e) {
 		LOG_ERR("Problems aborting enrollment: %s", e.what());
 	}
 }
 
-//Class Enrollment Task
+// Class Enrollment Task
 BaseEnrollmentTask::BaseEnrollmentTask(int timeout)
 {
 	rib_daemon_ = 0;
@@ -709,12 +708,7 @@ void BaseEnrollmentTask::neighborDeclaredDead(NeighborDeclaredDeadEvent * deadEv
 
 void BaseEnrollmentTask::nMinusOneFlowDeallocated(NMinusOneFlowDeallocatedEvent  * event)
 {
-	//1 Check if the flow deallocated was a management flow
-	if(!event->management_flow_){
-		return;
-	}
-
-	//2 Remove the enrollment state machine from the list
+	//1 Remove the enrollment state machine from the list
 	try{
 		IEnrollmentStateMachine * enrollmentStateMachine =
 				getEnrollmentStateMachine(&(event->cdap_session_descriptor_), true);
@@ -729,7 +723,7 @@ void BaseEnrollmentTask::nMinusOneFlowDeallocated(NMinusOneFlowDeallocatedEvent 
 		LOG_ERR("Problems: %s", e.what());
 	}
 
-	//3 Check if we still have connectivity to the neighbor, if not, issue a ConnectivityLostEvent
+	//2 Check if we still have connectivity to the neighbor, if not, issue a ConnectivityLostEvent
 	std::list<IEnrollmentStateMachine *> machines = state_machines_.getEntries();
 	std::list<IEnrollmentStateMachine *>::const_iterator it;
 	for (it = machines.begin(); it!= machines.end(); ++it) {
@@ -740,7 +734,7 @@ void BaseEnrollmentTask::nMinusOneFlowDeallocated(NMinusOneFlowDeallocatedEvent 
 		}
 	}
 
-	//We don't have connectivity to the neighbor, issue a Connectivity lost event
+	//3 We don't have connectivity to the neighbor, issue a Connectivity lost event
 	std::list<rina::Neighbor *> neighbors = get_neighbors();
 	std::list<rina::Neighbor *>::const_iterator it2;
 	for (it2 = neighbors.begin(); it2 != neighbors.end(); ++it2) {
@@ -769,12 +763,10 @@ void BaseEnrollmentTask::nMinusOneFlowAllocationFailed(NMinusOneFlowAllocationFa
 }
 
 void BaseEnrollmentTask::enrollmentFailed(const ApplicationProcessNamingInformation& remotePeerNamingInfo,
-		int portId, const std::string& reason, bool enrollee, bool sendReleaseMessage)
+		int portId, const std::string& reason, bool sendReleaseMessage)
 {
 	LOG_ERR("An error happened during enrollment of remote IPC Process %s because of %s",
 			remotePeerNamingInfo.getEncodedString().c_str(), reason.c_str());
-
-	(void) enrollee;
 
 	//1 Remove enrollment state machine from the store
 	IEnrollmentStateMachine * stateMachine =
@@ -806,6 +798,22 @@ void BaseEnrollmentTask::enrollmentCompleted(Neighbor * neighbor, bool enrollee)
 {
 	NeighborAddedEvent * event = new NeighborAddedEvent(neighbor, enrollee);
 	event_manager_->deliverEvent(event);
+}
+
+void BaseEnrollmentTask::add_enrollment_state_machine(const std::string& key,
+				  IEnrollmentStateMachine * value)
+{
+	state_machines_.put(key, value);
+}
+
+IEnrollmentStateMachine * BaseEnrollmentTask::remove_enrollment_state_machine(const std::string& key)
+{
+	return state_machines_.erase(key);
+}
+
+IEnrollmentStateMachine * BaseEnrollmentTask::get_enrollment_state_machine(const std::string& key)
+{
+	return state_machines_.find(key);
 }
 
 }

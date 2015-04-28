@@ -84,27 +84,10 @@ public:
 	AEPolicySet() : ps(NULL) { };
 	virtual ~AEPolicySet() { };
         virtual int select_policy_set(const std::string& path,
-                                      const std::string& name) {
-                // TODO it will be pure virtual as soon as overridden
-                // by all existing components
-                (void) (path+name);
-                return -1;
-        }
+                                      const std::string& name) = 0;
         virtual int set_policy_set_param(const std::string& path,
                                          const std::string& name,
-                                         const std::string& value) {
-                // TODO it will be pure virtual as soon as overridden
-                // by all existing components
-                (void) (path+name+value);
-                return -1;
-        }
-
-        virtual int select_policy_set_common(const std::string& component,
-                                     	 	 const std::string& path,
-                                     	 	 const std::string& ps_name) = 0;
-        virtual int set_policy_set_param_common(const std::string& path,
-                                        		const std::string& param_name,
-                                        		const std::string& param_value) = 0;
+                                         const std::string& value) = 0;
 
         /// The policy set of this AE
 	IPolicySet * ps;
@@ -121,18 +104,17 @@ public:
 				: name_(name), app(NULL) { };
 	virtual ~ApplicationEntity();
 	const std::string& get_name() const;
+	ApplicationProcess * get_application_process();
 	virtual void set_application_process(ApplicationProcess * ap) = 0;
 	void add_instance(ApplicationEntityInstance * instance);
 	ApplicationEntityInstance * remove_instance(const std::string& instance_id);
 	ApplicationEntityInstance * get_instance(const std::string& instance_id);
 	std::list<ApplicationEntityInstance*> get_all_instances();
-
-        int select_policy_set_common(const std::string& component,
-                                     const std::string& path,
-                                     const std::string& ps_name);
-        int set_policy_set_param_common(const std::string& path,
-                                        const std::string& param_name,
-                                        const std::string& param_value);
+        virtual int select_policy_set(const std::string& path,
+                                      const std::string& name);
+        virtual int set_policy_set_param(const std::string& path,
+                                         const std::string& name,
+                                         const std::string& value);
 
 	///Constants
 	static const std::string IRM_AE_NAME;
@@ -148,6 +130,13 @@ protected:
 	ApplicationProcess * app;
 
 private:
+        int select_policy_set_common(const std::string& component,
+                                     const std::string& path,
+                                     const std::string& ps_name);
+        int set_policy_set_param_common(const std::string& path,
+                                        const std::string& param_name,
+                                        const std::string& param_value);
+
 	/// The Application entity instances in this application entity
 	ThreadSafeMapOfPointers<std::string, ApplicationEntityInstance> instances;
 };

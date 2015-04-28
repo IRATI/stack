@@ -50,6 +50,11 @@ const std::string& ApplicationEntity::get_name() const
 	return name_;
 }
 
+ApplicationProcess * ApplicationEntity::get_application_process()
+{
+	return app;
+}
+
 void ApplicationEntity::add_instance(ApplicationEntityInstance * instance)
 {
 	if (!instance) {
@@ -79,6 +84,19 @@ ApplicationEntityInstance * ApplicationEntity::get_instance(const std::string& i
 std::list<ApplicationEntityInstance*> ApplicationEntity::get_all_instances()
 {
 	return instances.getEntries();
+}
+
+int ApplicationEntity::select_policy_set(const std::string& path,
+                      	      	         const std::string& name)
+{
+	return select_policy_set_common(get_name(), path, name);
+}
+
+int ApplicationEntity::set_policy_set_param(const std::string& path,
+                         	 	    const std::string& name,
+                         	 	    const std::string& value)
+{
+	return set_policy_set_param_common(path, name, value);
 }
 
 int ApplicationEntity::select_policy_set_common(const std::string& component,

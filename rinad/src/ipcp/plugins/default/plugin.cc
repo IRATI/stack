@@ -27,6 +27,12 @@ extern "C" void
 destroyResourceAllocatorPs(rina::IPolicySet * instance);
 
 extern "C" rina::IPolicySet *
+createEnrollmentTaskPs(rina::ApplicationEntity * context);
+
+extern "C" void
+destroyEnrollmentTaskPs(rina::IPolicySet * instance);
+
+extern "C" rina::IPolicySet *
 createRoutingComponentPs(rina::ApplicationEntity * context);
 
 extern "C" void
@@ -39,6 +45,7 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
         struct rina::PsFactory fa_factory;
         struct rina::PsFactory nsm_factory;
         struct rina::PsFactory ra_factory;
+        struct rina::PsFactory et_factory;
         struct rina::PsFactory rc_factory;
         int ret;
 
@@ -84,6 +91,17 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
         ret = ipc_process->psFactoryPublish(ra_factory);
         if (ret) {
                 return ret;
+        }
+
+        et_factory.plugin_name = plugin_name;
+        et_factory.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;
+        et_factory.app_entity = rina::ApplicationEntity::ENROLLMENT_TASK_AE_NAME;
+        et_factory.create = createEnrollmentTaskPs;
+        et_factory.destroy = destroyEnrollmentTaskPs;
+
+        ret = ipc_process->psFactoryPublish(et_factory);
+        if (ret) {
+        	return ret;
         }
 
         rc_factory.plugin_name = plugin_name;

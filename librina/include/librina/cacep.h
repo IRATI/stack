@@ -64,8 +64,8 @@ public:
         virtual void releaseResponse(int result, const std::string& result_reason,
                         rina::CDAPSessionDescriptor * session_descriptor) = 0;
 
-        /// The authentication policy set
-        IAuthPolicySet * ps;
+        /// The authentication policy sets
+        ThreadSafeMapOfPointers<std::string, IAuthPolicySet> auth_policy_sets;
 };
 
 

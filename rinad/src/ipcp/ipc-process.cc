@@ -107,6 +107,11 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
                 throw rina::Exception("Cannot create resource allocator policy-set");
         }
 
+        enrollment_task_->select_policy_set(std::string(), rina::IPolicySet::DEFAULT_PS_SET_NAME);
+        if (!enrollment_task_->ps) {
+                throw rina::Exception("Cannot create enrollment task policy-set");
+        }
+
         routing_component_->select_policy_set(std::string(), "link-state");
         if (!routing_component_->ps) {
                 throw rina::Exception("Cannot create routing component policy-set");
@@ -148,6 +153,9 @@ IPCProcessImpl::~IPCProcessImpl() {
 	}
 
 	if (enrollment_task_) {
+		psDestroy(rina::ApplicationEntity::ENROLLMENT_TASK_AE_NAME,
+                   enrollment_task_->selected_ps_name,
+                   enrollment_task_->ps);
 		delete enrollment_task_;
 	}
 

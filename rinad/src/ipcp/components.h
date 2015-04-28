@@ -103,6 +103,37 @@ public:
 	virtual ~IPCPEnrollmentTask(){};
 };
 
+/// Policy set of the IPCP enrollment task
+class IPCPEnrollmentTaskPS : public rina::IPolicySet {
+public:
+        virtual ~IPCPEnrollmentTaskPS() {};
+        virtual void connect_received(int invoke_id,
+        			      rina::CDAPSessionDescriptor * session_descriptor) = 0;
+        virtual void connect_response_received(int result,
+        				       const std::string& result_reason,
+        				       rina::CDAPSessionDescriptor * session_descriptor) = 0;
+        virtual void initiate_enrollment(const rina::NMinusOneFlowAllocatedEvent & event,
+        				 rina::EnrollmentRequest * request) = 0;
+        virtual void inform_ipcm_about_failure(rina::IEnrollmentStateMachine * state_machine) = 0;
+        virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
+};
+
+/// The object that contains all the information
+/// that is required to initiate an enrollment
+/// request (send as the objectvalue of a CDAP M_START
+/// message, as specified by the Enrollment spec)
+class EnrollmentInformationRequest {
+public:
+	EnrollmentInformationRequest() : address_(0),
+		allowed_to_start_early_(false) {};
+
+	/// The address of the IPC Process that requests
+	///to join a DIF
+	unsigned int address_;
+	std::list<rina::ApplicationProcessNamingInformation> supporting_difs_;
+	bool allowed_to_start_early_;
+};
+
 /// Encapsulates all the information required to manage a Flow
 class Flow {
 public:
@@ -257,10 +288,6 @@ public:
 	RoutingComponent() : IRoutingComponent() { };
 	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
-        int select_policy_set(const std::string& path, const std::string& name);
-        int set_policy_set_param(const std::string& path,
-                                 const std::string& name,
-                                 const std::string& value);
         ~RoutingComponent() {};
 };
 
@@ -424,10 +451,6 @@ public:
 	SecurityManager() : ISecurityManager() { };
 	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
-        int select_policy_set(const std::string& path, const std::string& name);
-        int set_policy_set_param(const std::string& path,
-                                 const std::string& name,
-                                 const std::string& value);
 	~SecurityManager() {};
 };
 

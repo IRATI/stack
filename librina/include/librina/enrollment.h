@@ -148,7 +148,6 @@ public:
 	virtual void enrollmentFailed(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
                                       int portId,
                                       const std::string& reason,
-                                      bool enrolle,
                                       bool sendReleaseMessage) = 0;
 
 	/// Finds out if the App process is already enrolled to the App process identified by
@@ -197,8 +196,7 @@ protected:
 
 	/// Called by the enrollment state machine when the enrollment sequence fails
 	void abortEnrollment(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
-			     int portId, const std::string& reason, bool enrollee,
-			     bool sendReleaseMessage);
+			     int portId, const std::string& reason, bool sendReleaseMessage);
 
 	/// Create or update the neighbor information in the RIB
 	/// @param enrolled true if the neighbor is enrolled, false otherwise
@@ -226,13 +224,12 @@ protected:
 class EnrollmentFailedTimerTask: public rina::TimerTask {
 public:
 	EnrollmentFailedTimerTask(IEnrollmentStateMachine * state_machine,
-			const std::string& reason, bool enrollee);
+			const std::string& reason);
 	~EnrollmentFailedTimerTask() throw() {};
 	void run();
 
 	IEnrollmentStateMachine * state_machine_;
 	std::string reason_;
-	bool enrollee_;
 };
 
 class BaseEnrollmentTask: public IEnrollmentTask, public InternalEventListener {
@@ -251,20 +248,19 @@ public:
 			CDAPSessionDescriptor * session_descriptor);
 	void eventHappened(rina::InternalEvent * event);
 	virtual void enrollmentFailed(const ApplicationProcessNamingInformation& remotePeerNamingInfo,
-			int portId, const std::string& reason, bool enrolle, bool sendReleaseMessage);
+			int portId, const std::string& reason, bool sendReleaseMessage);
 	void enrollmentCompleted(Neighbor * neighbor, bool enrollee);
+	void add_enrollment_state_machine(const std::string& key,
+					  IEnrollmentStateMachine * value);
+	IEnrollmentStateMachine * remove_enrollment_state_machine(const std::string& key);
+	IEnrollmentStateMachine * get_enrollment_state_machine(const std::string& key);
+	IEnrollmentStateMachine * getEnrollmentStateMachine(
+			const CDAPSessionDescriptor * cdapSessionDescriptor, bool remove);
+	void deallocateFlow(int portId);
 
 protected:
 	virtual void populateRIB();
 	virtual void subscribeToEvents();
-	void deallocateFlow(int portId);
-
-	/// Returns the enrollment state machine associated to the cdap descriptor.
-	/// @param cdapSessionDescriptor
-	/// @param remove
-	/// @return
-	IEnrollmentStateMachine * getEnrollmentStateMachine(
-			const CDAPSessionDescriptor * cdapSessionDescriptor, bool remove);
 
 	///  If the N-1 flow with the neighbor is still allocated, request its deallocation
 	/// @param deadEvent

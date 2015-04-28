@@ -30,6 +30,11 @@
 
 namespace rina {
 
+class CDAPErrorCodes {
+public:
+	static const int CONNECTION_REJECTED_ERROR;
+};
+
 /// Encapsulates the data of an AuthValue
 class AuthValue {
 public:
