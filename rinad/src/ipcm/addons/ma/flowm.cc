@@ -260,7 +260,7 @@ void ActiveWorker::allocateFlow()
         if (!event) {
                 LOG_ERR("[w:%u] Failed to allocate a flow. Unknown error", id);
                 rina::ipcManager->withdrawPendingFlow(seqnum);
-                assert(0);
+                flow_ = NULL;
                 return;
         }
         LOG_DBG("[w:%u] Got event %u, waiting for %u", id,
