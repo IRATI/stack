@@ -107,7 +107,7 @@
                     "dif_name": "300",
                     "TTL" : 64,
                     "enable_CRC" : true,
-                    "enc" : "des",
+                    "enc" : "ecb(aes)",
                     "mac" : "md5",
                     "key" : "01234567890123456789012345678901"
                 }

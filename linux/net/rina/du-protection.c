@@ -23,6 +23,9 @@
 #include <linux/export.h>
 #include <linux/types.h>
 #include <linux/crc32.h>
+#include <linux/crypto.h>
+#include <linux/err.h>
+#include <linux/scatterlist.h>
 
 #define RINA_PREFIX "du-protection"
 
@@ -32,8 +35,6 @@
 #include "du-protection.h"
 
 #ifdef CONFIG_RINA_DUP
-
-#if defined(CONFIG_RINA_IPCPS_CRC) || defined(CONFIG_RINA_IPCPS_TTL)
 
 static bool pdu_ser_data_and_length(struct pdu_ser * pdu,
                                     unsigned char ** data,
@@ -59,9 +60,6 @@ static bool pdu_ser_data_and_length(struct pdu_ser * pdu,
         return true;
 }
 
-#endif
-
-#ifdef CONFIG_RINA_IPCPS_CRC
 
 static bool pdu_ser_crc32(struct pdu_ser * pdu,
                           u32 *            crc)
@@ -137,10 +135,6 @@ bool dup_chksum_is_ok(struct pdu_ser * pdu)
 }
 EXPORT_SYMBOL(dup_chksum_is_ok);
 
-#endif
-
-#ifdef CONFIG_RINA_IPCPS_TTL
-
 bool dup_ttl_set(struct pdu_ser * pdu,
                  size_t           value)
 {
@@ -151,7 +145,7 @@ bool dup_ttl_set(struct pdu_ser * pdu,
         if (!pdu_ser_is_ok(pdu))
                 return false;
 
-        BUILD_BUG_ON(CONFIG_RINA_IPCPS_TTL_DEFAULT <= 0);
+        /*BUILD_BUG_ON(CONFIG_RINA_IPCPS_TTL_DEFAULT <= 0);*/
 
         if (!pdu_ser_is_ok(pdu))
                 return false;
@@ -218,6 +212,55 @@ bool dup_ttl_is_expired(struct pdu_ser * pdu)
 }
 EXPORT_SYMBOL(dup_ttl_is_expired);
 
-#endif
+int dup_encrypt_data(const char              * src,
+                     char                    * dst,
+                     ssize_t                   src_size,
+                     ssize_t                   dst_size,
+                     struct crypto_blkcipher * blkcipher)
+{
+    struct blkcipher_desc desc;
+    struct scatterlist sg_src;
+    struct scatterlist sg_dst;
 
+    if (blkcipher == NULL){
+        LOG_ERR("invalid blk cipher structure!");
+        return -1;
+    }
+
+    desc.flags = 0;
+    desc.tfm = blkcipher;
+
+    sg_init_one(&sg_src, src, src_size);
+    sg_init_one(&sg_dst, dst, dst_size);
+
+    crypto_blkcipher_encrypt(&desc, &sg_dst, &sg_src, src_size);
+    return 0;
+}
+EXPORT_SYMBOL(dup_encrypt_data);
+
+int dup_decrypt_data(const char              * src,
+                     char                    * dst,
+                     ssize_t                   src_size,
+                     ssize_t                   dst_size,
+                     struct crypto_blkcipher * blkcipher)
+{
+    struct blkcipher_desc desc;
+    struct scatterlist sg_src;
+    struct scatterlist sg_dst;
+
+    if (blkcipher == NULL){
+        LOG_ERR("invalid blk cipher structure!");
+        return -1;
+    }
+
+    desc.flags = 0;
+    desc.tfm = blkcipher;
+
+    sg_init_one(&sg_src, src, src_size);
+    sg_init_one(&sg_dst, dst, dst_size);
+
+    crypto_blkcipher_decrypt(&desc, &sg_dst, &sg_src, src_size);
+    return 0;
+}
+EXPORT_SYMBOL(dup_decrypt_data);
 #endif

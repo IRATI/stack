@@ -71,6 +71,24 @@ static struct rmt_n1_port * n1_port_create(port_id_t id,
         tmp->n1_ipcp = n1_ipcp;
         tmp->state   = N1_PORT_STATE_ENABLED;
         tmp->dup_config = dup_config;
+
+        //dup state init
+        if (dup_config != NULL && dup_config->encryption_cipher != NULL){
+            tmp->blkcipher = crypto_alloc_blkcipher(dup_config->encryption_cipher, 0, 0);
+            if (IS_ERR(tmp->blkcipher)) {
+                printk("could not allocate blkcipher handle for %s\n", dup_config->encryption_cipher);
+                return NULL;
+            }
+
+            if (crypto_blkcipher_setkey(tmp->blkcipher,
+                                        dup_config->key,
+                                        strlen(dup_config->key))) {
+                printk("key could not be set\n");
+                return NULL;
+            }
+        }else
+            tmp->blkcipher = NULL;
+
         atomic_set(&tmp->n_sdus, 0);
         spin_lock_init(&tmp->lock);
 
@@ -84,6 +102,10 @@ static int n1_port_n1_user_ipcp_unbind(struct rmt_n1_port * n1p)
         struct ipcp_instance * n1_ipcp;
 
         ASSERT(n1p);
+
+        if (n1p->blkcipher != NULL){
+            crypto_free_blkcipher(n1p->blkcipher);
+        }
 
         n1_ipcp = n1p->n1_ipcp;
         if (n1_ipcp                             &&
@@ -510,6 +532,7 @@ static int n1_port_write(struct serdes *      serdes,
         struct ipcp_instance * n1_ipcp;
         struct pci *           pci;
         size_t                 ttl;
+        struct dup_config_entry * dup_conf;
 
         ASSERT(n1_port);
         ASSERT(serdes);
@@ -522,29 +545,31 @@ static int n1_port_write(struct serdes *      serdes,
         port_id = n1_port->port_id;
         n1_ipcp = n1_port->n1_ipcp;
 
+        dup_conf = n1_port->dup_config;
+
         pci = 0;
         ttl = 0;
 
         atomic_dec(&n1_port->n_sdus);
 
-#ifdef CONFIG_RINA_IPCPS_TTL
-        pci = pdu_pci_get_rw(pdu);
-        if (!pci) {
-                LOG_ERR("Cannot get PCI");
-                pdu_destroy(pdu);
-                return -1;
+        if (dup_conf != NULL && dup_conf->ttl > 0){
+            pci = pdu_pci_get_rw(pdu);
+            if (!pci) {
+                    LOG_ERR("Cannot get PCI");
+                    pdu_destroy(pdu);
+                    return -1;
+            }
+
+            LOG_DBG("TTL to start with is %d", dup_conf->ttl);
+
+            if (pci_ttl_set(pci, dup_conf->ttl)) {
+                    LOG_ERR("Could not set TTL");
+                    pdu_destroy(pdu);
+                    return -1;
+            }
         }
 
-        LOG_DBG("TTL to start with is %d", CONFIG_RINA_IPCPS_TTL_DEFAULT);
-
-        if (pci_ttl_set(pci, CONFIG_RINA_IPCPS_TTL_DEFAULT)) {
-                LOG_ERR("Could not set TTL");
-                pdu_destroy(pdu);
-                return -1;
-        }
-#endif
-
-        pdu_ser = pdu_serialize_ni(serdes, pdu);
+        pdu_ser = pdu_serialize_ni(serdes, pdu, dup_conf, n1_port->blkcipher);
         if (!pdu_ser) {
                 LOG_ERR("Error creating serialized PDU");
                 pdu_destroy(pdu);
@@ -1148,6 +1173,7 @@ int rmt_receive(struct rmt * rmt,
         qos_id_t         qos_id;
         struct serdes *  serdes;
         struct buffer *  buf;
+        struct rmt_n1_port * n1_port;
 
         if (!sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus SDU passed");
@@ -1163,6 +1189,7 @@ int rmt_receive(struct rmt * rmt,
                 sdu_destroy(sdu);
                 return -1;
         }
+        n1_port = n1pmap_find(rmt->n1_ports, from);
 
         buf = sdu_buffer_rw(sdu);
         if (!buf) {
@@ -1189,7 +1216,8 @@ int rmt_receive(struct rmt * rmt,
         serdes = rmt->serdes;
         ASSERT(serdes);
 
-        pdu = pdu_deserialize_ni(serdes, pdu_ser);
+        pdu = pdu_deserialize_ni(serdes, pdu_ser,
+                                 n1_port->dup_config, n1_port->blkcipher);
         if (!pdu) {
                 LOG_ERR("Failed to deserialize PDU!");
                 pdu_ser_destroy(pdu_ser);
