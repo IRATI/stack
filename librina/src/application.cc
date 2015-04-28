@@ -28,6 +28,7 @@
 #include "core.h"
 #include "rina-syscalls.h"
 #include "librina/application.h"
+#include "librina/plugin-info.h"
 
 namespace rina {
 
@@ -184,14 +185,13 @@ AppPolicyManager::~AppPolicyManager()
 }
 
 std::vector<rina::PsFactory>::iterator
-AppPolicyManager::psFactoryLookup(const std::string& ae_name,
-                                  const std::string& name)
+AppPolicyManager::psFactoryLookup(const PsInfo& ps_info)
 {
         for (std::vector<PsFactory>::iterator
                 it = ae_policy_factories.begin();
                 it != ae_policy_factories.end(); it++) {
-                if (it->app_entity == ae_name &&
-                                it->name == name) {
+                if (it->info.app_entity == ps_info.app_entity &&
+                                it->info.name == ps_info.name) {
                 	return it;
                 }
         }
@@ -201,44 +201,64 @@ AppPolicyManager::psFactoryLookup(const std::string& ae_name,
 
 int AppPolicyManager::psFactoryPublish(const PsFactory& factory)
 {
+	bool declared = false;
+
         // TODO check that factory.component is an existing component
 
         // Check if the (name, component) couple specified by 'factory'
         // has not already been published.
-        if (psFactoryLookup(factory.app_entity, factory.name) !=
+        if (psFactoryLookup(factory.info) !=
         				ae_policy_factories.end()) {
                 LOG_ERR("Factory %s for component %s already "
-                                "published", factory.name.c_str(),
-                                factory.app_entity.c_str());
+                                "published", factory.info.name.c_str(),
+                                factory.info.app_entity.c_str());
                 return -1;
         }
+
+	// Check if this policy set factory has been declared in the
+	// plugin manifest file
+	for (std::list<PsInfo>::iterator mi = manifest_policy_sets.begin();
+				mi != manifest_policy_sets.end(); mi++) {
+		if (mi->name == factory.info.name &&
+				mi->app_entity == factory.info.app_entity) {
+			declared = true;
+			break;
+		}
+	}
+
+	if (!declared) {
+		LOG_ERR("Pluggable component '%s'/'%s' not declared "
+			"in manifest file for plugin %s",
+			factory.info.app_entity.c_str(), factory.info.name.c_str(),
+			factory.plugin_name.c_str());
+		return -1;
+	}
 
         // Add the new factory
         ae_policy_factories.push_back(factory);
         ae_policy_factories.back().refcnt = 0;
 
         LOG_INFO("Pluggable component '%s'/'%s' [%s] published",
-                 factory.app_entity.c_str(), factory.name.c_str(),
+                 factory.info.app_entity.c_str(), factory.info.name.c_str(),
                  factory.plugin_name.c_str());
 
         return 0;
 }
 
-int AppPolicyManager::psFactoryUnpublish(const std::string& component,
-                                         const std::string& name)
+int AppPolicyManager::psFactoryUnpublish(const PsInfo& ps_info)
 {
         std::vector<PsFactory>::iterator fi;
 
-        fi = psFactoryLookup(component, name);
+        fi = psFactoryLookup(ps_info);
         if (fi == ae_policy_factories.end()) {
                 LOG_ERR("Factory %s for component %s not "
-                                "published", name.c_str(),
-                                component.c_str());
+                                "published", ps_info.name.c_str(),
+                                ps_info.app_entity.c_str());
                 return -1;
         }
 
         LOG_INFO("Pluggable component '%s'/'%s' [%s] unpublished",
-                 fi->app_entity.c_str(), fi->name.c_str(),
+                 fi->info.app_entity.c_str(), fi->info.name.c_str(),
                  fi->plugin_name.c_str());
 
         ae_policy_factories.erase(fi);
@@ -253,7 +273,7 @@ IPolicySet * AppPolicyManager::psCreate(const std::string& component,
         std::vector<PsFactory>::iterator it;
         IPolicySet *ps = NULL;
 
-        it = psFactoryLookup(component, name);
+        it = psFactoryLookup(PsInfo(name, component, std::string()));
         if (it == ae_policy_factories.end()) {
                 LOG_ERR("Pluggable component %s/%s not found",
                         component.c_str(), name.c_str());
@@ -274,7 +294,7 @@ int AppPolicyManager::psDestroy(const std::string& component,
 {
         std::vector<PsFactory>::iterator it;
 
-        it = psFactoryLookup(component, name);
+        it = psFactoryLookup(PsInfo(name, component, std::string()));
         if (it == ae_policy_factories.end()) {
                 LOG_ERR("Pluggable component %s/%s not found",
                         component.c_str(), name.c_str());
@@ -300,6 +320,14 @@ int AppPolicyManager::plugin_load(const std::string& plugin_dir,
                 LOG_INFO("Plugin '%s' already loaded", plugin_name.c_str());
                 return 0;
         }
+
+	// Load the manifest (will overwrite the existing manifest)
+	ret = plugin_get_info(plugin_name, plugin_dir, manifest_policy_sets);
+	if (ret) {
+		LOG_ERR("Failed to load manifest for plugin %s",
+			plugin_name.c_str());
+		return ret;
+	}
 
         plugin_path += "/";
         plugin_path += plugin_name + ".so";
@@ -372,8 +400,7 @@ int AppPolicyManager::plugin_unload(const std::string& plugin_name)
 
         // Unpublish all the policy sets published by this plugin
         for (unsigned int i = 0; i < unpublish_list.size(); i++) {
-                psFactoryUnpublish(unpublish_list[i]->app_entity,
-                                   unpublish_list[i]->name);
+                psFactoryUnpublish(unpublish_list[i]->info);
         }
 
         /* Unload the plugin only if */
