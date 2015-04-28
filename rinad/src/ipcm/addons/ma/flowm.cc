@@ -128,14 +128,12 @@ class Worker {
 	 */
 	inline void stop(void){
 
+		//Must be set strictly before deallocation of the thread
 		keep_running = false;
 
-		if (flow_) {
-			if (flow_->isAllocated()) {
-				rina::ipcManager->requestFlowDeallocation(flow_->getPortId());
-				delete flow_;
-			}
-		}
+		try{
+			rina::ipcManager->requestFlowDeallocation(port_id);
+		}catch(...){}
 	}
 
 	inline pthread_t* getPthreadContext() {
@@ -173,8 +171,11 @@ class Worker {
 	//RIBFactory
 	RIBFactory* rib_factory_;
 
-	// Flow being used
+	//Flow being used
 	rina::Flow* flow_;
+
+	//Port-id of the flow in use
+	int port_id;
 };
 
 /**
@@ -271,7 +272,7 @@ void* ActiveWorker::run(void* param)
 	char buffer[max_sdu_size_in_bytes];
 	rina::cdap_rib::src_info_t src;
 	rina::cdap_rib::dest_info_t dest;
-	int bytes_read, port_id;
+	int bytes_read;
 	(void) param;
 
 	keep_running = true;
@@ -285,6 +286,12 @@ void* ActiveWorker::run(void* param)
 			if(!flow_) {
 				usleep(FM_FALLOC_ALLOC_RETRY_US);
 				continue;
+			}
+
+			//Recheck after flow alloc (prevents race)
+			if(!keep_running){
+				delete flow_;
+				break;
 			}
 
 			//Set port id so that we can print traces even if the
@@ -313,7 +320,7 @@ void* ActiveWorker::run(void* param)
 							port_id);
 
 			//Recover the response
-			//TODO: add support for other 
+			//TODO: add support for other
 			bytes_read = flow_->readSDU(buffer,
 							max_sdu_size_in_bytes);
 			rina::cdap_rib::SerializedObject message;
@@ -342,10 +349,16 @@ void* ActiveWorker::run(void* param)
 			}
 		}catch(rina::ReadSDUException &e){
 			LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
+			if(flow_)
+				delete flow_;
 		}catch(rina::WriteSDUException &e){
 			LOG_ERR("Cannot write to flow with port id: %u anymore", port_id);
+			if(flow_)
+				delete flow_;
 		}catch(...){
 			LOG_CRIT("Unknown error during operation with port id: %u. This is a bug, please report it", port_id);
+			if(flow_)
+				delete flow_;
 		}
 	}
 
