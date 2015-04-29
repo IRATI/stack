@@ -105,14 +105,6 @@ const std::string EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_CLASS = "opera
 const std::string EncoderConstants::PDU_FORWARDING_TABLE_RIB_OBJECT_CLASS = "pdu forwarding table";
 const std::string EncoderConstants::PDU_FORWARDING_TABLE_RIB_OBJECT_NAME = SEPARATOR + DIF +
 		SEPARATOR + RESOURCE_ALLOCATION + SEPARATOR + PDU_FORWARDING_TABLE;
-const std::string EncoderConstants::DIF_REGISTRATION_SET_RIB_OBJECT_CLASS = "DIF registration set";
-const std::string EncoderConstants::DIF_REGISTRATION_RIB_OBJECT_CLASS = "DIF registration";
-const std::string EncoderConstants::DIF_REGISTRATION_SET_RIB_OBJECT_NAME = SEPARATOR + DIF +
-		SEPARATOR + RESOURCE_ALLOCATION + SEPARATOR + NMINUSONEFLOWMANAGER + SEPARATOR + DIF_REGISTRATIONS;
-const std::string EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_CLASS = "nminusone flow set";
-const std::string EncoderConstants::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS = "nminusone flow";
-const std::string EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME = SEPARATOR + DIF +
-		SEPARATOR + RESOURCE_ALLOCATION + SEPARATOR + NMINUSONEFLOWMANAGER + SEPARATOR + NMINUSEONEFLOWS;
 const std::string EncoderConstants::DIF_NAME_WHATEVERCAST_RULE = "any";
 const std::string EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME = SEPARATOR +
 		DIF + SEPARATOR + DIFMANAGEMENT  + SEPARATOR + DIRECTORY_FORWARDING_TABLE_ENTRIES;

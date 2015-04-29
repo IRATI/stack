@@ -3166,7 +3166,7 @@ void AppCDAPProvider::send(const cdap_m_t *m_sent, int port)
         const cdap_rib::SerializedObject *ser_sent_m = manager_
                         ->encodeNextMessageToBeSent(*m_sent, port);
         manager_->messageSent(*m_sent, port);
-        rina::ipcManager->getAllocatedFlow(port)->writeSDU(ser_sent_m->message_,
+        rina::ipcManager->writeSDU(port, ser_sent_m->message_,
                                                            ser_sent_m->size_);
         delete[] ser_sent_m->message_;
         delete ser_sent_m;

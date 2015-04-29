@@ -66,7 +66,6 @@ class Worker {
 			: flow_manager(fm),
 			  rib_factory_(rib_factory)
 	{
-		flow_ = NULL;
 	}
 
 	/**
@@ -172,7 +171,7 @@ class Worker {
 	RIBFactory* rib_factory_;
 
 	//Flow being used
-	rina::Flow* flow_;
+	rina::FlowInformation flow_;
 
 	//Port-id of the flow in use
 	int port_id;
@@ -241,12 +240,13 @@ void ActiveWorker::allocateFlow()
 		LOG_ERR("[w:%u] Failed to allocate a flow. Operation timed-out",
 			id);
 		rina::ipcManager->withdrawPendingFlow(seqnum);
+		flow_.portId = -1;
 		return;
 	}
 	if (!event) {
 		LOG_ERR("[w:%u] Failed to allocate a flow. Unknown error", id);
 		rina::ipcManager->withdrawPendingFlow(seqnum);
-		flow_ = NULL;
+		flow_.portId = -1;
 		return;
 	}
 	LOG_DBG("[w:%u] Got event %u, waiting for %u", id,
@@ -256,12 +256,13 @@ void ActiveWorker::allocateFlow()
 	rrevent = dynamic_cast<rina::AllocateFlowRequestResultEvent*>(event);
 	if (!rrevent || rrevent->portId < 0) {
 		rina::ipcManager->withdrawPendingFlow(seqnum);
+		flow_.portId = -1;
 	}else{
 		//Recover the flow
 		flow_ = rina::ipcManager->commitPendingFlow(rrevent->sequenceNumber,
 							   rrevent->portId,
 							   rrevent->difName);
-		LOG_INFO("[w:%u] Flow allocated, port id = %d", id, flow_->getPortId());
+		LOG_INFO("[w:%u] Flow allocated, port id = %d", id, flow_.portId);
 	}
 }
 
@@ -283,32 +284,31 @@ void* ActiveWorker::run(void* param)
 		allocateFlow();
 
 		try {
-			if(!flow_) {
+			if(!(flow_.portId < 0)) {
 				usleep(FM_FALLOC_ALLOC_RETRY_US);
 				continue;
 			}
 
 			//Recheck after flow alloc (prevents race)
 			if(!keep_running){
-				delete flow_;
 				break;
 			}
 
 			//Set port id so that we can print traces even if the
 			//flow is gone
-			port_id = flow_->getPortId();
+			port_id = flow_.portId;
 
 			//Fill source parameters
-			src.ap_name_ = flow_->getLocalApplicationName().processName;
-			src.ae_name_ = flow_->getLocalApplicationName().entityName;
-			src.ap_inst_ = flow_->getLocalApplicationName().processInstance;
-			src.ae_inst_ = flow_->getLocalApplicationName().entityInstance;
+			src.ap_name_ = flow_.localAppName.processName;
+			src.ae_name_ = flow_.localAppName.entityName;
+			src.ap_inst_ = flow_.localAppName.processInstance;
+			src.ae_inst_ = flow_.localAppName.entityInstance;
 
 			//Fill destination parameters
-			dest.ap_name_ = flow_->getRemoteApplcationName().processName;
-			dest.ae_name_ = flow_->getRemoteApplcationName().entityName;
-			dest.ap_inst_ = flow_->getRemoteApplcationName().processInstance;
-			dest.ae_inst_ = flow_->getRemoteApplcationName().entityInstance;
+			dest.ap_name_ = flow_.remoteAppName.processName;
+			dest.ae_name_ = flow_.remoteAppName.entityName;
+			dest.ap_inst_ = flow_.remoteAppName.processInstance;
+			dest.ae_inst_ = flow_.remoteAppName.entityInstance;
 			rina::cdap_rib::auth_info auth;
 			auth.auth_mech_ = auth.AUTH_NONE;
 
@@ -321,7 +321,7 @@ void* ActiveWorker::run(void* param)
 
 			//Recover the response
 			//TODO: add support for other
-			bytes_read = flow_->readSDU(buffer,
+			bytes_read = rina::ipcManager->readSDU(port_id, buffer,
 							max_sdu_size_in_bytes);
 			rina::cdap_rib::SerializedObject message;
 			message.message_ = buffer;
@@ -335,7 +335,8 @@ void* ActiveWorker::run(void* param)
 
 			//I/O loop
 			while(true) {
-				bytes_read = flow_->readSDU(buffer,
+				bytes_read = rina::ipcManager->readSDU(port_id,
+									buffer,
 							max_sdu_size_in_bytes);
 
 				rina::cdap_rib::SerializedObject message;
@@ -349,16 +350,10 @@ void* ActiveWorker::run(void* param)
 			}
 		}catch(rina::ReadSDUException &e){
 			LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
-			if(flow_)
-				delete flow_;
 		}catch(rina::WriteSDUException &e){
 			LOG_ERR("Cannot write to flow with port id: %u anymore", port_id);
-			if(flow_)
-				delete flow_;
 		}catch(...){
 			LOG_CRIT("Unknown error during operation with port id: %u. This is a bug, please report it", port_id);
-			if(flow_)
-				delete flow_;
 		}
 	}
 
@@ -369,7 +364,7 @@ void* ActiveWorker::run(void* param)
 void FlowManager::process_flow_event(rina::IPCEvent** event_)
 {
 
-	rina::Flow *flow;
+	rina::FlowInformation flow;
 	unsigned int port_id;
 	rina::DeallocateFlowResponseEvent *resp;
 
@@ -409,7 +404,7 @@ void FlowManager::process_flow_event(rina::IPCEvent** event_)
 							*dynamic_cast<rina::FlowRequestEvent*>(event),
 							0, true);
 			LOG_INFO("New flow allocated [port-id = %d]",
-				 flow->getPortId());
+				 flow.portId);
 			break;
 
 		case rina::FLOW_DEALLOCATED_EVENT:

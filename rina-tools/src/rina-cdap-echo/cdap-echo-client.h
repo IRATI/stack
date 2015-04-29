@@ -49,11 +49,19 @@ class Client : public Application, public rina::cdap::CDAPCallbackInterface
                                 const rina::cdap_rib::obj_info_t &onj,
                                 const rina::cdap_rib::res_info_t &res);
  protected:
+<<<<<<< HEAD
         void createFlow();
         void cacep();
         void sendReadRMessage();
         void release();
         void destroyFlow();
+=======
+  int createFlow();
+  void echoFlow(int port_id);
+  void destroyFlow(int port_id);
+  bool cacep(int port_id);
+  bool release(int port_id);
+>>>>>>> irati/pr/557
 
  private:
         std::string dif_name;

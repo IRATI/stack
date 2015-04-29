@@ -70,11 +70,11 @@ class Manager : public Application
         void run();
         ~Manager();
  protected:
-        void startWorker(rina::Flow *flow);
-        void operate(rina::Flow* flow);
-        void cacep(rina::Flow* flow);
-        void createIPCP(rina::Flow *flow);
-        void queryRIB(rina::Flow *flow);
+        void startWorker(rina::FlowInformation flow);
+        void operate(rina::FlowInformation flow);
+        void cacep(rina::FlowInformation flow);
+        void createIPCP(rina::FlowInformation flow);
+        void queryRIB(rina::FlowInformation flow);
 
  private:
         std::string dif_name_;
