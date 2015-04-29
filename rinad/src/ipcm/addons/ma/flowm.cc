@@ -284,7 +284,7 @@ void* ActiveWorker::run(void* param)
 		allocateFlow();
 
 		try {
-			if(!(flow_.portId < 0)) {
+			if(flow_.portId < 0) {
 				usleep(FM_FALLOC_ALLOC_RETRY_US);
 				continue;
 			}
