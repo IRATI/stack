@@ -31,7 +31,6 @@
 
 class ConnectionCallback : public rina::cdap::CDAPCallbackInterface
 {
-<<<<<<< HEAD
  public:
   ConnectionCallback(bool *keep_serving,
                      rina::cdap::CDAPProviderInterface **prov);
@@ -56,34 +55,14 @@ class Server : public Application
   void run();
 
  protected:
-  void serveEchoFlow(rina::Flow *flow);
+  void serveEchoFlow(int port_id);
   //static void destroyFlow(sigval_t val);
  private:
-  void startWorker(rina::Flow * f);
+  void startWorker(int port_id);
   int interval;
   int dw;
   const unsigned int max_sdu_size_in_bytes = 10000;
 
-=======
-public:
-        Server(const std::string& dif_name,
-               const std::string& app_name,
-               const std::string& app_instance,
-               const int dealloc_wait);
-
-        void run();
-
-protected:
-        void serveEchoFlow(int port_id);
-        static void destroyFlow(sigval_t val);
-        bool cacep(int port_id);
-        bool release(int port_id, int invoke_id);
-private:
-        void startWorker(int port_id);
-        int interval;
-        int dw;
-        rina::CDAPSessionManagerInterface *manager_;
->>>>>>> irati/pr/557
 };
 
 #endif
