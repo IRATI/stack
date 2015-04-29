@@ -557,6 +557,10 @@ protected:
 	*/
 	IPCMIPCProcess* lookup_ipcp_by_id(const unsigned short id,
 							bool write_lock=false);
+
+	/// True if there is an IPCP assigned to the DIF, false otherwise
+	bool is_any_ipcp_assigned_to_dif(const rina::ApplicationProcessNamingInformation& dif_name);
+
 	//
 	// Internal event API
 	//
