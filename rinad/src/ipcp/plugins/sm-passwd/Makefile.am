@@ -27,3 +27,5 @@ sm_passwd_la_SOURCES  =				\
 	../../components.cc
 
 plugins_LTLIBRARIES += sm-passwd.la
+
+dist_plugins_DATA = sm-passwd.manifest

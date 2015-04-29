@@ -46,25 +46,6 @@ public:
 
 class FakeRIBDaemon: public rinad::IPCPRIBDaemon {
 public:
-	void subscribeToEvent(const rinad::IPCProcessEventType& eventId,
-			rinad::EventListener * eventListener) {
-		if (!eventListener) {
-			return;
-		}
-		LOG_IPCP_DBG("%d", eventId);
-	}
-	void unsubscribeFromEvent(const rinad::IPCProcessEventType& eventId,
-			rinad::EventListener * eventListener) {
-		if (!eventListener) {
-			return;
-		}
-		LOG_IPCP_DBG("%d", eventId);
-	}
-	void deliverEvent(rinad::Event * event) {
-		if (!event) {
-			return;
-		}
-	}
 	void set_application_process(rina::ApplicationProcess * ap) {
 		ipc_process_ = dynamic_cast<rinad::IPCProcess *>(ap);
 	}

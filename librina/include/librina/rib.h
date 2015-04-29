@@ -25,10 +25,19 @@
 
 #ifdef __cplusplus
 
-#include "common.h"
+#include "application.h"
 #include "cdap.h"
 
 namespace rina {
+
+class RIBNamingConstants {
+public:
+	static const std::string DAF;
+	static const std::string DIF_REGISTRATIONS;
+	static const std::string IRM;
+	static const std::string N_MINUS_ONE_FLOWS;
+	static const std::string SEPARATOR;
+};
 
 /// Encodes and Decodes an object to/from bytes)
 class EncoderInterface {
@@ -277,8 +286,9 @@ public:
 };
 
 /// Interface that provides the RIB Daemon API
-class IRIBDaemon {
+class IRIBDaemon : public ApplicationEntity {
 public:
+	IRIBDaemon() : ApplicationEntity(ApplicationEntity::RIB_DAEMON_AE_NAME) { };
         virtual ~IRIBDaemon(){};
 
         /// Add an object to the RIB
@@ -756,7 +766,7 @@ public:
 // /A RIB Daemon partial implementation, that internally uses the RIB
 /// implementation provided by the RIB class. Complete implementations have
 /// to extend this class to adapt it to the environment they are operating
-class RIBDaemon : public IRIBDaemon{
+class RIBDaemon : public IRIBDaemon {
 public:
         RIBDaemon();
         void initialize(const std::string& separator, IEncoder * encoder,
