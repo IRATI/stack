@@ -453,6 +453,17 @@ public:
 						bool load);
 
 	//
+	// Get information about plugin
+	//
+	// @param plugin_name The name of the plugin to get info from
+	// @param result A list that is filled in with information about
+	//               the policy sets supported by the plugin
+	//
+	// @ret IPCM_FAILURE on failure, otherwise the IPCM_SUCCESS
+        ipcm_res plugin_get_info(const std::string& plugin_name,
+				 std::list<rina::PsInfo>& result);
+
+	//
 	// Get the current logging debug level
 	//
 	std::string get_log_level() const;
@@ -546,6 +557,10 @@ protected:
 	*/
 	IPCMIPCProcess* lookup_ipcp_by_id(const unsigned short id,
 							bool write_lock=false);
+
+	/// True if there is an IPCP assigned to the DIF, false otherwise
+	bool is_any_ipcp_assigned_to_dif(const rina::ApplicationProcessNamingInformation& dif_name);
+
 	//
 	// Internal event API
 	//

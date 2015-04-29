@@ -107,14 +107,14 @@ void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProces
 }
 
 std::list<int> NMinusOneFlowManager::getNMinusOneFlowsToNeighbour(unsigned int address) {
-	std::vector<rina::Flow *> flows = rina::extendedIPCManager->getAllocatedFlows();
+	std::vector<rina::FlowInformation> flows = rina::extendedIPCManager->getAllocatedFlows();
 	std::list<int> result;
 	unsigned int target_address = 0;
 	for (unsigned int i=0; i<flows.size(); i++) {
 		target_address = ipc_process_->namespace_manager_->getAdressByname(
-				flows[i]->getFlowInformation().remoteAppName);
+				flows[i].remoteAppName);
 		if (target_address == address) {
-			result.push_back(flows[i]->getPortId());
+			result.push_back(flows[i].portId);
 		}
 	}
 
@@ -135,11 +135,11 @@ int NMinusOneFlowManager::getManagementFlowToNeighbour(unsigned int address) {
 
 unsigned int NMinusOneFlowManager::numberOfFlowsToNeighbour(const std::string& apn,
 		const std::string& api) {
-	std::vector<rina::Flow *> flows = rina::extendedIPCManager->getAllocatedFlows();
+	std::vector<rina::FlowInformation> flows = rina::extendedIPCManager->getAllocatedFlows();
 	unsigned int result = 0;
 	for (unsigned int i=0; i<flows.size(); i++) {
-		if (flows[i]->getFlowInformation().remoteAppName.processName == apn &&
-				flows[i]->getFlowInformation().remoteAppName.processInstance == api) {
+		if (flows[i].remoteAppName.processName == apn &&
+				flows[i].remoteAppName.processInstance == api) {
 			result ++;
 		}
 	}
@@ -156,14 +156,15 @@ bool IPCPFlowAcceptor::accept_flow(const rina::FlowRequestEvent& event)
 
 	//TODO deal with the different AEs (Management vs. Data transfer), right now assuming the flow
 	//is both used for data transfer and management purposes
-	if (rina::extendedIPCManager->getFlowToRemoteApp(event.remoteApplicationName) != 0) {
+	try {
+		rina::extendedIPCManager->getPortIdToRemoteApp(event.remoteApplicationName);
 		LOG_IPCP_INFO("Rejecting flow request since we already have a flow to the remote IPC Process: %s-%s",
-			       event.remoteApplicationName.processName.c_str(),
-			       event.remoteApplicationName.processInstance.c_str());
+				event.remoteApplicationName.processName.c_str(),
+				event.remoteApplicationName.processInstance.c_str());
 		return false;
+	} catch(rina::Exception & ex) {
+		return true;
 	}
-
-	return true;
 }
 
 //CLASS Resource Allocator

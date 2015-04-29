@@ -1125,6 +1125,33 @@ CDAPMessage* CDAPSessionManager::getCancelReadResponseMessage(
   return CDAPMessage::getCancelReadResponseMessage(flags, invoke_id, result,
                                                    result_reason);
 }
+
+CDAPMessage* CDAPSessionManager::getRequestMessage(int port_id,
+			CDAPMessage::Opcode opcode, char * filter,
+			CDAPMessage::Flags flags, const std::string &obj_class,
+			long obj_inst, const std::string &obj_name,
+			int scope, bool invoke_id)
+{
+	CDAPMessage *cdap_message = CDAPMessage::getRequestMessage(opcode,
+			filter, flags, obj_class, obj_inst, obj_name, scope);
+	assignInvokeId(*cdap_message, invoke_id, port_id, true);
+	return cdap_message;
+}
+
+CDAPMessage* CDAPSessionManager::getResponseMessage(CDAPMessage::Opcode opcode,
+		CDAPMessage::Flags flags, const std::string &obj_class,
+		long obj_inst, const std::string &obj_name,
+		int result, const std::string &result_reason, int invoke_id)
+{
+	  return CDAPMessage::getResponseMessage(opcode, flags, obj_class, obj_inst,
+			  obj_name, result, result_reason, invoke_id);
+}
+
+CDAPInvokeIdManagerInterface * CDAPSessionManager::get_invoke_id_manager()
+{
+	return invoke_id_manager_;
+}
+
 void CDAPSessionManager::assignInvokeId(CDAPMessage &cdap_message,
                                         bool invoke_id, int port_id,
                                         bool sent) {

@@ -71,10 +71,9 @@ void FlowSetRIBObject::remoteCreateObject(
 		void * object_value, const std::string& object_name,
 		int invoke_id, rina::CDAPSessionDescriptor * session_descriptor)
 {
+	(void) session_descriptor;
 	flow_allocator_->createFlowRequestMessageReceived((Flow *) object_value,
-			object_name,
-			invoke_id,
-			session_descriptor->port_id_);
+			object_name, invoke_id);
 }
 
 void FlowSetRIBObject::createObject(const std::string& objectClass,
@@ -275,8 +274,7 @@ void FlowAllocator::populateRIB()
 }
 
 void FlowAllocator::createFlowRequestMessageReceived(
-		Flow * flow, const std::string& object_name, int invoke_id,
-		int underlyingPortId)
+		Flow * flow, const std::string& object_name, int invoke_id)
 {
 	IFlowAllocatorInstance * fai = 0;
 	unsigned int myAddress = 0;
@@ -309,7 +307,7 @@ void FlowAllocator::createFlowRequestMessageReceived(
 		add_instance(fai);
 
 		//TODO check if this operation throws an exception an react accordingly
-		fai->createFlowRequestMessageReceived(flow, object_name, invoke_id, underlyingPortId);
+		fai->createFlowRequestMessageReceived(flow, object_name, invoke_id);
 		return;
 	}
 
@@ -570,7 +568,6 @@ void FlowAllocatorInstance::initialize(
 	security_manager_ = ipc_process->security_manager_;
 	state = NO_STATE;
 	allocate_response_message_handle_ = 0;
-	underlying_port_id_ = 0;
 	flow_ = 0;
 	lock_ = new rina::Lockable();
 	timer_ = new rina::Timer();
@@ -716,11 +713,8 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(
 
 	if (flow_->destination_address != flow_->source_address) {
 		try {
-			//5 get the portId of any open CDAP session
-			std::vector<int> cdapSessions;
-			cdap_session_manager_->getAllCDAPSessionIds(cdapSessions);
+			//5 Send to destination address
 			rina::RemoteProcessId remote_id;
-			remote_id.port_id_ = cdapSessions[0];
 			remote_id.use_address_ = true;
 			remote_id.address_ = flow_->destination_address;
 
@@ -732,8 +726,6 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(
 			rib_daemon_->remoteCreateObject(
 					EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_,
 					robject_value, 0, remote_id, this);
-
-			underlying_port_id_ = cdapSessions[0];
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR(
 					"Problems sending M_CREATE <Flow> CDAP message to neighbor: %s",
@@ -746,7 +738,7 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(
 		//Destination application is registered at this IPC Process
 		//Bypass RIB Daemon and call Flow Allocator directly
 		Flow * dest_flow = new Flow(*flow_);
-		flow_allocator_->createFlowRequestMessageReceived(dest_flow, object_name_, 0, 0);
+		flow_allocator_->createFlowRequestMessageReceived(dest_flow, object_name_, 0);
 	}
 
 	state = MESSAGE_TO_PEER_FAI_SENT;
@@ -754,8 +746,7 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(
 }
 
 void FlowAllocatorInstance::createFlowRequestMessageReceived(
-		Flow * flow, const std::string& object_name, int invoke_id,
-		int underlyingPortId)
+		Flow * flow, const std::string& object_name, int invoke_id)
 {
 	ISecurityManagerPs *smps =
 		dynamic_cast<ISecurityManagerPs *>(security_manager_->ps);
@@ -772,7 +763,6 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(
 	}
 	invoke_id_ = invoke_id;
 	object_name_ = object_name;
-	underlying_port_id_ = underlyingPortId;
 	flow_->destination_port_id = port_id_;
 
 	//1 Reverse connection source/dest addresses and CEP-ids
@@ -798,7 +788,6 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(
 		if (flow_->source_address != flow_->destination_address) {
 			try {
 				rina::RemoteProcessId remote_id;
-				remote_id.port_id_ = underlying_port_id_;
 				remote_id.use_address_ = true;
 				remote_id.address_ = flow_->source_address;
 
@@ -902,7 +891,6 @@ void FlowAllocatorInstance::submitAllocateResponse(
 		if (flow_->source_address != flow_->destination_address) {
 			try {
 				rina::RemoteProcessId remote_id;
-				remote_id.port_id_ = underlying_port_id_;
 				remote_id.use_address_ = true;
 				remote_id.address_ = flow_->source_address;
 
@@ -967,7 +955,6 @@ void FlowAllocatorInstance::submitAllocateResponse(
 	if (flow_->source_address != flow_->destination_address) {
 		try {
 			rina::RemoteProcessId remote_id;
-			remote_id.port_id_ = underlying_port_id_;
 			remote_id.use_address_ = true;
 			remote_id.address_ = flow_->source_address;
 
@@ -1085,7 +1072,6 @@ void FlowAllocatorInstance::submitDeallocate(
 		if (flow_->source_address != flow_->destination_address) {
 			try {
 				rina::RemoteProcessId remote_id;
-				remote_id.port_id_ = underlying_port_id_;
 				remote_id.use_address_ = true;
 				if (ipc_process_->get_address() == flow_->source_address) {
 					remote_id.address_ = flow_->destination_address;

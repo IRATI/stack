@@ -283,6 +283,17 @@ public:
 	CDAPMessage* getCancelReadRequestMessage(CDAPMessage::Flags flags, int invoke_id);
 	CDAPMessage* getCancelReadResponseMessage(CDAPMessage::Flags flags, int invoke_id, int result,
 			const std::string &result_reason);
+	CDAPMessage* getRequestMessage(int port_id,
+			CDAPMessage::Opcode opcode, char * filter,
+			CDAPMessage::Flags flags, const std::string &obj_class,
+			long obj_inst, const std::string &obj_name,
+			int scope, bool invoke_id);
+	CDAPMessage* getResponseMessage(CDAPMessage::Opcode opcode,
+			CDAPMessage::Flags flags, const std::string &obj_class,
+			long obj_inst, const std::string &obj_name,
+			int result,
+			const std::string &result_reason, int invoke_id);
+	CDAPInvokeIdManagerInterface * get_invoke_id_manager();
 private:
 	void assignInvokeId(CDAPMessage &cdap_message, bool invoke_id, int port_id, bool sent);
 	WireMessageProviderFactory* wire_message_provider_factory_;
