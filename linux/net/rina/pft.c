@@ -461,7 +461,7 @@ int pft_set_policy_set_param(struct pft * pft,
                 rcu_read_lock();
                 ps = container_of(rcu_dereference(pft->base.ps), struct pft_ps, base);
                 if (!ps) {
-                        LOG_ERR("No policy-set selected for this RMT");
+                        LOG_ERR("No policy-set selected for this PFT");
                 } else {
                         LOG_ERR("Unknown PFT parameter policy '%s'", name);
                 }
