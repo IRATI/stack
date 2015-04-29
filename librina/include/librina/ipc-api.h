@@ -443,7 +443,7 @@ public:
 	 * @return int The number of bytes read
 	 * @throws IPCException if the flow is not in the ALLOCATED state
 	 */
-	int readSDU(int portId, void * sdu, int maxBytes) throw(Exception);
+	int readSDU(int portId, void * sdu, int maxBytes);
 
 	/**
 	 * Writes an SDU to the flow
@@ -453,7 +453,7 @@ public:
 	 * @throws IPCException if the flow is not in the ALLOCATED state or
 	 * there are problems writing to the flow
 	 */
-	void writeSDU(int portId, void * sdu, int size) throw(Exception);
+	void writeSDU(int portId, void * sdu, int size);
 
 	/**
 	 * Returns the flows that are currently allocated

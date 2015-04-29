@@ -663,7 +663,7 @@ std::vector<ApplicationRegistration *> IPCManager::getRegisteredApplications()
 	return response;
 }
 
-int IPCManager::readSDU(int portId, void * sdu, int maxBytes) throw(Exception)
+int IPCManager::readSDU(int portId, void * sdu, int maxBytes)
 {
 #if STUB_API
         memset(sdu, 'v', maxBytes);
@@ -679,7 +679,7 @@ int IPCManager::readSDU(int portId, void * sdu, int maxBytes) throw(Exception)
 #endif
 }
 
-void IPCManager::writeSDU(int portId, void * sdu, int size) throw(Exception)
+void IPCManager::writeSDU(int portId, void * sdu, int size)
 {
 #if STUB_API
 	/* Do nothing. */
