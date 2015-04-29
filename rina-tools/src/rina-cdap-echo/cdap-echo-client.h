@@ -37,11 +37,11 @@ class Client : public Application {
   void run();
   ~Client();
  protected:
-  rina::Flow* createFlow();
-  void echoFlow(rina::Flow *flow);
-  void destroyFlow(rina::Flow *flow);
-  bool cacep(rina::Flow *flow);
-  bool release(rina::Flow *flow);
+  int createFlow();
+  void echoFlow(int port_id);
+  void destroyFlow(int port_id);
+  bool cacep(int port_id);
+  bool release(int port_id);
 
  private:
   std::string dif_name;

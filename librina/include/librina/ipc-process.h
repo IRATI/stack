@@ -466,6 +466,9 @@ public:
 	DIFInformation currentDIFInformation;
 
 	static const std::string error_allocate_flow;
+
+	Lockable lock;
+
 	ExtendedIPCManager();
 	~ExtendedIPCManager() throw();
 #ifndef SWIG
@@ -628,7 +631,7 @@ public:
 	 * @throws FlowAllocationException If there are problems
 	 * confirming/denying the flow
 	 */
-	Flow * allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
+	FlowInformation allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
 			int result, bool notifySource);
 
 	/**

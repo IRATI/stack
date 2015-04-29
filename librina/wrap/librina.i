@@ -82,6 +82,12 @@
     jenv->ThrowNew(excep, $1.what());
   return $null;
 }
+%typemap(throws, throws="eu.irati.librina.UnknownFlowException") rina::UnknownFlowException {
+  jclass excep = jenv->FindClass("eu/irati/librina/UnknownFlowException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
 %typemap(throws, throws="eu.irati.librina.ReadSDUException") rina::ReadSDUException {
   jclass excep = jenv->FindClass("eu/irati/librina/ReadSDUException");
   if (excep)
@@ -437,8 +443,7 @@ MAKE_COLLECTION_ITERABLE(FlowInformationListIterator, FlowInformation, std::list
 MAKE_COLLECTION_ITERABLE(UnsignedIntListIterator, Long, std::list, unsigned int);
 
 %template(DIFPropertiesVector) std::vector<rina::DIFProperties>;
-%template(FlowVector) std::vector<rina::Flow>;
-%template(FlowPointerVector) std::vector<rina::Flow *>;
+%template(FlowInformationVector) std::vector<rina::FlowInformation>;
 %template(ApplicationRegistrationVector) std::vector<rina::ApplicationRegistration *>;
 %template(ParameterList) std::list<rina::Parameter>;
 %template(ApplicationProcessNamingInformationList) std::list<rina::ApplicationProcessNamingInformation>;
