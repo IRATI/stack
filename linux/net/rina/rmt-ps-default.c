@@ -89,22 +89,23 @@ default_rmt_scheduling_create_policy_tx(struct rmt_ps *        ps,
 
         data = ps->priv;
 
-        qgroup = rmt_qgroup_create();
+        qgroup = rmt_qgroup_create(n1_port->port_id);
         if (!qgroup) {
                 LOG_ERR("Could not create queues group struct for n1_port %u",
                         n1_port->port_id);
                 return -1;
         }
-        hash_add(data->outqs->qgroups, &qgroup->hlist, n1_port->port_id);
+        hash_add(data->outqs->qgroups, &qgroup->hlist, qgroup->pid);
 
         kqueue = rmt_kqueue_create(0);
         if (!kqueue) {
-                LOG_ERR("Could not create key-queue struct for n1_port %u",
-                        n1_port->port_id);
+                LOG_ERR("Could not create kqueue for n1_port %u and key %u",
+                        n1_port->port_id, 0);
                 return -1;
         }
         hash_add(qgroup->queues, &kqueue->hlist, 0);
 
+        LOG_DBG("Structures for scheduling policies created...");
         return 0;
 }
 
@@ -123,7 +124,7 @@ default_rmt_scheduling_destroy_policy_tx(struct rmt_ps *        ps,
 
         data = ps->priv;
 
-        qgroup = rmt_queue_set_find(data->outqs, n1_port->port_id);
+        qgroup = rmt_qgroup_find(data->outqs, n1_port->port_id);
         if (!qgroup) {
                 LOG_ERR("Could not find queues group for n1_port %u",
                         n1_port->port_id);
@@ -203,14 +204,14 @@ default_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
         }
 
         /* NOTE: The policy is called with the n1_port lock taken */
-        qg = rmt_queue_set_find(data->outqs, n1_port->port_id);
+        qg = rmt_qgroup_find(data->outqs, n1_port->port_id);
         if (!qg) {
                 LOG_ERR("Could not find queue group for n1_port %u",
                         n1_port->port_id);
                 pdu_destroy(pdu);
                 return -1;
         }
-        q = rmt_qgroup_find(qg, 0);
+        q = rmt_kqueue_find(qg, 0);
         if (!qg) {
                 LOG_ERR("Could not find queue in the group for n1_port %u",
                         n1_port->port_id);
@@ -238,13 +239,13 @@ default_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
         }
 
         /* NOTE: The policy is called with the n1_port lock taken */
-        qg = rmt_queue_set_find(data->outqs, n1_port->port_id);
+        qg = rmt_qgroup_find(data->outqs, n1_port->port_id);
         if (!qg) {
                 LOG_ERR("Could not find queue group for n1_port %u",
                         n1_port->port_id);
                 return NULL;
         }
-        q = rmt_qgroup_find(qg, 0);
+        q = rmt_kqueue_find(qg, 0);
         if (!qg) {
                 LOG_ERR("Could not find queue in the group for n1_port %u",
                         n1_port->port_id);

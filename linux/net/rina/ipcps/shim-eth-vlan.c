@@ -328,7 +328,7 @@ static int unbind_and_destroy_flow(struct ipcp_instance_data * data,
                         flow_unbinding_ipcp(flow->user_ipcp->data,
                                             flow->port_id);
         }
-
+        LOG_DBG("Shim ethe vlan unbinded port: %u", flow->port_id);
         if (flow_destroy(data, flow)) {
                 LOG_ERR("Failed to destroy shim-eth-vlan flow");
                 return -1;

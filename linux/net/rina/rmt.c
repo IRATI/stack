@@ -84,7 +84,6 @@ static int n1_port_n1_user_ipcp_unbind(struct rmt_n1_port * n1p)
         ASSERT(n1p);
 
         n1_ipcp = n1p->n1_ipcp;
-
         if (n1_ipcp                             &&
             n1_ipcp->ops                        &&
             n1_ipcp->data                       &&
@@ -145,7 +144,6 @@ static int n1pmap_destroy(struct n1pmap * m)
                         return -1;
                 }
         }
-
         rkfree(m);
         return 0;
 }
@@ -213,14 +211,40 @@ int rmt_kqueue_destroy(struct rmt_kqueue * q)
 }
 EXPORT_SYMBOL(rmt_kqueue_destroy);
 
-struct rmt_qgroup * rmt_qgroup_create(void)
+struct rmt_kqueue * rmt_kqueue_find(struct rmt_qgroup * g,
+                                    unsigned int        key)
+{
+        struct rmt_kqueue * entry;
+        const struct hlist_head * head;
+
+        ASSERT(g);
+
+        head = &g->queues[rmap_hash(g->queues, key)];
+        hlist_for_each_entry(entry, head, hlist) {
+                LOG_DBG("Looking for kqueue, current port: %u",
+                         entry->key);
+                if (entry->key == key)
+                        return entry;
+        }
+
+        return NULL;
+}
+EXPORT_SYMBOL(rmt_kqueue_find);
+
+struct rmt_qgroup * rmt_qgroup_create(port_id_t pid)
 {
         struct rmt_qgroup * tmp;
+
+        if (!is_port_id_ok(pid)) {
+                LOG_ERR("Could not create qgroup, wrong port id");
+                return NULL;
+        }
 
         tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
         if (!tmp)
                 return NULL;
 
+        tmp->pid = pid;
         hash_init(tmp->queues);
 
         return tmp;
@@ -234,6 +258,7 @@ int rmt_qgroup_destroy(struct rmt_qgroup * g)
         int                 bucket;
 
         ASSERT(g);
+        hash_del(&g->hlist);
 
         hash_for_each_safe(g->queues, bucket, tmp, entry, hlist) {
                 ASSERT(entry);
@@ -244,29 +269,33 @@ int rmt_qgroup_destroy(struct rmt_qgroup * g)
                 }
         }
 
+        LOG_DBG("Qgroup for port: %u destroyed...", g->pid);
         rkfree(g);
 
         return 0;
 }
 EXPORT_SYMBOL(rmt_qgroup_destroy);
 
-struct rmt_kqueue * rmt_qgroup_find(struct rmt_qgroup * g,
-                                    unsigned int        key)
+struct rmt_qgroup * rmt_qgroup_find(struct rmt_queue_set * qs,
+                                    port_id_t              pid)
 {
-        struct rmt_kqueue * entry;
+        struct rmt_qgroup * entry;
         const struct hlist_head * head;
 
-        ASSERT(g);
+        ASSERT(qs);
 
-        head = &g->queues[rmap_hash(g->queues, key)];
+        head = &qs->qgroups[rmap_hash(qs->qgroups, pid)];
+
         hlist_for_each_entry(entry, head, hlist) {
-                if (entry->key == key)
+                LOG_DBG("Looking for qgroup, current port: %u",
+                         entry->pid);
+                if (entry->pid == pid)
                         return entry;
         }
-
         return NULL;
 }
 EXPORT_SYMBOL(rmt_qgroup_find);
+
 
 struct rmt_queue_set * rmt_queue_set_create(void)
 {
@@ -304,25 +333,6 @@ int rmt_queue_set_destroy(struct rmt_queue_set * qs)
         return 0;
 }
 EXPORT_SYMBOL(rmt_queue_set_destroy);
-
-struct rmt_qgroup * rmt_queue_set_find(struct rmt_queue_set * qs,
-                                       port_id_t              pid)
-{
-        struct rmt_qgroup * entry;
-        const struct hlist_head * head;
-
-        ASSERT(qs);
-
-        head = &qs->qgroups[rmap_hash(qs->qgroups, pid)];
-
-        hlist_for_each_entry(entry, head, hlist) {
-                if (entry->pid == pid)
-                        return entry;
-        }
-
-        return NULL;
-}
-EXPORT_SYMBOL(rmt_queue_set_find);
 
 /* RMT DATAMODEL FOR RMT PS END */
 
@@ -797,8 +807,11 @@ static int __queue_send_add(struct rmt * instance,
         rcu_read_lock();
         ps = container_of(rcu_dereference(instance->base.ps), struct rmt_ps, base);
         if (ps && ps->rmt_scheduling_create_policy_tx) {
-                if (ps->rmt_scheduling_create_policy_tx(ps, tmp))
+                if (ps->rmt_scheduling_create_policy_tx(ps, tmp)) {
+                        LOG_ERR("Problems creating structs for scheduling "
+                                "policy");
                         return -1;
+                }
         }
         rcu_read_unlock();
 
@@ -809,8 +822,8 @@ static int __queue_send_add(struct rmt * instance,
 }
 
 static int rmt_n1_port_send_add(struct rmt * instance,
-                              port_id_t    id,
-                              struct ipcp_instance * n1_ipcp)
+                                port_id_t    id,
+                                struct ipcp_instance * n1_ipcp)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
@@ -957,7 +970,8 @@ static int rmt_n1_port_send_delete(struct rmt * instance,
                         return -1;
         }
         rcu_read_unlock();
-        return n1_port_destroy(n1_port);
+        n1_port_destroy(n1_port);
+        return 0;
 }
 
 int rmt_n1port_bind(struct rmt * instance,

@@ -87,14 +87,14 @@ struct rmt_queue_set {
 
 struct rmt_kqueue *     rmt_kqueue_create(unsigned int key);
 int                     rmt_kqueue_destroy(struct rmt_kqueue * q);
-struct rmt_qgroup *     rmt_qgroup_create(void);
+struct rmt_qgroup *     rmt_qgroup_create(port_id_t pid);
 int                     rmt_qgroup_destroy(struct rmt_qgroup* g);
-struct rmt_kqueue *     rmt_qgroup_find(struct rmt_qgroup * g,
+struct rmt_kqueue *     rmt_kqueue_find(struct rmt_qgroup * g,
                                         unsigned int        key);
 struct rmt_queue_set *  rmt_queue_set_create(void);
 int                     rmt_queue_set_destroy(struct rmt_queue_set * qs);
-struct rmt_qgroup *     rmt_queue_set_find(struct rmt_queue_set * qs,
-                                           port_id_t              pid);
+struct rmt_qgroup *     rmt_qgroup_find(struct rmt_queue_set * qs,
+                                        port_id_t              pid);
 struct rmt * rmt_create(struct ipcp_instance *  parent,
                         struct kfa *            kfa,
                         struct efcp_container * efcpc);
