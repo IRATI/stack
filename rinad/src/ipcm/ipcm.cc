@@ -27,6 +27,7 @@
 
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
+#include <librina/plugin-info.h>
 
 #define RINA_PREFIX "ipcm"
 #include <librina/logs.h>
@@ -1129,6 +1130,15 @@ IPCManager_::plugin_load(Promise* promise, const unsigned short ipcp_id,
 	}
 
 	return IPCM_PENDING;
+}
+
+ipcm_res_t
+IPCManager_::plugin_get_info(const std::string& plugin_name,
+			     std::list<rina::PsInfo>& result)
+{
+	int ret = rina::plugin_get_info(plugin_name, IPCPPLUGINSDIR, result);
+
+	return ret ? IPCM_FAILURE : IPCM_SUCCESS;
 }
 
 ipcm_res_t

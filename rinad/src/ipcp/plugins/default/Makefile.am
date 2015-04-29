@@ -62,3 +62,5 @@ XFAIL_TESTS =
 PASS_TESTS  = test-routing test-encoders
 
 TESTS = $(PASS_TESTS) $(XFAIL_TESTS)
+
+dist_plugins_DATA = default.manifest
