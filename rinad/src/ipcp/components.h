@@ -257,7 +257,7 @@ public:
 	/// @param cdapMessage
 	/// @param underlyingPortId
 	virtual void createFlowRequestMessageReceived(Flow * flow, const std::string& object_name,
-			int invoke_id, int underlying_port_id) = 0;
+			int invoke_id) = 0;
 
 	/// Called by the flow allocator instance when it finishes to cleanup the state.
 	/// @param portId

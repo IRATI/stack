@@ -175,7 +175,7 @@ void IPCPRIBDaemonImpl::sendMessageSpecific(bool useAddress, const rina::CDAPMes
 	}
 
 	atomic_send_lock_.lock();
-    sdu = 0;
+	sdu = 0;
 	try {
 		if (useAddress) {
 			adata.source_address_ = ipcp->get_address();
@@ -189,6 +189,10 @@ void IPCPRIBDaemonImpl::sendMessageSpecific(bool useAddress, const rina::CDAPMes
 			rina::kernelIPCProcess->sendMgmgtSDUToAddress(sdu->message_, sdu->size_, address);
 			LOG_IPCP_DBG("Sent A-Data CDAP message to address %u: %s", address,
 					cdapMessage.to_string().c_str());
+			if (cdapMessage.invoke_id_ != 0 && !cdapMessage.is_request_message()) {
+				cdsm->get_invoke_id_manager()->freeInvokeId(cdapMessage.invoke_id_, true);
+			}
+
 			delete sdu;
 			delete adataCDAPMessage;
 		} else {
@@ -203,6 +207,10 @@ void IPCPRIBDaemonImpl::sendMessageSpecific(bool useAddress, const rina::CDAPMes
 	} catch (rina::Exception &e) {
 		if (sdu) {
 			delete sdu;
+		}
+
+		if (cdapMessage.invoke_id_ != 0 && cdapMessage.is_request_message()) {
+			cdsm->get_invoke_id_manager()->freeInvokeId(cdapMessage.invoke_id_, false);
 		}
 
 		std::string reason = std::string(e.what());
@@ -262,13 +270,25 @@ void IPCPRIBDaemonImpl::cdapMessageDelivered(char* message, int length, int port
     		}
 
     		aDataCDAPMessage = cdap_session_manager_->decodeCDAPMessage(*adata->encoded_cdap_message_);
+
+    		if (aDataCDAPMessage->invoke_id_ != 0) {
+    			if (aDataCDAPMessage->is_request_message()) {
+    				cdap_session_manager_->get_invoke_id_manager()->reserveInvokeId(aDataCDAPMessage->invoke_id_,
+    												false);
+    			} else {
+    				cdap_session_manager_->get_invoke_id_manager()->freeInvokeId(aDataCDAPMessage->invoke_id_,
+    				    							     false);
+    			}
+    		}
+
     		descriptor = new rina::CDAPSessionDescriptor();
 
     		LOG_IPCP_DBG("Received A-Data CDAP message from address %u : %s", adata->source_address_,
     	    		aDataCDAPMessage->to_string().c_str());
 
     		atomic_send_lock_.unlock();
-    		processIncomingCDAPMessage(aDataCDAPMessage, descriptor,
+    		processIncomingCDAPMessage(aDataCDAPMessage,
+    					   descriptor,
     					   rina::CDAPSessionInterface::SESSION_STATE_CON);
     		delete aDataCDAPMessage;
     		delete adata;
