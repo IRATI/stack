@@ -57,9 +57,6 @@ struct rmt_ps {
         int (* rmt_scheduling_destroy_policy_tx)(struct rmt_ps *,
                                                  struct rmt_n1_port *);
 
-        /* Parametric policies. */
-        int          max_q;
-
         /* Reference used to access the RMT data model. */
         struct rmt * dm;
 

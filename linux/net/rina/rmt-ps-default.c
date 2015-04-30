@@ -103,6 +103,8 @@ default_rmt_scheduling_create_policy_tx(struct rmt_ps *        ps,
                         n1_port->port_id, 0);
                 return -1;
         }
+        /* FIXME this is not used in this implementation so far */
+        kqueue->max_q = 256;
         hash_add(qgroup->queues, &kqueue->hlist, 0);
 
         LOG_DBG("Structures for scheduling policies created...");
@@ -339,8 +341,6 @@ rmt_ps_default_create(struct rina_component * component)
         ps->rmt_scheduling_policy_rx         = default_rmt_scheduling_policy_rx;
         ps->rmt_scheduling_create_policy_tx  = default_rmt_scheduling_create_policy_tx;
         ps->rmt_scheduling_destroy_policy_tx = default_rmt_scheduling_destroy_policy_tx;
-
-        ps->max_q       = 256;
 
         return &ps->base;
 }

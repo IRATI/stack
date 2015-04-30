@@ -418,8 +418,6 @@ int rmt_set_policy_set_param(struct rmt * rmt,
                 ps = container_of(rcu_dereference(rmt->base.ps), struct rmt_ps, base);
                 if (!ps) {
                         LOG_ERR("No policy-set selected for this RMT");
-                } else if (strcmp(name, "max_q") == 0) {
-                        ret = kstrtoint(value, 10, &ps->max_q);
                 } else {
                         LOG_ERR("Unknown RMT parameter policy '%s'", name);
                 }
@@ -525,6 +523,8 @@ static int n1_port_write(struct serdes *      serdes,
         pci = 0;
         ttl = 0;
 
+        atomic_dec(&n1_port->n_sdus);
+
 #ifdef CONFIG_RINA_IPCPS_TTL
         pci = pdu_pci_get_rw(pdu);
         if (!pci) {
@@ -578,7 +578,6 @@ static int n1_port_write(struct serdes *      serdes,
                 return -1;
         }
 
-        atomic_dec(&n1_port->n_sdus);
         return 0;
 }
 
