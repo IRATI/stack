@@ -837,6 +837,51 @@ CDAPMessage* CDAPMessage::getCancelReadResponseMessage(Flags flags,
 	return cdap_message;
 }
 
+CDAPMessage* CDAPMessage::getRequestMessage(Opcode opcode, char * filter,
+		Flags flags, const std::string &obj_class, long obj_inst,
+		const std::string &obj_name, int scope)
+{
+	CDAPMessage *cdap_message = new CDAPMessage();
+	cdap_message->set_filter(filter);
+	cdap_message->set_flags(flags);
+	cdap_message->set_obj_class(obj_class);
+	cdap_message->set_obj_inst(obj_inst);
+	cdap_message->set_obj_name(obj_name);
+	cdap_message->set_op_code(opcode);
+	cdap_message->set_scope(scope);
+	return cdap_message;
+}
+
+CDAPMessage* CDAPMessage::getResponseMessage(Opcode opcode, Flags flags,
+		const std::string &obj_class, long obj_inst,
+		const std::string &obj_name, int result,
+		const std::string &result_reason, int invoke_id)
+{
+	CDAPMessage *cdap_message = new CDAPMessage();
+	cdap_message->set_flags(flags);
+	cdap_message->set_invoke_id(invoke_id);
+	cdap_message->set_obj_class(obj_class);
+	cdap_message->set_obj_inst(obj_inst);
+	cdap_message->set_obj_name(obj_name);
+	cdap_message->set_op_code(opcode);
+	cdap_message->set_result(result);
+	cdap_message->set_result_reason(result_reason);
+	return cdap_message;
+}
+
+bool CDAPMessage::is_request_message() const
+{
+	if (op_code_ == M_CONNECT || op_code_ == M_RELEASE ||
+			op_code_ == M_CREATE || op_code_ == M_DELETE ||
+			op_code_ == M_READ || op_code_ == M_WRITE ||
+			op_code_ == M_START || op_code_ == M_STOP ||
+			op_code_ == M_CANCELREAD) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
 std::string CDAPMessage::to_string() const {
 	std::stringstream ss;
 	ss << std::endl << opcodeToString(op_code_) << std::endl;
