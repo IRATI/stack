@@ -813,7 +813,7 @@ void RIBDaemon::processIncomingCDAPMessage(const rina::CDAPMessage * cdapMessage
 
 	if (session_state == rina::CDAPSessionInterface::SESSION_STATE_AWAIT_CON) {
 		if (opcode == rina::CDAPMessage::M_CONNECT) {
-			cacep_handler_->connect(cdapMessage->invoke_id_,
+			cacep_handler_->connect(*cdapMessage,
 			                        descriptor);
 		} else {
 			//TODO These must be authentication messages, delegate to CACEPHandler

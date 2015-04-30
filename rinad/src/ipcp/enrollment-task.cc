@@ -412,8 +412,8 @@ void EnrollmentTask::initiateEnrollment(rina::EnrollmentRequest * request)
 	port_ids_pending_to_be_allocated_.put(handle, request);
 }
 
-void EnrollmentTask::connect(int invoke_id,
-		rina::CDAPSessionDescriptor * session_descriptor)
+void EnrollmentTask::connect(const rina::CDAPMessage& cdapMessage,
+			     rina::CDAPSessionDescriptor * session_descriptor)
 {
 	LOG_IPCP_DBG("Received M_CONNECT CDAP message from port-id %d",
 			session_descriptor->port_id_);
@@ -446,7 +446,7 @@ void EnrollmentTask::connect(int invoke_id,
 								       session_descriptor->src_ae_name_,
 								       session_descriptor->src_ap_inst_,
 								       session_descriptor->src_ap_name_,
-								       invoke_id,
+								       cdapMessage.invoke_id_,
 								       remote_id);
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Problems sending CDAP message: %s", e.what());
@@ -460,7 +460,7 @@ void EnrollmentTask::connect(int invoke_id,
 	//3 Delegate further processing to the policy
 	IPCPEnrollmentTaskPS * ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);
 	assert(ipcp_ps);
-	ipcp_ps->connect_received(invoke_id, session_descriptor);
+	ipcp_ps->connect_received(cdapMessage, session_descriptor);
 }
 
 void EnrollmentTask::connectResponse(int result, const std::string& result_reason,

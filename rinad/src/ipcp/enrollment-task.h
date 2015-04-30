@@ -94,8 +94,8 @@ public:
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	void processEnrollmentRequestEvent(rina::EnrollToDAFRequestEvent * event);
 	void initiateEnrollment(rina::EnrollmentRequest * request);
-	void connect(int invoke_id,
-			rina::CDAPSessionDescriptor * session_descriptor);
+	void connect(const rina::CDAPMessage& message,
+		     rina::CDAPSessionDescriptor * session_descriptor);
 	void connectResponse(int result, const std::string& result_reason,
 			rina::CDAPSessionDescriptor * session_descriptor);
 	void enrollmentFailed(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,

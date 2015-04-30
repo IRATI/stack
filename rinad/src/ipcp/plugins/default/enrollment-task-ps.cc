@@ -692,7 +692,8 @@ public:
 	/// Authenticate the remote peer and issue a connect response
 	/// @param invoke_id
     /// @param portId
-	void connect(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
+	void connect(const rina::CDAPMessage& cdapMessage,
+		     rina::CDAPSessionDescriptor * session_descriptor);
 
 	/// Called by the Enrollment object when it receives an M_START message from
 	/// the enrolling member. Have to look at the enrollment information request,
@@ -745,10 +746,13 @@ EnrollerStateMachine::EnrollerStateMachine(IPCProcess * ipc_process,
 	enroller_ = true;
 }
 
-EnrollerStateMachine::~EnrollerStateMachine() {
+EnrollerStateMachine::~EnrollerStateMachine()
+{
 }
 
-void EnrollerStateMachine::connect(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
+void EnrollerStateMachine::connect(const rina::CDAPMessage& cdapMessage,
+			           rina::CDAPSessionDescriptor * session_descriptor)
+{
 	rina::ScopedLock g(*lock_);
         ISecurityManagerPs *smps = dynamic_cast<ISecurityManagerPs *>(security_manager_->ps);
 
@@ -766,7 +770,7 @@ void EnrollerStateMachine::connect(int invoke_id, rina::CDAPSessionDescriptor * 
 	remote_peer_->name_.processInstance = session_descriptor->dest_ap_inst_;
 
 	rina::IAuthPolicySet * ps = security_manager_->get_auth_policy_set(
-			rina::IAuthPolicySet::cdapTypeToString(rina::CDAPMessage::AUTH_NONE));
+			rina::IAuthPolicySet::cdapTypeToString(cdapMessage.auth_mech_));
 	if (!ps) {
 		abortEnrollment(remote_peer_->name_, port_id_,
 				std::string("Could not find auth policy set"), true);
@@ -774,8 +778,8 @@ void EnrollerStateMachine::connect(int invoke_id, rina::CDAPSessionDescriptor * 
 	}
 
 	//TODO pass auth_value and auth_type in the function interface
-	rina::IAuthPolicySet::AuthStatus auth_status = ps->initiate_authentication(rina::AuthValue(),
-			session_descriptor->port_id_);
+	rina::IAuthPolicySet::AuthStatus auth_status = ps->initiate_authentication(cdapMessage.auth_value_,
+										   session_descriptor->port_id_);
 	if (auth_status == rina::IAuthPolicySet::FAILED) {
 		abortEnrollment(remote_peer_->name_, port_id_,
 				std::string("Authentication failed"), true);
@@ -805,7 +809,7 @@ void EnrollerStateMachine::connect(int invoke_id, rina::CDAPSessionDescriptor * 
 				rina::AuthValue(), session_descriptor->dest_ae_inst_, IPCProcess::MANAGEMENT_AE,
 				session_descriptor->dest_ap_inst_, session_descriptor->dest_ap_name_, 0, "", session_descriptor->src_ae_inst_,
 				IPCProcess::MANAGEMENT_AE, session_descriptor->src_ap_inst_, session_descriptor->src_ap_name_,
-				invoke_id, remote_id);
+				cdapMessage.invoke_id_, remote_id);
 
 		//Set timer
 		last_scheduled_task_ = new rina::EnrollmentFailedTimerTask(this, START_ENROLLMENT_TIMEOUT);
@@ -1108,7 +1112,7 @@ class EnrollmentTaskPs: public IPCPEnrollmentTaskPS {
 public:
 	EnrollmentTaskPs(IPCProcess * ipcp_);
         virtual ~EnrollmentTaskPs() {};
-        void connect_received(int invoke_id,
+        void connect_received(const rina::CDAPMessage& cdapMessage,
         		      rina::CDAPSessionDescriptor * session_descriptor);
         void connect_response_received(int result,
         			       const std::string& result_reason,
@@ -1152,7 +1156,7 @@ void EnrollmentTaskPs::populate_rib()
 	}
 }
 
-void EnrollmentTaskPs::connect_received(int invoke_id,
+void EnrollmentTaskPs::connect_received(const rina::CDAPMessage& cdapMessage,
         		 	        rina::CDAPSessionDescriptor * session_descriptor)
 {
 	try{
@@ -1163,7 +1167,7 @@ void EnrollmentTaskPs::connect_received(int invoke_id,
 									      session_descriptor->port_id_,
 									      false,
 									      flowInformation.difName);
-		enrollmentStateMachine->connect(invoke_id, session_descriptor);
+		enrollmentStateMachine->connect(cdapMessage, session_descriptor);
 	}catch(rina::Exception &e){
 		LOG_IPCP_ERR("Problems: %s", e.what());
 
@@ -1183,7 +1187,7 @@ void EnrollmentTaskPs::connect_received(int invoke_id,
 								      session_descriptor->src_ae_name_,
 								      session_descriptor->src_ap_inst_,
 								      session_descriptor->src_ap_name_,
-								      invoke_id,
+								      cdapMessage.invoke_id_,
 								      remote_id);
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Problems sending CDAP message: %s", e.what());

@@ -107,7 +107,7 @@ public:
 class IPCPEnrollmentTaskPS : public rina::IPolicySet {
 public:
         virtual ~IPCPEnrollmentTaskPS() {};
-        virtual void connect_received(int invoke_id,
+        virtual void connect_received(const rina::CDAPMessage& cdapMessage,
         			      rina::CDAPSessionDescriptor * session_descriptor) = 0;
         virtual void connect_response_received(int result,
         				       const std::string& result_reason,

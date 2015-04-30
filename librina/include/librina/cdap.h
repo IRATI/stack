@@ -1076,7 +1076,7 @@ public:
         /// A remote IPC process Connect request has been received.
         /// @param invoke_id the id of the connect message
         /// @param session_descriptor
-        virtual void connect(int invoke_id,
+        virtual void connect(const CDAPMessage& cdap_message,
                         rina::CDAPSessionDescriptor * session_descriptor) = 0;
 
         /// A remote IPC process Connect response has been received.
