@@ -646,8 +646,11 @@ static void send_worker(unsigned long o)
                 if (ps && ps->rmt_next_scheduled_policy_tx) {
                         do {
                                 pdu = ps->rmt_next_scheduled_policy_tx(ps, n1_port);
-                                if (n1_port_write(rmt->serdes, n1_port, pdu))
-                                        LOG_ERR("Could not write scheduled PDU in n1 port");
+                                if (pdu) {
+                                        if (n1_port_write(rmt->serdes, n1_port, pdu))
+                                                LOG_ERR("Could not write scheduled PDU in n1 port");
+                                        pdus_sent++;
+                                }
                         } while((pdus_sent < MAX_PDUS_SENT_PER_CYCLE) ||
                                 (atomic_read(&n1_port->n_sdus) <= 0));
                 }
