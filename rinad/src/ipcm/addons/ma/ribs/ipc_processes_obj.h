@@ -6,8 +6,8 @@
  */
 
 
-#ifndef __RINAD_OS_PROC_OBJ_H__
-#define __RINAD_OS_PROC_OBJ_H__
+#ifndef __RINAD_IPC_PROCESSES_OBJ_H__
+#define __RINAD_IPC_PROCESSES_OBJ_H__
 
 #include <librina/rib_v2.h>
 #include <librina/patterns.h>
@@ -22,10 +22,10 @@ namespace rib_v1{
 /**
  * OSApplicationProcess object
  */
-class OSApplicationProcessObj : public rina::rib::EmptyRIBObject{
+class IPCProcessesObj : public rina::rib::EmptyRIBObject{
 
 public:
-	OSApplicationProcessObj(std::string name, long instance,
+	IPCProcessesObj(std::string name, long instance,
 					rina::rib::RIBDNorthInterface* ribd);
 	rina::cdap_rib::res_info_t* remoteCreate(const std::string& name,
 			const std::string clas,
@@ -48,4 +48,4 @@ private:
 } //namespace rinad
 
 
-#endif  /* __RINAD_OS_PROC_OBJ_H__ */
+#endif  /* __RINAD_IPC_PROCESSES_OBJ_H__ */

@@ -253,13 +253,13 @@ void Manager::createIPCP(rina::FlowInformation flow)
 
         mad_manager::structures::ipcp_config_t ipc_config;
         ipc_config.process_instance = "1";
-        ipc_config.process_name = "test2.IRATI";
+        ipc_config.process_name = "normal-1.IPCP";
         ipc_config.process_type = "normal-ipc";
         ipc_config.dif_to_assign = "normal.DIF";
 
         cdap_rib::obj_info_t obj;
         obj.name_ =
-                        "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=1";
+                        "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=2";
         obj.class_ = "IPCProcess";
         obj.inst_ = 0;
         mad_manager::encoders::IPCPConfigEncoder().encode(ipc_config,
@@ -291,7 +291,7 @@ void Manager::queryRIB(rina::FlowInformation flow)
 
 	cdap_rib::obj_info_t obj;
 	obj.name_ =
-			"root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcesses, ipcProcessID=2, RIBDaemon";
+			"root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=2, RIBDaemon";
 	obj.class_ = "RIBDaemon";
 	obj.inst_ = 0;
 

@@ -1,4 +1,4 @@
-#include <os_proc_obj.h>
+#include <ipc_processes_obj.h>
 #include <ipcp_obj.h>
 #include <ribd_obj.cc>
 
@@ -17,9 +17,9 @@ namespace rib_v1 {
 extern Singleton<rina::ConsecutiveUnsignedIntegerGenerator> inst_gen;
 
 //Static class names
-const std::string OSApplicationProcessObj::class_name = "OSApplicationProcess";
+const std::string IPCProcessesObj::class_name = "OSApplicationProcess";
 
-OSApplicationProcessObj::OSApplicationProcessObj(
+IPCProcessesObj::IPCProcessesObj(
 		std::string name, long instance,
 		rina::rib::RIBDNorthInterface* ribd)
 		: rina::rib::EmptyRIBObject(class_name, name, instance,
@@ -28,7 +28,7 @@ OSApplicationProcessObj::OSApplicationProcessObj(
 	ribd_ = ribd;
 }
 
-rina::cdap_rib::res_info_t* OSApplicationProcessObj::remoteCreate(
+rina::cdap_rib::res_info_t* IPCProcessesObj::remoteCreate(
 		const std::string& name, const std::string clas,
 		const rina::cdap_rib::SerializedObject &obj_req,
 		rina::cdap_rib::SerializedObject &obj_reply) {
@@ -37,7 +37,6 @@ rina::cdap_rib::res_info_t* OSApplicationProcessObj::remoteCreate(
 	rina::cdap_rib::res_info_t* res = new rina::cdap_rib::res_info_t;
 
 	if (clas == IPCPObj::class_name) {
-
 		IPCPObj* ipcp;
 
 		try {
@@ -59,7 +58,9 @@ rina::cdap_rib::res_info_t* OSApplicationProcessObj::remoteCreate(
 				res->result_ = 1;
 				if (!object.dif_to_register.empty()) {
 					if (registerAtDIF(object, ipcp_id))
+					{
 						res->result_ = 1;
+					}
 					else {
 						// TODO Implement destroy ipcp
 						res->result_ = -1;
@@ -72,7 +73,6 @@ rina::cdap_rib::res_info_t* OSApplicationProcessObj::remoteCreate(
 		} else {
 			res->result_ = -1;
 		}
-
 		if (res->result_ > 0) {
 			ribd_->addRIBObject(ipcp);
 			// TODO: create basic IPCP objects
@@ -91,7 +91,7 @@ rina::cdap_rib::res_info_t* OSApplicationProcessObj::remoteCreate(
 	return res;
 }
 
-int OSApplicationProcessObj::createIPCP(
+int IPCProcessesObj::createIPCP(
 		rinad::mad_manager::structures::ipcp_config_t &object) {
 	CreateIPCPPromise ipcp_promise;
 
@@ -110,7 +110,7 @@ int OSApplicationProcessObj::createIPCP(
 	return ipcp_promise.ipcp_id;
 
 }
-bool OSApplicationProcessObj::assignToDIF(
+bool IPCProcessesObj::assignToDIF(
 		rinad::mad_manager::structures::ipcp_config_t &object,
 		int ipcp_id) {
 	// ASSIGN TO DIF
@@ -135,7 +135,7 @@ bool OSApplicationProcessObj::assignToDIF(
 
 	return true;
 }
-bool OSApplicationProcessObj::registerAtDIF(
+bool IPCProcessesObj::registerAtDIF(
 		mad_manager::structures::ipcp_config_t &object, int ipcp_id) {
 	Promise promise;
 

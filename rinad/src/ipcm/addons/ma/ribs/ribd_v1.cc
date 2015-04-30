@@ -27,7 +27,7 @@
 
 //Object definitions
 #include "ipcp_obj.h"
-#include "os_proc_obj.h"
+#include "ipc_processes_obj.h"
 #include "ribd_obj.h"
 
 namespace rinad {
@@ -153,68 +153,74 @@ void initiateRIB(rina::rib::RIBDNorthInterface* ribd) {
 						"processingSystemID=1, kernelApplicationProcess",
 						inst_gen->next(), enc));
 		ribd->addRIBObject(
-				new OSApplicationProcessObj(
+				new rina::rib::EmptyRIBObject("OSApplicationProcess",
 						"root, computingSystemID = 1, "
 						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess",
-						inst_gen->next(), ribd));
+						inst_gen->next(), enc));
 		ribd->addRIBObject(
-				new OSApplicationProcessObj(
+				new IPCProcessesObj(
 						"root, computingSystemID = 1, "
 						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses",
 						inst_gen->next(), ribd));
 		ribd->addRIBObject(
 				new rina::rib::EmptyRIBObject(
+						"ManagementAgents",
+						"root, computingSystemID = 1, "
+						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgents",
+						inst_gen->next(), enc));
+		ribd->addRIBObject(
+				new rina::rib::EmptyRIBObject(
 						"ManagementAgent",
 						"root, computingSystemID = 1, "
-						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgentID=1",
+						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgents, managementAgentID=1",
 						inst_gen->next(), enc));
 		// IPCManagement branch
 		ribd->addRIBObject(
 				new rina::rib::EmptyRIBObject(
 						"IPCManagement",
 						"root, computingSystemID = 1, "
-						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgentID = 1, ipcManagement",
+						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgents, managementAgentID = 1, ipcManagement",
 						inst_gen->next(), enc));
 		ribd->addRIBObject(
 				new rina::rib::EmptyRIBObject(
 						"IPCResourceManager",
 						"root, computingSystemID = 1, "
-						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgentID = 1, ipcManagement, "
+						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgents, managementAgentID = 1, ipcManagement, "
 						"ipcResourceManager",
 						inst_gen->next(), enc));
 		ribd->addRIBObject(
 				new rina::rib::EmptyRIBObject(
 						"UnderlayingFlows",
 						"root, computingSystemID = 1, "
-						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgentID = 1, ipcManagement, "
+						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgents, managementAgentID = 1, ipcManagement, "
 						"ipcResourceManager, underlayingFlows",
 						inst_gen->next(), enc));
 		ribd->addRIBObject(
 				new rina::rib::EmptyRIBObject(
 						"UnderlayingDIFs",
 						"root, computingSystemID = 1, "
-						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgentID = 1, ipcManagement, "
+						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgents, managementAgentID = 1, ipcManagement, "
 						"ipcResourceManager, underlayingDIFs",
 						inst_gen->next(), enc));
 		ribd->addRIBObject(
 				new rina::rib::EmptyRIBObject(
 						"QueryDIFAllocator",
 						"root, computingSystemID = 1, "
-						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgentID = 1, ipcManagement, "
+						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgents, managementAgentID = 1, ipcManagement, "
 						"ipcResourceManager, queryDIFAllocator",
 						inst_gen->next(), enc));
 		ribd->addRIBObject(
 				new rina::rib::EmptyRIBObject(
 						"UnderlayingRegistrations",
 						"root, computingSystemID = 1, "
-						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgentID = 1, ipcManagement, "
+						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgents, managementAgentID = 1, ipcManagement, "
 						"ipcResourceManager, underlayingRegistrations",
 						inst_gen->next(), enc));
 		ribd->addRIBObject(
 				new rina::rib::EmptyRIBObject(
 						"SDUPRotection",
 						"root, computingSystemID = 1, "
-						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgentID = 1, ipcManagement, "
+						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgents, managementAgentID = 1, ipcManagement, "
 						"sduProtection",
 						inst_gen->next(), enc));
 		// RIBDaemon branch
@@ -222,13 +228,13 @@ void initiateRIB(rina::rib::RIBDNorthInterface* ribd) {
 				new rina::rib::EmptyRIBObject(
 						"RIBDaemon",
 						"root, computingSystemID = 1, "
-						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgentID = 1, ribDaemon",
+						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgents, managementAgentID = 1, ribDaemon",
 						inst_gen->next(), enc));
 		ribd->addRIBObject(
 				new rina::rib::EmptyRIBObject(
 						"Discriminators",
 						"root, computingSystemID = 1, "
-						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgentID = 1, ribDaemon"
+						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgents, managementAgentID = 1, ribDaemon"
 						", discriminators",
 						inst_gen->next(), enc));
 		// DIFManagement
@@ -236,7 +242,7 @@ void initiateRIB(rina::rib::RIBDNorthInterface* ribd) {
 				new rina::rib::EmptyRIBObject(
 						"DIFManagement",
 						"root, computingSystemID = 1, "
-						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgentID = 1, difManagement",
+						"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, managementAgents, managementAgentID = 1, difManagement",
 						inst_gen->next(), enc));
 
 		//
@@ -270,7 +276,6 @@ void initiateRIB(rina::rib::RIBDNorthInterface* ribd) {
 	} catch (rina::Exception &e1) {
 		LOG_ERR("RIB basic objects were not created because %s",
 			e1.what());
-		throw rina::Exception("Finish application");
 	}
 }
 
