@@ -388,7 +388,7 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 		if(!ipcp){
 			ss << "Invalid IPCP id "<< ipcp_id;
 			FLUSH_LOG(ERR, ss);
-			throw rina::Exception();
+			throw rina::AssignToDIFException();
 		}
 
 		//Auto release the write lock
@@ -402,7 +402,15 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 			ss << "Cannot find properties for DIF "
 				<< dif_name.toString();
 			FLUSH_LOG(ERR, ss);
-			throw rina::Exception();
+			throw rina::AssignToDIFException();
+		}
+
+		if (is_any_ipcp_assigned_to_dif(dif_name)) {
+			ss << "There is already an IPCP assigned to DIF "
+				<< dif_name.toString()
+				<< " in this system.";
+			FLUSH_LOG(ERR, ss);
+			throw rina::AssignToDIFException();
 		}
 
 		// Fill in the DIFConfiguration object.
@@ -505,7 +513,7 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 			ss << "Unable to allocate memory for the transaction object. Out of memory! "
 				<< dif_name.toString();
 			FLUSH_LOG(ERR, ss);
-			throw rina::Exception();
+			throw rina::AssignToDIFException();
 		}
 
 		//Store transaction
@@ -513,7 +521,7 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 			ss << "Unable to add transaction; out of memory? "
 				<< dif_name.toString();
 			FLUSH_LOG(ERR, ss);
-			throw rina::Exception();
+			throw rina::AssignToDIFException();
 		}
 
 		ipcp->assignToDIF(dif_info, trans->tid);

@@ -11,8 +11,8 @@ message connectionId_t {  //information to identify a connection
 }
 
 message Flow{  //Contains the information to setup a new flow
-	required rina.messages.applicationProcessNamingInfo_t sourceNamingInfo = 1;  			//The naming information of the source application process
-	required rina.messages.applicationProcessNamingInfo_t destinationNamingInfo = 2; 		//The naming information of the destination application process
+	required applicationProcessNamingInfo_t sourceNamingInfo = 1;  			//The naming information of the source application process
+	required applicationProcessNamingInfo_t destinationNamingInfo = 2; 		//The naming information of the destination application process
 	required uint64 sourcePortId = 3; 										//The port id allocated to this flow by the source IPC process
 	optional uint64 destinationPortId = 4; 									//The port id allocated to this flow by the destination IPC process
 	required uint64 sourceAddress = 5; 										//The address of the source IPC process for this flow
@@ -20,7 +20,7 @@ message Flow{  //Contains the information to setup a new flow
 	repeated connectionId_t connectionIds = 7; 								//The identifiers of all the connections that can be used to support this flow during its lifetime
 	optional uint32 currentConnectionIdIndex = 8;							//Identifies the index of the current active connection in the flow
 	optional uint32 state = 9; 												//
-	optional rina.messages.qosSpecification_t qosParameters = 10; 			//the QoS parameters specified by the application process that requested this flow
+	optional qosSpecification_t qosParameters = 10; 			//the QoS parameters specified by the application process that requested this flow
 	optional connectionPolicies_t connectionPolicies = 11;                  //the configuration for the policies and parameters of this EFCP connection
 	optional bytes accessControl = 12; 										// ?
 	optional uint32 maxCreateFlowRetries = 13; 								//Maximum number of retries to create the flow before giving up
