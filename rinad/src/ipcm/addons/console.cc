@@ -536,7 +536,7 @@ IPCMConsole::register_at_dif(vector<string>& args)
 int
 IPCMConsole::unregister_from_dif(std::vector<std::string>& args)
 {
-	int ipcp_id, slave_ipcp_id;
+	int ipcp_id;
 	Promise promise;
 
 	if (args.size() < 3) {
@@ -544,7 +544,7 @@ IPCMConsole::unregister_from_dif(std::vector<std::string>& args)
 		return CMDRETCONT;
 	}
 
-	std::string dif_name(args[2]);
+	rina::ApplicationProcessNamingInformation dif_name(args[2], string());
 
 	if(string2int(args[1], ipcp_id)){
 		outstream << "Invalid IPC process id" << endl;
@@ -555,15 +555,9 @@ IPCMConsole::unregister_from_dif(std::vector<std::string>& args)
 		return CMDRETCONT;
 	}
 
-	slave_ipcp_id = IPCManager->get_ipcp_by_dif_name(dif_name);
-	if (!IPCManager->ipcp_exists(slave_ipcp_id) ) {
-		outstream << "No IPC process in that DIF" << endl;
-		return CMDRETCONT;
-	}
-
 	//Call IPCManager
 	if(IPCManager->unregister_ipcp_from_ipcp(&promise, ipcp_id,
-			slave_ipcp_id) == IPCM_FAILURE || promise.wait() != IPCM_SUCCESS) {
+			dif_name) == IPCM_FAILURE || promise.wait() != IPCM_SUCCESS) {
 		outstream << "Unregistration failed" << endl;
 		return CMDRETCONT;
 	}

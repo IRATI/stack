@@ -3,6 +3,7 @@
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,6 +49,52 @@ struct rmt;
 
 /* NOTE: There's one RMT for each IPC Process */
 
+/* Plugin support */
+
+#define RMT_PS_HASHSIZE 7
+
+enum flow_state {
+        N1_PORT_STATE_ENABLED,
+        N1_PORT_STATE_DISABLED,
+};
+
+struct rmt_n1_port {
+        spinlock_t             lock;
+        port_id_t              port_id;
+        struct ipcp_instance * n1_ipcp;
+        struct hlist_node      hlist;
+        enum flow_state        state;
+        atomic_t               n_sdus;
+};
+
+/* The key in this struct is used to filter by cep_ids, qos_id, address... */
+struct rmt_kqueue {
+        struct rfifo *    queue;
+        unsigned int      key;
+        unsigned int      max_q;
+        struct hlist_node hlist;
+};
+
+struct rmt_qgroup {
+        port_id_t         pid;
+        struct hlist_node hlist;
+        DECLARE_HASHTABLE(queues, RMT_PS_HASHSIZE);
+};
+
+struct rmt_queue_set {
+        DECLARE_HASHTABLE(qgroups, RMT_PS_HASHSIZE);
+};
+
+struct rmt_kqueue *     rmt_kqueue_create(unsigned int key);
+int                     rmt_kqueue_destroy(struct rmt_kqueue * q);
+struct rmt_qgroup *     rmt_qgroup_create(port_id_t pid);
+int                     rmt_qgroup_destroy(struct rmt_qgroup* g);
+struct rmt_kqueue *     rmt_kqueue_find(struct rmt_qgroup * g,
+                                        unsigned int        key);
+struct rmt_queue_set *  rmt_queue_set_create(void);
+int                     rmt_queue_set_destroy(struct rmt_queue_set * qs);
+struct rmt_qgroup *     rmt_qgroup_find(struct rmt_queue_set * qs,
+                                        port_id_t              pid);
 struct rmt * rmt_create(struct ipcp_instance *  parent,
                         struct kfa *            kfa,
                         struct efcp_container * efcpc);
@@ -80,11 +127,9 @@ int          rmt_pft_flush(struct rmt * instance);
 int          rmt_send(struct rmt * instance,
                       struct pci * pci,
                       struct pdu * pdu);
-
 int          rmt_send_port_id(struct rmt *  instance,
                               port_id_t     id,
                               struct pdu *  pdu);
-
 int          rmt_receive(struct rmt * instance,
                          struct sdu * sdu,
                          port_id_t    from);
@@ -104,21 +149,4 @@ int          rmt_set_policy_set_param(struct rmt * rmt,
 
 struct rmt * rmt_from_component(struct rina_component * component);
 
-/* Plugin support */
-enum flow_state {
-        N1_PORT_STATE_ENABLED,
-        N1_PORT_STATE_DISABLED,
-        N1_PORT_STATE_BUSY
-};
-
-struct rmt_n1_port {
-        spinlock_t             lock;
-        /* this should be a list or hlist of rfifos */
-        struct rfifo *         queue;
-        port_id_t              port_id;
-        struct ipcp_instance * n1_ipcp;
-        struct hlist_node      hlist;
-        enum flow_state        state;
-        atomic_t               n_sdus;
-};
 #endif

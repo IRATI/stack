@@ -74,14 +74,18 @@ protected:
 	void cleanFlowAndNotify(int portId);
 };
 
-class DIFRegistrationRIBObject: public SimpleSetMemberRIBObject {
+class DIFRegistrationRIBObject: public BaseRIBObject {
 public:
 	DIFRegistrationRIBObject(IRIBDaemon * rib_daemon,
 				 const std::string& object_class,
 				 const std::string& object_name,
-				 const std::string* dif_name);
-	std::string get_displayable_value();
+				 const std::string& dif_name_);
+	const void* get_value() const;
 	void deleteObject(const void* objectValue);
+	std::string get_displayable_value();
+
+private:
+	std::string dif_name;
 };
 
 class DIFRegistrationSetRIBObject: public BaseRIBObject {
@@ -97,14 +101,18 @@ public:
                           const void* objectValue);
 };
 
-class NMinusOneFlowRIBObject: public SimpleSetMemberRIBObject {
+class NMinusOneFlowRIBObject: public BaseRIBObject {
 public:
 	NMinusOneFlowRIBObject(IRIBDaemon * rib_daemon,
 			       const std::string& object_class,
 			       const std::string& object_name,
-			       const rina::FlowInformation* flow_info);
-	std::string get_displayable_value();
+			       const rina::FlowInformation& flow_info);
+	const void* get_value() const;
 	void deleteObject(const void* objectValue);
+	std::string get_displayable_value();
+
+private:
+	FlowInformation flow_information;
 };
 
 class NMinusOneFlowSetRIBObject: public BaseRIBObject {
