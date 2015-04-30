@@ -51,8 +51,6 @@ rina::cdap_rib::res_info_t* OSApplicationProcessObj::remoteCreate(
                         return res;
                 }
 
-                ribd_->addRIBObject(ipcp);
-
                 mad_manager::structures::ipcp_config_t object;
                 rinad::mad_manager::encoders::IPCPConfigEncoder().decode(
                                 obj_req, object);
@@ -87,6 +85,7 @@ rina::cdap_rib::res_info_t* OSApplicationProcessObj::remoteCreate(
 
                 if (res->result_ >0)
                 {
+                        ribd_->addRIBObject(ipcp);
                         // TODO: create basic IPCP objects
                         ribd_->addRIBObject(
                                         new RIBDaemonObj(name +", RIBDaemon", inst_gen->next(), ipcp_id));

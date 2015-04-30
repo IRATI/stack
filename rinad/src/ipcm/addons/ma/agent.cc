@@ -185,16 +185,19 @@ void ManagementAgent::process_ipcm_event(const IPCMEvent& event){
 				LOG_DBG("The IPCP '%s'(%d) has been created",
 							ipcp_name.c_str(),
 							event.ipcp_id);
+				rib_v1::createIPCPObject(get_rib()->getRIB(1), event.ipcp_id);
 				break;
 		case IPCM_IPCP_CRASHED:
 				LOG_DBG("IPCP '%s'(%d) has CRASHED!",
 							ipcp_name.c_str(),
 							event.ipcp_id);
+				rib_v1::destroyIPCPObject(get_rib()->getRIB(1), event.ipcp_id);
 				break;
 		case IPCM_IPCP_TO_BE_DESTROYED:
 				LOG_DBG("IPCP '%s'(%d) is about to be destroyed...",
 							ipcp_name.c_str(),
 							event.ipcp_id);
+				rib_v1::destroyIPCPObject(get_rib()->getRIB(1), event.ipcp_id);
 				break;
 		case IPCM_IPCP_UPDATED:
 				LOG_DBG("The configuration of the IPCP '%s'(%d) has been updated",

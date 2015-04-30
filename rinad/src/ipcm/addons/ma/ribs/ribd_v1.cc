@@ -248,8 +248,8 @@ void initiateRIB(rina::rib::RIBDNorthInterface* ribd)
 
 			//Add the IPCP and add the RIBDaemon
 			std::stringstream ss;
-			ss << "root, computingSystemID = 1, processingSystemID = 1, kernelApplicationProcess, osApplicationProcess, ";
-			ss << "processID = "<< (*it);
+			ss << "root, computingSystemID = 1, processingSystemID = 1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ";
+			ss << "ipcProcessID = "<< (*it);
 			ribd->addRIBObject(
 				new IPCPObj(ss.str(), inst_gen->next(),
 								(*it)));
@@ -265,6 +265,36 @@ void initiateRIB(rina::rib::RIBDNorthInterface* ribd)
 		LOG_ERR("RIB basic objects were not created because %s", e1.what());
 		throw rina::Exception("Finish application");
 	}
+}
+
+void createIPCPObject(rina::rib::RIBDNorthInterface &ribd, int ipcp_id)
+{
+        IPCPObj* ipcp;
+
+	std::stringstream ss;
+	ss << "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=";
+	ss << ipcp_id;
+        try {
+                ipcp = new IPCPObj(ss.str(), inst_gen->next(), ipcp_id);
+
+                ribd.addRIBObject(ipcp);
+        } catch (...) {
+                LOG_ERR("Unable to create an IPCP object '%s'; out of memory?",
+                        ss.str().c_str());
+        }
+}
+
+void destroyIPCPObject(rina::rib::RIBDNorthInterface &ribd, int ipcp_id)
+{
+	std::stringstream ss;
+	ss << "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=";
+	ss << ipcp_id;
+        try {
+        	ribd.removeRIBObject(ss.str());
+        } catch (...) {
+                LOG_ERR("Unable to delete an IPCP object '%s'",
+                        ss.str().c_str());
+        }
 }
 
 };//namespace rib_v1;

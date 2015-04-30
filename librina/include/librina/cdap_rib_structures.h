@@ -134,7 +134,7 @@ typedef struct object_info
   /// ObjectClass within an application.
   std::string name_;
   /// ObjectValueInterface (ObjectValueInterface). The value of the object.
-  SerializedObject value_;
+  ser_obj_t value_;
   /// Result (int32). Mandatory in the responses, forbidden in the requests
   /// The result of an operation, indicating its success (which has the value zero,
   /// the default for this field), partial success in the case of

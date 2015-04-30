@@ -34,64 +34,67 @@ namespace rib {
 //fwd decl
 class RIB;
 
-class RIBIntObject
+class RIBIntObject : public rina::Lockable
 {
 
         friend class RIB;
 
  private:
         RIBIntObject(BaseRIBObject *object);
-        ~RIBIntObject();
+        ~RIBIntObject() throw();
 
-        void add_child(RIBIntObject *child);
-        void remove_child(const std::string& name);
+        bool add_child(RIBIntObject *child);
+        bool remove_child(const std::string& name);
         BaseRIBObject* object_;
         RIBIntObject* parent_;
         std::list<RIBIntObject*> children_;
 };
 
-RIBIntObject::RIBIntObject(BaseRIBObject *object)
+RIBIntObject::RIBIntObject(BaseRIBObject *object) : Lockable()
 {
 
         object_ = object;
 }
 
-RIBIntObject::~RIBIntObject()
+RIBIntObject::~RIBIntObject() throw()
 {
-
         delete object_;
 }
 
-void RIBIntObject::add_child(RIBIntObject *child)
+bool RIBIntObject::add_child(RIBIntObject *child)
 {
-
+	lock();
         for (std::list<RIBIntObject*>::iterator it = children_.begin();
                         it != children_.end(); it++) {
                 if ((*it)->object_->get_name().compare(
                                 child->object_->get_name()) == 0) {
-                        throw Exception("Object is already a child");
+                        LOG_ERR("Object is already a child");
+                        unlock();
+                        return false;
                 }
         }
-
         children_.push_back(child);
         child->parent_ = this;
+        unlock();
+        return true;
 }
 
-void RIBIntObject::remove_child(const std::string& name)
+bool RIBIntObject::remove_child(const std::string& name)
 {
-
+	bool found = false;
+	lock();
         for (std::list<RIBIntObject*>::iterator it = children_.begin();
                         it != children_.end(); it++) {
                 if ((*it)->object_->get_name().compare(name) == 0) {
                         children_.erase(it);
-                        return;
+                        found = true;
+                        break;
                 }
         }
-
-        std::stringstream ss;
-        ss << "Unknown child object with object name: " << name.c_str()
-           << std::endl;
-        throw Exception(ss.str().c_str());
+        unlock();
+        if (!found)
+        	LOG_ERR("Unknown child object with object name: %s", name.c_str());
+        return found;
 }
 
 /// A simple RIB implementation, based on a hashtable of RIB objects
@@ -121,6 +124,9 @@ class RIB : public rina::Lockable
         std::map<std::string, RIBIntObject*> rib_by_name_;
         std::map<long, RIBIntObject*> rib_by_instance_;
         const RIBSchema *rib_schema_;
+
+        RIBIntObject* getInternalRIBObject(const std::string& name);
+        RIBIntObject* getInternalRIBObject(long instance);
 };
 
 //Class RIB
@@ -149,87 +155,77 @@ RIB::~RIB() throw ()
 BaseRIBObject* RIB::getRIBObject(const std::string& clas,
                                  const std::string& name, bool check)
 {
+        RIBIntObject* rib_object = getInternalRIBObject(name);
 
-        std::string norm_name = name;
-        norm_name.erase(std::remove_if(norm_name.begin(), norm_name.end(),
-                                       ::isspace),
-                        norm_name.end());
+        if(rib_object)
+        {
+		if (check && rib_object->object_->get_class().compare(clas) != 0) {
+			LOG_ERR("RIB object class does not match the user specified one");
+			return NULL;
+		}
 
-        RIBIntObject* rib_object;
-        std::map<std::string, RIBIntObject*>::iterator it;
-
-        lock();
-        it = rib_by_name_.find(norm_name);
-        unlock();
-        if (it == rib_by_name_.end()) {
-                return NULL;
+		return rib_object->object_;
         }
-
-        rib_object = it->second;
-        if (check && rib_object->object_->get_class().compare(clas) != 0) {
-                throw Exception("Object class does not match the user specified one");
+        else
+        {
+                LOG_ERR("RIB object %s is not in the RIB", name.c_str());
         }
-
-        return rib_object->object_;
+        return NULL;
 }
 
 BaseRIBObject* RIB::getRIBObject(const std::string& clas, long instance,
                                  bool check)
 {
 
-        RIBIntObject* rib_object;
-        std::map<long, RIBIntObject*>::iterator it;
+        RIBIntObject* rib_object = getInternalRIBObject(instance);
 
-        lock();
-        it = rib_by_instance_.find(instance);
-        unlock();
+        if(rib_object)
+        {
+		if (check && rib_object->object_->get_class().compare(clas) != 0) {
+			LOG_ERR("RIB object class does not match the user specified one");
+			return NULL;
+		}
 
-        if (it == rib_by_instance_.end()) {
-                return NULL;
+		return rib_object->object_;
         }
-
-        rib_object = it->second;
-        if (check && rib_object->object_->get_class().compare(clas) != 0) {
-                throw Exception("Object class does not match the user "
-                                "specified one");
+        else
+        {
+                LOG_ERR("RIB object %d is not in the RIB", instance);
         }
-
-        return rib_object->object_;
+        return NULL;
 }
 
 void RIB::addRIBObject(BaseRIBObject* rib_object)
 {
 
-        RIBIntObject *parent = 0;
+        RIBIntObject *parent = NULL;
+        RIBIntObject *obj = NULL;
 
+        // Check if the parent exists
         std::string parent_name = get_parent_name(rib_object->get_name());
         if (!parent_name.empty()) {
-                lock();
-                if (rib_by_name_.find(parent_name) == rib_by_name_.end()) {
+        	parent = getInternalRIBObject(parent_name);
+                if (!parent) {
                         std::stringstream ss;
                         ss << "Exception in object " << rib_object->get_name()
                            << ". Parent name (" << parent_name
                            << ") is not in the RIB" << std::endl;
-                        unlock();
                         throw Exception(ss.str().c_str());
                 }
-                parent = rib_by_name_[parent_name];
-                unlock();
         }
         // TODO: add schema validation
         //  if (rib_schema_->validateAddObject(rib_object, parent))
         //  {
-        lock();
-        if (rib_by_name_.find(rib_object->get_name()) != rib_by_name_.end()) {
-                unlock();
+
+        obj = getInternalRIBObject(rib_object->get_name());
+        if (obj) {
                 std::stringstream ss;
-                ss << "Object with the same name (" << rib_object->get_name()
+                ss << "Object with the same name (" << obj->object_->get_name()
                    << ") already exists in the RIB" << std::endl;
                 throw Exception(ss.str().c_str());
         }
-        if (rib_by_instance_.find(rib_object->get_instance())
-                        != rib_by_instance_.end()) {
-                unlock();
+        obj = getInternalRIBObject(rib_object->get_instance());
+        if (obj) {
                 std::stringstream ss;
                 ss << "Object with the same instance ("
                    << rib_object->get_instance() << ") already exists "
@@ -238,10 +234,19 @@ void RIB::addRIBObject(BaseRIBObject* rib_object)
                 throw Exception(ss.str().c_str());
         }
         RIBIntObject *int_object = new RIBIntObject(rib_object);
-        if (parent != 0) {
-                parent->add_child(int_object);
+        if (parent) {
+        	if (!parent->add_child(int_object))
+        	{
+                        std::stringstream ss;
+                        ss << "Can not add object '" << int_object->object_->get_name()
+                           << "' as a child of object '" << parent->object_->
+                           get_name() << std::endl;
+                        throw Exception(ss.str().c_str());
+        	}
                 int_object->parent_ = parent;
         }
+        LOG_DBG("Object %s added to the RIB", int_object->object_->get_name().c_str());
+        lock();
         rib_by_name_[int_object->object_->get_name()] = int_object;
         rib_by_instance_[int_object->object_->get_instance()] = int_object;
         unlock();
@@ -249,43 +254,51 @@ void RIB::addRIBObject(BaseRIBObject* rib_object)
 
 BaseRIBObject* RIB::removeRIBObject(const std::string& name)
 {
-
-        std::map<std::string, RIBIntObject*>::iterator it;
-        RIBIntObject* rib_object;
-
-        lock();
-        it = rib_by_name_.find(name);
-        if (it == rib_by_name_.end()) {
-                unlock();
-                throw Exception("Could not find object in the RIB");
+        RIBIntObject* rib_object = getInternalRIBObject(name);
+        if (rib_object)
+        {
+        	RIBIntObject* parent = rib_object->parent_;
+        	if (parent)
+        	{
+        		if(!parent->remove_child(rib_object->object_->get_name()))
+        		{
+                                std::stringstream ss;
+                                ss << "Can not remove object '" << rib_object->object_->get_name()
+                                   << "' as a child of object '" << parent->object_->
+                                   get_name() << std::endl;
+                                throw Exception(ss.str().c_str());
+        		}
+        	}
+        	lock();
+        	rib_by_name_.erase(rib_object->object_->get_name());
+        	rib_by_instance_.erase(rib_object->object_->get_instance());
+        	unlock();
+        	LOG_DBG("Object %s removed from the RIB", rib_object->object_->get_name().c_str());
+                return rib_object->object_;
         }
-
-        rib_object = it->second;
-
-        RIBIntObject* parent = rib_object->parent_;
-        parent->remove_child(name);
-        rib_by_name_.erase(it);
-        rib_by_instance_.erase(rib_object->object_->get_instance());
-        unlock();
-        return rib_object->object_;
+        else
+        {
+                LOG_ERR("RIB object %s is not in the RIB", name.c_str());
+        }
+        return NULL;
 }
 
 BaseRIBObject * RIB::removeRIBObject(long instance)
 {
-
-        std::map<long, RIBIntObject*>::iterator it;
-        RIBIntObject* rib_object;
-
-        lock();
-        it = rib_by_instance_.find(instance);
-        if (it == rib_by_instance_.end()) {
+        RIBIntObject* rib_object = getInternalRIBObject(instance);
+        if (rib_object)
+        {
+        	RIBIntObject* parent = rib_object->parent_;
+        	parent->remove_child(rib_object->object_->get_name());
+                lock();
+        	rib_by_name_.erase(rib_object->object_->get_name());
+                rib_by_instance_.erase(instance);
                 unlock();
-                throw Exception("Could not find object in the RIB");
         }
-
-        rib_object = it->second;
-        rib_by_instance_.erase(it);
-        unlock();
+        else
+        {
+                LOG_ERR("RIB object %d is not in the RIB", instance);
+        }
 
         return rib_object->object_;
 }
@@ -325,6 +338,42 @@ std::string RIB::get_parent_name(const std::string child_name) const
 const cdap_rib::vers_info_t& RIB::get_version() const
 {
         return rib_schema_->get_version();
+}
+
+RIBIntObject* RIB::getInternalRIBObject(const std::string& name)
+{
+        std::string norm_name = name;
+        norm_name.erase(std::remove_if(norm_name.begin(), norm_name.end(),
+                                       ::isspace),
+                        norm_name.end());
+
+        std::map<std::string, RIBIntObject*>::iterator it;
+
+        LOG_DBG("Normalized name is %s", norm_name.c_str());
+
+        lock();
+        it = rib_by_name_.find(norm_name);
+        unlock();
+        if (it == rib_by_name_.end()) {
+                return NULL;
+        }
+
+        return it->second;
+}
+
+RIBIntObject* RIB::getInternalRIBObject(long instance)
+{
+        std::map<long, RIBIntObject*>::iterator it;
+
+        lock();
+        it = rib_by_instance_.find(instance);
+        unlock();
+
+        if (it == rib_by_instance_.end()) {
+                return NULL;
+        }
+
+        return it->second;
 }
 
 /// Interface that provides the RIB Daemon API
@@ -544,20 +593,23 @@ void RIBDaemon::remote_create_request(const cdap_rib::con_handle_t &con,
                                                     true);
         if (rib_obj == NULL) {
                 std::string parent_name = rib_->get_parent_name(obj.name_);
+                LOG_DBG("L'objecte origen es null, afegim al pare");
                 rib_obj = rib_->getRIBObject("", parent_name, false);
         }
-
-        //Call the application
-        cdap_rib::res_info_t* res = rib_obj->remoteCreate(obj.name_, obj.class_,
-                                                          obj.value_,
-                                                          obj_reply.value_);
-        try {
-                cdap_provider_->remote_create_response(con.port_, obj_reply,
-                                                       flags, *res, message_id);
-        } catch (Exception &e) {
-                LOG_ERR("Unable to send the response");
+        if(rib_obj)
+        {
+		//Call the application
+		cdap_rib::res_info_t* res = rib_obj->remoteCreate(obj.name_, obj.class_,
+								  obj.value_,
+								  obj_reply.value_);
+		try {
+			cdap_provider_->remote_create_response(con.port_, obj_reply,
+							       flags, *res, message_id);
+		} catch (Exception &e) {
+			LOG_ERR("Unable to send the response");
+		}
+		delete res;
         }
-        delete res;
 }
 
 void RIBDaemon::remote_delete_request(const cdap_rib::con_handle_t &con,
@@ -570,15 +622,18 @@ void RIBDaemon::remote_delete_request(const cdap_rib::con_handle_t &con,
         // FIXME add res and flags
         cdap_rib::flags_t flags;
 
-        BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
-        cdap_rib::res_info_t* res = ribObj->remoteDelete(obj.name_);
-        try {
-                cdap_provider_->remote_delete_response(con.port_, obj, flags,
-                                                       *res, message_id);
-        } catch (Exception &e) {
-                LOG_ERR("Unable to send the response");
+        BaseRIBObject* rib_obj = rib_->getRIBObject(obj.class_, obj.name_, true);
+        if(rib_obj)
+        {
+		cdap_rib::res_info_t* res = rib_obj->remoteDelete(obj.name_);
+		try {
+			cdap_provider_->remote_delete_response(con.port_, obj, flags,
+							       *res, message_id);
+		} catch (Exception &e) {
+			LOG_ERR("Unable to send the response");
+		}
+		delete res;
         }
-        delete res;
 }
 void RIBDaemon::remote_read_request(const cdap_rib::con_handle_t &con,
                                     const cdap_rib::obj_info_t &obj,
@@ -593,19 +648,21 @@ void RIBDaemon::remote_read_request(const cdap_rib::con_handle_t &con,
         //Reply object set to empty
         cdap_rib::obj_info_t obj_reply;
         obj_reply.value_.size_ = 0;
+        obj_reply.value_.message_ = 0;
 
         BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
-        cdap_rib::res_info_t* res = ribObj->remoteRead(obj.name_,
-                                                       obj_reply.value_);
-
-        LOG_DBG("Object Sizeeee %d", obj_reply.value_.size_);
-        try {
-                cdap_provider_->remote_read_response(con.port_, obj_reply, flags,
-                                                     *res, message_id);
-        } catch (Exception &e) {
-                LOG_ERR("Unable to send the response");
+        if (ribObj)
+        {
+		cdap_rib::res_info_t* res = ribObj->remoteRead(obj.name_,
+							       obj_reply.value_);
+		try {
+			cdap_provider_->remote_read_response(con.port_, obj_reply, flags,
+							     *res, message_id);
+		} catch (Exception &e) {
+			LOG_ERR("Unable to send the response");
+		}
+	        delete res;
         }
-        delete res;
 }
 void RIBDaemon::remote_cancel_read_request(const cdap_rib::con_handle_t &con,
                                            const cdap_rib::obj_info_t &obj,
@@ -619,15 +676,18 @@ void RIBDaemon::remote_cancel_read_request(const cdap_rib::con_handle_t &con,
         cdap_rib::flags_t flags;
 
         BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
-        cdap_rib::res_info_t* res = ribObj->remoteCancelRead(obj.name_);
+        if (ribObj)
+        {
+		cdap_rib::res_info_t* res = ribObj->remoteCancelRead(obj.name_);
 
-        try {
-                cdap_provider_->remote_cancel_read_response(con.port_, flags,
-                                                            *res, message_id);
-        } catch (Exception &e) {
-                LOG_ERR("Unable to send the response");
+		try {
+			cdap_provider_->remote_cancel_read_response(con.port_, flags,
+								    *res, message_id);
+		} catch (Exception &e) {
+			LOG_ERR("Unable to send the response");
+		}
+		delete res;
         }
-        delete res;
 }
 void RIBDaemon::remote_write_request(const cdap_rib::con_handle_t &con,
                                      const cdap_rib::obj_info_t &obj,
@@ -644,15 +704,18 @@ void RIBDaemon::remote_write_request(const cdap_rib::con_handle_t &con,
         obj_reply.value_.size_ = 0;
 
         BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
-        cdap_rib::res_info_t* res = ribObj->remoteWrite(obj.name_, obj.value_,
-                                                        obj_reply.value_);
-        try {
-                cdap_provider_->remote_write_response(con.port_, flags, *res,
-                                                      message_id);
-        } catch (Exception &e) {
-                LOG_ERR("Unable to send the response");
+        if (ribObj)
+        {
+		cdap_rib::res_info_t* res = ribObj->remoteWrite(obj.name_, obj.value_,
+								obj_reply.value_);
+		try {
+			cdap_provider_->remote_write_response(con.port_, flags, *res,
+							      message_id);
+		} catch (Exception &e) {
+			LOG_ERR("Unable to send the response");
+		}
+		delete res;
         }
-        delete res;
 }
 void RIBDaemon::remote_start_request(const cdap_rib::con_handle_t &con,
                                      const cdap_rib::obj_info_t &obj,
@@ -669,16 +732,19 @@ void RIBDaemon::remote_start_request(const cdap_rib::con_handle_t &con,
         obj_reply.value_.size_ = 0;
 
         BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
-        cdap_rib::res_info_t* res = ribObj->remoteStart(obj.name_, obj.value_,
-                                                        obj_reply.value_);
+        if (ribObj)
+        {
+		cdap_rib::res_info_t* res = ribObj->remoteStart(obj.name_, obj.value_,
+								obj_reply.value_);
 
-        try {
-                cdap_provider_->remote_start_response(con.port_, obj, flags,
-                                                      *res, message_id);
-        } catch (Exception &e) {
-                LOG_ERR("Unable to send the response");
+		try {
+			cdap_provider_->remote_start_response(con.port_, obj, flags,
+							      *res, message_id);
+		} catch (Exception &e) {
+			LOG_ERR("Unable to send the response");
+		}
+		delete res;
         }
-        delete res;
 }
 void RIBDaemon::remote_stop_request(const cdap_rib::con_handle_t &con,
                                     const cdap_rib::obj_info_t &obj,
@@ -695,16 +761,19 @@ void RIBDaemon::remote_stop_request(const cdap_rib::con_handle_t &con,
         obj_reply.value_.size_ = 0;
 
         BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
-        cdap_rib::res_info_t* res = ribObj->remoteStop(obj.name_, obj.value_,
-                                                       obj_reply.value_);
+        if (ribObj)
+        {
+		cdap_rib::res_info_t* res = ribObj->remoteStop(obj.name_, obj.value_,
+							       obj_reply.value_);
 
-        try {
-                cdap_provider_->remote_stop_response(con.port_, flags, *res,
-                                                     message_id);
-        } catch (Exception &e) {
-                LOG_ERR("Unable to send the response");
+		try {
+			cdap_provider_->remote_stop_response(con.port_, flags, *res,
+							     message_id);
+		} catch (Exception &e) {
+			LOG_ERR("Unable to send the response");
+		}
+		delete res;
         }
-        delete res;
 }
 
 void RIBDaemon::addRIBObject(BaseRIBObject *rib_object)
@@ -716,13 +785,12 @@ void RIBDaemon::addRIBObject(BaseRIBObject *rib_object)
 }
 void RIBDaemon::removeRIBObject(BaseRIBObject *rib_object)
 {
-
         rib_->removeRIBObject(rib_object->get_name());
 }
 void RIBDaemon::removeRIBObject(const std::string& name)
 {
-
-        rib_->removeRIBObject(name);
+	BaseRIBObject *obj = rib_->removeRIBObject(name);
+	delete obj;
 }
 
 BaseRIBObject* RIBDaemon::getObject(const std::string& name,

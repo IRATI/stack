@@ -263,7 +263,7 @@ void Manager::createIPCP(rina::Flow* flow)
 
         cdap_rib::obj_info_t obj;
         obj.name_ =
-                        "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcessID=1";
+                        "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=2";
         obj.class_ = "IPCProcess";
         obj.inst_ = 0;
         mad_manager::encoders::IPCPConfigEncoder().encode(ipc_config,
@@ -294,7 +294,7 @@ void Manager::queryRIB(rina::Flow *flow)
 
         cdap_rib::obj_info_t obj;
         obj.name_ =
-                        "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcessID=1, RIBDaemon";
+                        "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=2, RIBDaemon";
         obj.class_ = "RIBDaemon";
         obj.inst_ = 0;
 

@@ -52,7 +52,8 @@ class RIBConHandler_v1 : public rina::cacep::AppConHandlerInterface{
 
 //TODO: remove this
 void initiateRIB(rina::rib::RIBDNorthInterface* ribd);
-
+void createIPCPObject(rina::rib::RIBDNorthInterface &ribd, int ipcp_id);
+void destroyIPCPObject(rina::rib::RIBDNorthInterface &ribd, int ipcp_id);
 };//namespace rib_v1
 };//namespace mad
 };//namespace rinad
