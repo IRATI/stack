@@ -17,7 +17,7 @@ nobase_pkginclude_HEADERS = \
 	ipc-process.h			\
 	faux-sockets.h			\
 	cdap.h					\
-	cacep.h					\
+	security-manager.h			\
 	likely.h				\
 	rib.h                   \
 	irm.h					\

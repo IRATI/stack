@@ -74,7 +74,7 @@ allsources =							\
         ipc-process.cc						\
         faux-sockets.cc						\
         cdap.cc							\
-        cacep.cc						\
+        security-manager.cc					\
         rib.cc							\
         enrollment.cc						\
         irm.cc							\

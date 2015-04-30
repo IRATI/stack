@@ -33,7 +33,7 @@
 #include <librina/ipc-process.h>
 #include <librina/internal-events.h>
 #include <librina/irm.h>
-#include <librina/cacep.h>
+#include <librina/security-manager.h>
 
 #include "common/encoder.h"
 
@@ -437,21 +437,13 @@ public:
         virtual ~ISecurityManagerPs() {}
 };
 
-class ISecurityManager: public IPCProcessComponent, public rina::ApplicationEntity {
-// This class is used by the plugins to access the IPCP functionalities
-public:
-	static const std::string SECURITY_MANAGER_AE_NAME;
-	ISecurityManager() : rina::ApplicationEntity(SECURITY_MANAGER_AE_NAME) { };
-        virtual ~ISecurityManager() {}
-};
-
-class SecurityManager: public ISecurityManager {
+class IPCPSecurityManager: public rina::ISecurityManager, public IPCProcessComponent {
 // Used by IPCP to access the functionalities of the security manager
 public:
-	SecurityManager() : ISecurityManager() { };
+	IPCPSecurityManager(){ };
 	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
-	~SecurityManager() {};
+	~IPCPSecurityManager() {};
 };
 
 class IPCPRIBDaemon;
@@ -496,7 +488,7 @@ public:
 	IFlowAllocator * flow_allocator_;
 	INamespaceManager * namespace_manager_;
 	IResourceAllocator * resource_allocator_;
-	ISecurityManager * security_manager_;
+	IPCPSecurityManager * security_manager_;
 	IRoutingComponent * routing_component_;
 	IPCPRIBDaemon * rib_daemon_;
 

@@ -27,7 +27,7 @@
 namespace rinad {
 
 //Class SecurityManager
-void SecurityManager::set_application_process(rina::ApplicationProcess * ap)
+void IPCPSecurityManager::set_application_process(rina::ApplicationProcess * ap)
 {
 	if (!ap)
 			return;
@@ -40,7 +40,7 @@ void SecurityManager::set_application_process(rina::ApplicationProcess * ap)
 	}
 }
 
-void SecurityManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
+void IPCPSecurityManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
 	LOG_IPCP_DBG("Set dif configuration: %u", dif_configuration.address_);
 }
 

@@ -1068,6 +1068,38 @@ public:
 			WireMessageProviderFactory *wire_message_provider_factory,
 			long timeout);
 };
+
+class CACEPHandler {
+public:
+        virtual ~CACEPHandler(){};
+
+        /// A remote IPC process Connect request has been received.
+        /// @param invoke_id the id of the connect message
+        /// @param session_descriptor
+        virtual void connect(int invoke_id,
+                        rina::CDAPSessionDescriptor * session_descriptor) = 0;
+
+        /// A remote IPC process Connect response has been received.
+        /// @param result
+        /// @param result_reason
+        /// @param session_descriptor
+        virtual void connectResponse(int result, const std::string& result_reason,
+                        rina::CDAPSessionDescriptor * session_descriptor) = 0;
+
+        /// A remote IPC process Release request has been received.
+        /// @param invoke_id the id of the release message
+        /// @param session_descriptor
+        virtual void release(int invoke_id,
+                        rina::CDAPSessionDescriptor * session_descriptor) = 0;
+
+        /// A remote IPC process Release response has been received.
+        /// @param result
+        /// @param result_reason
+        /// @param session_descriptor
+        virtual void releaseResponse(int result, const std::string& result_reason,
+                        rina::CDAPSessionDescriptor * session_descriptor) = 0;
+};
+
 }
 
 #endif

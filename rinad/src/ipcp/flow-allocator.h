@@ -287,7 +287,7 @@ private:
 	rina::IMasterEncoder * encoder_;
 	IPCPRIBDaemon * rib_daemon_;
 	INamespaceManager * namespace_manager_;
-	ISecurityManager * security_manager_;
+	IPCPSecurityManager * security_manager_;
 	FAIState state;
 
 	rina::Timer timer;

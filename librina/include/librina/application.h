@@ -121,6 +121,7 @@ public:
 	static const std::string RIB_DAEMON_AE_NAME;
 	static const std::string ENROLLMENT_TASK_AE_NAME;
 	static const std::string INTERNAL_EVENT_MANAGER_AE_NAME;
+	static const std::string SECURITY_MANAGER_AE_NAME;
 
 protected:
         /// The Application Entity name, immutable during the AE's lifetime
@@ -229,6 +230,7 @@ public:
 	ApplicationEntity * get_ipc_resource_manager();
 	ApplicationEntity * get_rib_daemon();
 	ApplicationEntity * get_enrollment_task();
+	ApplicationEntity * get_security_manager();
 	ApplicationEntity * get_internal_event_manager();
 
 protected:

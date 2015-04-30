@@ -173,6 +173,7 @@ const std::string ApplicationEntity::IRM_AE_NAME = "ipc-resource-manager";
 const std::string ApplicationEntity::RIB_DAEMON_AE_NAME = "rib-daemon";
 const std::string ApplicationEntity::ENROLLMENT_TASK_AE_NAME = "enrollment-task";
 const std::string ApplicationEntity::INTERNAL_EVENT_MANAGER_AE_NAME = "event-manager";
+const std::string ApplicationEntity::SECURITY_MANAGER_AE_NAME = "security-manager";
 
 //Class App Policy Manager
 AppPolicyManager::~AppPolicyManager()
@@ -475,6 +476,11 @@ ApplicationEntity * ApplicationProcess::get_enrollment_task()
 ApplicationEntity * ApplicationProcess::get_internal_event_manager()
 {
 	return get_entity(ApplicationEntity::INTERNAL_EVENT_MANAGER_AE_NAME);
+}
+
+ApplicationEntity * ApplicationProcess::get_security_manager()
+{
+	return get_entity(ApplicationEntity::SECURITY_MANAGER_AE_NAME);
 }
 
 }

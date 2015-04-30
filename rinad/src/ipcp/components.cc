@@ -26,7 +26,6 @@
 
 namespace rinad {
 
-const std::string ISecurityManager::SECURITY_MANAGER_AE_NAME = "security-manager";
 const std::string IResourceAllocator::RESOURCE_ALLOCATOR_AE_NAME = "resource-allocator";
 const std::string INamespaceManager::NAMESPACE_MANAGER_AE_NAME = "namespace-manager";
 const std::string IRoutingComponent::ROUTING_COMPONENT_AE_NAME = "routing";

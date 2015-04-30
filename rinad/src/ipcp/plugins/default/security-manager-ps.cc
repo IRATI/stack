@@ -30,7 +30,7 @@ namespace rinad {
 
 class SecurityManagerPs: public ISecurityManagerPs {
 public:
-	SecurityManagerPs(ISecurityManager * dm);
+	SecurityManagerPs(IPCPSecurityManager * dm);
 	bool isAllowedToJoinDIF(const rina::Neighbor& newMember);
 	bool acceptFlow(const Flow& newFlow);
         int set_policy_set_param(const std::string& name,
@@ -39,10 +39,10 @@ public:
 
 private:
         // Data model of the security manager component.
-        ISecurityManager * dm;
+        IPCPSecurityManager * dm;
 };
 
-SecurityManagerPs::SecurityManagerPs(ISecurityManager * dm_) : dm(dm_)
+SecurityManagerPs::SecurityManagerPs(IPCPSecurityManager * dm_) : dm(dm_)
 {
 	(void)dm;
 }
@@ -72,7 +72,7 @@ int SecurityManagerPs::set_policy_set_param(const std::string& name,
 extern "C" rina::IPolicySet *
 createSecurityManagerPs(rina::ApplicationEntity * ctx)
 {
-        ISecurityManager * sm = dynamic_cast<ISecurityManager *>(ctx);
+	IPCPSecurityManager * sm = dynamic_cast<IPCPSecurityManager *>(ctx);
 
         if (!sm) {
                 return NULL;
@@ -83,6 +83,26 @@ createSecurityManagerPs(rina::ApplicationEntity * ctx)
 
 extern "C" void
 destroySecurityManagerPs(rina::IPolicySet * ps)
+{
+        if (ps) {
+                delete ps;
+        }
+}
+
+extern "C" rina::IPolicySet *
+createAuthNonePs(rina::ApplicationEntity * ctx)
+{
+	IPCPSecurityManager * sm = dynamic_cast<IPCPSecurityManager *>(ctx);
+
+        if (!sm) {
+                return NULL;
+        }
+
+        return new rina::AuthNonePolicySet();
+}
+
+extern "C" void
+destroyAuthNonePs(rina::IPolicySet * ps)
 {
         if (ps) {
                 delete ps;

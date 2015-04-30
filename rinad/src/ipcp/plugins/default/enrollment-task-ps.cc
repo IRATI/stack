@@ -274,10 +274,21 @@ void EnrolleeStateMachine::initiateEnrollment(rina::EnrollmentRequest * enrollme
 		rina::RemoteProcessId remote_id;
 		remote_id.port_id_ = portId;
 
-		rib_daemon_->openApplicationConnection(rina::CDAPMessage::AUTH_NONE, rina::AuthValue(), "", IPCProcess::MANAGEMENT_AE,
-				remote_peer_->name_.processInstance, remote_peer_->name_.processName, "",
-				IPCProcess::MANAGEMENT_AE, ipc_process_->get_instance(),
-				ipc_process_->get_name(), remote_id);
+		rina::IAuthPolicySet * ps =
+				ipc_process_->security_manager_->get_auth_policy_set(
+						rina::IAuthPolicySet::cdapTypeToString(rina::CDAPMessage::AUTH_NONE));
+		if (!ps) {
+			abortEnrollment(remote_peer_->name_, port_id_,
+					std::string("Unsupported authentication policy set"), true);
+			return;
+		}
+
+		rina::AuthValue credentials = ps->get_my_credentials(portId);
+
+		rib_daemon_->openApplicationConnection(rina::CDAPMessage::AUTH_NONE, credentials, "",
+				IPCProcess::MANAGEMENT_AE, remote_peer_->name_.processInstance,
+				remote_peer_->name_.processName, "", IPCProcess::MANAGEMENT_AE,
+				ipc_process_->get_instance(), ipc_process_->get_name(), remote_id);
 
 		port_id_ = portId;
 
@@ -719,7 +730,7 @@ private:
 
     void enrollmentCompleted();
 
-	ISecurityManager * security_manager_;
+	IPCPSecurityManager * security_manager_;
 	INamespaceManager * namespace_manager_;
 };
 
@@ -754,7 +765,27 @@ void EnrollerStateMachine::connect(int invoke_id, rina::CDAPSessionDescriptor * 
 	remote_peer_->name_.processName = session_descriptor->dest_ap_name_;
 	remote_peer_->name_.processInstance = session_descriptor->dest_ap_inst_;
 
-	//TODO Authenticate sender
+	rina::IAuthPolicySet * ps = security_manager_->get_auth_policy_set(
+			rina::IAuthPolicySet::cdapTypeToString(rina::CDAPMessage::AUTH_NONE));
+	if (!ps) {
+		abortEnrollment(remote_peer_->name_, port_id_,
+				std::string("Could not find auth policy set"), true);
+		return;
+	}
+
+	//TODO pass auth_value and auth_type in the function interface
+	rina::IAuthPolicySet::AuthStatus auth_status = ps->initiate_authentication(rina::AuthValue(),
+			session_descriptor->port_id_);
+	if (auth_status == rina::IAuthPolicySet::FAILED) {
+		abortEnrollment(remote_peer_->name_, port_id_,
+				std::string("Authentication failed"), true);
+		return;
+	} else if (auth_status == rina::IAuthPolicySet::IN_PROGRESS) {
+		//TODO in case authentication is in progress, "wait" until authentication is over
+		//be careful with race conditions
+		return;
+	}
+
 	LOG_IPCP_DBG("Authentication successful, deciding if new member can join the DIF...");
 	if (!smps->isAllowedToJoinDIF(*remote_peer_)) {
 		LOG_IPCP_WARN("Security Manager rejected enrollment attempt, aborting enrollment");

@@ -72,7 +72,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         flow_allocator_ = new FlowAllocator();
         namespace_manager_ = new NamespaceManager();
         resource_allocator_ = new ResourceAllocator();
-        security_manager_ = new SecurityManager();
+        security_manager_ = new IPCPSecurityManager();
         routing_component_ = new RoutingComponent();
         rib_daemon_ = new IPCPRIBDaemonImpl();
 
@@ -91,6 +91,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         if (!security_manager_->ps) {
                 throw rina::Exception("Cannot create security manager policy-set");
         }
+        security_manager_->add_auth_policy_set(rina::IAuthPolicySet::AUTH_NONE);
 
         flow_allocator_->select_policy_set(std::string(), rina::IPolicySet::DEFAULT_PS_SET_NAME);
         if (!flow_allocator_->ps) {
@@ -181,7 +182,7 @@ IPCProcessImpl::~IPCProcessImpl() {
 	}
 
 	if (security_manager_) {
-		psDestroy(ISecurityManager::SECURITY_MANAGER_AE_NAME,
+		psDestroy(rina::ApplicationEntity::SECURITY_MANAGER_AE_NAME,
                    security_manager_->selected_ps_name,
                    security_manager_->ps);
         delete security_manager_;

@@ -9,6 +9,12 @@ extern "C" void
 destroySecurityManagerPs(rina::IPolicySet * instance);
 
 extern "C" rina::IPolicySet *
+createAuthNonePs(rina::ApplicationEntity * context);
+
+extern "C" void
+destroyAuthNonePs(rina::IPolicySet * instance);
+
+extern "C" rina::IPolicySet *
 createFlowAllocatorPs(rina::ApplicationEntity * context);
 
 extern "C" void
@@ -42,6 +48,7 @@ extern "C" int
 init(IPCProcess * ipc_process, const std::string& plugin_name)
 {
         struct rina::PsFactory sm_factory;
+        struct rina::PsFactory auth_none_factory;
         struct rina::PsFactory fa_factory;
         struct rina::PsFactory nsm_factory;
         struct rina::PsFactory ra_factory;
@@ -51,11 +58,22 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
 
         sm_factory.plugin_name = plugin_name;
         sm_factory.info.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;
-        sm_factory.info.app_entity = ISecurityManager::SECURITY_MANAGER_AE_NAME;
+        sm_factory.info.app_entity = rina::ApplicationEntity::SECURITY_MANAGER_AE_NAME;
         sm_factory.create = createSecurityManagerPs;
         sm_factory.destroy = destroySecurityManagerPs;
 
         ret = ipc_process->psFactoryPublish(sm_factory);
+        if (ret) {
+                return ret;
+        }
+
+        auth_none_factory.plugin_name = plugin_name;
+        auth_none_factory.info.name = rina::IAuthPolicySet::AUTH_NONE;
+        auth_none_factory.info.app_entity = rina::ApplicationEntity::SECURITY_MANAGER_AE_NAME;
+        auth_none_factory.create = createAuthNonePs;
+        auth_none_factory.destroy = destroyAuthNonePs;
+
+        ret = ipc_process->psFactoryPublish(auth_none_factory);
         if (ret) {
                 return ret;
         }
