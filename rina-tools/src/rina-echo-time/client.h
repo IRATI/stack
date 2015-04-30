@@ -45,10 +45,10 @@ public:
                int dw);
                void run();
 protected:
-        rina::Flow* createFlow();
-        void pingFlow(rina::Flow *flow);
-        void perfFlow(rina::Flow *flow);
-        void destroyFlow(rina::Flow *flow);
+        int createFlow();
+        void pingFlow(int port_id);
+        void perfFlow(int port_id);
+        void destroyFlow(int port_id);
 
 private:
         std::string test_type;

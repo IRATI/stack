@@ -278,7 +278,7 @@ const std::string FlowInformation::toString(){
         ss<<"Local app name: "<<localAppName.toString()<<std::endl;
         ss<<"Remote app name: "<<remoteAppName.toString()<<std::endl;
         ss<<"DIF name: "<<difName.processName;
-        ss<<"; Port-id: "<<portId<<std::endl;
+        ss<<"; Port-id: "<<portId<<"; State: "<<state<<std::endl;
         ss<<"Flow specification: "<<flowSpecification.toString();
 
         return ss.str();

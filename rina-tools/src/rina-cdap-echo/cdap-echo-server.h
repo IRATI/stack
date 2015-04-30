@@ -39,12 +39,12 @@ public:
         void run();
 
 protected:
-        void serveEchoFlow(rina::Flow * f);
+        void serveEchoFlow(int port_id);
         static void destroyFlow(sigval_t val);
-        bool cacep(rina::Flow *flow);
-        bool release(rina::Flow *flow, int invoke_id);
+        bool cacep(int port_id);
+        bool release(int port_id, int invoke_id);
 private:
-        void startWorker(rina::Flow * f);
+        void startWorker(int port_id);
         int interval;
         int dw;
         rina::CDAPSessionManagerInterface *manager_;
