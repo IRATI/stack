@@ -43,9 +43,9 @@ private:
         bool registerAtDIF(rinad::mad_manager::structures::ipcp_config_t &object, int ipcp_id);
 };
 
-}; //namespace rib_v1
-}; //namespace mad
-}; //namespace rinad
+} //namespace rib_v1
+} //namespace mad
+} //namespace rinad
 
 
 #endif  /* __RINAD_OS_PROC_OBJ_H__ */

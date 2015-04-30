@@ -20,152 +20,144 @@ extern Singleton<rina::ConsecutiveUnsignedIntegerGenerator> inst_gen;
 const std::string OSApplicationProcessObj::class_name = "OSApplicationProcess";
 
 OSApplicationProcessObj::OSApplicationProcessObj(
-                std::string name, long instance,
-                rina::rib::RIBDNorthInterface* ribd)
-                : rina::rib::EmptyRIBObject(class_name, name, instance,
-                                            &encoder_)
-{
+		std::string name, long instance,
+		rina::rib::RIBDNorthInterface* ribd)
+		: rina::rib::EmptyRIBObject(class_name, name, instance,
+						&encoder_) {
 
-        ribd_ = ribd;
+	ribd_ = ribd;
 }
 
 rina::cdap_rib::res_info_t* OSApplicationProcessObj::remoteCreate(
-                const std::string& name, const std::string clas,
-                const rina::cdap_rib::SerializedObject &obj_req,
-                rina::cdap_rib::SerializedObject &obj_reply)
-{
+		const std::string& name, const std::string clas,
+		const rina::cdap_rib::SerializedObject &obj_req,
+		rina::cdap_rib::SerializedObject &obj_reply) {
 
-        (void) obj_reply;
-        rina::cdap_rib::res_info_t* res = new rina::cdap_rib::res_info_t;
+	(void) obj_reply;
+	rina::cdap_rib::res_info_t* res = new rina::cdap_rib::res_info_t;
 
-        if (clas == IPCPObj::class_name) {
+	if (clas == IPCPObj::class_name) {
 
-                IPCPObj* ipcp;
+		IPCPObj* ipcp;
 
-                try {
-                        ipcp = new IPCPObj(name, inst_gen->next(), obj_req);
-                } catch (...) {
-                        LOG_ERR("Unable to create an IPCP object '%s'; out of memory?",
-                                name.c_str());
-                        res->result_ = -1;
-                        return res;
-                }
+		try {
+			ipcp = new IPCPObj(name, inst_gen->next(), obj_req);
+		} catch (...) {
+			LOG_ERR("Unable to create an IPCP object '%s'; out of memory?",
+				name.c_str());
+			res->result_ = -1;
+			return res;
+		}
 
-                mad_manager::structures::ipcp_config_t object;
-                rinad::mad_manager::encoders::IPCPConfigEncoder().decode(
-                                obj_req, object);
-                int ipcp_id = createIPCP(object);
-                if (ipcp_id > 0)
-                {
-                        res->result_ = 1;
-                        if(assignToDIF(object, ipcp_id))
-                        {
-                                res->result_ = 1;
-                                if (!object.dif_to_register.empty())
-                                {
-                                        if (registerAtDIF(object, ipcp_id))
-                                                res->result_ = 1;
-                                        else
-                                        {
-                                                // TODO Implement destroy ipcp
-                                                res->result_ = -1;
-                                        }
-                                }
-                        }
-                        else
-                        {
-                                // TODO Implement destroy ipcp
-                                res->result_ = -1;
-                        }
-                }
-                else
-                {
-                        res->result_ = -1;
-                }
+		mad_manager::structures::ipcp_config_t object;
+		rinad::mad_manager::encoders::IPCPConfigEncoder().decode(
+				obj_req, object);
+		int ipcp_id = createIPCP(object);
+		if (ipcp_id > 0) {
+			res->result_ = 1;
+			if (assignToDIF(object, ipcp_id)) {
+				res->result_ = 1;
+				if (!object.dif_to_register.empty()) {
+					if (registerAtDIF(object, ipcp_id))
+						res->result_ = 1;
+					else {
+						// TODO Implement destroy ipcp
+						res->result_ = -1;
+					}
+				}
+			} else {
+				// TODO Implement destroy ipcp
+				res->result_ = -1;
+			}
+		} else {
+			res->result_ = -1;
+		}
 
-                if (res->result_ >0)
-                {
-                        ribd_->addRIBObject(ipcp);
-                        // TODO: create basic IPCP objects
-                        ribd_->addRIBObject(
-                                        new RIBDaemonObj(name +", RIBDaemon", inst_gen->next(), ipcp_id));
-                }
+		if (res->result_ > 0) {
+			ribd_->addRIBObject(ipcp);
+			// TODO: create basic IPCP objects
+			ribd_->addRIBObject(
+					new RIBDaemonObj(
+							name + ", RIBDaemon",
+							inst_gen->next(),
+							ipcp_id));
+		}
 
-        } else {
-                LOG_ERR("Create object %s is not implemented as a child of OSApplicationProcess object",
-                        name.c_str());
-                res->result_ = -1;
-        }
-        return res;
+	} else {
+		LOG_ERR("Create object %s is not implemented as a child of OSApplicationProcess object",
+			name.c_str());
+		res->result_ = -1;
+	}
+	return res;
 }
 
 int OSApplicationProcessObj::createIPCP(
-                rinad::mad_manager::structures::ipcp_config_t &object)
-{
-        CreateIPCPPromise ipcp_promise;
+		rinad::mad_manager::structures::ipcp_config_t &object) {
+	CreateIPCPPromise ipcp_promise;
 
-        rina::ApplicationProcessNamingInformation ipcp_name(
-                        object.process_name, object.process_instance);
+	rina::ApplicationProcessNamingInformation ipcp_name(
+			object.process_name, object.process_instance);
 
-        if (IPCManager->create_ipcp(ManagementAgent::inst, &ipcp_promise,
-                                    ipcp_name, object.process_type)
-                        == IPCM_FAILURE
-                        || ipcp_promise.wait() != IPCM_SUCCESS) {
-                LOG_ERR("Error while creating IPC process");
-                return -1;
-        }
-        LOG_INFO("IPC process created successfully [id = %d, name= %s]",
-                 ipcp_promise.ipcp_id, object.process_name.c_str());
-        return ipcp_promise.ipcp_id;
+	if (IPCManager->create_ipcp(ManagementAgent::inst, &ipcp_promise,
+					ipcp_name, object.process_type)
+			== IPCM_FAILURE
+			|| ipcp_promise.wait() != IPCM_SUCCESS) {
+		LOG_ERR("Error while creating IPC process");
+		return -1;
+	}
+	LOG_INFO("IPC process created successfully [id = %d, name= %s]",
+			ipcp_promise.ipcp_id, object.process_name.c_str());
+	return ipcp_promise.ipcp_id;
 
 }
 bool OSApplicationProcessObj::assignToDIF(
-                rinad::mad_manager::structures::ipcp_config_t &object, int ipcp_id)
-{
-        // ASSIGN TO DIF
-        Promise assign_promise;
+		rinad::mad_manager::structures::ipcp_config_t &object,
+		int ipcp_id) {
+	// ASSIGN TO DIF
+	Promise assign_promise;
 
-        rina::ApplicationProcessNamingInformation dif_name(object.dif_to_assign,
-                                                           std::string());
+	rina::ApplicationProcessNamingInformation dif_name(object.dif_to_assign,
+								std::string());
 
-        if (!IPCManager->ipcp_exists(ipcp_id)) {
-                LOG_ERR("No such IPC process id %d", ipcp_id);
-                return false;
-        }
+	if (!IPCManager->ipcp_exists(ipcp_id)) {
+		LOG_ERR("No such IPC process id %d", ipcp_id);
+		return false;
+	}
 
-        if (IPCManager->assign_to_dif(ManagementAgent::inst, &assign_promise,
-                                      ipcp_id, dif_name)
-                        == IPCM_FAILURE
-                        || assign_promise.wait() != IPCM_SUCCESS) {
-                LOG_ERR("DIF assignment failed");
-                return false;
-        }
+	if (IPCManager->assign_to_dif(ManagementAgent::inst, &assign_promise,
+					ipcp_id, dif_name) == IPCM_FAILURE
+			|| assign_promise.wait() != IPCM_SUCCESS) {
+		LOG_ERR("DIF assignment failed");
+		return false;
+	}
 
-        LOG_INFO("DIF assignment completed successfully");
+	LOG_INFO("DIF assignment completed successfully");
 
-        return true;
+	return true;
 }
-bool OSApplicationProcessObj::registerAtDIF(mad_manager::structures::ipcp_config_t &object, int ipcp_id)
-{
-        Promise promise;
+bool OSApplicationProcessObj::registerAtDIF(
+		mad_manager::structures::ipcp_config_t &object, int ipcp_id) {
+	Promise promise;
 
-        rina::ApplicationProcessNamingInformation dif_name(object.dif_to_register, std::string());
+	rina::ApplicationProcessNamingInformation dif_name(
+			object.dif_to_register, std::string());
 
-        if (!IPCManager->ipcp_exists(ipcp_id)) {
-                LOG_ERR("No such IPC process id");
-                return false;
-        }
+	if (!IPCManager->ipcp_exists(ipcp_id)) {
+		LOG_ERR("No such IPC process id");
+		return false;
+	}
 
-        if(IPCManager->register_at_dif(ManagementAgent::inst, &promise, ipcp_id, dif_name) == IPCM_FAILURE ||
-                        promise.wait() != IPCM_SUCCESS) {
-                LOG_ERR("Registration failed");
-                return false;
-        }
+	if (IPCManager->register_at_dif(ManagementAgent::inst, &promise,
+					ipcp_id, dif_name) == IPCM_FAILURE
+			|| promise.wait() != IPCM_SUCCESS) {
+		LOG_ERR("Registration failed");
+		return false;
+	}
 
-        LOG_INFO("IPC process registration completed successfully");
+	LOG_INFO("IPC process registration completed successfully");
 
-        return true;
+	return true;
 }
-};//namespace rib_v1
-};//namespace mad
-};//namespace rinad
+}//namespace rib_v1
+}//namespace mad
+}//namespace rinad
