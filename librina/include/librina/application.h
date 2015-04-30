@@ -44,7 +44,7 @@
  */
 namespace rina {
 
-// A set of policies for a specific application entity
+/// A set of policies for a specific application entity
 class IPolicySet {
 public:
         virtual int set_policy_set_param(const std::string& name,
@@ -56,39 +56,33 @@ public:
 
 class ApplicationEntity;
 
-// An instance of an application entity
+/// An instance of an application entity
 class ApplicationEntityInstance {
 public:
-		ApplicationEntityInstance(const std::string& instance_id)
-			: instance_id_(instance_id), ae(NULL) { };
-		virtual ~ApplicationEntityInstance(){};
-		const std::string& get_instance_id() const;
-		virtual void set_application_entity(ApplicationEntity * ae) = 0;
+	ApplicationEntityInstance(const std::string& instance_id)
+		: instance_id_(instance_id), ae(NULL) { };
+	virtual ~ApplicationEntityInstance(){};
+	const std::string& get_instance_id() const;
+	virtual void set_application_entity(ApplicationEntity * ae) = 0;
 
 protected:
-		//The AE Instance, immutable during the AE's lifetime
-		std::string instance_id_;
+	/// The AE Instance, immutable during the AE's lifetime
+	std::string instance_id_;
 
-		//The Application Entity this instance is part of
-		ApplicationEntity * ae;
+	/// The Application Entity this instance is part of
+	ApplicationEntity * ae;
 };
+
+class AppPolicyManager;
 
 class ApplicationProcess;
 
-// A type of component of an application process, manages all the instances
-// of this type
-class ApplicationEntity {
+/// Contains all the data and functions required to access
+/// and configure the AE Policy Set
+class AEPolicySet {
 public:
-		ApplicationEntity(const std::string& name)
-						: ps(NULL), name_(name), app(NULL) { };
-		virtual ~ApplicationEntity();
-		const std::string& get_name() const;
-		virtual void set_application_process(ApplicationProcess * ap) = 0;
-		void add_instance(ApplicationEntityInstance * instance);
-		ApplicationEntityInstance * remove_instance(const std::string& instance_id);
-		ApplicationEntityInstance * get_instance(const std::string& instance_id);
-		std::list<ApplicationEntityInstance*> get_all_instances();
-
+	AEPolicySet() : ps(NULL) { };
+	virtual ~AEPolicySet() { };
         virtual int select_policy_set(const std::string& path,
                                       const std::string& name) {
                 // TODO it will be pure virtual as soon as overridden
@@ -105,6 +99,34 @@ public:
                 return -1;
         }
 
+        virtual int select_policy_set_common(const std::string& component,
+                                     	 	 const std::string& path,
+                                     	 	 const std::string& ps_name) = 0;
+        virtual int set_policy_set_param_common(const std::string& path,
+                                        		const std::string& param_name,
+                                        		const std::string& param_value) = 0;
+
+        /// The policy set of this AE
+	IPolicySet * ps;
+
+	/// The name of the selected policy set
+	std::string selected_ps_name;
+};
+
+/// A type of component of an application process, manages all the instances
+/// of this type
+class ApplicationEntity : public AEPolicySet {
+public:
+	ApplicationEntity(const std::string& name)
+				: name_(name), app(NULL) { };
+	virtual ~ApplicationEntity();
+	const std::string& get_name() const;
+	virtual void set_application_process(ApplicationProcess * ap) = 0;
+	void add_instance(ApplicationEntityInstance * instance);
+	ApplicationEntityInstance * remove_instance(const std::string& instance_id);
+	ApplicationEntityInstance * get_instance(const std::string& instance_id);
+	std::list<ApplicationEntityInstance*> get_all_instances();
+
         int select_policy_set_common(const std::string& component,
                                      const std::string& path,
                                      const std::string& ps_name);
@@ -112,91 +134,123 @@ public:
                                         const std::string& param_name,
                                         const std::string& param_value);
 
-		//The policy set of this AE
-		IPolicySet * ps;
-
-		//The name of the selected policy set
-		std::string selected_ps_name;
+	///Constants
+	static const std::string IRM_AE_NAME;
+	static const std::string RIB_DAEMON_AE_NAME;
+	static const std::string ENROLLMENT_TASK_AE_NAME;
+	static const std::string INTERNAL_EVENT_MANAGER_AE_NAME;
 
 protected:
-		//The Application Entity name, immutable during the AE's lifetime
-		std::string name_;
+        /// The Application Entity name, immutable during the AE's lifetime
+	std::string name_;
 
-		//A reference to the application process that hosts the AE
-		ApplicationProcess * app;
+	/// A reference to the application process that hosts the AE
+	ApplicationProcess * app;
 
 private:
-		// The Application entity instances in this application entity
-		ThreadSafeMapOfPointers<std::string, ApplicationEntityInstance> instances;
+	/// The Application entity instances in this application entity
+	ThreadSafeMapOfPointers<std::string, ApplicationEntityInstance> instances;
 };
 
 extern "C" {
         typedef IPolicySet *(*app_entity_factory_create_t)(
                                                 ApplicationEntity * ctx);
         typedef void (*app_entity_factory_destroy_t)(IPolicySet * ps);
-        typedef int (*plugin_init_function_t)(ApplicationProcess * app_process,
+        typedef int (*plugin_init_function_t)(AppPolicyManager * app_process,
                                               const std::string& plugin_name);
 }
 
+/// Info about a policy set
+struct PsInfo {
+	/// Name of this pluggable policy set
+	std::string name;
+
+	/// Name of the AE (or component) that this policy set is for
+	std::string app_entity;
+
+	/// Versioning information for this policy set
+	std::string version;
+
+	PsInfo() { }
+	PsInfo(const std::string& n, const std::string& c,
+	       const std::string& v) : name(n), app_entity(c), version(v) { }
+};
+
 struct PsFactory {
-        // Name of this pluggable policy set.
-        std::string name;
+	struct PsInfo info;
 
-        // Name of the AE where this plugin applies.
-        std::string app_entity;
-
-        // Name of the plugin that published this policy set
+        /// Name of the plugin that published this policy set
         std::string plugin_name;
 
-        // Constructor method for instances of this pluggable policy set.
+        /// Constructor method for instances of this pluggable policy set.
         app_entity_factory_create_t create;
 
-        // Destructor method for instances of this pluggable policy set.
+        /// Destructor method for instances of this pluggable policy set.
         app_entity_factory_destroy_t destroy;
 
-        // Reference counter for the number of policy sets created
-        // by this factory
+        /// Reference counter for the number of policy sets created
+        /// by this factory
         unsigned int refcnt;
 };
 
-// The base class for an Application Process that is member of a
-// distributed application
-class ApplicationProcess {
+/// A class that can manage the policies of an application process
+class AppPolicyManager {
 public:
-		ApplicationProcess(const std::string& name, const std::string& instance)
-						: name_(name), instance_(instance) { };
-		virtual ~ApplicationProcess();
-		const std::string& get_name() const;
-		const std::string& get_instance() const;
-		void add_entity(ApplicationEntity * entity);
-		ApplicationEntity * remove_entity(const std::string& name);
-		ApplicationEntity * get_entity(const std::string& name);
-		std::list<ApplicationEntity*> get_all_entities();
-
-		//Policy management
-        virtual std::vector<PsFactory>::iterator
-                        psFactoryLookup(const std::string& ae_name,
-                                        const std::string& name) = 0;
-        virtual int psFactoryPublish(const PsFactory& factory) = 0;
-        virtual int psFactoryUnpublish(const std::string& ae_name,
-                                       const std::string& name) = 0;
-        virtual IPolicySet * psCreate(const std::string& ae_name,
+	AppPolicyManager() { };
+	virtual ~AppPolicyManager();
+	virtual std::vector<PsFactory>::iterator
+                  psFactoryLookup(const PsInfo& ps_info);
+	virtual int psFactoryPublish(const PsFactory& factory);
+	virtual int psFactoryUnpublish(const PsInfo& ps_info);
+	virtual IPolicySet * psCreate(const std::string& ae_name,
                                       const std::string& name,
-                                      ApplicationEntity * context) = 0;
-        virtual int psDestroy(const std::string& ae_name,
+                                      ApplicationEntity * context);
+	virtual int psDestroy(const std::string& ae_name,
                               const std::string& name,
-                              IPolicySet * instance) = 0;
+                              IPolicySet * instance);
 
 protected:
-		// The ApplicationProcess name, immutable during the AP's lifetime
-		std::string name_;
-
-		// The ApplicationProcess instance, immutable during the AP's lifetime
-		std::string instance_;
+	int plugin_load(const std::string& plugin_dir,
+			const std::string& name);
+	int plugin_unload(const std::string& name);
 
 private:
-		// The Application entities in this application process
-		ThreadSafeMapOfPointers<std::string, ApplicationEntity> entities;
+	std::vector<rina::PsFactory> ae_policy_factories;
+	std::map< std::string, void * > plugins_handles;
+	std::list<PsInfo> manifest_policy_sets;
+};
+
+// The base class for an Application Process that is member of a
+// distributed application and is configurable via policies
+class ApplicationProcess : public AppPolicyManager {
+public:
+	ApplicationProcess(const std::string& name, const std::string& instance)
+				: name_(name), instance_(instance) { };
+	virtual ~ApplicationProcess();
+	const std::string& get_name() const;
+	const std::string& get_instance() const;
+	void add_entity(ApplicationEntity * entity);
+	ApplicationEntity * remove_entity(const std::string& name);
+	ApplicationEntity * get_entity(const std::string& name);
+	std::list<ApplicationEntity*> get_all_entities();
+
+	/// Helper methods to facilitate getting general AEs, which may be
+	/// present or not in this Application Process
+	ApplicationEntity * get_ipc_resource_manager();
+	ApplicationEntity * get_rib_daemon();
+	ApplicationEntity * get_enrollment_task();
+	ApplicationEntity * get_internal_event_manager();
+
+protected:
+	// The ApplicationProcess name, immutable during the AP's lifetime
+	std::string name_;
+
+	// The ApplicationProcess instance, immutable during the AP's lifetime
+	std::string instance_;
+
+private:
+	// The Application entities in this application process
+	ThreadSafeMapOfPointers<std::string, ApplicationEntity> entities;
 };
 
 }

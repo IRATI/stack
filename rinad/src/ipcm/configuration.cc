@@ -33,7 +33,7 @@
 #include <librina/logs.h>
 
 #include "rina-configuration.h"
-#include "json/json.h"
+#include <librina/json/json.h>
 #include "ipcm.h"
 
 using namespace std;

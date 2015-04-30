@@ -55,10 +55,10 @@ class Server : public Application
   void run();
 
  protected:
-  void serveEchoFlow(rina::Flow *flow);
+  void serveEchoFlow(int port_id);
   //static void destroyFlow(sigval_t val);
  private:
-  void startWorker(rina::Flow * f);
+  void startWorker(int port_id);
   int interval;
   int dw;
   const unsigned int max_sdu_size_in_bytes = 10000;

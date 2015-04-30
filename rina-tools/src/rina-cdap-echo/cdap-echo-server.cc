@@ -92,7 +92,7 @@ void Server::run()
 
   for (;;) {
     IPCEvent* event = ipcEventProducer->eventWait();
-    Flow *flow = 0;
+    FlowInformation flow;
     unsigned int port_id;
     DeallocateFlowResponseEvent *resp = 0;
 
@@ -117,8 +117,8 @@ void Server::run()
       case FLOW_ALLOCATION_REQUESTED_EVENT:
         flow = ipcManager->allocateFlowResponse(
             *dynamic_cast<FlowRequestEvent*>(event), 0, true);
-        LOG_INFO("New flow allocated [port-id = %d]", flow->getPortId());
-        startWorker (flow);
+        LOG_INFO("New flow allocated [port-id = %d]", flow.portId);
+        startWorker(flow.portId);
         break;
 
       case FLOW_DEALLOCATED_EVENT:
@@ -142,17 +142,16 @@ void Server::run()
   }
 }
 
-void Server::startWorker(rina::Flow *flow)
-{
-  void (Server::*server_function)(Flow *flow);
+void Server::startWorker(int port_id) {
+  void (Server::*server_function)(int port_id);
 
   server_function = &Server::serveEchoFlow;
 
-  thread t(server_function, this, flow);
+  thread t(server_function, this, port_id);
   t.detach();
 }
 
-void Server::serveEchoFlow(rina::Flow* flow)
+void Server::serveEchoFlow(int port_id)
 {
   bool keep_serving = true;
   char buffer[max_sdu_size_in_bytes];
@@ -162,16 +161,17 @@ void Server::serveEchoFlow(rina::Flow* flow)
   cdap::CDAPProviderFactory::init(2000);
   cdap_prov = cdap::CDAPProviderFactory::create(false, callback);
   while (keep_serving) {
-    int bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
+    int bytes_read = ipcManager->readSDU(port_id, buffer, max_sdu_size_in_bytes);
     cdap_rib::SerializedObject message;
     message.message_ = buffer;
     message.size_ = bytes_read;
-    cdap_prov->process_message(message, flow->getPortId());
+    cdap_prov->process_message(message, port_id);
   }
-  cdap::CDAPProviderFactory::destroy(flow->getPortId());
+  cdap::CDAPProviderFactory::destroy(port_id);
   delete cdap_prov;
   delete callback;
 }
+
 /*
 void Server::destroyFlow(sigval_t val)
 {
@@ -185,5 +185,19 @@ void Server::destroyFlow(sigval_t val)
   // TODO here we should store the seqnum (handle) returned by
   // requestFlowDeallocation() and match it in the event loop
   ipcManager->requestFlowDeallocation(port_id);
+=======
+
+void Server::destroyFlow(sigval_t val)
+{
+        int port_id = val.sival_int;
+
+        // TODO here we should store the seqnum (handle) returned by
+        // requestFlowDeallocation() and match it in the event loop
+        try {
+        	ipcManager->requestFlowDeallocation(port_id);
+        } catch(rina::Exception &e) {
+        	//Ignore, flow was already deallocated
+        }
+>>>>>>> irati/pr/557
 }
 */

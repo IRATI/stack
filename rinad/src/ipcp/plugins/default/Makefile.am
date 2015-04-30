@@ -44,7 +44,6 @@ testsLIBS =	$(COMMONLIBS)
 test_routing_SOURCES  =					    \
 	test-routing.cc							\
 	../../components.cc	 ../../components.h \
-	../../events.cc      ../../events.h	    \
 	routing-ps.cc 	     routing-ps.h
 test_routing_CPPFLAGS = $(testsCPPFLAGS)
 test_routing_LDADD    = $(testsLIBS)
@@ -52,7 +51,6 @@ test_routing_LDADD    = $(testsLIBS)
 test_encoders_SOURCES  =			\
 	test-encoders.cc			\
 	../../components.cc	 ../../components.h \
-	../../events.cc      ../../events.h	    \
     routing-ps.cc 	     routing-ps.h
 test_encoders_CPPFLAGS = $(testsCPPFLAGS)
 test_encoders_LDADD    = $(testsLIBS)
@@ -64,3 +62,5 @@ XFAIL_TESTS =
 PASS_TESTS  = test-routing test-encoders
 
 TESTS = $(PASS_TESTS) $(XFAIL_TESTS)
+
+dist_plugins_DATA = default.manifest

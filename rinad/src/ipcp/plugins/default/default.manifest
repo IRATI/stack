@@ -1,0 +1,31 @@
+{
+        "PluginName": "default",
+        "PluginVersion": "1",
+        "PolicySets" : [
+                {
+                        "Name": "default",
+                        "Component": "security-manager",
+                        "Version" : "1"
+                },
+                {
+                        "Name": "default",
+                        "Component": "flow-allocator",
+                        "Version" : "1"
+                },
+                {
+                        "Name": "default",
+                        "Component": "namespace-manager",
+                        "Version" : "1"
+                },
+                {
+                        "Name": "default",
+                        "Component": "resource-allocator",
+                        "Version" : "1"
+                },
+                {
+                        "Name": "link-state",
+                        "Component": "routing",
+                        "Version" : "1"
+                }
+        ]
+}

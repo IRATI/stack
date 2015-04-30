@@ -65,7 +65,7 @@ class Client : public Application, public rina::cdap::CDAPCallbackInterface
         unsigned int wait;
         int gap;
         int dealloc_wait;
-        rina::Flow* flow_;
+        rina::FlowInformation flow_;
         rina::cdap::CDAPProviderInterface* cdap_prov_;
         rina::cdap_rib::con_handle_t con_;
         unsigned long count_;

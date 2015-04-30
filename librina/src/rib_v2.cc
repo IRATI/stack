@@ -328,8 +328,6 @@ RIBIntObject* RIB::getInternalRIBObject(const std::string& name) {
 
 	std::map<std::string, RIBIntObject*>::iterator it;
 
-	LOG_DBG("Normalized name is %s", norm_name.c_str());
-
 	lock();
 	it = rib_by_name_.find(norm_name);
 	unlock();
@@ -557,6 +555,7 @@ void RIBDaemon::remote_create_request(const cdap_rib::con_handle_t &con,
 	obj_reply.value_.size_ = 0;
 	obj_reply.inst_ = 0;
 
+	cdap_rib::res_info_t* res;
 	BaseRIBObject* rib_obj = rib_->getRIBObject(obj.class_, obj.name_,
 							true);
 	if (rib_obj == NULL) {
@@ -566,19 +565,24 @@ void RIBDaemon::remote_create_request(const cdap_rib::con_handle_t &con,
 	}
 	if (rib_obj) {
 		//Call the application
-		cdap_rib::res_info_t* res = rib_obj->remoteCreate(
+		res = rib_obj->remoteCreate(
 				obj.name_, obj.class_, obj.value_,
 				obj_reply.value_);
-		try {
-			cdap_provider_->remote_create_response(con.port_,
-								obj_reply,
-								flags, *res,
-								message_id);
-		} catch (Exception &e) {
-			LOG_ERR("Unable to send the response");
-		}
-		delete res;
 	}
+	else
+	{
+		res = new cdap_rib::res_info_t;
+		res->result_ = -1;
+	}
+	try {
+		cdap_provider_->remote_create_response(con.port_,
+							obj_reply,
+							flags, *res,
+							message_id);
+	} catch (Exception &e) {
+		LOG_ERR("Unable to send the response");
+	}
+	delete res;
 }
 
 void RIBDaemon::remote_delete_request(const cdap_rib::con_handle_t &con,
@@ -915,14 +919,20 @@ cdap_rib::res_info_t* BaseRIBObject::remoteCreate(
 	(void) obj_req;
 	(void) obj_reply;
 	operation_not_supported();
-	return NULL;
+	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
+	// FIXME: change for real opcode
+	res->result_ = -2;
+	return res;
 }
 
 cdap_rib::res_info_t* BaseRIBObject::remoteDelete(const std::string& name) {
 
 	(void) name;
 	operation_not_supported();
-	return NULL;
+	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
+	// FIXME: change for real opcode
+	res->result_ = -2;
+	return res;
 }
 
 cdap_rib::res_info_t* BaseRIBObject::remoteRead(
@@ -932,14 +942,20 @@ cdap_rib::res_info_t* BaseRIBObject::remoteRead(
 	(void) name;
 	(void) obj_reply;
 	operation_not_supported();
-	return NULL;
+	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
+	// FIXME: change for real opcode
+	res->result_ = -2;
+	return res;
 }
 
 cdap_rib::res_info_t* BaseRIBObject::remoteCancelRead(const std::string& name) {
 
 	(void) name;
 	operation_not_supported();
-	return NULL;
+	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
+	// FIXME: change for real opcode
+	res->result_ = -2;
+	return res;
 }
 
 cdap_rib::res_info_t* BaseRIBObject::remoteWrite(
@@ -951,7 +967,10 @@ cdap_rib::res_info_t* BaseRIBObject::remoteWrite(
 	(void) obj_req;
 	(void) obj_reply;
 	operation_not_supported();
-	return NULL;
+	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
+	// FIXME: change for real opcode
+	res->result_ = -2;
+	return res;
 }
 
 cdap_rib::res_info_t* BaseRIBObject::remoteStart(
@@ -963,7 +982,10 @@ cdap_rib::res_info_t* BaseRIBObject::remoteStart(
 	(void) obj_req;
 	(void) obj_reply;
 	operation_not_supported();
-	return NULL;
+	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
+	// FIXME: change for real opcode
+	res->result_ = -2;
+	return res;
 }
 
 cdap_rib::res_info_t* BaseRIBObject::remoteStop(
@@ -975,7 +997,10 @@ cdap_rib::res_info_t* BaseRIBObject::remoteStop(
 	(void) obj_req;
 	(void) obj_reply;
 	operation_not_supported();
-	return NULL;
+	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
+	// FIXME: change for real opcode
+	res->result_ = -2;
+	return res;
 }
 
 const std::string& BaseRIBObject::get_class() const {

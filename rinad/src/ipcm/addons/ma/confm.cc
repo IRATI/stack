@@ -6,10 +6,10 @@
 #include <librina/common.h>
 #include <debug.h>
 
+#include <librina/json/json.h>
+
 #include <fstream>
 #include <sstream>
-
-#include "json/json.h"
 
 namespace rinad{
 namespace mad{
