@@ -828,7 +828,7 @@ static int parse_port_id_altlist_entries(struct nlattr * nested_attr,
 
         alts->num_ports	= nla_len(nested_attr);
         alts->ports	= rkzalloc(alts->num_ports, GFP_KERNEL);
-        LOG_DBG("Allocated %zd bytes in %pk", alts->ports_size, alts->ports);
+        LOG_DBG("Allocated %zd bytes in %pk", alts->num_ports, alts->ports);
 
         if (!alts->ports) {
                 LOG_ERR("Could not allocate memory for port-ids");
@@ -2857,8 +2857,8 @@ static int format_port_id_altlist(struct port_id_altlist *pos,
                 return -1;
         }
 
-        for (i = 0; i < pos->num_ports; i++) {
-                if (nla_put_u32(skb_out, i, pos->ports[i]))
+        for (i = 1; i <= pos->num_ports; i++) {
+                if (nla_put_u32(skb_out, i, pos->ports[i-1]))
                         return -1;
         }
 
@@ -2872,7 +2872,7 @@ static int format_pft_entry_altlists(struct list_head * entries,
 {
         struct nlattr * msg_alts;
 	struct port_id_altlist * pos, * nxt;
-        int i = 0;
+
 
         if (!skb_out) {
                 LOG_ERR("Bogus input parameter(s), bailing out");
@@ -2886,20 +2886,10 @@ static int format_pft_entry_altlists(struct list_head * entries,
         }
 
 	list_for_each_entry_safe(pos, nxt, entries, next) {
-		struct nlattr * msg_entry;
-
-		i++;
-		if (!(msg_entry = nla_nest_start(skb_out, i))) {
-			nla_nest_cancel(skb_out, msg_entry);
-			LOG_ERR(BUILD_STRERROR("pft_entry_port_id_altlists attribute"));
-			return format_fail("rnl_ipcm_pft_dump_resp_msg");
-		}
-
-                if (format_port_id_altlist(pos,
-                                                 skb_out))
+		if (format_port_id_altlist(pos,
+                                           skb_out))
                         return format_fail("rnl_ipcm_pft_dump_resp_msg");
 
-		nla_nest_end(skb_out, msg_entry);
 		list_del(&pos->next);
 		rkfree(pos);
 	}
@@ -2930,10 +2920,10 @@ static int format_pft_entries_list(struct list_head * entries,
                         return format_fail("rnl_ipcm_pft_dump_resp_msg");
                 }
 
-                if ((nla_put_u32(skb_out,
+                if (nla_put_u32(skb_out,
                                  PFTELE_ATTR_ADDRESS,
-                                 pos->destination)                         ||
-                     nla_put_u32(skb_out, PFTELE_ATTR_QOSID, pos->qos_id)) ||
+                                 pos->destination)                        ||
+                     nla_put_u32(skb_out, PFTELE_ATTR_QOSID, pos->qos_id) ||
 			format_pft_entry_altlists(&pos->port_id_altlists,
 						      skb_out))
                         return format_fail("rnl_ipcm_pft_dump_resp_msg");
