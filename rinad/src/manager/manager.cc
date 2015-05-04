@@ -229,7 +229,11 @@ void Manager::operate(rina::FlowInformation flow)
         // CACEP
         cacep(flow);
         // CREATE IPCP
-        createIPCP(flow);
+        std::cout <<"flow.remoteAppName.processName: "<< flow.remoteAppName.processName<<std::endl;
+        if(flow.remoteAppName.processName == "rina.apps.mad")
+        {
+        	createIPCP_1(flow);
+        }
         // QUERY RIB
         queryRIB(flow);
         // FINISH
@@ -247,7 +251,7 @@ void Manager::cacep(rina::FlowInformation flow)
         cdap_prov_->process_message(message, flow.portId);
 }
 
-void Manager::createIPCP(rina::FlowInformation flow)
+void Manager::createIPCP_1(rina::FlowInformation flow)
 {
         char buffer[max_sdu_size_in_bytes];
 
@@ -256,10 +260,11 @@ void Manager::createIPCP(rina::FlowInformation flow)
         ipc_config.process_name = "normal-1.IPCP";
         ipc_config.process_type = "normal-ipc";
         ipc_config.dif_to_assign = "normal.DIF";
+        ipc_config.dif_to_register = "400";
 
         cdap_rib::obj_info_t obj;
         obj.name_ =
-                        "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=2";
+                        "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=4";
         obj.class_ = "IPCProcess";
         obj.inst_ = 0;
         mad_manager::encoders::IPCPConfigEncoder().encode(ipc_config,
@@ -291,7 +296,7 @@ void Manager::queryRIB(rina::FlowInformation flow)
 
 	cdap_rib::obj_info_t obj;
 	obj.name_ =
-			"root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=2, RIBDaemon";
+			"root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=4, RIBDaemon";
 	obj.class_ = "RIBDaemon";
 	obj.inst_ = 0;
 
