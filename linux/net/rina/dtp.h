@@ -44,10 +44,6 @@ int          dtp_sv_init(struct dtp * dtp,
 /* Sends a SDU to the DTP (DTP takes the ownership of the passed SDU) */
 int          dtp_write(struct dtp * instance,
                        struct sdu * sdu);
-int          dtp_mgmt_write(struct rmt * rmt,
-                            address_t    src_address,
-                            port_id_t    port_id,
-                            struct sdu * sdu);
 
 /* DTP receives a PDU from RMT */
 int          dtp_receive(struct dtp * instance,

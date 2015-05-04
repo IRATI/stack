@@ -2,8 +2,7 @@
 // Application
 //
 //    Eduard Grasa          <eduard.grasa@i2cat.net>
-//    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
-//    Francesco Salvestrini <f.salvestrini@nextworks.it>
+//    Vincenzo Maffione     <v.maffione@nextworks.it>
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -21,793 +20,443 @@
 // MA  02110-1301  USA
 //
 
-#include <cstring>
-#include <stdexcept>
+#include <dlfcn.h>
 
-#define RINA_PREFIX "application"
+#define RINA_PREFIX "librina.application"
 
 #include "librina/logs.h"
 #include "core.h"
 #include "rina-syscalls.h"
 #include "librina/application.h"
+#include "librina/plugin-info.h"
 
 namespace rina {
 
-/* CLASS FLOW */
-Flow::Flow(const ApplicationProcessNamingInformation& localApplicationName,
-		const ApplicationProcessNamingInformation& remoteApplicationName,
-		const FlowSpecification& flowSpecification, FlowState flowState){
-	flowInformation.localAppName = localApplicationName;
-	flowInformation.remoteAppName = remoteApplicationName;
-	flowInformation.flowSpecification = flowSpecification;
-	flowInformation.portId = 0;
-	this->flowState = flowState;
+const std::string IPolicySet::DEFAULT_PS_SET_NAME = "default";
+
+// Class ApplicationEntityInstance
+const std::string& ApplicationEntityInstance::get_instance_id() const
+{
+	return instance_id_;
 }
 
-Flow::Flow(const ApplicationProcessNamingInformation& localApplicationName,
-		const ApplicationProcessNamingInformation& remoteApplicationName,
-		const FlowSpecification& flowSpecification, FlowState flowState,
-		const ApplicationProcessNamingInformation& DIFName, int portId) {
-	flowInformation.localAppName = localApplicationName;
-	flowInformation.remoteAppName = remoteApplicationName;
-	flowInformation.flowSpecification = flowSpecification;
-	flowInformation.portId = portId;
-	flowInformation.difName = DIFName;
-	this->flowState = flowState;
+// Class ApplicationEntity
+ApplicationEntity::~ApplicationEntity()
+{
+	instances.deleteValues();
 }
 
-void Flow::setPortId(int portId){
-	flowInformation.portId = portId;
+const std::string& ApplicationEntity::get_name() const
+{
+	return name_;
 }
 
-void Flow::setDIFName(const ApplicationProcessNamingInformation& DIFName) {
-	flowInformation.difName = DIFName;
-}
-
-void Flow::setState(FlowState flowState) {
-	this->flowState = flowState;
-}
-
-const FlowState& Flow::getState() const {
-	return flowState;
-}
-
-int Flow::getPortId() const {
-	return flowInformation.portId;
-}
-
-const ApplicationProcessNamingInformation&
-Flow::getDIFName() const {
-	return flowInformation.difName;
-}
-
-const ApplicationProcessNamingInformation&
-Flow::getLocalApplicationName() const {
-	return flowInformation.localAppName;
-}
-
-const ApplicationProcessNamingInformation&
-Flow::getRemoteApplcationName() const {
-	return flowInformation.remoteAppName;
-}
-
-const FlowSpecification& Flow::getFlowSpecification() const {
-	return flowInformation.flowSpecification;
-}
-
-bool Flow::isAllocated() const{
-	return flowState == FLOW_ALLOCATED;
-}
-
-const FlowInformation& Flow::getFlowInformation() const {
-   return flowInformation;
-}
-
-int Flow::readSDU(void * sdu, int maxBytes) throw(Exception){
-	if (flowState != FLOW_ALLOCATED) {
-		throw FlowNotAllocatedException();
+void ApplicationEntity::add_instance(ApplicationEntityInstance * instance)
+{
+	if (!instance) {
+		LOG_ERR("Bogus AE instance passed, returning");
+		return;
 	}
 
-#if STUB_API
-        memset(sdu, 'v', maxBytes);
+	instance->set_application_entity(this);
+	instances.put(instance->get_instance_id(), instance);
+}
 
-	return maxBytes;
-#else
-	int result = syscallReadSDU(flowInformation.portId, sdu, maxBytes);
-	if (result < 0){
-		throw ReadSDUException();
+ApplicationEntityInstance * ApplicationEntity::remove_instance(const std::string& instance_id)
+{
+	ApplicationEntityInstance * aei = instances.erase(instance_id);
+	if (aei) {
+		aei->set_application_entity(NULL);
 	}
 
-	return result;
-#endif
+	return aei;
 }
 
-void Flow::writeSDU(void * sdu, int size) throw(Exception) {
-	if (flowState != FLOW_ALLOCATED) {
-		throw FlowNotAllocatedException();
-	}
-
-#if STUB_API
-	/* Do nothing. */
-        (void)sdu;
-        (void)size;
-#else
-	int result = syscallWriteSDU(flowInformation.portId, sdu, size);
-	if (result < 0){
-		throw WriteSDUException();
-	}
-#endif
+ApplicationEntityInstance * ApplicationEntity::get_instance(const std::string& instance_id)
+{
+	return instances.find(instance_id);
 }
 
-/* CLASS APPLICATION REGISTRATION */
-ApplicationRegistration::ApplicationRegistration(
-		const ApplicationProcessNamingInformation& applicationName) {
-	this->applicationName = applicationName;
+std::list<ApplicationEntityInstance*> ApplicationEntity::get_all_instances()
+{
+	return instances.getEntries();
 }
 
-void ApplicationRegistration::addDIFName(
-		const ApplicationProcessNamingInformation& DIFName) {
-	DIFNames.push_back(DIFName);
-}
+int ApplicationEntity::select_policy_set_common(const std::string& component,
+                                           	const std::string& path,
+                                           	const std::string& ps_name)
+{
+        IPolicySet *candidate = NULL;
 
-void ApplicationRegistration::removeDIFName(
-		const ApplicationProcessNamingInformation& DIFName) {
-	DIFNames.remove(DIFName);
-}
+        if (path != std::string()) {
+                LOG_ERR("No subcomponents to address");
+                return -1;
+        }
 
-/* CLASS IPC MANAGER */
-IPCManager::IPCManager() : Lockable() {
-}
+        if (!app) {
+                LOG_ERR("bug: NULL app reference");
+                return -1;
+        }
 
-IPCManager::~IPCManager() throw(){
-}
-
-const std::string IPCManager::application_registered_error =
-		"The application is already registered in this DIF";
-const std::string IPCManager::application_not_registered_error =
-		"The application is not registered in this DIF";
-const std::string IPCManager::unknown_flow_error =
-		"There is no flow at the specified portId";
-const std::string IPCManager::error_registering_application =
-		"Error registering application";
-const std::string IPCManager::error_unregistering_application =
-		"Error unregistering application";
-const std::string IPCManager::error_requesting_flow_allocation =
-		"Error requesting flow allocation";
-const std::string IPCManager::error_requesting_flow_deallocation =
-		"Error requesting flow deallocation";
-const std::string IPCManager::error_getting_dif_properties =
-		"Error getting DIF properties";
-const std::string IPCManager::wrong_flow_state  =
-                "Wrong flow state";
-
-Flow * IPCManager::getPendingFlow(unsigned int seqNumber) {
-        std::map<unsigned int, Flow*>::iterator iterator;
-
-        iterator = pendingFlows.find(seqNumber);
-        if (iterator == pendingFlows.end()) {
+        if (ps_name == selected_ps_name) {
+                LOG_INFO("policy set %s already selected for component %s",
+                         ps_name.c_str(), component.c_str());
                 return 0;
         }
 
-        return iterator->second;
-}
-
-Flow * IPCManager::getAllocatedFlow(int portId) {
-        std::map<int, Flow*>::iterator iterator;
-
-        iterator = allocatedFlows.find(portId);
-        if (iterator == allocatedFlows.end()) {
-                return 0;
+        candidate = app->psCreate(component, ps_name, this);
+        if (!candidate) {
+                LOG_ERR("failed to allocate instance of policy set %s", ps_name.c_str());
+                return -1;
         }
 
-        return iterator->second;
+        if (ps) {
+                // Remove the old one.
+                app->psDestroy(component, selected_ps_name, ps);
+        }
+
+        // Install the new one.
+        ps = candidate;
+        selected_ps_name = ps_name;
+        LOG_INFO("Policy-set %s selected for component %s",
+                        ps_name.c_str(), component.c_str());
+
+        return ps ? 0 : -1;
 }
 
-Flow * IPCManager::getFlowToRemoteApp(
-                ApplicationProcessNamingInformation remoteAppName) {
-        std::map<int, Flow*>::iterator iterator;
+int ApplicationEntity::set_policy_set_param_common(const std::string& path,
+                                              const std::string& param_name,
+                                              const std::string& param_value)
+{
+        LOG_DBG("set_policy_set_param(%s, %s) called",
+                param_name.c_str(), param_value.c_str());
 
-        for(iterator = allocatedFlows.begin(); iterator != allocatedFlows.end();
-                        ++iterator) {
-                if (iterator->second->getRemoteApplcationName() ==
-                                remoteAppName) {
-                        return iterator->second;
+        if (!app) {
+                LOG_ERR("bug: NULL app reference");
+                return -1;
+        }
+
+        if (path == selected_ps_name) {
+                // This request is for the currently selected
+                // policy set, forward to it
+                return ps->set_policy_set_param(param_name, param_value);
+        } else if (path != std::string()) {
+                LOG_ERR("Invalid component address '%s'", path.c_str());
+                return -1;
+        }
+
+        // This request is for the component itself
+        LOG_ERR("No such parameter '%s' exists", param_name.c_str());
+
+        return -1;
+}
+
+const std::string ApplicationEntity::IRM_AE_NAME = "ipc-resource-manager";
+const std::string ApplicationEntity::RIB_DAEMON_AE_NAME = "rib-daemon";
+const std::string ApplicationEntity::ENROLLMENT_TASK_AE_NAME = "enrollment-task";
+const std::string ApplicationEntity::INTERNAL_EVENT_MANAGER_AE_NAME = "event-manager";
+
+//Class App Policy Manager
+AppPolicyManager::~AppPolicyManager()
+{
+	for (std::map<std::string, void *>::iterator
+                it = plugins_handles.begin();
+                it != plugins_handles.end(); it++) {
+		plugin_unload(it->first);
+	}
+}
+
+std::vector<rina::PsFactory>::iterator
+AppPolicyManager::psFactoryLookup(const PsInfo& ps_info)
+{
+        for (std::vector<PsFactory>::iterator
+                it = ae_policy_factories.begin();
+                it != ae_policy_factories.end(); it++) {
+                if (it->info.app_entity == ps_info.app_entity &&
+                                it->info.name == ps_info.name) {
+                	return it;
                 }
         }
 
-        return NULL;
+        return ae_policy_factories.end();
 }
 
-ApplicationRegistrationInformation IPCManager::getRegistrationInfo(
-                        unsigned int seqNumber) {
-        std::map<unsigned int, ApplicationRegistrationInformation>::iterator iterator;
+int AppPolicyManager::psFactoryPublish(const PsFactory& factory)
+{
+	bool declared = false;
 
-        iterator = registrationInformation.find(seqNumber);
-        if (iterator == registrationInformation.end()) {
-                throw IPCException("Registration not found");
+        // TODO check that factory.component is an existing component
+
+        // Check if the (name, component) couple specified by 'factory'
+        // has not already been published.
+        if (psFactoryLookup(factory.info) !=
+        				ae_policy_factories.end()) {
+                LOG_ERR("Factory %s for component %s already "
+                                "published", factory.info.name.c_str(),
+                                factory.info.app_entity.c_str());
+                return -1;
         }
 
-        return iterator->second;
+	// Check if this policy set factory has been declared in the
+	// plugin manifest file
+	for (std::list<PsInfo>::iterator mi = manifest_policy_sets.begin();
+				mi != manifest_policy_sets.end(); mi++) {
+		if (mi->name == factory.info.name &&
+				mi->app_entity == factory.info.app_entity) {
+			declared = true;
+			break;
+		}
+	}
+
+	if (!declared) {
+		LOG_ERR("Pluggable component '%s'/'%s' not declared "
+			"in manifest file for plugin %s",
+			factory.info.app_entity.c_str(), factory.info.name.c_str(),
+			factory.plugin_name.c_str());
+		return -1;
+	}
+
+        // Add the new factory
+        ae_policy_factories.push_back(factory);
+        ae_policy_factories.back().refcnt = 0;
+
+        LOG_INFO("Pluggable component '%s'/'%s' [%s] published",
+                 factory.info.app_entity.c_str(), factory.info.name.c_str(),
+                 factory.plugin_name.c_str());
+
+        return 0;
 }
 
-ApplicationRegistration * IPCManager::getApplicationRegistration(
-                const ApplicationProcessNamingInformation& appName) {
-        std::map<ApplicationProcessNamingInformation,
-        ApplicationRegistration*>::iterator iterator =
-                        applicationRegistrations.find(appName);
+int AppPolicyManager::psFactoryUnpublish(const PsInfo& ps_info)
+{
+        std::vector<PsFactory>::iterator fi;
 
-        if (iterator == applicationRegistrations.end()){
+        fi = psFactoryLookup(ps_info);
+        if (fi == ae_policy_factories.end()) {
+                LOG_ERR("Factory %s for component %s not "
+                                "published", ps_info.name.c_str(),
+                                ps_info.app_entity.c_str());
+                return -1;
+        }
+
+        LOG_INFO("Pluggable component '%s'/'%s' [%s] unpublished",
+                 fi->info.app_entity.c_str(), fi->info.name.c_str(),
+                 fi->plugin_name.c_str());
+
+        ae_policy_factories.erase(fi);
+
+        return 0;
+}
+
+IPolicySet * AppPolicyManager::psCreate(const std::string& component,
+                         	 	 	 	const std::string& name,
+                         	 	 	 	ApplicationEntity * ae)
+{
+        std::vector<PsFactory>::iterator it;
+        IPolicySet *ps = NULL;
+
+        it = psFactoryLookup(PsInfo(name, component, std::string()));
+        if (it == ae_policy_factories.end()) {
+                LOG_ERR("Pluggable component %s/%s not found",
+                        component.c_str(), name.c_str());
+                return NULL;
+        }
+
+        ps = it->create(ae);
+        if (ps) {
+                it->refcnt++;
+        }
+
+        return ps;
+}
+
+int AppPolicyManager::psDestroy(const std::string& component,
+                              	const std::string& name,
+                                IPolicySet * instance)
+{
+        std::vector<PsFactory>::iterator it;
+
+        it = psFactoryLookup(PsInfo(name, component, std::string()));
+        if (it == ae_policy_factories.end()) {
+                LOG_ERR("Pluggable component %s/%s not found",
+                        component.c_str(), name.c_str());
+                return -1;
+        }
+
+        it->destroy(instance);
+        it->refcnt--;
+
+        return 0;
+}
+
+int AppPolicyManager::plugin_load(const std::string& plugin_dir,
+				  const std::string& plugin_name)
+{
+	std::string plugin_path = plugin_dir;
+        void *handle = NULL;
+        rina::plugin_init_function_t init_func;
+        char *errstr;
+        int ret;
+
+        if (plugins_handles.count(plugin_name)) {
+                LOG_INFO("Plugin '%s' already loaded", plugin_name.c_str());
                 return 0;
         }
 
-        return iterator->second;
-}
-
-void IPCManager::putApplicationRegistration(
-                        const ApplicationProcessNamingInformation& key,
-                        ApplicationRegistration * value) {
-        applicationRegistrations[key] = value;
-}
-
-void IPCManager::removeApplicationRegistration(
-                        const ApplicationProcessNamingInformation& key) {
-        applicationRegistrations.erase(key);
-}
-
-unsigned int IPCManager::internalRequestFlowAllocation(
-                const ApplicationProcessNamingInformation& localAppName,
-                const ApplicationProcessNamingInformation& remoteAppName,
-                const FlowSpecification& flowSpec,
-                unsigned short sourceIPCProcessId) {
-        Flow * flow;
-
-#if STUB_API
-        flow = new Flow(localAppName, remoteAppName, flowSpec, FLOW_ALLOCATED);
-        pendingFlows[0] = flow;
-        (void)sourceIPCProcessId;
-        return 0;
-#else
-        AppAllocateFlowRequestMessage message;
-        message.setSourceAppName(localAppName);
-        message.setDestAppName(remoteAppName);
-        message.setSourceIpcProcessId(sourceIPCProcessId);
-        message.setFlowSpecification(flowSpec);
-        message.setRequestMessage(true);
-
-        try{
-                rinaManager->sendMessage(&message, true);
-        }catch(NetlinkException &e){
-                throw FlowAllocationException(e.what());
-        }
-
-        flow = new Flow(localAppName, remoteAppName, flowSpec, FLOW_ALLOCATED);
-        lock();
-        pendingFlows[message.getSequenceNumber()] = flow;
-        unlock();
-
-        return message.getSequenceNumber();
-#endif
-}
-
-unsigned int IPCManager::internalRequestFlowAllocationInDIF(
-                const ApplicationProcessNamingInformation& localAppName,
-                const ApplicationProcessNamingInformation& remoteAppName,
-                const ApplicationProcessNamingInformation& difName,
-                unsigned short sourceIPCProcessId,
-                const FlowSpecification& flowSpec) {
-        Flow * flow;
-
-#if STUB_API
-        flow = new Flow(localAppName, remoteAppName, flowSpec, FLOW_ALLOCATED);
-        pendingFlows[0] = flow;
-        (void)difName;
-        (void)sourceIPCProcessId;
-        return 0;
-#else
-        AppAllocateFlowRequestMessage message;
-        message.setSourceAppName(localAppName);
-        message.setDestAppName(remoteAppName);
-        message.setSourceIpcProcessId(sourceIPCProcessId);
-        message.setFlowSpecification(flowSpec);
-        message.setDifName(difName);
-        message.setRequestMessage(true);
-
-        try{
-                rinaManager->sendMessage(&message, true);
-        }catch(NetlinkException &e){
-                throw FlowAllocationException(e.what());
-        }
-
-        flow = new Flow(localAppName, remoteAppName, flowSpec, FLOW_ALLOCATED);
-        lock();
-        pendingFlows[message.getSequenceNumber()] = flow;
-        unlock();
-
-        return message.getSequenceNumber();
-#endif
-}
-
-Flow * IPCManager::internalAllocateFlowResponse(
-                const FlowRequestEvent& flowRequestEvent,
-                int result, bool notifySource, unsigned short ipcProcessId) {
-#if STUB_API
-        //Do nothing
-        (void)notifySource;
-        (void)ipcProcessId;
-#else
-        AppAllocateFlowResponseMessage responseMessage;
-        responseMessage.setResult(result);
-        responseMessage.setNotifySource(notifySource);
-        responseMessage.setSourceIpcProcessId(ipcProcessId);
-        responseMessage.setSequenceNumber(flowRequestEvent.sequenceNumber);
-        responseMessage.setResponseMessage(true);
-        try{
-                rinaManager->sendMessage(&responseMessage, false);
-        }catch(NetlinkException &e){
-                throw FlowAllocationException(e.what());
-        }
-#endif
-        if (result != 0) {
-                LOG_WARN("Flow was not accepted, error code: %d", result);
-                return 0;
-        }
-
-        Flow * flow = new Flow(flowRequestEvent.localApplicationName,
-                        flowRequestEvent.remoteApplicationName,
-                        flowRequestEvent.flowSpecification, FLOW_ALLOCATED,
-                        flowRequestEvent.DIFName, flowRequestEvent.portId);
-        lock();
-        allocatedFlows[flowRequestEvent.portId] = flow;
-        unlock();
-        return flow;
-}
-
-unsigned int IPCManager::getDIFProperties(
-		const ApplicationProcessNamingInformation& applicationName,
-		const ApplicationProcessNamingInformation& DIFName) {
-
-#if STUB_API
-        (void)applicationName;
-        (void)DIFName;
-	return 0;
-#else
-	AppGetDIFPropertiesRequestMessage message;
-	message.setApplicationName(applicationName);
-	message.setDifName(DIFName);
-	message.setRequestMessage(true);
-
-	try{
-		rinaManager->sendMessage(&message, true);
-	}catch(NetlinkException &e){
-		throw GetDIFPropertiesException(e.what());
+	// Load the manifest (will overwrite the existing manifest)
+	ret = plugin_get_info(plugin_name, plugin_dir, manifest_policy_sets);
+	if (ret) {
+		LOG_ERR("Failed to load manifest for plugin %s",
+			plugin_name.c_str());
+		return ret;
 	}
 
-	return message.getSequenceNumber();
-#endif
-}
+        plugin_path += "/";
+        plugin_path += plugin_name + ".so";
 
-unsigned int IPCManager::requestApplicationRegistration(
-                const ApplicationRegistrationInformation& appRegistrationInfo) {
-#if STUB_API
-        registrationInformation[0] = appRegistrationInfo;
-	return 0;
-#else
-	AppRegisterApplicationRequestMessage message;
-	message.setApplicationRegistrationInformation(appRegistrationInfo);
-	message.setRequestMessage(true);
-
-	try{
-	        rinaManager->sendMessage(&message, true);
-	}catch(NetlinkException &e){
-	        throw ApplicationRegistrationException(e.what());
-	}
-
-	lock();
-	registrationInformation[message.getSequenceNumber()] = appRegistrationInfo;
-	unlock();
-
-	return message.getSequenceNumber();
-#endif
-}
-
-ApplicationRegistration * IPCManager::commitPendingRegistration(
-                        unsigned int seqNumber,
-                        const ApplicationProcessNamingInformation& DIFName) {
-        ApplicationRegistrationInformation appRegInfo;
-        ApplicationRegistration * applicationRegistration;
-
-        lock();
-        try {
-        	appRegInfo = getRegistrationInfo(seqNumber);
-        } catch(IPCException &e){
-                unlock();
-                throw ApplicationRegistrationException("Unknown registration");
+        handle = dlopen(plugin_path.c_str(), RTLD_NOW);
+        if (!handle) {
+                LOG_ERR("Cannot load plugin %s: %s", plugin_name.c_str(),
+                        dlerror());
+                return -1;
         }
 
-        registrationInformation.erase(seqNumber);
+        /* Clear any pending error conditions. */
+        dlerror();
 
-        applicationRegistration = getApplicationRegistration(
-                        appRegInfo.appName);
+        /* Try to load the init() function. */
+        init_func = (plugin_init_function_t)dlsym(handle, "init");
 
-        if (!applicationRegistration){
-                applicationRegistration = new ApplicationRegistration(
-                                appRegInfo.appName);
-                applicationRegistrations[appRegInfo.appName] =
-                                applicationRegistration;
+        /* Check if an error occurred in dlsym(). */
+        errstr = dlerror();
+        if (errstr) {
+                dlclose(handle);
+                LOG_ERR("Failed to link the init() function for plugin %s: %s",
+                        plugin_name.c_str(), errstr);
+                return -1;
         }
 
-        applicationRegistration->addDIFName(DIFName);
-        unlock();
+        /* Invoke the plugin initialization function, that will publish
+         * pluggable components. */
+        ret = init_func(this, plugin_name);
+        if (ret) {
+                dlclose(handle);
+                LOG_ERR("Failed to initialize plugin %s",
+                        plugin_name.c_str());
+                return -1;
+        }
 
-        return applicationRegistration;
+        plugins_handles[plugin_name] = handle;
+
+        LOG_INFO("Plugin %s loaded successfully", plugin_name.c_str());
+
+        return 0;
 }
 
-void IPCManager::withdrawPendingRegistration(unsigned int seqNumber) {
-        ApplicationRegistrationInformation appRegInfo;
+int AppPolicyManager::plugin_unload(const std::string& plugin_name)
+{
+        std::map< std::string, void * >::iterator mit;
+        std::vector< std::vector<PsFactory>::iterator > unpublish_list;
 
-        lock();
-        try {
-        	appRegInfo = getRegistrationInfo(seqNumber);
-        } catch(IPCException &e){
-        	unlock();
-        	throw ApplicationRegistrationException("Unknown registration");
+        mit = plugins_handles.find(plugin_name);
+        if (mit == plugins_handles.end()) {
+                LOG_ERR("plugin %s not found", plugin_name.c_str());
+                return -1;
         }
 
-        unlock();
-        registrationInformation.erase(seqNumber);
-}
-
-unsigned int IPCManager::requestApplicationUnregistration(
-		const ApplicationProcessNamingInformation& applicationName,
-		const ApplicationProcessNamingInformation& DIFName) {
-        ApplicationRegistration * applicationRegistration;
-        bool found = false;
-
-        lock();
-        applicationRegistration = getApplicationRegistration(applicationName);
-        if (!applicationRegistration){
-                unlock();
-                throw ApplicationUnregistrationException(
-                                IPCManager::application_not_registered_error);
-        }
-
-        std::list<ApplicationProcessNamingInformation>::const_iterator iterator;
-        for (iterator = applicationRegistration->DIFNames.begin();
-                        iterator != applicationRegistration->DIFNames.end();
-                        ++iterator) {
-                if (*iterator == DIFName) {
-                        found = true;
+        // Look for all the policy-sets published by the plugin
+        // Note: Here we assume the plugin name is used as the "name"
+        // argument in the psFactoryPublish() calls.
+        for (std::vector<PsFactory>::iterator
+                it = ae_policy_factories.begin();
+                        it != ae_policy_factories.end(); it++) {
+                if (it->plugin_name == plugin_name) {
+                        if (it->refcnt > 0) {
+                                LOG_ERR("Cannot unload plugin %s: it is "
+                                                "in use", plugin_name.c_str());
+                                return -1;
+                        }
+                        unpublish_list.push_back(it);
                 }
         }
 
-        if (!found) {
-                unlock();
-                throw ApplicationUnregistrationException(
-                                IPCManager::application_not_registered_error);
+        // Unpublish all the policy sets published by this plugin
+        for (unsigned int i = 0; i < unpublish_list.size(); i++) {
+                psFactoryUnpublish(unpublish_list[i]->info);
         }
 
-        ApplicationRegistrationInformation appRegInfo;
-        appRegInfo.appName = applicationName;
-        appRegInfo.difName = DIFName;
+        /* Unload the plugin only if */
+        dlclose(mit->second);
+        plugins_handles.erase(mit);
 
-#if STUB_API
-        registrationInformation[0] = appRegInfo;
-        unlock();
-	return 0;
-#else
-	AppUnregisterApplicationRequestMessage message;
-	message.setApplicationName(applicationName);
-	message.setDifName(DIFName);
-	message.setRequestMessage(true);
+        return 0;
+}
 
-	try{
-	        rinaManager->sendMessage(&message, true);
-	}catch(NetlinkException &e){
-	        unlock();
-	        throw ApplicationUnregistrationException(e.what());
+//Class Application Process
+ApplicationProcess::~ApplicationProcess()
+{
+	entities.deleteValues();
+}
+
+const std::string& ApplicationProcess::get_name() const
+{
+	return name_;
+}
+
+const std::string& ApplicationProcess::get_instance() const
+{
+	return instance_;
+}
+
+void ApplicationProcess::add_entity(ApplicationEntity * entity)
+{
+	if (!entity) {
+		LOG_ERR("Bogus entity passed, returning");
+		return;
 	}
 
-	registrationInformation[message.getSequenceNumber()] =
-	                appRegInfo;
-	unlock();
-	return message.getSequenceNumber();
-#endif
-
+	entity->set_application_process(this);
+	entities.put(entity->get_name(), entity);
 }
 
-void IPCManager::appUnregistrationResult(unsigned int seqNumber, bool success) {
-        ApplicationRegistrationInformation appRegInfo;
-
-        lock();
-
-        try {
-                appRegInfo = getRegistrationInfo(seqNumber);
-        } catch (IPCException &e){
-                unlock();
-                throw ApplicationUnregistrationException(
-                                "Pending unregistration not found");
-        }
-
-       registrationInformation.erase(seqNumber);
-       ApplicationRegistration * applicationRegistration;
-
-       applicationRegistration = getApplicationRegistration(
-                       appRegInfo.appName);
-       if (!applicationRegistration){
-               unlock();
-               throw ApplicationUnregistrationException(
-                       IPCManager::application_not_registered_error);
-       }
-
-       if (!success) {
-    	   return;
-       }
-
-       std::list<ApplicationProcessNamingInformation>::const_iterator iterator;
-       for (iterator = applicationRegistration->DIFNames.begin();
-                       iterator != applicationRegistration->DIFNames.end();
-                       ++iterator) {
-               if (*iterator == appRegInfo.difName) {
-                       applicationRegistration->removeDIFName(
-                                       appRegInfo.difName);
-                       if (applicationRegistration->DIFNames.size() == 0) {
-                               applicationRegistrations.erase(
-                                       appRegInfo.appName);
-                       }
-
-                       break;
-               }
-       }
-
-       unlock();
-}
-
-unsigned int IPCManager::requestFlowAllocation(
-		const ApplicationProcessNamingInformation& localAppName,
-		const ApplicationProcessNamingInformation& remoteAppName,
-		const FlowSpecification& flowSpec) {
-        return internalRequestFlowAllocation(
-                        localAppName, remoteAppName, flowSpec, 0);
-}
-
-unsigned int IPCManager::requestFlowAllocationInDIF(
-                const ApplicationProcessNamingInformation& localAppName,
-                const ApplicationProcessNamingInformation& remoteAppName,
-                const ApplicationProcessNamingInformation& difName,
-                const FlowSpecification& flowSpec) {
-        return internalRequestFlowAllocationInDIF(localAppName,
-                        remoteAppName, difName, 0, flowSpec);
-}
-
-Flow * IPCManager::commitPendingFlow(unsigned int sequenceNumber, int portId,
-                        const ApplicationProcessNamingInformation& DIFName) {
-        Flow * flow;
-
-        lock();
-        flow = getPendingFlow(sequenceNumber);
-        if (flow == 0) {
-                unlock();
-                throw FlowDeallocationException(IPCManager::unknown_flow_error);
-        }
-
-        pendingFlows.erase(sequenceNumber);
-
-        flow->setPortId(portId);
-        flow->setDIFName(DIFName);
-        allocatedFlows[portId] = flow;
-        unlock();
-
-        return flow;
-}
-
-FlowInformation IPCManager::withdrawPendingFlow(unsigned int sequenceNumber) {
-        std::map<int, Flow*>::iterator iterator;
-        Flow * flow;
-        FlowInformation flowInformation;
-
-        lock();
-        flow = getPendingFlow(sequenceNumber);
-        if (flow == 0) {
-                unlock();
-                throw FlowDeallocationException(IPCManager::unknown_flow_error);
-        }
-
-        pendingFlows.erase(sequenceNumber);
-        flowInformation = flow->getFlowInformation();
-        delete flow;
-        unlock();
-
-        return flowInformation;
-}
-
-Flow * IPCManager::allocateFlowResponse(
-		const FlowRequestEvent& flowRequestEvent, int result,
-		bool notifySource) {
-        return internalAllocateFlowResponse(
-                        flowRequestEvent, result, notifySource, 0);
-}
-
-unsigned int IPCManager::requestFlowDeallocation(int portId) {
-        Flow * flow;
-
-        lock();
-        flow = getAllocatedFlow(portId);
-        if (flow == 0) {
-                unlock();
-                throw FlowDeallocationException(
-                                IPCManager::unknown_flow_error);
-        }
-
-        if (flow->getState() != FLOW_ALLOCATED) {
-                unlock();
-                throw FlowDeallocationException(
-                                IPCManager::wrong_flow_state);
-        }
-
-#if STUB_API
-        flow->setState(FLOW_DEALLOCATION_REQUESTED);
-        unlock();
-	return 0;
-#else
-
-	LOG_DBG("Application %s requested to deallocate flow with port-id %d",
-		flow->getLocalApplicationName().processName.c_str(),
-		flow->getPortId());
-	AppDeallocateFlowRequestMessage message;
-	message.setApplicationName(flow->getLocalApplicationName());
-	message.setPortId(flow->getPortId());
-	message.setRequestMessage(true);
-
-	try{
-	        rinaManager->sendMessage(&message, true);
-	}catch(NetlinkException &e){
-	        unlock();
-	        throw FlowDeallocationException(e.what());
+ApplicationEntity * ApplicationProcess::remove_entity(const std::string& name)
+{
+	ApplicationEntity * ae = entities.erase(name);
+	if (ae) {
+		ae->set_application_process(NULL);
 	}
 
-	flow->setState(FLOW_DEALLOCATION_REQUESTED);
-	unlock();
-
-	return message.getSequenceNumber();
-#endif
+	return ae;
 }
 
-void IPCManager::flowDeallocationResult(int portId, bool success) {
-        Flow * flow;
-
-        lock();
-
-        flow = getAllocatedFlow(portId);
-        if (flow == 0) {
-                unlock();
-                throw FlowDeallocationException(
-                                IPCManager::unknown_flow_error);
-        }
-
-        if (flow->getState() != FLOW_DEALLOCATION_REQUESTED) {
-                unlock();
-                throw FlowDeallocationException(
-                                IPCManager::wrong_flow_state);
-        }
-
-        if (success) {
-                allocatedFlows.erase(portId);
-                delete flow;
-        } else {
-                flow->setState(FLOW_ALLOCATED);
-        }
-
-        unlock();
+ApplicationEntity * ApplicationProcess::get_entity(const std::string& name)
+{
+	return entities.find(name);
 }
 
-void IPCManager::flowDeallocated(int portId) {
-	lock();
-
-	Flow * flow = getAllocatedFlow(portId);
-
-	if (flow == 0) {
-		unlock();
-		throw FlowDeallocationException("Unknown flow");
-	}
-
-	allocatedFlows.erase(portId);
-	delete flow;
-
-	unlock();
+std::list<ApplicationEntity*> ApplicationProcess::get_all_entities()
+{
+	return entities.getEntries();
 }
 
-std::vector<Flow *> IPCManager::getAllocatedFlows() {
-	std::vector<Flow *> response;
-
-	lock();
-	for (std::map<int, Flow*>::iterator it = allocatedFlows.begin();
-			it != allocatedFlows.end(); ++it) {
-		response.push_back(it->second);
-	}
-	unlock();
-
-	return response;
+ApplicationEntity * ApplicationProcess::get_ipc_resource_manager()
+{
+	return get_entity(ApplicationEntity::IRM_AE_NAME);
 }
 
-std::vector<ApplicationRegistration *> IPCManager::getRegisteredApplications() {
-	LOG_DBG("IPCManager.getRegisteredApplications called");
-	std::vector<ApplicationRegistration *> response;
-
-	lock();
-	for (std::map<ApplicationProcessNamingInformation,
-			ApplicationRegistration*>::iterator it = applicationRegistrations
-			.begin(); it != applicationRegistrations.end(); ++it) {
-		response.push_back(it->second);
-	}
-	unlock();
-
-	return response;
+ApplicationEntity * ApplicationProcess::get_rib_daemon()
+{
+	return get_entity(ApplicationEntity::RIB_DAEMON_AE_NAME);
 }
 
-Singleton<IPCManager> ipcManager;
-
-/* CLASS APPLICATION UNREGISTERED EVENT */
-
-ApplicationUnregisteredEvent::ApplicationUnregisteredEvent(
-		const ApplicationProcessNamingInformation& appName,
-		const ApplicationProcessNamingInformation& DIFName,
-		unsigned int sequenceNumber) :
-				IPCEvent(APPLICATION_UNREGISTERED_EVENT,
-						sequenceNumber) {
-	this->applicationName = appName;
-	this->DIFName = DIFName;
+ApplicationEntity * ApplicationProcess::get_enrollment_task()
+{
+	return get_entity(ApplicationEntity::ENROLLMENT_TASK_AE_NAME);
 }
 
-/* CLASS APPLICATION REGISTRATION CANCELED EVENT*/
-AppRegistrationCanceledEvent::AppRegistrationCanceledEvent(int code,
-                const std::string& reason,
-                const ApplicationProcessNamingInformation& difName,
-                unsigned int sequenceNumber):
-			IPCEvent(
-				APPLICATION_REGISTRATION_CANCELED_EVENT,
-				sequenceNumber){
-        this->code = code;
-        this->reason = reason;
-        this->difName = difName;
-}
-
-/* CLASS AllocateFlowRequestResultEvent EVENT*/
-AllocateFlowRequestResultEvent::AllocateFlowRequestResultEvent(
-                        const ApplicationProcessNamingInformation& appName,
-                        const ApplicationProcessNamingInformation& difName,
-                        int portId,
-                        unsigned int sequenceNumber):
-                                IPCEvent(
-                                         ALLOCATE_FLOW_REQUEST_RESULT_EVENT,
-                                         sequenceNumber){
-        this->sourceAppName = appName;
-        this->difName = difName;
-        this->portId = portId;
-}
-
-/* CLASS Deallocate Flow Response EVENT*/
-DeallocateFlowResponseEvent::DeallocateFlowResponseEvent(
-                        const ApplicationProcessNamingInformation& appName,
-                        int portId, int result,
-                        unsigned int sequenceNumber):
-                                BaseResponseEvent(result,
-                                         DEALLOCATE_FLOW_RESPONSE_EVENT,
-                                         sequenceNumber){
-        this->appName = appName;
-        this->portId = portId;
-}
-
-/* CLASS Get DIF Properties Response EVENT*/
-GetDIFPropertiesResponseEvent::GetDIFPropertiesResponseEvent(
-                        const ApplicationProcessNamingInformation& appName,
-                        const std::list<DIFProperties>& difProperties,
-                        int result,
-                        unsigned int sequenceNumber):
-                                BaseResponseEvent(result,
-                                         GET_DIF_PROPERTIES_RESPONSE_EVENT,
-                                         sequenceNumber){
-        this->applicationName = appName;
-        this->difProperties = difProperties;
+ApplicationEntity * ApplicationProcess::get_internal_event_manager()
+{
+	return get_entity(ApplicationEntity::INTERNAL_EVENT_MANAGER_AE_NAME);
 }
 
 }

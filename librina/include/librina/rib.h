@@ -25,10 +25,19 @@
 
 #ifdef __cplusplus
 
-#include "common.h"
+#include "application.h"
 #include "cdap.h"
 
 namespace rina {
+
+class RIBNamingConstants {
+public:
+	static const std::string DAF;
+	static const std::string DIF_REGISTRATIONS;
+	static const std::string IRM;
+	static const std::string N_MINUS_ONE_FLOWS;
+	static const std::string SEPARATOR;
+};
 
 /// Encodes and Decodes an object to/from bytes)
 class EncoderInterface {
@@ -277,8 +286,9 @@ public:
 };
 
 /// Interface that provides the RIB Daemon API
-class IRIBDaemon {
+class IRIBDaemon : public ApplicationEntity {
 public:
+	IRIBDaemon() : ApplicationEntity(ApplicationEntity::RIB_DAEMON_AE_NAME) { };
         virtual ~IRIBDaemon(){};
 
         /// Add an object to the RIB
@@ -884,6 +894,28 @@ private:
         void sendMessageToProcess(const rina::CDAPMessage & cdapMessage, const RemoteProcessId& remote_id,
                         ICDAPResponseMessageHandler * response_handler);
 
+        void assign_invoke_id_if_needed(CDAPMessage * message, bool invoke_id);
+
+        void remote_operation_on_object(rina::CDAPMessage::Opcode opcode,
+        		const std::string& object_class, const std::string& object_name,
+        		int scope, const RemoteProcessId& remote_id,
+        		ICDAPResponseMessageHandler * response_handler);
+
+        void remote_operation_on_object_with_value(rina::CDAPMessage::Opcode opcode,
+        		const std::string& object_class, const std::string& object_name,
+        		RIBObjectValue& object_value, int scope,
+        		const RemoteProcessId& remote_id,
+        		ICDAPResponseMessageHandler * response_handler);
+
+        void remote_operation_response_with_value(rina::CDAPMessage::Opcode opcode,
+        		const std::string& object_class, const std::string& object_name,
+                        RIBObjectValue& object_value, int result, const std::string result_reason,
+                        int invoke_id, const RemoteProcessId& remote_id, rina::CDAPMessage::Flags flags);
+
+        void remote_operation_response(rina::CDAPMessage::Opcode opcode,
+                		const std::string& object_class, const std::string& object_name,
+                                int result, const std::string result_reason,
+                                int invoke_id, const RemoteProcessId& remote_id);
 };
 
 ///Object exchanged between applications processes that

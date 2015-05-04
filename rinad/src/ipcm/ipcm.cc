@@ -27,6 +27,7 @@
 
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
+#include <librina/plugin-info.h>
 
 #define RINA_PREFIX "ipcm"
 #include <librina/logs.h>
@@ -325,7 +326,7 @@ IPCManager_::assign_to_dif(Promise* promise, const unsigned short ipcp_id,
 		if(!ipcp){
 			ss << "Invalid IPCP id "<< ipcp_id;
 			FLUSH_LOG(ERR, ss);
-			throw rina::Exception();
+			throw rina::AssignToDIFException();
 		}
 
 		//Auto release the write lock
@@ -339,7 +340,15 @@ IPCManager_::assign_to_dif(Promise* promise, const unsigned short ipcp_id,
 			ss << "Cannot find properties for DIF "
 				<< dif_name.toString();
 			FLUSH_LOG(ERR, ss);
-			throw rina::Exception();
+			throw rina::AssignToDIFException();
+		}
+
+		if (is_any_ipcp_assigned_to_dif(dif_name)) {
+			ss << "There is already an IPCP assigned to DIF "
+				<< dif_name.toString()
+				<< " in this system.";
+			FLUSH_LOG(ERR, ss);
+			throw rina::AssignToDIFException();
 		}
 
 		// Fill in the DIFConfiguration object.
@@ -389,6 +398,15 @@ IPCManager_::assign_to_dif(Promise* promise, const unsigned short ipcp_id,
 			}
 			nsm_config.addressing_configuration_ = address_config;
 
+                        // Copy the por-component policy set names from the configuration
+                        // structure to the dif_config struct
+                        for (map<string, string>::iterator
+                                        it = dif_props.policySets.begin();
+                                        it != dif_props.policySets.end(); it++) {
+                                dif_config.policy_sets.push_back(
+                                                rina::Parameter(it->first, it->second));
+                        }
+
 			found = dif_props.
 				lookup_ipcp_address(ipcp->get_name(),
 						address);
@@ -433,7 +451,7 @@ IPCManager_::assign_to_dif(Promise* promise, const unsigned short ipcp_id,
 			ss << "Unable to allocate memory for the transaction object. Out of memory! "
 				<< dif_name.toString();
 			FLUSH_LOG(ERR, ss);
-			throw rina::Exception();
+			throw rina::AssignToDIFException();
 		}
 
 		//Store transaction
@@ -441,7 +459,7 @@ IPCManager_::assign_to_dif(Promise* promise, const unsigned short ipcp_id,
 			ss << "Unable to add transaction; out of memory? "
 				<< dif_name.toString();
 			FLUSH_LOG(ERR, ss);
-			throw rina::Exception();
+			throw rina::AssignToDIFException();
 		}
 
 		ipcp->assignToDIF(dif_info, trans->tid);
@@ -1120,6 +1138,15 @@ IPCManager_::plugin_load(Promise* promise, const unsigned short ipcp_id,
 	}
 
 	return IPCM_PENDING;
+}
+
+ipcm_res_t
+IPCManager_::plugin_get_info(const std::string& plugin_name,
+			     std::list<rina::PsInfo>& result)
+{
+	int ret = rina::plugin_get_info(plugin_name, IPCPPLUGINSDIR, result);
+
+	return ret ? IPCM_FAILURE : IPCM_SUCCESS;
 }
 
 ipcm_res_t

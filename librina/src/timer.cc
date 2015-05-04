@@ -21,7 +21,7 @@
 
 #include <cerrno>
 
-#define RINA_PREFIX "timer"
+#define RINA_PREFIX "librina.timer"
 
 #include "librina/logs.h"
 #include "librina/timer.h"

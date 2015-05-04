@@ -45,7 +45,7 @@ void Server::run() {
 
   for (;;) {
     IPCEvent* event = ipcEventProducer->eventWait();
-    Flow *flow = 0;
+    FlowInformation flow;
     unsigned int port_id;
     DeallocateFlowResponseEvent *resp = 0;
 
@@ -70,8 +70,8 @@ void Server::run() {
       case FLOW_ALLOCATION_REQUESTED_EVENT:
         flow = ipcManager->allocateFlowResponse(
             *dynamic_cast<FlowRequestEvent*>(event), 0, true);
-        LOG_INFO("New flow allocated [port-id = %d]", flow->getPortId());
-        startWorker(flow);
+        LOG_INFO("New flow allocated [port-id = %d]", flow.portId);
+        startWorker(flow.portId);
         break;
 
       case FLOW_DEALLOCATED_EVENT:
@@ -95,16 +95,16 @@ void Server::run() {
   }
 }
 
-void Server::startWorker(Flow *flow) {
-  void (Server::*server_function)(Flow *flow);
+void Server::startWorker(int port_id) {
+  void (Server::*server_function)(int port_id);
 
   server_function = &Server::serveEchoFlow;
 
-  thread t(server_function, this, flow);
+  thread t(server_function, this, port_id);
   t.detach();
 }
 
-bool Server::cacep(Flow *flow) {
+bool Server::cacep(int port_id) {
   rina::WireMessageProviderFactory wire_factory;
   rina::CDAPSessionManagerFactory factory;
   char buffer[max_sdu_size_in_bytes], *bytes_read;
@@ -115,7 +115,7 @@ bool Server::cacep(Flow *flow) {
 
   // M_CONNECT
   try {
-    n_bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
+    n_bytes_read = ipcManager->readSDU(port_id, buffer, max_sdu_size_in_bytes);
   } catch (rina::IPCException &e) {
     std::cout << "CACEP not stablished. Exception while reading SDU: "
               << e.what() << std::endl;
@@ -124,7 +124,7 @@ bool Server::cacep(Flow *flow) {
   bytes_read = new char[n_bytes_read];
   memcpy(bytes_read, buffer, n_bytes_read);
   SerializedObject ser_rec_m(bytes_read, n_bytes_read);
-  m_rcv = manager_->messageReceived(ser_rec_m, flow->getPortId());
+  m_rcv = manager_->messageReceived(ser_rec_m, port_id);
   std::cout << "CACEP stablished" << std::endl;
 
   //M_CONNECT_R
@@ -136,9 +136,9 @@ bool Server::cacep(Flow *flow) {
                                                       "1", "B",
                                                       m_rcv->invoke_id_);
   const SerializedObject *ser_sent_m = manager_->encodeNextMessageToBeSent(
-      *m_sent, flow->getPortId());
-  manager_->messageSent(*m_sent, flow->getPortId());
-  flow->writeSDU(ser_sent_m->message_, ser_sent_m->size_);
+      *m_sent, port_id);
+  manager_->messageSent(*m_sent, port_id);
+  ipcManager->writeSDU(port_id, ser_sent_m->message_, ser_sent_m->size_);
 
   delete m_rcv;
   delete ser_sent_m;
@@ -146,23 +146,23 @@ bool Server::cacep(Flow *flow) {
   return true;
 }
 
-bool Server::release(rina::Flow *flow, int invoke_id) {
+bool Server::release(int port_id, int invoke_id) {
   const CDAPMessage *m_sent;
 
   //M_CONNECT_R
   m_sent = manager_->getReleaseConnectionResponseMessage(
       CDAPMessage::NONE_FLAGS, 1, "Ok", invoke_id);
   const SerializedObject *ser_sent_m = manager_->encodeNextMessageToBeSent(
-      *m_sent, flow->getPortId());
-  manager_->messageSent(*m_sent, flow->getPortId());
-  flow->writeSDU(ser_sent_m->message_, ser_sent_m->size_);
+      *m_sent, port_id);
+  manager_->messageSent(*m_sent, port_id);
+  ipcManager->writeSDU(port_id, ser_sent_m->message_, ser_sent_m->size_);
   std::cout << "Connection released and RELEASE response sent"<<std::endl;
   delete ser_sent_m;
   delete m_sent;
   return true;
 }
 
-void Server::serveEchoFlow(Flow *flow) {
+void Server::serveEchoFlow(int port_id) {
   char buffer[max_sdu_size_in_bytes], *bytes_read;
   int n_bytes_read;
   const CDAPMessage *m_sent, *m_rcv;
@@ -173,7 +173,7 @@ void Server::serveEchoFlow(Flow *flow) {
   // Setup a timer if dealloc_wait option is set */
   if (dw > 0) {
     event.sigev_notify = SIGEV_THREAD;
-    event.sigev_value.sival_ptr = flow;
+    event.sigev_value.sival_int = port_id;
     event.sigev_notify_function = &destroyFlow;
 
     timer_create(CLOCK_REALTIME, &event, &timer_id);
@@ -185,13 +185,13 @@ void Server::serveEchoFlow(Flow *flow) {
 
     timer_settime(timer_id, 0, &itime, NULL);
   }
-  cacep(flow);
+  cacep(port_id);
 
   try {
     for (;;) {
       // Receive READ request
       try {
-        n_bytes_read = flow->readSDU(buffer, max_sdu_size_in_bytes);
+        n_bytes_read = ipcManager->readSDU(port_id, buffer, max_sdu_size_in_bytes);
       } catch (rina::IPCException &e) {
         std::cout << "Exception while reading SDU: " << e.what() << std::endl;
         break;
@@ -199,12 +199,12 @@ void Server::serveEchoFlow(Flow *flow) {
       bytes_read = new char[n_bytes_read];
       memcpy(bytes_read, buffer, n_bytes_read);
       SerializedObject ser_rec_m(bytes_read, n_bytes_read);
-      m_rcv = manager_->messageReceived(ser_rec_m, flow->getPortId());
+      m_rcv = manager_->messageReceived(ser_rec_m, port_id);
       if (m_rcv->op_code_ == CDAPMessage::M_RELEASE)
       {
         std::cout << "Received RELEASE request with invoke id " << m_rcv->invoke_id_
                   << std::endl;
-        release(flow, m_rcv->invoke_id_);
+        release(port_id, m_rcv->invoke_id_);
         delete m_rcv;
         break;
       }
@@ -219,9 +219,9 @@ void Server::serveEchoFlow(Flow *flow) {
                                                       "good",
                                                       m_rcv->invoke_id_);
       const SerializedObject *ser_sent_m = manager_->encodeNextMessageToBeSent(
-          *m_sent, flow->getPortId());
-      manager_->messageSent(*m_sent, flow->getPortId());
-      flow->writeSDU(ser_sent_m->message_, ser_sent_m->size_);
+          *m_sent, port_id);
+      manager_->messageSent(*m_sent, port_id);
+      ipcManager->writeSDU(port_id, ser_sent_m->message_, ser_sent_m->size_);
 
       delete m_rcv;
       delete ser_sent_m;
@@ -241,15 +241,15 @@ void Server::serveEchoFlow(Flow *flow) {
 
 }
 
-void Server::destroyFlow(sigval_t val) {
-  Flow *flow = (Flow *) val.sival_ptr;
+void Server::destroyFlow(sigval_t val)
+{
+        int port_id = val.sival_int;
 
-  if (flow->getState() != FlowState::FLOW_ALLOCATED)
-    return;
-
-  int port_id = flow->getPortId();
-
-  // TODO here we should store the seqnum (handle) returned by
-  // requestFlowDeallocation() and match it in the event loop
-  ipcManager->requestFlowDeallocation(port_id);
+        // TODO here we should store the seqnum (handle) returned by
+        // requestFlowDeallocation() and match it in the event loop
+        try {
+        	ipcManager->requestFlowDeallocation(port_id);
+        } catch(rina::Exception &e) {
+        	//Ignore, flow was already deallocated
+        }
 }

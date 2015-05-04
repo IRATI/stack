@@ -23,7 +23,7 @@
 #include <sstream>
 #include <unistd.h>
 
-#define RINA_PREFIX "core"
+#define RINA_PREFIX "librina.core"
 
 #include "librina/logs.h"
 #include "core.h"

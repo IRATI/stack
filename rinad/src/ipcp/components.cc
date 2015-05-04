@@ -22,12 +22,16 @@
 #include <sstream>
 #include <iostream>
 
-#define RINA_PREFIX "ipcp-components"
-#include <librina/logs.h>
-
 #include "components.h"
 
 namespace rinad {
+
+const std::string ISecurityManager::SECURITY_MANAGER_AE_NAME = "security-manager";
+const std::string IResourceAllocator::RESOURCE_ALLOCATOR_AE_NAME = "resource-allocator";
+const std::string INamespaceManager::NAMESPACE_MANAGER_AE_NAME = "namespace-manager";
+const std::string IRoutingComponent::ROUTING_COMPONENT_AE_NAME = "routing";
+const std::string IFlowAllocator::FLOW_ALLOCATOR_AE_NAME = "flow-allocator";
+const std::string IEnrollmentTask::ENROLLMENT_TASK_AE_NAME = "enrollment task";
 
 //	CLASS EnrollmentRequest
 EnrollmentRequest::EnrollmentRequest(rina::Neighbor * neighbor) {
@@ -55,6 +59,31 @@ Flow::Flow() {
 	source = false;
 	state = EMPTY;
 	access_control = 0;
+}
+
+Flow::Flow(const Flow& flow) {
+	source_naming_info = flow.source_naming_info;
+	destination_naming_info = flow.destination_naming_info;
+	flow_specification = flow.flow_specification;
+	source_port_id = flow.source_port_id;
+	destination_port_id = flow.destination_port_id;
+	source_address = flow.source_address;
+	destination_address = flow.destination_address;
+	current_connection_index = flow.current_connection_index;
+	max_create_flow_retries = flow.max_create_flow_retries;
+	create_flow_retries = flow.create_flow_retries;
+	hop_count = flow.hop_count;
+	source = flow.source;
+	state = flow.state;
+	access_control = 0;
+
+	std::list<rina::Connection*>::const_iterator it;
+	rina::Connection * current = 0;
+	for (it = flow.connections.begin();
+			it != flow.connections.end(); ++it) {
+		current = *it;
+		connections.push_back(new rina::Connection(*current));
+	}
 }
 
 Flow::~Flow() {
@@ -198,11 +227,13 @@ void SimpleSetMemberIPCPRIBObject::deleteObject(const void* objectValue)
 }
 
 //Class IPCProcess
-IPCProcess::IPCProcess()
+IPCProcess::IPCProcess(const std::string& name, const std::string& instance)
+			: rina::ApplicationProcess(name, instance)
 {
 	delimiter_ = 0;
 	encoder_ = 0;
 	cdap_session_manager_ = 0;
+	internal_event_manager_ = 0;
 	enrollment_task_ = 0;
 	flow_allocator_ = 0;
 	namespace_manager_ = 0;
@@ -211,77 +242,5 @@ IPCProcess::IPCProcess()
 	rib_daemon_ = 0;
 	routing_component_ = 0;
 }
-
-//Class IPCProcessComponent
-int IPCProcessComponent::select_policy_set_common(IPCProcess * ipcp,
-                                           const std::string& component,
-                                           const std::string& path,
-                                           const std::string& ps_name)
-{
-        IPolicySet *candidate = NULL;
-
-        if (path != std::string()) {
-                LOG_ERR("No subcomponents to address");
-                return -1;
-        }
-
-        if (!ipcp) {
-                LOG_ERR("bug: NULL ipcp reference");
-                return -1;
-        }
-
-        if (ps_name == selected_ps_name) {
-                LOG_INFO("policy set %s already selected", ps_name.c_str());
-                return 0;
-        }
-
-        candidate = ipcp->psCreate(component, ps_name, this);
-        if (!candidate) {
-                LOG_ERR("failed to allocate instance of policy set %s", ps_name.c_str());
-                return -1;
-        }
-
-        if (ps) {
-                // Remove the old one.
-                ipcp->psDestroy(component, selected_ps_name, ps);
-        }
-
-        // Install the new one.
-        ps = candidate;
-        selected_ps_name = ps_name;
-        LOG_INFO("Policy-set %s selected for component %s",
-                        ps_name.c_str(), component.c_str());
-
-        return ps ? 0 : -1;
-}
-
-int IPCProcessComponent::set_policy_set_param_common(IPCProcess * ipcp,
-                                              const std::string& path,
-                                              const std::string& param_name,
-                                              const std::string& param_value)
-{
-        LOG_DBG("set_policy_set_param(%s, %s) called",
-                param_name.c_str(), param_value.c_str());
-
-        if (!ipcp) {
-                LOG_ERR("bug: NULL ipcp reference");
-                return -1;
-        }
-
-        if (path == selected_ps_name) {
-                // This request is for the currently selected
-                // policy set, forward to it
-                return ps->set_policy_set_param(param_name, param_value);
-        } else if (path != std::string()) {
-                LOG_ERR("Invalid component address '%s'", path.c_str());
-                return -1;
-        }
-
-        // This request is for the component itself
-        LOG_ERR("No such parameter '%s' exists", param_name.c_str());
-
-        return -1;
-}
-
 
 }

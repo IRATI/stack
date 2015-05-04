@@ -231,17 +231,36 @@ static void enable_write(struct cwq * cwq,
         return;
 }
 
+int dt_pdu_send(struct dt *  dt,
+                struct rmt * rmt,
+                address_t    address,
+                qos_id_t     qos_id,
+                struct pdu * pdu)
+{
+        struct efcp * efcp;
+
+        if (!dt)
+                return -1;
+
+        efcp = dt_efcp(dt);
+        if (!efcp)
+                return -1;
+
+        return common_efcp_pdu_send(efcp, rmt, address, qos_id, pdu);
+}
+EXPORT_SYMBOL(dt_pdu_send);
+
 void cwq_deliver(struct cwq * queue,
                  struct dt *  dt,
                  struct rmt * rmt,
                  address_t    address,
                  qos_id_t     qos_id)
 {
-        struct rtxq * rtxq;
-        struct dtcp * dtcp;
-        struct dtp *  dtp;
-        struct pdu  * tmp;
-        bool rtx_ctrl;
+        struct rtxq *           rtxq;
+        struct dtcp *           dtcp;
+        struct dtp *            dtp;
+        struct pdu  *           tmp;
+        bool                    rtx_ctrl;
 
         if (!queue)
                 return;
@@ -295,11 +314,7 @@ void cwq_deliver(struct cwq * queue,
                                           pci_sequence_number_get(pci)))
                         LOG_ERR("Problems setting sender left window edge");
 
-                if (rmt_send(rmt,
-                             address,
-                             qos_id,
-                             pdu))
-                        LOG_ERR("Problems sending PDU");
+                dt_pdu_send(dt, rmt, address, qos_id, pdu);
         }
         spin_unlock(&queue->lock);
 
@@ -473,6 +488,7 @@ static int rtxqueue_entries_ack(struct rtxqueue * q,
 }
 
 static int rtxqueue_entries_nack(struct rtxqueue * q,
+                                 struct dt *       dt,
                                  struct rmt *      rmt,
                                  seq_num_t         seq_num,
                                  uint_t            data_rtx_max)
@@ -481,6 +497,8 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
         struct pdu *        tmp;
 
         ASSERT(q);
+        ASSERT(dt);
+        ASSERT(rmt);
 
         /*
          * FIXME: this should be change since we are sending in inverse order
@@ -498,13 +516,12 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
                         }
 
                         tmp = pdu_dup_ni(cur->pdu);
-                        if (rmt_send(rmt,
-                                     pci_destination(pdu_pci_get_ro(tmp)),
-                                     pci_qos_id(pdu_pci_get_ro(tmp)),
-                                     tmp)) {
-                                LOG_ERR("Could not send NACKed PDU to RMT");
+                        if (dt_pdu_send(dt,
+                                        rmt,
+                                        pci_destination(pdu_pci_get_ro(tmp)),
+                                        pci_qos_id(pdu_pci_get_ro(tmp)),
+                                        tmp))
                                 continue;
-                        }
                 } else
                         return 0;
         }
@@ -580,6 +597,7 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
 
 static int rtxqueue_rtx(struct rtxqueue * q,
                         unsigned int      tr,
+                        struct dt *       dt,
                         struct rmt *      rmt,
                         uint_t            data_rtx_max)
 {
@@ -587,6 +605,10 @@ static int rtxqueue_rtx(struct rtxqueue * q,
         struct pdu *        tmp;
         seq_num_t           seq = 0;
         unsigned long       tr_jiffies;
+
+        ASSERT(q);
+        ASSERT(dt);
+        ASSERT(rmt);
 
         tr_jiffies = msecs_to_jiffies(tr);
 
@@ -606,13 +628,12 @@ static int rtxqueue_rtx(struct rtxqueue * q,
                                 continue;
                         }
                         tmp = pdu_dup_ni(cur->pdu);
-                        if (rmt_send(rmt,
-                                     pci_destination(pdu_pci_get_ro(tmp)),
-                                     pci_qos_id(pdu_pci_get_ro(tmp)),
-                                     tmp)) {
-                                LOG_ERR("Could not send rtxed PDU to RMT");
+                        if (dt_pdu_send(dt,
+                                        rmt,
+                                        pci_destination(pdu_pci_get_ro(tmp)),
+                                        pci_qos_id(pdu_pci_get_ro(tmp)),
+                                        tmp))
                                 continue;
-                        }
                 } else {
                         LOG_DBG("RTX timer: from here PDUs still have time,"
                                 "finishing...");
@@ -646,12 +667,12 @@ static void rtx_timer_func(void * data)
         struct rtxq *        q;
         struct dtcp_config * dtcp_cfg;
         unsigned int         tr;
-        unsigned int data_retransmit_max;
+        unsigned int         data_retransmit_max;
 
         LOG_DBG("RTX timer triggered...");
 
         q = (struct rtxq *) data;
-        if (!q) {
+        if (!q || !q->rmt || !q->parent) {
                 LOG_ERR("No RTXQ to work with");
                 return;
         }
@@ -672,6 +693,7 @@ static void rtx_timer_func(void * data)
         spin_lock(&q->lock);
         if (rtxqueue_rtx(q->queue,
                          tr,
+                         q->parent,
                          q->rmt,
                          data_retransmit_max))
                 LOG_ERR("RTX failed");
@@ -838,9 +860,9 @@ int rtxq_nack(struct rtxq * q,
               unsigned int  tr)
 {
         struct dtcp_config * dtcp_cfg;
-        unsigned int data_retransmit_max;
+        unsigned int         data_retransmit_max;
 
-        if (!q)
+        if (!q || !q->parent || !q->rmt)
                 return -1;
 
         dtcp_cfg = dtcp_config_get(dt_dtcp(q->parent));
@@ -854,6 +876,7 @@ int rtxq_nack(struct rtxq * q,
 
         spin_lock(&q->lock);
         rtxqueue_entries_nack(q->queue,
+                              q->parent,
                               q->rmt,
                               seq_num,
                               data_retransmit_max);
@@ -867,3 +890,47 @@ int rtxq_nack(struct rtxq * q,
 
         return 0;
 }
+
+int common_efcp_pdu_send(struct efcp * efcp,
+        		 struct rmt *  rmt,
+        	         address_t     address,
+                         qos_id_t      qos_id,
+			 struct pdu *  pdu)
+{
+        const struct pci *	pci;
+	struct efcp_container * efcpc;
+	cep_id_t		dest_cep_id;
+
+	if (!pdu)
+	        return -1;
+
+	pci = pdu_pci_get_ro(pdu);
+	if (!pci)
+		return -1;
+
+	/* Remote flow case */
+	if (pci_source(pci) != pci_destination(pci)) {
+	        if (rmt_send(rmt, address, qos_id, pdu)) {
+	                LOG_ERR("Problems sending PDU to RMT");
+	                return -1;
+	        }
+	        return 0;
+	}
+
+	/* Local flow case */
+	dest_cep_id = pci_cep_destination(pci);
+	efcpc = efcp_container_get(efcp);
+	if (!efcpc) {
+	        LOG_ERR("Could not retrieve the EFCP container in"
+	        "loopback operation");
+	        pdu_destroy(pdu);
+	        return -1;
+ 	}
+	if (efcp_container_receive(efcpc, dest_cep_id, pdu)) {
+	        LOG_ERR("Problems sending PDU to loopback EFCP");
+	        return -1;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(common_efcp_pdu_send);

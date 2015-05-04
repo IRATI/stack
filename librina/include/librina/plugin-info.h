@@ -1,7 +1,7 @@
 /*
- * IPC Process - Policy
+ * Plugin information retrieval from manifest manifest
  *
- *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Vincenzo Maffione     <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,8 +17,21 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+#ifndef __PLUGIN_INFO__
+#define __PLUGIN_INFO__
 
-#ifndef RINAD_IPCP_POLICY_H
-#define RINAD_IPCP_POLICY_H
+#include <list>
+#include <string>
 
-#endif
+#include <librina/common.h>
+#include <librina/application.h>
+
+namespace rina {
+
+int plugin_get_info(const std::string& plugin_name,
+		    const std::string& plugins_path,
+		    std::list<rina::PsInfo>& result);
+
+} // namespace rina
+
+#endif  /* __PLUGIN_INFO__ */

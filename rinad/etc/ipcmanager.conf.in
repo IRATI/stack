@@ -47,7 +47,7 @@
     	"qosIdLength" : 2,
     	"sequenceNumberLength" : 4,
     	"maxPduSize" : 10000,
-    	"maxPduLifetime" : 30
+    	"maxPduLifetime" : 60000
     },
     "qosCubes" : [ {
 		 "name" : "unreliablewithflowcontrol",
@@ -134,6 +134,13 @@
         "declaredDeadIntervalInMs" : 120000,
         "neighborsEnrollerPeriodInMs" : 30000,
         "maxEnrollmentRetries" : 3
-     }
+     },
+     "policySets" : {
+        "security-manager" : "default",
+        "flow-allocator" : "default",
+        "namespace-manager" : "default",
+        "routing" : "link-state",
+        "resource-allocator" : "default"
+    }
   } ]
 }

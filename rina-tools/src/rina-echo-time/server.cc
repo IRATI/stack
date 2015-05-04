@@ -46,10 +46,11 @@ void Server::run()
 {
         applicationRegister();
 
+        rina::FlowInformation flow;
+
         for(;;) {
                 IPCEvent* event = ipcEventProducer->eventWait();
-                Flow *flow = nullptr;
-                unsigned int port_id;
+                int port_id = 0;
                 DeallocateFlowResponseEvent *resp = nullptr;
 
                 if (!event)
@@ -69,8 +70,9 @@ void Server::run()
 
                 case FLOW_ALLOCATION_REQUESTED_EVENT:
                         flow = ipcManager->allocateFlowResponse(*dynamic_cast<FlowRequestEvent*>(event), 0, true);
-                        LOG_INFO("New flow allocated [port-id = %d]", flow->getPortId());
-                        startWorker(flow);
+                        port_id = flow.portId;
+                        LOG_INFO("New flow allocated [port-id = %d]", port_id);
+                        startWorker(port_id);
                         break;
 
                 case FLOW_DEALLOCATED_EVENT:
@@ -95,9 +97,9 @@ void Server::run()
         }
 }
 
-void Server::startWorker(Flow *flow)
+void Server::startWorker(int port_id)
 {
-        void (Server::*server_function)(Flow *flow);
+        void (Server::*server_function)(int port_id);
 
         if (test_type == "ping")
                 server_function = &Server::servePingFlow;
@@ -111,11 +113,11 @@ void Server::startWorker(Flow *flow)
                 return;
         }
 
-        thread t(server_function, this, flow);
+        thread t(server_function, this, port_id);
         t.detach();
 }
 
-void Server::servePingFlow(Flow* flow)
+void Server::servePingFlow(int port_id)
 {
         char *buffer = new char[max_buffer_size];
         struct sigevent event;
@@ -125,7 +127,7 @@ void Server::servePingFlow(Flow* flow)
         // Setup a timer if dealloc_wait option is set */
         if (dw > 0) {
                 event.sigev_notify = SIGEV_THREAD;
-                event.sigev_value.sival_ptr = flow;
+                event.sigev_value.sival_int = port_id;
                 event.sigev_notify_function = &destroyFlow;
 
                 timer_create(CLOCK_REALTIME, &event, &timer_id);
@@ -140,9 +142,10 @@ void Server::servePingFlow(Flow* flow)
 
         try {
                 for(;;) {
-                        int bytes_read = flow->readSDU(buffer,
-                                                        max_buffer_size);
-                        flow->writeSDU(buffer, bytes_read);
+                        int bytes_read = ipcManager->readSDU(port_id,
+                        				     buffer,
+                                                             max_buffer_size);
+                        ipcManager->writeSDU(port_id, buffer, bytes_read);
                         if (dw > 0)
                                 timer_settime(timer_id, 0, &itime, NULL);
                 }
@@ -165,7 +168,7 @@ timespec_diff_us(const struct timespec& before, const struct timespec& later)
                         (later.tv_nsec - before.tv_nsec))/1000;
 }
 
-void Server::servePerfFlow(Flow* flow)
+void Server::servePerfFlow(int port_id)
 {
         unsigned long int us;
         unsigned long tot_us = 0;
@@ -185,7 +188,7 @@ void Server::servePerfFlow(Flow* flow)
         // Setup a timer if dealloc_wait option is set */
         if (dw > 0) {
                 event.sigev_notify = SIGEV_THREAD;
-                event.sigev_value.sival_ptr = flow;
+                event.sigev_value.sival_int = port_id;
                 event.sigev_notify_function = &destroyFlow;
 
                 timer_create(CLOCK_REALTIME, &event, &timer_id);
@@ -201,7 +204,7 @@ void Server::servePerfFlow(Flow* flow)
         try {
                 clock_gettime(CLOCK_REALTIME, &last_timestamp);
                 for(;;) {
-                        sdu_size = flow->readSDU(buffer, max_buffer_size);
+                        sdu_size = ipcManager->readSDU(port_id, buffer, max_buffer_size);
                         if (sdu_size <= 0) {
                                 break;
                         }
@@ -267,14 +270,13 @@ void Server::printPerfStats(unsigned long pkt, unsigned long bytes,
 
 void Server::destroyFlow(sigval_t val)
 {
-        Flow *flow = (Flow *)val.sival_ptr;
-
-        if (flow->getState() != FlowState::FLOW_ALLOCATED)
-                return;
-
-        int port_id = flow->getPortId();
+        int port_id = val.sival_int;
 
         // TODO here we should store the seqnum (handle) returned by
         // requestFlowDeallocation() and match it in the event loop
-        ipcManager->requestFlowDeallocation(port_id);
+        try {
+        	ipcManager->requestFlowDeallocation(port_id);
+        } catch(rina::Exception &e) {
+        	//Ignore, flow was already deallocated
+        }
 }

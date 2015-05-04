@@ -23,7 +23,7 @@
 #include <cerrno>
 #include <unistd.h>
 
-#define RINA_PREFIX "concurrency"
+#define RINA_PREFIX "librina.concurrency"
 
 #include "librina/concurrency.h"
 #include "librina/logs.h"
@@ -381,8 +381,6 @@ Lockable::Lockable() {
 		throw ConcurrentException(
 				ConcurrentException::error_destroy_mutex_attributes);
 	}
-
-	LOG_DBG("Lockable created successfully");
 }
 
 Lockable::~Lockable() throw () {
@@ -454,8 +452,6 @@ ReadWriteLockable::ReadWriteLockable() {
 		throw ConcurrentException(
 				ConcurrentException::error_destroy_rw_lock_attributes);
 	}
-
-	LOG_DBG("Read/Write Lockable created successfully");
 }
 
 ReadWriteLockable::~ReadWriteLockable() throw () {
@@ -548,8 +544,6 @@ ConditionVariable::ConditionVariable():Lockable() {
 		throw ConcurrentException(
 				ConcurrentException::error_destroy_cond_attributes);
 	}
-
-	LOG_DBG("Condition variable created successfully");
 }
 
 ConditionVariable::~ConditionVariable() throw () {

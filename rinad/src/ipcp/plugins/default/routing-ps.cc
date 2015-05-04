@@ -25,13 +25,13 @@
 #include <sstream>
 #include <string>
 
-#define RINA_PREFIX "routing-ps-link-state"
+#define IPCP_MODULE "routing-ps-link-state"
+#include "../../ipcp-logging.h"
 
-#include <librina/logs.h>
 #include <librina/timer.h>
 
 #include "ipcp/components.h"
-#include "ipcp/link-state-routing-ps.h"
+#include "routing-ps.h"
 #include "common/encoders/FlowStateGroupMessage.pb.h"
 
 namespace rinad {
@@ -50,7 +50,7 @@ void LinkStateRoutingPs::set_dif_configuration(const rina::DIFConfiguration& dif
 
 	if (pduftgConfig.get_pduft_generator_policy().get_name().compare(
 			LINK_STATE_POLICY) != 0) {
-		LOG_WARN("Unsupported routing policy: %s.",
+		LOG_IPCP_WARN("Unsupported routing policy: %s.",
 				pduftgConfig.get_pduft_generator_policy().get_name().c_str());
 		throw rina::Exception("Unknown routing Policy");
 	}
@@ -62,13 +62,13 @@ void LinkStateRoutingPs::set_dif_configuration(const rina::DIFConfiguration& dif
 int LinkStateRoutingPs::set_policy_set_param(const std::string& name,
                                             const std::string& value)
 {
-        LOG_DBG("No policy-set-specific parameters to set (%s, %s)",
+        LOG_IPCP_DBG("No policy-set-specific parameters to set (%s, %s)",
                         name.c_str(), value.c_str());
         return -1;
 }
 
-extern "C" IPolicySet *
-createRoutingComponentPs(IPCProcessComponent * ctx)
+extern "C" rina::IPolicySet *
+createRoutingComponentPs(rina::ApplicationEntity * ctx)
 {
 		IRoutingComponent * rc = dynamic_cast<IRoutingComponent *>(ctx);
 
@@ -80,7 +80,7 @@ createRoutingComponentPs(IPCProcessComponent * ctx)
 }
 
 extern "C" void
-destroyRoutingComponentPs(IPolicySet * ps)
+destroyRoutingComponentPs(rina::IPolicySet * ps)
 {
         if (ps) {
                 delete ps;
@@ -254,19 +254,19 @@ void Graph::init_edges()
 			continue;
 		}
 
-		LOG_DBG("Processing flow state object: %s",
+		LOG_IPCP_DBG("Processing flow state object: %s",
 				(*flowIt)->object_name_.c_str());
 
 		origin = get_checked_vertex((*flowIt)->address_);
 		if (origin == 0) {
-			LOG_WARN("Could not find checked vertex for address %ud",
+			LOG_IPCP_WARN("Could not find checked vertex for address %ud",
 					(*flowIt)->address_);
 			continue;
 		}
 
 		dest = get_checked_vertex((*flowIt)->neighbor_address_);
 		if (dest == 0) {
-			LOG_WARN("Could not find checked vertex for address %ud",
+			LOG_IPCP_WARN("Could not find checked vertex for address %ud",
 					(*flowIt)->neighbor_address_);
 			continue;
 		}
@@ -329,7 +329,7 @@ std::list<rina::RoutingTableEntry *> DijkstraAlgorithm::computeRoutingTable(
 				entry->qosId = 1;
 				entry->cost = 1;
 				result.push_back(entry);
-				LOG_DBG("Added entry to routing table: destination %u, next-hop %u",
+				LOG_IPCP_DBG("Added entry to routing table: destination %u, next-hop %u",
 						entry->address, nextHop);
 			}
 		}
@@ -628,7 +628,7 @@ void FlowStateDatabase::deprecateObject(unsigned int address)
 	if (!fso) {
 		return;
 	}
-	LOG_DBG("Object %s deprecated", fso->object_name_.c_str());
+	LOG_IPCP_DBG("Object %s deprecated", fso->object_name_.c_str());
 
 	fso->up_ = false;
 	fso->age_ = *maximum_age_;
@@ -680,7 +680,7 @@ std::map <int, std::list<FlowStateObject*> > FlowStateDatabase::prepareForPropag
   for (std::list<FlowStateObject*>::iterator it = modifiedFSOs.begin();
       it != modifiedFSOs.end(); ++it) {
 
-    LOG_DBG("Propagation: Check modified object %s with age %d and status %d",
+    LOG_IPCP_DBG("Propagation: Check modified object %s with age %d and status %d",
     (*it)->object_name_.c_str(), (*it)->age_, (*it)->up_);
 
     for(std::map<int, std::list<FlowStateObject*> >::iterator it2 =
@@ -704,7 +704,7 @@ void FlowStateDatabase::incrementAge()
 			(*it)->age_ = (*it)->age_ + 1;
 
 		if ((*it)->age_ >= *maximum_age_ && !(*it)->being_erased_) {
-			LOG_DBG("Object to erase age: %d", (*it)->age_);
+			LOG_IPCP_DBG("Object to erase age: %d", (*it)->age_);
 			KillFlowStateObjectTimerTask * ksttask =
 					new KillFlowStateObjectTimerTask(rib_daemon_, (*it), this);
 			timer_->scheduleTask(ksttask, WAIT_UNTIL_REMOVE_OBJECT);
@@ -717,7 +717,7 @@ void FlowStateDatabase::updateObjects(
 		const std::list<FlowStateObject*>& newObjects, int avoidPort,
 		unsigned int address)
 {
-	LOG_DBG("Update objects from DB launched");
+	LOG_IPCP_DBG("Update objects from DB launched");
 
 	std::list<FlowStateObject*>::const_iterator newIt, oldIt;
 	;
@@ -729,7 +729,7 @@ void FlowStateDatabase::updateObjects(
 			if ((*newIt)->address_ == (*oldIt)->address_
 					&& (*newIt)->neighbor_address_
 							== (*oldIt)->neighbor_address_) {
-				LOG_DBG("Found the object in the DB. Object: %s",
+				LOG_IPCP_DBG("Found the object in the DB. Object: %s",
 						(*oldIt)->object_name_.c_str());
 
 				if ((*newIt)->sequence_number_ > (*oldIt)->sequence_number_
@@ -738,11 +738,11 @@ void FlowStateDatabase::updateObjects(
 						(*oldIt)->sequence_number_ = (*newIt)->sequence_number_
 								+ 1;
 						(*oldIt)->avoid_port_ = NO_AVOID_PORT;
-						LOG_DBG(
+						LOG_IPCP_DBG(
 								"Object is self generated, updating the sequence number of %s to %d",
 								(*oldIt)->object_name_.c_str(), (*oldIt)->sequence_number_);
 					} else {
-						LOG_DBG("Update the object %s with seq num %d",
+						LOG_IPCP_DBG("Update the object %s with seq num %d",
 								(*oldIt)->object_name_.c_str(), (*newIt)->sequence_number_);
 						(*oldIt)->age_ = (*newIt)->age_;
 						(*oldIt)->up_ = (*newIt)->up_;
@@ -766,13 +766,13 @@ void FlowStateDatabase::updateObjects(
 		}
 
 		if ((*newIt)->address_ == address) {
-			LOG_DBG("Object has origin myself, discard object %s",
+			LOG_IPCP_DBG("Object has origin myself, discard object %s",
 					(*newIt)->object_name_.c_str());
 			delete (*newIt);
 			continue;
 		}
 
-		LOG_DBG("New object added");
+		LOG_IPCP_DBG("New object added");
 		(*newIt)->avoid_port_ = avoidPort;
 		(*newIt)->modified_ = true;
 		flow_state_objects_.push_back((*newIt));
@@ -782,7 +782,7 @@ void FlowStateDatabase::updateObjects(
 					EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
 					(*newIt)->object_name_, (*newIt));
 		} catch (rina::Exception &e) {
-			LOG_ERR("Problems creating RIB object: %s", e.what());
+			LOG_IPCP_ERR("Problems creating RIB object: %s", e.what());
 		}
 	}
 }
@@ -801,7 +801,7 @@ void LinkStateRoutingCDAPMessageHandler::readResponse(int result,
 	(void) object_name;
 
 	if (result != 0) {
-		LOG_ERR("Problems reading Flow State Objects from neighbor: %s",
+		LOG_IPCP_ERR("Problems reading Flow State Objects from neighbor: %s",
 				result_reason.c_str());
 	}
 
@@ -858,7 +858,7 @@ void KillFlowStateObjectTimerTask::run()
 							fso_->object_name_);
 			fs_rib_o->deleteObject(fso_);
 		} catch (rina::Exception &e) {
-			LOG_ERR("Object could not be removed from the RIB");
+			LOG_IPCP_ERR("Object could not be removed from the RIB");
 		}
 		delete fso_;
 	}
@@ -951,16 +951,20 @@ void LinkStateRoutingPolicy::populateRIB()
 		fs_rib_group_ = new FlowStateRIBObjectGroup(ipc_process_, this);
 		rib_daemon_->addRIBObject(fs_rib_group_);
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems adding object to RIB: %s", e.what());
+		LOG_IPCP_ERR("Problems adding object to RIB: %s", e.what());
 	}
 }
 
 void LinkStateRoutingPolicy::subscribeToEvents()
 {
-	rib_daemon_->subscribeToEvent(IPCP_EVENT_N_MINUS_1_FLOW_DEALLOCATED, this);
-	rib_daemon_->subscribeToEvent(IPCP_EVENT_N_MINUS_1_FLOW_ALLOCATED, this);
-	rib_daemon_->subscribeToEvent(IPCP_EVENT_NEIGHBOR_ADDED, this);
-	rib_daemon_->subscribeToEvent(IPCP_EVENT_CONNECTIVITY_TO_NEIGHBOR_LOST, this);
+	ipc_process_->internal_event_manager_->
+		subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED, this);
+	ipc_process_->internal_event_manager_->
+		subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED, this);
+	ipc_process_->internal_event_manager_->
+		subscribeToEvent(rina::InternalEvent::APP_NEIGHBOR_ADDED, this);
+	ipc_process_->internal_event_manager_->
+		subscribeToEvent(rina::InternalEvent::APP_CONNECTIVITY_TO_NEIGHBOR_LOST, this);
 }
 
 void LinkStateRoutingPolicy::set_dif_configuration(
@@ -970,7 +974,7 @@ void LinkStateRoutingPolicy::set_dif_configuration(
 			dif_configuration.get_pduft_generator_configuration();
 	if (pduft_generator_config_.get_link_state_routing_configuration().get_routing_algorithm().compare(
 			"Dijkstra") != 0) {
-		LOG_WARN("Unsupported routing algorithm, using Dijkstra instead");
+		LOG_IPCP_WARN("Unsupported routing algorithm, using Dijkstra instead");
 	}
 
 	routing_algorithm_ = new DijkstraAlgorithm();
@@ -978,24 +982,24 @@ void LinkStateRoutingPolicy::set_dif_configuration(
 
 	if (!test_) {
 		maximum_age_ =
-				pduft_generator_config_.get_link_state_routing_configuration().get_object_maximum_age();
+			pduft_generator_config_.get_link_state_routing_configuration().get_object_maximum_age();
 		long delay = 0;
 
 		// Task to compute PDUFT
 		delay =
-				pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_pduft_computation();
+			pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_pduft_computation();
 		ComputeRoutingTimerTask * cttask = new ComputeRoutingTimerTask(this, delay);
 		timer_->scheduleTask(cttask, delay);
 
 		// Task to increment age
 		delay =
-				pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_age_increment();
+			pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_age_increment();
 		UpdateAgeTimerTask * uattask = new UpdateAgeTimerTask(this, delay);
 		timer_->scheduleTask(uattask, delay);
 
 		// Task to propagate modified FSO
 		delay =
-				pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_fsodb_propagation();
+			pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_fsodb_propagation();
 		PropagateFSODBTimerTask * pfttask = new PropagateFSODBTimerTask(this,
 				delay);
 		timer_->scheduleTask(pfttask, delay);
@@ -1007,32 +1011,33 @@ const std::list<rina::FlowInformation>& LinkStateRoutingPolicy::get_allocated_fl
 	return allocated_flows_;
 }
 
-void LinkStateRoutingPolicy::eventHappened(Event * event)
+void LinkStateRoutingPolicy::eventHappened(rina::InternalEvent * event)
 {
 	if (!event)
 		return;
 
 	rina::ScopedLock g(*lock_);
 
-	if (event->get_id() == IPCP_EVENT_N_MINUS_1_FLOW_DEALLOCATED) {
-		NMinusOneFlowDeallocatedEvent * flowEvent =
-				(NMinusOneFlowDeallocatedEvent *) event;
-		processFlowDeallocatedEvent(flowEvent);
-	} else if (event->get_id() == IPCP_EVENT_N_MINUS_1_FLOW_ALLOCATED) {
-		NMinusOneFlowAllocatedEvent * flowEvent =
-				(NMinusOneFlowAllocatedEvent *) event;
-		processFlowAllocatedEvent(flowEvent);
-	} else if (event->get_id() == IPCP_EVENT_NEIGHBOR_ADDED) {
-		NeighborAddedEvent * neighEvent = (NeighborAddedEvent *) event;
-		processNeighborAddedEvent(neighEvent);
-	} else if (event->get_id() == IPCP_EVENT_CONNECTIVITY_TO_NEIGHBOR_LOST) {
-		ConnectiviyToNeighborLostEvent * neighEvent = (ConnectiviyToNeighborLostEvent *) event;
-		processNeighborLostEvent(neighEvent);
+	if (event->type == rina::InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED) {
+			rina::NMinusOneFlowDeallocatedEvent * flowEvent =
+				(rina::NMinusOneFlowDeallocatedEvent *) event;
+			processFlowDeallocatedEvent(flowEvent);
+	} else if (event->type == rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED) {
+			rina::NMinusOneFlowAllocatedEvent * flowEvent =
+				(rina::NMinusOneFlowAllocatedEvent *) event;
+			processFlowAllocatedEvent(flowEvent);
+	} else if (event->type == rina::InternalEvent::APP_NEIGHBOR_ADDED) {
+			rina::NeighborAddedEvent * neighEvent = (rina::NeighborAddedEvent *) event;
+			processNeighborAddedEvent(neighEvent);
+	} else if (event->type == rina::InternalEvent::APP_CONNECTIVITY_TO_NEIGHBOR_LOST) {
+			rina::ConnectiviyToNeighborLostEvent * neighEvent =
+					(rina::ConnectiviyToNeighborLostEvent *) event;
+			processNeighborLostEvent(neighEvent);
 	}
 }
 
 void LinkStateRoutingPolicy::processFlowDeallocatedEvent(
-		NMinusOneFlowDeallocatedEvent * event)
+		rina::NMinusOneFlowDeallocatedEvent * event)
 {
 	std::list<rina::FlowInformation>::iterator it;
 
@@ -1043,22 +1048,22 @@ void LinkStateRoutingPolicy::processFlowDeallocatedEvent(
 		}
 	}
 
-	LOG_DBG("N-1 Flow with neighbor lost");
+	LOG_IPCP_DBG("N-1 Flow with neighbor lost");
 	//TODO update cost
 }
 
 void LinkStateRoutingPolicy::processNeighborLostEvent(
-		ConnectiviyToNeighborLostEvent * event) {
+		rina::ConnectiviyToNeighborLostEvent * event) {
 	db_->deprecateObject(event->neighbor_->address_);
 }
 
 void LinkStateRoutingPolicy::processFlowAllocatedEvent(
-		NMinusOneFlowAllocatedEvent * event)
+		rina::NMinusOneFlowAllocatedEvent * event)
 {
 	if (ipc_process_->resource_allocator_->get_n_minus_one_flow_manager()->
 			numberOfFlowsToNeighbour(event->flow_information_.remoteAppName.processName,
 					event->flow_information_.remoteAppName.processInstance) > 1) {
-		LOG_DBG("Already had an N-1 flow with this neighbor IPCP");
+		LOG_IPCP_DBG("Already had an N-1 flow with this neighbor IPCP");
 		//TODO update the cost of the FlowStateObject
 		return;
 	}
@@ -1069,13 +1074,13 @@ void LinkStateRoutingPolicy::processFlowAllocatedEvent(
 						event->flow_information_.remoteAppName), 1,
 						event->flow_information_.portId);
 	} catch (rina::Exception &e) {
-		LOG_DBG("flow allocation waiting for enrollment");
+		LOG_IPCP_DBG("flow allocation waiting for enrollment");
 		allocated_flows_.push_back(event->flow_information_);
 	}
 }
 
 void LinkStateRoutingPolicy::processNeighborAddedEvent(
-		NeighborAddedEvent * event)
+		rina::NeighborAddedEvent * event)
 {
 	std::list<rina::FlowInformation>::iterator it;
 
@@ -1083,7 +1088,7 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(
 		if (it->portId == event->neighbor_->underlying_port_id_)
 				/*it->remoteAppName.processName.compare(
 				event->neighbor_->get_name().processName) == 0) */{
-			LOG_INFO(
+			LOG_IPCP_INFO(
 					"There was an allocation flow event waiting for enrollment, launching it");
 			try {
 				db_->addObjectToGroup(ipc_process_->get_address(),
@@ -1092,7 +1097,7 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(
 				allocated_flows_.erase(it);
 				break;
 			} catch (rina::Exception &e) {
-				LOG_ERR("Could not allocate the flow, no neighbor found");
+				LOG_IPCP_ERR("Could not allocate the flow, no neighbor found");
 			}
 		}
 	}
@@ -1117,7 +1122,7 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(
 				robject_value, 0, remote_id, 0);
 		db_->setAvoidPort(portId);
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
+		LOG_IPCP_ERR("Problems encoding and sending CDAP message: %s", e.what());
 	}
 }
 
@@ -1149,7 +1154,7 @@ void LinkStateRoutingPolicy::propagateFSDB() const
           EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME,
           robject_value, 0, remote_id, 0);
       } catch (rina::Exception &e) {
-        LOG_ERR("Errors sending message: %s", e.what());
+        LOG_IPCP_ERR("Errors sending message: %s", e.what());
       }
 	  }
 	}
@@ -1192,7 +1197,7 @@ void LinkStateRoutingPolicy::writeMessageReceived(
 		db_->updateObjects(flow_state_objects, portId,
 				ipc_process_->get_address());
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems decoding Flow State Object Group: %s", e.what());
+		LOG_IPCP_ERR("Problems decoding Flow State Object Group: %s", e.what());
 	}
 }
 
@@ -1213,7 +1218,7 @@ void LinkStateRoutingPolicy::readMessageRecieved(int invoke_id,
 				fs_rib_group_->name_, robject_value, 0, "", invoke_id, false,
 				remote_id);
 	} catch (rina::Exception &e) {
-		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
+		LOG_IPCP_ERR("Problems encoding and sending CDAP message: %s", e.what());
 	}
 }
 

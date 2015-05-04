@@ -40,15 +40,15 @@ public:
         void run();
 
 protected:
-        void servePingFlow(rina::Flow * f);
-        void servePerfFlow(rina::Flow *f);
+        void servePingFlow(int port_id);
+        void servePerfFlow(int port_id);
         static void destroyFlow(sigval_t val);
 
 private:
         std::string test_type;
         int interval;
         int dw;
-        void startWorker(rina::Flow * f);
+        void startWorker(int port_id);
         void printPerfStats(unsigned long pkt, unsigned long bytes,
                 unsigned long us);
 };

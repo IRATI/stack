@@ -24,7 +24,7 @@
 #include <ostream>
 #include <sstream>
 
-#define RINA_PREFIX "common"
+#define RINA_PREFIX "librina.common"
 
 #include "librina/logs.h"
 #include "config.h"
@@ -278,7 +278,7 @@ const std::string FlowInformation::toString(){
         ss<<"Local app name: "<<localAppName.toString()<<std::endl;
         ss<<"Remote app name: "<<remoteAppName.toString()<<std::endl;
         ss<<"DIF name: "<<difName.processName;
-        ss<<"; Port-id: "<<portId<<std::endl;
+        ss<<"; Port-id: "<<portId<<"; State: "<<state<<std::endl;
         ss<<"Flow specification: "<<flowSpecification.toString();
 
         return ss.str();
@@ -798,6 +798,128 @@ unsigned int ConsecutiveUnsignedIntegerGenerator::next(){
 	return result;
 }
 
+/* CLASS NEIGHBOR */
+Neighbor::Neighbor() {
+	address_ = false;
+	average_rtt_in_ms_ = 0;
+	last_heard_from_time_in_ms_ = 0;
+	enrolled_ = false;
+	underlying_port_id_ = 0;
+	number_of_enrollment_attempts_ = 0;
+}
+
+bool Neighbor::operator==(const Neighbor &other) const{
+	return name_ == other.get_name();
+}
+
+bool Neighbor::operator!=(const Neighbor &other) const{
+	return !(*this == other);
+}
+
+const ApplicationProcessNamingInformation&
+Neighbor::get_name() const {
+	return name_;
+}
+
+void Neighbor::set_name(
+		const ApplicationProcessNamingInformation& name) {
+	name_ = name;
+}
+
+const ApplicationProcessNamingInformation&
+Neighbor::get_supporting_dif_name() const {
+	return supporting_dif_name_;
+}
+
+void Neighbor::set_supporting_dif_name(
+		const ApplicationProcessNamingInformation& supporting_dif_name) {
+	supporting_dif_name_ = supporting_dif_name;
+}
+
+const std::list<ApplicationProcessNamingInformation>&
+Neighbor::get_supporting_difs() {
+	return supporting_difs_;
+}
+
+void Neighbor::set_supporting_difs(
+		const std::list<ApplicationProcessNamingInformation>& supporting_difs) {
+	supporting_difs_ = supporting_difs;
+}
+
+void Neighbor::add_supporting_dif(
+		const ApplicationProcessNamingInformation& supporting_dif) {
+	supporting_difs_.push_back(supporting_dif);
+}
+
+unsigned int Neighbor::get_address() const {
+	return address_;
+}
+
+void Neighbor::set_address(unsigned int address) {
+	address_ = address;
+}
+
+unsigned int Neighbor::get_average_rtt_in_ms() const {
+	return average_rtt_in_ms_;
+}
+
+void Neighbor::set_average_rtt_in_ms(unsigned int average_rtt_in_ms) {
+	average_rtt_in_ms_ = average_rtt_in_ms;
+}
+
+bool Neighbor::is_enrolled() const {
+	return enrolled_;
+}
+
+void Neighbor::set_enrolled(bool enrolled){
+	enrolled_ = enrolled;
+}
+
+int Neighbor::get_last_heard_from_time_in_ms() const {
+	return last_heard_from_time_in_ms_;
+}
+
+void Neighbor::set_last_heard_from_time_in_ms(int last_heard_from_time_in_ms) {
+	last_heard_from_time_in_ms_ = last_heard_from_time_in_ms;
+}
+
+int Neighbor::get_underlying_port_id() const {
+	return underlying_port_id_;
+}
+
+void Neighbor::set_underlying_port_id(int underlying_port_id) {
+	underlying_port_id_ = underlying_port_id;
+}
+
+unsigned int Neighbor::get_number_of_enrollment_attempts() const {
+	return number_of_enrollment_attempts_;
+}
+
+void Neighbor::set_number_of_enrollment_attempts(
+		unsigned int number_of_enrollment_attempts) {
+	number_of_enrollment_attempts_ = number_of_enrollment_attempts;
+}
+
+const std::string Neighbor::toString(){
+	std::stringstream ss;
+
+	ss<<"Address: "<<address_;
+	ss<<"; Average RTT(ms): "<<average_rtt_in_ms_;
+	ss<<"; Is enrolled: "<<enrolled_<<std::endl;
+	ss<<"Name: "<<name_.toString()<<std::endl;
+	ss<<"Supporting DIF in common: "<<supporting_dif_name_.processName;
+	ss<<"; N-1 port-id: "<<underlying_port_id_<<std::endl;
+	ss<<"List of supporting DIFs: ";
+	for (std::list<ApplicationProcessNamingInformation>::iterator it = supporting_difs_.begin();
+			it != supporting_difs_.end(); it++)
+		ss<< it->processName << "; ";
+	ss<<std::endl;
+	ss<<"Last heard from time (ms): "<<last_heard_from_time_in_ms_;
+	ss<<"; Number of enrollment attempts: "<<number_of_enrollment_attempts_;
+
+	return ss.str();
+}
+
 /* INITIALIZATION OPERATIONS */
 
 bool librinaInitialized = false;
@@ -813,8 +935,8 @@ void initialize(unsigned int localPort, const std::string& logLevel,
         }
 
 	setNetlinkPortId(localPort);
-	setLogLevel(logLevel);
-	if (setLogFile(pathToLogFile) != 0) {
+	setLogLevel(logLevel.c_str());
+	if (setLogFile(pathToLogFile.c_str()) != 0) {
 	        LOG_WARN("Error setting log file, using stdout only");
 	}
 	rinaManager->getNetlinkManager();
@@ -832,8 +954,8 @@ void initialize(const std::string& logLevel,
                 throw InitializationException("Librina already initialized");
         }
 
-        setLogLevel(logLevel);
-        if (setLogFile(pathToLogFile) != 0) {
+        setLogLevel(logLevel.c_str());
+        if (setLogFile(pathToLogFile.c_str()) != 0) {
                 LOG_WARN("Error setting log file, using stdout only");
         }
 

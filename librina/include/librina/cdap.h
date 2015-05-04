@@ -343,7 +343,15 @@ public:
 			int invoke_id);
 	static CDAPMessage* getCancelReadResponseMessage(Flags flags,
 			int invoke_id, int result, const std::string &result_reason);
+	static CDAPMessage* getRequestMessage(Opcode opcode, char * filter, Flags flags,
+			const std::string &obj_class, long obj_inst,
+			const std::string &obj_name, int scope);
+	static CDAPMessage* getResponseMessage(Opcode opcode, Flags flags,
+			const std::string &obj_class, long obj_inst,
+			const std::string &obj_name, int result,
+			const std::string &result_reason, int invoke_id);
 	std::string to_string() const;
+	bool is_request_message() const;
 	/// Returns a reply message from the request message, copying all the fields except for: Opcode (it will be the
 	/// request message counterpart), result (it will be 0) and result_reason (it will be null)
 	/// @param requestMessage
@@ -1004,6 +1012,20 @@ public:
 	virtual CDAPMessage* getCancelReadResponseMessage(
 			CDAPMessage::Flags flags, int invoke_id, int result,
 			const std::string &result_reason) = 0;
+
+	virtual CDAPMessage* getRequestMessage(int port_id,
+			CDAPMessage::Opcode opcode, char * filter,
+			CDAPMessage::Flags flags, const std::string &obj_class,
+			long obj_inst, const std::string &obj_name,
+			int scope, bool invoke_id) = 0;
+
+	virtual CDAPMessage* getResponseMessage(CDAPMessage::Opcode opcode,
+			CDAPMessage::Flags flags, const std::string &obj_class,
+			long obj_inst, const std::string &obj_name,
+			int result,
+			const std::string &result_reason, int invoke_id) = 0;
+
+	virtual CDAPInvokeIdManagerInterface * get_invoke_id_manager() = 0;
 };
 
 /// Provides a wire format for CDAP messages

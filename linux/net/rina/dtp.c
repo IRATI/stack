@@ -120,12 +120,14 @@ EXPORT_SYMBOL(dtp_sv_connection);
 
 int nxt_seq_reset(struct dtp_sv * sv, seq_num_t sn)
 {
+        unsigned long flags;
+
         if (!sv)
                 return -1;
 
-        spin_lock(&sv->lock);
+        spin_lock_irqsave(&sv->lock, flags);
         sv->seq_nr_to_send = sn;
-        spin_unlock(&sv->lock);
+        spin_unlock_irqrestore(&sv->lock, flags);
 
         return 0;
 }
@@ -149,6 +151,7 @@ seq_num_t dtp_sv_last_nxt_seq_nr(struct dtp * instance)
 {
         seq_num_t       tmp;
         struct dtp_sv * sv;
+        unsigned long   flags;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
@@ -157,12 +160,13 @@ seq_num_t dtp_sv_last_nxt_seq_nr(struct dtp * instance)
         sv = instance->sv;
         ASSERT(sv);
 
-        spin_lock(&sv->lock);
+        spin_lock_irqsave(&sv->lock, flags);
         tmp = sv->seq_nr_to_send;
-        spin_unlock(&sv->lock);
+        spin_unlock_irqrestore(&sv->lock, flags);
 
         return tmp;
 }
+EXPORT_SYMBOL(dtp_sv_last_nxt_seq_nr);
 
 seq_num_t dtp_sv_max_seq_nr_sent(struct dtp * instance)
 {
@@ -183,6 +187,7 @@ seq_num_t dtp_sv_max_seq_nr_sent(struct dtp * instance)
 
         return tmp;
 }
+EXPORT_SYMBOL(dtp_sv_max_seq_nr_sent);
 
 int dtp_sv_max_seq_nr_set(struct dtp * instance, seq_num_t num)
 {
@@ -222,11 +227,13 @@ static uint_t dropped_pdus(struct dtp_sv * sv)
 
 static void dropped_pdus_inc(struct dtp_sv * sv)
 {
+        unsigned long flags;
+
         ASSERT(sv);
 
-        spin_lock(&sv->lock);
+        spin_lock_irqsave(&sv->lock, flags);
         sv->dropped_pdus++;
-        spin_unlock(&sv->lock);
+        spin_unlock_irqrestore(&sv->lock, flags);
 }
 
 int dtp_initial_sequence_number(struct dtp * instance)
@@ -762,7 +769,7 @@ static void tf_a(void * o)
                 process_A_expiration(dtp, dtcp);
 #if DTP_INACTIVITY_TIMERS_ENABLE
                 if (rtimer_restart(dtp->timers.sender_inactivity,
-                                   2 * (dt_sv_mpl(dt) +
+                                   3 * (dt_sv_mpl(dt) +
                                         dt_sv_r(dt)   +
                                         dt_sv_a(dt)))) {
                         LOG_ERR("Failed to start sender_inactiviy timer");
@@ -794,6 +801,10 @@ int dtp_sv_init(struct dtp * dtp,
         dtp->sv->window_based = window_based;
         dtp->sv->rate_based   = rate_based;
         dtp->sv->a            = a;
+
+        /* Init seq numbers */
+        dtp->sv->max_seq_nr_sent = dtp->sv->seq_nr_to_send;
+        dtp->sv->max_seq_nr_rcv  = 0;
 
         return 0;
 }
@@ -1049,20 +1060,20 @@ static bool window_is_closed(struct dtp_sv * sv,
 int dtp_write(struct dtp * instance,
               struct sdu * sdu)
 {
-        struct pdu *          pdu;
-        struct pci *          pci;
-        struct dtp_sv *       sv;
-        struct dt *           dt;
-        struct dtcp *         dtcp;
-        struct rtxq *         rtxq;
-        struct pdu *          cpdu;
+        struct pdu *            pdu;
+        struct pci *            pci;
+        struct dtp_sv *         sv;
+        struct dt *             dt;
+        struct dtcp *           dtcp;
+        struct rtxq *           rtxq;
+        struct pdu *            cpdu;
         struct dtp_ps * ps;
-        seq_num_t             sn;
+        seq_num_t               sn;
 
         if (!sdu_is_ok(sdu))
                 return -1;
 
-        if (!instance) {
+        if (!instance || !instance->rmt) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 sdu_destroy(sdu);
                 return -1;
@@ -1227,7 +1238,7 @@ int dtp_write(struct dtp * instance,
 #if DTP_INACTIVITY_TIMERS_ENABLE
                 /* Start SenderInactivityTimer */
                 if (rtimer_restart(instance->timers.sender_inactivity,
-                                   2 * (dt_sv_mpl(dt) +
+                                   3 * (dt_sv_mpl(dt) +
                                         dt_sv_r(dt)   +
                                         dt_sv_a(dt)))) {
                         LOG_ERR("Failed to start sender_inactiviy timer");
@@ -1239,81 +1250,11 @@ int dtp_write(struct dtp * instance,
                 return 0;
         }
 
-        /* Post SDU to RMT */
-        return rmt_send(instance->rmt,
-                        pci_destination(pci),
-                        pci_qos_id(pci),
-                        pdu);
-}
-
-int dtp_mgmt_write(struct rmt * rmt,
-                   address_t    src_address,
-                   port_id_t    port_id,
-                   struct sdu * sdu)
-{
-        struct pci * pci;
-        struct pdu * pdu;
-        address_t    dst_address;
-
-        /*
-         * NOTE:
-         *   DTP should build the PCI header src and dst cep_ids = 0
-         *   ask FT for the dst address the N-1 port is connected to
-         *   pass to the rmt
-         */
-
-        if (!sdu) {
-                LOG_ERR("No data passed, bailing out");
-                return -1;
-        }
-
-        dst_address = 0; /* FIXME: get from PFT */
-
-        /*
-         * FIXME:
-         *   We should avoid to create a PCI only to have its fields to use
-         */
-        pci = pci_create();
-        if (!pci)
-                return -1;
-
-        if (pci_format(pci,
-                       0,
-                       0,
-                       src_address,
-                       dst_address,
-                       0,
-                       0,
-                       PDU_TYPE_MGMT)) {
-                pci_destroy(pci);
-                return -1;
-        }
-
-        pdu = pdu_create();
-        if (!pdu) {
-                pci_destroy(pci);
-                return -1;
-        }
-
-        if (pdu_buffer_set(pdu, sdu_buffer_rw(sdu))) {
-                pci_destroy(pci);
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        if (pdu_pci_set(pdu, pci)) {
-                pci_destroy(pci);
-                return -1;
-        }
-
-        /* Give the data to RMT now ! */
-
-        /* FIXME: What about sequencing (and all the other procedures) ? */
-        return rmt_send(rmt,
-                        pci_destination(pci),
-                        pci_cep_destination(pci),
-                        pdu);
-
+        return dt_pdu_send(dt,
+                           instance->rmt,
+                           pci_destination(pci),
+                           pci_qos_id(pci),
+                           pdu);
 }
 
 void dtp_drf_required_set(struct dtp * dtp)
@@ -1399,14 +1340,7 @@ int dtp_receive(struct dtp * instance,
                 rtx_ctrl = dtcp_ps->rtx_ctrl;
         }
         rcu_read_unlock();
-#if DTP_INACTIVITY_TIMERS_ENABLE
-        /* Stop ReceiverInactivityTimer */
-        if (rtimer_stop(instance->timers.receiver_inactivity)) {
-                LOG_ERR("Failed to stop timer");
-                /*pdu_destroy(pdu);
-                  return -1;*/
-        }
-#endif
+
         seq_num = pci_sequence_number_get(pci);
 
         LOG_DBG("local_soft_irq_pending: %d", local_softirq_pending());
@@ -1415,6 +1349,17 @@ int dtp_receive(struct dtp * instance,
 
 
          if (instance->sv->drf_required) {
+#if DTP_INACTIVITY_TIMERS_ENABLE
+                /* Start ReceiverInactivityTimer */
+                if (rtimer_restart(instance->timers.receiver_inactivity,
+                                   2 * (dt_sv_mpl(dt) +
+                                        dt_sv_r(dt)   +
+                                        dt_sv_a(dt)))) {
+                        LOG_ERR("Failed to start Receiver Inactivity timer");
+                        pdu_destroy(pdu);
+                        return -1;
+                }
+#endif
                 if ((pci_flags_get(pci) & PDU_FLAGS_DATA_RUN)) {
                         instance->sv->drf_required = false;
                         spin_lock_irqsave(&instance->seqq->lock, flags);
@@ -1446,10 +1391,11 @@ int dtp_receive(struct dtp * instance,
                 pdu_destroy(pdu);
 
                 dropped_pdus_inc(sv);
+
+                /*FIXME: Rtimer should not be restarted here, to be deleted */
 #if DTP_INACTIVITY_TIMERS_ENABLE
                 /* Start ReceiverInactivityTimer */
-                if (rtimer_restart(instance->
-                                   timers.receiver_inactivity,
+                if (rtimer_restart(instance->timers.receiver_inactivity,
                                    3 * (dt_sv_mpl(dt) +
                                         dt_sv_r(dt)   +
                                         dt_sv_a(dt))))
@@ -1467,12 +1413,24 @@ int dtp_receive(struct dtp * instance,
                 return 0;
         }
 
+        /*NOTE: Just for debugging */
         if (dtcp && seq_num > dtcp_rcv_rt_win(dtcp)) {
                 LOG_INFO("PDU Scep-id %u Dcep-id %u SeqN %u, RWE: %u",
                          pci_cep_source(pci), pci_cep_destination(pci),
                          seq_num, dtcp_rcv_rt_win(dtcp));
         }
 
+#if DTP_INACTIVITY_TIMERS_ENABLE
+        /* Start ReceiverInactivityTimer */
+        if (rtimer_restart(instance->timers.receiver_inactivity,
+                           2 * (dt_sv_mpl(dt) +
+                                dt_sv_r(dt)   +
+                                dt_sv_a(dt)))) {
+                LOG_ERR("Failed to start Receiver Inactivity timer");
+                pdu_destroy(pdu);
+                return -1;
+        }
+#endif
         if (!a) {
                 bool set_lft_win_edge;
 
@@ -1483,7 +1441,7 @@ int dtp_receive(struct dtp * instance,
                         if (pdu_post(instance, pdu))
                                 return -1;
 
-                        goto exit;
+                        return 0;
                 }
 
                 set_lft_win_edge = !(dtcp_rtx_ctrl(dtcp_config_get(dtcp)) &&
@@ -1503,14 +1461,14 @@ int dtp_receive(struct dtp * instance,
                         }
                         if (!set_lft_win_edge) {
                                 pdu_destroy(pdu);
-                                goto exit;
+                                return 0;
                         }
                 }
 
                 if (pdu_post(instance, pdu))
                         return -1;
 
-                goto exit;
+                return 0;
 
         fail:
                 pdu_destroy(pdu);
@@ -1549,18 +1507,6 @@ int dtp_receive(struct dtp * instance,
         }
 
         LOG_DBG("DTP receive ended...");
-
- exit:
-#if DTP_INACTIVITY_TIMERS_ENABLE
-        /* Start ReceiverInactivityTimer */
-        if (rtimer_restart(instance->timers.receiver_inactivity,
-                           2 * (dt_sv_mpl(dt) +
-                                dt_sv_r(dt)   +
-                                dt_sv_a(dt)))) {
-                LOG_ERR("Failed to start Receiver Inactivity timer");
-                return -1;
-        }
-#endif
         return 0;
 }
 

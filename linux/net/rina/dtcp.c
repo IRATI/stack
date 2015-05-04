@@ -172,44 +172,54 @@ struct dtcp_config * dtcp_config_get(struct dtcp * dtcp)
 }
 EXPORT_SYMBOL(dtcp_config_get);
 
-int pdu_send(struct dtcp * dtcp, struct pdu * pdu)
+int dtcp_pdu_send(struct dtcp * dtcp, struct pdu * pdu)
 {
+        struct efcp * efcp;
+
         ASSERT(dtcp);
-        ASSERT(pdu);
+        ASSERT(dtcp->parent);
 
-        if (rmt_send(dtcp->rmt,
-                     dtcp->conn->destination_address,
-                     dtcp->conn->qos_id,
-                     pdu))
+        efcp = dt_efcp(dtcp->parent);
+        if (!efcp) {
+                LOG_ERR("Passed instance has no EFCP, dtcp_pdu_send bailing out");
+                pdu_destroy(pdu);
                 return -1;
+        }
 
-        return 0;
+        return common_efcp_pdu_send(efcp,
+        			    dtcp->rmt,
+        			    dtcp->conn->destination_address,
+        			    dtcp->conn->qos_id,
+        			    pdu);
 }
-EXPORT_SYMBOL(pdu_send);
+EXPORT_SYMBOL(dtcp_pdu_send);
 
 static int last_rcv_ctrl_seq_set(struct dtcp * dtcp,
                                  seq_num_t     last_rcv_ctrl_seq)
 {
+        unsigned long flags;
+
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
-        spin_lock(&dtcp->sv->lock);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
         dtcp->sv->last_rcv_ctl_seq = last_rcv_ctrl_seq;
-        spin_unlock(&dtcp->sv->lock);
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 
         return 0;
 }
 
 seq_num_t last_rcv_ctrl_seq(struct dtcp * dtcp)
 {
-        seq_num_t tmp;
+        seq_num_t     tmp;
+        unsigned long flags;
 
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
-        spin_lock(&dtcp->sv->lock);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
         tmp = dtcp->sv->last_rcv_ctl_seq;
-        spin_unlock(&dtcp->sv->lock);
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 
         return tmp;
 }
@@ -217,32 +227,37 @@ EXPORT_SYMBOL(last_rcv_ctrl_seq);
 
 static void flow_ctrl_inc(struct dtcp * dtcp)
 {
+        unsigned long flags;
+
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
-        spin_lock(&dtcp->sv->lock);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
         dtcp->sv->flow_ctl++;
-        spin_unlock(&dtcp->sv->lock);
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 }
 
 static void acks_inc(struct dtcp * dtcp)
 {
+        unsigned long flags;
+
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
-        spin_lock(&dtcp->sv->lock);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
         dtcp->sv->acks++;
-        spin_unlock(&dtcp->sv->lock);
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 }
 
 static int snd_rt_wind_edge_set(struct dtcp * dtcp, seq_num_t new_rt_win)
 {
+        unsigned long flags;
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
-        spin_lock(&dtcp->sv->lock);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
         dtcp->sv->snd_rt_wind_edge = new_rt_win;
-        spin_unlock(&dtcp->sv->lock);
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 
         return 0;
 }
@@ -281,14 +296,15 @@ EXPORT_SYMBOL(snd_lft_win);
 
 seq_num_t rcvr_rt_wind_edge(struct dtcp * dtcp)
 {
-        seq_num_t tmp;
+        unsigned long flags;
+        seq_num_t     tmp;
 
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
-        spin_lock(&dtcp->sv->lock);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
         tmp = dtcp->sv->rcvr_rt_wind_edge;
-        spin_unlock(&dtcp->sv->lock);
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 
         return tmp;
 }
@@ -296,40 +312,45 @@ EXPORT_SYMBOL(rcvr_rt_wind_edge);
 
 static seq_num_t next_snd_ctl_seq(struct dtcp * dtcp)
 {
-        seq_num_t tmp;
+        seq_num_t     tmp;
+        unsigned long flags;
+
 
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
-        spin_lock(&dtcp->sv->lock);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
         tmp = ++dtcp->sv->next_snd_ctl_seq;
-        spin_unlock(&dtcp->sv->lock);
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 
         return tmp;
 }
 
 static seq_num_t last_snd_data_ack(struct dtcp * dtcp)
 {
-        seq_num_t tmp;
+        seq_num_t     tmp;
+        unsigned long flags;
 
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
-        spin_lock(&dtcp->sv->lock);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
         tmp = dtcp->sv->last_snd_data_ack;
-        spin_unlock(&dtcp->sv->lock);
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 
         return tmp;
 }
 
 static void last_snd_data_ack_set(struct dtcp * dtcp, seq_num_t seq_num)
 {
+        unsigned long flags;
+
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
-        spin_lock(&dtcp->sv->lock);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
         dtcp->sv->last_snd_data_ack = seq_num;
-        spin_unlock(&dtcp->sv->lock);
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 }
 
 static int push_pdus_rmt(struct dtcp * dtcp)
@@ -904,7 +925,7 @@ int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
         LOG_DBG("DTCP Sending ACK (CPU: %d)", smp_processor_id());
         dump_we(dtcp, pdu_pci_get_rw(pdu));
 
-        if (pdu_send(dtcp, pdu)){
+        if (dtcp_pdu_send(dtcp, pdu)){
                 atomic_dec(&dtcp->cpdus_in_transit);
                 return -1;
         }
@@ -917,16 +938,17 @@ EXPORT_SYMBOL(dtcp_ack_flow_control_pdu_send);
 
 void update_rt_wind_edge(struct dtcp * dtcp)
 {
-        seq_num_t seq;
+        seq_num_t     seq;
+        unsigned long flags;
 
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
         seq = dt_sv_rcv_lft_win(dtcp->parent);
-        spin_lock(&dtcp->sv->lock);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
         seq += dtcp->sv->rcvr_credit;
         dtcp->sv->rcvr_rt_wind_edge = seq;
-        spin_unlock(&dtcp->sv->lock);
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 }
 EXPORT_SYMBOL(update_rt_wind_edge);
 
@@ -991,13 +1013,13 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
         LOG_DBG("DTCP SV initialized with dtcp_conf:");
         LOG_DBG("  data_retransmit_max: %d",
                 instance->sv->data_retransmit_max);
-        LOG_DBG("  sndr_credit:         %d",
+        LOG_DBG("  sndr_credit:         %u",
                 instance->sv->sndr_credit);
-        LOG_DBG("  snd_rt_wind_edge:    %d",
+        LOG_DBG("  snd_rt_wind_edge:    %u",
                 instance->sv->snd_rt_wind_edge);
-        LOG_DBG("  rcvr_credit:         %d",
+        LOG_DBG("  rcvr_credit:         %u",
                 instance->sv->rcvr_credit);
-        LOG_DBG("  rcvr_rt_wind_edge:   %d",
+        LOG_DBG("  rcvr_rt_wind_edge:   %u",
                 instance->sv->rcvr_rt_wind_edge);
 
         return 0;
@@ -1291,6 +1313,16 @@ seq_num_t dtcp_snd_rt_win(struct dtcp * dtcp)
 
         return snd_rt_wind_edge(dtcp);
 }
+EXPORT_SYMBOL(dtcp_snd_rt_win);
+
+int dtcp_snd_rt_win_set(struct dtcp * dtcp, seq_num_t rt_win_edge)
+{
+        if (!dtcp || !dtcp->sv)
+                return -1;
+
+        return snd_rt_wind_edge_set(dtcp, rt_win_edge);
+}
+EXPORT_SYMBOL(dtcp_snd_rt_win_set);
 
 seq_num_t dtcp_snd_lf_win(struct dtcp * dtcp)
 {

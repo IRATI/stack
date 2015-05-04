@@ -19,9 +19,9 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
-#define RINA_PREFIX "security-manager-ps-default"
+#define IPCP_MODULE "security-manager-ps-default"
+#include "../../ipcp-logging.h"
 
-#include <librina/logs.h>
 #include <string>
 
 #include "ipcp/components.h"
@@ -50,13 +50,13 @@ SecurityManagerPs::SecurityManagerPs(ISecurityManager * dm_) : dm(dm_)
 
 bool SecurityManagerPs::isAllowedToJoinDIF(const rina::Neighbor& newMember)
 {
-	LOG_DBG("Allowing IPC Process %s to join the DIF", newMember.name_.processName.c_str());
+	LOG_IPCP_DBG("Allowing IPC Process %s to join the DIF", newMember.name_.processName.c_str());
 	return true;
 }
 
 bool SecurityManagerPs::acceptFlow(const Flow& newFlow)
 {
-	LOG_DBG("Accepting flow from remote application %s",
+	LOG_IPCP_DBG("Accepting flow from remote application %s",
 			newFlow.source_naming_info.getEncodedString().c_str());
 	return true;
 }
@@ -64,13 +64,13 @@ bool SecurityManagerPs::acceptFlow(const Flow& newFlow)
 int SecurityManagerPs::set_policy_set_param(const std::string& name,
                                             const std::string& value)
 {
-        LOG_DBG("No policy-set-specific parameters to set (%s, %s)",
+        LOG_IPCP_DBG("No policy-set-specific parameters to set (%s, %s)",
                         name.c_str(), value.c_str());
         return -1;
 }
 
-extern "C" IPolicySet *
-createSecurityManagerPs(IPCProcessComponent * ctx)
+extern "C" rina::IPolicySet *
+createSecurityManagerPs(rina::ApplicationEntity * ctx)
 {
         ISecurityManager * sm = dynamic_cast<ISecurityManager *>(ctx);
 
@@ -82,7 +82,7 @@ createSecurityManagerPs(IPCProcessComponent * ctx)
 }
 
 extern "C" void
-destroySecurityManagerPs(IPolicySet * ps)
+destroySecurityManagerPs(rina::IPolicySet * ps)
 {
         if (ps) {
                 delete ps;

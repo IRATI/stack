@@ -133,6 +133,9 @@ IPCMConsole::IPCMConsole(rina::ThreadAttributes &ta,
 			ConsoleCmdInfo(&IPCMConsole::plugin_unload,
 				"USAGE: plugin-unload <ipcp-id> "
 				"<plugin-name>");
+	commands_map["plugin-get-info"] =
+			ConsoleCmdInfo(&IPCMConsole::plugin_get_info,
+				"USAGE: plugin-get-info <plugin-name>");
 
 	worker = new rina::Thread(&ta, console_function, this);
 }
@@ -697,7 +700,7 @@ IPCMConsole::set_policy_set_param(std::vector<std::string>& args)
 		return CMDRETCONT;
 	}
 
-	if(IPCManager->set_policy_set_param(&promise, ipcp_id, args[2],
+	if (IPCManager->set_policy_set_param(&promise, ipcp_id, args[2],
 			args[3], args[4]) == IPCM_FAILURE || promise.wait() != IPCM_SUCCESS) {
 		outstream << "set-policy-set-param operation failed"<< endl;
 		return CMDRETCONT;
@@ -719,7 +722,7 @@ IPCMConsole::plugin_load_unload(std::vector<std::string>& args, bool load)
 		return CMDRETCONT;
 	}
 
-	if(string2int(args[1], ipcp_id)){
+	if (string2int(args[1], ipcp_id)){
 		outstream << "Invalid IPC process id" << endl;
 		return CMDRETCONT;
 	}
@@ -735,7 +738,7 @@ IPCMConsole::plugin_load_unload(std::vector<std::string>& args, bool load)
 		un = "un";
 	}
 
-	if(IPCManager->plugin_load(NULL, ipcp_id, args[2], load) == IPCM_FAILURE ||
+	if (IPCManager->plugin_load(&promise, ipcp_id, args[2], load) == IPCM_FAILURE ||
 			promise.wait() != IPCM_SUCCESS) {
 		outstream << "Plugin " << un << "loading failed" << endl;
 		return CMDRETCONT;
@@ -756,6 +759,33 @@ int
 IPCMConsole::plugin_unload(std::vector<std::string>& args)
 {
 	return plugin_load_unload(args, false);
+}
+
+int
+IPCMConsole::plugin_get_info(std::vector<std::string>& args)
+{
+	if (args.size() < 2) {
+		outstream << commands_map[args[0]].usage << endl;
+		return CMDRETCONT;
+	}
+
+        const std::string& plugin_name = args[1];
+	std::list<rina::PsInfo> policy_sets;
+
+	if (IPCManager->plugin_get_info(plugin_name, policy_sets) == IPCM_FAILURE) {
+		outstream << "Failed to get information about plugin "
+                                << plugin_name << endl;
+		return CMDRETCONT;
+	}
+
+	for (std::list<rina::PsInfo>::iterator lit = policy_sets.begin();
+					lit != policy_sets.end(); lit++) {
+                outstream << "Policy set: Name='" << lit->name <<
+			     "', Component='" << lit->app_entity <<
+			     "', Version='" << lit->version << "'" << endl;
+	}
+
+	return CMDRETCONT;
 }
 
 }//namespace rinad

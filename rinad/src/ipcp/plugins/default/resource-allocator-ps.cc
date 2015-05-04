@@ -18,9 +18,9 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
-#define RINA_PREFIX "resource-allocator-ps-default"
+#define IPCP_MODULE "resource-allocator-ps-default"
+#include "../../ipcp-logging.h"
 
-#include <librina/logs.h>
 #include <string>
 
 #include "ipcp/components.h"
@@ -46,7 +46,7 @@ ResourceAllocatorPs::ResourceAllocatorPs(IResourceAllocator * ra) : res_alloc(ra
 void ResourceAllocatorPs::routingTableUpdated(
 		const std::list<rina::RoutingTableEntry*>& rt)
 {
-	LOG_DBG("Got %d entries in the routing table", rt.size());
+	LOG_IPCP_DBG("Got %d entries in the routing table", rt.size());
 	//Compute PDU Forwarding Table
 	std::list<rina::PDUForwardingTableEntry *> pduft;
 	std::list<rina::RoutingTableEntry *>::const_iterator it;
@@ -57,8 +57,8 @@ void ResourceAllocatorPs::routingTableUpdated(
 		entry->address = (*it)->address;
 		entry->qosId = (*it)->qosId;
 
-		LOG_DBG("Processing entry for destination %u", (*it)->address);
-		LOG_DBG("Next hop address %u", (*it)->nextHopAddresses.front());
+		LOG_IPCP_DBG("Processing entry for destination %u", (*it)->address);
+		LOG_IPCP_DBG("Next hop address %u", (*it)->nextHopAddresses.front());
 
 		port_id = res_alloc->get_n_minus_one_flow_manager()->
 				getManagementFlowToNeighbour((*it)->nextHopAddresses.front());
@@ -66,7 +66,7 @@ void ResourceAllocatorPs::routingTableUpdated(
 		if (port_id == -1) {
 			delete entry;
 		} else {
-			LOG_DBG("N-1 port-id: %u", port_id);
+			LOG_IPCP_DBG("N-1 port-id: %u", port_id);
 			entry->portIds.push_back(port_id);
 			pduft.push_back(entry);
 		}
@@ -75,7 +75,7 @@ void ResourceAllocatorPs::routingTableUpdated(
 	try {
 		rina::kernelIPCProcess->modifyPDUForwardingTableEntries(pduft, 2);
 	} catch (rina::Exception & e) {
-		LOG_ERR("Error setting PDU Forwarding Table in the kernel: %s",
+		LOG_IPCP_ERR("Error setting PDU Forwarding Table in the kernel: %s",
 				e.what());
 	}
 }
@@ -83,13 +83,13 @@ void ResourceAllocatorPs::routingTableUpdated(
 int ResourceAllocatorPs::set_policy_set_param(const std::string& name,
                                             const std::string& value)
 {
-        LOG_DBG("No policy-set-specific parameters to set (%s, %s)",
+        LOG_IPCP_DBG("No policy-set-specific parameters to set (%s, %s)",
                         name.c_str(), value.c_str());
         return -1;
 }
 
-extern "C" IPolicySet *
-createResourceAllocatorPs(IPCProcessComponent * ctx)
+extern "C" rina::IPolicySet *
+createResourceAllocatorPs(rina::ApplicationEntity * ctx)
 {
 		IResourceAllocator * ra = dynamic_cast<IResourceAllocator *>(ctx);
 
@@ -101,7 +101,7 @@ createResourceAllocatorPs(IPCProcessComponent * ctx)
 }
 
 extern "C" void
-destroyResourceAllocatorPs(IPolicySet * ps)
+destroyResourceAllocatorPs(rina::IPolicySet * ps)
 {
         if (ps) {
                 delete ps;
