@@ -552,8 +552,11 @@ void RIBDaemon::remote_create_request(const cdap_rib::con_handle_t &con,
 
 	//Reply object set to empty
 	cdap_rib::obj_info_t obj_reply;
+	obj_reply.name_ = obj.name_;
+	obj_reply.class_ = obj.class_;
+	obj_reply.inst_ = obj.inst_;
 	obj_reply.value_.size_ = 0;
-	obj_reply.inst_ = 0;
+	obj_reply.value_.message_ = 0;
 
 	cdap_rib::res_info_t* res;
 	BaseRIBObject* rib_obj = rib_->getRIBObject(obj.class_, obj.name_,
@@ -565,7 +568,6 @@ void RIBDaemon::remote_create_request(const cdap_rib::con_handle_t &con,
 	if (rib_obj) {
 		//Call the application
 		res = rib_obj->remoteCreate(
-
 				obj.name_, obj.class_, obj.value_,
 				obj_reply.value_);
 	}
@@ -616,9 +618,13 @@ void RIBDaemon::remote_read_request(const cdap_rib::con_handle_t &con,
 	(void) filt;
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
+	flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
 
 	//Reply object set to empty
 	cdap_rib::obj_info_t obj_reply;
+	obj_reply.name_ = obj.name_;
+	obj_reply.class_ = obj.class_;
+	obj_reply.inst_ = obj.inst_;
 	obj_reply.value_.size_ = 0;
 	obj_reply.value_.message_ = 0;
 
@@ -635,9 +641,9 @@ void RIBDaemon::remote_read_request(const cdap_rib::con_handle_t &con,
 	}
 	try {
 		cdap_provider_->remote_read_response(con.port_,
-							obj_reply,
-							flags, *res,
-							message_id);
+		                                     obj_reply,
+		                                     flags, *res,
+		                                     message_id);
 	} catch (Exception &e) {
 		LOG_ERR("Unable to send the response");
 	}
@@ -683,7 +689,11 @@ void RIBDaemon::remote_write_request(const cdap_rib::con_handle_t &con,
 
 	//Reply object set to empty
 	cdap_rib::obj_info_t obj_reply;
+	obj_reply.name_ = obj.name_;
+	obj_reply.class_ = obj.class_;
+	obj_reply.inst_ = obj.inst_;
 	obj_reply.value_.size_ = 0;
+	obj_reply.value_.message_ = 0;
 
 	cdap_rib::res_info_t* res;
 
@@ -718,6 +728,11 @@ void RIBDaemon::remote_start_request(const cdap_rib::con_handle_t &con,
 	//Reply object set to empty
 	cdap_rib::obj_info_t obj_reply;
 	obj_reply.value_.size_ = 0;
+	obj_reply.name_ = obj.name_;
+	obj_reply.class_ = obj.class_;
+	obj_reply.inst_ = obj.inst_;
+	obj_reply.value_.size_ = 0;
+	obj_reply.value_.message_ = 0;
 
 	cdap_rib::res_info_t* res;
 
@@ -751,7 +766,11 @@ void RIBDaemon::remote_stop_request(const cdap_rib::con_handle_t &con,
 
 	//Reply object set to empty
 	cdap_rib::obj_info_t obj_reply;
+	obj_reply.name_ = obj.name_;
+	obj_reply.class_ = obj.class_;
+	obj_reply.inst_ = obj.inst_;
 	obj_reply.value_.size_ = 0;
+	obj_reply.value_.message_ = 0;
 
 	cdap_rib::res_info_t* res;
 
@@ -966,6 +985,7 @@ cdap_rib::res_info_t* BaseRIBObject::remoteDelete(const std::string& name) {
 	return res;
 }
 
+// FIXME remove name, it is not needed
 cdap_rib::res_info_t* BaseRIBObject::remoteRead(
 		const std::string& name,
 		cdap_rib::SerializedObject &obj_reply) {
