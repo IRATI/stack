@@ -1832,15 +1832,14 @@ void CDAPSession::messageSentOrReceived(const cdap_m_t &cdap_message, bool sent)
 }
 void CDAPSession::freeOrReserveInvokeId(const cdap_m_t &cdap_message, bool sent)
 {
-        cdap_m_t::Opcode op_code = cdap_message.op_code_;
-        if (op_code == cdap_m_t::M_CONNECT_R || op_code == cdap_m_t::M_RELEASE_R
-                        || op_code == cdap_m_t::M_CREATE_R
-                        || op_code == cdap_m_t::M_DELETE_R
-                        || op_code == cdap_m_t::M_START_R
-                        || op_code == cdap_m_t::M_STOP_R
-                        || op_code == cdap_m_t::M_WRITE_R
-                        || op_code == cdap_m_t::M_CANCELREAD_R
-                        || (op_code == cdap_m_t::M_READ_R
+        if (cdap_message.op_code_ == cdap_m_t::M_CONNECT_R || cdap_message.op_code_ == cdap_m_t::M_RELEASE_R
+                        || cdap_message.op_code_ == cdap_m_t::M_CREATE_R
+                        || cdap_message.op_code_ == cdap_m_t::M_DELETE_R
+                        || cdap_message.op_code_ == cdap_m_t::M_START_R
+                        || cdap_message.op_code_ == cdap_m_t::M_STOP_R
+                        || cdap_message.op_code_ == cdap_m_t::M_WRITE_R
+                        || cdap_message.op_code_ == cdap_m_t::M_CANCELREAD_R
+                        || (cdap_message.op_code_ == cdap_m_t::M_READ_R
                                         && cdap_message.flags_
                                                         == cdap_rib::flags_t::NONE_FLAGS)
                         || cdap_message.flags_
@@ -1849,15 +1848,15 @@ void CDAPSession::freeOrReserveInvokeId(const cdap_m_t &cdap_message, bool sent)
         }
 
         if (cdap_message.invoke_id_ != 0) {
-                if (op_code == cdap_m_t::M_CONNECT
-                                || op_code == cdap_m_t::M_RELEASE
-                                || op_code == cdap_m_t::M_CREATE
-                                || op_code == cdap_m_t::M_DELETE
-                                || op_code == cdap_m_t::M_START
-                                || op_code == cdap_m_t::M_STOP
-                                || op_code == cdap_m_t::M_WRITE
-                                || op_code == cdap_m_t::M_CANCELREAD
-                                || op_code == cdap_m_t::M_READ) {
+                if (cdap_message.op_code_ == cdap_m_t::M_CONNECT
+                                || cdap_message.op_code_ == cdap_m_t::M_RELEASE
+                                || cdap_message.op_code_ == cdap_m_t::M_CREATE
+                                || cdap_message.op_code_ == cdap_m_t::M_DELETE
+                                || cdap_message.op_code_ == cdap_m_t::M_START
+                                || cdap_message.op_code_ == cdap_m_t::M_STOP
+                                || cdap_message.op_code_ == cdap_m_t::M_WRITE
+                                || cdap_message.op_code_ == cdap_m_t::M_CANCELREAD
+                                || cdap_message.op_code_ == cdap_m_t::M_READ) {
                         invoke_id_manager_->reserveInvokeId(
                                         cdap_message.invoke_id_, sent);
                 }

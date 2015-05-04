@@ -5,7 +5,7 @@ option optimize_for = LITE_RUNTIME;
 
 //Simple types
 message str{
-	required string value = 1;  //Serialized string
+	optional string value = 1;  //Serialized string
 }
 
 //Contains the information of an IPCP

@@ -39,113 +39,109 @@ const std::string Manager::mad_name = "mad";
 const std::string Manager::mad_instance = "1";
 
 Application::Application(const string& dif_name_, const string& app_name_,
-                         const string& app_instance_)
-                : dif_name(dif_name_),
-                  app_name(app_name_),
-                  app_instance(app_instance_)
-{
+				const string& app_instance_)
+		: 	dif_name(dif_name_),
+			app_name(app_name_),
+			app_instance(app_instance_) {
 }
 
-void Application::applicationRegister()
-{
-        ApplicationRegistrationInformation ari;
-        RegisterApplicationResponseEvent *resp;
-        unsigned int seqnum;
-        IPCEvent *event;
+void Application::applicationRegister() {
+	ApplicationRegistrationInformation ari;
+	RegisterApplicationResponseEvent *resp;
+	unsigned int seqnum;
+	IPCEvent *event;
 
-        ari.ipcProcessId = 0;  // This is an application, not an IPC process
-        ari.appName = ApplicationProcessNamingInformation(app_name,
-                                                          app_instance);
-        if (dif_name == string()) {
-                ari.applicationRegistrationType =
-                                rina::APPLICATION_REGISTRATION_ANY_DIF;
-        } else {
-                ari.applicationRegistrationType =
-                                rina::APPLICATION_REGISTRATION_SINGLE_DIF;
-                ari.difName = ApplicationProcessNamingInformation(dif_name,
-                                                                  string());
-        }
+	ari.ipcProcessId = 0;  // This is an application, not an IPC process
+	ari.appName = ApplicationProcessNamingInformation(app_name,
+								app_instance);
+	if (dif_name == string()) {
+		ari.applicationRegistrationType =
+				rina::APPLICATION_REGISTRATION_ANY_DIF;
+	} else {
+		ari.applicationRegistrationType =
+				rina::APPLICATION_REGISTRATION_SINGLE_DIF;
+		ari.difName = ApplicationProcessNamingInformation(
+				dif_name, string());
+	}
 
-        // Request the registration
-        seqnum = ipcManager->requestApplicationRegistration(ari);
+	// Request the registration
+	seqnum = ipcManager->requestApplicationRegistration(ari);
 
-        // Wait for the response to come
-        for (;;) {
-                event = ipcEventProducer->eventWait();
-                if (event
-                                && event->eventType
-                                                == REGISTER_APPLICATION_RESPONSE_EVENT
-                                && event->sequenceNumber == seqnum) {
-                        break;
-                }
-        }
+	// Wait for the response to come
+	for (;;) {
+		event = ipcEventProducer->eventWait();
+		if (event
+				&& event->eventType
+						== REGISTER_APPLICATION_RESPONSE_EVENT
+				&& event->sequenceNumber == seqnum) {
+			break;
+		}
+	}
 
-        resp = dynamic_cast<RegisterApplicationResponseEvent*>(event);
+	resp = dynamic_cast<RegisterApplicationResponseEvent*>(event);
 
-        // Update librina state
-        if (resp->result == 0) {
-                ipcManager->commitPendingRegistration(seqnum, resp->DIFName);
-        } else {
-                ipcManager->withdrawPendingRegistration(seqnum);
-                throw ApplicationRegistrationException(
-                                "Failed to register application");
-        }
+	// Update librina state
+	if (resp->result == 0) {
+		ipcManager->commitPendingRegistration(seqnum, resp->DIFName);
+	} else {
+		ipcManager->withdrawPendingRegistration(seqnum);
+		throw ApplicationRegistrationException(
+				"Failed to register application");
+	}
 }
 
 const uint Application::max_buffer_size = 1 << 18;
 
-ConnectionCallback::ConnectionCallback(rina::cdap::CDAPProviderInterface **prov)
-{
-        prov_ = prov;
+ConnectionCallback::ConnectionCallback(
+		rina::cdap::CDAPProviderInterface **prov) {
+	prov_ = prov;
 }
 
 void ConnectionCallback::open_connection(
-                const rina::cdap_rib::con_handle_t &con,
-                const rina::cdap_rib::flags_t &flags, int message_id)
-{
-        (void) flags;
-        cdap_rib::res_info_t res;
-        res.result_ = 1;
-        res.result_reason_ = "Ok";
-        std::cout << "open conection request CDAP message received"
-                  << std::endl;
-        (*prov_)->open_connection_response(con, res, message_id);
-        std::cout << "open conection response CDAP message sent" << std::endl;
+		const rina::cdap_rib::con_handle_t &con,
+		const rina::cdap_rib::flags_t &flags, int message_id) {
+	(void) flags;
+	cdap_rib::res_info_t res;
+	res.result_ = 1;
+	res.result_reason_ = "Ok";
+	std::cout << "open conection request CDAP message received"
+			<< std::endl;
+	(*prov_)->open_connection_response(con, res, message_id);
+	std::cout << "open conection response CDAP message sent" << std::endl;
 }
 
 void ConnectionCallback::remote_create_result(
-                const rina::cdap_rib::con_handle_t &con,
-                const rina::cdap_rib::obj_info_t &obj,
-                const rina::cdap_rib::res_info_t &res)
-{
-        (void) con;
-        (void) obj;
-        std::cout << "Result code is: " << res.result_ << std::endl;
+		const rina::cdap_rib::con_handle_t &con,
+		const rina::cdap_rib::obj_info_t &obj,
+		const rina::cdap_rib::res_info_t &res) {
+	(void) con;
+	(void) obj;
+	std::cout << "Result code is: " << res.result_ << std::endl;
 }
 
-void ConnectionCallback::remote_read_result(const rina::cdap_rib::con_handle_t &con,
-                        const rina::cdap_rib::obj_info_t &obj,
-                        const rina::cdap_rib::res_info_t &res)
-{
-        // decode object value
-        // print object value
-        (void) con;
-        std::cout<<"Query Rib operation returned result "<<res.result_<<std::endl;
-        std::string query_rib;
-        rinad::mad_manager::encoders::StringEncoder().decode(obj.value_, query_rib);
-        std::cout<<"QueryRIB:"<<std::endl<<query_rib<<std::endl;
+void ConnectionCallback::remote_read_result(
+		const rina::cdap_rib::con_handle_t &con,
+		const rina::cdap_rib::obj_info_t &obj,
+		const rina::cdap_rib::res_info_t &res) {
+	// decode object value
+	// print object value
+	(void) con;
+	std::cout << "Query Rib operation returned result " << res.result_
+			<< std::endl;
+	std::string query_rib;
+	rinad::mad_manager::encoders::StringEncoder().decode(obj.value_,
+								query_rib);
+	std::cout << "QueryRIB:" << std::endl << query_rib << std::endl;
 }
 
 Manager::Manager(const std::string& dif_name, const std::string& apn,
-                 const std::string& api)
-                : Application(dif_name, apn, api)
-{
-  (void)client_app_reg_;
-  cdap_prov_ = 0;
+			const std::string& api)
+		: Application(dif_name, apn, api) {
+	(void) client_app_reg_;
+	cdap_prov_ = 0;
 }
 
-Manager::~Manager()
-{
+Manager::~Manager() {
 }
 
 void Manager::run()
@@ -218,10 +214,10 @@ void Manager::startWorker(rina::FlowInformation flow)
 {
         void (Manager::*server_function)(rina::FlowInformation flow);
 
-        server_function = &Manager::operate;
+	server_function = &Manager::operate;
 
-        thread t(server_function, this, flow);
-        t.detach();
+	thread t(server_function, this, flow);
+	t.detach();
 }
 
 void Manager::operate(rina::FlowInformation flow)
@@ -257,13 +253,13 @@ void Manager::createIPCP(rina::FlowInformation flow)
 
         mad_manager::structures::ipcp_config_t ipc_config;
         ipc_config.process_instance = "1";
-        ipc_config.process_name = "test2.IRATI";
+        ipc_config.process_name = "normal-1.IPCP";
         ipc_config.process_type = "normal-ipc";
         ipc_config.dif_to_assign = "normal.DIF";
 
         cdap_rib::obj_info_t obj;
         obj.name_ =
-                        "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcessID=1";
+                        "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=2";
         obj.class_ = "IPCProcess";
         obj.inst_ = 0;
         mad_manager::encoders::IPCPConfigEncoder().encode(ipc_config,
@@ -293,18 +289,18 @@ void Manager::queryRIB(rina::FlowInformation flow)
 {
         char buffer[max_sdu_size_in_bytes];
 
-        cdap_rib::obj_info_t obj;
-        obj.name_ =
-                        "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcessID=1, RIBDaemon";
-        obj.class_ = "RIBDaemon";
-        obj.inst_ = 0;
+	cdap_rib::obj_info_t obj;
+	obj.name_ =
+			"root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=2, RIBDaemon";
+	obj.class_ = "RIBDaemon";
+	obj.inst_ = 0;
 
-        cdap_rib::flags_t flags;
-        flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
+	cdap_rib::flags_t flags;
+	flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
 
-        cdap_rib::filt_info_t filt;
-        filt.filter_ = 0;
-        filt.scope_ = 0;
+	cdap_rib::filt_info_t filt;
+	filt.filter_ = 0;
+	filt.scope_ = 0;
 
         cdap_prov_->remote_read(flow.portId, obj, flags, filt);
         std::cout << "Read RIBDaemon request CDAP message sent" << std::endl;
