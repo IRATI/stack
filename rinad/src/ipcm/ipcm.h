@@ -605,7 +605,7 @@ protected:
 		const rina::ApplicationRegistrationRequestEvent& req_event);
 
 	//IPCP mgmt
-	int ipcm_register_response_ipcp(
+	void ipcm_register_response_ipcp(IPCMIPCProcess * ipcp,
 		rina::IpcmRegisterApplicationResponseEvent *event);
 	void ipcm_unregister_response_ipcp(IPCMIPCProcess * ipcp,
 				rina::IpcmUnregisterApplicationResponseEvent *event,

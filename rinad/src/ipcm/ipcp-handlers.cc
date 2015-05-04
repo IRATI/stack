@@ -97,7 +97,7 @@ void IPCManager_::ipc_process_daemon_initialized_event_handler(
 	return;
 }
 
-int IPCManager_::ipcm_register_response_ipcp(
+void IPCManager_::ipcm_register_response_ipcp(IPCMIPCProcess * ipcp,
 	rina::IpcmRegisterApplicationResponseEvent *e)
 {
 	ostringstream ss;
@@ -106,18 +106,16 @@ int IPCManager_::ipcm_register_response_ipcp(
 	IPCPregTransState* trans = get_transaction_state<IPCPregTransState>(e->sequenceNumber);
 
 	if(!trans){
-		return ret;
+		LOG_ERR("Transaction not of valid type");
+		throw rina::Exception();
 	}
 
-	rinad::IPCMIPCProcess *ipcp = lookup_ipcp_by_id(trans->ipcp_id);
-	if(!ipcp)
-		return ret;
-	//Auto release the read lock
-	rina::ReadScopedLock readlock(ipcp->rwlock, false);
-
 	rinad::IPCMIPCProcess *slave_ipcp = lookup_ipcp_by_id(trans->slave_ipcp_id);
-	if(!slave_ipcp)
-		return ret;
+	if(!slave_ipcp) {
+		LOG_ERR("Could not find slave IPCP");
+		throw rina::Exception();
+	}
+
 	//Auto release the read lock
 	rina::ReadScopedLock sreadlock(slave_ipcp->rwlock, false);
 
@@ -137,8 +135,6 @@ int IPCManager_::ipcm_register_response_ipcp(
 				"to N-1 DIF " <<
 				slave_dif_name.toString() << endl;
 			FLUSH_LOG(INFO, ss);
-
-			ret = IPCM_SUCCESS;
 		} catch (rina::NotifyRegistrationToDIFException& e) {
 			ss  << ": Error while notifying "
 				"IPC process " <<
@@ -146,15 +142,15 @@ int IPCManager_::ipcm_register_response_ipcp(
 				" about registration to N-1 DIF"
 				<< slave_dif_name.toString() << endl;
 			FLUSH_LOG(ERR, ss);
+			throw e;
 		}
 	} else {
 		ss  << "Cannot register IPC process "
 			<< ipcp->get_name().toString() <<
 			" to DIF " << slave_dif_name.toString() << endl;
 		FLUSH_LOG(ERR, ss);
+		throw rina::Exception();
 	}
-
-	return ret;
 }
 
 void IPCManager_::ipcm_unregister_response_ipcp(IPCMIPCProcess * ipcp,
