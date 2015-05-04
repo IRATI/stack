@@ -373,15 +373,6 @@ std::string DIFRegistrationRIBObject::get_displayable_value() {
 	return ss.str();
 }
 
-void DIFRegistrationRIBObject::deleteObject(const void* objectValue) {
-	(void) objectValue; // Stop compiler barfs
-
-	parent_->remove_child(name_);
-	base_rib_daemon_->removeRIBObject(name_);
-	const std::string * value = (const std::string *) get_value();
-	delete value;
-}
-
 // Class DIF registration set RIB Object
 const std::string DIFRegistrationSetRIBObject::DIF_REGISTRATION_SET_RIB_OBJECT_CLASS =
 		"DIF registration set";
@@ -439,19 +430,6 @@ std::string NMinusOneFlowRIBObject::get_displayable_value()
 	FlowSpecification flowSpec = flow_info->flowSpecification;
 	ss << "Flow characteristics: " << flowSpec.toString();
 	return ss.str();
-}
-
-void NMinusOneFlowRIBObject::deleteObject(const void* objectValue)
-{
-	(void) objectValue; // Stop compiler barfs
-
-	parent_->remove_child(name_);
-	base_rib_daemon_->removeRIBObject(name_);
-	const FlowInformation * flow_info =
-				(const FlowInformation *) get_value();
-	if (flow_info) {
-		delete flow_info;
-	}
 }
 
 // Class N-1 Flow set RIB Object
