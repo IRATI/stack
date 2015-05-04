@@ -388,7 +388,7 @@ public:
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t unregister_ipcp_from_ipcp(Promise* promise,
 						const unsigned short ipcp_id,
-						const unsigned short slave_ipcp_id);
+						const rina::ApplicationProcessNamingInformation& dif_name);
 	//
 	// Update the DIF configuration
 	//TODO: What is really this for?
@@ -607,7 +607,7 @@ protected:
 	//IPCP mgmt
 	int ipcm_register_response_ipcp(
 		rina::IpcmRegisterApplicationResponseEvent *event);
-	int ipcm_unregister_response_ipcp(
+	void ipcm_unregister_response_ipcp(IPCMIPCProcess * ipcp,
 				rina::IpcmUnregisterApplicationResponseEvent *event,
 				TransactionState *trans);
 

@@ -157,28 +157,23 @@ int IPCManager_::ipcm_register_response_ipcp(
 	return ret;
 }
 
-int IPCManager_::ipcm_unregister_response_ipcp(
+void IPCManager_::ipcm_unregister_response_ipcp(IPCMIPCProcess * ipcp,
 			rina::IpcmUnregisterApplicationResponseEvent *e,
 			TransactionState *t)
 {
 	ostringstream ss;
 	bool success;
-	ipcm_res_t ret = IPCM_FAILURE;
 	IPCPregTransState *trans = dynamic_cast<IPCPregTransState*>(t);
 	if(!trans){
-		return -1;
+		LOG_ERR("Transaction is not of the right type");
+		throw rina::Exception();
 	}
 
-	rinad::IPCMIPCProcess *ipcp = lookup_ipcp_by_id(trans->ipcp_id);
-	if(!ipcp)
-		return -1;
-
-	//Auto release the read lock
-	rina::ReadScopedLock readlock(ipcp->rwlock, false);
-
 	rinad::IPCMIPCProcess *slave_ipcp = lookup_ipcp_by_id(trans->slave_ipcp_id);
-	if(!slave_ipcp)
-		return -1;
+	if(!slave_ipcp) {
+		LOG_ERR("Could not find slave IPCP");
+		throw  rina::Exception();
+	}
 
 	//Auto release the read lock
 	rina::ReadScopedLock sreadlock(slave_ipcp->rwlock, false);
@@ -199,26 +194,20 @@ int IPCManager_::ipcm_unregister_response_ipcp(
 				" informed about its unregistration from DIF "
 				<< slave_dif_name.toString() << endl;
 			FLUSH_LOG(INFO, ss);
-
-			ret = IPCM_SUCCESS;
 		} catch (rina::NotifyRegistrationToDIFException& e) {
 			ss  << ": Error while reporing "
 				"unregistration result for IPC process "
 				<< ipcp->get_name().toString() << endl;
 			FLUSH_LOG(ERR, ss);
+			throw e;
 		}
 	} else {
 		ss  << ": Cannot unregister IPC Process "
 			<< ipcp->get_name().toString() << " from DIF " <<
 			slave_dif_name.toString() << endl;
 		FLUSH_LOG(ERR, ss);
+		throw rina::Exception();
 	}
-
-	//Set return value, mark as completed and signal
-	trans->completed(ret);
-	remove_transaction_state(trans->tid);
-
-	return -(ret == IPCM_SUCCESS);
 }
 
 void
