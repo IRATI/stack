@@ -76,9 +76,8 @@ void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProces
 			std::stringstream ss;
 			ss<<rina::DIFRegistrationSetRIBObject::DIF_REGISTRATION_SET_RIB_OBJECT_NAME;
 			ss<<rina::RIBNamingConstants::SEPARATOR<<event.getDIFName().processName;
-			std::string * dif_name = new std::string(event.getDIFName().processName);
 			rib_daemon_->createObject(rina::DIFRegistrationSetRIBObject::DIF_REGISTRATION_RIB_OBJECT_CLASS,
-					ss.str(), dif_name, 0);
+					ss.str(), &(event.getDIFName().processName), 0);
 		}catch(rina::Exception &e){
 			LOG_IPCP_ERR("Problems creating RIB object: %s", e.what());;
 		}
