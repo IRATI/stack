@@ -71,10 +71,160 @@ rina::IAuthPolicySet::AuthStatus AuthNonePolicySet::initiate_authentication(rina
 	return rina::IAuthPolicySet::SUCCESSFULL;
 }
 
+// No authentication messages exchanged
+void AuthNonePolicySet::process_incoming_message(const CDAPMessage& message,
+						 int session_id)
+{
+	(void) message;
+	(void) session_id;
+}
+
 int AuthNonePolicySet::set_policy_set_param(const std::string& name,
                                             const std::string& value)
 {
         LOG_DBG("No policy-set-specific parameters to set (%s, %s)",
+                        name.c_str(), value.c_str());
+        return -1;
+}
+
+//Class AuthPasswdPolicySet
+const std::string AuthPasswordPolicySet::PASSWORD = "password";
+const std::string AuthPasswordPolicySet::DEFAULT_CIPHER = "default";
+const std::string AuthPasswordPolicySet::CHALLENGE_REQUEST = "challenge request";
+const std::string AuthPasswordPolicySet::CHALLENGE_REPLY = "challenge reply";
+
+// No credentials required, since the process being authenticated
+// will have to demonstrate that it knows the password by encrypting
+// a random challenge with a password string
+rina::AuthValue AuthPasswordPolicySet::get_my_credentials(int session_id)
+{
+	(void) session_id;
+
+	rina::AuthValue result;
+	return result;
+}
+
+std::string * AuthPasswordPolicySet::generate_random_challenge()
+{
+	static const char alphanum[] =
+			"0123456789"
+			"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+			"abcdefghijklmnopqrstuvwxyz";
+
+	char *s = new char[challenge_length];
+
+	for (int i = 0; i < challenge_length; ++i) {
+		s[i] = alphanum[rand() % (sizeof(alphanum) - 1)];
+	}
+
+	s[challenge_length] = 0;
+
+	std::string * result = new std::string(s);
+	delete s;
+
+	return result;
+}
+
+std::string * AuthPasswordPolicySet::encrypt_challenge(const std::string& challenge)
+{
+	(void) challenge;
+	return 0;
+}
+
+std::string * AuthPasswordPolicySet::decrypt_challenge(const std::string& encrypted_challenge)
+{
+	(void) encrypted_challenge;
+	return 0;
+}
+
+rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(rina::AuthValue credentials,
+								      	    int session_id)
+{
+	(void) credentials;
+	(void) session_id;
+
+	WriteScopedLock writeLock(lock);
+
+	//1 Generate a random password string and send it to the AP being authenticated
+	std::string * challenge = generate_random_challenge();
+
+	try {
+		RIBObjectValue robject_value;
+		robject_value.type_ = RIBObjectValue::stringtype;
+		robject_value.string_value_ = *challenge;
+
+		RemoteProcessId remote_id;
+		remote_id.port_id_ = session_id;
+
+		//object class contains challenge request or reply
+		//object name contains cipher name
+		rib_daemon->remoteWriteObject(CHALLENGE_REQUEST, cipher,
+				robject_value, 0, remote_id, 0);
+	} catch (Exception &e) {
+		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
+	}
+
+	//2 Store pending challenge and return
+	pending_challenges.put(session_id, challenge);
+
+	//3 TODO set timer to clean up pending authentication session upon timer expiry
+
+	return rina::IAuthPolicySet::IN_PROGRESS;
+}
+
+void AuthPasswordPolicySet::authentication_failed(int session_id)
+{
+	//TODO clean up pending challenges and issue
+	// an authentication failed notification
+}
+
+void AuthPasswordPolicySet::process_challenge_request(const CDAPMessage& message,
+						      int session_id)
+{
+	//TODO
+}
+
+void AuthPasswordPolicySet::process_challenge_reply(const CDAPMessage& message,
+						    int session_id)
+{
+	//TODO
+}
+
+void AuthPasswordPolicySet::process_incoming_message(const CDAPMessage& message,
+						     int session_id)
+{
+	if (message.op_code_ != CDAPMessage::M_WRITE) {
+		LOG_ERR("Wrong operation type");
+		authentication_failed(session_id);
+		return;
+	}
+
+	if (message.obj_value_ == 0) {
+		LOG_ERR("Null object value");
+		authentication_failed(session_id);
+		return;
+	}
+
+	if (message.obj_class_ == CHALLENGE_REQUEST) {
+		process_challenge_request(message, session_id);
+	} else if (message.obj_class_ == CHALLENGE_REPLY) {
+		process_challenge_reply(message, session_id);
+	} else {
+		LOG_ERR("Wrong message type");
+		authentication_failed(session_id);
+	}
+}
+
+// Allow modification of password via set_policy_set param
+int AuthPasswordPolicySet::set_policy_set_param(const std::string& name,
+                                            const std::string& value)
+{
+	if (name == PASSWORD) {
+		password = value;
+		return 0;
+	}
+
+        LOG_DBG("Unknown policy-set-specific parameters to set (%s, %s)",
                         name.c_str(), value.c_str());
         return -1;
 }
