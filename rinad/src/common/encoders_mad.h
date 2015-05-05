@@ -22,6 +22,7 @@
 #define ENCODERS_MAD_H_
 
 #include <librina/rib_v2.h>
+#include "common/encoders/MA-IPCP.pb.h"
 
 namespace rinad {
 namespace mad_manager {
@@ -36,6 +37,13 @@ typedef struct ipcp{
 	//TODO: add missing info
 }ipcp_t;
 
+typedef struct enrollment_config{
+	std::string neighbor_name;
+	std::string neighbor_instance;
+	std::string enr_dif;
+	std::string enr_un_dif;
+}enrollment_config_t;
+
 /**
 * IPCP configuration struct
 */
@@ -45,6 +53,7 @@ typedef struct ipcp_config{
 	std::string process_type;
 	std::string dif_to_register;
 	std::string dif_to_assign;
+	enrollment_config_t enr_conf;
 }ipcp_config_t;
 
 } //namespace structures
@@ -97,6 +106,11 @@ public:
 	void decode(const rina::cdap_rib::ser_obj_t &ser_obj,
 			structures::ipcp_config_t& obj);
 	std::string get_type() const{ return "ipcp-config"; };
+private:
+	void encode_enrollment(const structures::enrollment_config_t &obj,
+			messages::enrollment_config &ser_obj);
+	void decode_enrollment(const messages::enrollment_config &ser_obj,
+	                       structures::enrollment_config_t &obj);
 };
 
 } //namespace encoders

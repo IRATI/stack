@@ -41,6 +41,7 @@ private:
 	int createIPCP(rinad::mad_manager::structures::ipcp_config_t &object);
         bool assignToDIF(rinad::mad_manager::structures::ipcp_config_t &object, int ipcp_id);
         bool registerAtDIF(rinad::mad_manager::structures::ipcp_config_t &object, int ipcp_id);
+        bool enrollToDIF(rinad::mad_manager::structures::enrollment_config_t &object, int ipcp_id);
 };
 
 } //namespace rib_v1
