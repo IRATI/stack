@@ -395,51 +395,51 @@ const SerializedObject* CDAPSessionImpl::encodeNextMessageToBeSent(
       connection_state_machine_->checkReleaseResponse();
       break;
     case CDAPMessage::M_CREATE:
-      checkIsConnected();
+      check_can_send_or_receive_messages();
       checkInvokeIdNotExists(cdap_message, true);
       break;
     case CDAPMessage::M_CREATE_R:
-      checkIsConnected();
+      check_can_send_or_receive_messages();
       checkCanSendOrReceiveResponse(cdap_message, CDAPMessage::M_CREATE, true);
       break;
     case CDAPMessage::M_DELETE:
-      checkIsConnected();
+      check_can_send_or_receive_messages();
       checkInvokeIdNotExists(cdap_message, true);
       break;
     case CDAPMessage::M_DELETE_R:
-      checkIsConnected();
+      check_can_send_or_receive_messages();
       checkCanSendOrReceiveResponse(cdap_message, CDAPMessage::M_DELETE, true);
       break;
     case CDAPMessage::M_START:
-      checkIsConnected();
+      check_can_send_or_receive_messages();
       checkInvokeIdNotExists(cdap_message, true);
       break;
     case CDAPMessage::M_START_R:
-      checkIsConnected();
+      check_can_send_or_receive_messages();
       checkCanSendOrReceiveResponse(cdap_message, CDAPMessage::M_START, true);
       break;
     case CDAPMessage::M_STOP:
-      checkIsConnected();
+      check_can_send_or_receive_messages();
       checkInvokeIdNotExists(cdap_message, true);
       break;
     case CDAPMessage::M_STOP_R:
-      checkIsConnected();
+      check_can_send_or_receive_messages();
       checkCanSendOrReceiveResponse(cdap_message, CDAPMessage::M_STOP, true);
       break;
     case CDAPMessage::M_WRITE:
-      checkIsConnected();
+      check_can_send_or_receive_messages();
       checkInvokeIdNotExists(cdap_message, true);
       break;
     case CDAPMessage::M_WRITE_R:
-      checkIsConnected();
+      check_can_send_or_receive_messages();
       checkCanSendOrReceiveResponse(cdap_message, CDAPMessage::M_WRITE, true);
       break;
     case CDAPMessage::M_READ:
-      checkIsConnected();
+      check_can_send_or_receive_messages();
       checkInvokeIdNotExists(cdap_message, true);
       break;
     case CDAPMessage::M_READ_R:
-      checkIsConnected();
+      check_can_send_or_receive_messages();
       checkCanSendOrReceiveResponse(cdap_message, CDAPMessage::M_READ, true);
       break;
     case CDAPMessage::M_CANCELREAD:
