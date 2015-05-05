@@ -25,7 +25,7 @@
 #ifdef __cplusplus
 
 #include "librina/application.h"
-#include "librina/cdap.h"
+#include "librina/rib.h"
 #include "librina/internal-events.h"
 
 namespace rina {
@@ -64,7 +64,7 @@ public:
 	virtual AuthStatus initiate_authentication(AuthValue credentials, int session_id) = 0;
 
 	/// Process an incoming CDAP message
-	virtual void process_incoming_message(const CDAPMessage& message, int session_id) = 0;
+	virtual int process_incoming_message(const CDAPMessage& message, int session_id) = 0;
 
 	// The type of authentication policy
 	std::string type;
@@ -76,7 +76,7 @@ public:
 	virtual ~AuthNonePolicySet() { };
 	rina::AuthValue get_my_credentials(int session_id);
 	AuthStatus initiate_authentication(rina::AuthValue credentials, int session_id);
-	void process_incoming_message(const CDAPMessage& message, int session_id);
+	int process_incoming_message(const CDAPMessage& message, int session_id);
 	int set_policy_set_param(const std::string& name,
 	                         const std::string& value);
 };
@@ -98,7 +98,7 @@ public:
 	virtual ~AuthPasswordPolicySet() { };
 	rina::AuthValue get_my_credentials(int session_id);
 	AuthStatus initiate_authentication(rina::AuthValue credentials, int session_id);
-	void process_incoming_message(const CDAPMessage& message, int session_id);
+	int process_incoming_message(const CDAPMessage& message, int session_id);
 	int set_policy_set_param(const std::string& name,
 	                         const std::string& value);
 
@@ -106,13 +106,14 @@ private:
 	std::string * generate_random_challenge();
 	std::string * encrypt_challenge(const std::string& challenge);
 	std::string * decrypt_challenge(const std::string& encrypted_challenge);
-	void authentication_failed(int session_id);
-	void process_challenge_request(const CDAPMessage& message, int session_id);
-	void process_challenge_reply(const CDAPMessage& message, int session_id);
+	int process_challenge_request(const std::string& challenge,
+			 	      int session_id);
+	int process_challenge_reply(const std::string& encrypted_challenge,
+			 	    int session_id);
 
-	IRIBDaemon * rib_daemon;
 	std::string password;
 	int challenge_length;
+	IRIBDaemon * rib_daemon;
 	std::string cipher;
 	ThreadSafeMapOfPointers<int, std::string> pending_challenges;
 	Lockable lock;

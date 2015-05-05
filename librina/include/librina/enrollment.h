@@ -29,6 +29,7 @@
 
 #include "irm.h"
 #include "timer.h"
+#include "security-manager.h"
 
 namespace rina {
 
@@ -182,6 +183,9 @@ public:
 	void releaseResponse(int result, const std::string& result_reason,
 			rina::CDAPSessionDescriptor * session_descriptor);
 
+	virtual void process_authentication_message(const rina::CDAPMessage& message,
+					            rina::CDAPSessionDescriptor * session_descriptor) = 0;
+
 	/// Called by the EnrollmentTask when the flow supporting the CDAP session with the remote peer
 	/// has been deallocated
 	/// @param cdapSessionDescriptor
@@ -213,6 +217,7 @@ protected:
 	ApplicationProcess * app_;
 	IRIBDaemon * rib_daemon_;
 	IEnrollmentTask * enrollment_task_;
+	IAuthPolicySet * auth_ps_;
 	int timeout_;
 	Timer * timer_;
 	Lockable * lock_;

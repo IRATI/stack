@@ -19,6 +19,8 @@
 // MA  02110-1301  USA
 //
 
+#include <cstdlib>
+
 #define RINA_PREFIX "librina.security-manager"
 
 #include "librina/logs.h"
@@ -72,11 +74,14 @@ rina::IAuthPolicySet::AuthStatus AuthNonePolicySet::initiate_authentication(rina
 }
 
 // No authentication messages exchanged
-void AuthNonePolicySet::process_incoming_message(const CDAPMessage& message,
+int AuthNonePolicySet::process_incoming_message(const CDAPMessage& message,
 						 int session_id)
 {
 	(void) message;
 	(void) session_id;
+
+	//This function should never be called for this authenticaiton policy
+	return IAuthPolicySet::FAILED;
 }
 
 int AuthNonePolicySet::set_policy_set_param(const std::string& name,
@@ -127,14 +132,12 @@ std::string * AuthPasswordPolicySet::generate_random_challenge()
 
 std::string * AuthPasswordPolicySet::encrypt_challenge(const std::string& challenge)
 {
-	(void) challenge;
-	return 0;
+	return new std::string(challenge);
 }
 
 std::string * AuthPasswordPolicySet::decrypt_challenge(const std::string& encrypted_challenge)
 {
-	(void) encrypted_challenge;
-	return 0;
+	return new std::string(encrypted_challenge);
 }
 
 rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(rina::AuthValue credentials,
@@ -143,7 +146,7 @@ rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(
 	(void) credentials;
 	(void) session_id;
 
-	WriteScopedLock writeLock(lock);
+	ScopedLock scopedLock(lock);
 
 	//1 Generate a random password string and send it to the AP being authenticated
 	std::string * challenge = generate_random_challenge();
@@ -172,47 +175,91 @@ rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(
 	return rina::IAuthPolicySet::IN_PROGRESS;
 }
 
-void AuthPasswordPolicySet::authentication_failed(int session_id)
-{
-	//TODO clean up pending challenges and issue
-	// an authentication failed notification
-}
-
-void AuthPasswordPolicySet::process_challenge_request(const CDAPMessage& message,
-						      int session_id)
-{
-	//TODO
-}
-
-void AuthPasswordPolicySet::process_challenge_reply(const CDAPMessage& message,
-						    int session_id)
-{
-	//TODO
-}
-
-void AuthPasswordPolicySet::process_incoming_message(const CDAPMessage& message,
+int AuthPasswordPolicySet::process_challenge_request(const std::string& challenge,
 						     int session_id)
 {
+	std::string * encrypted_challenge = encrypt_challenge(challenge);
+
+	try {
+		RIBObjectValue robject_value;
+		robject_value.type_ = RIBObjectValue::stringtype;
+		robject_value.string_value_ = *encrypted_challenge;
+		delete encrypted_challenge;
+
+		RemoteProcessId remote_id;
+		remote_id.port_id_ = session_id;
+
+		//object class contains challenge request or reply
+		//object name contains cipher name
+		rib_daemon->remoteWriteObject(CHALLENGE_REPLY, cipher,
+				robject_value, 0, remote_id, 0);
+	} catch (Exception &e) {
+		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
+	}
+
+	return IAuthPolicySet::IN_PROGRESS;
+}
+
+int AuthPasswordPolicySet::process_challenge_reply(const std::string& encrypted_challenge,
+						    int session_id)
+{
+	int result = IAuthPolicySet::FAILED;
+
+	ScopedLock scopedLock(lock);
+
+	std::string * challenge = pending_challenges.erase(session_id);
+	if (!challenge) {
+		LOG_DBG("Could not find pending challenge for session_id %d",
+			session_id);
+		return IAuthPolicySet::FAILED;
+	}
+
+	std::string * recovered_challenge = decrypt_challenge(encrypted_challenge);
+	if (*challenge == *recovered_challenge) {
+		result = IAuthPolicySet::SUCCESSFULL;
+	} else {
+		LOG_DBG("Authentication failed; challenge: %s; recovered_challenge: %s ",
+				challenge->c_str(), recovered_challenge->c_str());
+	}
+
+	delete challenge;
+	delete recovered_challenge;
+	return result;
+}
+
+int AuthPasswordPolicySet::process_incoming_message(const CDAPMessage& message,
+						     int session_id)
+{
+	RIBObjectValue * robject_value = 0;
+
 	if (message.op_code_ != CDAPMessage::M_WRITE) {
 		LOG_ERR("Wrong operation type");
-		authentication_failed(session_id);
-		return;
+		return IAuthPolicySet::FAILED;
 	}
 
 	if (message.obj_value_ == 0) {
 		LOG_ERR("Null object value");
-		authentication_failed(session_id);
-		return;
+		return IAuthPolicySet::FAILED;
+	}
+
+	robject_value = dynamic_cast<RIBObjectValue *>(message.obj_value_);
+	if (!robject_value) {
+		LOG_ERR("Object value of wrong type");
+		return IAuthPolicySet::FAILED;
 	}
 
 	if (message.obj_class_ == CHALLENGE_REQUEST) {
-		process_challenge_request(message, session_id);
-	} else if (message.obj_class_ == CHALLENGE_REPLY) {
-		process_challenge_reply(message, session_id);
-	} else {
-		LOG_ERR("Wrong message type");
-		authentication_failed(session_id);
+		return process_challenge_request(robject_value->string_value_,
+						 session_id);
 	}
+
+	if (message.obj_class_ == CHALLENGE_REPLY) {
+		return process_challenge_reply(robject_value->string_value_,
+					       session_id);
+	}
+
+	LOG_ERR("Wrong message type");
+	return IAuthPolicySet::FAILED;
 }
 
 // Allow modification of password via set_policy_set param

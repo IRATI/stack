@@ -816,8 +816,10 @@ void RIBDaemon::processIncomingCDAPMessage(const rina::CDAPMessage * cdapMessage
 			cacep_handler_->connect(*cdapMessage,
 			                        descriptor);
 		} else {
-			//TODO These must be authentication messages, delegate to CACEPHandler
+			//These must be authentication messages, delegate to CACEPHandler
 			//who will delegate to the authentication policy
+			cacep_handler_->process_authentication_message(*cdapMessage,
+								       descriptor);
 		}
 
 		return;

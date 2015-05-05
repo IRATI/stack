@@ -92,6 +92,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
                 throw rina::Exception("Cannot create security manager policy-set");
         }
         security_manager_->add_auth_policy_set(rina::IAuthPolicySet::AUTH_NONE);
+        security_manager_->add_auth_policy_set(rina::IAuthPolicySet::AUTH_PASSWORD);
 
         flow_allocator_->select_policy_set(std::string(), rina::IPolicySet::DEFAULT_PS_SET_NAME);
         if (!flow_allocator_->ps) {

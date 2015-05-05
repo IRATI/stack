@@ -473,6 +473,14 @@ void EnrollmentTask::connectResponse(int result, const std::string& result_reaso
 	ipcp_ps->connect_response_received(result, result_reason, session_descriptor);
 }
 
+void EnrollmentTask::process_authentication_message(const rina::CDAPMessage& message,
+		rina::CDAPSessionDescriptor * session_descriptor)
+{
+	IPCPEnrollmentTaskPS * ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);
+	assert(ipcp_ps);
+	ipcp_ps->process_authentication_message(message, session_descriptor);
+}
+
 void EnrollmentTask::nMinusOneFlowAllocated(rina::NMinusOneFlowAllocatedEvent * flowEvent)
 {
 	rina::EnrollmentRequest * request =

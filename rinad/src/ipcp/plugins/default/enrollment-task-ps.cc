@@ -51,7 +51,9 @@ public:
 	static const std::string START_ENROLLMENT_TIMEOUT;
 	static const std::string STOP_ENROLLMENT_RESPONSE_TIMEOUT;
 	static const std::string STOP_RESPONSE_IN_BAD_STATE;
+	static const std::string AUTHENTICATION_TIMEOUT;
 
+	static const std::string STATE_AUTHENTICATING;
 	static const std::string STATE_WAIT_CONNECT_RESPONSE;
 	static const std::string STATE_WAIT_START_ENROLLMENT_RESPONSE;
 	static const std::string STATE_WAIT_READ_RESPONSE;
@@ -112,7 +114,11 @@ const std::string BaseEnrollmentStateMachine::STOP_ENROLLMENT_RESPONSE_TIMEOUT =
 		"Timeout waiting for stop enrollment response";
 const std::string BaseEnrollmentStateMachine::STOP_RESPONSE_IN_BAD_STATE =
 		"Received a STOP Response message in a wrong state";
+const std::string BaseEnrollmentStateMachine::AUTHENTICATION_TIMEOUT =
+		"Timeout waiting for authentication to complete";
 
+const std::string BaseEnrollmentStateMachine::STATE_AUTHENTICATING =
+		"AUTHENTICATING";
 const std::string BaseEnrollmentStateMachine::STATE_WAIT_CONNECT_RESPONSE =
 		"WAIT_CONNECT_RESPONSE";
 const std::string BaseEnrollmentStateMachine::STATE_WAIT_START_ENROLLMENT_RESPONSE =
@@ -191,6 +197,9 @@ public:
 	/// enrollment request event
 	/// @param portId
 	void initiateEnrollment(rina::EnrollmentRequest * enrollmentRequest, int portId);
+
+	void process_authentication_message(const rina::CDAPMessage& message,
+				            rina::CDAPSessionDescriptor * session_descriptor);
 
 	/// Called by the EnrollmentTask when it got an M_CONNECT_R message
 	/// @param result
@@ -274,16 +283,15 @@ void EnrolleeStateMachine::initiateEnrollment(rina::EnrollmentRequest * enrollme
 		rina::RemoteProcessId remote_id;
 		remote_id.port_id_ = portId;
 
-		rina::IAuthPolicySet * ps =
-				ipc_process_->security_manager_->get_auth_policy_set(
-						rina::IAuthPolicySet::cdapTypeToString(rina::CDAPMessage::AUTH_NONE));
-		if (!ps) {
+		auth_ps_ = ipc_process_->security_manager_->get_auth_policy_set(
+				rina::IAuthPolicySet::cdapTypeToString(rina::CDAPMessage::AUTH_PASSWD));
+		if (!auth_ps_) {
 			abortEnrollment(remote_peer_->name_, port_id_,
 					std::string("Unsupported authentication policy set"), true);
 			return;
 		}
 
-		rina::AuthValue credentials = ps->get_my_credentials(portId);
+		rina::AuthValue credentials = auth_ps_->get_my_credentials(portId);
 
 		rib_daemon_->openApplicationConnection(rina::CDAPMessage::AUTH_NONE, credentials, "",
 				IPCProcess::MANAGEMENT_AE, remote_peer_->name_.processInstance,
@@ -301,6 +309,32 @@ void EnrolleeStateMachine::initiateEnrollment(rina::EnrollmentRequest * enrollme
 	}catch(rina::Exception &e){
 		LOG_IPCP_ERR("Problems sending M_CONNECT message: %s", e.what());
 		abortEnrollment(remote_peer_->name_, port_id_, std::string(e.what()), true);
+	}
+}
+
+void EnrolleeStateMachine::process_authentication_message(const rina::CDAPMessage& message,
+					    	          rina::CDAPSessionDescriptor * session_descriptor)
+{
+	rina::ScopedLock g(*lock_);
+
+	if (!auth_ps_ || state_ != STATE_WAIT_CONNECT_RESPONSE) {
+		abortEnrollment(remote_peer_->name_,
+				port_id_,
+				"Authentication policy is null or wrong state",
+				true);
+		return;
+	}
+
+	int result = auth_ps_->process_incoming_message(message,
+							session_descriptor->port_id_);
+
+	if (result == rina::IAuthPolicySet::FAILED) {
+		abortEnrollment(remote_peer_->name_,
+				port_id_,
+				"Authentication failed",
+				true);
+	} else if (result == rina::IAuthPolicySet::SUCCESSFULL) {
+		LOG_IPCP_INFO("Authentication was successful, waiting for M_CONNECT_R");
 	}
 }
 
@@ -695,6 +729,9 @@ public:
 	void connect(const rina::CDAPMessage& cdapMessage,
 		     rina::CDAPSessionDescriptor * session_descriptor);
 
+	void process_authentication_message(const rina::CDAPMessage& message,
+				            rina::CDAPSessionDescriptor * session_descriptor);
+
 	/// Called by the Enrollment object when it receives an M_START message from
 	/// the enrolling member. Have to look at the enrollment information request,
 	/// from that deduce if the IPC process requesting to enroll with me is already
@@ -725,6 +762,8 @@ private:
     void sendNegativeStartResponseAndAbortEnrollment(int result, const std::string&
     		resultReason, int invoke_id);
 
+        void authentication_successful();
+
     /// Send all the information required to start operation to
     /// the IPC process that is enrolling to me
     void sendDIFStaticInformation();
@@ -733,6 +772,8 @@ private:
 
 	IPCPSecurityManager * security_manager_;
 	INamespaceManager * namespace_manager_;
+	rina::CDAPSessionDescriptor * session_descriptor_;
+	int connect_message_invoke_id_;
 };
 
 //Class EnrollerStateMachine
@@ -744,6 +785,8 @@ EnrollerStateMachine::EnrollerStateMachine(IPCProcess * ipc_process,
 	security_manager_ = ipc_process->security_manager_;
 	namespace_manager_ = ipc_process->namespace_manager_;
 	enroller_ = true;
+	session_descriptor_ = 0;
+	connect_message_invoke_id_ = 0;
 }
 
 EnrollerStateMachine::~EnrollerStateMachine()
@@ -754,9 +797,6 @@ void EnrollerStateMachine::connect(const rina::CDAPMessage& cdapMessage,
 			           rina::CDAPSessionDescriptor * session_descriptor)
 {
 	rina::ScopedLock g(*lock_);
-        ISecurityManagerPs *smps = dynamic_cast<ISecurityManagerPs *>(security_manager_->ps);
-
-        assert(smps);
 
 	if (state_ != STATE_NULL) {
 		abortEnrollment(remote_peer_->name_, session_descriptor->port_id_,
@@ -768,27 +808,75 @@ void EnrollerStateMachine::connect(const rina::CDAPMessage& cdapMessage,
 			session_descriptor->dest_ap_inst_.c_str());
 	remote_peer_->name_.processName = session_descriptor->dest_ap_name_;
 	remote_peer_->name_.processInstance = session_descriptor->dest_ap_inst_;
+	session_descriptor_ = session_descriptor;
+	connect_message_invoke_id_ = cdapMessage.invoke_id_;
 
-	rina::IAuthPolicySet * ps = security_manager_->get_auth_policy_set(
+	auth_ps_ = security_manager_->get_auth_policy_set(
 			rina::IAuthPolicySet::cdapTypeToString(cdapMessage.auth_mech_));
-	if (!ps) {
+	if (!auth_ps_) {
 		abortEnrollment(remote_peer_->name_, port_id_,
 				std::string("Could not find auth policy set"), true);
 		return;
 	}
 
 	//TODO pass auth_value and auth_type in the function interface
-	rina::IAuthPolicySet::AuthStatus auth_status = ps->initiate_authentication(cdapMessage.auth_value_,
-										   session_descriptor->port_id_);
+	rina::IAuthPolicySet::AuthStatus auth_status =
+			auth_ps_->initiate_authentication(cdapMessage.auth_value_,
+							  session_descriptor->port_id_);
 	if (auth_status == rina::IAuthPolicySet::FAILED) {
 		abortEnrollment(remote_peer_->name_, port_id_,
 				std::string("Authentication failed"), true);
 		return;
 	} else if (auth_status == rina::IAuthPolicySet::IN_PROGRESS) {
-		//TODO in case authentication is in progress, "wait" until authentication is over
-		//be careful with race conditions
+		state_ = STATE_AUTHENTICATING;
+		last_scheduled_task_ = new rina::EnrollmentFailedTimerTask(this,
+									   AUTHENTICATION_TIMEOUT);
+		LOG_IPCP_DBG("Authentication in progress");
+		timer_->scheduleTask(last_scheduled_task_, timeout_);
 		return;
 	}
+
+	authentication_successful();
+}
+
+void EnrollerStateMachine::process_authentication_message(const rina::CDAPMessage& message,
+					    	          rina::CDAPSessionDescriptor * session_descriptor)
+{
+	rina::ScopedLock g(*lock_);
+
+	if (!auth_ps_ || state_ != STATE_AUTHENTICATING) {
+		abortEnrollment(remote_peer_->name_,
+				port_id_,
+				"Authentication policy is null or wrong state",
+				true);
+		return;
+	}
+
+	int result = auth_ps_->process_incoming_message(message,
+							session_descriptor->port_id_);
+
+	if (result == rina::IAuthPolicySet::IN_PROGRESS) {
+		LOG_IPCP_DBG("Authentication still in progress");
+		return;
+	}
+
+	timer_->cancelTask(last_scheduled_task_);
+
+	if (result == rina::IAuthPolicySet::FAILED) {
+		abortEnrollment(remote_peer_->name_,
+				port_id_,
+				"Authentication failed",
+				true);
+		return;
+	}
+
+	authentication_successful();
+}
+
+void EnrollerStateMachine::authentication_successful()
+{
+	ISecurityManagerPs *smps = dynamic_cast<ISecurityManagerPs *>(security_manager_->ps);
+	assert(smps);
 
 	LOG_IPCP_DBG("Authentication successful, deciding if new member can join the DIF...");
 	if (!smps->isAllowedToJoinDIF(*remote_peer_)) {
@@ -798,18 +886,18 @@ void EnrollerStateMachine::connect(const rina::CDAPMessage& cdapMessage,
 		return;
 	}
 
-
 	//Send M_CONNECT_R
-	port_id_ = session_descriptor->port_id_;
+	port_id_ = session_descriptor_->port_id_;
 	try{
 		rina::RemoteProcessId remote_id;
 		remote_id.port_id_ = port_id_;
 
 		rib_daemon_->openApplicationConnectionResponse(rina::CDAPMessage::AUTH_NONE,
-				rina::AuthValue(), session_descriptor->dest_ae_inst_, IPCProcess::MANAGEMENT_AE,
-				session_descriptor->dest_ap_inst_, session_descriptor->dest_ap_name_, 0, "", session_descriptor->src_ae_inst_,
-				IPCProcess::MANAGEMENT_AE, session_descriptor->src_ap_inst_, session_descriptor->src_ap_name_,
-				cdapMessage.invoke_id_, remote_id);
+				rina::AuthValue(), session_descriptor_->dest_ae_inst_,
+				IPCProcess::MANAGEMENT_AE, session_descriptor_->dest_ap_inst_,
+				session_descriptor_->dest_ap_name_, 0, "", session_descriptor_->src_ae_inst_,
+				IPCProcess::MANAGEMENT_AE, session_descriptor_->src_ap_inst_,
+				session_descriptor_->src_ap_name_, connect_message_invoke_id_, remote_id);
 
 		//Set timer
 		last_scheduled_task_ = new rina::EnrollmentFailedTimerTask(this, START_ENROLLMENT_TIMEOUT);
@@ -820,7 +908,7 @@ void EnrollerStateMachine::connect(const rina::CDAPMessage& cdapMessage,
 	}catch(rina::Exception &e){
 		LOG_IPCP_ERR("Problems sending CDAP message: %s", e.what());
 		abortEnrollment(remote_peer_->name_, port_id_,
-						std::string(e.what()), true);
+				std::string(e.what()), true);
 	}
 }
 
@@ -1117,6 +1205,8 @@ public:
         void connect_response_received(int result,
         			       const std::string& result_reason,
         			       rina::CDAPSessionDescriptor * session_descriptor);
+        void process_authentication_message(const rina::CDAPMessage& message,
+        			rina::CDAPSessionDescriptor * session_descriptor);
         void initiate_enrollment(const rina::NMinusOneFlowAllocatedEvent & event,
         			 rina::EnrollmentRequest * request);
         void inform_ipcm_about_failure(rina::IEnrollmentStateMachine * state_machine);
@@ -1208,17 +1298,42 @@ void EnrollmentTaskPs::connect_response_received(int result,
 		stateMachine->connectResponse(result, result_reason);
 	}catch(rina::Exception &e){
 		//Error getting the enrollment state machine
-		LOG_IPCP_ERR("Problems getting enrollment state machine: %s", e.what());
-
+		LOG_IPCP_ERR("Problems getting enrollment state machine: %s",
+				e.what());
 		try {
 			rina::RemoteProcessId remote_id;
 			remote_id.port_id_ = session_descriptor->port_id_;
 
 			rib_daemon->closeApplicationConnection(remote_id, 0);
 		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Problems closing application connection: %s", e.what());
+			LOG_IPCP_ERR("Problems closing application connection: %s",
+				     e.what());
 		}
 
+		et->deallocateFlow(session_descriptor->port_id_);
+	}
+}
+
+void EnrollmentTaskPs::process_authentication_message(const rina::CDAPMessage& message,
+			rina::CDAPSessionDescriptor * session_descriptor)
+{
+	try {
+		rina::IEnrollmentStateMachine * stateMachine =
+			et->getEnrollmentStateMachine(session_descriptor, false);
+		stateMachine->process_authentication_message(message,
+							     session_descriptor);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems getting enrollment state machine: %s",
+			     e.what());
+		try {
+			rina::RemoteProcessId remote_id;
+			remote_id.port_id_ = session_descriptor->port_id_;
+
+			rib_daemon->closeApplicationConnection(remote_id, 0);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems closing application connection: %s",
+				     e.what());
+		}
 		et->deallocateFlow(session_descriptor->port_id_);
 	}
 }

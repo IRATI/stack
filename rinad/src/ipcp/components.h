@@ -112,6 +112,8 @@ public:
         virtual void connect_response_received(int result,
         				       const std::string& result_reason,
         				       rina::CDAPSessionDescriptor * session_descriptor) = 0;
+        virtual void process_authentication_message(const rina::CDAPMessage& message,
+        					    rina::CDAPSessionDescriptor * session_descriptor) = 0;
         virtual void initiate_enrollment(const rina::NMinusOneFlowAllocatedEvent & event,
         				 rina::EnrollmentRequest * request) = 0;
         virtual void inform_ipcm_about_failure(rina::IEnrollmentStateMachine * state_machine) = 0;

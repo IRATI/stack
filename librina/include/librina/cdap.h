@@ -1098,6 +1098,10 @@ public:
         /// @param session_descriptor
         virtual void releaseResponse(int result, const std::string& result_reason,
                         rina::CDAPSessionDescriptor * session_descriptor) = 0;
+
+        /// Process an authentication message
+        virtual void process_authentication_message(const CDAPMessage& message,
+        		rina::CDAPSessionDescriptor * session_descriptor) = 0;
 };
 
 }

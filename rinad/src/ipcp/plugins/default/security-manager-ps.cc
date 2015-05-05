@@ -109,4 +109,29 @@ destroyAuthNonePs(rina::IPolicySet * ps)
         }
 }
 
+extern "C" rina::IPolicySet *
+createAuthPasswordPs(rina::ApplicationEntity * ctx)
+{
+	IPCPSecurityManager * sm = dynamic_cast<IPCPSecurityManager *>(ctx);
+        if (!sm || !sm->get_application_process()) {
+                return NULL;
+        }
+
+        IPCPRIBDaemon * rib_daemon =
+        		dynamic_cast<IPCPRIBDaemon *>(sm->get_application_process()->get_rib_daemon());
+        if (!rib_daemon) {
+        	return NULL;
+        }
+
+        return new rina::AuthPasswordPolicySet("admin123", 128, rib_daemon);
+}
+
+extern "C" void
+destroyAuthPasswordPs(rina::IPolicySet * ps)
+{
+        if (ps) {
+                delete ps;
+        }
+}
+
 }
