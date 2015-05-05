@@ -151,7 +151,7 @@ std::string * AuthPasswordPolicySet::generate_random_challenge()
 std::string AuthPasswordPolicySet::encrypt_challenge(const std::string& challenge)
 {
 	size_t j = 0;
-	char s [challenge.size()];
+	char * s = new char[challenge.size()];
 
 	//Simple XOR-based encryption, as a proof of concept
 	for (size_t i=0; i<challenge.size(); i++) {
@@ -162,9 +162,11 @@ std::string AuthPasswordPolicySet::encrypt_challenge(const std::string& challeng
 		}
 	}
 
-	LOG_DBG("Input: %s \nOutput: %s", challenge.c_str(), s);
+	std::string result = std::string(s, challenge.size());
+	LOG_DBG("Input: %s \nOutput: %s", challenge.c_str(), result.c_str());
+	delete s;
 
-	return std::string(s);
+	return result;
 }
 
 std::string AuthPasswordPolicySet::decrypt_challenge(const std::string& encrypted_challenge)
