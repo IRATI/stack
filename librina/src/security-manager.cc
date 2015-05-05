@@ -150,31 +150,26 @@ std::string * AuthPasswordPolicySet::generate_random_challenge()
 
 std::string AuthPasswordPolicySet::encrypt_challenge(const std::string& challenge)
 {
-	std::stringstream ss;
 	size_t j = 0;
+	char s [challenge.size()];
 
 	//Simple XOR-based encryption, as a proof of concept
 	for (size_t i=0; i<challenge.size(); i++) {
-		ss << (challenge.at(i) ^ password.at(j));
+		s[i] = challenge[i] ^ password[j];
 		j++;
 		if (j == password.size()) {
 			j = 0;
 		}
 	}
 
-	std::string result = ss.str();
-	LOG_DBG("Challenge: %s ; Encrypted challenge: %s",
-			challenge.c_str(), result.c_str());
+	LOG_DBG("Input: %s \nOutput: %s", challenge.c_str(), s);
 
-	return result;
+	return std::string(s);
 }
 
 std::string AuthPasswordPolicySet::decrypt_challenge(const std::string& encrypted_challenge)
 {
-	std::string result = encrypt_challenge(encrypted_challenge);
-	LOG_DBG("Encrypted challenge: %s; Recovered challenge: %s",
-			encrypted_challenge.c_str(), result.c_str());
-	return result;
+	return encrypt_challenge(encrypted_challenge);
 }
 
 rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(rina::AuthValue credentials,
