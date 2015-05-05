@@ -55,6 +55,27 @@ const std::string IAuthPolicySet::cdapTypeToString(CDAPMessage::AuthTypes type)
 	}
 }
 
+CDAPMessage::AuthTypes IAuthPolicySet::stringToCDAPType(const std::string& type)
+{
+	if (type == AUTH_NONE) {
+		return CDAPMessage::AUTH_NONE;
+	}
+
+	if (type == AUTH_PASSWORD) {
+		return CDAPMessage::AUTH_PASSWD;
+	}
+
+	if (type == AUTH_SSHRSA) {
+		return CDAPMessage::AUTH_SSHRSA;
+	}
+
+	if (type == AUTH_SSHDSA) {
+		return CDAPMessage::AUTH_SSHDSA;
+	}
+
+	throw Exception("Unknown authentication type");
+}
+
 //Class AuthNonePolicySet
 rina::AuthValue AuthNonePolicySet::get_my_credentials(int session_id)
 {

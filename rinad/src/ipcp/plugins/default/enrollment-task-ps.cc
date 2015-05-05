@@ -892,7 +892,7 @@ void EnrollerStateMachine::authentication_successful()
 		rina::RemoteProcessId remote_id;
 		remote_id.port_id_ = port_id_;
 
-		rib_daemon_->openApplicationConnectionResponse(rina::CDAPMessage::AUTH_NONE,
+		rib_daemon_->openApplicationConnectionResponse(rina::IAuthPolicySet::stringToCDAPType(auth_ps_->type),
 				rina::AuthValue(), session_descriptor_->dest_ae_inst_,
 				IPCProcess::MANAGEMENT_AE, session_descriptor_->dest_ap_inst_,
 				session_descriptor_->dest_ap_name_, 0, "", session_descriptor_->src_ae_inst_,

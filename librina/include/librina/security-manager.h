@@ -52,6 +52,7 @@ public:
 	static const std::string AUTH_SSHDSA;
 
 	static const std::string cdapTypeToString(CDAPMessage::AuthTypes type);
+	static CDAPMessage::AuthTypes stringToCDAPType(const std::string& type);
 
 	IAuthPolicySet(CDAPMessage::AuthTypes type_);
 	virtual ~IAuthPolicySet() { };
