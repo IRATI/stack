@@ -163,7 +163,6 @@ std::string AuthPasswordPolicySet::encrypt_challenge(const std::string& challeng
 	}
 
 	std::string result = std::string(s, challenge.size());
-	LOG_DBG("Input: %s \nOutput: %s", challenge.c_str(), result.c_str());
 	delete s;
 
 	return result;

@@ -526,16 +526,7 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 	LOG_IPCP_ERR("An error happened during enrollment of remote IPC Process %s because of %s",
 			remotePeerNamingInfo.getEncodedString().c_str(), reason.c_str());
 
-	//1 Remove enrollment state machine from the store
-	rina::IEnrollmentStateMachine * stateMachine =
-			getEnrollmentStateMachine(remotePeerNamingInfo.processName, portId, true);
-	if (!stateMachine) {
-		LOG_IPCP_ERR("Could not find the enrollment state machine associated to neighbor %s and portId %d",
-				remotePeerNamingInfo.processName.c_str(), portId);
-		return;
-	}
-
-	//2 Send message and deallocate flow if required
+	//1 Send message and deallocate flow if required
 	if(sendReleaseMessage){
 		try {
 			rina::RemoteProcessId remote_id;
@@ -547,6 +538,15 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 		}
 
 		deallocateFlow(portId);
+	}
+
+	//2 Remove enrollment state machine from the store
+	rina::IEnrollmentStateMachine * stateMachine =
+			getEnrollmentStateMachine(remotePeerNamingInfo.processName, portId, true);
+	if (!stateMachine) {
+		LOG_IPCP_ERR("Could not find the enrollment state machine associated to neighbor %s and portId %d",
+				remotePeerNamingInfo.processName.c_str(), portId);
+		return;
 	}
 
 	//3 In the case of the enrollee state machine, reply to the IPC Manager
