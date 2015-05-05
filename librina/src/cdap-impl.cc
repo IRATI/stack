@@ -47,20 +47,19 @@ void ReleaseConnectionTimerTask::run() {
 
 // CLASS ConnectionStateMachine
 ConnectionStateMachine::ConnectionStateMachine(CDAPSessionImpl *cdap_session,
-                                               long timeout) {
-  cdap_session_ = cdap_session;
-  timeout_ = timeout;
-  lock();
-  connection_state_ = NONE;
-  unlock();
-  open_timer_ = 0;
-  close_timer_ = 0;
+                                               long timeout)
+{
+	cdap_session_ = cdap_session;
+	timeout_ = timeout;
+	last_timer_task_ = 0;
+	connection_state_ = NONE;
 }
-ConnectionStateMachine::~ConnectionStateMachine() throw () {
-  delete open_timer_;
-  open_timer_ = 0;
-  delete close_timer_;
-  close_timer_ = 0;
+
+ConnectionStateMachine::~ConnectionStateMachine() throw ()
+{
+	if (last_timer_task_) {
+		timer.cancelTask(last_timer_task_);
+	}
 }
 
 bool ConnectionStateMachine::is_connected()
@@ -193,63 +192,73 @@ void ConnectionStateMachine::resetConnection() {
   unlock();
   cdap_session_->stopConnection();
 }
-void ConnectionStateMachine::connect() {
-  checkConnect();
-  lock();
-  connection_state_ = AWAITCON;
-  unlock();
-  LOG_DBG("Waiting timeout %d to receive a connection response", timeout_);
-  open_timer_ = new Timer();
-  ResetStablishmentTimerTask *reset = new ResetStablishmentTimerTask(this);
-  open_timer_->scheduleTask(reset, timeout_);
+
+void ConnectionStateMachine::connect()
+{
+	checkConnect();
+	lock();
+	connection_state_ = AWAITCON;
+	unlock();
+	LOG_DBG("Waiting timeout %d to receive a connection response", timeout_);
+
+	last_timer_task_ = new ResetStablishmentTimerTask(this);
+	timer.scheduleTask(last_timer_task_, timeout_);
 }
-void ConnectionStateMachine::connectReceived() {
-  lock();
-  if (connection_state_ != NONE) {
-    std::stringstream ss;
-    ss << "Cannot open a new connection because this CDAP session is currently in"
-       << connection_state_ << " state";
-    unlock();
-    throw CDAPException(ss.str());
-  }
-  connection_state_ = AWAITCON;
-  unlock();
+
+void ConnectionStateMachine::connectReceived()
+{
+	lock();
+	if (connection_state_ != NONE) {
+		std::stringstream ss;
+		ss << "Cannot open a new connection because this CDAP session is currently in"
+		   << connection_state_ << " state";
+		unlock();
+		throw CDAPException(ss.str());
+	}
+	connection_state_ = AWAITCON;
+	unlock();
 }
+
 void ConnectionStateMachine::connectResponse() {
   checkConnectResponse();
   lock();
   connection_state_ = CONNECTED;
   unlock();
 }
-void ConnectionStateMachine::connectResponseReceived() {
-  lock();
-  if (connection_state_ != AWAITCON) {
-    std::stringstream ss;
-    ss << "Received an M_CONNECT_R message, but this CDAP session is currently in "
-           << connection_state_
-       << " state";
-    unlock();
-    throw CDAPException(ss.str());
-  }
-  LOG_DBG("Connection response received");
-  delete open_timer_;
-  open_timer_ = 0;
-  connection_state_ = CONNECTED;
-  unlock();
-}
-void ConnectionStateMachine::release(const CDAPMessage &cdap_message) {
-  checkRelease();
-  lock();
-  connection_state_ = AWAITCLOSE;
-  unlock();
-  if (cdap_message.get_invoke_id() != 0) {
-    close_timer_ = new Timer();
-    ReleaseConnectionTimerTask *reset = new ReleaseConnectionTimerTask(this);
-    LOG_DBG("Waiting timeout %d to receive a release response", timeout_);
-    close_timer_->scheduleTask(reset, timeout_);
-  }
+void ConnectionStateMachine::connectResponseReceived()
+{
+	lock();
+	if (connection_state_ != AWAITCON) {
+		std::stringstream ss;
+		ss << "Received an M_CONNECT_R message, but this CDAP session is currently in "
+		   << connection_state_ << " state";
+		unlock();
+		throw CDAPException(ss.str());
+	}
+	LOG_DBG("Connection response received");
 
+	if (last_timer_task_) {
+		timer.cancelTask(last_timer_task_);
+		last_timer_task_ = 0;
+	}
+
+	connection_state_ = CONNECTED;
+	unlock();
 }
+
+void ConnectionStateMachine::release(const CDAPMessage &cdap_message)
+{
+	checkRelease();
+	lock();
+	connection_state_ = AWAITCLOSE;
+	unlock();
+	if (cdap_message.get_invoke_id() != 0) {
+		last_timer_task_ = new ReleaseConnectionTimerTask(this);
+		LOG_DBG("Waiting timeout %d to receive a release response", timeout_);
+		timer.scheduleTask(last_timer_task_, timeout_);
+	}
+}
+
 void ConnectionStateMachine::releaseReceived(const CDAPMessage &message) {
   lock();
   if (connection_state_ != CONNECTED && connection_state_ != AWAITCLOSE
@@ -268,22 +277,29 @@ void ConnectionStateMachine::releaseReceived(const CDAPMessage &message) {
   }
   unlock();
 }
+
 void ConnectionStateMachine::releaseResponse() {
   checkReleaseResponse();
   lock();
   connection_state_ = NONE;
   unlock();
 }
-void ConnectionStateMachine::releaseResponseReceived() {
-  if (connection_state_ != AWAITCLOSE) {
-    std::stringstream ss;
-    ss << "Received an M_RELEASE_R message, but this CDAP session is currently in "
-       << connection_state_ << " state";
-    throw CDAPException(ss.str());
-  }
-  LOG_DBG("Release response received");
-  delete close_timer_;
-  close_timer_ = 0;
+
+void ConnectionStateMachine::releaseResponseReceived()
+{
+	lock();
+	if (connection_state_ != AWAITCLOSE) {
+		std::stringstream ss;
+		ss << "Received an M_RELEASE_R message, but this CDAP session is currently in "
+		   << connection_state_ << " state";
+		throw CDAPException(ss.str());
+	}
+	LOG_DBG("Release response received");
+	if (last_timer_task_) {
+		timer.cancelTask(last_timer_task_);
+		last_timer_task_ = 0;
+	}
+	unlock();
 }
 
 // CLASS CDAPOperationState
@@ -921,12 +937,19 @@ const CDAPMessage* CDAPSessionManager::decodeCDAPMessage(
     const SerializedObject &cdap_message) {
   return wire_message_provider_->deserializeMessage(cdap_message);
 }
-void CDAPSessionManager::removeCDAPSession(int port_id) {
-  std::map<int, CDAPSessionImpl*>::iterator itr = cdap_sessions_.find(port_id);
-  delete itr->second;
-  itr->second = 0;
-  cdap_sessions_.erase(itr);
+
+void CDAPSessionManager::removeCDAPSession(int port_id)
+{
+	std::map<int, CDAPSessionImpl*>::iterator itr = cdap_sessions_.find(port_id);
+	if (itr == cdap_sessions_.end()) {
+		return;
+	}
+
+	cdap_sessions_.erase(itr);
+	delete itr->second;
+	itr->second = 0;
 }
+
 const SerializedObject* CDAPSessionManager::encodeNextMessageToBeSent(
     const CDAPMessage &cdap_message, int port_id) {
   std::map<int, CDAPSessionImpl*>::iterator it = cdap_sessions_.find(port_id);
