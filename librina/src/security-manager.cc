@@ -322,6 +322,7 @@ int AuthPasswordPolicySet::set_policy_set_param(const std::string& name,
 {
 	if (name == PASSWORD) {
 		password = value;
+		LOG_INFO("Updated password to: %s", password.c_str());
 		return 0;
 	}
 
