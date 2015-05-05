@@ -286,7 +286,10 @@ void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponse
         ostringstream ss;
 	APPregTransState* t1;
 	IPCPregTransState* t2;
-	ipcm_res_t ret = IPCM_SUCCESS;
+	ipcm_res_t ret = IPCM_FAILURE;
+	if (e->result == 0) {
+		ret = IPCM_SUCCESS;
+	}
 	IPCPTransState* trans = get_transaction_state<IPCPTransState>(e->sequenceNumber);
 
 	if(!trans){
@@ -320,7 +323,7 @@ void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponse
 			ipcm_register_response_app(e, ipcp, t1->req);
 		}else{
 			//IPCP registration
-			ipcm_register_response_ipcp(e);
+			ipcm_register_response_ipcp(ipcp, e);
 		}
 	}catch(...){
 		ret = IPCM_FAILURE;
@@ -441,7 +444,10 @@ void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResp
 {
 	ostringstream ss;
 	IPCMIPCProcess* ipcp;
-	ipcm_res_t ret = IPCM_SUCCESS;
+	ipcm_res_t ret = IPCM_FAILURE;
+	if (e->result == 0) {
+		ret = IPCM_SUCCESS;
+	}
 
 	//First check if this de-reg was a pending
 	APPUnregTransState* t1;
@@ -480,7 +486,7 @@ void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResp
 		} else {
 			t2 = get_transaction_state<IPCPregTransState>(e->sequenceNumber);
 			if (t2){
-				ipcm_unregister_response_ipcp(e, t2);
+				ipcm_unregister_response_ipcp(ipcp, e, t2);
 			}
 			else {
 				//This is the case when the app unreg has been requested by the IPCM
