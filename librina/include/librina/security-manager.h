@@ -27,6 +27,7 @@
 #include "librina/application.h"
 #include "librina/rib.h"
 #include "librina/internal-events.h"
+#include "librina/timer.h"
 
 namespace rina {
 
@@ -70,9 +71,9 @@ public:
 	std::string type;
 };
 
-class AuthNonePolicySet : public rina::IAuthPolicySet {
+class AuthNonePolicySet : public IAuthPolicySet {
 public:
-	AuthNonePolicySet() : rina::IAuthPolicySet(rina::CDAPMessage::AUTH_NONE) { };
+	AuthNonePolicySet() : IAuthPolicySet(rina::CDAPMessage::AUTH_NONE) { };
 	virtual ~AuthNonePolicySet() { };
 	rina::AuthValue get_my_credentials(int session_id);
 	AuthStatus initiate_authentication(rina::AuthValue credentials, int session_id);
@@ -81,26 +82,54 @@ public:
 	                         const std::string& value);
 };
 
+class AuthPasswordPolicySet;
+
+class CancelPasswdAuthTimerTask : public TimerTask {
+public:
+	CancelPasswdAuthTimerTask(AuthPasswordPolicySet * ps_,
+			int session_id_) : ps(ps_),
+			session_id(session_id_) { };
+	~CancelPasswdAuthTimerTask() throw() { };
+	void run();
+
+	AuthPasswordPolicySet * ps;
+	int session_id;
+};
+
+class AuthPasswordSessionInformation {
+public:
+	AuthPasswordSessionInformation(CancelPasswdAuthTimerTask * task,
+			std::string * chall) : timer_task(task),
+			challenge(chall) { };
+	~AuthPasswordSessionInformation() {
+		if (challenge) {
+			delete challenge;
+		}
+	};
+
+	// Owned by a timer
+	CancelPasswdAuthTimerTask * timer_task;
+	std::string * challenge;
+};
+
 /// As defined in PRISTINE's D4.1, online at
 /// https://wiki.ict-pristine.eu/wp4/d41/Authentication-mechanisms#The-AuthNPassword-Authentication-Mechanism
-class AuthPasswordPolicySet : public rina::IAuthPolicySet {
+class AuthPasswordPolicySet : public IAuthPolicySet {
 public:
 	static const std::string PASSWORD;
 	static const std::string CHALLENGE_REQUEST;
 	static const std::string CHALLENGE_REPLY;
 	static const std::string DEFAULT_CIPHER;
+	static const int DEFAULT_TIMEOUT;
 
 	AuthPasswordPolicySet(const std::string password_,
-			int challenge_length_, IRIBDaemon * ribd) :
-		rina::IAuthPolicySet(rina::CDAPMessage::AUTH_PASSWD),
-		password(password_), challenge_length(challenge_length_),
-		rib_daemon(ribd), cipher(DEFAULT_CIPHER) { };
-	virtual ~AuthPasswordPolicySet() { };
+			int challenge_length_, IRIBDaemon * ribd);
 	rina::AuthValue get_my_credentials(int session_id);
 	AuthStatus initiate_authentication(rina::AuthValue credentials, int session_id);
 	int process_incoming_message(const CDAPMessage& message, int session_id);
 	int set_policy_set_param(const std::string& name,
 	                         const std::string& value);
+	void remove_session_info(int session_id);
 
 private:
 	std::string * generate_random_challenge();
@@ -115,7 +144,9 @@ private:
 	int challenge_length;
 	IRIBDaemon * rib_daemon;
 	std::string cipher;
-	ThreadSafeMapOfPointers<int, std::string> pending_challenges;
+	ThreadSafeMapOfPointers<int, AuthPasswordSessionInformation> pending_sessions;
+	Timer timer;
+	int timeout;
 	Lockable lock;
 };
 

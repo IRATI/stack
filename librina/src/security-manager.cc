@@ -92,11 +92,29 @@ int AuthNonePolicySet::set_policy_set_param(const std::string& name,
         return -1;
 }
 
+//Class CancelPasswdAuthTimerTask
+void CancelPasswdAuthTimerTask::run()
+{
+	ps->remove_session_info(session_id);
+}
+
 //Class AuthPasswdPolicySet
 const std::string AuthPasswordPolicySet::PASSWORD = "password";
-const std::string AuthPasswordPolicySet::DEFAULT_CIPHER = "default";
+const std::string AuthPasswordPolicySet::DEFAULT_CIPHER = "default_cipher";
 const std::string AuthPasswordPolicySet::CHALLENGE_REQUEST = "challenge request";
 const std::string AuthPasswordPolicySet::CHALLENGE_REPLY = "challenge reply";
+const int AuthPasswordPolicySet::DEFAULT_TIMEOUT = 10000;
+
+AuthPasswordPolicySet::AuthPasswordPolicySet(const std::string password_,
+			int challenge_length_, IRIBDaemon * ribd) :
+		IAuthPolicySet(rina::CDAPMessage::AUTH_PASSWD)
+{
+	password = password_;
+	challenge_length = challenge_length_;
+	rib_daemon = ribd;
+	cipher = DEFAULT_CIPHER;
+	timeout = DEFAULT_TIMEOUT;
+}
 
 // No credentials required, since the process being authenticated
 // will have to demonstrate that it knows the password by encrypting
@@ -167,12 +185,27 @@ rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 	}
 
-	//2 Store pending challenge and return
-	pending_challenges.put(session_id, challenge);
+	//2 set timer to clean up pending authentication session upon timer expiry
+	CancelPasswdAuthTimerTask * timer_task =
+			new CancelPasswdAuthTimerTask(this, session_id);
+	timer.scheduleTask(timer_task, timeout);
 
-	//3 TODO set timer to clean up pending authentication session upon timer expiry
+	AuthPasswordSessionInformation * session_info =
+			new AuthPasswordSessionInformation(timer_task, challenge);
+	pending_sessions.put(session_id, session_info);
 
 	return rina::IAuthPolicySet::IN_PROGRESS;
+}
+
+void AuthPasswordPolicySet::remove_session_info(int session_id)
+{
+	ScopedLock scopedLock(lock);
+
+	AuthPasswordSessionInformation * session_info =
+			pending_sessions.erase(session_id);
+	if (session_info) {
+		delete session_info;
+	}
 }
 
 int AuthPasswordPolicySet::process_challenge_request(const std::string& challenge,
@@ -201,28 +234,31 @@ int AuthPasswordPolicySet::process_challenge_request(const std::string& challeng
 }
 
 int AuthPasswordPolicySet::process_challenge_reply(const std::string& encrypted_challenge,
-						    int session_id)
+						   int session_id)
 {
 	int result = IAuthPolicySet::FAILED;
 
 	ScopedLock scopedLock(lock);
 
-	std::string * challenge = pending_challenges.erase(session_id);
-	if (!challenge) {
-		LOG_DBG("Could not find pending challenge for session_id %d",
+	AuthPasswordSessionInformation * session_info = pending_sessions.erase(session_id);
+	if (!session_info) {
+		LOG_DBG("Could not find pending auth session information for session_id %d",
 			session_id);
 		return IAuthPolicySet::FAILED;
 	}
 
+	timer.cancelTask(session_info->timer_task);
+
 	std::string * recovered_challenge = decrypt_challenge(encrypted_challenge);
-	if (*challenge == *recovered_challenge) {
+	if (*(session_info->challenge) == *recovered_challenge) {
 		result = IAuthPolicySet::SUCCESSFULL;
 	} else {
 		LOG_DBG("Authentication failed; challenge: %s; recovered_challenge: %s ",
-				challenge->c_str(), recovered_challenge->c_str());
+				(session_info->challenge)->c_str(),
+				recovered_challenge->c_str());
 	}
 
-	delete challenge;
+	delete session_info;
 	delete recovered_challenge;
 	return result;
 }
