@@ -155,6 +155,9 @@ public:
 	ISecurityManager() : rina::ApplicationEntity(SECURITY_MANAGER_AE_NAME) { };
         virtual ~ISecurityManager();
         int add_auth_policy_set(const std::string& auth_type);
+        int set_policy_set_param(const std::string& path,
+                                 const std::string& name,
+                                 const std::string& value);
         IAuthPolicySet * get_auth_policy_set(const std::string& auth_type);
         ISecurityContext * get_security_context(int context_id);
         void eventHappened(InternalEvent * event);

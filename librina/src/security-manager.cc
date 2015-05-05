@@ -386,6 +386,33 @@ int ISecurityManager::add_auth_policy_set(const std::string& auth_type)
         return 0;
 }
 
+int ISecurityManager::set_policy_set_param(const std::string& path,
+                         	 	   const std::string& name,
+                         	 	   const std::string& value)
+{
+	IPolicySet * selected_ps;
+
+        LOG_DBG("set_policy_set_param(%s, %s) called",
+                name.c_str(), name.c_str());
+
+        if (path == std::string()) {
+        	// This request is for the component itself
+        	LOG_ERR("No such parameter '%s' exists", name.c_str());
+        	return -1;
+        } else if (path == selected_ps_name) {
+        	selected_ps = ps;
+        } else {
+        	selected_ps = auth_policy_sets.find(path);
+        }
+
+        if (!selected_ps) {
+                LOG_ERR("Invalid component address '%s'", path.c_str());
+                return -1;
+        }
+
+        return selected_ps->set_policy_set_param(name, value);
+}
+
 IAuthPolicySet * ISecurityManager::get_auth_policy_set(const std::string& auth_type)
 {
 	return auth_policy_sets.find(auth_type);
