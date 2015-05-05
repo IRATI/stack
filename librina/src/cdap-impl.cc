@@ -126,7 +126,7 @@ void ConnectionStateMachine::connectResponseSentOrReceived(bool sent) {
 }
 void ConnectionStateMachine::checkRelease() {
   lock();
-  if (connection_state_ != CONNECTED) {
+  if (connection_state_ != CONNECTED && connection_state_ != AWAITCON) {
     std::stringstream ss;
     ss << "Cannot close a connection because " << "this CDAP session is "
        << "currently in " << connection_state_ << " state";
@@ -252,7 +252,8 @@ void ConnectionStateMachine::release(const CDAPMessage &cdap_message) {
 }
 void ConnectionStateMachine::releaseReceived(const CDAPMessage &message) {
   lock();
-  if (connection_state_ != CONNECTED && connection_state_ != AWAITCLOSE) {
+  if (connection_state_ != CONNECTED && connection_state_ != AWAITCLOSE
+		  && connection_state_ != AWAITCON) {
     std::stringstream ss;
     ss << "Cannot close the connection because this CDAP session is currently in "
        << connection_state_ << " state";
