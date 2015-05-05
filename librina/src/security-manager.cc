@@ -393,7 +393,7 @@ int ISecurityManager::set_policy_set_param(const std::string& path,
 	IPolicySet * selected_ps;
 
         LOG_DBG("set_policy_set_param(%s, %s) called",
-                name.c_str(), name.c_str());
+                name.c_str(), value.c_str());
 
         if (path == std::string()) {
         	// This request is for the component itself

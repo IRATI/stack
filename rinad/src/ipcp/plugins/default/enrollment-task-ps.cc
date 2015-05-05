@@ -810,6 +810,7 @@ void EnrollerStateMachine::connect(const rina::CDAPMessage& cdapMessage,
 	remote_peer_->name_.processInstance = session_descriptor->dest_ap_inst_;
 	session_descriptor_ = session_descriptor;
 	connect_message_invoke_id_ = cdapMessage.invoke_id_;
+	port_id_ = session_descriptor_->port_id_;
 
 	auth_ps_ = security_manager_->get_auth_policy_set(
 			rina::IAuthPolicySet::cdapTypeToString(cdapMessage.auth_mech_));
@@ -822,7 +823,7 @@ void EnrollerStateMachine::connect(const rina::CDAPMessage& cdapMessage,
 	//TODO pass auth_value and auth_type in the function interface
 	rina::IAuthPolicySet::AuthStatus auth_status =
 			auth_ps_->initiate_authentication(cdapMessage.auth_value_,
-							  session_descriptor->port_id_);
+							  port_id_);
 	if (auth_status == rina::IAuthPolicySet::FAILED) {
 		abortEnrollment(remote_peer_->name_, port_id_,
 				std::string("Authentication failed"), true);
@@ -887,7 +888,6 @@ void EnrollerStateMachine::authentication_successful()
 	}
 
 	//Send M_CONNECT_R
-	port_id_ = session_descriptor_->port_id_;
 	try{
 		rina::RemoteProcessId remote_id;
 		remote_id.port_id_ = port_id_;
