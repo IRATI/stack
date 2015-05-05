@@ -852,7 +852,7 @@ public:
         unsigned int qosId;
 
         /** The N-1 portid */
-        std::list<PortIdAlt> portIds;
+        std::list<PortIdAlt> portIdAlts;
 
         PDUForwardingTableEntry();
         bool operator==(const PDUForwardingTableEntry &other) const;
@@ -860,9 +860,8 @@ public:
 #ifndef SWIG
         unsigned int getAddress() const;
         void setAddress(unsigned int address);
-        const std::list<PortIdAlt> getPortIds() const;
-        void setPortIds(const std::list<PortIdAlt>& portIds);
-        void addPortId(unsigned int portId);
+        const std::list<PortIdAlt> getPortIdAlts() const;
+        void setPortIdAlts(const std::list<PortIdAlt>& portIds);
         unsigned int getQosId() const;
         void setQosId(unsigned int qosId);
 #endif

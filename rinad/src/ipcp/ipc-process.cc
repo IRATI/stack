@@ -406,7 +406,7 @@ void IPCProcessImpl::logPDUFTE(const rina::DumpFTResponseEvent& event) {
 	for (it = event.entries.begin(); it != event.entries.end(); ++it) {
 		ss << "Address: " << it->address << "; QoS-id: ";
 		ss << it->qosId << "; Port-ids: ";
-		for (it2 = it->portIds.begin(); it2 != it->portIds.end(); ++it2) {
+		for (it2 = it->portIdAlts.begin(); it2 != it->portIdAlts.end(); ++it2) {
 			for (it3 = it2->alts.begin(); it3 != it2->alts.end(); it3++) {
 				ss << (*it3) << ", ";
 			}

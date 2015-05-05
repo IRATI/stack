@@ -67,7 +67,7 @@ void ResourceAllocatorPs::routingTableUpdated(
 			delete entry;
 		} else {
 			LOG_IPCP_DBG("N-1 port-id: %u", port_id);
-			entry->portIds.push_back(port_id);
+			entry->portIdAlts.push_back(rina::PortIdAlt(port_id));
 			pduft.push_back(entry);
 		}
 	}

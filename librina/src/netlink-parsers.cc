@@ -4767,7 +4767,7 @@ int putPDUForwardingTableEntryObject(nl_msg* netlinkMessage,
               const PDUForwardingTableEntry& object) {
         struct nlattr * portIdAlts;
         std::list<PortIdAlt>::const_iterator iterator;
-        const std::list<PortIdAlt> portIdsList = object.getPortIds();
+        const std::list<PortIdAlt> portIdsList = object.getPortIdAlts();
         int i = 0;
 
         NLA_PUT_U32(netlinkMessage, PFTE_ATTR_ADDRESS, object.getAddress());
@@ -8363,8 +8363,8 @@ int parseListOfPortIdAlts(nlattr *nested, PDUForwardingTableEntry * entry) {
                         nla = nla_next(nla, &(rem))){
 		int err;
 
-		entry->portIds.push_back(PortIdAlt());
-		err = parsePortIdAlt(nla, entry->portIds.back());
+		entry->portIdAlts.push_back(PortIdAlt());
+		err = parsePortIdAlt(nla, entry->portIdAlts.back());
 		if (err) {
 			return err;
 		}

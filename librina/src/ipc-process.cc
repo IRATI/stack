@@ -879,17 +879,13 @@ void PDUForwardingTableEntry::setAddress(unsigned int address) {
         this->address = address;
 }
 
-const std::list<PortIdAlt> PDUForwardingTableEntry::getPortIds() const {
-        return portIds;
+const std::list<PortIdAlt> PDUForwardingTableEntry::getPortIdAlts() const {
+        return portIdAlts;
 }
 
 void PDUForwardingTableEntry::
-setPortIds(const std::list<PortIdAlt>& portIds) {
-        this->portIds = portIds;
-}
-
-void PDUForwardingTableEntry::addPortId(unsigned int portId) {
-        portIds.push_back(PortIdAlt(portId));
+setPortIdAlts(const std::list<PortIdAlt>& portIdAlts) {
+        this->portIdAlts = portIdAlts;
 }
 
 unsigned int PDUForwardingTableEntry::getQosId() const {
@@ -905,8 +901,8 @@ const std::string PDUForwardingTableEntry::toString() {
 
         ss<<"Address: "<<address<<" QoS-id: "<<qosId;
         ss<<"List of N-1 port-ids: ";
-        for (std::list<PortIdAlt>::iterator it = portIds.begin();
-                        it != portIds.end(); it++)
+        for (std::list<PortIdAlt>::iterator it = portIdAlts.begin();
+                        it != portIdAlts.end(); it++)
 		for (std::list<unsigned int>::iterator jt = it->alts.begin();
 				jt != it->alts.end(); jt++) {
 			ss<< *jt << ",";
