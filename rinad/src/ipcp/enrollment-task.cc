@@ -544,8 +544,6 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 	rina::IEnrollmentStateMachine * stateMachine =
 			getEnrollmentStateMachine(remotePeerNamingInfo.processName, portId, true);
 	if (!stateMachine) {
-		LOG_IPCP_ERR("Could not find the enrollment state machine associated to neighbor %s and portId %d",
-				remotePeerNamingInfo.processName.c_str(), portId);
 		return;
 	}
 
