@@ -77,8 +77,6 @@ class Manager : public Application {
 	std::string dif_name_;
 	bool client_app_reg_;
 	rina::cdap_rib::con_handle_t con_;
-	static const std::string mad_name;
-	static const std::string mad_instance;
 	rina::cdap::CDAPProviderInterface *cdap_prov_;
 };
 #endif//MANAGER_HPP
