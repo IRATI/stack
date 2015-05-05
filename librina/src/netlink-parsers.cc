@@ -4744,8 +4744,8 @@ int putIpcpConnectionDestroyResultMessageObject(nl_msg* netlinkMessage,
 int putPDUForwardingTableEntryObject(nl_msg* netlinkMessage,
               const PDUForwardingTableEntry& object) {
         struct nlattr * portIds;
-        std::list<unsigned int>::const_iterator iterator;
-        const std::list<unsigned int> portIdsList = object.getPortIds();
+        std::list<PortIdAlt>::const_iterator iterator;
+        const std::list<PortIdAlt> portIdsList = object.getPortIds();
         int i=0;
 
         NLA_PUT_U32(netlinkMessage, PFTE_ATTR_ADDRESS, object.getAddress());
@@ -4758,8 +4758,10 @@ int putPDUForwardingTableEntryObject(nl_msg* netlinkMessage,
         for (iterator = portIdsList.begin();
                         iterator != portIdsList.end();
                         ++iterator) {
-                NLA_PUT_U32(netlinkMessage, i, *iterator);
-                i++;
+		if (iterator->alts.size()) {
+			NLA_PUT_U32(netlinkMessage, i, iterator->alts.front());
+			i++;
+		}
         }
 
         nla_nest_end(netlinkMessage, portIds);
