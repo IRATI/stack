@@ -230,7 +230,8 @@ int AuthPasswordPolicySet::process_challenge_reply(const std::string& encrypted_
 int AuthPasswordPolicySet::process_incoming_message(const CDAPMessage& message,
 						     int session_id)
 {
-	RIBObjectValue * robject_value = 0;
+	StringObjectValue * string_value = 0;
+	const std::string * challenge = 0;
 
 	if (message.op_code_ != CDAPMessage::M_WRITE) {
 		LOG_ERR("Wrong operation type");
@@ -242,19 +243,25 @@ int AuthPasswordPolicySet::process_incoming_message(const CDAPMessage& message,
 		return IAuthPolicySet::FAILED;
 	}
 
-	robject_value = dynamic_cast<RIBObjectValue *>(message.obj_value_);
-	if (!robject_value) {
+	string_value = dynamic_cast<StringObjectValue *>(message.obj_value_);
+	if (!string_value) {
 		LOG_ERR("Object value of wrong type");
 		return IAuthPolicySet::FAILED;
 	}
 
+	challenge = (const std::string *) string_value->get_value();
+	if (!challenge) {
+		LOG_ERR("Error decoding challenge");
+		return IAuthPolicySet::FAILED;
+	}
+
 	if (message.obj_class_ == CHALLENGE_REQUEST) {
-		return process_challenge_request(robject_value->string_value_,
+		return process_challenge_request(*challenge,
 						 session_id);
 	}
 
 	if (message.obj_class_ == CHALLENGE_REPLY) {
-		return process_challenge_reply(robject_value->string_value_,
+		return process_challenge_reply(*challenge,
 					       session_id);
 	}
 
