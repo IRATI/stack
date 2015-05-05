@@ -148,14 +148,33 @@ std::string * AuthPasswordPolicySet::generate_random_challenge()
 	return result;
 }
 
-std::string * AuthPasswordPolicySet::encrypt_challenge(const std::string& challenge)
+std::string AuthPasswordPolicySet::encrypt_challenge(const std::string& challenge)
 {
-	return new std::string(challenge);
+	std::stringstream ss;
+	size_t j = 0;
+
+	//Simple XOR-based encryption, as a proof of concept
+	for (size_t i=0; i<challenge.size(); i++) {
+		ss << (challenge.at(i) ^ password.at(j));
+		j++;
+		if (j == password.size()) {
+			j = 0;
+		}
+	}
+
+	std::string result = ss.str();
+	LOG_DBG("Challenge: %s ; Encrypted challenge: %s",
+			challenge.c_str(), result.c_str());
+
+	return result;
 }
 
-std::string * AuthPasswordPolicySet::decrypt_challenge(const std::string& encrypted_challenge)
+std::string AuthPasswordPolicySet::decrypt_challenge(const std::string& encrypted_challenge)
 {
-	return new std::string(encrypted_challenge);
+	std::string result = encrypt_challenge(encrypted_challenge);
+	LOG_DBG("Encrypted challenge: %s; Recovered challenge: %s",
+			encrypted_challenge.c_str(), result.c_str());
+	return result;
 }
 
 rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(rina::AuthValue credentials,
@@ -211,13 +230,10 @@ void AuthPasswordPolicySet::remove_session_info(int session_id)
 int AuthPasswordPolicySet::process_challenge_request(const std::string& challenge,
 						     int session_id)
 {
-	std::string * encrypted_challenge = encrypt_challenge(challenge);
-
 	try {
 		RIBObjectValue robject_value;
 		robject_value.type_ = RIBObjectValue::stringtype;
-		robject_value.string_value_ = *encrypted_challenge;
-		delete encrypted_challenge;
+		robject_value.string_value_ = encrypt_challenge(challenge);
 
 		RemoteProcessId remote_id;
 		remote_id.port_id_ = session_id;
@@ -249,17 +265,16 @@ int AuthPasswordPolicySet::process_challenge_reply(const std::string& encrypted_
 
 	timer.cancelTask(session_info->timer_task);
 
-	std::string * recovered_challenge = decrypt_challenge(encrypted_challenge);
-	if (*(session_info->challenge) == *recovered_challenge) {
+	std::string recovered_challenge = decrypt_challenge(encrypted_challenge);
+	if (*(session_info->challenge) == recovered_challenge) {
 		result = IAuthPolicySet::SUCCESSFULL;
 	} else {
 		LOG_DBG("Authentication failed; challenge: %s; recovered_challenge: %s ",
 				(session_info->challenge)->c_str(),
-				recovered_challenge->c_str());
+				recovered_challenge.c_str());
 	}
 
 	delete session_info;
-	delete recovered_challenge;
 	return result;
 }
 

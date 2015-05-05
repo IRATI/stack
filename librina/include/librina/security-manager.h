@@ -133,8 +133,8 @@ public:
 
 private:
 	std::string * generate_random_challenge();
-	std::string * encrypt_challenge(const std::string& challenge);
-	std::string * decrypt_challenge(const std::string& encrypted_challenge);
+	std::string encrypt_challenge(const std::string& challenge);
+	std::string decrypt_challenge(const std::string& encrypted_challenge);
 	int process_challenge_request(const std::string& challenge,
 			 	      int session_id);
 	int process_challenge_reply(const std::string& encrypted_challenge,
