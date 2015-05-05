@@ -35,10 +35,10 @@ struct rmt_ps {
         /* Behavioural policies. */
         void (* max_q_policy_tx)(struct rmt_ps *,
                                  struct pdu *,
-                                 struct rfifo *);
+                                 struct rmt_n1_port *);
         void (* max_q_policy_rx)(struct rmt_ps *,
                                  struct sdu *,
-                                 struct rfifo *);
+                                 struct rmt_n1_port *);
         void (* rmt_q_monitor_policy_tx)(struct rmt_ps *,
                                  struct pdu *,
                                  struct rmt_n1_port *);
