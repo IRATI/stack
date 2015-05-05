@@ -328,7 +328,7 @@ static int unbind_and_destroy_flow(struct ipcp_instance_data * data,
                         flow_unbinding_ipcp(flow->user_ipcp->data,
                                             flow->port_id);
         }
-
+        LOG_DBG("Shim ethe vlan unbinded port: %u", flow->port_id);
         if (flow_destroy(data, flow)) {
                 LOG_ERR("Failed to destroy shim-eth-vlan flow");
                 return -1;
@@ -1378,7 +1378,7 @@ static int eth_vlan_query_rib(struct ipcp_instance_data * data,
                               const string_t *            object_name,
                               uint64_t                    object_instance,
                               uint32_t                    scope,
-                              const string_t *            filter) 
+                              const string_t *            filter)
 {
 	LOG_MISSING;
 	return -1;
@@ -1584,6 +1584,7 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
 {
         struct interface_data_mapping * mapping;
         struct ipcp_instance_data * pos, * next;
+        struct shim_eth_flow * flow, * nflow;
 
         ASSERT(data);
         ASSERT(instance);
@@ -1593,6 +1594,11 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
         /* Retrieve the instance */
         list_for_each_entry_safe(pos, next, &data->instances, list) {
                 if (pos->id == instance->data->id) {
+
+                        /* Destroy existing flows */
+                        list_for_each_entry_safe(flow, nflow, &pos->flows, list) {
+                                unbind_and_destroy_flow(pos, flow);
+                        }
 
                         /* Remove packet handler if there is one */
                         if (pos->eth_vlan_packet_type->dev)
