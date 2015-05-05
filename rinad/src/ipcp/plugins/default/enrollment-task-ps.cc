@@ -293,7 +293,7 @@ void EnrolleeStateMachine::initiateEnrollment(rina::EnrollmentRequest * enrollme
 
 		rina::AuthValue credentials = auth_ps_->get_my_credentials(portId);
 
-		rib_daemon_->openApplicationConnection(rina::CDAPMessage::AUTH_NONE, credentials, "",
+		rib_daemon_->openApplicationConnection(rina::CDAPMessage::AUTH_PASSWD, credentials, "",
 				IPCProcess::MANAGEMENT_AE, remote_peer_->name_.processInstance,
 				remote_peer_->name_.processName, "", IPCProcess::MANAGEMENT_AE,
 				ipc_process_->get_instance(), ipc_process_->get_name(), remote_id);
