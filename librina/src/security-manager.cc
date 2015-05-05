@@ -265,9 +265,7 @@ int AuthPasswordPolicySet::process_challenge_reply(const std::string& encrypted_
 	if (*(session_info->challenge) == recovered_challenge) {
 		result = IAuthPolicySet::SUCCESSFULL;
 	} else {
-		LOG_DBG("Authentication failed; challenge: %s; recovered_challenge: %s ",
-				(session_info->challenge)->c_str(),
-				recovered_challenge.c_str());
+		LOG_DBG("Authentication failed");
 	}
 
 	delete session_info;
