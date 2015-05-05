@@ -210,8 +210,6 @@ IEnrollmentStateMachine::IEnrollmentStateMachine(ApplicationProcess * app, bool 
 	rib_daemon_ = dynamic_cast<IRIBDaemon*>(app->get_rib_daemon());
 	enrollment_task_ = dynamic_cast<IEnrollmentTask*>(app->get_enrollment_task());
 	timeout_ = timeout;
-	timer_ = new Timer();
-	lock_ = new Lockable();
 	remote_peer_ = new rina::Neighbor();
 	remote_peer_->name_ = remote_naming_info;
 	if (supporting_dif_name) {
@@ -224,20 +222,9 @@ IEnrollmentStateMachine::IEnrollmentStateMachine(ApplicationProcess * app, bool 
 	enroller_ = false;
 }
 
-IEnrollmentStateMachine::~IEnrollmentStateMachine()
-{
-	if (timer_) {
-		delete timer_;
-	}
-
-	if (lock_) {
-		delete lock_;
-	}
-}
-
 void IEnrollmentStateMachine::release(int invoke_id, CDAPSessionDescriptor * session_descriptor)
 {
-	ScopedLock g(*lock_);
+	ScopedLock g(lock_);
 	LOG_DBG("Releasing the CDAP connection");
 
 	if (!isValidPortId(session_descriptor)) {
@@ -247,10 +234,6 @@ void IEnrollmentStateMachine::release(int invoke_id, CDAPSessionDescriptor * ses
 	createOrUpdateNeighborInformation(false);
 
 	state_ = STATE_NULL;
-	if (timer_) {
-		delete timer_;
-		timer_ = 0;
-	}
 
 	if (invoke_id == 0) {
 		return;
@@ -269,7 +252,7 @@ void IEnrollmentStateMachine::release(int invoke_id, CDAPSessionDescriptor * ses
 void IEnrollmentStateMachine::releaseResponse(int result, const std::string& result_reason,
 					      CDAPSessionDescriptor * session_descriptor)
 {
-	ScopedLock g(*lock_);
+	ScopedLock g(lock_);
 
 	(void) result;
 	(void) result_reason;
@@ -285,7 +268,7 @@ void IEnrollmentStateMachine::releaseResponse(int result, const std::string& res
 
 void IEnrollmentStateMachine::flowDeallocated(CDAPSessionDescriptor * cdapSessionDescriptor)
 {
-	ScopedLock g(*lock_);
+	ScopedLock g(lock_);
 	LOG_INFO("The flow supporting the CDAP session identified by %d has been deallocated.",
 			cdapSessionDescriptor->port_id_);
 
@@ -296,10 +279,6 @@ void IEnrollmentStateMachine::flowDeallocated(CDAPSessionDescriptor * cdapSessio
 	createOrUpdateNeighborInformation(false);
 
 	state_ = STATE_NULL;
-	if (timer_) {
-		delete timer_;
-		timer_ = 0;
-	}
 }
 
 bool IEnrollmentStateMachine::isValidPortId(const CDAPSessionDescriptor * cdapSessionDescriptor)
@@ -316,13 +295,7 @@ bool IEnrollmentStateMachine::isValidPortId(const CDAPSessionDescriptor * cdapSe
 void IEnrollmentStateMachine::abortEnrollment(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
 			int portId, const std::string& reason, bool sendReleaseMessage)
 {
-	if (timer_) {
-		delete timer_;
-		timer_ = 0;
-	}
-
 	state_ = STATE_NULL;
-
 	enrollment_task_->enrollmentFailed(remotePeerNamingInfo, portId, reason, sendReleaseMessage);
 }
 

@@ -266,7 +266,7 @@ EnrolleeStateMachine::~EnrolleeStateMachine() {
 void EnrolleeStateMachine::initiateEnrollment(rina::EnrollmentRequest * enrollmentRequest,
 					      int portId)
 {
-	rina::ScopedLock g(*lock_);
+	rina::ScopedLock g(lock_);
 
 	enrollment_request_ = enrollmentRequest;
 	remote_peer_->address_ = enrollment_request_->neighbor_->address_;
@@ -302,7 +302,7 @@ void EnrolleeStateMachine::initiateEnrollment(rina::EnrollmentRequest * enrollme
 
 		//Set timer
 		last_scheduled_task_ = new rina::EnrollmentFailedTimerTask(this, CONNECT_RESPONSE_TIMEOUT);
-		timer_->scheduleTask(last_scheduled_task_, timeout_);
+		timer_.scheduleTask(last_scheduled_task_, timeout_);
 
 		//Update state
 		state_ = STATE_WAIT_CONNECT_RESPONSE;
@@ -315,9 +315,10 @@ void EnrolleeStateMachine::initiateEnrollment(rina::EnrollmentRequest * enrollme
 void EnrolleeStateMachine::process_authentication_message(const rina::CDAPMessage& message,
 					    	          rina::CDAPSessionDescriptor * session_descriptor)
 {
-	rina::ScopedLock g(*lock_);
+	lock_.lock();
 
 	if (!auth_ps_ || state_ != STATE_WAIT_CONNECT_RESPONSE) {
+		lock_.unlock();
 		abortEnrollment(remote_peer_->name_,
 				port_id_,
 				"Authentication policy is null or wrong state",
@@ -327,6 +328,8 @@ void EnrolleeStateMachine::process_authentication_message(const rina::CDAPMessag
 
 	int result = auth_ps_->process_incoming_message(message,
 							session_descriptor->port_id_);
+
+	lock_.unlock();
 
 	if (result == rina::IAuthPolicySet::FAILED) {
 		abortEnrollment(remote_peer_->name_,
@@ -340,7 +343,7 @@ void EnrolleeStateMachine::process_authentication_message(const rina::CDAPMessag
 
 void EnrolleeStateMachine::connectResponse(int result,
 		const std::string& result_reason) {
-	rina::ScopedLock g(*lock_);
+	rina::ScopedLock g(lock_);
 
 	if (state_ != STATE_WAIT_CONNECT_RESPONSE) {
 		abortEnrollment(remote_peer_->name_, port_id_,
@@ -348,7 +351,7 @@ void EnrolleeStateMachine::connectResponse(int result,
 		return;
 	}
 
-	timer_->cancelTask(last_scheduled_task_);
+	timer_.cancelTask(last_scheduled_task_);
 	if (result != 0) {
 		state_ = STATE_NULL;
 		enrollment_task_->enrollmentFailed(remote_peer_->get_name(), port_id_,
@@ -391,7 +394,7 @@ void EnrolleeStateMachine::connectResponse(int result,
 
 		//Set timer
 		last_scheduled_task_ = new rina::EnrollmentFailedTimerTask(this, START_RESPONSE_TIMEOUT);
-		timer_->scheduleTask(last_scheduled_task_, timeout_);
+		timer_.scheduleTask(last_scheduled_task_, timeout_);
 
 		//Update state
 		state_ = STATE_WAIT_START_ENROLLMENT_RESPONSE;
@@ -403,7 +406,7 @@ void EnrolleeStateMachine::connectResponse(int result,
 
 void EnrolleeStateMachine::startResponse(int result, const std::string& result_reason,
 		void * object_value, rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::ScopedLock g(*lock_);
+	rina::ScopedLock g(lock_);
 
 	if (!isValidPortId(session_descriptor)){
 		return;
@@ -415,7 +418,7 @@ void EnrolleeStateMachine::startResponse(int result, const std::string& result_r
 		return;
 	}
 
-	timer_->cancelTask(last_scheduled_task_);
+	timer_.cancelTask(last_scheduled_task_);
 	if (result != 0) {
 		state_ = STATE_NULL;
 		enrollment_task_->enrollmentFailed(remote_peer_->get_name(), port_id_,
@@ -441,7 +444,7 @@ void EnrolleeStateMachine::startResponse(int result, const std::string& result_r
 
 	//Set timer
 	last_scheduled_task_ = new rina::EnrollmentFailedTimerTask(this, STOP_ENROLLMENT_TIMEOUT);
-	timer_->scheduleTask(last_scheduled_task_, timeout_);
+	timer_.scheduleTask(last_scheduled_task_, timeout_);
 
 	//Update state
 	state_ = STATE_WAIT_STOP_ENROLLMENT_RESPONSE;
@@ -449,7 +452,7 @@ void EnrolleeStateMachine::startResponse(int result, const std::string& result_r
 
 void EnrolleeStateMachine::stop(EnrollmentInformationRequest * eiRequest, int invoke_id,
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	rina::ScopedLock g(*lock_);
+	rina::ScopedLock g(lock_);
 
 	if (!isValidPortId(cdapSessionDescriptor)){
 		return;
@@ -461,7 +464,7 @@ void EnrolleeStateMachine::stop(EnrollmentInformationRequest * eiRequest, int in
 		return;
 	}
 
-	timer_->cancelTask(last_scheduled_task_);
+	timer_.cancelTask(last_scheduled_task_);
 	//Check if I'm allowed to start early
 	if (!eiRequest->allowed_to_start_early_){
 		abortEnrollment(remote_peer_->name_, port_id_, STOP_WITH_NO_OBJECT_VALUE, true);
@@ -490,7 +493,7 @@ void EnrolleeStateMachine::requestMoreInformationOrStart() {
 		//Set timer
 		last_scheduled_task_ = new rina::EnrollmentFailedTimerTask(this,
 									   READ_RESPONSE_TIMEOUT);
-		timer_->scheduleTask(last_scheduled_task_, timeout_);
+		timer_.scheduleTask(last_scheduled_task_, timeout_);
 
 		//Update state
 		state_ = STATE_WAIT_READ_RESPONSE;
@@ -530,7 +533,7 @@ void EnrolleeStateMachine::requestMoreInformationOrStart() {
 	}
 
 	last_scheduled_task_ = new rina::EnrollmentFailedTimerTask(this, START_TIMEOUT);
-	timer_->scheduleTask(last_scheduled_task_, timeout_);
+	timer_.scheduleTask(last_scheduled_task_, timeout_);
 	state_ = STATE_WAIT_START;
 }
 
@@ -576,9 +579,8 @@ void EnrolleeStateMachine::commitEnrollment() {
 	}
 }
 
-void EnrolleeStateMachine::enrollmentCompleted() {
-	delete timer_;
-	timer_ = 0;
+void EnrolleeStateMachine::enrollmentCompleted()
+{
 	state_ = STATE_ENROLLED;
 
 	//Create or update the neighbor information in the RIB
@@ -620,7 +622,7 @@ void EnrolleeStateMachine::enrollmentCompleted() {
 void EnrolleeStateMachine::readResponse(int result, const std::string& result_reason,
 		void * object_value, const std::string& object_name,
 		rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::ScopedLock g(*lock_);
+	rina::ScopedLock g(lock_);
 
 	if (!isValidPortId(session_descriptor)){
 		return;
@@ -632,7 +634,7 @@ void EnrolleeStateMachine::readResponse(int result, const std::string& result_re
 		return;
 	}
 
-	timer_->cancelTask(last_scheduled_task_);
+	timer_.cancelTask(last_scheduled_task_);
 
 	if (result != 0 || object_value == 0){
 		abortEnrollment(remote_peer_->name_, port_id_,
@@ -678,7 +680,7 @@ void EnrolleeStateMachine::readResponse(int result, const std::string& result_re
 
 void EnrolleeStateMachine::start(int result, const std::string& result_reason,
 		rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::ScopedLock g(*lock_);
+	rina::ScopedLock g(lock_);
 
 	if (!isValidPortId(session_descriptor)){
 		return;
@@ -694,7 +696,7 @@ void EnrolleeStateMachine::start(int result, const std::string& result_reason,
 		return;
 	}
 
-	timer_->cancelTask(last_scheduled_task_);
+	timer_.cancelTask(last_scheduled_task_);
 
 	if (result != 0){
 		abortEnrollment(remote_peer_->name_, port_id_,
@@ -796,9 +798,10 @@ EnrollerStateMachine::~EnrollerStateMachine()
 void EnrollerStateMachine::connect(const rina::CDAPMessage& cdapMessage,
 			           rina::CDAPSessionDescriptor * session_descriptor)
 {
-	rina::ScopedLock g(*lock_);
+	lock_.lock();
 
 	if (state_ != STATE_NULL) {
+		lock_.unlock();
 		abortEnrollment(remote_peer_->name_, session_descriptor->port_id_,
 				CONNECT_IN_NOT_NULL, true);
 		return;
@@ -815,6 +818,7 @@ void EnrollerStateMachine::connect(const rina::CDAPMessage& cdapMessage,
 	auth_ps_ = security_manager_->get_auth_policy_set(
 			rina::IAuthPolicySet::cdapTypeToString(cdapMessage.auth_mech_));
 	if (!auth_ps_) {
+		lock_.unlock();
 		abortEnrollment(remote_peer_->name_, port_id_,
 				std::string("Could not find auth policy set"), true);
 		return;
@@ -825,6 +829,7 @@ void EnrollerStateMachine::connect(const rina::CDAPMessage& cdapMessage,
 			auth_ps_->initiate_authentication(cdapMessage.auth_value_,
 							  port_id_);
 	if (auth_status == rina::IAuthPolicySet::FAILED) {
+		lock_.unlock();
 		abortEnrollment(remote_peer_->name_, port_id_,
 				std::string("Authentication failed"), true);
 		return;
@@ -833,19 +838,22 @@ void EnrollerStateMachine::connect(const rina::CDAPMessage& cdapMessage,
 		last_scheduled_task_ = new rina::EnrollmentFailedTimerTask(this,
 									   AUTHENTICATION_TIMEOUT);
 		LOG_IPCP_DBG("Authentication in progress");
-		timer_->scheduleTask(last_scheduled_task_, timeout_);
+		timer_.scheduleTask(last_scheduled_task_, timeout_);
+		lock_.unlock();
 		return;
 	}
 
+	lock_.unlock();
 	authentication_successful();
 }
 
 void EnrollerStateMachine::process_authentication_message(const rina::CDAPMessage& message,
 					    	          rina::CDAPSessionDescriptor * session_descriptor)
 {
-	rina::ScopedLock g(*lock_);
+	lock_.lock();
 
 	if (!auth_ps_ || state_ != STATE_AUTHENTICATING) {
+		lock_.unlock();
 		abortEnrollment(remote_peer_->name_,
 				port_id_,
 				"Authentication policy is null or wrong state",
@@ -858,10 +866,13 @@ void EnrollerStateMachine::process_authentication_message(const rina::CDAPMessag
 
 	if (result == rina::IAuthPolicySet::IN_PROGRESS) {
 		LOG_IPCP_DBG("Authentication still in progress");
+		lock_.unlock();
 		return;
 	}
 
-	timer_->cancelTask(last_scheduled_task_);
+	timer_.cancelTask(last_scheduled_task_);
+
+	lock_.unlock();
 
 	if (result == rina::IAuthPolicySet::FAILED) {
 		abortEnrollment(remote_peer_->name_,
@@ -876,6 +887,8 @@ void EnrollerStateMachine::process_authentication_message(const rina::CDAPMessag
 
 void EnrollerStateMachine::authentication_successful()
 {
+	rina::ScopedLock scopedLock(lock_);
+
 	ISecurityManagerPs *smps = dynamic_cast<ISecurityManagerPs *>(security_manager_->ps);
 	assert(smps);
 
@@ -901,7 +914,7 @@ void EnrollerStateMachine::authentication_successful()
 
 		//Set timer
 		last_scheduled_task_ = new rina::EnrollmentFailedTimerTask(this, START_ENROLLMENT_TIMEOUT);
-		timer_->scheduleTask(last_scheduled_task_, timeout_);
+		timer_.scheduleTask(last_scheduled_task_, timeout_);
 		LOG_IPCP_DBG("M_CONNECT_R sent to portID %d. Waiting for start enrollment request message", port_id_);
 
 		state_ = STATE_WAIT_START_ENROLLMENT;
@@ -941,7 +954,7 @@ void EnrollerStateMachine::sendDIFStaticInformation() {
 
 void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int invoke_id,
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	rina::ScopedLock g(*lock_);
+	rina::ScopedLock g(lock_);
 
 	INamespaceManagerPs *nsmps = dynamic_cast<INamespaceManagerPs *>(namespace_manager_->ps);
 	assert(nsmps);
@@ -956,7 +969,7 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int i
 		return;
 	}
 
-	timer_->cancelTask(last_scheduled_task_);
+	timer_.cancelTask(last_scheduled_task_);
 
 	bool requiresInitialization = false;
 
@@ -1049,7 +1062,7 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int i
 	//Set timer
 	last_scheduled_task_ = new rina::EnrollmentFailedTimerTask(this,
 								   STOP_ENROLLMENT_RESPONSE_TIMEOUT);
-	timer_->scheduleTask(last_scheduled_task_, timeout_);
+	timer_.scheduleTask(last_scheduled_task_, timeout_);
 
 	LOG_IPCP_DBG("Waiting for stop enrollment response message");
 	state_ = STATE_WAIT_STOP_ENROLLMENT_RESPONSE;
@@ -1057,7 +1070,7 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int i
 
 void EnrollerStateMachine::stopResponse(int result, const std::string& result_reason,
 		void * object_value, rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::ScopedLock g(*lock_);
+	rina::ScopedLock g(lock_);
 
 	(void) object_value;
 
@@ -1071,7 +1084,7 @@ void EnrollerStateMachine::stopResponse(int result, const std::string& result_re
 		return;
 	}
 
-	timer_->cancelTask(last_scheduled_task_);
+	timer_.cancelTask(last_scheduled_task_);
 	if (result != 0){
 		state_ = STATE_NULL;
 		enrollment_task_->enrollmentFailed(remote_peer_->name_, port_id_,
@@ -1093,10 +1106,8 @@ void EnrollerStateMachine::stopResponse(int result, const std::string& result_re
 	enrollmentCompleted();
 }
 
-void EnrollerStateMachine::enrollmentCompleted() {
-	delete timer_;
-	timer_ = 0;
-
+void EnrollerStateMachine::enrollmentCompleted()
+{
 	state_ = STATE_ENROLLED;
 
 	createOrUpdateNeighborInformation(true);
