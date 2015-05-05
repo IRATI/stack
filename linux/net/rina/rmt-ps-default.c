@@ -52,13 +52,13 @@ struct rmt_ps_data {
 static void
 default_max_q_policy_tx(struct rmt_ps * ps,
                         struct pdu *    pdu,
-                        struct rfifo *  queue)
+                        struct rmt_n1_port * n1_port)
 { }
 
 static void
 default_max_q_policy_rx(struct rmt_ps * ps,
                         struct sdu *    sdu,
-                        struct rfifo *  queue)
+                        struct rmt_n1_port * n1_port)
 { }
 
 static void
