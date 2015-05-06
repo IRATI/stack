@@ -304,7 +304,10 @@ void Manager::createIPCP_2(rina::FlowInformation flow)
         ipc_config.process_name = "normal-2.IPCP";
         ipc_config.process_type = "normal-ipc";
         ipc_config.dif_to_assign = "normal.DIF";
-        ipc_config.dif_to_register = "400";
+        ipc_config.enr_conf.enr_dif = "normal.DIF";
+        ipc_config.enr_conf.enr_un_dif = "400";
+        ipc_config.enr_conf.neighbor_name = "normal-1.IPCP";
+        ipc_config.enr_conf.neighbor_instance = "1";
 
         cdap_rib::obj_info_t obj;
         obj.name_ =

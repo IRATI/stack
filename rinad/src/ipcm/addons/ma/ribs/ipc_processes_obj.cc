@@ -59,10 +59,10 @@ rina::cdap_rib::res_info_t* IPCProcessesObj::remoteCreate(
 				res->result_ = 2;
 				if (!object.dif_to_register.empty() && registerAtDIF(object, ipcp_id))
 					res->result_ = 3;
-				//FIXME change when whatevercast
-				if (!object.enr_conf.neighbor_name.empty() && enrollToDIF(object.enr_conf, ipcp_id))
-					res->result_ = 4;
 			}
+			//FIXME change when whatevercast
+			if (!object.enr_conf.neighbor_name.empty() && enrollToDIF(object.enr_conf, ipcp_id))
+				res->result_ = 4;
 
 		} else
 			res->result_ = -1;
