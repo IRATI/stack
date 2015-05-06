@@ -67,12 +67,13 @@ class Manager : public Application {
 	void run();
 	~Manager();
  protected:
-        void startWorker(rina::FlowInformation flow);
+        void startWorker(rina::FlowInformation &flow);
         void operate(rina::FlowInformation flow);
-        void cacep(rina::FlowInformation flow);
-        void createIPCP_1(rina::FlowInformation flow);
-        void createIPCP_2(rina::FlowInformation flow);
-        void queryRIB(rina::FlowInformation flow);
+        void cacep(rina::FlowInformation &flow);
+        void createIPCP_1(rina::FlowInformation &flow);
+        void createIPCP_2(rina::FlowInformation &flow);
+        void createIPCP_3(rina::FlowInformation &flow);
+        void queryRIB(rina::FlowInformation &flow);
  private:
 	std::string dif_name_;
 	bool client_app_reg_;
