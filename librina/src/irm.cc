@@ -290,14 +290,7 @@ void IPCResourceManager::cleanFlowAndNotify(int portId)
 	}
 
 	//Notify about the event
-	const CDAPSessionInterface * cdapSession = cdap_session_manager_->get_cdap_session(portId);
-	CDAPSessionDescriptor * cdapSessionDescriptor = 0;
-	if (cdapSession) {
-		cdapSessionDescriptor = cdapSession->get_session_descriptor();
-	}
-
-	NMinusOneFlowDeallocatedEvent * flowDeEvent =
-			new NMinusOneFlowDeallocatedEvent(portId, *cdapSessionDescriptor);
+	NMinusOneFlowDeallocatedEvent * flowDeEvent = new NMinusOneFlowDeallocatedEvent(portId);
 	event_manager_->deliverEvent(flowDeEvent);
 }
 

@@ -272,7 +272,7 @@ void EnrolleeStateMachine::initiateEnrollment(rina::EnrollmentRequest * enrollme
 	remote_peer_->address_ = enrollment_request_->neighbor_->address_;
 	remote_peer_->name_ = enrollment_request_->neighbor_->name_;
 	remote_peer_->supporting_dif_name_ = enrollment_request_->neighbor_->supporting_dif_name_;
-	remote_peer_->underlying_port_id_ = enrollment_request_->neighbor_->underlying_port_id_;
+	remote_peer_->underlying_port_id_ = portId;
 	remote_peer_->supporting_difs_ = enrollment_request_->neighbor_->supporting_difs_;
 
 	if (state_ != STATE_NULL) {
@@ -354,7 +354,7 @@ void EnrolleeStateMachine::connectResponse(int result,
 	timer_.cancelTask(last_scheduled_task_);
 	if (result != 0) {
 		state_ = STATE_NULL;
-		enrollment_task_->enrollmentFailed(remote_peer_->get_name(), port_id_,
+		enrollment_task_->enrollmentFailed(remote_peer_->name_, port_id_,
 				result_reason, true);
 		return;
 	}
@@ -408,7 +408,7 @@ void EnrolleeStateMachine::startResponse(int result, const std::string& result_r
 		void * object_value, rina::CDAPSessionDescriptor * session_descriptor) {
 	rina::ScopedLock g(lock_);
 
-	if (!isValidPortId(session_descriptor)){
+	if (!isValidPortId(session_descriptor->port_id_)){
 		return;
 	}
 
@@ -421,7 +421,7 @@ void EnrolleeStateMachine::startResponse(int result, const std::string& result_r
 	timer_.cancelTask(last_scheduled_task_);
 	if (result != 0) {
 		state_ = STATE_NULL;
-		enrollment_task_->enrollmentFailed(remote_peer_->get_name(), port_id_,
+		enrollment_task_->enrollmentFailed(remote_peer_->name_, port_id_,
 				result_reason, true);
 		return;
 	}
@@ -454,7 +454,7 @@ void EnrolleeStateMachine::stop(EnrollmentInformationRequest * eiRequest, int in
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	rina::ScopedLock g(lock_);
 
-	if (!isValidPortId(cdapSessionDescriptor)){
+	if (!isValidPortId(cdapSessionDescriptor->port_id_)){
 		return;
 	}
 
@@ -467,7 +467,8 @@ void EnrolleeStateMachine::stop(EnrollmentInformationRequest * eiRequest, int in
 	timer_.cancelTask(last_scheduled_task_);
 	//Check if I'm allowed to start early
 	if (!eiRequest->allowed_to_start_early_){
-		abortEnrollment(remote_peer_->name_, port_id_, STOP_WITH_NO_OBJECT_VALUE, true);
+		abortEnrollment(remote_peer_->name_, port_id_,
+				STOP_WITH_NO_OBJECT_VALUE, true);
 		return;
 	}
 
@@ -520,7 +521,8 @@ void EnrolleeStateMachine::requestMoreInformationOrStart() {
 			rib_daemon_->remoteStopObjectResponse("", "", object_value, -1,
 					PROBLEMS_COMMITTING_ENROLLMENT_INFO, stop_request_invoke_id_, remote_id);
 
-			abortEnrollment(remote_peer_->name_, port_id_, PROBLEMS_COMMITTING_ENROLLMENT_INFO, true);
+			abortEnrollment(remote_peer_->name_, port_id_,
+					PROBLEMS_COMMITTING_ENROLLMENT_INFO, true);
 		}
 
 		return;
@@ -590,7 +592,7 @@ void EnrolleeStateMachine::enrollmentCompleted()
 	sendCreateInformation(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
 			EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME);
 
-	enrollment_task_->enrollmentCompleted(remote_peer_, true);
+	enrollment_task_->enrollmentCompleted(*remote_peer_, true);
 
 	//Notify the kernel
 	if (!was_dif_member_before_enrollment_) {
@@ -624,7 +626,7 @@ void EnrolleeStateMachine::readResponse(int result, const std::string& result_re
 		rina::CDAPSessionDescriptor * session_descriptor) {
 	rina::ScopedLock g(lock_);
 
-	if (!isValidPortId(session_descriptor)){
+	if (!isValidPortId(session_descriptor->port_id_)){
 		return;
 	}
 
@@ -682,7 +684,7 @@ void EnrolleeStateMachine::start(int result, const std::string& result_reason,
 		rina::CDAPSessionDescriptor * session_descriptor) {
 	rina::ScopedLock g(lock_);
 
-	if (!isValidPortId(session_descriptor)){
+	if (!isValidPortId(session_descriptor->port_id_)){
 		return;
 	}
 
@@ -959,7 +961,7 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int i
 	INamespaceManagerPs *nsmps = dynamic_cast<INamespaceManagerPs *>(namespace_manager_->ps);
 	assert(nsmps);
 
-	if (!isValidPortId(cdapSessionDescriptor)){
+	if (!isValidPortId(cdapSessionDescriptor->port_id_)){
 		return;
 	}
 
@@ -1074,7 +1076,7 @@ void EnrollerStateMachine::stopResponse(int result, const std::string& result_re
 
 	(void) object_value;
 
-	if (!isValidPortId(session_descriptor)){
+	if (!isValidPortId(session_descriptor->port_id_)){
 		return;
 	}
 
@@ -1112,7 +1114,7 @@ void EnrollerStateMachine::enrollmentCompleted()
 
 	createOrUpdateNeighborInformation(true);
 
-	enrollment_task_->enrollmentCompleted(remote_peer_, false);
+	enrollment_task_->enrollmentCompleted(*remote_peer_, false);
 
 	LOG_IPCP_INFO("Remote IPC Process enrolled!");
 }
@@ -1152,7 +1154,7 @@ void EnrollmentRIBObject::remoteStartObject(void * object_value, int invoke_id,
 
 	try {
 		stateMachine = (EnrollerStateMachine *) enrollment_task_->getEnrollmentStateMachine(
-				cdapSessionDescriptor->dest_ap_name_, cdapSessionDescriptor->port_id_, false);
+				cdapSessionDescriptor->port_id_, false);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems retrieving state machine: %s", e.what());
 		sendErrorMessage(cdapSessionDescriptor);
@@ -1177,7 +1179,7 @@ void EnrollmentRIBObject::remoteStopObject(void * object_value, int invoke_id,
 
 	try {
 		stateMachine = (EnrolleeStateMachine *) enrollment_task_->getEnrollmentStateMachine(
-				cdapSessionDescriptor->dest_ap_name_, cdapSessionDescriptor->port_id_, false);
+				cdapSessionDescriptor->port_id_, false);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems retrieving state machine: %s", e.what());
 		sendErrorMessage(cdapSessionDescriptor);
@@ -1304,7 +1306,7 @@ void EnrollmentTaskPs::connect_response_received(int result,
 {
 	try{
 		EnrolleeStateMachine * stateMachine =
-			(EnrolleeStateMachine*) et->getEnrollmentStateMachine(session_descriptor,
+			(EnrolleeStateMachine*) et->getEnrollmentStateMachine(session_descriptor->port_id_,
 									     false);
 		stateMachine->connectResponse(result, result_reason);
 	}catch(rina::Exception &e){
@@ -1330,7 +1332,7 @@ void EnrollmentTaskPs::process_authentication_message(const rina::CDAPMessage& m
 {
 	try {
 		rina::IEnrollmentStateMachine * stateMachine =
-			et->getEnrollmentStateMachine(session_descriptor, false);
+			et->getEnrollmentStateMachine(session_descriptor->port_id_, false);
 		stateMachine->process_authentication_message(message,
 							     session_descriptor);
 	} catch (rina::Exception &e) {
@@ -1412,9 +1414,7 @@ rina::IEnrollmentStateMachine * EnrollmentTaskPs::createEnrollmentStateMachine(
 					apNamingInfo, timeout, sdname);
 		}
 
-		std::stringstream ss;
-		ss<<apNamingInfo.processName<<"-"<<portId;
-		et->add_enrollment_state_machine(ss.str(), stateMachine);
+		et->add_enrollment_state_machine(portId, stateMachine);
 
 		LOG_IPCP_DBG("Created a new Enrollment state machine for remote IPC process: %s",
 				apNamingInfo.getEncodedString().c_str());

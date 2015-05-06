@@ -81,10 +81,10 @@ public:
 
 class NeighborRIBObject: public SimpleSetMemberRIBObject {
 public:
-	NeighborRIBObject(IRIBDaemon * rib_daemon,
-			  const std::string& object_class,
-			  const std::string& object_name,
-			  const rina::Neighbor* neighbor);
+	NeighborRIBObject(IRIBDaemon * ribdaemon,
+			const std::string& object_class,
+			const std::string& object_name,
+			const rina::Neighbor* neighbor);
 	std::string get_displayable_value();
 };
 
@@ -137,7 +137,7 @@ public:
 	/// @param enrollee true if this App process is the one that initiated the
 	/// enrollment sequence (i.e. it is the application process that wants to
 	/// join the DIF)
-	virtual void enrollmentCompleted(Neighbor * neighbor,
+	virtual void enrollmentCompleted(const Neighbor& neighbor,
                                          bool enrollee) = 0;
 
 	/// Called by the enrollment state machine when the enrollment sequence fails
@@ -189,14 +189,14 @@ public:
 	/// Called by the EnrollmentTask when the flow supporting the CDAP session with the remote peer
 	/// has been deallocated
 	/// @param cdapSessionDescriptor
-	void flowDeallocated(rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void flowDeallocated(int portId);
 
 	rina::Neighbor * remote_peer_;
 	bool enroller_;
 	std::string state_;
 
 protected:
-	bool isValidPortId(const rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	bool isValidPortId(int portId);
 
 	/// Called by the enrollment state machine when the enrollment sequence fails
 	void abortEnrollment(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
@@ -243,8 +243,6 @@ public:
 	~BaseEnrollmentTask();
 	virtual void set_application_process(rina::ApplicationProcess * ap);
 	const std::list<Neighbor *> get_neighbors() const;
-	IEnrollmentStateMachine * getEnrollmentStateMachine(const std::string& apName,
-			int portId, bool remove);
 	bool isEnrolledTo(const std::string& applicationProcessName) const;
 	const std::list<std::string> get_enrolled_app_names() const;
 	virtual void initiateEnrollment(EnrollmentRequest * request);
@@ -254,13 +252,11 @@ public:
 	void eventHappened(rina::InternalEvent * event);
 	virtual void enrollmentFailed(const ApplicationProcessNamingInformation& remotePeerNamingInfo,
 			int portId, const std::string& reason, bool sendReleaseMessage);
-	void enrollmentCompleted(Neighbor * neighbor, bool enrollee);
-	void add_enrollment_state_machine(const std::string& key,
-					  IEnrollmentStateMachine * value);
-	IEnrollmentStateMachine * remove_enrollment_state_machine(const std::string& key);
-	IEnrollmentStateMachine * get_enrollment_state_machine(const std::string& key);
-	IEnrollmentStateMachine * getEnrollmentStateMachine(
-			const CDAPSessionDescriptor * cdapSessionDescriptor, bool remove);
+	void enrollmentCompleted(const Neighbor& neighbor, bool enrollee);
+	void add_enrollment_state_machine(int key, IEnrollmentStateMachine * value);
+	IEnrollmentStateMachine * remove_enrollment_state_machine(int key);
+	IEnrollmentStateMachine * get_enrollment_state_machine(int key);
+	IEnrollmentStateMachine * getEnrollmentStateMachine(int key, bool remove);
 	void deallocateFlow(int portId);
 
 protected:
@@ -297,7 +293,7 @@ protected:
 
 	/// Stores the enrollment state machines, one per remote IPC process that this IPC
 	/// process is enrolled to.
-	rina::ThreadSafeMapOfPointers<std::string, rina::IEnrollmentStateMachine> state_machines_;
+	rina::ThreadSafeMapOfPointers<int, rina::IEnrollmentStateMachine> state_machines_;
 
 	rina::ThreadSafeMapOfPointers<unsigned int, rina::EnrollmentRequest> port_ids_pending_to_be_allocated_;
 };

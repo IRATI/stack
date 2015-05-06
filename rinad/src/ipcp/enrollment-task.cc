@@ -131,7 +131,7 @@ void WatchdogRIBObject::sendMessages() {
 		//dead and fire a NEIGHBOR_DECLARED_DEAD event
 		if ((*it)->last_heard_from_time_in_ms_ != 0 &&
 				(*it)->last_heard_from_time_in_ms_ + declared_dead_interval_ < currentTimeInMs) {
-			rina::NeighborDeclaredDeadEvent * event = new rina::NeighborDeclaredDeadEvent((*it));
+			rina::NeighborDeclaredDeadEvent * event = new rina::NeighborDeclaredDeadEvent(*(*it));
 			ipc_process_->internal_event_manager_->deliverEvent(event);
 			continue;
 		}
@@ -528,7 +528,7 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 
 	//1 Remove enrollment state machine from the store
 	rina::IEnrollmentStateMachine * stateMachine =
-			getEnrollmentStateMachine(remotePeerNamingInfo.processName, portId, true);
+			getEnrollmentStateMachine(portId, true);
 	if (!stateMachine) {
 		LOG_IPCP_ERR("Could not find the enrollment state machine associated to neighbor %s and portId %d",
 				remotePeerNamingInfo.processName.c_str(), portId);
@@ -557,6 +557,41 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 	delete stateMachine;
 }
 
+void EnrollmentTask::release(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor)
+{
+	LOG_DBG("Received M_RELEASE cdapMessage from portId %d",
+			session_descriptor->port_id_);
+	rina::IEnrollmentStateMachine * stateMachine = 0;
+
+	try{
+		stateMachine = getEnrollmentStateMachine(session_descriptor->port_id_, true);
+		stateMachine->release(invoke_id, session_descriptor);
+	}catch(rina::Exception &e){
+		//Error getting the enrollment state machine
+		LOG_ERR("Problems getting enrollment state machine: %s", e.what());
+	}
+
+
+	if (invoke_id != 0) {
+		try {
+			rina::RemoteProcessId remote_id;
+			remote_id.port_id_ = session_descriptor->port_id_;
+
+			rib_daemon_->closeApplicationConnectionResponse(0, "", invoke_id, remote_id);
+		} catch (rina::Exception &e) {
+			LOG_ERR("Problems generating or sending CDAP Message: %s", e.what());
+		}
+	}
+
+	//3 In the case of the enrollee state machine, reply to the IPC Manager
+	IPCPEnrollmentTaskPS * ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);
+	assert(ipcp_ps);
+	ipcp_ps->inform_ipcm_about_failure(stateMachine);
+
+	deallocateFlow(session_descriptor->port_id_);
+	delete stateMachine;
+}
+
 // Class Operational Status RIB Object
 OperationalStatusRIBObject::OperationalStatusRIBObject(IPCProcess * ipc_process) :
 		BaseIPCPRIBObject(ipc_process, EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_CLASS,
@@ -572,8 +607,7 @@ void OperationalStatusRIBObject::remoteStartObject(void * object_value, int invo
 	(void) invoke_id;
 
 	try {
-		if (!enrollment_task_->getEnrollmentStateMachine(
-				cdapSessionDescriptor->dest_ap_name_, cdapSessionDescriptor->port_id_, false)) {
+		if (!enrollment_task_->getEnrollmentStateMachine(cdapSessionDescriptor->port_id_, false)) {
 			LOG_IPCP_ERR("Got a CDAP message that is not for me: %s");
 			return;
 		}

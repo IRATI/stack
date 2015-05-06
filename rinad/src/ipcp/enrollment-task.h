@@ -98,6 +98,7 @@ public:
 		     rina::CDAPSessionDescriptor * session_descriptor);
 	void connectResponse(int result, const std::string& result_reason,
 			rina::CDAPSessionDescriptor * session_descriptor);
+	void release(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
 	void process_authentication_message(const rina::CDAPMessage& message,
 			rina::CDAPSessionDescriptor * session_descriptor);
 	void enrollmentFailed(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,

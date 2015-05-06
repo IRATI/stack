@@ -29,26 +29,25 @@
 namespace rina {
 
 // Class Neighbor RIB object
-NeighborRIBObject::NeighborRIBObject(IRIBDaemon* rib_daemon,
-	const std::string& object_class, const std::string& object_name,
-	const rina::Neighbor* neighbor) :
-		SimpleSetMemberRIBObject(rib_daemon, object_class,
-					 object_name, neighbor)
+NeighborRIBObject::NeighborRIBObject(IRIBDaemon * rib_daemon,
+		const std::string& object_class, const std::string& object_name,
+		const rina::Neighbor* neighbor) :
+				SimpleSetMemberRIBObject(rib_daemon, object_class,
+						object_name, neighbor)
 {
 };
 
-std::string NeighborRIBObject::get_displayable_value()
-{
-	const rina::Neighbor * nei = (const rina::Neighbor *) get_value();
-	std::stringstream ss;
-	ss << "Name: " << nei->name_.getEncodedString();
-	ss << "; Address: " << nei->address_;
-	ss << "; Enrolled: " << nei->enrolled_ << std::endl;
-	ss << "; Supporting DIF Name: " << nei->supporting_dif_name_.processName;
-	ss << "; Underlying port-id: " << nei->underlying_port_id_;
-	ss << "; Number of enroll. attempts: " << nei->number_of_enrollment_attempts_;
+std::string NeighborRIBObject::get_displayable_value() {
+    const rina::Neighbor * nei = (const rina::Neighbor *) get_value();
+    std::stringstream ss;
+    ss << "Name: " << nei->name_.getEncodedString();
+    ss << "; Address: " << nei->address_;
+    ss << "; Enrolled: " << nei->enrolled_ << std::endl;
+    ss << "; Supporting DIF Name: " << nei->supporting_dif_name_.processName;
+    ss << "; Underlying port-id: " << nei->underlying_port_id_;
+    ss << "; Number of enroll. attempts: " << nei->number_of_enrollment_attempts_;
 
-	return ss.str();
+    return ss.str();
 }
 
 // Class Neighbor Set RIB Object
@@ -210,7 +209,7 @@ IEnrollmentStateMachine::IEnrollmentStateMachine(ApplicationProcess * app, bool 
 	rib_daemon_ = dynamic_cast<IRIBDaemon*>(app->get_rib_daemon());
 	enrollment_task_ = dynamic_cast<IEnrollmentTask*>(app->get_enrollment_task());
 	timeout_ = timeout;
-	remote_peer_ = new rina::Neighbor();
+	remote_peer_ = new Neighbor();
 	remote_peer_->name_ = remote_naming_info;
 	if (supporting_dif_name) {
 		remote_peer_->supporting_dif_name_ = *supporting_dif_name;
@@ -230,7 +229,7 @@ void IEnrollmentStateMachine::release(int invoke_id, CDAPSessionDescriptor * ses
 
 	(void) invoke_id;
 
-	if (!isValidPortId(session_descriptor)) {
+	if (!isValidPortId(session_descriptor->port_id_)) {
 		return;
 	}
 
@@ -251,7 +250,7 @@ void IEnrollmentStateMachine::releaseResponse(int result, const std::string& res
 	(void) result;
 	(void) result_reason;
 
-	if (!isValidPortId(session_descriptor)) {
+	if (!isValidPortId(session_descriptor->port_id_)) {
 		return;
 	}
 
@@ -260,13 +259,13 @@ void IEnrollmentStateMachine::releaseResponse(int result, const std::string& res
 	}
 }
 
-void IEnrollmentStateMachine::flowDeallocated(CDAPSessionDescriptor * cdapSessionDescriptor)
+void IEnrollmentStateMachine::flowDeallocated(int portId)
 {
 	ScopedLock g(lock_);
 	LOG_INFO("The flow supporting the CDAP session identified by %d has been deallocated.",
-			cdapSessionDescriptor->port_id_);
+			portId);
 
-	if (!isValidPortId(cdapSessionDescriptor)){
+	if (!isValidPortId(portId)){
 		return;
 	}
 
@@ -275,11 +274,11 @@ void IEnrollmentStateMachine::flowDeallocated(CDAPSessionDescriptor * cdapSessio
 	state_ = STATE_NULL;
 }
 
-bool IEnrollmentStateMachine::isValidPortId(const CDAPSessionDescriptor * cdapSessionDescriptor)
+bool IEnrollmentStateMachine::isValidPortId(int portId)
 {
-	if (cdapSessionDescriptor->port_id_ != port_id_) {
+	if (portId != port_id_) {
 		LOG_ERR("Received a CDAP message form port-id %d, but was expecting it form port-id %d",
-				cdapSessionDescriptor->port_id_, port_id_);
+				portId, port_id_);
 		return false;
 	}
 
@@ -310,7 +309,7 @@ void IEnrollmentStateMachine::createOrUpdateNeighborInformation(bool enrolled)
 		ss<<NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_NAME<<RIBNamingConstants::SEPARATOR;
 		ss<<remote_peer_->name_.processName;
 		rib_daemon_->createObject(NeighborSetRIBObject::NEIGHBOR_RIB_OBJECT_CLASS,
-					  ss.str(),remote_peer_, 0);
+					  ss.str(), remote_peer_, 0);
 	} catch (Exception &e) {
 		LOG_ERR("Problems creating RIB object: %s", e.what());
 	}
@@ -401,8 +400,9 @@ EnrollmentFailedTimerTask::EnrollmentFailedTimerTask(IEnrollmentStateMachine * s
 
 void EnrollmentFailedTimerTask::run() {
 	try {
-		state_machine_->abortEnrollment(state_machine_->remote_peer_->name_, state_machine_->port_id_,
-				reason_, true);
+		state_machine_->abortEnrollment(state_machine_->remote_peer_->name_,
+						state_machine_->port_id_,
+						reason_, true);
 	} catch(rina::Exception &e) {
 		LOG_ERR("Problems aborting enrollment: %s", e.what());
 	}
@@ -486,18 +486,14 @@ const std::list<Neighbor *> BaseEnrollmentTask::get_neighbors() const
 	return result;
 }
 
-IEnrollmentStateMachine * BaseEnrollmentTask::getEnrollmentStateMachine(
-		const std::string& apName, int portId, bool remove)
+IEnrollmentStateMachine * BaseEnrollmentTask::getEnrollmentStateMachine(int portId, bool remove)
 {
-	std::stringstream ss;
-	ss<<apName<<"-"<<portId;
-
 	if (remove) {
-		LOG_DBG("Removing enrollment state machine associated to %s %d",
-				apName.c_str(), portId);
-		return state_machines_.erase(ss.str());
+		LOG_DBG("Removing enrollment state machine associated to %d",
+				portId);
+		return state_machines_.erase(portId);
 	} else {
-		return state_machines_.find(ss.str());
+		return state_machines_.find(portId);
 	}
 }
 
@@ -566,36 +562,21 @@ void BaseEnrollmentTask::deallocateFlow(int portId)
 	}
 }
 
-IEnrollmentStateMachine * BaseEnrollmentTask::getEnrollmentStateMachine(
-		const CDAPSessionDescriptor * cdapSessionDescriptor, bool remove)
-{
-	try {
-		if (app->get_name().compare(cdapSessionDescriptor->src_ap_name_) == 0) {
-			return getEnrollmentStateMachine(cdapSessionDescriptor->dest_ap_name_,
-					cdapSessionDescriptor->port_id_, remove);
-		} else {
-			return 0;
-		}
-	} catch (Exception &e) {
-		LOG_ERR("Problems retrieving state machine: &s", e.what());
-		return 0;
-	}
-}
-
 void BaseEnrollmentTask::release(int invoke_id, CDAPSessionDescriptor * session_descriptor)
 {
 	LOG_DBG("Received M_RELEASE cdapMessage from portId %d",
 			session_descriptor->port_id_);
 
-	try{
-		IEnrollmentStateMachine * stateMachine =
-				getEnrollmentStateMachine(session_descriptor, false);
-		stateMachine->release(invoke_id, session_descriptor);
-	}catch(Exception &e){
-		//Error getting the enrollment state machine
-		LOG_ERR("Problems getting enrollment state machine: %s", e.what());
-	}
+	IEnrollmentStateMachine * stateMachine = 0;
 
+	stateMachine = getEnrollmentStateMachine(session_descriptor->port_id_, true);
+	if (stateMachine) {
+		stateMachine->release(invoke_id, session_descriptor);
+	} else {
+		LOG_WARN("Could not find enrollment stateMachine associated to port-id %d",
+				session_descriptor->port_id_);
+		return;
+	}
 
 	if (invoke_id != 0) {
 		try {
@@ -609,6 +590,8 @@ void BaseEnrollmentTask::release(int invoke_id, CDAPSessionDescriptor * session_
 	}
 
 	deallocateFlow(session_descriptor->port_id_);
+
+	delete stateMachine;
 }
 
 void BaseEnrollmentTask::releaseResponse(int result, const std::string& result_reason,
@@ -619,7 +602,7 @@ void BaseEnrollmentTask::releaseResponse(int result, const std::string& result_r
 
 	try{
 		IEnrollmentStateMachine * stateMachine =
-				getEnrollmentStateMachine(session_descriptor, false);
+				getEnrollmentStateMachine(session_descriptor->port_id_, false);
 		stateMachine->releaseResponse(result, result_reason, session_descriptor);
 	}catch(Exception &e){
 		//Error getting the enrollment state machine
@@ -662,7 +645,7 @@ void BaseEnrollmentTask::eventHappened(InternalEvent * event)
 void BaseEnrollmentTask::neighborDeclaredDead(NeighborDeclaredDeadEvent * deadEvent)
 {
 	try{
-		irm_->getNMinus1FlowInformation(deadEvent->neighbor_->underlying_port_id_);
+		irm_->getNMinus1FlowInformation(deadEvent->neighbor_.underlying_port_id_);
 	} catch(Exception &e){
 		LOG_INFO("The N-1 flow with the dead neighbor has already been deallocated");
 		return;
@@ -670,7 +653,7 @@ void BaseEnrollmentTask::neighborDeclaredDead(NeighborDeclaredDeadEvent * deadEv
 
 	try{
 		LOG_INFO("Requesting the deallocation of the N-1 flow with the dead neibhor");
-		irm_->deallocateNMinus1Flow(deadEvent->neighbor_->underlying_port_id_);
+		irm_->deallocateNMinus1Flow(deadEvent->neighbor_.underlying_port_id_);
 	} catch (rina::Exception &e){
 		LOG_ERR("Problems requesting the deallocation of a N-1 flow: %s", e.what());
 	}
@@ -678,43 +661,25 @@ void BaseEnrollmentTask::neighborDeclaredDead(NeighborDeclaredDeadEvent * deadEv
 
 void BaseEnrollmentTask::nMinusOneFlowDeallocated(NMinusOneFlowDeallocatedEvent  * event)
 {
+	Neighbor * neighbor;
+
 	//1 Remove the enrollment state machine from the list
-	try{
-		IEnrollmentStateMachine * enrollmentStateMachine =
-				getEnrollmentStateMachine(&(event->cdap_session_descriptor_), true);
-		if (!enrollmentStateMachine){
-			//Do nothing, we had already cleaned up
-			return;
-		}else{
-			enrollmentStateMachine->flowDeallocated(&(event->cdap_session_descriptor_));
-			delete enrollmentStateMachine;
-		}
-	}catch(Exception &e){
-		LOG_ERR("Problems: %s", e.what());
+	IEnrollmentStateMachine * enrollmentStateMachine =
+			getEnrollmentStateMachine(event->port_id_, true);
+	if (!enrollmentStateMachine){
+		//Do nothing, we had already cleaned up
+		LOG_INFO("Could not find enrollment state machine associated to port-id %d",
+				event->port_id_);
+		return;
+	}else{
+		neighbor = enrollmentStateMachine->remote_peer_;
+		enrollmentStateMachine->flowDeallocated(event->port_id_);
+		delete enrollmentStateMachine;
 	}
 
-	//2 Check if we still have connectivity to the neighbor, if not, issue a ConnectivityLostEvent
-	std::list<IEnrollmentStateMachine *> machines = state_machines_.getEntries();
-	std::list<IEnrollmentStateMachine *>::const_iterator it;
-	for (it = machines.begin(); it!= machines.end(); ++it) {
-		if ((*it)->remote_peer_->name_.processName.compare(
-				event->cdap_session_descriptor_.dest_ap_name_) == 0){
-			//We still have connectivity with the neighbor, return
-			return;
-		}
-	}
-
-	//3 We don't have connectivity to the neighbor, issue a Connectivity lost event
-	std::list<rina::Neighbor *> neighbors = get_neighbors();
-	std::list<rina::Neighbor *>::const_iterator it2;
-	for (it2 = neighbors.begin(); it2 != neighbors.end(); ++it2) {
-		if ((*it2)->name_.processName.compare(event->cdap_session_descriptor_.dest_ap_name_) == 0) {
-			rina::ConnectiviyToNeighborLostEvent * event2 =
-					new rina::ConnectiviyToNeighborLostEvent((*it2));
-			event_manager_->deliverEvent(event2);
-			return;
-		}
-	}
+	ConnectiviyToNeighborLostEvent * event2 =
+			new ConnectiviyToNeighborLostEvent(*neighbor);
+	event_manager_->deliverEvent(event2);
 }
 
 void BaseEnrollmentTask::nMinusOneFlowAllocationFailed(NMinusOneFlowAllocationFailedEvent * event)
@@ -739,8 +704,7 @@ void BaseEnrollmentTask::enrollmentFailed(const ApplicationProcessNamingInformat
 			remotePeerNamingInfo.getEncodedString().c_str(), reason.c_str());
 
 	//1 Remove enrollment state machine from the store
-	IEnrollmentStateMachine * stateMachine =
-			getEnrollmentStateMachine(remotePeerNamingInfo.processName, portId, true);
+	IEnrollmentStateMachine * stateMachine = getEnrollmentStateMachine(portId, true);
 	if (!stateMachine) {
 		LOG_ERR("Could not find the enrollment state machine associated to neighbor %s and portId %d",
 				remotePeerNamingInfo.processName.c_str(), portId);
@@ -764,24 +728,23 @@ void BaseEnrollmentTask::enrollmentFailed(const ApplicationProcessNamingInformat
 	delete stateMachine;
 }
 
-void BaseEnrollmentTask::enrollmentCompleted(Neighbor * neighbor, bool enrollee)
+void BaseEnrollmentTask::enrollmentCompleted(const Neighbor& neighbor, bool enrollee)
 {
 	NeighborAddedEvent * event = new NeighborAddedEvent(neighbor, enrollee);
 	event_manager_->deliverEvent(event);
 }
 
-void BaseEnrollmentTask::add_enrollment_state_machine(const std::string& key,
-				  IEnrollmentStateMachine * value)
+void BaseEnrollmentTask::add_enrollment_state_machine(int key, IEnrollmentStateMachine * value)
 {
 	state_machines_.put(key, value);
 }
 
-IEnrollmentStateMachine * BaseEnrollmentTask::remove_enrollment_state_machine(const std::string& key)
+IEnrollmentStateMachine * BaseEnrollmentTask::remove_enrollment_state_machine(int key)
 {
 	return state_machines_.erase(key);
 }
 
-IEnrollmentStateMachine * BaseEnrollmentTask::get_enrollment_state_machine(const std::string& key)
+IEnrollmentStateMachine * BaseEnrollmentTask::get_enrollment_state_machine(int key)
 {
 	return state_machines_.find(key);
 }

@@ -449,7 +449,7 @@ void ISecurityManager::eventHappened(InternalEvent * event)
 
 	if (event->type == InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED) {
 		n_event = dynamic_cast<NMinusOneFlowDeallocatedEvent *>(event);
-		context = security_contexts.erase(n_event->cdap_session_descriptor_.port_id_);
+		context = security_contexts.erase(n_event->port_id_);
 		if (context) {
 			delete context;
 		}
