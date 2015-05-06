@@ -219,6 +219,7 @@ IEnrollmentStateMachine::IEnrollmentStateMachine(ApplicationProcess * app, bool 
 	port_id_ = 0;
 	last_scheduled_task_ = 0;
 	state_ = STATE_NULL;
+	auth_ps_ = 0;
 	enroller_ = false;
 }
 
@@ -227,26 +228,19 @@ void IEnrollmentStateMachine::release(int invoke_id, CDAPSessionDescriptor * ses
 	ScopedLock g(lock_);
 	LOG_DBG("Releasing the CDAP connection");
 
+	(void) invoke_id;
+
 	if (!isValidPortId(session_descriptor)) {
 		return;
+	}
+
+	if (last_scheduled_task_) {
+		timer_.cancelTask(last_scheduled_task_);
 	}
 
 	createOrUpdateNeighborInformation(false);
 
 	state_ = STATE_NULL;
-
-	if (invoke_id == 0) {
-		return;
-	}
-
-	try {
-		rina::RemoteProcessId remote_id;
-		remote_id.port_id_ = port_id_;
-
-		rib_daemon_->closeApplicationConnectionResponse(0, "", invoke_id, remote_id);
-	} catch (Exception &e) {
-		LOG_ERR("Problems generating or sending CDAP Message: %s", e.what());
-	}
 }
 
 void IEnrollmentStateMachine::releaseResponse(int result, const std::string& result_reason,
@@ -600,18 +594,21 @@ void BaseEnrollmentTask::release(int invoke_id, CDAPSessionDescriptor * session_
 	}catch(Exception &e){
 		//Error getting the enrollment state machine
 		LOG_ERR("Problems getting enrollment state machine: %s", e.what());
+	}
 
+
+	if (invoke_id != 0) {
 		try {
-			RemoteProcessId remote_id;
+			rina::RemoteProcessId remote_id;
 			remote_id.port_id_ = session_descriptor->port_id_;
 
-			rib_daemon_->closeApplicationConnection(remote_id, 0);
+			rib_daemon_->closeApplicationConnectionResponse(0, "", invoke_id, remote_id);
 		} catch (Exception &e) {
-			LOG_ERR("Problems closing application connection: %s", e.what());
+			LOG_ERR("Problems generating or sending CDAP Message: %s", e.what());
 		}
-
-		deallocateFlow(session_descriptor->port_id_);
 	}
+
+	deallocateFlow(session_descriptor->port_id_);
 }
 
 void BaseEnrollmentTask::releaseResponse(int result, const std::string& result_reason,

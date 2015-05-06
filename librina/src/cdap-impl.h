@@ -157,7 +157,7 @@ public:
 	int get_port_id() const;
 	CDAPSessionDescriptor* get_session_descriptor() const;
 	CDAPInvokeIdManagerImpl* get_invoke_id_manager() const;
-	void stopConnection();
+	bool is_closed() const;
 	std::string get_session_state() const;
 private:
 	void messageSentOrReceived(const CDAPMessage &cdap_message, bool sent);

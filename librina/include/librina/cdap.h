@@ -669,6 +669,9 @@ public:
 
 	//Return the state of this session (NONE, AWAIT_CON, CON or AWAIT_CLOSE)
 	virtual std::string get_session_state() const = 0;
+
+	/// True if this CDAP session is closed, false otherwise
+	virtual bool is_closed() const = 0;
 };
 
 /// Manages the creation/deletion of CDAP sessions within an IPC process
@@ -703,8 +706,10 @@ public:
 	/// @param port_id
 	/// @return encoded version of the CDAP Message
 	/// @throws CDAPException
-	virtual void messageSent(const CDAPMessage &cdap_message, int port_id)
-	= 0;
+	virtual void messageSent(const CDAPMessage &cdap_message, int port_id) = 0;
+	/// Called by the CDAPSession state machine when the cdap session is terminated
+	/// @param port_id
+	virtual void removeCDAPSession(int port_id) = 0;
 	/// Get a CDAP session that matches the port_id
 	/// @param port_id
 	/// @return
@@ -712,9 +717,7 @@ public:
 	/// Get the identifiers of all the CDAP sessions
 	/// @return
 	virtual void getAllCDAPSessionIds(std::vector<int> &vector) = 0;
-	/// Called by the CDAPSession state machine when the cdap session is terminated
-	/// @param port_id
-	virtual void removeCDAPSession(int port_id) = 0;
+
 	/// Encodes a CDAP message. It just converts a CDAP message into a byte
 	/// array, without caring about what session this CDAP message belongs to (and
 	/// therefore it doesn't update any CDAP session state machine). Called by

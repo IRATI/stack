@@ -190,7 +190,6 @@ std::string ConnectionStateMachine::get_state()
 void ConnectionStateMachine::resetConnection() {
   connection_state_ = NONE;
   unlock();
-  cdap_session_->stopConnection();
 }
 
 void ConnectionStateMachine::connect()
@@ -274,7 +273,6 @@ void ConnectionStateMachine::releaseReceived(const CDAPMessage &message) {
   } else {
     connection_state_ = NONE;
     unlock();
-    cdap_session_->stopConnection();
   }
 }
 
@@ -500,8 +498,14 @@ CDAPSessionDescriptor* CDAPSessionImpl::get_session_descriptor() const {
 CDAPInvokeIdManagerImpl* CDAPSessionImpl::get_invoke_id_manager() const {
   return invoke_id_manager_;
 }
-void CDAPSessionImpl::stopConnection() {
-  cdap_session_manager_->removeCDAPSession(get_port_id());
+
+bool CDAPSessionImpl::is_closed() const
+{
+	if (connection_state_machine_->get_state() ==
+			CDAPSessionInterface::SESSION_STATE_NONE) {
+		return true;
+	}
+	return false;
 }
 
 std::string CDAPSessionImpl::get_session_state() const

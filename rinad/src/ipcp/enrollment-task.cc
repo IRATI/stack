@@ -545,9 +545,9 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Problems closing application connection: %s", e.what());
 		}
-
-		deallocateFlow(portId);
 	}
+
+	deallocateFlow(portId);
 
 	//3 In the case of the enrollee state machine, reply to the IPC Manager
 	IPCPEnrollmentTaskPS * ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);

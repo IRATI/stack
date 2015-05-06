@@ -202,7 +202,13 @@ void IPCPRIBDaemonImpl::sendMessageSpecific(bool useAddress, const rina::CDAPMes
 					cdapMessage.to_string().c_str());
 
 			cdsm->messageSent(cdapMessage, sessionId);
-		    delete sdu;
+			delete sdu;
+
+			//Check if CDAP session was closed due to the message sent
+			const rina::CDAPSessionInterface* cdap_session = cdsm->get_cdap_session(sessionId);
+			if (cdap_session && cdap_session->is_closed()) {
+				cdsm->removeCDAPSession(sessionId);
+			}
 		}
 	} catch (rina::Exception &e) {
 		if (sdu) {
@@ -317,6 +323,12 @@ void IPCPRIBDaemonImpl::cdapMessageDelivered(char* message, int length, int port
 
     processIncomingCDAPMessage(cdapMessage, descriptor,
 		    	       cdapSession->get_session_state());
+
+    //Check if CDAP session has been closed due to the message received
+    if (cdapSession->is_closed()) {
+	    cdap_session_manager_->removeCDAPSession(portId);
+    }
+
     delete cdapMessage;
 }
 
