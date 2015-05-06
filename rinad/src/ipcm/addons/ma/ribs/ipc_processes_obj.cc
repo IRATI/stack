@@ -54,9 +54,13 @@ rina::cdap_rib::res_info_t* IPCProcessesObj::remoteCreate(
 		int ipcp_id = createIPCP(object);
 		if (ipcp_id > 0) {
 			res->result_ = 1;
-			if (object.dif_to_assign.empty() && !object.enr_conf.neighbor_name.empty())
+			if (object.dif_to_assign.empty() && !object.enr_conf.enr_dif.empty())
 			{
-				object.dif_to_assign = object.enr_conf.neighbor_name;
+				object.dif_to_assign = object.enr_conf.enr_dif;
+			}
+			if (object.dif_to_register.empty() && !object.enr_conf.enr_un_dif.empty())
+			{
+				object.dif_to_register = object.enr_conf.enr_un_dif;
 			}
 			if (!object.dif_to_assign.empty() && assignToDIF(object, ipcp_id))
 			{
