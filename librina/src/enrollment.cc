@@ -674,12 +674,13 @@ void BaseEnrollmentTask::nMinusOneFlowDeallocated(NMinusOneFlowDeallocatedEvent 
 	}else{
 		neighbor = enrollmentStateMachine->remote_peer_;
 		enrollmentStateMachine->flowDeallocated(event->port_id_);
-		delete enrollmentStateMachine;
 	}
 
 	ConnectiviyToNeighborLostEvent * event2 =
 			new ConnectiviyToNeighborLostEvent(*neighbor);
 	event_manager_->deliverEvent(event2);
+
+	delete enrollmentStateMachine;
 }
 
 void BaseEnrollmentTask::nMinusOneFlowAllocationFailed(NMinusOneFlowAllocationFailedEvent * event)
