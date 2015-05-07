@@ -31,18 +31,17 @@
 namespace rina {
 namespace cdap {
 
-// Interface of the RIB to be used from the communication protocol
 class CDAPCallbackInterface
 {
  public:
         virtual ~CDAPCallbackInterface();
         virtual void open_connection_result(const cdap_rib::con_handle_t &con,
-                                            const cdap_rib::result_info &res);
+                                           const cdap_rib::result_info &res);
         virtual void open_connection(const cdap_rib::con_handle_t &con,
                                      const cdap_rib::flags_t &flags,
                                      int message_id);
         virtual void close_connection_result(const cdap_rib::con_handle_t &con,
-                                             const cdap_rib::result_info &res);
+                                           const cdap_rib::result_info &res);
         virtual void close_connection(const cdap_rib::con_handle_t &con,
                                       const cdap_rib::flags_t &flags,
                                       int message_id);
@@ -178,6 +177,10 @@ class CDAPProviderInterface
                                           int message_id) = 0;
         virtual void process_message(cdap_rib::SerializedObject &message,
                                      unsigned int port) = 0;
+
+	virtual void destroy_session(int port){ (void)port; /*FIXME*/ };
+
+
 };
 
 typedef struct CDAPMessage
@@ -318,15 +321,32 @@ class SerializerInterface
                         const cdap_m_t &cdapMessage) = 0;
 };
 
-namespace CDAPProviderFactory {
 
-extern void init(long timeout);
-extern CDAPProviderInterface* create(bool is_IPCP,
-                                     cdap::CDAPCallbackInterface *callback);
+///
+/// Initialize the CDAP provider
+///
+/// Should be only called once.
+///
+/// @warning This function is NOT thread safe
+///
+extern void init(cdap::CDAPCallbackInterface *callback, bool is_IPCP);
+
+///
+/// Get the CDAProvider interface object
+///
+/// @ret a pointer to a valid CDAPProviderInterface object or NULL
+///
+extern CDAPProviderInterface* getProvider(void);
+
+///
+/// Finializes the CDAP provider
+///
+extern void fini(void);
+
+//TODO remove
 extern void destroy(int port);
-extern void finit();
-}
 
-}
-}
+
+} //namespace cdap
+} //namespace rina
 #endif /* CDAP_PROVIDER_H_ */

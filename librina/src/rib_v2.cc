@@ -358,7 +358,7 @@ class RIBDaemon : public RIBDNorthInterface, cdap::CDAPCallbackInterface {
  public:
 	RIBDaemon(cacep::AppConHandlerInterface *app_con_callback,
 			ResponseHandlerInterface* app_resp_callback,
-			cdap_rib::cdap_params *params, const RIBSchema *schema);
+			cdap_rib::cdap_params params, const RIBSchema *schema);
 	~RIBDaemon();
 	void open_connection_result(const cdap_rib::con_handle_t &con,
 					const cdap_rib::result_info &res);
@@ -424,7 +424,6 @@ class RIBDaemon : public RIBDNorthInterface, cdap::CDAPCallbackInterface {
 					const std::string& clas) const;
 	BaseRIBObject* getObject(unsigned long instance,
 					const std::string& clas) const;
-	void process_message(cdap_rib::SerializedObject &message, int port);
 	void remote_open_connection(const cdap_rib::src_info_t &src,
 					const cdap_rib::dest_info_t &dest,
 					const cdap_rib::auth_info &auth,
@@ -440,16 +439,17 @@ class RIBDaemon : public RIBDNorthInterface, cdap::CDAPCallbackInterface {
 
 RIBDaemon::RIBDaemon(cacep::AppConHandlerInterface *app_con_callback,
 			ResponseHandlerInterface* app_resp_callback,
-			cdap_rib::cdap_params *params,
+			cdap_rib::cdap_params params,
 			const RIBSchema *schema) {
 
 	app_con_callback_ = app_con_callback;
 	app_resp_callback_ = app_resp_callback;
 	rib_ = new RIB(schema);
-	cdap::CDAPProviderFactory::init(params->timeout_);
-	cdap_provider_ = cdap::CDAPProviderFactory::create(params->is_IPCP_,
-								this);
-	delete params;
+
+	//Initialize the parameters
+	//TODO: move this out of here... the callback must be 1 and only one
+	cdap::init(this, params.is_IPCP_);
+	cdap_provider_ = cdap::getProvider();
 }
 
 RIBDaemon::~RIBDaemon() {
@@ -462,8 +462,6 @@ RIBDaemon::~RIBDaemon() {
 	}
 	encoders_.clear();
 	delete rib_;
-	delete cdap_provider_;
-	cdap::CDAPProviderFactory::finit();
 }
 
 void RIBDaemon::open_connection_result(const cdap_rib::con_handle_t &con,
@@ -818,10 +816,6 @@ BaseRIBObject* RIBDaemon::getObject(unsigned long instance,
 					const std::string& clas) const {
 
 	return rib_->getRIBObject(clas, instance, true);
-}
-void RIBDaemon::process_message(cdap_rib::SerializedObject &message, int port) {
-
-	cdap_provider_->process_message(message, port);
 }
 
 void RIBDaemon::remote_open_connection(const cdap_rib::src_info_t &src,
@@ -1200,13 +1194,13 @@ const cdap_rib::vers_info_t& RIBSchema::get_version() const {
 // CLASS RIBDFactory
 RIBDNorthInterface* RIBDFactory::create(
 		cacep::AppConHandlerInterface* app_callback,
-		ResponseHandlerInterface* app_resp_callbak, void* comm_params,
+		ResponseHandlerInterface* app_resp_callbak,
+		cdap_rib::cdap_params_t& cdap_params,
 		const cdap_rib::version_info *version, char separator) {
 
-	cdap_rib::cdap_params_t *params = (cdap_rib::cdap_params_t*) comm_params;
 	RIBSchema *schema = new RIBSchema(version, separator);
 	RIBDNorthInterface* ribd = new RIBDaemon(app_callback, app_resp_callbak,
-							params, schema);
+							cdap_params, schema);
 	return ribd;
 }
 

@@ -2700,36 +2700,6 @@ const cdap_rib::SerializedObject* GPBSerializer::serializeMessage(
         return serialized_message;
 }
 
-// CDAPProviderFactory
-namespace CDAPProviderFactory {
-
-static SerializerInterface *serializer = new GPBSerializer();
-static CDAPSessionManager *manager = new CDAPSessionManager(serializer);
-
-void init(long timeout)
-{
-        manager->set_timeout(timeout);
-}
-
-CDAPProviderInterface* create(bool is_IPCP,
-                              cdap::CDAPCallbackInterface *callback)
-{
-        if (is_IPCP)
-                return new IPCPCDAPProvider(callback, manager);
-        else
-                return new AppCDAPProvider(callback, manager);
-}
-
-void destroy(int port)
-{
-        manager->removeCDAPSession(port);
-}
-void finit()
-{
-        delete manager;
-}
-}
-
 // CLASS CDAPProvider
 CDAPProvider::CDAPProvider(cdap::CDAPCallbackInterface *callback,
                            CDAPSessionManager *manager)
@@ -3189,190 +3159,237 @@ void IPCPCDAPProvider::send(const cdap_m_t *m_sent, int port)
         delete ser_sent_m;
 }
 
-// CLASS CDAPCallbackInterface
+
+//
+// Default empty callbacks
+//
 CDAPCallbackInterface::~CDAPCallbackInterface()
 {
 }
 void CDAPCallbackInterface::open_connection_result(
-                const cdap_rib::con_handle_t &con,
-                const cdap_rib::result_info &res)
+		const cdap_rib::con_handle_t &con,
+		const cdap_rib::result_info &res)
 {
-        (void) con;
-        (void) res;
-        LOG_INFO("Callback open_connection_result operation not implemented");
+	(void) con;
+	(void) res;
+	LOG_INFO("Callback open_connection_result operation not implemented");
 }
 void CDAPCallbackInterface::open_connection(const cdap_rib::con_handle_t &con,
-                                            const cdap_rib::flags_t &flags,
-                                            int message_id)
+		const cdap_rib::flags_t &flags,
+		int message_id)
 {
-        (void) con;
-        (void) flags;
-        (void) message_id;
-        LOG_INFO("Callback open_connection operation not implemented");
+	(void) con;
+	(void) flags;
+	(void) message_id;
+	LOG_INFO("Callback open_connection operation not implemented");
 }
 void CDAPCallbackInterface::close_connection_result(
-                const cdap_rib::con_handle_t &con,
-                const cdap_rib::result_info &res)
+		const cdap_rib::con_handle_t &con,
+		const cdap_rib::result_info &res)
 {
-        (void) con;
-        (void) res;
-        LOG_INFO("Callback close_connection_result operation not implemented");
+	(void) con;
+	(void) res;
+	LOG_INFO("Callback close_connection_result operation not implemented");
 
 }
 void CDAPCallbackInterface::close_connection(const cdap_rib::con_handle_t &con,
-                                             const cdap_rib::flags_t &flags,
-                                             int message_id)
+		const cdap_rib::flags_t &flags,
+		int message_id)
 {
-        (void) con;
-        (void) flags;
-        (void) message_id;
-        LOG_INFO("Callback close_connection operation not implemented");
+	(void) con;
+	(void) flags;
+	(void) message_id;
+	LOG_INFO("Callback close_connection operation not implemented");
 }
 
 void CDAPCallbackInterface::remote_create_result(
-                const cdap_rib::con_handle_t &con,
-                const cdap_rib::obj_info_t &obj,
-                const cdap_rib::res_info_t &res)
+		const cdap_rib::con_handle_t &con,
+		const cdap_rib::obj_info_t &obj,
+		const cdap_rib::res_info_t &res)
 {
-        (void) con;
-        (void) res;
-        (void) obj;
-        LOG_INFO("Callback remote_create_result operation not implemented");
+	(void) con;
+	(void) res;
+	(void) obj;
+	LOG_INFO("Callback remote_create_result operation not implemented");
 }
 void CDAPCallbackInterface::remote_delete_result(
-                const cdap_rib::con_handle_t &con,
-                const cdap_rib::res_info_t &res)
+		const cdap_rib::con_handle_t &con,
+		const cdap_rib::res_info_t &res)
 {
-        (void) con;
-        (void) res;
-        LOG_INFO("Callback remote_delete_result operation not implemented");
+	(void) con;
+	(void) res;
+	LOG_INFO("Callback remote_delete_result operation not implemented");
 }
 void CDAPCallbackInterface::remote_read_result(
-                const cdap_rib::con_handle_t &con,
-                const cdap_rib::obj_info_t &obj,
-                const cdap_rib::res_info_t &res)
+		const cdap_rib::con_handle_t &con,
+		const cdap_rib::obj_info_t &obj,
+		const cdap_rib::res_info_t &res)
 {
-        (void) con;
-        (void) res;
-        (void) obj;
-        LOG_INFO("Callback remote_read_result operation not implemented");
+	(void) con;
+	(void) res;
+	(void) obj;
+	LOG_INFO("Callback remote_read_result operation not implemented");
 }
 void CDAPCallbackInterface::remote_cancel_read_result(
-                const cdap_rib::con_handle_t &con,
-                const cdap_rib::res_info_t &res)
+		const cdap_rib::con_handle_t &con,
+		const cdap_rib::res_info_t &res)
 {
-        (void) con;
-        (void) res;
-        LOG_INFO("Callback remote_cancel_read_result operation not implemented");
+	(void) con;
+	(void) res;
+	LOG_INFO("Callback remote_cancel_read_result operation not implemented");
 }
 void CDAPCallbackInterface::remote_write_result(
-                const cdap_rib::con_handle_t &con,
-                const cdap_rib::obj_info_t &obj,
-                const cdap_rib::res_info_t &res)
+		const cdap_rib::con_handle_t &con,
+		const cdap_rib::obj_info_t &obj,
+		const cdap_rib::res_info_t &res)
 {
-        (void) con;
-        (void) res;
-        (void) obj;
-        LOG_INFO("Callback remote_write_result operation not implemented");
+	(void) con;
+	(void) res;
+	(void) obj;
+	LOG_INFO("Callback remote_write_result operation not implemented");
 }
 void CDAPCallbackInterface::remote_start_result(
-                const cdap_rib::con_handle_t &con,
-                const cdap_rib::obj_info_t &obj,
-                const cdap_rib::res_info_t &res)
+		const cdap_rib::con_handle_t &con,
+		const cdap_rib::obj_info_t &obj,
+		const cdap_rib::res_info_t &res)
 {
-        (void) con;
-        (void) res;
-        (void) obj;
-        LOG_INFO("Callback remote_start_result operation not implemented");
+	(void) con;
+	(void) res;
+	(void) obj;
+	LOG_INFO("Callback remote_start_result operation not implemented");
 }
 void CDAPCallbackInterface::remote_stop_result(
-                const cdap_rib::con_handle_t &con,
-                const cdap_rib::obj_info_t &obj,
-                const cdap_rib::res_info_t &res)
+		const cdap_rib::con_handle_t &con,
+		const cdap_rib::obj_info_t &obj,
+		const cdap_rib::res_info_t &res)
 {
-        (void) con;
-        (void) res;
-        (void) obj;
-        LOG_INFO("Callback remote_stop_result operation not implemented");
+	(void) con;
+	(void) res;
+	(void) obj;
+	LOG_INFO("Callback remote_stop_result operation not implemented");
 }
 
 void CDAPCallbackInterface::remote_create_request(
-                const cdap_rib::con_handle_t &con,
-                const cdap_rib::obj_info_t &obj,
-                const cdap_rib::filt_info_t &filt, int message_id)
+		const cdap_rib::con_handle_t &con,
+		const cdap_rib::obj_info_t &obj,
+		const cdap_rib::filt_info_t &filt, int message_id)
 {
-        (void) con;
-        (void) obj;
-        (void) filt;
-        (void) message_id;
-        LOG_INFO("Callback remote_create_request operation not implemented");
+	(void) con;
+	(void) obj;
+	(void) filt;
+	(void) message_id;
+	LOG_INFO("Callback remote_create_request operation not implemented");
 }
 void CDAPCallbackInterface::remote_delete_request(
-                const cdap_rib::con_handle_t &con,
-                const cdap_rib::obj_info_t &obj,
-                const cdap_rib::filt_info_t &filt, int message_id)
+		const cdap_rib::con_handle_t &con,
+		const cdap_rib::obj_info_t &obj,
+		const cdap_rib::filt_info_t &filt, int message_id)
 {
-        (void) con;
-        (void) obj;
-        (void) filt;
-        (void) message_id;
-        LOG_INFO("Callback remote_delete_request operation not implemented");
+	(void) con;
+	(void) obj;
+	(void) filt;
+	(void) message_id;
+	LOG_INFO("Callback remote_delete_request operation not implemented");
 }
 void CDAPCallbackInterface::remote_read_request(
-                const cdap_rib::con_handle_t &con,
-                const cdap_rib::obj_info_t &obj,
-                const cdap_rib::filt_info_t &filt, int message_id)
+		const cdap_rib::con_handle_t &con,
+		const cdap_rib::obj_info_t &obj,
+		const cdap_rib::filt_info_t &filt, int message_id)
 {
-        (void) con;
-        (void) obj;
-        (void) filt;
-        (void) message_id;
-        LOG_INFO("Callback remote_read_request operation not implemented");
+	(void) con;
+	(void) obj;
+	(void) filt;
+	(void) message_id;
+	LOG_INFO("Callback remote_read_request operation not implemented");
 }
 void CDAPCallbackInterface::remote_cancel_read_request(
-                const cdap_rib::con_handle_t &con,
-                const cdap_rib::obj_info_t &obj,
-                const cdap_rib::filt_info_t &filt, int message_id)
+		const cdap_rib::con_handle_t &con,
+		const cdap_rib::obj_info_t &obj,
+		const cdap_rib::filt_info_t &filt, int message_id)
 {
-        (void) con;
-        (void) obj;
-        (void) filt;
-        (void) message_id;
-        LOG_INFO("Callback remote_cancel_read_request operation not implemented");
+	(void) con;
+	(void) obj;
+	(void) filt;
+	(void) message_id;
+	LOG_INFO("Callback remote_cancel_read_request operation not implemented");
 }
 void CDAPCallbackInterface::remote_write_request(
-                const cdap_rib::con_handle_t &con,
-                const cdap_rib::obj_info_t &obj,
-                const cdap_rib::filt_info_t &filt, int message_id)
+		const cdap_rib::con_handle_t &con,
+		const cdap_rib::obj_info_t &obj,
+		const cdap_rib::filt_info_t &filt, int message_id)
 {
-        (void) con;
-        (void) obj;
-        (void) filt;
-        (void) message_id;
-        LOG_INFO("Callback remote_write_request operation not implemented");
+	(void) con;
+	(void) obj;
+	(void) filt;
+	(void) message_id;
+	LOG_INFO("Callback remote_write_request operation not implemented");
 }
 void CDAPCallbackInterface::remote_start_request(
-                const cdap_rib::con_handle_t &con,
-                const cdap_rib::obj_info_t &obj,
-                const cdap_rib::filt_info_t &filt, int message_id)
+		const cdap_rib::con_handle_t &con,
+		const cdap_rib::obj_info_t &obj,
+		const cdap_rib::filt_info_t &filt, int message_id)
 {
-        (void) con;
-        (void) obj;
-        (void) filt;
-        (void) message_id;
-        LOG_INFO("Callback remote_start_request operation not implemented");
+	(void) con;
+	(void) obj;
+	(void) filt;
+	(void) message_id;
+	LOG_INFO("Callback remote_start_request operation not implemented");
 }
 void CDAPCallbackInterface::remote_stop_request(
-                const cdap_rib::con_handle_t &con,
-                const cdap_rib::obj_info_t &obj,
-                const cdap_rib::filt_info_t &filt, int message_id)
+		const cdap_rib::con_handle_t &con,
+		const cdap_rib::obj_info_t &obj,
+		const cdap_rib::filt_info_t &filt, int message_id)
 {
-        (void) con;
-        (void) obj;
-        (void) filt;
-        (void) message_id;
-        LOG_INFO("Callback remote_stop_request operation not implemented");
+	(void) con;
+	(void) obj;
+	(void) filt;
+	(void) message_id;
+	LOG_INFO("Callback remote_stop_request operation not implemented");
 }
 
+
+//
+// CDAP Provider
+//
+
+//Static elements
+static bool inited = false;
+static SerializerInterface *serializer = NULL;
+static CDAPSessionManager *manager = NULL;
+static CDAPProviderInterface* iface = NULL;
+
+CDAPProviderInterface* getProvider(){
+	return iface;
 }
+
+void init(cdap::CDAPCallbackInterface *callback, bool is_IPCP){
+
+	//First check the flag
+	if(inited){
+		LOG_ERR("Double call to rina::cdap::init()");
+		return;
+	}
+
+	//Initialize subcomponents
+	inited = true;
+	serializer = new GPBSerializer();
+	manager = new CDAPSessionManager(serializer);
+
+        if (is_IPCP)
+                iface = new IPCPCDAPProvider(callback, manager);
+        else
+                iface = new AppCDAPProvider(callback, manager);
 }
+
+void destroy(int port){
+        manager->removeCDAPSession(port);
+}
+
+void fini(){
+	delete serializer;
+        delete manager;
+        delete iface;
+}
+
+} //namespace cdap
+} //namespace rina

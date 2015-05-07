@@ -46,7 +46,6 @@ class Application {
 
 class ConnectionCallback : public rina::cdap::CDAPCallbackInterface {
  public:
-	ConnectionCallback(rina::cdap::CDAPProviderInterface **prov);
 	void open_connection(const rina::cdap_rib::con_handle_t &con,
 				const rina::cdap_rib::flags_t &flags,
 				int message_id);
@@ -56,8 +55,6 @@ class ConnectionCallback : public rina::cdap::CDAPCallbackInterface {
 	void remote_read_result(const rina::cdap_rib::con_handle_t &con,
 				const rina::cdap_rib::obj_info_t &obj,
 				const rina::cdap_rib::res_info_t &res);
- private:
-	rina::cdap::CDAPProviderInterface **prov_;
 };
 
 class Manager : public Application {
@@ -78,6 +75,6 @@ class Manager : public Application {
 	rina::cdap_rib::con_handle_t con_;
 	static const std::string mad_name;
 	static const std::string mad_instance;
-	rina::cdap::CDAPProviderInterface *cdap_prov_;
+        ConnectionCallback callback;
 };
 #endif//MANAGER_HPP

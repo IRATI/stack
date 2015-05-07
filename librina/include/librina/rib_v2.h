@@ -324,7 +324,6 @@ public:
 			const std::string& clas) const = 0;
 	virtual BaseRIBObject* getObject(unsigned long instance,
 			const std::string& clas) const = 0;
-	virtual void process_message(cdap_rib::SerializedObject &message, int port) = 0;
 	virtual void remote_open_connection(const cdap_rib::src_info_t &src,
                                       const cdap_rib::dest_info_t &dest, const cdap_rib::auth_info &auth,
                                       int port) = 0;
@@ -392,7 +391,7 @@ class RIBDFactory {
 public:
 	RIBDNorthInterface* create(cacep::AppConHandlerInterface* app_callback,
 			ResponseHandlerInterface* app_resp_callbak,
-			void* comm_params,
+			cdap_rib::cdap_params_t& cdap_params,
 			const cdap_rib::version_info *version,
 			char separator);
 };

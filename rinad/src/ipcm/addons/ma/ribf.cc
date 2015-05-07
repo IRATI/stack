@@ -66,9 +66,9 @@ RIBFactory::~RIBFactory() throw (){
 void RIBFactory::createRIB(uint64_t version){
 
 	char separator = ',';
-	rina::cdap_rib::cdap_params_t *params = new rina::cdap_rib::cdap_params_t;
-	params->is_IPCP_ = false;
-	params->timeout_ = 2000;
+	rina::cdap_rib::cdap_params_t params;
+	params.is_IPCP_ = false;
+	params.timeout_ = 2000;
 
 	rina::cdap_rib::vers_info_t *vers = new rina::cdap_rib::vers_info_t;
 	vers->version_ = (long) version;

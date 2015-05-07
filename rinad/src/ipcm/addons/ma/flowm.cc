@@ -36,6 +36,7 @@
 #define RINA_PREFIX "ipcm.mad.flowm"
 #include <librina/likely.h>
 #include <librina/logs.h>
+#include <librina/cdap_v2.h>
 #include <librina/rib_v2.h>
 
 namespace rinad {
@@ -327,9 +328,8 @@ void* ActiveWorker::run(void* param)
 			message.message_ = buffer;
 			message.size_ = bytes_read;
 
-			// FIXME this should be injected through the
-			// CDAP library not the RIB
-			rib_factory_->getRIB(1).process_message(message,
+			//Instruct CDAP provider to process the message
+			rina::cdap::getProvider()->process_message(message,
 							port_id);
 			LOG_DBG("Connection stablished between MAD and Manager (port id: %u)", port_id);
 
@@ -343,10 +343,10 @@ void* ActiveWorker::run(void* param)
 				message.message_ = buffer;
 				message.size_ = bytes_read;
 
-				// FIXME this should be injected through the
-				// CDAP library not the RIB
-				rib_factory_->getRIB(1).process_message(message,
-							port_id);
+				//Instruct CDAP provider to process the message
+				rina::cdap::getProvider()->process_message(
+								message,
+								port_id);
 			}
 		}catch(rina::ReadSDUException &e){
 			LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
