@@ -61,14 +61,7 @@ NeighborSetRIBObject::NeighborSetRIBObject(ApplicationProcess * app, IRIBDaemon 
 	BaseRIBObject(rib_daemon, NEIGHBOR_SET_RIB_OBJECT_CLASS,
 			objectInstanceGenerator->getObjectInstance(),
 			NEIGHBOR_SET_RIB_OBJECT_NAME){
-	lock_ = new rina::Lockable();
 	app_ = app;
-}
-
-NeighborSetRIBObject::~NeighborSetRIBObject() {
-	if (lock_) {
-		delete lock_;
-	}
 }
 
 const void* NeighborSetRIBObject::get_value() const {
@@ -77,7 +70,7 @@ const void* NeighborSetRIBObject::get_value() const {
 
 void NeighborSetRIBObject::remoteCreateObject(void * object_value, const std::string& object_name,
 		int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::ScopedLock g(*lock_);
+	rina::ScopedLock g(lock_);
 	std::list<rina::Neighbor *> neighborsToCreate;
 
 	(void) invoke_id;  // Stop compiler barfs
@@ -220,6 +213,10 @@ IEnrollmentStateMachine::IEnrollmentStateMachine(ApplicationProcess * app, bool 
 	state_ = STATE_NULL;
 	auth_ps_ = 0;
 	enroller_ = false;
+}
+
+IEnrollmentStateMachine::~IEnrollmentStateMachine() {
+	LOG_DBG("IEnrollmentStateMachine destructor called");
 }
 
 void IEnrollmentStateMachine::release(int invoke_id, CDAPSessionDescriptor * session_descriptor)
@@ -578,6 +575,9 @@ void BaseEnrollmentTask::release(int invoke_id, CDAPSessionDescriptor * session_
 		return;
 	}
 
+	delete stateMachine;
+	stateMachine = 0;
+
 	if (invoke_id != 0) {
 		try {
 			rina::RemoteProcessId remote_id;
@@ -590,8 +590,6 @@ void BaseEnrollmentTask::release(int invoke_id, CDAPSessionDescriptor * session_
 	}
 
 	deallocateFlow(session_descriptor->port_id_);
-
-	delete stateMachine;
 }
 
 void BaseEnrollmentTask::releaseResponse(int result, const std::string& result_reason,
@@ -652,14 +650,14 @@ void BaseEnrollmentTask::neighborDeclaredDead(NeighborDeclaredDeadEvent * deadEv
 	}
 
 	try{
-		LOG_INFO("Requesting the deallocation of the N-1 flow with the dead neibhor");
+		LOG_INFO("Requesting the deallocation of the N-1 flow with the dead neighbor");
 		irm_->deallocateNMinus1Flow(deadEvent->neighbor_.underlying_port_id_);
 	} catch (rina::Exception &e){
 		LOG_ERR("Problems requesting the deallocation of a N-1 flow: %s", e.what());
 	}
 }
 
-void BaseEnrollmentTask::nMinusOneFlowDeallocated(NMinusOneFlowDeallocatedEvent  * event)
+void BaseEnrollmentTask::nMinusOneFlowDeallocated(NMinusOneFlowDeallocatedEvent * event)
 {
 	Neighbor * neighbor;
 
@@ -671,16 +669,16 @@ void BaseEnrollmentTask::nMinusOneFlowDeallocated(NMinusOneFlowDeallocatedEvent 
 		LOG_INFO("Could not find enrollment state machine associated to port-id %d",
 				event->port_id_);
 		return;
-	}else{
-		neighbor = enrollmentStateMachine->remote_peer_;
-		enrollmentStateMachine->flowDeallocated(event->port_id_);
 	}
+
+	neighbor = enrollmentStateMachine->remote_peer_;
+	enrollmentStateMachine->flowDeallocated(event->port_id_);
 
 	ConnectiviyToNeighborLostEvent * event2 =
 			new ConnectiviyToNeighborLostEvent(*neighbor);
-	event_manager_->deliverEvent(event2);
-
 	delete enrollmentStateMachine;
+	enrollmentStateMachine = 0;
+	event_manager_->deliverEvent(event2);
 }
 
 void BaseEnrollmentTask::nMinusOneFlowAllocationFailed(NMinusOneFlowAllocationFailedEvent * event)
@@ -712,6 +710,9 @@ void BaseEnrollmentTask::enrollmentFailed(const ApplicationProcessNamingInformat
 		return;
 	}
 
+	delete stateMachine;
+	stateMachine = 0;
+
 	//2 Send message and deallocate flow if required
 	if(sendReleaseMessage){
 		try {
@@ -725,8 +726,6 @@ void BaseEnrollmentTask::enrollmentFailed(const ApplicationProcessNamingInformat
 
 		deallocateFlow(portId);
 	}
-
-	delete stateMachine;
 }
 
 void BaseEnrollmentTask::enrollmentCompleted(const Neighbor& neighbor, bool enrollee)

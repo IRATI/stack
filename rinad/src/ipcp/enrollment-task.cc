@@ -426,7 +426,6 @@ void EnrollmentTask::connect(const rina::CDAPMessage& cdapMessage,
 
 	//2 Find out if we are already enrolled to the remote IPC process
 	if (isEnrolledTo(session_descriptor->dest_ap_name_)){
-
 		std::string message = "Received an enrollment request for an IPC process I'm already enrolled to";
 		LOG_IPCP_ERR("%s", message.c_str());
 
@@ -535,7 +534,15 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 		return;
 	}
 
-	//2 Send message and deallocate flow if required
+	//2 In the case of the enrollee state machine, reply to the IPC Manager
+	IPCPEnrollmentTaskPS * ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);
+	assert(ipcp_ps);
+	ipcp_ps->inform_ipcm_about_failure(stateMachine);
+
+	delete stateMachine;
+	stateMachine = 0;
+
+	//3 Send message and deallocate flow if required
 	if(sendReleaseMessage){
 		try {
 			rina::RemoteProcessId remote_id;
@@ -548,13 +555,6 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 	}
 
 	deallocateFlow(portId);
-
-	//3 In the case of the enrollee state machine, reply to the IPC Manager
-	IPCPEnrollmentTaskPS * ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);
-	assert(ipcp_ps);
-	ipcp_ps->inform_ipcm_about_failure(stateMachine);
-
-	delete stateMachine;
 }
 
 void EnrollmentTask::release(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor)
@@ -571,6 +571,13 @@ void EnrollmentTask::release(int invoke_id, rina::CDAPSessionDescriptor * sessio
 		LOG_ERR("Problems getting enrollment state machine: %s", e.what());
 	}
 
+	//2 In the case of the enrollee state machine, reply to the IPC Manager
+	IPCPEnrollmentTaskPS * ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);
+	assert(ipcp_ps);
+	ipcp_ps->inform_ipcm_about_failure(stateMachine);
+
+	delete stateMachine;
+	stateMachine = 0;
 
 	if (invoke_id != 0) {
 		try {
@@ -583,13 +590,7 @@ void EnrollmentTask::release(int invoke_id, rina::CDAPSessionDescriptor * sessio
 		}
 	}
 
-	//3 In the case of the enrollee state machine, reply to the IPC Manager
-	IPCPEnrollmentTaskPS * ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);
-	assert(ipcp_ps);
-	ipcp_ps->inform_ipcm_about_failure(stateMachine);
-
 	deallocateFlow(session_descriptor->port_id_);
-	delete stateMachine;
 }
 
 // Class Operational Status RIB Object

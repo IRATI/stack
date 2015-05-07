@@ -95,7 +95,7 @@ public:
 	static const std::string NEIGHBOR_SET_RIB_OBJECT_NAME;
 
 	NeighborSetRIBObject(ApplicationProcess * app, IRIBDaemon * rib_daemon);
-	~NeighborSetRIBObject();
+	~NeighborSetRIBObject() { };
 	const void* get_value() const;
 	void remoteCreateObject(void * object_value, const std::string& object_name,
 			int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
@@ -108,7 +108,7 @@ private:
 			std::list<rina::Neighbor *> * list);
 	void createNeighbor(rina::Neighbor * neighbor);
 
-	Lockable * lock_;
+	Lockable lock_;
 	ApplicationProcess * app_;
 };
 
@@ -118,7 +118,7 @@ class IEnrollmentTask : public rina::ApplicationEntity,
 			public rina::CACEPHandler {
 public:
 	IEnrollmentTask() : rina::ApplicationEntity(ApplicationEntity::ENROLLMENT_TASK_AE_NAME) { };
-	virtual ~IEnrollmentTask(){};
+	virtual ~IEnrollmentTask() { };
 	virtual const std::list<Neighbor *> get_neighbors() const = 0;
 	virtual const std::list<std::string> get_enrolled_app_names() const = 0;
 
@@ -146,7 +146,7 @@ public:
 	/// @param enrollee
 	/// @param sendMessage
 	/// @param reason
-	virtual void enrollmentFailed(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
+	virtual void enrollmentFailed(const ApplicationProcessNamingInformation& remotePeerNamingInfo,
                                       int portId,
                                       const std::string& reason,
                                       bool sendReleaseMessage) = 0;
@@ -166,25 +166,25 @@ public:
 	static const std::string STATE_ENROLLED;
 
 	IEnrollmentStateMachine(ApplicationProcess * app, bool isIPCP,
-			const rina::ApplicationProcessNamingInformation& remote_naming_info,
-			int timeout, rina::ApplicationProcessNamingInformation * supporting_dif_name);
-	~IEnrollmentStateMachine(){ };
+			const ApplicationProcessNamingInformation& remote_naming_info,
+			int timeout, ApplicationProcessNamingInformation * supporting_dif_name);
+	virtual ~IEnrollmentStateMachine();
 
 	/// Called by the EnrollmentTask when it got an M_RELEASE message
 	/// @param invoke_id the invoke_id of the release message
 	/// @param cdapSessionDescriptor
 	void release(int invoke_id,
-			rina::CDAPSessionDescriptor * session_descriptor);
+		     CDAPSessionDescriptor * session_descriptor);
 
 	/// Called by the EnrollmentTask when it got an M_RELEASE_R message
 	/// @param result
 	/// @param result_reason
 	/// @param session_descriptor
 	void releaseResponse(int result, const std::string& result_reason,
-			rina::CDAPSessionDescriptor * session_descriptor);
+			     CDAPSessionDescriptor * session_descriptor);
 
 	virtual void process_authentication_message(const rina::CDAPMessage& message,
-					            rina::CDAPSessionDescriptor * session_descriptor) = 0;
+					            CDAPSessionDescriptor * session_descriptor) = 0;
 
 	/// Called by the EnrollmentTask when the flow supporting the CDAP session with the remote peer
 	/// has been deallocated
@@ -199,7 +199,7 @@ protected:
 	bool isValidPortId(int portId);
 
 	/// Called by the enrollment state machine when the enrollment sequence fails
-	void abortEnrollment(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
+	void abortEnrollment(const ApplicationProcessNamingInformation& remotePeerNamingInfo,
 			     int portId, const std::string& reason, bool sendReleaseMessage);
 
 	/// Create or update the neighbor information in the RIB
@@ -226,7 +226,7 @@ protected:
 	bool isIPCP_;
 };
 
-class EnrollmentFailedTimerTask: public rina::TimerTask {
+class EnrollmentFailedTimerTask: public TimerTask {
 public:
 	EnrollmentFailedTimerTask(IEnrollmentStateMachine * state_machine,
 			const std::string& reason);
@@ -240,8 +240,8 @@ public:
 class BaseEnrollmentTask: public IEnrollmentTask, public InternalEventListener {
 public:
 	BaseEnrollmentTask(int timeout);
-	~BaseEnrollmentTask();
-	virtual void set_application_process(rina::ApplicationProcess * ap);
+	virtual ~BaseEnrollmentTask();
+	virtual void set_application_process(ApplicationProcess * ap);
 	const std::list<Neighbor *> get_neighbors() const;
 	bool isEnrolledTo(const std::string& applicationProcessName) const;
 	const std::list<std::string> get_enrolled_app_names() const;
@@ -249,7 +249,7 @@ public:
 	virtual void release(int invoke_id, CDAPSessionDescriptor * session_descriptor);
 	virtual void releaseResponse(int result, const std::string& result_reason,
 			CDAPSessionDescriptor * session_descriptor);
-	void eventHappened(rina::InternalEvent * event);
+	void eventHappened(InternalEvent * event);
 	virtual void enrollmentFailed(const ApplicationProcessNamingInformation& remotePeerNamingInfo,
 			int portId, const std::string& reason, bool sendReleaseMessage);
 	void enrollmentCompleted(const Neighbor& neighbor, bool enrollee);
@@ -293,9 +293,9 @@ protected:
 
 	/// Stores the enrollment state machines, one per remote IPC process that this IPC
 	/// process is enrolled to.
-	rina::ThreadSafeMapOfPointers<int, rina::IEnrollmentStateMachine> state_machines_;
+	rina::ThreadSafeMapOfPointers<int, IEnrollmentStateMachine> state_machines_;
 
-	rina::ThreadSafeMapOfPointers<unsigned int, rina::EnrollmentRequest> port_ids_pending_to_be_allocated_;
+	rina::ThreadSafeMapOfPointers<unsigned int, EnrollmentRequest> port_ids_pending_to_be_allocated_;
 };
 
 }

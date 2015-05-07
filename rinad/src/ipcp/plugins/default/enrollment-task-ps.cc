@@ -61,7 +61,7 @@ public:
 	static const std::string STATE_WAIT_START_ENROLLMENT;
 	static const std::string STATE_WAIT_STOP_ENROLLMENT_RESPONSE;
 
-	~BaseEnrollmentStateMachine(){};
+	virtual ~BaseEnrollmentStateMachine();
 
 protected:
 	BaseEnrollmentStateMachine(IPCProcess * ipc_process,
@@ -141,6 +141,10 @@ BaseEnrollmentStateMachine::BaseEnrollmentStateMachine(IPCProcess * ipc_process,
 	ipc_process_ = ipc_process;
 	cdap_session_manager_ = ipc_process->cdap_session_manager_;
 	encoder_ = ipc_process->encoder_;
+}
+
+BaseEnrollmentStateMachine::~BaseEnrollmentStateMachine() {
+	LOG_IPCP_DBG("BaseEnrollmentStateMachine destructor called");
 }
 
 void BaseEnrollmentStateMachine::sendDIFDynamicInformation() {
@@ -261,6 +265,7 @@ EnrolleeStateMachine::EnrolleeStateMachine(IPCProcess * ipc_process,
 }
 
 EnrolleeStateMachine::~EnrolleeStateMachine() {
+	LOG_IPCP_DBG("Enrollee state machine destructor called");
 }
 
 void EnrolleeStateMachine::initiateEnrollment(rina::EnrollmentRequest * enrollmentRequest,
