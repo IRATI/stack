@@ -19,9 +19,8 @@ extern Singleton<rina::ConsecutiveUnsignedIntegerGenerator> inst_gen;
 //Static class names
 const std::string IPCProcessesObj::class_name = "OSApplicationProcess";
 
-IPCProcessesObj::IPCProcessesObj(
-		std::string name, long instance,
-		rina::rib::RIBDNorthInterface* ribd)
+IPCProcessesObj::IPCProcessesObj(std::string name, long instance,
+					rina::rib::RIBDNorthInterface* ribd)
 		: rina::rib::EmptyRIBObject(class_name, name, instance,
 						&encoder_) {
 
@@ -54,25 +53,37 @@ rina::cdap_rib::res_info_t* IPCProcessesObj::remoteCreate(
 		int ipcp_id = createIPCP(object);
 		if (ipcp_id > 0) {
 			res->result_ = 1;
-			if (object.dif_to_assign.empty() && !object.enr_conf.enr_dif.empty())
-			{
+			if (object.dif_to_assign.empty()
+					&& !object.enr_conf.enr_dif.empty()) {
 				object.dif_to_assign = object.enr_conf.enr_dif;
 			}
-			if (object.dif_to_register.empty() && !object.enr_conf.enr_un_dif.empty())
-			{
-				object.dif_to_register = object.enr_conf.enr_un_dif;
+			bool found = false;
+			for (std::list<std::string>::iterator it = object
+					.difs_to_register.begin();
+					it != object.difs_to_register.end();
+					++it) {
+				if ((*it) == object.enr_conf.enr_un_dif) {
+					found = true;
+					break;
+				}
 			}
-			if (!object.dif_to_assign.empty() && assignToDIF(object, ipcp_id))
-			{
-				res->result_ = 2;
-				if (!object.dif_to_register.empty() && registerAtDIF(object, ipcp_id))
-					res->result_ = 3;
-			}
-			//FIXME change when whatevercast
-			if (!object.enr_conf.neighbor_name.empty() && enrollToDIF(object.enr_conf, ipcp_id))
-				res->result_ = 4;
+			if (!found)
+				object.difs_to_register.push_back(
+						object.enr_conf.enr_un_dif);
 
-		} else
+		}
+		if (!object.dif_to_assign.empty()
+				&& assignToDIF(object, ipcp_id)) {
+			res->result_ = 2;
+			if (!object.difs_to_register.empty()
+					&& registerAtDIF(object, ipcp_id))
+				res->result_ = 3;
+		}
+		//FIXME change when whatevercast
+		if (!object.enr_conf.neighbor_name.empty()
+				&& enrollToDIF(object.enr_conf, ipcp_id))
+			res->result_ = 4;
+		else
 			res->result_ = -1;
 
 		if (res->result_ > 0) {
@@ -139,46 +150,51 @@ bool IPCProcessesObj::assignToDIF(
 }
 bool IPCProcessesObj::registerAtDIF(
 		mad_manager::structures::ipcp_config_t &object, int ipcp_id) {
-	Promise promise;
+	for(std::list<std::string>::iterator it = object.difs_to_register.begin(); it != object.difs_to_register.end(); ++it)
+	{
+		Promise promise;
 
-	rina::ApplicationProcessNamingInformation dif_name(
-			object.dif_to_register, std::string());
+		rina::ApplicationProcessNamingInformation dif_name(
+				*it, std::string());
+		if (!IPCManager->ipcp_exists(ipcp_id)) {
+			LOG_ERR("No such IPC process id");
+			return false;
+		}
 
-	if (!IPCManager->ipcp_exists(ipcp_id)) {
-		LOG_ERR("No such IPC process id");
-		return false;
+		if (IPCManager->register_at_dif(ManagementAgent::inst, &promise,
+						ipcp_id, dif_name) == IPCM_FAILURE
+				|| promise.wait() != IPCM_SUCCESS) {
+			LOG_ERR("Registration failed");
+			return false;
+		}
+
+		LOG_INFO("IPC process registration to dif %s completed successfully", it->c_str());
 	}
-
-	if (IPCManager->register_at_dif(ManagementAgent::inst, &promise,
-					ipcp_id, dif_name) == IPCM_FAILURE
-			|| promise.wait() != IPCM_SUCCESS) {
-		LOG_ERR("Registration failed");
-		return false;
-	}
-
-	LOG_INFO("IPC process registration completed successfully");
 
 	return true;
 }
-bool IPCProcessesObj::enrollToDIF(mad_manager::structures::enrollment_config_t &object, int ipcp_id)
-{
+bool IPCProcessesObj::enrollToDIF(
+		mad_manager::structures::enrollment_config_t &object,
+		int ipcp_id) {
 	NeighborData neighbor_data;
 	Promise promise;
 
 	neighbor_data.difName = rina::ApplicationProcessNamingInformation(
-				object.enr_dif, std::string());
+			object.enr_dif, std::string());
 	neighbor_data.supportingDifName =
-		rina::ApplicationProcessNamingInformation(object.enr_un_dif, std::string());
-	neighbor_data.apName =
-		rina::ApplicationProcessNamingInformation(object.neighbor_name, object.neighbor_instance);
+			rina::ApplicationProcessNamingInformation(
+					object.enr_un_dif, std::string());
+	neighbor_data.apName = rina::ApplicationProcessNamingInformation(
+			object.neighbor_name, object.neighbor_instance);
 
 	if (!IPCManager->ipcp_exists(ipcp_id)) {
 		LOG_ERR("No such IPC process id");
 		return false;
 	}
 
-	if(IPCManager->enroll_to_dif(ManagementAgent::inst, &promise, ipcp_id, neighbor_data) == IPCM_FAILURE ||
-			promise.wait() != IPCM_SUCCESS) {
+	if (IPCManager->enroll_to_dif(ManagementAgent::inst, &promise, ipcp_id,
+					neighbor_data) == IPCM_FAILURE
+			|| promise.wait() != IPCM_SUCCESS) {
 		LOG_ERR("Enrollment operation failed");
 		return false;
 	}
@@ -187,6 +203,6 @@ bool IPCProcessesObj::enrollToDIF(mad_manager::structures::enrollment_config_t &
 
 	return true;
 }
-}//namespace rib_v1
-}//namespace mad
-}//namespace rinad
+}  //namespace rib_v1
+}  //namespace mad
+}  //namespace rinad

@@ -51,7 +51,7 @@ typedef struct ipcp_config{
 	std::string process_name;
 	std::string process_instance;
 	std::string process_type;
-	std::string dif_to_register;
+	std::list<std::string> difs_to_register;
 	std::string dif_to_assign;
 	enrollment_config_t enr_conf;
 }ipcp_config_t;
