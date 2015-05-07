@@ -27,12 +27,7 @@
 namespace rinad {
 
 //Class SecurityManager
-<<<<<<< HEAD
 void IPCPSecurityManager::set_application_process(rina::ApplicationProcess * ap)
-=======
-
-void SecurityManager::set_application_process(rina::ApplicationProcess * ap)
->>>>>>> 0eb46ca2ad8ff3ec2ea3b23a3df7e85f1b085313
 {
 	if (!ap)
 			return;
