@@ -94,13 +94,18 @@ public:
   virtual std::list<char*>& getRawSdus(char delimitedSdus[]) = 0;
 };
 
+class IEnrollmentStateMachine;
+
 /// Interface that must be implementing by classes that provide
 /// the behavior of an enrollment task
 class IPCPEnrollmentTask : public IPCProcessComponent,
-			   public rina::BaseEnrollmentTask {
+			   public rina::IEnrollmentTask {
 public:
-	IPCPEnrollmentTask(int timeout) : BaseEnrollmentTask(timeout) { };
+	IPCPEnrollmentTask() : IEnrollmentTask() { };
 	virtual ~IPCPEnrollmentTask(){};
+	virtual IEnrollmentStateMachine * getEnrollmentStateMachine(int portId, bool remove) = 0;
+	virtual void deallocateFlow(int portId) = 0;
+	virtual void add_enrollment_state_machine(int portId, IEnrollmentStateMachine * stateMachine) = 0;
 };
 
 /// Policy set of the IPCP enrollment task
@@ -116,7 +121,7 @@ public:
         					    rina::CDAPSessionDescriptor * session_descriptor) = 0;
         virtual void initiate_enrollment(const rina::NMinusOneFlowAllocatedEvent & event,
         				 rina::EnrollmentRequest * request) = 0;
-        virtual void inform_ipcm_about_failure(rina::IEnrollmentStateMachine * state_machine) = 0;
+        virtual void inform_ipcm_about_failure(IEnrollmentStateMachine * state_machine) = 0;
         virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
 };
 

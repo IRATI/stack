@@ -103,7 +103,7 @@ private:
 	/// state machine
 	ConnectionState connection_state_;
 
-	Timer timer;
+	Timer * timer;
 	TimerTask * last_timer_task_;
 
 	friend class ResetStablishmentTimerTask;
@@ -309,6 +309,7 @@ private:
 	/// The maximum time the CDAP state machine of a session will wait for connect or release responses (in ms)
 	long timeout_;
 	CDAPInvokeIdManagerImpl *invoke_id_manager_;
+	ReadWriteLockable lock;
 };
 
 /// Google Protocol Buffers Wire Message Provider

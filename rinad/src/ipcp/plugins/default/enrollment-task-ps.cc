@@ -26,13 +26,14 @@
 #include <assert.h>
 
 #include "ipcp/ipc-process.h"
+#include "ipcp/enrollment-task.h"
 
 namespace rinad {
 
 /// The base class that contains the common aspects of both
 /// enrollment state machines: the enroller side and the enrolle
 /// side
-class BaseEnrollmentStateMachine : public rina::IEnrollmentStateMachine {
+class BaseEnrollmentStateMachine : public IEnrollmentStateMachine {
 public:
 	static const std::string CONNECT_RESPONSE_TIMEOUT;
 	static const std::string START_RESPONSE_TIMEOUT;
@@ -61,7 +62,7 @@ public:
 	static const std::string STATE_WAIT_START_ENROLLMENT;
 	static const std::string STATE_WAIT_STOP_ENROLLMENT_RESPONSE;
 
-	virtual ~BaseEnrollmentStateMachine();
+	virtual ~BaseEnrollmentStateMachine() { };
 
 protected:
 	BaseEnrollmentStateMachine(IPCProcess * ipc_process,
@@ -135,16 +136,12 @@ const std::string BaseEnrollmentStateMachine::STATE_WAIT_STOP_ENROLLMENT_RESPONS
 BaseEnrollmentStateMachine::BaseEnrollmentStateMachine(IPCProcess * ipc_process,
 			const rina::ApplicationProcessNamingInformation& remote_naming_info,
 			int timeout, rina::ApplicationProcessNamingInformation * supporting_dif_name) :
-				rina::IEnrollmentStateMachine(ipc_process, true, remote_naming_info,
+				IEnrollmentStateMachine(ipc_process, remote_naming_info,
 						timeout, supporting_dif_name)
 {
 	ipc_process_ = ipc_process;
 	cdap_session_manager_ = ipc_process->cdap_session_manager_;
 	encoder_ = ipc_process->encoder_;
-}
-
-BaseEnrollmentStateMachine::~BaseEnrollmentStateMachine() {
-	LOG_IPCP_DBG("BaseEnrollmentStateMachine destructor called");
 }
 
 void BaseEnrollmentStateMachine::sendDIFDynamicInformation() {
@@ -193,7 +190,7 @@ public:
 	EnrolleeStateMachine(IPCProcess * ipc_process,
 			const rina::ApplicationProcessNamingInformation& remote_naming_info,
 			int timeout);
-	~EnrolleeStateMachine();
+	~EnrolleeStateMachine() { };
 
 	/// Called by the DIFMembersSetObject to initiate the enrollment sequence
 	/// with a remote IPC Process
@@ -264,10 +261,6 @@ EnrolleeStateMachine::EnrolleeStateMachine(IPCProcess * ipc_process,
 	stop_request_invoke_id_ = 0;
 }
 
-EnrolleeStateMachine::~EnrolleeStateMachine() {
-	LOG_IPCP_DBG("Enrollee state machine destructor called");
-}
-
 void EnrolleeStateMachine::initiateEnrollment(rina::EnrollmentRequest * enrollmentRequest,
 					      int portId)
 {
@@ -306,7 +299,7 @@ void EnrolleeStateMachine::initiateEnrollment(rina::EnrollmentRequest * enrollme
 		port_id_ = portId;
 
 		//Set timer
-		last_scheduled_task_ = new rina::EnrollmentFailedTimerTask(this, CONNECT_RESPONSE_TIMEOUT);
+		last_scheduled_task_ = new EnrollmentFailedTimerTask(this, CONNECT_RESPONSE_TIMEOUT);
 		timer_.scheduleTask(last_scheduled_task_, timeout_);
 
 		//Update state
@@ -398,7 +391,7 @@ void EnrolleeStateMachine::connectResponse(int result,
 		LOG_IPCP_DBG("Sent a M_START Message to portid: %d", port_id_);
 
 		//Set timer
-		last_scheduled_task_ = new rina::EnrollmentFailedTimerTask(this, START_RESPONSE_TIMEOUT);
+		last_scheduled_task_ = new EnrollmentFailedTimerTask(this, START_RESPONSE_TIMEOUT);
 		timer_.scheduleTask(last_scheduled_task_, timeout_);
 
 		//Update state
@@ -448,7 +441,7 @@ void EnrolleeStateMachine::startResponse(int result, const std::string& result_r
 	}
 
 	//Set timer
-	last_scheduled_task_ = new rina::EnrollmentFailedTimerTask(this, STOP_ENROLLMENT_TIMEOUT);
+	last_scheduled_task_ = new EnrollmentFailedTimerTask(this, STOP_ENROLLMENT_TIMEOUT);
 	timer_.scheduleTask(last_scheduled_task_, timeout_);
 
 	//Update state
@@ -497,8 +490,8 @@ void EnrolleeStateMachine::stop(EnrollmentInformationRequest * eiRequest, int in
 void EnrolleeStateMachine::requestMoreInformationOrStart() {
 	if (sendNextObjectRequired()){
 		//Set timer
-		last_scheduled_task_ = new rina::EnrollmentFailedTimerTask(this,
-									   READ_RESPONSE_TIMEOUT);
+		last_scheduled_task_ = new EnrollmentFailedTimerTask(this,
+							 	     READ_RESPONSE_TIMEOUT);
 		timer_.scheduleTask(last_scheduled_task_, timeout_);
 
 		//Update state
@@ -539,7 +532,7 @@ void EnrolleeStateMachine::requestMoreInformationOrStart() {
 		LOG_IPCP_ERR("Problems sending CDAP message: %s", e.what());
 	}
 
-	last_scheduled_task_ = new rina::EnrollmentFailedTimerTask(this, START_TIMEOUT);
+	last_scheduled_task_ = new EnrollmentFailedTimerTask(this, START_TIMEOUT);
 	timer_.scheduleTask(last_scheduled_task_, timeout_);
 	state_ = STATE_WAIT_START;
 }
@@ -728,13 +721,13 @@ public:
 	EnrollerStateMachine(IPCProcess * ipc_process,
 		const rina::ApplicationProcessNamingInformation& remote_naming_info, int timeout,
 		rina::ApplicationProcessNamingInformation * supporting_dif_name);
-	~EnrollerStateMachine();
+	~EnrollerStateMachine() { };
 
 	/// An M_CONNECT message has been received.  Handle the transition from the
 	/// NULL to the WAIT_START_ENROLLMENT state.
 	/// Authenticate the remote peer and issue a connect response
 	/// @param invoke_id
-    /// @param portId
+	/// @param portId
 	void connect(const rina::CDAPMessage& cdapMessage,
 		     rina::CDAPSessionDescriptor * session_descriptor);
 
@@ -798,10 +791,6 @@ EnrollerStateMachine::EnrollerStateMachine(IPCProcess * ipc_process,
 	connect_message_invoke_id_ = 0;
 }
 
-EnrollerStateMachine::~EnrollerStateMachine()
-{
-}
-
 void EnrollerStateMachine::connect(const rina::CDAPMessage& cdapMessage,
 			           rina::CDAPSessionDescriptor * session_descriptor)
 {
@@ -842,8 +831,8 @@ void EnrollerStateMachine::connect(const rina::CDAPMessage& cdapMessage,
 		return;
 	} else if (auth_status == rina::IAuthPolicySet::IN_PROGRESS) {
 		state_ = STATE_AUTHENTICATING;
-		last_scheduled_task_ = new rina::EnrollmentFailedTimerTask(this,
-									   AUTHENTICATION_TIMEOUT);
+		last_scheduled_task_ = new EnrollmentFailedTimerTask(this,
+								     AUTHENTICATION_TIMEOUT);
 		LOG_IPCP_DBG("Authentication in progress");
 		timer_.scheduleTask(last_scheduled_task_, timeout_);
 		lock_.unlock();
@@ -920,7 +909,7 @@ void EnrollerStateMachine::authentication_successful()
 				session_descriptor_->src_ap_name_, connect_message_invoke_id_, remote_id);
 
 		//Set timer
-		last_scheduled_task_ = new rina::EnrollmentFailedTimerTask(this, START_ENROLLMENT_TIMEOUT);
+		last_scheduled_task_ = new EnrollmentFailedTimerTask(this, START_ENROLLMENT_TIMEOUT);
 		timer_.scheduleTask(last_scheduled_task_, timeout_);
 		LOG_IPCP_DBG("M_CONNECT_R sent to portID %d. Waiting for start enrollment request message", port_id_);
 
@@ -1067,8 +1056,8 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int i
 	}
 
 	//Set timer
-	last_scheduled_task_ = new rina::EnrollmentFailedTimerTask(this,
-								   STOP_ENROLLMENT_RESPONSE_TIMEOUT);
+	last_scheduled_task_ = new EnrollmentFailedTimerTask(this,
+						   	     STOP_ENROLLMENT_RESPONSE_TIMEOUT);
 	timer_.scheduleTask(last_scheduled_task_, timeout_);
 
 	LOG_IPCP_DBG("Waiting for stop enrollment response message");
@@ -1227,14 +1216,14 @@ public:
         			rina::CDAPSessionDescriptor * session_descriptor);
         void initiate_enrollment(const rina::NMinusOneFlowAllocatedEvent & event,
         			 rina::EnrollmentRequest * request);
-        void inform_ipcm_about_failure(rina::IEnrollmentStateMachine * state_machine);
+        void inform_ipcm_about_failure(IEnrollmentStateMachine * state_machine);
         void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
         int set_policy_set_param(const std::string& name,
         		         const std::string& value);
 
 private:
         void populate_rib();
-        rina::IEnrollmentStateMachine * createEnrollmentStateMachine(
+        IEnrollmentStateMachine * createEnrollmentStateMachine(
         		const rina::ApplicationProcessNamingInformation& apNamingInfo, int portId,
                 	bool enrollee, const rina::ApplicationProcessNamingInformation& supportingDifName);
 
@@ -1242,6 +1231,7 @@ private:
         IPCProcess * ipcp;
         IPCPEnrollmentTask * et;
         int timeout;
+        rina::Lockable lock;
         rina::IPCResourceManager * irm;
         rina::IRIBDaemon * rib_daemon;
 };
@@ -1267,6 +1257,8 @@ void EnrollmentTaskPs::populate_rib()
 void EnrollmentTaskPs::connect_received(const rina::CDAPMessage& cdapMessage,
         		 	        rina::CDAPSessionDescriptor * session_descriptor)
 {
+	rina::ScopedLock g(lock);
+
 	try{
 		rina::FlowInformation flowInformation =
 			irm->getNMinus1FlowInformation(session_descriptor->port_id_);
@@ -1309,6 +1301,8 @@ void EnrollmentTaskPs::connect_response_received(int result,
 			     	     	         const std::string& result_reason,
 			     	     	         rina::CDAPSessionDescriptor * session_descriptor)
 {
+	rina::ScopedLock g(lock);
+
 	try{
 		EnrolleeStateMachine * stateMachine =
 			(EnrolleeStateMachine*) et->getEnrollmentStateMachine(session_descriptor->port_id_,
@@ -1335,8 +1329,10 @@ void EnrollmentTaskPs::connect_response_received(int result,
 void EnrollmentTaskPs::process_authentication_message(const rina::CDAPMessage& message,
 			rina::CDAPSessionDescriptor * session_descriptor)
 {
+	rina::ScopedLock g(lock);
+
 	try {
-		rina::IEnrollmentStateMachine * stateMachine =
+		IEnrollmentStateMachine * stateMachine =
 			et->getEnrollmentStateMachine(session_descriptor->port_id_, false);
 		stateMachine->process_authentication_message(message,
 							     session_descriptor);
@@ -1359,6 +1355,8 @@ void EnrollmentTaskPs::process_authentication_message(const rina::CDAPMessage& m
 void EnrollmentTaskPs::initiate_enrollment(const rina::NMinusOneFlowAllocatedEvent & event,
 					      rina::EnrollmentRequest * request)
 {
+	rina::ScopedLock g(lock);
+
 	EnrolleeStateMachine * enrollmentStateMachine = 0;
 
 	//1 Tell the enrollment task to create a new Enrollment state machine
@@ -1382,7 +1380,7 @@ void EnrollmentTaskPs::initiate_enrollment(const rina::NMinusOneFlowAllocatedEve
 	}
 }
 
-void EnrollmentTaskPs::inform_ipcm_about_failure(rina::IEnrollmentStateMachine * state_machine)
+void EnrollmentTaskPs::inform_ipcm_about_failure(IEnrollmentStateMachine * state_machine)
 {
 	EnrolleeStateMachine * sm = dynamic_cast<EnrolleeStateMachine *>(state_machine);
 	if (sm) {
@@ -1400,11 +1398,11 @@ void EnrollmentTaskPs::inform_ipcm_about_failure(rina::IEnrollmentStateMachine *
 	}
 }
 
-rina::IEnrollmentStateMachine * EnrollmentTaskPs::createEnrollmentStateMachine(
+IEnrollmentStateMachine * EnrollmentTaskPs::createEnrollmentStateMachine(
         	const rina::ApplicationProcessNamingInformation& apNamingInfo, int portId,
         	bool enrollee, const rina::ApplicationProcessNamingInformation& supportingDifName)
 {
-	rina::IEnrollmentStateMachine * stateMachine = 0;
+	IEnrollmentStateMachine * stateMachine = 0;
 
 	if (apNamingInfo.entityName.compare("") == 0 ||
 			apNamingInfo.entityName.compare(IPCProcess::MANAGEMENT_AE) == 0) {

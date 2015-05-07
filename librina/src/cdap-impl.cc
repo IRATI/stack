@@ -53,12 +53,18 @@ ConnectionStateMachine::ConnectionStateMachine(CDAPSessionImpl *cdap_session,
 	timeout_ = timeout;
 	last_timer_task_ = 0;
 	connection_state_ = NONE;
+	timer = new Timer();
 }
 
 ConnectionStateMachine::~ConnectionStateMachine() throw ()
 {
 	if (last_timer_task_) {
-		timer.cancelTask(last_timer_task_);
+		timer->cancelTask(last_timer_task_);
+	}
+
+	if (timer) {
+		delete timer;
+		timer = 0;
 	}
 }
 
@@ -201,7 +207,7 @@ void ConnectionStateMachine::connect()
 	LOG_DBG("Waiting timeout %d to receive a connection response", timeout_);
 
 	last_timer_task_ = new ResetStablishmentTimerTask(this);
-	timer.scheduleTask(last_timer_task_, timeout_);
+	timer->scheduleTask(last_timer_task_, timeout_);
 }
 
 void ConnectionStateMachine::connectReceived()
@@ -237,7 +243,7 @@ void ConnectionStateMachine::connectResponseReceived()
 	LOG_DBG("Connection response received");
 
 	if (last_timer_task_) {
-		timer.cancelTask(last_timer_task_);
+		timer->cancelTask(last_timer_task_);
 		last_timer_task_ = 0;
 	}
 
@@ -254,7 +260,7 @@ void ConnectionStateMachine::release(const CDAPMessage &cdap_message)
 	if (cdap_message.get_invoke_id() != 0) {
 		last_timer_task_ = new ReleaseConnectionTimerTask(this);
 		LOG_DBG("Waiting timeout %d to receive a release response", timeout_);
-		timer.scheduleTask(last_timer_task_, timeout_);
+		timer->scheduleTask(last_timer_task_, timeout_);
 	}
 }
 
@@ -294,7 +300,7 @@ void ConnectionStateMachine::releaseResponseReceived()
 	}
 	LOG_DBG("Release response received");
 	if (last_timer_task_) {
-		timer.cancelTask(last_timer_task_);
+		timer->cancelTask(last_timer_task_);
 		last_timer_task_ = 0;
 	}
 	unlock();
@@ -881,21 +887,26 @@ CDAPSessionManager::CDAPSessionManager(WireMessageProviderFactory *arg0,
   invoke_id_manager_ = new CDAPInvokeIdManagerImpl();
 }
 
-CDAPSessionImpl* CDAPSessionManager::createCDAPSession(int port_id) {
-  if (cdap_sessions_.find(port_id) != cdap_sessions_.end()) {
-    return cdap_sessions_.find(port_id)->second;
-  } else {
-    CDAPSessionImpl *cdap_session = new CDAPSessionImpl(this, timeout_,
-                                                        wire_message_provider_,
-                                                        invoke_id_manager_);
-    CDAPSessionDescriptor *descriptor = new CDAPSessionDescriptor(port_id);
-    cdap_session->set_session_descriptor(descriptor);
-    cdap_sessions_.insert(
-        std::pair<int, CDAPSessionImpl*>(port_id, cdap_session));
-    return cdap_session;
-  }
+CDAPSessionImpl* CDAPSessionManager::createCDAPSession(int port_id)
+{
+	WriteScopedLock g(lock);
+	if (cdap_sessions_.find(port_id) != cdap_sessions_.end()) {
+		return cdap_sessions_.find(port_id)->second;
+	} else {
+		CDAPSessionImpl *cdap_session =
+				new CDAPSessionImpl(this, timeout_,
+                                                    wire_message_provider_,
+                                                    invoke_id_manager_);
+		CDAPSessionDescriptor *descriptor = new CDAPSessionDescriptor(port_id);
+		cdap_session->set_session_descriptor(descriptor);
+		cdap_sessions_.insert(
+				std::pair<int, CDAPSessionImpl*>(port_id, cdap_session));
+		return cdap_session;
+	}
 }
-CDAPSessionManager::~CDAPSessionManager() throw () {
+
+CDAPSessionManager::~CDAPSessionManager() throw ()
+{
   delete invoke_id_manager_;
   invoke_id_manager_ = 0;
   for (std::map<int, CDAPSessionImpl*>::iterator iter = cdap_sessions_.begin();
@@ -907,32 +918,41 @@ CDAPSessionManager::~CDAPSessionManager() throw () {
   delete wire_message_provider_;
   wire_message_provider_ = 0;
 }
-void CDAPSessionManager::getAllCDAPSessionIds(std::vector<int> &vector) {
-  vector.clear();
-  for (std::map<int, CDAPSessionImpl*>::iterator it = cdap_sessions_.begin();
-      it != cdap_sessions_.end(); ++it) {
-    vector.push_back(it->first);
-  }
+void CDAPSessionManager::getAllCDAPSessionIds(std::vector<int> &vector)
+{
+	ReadScopedLock g(lock);
+	vector.clear();
+	for (std::map<int, CDAPSessionImpl*>::iterator it = cdap_sessions_.begin();
+			it != cdap_sessions_.end(); ++it) {
+		vector.push_back(it->first);
+	}
 }
+
 void CDAPSessionManager::getAllCDAPSessions(
-    std::vector<CDAPSessionInterface*> &vector) {
-  for (std::vector<CDAPSessionInterface*>::iterator iter = vector.begin();
-      iter != vector.end(); ++iter) {
-    delete *iter;
-  }
-  vector.clear();
-  for (std::map<int, CDAPSessionImpl*>::iterator it = cdap_sessions_.begin();
-      it != cdap_sessions_.end(); ++it) {
-    vector.push_back(it->second);
-  }
+    std::vector<CDAPSessionInterface*> &vector)
+{
+	ReadScopedLock g(lock);
+ 	for (std::vector<CDAPSessionInterface*>::iterator iter = vector.begin();
+ 			iter != vector.end(); ++iter) {
+ 		delete *iter;
+ 	}
+ 	vector.clear();
+ 	for (std::map<int, CDAPSessionImpl*>::iterator it = cdap_sessions_.begin();
+ 			it != cdap_sessions_.end(); ++it) {
+ 		vector.push_back(it->second);
+ 	}
 }
-CDAPSessionImpl* CDAPSessionManager::get_cdap_session(int port_id) {
-  std::map<int, CDAPSessionImpl*>::iterator itr = cdap_sessions_.find(port_id);
-  if (itr != cdap_sessions_.end())
-    return cdap_sessions_.find(port_id)->second;
-  else
-    return 0;
+
+CDAPSessionImpl* CDAPSessionManager::get_cdap_session(int port_id)
+{
+	ReadScopedLock g(lock);
+	std::map<int, CDAPSessionImpl*>::iterator itr = cdap_sessions_.find(port_id);
+	if (itr != cdap_sessions_.end())
+		return cdap_sessions_.find(port_id)->second;
+	else
+		return 0;
 }
+
 const SerializedObject* CDAPSessionManager::encodeCDAPMessage(
     const CDAPMessage &cdap_message) {
   return wire_message_provider_->serializeMessage(cdap_message);
@@ -944,6 +964,7 @@ const CDAPMessage* CDAPSessionManager::decodeCDAPMessage(
 
 void CDAPSessionManager::removeCDAPSession(int port_id)
 {
+	WriteScopedLock g(lock);
 	std::map<int, CDAPSessionImpl*>::iterator itr = cdap_sessions_.find(port_id);
 	if (itr == cdap_sessions_.end()) {
 		return;
@@ -955,27 +976,30 @@ void CDAPSessionManager::removeCDAPSession(int port_id)
 }
 
 const SerializedObject* CDAPSessionManager::encodeNextMessageToBeSent(
-    const CDAPMessage &cdap_message, int port_id) {
-  std::map<int, CDAPSessionImpl*>::iterator it = cdap_sessions_.find(port_id);
-  CDAPSessionInterface* cdap_session;
+    const CDAPMessage &cdap_message, int port_id)
+{
+	std::map<int, CDAPSessionImpl*>::iterator it = cdap_sessions_.find(port_id);
+	CDAPSessionInterface* cdap_session;
 
-  if (it == cdap_sessions_.end()) {
-    if (cdap_message.get_op_code() == CDAPMessage::M_CONNECT) {
-      cdap_session = createCDAPSession(port_id);
-    } else {
-      std::stringstream ss;
-      ss << "There are no open CDAP sessions associated to the flow identified by "
-         << port_id << " right now";
-      throw CDAPException(ss.str());
-    }
-  } else {
-    cdap_session = it->second;
-  }
+	if (it == cdap_sessions_.end()) {
+		if (cdap_message.get_op_code() == CDAPMessage::M_CONNECT) {
+			cdap_session = createCDAPSession(port_id);
+		} else {
+			std::stringstream ss;
+			ss << "There are no open CDAP sessions associated to the flow identified by "
+					<< port_id << " right now";
+			throw CDAPException(ss.str());
+		}
+	} else {
+		cdap_session = it->second;
+	}
 
-  return cdap_session->encodeNextMessageToBeSent(cdap_message);
+	return cdap_session->encodeNextMessageToBeSent(cdap_message);
 }
+
 const CDAPMessage* CDAPSessionManager::messageReceived(
-    const SerializedObject &encoded_cdap_message, int port_id) {
+    const SerializedObject &encoded_cdap_message, int port_id)
+{
   const CDAPMessage *cdap_message = decodeCDAPMessage(encoded_cdap_message);
   CDAPSessionImpl *cdap_session = get_cdap_session(port_id);
   switch (cdap_message->get_op_code()) {
