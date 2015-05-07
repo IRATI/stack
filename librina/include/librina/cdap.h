@@ -2,6 +2,8 @@
  * CDAP
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Bernat Gastón <bernat.gaston@i2cat.net>
+ *    Eduard Grasa <eduard.grasa@i2cat.net>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -1057,6 +1059,80 @@ public:
 	CDAPSessionManagerInterface* createCDAPSessionManager(
 			WireMessageProviderFactory *wire_message_provider_factory,
 			long timeout);
+};
+
+/// Interface of classes that handle CDAP response message.
+class ICDAPResponseMessageHandler {
+public:
+        virtual ~ICDAPResponseMessageHandler(){};
+        virtual void createResponse(int result, const std::string& result_reason,
+                        void * object_value, rina::CDAPSessionDescriptor * session_descriptor) = 0;
+        virtual void deleteResponse(int result, const std::string& result_reason,
+                        rina::CDAPSessionDescriptor * session_descriptor) = 0;
+        virtual void readResponse(int result, const std::string& result_reason,
+                        void * object_value, const std::string& object_name,
+                        rina::CDAPSessionDescriptor * session_descriptor) = 0;
+        virtual void cancelReadResponse(int result, const std::string& result_reason,
+                        rina::CDAPSessionDescriptor * session_descriptor) = 0;
+        virtual void writeResponse(int result, const std::string& result_reason,
+                        void * object_value, rina::CDAPSessionDescriptor * session_descriptor) = 0;
+        virtual void startResponse(int result, const std::string& result_reason,
+                        void * object_value, rina::CDAPSessionDescriptor * session_descriptor) = 0;
+        virtual void stopResponse(int result, const std::string& result_reason,
+                        void * object_value, rina::CDAPSessionDescriptor * session_descriptor) = 0;
+};
+
+class BaseCDAPResponseMessageHandler: public ICDAPResponseMessageHandler {
+public:
+        virtual void createResponse(int result, const std::string& result_reason,
+                        void * object_value, CDAPSessionDescriptor * session_descriptor) {
+                (void) result; // Stop compiler barfs
+                (void) result_reason; //Stop compiler barfs
+                (void) object_value; //Stop compiler barfs
+                (void) session_descriptor; // Stop compiler barfs
+        }
+        virtual void deleteResponse(int result, const std::string& result_reason,
+                        CDAPSessionDescriptor * session_descriptor) {
+                                (void) result; // Stop compiler barfs
+                                (void) result_reason; //Stop compiler barfs
+                                (void) session_descriptor; // Stop compiler barfs
+        }
+        virtual void readResponse(int result, const std::string& result_reason,
+                        void * object_value, const std::string& object_name,
+                        CDAPSessionDescriptor * session_descriptor) {
+                                (void) result; // Stop compiler barfs
+                                (void) result_reason; //Stop compiler barfs
+                                (void) object_value; //Stop compiler barfs
+                                (void) object_name; //Stop compiler barfs
+                                (void) session_descriptor; // Stop compiler barfs
+        }
+        virtual void cancelReadResponse(int result, const std::string& result_reason,
+                        CDAPSessionDescriptor * cdapSessionDescriptor) {
+                                (void) result; // Stop compiler barfs
+                                (void) result_reason; //Stop compiler barfs
+                (void) cdapSessionDescriptor; // Stop compiler barfs
+        }
+        virtual void writeResponse(int result, const std::string& result_reason,
+                        void * object_value, CDAPSessionDescriptor * session_descriptor) {
+                (void) result; // Stop compiler barfs
+                (void) result_reason; // Stop compiler barfs
+                (void) object_value; // Stop compiler barfs
+                (void) session_descriptor; // Stop compiler barfs
+        }
+        virtual void startResponse(int result, const std::string& result_reason,
+                        void * object_value, CDAPSessionDescriptor * session_descriptor) {
+                                (void) result; // Stop compiler barfs
+                                (void) result_reason; // Stop compiler barfs
+                                (void) object_value; // Stop compiler barfs
+                                (void) session_descriptor; // Stop compiler barfs
+        }
+        virtual void stopResponse(int result, const std::string& result_reason,
+                        void * object_value, CDAPSessionDescriptor * session_descriptor) {
+                                (void) result; // Stop compiler barfs
+                                (void) result_reason; // Stop compiler barfs
+                                (void) object_value; // Stop compiler barfs
+                                (void) session_descriptor; // Stop compiler barfs
+        }
 };
 }
 

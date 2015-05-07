@@ -2,6 +2,8 @@
  * IPC Manager console
  *
  *    Vincenzo Maffione     <v.maffione@nextworks.it>
+ *    Eduard Grasa          <eduard.grasa@i2cat.net>
+ *    Marc Sune             <marc.sune (at) bisdn.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -91,10 +93,10 @@ class IPCMConsole : public Addon {
                 int plugin_get_info(std::vector<std::string>& args);
 
         public:
-                IPCMConsole(rina::ThreadAttributes &ta,
-					const unsigned int port);
+                IPCMConsole(const unsigned int port);
                 void body();
                 virtual ~IPCMConsole() throw();
+		static const std::string NAME;
 	private:
 		//Local console port
 		const unsigned int port;

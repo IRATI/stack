@@ -331,6 +331,39 @@ EXTRA_DIST +=                                   \
 protoSOURCES += FlowStateMessage.pb.cc FlowStateMessage.pb.h
 
 
+MA-IPCP.stamp: MA-IPCP.proto
+	rm -f MA-IPCP.tmp
+	touch MA-IPCP.tmp
+	$(PROTOC) -I$(builddir) -I$(srcdir)	\
+		--cpp_out=$(builddir)		\
+		$(srcdir)/MA-IPCP.proto
+	mv -f MA-IPCP.tmp $@
+
+MA-IPCP.pb.h MA-IPCP.pb.cc: MA-IPCP.stamp
+	if test -f $@; then :; else \
+	  trap 'rm -rf MA-IPCP.lock MA-IPCP.stamp' 1 2 13 15; \
+	  if mkdir MA-IPCP.lock 2>/dev/null; then \
+	    rm -f MA-IPCP.stamp; \
+	    $(MAKE) $(AM_MAKEFLAGS) MA-IPCP.stamp; \
+	    result=$$?; rm -rf MA-IPCP.lock; exit $$result; \
+	  else \
+	    while test -d MA-IPCP.lock; do sleep 1; done; \
+	    test -f MA-IPCP.stamp; \
+	  fi; \
+	fi
+
+DISTCLEANFILES +=                               \
+        MA-IPCP.pb.h MA-IPCP.pb.cc MA-IPCP.stamp
+
+MOSTLYCLEANFILES +=                             \
+        MA-IPCP.tmp
+
+EXTRA_DIST +=                                   \
+        MA-IPCP.proto
+
+protoSOURCES += MA-IPCP.pb.cc MA-IPCP.pb.h
+
+
 NeighborArrayMessage.stamp: NeighborArrayMessage.proto
 	rm -f NeighborArrayMessage.tmp
 	touch NeighborArrayMessage.tmp

@@ -68,6 +68,16 @@ TaskScheduler::TaskScheduler() :
 		Lockable() {
 }
 TaskScheduler::~TaskScheduler() throw () {
+  for (std::map<Time, std::list<TimerTask*>* >::iterator iter_map = tasks_.begin();
+      iter_map != tasks_.end(); ++iter_map) {
+    for (std::list<TimerTask*>::iterator iter_list = iter_map->second->begin();
+        iter_list != iter_map->second->end(); ++iter_list){
+      delete *iter_list;
+    }
+    iter_map->second->empty();
+    delete iter_map->second;
+  }
+  tasks_.empty();
 }
 void TaskScheduler::insert(Time time, TimerTask* timer_task) {
 	lock();
