@@ -19,7 +19,10 @@ nobase_pkginclude_HEADERS = \
 	cdap.h					\
 	security-manager.h			\
 	likely.h				\
-	rib.h                   \
+	rib.h                    		\
+	cdap_v2.h					\
+	rib_v2.h                    		\
+	cdap_rib_structures.h		\
 	irm.h					\
 	enrollment.h		\
 	sdu-protection.h		\

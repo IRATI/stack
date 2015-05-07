@@ -904,6 +904,7 @@ bool parse_configuration(std::string& file_loc)
         // Get everything in our data structures
         rinad::RINAConfiguration config;
 
+	config.configuration_file = file_loc;
         parse_local_conf(root, config.local);
         parse_app_to_dif(root, config.applicationToDIFMappings);
         parse_ipc_to_create(root, config.ipcProcessesToCreate);

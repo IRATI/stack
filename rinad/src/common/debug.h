@@ -2,6 +2,7 @@
  * Debugging utils
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Vincenzo Maffione     <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +22,17 @@
 #ifndef RINAD_DEBUG_H
 #define RINAD_DEBUG_H
 
+#include <string>
+
 void dump_backtrace(void);
+
+#ifndef FLUSH_LOG
+	//Force log flushing
+	#define FLUSH_LOG(_lev_, _ss_)\
+			do{\
+				LOGF_##_lev_ ("%s", (_ss_).str().c_str());\
+				ss.str(std::string());\
+			}while (0)
+#endif //FLUSH_LOG
 
 #endif

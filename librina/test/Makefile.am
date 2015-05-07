@@ -114,7 +114,7 @@ check_PROGRAMS =				\
 	test-concurrency			\
 	test-syscalls				\
 	test-timer				\
-	test-cdap
+	test-cdap				
 
 XFAIL_TESTS =					\
 	test-03
@@ -123,14 +123,14 @@ PASS_TESTS =					\
 	test-01					\
 	test-02
 
-TESTS = $(PASS_TESTS) $(XFAIL_TESTS)
-
-FUNCTIONAL_PASS_TESTS =				\
-	test-netlink-manager			\
-	test-netlink-parsers			\
-	test-concurrency			\
-	test-syscalls				\
-	test-timer				\
+TESTS = $(PASS_TESTS) $(XFAIL_TESTS)			
+	
+FUNCTIONAL_PASS_TESTS = \
+	test-netlink-manager \
+	test-netlink-parsers \
+	test-concurrency \
+	test-syscalls \
+	test-timer \
 	test-cdap
 
 FUNCTIONAL_XFAIL_TESTS =
@@ -138,7 +138,7 @@ FUNCTIONAL_XFAIL_TESTS =
 FUNCTIONAL_TESTS = $(FUNCTIONAL_PASS_TESTS) $(FUNCTIONAL_XFAIL_TESTS)
 
 KERNEL_DEBUG_PASS_TESTS =			\
-	test-syscalls
+	test-syscalls 
 
 KERNEL_DEBUG_XFAIL_TESTS =
 
@@ -149,3 +149,11 @@ check-kernel-debug: check-kernel-debug-am
 check-functional: check-functional-am
 
 check-all: check check-functional
+
+# ADD to functional tests plus backslash
+#test-netlink-manager			
+#test-netlink-parsers			
+#test-concurrency			
+#test-syscalls				
+#test-timer				
+#test-cdap	

@@ -51,5 +51,5 @@ class EventLoop {
         EventHandler post_function;
 };
 
-}
+} //namespace rinad
 #endif   /* __EVENT_LOOP_H__ */
