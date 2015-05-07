@@ -57,35 +57,37 @@ rina::cdap_rib::res_info_t* IPCProcessesObj::remoteCreate(
 					&& !object.enr_conf.enr_dif.empty()) {
 				object.dif_to_assign = object.enr_conf.enr_dif;
 			}
-			bool found = false;
-			for (std::list<std::string>::iterator it = object
-					.difs_to_register.begin();
-					it != object.difs_to_register.end();
-					++it) {
-				if ((*it) == object.enr_conf.enr_un_dif) {
-					found = true;
-					break;
+			if (!object.enr_conf.enr_un_dif.empty())
+			{
+				bool found = false;
+				for (std::list<std::string>::iterator it = object
+						.difs_to_register.begin();
+						it != object.difs_to_register.end();
+						++it) {
+					if ((*it) == object.enr_conf.enr_un_dif) {
+						found = true;
+						break;
+					}
 				}
+				if (!found)
+					object.difs_to_register.push_back(
+							object.enr_conf.enr_un_dif);
 			}
-			if (!found)
-				object.difs_to_register.push_back(
-						object.enr_conf.enr_un_dif);
-
-		}
-		if (!object.dif_to_assign.empty()
-				&& assignToDIF(object, ipcp_id)) {
-			res->result_ = 2;
 			if (!object.difs_to_register.empty()
 					&& registerAtDIF(object, ipcp_id))
+				res->result_ = 2;
+			if (!object.dif_to_assign.empty()
+					&& assignToDIF(object, ipcp_id))
 				res->result_ = 3;
+			//FIXME change when whatevercast
+			if (!object.enr_conf.neighbor_name.empty())
+			{
+				if(enrollToDIF(object.enr_conf, ipcp_id))
+					res->result_ = 4;
+				else
+					res->result_ = -1;
+			}
 		}
-		//FIXME change when whatevercast
-		if (!object.enr_conf.neighbor_name.empty()
-				&& enrollToDIF(object.enr_conf, ipcp_id))
-			res->result_ = 4;
-		else
-			res->result_ = -1;
-
 		if (res->result_ > 0) {
 			ribd_->addRIBObject(ipcp);
 			// TODO: create basic IPCP objects
@@ -150,10 +152,12 @@ bool IPCProcessesObj::assignToDIF(
 }
 bool IPCProcessesObj::registerAtDIF(
 		mad_manager::structures::ipcp_config_t &object, int ipcp_id) {
+	LOG_DBG("There are %d difs", object.difs_to_register.size());
 	for(std::list<std::string>::iterator it = object.difs_to_register.begin(); it != object.difs_to_register.end(); ++it)
 	{
 		Promise promise;
 
+		LOG_DBG("Dif name is %s", it->c_str());
 		rina::ApplicationProcessNamingInformation dif_name(
 				*it, std::string());
 		if (!IPCManager->ipcp_exists(ipcp_id)) {
