@@ -139,7 +139,6 @@ void IPCResourceManager::allocateRequestResult(const AllocateFlowRequestResultEv
 		return;
 	}
 
-	FlowInformation * flowInformation = 0;
 	FlowInformation flow;
 	if (ipcp) {
 		flow = extendedIPCManager->commitPendingFlow(event.sequenceNumber,
@@ -155,22 +154,14 @@ void IPCResourceManager::allocateRequestResult(const AllocateFlowRequestResultEv
 		std::stringstream ss;
 		ss<<NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
 		ss<<RIBNamingConstants::SEPARATOR<<event.portId;
-		flowInformation = new FlowInformation();
-		flowInformation->localAppName = flow.localAppName;
-		flowInformation->remoteAppName = flow.remoteAppName;
-		flowInformation->difName = flow.difName;
-		flowInformation->flowSpecification = flow.flowSpecification;
-		flowInformation->state = flow.state;
-		flowInformation->portId = flow.portId;
 		rib_daemon_->createObject(NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
-					  ss.str(), flowInformation, 0);
+					  ss.str(), &flow, 0);
 	} catch (Exception &e) {
 		LOG_ERR("Problems creating RIB object: %s", e.what());
 	}
 
 	InternalEvent * flowAllocatedEvent =
-			new NMinusOneFlowAllocatedEvent(event.sequenceNumber,
-							*flowInformation);
+			new NMinusOneFlowAllocatedEvent(event.sequenceNumber, flow);
 	event_manager_->deliverEvent(flowAllocatedEvent);
 }
 
@@ -211,7 +202,6 @@ void IPCResourceManager::flowAllocationRequested(const FlowRequestEvent& event)
 		}
 	}
 
-	FlowInformation * flowInformation = 0;
 	FlowInformation flow;
 	try {
 		if (ipcp) {
@@ -231,21 +221,14 @@ void IPCResourceManager::flowAllocationRequested(const FlowRequestEvent& event)
 		std::stringstream ss;
 		ss<<NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
 		ss<<RIBNamingConstants::SEPARATOR<<event.portId;
-		flowInformation = new FlowInformation();
-		flowInformation->localAppName = flow.localAppName;
-		flowInformation->remoteAppName = flow.remoteAppName;
-		flowInformation->difName = flow.difName;
-		flowInformation->flowSpecification = flow.flowSpecification;
-		flowInformation->state = flow.state;
-		flowInformation->portId = flow.portId;
 		rib_daemon_->createObject(NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
-					  ss.str(), flowInformation, 0);
+					  ss.str(), &flow, 0);
 	} catch (Exception &e){
 		LOG_ERR("Error creating RIB object: %s", e.what());
 	}
 
 	InternalEvent * flowAllocatedEvent =
-			new NMinusOneFlowAllocatedEvent(event.sequenceNumber,*flowInformation);
+			new NMinusOneFlowAllocatedEvent(event.sequenceNumber, flow);
 	event_manager_->deliverEvent(flowAllocatedEvent);
 }
 
@@ -360,26 +343,32 @@ std::list<FlowInformation> IPCResourceManager::getAllNMinusOneFlowInformation() 
 DIFRegistrationRIBObject::DIFRegistrationRIBObject(IRIBDaemon* rib_daemon,
 						   const std::string& object_class,
 						   const std::string& object_name,
-						   const std::string* dif_name) :
-			SimpleSetMemberRIBObject(rib_daemon, object_class, object_name, dif_name)
+						   const std::string& dif_name_) :
+			BaseRIBObject(rib_daemon, object_class, objectInstanceGenerator->getObjectInstance(),
+				      object_name)
 {
+	dif_name = dif_name_;
 }
 
-std::string DIFRegistrationRIBObject::get_displayable_value() {
-	const std::string * dif_name = (const std::string *) get_value();
+const void* DIFRegistrationRIBObject::get_value() const
+{
+	return &dif_name;
+}
+
+std::string DIFRegistrationRIBObject::get_displayable_value()
+{
 	std::stringstream ss;
-	ss << "N-1 DIF name: " << *dif_name;
+	ss << "N-1 DIF name: " << dif_name;
 
 	return ss.str();
 }
 
-void DIFRegistrationRIBObject::deleteObject(const void* objectValue) {
-	(void) objectValue; // Stop compiler barfs
+void DIFRegistrationRIBObject::deleteObject(const void* objectValue)
+{
+        (void) objectValue; // Stop compiler barfs
 
-	parent_->remove_child(name_);
-	base_rib_daemon_->removeRIBObject(name_);
-	const std::string * value = (const std::string *) get_value();
-	delete value;
+        parent_->remove_child(name_);
+        base_rib_daemon_->removeRIBObject(name_);
 }
 
 // Class DIF registration set RIB Object
@@ -405,12 +394,14 @@ const void* DIFRegistrationSetRIBObject::get_value() const
 
 void DIFRegistrationSetRIBObject::createObject(const std::string& objectClass,
 	const std::string& objectName,
-	const void* objectValue) {
+	const void* objectValue)
+{
+	const std::string * dif_name = (const std::string *) objectValue;
 	DIFRegistrationRIBObject * ribObject =
 		new DIFRegistrationRIBObject(base_rib_daemon_,
 					     objectClass,
 					     objectName,
-					     (const std::string *) objectValue);
+					     *dif_name);
 	add_child(ribObject);
 	base_rib_daemon_->addRIBObject(ribObject);
 }
@@ -419,39 +410,39 @@ void DIFRegistrationSetRIBObject::createObject(const std::string& objectClass,
 NMinusOneFlowRIBObject::NMinusOneFlowRIBObject(IRIBDaemon * rib_daemon,
 				 	       const std::string& object_class,
 					       const std::string& object_name,
-					       const rina::FlowInformation* flow_info)
-		: SimpleSetMemberRIBObject(rib_daemon, object_class, object_name, flow_info)
+					       const rina::FlowInformation& flow_info)
+		: BaseRIBObject(rib_daemon, object_class, objectInstanceGenerator->getObjectInstance(),
+				object_name)
 {
+	flow_information = flow_info;
 }
 
 std::string NMinusOneFlowRIBObject::get_displayable_value()
 {
-	const FlowInformation * flow_info =
-			(const FlowInformation *) get_value();
 	std::stringstream ss;
 	ApplicationProcessNamingInformation name;
-	name = flow_info->localAppName;
+	name = flow_information.localAppName;
 	ss << "Local app name: " << name.getEncodedString();
-	name = flow_info->remoteAppName;
+	name = flow_information.remoteAppName;
 	ss << "Remote app name: " << name.getEncodedString() << std::endl;
-	ss << "N-1 DIF name: " << flow_info->difName.processName;
-	ss << "; port-id: " << flow_info->portId << std::endl;
-	FlowSpecification flowSpec = flow_info->flowSpecification;
+	ss << "N-1 DIF name: " << flow_information.difName.processName;
+	ss << "; port-id: " << flow_information.portId << std::endl;
+	FlowSpecification flowSpec = flow_information.flowSpecification;
 	ss << "Flow characteristics: " << flowSpec.toString();
 	return ss.str();
 }
 
+const void* NMinusOneFlowRIBObject::get_value() const
+{
+	return &flow_information;
+}
+
 void NMinusOneFlowRIBObject::deleteObject(const void* objectValue)
 {
-	(void) objectValue; // Stop compiler barfs
+        (void) objectValue; // Stop compiler barfs
 
-	parent_->remove_child(name_);
-	base_rib_daemon_->removeRIBObject(name_);
-	const FlowInformation * flow_info =
-				(const FlowInformation *) get_value();
-	if (flow_info) {
-		delete flow_info;
-	}
+        parent_->remove_child(name_);
+        base_rib_daemon_->removeRIBObject(name_);
 }
 
 // Class N-1 Flow set RIB Object
@@ -479,11 +470,12 @@ void NMinusOneFlowSetRIBObject::createObject(const std::string& objectClass,
 		const std::string& objectName,
 		const void* objectValue)
 {
+	const FlowInformation * flow_info = (const FlowInformation *) objectValue;
 	NMinusOneFlowRIBObject * ribObject =
 		new NMinusOneFlowRIBObject(base_rib_daemon_,
 					   objectClass,
 					   objectName,
-					   (const rina::FlowInformation *) objectValue);
+					   *flow_info);
 	add_child(ribObject);
 	base_rib_daemon_->addRIBObject(ribObject);
 }
