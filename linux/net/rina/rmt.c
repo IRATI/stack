@@ -637,11 +637,6 @@ static void send_worker(unsigned long o)
                         reschedule++;
 
                 rcu_read_lock();
-                if (ps->rmt_q_monitor_policy_tx) {
-                        /* FIXME: check thi API when implemented */
-                        ps->rmt_q_monitor_policy_tx(ps, pdu, n1_port);
-                }
-
                 if (ps && ps->rmt_next_scheduled_policy_tx) {
                         do {
                                 pdu = ps->rmt_next_scheduled_policy_tx(ps, n1_port);

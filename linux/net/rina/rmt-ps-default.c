@@ -104,7 +104,9 @@ default_rmt_scheduling_create_policy_tx(struct rmt_ps *        ps,
                 return -1;
         }
         /* FIXME this is not used in this implementation so far */
-        kqueue->max_q = 256;
+        kqueue->max_q   = 256;
+        kqueue->min_qth = 0;
+        kqueue->max_qth = 0;
         hash_add(qgroup->queues, &kqueue->hlist, 0);
 
         LOG_DBG("Structures for scheduling policies created...");
