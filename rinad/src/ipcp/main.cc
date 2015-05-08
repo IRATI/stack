@@ -117,13 +117,14 @@ int main(int argc, char * argv[])
 
         LOG_IPCP_DBG("SIGSEGV handler installed successfully");
 
-        if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
+        if (signal(SIGPIPE, SIG_IGN) == SIG_ERR){
                 LOG_IPCP_WARN("Cannot ignore SIGPIPE, bailing out");
-
+		return EXIT_FAILURE;
+	}
         LOG_IPCP_DBG("SIGPIPE handler installed successfully");
 
         if (signal(SIGINT, SIG_IGN) == SIG_ERR)
-                LOG_IPCP_WARN("Cannot ignore SIGINT, bailing out");
+                LOG_IPCP_WARN("Cannot ignore SIGINT!");
 
         LOG_IPCP_DBG("SIGINT handler installed successfully");
 
