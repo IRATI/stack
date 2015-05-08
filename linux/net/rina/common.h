@@ -157,11 +157,18 @@ struct rib_object_entry {
         struct list_head  next;
 };
 
+struct port_id_alt {
+	port_id_t *		ports;
+	size_t			num_ports;
+	struct list_head	next;
+};
+
 struct pdu_ft_entry {
         address_t        destination;
         qos_id_t         qos_id;
-        port_id_t *      ports;
-        size_t           ports_size;
+        //port_id_t *      ports;
+        //size_t           ports_size;
+	struct list_head port_id_alts;
         struct list_head next;
 };
 

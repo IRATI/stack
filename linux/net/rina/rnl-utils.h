@@ -40,10 +40,16 @@ enum app_name_info_attrs_list {
 };
 #define APNI_ATTR_MAX (__APNI_ATTR_MAX - 1)
 
+enum port_id_alt_attrs_list {
+        PIA_ATTR_PORTIDS = 1,
+        __PIA_ATTR_MAX,
+};
+#define PIA_ATTR_MAX (__PIA_ATTR_MAX - 1)
+
 enum pdu_ft_entry_attrs_list {
         PFTELE_ATTR_ADDRESS = 1,
         PFTELE_ATTR_QOSID,
-        PFTELE_ATTR_PORTIDS,
+        PFTELE_ATTR_PORT_ID_ALTS,
         __PFTELE_ATTR_MAX,
 };
 #define PFTELE_ATTR_MAX (__PFTELE_ATTR_MAX - 1)

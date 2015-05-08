@@ -555,6 +555,36 @@ int pft_nhop(struct pft * instance,
         return 0;
 }
 
+static int pfte_port_id_alts_copy(struct pft_entry * entry,
+			          struct list_head * port_id_alts)
+{
+        struct pft_port_entry * pos;
+
+        ASSERT(pfte_is_ok(entry));
+
+        list_for_each_entry_rcu(pos, &entry->ports, next) {
+		struct port_id_alt * alt;
+		int cnt = 1;
+
+		alt = rkmalloc(sizeof(*alt), GFP_ATOMIC);
+		if (!alt) {
+			return -1;
+		}
+
+		alt->ports = rkmalloc(cnt * sizeof(*(alt->ports)), GFP_ATOMIC);
+		if (!alt->ports) {
+			return -1;
+		}
+
+		alt->ports[0] = pft_pe_port(pos);
+		alt->num_ports = cnt;
+
+		list_add_tail(&alt->next, port_id_alts);
+        }
+
+        return 0;
+}
+
 int pft_dump(struct pft *       instance,
              struct list_head * entries)
 {
@@ -574,9 +604,8 @@ int pft_dump(struct pft *       instance,
 
                 entry->destination = pos->destination;
                 entry->qos_id      = pos->qos_id;
-                entry->ports_size  = 0;
-                entry->ports       = NULL;
-                if (pfte_ports_copy(pos, &entry->ports, &entry->ports_size)) {
+		INIT_LIST_HEAD(&entry->port_id_alts);
+                if (pfte_port_id_alts_copy(pos, &entry->port_id_alts)) {
                         rkfree(entry);
                         rcu_read_unlock();
                         return -1;
