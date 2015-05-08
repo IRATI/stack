@@ -209,16 +209,10 @@ struct ipcp_instance_ops {
                               struct sdu *                sdu);
 
         int (* pft_add)(struct ipcp_instance_data * data,
-                        address_t                   address,
-                        qos_id_t                    qos_id,
-                        port_id_t *                 ports,
-                        size_t                      size);
+			struct pdu_ft_entry	  * entry);
 
         int (* pft_remove)(struct ipcp_instance_data * data,
-                           address_t                   address,
-                           qos_id_t                    qos_id,
-                           port_id_t *                 ports,
-                           size_t                      size);
+			   struct pdu_ft_entry	  * entry);
 
         int (* pft_dump)(struct ipcp_instance_data * data,
                          struct list_head *          entries);

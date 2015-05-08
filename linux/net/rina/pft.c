@@ -391,35 +391,33 @@ struct pft_entry * pft_find(struct pft * instance,
 EXPORT_SYMBOL(pft_find);
 
 int pft_add(struct pft *      instance,
-            address_t         destination,
-            qos_id_t          qos_id,
-            const port_id_t * ports,
-            size_t            count)
+	    struct pdu_ft_entry *entry)
 {
         struct pft_entry * tmp;
-        int                i;
+	struct port_id_alt * alts;
 
         if (!__pft_is_ok(instance))
                 return -1;
 
-        if (!is_address_ok(destination)) {
+        if (!entry) {
+                LOG_ERR("Bogus output parameters, won't add");
+                return -1;
+        }
+
+        if (!is_address_ok(entry->destination)) {
                 LOG_ERR("Bogus destination address passed, cannot add");
                 return -1;
         }
-        if (!is_qos_id_ok(qos_id)) {
+        if (!is_qos_id_ok(entry->qos_id)) {
                 LOG_ERR("Bogus qos-id passed, cannot add");
-                return -1;
-        }
-        if (!ports || !count) {
-                LOG_ERR("Bogus output parameters, won't add");
                 return -1;
         }
 
         mutex_lock(&instance->write_lock);
 
-        tmp = pft_find(instance, destination, qos_id);
+        tmp = pft_find(instance, entry->destination, entry->qos_id);
         if (!tmp) {
-                tmp = pfte_create_ni(destination, qos_id);
+                tmp = pfte_create_ni(entry->destination, entry->qos_id);
                 if (!tmp) {
                         mutex_unlock(&instance->write_lock);
                         return -1;
@@ -428,13 +426,19 @@ int pft_add(struct pft *      instance,
                 list_add_rcu(&tmp->next, &instance->entries);
         }
 
-        for (i = 0; i < count; i++) {
-                if (pfte_port_add(tmp, ports[i])) {
+	list_for_each_entry(alts, &entry->port_id_alts, next) {
+		if (alts->num_ports < 1) {
+			LOG_INFO("Port id alternative set is empty");
+			continue;
+		}
+
+		/* Just add the first alternative and ignore the others. */
+                if (pfte_port_add(tmp, alts->ports[0])) {
                         pfte_destroy(tmp);
                         mutex_unlock(&instance->write_lock);
                         return -1;
                 }
-        }
+	}
 
         mutex_unlock(&instance->write_lock);
 
@@ -476,40 +480,50 @@ int pft_set_policy_set_param(struct pft * pft,
 EXPORT_SYMBOL(pft_set_policy_set_param);
 
 int pft_remove(struct pft *      instance,
+	       struct pdu_ft_entry * entry)
+/*
                address_t         destination,
                qos_id_t          qos_id,
                const port_id_t * ports,
-               size_t            count)
+               size_t            count)*/
 {
+	struct port_id_alt * alts;
         struct pft_entry * tmp;
-        int                i;
 
         if (!__pft_is_ok(instance))
                 return -1;
 
-        if (!is_address_ok(destination)) {
-                LOG_ERR("Bogus destination address, cannot remove");
+        if (!entry) {
+                LOG_ERR("Bogus output parameters, won't add");
                 return -1;
         }
-        if (!is_qos_id_ok(qos_id)) {
-                LOG_ERR("Bogus qos-id, cannot remove");
+
+        if (!is_address_ok(entry->destination)) {
+                LOG_ERR("Bogus destination address passed, cannot add");
                 return -1;
         }
-        if (!ports || !count) {
-                LOG_ERR("Bogus output parameters, won't remove");
+        if (!is_qos_id_ok(entry->qos_id)) {
+                LOG_ERR("Bogus qos-id passed, cannot add");
                 return -1;
         }
 
         mutex_lock(&instance->write_lock);
 
-        tmp = pft_find(instance, destination, qos_id);
+        tmp = pft_find(instance, entry->destination, entry->qos_id);
         if (!tmp) {
                 mutex_unlock(&instance->write_lock);
                 return -1;
         }
 
-        for (i = 0; i < count; i++)
-                pfte_port_remove(tmp, ports[i]);
+	list_for_each_entry(alts, &entry->port_id_alts, next) {
+		if (alts->num_ports < 1) {
+			LOG_INFO("Port id alternative set is empty");
+			continue;
+		}
+
+		/* Just remove the first alternative and ignore the others. */
+                pfte_port_remove(tmp, alts->ports[0]);
+	}
 
         /* If the list of port-ids is empty, remove the entry */
         if (list_empty(&tmp->ports)) {

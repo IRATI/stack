@@ -46,15 +46,9 @@ bool         pft_is_empty(struct pft * instance);
 int          pft_flush(struct pft * instance);
 
 int          pft_add(struct pft *       instance,
-                     address_t          destination,
-                     qos_id_t           qos_id,
-                     const port_id_t  * ports,
-                     size_t             count);
+		     struct pdu_ft_entry *entry);
 int          pft_remove(struct pft *       instance,
-                        address_t          destination,
-                        qos_id_t           qos_id,
-                        const port_id_t  * ports,
-                        size_t             count);
+		        struct pdu_ft_entry *entry);
 
 /* NOTE: ports and entries are in-out parms */
 int          pft_nhop(struct pft * instance,
