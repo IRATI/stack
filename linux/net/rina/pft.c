@@ -29,6 +29,11 @@
 #include "utils.h"
 #include "debug.h"
 #include "pft.h"
+#include "pft-ps.h"
+
+static struct policy_set_list policy_sets = {
+        .head = LIST_HEAD_INIT(policy_sets.head)
+};
 
 /* FIXME: This representation is crappy and MUST be changed */
 struct pft_port_entry {
@@ -83,14 +88,6 @@ static port_id_t pft_pe_port(struct pft_port_entry * pe)
 
         return pe->port_id;
 }
-
-/* FIXME: This representation is crappy and MUST be changed */
-struct pft_entry {
-        address_t        destination;
-        qos_id_t         qos_id;
-        struct list_head ports;
-        struct list_head next;
-};
 
 static struct pft_entry * pfte_create_gfp(gfp_t     flags,
                                           address_t destination,
@@ -193,9 +190,9 @@ static void pfte_port_remove(struct pft_entry * entry,
 
 }
 
-static int pfte_ports_copy(struct pft_entry * entry,
-                           port_id_t **       port_ids,
-                           size_t *           entries)
+int pfte_ports_copy(struct pft_entry * entry,
+                    port_id_t **       port_ids,
+                    size_t *           entries)
 {
         struct pft_port_entry * pos;
         size_t                  count;
@@ -232,12 +229,47 @@ static int pfte_ports_copy(struct pft_entry * entry,
 
         return 0;
 }
+EXPORT_SYMBOL(pfte_ports_copy);
 
 /* FIXME: This representation is crappy and MUST be changed */
 struct pft {
-        struct mutex     write_lock;
-        struct list_head entries;
+        struct mutex          write_lock;
+        struct list_head      entries;
+        struct rina_component base;
 };
+
+
+int pft_select_policy_set(struct pft * pft,
+                          const string_t * path,
+                          const string_t * name)
+{
+        int ret;
+
+        if (path && strcmp(path, "")) {
+                LOG_ERR("This component has no selectable subcomponents");
+                return -1;
+        }
+
+        ret = base_select_policy_set(&pft->base, &policy_sets, name);
+
+        return ret;
+}
+EXPORT_SYMBOL(pft_select_policy_set);
+
+/* Must be called under RCU read lock. */
+struct pft_ps *
+pft_ps_get(struct pft * pft)
+{
+        return container_of(rcu_dereference(pft->base.ps),
+                            struct pft_ps, base);
+}
+
+struct pft *
+pft_from_component(struct rina_component * component)
+{
+        return container_of(component, struct pft, base);
+}
+EXPORT_SYMBOL(pft_from_component);
 
 static struct pft * pft_create_gfp(gfp_t flags)
 {
@@ -250,6 +282,14 @@ static struct pft * pft_create_gfp(gfp_t flags)
         mutex_init(&tmp->write_lock);
 
         INIT_LIST_HEAD(&tmp->entries);
+
+        rina_component_init(&tmp->base);
+
+        /* Try to select the default policy-set. */
+        if (pft_select_policy_set(tmp, "", RINA_PS_DEFAULT_NAME)) {
+                pft_destroy(tmp);
+                return NULL;
+        }
 
         return tmp;
 }
@@ -271,6 +311,7 @@ static bool __pft_is_ok(struct pft * instance)
  */
 bool pft_is_ok(struct pft * instance)
 { return __pft_is_ok(instance); }
+EXPORT_SYMBOL(pft_is_ok);
 
 bool pft_is_empty(struct pft * instance)
 {
@@ -322,14 +363,16 @@ int pft_destroy(struct pft * instance)
 
         mutex_unlock(&instance->write_lock);
 
+        rina_component_fini(&instance->base);
+
         rkfree(instance);
 
         return 0;
 }
 
-static struct pft_entry * pft_find(struct pft * instance,
-                                   address_t    destination,
-                                   qos_id_t     qos_id)
+struct pft_entry * pft_find(struct pft * instance,
+                            address_t    destination,
+                            qos_id_t     qos_id)
 {
         struct pft_entry * pos;
 
@@ -345,6 +388,7 @@ static struct pft_entry * pft_find(struct pft * instance,
 
         return NULL;
 }
+EXPORT_SYMBOL(pft_find);
 
 int pft_add(struct pft *      instance,
             address_t         destination,
@@ -397,6 +441,40 @@ int pft_add(struct pft *      instance,
         return 0;
 }
 
+int pft_set_policy_set_param(struct pft * pft,
+                             const char * path,
+                             const char * name,
+                             const char * value)
+{
+        struct pft_ps * ps;
+        int ret = -1;
+
+        if (!pft || !path || !name || !value) {
+           LOG_ERRF("NULL arguments %p %p %p %p", pft, path, name, value);
+           return -1;
+        }
+
+        LOG_DBG("set-policy-set-param '%s' '%s' '%s'", path, name, value);
+
+        if (strcmp(path, "") == 0) {
+                /* The request addresses this PFT instance. */
+                rcu_read_lock();
+                ps = container_of(rcu_dereference(pft->base.ps), struct pft_ps, base);
+                if (!ps) {
+                        LOG_ERR("No policy-set selected for this PFT");
+                } else {
+                        LOG_ERR("Unknown PFT parameter policy '%s'", name);
+                }
+                rcu_read_unlock();
+
+        } else {
+           ret = base_set_policy_set_param(&pft->base, path, name, value);
+        }
+
+        return ret;
+}
+EXPORT_SYMBOL(pft_set_policy_set_param);
+
 int pft_remove(struct pft *      instance,
                address_t         destination,
                qos_id_t          qos_id,
@@ -444,22 +522,17 @@ int pft_remove(struct pft *      instance,
 }
 
 int pft_nhop(struct pft * instance,
-             address_t    destination,
-             qos_id_t     qos_id,
+             struct pci * pci,
              port_id_t ** ports,
              size_t *     count)
 {
-        struct pft_entry * tmp;
+        struct pft_ps *ps;
 
         if (!__pft_is_ok(instance))
                 return -1;
 
-        if (!is_address_ok(destination)) {
-                LOG_ERR("Bogus destination address, cannot get NHOP");
-                return -1;
-        }
-        if (!is_qos_id_ok(qos_id)) {
-                LOG_ERR("Bogus qos-id, cannot get NHOP");
+        if (!pci_is_ok(pci)) {
+                LOG_ERR("Bogus PCI, cannot get NHOP");
                 return -1;
         }
         if (!ports || !count) {
@@ -467,25 +540,16 @@ int pft_nhop(struct pft * instance,
                 return -1;
         }
 
-        /*
-         * Taking the lock here since otherwise instance might be deleted when
-         * copying the ports
-         */
         rcu_read_lock();
 
-        tmp = pft_find(instance, destination, qos_id);
-        if (!tmp) {
-                LOG_ERR("Could not find any entry for dest address: %u and "
-                        "qos_id %d", destination, qos_id);
+        ps = container_of(rcu_dereference(instance->base.ps),
+                          struct pft_ps, base);
+
+        ASSERT(ps->next_hop);
+        if (ps->next_hop(ps, pci, ports, count)) {
                 rcu_read_unlock();
                 return -1;
         }
-
-        if (pfte_ports_copy(tmp, ports, count)) {
-                rcu_read_unlock();
-                return -1;
-        }
-
         rcu_read_unlock();
 
         return 0;
@@ -524,6 +588,21 @@ int pft_dump(struct pft *       instance,
 
         return 0;
 }
+
+int pft_ps_publish(struct ps_factory * factory)
+{
+        if (factory == NULL) {
+                LOG_ERR("%s: NULL factory", __func__);
+                return -1;
+        }
+
+        return ps_publish(&policy_sets, factory);
+}
+EXPORT_SYMBOL(pft_ps_publish);
+
+int pft_ps_unpublish(const char * name)
+{ return ps_unpublish(&policy_sets, name); }
+EXPORT_SYMBOL(pft_ps_unpublish);
 
 #ifdef CONFIG_RINA_PFT_REGRESSION_TESTS
 static bool regression_tests_nhop(void)
