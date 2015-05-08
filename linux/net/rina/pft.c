@@ -394,7 +394,7 @@ int pft_add(struct pft *      instance,
 	    struct pdu_ft_entry *entry)
 {
         struct pft_entry * tmp;
-	struct port_id_alt * alts;
+	struct port_id_altlist * alts;
 
         if (!__pft_is_ok(instance))
                 return -1;
@@ -426,7 +426,7 @@ int pft_add(struct pft *      instance,
                 list_add_rcu(&tmp->next, &instance->entries);
         }
 
-	list_for_each_entry(alts, &entry->port_id_alts, next) {
+	list_for_each_entry(alts, &entry->port_id_altlists, next) {
 		if (alts->num_ports < 1) {
 			LOG_INFO("Port id alternative set is empty");
 			continue;
@@ -487,7 +487,7 @@ int pft_remove(struct pft *      instance,
                const port_id_t * ports,
                size_t            count)*/
 {
-	struct port_id_alt * alts;
+	struct port_id_altlist * alts;
         struct pft_entry * tmp;
 
         if (!__pft_is_ok(instance))
@@ -515,7 +515,7 @@ int pft_remove(struct pft *      instance,
                 return -1;
         }
 
-	list_for_each_entry(alts, &entry->port_id_alts, next) {
+	list_for_each_entry(alts, &entry->port_id_altlists, next) {
 		if (alts->num_ports < 1) {
 			LOG_INFO("Port id alternative set is empty");
 			continue;
@@ -569,15 +569,15 @@ int pft_nhop(struct pft * instance,
         return 0;
 }
 
-static int pfte_port_id_alts_copy(struct pft_entry * entry,
-			          struct list_head * port_id_alts)
+static int pfte_port_id_altlists_copy(struct pft_entry * entry,
+			          struct list_head * port_id_altlists)
 {
         struct pft_port_entry * pos;
 
         ASSERT(pfte_is_ok(entry));
 
         list_for_each_entry_rcu(pos, &entry->ports, next) {
-		struct port_id_alt * alt;
+		struct port_id_altlist * alt;
 		int cnt = 1;
 
 		alt = rkmalloc(sizeof(*alt), GFP_ATOMIC);
@@ -593,7 +593,7 @@ static int pfte_port_id_alts_copy(struct pft_entry * entry,
 		alt->ports[0] = pft_pe_port(pos);
 		alt->num_ports = cnt;
 
-		list_add_tail(&alt->next, port_id_alts);
+		list_add_tail(&alt->next, port_id_altlists);
         }
 
         return 0;
@@ -618,8 +618,8 @@ int pft_dump(struct pft *       instance,
 
                 entry->destination = pos->destination;
                 entry->qos_id      = pos->qos_id;
-		INIT_LIST_HEAD(&entry->port_id_alts);
-                if (pfte_port_id_alts_copy(pos, &entry->port_id_alts)) {
+		INIT_LIST_HEAD(&entry->port_id_altlists);
+                if (pfte_port_id_altlists_copy(pos, &entry->port_id_altlists)) {
                         rkfree(entry);
                         rcu_read_unlock();
                         return -1;
