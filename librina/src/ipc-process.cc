@@ -833,16 +833,16 @@ RoutingTableEntry::RoutingTableEntry(){
 	qosId = 0;
 }
 
-PortIdAlt::PortIdAlt()
+PortIdAltlist::PortIdAltlist()
 {
 }
 
-PortIdAlt::PortIdAlt(unsigned int nh)
+PortIdAltlist::PortIdAltlist(unsigned int nh)
 {
 	add_alt(nh);
 }
 
-void PortIdAlt::add_alt(unsigned int nh)
+void PortIdAltlist::add_alt(unsigned int nh)
 {
 	alts.push_back(nh);
 }
@@ -879,13 +879,13 @@ void PDUForwardingTableEntry::setAddress(unsigned int address) {
         this->address = address;
 }
 
-const std::list<PortIdAlt> PDUForwardingTableEntry::getPortIdAlts() const {
-        return portIdAlts;
+const std::list<PortIdAltlist> PDUForwardingTableEntry::getPortIdAltlists() const {
+        return portIdAltlists;
 }
 
 void PDUForwardingTableEntry::
-setPortIdAlts(const std::list<PortIdAlt>& portIdAlts) {
-        this->portIdAlts = portIdAlts;
+setPortIdAltlists(const std::list<PortIdAltlist>& portIdAltlists) {
+        this->portIdAltlists = portIdAltlists;
 }
 
 unsigned int PDUForwardingTableEntry::getQosId() const {
@@ -901,8 +901,8 @@ const std::string PDUForwardingTableEntry::toString() {
 
         ss<<"Address: "<<address<<" QoS-id: "<<qosId;
         ss<<"List of N-1 port-ids: ";
-        for (std::list<PortIdAlt>::iterator it = portIdAlts.begin();
-                        it != portIdAlts.end(); it++)
+        for (std::list<PortIdAltlist>::iterator it = portIdAltlists.begin();
+                        it != portIdAltlists.end(); it++)
 		for (std::list<unsigned int>::iterator jt = it->alts.begin();
 				jt != it->alts.end(); jt++) {
 			ss<< *jt << ",";

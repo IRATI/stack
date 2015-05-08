@@ -3051,9 +3051,9 @@ int testRmtModifyPDUFTEntriesRequestMessage() {
         int returnValue = 0;
         std::list<PDUForwardingTableEntry *>::const_iterator iterator;
         std::list<PDUForwardingTableEntry *> entriesList;
-        std::list<PortIdAlt>::const_iterator iterator2;
+        std::list<PortIdAltlist>::const_iterator iterator2;
         std::list<unsigned int>::const_iterator it3;
-        std::list<PortIdAlt> portIdsList;
+        std::list<PortIdAltlist> portIdsList;
 
         RmtModifyPDUFTEntriesRequestMessage message;
         PDUForwardingTableEntry * entry1 = new PDUForwardingTableEntry();
@@ -3143,9 +3143,9 @@ int testRmtDumpPDUFTResponseMessage() {
         int returnValue = 0;
         std::list<PDUForwardingTableEntry>::const_iterator iterator;
         std::list<PDUForwardingTableEntry> entriesList;
-        std::list<PortIdAlt>::const_iterator iterator2;
+        std::list<PortIdAltlist>::const_iterator iterator2;
 	std::list<unsigned int>::const_iterator it3;
-        std::list<PortIdAlt> portIdsList;
+        std::list<PortIdAltlist> portIdsList;
 
         RmtDumpPDUFTEntriesResponseMessage message;
         PDUForwardingTableEntry entry1, entry2;

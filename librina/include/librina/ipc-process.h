@@ -832,11 +832,11 @@ public:
 	RoutingTableEntry();
 };
 
-struct PortIdAlt {
+struct PortIdAltlist {
 	std::list<unsigned int> alts;
 
-	PortIdAlt();
-	PortIdAlt(unsigned int pid);
+	PortIdAltlist();
+	PortIdAltlist(unsigned int pid);
 	void add_alt(unsigned int pid);
 };
 
@@ -852,7 +852,7 @@ public:
         unsigned int qosId;
 
         /** The N-1 portid */
-        std::list<PortIdAlt> portIdAlts;
+        std::list<PortIdAltlist> portIdAltlists;
 
         PDUForwardingTableEntry();
         bool operator==(const PDUForwardingTableEntry &other) const;
@@ -860,8 +860,8 @@ public:
 #ifndef SWIG
         unsigned int getAddress() const;
         void setAddress(unsigned int address);
-        const std::list<PortIdAlt> getPortIdAlts() const;
-        void setPortIdAlts(const std::list<PortIdAlt>& portIds);
+        const std::list<PortIdAltlist> getPortIdAltlists() const;
+        void setPortIdAltlists(const std::list<PortIdAltlist>& portIds);
         unsigned int getQosId() const;
         void setQosId(unsigned int qosId);
 #endif

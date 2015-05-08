@@ -4741,7 +4741,7 @@ int putIpcpConnectionDestroyResultMessageObject(nl_msg* netlinkMessage,
         return -1;
 }
 
-int putPortIdAlt(nl_msg* netlinkMessage, const PortIdAlt& object)
+int putPortIdAltlist(nl_msg* netlinkMessage, const PortIdAltlist& object)
 {
 	struct nlattr * portIds;
 	std::list<unsigned int>::const_iterator it;
@@ -4765,16 +4765,16 @@ int putPortIdAlt(nl_msg* netlinkMessage, const PortIdAlt& object)
 
 int putPDUForwardingTableEntryObject(nl_msg* netlinkMessage,
               const PDUForwardingTableEntry& object) {
-        struct nlattr * portIdAlts;
-        std::list<PortIdAlt>::const_iterator iterator;
-        const std::list<PortIdAlt> portIdsList = object.getPortIdAlts();
+        struct nlattr * portIdAltlists;
+        std::list<PortIdAltlist>::const_iterator iterator;
+        const std::list<PortIdAltlist> portIdsList = object.getPortIdAltlists();
         int i = 0;
 
         NLA_PUT_U32(netlinkMessage, PFTE_ATTR_ADDRESS, object.getAddress());
         NLA_PUT_U32(netlinkMessage, PFTE_ATTR_QOS_ID, object.getQosId());
 
-        if (!(portIdAlts = nla_nest_start(netlinkMessage,
-					  PFTE_ATTR_PORT_ID_ALTS))) {
+        if (!(portIdAltlists = nla_nest_start(netlinkMessage,
+					  PFTE_ATTR_PORT_ID_ALTLISTS))) {
                 goto nla_put_failure;
         }
 
@@ -4787,14 +4787,14 @@ int putPDUForwardingTableEntryObject(nl_msg* netlinkMessage,
 			goto nla_put_failure;
 		}
 
-		if (putPortIdAlt(netlinkMessage, *iterator)) {
+		if (putPortIdAltlist(netlinkMessage, *iterator)) {
 			goto nla_put_failure;
 		}
 
 		nla_nest_end(netlinkMessage, portIdAlt);
         }
 
-        nla_nest_end(netlinkMessage, portIdAlts);
+        nla_nest_end(netlinkMessage, portIdAltlists);
         return 0;
 
         nla_put_failure: LOG_ERR(
@@ -8321,7 +8321,7 @@ IpcpConnectionDestroyResultMessage * parseIpcpConnectionDestroyResultMessage(
         return result;
 }
 
-int parsePortIdAlt(nlattr *nested, PortIdAlt& portIdAlt)
+int parsePortIdAltlist(nlattr *nested, PortIdAltlist& portIdAlt)
 {
         struct nla_policy attr_policy[PIA_ATTR_MAX + 1];
         attr_policy[PIA_ATTR_PORT_IDS].type = NLA_NESTED;
@@ -8331,7 +8331,7 @@ int parsePortIdAlt(nlattr *nested, PortIdAlt& portIdAlt)
 	int err = nla_parse_nested(attrs, PIA_ATTR_MAX, nested, attr_policy);
 
         if (err < 0) {
-                LOG_ERR("Error parsing PortIdAlt from Netlink message: %d",
+                LOG_ERR("Error parsing PortIdAltlist from Netlink message: %d",
                         err);
                 return err;
         }
@@ -8354,7 +8354,7 @@ int parsePortIdAlt(nlattr *nested, PortIdAlt& portIdAlt)
         return 0;
 }
 
-int parseListOfPortIdAlts(nlattr *nested, PDUForwardingTableEntry * entry) {
+int parseListOfPortIdAltlists(nlattr *nested, PDUForwardingTableEntry * entry) {
         nlattr * nla;
         int rem;
 
@@ -8363,8 +8363,8 @@ int parseListOfPortIdAlts(nlattr *nested, PDUForwardingTableEntry * entry) {
                         nla = nla_next(nla, &(rem))){
 		int err;
 
-		entry->portIdAlts.push_back(PortIdAlt());
-		err = parsePortIdAlt(nla, entry->portIdAlts.back());
+		entry->portIdAltlists.push_back(PortIdAltlist());
+		err = parsePortIdAltlist(nla, entry->portIdAltlists.back());
 		if (err) {
 			return err;
 		}
@@ -8385,9 +8385,9 @@ PDUForwardingTableEntry * parsePDUForwardingTableEntry(nlattr *nested) {
         attr_policy[PFTE_ATTR_QOS_ID].type = NLA_U32;
         attr_policy[PFTE_ATTR_QOS_ID].minlen = 4;
         attr_policy[PFTE_ATTR_QOS_ID].maxlen = 4;
-        attr_policy[PFTE_ATTR_PORT_ID_ALTS].type = NLA_NESTED;
-        attr_policy[PFTE_ATTR_PORT_ID_ALTS].minlen = 0;
-        attr_policy[PFTE_ATTR_PORT_ID_ALTS].maxlen = 0;
+        attr_policy[PFTE_ATTR_PORT_ID_ALTLISTS].type = NLA_NESTED;
+        attr_policy[PFTE_ATTR_PORT_ID_ALTLISTS].minlen = 0;
+        attr_policy[PFTE_ATTR_PORT_ID_ALTLISTS].maxlen = 0;
         struct nlattr *attrs[PFTE_ATTR_MAX + 1];
 
         int err = nla_parse_nested(attrs, PFTE_ATTR_MAX, nested, attr_policy);
@@ -8409,8 +8409,8 @@ PDUForwardingTableEntry * parsePDUForwardingTableEntry(nlattr *nested) {
                                 nla_get_u32(attrs[PFTE_ATTR_QOS_ID]));
         }
 
-        if (attrs[PFTE_ATTR_PORT_ID_ALTS]){
-                parseListOfPortIdAlts(attrs[PFTE_ATTR_PORT_ID_ALTS], result);
+        if (attrs[PFTE_ATTR_PORT_ID_ALTLISTS]){
+                parseListOfPortIdAltlists(attrs[PFTE_ATTR_PORT_ID_ALTLISTS], result);
         }
 
         return result;
