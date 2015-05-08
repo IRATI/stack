@@ -1474,14 +1474,14 @@ void IPCManager_::io_loop(){
 		event = rina::ipcEventProducer->eventTimedWait(
 						IPCM_EVENT_TIMEOUT_S,
 						IPCM_EVENT_TIMEOUT_NS);
-		if(!event)
-			continue;
-
 		if(req_to_stop){
 			//Signal the main thread to start
 			//the stop procedure
 			stop_cond.signal();
 		}
+
+		if(!event)
+			continue;
 
 		if (!keep_running)
 			break;
