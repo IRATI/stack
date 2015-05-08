@@ -112,16 +112,21 @@ int main(int argc, char * argv[])
                 return EXIT_FAILURE;
         }
 
-        if (signal(SIGSEGV, sighandler_segv) == SIG_ERR) {
+        if (signal(SIGSEGV, sighandler_segv) == SIG_ERR)
                 LOG_IPCP_WARN("Cannot install SIGSEGV handler!");
-        }
+
         LOG_IPCP_DBG("SIGSEGV handler installed successfully");
 
-        if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
+        if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
                 LOG_IPCP_WARN("Cannot ignore SIGPIPE, bailing out");
-                return EXIT_FAILURE;
-        }
+
         LOG_IPCP_DBG("SIGPIPE handler installed successfully");
+
+        if (signal(SIGINT, SIG_IGN) == SIG_ERR)
+                LOG_IPCP_WARN("Cannot ignore SIGINT, bailing out");
+
+        LOG_IPCP_DBG("SIGINT handler installed successfully");
+
 
         try {
                 retval = wrapped_main(argc, argv);
