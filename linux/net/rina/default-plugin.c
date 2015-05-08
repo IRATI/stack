@@ -30,10 +30,12 @@
 #include "rmt-ps.h"
 #include "dtp-ps.h"
 #include "dtcp-ps.h"
+#include "pft-ps.h"
 
 extern struct ps_factory rmt_factory;
 extern struct ps_factory dtp_factory;
 extern struct ps_factory dtcp_factory;
+extern struct ps_factory pft_factory;
 
 static int __init mod_init(void)
 {
@@ -42,6 +44,7 @@ static int __init mod_init(void)
         strcpy(rmt_factory.name,  RINA_PS_DEFAULT_NAME);
         strcpy(dtp_factory.name,  RINA_PS_DEFAULT_NAME);
         strcpy(dtcp_factory.name, RINA_PS_DEFAULT_NAME);
+        strcpy(pft_factory.name, RINA_PS_DEFAULT_NAME);
 
         ret = rmt_ps_publish(&rmt_factory);
         if (ret) {
@@ -66,6 +69,14 @@ static int __init mod_init(void)
         }
 
         LOG_INFO("DTCP default policy set loaded successfully");
+
+        ret = pft_ps_publish(&pft_factory);
+        if (ret) {
+                LOG_ERR("Failed to publish PFT policy set factory");
+                return -1;
+        }
+
+        LOG_INFO("PFT default policy set loaded successfully");
 
         return 0;
 }
@@ -97,6 +108,14 @@ static void __exit mod_exit(void)
         }
 
         LOG_INFO("DTCP default policy set unloaded successfully");
+
+        ret = pft_ps_unpublish(RINA_PS_DEFAULT_NAME);
+        if (ret) {
+                LOG_ERR("Failed to unpublish PFT policy set factory");
+                return;
+        }
+
+        LOG_INFO("PFT default policy set unloaded successfully");
 }
 
 module_init(mod_init);

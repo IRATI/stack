@@ -897,20 +897,20 @@ int common_efcp_pdu_send(struct efcp * efcp,
                          qos_id_t      qos_id,
 			 struct pdu *  pdu)
 {
-        const struct pci *	pci;
+        struct pci *	        pci;
 	struct efcp_container * efcpc;
 	cep_id_t		dest_cep_id;
 
 	if (!pdu)
 	        return -1;
 
-	pci = pdu_pci_get_ro(pdu);
+	pci = pdu_pci_get_rw(pdu);
 	if (!pci)
 		return -1;
 
 	/* Remote flow case */
 	if (pci_source(pci) != pci_destination(pci)) {
-	        if (rmt_send(rmt, address, qos_id, pdu)) {
+	        if (rmt_send(rmt, pci, pdu)) {
 	                LOG_ERR("Problems sending PDU to RMT");
 	                return -1;
 	        }

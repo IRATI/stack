@@ -125,8 +125,7 @@ int          rmt_pft_dump(struct rmt *       instance,
 int          rmt_pft_flush(struct rmt * instance);
 
 int          rmt_send(struct rmt * instance,
-                      address_t    address,
-                      qos_id_t     qos_id,
+                      struct pci * pci,
                       struct pdu * pdu);
 int          rmt_send_port_id(struct rmt *  instance,
                               port_id_t     id,
