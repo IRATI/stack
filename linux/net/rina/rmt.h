@@ -111,9 +111,9 @@ int          rmt_n1port_bind(struct rmt * instance,
 int          rmt_n1port_unbind(struct rmt * instance,
                                port_id_t    id);
 int          rmt_pft_add(struct rmt *       instance,
-			 struct pdu_ft_entry * entry);
+			 struct modpdufwd_entry * entry);
 int          rmt_pft_remove(struct rmt *       instance,
-			 struct pdu_ft_entry * entry);
+			 struct modpdufwd_entry * entry);
 int          rmt_pft_dump(struct rmt *       instance,
                           struct list_head * entries);
 int          rmt_pft_flush(struct rmt * instance);

@@ -391,7 +391,7 @@ struct pft_entry * pft_find(struct pft * instance,
 EXPORT_SYMBOL(pft_find);
 
 int pft_add(struct pft *      instance,
-	    struct pdu_ft_entry *entry)
+	    struct modpdufwd_entry *entry)
 {
         struct pft_entry * tmp;
 	struct port_id_altlist * alts;
@@ -480,7 +480,7 @@ int pft_set_policy_set_param(struct pft * pft,
 EXPORT_SYMBOL(pft_set_policy_set_param);
 
 int pft_remove(struct pft *      instance,
-	       struct pdu_ft_entry * entry)
+	       struct modpdufwd_entry * entry)
 /*
                address_t         destination,
                qos_id_t          qos_id,
@@ -603,7 +603,7 @@ int pft_dump(struct pft *       instance,
              struct list_head * entries)
 {
         struct pft_entry *    pos;
-        struct pdu_ft_entry * entry;
+        struct modpdufwd_entry * entry;
 
         if (!__pft_is_ok(instance))
                 return -1;

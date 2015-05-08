@@ -163,7 +163,7 @@ struct port_id_altlist {
 	struct list_head	next;
 };
 
-struct pdu_ft_entry {
+struct modpdufwd_entry {
         address_t        destination;
         qos_id_t         qos_id;
         //port_id_t *      ports;

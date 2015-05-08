@@ -1112,10 +1112,10 @@ static int notify_ipcp_modify_pfte(void *             data,
         struct rnl_msg *                    msg;
         struct ipcp_instance *              ipc_process;
         ipc_process_id_t                    ipc_id;
-        struct pdu_ft_entry *               entry;
+        struct modpdufwd_entry *               entry;
 
         int (* op)(struct ipcp_instance_data * data,
-		   struct pdu_ft_entry       * entry);
+		   struct modpdufwd_entry       * entry);
 
         if (!data) {
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");

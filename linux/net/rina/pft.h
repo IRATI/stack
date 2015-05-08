@@ -46,9 +46,9 @@ bool         pft_is_empty(struct pft * instance);
 int          pft_flush(struct pft * instance);
 
 int          pft_add(struct pft *       instance,
-		     struct pdu_ft_entry *entry);
+		     struct modpdufwd_entry *entry);
 int          pft_remove(struct pft *       instance,
-		        struct pdu_ft_entry *entry);
+		        struct modpdufwd_entry *entry);
 
 /* NOTE: ports and entries are in-out parms */
 int          pft_nhop(struct pft * instance,
