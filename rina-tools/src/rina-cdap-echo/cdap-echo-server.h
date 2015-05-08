@@ -25,29 +25,44 @@
 #include <librina/librina.h>
 #include <time.h>
 #include <signal.h>
+#include <librina/cdap_v2.h>
 
-#include "cdap-echo-application.h"
+#include "application.h"
 
-class Server: public Application
+class ConnectionCallback : public rina::cdap::CDAPCallbackInterface
 {
-public:
-        Server(const std::string& dif_name,
-               const std::string& app_name,
-               const std::string& app_instance,
-               const int dealloc_wait);
+ public:
+  ConnectionCallback(bool *keep_serving,
+                     rina::cdap::CDAPProviderInterface **prov);
+  void open_connection(const rina::cdap_rib::con_handle_t &con,
+                       const rina::cdap_rib::flags_t &flags, int message_id);
+  void remote_read_request(const rina::cdap_rib::con_handle_t &con,
+                           const rina::cdap_rib::obj_info_t &obj,
+                           const rina::cdap_rib::filt_info_t &filt,
+                           int message_id);
+  void close_connection(const rina::cdap_rib::con_handle_t &con,
+                        const rina::cdap_rib::flags_t &flags, int message_id);
+ private:
+  bool *keep_serving_;
+  rina::cdap::CDAPProviderInterface **prov_;
+};
 
-        void run();
+class Server : public Application
+{
+ public:
+  Server(const std::string& dif_name, const std::string& app_name,
+         const std::string& app_instance, const int dealloc_wait);
+  void run();
 
-protected:
-        void serveEchoFlow(int port_id);
-        static void destroyFlow(sigval_t val);
-        bool cacep(int port_id);
-        bool release(int port_id, int invoke_id);
-private:
-        void startWorker(int port_id);
-        int interval;
-        int dw;
-        rina::CDAPSessionManagerInterface *manager_;
+ protected:
+  void serveEchoFlow(int port_id);
+  //static void destroyFlow(sigval_t val);
+ private:
+  void startWorker(int port_id);
+  int interval;
+  int dw;
+  const unsigned int max_sdu_size_in_bytes = 10000;
+
 };
 
 #endif

@@ -223,6 +223,12 @@ class RINAConfiguration {
                 rina::ApplicationProcessNamingInformation>
                 applicationToDIFMappings;
 
+	/*
+	 * The path of the configuration file where the configuration
+	 * comes from
+	 */
+	std::string configuration_file;
+
         bool lookup_dif_properties(
                         const rina::ApplicationProcessNamingInformation& dif_name,
                         DIFProperties& result) const;

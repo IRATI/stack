@@ -4,6 +4,7 @@
 //    Francesco Salvestrini <f.salvestrini@nextworks.it>
 //    Vincenzo Maffione     <v.maffione@nextworks.it>
 //    Sander Vrijders       <sander.vrijders@intec.ugent.be>
+//    Marc Sune             <marc.sune (at) bisdn.de>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -48,8 +49,6 @@ using namespace std;
 using namespace TCLAP;
 
 
-#define WANT_PARACHUTE 0
-
 void handler(int signum)
 {
 	switch(signum){
@@ -69,10 +68,11 @@ void handler(int signum)
 
 int wrapped_main(int argc, char * argv[])
 {
+	std::string addons;
 	std::string conf;
 	std::string logfile;
 	std::string loglevel;
-	unsigned int wait_time;
+	bool dump;
 
 	// Wrap everything in a try block.  Do this every time,
 	// because exceptions will be thrown for problems.
@@ -80,6 +80,14 @@ int wrapped_main(int argc, char * argv[])
 	try {
 		// Define the command line object.
 		TCLAP::CmdLine cmd("IPC Manager", ' ', PACKAGE_VERSION);
+
+		TCLAP::ValueArg<std::string>
+			addons_arg("a",
+				 "addons",
+				 "Load listed addons; default \"console, scripting\"",
+				 false,
+				 "console, scripting",
+				 "string");
 
 		TCLAP::ValueArg<std::string>
 			conf_arg("c",
@@ -95,25 +103,25 @@ int wrapped_main(int argc, char * argv[])
 				     false,
 				     "INFO",
 				     "string");
-		TCLAP::ValueArg<unsigned int>
-			wait_time_arg("w",
-				     "wait-time",
-				     "Maximum time (in seconds) to wait for an event response",
-				     false,
-				     10,
-				     "unsigned int");
+		TCLAP::SwitchArg
+			dump_arg("d",
+				     "dump",
+				     "Dump configuration on startup",
+				     false);
 
+		cmd.add(addons_arg);
 		cmd.add(conf_arg);
 		cmd.add(loglevel_arg);
-		cmd.add(wait_time_arg);
+		cmd.add(dump_arg);
 
 		// Parse the args.
 		cmd.parse(argc, argv);
 
 		// Get the value parsed by each arg.
+		addons = addons_arg.getValue();
 		conf     = conf_arg.getValue();
 		loglevel = loglevel_arg.getValue();
-		wait_time = wait_time_arg.getValue();
+		dump = dump_arg.getValue();
 
 		LOG_DBG("Config file is: %s", conf.c_str());
 
@@ -131,14 +139,14 @@ int wrapped_main(int argc, char * argv[])
 	}
 
 	//Initialize IPCM
-	rinad::IPCManager->init(wait_time, loglevel);
+	rinad::IPCManager->init(loglevel);
 
 	//Dump the config
-	rinad::IPCManager->dumpConfig();
+	if(dump)
+		rinad::IPCManager->dumpConfig();
 
-	//TODO make this configurable
-	rinad::IPCManager->start_console_worker();
-	rinad::IPCManager->start_script_worker();
+	//Load addons
+	rinad::IPCManager->load_addons(addons);
 
 	//Run the loop
 	rinad::IPCManager->run();
@@ -156,13 +164,12 @@ int main(int argc, char * argv[])
 		exit(EXIT_FAILURE);
 	}
 
-#if WANT_PARACHUTE
 	//Configure signal  traps
 	if (signal(SIGSEGV, handler) == SIG_ERR) {
 		LOG_WARN("Could not install SIGSEGV handler!");
 	}
         LOG_DBG("SIGSEGV handler installed successfully");
-#endif
+
 	if (signal(SIGINT, handler) == SIG_ERR) {
 		LOG_ERR("Could not install SIGINT handler!");
 	}

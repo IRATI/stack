@@ -2,6 +2,8 @@
  * IPC Manager - IPCP related routine handlers
  *
  *    Vincenzo Maffione     <v.maffione@nextworks.it>
+ *    Eduard Grasa          <eduard.grasa@i2cat.net>
+ *    Marc Sune             <marc.sune (at) bisdn.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +28,7 @@
 
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
+#include <debug.h>
 
 #define RINA_PREFIX "ipcm.ipcp"
 #include <librina/logs.h>
@@ -78,17 +81,24 @@ void IPCManager_::ipc_process_daemon_initialized_event_handler(
 		return;
 	}
 
-	//Auto release the read lock
-	rina::WriteScopedLock writelock(ipcp->rwlock, false);
+	{
+		//Auto release the read lock
+		rina::WriteScopedLock writelock(ipcp->rwlock, false);
 
-	assert(ipcp->get_type() == rina::NORMAL_IPC_PROCESS);
+		assert(ipcp->get_type() == rina::NORMAL_IPC_PROCESS);
 
-	//Initialize
-	ipcp->setInitialized();
+		//Initialize
+		ipcp->setInitialized();
+	}
 
 	ss << "IPC process daemon initialized [id = " <<
 		e->ipcProcessId<< "]" << endl;
 	FLUSH_LOG(INFO, ss);
+
+	//Distribute the event to the addons
+	IPCMEvent addon_e(trans->callee, IPCM_IPCP_CREATED,
+					e->ipcProcessId);
+	Addon::distribute_ipcm_event(addon_e);
 
 	//Set return value, mark as completed and signal
 	trans->completed(IPCM_SUCCESS);

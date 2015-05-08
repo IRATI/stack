@@ -27,6 +27,7 @@
 namespace rinad {
 
 //Class SecurityManager
+
 void SecurityManager::set_application_process(rina::ApplicationProcess * ap)
 {
 	if (!ap)

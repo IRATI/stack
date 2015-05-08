@@ -2,6 +2,7 @@
  * IPC Manager - Policy management
  *
  *    Vincenzo Maffione     <v.maffione@nextworks.it>
+ *    Marc Sune             <marc.sune (at) bisdn.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +27,7 @@
 
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
+#include <debug.h>
 
 #define RINA_PREFIX "ipcm.policies"
 #include <librina/logs.h>

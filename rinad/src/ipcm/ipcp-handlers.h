@@ -42,8 +42,8 @@ namespace rinad {
 class IPCPTransState: public TransactionState{
 
 public:
-	IPCPTransState(Promise* promise, int _ipcp_id)
-					: TransactionState(promise),
+	IPCPTransState(Addon* callee, Promise* promise, int _ipcp_id)
+					: TransactionState(callee, promise),
 						ipcp_id(_ipcp_id){}
 	virtual ~IPCPTransState(){};
 
@@ -57,9 +57,10 @@ public:
 class IPCPregTransState: public IPCPTransState {
 
 public:
-	IPCPregTransState(Promise* promise, int _ipcp_id,
+	IPCPregTransState(Addon* callee, Promise* promise, int _ipcp_id,
 					int _slave_ipcp_id) :
-					IPCPTransState(promise, _ipcp_id),
+					IPCPTransState(callee, promise,
+								_ipcp_id),
 					slave_ipcp_id(_slave_ipcp_id){}
 	virtual ~IPCPregTransState(){};
 

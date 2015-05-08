@@ -74,7 +74,9 @@ allsources =							\
         ipc-process.cc						\
         faux-sockets.cc						\
         cdap.cc							\
+        cdap_v2.cc							\
         rib.cc							\
+        rib_v2.cc							\
         irm.cc							\
         sdu-protection.cc					\
         netlink-messages.cc  netlink-messages.h			\

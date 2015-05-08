@@ -1,7 +1,7 @@
 /*
- * Echo Application
+ * Test for the Communication task for the MA daemon
  *
- * Addy Bombeke <addy.bombeke@ugent.be>
+ *    Bernat Gaston         <bernat.gaston@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,7 +10,7 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
@@ -18,27 +18,20 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef APPLICATION_HPP
-#define APPLICATION_HPP
+#include "commm.h"
 
-#include <string>
 
-class Application
+bool getInstance_New_True
 {
-public:
-        Application(const std::string& dif_name_,
-                    const std::string & app_name_,
-                    const std::string & app_instance_);
 
-        static const uint max_buffer_size;
+}
 
-protected:
-        void applicationRegister();
+bool CACEPManagerFactory_Test
+{
 
-        std::string dif_name;
-        std::string app_name;
-        std::string app_instance;
-        const unsigned int max_sdu_size_in_bytes = 10000;
+}
 
-};
-#endif
+void main()
+{
+
+}
