@@ -3167,7 +3167,7 @@ void AppCDAPProvider::send(const cdap_m_t *m_sent, int port)
         manager_->messageSent(*m_sent, port);
         rina::ipcManager->writeSDU(port, ser_sent_m->message_,
                                                            ser_sent_m->size_);
-        delete[] ser_sent_m->message_;
+        delete[] (char*) ser_sent_m->message_;
         delete ser_sent_m;
 }
 
@@ -3184,7 +3184,7 @@ void IPCPCDAPProvider::send(const cdap_m_t *m_sent, int port)
         manager_->messageSent(*m_sent, port);
         rina::kernelIPCProcess->writeMgmgtSDUToPortId(ser_sent_m->message_,
                                                       ser_sent_m->size_, port);
-        delete[] ser_sent_m->message_;
+        delete[] (char*) ser_sent_m->message_;
         delete ser_sent_m;
 }
 
