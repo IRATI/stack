@@ -49,8 +49,6 @@ using namespace std;
 using namespace TCLAP;
 
 
-#define WANT_PARACHUTE 0
-
 void handler(int signum)
 {
 	switch(signum){
@@ -166,13 +164,12 @@ int main(int argc, char * argv[])
 		exit(EXIT_FAILURE);
 	}
 
-#if WANT_PARACHUTE
 	//Configure signal  traps
 	if (signal(SIGSEGV, handler) == SIG_ERR) {
 		LOG_WARN("Could not install SIGSEGV handler!");
 	}
         LOG_DBG("SIGSEGV handler installed successfully");
-#endif
+
 	if (signal(SIGINT, handler) == SIG_ERR) {
 		LOG_ERR("Could not install SIGINT handler!");
 	}

@@ -729,11 +729,10 @@ int rmt_send_port_id(struct rmt * instance,
 EXPORT_SYMBOL(rmt_send_port_id);
 
 int rmt_send(struct rmt * instance,
-             address_t    address,
-             qos_id_t     qos_id,
+             struct pci * pci,
              struct pdu * pdu)
 {
-        int          i;
+        int i;
 
         if (!instance) {
                 LOG_ERR("Bogus RMT passed");
@@ -745,8 +744,7 @@ int rmt_send(struct rmt * instance,
         }
 
         if (pft_nhop(instance->pft,
-                     address,
-                     qos_id,
+                     pci,
                      &(instance->cache.pids),
                      &(instance->cache.count))) {
                 LOG_ERR("Cannot get the NHOP for this PDU");
@@ -1125,14 +1123,14 @@ int rmt_receive(struct rmt * rmt,
                 struct sdu * sdu,
                 port_id_t    from)
 {
-        pdu_type_t          pdu_type;
-        const struct pci *  pci;
-        struct pdu_ser *    pdu_ser;
-        struct pdu *        pdu;
-        address_t           dst_addr;
-        qos_id_t            qos_id;
-        struct serdes *     serdes;
-        struct buffer *     buf;
+        pdu_type_t       pdu_type;
+        struct pci *     pci;
+        struct pdu_ser * pdu_ser;
+        struct pdu *     pdu;
+        address_t        dst_addr;
+        qos_id_t         qos_id;
+        struct serdes *  serdes;
+        struct buffer *  buf;
 
         if (!sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus SDU passed");
@@ -1181,7 +1179,7 @@ int rmt_receive(struct rmt * rmt,
                 return -1;
         }
 
-        pci = pdu_pci_get_ro(pdu);
+        pci = pdu_pci_get_rw(pdu);
         if (!pci) {
                 LOG_ERR("No PCI to work with, dropping SDU!");
                 pdu_destroy(pdu);
@@ -1212,8 +1210,7 @@ int rmt_receive(struct rmt * rmt,
                         /*NOTE: we could reuse the serialized pdu when
                          * forwarding */
                         return rmt_send(rmt,
-                                        dst_addr,
-                                        qos_id,
+                                        pci,
                                         pdu);
                 }
         } else {
