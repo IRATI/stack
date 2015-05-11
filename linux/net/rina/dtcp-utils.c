@@ -61,7 +61,7 @@ struct dtcp_fctrl_config {
         uint_t                       rcvd_bytes_percent_th;
         uint_t                       rcvd_buffers_th;
         struct policy *              closed_window;
-        struct policy *              flow_control_overrun;
+        /*struct policy *              flow_control_overrun;*/
         struct policy *              reconcile_flow_conflict;
         struct policy *              receiving_flow_control;
 };
@@ -185,8 +185,9 @@ static int dtcp_fctrl_config_destroy(struct dtcp_fctrl_config * cfg)
 
         if (cfg->closed_window)
                 policy_destroy(cfg->closed_window);
-        if (cfg->flow_control_overrun)
-                policy_destroy(cfg->flow_control_overrun);
+        /*FIXME this goes to DTP */
+        /*if (cfg->flow_control_overrun)
+                policy_destroy(cfg->flow_control_overrun);*/
         if (cfg->reconcile_flow_conflict)
                 policy_destroy(cfg->reconcile_flow_conflict);
         if (cfg->receiving_flow_control)
@@ -218,11 +219,11 @@ static struct dtcp_fctrl_config * dtcp_fctrl_config_create_gfp(gfp_t flags)
         }
 
         tmp->closed_window            = policy_create_gfp(flags);
-        tmp->flow_control_overrun     = policy_create_gfp(flags);
+        /*tmp->flow_control_overrun     = policy_create_gfp(flags);*/
         tmp->reconcile_flow_conflict  = policy_create_gfp(flags);
         tmp->receiving_flow_control   = policy_create_gfp(flags);
         if (!tmp->closed_window              ||
-            !tmp->flow_control_overrun       ||
+            /*!tmp->flow_control_overrun       ||*/
             !tmp->reconcile_flow_conflict    ||
             !tmp->receiving_flow_control) {
                 LOG_ERR("Could not create a policy in "
@@ -619,6 +620,7 @@ int dtcp_closed_window_set(struct dtcp_config * cfg,
 }
 EXPORT_SYMBOL(dtcp_closed_window_set);
 
+/*
 int dtcp_flow_control_overrun_set(struct dtcp_config * cfg,
                                   struct policy * flow_control_overrun)
 {
@@ -631,6 +633,7 @@ int dtcp_flow_control_overrun_set(struct dtcp_config * cfg,
         return 0;
 }
 EXPORT_SYMBOL(dtcp_flow_control_overrun_set);
+*/
 
 int dtcp_reconcile_flow_conflict_set(struct dtcp_config * cfg,
                                      struct policy * reconcile_flow_conflict)
@@ -1019,6 +1022,7 @@ struct policy * dtcp_closed_window(struct dtcp_config * cfg)
 }
 EXPORT_SYMBOL(dtcp_closed_window);
 
+/*
 struct policy * dtcp_flow_control_overrun(struct dtcp_config * cfg)
 {
         if (!cfg || !cfg->fctrl_cfg)
@@ -1027,6 +1031,7 @@ struct policy * dtcp_flow_control_overrun(struct dtcp_config * cfg)
         return cfg->fctrl_cfg->flow_control_overrun;
 }
 EXPORT_SYMBOL(dtcp_flow_control_overrun);
+*/
 
 struct policy * dtcp_reconcile_flow_conflict(struct dtcp_config * cfg)
 {
