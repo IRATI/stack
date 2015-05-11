@@ -180,10 +180,6 @@ public:
 	IFlowAllocatorInstance * getFAI(int portId);
 	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
-        int select_policy_set(const std::string& path, const std::string& name);
-        int set_policy_set_param(const std::string& path,
-                                 const std::string& name,
-                                 const std::string& value);
 	void createFlowRequestMessageReceived(Flow * flow, const std::string& object_name,
 			int invoke_id);
 	void submitAllocateRequest(rina::FlowRequestEvent& flowRequestEvent);
@@ -291,7 +287,7 @@ private:
 	rina::IMasterEncoder * encoder_;
 	IPCPRIBDaemon * rib_daemon_;
 	INamespaceManager * namespace_manager_;
-	ISecurityManager * security_manager_;
+	IPCPSecurityManager * security_manager_;
 	FAIState state;
 
 	rina::Timer timer;
