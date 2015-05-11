@@ -140,6 +140,8 @@ Manager::Manager(const std::string& dif_name, const std::string& apn,
 }
 
 Manager::~Manager() {
+	if(cdap_prov_)
+		delete cdap_prov_;
 }
 
 void Manager::run()
@@ -225,39 +227,50 @@ void Manager::operate(rina::FlowInformation flow)
         cdap::CDAPProviderFactory::init(2000);
         cdap_prov_ = cdap::CDAPProviderFactory::create(false, &callback);
         // CACEP
-        cacep(flow);
-        // CREATE IPCP
-        std::cout <<"flow.remoteAppName.processName: "<< flow.remoteAppName.processName<<std::endl;
-        if(flow.remoteAppName.processName == "rina.apps.mad.1")
+        if(cacep(flow))
         {
-        	createIPCP_1(flow);
+        	bool create_result = false;
+		// CREATE IPCP
+		std::cout <<"flow.remoteAppName.processName: "<< flow.remoteAppName.processName<<std::endl;
+		if(flow.remoteAppName.processName == "rina.apps.mad.1")
+		{
+			create_result = createIPCP_1(flow);
+		}
+		if(flow.remoteAppName.processName == "rina.apps.mad.2")
+		{
+			create_result = createIPCP_2(flow);
+		}
+		if(flow.remoteAppName.processName == "rina.apps.mad.3")
+		{
+			create_result = createIPCP_3(flow);
+		}
+		// QUERY RIB
+		if(create_result)
+			queryRIB(flow);
         }
-	if(flow.remoteAppName.processName == "rina.apps.mad.2")
-	{
-		createIPCP_2(flow);
-	}
-	if(flow.remoteAppName.processName == "rina.apps.mad.3")
-	{
-		createIPCP_3(flow);
-	}
-        // QUERY RIB
-        queryRIB(flow);
         // FINISH
         cdap::CDAPProviderFactory::destroy(flow.portId);
-        delete cdap_prov_;
 }
 
-void Manager::cacep(rina::FlowInformation &flow)
+bool Manager::cacep(rina::FlowInformation &flow)
 {
         char buffer[max_sdu_size_in_bytes];
-        int bytes_read = ipcManager->readSDU(flow.portId, buffer, max_sdu_size_in_bytes);
-        cdap_rib::SerializedObject message;
-        message.message_ = buffer;
-        message.size_ = bytes_read;
-        cdap_prov_->process_message(message, flow.portId);
+        try{
+                int bytes_read = ipcManager->readSDU(flow.portId, buffer, max_sdu_size_in_bytes);
+                cdap_rib::SerializedObject message;
+                message.message_ = buffer;
+                message.size_ = bytes_read;
+                cdap_prov_->process_message(message, flow.portId);
+        }
+        catch(Exception &e)
+        {
+        	std::cout<<"ReadSDUException in CACEP: "<< e.what() <<std::endl;
+        	return false;
+        }
+        return true;
 }
 
-void Manager::createIPCP_1(rina::FlowInformation &flow)
+bool Manager::createIPCP_1(rina::FlowInformation &flow)
 {
         char buffer[max_sdu_size_in_bytes];
 
@@ -288,15 +301,23 @@ void Manager::createIPCP_1(rina::FlowInformation &flow)
         cdap_prov_->remote_create(flow.portId, obj, flags, filt);
         std::cout << "create IPC request CDAP message sent" << std::endl;
 
-        int bytes_read = ipcManager->readSDU(flow.portId, buffer,
-							max_sdu_size_in_bytes);
-        cdap_rib::SerializedObject message;
-        message.message_ = buffer;
-        message.size_ = bytes_read;
-        cdap_prov_->process_message(message, flow.portId);
+        try{
+		int bytes_read = ipcManager->readSDU(flow.portId, buffer,
+								max_sdu_size_in_bytes);
+		cdap_rib::SerializedObject message;
+		message.message_ = buffer;
+		message.size_ = bytes_read;
+		cdap_prov_->process_message(message, flow.portId);
+        }
+	catch(Exception &e)
+	{
+		std::cout<<"ReadSDUException in createIPCP_1: "<< e.what() <<std::endl;
+		return false;
+	}
+	return true;
 }
 
-void Manager::createIPCP_2(rina::FlowInformation &flow)
+bool Manager::createIPCP_2(rina::FlowInformation &flow)
 {
         char buffer[max_sdu_size_in_bytes];
 
@@ -331,15 +352,23 @@ void Manager::createIPCP_2(rina::FlowInformation &flow)
         cdap_prov_->remote_create(flow.portId, obj, flags, filt);
         std::cout << "create IPC request CDAP message sent" << std::endl;
 
-        int bytes_read = ipcManager->readSDU(flow.portId, buffer,
-							max_sdu_size_in_bytes);
-        cdap_rib::SerializedObject message;
-        message.message_ = buffer;
-        message.size_ = bytes_read;
-        cdap_prov_->process_message(message, flow.portId);
+        try{
+		int bytes_read = ipcManager->readSDU(flow.portId, buffer,
+								max_sdu_size_in_bytes);
+		cdap_rib::SerializedObject message;
+		message.message_ = buffer;
+		message.size_ = bytes_read;
+		cdap_prov_->process_message(message, flow.portId);
+        }
+	catch(Exception &e)
+	{
+		std::cout<<"ReadSDUException in createIPCP_2: "<< e.what() <<std::endl;
+		return false;
+	}
+	return true;
 }
 
-void Manager::createIPCP_3(rina::FlowInformation &flow)
+bool Manager::createIPCP_3(rina::FlowInformation &flow)
 {
         char buffer[max_sdu_size_in_bytes];
 
@@ -373,12 +402,20 @@ void Manager::createIPCP_3(rina::FlowInformation &flow)
         cdap_prov_->remote_create(flow.portId, obj, flags, filt);
         std::cout << "create IPC request CDAP message sent" << std::endl;
 
-        int bytes_read = ipcManager->readSDU(flow.portId, buffer,
-							max_sdu_size_in_bytes);
-        cdap_rib::SerializedObject message;
-        message.message_ = buffer;
-        message.size_ = bytes_read;
-        cdap_prov_->process_message(message, flow.portId);
+        try{
+		int bytes_read = ipcManager->readSDU(flow.portId, buffer,
+								max_sdu_size_in_bytes);
+		cdap_rib::SerializedObject message;
+		message.message_ = buffer;
+		message.size_ = bytes_read;
+		cdap_prov_->process_message(message, flow.portId);
+        }
+	catch(Exception &e)
+	{
+		std::cout<<"ReadSDUException in createIPCP 3: "<< e.what() <<std::endl;
+		return false;
+	}
+	return true;
 }
 
 void Manager::queryRIB(rina::FlowInformation &flow)

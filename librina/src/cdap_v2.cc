@@ -2206,9 +2206,12 @@ void CDAPSessionManager::removeCDAPSession(int port_id)
 {
         std::map<int, CDAPSession*>::iterator itr = cdap_sessions_.find(
                         port_id);
-        delete itr->second;
-        itr->second = 0;
-        cdap_sessions_.erase(itr);
+        if (itr != cdap_sessions_.end())
+        {
+		delete itr->second;
+		itr->second = 0;
+		cdap_sessions_.erase(itr);
+        }
 }
 const cdap_rib::SerializedObject* CDAPSessionManager::encodeNextMessageToBeSent(
                 const CDAPMessage &cdap_message, int port_id)
