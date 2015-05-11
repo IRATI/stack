@@ -43,6 +43,7 @@ rina-default-plugin-y :=			\
 	default-plugin.o			\
 	rmt-ps-common.o				\
 	rmt-ps-default.o			\
+	dtp-ps-common.o				\
 	dtp-ps-default.o			\
 	dtcp-ps-default.o                       \
 	pft-ps-default.o
