@@ -41,6 +41,7 @@ obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
 
 rina-default-plugin-y :=			\
 	default-plugin.o			\
+	rmt-ps-common.o				\
 	rmt-ps-default.o			\
 	dtp-ps-default.o			\
 	dtcp-ps-default.o                       \
