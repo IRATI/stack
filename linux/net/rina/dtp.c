@@ -1065,10 +1065,10 @@ int dtp_write(struct dtp * instance,
         struct dtp_sv *         sv;
         struct dt *             dt;
         struct dtcp *           dtcp;
-        struct rtxq *           rtxq;
+        struct rtxq *           rtxq = NULL;
         struct pdu *            cpdu;
-        struct dtp_ps * ps;
-        seq_num_t               sn;
+        struct dtp_ps *         ps;
+        seq_num_t               sn, csn;
 
         if (!sdu_is_ok(sdu))
                 return -1;
@@ -1135,12 +1135,13 @@ int dtp_write(struct dtp * instance,
          */
         /* Probably needs to be revised */
 
+        csn = nxt_seq_get(sv);
         if (pci_format(pci,
                        sv->connection->source_cep_id,
                        sv->connection->destination_cep_id,
                        sv->connection->source_address,
                        sv->connection->destination_address,
-                       nxt_seq_get(sv),
+                       csn,
                        sv->connection->qos_id,
                        PDU_TYPE_DT)) {
                 pci_destroy(pci);
@@ -1148,8 +1149,8 @@ int dtp_write(struct dtp * instance,
                 return -1;
         }
         sn = dtcp_snd_lf_win(dtcp);
-        if (dt_sv_drf_flag(dt)                         ||
-            (sn == (pci_sequence_number_get(pci) - 1)) ||
+        if (dt_sv_drf_flag(dt)          ||
+            (sn == (csn - 1))           ||
             !sv->rexmsn_ctrl)
                 pci_flags_set(pci, PDU_FLAGS_DATA_RUN);
 
@@ -1189,7 +1190,7 @@ int dtp_write(struct dtp * instance,
                         if (window_is_closed(sv,
                                              dt,
                                              dtcp,
-                                             pci_sequence_number_get(pci))) {
+                                             csn)) {
                                 if (ps->closed_window(ps, pdu)) {
                                         rcu_read_unlock();
                                         LOG_ERR("Problems with the "
@@ -1199,15 +1200,26 @@ int dtp_write(struct dtp * instance,
                                 rcu_read_unlock();
                                 return 0;
                         }
+                        if (!rtxq) {
+                                rtxq = dt_rtxq(dt);
+                                if (!rtxq) {
+                                        rcu_read_unlock();
+                                        LOG_ERR("Failed to get rtxq");
+                                        return 0;
+                                }
+                                rtxq_push_sn(rtxq, sn);
+                        }
                 }
                 if (sv->rexmsn_ctrl) {
                         /* FIXME: Add timer for PDU */
-                        rtxq = dt_rtxq(dt);
                         if (!rtxq) {
-                                LOG_ERR("Failed to get rtxq");
-                                rcu_read_unlock();
-                                pdu_destroy(pdu);
-                                return -1;
+                                rtxq = dt_rtxq(dt);
+                                if (!rtxq) {
+                                        LOG_ERR("Failed to get rtxq");
+                                        rcu_read_unlock();
+                                        pdu_destroy(pdu);
+                                        return -1;
+                                }
                         }
 
                         cpdu = pdu_dup_ni(pdu);

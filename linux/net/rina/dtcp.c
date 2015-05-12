@@ -137,6 +137,8 @@ struct dtcp_sv {
          * */
         uint_t       acks;
         uint_t       flow_ctl;
+
+        uint_t       rtt;
 };
 
 struct dtcp {
@@ -758,10 +760,16 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
                         break;
                 case PDU_TYPE_ACK:
                         acks_inc(dtcp);
+                        rcu_read_lock();
+                        ps->rtt_estimator(ps, seq_num);
+                        rcu_read_unlock();
                         break;
                 case PDU_TYPE_ACK_AND_FC:
                         acks_inc(dtcp);
                         flow_ctrl_inc(dtcp);
+                        rcu_read_lock();
+                        ps->rtt_estimator(ps, seq_num);
+                        rcu_read_unlock();
                         break;
                 default:
                         break;
@@ -775,11 +783,6 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         /* We are in seq_num == last_ctrl + 1 */
 
         last_rcv_ctrl_seq_set(dtcp, seq_num);
-
-        /*
-         * FIXME: Missing step described in the specs: retrieve the time
-         *        of this Ack and calculate the RTT with RTTEstimator policy
-         */
 
         LOG_DBG("dtcp_common_rcv_control sending to proper function...");
 
@@ -971,6 +974,7 @@ static struct dtcp_sv default_sv = {
         .pdus_rcvd_in_time_unit = 0,
         .acks                   = 0,
         .flow_ctl               = 0,
+        .rtt                    = 0,
 };
 
 /* FIXME: this should be completed with other parameters from the config */
