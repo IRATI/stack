@@ -28,25 +28,54 @@
 #include "rds/rmem.h"
 #include "rmt-ps.h"
 
-static void skeleton_max_q_policy_tx(struct rmt_ps * ps,
-                                    struct pdu *    pdu,
-                                    struct rfifo *  queue)
+static void skeleton_max_q_policy_tx(struct rmt_ps *      ps,
+                                     struct pdu *         pdu,
+                                     struct rmt_n1_port * port)
 { printk("%s: called()\n", __func__); }
 
-static void skeleton_max_q_policy_rx(struct rmt_ps * ps,
-                                    struct sdu *    sdu,
-                                    struct rfifo *  queue)
+static void skeleton_max_q_policy_rx(struct rmt_ps *      ps,
+                                     struct sdu *         sdu,
+                                     struct rmt_n1_port * port)
 { printk("%s: called()\n", __func__); }
 
-static void skeleton_rmt_q_monitor_policy_tx(struct rmt_ps * ps,
-                                    struct pdu *    pdu,
-                                    struct rfifo *  queue)
+static void skeleton_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
+                                             struct pdu *         pdu,
+                                             struct rmt_n1_port * port)
 { printk("%s: called()\n", __func__); }
 
-static void skeleton_rmt_q_monitor_policy_rx(struct rmt_ps * ps,
-                                    struct sdu *    sdu,
-                                    struct rfifo *  queue)
+static void skeleton_rmt_q_monitor_policy_rx(struct rmt_ps *      ps,
+                                             struct sdu *         sdu,
+                                             struct rmt_n1_port * port)
 { printk("%s: called()\n", __func__); }
+
+static struct pdu *
+skeleton_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
+                                      struct rmt_n1_port * port)
+{
+        printk("%s: called()\n", __func__);
+        return NULL;
+}
+
+static int skeleton_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
+                                                     struct rmt_n1_port * port,
+                                                     struct pdu *         pdu)
+{
+        printk("%s: called()\n", __func__);
+        return 0;
+}
+
+static int skeleton_rmt_scheduling_create_policy_tx(struct rmt_ps *      ps,
+                                                    struct rmt_n1_port * port)
+{ printk("%s: called()\n", __func__);
+  return 0;
+}
+
+static int skeleton_rmt_scheduling_destroy_policy_tx(struct rmt_ps *      ps,
+                                                     struct rmt_n1_port * port)
+{
+        printk("%s: called()\n", __func__);
+        return 0;
+}
 
 static int rmt_ps_set_policy_set_param(struct ps_base * bps,
                                        const char    * name,
@@ -82,13 +111,16 @@ rmt_ps_skeleton_create(struct rina_component * component)
         }
 
         ps->base.set_policy_set_param = rmt_ps_set_policy_set_param;
-        ps->dm              = rmt;
-        ps->max_q           = 256;
-        ps->priv            = NULL;
+        ps->dm = rmt;
+        ps->priv = NULL;
         ps->max_q_policy_tx = skeleton_max_q_policy_tx;
         ps->max_q_policy_rx = skeleton_max_q_policy_rx;
         ps->rmt_q_monitor_policy_tx = skeleton_rmt_q_monitor_policy_tx;
         ps->rmt_q_monitor_policy_rx = skeleton_rmt_q_monitor_policy_rx;
+        ps->rmt_next_scheduled_policy_tx     = skeleton_rmt_next_scheduled_policy_tx;
+        ps->rmt_enqueue_scheduling_policy_tx = skeleton_rmt_enqueue_scheduling_policy_tx;
+        ps->rmt_scheduling_create_policy_tx  = skeleton_rmt_scheduling_create_policy_tx;
+        ps->rmt_scheduling_destroy_policy_tx = skeleton_rmt_scheduling_destroy_policy_tx;
 
         return &ps->base;
 }

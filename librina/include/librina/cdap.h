@@ -32,6 +32,11 @@
 
 namespace rina {
 
+class CDAPErrorCodes {
+public:
+	static const int CONNECTION_REJECTED_ERROR;
+};
+
 /// Encapsulates the data of an AuthValue
 class AuthValue {
 public:
@@ -345,7 +350,15 @@ public:
 			int invoke_id);
 	static CDAPMessage* getCancelReadResponseMessage(Flags flags,
 			int invoke_id, int result, const std::string &result_reason);
+	static CDAPMessage* getRequestMessage(Opcode opcode, char * filter, Flags flags,
+			const std::string &obj_class, long obj_inst,
+			const std::string &obj_name, int scope);
+	static CDAPMessage* getResponseMessage(Opcode opcode, Flags flags,
+			const std::string &obj_class, long obj_inst,
+			const std::string &obj_name, int result,
+			const std::string &result_reason, int invoke_id);
 	std::string to_string() const;
+	bool is_request_message() const;
 	/// Returns a reply message from the request message, copying all the fields except for: Opcode (it will be the
 	/// request message counterpart), result (it will be 0) and result_reason (it will be null)
 	/// @param requestMessage
@@ -613,9 +626,12 @@ public:
 ///     a) call the messageReceived operation
 ///     b) if successful, you can already use the cdap message; if not, look at the exception
 class CDAPSessionInterface {
-
-	/*	Constructors and Destructors	*/
 public:
+	static const std::string SESSION_STATE_NONE;
+	static const std::string SESSION_STATE_AWAIT_CON;
+	static const std::string SESSION_STATE_CON;
+	static const std::string SESSION_STATE_AWAIT_CLOSE;
+
 	virtual ~CDAPSessionInterface() throw () {
 	}
 	;
@@ -653,6 +669,11 @@ public:
 	///Return the descriptor of this session
 	virtual CDAPSessionDescriptor* get_session_descriptor() const = 0;
 
+	//Return the state of this session (NONE, AWAIT_CON, CON or AWAIT_CLOSE)
+	virtual std::string get_session_state() const = 0;
+
+	/// True if this CDAP session is closed, false otherwise
+	virtual bool is_closed() const = 0;
 };
 
 /// Manages the creation/deletion of CDAP sessions within an IPC process
@@ -687,8 +708,10 @@ public:
 	/// @param port_id
 	/// @return encoded version of the CDAP Message
 	/// @throws CDAPException
-	virtual void messageSent(const CDAPMessage &cdap_message, int port_id)
-	= 0;
+	virtual void messageSent(const CDAPMessage &cdap_message, int port_id) = 0;
+	/// Called by the CDAPSession state machine when the cdap session is terminated
+	/// @param port_id
+	virtual void removeCDAPSession(int port_id) = 0;
 	/// Get a CDAP session that matches the port_id
 	/// @param port_id
 	/// @return
@@ -696,9 +719,7 @@ public:
 	/// Get the identifiers of all the CDAP sessions
 	/// @return
 	virtual void getAllCDAPSessionIds(std::vector<int> &vector) = 0;
-	/// Called by the CDAPSession state machine when the cdap session is terminated
-	/// @param port_id
-	virtual void removeCDAPSession(int port_id) = 0;
+
 	/// Encodes a CDAP message. It just converts a CDAP message into a byte
 	/// array, without caring about what session this CDAP message belongs to (and
 	/// therefore it doesn't update any CDAP session state machine). Called by
@@ -1006,6 +1027,20 @@ public:
 	virtual CDAPMessage* getCancelReadResponseMessage(
 			CDAPMessage::Flags flags, int invoke_id, int result,
 			const std::string &result_reason) = 0;
+
+	virtual CDAPMessage* getRequestMessage(int port_id,
+			CDAPMessage::Opcode opcode, char * filter,
+			CDAPMessage::Flags flags, const std::string &obj_class,
+			long obj_inst, const std::string &obj_name,
+			int scope, bool invoke_id) = 0;
+
+	virtual CDAPMessage* getResponseMessage(CDAPMessage::Opcode opcode,
+			CDAPMessage::Flags flags, const std::string &obj_class,
+			long obj_inst, const std::string &obj_name,
+			int result,
+			const std::string &result_reason, int invoke_id) = 0;
+
+	virtual CDAPInvokeIdManagerInterface * get_invoke_id_manager() = 0;
 };
 
 /// Provides a wire format for CDAP messages
@@ -1037,6 +1072,41 @@ public:
 	CDAPSessionManagerInterface* createCDAPSessionManager(
 			WireMessageProviderFactory *wire_message_provider_factory,
 			long timeout);
+};
+
+class CACEPHandler {
+public:
+        virtual ~CACEPHandler(){};
+
+        /// A remote IPC process Connect request has been received.
+        /// @param invoke_id the id of the connect message
+        /// @param session_descriptor
+        virtual void connect(const CDAPMessage& cdap_message,
+                        rina::CDAPSessionDescriptor * session_descriptor) = 0;
+
+        /// A remote IPC process Connect response has been received.
+        /// @param result
+        /// @param result_reason
+        /// @param session_descriptor
+        virtual void connectResponse(int result, const std::string& result_reason,
+                        rina::CDAPSessionDescriptor * session_descriptor) = 0;
+
+        /// A remote IPC process Release request has been received.
+        /// @param invoke_id the id of the release message
+        /// @param session_descriptor
+        virtual void release(int invoke_id,
+                        rina::CDAPSessionDescriptor * session_descriptor) = 0;
+
+        /// A remote IPC process Release response has been received.
+        /// @param result
+        /// @param result_reason
+        /// @param session_descriptor
+        virtual void releaseResponse(int result, const std::string& result_reason,
+                        rina::CDAPSessionDescriptor * session_descriptor) = 0;
+
+        /// Process an authentication message
+        virtual void process_authentication_message(const CDAPMessage& message,
+        		rina::CDAPSessionDescriptor * session_descriptor) = 0;
 };
 
 /// Interface of classes that handle CDAP response message.
@@ -1112,6 +1182,7 @@ public:
                                 (void) session_descriptor; // Stop compiler barfs
         }
 };
+
 }
 
 #endif

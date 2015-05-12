@@ -581,6 +581,7 @@ IPCManager_::register_at_dif(Addon* callee, Promise* promise,
 			throw rina::Exception();
 		}
 
+		rina::WriteScopedLock writelock(ipcp->rwlock, false);
 		slave_ipcp = select_ipcp_by_dif(dif_name, true);
 
 		if (!slave_ipcp) {
@@ -591,8 +592,6 @@ IPCManager_::register_at_dif(Addon* callee, Promise* promise,
 			throw rina::Exception();
 		}
 
-		//Auto release the write lock
-		rina::WriteScopedLock writelock(ipcp->rwlock, false);
 		rina::WriteScopedLock swritelock(slave_ipcp->rwlock, false);
 
 		//Create a transaction
@@ -638,8 +637,9 @@ IPCManager_::register_at_dif(Addon* callee, Promise* promise,
 }
 
 ipcm_res_t
-IPCManager_::unregister_ipcp_from_ipcp(Addon* callee, Promise* promise, const unsigned short ipcp_id,
-		const unsigned short slave_ipcp_id)
+IPCManager_::unregister_ipcp_from_ipcp(Addon* callee, Promise* promise,
+		const unsigned short ipcp_id,
+		const rina::ApplicationProcessNamingInformation& dif_name)
 {
 	ostringstream ss;
 	IPCMIPCProcess *ipcp, *slave_ipcp;
@@ -647,7 +647,7 @@ IPCManager_::unregister_ipcp_from_ipcp(Addon* callee, Promise* promise, const un
 
 	try {
 
-		ipcp = lookup_ipcp_by_id(ipcp_id);
+		ipcp = lookup_ipcp_by_id(ipcp_id, true);
 
 		if(!ipcp){
 			ss << "Invalid IPCP id "<< ipcp_id;
@@ -655,16 +655,17 @@ IPCManager_::unregister_ipcp_from_ipcp(Addon* callee, Promise* promise, const un
 			throw rina::Exception();
 		}
 
-		slave_ipcp = lookup_ipcp_by_id(slave_ipcp_id);
+		rina::WriteScopedLock writelock(ipcp->rwlock, false);
+		slave_ipcp = select_ipcp_by_dif(dif_name, true);
 
 		if (!slave_ipcp) {
-			ss << "Invalid IPCP id "<< slave_ipcp_id;
+			ss << "Cannot find any IPC process belonging "
+			   << "to DIF " << dif_name.toString()
+			   << endl;
 			FLUSH_LOG(ERR, ss);
 			throw rina::Exception();
 		}
 
-		//Auto release the write lock
-		rina::WriteScopedLock writelock(ipcp->rwlock, false);
 		rina::WriteScopedLock swritelock(slave_ipcp->rwlock, false);
 
 		//Create a transaction
@@ -1473,14 +1474,14 @@ void IPCManager_::io_loop(){
 		event = rina::ipcEventProducer->eventTimedWait(
 						IPCM_EVENT_TIMEOUT_S,
 						IPCM_EVENT_TIMEOUT_NS);
-		if(!event)
-			continue;
-
 		if(req_to_stop){
 			//Signal the main thread to start
 			//the stop procedure
 			stop_cond.signal();
 		}
+
+		if(!event)
+			continue;
 
 		if (!keep_running)
 			break;

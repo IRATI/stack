@@ -44,6 +44,7 @@ namespace rinad {
 void IPCManager_::ipc_process_set_policy_set_param_response_handler(
 				rina::SetPolicySetParamResponseEvent *event)
 {
+	bool success = (event->result == 0);
 	ostringstream ss;
 
 	IPCPTransState* trans = get_transaction_state<IPCPTransState>(event->sequenceNumber);
@@ -73,14 +74,14 @@ void IPCManager_::ipc_process_set_policy_set_param_response_handler(
 	FLUSH_LOG(INFO, ss);
 
 	//Mark as completed
-	trans->completed(IPCM_SUCCESS);
+	trans->completed(success ? IPCM_SUCCESS : IPCM_FAILURE);
 	remove_transaction_state(trans->tid);
 }
 
 void IPCManager_::ipc_process_plugin_load_response_handler(rina::PluginLoadResponseEvent *event)
 {
-        bool success = (event->result == 0);
-        ostringstream ss;
+	bool success = (event->result == 0);
+	ostringstream ss;
         int ret = -1;
 
         IPCPTransState* trans = get_transaction_state<IPCPTransState>(event->sequenceNumber);
@@ -112,19 +113,16 @@ void IPCManager_::ipc_process_plugin_load_response_handler(rina::PluginLoadRespo
 	       << " [success=" << success << "]" << endl;
         FLUSH_LOG(INFO, ss);
 
-        //Mark as completed
-        if (success)
-        	trans->completed(IPCM_SUCCESS);
-        else
-        	trans->completed(IPCM_FAILURE);
+	//Mark as completed
+	trans->completed(success ? IPCM_SUCCESS : IPCM_FAILURE);
         remove_transaction_state(trans->tid);
 }
 
 void IPCManager_::ipc_process_select_policy_set_response_handler(
 					rina::SelectPolicySetResponseEvent *event)
 {
-        bool success = (event->result == 0);
-        ostringstream ss;
+	bool success = (event->result == 0);
+	ostringstream ss;
         int ret = -1;
 
 	IPCPTransState* trans = get_transaction_state<IPCPTransState>(event->sequenceNumber);
@@ -154,7 +152,7 @@ void IPCManager_::ipc_process_select_policy_set_response_handler(
 	FLUSH_LOG(INFO, ss);
 
 	//Mark as completed
-	trans->completed(IPCM_SUCCESS);
+	trans->completed(success ? IPCM_SUCCESS : IPCM_FAILURE);
 	remove_transaction_state(trans->tid);
 }
 

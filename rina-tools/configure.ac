@@ -142,6 +142,7 @@ AC_CONFIG_FILES([
     src/common/Makefile
     src/rina-echo-time/Makefile
     src/rina-cdap-echo/Makefile
+    src/manager/Makefile
     src/common/tclap/Makefile
 
     doc/Makefile
