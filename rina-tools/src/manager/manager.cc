@@ -203,8 +203,6 @@ void Manager::run() {
 				if (flow.remoteAppName.processName
 						== "rina.apps.mad.1") {
 					if (waiting.find(1) == waiting.end()) {
-						std::cout << "Afegim flow"
-								<< std::endl;
 						waiting[1] = flow;
 					} else {
 						std::cout << "Error, flow with the same mad already exist: "
@@ -220,8 +218,6 @@ void Manager::run() {
 				if (flow.remoteAppName.processName
 						== "rina.apps.mad.2") {
 					if (waiting.find(2) == waiting.end()) {
-						std::cout << "Afegim flow"
-								<< std::endl;
 						waiting[2] = flow;
 					} else {
 						std::cout << "Error, flow with the same mad already exist: "
@@ -237,8 +233,6 @@ void Manager::run() {
 				if (flow.remoteAppName.processName
 						== "rina.apps.mad.3") {
 					if (waiting.find(3) == waiting.end()) {
-						std::cout << "Afegim flow"
-								<< std::endl;
 						waiting[3] = flow;
 					} else {
 						std::cout << "Error, flow with the same mad already exist: "
@@ -252,8 +246,6 @@ void Manager::run() {
 					}
 				}
 				while (waiting.find(order) != waiting.end()) {
-					std::cout << "Tractem flow"
-							<< std::endl;
 					order++;
 					operate(flow);
 				}
@@ -309,6 +301,8 @@ void Manager::operate(rina::FlowInformation flow) {
 	}
 	if (flow.remoteAppName.processName == "rina.apps.mad.3") {
 		create_result = createIPCP_3(flow);
+		if (create_result)
+			queryRIB(flow, IPCP_3 + ", RIBDaemon");
 	}
 }
 

@@ -61,7 +61,7 @@ class Manager : public Application {
  private:
         const std::string IPCP_1 = "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=4";
         const std::string IPCP_2 = "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=5";
-        const std::string IPCP_3;
+        const std::string IPCP_3 = "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=4";
 	std::string dif_name_;
 	bool client_app_reg_;
 	rina::cdap_rib::con_handle_t con_;
