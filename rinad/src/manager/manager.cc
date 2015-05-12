@@ -235,18 +235,24 @@ void Manager::operate(rina::FlowInformation flow)
 		if(flow.remoteAppName.processName == "rina.apps.mad.1")
 		{
 			create_result = createIPCP_1(flow);
+			// QUERY RIB
+			if(create_result)
+				queryRIB(flow,
+						"root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=4, RIBDaemon");
+
 		}
 		if(flow.remoteAppName.processName == "rina.apps.mad.2")
 		{
 			create_result = createIPCP_2(flow);
+			if(create_result)
+				queryRIB(flow,
+						"root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=5, RIBDaemon");
+
 		}
 		if(flow.remoteAppName.processName == "rina.apps.mad.3")
 		{
 			create_result = createIPCP_3(flow);
 		}
-		// QUERY RIB
-		if(create_result)
-			queryRIB(flow);
         }
         // FINISH
         cdap::CDAPProviderFactory::destroy(flow.portId);
@@ -334,7 +340,7 @@ bool Manager::createIPCP_2(rina::FlowInformation &flow)
 
         cdap_rib::obj_info_t obj;
         obj.name_ =
-                        "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=4";
+                        "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=5";
         obj.class_ = "IPCProcess";
         obj.inst_ = 0;
         mad_manager::encoders::IPCPConfigEncoder().encode(ipc_config,
@@ -418,13 +424,12 @@ bool Manager::createIPCP_3(rina::FlowInformation &flow)
 	return true;
 }
 
-void Manager::queryRIB(rina::FlowInformation &flow)
+void Manager::queryRIB(rina::FlowInformation &flow, std::string name)
 {
         char buffer[max_sdu_size_in_bytes];
 
 	cdap_rib::obj_info_t obj;
-	obj.name_ =
-			"root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=4, RIBDaemon";
+	obj.name_ = name;
 	obj.class_ = "RIBDaemon";
 	obj.inst_ = 0;
 
@@ -438,10 +443,16 @@ void Manager::queryRIB(rina::FlowInformation &flow)
         cdap_prov_->remote_read(flow.portId, obj, flags, filt);
         std::cout << "Read RIBDaemon request CDAP message sent" << std::endl;
 
-        int bytes_read = ipcManager->readSDU(flow.portId, buffer,
-							max_sdu_size_in_bytes);
-        cdap_rib::SerializedObject message;
-        message.message_ = buffer;
-        message.size_ = bytes_read;
-        cdap_prov_->process_message(message, flow.portId);
+        try{
+		int bytes_read = ipcManager->readSDU(flow.portId, buffer,
+								max_sdu_size_in_bytes);
+		cdap_rib::SerializedObject message;
+		message.message_ = buffer;
+		message.size_ = bytes_read;
+		cdap_prov_->process_message(message, flow.portId);
+        }
+	catch(Exception &e)
+	{
+		std::cout<<"ReadSDUException in queryRIB: "<< e.what() <<std::endl;
+	}
 }

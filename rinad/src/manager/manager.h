@@ -73,7 +73,7 @@ class Manager : public Application {
         bool createIPCP_1(rina::FlowInformation &flow);
         bool createIPCP_2(rina::FlowInformation &flow);
         bool createIPCP_3(rina::FlowInformation &flow);
-        void queryRIB(rina::FlowInformation &flow);
+        void queryRIB(rina::FlowInformation &flow, std::string name);
  private:
 	std::string dif_name_;
 	bool client_app_reg_;
