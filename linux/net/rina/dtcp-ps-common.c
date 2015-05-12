@@ -263,6 +263,67 @@ common_rate_reduction(struct dtcp_ps * ps)
 }
 EXPORT_SYMBOL(common_rate_reduction);
 
+int common_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
+{
+        struct dtcp *       dtcp;
+        struct dt *         dt;
+        uint_t              rtt, new_rtt, srtt, rttvar, trmsecs;
+        timeout_t           start_time;
+        int                 abs;
+        struct rtxq_entry * entry;
+
+        if (!ps)
+                return -1;
+        dtcp = ps->dm;
+        if (!dtcp)
+                return -1;
+        dt = dtcp_dt(dtcp);
+        if (!dt)
+                return -1;
+
+        entry = rtxq_entry_peek(dt_rtxq(dt), sn);
+        if (!entry) {
+                LOG_ERR("Could not retrieve timestamp of Seq num: %u for RTT "
+                        "estimation", sn);
+                return -1;
+        }
+
+        /* if it is a retransmission we do not consider it*/
+        if (rtxq_entry_retries(entry) != 0)
+                return 0;
+
+        start_time = rtxq_entry_timestamp(entry);
+        rtt        = dtcp_rtt(dtcp);
+        srtt       = dtcp_srtt(dtcp);
+        rttvar     = dtcp_rttvar(dtcp);
+
+        new_rtt = jiffies_to_msecs(jiffies - start_time);
+
+        if (!rtt) {
+                rttvar = new_rtt >> 1;
+                srtt   = new_rtt;
+        } else {
+                abs = srtt - new_rtt;
+                abs = abs < 0 ? -abs : abs;
+                rttvar = ((3 * rttvar) >> 2) + (((uint_t)abs) >> 2);
+        }
+        /* k * rttvar = 4 * rttvar */
+        trmsecs  = rttvar << 2;
+        /* G is 0.1s according to RFC6298, then 100ms */
+        trmsecs  = 100 > trmsecs ? 100 : trmsecs;
+        trmsecs += srtt;
+        /* RTO (tr) less than 1s? */
+        trmsecs  = trmsecs < 1000 ? 1000 : trmsecs;
+
+        dtcp_rtt_set(dtcp, new_rtt);
+        dtcp_rttvar_set(dtcp, rttvar);
+        dtcp_srtt_set(dtcp, srtt);
+        dt_sv_tr_set(dt, msecs_to_jiffies(trmsecs));
+
+        return 0;
+}
+EXPORT_SYMBOL(common_rtt_estimator);
+
 int dtcp_ps_common_set_policy_set_param(struct ps_base * bps,
                                         const char    * name,
                                         const char    * value)

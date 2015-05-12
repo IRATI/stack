@@ -91,6 +91,13 @@ struct pdu *     pdu_ctrl_ack_create(struct dtcp * dtcp,
                                      seq_num_t     snd_rt_wind_edge);
 struct pdu *     pdu_ctrl_generate(struct dtcp * dtcp, pdu_type_t type);
 void             update_rt_wind_edge(struct dtcp * dtcp);
+uint_t           dtcp_rtt(struct dtcp * dtcp);
+int              dtcp_rtt_set(struct dtcp * dtcp, uint_t rtt);
+uint_t           dtcp_srtt(struct dtcp * dtcp);
+int              dtcp_srtt_set(struct dtcp * dtcp, uint_t srtt);
+uint_t           dtcp_rttvar(struct dtcp * dtcp);
+int              dtcp_rttvar_set(struct dtcp * dtcp, uint_t rttvar);
+
 /* end SDK */
 
 /*FIXME: wrapper to be called by dtp in the post_worker */

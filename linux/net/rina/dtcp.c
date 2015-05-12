@@ -138,7 +138,10 @@ struct dtcp_sv {
         uint_t       acks;
         uint_t       flow_ctl;
 
+        /* RTT estimation */
         uint_t       rtt;
+        uint_t       srtt;
+        uint_t       rttvar;
 };
 
 struct dtcp {
@@ -195,6 +198,99 @@ int dtcp_pdu_send(struct dtcp * dtcp, struct pdu * pdu)
         			    pdu);
 }
 EXPORT_SYMBOL(dtcp_pdu_send);
+
+uint_t dtcp_rtt(struct dtcp * dtcp)
+{
+        unsigned long flags;
+        uint_t        tmp;
+
+        if (!dtcp || !dtcp->sv)
+                return 0;
+
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        tmp = dtcp->sv->rtt;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+        return tmp;
+}
+EXPORT_SYMBOL(dtcp_rtt);
+
+int dtcp_rtt_set(struct dtcp * dtcp, uint_t rtt)
+{
+        unsigned long flags;
+
+        if (!dtcp || !dtcp->sv)
+                return -1;
+
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        dtcp->sv->rtt = rtt;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+        return 0;
+}
+EXPORT_SYMBOL(dtcp_rtt_set);
+
+uint_t dtcp_srtt(struct dtcp * dtcp)
+{
+        unsigned long flags;
+        uint_t        tmp;
+
+        if (!dtcp || !dtcp->sv)
+                return 0;
+
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        tmp = dtcp->sv->srtt;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+        return tmp;
+}
+EXPORT_SYMBOL(dtcp_srtt);
+
+int dtcp_srtt_set(struct dtcp * dtcp, uint_t srtt)
+{
+        unsigned long flags;
+
+        if (!dtcp || !dtcp->sv)
+                return -1;
+
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        dtcp->sv->srtt = srtt;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+        return 0;
+}
+EXPORT_SYMBOL(dtcp_srtt_set);
+
+uint_t dtcp_rttvar(struct dtcp * dtcp)
+{
+        unsigned long flags;
+        uint_t        tmp;
+
+        if (!dtcp || !dtcp->sv)
+                return 0;
+
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        tmp = dtcp->sv->rttvar;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+        return tmp;
+}
+EXPORT_SYMBOL(dtcp_rttvar);
+
+int dtcp_rttvar_set(struct dtcp * dtcp, uint_t rttvar)
+{
+        unsigned long flags;
+
+        if (!dtcp || !dtcp->sv)
+                return -1;
+
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        dtcp->sv->rtt = rttvar;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+        return 0;
+}
+EXPORT_SYMBOL(dtcp_rttvar_set);
 
 static int last_rcv_ctrl_seq_set(struct dtcp * dtcp,
                                  seq_num_t     last_rcv_ctrl_seq)
@@ -974,6 +1070,7 @@ static struct dtcp_sv default_sv = {
         .acks                   = 0,
         .flow_ctl               = 0,
         .rtt                    = 0,
+        .srtt                   = 0,
 };
 
 /* FIXME: this should be completed with other parameters from the config */
