@@ -44,22 +44,6 @@ class Application {
 
 };
 
-class ConnectionCallback : public rina::cdap::CDAPCallbackInterface {
- public:
-	ConnectionCallback(rina::cdap::CDAPProviderInterface **prov);
-	void open_connection(const rina::cdap_rib::con_handle_t &con,
-				const rina::cdap_rib::flags_t &flags,
-				int message_id);
-	void remote_create_result(const rina::cdap_rib::con_handle_t &con,
-					const rina::cdap_rib::obj_info_t &obj,
-					const rina::cdap_rib::res_info_t &res);
-	void remote_read_result(const rina::cdap_rib::con_handle_t &con,
-				const rina::cdap_rib::obj_info_t &obj,
-				const rina::cdap_rib::res_info_t &res);
- private:
-	rina::cdap::CDAPProviderInterface **prov_;
-};
-
 class Manager : public Application {
  public:
 	Manager(const std::string& dif_name, const std::string& apn,
@@ -75,6 +59,9 @@ class Manager : public Application {
         bool createIPCP_3(rina::FlowInformation &flow);
         void queryRIB(rina::FlowInformation &flow, std::string name);
  private:
+        const std::string IPCP_1 = "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=4";
+        const std::string IPCP_2 = "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=5";
+        const std::string IPCP_3;
 	std::string dif_name_;
 	bool client_app_reg_;
 	rina::cdap_rib::con_handle_t con_;

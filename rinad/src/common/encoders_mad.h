@@ -22,7 +22,6 @@
 #define ENCODERS_MAD_H_
 
 #include <librina/rib_v2.h>
-#include "common/encoders/MA-IPCP.pb.h"
 
 namespace rinad {
 namespace mad_manager {
@@ -79,7 +78,19 @@ public:
 
 
 
-//Specific
+//
+// Encoder of IPCPConfig
+//
+class IPCPConfigEncoder: public rina::rib::Encoder<structures::ipcp_config_t> {
+
+public:
+	void encode (const structures::ipcp_config_t &obj,
+					rina::cdap_rib::ser_obj_t& ser_obj);
+	void decode(const rina::cdap_rib::ser_obj_t &ser_obj,
+			structures::ipcp_config_t& obj);
+	std::string get_type() const{ return "ipcp-config"; };
+};
+
 
 /**
  * Encoder IPCP
@@ -92,25 +103,6 @@ public:
 			structures::ipcp_t& des_obj);
 
 	std::string get_type() const{ return "ipcp"; };
-};
-
-
-/**
-* Encoder of IPCP configuration
-*/
-class IPCPConfigEncoder: public rina::rib::Encoder<structures::ipcp_config_t> {
-
-public:
-	void encode (const structures::ipcp_config_t &obj,
-					rina::cdap_rib::ser_obj_t& ser_obj);
-	void decode(const rina::cdap_rib::ser_obj_t &ser_obj,
-			structures::ipcp_config_t& obj);
-	std::string get_type() const{ return "ipcp-config"; };
-private:
-	void encode_enrollment(const structures::enrollment_config_t &obj,
-			messages::enrollment_config &ser_obj);
-	void decode_enrollment(const messages::enrollment_config &ser_obj,
-	                       structures::enrollment_config_t &obj);
 };
 
 } //namespace encoders
