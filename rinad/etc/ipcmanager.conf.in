@@ -50,7 +50,7 @@
     	"maxPduLifetime" : 60000
     },
     "qosCubes" : [ {
-		 "name" : "unreliablewithflowcontrol",
+	 "name" : "unreliablewithflowcontrol",
          "id" : 1,
          "partialDelivery" : false,
          "orderedDelivery" : true,
@@ -95,7 +95,7 @@
                		    }
              		}
            	  }
-         }
+             }
      } ], 
      "knownIPCProcessAddresses" : [ {
     	 "apName" : "test1.IRATI",
@@ -134,6 +134,24 @@
         "declaredDeadIntervalInMs" : 120000,
         "neighborsEnrollerPeriodInMs" : 30000,
         "maxEnrollmentRetries" : 3
+     },
+     "rmtConfiguration" : {
+        "pduForwardingPolicy" : {
+           "name" : "default",
+           "version" : "0"
+        }, 
+        "qMonitorPolicy" : {
+           "name" : "default",
+           "version" : "0"
+        }, 
+       "maxQPolicy" : {
+           "name" : "default",
+           "version" : "0"
+        },
+       "schedulingPolicy" : {
+           "name" : "default",
+           "version" : "0"
+        }  
      },
      "policySets" : {
         "security-manager" : "default",

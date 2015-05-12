@@ -118,6 +118,8 @@ int                  ipcp_config_destroy(struct ipcp_config * cfg);
 
 struct efcp_config * efcp_config_create(void);
 int                  efcp_config_destroy(struct efcp_config * efcp_config);
+struct rmt_config *  rmt_config_create(void);
+int                  rmt_config_destroy(struct rmt_config * rmt_config);
 struct dif_config *  dif_config_create(void);
 int                  dif_config_destroy(struct dif_config * dif_config);
 struct dif_info *    dif_info_create(void);

@@ -488,9 +488,10 @@ EFCPConfiguration * parseEFCPConfigurationObject(nlattr *nested);
 
 /* RMTConfiguration CLASS */
 enum RMTConfigurationAttributes {
-        RMTC_ATTR_QUEUE_MONITOR_POLICY = 1,
+        RMTC_ATTR_PDU_FORWARD_POLICY = 1,
+        RMTC_ATTR_Q_MONITOR_POLICY,
+        RMTC_ATTR_MAX_Q_POLICY,
         RMTC_ATTR_SCHEDULING_POLICY,
-        RMTC_ATTR_MAX_QUEUE_POLICY,
         __RMTC_ATTR_MAX,
 };
 

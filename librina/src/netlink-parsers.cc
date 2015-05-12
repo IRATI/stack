@@ -3655,37 +3655,47 @@ int putEFCPConfigurationObject(nl_msg* netlinkMessage,
 
 int putRMTConfigurationObject(nl_msg* netlinkMessage,
                 const RMTConfiguration& object){
-        struct nlattr *qmPolicy, *sPolicy, *mqPolicy;
+        struct nlattr *pfPolicy, *qmPolicy, *mqPolicy, *sPolicy;
 
-        if (!(qmPolicy = nla_nest_start(
-                        netlinkMessage, RMTC_ATTR_QUEUE_MONITOR_POLICY))) {
+        if (!(pfPolicy = nla_nest_start(
+                        netlinkMessage, RMTC_ATTR_PDU_FORWARD_POLICY))) {
                 goto nla_put_failure;
         }
         if (putPolicyConfigObject(netlinkMessage,
-                        object.get_rmt_queue_monitor_policy()) < 0) {
+                        object.pdu_forwarding_policy_) < 0) {
+                goto nla_put_failure;
+        }
+        nla_nest_end(netlinkMessage, pfPolicy);
+
+        if (!(qmPolicy = nla_nest_start(
+                        netlinkMessage, RMTC_ATTR_Q_MONITOR_POLICY))) {
+                goto nla_put_failure;
+        }
+        if (putPolicyConfigObject(netlinkMessage,
+                        object.q_monitor_policy_) < 0) {
                 goto nla_put_failure;
         }
         nla_nest_end(netlinkMessage, qmPolicy);
+
+        if (!(mqPolicy = nla_nest_start(
+                        netlinkMessage, RMTC_ATTR_MAX_Q_POLICY))) {
+                goto nla_put_failure;
+        }
+        if (putPolicyConfigObject(netlinkMessage,
+                        object.max_q_policy_) < 0) {
+                goto nla_put_failure;
+        }
+        nla_nest_end(netlinkMessage, mqPolicy);
 
         if (!(sPolicy = nla_nest_start(
                         netlinkMessage, RMTC_ATTR_SCHEDULING_POLICY))) {
                 goto nla_put_failure;
         }
         if (putPolicyConfigObject(netlinkMessage,
-                        object.get_rmt_scheduling_policy()) < 0) {
+                        object.scheduling_policy_) < 0) {
                 goto nla_put_failure;
         }
         nla_nest_end(netlinkMessage, sPolicy);
-
-        if (!(mqPolicy = nla_nest_start(
-                        netlinkMessage, RMTC_ATTR_MAX_QUEUE_POLICY))) {
-                goto nla_put_failure;
-        }
-        if (putPolicyConfigObject(netlinkMessage,
-                        object.get_max_queue_policy()) < 0) {
-                goto nla_put_failure;
-        }
-        nla_nest_end(netlinkMessage, mqPolicy);
 
         return 0;
 
@@ -6190,15 +6200,18 @@ EFCPConfiguration * parseEFCPConfigurationObject(nlattr *nested) {
 
 RMTConfiguration * parseRMTConfigurationObject(nlattr *nested) {
         struct nla_policy attr_policy[RMTC_ATTR_MAX + 1];
-        attr_policy[RMTC_ATTR_QUEUE_MONITOR_POLICY].type = NLA_NESTED;
-        attr_policy[RMTC_ATTR_QUEUE_MONITOR_POLICY].minlen = 0;
-        attr_policy[RMTC_ATTR_QUEUE_MONITOR_POLICY].maxlen = 0;
+        attr_policy[RMTC_ATTR_PDU_FORWARD_POLICY].type = NLA_NESTED;
+        attr_policy[RMTC_ATTR_PDU_FORWARD_POLICY].minlen = 0;
+        attr_policy[RMTC_ATTR_PDU_FORWARD_POLICY].maxlen = 0;
+        attr_policy[RMTC_ATTR_Q_MONITOR_POLICY].type = NLA_NESTED;
+        attr_policy[RMTC_ATTR_Q_MONITOR_POLICY].minlen = 0;
+        attr_policy[RMTC_ATTR_Q_MONITOR_POLICY].maxlen = 0;
+        attr_policy[RMTC_ATTR_MAX_Q_POLICY].type = NLA_NESTED;
+        attr_policy[RMTC_ATTR_MAX_Q_POLICY].minlen = 0;
+        attr_policy[RMTC_ATTR_MAX_Q_POLICY].maxlen = 0;
         attr_policy[RMTC_ATTR_SCHEDULING_POLICY].type = NLA_NESTED;
         attr_policy[RMTC_ATTR_SCHEDULING_POLICY].minlen = 0;
         attr_policy[RMTC_ATTR_SCHEDULING_POLICY].maxlen = 0;
-        attr_policy[RMTC_ATTR_MAX_QUEUE_POLICY].type = NLA_NESTED;
-        attr_policy[RMTC_ATTR_MAX_QUEUE_POLICY].minlen = 0;
-        attr_policy[RMTC_ATTR_MAX_QUEUE_POLICY].maxlen = 0;
         struct nlattr *attrs[RMTC_ATTR_MAX + 1];
 
         int err = nla_parse_nested(attrs, RMTC_ATTR_MAX, nested, attr_policy);
@@ -6210,43 +6223,56 @@ RMTConfiguration * parseRMTConfigurationObject(nlattr *nested) {
         }
 
         RMTConfiguration * result = new RMTConfiguration();
+        PolicyConfig * pdufor;
         PolicyConfig * monitor;
-        PolicyConfig * scheduling;
         PolicyConfig * max;
+        PolicyConfig * scheduling;
 
-        if (attrs[RMTC_ATTR_QUEUE_MONITOR_POLICY]) {
-                monitor = parsePolicyConfigObject(
-                                attrs[RMTC_ATTR_QUEUE_MONITOR_POLICY]);
+        if (attrs[RMTC_ATTR_PDU_FORWARD_POLICY]) {
+        	pdufor = parsePolicyConfigObject(
+                                attrs[RMTC_ATTR_PDU_FORWARD_POLICY]);
+                if (pdufor == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->pdu_forwarding_policy_ = *pdufor;
+                        delete pdufor;
+                }
+        }
+
+        if (attrs[RMTC_ATTR_Q_MONITOR_POLICY]) {
+        	monitor = parsePolicyConfigObject(
+                                attrs[RMTC_ATTR_Q_MONITOR_POLICY]);
                 if (monitor == 0) {
                         delete result;
                         return 0;
                 } else {
-                        result->set_rmt_queue_monitor_policy(*monitor);
+                        result->q_monitor_policy_ = *monitor;
                         delete monitor;
                 }
         }
 
+        if (attrs[RMTC_ATTR_MAX_Q_POLICY]) {
+                max = parsePolicyConfigObject(
+                                attrs[RMTC_ATTR_MAX_Q_POLICY]);
+                if (max == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->max_q_policy_ = *max;
+                        delete max;
+                }
+        }
+
         if (attrs[RMTC_ATTR_SCHEDULING_POLICY]) {
-                scheduling = parsePolicyConfigObject(
+        	scheduling = parsePolicyConfigObject(
                                 attrs[RMTC_ATTR_SCHEDULING_POLICY]);
                 if (scheduling == 0) {
                         delete result;
                         return 0;
                 } else {
-                        result->set_rmt_scheduling_policy(*scheduling);
+                        result->scheduling_policy_ = *scheduling;
                         delete scheduling;
-                }
-        }
-
-        if (attrs[RMTC_ATTR_MAX_QUEUE_POLICY]) {
-                max = parsePolicyConfigObject(
-                                attrs[RMTC_ATTR_MAX_QUEUE_POLICY]);
-                if (max == 0) {
-                        delete result;
-                        return 0;
-                } else {
-                        result->set_max_queue_policy(*max);
-                        delete max;
                 }
         }
 

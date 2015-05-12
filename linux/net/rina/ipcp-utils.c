@@ -480,6 +480,68 @@ int efcp_config_destroy(struct efcp_config * efcp_config)
 }
 EXPORT_SYMBOL(efcp_config_destroy);
 
+struct rmt_config * rmt_config_create(void)
+{
+        struct rmt_config * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->pdu_forwarding = policy_create();
+        if (!tmp->pdu_forwarding) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        tmp->q_monitor = policy_create();
+        if (!tmp->q_monitor) {
+        	rkfree(tmp->pdu_forwarding);
+                rkfree(tmp);
+                return NULL;
+        }
+
+        tmp->max_q = policy_create();
+        if (!tmp->max_q) {
+        	rkfree(tmp->q_monitor);
+        	rkfree(tmp->pdu_forwarding);
+                rkfree(tmp);
+                return NULL;
+        }
+
+        tmp->scheduling = policy_create();
+        if (!tmp->scheduling) {
+        	rkfree(tmp->max_q);
+        	rkfree(tmp->q_monitor);
+        	rkfree(tmp->pdu_forwarding);
+                rkfree(tmp);
+                return NULL;
+        }
+
+        return tmp;
+}
+EXPORT_SYMBOL(rmt_config_create);
+
+int rmt_config_destroy(struct rmt_config * rmt_config)
+{
+        if (rmt_config->pdu_forwarding)
+                rkfree(rmt_config->pdu_forwarding);
+
+        if (rmt_config->q_monitor)
+                policy_destroy(rmt_config->q_monitor);
+
+        if (rmt_config->max_q)
+                rkfree(rmt_config->max_q);
+
+        if (rmt_config->scheduling)
+                policy_destroy(rmt_config->scheduling);
+
+        rkfree(rmt_config);
+
+        return 0;
+}
+EXPORT_SYMBOL(rmt_config_destroy);
+
 struct dif_config * dif_config_create(void)
 {
         struct dif_config * tmp;
@@ -489,6 +551,7 @@ struct dif_config * dif_config_create(void)
                 return NULL;
 
         tmp->efcp_config = NULL;
+        tmp->rmt_config = NULL;
         INIT_LIST_HEAD(&(tmp->ipcp_config_entries));
 
         return tmp;

@@ -29,6 +29,7 @@
 #include "du.h"
 #include "efcp.h"
 #include "ipcp-factories.h"
+#include "ipcp-instances.h"
 #include "ps-factory.h"
 
 struct rmt;
@@ -104,6 +105,8 @@ int          rmt_address_set(struct rmt * instance,
                              address_t    address);
 int          rmt_dt_cons_set(struct rmt *     instance,
                              struct dt_cons * dt_cons);
+int          rmt_config_set(struct rmt *        instance,
+                            struct rmt_config * rmt_config);
 
 int          rmt_n1port_bind(struct rmt * instance,
                              port_id_t    id,
