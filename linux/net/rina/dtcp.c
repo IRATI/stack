@@ -745,14 +745,6 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         seq_num = pci_sequence_number_get(pci);
         last_ctrl = last_rcv_ctrl_seq(dtcp);
 
-        if (seq_num > (last_ctrl + 1)) {
-                rcu_read_lock();
-                ps = container_of(rcu_dereference(dtcp->base.ps),
-                                  struct dtcp_ps, base);
-                ps->lost_control_pdu(ps);
-                rcu_read_unlock();
-        }
-
         if (seq_num <= last_ctrl) {
                 switch (type) {
                 case PDU_TYPE_FC:
@@ -760,16 +752,10 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
                         break;
                 case PDU_TYPE_ACK:
                         acks_inc(dtcp);
-                        rcu_read_lock();
-                        ps->rtt_estimator(ps, seq_num);
-                        rcu_read_unlock();
                         break;
                 case PDU_TYPE_ACK_AND_FC:
                         acks_inc(dtcp);
                         flow_ctrl_inc(dtcp);
-                        rcu_read_lock();
-                        ps->rtt_estimator(ps, seq_num);
-                        rcu_read_unlock();
                         break;
                 default:
                         break;
@@ -779,8 +765,15 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
                 return 0;
 
         }
+        rcu_read_lock();
+        ps = container_of(rcu_dereference(dtcp->base.ps),
+                          struct dtcp_ps, base);
+        if (seq_num > (last_ctrl + 1)) {
+                ps->lost_control_pdu(ps);
+        }
+        rcu_read_unlock();
 
-        /* We are in seq_num == last_ctrl + 1 */
+        /* We are in seq_num >= last_ctrl + 1 */
 
         last_rcv_ctrl_seq_set(dtcp, seq_num);
 
@@ -789,6 +782,9 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         switch (type) {
         case PDU_TYPE_ACK:
                 ret = rcv_ack(dtcp, pdu);
+                rcu_read_lock();
+                ps->rtt_estimator(ps, seq_num);
+                rcu_read_unlock();
                 break;
         case PDU_TYPE_NACK:
                 ret = rcv_nack_ctl(dtcp, pdu);
@@ -797,6 +793,9 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
                 ret = rcv_flow_ctl(dtcp, pdu);
                 break;
         case PDU_TYPE_ACK_AND_FC:
+                rcu_read_lock();
+                ps->rtt_estimator(ps, seq_num);
+                rcu_read_unlock();
                 ret = rcv_ack_and_flow_ctl(dtcp, pdu);
                 break;
         default:

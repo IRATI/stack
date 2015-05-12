@@ -474,11 +474,9 @@ static int rtxqueue_entries_ack(struct rtxqueue * q,
         ASSERT(q);
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
-                struct pci * pci;
                 seq_num_t    seq;
 
-                pci = pdu_pci_get_rw(cur->pdu);
-                seq = pci_sequence_number_get(pci);
+                seq = cur->sn;
                 if (seq <= seq_num) {
                         LOG_DBG("Seq num acked: %u", seq);
                         rtxq_entry_destroy(cur);
@@ -529,6 +527,18 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
         }
 
         return 0;
+}
+
+static struct rtxq_entry * rtxqueue_entry_peek(struct rtxqueue * q,
+                                               seq_num_t sn)
+{
+        struct rtxq_entry * cur;
+        list_for_each_entry(cur, &q->head, next) {
+                if (cur->sn == sn) {
+                        return cur;
+                }
+        }
+        return NULL;
 }
 
 /* push in seq_num order */
@@ -800,6 +810,36 @@ struct rtxq * rtxq_create_ni(struct dt *  dt,
 
         return tmp;
 }
+
+struct rtxq_entry * rtxq_entry_peek(struct rtxq * q, seq_num_t sn)
+{
+        unsigned long       flags;
+        struct rtxq_entry * entry;
+        if (!q)
+                return NULL;
+
+        spin_lock_irqsave(&q->lock, flags);
+        entry = rtxqueue_entry_peek(q->queue, sn);
+        spin_unlock_irqrestore(&q->lock, flags);
+        return entry;
+}
+EXPORT_SYMBOL(rtxq_entry_peek);
+
+unsigned long rtxq_entry_timestamp(struct rtxq_entry * entry)
+{
+        if (!entry)
+                return 0;
+        return entry->time_stamp;
+}
+EXPORT_SYMBOL(rtxq_entry_timestamp);
+
+int rtxq_entry_retries(struct rtxq_entry * entry)
+{
+        if (!entry)
+                return -1;
+        return entry->retries;
+}
+EXPORT_SYMBOL(rtxq_entry_retries);
 
 int rtxq_push_sn(struct rtxq * q, seq_num_t sn)
 {
