@@ -27,20 +27,9 @@
 
 #define RINA_PREFIX "dtp-ps-default"
 
-//#include "logs.h"
 #include "rds/rmem.h"
-//#include "rds/rtimer.h"
-
 #include "dtp-ps.h"
 #include "dtp.h"
-//#include "pdu.h"
-
-//#include "dtcp.h"
-//#include "dtcp-ps.h"
-//#include "dtcp-utils.h"
-//#include "dt-utils.h"
-//#include "debug.h"
-
 #include "dtp-ps-common.h"
 
 static int
