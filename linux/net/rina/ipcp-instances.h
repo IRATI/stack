@@ -97,6 +97,21 @@ struct efcp_config {
         struct policy * unknown_flow;
 };
 
+/* Represents the configuration of the RMT */
+struct rmt_config {
+	/* The configuration of the PDU Forwarding policy */
+	struct policy * pdu_forwarding;
+
+	/* The configuration of the queue monitor policy */
+	struct policy * q_monitor;
+
+	/* The configuration of the max queue policy */
+	struct policy * max_q;
+
+	/* The configuration of the scheduling policy */
+	struct policy * scheduling;
+};
+
 /* Represents a DIF configuration (policies, parameters, etc) */
 struct dif_config {
         /* List of configuration entries */
@@ -104,6 +119,9 @@ struct dif_config {
 
         /* the config of the efcp */
         struct efcp_config * efcp_config;
+
+        /* the config of the rmt */
+        struct rmt_config * rmt_config;
 
         /* The address of the IPC Process*/
         address_t           address;

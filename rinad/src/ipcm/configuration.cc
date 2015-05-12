@@ -55,6 +55,9 @@ void parse_policy(const Json::Value  & root,
 {
         Json::Value p = root[name];
 
+        if (p == 0)
+        	return;
+
         pol.name_    = p.get("name", string()).asString();
         pol.version_ = p.get("version", string()).asString();
 
@@ -429,16 +432,20 @@ void parse_dif_configs(const Json::Value   & root,
                                 rina::RMTConfiguration rc;
 
                                 parse_policy(rmt_conf,
-                                             "rmtQueueMonitorPolicy",
-                                             rc.rmt_queue_monitor_policy_);
+                                             "pduForwardingPolicy",
+                                             rc.pdu_forwarding_policy_);
 
                                 parse_policy(rmt_conf,
-                                             "rmtSchedulingPolicy",
-                                             rc.rmt_scheduling_policy_);
+                                             "qMonitorPolicy",
+                                             rc.q_monitor_policy_);
 
                                 parse_policy(rmt_conf,
-                                             "maxQueuePolicy",
-                                             rc.max_queue_policy_);
+                                             "maxQPolicy",
+                                             rc.max_q_policy_);
+
+                                parse_policy(rmt_conf,
+                                             "schedulingPolicy",
+                                             rc.scheduling_policy_);
 
                                 props.rmtConfiguration = rc;
                         }

@@ -1073,36 +1073,6 @@ void FlowAllocatorConfiguration::set_seq_rollover_policy(
 	seq_rollover_policy_ = seq_rollover_policy;
 }
 
-// CLASS RMTConfiguration
-RMTConfiguration::RMTConfiguration(){
-}
-
-const PolicyConfig& RMTConfiguration::get_max_queue_policy() const {
-	return max_queue_policy_;
-}
-
-void RMTConfiguration::set_max_queue_policy(const PolicyConfig& max_queue_policy) {
-	max_queue_policy_ = max_queue_policy;
-}
-
-const PolicyConfig& RMTConfiguration::get_rmt_queue_monitor_policy() const {
-	return rmt_queue_monitor_policy_;
-}
-
-void RMTConfiguration::set_rmt_queue_monitor_policy(
-		const PolicyConfig& rmt_queue_monitor_policy) {
-	rmt_queue_monitor_policy_ = rmt_queue_monitor_policy;
-}
-
-const PolicyConfig& RMTConfiguration::get_rmt_scheduling_policy() const {
-	return rmt_scheduling_policy_;
-}
-
-void RMTConfiguration::set_rmt_scheduling_policy(
-		const PolicyConfig& rmt_scheduling_policy){
-	rmt_scheduling_policy_ = rmt_scheduling_policy;
-}
-
 // CLASS LinkStateRouting Configuraiton
 
 const std::string LinkStateRoutingConfiguration::DEFAULT_ROUTING_ALGORITHM =
