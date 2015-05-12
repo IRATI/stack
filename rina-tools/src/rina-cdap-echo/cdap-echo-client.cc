@@ -130,8 +130,8 @@ void Client::createFlow()
 void Client::cacep()
 {
         char buffer[max_buffer_size];
-        cdap::CDAPProviderFactory::init(2000);
-        cdap_prov_ = cdap::CDAPProviderFactory::create(false, this);
+        cdap::init(this, false);
+        cdap_prov_ = cdap::getProvider();
         cdap_rib::vers_info_t ver;
         ver.version_ = 1;
         cdap_rib::src_info_t src;
@@ -247,7 +247,7 @@ void Client::destroyFlow()
         DeallocateFlowResponseEvent *resp = 0;
         unsigned int seqnum;
         IPCEvent* event;
-        cdap::CDAPProviderFactory::destroy(flow_.portId);
+        cdap::destroy(flow_.portId);
         seqnum = ipcManager->requestFlowDeallocation(flow_.portId);
 
         for (;;) {
@@ -262,5 +262,4 @@ void Client::destroyFlow()
         assert(resp);
 
         ipcManager->flowDeallocationResult(flow_.portId, resp->result == 0);
-        cdap::CDAPProviderFactory::finit();
 }

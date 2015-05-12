@@ -155,11 +155,11 @@ void Server::serveEchoFlow(int port_id)
 {
   bool keep_serving = true;
   char buffer[max_sdu_size_in_bytes];
-  rina::cdap::CDAPProviderInterface *cdap_prov = 0;
+  rina::cdap::CDAPProviderInterface *cdap_prov = NULL;
   ConnectionCallback* callback = new ConnectionCallback(&keep_serving, &cdap_prov);
   std::cout<<"cdap_prov created"<<std::endl;
-  cdap::CDAPProviderFactory::init(2000);
-  cdap_prov = cdap::CDAPProviderFactory::create(false, callback);
+  cdap::init(callback, false);
+  cdap_prov = cdap::getProvider();
   while (keep_serving) {
     int bytes_read = ipcManager->readSDU(port_id, buffer, max_sdu_size_in_bytes);
     cdap_rib::SerializedObject message;
@@ -167,7 +167,7 @@ void Server::serveEchoFlow(int port_id)
     message.size_ = bytes_read;
     cdap_prov->process_message(message, port_id);
   }
-  cdap::CDAPProviderFactory::destroy(port_id);
+  cdap::destroy(port_id);
   delete cdap_prov;
   delete callback;
 }
