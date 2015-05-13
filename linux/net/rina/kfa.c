@@ -40,11 +40,12 @@
 #include "kfa-utils.h"
 
 struct kfa {
-        spinlock_t             lock;
-        struct pidm *          pidm;
-        struct kfa_pmap *      flows;
-        struct ipcp_instance * ipcp;
-        struct list_head       list;
+        spinlock_t                lock;
+        struct pidm *             pidm;
+        struct kfa_pmap *         flows;
+        struct ipcp_instance *    ipcp;
+        struct list_head          list;
+        struct workqueue_struct * flowdelq;
 };
 
 enum flow_state {
@@ -188,19 +189,78 @@ static int kfa_flow_destroy(struct kfa *       instance,
         return retval;
 }
 
-static int kfa_flow_deallocate(struct ipcp_instance_data * data,
-                               port_id_t                   id)
+struct flowdel_data {
+        struct kfa * kfa;
+        port_id_t    id;
+};
+
+static int kfa_flow_deallocate_worker(void * data)
 {
-        struct ipcp_flow * flow;
-        struct kfa *       instance;
-        unsigned long      flags;
+        struct ipcp_flow *    flow;
+        struct kfa *          instance;
+        port_id_t             id;
+        struct flowdel_data * wqdata;
+        unsigned long         flags;
 
         IRQ_BARRIER;
 
-        if (!data) {
+        wqdata = (struct flowdel_data *) data;
+        if (!wqdata) {
                 LOG_ERR("Bogus ipcp data passed, bailing out");
                 return -1;
         }
+
+        instance = wqdata->kfa;
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return -1;
+        }
+        id = wqdata->id;
+        if (!is_port_id_ok(id)) {
+                LOG_ERR("Bogus flow-id, bailing out");
+                return -1;
+        }
+
+        spin_lock_irqsave(&instance->lock, flags);
+
+        flow = kfa_pmap_find(instance->flows, id);
+        if (!flow) {
+                spin_unlock_irqrestore(&instance->lock, flags);
+                LOG_ERR("The flow with port-id %d was already destroyed", id);
+                return 0;
+        }
+
+        ASSERT(flow->state == PORT_STATE_DEALLOCATED);
+
+        if ((atomic_read(&flow->readers) == 0) &&
+            (atomic_read(&flow->writers) == 0) &&
+            (atomic_read(&flow->posters) == 0)) {
+                if (kfa_flow_destroy(instance, flow, id))
+                        LOG_ERR("Could not destroy the flow correctly");
+                spin_unlock_irqrestore(&instance->lock, flags);
+                return 0;
+        }
+
+        spin_unlock_irqrestore(&instance->lock, flags);
+
+        LOG_DBG("Waking up all!");
+        wake_up_interruptible_all(&flow->read_wqueue);
+        wake_up_interruptible_all(&flow->write_wqueue);
+
+        return 0;
+}
+
+static int kfa_flow_deallocate(struct ipcp_instance_data * data,
+                               port_id_t                   id)
+{
+        struct rwq_work_item * item;
+        struct flowdel_data *  wqdata;
+        struct ipcp_flow *     flow;
+        struct kfa *           instance;
+        unsigned long          flags;
+
+        if (!data)
+                return -1;
 
         instance = data->kfa;
         if (!instance) {
@@ -223,20 +283,19 @@ static int kfa_flow_deallocate(struct ipcp_instance_data * data,
 
         flow->state = PORT_STATE_DEALLOCATED;
 
-        if ((atomic_read(&flow->readers) == 0) &&
-            (atomic_read(&flow->writers) == 0) &&
-            (atomic_read(&flow->posters) == 0)) {
-                if (kfa_flow_destroy(instance, flow, id))
-                        LOG_ERR("Could not destroy the flow correctly");
-                spin_unlock_irqrestore(&instance->lock, flags);
-                return 0;
-        }
-
         spin_unlock_irqrestore(&instance->lock, flags);
 
-        LOG_DBG("Waking up all!");
-        wake_up_interruptible_all(&flow->read_wqueue);
-        wake_up_interruptible_all(&flow->write_wqueue);
+        wqdata       = rkzalloc(sizeof(*wqdata), GFP_KERNEL);
+        wqdata->kfa  = instance;
+        wqdata->id   = id;
+
+        item = rwq_work_create_ni(kfa_flow_deallocate_worker, (void *) wqdata);
+        if (!item) {
+                rkfree(data);
+                return -1;
+        }
+
+        rwq_work_post(data->kfa->flowdelq, item);
 
         return 0;
 }
@@ -920,6 +979,16 @@ struct kfa * kfa_create(void)
         }
         instance->ipcp->data->kfa = instance;
 
+        instance->flowdelq = rwq_create("flowdelq");
+        if (!instance->flowdelq) {
+                LOG_ERR("Could not allocate memory for kfa ipcp "
+                        "internal data");
+                pidm_destroy(instance->pidm);
+                kfa_pmap_destroy(instance->flows);
+                rkfree(instance);
+                return NULL;
+        }
+
         spin_lock_init(&instance->lock);
 
         return instance;
@@ -937,6 +1006,8 @@ int kfa_destroy(struct kfa * instance)
         kfa_pmap_destroy(instance->flows);
 
         pidm_destroy(instance->pidm);
+        rwq_destroy(instance->flowdelq);
+
         rkfree(instance);
 
         return 0;
