@@ -34,7 +34,7 @@
 #include <librina/ipc-manager.h>
 #include <librina/patterns.h>
 
-#include "rina-configuration.h"
+#include "dif-template-manager.h"
 
 //Addons
 #include "addon.h"
@@ -798,6 +798,8 @@ private:
 	void io_loop(void);
 
 	friend class Singleton<rinad::IPCManager_>;
+
+	DIFTemplateManager * dif_template_manager;
 };
 
 

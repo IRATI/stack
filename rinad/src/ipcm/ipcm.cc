@@ -76,13 +76,16 @@ namespace rinad {
 //Singleton instance
 Singleton<IPCManager_> IPCManager;
 
-IPCManager_::IPCManager_() : req_to_stop(false), io_thread(NULL){
+IPCManager_::IPCManager_() : req_to_stop(false), io_thread(NULL),
+		dif_template_manager(NULL){
 
 }
 
 IPCManager_::~IPCManager_()
 {
-
+	if (dif_template_manager) {
+		delete dif_template_manager;
+	}
 }
 
 void IPCManager_::init(const std::string& loglevel)
@@ -106,6 +109,8 @@ void IPCManager_::init(const std::string& loglevel)
 		io_thread = new rina::Thread(&io_thread_attrs,
 							io_loop_trampoline,
 							NULL);
+
+		dif_template_manager = new DIFTemplateManager("/usr/local/irati/etc/templates");
 	} catch (rina::InitializationException& e) {
 		LOG_ERR("Error while initializing librina-ipc-manager");
 		exit(EXIT_FAILURE);
