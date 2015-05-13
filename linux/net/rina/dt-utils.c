@@ -261,6 +261,7 @@ void cwq_deliver(struct cwq * queue,
         struct dtp *            dtp;
         struct pdu  *           tmp;
         bool                    rtx_ctrl;
+        bool                    flow_ctrl;
 
         if (!queue)
                 return;
@@ -276,7 +277,8 @@ void cwq_deliver(struct cwq * queue,
                 return;
 
         rcu_read_lock();
-        rtx_ctrl = dtcp_ps_get(dtcp)->rtx_ctrl;
+        rtx_ctrl  = dtcp_ps_get(dtcp)->rtx_ctrl;
+        flow_ctrl = dtcp_ps_get(dtcp)->flow_ctrl;
         rcu_read_unlock();
 
         dtp = dt_dtp(dt);
@@ -294,22 +296,25 @@ void cwq_deliver(struct cwq * queue,
                         spin_unlock(&queue->lock);
                         return;
                 }
-
-                if (rtx_ctrl) {
+                pci = pdu_pci_get_ro(pdu);
+                if (flow_ctrl || rtx_ctrl) {
                         rtxq = dt_rtxq(dt);
                         if (!rtxq) {
                                 spin_unlock(&queue->lock);
                                 LOG_ERR("Couldn't find the RTX queue");
                                 return;
                         }
-                        tmp = pdu_dup_ni(pdu);
-                        if (!tmp) {
-                                spin_unlock(&queue->lock);
-                                return;
+                        if (!rtx_ctrl) {
+                                rtxq_push_sn(rtxq, pci_sequence_number_get(pci));
+                        } else {
+                                tmp = pdu_dup_ni(pdu);
+                                if (!tmp) {
+                                        spin_unlock(&queue->lock);
+                                        return;
+                                }
+                                rtxq_push_ni(rtxq, tmp);
                         }
-                        rtxq_push_ni(rtxq, tmp);
                 }
-                pci = pdu_pci_get_ro(pdu);
                 if (dtp_sv_max_seq_nr_set(dtp,
                                           pci_sequence_number_get(pci)))
                         LOG_ERR("Problems setting sender left window edge");

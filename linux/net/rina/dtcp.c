@@ -801,7 +801,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         struct dtcp_ps * ps;
         struct pci *     pci;
         pdu_type_t       type;
-        seq_num_t        seq_num;
+        seq_num_t        sn;
         seq_num_t        last_ctrl;
         int              ret;
 
@@ -838,10 +838,10 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
                 return -1;
         }
 
-        seq_num = pci_sequence_number_get(pci);
+        sn = pci_sequence_number_get(pci);
         last_ctrl = last_rcv_ctrl_seq(dtcp);
 
-        if (seq_num <= last_ctrl) {
+        if (sn <= last_ctrl) {
                 switch (type) {
                 case PDU_TYPE_FC:
                         flow_ctrl_inc(dtcp);
@@ -864,14 +864,14 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         rcu_read_lock();
         ps = container_of(rcu_dereference(dtcp->base.ps),
                           struct dtcp_ps, base);
-        if (seq_num > (last_ctrl + 1)) {
+        if (sn > (last_ctrl + 1)) {
                 ps->lost_control_pdu(ps);
         }
         rcu_read_unlock();
 
-        /* We are in seq_num >= last_ctrl + 1 */
+        /* We are in sn >= last_ctrl + 1 */
 
-        last_rcv_ctrl_seq_set(dtcp, seq_num);
+        last_rcv_ctrl_seq_set(dtcp, sn);
 
         LOG_DBG("dtcp_common_rcv_control sending to proper function...");
 
@@ -879,7 +879,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         case PDU_TYPE_ACK:
                 ret = rcv_ack(dtcp, pdu);
                 rcu_read_lock();
-                ps->rtt_estimator(ps, seq_num);
+                ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
                 rcu_read_unlock();
                 break;
         case PDU_TYPE_NACK:
@@ -890,7 +890,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
                 break;
         case PDU_TYPE_ACK_AND_FC:
                 rcu_read_lock();
-                ps->rtt_estimator(ps, seq_num);
+                ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
                 rcu_read_unlock();
                 ret = rcv_ack_and_flow_ctl(dtcp, pdu);
                 break;
