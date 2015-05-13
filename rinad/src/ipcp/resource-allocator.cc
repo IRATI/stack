@@ -205,17 +205,4 @@ INMinusOneFlowManager * ResourceAllocator::get_n_minus_one_flow_manager() const 
 	return n_minus_one_flow_manager_;
 }
 
-int ResourceAllocator::select_policy_set(const std::string& path,
-		const std::string& name)
-{
-	return select_policy_set_common(get_name(), path, name);
-}
-
-int ResourceAllocator::set_policy_set_param(const std::string& path,
-		const std::string& name,
-		const std::string& value)
-{
-	return set_policy_set_param_common(path, name, value);
-}
-
 }

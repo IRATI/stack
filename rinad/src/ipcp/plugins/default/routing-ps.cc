@@ -1054,7 +1054,7 @@ void LinkStateRoutingPolicy::processFlowDeallocatedEvent(
 
 void LinkStateRoutingPolicy::processNeighborLostEvent(
 		rina::ConnectiviyToNeighborLostEvent * event) {
-	db_->deprecateObject(event->neighbor_->address_);
+	db_->deprecateObject(event->neighbor_.address_);
 }
 
 void LinkStateRoutingPolicy::processFlowAllocatedEvent(
@@ -1085,7 +1085,7 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(
 	std::list<rina::FlowInformation>::iterator it;
 
 	for (it = allocated_flows_.begin(); it != allocated_flows_.end(); ++it) {
-		if (it->portId == event->neighbor_->underlying_port_id_)
+		if (it->portId == event->neighbor_.underlying_port_id_)
 				/*it->remoteAppName.processName.compare(
 				event->neighbor_->get_name().processName) == 0) */{
 			LOG_IPCP_INFO(
@@ -1093,7 +1093,7 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(
 			try {
 				db_->addObjectToGroup(ipc_process_->get_address(),
 						ipc_process_->namespace_manager_->getAdressByname(
-								event->neighbor_->get_name()), 1, it->portId);
+								event->neighbor_.get_name()), 1, it->portId);
 				allocated_flows_.erase(it);
 				break;
 			} catch (rina::Exception &e) {
@@ -1106,7 +1106,7 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(
 		return;
 	}
 
-	int portId = event->neighbor_->get_underlying_port_id();
+	int portId = event->neighbor_.get_underlying_port_id();
 
 	try {
 		rina::RIBObjectValue robject_value;

@@ -202,7 +202,13 @@ void IPCPRIBDaemonImpl::sendMessageSpecific(bool useAddress, const rina::CDAPMes
 					cdapMessage.to_string().c_str());
 
 			cdsm->messageSent(cdapMessage, sessionId);
-		    delete sdu;
+			delete sdu;
+
+			//Check if CDAP session was closed due to the message sent
+			const rina::CDAPSessionInterface* cdap_session = cdsm->get_cdap_session(sessionId);
+			if (cdap_session && cdap_session->is_closed()) {
+				cdsm->removeCDAPSession(sessionId);
+			}
 		}
 	} catch (rina::Exception &e) {
 		if (sdu) {
@@ -245,7 +251,7 @@ void IPCPRIBDaemonImpl::cdapMessageDelivered(char* message, int length, int port
     const rina::CDAPMessage * cdapMessage;
     const rina::CDAPMessage * aDataCDAPMessage;
     const rina::CDAPSessionInterface * cdapSession;
-    rina::CDAPSessionDescriptor  * cdapSessionDescriptor;
+    rina::CDAPSessionDescriptor * descriptor;
     rina::ADataObject * adata;
 
     //1 Decode the message and obtain the CDAP session descriptor
@@ -270,6 +276,7 @@ void IPCPRIBDaemonImpl::cdapMessageDelivered(char* message, int length, int port
     		}
 
     		aDataCDAPMessage = cdap_session_manager_->decodeCDAPMessage(*adata->encoded_cdap_message_);
+
     		if (aDataCDAPMessage->invoke_id_ != 0) {
     			if (aDataCDAPMessage->is_request_message()) {
     				cdap_session_manager_->get_invoke_id_manager()->reserveInvokeId(aDataCDAPMessage->invoke_id_,
@@ -280,16 +287,18 @@ void IPCPRIBDaemonImpl::cdapMessageDelivered(char* message, int length, int port
     			}
     		}
 
-    		cdapSessionDescriptor = new rina::CDAPSessionDescriptor();
+    		descriptor = new rina::CDAPSessionDescriptor();
 
     		LOG_IPCP_DBG("Received A-Data CDAP message from address %u : %s", adata->source_address_,
     	    		aDataCDAPMessage->to_string().c_str());
 
     		atomic_send_lock_.unlock();
-    		processIncomingCDAPMessage(aDataCDAPMessage, cdapSessionDescriptor);
+    		processIncomingCDAPMessage(aDataCDAPMessage,
+    					   descriptor,
+    					   rina::CDAPSessionInterface::SESSION_STATE_CON);
     		delete aDataCDAPMessage;
     		delete adata;
-    		delete cdapSessionDescriptor;
+    		delete descriptor;
     		delete cdapMessage;
     		return;
     	} catch (rina::Exception &e) {
@@ -307,12 +316,19 @@ void IPCPRIBDaemonImpl::cdapMessageDelivered(char* message, int length, int port
             return;
     }
 
-    cdapSessionDescriptor = cdapSession->get_session_descriptor();
+    descriptor = cdapSession->get_session_descriptor();
     LOG_IPCP_DBG("Received CDAP message through portId %d: %s", portId,
                     cdapMessage->to_string().c_str());
     atomic_send_lock_.unlock();
 
-    processIncomingCDAPMessage(cdapMessage, cdapSessionDescriptor);
+    processIncomingCDAPMessage(cdapMessage, descriptor,
+		    	       cdapSession->get_session_state());
+
+    //Check if CDAP session has been closed due to the message received
+    if (cdapSession->is_closed()) {
+	    cdap_session_manager_->removeCDAPSession(portId);
+    }
+
     delete cdapMessage;
 }
 

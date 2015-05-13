@@ -29,7 +29,7 @@ namespace cdap_rib {
 
 typedef struct SerializedObject {
 	int size_;
-	char* message_;
+	void* message_;
 } ser_obj_t;
 
 typedef struct cdap_params {
