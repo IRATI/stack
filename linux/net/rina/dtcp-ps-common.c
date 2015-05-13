@@ -307,6 +307,10 @@ int common_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
                 abs = abs < 0 ? -abs : abs;
                 rttvar = ((3 * rttvar) >> 2) + (((uint_t)abs) >> 2);
         }
+
+        /*FIXME: k, G, alpha and betha should be parameters passed to the policy
+         * set. Probably moving them to ps->priv */
+
         /* k * rttvar = 4 * rttvar */
         trmsecs  = rttvar << 2;
         /* G is 0.1s according to RFC6298, then 100ms */
@@ -319,6 +323,7 @@ int common_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
         dtcp_rttvar_set(dtcp, rttvar);
         dtcp_srtt_set(dtcp, srtt);
         dt_sv_tr_set(dt, msecs_to_jiffies(trmsecs));
+        LOG_DBG("TR set to %lu msecs", msecs_to_jiffies(trmsecs));
 
         return 0;
 }
