@@ -534,13 +534,19 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
         return 0;
 }
 
-static struct rtxq_entry * rtxqueue_entry_peek(struct rtxqueue * q,
-                                               seq_num_t sn)
+static struct rtxq_entry * rtxqueue_entry_peek_and_clean(struct rtxqueue * q,
+                                                         seq_num_t sn)
 {
-        struct rtxq_entry * cur;
-        list_for_each_entry(cur, &q->head, next) {
+        struct rtxq_entry * cur, *n;
+        list_for_each_entry_safe(cur, n, &q->head, next) {
+                if (cur->sn < sn) {
+                        rtxq_entry_destroy(cur);
+                }
                 if (cur->sn == sn) {
                         return cur;
+                }
+                if (cur->sn > sn) {
+                        return NULL;
                 }
         }
         return NULL;
@@ -816,7 +822,7 @@ struct rtxq * rtxq_create_ni(struct dt *  dt,
         return tmp;
 }
 
-struct rtxq_entry * rtxq_entry_peek(struct rtxq * q, seq_num_t sn)
+struct rtxq_entry * rtxq_entry_peek_and_clean(struct rtxq * q, seq_num_t sn)
 {
         unsigned long       flags;
         struct rtxq_entry * entry;
@@ -824,11 +830,11 @@ struct rtxq_entry * rtxq_entry_peek(struct rtxq * q, seq_num_t sn)
                 return NULL;
 
         spin_lock_irqsave(&q->lock, flags);
-        entry = rtxqueue_entry_peek(q->queue, sn);
+        entry = rtxqueue_entry_peek_and_clean(q->queue, sn);
         spin_unlock_irqrestore(&q->lock, flags);
         return entry;
 }
-EXPORT_SYMBOL(rtxq_entry_peek);
+EXPORT_SYMBOL(rtxq_entry_peek_and_clean);
 
 unsigned long rtxq_entry_timestamp(struct rtxq_entry * entry)
 {
