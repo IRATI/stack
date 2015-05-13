@@ -34,38 +34,17 @@ using namespace std;
 
 namespace rinad {
 
-// Return the configuration of the DIF named "difName" if it is known
+// Return the name of the template of the DIF named "difName" if it is known
 // @param difName
 // @result
-bool RINAConfiguration::lookup_dif_properties(
+bool RINAConfiguration::lookup_dif_template_mappings(
                 const rina::ApplicationProcessNamingInformation& dif_name,
-                DIFProperties& result) const
+                DIFTemplateMapping& result) const
 {
-        for (list<DIFProperties>::const_iterator it = difConfigurations.begin();
+        for (list<DIFTemplateMapping>::const_iterator it = difConfigurations.begin();
                                         it != difConfigurations.end(); it++) {
-                if (it->difName == dif_name) {
+                if (it->dif_name == dif_name) {
                         result = *it;
-                        return true;
-                }
-        }
-
-        return false;
-}
-
-
-// Return the DIF type by supplying the difName
-// @param dif_name
-// @result
-bool RINAConfiguration::lookup_type_by_dif(
-                const rina::ApplicationProcessNamingInformation& dif_name,
-                std::string& result) const
-{
-        DIFProperties dif_props;
-
-        for (list<DIFProperties>::const_iterator it = difConfigurations.begin();
-                                        it != difConfigurations.end(); it++) {
-                if (it->difName == dif_name) {
-                        result = it->difType;
                         return true;
                 }
         }
@@ -166,18 +145,10 @@ string RINAConfiguration::toString() const
                 dump_map(ss, it->parameters, 2);
         }
 
-        for (list<DIFProperties>::const_iterator it = difConfigurations.begin();
+        for (list<DIFTemplateMapping>::const_iterator it = difConfigurations.begin();
                                 it != difConfigurations.end(); it++) {
-                ss << "DIF configuration/properties:" << endl;
-                ss << "\tDIF name: " << it->difName.toString() << endl;
-                ss << "\tDIF type: " << it->difType << endl;
-                // TODO complete
-                ss << "\tParameters: " << endl;
-                for (map<string, string>::const_iterator pit =
-                        it->configParameters.begin();
-                                pit != it->configParameters.end(); pit++) {
-                        ss << "\t\t" << pit->first << ":" << pit->second << endl;
-                }
+                ss << "\tDIF name: " << it->dif_name.toString() << endl;
+                ss << "\tTemplate name: " << it->template_name << endl;
         }
 
         ss << "Application --> DIF mappings:" << endl;
@@ -191,7 +162,7 @@ string RINAConfiguration::toString() const
         return local.toString() + ss.str();
 }
 
-bool DIFProperties::lookup_ipcp_address(
+bool DIFTemplate::lookup_ipcp_address(
                 const rina::ApplicationProcessNamingInformation& ipcp_name,
                 unsigned int& result)
 {
@@ -206,6 +177,68 @@ bool DIFProperties::lookup_ipcp_address(
         }
 
         return false;
+}
+
+std::string DIFTemplate::toString()
+{
+	std::stringstream ss;
+	ss << "* DIF Template name: " << templateName << std::endl;
+	ss << "* DIF type: " << difType << std::endl;
+
+	if (difType == rina::NORMAL_IPC_PROCESS) {
+		ss << "** DATA TRANSFER CONSTANTS **"<<std::endl;
+		ss << dataTransferConstants.toString()<<std::endl;
+
+		if (qosCubes.size() != 0) {
+			ss << "** QOS CUBES **" << std::endl;
+			std::list<rina::QoSCube>::iterator it;
+			for (it = qosCubes.begin(); it != qosCubes.end(); ++ it) {
+				ss << "*** QOS CUBE " << it->name_ << " ***" <<std::endl;
+				ss << it->toString() << std::endl;
+			}
+		}
+
+		ss << "** ENROLLMENT TASK **"<<std::endl;
+		ss << etConfiguration.toString();
+
+		ss << "** RELAYING AND MULTIPLEXING TASK ** "<<std::endl;
+		ss <<rmtConfiguration.toString();
+
+		ss << "** PDU FORWARDIG TABLE GENERATOR **" <<std::endl;
+		ss << pdufTableGeneratorConfiguration.toString()<<std::endl;
+
+		if (policySets.size() != 0) {
+			ss << "** POLICY SETS **" << std::endl;
+			std::map<std::string, std::string>::iterator it;
+			for (it = policySets.begin(); it != policySets.end(); ++ it) {
+				ss << "   Name: " << it->first;
+				ss << "; Value: " << it->second << std::endl;
+			}
+		}
+
+		if (policySetParameters.size() != 0) {
+			ss << "** POLICY SET PARAMETERS **" << std::endl;
+			std::map<std::string, std::string>::iterator it;
+			for (it = policySetParameters.begin();
+					it != policySetParameters.end(); ++ it) {
+				ss << "   Name: " << it->first;
+				ss << "; Value: " << it->second << std::endl;
+			}
+		}
+	}
+
+	if (configParameters.size() != 0) {
+		ss << "** CONFIG PARAMETERS **" << std::endl;
+		std::map<std::string, std::string>::iterator it;
+		for (it = configParameters.begin(); it != configParameters.end(); ++ it) {
+			ss << "   Name: " << it->first;
+			ss << "   Value: " << it->second << std::endl;
+		}
+	}
+
+	ss << std::endl;
+
+	return ss.str();
 }
 
 bool RINAConfiguration::lookup_dif_by_application(

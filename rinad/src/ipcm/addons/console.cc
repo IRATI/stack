@@ -101,7 +101,7 @@ IPCMConsole::IPCMConsole(const unsigned int port_) :
 	commands_map["assign-to-dif"] =
 			ConsoleCmdInfo(&IPCMConsole::assign_to_dif,
 				"USAGE: assign-to-dif <ipcp-id> "
-				"<dif-name>");
+				"<dif-name> <dif-template-name>");
 	commands_map["register-at-dif"] =
 			ConsoleCmdInfo(&IPCMConsole::register_at_dif,
 				"USAGE: register-at-dif <ipcp-id> "
@@ -140,6 +140,8 @@ IPCMConsole::IPCMConsole(const unsigned int port_) :
 	commands_map["plugin-get-info"] =
 			ConsoleCmdInfo(&IPCMConsole::plugin_get_info,
 				"USAGE: plugin-get-info <plugin-name>");
+	commands_map["show-dif-templates"] = ConsoleCmdInfo(&IPCMConsole::show_dif_templates,
+					"USAGE: show-dif-templates");
 
 	rina::ThreadAttributes ta;
 	worker = new rina::Thread(&ta, console_function, this);
@@ -442,8 +444,9 @@ IPCMConsole::assign_to_dif(std::vector<string>& args)
 {
 	int ipcp_id;
 	Promise promise;
+	rinad::DIFTemplate * dif_template;
 
-	if (args.size() < 3) {
+	if (args.size() < 4) {
 		outstream << commands_map[args[0]].usage << endl;
 		return CMDRETCONT;
 	}
@@ -460,7 +463,13 @@ IPCMConsole::assign_to_dif(std::vector<string>& args)
 		return CMDRETCONT;
 	}
 
-	if (IPCManager->assign_to_dif(this, &promise, ipcp_id, dif_name) == IPCM_FAILURE ||
+	dif_template = IPCManager->dif_template_manager->get_dif_template(args[3]);
+	if (!dif_template) {
+		outstream << "Cannot find DIF template called " << args[3] << endl;
+		return CMDRETCONT;
+	}
+
+	if (IPCManager->assign_to_dif(this, &promise, ipcp_id, dif_template, dif_name) == IPCM_FAILURE ||
 			promise.wait() != IPCM_SUCCESS){
 		outstream << "DIF assignment failed" << endl;
 		return CMDRETCONT;
@@ -782,6 +791,26 @@ IPCMConsole::plugin_get_info(std::vector<std::string>& args)
                 outstream << "Policy set: Name='" << lit->name <<
 			     "', Component='" << lit->app_entity <<
 			     "', Version='" << lit->version << "'" << endl;
+	}
+
+	return CMDRETCONT;
+}
+
+int IPCMConsole::show_dif_templates(std::vector<std::string>& args)
+{
+	if (args.size() != 1) {
+		outstream << commands_map[args[0]].usage << endl;
+		return CMDRETCONT;
+	}
+
+	std::list<DIFTemplate*> dif_templates =
+			IPCManager->dif_template_manager->get_all_dif_templates();
+
+	outstream<< "CURRENT DIF TEMPLATES:" << endl;
+
+	std::list<DIFTemplate*>::iterator it;
+	for (it = dif_templates.begin(); it != dif_templates.end(); ++it) {
+		outstream << (*it)->toString() << endl;
 	}
 
 	return CMDRETCONT;

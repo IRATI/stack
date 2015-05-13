@@ -249,7 +249,7 @@ public:
 	//
 	// Initialize the IPCManager
 	//
-	void init(const std::string& loglevel);
+	void init(const std::string& loglevel, std::string& config_file);
 
 	//
 	// Load the specified addons
@@ -342,6 +342,7 @@ public:
 	//
 	ipcm_res_t assign_to_dif(Addon* callee, Promise* promise,
 			const unsigned short ipcp_id,
+			rinad::DIFTemplate * dif_template,
 			const rina::ApplicationProcessNamingInformation&
 				difName);
 
@@ -486,6 +487,10 @@ public:
 	//
 	void loadConfig(rinad::RINAConfiguration& newConf){
 		config = newConf;
+	}
+
+	rinad::RINAConfiguration& getConfig() {
+		return config;
 	}
 
 	//
@@ -761,9 +766,6 @@ protected:
 	//Rwlock for transactions
 	rina::ReadWriteLockable trans_rwlock;
 
-	// RINA configuration internal state
-	rinad::RINAConfiguration config;
-
 	//Current logging level
 	std::string log_level_;
 
@@ -776,9 +778,15 @@ protected:
 	//IPCM factory
 	IPCMIPCProcessFactory ipcp_factory_;
 
+	// RINA configuration internal state
+	rinad::RINAConfiguration config;
+
 public:
 	//Generator of opaque identifiers
 	rina::ConsecutiveUnsignedIntegerGenerator __tid_gen;
+
+	//The DIF template manager
+	DIFTemplateManager * dif_template_manager;
 private:
 	//Singleton
 	IPCManager_();
@@ -798,8 +806,6 @@ private:
 	void io_loop(void);
 
 	friend class Singleton<rinad::IPCManager_>;
-
-	DIFTemplateManager * dif_template_manager;
 };
 
 

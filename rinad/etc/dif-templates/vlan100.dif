@@ -1,0 +1,7 @@
+{
+    "difName" : "100",
+    "difType" : "shim-eth-vlan",
+    "configParameters" : {
+    	"interface-name" : "eth1"
+      }
+}

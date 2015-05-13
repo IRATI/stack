@@ -1075,6 +1075,22 @@ void FlowAllocatorConfiguration::set_seq_rollover_policy(
 
 // CLASS RMTConfiguration
 RMTConfiguration::RMTConfiguration(){
+	max_queue_policy_ = PolicyConfig();
+	rmt_queue_monitor_policy_ = PolicyConfig();
+	rmt_scheduling_policy_ = PolicyConfig();
+}
+
+std::string RMTConfiguration::toString()
+{
+	std::stringstream ss;
+	ss << "Max queue policy. Name: " << max_queue_policy_.name_ ;
+	ss << "; Version: " << max_queue_policy_.version_ << std::endl;
+	ss << "Queue monitor policy. Name: " << rmt_queue_monitor_policy_.name_ ;
+	ss << "; Version: " << rmt_queue_monitor_policy_.version_ << std::endl;
+	ss << "Scheduling policy. Name: " << rmt_scheduling_policy_.name_ ;
+	ss << "; Version: " << rmt_scheduling_policy_.version_ << std::endl;
+
+	return ss.str();
 }
 
 const PolicyConfig& RMTConfiguration::get_max_queue_policy() const {
@@ -1201,6 +1217,16 @@ PDUFTableGeneratorConfiguration::PDUFTableGeneratorConfiguration(
 	set_pduft_generator_policy(pduFTGeneratorPolicy);
 }
 
+std::string PDUFTableGeneratorConfiguration::toString() {
+	std::stringstream ss;
+	ss << "PDU FT generator policy. Name: " << pduft_generator_policy_.name_;
+	ss << "; Version: "<<pduft_generator_policy_.version_ << std::endl;
+	ss << "*** LINK STATE ROUTING CONFIGURATION ***"<<std::endl;
+	ss << link_state_routing_configuration_.toString();
+
+	return ss.str();
+}
+
 const LinkStateRoutingConfiguration&
 PDUFTableGeneratorConfiguration::get_link_state_routing_configuration() const {
         return link_state_routing_configuration_;
@@ -1229,6 +1255,18 @@ EnrollmentTaskConfiguration::EnrollmentTaskConfiguration() {
 	declared_dead_interval_in_ms_ = 120000;
 	neighbor_enroller_period_in_ms_ = 10000;
 	max_number_of_enrollment_attempts_ = 3;
+}
+
+std::string EnrollmentTaskConfiguration::toString()
+{
+	std::stringstream ss;
+	ss << "Enrollment timeout in ms: " << enrollment_timeout_in_ms_ << std::endl;
+	ss << "Watchdog period in ms: " << watchdog_period_in_ms_ << std::endl;
+	ss << "Declared dead interval in ms: "<< declared_dead_interval_in_ms_ << std::endl;
+	ss << "Neighbor enroller period in ms: "<<neighbor_enroller_period_in_ms_<< std::endl;
+	ss << "Max number of enrollment attempts: " << max_number_of_enrollment_attempts_ << std::endl;
+	return ss.str();
+
 }
 
 // Class Static IPC Process Address

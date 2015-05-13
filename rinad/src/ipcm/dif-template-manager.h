@@ -30,11 +30,14 @@
 
 namespace rinad {
 
+class DIFTemplateManager;
+
 /// Monitors the folder of the DIF templates
 class DIFTemplateMonitor: public rina::SimpleThread {
 public:
 	DIFTemplateMonitor(rina::ThreadAttributes * thread_attrs,
-			   const std::string& folder);
+			   const std::string& folder,
+			   DIFTemplateManager * dtm);
 	~DIFTemplateMonitor() throw();
 	void do_stop();
 	int run();
@@ -43,6 +46,7 @@ private:
 	bool has_to_stop();
 	void process_events(int fd);
 
+	DIFTemplateManager * dif_template_manager;
 	std::string folder_name;
 	bool stop;
 	rina::Lockable lock;
@@ -50,23 +54,30 @@ private:
 
 class DIFTemplateManager {
 public:
+	static const std::string DIF_TEMPLATES_DIRECTORY;
+	static const std::string DEFAULT_TEMPLATE_NAME;
+
 	DIFTemplateManager(const std::string& folder);
 	virtual ~DIFTemplateManager(void);
-	rinad::DIFProperties * get_dif_template(const std::string& name);
-	void add_dif_template(const std::string& name, rinad::DIFProperties * dif_template);
+	rinad::DIFTemplate * get_dif_template(const std::string& name);
+	void add_dif_template(const std::string& name, rinad::DIFTemplate * dif_template);
 	void remove_dif_template(const std::string& name);
+	std::list<rinad::DIFTemplate *> get_all_dif_templates();
 
 private:
+	int load_initial_dif_templates();
 	void internal_remove_dif_template(const std::string& name);
+	void augment_dif_template(rinad::DIFTemplate * dif_template);
 
 	//The folder containing the DIF templates to monitor
 	std::string folder_name;
 
 	//The current templates
-	std::map<std::string, rinad::DIFProperties *> dif_templates;
+	std::map<std::string, rinad::DIFTemplate *> dif_templates;
 
 	rina::ReadWriteLockable templates_lock;
 	DIFTemplateMonitor * template_monitor;
+	rinad::DIFTemplate * default_template;
 };
 
 } //namespace rinad
