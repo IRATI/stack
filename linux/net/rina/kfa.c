@@ -230,7 +230,10 @@ static int kfa_flow_deallocate_worker(void * data)
                 return 0;
         }
 
-        ASSERT(flow->state == PORT_STATE_DEALLOCATED);
+        if (flow->state != PORT_STATE_DEALLOCATED) {
+                LOG_ERR("Port %u should be deallocated but it is not...", id);
+                return 0;
+        }
 
         if ((atomic_read(&flow->readers) == 0) &&
             (atomic_read(&flow->writers) == 0) &&
@@ -282,6 +285,15 @@ static int kfa_flow_deallocate(struct ipcp_instance_data * data,
         }
 
         flow->state = PORT_STATE_DEALLOCATED;
+
+        if ((atomic_read(&flow->readers) == 0) &&
+            (atomic_read(&flow->writers) == 0) &&
+            (atomic_read(&flow->posters) == 0)) {
+                if (kfa_flow_destroy(instance, flow, id))
+                        LOG_ERR("Could not destroy the flow correctly");
+                spin_unlock_irqrestore(&instance->lock, flags);
+                return 0;
+        }
 
         spin_unlock_irqrestore(&instance->lock, flags);
 
