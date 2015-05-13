@@ -1178,8 +1178,7 @@ int dtp_write(struct dtp * instance,
         sdu_buffer_disown(sdu);
         sdu_destroy(sdu);
 
-        LOG_DBG("DTP Sending PDU %u (CPU: %d)",
-                pci_sequence_number_get(pci), smp_processor_id());
+        LOG_DBG("DTP Sending PDU %u (CPU: %d)", csn, smp_processor_id());
 
         if (dtcp) {
                 rcu_read_lock();
@@ -1200,7 +1199,7 @@ int dtp_write(struct dtp * instance,
                                 rcu_read_unlock();
                                 return 0;
                         }
-                        if (!rtxq) {
+                        if (!rtxq && !sv->rexmsn_ctrl) {
                                 rtxq = dt_rtxq(dt);
                                 if (!rtxq) {
                                         rcu_read_unlock();
