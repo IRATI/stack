@@ -26,6 +26,8 @@
 #include <iostream>
 
 namespace rina {
+//CLASS CDAP Error Code
+const int CDAPErrorCodes::CONNECTION_REJECTED_ERROR = -1;
 
 // CLASS AuthValue
 AuthValue::AuthValue() {
@@ -1265,5 +1267,11 @@ CDAPSessionManagerInterface* CDAPSessionManagerFactory::createCDAPSessionManager
 		long timeout) {
 	return new CDAPSessionManager(wire_message_provider_factory, timeout);
 }
+
+// CLASS CDAPMessageInterface
+const std::string CDAPSessionInterface::SESSION_STATE_NONE = "NONE";
+const std::string CDAPSessionInterface::SESSION_STATE_AWAIT_CON = "AWAIT CON";
+const std::string CDAPSessionInterface::SESSION_STATE_CON = "CONNECTED";
+const std::string CDAPSessionInterface::SESSION_STATE_AWAIT_CLOSE = "AWAIT CLOSE";
 
 }

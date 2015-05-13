@@ -178,6 +178,8 @@ unsigned int IPCManager::internalRequestFlowAllocation(
         FlowInformation * flow;
         unsigned int result = 0;
 
+        WriteScopedLock writeLock(flows_rw_lock);
+
 #if STUB_API
         (void)sourceIPCProcessId;
 #else
@@ -203,7 +205,6 @@ unsigned int IPCManager::internalRequestFlowAllocation(
         flow->flowSpecification = flowSpec;
         flow->state = FlowInformation::FLOW_ALLOCATION_REQUESTED;
 
-        WriteScopedLock writeLock(flows_rw_lock);
         pendingFlows[result] = flow;
 
         return result;
@@ -216,8 +217,10 @@ unsigned int IPCManager::internalRequestFlowAllocationInDIF(
                 unsigned short sourceIPCProcessId,
                 const FlowSpecification& flowSpec)
 {
-	FlowInformation * flow;
 	unsigned int result = 0;
+	FlowInformation * flow = 0;
+
+	WriteScopedLock writeLock(flows_rw_lock);
 
 #if STUB_API
         (void)difName;
@@ -246,7 +249,6 @@ unsigned int IPCManager::internalRequestFlowAllocationInDIF(
         flow->flowSpecification = flowSpec;
         flow->state = FlowInformation::FLOW_ALLOCATION_REQUESTED;
 
-        WriteScopedLock writeLock(flows_rw_lock);
         pendingFlows[result] = flow;
 
         return result;
@@ -254,7 +256,12 @@ unsigned int IPCManager::internalRequestFlowAllocationInDIF(
 
 FlowInformation IPCManager::internalAllocateFlowResponse(
                 const FlowRequestEvent& flowRequestEvent,
-                int result, bool notifySource, unsigned short ipcProcessId) {
+                int result, bool notifySource, unsigned short ipcProcessId)
+{
+	FlowInformation * flow = 0;
+
+	WriteScopedLock writeLock(flows_rw_lock);
+
 #if STUB_API
         //Do nothing
         (void)notifySource;
@@ -278,7 +285,7 @@ FlowInformation IPCManager::internalAllocateFlowResponse(
                 return flowInformation;
         }
 
-        FlowInformation * flow = new FlowInformation();
+        flow = new FlowInformation();
         flow->localAppName = flowRequestEvent.localApplicationName;
         flow->remoteAppName = flowRequestEvent.remoteApplicationName;
         flow->flowSpecification = flowRequestEvent.flowSpecification;
@@ -286,7 +293,6 @@ FlowInformation IPCManager::internalAllocateFlowResponse(
         flow->difName = flowRequestEvent.DIFName;
         flow->portId = flowRequestEvent.portId;
 
-        WriteScopedLock writeLock(flows_rw_lock);
         allocatedFlows[flowRequestEvent.portId] = flow;
 
         return *flow;
@@ -317,9 +323,11 @@ unsigned int IPCManager::getDIFProperties(
 }
 
 unsigned int IPCManager::requestApplicationRegistration(
-                const ApplicationRegistrationInformation& appRegistrationInfo) {
-#if STUB_API
+                const ApplicationRegistrationInformation& appRegistrationInfo)
+{
 	WriteScopedLock writeLock(regs_rw_lock);
+
+#if STUB_API
         registrationInformation[0] = appRegistrationInfo;
 	return 0;
 #else
@@ -333,7 +341,6 @@ unsigned int IPCManager::requestApplicationRegistration(
 	        throw ApplicationRegistrationException(e.what());
 	}
 
-	WriteScopedLock writeLock(regs_rw_lock);
 	registrationInformation[message.getSequenceNumber()] = appRegistrationInfo;
 
 	return message.getSequenceNumber();
@@ -342,7 +349,8 @@ unsigned int IPCManager::requestApplicationRegistration(
 
 ApplicationRegistration * IPCManager::commitPendingRegistration(
                         unsigned int seqNumber,
-                        const ApplicationProcessNamingInformation& DIFName) {
+                        const ApplicationProcessNamingInformation& DIFName)
+{
         ApplicationRegistrationInformation appRegInfo;
         ApplicationRegistration * applicationRegistration;
 
@@ -371,7 +379,8 @@ ApplicationRegistration * IPCManager::commitPendingRegistration(
         return applicationRegistration;
 }
 
-void IPCManager::withdrawPendingRegistration(unsigned int seqNumber) {
+void IPCManager::withdrawPendingRegistration(unsigned int seqNumber)
+{
         ApplicationRegistrationInformation appRegInfo;
 
         WriteScopedLock writeLock(regs_rw_lock);
@@ -387,7 +396,8 @@ void IPCManager::withdrawPendingRegistration(unsigned int seqNumber) {
 
 unsigned int IPCManager::requestApplicationUnregistration(
 		const ApplicationProcessNamingInformation& applicationName,
-		const ApplicationProcessNamingInformation& DIFName) {
+		const ApplicationProcessNamingInformation& DIFName)
+{
         ApplicationRegistration * applicationRegistration;
         bool found = false;
 

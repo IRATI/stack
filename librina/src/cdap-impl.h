@@ -43,7 +43,8 @@ class ConnectionStateMachine: public Lockable {
 public:
 	ConnectionStateMachine(CDAPSessionImpl* cdap_session, long timeout);
 	~ConnectionStateMachine() throw();
-	bool is_connected() const;
+	bool is_connected();
+	bool can_send_or_receive_messages();
 	/// Checks if a the CDAP connection can be opened (i.e. an M_CONNECT message can be sent)
 	/// @throws CDAPException
 	void checkConnect();
@@ -60,6 +61,7 @@ public:
 	/// @throws CDAPException
 	void checkReleaseResponse();
 	void releaseResponseSentOrReceived(bool sent);
+	std::string get_state();
 private:
 	enum ConnectionState {
 		NONE, AWAITCON, CONNECTED, AWAITCLOSE
@@ -100,8 +102,10 @@ private:
 	/// The state of the CDAP connection, drives the CDAP connection
 	/// state machine
 	ConnectionState connection_state_;
-	Timer *open_timer_;
-	Timer *close_timer_;
+
+	Timer * timer;
+	TimerTask * last_timer_task_;
+
 	friend class ResetStablishmentTimerTask;
 	friend class ReleaseConnectionTimerTask;
 };
@@ -153,11 +157,13 @@ public:
 	int get_port_id() const;
 	CDAPSessionDescriptor* get_session_descriptor() const;
 	CDAPInvokeIdManagerImpl* get_invoke_id_manager() const;
-	void stopConnection();
+	bool is_closed() const;
+	std::string get_session_state() const;
 private:
 	void messageSentOrReceived(const CDAPMessage &cdap_message, bool sent);
 	void freeOrReserveInvokeId(const CDAPMessage &cdap_message, bool sent);
 	void checkIsConnected() const;
+	void check_can_send_or_receive_messages() const;
 	void checkInvokeIdNotExists(const CDAPMessage &cdap_message, bool sent) const;
 	void checkCanSendOrReceiveCancelReadRequest(const CDAPMessage &cdap_message,
 			bool sent) const;
@@ -303,6 +309,7 @@ private:
 	/// The maximum time the CDAP state machine of a session will wait for connect or release responses (in ms)
 	long timeout_;
 	CDAPInvokeIdManagerImpl *invoke_id_manager_;
+	ReadWriteLockable lock;
 };
 
 /// Google Protocol Buffers Wire Message Provider

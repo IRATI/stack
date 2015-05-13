@@ -129,10 +129,6 @@ const std::string EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME = SE
 const std::string EncoderConstants::WATCHDOG_RIB_OBJECT_NAME = SEPARATOR + DIF + SEPARATOR + DIFMANAGEMENT +
 		SEPARATOR + WATCHDOG;
 const std::string EncoderConstants::WATCHDOG_RIB_OBJECT_CLASS = "watchdog timer";
-const std::string EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS = "neighbor set";
-const std::string EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS = "neighbor";
-const std::string EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME = SEPARATOR + DAF +
-        SEPARATOR + DAFMANAGEMENT + SEPARATOR + NEIGHBORS;
 const std::string EncoderConstants::ADDRESS_RIB_OBJECT_CLASS = "address";
 const std::string EncoderConstants::ADDRESS_RIB_OBJECT_NAME = SEPARATOR + DAF +
 		SEPARATOR + DAFMANAGEMENT + SEPARATOR + NAMING + SEPARATOR + ADDRESS;

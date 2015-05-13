@@ -8,6 +8,16 @@
                         "Version" : "1"
                 },
                 {
+                        "Name": "authentication-none",
+                        "Component": "security-manager",
+                        "Version" : "1"
+                },
+                {
+                        "Name": "authentication-password",
+                        "Component": "security-manager",
+                        "Version" : "1"
+                },
+                {
                         "Name": "default",
                         "Component": "flow-allocator",
                         "Version" : "1"
@@ -20,6 +30,11 @@
                 {
                         "Name": "default",
                         "Component": "resource-allocator",
+                        "Version" : "1"
+                },
+                {
+                        "Name": "default",
+                        "Component": "enrollment-task",
                         "Version" : "1"
                 },
                 {

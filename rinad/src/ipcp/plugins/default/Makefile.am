@@ -25,15 +25,16 @@ default_la_CPPFLAGS =				\
 	$(COMMONCPPFLAGS)
 default_la_LIBADD = $(COMMONLIBS) -ldl
 default_la_LDFLAGS = -module
-default_la_SOURCES =			 \
-		plugin.cc		 		 \
-		../../components.h		 \
-		../../components.cc		 \
-		security-manager-ps.cc	 \
-		flow-allocator-ps.cc     \
+default_la_SOURCES =		 \
+	plugin.cc		 \
+	../../components.h	 \
+	../../components.cc	 \
+	security-manager-ps.cc	 \
+	flow-allocator-ps.cc     \
         namespace-manager-ps.cc  \
         resource-allocator-ps.cc \
-        routing-ps.h 	 		 \
+        enrollment-task-ps.cc    \
+        routing-ps.h 	 	 \
         routing-ps.cc
 
 plugins_LTLIBRARIES += default.la

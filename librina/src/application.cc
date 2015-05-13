@@ -51,6 +51,11 @@ const std::string& ApplicationEntity::get_name() const
 	return name_;
 }
 
+ApplicationProcess * ApplicationEntity::get_application_process()
+{
+	return app;
+}
+
 void ApplicationEntity::add_instance(ApplicationEntityInstance * instance)
 {
 	if (!instance) {
@@ -80,6 +85,19 @@ ApplicationEntityInstance * ApplicationEntity::get_instance(const std::string& i
 std::list<ApplicationEntityInstance*> ApplicationEntity::get_all_instances()
 {
 	return instances.getEntries();
+}
+
+int ApplicationEntity::select_policy_set(const std::string& path,
+                      	      	         const std::string& name)
+{
+	return select_policy_set_common(get_name(), path, name);
+}
+
+int ApplicationEntity::set_policy_set_param(const std::string& path,
+                         	 	    const std::string& name,
+                         	 	    const std::string& value)
+{
+	return set_policy_set_param_common(path, name, value);
 }
 
 int ApplicationEntity::select_policy_set_common(const std::string& component,
@@ -155,6 +173,7 @@ const std::string ApplicationEntity::IRM_AE_NAME = "ipc-resource-manager";
 const std::string ApplicationEntity::RIB_DAEMON_AE_NAME = "rib-daemon";
 const std::string ApplicationEntity::ENROLLMENT_TASK_AE_NAME = "enrollment-task";
 const std::string ApplicationEntity::INTERNAL_EVENT_MANAGER_AE_NAME = "event-manager";
+const std::string ApplicationEntity::SECURITY_MANAGER_AE_NAME = "security-manager";
 
 //Class App Policy Manager
 AppPolicyManager::~AppPolicyManager()
@@ -457,6 +476,11 @@ ApplicationEntity * ApplicationProcess::get_enrollment_task()
 ApplicationEntity * ApplicationProcess::get_internal_event_manager()
 {
 	return get_entity(ApplicationEntity::INTERNAL_EVENT_MANAGER_AE_NAME);
+}
+
+ApplicationEntity * ApplicationProcess::get_security_manager()
+{
+	return get_entity(ApplicationEntity::SECURITY_MANAGER_AE_NAME);
 }
 
 }

@@ -2,6 +2,8 @@
  * RIB API
  *
  *    Bernat Gastón <bernat.gaston@i2cat.net>
+ *    Eduard Grasa          <eduard.grasa@i2cat.net>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
