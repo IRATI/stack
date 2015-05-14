@@ -1204,9 +1204,9 @@ int dtp_write(struct dtp * instance,
                                 if (!rtxq) {
                                         rcu_read_unlock();
                                         LOG_ERR("Failed to get rtxq");
-                                        return 0;
+                                        return -1;
                                 }
-                                rtxq_push_sn(rtxq, sn);
+                                rtxq_push_sn(rtxq, csn);
                         }
                 }
                 if (sv->rexmsn_ctrl) {

@@ -281,6 +281,8 @@ int common_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
         if (!dt)
                 return -1;
 
+        LOG_DBG("RTT Estimator...");
+
         entry = rtxq_entry_peek_and_clean(dt_rtxq(dt), sn);
         if (!entry) {
                 LOG_ERR("Could not retrieve timestamp of Seq num: %u for RTT "
@@ -289,8 +291,11 @@ int common_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
         }
 
         /* if it is a retransmission we do not consider it*/
-        if (rtxq_entry_retries(entry) != 0)
+        if (rtxq_entry_retries(entry) != 0) {
+                LOG_DBG("RTTestimator PDU %u has been retransmitted %u",
+                        sn, rtxq_entry_retries(entry));
                 return 0;
+        }
 
         start_time = rtxq_entry_timestamp(entry);
         rtt        = dtcp_rtt(dtcp);
