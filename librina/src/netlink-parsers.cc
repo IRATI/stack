@@ -1359,6 +1359,153 @@ int parseListOfDIFConfigurationPolicySets(nlattr *nested,
 	return 0;
 }
 
+int putDUProtectConfObject(
+        nl_msg* netlinkMessage,
+        const DUProtectionConfiguration& object){
+
+	NLA_PUT_STRING(netlinkMessage, DUPC_DIF_NAME,
+			object.dif_name.c_str());
+
+    NLA_PUT_U32(netlinkMessage, DUPC_TTL, object.TTL);
+
+    if (object.enable_CRC){
+        NLA_PUT_FLAG(netlinkMessage, DUPC_ENABLE_CRC);
+    }
+
+    NLA_PUT_STRING(netlinkMessage, DUPC_ENC_CIPHER,
+            object.encryption_cipher.c_str());
+
+    NLA_PUT_STRING(netlinkMessage, DUPC_MSG_DIGEST,
+            object.message_digest.c_str());
+
+    NLA_PUT_STRING(netlinkMessage, DUPC_KEY,
+            object.key.c_str());
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building DUProtectionConfiguration Netlink object");
+	return -1;
+}
+
+int putListOfDUConfs(
+        nl_msg* netlinkMessage,
+        const std::list<DUProtectionConfiguration> duProtectConfs){
+	std::list<DUProtectionConfiguration>::const_iterator iterator;
+	struct nlattr *dup_conf;
+	int i = 0;
+
+	for (iterator = duProtectConfs.begin();
+			iterator != duProtectConfs.end();
+			++iterator) {
+		if (!(dup_conf = nla_nest_start(netlinkMessage, i))){
+			goto nla_put_failure;
+		}
+		if (putDUProtectConfObject(netlinkMessage, *iterator) < 0) {
+			goto nla_put_failure;
+		}
+		nla_nest_end(netlinkMessage, dup_conf);
+		i++;
+	}
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building List of DUProtectionConfigurations Netlink object");
+	return -1;
+}
+
+int parseListOfDUProtectConfs(nlattr *nested,
+		DIFConfiguration * difConfiguration){
+	nlattr * nla;
+	int rem;
+	DUProtectionConfiguration *dup_conf;
+
+	for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
+		     nla_ok(nla, rem);
+		     nla = nla_next(nla, &(rem))){
+		/* validate & parse attribute */
+		dup_conf = parseDUProtectConf(nla);
+		if (dup_conf == 0){
+			return -1;
+		}
+		difConfiguration->duProtectionConfs.push_back(*dup_conf);
+		delete dup_conf;
+	}
+
+	if (rem > 0){
+		LOG_WARN("Missing bits to parse");
+	}
+
+	return 0;
+}
+
+DUProtectionConfiguration * parseDUProtectConf(nlattr *nested){
+	struct nla_policy attr_policy[DUPC_ATTR_MAX + 1];
+	attr_policy[DUPC_DIF_NAME].type = NLA_STRING;
+	attr_policy[DUPC_DIF_NAME].minlen = 0;
+	attr_policy[DUPC_DIF_NAME].maxlen = 65535;
+	attr_policy[DUPC_TTL].type = NLA_U32;
+	attr_policy[DUPC_TTL].minlen = 0;
+	attr_policy[DUPC_TTL].maxlen = 65535;
+	attr_policy[DUPC_ENABLE_CRC].type = NLA_FLAG;
+	attr_policy[DUPC_ENABLE_CRC].minlen = 0;
+	attr_policy[DUPC_ENABLE_CRC].maxlen = 0;
+	attr_policy[DUPC_ENC_CIPHER].type = NLA_STRING;
+	attr_policy[DUPC_ENC_CIPHER].minlen = 0;
+	attr_policy[DUPC_ENC_CIPHER].maxlen = 65535;
+	attr_policy[DUPC_MSG_DIGEST].type = NLA_STRING;
+	attr_policy[DUPC_MSG_DIGEST].minlen = 0;
+	attr_policy[DUPC_MSG_DIGEST].maxlen = 65535;
+	attr_policy[DUPC_KEY].type = NLA_STRING;
+	attr_policy[DUPC_KEY].minlen = 0;
+	attr_policy[DUPC_KEY].maxlen = 65535;
+	struct nlattr *attrs[DUPC_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, DUPC_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing Parameter from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	DUProtectionConfiguration * result = new DUProtectionConfiguration();
+
+	if (attrs[DUPC_DIF_NAME]){
+		result->dif_name =
+				nla_get_string(attrs[DUPC_DIF_NAME]);
+	}
+
+	if (attrs[DUPC_TTL]){
+		result->TTL =
+				nla_get_u32(attrs[DUPC_TTL]);
+	}
+
+	if (attrs[DUPC_ENABLE_CRC]){
+		result->enable_CRC = true;
+	}else{
+        result->enable_CRC = false;
+    }
+
+	if (attrs[DUPC_ENC_CIPHER]){
+		result->encryption_cipher =
+				nla_get_string(attrs[DUPC_ENC_CIPHER]);
+	}
+
+	if (attrs[DUPC_MSG_DIGEST]){
+		result->message_digest =
+				nla_get_string(attrs[DUPC_MSG_DIGEST]);
+	}
+
+	if (attrs[DUPC_KEY]){
+		result->key =
+				nla_get_string(attrs[DUPC_KEY]);
+	}
+
+	return result;
+}
+
 int putNeighborObject(nl_msg* netlinkMessage,
                 const Neighbor& object) {
         struct nlattr *name, *supportingDIFName;
@@ -4002,7 +4149,8 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
                 const DIFConfiguration& object,
                 bool normalIPCProcess){
 	struct nlattr *parameters, *efcpConfig, *rmtConfig, *smConfig,
-		*etConfig, *faConfig, *nsmConfig, *pduftConfig, *policySets;
+		*etConfig, *faConfig, *nsmConfig, *pduftConfig, *policySets,
+        *duProtectConfs;
 
 	if  (object.get_parameters().size() > 0) {
 	        if (!(parameters = nla_nest_start(
@@ -4097,6 +4245,18 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
                                 goto nla_put_failure;
                         }
                         nla_nest_end(netlinkMessage, policySets);
+                }
+
+                if (object.duProtectionConfs.size() > 0){
+                    if (!(duProtectConfs = nla_nest_start(netlinkMessage,
+                                                        DCONF_ATTR_DUP_CONFS))){
+                            goto nla_put_failure;
+                    }
+                    if (putListOfDUConfs(netlinkMessage,
+                                         object.duProtectionConfs) < 0) {
+                            goto nla_put_failure;
+                    }
+                    nla_nest_end(netlinkMessage, duProtectConfs);
                 }
 
 	}
@@ -6820,6 +6980,9 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 	attr_policy[DCONF_ATTR_POLICY_SETS].type = NLA_NESTED;
 	attr_policy[DCONF_ATTR_POLICY_SETS].minlen = 0;
 	attr_policy[DCONF_ATTR_POLICY_SETS].maxlen = 0;
+	attr_policy[DCONF_ATTR_DUP_CONFS].type = NLA_NESTED;
+	attr_policy[DCONF_ATTR_DUP_CONFS].minlen = 0;
+	attr_policy[DCONF_ATTR_DUP_CONFS].maxlen = 0;
 	struct nlattr *attrs[DCONF_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, DCONF_ATTR_MAX, nested, attr_policy);
@@ -6941,6 +7104,15 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 	if (attrs[DCONF_ATTR_POLICY_SETS]) {
 		status = parseListOfDIFConfigurationPolicySets(
 				attrs[DCONF_ATTR_POLICY_SETS], result);
+		if (status != 0){
+			delete result;
+			return 0;
+		}
+	}
+
+	if (attrs[DCONF_ATTR_DUP_CONFS]) {
+		status = parseListOfDUProtectConfs(
+				attrs[DCONF_ATTR_DUP_CONFS], result);
 		if (status != 0){
 			delete result;
 			return 0;

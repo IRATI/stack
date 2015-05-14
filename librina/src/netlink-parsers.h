@@ -639,12 +639,36 @@ int putSecurityManagerConfigurationObject(nl_msg* netlinkMessage,
 
 SecurityManagerConfiguration * parseSecurityManagerConfigurationObject(nlattr *nested);
 
+
+/* DUProtectionConfiguration CLASS */
+enum DUProtectionConfigurationAttributes {
+    DUPC_DIF_NAME = 1,
+    DUPC_TTL,
+    DUPC_ENABLE_CRC,
+    DUPC_ENC_CIPHER,
+    DUPC_MSG_DIGEST,
+    DUPC_KEY,
+    __DUPC_ATTR_MAX,
+};
+
+#define DUPC_ATTR_MAX (__DUPC_ATTR_MAX -1)
+
+int putListOfDUConfs(nl_msg* netlinkMessage,
+        const std::list<DUProtectionConfiguration> duProtectConfs);
+int putDUProtectConfObject(nl_msg* netlinkMessage,
+        const DUProtectionConfiguration& object);
+
+int parseListOfDUProtectConfs(nlattr *nested,
+        DIFConfiguration * difConfiguration);
+DUProtectionConfiguration * parseDUProtectConf(nlattr *nested);
+
 /* DIF Configuration CLASS */
 enum DIFConfigurationAttributes {
 	DCONF_ATTR_PARAMETERS = 1,
 	DCONF_ATTR_ADDRESS,
 	DCONF_ATTR_EFCP_CONF,
 	DCONF_ATTR_RMT_CONF,
+    DCONF_ATTR_DUP_CONFS,
 	DCONF_ATTR_PDUFT_CONF,
 	DCONF_ATTR_FA_CONF,
 	DCONF_ATTR_ET_CONF,

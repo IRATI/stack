@@ -482,6 +482,12 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 					dif_template->pdufTableGeneratorConfiguration;
 			dif_config.rmt_configuration_ = dif_template->rmtConfiguration;
 			dif_config.set_address(address);
+
+			for (std::map<std::string, rina::DUProtectionConfiguration>::iterator
+					it = dif_template->duProtectionConfs.begin();
+					it != dif_template->duProtectionConfs.end(); it++){
+				dif_config.duProtectionConfs.push_back(it->second);
+			}
 		}
 
 		for (map<string, string>::const_iterator

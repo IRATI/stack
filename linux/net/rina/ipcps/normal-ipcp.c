@@ -77,6 +77,7 @@ struct ipcp_instance_data {
         address_t               address;
         struct mgmt_data *      mgmt_data;
         spinlock_t              lock;
+        struct list_head        dup_confs;
 };
 
 enum normal_flow_state {
@@ -576,6 +577,8 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
                                 const struct dif_info *     dif_information)
 {
         struct efcp_config * efcp_config;
+        struct dup_config * dup_pos, * dup_cfg;
+        struct dup_config_entry * entry;
 
         data->info->dif_name = name_dup(dif_information->dif_name);
         data->address        = dif_information->configuration->address;
@@ -601,6 +604,28 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         if (rmt_dt_cons_set(data->rmt, dt_cons_dup(efcp_config->dt_cons))) {
                 LOG_ERR("Could not set dt_cons in RMT");
                 return -1;
+        }
+
+        list_for_each_entry_safe(dup_pos, dup_cfg,
+                                 &data->dup_confs,
+                                 next) {
+            list_del(&dup_pos->next);
+            dup_config_destroy(dup_pos);
+        }
+
+        list_for_each_entry(dup_pos,
+                            &dif_information->configuration->dup_confs,
+                            next){
+            entry = dup_config_entry_dup(dup_pos->entry);
+
+            dup_cfg = dup_config_create();
+            if (!dup_cfg) {
+                dup_config_entry_destroy(entry);
+                LOG_ERR("DU Protection config creation failed in RMT");
+                continue;
+            }
+            dup_cfg->entry = entry;
+            list_add(&dup_cfg->next, &data->dup_confs);
         }
 
         return 0;
@@ -907,6 +932,15 @@ static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
         return data->info->name;
 }
 
+static const struct name * normal_dif_name(struct ipcp_instance_data * data)
+{
+        ASSERT(data);
+        ASSERT(data->info);
+        ASSERT(name_is_ok(data->info->dif_name));
+
+        return data->info->dif_name;
+}
+
 static int normal_set_policy_set_param(struct ipcp_instance_data * data,
                                        const string_t *path,
                                        const string_t *param_name,
@@ -954,6 +988,17 @@ static int normal_select_policy_set(struct ipcp_instance_data *data,
         return -1;
 }
 
+struct dup_config_entry * normal_find_dup_config(struct ipcp_instance_data *data,
+                                                 struct name * dif_name)
+{
+    struct dup_config * dup_pos;
+    list_for_each_entry(dup_pos, &data->dup_confs, next){
+        if (name_cmp(NAME_CMP_APN, dup_pos->entry->dif_name, dif_name))
+            return dup_pos->entry;
+    }
+    return NULL;
+}
+
 static struct ipcp_instance_ops normal_instance_ops = {
         .flow_allocate_request     = NULL,
         .flow_allocate_response    = NULL,
@@ -988,12 +1033,14 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .query_rib		   = NULL,
 
         .ipcp_name                 = normal_ipcp_name,
+        .dif_name                  = normal_dif_name,
 
         .set_policy_set_param      = normal_set_policy_set_param,
         .select_policy_set         = normal_select_policy_set,
 
         .enable_write              = enable_write,
-        .disable_write             = disable_write
+        .disable_write             = disable_write,
+        .find_dup_config           = normal_find_dup_config
 };
 
 static struct mgmt_data * normal_mgmt_data_create(void)
@@ -1146,6 +1193,8 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         INIT_LIST_HEAD(&instance->data->list);
         spin_lock_init(&instance->data->lock);
         list_add(&(instance->data->list), &(data->instances));
+
+        INIT_LIST_HEAD(&instance->data->dup_confs);
         LOG_DBG("Normal IPC process instance created and added to the list");
 
         return instance;
@@ -1175,6 +1224,7 @@ static int normal_destroy(struct ipcp_factory_data * data,
 {
 
         struct ipcp_instance_data * tmp;
+        struct dup_config * dup_pos, * dup_nxt;
 
         ASSERT(data);
         ASSERT(instance);
@@ -1205,6 +1255,13 @@ static int normal_destroy(struct ipcp_factory_data * data,
         mgmt_data_destroy(tmp->mgmt_data);
         rkfree(tmp);
         rkfree(instance);
+
+        list_for_each_entry_safe(dup_pos, dup_nxt,
+                                 &tmp->dup_confs,
+                                 next) {
+            list_del(&dup_pos->next);
+            dup_config_destroy(dup_pos);
+        }
 
         return 0;
 }

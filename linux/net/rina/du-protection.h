@@ -24,6 +24,7 @@
 #define RINA_DU_PROTECTION_H
 
 #include "pdu-ser.h"
+#include "ipcp-instances.h"
 
 bool    dup_chksum_set(struct pdu_ser * pdu);
 bool    dup_chksum_is_ok(struct pdu_ser * pdu);
@@ -31,5 +32,17 @@ bool    dup_chksum_is_ok(struct pdu_ser * pdu);
 bool    dup_ttl_set(struct pdu_ser * pdu, size_t value);
 ssize_t dup_ttl_decrement(struct pdu_ser * pdu);
 bool    dup_ttl_is_expired(struct pdu_ser * pdu);
+
+int dup_encrypt_data(const char              * src,
+                     char                    * dst,
+                     ssize_t                   src_size,
+                     ssize_t                   dst_size,
+                     struct crypto_blkcipher * blkcipher);
+
+int dup_decrypt_data(const char              * src,
+                     char                    * dst,
+                     ssize_t                   src_size,
+                     ssize_t                   dst_size,
+                     struct crypto_blkcipher * blkcipher);
 
 #endif

@@ -305,8 +305,6 @@ void parse_efcp_policies(const Json::Value  root,
         }
 }
 
-
-
 void parse_ipc_to_create(const Json::Value          root,
                          list<IPCProcessToCreate> & ipcProcessesToCreate)
 {
@@ -382,6 +380,7 @@ void parse_ipc_to_create(const Json::Value          root,
                                                                      value));
                         }
                 }
+
 
                 // parameters
                 Json::Value params = ipc_processes[i]["parameters"];
@@ -824,6 +823,30 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 
 		dif_template->etConfiguration = et;
 	}
+
+        //sduProtectionConfiguration
+        Json::Value duProtectionConfs = root["duProtectionConfigurations"];
+        if (duProtectionConfs != 0){
+                Json::Value::Members members =
+                        duProtectionConfs.getMemberNames();
+                for (unsigned int j = 0; j < members.size(); j++) {
+                    rina::DUProtectionConfiguration& duconf = dif_template->duProtectionConfs[members[j]];
+                    Json::Value duProtectionConf = duProtectionConfs[members[j]];
+
+                    duconf.dif_name = duProtectionConf
+                        .get("dif_name", duconf.dif_name).asString();
+                    duconf.TTL = duProtectionConf
+                        .get("TTL", duconf.TTL).asInt();
+                    duconf.enable_CRC = duProtectionConf
+                        .get("enable_CRC", duconf.enable_CRC).asBool();
+                    duconf.encryption_cipher = duProtectionConf
+                        .get("enc", duconf.encryption_cipher).asString();
+                    duconf.message_digest = duProtectionConf
+                        .get("mac", duconf.message_digest).asString();
+                    duconf.key = duProtectionConf
+                        .get("key", duconf.key).asString();
+                }
+        }
 
 	// configParameters;
 	Json::Value confParams = root["configParameters"];

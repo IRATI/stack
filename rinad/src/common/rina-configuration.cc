@@ -235,6 +235,24 @@ std::string DIFTemplate::toString()
 			ss << std::endl;
 		}
 
+		if (duProtectionConfs.size () > 0) {
+			ss << "** SDU PROTECTION **" <<std::endl;
+			for (map<string, rina::DUProtectionConfiguration>::const_iterator
+					dup_it = duProtectionConfs.begin();
+					dup_it != duProtectionConfs.end(); dup_it++){
+				ss << "*** SDU PROTECTION PROFILE  " << dup_it->second.dif_name << endl;
+				ss << "\t\tTTL: " << dup_it->second.TTL << endl;
+				if (dup_it->second.enable_CRC)
+					ss << "\t\tCRC: enabled" << endl;
+				else
+					ss << "\t\tCRC: disabled" << endl;
+				ss << "\t\tenc: " << dup_it->second.encryption_cipher << endl;
+				ss << "\t\tmac: " << dup_it->second.message_digest << endl;
+				ss << "\t\tkey: " << dup_it->second.key << endl;
+			}
+			ss << std::endl;
+		}
+
 		if (policySets.size() != 0) {
 			ss << "** POLICY SETS **" << std::endl;
 			std::map<std::string, std::string>::iterator it;
