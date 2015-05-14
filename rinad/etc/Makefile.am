@@ -37,3 +37,13 @@ CLEANFILES    += ipcmanager.conf
 BUILT_SOURCES += ipcmanager.conf
 EXTRA_DIST    += ipcmanager.conf.in
 sysconf_DATA  += ipcmanager.conf
+
+CLEANFILES    += default.dif
+BUILT_SOURCES += default.dif
+EXTRA_DIST    += default.dif
+sysconf_DATA  += default.dif
+
+CLEANFILES    += vlan100.dif
+BUILT_SOURCES += vlan100.dif
+EXTRA_DIST    += vlan100.dif
+sysconf_DATA  += vlan100.dif

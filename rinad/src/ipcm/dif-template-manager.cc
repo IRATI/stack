@@ -95,6 +95,10 @@ void DIFTemplateMonitor::process_events(int fd)
                 		continue;
                 	}
 
+                	if (file_name == "ipcmanager.conf") {
+                		continue;
+                	}
+
                 	if (event->mask & IN_CLOSE_WRITE)
                 		LOG_DBG("The file of DIF template %s has been modified.",
                 				event->name);
@@ -168,7 +172,6 @@ int DIFTemplateMonitor::run()
 }
 
 //Class DIF Template Manager
-const std::string DIFTemplateManager::DIF_TEMPLATES_DIRECTORY = "/dif-templates";
 const std::string DIFTemplateManager::DEFAULT_TEMPLATE_NAME = "default.dif";
 
 DIFTemplateManager::DIFTemplateManager(const std::string& folder)
@@ -356,6 +359,10 @@ void DIFTemplateManager::add_dif_template(const std::string& name,
 	//If the template already exists destroy the old version
 	internal_remove_dif_template(name);
 	dif_templates[name] = dif_template;
+
+	if (name == DEFAULT_TEMPLATE_NAME) {
+		default_template = dif_template;
+	}
 
 	LOG_INFO("Added or modified DIF template called: %s", name.c_str());
 }

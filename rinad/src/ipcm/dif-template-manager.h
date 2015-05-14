@@ -54,7 +54,6 @@ private:
 
 class DIFTemplateManager {
 public:
-	static const std::string DIF_TEMPLATES_DIRECTORY;
 	static const std::string DEFAULT_TEMPLATE_NAME;
 
 	DIFTemplateManager(const std::string& folder);
