@@ -221,7 +221,8 @@ int DIFTemplateManager::load_initial_dif_templates()
 	do {
 		errno = 0;
 		if ((dp = readdir(dirp)) != NULL) {
-			if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0) {
+			if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0 ||
+					strcmp(dp->d_name, "ipcmanager.conf") == 0) {
 				continue;
 			}
 

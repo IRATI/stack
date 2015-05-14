@@ -22,17 +22,17 @@
     "type" : "shim-eth-vlan",
     "apName" : "test-eth-vlan",
     "apInstance" : "1",
-    "difName" : "100"
+    "difName" : "110"
    }, {
     "type" : "normal-ipc",
     "apName" : "test1.IRATI",
     "apInstance" : "1",
     "difName" : "normal.DIF",
-    "difsToRegisterAt" : ["100"]
+    "difsToRegisterAt" : ["110"]
    } ],
   "difConfigurations" : [ {
-    "name" : "100",
-    "template" : "vlan100.dif"
+    "name" : "110",
+    "template" : "shim-eth-vlan.dif"
   }, {
     "name" : "normal.DIF",
     "template" : "default.dif"

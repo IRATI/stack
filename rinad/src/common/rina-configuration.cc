@@ -182,30 +182,58 @@ bool DIFTemplate::lookup_ipcp_address(
 std::string DIFTemplate::toString()
 {
 	std::stringstream ss;
-	ss << "* DIF Template name: " << templateName << std::endl;
-	ss << "* DIF type: " << difType << std::endl;
-
+	ss << "* TEMPLATE " << templateName << std::endl;
+	ss << std::endl;
+	ss << "** DIF type: " << difType << std::endl;
+	ss << std::endl;
 	if (difType == rina::NORMAL_IPC_PROCESS) {
 		ss << "** DATA TRANSFER CONSTANTS **"<<std::endl;
 		ss << dataTransferConstants.toString()<<std::endl;
+		ss << std::endl;
 
 		if (qosCubes.size() != 0) {
 			ss << "** QOS CUBES **" << std::endl;
+			ss << std::endl;
 			std::list<rina::QoSCube>::iterator it;
 			for (it = qosCubes.begin(); it != qosCubes.end(); ++ it) {
 				ss << "*** QOS CUBE " << it->name_ << " ***" <<std::endl;
 				ss << it->toString() << std::endl;
+				ss << std::endl;
 			}
 		}
 
 		ss << "** ENROLLMENT TASK **"<<std::endl;
 		ss << etConfiguration.toString();
+		ss << std::endl;
 
 		ss << "** RELAYING AND MULTIPLEXING TASK ** "<<std::endl;
 		ss <<rmtConfiguration.toString();
+		ss << std::endl;
 
 		ss << "** PDU FORWARDIG TABLE GENERATOR **" <<std::endl;
 		ss << pdufTableGeneratorConfiguration.toString()<<std::endl;
+
+		if (knownIPCProcessAddresses.size() > 0) {
+			ss << "** KNOWN IPCP ADDRESSES **" <<std::endl;
+			std::list<KnownIPCProcessAddress>::iterator it;
+			for (it = knownIPCProcessAddresses.begin();
+					it != knownIPCProcessAddresses.end(); ++it) {
+				ss << "   IPCP name: " << it->name.getProcessNamePlusInstance();
+				ss << " address: " << it->address << std::endl;
+			}
+			ss << std::endl;
+		}
+
+		if (addressPrefixes.size() > 0) {
+			ss << "** ADDRESS PREFIXES **" <<std::endl;
+			std::list<AddressPrefixConfiguration>::iterator it;
+			for (it = addressPrefixes.begin();
+					it != addressPrefixes.end(); ++it) {
+				ss << "   Organization: " << it->organization;
+				ss << " address prefix: " << it->addressPrefix << std::endl;
+			}
+			ss << std::endl;
+		}
 
 		if (policySets.size() != 0) {
 			ss << "** POLICY SETS **" << std::endl;
@@ -214,6 +242,7 @@ std::string DIFTemplate::toString()
 				ss << "   Name: " << it->first;
 				ss << "; Value: " << it->second << std::endl;
 			}
+			ss << std::endl;
 		}
 
 		if (policySetParameters.size() != 0) {
@@ -224,6 +253,7 @@ std::string DIFTemplate::toString()
 				ss << "   Name: " << it->first;
 				ss << "; Value: " << it->second << std::endl;
 			}
+			ss << std::endl;
 		}
 	}
 
@@ -234,6 +264,7 @@ std::string DIFTemplate::toString()
 			ss << "   Name: " << it->first;
 			ss << "   Value: " << it->second << std::endl;
 		}
+		ss << std::endl;
 	}
 
 	ss << std::endl;
