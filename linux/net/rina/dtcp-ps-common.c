@@ -327,8 +327,8 @@ int common_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
         dtcp_rtt_set(dtcp, new_rtt);
         dtcp_rttvar_set(dtcp, rttvar);
         dtcp_srtt_set(dtcp, srtt);
-        dt_sv_tr_set(dt, msecs_to_jiffies(trmsecs));
-        LOG_DBG("TR set to %lu msecs", msecs_to_jiffies(trmsecs));
+        dt_sv_tr_set(dt, dt_sv_a(dt) + msecs_to_jiffies(trmsecs));
+        LOG_DBG("TR set to %lu msecs", msecs_to_jiffies(dt_sv_a(dt)) + trmsecs);
 
         return 0;
 }

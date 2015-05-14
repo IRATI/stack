@@ -298,7 +298,7 @@ void cwq_deliver(struct cwq * queue,
                 }
                 pci = pdu_pci_get_ro(pdu);
                 if (flow_ctrl || rtx_ctrl) {
-                        rtxq = dt_rtxq(dt);
+                        /*rtxq = dt_rtxq(dt);
                         if (!rtxq) {
                                 spin_unlock(&queue->lock);
                                 LOG_ERR("Couldn't find the RTX queue");
@@ -306,7 +306,17 @@ void cwq_deliver(struct cwq * queue,
                         }
                         if (!rtx_ctrl) {
                                 rtxq_push_sn(rtxq, pci_sequence_number_get(pci));
-                        } else {
+                        } else {*/
+                        if (rtx_ctrl) {
+                                /*FIXME: this to be removed if previous code is
+                                 * uncommented */
+                                rtxq = dt_rtxq(dt);
+                                if (!rtxq) {
+                                        spin_unlock(&queue->lock);
+                                        LOG_ERR("Couldn't find the RTX queue");
+                                        return;
+                                }
+                                /**/
                                 tmp = pdu_dup_ni(pdu);
                                 if (!tmp) {
                                         spin_unlock(&queue->lock);

@@ -1199,7 +1199,8 @@ int dtp_write(struct dtp * instance,
                                 rcu_read_unlock();
                                 return 0;
                         }
-                        if (!rtxq && !sv->rexmsn_ctrl) {
+                        /* FIXME: wait for John's answer for this*/
+                        /*if (!rtxq && !sv->rexmsn_ctrl) {
                                 rtxq = dt_rtxq(dt);
                                 if (!rtxq) {
                                         rcu_read_unlock();
@@ -1207,7 +1208,7 @@ int dtp_write(struct dtp * instance,
                                         return -1;
                                 }
                                 rtxq_push_sn(rtxq, csn);
-                        }
+                        }*/
                 }
                 if (sv->rexmsn_ctrl) {
                         /* FIXME: Add timer for PDU */
