@@ -782,6 +782,7 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         /* This updates sender LWE */
         if (ps->sender_ack(ps, seq))
                 LOG_ERR("Could not update RTXQ and LWE");
+        ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
         rcu_read_unlock();
 
         snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
