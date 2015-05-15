@@ -681,6 +681,7 @@ static int rcv_nack_ctl(struct dtcp * dtcp,
                         return -1;
                 }
                 rtxq_nack(q, seq_num, dt_sv_tr(dtcp->parent));
+                ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
         }
         rcu_read_unlock();
 
@@ -711,6 +712,7 @@ static int rcv_ack(struct dtcp * dtcp,
         ps = container_of(rcu_dereference(dtcp->base.ps),
                           struct dtcp_ps, base);
         ret = ps->sender_ack(ps, seq);
+        ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
         rcu_read_unlock();
 
         LOG_DBG("DTCP received ACK (CPU: %d)", smp_processor_id());
@@ -783,7 +785,7 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         rcu_read_unlock();
 
         snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
-        LOG_DBG("Right Window Edge: %d", snd_rt_wind_edge(dtcp));
+        LOG_DBG("Right Window Edge: %u", snd_rt_wind_edge(dtcp));
 
         LOG_DBG("Calling CWQ_deliver for DTCP: %pK", dtcp);
         push_pdus_rmt(dtcp);
@@ -877,9 +879,6 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         switch (type) {
         case PDU_TYPE_ACK:
-                rcu_read_lock();
-                ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
-                rcu_read_unlock();
                 ret = rcv_ack(dtcp, pdu);
                 break;
         case PDU_TYPE_NACK:
@@ -889,9 +888,6 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
                 ret = rcv_flow_ctl(dtcp, pdu);
                 break;
         case PDU_TYPE_ACK_AND_FC:
-                rcu_read_lock();
-                ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
-                rcu_read_unlock();
                 ret = rcv_ack_and_flow_ctl(dtcp, pdu);
                 break;
         default:

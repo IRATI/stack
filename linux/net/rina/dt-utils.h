@@ -66,6 +66,7 @@ struct rtxq_entry * rtxq_entry_peek(struct rtxq * q,
                                     seq_num_t sn);
 unsigned long       rtxq_entry_timestamp(struct rtxq_entry * entry);
 int                 rtxq_entry_retries(struct rtxq_entry * entry);
+int                 rtxq_entry_destroy(struct rtxq_entry * entry);
 int                 rtxq_push_sn(struct rtxq * q,
                                  seq_num_t sn);
 int                 rtxq_push_ni(struct rtxq * q,

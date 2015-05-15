@@ -403,7 +403,7 @@ static struct rtxq_entry * rtxq_entry_create(struct pdu * pdu)
 static struct rtxq_entry * rtxq_entry_create_ni(struct pdu * pdu)
 { return rtxq_entry_create_gfp(pdu, GFP_ATOMIC); }
 
-static int rtxq_entry_destroy(struct rtxq_entry * entry)
+int rtxq_entry_destroy(struct rtxq_entry * entry)
 {
         if (!entry)
                 return -1;
@@ -414,6 +414,7 @@ static int rtxq_entry_destroy(struct rtxq_entry * entry)
 
         return 0;
 }
+EXPORT_SYMBOL(rtxq_entry_destroy);
 
 struct rtxqueue {
         struct list_head head;
@@ -474,7 +475,9 @@ static int rtxqueue_entries_ack(struct rtxqueue * q,
                 seq_num_t    seq;
 
                 seq = pci_sequence_number_get(pdu_pci_get_rw((cur->pdu)));
-                if (seq <= seq_num) {
+                /*NOTE: <= is not used because the entry is needed by RTT
+                 * estimator policy which will destroy it*/
+                if (seq < seq_num) {
                         LOG_DBG("Seq num acked: %u", seq);
                         rtxq_entry_destroy(cur);
                 } else
@@ -533,6 +536,10 @@ static struct rtxq_entry * rtxqueue_entry_peek(struct rtxqueue * q,
         seq_num_t           csn;
         list_for_each_entry(cur, &q->head, next) {
                 csn = pci_sequence_number_get(pdu_pci_get_rw((cur->pdu)));
+                if (csn > sn) {
+                        LOG_ERR("PDU was already removed from rtxq");
+                        return NULL;
+                }
                 if (csn == sn) {
                         return cur;
                 }

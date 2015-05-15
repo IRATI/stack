@@ -294,15 +294,21 @@ int common_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
         if (rtxq_entry_retries(entry) != 0) {
                 LOG_DBG("RTTestimator PDU %u has been retransmitted %u",
                         sn, rtxq_entry_retries(entry));
+                rtxq_entry_destroy(entry);
                 return 0;
         }
 
         start_time = rtxq_entry_timestamp(entry);
+        new_rtt    = jiffies_to_msecs(jiffies - start_time);
+
+        /* NOTE: the acking process has alrady deleted old entries from rtxq
+         * except for the one with the sn we need, here we have to detroy just
+         * the one we use */
+        rtxq_entry_destroy(entry);
+
         rtt        = dtcp_rtt(dtcp);
         srtt       = dtcp_srtt(dtcp);
         rttvar     = dtcp_rttvar(dtcp);
-
-        new_rtt = jiffies_to_msecs(jiffies - start_time);
 
         if (!rtt) {
                 rttvar = new_rtt >> 1;
