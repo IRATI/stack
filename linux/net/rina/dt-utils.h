@@ -62,8 +62,8 @@ struct rtxq *       rtxq_create_ni(struct dt *  dt,
 int                 rtxq_destroy(struct rtxq * q);
 
 /* FIXME: Where do we keep the rexmsntimer for the PDU? */
-struct rtxq_entry * rtxq_entry_peek_and_clean(struct rtxq * q,
-                                              seq_num_t sn);
+struct rtxq_entry * rtxq_entry_peek(struct rtxq * q,
+                                    seq_num_t sn);
 unsigned long       rtxq_entry_timestamp(struct rtxq_entry * entry);
 int                 rtxq_entry_retries(struct rtxq_entry * entry);
 int                 rtxq_push_sn(struct rtxq * q,

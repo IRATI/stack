@@ -296,35 +296,21 @@ void cwq_deliver(struct cwq * queue,
                         spin_unlock(&queue->lock);
                         return;
                 }
-                pci = pdu_pci_get_ro(pdu);
-                if (flow_ctrl || rtx_ctrl) {
-                        /*rtxq = dt_rtxq(dt);
+                if (rtx_ctrl) {
+                        rtxq = dt_rtxq(dt);
                         if (!rtxq) {
                                 spin_unlock(&queue->lock);
                                 LOG_ERR("Couldn't find the RTX queue");
                                 return;
                         }
-                        if (!rtx_ctrl) {
-                                rtxq_push_sn(rtxq, pci_sequence_number_get(pci));
-                        } else {*/
-                        if (rtx_ctrl) {
-                                /*FIXME: this to be removed if previous code is
-                                 * uncommented */
-                                rtxq = dt_rtxq(dt);
-                                if (!rtxq) {
-                                        spin_unlock(&queue->lock);
-                                        LOG_ERR("Couldn't find the RTX queue");
-                                        return;
-                                }
-                                /**/
-                                tmp = pdu_dup_ni(pdu);
-                                if (!tmp) {
-                                        spin_unlock(&queue->lock);
-                                        return;
-                                }
-                                rtxq_push_ni(rtxq, tmp);
+                        tmp = pdu_dup_ni(pdu);
+                        if (!tmp) {
+                                spin_unlock(&queue->lock);
+                                return;
                         }
+                        rtxq_push_ni(rtxq, tmp);
                 }
+                pci = pdu_pci_get_ro(pdu);
                 if (dtp_sv_max_seq_nr_set(dtp,
                                           pci_sequence_number_get(pci)))
                         LOG_ERR("Problems setting sender left window edge");
@@ -387,15 +373,12 @@ seq_num_t cwq_peek(struct cwq * queue)
 
 struct rtxq_entry {
         unsigned long    time_stamp;
-        seq_num_t        sn;
         struct pdu *     pdu;
         int              retries;
         struct list_head next;
 };
 
-static struct rtxq_entry * rtxq_entry_create_gfp(struct pdu * pdu,
-                                                 seq_num_t sn,
-                                                 gfp_t flag)
+static struct rtxq_entry * rtxq_entry_create_gfp(struct pdu * pdu, gfp_t flag)
 {
         struct rtxq_entry * tmp;
 
@@ -403,7 +386,6 @@ static struct rtxq_entry * rtxq_entry_create_gfp(struct pdu * pdu,
         if (!tmp)
                 return NULL;
 
-        tmp->sn         = sn;
         tmp->pdu        = pdu;
         tmp->time_stamp = jiffies;
         tmp->retries    = 0;
@@ -418,8 +400,8 @@ static struct rtxq_entry * rtxq_entry_create(struct pdu * pdu)
 { return rtxq_entry_create_gfp(pdu, GFP_KERNEL); }
 #endif
 
-static struct rtxq_entry * rtxq_entry_create_ni(struct pdu * pdu, seq_num_t sn)
-{ return rtxq_entry_create_gfp(pdu, sn, GFP_ATOMIC); }
+static struct rtxq_entry * rtxq_entry_create_ni(struct pdu * pdu)
+{ return rtxq_entry_create_gfp(pdu, GFP_ATOMIC); }
 
 static int rtxq_entry_destroy(struct rtxq_entry * entry)
 {
@@ -491,7 +473,7 @@ static int rtxqueue_entries_ack(struct rtxqueue * q,
         list_for_each_entry_safe(cur, n, &q->head, next) {
                 seq_num_t    seq;
 
-                seq = cur->sn;
+                seq = pci_sequence_number_get(pdu_pci_get_rw((cur->pdu)));
                 if (seq <= seq_num) {
                         LOG_DBG("Seq num acked: %u", seq);
                         rtxq_entry_destroy(cur);
@@ -544,26 +526,22 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
         return 0;
 }
 
-static struct rtxq_entry * rtxqueue_entry_peek_and_clean(struct rtxqueue * q,
-                                                         seq_num_t sn)
+static struct rtxq_entry * rtxqueue_entry_peek(struct rtxqueue * q,
+                                               seq_num_t sn)
 {
-        struct rtxq_entry * cur, *n;
-        list_for_each_entry_safe(cur, n, &q->head, next) {
-                if (cur->sn < sn) {
-                        rtxq_entry_destroy(cur);
-                }
-                if (cur->sn == sn) {
+        struct rtxq_entry * cur;
+        seq_num_t           csn;
+        list_for_each_entry(cur, &q->head, next) {
+                csn = pci_sequence_number_get(pdu_pci_get_rw((cur->pdu)));
+                if (csn == sn) {
                         return cur;
-                }
-                if (cur->sn > sn) {
-                        return NULL;
                 }
         }
         return NULL;
 }
 
 /* push in seq_num order */
-static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu, seq_num_t sn)
+static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
 {
         struct rtxq_entry * tmp, * cur, * last = NULL;
         seq_num_t           csn, psn;
@@ -572,13 +550,10 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu, seq_num_t sn)
         if (!q)
                 return -1;
 
-        csn = sn;
-        if (pdu) {
-                pci  = pdu_pci_get_ro(pdu);
-                csn  = pci_sequence_number_get((struct pci *) pci);
-        }
+        pci  = pdu_pci_get_ro(pdu);
+        csn  = pci_sequence_number_get((struct pci *) pci);
 
-        tmp = rtxq_entry_create_ni(pdu, csn);
+        tmp = rtxq_entry_create_ni(pdu);
         if (!tmp)
                 return -1;
 
@@ -593,7 +568,7 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu, seq_num_t sn)
         if (!last)
                 return -1;
 
-        psn = last->sn;
+        psn = pci_sequence_number_get(pdu_pci_get_rw((last->pdu)));
         if (csn == psn) {
                 LOG_ERR("Another PDU with the same seq_num is in "
                         "the rtx queue!");
@@ -607,7 +582,7 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu, seq_num_t sn)
         }
 
         list_for_each_entry(cur, &q->head, next) {
-                psn = cur->sn;
+                psn = pci_sequence_number_get(pdu_pci_get_rw((cur->pdu)));
                 if (csn == psn) {
                         LOG_ERR("Another PDU with the same seq_num is in "
                                 "the rtx queue!");
@@ -832,7 +807,7 @@ struct rtxq * rtxq_create_ni(struct dt *  dt,
         return tmp;
 }
 
-struct rtxq_entry * rtxq_entry_peek_and_clean(struct rtxq * q, seq_num_t sn)
+struct rtxq_entry * rtxq_entry_peek(struct rtxq * q, seq_num_t sn)
 {
         unsigned long       flags;
         struct rtxq_entry * entry;
@@ -840,11 +815,11 @@ struct rtxq_entry * rtxq_entry_peek_and_clean(struct rtxq * q, seq_num_t sn)
                 return NULL;
 
         spin_lock_irqsave(&q->lock, flags);
-        entry = rtxqueue_entry_peek_and_clean(q->queue, sn);
+        entry = rtxqueue_entry_peek(q->queue, sn);
         spin_unlock_irqrestore(&q->lock, flags);
         return entry;
 }
-EXPORT_SYMBOL(rtxq_entry_peek_and_clean);
+EXPORT_SYMBOL(rtxq_entry_peek);
 
 unsigned long rtxq_entry_timestamp(struct rtxq_entry * entry)
 {
@@ -862,18 +837,6 @@ int rtxq_entry_retries(struct rtxq_entry * entry)
 }
 EXPORT_SYMBOL(rtxq_entry_retries);
 
-int rtxq_push_sn(struct rtxq * q, seq_num_t sn)
-{
-        unsigned long flags;
-        if (!q)
-                return -1;
-
-        spin_lock_irqsave(&q->lock, flags);
-        rtxqueue_push_ni(q->queue, NULL, sn);
-        spin_unlock_irqrestore(&q->lock, flags);
-        return 0;
-}
-
 int rtxq_push_ni(struct rtxq * q,
                  struct pdu *  pdu)
 {
@@ -887,7 +850,7 @@ int rtxq_push_ni(struct rtxq * q,
         /* is the first transmitted PDU */
         rtimer_start(q->r_timer, dt_sv_tr(q->parent));
 #endif
-        rtxqueue_push_ni(q->queue, pdu, 0);
+        rtxqueue_push_ni(q->queue, pdu);
         spin_unlock_irqrestore(&q->lock, flags);
         return 0;
 }

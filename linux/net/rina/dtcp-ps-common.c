@@ -283,7 +283,7 @@ int common_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
 
         LOG_DBG("RTT Estimator...");
 
-        entry = rtxq_entry_peek_and_clean(dt_rtxq(dt), sn);
+        entry = rtxq_entry_peek(dt_rtxq(dt), sn);
         if (!entry) {
                 LOG_ERR("Could not retrieve timestamp of Seq num: %u for RTT "
                         "estimation", sn);

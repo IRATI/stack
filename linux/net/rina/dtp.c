@@ -1065,7 +1065,7 @@ int dtp_write(struct dtp * instance,
         struct dtp_sv *         sv;
         struct dt *             dt;
         struct dtcp *           dtcp;
-        struct rtxq *           rtxq = NULL;
+        struct rtxq *           rtxq;
         struct pdu *            cpdu;
         struct dtp_ps *         ps;
         seq_num_t               sn, csn;
@@ -1199,27 +1199,15 @@ int dtp_write(struct dtp * instance,
                                 rcu_read_unlock();
                                 return 0;
                         }
-                        /* FIXME: wait for John's answer for this*/
-                        /*if (!rtxq && !sv->rexmsn_ctrl) {
-                                rtxq = dt_rtxq(dt);
-                                if (!rtxq) {
-                                        rcu_read_unlock();
-                                        LOG_ERR("Failed to get rtxq");
-                                        return -1;
-                                }
-                                rtxq_push_sn(rtxq, csn);
-                        }*/
                 }
                 if (sv->rexmsn_ctrl) {
                         /* FIXME: Add timer for PDU */
+                        rtxq = dt_rtxq(dt);
                         if (!rtxq) {
-                                rtxq = dt_rtxq(dt);
-                                if (!rtxq) {
-                                        LOG_ERR("Failed to get rtxq");
-                                        rcu_read_unlock();
-                                        pdu_destroy(pdu);
-                                        return -1;
-                                }
+                                LOG_ERR("Failed to get rtxq");
+                                rcu_read_unlock();
+                                pdu_destroy(pdu);
+                                return -1;
                         }
 
                         cpdu = pdu_dup_ni(pdu);

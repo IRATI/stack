@@ -877,10 +877,10 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         switch (type) {
         case PDU_TYPE_ACK:
-                ret = rcv_ack(dtcp, pdu);
                 rcu_read_lock();
                 ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
                 rcu_read_unlock();
+                ret = rcv_ack(dtcp, pdu);
                 break;
         case PDU_TYPE_NACK:
                 ret = rcv_nack_ctl(dtcp, pdu);
