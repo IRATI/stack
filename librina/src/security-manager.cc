@@ -353,14 +353,16 @@ int AuthPasswordPolicySet::set_policy_set_param(const std::string& name,
 
 //AuthSSHRSAOptions encoder and decoder operations
 SSHRSAAuthOptions * decode_ssh_rsa_auth_options(const SerializedObject &message) {
-	SSHRSAAuthOptions * result;
+	SSHRSAAuthOptions * result = new SSHRSAAuthOptions();
 
+	(void) message;
 	return result;
 }
 
 SerializedObject * encode_ssh_rsa_auth_options(const SSHRSAAuthOptions& options){
-	SerializedObject * object;
+	SerializedObject * object = new SerializedObject();
 
+	(void) options;
 	return object;
 }
 
@@ -377,6 +379,7 @@ AuthSSHRSAPolicySet::AuthSSHRSAPolicySet(IRIBDaemon * ribd) :
 rina::AuthValue AuthSSHRSAPolicySet::get_my_auth_value(int session_id)
 {
 	rina::AuthValue auth_value;
+	(void) session_id;
 
 	SSHRSAAuthOptions options;
 	options.versions.push_back("1");
@@ -384,7 +387,15 @@ rina::AuthValue AuthSSHRSAPolicySet::get_my_auth_value(int session_id)
 	//TODO add supported encryption algorithms (from openSSL);
 	//TODO add supported MAC algorithms (from openSSL);
 
-	auth_value.auth_other_ = encode_ssh_rsa_auth_options(options);
+	SerializedObject * sobj = encode_ssh_rsa_auth_options(options);
+	if (!sobj) {
+		LOG_ERR("Problems encoding SSHRSAAuthOptions");
+		throw Exception();
+	}
+
+	auth_value.auth_other_ = *sobj;
+	delete sobj;
+
 	return auth_value;
 }
 
