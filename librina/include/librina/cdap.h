@@ -46,7 +46,7 @@ public:
 #ifndef SWIG
 	const std::string get_auth_name() const;
 	const std::string get_auth_password() const;
-	const std::string get_auth_other() const;
+	const SerializedObject& get_auth_other() const;
 #endif
 	bool is_empty() const;
 	std::string to_string() const;

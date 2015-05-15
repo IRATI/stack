@@ -49,19 +49,17 @@ const std::string AuthValue::get_auth_name() const {
 const std::string AuthValue::get_auth_password() const {
 	return auth_password_;
 }
-const std::string AuthValue::get_auth_other() const {
+const SerializedObject& AuthValue::get_auth_other() const {
 	return auth_other_;
 }
 bool AuthValue::is_empty() const {
-	if (auth_name_.empty() && auth_password_.empty()
-					&& !auth_other_) {
+	if (auth_name_.empty() && auth_password_.empty()) {
 		return true;
 	} else
 		return false;
 }
 std::string AuthValue::to_string() const {
-	return "Auth name: " + auth_name_ + "; Auth password: " + auth_password_
-			+ "; Auth other: " + auth_other_;
+	return "Auth name: " + auth_name_ + "; Auth password: " + auth_password_;
 }
 
 // CLASS IntObjectValue
