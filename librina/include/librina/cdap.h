@@ -2,7 +2,7 @@
  * CDAP
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Bernat Gast√≥n <bernat.gaston@i2cat.net>
+ *    Bernat Gastón <bernat.gaston@i2cat.net>
  *    Eduard Grasa <eduard.grasa@i2cat.net>
  *
  * This library is free software; you can redistribute it and/or
@@ -42,7 +42,7 @@ class AuthValue {
 public:
 	AuthValue();
 	AuthValue(const std::string &auth_name, const std::string &auth_password,
-			const std::string &auth_other);
+			const SerializedObject& auth_other);
 #ifndef SWIG
 	const std::string get_auth_name() const;
 	const std::string get_auth_password() const;
@@ -56,7 +56,7 @@ public:
 	/// Authentication password
 	std::string auth_password_;
 	/// Additional authentication information
-	std::string auth_other_;
+	SerializedObject auth_other_;
 };
 
 /// Encapsulates the data to set an object value

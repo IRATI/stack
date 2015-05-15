@@ -25,6 +25,7 @@
 
 #include "librina/logs.h"
 #include "librina/security-manager.h"
+#include "auth-policies.pb.h"
 
 namespace rina {
 
@@ -77,7 +78,7 @@ CDAPMessage::AuthTypes IAuthPolicySet::stringToCDAPType(const std::string& type)
 }
 
 //Class AuthNonePolicySet
-rina::AuthValue AuthNonePolicySet::get_my_credentials(int session_id)
+rina::AuthValue AuthNonePolicySet::get_my_auth_value(int session_id)
 {
 	(void) session_id;
 
@@ -140,7 +141,7 @@ AuthPasswordPolicySet::AuthPasswordPolicySet(const std::string password_,
 // No credentials required, since the process being authenticated
 // will have to demonstrate that it knows the password by encrypting
 // a random challenge with a password string
-rina::AuthValue AuthPasswordPolicySet::get_my_credentials(int session_id)
+rina::AuthValue AuthPasswordPolicySet::get_my_auth_value(int session_id)
 {
 	(void) session_id;
 
@@ -348,6 +349,43 @@ int AuthPasswordPolicySet::set_policy_set_param(const std::string& name,
         LOG_DBG("Unknown policy-set-specific parameters to set (%s, %s)",
                         name.c_str(), value.c_str());
         return -1;
+}
+
+//AuthSSHRSAOptions encoder and decoder operations
+SSHRSAAuthOptions * decode_ssh_rsa_auth_options(const SerializedObject &message) {
+	SSHRSAAuthOptions * result;
+
+	return result;
+}
+
+SerializedObject * encode_ssh_rsa_auth_options(const SSHRSAAuthOptions& options){
+	SerializedObject * object;
+
+	return object;
+}
+
+//Class AuthSSHRSA
+const int AuthSSHRSAPolicySet::DEFAULT_TIMEOUT = 10000;
+
+AuthSSHRSAPolicySet::AuthSSHRSAPolicySet(IRIBDaemon * ribd) :
+		IAuthPolicySet(rina::CDAPMessage::AUTH_SSHRSA)
+{
+	rib_daemon = ribd;
+	timeout = DEFAULT_TIMEOUT;
+}
+
+rina::AuthValue AuthSSHRSAPolicySet::get_my_auth_value(int session_id)
+{
+	rina::AuthValue auth_value;
+
+	SSHRSAAuthOptions options;
+	options.versions.push_back("1");
+	//TODO add supported key exchange algorithms (from openSSL);
+	//TODO add supported encryption algorithms (from openSSL);
+	//TODO add supported MAC algorithms (from openSSL);
+
+	auth_value.auth_other_ = encode_ssh_rsa_auth_options(options);
+	return auth_value;
 }
 
 //Class ISecurity Manager

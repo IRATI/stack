@@ -57,13 +57,13 @@ public:
 	IAuthPolicySet(CDAPMessage::AuthTypes type_);
 	virtual ~IAuthPolicySet() { };
 
-	/// get credentials of application process required for authentication
-	virtual AuthValue get_my_credentials(int session_id) = 0;
+	/// get auth_value field of application process required for authentication
+	virtual AuthValue get_my_auth_value(int session_id) = 0;
 
 	/// initiate the authentication of a remote AE. Any values originated
 	/// from authentication such as sesion keys will be stored in the
 	/// corresponding security context
-	virtual AuthStatus initiate_authentication(AuthValue credentials, int session_id) = 0;
+	virtual AuthStatus initiate_authentication(AuthValue auth_value, int session_id) = 0;
 
 	/// Process an incoming CDAP message
 	virtual int process_incoming_message(const CDAPMessage& message, int session_id) = 0;
@@ -76,7 +76,7 @@ class AuthNonePolicySet : public IAuthPolicySet {
 public:
 	AuthNonePolicySet() : IAuthPolicySet(rina::CDAPMessage::AUTH_NONE) { };
 	virtual ~AuthNonePolicySet() { };
-	rina::AuthValue get_my_credentials(int session_id);
+	rina::AuthValue get_my_auth_value(int session_id);
 	AuthStatus initiate_authentication(rina::AuthValue credentials, int session_id);
 	int process_incoming_message(const CDAPMessage& message, int session_id);
 	int set_policy_set_param(const std::string& name,
@@ -125,7 +125,8 @@ public:
 
 	AuthPasswordPolicySet(const std::string password_,
 			int challenge_length_, IRIBDaemon * ribd);
-	rina::AuthValue get_my_credentials(int session_id);
+	~AuthPasswordPolicySet() { };
+	rina::AuthValue get_my_auth_value(int session_id);
 	AuthStatus initiate_authentication(rina::AuthValue credentials, int session_id);
 	int process_incoming_message(const CDAPMessage& message, int session_id);
 	int set_policy_set_param(const std::string& name,
@@ -146,6 +147,47 @@ private:
 	IRIBDaemon * rib_daemon;
 	std::string cipher;
 	ThreadSafeMapOfPointers<int, AuthPasswordSessionInformation> pending_sessions;
+	Timer timer;
+	int timeout;
+	Lockable lock;
+};
+
+/// Options that then SSH RSA authenticaiton policy has to negotiate with its peer
+class SSHRSAAuthOptions {
+public:
+	SSHRSAAuthOptions() { };
+	~SSHRSAAuthOptions() { };
+
+	///Supported policy versions
+	std::list<std::string> versions;
+
+	/// Supported key exchange algorithms
+	std::list<std::string> key_exch_algs;
+
+	/// Supported encryption algorithms
+	std::list<std::string> encrypt_algs;
+
+	/// Supported MAC algorithms
+	std::list<std::string> mac_algs;
+};
+
+/// Authentication policy set that mimics SSH approach. It is associated to
+/// a cryptographic SDU protection policy, which is configured by this Authz policy.
+/// It uses the Open SSL crypto library to perform all its functions
+/// 1: Negotiation of versions
+/// 2: Negotiation of algorithms
+/// 3: Encryption key generation and exchange (configuring SDU protection policy)
+/// 4: Authentication
+class AuthSSHRSAPolicySet : public IAuthPolicySet {
+public:
+	static const int DEFAULT_TIMEOUT;
+
+	AuthSSHRSAPolicySet(IRIBDaemon * ribd);
+	~AuthSSHRSAPolicySet() { };
+	rina::AuthValue get_my_auth_value(int session_id);
+
+private:
+	IRIBDaemon * rib_daemon;
 	Timer timer;
 	int timeout;
 	Lockable lock;

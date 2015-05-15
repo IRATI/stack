@@ -30,14 +30,19 @@ namespace rina {
 const int CDAPErrorCodes::CONNECTION_REJECTED_ERROR = -1;
 
 // CLASS AuthValue
-AuthValue::AuthValue() {
+AuthValue::AuthValue()
+{
 }
+
 AuthValue::AuthValue(const std::string &auth_name,
-		const std::string &auth_password, const std::string &auth_other) {
+		     const std::string &auth_password,
+		     const SerializedObject& auth_other)
+{
 	auth_name_ = auth_name;
 	auth_password_ = auth_password;
 	auth_other_ = auth_other;
 }
+
 const std::string AuthValue::get_auth_name() const {
 	return auth_name_;
 }
@@ -49,7 +54,7 @@ const std::string AuthValue::get_auth_other() const {
 }
 bool AuthValue::is_empty() const {
 	if (auth_name_.empty() && auth_password_.empty()
-					&& auth_other_.empty()) {
+					&& !auth_other_) {
 		return true;
 	} else
 		return false;

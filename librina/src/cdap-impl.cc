@@ -1303,10 +1303,21 @@ const CDAPMessage* GPBWireMessageProvider::deserializeMessage(
   CDAPMessage::AuthTypes auth_type =
       static_cast<CDAPMessage::AuthTypes>(auth_type_val);
   cdapMessage->set_auth_mech(auth_type);
-  AuthValue auth_value(gpfCDAPMessage.authvalue().authname(),
-                       gpfCDAPMessage.authvalue().authpassword(),
-                       gpfCDAPMessage.authvalue().authother());
+
+  AuthValue auth_value;
+  auth_value.auth_name_ = gpfCDAPMessage.authvalue().authname();
+  auth_value.auth_password_ = gpfCDAPMessage.authvalue().authpassword();
+  if (gpfCDAPMessage.authvalue().has_authother()) {
+	  char *val = new char[gpfCDAPMessage.authvalue().authother().size()];
+	  memcpy(val,
+	         gpfCDAPMessage.authvalue().authother().data(),
+	         gpfCDAPMessage.authvalue().authother().size());
+	  SerializedObject sobj(val,
+			  	gpfCDAPMessage.authvalue().authother());
+	  auth_value.auth_other_ = sobj;
+  }
   cdapMessage->set_auth_value(auth_value);
+
   if (gpfCDAPMessage.has_destaeinst())
     cdapMessage->set_dest_ae_inst(gpfCDAPMessage.destaeinst());
   if (gpfCDAPMessage.has_destaename())
@@ -1394,11 +1405,16 @@ const SerializedObject* GPBWireMessageProvider::serializeMessage(
       (cdap::impl::googleprotobuf::authTypes_t) cdapMessage.get_auth_mech());
   cdap::impl::googleprotobuf::authValue_t *gpb_auth_value =
       new cdap::impl::googleprotobuf::authValue_t();
+
   AuthValue auth_value = cdapMessage.get_auth_value();
   gpb_auth_value->set_authname(auth_value.get_auth_name());
-  gpb_auth_value->set_authother(auth_value.get_auth_other());
   gpb_auth_value->set_authpassword(auth_value.get_auth_password());
+  if (auth_value.auth_other_) {
+	  gpb_auth_value->set_authother(auth_value.auth_other_.message_,
+			  	  	auth_value.auth_other_.size_);
+  }
   gpfCDAPMessage.set_allocated_authvalue(gpb_auth_value);
+
   gpfCDAPMessage.set_destaeinst(cdapMessage.get_dest_ae_inst());
   gpfCDAPMessage.set_destaename(cdapMessage.get_dest_ae_name());
   gpfCDAPMessage.set_destapinst(cdapMessage.get_dest_ap_inst());

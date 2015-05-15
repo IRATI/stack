@@ -1,7 +1,7 @@
 /*
  * CDAP implementation
  *
- *    Bernat Gast√≥n <bernat.gaston@i2cat.net>
+ *    Bernat Gastón <bernat.gaston@i2cat.net>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This library is free software{} you can redistribute it and/or
@@ -2525,12 +2525,19 @@ const cdap_m_t* GPBSerializer::deserializeMessage(
                 cdapMessage->auth_mech_ = auth_mech;
         }
         // AUTH_VALUE
-        if (gpfCDAPMessage.has_authvalue()) {
-                AuthValue auth_value(gpfCDAPMessage.authvalue().authname(),
-                                     gpfCDAPMessage.authvalue().authpassword(),
-                                     gpfCDAPMessage.authvalue().authother());
-                cdapMessage->auth_value_ = auth_value;
+        AuthValue auth_value;
+        auth_value.auth_name_ = gpfCDAPMessage.authvalue().authname();
+        auth_value.auth_password_ = gpfCDAPMessage.authvalue().authpassword();
+        if (gpfCDAPMessage.authvalue().has_authother()) {
+      	  char *val = new char[gpfCDAPMessage.authvalue().authother().size()];
+      	  memcpy(val,
+      	         gpfCDAPMessage.authvalue().authother().data(),
+      	         gpfCDAPMessage.authvalue().authother().size());
+      	  SerializedObject sobj(val,
+      			  	gpfCDAPMessage.authvalue().authother());
+      	  auth_value.auth_other_ = sobj;
         }
+        cdapMessage->auth_value_ = auth_value;
         // DEST_AE_INST
         if (gpfCDAPMessage.has_destaeinst())
                 cdapMessage->dest_ae_inst_ = gpfCDAPMessage.destaeinst();
@@ -2633,8 +2640,11 @@ const cdap_rib::SerializedObject* GPBSerializer::serializeMessage(
         // AUTH_VALUE
         AuthValue auth_value = cdapMessage.auth_value_;
         gpb_auth_value->set_authname(auth_value.get_auth_name());
-        gpb_auth_value->set_authother(auth_value.get_auth_other());
         gpb_auth_value->set_authpassword(auth_value.get_auth_password());
+        if (auth_value.auth_other_) {
+      	  gpb_auth_value->set_authother(auth_value.auth_other_.message_,
+      			  	  	auth_value.auth_other_.size_);
+        }
         gpfCDAPMessage.set_allocated_authvalue(gpb_auth_value);
         // DEST_AE_INST
         gpfCDAPMessage.set_destaeinst(cdapMessage.dest_ae_inst_);

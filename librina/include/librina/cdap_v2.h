@@ -2,7 +2,7 @@
  * CDAP North bound API
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Bernat Gast√≥n <bernat.gaston@i2cat.net>
+ *    Bernat Gastón <bernat.gaston@i2cat.net>
  *    Eduard Grasa <eduard.grasa@i2cat.net>
  *
  * This library is free software; you can redistribute it and/or

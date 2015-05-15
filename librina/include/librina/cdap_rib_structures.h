@@ -1,7 +1,7 @@
 /*
  * RIB and CDAP common structures
  *
- *    Bernat Gast√≥n <bernat.gaston@i2cat.net>
+ *    Bernat Gastón <bernat.gaston@i2cat.net>
  *
  * This library is free software{} you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
