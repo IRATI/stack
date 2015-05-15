@@ -27,6 +27,7 @@
 #include <list>
 #include <map>
 #include <algorithm>
+#include "librina/exceptions.h"
 
 namespace rina{
 namespace cacep {
@@ -35,17 +36,16 @@ namespace cacep {
 class AppConHandlerInterface {
 
 public:
-	virtual ~AppConHandlerInterface()
-	{
-	}
-	/// A remote IPC process Connect request has been received.
+	virtual ~AppConHandlerInterface(){};
+
+	/// A remote Connect request has been received.
 	virtual void connect(int message_id, const cdap_rib::con_handle_t &con) = 0;
-	/// A remote IPC process Connect response has been received.
+	/// A remote Connect response has been received.
 	virtual void connectResponse(const cdap_rib::res_info_t &res,
 			const cdap_rib::con_handle_t &con) = 0;
-	/// A remote IPC process Release request has been received.
+	/// A remote Release request has been received.
 	virtual void release(int message_id, const cdap_rib::con_handle_t &con) = 0;
-	/// A remote IPC process Release response has been received.
+	/// A remote Release response has been received.
 	virtual void releaseResponse(const cdap_rib::res_info_t &res,
 			const cdap_rib::con_handle_t &con) = 0;
 };
@@ -54,32 +54,68 @@ public:
 
 namespace rib {
 
-class ResponseHandlerInterface
-{
- public:
-  virtual ~ResponseHandlerInterface()
-  {
-  }
+//fwd decl
+class RIB;
+class RIBDaemonProxy;
 
-  virtual void createResponse(const cdap_rib::res_info_t &res,
-                              const cdap_rib::obj_info_t &obj,
-                              const cdap_rib::con_handle_t &con) = 0;
-  virtual void deleteResponse(const cdap_rib::res_info_t &res,
-                              const cdap_rib::con_handle_t &con) = 0;
-  virtual void readResponse(const cdap_rib::res_info_t &res,
-                            const cdap_rib::obj_info_t &obj,
-                            const cdap_rib::con_handle_t &con) = 0;
-  virtual void cancelReadResponse(const cdap_rib::res_info_t &res,
-                                  const cdap_rib::con_handle_t &con) = 0;
-  virtual void writeResponse(const cdap_rib::res_info_t &res,
-                             const cdap_rib::obj_info_t &obj,
-                             const cdap_rib::con_handle_t &con) = 0;
-  virtual void startResponse(const cdap_rib::res_info_t &res,
-                             const cdap_rib::obj_info_t &obj,
-                             const cdap_rib::con_handle_t &con) = 0;
-  virtual void stopResponse(const cdap_rib::res_info_t &res,
-                            const cdap_rib::obj_info_t &obj,
-                            const cdap_rib::con_handle_t &con) = 0;
+/// RIB version has been already registered
+DECLARE_EXCEPTION_SUBCLASS(eRIBVersionExists);
+
+/// RIB version does not exist
+DECLARE_EXCEPTION_SUBCLASS(eRIBVersionDoesNotExist);
+
+///
+/// Initialize the RIB library (RIBDaemon)
+///
+/// This method initializes the state of the RIB library. It does:
+///
+/// * Initialize internal state of the RIB library (RIBDaemon)
+/// * Intiialize the CDAP provider
+///
+///
+void init(cacep::AppConHandlerInterface *app_con_callback,
+		cdap_rib::cdap_params params);
+
+//
+// Get a proxy object to interface the RIBDaemon
+//
+// @ret A proxy object to the RIBDaemon
+//
+RIBDaemonProxy* getRIBDProxy(void);
+
+
+///
+/// Destroy the RIB library state
+///
+void fini(void);
+
+//
+// The
+//
+class RIBOpsRespHandlers {
+
+public:
+	virtual ~RIBOpsRespHandlers(){};
+
+	virtual void createResponse(const cdap_rib::res_info_t &res,
+			const cdap_rib::obj_info_t &obj,
+			const cdap_rib::con_handle_t &con) = 0;
+	virtual void deleteResponse(const cdap_rib::res_info_t &res,
+			const cdap_rib::con_handle_t &con) = 0;
+	virtual void readResponse(const cdap_rib::res_info_t &res,
+			const cdap_rib::obj_info_t &obj,
+			const cdap_rib::con_handle_t &con) = 0;
+	virtual void cancelReadResponse(const cdap_rib::res_info_t &res,
+			const cdap_rib::con_handle_t &con) = 0;
+	virtual void writeResponse(const cdap_rib::res_info_t &res,
+			const cdap_rib::obj_info_t &obj,
+			const cdap_rib::con_handle_t &con) = 0;
+	virtual void startResponse(const cdap_rib::res_info_t &res,
+			const cdap_rib::obj_info_t &obj,
+			const cdap_rib::con_handle_t &con) = 0;
+	virtual void stopResponse(const cdap_rib::res_info_t &res,
+			const cdap_rib::obj_info_t &obj,
+			const cdap_rib::con_handle_t &con) = 0;
 };
 
 class AbstractEncoder {
@@ -113,56 +149,21 @@ public:
 			T& des_obj) = 0;
 };
 
-/// Contains the data of an object in the RIB
-class RIBObjectData {
-
-public:
-	RIBObjectData();
-	RIBObjectData(std::string clas, std::string name, unsigned long instance,
-			std::string disp_value);
-	virtual ~RIBObjectData()
-	{
-	}
-	;
-	bool operator==(const RIBObjectData &other) const;
-	bool operator!=(const RIBObjectData &other) const;
-	const std::string& get_class() const;
-	unsigned long get_instance() const;
-	const std::string& get_name() const;
-	virtual const std::string& get_displayable_value() const;
-private:
-	/** The class (type) of object */
-	std::string class_;
-	/** The name of the object (unique within a class)*/
-	std::string name_;
-	/** A synonim for clazz+name (unique within the RIB) */
-	unsigned long instance_;
-	/**
-	 * The value of the object, encoded in an string for
-	 * displayable purposes
-	 */
-	std::string displayable_value_;
-};
-
-class RIBDNorthInterface;
 /// Base RIB Object. API for the create/delete/read/write/start/stop RIB
 /// functionality for certain objects (identified by objectNames)
-class BaseRIBObject {
+class RIBObj {
 
 public:
-	virtual ~BaseRIBObject()
-	{
-	}
-	;
+	virtual ~RIBObj(){};
+
 	virtual std::string get_displayable_value();
 	// FIXME fix object data displayable
-	virtual RIBObjectData* get_data();
 
 	/// Local invocations
 	virtual bool createObject(const std::string& clas, const std::string& name,
 			const void* value);
 	virtual bool deleteObject(const void* value);
-	virtual BaseRIBObject* readObject();
+	virtual RIBObj* readObject();
 	virtual bool writeObject(const void* value);
 	virtual bool startObject(const void* object);
 	virtual bool stopObject(const void* object);
@@ -265,70 +266,6 @@ private:
 	void operation_not_supported();
 };
 
-/// Base RIB Object. API for the create/delete/read/write/start/stop RIB
-/// functionality for certain objects (identified by objectNames)
-template<class T>
-class RIBObject : public BaseRIBObject {
-
-public:
-	RIBObject(const std::string& clas, long instance, std::string name, T* value,
-			Encoder<T> *encoder)
-	{
-		name.erase(std::remove_if(name.begin(), name.end(), ::isspace), name.end());
-		name_ = name;
-		class_ = clas;
-		instance_ = instance;
-		value_ = value;
-		encoder_ = encoder;
-	}
-	RIBObject(const std::string& clas, long instance, std::string name,
-			cdap_rib::SerializedObject* value, Encoder<T> *encoder)
-	{
-		name.erase(std::remove_if(name.begin(), name.end(), ::isspace), name.end());
-		name_ = name;
-		class_ = clas;
-		instance_ = instance;
-		encoder_ = encoder;
-		value_ = encoder->decode(value);
-	}
-
-	virtual ~RIBObject()
-	{
-		delete value_;
-	}
-	const T* get_value() const
-	{
-		return value_;
-	}
-	AbstractEncoder* get_encoder() const
-	{
-		return encoder_;
-	}
-protected:
-	T* value_;
-	Encoder<T> *encoder_;
-};
-
-// RIB daemon Interface to be used by RIBObjects
-class RIBDNorthInterface {
-
-public:
-	virtual ~RIBDNorthInterface()
-	{
-	}
-	;
-	virtual void addRIBObject(BaseRIBObject *ribObject) = 0;
-	virtual void removeRIBObject(BaseRIBObject *ribObject) = 0;
-	virtual void removeRIBObject(const std::string& name) = 0;
-	virtual BaseRIBObject* getObject(const std::string& name,
-			const std::string& clas) const = 0;
-	virtual BaseRIBObject* getObject(unsigned long instance,
-			const std::string& clas) const = 0;
-	virtual void remote_open_connection(const cdap_rib::src_info_t &src,
-                                      const cdap_rib::dest_info_t &dest, const cdap_rib::auth_info &auth,
-                                      int port) = 0;
-};
-
 /**
  * RIB library result codes
  */
@@ -378,207 +315,43 @@ public:
 	char get_separator() const;
 	const cdap_rib::vers_info_t& get_version() const;
 private:
-	bool validateAddObject(const BaseRIBObject* obj);
-	bool validateRemoveObject(const BaseRIBObject* obj,
-			const BaseRIBObject* parent);
+	bool validateAddObject(const RIBObj* obj);
+	bool validateRemoveObject(const RIBObj* obj,
+			const RIBObj* parent);
 	const cdap_rib::vers_info_t *version_;
 	std::map<std::string, RIBSchemaObject*> rib_schema_;
 	char separator_;
 };
 
-class RIBDFactory {
+//
+// EmptyClass
+//
+class EmptyClass {
+
+};
+
+class EmptyEncoder : public rib::Encoder<EmptyClass> {
 
 public:
-	RIBDNorthInterface* create(cacep::AppConHandlerInterface* app_callback,
-			ResponseHandlerInterface* app_resp_callbak,
-			cdap_rib::cdap_params_t& cdap_params,
-			const cdap_rib::version_info *version,
-			char separator);
+	virtual void encode(const EmptyClass &obj, cdap_rib::SerializedObject& serobj){
+		(void)serobj;
+		(void)obj;
+	};
+	virtual void decode(const cdap_rib::SerializedObject &serobj,
+			EmptyClass& des_obj){
+		(void)serobj;
+		(void)des_obj;
+	};
+	std::string get_type() const{
+		return "EmptyClass";
+	};
 };
 
+//
+// RIBDaemon Proxy class
+//
+class RIBDaemonProxy{
 
-//Uncomment this when implemented
-#if 0
-
-class IntEncoder : public rib::Encoder<int> {
-
-public:
-	const cdap_rib::SerializedObject* encode(const int &object);
-	int* decode(const cdap_rib::SerializedObject &serialized_object) const;
-	std::string get_type() const;
-};
-
-class SIntEncoder : public rib::Encoder<short int> {
-
-public:
-	const cdap_rib::SerializedObject* encode(const short int &object);
-	short int* decode(const cdap_rib::SerializedObject &serialized_object) const;
-	std::string get_type() const;
-};
-
-class LongEncoder : public rib::Encoder<long long> {
-
-public:
-	const cdap_rib::SerializedObject* encode(const long long &object);
-	long long* decode(const cdap_rib::SerializedObject &serialized_object) const;
-	std::string get_type() const;
-};
-
-class SLongEncoder : public rib::Encoder<long> {
-
-public:
-	const cdap_rib::SerializedObject* encode(const long &object);
-	long* decode(const cdap_rib::SerializedObject &serialized_object) const;
-	std::string get_type() const;};
-
-class StringEncoder : public rib::Encoder<std::string> {
-
-public:
-	const cdap_rib::SerializedObject* encode(const std::string &object);
-	std::string* decode(
-			const cdap_rib::SerializedObject &serialized_object) const;
-	std::string get_type() const;
-};
-
-class FloatEncoder : public rib::Encoder<float> {
-
-public:
-	const cdap_rib::SerializedObject* encode(const float &object);
-	float* decode(const cdap_rib::SerializedObject &serialized_object) const;
-	std::string get_type() const;
-};
-
-class DoubleEncoder : public rib::Encoder<double> {
-
-public:
-	const cdap_rib::SerializedObject* encode(const double &object);
-	double* decode(const cdap_rib::SerializedObject &serialized_object) const;
-	std::string get_type() const;
-};
-
-class BoolEncoder : public rib::Encoder<bool> {
-
-public:
-	const cdap_rib::SerializedObject* encode(const bool &object);
-	bool* decode(const cdap_rib::SerializedObject &serialized_object) const;
-	std::string get_type() const;
-};
-
-#endif
-
-class empty {
-
-};
-
-class EmptyEncoder : public rib::Encoder<empty> {
-
-	public:
-		virtual void encode(const empty &obj, cdap_rib::SerializedObject& serobj){
-			(void)serobj;
-			(void)obj;
-		};
-		virtual void decode(const cdap_rib::SerializedObject &serobj,
-				empty& des_obj){
-			(void)serobj;
-			(void)des_obj;
-		};
-		std::string get_type() const{
-			return "empty";
-		};
-};
-
-//Uncomment this when implemented
-#if 0
-
-class IntRIBObject : public rib::RIBObject<int> {
-
-	public:
-		IntRIBObject(const std::string& clas, std::string name, long instance,
-				int* value, IntEncoder *encoder)
-			: RIBObject(clas, instance, name, value, encoder)
-		{
-		}
-};
-
-class SIntRIBObject : public rib::RIBObject<short int> {
-
-	public:
-		SIntRIBObject(const std::string& clas, std::string name, long instance,
-				short int* value, SIntEncoder *encoder)
-			: RIBObject(clas, instance, name, value, encoder)
-		{
-		}
-};
-
-class SLongRIBObject : public rib::RIBObject<long> {
-
-	public:
-		SLongRIBObject(const std::string& clas, std::string name, long instance,
-				long* value, SLongEncoder *encoder)
-			: RIBObject(clas, instance, name, value, encoder)
-		{
-		}
-};
-
-class LongRIBObject : public rib::RIBObject<long long> {
-
-	public:
-		LongRIBObject(const std::string& clas, std::string name, long instance,
-				long long* value, LongEncoder *encoder)
-			: RIBObject(clas, instance, name, value, encoder)
-		{
-		}
-};
-
-class StringRIBObject : public rib::RIBObject<std::string> {
-
-	public:
-		StringRIBObject(const std::string& clas, std::string name, long instance,
-				std::string* value, StringEncoder *encoder)
-			: RIBObject(clas, instance, name, value, encoder)
-		{
-		}
-};
-
-class FloatRIBObject : public rib::RIBObject<float> {
-
-	public:
-		FloatRIBObject(const std::string& clas, std::string name, long instance,
-				float* value, FloatEncoder *encoder)
-			: RIBObject(clas, instance, name, value, encoder)
-		{
-		}
-};
-
-class DoubleRIBObject : public rib::RIBObject<double> {
-
-	public:
-		DoubleRIBObject(const std::string& clas, std::string name, long instance,
-				double* value, DoubleEncoder *encoder)
-			: RIBObject(clas, instance, name, value, encoder)
-		{
-		}
-};
-
-class BoolRIBObject : public rib::RIBObject<bool> {
-
-	public:
-		BoolRIBObject(const std::string& clas, std::string name, long instance,
-				bool* value, BoolEncoder *encoder)
-			: RIBObject(clas, instance, name, value, encoder)
-		{
-		}
-};
-#endif
-
-class EmptyRIBObject : public rib::RIBObject<empty> {
-
-	public:
-		EmptyRIBObject(const std::string& clas, std::string name, long instance,
-				EmptyEncoder *encoder)
-			: RIBObject(clas, instance, name, (empty*) 0, encoder)
-		{
-		}
 };
 
 

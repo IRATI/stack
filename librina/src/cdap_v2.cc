@@ -3367,7 +3367,7 @@ void init(cdap::CDAPCallbackInterface *callback, bool is_IPCP){
 	//First check the flag
 	if(inited){
 		LOG_ERR("Double call to rina::cdap::init()");
-		return;
+		throw Exception("Double call to rina::cdap::init()");
 	}
 
 	//Initialize subcomponents
