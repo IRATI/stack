@@ -102,6 +102,9 @@ PKG_PROG_PKG_CONFIG([0.26])
 LIBNL_MIN_VERSION=3.2.14
 AC_SUBST(LIBNL_MIN_VERSION, $LIBNL_MIN_VERSION)
 
+OPENSSL_MIN_VERSION=1.0.1
+AC_SUBST(OPENSSL_MIN_VERSION, $OPENSSL_MIN_VERSION)
+
 PKG_CHECK_MODULES(LIBNL3, [libnl-3.0 >= $LIBNL_MIN_VERSION],, [
     AC_MSG_ERROR([Your system lacks of libnl-3 support (>= $LIBNL_MIN_VERSION)])
 ])
@@ -112,6 +115,10 @@ PKG_CHECK_MODULES(LIBNLGENL3, [libnl-genl-3.0 >= $LIBNL_MIN_VERSION],, [
 
 AC_CHECK_LIB([pthread],[pthread_create],,[
     AC_MSG_ERROR([Your system lacks of libpthread support])
+])
+
+PKG_CHECK_MODULES(OPENSSL, [openssl >= $OPENSSL_MIN_VERSION],, [
+    AC_MSG_ERROR([Your system lacks of openssl support (>= $OPENSSL_MIN_VERSION)])
 ])
 
 build_bindings=no
