@@ -191,6 +191,32 @@ find_instance(struct ipcp_factory_data * data,
         return NULL;
 }
 
+static int normal_flow_prebind(struct ipcp_instance_data * data,
+                               port_id_t                   port_id)
+{
+        struct normal_flow * flow;
+
+        if (!data || !is_port_id_ok(port_id)) {
+                LOG_ERR("Wrong input parameters...");
+                return -1;
+        }
+
+        flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+        if (!flow) {
+                LOG_ERR("Could not create a flow in normal-ipcp to pre-bind");
+                return -1;
+        }
+        flow->port_id = port_id;
+        INIT_LIST_HEAD(&flow->list);
+        INIT_LIST_HEAD(&flow->cep_ids_list);
+        flow->state = PORT_STATE_PENDING;
+        spin_lock(&data->lock);
+        list_add(&flow->list, &data->flows);
+        spin_unlock(&data->lock);
+
+        return 0;
+}
+
 static
 cep_id_t connection_create_request(struct ipcp_instance_data * data,
                                    port_id_t                   port_id,
@@ -234,18 +260,9 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
         spin_lock(&data->lock);
         flow = find_flow(data, port_id);
         if (!flow) {
-                spin_unlock(&data->lock);
-                flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
-                if (!flow) {
-                        LOG_ERR("Could not create a flow in normal-ipcp");
-                        efcp_connection_destroy(data->efcpc, cep_id);
-                        return cep_id_bad();
-                }
-                flow->port_id = port_id;
-                INIT_LIST_HEAD(&flow->list);
-                INIT_LIST_HEAD(&flow->cep_ids_list);
-                spin_lock(&data->lock);
-                list_add(&flow->list, &data->flows);
+                LOG_ERR("Could not retrieve normal flow to create connection");
+                efcp_connection_destroy(data->efcpc, cep_id);
+                return cep_id_bad();
         }
 
         list_add(&cep_entry->list, &flow->cep_ids_list);
@@ -351,6 +368,7 @@ static int ipcp_flow_binding(struct ipcp_instance_data * user_data,
 static int normal_flow_unbinding_ipcp(struct ipcp_instance_data * user_data,
                                       port_id_t                   pid)
 {
+        kfa_port_id_release(user_data->kfa, pid);
         if (rmt_n1port_unbind(user_data->rmt, pid))
                 return -1;
 
@@ -958,6 +976,7 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .flow_allocate_request     = NULL,
         .flow_allocate_response    = NULL,
         .flow_deallocate           = normal_deallocate,
+        .flow_prebind              = normal_flow_prebind,
         .flow_binding_ipcp         = ipcp_flow_binding,
         .flow_unbinding_ipcp       = normal_flow_unbinding_ipcp,
         .flow_unbinding_user_ipcp  = normal_flow_unbinding_user_ipcp,

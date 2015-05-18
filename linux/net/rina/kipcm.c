@@ -2199,6 +2199,11 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
                 return port_id_bad();
         }
 
+        ASSERT(ipc_process->ops);
+        if (ipc_process->ops->flow_prebind) {
+                ipc_process->ops->flow_prebind(ipc_process->data, pid);
+        }
+
         user_ipc_process = ipcp_imap_find_by_name(kipcm->instances,
                                                   process_name);
 
@@ -2227,19 +2232,16 @@ int kipcm_deallocate_port(struct kipcm *   kipcm,
                           port_id_t        port_id)
 {
         struct ipcp_instance * ipc_process;
-        int                    ret = 0;
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
-                ret = -1;
-                goto exit;
+                return -1;
         }
 
         ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipc_process) {
                 LOG_ERR("IPC process %d not found", ipc_id);
-                ret = -1;
-                goto exit;
+                return -1;
         }
 
         ASSERT(ipc_process->ops);
@@ -2248,13 +2250,10 @@ int kipcm_deallocate_port(struct kipcm *   kipcm,
         if (ipc_process->ops->flow_deallocate(ipc_process->data, port_id)) {
                 LOG_ERR("Failed deallocate flow request "
                         "for port id: %d", port_id);
-                ret = -1;
-                goto exit;
+                return -1;
         }
 
-        exit:
-        kfa_port_id_release(kipcm->kfa, port_id);
-        return ret;
+        return 0;
 }
 
 int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
