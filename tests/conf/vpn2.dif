@@ -1,0 +1,25 @@
+{
+    "difType" : "normal-ipc",
+    "knownIPCProcessAddresses": [
+     {
+         "apName": "h.n.nxw.IPCP",
+         "apInstance": "1",
+         "address": 16
+     },
+     {
+         "apName": "g.n.nxw.IPCP",
+         "apInstance": "1",
+         "address": 17
+     },
+     {
+         "apName": "h.n.i2cat.IPCP",
+         "apInstance": "1",
+         "address": 18
+     },
+     {
+         "apName": "g.n.i2cat.IPCP",
+         "apInstance": "1",
+         "address": 19
+     }
+     ]
+  }
