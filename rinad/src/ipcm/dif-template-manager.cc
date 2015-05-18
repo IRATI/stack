@@ -61,6 +61,15 @@ bool DIFTemplateMonitor::has_to_stop()
 	return stop;
 }
 
+static bool str_ends_with(const std::string& str, const std::string& suffix)
+{
+	if (suffix.size() > str.size()) {
+		return false;
+	}
+
+	return std::equal(suffix.rbegin(), suffix.rend(), str.rbegin());
+}
+
 void DIFTemplateMonitor::process_events(int fd)
 {
         char buf[4096]
@@ -87,17 +96,9 @@ void DIFTemplateMonitor::process_events(int fd)
                 	event = (const struct inotify_event *) ptr;
                 	std::string file_name = std::string(event->name);
 
-                	//ignore *.swp, *.swx, *~*, *4913*
-                	if (file_name.find(".swx") != std::string::npos ||
-                			file_name.find(".swp") != std::string::npos ||
-                			file_name.find("~") != std::string::npos ||
-                			file_name.find("4913") != std::string::npos) {
-                		continue;
-                	}
-
-                	if (file_name == "ipcmanager.conf") {
-                		continue;
-                	}
+			if (! str_ends_with(file_name, ".dif")) {
+				continue;
+			}
 
                 	if (event->mask & IN_CLOSE_WRITE)
                 		LOG_DBG("The file of DIF template %s has been modified.",
@@ -221,8 +222,7 @@ int DIFTemplateManager::load_initial_dif_templates()
 	do {
 		errno = 0;
 		if ((dp = readdir(dirp)) != NULL) {
-			if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0 ||
-					strcmp(dp->d_name, "ipcmanager.conf") == 0) {
+			if (! str_ends_with(std::string(dp->d_name), ".dif")) {
 				continue;
 			}
 
