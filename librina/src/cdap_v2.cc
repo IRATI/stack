@@ -622,8 +622,13 @@ cdap_m_t* CDAPMessageFactory::getOpenConnectionRequestMessage(
         rina::AuthPolicy auth_policy;
         auth_policy.name_ = con.auth_.name;
         auth_policy.versions_ = con.auth_.versions;
-        auth_policy.options_ = SerializedObject((char*) con.auth_.options.message_,
-        					con.auth_.options.size_);
+        if (con.auth_.options.size_ > 0) {
+        	char * val = new char[con.auth_.options.size_];
+        	memcpy(val, con.auth_.options.message_,
+        			con.auth_.options.size_);
+        	auth_policy.options_ = SerializedObject(val,
+        			con.auth_.options.size_);
+        }
         cdap_message->auth_policy_ = auth_policy;
         cdap_message->dest_ae_inst_ = con.dest_.ae_inst_;
         cdap_message->dest_ae_name_ = con.dest_.ae_name_;
@@ -647,8 +652,13 @@ cdap_m_t* CDAPMessageFactory::getOpenConnectionResponseMessage(
         rina::AuthPolicy auth_policy;
         auth_policy.name_ = con.auth_.name;
         auth_policy.versions_ = con.auth_.versions;
-        auth_policy.options_ = SerializedObject((char*)con.auth_.options.message_,
-        					con.auth_.options.size_);
+        if (con.auth_.options.size_ > 0) {
+        	char * val = new char[con.auth_.options.size_];
+        	memcpy(val, con.auth_.options.message_,
+        			con.auth_.options.size_);
+        	auth_policy.options_ = SerializedObject(val,
+        			con.auth_.options.size_);
+        }
         cdap_message->auth_policy_ = auth_policy;
         cdap_message->dest_ae_inst_ = con.dest_.ae_inst_;
         cdap_message->dest_ae_name_ = con.dest_.ae_name_;
