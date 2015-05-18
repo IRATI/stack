@@ -52,7 +52,7 @@ rina::AuthSDUProtectionProfile IPCPSecurityManager::get_auth_sdup_profile(const 
 	if (it == config.specific_auth_profiles.end()) {
 		return config.default_auth_profile;
 	} else {
-		return *it;
+		return it->second;
 	}
 }
 
