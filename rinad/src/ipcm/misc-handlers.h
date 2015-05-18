@@ -42,8 +42,8 @@ namespace rinad {
 class RIBqTransState: public IPCPTransState{
 
 public:
-	RIBqTransState(Promise* _promise, int _ipcp_id)
-					:IPCPTransState(_promise, _ipcp_id){}
+	RIBqTransState(Addon* callee, Promise* _promise, int _ipcp_id)
+				:IPCPTransState(callee, _promise, _ipcp_id){}
 	virtual ~RIBqTransState(){};
 
 	//Output result

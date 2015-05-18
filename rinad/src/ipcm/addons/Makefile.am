@@ -7,7 +7,7 @@
 EXTRA_DIST   =
 CLEANFILES   =
 
-SUBDIRS=
+SUBDIRS= ma
 
 #
 #Addons
@@ -22,3 +22,6 @@ libaddons_la_CPPFLAGS =				\
 	$(LIBRINA_CFLAGS)			\
 	-I$(srcdir)/../../			\
 	-I$(srcdir)/../../common
+
+libaddons_la_LIBADD =				\
+	ma/libaddons_ma.la

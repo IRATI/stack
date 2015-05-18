@@ -33,6 +33,7 @@
 #include <librina/ipc-process.h>
 #include <librina/internal-events.h>
 #include <librina/irm.h>
+#include <librina/security-manager.h>
 
 #include "common/encoder.h"
 
@@ -93,91 +94,51 @@ public:
   virtual std::list<char*>& getRawSdus(char delimitedSdus[]) = 0;
 };
 
-/// Contains the objects needed to request the Enrollment
-class EnrollmentRequest
-{
-public:
-	EnrollmentRequest(rina::Neighbor * neighbor);
-	EnrollmentRequest(rina::Neighbor * neighbor,
-                          const rina::EnrollToDIFRequestEvent & event);
-	rina::Neighbor * neighbor_;
-	rina::EnrollToDIFRequestEvent event_;
-	bool ipcm_initiated_;
-};
+class IEnrollmentStateMachine;
 
 /// Interface that must be implementing by classes that provide
 /// the behavior of an enrollment task
-class IEnrollmentTask : public IPCProcessComponent, public rina::ApplicationEntity,
-						public rina::IApplicationConnectionHandler {
+class IPCPEnrollmentTask : public IPCProcessComponent,
+			   public rina::IEnrollmentTask {
 public:
-	static const std::string ENROLLMENT_TASK_AE_NAME;
+	IPCPEnrollmentTask() : IEnrollmentTask() { };
+	virtual ~IPCPEnrollmentTask(){};
+	virtual IEnrollmentStateMachine * getEnrollmentStateMachine(int portId, bool remove) = 0;
+	virtual void deallocateFlow(int portId) = 0;
+	virtual void add_enrollment_state_machine(int portId, IEnrollmentStateMachine * stateMachine) = 0;
+};
 
-	IEnrollmentTask() : rina::ApplicationEntity(ENROLLMENT_TASK_AE_NAME) { };
-	virtual ~IEnrollmentTask(){};
-	virtual const std::list<rina::Neighbor *> get_neighbors() const = 0;
-	virtual const std::list<std::string> get_enrolled_ipc_process_names() const = 0;
+/// Policy set of the IPCP enrollment task
+class IPCPEnrollmentTaskPS : public rina::IPolicySet {
+public:
+        virtual ~IPCPEnrollmentTaskPS() {};
+        virtual void connect_received(const rina::CDAPMessage& cdapMessage,
+        			      rina::CDAPSessionDescriptor * session_descriptor) = 0;
+        virtual void connect_response_received(int result,
+        				       const std::string& result_reason,
+        				       rina::CDAPSessionDescriptor * session_descriptor) = 0;
+        virtual void process_authentication_message(const rina::CDAPMessage& message,
+        					    rina::CDAPSessionDescriptor * session_descriptor) = 0;
+        virtual void initiate_enrollment(const rina::NMinusOneFlowAllocatedEvent & event,
+        				 rina::EnrollmentRequest * request) = 0;
+        virtual void inform_ipcm_about_failure(IEnrollmentStateMachine * state_machine) = 0;
+        virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
+};
 
-	/// A remote IPC process Connect request has been received.
-	/// @param invoke_id the id of the connect message
-	/// @param session_descriptor
-	virtual void connect(int invoke_id,
-			rina::CDAPSessionDescriptor * session_descriptor) = 0;
+/// The object that contains all the information
+/// that is required to initiate an enrollment
+/// request (send as the objectvalue of a CDAP M_START
+/// message, as specified by the Enrollment spec)
+class EnrollmentInformationRequest {
+public:
+	EnrollmentInformationRequest() : address_(0),
+		allowed_to_start_early_(false) {};
 
-	/// A remote IPC process Connect response has been received.
-	/// @param result
-	/// @param result_reason
-	/// @param session_descriptor
-	virtual void connectResponse(int result, const std::string& result_reason,
-			rina::CDAPSessionDescriptor * session_descriptor) = 0;
-
-	/// A remote IPC process Release request has been received.
-	/// @param invoke_id the id of the release message
-	/// @param session_descriptor
-	virtual void release(int invoke_id,
-			rina::CDAPSessionDescriptor * session_descriptor) = 0;
-
-	/// A remote IPC process Release response has been received.
-	/// @param result
-	/// @param result_reason
-	/// @param session_descriptor
-	virtual void releaseResponse(int result, const std::string& result_reason,
-			rina::CDAPSessionDescriptor * session_descriptor) = 0;
-
-	/// Process a request to initiate enrollment with a new Neighbor, triggered by the IPC Manager
-	/// @param event
-	virtual void processEnrollmentRequestEvent(rina::EnrollToDIFRequestEvent * event) = 0;
-
-	/// Starts the enrollment program
-	/// @param cdapMessage
-	/// @param cdapSessionDescriptor
-	virtual void initiateEnrollment(EnrollmentRequest * request) = 0;
-
-	/// Called by the enrollment state machine when the enrollment request has been completed,
-	/// either successfully or unsuccessfully
-	/// @param candidate the IPC process we were trying to enroll to
-	/// @param enrollee true if this IPC process is the one that initiated the
-	/// enrollment sequence (i.e. it is the application process that wants to
-	/// join the DIF)
-	virtual void enrollmentCompleted(rina::Neighbor * neighbor,
-                                         bool enrollee) = 0;
-
-	/// Called by the enrollment state machine when the enrollment sequence fails
-	/// @param remotePeer
-	/// @param portId
-	/// @param enrollee
-	/// @param sendMessage
-	/// @param reason
-	virtual void enrollmentFailed(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
-                                      int portId,
-                                      const std::string& reason,
-                                      bool enrolle,
-                                      bool sendReleaseMessage) = 0;
-
-	/// Finds out if the ICP process is already enrolled to the IPC process identified by
-	/// the provided apNamingInfo
-	/// @param apNamingInfo
-	/// @return
-	virtual bool isEnrolledTo(const std::string& applicationProcessName) const = 0;
+	/// The address of the IPC Process that requests
+	///to join a DIF
+	unsigned int address_;
+	std::list<rina::ApplicationProcessNamingInformation> supporting_difs_;
+	bool allowed_to_start_early_;
 };
 
 /// Encapsulates all the information required to manage a Flow
@@ -334,10 +295,6 @@ public:
 	RoutingComponent() : IRoutingComponent() { };
 	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
-        int select_policy_set(const std::string& path, const std::string& name);
-        int set_policy_set_param(const std::string& path,
-                                 const std::string& name,
-                                 const std::string& value);
         ~RoutingComponent() {};
 };
 
@@ -487,25 +444,13 @@ public:
         virtual ~ISecurityManagerPs() {}
 };
 
-class ISecurityManager: public IPCProcessComponent, public rina::ApplicationEntity {
-// This class is used by the plugins to access the IPCP functionalities
-public:
-	static const std::string SECURITY_MANAGER_AE_NAME;
-	ISecurityManager() : rina::ApplicationEntity(SECURITY_MANAGER_AE_NAME) { };
-        virtual ~ISecurityManager() {}
-};
-
-class SecurityManager: public ISecurityManager {
+class IPCPSecurityManager: public rina::ISecurityManager, public IPCProcessComponent {
 // Used by IPCP to access the functionalities of the security manager
 public:
-	SecurityManager() : ISecurityManager() { };
+	IPCPSecurityManager(){ };
 	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
-        int select_policy_set(const std::string& path, const std::string& name);
-        int set_policy_set_param(const std::string& path,
-                                 const std::string& name,
-                                 const std::string& value);
-	~SecurityManager() {};
+	~IPCPSecurityManager() {};
 };
 
 class IPCPRIBDaemon;
@@ -546,18 +491,17 @@ public:
 	rina::IMasterEncoder * encoder_;
 	rina::CDAPSessionManagerInterface* cdap_session_manager_;
 	rina::InternalEventManager * internal_event_manager_;
-	IEnrollmentTask * enrollment_task_;
+	IPCPEnrollmentTask * enrollment_task_;
 	IFlowAllocator * flow_allocator_;
 	INamespaceManager * namespace_manager_;
 	IResourceAllocator * resource_allocator_;
-	ISecurityManager * security_manager_;
+	IPCPSecurityManager * security_manager_;
 	IRoutingComponent * routing_component_;
 	IPCPRIBDaemon * rib_daemon_;
 
 	IPCProcess(const std::string& name, const std::string& instance);
 	virtual ~IPCProcess(){};
 	virtual unsigned short get_id() = 0;
-	virtual unsigned int get_address() const = 0;
 	virtual void set_address(unsigned int address) = 0;
 	virtual const IPCProcessOperationalState& get_operational_state() const = 0;
 	virtual void set_operational_state(const IPCProcessOperationalState& operational_state) = 0;

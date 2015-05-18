@@ -2,6 +2,7 @@
  * IPC Manager - Registration and unregistration
  *
  *    Vincenzo Maffione     <v.maffione@nextworks.it>
+ *    Marc Sune             <marc.sune (at) bisdn.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +28,7 @@
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
 #include <librina/logs.h>
+#include <debug.h>
 
 #include "rina-configuration.h"
 #include "app-handlers.h"
@@ -93,7 +95,7 @@ void IPCManager_::os_process_finalized_handler(
 				rina::ApplicationUnregistrationRequestEvent
 				req_event(app_name, ipcps[i]->dif_name_, 0);
 
-				IPCManager->unregister_app_from_ipcp(NULL,
+				IPCManager->unregister_app_from_ipcp(NULL, NULL,
 						req_event,
 						ipcps[i]->get_id());
 			}
@@ -105,8 +107,13 @@ void IPCManager_::os_process_finalized_handler(
 		//TODO if the IPCP was supporting flows or had
 		//registered applications, notify them
 
+		//Distribute the event to the addons
+		IPCMEvent addon_e(NULL, IPCM_IPCP_CRASHED,
+						event->ipcProcessId);
+		Addon::distribute_ipcm_event(addon_e);
+
 		// Cleanup IPC Process state in the kernel
-		if(IPCManager->destroy_ipcp(event->ipcProcessId) < 0 ){
+		if(IPCManager->destroy_ipcp(NULL, event->ipcProcessId) < 0 ){
 			LOG_WARN("Problems cleaning up state of IPCP with id: %d\n",
 					event->ipcProcessId);
 		}
@@ -194,7 +201,7 @@ void IPCManager_::app_reg_req_handler(
 	//Perform the registration
 	try {
 		//Create a transaction
-		trans = new APPregTransState(NULL, slave_ipcp->get_id(), *event);
+		trans = new APPregTransState(NULL, NULL, slave_ipcp->get_id(), *event);
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! "
 					<< dif_name.toString();
@@ -286,7 +293,10 @@ void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponse
         ostringstream ss;
 	APPregTransState* t1;
 	IPCPregTransState* t2;
-	ipcm_res_t ret = IPCM_SUCCESS;
+	ipcm_res_t ret = IPCM_FAILURE;
+	if (e->result == 0) {
+		ret = IPCM_SUCCESS;
+	}
 	IPCPTransState* trans = get_transaction_state<IPCPTransState>(e->sequenceNumber);
 
 	if(!trans){
@@ -320,7 +330,7 @@ void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponse
 			ipcm_register_response_app(e, ipcp, t1->req);
 		}else{
 			//IPCP registration
-			ipcm_register_response_ipcp(e);
+			ipcm_register_response_ipcp(ipcp, e);
 		}
 	}catch(...){
 		ret = IPCM_FAILURE;
@@ -383,7 +393,7 @@ void IPCManager_::application_unregistration_request_event_handler(
 			ipcp_id = slave_ipcp->get_id();
 		}
 
-        err = unregister_app_from_ipcp(NULL, *event, ipcp_id);
+        err = unregister_app_from_ipcp(NULL, NULL, *event, ipcp_id);
         if (err) {
                 // Inform the unregistering application that the unregistration
                 // operation failed
@@ -441,7 +451,10 @@ void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResp
 {
 	ostringstream ss;
 	IPCMIPCProcess* ipcp;
-	ipcm_res_t ret = IPCM_SUCCESS;
+	ipcm_res_t ret = IPCM_FAILURE;
+	if (e->result == 0) {
+		ret = IPCM_SUCCESS;
+	}
 
 	//First check if this de-reg was a pending
 	APPUnregTransState* t1;
@@ -480,7 +493,7 @@ void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResp
 		} else {
 			t2 = get_transaction_state<IPCPregTransState>(e->sequenceNumber);
 			if (t2){
-				ipcm_unregister_response_ipcp(e, t2);
+				ipcm_unregister_response_ipcp(ipcp, e, t2);
 			}
 			else {
 				//This is the case when the app unreg has been requested by the IPCM

@@ -9,6 +9,18 @@ extern "C" void
 destroySecurityManagerPs(rina::IPolicySet * instance);
 
 extern "C" rina::IPolicySet *
+createAuthNonePs(rina::ApplicationEntity * context);
+
+extern "C" void
+destroyAuthNonePs(rina::IPolicySet * instance);
+
+extern "C" rina::IPolicySet *
+createAuthPasswordPs(rina::ApplicationEntity * context);
+
+extern "C" void
+destroyAuthPasswordPs(rina::IPolicySet * instance);
+
+extern "C" rina::IPolicySet *
 createFlowAllocatorPs(rina::ApplicationEntity * context);
 
 extern "C" void
@@ -27,6 +39,12 @@ extern "C" void
 destroyResourceAllocatorPs(rina::IPolicySet * instance);
 
 extern "C" rina::IPolicySet *
+createEnrollmentTaskPs(rina::ApplicationEntity * context);
+
+extern "C" void
+destroyEnrollmentTaskPs(rina::IPolicySet * instance);
+
+extern "C" rina::IPolicySet *
 createRoutingComponentPs(rina::ApplicationEntity * context);
 
 extern "C" void
@@ -36,19 +54,44 @@ extern "C" int
 init(IPCProcess * ipc_process, const std::string& plugin_name)
 {
         struct rina::PsFactory sm_factory;
+        struct rina::PsFactory auth_none_factory;
+        struct rina::PsFactory auth_password_factory;
         struct rina::PsFactory fa_factory;
         struct rina::PsFactory nsm_factory;
         struct rina::PsFactory ra_factory;
+        struct rina::PsFactory et_factory;
         struct rina::PsFactory rc_factory;
         int ret;
 
         sm_factory.plugin_name = plugin_name;
         sm_factory.info.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;
-        sm_factory.info.app_entity = ISecurityManager::SECURITY_MANAGER_AE_NAME;
+        sm_factory.info.app_entity = rina::ApplicationEntity::SECURITY_MANAGER_AE_NAME;
         sm_factory.create = createSecurityManagerPs;
         sm_factory.destroy = destroySecurityManagerPs;
 
         ret = ipc_process->psFactoryPublish(sm_factory);
+        if (ret) {
+                return ret;
+        }
+
+        auth_none_factory.plugin_name = plugin_name;
+        auth_none_factory.info.name = rina::IAuthPolicySet::AUTH_NONE;
+        auth_none_factory.info.app_entity = rina::ApplicationEntity::SECURITY_MANAGER_AE_NAME;
+        auth_none_factory.create = createAuthNonePs;
+        auth_none_factory.destroy = destroyAuthNonePs;
+
+        ret = ipc_process->psFactoryPublish(auth_none_factory);
+        if (ret) {
+                return ret;
+        }
+
+        auth_password_factory.plugin_name = plugin_name;
+        auth_password_factory.info.name = rina::IAuthPolicySet::AUTH_PASSWORD;
+        auth_password_factory.info.app_entity = rina::ApplicationEntity::SECURITY_MANAGER_AE_NAME;
+        auth_password_factory.create = createAuthPasswordPs;
+        auth_password_factory.destroy = destroyAuthPasswordPs;
+
+        ret = ipc_process->psFactoryPublish(auth_password_factory);
         if (ret) {
                 return ret;
         }
@@ -84,6 +127,17 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
         ret = ipc_process->psFactoryPublish(ra_factory);
         if (ret) {
                 return ret;
+        }
+
+        et_factory.plugin_name = plugin_name;
+        et_factory.info.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;
+        et_factory.info.app_entity = rina::ApplicationEntity::ENROLLMENT_TASK_AE_NAME;
+        et_factory.create = createEnrollmentTaskPs;
+        et_factory.destroy = destroyEnrollmentTaskPs;
+
+        ret = ipc_process->psFactoryPublish(et_factory);
+        if (ret) {
+        	return ret;
         }
 
         rc_factory.plugin_name = plugin_name;

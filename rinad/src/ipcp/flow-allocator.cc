@@ -246,19 +246,6 @@ void FlowAllocator::set_dif_configuration(
 	}
 }
 
-int FlowAllocator::select_policy_set(const std::string& path,
-		const std::string& name)
-{
-	return select_policy_set_common(get_name(), path, name);
-}
-
-int FlowAllocator::set_policy_set_param(const std::string& path,
-		const std::string& name,
-		const std::string& value)
-{
-	return set_policy_set_param_common(path, name, value);
-}
-
 void FlowAllocator::populateRIB()
 {
 	try {

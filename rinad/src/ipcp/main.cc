@@ -71,16 +71,15 @@ int wrapped_main(int argc, char * argv[])
         	LOG_IPCP_ERR("Problems running event loop: %s", e.what());
         } catch (std::exception &e1) {
         	LOG_IPCP_ERR("Problems running event loop: %s", e1.what());
-        }
+        } catch (...) {
+        	LOG_IPCP_ERR("Unhandled exception!!!");
+	}
 
         LOG_IPCP_DBG("Exited event loop");
 
         return EXIT_SUCCESS;
 }
 
-#define WANT_PARACHUTE 0
-
-#if WANT_PARACHUTE
 void sighandler_segv(int signum)
 {
         LOG_IPCP_CRIT("Got signal %d", signum);
@@ -90,7 +89,6 @@ void sighandler_segv(int signum)
                 exit(EXIT_FAILURE);
         }
 }
-#endif
 
 int main(int argc, char * argv[])
 {
@@ -114,17 +112,22 @@ int main(int argc, char * argv[])
                 return EXIT_FAILURE;
         }
 
-#if WANT_PARACHUTE
-        if (signal(SIGSEGV, sighandler_segv) == SIG_ERR) {
+        if (signal(SIGSEGV, sighandler_segv) == SIG_ERR)
                 LOG_IPCP_WARN("Cannot install SIGSEGV handler!");
-        }
+
         LOG_IPCP_DBG("SIGSEGV handler installed successfully");
-#endif
-        if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
+
+        if (signal(SIGPIPE, SIG_IGN) == SIG_ERR){
                 LOG_IPCP_WARN("Cannot ignore SIGPIPE, bailing out");
-                return EXIT_FAILURE;
-        }
+		return EXIT_FAILURE;
+	}
         LOG_IPCP_DBG("SIGPIPE handler installed successfully");
+
+        if (signal(SIGINT, SIG_IGN) == SIG_ERR)
+                LOG_IPCP_WARN("Cannot ignore SIGINT!");
+
+        LOG_IPCP_DBG("SIGINT handler installed successfully");
+
 
         try {
                 retval = wrapped_main(argc, argv);
