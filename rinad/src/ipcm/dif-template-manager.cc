@@ -96,21 +96,9 @@ void DIFTemplateMonitor::process_events(int fd)
                 	event = (const struct inotify_event *) ptr;
                 	std::string file_name = std::string(event->name);
 
-                	//ignore *.swp, *.swx, *~*, *4913*
-                	if (file_name.find(".swx") != std::string::npos ||
-                			file_name.find(".swp") != std::string::npos ||
-                			file_name.find("~") != std::string::npos ||
-                			file_name.find("4913") != std::string::npos) {
-                		continue;
-                	}
-
 			if (! str_ends_with(file_name, ".dif")) {
 				continue;
 			}
-
-                	if (file_name == "ipcmanager.conf") {
-                		continue;
-                	}
 
                 	if (event->mask & IN_CLOSE_WRITE)
                 		LOG_DBG("The file of DIF template %s has been modified.",
