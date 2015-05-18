@@ -28,6 +28,7 @@
 #include "librina/rib.h"
 #include "librina/internal-events.h"
 #include "librina/timer.h"
+#include "librina/configuration.h"
 
 namespace rina {
 
@@ -37,6 +38,8 @@ public:
 	ISecurityContext(int id_) : id(id_) { };
 	virtual ~ISecurityContext() { };
 
+	PolicyConfig crcPolicy;
+	PolicyConfig ttlPolicy;
 	int id;
 };
 
@@ -55,12 +58,14 @@ public:
 	virtual ~IAuthPolicySet() { };
 
 	/// get auth_policy
-	virtual AuthPolicy get_auth_policy(int session_id) = 0;
+	virtual AuthPolicy get_auth_policy(int session_id,
+					   const AuthSDUProtectionProfile& profile) = 0;
 
 	/// initiate the authentication of a remote AE. Any values originated
 	/// from authentication such as sesion keys will be stored in the
 	/// corresponding security context
 	virtual AuthStatus initiate_authentication(const AuthPolicy& auth_policy,
+						   const AuthSDUProtectionProfile& profile,
 						   int session_id) = 0;
 
 	/// Process an incoming CDAP message
@@ -71,46 +76,55 @@ public:
 	std::string type;
 };
 
+class ISecurityManager;
+
 class AuthNonePolicySet : public IAuthPolicySet {
 public:
-	AuthNonePolicySet() : IAuthPolicySet(IAuthPolicySet::AUTH_NONE) { };
+	AuthNonePolicySet(ISecurityManager * sm) :
+		IAuthPolicySet(IAuthPolicySet::AUTH_NONE), sec_man(sm) { };
 	virtual ~AuthNonePolicySet() { };
-	AuthPolicy get_auth_policy(int session_id);
+	AuthPolicy get_auth_policy(int session_id,
+				   const AuthSDUProtectionProfile& profile);
 	AuthStatus initiate_authentication(const AuthPolicy& auth_policy,
+					   const AuthSDUProtectionProfile& profile,
 					   int session_id);
 	int process_incoming_message(const CDAPMessage& message, int session_id);
 	int set_policy_set_param(const std::string& name,
 	                         const std::string& value);
+
+private:
+	ISecurityManager * sec_man;
 };
 
 class AuthPasswordPolicySet;
 
-class CancelPasswdAuthTimerTask : public TimerTask {
+class CancelAuthTimerTask : public TimerTask {
 public:
-	CancelPasswdAuthTimerTask(AuthPasswordPolicySet * ps_,
-			int session_id_) : ps(ps_),
+	CancelAuthTimerTask(ISecurityManager * sm,
+			int session_id_) : sec_man(sm),
 			session_id(session_id_) { };
-	~CancelPasswdAuthTimerTask() throw() { };
+	~CancelAuthTimerTask() throw() { };
 	void run();
 
-	AuthPasswordPolicySet * ps;
+	ISecurityManager * sec_man;
 	int session_id;
 };
 
-class AuthPasswordSessionInformation {
+class AuthPasswordSecurityContext : public ISecurityContext {
 public:
-	AuthPasswordSessionInformation(CancelPasswdAuthTimerTask * task,
-			std::string * chall) : timer_task(task),
-			challenge(chall) { };
-	~AuthPasswordSessionInformation() {
+	AuthPasswordSecurityContext(int session_id);
+	~AuthPasswordSecurityContext() {
 		if (challenge) {
 			delete challenge;
 		}
 	};
 
+	std::string cipher;
+	std::string password;
 	// Owned by a timer
-	CancelPasswdAuthTimerTask * timer_task;
+	CancelAuthTimerTask * timer_task;
 	std::string * challenge;
+	int challenge_length;
 };
 
 /// As defined in PRISTINE's D4.1, online at
@@ -118,37 +132,40 @@ public:
 class AuthPasswordPolicySet : public IAuthPolicySet {
 public:
 	static const std::string PASSWORD;
+	static const std::string CIPHER;
+	static const std::string CHALLENGE_LENGTH;
 	static const std::string CHALLENGE_REQUEST;
 	static const std::string CHALLENGE_REPLY;
 	static const std::string DEFAULT_CIPHER;
 	static const int DEFAULT_TIMEOUT;
 
-	AuthPasswordPolicySet(const std::string password_,
-			int challenge_length_, IRIBDaemon * ribd);
+	AuthPasswordPolicySet(IRIBDaemon * ribd,
+			      ISecurityManager * sec_man);
 	~AuthPasswordPolicySet() { };
-	AuthPolicy get_auth_policy(int session_id);
+	AuthPolicy get_auth_policy(int session_id,
+				   const AuthSDUProtectionProfile& profile);
 	AuthStatus initiate_authentication(const AuthPolicy& auth_policy,
+					   const AuthSDUProtectionProfile& profile,
 					   int session_id);
 	int process_incoming_message(const CDAPMessage& message,
 				     int session_id);
 	int set_policy_set_param(const std::string& name,
 	                         const std::string& value);
-	void remove_session_info(int session_id);
 
 private:
-	std::string * generate_random_challenge();
-	std::string encrypt_challenge(const std::string& challenge);
-	std::string decrypt_challenge(const std::string& encrypted_challenge);
+	std::string * generate_random_challenge(int length);
+	std::string encrypt_challenge(const std::string& challenge,
+				      const std::string password);
+	std::string decrypt_challenge(const std::string& encrypted_challenge,
+				      const std::string& password);
 	int process_challenge_request(const std::string& challenge,
 			 	      int session_id);
 	int process_challenge_reply(const std::string& encrypted_challenge,
 			 	    int session_id);
 
-	std::string password;
-	int challenge_length;
 	IRIBDaemon * rib_daemon;
 	std::string cipher;
-	ThreadSafeMapOfPointers<int, AuthPasswordSessionInformation> pending_sessions;
+	ISecurityManager * sec_man;
 	Timer timer;
 	int timeout;
 	Lockable lock;
@@ -168,6 +185,21 @@ public:
 
 	/// Supported MAC algorithms
 	std::list<std::string> mac_algs;
+
+	/// Supported compression algorithms
+	std::list<std::string> compress_algs;
+};
+
+///Captures all data of the SSHRSA security context
+class SSHRSASecurityContext : public ISecurityContext {
+public:
+	SSHRSASecurityContext(int session_id) : ISecurityContext(session_id) { };
+
+	/// Negotiated algorithms
+	std::string key_exch_alg;
+	std::string encrypt_alg;
+	std::string mac_alg;
+	std::string compress_alg;
 };
 
 /// Authentication policy set that mimics SSH approach. It is associated to
@@ -179,14 +211,20 @@ public:
 /// 4: Authentication
 class AuthSSHRSAPolicySet : public IAuthPolicySet {
 public:
+	static const std::string KEY_EXCHANGE_ALGORITHM;
+	static const std::string ENCRYPTION_ALGORITHM;
+	static const std::string MAC_ALGORITHM;
+	static const std::string COMPRESSION_ALGORITHM;
 	static const int DEFAULT_TIMEOUT;
 
-	AuthSSHRSAPolicySet(IRIBDaemon * ribd);
+	AuthSSHRSAPolicySet(IRIBDaemon * ribd, ISecurityManager * sm);
 	~AuthSSHRSAPolicySet() { };
-	AuthPolicy get_auth_policy(int session_id);
+	AuthPolicy get_auth_policy(int session_id,
+				   const AuthSDUProtectionProfile& profile);
 
 private:
 	IRIBDaemon * rib_daemon;
+	ISecurityManager * sec_man;
 	Timer timer;
 	int timeout;
 	Lockable lock;
@@ -202,6 +240,8 @@ public:
                                  const std::string& value);
         IAuthPolicySet * get_auth_policy_set(const std::string& auth_type);
         ISecurityContext * get_security_context(int context_id);
+        ISecurityContext * remove_security_context(int context_id);
+        void add_security_context(ISecurityContext * context);
         void eventHappened(InternalEvent * event);
 
 private:

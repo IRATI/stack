@@ -39,6 +39,7 @@
 #include <vector>
 #include <list>
 #include <ctime>
+#include <cstdlib>
 
 #include "librina/concurrency.h"
 #include "librina/exceptions.h"
@@ -52,6 +53,8 @@ static std::string NORMAL_IPC_PROCESS= "normal-ipc";
  * Returns the version number of librina
  */
 std::string getVersion();
+
+extern int string2int(const std::string& s, int& ret);
 
 /**
  * Contains application naming information

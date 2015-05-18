@@ -38,6 +38,7 @@ public:
         PolicyParameter(const std::string& name, const std::string& value);
         bool operator==(const PolicyParameter &other) const;
         bool operator!=(const PolicyParameter &other) const;
+        std::string toString();
 #ifndef SWIG
         const std::string& get_name() const;
         void set_name(const std::string& name);
@@ -59,6 +60,8 @@ public:
         PolicyConfig(const std::string& name, const std::string& version);
         bool operator==(const PolicyConfig &other) const;
         bool operator!=(const PolicyConfig &other) const;
+        std::string get_param_value(const std::string& param_name) const;
+        std::string toString();
 #ifndef SWIG
         const std::string& get_name() const;
         void set_name(const std::string& name);
@@ -832,17 +835,34 @@ public:
 	AddressingConfiguration addressing_configuration_;
 };
 
+/// Configuration of
+class AuthSDUProtectionProfile {
+public:
+	std::string to_string();
+
+	///The authentication-encryption-compression policy set
+	PolicyConfig authPolicy;
+
+	// The CRC policy config
+	PolicyConfig crcPolicy;
+
+	// The TTL policy config
+	PolicyConfig ttlPolicy;
+};
+
 /// Configuration of the Security Manager
 class SecurityManagerConfiguration {
 public:
+	std::string toString();
+
 	/// Access control policy for allowing new members into a DIF
 	PolicyConfig difMemberAccessControlPolicy;
 
 	/// Access control policy for accepting flows
 	PolicyConfig newFlowAccessControlPolicy;
 
-	/// The authentication policy for new members of the DIF
-	PolicyConfig authenticationPolicy;
+	AuthSDUProtectionProfile default_auth_profile;
+	std::map<std::string, AuthSDUProtectionProfile> specific_auth_profiles;
 };
 
 /* DU protection configuration for an N-1 DIF */

@@ -91,6 +91,7 @@ struct DIFTemplate {
         std::map<std::string, std::string> policySets;
         std::map<std::string, std::string> policySetParameters;
         rina::EnrollmentTaskConfiguration etConfiguration;
+        rina::SecurityManagerConfiguration secManConfiguration;
 
         /* Only for normal DIFs */
         NMinusOneFlowsConfiguration nMinusOneFlowsConfiguration;

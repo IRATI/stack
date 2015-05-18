@@ -78,6 +78,7 @@ protected:
 	IPCProcess * ipc_process_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 	rina::IMasterEncoder * encoder_;
+	IPCPSecurityManager * sec_man_;
 };
 
 //Class BaseEnrollmentStateMachine
@@ -142,6 +143,7 @@ BaseEnrollmentStateMachine::BaseEnrollmentStateMachine(IPCProcess * ipc_process,
 	ipc_process_ = ipc_process;
 	cdap_session_manager_ = ipc_process->cdap_session_manager_;
 	encoder_ = ipc_process->encoder_;
+	sec_man_ = ipc_process->security_manager_;
 }
 
 void BaseEnrollmentStateMachine::sendDIFDynamicInformation() {
@@ -289,7 +291,9 @@ void EnrolleeStateMachine::initiateEnrollment(rina::EnrollmentRequest * enrollme
 			return;
 		}
 
-		rina::AuthPolicy auth_policy = auth_ps_->get_auth_policy(portId);
+		rina::AuthSDUProtectionProfile profile =
+				sec_man_->get_auth_sdup_profile(remote_peer_->supporting_dif_name_.processName);
+		rina::AuthPolicy auth_policy = auth_ps_->get_auth_policy(portId, profile);
 
 		rib_daemon_->openApplicationConnection(auth_policy, "",
 				IPCProcess::MANAGEMENT_AE, remote_peer_->name_.processInstance,
@@ -820,9 +824,11 @@ void EnrollerStateMachine::connect(const rina::CDAPMessage& cdapMessage,
 	}
 
 	//TODO pass auth_value and auth_type in the function interface
+	rina::AuthSDUProtectionProfile profile =
+			sec_man_->get_auth_sdup_profile(remote_peer_->supporting_dif_name_.processName);
 	rina::IAuthPolicySet::AuthStatus auth_status =
 			auth_ps_->initiate_authentication(cdapMessage.auth_policy_,
-							  port_id_);
+							  profile, port_id_);
 	if (auth_status == rina::IAuthPolicySet::FAILED) {
 		lock_.unlock();
 		abortEnrollment(remote_peer_->name_, port_id_,

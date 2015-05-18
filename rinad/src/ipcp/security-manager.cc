@@ -40,8 +40,20 @@ void IPCPSecurityManager::set_application_process(rina::ApplicationProcess * ap)
 	}
 }
 
-void IPCPSecurityManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
-	LOG_IPCP_DBG("Set dif configuration: %u", dif_configuration.address_);
+void IPCPSecurityManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
+{
+	config = dif_configuration.sm_configuration_;
+}
+
+rina::AuthSDUProtectionProfile IPCPSecurityManager::get_auth_sdup_profile(const std::string& under_dif_name)
+{
+	std::map<std::string, rina::AuthSDUProtectionProfile>::const_iterator it =
+			config.specific_auth_profiles.find(under_dif_name);
+	if (it == config.specific_auth_profiles.end()) {
+		return config.default_auth_profile;
+	} else {
+		return *it;
+	}
 }
 
 }

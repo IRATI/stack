@@ -37,6 +37,20 @@ std::string getVersion() {
 	return VERSION;
 }
 
+int string2int(const std::string& s, int& ret)
+{
+	char *dummy;
+	const char *cstr = s.c_str();
+
+	ret = strtoul(cstr, &dummy, 10);
+	if (!s.size() || *dummy != '\0') {
+		ret = ~0U;
+		return -1;
+	}
+
+	return 0;
+}
+
 /* CLASS APPLICATION PROCESS NAMING INFORMATION */
 
 ApplicationProcessNamingInformation::ApplicationProcessNamingInformation() {

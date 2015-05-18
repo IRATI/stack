@@ -20,6 +20,7 @@
 //
 
 #include <cstdlib>
+#include <openssl/ssl.h>
 
 #define RINA_PREFIX "librina.security-manager"
 
@@ -41,20 +42,44 @@ IAuthPolicySet::IAuthPolicySet(const std::string& type_)
 }
 
 //Class AuthNonePolicySet
-AuthPolicy AuthNonePolicySet::get_auth_policy(int session_id)
+AuthPolicy AuthNonePolicySet::get_auth_policy(int session_id,
+					      const AuthSDUProtectionProfile& profile)
 {
-	(void) session_id;
+	if (profile.authPolicy.name_ != type) {
+		LOG_ERR("Wrong policy name: %s", profile.authPolicy.name_.c_str());
+		throw Exception();
+	}
+
+	ISecurityContext * sc = new ISecurityContext(session_id);
+	sc->crcPolicy = profile.crcPolicy;
+	sc->ttlPolicy = profile.ttlPolicy;
+	sec_man->add_security_context(sc);
 
 	AuthPolicy result;
 	result.name_ = IAuthPolicySet::AUTH_NONE;
+	result.versions_.push_back(profile.authPolicy.version_);
 	return result;
 }
 
 rina::IAuthPolicySet::AuthStatus AuthNonePolicySet::initiate_authentication(const AuthPolicy& auth_policy,
+									    const AuthSDUProtectionProfile& profile,
 								      	    int session_id)
 {
-	(void) auth_policy;
-	(void) session_id;
+	if (auth_policy.name_ != type) {
+		LOG_ERR("Wrong policy name: %s", auth_policy.name_.c_str());
+		return rina::IAuthPolicySet::FAILED;
+	}
+
+	if (auth_policy.versions_.front() != RINA_DEFAULT_POLICY_VERSION) {
+		LOG_ERR("Unsupported policy version: %s",
+				auth_policy.versions_.front().c_str());
+		return rina::IAuthPolicySet::FAILED;
+	}
+
+	ISecurityContext * sc = new ISecurityContext(session_id);
+	sc->crcPolicy = profile.crcPolicy;
+	sc->ttlPolicy = profile.ttlPolicy;
+	sec_man->add_security_context(sc);
 
 	return rina::IAuthPolicySet::SUCCESSFULL;
 }
@@ -78,26 +103,38 @@ int AuthNonePolicySet::set_policy_set_param(const std::string& name,
         return -1;
 }
 
-//Class CancelPasswdAuthTimerTask
-void CancelPasswdAuthTimerTask::run()
+//Class CancelAuthTimerTask
+void CancelAuthTimerTask::run()
 {
-	ps->remove_session_info(session_id);
+	ISecurityContext * sc = sec_man->remove_security_context(session_id);
+	if (sc) {
+		delete sc;
+	}
+}
+
+// Class AuthPasswordSecurityContext
+AuthPasswordSecurityContext::AuthPasswordSecurityContext(int session_id) :
+		ISecurityContext(session_id)
+{
+	challenge = 0;
+	timer_task = 0;
+	challenge_length = 0;
 }
 
 //Class AuthPasswdPolicySet
 const std::string AuthPasswordPolicySet::PASSWORD = "password";
+const std::string AuthPasswordPolicySet::CIPHER = "cipher";
+const std::string AuthPasswordPolicySet::CHALLENGE_LENGTH = "challenge-length";
 const std::string AuthPasswordPolicySet::DEFAULT_CIPHER = "default_cipher";
 const std::string AuthPasswordPolicySet::CHALLENGE_REQUEST = "challenge request";
 const std::string AuthPasswordPolicySet::CHALLENGE_REPLY = "challenge reply";
 const int AuthPasswordPolicySet::DEFAULT_TIMEOUT = 10000;
 
-AuthPasswordPolicySet::AuthPasswordPolicySet(const std::string password_,
-			int challenge_length_, IRIBDaemon * ribd) :
+AuthPasswordPolicySet::AuthPasswordPolicySet(IRIBDaemon * ribd, ISecurityManager * sm) :
 		IAuthPolicySet(IAuthPolicySet::AUTH_PASSWORD)
 {
-	password = password_;
-	challenge_length = challenge_length_;
 	rib_daemon = ribd;
+	sec_man = sm;
 	cipher = DEFAULT_CIPHER;
 	timeout = DEFAULT_TIMEOUT;
 }
@@ -105,29 +142,46 @@ AuthPasswordPolicySet::AuthPasswordPolicySet(const std::string password_,
 // No credentials required, since the process being authenticated
 // will have to demonstrate that it knows the password by encrypting
 // a random challenge with a password string
-AuthPolicy AuthPasswordPolicySet::get_auth_policy(int session_id)
+AuthPolicy AuthPasswordPolicySet::get_auth_policy(int session_id,
+						  const AuthSDUProtectionProfile& profile)
 {
-	(void) session_id;
+	if (profile.authPolicy.name_ != type) {
+		LOG_ERR("Wrong policy name: %s", profile.authPolicy.name_.c_str());
+		throw Exception();
+	}
+
+	AuthPasswordSecurityContext * sc = new AuthPasswordSecurityContext(session_id);
+	sc->password = profile.authPolicy.get_param_value(PASSWORD);
+	if (string2int(profile.authPolicy.get_param_value(CHALLENGE_LENGTH), sc->challenge_length) != 0) {
+		LOG_ERR("Error parsing challenge length string as integer");
+		delete sc;
+		throw Exception();
+	}
+	sc->cipher = profile.authPolicy.get_param_value(CIPHER);
+	sc->crcPolicy = profile.crcPolicy;
+	sc->ttlPolicy = profile.ttlPolicy;
+	sec_man->add_security_context(sc);
 
 	rina::AuthPolicy result;
 	result.name_ = IAuthPolicySet::AUTH_PASSWORD;
+	result.versions_.push_back(profile.authPolicy.version_);
 	return result;
 }
 
-std::string * AuthPasswordPolicySet::generate_random_challenge()
+std::string * AuthPasswordPolicySet::generate_random_challenge(int length)
 {
 	static const char alphanum[] =
 			"0123456789"
 			"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 			"abcdefghijklmnopqrstuvwxyz";
 
-	char *s = new char[challenge_length];
+	char *s = new char[length];
 
-	for (int i = 0; i < challenge_length; ++i) {
+	for (int i = 0; i < length; ++i) {
 		s[i] = alphanum[rand() % (sizeof(alphanum) - 1)];
 	}
 
-	s[challenge_length] = 0;
+	s[length] = 0;
 
 	std::string * result = new std::string(s);
 	delete s;
@@ -135,7 +189,8 @@ std::string * AuthPasswordPolicySet::generate_random_challenge()
 	return result;
 }
 
-std::string AuthPasswordPolicySet::encrypt_challenge(const std::string& challenge)
+std::string AuthPasswordPolicySet::encrypt_challenge(const std::string& challenge,
+						     const std::string password)
 {
 	size_t j = 0;
 	char * s = new char[challenge.size()];
@@ -155,26 +210,48 @@ std::string AuthPasswordPolicySet::encrypt_challenge(const std::string& challeng
 	return result;
 }
 
-std::string AuthPasswordPolicySet::decrypt_challenge(const std::string& encrypted_challenge)
+std::string AuthPasswordPolicySet::decrypt_challenge(const std::string& encrypted_challenge,
+						     const std::string& password)
 {
-	return encrypt_challenge(encrypted_challenge);
+	return encrypt_challenge(encrypted_challenge, password);
 }
 
 rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(const AuthPolicy& auth_policy,
+										const AuthSDUProtectionProfile& profile,
 								      	        int session_id)
 {
-	(void) auth_policy;
-	(void) session_id;
+	if (auth_policy.name_ != type) {
+		LOG_ERR("Wrong policy name: %s", auth_policy.name_.c_str());
+		return rina::IAuthPolicySet::FAILED;
+	}
+
+	if (auth_policy.versions_.front() != RINA_DEFAULT_POLICY_VERSION) {
+		LOG_ERR("Unsupported policy version: %s",
+				auth_policy.versions_.front().c_str());
+		return rina::IAuthPolicySet::FAILED;
+	}
+
+	AuthPasswordSecurityContext * sc = new AuthPasswordSecurityContext(session_id);
+	sc->password = profile.authPolicy.get_param_value(PASSWORD);
+	if (string2int(profile.authPolicy.get_param_value(CHALLENGE_LENGTH), sc->challenge_length) != 0) {
+		LOG_ERR("Error parsing challenge length string as integer");
+		delete sc;
+		return rina::IAuthPolicySet::FAILED;
+	}
+	sc->cipher = profile.authPolicy.get_param_value(CIPHER);
+	sc->crcPolicy = profile.crcPolicy;
+	sc->ttlPolicy = profile.ttlPolicy;
+	sec_man->add_security_context(sc);
 
 	ScopedLock scopedLock(lock);
 
 	//1 Generate a random password string and send it to the AP being authenticated
-	std::string * challenge = generate_random_challenge();
+	sc->challenge = generate_random_challenge(sc->challenge_length);
 
 	try {
 		RIBObjectValue robject_value;
 		robject_value.type_ = RIBObjectValue::stringtype;
-		robject_value.string_value_ = *challenge;
+		robject_value.string_value_ = *(sc->challenge);
 
 		RemoteProcessId remote_id;
 		remote_id.port_id_ = session_id;
@@ -188,35 +265,29 @@ rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(
 	}
 
 	//2 set timer to clean up pending authentication session upon timer expiry
-	CancelPasswdAuthTimerTask * timer_task =
-			new CancelPasswdAuthTimerTask(this, session_id);
-	timer.scheduleTask(timer_task, timeout);
-
-	AuthPasswordSessionInformation * session_info =
-			new AuthPasswordSessionInformation(timer_task, challenge);
-	pending_sessions.put(session_id, session_info);
+	sc->timer_task = new CancelAuthTimerTask(sec_man, session_id);
+	timer.scheduleTask(sc->timer_task, timeout);
 
 	return rina::IAuthPolicySet::IN_PROGRESS;
-}
-
-void AuthPasswordPolicySet::remove_session_info(int session_id)
-{
-	ScopedLock scopedLock(lock);
-
-	AuthPasswordSessionInformation * session_info =
-			pending_sessions.erase(session_id);
-	if (session_info) {
-		delete session_info;
-	}
 }
 
 int AuthPasswordPolicySet::process_challenge_request(const std::string& challenge,
 						     int session_id)
 {
+	ScopedLock scopedLock(lock);
+
+	AuthPasswordSecurityContext * sc =
+			dynamic_cast<AuthPasswordSecurityContext *>(sec_man->get_security_context(session_id));
+	if (!sc) {
+		LOG_ERR("Could not find pending security context for session_id %d",
+			session_id);
+		return IAuthPolicySet::FAILED;
+	}
+
 	try {
 		RIBObjectValue robject_value;
 		robject_value.type_ = RIBObjectValue::stringtype;
-		robject_value.string_value_ = encrypt_challenge(challenge);
+		robject_value.string_value_ = encrypt_challenge(challenge, sc->password);
 
 		RemoteProcessId remote_id;
 		remote_id.port_id_ = session_id;
@@ -239,23 +310,23 @@ int AuthPasswordPolicySet::process_challenge_reply(const std::string& encrypted_
 
 	ScopedLock scopedLock(lock);
 
-	AuthPasswordSessionInformation * session_info = pending_sessions.erase(session_id);
-	if (!session_info) {
-		LOG_DBG("Could not find pending auth session information for session_id %d",
+	AuthPasswordSecurityContext * sc =
+			dynamic_cast<AuthPasswordSecurityContext *>(sec_man->get_security_context(session_id));
+	if (!sc) {
+		LOG_ERR("Could not find pending security context for session_id %d",
 			session_id);
 		return IAuthPolicySet::FAILED;
 	}
 
-	timer.cancelTask(session_info->timer_task);
+	timer.cancelTask(sc->timer_task);
 
-	std::string recovered_challenge = decrypt_challenge(encrypted_challenge);
-	if (*(session_info->challenge) == recovered_challenge) {
+	std::string recovered_challenge = decrypt_challenge(encrypted_challenge, sc->password);
+	if (*(sc->challenge) == recovered_challenge) {
 		result = IAuthPolicySet::SUCCESSFULL;
 	} else {
 		LOG_DBG("Authentication failed");
 	}
 
-	delete session_info;
 	return result;
 }
 
@@ -303,14 +374,8 @@ int AuthPasswordPolicySet::process_incoming_message(const CDAPMessage& message,
 
 // Allow modification of password via set_policy_set param
 int AuthPasswordPolicySet::set_policy_set_param(const std::string& name,
-                                            const std::string& value)
+                                            	const std::string& value)
 {
-	if (name == PASSWORD) {
-		password = value;
-		LOG_INFO("Updated password to: %s", password.c_str());
-		return 0;
-	}
-
         LOG_DBG("Unknown policy-set-specific parameters to set (%s, %s)",
                         name.c_str(), value.c_str());
         return -1;
@@ -335,6 +400,10 @@ SSHRSAAuthOptions * decode_ssh_rsa_auth_options(const SerializedObject &message)
 		result->mac_algs.push_back(gpb_options.mac_algs(i));
 	}
 
+	for(int i=0; i<gpb_options.compress_algs_size(); i++) {
+		result->compress_algs.push_back(gpb_options.compress_algs(i));
+	}
+
 	return result;
 }
 
@@ -356,6 +425,11 @@ SerializedObject * encode_ssh_rsa_auth_options(const SSHRSAAuthOptions& options)
 		gpb_options.add_mac_algs(*it);
 	}
 
+	for(std::list<std::string>::const_iterator it = options.compress_algs.begin();
+			it != options.compress_algs.end(); ++it) {
+		gpb_options.add_compress_algs(*it);
+	}
+
 	int size = gpb_options.ByteSize();
 	char *serialized_message = new char[size];
 	gpb_options.SerializeToArray(serialized_message, size);
@@ -366,34 +440,57 @@ SerializedObject * encode_ssh_rsa_auth_options(const SSHRSAAuthOptions& options)
 
 //Class AuthSSHRSA
 const int AuthSSHRSAPolicySet::DEFAULT_TIMEOUT = 10000;
+const std::string AuthSSHRSAPolicySet::KEY_EXCHANGE_ALGORITHM = "keyExchangeAlg";
+const std::string AuthSSHRSAPolicySet::ENCRYPTION_ALGORITHM = "encryptAlg";
+const std::string AuthSSHRSAPolicySet::MAC_ALGORITHM = "macAlg";
+const std::string AuthSSHRSAPolicySet::COMPRESSION_ALGORITHM = "compressAlg";
 
-AuthSSHRSAPolicySet::AuthSSHRSAPolicySet(IRIBDaemon * ribd) :
+AuthSSHRSAPolicySet::AuthSSHRSAPolicySet(IRIBDaemon * ribd, ISecurityManager * sm) :
 		IAuthPolicySet(IAuthPolicySet::AUTH_SSHRSA)
 {
 	rib_daemon = ribd;
+	sec_man = sm;
 	timeout = DEFAULT_TIMEOUT;
 }
 
-AuthPolicy AuthSSHRSAPolicySet::get_auth_policy(int session_id)
+AuthPolicy AuthSSHRSAPolicySet::get_auth_policy(int session_id,
+						const AuthSDUProtectionProfile& profile)
 {
-	(void) session_id;
+	if (profile.authPolicy.name_ != type) {
+		LOG_ERR("Wrong policy name: %s", profile.authPolicy.name_.c_str());
+		throw Exception();
+	}
+
 	AuthPolicy auth_policy;
 	auth_policy.name_ = IAuthPolicySet::AUTH_SSHRSA;
-	auth_policy.versions_.push_back("1");
+	auth_policy.versions_.push_back(profile.authPolicy.version_);
+
+	SSHRSASecurityContext * sc = new SSHRSASecurityContext(session_id);
+	sc->key_exch_alg = profile.authPolicy.get_param_value(KEY_EXCHANGE_ALGORITHM);
+	sc->encrypt_alg = profile.authPolicy.get_param_value(ENCRYPTION_ALGORITHM);
+	sc->mac_alg = profile.authPolicy.get_param_value(MAC_ALGORITHM);
+	sc->compress_alg = profile.authPolicy.get_param_value(COMPRESSION_ALGORITHM);
+	sc->crcPolicy = profile.crcPolicy;
+	sc->ttlPolicy = profile.ttlPolicy;
 
 	SSHRSAAuthOptions options;
-	//TODO add supported key exchange algorithms (from openSSL);
-	//TODO add supported encryption algorithms (from openSSL);
-	//TODO add supported MAC algorithms (from openSSL);
+	options.key_exch_algs.push_back(sc->key_exch_alg);
+	options.encrypt_algs.push_back(sc->encrypt_alg);
+	options.mac_algs.push_back(sc->mac_alg);
+	options.compress_algs.push_back(sc->compress_alg);
 
 	SerializedObject * sobj = encode_ssh_rsa_auth_options(options);
 	if (!sobj) {
 		LOG_ERR("Problems encoding SSHRSAAuthOptions");
+		delete sc;
 		throw Exception();
 	}
 
 	auth_policy.options_ = *sobj;
 	delete sobj;
+
+	//Store security context
+	sec_man->add_security_context(sc);
 
 	return auth_policy;
 }
@@ -488,6 +585,21 @@ IAuthPolicySet * ISecurityManager::get_auth_policy_set(const std::string& auth_t
 ISecurityContext * ISecurityManager::get_security_context(int context_id)
 {
 	return security_contexts.find(context_id);
+}
+
+ISecurityContext * ISecurityManager::remove_security_context(int context_id)
+{
+	return security_contexts.erase(context_id);
+}
+
+void ISecurityManager::add_security_context(ISecurityContext * context)
+{
+	if (!context) {
+		LOG_ERR("Bogus security context passed, not storing it");
+		return;
+	}
+
+	security_contexts.put(context->id, context);
 }
 
 void ISecurityManager::eventHappened(InternalEvent * event)

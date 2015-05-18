@@ -4,4 +4,9 @@ message authOptsSSHRSA_t {
 	repeated string key_exch_algs = 1;		// Supported key exchange algorithms
 	repeated string encrypt_algs = 2;		// Supported encryption algorithms
 	repeated string mac_algs = 3;			// Supported MAC algorithms
+	repeated string compress_algs = 4;		// Supported compression algorithms
+}
+
+message authOptsPassword_t {
+	repeated string cipher = 1;		// Supported ciphers
 }

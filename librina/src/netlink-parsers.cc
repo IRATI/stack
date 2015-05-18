@@ -4106,7 +4106,7 @@ int putNamespaceManagerConfigurationObject(nl_msg* netlinkMessage,
 
 int putSecurityManagerConfigurationObject(nl_msg* netlinkMessage,
 		const SecurityManagerConfiguration& object){
-	struct nlattr *nmPolicy, *nfPolicy, *aPolicy;
+	struct nlattr *nmPolicy, *nfPolicy;
 
 	if (!(nmPolicy = nla_nest_start(
 			netlinkMessage, SECMANC_DIF_MEM_ACC_CON_POLICY))) {
@@ -4127,16 +4127,6 @@ int putSecurityManagerConfigurationObject(nl_msg* netlinkMessage,
 		goto nla_put_failure;
 	}
 	nla_nest_end(netlinkMessage, nfPolicy);
-
-	if (!(aPolicy = nla_nest_start(
-			netlinkMessage, SECMANC_AUTH_POLICY))) {
-		goto nla_put_failure;
-	}
-	if (putPolicyConfigObject(netlinkMessage,
-			object.authenticationPolicy) < 0) {
-		goto nla_put_failure;
-	}
-	nla_nest_end(netlinkMessage, aPolicy);
 
 	return 0;
 
@@ -6907,7 +6897,6 @@ SecurityManagerConfiguration * parseSecurityManagerConfigurationObject(nlattr *n
 	SecurityManagerConfiguration * result = new SecurityManagerConfiguration();
 	PolicyConfig * difAc;
 	PolicyConfig * flowAc;
-	PolicyConfig * auth;
 
 	if (attrs[SECMANC_DIF_MEM_ACC_CON_POLICY]) {
 		difAc = parsePolicyConfigObject(
@@ -6930,18 +6919,6 @@ SecurityManagerConfiguration * parseSecurityManagerConfigurationObject(nlattr *n
 		} else {
 			result->newFlowAccessControlPolicy = *flowAc;
 			delete flowAc;
-		}
-	}
-
-	if (attrs[SECMANC_AUTH_POLICY]) {
-		auth = parsePolicyConfigObject(
-				attrs[SECMANC_AUTH_POLICY]);
-		if (auth == 0) {
-			delete result;
-			return 0;
-		} else {
-			result->authenticationPolicy = *auth;
-			delete auth;
 		}
 	}
 

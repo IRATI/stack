@@ -516,6 +516,14 @@ bool parse_configuration(std::string& file_loc)
         return true;
 }
 
+void parse_auth_sduprot_profile(const Json::Value  & root,
+                  	        rina::AuthSDUProtectionProfile & profile)
+{
+        parse_policy(root, "authPolicy", profile.authPolicy);
+        parse_policy(root, "TTLPolicy", profile.ttlPolicy);
+        parse_policy(root, "CRCPolicy", profile.crcPolicy);
+}
+
 rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 					       rinad::DIFTemplate * dif_template)
 {
@@ -825,27 +833,50 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 	}
 
         //sduProtectionConfiguration
-        Json::Value duProtectionConfs = root["duProtectionConfigurations"];
-        if (duProtectionConfs != 0){
-                Json::Value::Members members =
-                        duProtectionConfs.getMemberNames();
-                for (unsigned int j = 0; j < members.size(); j++) {
-                    rina::DUProtectionConfiguration& duconf = dif_template->duProtectionConfs[members[j]];
-                    Json::Value duProtectionConf = duProtectionConfs[members[j]];
+        Json::Value secManConf = root["securityManager"];
+        if (secManConf != 0){
+        	rina::SecurityManagerConfiguration sm_conf;
 
-                    duconf.dif_name = duProtectionConf
-                        .get("dif_name", duconf.dif_name).asString();
-                    duconf.TTL = duProtectionConf
-                        .get("TTL", duconf.TTL).asInt();
-                    duconf.enable_CRC = duProtectionConf
-                        .get("enable_CRC", duconf.enable_CRC).asBool();
-                    duconf.encryption_cipher = duProtectionConf
-                        .get("enc", duconf.encryption_cipher).asString();
-                    duconf.message_digest = duProtectionConf
-                        .get("mac", duconf.message_digest).asString();
-                    duconf.key = duProtectionConf
-                        .get("key", duconf.key).asString();
-                }
+        	if (secManConf["newFlowAccessControlPolicy"] != 0) {
+        		 parse_policy(secManConf,
+        		              "newFlowAccessControlPolicy",
+        		              sm_conf.newFlowAccessControlPolicy);
+        	}
+
+        	if (secManConf["difMemberAccessControlPolicy"] != 0) {
+        		 parse_policy(secManConf,
+        		              "difMemberAccessControlPolicy",
+        		              sm_conf.difMemberAccessControlPolicy);
+        	}
+
+        	Json::Value profiles = secManConf["authSDUProtProfiles"];
+        	if (profiles != 0) {
+        		Json::Value defaultProfile = profiles["default"];
+        		if (defaultProfile != 0) {
+        			parse_auth_sduprot_profile(defaultProfile,
+        						   sm_conf.default_auth_profile);
+        		}
+
+        		Json::Value specifics = profiles["specific"];
+        		if (specifics != 0) {
+        			for (unsigned int j = 0;
+        					j < specifics.size();
+        					j++) {
+        				rina::AuthSDUProtectionProfile profile;
+        				std::string dif_name;
+
+        				parse_auth_sduprot_profile(specifics[j], profile);
+
+        				dif_name = specifics[j]
+        				                   .get("underlyingDIF", dif_name)
+        				                   .asString();
+
+        				sm_conf.specific_auth_profiles[dif_name] = profile;
+        			}
+        		}
+        	}
+
+        	dif_template->secManConfiguration = sm_conf;
         }
 
 	// configParameters;

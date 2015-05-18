@@ -98,7 +98,7 @@ createAuthNonePs(rina::ApplicationEntity * ctx)
                 return NULL;
         }
 
-        return new rina::AuthNonePolicySet();
+        return new rina::AuthNonePolicySet(sm);
 }
 
 extern "C" void
@@ -123,7 +123,7 @@ createAuthPasswordPs(rina::ApplicationEntity * ctx)
         	return NULL;
         }
 
-        return new rina::AuthPasswordPolicySet("admin123", 128, rib_daemon);
+        return new rina::AuthPasswordPolicySet(rib_daemon, sm);
 }
 
 extern "C" void

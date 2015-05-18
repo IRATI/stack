@@ -451,6 +451,10 @@ public:
 	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	~IPCPSecurityManager() {};
+	rina::AuthSDUProtectionProfile get_auth_sdup_profile(const std::string& under_dif_name);
+
+private:
+	rina::SecurityManagerConfiguration config;
 };
 
 class IPCPRIBDaemon;

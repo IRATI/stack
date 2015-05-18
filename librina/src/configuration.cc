@@ -62,6 +62,13 @@ void PolicyParameter::set_value(const std::string& value) {
         value_ = value;
 }
 
+std::string PolicyParameter::toString()
+{
+	std::stringstream ss;
+	ss << "Name: " << name_ << "; Value: " << value_ << std::endl;
+	return ss.str();
+}
+
 // CLASS POLICY CONFIGURATION
 PolicyConfig::PolicyConfig() {
         name_ = RINA_DEFAULT_POLICY_NAME;
@@ -111,6 +118,32 @@ const std::string& PolicyConfig::get_version() const {
 
 void PolicyConfig::set_version(const std::string& version) {
         version_ = version;
+}
+
+std::string PolicyConfig::get_param_value(const std::string& param_name) const
+{
+	for(std::list<PolicyParameter>::const_iterator it = parameters_.begin();
+					it != parameters_.end(); ++it) {
+		if (it->name_ == param_name) {
+			return it->value_;
+		}
+	}
+
+	return std::string();
+}
+
+std::string PolicyConfig::toString()
+{
+	std::stringstream ss;
+	ss << "Name: " << name_ << "; Version: " << version_ << std::endl;
+	if (parameters_.size() > 0) {
+		for(std::list<PolicyParameter>::iterator it = parameters_.begin();
+				it != parameters_.end(); ++it) {
+			ss << "Parameter: " << it->toString();
+		}
+	}
+
+	return ss.str();
 }
 
 // CLASS DTCP WINDOW-BASED FLOW CONTROL CONFIG
@@ -1277,6 +1310,42 @@ StaticIPCProcessAddress::StaticIPCProcessAddress() {
 //Class AddressPrefixConfiguration
 AddressPrefixConfiguration::AddressPrefixConfiguration() {
 	address_prefix_ = 0;
+}
+
+//Class AuthSDUProtectionProfile
+std::string AuthSDUProtectionProfile::to_string()
+{
+	std::stringstream ss;
+	ss << "Auth policy" << std::endl;
+	ss << authPolicy.toString() << std::endl;
+	ss << "CRC policy" << std::endl;
+	ss << crcPolicy.toString() <<std::endl;
+	ss << "TTL policy" << std::endl;
+	ss << ttlPolicy.toString() << std::endl;
+
+	return ss.str();
+}
+
+//Class SecurityManagerConfiguration
+std::string SecurityManagerConfiguration::toString()
+{
+	std::stringstream ss;
+	ss << "New flow access control policy" << std::endl;
+	ss << newFlowAccessControlPolicy.toString() << std::endl;
+	ss << "DIF member access control policy" << std::endl;
+	ss << difMemberAccessControlPolicy.toString() << std::endl;
+	ss << "Default auth-sdup profile" << std::endl;
+	ss << default_auth_profile.to_string() << std::endl;
+	if (specific_auth_profiles.size () > 0) {
+		ss << "Specific auth-sdup profiles" << std::endl;
+		for (std::map<std::string, AuthSDUProtectionProfile>::iterator it = specific_auth_profiles.begin();
+				it != specific_auth_profiles.end(); ++it) {
+			ss << "N-1 DIF name: " << it->first << "; Profile: " <<std::endl;
+			ss << it->second.to_string() << std::endl;
+		}
+	}
+
+	return ss.str();
 }
 
 // CLASS DIF CONFIGURATION
