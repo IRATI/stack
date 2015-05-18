@@ -1,5 +1,5 @@
 /*
- * IPC Manager console
+ * Scripting engine
  *
  *    Vincenzo Maffione     <v.maffione@nextworks.it>
  *    Marc Sune             <marc.sune (at) bisdn.de>
@@ -23,16 +23,8 @@
 #define __IPCM_SCRIPTING_H__
 
 #include <cstdlib>
-#include <iostream>
 #include <map>
 #include <vector>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <cstring>
-#include <cerrno>
-#include <sstream>
 
 #include "../addon.h"
 
