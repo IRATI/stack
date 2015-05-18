@@ -157,6 +157,15 @@ PluginLoadRequestEvent::PluginLoadRequestEvent(const std::string& name,
         this->load = load;
 }
 
+/* CLASS FWD CDAP MSG REQUEST EVENT */
+FwdCDAPMsgRequestEvent::FwdCDAPMsgRequestEvent(const SerializedObject& sm,
+                                unsigned int sequenceNumber) :
+				IPCEvent(IPC_PROCESS_FWD_CDAP_MSG,
+                                         sequenceNumber)
+{
+        this->sermsg = sm;
+}
+
 /* CLASS CREATE CONNECTION RESPONSE EVENT */
 CreateConnectionResponseEvent::CreateConnectionResponseEvent(int portId,
         int cepId, unsigned int sequenceNumber):

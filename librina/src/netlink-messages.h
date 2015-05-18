@@ -92,6 +92,7 @@ enum RINANetlinkOperationCode{
 	RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE, /* 55 IPC Manager -> Application */
         RINA_C_IPCM_PLUGIN_LOAD_REQUEST, /* 56, IPC Manager -> IPC Process */
         RINA_C_IPCM_PLUGIN_LOAD_RESPONSE, /* 57, IPC Process -> IPC Manager */
+        RINA_C_IPCM_FWD_CDAP_MSG_REQUEST, /* 58, IPC Manager -> IPC Process */
 	__RINA_C_MAX,
  };
 
@@ -1078,6 +1079,20 @@ public:
 	bool load;
 
 	IpcmPluginLoadRequestMessage();
+	IPCEvent* toIPCEvent();
+};
+
+/**
+ * Used by the IPC Manager to forward a CDAP message to an IPC process
+ * IPC Manager -> IPC Process
+ */
+class IpcmFwdCDAPMsgRequestMessage:
+		public BaseNetlinkMessage {
+public:
+	/** The serialized object containing the message to be forwarded */
+	SerializedObject sermsg;
+
+	IpcmFwdCDAPMsgRequestMessage();
 	IPCEvent* toIPCEvent();
 };
 

@@ -126,6 +126,21 @@ public:
 };
 
 /**
+ * Thrown when there are problems while trying to forward
+ * a CDAP message.
+ */
+class FwdCDAPMsgException: public IPCException {
+public:
+	FwdCDAPMsgException():
+		IPCException("Problems while forwarding a CDAP "
+                                "message to an IPC Process") {
+	}
+	FwdCDAPMsgException(const std::string& description):
+		IPCException(description) {
+	}
+};
+
+/**
  * Event informing about the result of an assign to DIF operation
  */
 class AssignToDIFResponseEvent: public BaseResponseEvent {

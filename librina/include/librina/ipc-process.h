@@ -186,6 +186,19 @@ public:
 };
 
 /**
+ * The IPC Manager wants to forward a CDAP message to
+ * an IPC process
+ */
+class FwdCDAPMsgRequestEvent: public IPCEvent {
+public:
+	/** The serialized CDAP message to be forwarded */
+	SerializedObject sermsg;
+
+	FwdCDAPMsgRequestEvent(const SerializedObject& sm,
+                               unsigned int sequenceNumber);
+};
+
+/**
  * The Kernel components of the IPC Process report about the result of a
  * create EFCP connection operation
  */

@@ -516,6 +516,28 @@ void IPCProcessProxy::pluginLoad(const std::string& name, bool load,
 #endif
 }
 
+void IPCProcessProxy::forwardCDAPMessage(const SerializedObject& sermsg,
+					 unsigned int opaque)
+{
+#if STUB_API
+        (void)sermsg;
+        (void)opaque;
+#else
+	IpcmFwdCDAPMsgRequestMessage message;
+        message.sermsg = sermsg;
+	message.setDestIpcProcessId(id);
+	message.setDestPortId(portId);
+	message.setRequestMessage(true);
+	message.setSequenceNumber(opaque);
+
+	try {
+	        rinaManager->sendMessage(&message, false);
+	} catch (NetlinkException &e) {
+	        throw FwdCDAPMsgException(e.what());
+	}
+#endif
+}
+
 /** CLASS IPC PROCESS FACTORY */
 const std::string IPCProcessFactory::unknown_ipc_process_error =
 		"Could not find an IPC Process with the provided id";

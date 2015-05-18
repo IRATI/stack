@@ -1598,6 +1598,17 @@ IPCEvent* IpcmPluginLoadRequestMessage::toIPCEvent(){
 	return event;
 }
 
+/* CLASS FWD CDAP MSG REQUEST MESSAGE */
+IpcmFwdCDAPMsgRequestMessage::IpcmFwdCDAPMsgRequestMessage():
+                BaseNetlinkMessage(RINA_C_IPCM_FWD_CDAP_MSG_REQUEST) {
+}
+
+IPCEvent* IpcmFwdCDAPMsgRequestMessage::toIPCEvent(){
+	IPCEvent * event = new FwdCDAPMsgRequestEvent(sermsg,
+			                              getSequenceNumber());
+	return event;
+}
+
 /* CLASS PLUGIN LOAD RESPONSE MESSAGE */
 IpcmPluginLoadResponseMessage::IpcmPluginLoadResponseMessage():
                 BaseNetlinkResponseMessage(RINA_C_IPCM_PLUGIN_LOAD_RESPONSE) {
