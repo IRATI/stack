@@ -30,66 +30,30 @@
 namespace rina {
 
 //Class AuthPolicySet
-const std::string IAuthPolicySet::AUTH_NONE = "authentication-none";
-const std::string IAuthPolicySet::AUTH_PASSWORD = "authentication-password";
-const std::string IAuthPolicySet::AUTH_SSHRSA = "authentication-sshrsa";
-const std::string IAuthPolicySet::AUTH_SSHDSA = "authentication-sshdsa";
+const std::string IAuthPolicySet::AUTH_NONE = "PSOC_authentication-none";
+const std::string IAuthPolicySet::AUTH_PASSWORD = "PSOC_authentication-password";
+const std::string IAuthPolicySet::AUTH_SSHRSA = "PSOC_authentication-sshrsa";
+const std::string IAuthPolicySet::AUTH_SSHDSA = "PSOC_authentication-sshdsa";
 
-IAuthPolicySet::IAuthPolicySet(CDAPMessage::AuthTypes type_)
+IAuthPolicySet::IAuthPolicySet(const std::string& type_)
 {
-	type = cdapTypeToString(type_);
-}
-
-const std::string IAuthPolicySet::cdapTypeToString(CDAPMessage::AuthTypes type)
-{
-	switch(type) {
-	case CDAPMessage::AUTH_NONE:
-		return AUTH_NONE;
-	case CDAPMessage::AUTH_PASSWD:
-		return AUTH_PASSWORD;
-	case CDAPMessage::AUTH_SSHRSA:
-		return AUTH_SSHRSA;
-	case CDAPMessage::AUTH_SSHDSA:
-		return AUTH_SSHDSA;
-	default:
-		throw Exception("Unknown authentication type");
-	}
-}
-
-CDAPMessage::AuthTypes IAuthPolicySet::stringToCDAPType(const std::string& type)
-{
-	if (type == AUTH_NONE) {
-		return CDAPMessage::AUTH_NONE;
-	}
-
-	if (type == AUTH_PASSWORD) {
-		return CDAPMessage::AUTH_PASSWD;
-	}
-
-	if (type == AUTH_SSHRSA) {
-		return CDAPMessage::AUTH_SSHRSA;
-	}
-
-	if (type == AUTH_SSHDSA) {
-		return CDAPMessage::AUTH_SSHDSA;
-	}
-
-	throw Exception("Unknown authentication type");
+	type = type_;
 }
 
 //Class AuthNonePolicySet
-rina::AuthValue AuthNonePolicySet::get_my_auth_value(int session_id)
+AuthPolicy AuthNonePolicySet::get_auth_policy(int session_id)
 {
 	(void) session_id;
 
-	rina::AuthValue result;
+	AuthPolicy result;
+	result.name_ = IAuthPolicySet::AUTH_NONE;
 	return result;
 }
 
-rina::IAuthPolicySet::AuthStatus AuthNonePolicySet::initiate_authentication(rina::AuthValue credentials,
+rina::IAuthPolicySet::AuthStatus AuthNonePolicySet::initiate_authentication(const AuthPolicy& auth_policy,
 								      	    int session_id)
 {
-	(void) credentials;
+	(void) auth_policy;
 	(void) session_id;
 
 	return rina::IAuthPolicySet::SUCCESSFULL;
@@ -129,7 +93,7 @@ const int AuthPasswordPolicySet::DEFAULT_TIMEOUT = 10000;
 
 AuthPasswordPolicySet::AuthPasswordPolicySet(const std::string password_,
 			int challenge_length_, IRIBDaemon * ribd) :
-		IAuthPolicySet(rina::CDAPMessage::AUTH_PASSWD)
+		IAuthPolicySet(IAuthPolicySet::AUTH_PASSWORD)
 {
 	password = password_;
 	challenge_length = challenge_length_;
@@ -141,11 +105,12 @@ AuthPasswordPolicySet::AuthPasswordPolicySet(const std::string password_,
 // No credentials required, since the process being authenticated
 // will have to demonstrate that it knows the password by encrypting
 // a random challenge with a password string
-rina::AuthValue AuthPasswordPolicySet::get_my_auth_value(int session_id)
+AuthPolicy AuthPasswordPolicySet::get_auth_policy(int session_id)
 {
 	(void) session_id;
 
-	rina::AuthValue result;
+	rina::AuthPolicy result;
+	result.name_ = IAuthPolicySet::AUTH_PASSWORD;
 	return result;
 }
 
@@ -195,10 +160,10 @@ std::string AuthPasswordPolicySet::decrypt_challenge(const std::string& encrypte
 	return encrypt_challenge(encrypted_challenge);
 }
 
-rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(rina::AuthValue credentials,
-								      	    int session_id)
+rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(const AuthPolicy& auth_policy,
+								      	        int session_id)
 {
-	(void) credentials;
+	(void) auth_policy;
 	(void) session_id;
 
 	ScopedLock scopedLock(lock);
@@ -353,16 +318,49 @@ int AuthPasswordPolicySet::set_policy_set_param(const std::string& name,
 
 //AuthSSHRSAOptions encoder and decoder operations
 SSHRSAAuthOptions * decode_ssh_rsa_auth_options(const SerializedObject &message) {
+	rina::auth::policies::googleprotobuf::authOptsSSHRSA_t gpb_options;
 	SSHRSAAuthOptions * result = new SSHRSAAuthOptions();
 
-	(void) message;
+	gpb_options.ParseFromArray(message.message_, message.size_);
+
+	for(int i=0; i<gpb_options.key_exch_algs_size(); i++) {
+		result->key_exch_algs.push_back(gpb_options.key_exch_algs(i));
+	}
+
+	for(int i=0; i<gpb_options.encrypt_algs_size(); i++) {
+		result->encrypt_algs.push_back(gpb_options.encrypt_algs(i));
+	}
+
+	for(int i=0; i<gpb_options.mac_algs_size(); i++) {
+		result->mac_algs.push_back(gpb_options.mac_algs(i));
+	}
+
 	return result;
 }
 
 SerializedObject * encode_ssh_rsa_auth_options(const SSHRSAAuthOptions& options){
-	SerializedObject * object = new SerializedObject();
+	rina::auth::policies::googleprotobuf::authOptsSSHRSA_t gpb_options;
 
-	(void) options;
+	for(std::list<std::string>::const_iterator it = options.key_exch_algs.begin();
+			it != options.key_exch_algs.end(); ++it) {
+		gpb_options.add_key_exch_algs(*it);
+	}
+
+	for(std::list<std::string>::const_iterator it = options.encrypt_algs.begin();
+			it != options.encrypt_algs.end(); ++it) {
+		gpb_options.add_encrypt_algs(*it);
+	}
+
+	for(std::list<std::string>::const_iterator it = options.mac_algs.begin();
+			it != options.mac_algs.end(); ++it) {
+		gpb_options.add_mac_algs(*it);
+	}
+
+	int size = gpb_options.ByteSize();
+	char *serialized_message = new char[size];
+	gpb_options.SerializeToArray(serialized_message, size);
+	SerializedObject *object = new SerializedObject(serialized_message, size);
+
 	return object;
 }
 
@@ -370,19 +368,20 @@ SerializedObject * encode_ssh_rsa_auth_options(const SSHRSAAuthOptions& options)
 const int AuthSSHRSAPolicySet::DEFAULT_TIMEOUT = 10000;
 
 AuthSSHRSAPolicySet::AuthSSHRSAPolicySet(IRIBDaemon * ribd) :
-		IAuthPolicySet(rina::CDAPMessage::AUTH_SSHRSA)
+		IAuthPolicySet(IAuthPolicySet::AUTH_SSHRSA)
 {
 	rib_daemon = ribd;
 	timeout = DEFAULT_TIMEOUT;
 }
 
-rina::AuthValue AuthSSHRSAPolicySet::get_my_auth_value(int session_id)
+AuthPolicy AuthSSHRSAPolicySet::get_auth_policy(int session_id)
 {
-	rina::AuthValue auth_value;
 	(void) session_id;
+	AuthPolicy auth_policy;
+	auth_policy.name_ = IAuthPolicySet::AUTH_SSHRSA;
+	auth_policy.versions_.push_back("1");
 
 	SSHRSAAuthOptions options;
-	options.versions.push_back("1");
 	//TODO add supported key exchange algorithms (from openSSL);
 	//TODO add supported encryption algorithms (from openSSL);
 	//TODO add supported MAC algorithms (from openSSL);
@@ -393,10 +392,10 @@ rina::AuthValue AuthSSHRSAPolicySet::get_my_auth_value(int session_id)
 		throw Exception();
 	}
 
-	auth_value.auth_other_ = *sobj;
+	auth_policy.options_ = *sobj;
 	delete sobj;
 
-	return auth_value;
+	return auth_policy;
 }
 
 //Class ISecurity Manager

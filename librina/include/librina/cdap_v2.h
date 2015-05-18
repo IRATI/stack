@@ -109,7 +109,7 @@ class CDAPProviderInterface
                         const cdap_rib::vers_info_t &ver,
                         const cdap_rib::src_info_t &src,
                         const cdap_rib::dest_info_t &dest,
-                        const cdap_rib::auth_info &auth, int port) = 0;
+                        const cdap_rib::auth_policy &auth, int port) = 0;
         virtual int close_connection(unsigned int port) = 0;
         virtual int remote_create(unsigned int port,
                                   const cdap_rib::obj_info_t &obj,
@@ -208,14 +208,8 @@ typedef struct CDAPMessage
         /// AbstractSyntaxID (int32), mandatory. The specific version of the
         /// CDAP protocol message declarations that the message conforms to
         int abs_syntax_;
-        /// AuthenticationMechanismName (authtypes), optional, not validated by CDAP.
-        /// Identification of the method to be used by the destination application to
-        /// authenticate the source application
-        cdap_rib::auth_info_t::AuthTypes auth_mech_;
-        /// AuthenticationValue (authvalue), optional, not validated by CDAP.
-        /// Authentication information accompanying auth_mech, format and value
-        /// appropiate to the selected auth_mech
-        rina::AuthValue auth_value_;
+        /// Authentication Policy information
+        rina::AuthPolicy auth_policy_;
         /// DestinationApplication-Entity-Instance-Id (string), optional, not validated by CDAP.
         /// Specific instance of the Application Entity that the source application
         /// wishes to connect to in the destination application.

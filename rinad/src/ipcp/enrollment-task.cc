@@ -686,8 +686,7 @@ void EnrollmentTask::connect(const rina::CDAPMessage& cdapMessage,
 			rina::RemoteProcessId remote_id;
 			remote_id.port_id_ = session_descriptor->port_id_;
 
-			rib_daemon_->openApplicationConnectionResponse(session_descriptor->auth_mech_,
-								       rina::AuthValue(),
+			rib_daemon_->openApplicationConnectionResponse(rina::AuthPolicy(),
 								       session_descriptor->dest_ae_inst_,
 								       session_descriptor->dest_ae_name_,
 								       session_descriptor->dest_ap_inst_,

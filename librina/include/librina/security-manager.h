@@ -51,22 +51,21 @@ public:
 	static const std::string AUTH_SSHRSA;
 	static const std::string AUTH_SSHDSA;
 
-	static const std::string cdapTypeToString(CDAPMessage::AuthTypes type);
-	static CDAPMessage::AuthTypes stringToCDAPType(const std::string& type);
-
-	IAuthPolicySet(CDAPMessage::AuthTypes type_);
+	IAuthPolicySet(const std::string& type_);
 	virtual ~IAuthPolicySet() { };
 
-	/// get auth_value field of application process required for authentication
-	virtual AuthValue get_my_auth_value(int session_id) = 0;
+	/// get auth_policy
+	virtual AuthPolicy get_auth_policy(int session_id) = 0;
 
 	/// initiate the authentication of a remote AE. Any values originated
 	/// from authentication such as sesion keys will be stored in the
 	/// corresponding security context
-	virtual AuthStatus initiate_authentication(AuthValue auth_value, int session_id) = 0;
+	virtual AuthStatus initiate_authentication(const AuthPolicy& auth_policy,
+						   int session_id) = 0;
 
 	/// Process an incoming CDAP message
-	virtual int process_incoming_message(const CDAPMessage& message, int session_id) = 0;
+	virtual int process_incoming_message(const CDAPMessage& message,
+					     int session_id) = 0;
 
 	// The type of authentication policy
 	std::string type;
@@ -74,10 +73,11 @@ public:
 
 class AuthNonePolicySet : public IAuthPolicySet {
 public:
-	AuthNonePolicySet() : IAuthPolicySet(rina::CDAPMessage::AUTH_NONE) { };
+	AuthNonePolicySet() : IAuthPolicySet(IAuthPolicySet::AUTH_NONE) { };
 	virtual ~AuthNonePolicySet() { };
-	rina::AuthValue get_my_auth_value(int session_id);
-	AuthStatus initiate_authentication(rina::AuthValue credentials, int session_id);
+	AuthPolicy get_auth_policy(int session_id);
+	AuthStatus initiate_authentication(const AuthPolicy& auth_policy,
+					   int session_id);
 	int process_incoming_message(const CDAPMessage& message, int session_id);
 	int set_policy_set_param(const std::string& name,
 	                         const std::string& value);
@@ -126,9 +126,11 @@ public:
 	AuthPasswordPolicySet(const std::string password_,
 			int challenge_length_, IRIBDaemon * ribd);
 	~AuthPasswordPolicySet() { };
-	rina::AuthValue get_my_auth_value(int session_id);
-	AuthStatus initiate_authentication(rina::AuthValue credentials, int session_id);
-	int process_incoming_message(const CDAPMessage& message, int session_id);
+	AuthPolicy get_auth_policy(int session_id);
+	AuthStatus initiate_authentication(const AuthPolicy& auth_policy,
+					   int session_id);
+	int process_incoming_message(const CDAPMessage& message,
+				     int session_id);
 	int set_policy_set_param(const std::string& name,
 	                         const std::string& value);
 	void remove_session_info(int session_id);
@@ -158,9 +160,6 @@ public:
 	SSHRSAAuthOptions() { };
 	~SSHRSAAuthOptions() { };
 
-	///Supported policy versions
-	std::list<std::string> versions;
-
 	/// Supported key exchange algorithms
 	std::list<std::string> key_exch_algs;
 
@@ -184,7 +183,7 @@ public:
 
 	AuthSSHRSAPolicySet(IRIBDaemon * ribd);
 	~AuthSSHRSAPolicySet() { };
-	rina::AuthValue get_my_auth_value(int session_id);
+	AuthPolicy get_auth_policy(int session_id);
 
 private:
 	IRIBDaemon * rib_daemon;

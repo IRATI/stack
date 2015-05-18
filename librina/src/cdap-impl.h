@@ -224,13 +224,13 @@ public:
 	void messageSent(const CDAPMessage &cdap_message, int port_id);
 	int get_port_id(std::string destination_application_process_name);
 	CDAPMessage* getOpenConnectionRequestMessage(int port_id,
-			CDAPMessage::AuthTypes auth_mech, const AuthValue &auth_value,
+			const AuthPolicy& auth_policy,
 			const std::string &dest_ae_inst, const std::string &dest_ae_name,
 			const std::string &dest_ap_inst, const std::string &dest_ap_name,
 			const std::string &src_ae_inst, const std::string &src_ae_name,
 			const std::string &src_ap_inst, const std::string &src_ap_name);
 	CDAPMessage* getOpenConnectionResponseMessage(
-			CDAPMessage::AuthTypes auth_mech, const AuthValue &auth_value,
+			const AuthPolicy& auth_policy,
 			const std::string &dest_ae_inst, const std::string &dest_ae_name,
 			const std::string &dest_ap_inst, const std::string &dest_ap_name,
 			int result, const std::string &result_reason,

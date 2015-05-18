@@ -282,16 +282,16 @@ void EnrolleeStateMachine::initiateEnrollment(rina::EnrollmentRequest * enrollme
 		remote_id.port_id_ = portId;
 
 		auth_ps_ = ipc_process_->security_manager_->get_auth_policy_set(
-				rina::IAuthPolicySet::cdapTypeToString(rina::CDAPMessage::AUTH_PASSWD));
+				rina::IAuthPolicySet::AUTH_PASSWORD);
 		if (!auth_ps_) {
 			abortEnrollment(remote_peer_->name_, port_id_,
 					std::string("Unsupported authentication policy set"), true);
 			return;
 		}
 
-		rina::AuthValue credentials = auth_ps_->get_my_auth_value(portId);
+		rina::AuthPolicy auth_policy = auth_ps_->get_auth_policy(portId);
 
-		rib_daemon_->openApplicationConnection(rina::CDAPMessage::AUTH_PASSWD, credentials, "",
+		rib_daemon_->openApplicationConnection(auth_policy, "",
 				IPCProcess::MANAGEMENT_AE, remote_peer_->name_.processInstance,
 				remote_peer_->name_.processName, "", IPCProcess::MANAGEMENT_AE,
 				ipc_process_->get_instance(), ipc_process_->get_name(), remote_id);
@@ -811,8 +811,7 @@ void EnrollerStateMachine::connect(const rina::CDAPMessage& cdapMessage,
 	connect_message_invoke_id_ = cdapMessage.invoke_id_;
 	port_id_ = session_descriptor_->port_id_;
 
-	auth_ps_ = security_manager_->get_auth_policy_set(
-			rina::IAuthPolicySet::cdapTypeToString(cdapMessage.auth_mech_));
+	auth_ps_ = security_manager_->get_auth_policy_set(cdapMessage.auth_policy_.name_);
 	if (!auth_ps_) {
 		lock_.unlock();
 		abortEnrollment(remote_peer_->name_, port_id_,
@@ -822,7 +821,7 @@ void EnrollerStateMachine::connect(const rina::CDAPMessage& cdapMessage,
 
 	//TODO pass auth_value and auth_type in the function interface
 	rina::IAuthPolicySet::AuthStatus auth_status =
-			auth_ps_->initiate_authentication(cdapMessage.auth_value_,
+			auth_ps_->initiate_authentication(cdapMessage.auth_policy_,
 							  port_id_);
 	if (auth_status == rina::IAuthPolicySet::FAILED) {
 		lock_.unlock();
@@ -901,8 +900,8 @@ void EnrollerStateMachine::authentication_successful()
 		rina::RemoteProcessId remote_id;
 		remote_id.port_id_ = port_id_;
 
-		rib_daemon_->openApplicationConnectionResponse(rina::IAuthPolicySet::stringToCDAPType(auth_ps_->type),
-				rina::AuthValue(), session_descriptor_->dest_ae_inst_,
+		rib_daemon_->openApplicationConnectionResponse(
+				rina::AuthPolicy(), session_descriptor_->dest_ae_inst_,
 				IPCProcess::MANAGEMENT_AE, session_descriptor_->dest_ap_inst_,
 				session_descriptor_->dest_ap_name_, 0, "", session_descriptor_->src_ae_inst_,
 				IPCProcess::MANAGEMENT_AE, session_descriptor_->src_ap_inst_,
@@ -1275,8 +1274,7 @@ void EnrollmentTaskPs::connect_received(const rina::CDAPMessage& cdapMessage,
 			rina::RemoteProcessId remote_id;
 			remote_id.port_id_ = session_descriptor->port_id_;
 
-			rib_daemon->openApplicationConnectionResponse(session_descriptor->auth_mech_,
-								      rina::AuthValue(),
+			rib_daemon->openApplicationConnectionResponse(rina::AuthPolicy(),
 								      session_descriptor->dest_ae_inst_,
 								      session_descriptor->dest_ae_name_,
 								      session_descriptor->dest_ap_inst_,

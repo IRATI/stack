@@ -829,10 +829,10 @@ const CDAPMessage* CDAPSessionImpl::deserializeMessage(
   return wire_message_provider_->deserializeMessage(message);
 }
 void CDAPSessionImpl::populateSessionDescriptor(const CDAPMessage &cdap_message,
-                                                bool send) {
+                                                bool send)
+{
   session_descriptor_->set_abs_syntax(cdap_message.get_abs_syntax());
-  session_descriptor_->set_auth_mech(cdap_message.get_auth_mech());
-  session_descriptor_->set_auth_value(cdap_message.get_auth_value());
+  session_descriptor_->set_auth_policy(cdap_message.get_auth_policy());
 
   if (send) {
     session_descriptor_->set_dest_ae_inst(&cdap_message.get_dest_ae_inst());
@@ -1065,7 +1065,7 @@ int CDAPSessionManager::get_port_id(
 }
 
 CDAPMessage* CDAPSessionManager::getOpenConnectionRequestMessage(
-    int port_id, CDAPMessage::AuthTypes auth_mech, const AuthValue &auth_value,
+    int port_id, const AuthPolicy& auth_policy,
     const std::string &dest_ae_inst, const std::string &dest_ae_name,
     const std::string &dest_ap_inst, const std::string &dest_ap_name,
     const std::string &src_ae_inst, const std::string &src_ae_name,
@@ -1075,20 +1075,20 @@ CDAPMessage* CDAPSessionManager::getOpenConnectionRequestMessage(
     cdap_session = createCDAPSession(port_id);
   }
   return CDAPMessage::getOpenConnectionRequestMessage(
-      auth_mech, auth_value, dest_ae_inst, dest_ae_name, dest_ap_inst,
+      auth_policy, dest_ae_inst, dest_ae_name, dest_ap_inst,
       dest_ap_name, src_ae_inst, src_ae_name, src_ap_inst, src_ap_name,
       cdap_session->get_invoke_id_manager()->newInvokeId(true));
 }
 
 CDAPMessage* CDAPSessionManager::getOpenConnectionResponseMessage(
-    CDAPMessage::AuthTypes auth_mech, const AuthValue &auth_value,
+    const AuthPolicy &auth_policy,
     const std::string &dest_ae_inst, const std::string &dest_ae_name,
     const std::string &dest_ap_inst, const std::string &dest_ap_name,
     int result, const std::string &result_reason,
     const std::string &src_ae_inst, const std::string &src_ae_name,
     const std::string &src_ap_inst, const std::string &src_ap_name,
     int invoke_id) {
-  return CDAPMessage::getOpenConnectionResponseMessage(auth_mech, auth_value,
+  return CDAPMessage::getOpenConnectionResponseMessage(auth_policy,
                                                        dest_ae_inst,
                                                        dest_ae_name,
                                                        dest_ap_inst,
@@ -1299,24 +1299,23 @@ const CDAPMessage* GPBWireMessageProvider::deserializeMessage(
 
   gpfCDAPMessage.ParseFromArray(message.message_, message.size_);
   cdapMessage->set_abs_syntax(gpfCDAPMessage.abssyntax());
-  int auth_type_val = gpfCDAPMessage.authmech();
-  CDAPMessage::AuthTypes auth_type =
-      static_cast<CDAPMessage::AuthTypes>(auth_type_val);
-  cdapMessage->set_auth_mech(auth_type);
 
-  AuthValue auth_value;
-  auth_value.auth_name_ = gpfCDAPMessage.authvalue().authname();
-  auth_value.auth_password_ = gpfCDAPMessage.authvalue().authpassword();
-  if (gpfCDAPMessage.authvalue().has_authother()) {
-	  char *val = new char[gpfCDAPMessage.authvalue().authother().size()];
-	  memcpy(val,
-	         gpfCDAPMessage.authvalue().authother().data(),
-	         gpfCDAPMessage.authvalue().authother().size());
-	  SerializedObject sobj(val,
-			  	gpfCDAPMessage.authvalue().authother());
-	  auth_value.auth_other_ = sobj;
+  AuthPolicy auth_policy;
+  auth_policy.name_ = gpfCDAPMessage.authpolicy().name();
+  for(int i=0; i<gpfCDAPMessage.authpolicy().versions_size(); i++) {
+  	auth_policy.versions_.push_back(
+  			gpfCDAPMessage.authpolicy().versions(i));
   }
-  cdapMessage->set_auth_value(auth_value);
+  if (gpfCDAPMessage.authpolicy().has_options()) {
+	  char *val = new char[gpfCDAPMessage.authpolicy().options().size()];
+	  memcpy(val,
+	         gpfCDAPMessage.authpolicy().options().data(),
+	         gpfCDAPMessage.authpolicy().options().size());
+	  SerializedObject sobj(val,
+			  	gpfCDAPMessage.authpolicy().options().size());
+	  auth_policy.options_ = sobj;
+  }
+  cdapMessage->auth_policy_ = auth_policy;
 
   if (gpfCDAPMessage.has_destaeinst())
     cdapMessage->set_dest_ae_inst(gpfCDAPMessage.destaeinst());
@@ -1397,23 +1396,20 @@ const SerializedObject* GPBWireMessageProvider::serializeMessage(
     const CDAPMessage &cdapMessage) {
   cdap::impl::googleprotobuf::CDAPMessage gpfCDAPMessage;
   gpfCDAPMessage.set_abssyntax(cdapMessage.get_abs_syntax());
-  if (!cdap::impl::googleprotobuf::authTypes_t_IsValid(
-      cdapMessage.get_auth_mech())) {
-    throw CDAPException("Serializing Message: Not a valid AuthType");
-  }
-  gpfCDAPMessage.set_authmech(
-      (cdap::impl::googleprotobuf::authTypes_t) cdapMessage.get_auth_mech());
-  cdap::impl::googleprotobuf::authValue_t *gpb_auth_value =
-      new cdap::impl::googleprotobuf::authValue_t();
 
-  AuthValue auth_value = cdapMessage.get_auth_value();
-  gpb_auth_value->set_authname(auth_value.get_auth_name());
-  gpb_auth_value->set_authpassword(auth_value.get_auth_password());
-  if (auth_value.auth_other_) {
-	  gpb_auth_value->set_authother(auth_value.auth_other_.message_,
-			  	  	auth_value.auth_other_.size_);
+  cdap::impl::googleprotobuf::authPolicy_t *gpb_auth_policy =
+                  new cdap::impl::googleprotobuf::authPolicy_t();
+  AuthPolicy auth_policy = cdapMessage.auth_policy_;
+  gpb_auth_policy->set_name(auth_policy.name_);
+  for(std::list<std::string>::iterator it = auth_policy.versions_.begin();
+  		it != auth_policy.versions_.end(); ++it) {
+  	gpb_auth_policy->add_versions(*it);
   }
-  gpfCDAPMessage.set_allocated_authvalue(gpb_auth_value);
+  if (auth_policy.options_.size_ > 0) {
+  	gpb_auth_policy->set_options(auth_policy.options_.message_,
+  				     auth_policy.options_.size_);
+  }
+  gpfCDAPMessage.set_allocated_authpolicy(gpb_auth_policy);
 
   gpfCDAPMessage.set_destaeinst(cdapMessage.get_dest_ae_inst());
   gpfCDAPMessage.set_destaename(cdapMessage.get_dest_ae_name());

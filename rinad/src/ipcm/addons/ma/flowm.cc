@@ -37,6 +37,7 @@
 #include <librina/likely.h>
 #include <librina/logs.h>
 #include <librina/rib_v2.h>
+#include <librina/security-manager.h>
 
 namespace rinad {
 namespace mad {
@@ -309,8 +310,8 @@ void* ActiveWorker::run(void* param)
 			dest.ae_name_ = flow_.remoteAppName.entityName;
 			dest.ap_inst_ = flow_.remoteAppName.processInstance;
 			dest.ae_inst_ = flow_.remoteAppName.entityInstance;
-			rina::cdap_rib::auth_info auth;
-			auth.auth_mech_ = auth.AUTH_NONE;
+			rina::cdap_rib::auth_policy_t auth;
+			auth.name = rina::IAuthPolicySet::AUTH_NONE;
 
 			//TODO: remove this. The API should NOT require a RIB
 			//instance for calling the remote API
