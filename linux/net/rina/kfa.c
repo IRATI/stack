@@ -295,7 +295,6 @@ static int kfa_flow_deallocate(struct ipcp_instance_data * data,
                 return 0;
         }
 
-        spin_unlock_irqrestore(&instance->lock, flags);
 
         wqdata       = rkzalloc(sizeof(*wqdata), GFP_KERNEL);
         wqdata->kfa  = instance;
@@ -303,11 +302,12 @@ static int kfa_flow_deallocate(struct ipcp_instance_data * data,
 
         item = rwq_work_create_ni(kfa_flow_deallocate_worker, (void *) wqdata);
         if (!item) {
-                rkfree(data);
+                rkfree(wqdata);
                 return -1;
         }
 
         rwq_work_post(data->kfa->flowdelq, item);
+        spin_unlock_irqrestore(&instance->lock, flags);
 
         return 0;
 }
