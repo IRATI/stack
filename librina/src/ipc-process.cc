@@ -918,7 +918,10 @@ unsigned int KernelIPCProcess::assignToDIF(
         message.setRequestMessage(true);
 
         try {
-                rinaManager->sendMessage(&message, true);
+        	//FIXME, compute maximum message size dynamically
+		rinaManager->sendMessageOfMaxSize(&message,
+                                          	  5 * get_page_size(),
+                                          	  true);
         } catch (NetlinkException &e) {
                 throw AssignToDIFException(e.what());
         }
