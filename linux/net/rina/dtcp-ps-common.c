@@ -326,15 +326,15 @@ int common_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
         trmsecs  = rttvar << 2;
         /* G is 0.1s according to RFC6298, then 100ms */
         trmsecs  = 100 > trmsecs ? 100 : trmsecs;
-        trmsecs += srtt;
-        /* RTO (tr) less than 1s? */
-        trmsecs  = trmsecs < 1000 ? 1000 : trmsecs;
+        trmsecs += srtt + jiffies_to_msecs(dt_sv_a(dt));
+        /* RTO (tr) less than 1s? (not for the common policy) */
+        /*trmsecs  = trmsecs < 1000 ? 1000 : trmsecs;*/
 
         dtcp_rtt_set(dtcp, new_rtt);
         dtcp_rttvar_set(dtcp, rttvar);
         dtcp_srtt_set(dtcp, srtt);
-        dt_sv_tr_set(dt, dt_sv_a(dt) + msecs_to_jiffies(trmsecs));
-        LOG_DBG("TR set to %lu msecs", msecs_to_jiffies(dt_sv_a(dt)) + trmsecs);
+        dt_sv_tr_set(dt, msecs_to_jiffies(trmsecs));
+        LOG_DBG("TR set to %u msecs", trmsecs);
 
         return 0;
 }
