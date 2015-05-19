@@ -417,6 +417,19 @@ public:
 	void pluginLoad(const std::string& name, bool load,
 			unsigned int opaque);
 
+	/**
+	 * Invoked by the IPC Manager to forward a CDAP message to
+         * IPC process, so that the latter can process the message
+	 * through its RIB
+	 *
+	 * @param sermsg The serialized message
+         * @param opaque an opaque identifier to correlate requests and responses
+	 * @throws ForwardCDAPException if an error happens during
+         *         the process
+	 */
+	void forwardCDAPMessage(const rina::SerializedObject& sermsg,
+				unsigned int opaque);
+
 private:
 	/** The IPC Process proxy class */
 	rina::IPCProcessProxy* proxy_;

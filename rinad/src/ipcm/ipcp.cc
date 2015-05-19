@@ -443,6 +443,12 @@ void IPCMIPCProcess::pluginLoad(const std::string& name, bool load,
 	proxy_->pluginLoad(name, load, opaque);
 }
 
+void IPCMIPCProcess::forwardCDAPMessage(const rina::SerializedObject& sermsg,
+					unsigned int opaque)
+{
+	proxy_->forwardCDAPMessage(sermsg, opaque);
+}
+
 
 //
 // IPCM IPC process factory
