@@ -138,6 +138,17 @@ private:
         pthread_t thread_id_;
 };
 
+/// A Simple thread that performs all its work in the run method
+class SimpleThread : public Thread {
+public:
+	SimpleThread(ThreadAttributes * threadAttributes);
+	virtual ~SimpleThread() throw();
+	///Subclasses must override this method in order for the
+	///to do something useful
+	///@return 0 if everything is ok, -1 otherwise
+	virtual int run() = 0;
+};
+
 /**
  * Wraps a Mutex as provided by the pthreads library
  */

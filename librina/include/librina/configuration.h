@@ -677,6 +677,7 @@ public:
 class RMTConfiguration {
 public:
         RMTConfiguration();
+        std::string toString();
 #ifndef SWIG
         const PolicyConfig& get_max_queue_policy() const;
         void set_max_queue_policy(const PolicyConfig& max_queue_policy);
@@ -764,6 +765,8 @@ public:
         /// Link state routing configuration parameters - only relevant if a
         /// link-state routing PDU FT Generation policy is used
         LinkStateRoutingConfiguration link_state_routing_configuration_;
+
+        std::string toString();
 };
 
 /// Configuration of the resource allocator
@@ -786,6 +789,8 @@ public:
 
 	//The maximum number of enrollment attempts
 	unsigned int max_number_of_enrollment_attempts_;
+
+	std::string toString();
 };
 
 /// Configuration of a static IPC Process address

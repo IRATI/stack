@@ -1,0 +1,15 @@
+{
+    "difType" : "normal-ipc",
+    "knownIPCProcessAddresses": [
+     {
+         "apName": "Ada",
+         "apInstance": "1",
+         "address": 5
+     },
+     {
+         "apName": "Knuth",
+         "apInstance": "1",
+         "address": 6
+     }
+     ]
+  }
