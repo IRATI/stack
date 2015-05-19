@@ -495,6 +495,69 @@ AuthPolicy AuthSSHRSAPolicySet::get_auth_policy(int session_id,
 	return auth_policy;
 }
 
+/*rina::IAuthPolicySet::AuthStatus AuthSSHRSAPolicySet::initiate_authentication(const AuthPolicy& auth_policy,
+									      const AuthSDUProtectionProfile& profile,
+								      	      int session_id)
+{
+	if (auth_policy.name_ != type) {
+		LOG_ERR("Wrong policy name: %s", auth_policy.name_.c_str());
+		return rina::IAuthPolicySet::FAILED;
+	}
+
+	if (auth_policy.versions_.front() != RINA_DEFAULT_POLICY_VERSION) {
+		LOG_ERR("Unsupported policy version: %s",
+				auth_policy.versions_.front().c_str());
+		return rina::IAuthPolicySet::FAILED;
+	}
+
+	SSHRSAAuthOptions * options = decode_ssh_rsa_auth_options(auth_policy.options_);
+	if (!options) {
+		LOG_ERR("Could not decode SSHARSA options");
+		return rina::IAuthPolicySet::FAILED;
+	}
+
+	SSHRSASecurityContext * sc = new SSHRSASecurityContext(session_id);
+	std::string current_alg = options->key_exch_algs.front();
+	if (current_alg != SSL_TXT_EDH) {
+		LOG_ERR("Unsupported key exchange algorithm: %s",
+			current_alg.c_str());
+		delete sc;
+		delete options;
+		return rina::IAuthPolicySet::FAILED;
+	} else {
+		sc->key_exch_alg = current_alg;
+	}
+
+	current_alg = options->encrypt_algs.front();
+	if (current_alg != SSL_TXT_AES128 && current_alg != SSL_TXT_AES256) {
+		LOG_ERR("Unsupported encryption algorithm: %s",
+			current_alg.c_str());
+		delete sc;
+		delete options;
+		return rina::IAuthPolicySet::FAILED;
+	} else {
+		sc->encrypt_alg = current_alg;
+	}
+
+	current_alg = options->mac_algs.front();
+	if (current_alg != SSL_TXT_MD5 && current_alg != SSL_TXT_SHA1) {
+		LOG_ERR("Unsupported MAC algorithm: %s",
+			current_alg.c_str());
+		delete sc;
+		delete options;
+		return rina::IAuthPolicySet::FAILED;
+	} else {
+		sc->mac_alg = current_alg;
+	}
+
+	//TODO check compression algorithm when we use them
+	delete options;
+
+	//1 Return options to client
+
+
+}*/
+
 //Class ISecurity Manager
 ISecurityManager::~ISecurityManager()
 {

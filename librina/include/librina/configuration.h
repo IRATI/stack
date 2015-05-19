@@ -865,17 +865,6 @@ public:
 	std::map<std::string, AuthSDUProtectionProfile> specific_auth_profiles;
 };
 
-/* DU protection configuration for an N-1 DIF */
-class DUProtectionConfiguration {
-public:
-    std::string dif_name;
-    unsigned int TTL;
-    bool enable_CRC;
-    std::string encryption_cipher;
-    std::string message_digest;
-    std::string key;
-};
-
 /// Contains the data about a DIF Configuration
 /// (QoS cubes, policies, parameters, etc)
 class DIFConfiguration {
@@ -935,9 +924,6 @@ public:
 
 	/// Other policies of the DIF
 	std::list<PolicyConfig> policies_;
-
-    /// N-1 DIF DU protection configurations
-    std::list<DUProtectionConfiguration> duProtectionConfs;
 };
 
 /// Contains the information about a DIF (name, type, configuration)

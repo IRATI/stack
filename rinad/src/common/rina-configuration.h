@@ -111,8 +111,6 @@ struct DIFTemplate {
         /* Extra configuration parameters (name/value pairs) */
         std::map<std::string, std::string> configParameters;
 
-        std::map<std::string, rina::DUProtectionConfiguration> duProtectionConfs;
-
         bool lookup_ipcp_address(
                         const rina::ApplicationProcessNamingInformation&,
                         unsigned int& result);

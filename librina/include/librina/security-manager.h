@@ -221,6 +221,9 @@ public:
 	~AuthSSHRSAPolicySet() { };
 	AuthPolicy get_auth_policy(int session_id,
 				   const AuthSDUProtectionProfile& profile);
+	/*AuthStatus initiate_authentication(const AuthPolicy& auth_policy,
+				           const AuthSDUProtectionProfile& profile,
+					   int session_id);*/
 
 private:
 	IRIBDaemon * rib_daemon;

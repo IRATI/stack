@@ -1359,52 +1359,87 @@ int parseListOfDIFConfigurationPolicySets(nlattr *nested,
 	return 0;
 }
 
-int putDUProtectConfObject(
-        nl_msg* netlinkMessage,
-        const DUProtectionConfiguration& object){
+int putAuthSDUProtectionProfile(nl_msg* netlinkMessage,
+		const AuthSDUProtectionProfile& object)
+{
+	struct nlattr *authp, *crcp, *ttlp;
 
-	NLA_PUT_STRING(netlinkMessage, DUPC_DIF_NAME,
-			object.dif_name.c_str());
+	if (!(authp = nla_nest_start(netlinkMessage, AUTHP_AUTH_POLICY))) {
+		goto nla_put_failure;
+	}
+	if (putPolicyConfigObject(netlinkMessage,
+				  object.authPolicy) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, authp);
 
-    NLA_PUT_U32(netlinkMessage, DUPC_TTL, object.TTL);
+	if (!(crcp = nla_nest_start(netlinkMessage, AUTHP_CRC_POLICY))) {
+		goto nla_put_failure;
+	}
+	if (putPolicyConfigObject(netlinkMessage,
+				  object.crcPolicy) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, crcp);
 
-    if (object.enable_CRC){
-        NLA_PUT_FLAG(netlinkMessage, DUPC_ENABLE_CRC);
-    }
-
-    NLA_PUT_STRING(netlinkMessage, DUPC_ENC_CIPHER,
-            object.encryption_cipher.c_str());
-
-    NLA_PUT_STRING(netlinkMessage, DUPC_MSG_DIGEST,
-            object.message_digest.c_str());
-
-    NLA_PUT_STRING(netlinkMessage, DUPC_KEY,
-            object.key.c_str());
+	if (!(ttlp = nla_nest_start(netlinkMessage, AUTHP_TTL_POLICY))) {
+		goto nla_put_failure;
+	}
+	if (putPolicyConfigObject(netlinkMessage,
+				  object.ttlPolicy) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, ttlp);
 
 	return 0;
 
 	nla_put_failure: LOG_ERR(
-			"Error building DUProtectionConfiguration Netlink object");
+			"Error building AuthSDUProtectionProfile Netlink object");
 	return -1;
 }
 
-int putListOfDUConfs(
-        nl_msg* netlinkMessage,
-        const std::list<DUProtectionConfiguration> duProtectConfs){
-	std::list<DUProtectionConfiguration>::const_iterator iterator;
-	struct nlattr *dup_conf;
+int putSpecificAuthSDUProtectionProfile(nl_msg* netlinkMessage,
+					const std::string& under_dif,
+			   	        const AuthSDUProtectionProfile& object)
+{
+	struct nlattr *authp;
+
+	NLA_PUT_STRING(netlinkMessage, SAUTHP_UNDER_DIF, under_dif.c_str());
+
+	if (!(authp = nla_nest_start(netlinkMessage, SAUTHP_AUTH_PROFILE))) {
+		goto nla_put_failure;
+	}
+	if (putAuthSDUProtectionProfile(netlinkMessage, object) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, authp);
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building SpecificAuthSDUProtectionProfile Netlink object");
+	return -1;
+}
+
+int putListOfAuthSDUProtectionProfiles(nl_msg* netlinkMessage,
+				       const std::map<std::string, AuthSDUProtectionProfile>& profiles)
+{
+	std::map<std::string, AuthSDUProtectionProfile>::const_iterator iterator;
+	struct nlattr *specific_conf;
 	int i = 0;
 
-	for (iterator = duProtectConfs.begin();
-			iterator != duProtectConfs.end();
+	for (iterator = profiles.begin();
+			iterator != profiles.end();
 			++iterator) {
-		if (!(dup_conf = nla_nest_start(netlinkMessage, i))){
+		if (!(specific_conf = nla_nest_start(netlinkMessage, i))){
 			goto nla_put_failure;
 		}
-		if (putDUProtectConfObject(netlinkMessage, *iterator) < 0) {
+		if (putSpecificAuthSDUProtectionProfile(netlinkMessage,
+							iterator->first,
+							iterator->second) < 0) {
 			goto nla_put_failure;
 		}
-		nla_nest_end(netlinkMessage, dup_conf);
+		nla_nest_end(netlinkMessage, specific_conf);
 		i++;
 	}
 
@@ -1415,22 +1450,19 @@ int putListOfDUConfs(
 	return -1;
 }
 
-int parseListOfDUProtectConfs(nlattr *nested,
-		DIFConfiguration * difConfiguration){
+int parseListOfAuthSDUProtectionProfiles(nlattr *nested,
+			     	     	 std::map<std::string, AuthSDUProtectionProfile>& profiles)
+{
 	nlattr * nla;
 	int rem;
-	DUProtectionConfiguration *dup_conf;
 
 	for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
 		     nla_ok(nla, rem);
 		     nla = nla_next(nla, &(rem))){
 		/* validate & parse attribute */
-		dup_conf = parseDUProtectConf(nla);
-		if (dup_conf == 0){
+		if (parseSpecificSDUProtectionProfile(nla, profiles) != 0) {
 			return -1;
 		}
-		difConfiguration->duProtectionConfs.push_back(*dup_conf);
-		delete dup_conf;
 	}
 
 	if (rem > 0){
@@ -1440,67 +1472,104 @@ int parseListOfDUProtectConfs(nlattr *nested,
 	return 0;
 }
 
-DUProtectionConfiguration * parseDUProtectConf(nlattr *nested){
-	struct nla_policy attr_policy[DUPC_ATTR_MAX + 1];
-	attr_policy[DUPC_DIF_NAME].type = NLA_STRING;
-	attr_policy[DUPC_DIF_NAME].minlen = 0;
-	attr_policy[DUPC_DIF_NAME].maxlen = 65535;
-	attr_policy[DUPC_TTL].type = NLA_U32;
-	attr_policy[DUPC_TTL].minlen = 0;
-	attr_policy[DUPC_TTL].maxlen = 65535;
-	attr_policy[DUPC_ENABLE_CRC].type = NLA_FLAG;
-	attr_policy[DUPC_ENABLE_CRC].minlen = 0;
-	attr_policy[DUPC_ENABLE_CRC].maxlen = 0;
-	attr_policy[DUPC_ENC_CIPHER].type = NLA_STRING;
-	attr_policy[DUPC_ENC_CIPHER].minlen = 0;
-	attr_policy[DUPC_ENC_CIPHER].maxlen = 65535;
-	attr_policy[DUPC_MSG_DIGEST].type = NLA_STRING;
-	attr_policy[DUPC_MSG_DIGEST].minlen = 0;
-	attr_policy[DUPC_MSG_DIGEST].maxlen = 65535;
-	attr_policy[DUPC_KEY].type = NLA_STRING;
-	attr_policy[DUPC_KEY].minlen = 0;
-	attr_policy[DUPC_KEY].maxlen = 65535;
-	struct nlattr *attrs[DUPC_ATTR_MAX + 1];
+int parseSpecificSDUProtectionProfile(nlattr *nested,
+			     	       std::map<std::string, AuthSDUProtectionProfile>& profiles)
+{
+	struct nla_policy attr_policy[SAUTHP_ATTR_MAX + 1];
+	attr_policy[SAUTHP_UNDER_DIF].type = NLA_STRING;
+	attr_policy[SAUTHP_UNDER_DIF].minlen = 0;
+	attr_policy[SAUTHP_UNDER_DIF].maxlen = 65535;
+	attr_policy[SAUTHP_AUTH_PROFILE].type = NLA_NESTED;
+	attr_policy[SAUTHP_AUTH_PROFILE].minlen = 0;
+	attr_policy[SAUTHP_AUTH_PROFILE].maxlen = 0;
+	struct nlattr *attrs[SAUTHP_ATTR_MAX + 1];
 
-	int err = nla_parse_nested(attrs, DUPC_ATTR_MAX, nested, attr_policy);
+	int err = nla_parse_nested(attrs, SAUTHP_ATTR_MAX, nested, attr_policy);
 	if (err < 0) {
-		LOG_ERR(
-				"Error parsing Parameter from Netlink message: %d",
-				err);
+		LOG_ERR("Error parsing SpeficicAuthSDUProtectionProfile from Netlink message: %d",
+			err);
 		return 0;
 	}
 
-	DUProtectionConfiguration * result = new DUProtectionConfiguration();
+	AuthSDUProtectionProfile * profile;
+	std::string under_dif_name;
 
-	if (attrs[DUPC_DIF_NAME]){
-		result->dif_name =
-				nla_get_string(attrs[DUPC_DIF_NAME]);
+        if (attrs[SAUTHP_UNDER_DIF]) {
+                under_dif_name = nla_get_string(attrs[SAUTHP_UNDER_DIF]);
+        }
+
+	if (attrs[SAUTHP_AUTH_PROFILE]) {
+		profile = parseAuthSDUProtectionProfile(
+					attrs[SAUTHP_AUTH_PROFILE]);
+		if (profile == 0) {
+			return -1;
+		} else {
+			profiles[under_dif_name] = *profile;
+			delete profile;
+		}
 	}
 
-	if (attrs[DUPC_TTL]){
-		result->TTL =
-				nla_get_u32(attrs[DUPC_TTL]);
+	return 0;
+}
+
+AuthSDUProtectionProfile * parseAuthSDUProtectionProfile(nlattr *nested)
+{
+	struct nla_policy attr_policy[AUTHP_ATTR_MAX + 1];
+	attr_policy[AUTHP_AUTH_POLICY].type = NLA_NESTED;
+	attr_policy[AUTHP_AUTH_POLICY].minlen = 0;
+	attr_policy[AUTHP_AUTH_POLICY].maxlen = 0;
+	attr_policy[AUTHP_CRC_POLICY].type = NLA_NESTED;
+	attr_policy[AUTHP_CRC_POLICY].minlen = 0;
+	attr_policy[AUTHP_CRC_POLICY].maxlen = 0;
+	attr_policy[AUTHP_TTL_POLICY].type = NLA_NESTED;
+	attr_policy[AUTHP_TTL_POLICY].minlen = 0;
+	attr_policy[AUTHP_TTL_POLICY].maxlen = 0;
+	struct nlattr *attrs[AUTHP_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, AUTHP_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing AuthSDUProtectionProfile from Netlink message: %d",
+			err);
+		return 0;
 	}
 
-	if (attrs[DUPC_ENABLE_CRC]){
-		result->enable_CRC = true;
-	}else{
-        result->enable_CRC = false;
-    }
+	AuthSDUProtectionProfile * result = new AuthSDUProtectionProfile();
+	PolicyConfig * policy_config;
 
-	if (attrs[DUPC_ENC_CIPHER]){
-		result->encryption_cipher =
-				nla_get_string(attrs[DUPC_ENC_CIPHER]);
+	if (attrs[AUTHP_AUTH_POLICY]) {
+		policy_config = parsePolicyConfigObject(
+					attrs[AUTHP_AUTH_POLICY]);
+		if (policy_config == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->authPolicy = *policy_config;
+			delete policy_config;
+		}
 	}
 
-	if (attrs[DUPC_MSG_DIGEST]){
-		result->message_digest =
-				nla_get_string(attrs[DUPC_MSG_DIGEST]);
+	if (attrs[AUTHP_CRC_POLICY]) {
+		policy_config = parsePolicyConfigObject(
+					attrs[AUTHP_CRC_POLICY]);
+		if (policy_config == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->crcPolicy = *policy_config;
+			delete policy_config;
+		}
 	}
 
-	if (attrs[DUPC_KEY]){
-		result->key =
-				nla_get_string(attrs[DUPC_KEY]);
+	if (attrs[AUTHP_TTL_POLICY]) {
+		policy_config = parsePolicyConfigObject(
+					attrs[AUTHP_TTL_POLICY]);
+		if (policy_config == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->ttlPolicy = *policy_config;
+			delete policy_config;
+		}
 	}
 
 	return result;
@@ -4105,8 +4174,9 @@ int putNamespaceManagerConfigurationObject(nl_msg* netlinkMessage,
 }
 
 int putSecurityManagerConfigurationObject(nl_msg* netlinkMessage,
-		const SecurityManagerConfiguration& object){
-	struct nlattr *nmPolicy, *nfPolicy;
+		const SecurityManagerConfiguration& object)
+{
+	struct nlattr *nmPolicy, *nfPolicy, *defAuth, *specAuth;
 
 	if (!(nmPolicy = nla_nest_start(
 			netlinkMessage, SECMANC_DIF_MEM_ACC_CON_POLICY))) {
@@ -4128,6 +4198,26 @@ int putSecurityManagerConfigurationObject(nl_msg* netlinkMessage,
 	}
 	nla_nest_end(netlinkMessage, nfPolicy);
 
+	if (!(defAuth = nla_nest_start(
+			netlinkMessage, SECMANC_DEFAULT_AUTH_SDUP_POLICY))) {
+		goto nla_put_failure;
+	}
+	if (putAuthSDUProtectionProfile(netlinkMessage,
+					object.default_auth_profile) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, defAuth);
+
+	if (!(specAuth = nla_nest_start(
+			netlinkMessage, SECMANC_SPECIFIC_AUTH_SDUP_POLICIES))) {
+		goto nla_put_failure;
+	}
+	if (putListOfAuthSDUProtectionProfiles(netlinkMessage,
+					       object.specific_auth_profiles) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, specAuth);
+
 	return 0;
 
 	nla_put_failure: LOG_ERR(
@@ -4139,8 +4229,7 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
                 const DIFConfiguration& object,
                 bool normalIPCProcess){
 	struct nlattr *parameters, *efcpConfig, *rmtConfig, *smConfig,
-		*etConfig, *faConfig, *nsmConfig, *pduftConfig, *policySets,
-        *duProtectConfs;
+		*etConfig, *faConfig, *nsmConfig, *pduftConfig, *policySets;
 
 	if  (object.get_parameters().size() > 0) {
 	        if (!(parameters = nla_nest_start(
@@ -4236,19 +4325,6 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
                         }
                         nla_nest_end(netlinkMessage, policySets);
                 }
-
-                if (object.duProtectionConfs.size() > 0){
-                    if (!(duProtectConfs = nla_nest_start(netlinkMessage,
-                                                        DCONF_ATTR_DUP_CONFS))){
-                            goto nla_put_failure;
-                    }
-                    if (putListOfDUConfs(netlinkMessage,
-                                         object.duProtectionConfs) < 0) {
-                            goto nla_put_failure;
-                    }
-                    nla_nest_end(netlinkMessage, duProtectConfs);
-                }
-
 	}
 
 	NLA_PUT_U32(netlinkMessage, DCONF_ATTR_ADDRESS,
@@ -6881,22 +6957,25 @@ SecurityManagerConfiguration * parseSecurityManagerConfigurationObject(nlattr *n
 	attr_policy[SECMANC_NEW_FLOW_ACC_CON_POLICY].type = NLA_NESTED;
 	attr_policy[SECMANC_NEW_FLOW_ACC_CON_POLICY].minlen = 0;
 	attr_policy[SECMANC_NEW_FLOW_ACC_CON_POLICY].maxlen = 0;
-	attr_policy[SECMANC_AUTH_POLICY].type = NLA_NESTED;
-	attr_policy[SECMANC_AUTH_POLICY].minlen = 0;
-	attr_policy[SECMANC_AUTH_POLICY].maxlen = 0;
+	attr_policy[SECMANC_DEFAULT_AUTH_SDUP_POLICY].type = NLA_NESTED;
+	attr_policy[SECMANC_DEFAULT_AUTH_SDUP_POLICY].minlen = 0;
+	attr_policy[SECMANC_DEFAULT_AUTH_SDUP_POLICY].maxlen = 0;
+	attr_policy[SECMANC_SPECIFIC_AUTH_SDUP_POLICIES].type = NLA_NESTED;
+	attr_policy[SECMANC_SPECIFIC_AUTH_SDUP_POLICIES].minlen = 0;
+	attr_policy[SECMANC_SPECIFIC_AUTH_SDUP_POLICIES].maxlen = 0;
 	struct nlattr *attrs[SECMANC_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, SECMANC_ATTR_MAX, nested, attr_policy);
 	if (err < 0) {
-		LOG_ERR(
-				"Error parsing SecurityManagerConfiguration information from Netlink message: %d",
-				err);
+		LOG_ERR("Error parsing SecurityManagerConfiguration information from Netlink message: %d",
+			err);
 		return 0;
 	}
 
 	SecurityManagerConfiguration * result = new SecurityManagerConfiguration();
 	PolicyConfig * difAc;
 	PolicyConfig * flowAc;
+	AuthSDUProtectionProfile * default_profile;
 
 	if (attrs[SECMANC_DIF_MEM_ACC_CON_POLICY]) {
 		difAc = parsePolicyConfigObject(
@@ -6920,6 +6999,24 @@ SecurityManagerConfiguration * parseSecurityManagerConfigurationObject(nlattr *n
 			result->newFlowAccessControlPolicy = *flowAc;
 			delete flowAc;
 		}
+	}
+
+	if (attrs[SECMANC_DEFAULT_AUTH_SDUP_POLICY]) {
+		default_profile = parseAuthSDUProtectionProfile(
+					attrs[SECMANC_DEFAULT_AUTH_SDUP_POLICY]);
+		if (default_profile == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->default_auth_profile = *default_profile;
+			delete default_profile;
+		}
+	}
+
+	if (attrs[SECMANC_SPECIFIC_AUTH_SDUP_POLICIES]) {
+		parseListOfAuthSDUProtectionProfiles(
+				attrs[SECMANC_SPECIFIC_AUTH_SDUP_POLICIES],
+				result->specific_auth_profiles);
 	}
 
 	return result;
@@ -6957,9 +7054,6 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 	attr_policy[DCONF_ATTR_POLICY_SETS].type = NLA_NESTED;
 	attr_policy[DCONF_ATTR_POLICY_SETS].minlen = 0;
 	attr_policy[DCONF_ATTR_POLICY_SETS].maxlen = 0;
-	attr_policy[DCONF_ATTR_DUP_CONFS].type = NLA_NESTED;
-	attr_policy[DCONF_ATTR_DUP_CONFS].minlen = 0;
-	attr_policy[DCONF_ATTR_DUP_CONFS].maxlen = 0;
 	struct nlattr *attrs[DCONF_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, DCONF_ATTR_MAX, nested, attr_policy);
@@ -7081,15 +7175,6 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 	if (attrs[DCONF_ATTR_POLICY_SETS]) {
 		status = parseListOfDIFConfigurationPolicySets(
 				attrs[DCONF_ATTR_POLICY_SETS], result);
-		if (status != 0){
-			delete result;
-			return 0;
-		}
-	}
-
-	if (attrs[DCONF_ATTR_DUP_CONFS]) {
-		status = parseListOfDUProtectConfs(
-				attrs[DCONF_ATTR_DUP_CONFS], result);
 		if (status != 0){
 			delete result;
 			return 0;
