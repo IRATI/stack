@@ -666,6 +666,16 @@ void IPCProcessImpl::processPluginLoadRequestEvent(
         return;
 }
 
+void IPCProcessImpl::processFwdCDAPMsgRequestEvent(
+                        const rina::FwdCDAPMsgRequestEvent& event) {
+		rina::ScopedLock g(*lock_);
+
+	LOG_IPCP_INFO("Stub for forwarded CDAP Message [len=%d]",
+		      event.sermsg.size_);
+
+        return;
+}
+
 //Event loop handlers
 static void
 ipc_process_dif_registration_notification_handler(rina::IPCEvent *e,
@@ -918,6 +928,17 @@ ipc_process_plugin_load_handler(rina::IPCEvent *e,
 }
 
 static void
+ipc_process_fwd_cdap_msg_handler(rina::IPCEvent *e,
+		                 EventLoopData *opaque)
+
+{
+	DOWNCAST_DECL(e, rina::FwdCDAPMsgRequestEvent, event);
+	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
+
+	ipcp->processFwdCDAPMsgRequestEvent(*event);
+}
+
+static void
 ipc_process_default_handler(rina::IPCEvent *e,
 		EventLoopData *opaque)
 {
@@ -973,6 +994,8 @@ void register_handlers_all(EventLoop& loop) {
                         ipc_process_select_policy_set_response_handler);
         loop.register_event(rina::IPC_PROCESS_PLUGIN_LOAD,
                         ipc_process_plugin_load_handler);
+        loop.register_event(rina::IPC_PROCESS_FWD_CDAP_MSG,
+                        ipc_process_fwd_cdap_msg_handler);
 
 	//Unsupported events
 	loop.register_event(rina::APPLICATION_UNREGISTERED_EVENT,
