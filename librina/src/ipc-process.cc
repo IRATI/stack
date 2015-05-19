@@ -406,7 +406,10 @@ void ExtendedIPCManager::enrollToDIFResponse(const EnrollToDAFRequestEvent& even
         responseMessage.setSequenceNumber(event.sequenceNumber);
         responseMessage.setResponseMessage(true);
         try {
-                rinaManager->sendMessage(&responseMessage, false);
+        	//FIXME, compute maximum message size dynamically
+        	rinaManager->sendMessageOfMaxSize(&responseMessage,
+        					  5 * get_page_size(),
+        					  false);
         } catch (NetlinkException &e) {
                 throw EnrollException(e.what());
         }
