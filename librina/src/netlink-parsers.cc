@@ -1803,13 +1803,15 @@ ApplicationRegistrationInformation * parseApplicationRegistrationInformation(
 
 int putPolicyParameterObject(nl_msg * netlinkMessage,
                 const PolicyParameter& object) {
-        NLA_PUT_STRING(netlinkMessage, PPA_ATTR_NAME, object.get_name().c_str());
-        NLA_PUT_STRING(netlinkMessage, PPA_ATTR_VALUE, object.get_value().c_str());
+        NLA_PUT_STRING(netlinkMessage, PPA_ATTR_NAME, object.name_.c_str());
+        NLA_PUT_STRING(netlinkMessage, PPA_ATTR_VALUE, object.value_.c_str());
 
         return 0;
 
         nla_put_failure: LOG_ERR(
-                        "Error building PolicyParameter Netlink object");
+                        "Error building PolicyParameter Netlink object; name: %s, value: %s",
+                         object.name_.c_str(),
+                         object.value_.c_str());
         return -1;
 }
 
@@ -1871,7 +1873,7 @@ int putListOfPolicyParameters(nl_msg* netlinkMessage,
 }
 
 int parseListOfPolicyConfigPolicyParameters(nlattr *nested,
-                PolicyConfig * efcpPolicyConfig) {
+                PolicyConfig * policyConfig) {
         nlattr * nla;
         int rem;
         PolicyParameter * parameter;
@@ -1883,7 +1885,7 @@ int parseListOfPolicyConfigPolicyParameters(nlattr *nested,
                 if (parameter == 0){
                         return -1;
                 }
-                efcpPolicyConfig->add_parameter(*parameter);
+                policyConfig->add_parameter(*parameter);
                 delete parameter;
         }
 

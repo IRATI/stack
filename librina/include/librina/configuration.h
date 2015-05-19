@@ -27,7 +27,7 @@
 #include "librina/common.h"
 
 #define RINA_DEFAULT_POLICY_NAME "default"
-#define RINA_DEFAULT_POLICY_VERSION "0"
+#define RINA_DEFAULT_POLICY_VERSION "1"
 
 namespace rina {
 
