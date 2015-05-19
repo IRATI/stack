@@ -293,6 +293,8 @@ void IPCProcessImpl::processAssignToDIFRequestEvent(const rina::AssignToDIFReque
 	}
 
 	try {
+		rina::SecurityManagerConfiguration config = event.difInformation.dif_configuration_.sm_configuration_;
+		LOG_IPCP_DBG("%s", config.toString().c_str());
 		unsigned int handle = rina::kernelIPCProcess->assignToDIF(event.difInformation);
 		pending_events_.insert(std::pair<unsigned int,
 				rina::AssignToDIFRequestEvent>(handle, event));
