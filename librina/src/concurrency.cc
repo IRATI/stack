@@ -359,7 +359,7 @@ void * do_simple_thread_work(void * arg)
 		return (void *) -1;
 	}
 
-	return (void *) simple_thread->run();
+	return reinterpret_cast<void *>(simple_thread->run());
 }
 
 SimpleThread::SimpleThread(ThreadAttributes * threadAttributes) :
