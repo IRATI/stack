@@ -254,8 +254,10 @@ static int __init mod_init(void)
 
         /* FIXME: This is not the right place, please fix */
 #ifdef CONFIG_RINA_RDS_REGRESSION_TESTS
-        if (!regression_tests_rds())
+        if (!regression_tests_rds()) {
+                rina_personality_unregister(personality);
                 return -1;
+        }
 #endif
 
         LOG_DBG("Rina default personality loaded successfully");
