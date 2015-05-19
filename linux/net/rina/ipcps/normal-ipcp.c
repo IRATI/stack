@@ -68,7 +68,6 @@ struct ipcp_instance_data {
         ipc_process_id_t        id;
         u32                     nl_port;
         struct list_head        flows;
-        struct list_head        list;
         struct normal_info *    info;
         /*  FIXME: Remove it as soon as the kipcm_kfa gets removed*/
         struct kfa *            kfa;
@@ -77,6 +76,7 @@ struct ipcp_instance_data {
         address_t               address;
         struct mgmt_data *      mgmt_data;
         spinlock_t              lock;
+        struct list_head        list;
 };
 
 enum normal_flow_state {
@@ -88,16 +88,16 @@ enum normal_flow_state {
 };
 
 struct cep_ids_entry {
-        struct list_head list;
         cep_id_t         cep_id;
+        struct list_head list;
 };
 
 struct normal_flow {
         port_id_t              port_id;
         cep_id_t               active;
         struct list_head       cep_ids_list;
-        struct list_head       list;
         enum normal_flow_state state;
+        struct list_head       list;
 };
 
 static struct normal_flow * find_flow(struct ipcp_instance_data * data,
@@ -493,9 +493,6 @@ connection_create_arrived(struct ipcp_instance_data * data,
                 efcp_connection_destroy(data->efcpc, cep_id);
                 return cep_id_bad();
         }
-        flow->port_id = port_id;
-        INIT_LIST_HEAD(&flow->list);
-        INIT_LIST_HEAD(&flow->cep_ids_list);
 
         ipcp = kipcm_find_ipcp(default_kipcm, data->id);
         if (!ipcp) {
@@ -514,7 +511,6 @@ connection_create_arrived(struct ipcp_instance_data * data,
                 return cep_id_bad();
         }
 
-        list_add(&flow->list, &data->flows);
         list_add(&cep_entry->list, &flow->cep_ids_list);
         flow->active = cep_id;
         flow->state = PORT_STATE_ALLOCATED;
@@ -529,6 +525,9 @@ static int remove_all_cepid(struct ipcp_instance_data * data,
         struct cep_ids_entry *pos, *next;
 
         ASSERT(data);
+
+        ASSERT(flow);
+        ASSERT(&flow->cep_ids_list);
 
         list_for_each_entry_safe(pos, next, &flow->cep_ids_list, list) {
                 efcp_connection_destroy(data->efcpc, pos->cep_id);
@@ -558,13 +557,14 @@ static int normal_deallocate(struct ipcp_instance_data * data,
                 return -1;
         }
         flow->state = PORT_STATE_DEALLOCATED;
-        spin_unlock_irqrestore(&data->lock, flags);
 
         remove_all_cepid(data, flow);
 
         list_del(&flow->list);
 
         rkfree(flow);
+
+        spin_unlock_irqrestore(&data->lock, flags);
 
         return 0;
 }
