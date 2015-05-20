@@ -603,6 +603,25 @@ public:
         bool operator!=(const Parameter &other) const;
 };
 
+struct UcharArray {
+	UcharArray() {
+		array = 0;
+		length = 0;
+	}
+	UcharArray(int arrayLength) {
+		array = new unsigned char[arrayLength];
+		length = arrayLength;
+	}
+	~UcharArray() {
+		if (array) {
+			delete array;
+		}
+	}
+
+	unsigned char * array;
+	int length;
+};
+
 class SerializedObject {
 public:
         SerializedObject();

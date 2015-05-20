@@ -404,6 +404,33 @@ SSHRSAAuthOptions * decode_ssh_rsa_auth_options(const SerializedObject &message)
 		result->compress_algs.push_back(gpb_options.compress_algs(i));
 	}
 
+	if (gpb_options.has_dh_public_key()) {
+		  result->dh_public_key.array =
+				  new unsigned char[gpb_options.dh_public_key().size()];
+		  memcpy(result->dh_public_key.array,
+			 gpb_options.dh_public_key().data(),
+			 gpb_options.dh_public_key().size());
+		  result->dh_public_key.length = gpb_options.dh_public_key().size();
+	}
+
+	if (gpb_options.has_dh_g()) {
+		  result->dh_parameter_g.array =
+				  new unsigned char[gpb_options.dh_g().size()];
+		  memcpy(result->dh_parameter_g.array,
+			 gpb_options.dh_g().data(),
+			 gpb_options.dh_g().size());
+		  result->dh_parameter_g.length = gpb_options.dh_g().size();
+	}
+
+	if (gpb_options.has_dh_p()) {
+		  result->dh_parameter_p.array =
+				  new unsigned char[gpb_options.dh_p().size()];
+		  memcpy(result->dh_parameter_p.array,
+			 gpb_options.dh_p().data(),
+			 gpb_options.dh_p().size());
+		  result->dh_parameter_g.length = gpb_options.dh_p().size();
+	}
+
 	return result;
 }
 
@@ -430,12 +457,39 @@ SerializedObject * encode_ssh_rsa_auth_options(const SSHRSAAuthOptions& options)
 		gpb_options.add_compress_algs(*it);
 	}
 
+	if (options.dh_public_key.length > 0) {
+		gpb_options.set_dh_public_key(options.dh_public_key.array,
+					      options.dh_public_key.length);
+	}
+
+	if (options.dh_parameter_g.length > 0) {
+		gpb_options.set_dh_g(options.dh_parameter_g.array,
+				     options.dh_parameter_g.length);
+	}
+
+	if (options.dh_parameter_p.length > 0) {
+		gpb_options.set_dh_p(options.dh_parameter_p.array,
+				     options.dh_parameter_p.length);
+	}
+
 	int size = gpb_options.ByteSize();
 	char *serialized_message = new char[size];
 	gpb_options.SerializeToArray(serialized_message, size);
 	SerializedObject *object = new SerializedObject(serialized_message, size);
 
 	return object;
+}
+
+// Class SSHRSASecurityContext
+SSHRSASecurityContext::~SSHRSASecurityContext()
+{
+	if (dh_state) {
+		DH_free(dh_state);
+	}
+
+	if (dh_peer_pub_key) {
+		BN_free(dh_peer_pub_key);
+	}
 }
 
 //Class AuthSSHRSA
@@ -473,11 +527,30 @@ AuthPolicy AuthSSHRSAPolicySet::get_auth_policy(int session_id,
 	sc->crcPolicy = profile.crcPolicy;
 	sc->ttlPolicy = profile.ttlPolicy;
 
+	//Initialize Diffie-Hellman machinery and generate private/public key pairs
+	if (edh_init_keys(sc) != 0) {
+		delete sc;
+		throw Exception();
+	}
+
 	SSHRSAAuthOptions options;
 	options.key_exch_algs.push_back(sc->key_exch_alg);
 	options.encrypt_algs.push_back(sc->encrypt_alg);
 	options.mac_algs.push_back(sc->mac_alg);
 	options.compress_algs.push_back(sc->compress_alg);
+	options.dh_public_key.length = BN_bn2bin(sc->dh_state->pub_key,
+						 options.dh_public_key.array);
+	options.dh_parameter_g = BN_bn2bin(sc->dh_state->g,
+			 	 	   options.dh_parameter_g.array);
+	options.dh_parameter_p = BN_bn2bin(sc->dh_state->p,
+			 	 	   options.dh_parameter_p.array);
+
+	if (options.dh_public_key.length <= 0) {
+		LOG_ERR("Error transforming big number to binary: %d",
+		        options.dh_public_key.length);
+		delete sc;
+		throw Exception();
+	}
 
 	SerializedObject * sobj = encode_ssh_rsa_auth_options(options);
 	if (!sobj) {
@@ -495,10 +568,54 @@ AuthPolicy AuthSSHRSAPolicySet::get_auth_policy(int session_id,
 	return auth_policy;
 }
 
-/*rina::IAuthPolicySet::AuthStatus AuthSSHRSAPolicySet::initiate_authentication(const AuthPolicy& auth_policy,
+int AuthSSHRSAPolicySet::edh_init_keys(SSHRSASecurityContext * sc)
+{
+	DH *dh_state;
+	int codes;
+
+	/* Generate the parameters to be used */
+	if ((dh_state = DH_new()) == NULL) {
+		LOG_ERR("Error initializing Diffie-Hellman state");
+		return -1;
+	}
+
+	if (DH_generate_parameters_ex(dh_state, 2048, DH_GENERATOR_2, NULL) != 1) {
+		LOG_ERR("Error generating Diffie-Hellman parameters");
+		DH_free(dh_state);
+		return -1;
+	}
+
+	if (DH_check(dh_state, &codes) != 1) {
+		LOG_ERR("Error checking parameters");
+		DH_free(dh_state);
+		return -1;
+	}
+
+	if (codes != 0)
+	{
+		LOG_ERR("Diffie-Hellman check has failed");
+		DH_free(dh_state);
+		return -1;
+	}
+
+	/* Generate the public and private key pair */
+	if (DH_generate_key(dh_state) != 1) {
+		LOG_ERR("Error generating public and private key pair");
+		DH_free(dh_state);
+		return -1;
+	}
+
+	sc->dh_state = dh_state;
+
+	return 0;
+}
+
+rina::IAuthPolicySet::AuthStatus AuthSSHRSAPolicySet::initiate_authentication(const AuthPolicy& auth_policy,
 									      const AuthSDUProtectionProfile& profile,
 								      	      int session_id)
 {
+	(void) profile;
+
 	if (auth_policy.name_ != type) {
 		LOG_ERR("Wrong policy name: %s", auth_policy.name_.c_str());
 		return rina::IAuthPolicySet::FAILED;
@@ -551,12 +668,126 @@ AuthPolicy AuthSSHRSAPolicySet::get_auth_policy(int session_id,
 	}
 
 	//TODO check compression algorithm when we use them
+
+	//Initialize Diffie-Hellman machinery and generate private/public key pairs
+	BIGNUM * g = BN_bin2bn(options->dh_parameter_g.array,
+			       options->dh_parameter_g.length,
+			       NULL);
+	if (!g) {
+		LOG_ERR("Error converting parameter g to a BIGNUM");
+		delete sc;
+		delete options;
+		return rina::IAuthPolicySet::FAILED;
+	}
+
+	BIGNUM * p = BN_bin2bn(options->dh_parameter_p.array,
+			       options->dh_parameter_p.length,
+			       NULL);
+	if (!p) {
+		LOG_ERR("Error converting parameter p to a BIGNUM");
+		delete sc;
+		delete options;
+		delete g;
+		return rina::IAuthPolicySet::FAILED;
+	}
+
+	if (edh_init_keys_with_params(sc, g, p) != 0) {
+		delete sc;
+		delete options;
+		delete p;
+		delete g;
+		return rina::IAuthPolicySet::FAILED;
+	}
+
+	//Add peer public key to security context
+	sc->dh_peer_pub_key = BN_bin2bn(options->dh_public_key.array,
+			       	        options->dh_public_key.length,
+			       	        NULL);
+	if (!sc->dh_peer_pub_key) {
+		LOG_ERR("Error converting public key to a BIGNUM");
+		delete sc;
+		delete options;
+		delete g;
+		delete p;
+		return rina::IAuthPolicySet::FAILED;
+	}
+
+	//Options is not needed anymore
 	delete options;
 
-	//1 Return options to client
+	//Generate the shared secret
+	if (edh_generate_shared_secret(sc) != 0) {
+		delete sc;
+		delete g;
+		delete p;
+		return rina::IAuthPolicySet::FAILED;
+	}
 
+	sec_man->add_security_context(sc);
 
-}*/
+	//TODO send message to peer with public key
+
+	return rina::IAuthPolicySet::IN_PROGRESS;
+}
+
+int AuthSSHRSAPolicySet::edh_init_keys_with_params(SSHRSASecurityContext * sc,
+			      	      	           BIGNUM * g,
+			      	      	           BIGNUM * p)
+{
+	DH *dh_state;
+	int codes;
+
+	/* Generate the parameters to be used */
+	if ((dh_state = DH_new()) == NULL) {
+		LOG_ERR("Error initializing Diffie-Hellman state");
+		return -1;
+	}
+
+	dh_state->g = g;
+	dh_state->p = p;
+
+	if (DH_check(dh_state, &codes) != 1) {
+		LOG_ERR("Error checking private key against parameters");
+		DH_free(dh_state);
+		return -1;
+	}
+
+	if (codes != 0)
+	{
+		LOG_ERR("Diffie-Hellman check has failed");
+		DH_free(dh_state);
+		return -1;
+	}
+
+	/* Generate the public and private key pair */
+	if (DH_generate_key(dh_state) != 1) {
+		LOG_ERR("Error generating public and private key pair");
+		DH_free(dh_state);
+		return -1;
+	}
+
+	sc->dh_state = dh_state;
+
+	return 0;
+}
+
+int AuthSSHRSAPolicySet::edh_generate_shared_secret(SSHRSASecurityContext * sc)
+{
+	if((sc->shared_secret.array =
+			(unsigned char*) OPENSSL_malloc(sizeof(unsigned char) * (DH_size(sc->dh_state)))) == NULL) {
+		LOG_ERR("Error allocating memory for shared secret");
+		return -1;
+	}
+
+	if((sc->shared_secret.length =
+			DH_compute_key(sc->shared_secret.array, sc->dh_peer_pub_key, sc->dh_state)) < 0) {
+		LOG_ERR("Error computing shared secret");
+		OPENSSL_free(sc->shared_secret.array);
+		return -1;
+	}
+
+	return 0;
+}
 
 //Class ISecurity Manager
 ISecurityManager::~ISecurityManager()

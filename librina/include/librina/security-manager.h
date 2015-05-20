@@ -24,6 +24,8 @@
 
 #ifdef __cplusplus
 
+#include <openssl/dh.h>
+
 #include "librina/application.h"
 #include "librina/rib.h"
 #include "librina/internal-events.h"
@@ -171,7 +173,7 @@ private:
 	Lockable lock;
 };
 
-/// Options that then SSH RSA authenticaiton policy has to negotiate with its peer
+/// Options that then SSH RSA authentication policy has to negotiate with its peer
 class SSHRSAAuthOptions {
 public:
 	SSHRSAAuthOptions() { };
@@ -188,18 +190,34 @@ public:
 
 	/// Supported compression algorithms
 	std::list<std::string> compress_algs;
+
+	/// DH public key, p and g
+	UcharArray dh_public_key;
+	UcharArray dh_parameter_p;
+	UcharArray dh_parameter_g;
 };
 
 ///Captures all data of the SSHRSA security context
 class SSHRSASecurityContext : public ISecurityContext {
 public:
-	SSHRSASecurityContext(int session_id) : ISecurityContext(session_id) { };
+	SSHRSASecurityContext(int session_id) : ISecurityContext(session_id),
+		dh_state(NULL), dh_peer_pub_key(NULL) { };
+	~SSHRSASecurityContext();
 
 	/// Negotiated algorithms
 	std::string key_exch_alg;
 	std::string encrypt_alg;
 	std::string mac_alg;
 	std::string compress_alg;
+
+	///Diffie-Hellman key exchange state
+	DH * dh_state;
+
+	///The EDH public key of the peer
+	BIGNUM * dh_peer_pub_key;
+
+	///The shared secret, used as the encryption key
+	UcharArray shared_secret;
 };
 
 /// Authentication policy set that mimics SSH approach. It is associated to
@@ -221,11 +239,24 @@ public:
 	~AuthSSHRSAPolicySet() { };
 	AuthPolicy get_auth_policy(int session_id,
 				   const AuthSDUProtectionProfile& profile);
-	/*AuthStatus initiate_authentication(const AuthPolicy& auth_policy,
+	AuthStatus initiate_authentication(const AuthPolicy& auth_policy,
 				           const AuthSDUProtectionProfile& profile,
-					   int session_id);*/
+					   int session_id);
 
 private:
+	/// Initialize keys for DH key exchange. Returns 0 if successful
+	/// -1 otherwise.
+	int edh_init_keys(SSHRSASecurityContext * sc);
+
+	/// Initialize keys for DH with external parameters
+	int edh_init_keys_with_params(SSHRSASecurityContext * sc,
+				      BIGNUM * g,
+				      BIGNUM * p);
+
+	/// Generate the shared secret using the peer's public key.
+	/// Returns 0 if successful, -1 otherwise
+	int edh_generate_shared_secret(SSHRSASecurityContext * sc);
+
 	IRIBDaemon * rib_daemon;
 	ISecurityManager * sec_man;
 	Timer timer;
