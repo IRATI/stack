@@ -422,12 +422,12 @@ public:
          * IPC process, so that the latter can process the message
 	 * through its RIB
 	 *
-	 * @param sermsg The serialized message
+	 * @param msg The CDAP message to send
          * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws ForwardCDAPException if an error happens during
          *         the process
 	 */
-	void forwardCDAPMessage(const rina::SerializedObject& sermsg,
+	void forwardCDAPMessage(const rina::CDAPMessage& msg,
 				unsigned int opaque);
 
 private:
