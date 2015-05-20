@@ -1,0 +1,6 @@
+{
+    "difType" : "shim-hv",
+    "configParameters" : {
+    	"vmpi-id": "1"
+      }
+}
