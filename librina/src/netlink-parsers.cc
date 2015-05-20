@@ -8702,10 +8702,13 @@ parseIpcmFwdCDAPMsgRequestMessage(nlmsghdr *hdr){
 			new IpcmFwdCDAPMsgRequestMessage();
 
 	if (attrs[IFCM_ATTR_CDAP_MSG]) {
+		size_t msglen = nla_len(attrs[IFCM_ATTR_CDAP_MSG]);
+		char *msgbuf = new char[msglen];
+
 		// XXX or nla_get_data() ?
-		result->sermsg = SerializedObject(
-				(char *)nla_data(attrs[IFCM_ATTR_CDAP_MSG]),
-				nla_len(attrs[IFCM_ATTR_CDAP_MSG]));
+		memcpy(msgbuf, nla_data(attrs[IFCM_ATTR_CDAP_MSG]), msglen);
+
+		result->sermsg = SerializedObject(msgbuf, msglen);
 	}
 
 	return result;
