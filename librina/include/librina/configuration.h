@@ -679,32 +679,19 @@ public:
         RMTConfiguration();
         std::string toString();
 #ifndef SWIG
-        const PolicyConfig& get_max_queue_policy() const;
-        void set_max_queue_policy(const PolicyConfig& max_queue_policy);
-        const PolicyConfig& get_rmt_queue_monitor_policy() const;
-        void set_rmt_queue_monitor_policy(const PolicyConfig& rmt_queue_monitor_policy);
-        const PolicyConfig& get_rmt_scheduling_policy() const;
-        void set_rmt_scheduling_policy(const PolicyConfig& rmt_scheduling_policy);
+        const PolicyConfig& get_rmt_policy_set() const;
+        void set_rmt_policy_set(const PolicyConfig& rmt_policy_set);
+        const PolicyConfig& get_pft_policy_set() const;
+        void set_pft_policy_set(const PolicyConfig& pft_policy_set);
 #endif
 
-        /// Three parameters are provided to monitor the queues. This policy
-        /// can be invoked whenever a PDU is placed in a queue and may keep
-        /// additional variables that may be of use to the decision process of
-        /// the RMT-Scheduling Policy and the MaxQPolicy.
-        PolicyConfig rmt_queue_monitor_policy_;
+        /// Set of policies to define RMT's behaviour.
+        // QMonitor Policy, MaxQ Policy and Scheduling Policy
+        PolicyConfig rmt_policy_set_;
 
-        /// This is the meat of the RMT. This is the scheduling algorithm that
-        /// determines the order input and output queues are serviced. We have
-        /// not distinguished inbound from outbound. That is left to the policy.
-        /// To do otherwise, would impose a policy. This policy may implement
-        /// any of the standard scheduling algorithms, FCFS, LIFO,
-        /// longestQfirst, priorities, etc.
-        PolicyConfig rmt_scheduling_policy_;
-
-        /// This policy is invoked when a queue reaches or crosses the threshold
-        /// or maximum queue lengths allowed for this queue. Note that maximum
-        /// length may be exceeded.
-        PolicyConfig max_queue_policy_;
+        /// Set of policies to define PDU Forwarding's behaviour.
+        // pft_nhop
+        PolicyConfig pft_policy_set_;
 };
 
 /// Link State routing configuration

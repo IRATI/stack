@@ -9,12 +9,12 @@
 // modify it under the terms of the GNU Lesser General Public
 // License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// 
+//
 // This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 // Lesser General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU Lesser General Public
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -3655,37 +3655,27 @@ int putEFCPConfigurationObject(nl_msg* netlinkMessage,
 
 int putRMTConfigurationObject(nl_msg* netlinkMessage,
                 const RMTConfiguration& object){
-        struct nlattr *qmPolicy, *sPolicy, *mqPolicy;
+        struct nlattr *pfPolicy, *rmtPolicy;
 
-        if (!(qmPolicy = nla_nest_start(
-                        netlinkMessage, RMTC_ATTR_QUEUE_MONITOR_POLICY))) {
+        if (!(pfPolicy = nla_nest_start(
+                        netlinkMessage, RMTC_ATTR_PFT_POLICY_SET))) {
                 goto nla_put_failure;
         }
         if (putPolicyConfigObject(netlinkMessage,
-                        object.get_rmt_queue_monitor_policy()) < 0) {
+                        object.pft_policy_set_) < 0) {
                 goto nla_put_failure;
         }
-        nla_nest_end(netlinkMessage, qmPolicy);
+        nla_nest_end(netlinkMessage, pfPolicy);
 
-        if (!(sPolicy = nla_nest_start(
-                        netlinkMessage, RMTC_ATTR_SCHEDULING_POLICY))) {
+        if (!(rmtPolicy = nla_nest_start(
+                        netlinkMessage, RMTC_ATTR_RMT_POLICY_SET))) {
                 goto nla_put_failure;
         }
         if (putPolicyConfigObject(netlinkMessage,
-                        object.get_rmt_scheduling_policy()) < 0) {
+                        object.rmt_policy_set_) < 0) {
                 goto nla_put_failure;
         }
-        nla_nest_end(netlinkMessage, sPolicy);
-
-        if (!(mqPolicy = nla_nest_start(
-                        netlinkMessage, RMTC_ATTR_MAX_QUEUE_POLICY))) {
-                goto nla_put_failure;
-        }
-        if (putPolicyConfigObject(netlinkMessage,
-                        object.get_max_queue_policy()) < 0) {
-                goto nla_put_failure;
-        }
-        nla_nest_end(netlinkMessage, mqPolicy);
+        nla_nest_end(netlinkMessage, rmtPolicy);
 
         return 0;
 
@@ -6190,15 +6180,12 @@ EFCPConfiguration * parseEFCPConfigurationObject(nlattr *nested) {
 
 RMTConfiguration * parseRMTConfigurationObject(nlattr *nested) {
         struct nla_policy attr_policy[RMTC_ATTR_MAX + 1];
-        attr_policy[RMTC_ATTR_QUEUE_MONITOR_POLICY].type = NLA_NESTED;
-        attr_policy[RMTC_ATTR_QUEUE_MONITOR_POLICY].minlen = 0;
-        attr_policy[RMTC_ATTR_QUEUE_MONITOR_POLICY].maxlen = 0;
-        attr_policy[RMTC_ATTR_SCHEDULING_POLICY].type = NLA_NESTED;
-        attr_policy[RMTC_ATTR_SCHEDULING_POLICY].minlen = 0;
-        attr_policy[RMTC_ATTR_SCHEDULING_POLICY].maxlen = 0;
-        attr_policy[RMTC_ATTR_MAX_QUEUE_POLICY].type = NLA_NESTED;
-        attr_policy[RMTC_ATTR_MAX_QUEUE_POLICY].minlen = 0;
-        attr_policy[RMTC_ATTR_MAX_QUEUE_POLICY].maxlen = 0;
+        attr_policy[RMTC_ATTR_PFT_POLICY_SET].type = NLA_NESTED;
+        attr_policy[RMTC_ATTR_PFT_POLICY_SET].minlen = 0;
+        attr_policy[RMTC_ATTR_PFT_POLICY_SET].maxlen = 0;
+        attr_policy[RMTC_ATTR_RMT_POLICY_SET].type = NLA_NESTED;
+        attr_policy[RMTC_ATTR_RMT_POLICY_SET].minlen = 0;
+        attr_policy[RMTC_ATTR_RMT_POLICY_SET].maxlen = 0;
         struct nlattr *attrs[RMTC_ATTR_MAX + 1];
 
         int err = nla_parse_nested(attrs, RMTC_ATTR_MAX, nested, attr_policy);
@@ -6210,43 +6197,30 @@ RMTConfiguration * parseRMTConfigurationObject(nlattr *nested) {
         }
 
         RMTConfiguration * result = new RMTConfiguration();
-        PolicyConfig * monitor;
-        PolicyConfig * scheduling;
-        PolicyConfig * max;
+        PolicyConfig * pftps;
+        PolicyConfig * rmtps;
 
-        if (attrs[RMTC_ATTR_QUEUE_MONITOR_POLICY]) {
-                monitor = parsePolicyConfigObject(
-                                attrs[RMTC_ATTR_QUEUE_MONITOR_POLICY]);
-                if (monitor == 0) {
+        if (attrs[RMTC_ATTR_PFT_POLICY_SET]) {
+        	pftps = parsePolicyConfigObject(
+                                attrs[RMTC_ATTR_PFT_POLICY_SET]);
+                if (pftps == 0) {
                         delete result;
                         return 0;
                 } else {
-                        result->set_rmt_queue_monitor_policy(*monitor);
-                        delete monitor;
+                        result->pft_policy_set_ = *pftps;
+                        delete pftps;
                 }
         }
 
-        if (attrs[RMTC_ATTR_SCHEDULING_POLICY]) {
-                scheduling = parsePolicyConfigObject(
-                                attrs[RMTC_ATTR_SCHEDULING_POLICY]);
-                if (scheduling == 0) {
+        if (attrs[RMTC_ATTR_RMT_POLICY_SET]) {
+        	rmtps = parsePolicyConfigObject(
+                                attrs[RMTC_ATTR_RMT_POLICY_SET]);
+                if (rmtps == 0) {
                         delete result;
                         return 0;
                 } else {
-                        result->set_rmt_scheduling_policy(*scheduling);
-                        delete scheduling;
-                }
-        }
-
-        if (attrs[RMTC_ATTR_MAX_QUEUE_POLICY]) {
-                max = parsePolicyConfigObject(
-                                attrs[RMTC_ATTR_MAX_QUEUE_POLICY]);
-                if (max == 0) {
-                        delete result;
-                        return 0;
-                } else {
-                        result->set_max_queue_policy(*max);
-                        delete max;
+                        result->rmt_policy_set_ = *rmtps;
+                        delete rmtps;
                 }
         }
 

@@ -408,6 +408,15 @@ enum efcp_config_attrs_list {
 };
 #define EFCPC_ATTR_MAX (__EFCPC_ATTR_MAX -1)
 
+enum rmt_config_attrs_list {
+        RMTC_ATTR_PDU_FORW_POLICY = 1,
+        RMTC_ATTR_Q_MONITOR_POLICY,
+        RMTC_ATTR_MAX_Q_POLICY,
+        RMTC_ATTR_SCHED_POLICY,
+        __RMTC_ATTR_MAX,
+};
+#define RMTC_ATTR_MAX (__RMTC_ATTR_MAX -1)
+
 enum dif_config_attrs_list {
         DCONF_ATTR_IPCP_CONFIG_ENTRIES = 1,
         DCONF_ATTR_ADDRESS,

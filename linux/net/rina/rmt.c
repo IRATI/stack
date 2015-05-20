@@ -44,6 +44,7 @@
 #include "serdes.h"
 #include "pdu-ser.h"
 #include "rmt-ps.h"
+#include "ipcp-utils.h"
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 #define MAX_PDUS_SENT_PER_CYCLE 10
@@ -367,6 +368,7 @@ static int pft_cache_fini(struct pft_cache * c)
 struct rmt {
         struct rina_component     base;
         address_t                 address;
+        struct rmt_config *       config;
         struct ipcp_instance *    parent;
         struct pft *              pft;
         struct kfa *              kfa;
@@ -444,6 +446,7 @@ int rmt_destroy(struct rmt * instance)
 
         if (instance->pft)            pft_destroy(instance->pft);
         if (instance->serdes)         serdes_destroy(instance->serdes);
+        if (instance->config)	      rmt_config_destroy(instance->config);
 
         rina_component_fini(&instance->base);
 
@@ -496,6 +499,29 @@ int rmt_dt_cons_set(struct rmt *     instance,
         return 0;
 }
 EXPORT_SYMBOL(rmt_dt_cons_set);
+
+int rmt_config_set(struct rmt *        instance,
+                   struct rmt_config * rmt_config)
+{
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        if (!rmt_config) {
+                 LOG_ERR("Bogus rmt_config passed");
+                return -1;
+        }
+
+        instance->config = rmt_config;
+
+        /* Add code to instantiate the policies in the rmt config */
+        LOG_MISSING;
+
+        return 0;
+}
+EXPORT_SYMBOL(rmt_config_set);
+
 
 static int n1_port_write(struct serdes *      serdes,
                          struct rmt_n1_port * n1_port,

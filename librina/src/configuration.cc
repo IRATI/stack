@@ -1075,48 +1075,35 @@ void FlowAllocatorConfiguration::set_seq_rollover_policy(
 
 // CLASS RMTConfiguration
 RMTConfiguration::RMTConfiguration(){
-	max_queue_policy_ = PolicyConfig();
-	rmt_queue_monitor_policy_ = PolicyConfig();
-	rmt_scheduling_policy_ = PolicyConfig();
+	rmt_policy_set_ = PolicyConfig();
+	pft_policy_set_ = PolicyConfig();
 }
 
 std::string RMTConfiguration::toString()
 {
 	std::stringstream ss;
-	ss << "Max queue policy. Name: " << max_queue_policy_.name_ ;
-	ss << "; Version: " << max_queue_policy_.version_ << std::endl;
-	ss << "Queue monitor policy. Name: " << rmt_queue_monitor_policy_.name_ ;
-	ss << "; Version: " << rmt_queue_monitor_policy_.version_ << std::endl;
-	ss << "Scheduling policy. Name: " << rmt_scheduling_policy_.name_ ;
-	ss << "; Version: " << rmt_scheduling_policy_.version_ << std::endl;
+	ss << "Selected RMT Policy set. Name: " << rmt_policy_set_.name_ ;
+	ss << "; Version: " << rmt_policy_set_.version_ << std::endl;
+	ss << "PDU Forwarding Policy set. Name: " << pft_policy_set_.name_ ;
+	ss << "; Version: " << pft_policy_set_.version_ << std::endl;
 
 	return ss.str();
 }
 
-const PolicyConfig& RMTConfiguration::get_max_queue_policy() const {
-	return max_queue_policy_;
+const PolicyConfig& RMTConfiguration::get_rmt_policy_set() const {
+	return rmt_policy_set_;
 }
 
-void RMTConfiguration::set_max_queue_policy(const PolicyConfig& max_queue_policy) {
-	max_queue_policy_ = max_queue_policy;
+void RMTConfiguration::set_rmt_policy_set(const PolicyConfig& rmt_policy_set) {
+	rmt_policy_set_ = rmt_policy_set;
 }
 
-const PolicyConfig& RMTConfiguration::get_rmt_queue_monitor_policy() const {
-	return rmt_queue_monitor_policy_;
+const PolicyConfig& RMTConfiguration::get_pft_policy_set() const {
+	return pft_policy_set_;
 }
 
-void RMTConfiguration::set_rmt_queue_monitor_policy(
-		const PolicyConfig& rmt_queue_monitor_policy) {
-	rmt_queue_monitor_policy_ = rmt_queue_monitor_policy;
-}
-
-const PolicyConfig& RMTConfiguration::get_rmt_scheduling_policy() const {
-	return rmt_scheduling_policy_;
-}
-
-void RMTConfiguration::set_rmt_scheduling_policy(
-		const PolicyConfig& rmt_scheduling_policy){
-	rmt_scheduling_policy_ = rmt_scheduling_policy;
+void RMTConfiguration::set_pft_policy_set(const PolicyConfig& rmt_policy_set) {
+	pft_policy_set_ = rmt_policy_set;
 }
 
 // CLASS LinkStateRouting Configuraiton
