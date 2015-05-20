@@ -105,6 +105,42 @@ port_id_t kfa_port_id_reserve(struct kfa *     instance,
 }
 EXPORT_SYMBOL(kfa_port_id_reserve);
 
+/* NOTE: Add instance-locking IFF exporting to API */
+static int kfa_flow_destroy(struct kfa *       instance,
+                            struct ipcp_flow * flow,
+                            port_id_t          id)
+{
+        int                    retval = 0;
+
+        ASSERT(flow);
+
+        LOG_DBG("We are destroying flow %d", id);
+
+        /* FIXME: Should we ASSERT() here ? */
+        if (!flow->sdu_ready)
+                LOG_WARN("Instance %pK SDU-ready FIFO is NULL", instance);
+        else
+                if (rfifo_destroy(flow->sdu_ready,
+                                  (void (*) (void *)) sdu_destroy)) {
+                        LOG_ERR("Flow %d FIFO has not been destroyed", id);
+                        retval = -1;
+                }
+
+        if (kfa_pmap_remove(instance->flows, id)) {
+                LOG_ERR("Could not remove pending flow with port-id %d", id);
+                retval = -1;
+        }
+
+        if (pidm_release(instance->pidm, id)) {
+                LOG_ERR("Could not release pid %d from the map", id);
+                retval = -1;
+        }
+
+        rkfree(flow);
+
+        return retval;
+}
+
 int  kfa_port_id_release(struct kfa * instance,
                          port_id_t    port_id)
 {
@@ -152,42 +188,6 @@ int  kfa_port_id_release(struct kfa * instance,
         return 0;
 }
 EXPORT_SYMBOL(kfa_port_id_release);
-
-/* NOTE: Add instance-locking IFF exporting to API */
-static int kfa_flow_destroy(struct kfa *       instance,
-                            struct ipcp_flow * flow,
-                            port_id_t          id)
-{
-        int                    retval = 0;
-
-        ASSERT(flow);
-
-        LOG_DBG("We are destroying flow %d", id);
-
-        /* FIXME: Should we ASSERT() here ? */
-        if (!flow->sdu_ready)
-                LOG_WARN("Instance %pK SDU-ready FIFO is NULL", instance);
-        else
-                if (rfifo_destroy(flow->sdu_ready,
-                                  (void (*) (void *)) sdu_destroy)) {
-                        LOG_ERR("Flow %d FIFO has not been destroyed", id);
-                        retval = -1;
-                }
-
-        if (kfa_pmap_remove(instance->flows, id)) {
-                LOG_ERR("Could not remove pending flow with port-id %d", id);
-                retval = -1;
-        }
-
-        if (pidm_release(instance->pidm, id)) {
-                LOG_ERR("Could not release pid %d from the map", id);
-                retval = -1;
-        }
-
-        rkfree(flow);
-
-        return retval;
-}
 
 struct flowdel_data {
         struct kfa * kfa;
@@ -289,13 +289,13 @@ static int kfa_flow_deallocate(struct ipcp_instance_data * data,
         if ((atomic_read(&flow->readers) == 0) &&
             (atomic_read(&flow->writers) == 0) &&
             (atomic_read(&flow->posters) == 0)) {
+                LOG_DBG("Destroying kfa flow now...");
                 if (kfa_flow_destroy(instance, flow, id))
                         LOG_ERR("Could not destroy the flow correctly");
                 spin_unlock_irqrestore(&instance->lock, flags);
                 return 0;
         }
 
-        spin_unlock_irqrestore(&instance->lock, flags);
 
         wqdata       = rkzalloc(sizeof(*wqdata), GFP_KERNEL);
         wqdata->kfa  = instance;
@@ -303,15 +303,15 @@ static int kfa_flow_deallocate(struct ipcp_instance_data * data,
 
         item = rwq_work_create_ni(kfa_flow_deallocate_worker, (void *) wqdata);
         if (!item) {
-                rkfree(data);
+                rkfree(wqdata);
                 return -1;
         }
 
         rwq_work_post(data->kfa->flowdelq, item);
+        spin_unlock_irqrestore(&instance->lock, flags);
 
         return 0;
 }
-EXPORT_SYMBOL(kfa_flow_deallocate);
 
 static bool ok_write(struct ipcp_flow * flow)
 {
