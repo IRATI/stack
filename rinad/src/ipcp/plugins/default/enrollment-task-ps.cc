@@ -283,16 +283,15 @@ void EnrolleeStateMachine::initiateEnrollment(rina::EnrollmentRequest * enrollme
 		rina::RemoteProcessId remote_id;
 		remote_id.port_id_ = portId;
 
-		auth_ps_ = ipc_process_->security_manager_->get_auth_policy_set(
-				rina::IAuthPolicySet::AUTH_PASSWORD);
+		rina::AuthSDUProtectionProfile profile =
+				sec_man_->get_auth_sdup_profile(remote_peer_->supporting_dif_name_.processName);
+		auth_ps_ = ipc_process_->security_manager_->get_auth_policy_set(profile.authPolicy.name_);
 		if (!auth_ps_) {
 			abortEnrollment(remote_peer_->name_, port_id_,
 					std::string("Unsupported authentication policy set"), true);
 			return;
 		}
 
-		rina::AuthSDUProtectionProfile profile =
-				sec_man_->get_auth_sdup_profile(remote_peer_->supporting_dif_name_.processName);
 		rina::AuthPolicy auth_policy = auth_ps_->get_auth_policy(portId, profile);
 
 		rib_daemon_->openApplicationConnection(auth_policy, "",

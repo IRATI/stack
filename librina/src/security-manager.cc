@@ -520,7 +520,9 @@ AuthPolicy AuthSSHRSAPolicySet::get_auth_policy(int session_id,
 						const AuthSDUProtectionProfile& profile)
 {
 	if (profile.authPolicy.name_ != type) {
-		LOG_ERR("Wrong policy name: %s", profile.authPolicy.name_.c_str());
+		LOG_ERR("Wrong policy name: %s, expected: %s",
+				profile.authPolicy.name_.c_str(),
+				type.c_str());
 		throw Exception();
 	}
 
@@ -622,8 +624,9 @@ int AuthSSHRSAPolicySet::edh_init_keys(SSHRSASecurityContext * sc)
 	DH *dh_state;
 
 	// Init own parameters
-	if (!dh_parameters || edh_init_parameters() != 0) {
+	if (!dh_parameters && edh_init_parameters() != 0) {
 		LOG_ERR("Error initializing Diffie-Hellman parameters");
+		return -1;
 	}
 
 	if ((dh_state = DH_new()) == NULL) {
