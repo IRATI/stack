@@ -57,9 +57,11 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         state = NOT_INITIALIZED;
         lock_ = new rina::Lockable();
 
+	wmpi = rina::WireMessageProviderFactory().createWireMessageProvider();
+
         // Load the default pluggable components
         if (plugin_load(PLUGINSDIR, "default")) {
-        		throw rina::Exception("Failed to load default plugin");
+		throw rina::Exception("Failed to load default plugin");
         }
 
         // Initialize application entities
@@ -669,9 +671,14 @@ void IPCProcessImpl::processPluginLoadRequestEvent(
 void IPCProcessImpl::processFwdCDAPMsgRequestEvent(
                         const rina::FwdCDAPMsgRequestEvent& event) {
 		rina::ScopedLock g(*lock_);
+	const rina::CDAPMessage *msg = wmpi->deserializeMessage(event.sermsg);
+	std::string msg_s;
 
-	LOG_IPCP_INFO("Stub for forwarded CDAP Message [len=%d]",
-		      event.sermsg.size_);
+	msg_s = msg->to_string();
+	delete msg;
+
+	LOG_IPCP_INFO("Stub for forwarded CDAP Message:\n%s",
+		      msg_s.c_str());
 
         return;
 }
