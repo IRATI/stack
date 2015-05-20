@@ -53,20 +53,6 @@ config RINA_IPCPS_TTL_DEFAULT
         help
           no help for the time being
 
-config RINA_RMT_REGRESSION_TESTS
-	bool "RMT regression tests"
-	default n
-        depends on RINA_REGRESSION_TESTS
-	help
-	  No help for the time being
-
-config RINA_PFT_REGRESSION_TESTS
-	bool "PFT regression tests"
-	default n
-        depends on RINA_REGRESSION_TESTS
-	help
-	  No help for the time being
-
 endif
 
 config RINA_SHIM_ETH_VLAN
