@@ -2200,12 +2200,13 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
         }
 
         ASSERT(ipc_process->ops);
-        if (ipc_process->ops->flow_prebind) {
-                ipc_process->ops->flow_prebind(ipc_process->data, pid);
-        }
 
         user_ipc_process = ipcp_imap_find_by_name(kipcm->instances,
                                                   process_name);
+
+        if (ipc_process->ops->flow_prebind) {
+                ipc_process->ops->flow_prebind(ipc_process->data, user_ipc_process, pid);
+        }
 
         if (user_ipc_process) {
                 KIPCM_UNLOCK(kipcm);

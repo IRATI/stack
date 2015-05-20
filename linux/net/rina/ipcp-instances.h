@@ -181,6 +181,7 @@ struct ipcp_instance_ops {
                                       struct conn_policies *      cp_params);
 
         int      (* flow_prebind)(struct ipcp_instance_data * data,
+                                  struct ipcp_instance *      user_ipcp,
                                   port_id_t                   port_id);
 
         int      (* flow_binding_ipcp)(struct ipcp_instance_data * user_data,

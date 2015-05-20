@@ -887,6 +887,7 @@ int efcp_connection_destroy(struct efcp_container * container,
                 }
                 return 0;
         }
+        LOG_DBG("efcp_connection_destroy con pending ops");
         spin_unlock_irqrestore(&container->lock, flags);
 
         return 0;

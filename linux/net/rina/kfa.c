@@ -289,6 +289,7 @@ static int kfa_flow_deallocate(struct ipcp_instance_data * data,
         if ((atomic_read(&flow->readers) == 0) &&
             (atomic_read(&flow->writers) == 0) &&
             (atomic_read(&flow->posters) == 0)) {
+                LOG_DBG("Destroying kfa flow now...");
                 if (kfa_flow_destroy(instance, flow, id))
                         LOG_ERR("Could not destroy the flow correctly");
                 spin_unlock_irqrestore(&instance->lock, flags);
@@ -311,7 +312,6 @@ static int kfa_flow_deallocate(struct ipcp_instance_data * data,
 
         return 0;
 }
-EXPORT_SYMBOL(kfa_flow_deallocate);
 
 static bool ok_write(struct ipcp_flow * flow)
 {

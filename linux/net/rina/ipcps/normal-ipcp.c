@@ -97,6 +97,7 @@ struct normal_flow {
         cep_id_t               active;
         struct list_head       cep_ids_list;
         enum normal_flow_state state;
+        struct ipcp_instance * user_ipcp;
         struct list_head       list;
 };
 
@@ -192,6 +193,7 @@ find_instance(struct ipcp_factory_data * data,
 }
 
 static int normal_flow_prebind(struct ipcp_instance_data * data,
+                               struct ipcp_instance *      user_ipcp,
                                port_id_t                   port_id)
 {
         struct normal_flow * flow;
@@ -206,6 +208,9 @@ static int normal_flow_prebind(struct ipcp_instance_data * data,
                 LOG_ERR("Could not create a flow in normal-ipcp to pre-bind");
                 return -1;
         }
+        if (!user_ipcp)
+                user_ipcp = kfa_ipcp_instance(data->kfa);
+        flow->user_ipcp = user_ipcp;
         flow->port_id = port_id;
         INIT_LIST_HEAD(&flow->list);
         INIT_LIST_HEAD(&flow->cep_ids_list);
@@ -368,7 +373,6 @@ static int ipcp_flow_binding(struct ipcp_instance_data * user_data,
 static int normal_flow_unbinding_ipcp(struct ipcp_instance_data * user_data,
                                       port_id_t                   pid)
 {
-        kfa_port_id_release(user_data->kfa, pid);
         if (rmt_n1port_unbind(user_data->rmt, pid))
                 return -1;
 
@@ -543,6 +547,7 @@ static int normal_deallocate(struct ipcp_instance_data * data,
 {
         struct normal_flow * flow;
         unsigned long        flags;
+        const struct name *   user_ipcp_name;
 
         if (!data) {
                 LOG_ERR("Bogus instance passed");
@@ -556,15 +561,24 @@ static int normal_deallocate(struct ipcp_instance_data * data,
                 LOG_ERR("Could not find flow %d to deallocate", port_id);
                 return -1;
         }
-        flow->state = PORT_STATE_DEALLOCATED;
 
-        remove_all_cepid(data, flow);
+        user_ipcp_name = flow->user_ipcp->ops->ipcp_name(flow->user_ipcp->data);
+
+        if (flow->state == PORT_STATE_PENDING) {
+                flow->user_ipcp->ops->flow_unbinding_ipcp(flow->user_ipcp->data,
+                                                          port_id);
+        } else {
+                remove_all_cepid(data, flow);
+        }
 
         list_del(&flow->list);
-
         rkfree(flow);
 
         spin_unlock_irqrestore(&data->lock, flags);
+
+        /*NOTE: KFA will take care of releasing the port */
+        if (user_ipcp_name)
+                kfa_port_id_release(data->kfa, port_id);
 
         return 0;
 }
