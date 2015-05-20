@@ -498,6 +498,7 @@ const std::string AuthSSHRSAPolicySet::KEY_EXCHANGE_ALGORITHM = "keyExchangeAlg"
 const std::string AuthSSHRSAPolicySet::ENCRYPTION_ALGORITHM = "encryptAlg";
 const std::string AuthSSHRSAPolicySet::MAC_ALGORITHM = "macAlg";
 const std::string AuthSSHRSAPolicySet::COMPRESSION_ALGORITHM = "compressAlg";
+const std::string AuthSSHRSAPolicySet::EDH_EXCHANGE = "Ephemeral Diffie-Hellman exchange";
 
 AuthSSHRSAPolicySet::AuthSSHRSAPolicySet(IRIBDaemon * ribd, ISecurityManager * sm) :
 		IAuthPolicySet(IAuthPolicySet::AUTH_SSHRSA)
@@ -505,6 +506,14 @@ AuthSSHRSAPolicySet::AuthSSHRSAPolicySet(IRIBDaemon * ribd, ISecurityManager * s
 	rib_daemon = ribd;
 	sec_man = sm;
 	timeout = DEFAULT_TIMEOUT;
+	dh_parameters = 0;
+}
+
+AuthSSHRSAPolicySet::~AuthSSHRSAPolicySet()
+{
+	if (dh_parameters) {
+		DH_free(dh_parameters);
+	}
 }
 
 AuthPolicy AuthSSHRSAPolicySet::get_auth_policy(int session_id,
@@ -512,6 +521,13 @@ AuthPolicy AuthSSHRSAPolicySet::get_auth_policy(int session_id,
 {
 	if (profile.authPolicy.name_ != type) {
 		LOG_ERR("Wrong policy name: %s", profile.authPolicy.name_.c_str());
+		throw Exception();
+	}
+
+	ScopedLock sc_lock(lock);
+
+	if (sec_man->get_security_context(session_id) != 0) {
+		LOG_ERR("A security context already exists for session_id: %d", session_id);
 		throw Exception();
 	}
 
@@ -545,9 +561,10 @@ AuthPolicy AuthSSHRSAPolicySet::get_auth_policy(int session_id,
 	options.dh_parameter_p = BN_bn2bin(sc->dh_state->p,
 			 	 	   options.dh_parameter_p.array);
 
-	if (options.dh_public_key.length <= 0) {
-		LOG_ERR("Error transforming big number to binary: %d",
-		        options.dh_public_key.length);
+	if (options.dh_public_key.length <= 0 ||
+			options.dh_parameter_g.length <= 0 ||
+			options.dh_parameter_p.length <= 0) {
+		LOG_ERR("Error transforming big number to binary");
 		delete sc;
 		throw Exception();
 	}
@@ -563,42 +580,62 @@ AuthPolicy AuthSSHRSAPolicySet::get_auth_policy(int session_id,
 	delete sobj;
 
 	//Store security context
+	sc->state = SSHRSASecurityContext::WAIT_EDH_EXCHANGE;
 	sec_man->add_security_context(sc);
 
 	return auth_policy;
 }
 
-int AuthSSHRSAPolicySet::edh_init_keys(SSHRSASecurityContext * sc)
+int AuthSSHRSAPolicySet::edh_init_parameters()
 {
-	DH *dh_state;
 	int codes;
 
-	/* Generate the parameters to be used */
-	if ((dh_state = DH_new()) == NULL) {
+	if ((dh_parameters = DH_new()) == NULL) {
 		LOG_ERR("Error initializing Diffie-Hellman state");
 		return -1;
 	}
 
-	if (DH_generate_parameters_ex(dh_state, 2048, DH_GENERATOR_2, NULL) != 1) {
+	if (DH_generate_parameters_ex(dh_parameters, 2048, DH_GENERATOR_2, NULL) != 1) {
 		LOG_ERR("Error generating Diffie-Hellman parameters");
-		DH_free(dh_state);
+		DH_free(dh_parameters);
 		return -1;
 	}
 
-	if (DH_check(dh_state, &codes) != 1) {
+	if (DH_check(dh_parameters, &codes) != 1) {
 		LOG_ERR("Error checking parameters");
-		DH_free(dh_state);
+		DH_free(dh_parameters);
 		return -1;
 	}
 
 	if (codes != 0)
 	{
 		LOG_ERR("Diffie-Hellman check has failed");
-		DH_free(dh_state);
+		DH_free(dh_parameters);
 		return -1;
 	}
 
-	/* Generate the public and private key pair */
+	return 0;
+}
+
+int AuthSSHRSAPolicySet::edh_init_keys(SSHRSASecurityContext * sc)
+{
+	DH *dh_state;
+
+	// Init own parameters
+	if (!dh_parameters || edh_init_parameters() != 0) {
+		LOG_ERR("Error initializing Diffie-Hellman parameters");
+	}
+
+	if ((dh_state = DH_new()) == NULL) {
+		LOG_ERR("Error initializing Diffie-Hellman state");
+		return -1;
+	}
+
+	// Re-use P and G generated before
+	dh_state->p = BN_dup(dh_parameters->p);
+	dh_state->g = BN_dup(dh_parameters->g);
+
+	// Generate the public and private key pair
 	if (DH_generate_key(dh_state) != 1) {
 		LOG_ERR("Error generating public and private key pair");
 		DH_free(dh_state);
@@ -624,6 +661,13 @@ rina::IAuthPolicySet::AuthStatus AuthSSHRSAPolicySet::initiate_authentication(co
 	if (auth_policy.versions_.front() != RINA_DEFAULT_POLICY_VERSION) {
 		LOG_ERR("Unsupported policy version: %s",
 				auth_policy.versions_.front().c_str());
+		return rina::IAuthPolicySet::FAILED;
+	}
+
+	ScopedLock sc_lock(lock);
+
+	if (sec_man->get_security_context(session_id) != 0) {
+		LOG_ERR("A security context already exists for session_id: %d", session_id);
 		return rina::IAuthPolicySet::FAILED;
 	}
 
@@ -707,8 +751,6 @@ rina::IAuthPolicySet::AuthStatus AuthSSHRSAPolicySet::initiate_authentication(co
 		LOG_ERR("Error converting public key to a BIGNUM");
 		delete sc;
 		delete options;
-		delete g;
-		delete p;
 		return rina::IAuthPolicySet::FAILED;
 	}
 
@@ -718,14 +760,58 @@ rina::IAuthPolicySet::AuthStatus AuthSSHRSAPolicySet::initiate_authentication(co
 	//Generate the shared secret
 	if (edh_generate_shared_secret(sc) != 0) {
 		delete sc;
-		delete g;
-		delete p;
 		return rina::IAuthPolicySet::FAILED;
 	}
 
+	// TODO configure kernel SDU protection policy with shared secret
+	// tell it to encrypt/decrypt all messages right after sending the next one
+
+	// Prepare message for the peer, send selected algorithms and public key
+	SSHRSAAuthOptions auth_options;
+	auth_options.key_exch_algs.push_back(sc->key_exch_alg);
+	auth_options.encrypt_algs.push_back(sc->encrypt_alg);
+	auth_options.mac_algs.push_back(sc->mac_alg);
+	auth_options.compress_algs.push_back(sc->compress_alg);
+	auth_options.dh_public_key.length = BN_bn2bin(sc->dh_state->pub_key,
+						      auth_options.dh_public_key.array);
+
+	if (auth_options.dh_public_key.length <= 0) {
+		LOG_ERR("Error transforming big number to binary");
+		delete sc;
+		return rina::IAuthPolicySet::FAILED;
+	}
+
+	SerializedObject * sobj = encode_ssh_rsa_auth_options(auth_options);
+	if (!sobj) {
+		LOG_ERR("Problems encoding SSHRSAAuthOptions");
+		delete sc;
+		return rina::IAuthPolicySet::FAILED;
+	}
+
+	sc->state = SSHRSASecurityContext::EDH_COMPLETED;
 	sec_man->add_security_context(sc);
 
-	//TODO send message to peer with public key
+	//Send message to peer with selected algorithms and public key
+	try {
+		RIBObjectValue robject_value;
+		robject_value.type_ = RIBObjectValue::bytestype;
+		robject_value.bytes_value_ = *sobj;
+
+		RemoteProcessId remote_id;
+		remote_id.port_id_ = session_id;
+
+		//object class contains challenge request or reply
+		//object name contains cipher name
+		rib_daemon->remoteWriteObject(EDH_EXCHANGE, EDH_EXCHANGE,
+				robject_value, 0, remote_id, 0);
+	} catch (Exception &e) {
+		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
+		delete sc;
+		delete sobj;
+		return rina::IAuthPolicySet::FAILED;
+	}
+
+	delete sobj;
 
 	return rina::IAuthPolicySet::IN_PROGRESS;
 }
@@ -786,7 +872,101 @@ int AuthSSHRSAPolicySet::edh_generate_shared_secret(SSHRSASecurityContext * sc)
 		return -1;
 	}
 
+	LOG_DBG("Computed shared secret: %s", sc->shared_secret.toString().c_str());
+
 	return 0;
+}
+
+int AuthSSHRSAPolicySet::process_incoming_message(const CDAPMessage& message, int session_id)
+{
+	ScopedLock sc_lock(lock);
+
+	if (message.obj_class_ == EDH_EXCHANGE) {
+		return process_edh_exchange_message(message, session_id);
+	}
+
+	return rina::IAuthPolicySet::FAILED;
+}
+
+int AuthSSHRSAPolicySet::process_edh_exchange_message(const CDAPMessage& message, int session_id)
+{
+	ByteArrayObjectValue * bytes_value;
+	SSHRSASecurityContext * sc;
+	const SerializedObject * sobj;
+
+	if (message.op_code_ != CDAPMessage::M_WRITE) {
+		LOG_ERR("Wrong operation type");
+		return IAuthPolicySet::FAILED;
+	}
+
+	if (message.obj_value_ == 0) {
+		LOG_ERR("Null object value");
+		return IAuthPolicySet::FAILED;
+	}
+
+	bytes_value = dynamic_cast<ByteArrayObjectValue *>(message.obj_value_);
+	if (!bytes_value) {
+		LOG_ERR("Object value of wrong type");
+		return IAuthPolicySet::FAILED;
+	}
+
+	sobj = static_cast<const SerializedObject *>(bytes_value->get_value());
+	SSHRSAAuthOptions * options = decode_ssh_rsa_auth_options(*sobj);
+	if (!options) {
+		LOG_ERR("Could not decode SSHARSA options");
+		return rina::IAuthPolicySet::FAILED;
+	}
+
+	sc = dynamic_cast<SSHRSASecurityContext *>(sec_man->get_security_context(session_id));
+	if (!sc) {
+		LOG_ERR("Could not retrieve Security Context for session: %d", session_id);
+		delete options;
+		return IAuthPolicySet::FAILED;
+	}
+
+	if (sc->state != SSHRSASecurityContext::WAIT_EDH_EXCHANGE) {
+		LOG_ERR("Wrong session state: %d", sc->state);
+		sec_man->remove_security_context(session_id);
+		delete sc;
+		delete options;
+		return IAuthPolicySet::FAILED;
+	}
+
+	//Add peer public key to security context
+	sc->dh_peer_pub_key = BN_bin2bn(options->dh_public_key.array,
+			       	        options->dh_public_key.length,
+			       	        NULL);
+	if (!sc->dh_peer_pub_key) {
+		LOG_ERR("Error converting public key to a BIGNUM");
+		delete sc;
+		delete options;
+		return rina::IAuthPolicySet::FAILED;
+	}
+
+	//Options is not needed anymore
+	delete options;
+
+	//Generate the shared secret
+	if (edh_generate_shared_secret(sc) != 0) {
+		delete sc;
+		return rina::IAuthPolicySet::FAILED;
+	}
+
+	sc->state = SSHRSASecurityContext::EDH_COMPLETED;
+
+	//TODO, configure the shared secret in the kernel SDU protection module
+
+	//TODO continue with authentication
+
+	return rina::IAuthPolicySet::IN_PROGRESS;
+}
+
+int AuthSSHRSAPolicySet::set_policy_set_param(const std::string& name,
+                         	 	      const std::string& value)
+{
+        LOG_DBG("No policy-set-specific parameters to set (%s, %s)",
+                        name.c_str(), value.c_str());
+        return -1;
 }
 
 //Class ISecurity Manager

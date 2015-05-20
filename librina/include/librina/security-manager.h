@@ -201,8 +201,16 @@ public:
 class SSHRSASecurityContext : public ISecurityContext {
 public:
 	SSHRSASecurityContext(int session_id) : ISecurityContext(session_id),
-		dh_state(NULL), dh_peer_pub_key(NULL) { };
+			state(BEGIN), dh_state(NULL), dh_peer_pub_key(NULL) { };
 	~SSHRSASecurityContext();
+
+        enum State {
+        	BEGIN,
+                WAIT_EDH_EXCHANGE,
+                EDH_COMPLETED
+        };
+
+        State state;
 
 	/// Negotiated algorithms
 	std::string key_exch_alg;
@@ -234,21 +242,29 @@ public:
 	static const std::string MAC_ALGORITHM;
 	static const std::string COMPRESSION_ALGORITHM;
 	static const int DEFAULT_TIMEOUT;
+	static const std::string EDH_EXCHANGE;
 
 	AuthSSHRSAPolicySet(IRIBDaemon * ribd, ISecurityManager * sm);
-	~AuthSSHRSAPolicySet() { };
+	~AuthSSHRSAPolicySet();
 	AuthPolicy get_auth_policy(int session_id,
 				   const AuthSDUProtectionProfile& profile);
 	AuthStatus initiate_authentication(const AuthPolicy& auth_policy,
 				           const AuthSDUProtectionProfile& profile,
 					   int session_id);
+	int process_incoming_message(const CDAPMessage& message, int session_id);
+	int set_policy_set_param(const std::string& name,
+	                         const std::string& value);
 
 private:
-	/// Initialize keys for DH key exchange. Returns 0 if successful
-	/// -1 otherwise.
+	/// Initialize own DH parameters (P and G)
+	/// Returns 0 if successful, -1 otherwise
+	int edh_init_parameters();
+
+	/// Initialize keys for DH key exchange with own P and G params.
+	/// Returns 0 if successful -1 otherwise.
 	int edh_init_keys(SSHRSASecurityContext * sc);
 
-	/// Initialize keys for DH with external parameters
+	/// Initialize keys for DH with the peer's parameters
 	int edh_init_keys_with_params(SSHRSASecurityContext * sc,
 				      BIGNUM * g,
 				      BIGNUM * p);
@@ -257,8 +273,11 @@ private:
 	/// Returns 0 if successful, -1 otherwise
 	int edh_generate_shared_secret(SSHRSASecurityContext * sc);
 
+	int process_edh_exchange_message(const CDAPMessage& message, int session_id);
+
 	IRIBDaemon * rib_daemon;
 	ISecurityManager * sec_man;
+	DH * dh_parameters;
 	Timer timer;
 	int timeout;
 	Lockable lock;

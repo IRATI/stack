@@ -134,4 +134,29 @@ destroyAuthPasswordPs(rina::IPolicySet * ps)
         }
 }
 
+extern "C" rina::IPolicySet *
+createAuthSSHRSAPs(rina::ApplicationEntity * ctx)
+{
+	IPCPSecurityManager * sm = dynamic_cast<IPCPSecurityManager *>(ctx);
+        if (!sm || !sm->get_application_process()) {
+                return NULL;
+        }
+
+        IPCPRIBDaemon * rib_daemon =
+        		dynamic_cast<IPCPRIBDaemon *>(sm->get_application_process()->get_rib_daemon());
+        if (!rib_daemon) {
+        	return NULL;
+        }
+
+        return new rina::AuthSSHRSAPolicySet(rib_daemon, sm);
+}
+
+extern "C" void
+destroyAuthSSHRSAPs(rina::IPolicySet * ps)
+{
+        if (ps) {
+                delete ps;
+        }
+}
+
 }

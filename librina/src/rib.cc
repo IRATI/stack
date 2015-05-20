@@ -985,6 +985,12 @@ void RIBDaemon::encodeObject(RIBObjectValue& object_value, rina::CDAPMessage * m
                 message->obj_value_ = double_value;
                 break;
         }
+        case RIBObjectValue::bytestype : {
+        	rina::ByteArrayObjectValue * bytes_value =
+        			new rina::ByteArrayObjectValue(object_value.bytes_value_);
+        	message->obj_value_ = bytes_value;
+        	break;
+        }
         default :
                 break;
         }

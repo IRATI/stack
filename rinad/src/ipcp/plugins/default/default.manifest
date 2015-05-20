@@ -17,6 +17,11 @@
                         "Component": "security-manager",
                         "Version" : "1"
                 },
+	        {
+                        "Name": "PSOC_authentication-sshrsa",
+                        "Component": "security-manager",
+                        "Version" : "1"
+                },
                 {
                         "Name": "default",
                         "Component": "flow-allocator",

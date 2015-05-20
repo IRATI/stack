@@ -36,6 +36,7 @@
 #ifdef __cplusplus
 
 #include <string>
+#include <sstream>
 #include <vector>
 #include <list>
 #include <ctime>
@@ -616,6 +617,14 @@ struct UcharArray {
 		if (array) {
 			delete array;
 		}
+	}
+
+	std::string toString() {
+		std::stringstream ss;
+		for (int i = 0; i < length; i++) {
+			ss << array[i];
+		}
+		return ss.str();
 	}
 
 	unsigned char * array;

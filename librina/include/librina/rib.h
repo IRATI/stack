@@ -199,6 +199,7 @@ public:
                 floattype,
                 doubletype,
                 booltype,
+                bytestype
         };
 
         RIBObjectValue();
@@ -211,6 +212,7 @@ public:
         float float_value_;
         std::string string_value_;
         void * complex_value_;
+        SerializedObject bytes_value_;
 };
 
 /// Interface that provides the RIB Daemon API
