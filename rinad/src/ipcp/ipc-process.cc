@@ -72,13 +72,14 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         flow_allocator_ = new FlowAllocator();
         namespace_manager_ = new NamespaceManager();
         resource_allocator_ = new ResourceAllocator();
-        security_manager_ = new SecurityManager();
+        security_manager_ = new IPCPSecurityManager();
         routing_component_ = new RoutingComponent();
         rib_daemon_ = new IPCPRIBDaemonImpl();
 
         add_entity(internal_event_manager_);
         add_entity(rib_daemon_);
         add_entity(enrollment_task_);
+        add_entity(resource_allocator_->get_n_minus_one_flow_manager());
         add_entity(resource_allocator_);
         add_entity(namespace_manager_);
         add_entity(flow_allocator_);
@@ -90,6 +91,8 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         if (!security_manager_->ps) {
                 throw rina::Exception("Cannot create security manager policy-set");
         }
+        security_manager_->add_auth_policy_set(rina::IAuthPolicySet::AUTH_NONE);
+        security_manager_->add_auth_policy_set(rina::IAuthPolicySet::AUTH_PASSWORD);
 
         flow_allocator_->select_policy_set(std::string(), rina::IPolicySet::DEFAULT_PS_SET_NAME);
         if (!flow_allocator_->ps) {
@@ -104,6 +107,11 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         resource_allocator_->select_policy_set(std::string(), rina::IPolicySet::DEFAULT_PS_SET_NAME);
         if (!resource_allocator_->ps) {
                 throw rina::Exception("Cannot create resource allocator policy-set");
+        }
+
+        enrollment_task_->select_policy_set(std::string(), rina::IPolicySet::DEFAULT_PS_SET_NAME);
+        if (!enrollment_task_->ps) {
+                throw rina::Exception("Cannot create enrollment task policy-set");
         }
 
         routing_component_->select_policy_set(std::string(), "link-state");
@@ -147,6 +155,9 @@ IPCProcessImpl::~IPCProcessImpl() {
 	}
 
 	if (enrollment_task_) {
+		psDestroy(rina::ApplicationEntity::ENROLLMENT_TASK_AE_NAME,
+                   enrollment_task_->selected_ps_name,
+                   enrollment_task_->ps);
 		delete enrollment_task_;
 	}
 
@@ -172,7 +183,7 @@ IPCProcessImpl::~IPCProcessImpl() {
 	}
 
 	if (security_manager_) {
-		psDestroy(ISecurityManager::SECURITY_MANAGER_AE_NAME,
+		psDestroy(rina::ApplicationEntity::SECURITY_MANAGER_AE_NAME,
                    security_manager_->selected_ps_name,
                    security_manager_->ps);
         delete security_manager_;
@@ -210,9 +221,9 @@ void IPCProcessImpl::init_encoder() {
 			new EnrollmentInformationRequestEncoder());
 	encoder_->addEncoder(EncoderConstants::FLOW_RIB_OBJECT_CLASS,
 			new FlowEncoder());
-	encoder_->addEncoder(EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS,
+	encoder_->addEncoder(rina::NeighborSetRIBObject::NEIGHBOR_RIB_OBJECT_CLASS,
 			new NeighborEncoder());
-	encoder_->addEncoder(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
+	encoder_->addEncoder(rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_CLASS,
 			new NeighborListEncoder());
 	encoder_->addEncoder(EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS,
 			new QoSCubeEncoder());
@@ -745,7 +756,7 @@ static void
 enroll_to_dif_request_event_handler(rina::IPCEvent *e,
 		EventLoopData *opaque)
 {
-	DOWNCAST_DECL(e, rina::EnrollToDIFRequestEvent, event);
+	DOWNCAST_DECL(e, rina::EnrollToDAFRequestEvent, event);
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
 	ipcp->enrollment_task_->processEnrollmentRequestEvent(event);

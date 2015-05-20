@@ -31,6 +31,7 @@
 
 #include "librina/configuration.h"
 #include "librina/application.h"
+#include "librina/enrollment.h"
 #include "librina/ipc-daemons.h"
 
 namespace rina {
@@ -65,35 +66,6 @@ public:
                         unsigned int sequenceNumber);
 #ifndef SWIG
         const DIFConfiguration& getDIFConfiguration() const;
-#endif
-};
-
-/**
- * The IPC Manager requests the IPC Process to enroll to a DIF,
- * through neighbour neighbourName, which can be reached by allocating
- * a flow through the supportingDIFName
- */
-class EnrollToDIFRequestEvent: public IPCEvent {
-public:
-        /** The DIF to enroll to */
-        ApplicationProcessNamingInformation difName;
-
-        /** The N-1 DIF name to allocate a flow to the member */
-        ApplicationProcessNamingInformation supportingDIFName;
-
-        /** The neighbor to contact */
-        ApplicationProcessNamingInformation neighborName;
-
-        EnrollToDIFRequestEvent() {}
-        EnrollToDIFRequestEvent(
-                const ApplicationProcessNamingInformation& difName,
-                const ApplicationProcessNamingInformation& supportingDIFName,
-                const ApplicationProcessNamingInformation& neighbourName,
-                unsigned int sequenceNumber);
-#ifndef SWIG
-        const ApplicationProcessNamingInformation& getDifName() const;
-        const ApplicationProcessNamingInformation& getNeighborName() const;
-        const ApplicationProcessNamingInformation& getSupportingDifName() const;
 #endif
 };
 
@@ -562,7 +534,7 @@ public:
 	 * @throws EnrollException if there are problems communicating with the
 	 * IPC Manager
 	 */
-	void enrollToDIFResponse(const EnrollToDIFRequestEvent& event,
+	void enrollToDIFResponse(const EnrollToDAFRequestEvent& event,
 	                int result, const std::list<Neighbor> & newNeighbors,
 	                const DIFInformation& difInformation);
 

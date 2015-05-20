@@ -76,16 +76,19 @@ namespace rinad {
 //Singleton instance
 Singleton<IPCManager_> IPCManager;
 
-IPCManager_::IPCManager_() : req_to_stop(false), io_thread(NULL){
+IPCManager_::IPCManager_() : req_to_stop(false), io_thread(NULL),
+		dif_template_manager(NULL){
 
 }
 
 IPCManager_::~IPCManager_()
 {
-
+	if (dif_template_manager) {
+		delete dif_template_manager;
+	}
 }
 
-void IPCManager_::init(const std::string& loglevel)
+void IPCManager_::init(const std::string& loglevel, std::string& config_file)
 {
 	// Initialize the IPC manager infrastructure in librina.
 
@@ -106,6 +109,11 @@ void IPCManager_::init(const std::string& loglevel)
 		io_thread = new rina::Thread(&io_thread_attrs,
 							io_loop_trampoline,
 							NULL);
+
+		//Initialize DIF Templates Manager (with its monitor thread)
+		stringstream ss;
+		ss << config_file.substr(0, config_file.rfind("/"));
+		dif_template_manager = new DIFTemplateManager(ss.str());
 	} catch (rina::InitializationException& e) {
 		LOG_ERR("Error while initializing librina-ipc-manager");
 		exit(EXIT_FAILURE);
@@ -372,14 +380,13 @@ int IPCManager_::get_ipcp_by_dif_name(std::string& difName){
 ipcm_res_t
 IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 			const unsigned short ipcp_id,
+			rinad::DIFTemplate * dif_template,
 			const rina::ApplicationProcessNamingInformation &
 								  dif_name)
 {
-	rinad::DIFProperties dif_props;
 	rina::DIFInformation dif_info;
 	rina::DIFConfiguration dif_config;
 	ostringstream ss;
-	bool found;
 	IPCMIPCProcess* ipcp;
 	IPCPTransState* trans;
 
@@ -393,17 +400,6 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 
 		//Auto release the write lock
 		rina::WriteScopedLock writelock(ipcp->rwlock, false);
-
-		// Try to extract the DIF properties from the
-		// configuration.
-		found = config.lookup_dif_properties(dif_name,
-				dif_props);
-		if (!found) {
-			ss << "Cannot find properties for DIF "
-				<< dif_name.toString();
-			FLUSH_LOG(ERR, ss);
-			throw rina::AssignToDIFException();
-		}
 
 		if (is_any_ipcp_assigned_to_dif(dif_name)) {
 			ss << "There is already an IPCP assigned to DIF "
@@ -422,11 +418,11 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 
 			// FIll in the EFCPConfiguration object.
 			efcp_config.set_data_transfer_constants(
-					dif_props.dataTransferConstants);
+					dif_template->dataTransferConstants);
 			rina::QoSCube * qosCube = 0;
 			for (list<rina::QoSCube>::iterator
-					qit = dif_props.qosCubes.begin();
-					qit != dif_props.qosCubes.end();
+					qit = dif_template->qosCubes.begin();
+					qit != dif_template->qosCubes.end();
 					qit++) {
 				qosCube = new rina::QoSCube(*qit);
 				if(!qosCube){
@@ -439,8 +435,8 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 			}
 
 			for (list<AddressPrefixConfiguration>::iterator
-					ait = dif_props.addressPrefixes.begin();
-					ait != dif_props.addressPrefixes.end();
+					ait = dif_template->addressPrefixes.begin();
+					ait != dif_template->addressPrefixes.end();
 					ait ++) {
 				rina::AddressPrefixConfiguration prefix;
 				prefix.address_prefix_ = ait->addressPrefix;
@@ -449,8 +445,8 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 			}
 
 			for (list<rinad::KnownIPCProcessAddress>::iterator
-					kit = dif_props.knownIPCProcessAddresses.begin();
-					kit != dif_props.knownIPCProcessAddresses.end();
+					kit = dif_template->knownIPCProcessAddresses.begin();
+					kit != dif_template->knownIPCProcessAddresses.end();
 					kit ++) {
 				rina::StaticIPCProcessAddress static_address;
 				static_address.ap_name_ = kit->name.processName;
@@ -463,13 +459,13 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
                         // Copy the por-component policy set names from the configuration
                         // structure to the dif_config struct
                         for (map<string, string>::iterator
-                                        it = dif_props.policySets.begin();
-                                        it != dif_props.policySets.end(); it++) {
+                                        it = dif_template->policySets.begin();
+                                        it != dif_template->policySets.end(); it++) {
                                 dif_config.policy_sets.push_back(
                                                 rina::Parameter(it->first, it->second));
                         }
 
-			found = dif_props.
+			bool found = dif_template->
 				lookup_ipcp_address(ipcp->get_name(),
 						address);
 			if (!found) {
@@ -483,14 +479,14 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 			dif_config.set_efcp_configuration(efcp_config);
 			dif_config.nsm_configuration_ = nsm_config;
 			dif_config.pduft_generator_configuration_ =
-				dif_props.pdufTableGeneratorConfiguration;
-			dif_config.rmt_configuration_ = dif_props.rmtConfiguration;
+					dif_template->pdufTableGeneratorConfiguration;
+			dif_config.rmt_configuration_ = dif_template->rmtConfiguration;
 			dif_config.set_address(address);
 		}
 
 		for (map<string, string>::const_iterator
-				pit = dif_props.configParameters.begin();
-				pit != dif_props.configParameters.end();
+				pit = dif_template->configParameters.begin();
+				pit != dif_template->configParameters.end();
 				pit++) {
 			dif_config.add_parameter
 				(rina::Parameter(pit->first, pit->second));
@@ -814,31 +810,42 @@ IPCManager_::apply_configuration()
 		ipcm_res_t result;
 		CreateIPCPPromise c_promise;
 		Promise promise;
+		bool found;
+		rinad::DIFTemplateMapping template_mapping;
+		rinad::DIFTemplate * dif_template;
 		for (cit = config.ipcProcessesToCreate.begin();
 		     cit != config.ipcProcessesToCreate.end(); cit++) {
-			std::string	type;
 			ostringstream      ss;
 
-			if (!config.lookup_type_by_dif(cit->difName, type)) {
-				ss << "Failed to retrieve DIF type for "
-				   << cit->name.toString() << endl;
+			found = config.lookup_dif_template_mappings(cit->difName, template_mapping);
+			if (!found) {
+				ss << "Could not find DIF template for dif name "
+						<< cit->difName.processName <<endl;
+				FLUSH_LOG(ERR, ss);
+				continue;
+			}
+
+			dif_template = dif_template_manager->get_dif_template(template_mapping.template_name);
+			if (!dif_template) {
+				ss << "Cannot find template called " << template_mapping.template_name;
 				FLUSH_LOG(ERR, ss);
 				continue;
 			}
 
 			try {
-				if (create_ipcp(NULL, &c_promise, cit->name, type) == IPCM_FAILURE ||
+				if (create_ipcp(NULL, &c_promise, cit->name, dif_template->difType) == IPCM_FAILURE ||
 						c_promise.wait() != IPCM_SUCCESS) {
 					continue;
 				}
 				ipcps.push_back(c_promise.ipcp_id);
 
-				if (assign_to_dif(NULL, &promise, c_promise.ipcp_id, cit->difName) == IPCM_FAILURE ||
-						promise.wait() != IPCM_SUCCESS) {
+				if (assign_to_dif(NULL, &promise, c_promise.ipcp_id, dif_template,
+						cit->difName) == IPCM_FAILURE || promise.wait() != IPCM_SUCCESS) {
 					ss << "Problems assigning IPCP " << c_promise.ipcp_id
-						<< " to DIF " << cit->difName.processName <<endl;
+							<< " to DIF " << cit->difName.processName <<endl;
 					FLUSH_LOG(ERR, ss);
 				}
+
 				for (list<rina::ApplicationProcessNamingInformation>::const_iterator
 						nit = cit->difsToRegisterAt.begin();
 						nit != cit->difsToRegisterAt.end(); nit++) {
@@ -1474,14 +1481,14 @@ void IPCManager_::io_loop(){
 		event = rina::ipcEventProducer->eventTimedWait(
 						IPCM_EVENT_TIMEOUT_S,
 						IPCM_EVENT_TIMEOUT_NS);
-		if(!event)
-			continue;
-
 		if(req_to_stop){
 			//Signal the main thread to start
 			//the stop procedure
 			stop_cond.signal();
 		}
+
+		if(!event)
+			continue;
 
 		if (!keep_running)
 			break;

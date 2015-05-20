@@ -158,15 +158,6 @@ const std::string NMinusOneFlowAllocatedEvent::toString()
 }
 
 //CLASS NMinusOneFlowDeallocated Event
-NMinusOneFlowDeallocatedEvent::NMinusOneFlowDeallocatedEvent(int port_id,
-			const rina::CDAPSessionDescriptor & cdap_session_descriptor):
-				InternalEvent(InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED)
-{
-	port_id_ = port_id;
-	cdap_session_descriptor_ = cdap_session_descriptor;
-	management_flow_ = true;
-}
-
 NMinusOneFlowDeallocatedEvent::NMinusOneFlowDeallocatedEvent(int port_id):
 				InternalEvent(InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED)
 {
@@ -182,7 +173,7 @@ const std::string NMinusOneFlowDeallocatedEvent::toString()
 }
 
 //CLASS Connectivity to Neighbor lost
-ConnectiviyToNeighborLostEvent::ConnectiviyToNeighborLostEvent(rina::Neighbor* neighbor):
+ConnectiviyToNeighborLostEvent::ConnectiviyToNeighborLostEvent(const Neighbor& neighbor):
 		InternalEvent(InternalEvent::APP_CONNECTIVITY_TO_NEIGHBOR_LOST)
 {
 	neighbor_ = neighbor;
@@ -191,12 +182,12 @@ ConnectiviyToNeighborLostEvent::ConnectiviyToNeighborLostEvent(rina::Neighbor* n
 const std::string ConnectiviyToNeighborLostEvent::toString()
 {
 	std::stringstream ss;
-	ss<<"Event id: "<<type<<"; Neighbor: "<<neighbor_->toString()<<std::endl;
+	ss<<"Event id: "<<type<<"; Neighbor: "<<neighbor_.toString()<<std::endl;
 	return ss.str();
 }
 
 //CLASS NeighborAddedEvent
-NeighborAddedEvent::NeighborAddedEvent(rina::Neighbor * neighbor, bool enrollee):
+NeighborAddedEvent::NeighborAddedEvent(const Neighbor& neighbor, bool enrollee):
 		InternalEvent(InternalEvent::APP_NEIGHBOR_ADDED)
 {
 	neighbor_ = neighbor;
@@ -206,13 +197,13 @@ NeighborAddedEvent::NeighborAddedEvent(rina::Neighbor * neighbor, bool enrollee)
 const std::string NeighborAddedEvent::toString()
 {
 	std::stringstream ss;
-	ss<<"Event id: "<<type<<"; Neighbor: "<<neighbor_->toString()<<std::endl;
+	ss<<"Event id: "<<type<<"; Neighbor: "<<neighbor_.toString()<<std::endl;
 	ss<<"Enrollee: "<<enrollee_<<std::endl;
 	return ss.str();
 }
 
 /// A connectivity to a neighbor has been lost
-NeighborDeclaredDeadEvent::NeighborDeclaredDeadEvent(rina::Neighbor * neighbor):
+NeighborDeclaredDeadEvent::NeighborDeclaredDeadEvent(const Neighbor& neighbor):
 		InternalEvent(InternalEvent::APP_NEIGHBOR_DECLARED_DEAD)
 {
 	neighbor_ = neighbor;
@@ -221,7 +212,7 @@ NeighborDeclaredDeadEvent::NeighborDeclaredDeadEvent(rina::Neighbor * neighbor):
 const std::string NeighborDeclaredDeadEvent::toString()
 {
 	std::stringstream ss;
-	ss<<"Event id: "<<type<<"; Neighbor: "<<neighbor_->toString()<<std::endl;
+	ss<<"Event id: "<<type<<"; Neighbor: "<<neighbor_.toString()<<std::endl;
 	return ss.str();
 }
 

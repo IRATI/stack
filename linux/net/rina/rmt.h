@@ -72,6 +72,8 @@ struct rmt_kqueue {
         struct rfifo *    queue;
         unsigned int      key;
         unsigned int      max_q;
+        unsigned int      min_qth;
+        unsigned int      max_qth;
         struct hlist_node hlist;
 };
 

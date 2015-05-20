@@ -52,17 +52,4 @@ void RoutingComponent::set_dif_configuration(const rina::DIFConfiguration& dif_c
 	rps->set_dif_configuration(dif_configuration);
 }
 
-int RoutingComponent::select_policy_set(const std::string& path,
-                                       const std::string& name)
-{
-        return select_policy_set_common(get_name(), path, name);
-}
-
-int RoutingComponent::set_policy_set_param(const std::string& path,
-                                          const std::string& name,
-                                          const std::string& value)
-{
-        return set_policy_set_param_common(path, name, value);
-}
-
 }

@@ -2192,8 +2192,14 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
                 return port_id_bad();
         }
 
+        ASSERT(ipc_process->ops);
+
         user_ipc_process = ipcp_imap_find_by_name(kipcm->instances,
                                                   process_name);
+
+        if (ipc_process->ops->flow_prebind) {
+                ipc_process->ops->flow_prebind(ipc_process->data, user_ipc_process, pid);
+        }
 
         if (user_ipc_process) {
                 KIPCM_UNLOCK(kipcm);
@@ -2240,8 +2246,6 @@ int kipcm_deallocate_port(struct kipcm *   kipcm,
                         "for port id: %d", port_id);
                 return -1;
         }
-
-        kfa_port_id_release(kipcm->kfa, port_id);
 
         return 0;
 }

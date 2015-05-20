@@ -231,13 +231,6 @@ struct personality_ops ops = {
 static struct personality_data data;
 static struct personality *    personality = NULL;
 
-/* FIXME: Remove the following externs */
-#ifdef CONFIG_RINA_PFT_REGRESSION_TESTS
-extern bool regression_tests_pft(void);
-#endif
-#ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
-extern bool regression_tests_rmt(void);
-#endif
 #ifdef CONFIG_RINA_RDS_REGRESSION_TESTS
 extern bool regression_tests_rds(void);
 #endif
@@ -260,17 +253,11 @@ static int __init mod_init(void)
         ASSERT(personality != NULL);
 
         /* FIXME: This is not the right place, please fix */
-#ifdef CONFIG_RINA_PFT_REGRESSION_TESTS
-        if (!regression_tests_pft())
-                return -1;
-#endif
-#ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
-        if (!regression_tests_rmt())
-                return -1;
-#endif
 #ifdef CONFIG_RINA_RDS_REGRESSION_TESTS
-        if (!regression_tests_rds())
+        if (!regression_tests_rds()) {
+                rina_personality_unregister(personality);
                 return -1;
+        }
 #endif
 
         LOG_DBG("Rina default personality loaded successfully");

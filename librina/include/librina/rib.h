@@ -35,7 +35,9 @@ public:
 	static const std::string DAF;
 	static const std::string DIF_REGISTRATIONS;
 	static const std::string IRM;
+	static const std::string MANAGEMENT;
 	static const std::string N_MINUS_ONE_FLOWS;
+	static const std::string NEIGHBORS;
 	static const std::string SEPARATOR;
 };
 
@@ -658,37 +660,6 @@ public:
 	virtual void* decode(const rina::CDAPMessage * cdapMessage) = 0;
 };
 
-class IApplicationConnectionHandler {
-public:
-        virtual ~IApplicationConnectionHandler(){};
-
-        /// A remote IPC process Connect request has been received.
-        /// @param invoke_id the id of the connect message
-        /// @param session_descriptor
-        virtual void connect(int invoke_id,
-                        rina::CDAPSessionDescriptor * session_descriptor) = 0;
-
-        /// A remote IPC process Connect response has been received.
-        /// @param result
-        /// @param result_reason
-        /// @param session_descriptor
-        virtual void connectResponse(int result, const std::string& result_reason,
-                        rina::CDAPSessionDescriptor * session_descriptor) = 0;
-
-        /// A remote IPC process Release request has been received.
-        /// @param invoke_id the id of the release message
-        /// @param session_descriptor
-        virtual void release(int invoke_id,
-                        rina::CDAPSessionDescriptor * session_descriptor) = 0;
-
-        /// A remote IPC process Release response has been received.
-        /// @param result
-        /// @param result_reason
-        /// @param session_descriptor
-        virtual void releaseResponse(int result, const std::string& result_reason,
-                        rina::CDAPSessionDescriptor * session_descriptor) = 0;
-};
-
 // /A RIB Daemon partial implementation, that internally uses the RIB
 /// implementation provided by the RIB class. Complete implementations have
 /// to extend this class to adapt it to the environment they are operating
@@ -697,7 +668,7 @@ public:
         RIBDaemon();
         void initialize(const std::string& separator, IEncoder * encoder,
                         CDAPSessionManagerInterface * cdap_session_manager_,
-                        IApplicationConnectionHandler * app_conn_handler_);
+                        CACEPHandler * cacep_handler_);
         void addRIBObject(BaseRIBObject * ribObject);
         void removeRIBObject(BaseRIBObject * ribObject);
         void removeRIBObject(const std::string& objectName);
@@ -785,7 +756,8 @@ public:
                         unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler) = 0;
 
         void processIncomingCDAPMessage(const rina::CDAPMessage * cdapMessage,
-        		rina::CDAPSessionDescriptor * session_descriptor);
+        				rina::CDAPSessionDescriptor * descriptor,
+        				const std::string& session_state);
 
         /// CDAP Message handlers that have sent a CDAP message and are waiting for a reply
         ThreadSafeMapOfPointers<int, ICDAPResponseMessageHandler> handlers_waiting_for_reply_;
@@ -795,7 +767,7 @@ public:
 private:
         RIB rib_;
         IEncoder * encoder_;
-        IApplicationConnectionHandler * app_conn_handler_;
+        CACEPHandler * cacep_handler_;
         std::string separator_;
 
         //Get a CDAP Message Handler waiting for a response message
