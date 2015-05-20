@@ -191,10 +191,8 @@ public:
 	/// Supported compression algorithms
 	std::list<std::string> compress_algs;
 
-	/// DH public key, p and g
+	/// DH public key
 	UcharArray dh_public_key;
-	UcharArray dh_parameter_p;
-	UcharArray dh_parameter_g;
 };
 
 ///Captures all data of the SSHRSA security context
@@ -224,9 +222,11 @@ public:
 	///The EDH public key of the peer
 	BIGNUM * dh_peer_pub_key;
 
-	///The shared secret, used as the encryption key
+	///The shared secret, used to generate the encryption key
 	UcharArray shared_secret;
 };
+
+class AuthSSHRSAPolicySet;
 
 /// Authentication policy set that mimics SSH approach. It is associated to
 /// a cryptographic SDU protection policy, which is configured by this Authz policy.
@@ -256,18 +256,12 @@ public:
 	                         const std::string& value);
 
 private:
-	/// Initialize own DH parameters (P and G)
-	/// Returns 0 if successful, -1 otherwise
-	int edh_init_parameters();
+	/// Initialize parameters (p, g) for DH key exchange
+	void edh_init_params();
 
 	/// Initialize keys for DH key exchange with own P and G params.
 	/// Returns 0 if successful -1 otherwise.
 	int edh_init_keys(SSHRSASecurityContext * sc);
-
-	/// Initialize keys for DH with the peer's parameters
-	int edh_init_keys_with_params(SSHRSASecurityContext * sc,
-				      BIGNUM * g,
-				      BIGNUM * p);
 
 	/// Generate the shared secret using the peer's public key.
 	/// Returns 0 if successful, -1 otherwise
