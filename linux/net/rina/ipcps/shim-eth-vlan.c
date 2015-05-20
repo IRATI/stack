@@ -1410,6 +1410,7 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .flow_allocate_request     = eth_vlan_flow_allocate_request,
         .flow_allocate_response    = eth_vlan_flow_allocate_response,
         .flow_deallocate           = eth_vlan_flow_deallocate,
+        .flow_prebind              = NULL,
         .flow_binding_ipcp         = NULL,
         .flow_unbinding_ipcp       = NULL,
         .flow_unbinding_user_ipcp  = eth_vlan_unbind_user_ipcp,

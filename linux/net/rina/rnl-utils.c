@@ -1625,8 +1625,6 @@ static int parse_dtcp_fctrl_config(struct nlattr * attr,
         attr_policy[DFCC_ATTR_RBUFFER_THRES].len             = 4;
         attr_policy[DFCC_ATTR_CLOSED_WINDOW_POLICY].type     = NLA_NESTED;
         attr_policy[DFCC_ATTR_CLOSED_WINDOW_POLICY].len      = 0;
-        attr_policy[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY].type = NLA_NESTED;
-        attr_policy[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY].len  = 0;
         attr_policy[DFCC_ATTR_RECON_FLOW_CTRL_POLICY].type   = NLA_NESTED;
         attr_policy[DFCC_ATTR_RECON_FLOW_CTRL_POLICY].len    = 0;
         attr_policy[DFCC_ATTR_RCVING_FLOW_CTRL_POLICY].type  = NLA_NESTED;
@@ -1682,11 +1680,6 @@ static int parse_dtcp_fctrl_config(struct nlattr * attr,
         if (attrs[DFCC_ATTR_CLOSED_WINDOW_POLICY])
                 if (parse_policy(attrs[DFCC_ATTR_CLOSED_WINDOW_POLICY],
                                  dtcp_closed_window(cfg)))
-                        return -1;
-
-        if (attrs[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY])
-                if (parse_policy(attrs[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY],
-                                 dtcp_flow_control_overrun(cfg)))
                         return -1;
 
         if (attrs[DFCC_ATTR_RECON_FLOW_CTRL_POLICY])

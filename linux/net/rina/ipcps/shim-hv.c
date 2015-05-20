@@ -1133,6 +1133,7 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .flow_allocate_request     = shim_hv_flow_allocate_request,
         .flow_allocate_response    = shim_hv_flow_allocate_response,
         .flow_deallocate           = shim_hv_flow_deallocate,
+        .flow_prebind              = NULL,
         .flow_binding_ipcp         = NULL,
         .flow_unbinding_ipcp       = NULL,
         .flow_unbinding_user_ipcp  = shim_hv_unbind_user_ipcp,
