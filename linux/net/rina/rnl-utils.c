@@ -928,7 +928,7 @@ static int parse_pdu_fte_altlists(struct nlattr *       nested_attr,
 }
 
 static int parse_pdu_fte_list_entry(struct nlattr *       attr,
-                                    struct modpdufwd_entry * pfte_struct)
+                                    struct modpdufwd_entry * mpfe)
 {
         struct nla_policy attr_policy[PFTELE_ATTR_MAX + 1];
         struct nlattr *   attrs[PFTELE_ATTR_MAX + 1];
@@ -947,16 +947,16 @@ static int parse_pdu_fte_list_entry(struct nlattr *       attr,
                 return -1;
 
         if (attrs[PFTELE_ATTR_ADDRESS])
-                pfte_struct->destination =
+                mpfe->fwd_info =
                         nla_get_u32(attrs[PFTELE_ATTR_ADDRESS]);
 
         if (attrs[PFTELE_ATTR_QOSID])
-                pfte_struct->qos_id =
+                mpfe->qos_id =
                         nla_get_u32(attrs[PFTELE_ATTR_QOSID]);
 
         if (attrs[PFTELE_ATTR_PORT_ID_ALTLISTS]) {
                 if (parse_pdu_fte_altlists(attrs[PFTELE_ATTR_PORT_ID_ALTLISTS],
-                                           pfte_struct))
+                                           mpfe))
                         return -1;
 
         }
@@ -2915,7 +2915,7 @@ static int format_pft_entries_list(struct list_head * entries,
 
                 if (nla_put_u32(skb_out,
                                  PFTELE_ATTR_ADDRESS,
-                                 pos->destination)                        ||
+                                 pos->fwd_info)                        ||
                      nla_put_u32(skb_out, PFTELE_ATTR_QOSID, pos->qos_id) ||
 			format_pft_entry_altlists(&pos->port_id_altlists,
 						      skb_out))

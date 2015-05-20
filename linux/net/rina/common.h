@@ -164,10 +164,8 @@ struct port_id_altlist {
 };
 
 struct modpdufwd_entry {
-        address_t        destination;
+        address_t        fwd_info; /* dest_addr, neighbor_addr, circuit-id */
         qos_id_t         qos_id;
-        //port_id_t *      ports;
-        //size_t           ports_size;
 	struct list_head port_id_altlists;
         struct list_head next;
 };

@@ -391,7 +391,7 @@ struct pft_entry * pft_find(struct pft * instance,
 EXPORT_SYMBOL(pft_find);
 
 int pft_add(struct pft *      instance,
-	    struct modpdufwd_entry *entry)
+	    struct modpdufwd_entry *mpfe)
 {
         struct pft_entry * tmp;
 	struct port_id_altlist * alts;
@@ -399,25 +399,25 @@ int pft_add(struct pft *      instance,
         if (!__pft_is_ok(instance))
                 return -1;
 
-        if (!entry) {
+        if (!mpfe) {
                 LOG_ERR("Bogus output parameters, won't add");
                 return -1;
         }
 
-        if (!is_address_ok(entry->destination)) {
+        if (!is_address_ok(mpfe->fwd_info)) {
                 LOG_ERR("Bogus destination address passed, cannot add");
                 return -1;
         }
-        if (!is_qos_id_ok(entry->qos_id)) {
+        if (!is_qos_id_ok(mpfe->qos_id)) {
                 LOG_ERR("Bogus qos-id passed, cannot add");
                 return -1;
         }
 
         mutex_lock(&instance->write_lock);
 
-        tmp = pft_find(instance, entry->destination, entry->qos_id);
+        tmp = pft_find(instance, mpfe->fwd_info, mpfe->qos_id);
         if (!tmp) {
-                tmp = pfte_create_ni(entry->destination, entry->qos_id);
+                tmp = pfte_create_ni(mpfe->fwd_info, mpfe->qos_id);
                 if (!tmp) {
                         mutex_unlock(&instance->write_lock);
                         return -1;
@@ -426,7 +426,7 @@ int pft_add(struct pft *      instance,
                 list_add_rcu(&tmp->next, &instance->entries);
         }
 
-	list_for_each_entry(alts, &entry->port_id_altlists, next) {
+	list_for_each_entry(alts, &mpfe->port_id_altlists, next) {
 		if (alts->num_ports < 1) {
 			LOG_INFO("Port id alternative set is empty");
 			continue;
@@ -480,7 +480,7 @@ int pft_set_policy_set_param(struct pft * pft,
 EXPORT_SYMBOL(pft_set_policy_set_param);
 
 int pft_remove(struct pft *      instance,
-	       struct modpdufwd_entry * entry)
+	       struct modpdufwd_entry * mpfe)
 /*
                address_t         destination,
                qos_id_t          qos_id,
@@ -493,29 +493,29 @@ int pft_remove(struct pft *      instance,
         if (!__pft_is_ok(instance))
                 return -1;
 
-        if (!entry) {
+        if (!mpfe) {
                 LOG_ERR("Bogus output parameters, won't add");
                 return -1;
         }
 
-        if (!is_address_ok(entry->destination)) {
+        if (!is_address_ok(mpfe->fwd_info)) {
                 LOG_ERR("Bogus destination address passed, cannot add");
                 return -1;
         }
-        if (!is_qos_id_ok(entry->qos_id)) {
+        if (!is_qos_id_ok(mpfe->qos_id)) {
                 LOG_ERR("Bogus qos-id passed, cannot add");
                 return -1;
         }
 
         mutex_lock(&instance->write_lock);
 
-        tmp = pft_find(instance, entry->destination, entry->qos_id);
+        tmp = pft_find(instance, mpfe->fwd_info, mpfe->qos_id);
         if (!tmp) {
                 mutex_unlock(&instance->write_lock);
                 return -1;
         }
 
-	list_for_each_entry(alts, &entry->port_id_altlists, next) {
+	list_for_each_entry(alts, &mpfe->port_id_altlists, next) {
 		if (alts->num_ports < 1) {
 			LOG_INFO("Port id alternative set is empty");
 			continue;
@@ -603,29 +603,29 @@ int pft_dump(struct pft *       instance,
              struct list_head * entries)
 {
         struct pft_entry *    pos;
-        struct modpdufwd_entry * entry;
+        struct modpdufwd_entry * mpfe;
 
         if (!__pft_is_ok(instance))
                 return -1;
 
         rcu_read_lock();
         list_for_each_entry_rcu(pos, &instance->entries, next) {
-                entry = rkmalloc(sizeof(*entry), GFP_ATOMIC);
-                if (!entry) {
+                mpfe = rkmalloc(sizeof(*mpfe), GFP_ATOMIC);
+                if (!mpfe) {
                         rcu_read_unlock();
                         return -1;
                 }
 
-                entry->destination = pos->destination;
-                entry->qos_id      = pos->qos_id;
-		INIT_LIST_HEAD(&entry->port_id_altlists);
-                if (pfte_port_id_altlists_copy(pos, &entry->port_id_altlists)) {
-                        rkfree(entry);
+                mpfe->fwd_info= pos->destination;
+                mpfe->qos_id      = pos->qos_id;
+		INIT_LIST_HEAD(&mpfe->port_id_altlists);
+                if (pfte_port_id_altlists_copy(pos, &mpfe->port_id_altlists)) {
+                        rkfree(mpfe);
                         rcu_read_unlock();
                         return -1;
                 }
 
-                list_add(&entry->next, entries);
+                list_add(&mpfe->next, entries);
         }
         rcu_read_unlock();
 
