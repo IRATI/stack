@@ -1,7 +1,10 @@
 /*
  * Common function for DTP's policy set
  *
+ *    Vincenzo Maffione <v.maffione@nextworks.it>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
+ *    Miquel Tarzan <miquel.tarzan@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
