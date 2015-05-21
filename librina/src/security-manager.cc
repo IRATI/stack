@@ -556,6 +556,17 @@ void AuthSSHRSAPolicySet::edh_init_params()
 	}
 }
 
+unsigned char * AuthSSHRSAPolicySet::BN_to_binary(BIGNUM *b, int *len)
+{
+	unsigned char *ret;
+
+	int size = BN_num_bytes(b);
+	ret = (unsigned char*)calloc(size, sizeof(unsigned char));
+	*len = BN_bn2bin(b, ret);
+
+	return ret;
+}
+
 AuthPolicy AuthSSHRSAPolicySet::get_auth_policy(int session_id,
 						const AuthSDUProtectionProfile& profile)
 {
@@ -596,10 +607,8 @@ AuthPolicy AuthSSHRSAPolicySet::get_auth_policy(int session_id,
 	options.encrypt_algs.push_back(sc->encrypt_alg);
 	options.mac_algs.push_back(sc->mac_alg);
 	options.compress_algs.push_back(sc->compress_alg);
-	options.dh_public_key.array =
-			(unsigned char*) malloc((BN_num_bytes(sc->dh_state->pub_key)) * sizeof(unsigned char));
-	options.dh_public_key.length = BN_bn2bin(sc->dh_state->pub_key,
-						 options.dh_public_key.array);
+	options.dh_public_key.array = BN_to_binary(sc->dh_state->pub_key,
+						   &options.dh_public_key.length);
 
 	if (options.dh_public_key.length <= 0) {
 		LOG_ERR("Error transforming big number to binary");
@@ -757,10 +766,8 @@ rina::IAuthPolicySet::AuthStatus AuthSSHRSAPolicySet::initiate_authentication(co
 	auth_options.encrypt_algs.push_back(sc->encrypt_alg);
 	auth_options.mac_algs.push_back(sc->mac_alg);
 	auth_options.compress_algs.push_back(sc->compress_alg);
-	auth_options.dh_public_key.array =
-			(unsigned char*) malloc((BN_num_bytes(sc->dh_state->pub_key)) * sizeof(unsigned char));
-	auth_options.dh_public_key.length = BN_bn2bin(sc->dh_state->pub_key,
-						      auth_options.dh_public_key.array);
+	auth_options.dh_public_key.array = BN_to_binary(sc->dh_state->pub_key,
+						        &auth_options.dh_public_key.length);
 
 	if (auth_options.dh_public_key.length <= 0) {
 		LOG_ERR("Error transforming big number to binary");

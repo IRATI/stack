@@ -256,6 +256,9 @@ public:
 	                         const std::string& value);
 
 private:
+	//Convert Big Number to binary
+	unsigned char * BN_to_binary(BIGNUM *b, int *len);
+
 	/// Initialize parameters (p, g) for DH key exchange
 	void edh_init_params();
 
