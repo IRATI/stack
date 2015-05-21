@@ -248,6 +248,16 @@ int DumpFTResponseEvent::getResult() const {
         return result;
 }
 
+// Class enable encryption response event
+EnableEncryptionResponseEvent::EnableEncryptionResponseEvent(int port,
+                int res, unsigned int sequenceNumber) :
+                		IPCEvent(IPC_PROCESS_ENABLE_ENCRYPTION_RESPONSE,
+                				sequenceNumber)
+{
+	port_id = port;
+	result = res;
+}
+
 /* CLASS EXTENDED IPC MANAGER */
 const std::string ExtendedIPCManager::error_allocate_flow =
 		"Error allocating flow";

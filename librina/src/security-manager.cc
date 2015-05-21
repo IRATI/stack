@@ -606,8 +606,8 @@ AuthPolicy AuthSSH2PolicySet::get_auth_policy(int session_id,
 	options.encrypt_algs.push_back(sc->encrypt_alg);
 	options.mac_algs.push_back(sc->mac_alg);
 	options.compress_algs.push_back(sc->compress_alg);
-	options.dh_public_key.array = BN_to_binary(sc->dh_state->pub_key,
-						   &options.dh_public_key.length);
+	options.dh_public_key.data = BN_to_binary(sc->dh_state->pub_key,
+						  &options.dh_public_key.length);
 
 	if (options.dh_public_key.length <= 0 ) {
 		LOG_ERR("Error transforming big number to binary");
@@ -737,7 +737,7 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(const Auth
 	}
 
 	//Add peer public key to security context
-	sc->dh_peer_pub_key = BN_bin2bn(options->dh_public_key.array,
+	sc->dh_peer_pub_key = BN_bin2bn(options->dh_public_key.data,
 			       	        options->dh_public_key.length,
 			       	        NULL);
 	if (!sc->dh_peer_pub_key) {
@@ -774,14 +774,14 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(const Auth
 
 int AuthSSH2PolicySet::edh_generate_shared_secret(SSH2SecurityContext * sc)
 {
-	if((sc->shared_secret.array =
+	if((sc->shared_secret.data =
 			(unsigned char*) OPENSSL_malloc(sizeof(unsigned char) * (DH_size(sc->dh_state)))) == NULL) {
 		LOG_ERR("Error allocating memory for shared secret");
 		return -1;
 	}
 
 	if((sc->shared_secret.length =
-			DH_compute_key(sc->shared_secret.array, sc->dh_peer_pub_key, sc->dh_state)) < 0) {
+			DH_compute_key(sc->shared_secret.data, sc->dh_peer_pub_key, sc->dh_state)) < 0) {
 		LOG_ERR("Error computing shared secret");
 		return -1;
 	}
@@ -792,13 +792,13 @@ int AuthSSH2PolicySet::edh_generate_shared_secret(SSH2SecurityContext * sc)
 
 	if (sc->encrypt_alg == SSL_TXT_AES128) {
 		sc->encrypt_key.length = 16;
-		sc->encrypt_key.array = new unsigned char[16];
-		MD5(sc->shared_secret.array, sc->shared_secret.length, sc->encrypt_key.array);
+		sc->encrypt_key.data = new unsigned char[16];
+		MD5(sc->shared_secret.data, sc->shared_secret.length, sc->encrypt_key.data);
 
 	} else if (sc->encrypt_alg == SSL_TXT_AES256) {
 		sc->encrypt_key.length = 32;
-		sc->encrypt_key.array = new unsigned char[32];
-		SHA256(sc->shared_secret.array, sc->shared_secret.length, sc->encrypt_key.array);
+		sc->encrypt_key.data = new unsigned char[32];
+		SHA256(sc->shared_secret.data, sc->shared_secret.length, sc->encrypt_key.data);
 	}
 
 	LOG_DBG("Generated encryption key of length %d bytes: %s",
@@ -824,7 +824,7 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::decryption_enabled_server(SSH2Secu
 	auth_options.encrypt_algs.push_back(sc->encrypt_alg);
 	auth_options.mac_algs.push_back(sc->mac_alg);
 	auth_options.compress_algs.push_back(sc->compress_alg);
-	auth_options.dh_public_key.array = BN_to_binary(sc->dh_state->pub_key,
+	auth_options.dh_public_key.data = BN_to_binary(sc->dh_state->pub_key,
 			&auth_options.dh_public_key.length);
 
 	if (auth_options.dh_public_key.length <= 0) {
@@ -947,7 +947,7 @@ int AuthSSH2PolicySet::process_edh_exchange_message(const CDAPMessage& message, 
 	}
 
 	//Add peer public key to security context
-	sc->dh_peer_pub_key = BN_bin2bn(options->dh_public_key.array,
+	sc->dh_peer_pub_key = BN_bin2bn(options->dh_public_key.data,
 			       	        options->dh_public_key.length,
 			       	        NULL);
 	if (!sc->dh_peer_pub_key) {

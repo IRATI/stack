@@ -5190,6 +5190,46 @@ int putIpcmPluginLoadResponseMessageObject(nl_msg* netlinkMessage,
         return -1;
 }
 
+int putIPCPEnableEncryptionRequestMessage(nl_msg* netlinkMessage,
+		const IPCPEnableEncryptionRequestMessage& object){
+	if (object.enable_decryption) {
+		NLA_PUT_FLAG(netlinkMessage, EERM_ATTR_EN_DECRYPT);
+	}
+	if (object.enable_encryption) {
+		NLA_PUT_FLAG(netlinkMessage, EERM_ATTR_EN_ENCRYPT);
+	}
+	NLA_PUT_STRING(netlinkMessage, EERM_ATTR_ENCRYPT_ALG,
+		       object.encrypt_alg.c_str());
+	NLA_PUT_STRING(netlinkMessage, EERM_ATTR_MAC_ALG,
+		       object.mac_alg.c_str());
+	NLA_PUT_STRING(netlinkMessage, EERM_ATTR_COMPRESS_ALG,
+		       object.compress_alg.c_str());
+	NLA_PUT(netlinkMessage, EERM_ATTR_ENCRYPT_KEY,
+		object.encrypt_key.length, object.encrypt_key.data);
+	NLA_PUT_U32(netlinkMessage, EERM_ATTR_N_1_PORT, object.port_id);
+
+	return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building IpcmPluginLoadRequestMessage "
+                        "Netlink object");
+        return -1;
+}
+
+int putIPCPEnableEncryptionResponseMessage(nl_msg* netlinkMessage,
+		const IPCPEnableEncryptionResponseMessage& object){
+
+	NLA_PUT_U32(netlinkMessage, EEREM_ATTR_RESULT, object.result);
+	NLA_PUT_U32(netlinkMessage, EEREM_ATTR_N_1_PORT, object.port_id);
+
+	return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building IPCPEnableEncryptionResponseMessage"
+                        "Netlink object");
+        return -1;
+}
+
 AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
 		nlmsghdr *hdr) {
 	struct nla_policy attr_policy[AAFR_ATTR_MAX + 1];

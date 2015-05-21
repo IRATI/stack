@@ -268,6 +268,7 @@ enum IPCEventType {
         IPC_PROCESS_SELECT_POLICY_SET_RESPONSE,
         IPC_PROCESS_PLUGIN_LOAD,
         IPC_PROCESS_PLUGIN_LOAD_RESPONSE,
+        IPC_PROCESS_ENABLE_ENCRYPTION_RESPONSE,
 	NO_EVENT
 };
 
@@ -607,29 +608,35 @@ public:
 
 struct UcharArray {
 	UcharArray() {
-		array = 0;
+		data = 0;
 		length = 0;
 	}
 	UcharArray(int arrayLength) {
-		array = new unsigned char[arrayLength];
+		data = new unsigned char[arrayLength];
 		length = arrayLength;
 	}
 	~UcharArray() {
-		if (array) {
-			delete array;
+		if (data) {
+			delete data;
 		}
+	}
+	UcharArray& operator=(const UcharArray &other) {
+		length = other.length;
+		data = new unsigned char[length];
+		memcpy(data, other.data, length);
+		return *this;
 	}
 
 	std::string toString() {
 		std::stringstream ss;
 		ss << std::hex;
 		for (int i = 0; i < length; i++) {
-			ss << std::setw(2) << std::setfill('0') << (int)array[i];
+			ss << std::setw(2) << std::setfill('0') << (int)data[i];
 		}
 		return ss.str();
 	}
 
-	unsigned char * array;
+	unsigned char * data;
 	int length;
 };
 
