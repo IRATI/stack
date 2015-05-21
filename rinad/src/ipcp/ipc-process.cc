@@ -671,14 +671,26 @@ void IPCProcessImpl::processPluginLoadRequestEvent(
 void IPCProcessImpl::processFwdCDAPMsgRequestEvent(
                         const rina::FwdCDAPMsgRequestEvent& event) {
 		rina::ScopedLock g(*lock_);
-	const rina::CDAPMessage *msg = wmpi->deserializeMessage(event.sermsg);
-	std::string msg_s;
+	const rina::CDAPMessage * msg;
+	rina::CDAPSessionDescriptor * session_descr;
 
-	msg_s = msg->to_string();
+	if (!event.sermsg.message_) {
+		LOG_IPCP_ERR("No CDAP message to be forwarded");
+		return;
+	}
+
+	msg = wmpi->deserializeMessage(event.sermsg);
+
+	LOG_IPCP_INFO("Forwarded CDAP Message:\n%s",
+		      msg->to_string().c_str());
+
+	session_descr = new rina::CDAPSessionDescriptor();
+
+	rib_daemon_->processIncomingCDAPMessage(msg, session_descr,
+			rina::CDAPSessionInterface::SESSION_STATE_CON);
+
 	delete msg;
-
-	LOG_IPCP_INFO("Stub for forwarded CDAP Message:\n%s",
-		      msg_s.c_str());
+	delete session_descr;
 
         return;
 }
