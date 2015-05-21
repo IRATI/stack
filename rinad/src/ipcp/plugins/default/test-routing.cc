@@ -798,11 +798,12 @@ int getRoutingTable_MultiGraphEntries_True() {
 	return result;
 }
 
-int getRoutingTable_MoreGraphEntries_True() {
+int getRoutingTable_MoreGraphEntries_True(bool lfa) {
 	std::list<rinad::FlowStateObject *> objects;
 	rinad::IRoutingAlgorithm * routingAlgorithm;
 	std::list<rina::RoutingTableEntry *> rtable;
 	std::vector<unsigned int> exp_nhops;
+	rinad::IResiliencyAlgorithm *resalg;
 	int result = 0;
 
 	routingAlgorithm = new rinad::DijkstraAlgorithm();
@@ -835,8 +836,9 @@ int getRoutingTable_MoreGraphEntries_True() {
 	exp_nhops[6] = 4;
 	exp_nhops[7] = 3;
 
-	rtable = routingAlgorithm->computeRoutingTable(rinad::Graph(objects),
-						       objects, 1);
+	rinad::Graph graph(objects);
+
+	rtable = routingAlgorithm->computeRoutingTable(graph, objects, 1);
 
 	for (std::list<rina::RoutingTableEntry *>::iterator
 			rit = rtable.begin(); rit != rtable.end(); rit++) {
@@ -868,6 +870,11 @@ int getRoutingTable_MoreGraphEntries_True() {
 		}
 
 		std::cout << "]" << std::endl;
+	}
+
+	if (lfa) {
+		resalg = new rinad::LoopFreeAlternateAlgorithm(*routingAlgorithm);
+		resalg->fortifyRoutingTable(graph, 1, rtable);
 	}
 
 	for (std::list<rinad::FlowStateObject *>::iterator
@@ -910,12 +917,19 @@ int test_dijkstra() {
 	}
 	LOG_IPCP_INFO("getPDUTForwardingTable_MultiGraphEntries_True test passed");
 
-	result = getRoutingTable_MoreGraphEntries_True();
+	result = getRoutingTable_MoreGraphEntries_True(false);
 	if (result < 0) {
 		LOG_IPCP_ERR("getPDUTForwardingTable_MoreGraphEntries_True test failed");
 		return result;
 	}
 	LOG_IPCP_INFO("getPDUTForwardingTable_MoreGraphEntries_True test passed");
+
+	result = getRoutingTable_MoreGraphEntries_True(true);
+	if (result < 0) {
+		LOG_IPCP_ERR("getPDUTForwardingTable_MoreGraphEntriesLFA_True test failed");
+		return result;
+	}
+	LOG_IPCP_INFO("getPDUTForwardingTable_MoreGraphEntriesLFA_True test passed");
 
 	return result;
 }
