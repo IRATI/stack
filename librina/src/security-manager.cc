@@ -33,8 +33,7 @@ namespace rina {
 //Class AuthPolicySet
 const std::string IAuthPolicySet::AUTH_NONE = "PSOC_authentication-none";
 const std::string IAuthPolicySet::AUTH_PASSWORD = "PSOC_authentication-password";
-const std::string IAuthPolicySet::AUTH_SSHRSA = "PSOC_authentication-sshrsa";
-const std::string IAuthPolicySet::AUTH_SSHDSA = "PSOC_authentication-sshdsa";
+const std::string IAuthPolicySet::AUTH_SSH2 = "PSOC_authentication-ssh2";
 
 IAuthPolicySet::IAuthPolicySet(const std::string& type_)
 {
@@ -381,10 +380,10 @@ int AuthPasswordPolicySet::set_policy_set_param(const std::string& name,
         return -1;
 }
 
-//AuthSSHRSAOptions encoder and decoder operations
-SSHRSAAuthOptions * decode_ssh_rsa_auth_options(const SerializedObject &message) {
-	rina::auth::policies::googleprotobuf::authOptsSSHRSA_t gpb_options;
-	SSHRSAAuthOptions * result = new SSHRSAAuthOptions();
+//AuthSSH2Options encoder and decoder operations
+SSH2AuthOptions * decode_ssh2_auth_options(const SerializedObject &message) {
+	rina::auth::policies::googleprotobuf::authOptsSSH2_t gpb_options;
+	SSH2AuthOptions * result = new SSH2AuthOptions();
 
 	gpb_options.ParseFromArray(message.message_, message.size_);
 
@@ -416,8 +415,8 @@ SSHRSAAuthOptions * decode_ssh_rsa_auth_options(const SerializedObject &message)
 	return result;
 }
 
-SerializedObject * encode_ssh_rsa_auth_options(const SSHRSAAuthOptions& options){
-	rina::auth::policies::googleprotobuf::authOptsSSHRSA_t gpb_options;
+SerializedObject * encode_ssh2_auth_options(const SSH2AuthOptions& options){
+	rina::auth::policies::googleprotobuf::authOptsSSH2_t gpb_options;
 
 	for(std::list<std::string>::const_iterator it = options.key_exch_algs.begin();
 			it != options.key_exch_algs.end(); ++it) {
@@ -452,8 +451,8 @@ SerializedObject * encode_ssh_rsa_auth_options(const SSHRSAAuthOptions& options)
 	return object;
 }
 
-// Class SSHRSASecurityContext
-SSHRSASecurityContext::~SSHRSASecurityContext()
+// Class SSH2SecurityContext
+SSH2SecurityContext::~SSH2SecurityContext()
 {
 	if (dh_state) {
 		DH_free(dh_state);
@@ -464,16 +463,16 @@ SSHRSASecurityContext::~SSHRSASecurityContext()
 	}
 }
 
-//Class AuthSSHRSA
-const int AuthSSHRSAPolicySet::DEFAULT_TIMEOUT = 10000;
-const std::string AuthSSHRSAPolicySet::KEY_EXCHANGE_ALGORITHM = "keyExchangeAlg";
-const std::string AuthSSHRSAPolicySet::ENCRYPTION_ALGORITHM = "encryptAlg";
-const std::string AuthSSHRSAPolicySet::MAC_ALGORITHM = "macAlg";
-const std::string AuthSSHRSAPolicySet::COMPRESSION_ALGORITHM = "compressAlg";
-const std::string AuthSSHRSAPolicySet::EDH_EXCHANGE = "Ephemeral Diffie-Hellman exchange";
+//Class AuthSSH2
+const int AuthSSH2PolicySet::DEFAULT_TIMEOUT = 10000;
+const std::string AuthSSH2PolicySet::KEY_EXCHANGE_ALGORITHM = "keyExchangeAlg";
+const std::string AuthSSH2PolicySet::ENCRYPTION_ALGORITHM = "encryptAlg";
+const std::string AuthSSH2PolicySet::MAC_ALGORITHM = "macAlg";
+const std::string AuthSSH2PolicySet::COMPRESSION_ALGORITHM = "compressAlg";
+const std::string AuthSSH2PolicySet::EDH_EXCHANGE = "Ephemeral Diffie-Hellman exchange";
 
-AuthSSHRSAPolicySet::AuthSSHRSAPolicySet(IRIBDaemon * ribd, ISecurityManager * sm) :
-		IAuthPolicySet(IAuthPolicySet::AUTH_SSHRSA)
+AuthSSH2PolicySet::AuthSSH2PolicySet(IRIBDaemon * ribd, ISecurityManager * sm) :
+		IAuthPolicySet(IAuthPolicySet::AUTH_SSH2)
 {
 	rib_daemon = ribd;
 	sec_man = sm;
@@ -490,14 +489,14 @@ AuthSSHRSAPolicySet::AuthSSHRSAPolicySet(IRIBDaemon * ribd, ISecurityManager * s
 	}
 }
 
-AuthSSHRSAPolicySet::~AuthSSHRSAPolicySet()
+AuthSSH2PolicySet::~AuthSSH2PolicySet()
 {
 	if (dh_parameters) {
 		DH_free(dh_parameters);
 	}
 }
 
-void AuthSSHRSAPolicySet::edh_init_params()
+void AuthSSH2PolicySet::edh_init_params()
 {
 	int codes;
 
@@ -556,7 +555,7 @@ void AuthSSHRSAPolicySet::edh_init_params()
 	}
 }
 
-unsigned char * AuthSSHRSAPolicySet::BN_to_binary(BIGNUM *b, int *len)
+unsigned char * AuthSSH2PolicySet::BN_to_binary(BIGNUM *b, int *len)
 {
 	unsigned char *ret;
 
@@ -567,7 +566,7 @@ unsigned char * AuthSSHRSAPolicySet::BN_to_binary(BIGNUM *b, int *len)
 	return ret;
 }
 
-AuthPolicy AuthSSHRSAPolicySet::get_auth_policy(int session_id,
+AuthPolicy AuthSSH2PolicySet::get_auth_policy(int session_id,
 						const AuthSDUProtectionProfile& profile)
 {
 	if (profile.authPolicy.name_ != type) {
@@ -585,10 +584,10 @@ AuthPolicy AuthSSHRSAPolicySet::get_auth_policy(int session_id,
 	}
 
 	AuthPolicy auth_policy;
-	auth_policy.name_ = IAuthPolicySet::AUTH_SSHRSA;
+	auth_policy.name_ = IAuthPolicySet::AUTH_SSH2;
 	auth_policy.versions_.push_back(profile.authPolicy.version_);
 
-	SSHRSASecurityContext * sc = new SSHRSASecurityContext(session_id);
+	SSH2SecurityContext * sc = new SSH2SecurityContext(session_id);
 	sc->key_exch_alg = profile.authPolicy.get_param_value(KEY_EXCHANGE_ALGORITHM);
 	sc->encrypt_alg = profile.authPolicy.get_param_value(ENCRYPTION_ALGORITHM);
 	sc->mac_alg = profile.authPolicy.get_param_value(MAC_ALGORITHM);
@@ -602,7 +601,7 @@ AuthPolicy AuthSSHRSAPolicySet::get_auth_policy(int session_id,
 		throw Exception();
 	}
 
-	SSHRSAAuthOptions options;
+	SSH2AuthOptions options;
 	options.key_exch_algs.push_back(sc->key_exch_alg);
 	options.encrypt_algs.push_back(sc->encrypt_alg);
 	options.mac_algs.push_back(sc->mac_alg);
@@ -616,7 +615,7 @@ AuthPolicy AuthSSHRSAPolicySet::get_auth_policy(int session_id,
 		throw Exception();
 	}
 
-	SerializedObject * sobj = encode_ssh_rsa_auth_options(options);
+	SerializedObject * sobj = encode_ssh2_auth_options(options);
 	if (!sobj) {
 		LOG_ERR("Problems encoding SSHRSAAuthOptions");
 		delete sc;
@@ -627,13 +626,13 @@ AuthPolicy AuthSSHRSAPolicySet::get_auth_policy(int session_id,
 	delete sobj;
 
 	//Store security context
-	sc->state = SSHRSASecurityContext::WAIT_EDH_EXCHANGE;
+	sc->state = SSH2SecurityContext::WAIT_EDH_EXCHANGE;
 	sec_man->add_security_context(sc);
 
 	return auth_policy;
 }
 
-int AuthSSHRSAPolicySet::edh_init_keys(SSHRSASecurityContext * sc)
+int AuthSSH2PolicySet::edh_init_keys(SSH2SecurityContext * sc)
 {
 	DH *dh_state;
 
@@ -664,9 +663,9 @@ int AuthSSHRSAPolicySet::edh_init_keys(SSHRSASecurityContext * sc)
 	return 0;
 }
 
-rina::IAuthPolicySet::AuthStatus AuthSSHRSAPolicySet::initiate_authentication(const AuthPolicy& auth_policy,
-									      const AuthSDUProtectionProfile& profile,
-								      	      int session_id)
+rina::IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(const AuthPolicy& auth_policy,
+									    const AuthSDUProtectionProfile& profile,
+								      	    int session_id)
 {
 	(void) profile;
 
@@ -688,13 +687,13 @@ rina::IAuthPolicySet::AuthStatus AuthSSHRSAPolicySet::initiate_authentication(co
 		return rina::IAuthPolicySet::FAILED;
 	}
 
-	SSHRSAAuthOptions * options = decode_ssh_rsa_auth_options(auth_policy.options_);
+	SSH2AuthOptions * options = decode_ssh2_auth_options(auth_policy.options_);
 	if (!options) {
 		LOG_ERR("Could not decode SSHARSA options");
 		return rina::IAuthPolicySet::FAILED;
 	}
 
-	SSHRSASecurityContext * sc = new SSHRSASecurityContext(session_id);
+	SSH2SecurityContext * sc = new SSH2SecurityContext(session_id);
 	std::string current_alg = options->key_exch_algs.front();
 	if (current_alg != SSL_TXT_EDH) {
 		LOG_ERR("Unsupported key exchange algorithm: %s",
@@ -761,7 +760,7 @@ rina::IAuthPolicySet::AuthStatus AuthSSHRSAPolicySet::initiate_authentication(co
 	// tell it to encrypt/decrypt all messages right after sending the next one
 
 	// Prepare message for the peer, send selected algorithms and public key
-	SSHRSAAuthOptions auth_options;
+	SSH2AuthOptions auth_options;
 	auth_options.key_exch_algs.push_back(sc->key_exch_alg);
 	auth_options.encrypt_algs.push_back(sc->encrypt_alg);
 	auth_options.mac_algs.push_back(sc->mac_alg);
@@ -775,14 +774,14 @@ rina::IAuthPolicySet::AuthStatus AuthSSHRSAPolicySet::initiate_authentication(co
 		return rina::IAuthPolicySet::FAILED;
 	}
 
-	SerializedObject * sobj = encode_ssh_rsa_auth_options(auth_options);
+	SerializedObject * sobj = encode_ssh2_auth_options(auth_options);
 	if (!sobj) {
-		LOG_ERR("Problems encoding SSHRSAAuthOptions");
+		LOG_ERR("Problems encoding SSH2AuthOptions");
 		delete sc;
 		return rina::IAuthPolicySet::FAILED;
 	}
 
-	sc->state = SSHRSASecurityContext::EDH_COMPLETED;
+	sc->state = SSH2SecurityContext::EDH_COMPLETED;
 	sec_man->add_security_context(sc);
 
 	//Send message to peer with selected algorithms and public key
@@ -810,7 +809,7 @@ rina::IAuthPolicySet::AuthStatus AuthSSHRSAPolicySet::initiate_authentication(co
 	return rina::IAuthPolicySet::IN_PROGRESS;
 }
 
-int AuthSSHRSAPolicySet::edh_generate_shared_secret(SSHRSASecurityContext * sc)
+int AuthSSH2PolicySet::edh_generate_shared_secret(SSH2SecurityContext * sc)
 {
 	if((sc->shared_secret.array =
 			(unsigned char*) OPENSSL_malloc(sizeof(unsigned char) * (DH_size(sc->dh_state)))) == NULL) {
@@ -830,7 +829,7 @@ int AuthSSHRSAPolicySet::edh_generate_shared_secret(SSHRSASecurityContext * sc)
 	return 0;
 }
 
-int AuthSSHRSAPolicySet::process_incoming_message(const CDAPMessage& message, int session_id)
+int AuthSSH2PolicySet::process_incoming_message(const CDAPMessage& message, int session_id)
 {
 	ScopedLock sc_lock(lock);
 
@@ -841,10 +840,10 @@ int AuthSSHRSAPolicySet::process_incoming_message(const CDAPMessage& message, in
 	return rina::IAuthPolicySet::FAILED;
 }
 
-int AuthSSHRSAPolicySet::process_edh_exchange_message(const CDAPMessage& message, int session_id)
+int AuthSSH2PolicySet::process_edh_exchange_message(const CDAPMessage& message, int session_id)
 {
 	ByteArrayObjectValue * bytes_value;
-	SSHRSASecurityContext * sc;
+	SSH2SecurityContext * sc;
 	const SerializedObject * sobj;
 
 	if (message.op_code_ != CDAPMessage::M_WRITE) {
@@ -864,20 +863,20 @@ int AuthSSHRSAPolicySet::process_edh_exchange_message(const CDAPMessage& message
 	}
 
 	sobj = static_cast<const SerializedObject *>(bytes_value->get_value());
-	SSHRSAAuthOptions * options = decode_ssh_rsa_auth_options(*sobj);
+	SSH2AuthOptions * options = decode_ssh2_auth_options(*sobj);
 	if (!options) {
 		LOG_ERR("Could not decode SSHARSA options");
 		return rina::IAuthPolicySet::FAILED;
 	}
 
-	sc = dynamic_cast<SSHRSASecurityContext *>(sec_man->get_security_context(session_id));
+	sc = dynamic_cast<SSH2SecurityContext *>(sec_man->get_security_context(session_id));
 	if (!sc) {
 		LOG_ERR("Could not retrieve Security Context for session: %d", session_id);
 		delete options;
 		return IAuthPolicySet::FAILED;
 	}
 
-	if (sc->state != SSHRSASecurityContext::WAIT_EDH_EXCHANGE) {
+	if (sc->state != SSH2SecurityContext::WAIT_EDH_EXCHANGE) {
 		LOG_ERR("Wrong session state: %d", sc->state);
 		sec_man->remove_security_context(session_id);
 		delete sc;
@@ -905,7 +904,7 @@ int AuthSSHRSAPolicySet::process_edh_exchange_message(const CDAPMessage& message
 		return rina::IAuthPolicySet::FAILED;
 	}
 
-	sc->state = SSHRSASecurityContext::EDH_COMPLETED;
+	sc->state = SSH2SecurityContext::EDH_COMPLETED;
 
 	//TODO, configure the shared secret in the kernel SDU protection module
 
@@ -914,7 +913,7 @@ int AuthSSHRSAPolicySet::process_edh_exchange_message(const CDAPMessage& message
 	return rina::IAuthPolicySet::IN_PROGRESS;
 }
 
-int AuthSSHRSAPolicySet::set_policy_set_param(const std::string& name,
+int AuthSSH2PolicySet::set_policy_set_param(const std::string& name,
                          	 	      const std::string& value)
 {
         LOG_DBG("No policy-set-specific parameters to set (%s, %s)",

@@ -53,8 +53,7 @@ public:
 
 	static const std::string AUTH_NONE;
 	static const std::string AUTH_PASSWORD;
-	static const std::string AUTH_SSHRSA;
-	static const std::string AUTH_SSHDSA;
+	static const std::string AUTH_SSH2;
 
 	IAuthPolicySet(const std::string& type_);
 	virtual ~IAuthPolicySet() { };
@@ -173,11 +172,11 @@ private:
 	Lockable lock;
 };
 
-/// Options that then SSH RSA authentication policy has to negotiate with its peer
-class SSHRSAAuthOptions {
+/// Options that then SSH 2 authentication policy has to negotiate with its peer
+class SSH2AuthOptions {
 public:
-	SSHRSAAuthOptions() { };
-	~SSHRSAAuthOptions() { };
+	SSH2AuthOptions() { };
+	~SSH2AuthOptions() { };
 
 	/// Supported key exchange algorithms
 	std::list<std::string> key_exch_algs;
@@ -196,11 +195,11 @@ public:
 };
 
 ///Captures all data of the SSHRSA security context
-class SSHRSASecurityContext : public ISecurityContext {
+class SSH2SecurityContext : public ISecurityContext {
 public:
-	SSHRSASecurityContext(int session_id) : ISecurityContext(session_id),
+	SSH2SecurityContext(int session_id) : ISecurityContext(session_id),
 			state(BEGIN), dh_state(NULL), dh_peer_pub_key(NULL) { };
-	~SSHRSASecurityContext();
+	~SSH2SecurityContext();
 
         enum State {
         	BEGIN,
@@ -226,8 +225,6 @@ public:
 	UcharArray shared_secret;
 };
 
-class AuthSSHRSAPolicySet;
-
 /// Authentication policy set that mimics SSH approach. It is associated to
 /// a cryptographic SDU protection policy, which is configured by this Authz policy.
 /// It uses the Open SSL crypto library to perform all its functions
@@ -235,7 +232,7 @@ class AuthSSHRSAPolicySet;
 /// 2: Negotiation of algorithms
 /// 3: Encryption key generation and exchange (configuring SDU protection policy)
 /// 4: Authentication
-class AuthSSHRSAPolicySet : public IAuthPolicySet {
+class AuthSSH2PolicySet : public IAuthPolicySet {
 public:
 	static const std::string KEY_EXCHANGE_ALGORITHM;
 	static const std::string ENCRYPTION_ALGORITHM;
@@ -244,8 +241,8 @@ public:
 	static const int DEFAULT_TIMEOUT;
 	static const std::string EDH_EXCHANGE;
 
-	AuthSSHRSAPolicySet(IRIBDaemon * ribd, ISecurityManager * sm);
-	~AuthSSHRSAPolicySet();
+	AuthSSH2PolicySet(IRIBDaemon * ribd, ISecurityManager * sm);
+	~AuthSSH2PolicySet();
 	AuthPolicy get_auth_policy(int session_id,
 				   const AuthSDUProtectionProfile& profile);
 	AuthStatus initiate_authentication(const AuthPolicy& auth_policy,
@@ -264,11 +261,11 @@ private:
 
 	/// Initialize keys for DH key exchange with own P and G params.
 	/// Returns 0 if successful -1 otherwise.
-	int edh_init_keys(SSHRSASecurityContext * sc);
+	int edh_init_keys(SSH2SecurityContext * sc);
 
 	/// Generate the shared secret using the peer's public key.
 	/// Returns 0 if successful, -1 otherwise
-	int edh_generate_shared_secret(SSHRSASecurityContext * sc);
+	int edh_generate_shared_secret(SSH2SecurityContext * sc);
 
 	int process_edh_exchange_message(const CDAPMessage& message, int session_id);
 

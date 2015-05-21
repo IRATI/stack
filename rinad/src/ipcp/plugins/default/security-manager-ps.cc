@@ -135,7 +135,7 @@ destroyAuthPasswordPs(rina::IPolicySet * ps)
 }
 
 extern "C" rina::IPolicySet *
-createAuthSSHRSAPs(rina::ApplicationEntity * ctx)
+createAuthSSH2Ps(rina::ApplicationEntity * ctx)
 {
 	IPCPSecurityManager * sm = dynamic_cast<IPCPSecurityManager *>(ctx);
         if (!sm || !sm->get_application_process()) {
@@ -148,11 +148,11 @@ createAuthSSHRSAPs(rina::ApplicationEntity * ctx)
         	return NULL;
         }
 
-        return new rina::AuthSSHRSAPolicySet(rib_daemon, sm);
+        return new rina::AuthSSH2PolicySet(rib_daemon, sm);
 }
 
 extern "C" void
-destroyAuthSSHRSAPs(rina::IPolicySet * ps)
+destroyAuthSSH2Ps(rina::IPolicySet * ps)
 {
         if (ps) {
                 delete ps;

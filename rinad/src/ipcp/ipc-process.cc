@@ -93,7 +93,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         }
         security_manager_->add_auth_policy_set(rina::IAuthPolicySet::AUTH_NONE);
         security_manager_->add_auth_policy_set(rina::IAuthPolicySet::AUTH_PASSWORD);
-        security_manager_->add_auth_policy_set(rina::IAuthPolicySet::AUTH_SSHRSA);
+        security_manager_->add_auth_policy_set(rina::IAuthPolicySet::AUTH_SSH2);
 
         flow_allocator_->select_policy_set(std::string(), rina::IPolicySet::DEFAULT_PS_SET_NAME);
         if (!flow_allocator_->ps) {

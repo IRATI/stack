@@ -1,6 +1,6 @@
 package rina.auth.policies.googleprotobuf;
 
-message authOptsSSHRSA_t {
+message authOptsSSH2_t {
 	repeated string key_exch_algs = 1;		// Supported key exchange algorithms
 	repeated string encrypt_algs = 2;		// Supported encryption algorithms
 	repeated string mac_algs = 3;			// Supported MAC algorithms
