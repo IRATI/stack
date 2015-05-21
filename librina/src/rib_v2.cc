@@ -228,7 +228,7 @@ public:
 	const cdap_rib::vers_info_t& get_version() const;
 
 	//
-	// CDAP operations
+	// Remote CDAP operation results
 	//
 
 	void remote_create_result(const cdap_rib::con_handle_t &con,
@@ -251,32 +251,35 @@ public:
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::res_info_t &res);
 
+	//
+	// Incoming requests
+	//
 
-	void remote_create_request(const cdap_rib::con_handle_t &con,
+	void create_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::filt_info_t &filt,
 			int message_id);
-	void remote_delete_request(const cdap_rib::con_handle_t &con,
+	void delete_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::filt_info_t &filt,
 			int message_id);
-	void remote_read_request(const cdap_rib::con_handle_t &con,
+	void read_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::filt_info_t &filt,
 			int message_id);
-	void remote_cancel_read_request(const cdap_rib::con_handle_t &con,
+	void cancel_read_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::filt_info_t &filt,
 			int message_id);
-	void remote_write_request(const cdap_rib::con_handle_t &con,
+	void write_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::filt_info_t &filt,
 			int message_id);
-	void remote_start_request(const cdap_rib::con_handle_t &con,
+	void start_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::filt_info_t &filt,
 			int message_id);
-	void remote_stop_request(const cdap_rib::con_handle_t &con,
+	void stop_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::filt_info_t &filt,
 			int message_id);
@@ -305,41 +308,41 @@ private:
 void RIB::remote_create_result(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::res_info_t &res) {
-	app_resp_callback->createResponse(res, obj, con);
+	app_resp_callback->remoteCreateResult(res, obj, con);
 }
 void RIB::remote_delete_result(const cdap_rib::con_handle_t &con,
 		const cdap_rib::res_info_t &res) {
 
-	app_resp_callback->deleteResponse(res, con);
+	app_resp_callback->remoteDeleteResult(res, con);
 }
 void RIB::remote_read_result(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::res_info_t &res) {
-	app_resp_callback->readResponse(res, obj, con);
+	app_resp_callback->remoteReadResult(res, obj, con);
 }
 void RIB::remote_cancel_read_result(
 		const cdap_rib::con_handle_t &con,
 		const cdap_rib::res_info_t &res) {
 
-	app_resp_callback->cancelReadResponse(res, con);
+	app_resp_callback->remoteCancelReadResult(res, con);
 }
 void RIB::remote_write_result(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::res_info_t &res) {
-	app_resp_callback->writeResponse(res, obj, con);
+	app_resp_callback->remoteWriteResult(res, obj, con);
 }
 void RIB::remote_start_result(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::res_info_t &res) {
-	app_resp_callback->startResponse(res, obj, con);
+	app_resp_callback->remoteStartResult(res, obj, con);
 }
 void RIB::remote_stop_result(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::res_info_t &res) {
-	app_resp_callback->stopResponse(res, obj, con);
+	app_resp_callback->remoteStopResult(res, obj, con);
 }
 
-void RIB::remote_create_request(const cdap_rib::con_handle_t &con,
+void RIB::create_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt,
 		int message_id) {
@@ -366,7 +369,7 @@ void RIB::remote_create_request(const cdap_rib::con_handle_t &con,
 	}
 	if (rib_obj) {
 		//Call the application
-		res = rib_obj->remoteCreate(
+		res = rib_obj->create(
 				obj.name_, obj.class_, obj.value_,
 				obj_reply.value_);
 	} else {
@@ -374,7 +377,7 @@ void RIB::remote_create_request(const cdap_rib::con_handle_t &con,
 		res->result_ = -1;
 	}
 	try {
-		cdap_provider->remote_create_response(con.port_,
+		cdap_provider->send_create_result(con.port_,
 				obj_reply,
 				flags, *res,
 				message_id);
@@ -384,7 +387,7 @@ void RIB::remote_create_request(const cdap_rib::con_handle_t &con,
 	delete res;
 }
 
-void RIB::remote_delete_request(const cdap_rib::con_handle_t &con,
+void RIB::delete_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt,
 		int message_id) {
@@ -396,9 +399,9 @@ void RIB::remote_delete_request(const cdap_rib::con_handle_t &con,
 	RIBObj* rib_obj = getRIBObj(obj.class_, obj.name_,
 			true);
 	if (rib_obj) {
-		cdap_rib::res_info_t* res = rib_obj->remoteDelete(obj.name_);
+		cdap_rib::res_info_t* res = rib_obj->delete_(obj.name_);
 		try {
-			cdap_provider->remote_delete_response(con.port_, obj,
+			cdap_provider->send_delete_result(con.port_, obj,
 					flags, *res,
 					message_id);
 		} catch (Exception &e) {
@@ -407,7 +410,7 @@ void RIB::remote_delete_request(const cdap_rib::con_handle_t &con,
 		delete res;
 	}
 }
-void RIB::remote_read_request(const cdap_rib::con_handle_t &con,
+void RIB::read_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt,
 		int message_id) {
@@ -428,14 +431,14 @@ void RIB::remote_read_request(const cdap_rib::con_handle_t &con,
 	cdap_rib::res_info_t* res;
 	RIBObj* ribObj = getRIBObj(obj.class_, obj.name_, true);
 	if (ribObj) {
-		res = ribObj->remoteRead(
+		res = ribObj->read(
 				obj.name_, obj_reply.value_);
 	} else {
 		res = new cdap_rib::res_info_t;
 		res->result_ = -1;
 	}
 	try {
-		cdap_provider->remote_read_response(con.port_,
+		cdap_provider->send_read_result(con.port_,
 				obj_reply,
 				flags, *res,
 				message_id);
@@ -444,7 +447,7 @@ void RIB::remote_read_request(const cdap_rib::con_handle_t &con,
 	}
 	delete res;
 }
-void RIB::remote_cancel_read_request(
+void RIB::cancel_read_request(
 		const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt, int message_id) {
@@ -457,21 +460,21 @@ void RIB::remote_cancel_read_request(
 
 	RIBObj* ribObj = getRIBObj(obj.class_, obj.name_, true);
 	if (ribObj) {
-		res = ribObj->remoteCancelRead(obj.name_);
+		res = ribObj->cancelRead(obj.name_);
 	} else {
 		res = new cdap_rib::res_info_t;
 		res->result_ = -1;
 	}
 
 	try {
-		cdap_provider->remote_cancel_read_response(
+		cdap_provider->send_cancel_read_result(
 				con.port_, flags, *res, message_id);
 	} catch (Exception &e) {
 		LOG_ERR("Unable to send the response");
 	}
 	delete res;
 }
-void RIB::remote_write_request(const cdap_rib::con_handle_t &con,
+void RIB::write_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt,
 		int message_id) {
@@ -492,14 +495,14 @@ void RIB::remote_write_request(const cdap_rib::con_handle_t &con,
 
 	RIBObj* ribObj = getRIBObj(obj.class_, obj.name_, true);
 	if (ribObj) {
-		res = ribObj->remoteWrite(
+		res = ribObj->write(
 				obj.name_, obj.value_, obj_reply.value_);
 	} else {
 		res = new cdap_rib::res_info_t;
 		res->result_ = -1;
 	}
 	try {
-		cdap_provider->remote_write_response(con.port_, flags,
+		cdap_provider->send_write_result(con.port_, flags,
 				*res,
 				message_id);
 	} catch (Exception &e) {
@@ -507,7 +510,7 @@ void RIB::remote_write_request(const cdap_rib::con_handle_t &con,
 	}
 	delete res;
 }
-void RIB::remote_start_request(const cdap_rib::con_handle_t &con,
+void RIB::start_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt,
 		int message_id) {
@@ -529,14 +532,14 @@ void RIB::remote_start_request(const cdap_rib::con_handle_t &con,
 
 	RIBObj* ribObj = getRIBObj(obj.class_, obj.name_, true);
 	if (ribObj) {
-		res = ribObj->remoteStart(
+		res = ribObj->start(
 				obj.name_, obj.value_, obj_reply.value_);
 	} else {
 		res = new cdap_rib::res_info_t;
 		res->result_ = -1;
 	}
 	try {
-		cdap_provider->remote_start_response(con.port_, obj,
+		cdap_provider->send_start_result(con.port_, obj,
 				flags, *res,
 				message_id);
 	} catch (Exception &e) {
@@ -544,7 +547,7 @@ void RIB::remote_start_request(const cdap_rib::con_handle_t &con,
 	}
 	delete res;
 }
-void RIB::remote_stop_request(const cdap_rib::con_handle_t &con,
+void RIB::stop_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt,
 		int message_id) {
@@ -565,14 +568,14 @@ void RIB::remote_stop_request(const cdap_rib::con_handle_t &con,
 
 	RIBObj* ribObj = getRIBObj(obj.class_, obj.name_, true);
 	if (ribObj) {
-		res = ribObj->remoteStop(
+		res = ribObj->stop(
 				obj.name_, obj.value_, obj_reply.value_);
 	} else {
 		res = new cdap_rib::res_info_t;
 		res->result_ = -1;
 	}
 	try {
-		cdap_provider->remote_stop_response(con.port_, flags,
+		cdap_provider->send_stop_result(con.port_, flags,
 				*res,
 				message_id);
 	} catch (Exception &e) {
@@ -844,15 +847,12 @@ protected:
 	//
 	// CDAP provider callbacks
 	//
-	void open_connection_result(const cdap_rib::con_handle_t &con,
-			const cdap_rib::result_info &res);
-	void open_connection(const cdap_rib::con_handle_t &con,
-			const cdap_rib::flags_t &flags, int message_id);
-	void close_connection_result(const cdap_rib::con_handle_t &con,
-			const cdap_rib::result_info &res);
-	void close_connection(const cdap_rib::con_handle_t &con,
-			const cdap_rib::flags_t &flags, int message_id);
 
+	//Remote
+	void remote_open_connection_result(const cdap_rib::con_handle_t &con,
+			const cdap_rib::result_info &res);
+	void remote_close_connection_result(const cdap_rib::con_handle_t &con,
+			const cdap_rib::result_info &res);
 	void remote_create_result(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::res_info_t &res);
@@ -873,39 +873,49 @@ protected:
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::res_info_t &res);
 
-	void remote_create_request(const cdap_rib::con_handle_t &con,
+
+	//Local
+	void open_connection(const cdap_rib::con_handle_t &con,
+			const cdap_rib::flags_t &flags, int message_id);
+	void close_connection(const cdap_rib::con_handle_t &con,
+			const cdap_rib::flags_t &flags, int message_id);
+
+	void create_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::filt_info_t &filt,
 			int message_id);
-	void remote_delete_request(const cdap_rib::con_handle_t &con,
+	void delete_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::filt_info_t &filt,
 			int message_id);
-	void remote_read_request(const cdap_rib::con_handle_t &con,
+	void read_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::filt_info_t &filt,
 			int message_id);
-	void remote_cancel_read_request(const cdap_rib::con_handle_t &con,
+	void cancel_read_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::filt_info_t &filt,
 			int message_id);
-	void remote_write_request(const cdap_rib::con_handle_t &con,
+	void write_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::filt_info_t &filt,
 			int message_id);
-	void remote_start_request(const cdap_rib::con_handle_t &con,
+	void start_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::filt_info_t &filt,
 			int message_id);
-	void remote_stop_request(const cdap_rib::con_handle_t &con,
+	void stop_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::filt_info_t &filt,
 			int message_id);
+
+#if 0
 	void remote_open_connection(const cdap_rib::vers_info_t &ver,
 			const cdap_rib::src_info_t &src,
 			const cdap_rib::dest_info_t &dest,
 			const cdap_rib::auth_info &auth,
 			int port);
+#endif
 private:
 
 	/**
@@ -1049,12 +1059,12 @@ RIB* RIBDaemon::unregisterRIB(RIB* inst){
 // Connection callbacks
 //
 
-void RIBDaemon::open_connection_result(const cdap_rib::con_handle_t &con,
+void RIBDaemon::remote_open_connection_result(const cdap_rib::con_handle_t &con,
 		const cdap_rib::res_info_t &res) {
 
 	// FIXME remove message_id
 
-	app_con_callback_->connectResponse(res, con);
+	app_con_callback_->connectResult(res, con);
 }
 
 void RIBDaemon::open_connection(const cdap_rib::con_handle_t &con,
@@ -1066,13 +1076,13 @@ void RIBDaemon::open_connection(const cdap_rib::con_handle_t &con,
 	(void) res;
 	(void) flags;
 	app_con_callback_->connect(message_id, con);
-	cdap_provider->open_connection_response(con, res, message_id);
+	cdap_provider->send_open_connection_result(con, res, message_id);
 }
 
-void RIBDaemon::close_connection_result(const cdap_rib::con_handle_t &con,
+void RIBDaemon::remote_close_connection_result(const cdap_rib::con_handle_t &con,
 		const cdap_rib::result_info &res) {
 
-	app_con_callback_->releaseResponse(res, con);
+	app_con_callback_->releaseResult(res, con);
 }
 
 void RIBDaemon::close_connection(const cdap_rib::con_handle_t &con,
@@ -1083,7 +1093,7 @@ void RIBDaemon::close_connection(const cdap_rib::con_handle_t &con,
 	cdap_rib::result_info res;
 	(void) res;
 	app_con_callback_->release(message_id, con);
-	cdap_provider->close_connection_response(con.port_, flags, res,
+	cdap_provider->send_close_connection_result(con.port_, flags, res,
 			message_id);
 }
 
@@ -1204,7 +1214,7 @@ void RIBDaemon::remote_stop_result(const cdap_rib::con_handle_t &con,
 }
 
 //CDAP object operations
-void RIBDaemon::remote_create_request(const cdap_rib::con_handle_t &con,
+void RIBDaemon::create_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt,
 		int message_id) {
@@ -1217,7 +1227,7 @@ void RIBDaemon::remote_create_request(const cdap_rib::con_handle_t &con,
 		cdap_rib::flags_t flags;
 		res.result_ = -1;
 		try {
-			cdap_provider->remote_create_response(con.port_,
+			cdap_provider->send_create_result(con.port_,
 					obj,
 					flags, res,
 					message_id);
@@ -1228,10 +1238,10 @@ void RIBDaemon::remote_create_request(const cdap_rib::con_handle_t &con,
 	}
 
 	//Invoke
-	rib->remote_create_request(con, obj, filt, message_id);
+	rib->create_request(con, obj, filt, message_id);
 }
 
-void RIBDaemon::remote_delete_request(const cdap_rib::con_handle_t &con,
+void RIBDaemon::delete_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt,
 		int message_id) {
@@ -1244,7 +1254,7 @@ void RIBDaemon::remote_delete_request(const cdap_rib::con_handle_t &con,
 		cdap_rib::flags_t flags;
 		res.result_ = -1;
 		try {
-			cdap_provider->remote_delete_response(con.port_, obj,
+			cdap_provider->send_delete_result(con.port_, obj,
 					flags, res,
 					message_id);
 		} catch (Exception &e) {
@@ -1254,10 +1264,10 @@ void RIBDaemon::remote_delete_request(const cdap_rib::con_handle_t &con,
 	}
 
 	//Invoke
-	rib->remote_delete_request(con, obj, filt, message_id);
+	rib->delete_request(con, obj, filt, message_id);
 }
 
-void RIBDaemon::remote_read_request(const cdap_rib::con_handle_t &con,
+void RIBDaemon::read_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt,
 		int message_id) {
@@ -1270,7 +1280,7 @@ void RIBDaemon::remote_read_request(const cdap_rib::con_handle_t &con,
 		cdap_rib::flags_t flags;
 		res.result_ = -1;
 		try {
-			cdap_provider->remote_read_response(con.port_, obj,
+			cdap_provider->send_read_result(con.port_, obj,
 					flags, res,
 					message_id);
 		} catch (Exception &e) {
@@ -1280,9 +1290,9 @@ void RIBDaemon::remote_read_request(const cdap_rib::con_handle_t &con,
 	}
 
 	//Invoke
-	rib->remote_read_request(con, obj, filt, message_id);
+	rib->read_request(con, obj, filt, message_id);
 }
-void RIBDaemon::remote_cancel_read_request(
+void RIBDaemon::cancel_read_request(
 		const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt, int message_id) {
@@ -1295,7 +1305,7 @@ void RIBDaemon::remote_cancel_read_request(
 		cdap_rib::flags_t flags;
 		res.result_ = -1;
 		try {
-			cdap_provider->remote_cancel_read_response(
+			cdap_provider->send_cancel_read_result(
 					con.port_,
 					flags, res,
 					message_id);
@@ -1306,9 +1316,9 @@ void RIBDaemon::remote_cancel_read_request(
 	}
 
 	//Invoke
-	rib->remote_cancel_read_request(con, obj, filt, message_id);
+	rib->cancel_read_request(con, obj, filt, message_id);
 }
-void RIBDaemon::remote_write_request(const cdap_rib::con_handle_t &con,
+void RIBDaemon::write_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt,
 		int message_id) {
@@ -1321,7 +1331,7 @@ void RIBDaemon::remote_write_request(const cdap_rib::con_handle_t &con,
 		cdap_rib::flags_t flags;
 		res.result_ = -1;
 		try {
-			cdap_provider->remote_write_response(
+			cdap_provider->send_write_result(
 					con.port_,
 					flags, res,
 					message_id);
@@ -1332,9 +1342,9 @@ void RIBDaemon::remote_write_request(const cdap_rib::con_handle_t &con,
 	}
 
 	//Invoke
-	rib->remote_write_request(con, obj, filt, message_id);
+	rib->write_request(con, obj, filt, message_id);
 }
-void RIBDaemon::remote_start_request(const cdap_rib::con_handle_t &con,
+void RIBDaemon::start_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt,
 		int message_id) {
@@ -1347,7 +1357,7 @@ void RIBDaemon::remote_start_request(const cdap_rib::con_handle_t &con,
 		cdap_rib::flags_t flags;
 		res.result_ = -1;
 		try {
-			cdap_provider->remote_start_response(
+			cdap_provider->send_start_result(
 					con.port_, obj,
 					flags, res,
 					message_id);
@@ -1358,9 +1368,9 @@ void RIBDaemon::remote_start_request(const cdap_rib::con_handle_t &con,
 	}
 
 	//Invoke
-	rib->remote_start_request(con, obj, filt, message_id);
+	rib->start_request(con, obj, filt, message_id);
 }
-void RIBDaemon::remote_stop_request(const cdap_rib::con_handle_t &con,
+void RIBDaemon::stop_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt,
 		int message_id) {
@@ -1373,7 +1383,7 @@ void RIBDaemon::remote_stop_request(const cdap_rib::con_handle_t &con,
 		cdap_rib::flags_t flags;
 		res.result_ = -1;
 		try {
-			cdap_provider->remote_stop_response(
+			cdap_provider->send_stop_result(
 					con.port_,
 					flags, res,
 					message_id);
@@ -1384,11 +1394,12 @@ void RIBDaemon::remote_stop_request(const cdap_rib::con_handle_t &con,
 	}
 
 	//Invoke
-	rib->remote_stop_request(con, obj, filt, message_id);
+	rib->stop_request(con, obj, filt, message_id);
 
 }
 
-void RIBDaemon::remote_open_connection(const cdap_rib::vers_info_t &ver,
+#if 0
+void RIBDaemon::open_connection(const cdap_rib::vers_info_t &ver,
 		const cdap_rib::src_info_t &src,
 		const cdap_rib::dest_info_t &dest,
 		const cdap_rib::auth_info &auth,
@@ -1396,6 +1407,7 @@ void RIBDaemon::remote_open_connection(const cdap_rib::vers_info_t &ver,
 	cdap_provider->open_connection(ver, src, dest, auth,
 			port);
 }
+#endif
 
 //
 // Encoder AbstractEncoder and base class
@@ -1420,56 +1432,13 @@ bool AbstractEncoder::operator!=(const AbstractEncoder &other) const {
 		return false;
 }
 
+//RIBObj
 std::string RIBObj::get_displayable_value() {
 
 	return "-";
 }
 
-bool RIBObj::createObject(const std::string& clas,
-		const std::string& name,
-		const void* value) {
-
-	(void) clas;
-	(void) name;
-	(void) value;
-	operation_not_supported();
-	return false;
-}
-
-bool RIBObj::deleteObject(const void* value) {
-
-	(void) value;
-	operation_not_supported();
-	return false;
-}
-
-RIBObj* RIBObj::readObject() {
-
-	return this;
-}
-
-bool RIBObj::writeObject(const void* value) {
-
-	(void) value;
-	operation_not_supported();
-	return false;
-}
-
-bool RIBObj::startObject(const void* object) {
-
-	(void) object;
-	operation_not_supported();
-	return false;
-}
-
-bool RIBObj::stopObject(const void* object) {
-
-	(void) object;
-	operation_not_supported();
-	return false;
-}
-
-cdap_rib::res_info_t* RIBObj::remoteCreate(
+cdap_rib::res_info_t* RIBObj::create(
 		const std::string& name, const std::string clas,
 		const cdap_rib::SerializedObject &obj_req,
 		cdap_rib::SerializedObject &obj_reply) {
@@ -1478,14 +1447,14 @@ cdap_rib::res_info_t* RIBObj::remoteCreate(
 	(void) clas;
 	(void) obj_req;
 	(void) obj_reply;
-	operation_not_supported();
 	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
+	operation_not_supported();
 	// FIXME: change for real opcode
 	res->result_ = -2;
 	return res;
 }
 
-cdap_rib::res_info_t* RIBObj::remoteDelete(const std::string& name) {
+cdap_rib::res_info_t* RIBObj::delete_(const std::string& name) {
 
 	(void) name;
 	operation_not_supported();
@@ -1496,7 +1465,7 @@ cdap_rib::res_info_t* RIBObj::remoteDelete(const std::string& name) {
 }
 
 // FIXME remove name, it is not needed
-cdap_rib::res_info_t* RIBObj::remoteRead(
+cdap_rib::res_info_t* RIBObj::read(
 		const std::string& name,
 		cdap_rib::SerializedObject &obj_reply) {
 
@@ -1509,7 +1478,7 @@ cdap_rib::res_info_t* RIBObj::remoteRead(
 	return res;
 }
 
-cdap_rib::res_info_t* RIBObj::remoteCancelRead(const std::string& name) {
+cdap_rib::res_info_t* RIBObj::cancelRead(const std::string& name) {
 
 	(void) name;
 	operation_not_supported();
@@ -1519,22 +1488,7 @@ cdap_rib::res_info_t* RIBObj::remoteCancelRead(const std::string& name) {
 	return res;
 }
 
-cdap_rib::res_info_t* RIBObj::remoteWrite(
-		const std::string& name,
-		const cdap_rib::SerializedObject &obj_req,
-		cdap_rib::SerializedObject &obj_reply) {
-
-	(void) name;
-	(void) obj_req;
-	(void) obj_reply;
-	operation_not_supported();
-	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
-	// FIXME: change for real opcode
-	res->result_ = -2;
-	return res;
-}
-
-cdap_rib::res_info_t* RIBObj::remoteStart(
+cdap_rib::res_info_t* RIBObj::write(
 		const std::string& name,
 		const cdap_rib::SerializedObject &obj_req,
 		cdap_rib::SerializedObject &obj_reply) {
@@ -1549,7 +1503,22 @@ cdap_rib::res_info_t* RIBObj::remoteStart(
 	return res;
 }
 
-cdap_rib::res_info_t* RIBObj::remoteStop(
+cdap_rib::res_info_t* RIBObj::start(
+		const std::string& name,
+		const cdap_rib::SerializedObject &obj_req,
+		cdap_rib::SerializedObject &obj_reply) {
+
+	(void) name;
+	(void) obj_req;
+	(void) obj_reply;
+	operation_not_supported();
+	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
+	// FIXME: change for real opcode
+	res->result_ = -2;
+	return res;
+}
+
+cdap_rib::res_info_t* RIBObj::stop(
 		const std::string& name,
 		const cdap_rib::SerializedObject &obj_req,
 		cdap_rib::SerializedObject &obj_reply) {

@@ -41,12 +41,12 @@ public:
 	/// A remote Connect request has been received.
 	virtual void connect(int message_id, const cdap_rib::con_handle_t &con) = 0;
 	/// A remote Connect response has been received.
-	virtual void connectResponse(const cdap_rib::res_info_t &res,
+	virtual void connectResult(const cdap_rib::res_info_t &res,
 			const cdap_rib::con_handle_t &con) = 0;
 	/// A remote Release request has been received.
 	virtual void release(int message_id, const cdap_rib::con_handle_t &con) = 0;
 	/// A remote Release response has been received.
-	virtual void releaseResponse(const cdap_rib::res_info_t &res,
+	virtual void releaseResult(const cdap_rib::res_info_t &res,
 			const cdap_rib::con_handle_t &con) = 0;
 };
 
@@ -90,30 +90,30 @@ RIBDaemonProxy* getRIBDProxy(void);
 void fini(void);
 
 //
-// The
+// RIB operations response handlers
 //
 class RIBOpsRespHandlers {
 
 public:
 	virtual ~RIBOpsRespHandlers(){};
 
-	virtual void createResponse(const cdap_rib::res_info_t &res,
+	virtual void remoteCreateResult(const cdap_rib::res_info_t &res,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::con_handle_t &con) = 0;
-	virtual void deleteResponse(const cdap_rib::res_info_t &res,
+	virtual void remoteDeleteResult(const cdap_rib::res_info_t &res,
 			const cdap_rib::con_handle_t &con) = 0;
-	virtual void readResponse(const cdap_rib::res_info_t &res,
+	virtual void remoteReadResult(const cdap_rib::res_info_t &res,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::con_handle_t &con) = 0;
-	virtual void cancelReadResponse(const cdap_rib::res_info_t &res,
+	virtual void remoteCancelReadResult(const cdap_rib::res_info_t &res,
 			const cdap_rib::con_handle_t &con) = 0;
-	virtual void writeResponse(const cdap_rib::res_info_t &res,
+	virtual void remoteWriteResult(const cdap_rib::res_info_t &res,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::con_handle_t &con) = 0;
-	virtual void startResponse(const cdap_rib::res_info_t &res,
+	virtual void remoteStartResult(const cdap_rib::res_info_t &res,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::con_handle_t &con) = 0;
-	virtual void stopResponse(const cdap_rib::res_info_t &res,
+	virtual void remoteStopResult(const cdap_rib::res_info_t &res,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::con_handle_t &con) = 0;
 };
@@ -159,15 +159,6 @@ public:
 	virtual std::string get_displayable_value();
 	// FIXME fix object data displayable
 
-	/// Local invocations
-	virtual bool createObject(const std::string& clas, const std::string& name,
-			const void* value);
-	virtual bool deleteObject(const void* value);
-	virtual RIBObj* readObject();
-	virtual bool writeObject(const void* value);
-	virtual bool startObject(const void* object);
-	virtual bool stopObject(const void* object);
-
 	///
 	/// Remote invocations, resulting from CDAP messages
 	///
@@ -182,7 +173,7 @@ public:
 	///                  Shall only be decoded if size != 0
 	///                  Initialized to size = 0 by default.
 	///
-	virtual cdap_rib::res_info_t* remoteCreate(const std::string& name, const std::string clas,
+	virtual cdap_rib::res_info_t* create(const std::string& name, const std::string clas,
 			const cdap_rib::SerializedObject &obj_req,
 			cdap_rib::SerializedObject &obj_reply);
 	///
@@ -190,7 +181,7 @@ public:
 	///
 	/// @param name FQN of the object
 	///
-	virtual cdap_rib::res_info_t* remoteDelete(const std::string& name);
+	virtual cdap_rib::res_info_t* delete_(const std::string& name);
 
 	///
 	///
@@ -199,7 +190,7 @@ public:
 	/// @param name FQN of the object
 	/// @obj_reply Serialized object to be returned.
 	///
-	virtual cdap_rib::res_info_t* remoteRead(const std::string& name,
+	virtual cdap_rib::res_info_t* read(const std::string& name,
 			cdap_rib::SerializedObject &obj_reply);
 
 	///
@@ -208,7 +199,7 @@ public:
 	///
 	/// @param name FQN of the object
 	///
-	virtual cdap_rib::res_info_t* remoteCancelRead(const std::string& name);
+	virtual cdap_rib::res_info_t* cancelRead(const std::string& name);
 
 	///
 	///
@@ -220,7 +211,7 @@ public:
 	///                  Will only be decoded by the RIB library if size != 0.
 	///                  Initialized to size = 0 by default.
 	///
-	virtual cdap_rib::res_info_t* remoteWrite(const std::string& name,
+	virtual cdap_rib::res_info_t* write(const std::string& name,
 			const cdap_rib::SerializedObject &obj_req,
 			cdap_rib::SerializedObject &obj_reply);
 
@@ -235,7 +226,7 @@ public:
 	///                  Shall only be decoded if size != 0
 	///                  Initialized to size = 0 by default.
 	///
-	virtual cdap_rib::res_info_t* remoteStart(const std::string& name,
+	virtual cdap_rib::res_info_t* start(const std::string& name,
 			const cdap_rib::SerializedObject &obj_req,
 			cdap_rib::SerializedObject &obj_reply);
 
@@ -250,7 +241,7 @@ public:
 	///                  Shall only be decoded if size != 0
 	///                  Initialized to size = 0 by default.
 	///
-	virtual cdap_rib::res_info_t* remoteStop(const std::string& name,
+	virtual cdap_rib::res_info_t* stop(const std::string& name,
 			const cdap_rib::SerializedObject &obj_req,
 			cdap_rib::SerializedObject &obj_reply);
 
