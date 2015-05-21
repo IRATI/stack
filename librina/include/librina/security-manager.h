@@ -192,6 +192,9 @@ public:
 
 	/// DH public key
 	UcharArray dh_public_key;
+	/// DH parameters p and g
+	UcharArray dh_param_p;
+	UcharArray dh_param_g;
 };
 
 ///Captures all data of the SSHRSA security context
@@ -261,7 +264,7 @@ private:
 
 	/// Initialize keys for DH key exchange with own P and G params.
 	/// Returns 0 if successful -1 otherwise.
-	int edh_init_keys(SSH2SecurityContext * sc);
+	int edh_init_keys(SSH2SecurityContext * sc, BIGNUM * p, BIGNUM * g);
 
 	/// Generate the shared secret using the peer's public key.
 	/// Returns 0 if successful, -1 otherwise

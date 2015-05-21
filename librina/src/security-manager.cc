@@ -412,6 +412,24 @@ SSH2AuthOptions * decode_ssh2_auth_options(const SerializedObject &message) {
 		  result->dh_public_key.length = gpb_options.dh_public_key().size();
 	}
 
+	if (gpb_options.has_dh_param_p()) {
+		  result->dh_param_p.array =
+				  new unsigned char[gpb_options.dh_param_p().size()];
+		  memcpy(result->dh_param_p.array,
+			 gpb_options.dh_param_p().data(),
+			 gpb_options.dh_param_p().size());
+		  result->dh_param_p.length = gpb_options.dh_param_p().size();
+	}
+
+	if (gpb_options.has_dh_param_g()) {
+		  result->dh_param_g.array =
+				  new unsigned char[gpb_options.dh_param_g().size()];
+		  memcpy(result->dh_param_p.array,
+			 gpb_options.dh_param_g().data(),
+			 gpb_options.dh_param_g().size());
+		  result->dh_param_g.length = gpb_options.dh_param_g().size();
+	}
+
 	return result;
 }
 
@@ -441,6 +459,16 @@ SerializedObject * encode_ssh2_auth_options(const SSH2AuthOptions& options){
 	if (options.dh_public_key.length > 0) {
 		gpb_options.set_dh_public_key(options.dh_public_key.array,
 					      options.dh_public_key.length);
+	}
+
+	if (options.dh_param_p.length > 0) {
+		gpb_options.set_dh_param_p(options.dh_param_p.array,
+					   options.dh_param_p.length);
+	}
+
+	if (options.dh_param_g.length > 0) {
+		gpb_options.set_dh_param_g(options.dh_param_g.array,
+					   options.dh_param_g.length);
 	}
 
 	int size = gpb_options.ByteSize();
@@ -596,7 +624,7 @@ AuthPolicy AuthSSH2PolicySet::get_auth_policy(int session_id,
 	sc->ttlPolicy = profile.ttlPolicy;
 
 	//Initialize Diffie-Hellman machinery and generate private/public key pairs
-	if (edh_init_keys(sc) != 0) {
+	if (edh_init_keys(sc, NULL, NULL) != 0) {
 		delete sc;
 		throw Exception();
 	}
@@ -608,8 +636,14 @@ AuthPolicy AuthSSH2PolicySet::get_auth_policy(int session_id,
 	options.compress_algs.push_back(sc->compress_alg);
 	options.dh_public_key.array = BN_to_binary(sc->dh_state->pub_key,
 						   &options.dh_public_key.length);
+	options.dh_param_p.array = BN_to_binary(sc->dh_state->p,
+						&options.dh_param_p.length);
+	options.dh_param_g.array = BN_to_binary(sc->dh_state->g,
+						&options.dh_param_g.length);
 
-	if (options.dh_public_key.length <= 0) {
+	if (options.dh_public_key.length <= 0 ||
+			options.dh_param_p.length <= 0 ||
+			options.dh_param_g.length <= 0) {
 		LOG_ERR("Error transforming big number to binary");
 		delete sc;
 		throw Exception();
@@ -632,7 +666,7 @@ AuthPolicy AuthSSH2PolicySet::get_auth_policy(int session_id,
 	return auth_policy;
 }
 
-int AuthSSH2PolicySet::edh_init_keys(SSH2SecurityContext * sc)
+int AuthSSH2PolicySet::edh_init_keys(SSH2SecurityContext * sc, BIGNUM * p, BIGNUM * g)
 {
 	DH *dh_state;
 
@@ -647,9 +681,18 @@ int AuthSSH2PolicySet::edh_init_keys(SSH2SecurityContext * sc)
 		return -1;
 	}
 
-	// Re-use P and G generated before
-	dh_state->p = BN_dup(dh_parameters->p);
-	dh_state->g = BN_dup(dh_parameters->g);
+	// Set P and G (re-use defaults or use the ones sent by the peer)
+	if (!p) {
+		dh_state->p = BN_dup(dh_parameters->p);
+	} else {
+		dh_state->p = p;
+	}
+
+	if (!g) {
+		dh_state->g = BN_dup(dh_parameters->g);
+	} else {
+		dh_state->g = g;
+	}
 
 	// Generate the public and private key pair
 	if (DH_generate_key(dh_state) != 1) {
@@ -730,7 +773,28 @@ rina::IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(cons
 	//TODO check compression algorithm when we use them
 
 	//Initialize Diffie-Hellman machinery and generate private/public key pairs
-	if (edh_init_keys(sc) != 0) {
+	BIGNUM *p = BN_bin2bn(options->dh_param_p.array,
+			      options->dh_param_p.length,
+			      NULL);
+	if (!p) {
+		LOG_ERR("Error converting binary to BIGNUM for parameter p");
+		delete sc;
+		delete options;
+		return rina::IAuthPolicySet::FAILED;
+	}
+
+	BIGNUM *g = BN_bin2bn(options->dh_param_g.array,
+			      options->dh_param_g.length,
+			      NULL);
+	if (!g) {
+		LOG_ERR("Error converting binary to BIGNUM for parameter g");
+		BN_free(p);
+		delete sc;
+		delete options;
+		return rina::IAuthPolicySet::FAILED;
+	}
+
+	if (edh_init_keys(sc, p, g) != 0) {
 		delete sc;
 		delete options;
 		return rina::IAuthPolicySet::FAILED;
