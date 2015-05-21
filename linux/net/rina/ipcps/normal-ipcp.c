@@ -263,8 +263,10 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
         cep_entry->cep_id = cep_id;
 
         spin_lock(&data->lock);
+
         flow = find_flow(data, port_id);
         if (!flow) {
+                spin_unlock(&data->lock);
                 LOG_ERR("Could not retrieve normal flow to create connection");
                 efcp_connection_destroy(data->efcpc, cep_id);
                 return cep_id_bad();
@@ -297,21 +299,14 @@ static int connection_update_request(struct ipcp_instance_data * data,
                 efcp_connection_destroy(data->efcpc, src_cep_id);
                 return -1;
         }
-        ASSERT(user_ipcp->ops);
-        ASSERT(user_ipcp->ops->flow_binding_ipcp);
-        if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
-                                              port_id,
-                                              n1_ipcp)) {
-                LOG_ERR("Cannot bind flow with user ipcp");
-                efcp_connection_destroy(data->efcpc, src_cep_id);
-                return -1;
-        }
-
         if (efcp_connection_update(data->efcpc,
                                    user_ipcp,
                                    src_cep_id,
                                    dst_cep_id))
                 return -1;
+
+        ASSERT(user_ipcp->ops);
+        ASSERT(user_ipcp->ops->flow_binding_ipcp);
 
         spin_lock(&data->lock);
 
@@ -320,12 +315,22 @@ static int connection_update_request(struct ipcp_instance_data * data,
                 spin_unlock(&data->lock);
                 LOG_ERR("The flow with port-id %d is not pending, "
                         "cannot commit it", port_id);
+                efcp_connection_destroy(data->efcpc, src_cep_id);
+                return -1;
+        }
+        if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
+                                              port_id,
+                                              n1_ipcp)) {
+                spin_unlock(&data->lock);
+                LOG_ERR("Cannot bind flow with user ipcp");
+                efcp_connection_destroy(data->efcpc, src_cep_id);
                 return -1;
         }
 
         if (flow->state != PORT_STATE_PENDING) {
                 spin_unlock(&data->lock);
                 LOG_ERR("Flow on port-id %d already committed", port_id);
+                efcp_connection_destroy(data->efcpc, src_cep_id);
                 return -1;
         }
 
