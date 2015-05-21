@@ -489,15 +489,6 @@ connection_create_arrived(struct ipcp_instance_data * data,
         INIT_LIST_HEAD(&cep_entry->list);
         cep_entry->cep_id = cep_id;
 
-        spin_lock(&data->lock);
-        flow = find_flow(data, port_id);
-        if (!flow) {
-                spin_unlock(&data->lock);
-                LOG_ERR("Could not create a flow in normal-ipcp");
-                efcp_connection_destroy(data->efcpc, cep_id);
-                return cep_id_bad();
-        }
-
         ipcp = kipcm_find_ipcp(default_kipcm, data->id);
         if (!ipcp) {
                 LOG_ERR("KIPCM could not retrieve this IPCP");
@@ -507,14 +498,22 @@ connection_create_arrived(struct ipcp_instance_data * data,
 
         ASSERT(user_ipcp->ops);
         ASSERT(user_ipcp->ops->flow_binding_ipcp);
+        spin_lock(&data->lock);
+        flow = find_flow(data, port_id);
+        if (!flow) {
+                spin_unlock(&data->lock);
+                LOG_ERR("Could not create a flow in normal-ipcp");
+                efcp_connection_destroy(data->efcpc, cep_id);
+                return cep_id_bad();
+        }
         if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
                                               conn->port_id,
                                               ipcp)) {
+                spin_unlock(&data->lock);
                 LOG_ERR("Could not bind flow with user_ipcp");
                 efcp_connection_destroy(data->efcpc, cep_id);
                 return cep_id_bad();
         }
-
         list_add(&cep_entry->list, &flow->cep_ids_list);
         flow->active = cep_id;
         flow->state = PORT_STATE_ALLOCATED;
