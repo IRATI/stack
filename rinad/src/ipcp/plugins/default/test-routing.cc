@@ -698,41 +698,42 @@ int test_graph () {
 }
 
 int getRoutingTable_NoFSO_size0() {
+	std::list<rinad::FlowStateObject *> fsos;
+	std::list<rina::RoutingTableEntry *> rtable;
+	rinad::IRoutingAlgorithm * routingAlgorithm;
 	int result = 0;
 
-	rinad::IRoutingAlgorithm * routingAlgorithm =
-			new rinad::DijkstraAlgorithm();
-	std::list<rinad::FlowStateObject *> fsos;
+	routingAlgorithm = new rinad::DijkstraAlgorithm();
 
-	std::list<rina::RoutingTableEntry *> rtable =
-			routingAlgorithm->computeRoutingTable(fsos, 1);
-
+	rtable = routingAlgorithm->computeRoutingTable(rinad::Graph(fsos),
+						       fsos, 1);
 	if (rtable.size() != 0) {
 		result = -1;
 	}
 
 	delete routingAlgorithm;
+
 	return result;
 }
 
 int getRoutingTable_LinearGraphNumberOfEntries_2() {
-	int result = 0;
-
 	std::list<rinad::FlowStateObject *> objects;
 	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
 	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, true, 1, 1);
 	rinad::FlowStateObject fso3 = rinad::FlowStateObject(2, 3, 1, true, 1, 1);
 	rinad::FlowStateObject fso4 = rinad::FlowStateObject(3, 2, 1, true, 1, 1);
+	rinad::IRoutingAlgorithm * routingAlgorithm;
+	std::list<rina::RoutingTableEntry *> rtable;
+	routingAlgorithm = new rinad::DijkstraAlgorithm();
+	int result = 0;
+
 	objects.push_back(&fso1);
 	objects.push_back(&fso2);
 	objects.push_back(&fso3);
 	objects.push_back(&fso4);
-	rinad::IRoutingAlgorithm * routingAlgorithm =
-			new rinad::DijkstraAlgorithm();
 
-	std::list<rina::RoutingTableEntry *> rtable =
-			routingAlgorithm->computeRoutingTable(objects, 1);
-
+	rtable = routingAlgorithm->computeRoutingTable(rinad::Graph(objects),
+						       objects, 1);
 	if (rtable.size() != 2) {
 		result = -1;
 	}
@@ -742,19 +743,20 @@ int getRoutingTable_LinearGraphNumberOfEntries_2() {
 }
 
 int getRoutingTable_StateFalseNoEntries_True() {
-	int result = 0;
-
 	std::list<rinad::FlowStateObject *> objects;
 	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
 	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, false, 1, 1);
+	rinad::IRoutingAlgorithm * routingAlgorithm;
+	std::list<rina::RoutingTableEntry *> rtable;
+	int result = 0;
+
+	routingAlgorithm = new rinad::DijkstraAlgorithm();
+
 	objects.push_back(&fso1);
 	objects.push_back(&fso2);
-	rinad::IRoutingAlgorithm * routingAlgorithm =
-			new rinad::DijkstraAlgorithm();
 
-	std::list<rina::RoutingTableEntry *> rtable =
-			routingAlgorithm->computeRoutingTable(objects, 1);
-
+	rtable = routingAlgorithm->computeRoutingTable(rinad::Graph(objects),
+						       objects, 1);
 	if (rtable.size() != 0) {
 		result = -1;
 	}
@@ -764,8 +766,6 @@ int getRoutingTable_StateFalseNoEntries_True() {
 }
 
 int getRoutingTable_MultiGraphEntries_True() {
-	int result = 0;
-
 	std::list<rinad::FlowStateObject *> objects;
 	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
 	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, true, 1, 1);
@@ -773,18 +773,21 @@ int getRoutingTable_MultiGraphEntries_True() {
 	rinad::FlowStateObject fso4 = rinad::FlowStateObject(3, 1, 1, true, 1, 1);
 	rinad::FlowStateObject fso5 = rinad::FlowStateObject(2, 3, 1, true, 1, 1);
 	rinad::FlowStateObject fso6 = rinad::FlowStateObject(3, 2, 1, true, 1, 1);
+	rinad::IRoutingAlgorithm * routingAlgorithm;
+	std::list<rina::RoutingTableEntry *> rtable;
+	int result = 0;
+
+	routingAlgorithm = new rinad::DijkstraAlgorithm();
+
 	objects.push_back(&fso1);
 	objects.push_back(&fso2);
 	objects.push_back(&fso3);
 	objects.push_back(&fso4);
 	objects.push_back(&fso5);
 	objects.push_back(&fso6);
-	rinad::IRoutingAlgorithm * routingAlgorithm =
-			new rinad::DijkstraAlgorithm();
 
-	std::list<rina::RoutingTableEntry *> rtable =
-			routingAlgorithm->computeRoutingTable(objects, 1);
-
+	rtable = routingAlgorithm->computeRoutingTable(rinad::Graph(objects),
+						       objects, 1);
 	if (rtable.size() != 2) {
 		result = -1;
 	}
