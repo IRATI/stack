@@ -179,6 +179,32 @@ const std::string ApplicationProcessNamingInformation::toString() const{
         return ss.str();
 }
 
+ApplicationProcessNamingInformation
+decode_apnameinfo(const std::string &encodedString)
+{
+        ApplicationProcessNamingInformation ret;
+        std::stringstream ss(encodedString);
+        std::string elem;
+        std::vector<std::string> elems;
+
+        while (std::getline(ss, elem, '-')) {
+                elems.push_back(elem);
+        }
+
+        if (elems.size() < 3) {
+                return ret;
+        }
+
+        ret.processName = elems[0];
+        ret.processInstance = elems[1];
+        ret.entityName = elems[2];
+        if (elems.size() >= 4) {
+                ret.entityInstance = elems[3];
+        }
+
+        return ret;
+}
+
 /* CLASS FLOW SPECIFICATION */
 
 FlowSpecification::FlowSpecification() {
@@ -278,7 +304,7 @@ const std::string FlowInformation::toString(){
         ss<<"Local app name: "<<localAppName.toString()<<std::endl;
         ss<<"Remote app name: "<<remoteAppName.toString()<<std::endl;
         ss<<"DIF name: "<<difName.processName;
-        ss<<"; Port-id: "<<portId<<std::endl;
+        ss<<"; Port-id: "<<portId<<"; State: "<<state<<std::endl;
         ss<<"Flow specification: "<<flowSpecification.toString();
 
         return ss.str();

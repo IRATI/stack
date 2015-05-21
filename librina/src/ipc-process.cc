@@ -46,34 +46,6 @@ AssignToDIFRequestEvent::AssignToDIFRequestEvent(
         AssignToDIFRequestEvent::getDIFInformation() const
 { return difInformation; }
 
-/* CLASS ENROLL TO DIF REQUEST EVENT */
-EnrollToDIFRequestEvent::EnrollToDIFRequestEvent(
-                const ApplicationProcessNamingInformation& difName,
-                const ApplicationProcessNamingInformation& supportingDIFName,
-                const ApplicationProcessNamingInformation& neighborName,
-                unsigned int sequenceNumber):
-                IPCEvent(ENROLL_TO_DIF_REQUEST_EVENT, sequenceNumber)
-{
-        this->difName           = difName;
-        this->supportingDIFName = supportingDIFName;
-        this->neighborName      = neighborName;
-}
-
-const ApplicationProcessNamingInformation&
-EnrollToDIFRequestEvent::getDifName() const {
-        return difName;
-}
-
-const ApplicationProcessNamingInformation&
-EnrollToDIFRequestEvent::getNeighborName() const {
-        return neighborName;
-}
-
-const ApplicationProcessNamingInformation&
-EnrollToDIFRequestEvent::getSupportingDifName() const {
-        return supportingDIFName;
-}
-
 /* CLASS UPDATE DIF CONFIGURATION REQUEST EVENT */
 const DIFConfiguration&
 UpdateDIFConfigurationRequestEvent::getDIFConfiguration() const
@@ -312,9 +284,9 @@ void ExtendedIPCManager::setIPCManagerPort(
 
 void ExtendedIPCManager::notifyIPCProcessInitialized(
                 const ApplicationProcessNamingInformation& name) {
-        lock();
+	ScopedLock slock(lock);
+
         if (ipcProcessInitialized) {
-                unlock();
                 throw IPCException("IPC Process already initialized");
         }
 
@@ -332,15 +304,14 @@ void ExtendedIPCManager::notifyIPCProcessInitialized(
         try {
                 rinaManager->sendMessage(&message, false);
         } catch(NetlinkException &e) {
-                unlock();
                 throw IPCException(e.what());
         }
 #endif
         ipcProcessInitialized = true;
-        unlock();
 }
 
-bool ExtendedIPCManager::isIPCProcessInitialized() const {
+bool ExtendedIPCManager::isIPCProcessInitialized() const
+{
         return ipcProcessInitialized;
 }
 
@@ -349,7 +320,7 @@ ApplicationRegistration * ExtendedIPCManager::appRegistered(
                         const ApplicationProcessNamingInformation& DIFName) {
         ApplicationRegistration * applicationRegistration;
 
-        lock();
+        ScopedLock slock(lock);
 
         applicationRegistration = getApplicationRegistration(
                         appName);
@@ -362,7 +333,6 @@ ApplicationRegistration * ExtendedIPCManager::appRegistered(
         }
 
         applicationRegistration->addDIFName(DIFName);
-        unlock();
 
         return applicationRegistration;
 }
@@ -370,11 +340,11 @@ ApplicationRegistration * ExtendedIPCManager::appRegistered(
 void ExtendedIPCManager::appUnregistered(
                 const ApplicationProcessNamingInformation& appName,
                 const ApplicationProcessNamingInformation& DIFName) {
-        lock();
+	ScopedLock slock(lock);
+
         ApplicationRegistration * applicationRegistration =
                         getApplicationRegistration(appName);
         if (!applicationRegistration) {
-                unlock();
                 throw ApplicationUnregistrationException(
                                 IPCManager::application_not_registered_error.c_str());
         }
@@ -392,8 +362,6 @@ void ExtendedIPCManager::appUnregistered(
                         break;
                 }
         }
-
-        unlock();
 }
 
 void ExtendedIPCManager::assignToDIFResponse(
@@ -418,7 +386,7 @@ void ExtendedIPCManager::assignToDIFResponse(
 #endif
 }
 
-void ExtendedIPCManager::enrollToDIFResponse(const EnrollToDIFRequestEvent& event,
+void ExtendedIPCManager::enrollToDIFResponse(const EnrollToDAFRequestEvent& event,
                         int result, const std::list<Neighbor> & newNeighbors,
                         const DIFInformation& difInformation) {
 #if STUB_API
@@ -564,7 +532,7 @@ unsigned int ExtendedIPCManager::requestFlowAllocationInDIF(
                         remoteAppName, difName, ipcProcessId, flowSpec);
 }
 
-Flow * ExtendedIPCManager::allocateFlowResponse(
+FlowInformation ExtendedIPCManager::allocateFlowResponse(
                 const FlowRequestEvent& flowRequestEvent, int result,
                 bool notifySource) {
         return internalAllocateFlowResponse(flowRequestEvent,

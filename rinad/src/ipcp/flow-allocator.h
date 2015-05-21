@@ -76,7 +76,7 @@ public:
 	/// @param requestMessate the CDAP request message
 	/// @param underlyingPortId the port id to reply later on
 	virtual void createFlowRequestMessageReceived(Flow * flow, const std::string& object_name,
-			int invoke_id, int underlyingPortId) = 0;
+			int invoke_id) = 0;
 
 	/// When the FAI gets a Allocate_Response from the destination application,
 	/// it formulates a Create_Response on the flow object requested.If the
@@ -180,12 +180,8 @@ public:
 	IFlowAllocatorInstance * getFAI(int portId);
 	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
-        int select_policy_set(const std::string& path, const std::string& name);
-        int set_policy_set_param(const std::string& path,
-                                 const std::string& name,
-                                 const std::string& value);
 	void createFlowRequestMessageReceived(Flow * flow, const std::string& object_name,
-			int invoke_id, int underlying_port_id);
+			int invoke_id);
 	void submitAllocateRequest(rina::FlowRequestEvent& flowRequestEvent);
 	void processCreateConnectionResponseEvent(
 			const rina::CreateConnectionResponseEvent& event);
@@ -249,7 +245,7 @@ public:
 	void processCreateConnectionResponseEvent(
 			const rina::CreateConnectionResponseEvent& event);
 	void createFlowRequestMessageReceived(Flow * flow, const std::string& object_name,
-			int invoke_id, int underlyingPortId);
+			int invoke_id);
 	void processCreateConnectionResultEvent(
 			const rina::CreateConnectionResultEvent& event);
 	void submitAllocateResponse(const rina::AllocateFlowResponseEvent& event);
@@ -291,7 +287,7 @@ private:
 	rina::IMasterEncoder * encoder_;
 	IPCPRIBDaemon * rib_daemon_;
 	INamespaceManager * namespace_manager_;
-	ISecurityManager * security_manager_;
+	IPCPSecurityManager * security_manager_;
 	FAIState state;
 
 	rina::Timer timer;
@@ -310,7 +306,6 @@ private:
 
 	unsigned int allocate_response_message_handle_;
 	int invoke_id_;
-	int underlying_port_id_;
 	rina::Lockable * lock_;
 	rina::Timer * timer_;
 };

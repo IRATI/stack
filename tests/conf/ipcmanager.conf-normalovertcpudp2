@@ -40,95 +40,12 @@
     ],
     "difConfigurations": [
 	{
-             "difName" : "shim.DIF",
-             "difType" : "shim-tcp-udp",
-             "configParameters" : {
-               "hostname" : "10.1.1.3",
-               "dirEntry" : "2:11:test2.IRATI0:8:10.1.1.34:242711:test1.IRATI0:8:10.1.1.24:2426",
-               "expReg"   : "1:11:test2.IRATI0:4:2427"
-             }
+             "name" : "shim.DIF",
+             "template" : "shim-tcp-udp.dif"
         },
         {
-            "difName": "normal.DIF",
-            "difType": "normal-ipc",
-            "dataTransferConstants": {
-                "addressLength": 2,
-                "cepIdLength": 2,
-                "lengthLength": 2,
-                "portIdLength": 2,
-                "qosIdLength": 2,
-                "sequenceNumberLength": 4,
-                "maxPduSize": 10000,
-                "maxPduLifetime": 60000
-            },
-            "configParameters": {
-                "bar": "foo"
-            },
-            "qosCubes": [
-                {
-                    "name": "reliable",
-                    "id": 1,
-                    "partialDelivery": false,
-                    "orderedDelivery": true
-                },
-                {
-                    "name": "unreliable",
-                    "id": 2,
-                    "partialDelivery": true,
-                    "orderedDelivery": false
-                }
-            ],
-            "knownIPCProcessAddresses": [
-                {
-                    "apName": "test1.IRATI",
-                    "apInstance": "1",
-                    "address": 16
-                },
-                {
-                    "apName": "test2.IRATI",
-                    "apInstance": "1",
-                    "address": 17
-                }
-            ],
-            "addressPrefixes": [
-                {
-                    "addressPrefix": 0,
-                    "organization": "N.Bourbaki"
-                },
-                {
-                    "addressPrefix": 16,
-                    "organization": "IRATI"
-                }
-            ],
-            "pdufTableGeneratorConfiguration": {
-                "pduFtGeneratorPolicy": {
-                    "name": "LinkState",
-                    "version": "0"
-                },
-                "linkStateRoutingConfiguration": {
-                    "objectMaximumAge": 10000,
-                    "waitUntilReadCDAP": 5001,
-                    "waitUntilError": 5001,
-                    "waitUntilPDUFTComputation": 103,
-                    "waitUntilFSODBPropagation": 101,
-                    "waitUntilAgeIncrement": 997,
-                    "routingAlgorithm": "Dijkstra"
-                }
-            },
-     		"enrollmentTaskConfiguration" : {
-       		    "enrollTimeoutInMs" : 10000,
-        		"watchdogPeriodInMs" : 30000,
-        		"declaredDeadIntervalInMs" : 120000,
-        		"neighborsEnrollerPeriodInMs" : 30000,
-        		"maxEnrollmentRetries" : 3
-     		},
-            "policySets" : {
-                "security-manager" : "default",
-                "flow-allocator" : "default",
-                "namespace-manager" : "default",
-                "routing" : "link-state",
-                "resource-allocator" : "default"
-            }
+            "name": "normal.DIF",
+            "template": "default.dif"
         }
     ]
 }

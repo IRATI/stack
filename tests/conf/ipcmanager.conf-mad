@@ -1,0 +1,49 @@
+{
+    "localConfiguration": {
+        "installationPath": "/usr/local/irati/bin",
+        "libraryPath": "/usr/local/irati/lib",
+        "logPath": "/usr/local/irati/var/log",
+        "consolePort": 32766
+    },
+    "applicationToDIFMappings": [
+        {
+            "encodedAppName": "rina.apps.echotime.server-1--",
+            "difName": "normal.DIF"
+        },
+        {
+            "encodedAppName": "rina.apps.echotime.client-1--",
+            "difName": "normal.DIF"
+        }
+    ],
+    "ipcProcessesToCreate": [
+        {
+            "apName": "normal-1.IPCP",
+            "apInstance": "1",
+            "difName": "normal.DIF",
+            "difsToRegisterAt": [
+            ]
+        }
+    ],
+    "difConfigurations": [
+        {
+            "name": "normal.DIF",
+            "template": "default.dif"
+        }
+    ],
+    "addons" : {
+        "mad" : {
+            "managerAppName" : "rina.apps.mad-1--",
+            "NMSDIFs" : [
+                {
+                    "DIF": "normal.DIF"
+                }
+            ],
+            "managerConnections" : [
+                {
+                    "managerAppName" : "rina.apps.manager-1--",
+                    "DIF" : "normal.DIF"
+                }
+            ]
+        }
+    }
+}

@@ -1,7 +1,8 @@
 /*
- * IPC Manager console
+ * Scripting engine
  *
  *    Vincenzo Maffione     <v.maffione@nextworks.it>
+ *    Marc Sune             <marc.sune (at) bisdn.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,21 +23,22 @@
 #define __IPCM_SCRIPTING_H__
 
 #include <cstdlib>
-#include <iostream>
 #include <map>
 #include <vector>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <cstring>
-#include <cerrno>
-#include <sstream>
+
+#include "../addon.h"
 
 namespace rinad {
 
-//TODO: use addon class
-void * script_function(void *opaque);
 
-}
+class ScriptingEngine : public Addon{
+
+public:
+	ScriptingEngine(void);
+	virtual ~ScriptingEngine(void);
+	static const std::string NAME;
+};
+
+} //namespace rinad
+
 #endif  /* __IPCM_SCRIPTING_H__ */

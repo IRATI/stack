@@ -2,6 +2,8 @@
  * IPC Manager
  *
  *    Vincenzo Maffione <v.maffione@nextworks.it>
+ *    Eduard Grasa          <eduard.grasa@i2cat.net>
+ *    Marc Sune         <marc.sune (at) bisdn.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,7 +34,7 @@
 #include <librina/ipc-manager.h>
 #include <librina/patterns.h>
 
-#include "rina-configuration.h"
+#include "dif-template-manager.h"
 
 //Addons
 #include "addon.h"
@@ -43,17 +45,8 @@
 
 //Constants
 #define PROMISE_TIMEOUT_S 5
-#define PROMISE_RETRY_NSEC 10000000 //1ms
+#define PROMISE_RETRY_NSEC 10000000 //10ms
 #define _PROMISE_1_SEC_NSEC 1000000000
-
-#ifndef FLUSH_LOG
-	//Force log flushing
-	#define FLUSH_LOG(_lev_, _ss_)\
-			do{\
-				LOGF_##_lev_ ("%s", (_ss_).str().c_str());\
-				ss.str(string());\
-			}while (0)
-#endif //FLUSH_LOG
 
 namespace rinad {
 
@@ -148,7 +141,7 @@ public:
 class TransactionState {
 
 public:
-	TransactionState(Promise* promise);
+	TransactionState(Addon* addon, Promise* promise);
 	virtual ~TransactionState(){};
 
 	//
@@ -189,6 +182,9 @@ public:
 	//Transaction id
 	const int tid;
 
+	//Callee that generated the transaction
+	Addon* callee;
+
 protected:
 	//Protect abort call
 	friend class Promise;
@@ -215,9 +211,10 @@ protected:
 	//
 	// Constructor only used
 	//
-	TransactionState(Promise* promise_, const int tid_):
+	TransactionState(Addon* callee_, Promise* promise_, const int tid_):
 							promise(promise_),
 							tid(tid_),
+							callee(callee_),
 							finalised(false){
 		if(promise){
 			promise->ret = IPCM_PENDING;
@@ -237,8 +234,8 @@ protected:
 //
 class SyscallTransState : public TransactionState {
 public:
-	SyscallTransState(Promise* promise_, const int tid_) :
-					TransactionState(promise_, tid_){};
+	SyscallTransState(Addon* callee, Promise* promise_, const int tid_) :
+				TransactionState(callee, promise_, tid_){};
 	virtual ~SyscallTransState(){};
 };
 
@@ -252,17 +249,13 @@ public:
 	//
 	// Initialize the IPCManager
 	//
-	void init(unsigned int wait_time, const std::string& loglevel);
+	void init(const std::string& loglevel, std::string& config_file);
 
 	//
-	// Start the script worker thread
+	// Load the specified addons
 	//
-	ipcm_res_t start_script_worker();
-
-	//
-	// Start the console worker thread
-	//
-	ipcm_res_t start_console_worker();
+	// @param addons Comma separated list of addons
+	void load_addons(const std::string& addon_list);
 
 	//
 	// TODO: XXX?????
@@ -272,9 +265,21 @@ public:
 
 	//
 	// List the existing IPCPs in the system
+	// TODO: deprecate this console only stuff
 	//
 	void list_ipcps(std::ostream& os);
 
+	//
+	// Get the list of IPCPs in the system (IPCP id)
+	//
+	// @param list The list will be filled here
+	//
+	void list_ipcps(std::list<int>& list);
+
+	//
+	// Get the IPCP name
+	//
+	std::string get_ipcp_name(int ipcp_id);
 
 	//
 	// Get the IPCP ID given a difName
@@ -312,7 +317,7 @@ public:
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	//
-	ipcm_res_t create_ipcp(CreateIPCPPromise* promise,
+	ipcm_res_t create_ipcp(Addon* callee, CreateIPCPPromise* promise,
 			const rina::ApplicationProcessNamingInformation& name,
 			const std::string& type);
 
@@ -323,7 +328,7 @@ public:
 	//
 	// @ret IPCM_SUCCESS on success IPCM_FAILURE
 	//
-	ipcm_res_t destroy_ipcp(const unsigned short ipcp_id);
+	ipcm_res_t destroy_ipcp(Addon* callee, const unsigned short ipcp_id);
 
 	//
 	// Assing an ipcp to a DIF
@@ -335,9 +340,11 @@ public:
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	//
-	ipcm_res_t assign_to_dif(Promise* promise, const unsigned short ipcp_id,
-			  const rina::ApplicationProcessNamingInformation&
-			  difName);
+	ipcm_res_t assign_to_dif(Addon* callee, Promise* promise,
+			const unsigned short ipcp_id,
+			rinad::DIFTemplate * dif_template,
+			const rina::ApplicationProcessNamingInformation&
+				difName);
 
 	//
 	// Register an IPCP to a single DIF
@@ -348,8 +355,9 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t register_at_dif(Promise* promise, const unsigned short ipcp_id,
-			    const rina::ApplicationProcessNamingInformation&
+	ipcm_res_t register_at_dif(Addon* callee, Promise* promise,
+			const unsigned short ipcp_id,
+			const rina::ApplicationProcessNamingInformation&
 			    difName);
 
 	//
@@ -361,8 +369,9 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t enroll_to_dif(Promise* promise, const unsigned short ipcp_id,
-			  const rinad::NeighborData& neighbor);
+	ipcm_res_t enroll_to_dif(Addon* callee, Promise* promise,
+			const unsigned short ipcp_id,
+			const rinad::NeighborData& neighbor);
 
 	//
 	// Unregister app from an ipcp
@@ -373,7 +382,8 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t unregister_app_from_ipcp(Promise* promise,
+	ipcm_res_t unregister_app_from_ipcp(Addon* callee,
+		Promise* promise,
 		const rina::ApplicationUnregistrationRequestEvent& req_event,
 		const unsigned short slave_ipcp_id);
 
@@ -386,9 +396,9 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t unregister_ipcp_from_ipcp(Promise* promise,
+	ipcm_res_t unregister_ipcp_from_ipcp(Addon* callee, Promise* promise,
 						const unsigned short ipcp_id,
-						const unsigned short slave_ipcp_id);
+						const rina::ApplicationProcessNamingInformation& dif_name);
 	//
 	// Update the DIF configuration
 	//TODO: What is really this for?
@@ -399,7 +409,7 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t update_dif_configuration(Promise* promise,
+	ipcm_res_t update_dif_configuration(Addon* callee, Promise* promise,
 				const unsigned short ipcp_id,
 				const rina::DIFConfiguration& dif_config);
 
@@ -412,7 +422,8 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t query_rib(QueryRIBPromise* promise, const unsigned short ipcp_id);
+	ipcm_res_t query_rib(Addon* callee, QueryRIBPromise* promise,
+						const unsigned short ipcp_id);
 
 	//
 	// Select a policy set
@@ -423,7 +434,8 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t select_policy_set(Promise* promise, const unsigned short ipcp_id,
+	ipcm_res_t select_policy_set(Addon* callee, Promise* promise,
+					const unsigned short ipcp_id,
 					const std::string& component_path,
 					const std::string& policy_set);
 	//
@@ -435,7 +447,8 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t set_policy_set_param(Promise* promise, const unsigned short ipcp_id,
+	ipcm_res_t set_policy_set_param(Addon* callee, Promise* promise,
+						const unsigned short ipcp_id,
 						const std::string& path,
 						const std::string& name,
 						const std::string& value);
@@ -448,7 +461,8 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t plugin_load(Promise* promise, const unsigned short ipcp_id,
+	ipcm_res_t plugin_load(Addon* callee, Promise* promise,
+						const unsigned short ipcp_id,
 						const std::string& plugin_name,
 						bool load);
 
@@ -475,6 +489,10 @@ public:
 		config = newConf;
 	}
 
+	rinad::RINAConfiguration& getConfig() {
+		return config;
+	}
+
 	//
 	// Dump the current configuration
 	// TODO return ostream or overload << operator instead
@@ -492,7 +510,7 @@ public:
 	// Stop I/O loop
 	//
 	inline void stop(void){
-		keep_running = false;
+		req_to_stop = true;
 	}
 
 protected:
@@ -557,6 +575,10 @@ protected:
 	*/
 	IPCMIPCProcess* lookup_ipcp_by_id(const unsigned short id,
 							bool write_lock=false);
+
+	/// True if there is an IPCP assigned to the DIF, false otherwise
+	bool is_any_ipcp_assigned_to_dif(const rina::ApplicationProcessNamingInformation& dif_name);
+
 	//
 	// Internal event API
 	//
@@ -601,9 +623,9 @@ protected:
 		const rina::ApplicationRegistrationRequestEvent& req_event);
 
 	//IPCP mgmt
-	int ipcm_register_response_ipcp(
+	void ipcm_register_response_ipcp(IPCMIPCProcess * ipcp,
 		rina::IpcmRegisterApplicationResponseEvent *event);
-	int ipcm_unregister_response_ipcp(
+	void ipcm_unregister_response_ipcp(IPCMIPCProcess * ipcp,
 				rina::IpcmUnregisterApplicationResponseEvent *event,
 				TransactionState *trans);
 
@@ -744,32 +766,45 @@ protected:
 	//Rwlock for transactions
 	rina::ReadWriteLockable trans_rwlock;
 
-	// RINA configuration internal state
-	rinad::RINAConfiguration config;
-
-	//Script thread
-	rina::Thread *script;
-
-	//IPCM Console instance
-	IPCMConsole *console;
-
-	//TODO: map of addons
-
 	//Current logging level
 	std::string log_level_;
 
 	//Keep running flag
 	volatile bool keep_running;
 
+	//Flag to indicate we have been requested to stop
+	volatile bool req_to_stop;
+
+	//IPCM factory
 	IPCMIPCProcessFactory ipcp_factory_;
+
+	// RINA configuration internal state
+	rinad::RINAConfiguration config;
 
 public:
 	//Generator of opaque identifiers
 	rina::ConsecutiveUnsignedIntegerGenerator __tid_gen;
+
+	//The DIF template manager
+	DIFTemplateManager * dif_template_manager;
 private:
 	//Singleton
 	IPCManager_();
 	virtual ~IPCManager_();
+
+	//I/O loop main thread
+	rina::Thread* io_thread;
+	rina::ThreadAttributes io_thread_attrs;
+
+	//Stop condition
+	rina::ConditionVariable stop_cond;
+
+	//Trampoline for the pthread_create
+	static void* io_loop_trampoline(void* param);
+
+	//Main I/O loop thread
+	void io_loop(void);
+
 	friend class Singleton<rinad::IPCManager_>;
 };
 

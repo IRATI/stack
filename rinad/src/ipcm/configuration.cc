@@ -31,8 +31,6 @@
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
 #include <librina/logs.h>
-
-#include "rina-configuration.h"
 #include <librina/json/json.h>
 #include "ipcm.h"
 
@@ -307,423 +305,7 @@ void parse_efcp_policies(const Json::Value  root,
         }
 }
 
-void parse_dif_configs(const Json::Value   & root,
-                       list<DIFProperties> & difConfigurations)
-{
-        Json::Value dif_configs = root["difConfigurations"];
 
-        for (unsigned int i = 0; i < dif_configs.size(); i++) {
-                rinad::DIFProperties props;
-
-                props.difName =
-                        rina::ApplicationProcessNamingInformation
-                        (dif_configs[i].get("difName", string()).asString(),
-                         string());
-
-                props.difType = dif_configs[i].get("difType", string())
-                        .asString();
-
-                // Data transfer constants
-                Json::Value dt_const =
-                        dif_configs[i]["dataTransferConstants"];
-                if (dt_const != 0) {
-                        rina::DataTransferConstants dt;
-
-                        // There is no asShort()
-                        dt.address_length_ =
-                                static_cast<unsigned short>
-                                (dt_const
-                                 .get("addressLength", 0)
-                                 .asUInt());
-                        dt.cep_id_length_ = static_cast<unsigned short>
-                                (dt_const
-                                 .get("cepIdLength", 0)
-                                 .asUInt());
-                        dt.dif_integrity_ = dt_const
-                                .get("difIntegrity", false)
-                                .asBool();
-                        dt.length_length_ = static_cast<unsigned short>
-                                (dt_const
-                                 .get("lengthLength", 0)
-                                 .asUInt());
-                        dt.max_pdu_lifetime_ = dt_const
-                                .get("maxPduLifetime", 0)
-                                .asUInt();
-                        dt.max_pdu_size_ = dt_const
-                                .get("maxPduSize", 0)
-                                .asUInt();
-                        dt.port_id_length_ =
-                                static_cast<unsigned short>
-                                (dt_const
-                                 .get("portIdLength", 0)
-                                 .asUInt());
-                        dt.qos_id_length_ = static_cast<unsigned short>
-                                (dt_const
-                                 .get("qosIdLength", 0)
-                                 .asUInt());
-                        dt.sequence_number_length_ =
-                                static_cast<unsigned short>
-                                (dt_const
-                                 .get("sequenceNumberLength", 0)
-                                 .asUInt());
-                        props.dataTransferConstants = dt;
-
-                        // QoS cubes
-                        Json::Value cubes = dif_configs[i]["qosCubes"];
-                        for (unsigned int j = 0; j < cubes.size(); j++) {
-                                // FIXME: Probably should have good default
-                                //        values. Check default constructor
-                                rina::QoSCube cube;
-
-                                cube.id_   = cubes[j].get("id", 0)
-                                        .asUInt();
-                                cube.name_ = cubes[j].get("name", string())
-                                        .asString();
-
-                                parse_efcp_policies(cubes[j], cube);
-
-                                cube.average_bandwidth_ =
-                                        cubes[j].get("averageBandwidth",
-                                                     cube.average_bandwidth_)
-                                        .asUInt();
-                                cube.average_sdu_bandwidth_ =
-                                        cubes[j].get("averageSduBandwidth",
-                                                     cube.average_sdu_bandwidth_)
-                                        .asUInt();
-                                cube.peak_bandwidth_duration_ =
-                                        cubes[j].get("peakBandwidthDuration",
-                                                     cube.peak_bandwidth_duration_)
-                                        .asUInt();
-                                cube.peak_sdu_bandwidth_duration_ =
-                                        cubes[j].get("peakSduBandwidthDuration",
-                                                     cube.peak_sdu_bandwidth_duration_)
-                                        .asUInt();
-                                cube.undetected_bit_error_rate_ =
-                                        cubes[j].get("undetectedBitErrorRate",
-                                                     cube.undetected_bit_error_rate_)
-                                        .asDouble();
-                                cube.partial_delivery_ =
-                                        cubes[j].get("partialDelivery",
-                                                     cube.partial_delivery_)
-                                        .asBool();
-                                cube.ordered_delivery_ =
-                                        cubes[j].get("orderedDelivery",
-                                                     cube.ordered_delivery_)
-                                        .asBool();
-                                cube.max_allowable_gap_ =
-                                        cubes[j].get("maxAllowableGap",
-                                                     cube.max_allowable_gap_)
-                                        .asInt();
-                                cube.delay_ = cubes[j].get("delay", cube.delay_)
-                                        .asUInt();
-                                cube.jitter_ = cubes[j].get("jitter", cube.jitter_)
-                                        .asUInt();
-
-                                props.qosCubes.push_back(cube);
-                        }
-
-                        // rmtConfiguration;
-                        Json::Value rmt_conf =
-                                dif_configs[i]["rmtConfiguration"];
-                        if (rmt_conf != 0) {
-                                rina::RMTConfiguration rc;
-
-                                parse_policy(rmt_conf,
-                                             "rmtQueueMonitorPolicy",
-                                             rc.rmt_queue_monitor_policy_);
-
-                                parse_policy(rmt_conf,
-                                             "rmtSchedulingPolicy",
-                                             rc.rmt_scheduling_policy_);
-
-                                parse_policy(rmt_conf,
-                                             "maxQueuePolicy",
-                                             rc.max_queue_policy_);
-
-                                props.rmtConfiguration = rc;
-                        }
-
-                        // std::map<std::string, std::string> policy_sets
-                        Json::Value policy_sets = dif_configs[i]["policySets"];
-                        if (policy_sets != 0) {
-                                Json::Value::Members members =
-                                        policy_sets.getMemberNames();
-                                for (unsigned int j = 0;
-                                     j < members.size();
-                                     j++) {
-                                        string value =
-                                                policy_sets.get(members[j],
-                                                             string())
-                                                .asString();
-                                        props.policySets.insert
-                                                (pair<string, string>
-                                                 (members[j], value));
-                                }
-                        }
-
-                        // std::map<std::string, std::string> policyParameters
-                        Json::Value policy_set_params =
-                                dif_configs[i]["policyParameters"];
-                        if (policy_set_params != 0) {
-                                Json::Value::Members members =
-                                        policy_set_params.getMemberNames();
-                                for (unsigned int j = 0;
-                                     j < members.size();
-                                     j++) {
-                                        string value = policy_set_params
-							.get(members[j],
-                                                        string()).asString();
-                                        props.policySetParameters.insert
-                                                (pair<string, string>
-                                                 (members[j], value));
-                                }
-                        }
-
-                        // NMinusOneFlowsConfiguration
-                        //       nMinusOneFlowsConfiguration;
-                        Json::Value flow_conf =
-                                dif_configs[i]["nMinusOneFlowsConfiguration"];
-                        if (flow_conf != 0) {
-                                rinad::NMinusOneFlowsConfiguration fc;
-
-                                fc.managementFlowQoSId =
-                                        flow_conf.get("managementFlowQosId",
-                                                      fc.managementFlowQoSId)
-                                        .asInt();
-
-                                Json::Value data_flow =
-                                        flow_conf["dataFlowsQosIds"];
-                                for (unsigned int j = 0;
-                                     j < data_flow.size();
-                                     j++) {
-                                        fc.dataFlowsQoSIds.push_back
-                                                (data_flow[j].asInt());
-                                }
-
-                                props.nMinusOneFlowsConfiguration = fc;
-                        }
-
-                        // std::list<ExpectedApplicationRegistration>
-                        // expectedApplicationRegistrations;
-                        Json::Value exp_app =
-                                dif_configs[i]["expectedApplicationRegistrations"];
-                        if (exp_app != 0) {
-                                for (unsigned int j = 0;
-                                     j < exp_app.size();
-                                     j++) {
-                                        rinad::ExpectedApplicationRegistration exp;
-
-                                        exp.applicationProcessName =
-                                                exp_app[j]
-                                                .get("apName", string())
-                                                .asString();
-
-                                        exp.applicationProcessInstance =
-                                                exp_app[j]
-                                                .get("apInstance", string())
-                                                .asString();
-
-                                        exp.applicationEntityName =
-                                                exp_app[j]
-                                                .get("aeName", string())
-                                                .asString();
-
-                                        exp.socketPortNumber =
-                                                exp_app[j]
-                                                .get("socketPortNumber",
-                                                     exp.socketPortNumber)
-                                                .asInt();
-
-                                        props.expectedApplicationRegistrations
-                                                .push_back(exp);
-                                }
-                        }
-
-                        // std::list<DirectoryEntry> directory;
-                        Json::Value dir = dif_configs[i]["directory"];
-                        if (dir != 0) {
-                                for (unsigned int j = 0; j < dir.size(); j++) {
-                                        rinad::DirectoryEntry de;
-
-                                        de.applicationProcessName =
-                                                dir[j].get("apName",
-                                                           string())
-                                                .asString();
-
-                                        de.applicationProcessInstance =
-                                                dir[j].get("apInstance",
-                                                           string())
-                                                .asString();
-
-                                        de.applicationEntityName =
-                                                dir[j].get("aeName",
-                                                           string())
-                                                .asString();
-
-                                        de.hostname =
-                                                dir[j].get("hostname",
-                                                           string())
-                                                .asString();
-
-                                        de.socketPortNumber =
-                                                dir[j].get("socketPortNumber",
-                                                           de.socketPortNumber)
-                                                .asInt();
-
-                                        props.directory.push_back(de);
-                                }
-                        }
-
-                        // std::list<KnownIPCProcessAddress>
-                        // knownIPCProcessAddresses;
-                        Json::Value known =
-                                dif_configs[i]["knownIPCProcessAddresses"];
-                        if (known != 0) {
-                                for (unsigned int j = 0;
-                                     j < known.size();
-                                     j++) {
-                                        rinad::KnownIPCProcessAddress kn;
-
-                                        parse_name(known[j], kn.name);
-
-                                        kn.address = known[j]
-                                                .get("address", kn.address)
-                                                .asUInt();
-
-                                        props.knownIPCProcessAddresses
-                                                .push_back(kn);
-                                }
-                        }
-
-                        // rina::PDUFTableGeneratorConfiguration
-                        // pdufTableGeneratorConfiguration;
-                        Json::Value pft =
-                                dif_configs[i]["pdufTableGeneratorConfiguration"];
-                        if (pft != 0) {
-                                rina::PDUFTableGeneratorConfiguration pf;
-
-                                parse_policy(pft, "pduFtGeneratorPolicy",
-                                             pf.pduft_generator_policy_);
-
-                                Json::Value lsr_config = pft["linkStateRoutingConfiguration"];
-
-                                rina::LinkStateRoutingConfiguration lsr;
-
-                                lsr.object_maximum_age_ =
-                                        lsr_config.get("objectMaximumAge",
-                                                       lsr.object_maximum_age_)
-                                        .asInt();
-
-                                lsr.wait_until_read_cdap_ =
-                                        lsr_config.get("waitUntilReadCdap",
-                                                       lsr.wait_until_read_cdap_)
-                                        .asInt();
-
-                                lsr.wait_until_error_ =
-                                        lsr_config.get("waitUntilError",
-                                                       lsr.wait_until_error_)
-                                        .asInt();
-
-                                lsr.wait_until_pduft_computation_ =
-                                        lsr_config.get("waitUntilPduftComputation",
-                                                       lsr.wait_until_pduft_computation_)
-                                        .asInt();
-
-                                lsr.wait_until_fsodb_propagation_ =
-                                        lsr_config.get("waitUntilFsodbPropagation",
-                                                       lsr.wait_until_fsodb_propagation_)
-                                        .asInt();
-
-                                lsr.wait_until_age_increment_ =
-                                        lsr_config.get("waitUntilAgeIncrement",
-                                                       lsr.wait_until_age_increment_)
-                                        .asInt();
-
-                                lsr.routing_algorithm_ =
-                                        lsr_config.get("routingAlgorithm",
-                                                       string())
-                                        .asString();
-
-                                pf.link_state_routing_configuration_  = lsr;
-                                props.pdufTableGeneratorConfiguration = pf;
-                        }
-
-                        // std::list<AddressPrefixConfiguration> addressPrefixes;
-                        Json::Value addrp = dif_configs[i]["addressPrefixes"];
-                        if (addrp != 0) {
-                                for (unsigned int j = 0;
-                                     j < addrp.size();
-                                     j++) {
-                                        AddressPrefixConfiguration apc;
-
-                                        apc.addressPrefix =
-                                                addrp[j].get("addressPrefix",
-                                                             apc.addressPrefix)
-                                                .asUInt();
-
-                                        apc.organization =
-                                        		addrp[j].get("organization",
-                                        				string())
-                                        				.asString();
-
-                                        props.addressPrefixes.push_back(apc);
-                                }
-                        }
-
-                        // rina::EnrollmentTaskConfiguration
-                        // enrollmentTaskConfiguration;
-                        Json::Value etc =
-                        		dif_configs[i]["enrollmentTaskConfiguration"];
-                        if (etc != 0) {
-                        	rina::EnrollmentTaskConfiguration et;
-
-                        	et.enrollment_timeout_in_ms_ =
-                        			etc.get("enrollTimeoutInMs",
-                        					et.enrollment_timeout_in_ms_)
-                        					.asInt();
-
-                        	et.watchdog_period_in_ms_ =
-                        			etc.get("watchdogPeriodInMs",
-                        					et.watchdog_period_in_ms_)
-                        					.asInt();
-
-                        	et.declared_dead_interval_in_ms_ =
-                        			etc.get("declaredDeadIntervalInMs",
-                        					et.declared_dead_interval_in_ms_)
-                        					.asInt();
-
-                        	et.max_number_of_enrollment_attempts_ =
-                        			etc.get("maxEnrollmentRetries",
-                        					et.max_number_of_enrollment_attempts_)
-                        					.asInt();
-
-                        	et.neighbor_enroller_period_in_ms_ =
-                        			etc.get("neighborsEnrollerPeriodInMs",
-                        					et.neighbor_enroller_period_in_ms_)
-                        					.asInt();
-
-                        	props.etConfiguration = et;
-                        }
-                }
-
-                // configParameters;
-                Json::Value confParams = dif_configs[i]["configParameters"];
-
-                if (confParams != 0) {
-                        Json::Value::Members members =
-                                confParams.getMemberNames();
-                        for (unsigned int j = 0; j < members.size(); j++) {
-                                string value = confParams
-                                        .get(members[j], string()).asString();
-                                props.configParameters
-                                        .insert(pair<string, string>
-                                                (members[j], value));
-                        }
-                }
-
-                difConfigurations.push_back(props);
-        }
-}
 
 void parse_ipc_to_create(const Json::Value          root,
                          list<IPCProcessToCreate> & ipcProcessesToCreate)
@@ -873,6 +455,27 @@ void parse_local_conf(const Json::Value &         root,
         }
 }
 
+void parse_dif_configs(const Json::Value   & root,
+                       list<DIFTemplateMapping> & difConfigurations)
+{
+        Json::Value dif_configs = root["difConfigurations"];
+        if (dif_configs != 0) {
+        	for (unsigned int i = 0; i < dif_configs.size(); i++) {
+        		rinad::DIFTemplateMapping mapping;
+
+                        mapping.dif_name =
+                                rina::ApplicationProcessNamingInformation
+                                (dif_configs[i].get("name", string()).asString(),
+                                 string());
+
+                        mapping.template_name = dif_configs[i].get("template", string())
+                                .asString();
+
+                        difConfigurations.push_back(mapping);
+        	}
+        }
+}
+
 bool parse_configuration(std::string& file_loc)
 {
         // General note: Params should be checked before they are used
@@ -904,6 +507,7 @@ bool parse_configuration(std::string& file_loc)
         // Get everything in our data structures
         rinad::RINAConfiguration config;
 
+	config.configuration_file = file_loc;
         parse_local_conf(root, config.local);
         parse_app_to_dif(root, config.applicationToDIFMappings);
         parse_ipc_to_create(root, config.ipcProcessesToCreate);
@@ -911,6 +515,365 @@ bool parse_configuration(std::string& file_loc)
         IPCManager->loadConfig(config);
 
         return true;
+}
+
+rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
+					       rinad::DIFTemplate * dif_template)
+{
+	dif_template->difType = root.get("difType", string())
+                        		.asString();
+
+	// Data transfer constants
+	Json::Value dt_const = root["dataTransferConstants"];
+	if (dt_const != 0) {
+		rina::DataTransferConstants dt;
+
+		// There is no asShort()
+		dt.address_length_ =
+				static_cast<unsigned short>
+		(dt_const
+				.get("addressLength", 0)
+				.asUInt());
+		dt.cep_id_length_ = static_cast<unsigned short>
+		(dt_const
+				.get("cepIdLength", 0)
+				.asUInt());
+		dt.dif_integrity_ = dt_const
+				.get("difIntegrity", false)
+				.asBool();
+		dt.length_length_ = static_cast<unsigned short>
+		(dt_const
+				.get("lengthLength", 0)
+				.asUInt());
+		dt.max_pdu_lifetime_ = dt_const
+				.get("maxPduLifetime", 0)
+				.asUInt();
+		dt.max_pdu_size_ = dt_const
+				.get("maxPduSize", 0)
+				.asUInt();
+		dt.port_id_length_ =
+				static_cast<unsigned short>
+		(dt_const
+				.get("portIdLength", 0)
+				.asUInt());
+		dt.qos_id_length_ = static_cast<unsigned short>
+		(dt_const
+				.get("qosIdLength", 0)
+				.asUInt());
+		dt.sequence_number_length_ =
+				static_cast<unsigned short>
+		(dt_const
+				.get("sequenceNumberLength", 0)
+				.asUInt());
+		dif_template->dataTransferConstants = dt;
+	}
+
+	// QoS cubes
+	Json::Value cubes = root["qosCubes"];
+	if (cubes != 0) {
+		for (unsigned int j = 0; j < cubes.size(); j++) {
+			// FIXME: Probably should have good default
+			//        values. Check default constructor
+			rina::QoSCube cube;
+
+			cube.id_   = cubes[j].get("id", 0).asUInt();
+			cube.name_ = cubes[j].get("name", string()).asString();
+
+			parse_efcp_policies(cubes[j], cube);
+
+			cube.average_bandwidth_ =
+					cubes[j].get("averageBandwidth",
+							cube.average_bandwidth_)
+							.asUInt();
+			cube.average_sdu_bandwidth_ =
+					cubes[j].get("averageSduBandwidth",
+							cube.average_sdu_bandwidth_)
+							.asUInt();
+			cube.peak_bandwidth_duration_ =
+					cubes[j].get("peakBandwidthDuration",
+							cube.peak_bandwidth_duration_)
+							.asUInt();
+			cube.peak_sdu_bandwidth_duration_ =
+					cubes[j].get("peakSduBandwidthDuration",
+							cube.peak_sdu_bandwidth_duration_)
+							.asUInt();
+			cube.undetected_bit_error_rate_ =
+					cubes[j].get("undetectedBitErrorRate",
+							cube.undetected_bit_error_rate_)
+							.asDouble();
+			cube.partial_delivery_ =
+					cubes[j].get("partialDelivery",
+							cube.partial_delivery_)
+							.asBool();
+			cube.ordered_delivery_ =
+					cubes[j].get("orderedDelivery",
+							cube.ordered_delivery_)
+							.asBool();
+			cube.max_allowable_gap_ =
+					cubes[j].get("maxAllowableGap",
+							cube.max_allowable_gap_)
+							.asInt();
+			cube.delay_ = cubes[j].get("delay", cube.delay_).asUInt();
+			cube.jitter_ = cubes[j].get("jitter", cube.jitter_).asUInt();
+
+			dif_template->qosCubes.push_back(cube);
+		}
+	}
+
+	// rmtConfiguration;
+	Json::Value rmt_conf = root["rmtConfiguration"];
+	if (rmt_conf != 0) {
+		rina::RMTConfiguration rc;
+
+		parse_policy(rmt_conf,
+				"rmtQueueMonitorPolicy",
+				rc.rmt_queue_monitor_policy_);
+
+		parse_policy(rmt_conf,
+				"rmtSchedulingPolicy",
+				rc.rmt_scheduling_policy_);
+
+		parse_policy(rmt_conf,
+				"maxQueuePolicy",
+				rc.max_queue_policy_);
+
+		dif_template->rmtConfiguration = rc;
+	}
+
+	// std::map<std::string, std::string> policy_sets
+	Json::Value policy_sets = root["policySets"];
+	if (policy_sets != 0) {
+		Json::Value::Members members =
+				policy_sets.getMemberNames();
+		for (unsigned int j = 0;
+				j < members.size();
+				j++) {
+			string value =
+					policy_sets.get(members[j],
+							string())
+							.asString();
+			dif_template->policySets.insert
+			(pair<string, string>
+			(members[j], value));
+		}
+	}
+
+	// std::map<std::string, std::string> policyParameters
+	Json::Value policy_set_params = root["policyParameters"];
+	if (policy_set_params != 0) {
+		Json::Value::Members members =
+				policy_set_params.getMemberNames();
+		for (unsigned int j = 0;
+				j < members.size();
+				j++) {
+			string value = policy_set_params
+					.get(members[j],
+							string()).asString();
+			dif_template->policySetParameters.insert
+			(pair<string, string>
+			(members[j], value));
+		}
+	}
+
+	// NMinusOneFlowsConfiguration
+	//       nMinusOneFlowsConfiguration;
+	Json::Value flow_conf = root["nMinusOneFlowsConfiguration"];
+	if (flow_conf != 0) {
+		rinad::NMinusOneFlowsConfiguration fc;
+
+		fc.managementFlowQoSId =
+				flow_conf.get("managementFlowQosId",
+						fc.managementFlowQoSId)
+						.asInt();
+
+		Json::Value data_flow =
+				flow_conf["dataFlowsQosIds"];
+		for (unsigned int j = 0;
+				j < data_flow.size();
+				j++) {
+			fc.dataFlowsQoSIds.push_back
+			(data_flow[j].asInt());
+		}
+
+		dif_template->nMinusOneFlowsConfiguration = fc;
+	}
+
+	// std::list<KnownIPCProcessAddress>
+	// knownIPCProcessAddresses;
+	Json::Value known = root["knownIPCProcessAddresses"];
+	if (known != 0) {
+		for (unsigned int j = 0;
+				j < known.size();
+				j++) {
+			rinad::KnownIPCProcessAddress kn;
+
+			parse_name(known[j], kn.name);
+
+			kn.address = known[j]
+			                   .get("address", kn.address)
+			                   .asUInt();
+
+			dif_template->knownIPCProcessAddresses.push_back(kn);
+		}
+	}
+
+	// rina::PDUFTableGeneratorConfiguration
+	// pdufTableGeneratorConfiguration;
+	Json::Value pft = root["pdufTableGeneratorConfiguration"];
+	if (pft != 0) {
+		rina::PDUFTableGeneratorConfiguration pf;
+
+		parse_policy(pft, "pduFtGeneratorPolicy",
+				pf.pduft_generator_policy_);
+
+		Json::Value lsr_config = pft["linkStateRoutingConfiguration"];
+
+		rina::LinkStateRoutingConfiguration lsr;
+
+		lsr.object_maximum_age_ =
+				lsr_config.get("objectMaximumAge",
+						lsr.object_maximum_age_)
+						.asInt();
+
+		lsr.wait_until_read_cdap_ =
+				lsr_config.get("waitUntilReadCdap",
+						lsr.wait_until_read_cdap_)
+						.asInt();
+
+		lsr.wait_until_error_ =
+				lsr_config.get("waitUntilError",
+						lsr.wait_until_error_)
+						.asInt();
+
+		lsr.wait_until_pduft_computation_ =
+				lsr_config.get("waitUntilPduftComputation",
+						lsr.wait_until_pduft_computation_)
+						.asInt();
+
+		lsr.wait_until_fsodb_propagation_ =
+				lsr_config.get("waitUntilFsodbPropagation",
+						lsr.wait_until_fsodb_propagation_)
+						.asInt();
+
+		lsr.wait_until_age_increment_ =
+				lsr_config.get("waitUntilAgeIncrement",
+						lsr.wait_until_age_increment_)
+						.asInt();
+
+		lsr.routing_algorithm_ =
+				lsr_config.get("routingAlgorithm",
+						string())
+						.asString();
+
+		pf.link_state_routing_configuration_  = lsr;
+		dif_template->pdufTableGeneratorConfiguration = pf;
+	}
+
+	// std::list<AddressPrefixConfiguration> addressPrefixes;
+	Json::Value addrp = root["addressPrefixes"];
+	if (addrp != 0) {
+		for (unsigned int j = 0;
+				j < addrp.size();
+				j++) {
+			AddressPrefixConfiguration apc;
+
+			apc.addressPrefix =
+					addrp[j].get("addressPrefix",
+							apc.addressPrefix)
+							.asUInt();
+
+			apc.organization =
+					addrp[j].get("organization",
+							string())
+							.asString();
+
+			dif_template->addressPrefixes.push_back(apc);
+		}
+	}
+
+	// rina::EnrollmentTaskConfiguration
+	// enrollmentTaskConfiguration;
+	Json::Value etc = root["enrollmentTaskConfiguration"];
+	if (etc != 0) {
+		rina::EnrollmentTaskConfiguration et;
+
+		et.enrollment_timeout_in_ms_ =
+				etc.get("enrollTimeoutInMs",
+						et.enrollment_timeout_in_ms_)
+						.asInt();
+
+		et.watchdog_period_in_ms_ =
+				etc.get("watchdogPeriodInMs",
+						et.watchdog_period_in_ms_)
+						.asInt();
+
+		et.declared_dead_interval_in_ms_ =
+				etc.get("declaredDeadIntervalInMs",
+						et.declared_dead_interval_in_ms_)
+						.asInt();
+
+		et.max_number_of_enrollment_attempts_ =
+				etc.get("maxEnrollmentRetries",
+						et.max_number_of_enrollment_attempts_)
+						.asInt();
+
+		et.neighbor_enroller_period_in_ms_ =
+				etc.get("neighborsEnrollerPeriodInMs",
+						et.neighbor_enroller_period_in_ms_)
+						.asInt();
+
+		dif_template->etConfiguration = et;
+	}
+
+	// configParameters;
+	Json::Value confParams = root["configParameters"];
+
+	if (confParams != 0) {
+		Json::Value::Members members =
+				confParams.getMemberNames();
+		for (unsigned int j = 0; j < members.size(); j++) {
+			string value = confParams
+					.get(members[j], string()).asString();
+			dif_template->configParameters
+			.insert(pair<string, string>
+			(members[j], value));
+		}
+	}
+
+	return dif_template;
+}
+
+DIFTemplate * parse_dif_template(const std::string& file_name,
+				 const std::string& template_name)
+{
+        // Parse config file with jsoncpp
+        Json::Value  root;
+        Json::Reader reader;
+        ifstream     file;
+
+        file.open(file_name.c_str());
+        if (file.fail()) {
+                LOG_ERR("Failed to open config file");
+                return 0;
+        }
+
+        if (!reader.parse(file, root, false)) {
+        	LOG_ERR("Failed to parse configuration");
+
+        	// FIXME: Log messages need to take string for this to work
+        	cout << "Failed to parse JSON" << endl
+        			<< reader.getFormatedErrorMessages() << endl;
+
+        	return 0;
+        }
+
+        file.close();
+
+        DIFTemplate * dif_template = new DIFTemplate();
+        dif_template->templateName = template_name;
+        parse_dif_template_config(root, dif_template);
+
+        return dif_template;
 }
 
 }

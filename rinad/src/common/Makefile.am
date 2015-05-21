@@ -9,8 +9,12 @@ SUBDIRS = tclap encoders
 #
 #Libs
 #
-noinst_LTLIBRARIES = librinad.la
+lib_LTLIBRARIES = librinad.la
 
+librinad_ladir = $(pkgincludedir)/ipcm
+
+#Distributable headers
+librinad_la_HEADERS = encoders_mad.h
 
 librinad_la_CFLAGS   =
 librinad_la_CPPFLAGS =				\
@@ -29,4 +33,5 @@ librinad_la_SOURCES  =					\
 	rina-configuration.cc rina-configuration.h	\
 	event-loop.cc	      event-loop.h		\
 	encoder.cc	      encoder.h			\
+	encoders_mad.cc	      encoders_mad.h			\
 			      concurrency.h

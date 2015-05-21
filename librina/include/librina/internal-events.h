@@ -134,8 +134,6 @@ public:
 /// Event that signals the deallocation of an N-1 flow
 class NMinusOneFlowDeallocatedEvent: public InternalEvent {
 public:
-	NMinusOneFlowDeallocatedEvent(int port_id,
-				      const CDAPSessionDescriptor & cdap_session_descriptor);
 	NMinusOneFlowDeallocatedEvent(int port_id);
 	const std::string toString();
 
@@ -144,27 +142,24 @@ public:
 
 	/// True if the flow deallocated was used for layer management
 	bool management_flow_;
-
-	/// The descriptor of the CDAP session
-	CDAPSessionDescriptor cdap_session_descriptor_;
 };
 
 /// The connectivity to a neighbor has been lost
 class ConnectiviyToNeighborLostEvent: public InternalEvent {
 public:
-	ConnectiviyToNeighborLostEvent(Neighbor * neighbor);
+	ConnectiviyToNeighborLostEvent(const Neighbor& neighbor);
 	const std::string toString();
 
-	Neighbor * neighbor_;
+	Neighbor neighbor_;
 };
 
 /// The IPC Process has enrolled with a new neighbor
 class NeighborAddedEvent: public InternalEvent {
 public:
-	NeighborAddedEvent(Neighbor * neighbor, bool enrollee);
+	NeighborAddedEvent(const Neighbor& neighbor, bool enrollee);
 	const std::string toString();
 
-	Neighbor * neighbor_;
+	Neighbor neighbor_;
 
 	/// True if this IPC Process requested the enrollment operation,
 	/// false if it was its neighbor.
@@ -174,10 +169,10 @@ public:
 /// A connectivity to a neighbor has been lost
 class NeighborDeclaredDeadEvent: public InternalEvent {
 public:
-	NeighborDeclaredDeadEvent(Neighbor * neighbor);
+	NeighborDeclaredDeadEvent(const Neighbor& neighbor);
 	const std::string toString();
 
-	Neighbor * neighbor_;
+	Neighbor neighbor_;
 };
 
 }

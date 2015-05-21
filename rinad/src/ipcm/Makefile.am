@@ -4,12 +4,11 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-SUBDIRS      = include
+SUBDIRS=addons
 
 EXTRA_DIST   =
 CLEANFILES   =
 
-SUBDIRS=addons
 
 CPPFLAGS_EXTRA =					\
 	-DDEFAULT_BINDIR=\"$(bindir)\"			\
@@ -28,11 +27,13 @@ ipcm_CPPFLAGS =					\
 	-I$(srcdir)/../common			\
 	-DPLUGINSDIR=\"$(pkglibdir)/ipcm\"	\
 	-DIPCPPLUGINSDIR=\"$(pkglibdir)/ipcp\"
+
 ipcm_LDADD    =					\
 	$(builddir)/../common/librinad.la	\
 	$(builddir)/addons/libaddons.la		\
 	$(LIBRINA_LIBS)
 ipcm_SOURCES  =					\
+	addon.cc				\
 	app-handlers.cc				\
 	dif-validator.cc			\
 	helpers.cc				\
@@ -43,7 +44,8 @@ ipcm_SOURCES  =					\
 	ipcp-handlers.cc			\
 	configuration.cc			\
 	flow-alloc-handlers.cc			\
-	policies-handlers.cc
+	policies-handlers.cc			\
+	dif-template-manager.cc			
 
 test_empty_SOURCES  =				\
 	test-empty.cc

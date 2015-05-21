@@ -30,14 +30,15 @@ namespace rinad {
 
 class NamespaceManagerPs: public INamespaceManagerPs {
 public:
-		NamespaceManagerPs(INamespaceManager * nsm);
-		bool isValidAddress(unsigned int address, const std::string& ipcp_name,
-				const std::string& ipcp_instance);
-		unsigned int getValidAddress(const std::string& ipcp_name,
-				const std::string& ipcp_instance);
-		int set_policy_set_param(const std::string& name,
-			const std::string& value);
-		virtual ~NamespaceManagerPs() {}
+	NamespaceManagerPs(INamespaceManager * nsm);
+	bool isValidAddress(unsigned int address,
+			    const std::string& ipcp_name,
+			    const std::string& ipcp_instance);
+	unsigned int getValidAddress(const std::string& ipcp_name,
+				     const std::string& ipcp_instance);
+	int set_policy_set_param(const std::string& name,
+				 const std::string& value);
+	virtual ~NamespaceManagerPs() {}
 
 private:
         // Data model of the namespace manager component.

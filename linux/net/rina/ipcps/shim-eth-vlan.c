@@ -328,7 +328,7 @@ static int unbind_and_destroy_flow(struct ipcp_instance_data * data,
                         flow_unbinding_ipcp(flow->user_ipcp->data,
                                             flow->port_id);
         }
-
+        LOG_DBG("Shim ethe vlan unbinded port: %u", flow->port_id);
         if (flow_destroy(data, flow)) {
                 LOG_ERR("Failed to destroy shim-eth-vlan flow");
                 return -1;
@@ -364,7 +364,7 @@ static void rinarp_resolve_handler(void *             opaque,
         struct ipcp_instance *      user_ipcp;
         struct ipcp_instance *      ipcp;
         struct shim_eth_flow *      flow;
-        unsigned long 				irqflags;
+        unsigned long 		    irqflags;
 
         LOG_DBG("Entered the ARP resolve handler of the shim-eth");
 
@@ -1183,8 +1183,10 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         info->vlan_id = (uint16_t) temp_vlan;
 
         if (!vlan_id_is_ok(info->vlan_id)) {
-                LOG_ERR("Bad vlan id specified: %d", info->vlan_id);
-                return -1;
+                if (info->vlan_id != 0) {
+                      LOG_ERR("Bad vlan id specified: %d", info->vlan_id);
+                      return -1;
+                }
         }
 
         data->dif_name = name_dup(dif_information->dif_name);
@@ -1201,7 +1203,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                 if (!strcmp(entry->name, "interface-name")) {
                         ASSERT(entry->value);
 
-                        info->interface_name = rkstrdup_ni(entry->value);
+                        info->interface_name = rkstrdup(entry->value);
                         if (!info->interface_name) {
                                 LOG_ERR("Cannot copy interface name");
                                 name_destroy(data->dif_name);
@@ -1223,8 +1225,14 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         data->eth_vlan_packet_type->type = cpu_to_be16(ETH_P_RINA);
         data->eth_vlan_packet_type->func = eth_vlan_rcv;
 
-        complete_interface = create_vlan_interface_name(info->interface_name,
-                                                        info->vlan_id);
+        if (info->vlan_id != 0) {
+                complete_interface =
+                        create_vlan_interface_name(info->interface_name,
+                                                   info->vlan_id);
+        } else {
+                complete_interface = rkstrdup(info->interface_name);
+        }
+
         if (!complete_interface) {
                 name_destroy(data->dif_name);
                 data->dif_name = NULL;
@@ -1328,8 +1336,14 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
         data->eth_vlan_packet_type->type = cpu_to_be16(ETH_P_RINA);
         data->eth_vlan_packet_type->func = eth_vlan_rcv;
 
-        complete_interface = create_vlan_interface_name(info->interface_name,
-                                                        info->vlan_id);
+        if (info->vlan_id != 0) {
+                complete_interface =
+                        create_vlan_interface_name(info->interface_name,
+                                                   info->vlan_id);
+        } else {
+                complete_interface = rkstrdup(info->interface_name);
+        }
+
         if (!complete_interface)
                 return -1;
 
@@ -1378,7 +1392,7 @@ static int eth_vlan_query_rib(struct ipcp_instance_data * data,
                               const string_t *            object_name,
                               uint64_t                    object_instance,
                               uint32_t                    scope,
-                              const string_t *            filter) 
+                              const string_t *            filter)
 {
 	LOG_MISSING;
 	return -1;
@@ -1388,6 +1402,7 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .flow_allocate_request     = eth_vlan_flow_allocate_request,
         .flow_allocate_response    = eth_vlan_flow_allocate_response,
         .flow_deallocate           = eth_vlan_flow_deallocate,
+        .flow_prebind              = NULL,
         .flow_binding_ipcp         = NULL,
         .flow_unbinding_ipcp       = NULL,
         .flow_unbinding_user_ipcp  = eth_vlan_unbind_user_ipcp,
@@ -1584,6 +1599,7 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
 {
         struct interface_data_mapping * mapping;
         struct ipcp_instance_data * pos, * next;
+        struct shim_eth_flow * flow, * nflow;
 
         ASSERT(data);
         ASSERT(instance);
@@ -1593,6 +1609,11 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
         /* Retrieve the instance */
         list_for_each_entry_safe(pos, next, &data->instances, list) {
                 if (pos->id == instance->data->id) {
+
+                        /* Destroy existing flows */
+                        list_for_each_entry_safe(flow, nflow, &pos->flows, list) {
+                                unbind_and_destroy_flow(pos, flow);
+                        }
 
                         /* Remove packet handler if there is one */
                         if (pos->eth_vlan_packet_type->dev)

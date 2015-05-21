@@ -59,8 +59,17 @@
  */
 namespace rina {
 
-enum FlowState {
-	FLOW_ALLOCATED, FLOW_DEALLOCATION_REQUESTED, FLOW_DEALLOCATED
+/**
+ * Thrown when some operation is invoked in a flow that is not allocated
+ */
+class UnknownFlowException: public IPCException {
+public:
+	UnknownFlowException():
+		IPCException("Unknown flow"){
+	}
+	UnknownFlowException(const std::string& description):
+		IPCException(description){
+	}
 };
 
 /**
@@ -169,65 +178,6 @@ public:
 };
 
 /**
- * Represents a flow between two application processes, and encapsulates
- * the services that the flow provides.
- */
-class Flow {
-	/** The state of the flow */
-	FlowState flowState;
-
-	/** A summary of the flow information */
-	FlowInformation flowInformation;
-
-	Flow(const ApplicationProcessNamingInformation& localApplicationName,
-	     const ApplicationProcessNamingInformation& remoteApplicationName,
-	     const FlowSpecification& flowSpecification, FlowState flowState);
-
-	Flow(const ApplicationProcessNamingInformation& localApplicationName,
-	     const ApplicationProcessNamingInformation& remoteApplicationName,
-	     const FlowSpecification& flowSpecification, FlowState flowState,
-	     const ApplicationProcessNamingInformation& DIFName, int portId);
-
-	void setPortId(int portId);
-	void setDIFName(const ApplicationProcessNamingInformation& DIFName);
-	void setState(FlowState flowState);
-
-public:
-	Flow();
-	const FlowState& getState() const;
-	int getPortId() const;
-	const ApplicationProcessNamingInformation& getDIFName() const;
-	const ApplicationProcessNamingInformation& getLocalApplicationName() const;
-	const ApplicationProcessNamingInformation& getRemoteApplcationName() const;
-	const FlowSpecification& getFlowSpecification() const;
-	bool isAllocated() const;
-	const FlowInformation& getFlowInformation() const;
-
-	/**
-	 * Reads an SDU from the flow. This function will block until there is an
-	 * SDU available.
-	 *
-	 * @param sdu A buffer to store the SDU data
-	 * @param maxBytes The maximum number of bytes to read
-	 * @return int The number of bytes read
-	 * @throws IPCException if the flow is not in the ALLOCATED state
-	 */
-	int readSDU(void * sdu, int maxBytes) throw(Exception);
-
-	/**
-	 * Writes an SDU to the flow
-	 *
-	 * @param sdu A buffer that contains the SDU data
-	 * @param size The size of the SDU data, in bytes
-	 * @throws IPCException if the flow is not in the ALLOCATED state or
-	 * there are problems writing to the flow
-	 */
-	void writeSDU(void * sdu, int size) throw(Exception);
-
-	friend class IPCManager;
-};
-
-/**
  * Contains the information about a registered application: its
  * name and the DIFs where it is registered
  */
@@ -249,12 +199,12 @@ public:
  * Point of entry to the IPC functionality available in the system. This class
  * is a singleton.
  */
-class IPCManager : public Lockable{
+class IPCManager {
 	/** The flows that are currently allocated */
-	std::map<int, Flow*> allocatedFlows;
+	std::map<int, FlowInformation*> allocatedFlows;
 
 	/** The flows that are pending to be allocated or deallocated*/
-	std::map<unsigned int, Flow*> pendingFlows;
+	std::map<unsigned int, FlowInformation*> pendingFlows;
 
 	/** The applications that are pending to be registered or unregistered */
 	std::map<unsigned int, ApplicationRegistrationInformation>
@@ -264,13 +214,17 @@ class IPCManager : public Lockable{
 	std::map<ApplicationProcessNamingInformation,
 	        ApplicationRegistration*> applicationRegistrations;
 
+	ReadWriteLockable flows_rw_lock;
+	ReadWriteLockable regs_rw_lock;
+
 protected:
 	/** Return the pending flow at sequenceNumber */
-	Flow * getPendingFlow(unsigned int seqNumber);
+	FlowInformation * getPendingFlow(unsigned int seqNumber);
+
+	FlowInformation * getAllocatedFlow(int portId);
 
 	/** Return the information of a registration request */
-	ApplicationRegistrationInformation getRegistrationInfo(
-	                unsigned int seqNumber);
+	ApplicationRegistrationInformation getRegistrationInfo(unsigned int seqNumber);
 
 	ApplicationRegistration * getApplicationRegistration(
 	                const ApplicationProcessNamingInformation& appName);
@@ -295,13 +249,14 @@ protected:
 	        unsigned short sourceIPCProcessId,
 	        const FlowSpecification& flow);
 
-	Flow * internalAllocateFlowResponse(
-	        const FlowRequestEvent& flowRequestEvent,
-	        int result, bool notifySource, unsigned short ipcProcessId);
+	FlowInformation internalAllocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
+						     int result,
+						     bool notifySource,
+						     unsigned short ipcProcessId);
 
 public:
 	IPCManager();
-	~IPCManager() throw();
+	virtual ~IPCManager() throw();
 	static const std::string application_registered_error;
 	static const std::string application_not_registered_error;
 	static const std::string unknown_flow_error;
@@ -312,12 +267,11 @@ public:
 	static const std::string error_getting_dif_properties;
 	static const std::string wrong_flow_state;
 
-	/** Return the allocated flow at portId */
-	Flow * getAllocatedFlow(int portId);
+	/// Return the information associated to a port-id
+	FlowInformation getFlowInformation(int portId);
 
 	/** Return a flow allocated to the remote application name */
-	Flow * getFlowToRemoteApp(
-			ApplicationProcessNamingInformation remoteAppName);
+	int getPortIdToRemoteApp(const ApplicationProcessNamingInformation& remoteAppName);
 
 	/**
 	 * Retrieves the names and characteristics of a single DIF or of all the
@@ -426,8 +380,9 @@ public:
 	 * @return the flow, ready to be used
 	 * @throws FlowAllocationException if the pending flow is not found
 	 */
-	Flow * commitPendingFlow(unsigned int sequenceNumber, int portId,
-	                const ApplicationProcessNamingInformation& DIFName);
+	FlowInformation commitPendingFlow(unsigned int sequenceNumber,
+					  int portId,
+					  const ApplicationProcessNamingInformation& DIFName);
 
 	/**
 	 * Tell the IPC Manager that a pending flow allocation has been denied
@@ -449,8 +404,9 @@ public:
 	 * @throws FlowAllocationException If there are problems
 	 * confirming/denying the flow
 	 */
-	virtual Flow * allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
-			int result, bool notifySource);
+	 FlowInformation allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
+				  	      int result,
+				  	      bool notifySource);
 
 	/**
 	 * Requests the deallocation of a flow
@@ -479,11 +435,32 @@ public:
 	void flowDeallocated(int portId);
 
 	/**
+	 * Reads an SDU from the flow. This function will block until there is an
+	 * SDU available.
+	 *
+	 * @param sdu A buffer to store the SDU data
+	 * @param maxBytes The maximum number of bytes to read
+	 * @return int The number of bytes read
+	 * @throws IPCException if the flow is not in the ALLOCATED state
+	 */
+	int readSDU(int portId, void * sdu, int maxBytes);
+
+	/**
+	 * Writes an SDU to the flow
+	 *
+	 * @param sdu A buffer that contains the SDU data
+	 * @param size The size of the SDU data, in bytes
+	 * @throws IPCException if the flow is not in the ALLOCATED state or
+	 * there are problems writing to the flow
+	 */
+	void writeSDU(int portId, void * sdu, int size);
+
+	/**
 	 * Returns the flows that are currently allocated
 	 *
 	 * @return the flows allocated
 	 */
-	std::vector<Flow *> getAllocatedFlows();
+	std::vector<FlowInformation> getAllocatedFlows();
 
 	/**
 	 * Returns the applications that are currently registered in one or more

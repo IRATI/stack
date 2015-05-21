@@ -69,27 +69,6 @@ struct NMinusOneFlowsConfiguration {
         NMinusOneFlowsConfiguration() : managementFlowQoSId(2) { }
 };
 
-struct ExpectedApplicationRegistration {
-
-        std::string applicationProcessName;
-        std::string applicationProcessInstance;
-        std::string applicationEntityName;
-        int socketPortNumber;
-
-        ExpectedApplicationRegistration() : socketPortNumber(-1) { }
-};
-
-struct DirectoryEntry {
-
-        std::string applicationProcessName;
-        std::string applicationProcessInstance;
-        std::string applicationEntityName;
-        std::string hostname;
-        int socketPortNumber;
-
-        DirectoryEntry() : socketPortNumber(-1) { }
-};
-
 /* The configuration of a known IPC Process */
 struct KnownIPCProcessAddress {
 
@@ -103,9 +82,8 @@ struct KnownIPCProcessAddress {
 };
 
 /* The configuration required to create a DIF */
-struct DIFProperties {
-
-        rina::ApplicationProcessNamingInformation difName;
+struct DIFTemplate {
+	std::string templateName;
         std::string difType;
         rina::DataTransferConstants dataTransferConstants;
         std::list<rina::QoSCube> qosCubes;
@@ -116,10 +94,6 @@ struct DIFProperties {
 
         /* Only for normal DIFs */
         NMinusOneFlowsConfiguration nMinusOneFlowsConfiguration;
-
-        /* Only for shim IP DIFs */
-        std::list<ExpectedApplicationRegistration> expectedApplicationRegistrations;
-        std::list<DirectoryEntry> directory;
 
         /*
          * The addresses of the known IPC Process (apname, address)
@@ -139,6 +113,8 @@ struct DIFProperties {
         bool lookup_ipcp_address(
                         const rina::ApplicationProcessNamingInformation&,
                         unsigned int& result);
+
+        std::string toString();
 };
 
 struct NeighborData {
@@ -190,6 +166,15 @@ struct LocalConfiguration {
                         consolePort(32766){ }
 };
 
+struct DIFTemplateMapping {
+
+	// The name of the DIF
+	rina::ApplicationProcessNamingInformation dif_name;
+
+	// The name of the template
+	std::string template_name;
+};
+
 /*
  * Global configuration for the RINA software
  */
@@ -208,7 +193,7 @@ class RINAConfiguration {
         /*
          * The configurations of zero or more DIFs
          */
-        std::list<DIFProperties> difConfigurations;
+        std::list<DIFTemplateMapping> difConfigurations;
 
         /*
          * Application to DIF mappings
@@ -223,17 +208,19 @@ class RINAConfiguration {
                 rina::ApplicationProcessNamingInformation>
                 applicationToDIFMappings;
 
-        bool lookup_dif_properties(
+	/*
+	 * The path of the configuration file where the configuration
+	 * comes from
+	 */
+	std::string configuration_file;
+
+        bool lookup_dif_template_mappings(
                         const rina::ApplicationProcessNamingInformation& dif_name,
-                        DIFProperties& result) const;
+                        DIFTemplateMapping& result) const;
 
         bool lookup_dif_by_application(
                 const rina::ApplicationProcessNamingInformation& app_name,
                 rina::ApplicationProcessNamingInformation& result);
-
-        bool lookup_type_by_dif(
-                const rina::ApplicationProcessNamingInformation& dif_name,
-                std::string& result) const;
 
 #if 0
         bool lookup_ipcp_address(const std::string dif_name,

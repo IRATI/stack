@@ -25,34 +25,50 @@
 #include <string>
 #include <chrono>
 #include <librina/librina.h>
+#include <librina/cdap_v2.h>
 
-#include "cdap-echo-application.h"
+#include "application.h"
 
-class Client : public Application {
+class Client;
+
+class Client : public Application, public rina::cdap::CDAPCallbackInterface
+{
+        friend class APPcallback;
  public:
-  Client(const std::string& dif_name, const std::string& apn,
-         const std::string& api, const std::string& server_apn,
-         const std::string& server_api, bool quiet, unsigned long count,
-         bool registration, unsigned int wait, int g, int dw);
-  void run();
-  ~Client();
+        Client(const std::string& dif_name, const std::string& apn,
+               const std::string& api, const std::string& server_apn,
+               const std::string& server_api, bool quiet, unsigned long count,
+               bool registration, unsigned int wait, int g, int dw);
+        void run();
+        ~Client();
+        void open_connection_result(const rina::cdap_rib::con_handle_t &con,
+                                    const rina::cdap_rib::result_info &res);
+        void close_connection_result(const rina::cdap_rib::con_handle_t &con,
+                                     const rina::cdap_rib::result_info &res);
+        void remote_read_result(const rina::cdap_rib::con_handle_t &con,
+                                const rina::cdap_rib::obj_info_t &onj,
+                                const rina::cdap_rib::res_info_t &res);
  protected:
-  rina::Flow* createFlow();
-  void echoFlow(rina::Flow *flow);
-  void destroyFlow(rina::Flow *flow);
-  bool cacep(rina::Flow *flow);
-  bool release(rina::Flow *flow);
+        void createFlow();
+        void cacep();
+        void sendReadRMessage();
+        void release();
+        void destroyFlow();
 
  private:
-  std::string dif_name;
-  std::string server_name;
-  std::string server_instance;
-  bool quiet;
-  unsigned long echo_times;  // -1 is infinite
-  bool client_app_reg;
-  unsigned int wait;
-  int gap;
-  int dealloc_wait;
-  rina::CDAPSessionManagerInterface *manager_;
+        std::string dif_name;
+        std::string server_name;
+        std::string server_instance;
+        bool quiet;
+        unsigned long echo_times;  // -1 is infinite
+        bool client_app_reg;
+        unsigned int wait;
+        int gap;
+        int dealloc_wait;
+        rina::FlowInformation flow_;
+        rina::cdap::CDAPProviderInterface* cdap_prov_;
+        rina::cdap_rib::con_handle_t con_;
+        unsigned long count_;
+        bool keep_running_;
 };
 #endif//CLIENT_HPP

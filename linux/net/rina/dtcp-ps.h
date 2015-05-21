@@ -76,8 +76,6 @@ struct dtcp_ps {
         int (* receiving_flow_control)(struct dtcp_ps * instance,
                                        seq_num_t seq);
         int (* update_credit)(struct dtcp_ps * instance);
-        int (* flow_control_overrun)(struct dtcp_ps * instance,
-                                     struct pdu * pdu);
         int (* reconcile_flow_conflict)(struct dtcp_ps * instance);
         int (* rcvr_flow_control)(struct dtcp_ps * instance, seq_num_t seq);
         int (* rate_reduction)(struct dtcp_ps * instance);

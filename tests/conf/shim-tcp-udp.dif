@@ -1,0 +1,8 @@
+{
+    "difType" : "shim-tcp-udp",
+     "configParameters" : {
+         "hostname" : "84.88.40.131",
+         "dirEntry" : "1:25:rina.apps.echotime.server0:12:84.88.40.1314:2426",
+         "expReg" : "1:25:rina.apps.echotime.server0:4:2426"
+     }
+}

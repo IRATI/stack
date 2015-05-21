@@ -35,23 +35,27 @@ struct rmt_ps {
         /* Behavioural policies. */
         void (* max_q_policy_tx)(struct rmt_ps *,
                                  struct pdu *,
-                                 struct rfifo *);
+                                 struct rmt_n1_port *);
         void (* max_q_policy_rx)(struct rmt_ps *,
                                  struct sdu *,
-                                 struct rfifo *);
+                                 struct rmt_n1_port *);
         void (* rmt_q_monitor_policy_tx)(struct rmt_ps *,
                                  struct pdu *,
-                                 struct rfifo *);
+                                 struct rmt_n1_port *);
         void (* rmt_q_monitor_policy_rx)(struct rmt_ps *,
                                  struct sdu *,
-                                 struct rfifo *);
-        struct rfifo * (* rmt_scheduling_policy_tx)(struct rmt_ps *,
-                                        struct rmt_n1_port *, bool restart);
-        struct rfifo * (* rmt_scheduling_policy_rx)(struct rmt_ps *,
-                                        struct rmt_n1_port *, bool restart);
-
-        /* Parametric policies. */
-        int          max_q;
+                                 struct rmt_n1_port *);
+        struct pdu * (* rmt_next_scheduled_policy_tx)(struct rmt_ps *,
+                                                      struct rmt_n1_port *);
+        int (* rmt_enqueue_scheduling_policy_tx)(struct rmt_ps *,
+                                                 struct rmt_n1_port *,
+                                                 struct pdu *);
+        int (* rmt_scheduling_policy_rx)(struct rmt_ps *,
+                                         struct rmt_n1_port *, struct sdu *);
+        int (* rmt_scheduling_create_policy_tx)(struct rmt_ps *,
+                                                struct rmt_n1_port *);
+        int (* rmt_scheduling_destroy_policy_tx)(struct rmt_ps *,
+                                                 struct rmt_n1_port *);
 
         /* Reference used to access the RMT data model. */
         struct rmt * dm;

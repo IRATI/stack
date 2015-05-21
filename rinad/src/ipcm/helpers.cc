@@ -2,6 +2,8 @@
 // Helpers for the RINA daemons
 //
 //    Vincenzo Maffione <v.maffione@nextworks.it>
+//    Marc Sune         <marc.sune (at) bisdn.de>
+//    Eduard Grasa      <eduard.grasa@i2cat.net>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -51,12 +53,8 @@ IPCManager_::select_ipcp_by_dif(
 
 	for (unsigned int i = 0; i < ipcps.size(); i++) {
 		rina::ApplicationProcessNamingInformation dif_name = ipcps[i]->dif_name_;
-		rina::ApplicationProcessNamingInformation ipcp_name = ipcps[i]->get_name();
 
-		if (dif_name.processName == target_dif_name.processName
-				/* The following OR clause is a temporary hack useful
-				 * for testing with shim dummy. TODO It will go away. */
-				|| ipcp_name.processName == target_dif_name.processName) {
+		if (dif_name.processName == target_dif_name.processName) {
 			//Acquire lock before leaving rwlock of the factory
 			if(write_lock)
 				ipcps[i]->rwlock.writelock();
@@ -195,6 +193,24 @@ IPCManager_::lookup_ipcp_by_id(unsigned short id, bool write_lock)
 	write_lock? ipcp->rwlock.writelock(): ipcp->rwlock.readlock();
 
 	return ipcp;
+}
+
+bool
+IPCManager_::is_any_ipcp_assigned_to_dif(const rina::ApplicationProcessNamingInformation& dif_name)
+{
+	//Prevent any insertion/deletion to happen
+	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
+
+	vector<IPCMIPCProcess *> ipcps;
+	ipcp_factory_.listIPCProcesses(ipcps);
+
+	for (unsigned int i = 0; i < ipcps.size(); i++) {
+		if (ipcps[i]->dif_name_.processName == dif_name.processName)
+			return true;
+
+	}
+
+	return false;
 }
 
 } //rinad namespace

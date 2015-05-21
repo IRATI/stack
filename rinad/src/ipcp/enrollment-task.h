@@ -30,24 +30,8 @@
 #include "ipcp/components.h"
 #include <librina/cdap.h>
 #include <librina/internal-events.h>
-#include <librina/timer.h>
 
 namespace rinad {
-
-/// The object that contains all the information
-/// that is required to initiate an enrollment
-/// request (send as the objectvalue of a CDAP M_START
-/// message, as specified by the Enrollment spec)
-class EnrollmentInformationRequest {
-public:
-	EnrollmentInformationRequest();
-
-	/// The address of the IPC Process that requests
-	///to join a DIF
-	unsigned int address_;
-	std::list<rina::ApplicationProcessNamingInformation> supporting_difs_;
-	bool allowed_to_start_early_;
-};
 
 class WatchdogRIBObject;
 
@@ -89,34 +73,6 @@ private:
 	rina::Lockable * lock_;
 };
 
-class NeighborRIBObject: public SimpleSetMemberIPCPRIBObject {
-public:
-	NeighborRIBObject(IPCProcess* ipc_process,
-			const std::string& object_class,
-			const std::string& object_name,
-			const rina::Neighbor* neighbor);
-	std::string get_displayable_value();
-};
-
-class NeighborSetRIBObject: public BaseIPCPRIBObject {
-public:
-	NeighborSetRIBObject(IPCProcess * ipc_process);
-	~NeighborSetRIBObject();
-	const void* get_value() const;
-	void remoteCreateObject(void * object_value, const std::string& object_name,
-			int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
-	void createObject(const std::string& objectClass,
-			const std::string& objectName,
-			const void* objectValue);
-
-private:
-	void populateNeighborsToCreateList(rina::Neighbor * neighbor,
-			std::list<rina::Neighbor *> * list);
-	void createNeighbor(rina::Neighbor * neighbor);
-
-	rina::Lockable * lock_;
-};
-
 /// Handles the operations related to the "daf.management.naming.currentsynonym" objects
 class AddressRIBObject: public BaseIPCPRIBObject {
 public:
@@ -130,98 +86,53 @@ private:
 	unsigned int address_;
 };
 
-class BaseEnrollmentStateMachine;
-
-class EnrollmentFailedTimerTask: public rina::TimerTask {
-public:
-	EnrollmentFailedTimerTask(BaseEnrollmentStateMachine * state_machine,
-			const std::string& reason, bool enrollee);
-	~EnrollmentFailedTimerTask() throw() {};
-	void run();
-
-	BaseEnrollmentStateMachine * state_machine_;
-	std::string reason_;
-	bool enrollee_;
-};
-
-/// The base class that contains the common aspects of both
-/// enrollment state machines: the enroller side and the enrolle
-/// side
-class BaseEnrollmentStateMachine : public rina::BaseCDAPResponseMessageHandler {
+// The common elements of an enrollment state machine
+class IEnrollmentStateMachine : public rina::BaseCDAPResponseMessageHandler {
 	friend class EnrollmentFailedTimerTask;
 public:
-	static const std::string CONNECT_RESPONSE_TIMEOUT;
-	static const std::string START_RESPONSE_TIMEOUT;
-	static const std::string START_IN_BAD_STATE;
-	static const std::string STOP_ENROLLMENT_TIMEOUT;
-	static const std::string STOP_IN_BAD_STATE;
-	static const std::string STOP_WITH_NO_OBJECT_VALUE;
-	static const std::string READ_RESPONSE_TIMEOUT;
-	static const std::string PROBLEMS_COMMITTING_ENROLLMENT_INFO;
-	static const std::string START_TIMEOUT;
-	static const std::string READ_RESPONSE_IN_BAD_STATE;
-	static const std::string UNSUCCESSFULL_READ_RESPONSE;
-	static const std::string UNSUCCESSFULL_START;
-	static const std::string CONNECT_IN_NOT_NULL;
-	static const std::string ENROLLMENT_NOT_ALLOWED;
-	static const std::string START_ENROLLMENT_TIMEOUT;
-	static const std::string STOP_ENROLLMENT_RESPONSE_TIMEOUT;
-	static const std::string STOP_RESPONSE_IN_BAD_STATE;
+	static const std::string STATE_NULL;
+	static const std::string STATE_ENROLLED;
 
-	enum State {
-		STATE_NULL,
-		STATE_WAIT_CONNECT_RESPONSE,
-		STATE_WAIT_START_ENROLLMENT_RESPONSE,
-		STATE_WAIT_READ_RESPONSE,
-		STATE_WAIT_START,
-		STATE_ENROLLED,
-		STATE_WAIT_START_ENROLLMENT,
-		STATE_WAIT_STOP_ENROLLMENT_RESPONSE
-	};
-
-	~BaseEnrollmentStateMachine();
+	IEnrollmentStateMachine(IPCProcess * ipcp,
+			const rina::ApplicationProcessNamingInformation& remote_naming_info,
+			int timeout, rina::ApplicationProcessNamingInformation * supporting_dif_name);
+	virtual ~IEnrollmentStateMachine();
 
 	/// Called by the EnrollmentTask when it got an M_RELEASE message
 	/// @param invoke_id the invoke_id of the release message
 	/// @param cdapSessionDescriptor
 	void release(int invoke_id,
-			rina::CDAPSessionDescriptor * session_descriptor);
+		     rina::CDAPSessionDescriptor * session_descriptor);
 
 	/// Called by the EnrollmentTask when it got an M_RELEASE_R message
 	/// @param result
 	/// @param result_reason
 	/// @param session_descriptor
 	void releaseResponse(int result, const std::string& result_reason,
-			rina::CDAPSessionDescriptor * session_descriptor);
+			     rina::CDAPSessionDescriptor * session_descriptor);
+
+	virtual void process_authentication_message(const rina::CDAPMessage& message,
+					            rina::CDAPSessionDescriptor * session_descriptor) = 0;
 
 	/// Called by the EnrollmentTask when the flow supporting the CDAP session with the remote peer
 	/// has been deallocated
 	/// @param cdapSessionDescriptor
-	void flowDeallocated(rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void flowDeallocated(int portId);
 
-	State state;
 	rina::Neighbor * remote_peer_;
 	bool enroller_;
+	std::string state_;
 
 protected:
-	BaseEnrollmentStateMachine(IPCProcess * ipc_process,
-			const rina::ApplicationProcessNamingInformation& remote_naming_info,
-			int timeout, rina::ApplicationProcessNamingInformation * supporting_dif_name);
-	bool isValidPortId(const rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	bool isValidPortId(int portId);
 
 	/// Called by the enrollment state machine when the enrollment sequence fails
 	void abortEnrollment(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
-			int portId, const std::string& reason, bool enrollee, bool sendReleaseMessage);
+			     int portId, const std::string& reason, bool sendReleaseMessage);
 
 	/// Create or update the neighbor information in the RIB
 	/// @param enrolled true if the neighbor is enrolled, false otherwise
 	void createOrUpdateNeighborInformation(bool enrolled);
-
-	/// Sends all the DIF dynamic information
-	void sendDIFDynamicInformation();
-
-	/// Send the entries in the DFT (if any)
-	void sendDFTEntries();
 
 	/// Send the neighbors (if any)
 	void sendNeighbors();
@@ -231,184 +142,59 @@ protected:
 	/// @param objectName the name of the object to be send
 	void sendCreateInformation(const std::string& objectClass, const std::string& objectName);
 
-	IPCProcess * ipc_process_;
-	IPCPRIBDaemon * rib_daemon_;
-	rina::CDAPSessionManagerInterface * cdap_session_manager_;
-	rina::IMasterEncoder * encoder_;
-	IEnrollmentTask * enrollment_task_;
+	IPCProcess * ipcp_;
+	rina::IRIBDaemon * rib_daemon_;
+	rina::IEnrollmentTask * enrollment_task_;
+	rina::IAuthPolicySet * auth_ps_;
 	int timeout_;
-	rina::Timer * timer_;
-	rina::Lockable * lock_;
+	rina::Timer timer_;
+	rina::Lockable lock_;
 	int port_id_;
 	rina::TimerTask * last_scheduled_task_;
 };
 
-/// The state machine of the party that wants to
-/// become a new member of the DIF.
-class EnrolleeStateMachine: public BaseEnrollmentStateMachine {
+class EnrollmentFailedTimerTask: public rina::TimerTask {
 public:
-	EnrolleeStateMachine(IPCProcess * ipc_process,
-			const rina::ApplicationProcessNamingInformation& remote_naming_info,
-			int timeout);
-	~EnrolleeStateMachine();
+	EnrollmentFailedTimerTask(IEnrollmentStateMachine * state_machine,
+			const std::string& reason);
+	~EnrollmentFailedTimerTask() throw() {};
+	void run();
 
-	/// Called by the DIFMembersSetObject to initiate the enrollment sequence
-	/// with a remote IPC Process
-	/// @param enrollment request contains information on the neighbor and on the
-	/// enrollment request event
-	/// @param portId
-	void initiateEnrollment(EnrollmentRequest * enrollmentRequest, int portId);
-
-	/// Called by the EnrollmentTask when it got an M_CONNECT_R message
-	/// @param result
-	/// @param result_reason
-	void connectResponse(int result, const std::string& result_reason);
-
-	void startResponse(int result, const std::string& result_reason,
-			void * object_value, rina::CDAPSessionDescriptor * session_descriptor);
-
-	/// Stop enrollment request received. Check if I have enough information, if not
-	/// ask for more with M_READs.
-	/// Have to check if I can start operating (if not wait
-	/// until M_START operationStatus). If I can start and have enough information,
-	/// create or update all the objects received during the enrollment phase.
-	void stop(EnrollmentInformationRequest * eiRequest, int invoke_id,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-
-	/// See if the response is valid and contains an object. See if more objects
-	/// are required. If not, start
-	void readResponse(int result, const std::string& result_reason,
-			void * object_value, const std::string& object_name,
-			rina::CDAPSessionDescriptor * session_descriptor);
-
-	void start(int result, const std::string& result_reason,
-			rina::CDAPSessionDescriptor * session_descriptor);
-
-	EnrollmentRequest * enrollment_request_;
-
-private:
-	/// See if more information is required for enrollment, or if we can
-	/// start or if we have to wait for the start message
-	void requestMoreInformationOrStart();
-
-	/// Checks if more information is required for enrollment
-	/// (At least there must be DataTransferConstants, a QoS cube and a DAF Member). If there is,
-	/// it sends a read request message and returns tru
-	bool sendNextObjectRequired();
-
-	/// Create the objects in the RIB
-	void commitEnrollment();
-
-	void enrollmentCompleted();
-
-	bool was_dif_member_before_enrollment_;
-	bool allowed_to_start_early_;
-	int stop_request_invoke_id_;
+	IEnrollmentStateMachine * state_machine_;
+	std::string reason_;
 };
 
-/// The state machine of the party that is a member of the DIF
-/// and will help the joining party (enrollee) to join the DIF
-class EnrollerStateMachine: public BaseEnrollmentStateMachine {
-public:
-	EnrollerStateMachine(IPCProcess * ipc_process,
-		const rina::ApplicationProcessNamingInformation& remote_naming_info, int timeout,
-		rina::ApplicationProcessNamingInformation * supporting_dif_name);
-	~EnrollerStateMachine();
-
-	/// An M_CONNECT message has been received.  Handle the transition from the
-	/// NULL to the WAIT_START_ENROLLMENT state.
-	/// Authenticate the remote peer and issue a connect response
-	/// @param invoke_id
-    /// @param portId
-	void connect(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
-
-	/// Called by the Enrollment object when it receives an M_START message from
-	/// the enrolling member. Have to look at the enrollment information request,
-	/// from that deduce if the IPC process requesting to enroll with me is already
-	/// a member of the DIF and if its address is valid. If it is not a member of
-	/// the DIF, send a new address with the M_START_R, send the M_CREATEs to provide
-	/// the DIF initialization information and state, and send M_STOP_R. If it is a
-	/// valid member, just send M_START_R with no address and M_STOP_R
-	/// @param eiRequest
-	/// @param invoke_id to reply to the message
-    /// @param cdapSessionDescriptor
-    void start(EnrollmentInformationRequest * eiRequest, int invoke_id,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-
-    /// The response of the stop operation has been received, send M_START operation without
-    /// waiting for an answer and consider the process enrolled
-    /// @param result
-    /// @param result_reason
-    /// @param object_value
-    /// @param cdapSessionDescriptor
-	void stopResponse(int result, const std::string& result_reason,
-			void * object_value, rina::CDAPSessionDescriptor * session_descriptor);
-
-private:
-    /// Send a negative response to the M_START enrollment message
-    /// @param result the error code
-    /// @param resultReason the reason of the bad result
-    /// @param requestMessage the received M_START enrollment message
-    void sendNegativeStartResponseAndAbortEnrollment(int result, const std::string&
-    		resultReason, int invoke_id);
-
-    /// Send all the information required to start operation to
-    /// the IPC process that is enrolling to me
-    void sendDIFStaticInformation();
-
-    void enrollmentCompleted();
-
-	ISecurityManager * security_manager_;
-	INamespaceManager * namespace_manager_;
-};
-
-class EnrollmentTask: public IEnrollmentTask, public rina::InternalEventListener {
+class EnrollmentTask: public IPCPEnrollmentTask, public rina::InternalEventListener {
 public:
 	EnrollmentTask();
 	~EnrollmentTask();
 	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+	void eventHappened(rina::InternalEvent * event);
 	const std::list<rina::Neighbor *> get_neighbors() const;
-	BaseEnrollmentStateMachine * getEnrollmentStateMachine(const std::string& apName,
-			int portId, bool remove);
-	bool isEnrolledTo(const std::string& applicationProcessName) const;
-	const std::list<std::string> get_enrolled_ipc_process_names() const;
-	void processEnrollmentRequestEvent(rina::EnrollToDIFRequestEvent * event);
-	void initiateEnrollment(EnrollmentRequest * request);
-	void connect(int invoke_id,
-			rina::CDAPSessionDescriptor * session_descriptor);
+	bool isEnrolledTo(const std::string& applicationProcessName);
+	const std::list<std::string> get_enrolled_app_names() const;
+	void processEnrollmentRequestEvent(rina::EnrollToDAFRequestEvent * event);
+	void initiateEnrollment(rina::EnrollmentRequest * request);
+	void connect(const rina::CDAPMessage& message,
+		     rina::CDAPSessionDescriptor * session_descriptor);
 	void connectResponse(int result, const std::string& result_reason,
 			rina::CDAPSessionDescriptor * session_descriptor);
-	void release(int invoke_id,
-			rina::CDAPSessionDescriptor * session_descriptor);
+	void release(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
 	void releaseResponse(int result, const std::string& result_reason,
 			rina::CDAPSessionDescriptor * session_descriptor);
-	void eventHappened(rina::InternalEvent * event);
+	void process_authentication_message(const rina::CDAPMessage& message,
+			rina::CDAPSessionDescriptor * session_descriptor);
 	void enrollmentFailed(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
-			int portId, const std::string& reason, bool enrolle, bool sendReleaseMessage);
-	void enrollmentCompleted(rina::Neighbor * neighbor, bool enrollee);
+			int portId, const std::string& reason, bool sendReleaseMessage);
+	void enrollmentCompleted(const rina::Neighbor& neighbor, bool enrollee);
+	IEnrollmentStateMachine * getEnrollmentStateMachine(int portId, bool remove);
+	void deallocateFlow(int portId);
+	void add_enrollment_state_machine(int portId, IEnrollmentStateMachine * stateMachine);
 
 private:
 	void populateRIB();
 	void subscribeToEvents();
-	void deallocateFlow(int portId);
-
-	/// Creates an enrollment state machine with the remote IPC process identified by the apNamingInfo
-	/// @param apNamingInfo
-	/// @param enrollee true if this IPC process is the one that initiated the
-	/// enrollment sequence (i.e. it is the application process that wants to
-	/// join the DIF)
-	/// @return
-	BaseEnrollmentStateMachine * createEnrollmentStateMachine(
-			const rina::ApplicationProcessNamingInformation& apNamingInfo, int portId,
-			bool enrollee, const rina::ApplicationProcessNamingInformation& supportingDifName);
-
-	/// Returns the enrollment state machine associated to the cdap descriptor.
-	/// @param cdapSessionDescriptor
-	/// @param remove
-	/// @return
-	BaseEnrollmentStateMachine * getEnrollmentStateMachine(
-			const rina::CDAPSessionDescriptor * cdapSessionDescriptor, bool remove);
 
 	///  If the N-1 flow with the neighbor is still allocated, request its deallocation
 	/// @param deadEvent
@@ -429,38 +215,22 @@ private:
 	/// @param resultReason
 	void nMinusOneFlowAllocationFailed(rina::NMinusOneFlowAllocationFailedEvent * event);
 
-	IPCPRIBDaemon * rib_daemon_;
-	rina::CDAPSessionManagerInterface * cdap_session_manager_;
-	IResourceAllocator * resource_allocator_;
+	rina::IRIBDaemon * rib_daemon_;
+	rina::InternalEventManager * event_manager_;
+	rina::IPCResourceManager * irm_;
 	INamespaceManager * namespace_manager_;
 	rina::Thread * neighbors_enroller_;
-	rina::Lockable * lock_;
+
+	rina::Lockable lock_;
 
 	/// The maximum time to wait between steps of the enrollment sequence (in ms)
 	int timeout_;
 
 	/// Stores the enrollment state machines, one per remote IPC process that this IPC
 	/// process is enrolled to.
-	rina::ThreadSafeMapOfPointers<std::string, BaseEnrollmentStateMachine> state_machines_;
+	rina::ThreadSafeMapOfPointers<int, IEnrollmentStateMachine> state_machines_;
 
-	rina::ThreadSafeMapOfPointers<unsigned int, EnrollmentRequest> port_ids_pending_to_be_allocated_;
-};
-
-/// Handles the operations related to the "daf.management.enrollment" objects
-class EnrollmentRIBObject: public BaseIPCPRIBObject {
-public:
-	EnrollmentRIBObject(IPCProcess * ipc_process);
-	const void* get_value() const;
-	void remoteStartObject(void * object_value, int invoke_id,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	void remoteStopObject(void * object_value, int invoke_id,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-
-private:
-	void sendErrorMessage(const rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-
-	EnrollmentTask * enrollment_task_;
-	rina::CDAPSessionManagerInterface * cdap_session_manager_;
+	rina::ThreadSafeMapOfPointers<unsigned int, rina::EnrollmentRequest> port_ids_pending_to_be_allocated_;
 };
 
 /// Handles the operations related to the "daf.management.operationalStatus" object

@@ -10,7 +10,7 @@ namespace rinad {
 
 class SecurityManagerPasswdPs: public ISecurityManagerPs {
 public:
-	SecurityManagerPasswdPs(ISecurityManager * dm);
+	SecurityManagerPasswdPs(IPCPSecurityManager * dm);
 	bool isAllowedToJoinDIF(const rina::Neighbor& newMember);
 	bool acceptFlow(const Flow& newFlow);
         int set_policy_set_param(const std::string& name,
@@ -19,12 +19,12 @@ public:
 
 private:
         // Data model of the security manager component.
-        ISecurityManager * dm;
+        IPCPSecurityManager * dm;
 
         int max_retries;
 };
 
-SecurityManagerPasswdPs::SecurityManagerPasswdPs(ISecurityManager * dm_) : dm(dm_)
+SecurityManagerPasswdPs::SecurityManagerPasswdPs(IPCPSecurityManager * dm_) : dm(dm_)
 {
 	(void)dm;
 }
@@ -69,7 +69,7 @@ int SecurityManagerPasswdPs::set_policy_set_param(const std::string& name,
 extern "C" rina::IPolicySet *
 createSecurityManagerPasswdPs(rina::ApplicationEntity * ctx)
 {
-        ISecurityManager * sm = dynamic_cast<ISecurityManager *>(ctx);
+	IPCPSecurityManager * sm = dynamic_cast<IPCPSecurityManager *>(ctx);
 
         if (!sm) {
                 return NULL;
@@ -94,7 +94,7 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
 
         factory.plugin_name = plugin_name;
         factory.info.name = "passwd";
-        factory.info.app_entity = ISecurityManager::SECURITY_MANAGER_AE_NAME;
+        factory.info.app_entity = rina::ApplicationEntity::SECURITY_MANAGER_AE_NAME;
         factory.create = createSecurityManagerPasswdPs;
         factory.destroy = destroySecurityManagerPasswdPs;
 

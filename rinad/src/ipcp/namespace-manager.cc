@@ -245,7 +245,7 @@ void DirectoryForwardingTableEntrySetRIBObject::eventHappened(rina::InternalEven
 	for (iterator = get_children().begin(); iterator != get_children().end(); ++iterator) {
 		entry = (rina::DirectoryForwardingTableEntry *) (*iterator)->get_value();
 		LOG_IPCP_DBG("Entry pointer: %p", entry);
-		if (entry->get_address() == conEvent->neighbor_->get_address()) {
+		if (entry->get_address() == conEvent->neighbor_.get_address()) {
 			objectsToDelete.push_back((*iterator)->name_);
 		}
 	}
@@ -610,19 +610,6 @@ unsigned int NamespaceManager::getAdressByname(const rina::ApplicationProcessNam
 	}
 
 	throw rina::Exception("Unknown neighbor");
-}
-
-int NamespaceManager::select_policy_set(const std::string& path,
-                                     const std::string& name)
-{
-	return select_policy_set_common(get_name(), path, name);
-}
-
-int NamespaceManager::set_policy_set_param(const std::string& path,
-                                        const std::string& name,
-                                        const std::string& value)
-{
-	return set_policy_set_param_common(path, name, value);
 }
 
 }

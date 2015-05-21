@@ -3,6 +3,8 @@
  *
  *    Vincenzo Maffione <v.maffione@nextworks.it>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
+ *    Miquel Tarzan <miquel.tarzan@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,172 +31,97 @@
 #include "rds/rmem.h"
 #include "rmt-ps.h"
 #include "rmt.h"
-
-struct sched_substate {
-        int last_bucket;
-        struct rfifo * last_queue;
-};
-
-struct sched_state {
-        struct sched_substate rx;
-        struct sched_substate tx;
-};
+#include "rmt-ps-common.h"
 
 static void
 default_max_q_policy_tx(struct rmt_ps * ps,
                         struct pdu *    pdu,
-                        struct rfifo *  queue)
+                        struct rmt_n1_port * n1_port)
 { }
 
 static void
 default_max_q_policy_rx(struct rmt_ps * ps,
                         struct sdu *    sdu,
-                        struct rfifo *  queue)
+                        struct rmt_n1_port * n1_port)
 { }
 
 static void
-default_rmt_q_monitor_policy_tx(struct rmt_ps * ps,
-                                struct pdu *    pdu,
-                                struct rfifo *  queue)
+default_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
+                                struct pdu *         pdu,
+                                struct rmt_n1_port * n1_port)
 { }
 
 static void
-default_rmt_q_monitor_policy_rx(struct rmt_ps * ps,
-                                struct sdu *    sdu,
-                                struct rfifo *  queue)
+default_rmt_q_monitor_policy_rx(struct rmt_ps *      ps,
+                                struct sdu *         sdu,
+                                struct rmt_n1_port * n1_port)
 { }
 
-static struct rfifo *
-rmt_scheduling_policy_common(struct sched_substate * sss,
-                             struct rmt_n1_port * n1_port, bool restart)
-{ return restart ? n1_port->queue : NULL; }
+static int
+default_rmt_scheduling_create_policy_tx(struct rmt_ps *        ps,
+                                        struct rmt_n1_port *   n1_port)
+{ return common_rmt_scheduling_create_policy_tx(ps, n1_port); }
 
-/* NOTE: To be used when rmt_n1_port struct has several queues */
-/* Round robin scheduler. */
-/*
-static struct rmt_queue *
-rmt_scheduling_policy_common(struct sched_substate * sss,
-                             struct rmt_qmap * qmap, bool restart)
-{
-        struct rmt_queue *queue;
-        struct rmt_queue *selected_queue = NULL;
-        int bkt;
+static int
+default_rmt_scheduling_destroy_policy_tx(struct rmt_ps *        ps,
+                                         struct rmt_n1_port *   n1_port)
+{ return common_rmt_scheduling_destroy_policy_tx(ps, n1_port); }
 
-        if (restart) {
-                sss->last_bucket = 0;
-                sss->last_queue = NULL;
-        }
+static int
+default_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
+                                         struct rmt_n1_port * n1_port,
+                                         struct pdu *         pdu)
+{ return common_rmt_enqueue_scheduling_policy_tx(ps, n1_port, pdu); }
 
-        LOG_DBG("SCHED-START: lb = %d, lq = %p",
-                sss->last_bucket, sss->last_queue);
+static struct pdu *
+default_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
+                                     struct rmt_n1_port * n1_port)
+{ return common_rmt_next_scheduled_policy_tx(ps, n1_port); }
 
-        for (bkt = sss->last_bucket, queue = NULL;
-                        queue == NULL && bkt < HASH_SIZE(qmap->queues); bkt++) {
-                if (sss->last_queue) {
-                        queue = sss->last_queue;
-                        hlist_for_each_entry_continue(queue, hlist) {
-                                selected_queue = queue;
-                                break;
-                        }
-                } else {
-                        hlist_for_each_entry(queue, &qmap->queues[bkt], hlist) {
-                                selected_queue = queue;
-                                break;
-                        }
-                }
-                if (selected_queue) {
-                        break;
-                } else {
-                        // When the bucket changes we must invalidate
-                        // sss->last_queue.
-                        sss->last_queue = NULL;
-                }
-        }
-
-        sss->last_bucket = bkt;
-        sss->last_queue = selected_queue;
-
-        LOG_DBG("SCHED-END: lb = %d, lq = %p",
-                sss->last_bucket, sss->last_queue);
-
-        return selected_queue;
-}
-*/
-
-static struct rfifo *
-default_rmt_scheduling_policy_tx(struct rmt_ps * ps,
+static int
+default_rmt_scheduling_policy_rx(struct rmt_ps *      ps,
                                  struct rmt_n1_port * n1_port,
-                                 bool restart)
-{
-        struct sched_state * ss = ps->priv;
-
-        return rmt_scheduling_policy_common(&ss->tx, n1_port, restart);
-}
-
-static struct rfifo *
-default_rmt_scheduling_policy_rx(struct rmt_ps * ps,
-                                 struct rmt_n1_port * n1_port,
-                                 bool restart)
-{
-        struct sched_state * ss = ps->priv;
-
-        return rmt_scheduling_policy_common(&ss->rx, n1_port, restart);
-}
+                                 struct sdu *         sdu)
+{ return common_rmt_scheduling_policy_rx(ps, n1_port, sdu); }
 
 static int
 rmt_ps_set_policy_set_param(struct ps_base * bps,
                             const char    * name,
                             const char    * value)
-{
-        struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
-
-        (void) ps;
-
-        if (!name) {
-                LOG_ERR("Null parameter name");
-                return -1;
-        }
-
-        if (!value) {
-                LOG_ERR("Null parameter value");
-                return -1;
-        }
-
-        LOG_ERR("No such parameter to set");
-
-        return -1;
-}
+{ return rmt_ps_common_set_policy_set_param(bps, name, value); }
 
 static struct ps_base *
 rmt_ps_default_create(struct rina_component * component)
 {
         struct rmt * rmt = rmt_from_component(component);
         struct rmt_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
-        struct sched_state *ss;
+        struct rmt_ps_common_data * data = rkzalloc(sizeof(*data), GFP_KERNEL);
 
-        if (!ps) {
+        if (!ps || !data) {
                 return NULL;
         }
 
         /* Allocate policy-set private data. */
-        ss = rkzalloc(sizeof(*ss), GFP_KERNEL);
-        if (!ss) {
+        data->outqs = rmt_queue_set_create();
+        if (!data->outqs) {
                 rkfree(ps);
+                rkfree(data);
                 return NULL;
         }
-        ps->priv = ss;
+        ps->priv = data;
 
         ps->base.set_policy_set_param = rmt_ps_set_policy_set_param;
         ps->dm          = rmt;
 
-        ps->max_q_policy_tx             = default_max_q_policy_tx;
-        ps->max_q_policy_rx             = default_max_q_policy_rx;
-        ps->rmt_q_monitor_policy_tx     = default_rmt_q_monitor_policy_tx;
-        ps->rmt_q_monitor_policy_rx     = default_rmt_q_monitor_policy_rx;
-        ps->rmt_scheduling_policy_tx    = default_rmt_scheduling_policy_tx;
-        ps->rmt_scheduling_policy_rx    = default_rmt_scheduling_policy_rx;
-
-        ps->max_q       = 256;
+        ps->max_q_policy_tx                  = default_max_q_policy_tx;
+        ps->max_q_policy_rx                  = default_max_q_policy_rx;
+        ps->rmt_q_monitor_policy_tx          = default_rmt_q_monitor_policy_tx;
+        ps->rmt_q_monitor_policy_rx          = default_rmt_q_monitor_policy_rx;
+        ps->rmt_next_scheduled_policy_tx     = default_rmt_next_scheduled_policy_tx;
+        ps->rmt_enqueue_scheduling_policy_tx = default_rmt_enqueue_scheduling_policy_tx;
+        ps->rmt_scheduling_policy_rx         = default_rmt_scheduling_policy_rx;
+        ps->rmt_scheduling_create_policy_tx  = default_rmt_scheduling_create_policy_tx;
+        ps->rmt_scheduling_destroy_policy_tx = default_rmt_scheduling_destroy_policy_tx;
 
         return &ps->base;
 }
@@ -203,15 +130,19 @@ static void
 rmt_ps_default_destroy(struct ps_base * bps)
 {
         struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
+        struct rmt_ps_common_data * data = ps->priv;
 
         if (bps) {
-                rkfree(ps->priv);
+                if (data) {
+                        if (data->outqs) rmt_queue_set_destroy(data->outqs);
+                        rkfree(data);
+                }
                 rkfree(ps);
         }
 }
 
 struct ps_factory rmt_factory = {
-        .owner          = THIS_MODULE,
+        .owner   = THIS_MODULE,
         .create  = rmt_ps_default_create,
         .destroy = rmt_ps_default_destroy,
 };

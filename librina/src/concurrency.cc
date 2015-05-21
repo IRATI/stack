@@ -350,6 +350,27 @@ bool Thread::operator!=(const Thread &other) const {
 	return !(*this == other);
 }
 
+/* Class SimpleThread */
+void * do_simple_thread_work(void * arg)
+{
+	SimpleThread * simple_thread = (SimpleThread *) arg;
+	if (!simple_thread) {
+		LOG_ERR("Bogus simple thread passed");
+		return (void *) -1;
+	}
+
+	return reinterpret_cast<void *>(simple_thread->run());
+}
+
+SimpleThread::SimpleThread(ThreadAttributes * threadAttributes) :
+		Thread(threadAttributes, do_simple_thread_work, (void *) this)
+{
+}
+
+SimpleThread::~SimpleThread() throw()
+{
+}
+
 /* CLASS LOCKABLE*/
 Lockable::Lockable() {
 	if (pthread_mutexattr_init(&mutex_attr_)) {
@@ -361,23 +382,19 @@ Lockable::Lockable() {
 #ifdef _DEBUG
 	if (pthread_mutexattr_settype(&mutex_attr_,
 					PTHREAD_MUTEX_ERRORCHECK)) {
-		LOG_CRIT("%s", ConcurrentException::error_set_mutex_attributes.c_str());
 		throw ConcurrentException(ConcurrentException::error_set_mutex_attributes);
 	}
 #else
 	if (pthread_mutexattr_settype(&mutex_attr_, PTHREAD_MUTEX_NORMAL)) {
-		LOG_CRIT("%s", ConcurrentException::error_set_mutex_attributes.c_str());
 		throw ConcurrentException(
 				ConcurrentException::error_set_mutex_attributes);
 	}
 #endif
 
 	if (pthread_mutex_init(&mutex_, &mutex_attr_)) {
-		LOG_CRIT("%s", ConcurrentException::error_initialize_mutex.c_str());
 		throw ConcurrentException(ConcurrentException::error_initialize_mutex);
 	}
 	if (pthread_mutexattr_destroy(&mutex_attr_)) {
-		LOG_CRIT("%s", ConcurrentException::error_destroy_mutex_attributes.c_str());
 		throw ConcurrentException(
 				ConcurrentException::error_destroy_mutex_attributes);
 	}

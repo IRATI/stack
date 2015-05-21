@@ -118,10 +118,6 @@ public:
 	void processApplicationUnregistrationRequestEvent(
 				const rina::ApplicationUnregistrationRequestEvent& event);
 	unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name);
-	int select_policy_set(const std::string& path, const std::string& name);
-	int set_policy_set_param(const std::string& path,
-			const std::string& name,
-			const std::string& value);
 
 private:
 	/// The directory forwarding table

@@ -1137,8 +1137,8 @@ void IpcmEnrollToDIFRequestMessage::setSupportingDifName(
 }
 
 IPCEvent* IpcmEnrollToDIFRequestMessage::toIPCEvent(){
-        EnrollToDIFRequestEvent * event =
-                        new EnrollToDIFRequestEvent(
+        EnrollToDAFRequestEvent * event =
+                        new EnrollToDAFRequestEvent(
                                         difName, supportingDIFName,
                                         neighborName, getSequenceNumber());
         return event;
