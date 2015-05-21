@@ -786,22 +786,22 @@ int AuthSSH2PolicySet::edh_generate_shared_secret(SSH2SecurityContext * sc)
 		return -1;
 	}
 
-	LOG_DBG("Computed shared secret of length %d: %s",
+	LOG_DBG("Computed shared secret of length %d bytes: %s",
 			sc->shared_secret.length,
 			sc->shared_secret.toString().c_str());
 
 	if (sc->encrypt_alg == SSL_TXT_AES128) {
-		sc->encrypt_key.length = 128;
-		sc->encrypt_key.array = new unsigned char[128];
+		sc->encrypt_key.length = 16;
+		sc->encrypt_key.array = new unsigned char[16];
 		MD5(sc->shared_secret.array, sc->shared_secret.length, sc->encrypt_key.array);
 
 	} else if (sc->encrypt_alg == SSL_TXT_AES256) {
-		sc->encrypt_key.length = 256;
-		sc->encrypt_key.array = new unsigned char[256];
+		sc->encrypt_key.length = 32;
+		sc->encrypt_key.array = new unsigned char[32];
 		SHA256(sc->shared_secret.array, sc->shared_secret.length, sc->encrypt_key.array);
 	}
 
-	LOG_DBG("Generated encryption key of length %d: %s",
+	LOG_DBG("Generated encryption key of length %d bytes: %s",
 			sc->encrypt_key.length,
 			sc->encrypt_key.toString().c_str());
 
