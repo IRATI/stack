@@ -41,6 +41,7 @@
 #include <list>
 #include <ctime>
 #include <cstdlib>
+#include <iomanip>
 
 #include "librina/concurrency.h"
 #include "librina/exceptions.h"
@@ -621,8 +622,9 @@ struct UcharArray {
 
 	std::string toString() {
 		std::stringstream ss;
+		ss << std::hex;
 		for (int i = 0; i < length; i++) {
-			ss << std::hex << array[i];
+			ss << std::setw(2) << std::setfill('0') << (int)array[i];
 		}
 		return ss.str();
 	}
