@@ -786,7 +786,9 @@ int AuthSSH2PolicySet::edh_generate_shared_secret(SSH2SecurityContext * sc)
 		return -1;
 	}
 
-	LOG_DBG("Computed shared secret: %s", sc->shared_secret.toString().c_str());
+	LOG_DBG("Computed shared secret of length %d: %s",
+			sc->shared_secret.length,
+			sc->shared_secret.toString().c_str());
 
 	return 0;
 }
@@ -862,7 +864,7 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::decryption_enabled_server(SSH2Secu
 
 IAuthPolicySet::AuthStatus AuthSSH2PolicySet::encryption_enabled_server(SSH2SecurityContext * sc)
 {
-	if (sc->state != SSH2SecurityContext::REQUESTED_ENABLE_DECRYPTION_SERVER) {
+	if (sc->state != SSH2SecurityContext::REQUESTED_ENABLE_ENCRYPTION_SERVER) {
 		LOG_ERR("Wrong state of policy");
 		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
