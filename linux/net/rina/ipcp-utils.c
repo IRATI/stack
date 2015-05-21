@@ -488,32 +488,15 @@ struct rmt_config * rmt_config_create(void)
         if (!tmp)
                 return NULL;
 
-        tmp->pdu_forwarding = policy_create();
-        if (!tmp->pdu_forwarding) {
+        tmp->pft_policy_set = policy_create();
+        if (!tmp->pft_policy_set) {
                 rkfree(tmp);
                 return NULL;
         }
 
-        tmp->q_monitor = policy_create();
-        if (!tmp->q_monitor) {
-        	rkfree(tmp->pdu_forwarding);
-                rkfree(tmp);
-                return NULL;
-        }
-
-        tmp->max_q = policy_create();
-        if (!tmp->max_q) {
-        	rkfree(tmp->q_monitor);
-        	rkfree(tmp->pdu_forwarding);
-                rkfree(tmp);
-                return NULL;
-        }
-
-        tmp->scheduling = policy_create();
-        if (!tmp->scheduling) {
-        	rkfree(tmp->max_q);
-        	rkfree(tmp->q_monitor);
-        	rkfree(tmp->pdu_forwarding);
+        tmp->rmt_policy_set = policy_create();
+        if (!tmp->rmt_policy_set) {
+        	rkfree(tmp->pft_policy_set);
                 rkfree(tmp);
                 return NULL;
         }
@@ -524,17 +507,11 @@ EXPORT_SYMBOL(rmt_config_create);
 
 int rmt_config_destroy(struct rmt_config * rmt_config)
 {
-        if (rmt_config->pdu_forwarding)
-                rkfree(rmt_config->pdu_forwarding);
+        if (rmt_config->pft_policy_set)
+                rkfree(rmt_config->pft_policy_set);
 
-        if (rmt_config->q_monitor)
-                policy_destroy(rmt_config->q_monitor);
-
-        if (rmt_config->max_q)
-                rkfree(rmt_config->max_q);
-
-        if (rmt_config->scheduling)
-                policy_destroy(rmt_config->scheduling);
+        if (rmt_config->rmt_policy_set)
+                policy_destroy(rmt_config->rmt_policy_set);
 
         rkfree(rmt_config);
 

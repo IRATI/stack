@@ -1285,14 +1285,10 @@ static int parse_rmt_config(struct nlattr *     rmt_config_attr,
         struct nla_policy attr_policy[RMTC_ATTR_MAX + 1];
         struct nlattr *   attrs[RMTC_ATTR_MAX + 1];
 
-        attr_policy[RMTC_ATTR_PDU_FORW_POLICY].type  = NLA_NESTED;
-        attr_policy[RMTC_ATTR_PDU_FORW_POLICY].len   = 0;
-        attr_policy[RMTC_ATTR_Q_MONITOR_POLICY].type = NLA_NESTED;
-        attr_policy[RMTC_ATTR_Q_MONITOR_POLICY].len  = 0;
-        attr_policy[RMTC_ATTR_MAX_Q_POLICY].type     = NLA_NESTED;
-        attr_policy[RMTC_ATTR_MAX_Q_POLICY].len      = 0;
-        attr_policy[RMTC_ATTR_SCHED_POLICY].type     = NLA_NESTED;
-        attr_policy[RMTC_ATTR_SCHED_POLICY].len      = 0;
+        attr_policy[RMTC_ATTR_PFT_POLICY_SET].type = NLA_NESTED;
+        attr_policy[RMTC_ATTR_PFT_POLICY_SET].len  = 0;
+        attr_policy[RMTC_ATTR_RMT_POLICY_SET].type = NLA_NESTED;
+        attr_policy[RMTC_ATTR_RMT_POLICY_SET].len  = 0;
 
         if (nla_parse_nested(attrs,
         		     RMTC_ATTR_MAX,
@@ -1300,30 +1296,16 @@ static int parse_rmt_config(struct nlattr *     rmt_config_attr,
                              attr_policy) < 0)
                 goto parse_fail;
 
-        if (attrs[RMTC_ATTR_PDU_FORW_POLICY]) {
-                if (parse_policy(attrs[RMTC_ATTR_PDU_FORW_POLICY],
-                                 rmt_config->pdu_forwarding))
+        if (attrs[RMTC_ATTR_PFT_POLICY_SET]) {
+                if (parse_policy(attrs[RMTC_ATTR_PFT_POLICY_SET],
+                                 rmt_config->pft_policy_set))
                         goto parse_fail;
 
         }
 
-        if (attrs[RMTC_ATTR_Q_MONITOR_POLICY]) {
-                if (parse_policy(attrs[RMTC_ATTR_Q_MONITOR_POLICY],
-                                 rmt_config->q_monitor))
-                        goto parse_fail;
-
-        }
-
-        if (attrs[RMTC_ATTR_MAX_Q_POLICY]) {
-                if (parse_policy(attrs[RMTC_ATTR_MAX_Q_POLICY],
-                                 rmt_config->max_q))
-                        goto parse_fail;
-
-        }
-
-        if (attrs[RMTC_ATTR_SCHED_POLICY]) {
-                if (parse_policy(attrs[RMTC_ATTR_SCHED_POLICY],
-                                 rmt_config->scheduling))
+        if (attrs[RMTC_ATTR_RMT_POLICY_SET]) {
+                if (parse_policy(attrs[RMTC_ATTR_RMT_POLICY_SET],
+                                 rmt_config->rmt_policy_set))
                         goto parse_fail;
 
         }

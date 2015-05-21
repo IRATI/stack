@@ -99,17 +99,11 @@ struct efcp_config {
 
 /* Represents the configuration of the RMT */
 struct rmt_config {
-	/* The configuration of the PDU Forwarding policy */
-	struct policy * pdu_forwarding;
+	/* The PS name for the PDU Forwarding Table (Next hop) */
+	struct policy * pft_policy_set;
 
-	/* The configuration of the queue monitor policy */
-	struct policy * q_monitor;
-
-	/* The configuration of the max queue policy */
-	struct policy * max_q;
-
-	/* The configuration of the scheduling policy */
-	struct policy * scheduling;
+	/* The PS name for the RMT */
+	struct policy * rmt_policy_set;
 };
 
 /* Represents a DIF configuration (policies, parameters, etc) */
