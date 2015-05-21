@@ -433,27 +433,6 @@ public:
 		return neighbors_;
 	}
 
-    std::vector<rina::PsFactory>::iterator
-                    psFactoryLookup(const std::string& component,
-                                   const std::string& name) {
-    	std::vector<rina::PsFactory>::iterator response;
-    	(void) component;
-    	(void) name;
-    	return response;
-    }
-
-    int psFactoryPublish(const rina::PsFactory& factory) {
-    	(void) factory;
-    	return 0;
-    }
-
-    int psFactoryUnpublish(const std::string& component,
-                                          const std::string& name){
-    	(void) component;
-    	(void) name;
-    	return 0;
-    }
-
     rina::IPolicySet * psCreate(const std::string& component,
                                  const std::string& name,
                                  rina::ApplicationEntity * context) {
