@@ -412,24 +412,6 @@ SSH2AuthOptions * decode_ssh2_auth_options(const SerializedObject &message) {
 		  result->dh_public_key.length = gpb_options.dh_public_key().size();
 	}
 
-	if (gpb_options.has_dh_param_p()) {
-		  result->dh_param_p.array =
-				  new unsigned char[gpb_options.dh_param_p().size()];
-		  memcpy(result->dh_param_p.array,
-			 gpb_options.dh_param_p().data(),
-			 gpb_options.dh_param_p().size());
-		  result->dh_param_p.length = gpb_options.dh_param_p().size();
-	}
-
-	if (gpb_options.has_dh_param_g()) {
-		  result->dh_param_g.array =
-				  new unsigned char[gpb_options.dh_param_g().size()];
-		  memcpy(result->dh_param_p.array,
-			 gpb_options.dh_param_g().data(),
-			 gpb_options.dh_param_g().size());
-		  result->dh_param_g.length = gpb_options.dh_param_g().size();
-	}
-
 	return result;
 }
 
@@ -459,16 +441,6 @@ SerializedObject * encode_ssh2_auth_options(const SSH2AuthOptions& options){
 	if (options.dh_public_key.length > 0) {
 		gpb_options.set_dh_public_key(options.dh_public_key.array,
 					      options.dh_public_key.length);
-	}
-
-	if (options.dh_param_p.length > 0) {
-		gpb_options.set_dh_param_p(options.dh_param_p.array,
-					   options.dh_param_p.length);
-	}
-
-	if (options.dh_param_g.length > 0) {
-		gpb_options.set_dh_param_g(options.dh_param_g.array,
-					   options.dh_param_g.length);
 	}
 
 	int size = gpb_options.ByteSize();
@@ -624,7 +596,7 @@ AuthPolicy AuthSSH2PolicySet::get_auth_policy(int session_id,
 	sc->ttlPolicy = profile.ttlPolicy;
 
 	//Initialize Diffie-Hellman machinery and generate private/public key pairs
-	if (edh_init_keys(sc, NULL, NULL) != 0) {
+	if (edh_init_keys(sc) != 0) {
 		delete sc;
 		throw Exception();
 	}
@@ -636,14 +608,8 @@ AuthPolicy AuthSSH2PolicySet::get_auth_policy(int session_id,
 	options.compress_algs.push_back(sc->compress_alg);
 	options.dh_public_key.array = BN_to_binary(sc->dh_state->pub_key,
 						   &options.dh_public_key.length);
-	options.dh_param_p.array = BN_to_binary(sc->dh_state->p,
-						&options.dh_param_p.length);
-	options.dh_param_g.array = BN_to_binary(sc->dh_state->g,
-						&options.dh_param_g.length);
 
-	if (options.dh_public_key.length <= 0 ||
-			options.dh_param_p.length <= 0 ||
-			options.dh_param_g.length <= 0) {
+	if (options.dh_public_key.length <= 0 ) {
 		LOG_ERR("Error transforming big number to binary");
 		delete sc;
 		throw Exception();
@@ -666,7 +632,7 @@ AuthPolicy AuthSSH2PolicySet::get_auth_policy(int session_id,
 	return auth_policy;
 }
 
-int AuthSSH2PolicySet::edh_init_keys(SSH2SecurityContext * sc, BIGNUM * p, BIGNUM * g)
+int AuthSSH2PolicySet::edh_init_keys(SSH2SecurityContext * sc)
 {
 	DH *dh_state;
 
@@ -682,17 +648,8 @@ int AuthSSH2PolicySet::edh_init_keys(SSH2SecurityContext * sc, BIGNUM * p, BIGNU
 	}
 
 	// Set P and G (re-use defaults or use the ones sent by the peer)
-	if (!p) {
-		dh_state->p = BN_dup(dh_parameters->p);
-	} else {
-		dh_state->p = p;
-	}
-
-	if (!g) {
-		dh_state->g = BN_dup(dh_parameters->g);
-	} else {
-		dh_state->g = g;
-	}
+	dh_state->p = BN_dup(dh_parameters->p);
+	dh_state->g = BN_dup(dh_parameters->g);
 
 	// Generate the public and private key pair
 	if (DH_generate_key(dh_state) != 1) {
@@ -706,7 +663,7 @@ int AuthSSH2PolicySet::edh_init_keys(SSH2SecurityContext * sc, BIGNUM * p, BIGNU
 	return 0;
 }
 
-rina::IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(const AuthPolicy& auth_policy,
+IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(const AuthPolicy& auth_policy,
 									    const AuthSDUProtectionProfile& profile,
 								      	    int session_id)
 {
@@ -714,26 +671,26 @@ rina::IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(cons
 
 	if (auth_policy.name_ != type) {
 		LOG_ERR("Wrong policy name: %s", auth_policy.name_.c_str());
-		return rina::IAuthPolicySet::FAILED;
+		return IAuthPolicySet::FAILED;
 	}
 
 	if (auth_policy.versions_.front() != RINA_DEFAULT_POLICY_VERSION) {
 		LOG_ERR("Unsupported policy version: %s",
 				auth_policy.versions_.front().c_str());
-		return rina::IAuthPolicySet::FAILED;
+		return IAuthPolicySet::FAILED;
 	}
 
 	ScopedLock sc_lock(lock);
 
 	if (sec_man->get_security_context(session_id) != 0) {
 		LOG_ERR("A security context already exists for session_id: %d", session_id);
-		return rina::IAuthPolicySet::FAILED;
+		return IAuthPolicySet::FAILED;
 	}
 
 	SSH2AuthOptions * options = decode_ssh2_auth_options(auth_policy.options_);
 	if (!options) {
 		LOG_ERR("Could not decode SSHARSA options");
-		return rina::IAuthPolicySet::FAILED;
+		return IAuthPolicySet::FAILED;
 	}
 
 	SSH2SecurityContext * sc = new SSH2SecurityContext(session_id);
@@ -743,7 +700,7 @@ rina::IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(cons
 			current_alg.c_str());
 		delete sc;
 		delete options;
-		return rina::IAuthPolicySet::FAILED;
+		return IAuthPolicySet::FAILED;
 	} else {
 		sc->key_exch_alg = current_alg;
 	}
@@ -754,7 +711,7 @@ rina::IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(cons
 			current_alg.c_str());
 		delete sc;
 		delete options;
-		return rina::IAuthPolicySet::FAILED;
+		return IAuthPolicySet::FAILED;
 	} else {
 		sc->encrypt_alg = current_alg;
 	}
@@ -765,7 +722,7 @@ rina::IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(cons
 			current_alg.c_str());
 		delete sc;
 		delete options;
-		return rina::IAuthPolicySet::FAILED;
+		return IAuthPolicySet::FAILED;
 	} else {
 		sc->mac_alg = current_alg;
 	}
@@ -773,31 +730,10 @@ rina::IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(cons
 	//TODO check compression algorithm when we use them
 
 	//Initialize Diffie-Hellman machinery and generate private/public key pairs
-	BIGNUM *p = BN_bin2bn(options->dh_param_p.array,
-			      options->dh_param_p.length,
-			      NULL);
-	if (!p) {
-		LOG_ERR("Error converting binary to BIGNUM for parameter p");
+	if (edh_init_keys(sc) != 0) {
 		delete sc;
 		delete options;
-		return rina::IAuthPolicySet::FAILED;
-	}
-
-	BIGNUM *g = BN_bin2bn(options->dh_param_g.array,
-			      options->dh_param_g.length,
-			      NULL);
-	if (!g) {
-		LOG_ERR("Error converting binary to BIGNUM for parameter g");
-		BN_free(p);
-		delete sc;
-		delete options;
-		return rina::IAuthPolicySet::FAILED;
-	}
-
-	if (edh_init_keys(sc, p, g) != 0) {
-		delete sc;
-		delete options;
-		return rina::IAuthPolicySet::FAILED;
+		return IAuthPolicySet::FAILED;
 	}
 
 	//Add peer public key to security context
@@ -808,7 +744,7 @@ rina::IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(cons
 		LOG_ERR("Error converting public key to a BIGNUM");
 		delete sc;
 		delete options;
-		return rina::IAuthPolicySet::FAILED;
+		return IAuthPolicySet::FAILED;
 	}
 
 	//Options is not needed anymore
@@ -817,60 +753,23 @@ rina::IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(cons
 	//Generate the shared secret
 	if (edh_generate_shared_secret(sc) != 0) {
 		delete sc;
-		return rina::IAuthPolicySet::FAILED;
+		return IAuthPolicySet::FAILED;
 	}
 
-	// TODO configure kernel SDU protection policy with shared secret
-	// tell it to encrypt/decrypt all messages right after sending the next one
-
-	// Prepare message for the peer, send selected algorithms and public key
-	SSH2AuthOptions auth_options;
-	auth_options.key_exch_algs.push_back(sc->key_exch_alg);
-	auth_options.encrypt_algs.push_back(sc->encrypt_alg);
-	auth_options.mac_algs.push_back(sc->mac_alg);
-	auth_options.compress_algs.push_back(sc->compress_alg);
-	auth_options.dh_public_key.array = BN_to_binary(sc->dh_state->pub_key,
-						        &auth_options.dh_public_key.length);
-
-	if (auth_options.dh_public_key.length <= 0) {
-		LOG_ERR("Error transforming big number to binary");
+	// Configure kernel SDU protection policy with shared secret and algorithms
+	// tell it to enable decryption
+	AuthStatus result = enable_encryption(sc, DECRYPTION);
+	if (result == IAuthPolicySet::FAILED) {
 		delete sc;
-		return rina::IAuthPolicySet::FAILED;
+		return result;
 	}
 
-	SerializedObject * sobj = encode_ssh2_auth_options(auth_options);
-	if (!sobj) {
-		LOG_ERR("Problems encoding SSH2AuthOptions");
-		delete sc;
-		return rina::IAuthPolicySet::FAILED;
-	}
-
-	sc->state = SSH2SecurityContext::EDH_COMPLETED;
 	sec_man->add_security_context(sc);
-
-	//Send message to peer with selected algorithms and public key
-	try {
-		RIBObjectValue robject_value;
-		robject_value.type_ = RIBObjectValue::bytestype;
-		robject_value.bytes_value_ = *sobj;
-
-		RemoteProcessId remote_id;
-		remote_id.port_id_ = session_id;
-
-		//object class contains challenge request or reply
-		//object name contains cipher name
-		rib_daemon->remoteWriteObject(EDH_EXCHANGE, EDH_EXCHANGE,
-				robject_value, 0, remote_id, 0);
-	} catch (Exception &e) {
-		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
-		delete sc;
-		delete sobj;
-		return rina::IAuthPolicySet::FAILED;
+	sc->state = SSH2SecurityContext::REQUESTED_ENABLE_DECRYPTION_SERVER;
+	if (result == IAuthPolicySet::SUCCESSFULL) {
+		result = decryption_enabled_server(sc);
 	}
-
-	delete sobj;
-
-	return rina::IAuthPolicySet::IN_PROGRESS;
+	return result;
 }
 
 int AuthSSH2PolicySet::edh_generate_shared_secret(SSH2SecurityContext * sc)
@@ -884,13 +783,95 @@ int AuthSSH2PolicySet::edh_generate_shared_secret(SSH2SecurityContext * sc)
 	if((sc->shared_secret.length =
 			DH_compute_key(sc->shared_secret.array, sc->dh_peer_pub_key, sc->dh_state)) < 0) {
 		LOG_ERR("Error computing shared secret");
-		OPENSSL_free(sc->shared_secret.array);
 		return -1;
 	}
 
 	LOG_DBG("Computed shared secret: %s", sc->shared_secret.toString().c_str());
 
 	return 0;
+}
+
+IAuthPolicySet::AuthStatus AuthSSH2PolicySet::decryption_enabled_server(SSH2SecurityContext * sc)
+{
+	if (sc->state != SSH2SecurityContext::REQUESTED_ENABLE_DECRYPTION_SERVER) {
+		LOG_ERR("Wrong state of policy");
+		sec_man->destroy_security_context(sc->id);
+		return IAuthPolicySet::FAILED;
+	}
+
+	LOG_DBG("Decryption enabled for port-id: %d", sc->id);
+
+	// Prepare message for the peer, send selected algorithms and public key
+	SSH2AuthOptions auth_options;
+	auth_options.key_exch_algs.push_back(sc->key_exch_alg);
+	auth_options.encrypt_algs.push_back(sc->encrypt_alg);
+	auth_options.mac_algs.push_back(sc->mac_alg);
+	auth_options.compress_algs.push_back(sc->compress_alg);
+	auth_options.dh_public_key.array = BN_to_binary(sc->dh_state->pub_key,
+			&auth_options.dh_public_key.length);
+
+	if (auth_options.dh_public_key.length <= 0) {
+		LOG_ERR("Error transforming big number to binary");
+		sec_man->destroy_security_context(sc->id);
+		return IAuthPolicySet::FAILED;
+	}
+
+	SerializedObject * sobj = encode_ssh2_auth_options(auth_options);
+	if (!sobj) {
+		LOG_ERR("Problems encoding SSH2AuthOptions");
+		sec_man->destroy_security_context(sc->id);
+		return IAuthPolicySet::FAILED;
+	}
+
+	//Send message to peer with selected algorithms and public key
+	try {
+		RIBObjectValue robject_value;
+		robject_value.type_ = RIBObjectValue::bytestype;
+		robject_value.bytes_value_ = *sobj;
+
+		RemoteProcessId remote_id;
+		remote_id.port_id_ = sc->id;
+
+		//object class contains challenge request or reply
+		//object name contains cipher name
+		rib_daemon->remoteWriteObject(EDH_EXCHANGE, EDH_EXCHANGE,
+				robject_value, 0, remote_id, 0);
+	} catch (Exception &e) {
+		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
+		sec_man->destroy_security_context(sc->id);
+		delete sobj;
+		return IAuthPolicySet::FAILED;
+	}
+
+	delete sobj;
+
+	// Configure kernel SDU protection policy with shared secret and algorithms
+	// tell it to enable encryption
+	AuthStatus result = enable_encryption(sc, ENCRYPTION);
+	if (result == IAuthPolicySet::FAILED) {
+		sec_man->destroy_security_context(sc->id);
+		return result;
+	}
+
+	sc->state = SSH2SecurityContext::REQUESTED_ENABLE_ENCRYPTION_SERVER;
+	if (result == IAuthPolicySet::SUCCESSFULL) {
+		result = encryption_enabled_server(sc);
+	}
+	return result;
+}
+
+IAuthPolicySet::AuthStatus AuthSSH2PolicySet::encryption_enabled_server(SSH2SecurityContext * sc)
+{
+	if (sc->state != SSH2SecurityContext::REQUESTED_ENABLE_DECRYPTION_SERVER) {
+		LOG_ERR("Wrong state of policy");
+		sec_man->destroy_security_context(sc->id);
+		return IAuthPolicySet::FAILED;
+	}
+
+	LOG_DBG("Encryption enabled for port-id: %d", sc->id);
+	sc->state = SSH2SecurityContext::ENCRYPTION_SETUP_SERVER;
+
+	return IAuthPolicySet::IN_PROGRESS;
 }
 
 int AuthSSH2PolicySet::process_incoming_message(const CDAPMessage& message, int session_id)
@@ -968,13 +949,35 @@ int AuthSSH2PolicySet::process_edh_exchange_message(const CDAPMessage& message, 
 		return rina::IAuthPolicySet::FAILED;
 	}
 
-	sc->state = SSH2SecurityContext::EDH_COMPLETED;
+	// Configure kernel SDU protection policy with shared secret and algorithms
+	// tell it to enable decryption and encryption
+	AuthStatus result = enable_encryption(sc, ENCRYPTION_AND_DECRYPTION);
+	if (result == IAuthPolicySet::FAILED) {
+		sec_man->destroy_security_context(sc->id);
+		return result;
+	}
 
-	//TODO, configure the shared secret in the kernel SDU protection module
+	sc->state = SSH2SecurityContext::REQUESTED_ENABLE_ENCRYPTION_DECRYPTION_CLIENT;
+	if (result == IAuthPolicySet::SUCCESSFULL) {
+		result = encryption_decryption_enabled_client(sc);
+	}
+	return result;
+}
+
+IAuthPolicySet::AuthStatus AuthSSH2PolicySet::encryption_decryption_enabled_client(SSH2SecurityContext * sc)
+{
+	if (sc->state != SSH2SecurityContext::REQUESTED_ENABLE_ENCRYPTION_DECRYPTION_CLIENT) {
+		LOG_ERR("Wrong state of policy");
+		sec_man->destroy_security_context(sc->id);
+		return IAuthPolicySet::FAILED;
+	}
+
+	LOG_DBG("Encryption and decryption enabled for port-id: %d", sc->id);
+
+	sc->state = SSH2SecurityContext::ENCRYPTION_SETUP_CLIENT;
 
 	//TODO continue with authentication
-
-	return rina::IAuthPolicySet::IN_PROGRESS;
+	return IAuthPolicySet::IN_PROGRESS;
 }
 
 int AuthSSH2PolicySet::set_policy_set_param(const std::string& name,
@@ -1080,6 +1083,14 @@ ISecurityContext * ISecurityManager::get_security_context(int context_id)
 ISecurityContext * ISecurityManager::remove_security_context(int context_id)
 {
 	return security_contexts.erase(context_id);
+}
+
+void ISecurityManager::destroy_security_context(int context_id)
+{
+	ISecurityContext * ctx = remove_security_context(context_id);
+	if (ctx) {
+		delete ctx;
+	}
 }
 
 void ISecurityManager::add_security_context(ISecurityContext * context)

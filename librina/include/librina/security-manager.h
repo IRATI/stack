@@ -192,9 +192,6 @@ public:
 
 	/// DH public key
 	UcharArray dh_public_key;
-	/// DH parameters p and g
-	UcharArray dh_param_p;
-	UcharArray dh_param_g;
 };
 
 ///Captures all data of the SSHRSA security context
@@ -207,7 +204,11 @@ public:
         enum State {
         	BEGIN,
                 WAIT_EDH_EXCHANGE,
-                EDH_COMPLETED
+                REQUESTED_ENABLE_ENCRYPTION_SERVER,
+                REQUESTED_ENABLE_DECRYPTION_SERVER,
+                REQUESTED_ENABLE_ENCRYPTION_DECRYPTION_CLIENT,
+                ENCRYPTION_SETUP_SERVER,
+                ENCRYPTION_SETUP_CLIENT
         };
 
         State state;
@@ -244,8 +245,14 @@ public:
 	static const int DEFAULT_TIMEOUT;
 	static const std::string EDH_EXCHANGE;
 
+	enum EncryptionType {
+		ENCRYPTION,
+		DECRYPTION,
+		ENCRYPTION_AND_DECRYPTION
+	};
+
 	AuthSSH2PolicySet(IRIBDaemon * ribd, ISecurityManager * sm);
-	~AuthSSH2PolicySet();
+	virtual ~AuthSSH2PolicySet();
 	AuthPolicy get_auth_policy(int session_id,
 				   const AuthSDUProtectionProfile& profile);
 	AuthStatus initiate_authentication(const AuthPolicy& auth_policy,
@@ -254,6 +261,21 @@ public:
 	int process_incoming_message(const CDAPMessage& message, int session_id);
 	int set_policy_set_param(const std::string& name,
 	                         const std::string& value);
+
+	//Enable decryption, encryption or both on N-1 port.
+	virtual AuthStatus enable_encryption(SSH2SecurityContext * sc, int mode) = 0;
+
+protected:
+
+	//Callback functions called when encryption and/or decryption have been enabled
+	// (in case the operations were asynchronous)
+	AuthStatus decryption_enabled_server(SSH2SecurityContext * sc);
+	AuthStatus encryption_enabled_server(SSH2SecurityContext * sc);
+	AuthStatus encryption_decryption_enabled_client(SSH2SecurityContext * sc);
+
+	IRIBDaemon * rib_daemon;
+	ISecurityManager * sec_man;
+	Lockable lock;
 
 private:
 	//Convert Big Number to binary
@@ -264,7 +286,7 @@ private:
 
 	/// Initialize keys for DH key exchange with own P and G params.
 	/// Returns 0 if successful -1 otherwise.
-	int edh_init_keys(SSH2SecurityContext * sc, BIGNUM * p, BIGNUM * g);
+	int edh_init_keys(SSH2SecurityContext * sc);
 
 	/// Generate the shared secret using the peer's public key.
 	/// Returns 0 if successful, -1 otherwise
@@ -272,12 +294,9 @@ private:
 
 	int process_edh_exchange_message(const CDAPMessage& message, int session_id);
 
-	IRIBDaemon * rib_daemon;
-	ISecurityManager * sec_man;
 	DH * dh_parameters;
 	Timer timer;
 	int timeout;
-	Lockable lock;
 };
 
 class ISecurityManager: public ApplicationEntity, public InternalEventListener {
@@ -291,6 +310,7 @@ public:
         IAuthPolicySet * get_auth_policy_set(const std::string& auth_type);
         ISecurityContext * get_security_context(int context_id);
         ISecurityContext * remove_security_context(int context_id);
+        void destroy_security_context(int context_id);
         void add_security_context(ISecurityContext * context);
         void eventHappened(InternalEvent * event);
 

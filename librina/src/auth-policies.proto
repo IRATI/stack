@@ -6,8 +6,6 @@ message authOptsSSH2_t {
 	repeated string mac_algs = 3;			// Supported MAC algorithms
 	repeated string compress_algs = 4;		// Supported compression algorithms
 	optional bytes dh_public_key = 5;		// EDH public key
-	optional bytes dh_param_p = 6;			// EDH p parameter
-	optional bytes dh_param_g = 7;			// EDH g parameter
 }
 
 message authOptsPassword_t {
