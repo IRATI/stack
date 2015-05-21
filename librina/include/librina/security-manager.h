@@ -25,6 +25,8 @@
 #ifdef __cplusplus
 
 #include <openssl/dh.h>
+#include <openssl/md5.h>
+#include <openssl/sha.h>
 
 #include "librina/application.h"
 #include "librina/rib.h"
@@ -227,6 +229,9 @@ public:
 
 	///The shared secret, used to generate the encryption key
 	UcharArray shared_secret;
+
+	///The encryption key
+	UcharArray encrypt_key;
 };
 
 /// Authentication policy set that mimics SSH approach. It is associated to

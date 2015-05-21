@@ -88,11 +88,11 @@ rina::IAuthPolicySet::AuthStatus IPCPAuthSSH2PolicySet::enable_encryption(rina::
 {
 	//TODO properly implement by sending NL messages to kernel
 	if (mode == rina::AuthSSH2PolicySet::ENCRYPTION) {
-		LOG_DBG("Enabling encryption for port-id: %d", sc->id);
+		LOG_IPCP_DBG("Enabling encryption for port-id: %d", sc->id);
 	} else if (mode == rina::AuthSSH2PolicySet::DECRYPTION) {
-		LOG_DBG("Enabling decryption for port-id: %d", sc->id);
+		LOG_IPCP_DBG("Enabling decryption for port-id: %d", sc->id);
 	} else {
-		LOG_DBG("Enabling encryption and decryption for port-id: %d", sc->id);
+		LOG_IPCP_DBG("Enabling encryption and decryption for port-id: %d", sc->id);
 	}
 
 	return rina::IAuthPolicySet::SUCCESSFULL;

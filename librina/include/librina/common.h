@@ -622,7 +622,7 @@ struct UcharArray {
 	std::string toString() {
 		std::stringstream ss;
 		for (int i = 0; i < length; i++) {
-			ss << array[i];
+			ss << std::hex << array[i];
 		}
 		return ss.str();
 	}
