@@ -504,6 +504,9 @@ EXPORT_SYMBOL(rmt_dt_cons_set);
 int rmt_config_set(struct rmt *        instance,
                    struct rmt_config * rmt_config)
 {
+        const string_t * rmt_ps_name;
+        const string_t * pft_ps_name;
+
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
                 return -1;
@@ -516,19 +519,19 @@ int rmt_config_set(struct rmt *        instance,
 
         instance->config = rmt_config;
 
-        /* Add code to instantiate the policies in the rmt config */
-        if (rmt_select_policy_set(instance, "",
-                                  policy_name(rmt_config->rmt_policy_set))) {
-                LOG_ERR("Could not set policy set %s for RMT",
-                        policy_name(rmt_config->rmt_policy_set));
-                return -1;
+        rmt_ps_name = policy_name(rmt_config->rmt_policy_set);
+        pft_ps_name = policy_name(rmt_config->pft_policy_set);
+
+        if (!strcmp(rmt_ps_name, RINA_PS_DEFAULT_NAME)) {
+                if (rmt_select_policy_set(instance, "", rmt_ps_name))
+                        LOG_ERR("Could not set policy set %s for RMT,"
+                                "sticked with default", rmt_ps_name);
         }
 
-        if (pft_select_policy_set(instance->pft, "",
-                                  policy_name(rmt_config->pft_policy_set))) {
-                LOG_ERR("Could not set policy set %s for PFT",
-                        policy_name(rmt_config->pft_policy_set));
-                return -1;
+        if (!strcmp(pft_ps_name, RINA_PS_DEFAULT_NAME)) {
+                if (rmt_select_policy_set(instance, "", pft_ps_name))
+                        LOG_ERR("Could not set policy set %s for PFT,"
+                                "sticked with default", pft_ps_name);
         }
 
         return 0;
