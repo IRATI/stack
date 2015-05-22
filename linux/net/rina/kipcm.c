@@ -1519,13 +1519,13 @@ static int notify_ipcp_enable_encryption(void *             data,
         }
 
         attrs = msg->attrs;
-        port_id = attrs->port_id;
 
         if (rnl_parse_msg(info, msg)) {
                 retval = -1;
                 goto out;
         }
 
+        port_id = attrs->port_id;
         ipc_id      = msg->header.dst_ipc_id;
         ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipc_process) {
