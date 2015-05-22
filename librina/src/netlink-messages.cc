@@ -286,14 +286,14 @@ const std::string BaseNetlinkMessage::operationCodeToString(RINANetlinkOperation
 	case RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE:
 		result = "40_SET_POL_SET_RESP";
 		break;
-	case RINA_C_IPCM_IPC_PROCESS_INITIALIZED:
-		result = "41_IPCP_INIT";
-		break;
 	case RINA_C_IPCP_ENABLE_ENCRYPTION_REQUEST:
-		result = "42_ENABLE_ENCRYPT_REQ";
+		result = "41_ENABLE_ENCRYPT_REQ";
 		break;
 	case RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE:
-		result = "43_ENABLE_ENCRYPT_RESP";
+		result = "42_ENABLE_ENCRYPT_RESP";
+		break;
+	case RINA_C_IPCM_IPC_PROCESS_INITIALIZED:
+		result = "43_IPCP_INIT";
 		break;
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST:
 		result = "44_APP_ALLOC_FLOW_REQ";

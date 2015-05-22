@@ -168,7 +168,7 @@ typedef enum {
         /* 42 KIPCM -> IPC Process (user space) */
         RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE,
 
-        /* 41 */
+        /* 43 */
         RINA_C_MAX,
 } msg_type_t;
 

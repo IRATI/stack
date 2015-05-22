@@ -202,7 +202,8 @@ public:
 	UcharArray dh_public_key;
 };
 
-struct EncryptionProfile {
+class EncryptionProfile {
+public:
 	EncryptionProfile() : enable_encryption(false),
 			enable_decryption(false) , port_id(0){ };
 

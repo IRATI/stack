@@ -9124,6 +9124,7 @@ IPCPEnableEncryptionRequestMessage * parseIPCPEnableEncryptionRequestMessage(
 
 	if (attrs[EERM_ATTR_ENCRYPT_KEY]) {
 		result->profile.encrypt_key.length = nla_len(attrs[EERM_ATTR_ENCRYPT_KEY]);
+		result->profile.encrypt_key.data = new unsigned char[result->profile.encrypt_key.length];
 		unsigned char * data = (unsigned char *) nla_data(attrs[EERM_ATTR_ENCRYPT_KEY]);
 		memcpy(result->profile.encrypt_key.data, data, result->profile.encrypt_key.length);
 	}
