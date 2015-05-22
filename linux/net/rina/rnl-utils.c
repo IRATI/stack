@@ -2343,9 +2343,9 @@ rnl_parse_ipcp_enable_encryption_req_msg(
 		msg_attrs->encryption_enabled = false;
 
 	if (info->attrs[IEERM_ATTR_EN_DECRYPT])
-		msg_attrs->encryption_enabled = true;
+		msg_attrs->decrption_enabled = true;
 	else
-		msg_attrs->encryption_enabled = false;
+		msg_attrs->decrption_enabled = false;
 
         if (info->attrs[IEERM_ATTR_ENCRYPT_ALG])
                 msg_attrs->encrypt_alg = nla_dup_string(info->attrs[IEERM_ATTR_MAC_ALG],
