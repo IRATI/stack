@@ -152,6 +152,7 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
 #define NLA_INIT_NESTED __NLA_INIT(NLA_NESTED, 0)
 #define NLA_INIT_STRING __NLA_INIT(NLA_STRING, 0)
 #define NLA_INIT_FLAG   __NLA_INIT(NLA_FLAG,   0)
+#define NLA_INIT_UNSPEC __NLA_INIT(NLA_UNSPEC, 0)
 
 static struct nla_policy iatdr_policy[IATDR_ATTR_MAX + 1] = {
         [IATDR_ATTR_DIF_INFORMATION] = NLA_INIT_NESTED,
@@ -264,6 +265,17 @@ static struct nla_policy isps_policy[ISPS_ATTR_MAX + 1] = {
         [ISPS_ATTR_NAME] = NLA_INIT_STRING,
 };
 
+static struct nla_policy ieerm_policy[IEERM_ATTR_MAX + 1] = {
+        [IEERM_ATTR_ENCRYPT_POLICY_CONFIG] = NLA_INIT_NESTED,
+        [IEERM_ATTR_EN_ENCRYPT] 	   = NLA_INIT_FLAG,
+        [IEERM_ATTR_EN_DECRYPT] 	   = NLA_INIT_FLAG,
+        [IEERM_ATTR_ENCRYPT_ALG] 	   = NLA_INIT_STRING,
+        [IEERM_ATTR_MAC_ALG] 	   	   = NLA_INIT_STRING,
+        [IEERM_ATTR_COMPRESS_ALG] 	   = NLA_INIT_STRING,
+        [IEERM_ATTR_ENCRYPT_KEY] 	   = NLA_INIT_UNSPEC,
+        [IEERM_ATTR_N_1_PORT] 	 	   = NLA_INIT_U32,
+};
+
 #define DECL_NL_OP(COMMAND, POLICY) {           \
                 .cmd    = COMMAND,              \
                         .flags  = 0,            \
@@ -315,7 +327,7 @@ static struct genl_ops nl_ops[] = {
         DECL_NL_OP(RINA_C_IPCP_SET_POLICY_SET_PARAM_RESPONSE, NULL),
         DECL_NL_OP(RINA_C_IPCP_SELECT_POLICY_SET_REQUEST, isps_policy),
         DECL_NL_OP(RINA_C_IPCP_SELECT_POLICY_SET_RESPONSE, NULL),
-        DECL_NL_OP(RINA_C_IPCP_ENABLE_ENCRYPTION_REQUEST, NULL),
+        DECL_NL_OP(RINA_C_IPCP_ENABLE_ENCRYPTION_REQUEST, ieerm_policy),
         DECL_NL_OP(RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE, NULL)
 };
 
