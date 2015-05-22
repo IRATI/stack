@@ -560,18 +560,17 @@ void LoopFreeAlternateAlgorithm::fortifyRoutingTable(const Graph& graph,
 						std::list<rina::RoutingTableEntry *>& rt)
 {
 	std::map<unsigned int, std::map< unsigned int, int > > neighbors_dist_trees;
-	std::map<unsigned int, int> dist_map;
+	std::map<unsigned int, int> src_dist_tree;
 
 	// TODO avoid this, can be computed when invoke computeRoutingTable()
-	routing_algorithm.computeShortestDistances(graph, source_address, dist_map);
+	routing_algorithm.computeShortestDistances(graph, source_address, src_dist_tree);
 
 	// Collect all the neighbors, and for each one use the routing algorithm to
 	// compute the shortest distance map rooted at that neighbor
 	for (std::list<unsigned int>::const_iterator it = graph.vertices_.begin();
 						it != graph.vertices_.end(); ++it) {
 		if ((*it) != source_address && graph.contains_edge(source_address, *it)) {
-			neighbors_dist_trees.insert(
-				make_pair(*it, std::map<unsigned int, int>()));
+			neighbors_dist_trees[*it] = std::map<unsigned int, int>();
 			routing_algorithm.computeShortestDistances(graph,
 						*it, neighbors_dist_trees[*it]);
 		}
@@ -595,9 +594,9 @@ void LoopFreeAlternateAlgorithm::fortifyRoutingTable(const Graph& graph,
 			unsigned int neigh = nit->first;
 
 			// dist(neigh, target) < dist(neigh, source) + dist(source, target)
-			if (neigh_dist_map[*it] < dist_map[neigh] + dist_map[*it]) {
-				LOG_DBG("Node %u is a possible LFA for destination %u",
-					neigh, *it);
+			if (neigh_dist_map[*it] < src_dist_tree[neigh] + src_dist_tree[*it]) {
+				//LOG_DBG("Node %u is a possible LFA for destination %u",
+				//	neigh, *it);
 				extendRoutingTableEntry(rt, *it, neigh);
 			}
 		}
