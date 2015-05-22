@@ -90,15 +90,11 @@
         }
      },
      "rmtConfiguration" : {
-        "rmtQueueMonitorPolicy" : {
+        "pftPolicySet" : {
           "name" : "default",
           "version" : "0"
         },
-        "rmtSchedulingPolicy" : {
-          "name" : "default",
-          "version" : "0"
-        },
-        "maxQueuePolicy" : {
+        "rmtPolicySet" : {
           "name" : "default",
           "version" : "0"
         }

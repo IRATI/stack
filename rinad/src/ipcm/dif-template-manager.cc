@@ -296,7 +296,7 @@ void DIFTemplateManager::augment_dif_template(rinad::DIFTemplate * dif_template)
 		dif_template->etConfiguration = default_template->etConfiguration;
 	}
 
-	if (dif_template->rmtConfiguration.max_queue_policy_.name_ == "") {
+	if (dif_template->rmtConfiguration.rmt_policy_set_.name_ == "") {
 		dif_template->rmtConfiguration = default_template->rmtConfiguration;
 	}
 
