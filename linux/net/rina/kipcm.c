@@ -1112,13 +1112,10 @@ static int notify_ipcp_modify_pfte(void *             data,
         struct rnl_msg *                    msg;
         struct ipcp_instance *              ipc_process;
         ipc_process_id_t                    ipc_id;
-        struct pdu_ft_entry *               entry;
+        struct modpdufwd_entry *               entry;
 
         int (* op)(struct ipcp_instance_data * data,
-                   address_t                   address,
-                   qos_id_t                    qos_id,
-                   port_id_t *                 ports,
-                   size_t                      size);
+		   struct modpdufwd_entry       * entry);
 
         if (!data) {
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
@@ -1182,11 +1179,7 @@ static int notify_ipcp_modify_pfte(void *             data,
         list_for_each_entry(entry, &attrs->pft_entries, next) {
                 ASSERT(entry);
 
-                if (op(ipc_process->data,
-                       entry->destination,
-                       entry->qos_id,
-                       entry->ports,
-                       entry->ports_size)) {
+                if (op(ipc_process->data, entry)) {
                         LOG_ERR("There were some problematic entries");
                         rnl_msg_destroy(msg);
                         return -1;
