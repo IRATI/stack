@@ -473,6 +473,9 @@ const std::string IPCEvent::eventTypeToString(IPCEventType eventType) {
         case IPC_PROCESS_PLUGIN_LOAD_RESPONSE:
                 result = "40_PLUGIN_LOAD_RESPONSE";
                 break;
+        case IPC_PROCESS_ENABLE_ENCRYPTION_RESPONSE:
+                result = "40_ENABLE_ENCRYPTION_RESPONSE";
+                break;
 	case NO_EVENT:
 		result = "41_NO_EVENT";
 		break;

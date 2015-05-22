@@ -249,8 +249,8 @@ int DumpFTResponseEvent::getResult() const {
 }
 
 // Class enable encryption response event
-EnableEncryptionResponseEvent::EnableEncryptionResponseEvent(int port,
-                int res, unsigned int sequenceNumber) :
+EnableEncryptionResponseEvent::EnableEncryptionResponseEvent(int res,
+                int port, unsigned int sequenceNumber) :
                 		IPCEvent(IPC_PROCESS_ENABLE_ENCRYPTION_RESPONSE,
                 				sequenceNumber)
 {
