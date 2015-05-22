@@ -161,7 +161,7 @@ std::list<unsigned int> Edge::getEndpoints()
 
 bool Edge::operator==(const Edge & other) const
 {
-	if (isVertexIn(other.address1_)) {
+	if (!isVertexIn(other.address1_)) {
 		return false;
 	}
 
