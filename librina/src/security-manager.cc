@@ -595,7 +595,7 @@ unsigned char * AuthSSH2PolicySet::BN_to_binary(BIGNUM *b, int *len)
 }
 
 AuthPolicy AuthSSH2PolicySet::get_auth_policy(int session_id,
-						const AuthSDUProtectionProfile& profile)
+					      const AuthSDUProtectionProfile& profile)
 {
 	if (profile.authPolicy.name_ != type) {
 		LOG_ERR("Wrong policy name: %s, expected: %s",
@@ -611,6 +611,7 @@ AuthPolicy AuthSSH2PolicySet::get_auth_policy(int session_id,
 		throw Exception();
 	}
 
+	LOG_DBG("Initiating authentication for session_id: %d", session_id);
 	AuthPolicy auth_policy;
 	auth_policy.name_ = IAuthPolicySet::AUTH_SSH2;
 	auth_policy.versions_.push_back(profile.authPolicy.version_);
@@ -714,6 +715,7 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(const Auth
 		return IAuthPolicySet::FAILED;
 	}
 
+	LOG_DBG("Initiating authentication for session_id: %d", session_id);
 	SSH2AuthOptions * options = decode_ssh2_auth_options(auth_policy.options_);
 	if (!options) {
 		LOG_ERR("Could not decode SSHARSA options");
