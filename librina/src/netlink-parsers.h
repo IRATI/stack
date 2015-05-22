@@ -1448,7 +1448,8 @@ IpcmPluginLoadResponseMessage *parseIpcmPluginLoadResponseMessage(
 
 /* IPCPEnableEncryptionRequestMessageAttributes CLASS */
 enum IPCPEnableEncryptionRequestMessageAttributes {
-        EERM_ATTR_EN_ENCRYPT = 1,
+        EERM_ATTR_ENCRYPT_POLICY_CONFIG = 1,
+	EERM_ATTR_EN_ENCRYPT,
         EERM_ATTR_EN_DECRYPT,
         EERM_ATTR_ENCRYPT_ALG,
         EERM_ATTR_MAC_ALG,
@@ -1475,10 +1476,10 @@ enum IPCPEnableEncryptionResponseMessageAttributes {
 
 #define EEREM_ATTR_MAX (__EEREM_ATTR_MAX -1)
 
-int putIPCPEnableEncryptionResponseMessageAttributes(nl_msg* netlinkMessage,
-                const IPCPEnableEncryptionResponseMessageAttributes& object);
+int putIPCPEnableEncryptionResponseMessage(nl_msg* netlinkMessage,
+                const IPCPEnableEncryptionResponseMessage& object);
 
-IPCPEnableEncryptionResponseMessageAttributes * parseIPCPEnableEncryptionResponseMessageAttributes(
+IPCPEnableEncryptionResponseMessage * parseIPCPEnableEncryptionResponseMessage(
                 nlmsghdr *hdr);
 
 }

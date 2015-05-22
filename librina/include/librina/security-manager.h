@@ -221,6 +221,9 @@ public:
 	std::string mac_alg;
 	std::string compress_alg;
 
+	/// Encryption policy configuration
+	PolicyConfig encrypt_policy_config;
+
 	///Diffie-Hellman key exchange state
 	DH * dh_state;
 

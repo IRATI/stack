@@ -1318,6 +1318,8 @@ std::string AuthSDUProtectionProfile::to_string()
 	std::stringstream ss;
 	ss << "Auth policy" << std::endl;
 	ss << authPolicy.toString() << std::endl;
+	ss << "Encrypt policy" << std::endl;
+	ss << encryptPolicy.toString() << std::endl;
 	ss << "CRC policy" << std::endl;
 	ss << crcPolicy.toString() <<std::endl;
 	ss << "TTL policy" << std::endl;

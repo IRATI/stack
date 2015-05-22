@@ -42,6 +42,7 @@
 #include <ctime>
 #include <cstdlib>
 #include <iomanip>
+#include <cstring>
 
 #include "librina/concurrency.h"
 #include "librina/exceptions.h"

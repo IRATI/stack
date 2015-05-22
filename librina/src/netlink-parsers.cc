@@ -501,6 +501,24 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
+	case RINA_C_IPCP_ENABLE_ENCRYPTION_REQUEST: {
+		IPCPEnableEncryptionRequestMessage * responseObject =
+			dynamic_cast<IPCPEnableEncryptionRequestMessage *>(message);
+		if (putIPCPEnableEncryptionRequestMessage(netlinkMessage,
+				*responseObject) < 0) {
+			return -1;
+		}
+		return 0;
+	}
+	case RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE: {
+		IPCPEnableEncryptionResponseMessage * responseObject =
+			dynamic_cast<IPCPEnableEncryptionResponseMessage *>(message);
+		if (putIPCPEnableEncryptionResponseMessage(netlinkMessage,
+				*responseObject) < 0) {
+			return -1;
+		}
+		return 0;
+	}
 	default: {
 		return -1;
 	}
@@ -719,6 +737,14 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	}
 	case RINA_C_IPCM_PLUGIN_LOAD_RESPONSE: {
 		return parseIpcmPluginLoadResponseMessage(
+		                netlinkMessageHeader);
+	}
+	case RINA_C_IPCP_ENABLE_ENCRYPTION_REQUEST: {
+		return parseIPCPEnableEncryptionRequestMessage(
+		                netlinkMessageHeader);
+	}
+	case RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE: {
+		return parseIPCPEnableEncryptionResponseMessage(
 		                netlinkMessageHeader);
 	}
 	default: {
@@ -5191,7 +5217,19 @@ int putIpcmPluginLoadResponseMessageObject(nl_msg* netlinkMessage,
 }
 
 int putIPCPEnableEncryptionRequestMessage(nl_msg* netlinkMessage,
-		const IPCPEnableEncryptionRequestMessage& object){
+		const IPCPEnableEncryptionRequestMessage& object)
+{
+	struct nlattr *en_policy;
+
+	if (!(en_policy =
+			nla_nest_start(netlinkMessage, EERM_ATTR_ENCRYPT_POLICY_CONFIG))) {
+		goto nla_put_failure;
+	}
+	if (putPolicyConfigObject(netlinkMessage, object.encrypt_policy_config) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, en_policy);
+
 	if (object.enable_decryption) {
 		NLA_PUT_FLAG(netlinkMessage, EERM_ATTR_EN_DECRYPT);
 	}
@@ -5217,8 +5255,8 @@ int putIPCPEnableEncryptionRequestMessage(nl_msg* netlinkMessage,
 }
 
 int putIPCPEnableEncryptionResponseMessage(nl_msg* netlinkMessage,
-		const IPCPEnableEncryptionResponseMessage& object){
-
+		const IPCPEnableEncryptionResponseMessage& object)
+{
 	NLA_PUT_U32(netlinkMessage, EEREM_ATTR_RESULT, object.result);
 	NLA_PUT_U32(netlinkMessage, EEREM_ATTR_N_1_PORT, object.port_id);
 
@@ -8927,6 +8965,134 @@ parseIpcmPluginLoadResponseMessage(nlmsghdr *hdr){
 
 	if (attrs[IPLRE_ATTR_RESULT]) {
 		result->result = nla_get_u32(attrs[IPLRE_ATTR_RESULT]);
+	}
+
+	return result;
+}
+
+IPCPEnableEncryptionRequestMessage * parseIPCPEnableEncryptionRequestMessage(
+		nlmsghdr *hdr)
+{
+	struct nla_policy attr_policy[EERM_ATTR_MAX + 1];
+	attr_policy[EERM_ATTR_ENCRYPT_POLICY_CONFIG].type = NLA_NESTED;
+	attr_policy[EERM_ATTR_ENCRYPT_POLICY_CONFIG].minlen = 0;
+	attr_policy[EERM_ATTR_ENCRYPT_POLICY_CONFIG].maxlen = 0;
+	attr_policy[EERM_ATTR_EN_ENCRYPT].type = NLA_FLAG;
+	attr_policy[EERM_ATTR_EN_ENCRYPT].minlen = 0;
+	attr_policy[EERM_ATTR_EN_ENCRYPT].maxlen = 0;
+	attr_policy[EERM_ATTR_EN_DECRYPT].type = NLA_FLAG;
+	attr_policy[EERM_ATTR_EN_DECRYPT].minlen = 0;
+	attr_policy[EERM_ATTR_EN_DECRYPT].maxlen = 0;
+	attr_policy[EERM_ATTR_ENCRYPT_ALG].type = NLA_STRING;
+	attr_policy[EERM_ATTR_ENCRYPT_ALG].minlen = 0;
+	attr_policy[EERM_ATTR_ENCRYPT_ALG].maxlen = 65535;
+	attr_policy[EERM_ATTR_MAC_ALG].type = NLA_STRING;
+	attr_policy[EERM_ATTR_MAC_ALG].minlen = 0;
+	attr_policy[EERM_ATTR_MAC_ALG].maxlen = 65535;
+	attr_policy[EERM_ATTR_COMPRESS_ALG].type = NLA_STRING;
+	attr_policy[EERM_ATTR_COMPRESS_ALG].minlen = 0;
+	attr_policy[EERM_ATTR_COMPRESS_ALG].maxlen = 65535;
+	attr_policy[EERM_ATTR_ENCRYPT_KEY].type = NLA_UNSPEC;
+	attr_policy[EERM_ATTR_ENCRYPT_KEY].minlen = 0;
+	attr_policy[EERM_ATTR_ENCRYPT_KEY].maxlen = 65535;
+        attr_policy[EERM_ATTR_N_1_PORT].type = NLA_U32;
+        attr_policy[EERM_ATTR_N_1_PORT].minlen = 4;
+        attr_policy[EERM_ATTR_N_1_PORT].maxlen = 4;
+	struct nlattr *attrs[EERM_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			EERM_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing IPCPEnableEncryptionRequestMessage "
+				"information from Netlink message: %d", err);
+		return 0;
+	}
+
+	IPCPEnableEncryptionRequestMessage * result =
+			new IPCPEnableEncryptionRequestMessage();
+	PolicyConfig * encrypt_config;
+
+	if (attrs[EERM_ATTR_ENCRYPT_POLICY_CONFIG]) {
+		encrypt_config = parsePolicyConfigObject(
+	                        	attrs[EERM_ATTR_ENCRYPT_POLICY_CONFIG]);
+		if (encrypt_config == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->encrypt_policy_config = *encrypt_config;
+			delete encrypt_config;
+		}
+	}
+
+	if (attrs[EERM_ATTR_EN_ENCRYPT]) {
+		result->enable_encryption = true;
+	} else {
+		result->enable_encryption = false;
+	}
+
+	if (attrs[EERM_ATTR_EN_DECRYPT]) {
+		result->enable_decryption = true;
+	} else {
+		result->enable_decryption = false;
+	}
+
+	if (attrs[EERM_ATTR_ENCRYPT_ALG]) {
+		result->encrypt_alg =
+				nla_get_string(attrs[EERM_ATTR_ENCRYPT_ALG]);
+	}
+
+	if (attrs[EERM_ATTR_MAC_ALG]) {
+		result->mac_alg =
+				nla_get_string(attrs[EERM_ATTR_MAC_ALG]);
+	}
+
+	if (attrs[EERM_ATTR_COMPRESS_ALG]) {
+		result->compress_alg =
+				nla_get_string(attrs[EERM_ATTR_COMPRESS_ALG]);
+	}
+
+	if (attrs[EERM_ATTR_ENCRYPT_KEY]) {
+		result->encrypt_key.length = nla_len(attrs[EERM_ATTR_ENCRYPT_KEY]);
+		unsigned char * data = (unsigned char *) nla_data(attrs[EERM_ATTR_ENCRYPT_KEY]);
+		memcpy(result->encrypt_key.data, data, result->encrypt_key.length);
+	}
+
+	if (attrs[EERM_ATTR_N_1_PORT]) {
+		result->port_id =
+				nla_get_u32(attrs[EERM_ATTR_N_1_PORT]);
+	}
+
+	return result;
+}
+
+IPCPEnableEncryptionResponseMessage * parseIPCPEnableEncryptionResponseMessage(nlmsghdr *hdr)
+{
+	struct nla_policy attr_policy[EEREM_ATTR_MAX + 1];
+        attr_policy[EEREM_ATTR_RESULT].type = NLA_U32;
+        attr_policy[EEREM_ATTR_RESULT].minlen = 4;
+        attr_policy[EEREM_ATTR_RESULT].maxlen = 4;
+        attr_policy[EEREM_ATTR_N_1_PORT].type = NLA_U32;
+        attr_policy[EEREM_ATTR_N_1_PORT].minlen = 4;
+        attr_policy[EEREM_ATTR_N_1_PORT].maxlen = 4;
+	struct nlattr *attrs[EEREM_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			EEREM_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing IPCPEnableEncryptionResponseMessage "
+                        "information from Netlink message: %d", err);
+		return 0;
+	}
+
+	IPCPEnableEncryptionResponseMessage * result =
+			new IPCPEnableEncryptionResponseMessage();
+
+	if (attrs[IPLRE_ATTR_RESULT]) {
+		result->result = nla_get_u32(attrs[IPLRE_ATTR_RESULT]);
+	}
+
+	if (attrs[EEREM_ATTR_N_1_PORT]) {
+		result->port_id = nla_get_u32(attrs[EEREM_ATTR_N_1_PORT]);
 	}
 
 	return result;

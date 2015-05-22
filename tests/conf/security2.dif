@@ -1,0 +1,105 @@
+{
+    "difType" : "normal-ipc",
+    "securityManager" : {
+    	"newFlowAccessControlPolicy" : {
+          "name" : "default",
+          "version" : "0"
+        },
+        "difMemberAccessControlPolicy" : {
+          "name" : "default",
+          "version" : "0"
+        },
+        "authSDUProtProfiles" : {
+           "default" : {
+              "authPolicy" : {
+              	"name" : "PSOC_authentication-sshrsa",
+          	"version" : "1",
+          	"parameters" : [ {
+          	   "name" : "keyExchangeAlg",
+          	   "value" : "EDH"
+          	}, {
+          	   "name" : "encryptAlg",
+          	   "value" : "AES128"
+          	}, {
+          	   "name" : "macAlg",
+          	   "value" : "SHA1"
+          	}, {
+          	   "name" : "compressAlg",
+          	   "value" : "default"
+          	} ]
+              },
+              "encryptPolicy" : {
+                   "name" : "default",
+                   "version" : "1"
+              },
+              "TTLPolicy" : {
+                 "name" : "decrement-one",
+                 "version" : "1",
+                 "parameters" : [ {
+                    "name" : "initialValue",
+                    "value" : "50"
+                  } ]
+                },
+                "CRCPolicy" : {
+                   "name" : "CRC32",
+                   "version" : "1"
+                }
+           },
+           "specific" : [ {
+               "underlyingDIF" : "100",
+               "authPolicy" : {
+               	  "name" : "PSOC_authentication-none",
+           	  "version" : "1"
+                },
+                "encryptPolicy" : {
+                   "name" : "default",
+                   "version" : "1"
+                },
+                "TTLPolicy" : {
+                   "name" : "decrement-one",
+                   "version" : "1",
+                   "parameters" : [ {
+                      "name" : "initialValue",
+                      "value" : "50"
+                   } ]
+                },
+                "CRCPolicy" : {
+                   "name" : "CRC32",
+                   "version" : "1"
+                }
+           }, {
+               "underlyingDIF" : "110",
+               "authPolicy" : {
+               	  "name" : "PSOC_authentication-password",
+           	  "version" : "1",
+           	  "parameters" : [ {
+           	     "name" : "password",
+           	     "value" : "admin123"
+           	  }, {
+           	     "name" : "challenge-length",
+           	     "value" : "128"
+           	  }, {
+           	     "name" : "cipher",
+           	     "value" : "default"
+           	  } ]
+                },
+                "encryptPolicy" : {
+                   "name" : "default",
+                   "version" : "1"
+                },
+                "TTLPolicy" : {
+                   "name" : "decrement-one",
+                   "version" : "1",
+                   "parameters" : [ {
+                      "name" : "initialValue",
+                      "value" : "50"
+                   } ]
+                },
+                "CRCPolicy" : {
+                   "name" : "CRC32",
+                   "version" : "1"
+                }
+           } ]
+        }
+    }
+  }

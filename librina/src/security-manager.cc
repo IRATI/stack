@@ -404,9 +404,9 @@ SSH2AuthOptions * decode_ssh2_auth_options(const SerializedObject &message) {
 	}
 
 	if (gpb_options.has_dh_public_key()) {
-		  result->dh_public_key.array =
+		  result->dh_public_key.data =
 				  new unsigned char[gpb_options.dh_public_key().size()];
-		  memcpy(result->dh_public_key.array,
+		  memcpy(result->dh_public_key.data,
 			 gpb_options.dh_public_key().data(),
 			 gpb_options.dh_public_key().size());
 		  result->dh_public_key.length = gpb_options.dh_public_key().size();
@@ -439,7 +439,7 @@ SerializedObject * encode_ssh2_auth_options(const SSH2AuthOptions& options){
 	}
 
 	if (options.dh_public_key.length > 0) {
-		gpb_options.set_dh_public_key(options.dh_public_key.array,
+		gpb_options.set_dh_public_key(options.dh_public_key.data,
 					      options.dh_public_key.length);
 	}
 
@@ -594,6 +594,7 @@ AuthPolicy AuthSSH2PolicySet::get_auth_policy(int session_id,
 	sc->compress_alg = profile.authPolicy.get_param_value(COMPRESSION_ALGORITHM);
 	sc->crcPolicy = profile.crcPolicy;
 	sc->ttlPolicy = profile.ttlPolicy;
+	sc->encrypt_policy_config = profile.encryptPolicy;
 
 	//Initialize Diffie-Hellman machinery and generate private/public key pairs
 	if (edh_init_keys(sc) != 0) {
@@ -667,8 +668,6 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(const Auth
 									    const AuthSDUProtectionProfile& profile,
 								      	    int session_id)
 {
-	(void) profile;
-
 	if (auth_policy.name_ != type) {
 		LOG_ERR("Wrong policy name: %s", auth_policy.name_.c_str());
 		return IAuthPolicySet::FAILED;
@@ -694,6 +693,7 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(const Auth
 	}
 
 	SSH2SecurityContext * sc = new SSH2SecurityContext(session_id);
+	sc->encrypt_policy_config = profile.encryptPolicy;
 	std::string current_alg = options->key_exch_algs.front();
 	if (current_alg != SSL_TXT_EDH) {
 		LOG_ERR("Unsupported key exchange algorithm: %s",

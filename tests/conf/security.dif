@@ -28,6 +28,10 @@
           	   "value" : "default"
           	} ]
               },
+              "encryptPolicy" : {
+                 "name" : "default",
+                 "version" : "1"
+              },
               "TTLPolicy" : {
                  "name" : "decrement-one",
                  "version" : "1",

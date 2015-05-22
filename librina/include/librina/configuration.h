@@ -843,10 +843,13 @@ public:
 	///The authentication-encryption-compression policy set
 	PolicyConfig authPolicy;
 
-	// The CRC policy config
+	/// The encryption policy configuration (name/version)
+	PolicyConfig encryptPolicy;
+
+	/// The CRC policy config
 	PolicyConfig crcPolicy;
 
-	// The TTL policy config
+	/// The TTL policy config
 	PolicyConfig ttlPolicy;
 };
 

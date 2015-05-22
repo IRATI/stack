@@ -520,6 +520,7 @@ void parse_auth_sduprot_profile(const Json::Value  & root,
                   	        rina::AuthSDUProtectionProfile & profile)
 {
         parse_policy(root, "authPolicy", profile.authPolicy);
+        parse_policy(root, "encryptPolicy", profile.encryptPolicy);
         parse_policy(root, "TTLPolicy", profile.ttlPolicy);
         parse_policy(root, "CRCPolicy", profile.crcPolicy);
 }

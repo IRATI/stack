@@ -1379,6 +1379,7 @@ public:
 	IPCPEnableEncryptionRequestMessage();
 	IPCEvent* toIPCEvent();
 
+	PolicyConfig encrypt_policy_config;
 	bool enable_encryption;
 	bool enable_decryption;
 	std::string encrypt_alg;
