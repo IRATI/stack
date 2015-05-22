@@ -605,8 +605,6 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
                                 const struct dif_info *     dif_information)
 {
         struct efcp_config * efcp_config;
-        struct dup_config * dup_pos, * dup_cfg;
-        struct dup_config_entry * entry;
 
         data->info->dif_name = name_dup(dif_information->dif_name);
         data->address        = dif_information->configuration->address;
@@ -632,28 +630,6 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         if (rmt_dt_cons_set(data->rmt, dt_cons_dup(efcp_config->dt_cons))) {
                 LOG_ERR("Could not set dt_cons in RMT");
                 return -1;
-        }
-
-        list_for_each_entry_safe(dup_pos, dup_cfg,
-                                 &data->dup_confs,
-                                 next) {
-            list_del(&dup_pos->next);
-            dup_config_destroy(dup_pos);
-        }
-
-        list_for_each_entry(dup_pos,
-                            &dif_information->configuration->dup_confs,
-                            next){
-            entry = dup_config_entry_dup(dup_pos->entry);
-
-            dup_cfg = dup_config_create();
-            if (!dup_cfg) {
-                dup_config_entry_destroy(entry);
-                LOG_ERR("DU Protection config creation failed in RMT");
-                continue;
-            }
-            dup_cfg->entry = entry;
-            list_add(&dup_cfg->next, &data->dup_confs);
         }
 
         return 0;
@@ -1002,15 +978,33 @@ static int normal_select_policy_set(struct ipcp_instance_data *data,
         return -1;
 }
 
-struct dup_config_entry * normal_find_dup_config(struct ipcp_instance_data *data,
-                                                 struct name * dif_name)
+int normal_enable_encryption(struct ipcp_instance_data * data,
+		             struct policy *  encrypt_policy_conf,
+			     bool 	      enable_encryption,
+		             bool    	      enable_decryption,
+			     const string_t * encrypt_alg,
+		             const string_t * mac_alg,
+		             const string_t * compress_alg,
+		             struct buffer *  encrypt_key,
+		             port_id_t 	      port_id)
 {
-    struct dup_config * dup_pos;
-    list_for_each_entry(dup_pos, &data->dup_confs, next){
-        if (name_cmp(NAME_CMP_APN, dup_pos->entry->dif_name, dif_name))
-            return dup_pos->entry;
-    }
-    return NULL;
+	//TODO implement
+	LOG_INFO("Enable encryption operation called on IPCP %d and port-id %d",
+			data->id, port_id);
+	if (enable_decryption) {
+		LOG_INFO("Enabling decryption");
+	}
+	if (enable_encryption) {
+		LOG_INFO("Enabling encryption");
+	}
+
+	(void) encrypt_policy_conf;
+	(void) encrypt_alg;
+	(void) mac_alg;
+	(void) compress_alg;
+	(void) encrypt_key;
+
+	return 0;
 }
 
 static struct ipcp_instance_ops normal_instance_ops = {
@@ -1055,7 +1049,7 @@ static struct ipcp_instance_ops normal_instance_ops = {
 
         .enable_write              = enable_write,
         .disable_write             = disable_write,
-        .find_dup_config           = normal_find_dup_config
+        .enable_encryption         = normal_enable_encryption
 };
 
 static struct mgmt_data * normal_mgmt_data_create(void)
@@ -1239,7 +1233,6 @@ static int normal_destroy(struct ipcp_factory_data * data,
 {
 
         struct ipcp_instance_data * tmp;
-        struct dup_config * dup_pos, * dup_nxt;
 
         ASSERT(data);
         ASSERT(instance);
@@ -1270,13 +1263,6 @@ static int normal_destroy(struct ipcp_factory_data * data,
         mgmt_data_destroy(tmp->mgmt_data);
         rkfree(tmp);
         rkfree(instance);
-
-        list_for_each_entry_safe(dup_pos, dup_nxt,
-                                 &tmp->dup_confs,
-                                 next) {
-            list_del(&dup_pos->next);
-            dup_config_destroy(dup_pos);
-        }
 
         return 0;
 }

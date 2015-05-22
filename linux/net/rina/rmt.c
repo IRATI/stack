@@ -819,18 +819,8 @@ static int __queue_send_add(struct rmt * instance,
 {
         struct rmt_n1_port * tmp;
         struct rmt_ps *      ps;
-        struct name * dif_name;
-        struct dup_config_entry * dup_config;
 
-        dif_name = n1_ipcp->ops->dif_name(n1_ipcp->data);
-
-        if (instance->parent->ops->find_dup_config)
-            dup_config = instance->parent->ops->find_dup_config(
-                    instance->parent->data, dif_name);
-        else
-            dup_config = NULL;
-
-        tmp = n1_port_create(id, n1_ipcp, dup_config);
+        tmp = n1_port_create(id, n1_ipcp, NULL);
         if (!tmp)
                 return -1;
 

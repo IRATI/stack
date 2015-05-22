@@ -312,6 +312,24 @@ rnl_ipcp_select_policy_set_req_msg_attrs_create(void)
         return tmp;
 }
 
+static struct rnl_ipcp_enable_encrypt_req_msg_attrs *
+rnl_ipcp_enable_encryption_req_msg_attrs_create(void)
+{
+        struct rnl_ipcp_enable_encrypt_req_msg_attrs * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if  (!tmp)
+                return NULL;
+
+        tmp->encrypt_policy_conf = policy_create();
+        if (!tmp->encrypt_policy_conf) {
+        	rkfree(tmp);
+        	return NULL;
+        }
+
+        return tmp;
+}
+
 struct rnl_msg * rnl_msg_create(enum rnl_msg_attr_type type)
 {
         struct rnl_msg * tmp;
@@ -433,6 +451,14 @@ struct rnl_msg * rnl_msg_create(enum rnl_msg_attr_type type)
         case RNL_MSG_ATTRS_SELECT_POLICY_SET_REQUEST:
                 tmp->attrs =
                         rnl_ipcp_select_policy_set_req_msg_attrs_create();
+                if (!tmp->attrs) {
+                        rkfree(tmp);
+                        return NULL;
+                }
+                break;
+        case RNL_MSG_ATTRS_ENABLE_ENCRYPTION_REQUEST:
+                tmp->attrs =
+                        rnl_ipcp_enable_encryption_req_msg_attrs_create();
                 if (!tmp->attrs) {
                         rkfree(tmp);
                         return NULL;
@@ -670,6 +696,36 @@ rnl_ipcp_select_policy_set_msg_attrs_destroy(
         return 0;
 }
 
+static int
+rnl_ipcp_enable_encryption_msg_attrs_destroy(
+                struct rnl_ipcp_enable_encrypt_req_msg_attrs * attrs)
+{
+        if (!attrs)
+                return -1;
+
+        if (attrs->encrypt_policy_conf)
+        	policy_destroy(attrs->encrypt_policy_conf);
+
+        if (attrs->encrypt_alg)
+                rkfree(attrs->encrypt_alg);
+
+        if (attrs->mac_alg)
+                rkfree(attrs->mac_alg);
+
+        if (attrs->compress_alg)
+                rkfree(attrs->compress_alg);
+
+        if (attrs->encrypt_key) {
+        	buffer_destroy(attrs->encrypt_key);
+        }
+
+        rkfree(attrs);
+
+        LOG_DBG("rnl_ipcp_enable_encrypt_req_msg_attrs destroyed correctly");
+
+        return 0;
+}
+
 int rnl_msg_destroy(struct rnl_msg * msg)
 {
         if (!msg)
@@ -717,6 +773,9 @@ int rnl_msg_destroy(struct rnl_msg * msg)
                 break;
         case RNL_MSG_ATTRS_SELECT_POLICY_SET_REQUEST:
                 rnl_ipcp_select_policy_set_msg_attrs_destroy(msg->attrs);
+                break;
+        case RNL_MSG_ATTRS_ENABLE_ENCRYPTION_REQUEST:
+                rnl_ipcp_enable_encryption_msg_attrs_destroy(msg->attrs);
                 break;
         default:
                 break;
@@ -1117,133 +1176,6 @@ static int parse_list_of_ipcp_config_entries(struct nlattr *     nested_attr,
         return 0;
 }
 
-static int parse_dup_config_entry(struct nlattr *           nl_entry,
-                                  struct dup_config_entry * entry)
-{
-        struct nla_policy attr_policy[DUP_CONFIG_ENTRY_ATTR_MAX + 1];
-        struct nlattr *   attrs[DUP_CONFIG_ENTRY_ATTR_MAX + 1];
-        string_t * dif_name;
-
-        if (!nl_entry) {
-                LOG_ERR("Bogus attribute passed, bailing out");
-                return -1;
-        }
-
-        if (!entry) {
-                LOG_ERR("Bogus entry passed, bailing out");
-                return -1;
-        }
-
-        attr_policy[DUP_CONFIG_ENTRY_ATTR_DIF_NAME].type  = NLA_STRING;
-        attr_policy[DUP_CONFIG_ENTRY_ATTR_DIF_NAME].len   = 0;
-
-        attr_policy[DUP_CONFIG_ENTRY_ATTR_TTL].type  = NLA_U32;
-        attr_policy[DUP_CONFIG_ENTRY_ATTR_TTL].len   = 4;
-
-        attr_policy[DUP_CONFIG_ENTRY_ATTR_ENABLE_CRC].type  = NLA_FLAG;
-        attr_policy[DUP_CONFIG_ENTRY_ATTR_ENABLE_CRC].len   = 0;
-
-        attr_policy[DUP_CONFIG_ENTRY_ATTR_ENC_CIPHER].type  = NLA_STRING;
-        attr_policy[DUP_CONFIG_ENTRY_ATTR_ENC_CIPHER].len   = 0;
-
-        attr_policy[DUP_CONFIG_ENTRY_ATTR_MSG_DIGEST].type  = NLA_STRING;
-        attr_policy[DUP_CONFIG_ENTRY_ATTR_MSG_DIGEST].len   = 0;
-
-        attr_policy[DUP_CONFIG_ENTRY_ATTR_KEY].type  = NLA_STRING;
-        attr_policy[DUP_CONFIG_ENTRY_ATTR_KEY].len   = 0;
-
-        if (nla_parse_nested(attrs, DUP_CONFIG_ENTRY_ATTR_MAX,
-                             nl_entry, attr_policy) < 0)
-                return -1;
-
-        if (attrs[DUP_CONFIG_ENTRY_ATTR_DIF_NAME]){
-                entry->dif_name = name_create();
-                if (!entry->dif_name)
-                    return -1;
-
-                dif_name = nla_get_string(attrs[DUP_CONFIG_ENTRY_ATTR_DIF_NAME]);
-                if (!name_init_from(entry->dif_name,
-                                    dif_name, NULL, NULL, NULL))
-                    return -1;
-        }
-
-        if (attrs[DUP_CONFIG_ENTRY_ATTR_TTL])
-                entry->ttl = nla_get_u32(attrs[DUP_CONFIG_ENTRY_ATTR_TTL]);
-
-        entry->enable_crc = nla_get_flag(attrs[DUP_CONFIG_ENTRY_ATTR_ENABLE_CRC]);
-
-        if (attrs[DUP_CONFIG_ENTRY_ATTR_ENC_CIPHER])
-                entry->encryption_cipher = nla_dup_string(attrs[DUP_CONFIG_ENTRY_ATTR_ENC_CIPHER], GFP_KERNEL);
-
-        if (attrs[DUP_CONFIG_ENTRY_ATTR_MSG_DIGEST])
-                entry->message_digest = nla_dup_string(attrs[DUP_CONFIG_ENTRY_ATTR_MSG_DIGEST], GFP_KERNEL);
-
-        if (attrs[DUP_CONFIG_ENTRY_ATTR_KEY])
-                entry->key = nla_dup_string(attrs[DUP_CONFIG_ENTRY_ATTR_KEY], GFP_KERNEL);
-
-        return 0;
-}
-
-static int parse_list_of_dup_confs(struct nlattr *     nested_attr,
-                                   struct dif_config * dif_config)
-{
-        struct nlattr *            nla;
-        struct dup_config_entry *  entry;
-        struct dup_config *        config;
-        int                        rem                   = 0;
-        int                        entries_with_problems = 0;
-        int                        total_entries         = 0;
-
-        if (!nested_attr) {
-                LOG_ERR("Bogus attribute passed, bailing out");
-                return -1;
-        }
-
-        if (!dif_config) {
-                LOG_ERR("Bogus dif_config passed, bailing out");
-                return -1;
-        }
-
-        for (nla = (struct nlattr*) nla_data(nested_attr),
-                     rem = nla_len(nested_attr);
-             nla_ok(nla, rem);
-             nla = nla_next(nla, &(rem))) {
-                total_entries++;
-
-                entry = rkzalloc(sizeof(*entry), GFP_KERNEL);
-                if (!entry) {
-                        entries_with_problems++;
-                        continue;
-                }
-
-                if (parse_dup_config_entry(nla, entry) < 0) {
-                        rkfree(entry);
-                        entries_with_problems++;
-                        continue;
-                }
-
-                config = dup_config_create();
-                if (!config) {
-                        rkfree(entry);
-                        entries_with_problems++;
-                        continue;
-                }
-                config->entry = entry;
-                list_add(&config->next, &dif_config->dup_confs);
-        }
-
-        if (rem > 0) {
-                LOG_WARN("Missing bits to parse");
-        }
-
-        if (entries_with_problems > 0)
-                LOG_WARN("Problems parsing %d out of %d parameters",
-                         entries_with_problems,
-                         total_entries);
-
-        return 0;
-}
-
 static int parse_policy_param(struct nlattr * attr, struct policy_parm * param)
 {
         struct nla_policy attr_policy[PPA_ATTR_MAX + 1];
@@ -1501,8 +1433,6 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
         attr_policy[DCONF_ATTR_EFCPC].len                = 0;
         attr_policy[DCONF_ATTR_RMTC].type                = NLA_NESTED;
         attr_policy[DCONF_ATTR_RMTC].len                 = 0;
-        attr_policy[DCONF_ATTR_DUP_CONFS].type           = NLA_NESTED;
-        attr_policy[DCONF_ATTR_DUP_CONFS].len            = 0;
 
         if (nla_parse_nested(attrs,
                              DCONF_ATTR_MAX,
@@ -1526,12 +1456,6 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
 
                 if (parse_efcp_config(attrs[DCONF_ATTR_EFCPC],
                                       dif_config->efcp_config))
-                        goto parse_fail;
-        }
-
-        if (attrs[DCONF_ATTR_DUP_CONFS]) {
-                if (parse_list_of_dup_confs(attrs[DCONF_ATTR_DUP_CONFS],
-                                            dif_config) < 0)
                         goto parse_fail;
         }
 
@@ -2400,6 +2324,53 @@ rnl_parse_ipcp_select_policy_set_req_msg(
         return 0;
 }
 
+static int
+rnl_parse_ipcp_enable_encryption_req_msg(
+                struct genl_info * info,
+                struct rnl_ipcp_enable_encrypt_req_msg_attrs * msg_attrs)
+{
+        if (info->attrs[IEERM_ATTR_ENCRYPT_POLICY_CONFIG]) {
+                if (parse_policy(info->attrs[IEERM_ATTR_ENCRYPT_POLICY_CONFIG],
+                	     msg_attrs->encrypt_policy_conf)) {
+                	LOG_ERR("Could not parse encryption policy");
+                	return -1;
+                }
+        }
+
+	if (info->attrs[IEERM_ATTR_EN_ENCRYPT])
+		msg_attrs->encryption_enabled = true;
+	else
+		msg_attrs->encryption_enabled = false;
+
+	if (info->attrs[IEERM_ATTR_EN_DECRYPT])
+		msg_attrs->encryption_enabled = true;
+	else
+		msg_attrs->encryption_enabled = false;
+
+        if (info->attrs[IEERM_ATTR_ENCRYPT_ALG])
+                msg_attrs->encrypt_alg = nla_dup_string(info->attrs[IEERM_ATTR_MAC_ALG],
+                                                 	GFP_KERNEL);
+
+        if (info->attrs[IEERM_ATTR_ENCRYPT_ALG])
+                msg_attrs->mac_alg = nla_dup_string(info->attrs[IEERM_ATTR_MAC_ALG],
+                                                    GFP_KERNEL);
+
+        if (info->attrs[IEERM_ATTR_COMPRESS_ALG])
+                msg_attrs->compress_alg = nla_dup_string(info->attrs[IEERM_ATTR_COMPRESS_ALG],
+                                                         GFP_KERNEL);
+
+        if (info->attrs[IEERM_ATTR_ENCRYPT_KEY]) {
+        	msg_attrs->encrypt_key = buffer_create_from(nla_data(info->attrs[IEERM_ATTR_ENCRYPT_KEY]),
+        						    nla_len(info->attrs[IEERM_ATTR_ENCRYPT_KEY]));
+        }
+
+        if (info->attrs[IEERM_ATTR_N_1_PORT])
+                msg_attrs->port_id =
+                        nla_get_u32(info->attrs[IEERM_ATTR_N_1_PORT]);
+
+        return 0;
+}
+
 int rnl_parse_msg(struct genl_info * info,
                   struct rnl_msg *   msg)
 {
@@ -2527,6 +2498,11 @@ int rnl_parse_msg(struct genl_info * info,
                 break;
         case RINA_C_IPCP_SELECT_POLICY_SET_REQUEST:
                 if (rnl_parse_ipcp_select_policy_set_req_msg(info,
+                                                             msg->attrs) < 0)
+                        goto fail;
+                break;
+        case RINA_C_IPCP_ENABLE_ENCRYPTION_REQUEST:
+                if (rnl_parse_ipcp_enable_encryption_req_msg(info,
                                                              msg->attrs) < 0)
                         goto fail;
                 break;
@@ -3184,6 +3160,25 @@ static int rnl_format_ipcp_select_policy_set_resp_msg(
                                                 "rnl_ipcp_select_policy"
                                                 "_set_resp_msg",
                                                 skb_out);
+}
+
+static int rnl_format_ipcp_enable_encryption_resp_msg(
+                                                uint_t           result,
+                                                port_id_t 	 port_id,
+                                                struct sk_buff * skb_out)
+{
+	if (!skb_out) {
+		LOG_ERR("Bogus input parameter(s), bailing out");
+		return -1;
+	}
+
+	if (nla_put_u32(skb_out, IEEREM_ATTR_RESULT, result) < 0)
+		return format_fail("rnl_format_ipcp_enable_encryption_resp_msg");
+
+	if (nla_put_u32(skb_out, IEEREM_ATTR_N_1_PORT, port_id) < 0)
+		return format_fail("rnl_format_ipcp_enable_encryption_resp_msg");
+
+        return 0;
 }
 
 int rnl_assign_dif_response(ipc_process_id_t id,
@@ -4005,3 +4000,54 @@ int rnl_select_policy_set_response(ipc_process_id_t id,
 
 }
 EXPORT_SYMBOL(rnl_select_policy_set_response);
+
+int rnl_enable_encryption_response(ipc_process_id_t id,
+                                   uint_t           res,
+                                   rnl_sn_t         seq_num,
+                                   port_id_t	    n_1_port,
+                                   u32              nl_port_id)
+{
+        struct sk_buff *      out_msg;
+        struct rina_msg_hdr * out_hdr;
+        int                   result;
+
+        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
+        if (!out_msg) {
+                LOG_ERR("Could not allocate memory for message");
+                return -1;
+        }
+
+        out_hdr = (struct rina_msg_hdr *)
+                genlmsg_put(out_msg,
+                            0,
+                            seq_num,
+                            &rnl_nl_family,
+                            0,
+                            RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE);
+        if (!out_hdr) {
+                LOG_ERR("Could not use genlmsg_put");
+                nlmsg_free(out_msg);
+                return -1;
+        }
+
+        out_hdr->src_ipc_id = id;
+        out_hdr->dst_ipc_id = 0;
+
+        if (rnl_format_ipcp_enable_encryption_resp_msg(res, n_1_port, out_msg)) {
+                LOG_ERR("Could not format message ...");
+                nlmsg_free(out_msg);
+                return -1;
+        }
+
+        result = genlmsg_end(out_msg, out_hdr);
+        if (result) {
+                LOG_DBG("Result of genlmesg_end: %d", result);
+        }
+
+        return send_nl_unicast_msg(&init_net,
+                                   out_msg,
+                                   nl_port_id,
+                                   RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE,
+                                   seq_num);
+}
+EXPORT_SYMBOL(rnl_enable_encryption_response);

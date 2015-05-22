@@ -422,95 +422,6 @@ int ipcp_config_destroy(struct ipcp_config * cfg)
         return 0;
 }
 
-struct dup_config * dup_config_create(void)
-{
-        struct dup_config * tmp;
-
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
-                return NULL;
-
-        tmp->entry = NULL;
-
-        INIT_LIST_HEAD(&tmp->next);
-
-        return tmp;
-}
-EXPORT_SYMBOL(dup_config_create);
-
-int dup_config_entry_destroy(struct dup_config_entry * entry)
-{
-    if (!entry)
-        return -1;
-
-    if (entry->dif_name) name_destroy(entry->dif_name);
-
-    if (entry->encryption_cipher) rkfree(entry->encryption_cipher);
-
-    if (entry->message_digest) rkfree(entry->message_digest);
-
-    if (entry->key) rkfree(entry->key);
-
-    rkfree(entry);
-
-    return 0;
-}
-EXPORT_SYMBOL(dup_config_entry_destroy);
-
-int dup_config_destroy(struct dup_config * cfg)
-{
-        if (!cfg)
-                return -1;
-
-        if (!cfg->entry)
-                return -1;
-
-        dup_config_entry_destroy(cfg->entry);
-
-        rkfree(cfg);
-
-        return 0;
-}
-EXPORT_SYMBOL(dup_config_destroy);
-
-int dup_config_entry_cpy(const struct dup_config_entry * src,
-                         struct dup_config_entry       * dst)
-{
-        if (!src || !dst)
-                return -1;
-
-        dst->dif_name = name_dup(src->dif_name);
-        if (!dst->dif_name)
-            return -1;
-
-        if (string_dup(src->encryption_cipher, &dst->encryption_cipher) ||
-            string_dup(src->message_digest, &dst->message_digest)       ||
-            string_dup(src->key, &dst->key))
-            return -1;
-
-        dst->ttl = src->ttl;
-        dst->enable_crc = src->enable_crc;
-
-        return 0;
-}
-EXPORT_SYMBOL(dup_config_entry_cpy);
-
-struct dup_config_entry * dup_config_entry_dup(const struct dup_config_entry * src){
-    struct dup_config_entry * tmp;
-
-    if (!src)
-        return NULL;
-
-    tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-    if (!tmp)
-            return NULL;
-
-    dup_config_entry_cpy(src, tmp);
-
-    return tmp;
-}
-EXPORT_SYMBOL(dup_config_entry_dup);
-
 struct flow_spec * flow_spec_dup(const struct flow_spec * fspec)
 {
         struct flow_spec * tmp;
@@ -579,7 +490,6 @@ struct dif_config * dif_config_create(void)
 
         tmp->efcp_config = NULL;
         INIT_LIST_HEAD(&(tmp->ipcp_config_entries));
-        INIT_LIST_HEAD(&(tmp->dup_confs));
 
         return tmp;
 }
@@ -588,7 +498,6 @@ EXPORT_SYMBOL(dif_config_create);
 int dif_config_destroy(struct dif_config * dif_config)
 {
         struct ipcp_config * pos, * nxt;
-        struct dup_config * dup_pos, * dup_nxt;
 
         if (!dif_config)
                 return -1;
@@ -598,13 +507,6 @@ int dif_config_destroy(struct dif_config * dif_config)
                                  next) {
                 list_del(&pos->next);
                 ipcp_config_destroy(pos);
-        }
-
-        list_for_each_entry_safe(dup_pos, dup_nxt,
-                                 &dif_config->dup_confs,
-                                 next) {
-                list_del(&dup_pos->next);
-                dup_config_destroy(dup_pos);
         }
 
         rkfree(dif_config);

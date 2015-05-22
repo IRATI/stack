@@ -121,9 +121,6 @@ struct dif_config {
 
         /* The address of the IPC Process*/
         address_t           address;
-
-        /* List of Data Unit Protection configuration entries */
-        struct list_head    dup_confs;
 };
 
 /* Represents the information about a DIF (name, type, configuration) */
@@ -259,10 +256,18 @@ struct ipcp_instance_ops {
                                   const string_t * path,
                                   const string_t * ps_name);
 
+        int (* enable_encryption)(struct ipcp_instance_data * data,
+        		          struct policy *  encrypt_policy_conf,
+        			  bool 		   enable_encryption,
+        		          bool 		   enable_decryption,
+        			  const string_t * encrypt_alg,
+        		          const string_t * mac_alg,
+        		          const string_t * compress_alg,
+        		          struct buffer *  encrypt_key,
+        		          port_id_t 	   port_id);
+
         int (* enable_write)(struct ipcp_instance_data * data, port_id_t id);
         int (* disable_write)(struct ipcp_instance_data * data, port_id_t id);
-        struct dup_config_entry * (* find_dup_config)(struct ipcp_instance_data * data,
-                                                      struct name * dif_name);
 };
 
 /* FIXME: Should work on struct ipcp_instance, not on ipcp_instance_ops */

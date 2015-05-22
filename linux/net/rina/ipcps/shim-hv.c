@@ -1168,7 +1168,7 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
 
         .set_policy_set_param      = NULL,
         .select_policy_set         = NULL,
-        .find_dup_config           = NULL,
+        .enable_encryption	   = NULL,
 };
 
 /* Initialize the IPC process factory. */

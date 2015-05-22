@@ -430,7 +430,6 @@ enum dif_config_attrs_list {
         DCONF_ATTR_ADDRESS,
         DCONF_ATTR_EFCPC,
         DCONF_ATTR_RMTC,
-        DCONF_ATTR_DUP_CONFS,
         __DCONF_ATTR_MAX,
 };
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)
@@ -533,6 +532,26 @@ enum ipcm_select_policy_set_req_result_attrs_list {
 };
 #define ISPSR_ATTR_MAX (__ISPSR_ATTR_MAX -1)
 
+enum ipcp_enable_encryption_req_attrs_list {
+        IEERM_ATTR_ENCRYPT_POLICY_CONFIG = 1,
+	IEERM_ATTR_EN_ENCRYPT,
+        IEERM_ATTR_EN_DECRYPT,
+        IEERM_ATTR_ENCRYPT_ALG,
+        IEERM_ATTR_MAC_ALG,
+        IEERM_ATTR_COMPRESS_ALG,
+        IEERM_ATTR_ENCRYPT_KEY,
+        IEERM_ATTR_N_1_PORT,
+        __IEERM_ATTR_MAX,
+};
+#define IEERM_ATTR_MAX (__IEERM_ATTR_MAX -1)
+
+enum ipcp_enable_encryption_resp_attrs_list {
+        IEEREM_ATTR_RESULT = 1,
+        IEEREM_ATTR_N_1_PORT,
+        __IEEREM_ATTR_MAX,
+};
+#define IEEREM_ATTR_MAX (__IEEREM_ATTR_MAX -1)
+
 /* FIXME: Should be hidden by the API !!! */
 struct rina_msg_hdr {
         unsigned short src_ipc_id;
@@ -554,7 +573,8 @@ enum rnl_msg_attr_type {
         RNL_MSG_ATTRS_RMT_PFT_DUMP_REQUEST,
         RNL_MSG_ATTRS_QUERY_RIB_REQUEST,
         RNL_MSG_ATTRS_SET_POLICY_SET_PARAM_REQUEST,
-        RNL_MSG_ATTRS_SELECT_POLICY_SET_REQUEST
+        RNL_MSG_ATTRS_SELECT_POLICY_SET_REQUEST,
+        RNL_MSG_ATTRS_ENABLE_ENCRYPTION_REQUEST
 };
 
 struct rnl_msg {
@@ -773,6 +793,17 @@ struct rnl_ipcp_select_policy_set_req_msg_attrs {
         string_t * name;
 };
 
+struct rnl_ipcp_enable_encrypt_req_msg_attrs {
+	struct policy * encrypt_policy_conf;
+	bool 		encryption_enabled;
+	bool		decrption_enabled;
+	string_t *	encrypt_alg;
+	string_t *	mac_alg;
+	string_t *	compress_alg;
+	struct buffer * encrypt_key;
+	port_id_t 	port_id;
+};
+
 int rnl_parse_msg(struct genl_info * info,
                   struct rnl_msg *   msg);
 
@@ -867,5 +898,11 @@ int rnl_set_policy_set_param_response(ipc_process_id_t id,
 int rnl_select_policy_set_response(ipc_process_id_t id,
                                    uint_t           res,
                                    rnl_sn_t         seq_num,
+                                   u32              nl_port_id);
+
+int rnl_enable_encryption_response(ipc_process_id_t id,
+                                   uint_t           res,
+                                   rnl_sn_t         seq_num,
+                                   port_id_t	    n_1_port,
                                    u32              nl_port_id);
 #endif

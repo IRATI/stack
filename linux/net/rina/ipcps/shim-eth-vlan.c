@@ -1445,7 +1445,7 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
 
         .set_policy_set_param      = NULL,
         .select_policy_set         = NULL,
-        .find_dup_config           = NULL,
+        .enable_encryption	   = NULL,
 };
 
 static struct ipcp_factory_data {
