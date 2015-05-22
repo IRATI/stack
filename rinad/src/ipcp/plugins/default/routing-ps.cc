@@ -307,6 +307,19 @@ Graph::CheckedVertex * Graph::get_checked_vertex(unsigned int address) const
 	return 0;
 }
 
+void Graph::print() const
+{
+	LOG_IPCP_INFO("Graph edges:");
+
+	for (std::list<Edge *>::const_iterator it = edges_.begin();
+					it != edges_.end(); it++) {
+		const Edge& e = **it;
+
+		LOG_IPCP_INFO("    (%u --> %u, %d)", e.address1_,
+			      e.address2_, e.weight_);
+	}
+}
+
 PredecessorInfo::PredecessorInfo(unsigned int nPredecessor)
 {
 	predecessor_ = nPredecessor;
