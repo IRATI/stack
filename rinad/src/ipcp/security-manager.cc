@@ -64,6 +64,8 @@ rina::IAuthPolicySet::AuthStatus IPCPSecurityManager::enable_encryption(const ri
 
 	rina::ScopedLock sc_lock(lock);
 	try{
+		LOG_DBG("Requesting the kernel to enable encryption on port-id: %d",
+			profile.port_id);
 		handle = rina::kernelIPCProcess->enableEncryption(profile);
 	} catch(rina::Exception &e) {
 		return rina::IAuthPolicySet::FAILED;
