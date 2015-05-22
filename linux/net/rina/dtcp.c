@@ -685,7 +685,7 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         rcu_read_unlock();
 
         snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
-        LOG_DBG("Right Window Edge: %d", snd_rt_wind_edge(dtcp));
+        LOG_DBG("Right Window Edge: %u", snd_rt_wind_edge(dtcp));
 
         LOG_DBG("Calling CWQ_deliver for DTCP: %pK", dtcp);
         push_pdus_rmt(dtcp);

@@ -222,8 +222,6 @@ struct rmt_kqueue * rmt_kqueue_find(struct rmt_qgroup * g,
 
         head = &g->queues[rmap_hash(g->queues, key)];
         hlist_for_each_entry(entry, head, hlist) {
-                LOG_DBG("Looking for kqueue, current port: %u",
-                         entry->key);
                 if (entry->key == key)
                         return entry;
         }
@@ -288,8 +286,6 @@ struct rmt_qgroup * rmt_qgroup_find(struct rmt_queue_set * qs,
         head = &qs->qgroups[rmap_hash(qs->qgroups, pid)];
 
         hlist_for_each_entry(entry, head, hlist) {
-                LOG_DBG("Looking for qgroup, current port: %u",
-                         entry->pid);
                 if (entry->pid == pid)
                         return entry;
         }
