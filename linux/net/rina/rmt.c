@@ -45,6 +45,7 @@
 #include "pdu-ser.h"
 #include "rmt-ps.h"
 #include "ipcp-utils.h"
+#include "policies.h"
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 #define MAX_PDUS_SENT_PER_CYCLE 10
@@ -516,7 +517,19 @@ int rmt_config_set(struct rmt *        instance,
         instance->config = rmt_config;
 
         /* Add code to instantiate the policies in the rmt config */
-        LOG_MISSING;
+        if (rmt_select_policy_set(instance, "",
+                                  policy_name(rmt_config->rmt_policy_set))) {
+                LOG_ERR("Could not set policy set %s for RMT",
+                        policy_name(rmt_config->rmt_policy_set));
+                return -1;
+        }
+
+        if (pft_select_policy_set(instance->pft, "",
+                                  policy_name(rmt_config->pft_policy_set))) {
+                LOG_ERR("Could not set policy set %s for PFT",
+                        policy_name(rmt_config->pft_policy_set));
+                return -1;
+        }
 
         return 0;
 }
