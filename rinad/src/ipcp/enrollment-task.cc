@@ -759,6 +759,13 @@ void EnrollmentTask::process_authentication_message(const rina::CDAPMessage& mes
 	ipcp_ps->process_authentication_message(message, session_descriptor);
 }
 
+void EnrollmentTask::authentication_completed(int port_id, bool success)
+{
+	IPCPEnrollmentTaskPS * ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);
+	assert(ipcp_ps);
+	ipcp_ps->authentication_completed(port_id, success);
+}
+
 IEnrollmentStateMachine * EnrollmentTask::getEnrollmentStateMachine(int portId, bool remove)
 {
 	if (remove) {

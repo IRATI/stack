@@ -69,35 +69,6 @@ int SecurityManagerPs::set_policy_set_param(const std::string& name,
         return -1;
 }
 
-///IPCP AuthSSH2Policy set
-class IPCPAuthSSH2PolicySet : public rina::AuthSSH2PolicySet {
-public:
-	IPCPAuthSSH2PolicySet(IPCPRIBDaemon * ribd, IPCPSecurityManager * sm);
-	virtual ~IPCPAuthSSH2PolicySet() { };
-	rina::IAuthPolicySet::AuthStatus enable_encryption(rina::SSH2SecurityContext * sc,
-							   int mode);
-};
-
-IPCPAuthSSH2PolicySet::IPCPAuthSSH2PolicySet(IPCPRIBDaemon * ribd, IPCPSecurityManager * sm) :
-			AuthSSH2PolicySet(ribd, sm)
-{
-}
-
-rina::IAuthPolicySet::AuthStatus IPCPAuthSSH2PolicySet::enable_encryption(rina::SSH2SecurityContext * sc,
-							   	   	  int mode)
-{
-	//TODO properly implement by sending NL messages to kernel
-	if (mode == rina::AuthSSH2PolicySet::ENCRYPTION) {
-		LOG_IPCP_DBG("Enabling encryption for port-id: %d", sc->id);
-	} else if (mode == rina::AuthSSH2PolicySet::DECRYPTION) {
-		LOG_IPCP_DBG("Enabling decryption for port-id: %d", sc->id);
-	} else {
-		LOG_IPCP_DBG("Enabling encryption and decryption for port-id: %d", sc->id);
-	}
-
-	return rina::IAuthPolicySet::SUCCESSFULL;
-}
-
 extern "C" rina::IPolicySet *
 createSecurityManagerPs(rina::ApplicationEntity * ctx)
 {
@@ -177,7 +148,7 @@ createAuthSSH2Ps(rina::ApplicationEntity * ctx)
         	return NULL;
         }
 
-        return new IPCPAuthSSH2PolicySet(rib_daemon, sm);
+        return new rina::AuthSSH2PolicySet(rib_daemon, sm);
 }
 
 extern "C" void

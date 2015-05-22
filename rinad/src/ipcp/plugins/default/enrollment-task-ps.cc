@@ -204,6 +204,8 @@ public:
 	void process_authentication_message(const rina::CDAPMessage& message,
 				            rina::CDAPSessionDescriptor * session_descriptor);
 
+	void authentication_completed(bool success);
+
 	/// Called by the EnrollmentTask when it got an M_CONNECT_R message
 	/// @param result
 	/// @param result_reason
@@ -338,6 +340,18 @@ void EnrolleeStateMachine::process_authentication_message(const rina::CDAPMessag
 				"Authentication failed",
 				true);
 	} else if (result == rina::IAuthPolicySet::SUCCESSFULL) {
+		LOG_IPCP_INFO("Authentication was successful, waiting for M_CONNECT_R");
+	}
+}
+
+void EnrolleeStateMachine::authentication_completed(bool success)
+{
+	if (!success) {
+		abortEnrollment(remote_peer_->name_,
+				port_id_,
+				"Authentication failed",
+				true);
+	} else {
 		LOG_IPCP_INFO("Authentication was successful, waiting for M_CONNECT_R");
 	}
 }
@@ -737,6 +751,8 @@ public:
 	void process_authentication_message(const rina::CDAPMessage& message,
 				            rina::CDAPSessionDescriptor * session_descriptor);
 
+	void authentication_completed(bool success);
+
 	/// Called by the Enrollment object when it receives an M_START message from
 	/// the enrolling member. Have to look at the enrollment information request,
 	/// from that deduce if the IPC process requesting to enroll with me is already
@@ -746,16 +762,16 @@ public:
 	/// valid member, just send M_START_R with no address and M_STOP_R
 	/// @param eiRequest
 	/// @param invoke_id to reply to the message
-    /// @param cdapSessionDescriptor
-    void start(EnrollmentInformationRequest * eiRequest, int invoke_id,
+	/// @param cdapSessionDescriptor
+	void start(EnrollmentInformationRequest * eiRequest, int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 
-    /// The response of the stop operation has been received, send M_START operation without
-    /// waiting for an answer and consider the process enrolled
-    /// @param result
-    /// @param result_reason
-    /// @param object_value
-    /// @param cdapSessionDescriptor
+	/// The response of the stop operation has been received, send M_START operation without
+	/// waiting for an answer and consider the process enrolled
+	/// @param result
+	/// @param result_reason
+	/// @param object_value
+	/// @param cdapSessionDescriptor
 	void stopResponse(int result, const std::string& result_reason,
 			void * object_value, rina::CDAPSessionDescriptor * session_descriptor);
 
@@ -883,6 +899,18 @@ void EnrollerStateMachine::process_authentication_message(const rina::CDAPMessag
 	}
 
 	authentication_successful();
+}
+
+void EnrollerStateMachine::authentication_completed(bool success)
+{
+	if (!success) {
+		abortEnrollment(remote_peer_->name_,
+				port_id_,
+				"Authentication failed",
+				true);
+	} else {
+		authentication_successful();
+	}
 }
 
 void EnrollerStateMachine::authentication_successful()
@@ -1218,6 +1246,7 @@ public:
         			       rina::CDAPSessionDescriptor * session_descriptor);
         void process_authentication_message(const rina::CDAPMessage& message,
         			rina::CDAPSessionDescriptor * session_descriptor);
+	void authentication_completed(int port_id, bool success);
         void initiate_enrollment(const rina::NMinusOneFlowAllocatedEvent & event,
         			 rina::EnrollmentRequest * request);
         void inform_ipcm_about_failure(IEnrollmentStateMachine * state_machine);
@@ -1352,6 +1381,30 @@ void EnrollmentTaskPs::process_authentication_message(const rina::CDAPMessage& m
 				     e.what());
 		}
 		et->deallocateFlow(session_descriptor->port_id_);
+	}
+}
+
+void EnrollmentTaskPs::authentication_completed(int port_id, bool success)
+{
+	rina::ScopedLock g(lock);
+
+	try {
+		IEnrollmentStateMachine * stateMachine =
+				et->getEnrollmentStateMachine(port_id, false);
+		stateMachine->authentication_completed(success);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems getting enrollment state machine: %s",
+				e.what());
+		try {
+			rina::RemoteProcessId remote_id;
+			remote_id.port_id_ = port_id;
+
+			rib_daemon->closeApplicationConnection(remote_id, 0);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems closing application connection: %s",
+					e.what());
+		}
+		et->deallocateFlow(port_id);
 	}
 }
 

@@ -5225,26 +5225,26 @@ int putIPCPEnableEncryptionRequestMessage(nl_msg* netlinkMessage,
 			nla_nest_start(netlinkMessage, EERM_ATTR_ENCRYPT_POLICY_CONFIG))) {
 		goto nla_put_failure;
 	}
-	if (putPolicyConfigObject(netlinkMessage, object.encrypt_policy_config) < 0) {
+	if (putPolicyConfigObject(netlinkMessage, object.profile.encrypt_policy_config) < 0) {
 		goto nla_put_failure;
 	}
 	nla_nest_end(netlinkMessage, en_policy);
 
-	if (object.enable_decryption) {
+	if (object.profile.enable_decryption) {
 		NLA_PUT_FLAG(netlinkMessage, EERM_ATTR_EN_DECRYPT);
 	}
-	if (object.enable_encryption) {
+	if (object.profile.enable_encryption) {
 		NLA_PUT_FLAG(netlinkMessage, EERM_ATTR_EN_ENCRYPT);
 	}
 	NLA_PUT_STRING(netlinkMessage, EERM_ATTR_ENCRYPT_ALG,
-		       object.encrypt_alg.c_str());
+		       object.profile.encrypt_alg.c_str());
 	NLA_PUT_STRING(netlinkMessage, EERM_ATTR_MAC_ALG,
-		       object.mac_alg.c_str());
+		       object.profile.mac_alg.c_str());
 	NLA_PUT_STRING(netlinkMessage, EERM_ATTR_COMPRESS_ALG,
-		       object.compress_alg.c_str());
+		       object.profile.compress_alg.c_str());
 	NLA_PUT(netlinkMessage, EERM_ATTR_ENCRYPT_KEY,
-		object.encrypt_key.length, object.encrypt_key.data);
-	NLA_PUT_U32(netlinkMessage, EERM_ATTR_N_1_PORT, object.port_id);
+		object.profile.encrypt_key.length, object.profile.encrypt_key.data);
+	NLA_PUT_U32(netlinkMessage, EERM_ATTR_N_1_PORT, object.profile.port_id);
 
 	return 0;
 
@@ -9019,46 +9019,46 @@ IPCPEnableEncryptionRequestMessage * parseIPCPEnableEncryptionRequestMessage(
 			delete result;
 			return 0;
 		} else {
-			result->encrypt_policy_config = *encrypt_config;
+			result->profile.encrypt_policy_config = *encrypt_config;
 			delete encrypt_config;
 		}
 	}
 
 	if (attrs[EERM_ATTR_EN_ENCRYPT]) {
-		result->enable_encryption = true;
+		result->profile.enable_encryption = true;
 	} else {
-		result->enable_encryption = false;
+		result->profile.enable_encryption = false;
 	}
 
 	if (attrs[EERM_ATTR_EN_DECRYPT]) {
-		result->enable_decryption = true;
+		result->profile.enable_decryption = true;
 	} else {
-		result->enable_decryption = false;
+		result->profile.enable_decryption = false;
 	}
 
 	if (attrs[EERM_ATTR_ENCRYPT_ALG]) {
-		result->encrypt_alg =
+		result->profile.encrypt_alg =
 				nla_get_string(attrs[EERM_ATTR_ENCRYPT_ALG]);
 	}
 
 	if (attrs[EERM_ATTR_MAC_ALG]) {
-		result->mac_alg =
+		result->profile.mac_alg =
 				nla_get_string(attrs[EERM_ATTR_MAC_ALG]);
 	}
 
 	if (attrs[EERM_ATTR_COMPRESS_ALG]) {
-		result->compress_alg =
+		result->profile.compress_alg =
 				nla_get_string(attrs[EERM_ATTR_COMPRESS_ALG]);
 	}
 
 	if (attrs[EERM_ATTR_ENCRYPT_KEY]) {
-		result->encrypt_key.length = nla_len(attrs[EERM_ATTR_ENCRYPT_KEY]);
+		result->profile.encrypt_key.length = nla_len(attrs[EERM_ATTR_ENCRYPT_KEY]);
 		unsigned char * data = (unsigned char *) nla_data(attrs[EERM_ATTR_ENCRYPT_KEY]);
-		memcpy(result->encrypt_key.data, data, result->encrypt_key.length);
+		memcpy(result->profile.encrypt_key.data, data, result->profile.encrypt_key.length);
 	}
 
 	if (attrs[EERM_ATTR_N_1_PORT]) {
-		result->port_id =
+		result->profile.port_id =
 				nla_get_u32(attrs[EERM_ATTR_N_1_PORT]);
 	}
 

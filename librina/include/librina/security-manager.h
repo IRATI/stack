@@ -75,6 +75,10 @@ public:
 	virtual int process_incoming_message(const CDAPMessage& message,
 					     int session_id) = 0;
 
+	//Called when encryption has been enabled on a certain port, if the call
+	//to the Security Manager's "enable encryption" was asynchronous
+	virtual AuthStatus encryption_enabled(int port_id) = 0;
+
 	// The type of authentication policy
 	std::string type;
 };
@@ -94,6 +98,7 @@ public:
 	int process_incoming_message(const CDAPMessage& message, int session_id);
 	int set_policy_set_param(const std::string& name,
 	                         const std::string& value);
+	AuthStatus encryption_enabled(int port_id);
 
 private:
 	ISecurityManager * sec_man;
@@ -154,6 +159,7 @@ public:
 				     int session_id);
 	int set_policy_set_param(const std::string& name,
 	                         const std::string& value);
+	AuthStatus encryption_enabled(int port_id);
 
 private:
 	std::string * generate_random_challenge(int length);
@@ -196,12 +202,28 @@ public:
 	UcharArray dh_public_key;
 };
 
+struct EncryptionProfile {
+	EncryptionProfile() : enable_encryption(false),
+			enable_decryption(false) , port_id(0){ };
+
+	PolicyConfig encrypt_policy_config;
+	bool enable_encryption;
+	bool enable_decryption;
+	std::string encrypt_alg;
+	std::string mac_alg;
+	std::string compress_alg;
+	int port_id;
+	UcharArray encrypt_key;
+};
+
 ///Captures all data of the SSHRSA security context
 class SSH2SecurityContext : public ISecurityContext {
 public:
 	SSH2SecurityContext(int session_id) : ISecurityContext(session_id),
 			state(BEGIN), dh_state(NULL), dh_peer_pub_key(NULL) { };
 	~SSH2SecurityContext();
+	EncryptionProfile get_encryption_profile(bool enable_encryption,
+						 bool enable_decryption);
 
         enum State {
         	BEGIN,
@@ -242,8 +264,9 @@ public:
 /// It uses the Open SSL crypto library to perform all its functions
 /// 1: Negotiation of versions
 /// 2: Negotiation of algorithms
-/// 3: Encryption key generation and exchange (configuring SDU protection policy)
-/// 4: Authentication
+/// 3: Encryption key generation
+/// 4: Configuration of encryption policy on N-1 port
+/// 5: Authentication using public/private key of DIF
 class AuthSSH2PolicySet : public IAuthPolicySet {
 public:
 	static const std::string KEY_EXCHANGE_ALGORITHM;
@@ -252,12 +275,6 @@ public:
 	static const std::string COMPRESSION_ALGORITHM;
 	static const int DEFAULT_TIMEOUT;
 	static const std::string EDH_EXCHANGE;
-
-	enum EncryptionType {
-		ENCRYPTION,
-		DECRYPTION,
-		ENCRYPTION_AND_DECRYPTION
-	};
 
 	AuthSSH2PolicySet(IRIBDaemon * ribd, ISecurityManager * sm);
 	virtual ~AuthSSH2PolicySet();
@@ -270,22 +287,15 @@ public:
 	int set_policy_set_param(const std::string& name,
 	                         const std::string& value);
 
-	//Enable decryption, encryption or both on N-1 port.
-	virtual AuthStatus enable_encryption(SSH2SecurityContext * sc, int mode) = 0;
+	//Called when encryption has been enabled on a certain port, if the call
+	//to the Security Manager's "enable encryption" was asynchronous
+	AuthStatus encryption_enabled(int port_id);
 
-protected:
-
-	//Callback functions called when encryption and/or decryption have been enabled
-	// (in case the operations were asynchronous)
+private:
 	AuthStatus decryption_enabled_server(SSH2SecurityContext * sc);
 	AuthStatus encryption_enabled_server(SSH2SecurityContext * sc);
 	AuthStatus encryption_decryption_enabled_client(SSH2SecurityContext * sc);
 
-	IRIBDaemon * rib_daemon;
-	ISecurityManager * sec_man;
-	Lockable lock;
-
-private:
 	//Convert Big Number to binary
 	unsigned char * BN_to_binary(BIGNUM *b, int *len);
 
@@ -302,6 +312,9 @@ private:
 
 	int process_edh_exchange_message(const CDAPMessage& message, int session_id);
 
+	IRIBDaemon * rib_daemon;
+	ISecurityManager * sec_man;
+	Lockable lock;
 	DH * dh_parameters;
 	Timer timer;
 	int timeout;
@@ -321,6 +334,8 @@ public:
         void destroy_security_context(int context_id);
         void add_security_context(ISecurityContext * context);
         void eventHappened(InternalEvent * event);
+        virtual IAuthPolicySet::AuthStatus enable_encryption(const EncryptionProfile& profile,
+        						     IAuthPolicySet * caller) = 0;
 
 private:
         /// The authentication policy sets, by type

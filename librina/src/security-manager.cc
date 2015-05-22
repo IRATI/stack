@@ -102,6 +102,12 @@ int AuthNonePolicySet::set_policy_set_param(const std::string& name,
         return -1;
 }
 
+IAuthPolicySet::AuthStatus AuthNonePolicySet::encryption_enabled(int port_id)
+{
+	LOG_ERR("Encryption is not supported by this policy, on port_id %d", port_id);
+	return FAILED;
+}
+
 //Class CancelAuthTimerTask
 void CancelAuthTimerTask::run()
 {
@@ -380,6 +386,12 @@ int AuthPasswordPolicySet::set_policy_set_param(const std::string& name,
         return -1;
 }
 
+IAuthPolicySet::AuthStatus AuthPasswordPolicySet::encryption_enabled(int port_id)
+{
+	LOG_ERR("Encryption is not supported by this policy, on port_id %d", port_id);
+	return IAuthPolicySet::FAILED;
+}
+
 //AuthSSH2Options encoder and decoder operations
 SSH2AuthOptions * decode_ssh2_auth_options(const SerializedObject &message) {
 	rina::auth::policies::googleprotobuf::authOptsSSH2_t gpb_options;
@@ -461,6 +473,22 @@ SSH2SecurityContext::~SSH2SecurityContext()
 	if (dh_peer_pub_key) {
 		BN_free(dh_peer_pub_key);
 	}
+}
+
+EncryptionProfile SSH2SecurityContext::get_encryption_profile(bool enable_encryption,
+					 	 	      bool enable_decryption)
+{
+	EncryptionProfile result;
+	result.encrypt_policy_config = encrypt_policy_config;
+	result.enable_encryption = enable_encryption;
+	result.enable_decryption = enable_decryption;
+	result.encrypt_alg = encrypt_alg;
+	result.mac_alg = mac_alg;
+	result.compress_alg = compress_alg;
+	result.encrypt_key = encrypt_key;
+	result.port_id = id;
+
+	return result;
 }
 
 //Class AuthSSH2
@@ -758,7 +786,8 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(const Auth
 
 	// Configure kernel SDU protection policy with shared secret and algorithms
 	// tell it to enable decryption
-	AuthStatus result = enable_encryption(sc, DECRYPTION);
+	AuthStatus result = sec_man->enable_encryption(sc->get_encryption_profile(false, true),
+						       this);
 	if (result == IAuthPolicySet::FAILED) {
 		delete sc;
 		return result;
@@ -806,6 +835,32 @@ int AuthSSH2PolicySet::edh_generate_shared_secret(SSH2SecurityContext * sc)
 			sc->encrypt_key.toString().c_str());
 
 	return 0;
+}
+
+IAuthPolicySet::AuthStatus AuthSSH2PolicySet::encryption_enabled(int port_id)
+{
+	SSH2SecurityContext * sc;
+
+	ScopedLock sc_lock(lock);
+
+	sc = dynamic_cast<SSH2SecurityContext *>(sec_man->get_security_context(port_id));
+	if (!sc) {
+		LOG_ERR("Could not retrieve SSH2 security context for port-id: %d", port_id);
+		return IAuthPolicySet::FAILED;
+	}
+
+	switch(sc->state) {
+	case SSH2SecurityContext::REQUESTED_ENABLE_DECRYPTION_SERVER:
+		return decryption_enabled_server(sc);
+	case SSH2SecurityContext::REQUESTED_ENABLE_ENCRYPTION_SERVER:
+		return encryption_enabled_server(sc);
+	case SSH2SecurityContext::REQUESTED_ENABLE_ENCRYPTION_DECRYPTION_CLIENT:
+		return encryption_decryption_enabled_client(sc);
+	default:
+		LOG_ERR("Wrong security context state: %d", sc->state);
+		sec_man->destroy_security_context(sc->id);
+		return IAuthPolicySet::FAILED;
+	}
 }
 
 IAuthPolicySet::AuthStatus AuthSSH2PolicySet::decryption_enabled_server(SSH2SecurityContext * sc)
@@ -864,7 +919,8 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::decryption_enabled_server(SSH2Secu
 
 	// Configure kernel SDU protection policy with shared secret and algorithms
 	// tell it to enable encryption
-	AuthStatus result = enable_encryption(sc, ENCRYPTION);
+	AuthStatus result = sec_man->enable_encryption(sc->get_encryption_profile(true, false),
+						       this);
 	if (result == IAuthPolicySet::FAILED) {
 		sec_man->destroy_security_context(sc->id);
 		return result;
@@ -888,7 +944,8 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::encryption_enabled_server(SSH2Secu
 	LOG_DBG("Encryption enabled for port-id: %d", sc->id);
 	sc->state = SSH2SecurityContext::ENCRYPTION_SETUP_SERVER;
 
-	return IAuthPolicySet::IN_PROGRESS;
+	//TODO continue with authentication
+	return IAuthPolicySet::SUCCESSFULL;
 }
 
 int AuthSSH2PolicySet::process_incoming_message(const CDAPMessage& message, int session_id)
@@ -968,7 +1025,8 @@ int AuthSSH2PolicySet::process_edh_exchange_message(const CDAPMessage& message, 
 
 	// Configure kernel SDU protection policy with shared secret and algorithms
 	// tell it to enable decryption and encryption
-	AuthStatus result = enable_encryption(sc, ENCRYPTION_AND_DECRYPTION);
+	AuthStatus result = sec_man->enable_encryption(sc->get_encryption_profile(true, true),
+						       this);
 	if (result == IAuthPolicySet::FAILED) {
 		sec_man->destroy_security_context(sc->id);
 		return result;
@@ -994,7 +1052,7 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::encryption_decryption_enabled_clie
 	sc->state = SSH2SecurityContext::ENCRYPTION_SETUP_CLIENT;
 
 	//TODO continue with authentication
-	return IAuthPolicySet::IN_PROGRESS;
+	return IAuthPolicySet::SUCCESSFULL;
 }
 
 int AuthSSH2PolicySet::set_policy_set_param(const std::string& name,

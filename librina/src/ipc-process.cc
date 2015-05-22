@@ -1133,6 +1133,33 @@ unsigned int KernelIPCProcess::dumptPDUFT() {
         return seqNum;
 }
 
+unsigned int KernelIPCProcess::enableEncryption(const EncryptionProfile& profile)
+{
+        unsigned int seqNum=0;
+
+#if STUB_API
+        (void) profile;
+        //Do nothing
+#else
+        IPCPEnableEncryptionRequestMessage message;
+        message.setSourceIpcProcessId(ipcProcessId);
+        message.setDestIpcProcessId(ipcProcessId);
+        message.profile = profile;
+        message.setDestPortId(0);
+        message.setRequestMessage(true);
+
+        try {
+                rinaManager->sendMessage(&message, true);
+        } catch (NetlinkException &e) {
+                throw Exception(e.what());
+        }
+
+        seqNum = message.getSequenceNumber();
+#endif
+
+        return seqNum;
+}
+
 unsigned int KernelIPCProcess::setPolicySetParam(
                                 const std::string& path,
                                 const std::string& name,

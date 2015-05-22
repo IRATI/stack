@@ -978,6 +978,9 @@ public:
          */
         unsigned int dumptPDUFT();
 
+        /// Request the kernel to enable encryption, decryption or both on a certain port
+        unsigned int enableEncryption(const EncryptionProfile& profile);
+
         /**
          * Request the Kernel IPC Process to modify a policy-set-related
          * parameter.

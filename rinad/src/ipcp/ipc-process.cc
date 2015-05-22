@@ -919,6 +919,16 @@ ipc_process_plugin_load_handler(rina::IPCEvent *e,
 }
 
 static void
+ipc_process_enable_encryption_response_handler(rina::IPCEvent *e,
+					       EventLoopData *opaque)
+{
+	DOWNCAST_DECL(e, rina::EnableEncryptionResponseEvent, event);
+	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
+
+	ipcp->security_manager_->process_enable_encryption_response(*event);
+}
+
+static void
 ipc_process_default_handler(rina::IPCEvent *e,
 		EventLoopData *opaque)
 {
@@ -974,6 +984,8 @@ void register_handlers_all(EventLoop& loop) {
                         ipc_process_select_policy_set_response_handler);
         loop.register_event(rina::IPC_PROCESS_PLUGIN_LOAD,
                         ipc_process_plugin_load_handler);
+        loop.register_event(rina::IPC_PROCESS_ENABLE_ENCRYPTION_RESPONSE,
+        		ipc_process_enable_encryption_response_handler);
 
 	//Unsupported events
 	loop.register_event(rina::APPLICATION_UNREGISTERED_EVENT,

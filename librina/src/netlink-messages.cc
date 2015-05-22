@@ -1974,9 +1974,6 @@ IPCEvent* RmtDumpPDUFTEntriesResponseMessage::toIPCEvent() {
 IPCPEnableEncryptionRequestMessage::IPCPEnableEncryptionRequestMessage()
 	: BaseNetlinkMessage(RINA_C_IPCP_ENABLE_ENCRYPTION_REQUEST)
 {
-	enable_decryption = false;
-	enable_encryption = false;
-	port_id = 0;
 }
 
 IPCEvent* IPCPEnableEncryptionRequestMessage::toIPCEvent() {
