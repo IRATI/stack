@@ -1500,7 +1500,7 @@ static int notify_ipcp_enable_encryption(void *             data,
         struct ipcp_instance *                         ipc_process;
         ipc_process_id_t                               ipc_id = 0;
         int retval = 0;
-        port_id_t				       port_id;
+        port_id_t				       port_id = 0;
 
         if (!data) {
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");

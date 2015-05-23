@@ -903,6 +903,11 @@ void EnrollerStateMachine::process_authentication_message(const rina::CDAPMessag
 
 void EnrollerStateMachine::authentication_completed(bool success)
 {
+	if (last_scheduled_task_) {
+		timer_.cancelTask(last_scheduled_task_);
+		last_scheduled_task_ = 0;
+	}
+
 	if (!success) {
 		abortEnrollment(remote_peer_->name_,
 				port_id_,

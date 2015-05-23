@@ -221,7 +221,8 @@ public:
 class SSH2SecurityContext : public ISecurityContext {
 public:
 	SSH2SecurityContext(int session_id) : ISecurityContext(session_id),
-			state(BEGIN), dh_state(NULL), dh_peer_pub_key(NULL) { };
+			state(BEGIN), dh_state(NULL), dh_peer_pub_key(NULL),
+			timer_task(NULL) { };
 	~SSH2SecurityContext();
 	EncryptionProfile get_encryption_profile(bool enable_encryption,
 						 bool enable_decryption);
@@ -258,6 +259,9 @@ public:
 
 	///The encryption key
 	UcharArray encrypt_key;
+
+	// Owned by a timer
+	CancelAuthTimerTask * timer_task;
 };
 
 /// Authentication policy set that mimics SSH approach. It is associated to
