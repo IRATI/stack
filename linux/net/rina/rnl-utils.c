@@ -2329,6 +2329,10 @@ rnl_parse_ipcp_enable_encryption_req_msg(
                 struct genl_info * info,
                 struct rnl_ipcp_enable_encrypt_req_msg_attrs * msg_attrs)
 {
+        if (info->attrs[IEERM_ATTR_N_1_PORT])
+                msg_attrs->port_id =
+                        nla_get_u32(info->attrs[IEERM_ATTR_N_1_PORT]);
+
         if (info->attrs[IEERM_ATTR_ENCRYPT_POLICY_CONFIG]) {
                 if (parse_policy(info->attrs[IEERM_ATTR_ENCRYPT_POLICY_CONFIG],
                 	     msg_attrs->encrypt_policy_conf)) {
@@ -2348,7 +2352,7 @@ rnl_parse_ipcp_enable_encryption_req_msg(
 		msg_attrs->decrption_enabled = false;
 
         if (info->attrs[IEERM_ATTR_ENCRYPT_ALG])
-                msg_attrs->encrypt_alg = nla_dup_string(info->attrs[IEERM_ATTR_MAC_ALG],
+                msg_attrs->encrypt_alg = nla_dup_string(info->attrs[IEERM_ATTR_ENCRYPT_ALG],
                                                  	GFP_KERNEL);
 
         if (info->attrs[IEERM_ATTR_ENCRYPT_ALG])
@@ -2363,10 +2367,6 @@ rnl_parse_ipcp_enable_encryption_req_msg(
         	msg_attrs->encrypt_key = buffer_create_from(nla_data(info->attrs[IEERM_ATTR_ENCRYPT_KEY]),
         						    nla_len(info->attrs[IEERM_ATTR_ENCRYPT_KEY]));
         }
-
-        if (info->attrs[IEERM_ATTR_N_1_PORT])
-                msg_attrs->port_id =
-                        nla_get_u32(info->attrs[IEERM_ATTR_N_1_PORT]);
 
         return 0;
 }

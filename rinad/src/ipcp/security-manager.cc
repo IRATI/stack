@@ -80,11 +80,12 @@ void IPCPSecurityManager::process_enable_encryption_response(const rina::EnableE
 {
 	rina::IAuthPolicySet * caller;
 
-	rina::ScopedLock sc_lock(lock);
+	lock.lock();
 
 	std::map<unsigned int, rina::IAuthPolicySet *>::iterator it =
 			pending_enable_encryption_requests.find(event.sequenceNumber);
 	if (it == pending_enable_encryption_requests.end()) {
+		lock.unlock();
 		LOG_WARN("Could not find pending request for enable encryption response event %u",
 			  event.sequenceNumber);
 		return;
@@ -92,6 +93,8 @@ void IPCPSecurityManager::process_enable_encryption_response(const rina::EnableE
 		caller = it->second;
 		pending_enable_encryption_requests.erase(it);
 	}
+
+	lock.unlock();
 
 	if (event.result != 0) {
 		LOG_ERR("Enabling flow encryption failed, authentication failed");

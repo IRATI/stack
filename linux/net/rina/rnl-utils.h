@@ -533,14 +533,14 @@ enum ipcm_select_policy_set_req_result_attrs_list {
 #define ISPSR_ATTR_MAX (__ISPSR_ATTR_MAX -1)
 
 enum ipcp_enable_encryption_req_attrs_list {
-        IEERM_ATTR_ENCRYPT_POLICY_CONFIG = 1,
+	IEERM_ATTR_N_1_PORT = 1,
+        IEERM_ATTR_ENCRYPT_POLICY_CONFIG,
 	IEERM_ATTR_EN_ENCRYPT,
         IEERM_ATTR_EN_DECRYPT,
         IEERM_ATTR_ENCRYPT_ALG,
         IEERM_ATTR_MAC_ALG,
         IEERM_ATTR_COMPRESS_ALG,
         IEERM_ATTR_ENCRYPT_KEY,
-        IEERM_ATTR_N_1_PORT,
         __IEERM_ATTR_MAX,
 };
 #define IEERM_ATTR_MAX (__IEERM_ATTR_MAX -1)

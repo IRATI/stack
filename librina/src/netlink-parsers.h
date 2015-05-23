@@ -1461,14 +1461,14 @@ IpcmPluginLoadResponseMessage *parseIpcmPluginLoadResponseMessage(
 
 /* IPCPEnableEncryptionRequestMessageAttributes CLASS */
 enum IPCPEnableEncryptionRequestMessageAttributes {
-        EERM_ATTR_ENCRYPT_POLICY_CONFIG = 1,
+        EERM_ATTR_N_1_PORT = 1,
+        EERM_ATTR_ENCRYPT_POLICY_CONFIG,
 	EERM_ATTR_EN_ENCRYPT,
         EERM_ATTR_EN_DECRYPT,
         EERM_ATTR_ENCRYPT_ALG,
         EERM_ATTR_MAC_ALG,
         EERM_ATTR_COMPRESS_ALG,
         EERM_ATTR_ENCRYPT_KEY,
-        EERM_ATTR_N_1_PORT,
         __EERM_ATTR_MAX,
 };
 
