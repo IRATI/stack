@@ -1244,16 +1244,14 @@ EnrollmentTaskConfiguration::EnrollmentTaskConfiguration() {
 	max_number_of_enrollment_attempts_ = 3;
 }
 
-std::string EnrollmentTaskConfiguration::toString()
-{
+std::string EnrollmentTaskConfiguration::toString() {
 	std::stringstream ss;
 	ss << "Enrollment timeout in ms: " << enrollment_timeout_in_ms_ << std::endl;
 	ss << "Watchdog period in ms: " << watchdog_period_in_ms_ << std::endl;
-	ss << "Declared dead interval in ms: "<< declared_dead_interval_in_ms_ << std::endl;
-	ss << "Neighbor enroller period in ms: "<<neighbor_enroller_period_in_ms_<< std::endl;
+	ss << "Declared dead interval in ms: " << declared_dead_interval_in_ms_ << std::endl;
+	ss << "Neighbor enroller period in ms: " << neighbor_enroller_period_in_ms_<< std::endl;
 	ss << "Max number of enrollment attempts: " << max_number_of_enrollment_attempts_ << std::endl;
 	return ss.str();
-
 }
 
 // Class Static IPC Process Address
