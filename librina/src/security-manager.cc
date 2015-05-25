@@ -20,6 +20,12 @@
 //
 
 #include <cstdlib>
+#include <openssl/bio.h>
+#include <openssl/err.h>
+#include <openssl/md5.h>
+#include <openssl/pem.h>
+#include <openssl/rand.h>
+#include <openssl/sha.h>
 #include <openssl/ssl.h>
 
 #define RINA_PREFIX "librina.security-manager"
@@ -464,6 +470,13 @@ SerializedObject * encode_ssh2_auth_options(const SSH2AuthOptions& options){
 }
 
 // Class SSH2SecurityContext
+const std::string SSH2SecurityContext::KEY_EXCHANGE_ALGORITHM = "keyExchangeAlg";
+const std::string SSH2SecurityContext::ENCRYPTION_ALGORITHM = "encryptAlg";
+const std::string SSH2SecurityContext::MAC_ALGORITHM = "macAlg";
+const std::string SSH2SecurityContext::COMPRESSION_ALGORITHM = "compressAlg";
+const std::string SSH2SecurityContext::KEYSTORE_PATH = "keystore";
+const std::string SSH2SecurityContext::KEYSTORE_PASSWORD = "keystorePass";
+
 SSH2SecurityContext::~SSH2SecurityContext()
 {
 	if (dh_state) {
@@ -472,6 +485,10 @@ SSH2SecurityContext::~SSH2SecurityContext()
 
 	if (dh_peer_pub_key) {
 		BN_free(dh_peer_pub_key);
+	}
+
+	if (auth_keypair) {
+		RSA_free(auth_keypair);
 	}
 }
 
@@ -491,13 +508,87 @@ EncryptionProfile SSH2SecurityContext::get_encryption_profile(bool enable_encryp
 	return result;
 }
 
+SSH2SecurityContext::SSH2SecurityContext(int session_id,
+				   	 const AuthSDUProtectionProfile& profile)
+		: ISecurityContext(session_id)
+{
+	key_exch_alg = profile.authPolicy.get_param_value(KEY_EXCHANGE_ALGORITHM);
+	encrypt_alg = profile.authPolicy.get_param_value(ENCRYPTION_ALGORITHM);
+	mac_alg = profile.authPolicy.get_param_value(MAC_ALGORITHM);
+	compress_alg = profile.authPolicy.get_param_value(COMPRESSION_ALGORITHM);
+	keystore_path = profile.authPolicy.get_param_value(KEYSTORE_PATH);
+	if (keystore_path == std::string()) {
+		//TODO set the configuration directory as the default keystore path
+	}
+	keystore_password = profile.authPolicy.get_param_value(KEYSTORE_PASSWORD);
+	crcPolicy = profile.crcPolicy;
+	ttlPolicy = profile.ttlPolicy;
+	encrypt_policy_config = profile.encryptPolicy;
+
+	dh_peer_pub_key = NULL;
+	dh_state = NULL;
+	auth_keypair = NULL;
+	timer_task = NULL;
+
+	state = BEGIN;
+}
+
+SSH2SecurityContext::SSH2SecurityContext(int session_id,
+					 const AuthSDUProtectionProfile& profile,
+					 SSH2AuthOptions * options)
+		: ISecurityContext(session_id)
+{
+	std::string option = options->key_exch_algs.front();
+	if (option != SSL_TXT_EDH) {
+		LOG_ERR("Unsupported key exchange algorithm: %s",
+			option.c_str());
+		throw Exception();
+	} else {
+		key_exch_alg = option;
+	}
+
+	option = options->encrypt_algs.front();
+	if (option != SSL_TXT_AES128 && option != SSL_TXT_AES256) {
+		LOG_ERR("Unsupported encryption algorithm: %s",
+			option.c_str());
+		throw Exception();
+	} else {
+		encrypt_alg = option;
+	}
+
+	option = options->mac_algs.front();
+	if (option != SSL_TXT_MD5 && option != SSL_TXT_SHA1) {
+		LOG_ERR("Unsupported MAC algorithm: %s",
+			option.c_str());
+		throw Exception();
+	} else {
+		mac_alg = option;
+	}
+
+	//TODO check compression algorithm when we use them
+
+	keystore_password = profile.authPolicy.get_param_value(KEYSTORE_PASSWORD);
+	crcPolicy = profile.crcPolicy;
+	ttlPolicy = profile.ttlPolicy;
+	encrypt_policy_config = profile.encryptPolicy;
+
+	dh_peer_pub_key = NULL;
+	dh_state = NULL;
+	auth_keypair = NULL;
+	timer_task = NULL;
+
+	state = BEGIN;
+}
+
 //Class AuthSSH2
 const int AuthSSH2PolicySet::DEFAULT_TIMEOUT = 10000;
-const std::string AuthSSH2PolicySet::KEY_EXCHANGE_ALGORITHM = "keyExchangeAlg";
-const std::string AuthSSH2PolicySet::ENCRYPTION_ALGORITHM = "encryptAlg";
-const std::string AuthSSH2PolicySet::MAC_ALGORITHM = "macAlg";
-const std::string AuthSSH2PolicySet::COMPRESSION_ALGORITHM = "compressAlg";
 const std::string AuthSSH2PolicySet::EDH_EXCHANGE = "Ephemeral Diffie-Hellman exchange";
+const int AuthSSH2PolicySet::MIN_RSA_KEY_PAIR_LENGTH = 256;
+const std::string AuthSSH2PolicySet::CLIENT_CHALLENGE = "Client challenge";
+const std::string AuthSSH2PolicySet::CLIENT_CHALLENGE_REPLY = "Client challenge reply";
+const std::string AuthSSH2PolicySet::CLIENT_DONE = "Client done";
+const std::string AuthSSH2PolicySet::SERVER_CHALLENGE = "Server challenge";
+const std::string AuthSSH2PolicySet::SERVER_CHALLENGE_REPLY = "Server challenge reply";
 
 AuthSSH2PolicySet::AuthSSH2PolicySet(IRIBDaemon * ribd, ISecurityManager * sm) :
 		IAuthPolicySet(IAuthPolicySet::AUTH_SSH2)
@@ -616,14 +707,13 @@ AuthPolicy AuthSSH2PolicySet::get_auth_policy(int session_id,
 	auth_policy.name_ = IAuthPolicySet::AUTH_SSH2;
 	auth_policy.versions_.push_back(profile.authPolicy.version_);
 
-	SSH2SecurityContext * sc = new SSH2SecurityContext(session_id);
-	sc->key_exch_alg = profile.authPolicy.get_param_value(KEY_EXCHANGE_ALGORITHM);
-	sc->encrypt_alg = profile.authPolicy.get_param_value(ENCRYPTION_ALGORITHM);
-	sc->mac_alg = profile.authPolicy.get_param_value(MAC_ALGORITHM);
-	sc->compress_alg = profile.authPolicy.get_param_value(COMPRESSION_ALGORITHM);
-	sc->crcPolicy = profile.crcPolicy;
-	sc->ttlPolicy = profile.ttlPolicy;
-	sc->encrypt_policy_config = profile.encryptPolicy;
+	SSH2SecurityContext * sc = new SSH2SecurityContext(session_id, profile);
+
+	//Load authentication keys from the keystore
+	if (load_authentication_keys(sc) != 0) {
+		delete sc;
+		throw Exception();
+	}
 
 	//Initialize Diffie-Hellman machinery and generate private/public key pairs
 	if (edh_init_keys(sc) != 0) {
@@ -660,6 +750,38 @@ AuthPolicy AuthSSH2PolicySet::get_auth_policy(int session_id,
 	sec_man->add_security_context(sc);
 
 	return auth_policy;
+}
+
+int AuthSSH2PolicySet::load_authentication_keys(SSH2SecurityContext * sc)
+{
+	BIO * keystore;
+
+	keystore =  BIO_new_file(sc->keystore_path.c_str(), "r");
+	if (!keystore) {
+		LOG_ERR("Problems opening keystore file at: %s",
+			sc->keystore_path.c_str());
+		return -1;
+	}
+
+	//TODO fix password issues sc->keystore_password should be passed here
+	sc->auth_keypair = PEM_read_bio_RSAPrivateKey(keystore, NULL, 0, NULL);
+	BIO_free(keystore);
+
+	if (!sc->auth_keypair) {
+		LOG_ERR("Problems reading RSA key pair from keystore");
+		return -1;
+	}
+
+	sc->challenge.length = RSA_size(sc->auth_keypair);
+	if (sc->challenge.length< MIN_RSA_KEY_PAIR_LENGTH) {
+		LOG_ERR("RSA keypair size is too low. Minimum: %d, actual: %d",
+				MIN_RSA_KEY_PAIR_LENGTH, sc->challenge.length);
+		RSA_free(sc->auth_keypair);
+		return -1;
+	}
+
+	LOG_DBG("Read RSA key pair from keystore");
+	return 0;
 }
 
 int AuthSSH2PolicySet::edh_init_keys(SSH2SecurityContext * sc)
@@ -722,42 +844,19 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(const Auth
 		return IAuthPolicySet::FAILED;
 	}
 
-	SSH2SecurityContext * sc = new SSH2SecurityContext(session_id);
-	sc->encrypt_policy_config = profile.encryptPolicy;
-	std::string current_alg = options->key_exch_algs.front();
-	if (current_alg != SSL_TXT_EDH) {
-		LOG_ERR("Unsupported key exchange algorithm: %s",
-			current_alg.c_str());
-		delete sc;
+	SSH2SecurityContext * sc;
+	try {
+		sc = new SSH2SecurityContext(session_id, profile, options);
+	} catch (Exception &e){
 		delete options;
 		return IAuthPolicySet::FAILED;
-	} else {
-		sc->key_exch_alg = current_alg;
 	}
 
-	current_alg = options->encrypt_algs.front();
-	if (current_alg != SSL_TXT_AES128 && current_alg != SSL_TXT_AES256) {
-		LOG_ERR("Unsupported encryption algorithm: %s",
-			current_alg.c_str());
+	//Load authentication keys from the keystore
+	if (load_authentication_keys(sc) != 0) {
 		delete sc;
-		delete options;
 		return IAuthPolicySet::FAILED;
-	} else {
-		sc->encrypt_alg = current_alg;
 	}
-
-	current_alg = options->mac_algs.front();
-	if (current_alg != SSL_TXT_MD5 && current_alg != SSL_TXT_SHA1) {
-		LOG_ERR("Unsupported MAC algorithm: %s",
-			current_alg.c_str());
-		delete sc;
-		delete options;
-		return IAuthPolicySet::FAILED;
-	} else {
-		sc->mac_alg = current_alg;
-	}
-
-	//TODO check compression algorithm when we use them
 
 	//Initialize Diffie-Hellman machinery and generate private/public key pairs
 	if (edh_init_keys(sc) != 0) {
@@ -944,18 +1043,29 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::encryption_enabled_server(SSH2Secu
 	}
 
 	LOG_DBG("Encryption enabled for port-id: %d", sc->id);
-	sc->state = SSH2SecurityContext::ENCRYPTION_SETUP_SERVER;
+	sc->state = SSH2SecurityContext::WAIT_CLIENT_CHALLENGE;
 
-	//TODO continue with authentication
-	return IAuthPolicySet::SUCCESSFULL;
+	encryption_ready_condition.enable_condition();
+	return IAuthPolicySet::IN_PROGRESS;
 }
 
 int AuthSSH2PolicySet::process_incoming_message(const CDAPMessage& message, int session_id)
 {
-	ScopedLock sc_lock(lock);
+	if (message.op_code_ != CDAPMessage::M_WRITE) {
+		LOG_ERR("Wrong operation type");
+		return IAuthPolicySet::FAILED;
+	}
 
 	if (message.obj_class_ == EDH_EXCHANGE) {
 		return process_edh_exchange_message(message, session_id);
+	}
+
+	if (message.obj_class_ == CLIENT_CHALLENGE) {
+		return process_client_challenge_message(message, session_id);
+	}
+
+	if (message.obj_class_ == CLIENT_CHALLENGE_REPLY) {
+		return process_client_challenge_reply_message(message, session_id);
 	}
 
 	return rina::IAuthPolicySet::FAILED;
@@ -966,11 +1076,6 @@ int AuthSSH2PolicySet::process_edh_exchange_message(const CDAPMessage& message, 
 	ByteArrayObjectValue * bytes_value;
 	SSH2SecurityContext * sc;
 	const SerializedObject * sobj;
-
-	if (message.op_code_ != CDAPMessage::M_WRITE) {
-		LOG_ERR("Wrong operation type");
-		return IAuthPolicySet::FAILED;
-	}
 
 	if (message.obj_value_ == 0) {
 		LOG_ERR("Null object value");
@@ -990,6 +1095,8 @@ int AuthSSH2PolicySet::process_edh_exchange_message(const CDAPMessage& message, 
 		return rina::IAuthPolicySet::FAILED;
 	}
 
+	ScopedLock sc_lock(lock);
+
 	sc = dynamic_cast<SSH2SecurityContext *>(sec_man->get_security_context(session_id));
 	if (!sc) {
 		LOG_ERR("Could not retrieve Security Context for session: %d", session_id);
@@ -1000,7 +1107,6 @@ int AuthSSH2PolicySet::process_edh_exchange_message(const CDAPMessage& message, 
 	if (sc->state != SSH2SecurityContext::WAIT_EDH_EXCHANGE) {
 		LOG_ERR("Wrong session state: %d", sc->state);
 		sec_man->remove_security_context(session_id);
-		delete sc;
 		delete options;
 		return IAuthPolicySet::FAILED;
 	}
@@ -1051,10 +1157,259 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::encryption_decryption_enabled_clie
 
 	LOG_DBG("Encryption and decryption enabled for port-id: %d", sc->id);
 
-	sc->state = SSH2SecurityContext::ENCRYPTION_SETUP_CLIENT;
+	//Client authenticates server: generate random challenge, encrypt
+	//with public key and authenticate server
+	if (generate_random_challenge(sc) != 0) {
+		sec_man->destroy_security_context(sc->id);
+		return IAuthPolicySet::FAILED;
+	}
 
-	//TODO continue with authentication
-	return IAuthPolicySet::SUCCESSFULL;
+	UcharArray encrypted_challenge;
+	if (encrypt_chall_with_pub_key(sc, encrypted_challenge) != 0) {
+		sec_man->destroy_security_context(sc->id);
+		return IAuthPolicySet::FAILED;
+	}
+
+	SerializedObject * sobj = encrypted_challenge.get_seralized_object();
+	if (!sobj) {
+		LOG_ERR("Error generating serialized object from uchar array");
+		sec_man->destroy_security_context(sc->id);
+		return IAuthPolicySet::FAILED;
+	}
+
+	sc->state = SSH2SecurityContext::WAIT_CLIENT_CHALLENGE_REPLY;
+
+	//Send message to peer with selected algorithms and public key
+	try {
+		RIBObjectValue robject_value;
+		robject_value.type_ = RIBObjectValue::bytestype;
+		robject_value.bytes_value_ = *sobj;
+
+		RemoteProcessId remote_id;
+		remote_id.port_id_ = sc->id;
+
+		//object class contains challenge request or reply
+		//object name contains cipher name
+		rib_daemon->remoteWriteObject(CLIENT_CHALLENGE, CLIENT_CHALLENGE,
+				robject_value, 0, remote_id, 0);
+	} catch (Exception &e) {
+		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
+		sec_man->destroy_security_context(sc->id);
+		delete sobj;
+		return IAuthPolicySet::FAILED;
+	}
+
+	delete sobj;
+	return IAuthPolicySet::IN_PROGRESS;
+}
+
+int AuthSSH2PolicySet::generate_random_challenge(SSH2SecurityContext * sc)
+{
+	int result = RAND_bytes(sc->challenge.data, sc->challenge.length);
+	if (result != 1) {
+		LOG_ERR("Error generating random number: %lu", ERR_get_error());
+		return -1;
+	}
+
+	return 0;
+}
+
+int AuthSSH2PolicySet::encrypt_chall_with_pub_key(SSH2SecurityContext * sc,
+						  UcharArray& encrypted_chall)
+{
+	encrypted_chall.length = RSA_public_encrypt(sc->challenge.length,
+						    sc->challenge.data,
+						    encrypted_chall.data,
+						    sc->auth_keypair,
+						    RSA_PKCS1_OAEP_PADDING);
+
+	if (encrypted_chall.length == -1) {
+		LOG_ERR("Error encrypting challenge with RSA public key: %lu", ERR_get_error());
+		return -1;
+	}
+
+	return 0;
+}
+
+int AuthSSH2PolicySet::process_client_challenge_message(const CDAPMessage& message, int session_id)
+{
+	ByteArrayObjectValue * bytes_value;
+	SSH2SecurityContext * sc;
+	const SerializedObject * sobj;
+
+	if (message.obj_value_ == 0) {
+		LOG_ERR("Null object value");
+		return IAuthPolicySet::FAILED;
+	}
+
+	bytes_value = dynamic_cast<ByteArrayObjectValue *>(message.obj_value_);
+	if (!bytes_value) {
+		LOG_ERR("Object value of wrong type");
+		return IAuthPolicySet::FAILED;
+	}
+
+	sobj = static_cast<const SerializedObject *>(bytes_value->get_value());
+	if (!sobj) {
+		LOG_ERR("Could not parse CDAP message value");
+		return rina::IAuthPolicySet::FAILED;
+	}
+
+	LOG_DBG("Checking if encryption is enabled, waiting otherwise");
+	encryption_ready_condition.wait_until_condition_is_true();
+	LOG_DBG("Encryption is enabled");
+
+	ScopedLock sc_lock(lock);
+
+	sc = dynamic_cast<SSH2SecurityContext *>(sec_man->get_security_context(session_id));
+	if (!sc) {
+		LOG_ERR("Could not retrieve Security Context for session: %d", session_id);
+		return IAuthPolicySet::FAILED;
+	}
+
+	if (sc->state != SSH2SecurityContext::WAIT_CLIENT_CHALLENGE) {
+		LOG_ERR("Wrong session state: %d", sc->state);
+		sec_man->remove_security_context(session_id);
+		return IAuthPolicySet::FAILED;
+	}
+
+	// Decrypt challenge with private key, XOR with shared secret
+	// compute MD5 hash and sent back to client
+	UcharArray encrypted_challenge(sobj);
+	UcharArray challenge;
+	if (decrypt_chall_with_priv_key(sc, encrypted_challenge, challenge) != 0) {
+		sec_man->remove_security_context(session_id);
+		return IAuthPolicySet::FAILED;
+	}
+
+	int j = 0;
+	for (int i=0; i< challenge.length; i++) {
+		challenge.data[i] = challenge.data[i] ^ sc->shared_secret.data[j];
+		j++;
+		if (j == sc->shared_secret.length) {
+			j = 0;
+		}
+	}
+
+	UcharArray hashed_challenge;
+	hashed_challenge.length = 16;
+	hashed_challenge.data = new unsigned char[16];
+	MD5(challenge.data, challenge.length, hashed_challenge.data);
+
+	SerializedObject * sobj2 = hashed_challenge.get_seralized_object();
+	if (!sobj2) {
+		LOG_ERR("Error generating serialized object from uchar array");
+		sec_man->destroy_security_context(sc->id);
+		return IAuthPolicySet::FAILED;
+	}
+
+	sc->state = SSH2SecurityContext::WAIT_CLIENT_DONE;
+
+	//Send message to peer with selected algorithms and public key
+	try {
+		RIBObjectValue robject_value;
+		robject_value.type_ = RIBObjectValue::bytestype;
+		robject_value.bytes_value_ = *sobj2;
+
+		RemoteProcessId remote_id;
+		remote_id.port_id_ = sc->id;
+
+		//object class contains challenge request or reply
+		//object name contains cipher name
+		rib_daemon->remoteWriteObject(CLIENT_CHALLENGE_REPLY, CLIENT_CHALLENGE_REPLY,
+				robject_value, 0, remote_id, 0);
+	} catch (Exception &e) {
+		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
+		sec_man->destroy_security_context(sc->id);
+		delete sobj2;
+		return IAuthPolicySet::FAILED;
+	}
+
+	delete sobj2;
+	return IAuthPolicySet::IN_PROGRESS;
+}
+
+int AuthSSH2PolicySet::decrypt_chall_with_priv_key(SSH2SecurityContext * sc,
+			        	  	   const UcharArray& encrypted_challenge,
+			        	  	   UcharArray& challenge)
+{
+	 challenge.length = RSA_private_decrypt(encrypted_challenge.length,
+			 	 	        encrypted_challenge.data,
+			 	 	        challenge.data,
+			 	 	        sc->auth_keypair,
+						RSA_PKCS1_OAEP_PADDING);
+
+	if (challenge.length == -1) {
+		LOG_ERR("Error decrypting challenge with RSA private key: %lu", ERR_get_error());
+		return -1;
+	}
+
+	return 0;
+}
+
+int AuthSSH2PolicySet::process_client_challenge_reply_message(const CDAPMessage& message, int session_id)
+{
+	ByteArrayObjectValue * bytes_value;
+	SSH2SecurityContext * sc;
+	const SerializedObject * sobj;
+
+	if (message.obj_value_ == 0) {
+		LOG_ERR("Null object value");
+		return IAuthPolicySet::FAILED;
+	}
+
+	bytes_value = dynamic_cast<ByteArrayObjectValue *>(message.obj_value_);
+	if (!bytes_value) {
+		LOG_ERR("Object value of wrong type");
+		return IAuthPolicySet::FAILED;
+	}
+
+	sobj = static_cast<const SerializedObject *>(bytes_value->get_value());
+	if (!sobj) {
+		LOG_ERR("Could not parse CDAP message value");
+		return rina::IAuthPolicySet::FAILED;
+	}
+
+	ScopedLock sc_lock(lock);
+
+	sc = dynamic_cast<SSH2SecurityContext *>(sec_man->get_security_context(session_id));
+	if (!sc) {
+		LOG_ERR("Could not retrieve Security Context for session: %d", session_id);
+		return IAuthPolicySet::FAILED;
+	}
+
+	if (sc->state != SSH2SecurityContext::WAIT_CLIENT_CHALLENGE_REPLY) {
+		LOG_ERR("Wrong session state: %d", sc->state);
+		sec_man->remove_security_context(session_id);
+		return IAuthPolicySet::FAILED;
+	}
+
+	// XOR original challenge with shared secret, compute MD5 hash and check if
+	// result is equal to received challenge
+	UcharArray received_challenge(sobj);
+	UcharArray hashed_challenge;
+
+	int j = 0;
+	for (int i=0; i< sc->challenge.length; i++) {
+		sc->challenge.data[i] = sc->challenge.data[i] ^ sc->shared_secret.data[j];
+		j++;
+		if (j == sc->shared_secret.length) {
+			j = 0;
+		}
+	}
+	hashed_challenge.length = 16;
+	hashed_challenge.data = new unsigned char[16];
+	MD5(sc->challenge.data, sc->challenge.length, hashed_challenge.data);
+
+	if (hashed_challenge != received_challenge) {
+		LOG_ERR("Error authenticating server. Hashed challenge: %s, received challenge: %s",
+			hashed_challenge.toString().c_str(),
+			received_challenge.toString().c_str());
+	}
+
+	LOG_INFO("Remote peer successfully authenticated");
+
+	sc->state = SSH2SecurityContext::WAIT_SERVER_CHALLENGE;
+	return IAuthPolicySet::IN_PROGRESS;
 }
 
 int AuthSSH2PolicySet::set_policy_set_param(const std::string& name,

@@ -607,40 +607,6 @@ public:
         bool operator!=(const Parameter &other) const;
 };
 
-struct UcharArray {
-	UcharArray() {
-		data = 0;
-		length = 0;
-	}
-	UcharArray(int arrayLength) {
-		data = new unsigned char[arrayLength];
-		length = arrayLength;
-	}
-	~UcharArray() {
-		if (data) {
-			delete data;
-		}
-	}
-	UcharArray& operator=(const UcharArray &other) {
-		length = other.length;
-		data = new unsigned char[length];
-		memcpy(data, other.data, length);
-		return *this;
-	}
-
-	std::string toString() {
-		std::stringstream ss;
-		ss << std::hex;
-		for (int i = 0; i < length; i++) {
-			ss << std::setw(2) << std::setfill('0') << (int)data[i];
-		}
-		return ss.str();
-	}
-
-	unsigned char * data;
-	int length;
-};
-
 class SerializedObject {
 public:
         SerializedObject();
@@ -653,6 +619,21 @@ public:
 
 private:
         void initialize(const SerializedObject& other );
+};
+
+struct UcharArray {
+	UcharArray();
+	UcharArray(int arrayLength);
+	UcharArray(const SerializedObject * sobj);
+	~UcharArray();
+	UcharArray& operator=(const UcharArray &other);
+	bool operator==(const UcharArray &other) const;
+	bool operator!=(const UcharArray &other) const;
+	std::string toString();
+	SerializedObject * get_seralized_object();
+
+	unsigned char * data;
+	int length;
 };
 
 class ConsecutiveUnsignedIntegerGenerator {

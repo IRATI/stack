@@ -25,8 +25,7 @@
 #ifdef __cplusplus
 
 #include <openssl/dh.h>
-#include <openssl/md5.h>
-#include <openssl/sha.h>
+#include <openssl/rsa.h>
 
 #include "librina/application.h"
 #include "librina/rib.h"
@@ -222,10 +221,20 @@ class SSH2SecurityContext : public ISecurityContext {
 public:
 	SSH2SecurityContext(int session_id) : ISecurityContext(session_id),
 			state(BEGIN), dh_state(NULL), dh_peer_pub_key(NULL),
-			timer_task(NULL) { };
+			auth_keypair(NULL), timer_task(NULL) { };
+	SSH2SecurityContext(int session_id, const AuthSDUProtectionProfile& profile);
+	SSH2SecurityContext(int session_id, const AuthSDUProtectionProfile& profile,
+			    SSH2AuthOptions * options);
 	~SSH2SecurityContext();
 	EncryptionProfile get_encryption_profile(bool enable_encryption,
 						 bool enable_decryption);
+
+	static const std::string KEY_EXCHANGE_ALGORITHM;
+	static const std::string ENCRYPTION_ALGORITHM;
+	static const std::string MAC_ALGORITHM;
+	static const std::string COMPRESSION_ALGORITHM;
+	static const std::string KEYSTORE_PATH;
+	static const std::string KEYSTORE_PASSWORD;
 
         enum State {
         	BEGIN,
@@ -233,8 +242,12 @@ public:
                 REQUESTED_ENABLE_ENCRYPTION_SERVER,
                 REQUESTED_ENABLE_DECRYPTION_SERVER,
                 REQUESTED_ENABLE_ENCRYPTION_DECRYPTION_CLIENT,
-                ENCRYPTION_SETUP_SERVER,
-                ENCRYPTION_SETUP_CLIENT
+                WAIT_CLIENT_CHALLENGE,
+                WAIT_CLIENT_CHALLENGE_REPLY,
+                WAIT_CLIENT_DONE,
+                WAIT_SERVER_CHALLENGE,
+                WAIT_SERVER_CHALLENGE_REPLY,
+                WAIT_M_CONNECT_R
         };
 
         State state;
@@ -244,6 +257,10 @@ public:
 	std::string encrypt_alg;
 	std::string mac_alg;
 	std::string compress_alg;
+
+	/// Authentication Keystore path and password
+	std::string keystore_path;
+	std::string keystore_password;
 
 	/// Encryption policy configuration
 	PolicyConfig encrypt_policy_config;
@@ -260,8 +277,39 @@ public:
 	///The encryption key
 	UcharArray encrypt_key;
 
+	/// RSA * key pair used for authentication
+	RSA * auth_keypair;
+
+	/// Challenge sent to peer so that he proofs it has the DIF's key
+	UcharArray challenge;
+
 	// Owned by a timer
 	CancelAuthTimerTask * timer_task;
+
+private:
+	//return -1 if options are valid, 0 otherwise
+	int validate_options(const SSH2AuthOptions& options);
+};
+
+class BoolConditionVariable: public ConditionVariable {
+public:
+	BoolConditionVariable() : enabled(false) {};
+	void wait_until_condition_is_true() {
+		lock();
+		if (!enabled) {
+			doWait();
+		}
+		unlock();
+	}
+	void enable_condition() {
+		lock();
+		enabled = true;
+		signal();
+		unlock();
+	}
+
+private:
+	bool enabled;
 };
 
 /// Authentication policy set that mimics SSH approach. It is associated to
@@ -274,12 +322,14 @@ public:
 /// 5: Authentication using public/private key of DIF
 class AuthSSH2PolicySet : public IAuthPolicySet {
 public:
-	static const std::string KEY_EXCHANGE_ALGORITHM;
-	static const std::string ENCRYPTION_ALGORITHM;
-	static const std::string MAC_ALGORITHM;
-	static const std::string COMPRESSION_ALGORITHM;
 	static const int DEFAULT_TIMEOUT;
 	static const std::string EDH_EXCHANGE;
+	static const int MIN_RSA_KEY_PAIR_LENGTH;
+	static const std::string CLIENT_CHALLENGE;
+	static const std::string CLIENT_CHALLENGE_REPLY;
+	static const std::string CLIENT_DONE;
+	static const std::string SERVER_CHALLENGE;
+	static const std::string SERVER_CHALLENGE_REPLY;
 
 	AuthSSH2PolicySet(IRIBDaemon * ribd, ISecurityManager * sm);
 	virtual ~AuthSSH2PolicySet();
@@ -304,6 +354,10 @@ private:
 	//Convert Big Number to binary
 	unsigned char * BN_to_binary(BIGNUM *b, int *len);
 
+	// Load the authentication keys required for this DIF from a file
+	// Returns 0 if successful, -1 if there is a failure
+	int load_authentication_keys(SSH2SecurityContext * sc);
+
 	/// Initialize parameters (p, g) for DH key exchange
 	void edh_init_params();
 
@@ -317,9 +371,28 @@ private:
 
 	int process_edh_exchange_message(const CDAPMessage& message, int session_id);
 
+	/// Generate a random challenge
+	/// Return 0 if successful, -1 otherwise
+	int generate_random_challenge(SSH2SecurityContext * sc);
+
+	/// Encrypt random challenge with public key.
+	/// Return 0 if successful, -1 otherwise
+	int encrypt_chall_with_pub_key(SSH2SecurityContext * sc, UcharArray& encrypted_chall);
+
+	int process_client_challenge_message(const CDAPMessage& message, int session_id);
+
+	/// Encrypt random challenge with public key.
+	/// Return 0 if successful, -1 otherwise
+	int decrypt_chall_with_priv_key(SSH2SecurityContext * sc,
+				        const UcharArray& encrypted_challenge,
+				        UcharArray& challenge);
+
+	int process_client_challenge_reply_message(const CDAPMessage& message, int session_id);
+
 	IRIBDaemon * rib_daemon;
 	ISecurityManager * sec_man;
 	Lockable lock;
+	BoolConditionVariable encryption_ready_condition;
 	DH * dh_parameters;
 	Timer timer;
 	int timeout;
