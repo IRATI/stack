@@ -538,7 +538,7 @@ bool test_neighbor(rinad::Encoder * encoder) {
 	nei.supporting_difs_.push_back(rina::ApplicationProcessNamingInformation("Castefa.i2CAT", "1"));
 
 	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
-	cdapMessage.obj_class_ = rinad::EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS;
+	cdapMessage.obj_class_ = rina::NeighborSetRIBObject::NEIGHBOR_RIB_OBJECT_CLASS;
 
 	encoder->encode(&nei, &cdapMessage);
 
@@ -576,7 +576,7 @@ bool test_neighbor_list(rinad::Encoder * encoder) {
 	nei_list.push_back(&nei2);
 
 	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
-	cdapMessage.obj_class_ = rinad::EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS;
+	cdapMessage.obj_class_ = rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_CLASS;
 
 	encoder->encode(&nei_list, &cdapMessage);
 
@@ -629,9 +629,9 @@ int main()
 			new rinad::EnrollmentInformationRequestEncoder());
 	encoder.addEncoder(rinad::EncoderConstants::FLOW_RIB_OBJECT_CLASS,
 			new rinad::FlowEncoder());
-	encoder.addEncoder(rinad::EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS,
+	encoder.addEncoder(rina::NeighborSetRIBObject::NEIGHBOR_RIB_OBJECT_CLASS,
 			new rinad::NeighborEncoder());
-	encoder.addEncoder(rinad::EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
+	encoder.addEncoder(rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_CLASS,
 			new rinad::NeighborListEncoder());
 	encoder.addEncoder(rinad::EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS,
 			new rinad::QoSCubeEncoder());
