@@ -244,10 +244,8 @@ public:
                 REQUESTED_ENABLE_ENCRYPTION_DECRYPTION_CLIENT,
                 WAIT_CLIENT_CHALLENGE,
                 WAIT_CLIENT_CHALLENGE_REPLY,
-                WAIT_CLIENT_DONE,
-                WAIT_SERVER_CHALLENGE,
                 WAIT_SERVER_CHALLENGE_REPLY,
-                WAIT_M_CONNECT_R
+                DONE
         };
 
         State state;
@@ -327,8 +325,6 @@ public:
 	static const int MIN_RSA_KEY_PAIR_LENGTH;
 	static const std::string CLIENT_CHALLENGE;
 	static const std::string CLIENT_CHALLENGE_REPLY;
-	static const std::string CLIENT_DONE;
-	static const std::string SERVER_CHALLENGE;
 	static const std::string SERVER_CHALLENGE_REPLY;
 
 	AuthSSH2PolicySet(IRIBDaemon * ribd, ISecurityManager * sm);
@@ -387,7 +383,17 @@ private:
 				        const UcharArray& encrypted_challenge,
 				        UcharArray& challenge);
 
+	int decrypt_combine_and_hash(SSH2SecurityContext * sc,
+				     const UcharArray& challenge,
+				     UcharArray& result);
+
 	int process_client_challenge_reply_message(const CDAPMessage& message, int session_id);
+
+	int check_challenge_reply(SSH2SecurityContext * sc,
+				  UcharArray& received_challenge);
+
+	int generate_and_encrypt_challenge(SSH2SecurityContext * sc,
+					   UcharArray& challenge);
 
 	IRIBDaemon * rib_daemon;
 	ISecurityManager * sec_man;

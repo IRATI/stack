@@ -469,6 +469,58 @@ SerializedObject * encode_ssh2_auth_options(const SSH2AuthOptions& options){
 	return object;
 }
 
+SerializedObject * encode_client_chall_reply_ssh2(const UcharArray& client_chall_reply,
+						  const UcharArray& server_chall)
+{
+	rina::auth::policies::googleprotobuf::clientChallReplySSH2_t gpb_chall;
+
+
+	if (client_chall_reply.length > 0) {
+		gpb_chall.set_client_challenge_rep(client_chall_reply.data,
+						   client_chall_reply.length);
+	}
+
+	if (server_chall.length > 0) {
+		gpb_chall.set_server_challenge(server_chall.data,
+					       server_chall.length);
+	}
+
+	int size = gpb_chall.ByteSize();
+	char *serialized_message = new char[size];
+	gpb_chall.SerializeToArray(serialized_message, size);
+	SerializedObject *object = new SerializedObject(serialized_message, size);
+
+	return object;
+}
+
+//AuthSSH2Options encoder and decoder operations
+void decode_client_chall_reply_ssh2(const SerializedObject &message,
+				    UcharArray& client_chall_reply,
+				    UcharArray& server_chall)
+{
+	rina::auth::policies::googleprotobuf::clientChallReplySSH2_t gpb_chall;
+
+	gpb_chall.ParseFromArray(message.message_, message.size_);
+
+	if (gpb_chall.has_client_challenge_rep()) {
+		client_chall_reply.data =
+				  new unsigned char[gpb_chall.client_challenge_rep().size()];
+		memcpy(client_chall_reply.data,
+		       gpb_chall.client_challenge_rep().data(),
+		       gpb_chall.client_challenge_rep().size());
+		client_chall_reply.length = gpb_chall.client_challenge_rep().size();
+	}
+
+	if (gpb_chall.has_server_challenge()) {
+		server_chall.data =
+				  new unsigned char[gpb_chall.server_challenge().size()];
+		memcpy(server_chall.data,
+		       gpb_chall.server_challenge().data(),
+		       gpb_chall.server_challenge().size());
+		server_chall.length = gpb_chall.server_challenge().size();
+	}
+}
+
 // Class SSH2SecurityContext
 const std::string SSH2SecurityContext::KEY_EXCHANGE_ALGORITHM = "keyExchangeAlg";
 const std::string SSH2SecurityContext::ENCRYPTION_ALGORITHM = "encryptAlg";
@@ -567,6 +619,10 @@ SSH2SecurityContext::SSH2SecurityContext(int session_id,
 
 	//TODO check compression algorithm when we use them
 
+	keystore_path = profile.authPolicy.get_param_value(KEYSTORE_PATH);
+	if (keystore_path == std::string()) {
+		//TODO set the configuration directory as the default keystore path
+	}
 	keystore_password = profile.authPolicy.get_param_value(KEYSTORE_PASSWORD);
 	crcPolicy = profile.crcPolicy;
 	ttlPolicy = profile.ttlPolicy;
@@ -586,8 +642,6 @@ const std::string AuthSSH2PolicySet::EDH_EXCHANGE = "Ephemeral Diffie-Hellman ex
 const int AuthSSH2PolicySet::MIN_RSA_KEY_PAIR_LENGTH = 256;
 const std::string AuthSSH2PolicySet::CLIENT_CHALLENGE = "Client challenge";
 const std::string AuthSSH2PolicySet::CLIENT_CHALLENGE_REPLY = "Client challenge reply";
-const std::string AuthSSH2PolicySet::CLIENT_DONE = "Client done";
-const std::string AuthSSH2PolicySet::SERVER_CHALLENGE = "Server challenge";
 const std::string AuthSSH2PolicySet::SERVER_CHALLENGE_REPLY = "Server challenge reply";
 
 AuthSSH2PolicySet::AuthSSH2PolicySet(IRIBDaemon * ribd, ISecurityManager * sm) :
@@ -1159,13 +1213,8 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::encryption_decryption_enabled_clie
 
 	//Client authenticates server: generate random challenge, encrypt
 	//with public key and authenticate server
-	if (generate_random_challenge(sc) != 0) {
-		sec_man->destroy_security_context(sc->id);
-		return IAuthPolicySet::FAILED;
-	}
-
 	UcharArray encrypted_challenge;
-	if (encrypt_chall_with_pub_key(sc, encrypted_challenge) != 0) {
+	if (generate_and_encrypt_challenge(sc, encrypted_challenge) != 0) {
 		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
@@ -1205,6 +1254,7 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::encryption_decryption_enabled_clie
 
 int AuthSSH2PolicySet::generate_random_challenge(SSH2SecurityContext * sc)
 {
+	sc->challenge.data = new unsigned char[sc->challenge.length];
 	int result = RAND_bytes(sc->challenge.data, sc->challenge.length);
 	if (result != 1) {
 		LOG_ERR("Error generating random number: %lu", ERR_get_error());
@@ -1275,34 +1325,29 @@ int AuthSSH2PolicySet::process_client_challenge_message(const CDAPMessage& messa
 	// Decrypt challenge with private key, XOR with shared secret
 	// compute MD5 hash and sent back to client
 	UcharArray encrypted_challenge(sobj);
-	UcharArray challenge;
-	if (decrypt_chall_with_priv_key(sc, encrypted_challenge, challenge) != 0) {
-		sec_man->remove_security_context(session_id);
+	UcharArray hashed_challenge;
+	if (decrypt_combine_and_hash(sc, encrypted_challenge, hashed_challenge) != 0) {
+		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 
-	int j = 0;
-	for (int i=0; i< challenge.length; i++) {
-		challenge.data[i] = challenge.data[i] ^ sc->shared_secret.data[j];
-		j++;
-		if (j == sc->shared_secret.length) {
-			j = 0;
-		}
+	//Server authenticates client: generate random challenge, encrypt
+	//with public key and authenticate server
+	UcharArray encrypted_server_challenge;
+	if (generate_and_encrypt_challenge(sc, encrypted_server_challenge) != 0) {
+		sec_man->destroy_security_context(sc->id);
+		return IAuthPolicySet::FAILED;
 	}
 
-	UcharArray hashed_challenge;
-	hashed_challenge.length = 16;
-	hashed_challenge.data = new unsigned char[16];
-	MD5(challenge.data, challenge.length, hashed_challenge.data);
-
-	SerializedObject * sobj2 = hashed_challenge.get_seralized_object();
+	SerializedObject * sobj2 = encode_client_chall_reply_ssh2(hashed_challenge,
+								  encrypted_server_challenge);
 	if (!sobj2) {
 		LOG_ERR("Error generating serialized object from uchar array");
 		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 
-	sc->state = SSH2SecurityContext::WAIT_CLIENT_DONE;
+	sc->state = SSH2SecurityContext::WAIT_SERVER_CHALLENGE_REPLY;
 
 	//Send message to peer with selected algorithms and public key
 	try {
@@ -1326,6 +1371,46 @@ int AuthSSH2PolicySet::process_client_challenge_message(const CDAPMessage& messa
 
 	delete sobj2;
 	return IAuthPolicySet::IN_PROGRESS;
+}
+
+int AuthSSH2PolicySet::generate_and_encrypt_challenge(SSH2SecurityContext * sc,
+				   	   	      UcharArray& challenge)
+{
+	if (generate_random_challenge(sc) != 0) {
+		return -1;
+	}
+
+	if (encrypt_chall_with_pub_key(sc, challenge) != 0) {
+		return -1;
+	}
+
+	return 0;
+}
+
+
+int AuthSSH2PolicySet::decrypt_combine_and_hash(SSH2SecurityContext * sc,
+						const UcharArray& challenge,
+						UcharArray& result)
+{
+	UcharArray decrypt_challenge;
+	if (decrypt_chall_with_priv_key(sc, challenge, decrypt_challenge) != 0) {
+		return -1;
+	}
+
+	int j = 0;
+	for (int i=0; i< decrypt_challenge.length; i++) {
+		decrypt_challenge.data[i] = decrypt_challenge.data[i] ^ sc->shared_secret.data[j];
+		j++;
+		if (j == sc->shared_secret.length) {
+			j = 0;
+		}
+	}
+
+	result.length = 16;
+	result.data = new unsigned char[16];
+	MD5(decrypt_challenge.data, decrypt_challenge.length, result.data);
+
+	return 0;
 }
 
 int AuthSSH2PolicySet::decrypt_chall_with_priv_key(SSH2SecurityContext * sc,
@@ -1385,7 +1470,62 @@ int AuthSSH2PolicySet::process_client_challenge_reply_message(const CDAPMessage&
 
 	// XOR original challenge with shared secret, compute MD5 hash and check if
 	// result is equal to received challenge
-	UcharArray received_challenge(sobj);
+	UcharArray received_challenge;
+	UcharArray server_challenge;
+	UcharArray hashed_challenge;
+
+	decode_client_chall_reply_ssh2(*sobj, received_challenge, server_challenge);
+
+	if (check_challenge_reply(sc, received_challenge) != 0) {
+		sec_man->remove_security_context(session_id);
+		return IAuthPolicySet::FAILED;
+	}
+
+	// Decrypt server challenge with private key, XOR with shared secret
+	// compute MD5 hash and sent back to client
+	UcharArray hashed_ser_challenge;
+	if (decrypt_combine_and_hash(sc, server_challenge, hashed_ser_challenge) != 0) {
+		sec_man->destroy_security_context(sc->id);
+		return IAuthPolicySet::FAILED;
+	}
+
+	SerializedObject * sobj2 = hashed_ser_challenge.get_seralized_object();
+	if (!sobj2) {
+		LOG_ERR("Error generating serialized object from uchar array");
+		sec_man->destroy_security_context(sc->id);
+		return IAuthPolicySet::FAILED;
+	}
+
+	sc->state = SSH2SecurityContext::DONE;
+
+	//Send message to peer with selected algorithms and public key
+	try {
+		RIBObjectValue robject_value;
+		robject_value.type_ = RIBObjectValue::bytestype;
+		robject_value.bytes_value_ = *sobj2;
+
+		RemoteProcessId remote_id;
+		remote_id.port_id_ = sc->id;
+
+		//object class contains challenge request or reply
+		//object name contains cipher name
+		rib_daemon->remoteWriteObject(SERVER_CHALLENGE_REPLY, SERVER_CHALLENGE_REPLY,
+				robject_value, 0, remote_id, 0);
+	} catch (Exception &e) {
+		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
+		sec_man->destroy_security_context(sc->id);
+		delete sobj2;
+		return IAuthPolicySet::FAILED;
+	}
+
+	delete sobj2;
+
+	return IAuthPolicySet::SUCCESSFULL;
+}
+
+int AuthSSH2PolicySet::check_challenge_reply(SSH2SecurityContext * sc,
+			  	  	     UcharArray& received_challenge)
+{
 	UcharArray hashed_challenge;
 
 	int j = 0;
@@ -1396,6 +1536,7 @@ int AuthSSH2PolicySet::process_client_challenge_reply_message(const CDAPMessage&
 			j = 0;
 		}
 	}
+
 	hashed_challenge.length = 16;
 	hashed_challenge.data = new unsigned char[16];
 	MD5(sc->challenge.data, sc->challenge.length, hashed_challenge.data);
@@ -1404,12 +1545,11 @@ int AuthSSH2PolicySet::process_client_challenge_reply_message(const CDAPMessage&
 		LOG_ERR("Error authenticating server. Hashed challenge: %s, received challenge: %s",
 			hashed_challenge.toString().c_str(),
 			received_challenge.toString().c_str());
+		return -1;
 	}
 
 	LOG_INFO("Remote peer successfully authenticated");
-
-	sc->state = SSH2SecurityContext::WAIT_SERVER_CHALLENGE;
-	return IAuthPolicySet::IN_PROGRESS;
+	return 0;
 }
 
 int AuthSSH2PolicySet::set_policy_set_param(const std::string& name,

@@ -8,6 +8,11 @@ message authOptsSSH2_t {
 	optional bytes dh_public_key = 5;		// EDH public key
 }
 
+message clientChallReplySSH2_t {
+	optional bytes client_challenge_rep = 1;	// Client challenge reply
+	optional bytes server_challenge = 2;		// Server challenge request
+}
+
 message authOptsPassword_t {
 	repeated string cipher = 1;		// Supported ciphers
 }
