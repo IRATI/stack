@@ -522,13 +522,15 @@ int rmt_config_set(struct rmt *        instance,
         rmt_ps_name = policy_name(rmt_config->rmt_policy_set);
         pft_ps_name = policy_name(rmt_config->pft_policy_set);
 
-        if (!strcmp(rmt_ps_name, RINA_PS_DEFAULT_NAME)) {
+        LOG_DBG("RMT PSs: %s, %s", rmt_ps_name, pft_ps_name);
+
+        if (strcmp(rmt_ps_name, RINA_PS_DEFAULT_NAME)) {
                 if (rmt_select_policy_set(instance, "", rmt_ps_name))
                         LOG_ERR("Could not set policy set %s for RMT,"
                                 "sticked with default", rmt_ps_name);
         }
 
-        if (!strcmp(pft_ps_name, RINA_PS_DEFAULT_NAME)) {
+        if (strcmp(pft_ps_name, RINA_PS_DEFAULT_NAME)) {
                 if (rmt_select_policy_set(instance, "", pft_ps_name))
                         LOG_ERR("Could not set policy set %s for PFT,"
                                 "sticked with default", pft_ps_name);
