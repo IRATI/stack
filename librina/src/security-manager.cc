@@ -1267,6 +1267,7 @@ int AuthSSH2PolicySet::generate_random_challenge(SSH2SecurityContext * sc)
 int AuthSSH2PolicySet::encrypt_chall_with_pub_key(SSH2SecurityContext * sc,
 						  UcharArray& encrypted_chall)
 {
+	encrypted_chall.data = new unsigned char[sc->challenge.length];
 	encrypted_chall.length = RSA_public_encrypt(sc->challenge.length,
 						    sc->challenge.data,
 						    encrypted_chall.data,
@@ -1417,11 +1418,12 @@ int AuthSSH2PolicySet::decrypt_chall_with_priv_key(SSH2SecurityContext * sc,
 			        	  	   const UcharArray& encrypted_challenge,
 			        	  	   UcharArray& challenge)
 {
-	 challenge.length = RSA_private_decrypt(encrypted_challenge.length,
-			 	 	        encrypted_challenge.data,
-			 	 	        challenge.data,
-			 	 	        sc->auth_keypair,
-						RSA_PKCS1_OAEP_PADDING);
+	challenge.data = new unsigned char[RSA_size(sc->auth_keypair)];
+	challenge.length = RSA_private_decrypt(encrypted_challenge.length,
+			 	 	       encrypted_challenge.data,
+			 	 	       challenge.data,
+			 	 	       sc->auth_keypair,
+					RSA_PKCS1_OAEP_PADDING);
 
 	if (challenge.length == -1) {
 		LOG_ERR("Error decrypting challenge with RSA private key: %lu", ERR_get_error());
@@ -1520,7 +1522,7 @@ int AuthSSH2PolicySet::process_client_challenge_reply_message(const CDAPMessage&
 
 	delete sobj2;
 
-	return IAuthPolicySet::SUCCESSFULL;
+	return IAuthPolicySet::IN_PROGRESS;
 }
 
 int AuthSSH2PolicySet::check_challenge_reply(SSH2SecurityContext * sc,
