@@ -389,6 +389,8 @@ private:
 
 	int process_client_challenge_reply_message(const CDAPMessage& message, int session_id);
 
+	int process_server_challenge_reply_message(const CDAPMessage& message, int session_id);
+
 	int check_challenge_reply(SSH2SecurityContext * sc,
 				  UcharArray& received_challenge);
 
