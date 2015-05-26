@@ -21,8 +21,6 @@
 
 #include <cstdlib>
 #include <openssl/bio.h>
-#include <openssl/crypto.h>
-#include <openssl/evp.h>
 #include <openssl/err.h>
 #include <openssl/md5.h>
 #include <openssl/pem.h>
@@ -658,14 +656,6 @@ AuthSSH2PolicySet::AuthSSH2PolicySet(IRIBDaemon * ribd, ISecurityManager * sm) :
 	timeout = DEFAULT_TIMEOUT;
 	dh_parameters = 0;
 
-	//Init libcrypto
-	ERR_load_crypto_strings();
-	OpenSSL_add_all_algorithms();
-	CRYPTO_malloc_debug_init();
-	CRYPTO_dbg_set_options(V_CRYPTO_MDEBUG_ALL);
-	CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
-	RAND_seed(rnd_seed, sizeof rnd_seed); /* or OAEP may fail */
-
 	//Generate G and P parameters in a separate thread (takes a bit of time)
 	edh_init_params();
 	if (!dh_parameters) {
@@ -1288,13 +1278,13 @@ int AuthSSH2PolicySet::encrypt_chall_with_pub_key(SSH2SecurityContext * sc,
 						  UcharArray& encrypted_chall)
 {
 	encrypted_chall.data = new unsigned char[RSA_size(sc->auth_keypair)];
-	int result = RSA_public_encrypt(sc->challenge.length,
-					sc->challenge.data,
-					encrypted_chall.data,
-					sc->auth_keypair,
-					RSA_PKCS1_OAEP_PADDING);
+	encrypted_chall.length = RSA_public_encrypt(sc->challenge.length,
+						   sc->challenge.data,
+						   encrypted_chall.data,
+						   sc->auth_keypair,
+						   RSA_PKCS1_OAEP_PADDING);
 
-	if (result == -1) {
+	if (encrypted_chall.length == -1) {
 		LOG_ERR("Error encrypting challenge with RSA public key: %s",
 			ERR_error_string(ERR_get_error(), NULL));
 		return -1;
@@ -1402,13 +1392,9 @@ int AuthSSH2PolicySet::generate_and_encrypt_challenge(SSH2SecurityContext * sc,
 		return -1;
 	}
 
-	LOG_DBG("aqui");
-
 	if (encrypt_chall_with_pub_key(sc, challenge) != 0) {
 		return -1;
 	}
-
-	LOG_DBG("aqui2");
 
 	return 0;
 }
