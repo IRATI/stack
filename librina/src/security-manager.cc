@@ -826,15 +826,17 @@ int AuthSSH2PolicySet::load_authentication_keys(SSH2SecurityContext * sc)
 		return -1;
 	}
 
-	//Since we'll use RSA encryption with RSA_PKCS1_OAEP_PADDING padding, the
-	//maximum length of the data to be encrypted must be less than RSA_size(rsa) - 41
-	sc->challenge.length = RSA_size(sc->auth_keypair) - 42;
-	if (sc->challenge.length< MIN_RSA_KEY_PAIR_LENGTH) {
+	int rsa_size = RSA_size(sc->auth_keypair);
+	if (rsa_size < MIN_RSA_KEY_PAIR_LENGTH) {
 		LOG_ERR("RSA keypair size is too low. Minimum: %d, actual: %d",
 				MIN_RSA_KEY_PAIR_LENGTH, sc->challenge.length);
 		RSA_free(sc->auth_keypair);
 		return -1;
 	}
+
+	//Since we'll use RSA encryption with RSA_PKCS1_OAEP_PADDING padding, the
+	//maximum length of the data to be encrypted must be less than RSA_size(rsa) - 41
+	sc->challenge.length = rsa_size - 42;
 
 	LOG_DBG("Read RSA key pair from keystore");
 	return 0;
