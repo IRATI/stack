@@ -975,10 +975,6 @@ int AuthSSH2PolicySet::edh_generate_shared_secret(SSH2SecurityContext * sc)
 		return -1;
 	}
 
-	LOG_DBG("Computed shared secret of length %d bytes: %s",
-			sc->shared_secret.length,
-			sc->shared_secret.toString().c_str());
-
 	if (sc->encrypt_alg == SSL_TXT_AES128) {
 		sc->encrypt_key.length = 16;
 		sc->encrypt_key.data = new unsigned char[16];
@@ -1227,9 +1223,6 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::encryption_decryption_enabled_clie
 		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
-	LOG_DBG("Generated and encrypted challenge of length %d: %s",
-		encrypted_challenge.length,
-		encrypted_challenge.toString().c_str());
 
 	SerializedObject * sobj = encrypted_challenge.get_seralized_object();
 	if (!sobj) {
@@ -1339,16 +1332,10 @@ int AuthSSH2PolicySet::process_client_challenge_message(const CDAPMessage& messa
 	// compute MD5 hash and sent back to client
 	UcharArray encrypted_challenge(sobj);
 	UcharArray hashed_challenge;
-	LOG_DBG("Received encrypted client challenge of %d bytes: %s",
-		encrypted_challenge.length,
-		encrypted_challenge.toString().c_str());
 	if (decrypt_combine_and_hash(sc, encrypted_challenge, hashed_challenge) != 0) {
 		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
-	LOG_DBG("Computed client challenge reply of %d bytes: %s",
-		hashed_challenge.length,
-		hashed_challenge.toString().c_str());
 
 	//Server authenticates client: generate random challenge, encrypt
 	//with public key and authenticate server
@@ -1357,9 +1344,6 @@ int AuthSSH2PolicySet::process_client_challenge_message(const CDAPMessage& messa
 		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
-	LOG_DBG("Generated encrypted server challenge of %d bytes: %s",
-		encrypted_server_challenge.length,
-		encrypted_server_challenge.toString().c_str());
 
 	SerializedObject * sobj2 = encode_client_chall_reply_ssh2(hashed_challenge,
 								  encrypted_server_challenge);
@@ -1496,12 +1480,7 @@ int AuthSSH2PolicySet::process_client_challenge_reply_message(const CDAPMessage&
 	// result is equal to received challenge
 	UcharArray received_challenge;
 	UcharArray server_challenge;
-	UcharArray hashed_challenge;
-
 	decode_client_chall_reply_ssh2(*sobj, received_challenge, server_challenge);
-	LOG_DBG("Received client challenge reply of length %d: %s",
-		received_challenge.length,
-		received_challenge.toString().c_str());
 
 	if (check_challenge_reply(sc, received_challenge) != 0) {
 		sec_man->remove_security_context(session_id);
@@ -1515,9 +1494,6 @@ int AuthSSH2PolicySet::process_client_challenge_reply_message(const CDAPMessage&
 		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
-	LOG_DBG("Computed encrypted server challenge of %d bytes: %s",
-		hashed_ser_challenge.length,
-		hashed_ser_challenge.toString().c_str());
 
 	SerializedObject * sobj2 = hashed_ser_challenge.get_seralized_object();
 	if (!sobj2) {
@@ -1622,10 +1598,6 @@ int AuthSSH2PolicySet::process_server_challenge_reply_message(const CDAPMessage&
 	// XOR original challenge with shared secret, compute MD5 hash and check if
 	// result is equal to received challenge
 	UcharArray received_challenge(sobj);
-	LOG_DBG("Received server challenge reply of length %d: %s",
-		received_challenge.length,
-		received_challenge.toString().c_str());
-
 	if (check_challenge_reply(sc, received_challenge) != 0) {
 		sec_man->remove_security_context(session_id);
 		return IAuthPolicySet::FAILED;

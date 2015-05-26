@@ -26,7 +26,14 @@
           	}, {
           	   "name" : "compressAlg",
           	   "value" : "default"
-          	} ]
+          	}, {
+                   "name" : "keystore",
+                   "value" : "/usr/local/irati/etc/private_key.pem"
+                }, {
+                   "name" : "keystorePass",
+                   "value" : "test"
+                } ]
+
               },
               "encryptPolicy" : {
                  "name" : "default",
