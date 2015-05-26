@@ -1287,14 +1287,14 @@ int AuthSSH2PolicySet::generate_random_challenge(SSH2SecurityContext * sc)
 int AuthSSH2PolicySet::encrypt_chall_with_pub_key(SSH2SecurityContext * sc,
 						  UcharArray& encrypted_chall)
 {
-	encrypted_chall.data = new unsigned char[sc->challenge.length];
-	encrypted_chall.length = RSA_public_encrypt(sc->challenge.length,
-						    sc->challenge.data,
-						    encrypted_chall.data,
-						    sc->auth_keypair,
-						    RSA_PKCS1_OAEP_PADDING);
+	encrypted_chall.data = new unsigned char[RSA_size(sc->auth_keypair)];
+	int result = RSA_public_encrypt(sc->challenge.length,
+					sc->challenge.data,
+					encrypted_chall.data,
+					sc->auth_keypair,
+					RSA_PKCS1_OAEP_PADDING);
 
-	if (encrypted_chall.length == -1) {
+	if (result == -1) {
 		LOG_ERR("Error encrypting challenge with RSA public key: %s",
 			ERR_error_string(ERR_get_error(), NULL));
 		return -1;
@@ -1448,7 +1448,7 @@ int AuthSSH2PolicySet::decrypt_chall_with_priv_key(SSH2SecurityContext * sc,
 			 	 	       encrypted_challenge.data,
 			 	 	       challenge.data,
 			 	 	       sc->auth_keypair,
-					RSA_PKCS1_OAEP_PADDING);
+			 	 	       RSA_PKCS1_OAEP_PADDING);
 
 	if (challenge.length == -1) {
 		LOG_ERR("Error decrypting challenge with RSA private key: %s",
