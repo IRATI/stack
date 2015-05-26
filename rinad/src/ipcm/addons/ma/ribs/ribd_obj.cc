@@ -33,20 +33,19 @@ rina::cdap_rib::res_info_t* RIBDaemonObj::remoteRead(const std::string& name,
 	r->result_ = 0;
 
 	//Perform the query
-	LOG_DBG("[DEBUG] fem la query");
 	if (IPCManager->query_rib(ManagementAgent::inst, &promise, ipcp_id) == IPCM_FAILURE ||
 			promise.wait() != IPCM_SUCCESS){
-		LOG_DBG("[DEBUG] query negativa");
 		r->result_ = -1;
 		return r;
 	}
 
-	//Serialize and return
-	LOG_DBG("[DEBUG] query positiva");
-	mad_manager::encoders::StringEncoder encoder;
-	encoder.encode(promise.serialized_rib, obj_reply);
+	// FIXME cut the query rib to avoid oversizing the shim eth buffer. Erase when spliting is implemented
+	std::string trunk = promise.serialized_rib.substr(0, 1000);
 
-	LOG_DBG("[DEBUG] retornem");
+	//Serialize and return
+	mad_manager::encoders::StringEncoder encoder;
+	encoder.encode(trunk, obj_reply);
+
 	return r;
 }
 
