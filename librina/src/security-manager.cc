@@ -826,7 +826,9 @@ int AuthSSH2PolicySet::load_authentication_keys(SSH2SecurityContext * sc)
 		return -1;
 	}
 
-	sc->challenge.length = RSA_size(sc->auth_keypair);
+	//Since we'll use RSA encryption with RSA_PKCS1_OAEP_PADDING padding, the
+	//maximum length of the data to be encrypted must be less than RSA_size(rsa) - 41
+	sc->challenge.length = RSA_size(sc->auth_keypair) - 42;
 	if (sc->challenge.length< MIN_RSA_KEY_PAIR_LENGTH) {
 		LOG_ERR("RSA keypair size is too low. Minimum: %d, actual: %d",
 				MIN_RSA_KEY_PAIR_LENGTH, sc->challenge.length);
@@ -1275,7 +1277,8 @@ int AuthSSH2PolicySet::encrypt_chall_with_pub_key(SSH2SecurityContext * sc,
 						    RSA_PKCS1_OAEP_PADDING);
 
 	if (encrypted_chall.length == -1) {
-		LOG_ERR("Error encrypting challenge with RSA public key: %lu", ERR_get_error());
+		LOG_ERR("Error encrypting challenge with RSA public key: %s",
+			ERR_error_string(ERR_get_error(), NULL));
 		return -1;
 	}
 
@@ -1426,7 +1429,8 @@ int AuthSSH2PolicySet::decrypt_chall_with_priv_key(SSH2SecurityContext * sc,
 					RSA_PKCS1_OAEP_PADDING);
 
 	if (challenge.length == -1) {
-		LOG_ERR("Error decrypting challenge with RSA private key: %lu", ERR_get_error());
+		LOG_ERR("Error decrypting challenge with RSA private key: %s",
+			ERR_error_string(ERR_get_error(), NULL));
 		return -1;
 	}
 
