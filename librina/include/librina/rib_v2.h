@@ -57,6 +57,7 @@ namespace rib {
 //fwd decl
 class RIB;
 class RIBDaemonProxy;
+class RIBOpsRespHandlers;
 
 /// RIB version has been already registered
 DECLARE_EXCEPTION_SUBCLASS(eRIBVersionExists);
@@ -74,6 +75,7 @@ DECLARE_EXCEPTION_SUBCLASS(eRIBVersionDoesNotExist);
 ///
 ///
 void init(cacep::AppConHandlerInterface *app_con_callback,
+		RIBOpsRespHandlers* remote_handlers,
 		cdap_rib::cdap_params params);
 
 //
@@ -81,7 +83,7 @@ void init(cacep::AppConHandlerInterface *app_con_callback,
 //
 // @ret A proxy object to the RIBDaemon
 //
-RIBDaemonProxy* getRIBDProxy(void);
+RIBDaemonProxy* RIBDaemonProxyFactory();
 
 
 ///
@@ -97,25 +99,25 @@ class RIBOpsRespHandlers {
 public:
 	virtual ~RIBOpsRespHandlers(){};
 
-	virtual void remoteCreateResult(const cdap_rib::res_info_t &res,
+	virtual void remoteCreateResult(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::con_handle_t &con) = 0;
-	virtual void remoteDeleteResult(const cdap_rib::res_info_t &res,
-			const cdap_rib::con_handle_t &con) = 0;
-	virtual void remoteReadResult(const cdap_rib::res_info_t &res,
+			const cdap_rib::res_info_t &res) = 0;
+	virtual void remoteDeleteResult(const cdap_rib::con_handle_t &con,
+			const cdap_rib::res_info_t &res) = 0;
+	virtual void remoteReadResult(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::con_handle_t &con) = 0;
-	virtual void remoteCancelReadResult(const cdap_rib::res_info_t &res,
-			const cdap_rib::con_handle_t &con) = 0;
-	virtual void remoteWriteResult(const cdap_rib::res_info_t &res,
+			const cdap_rib::res_info_t &res) = 0;
+	virtual void remoteCancelReadResult(const cdap_rib::con_handle_t &con,
+			const cdap_rib::res_info_t &res) = 0;
+	virtual void remoteWriteResult(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::con_handle_t &con) = 0;
-	virtual void remoteStartResult(const cdap_rib::res_info_t &res,
+			const cdap_rib::res_info_t &res) = 0;
+	virtual void remoteStartResult(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::con_handle_t &con) = 0;
-	virtual void remoteStopResult(const cdap_rib::res_info_t &res,
+			const cdap_rib::res_info_t &res) = 0;
+	virtual void remoteStopResult(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::con_handle_t &con) = 0;
+			const cdap_rib::res_info_t &res) = 0;
 };
 
 class AbstractEncoder {
@@ -338,11 +340,148 @@ public:
 	};
 };
 
+//fwd decl
+class RIBDaemon;
+
 //
 // RIBDaemon Proxy class
 //
 class RIBDaemonProxy{
 
+	///
+	/// Register a RIB
+	///
+	void registerRIB(RIB* rib);
+
+	///
+	/// List registered RIB versions
+	///
+	std::list<uint64_t> listVersions(void);
+
+	///
+	/// Retrieve a pointer to the RIB
+	///
+	/// @param version RIB version
+	/// @param Application Entity Name
+	///
+	/// @ret A pointer to the RIB object or NULL. The application needs to
+	/// take care to safely access it.
+	///
+	RIB* get(uint64_t version, std::string& ae_name);
+
+	/// Unregister a RIB
+	///
+	/// Unregisters a RIB from the library. This method does NOT
+	/// destroy the RIB instance.
+	///
+	/// @ret On success, it returns the pointer to the RIB instance
+	///
+	RIB* unregisterRIB(RIB* inst);
+
+
+	//
+	// RIB Client
+	//
+
+	///
+	/// Establish a CDAP connection to a remote RIB
+	///
+	/// @param ver RIB version
+	/// @param src Application source information
+	/// @param dst Application dst information
+	/// @param auth CDAP Authentication context
+	/// @param port_id Flow port id to be used
+	/// @ret A CDAP connection handle
+	///
+	cdap_rib::con_handle_t remote_open_connection(
+			const cdap_rib::vers_info_t &ver,
+			const cdap_rib::src_info_t &src,
+			const cdap_rib::dest_info_t &dest,
+			const cdap_rib::auth_info &auth, int port_id);
+
+	///
+	/// Close a CDAP connection to a remote RIB
+	///
+	/// @ret success/failure
+	///
+	int remote_close_connection(unsigned int port);
+
+	///
+	/// Perform a create operation over an object of the remote RIB
+	///
+	/// @ret success/failure
+	///
+	int remote_create(unsigned int port,
+				  const cdap_rib::obj_info_t &obj,
+				  const cdap_rib::flags_t &flags,
+				  const cdap_rib::filt_info_t &filt);
+
+	///
+	/// Perform a delete operation over an object of the remote RIB
+	///
+	/// @ret success/failure
+	///
+	int remote_delete(unsigned int port,
+				  const cdap_rib::obj_info_t &obj,
+				  const cdap_rib::flags_t &flags,
+				  const cdap_rib::filt_info_t &filt);
+
+	///
+	/// Perform a read operation over an object of the remote RIB
+	///
+	/// @ret success/failure
+	///
+	int remote_read(unsigned int port,
+				const cdap_rib::obj_info_t &obj,
+				const cdap_rib::flags_t &flags,
+				const cdap_rib::filt_info_t &filt);
+	///
+	/// Perform a cancel read operation over an object of the remote RIB
+	///
+	/// @ret success/failure
+	///
+	int remote_cancel_read(unsigned int port,
+				       const cdap_rib::flags_t &flags,
+				       int invoke_id);
+
+	///
+	/// Perform a write operation over an object of the remote RIB
+	///
+	/// @ret success/failure
+	///
+	int remote_write(unsigned int port,
+				 const cdap_rib::obj_info_t &obj,
+				 const cdap_rib::flags_t &flags,
+				 const cdap_rib::filt_info_t &filt);
+
+	///
+	/// Perform a start operation over an object of the remote RIB
+	///
+	/// @ret success/failure
+	///
+	int remote_start(unsigned int port,
+				 const cdap_rib::obj_info_t &obj,
+				 const cdap_rib::flags_t &flags,
+				 const cdap_rib::filt_info_t &filt);
+
+	///
+	/// Perform a stop operation over an object of the remote RIB
+	///
+	/// @ret success/failure
+	///
+	int remote_stop(unsigned int port,
+				const cdap_rib::obj_info_t &obj,
+				const cdap_rib::flags_t &flags,
+				const cdap_rib::filt_info_t &filt);
+
+private:
+
+	//Constructor
+	RIBDaemonProxy(RIBDaemon* ribd_);
+
+	friend RIBDaemonProxy* RIBDaemonProxyFactory();
+
+	RIBDaemon* ribd;
 };
 
 

@@ -116,35 +116,93 @@ public:
 	//
 	// Remote operations
 	//
+
+	///
+	/// Establish a CDAP connection to a remote RIB
+	///
+	/// @param ver RIB version
+	/// @param src Application source information
+	/// @param dst Application dst information
+	/// @param auth CDAP Authentication context
+	/// @param port_id Flow port id to be used
+	/// @ret A CDAP connection handle
+	///
 	virtual cdap_rib::con_handle_t remote_open_connection(
 			const cdap_rib::vers_info_t &ver,
 			const cdap_rib::src_info_t &src,
 			const cdap_rib::dest_info_t &dest,
-			const cdap_rib::auth_info &auth, int port) = 0;
+			const cdap_rib::auth_info &auth, int port_id) = 0;
+
+	///
+	/// Close a CDAP connection to a remote RIB
+	///
+	/// @ret success/failure
+	///
 	virtual int remote_close_connection(unsigned int port) = 0;
+
+	///
+	/// Perform a create operation over an object of the remote RIB
+	///
+	/// @ret success/failure
+	///
 	virtual int remote_create(unsigned int port,
 				  const cdap_rib::obj_info_t &obj,
 				  const cdap_rib::flags_t &flags,
 				  const cdap_rib::filt_info_t &filt) = 0;
+
+	///
+	/// Perform a delete operation over an object of the remote RIB
+	///
+	/// @ret success/failure
+	///
 	virtual int remote_delete(unsigned int port,
 				  const cdap_rib::obj_info_t &obj,
 				  const cdap_rib::flags_t &flags,
 				  const cdap_rib::filt_info_t &filt) = 0;
+
+	///
+	/// Perform a read operation over an object of the remote RIB
+	///
+	/// @ret success/failure
+	///
 	virtual int remote_read(unsigned int port,
 				const cdap_rib::obj_info_t &obj,
 				const cdap_rib::flags_t &flags,
 				const cdap_rib::filt_info_t &filt)= 0;
+	///
+	/// Perform a cancel read operation over an object of the remote RIB
+	///
+	/// @ret success/failure
+	///
 	virtual int remote_cancel_read(unsigned int port,
 				       const cdap_rib::flags_t &flags,
 				       int invoke_id) = 0;
+
+	///
+	/// Perform a write operation over an object of the remote RIB
+	///
+	/// @ret success/failure
+	///
 	virtual int remote_write(unsigned int port,
 				 const cdap_rib::obj_info_t &obj,
 				 const cdap_rib::flags_t &flags,
 				 const cdap_rib::filt_info_t &filt) = 0;
+
+	///
+	/// Perform a start operation over an object of the remote RIB
+	///
+	/// @ret success/failure
+	///
 	virtual int remote_start(unsigned int port,
 				 const cdap_rib::obj_info_t &obj,
 				 const cdap_rib::flags_t &flags,
 				 const cdap_rib::filt_info_t &filt) = 0;
+
+	///
+	/// Perform a stop operation over an object of the remote RIB
+	///
+	/// @ret success/failure
+	///
 	virtual int remote_stop(unsigned int port,
 				const cdap_rib::obj_info_t &obj,
 				const cdap_rib::flags_t &flags,
