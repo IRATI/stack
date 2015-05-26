@@ -568,6 +568,24 @@ ConnectionPolicies::ConnectionPolicies(){
 	max_sdu_gap_ = 0;
 }
 
+const PolicyConfig& ConnectionPolicies::get_dtp_policy_set() const {
+        return dtp_policy_set_;
+}
+
+void ConnectionPolicies::set_dtp_policy_set(
+                const PolicyConfig& dtp_policy_set) {
+	dtp_policy_set_ = dtp_policy_set;
+}
+
+const PolicyConfig& ConnectionPolicies::get_dtcp_policy_set() const {
+        return dtcp_policy_set_;
+}
+
+void ConnectionPolicies::set_dtcp_policy_set(
+                const PolicyConfig& dtcp_policy_set) {
+	dtcp_policy_set_ = dtcp_policy_set;
+}
+
 const PolicyConfig& ConnectionPolicies::get_rcvr_timer_inactivity_policy() const {
 	return rcvr_timer_inactivity_policy_;
 }
@@ -660,6 +678,10 @@ void ConnectionPolicies::set_incomplete_delivery(bool incomplete_delivery) {
 
 const std::string ConnectionPolicies::toString() {
         std::stringstream ss;
+        ss<<"DTP Policy Set (name/version): "<<dtp_policy_set_.get_name();
+        ss<<"/"<<dtp_policy_set_.get_version();
+        ss<<"DTCP Policy Set (name/version): "<<dtcp_policy_set_.get_name();
+        ss<<"/"<<dtcp_policy_set_.get_version();
         ss<<"Sder time inactivity policy (name/version): "<<sender_timer_inactivity_policy_.get_name();
         ss<<"/"<<sender_timer_inactivity_policy_.get_version();
         ss<<"; Rcvr time inactivity policy (name/version): "<<rcvr_timer_inactivity_policy_.get_name();

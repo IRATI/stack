@@ -397,6 +397,10 @@ public:
         void set_partial_delivery(bool partial_delivery);
         bool is_incomplete_delivery() const;
         void set_incomplete_delivery(bool incomplete_delivery);
+        const PolicyConfig& get_dtp_policy_set() const;
+        void set_dtp_policy_set(const PolicyConfig& dtp_policy_set);
+        const PolicyConfig& get_dtcp_policy_set() const;
+        void set_dtcp_policy_set(const PolicyConfig& dtcp_policy_set);
         const PolicyConfig& get_rcvr_timer_inactivity_policy() const;
         void set_rcvr_timer_inactivity_policy(
         		const PolicyConfig& rcvr_timer_inactivity_policy);
@@ -411,6 +415,10 @@ public:
 
         /// The configuration of the DTCP instance
         DTCPConfig dtcp_configuration_;
+
+        /// Policy Set for DTP and DTCP components.
+        PolicyConfig dtp_policy_set_;
+        PolicyConfig dtcp_policy_set_;
 
         /// used when DTCP is in use. If no PDUs arrive in this time period,
         /// the receiver should expect a DRF in the next Transfer PDU. If not,
