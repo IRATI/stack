@@ -328,7 +328,7 @@ bool Manager::createIPCP_1(rina::FlowInformation &flow) {
 
 	mad_manager::structures::ipcp_config_t ipc_config;
 	ipc_config.process_instance = "1";
-	ipc_config.process_name = "normal-1.IPCP";
+	ipc_config.process_name = "test1.IRATI";
 	ipc_config.process_type = "normal-ipc";
 	ipc_config.dif_to_assign = "normal.DIF";
 	ipc_config.difs_to_register.push_back("400");
@@ -373,13 +373,13 @@ bool Manager::createIPCP_2(rina::FlowInformation &flow) {
 
 	mad_manager::structures::ipcp_config_t ipc_config;
 	ipc_config.process_instance = "1";
-	ipc_config.process_name = "normal-2.IPCP";
+	ipc_config.process_name = "test2.IRATI";
 	ipc_config.process_type = "normal-ipc";
 	ipc_config.dif_to_assign = "normal.DIF";
 	ipc_config.difs_to_register.push_back("410");
 	ipc_config.enr_conf.enr_dif = "normal.DIF";
 	ipc_config.enr_conf.enr_un_dif = "400";
-	ipc_config.enr_conf.neighbor_name = "normal-1.IPCP";
+	ipc_config.enr_conf.neighbor_name = "test1.IRATI";
 	ipc_config.enr_conf.neighbor_instance = "1";
 
 	cdap_rib::obj_info_t obj;
@@ -422,12 +422,12 @@ bool Manager::createIPCP_3(rina::FlowInformation &flow) {
 
 	mad_manager::structures::ipcp_config_t ipc_config;
 	ipc_config.process_instance = "1";
-	ipc_config.process_name = "normal-3.IPCP";
+	ipc_config.process_name = "test3.IRATI";
 	ipc_config.process_type = "normal-ipc";
 	ipc_config.dif_to_assign = "normal.DIF";
 	ipc_config.enr_conf.enr_dif = "normal.DIF";
 	ipc_config.enr_conf.enr_un_dif = "410";
-	ipc_config.enr_conf.neighbor_name = "normal-2.IPCP";
+	ipc_config.enr_conf.neighbor_name = "test2.IRATI";
 	ipc_config.enr_conf.neighbor_instance = "1";
 
 	cdap_rib::obj_info_t obj;

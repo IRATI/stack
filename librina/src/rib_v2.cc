@@ -630,17 +630,21 @@ void RIBDaemon::remote_read_request(const cdap_rib::con_handle_t &con,
 	obj_reply.value_.message_ = 0;
 
 	cdap_rib::res_info_t* res;
+	LOG_DBG("[DEBUG] Anem a buscar l'objecte");
 	BaseRIBObject* ribObj = rib_->getRIBObject(obj.class_, obj.name_, true);
 	if (ribObj) {
+		LOG_DBG("[DEBUG] hi ha rib object, operem");
 		res = ribObj->remoteRead(
 				obj.name_, obj_reply.value_);
 	}
 	else
 	{
+		LOG_DBG("[DEBUG] no hi ha rib object");
 		res = new cdap_rib::res_info_t;
 		res->result_ = -1;
 	}
 	try {
+		LOG_DBG("[DEBUG] Enviem la resposta");
 		cdap_provider_->remote_read_response(con.port_,
 		                                     obj_reply,
 		                                     flags, *res,
