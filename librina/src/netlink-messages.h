@@ -74,26 +74,28 @@ enum RINANetlinkOperationCode{
         RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE, /* 40, IPC Process -> IPC Manager */
         RINA_C_IPCP_ENABLE_ENCRYPTION_REQUEST, /* 41, IPC Process (user space) -> IPC Process (kernel) */
         RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE, /* 42, IPC Process (kernel) -> IPC Process (user space) */
+        RINA_C_IPCP_ENABLE_TTL_ERROR_CHECK_REQUEST, /* 43, IPC Process (user space) -> IPC Process (kernel) */
+        RINA_C_IPCP_ENABLE_TTL_ERROR_CHECK_RESPONSE, /* 44, IPC Process (kernel) -> IPC Process (user space) */
 
         /* Userspace only messages MUST be after all the messages that are also
          * handled by the kernel. */
-	RINA_C_IPCM_IPC_PROCESS_INITIALIZED, /* 43 IPC Process -> IPC Manager */
-	RINA_C_APP_ALLOCATE_FLOW_REQUEST, /* 44 Allocate flow request, Application -> IPC Manager */
-	RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT, /* 45 Response to an application allocate flow request, IPC Manager -> Application */
-	RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED, /* 46 Allocate flow request from a remote application, IPC Manager -> Application */
-	RINA_C_APP_ALLOCATE_FLOW_RESPONSE, /* 47 Allocate flow response to an allocate request arrived operation, Application -> IPC Manager */
-	RINA_C_APP_DEALLOCATE_FLOW_REQUEST, /* 48 Application -> IPC Manager */
-	RINA_C_APP_DEALLOCATE_FLOW_RESPONSE, /* 49 IPC Manager -> Application */
-	RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION, /* 50 IPC Manager -> Application, flow deallocated without the application having requested it */
-	RINA_C_APP_REGISTER_APPLICATION_REQUEST, /* 51 Application -> IPC Manager */
-	RINA_C_APP_REGISTER_APPLICATION_RESPONSE, /* 52 IPC Manager -> Application */
-	RINA_C_APP_UNREGISTER_APPLICATION_REQUEST, /* 53 Application -> IPC Manager */
-	RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE, /* 54 IPC Manager -> Application */
-	RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION, /* 55 IPC Manager -> Application, application unregistered without the application having requested it */
-	RINA_C_APP_GET_DIF_PROPERTIES_REQUEST, /* 56 Application -> IPC Manager */
-	RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE, /* 57 IPC Manager -> Application */
-        RINA_C_IPCM_PLUGIN_LOAD_REQUEST, /* 58, IPC Manager -> IPC Process */
-        RINA_C_IPCM_PLUGIN_LOAD_RESPONSE, /* 59, IPC Process -> IPC Manager */
+	RINA_C_IPCM_IPC_PROCESS_INITIALIZED, /* 45 IPC Process -> IPC Manager */
+	RINA_C_APP_ALLOCATE_FLOW_REQUEST, /* 46 Allocate flow request, Application -> IPC Manager */
+	RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT, /* 47 Response to an application allocate flow request, IPC Manager -> Application */
+	RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED, /* 48 Allocate flow request from a remote application, IPC Manager -> Application */
+	RINA_C_APP_ALLOCATE_FLOW_RESPONSE, /* 49 Allocate flow response to an allocate request arrived operation, Application -> IPC Manager */
+	RINA_C_APP_DEALLOCATE_FLOW_REQUEST, /* 50 Application -> IPC Manager */
+	RINA_C_APP_DEALLOCATE_FLOW_RESPONSE, /* 51 IPC Manager -> Application */
+	RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION, /* 52 IPC Manager -> Application, flow deallocated without the application having requested it */
+	RINA_C_APP_REGISTER_APPLICATION_REQUEST, /* 53 Application -> IPC Manager */
+	RINA_C_APP_REGISTER_APPLICATION_RESPONSE, /* 54 IPC Manager -> Application */
+	RINA_C_APP_UNREGISTER_APPLICATION_REQUEST, /* 55 Application -> IPC Manager */
+	RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE, /* 56 IPC Manager -> Application */
+	RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION, /* 57 IPC Manager -> Application, application unregistered without the application having requested it */
+	RINA_C_APP_GET_DIF_PROPERTIES_REQUEST, /* 58 Application -> IPC Manager */
+	RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE, /* 59 IPC Manager -> Application */
+        RINA_C_IPCM_PLUGIN_LOAD_REQUEST, /* 60, IPC Manager -> IPC Process */
+        RINA_C_IPCM_PLUGIN_LOAD_RESPONSE, /* 61, IPC Process -> IPC Manager */
 	__RINA_C_MAX,
  };
 
@@ -1385,6 +1387,22 @@ public:
 class IPCPEnableEncryptionResponseMessage: public BaseNetlinkResponseMessage {
 public:
 	IPCPEnableEncryptionResponseMessage();
+	IPCEvent* toIPCEvent();
+
+	int port_id;
+};
+
+class IPCPEnableTTLErrorCheckRequestMessage : public BaseNetlinkMessage {
+public:
+	IPCPEnableTTLErrorCheckRequestMessage();
+	IPCEvent* toIPCEvent();
+
+	ErrorCheckTTLProfile profile;
+};
+
+class IPCPEnableTTLErrorCheckResponseMessage: public BaseNetlinkResponseMessage {
+public:
+	IPCPEnableTTLErrorCheckResponseMessage();
 	IPCEvent* toIPCEvent();
 
 	int port_id;

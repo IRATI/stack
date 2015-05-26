@@ -216,6 +216,39 @@ public:
 	UcharArray encrypt_key;
 };
 
+class ErrorCheckTTLProfile {
+public:
+	ErrorCheckTTLProfile() : port_id(0),
+		enable_error_check(NONE), enable_ttl(NONE){ };
+
+	enum EnableState {
+		NONE = 0,
+		ENABLE_TX,
+		ENABLE_RX,
+		ENABLE_BOTH
+	};
+
+	static EnableState integerToEnableState(int enable) {
+		if (enable == 0) {
+			return ErrorCheckTTLProfile::NONE;
+		} else if (enable == 1) {
+			return ErrorCheckTTLProfile::ENABLE_TX;
+		} else if (enable == 2) {
+			return ErrorCheckTTLProfile::ENABLE_RX;
+		} else if (enable == 3) {
+			return ErrorCheckTTLProfile::ENABLE_BOTH;
+		}
+
+		return ErrorCheckTTLProfile::NONE;
+	};
+
+	int port_id;
+	EnableState enable_error_check;
+	PolicyConfig error_check_policy;
+	EnableState enable_ttl;
+	PolicyConfig ttl_policy;
+};
+
 ///Captures all data of the SSHRSA security context
 class SSH2SecurityContext : public ISecurityContext {
 public:

@@ -818,12 +818,14 @@ int AuthSSH2PolicySet::load_authentication_keys(SSH2SecurityContext * sc)
 		return -1;
 	}
 
-	//TODO fix password issues sc->keystore_password should be passed here
+	//TODO fix problems with reading private keys from encrypted repos
+	//we should use sc->keystore_pass.c_str() as the last argument
 	sc->auth_keypair = PEM_read_bio_RSAPrivateKey(keystore, NULL, 0, NULL);
 	BIO_free(keystore);
 
 	if (!sc->auth_keypair) {
-		LOG_ERR("Problems reading RSA key pair from keystore");
+		LOG_ERR("Problems reading RSA key pair from keystore: %s",
+			ERR_error_string(ERR_get_error(), NULL));
 		return -1;
 	}
 
@@ -864,7 +866,8 @@ int AuthSSH2PolicySet::edh_init_keys(SSH2SecurityContext * sc)
 
 	// Generate the public and private key pair
 	if (DH_generate_key(dh_state) != 1) {
-		LOG_ERR("Error generating public and private key pair");
+		LOG_ERR("Error generating public and private key pair: %s",
+			ERR_error_string(ERR_get_error(), NULL));
 		DH_free(dh_state);
 		return -1;
 	}
@@ -971,7 +974,8 @@ int AuthSSH2PolicySet::edh_generate_shared_secret(SSH2SecurityContext * sc)
 
 	if((sc->shared_secret.length =
 			DH_compute_key(sc->shared_secret.data, sc->dh_peer_pub_key, sc->dh_state)) < 0) {
-		LOG_ERR("Error computing shared secret");
+		LOG_ERR("Error computing shared secret: %s",
+			ERR_error_string(ERR_get_error(), NULL));
 		return -1;
 	}
 

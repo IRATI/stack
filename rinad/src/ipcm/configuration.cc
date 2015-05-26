@@ -522,7 +522,7 @@ void parse_auth_sduprot_profile(const Json::Value  & root,
         parse_policy(root, "authPolicy", profile.authPolicy);
         parse_policy(root, "encryptPolicy", profile.encryptPolicy);
         parse_policy(root, "TTLPolicy", profile.ttlPolicy);
-        parse_policy(root, "CRCPolicy", profile.crcPolicy);
+        parse_policy(root, "ErrorCheckPolicy", profile.crcPolicy);
 }
 
 rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,

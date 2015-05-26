@@ -47,7 +47,7 @@
                     "value" : "50"
                   } ]
                 },
-                "CRCPolicy" : {
+                "ErrorCheckPolicy" : {
                    "name" : "CRC32",
                    "version" : "1"
                 }

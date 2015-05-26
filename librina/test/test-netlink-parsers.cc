@@ -3326,6 +3326,75 @@ int testEnableEncryptionRequestMessage() {
         return returnValue;
 }
 
+int testEnableTTLErrorCheckRequestMessage() {
+        std::cout << "TESTING ENABLE TTL ERROR CHECK REQUEST MESSAGE\n";
+        int returnValue = 0;
+
+        IPCPEnableTTLErrorCheckRequestMessage message;
+        message.profile.enable_error_check = ErrorCheckTTLProfile::ENABLE_BOTH;
+        message.profile.error_check_policy.name_ = "mypolicy";
+        message.profile.error_check_policy.version_ = "350";
+        message.profile.enable_ttl = ErrorCheckTTLProfile::ENABLE_BOTH;
+        message.profile.ttl_policy.name_ = "mypolicy";
+        message.profile.ttl_policy.version_ = "350";
+        message.profile.port_id = 232;
+
+        struct nl_msg* netlinkMessage = nlmsg_alloc();
+        if (!netlinkMessage) {
+                std::cout << "Error allocating Netlink message\n";
+        }
+        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+        int result = putBaseNetlinkMessage(netlinkMessage, &message);
+        if (result < 0) {
+                std::cout << "Error constructing IPCPEnableTTLErrorCheckRequestMessage "
+                                << "message \n";
+                nlmsg_free(netlinkMessage);
+                return result;
+        }
+
+        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+        IPCPEnableTTLErrorCheckRequestMessage * recoveredMessage =
+                        dynamic_cast<IPCPEnableTTLErrorCheckRequestMessage *>(
+                                        parseBaseNetlinkMessage(netlinkMessageHeader));
+
+        if (recoveredMessage == 0) {
+                std::cout << "Error parsing IPCPEnableTTLErrorCheckRequestMessage message "
+                                << "\n";
+                returnValue = -1;
+        } else if (message.profile.enable_error_check != recoveredMessage->profile.enable_error_check) {
+        	std::cout << "Error with enable error check";
+        	returnValue = -1;
+        } else if (message.profile.enable_ttl != recoveredMessage->profile.enable_ttl) {
+        	std::cout << "Error with enable TTL";
+        	returnValue = -1;
+        } else if (message.profile.port_id != recoveredMessage->profile.port_id) {
+        	std::cout << "Error with port_id";
+        	returnValue = -1;
+        } else if (message.profile.error_check_policy.name_ != recoveredMessage->profile.error_check_policy.name_) {
+        	std::cout << "Error with error_check_policy name";
+        	returnValue = -1;
+        } else if (message.profile.error_check_policy.version_ != recoveredMessage->profile.error_check_policy.version_) {
+        	std::cout << "Error with error_check_policy version";
+        	returnValue = -1;
+        } else if (message.profile.ttl_policy.name_ != recoveredMessage->profile.ttl_policy.name_) {
+        	std::cout << "Error with ttl_policy name";
+        	returnValue = -1;
+        } else if (message.profile.ttl_policy.version_ != recoveredMessage->profile.ttl_policy.version_) {
+        	std::cout << "Error with ttl_policy version";
+        	returnValue = -1;
+        }
+
+        if (returnValue == 0) {
+                std::cout << "IPCPEnableTTLErrorCheckRequestMessage test ok\n";
+        }
+        nlmsg_free(netlinkMessage);
+        delete recoveredMessage;
+
+        return returnValue;
+}
+
 int main() {
 	std::cout << "TESTING LIBRINA-NETLINK-PARSERS\n";
 
@@ -3547,6 +3616,11 @@ int main() {
 	}
 
 	result = testEnableEncryptionRequestMessage();
+	if (result < 0) {
+		return result;
+	}
+
+	result = testEnableTTLErrorCheckRequestMessage();
 	if (result < 0) {
 		return result;
 	}
