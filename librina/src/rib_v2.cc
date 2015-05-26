@@ -21,6 +21,7 @@
  */
 
 #include <stdint.h>
+#include <assert.h>
 #include <inttypes.h>
 #include <stdbool.h>
 
@@ -760,7 +761,7 @@ public:
 	/// @ret A pointer to the RIB object or NULL. The application needs to
 	/// take care to safely access it.
 	///
-	RIB* get(uint64_t version, std::string& ae_name);
+	RIB* get(const uint64_t version, const std::string& ae_name);
 
 	/// Unregister a RIB
 	///
@@ -838,6 +839,13 @@ protected:
 			const cdap_rib::filt_info_t &filt,
 			int message_id);
 
+
+	//
+	//Incoming connections (proxy only)
+	//
+	void store_connection(const cdap_rib::con_handle_t& con);
+	void remove_connection(const cdap_rib::con_handle_t& con);
+
 private:
 
 	//Friendship
@@ -848,7 +856,7 @@ private:
 	* TODO: this should be deprecated in favour of putting some state
 	* in the (opaque pointer, sort of cookie)
 	*/
-	RIB* getByPortId(int port_id);
+	RIB* getByPortId(const int port_id);
 
 	cacep::AppConHandlerInterface *app_con_callback_;
 	cdap::CDAPProviderInterface *cdap_provider;
@@ -930,7 +938,7 @@ std::list<uint64_t> RIBDaemon::listVersions(void){
 	return vers;
 }
 
-RIB* RIBDaemon::get(uint64_t ver, std::string& ae_name){
+RIB* RIBDaemon::get(const uint64_t ver, const std::string& ae_name){
 
 	uint64_t it_ver;
 	//TODO filter by ae_name
@@ -951,7 +959,7 @@ RIB* RIBDaemon::get(uint64_t ver, std::string& ae_name){
 }
 
 
-RIB* RIBDaemon::getByPortId(int port_id){
+RIB* RIBDaemon::getByPortId(const int port_id){
 
 	//Mutual exclusion
 	ReadScopedLock rlock(rwlock);
@@ -961,6 +969,72 @@ RIB* RIBDaemon::getByPortId(int port_id){
 	return port_id_rib_map[port_id];
 }
 
+void RIBDaemon::store_connection(const cdap_rib::con_handle_t& con){
+
+	const uint64_t ver = con.version_.version_;
+	const std::string& ae = con.dest_.ae_name_;
+	const int port_id = con.port_;
+
+	//FIXME: what if the rib is destroyed...
+	RIB* rib = get(ver, ae);
+
+	if(!rib){
+		LOG_ERR("No RIB version %" PRIu64 " registered for AE %s!",
+								ver,
+								ae.c_str());
+		throw eRIBVersionDoesNotExist();
+	}
+
+	//Mutual exclusion
+	WriteScopedLock wlock(rwlock);
+
+	//Store relation RIB <-> port_id
+	if(port_id_rib_map.find(port_id) != port_id_rib_map.end()){
+		LOG_ERR("Overwritting previous connection for RIB version: %" PRIu64 ", AE: %s and port id: %d!",
+								ver,
+								ae.c_str(),
+								port_id);
+		assert(0);
+	}
+
+	port_id_rib_map[port_id] = rib;
+
+	LOG_INFO("Bound port_id: %d CDAP connection to RIB version %" PRIu64 " (AE %s)",
+								port_id,
+								ver,
+								ae.c_str());
+}
+
+void RIBDaemon::remove_connection(const cdap_rib::con_handle_t& con){
+
+	const uint64_t ver = con.version_.version_;
+	const std::string& ae = con.dest_.ae_name_;
+	const int port_id = con.port_;
+
+
+	//FIXME: what if the rib is destroyed...
+	RIB* rib = getByPortId(port_id);
+
+	if(!rib){
+		LOG_ERR("Could not remove connection for port id: %d!",
+								port_id);
+		assert(0);
+		return;
+	}
+
+	//TODO: assert version
+
+	//Mutual exclusion
+	WriteScopedLock wlock(rwlock);
+
+	//Remove from the map
+	port_id_rib_map.erase(port_id);
+
+	LOG_INFO("CDAP connection on port id: %d unbound from RIB version %" PRIu64 " (AE %s)",
+								port_id,
+								ver,
+								ae.c_str());
+}
 ///
 /// Unregister RIB
 ///
@@ -1004,6 +1078,10 @@ void RIBDaemon::open_connection(const cdap_rib::con_handle_t &con,
 	(void) res;
 	(void) flags;
 	app_con_callback_->connect(message_id, con);
+
+	//The connect was successful store
+	store_connection(con);
+
 	cdap_provider->send_open_connection_result(con, res, message_id);
 }
 
@@ -1011,6 +1089,7 @@ void RIBDaemon::remote_close_connection_result(const cdap_rib::con_handle_t &con
 		const cdap_rib::result_info &res) {
 
 	app_con_callback_->releaseResult(res, con);
+	remove_connection(con);
 }
 
 void RIBDaemon::close_connection(const cdap_rib::con_handle_t &con,
@@ -1513,7 +1592,6 @@ cdap_rib::con_handle_t RIBDaemonProxy::remote_open_connection(
 								auth,
 								port_id);
 	//TODO store?
-
 	return handle;
 }
 
