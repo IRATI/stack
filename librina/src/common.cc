@@ -846,7 +846,8 @@ UcharArray::UcharArray(const SerializedObject * sobj)
 UcharArray::~UcharArray()
 {
 	if (data) {
-		delete data;
+		delete[] data;
+		data = 0;
 	}
 }
 

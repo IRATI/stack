@@ -21,6 +21,8 @@
 
 #include <cstdlib>
 #include <openssl/bio.h>
+#include <openssl/crypto.h>
+#include <openssl/evp.h>
 #include <openssl/err.h>
 #include <openssl/md5.h>
 #include <openssl/pem.h>
@@ -533,14 +535,17 @@ SSH2SecurityContext::~SSH2SecurityContext()
 {
 	if (dh_state) {
 		DH_free(dh_state);
+		dh_state = NULL;
 	}
 
 	if (dh_peer_pub_key) {
 		BN_free(dh_peer_pub_key);
+		dh_peer_pub_key = NULL;
 	}
 
 	if (auth_keypair) {
 		RSA_free(auth_keypair);
+		auth_keypair = NULL;
 	}
 }
 
@@ -643,6 +648,7 @@ const int AuthSSH2PolicySet::MIN_RSA_KEY_PAIR_LENGTH = 256;
 const std::string AuthSSH2PolicySet::CLIENT_CHALLENGE = "Client challenge";
 const std::string AuthSSH2PolicySet::CLIENT_CHALLENGE_REPLY = "Client challenge reply";
 const std::string AuthSSH2PolicySet::SERVER_CHALLENGE_REPLY = "Server challenge reply";
+static const char rnd_seed[] = "string to make the random number generator think it has entropy";
 
 AuthSSH2PolicySet::AuthSSH2PolicySet(IRIBDaemon * ribd, ISecurityManager * sm) :
 		IAuthPolicySet(IAuthPolicySet::AUTH_SSH2)
@@ -652,8 +658,13 @@ AuthSSH2PolicySet::AuthSSH2PolicySet(IRIBDaemon * ribd, ISecurityManager * sm) :
 	timeout = DEFAULT_TIMEOUT;
 	dh_parameters = 0;
 
-	rina::ThreadAttributes thread_attrs;
-	thread_attrs.setJoinable();
+	//Init libcrypto
+	ERR_load_crypto_strings();
+	OpenSSL_add_all_algorithms();
+	CRYPTO_malloc_debug_init();
+	CRYPTO_dbg_set_options(V_CRYPTO_MDEBUG_ALL);
+	CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
+	RAND_seed(rnd_seed, sizeof rnd_seed); /* or OAEP may fail */
 
 	//Generate G and P parameters in a separate thread (takes a bit of time)
 	edh_init_params();
@@ -666,6 +677,7 @@ AuthSSH2PolicySet::~AuthSSH2PolicySet()
 {
 	if (dh_parameters) {
 		DH_free(dh_parameters);
+		dh_parameters = NULL;
 	}
 }
 
@@ -1039,7 +1051,7 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::decryption_enabled_server(SSH2Secu
 	auth_options.mac_algs.push_back(sc->mac_alg);
 	auth_options.compress_algs.push_back(sc->compress_alg);
 	auth_options.dh_public_key.data = BN_to_binary(sc->dh_state->pub_key,
-			&auth_options.dh_public_key.length);
+						       &auth_options.dh_public_key.length);
 
 	if (auth_options.dh_public_key.length <= 0) {
 		LOG_ERR("Error transforming big number to binary");
@@ -1222,6 +1234,9 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::encryption_decryption_enabled_clie
 		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
+	LOG_DBG("Generated and encrypted challenge of length %d: %s",
+		encrypted_challenge.length,
+		encrypted_challenge.toString().c_str());
 
 	SerializedObject * sobj = encrypted_challenge.get_seralized_object();
 	if (!sobj) {
@@ -1261,7 +1276,8 @@ int AuthSSH2PolicySet::generate_random_challenge(SSH2SecurityContext * sc)
 	sc->challenge.data = new unsigned char[sc->challenge.length];
 	int result = RAND_bytes(sc->challenge.data, sc->challenge.length);
 	if (result != 1) {
-		LOG_ERR("Error generating random number: %lu", ERR_get_error());
+		LOG_ERR("Error generating random number: %s",
+			ERR_error_string(ERR_get_error(), NULL));
 		return -1;
 	}
 
@@ -1386,9 +1402,13 @@ int AuthSSH2PolicySet::generate_and_encrypt_challenge(SSH2SecurityContext * sc,
 		return -1;
 	}
 
+	LOG_DBG("aqui");
+
 	if (encrypt_chall_with_pub_key(sc, challenge) != 0) {
 		return -1;
 	}
+
+	LOG_DBG("aqui2");
 
 	return 0;
 }
@@ -1483,6 +1503,9 @@ int AuthSSH2PolicySet::process_client_challenge_reply_message(const CDAPMessage&
 	UcharArray hashed_challenge;
 
 	decode_client_chall_reply_ssh2(*sobj, received_challenge, server_challenge);
+	LOG_DBG("Received challenge reply of length %d: %s",
+		received_challenge.length,
+		received_challenge.toString().c_str());
 
 	if (check_challenge_reply(sc, received_challenge) != 0) {
 		sec_man->remove_security_context(session_id);
@@ -1670,6 +1693,7 @@ void ISecurityManager::destroy_security_context(int context_id)
 	ISecurityContext * ctx = remove_security_context(context_id);
 	if (ctx) {
 		delete ctx;
+		ctx = NULL;
 	}
 }
 
