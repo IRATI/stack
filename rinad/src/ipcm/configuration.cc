@@ -245,6 +245,14 @@ void parse_efcp_policies(const Json::Value  root,
                 cp.dtcp_present_ = con_pol.get("dtcpPresent",
                                                cp.dtcp_present_).asBool();
 
+                parse_policy(con_pol,
+                             "dtpPolicySet",
+                             cp.dtp_policy_set_);
+
+                parse_policy(con_pol,
+                             "dtcpPolicySet",
+                             cp.dtcp_policy_set_);
+
                 // DTCPConfig
                 Json::Value dtcp_conf = con_pol["dtcpConfiguration"];
                 if (dtcp_conf != 0) {
