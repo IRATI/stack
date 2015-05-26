@@ -35,6 +35,11 @@ struct conn_policies {
         /* FIXME: Anyone using this variable? To be removed */
         bool                 dtcp_present;
         struct dtcp_config * dtcp_cfg;
+
+        /* Policy sets configuration */
+        struct policy * dtp_ps;
+        struct policy * dtcp_ps;
+
         /* FIXME The following three "policies" are unused, useless
          * and duplicated - they already exist as function pointers
          * (dtp-ps.h). They have to be removed here, and therefore

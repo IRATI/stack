@@ -455,24 +455,9 @@ struct efcp_config * efcp_config_create(void)
         }
         tmp->dt_cons = tmp_dt;
 
-        tmp->dtp_ps = policy_create();
-        if (!tmp->dtp_ps) {
-                rkfree(tmp_dt);
-                rkfree(tmp);
-                return NULL;
-        }
-        tmp->dtcp_ps = policy_create();
-        if (!tmp->dtcp_ps) {
-                rkfree(tmp_dt);
-                policy_destroy(tmp->dtp_ps);
-                rkfree(tmp);
-                return NULL;
-        }
         tmp->unknown_flow = policy_create();
         if (!tmp->unknown_flow) {
                 rkfree(tmp_dt);
-                policy_destroy(tmp->dtp_ps);
-                policy_destroy(tmp->dtcp_ps);
                 rkfree(tmp);
                 return NULL;
         }
@@ -486,10 +471,6 @@ int efcp_config_destroy(struct efcp_config * efcp_config)
         if (efcp_config->dt_cons)
                 rkfree(efcp_config->dt_cons);
 
-        if (efcp_config->dtp_ps)
-                policy_destroy(efcp_config->dtp_ps);
-        if (efcp_config->dtcp_ps)
-                policy_destroy(efcp_config->dtcp_ps);
         if (efcp_config->unknown_flow)
                 policy_destroy(efcp_config->unknown_flow);
 

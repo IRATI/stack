@@ -151,6 +151,8 @@ enum dtcp_config_params_attrs_list {
 enum conn_policies_params_attrs_list {
         CPP_ATTR_DTCP_PRESENT = 1,
         CPP_ATTR_DTCP_CONFIG,
+        CPP_ATTR_DTP_POLICY_SET,
+        CPP_ATTR_DTCP_POLICY_SET,
         CPP_ATTR_RCVR_TIMER_INAC_POLICY,
         CPP_ATTR_SNDR_TIMER_INAC_POLICY,
         CPP_ATTR_INIT_SEQ_NUM_POLICY,
@@ -403,8 +405,6 @@ enum data_transfer_cons_attrs_list {
 enum efcp_config_attrs_list {
         EFCPC_ATTR_DATA_TRANS_CONS = 1,
         EFCPC_ATTR_QOS_CUBES,
-        EFCPC_ATTR_DTP_POLICY_SET,
-        EFCPC_ATTR_DTCP_POLICY_SET,
         EFCPC_ATTR_UNKNOWN_FLOW_POLICY,
         __EFCPC_ATTR_MAX,
 };

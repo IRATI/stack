@@ -94,10 +94,6 @@ struct efcp_config {
         /* The data transfer constants */
         struct dt_cons * dt_cons;
 
-        /* Policy sets configuration */
-        struct policy * dtp_ps;
-        struct policy * dtcp_ps;
-
         /* Left here for phase 2 */
         struct policy * unknown_flow;
 };

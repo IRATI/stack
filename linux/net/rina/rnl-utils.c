@@ -1242,10 +1242,6 @@ static int parse_efcp_config(struct nlattr *      efcp_config_attr,
         attr_policy[EFCPC_ATTR_DATA_TRANS_CONS].len      = 0;
         attr_policy[EFCPC_ATTR_QOS_CUBES].type           = NLA_NESTED;
         attr_policy[EFCPC_ATTR_QOS_CUBES].len            = 0;
-        attr_policy[EFCPC_ATTR_DTP_POLICY_SET].type      = NLA_NESTED;
-        attr_policy[EFCPC_ATTR_DTP_POLICY_SET].len       = 0;
-        attr_policy[EFCPC_ATTR_DTCP_POLICY_SET].type     = NLA_NESTED;
-        attr_policy[EFCPC_ATTR_DTCP_POLICY_SET].len      = 0;
         attr_policy[EFCPC_ATTR_UNKNOWN_FLOW_POLICY].type = NLA_NESTED;
         attr_policy[EFCPC_ATTR_UNKNOWN_FLOW_POLICY].len = 0;
 
@@ -1269,16 +1265,6 @@ static int parse_efcp_config(struct nlattr *      efcp_config_attr,
                 LOG_MISSING;
         }
 
-        if (attrs[EFCPC_ATTR_DTP_POLICY_SET]) {
-                if (parse_policy(attrs[EFCPC_ATTR_DTP_POLICY_SET],
-                                 efcp_config->dtp_ps))
-                        goto parse_fail;
-        }
-        if (attrs[EFCPC_ATTR_DTCP_POLICY_SET]) {
-                if (parse_policy(attrs[EFCPC_ATTR_DTCP_POLICY_SET],
-                                 efcp_config->dtp_ps))
-                        goto parse_fail;
-        }
         if (attrs[EFCPC_ATTR_UNKNOWN_FLOW_POLICY]) {
                 if (parse_policy(attrs[EFCPC_ATTR_UNKNOWN_FLOW_POLICY],
                                  efcp_config->unknown_flow))
@@ -1765,6 +1751,10 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
         attr_policy[CPP_ATTR_DTCP_PRESENT].len            = 0;
         attr_policy[CPP_ATTR_DTCP_CONFIG].type            = NLA_NESTED;
         attr_policy[CPP_ATTR_DTCP_CONFIG].len             = 0;
+        attr_policy[CPP_ATTR_DTP_POLICY_SET].type         = NLA_NESTED;
+        attr_policy[CPP_ATTR_DTP_POLICY_SET].len          = 0;
+        attr_policy[CPP_ATTR_DTCP_POLICY_SET].type        = NLA_NESTED;
+        attr_policy[CPP_ATTR_DTCP_POLICY_SET].len         = 0;
         attr_policy[CPP_ATTR_RCVR_TIMER_INAC_POLICY].type = NLA_NESTED;
         attr_policy[CPP_ATTR_RCVR_TIMER_INAC_POLICY].len  = 0;
         attr_policy[CPP_ATTR_SNDR_TIMER_INAC_POLICY].type = NLA_NESTED;
@@ -1797,6 +1787,17 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
                         LOG_ERR("Could not parse dtcp config");
                         return -1;
                 }
+
+        if (attrs[CPP_ATTR_DTP_POLICY_SET]) {
+                if (parse_policy(attrs[CPP_ATTR_DTP_POLICY_SET],
+                                 cpp_struct->dtp_ps))
+                        return -1;
+        }
+        if (attrs[CPP_ATTR_DTCP_POLICY_SET]) {
+                if (parse_policy(attrs[CPP_ATTR_DTCP_POLICY_SET],
+                                 cpp_struct->dtp_ps))
+                        return -1;
+        }
 
         if (attrs[CPP_ATTR_RCVR_TIMER_INAC_POLICY])
                 if (parse_policy(attrs[CPP_ATTR_RCVR_TIMER_INAC_POLICY],
