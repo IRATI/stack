@@ -832,6 +832,7 @@ static int __queue_send_add(struct rmt * instance,
                 if (ps->rmt_scheduling_create_policy_tx(ps, tmp)) {
                         LOG_ERR("Problems creating structs for scheduling "
                                 "policy");
+                        n1_port_destroy(tmp);
                         return -1;
                 }
         }

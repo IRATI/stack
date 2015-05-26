@@ -59,6 +59,7 @@ common_rmt_scheduling_create_policy_tx(struct rmt_ps *        ps,
         if (!kqueue) {
                 LOG_ERR("Could not create kqueue for n1_port %u and key %u",
                         n1_port->port_id, 0);
+                rmt_qgroup_destroy(qgroup);
                 return -1;
         }
         /* FIXME this is not used in this implementation so far */
