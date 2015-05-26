@@ -622,7 +622,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        efcp_container_set_config(efcp_config, data->efcpc);
+        efcp_container_config_set(efcp_config, data->efcpc);
 
         rmt_config = dif_information->configuration->rmt_config;
         if (!rmt_config) {

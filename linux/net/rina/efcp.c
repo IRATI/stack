@@ -387,7 +387,7 @@ struct efcp_config * efcp_container_config(struct efcp_container * container)
 }
 EXPORT_SYMBOL(efcp_container_config);
 
-int efcp_container_set_config(struct efcp_config *    efcp_config,
+int efcp_container_config_set(struct efcp_config *    efcp_config,
                               struct efcp_container * container)
 {
         if (!efcp_config || !container) {
@@ -401,7 +401,7 @@ int efcp_container_set_config(struct efcp_config *    efcp_config,
 
         return 0;
 }
-EXPORT_SYMBOL(efcp_container_set_config);
+EXPORT_SYMBOL(efcp_container_config_set);
 
 static int efcp_write(struct efcp * efcp,
                       struct sdu *  sdu)
