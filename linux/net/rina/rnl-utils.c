@@ -1242,6 +1242,10 @@ static int parse_efcp_config(struct nlattr *      efcp_config_attr,
         attr_policy[EFCPC_ATTR_DATA_TRANS_CONS].len      = 0;
         attr_policy[EFCPC_ATTR_QOS_CUBES].type           = NLA_NESTED;
         attr_policy[EFCPC_ATTR_QOS_CUBES].len            = 0;
+        attr_policy[EFCPC_ATTR_DTP_POLICY_SET].type      = NLA_NESTED;
+        attr_policy[EFCPC_ATTR_DTP_POLICY_SET].len       = 0;
+        attr_policy[EFCPC_ATTR_DTCP_POLICY_SET].type     = NLA_NESTED;
+        attr_policy[EFCPC_ATTR_DTCP_POLICY_SET].len      = 0;
         attr_policy[EFCPC_ATTR_UNKNOWN_FLOW_POLICY].type = NLA_NESTED;
         attr_policy[EFCPC_ATTR_UNKNOWN_FLOW_POLICY].len = 0;
 
@@ -1265,11 +1269,20 @@ static int parse_efcp_config(struct nlattr *      efcp_config_attr,
                 LOG_MISSING;
         }
 
+        if (attrs[EFCPC_ATTR_DTP_POLICY_SET]) {
+                if (parse_policy(attrs[EFCPC_ATTR_DTP_POLICY_SET],
+                                 efcp_config->dtp_ps))
+                        goto parse_fail;
+        }
+        if (attrs[EFCPC_ATTR_DTCP_POLICY_SET]) {
+                if (parse_policy(attrs[EFCPC_ATTR_DTCP_POLICY_SET],
+                                 efcp_config->dtp_ps))
+                        goto parse_fail;
+        }
         if (attrs[EFCPC_ATTR_UNKNOWN_FLOW_POLICY]) {
                 if (parse_policy(attrs[EFCPC_ATTR_UNKNOWN_FLOW_POLICY],
                                  efcp_config->unknown_flow))
                         goto parse_fail;
-
         }
 
         return 0;

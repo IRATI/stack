@@ -41,6 +41,7 @@
 #include "rmt.h"
 #include "dt-utils.h"
 #include "dtp-ps.h"
+#include "policies.h"
 
 enum efcp_state {
         EFCP_ALLOCATED = 1,
@@ -709,6 +710,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         dtp = dtp_create(tmp->dt,
                          container->rmt,
                          tmp,
+                         policy_name(container->config->dtp_ps),
                          connection);
         if (!dtp) {
                 efcp_destroy(tmp);
@@ -732,7 +734,10 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         dtcp_present = dtp_ps->dtcp_present;
         rcu_read_unlock();
         if (dtcp_present) {
-                dtcp = dtcp_create(tmp->dt, connection, container->rmt);
+                dtcp = dtcp_create(tmp->dt,
+                                   connection,
+                                   policy_name(container->config->dtcp_ps),
+                                   container->rmt);
                 if (!dtcp) {
                         efcp_destroy(tmp);
                         return cep_id_bad();

@@ -1195,9 +1195,11 @@ EXPORT_SYMBOL(dtcp_set_policy_set_param);
 
 struct dtcp * dtcp_create(struct dt *         dt,
                           struct connection * conn,
+                          const string_t *    dtcp_ps_name,
                           struct rmt *        rmt)
 {
         struct dtcp * tmp;
+        string_t *    ps_name;
 
         if (!dt) {
                 LOG_ERR("No DT passed, bailing out");
@@ -1233,9 +1235,13 @@ struct dtcp * dtcp_create(struct dt *         dt,
 
         rina_component_init(&tmp->base);
 
-        /* Try to select the default policy-set. */
-        if (dtcp_select_policy_set(tmp, "", RINA_PS_DEFAULT_NAME)) {
+        ps_name = (string_t *) dtcp_ps_name;
+        if (!ps_name || !strcmp(ps_name, ""))
+                ps_name = RINA_PS_DEFAULT_NAME;
+
+        if (dtcp_select_policy_set(tmp, "", ps_name)) {
                 dtcp_destroy(tmp);
+                LOG_ERR("Could not load DTCP PS %s", ps_name);
                 return NULL;
         }
 

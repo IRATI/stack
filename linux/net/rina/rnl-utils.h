@@ -403,6 +403,8 @@ enum data_transfer_cons_attrs_list {
 enum efcp_config_attrs_list {
         EFCPC_ATTR_DATA_TRANS_CONS = 1,
         EFCPC_ATTR_QOS_CUBES,
+        EFCPC_ATTR_DTP_POLICY_SET,
+        EFCPC_ATTR_DTCP_POLICY_SET,
         EFCPC_ATTR_UNKNOWN_FLOW_POLICY,
         __EFCPC_ATTR_MAX,
 };
