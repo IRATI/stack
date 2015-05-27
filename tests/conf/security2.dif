@@ -18,15 +18,6 @@
           	   "name" : "keyExchangeAlg",
           	   "value" : "EDH"
           	}, {
-          	   "name" : "encryptAlg",
-          	   "value" : "AES128"
-          	}, {
-          	   "name" : "macAlg",
-          	   "value" : "SHA1"
-          	}, {
-          	   "name" : "compressAlg",
-          	   "value" : "default"
-          	}, {
                    "name" : "keystore",
                    "value" : "/usr/local/irati/etc/private_key.pem"
                 }, {
@@ -36,11 +27,21 @@
 
               },
               "encryptPolicy" : {
-                   "name" : "default",
-                   "version" : "1"
+                 "name" : "default",
+                 "version" : "1",
+                 "parameters" : [ {
+          	   "name" : "encryptAlg",
+          	   "value" : "AES128"
+          	}, {
+          	   "name" : "macAlg",
+          	   "value" : "SHA1"
+          	}, {
+          	   "name" : "compressAlg",
+          	   "value" : "default"
+                } ]
               },
               "TTLPolicy" : {
-                 "name" : "decrement-one",
+                 "name" : "default",
                  "version" : "1",
                  "parameters" : [ {
                     "name" : "initialValue",
@@ -57,22 +58,6 @@
                "authPolicy" : {
                	  "name" : "PSOC_authentication-none",
            	  "version" : "1"
-                },
-                "encryptPolicy" : {
-                   "name" : "default",
-                   "version" : "1"
-                },
-                "TTLPolicy" : {
-                   "name" : "decrement-one",
-                   "version" : "1",
-                   "parameters" : [ {
-                      "name" : "initialValue",
-                      "value" : "50"
-                   } ]
-                },
-                "ErrorCheckPolicy" : {
-                   "name" : "CRC32",
-                   "version" : "1"
                 }
            }, {
                "underlyingDIF" : "110",
@@ -90,12 +75,8 @@
            	     "value" : "default"
            	  } ]
                 },
-                "encryptPolicy" : {
-                   "name" : "default",
-                   "version" : "1"
-                },
                 "TTLPolicy" : {
-                   "name" : "decrement-one",
+                   "name" : "default",
                    "version" : "1",
                    "parameters" : [ {
                       "name" : "initialValue",

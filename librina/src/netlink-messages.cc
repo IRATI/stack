@@ -292,62 +292,56 @@ const std::string BaseNetlinkMessage::operationCodeToString(RINANetlinkOperation
 	case RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE:
 		result = "42_ENABLE_ENCRYPT_RESP";
 		break;
-	case RINA_C_IPCP_ENABLE_TTL_ERROR_CHECK_REQUEST:
-		result = "43_ENABLE_TTL_ERROR_CHECK_REQ";
-		break;
-	case RINA_C_IPCP_ENABLE_TTL_ERROR_CHECK_RESPONSE:
-		result = "44_ENABLE_TTL_ERROR_CHECK_RESP";
-		break;
 	case RINA_C_IPCM_IPC_PROCESS_INITIALIZED:
-		result = "45_IPCP_INIT";
+		result = "43_IPCP_INIT";
 		break;
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST:
-		result = "46_APP_ALLOC_FLOW_REQ";
+		result = "44_APP_ALLOC_FLOW_REQ";
 		break;
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT:
-		result = "47_APP_ALLOC_FLOW_REQ_RES";
+		result = "45_APP_ALLOC_FLOW_REQ_RES";
 		break;
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED:
-		result = "48_APP_ALLOC_FLOW_REQ_ARR";
+		result = "46_APP_ALLOC_FLOW_REQ_ARR";
 		break;
 	case RINA_C_APP_ALLOCATE_FLOW_RESPONSE:
-		result = "49_APP_ALLOC_FLOW_RESP";
+		result = "47_APP_ALLOC_FLOW_RESP";
 		break;
 	case RINA_C_APP_DEALLOCATE_FLOW_REQUEST:
-		result = "50_APP_DEALLOC_FLOW_REQ";
+		result = "48_APP_DEALLOC_FLOW_REQ";
 		break;
 	case RINA_C_APP_DEALLOCATE_FLOW_RESPONSE:
-		result = "51_APP_DEALLOC_FLOW_RESP";
+		result = "49_APP_DEALLOC_FLOW_RESP";
 		break;
 	case RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION:
-		result = "52_APP_FLOW_DEALLOC_NOT";
+		result = "50_APP_FLOW_DEALLOC_NOT";
 		break;
 	case RINA_C_APP_REGISTER_APPLICATION_REQUEST:
-		result = "53_APP_REG_REQ";
+		result = "51_APP_REG_REQ";
 		break;
 	case RINA_C_APP_REGISTER_APPLICATION_RESPONSE:
-		result = "54_APP_REG_RESP";
+		result = "52_APP_REG_RESP";
 		break;
 	case RINA_C_APP_UNREGISTER_APPLICATION_REQUEST:
-		result = "55_APP_UNREG_REQ";
+		result = "53_APP_UNREG_REQ";
 		break;
 	case RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE:
-		result = "56_APP_UNREG_RESP";
+		result = "54_APP_UNREG_RESP";
 		break;
 	case RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION:
-		result = "57_APP_REG_CANC_NOT";
+		result = "55_APP_REG_CANC_NOT";
 		break;
 	case RINA_C_APP_GET_DIF_PROPERTIES_REQUEST:
-		result = "58_GET_DIF_PROPS_REQ";
+		result = "56_GET_DIF_PROPS_REQ";
 		break;
 	case RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE:
-		result = "59_GET_DIF_PROPS_RESP";
+		result = "57_GET_DIF_PROPS_RESP";
 		break;
 	case RINA_C_IPCM_PLUGIN_LOAD_REQUEST:
-		result = "60_PLUGIN_LOAD_REQ";
+		result = "58_PLUGIN_LOAD_REQ";
 		break;
 	case RINA_C_IPCM_PLUGIN_LOAD_RESPONSE:
-		result = "61_PLUGIN_LOAD_RESP";
+		result = "59_PLUGIN_LOAD_RESP";
 		break;
 	default:
 		result = "Unknown operation";
@@ -1998,31 +1992,6 @@ IPCEvent* IPCPEnableEncryptionResponseMessage::toIPCEvent()
         IPCEvent * event = new EnableEncryptionResponseEvent(result,
                         				     port_id,
                         				     getSequenceNumber());
-        return event;
-}
-
-/// CLASS IPCPEnableTTLErrorCheckRequestMessage
-IPCPEnableTTLErrorCheckRequestMessage::IPCPEnableTTLErrorCheckRequestMessage()
-	: BaseNetlinkMessage(RINA_C_IPCP_ENABLE_TTL_ERROR_CHECK_REQUEST)
-{
-}
-
-IPCEvent* IPCPEnableTTLErrorCheckRequestMessage::toIPCEvent() {
-        return 0;
-}
-
-/// CLASS IPCPEnableEncryptionResponseMessage
-IPCPEnableTTLErrorCheckResponseMessage::IPCPEnableTTLErrorCheckResponseMessage()
-	: BaseNetlinkResponseMessage(RINA_C_IPCP_ENABLE_TTL_ERROR_CHECK_RESPONSE)
-{
-	port_id = 0;
-}
-
-IPCEvent* IPCPEnableTTLErrorCheckResponseMessage::toIPCEvent()
-{
-        IPCEvent * event = new EnableTTLErrorCheckResponseEvent(result,
-                        				        port_id,
-                        				        getSequenceNumber());
         return event;
 }
 

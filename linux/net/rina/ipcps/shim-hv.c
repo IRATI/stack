@@ -1128,6 +1128,14 @@ static int shim_hv_query_rib(struct ipcp_instance_data * data,
 	return -1;
 }
 
+static const struct name * shim_hv_dif_name(struct ipcp_instance_data *priv)
+{
+        ASSERT(priv);
+        ASSERT(name_is_ok(&priv->dif_name));
+
+        return &priv->dif_name;
+}
+
 /* Interface exported by a shim IPC process. */
 static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .flow_allocate_request     = shim_hv_flow_allocate_request,
@@ -1164,11 +1172,12 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .query_rib		   = shim_hv_query_rib,
 
         .ipcp_name                 = shim_hv_ipcp_name,
-        .dif_name                  = shim_hv_dif_name,
 
         .set_policy_set_param      = NULL,
         .select_policy_set         = NULL,
         .enable_encryption	   = NULL,
+        .find_dup_config	   = NULL,
+        .dif_name		   = shim_hv_dif_name
 };
 
 /* Initialize the IPC process factory. */

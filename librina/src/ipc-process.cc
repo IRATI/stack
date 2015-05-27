@@ -258,16 +258,6 @@ EnableEncryptionResponseEvent::EnableEncryptionResponseEvent(int res,
 	result = res;
 }
 
-// Class enable encryption response event
-EnableTTLErrorCheckResponseEvent::EnableTTLErrorCheckResponseEvent(int res,
-                int port, unsigned int sequenceNumber) :
-                		IPCEvent(IPC_PROCESS_ENABLE_TTL_ERROR_CHECK_RESPONSE,
-                				sequenceNumber)
-{
-	port_id = port;
-	result = res;
-}
-
 /* CLASS EXTENDED IPC MANAGER */
 const std::string ExtendedIPCManager::error_allocate_flow =
 		"Error allocating flow";

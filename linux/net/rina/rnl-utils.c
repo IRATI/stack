@@ -1419,6 +1419,186 @@ static int parse_efcp_config(struct nlattr *      efcp_config_attr,
         return -1;
 }
 
+static int parse_dup_config_entry(struct nlattr *           dup_config_entry_attr,
+                                  struct dup_config_entry * dup_config_entry)
+{
+        struct nla_policy attr_policy[AUTHP_ATTR_MAX + 1];
+        struct nlattr *   attrs[AUTHP_ATTR_MAX + 1];
+
+	attr_policy[AUTHP_AUTH_POLICY].type = NLA_NESTED;
+	attr_policy[AUTHP_AUTH_POLICY].len = 0;
+	attr_policy[AUTHP_CRC_POLICY].type = NLA_NESTED;
+	attr_policy[AUTHP_CRC_POLICY].len = 0;
+	attr_policy[AUTHP_TTL_POLICY].type = NLA_NESTED;
+	attr_policy[AUTHP_TTL_POLICY].len = 0;
+
+        if (nla_parse_nested(attrs,
+        		     AUTHP_ATTR_MAX,
+        		     dup_config_entry_attr,
+                             attr_policy) < 0)
+                goto parse_fail;
+
+        if (attrs[AUTHP_AUTH_POLICY]) {
+        	dup_con
+        	dup_config_entry->n_1_dif_name =
+        			nla_dup_string(attrs[SAUTHP_UNDER_DIF], GFP_KERNEL);
+        }
+
+        if (attrs[SAUTHP_AUTH_PROFILE]) {
+                if (parse_dup_config_entry(attrs[SAUTHP_AUTH_PROFILE],
+                		           dup_config_entry))
+                	goto parse_fail;
+        }
+
+        return 0;
+
+ parse_fail:
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("specific dup config attributes"));
+        return -1;
+}
+
+
+static int parse_s_dup_config_entry(struct nlattr *           sdup_config_entry_attr,
+                                    struct dup_config_entry * dup_config_entry)
+{
+        struct nla_policy attr_policy[SAUTHP_ATTR_MAX + 1];
+        struct nlattr *   attrs[SAUTHP_ATTR_MAX + 1];
+
+	attr_policy[SAUTHP_UNDER_DIF].type = NLA_STRING;
+	attr_policy[SAUTHP_UNDER_DIF].len = 0;
+	attr_policy[SAUTHP_AUTH_PROFILE].type = NLA_NESTED;
+	attr_policy[SAUTHP_AUTH_PROFILE].len = 0;
+
+        if (nla_parse_nested(attrs,
+        		     SAUTHP_ATTR_MAX,
+        		     sdup_config_entry_attr,
+                             attr_policy) < 0)
+                goto parse_fail;
+
+        if (attrs[SAUTHP_UNDER_DIF]) {
+        	dup_config_entry->n_1_dif_name =
+        			nla_dup_string(attrs[SAUTHP_UNDER_DIF], GFP_KERNEL);
+        }
+
+        if (attrs[SAUTHP_AUTH_PROFILE]) {
+                if (parse_dup_config_entry(attrs[SAUTHP_AUTH_PROFILE],
+                		           dup_config_entry))
+                	goto parse_fail;
+        }
+
+        return 0;
+
+ parse_fail:
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("specific dup config attributes"));
+        return -1;
+}
+
+static int parse_list_of_dup_config_entries(struct nlattr *      nested_attr,
+                             	     	    struct sdup_config * sdup_config)
+{
+        struct nlattr *            nla;
+        struct dup_config_entry *  entry;
+        struct dup_config *        config;
+        int                        rem                   = 0;
+        int                        entries_with_problems = 0;
+        int                        total_entries         = 0;
+
+        if (!nested_attr) {
+                LOG_ERR("Bogus attribute passed, bailing out");
+                return -1;
+        }
+
+        if (!sdup_config) {
+                LOG_ERR("Bogus sdup_config passed, bailing out");
+                return -1;
+        }
+
+        for (nla = (struct nlattr*) nla_data(nested_attr),
+                     rem = nla_len(nested_attr);
+             nla_ok(nla, rem);
+             nla = nla_next(nla, &(rem))) {
+                total_entries++;
+
+                entry = dup_config_entry_create();
+                if (!entry) {
+                        entries_with_problems++;
+                        continue;
+                }
+
+                if (parse_s_dup_config_entry(nla, entry) < 0) {
+                        dup_config_entry_destroy(entry);
+                        entries_with_problems++;
+                        continue;
+                }
+
+                config = dup_config_create();
+                if (!config) {
+                	dup_config_entry_destroy(entry);
+                        entries_with_problems++;
+                        continue;
+                }
+                config->entry = entry;
+                list_add(&config->next, &sdup_config->specific_dup_confs);
+        }
+
+        if (rem > 0) {
+                LOG_WARN("Missing bits to parse");
+        }
+
+        if (entries_with_problems > 0)
+                LOG_WARN("Problems parsing %d out of %d dup config entries",
+                         entries_with_problems,
+                         total_entries);
+
+        return 0;
+}
+
+static int parse_sdup_config(struct nlattr *      sdup_config_attr,
+                             struct sdup_config * sdup_config)
+{
+        struct nla_policy attr_policy[SECMANC_ATTR_MAX + 1];
+        struct nlattr *   attrs[SECMANC_ATTR_MAX + 1];
+
+	attr_policy[SECMANC_DIF_MEM_ACC_CON_POLICY].type = NLA_NESTED;
+	attr_policy[SECMANC_DIF_MEM_ACC_CON_POLICY].len = 0;
+	attr_policy[SECMANC_NEW_FLOW_ACC_CON_POLICY].type = NLA_NESTED;
+	attr_policy[SECMANC_NEW_FLOW_ACC_CON_POLICY].len = 0;
+	attr_policy[SECMANC_DEFAULT_AUTH_SDUP_POLICY].type = NLA_NESTED;
+	attr_policy[SECMANC_DEFAULT_AUTH_SDUP_POLICY].len = 0;
+	attr_policy[SECMANC_SPECIFIC_AUTH_SDUP_POLICIES].type = NLA_NESTED;
+	attr_policy[SECMANC_SPECIFIC_AUTH_SDUP_POLICIES].len = 0;
+
+        if (nla_parse_nested(attrs,
+        		     SECMANC_ATTR_MAX,
+        		     sdup_config_attr,
+                             attr_policy) < 0)
+                goto parse_fail;
+
+        if (attrs[SECMANC_DEFAULT_AUTH_SDUP_POLICY]) {
+        	sdup_config->default_dup_conf = dup_config_entry_create();
+        	if (!sdup_config->default_dup_conf)
+        		goto parse_fail;
+
+        	sdup_config->default_dup_conf->n_1_dif_name = "";
+        	if (parse_dup_config_entry(attrs[SECMANC_DEFAULT_AUTH_SDUP_POLICY],
+        				   sdup_config->default_dup_conf))
+        		goto parse_fail;
+        }
+
+        if (attrs[SECMANC_SPECIFIC_AUTH_SDUP_POLICIES]) {
+                if (parse_list_of_dup_config_entries(attrs[SECMANC_SPECIFIC_AUTH_SDUP_POLICIES],
+                				     sdup_config))
+                	goto parse_fail;
+        }
+
+        return 0;
+
+ parse_fail:
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("sdup config attributes"));
+        return -1;
+}
+
+
 static int parse_dif_config(struct nlattr *     dif_config_attr,
                             struct dif_config * dif_config)
 {
@@ -1433,6 +1613,8 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
         attr_policy[DCONF_ATTR_EFCPC].len                = 0;
         attr_policy[DCONF_ATTR_RMTC].type                = NLA_NESTED;
         attr_policy[DCONF_ATTR_RMTC].len                 = 0;
+        attr_policy[DCONF_ATTR_SECMANC].type             = NLA_NESTED;
+        attr_policy[DCONF_ATTR_SECMANC].len              = 0;
 
         if (nla_parse_nested(attrs,
                              DCONF_ATTR_MAX,
@@ -1461,6 +1643,16 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
 
         if (attrs[DCONF_ATTR_RMTC]) {
                 LOG_MISSING;
+        }
+
+        if (attrs[DCONF_ATTR_SECMANC]) {
+        	dif_config->sdup_config = sdup_config_create();
+        	if (!dif_config->sdup_config)
+        		goto parse_fail;
+
+                if (parse_sdup_config(attrs[DCONF_ATTR_SECMANC],
+                		      dif_config->sdup_config))
+                	goto parse_fail;
         }
 
         return 0;

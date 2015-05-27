@@ -72,7 +72,9 @@ static struct rmt_n1_port * n1_port_create(port_id_t id,
         tmp->state   = N1_PORT_STATE_ENABLED;
         tmp->dup_config = dup_config;
 
-        //dup state init
+        /* dup state init. FIXME: This has to be moved to the
+         * specific encryption policy initialization
+         */
         if (dup_config != NULL && dup_config->encryption_cipher != NULL){
             tmp->blkcipher = crypto_alloc_blkcipher(dup_config->encryption_cipher, 0, 0);
             if (IS_ERR(tmp->blkcipher)) {
@@ -103,6 +105,7 @@ static int n1_port_n1_user_ipcp_unbind(struct rmt_n1_port * n1p)
 
         ASSERT(n1p);
 
+        /* FIXME: this has to be moved to specific encryption policy */
         if (n1p->blkcipher != NULL){
             crypto_free_blkcipher(n1p->blkcipher);
         }
@@ -127,6 +130,16 @@ static int n1_port_destroy(struct rmt_n1_port * n1p)
         LOG_DBG("Destroying N-1 port %pK (port-id = %d)", n1p, n1p->port_id);
 
         hash_del(&n1p->hlist);
+
+        if (n1p->dup_config) {
+        	dup_config_entry_destroy(n1p->dup_config);
+        }
+
+        /* FIXME: this has to be moved to specific encryption policy */
+        if (n1p->blkcipher) {
+        	crypto_free_blkcipher(n1p->blkcipher);
+        }
+
         rkfree(n1p);
 
         return 0;
@@ -552,7 +565,8 @@ static int n1_port_write(struct serdes *      serdes,
 
         atomic_dec(&n1_port->n_sdus);
 
-        if (dup_conf != NULL && dup_conf->ttl > 0){
+        /* FIXME, this should be moved to specific TTL policy inside serdes*/
+        if (dup_conf != NULL && dup_conf->ttl_policy != NULL){
             pci = pdu_pci_get_rw(pdu);
             if (!pci) {
                     LOG_ERR("Cannot get PCI");
@@ -560,9 +574,9 @@ static int n1_port_write(struct serdes *      serdes,
                     return -1;
             }
 
-            LOG_DBG("TTL to start with is %d", dup_conf->ttl);
+            LOG_DBG("TTL to start with is %d", dup_conf->initial_ttl_value);
 
-            if (pci_ttl_set(pci, dup_conf->ttl)) {
+            if (pci_ttl_set(pci, dup_conf->initial_ttl_value)) {
                     LOG_ERR("Could not set TTL");
                     pdu_destroy(pdu);
                     return -1;
@@ -819,8 +833,18 @@ static int __queue_send_add(struct rmt * instance,
 {
         struct rmt_n1_port * tmp;
         struct rmt_ps *      ps;
+        struct name * n_1_dif_name;
+        struct dup_config_entry * dup_config;
 
-        tmp = n1_port_create(id, n1_ipcp, NULL);
+        n_1_dif_name = n1_ipcp->ops->dif_name(n1_ipcp->data);
+
+        if (instance->parent->ops->find_dup_config)
+        	dup_config = instance->parent->ops->find_dup_config(instance->parent->data,
+        						            n_1_dif_name->process_name);
+        else
+        	dup_config = NULL;
+
+        tmp = n1_port_create(id, n1_ipcp, dup_config_entry_dup(dup_config));
         if (!tmp)
                 return -1;
 

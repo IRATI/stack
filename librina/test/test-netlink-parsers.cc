@@ -3234,13 +3234,8 @@ int testEnableEncryptionRequestMessage() {
         int returnValue = 0;
 
         IPCPEnableEncryptionRequestMessage message;
-        message.profile.compress_alg = "AES128";
-        message.profile.mac_alg = "SHA1";
-        message.profile.compress_alg = "default";
         message.profile.enable_decryption = true;
         message.profile.enable_encryption = true;
-        message.profile.encrypt_policy_config.name_ = "mypolicy";
-        message.profile.encrypt_policy_config.version_ = "350";
         message.profile.port_id = 232;
         message.profile.encrypt_key.length = 16;
         message.profile.encrypt_key.data = new unsigned char[16];
@@ -3291,23 +3286,8 @@ int testEnableEncryptionRequestMessage() {
         } else if (message.profile.enable_encryption != recoveredMessage->profile.enable_encryption) {
         	std::cout << "Error with enable_encryption";
         	returnValue = -1;
-        } else if (message.profile.encrypt_alg != recoveredMessage->profile.encrypt_alg) {
-        	std::cout << "Error with encrypt_alg";
-        	returnValue = -1;
-        } else if (message.profile.mac_alg != recoveredMessage->profile.mac_alg) {
-        	std::cout << "Error with mac_alg";
-        	returnValue = -1;
-        } else if (message.profile.compress_alg != recoveredMessage->profile.compress_alg) {
-        	std::cout << "Error with compress_alg";
-        	returnValue = -1;
         } else if (message.profile.port_id != recoveredMessage->profile.port_id) {
         	std::cout << "Error with port_id";
-        	returnValue = -1;
-        } else if (message.profile.encrypt_policy_config.name_ != recoveredMessage->profile.encrypt_policy_config.name_) {
-        	std::cout << "Error with encrypt_policy_config name";
-        	returnValue = -1;
-        } else if (message.profile.encrypt_policy_config.version_ != recoveredMessage->profile.encrypt_policy_config.version_) {
-        	std::cout << "Error with encrypt_policy_config version";
         	returnValue = -1;
         } else if (message.profile.encrypt_key.length != recoveredMessage->profile.encrypt_key.length) {
         	std::cout << "Error with encrypt key length";
@@ -3319,75 +3299,6 @@ int testEnableEncryptionRequestMessage() {
 
         if (returnValue == 0) {
                 std::cout << "IPCPEnableEncryptionRequestMessage test ok\n";
-        }
-        nlmsg_free(netlinkMessage);
-        delete recoveredMessage;
-
-        return returnValue;
-}
-
-int testEnableTTLErrorCheckRequestMessage() {
-        std::cout << "TESTING ENABLE TTL ERROR CHECK REQUEST MESSAGE\n";
-        int returnValue = 0;
-
-        IPCPEnableTTLErrorCheckRequestMessage message;
-        message.profile.enable_error_check = ErrorCheckTTLProfile::ENABLE_BOTH;
-        message.profile.error_check_policy.name_ = "mypolicy";
-        message.profile.error_check_policy.version_ = "350";
-        message.profile.enable_ttl = ErrorCheckTTLProfile::ENABLE_BOTH;
-        message.profile.ttl_policy.name_ = "mypolicy";
-        message.profile.ttl_policy.version_ = "350";
-        message.profile.port_id = 232;
-
-        struct nl_msg* netlinkMessage = nlmsg_alloc();
-        if (!netlinkMessage) {
-                std::cout << "Error allocating Netlink message\n";
-        }
-        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
-                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
-
-        int result = putBaseNetlinkMessage(netlinkMessage, &message);
-        if (result < 0) {
-                std::cout << "Error constructing IPCPEnableTTLErrorCheckRequestMessage "
-                                << "message \n";
-                nlmsg_free(netlinkMessage);
-                return result;
-        }
-
-        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
-        IPCPEnableTTLErrorCheckRequestMessage * recoveredMessage =
-                        dynamic_cast<IPCPEnableTTLErrorCheckRequestMessage *>(
-                                        parseBaseNetlinkMessage(netlinkMessageHeader));
-
-        if (recoveredMessage == 0) {
-                std::cout << "Error parsing IPCPEnableTTLErrorCheckRequestMessage message "
-                                << "\n";
-                returnValue = -1;
-        } else if (message.profile.enable_error_check != recoveredMessage->profile.enable_error_check) {
-        	std::cout << "Error with enable error check";
-        	returnValue = -1;
-        } else if (message.profile.enable_ttl != recoveredMessage->profile.enable_ttl) {
-        	std::cout << "Error with enable TTL";
-        	returnValue = -1;
-        } else if (message.profile.port_id != recoveredMessage->profile.port_id) {
-        	std::cout << "Error with port_id";
-        	returnValue = -1;
-        } else if (message.profile.error_check_policy.name_ != recoveredMessage->profile.error_check_policy.name_) {
-        	std::cout << "Error with error_check_policy name";
-        	returnValue = -1;
-        } else if (message.profile.error_check_policy.version_ != recoveredMessage->profile.error_check_policy.version_) {
-        	std::cout << "Error with error_check_policy version";
-        	returnValue = -1;
-        } else if (message.profile.ttl_policy.name_ != recoveredMessage->profile.ttl_policy.name_) {
-        	std::cout << "Error with ttl_policy name";
-        	returnValue = -1;
-        } else if (message.profile.ttl_policy.version_ != recoveredMessage->profile.ttl_policy.version_) {
-        	std::cout << "Error with ttl_policy version";
-        	returnValue = -1;
-        }
-
-        if (returnValue == 0) {
-                std::cout << "IPCPEnableTTLErrorCheckRequestMessage test ok\n";
         }
         nlmsg_free(netlinkMessage);
         delete recoveredMessage;
@@ -3616,11 +3527,6 @@ int main() {
 	}
 
 	result = testEnableEncryptionRequestMessage();
-	if (result < 0) {
-		return result;
-	}
-
-	result = testEnableTTLErrorCheckRequestMessage();
 	if (result < 0) {
 		return result;
 	}

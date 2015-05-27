@@ -873,18 +873,6 @@ public:
         int result;
 };
 
-class EnableTTLErrorCheckResponseEvent: public IPCEvent {
-public:
-        EnableTTLErrorCheckResponseEvent(int res,
-                        int port_id, unsigned int sequenceNumber);
-
-        // The N-1 port-id where encryption was to be applied
-        int port_id;
-
-        // Result of the operation, 0 success
-        int result;
-};
-
 /**
  * FIXME: Quick hack to get multiple parameters back
  */

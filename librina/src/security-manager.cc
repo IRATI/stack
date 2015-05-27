@@ -551,12 +551,8 @@ EncryptionProfile SSH2SecurityContext::get_encryption_profile(bool enable_encryp
 					 	 	      bool enable_decryption)
 {
 	EncryptionProfile result;
-	result.encrypt_policy_config = encrypt_policy_config;
 	result.enable_encryption = enable_encryption;
 	result.enable_decryption = enable_decryption;
-	result.encrypt_alg = encrypt_alg;
-	result.mac_alg = mac_alg;
-	result.compress_alg = compress_alg;
 	result.encrypt_key = encrypt_key;
 	result.port_id = id;
 
@@ -568,9 +564,9 @@ SSH2SecurityContext::SSH2SecurityContext(int session_id,
 		: ISecurityContext(session_id)
 {
 	key_exch_alg = profile.authPolicy.get_param_value(KEY_EXCHANGE_ALGORITHM);
-	encrypt_alg = profile.authPolicy.get_param_value(ENCRYPTION_ALGORITHM);
-	mac_alg = profile.authPolicy.get_param_value(MAC_ALGORITHM);
-	compress_alg = profile.authPolicy.get_param_value(COMPRESSION_ALGORITHM);
+	encrypt_alg = profile.encryptPolicy.get_param_value(ENCRYPTION_ALGORITHM);
+	mac_alg = profile.encryptPolicy.get_param_value(MAC_ALGORITHM);
+	compress_alg = profile.encryptPolicy.get_param_value(COMPRESSION_ALGORITHM);
 	keystore_path = profile.authPolicy.get_param_value(KEYSTORE_PATH);
 	if (keystore_path == std::string()) {
 		//TODO set the configuration directory as the default keystore path

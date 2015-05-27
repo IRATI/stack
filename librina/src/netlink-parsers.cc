@@ -519,24 +519,6 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
-	case RINA_C_IPCP_ENABLE_TTL_ERROR_CHECK_REQUEST: {
-		IPCPEnableTTLErrorCheckRequestMessage * responseObject =
-			dynamic_cast<IPCPEnableTTLErrorCheckRequestMessage *>(message);
-		if (putIPCPEnableTTLErrorCheckRequestMessage(netlinkMessage,
-				*responseObject) < 0) {
-			return -1;
-		}
-		return 0;
-	}
-	case RINA_C_IPCP_ENABLE_TTL_ERROR_CHECK_RESPONSE: {
-		IPCPEnableTTLErrorCheckResponseMessage * responseObject =
-			dynamic_cast<IPCPEnableTTLErrorCheckResponseMessage *>(message);
-		if (putIPCPEnableTTLErrorCheckResponseMessage(netlinkMessage,
-				*responseObject) < 0) {
-			return -1;
-		}
-		return 0;
-	}
 	default: {
 		return -1;
 	}
@@ -763,14 +745,6 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	}
 	case RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE: {
 		return parseIPCPEnableEncryptionResponseMessage(
-		                netlinkMessageHeader);
-	}
-	case RINA_C_IPCP_ENABLE_TTL_ERROR_CHECK_REQUEST: {
-		return parseIPCPEnableTTLErrorCheckRequestMessage(
-		                netlinkMessageHeader);
-	}
-	case RINA_C_IPCP_ENABLE_TTL_ERROR_CHECK_RESPONSE: {
-		return parseIPCPEnableTTLErrorCheckResponseMessage(
 		                netlinkMessageHeader);
 	}
 	default: {
@@ -1414,7 +1388,7 @@ int parseListOfDIFConfigurationPolicySets(nlattr *nested,
 int putAuthSDUProtectionProfile(nl_msg* netlinkMessage,
 		const AuthSDUProtectionProfile& object)
 {
-	struct nlattr *authp, *crcp, *ttlp;
+	struct nlattr *authp, *encryptp, *crcp, *ttlp;
 
 	if (!(authp = nla_nest_start(netlinkMessage, AUTHP_AUTH_POLICY))) {
 		goto nla_put_failure;
@@ -1424,6 +1398,15 @@ int putAuthSDUProtectionProfile(nl_msg* netlinkMessage,
 		goto nla_put_failure;
 	}
 	nla_nest_end(netlinkMessage, authp);
+
+	if (!(encryptp = nla_nest_start(netlinkMessage, AUTHP_ENCRYPT_POLICY))) {
+		goto nla_put_failure;
+	}
+	if (putPolicyConfigObject(netlinkMessage,
+				  object.encryptPolicy) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, encryptp);
 
 	if (!(crcp = nla_nest_start(netlinkMessage, AUTHP_CRC_POLICY))) {
 		goto nla_put_failure;
@@ -1570,6 +1553,9 @@ AuthSDUProtectionProfile * parseAuthSDUProtectionProfile(nlattr *nested)
 	attr_policy[AUTHP_AUTH_POLICY].type = NLA_NESTED;
 	attr_policy[AUTHP_AUTH_POLICY].minlen = 0;
 	attr_policy[AUTHP_AUTH_POLICY].maxlen = 0;
+	attr_policy[AUTHP_ENCRYPT_POLICY].type = NLA_NESTED;
+	attr_policy[AUTHP_ENCRYPT_POLICY].minlen = 0;
+	attr_policy[AUTHP_ENCRYPT_POLICY].maxlen = 0;
 	attr_policy[AUTHP_CRC_POLICY].type = NLA_NESTED;
 	attr_policy[AUTHP_CRC_POLICY].minlen = 0;
 	attr_policy[AUTHP_CRC_POLICY].maxlen = 0;
@@ -1596,6 +1582,18 @@ AuthSDUProtectionProfile * parseAuthSDUProtectionProfile(nlattr *nested)
 			return 0;
 		} else {
 			result->authPolicy = *policy_config;
+			delete policy_config;
+		}
+	}
+
+	if (attrs[AUTHP_ENCRYPT_POLICY]) {
+		policy_config = parsePolicyConfigObject(
+					attrs[AUTHP_ENCRYPT_POLICY]);
+		if (policy_config == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->encryptPolicy = *policy_config;
 			delete policy_config;
 		}
 	}
@@ -5277,29 +5275,12 @@ int putIpcmPluginLoadResponseMessageObject(nl_msg* netlinkMessage,
 int putIPCPEnableEncryptionRequestMessage(nl_msg* netlinkMessage,
 		const IPCPEnableEncryptionRequestMessage& object)
 {
-	struct nlattr *en_policy;
-
-	if (!(en_policy =
-			nla_nest_start(netlinkMessage, EERM_ATTR_ENCRYPT_POLICY_CONFIG))) {
-		goto nla_put_failure;
-	}
-	if (putPolicyConfigObject(netlinkMessage, object.profile.encrypt_policy_config) < 0) {
-		goto nla_put_failure;
-	}
-	nla_nest_end(netlinkMessage, en_policy);
-
 	if (object.profile.enable_decryption) {
 		NLA_PUT_FLAG(netlinkMessage, EERM_ATTR_EN_DECRYPT);
 	}
 	if (object.profile.enable_encryption) {
 		NLA_PUT_FLAG(netlinkMessage, EERM_ATTR_EN_ENCRYPT);
 	}
-	NLA_PUT_STRING(netlinkMessage, EERM_ATTR_ENCRYPT_ALG,
-		       object.profile.encrypt_alg.c_str());
-	NLA_PUT_STRING(netlinkMessage, EERM_ATTR_MAC_ALG,
-		       object.profile.mac_alg.c_str());
-	NLA_PUT_STRING(netlinkMessage, EERM_ATTR_COMPRESS_ALG,
-		       object.profile.compress_alg.c_str());
 	NLA_PUT(netlinkMessage, EERM_ATTR_ENCRYPT_KEY,
 		object.profile.encrypt_key.length, object.profile.encrypt_key.data);
 	NLA_PUT_U32(netlinkMessage, EERM_ATTR_N_1_PORT, object.profile.port_id);
@@ -5322,59 +5303,6 @@ int putIPCPEnableEncryptionResponseMessage(nl_msg* netlinkMessage,
 
         nla_put_failure: LOG_ERR(
                         "Error building IPCPEnableEncryptionResponseMessage"
-                        "Netlink object");
-        return -1;
-}
-
-int putIPCPEnableTTLErrorCheckRequestMessage(nl_msg* netlinkMessage,
-		const IPCPEnableTTLErrorCheckRequestMessage& object)
-{
-	struct nlattr *err_policy, *ttl_policy;
-
-	NLA_PUT_U32(netlinkMessage, ETECR_ATTR_N_1_PORT, object.profile.port_id);
-
-	NLA_PUT_U32(netlinkMessage, ETECR_ATTR_ENABLE_ERROR_CHECK,
-		    object.profile.enable_error_check);
-
-	if (!(err_policy =
-			nla_nest_start(netlinkMessage, ETECR_ATTR_ERROR_CHECK_POLICY))) {
-		goto nla_put_failure;
-	}
-	if (putPolicyConfigObject(netlinkMessage, object.profile.error_check_policy) < 0) {
-		goto nla_put_failure;
-	}
-	nla_nest_end(netlinkMessage, err_policy);
-
-	NLA_PUT_U32(netlinkMessage, ETECR_ATTR_ENABLE_TTL,
-		    object.profile.enable_ttl);
-
-	if (!(ttl_policy =
-			nla_nest_start(netlinkMessage, ETECR_ATTR_TTL_POLICY))) {
-		goto nla_put_failure;
-	}
-	if (putPolicyConfigObject(netlinkMessage, object.profile.ttl_policy) < 0) {
-		goto nla_put_failure;
-	}
-	nla_nest_end(netlinkMessage, ttl_policy);
-
-	return 0;
-
-        nla_put_failure: LOG_ERR(
-                        "Error building IPCPEnableTTLErrorCheckRequestMessage "
-                        "Netlink object");
-        return -1;
-}
-
-int putIPCPEnableTTLErrorCheckResponseMessage(nl_msg* netlinkMessage,
-		const IPCPEnableTTLErrorCheckResponseMessage& object)
-{
-	NLA_PUT_U32(netlinkMessage, ETECRR_ATTR_RESULT, object.result);
-	NLA_PUT_U32(netlinkMessage, ETECRR_ATTR_N_1_PORT, object.port_id);
-
-	return 0;
-
-        nla_put_failure: LOG_ERR(
-                        "Error building IPCPEnableTTLErrorCheckResponseMessage"
                         "Netlink object");
         return -1;
 }
@@ -9124,24 +9052,12 @@ IPCPEnableEncryptionRequestMessage * parseIPCPEnableEncryptionRequestMessage(
 		nlmsghdr *hdr)
 {
 	struct nla_policy attr_policy[EERM_ATTR_MAX + 1];
-	attr_policy[EERM_ATTR_ENCRYPT_POLICY_CONFIG].type = NLA_NESTED;
-	attr_policy[EERM_ATTR_ENCRYPT_POLICY_CONFIG].minlen = 0;
-	attr_policy[EERM_ATTR_ENCRYPT_POLICY_CONFIG].maxlen = 0;
 	attr_policy[EERM_ATTR_EN_ENCRYPT].type = NLA_FLAG;
 	attr_policy[EERM_ATTR_EN_ENCRYPT].minlen = 0;
 	attr_policy[EERM_ATTR_EN_ENCRYPT].maxlen = 0;
 	attr_policy[EERM_ATTR_EN_DECRYPT].type = NLA_FLAG;
 	attr_policy[EERM_ATTR_EN_DECRYPT].minlen = 0;
 	attr_policy[EERM_ATTR_EN_DECRYPT].maxlen = 0;
-	attr_policy[EERM_ATTR_ENCRYPT_ALG].type = NLA_STRING;
-	attr_policy[EERM_ATTR_ENCRYPT_ALG].minlen = 0;
-	attr_policy[EERM_ATTR_ENCRYPT_ALG].maxlen = 65535;
-	attr_policy[EERM_ATTR_MAC_ALG].type = NLA_STRING;
-	attr_policy[EERM_ATTR_MAC_ALG].minlen = 0;
-	attr_policy[EERM_ATTR_MAC_ALG].maxlen = 65535;
-	attr_policy[EERM_ATTR_COMPRESS_ALG].type = NLA_STRING;
-	attr_policy[EERM_ATTR_COMPRESS_ALG].minlen = 0;
-	attr_policy[EERM_ATTR_COMPRESS_ALG].maxlen = 65535;
 	attr_policy[EERM_ATTR_ENCRYPT_KEY].type = NLA_UNSPEC;
 	attr_policy[EERM_ATTR_ENCRYPT_KEY].minlen = 0;
 	attr_policy[EERM_ATTR_ENCRYPT_KEY].maxlen = 65535;
@@ -9160,19 +9076,6 @@ IPCPEnableEncryptionRequestMessage * parseIPCPEnableEncryptionRequestMessage(
 
 	IPCPEnableEncryptionRequestMessage * result =
 			new IPCPEnableEncryptionRequestMessage();
-	PolicyConfig * encrypt_config;
-
-	if (attrs[EERM_ATTR_ENCRYPT_POLICY_CONFIG]) {
-		encrypt_config = parsePolicyConfigObject(
-	                        	attrs[EERM_ATTR_ENCRYPT_POLICY_CONFIG]);
-		if (encrypt_config == 0) {
-			delete result;
-			return 0;
-		} else {
-			result->profile.encrypt_policy_config = *encrypt_config;
-			delete encrypt_config;
-		}
-	}
 
 	if (attrs[EERM_ATTR_EN_ENCRYPT]) {
 		result->profile.enable_encryption = true;
@@ -9184,21 +9087,6 @@ IPCPEnableEncryptionRequestMessage * parseIPCPEnableEncryptionRequestMessage(
 		result->profile.enable_decryption = true;
 	} else {
 		result->profile.enable_decryption = false;
-	}
-
-	if (attrs[EERM_ATTR_ENCRYPT_ALG]) {
-		result->profile.encrypt_alg =
-				nla_get_string(attrs[EERM_ATTR_ENCRYPT_ALG]);
-	}
-
-	if (attrs[EERM_ATTR_MAC_ALG]) {
-		result->profile.mac_alg =
-				nla_get_string(attrs[EERM_ATTR_MAC_ALG]);
-	}
-
-	if (attrs[EERM_ATTR_COMPRESS_ALG]) {
-		result->profile.compress_alg =
-				nla_get_string(attrs[EERM_ATTR_COMPRESS_ALG]);
 	}
 
 	if (attrs[EERM_ATTR_ENCRYPT_KEY]) {
@@ -9240,115 +9128,6 @@ IPCPEnableEncryptionResponseMessage * parseIPCPEnableEncryptionResponseMessage(n
 
 	if (attrs[IPLRE_ATTR_RESULT]) {
 		result->result = nla_get_u32(attrs[IPLRE_ATTR_RESULT]);
-	}
-
-	if (attrs[EEREM_ATTR_N_1_PORT]) {
-		result->port_id = nla_get_u32(attrs[EEREM_ATTR_N_1_PORT]);
-	}
-
-	return result;
-}
-
-IPCPEnableTTLErrorCheckRequestMessage * parseIPCPEnableTTLErrorCheckRequestMessage(
-		nlmsghdr *hdr)
-{
-	struct nla_policy attr_policy[ETECR_ATTR_MAX + 1];
-        attr_policy[ETECR_ATTR_N_1_PORT].type = NLA_U32;
-        attr_policy[ETECR_ATTR_N_1_PORT].minlen = 4;
-        attr_policy[ETECR_ATTR_N_1_PORT].maxlen = 4;
-        attr_policy[ETECR_ATTR_ENABLE_ERROR_CHECK].type = NLA_U32;
-        attr_policy[ETECR_ATTR_ENABLE_ERROR_CHECK].minlen = 4;
-        attr_policy[ETECR_ATTR_ENABLE_ERROR_CHECK].maxlen = 4;
-	attr_policy[ETECR_ATTR_ERROR_CHECK_POLICY].type = NLA_NESTED;
-	attr_policy[ETECR_ATTR_ERROR_CHECK_POLICY].minlen = 0;
-	attr_policy[ETECR_ATTR_ERROR_CHECK_POLICY].maxlen = 0;
-        attr_policy[ETECR_ATTR_ENABLE_TTL].type = NLA_U32;
-        attr_policy[ETECR_ATTR_ENABLE_TTL].minlen = 4;
-        attr_policy[ETECR_ATTR_ENABLE_TTL].maxlen = 4;
-	attr_policy[ETECR_ATTR_TTL_POLICY].type = NLA_NESTED;
-	attr_policy[ETECR_ATTR_TTL_POLICY].minlen = 0;
-	attr_policy[ETECR_ATTR_TTL_POLICY].maxlen = 0;
-	struct nlattr *attrs[ETECR_ATTR_MAX + 1];
-
-	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
-			ETECR_ATTR_MAX, attr_policy);
-	if (err < 0) {
-		LOG_ERR("Error parsing IPCPEnableTTLErrorCheckRequestMessage "
-				"information from Netlink message: %d", err);
-		return 0;
-	}
-
-	IPCPEnableTTLErrorCheckRequestMessage * result =
-			new IPCPEnableTTLErrorCheckRequestMessage();
-	PolicyConfig * error_check_config;
-	PolicyConfig * ttl_config;
-
-	if (attrs[ETECR_ATTR_N_1_PORT]) {
-		result->profile.port_id =
-				nla_get_u32(attrs[ETECR_ATTR_N_1_PORT]);
-	}
-
-	if (attrs[ETECR_ATTR_ENABLE_ERROR_CHECK]) {
-		result->profile.enable_error_check =
-				ErrorCheckTTLProfile::integerToEnableState(nla_get_u32(attrs[ETECR_ATTR_ENABLE_ERROR_CHECK]));
-	}
-
-	if (attrs[ETECR_ATTR_ERROR_CHECK_POLICY]) {
-		error_check_config = parsePolicyConfigObject(
-	                        	attrs[ETECR_ATTR_ERROR_CHECK_POLICY]);
-		if (error_check_config == 0) {
-			delete result;
-			return 0;
-		} else {
-			result->profile.error_check_policy = *error_check_config;
-			delete error_check_config;
-		}
-	}
-
-	if (attrs[ETECR_ATTR_ENABLE_TTL]) {
-		result->profile.enable_ttl =
-				ErrorCheckTTLProfile::integerToEnableState(nla_get_u32(attrs[ETECR_ATTR_ENABLE_TTL]));
-	}
-
-	if (attrs[ETECR_ATTR_TTL_POLICY]) {
-		ttl_config = parsePolicyConfigObject(
-	                        	attrs[ETECR_ATTR_TTL_POLICY]);
-		if (ttl_config == 0) {
-			delete result;
-			return 0;
-		} else {
-			result->profile.ttl_policy = *ttl_config;
-			delete ttl_config;
-		}
-	}
-
-	return result;
-}
-
-IPCPEnableTTLErrorCheckResponseMessage * parseIPCPEnableTTLErrorCheckResponseMessage(nlmsghdr *hdr)
-{
-	struct nla_policy attr_policy[ETECRR_ATTR_MAX + 1];
-        attr_policy[ETECRR_ATTR_RESULT].type = NLA_U32;
-        attr_policy[ETECRR_ATTR_RESULT].minlen = 4;
-        attr_policy[ETECRR_ATTR_RESULT].maxlen = 4;
-        attr_policy[ETECRR_ATTR_N_1_PORT].type = NLA_U32;
-        attr_policy[ETECRR_ATTR_N_1_PORT].minlen = 4;
-        attr_policy[ETECRR_ATTR_N_1_PORT].maxlen = 4;
-	struct nlattr *attrs[ETECRR_ATTR_MAX + 1];
-
-	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
-			ETECRR_ATTR_MAX, attr_policy);
-	if (err < 0) {
-		LOG_ERR("Error parsing IPCPEnableTTLErrorCheckResponseMessage "
-                        "information from Netlink message: %d", err);
-		return 0;
-	}
-
-	IPCPEnableTTLErrorCheckResponseMessage * result =
-			new IPCPEnableTTLErrorCheckResponseMessage();
-
-	if (attrs[ETECRR_ATTR_RESULT]) {
-		result->result = nla_get_u32(attrs[ETECRR_ATTR_RESULT]);
 	}
 
 	if (attrs[EEREM_ATTR_N_1_PORT]) {

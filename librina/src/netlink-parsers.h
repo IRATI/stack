@@ -643,6 +643,7 @@ SecurityManagerConfiguration * parseSecurityManagerConfigurationObject(nlattr *n
 /* AuthSDUProtectionProfile CLASS */
 enum AuthSDUProtectionProfileAttributes {
     AUTHP_AUTH_POLICY = 1,
+    AUTHP_ENCRYPT_POLICY,
     AUTHP_TTL_POLICY,
     AUTHP_CRC_POLICY,
     __AUTHP_ATTR_MAX,
@@ -679,11 +680,11 @@ enum DIFConfigurationAttributes {
 	DCONF_ATTR_ADDRESS,
 	DCONF_ATTR_EFCP_CONF,
 	DCONF_ATTR_RMT_CONF,
+	DCONF_ATTR_SM_CONF,
 	DCONF_ATTR_PDUFT_CONF,
 	DCONF_ATTR_FA_CONF,
 	DCONF_ATTR_ET_CONF,
 	DCONF_ATTR_NSM_CONF,
-	DCONF_ATTR_SM_CONF,
         DCONF_ATTR_POLICY_SETS,
 	__DCONF_ATTR_MAX,
 };
@@ -1462,12 +1463,8 @@ IpcmPluginLoadResponseMessage *parseIpcmPluginLoadResponseMessage(
 /* IPCPEnableEncryptionRequestMessageAttributes CLASS */
 enum IPCPEnableEncryptionRequestMessageAttributes {
         EERM_ATTR_N_1_PORT = 1,
-        EERM_ATTR_ENCRYPT_POLICY_CONFIG,
 	EERM_ATTR_EN_ENCRYPT,
         EERM_ATTR_EN_DECRYPT,
-        EERM_ATTR_ENCRYPT_ALG,
-        EERM_ATTR_MAC_ALG,
-        EERM_ATTR_COMPRESS_ALG,
         EERM_ATTR_ENCRYPT_KEY,
         __EERM_ATTR_MAX,
 };
@@ -1494,40 +1491,6 @@ int putIPCPEnableEncryptionResponseMessage(nl_msg* netlinkMessage,
 
 IPCPEnableEncryptionResponseMessage * parseIPCPEnableEncryptionResponseMessage(
                 nlmsghdr *hdr);
-
-/* IPCPEnableTTLErrorCheckRequestMessageAttributes CLASS */
-enum IPCPEnableTTLErrorCheckRequestMessageAttributes {
-        ETECR_ATTR_N_1_PORT = 1,
-        ETECR_ATTR_ENABLE_ERROR_CHECK,
-	ETECR_ATTR_ERROR_CHECK_POLICY,
-        ETECR_ATTR_ENABLE_TTL,
-	ETECR_ATTR_TTL_POLICY,
-        __ETECR_ATTR_MAX,
-};
-
-#define ETECR_ATTR_MAX (__ETECR_ATTR_MAX -1)
-
-int putIPCPEnableTTLErrorCheckRequestMessage(nl_msg* netlinkMessage,
-                const IPCPEnableTTLErrorCheckRequestMessage& object);
-
-IPCPEnableTTLErrorCheckRequestMessage * parseIPCPEnableTTLErrorCheckRequestMessage(
-                nlmsghdr *hdr);
-
-/* IPCPEnableTTLErrorCheckResponseMessageAttributes CLASS */
-enum IPCPEnableTTLErrorCheckResponseMessageAttributes {
-        ETECRR_ATTR_RESULT = 1,
-        ETECRR_ATTR_N_1_PORT,
-        __ETECRR_ATTR_MAX,
-};
-
-#define ETECRR_ATTR_MAX (__ETECRR_ATTR_MAX -1)
-
-int putIPCPEnableTTLErrorCheckResponseMessage(nl_msg* netlinkMessage,
-                const IPCPEnableTTLErrorCheckResponseMessage& object);
-
-IPCPEnableTTLErrorCheckResponseMessage * parseIPCPEnableTTLErrorCheckResponseMessage(
-                nlmsghdr *hdr);
-
 }
 
 #endif

@@ -1007,6 +1007,26 @@ int normal_enable_encryption(struct ipcp_instance_data * data,
 	return 0;
 }
 
+struct dup_config_entry * normal_find_dup_config(struct ipcp_instance_data *data,
+						 string_t * n_1_dif_name)
+{
+	struct dup_config * dup_pos;
+	list_for_each_entry(dup_pos, &data->dup_confs, next){
+		if (string_cmp(dup_pos->entry->n_1_dif_name, n_1_dif_name))
+			return dup_pos->entry;
+	}
+	return NULL;
+}
+
+static const struct name * normal_dif_name(struct ipcp_instance_data * data)
+{
+        ASSERT(data);
+        ASSERT(data->info);
+        ASSERT(name_is_ok(data->info->dif_name));
+
+        return data->info->dif_name;
+}
+
 static struct ipcp_instance_ops normal_instance_ops = {
         .flow_allocate_request     = NULL,
         .flow_allocate_response    = NULL,
@@ -1049,7 +1069,9 @@ static struct ipcp_instance_ops normal_instance_ops = {
 
         .enable_write              = enable_write,
         .disable_write             = disable_write,
-        .enable_encryption         = normal_enable_encryption
+        .enable_encryption         = normal_enable_encryption,
+        .find_dup_config	   = normal_find_dup_config,
+        .dif_name		   = normal_dif_name
 };
 
 static struct mgmt_data * normal_mgmt_data_create(void)
@@ -1233,6 +1255,7 @@ static int normal_destroy(struct ipcp_factory_data * data,
 {
 
         struct ipcp_instance_data * tmp;
+        struct dup_config * dup_pos, * dup_nxt;
 
         ASSERT(data);
         ASSERT(instance);
@@ -1261,6 +1284,13 @@ static int normal_destroy(struct ipcp_factory_data * data,
         efcp_container_destroy(tmp->efcpc);
         rmt_destroy(tmp->rmt);
         mgmt_data_destroy(tmp->mgmt_data);
+
+        list_for_each_entry_safe(dup_pos, dup_nxt,
+                                &tmp->dup_confs, next) {
+        	list_del(&dup_pos->next);
+        	dup_config_destroy(dup_pos);
+        }
+
         rkfree(tmp);
         rkfree(instance);
 

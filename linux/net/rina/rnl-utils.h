@@ -77,17 +77,6 @@ enum ipcp_config_entry_attrs_list {
 };
 #define IPCP_CONFIG_ENTRY_ATTR_MAX (__IPCP_CONFIG_ENTRY_ATTR_MAX - 1)
 
-enum dup_config_entry_attrs_list{
-        DUP_CONFIG_ENTRY_ATTR_DIF_NAME = 1,
-        DUP_CONFIG_ENTRY_ATTR_TTL,
-        DUP_CONFIG_ENTRY_ATTR_ENABLE_CRC,
-        DUP_CONFIG_ENTRY_ATTR_ENC_CIPHER,
-        DUP_CONFIG_ENTRY_ATTR_MSG_DIGEST,
-        DUP_CONFIG_ENTRY_ATTR_KEY,
-        __DUP_CONFIG_ENTRY_ATTR_MAX,
-};
-#define DUP_CONFIG_ENTRY_ATTR_MAX (__DUP_CONFIG_ENTRY_ATTR_MAX - 1)
-
 enum policy_param_attrs_list {
         PPA_ATTR_NAME = 1,
         PPA_ATTR_VALUE,
@@ -425,11 +414,37 @@ enum efcp_config_attrs_list {
 };
 #define EFCPC_ATTR_MAX (__EFCPC_ATTR_MAX -1)
 
+enum dup_config {
+	AUTHP_AUTH_POLICY = 1,
+	AUTHP_ENCRYPT_POLICY,
+	AUTHP_TTL_POLICY,
+	AUTHP_CRC_POLICY,
+	__AUTHP_ATTR_MAX,
+};
+#define AUTHP_ATTR_MAX (__AUTHP_ATTR_MAX -1)
+
+enum spec_sdup_config {
+    SAUTHP_UNDER_DIF = 1,
+    SAUTHP_AUTH_PROFILE,
+    __SAUTHP_ATTR_MAX,
+};
+#define SAUTHP_ATTR_MAX (__SAUTHP_ATTR_MAX -1)
+
+enum secman_config_attrs_list {
+	SECMANC_DIF_MEM_ACC_CON_POLICY = 1,
+	SECMANC_NEW_FLOW_ACC_CON_POLICY,
+	SECMANC_DEFAULT_AUTH_SDUP_POLICY,
+	SECMANC_SPECIFIC_AUTH_SDUP_POLICIES,
+	__SECMANC_ATTR_MAX,
+};
+#define SECMANC_ATTR_MAX (__SECMANC_ATTR_MAX -1)
+
 enum dif_config_attrs_list {
         DCONF_ATTR_IPCP_CONFIG_ENTRIES = 1,
         DCONF_ATTR_ADDRESS,
         DCONF_ATTR_EFCPC,
         DCONF_ATTR_RMTC,
+        DCONF_ATTR_SECMANC,
         __DCONF_ATTR_MAX,
 };
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)

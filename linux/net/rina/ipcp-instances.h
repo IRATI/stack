@@ -49,20 +49,6 @@ struct ipcp_config {
         struct ipcp_config_entry * entry;
 };
 
-struct dup_config_entry {
-    struct name * dif_name;
-    u_int32_t  ttl;
-    bool       enable_crc;
-    string_t * encryption_cipher;
-    string_t * message_digest;
-    string_t * key;
-};
-
-struct dup_config {
-    struct list_head          next;
-    struct dup_config_entry * entry;
-};
-
 struct dt_cons {
         /* The length of the address field in the DTP PCI, in bytes */
         u_int16_t address_length;
@@ -111,6 +97,41 @@ struct efcp_config {
         struct policy * unknown_flow;
 };
 
+struct dup_config_entry {
+	// The N-1 dif_name this configuration applies to
+	string_t * 	n_1_dif_name;
+
+	// If NULL TTL is disabled,
+	// otherwise contains the TTL policy data
+	struct policy * ttl_policy;
+	u_int32_t  	initial_ttl_value;
+
+	// if NULL error_check is disabled,
+	// otherwise contains the error check policy
+	// data
+	struct policy * error_check_policy;
+
+	//Encryption-related fields
+	struct policy * encryption_policy;
+	bool 		enable_encryption;
+	bool		enable_decryption;
+	string_t * 	encryption_cipher;
+	string_t * 	message_digest;
+	string_t * 	compress_alg;
+	string_t * 	key;
+};
+
+struct dup_config {
+	struct list_head          next;
+	struct dup_config_entry * entry;
+};
+
+/* Represents the configuration of the SDUProtection module */
+struct sdup_config {
+	struct dup_config_entry * default_dup_conf;
+	struct list_head	  specific_dup_confs;
+};
+
 /* Represents a DIF configuration (policies, parameters, etc) */
 struct dif_config {
         /* List of configuration entries */
@@ -121,6 +142,9 @@ struct dif_config {
 
         /* The address of the IPC Process*/
         address_t           address;
+
+        /* List of Data Unit Protection configuration entries */
+        struct sdup_config * sdup_config;
 };
 
 /* Represents the information about a DIF (name, type, configuration) */
@@ -268,6 +292,9 @@ struct ipcp_instance_ops {
 
         int (* enable_write)(struct ipcp_instance_data * data, port_id_t id);
         int (* disable_write)(struct ipcp_instance_data * data, port_id_t id);
+        struct dup_config_entry * (* find_dup_config)(struct ipcp_instance_data * data,
+        					      string_t * n_1_dif_name);
+        const struct name * (* dif_name)(struct ipcp_instance_data * data);
 };
 
 /* FIXME: Should work on struct ipcp_instance, not on ipcp_instance_ops */

@@ -724,7 +724,8 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
                 return NULL;
         }
 
-        if (dup_conf != NULL && dup_conf->ttl > 0){
+        /* FIXME: this should be moved to specific policy code */
+        if (dup_conf != NULL && dup_conf->ttl_policy != NULL){
             if (pdu_ser_head_grow_gfp(flags, tmp, sizeof(u8))) {
                     LOG_ERR("Failed to grow ser PDU");
                     pdu_ser_destroy(tmp);
@@ -744,8 +745,9 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
             }
         }
 
-        // Encryption
-        if (blkcipher != NULL){
+        /* FIXME: this should be moved to specific policy code */
+        if (blkcipher != NULL && dup_conf != NULL
+        		&& dup_conf->enable_encryption){
                 buf = pdu_ser_buffer(tmp);
                 blk_size = crypto_blkcipher_blocksize(blkcipher);
                 buffer_size = buffer_length(buf);
@@ -757,13 +759,13 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
                     return NULL;
                 }
 
-                //PADDING
+                /* PADDING */
                 data = buffer_data_rw(buf);
                 for (i=encrypted_size-1; i>buffer_size; i--){
                     data[i] = encrypted_size - buffer_size;
                 }
 
-                //Encrypt
+                /* Encrypt */
                 dup_encrypt_data(buffer_data_ro(buf),
                                  buffer_data_rw(buf),
                                  encrypted_size,
@@ -771,7 +773,8 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
                                  blkcipher);
         }
 
-        if (dup_conf != NULL && dup_conf->enable_crc){
+        /* FIXME: this should be moved to specific policy code */
+        if (dup_conf != NULL && dup_conf->error_check_policy != NULL){
             /* Assuming CRC32 */
             if (pdu_ser_head_grow_gfp(flags, tmp, sizeof(u32))) {
                     LOG_ERR("Failed to grow ser PDU");
@@ -830,7 +833,8 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                 flags,
         if (!pdu_ser_is_ok(pdu))
                 return NULL;
 
-        if (dup_conf != NULL && dup_conf->enable_crc){
+        /* FIXME: this should be moved to specific policy code */
+        if (dup_conf != NULL && dup_conf->error_check_policy != NULL){
             if (!dup_chksum_is_ok(pdu)) {
                     LOG_ERR("Bad CRC, PDU has been corrupted");
                     return NULL;
@@ -843,8 +847,9 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                 flags,
             }
         }
 
-        // Decryption
-        if (blkcipher != NULL){
+        /* FIXME: this should be moved to specific policy code */
+        if (blkcipher != NULL && dup_conf != NULL &&
+        		dup_conf->enable_decryption){
                 tmp_buff = pdu_ser_buffer(pdu);
                 ASSERT(tmp_buff);
 
@@ -888,7 +893,8 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                 flags,
 
         ttl = 0;
 
-        if (dup_conf != NULL && dup_conf->ttl > 0){
+        /* FIXME: this should be moved to specific policy code */
+        if (dup_conf != NULL && dup_conf->ttl_policy != NULL){
                 ttl = dup_ttl_decrement(pdu);
                 if (ttl < 0) {
                         LOG_ERR("Could not decrement TTL");
