@@ -45,6 +45,7 @@
 #include "pdu-ser.h"
 #include "rmt-ps.h"
 #include "policies.h"
+#include "rds/rstr.h"
 #include "ipcp-instances.h"
 #include "ipcp-utils.h"
 
