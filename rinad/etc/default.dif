@@ -16,11 +16,13 @@
          "partialDelivery" : false,
          "orderedDelivery" : true,
          "efcpPolicies" : {
-         "partialDelivery" : false,
-         "orderedDelivery" : true,
+              "dtpPolicySet" : "default",        
+              "partialDelivery" : false,
+              "orderedDelivery" : true,
               "initialATimer" : 300,
               "dtcpPresent" : true,
               "dtcpConfiguration" : {
+                   "dtcpPolicySet" : "default",
                    "rtxControl" : false,
                    "flowControl" : true,
                    "flowControlConfig" : {
@@ -41,10 +43,10 @@
          "maxAllowableGap": 0,
          "efcpPolicies" : {
               "dtpPolicySet" : "default",
-              "dtcpPolicySet" : "default",
               "initialATimer" : 300,
               "dtcpPresent" : true,
               "dtcpConfiguration" : {
+                   "dtcpPolicySet" : "default",
                    "rtxControl" : true,
                    "rtxControlConfig" : {
                        "dataRxmsNmax" : 5,
