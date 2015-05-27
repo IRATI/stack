@@ -736,7 +736,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         if (dtcp_present) {
                 dtcp = dtcp_create(tmp->dt,
                                    connection,
-                                   policy_name(connection->policies_params->dtp_ps),
+                                   policy_name(dtcp_ps(connection->policies_params->dtcp_cfg)),
                                    container->rmt);
                 if (!dtcp) {
                         efcp_destroy(tmp);

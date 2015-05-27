@@ -1691,6 +1691,8 @@ static int parse_dtcp_config(struct nlattr * attr, struct dtcp_config * cfg)
         attr_policy[DCA_ATTR_RETX_CONTROL].len             = 0;
         attr_policy[DCA_ATTR_RETX_CONTROL_CONFIG].type     = NLA_NESTED;
         attr_policy[DCA_ATTR_RETX_CONTROL_CONFIG].len      = 0;
+        attr_policy[DCA_ATTR_DTCP_POLICY_SET].type         = NLA_NESTED;
+        attr_policy[DCA_ATTR_DTCP_POLICY_SET].len          = 0;
         attr_policy[DCA_ATTR_LOST_CONTROL_PDU_POLICY].type = NLA_NESTED;
         attr_policy[DCA_ATTR_LOST_CONTROL_PDU_POLICY].len  = 0;
         attr_policy[DCA_ATTR_RTT_EST_POLICY].type          = NLA_NESTED;
@@ -1728,6 +1730,12 @@ static int parse_dtcp_config(struct nlattr * attr, struct dtcp_config * cfg)
                                             cfg))
                         return -1;
 
+        if (attrs[DCA_ATTR_DTCP_POLICY_SET])
+                if (parse_policy(attrs[DCA_ATTR_DTCP_POLICY_SET],
+                                 dtcp_ps(cfg)))
+                        return -1;
+
+
         if (attrs[DCA_ATTR_LOST_CONTROL_PDU_POLICY])
                 if (parse_policy(attrs[DCA_ATTR_LOST_CONTROL_PDU_POLICY],
                                  dtcp_lost_control_pdu(cfg)))
@@ -1753,8 +1761,6 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
         attr_policy[CPP_ATTR_DTCP_CONFIG].len             = 0;
         attr_policy[CPP_ATTR_DTP_POLICY_SET].type         = NLA_NESTED;
         attr_policy[CPP_ATTR_DTP_POLICY_SET].len          = 0;
-        attr_policy[CPP_ATTR_DTCP_POLICY_SET].type        = NLA_NESTED;
-        attr_policy[CPP_ATTR_DTCP_POLICY_SET].len         = 0;
         attr_policy[CPP_ATTR_RCVR_TIMER_INAC_POLICY].type = NLA_NESTED;
         attr_policy[CPP_ATTR_RCVR_TIMER_INAC_POLICY].len  = 0;
         attr_policy[CPP_ATTR_SNDR_TIMER_INAC_POLICY].type = NLA_NESTED;
@@ -1790,11 +1796,6 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
 
         if (attrs[CPP_ATTR_DTP_POLICY_SET]) {
                 if (parse_policy(attrs[CPP_ATTR_DTP_POLICY_SET],
-                                 cpp_struct->dtp_ps))
-                        return -1;
-        }
-        if (attrs[CPP_ATTR_DTCP_POLICY_SET]) {
-                if (parse_policy(attrs[CPP_ATTR_DTCP_POLICY_SET],
                                  cpp_struct->dtp_ps))
                         return -1;
         }

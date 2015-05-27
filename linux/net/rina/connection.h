@@ -36,9 +36,8 @@ struct conn_policies {
         bool                 dtcp_present;
         struct dtcp_config * dtcp_cfg;
 
-        /* Policy sets configuration */
+        /* DTP Policy set configuration */
         struct policy * dtp_ps;
-        struct policy * dtcp_ps;
 
         /* FIXME The following three "policies" are unused, useless
          * and duplicated - they already exist as function pointers
