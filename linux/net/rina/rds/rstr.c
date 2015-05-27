@@ -87,9 +87,11 @@ int string_dup_gfp(gfp_t            flags,
 
 int string_dup(const string_t * src, string_t ** dst)
 { return string_dup_gfp(GFP_KERNEL, src, dst); }
+EXPORT_SYMBOL(string_dup);
 
 int string_cmp(const string_t * a, const string_t * b)
 { return strcmp(a, b); }
+EXPORT_SYMBOL(string_cmp);
 
 /* FIXME: Should we assert here ? */
 int string_len(const string_t * s)
