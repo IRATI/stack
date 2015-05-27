@@ -1086,13 +1086,13 @@ public:
  * Used by the IPC Manager to forward a CDAP message to an IPC process
  * IPC Manager -> IPC Process
  */
-class IpcmFwdCDAPMsgRequestMessage:
+class IpcmFwdCDAPMsgMessage:
 		public BaseNetlinkMessage {
 public:
 	/** The serialized object containing the message to be forwarded */
 	SerializedObject sermsg;
 
-	IpcmFwdCDAPMsgRequestMessage();
+	IpcmFwdCDAPMsgMessage();
 	IPCEvent* toIPCEvent();
 };
 

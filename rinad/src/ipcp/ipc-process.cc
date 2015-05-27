@@ -668,8 +668,8 @@ void IPCProcessImpl::processPluginLoadRequestEvent(
         return;
 }
 
-void IPCProcessImpl::processFwdCDAPMsgRequestEvent(
-                        const rina::FwdCDAPMsgRequestEvent& event) {
+void IPCProcessImpl::processFwdCDAPMsgEvent(
+                        const rina::FwdCDAPMsgEvent& event) {
 		rina::ScopedLock g(*lock_);
 	const rina::CDAPMessage * msg;
 	rina::CDAPSessionDescriptor * session_descr;
@@ -954,10 +954,10 @@ ipc_process_fwd_cdap_msg_handler(rina::IPCEvent *e,
 		                 EventLoopData *opaque)
 
 {
-	DOWNCAST_DECL(e, rina::FwdCDAPMsgRequestEvent, event);
+	DOWNCAST_DECL(e, rina::FwdCDAPMsgEvent, event);
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
-	ipcp->processFwdCDAPMsgRequestEvent(*event);
+	ipcp->processFwdCDAPMsgEvent(*event);
 }
 
 static void

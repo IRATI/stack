@@ -1599,12 +1599,12 @@ IPCEvent* IpcmPluginLoadRequestMessage::toIPCEvent(){
 }
 
 /* CLASS FWD CDAP MSG REQUEST MESSAGE */
-IpcmFwdCDAPMsgRequestMessage::IpcmFwdCDAPMsgRequestMessage():
+IpcmFwdCDAPMsgMessage::IpcmFwdCDAPMsgMessage():
                 BaseNetlinkMessage(RINA_C_IPCM_FWD_CDAP_MSG_REQUEST) {
 }
 
-IPCEvent* IpcmFwdCDAPMsgRequestMessage::toIPCEvent(){
-	IPCEvent * event = new FwdCDAPMsgRequestEvent(sermsg,
+IPCEvent* IpcmFwdCDAPMsgMessage::toIPCEvent(){
+	IPCEvent * event = new FwdCDAPMsgEvent(sermsg,
 			                              getSequenceNumber());
 	return event;
 }

@@ -502,9 +502,9 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		return 0;
 	}
 	case RINA_C_IPCM_FWD_CDAP_MSG_REQUEST: {
-		IpcmFwdCDAPMsgRequestMessage * requestObject =
-			dynamic_cast<IpcmFwdCDAPMsgRequestMessage *>(message);
-		if (putIpcmFwdCDAPMsgRequestMessageObject(netlinkMessage,
+		IpcmFwdCDAPMsgMessage * requestObject =
+			dynamic_cast<IpcmFwdCDAPMsgMessage *>(message);
+		if (putIpcmFwdCDAPMsgMessageObject(netlinkMessage,
 				*requestObject) < 0) {
 			return -1;
 		}
@@ -731,7 +731,7 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 		                netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_FWD_CDAP_MSG_REQUEST: {
-		return parseIpcmFwdCDAPMsgRequestMessage(
+		return parseIpcmFwdCDAPMsgMessage(
 		                netlinkMessageHeader);
 	}
 	default: {
@@ -4975,15 +4975,15 @@ int putIpcmPluginLoadResponseMessageObject(nl_msg* netlinkMessage,
         return -1;
 }
 
-int putIpcmFwdCDAPMsgRequestMessageObject(nl_msg* netlinkMessage,
-		const IpcmFwdCDAPMsgRequestMessage& object){
+int putIpcmFwdCDAPMsgMessageObject(nl_msg* netlinkMessage,
+		const IpcmFwdCDAPMsgMessage& object){
 	NLA_PUT(netlinkMessage, IFCM_ATTR_CDAP_MSG, object.sermsg.size_,
 		object.sermsg.message_);
 
 	return 0;
 
         nla_put_failure: LOG_ERR(
-                        "Error building IpcmFwdCDAPMsgRequestMessage "
+                        "Error building IpcmFwdCDAPMsgMessage "
                         "Netlink object");
         return -1;
 }
@@ -8682,8 +8682,8 @@ parseIpcmPluginLoadResponseMessage(nlmsghdr *hdr){
 	return result;
 }
 
-IpcmFwdCDAPMsgRequestMessage *
-parseIpcmFwdCDAPMsgRequestMessage(nlmsghdr *hdr){
+IpcmFwdCDAPMsgMessage *
+parseIpcmFwdCDAPMsgMessage(nlmsghdr *hdr){
 	struct nla_policy attr_policy[IFCM_ATTR_MAX + 1];
 	attr_policy[IFCM_ATTR_CDAP_MSG].type = NLA_UNSPEC;
 	attr_policy[IFCM_ATTR_CDAP_MSG].minlen = 0;
@@ -8693,13 +8693,13 @@ parseIpcmFwdCDAPMsgRequestMessage(nlmsghdr *hdr){
 	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
 			        IFCM_ATTR_MAX, attr_policy);
 	if (err < 0) {
-		LOG_ERR("Error parsing IpcmFwdCDAPMsgRequestMessage "
+		LOG_ERR("Error parsing IpcmFwdCDAPMsgMessage "
                         "information from Netlink message: %d", err);
 		return 0;
 	}
 
-	IpcmFwdCDAPMsgRequestMessage * result =
-			new IpcmFwdCDAPMsgRequestMessage();
+	IpcmFwdCDAPMsgMessage * result =
+			new IpcmFwdCDAPMsgMessage();
 
 	if (attrs[IFCM_ATTR_CDAP_MSG]) {
 		size_t msglen = nla_len(attrs[IFCM_ATTR_CDAP_MSG]);

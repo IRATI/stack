@@ -720,7 +720,7 @@ public:
 	 * @param The serialized CDAP message to forward
 	 * @throws FwdCDAPMsgException
 	 */
-	void forwardCDAPResponse(const rina::FwdCDAPMsgRequestEvent& event,
+	void forwardCDAPResponse(const rina::FwdCDAPMsgEvent& event,
 				 const rina::SerializedObject& sermsg);
 };
 

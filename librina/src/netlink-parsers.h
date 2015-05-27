@@ -1412,18 +1412,18 @@ int putIpcmPluginLoadResponseMessageObject(nl_msg* netlinkMessage,
 IpcmPluginLoadResponseMessage *parseIpcmPluginLoadResponseMessage(
 		nlmsghdr *hdr);
 
-/* IpcmFwdCDAPMsgRequestMessage CLASS*/
-enum IpcmFwdCDAPMsgRequestMessageAttributes {
+/* IpcmFwdCDAPMsgMessage CLASS*/
+enum IpcmFwdCDAPMsgMessageAttributes {
 	IFCM_ATTR_CDAP_MSG = 1,
 	__IFCM_ATTR_MAX,
 };
 
 #define IFCM_ATTR_MAX (__IFCM_ATTR_MAX -1)
 
-int putIpcmFwdCDAPMsgRequestMessageObject(nl_msg* netlinkMessage,
-		const IpcmFwdCDAPMsgRequestMessage& object);
+int putIpcmFwdCDAPMsgMessageObject(nl_msg* netlinkMessage,
+		const IpcmFwdCDAPMsgMessage& object);
 
-IpcmFwdCDAPMsgRequestMessage * parseIpcmFwdCDAPMsgRequestMessage(
+IpcmFwdCDAPMsgMessage * parseIpcmFwdCDAPMsgMessage(
 		nlmsghdr *hdr);
 
 }

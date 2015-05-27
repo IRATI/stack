@@ -523,7 +523,7 @@ void IPCProcessProxy::forwardCDAPMessage(const SerializedObject& sermsg,
         (void)sermsg;
         (void)opaque;
 #else
-	IpcmFwdCDAPMsgRequestMessage message;
+	IpcmFwdCDAPMsgMessage message;
         message.sermsg = sermsg;
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);

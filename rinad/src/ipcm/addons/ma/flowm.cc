@@ -428,8 +428,8 @@ void FlowManager::process_flow_event(rina::IPCEvent** event_)
 
 		case rina::IPC_PROCESS_FWD_CDAP_MSG:
 		{
-			rina::FwdCDAPMsgRequestEvent *fwdevent =
-				dynamic_cast<rina::FwdCDAPMsgRequestEvent*>(event);
+			rina::FwdCDAPMsgEvent *fwdevent =
+				dynamic_cast<rina::FwdCDAPMsgEvent*>(event);
 
 			LOG_INFO("Received forwarded CDAP response %p", fwdevent);
 			break;

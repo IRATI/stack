@@ -710,7 +710,7 @@ void ExtendedIPCManager::pluginLoadResponse(
 }
 
 void ExtendedIPCManager::forwardCDAPResponse(
-				const rina::FwdCDAPMsgRequestEvent& event,
+				const rina::FwdCDAPMsgEvent& event,
 				const rina::SerializedObject& sermsg)
 {
 #if STUB_API
@@ -718,7 +718,7 @@ void ExtendedIPCManager::forwardCDAPResponse(
 	(void) event;
         (void) sermsg;
 #else
-	IpcmFwdCDAPMsgRequestMessage responseMessage;
+	IpcmFwdCDAPMsgMessage responseMessage;
 
 	//responseMessage.result = 0; TODO
 	responseMessage.sermsg = sermsg;
