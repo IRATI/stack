@@ -2423,14 +2423,6 @@ static int tcp_udp_query_rib(struct ipcp_instance_data * data,
 	return -1;
 }
 
-static const struct name * tcp_udp_dif_name(struct ipcp_instance_data * data)
-{
-        ASSERT(data);
-        ASSERT(name_is_ok(data->dif_name));
-
-        return data->dif_name;
-}
-
 static struct ipcp_instance_ops tcp_udp_instance_ops = {
         .flow_allocate_request     = tcp_udp_flow_allocate_request,
         .flow_allocate_response    = tcp_udp_flow_allocate_response,
@@ -2471,7 +2463,6 @@ static struct ipcp_instance_ops tcp_udp_instance_ops = {
         .set_policy_set_param      = NULL,
         .select_policy_set         = NULL,
         .enable_encryption	   = NULL,
-        .find_dup_config	   = NULL,
         .dif_name		   = tcp_udp_dif_name
 };
 

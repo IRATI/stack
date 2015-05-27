@@ -519,10 +519,29 @@ bool parse_configuration(std::string& file_loc)
 void parse_auth_sduprot_profile(const Json::Value  & root,
                   	        rina::AuthSDUProtectionProfile & profile)
 {
-        parse_policy(root, "authPolicy", profile.authPolicy);
-        parse_policy(root, "encryptPolicy", profile.encryptPolicy);
-        parse_policy(root, "TTLPolicy", profile.ttlPolicy);
-        parse_policy(root, "ErrorCheckPolicy", profile.crcPolicy);
+	if (root["authPolicy"] != 0) {
+		parse_policy(root, "authPolicy", profile.authPolicy);
+	} else {
+		profile.authPolicy.name_ = RINA_NO_POLICY_NAME;
+	}
+
+	if (root["encryptPolicy"] != 0) {
+		parse_policy(root, "encryptPolicy", profile.encryptPolicy);
+	} else {
+		profile.encryptPolicy.name_ = RINA_NO_POLICY_NAME;
+	}
+
+	if (root["TTLPolicy"] != 0) {
+		parse_policy(root, "TTLPolicy", profile.ttlPolicy);
+	} else {
+		profile.ttlPolicy.name_ = RINA_NO_POLICY_NAME;
+	}
+
+	if (root["ErrorCheckPolicy"] != 0) {
+		parse_policy(root, "ErrorCheckPolicy", profile.crcPolicy);
+	} else {
+		profile.crcPolicy.name_ = RINA_NO_POLICY_NAME;
+	}
 }
 
 rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,

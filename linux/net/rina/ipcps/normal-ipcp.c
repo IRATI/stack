@@ -76,7 +76,6 @@ struct ipcp_instance_data {
         address_t               address;
         struct mgmt_data *      mgmt_data;
         spinlock_t              lock;
-        struct list_head        dup_confs;
         struct list_head        list;
 };
 
@@ -605,6 +604,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
                                 const struct dif_info *     dif_information)
 {
         struct efcp_config * efcp_config;
+        struct sdup_config * sdup_config;
 
         data->info->dif_name = name_dup(dif_information->dif_name);
         data->address        = dif_information->configuration->address;
@@ -623,6 +623,13 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         }
 
         efcp_container_set_config(efcp_config, data->efcpc);
+
+        sdup_config = dif_information->configuration->sdup_config;
+        if (!sdup_config) {
+        	LOG_WARN("No SDU protection configuration specified");
+        } else {
+        	rmt_sdup_config_set(data->rmt, sdup_config);
+        }
 
         if (rmt_address_set(data->rmt, data->address))
                 return -1;
@@ -979,52 +986,16 @@ static int normal_select_policy_set(struct ipcp_instance_data *data,
 }
 
 int normal_enable_encryption(struct ipcp_instance_data * data,
-		             struct policy *  encrypt_policy_conf,
 			     bool 	      enable_encryption,
 		             bool    	      enable_decryption,
-			     const string_t * encrypt_alg,
-		             const string_t * mac_alg,
-		             const string_t * compress_alg,
 		             struct buffer *  encrypt_key,
 		             port_id_t 	      port_id)
 {
-	//TODO implement
-	LOG_INFO("Enable encryption operation called on IPCP %d and port-id %d",
-			data->id, port_id);
-	if (enable_decryption) {
-		LOG_INFO("Enabling decryption");
-	}
-	if (enable_encryption) {
-		LOG_INFO("Enabling encryption");
-	}
-
-	(void) encrypt_policy_conf;
-	(void) encrypt_alg;
-	(void) mac_alg;
-	(void) compress_alg;
-	(void) encrypt_key;
-
-	return 0;
-}
-
-struct dup_config_entry * normal_find_dup_config(struct ipcp_instance_data *data,
-						 string_t * n_1_dif_name)
-{
-	struct dup_config * dup_pos;
-	list_for_each_entry(dup_pos, &data->dup_confs, next){
-		if (string_cmp(dup_pos->entry->n_1_dif_name, n_1_dif_name))
-			return dup_pos->entry;
-	}
-	return NULL;
-}
-
-static const struct name * normal_dif_name(struct ipcp_instance_data * data)
-{
-        ASSERT(data);
-        ASSERT(data->info);
-        ASSERT(name_is_ok(data->info->dif_name));
-
-        return data->info->dif_name;
+	return rmt_enable_encryption(data->rmt,
+				     enable_decryption,
+				     enable_decryption,
+				     encrypt_key,
+				     port_id);
 }
 
 static struct ipcp_instance_ops normal_instance_ops = {
@@ -1070,7 +1041,6 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .enable_write              = enable_write,
         .disable_write             = disable_write,
         .enable_encryption         = normal_enable_encryption,
-        .find_dup_config	   = normal_find_dup_config,
         .dif_name		   = normal_dif_name
 };
 
@@ -1225,7 +1195,6 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         spin_lock_init(&instance->data->lock);
         list_add(&(instance->data->list), &(data->instances));
 
-        INIT_LIST_HEAD(&instance->data->dup_confs);
         LOG_DBG("Normal IPC process instance created and added to the list");
 
         return instance;
@@ -1255,7 +1224,6 @@ static int normal_destroy(struct ipcp_factory_data * data,
 {
 
         struct ipcp_instance_data * tmp;
-        struct dup_config * dup_pos, * dup_nxt;
 
         ASSERT(data);
         ASSERT(instance);
@@ -1284,12 +1252,6 @@ static int normal_destroy(struct ipcp_factory_data * data,
         efcp_container_destroy(tmp->efcpc);
         rmt_destroy(tmp->rmt);
         mgmt_data_destroy(tmp->mgmt_data);
-
-        list_for_each_entry_safe(dup_pos, dup_nxt,
-                                &tmp->dup_confs, next) {
-        	list_del(&dup_pos->next);
-        	dup_config_destroy(dup_pos);
-        }
 
         rkfree(tmp);
         rkfree(instance);

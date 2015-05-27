@@ -44,6 +44,9 @@
 #include "serdes.h"
 #include "pdu-ser.h"
 #include "rmt-ps.h"
+#include "policies.h"
+#include "ipcp-instances.h"
+#include "ipcp-utils.h"
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 #define MAX_PDUS_SENT_PER_CYCLE 10
@@ -79,13 +82,6 @@ static struct rmt_n1_port * n1_port_create(port_id_t id,
             tmp->blkcipher = crypto_alloc_blkcipher(dup_config->encryption_cipher, 0, 0);
             if (IS_ERR(tmp->blkcipher)) {
                 printk("could not allocate blkcipher handle for %s\n", dup_config->encryption_cipher);
-                return NULL;
-            }
-
-            if (crypto_blkcipher_setkey(tmp->blkcipher,
-                                        dup_config->key,
-                                        strlen(dup_config->key))) {
-                printk("key could not be set\n");
                 return NULL;
             }
         }else
@@ -412,6 +408,7 @@ struct rmt {
         struct tasklet_struct     egress_tasklet;
         struct n1pmap *           n1_ports;
         struct pft_cache          cache;
+        struct sdup_config *      sdup_conf;
 };
 
 struct rmt *
@@ -481,6 +478,7 @@ int rmt_destroy(struct rmt * instance)
 
         if (instance->pft)            pft_destroy(instance->pft);
         if (instance->serdes)         serdes_destroy(instance->serdes);
+        if (instance->sdup_conf)      sdup_config_destroy(instance->sdup_conf);
 
         rina_component_fini(&instance->base);
 
@@ -533,6 +531,90 @@ int rmt_dt_cons_set(struct rmt *     instance,
         return 0;
 }
 EXPORT_SYMBOL(rmt_dt_cons_set);
+
+static int extract_policy_parameters(struct dup_config_entry * entry)
+{
+	struct policy * policy;
+	struct policy_parm * parameter;
+
+	if (!entry) {
+		LOG_ERR("Bogus entry passed");
+		return -1;
+	}
+	LOG_DBG("Looking at SDU protection policy parameters for N-1 DIF %s",
+		entry->n_1_dif_name);
+
+	policy = entry->ttl_policy;
+	if (policy) {
+		parameter = policy_param_find(policy, "initialValue");
+		if (!parameter) {
+			LOG_ERR("Could not find parameter 'initialValue' in TTL policy");
+			return -1;
+		}
+
+		kstrtouint(policy_param_value(parameter), 10, &entry->initial_ttl_value);
+		LOG_DBG("Initial TTL value is %u", entry->initial_ttl_value);
+	}
+
+	policy = entry->encryption_policy;
+	if (policy) {
+		parameter = policy_param_find(policy, "encryptAlg");
+		if (!parameter) {
+			LOG_ERR("Could not find parameter 'encryptAlg' in Encryption policy");
+			return -1;
+		}
+
+		if (string_dup(policy_param_value(parameter), &entry->encryption_cipher)) {
+			LOG_ERR("Problems copying string ('encryptAlg' parameter value)");
+			return -1;
+		}
+		LOG_DBG("Encryption cipher is %s", entry->encryption_cipher);
+
+		parameter = policy_param_find(policy, "macAlg");
+		if (!parameter) {
+			LOG_ERR("Could not find parameter 'macAlg' in Encryption policy");
+			return -1;
+		}
+
+		if (string_dup(policy_param_value(parameter), &entry->message_digest)) {
+			LOG_ERR("Problems copying string ('macAlg' parameter value)");
+			return -1;
+		}
+		LOG_DBG("Message digest is %s", entry->message_digest);
+	}
+
+	return 0;
+}
+
+int rmt_sdup_config_set(struct rmt *         instance,
+                    	struct sdup_config * sdup_conf)
+{
+	struct dup_config * dup_pos;
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        if (!sdup_conf) {
+                 LOG_ERR("Bogus sdup_conf passed");
+                return -1;
+        }
+
+	/* FIXME this code should be moved to specific sdup policies */
+	list_for_each_entry(dup_pos, &sdup_conf->specific_dup_confs, next){
+		if (extract_policy_parameters(dup_pos->entry)) {
+			LOG_DBG("Setting sdu protection policies to NULL");
+			sdup_config_destroy(sdup_conf);
+			return -1;
+		}
+	}
+
+        instance->sdup_conf = sdup_conf;
+
+        return 0;
+}
+EXPORT_SYMBOL(rmt_sdup_config_set);
 
 static int n1_port_write(struct serdes *      serdes,
                          struct rmt_n1_port * n1_port,
@@ -827,22 +909,38 @@ int rmt_send(struct rmt * instance,
 }
 EXPORT_SYMBOL(rmt_send);
 
+static struct dup_config_entry * find_dup_config(struct sdup_config * sdup_conf,
+						 string_t * n_1_dif_name)
+{
+	struct dup_config * dup_pos;
+
+	if (!sdup_conf)
+		return NULL;
+
+	list_for_each_entry(dup_pos, &sdup_conf->specific_dup_confs, next){
+		if (string_cmp(dup_pos->entry->n_1_dif_name, n_1_dif_name))
+			return dup_pos->entry;
+	}
+
+	return sdup_conf->default_dup_conf;
+}
+
 static int __queue_send_add(struct rmt * instance,
                             port_id_t    id,
                             struct ipcp_instance * n1_ipcp)
 {
         struct rmt_n1_port * tmp;
         struct rmt_ps *      ps;
-        struct name * n_1_dif_name;
+        const struct name * n_1_dif_name;
         struct dup_config_entry * dup_config;
 
         n_1_dif_name = n1_ipcp->ops->dif_name(n1_ipcp->data);
-
-        if (instance->parent->ops->find_dup_config)
-        	dup_config = instance->parent->ops->find_dup_config(instance->parent->data,
-        						            n_1_dif_name->process_name);
-        else
+        if (n_1_dif_name) {
+        	dup_config = find_dup_config(instance->sdup_conf,
+        				     n_1_dif_name->process_name);
+        } else {
         	dup_config = NULL;
+        }
 
         tmp = n1_port_create(id, n1_ipcp, dup_config_entry_dup(dup_config));
         if (!tmp)
@@ -1313,11 +1411,12 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
         if (!tmp)
                 return NULL;
 
-        tmp->address = address_bad();
-        tmp->parent  = parent;
-        tmp->kfa     = kfa;
-        tmp->efcpc   = efcpc;
-        tmp->pft     = pft_create();
+        tmp->address   = address_bad();
+        tmp->parent    = parent;
+        tmp->kfa       = kfa;
+        tmp->efcpc     = efcpc;
+        tmp->sdup_conf = NULL;
+        tmp->pft       = pft_create();
         if (!tmp->pft)
                 goto fail;
 
@@ -1389,3 +1488,70 @@ EXPORT_SYMBOL(rmt_ps_publish);
 int rmt_ps_unpublish(const char * name)
 { return ps_unpublish(&policy_sets, name); }
 EXPORT_SYMBOL(rmt_ps_unpublish);
+
+int rmt_enable_encryption(struct rmt *    instance,
+			  bool 	    	  enable_encryption,
+			  bool      	  enable_decryption,
+			  struct buffer * encrypt_key,
+			  port_id_t 	  port_id)
+{
+	struct rmt_n1_port * rmt_port;
+	unsigned long        flags;
+
+	if (!instance) {
+		LOG_ERR("Bogus RMT instance passed");
+		return -1;
+	}
+
+	if (!encrypt_key) {
+		LOG_ERR("Bogus encryption key passed");
+		return -1;
+	}
+
+	if (!enable_decryption && !enable_encryption) {
+		LOG_ERR("Neither encryption nor decryption is being enabled");
+		return -1;
+	}
+
+	rmt_port = n1pmap_find(instance->n1_ports, port_id);
+	if (!rmt_port) {
+		LOG_ERR("Could not find N-1 port %d", port_id);
+		return -1;
+	}
+
+	if (!rmt_port->dup_config) {
+		LOG_ERR("SDU Protection for N-1 port %d is NULL", port_id);
+		return -1;
+	}
+
+	if (!rmt_port->dup_config->encryption_policy) {
+		LOG_ERR("Encryption policy for N-1 port %d is NULL", port_id);
+		return -1;
+	}
+
+	if (!rmt_port->blkcipher) {
+		LOG_ERR("Block cipher is not set for N-1 port %d", port_id);
+		return -1;
+	}
+
+	spin_lock_irqsave(&rmt_port->lock, flags);
+	if (!rmt_port->dup_config->enable_decryption &&
+			!rmt_port->dup_config->enable_encryption) {
+		/* Need to set key. FIXME: Move this to policy specific code */
+		if (crypto_blkcipher_setkey(rmt_port->blkcipher,
+					    buffer_data_rw(encrypt_key),
+					    buffer_length(encrypt_key))) {
+			LOG_ERR("Could not set encryption key for N-1 port %d", port_id);
+			spin_unlock_irqrestore(&rmt_port->lock, flags);
+			return -1;
+		}
+	}
+
+	rmt_port->dup_config->key = encrypt_key;
+	rmt_port->dup_config->enable_decryption = enable_decryption;
+	rmt_port->dup_config->enable_encryption = enable_encryption;
+	spin_unlock_irqrestore(&rmt_port->lock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL(rmt_enable_encryption);

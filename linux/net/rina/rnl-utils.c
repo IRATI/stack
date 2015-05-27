@@ -321,12 +321,6 @@ rnl_ipcp_enable_encryption_req_msg_attrs_create(void)
         if  (!tmp)
                 return NULL;
 
-        tmp->encrypt_policy_conf = policy_create();
-        if (!tmp->encrypt_policy_conf) {
-        	rkfree(tmp);
-        	return NULL;
-        }
-
         return tmp;
 }
 
@@ -702,18 +696,6 @@ rnl_ipcp_enable_encryption_msg_attrs_destroy(
 {
         if (!attrs)
                 return -1;
-
-        if (attrs->encrypt_policy_conf)
-        	policy_destroy(attrs->encrypt_policy_conf);
-
-        if (attrs->encrypt_alg)
-                rkfree(attrs->encrypt_alg);
-
-        if (attrs->mac_alg)
-                rkfree(attrs->mac_alg);
-
-        if (attrs->compress_alg)
-                rkfree(attrs->compress_alg);
 
         if (attrs->encrypt_key) {
         	buffer_destroy(attrs->encrypt_key);
@@ -1425,10 +1407,17 @@ static int parse_dup_config_entry(struct nlattr *           dup_config_entry_att
         struct nla_policy attr_policy[AUTHP_ATTR_MAX + 1];
         struct nlattr *   attrs[AUTHP_ATTR_MAX + 1];
 
+        if (!dup_config_entry_attr || !dup_config_entry) {
+                LOG_ERR("Bogus input parameters, cannot parse policy info");
+                return -1;
+        }
+
 	attr_policy[AUTHP_AUTH_POLICY].type = NLA_NESTED;
 	attr_policy[AUTHP_AUTH_POLICY].len = 0;
-	attr_policy[AUTHP_CRC_POLICY].type = NLA_NESTED;
-	attr_policy[AUTHP_CRC_POLICY].len = 0;
+	attr_policy[AUTHP_ENCRYPT_POLICY].type = NLA_NESTED;
+	attr_policy[AUTHP_ENCRYPT_POLICY].len = 0;
+	attr_policy[AUTHP_ERROR_CHECK_POLICY].type = NLA_NESTED;
+	attr_policy[AUTHP_ERROR_CHECK_POLICY].len = 0;
 	attr_policy[AUTHP_TTL_POLICY].type = NLA_NESTED;
 	attr_policy[AUTHP_TTL_POLICY].len = 0;
 
@@ -1438,31 +1427,53 @@ static int parse_dup_config_entry(struct nlattr *           dup_config_entry_att
                              attr_policy) < 0)
                 goto parse_fail;
 
-        if (attrs[AUTHP_AUTH_POLICY]) {
-        	dup_con
-        	dup_config_entry->n_1_dif_name =
-        			nla_dup_string(attrs[SAUTHP_UNDER_DIF], GFP_KERNEL);
+        if (attrs[AUTHP_ENCRYPT_POLICY]) {
+        	dup_config_entry->encryption_policy = policy_create();
+        	if (!dup_config_entry->encryption_policy)
+        		goto parse_fail;
+
+        	if (parse_policy(attrs[AUTHP_ENCRYPT_POLICY],
+        			 dup_config_entry->encryption_policy))
+        		goto parse_fail;
         }
 
-        if (attrs[SAUTHP_AUTH_PROFILE]) {
-                if (parse_dup_config_entry(attrs[SAUTHP_AUTH_PROFILE],
-                		           dup_config_entry))
-                	goto parse_fail;
+        if (attrs[AUTHP_ERROR_CHECK_POLICY]) {
+        	dup_config_entry->error_check_policy = policy_create();
+        	if (!dup_config_entry->error_check_policy)
+        		goto parse_fail;
+
+        	if (parse_policy(attrs[AUTHP_ERROR_CHECK_POLICY],
+        			 dup_config_entry->error_check_policy))
+        		goto parse_fail;
+        }
+
+        if (attrs[AUTHP_TTL_POLICY]) {
+        	dup_config_entry->ttl_policy = policy_create();
+        	if (!dup_config_entry->ttl_policy)
+        		goto parse_fail;
+
+        	if (parse_policy(attrs[AUTHP_TTL_POLICY],
+        			 dup_config_entry->ttl_policy))
+        		goto parse_fail;
         }
 
         return 0;
 
  parse_fail:
-        LOG_ERR(BUILD_STRERROR_BY_MTYPE("specific dup config attributes"));
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("dup config attributes"));
         return -1;
 }
-
 
 static int parse_s_dup_config_entry(struct nlattr *           sdup_config_entry_attr,
                                     struct dup_config_entry * dup_config_entry)
 {
         struct nla_policy attr_policy[SAUTHP_ATTR_MAX + 1];
         struct nlattr *   attrs[SAUTHP_ATTR_MAX + 1];
+
+        if (!sdup_config_entry_attr || !dup_config_entry) {
+                LOG_ERR("Bogus input parameters, cannot parse policy info");
+                return -1;
+        }
 
 	attr_policy[SAUTHP_UNDER_DIF].type = NLA_STRING;
 	attr_policy[SAUTHP_UNDER_DIF].len = 0;
@@ -1503,13 +1514,8 @@ static int parse_list_of_dup_config_entries(struct nlattr *      nested_attr,
         int                        entries_with_problems = 0;
         int                        total_entries         = 0;
 
-        if (!nested_attr) {
-                LOG_ERR("Bogus attribute passed, bailing out");
-                return -1;
-        }
-
-        if (!sdup_config) {
-                LOG_ERR("Bogus sdup_config passed, bailing out");
+        if (!nested_attr || !sdup_config) {
+                LOG_ERR("Bogus input parameters, cannot parse policy info");
                 return -1;
         }
 
@@ -1558,6 +1564,11 @@ static int parse_sdup_config(struct nlattr *      sdup_config_attr,
 {
         struct nla_policy attr_policy[SECMANC_ATTR_MAX + 1];
         struct nlattr *   attrs[SECMANC_ATTR_MAX + 1];
+
+        if (!sdup_config_attr || !sdup_config) {
+                LOG_ERR("Bogus input parameters, cannot parse policy info");
+                return -1;
+        }
 
 	attr_policy[SECMANC_DIF_MEM_ACC_CON_POLICY].type = NLA_NESTED;
 	attr_policy[SECMANC_DIF_MEM_ACC_CON_POLICY].len = 0;
@@ -2525,14 +2536,6 @@ rnl_parse_ipcp_enable_encryption_req_msg(
                 msg_attrs->port_id =
                         nla_get_u32(info->attrs[IEERM_ATTR_N_1_PORT]);
 
-        if (info->attrs[IEERM_ATTR_ENCRYPT_POLICY_CONFIG]) {
-                if (parse_policy(info->attrs[IEERM_ATTR_ENCRYPT_POLICY_CONFIG],
-                	     msg_attrs->encrypt_policy_conf)) {
-                	LOG_ERR("Could not parse encryption policy");
-                	return -1;
-                }
-        }
-
 	if (info->attrs[IEERM_ATTR_EN_ENCRYPT])
 		msg_attrs->encryption_enabled = true;
 	else
@@ -2542,18 +2545,6 @@ rnl_parse_ipcp_enable_encryption_req_msg(
 		msg_attrs->decrption_enabled = true;
 	else
 		msg_attrs->decrption_enabled = false;
-
-        if (info->attrs[IEERM_ATTR_ENCRYPT_ALG])
-                msg_attrs->encrypt_alg = nla_dup_string(info->attrs[IEERM_ATTR_ENCRYPT_ALG],
-                                                 	GFP_KERNEL);
-
-        if (info->attrs[IEERM_ATTR_ENCRYPT_ALG])
-                msg_attrs->mac_alg = nla_dup_string(info->attrs[IEERM_ATTR_MAC_ALG],
-                                                    GFP_KERNEL);
-
-        if (info->attrs[IEERM_ATTR_COMPRESS_ALG])
-                msg_attrs->compress_alg = nla_dup_string(info->attrs[IEERM_ATTR_COMPRESS_ALG],
-                                                         GFP_KERNEL);
 
         if (info->attrs[IEERM_ATTR_ENCRYPT_KEY]) {
         	msg_attrs->encrypt_key = buffer_create_from(nla_data(info->attrs[IEERM_ATTR_ENCRYPT_KEY]),

@@ -414,16 +414,16 @@ enum efcp_config_attrs_list {
 };
 #define EFCPC_ATTR_MAX (__EFCPC_ATTR_MAX -1)
 
-enum dup_config {
+enum dup_config_attrs_list {
 	AUTHP_AUTH_POLICY = 1,
 	AUTHP_ENCRYPT_POLICY,
 	AUTHP_TTL_POLICY,
-	AUTHP_CRC_POLICY,
+	AUTHP_ERROR_CHECK_POLICY,
 	__AUTHP_ATTR_MAX,
 };
 #define AUTHP_ATTR_MAX (__AUTHP_ATTR_MAX -1)
 
-enum spec_sdup_config {
+enum spec_sdup_config_attrs_list {
     SAUTHP_UNDER_DIF = 1,
     SAUTHP_AUTH_PROFILE,
     __SAUTHP_ATTR_MAX,
@@ -549,12 +549,8 @@ enum ipcm_select_policy_set_req_result_attrs_list {
 
 enum ipcp_enable_encryption_req_attrs_list {
 	IEERM_ATTR_N_1_PORT = 1,
-        IEERM_ATTR_ENCRYPT_POLICY_CONFIG,
 	IEERM_ATTR_EN_ENCRYPT,
         IEERM_ATTR_EN_DECRYPT,
-        IEERM_ATTR_ENCRYPT_ALG,
-        IEERM_ATTR_MAC_ALG,
-        IEERM_ATTR_COMPRESS_ALG,
         IEERM_ATTR_ENCRYPT_KEY,
         __IEERM_ATTR_MAX,
 };
@@ -809,12 +805,8 @@ struct rnl_ipcp_select_policy_set_req_msg_attrs {
 };
 
 struct rnl_ipcp_enable_encrypt_req_msg_attrs {
-	struct policy * encrypt_policy_conf;
 	bool 		encryption_enabled;
 	bool		decrption_enabled;
-	string_t *	encrypt_alg;
-	string_t *	mac_alg;
-	string_t *	compress_alg;
 	struct buffer * encrypt_key;
 	port_id_t 	port_id;
 };

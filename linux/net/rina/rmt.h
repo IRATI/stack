@@ -109,6 +109,8 @@ int          rmt_address_set(struct rmt * instance,
                              address_t    address);
 int          rmt_dt_cons_set(struct rmt *     instance,
                              struct dt_cons * dt_cons);
+int 	     rmt_sdup_config_set(struct rmt *         instance,
+                    	         struct sdup_config * sdup_conf);
 
 int          rmt_n1port_bind(struct rmt * instance,
                              port_id_t    id,
@@ -145,6 +147,12 @@ int          rmt_set_policy_set_param(struct rmt * rmt,
                                       const string_t * path,
                                       const string_t * name,
                                       const string_t * value);
+
+int 	     rmt_enable_encryption(struct rmt *     instance,
+			     	   bool 	    enable_encryption,
+			     	   bool    	    enable_decryption,
+			     	   struct buffer *  encrypt_key,
+			     	   port_id_t 	    port_id);
 
 struct rmt * rmt_from_component(struct rina_component * component);
 

@@ -1406,14 +1406,6 @@ static int eth_vlan_query_rib(struct ipcp_instance_data * data,
 	return -1;
 }
 
-static const struct name * eth_vlan_dif_name(struct ipcp_instance_data * data)
-{
-        ASSERT(data);
-        ASSERT(name_is_ok(data->dif_name));
-
-        return data->dif_name;
-}
-
 static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .flow_allocate_request     = eth_vlan_flow_allocate_request,
         .flow_allocate_response    = eth_vlan_flow_allocate_response,
@@ -1454,7 +1446,6 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .set_policy_set_param      = NULL,
         .select_policy_set         = NULL,
         .enable_encryption	   = NULL,
-        .find_dup_config	   = NULL,
         .dif_name		   = eth_vlan_dif_name
 };
 

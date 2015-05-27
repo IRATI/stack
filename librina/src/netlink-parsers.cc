@@ -1390,41 +1390,49 @@ int putAuthSDUProtectionProfile(nl_msg* netlinkMessage,
 {
 	struct nlattr *authp, *encryptp, *crcp, *ttlp;
 
-	if (!(authp = nla_nest_start(netlinkMessage, AUTHP_AUTH_POLICY))) {
-		goto nla_put_failure;
+	if (object.authPolicy.name_ != RINA_NO_POLICY_NAME) {
+		if (!(authp = nla_nest_start(netlinkMessage, AUTHP_AUTH_POLICY))) {
+			goto nla_put_failure;
+		}
+		if (putPolicyConfigObject(netlinkMessage,
+				object.authPolicy) < 0) {
+			goto nla_put_failure;
+		}
+		nla_nest_end(netlinkMessage, authp);
 	}
-	if (putPolicyConfigObject(netlinkMessage,
-				  object.authPolicy) < 0) {
-		goto nla_put_failure;
-	}
-	nla_nest_end(netlinkMessage, authp);
 
-	if (!(encryptp = nla_nest_start(netlinkMessage, AUTHP_ENCRYPT_POLICY))) {
-		goto nla_put_failure;
+	if (object.encryptPolicy.name_ != RINA_NO_POLICY_NAME) {
+		if (!(encryptp = nla_nest_start(netlinkMessage, AUTHP_ENCRYPT_POLICY))) {
+			goto nla_put_failure;
+		}
+		if (putPolicyConfigObject(netlinkMessage,
+				object.encryptPolicy) < 0) {
+			goto nla_put_failure;
+		}
+		nla_nest_end(netlinkMessage, encryptp);
 	}
-	if (putPolicyConfigObject(netlinkMessage,
-				  object.encryptPolicy) < 0) {
-		goto nla_put_failure;
-	}
-	nla_nest_end(netlinkMessage, encryptp);
 
-	if (!(crcp = nla_nest_start(netlinkMessage, AUTHP_CRC_POLICY))) {
-		goto nla_put_failure;
+	if (object.crcPolicy.name_ != RINA_NO_POLICY_NAME) {
+		if (!(crcp = nla_nest_start(netlinkMessage, AUTHP_CRC_POLICY))) {
+			goto nla_put_failure;
+		}
+		if (putPolicyConfigObject(netlinkMessage,
+				object.crcPolicy) < 0) {
+			goto nla_put_failure;
+		}
+		nla_nest_end(netlinkMessage, crcp);
 	}
-	if (putPolicyConfigObject(netlinkMessage,
-				  object.crcPolicy) < 0) {
-		goto nla_put_failure;
-	}
-	nla_nest_end(netlinkMessage, crcp);
 
-	if (!(ttlp = nla_nest_start(netlinkMessage, AUTHP_TTL_POLICY))) {
-		goto nla_put_failure;
+	if (object.ttlPolicy.name_ != RINA_NO_POLICY_NAME) {
+		if (!(ttlp = nla_nest_start(netlinkMessage, AUTHP_TTL_POLICY))) {
+			goto nla_put_failure;
+		}
+		if (putPolicyConfigObject(netlinkMessage,
+				object.ttlPolicy) < 0) {
+			goto nla_put_failure;
+		}
+		nla_nest_end(netlinkMessage, ttlp);
 	}
-	if (putPolicyConfigObject(netlinkMessage,
-				  object.ttlPolicy) < 0) {
-		goto nla_put_failure;
-	}
-	nla_nest_end(netlinkMessage, ttlp);
 
 	return 0;
 
@@ -1584,6 +1592,8 @@ AuthSDUProtectionProfile * parseAuthSDUProtectionProfile(nlattr *nested)
 			result->authPolicy = *policy_config;
 			delete policy_config;
 		}
+	} else {
+		result->authPolicy.name_ = RINA_NO_POLICY_NAME;
 	}
 
 	if (attrs[AUTHP_ENCRYPT_POLICY]) {
@@ -1596,6 +1606,8 @@ AuthSDUProtectionProfile * parseAuthSDUProtectionProfile(nlattr *nested)
 			result->encryptPolicy = *policy_config;
 			delete policy_config;
 		}
+	} else {
+		result->encryptPolicy.name_ = RINA_NO_POLICY_NAME;
 	}
 
 	if (attrs[AUTHP_CRC_POLICY]) {
@@ -1608,6 +1620,8 @@ AuthSDUProtectionProfile * parseAuthSDUProtectionProfile(nlattr *nested)
 			result->crcPolicy = *policy_config;
 			delete policy_config;
 		}
+	} else {
+		result->crcPolicy.name_ = RINA_NO_POLICY_NAME;
 	}
 
 	if (attrs[AUTHP_TTL_POLICY]) {
@@ -1620,6 +1634,8 @@ AuthSDUProtectionProfile * parseAuthSDUProtectionProfile(nlattr *nested)
 			result->ttlPolicy = *policy_config;
 			delete policy_config;
 		}
+	} else {
+		result->ttlPolicy.name_ = RINA_NO_POLICY_NAME;
 	}
 
 	return result;

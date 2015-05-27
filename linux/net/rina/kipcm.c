@@ -1537,12 +1537,9 @@ static int notify_ipcp_enable_encryption(void *             data,
 
         ASSERT(ipc_process->ops);
         if (ipc_process->ops->enable_encryption) {
-                retval = ipc_process->ops->enable_encryption(
-                                ipc_process->data, attrs->encrypt_policy_conf,
+                retval = ipc_process->ops->enable_encryption(ipc_process->data,
                                 attrs->encryption_enabled, attrs->decrption_enabled,
-                                attrs->encrypt_alg, attrs->mac_alg,
-                                attrs->compress_alg, attrs->encrypt_key,
-                                attrs->port_id);
+                                attrs->encrypt_key, attrs->port_id);
                 if (retval) {
                         LOG_ERR("Enable encryption operation failed");
                 }

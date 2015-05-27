@@ -499,7 +499,7 @@ int sdup_config_destroy(struct sdup_config * sdup_config)
 	struct dup_config  * dup_pos, * dup_nxt;
 
         if (sdup_config->default_dup_conf)
-                dup_conf_entry_destroy(sdup_config->default_dup_conf);
+        	dup_config_entry_destroy(sdup_config->default_dup_conf);
 
         list_for_each_entry_safe(dup_pos, dup_nxt,
         			 &sdup_config->specific_dup_confs,
@@ -514,20 +514,6 @@ int sdup_config_destroy(struct sdup_config * sdup_config)
         return 0;
 }
 EXPORT_SYMBOL(sdup_config_destroy);
-
-int efcp_config_destroy(struct efcp_config * efcp_config)
-{
-        if (efcp_config->dt_cons)
-                rkfree(efcp_config->dt_cons);
-
-        if (efcp_config->unknown_flow)
-                policy_destroy(efcp_config->unknown_flow);
-
-        rkfree(efcp_config);
-
-        return 0;
-}
-EXPORT_SYMBOL(efcp_config_destroy);
 
 struct dif_config * dif_config_create(void)
 {
@@ -665,7 +651,7 @@ int dup_config_entry_destroy(struct dup_config_entry * entry)
 		rkfree(entry->message_digest);
 
 	if (entry->key)
-		rkfree(entry->key);
+		buffer_destroy(entry->key);
 
 	rkfree(entry);
 
@@ -700,31 +686,15 @@ int dup_config_entry_cpy(const struct dup_config_entry * src,
         }
 
         if (src->error_check_policy) {
-        	dst->error_check_policy = policy_create();
+        	dst->error_check_policy = policy_dup_name_version(src->error_check_policy);
         	if (!dst->error_check_policy) {
-        		return -1;
-        	}
-        	if (string_dup(src->error_check_policy->name,
-        		       &dst->error_check_policy.name)){
-        		return -1;
-        	}
-        	if (string_dup(src->error_check_policy->version,
-        		       &dst->error_check_policy.version)){
         		return -1;
         	}
         }
 
         if (src->ttl_policy) {
-        	dst->ttl_policy = policy_create();
+        	dst->ttl_policy = policy_dup_name_version(dst->ttl_policy);
         	if (!dst->ttl_policy) {
-        		return -1;
-        	}
-        	if (string_dup(src->ttl_policy->name,
-        		       &dst->ttl_policy.name)){
-        		return -1;
-        	}
-        	if (string_dup(src->error_check_policy->version,
-        		       &dst->error_check_policy.version)){
         		return -1;
         	}
 
@@ -733,10 +703,14 @@ int dup_config_entry_cpy(const struct dup_config_entry * src,
 
         if (src->encryption_policy) {
                 if (string_dup(src->encryption_cipher, &dst->encryption_cipher) ||
-                    string_dup(src->message_digest, &dst->message_digest)       ||
-                    string_dup(src->key, &dst->key))
+                    string_dup(src->message_digest, &dst->message_digest))
                     return -1;
 
+                if (src->key) {
+                	dst->key = buffer_dup(src->key);
+                	if (!dst->key)
+                		return -1;
+                }
                 dst->enable_decryption = src->enable_decryption;
                 dst->enable_encryption = src->enable_encryption;
         }
@@ -757,7 +731,7 @@ struct dup_config_entry * dup_config_entry_dup(const struct dup_config_entry * s
 		return NULL;
 
 	if (dup_config_entry_cpy(src, tmp) != 0) {
-		dup_config_destroy(tmp);
+		dup_config_entry_destroy(tmp);
 		return NULL;
 	}
 

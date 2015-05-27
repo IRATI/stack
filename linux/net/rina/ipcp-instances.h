@@ -118,7 +118,7 @@ struct dup_config_entry {
 	string_t * 	encryption_cipher;
 	string_t * 	message_digest;
 	string_t * 	compress_alg;
-	string_t * 	key;
+	struct buffer * key;
 };
 
 struct dup_config {
@@ -281,20 +281,13 @@ struct ipcp_instance_ops {
                                   const string_t * ps_name);
 
         int (* enable_encryption)(struct ipcp_instance_data * data,
-        		          struct policy *  encrypt_policy_conf,
         			  bool 		   enable_encryption,
         		          bool 		   enable_decryption,
-        			  const string_t * encrypt_alg,
-        		          const string_t * mac_alg,
-        		          const string_t * compress_alg,
         		          struct buffer *  encrypt_key,
         		          port_id_t 	   port_id);
 
         int (* enable_write)(struct ipcp_instance_data * data, port_id_t id);
         int (* disable_write)(struct ipcp_instance_data * data, port_id_t id);
-        struct dup_config_entry * (* find_dup_config)(struct ipcp_instance_data * data,
-        					      string_t * n_1_dif_name);
-        const struct name * (* dif_name)(struct ipcp_instance_data * data);
 };
 
 /* FIXME: Should work on struct ipcp_instance, not on ipcp_instance_ops */

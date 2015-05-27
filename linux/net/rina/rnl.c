@@ -267,12 +267,8 @@ static struct nla_policy isps_policy[ISPS_ATTR_MAX + 1] = {
 
 static struct nla_policy ieerm_policy[IEERM_ATTR_MAX + 1] = {
 	[IEERM_ATTR_N_1_PORT] 	 	   = NLA_INIT_U32,
-        [IEERM_ATTR_ENCRYPT_POLICY_CONFIG] = NLA_INIT_NESTED,
         [IEERM_ATTR_EN_ENCRYPT] 	   = NLA_INIT_FLAG,
         [IEERM_ATTR_EN_DECRYPT] 	   = NLA_INIT_FLAG,
-        [IEERM_ATTR_ENCRYPT_ALG] 	   = NLA_INIT_STRING,
-        [IEERM_ATTR_MAC_ALG] 	   	   = NLA_INIT_STRING,
-        [IEERM_ATTR_COMPRESS_ALG] 	   = NLA_INIT_STRING,
         [IEERM_ATTR_ENCRYPT_KEY] 	   = NLA_INIT_UNSPEC,
 };
 

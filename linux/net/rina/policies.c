@@ -62,6 +62,28 @@ struct policy * policy_create_ni(void)
 { return policy_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(policy_create_ni);
 
+struct policy * policy_dup_name_version(const struct policy * policy)
+{
+	struct policy * tmp;
+
+	tmp = policy_create();
+	if (!tmp)
+		return NULL;
+
+	if (string_dup(tmp->name, &policy->name)){
+		policy_destroy(tmp);
+		return NULL;
+	}
+
+	if (string_dup(tmp->version, &policy->version)){
+		policy_destroy(tmp);
+		return NULL;
+	}
+
+	return tmp;
+}
+EXPORT_SYMBOL(policy_dup_name_version);
+
 static struct policy_parm * policy_param_create_gfp(gfp_t flags)
 {
         struct policy_parm * tmp;
