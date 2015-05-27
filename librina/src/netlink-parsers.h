@@ -1415,6 +1415,7 @@ IpcmPluginLoadResponseMessage *parseIpcmPluginLoadResponseMessage(
 /* IpcmFwdCDAPMsgMessage CLASS*/
 enum IpcmFwdCDAPMsgMessageAttributes {
 	IFCM_ATTR_CDAP_MSG = 1,
+	IFCM_ATTR_RESULT,
 	__IFCM_ATTR_MAX,
 };
 

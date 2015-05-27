@@ -4980,6 +4980,8 @@ int putIpcmFwdCDAPMsgMessageObject(nl_msg* netlinkMessage,
 	NLA_PUT(netlinkMessage, IFCM_ATTR_CDAP_MSG, object.sermsg.size_,
 		object.sermsg.message_);
 
+	NLA_PUT_U32(netlinkMessage, IFCM_ATTR_RESULT, object.result);
+
 	return 0;
 
         nla_put_failure: LOG_ERR(
@@ -8688,6 +8690,9 @@ parseIpcmFwdCDAPMsgMessage(nlmsghdr *hdr){
 	attr_policy[IFCM_ATTR_CDAP_MSG].type = NLA_UNSPEC;
 	attr_policy[IFCM_ATTR_CDAP_MSG].minlen = 0;
 	attr_policy[IFCM_ATTR_CDAP_MSG].maxlen = 65535;
+        attr_policy[IFCM_ATTR_RESULT].type = NLA_U32;
+        attr_policy[IFCM_ATTR_RESULT].minlen = 4;
+        attr_policy[IFCM_ATTR_RESULT].maxlen = 4;
 	struct nlattr *attrs[IFCM_ATTR_MAX + 1];
 
 	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
@@ -8709,6 +8714,10 @@ parseIpcmFwdCDAPMsgMessage(nlmsghdr *hdr){
 		memcpy(msgbuf, nla_data(attrs[IFCM_ATTR_CDAP_MSG]), msglen);
 
 		result->sermsg = SerializedObject(msgbuf, msglen);
+	}
+
+	if (attrs[IFCM_ATTR_RESULT]) {
+		result->result = nla_get_u32(attrs[IFCM_ATTR_RESULT]);
 	}
 
 	return result;

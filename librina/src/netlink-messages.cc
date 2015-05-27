@@ -1604,8 +1604,8 @@ IpcmFwdCDAPMsgMessage::IpcmFwdCDAPMsgMessage():
 }
 
 IPCEvent* IpcmFwdCDAPMsgMessage::toIPCEvent(){
-	IPCEvent * event = new FwdCDAPMsgEvent(sermsg,
-			                              getSequenceNumber());
+	IPCEvent * event = new FwdCDAPMsgEvent(sermsg, result,
+			                       getSequenceNumber());
 	return event;
 }
 

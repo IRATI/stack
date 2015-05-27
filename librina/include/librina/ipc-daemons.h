@@ -186,15 +186,20 @@ public:
 
 /**
  * The IPC Manager wants to forward a CDAP message to
- * an IPC process
+ * an IPC process, or the IPC process wants to forwards a
+ * CDAP response back to the IPC Manager.
  */
 class FwdCDAPMsgEvent: public IPCEvent {
 public:
 	/** The serialized CDAP message to be forwarded */
 	SerializedObject sermsg;
 
-	FwdCDAPMsgEvent(const SerializedObject& sm,
-                               unsigned int sequenceNumber);
+	/** Result of the forwarding operation, used only
+	 * in the direction IPC Process --> IPC Manager. */
+	int result;
+
+	FwdCDAPMsgEvent(const SerializedObject& sm, int result,
+			unsigned int sequenceNumber);
 };
 
 }

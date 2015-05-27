@@ -1084,13 +1084,18 @@ public:
 
 /**
  * Used by the IPC Manager to forward a CDAP message to an IPC process
- * IPC Manager -> IPC Process
+ * and by the IPC process for forwarding back the response
+ * IPC Manager -> IPC Process or IPC Process --> IPC Manager
  */
 class IpcmFwdCDAPMsgMessage:
 		public BaseNetlinkMessage {
 public:
 	/** The serialized object containing the message to be forwarded */
 	SerializedObject sermsg;
+
+	/** Result of a forward operation, used only when IPC Process forwards
+	 *  back a CDAP response to the IPC Manager. */
+	int result;
 
 	IpcmFwdCDAPMsgMessage();
 	IPCEvent* toIPCEvent();

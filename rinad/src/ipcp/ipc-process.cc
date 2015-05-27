@@ -692,8 +692,10 @@ void IPCProcessImpl::processFwdCDAPMsgEvent(
 	delete msg;
 	delete session_descr;
 
+	// Reply to the IPC Manager. For now we don't attach a CDAP
+	// response message
 	rina::extendedIPCManager->forwardCDAPResponse(event,
-					rina::SerializedObject());
+					rina::SerializedObject(), 0);
 
         return;
 }

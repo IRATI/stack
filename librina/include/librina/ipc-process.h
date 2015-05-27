@@ -721,7 +721,8 @@ public:
 	 * @throws FwdCDAPMsgException
 	 */
 	void forwardCDAPResponse(const rina::FwdCDAPMsgEvent& event,
-				 const rina::SerializedObject& sermsg);
+				 const rina::SerializedObject& sermsg,
+				 int result);
 };
 
 /**

@@ -525,6 +525,7 @@ void IPCProcessProxy::forwardCDAPMessage(const SerializedObject& sermsg,
 #else
 	IpcmFwdCDAPMsgMessage message;
         message.sermsg = sermsg;
+	message.result = 0;  // unused when IPC Manager sends
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
