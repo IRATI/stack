@@ -344,6 +344,8 @@ public:
         void set_rtx_control(bool rtx_control);
         const DTCPRtxControlConfig& get_rtx_control_config() const;
         void set_rtx_control_config(const DTCPRtxControlConfig& rtx_control_config);
+        const PolicyConfig& get_dtcp_policy_set() const;
+        void set_dtcp_policy_set(const PolicyConfig& dtcp_policy_set);
         const PolicyConfig& get_rtt_estimator_policy() const;
         void set_rtt_estimator_policy(const PolicyConfig& rtt_estimator_policy);
 #endif
@@ -360,6 +362,9 @@ public:
 
         /// the rtx control configuration of a DTCP instance
         DTCPRtxControlConfig rtx_control_config_;
+
+        /// Policy set for DTCP.
+        PolicyConfig dtcp_policy_set_;
 
         /// This policy determines what action to take when the PM detects that
         /// a control PDU (Ack or Flow Control) may have been lost.  If this
@@ -416,9 +421,8 @@ public:
         /// The configuration of the DTCP instance
         DTCPConfig dtcp_configuration_;
 
-        /// Policy Set for DTP and DTCP components.
+        /// Policy Set for DTP.
         PolicyConfig dtp_policy_set_;
-        PolicyConfig dtcp_policy_set_;
 
         /// used when DTCP is in use. If no PDUs arrive in this time period,
         /// the receiver should expect a DRF in the next Transfer PDU. If not,

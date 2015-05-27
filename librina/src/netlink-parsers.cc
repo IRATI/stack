@@ -2519,7 +2519,7 @@ DTCPRtxControlConfig * parseDTCPRtxControlConfigObject(nlattr *nested) {
 int putDTCPConfigObject(nl_msg* netlinkMessage,
                 const DTCPConfig& object) {
         struct nlattr *flowControlConfig, *rtxControlConfig,
-                *lostControlPduPolicy, *rttEstimatorPolicy;
+                *lostControlPduPolicy, *rttEstimatorPolicy, *dtcpPolicySet;
 
         if (object.is_flow_control()) {
                 NLA_PUT_FLAG(netlinkMessage, DCA_ATTR_FLOW_CONTROL);
@@ -2550,6 +2550,18 @@ int putDTCPConfigObject(nl_msg* netlinkMessage,
 
                 nla_nest_end(netlinkMessage, rtxControlConfig);
         }
+
+        if (!(dtcpPolicySet = nla_nest_start(netlinkMessage,
+                        DCA_ATTR_DTCP_POLICY_SET))) {
+                goto nla_put_failure;
+        }
+
+        if (putPolicyConfigObject(netlinkMessage,
+                        object.get_dtcp_policy_set())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, dtcpPolicySet);
 
         if (!(rttEstimatorPolicy = nla_nest_start(netlinkMessage,
                         DCA_ATTR_RTT_EST_POLICY))) {
@@ -2597,6 +2609,9 @@ parseDTCPConfigObject(nlattr *nested) {
         attr_policy[DCA_ATTR_RETX_CONTROL_CONFIG].type = NLA_NESTED;
         attr_policy[DCA_ATTR_RETX_CONTROL_CONFIG].minlen = 0;
         attr_policy[DCA_ATTR_RETX_CONTROL_CONFIG].maxlen = 0;
+        attr_policy[DCA_ATTR_DTCP_POLICY_SET].type = NLA_NESTED;
+        attr_policy[DCA_ATTR_DTCP_POLICY_SET].minlen = 0;
+        attr_policy[DCA_ATTR_DTCP_POLICY_SET].maxlen = 0;
         attr_policy[DCA_ATTR_LOST_CONTROL_PDU_POLICY].type = NLA_NESTED;
         attr_policy[DCA_ATTR_LOST_CONTROL_PDU_POLICY].minlen = 0;
         attr_policy[DCA_ATTR_LOST_CONTROL_PDU_POLICY].maxlen = 0;
@@ -2615,6 +2630,7 @@ parseDTCPConfigObject(nlattr *nested) {
         DTCPConfig * result = new DTCPConfig();
         DTCPFlowControlConfig * flowCtrlConfig;
         DTCPRtxControlConfig * rtxCtrlConfig;
+        PolicyConfig * dtcpPolicySet;
         PolicyConfig * lostControlPduPolicy;
         PolicyConfig * rttEstimatorPolicy;
 
@@ -2662,6 +2678,18 @@ parseDTCPConfigObject(nlattr *nested) {
                 result->set_rtx_control(false);
         }
 
+        if (attrs[DCA_ATTR_DTCP_POLICY_SET]){
+                dtcpPolicySet = parsePolicyConfigObject(
+                                attrs[DCA_ATTR_DTCP_POLICY_SET]);
+                if (dtcpPolicySet == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->set_dtcp_policy_set(*dtcpPolicySet);
+                        delete dtcpPolicySet;
+                }
+        }
+
         if (attrs[DCA_ATTR_LOST_CONTROL_PDU_POLICY]){
                 lostControlPduPolicy = parsePolicyConfigObject(
                                 attrs[DCA_ATTR_LOST_CONTROL_PDU_POLICY]);
@@ -2693,7 +2721,7 @@ int putConnectionPoliciesObject(nl_msg* netlinkMessage,
 		const ConnectionPolicies& object) {
 
         struct nlattr *dtcpConfig, *initSeqNumPolicy, *rtimerInacPolicy,
-                *stimerInacPolicy, *dtpPolicySet, *dtcpPolicySet;
+                *stimerInacPolicy, *dtpPolicySet;
 
         if (object.is_dtcp_present()){
                 NLA_PUT_FLAG(netlinkMessage, CPA_ATTR_DTCP_PRESENT);
@@ -2731,16 +2759,6 @@ int putConnectionPoliciesObject(nl_msg* netlinkMessage,
                 goto nla_put_failure;
         }
         nla_nest_end(netlinkMessage, dtpPolicySet);
-
-        if (!(dtcpPolicySet = nla_nest_start(
-                        netlinkMessage, CPA_ATTR_DTCP_POLICY_SET))) {
-                goto nla_put_failure;
-        }
-        if (putPolicyConfigObject(netlinkMessage,
-                        object.get_dtcp_policy_set()) < 0) {
-                goto nla_put_failure;
-        }
-        nla_nest_end(netlinkMessage, dtcpPolicySet);
 
         if (!(stimerInacPolicy = nla_nest_start(netlinkMessage,
                         CPA_ATTR_SNDR_TIMER_INAC_POLICY))) {
@@ -2806,9 +2824,6 @@ parseConnectionPoliciesObject(nlattr *nested) {
         attr_policy[CPA_ATTR_DTP_POLICY_SET].type = NLA_NESTED;
         attr_policy[CPA_ATTR_DTP_POLICY_SET].minlen = 0;
         attr_policy[CPA_ATTR_DTP_POLICY_SET].maxlen = 0;
-        attr_policy[CPA_ATTR_DTCP_POLICY_SET].type = NLA_NESTED;
-        attr_policy[CPA_ATTR_DTCP_POLICY_SET].minlen = 0;
-        attr_policy[CPA_ATTR_DTCP_POLICY_SET].maxlen = 0;
 	attr_policy[CPA_ATTR_RCVR_TIMER_INAC_POLICY].type = NLA_NESTED;
 	attr_policy[CPA_ATTR_RCVR_TIMER_INAC_POLICY].minlen = 0;
 	attr_policy[CPA_ATTR_RCVR_TIMER_INAC_POLICY].maxlen = 0;
@@ -2852,7 +2867,6 @@ parseConnectionPoliciesObject(nlattr *nested) {
         PolicyConfig * sTimerInacPolicy;
         PolicyConfig * rTimerInacPolicy;
         PolicyConfig * dtpPolicySet;
-        PolicyConfig * dtcpPolicySet;
 
 	if (attrs[CPA_ATTR_DTCP_PRESENT]) {
 	        result->set_dtcp_present(true);
@@ -2884,18 +2898,6 @@ parseConnectionPoliciesObject(nlattr *nested) {
                 } else {
                         result->set_dtp_policy_set(*dtpPolicySet);
                         delete dtpPolicySet;
-                }
-        }
-
-        if (attrs[CPA_ATTR_DTCP_POLICY_SET]) {
-                dtcpPolicySet = parsePolicyConfigObject(
-                                attrs[CPA_ATTR_DTCP_POLICY_SET]);
-                if (dtcpPolicySet == 0) {
-                        delete result;
-                        return 0;
-                } else {
-                        result->set_dtcp_policy_set(*dtcpPolicySet);
-                        delete dtcpPolicySet;
                 }
         }
 

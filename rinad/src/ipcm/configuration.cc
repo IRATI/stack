@@ -249,10 +249,6 @@ void parse_efcp_policies(const Json::Value  root,
                              "dtpPolicySet",
                              cp.dtp_policy_set_);
 
-                parse_policy(con_pol,
-                             "dtcpPolicySet",
-                             cp.dtcp_policy_set_);
-
                 // DTCPConfig
                 Json::Value dtcp_conf = con_pol["dtcpConfiguration"];
                 if (dtcp_conf != 0) {
@@ -270,6 +266,10 @@ void parse_efcp_policies(const Json::Value  root,
 
                         // rtx_control_config_
                         parse_rtx_flow_ctrl(dtcp_conf, dc);
+
+                        parse_policy(dtcp_conf,
+                                     "dtcpPolicySet",
+                                     dc.dtcp_policy_set_);
 
                         parse_policy(dtcp_conf,
                                      "lostControlPduPolicy",

@@ -533,6 +533,15 @@ void DTCPConfig::set_rtx_control_config(const DTCPRtxControlConfig& rtx_control_
 	rtx_control_config_ = rtx_control_config;
 }
 
+const PolicyConfig& DTCPConfig::get_dtcp_policy_set() const {
+        return dtcp_policy_set_;
+}
+
+void DTCPConfig::set_dtcp_policy_set(
+                const PolicyConfig& dtcp_policy_set) {
+	dtcp_policy_set_ = dtcp_policy_set;
+}
+
 const PolicyConfig& DTCPConfig::get_rtt_estimator_policy() const {
 	return rtt_estimator_policy_;
 }
@@ -546,6 +555,8 @@ const std::string DTCPConfig::toString() {
         ss<<"Flow control? "<<flow_control_<<"; Retx control? "<<rtx_control_;
         ss<<"; Lost control PDU policy (name/version): "<<lost_control_pdu_policy_.get_name();
         ss<<"/"<<lost_control_pdu_policy_.get_version()<<std::endl;
+        ss<<"DTCP Policy Set (name/version): "<<dtcp_policy_set_.get_name();
+        ss<<"/"<<dtcp_policy_set_.get_version();
         ss<<"RTT estimator policy (name/version): "<<rtt_estimator_policy_.get_name();
         ss<<"/"<<rtt_estimator_policy_.get_version()<<std::endl;
         if (rtx_control_) {
@@ -575,15 +586,6 @@ const PolicyConfig& ConnectionPolicies::get_dtp_policy_set() const {
 void ConnectionPolicies::set_dtp_policy_set(
                 const PolicyConfig& dtp_policy_set) {
 	dtp_policy_set_ = dtp_policy_set;
-}
-
-const PolicyConfig& ConnectionPolicies::get_dtcp_policy_set() const {
-        return dtcp_policy_set_;
-}
-
-void ConnectionPolicies::set_dtcp_policy_set(
-                const PolicyConfig& dtcp_policy_set) {
-	dtcp_policy_set_ = dtcp_policy_set;
 }
 
 const PolicyConfig& ConnectionPolicies::get_rcvr_timer_inactivity_policy() const {
@@ -680,8 +682,6 @@ const std::string ConnectionPolicies::toString() {
         std::stringstream ss;
         ss<<"DTP Policy Set (name/version): "<<dtp_policy_set_.get_name();
         ss<<"/"<<dtp_policy_set_.get_version();
-        ss<<"DTCP Policy Set (name/version): "<<dtcp_policy_set_.get_name();
-        ss<<"/"<<dtcp_policy_set_.get_version();
         ss<<"Sder time inactivity policy (name/version): "<<sender_timer_inactivity_policy_.get_name();
         ss<<"/"<<sender_timer_inactivity_policy_.get_version();
         ss<<"; Rcvr time inactivity policy (name/version): "<<rcvr_timer_inactivity_policy_.get_name();
