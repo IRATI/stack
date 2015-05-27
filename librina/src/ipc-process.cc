@@ -157,15 +157,6 @@ PluginLoadRequestEvent::PluginLoadRequestEvent(const std::string& name,
         this->load = load;
 }
 
-/* CLASS FWD CDAP MSG REQUEST EVENT */
-FwdCDAPMsgRequestEvent::FwdCDAPMsgRequestEvent(const SerializedObject& sm,
-                                unsigned int sequenceNumber) :
-				IPCEvent(IPC_PROCESS_FWD_CDAP_MSG,
-                                         sequenceNumber)
-{
-        this->sermsg = sm;
-}
-
 /* CLASS CREATE CONNECTION RESPONSE EVENT */
 CreateConnectionResponseEvent::CreateConnectionResponseEvent(int portId,
         int cepId, unsigned int sequenceNumber):
@@ -714,6 +705,31 @@ void ExtendedIPCManager::pluginLoadResponse(
 		rinaManager->sendMessage(&responseMessage, false);
 	} catch (NetlinkException &e) {
 		throw PluginLoadException(e.what());
+	}
+#endif
+}
+
+void ExtendedIPCManager::forwardCDAPResponse(
+				const rina::FwdCDAPMsgRequestEvent& event,
+				const rina::SerializedObject& sermsg)
+{
+#if STUB_API
+	//Do nothing
+	(void) event;
+        (void) sermsg;
+#else
+	IpcmFwdCDAPMsgRequestMessage responseMessage;
+
+	//responseMessage.result = 0; TODO
+	responseMessage.sermsg = sermsg;
+	responseMessage.setSequenceNumber(event.sequenceNumber);
+	responseMessage.setSourceIpcProcessId(ipcProcessId);
+        responseMessage.setDestPortId(ipcManagerPort);
+	responseMessage.setResponseMessage(true);
+	try {
+		rinaManager->sendMessage(&responseMessage, false);
+	} catch (NetlinkException &e) {
+		throw FwdCDAPMsgException(e.what());
 	}
 #endif
 }

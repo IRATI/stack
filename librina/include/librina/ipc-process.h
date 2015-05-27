@@ -186,19 +186,6 @@ public:
 };
 
 /**
- * The IPC Manager wants to forward a CDAP message to
- * an IPC process
- */
-class FwdCDAPMsgRequestEvent: public IPCEvent {
-public:
-	/** The serialized CDAP message to be forwarded */
-	SerializedObject sermsg;
-
-	FwdCDAPMsgRequestEvent(const SerializedObject& sm,
-                               unsigned int sequenceNumber);
-};
-
-/**
  * The Kernel components of the IPC Process report about the result of a
  * create EFCP connection operation
  */
@@ -727,6 +714,14 @@ public:
 	void pluginLoadResponse(const PluginLoadRequestEvent& event,
                                 int result);
 
+	/**
+	 * Forward to the IPC Manager a CDAP response message
+	 * @param event The event that triggered the operation
+	 * @param The serialized CDAP message to forward
+	 * @throws FwdCDAPMsgException
+	 */
+	void forwardCDAPResponse(const rina::FwdCDAPMsgRequestEvent& event,
+				 const rina::SerializedObject& sermsg);
 };
 
 /**

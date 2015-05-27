@@ -399,17 +399,15 @@ void FlowManager::process_flow_event(rina::IPCEvent** event_)
 			return;  //Do not delete
 		case rina::FLOW_ALLOCATION_REQUESTED_EVENT:
 			//TODO: add pasive worker
-			flow =
-					rina::ipcManager->allocateFlowResponse(
-							*dynamic_cast<rina::FlowRequestEvent*>(event),
-							0, true);
+			flow = rina::ipcManager->allocateFlowResponse(
+					*dynamic_cast<rina::FlowRequestEvent*>(event),
+					0, true);
 			LOG_INFO("New flow allocated [port-id = %d]",
 				 flow.portId);
 			break;
 
 		case rina::FLOW_DEALLOCATED_EVENT:
-			port_id =
-					dynamic_cast<rina::FlowDeallocatedEvent*>(event)
+			port_id = dynamic_cast<rina::FlowDeallocatedEvent*>(event)
 							->portId;
 			rina::ipcManager->flowDeallocated(port_id);
 			LOG_INFO("Flow torn down remotely [port-id = %d]",
@@ -420,14 +418,22 @@ void FlowManager::process_flow_event(rina::IPCEvent** event_)
 
 		case rina::DEALLOCATE_FLOW_RESPONSE_EVENT:
 			LOG_INFO("Destroying the flow after time-out");
-			resp =
-					dynamic_cast<rina::DeallocateFlowResponseEvent*>(event);
+			resp = dynamic_cast<rina::DeallocateFlowResponseEvent*>(event);
 			port_id = resp->portId;
 			rina::ipcManager->flowDeallocationResult(
 					port_id, resp->result == 0);
 			//TODO: add pasive worker
 			//joinWorker(port_id);
 			break;
+
+		case rina::IPC_PROCESS_FWD_CDAP_MSG:
+		{
+			rina::FwdCDAPMsgRequestEvent *fwdevent =
+				dynamic_cast<rina::FwdCDAPMsgRequestEvent*>(event);
+
+			LOG_INFO("Received forwarded CDAP response %p", fwdevent);
+			break;
+		}
 
 		default:
 			assert(0);

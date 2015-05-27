@@ -184,6 +184,19 @@ public:
                                 unsigned int sequenceNumber);
 };
 
+/**
+ * The IPC Manager wants to forward a CDAP message to
+ * an IPC process
+ */
+class FwdCDAPMsgRequestEvent: public IPCEvent {
+public:
+	/** The serialized CDAP message to be forwarded */
+	SerializedObject sermsg;
+
+	FwdCDAPMsgRequestEvent(const SerializedObject& sm,
+                               unsigned int sequenceNumber);
+};
+
 }
 
 #endif

@@ -692,6 +692,9 @@ void IPCProcessImpl::processFwdCDAPMsgRequestEvent(
 	delete msg;
 	delete session_descr;
 
+	rina::extendedIPCManager->forwardCDAPResponse(event,
+					rina::SerializedObject());
+
         return;
 }
 

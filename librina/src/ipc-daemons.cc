@@ -57,5 +57,14 @@ PluginLoadResponseEvent::PluginLoadResponseEvent(
                                          sequenceNumber)
 { this->result = result; }
 
+/* CLASS FWD CDAP MSG REQUEST EVENT */
+FwdCDAPMsgRequestEvent::FwdCDAPMsgRequestEvent(const SerializedObject& sm,
+                                unsigned int sequenceNumber) :
+				IPCEvent(IPC_PROCESS_FWD_CDAP_MSG,
+                                         sequenceNumber)
+{
+        this->sermsg = sm;
+}
+
 }
 
