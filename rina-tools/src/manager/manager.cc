@@ -246,8 +246,8 @@ void Manager::run() {
 					}
 				}
 				while (waiting.find(order) != waiting.end()) {
+					operate(waiting[order]);
 					order++;
-					operate(flow);
 				}
 
 				break;
