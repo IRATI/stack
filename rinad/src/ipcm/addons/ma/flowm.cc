@@ -361,7 +361,7 @@ void* ActiveWorker::run(void* param)
 }
 
 //Process an event coming from librina
-void FlowManager::process_flow_event(rina::IPCEvent** event_)
+void FlowManager::process_librina_event(rina::IPCEvent** event_)
 {
 
 	rina::FlowInformation flow;
