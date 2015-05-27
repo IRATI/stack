@@ -168,7 +168,6 @@ typedef struct connection_handler {
 	vers_info_t version_;
 } con_handle_t;
 
-}
-
-}
+} //cdap_rib namespace
+} //rina namespace
 #endif /* CDAP_RIB_STRUCTURES_H_ */

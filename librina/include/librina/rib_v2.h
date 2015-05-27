@@ -24,6 +24,7 @@
 #define RIB_PROVIDER_H_
 #include "cdap_rib_structures.h"
 #include <string>
+#include <inttypes.h>
 #include <list>
 #include <map>
 #include <algorithm>
@@ -39,12 +40,12 @@ public:
 	virtual ~AppConHandlerInterface(){};
 
 	/// A remote Connect request has been received.
-	virtual void connect(int message_id, const cdap_rib::con_handle_t &con) = 0;
+	virtual void connect(int invoke_id, const cdap_rib::con_handle_t &con) = 0;
 	/// A remote Connect response has been received.
 	virtual void connectResult(const cdap_rib::res_info_t &res,
 			const cdap_rib::con_handle_t &con) = 0;
 	/// A remote Release request has been received.
-	virtual void release(int message_id, const cdap_rib::con_handle_t &con) = 0;
+	virtual void release(int invoke_id, const cdap_rib::con_handle_t &con) = 0;
 	/// A remote Release response has been received.
 	virtual void releaseResult(const cdap_rib::res_info_t &res,
 			const cdap_rib::con_handle_t &con) = 0;
@@ -59,11 +60,14 @@ class RIB;
 class RIBDaemonProxy;
 class RIBOpsRespHandlers;
 
-/// RIB version has been already registered
-DECLARE_EXCEPTION_SUBCLASS(eRIBVersionExists);
+/// RIB version has been already registered for this AE
+DECLARE_EXCEPTION_SUBCLASS(eRIBAlreadyRegistered);
 
-/// RIB version does not exist
-DECLARE_EXCEPTION_SUBCLASS(eRIBVersionDoesNotExist);
+/// Could not find a valid RIB version for this AE
+DECLARE_EXCEPTION_SUBCLASS(eRIBNotFound);
+
+/// RIB is not registered in this AE
+DECLARE_EXCEPTION_SUBCLASS(eRIBNotRegistered);
 
 ///
 /// Initialize the RIB library (RIBDaemon)
@@ -349,9 +353,9 @@ class RIBDaemon;
 class RIBDaemonProxy{
 
 	///
-	/// Register a RIB
+	/// Register a RIB to an AE
 	///
-	void registerRIB(RIB* rib);
+	void registerRIB(RIB* rib, const std::string& ae_name);
 
 	///
 	/// List registered RIB versions
@@ -364,19 +368,40 @@ class RIBDaemonProxy{
 	/// @param version RIB version
 	/// @param Application Entity Name
 	///
-	/// @ret A pointer to the RIB object or NULL. The application needs to
-	/// take care to safely access it.
+	/// @ret A pointer to the RIB object or NULL.
 	///
-	RIB* get(uint64_t version, std::string& ae_name);
+	RIB* get(uint64_t version, const std::string& ae_name);
+
+	///
+	/// Retrieve a list of pointers to the RIB of a certain version
+	///
+	/// @param version RIB version
+	///
+	/// @ret a list of pointers to RIB objects
+	///
+	//std::list<RIB*> get(uint64_t version);
+
+	///
+	/// Retrieve a list of pointers to the RIB(s) registered in an AE
+	///
+	/// @param  RIB version
+	///
+	/// @ret a list of pointers to RIB objects
+	///
+	//std::list<RIB*> get(const std::string& ae_name);
+
 
 	/// Unregister a RIB
 	///
 	/// Unregisters a RIB from the library. This method does NOT
 	/// destroy the RIB instance.
 	///
+	/// @warning Current API does NOT guarantee that the RIB object can
+	/// be removed, even if it is not registered in any other AE.
+	///
 	/// @ret On success, it returns the pointer to the RIB instance
 	///
-	RIB* unregisterRIB(RIB* inst);
+	RIB* unregisterRIB(RIB* rib, const std::string& ae_name);
 
 
 	//
