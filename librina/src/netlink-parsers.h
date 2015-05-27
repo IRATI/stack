@@ -1277,11 +1277,24 @@ int putIpcpConnectionDestroyResultMessageObject(nl_msg* netlinkMessage,
 IpcpConnectionDestroyResultMessage * parseIpcpConnectionDestroyResultMessage(
                 nlmsghdr *hdr);
 
+/* PortIdAltlist CLASS */
+enum PortIdAltlistAttributes {
+        PIA_ATTR_PORT_IDS = 1,
+        __PIA_ATTR_MAX,
+};
+
+#define PIA_ATTR_MAX (__PIA_ATTR_MAX - 1)
+
+int putPortIdAltlist(nl_msg* netlinkMessage,
+                 const PortIdAltlist& object);
+
+int parsePortIdAltlist(nlattr *nested, PortIdAltlist& portIdAlt);
+
 /* PDUForwardingTableEntry CLASS*/
 enum PDUForwardingTableEntryAttributes {
         PFTE_ATTR_ADDRESS = 1,
         PFTE_ATTR_QOS_ID,
-        PFTE_ATTR_PORT_IDS,
+        PFTE_ATTR_PORT_ID_ALTLISTS,
         __PFTE_ATTR_MAX,
 };
 

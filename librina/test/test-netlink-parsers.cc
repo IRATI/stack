@@ -3051,8 +3051,9 @@ int testRmtModifyPDUFTEntriesRequestMessage() {
         int returnValue = 0;
         std::list<PDUForwardingTableEntry *>::const_iterator iterator;
         std::list<PDUForwardingTableEntry *> entriesList;
-        std::list<unsigned int>::const_iterator iterator2;
-        std::list<unsigned int> portIdsList;
+        std::list<PortIdAltlist>::const_iterator iterator2;
+        std::list<unsigned int>::const_iterator it3;
+        std::list<PortIdAltlist> portIdsList;
 
         RmtModifyPDUFTEntriesRequestMessage message;
         PDUForwardingTableEntry * entry1 = new PDUForwardingTableEntry();
@@ -3121,7 +3122,10 @@ int testRmtModifyPDUFTEntriesRequestMessage() {
                 for(iterator2 = portIdsList.begin();
                                 iterator2 != portIdsList.end();
                                 ++iterator2) {
-                        std::cout << *iterator2 <<std::endl;
+			for (it3 = iterator2->alts.begin();
+					it3 != iterator2->alts.end(); it3++) {
+				std::cout << *it3 <<std::endl;
+			}
                 }
         }
 
@@ -3139,8 +3143,9 @@ int testRmtDumpPDUFTResponseMessage() {
         int returnValue = 0;
         std::list<PDUForwardingTableEntry>::const_iterator iterator;
         std::list<PDUForwardingTableEntry> entriesList;
-        std::list<unsigned int>::const_iterator iterator2;
-        std::list<unsigned int> portIdsList;
+        std::list<PortIdAltlist>::const_iterator iterator2;
+	std::list<unsigned int>::const_iterator it3;
+        std::list<PortIdAltlist> portIdsList;
 
         RmtDumpPDUFTEntriesResponseMessage message;
         PDUForwardingTableEntry entry1, entry2;
@@ -3208,7 +3213,10 @@ int testRmtDumpPDUFTResponseMessage() {
                 for(iterator2 = portIdsList.begin();
                                 iterator2 != portIdsList.end();
                                 ++iterator2) {
-                        std::cout << *iterator2 <<std::endl;
+			for (it3 = iterator2->alts.begin();
+					it3 != iterator2->alts.end(); it3++) {
+				std::cout << *it3 <<std::endl;
+			}
                 }
         }
 

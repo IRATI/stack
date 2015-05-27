@@ -410,14 +410,18 @@ void IPCProcessImpl::logPDUFTE(const rina::DumpFTResponseEvent& event) {
 	}
 
 	std::list<rina::PDUForwardingTableEntry>::const_iterator it;
-	std::list<unsigned int>::const_iterator it2;
+	std::list<rina::PortIdAltlist>::const_iterator it2;
+	std::list<unsigned int>::const_iterator it3;
 	std::stringstream ss;
 	ss << "Contents of the PDU Forwarding Table: " << std::endl;
 	for (it = event.entries.begin(); it != event.entries.end(); ++it) {
 		ss << "Address: " << it->address << "; QoS-id: ";
 		ss << it->qosId << "; Port-ids: ";
-		for (it2 = it->portIds.begin(); it2 != it->portIds.end(); ++it2) {
-			ss << (*it2) << "; ";
+		for (it2 = it->portIdAltlists.begin(); it2 != it->portIdAltlists.end(); ++it2) {
+			for (it3 = it2->alts.begin(); it3 != it2->alts.end(); it3++) {
+				ss << (*it3) << ", ";
+			}
+			ss << ";";
 		}
 		ss << std::endl;
 	}
