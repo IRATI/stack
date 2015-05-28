@@ -951,6 +951,8 @@ static int __queue_send_add(struct rmt * instance,
         	if (tmp_dup_config) {
         		LOG_DBG("Found SDU Protection policy configuration, duplicating it");
         		dup_config = dup_config_entry_dup(tmp_dup_config);
+        	} else {
+        		dup_config = NULL;
         	}
         } else {
         	dup_config = NULL;

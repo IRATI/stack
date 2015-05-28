@@ -685,7 +685,6 @@ int dup_config_entry_cpy(const struct dup_config_entry * src,
         	return -1;
         }
 
-        LOG_DBG("Copying error check policy");
         if (src->error_check_policy) {
         	dst->error_check_policy = policy_dup_name_version(src->error_check_policy);
         	if (!dst->error_check_policy) {
@@ -693,9 +692,8 @@ int dup_config_entry_cpy(const struct dup_config_entry * src,
         	}
         }
 
-        LOG_DBG("Copying TTL policy");
         if (src->ttl_policy) {
-        	dst->ttl_policy = policy_dup_name_version(dst->ttl_policy);
+        	dst->ttl_policy = policy_dup_name_version(src->ttl_policy);
         	if (!dst->ttl_policy) {
         		return -1;
         	}
@@ -703,7 +701,6 @@ int dup_config_entry_cpy(const struct dup_config_entry * src,
         	dst->initial_ttl_value = src->initial_ttl_value;
         }
 
-        LOG_DBG("Copying encryption policy");
         if (src->encryption_policy) {
         	dst->encryption_policy = policy_dup_name_version(src->encryption_policy);
         	if (!dst->encryption_policy) {
