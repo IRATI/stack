@@ -62,11 +62,11 @@ struct policy * policy_create_ni(void)
 { return policy_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(policy_create_ni);
 
-struct policy * policy_dup_name_version(const struct policy * policy)
+struct policy * policy_dup_name_version(const struct policy * src)
 {
 	struct policy * tmp;
 
-	if (!policy) {
+	if (!src) {
 		LOG_ERR("Bogus policy passed");
 		return NULL;
 	}
@@ -75,12 +75,12 @@ struct policy * policy_dup_name_version(const struct policy * policy)
 	if (!tmp)
 		return NULL;
 
-	if (string_dup(policy->name, &tmp->name)){
+	if (string_dup(src->name, &tmp->name)){
 		policy_destroy(tmp);
 		return NULL;
 	}
 
-	if (string_dup(policy->version, &tmp->version)){
+	if (string_dup(src->version, &tmp->version)){
 		policy_destroy(tmp);
 		return NULL;
 	}

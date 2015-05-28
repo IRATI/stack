@@ -922,10 +922,15 @@ static struct dup_config_entry * find_dup_config(struct sdup_config * sdup_conf,
 		return NULL;
 
 	list_for_each_entry(dup_pos, &sdup_conf->specific_dup_confs, next){
-		if (string_cmp(dup_pos->entry->n_1_dif_name, n_1_dif_name))
+		if (string_cmp(dup_pos->entry->n_1_dif_name, n_1_dif_name)) {
+			LOG_DBG("Returning specific SDU Protection config for port over N-1 DIF %s",
+					n_1_dif_name);
 			return dup_pos->entry;
+		}
 	}
 
+	LOG_DBG("Returning default SDU Protection config for port over N-1 DIF %s",
+			n_1_dif_name);
 	return sdup_conf->default_dup_conf;
 }
 
@@ -937,16 +942,21 @@ static int __queue_send_add(struct rmt * instance,
         struct rmt_ps *      ps;
         const struct name * n_1_dif_name;
         struct dup_config_entry * dup_config;
+        struct dup_config_entry * tmp_dup_config;
 
         n_1_dif_name = n1_ipcp->ops->dif_name(n1_ipcp->data);
         if (n_1_dif_name) {
-        	dup_config = find_dup_config(instance->sdup_conf,
-        				     n_1_dif_name->process_name);
+        	tmp_dup_config = find_dup_config(instance->sdup_conf,
+        				         n_1_dif_name->process_name);
+        	if (tmp_dup_config) {
+        		LOG_DBG("Found SDU Protection policy configuration, duplicating it");
+        		dup_config = dup_config_entry_dup(tmp_dup_config);
+        	}
         } else {
         	dup_config = NULL;
         }
 
-        tmp = n1_port_create(id, n1_ipcp, dup_config_entry_dup(dup_config));
+        tmp = n1_port_create(id, n1_ipcp, dup_config);
         if (!tmp)
                 return -1;
 
