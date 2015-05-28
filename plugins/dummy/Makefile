@@ -10,7 +10,7 @@ ccflags-y = -Wtype-limits -Inet/rina
 
 obj-m := dummy-plugin.o
 
-dummy-plugin-y := rmt-ps-dummy.o dtcp-ps-dummy.o dtp-ps-dummy.o pft-ps-dummy.o
+dummy-plugin-y := dummy-plugin-ps.o rmt-ps-dummy.o dtcp-ps-dummy.o dtp-ps-dummy.o pft-ps-dummy.o
 
 else
 
