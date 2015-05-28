@@ -264,6 +264,16 @@ public:
 	};
 
 	//
+	// Get the fully qualified name given the instance id
+	//
+	// @ret The object fqn or "" if does not exist
+	//
+	std::string get_obj_fqn(const int64_t inst_id) {
+		ReadScopedLock rlock(rwlock);
+		return __get_obj_fqn(inst_id);
+	};
+
+	//
 	// Get the class name given a fully qualified name (fqn)
 	//
  	// @ret A string with the class name or an exception if the object
@@ -363,12 +373,31 @@ protected:
 			const cdap_rib::filt_info_t &filt,
 			int invoke_id);
 private:
+
+	// fqn <-> obj
 	std::map<std::string, RIBObj_*> obj_name_map;
+
+	// instance id <-> obj
 	std::map<int64_t, RIBObj_*> obj_inst_map;
+
+	// instance id <-> fqn
+	std::map<int64_t, std::string> inst_name_map;
+
+	// fqn <-> instance id
+	std::map<std::string, int64_t> name_inst_map;
+
+
+	// delegation cache: fqn <-> obj
+	std::map<std::string, RIBObj_*> deleg_cache;
+
+	//Schema
 	const RIBSchema *schema;
 
 	//Next id pointer
 	int64_t next_inst_id;
+
+	//Number of objects that delegate
+	unsigned int num_of_deleg;
 
 	//@internal only; must be called with the rwlock acquired
 	RIBObj_* get_obj(int64_t inst_id);
@@ -377,7 +406,10 @@ private:
 	int __remove_obj(int64_t inst_id);
 
 	//@internal: must be called with the rwlock acquired
-	int64_t __get_obj_inst_id(const std::string& fqn) const;
+	int64_t __get_obj_inst_id(const std::string& fqn);
+
+	//@internal: must be called with the rwlock acquired
+	std::string __get_obj_fqn(const int64_t inst_id);
 
 	//@internal Get a new (unused) instance id (strictly > 0);
 	//must be called with the wlock acquired
@@ -715,6 +747,24 @@ RIBObj_* RIB::get_obj(int64_t inst_id){
 		return NULL;
 }
 
+int64_t RIB::__get_obj_inst_id(const std::string& fqn){
+	int64_t id = -1;
+
+	if(name_inst_map.find(fqn) != name_inst_map.end())
+		id = name_inst_map[fqn];
+
+	return id;
+}
+
+std::string RIB::__get_obj_fqn(const int64_t inst_id) {
+	std::string fqn("");
+
+	if(inst_name_map.find(inst_id) != inst_name_map.end())
+		fqn = inst_name_map[inst_id];
+
+	return fqn;
+}
+
 int64_t RIB::get_new_inst_id(){
 	for(;; ++next_inst_id){
 		//Reuse ids; restart at 1
@@ -772,6 +822,15 @@ int64_t RIB::add_obj(const std::string& fqn, RIBObj<T>** obj_) {
 	//Add it and return
 	obj_name_map[fqn] = obj;
 	obj_inst_map[id] = obj;
+	inst_name_map[id] = fqn;
+	name_inst_map[fqn] = id;
+
+	if(obj->delegates){
+		//Increase counter number of num_of_deleg
+		num_of_deleg++;
+		//For consistency (delegation in delegation); clear cache
+		deleg_cache.clear();
+	}
 
 	//Mark pointer as acquired and return
 	*obj_ = NULL;
@@ -798,12 +857,24 @@ int RIB::__remove_obj(int64_t inst_id) {
 		return -1;
 	}
 
-	//Remove from the
+	//Remove from the maps
+	std::string fqn = get_obj_fqn(inst_id);
+	obj_inst_map.erase(inst_id);
+	inst_name_map.erase(inst_id);
+	name_inst_map.erase(fqn);
+	obj_name_map.erase(fqn);
 
 	//If there Remove from the cache
 	if(obj->delegates){
-		//TODO: removed cached delegated objs
+		//Remove cached delegated objs
+		deleg_cache.clear();
+		num_of_deleg--;
 	}
+
+	LOG_DBG("Object '%s' of class '%s' succesfully removed (id:'%" PRId64 "')",
+							fqn.c_str(),
+							obj->get_class().c_str(),
+							inst_id);
 
 	//Delete object
 	delete obj;
@@ -812,7 +883,6 @@ int RIB::__remove_obj(int64_t inst_id) {
 }
 
 char RIB::get_separator() const {
-
 	return schema->get_separator();
 }
 
