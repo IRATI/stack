@@ -82,7 +82,7 @@ static struct rmt_n1_port * n1_port_create(port_id_t id,
         if (dup_config != NULL && dup_config->encryption_cipher != NULL){
             tmp->blkcipher = crypto_alloc_blkcipher(dup_config->encryption_cipher, 0, 0);
             if (IS_ERR(tmp->blkcipher)) {
-                printk("could not allocate blkcipher handle for %s\n", dup_config->encryption_cipher);
+                LOG_ERR("could not allocate blkcipher handle for %s\n", dup_config->encryption_cipher);
                 return NULL;
             }
         }else
@@ -537,6 +537,7 @@ static int extract_policy_parameters(struct dup_config_entry * entry)
 {
 	struct policy * policy;
 	struct policy_parm * parameter;
+	string_t * aux;
 
 	if (!entry) {
 		LOG_ERR("Bogus entry passed");
@@ -563,11 +564,16 @@ static int extract_policy_parameters(struct dup_config_entry * entry)
 			return -1;
 		}
 
-		if (string_dup(policy_param_value(parameter), &entry->encryption_cipher)) {
-			LOG_ERR("Problems copying string ('encryptAlg' parameter value)");
-			return -1;
+		aux = policy_param_value(parameter);
+		if (string_cmp(aux, "AES128") == 0 || string_cmp(aux, "AES256") == 0) {
+			if (string_dup("aes", &entry->encryption_cipher)) {
+				LOG_ERR("Problems copying string ('encryptAlg' parameter value)");
+				return -1;
+			}
+			LOG_DBG("Encryption cipher is %s", entry->encryption_cipher);
+		} else {
+			LOG_DBG("Unsupported encryption cipher %s", aux);
 		}
-		LOG_DBG("Encryption cipher is %s", entry->encryption_cipher);
 
 		parameter = policy_param_find(policy, "macAlg");
 		if (!parameter) {
@@ -575,11 +581,22 @@ static int extract_policy_parameters(struct dup_config_entry * entry)
 			return -1;
 		}
 
-		if (string_dup(policy_param_value(parameter), &entry->message_digest)) {
-			LOG_ERR("Problems copying string ('macAlg' parameter value)");
-			return -1;
+		aux = policy_param_value(parameter);
+		if (string_cmp(aux, "SHA1") == 0 ) {
+			if (string_dup("sha1", &entry->message_digest)) {
+				LOG_ERR("Problems copying string ('message_digest' parameter value)");
+				return -1;
+			}
+			LOG_DBG("Message digest is %s", entry->message_digest);
+		} else if (string_cmp(aux, "MD5") == 0 ) {
+			if (string_dup("md5", &entry->message_digest)) {
+				LOG_ERR("Problems copying string ('message_digest' parameter value)");
+				return -1;
+			}
+			LOG_DBG("Message digest is %s", entry->message_digest);
+		} else {
+			LOG_DBG("Unsupported message digest %s", aux);
 		}
-		LOG_DBG("Message digest is %s", entry->message_digest);
 	}
 
 	return 0;

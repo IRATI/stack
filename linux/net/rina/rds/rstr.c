@@ -103,7 +103,7 @@ char * get_zero_length_string(void)
 	char * buf;
 	buf = rkmalloc(1, GFP_KERNEL);
 	if (buf)
-		buf[0] = '\n';
+		buf[0] = '\0';
 
 	return buf;
 }
