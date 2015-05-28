@@ -992,7 +992,7 @@ int normal_enable_encryption(struct ipcp_instance_data * data,
 		             port_id_t 	      port_id)
 {
 	return rmt_enable_encryption(data->rmt,
-				     enable_decryption,
+				     enable_encryption,
 				     enable_decryption,
 				     encrypt_key,
 				     port_id);
