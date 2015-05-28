@@ -1233,7 +1233,7 @@ static int parse_policy_param_list(struct nlattr * nested_attr,
                         continue;
                 }
 
-                if (!policy_param_bind(p, param)) {
+                if (policy_param_bind(p, param)) {
                 	LOG_ERR("Problems binding parameter to policy");
                         policy_param_destroy(param);
                         entries_with_problems++;
@@ -1593,7 +1593,7 @@ static int parse_sdup_config(struct nlattr *      sdup_config_attr,
         	if (!sdup_config->default_dup_conf)
         		goto parse_fail;
 
-        	sdup_config->default_dup_conf->n_1_dif_name = "";
+        	sdup_config->default_dup_conf->n_1_dif_name = get_zero_length_string();
         	if (parse_dup_config_entry(attrs[SECMANC_DEFAULT_AUTH_SDUP_POLICY],
         				   sdup_config->default_dup_conf))
         		goto parse_fail;
@@ -1629,6 +1629,16 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
         attr_policy[DCONF_ATTR_RMTC].len                 = 0;
         attr_policy[DCONF_ATTR_SECMANC].type             = NLA_NESTED;
         attr_policy[DCONF_ATTR_SECMANC].len              = 0;
+	attr_policy[DCONF_ATTR_PDUFT_CONF].type = NLA_NESTED;
+	attr_policy[DCONF_ATTR_PDUFT_CONF].len = 0;
+	attr_policy[DCONF_ATTR_FA_CONF].type = NLA_NESTED;
+	attr_policy[DCONF_ATTR_FA_CONF].len = 0;
+	attr_policy[DCONF_ATTR_ET_CONF].type = NLA_NESTED;
+	attr_policy[DCONF_ATTR_ET_CONF].len = 0;
+	attr_policy[DCONF_ATTR_NSM_CONF].type = NLA_NESTED;
+	attr_policy[DCONF_ATTR_NSM_CONF].len = 0;
+	attr_policy[DCONF_ATTR_POLICY_SETS].type = NLA_NESTED;
+	attr_policy[DCONF_ATTR_POLICY_SETS].len = 0;
 
         if (nla_parse_nested(attrs,
                              DCONF_ATTR_MAX,

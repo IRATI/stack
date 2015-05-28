@@ -96,3 +96,15 @@ EXPORT_SYMBOL(string_cmp);
 /* FIXME: Should we assert here ? */
 int string_len(const string_t * s)
 { return strlen(s); }
+
+char * get_zero_length_string(void)
+{
+	size_t len;
+	char * buf;
+	buf = rkmalloc(1, GFP_KERNEL);
+	if (buf)
+		buf[0] = '\n';
+
+	return buf;
+}
+EXPORT_SYMBOL(get_zero_length_string);

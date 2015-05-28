@@ -542,8 +542,6 @@ static int extract_policy_parameters(struct dup_config_entry * entry)
 		LOG_ERR("Bogus entry passed");
 		return -1;
 	}
-	LOG_DBG("Looking at SDU protection policy parameters for N-1 DIF %s",
-		entry->n_1_dif_name);
 
 	policy = entry->ttl_policy;
 	if (policy) {
