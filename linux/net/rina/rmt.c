@@ -603,6 +603,11 @@ int rmt_sdup_config_set(struct rmt *         instance,
         }
 
 	/* FIXME this code should be moved to specific sdup policies */
+        if (extract_policy_parameters(sdup_conf->default_dup_conf)) {
+        	LOG_DBG("Setting SDU protection policies to NULL");
+        	sdup_config_destroy(sdup_conf);
+        	return -1;
+        }
 	list_for_each_entry(dup_pos, &sdup_conf->specific_dup_confs, next){
 		if (extract_policy_parameters(dup_pos->entry)) {
 			LOG_DBG("Setting sdu protection policies to NULL");

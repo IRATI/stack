@@ -857,7 +857,11 @@ public:
 /// Configuration of the Security Manager
 class SecurityManagerConfiguration {
 public:
+	SecurityManagerConfiguration() : config_present(true) { };
 	std::string toString();
+
+	// True if the configuration is present
+	bool config_present;
 
 	/// Access control policy for allowing new members into a DIF
 	PolicyConfig difMemberAccessControlPolicy;

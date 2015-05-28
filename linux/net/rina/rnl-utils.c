@@ -1221,17 +1221,20 @@ static int parse_policy_param_list(struct nlattr * nested_attr,
 
                 param = policy_param_create();
                 if (!param) {
+                	LOG_ERR("Parameter is null");
                         entries_with_problems++;
                         continue;
                 }
 
                 if (parse_policy_param(nla, param)) {
+                	LOG_ERR("Problems parsing parameter");
                         policy_param_destroy(param);
                         entries_with_problems++;
                         continue;
                 }
 
                 if (!policy_param_bind(p, param)) {
+                	LOG_ERR("Problems binding parameter to policy");
                         policy_param_destroy(param);
                         entries_with_problems++;
                         continue;

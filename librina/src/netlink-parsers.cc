@@ -4372,15 +4372,17 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
 	        }
 	        nla_nest_end(netlinkMessage, nsmConfig);
 
-	        if (!(smConfig = nla_nest_start(
-	        		netlinkMessage, DCONF_ATTR_SM_CONF))) {
-	        	goto nla_put_failure;
+	        if (object.sm_configuration_.config_present) {
+	        	if (!(smConfig = nla_nest_start(
+	        			netlinkMessage, DCONF_ATTR_SM_CONF))) {
+	        		goto nla_put_failure;
+	        	}
+	        	if (putSecurityManagerConfigurationObject(netlinkMessage,
+	        			object.sm_configuration_) < 0) {
+	        		goto nla_put_failure;
+	        	}
+	        	nla_nest_end(netlinkMessage, smConfig);
 	        }
-	        if (putSecurityManagerConfigurationObject(netlinkMessage,
-	        		object.sm_configuration_) < 0) {
-	        	goto nla_put_failure;
-	        }
-	        nla_nest_end(netlinkMessage, smConfig);
 
                 if  (object.policy_sets.size() > 0) {
                         if (!(policySets = nla_nest_start(netlinkMessage,
@@ -7305,6 +7307,8 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 			result->sm_configuration_ = *smConfig;
 			delete smConfig;
 		}
+	} else {
+		result->sm_configuration_.config_present = false;
 	}
 
 	if (attrs[DCONF_ATTR_POLICY_SETS]) {

@@ -897,6 +897,10 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
         	}
 
         	dif_template->secManConfiguration = sm_conf;
+        } else {
+        	dif_template->secManConfiguration.difMemberAccessControlPolicy.name_ = RINA_NO_POLICY_NAME;
+        	dif_template->secManConfiguration.newFlowAccessControlPolicy.name_ = RINA_NO_POLICY_NAME;
+        	dif_template->secManConfiguration.config_present = false;
         }
 
 	// configParameters;

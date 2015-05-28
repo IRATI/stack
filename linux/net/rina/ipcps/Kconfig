@@ -26,33 +26,6 @@ config RINA_DTCP_RCVR_ACK_ATIMER
 endchoice
 endmenu
 
-config RINA_DUP
-        bool "Enable system-wide DU protection"
-        default n
-        help
-          no help for the time being
-
-config RINA_IPCPS_CRC
-        bool "Enable CRC on (all) IPCPs"
-        default n
-        depends on RINA_DUP
-        help
-          no help for the time being
-
-config RINA_IPCPS_TTL
-        bool "Enable TTL on (all) IPCPs"
-        depends on RINA_DUP
-        default n
-        help
-          no help for the time being
-
-config RINA_IPCPS_TTL_DEFAULT
-        int "TTL default value"
-        depends on RINA_IPCPS_TTL
-        default 50
-        help
-          no help for the time being
-
 endif
 
 config RINA_SHIM_ETH_VLAN
