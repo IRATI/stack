@@ -99,7 +99,6 @@ int string_len(const string_t * s)
 
 char * get_zero_length_string(void)
 {
-	size_t len;
 	char * buf;
 	buf = rkmalloc(1, GFP_KERNEL);
 	if (buf)

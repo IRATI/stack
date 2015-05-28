@@ -537,7 +537,7 @@ static int extract_policy_parameters(struct dup_config_entry * entry)
 {
 	struct policy * policy;
 	struct policy_parm * parameter;
-	string_t * aux;
+	const string_t * aux;
 
 	if (!entry) {
 		LOG_ERR("Bogus entry passed");
@@ -566,7 +566,7 @@ static int extract_policy_parameters(struct dup_config_entry * entry)
 
 		aux = policy_param_value(parameter);
 		if (string_cmp(aux, "AES128") == 0 || string_cmp(aux, "AES256") == 0) {
-			if (string_dup("aes", &entry->encryption_cipher)) {
+			if (string_dup("ecb(aes)", &entry->encryption_cipher)) {
 				LOG_ERR("Problems copying string ('encryptAlg' parameter value)");
 				return -1;
 			}
