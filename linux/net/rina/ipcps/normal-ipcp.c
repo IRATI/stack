@@ -880,34 +880,20 @@ static int normal_mgmt_sdu_post(struct ipcp_instance_data * data,
 }
 
 static int normal_pft_add(struct ipcp_instance_data * data,
-                          address_t                   address,
-                          qos_id_t                    qos_id,
-                          port_id_t *                 ports,
-                          size_t                      size)
+			  struct modpdufwd_entry *       entry)
 
 {
         ASSERT(data);
 
-        return rmt_pft_add(data->rmt,
-                           address,
-                           qos_id,
-                           ports,
-                           size);
+        return rmt_pft_add(data->rmt, entry);
 }
 
 static int normal_pft_remove(struct ipcp_instance_data * data,
-                             address_t                   address,
-                             qos_id_t                    qos_id,
-                             port_id_t *                 ports,
-                             size_t                      size)
+			     struct modpdufwd_entry *       entry)
 {
         ASSERT(data);
 
-        return rmt_pft_remove(data->rmt,
-                              address,
-                              qos_id,
-                              ports,
-                              size);
+        return rmt_pft_remove(data->rmt, entry);
 }
 
 static int normal_pft_dump(struct ipcp_instance_data * data,
