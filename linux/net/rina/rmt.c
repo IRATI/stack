@@ -1531,6 +1531,7 @@ int rmt_enable_encryption(struct rmt *    instance,
 	struct rmt_n1_port * rmt_port;
 	unsigned long        flags;
 	ssize_t l;
+	ssize_t i;
 	char * pointer;
 
 	if (!instance) {
@@ -1574,9 +1575,9 @@ int rmt_enable_encryption(struct rmt *    instance,
 			!rmt_port->dup_config->enable_encryption) {
 		/* Need to set key. FIXME: Move this to policy specific code */
 		LOG_DBG("Setting encryption key:");
-		ssize_t l = buffer_length(encrypt_key);
+		l = buffer_length(encrypt_key);
 		pointer = (char *) buffer_data_rw(encrypt_key);
-		for (ssize_t i = 0; i < l; i++) {
+		for (i = 0; i < l; i++) {
 			LOG_DBG("%02X", pointer[i]);
 		}
 		if (crypto_blkcipher_setkey(rmt_port->blkcipher,
