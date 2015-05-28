@@ -825,7 +825,7 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                 flags,
         seq_num_t             seq;
         ssize_t               ttl;
         uint8_t               pad_len;
-        char *                data;
+        const char *          data;
 
         if (!instance)
                 return NULL;

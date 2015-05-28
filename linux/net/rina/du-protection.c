@@ -34,8 +34,6 @@
 #include "debug.h"
 #include "du-protection.h"
 
-#ifdef CONFIG_RINA_DUP
-
 static bool pdu_ser_data_and_length(struct pdu_ser * pdu,
                                     unsigned char ** data,
                                     ssize_t *        len)
@@ -263,4 +261,3 @@ int dup_decrypt_data(const char              * src,
     return 0;
 }
 EXPORT_SYMBOL(dup_decrypt_data);
-#endif

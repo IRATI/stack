@@ -66,16 +66,21 @@ struct policy * policy_dup_name_version(const struct policy * policy)
 {
 	struct policy * tmp;
 
+	if (!policy) {
+		LOG_ERR("Bogus policy passed");
+		return NULL;
+	}
+
 	tmp = policy_create();
 	if (!tmp)
 		return NULL;
 
-	if (string_dup(tmp->name, &policy->name)){
+	if (string_dup(policy->name, &tmp->name)){
 		policy_destroy(tmp);
 		return NULL;
 	}
 
-	if (string_dup(tmp->version, &policy->version)){
+	if (string_dup(policy->version, &tmp->version)){
 		policy_destroy(tmp);
 		return NULL;
 	}
