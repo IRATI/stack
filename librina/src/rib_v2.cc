@@ -39,6 +39,7 @@
 namespace rina {
 namespace rib {
 
+#if 0
 //
 // Internals Wrap over a RIBObj
 //
@@ -49,63 +50,78 @@ class RIBObjWrap {
 
 	friend class RIB;
 
-private:
-	RIBObjWrap(RIBObj *object);
-	~RIBObjWrap() throw ();
+protected:
 
-	bool add_child(RIBObjWrap *child);
+	//Constructor&destructor
+	RIBObjWrap(RIBObj* object, const std::string& fqn);
+	~RIBObjWrap();
+
+	// Add a child element
+	bool add_child(RIBObjWrap* child);
+
+	// Remove a child element
 	bool remove_child(const std::string& name);
-	RIBObj* object_;
-	RIBObjWrap* parent_;
-	std::list<RIBObjWrap*> children_;
 
-	//Mutex
-	rina::Lockable mutex;
+	// Reference to the object
+	RIBObj* object;
+
+	// Parent object, if any
+	RIBObjWrap* parent;
+
+	// List of childs
+	std::list<RIBObjWrap*> children;
+
+	// Fully qualifed name
+	std::string fqn;
+
+	// Read/write lock
+	rina::ReadWriteLockable rwlock;
 };
 
-RIBObjWrap::RIBObjWrap(RIBObj *object){
-
-	object_ = object;
+RIBObjWrap::RIBObjWrap(RIBObj *obj, const std::string& fqn_) :
+							object(obj),
+							fqn(fqn_){
 }
 
-RIBObjWrap::~RIBObjWrap() throw () {
-	delete object_;
+RIBObjWrap::~RIBObjWrap(){
+	//Ensure there is no other thread still using this
+        rwlock.writelock();
 }
 
-bool RIBObjWrap::add_child(RIBObjWrap *child) {
-	mutex.lock();
-	for (std::list<RIBObjWrap*>::iterator it = children_.begin();
-			it != children_.end(); it++) {
-		if ((*it)->object_->get_name().compare(
-					child->object_->get_name()) == 0) {
-			LOG_ERR("Object is already a child");
-			mutex.unlock();
+bool RIBObjWrap::add_child(RIBObjWrap* child) {
+
+	//Mutual exclusion
+	WriteScopedLock wlock(rwlock);
+
+	for (std::list<RIBObjWrap*>::iterator it = children.begin();
+			it != children.end(); ++it) {
+		if ((*it)->fqn.compare(child->fqn) == 0)
 			return false;
-		}
 	}
-	children_.push_back(child);
-	child->parent_ = this;
-	mutex.unlock();
+
+	children.push_back(child);
+	child->parent = this;
+
 	return true;
 }
 
-bool RIBObjWrap::remove_child(const std::string& name) {
-	bool found = false;
-	mutex.lock();
-	for (std::list<RIBObjWrap*>::iterator it = children_.begin();
-			it != children_.end(); it++) {
-		if ((*it)->object_->get_name().compare(name) == 0) {
-			children_.erase(it);
-			found = true;
-			break;
+bool RIBObjWrap::remove_child(const std::string& fqn) {
+
+	//Mutual exclusion
+	WriteScopedLock wlock(rwlock);
+
+	for (std::list<RIBObjWrap*>::iterator it = children.begin();
+			it != children.end(); ++it) {
+		if ((*it)->fqn.compare(fqn) == 0) {
+			children.erase(it);
+			return true;
 		}
 	}
-	mutex.unlock();
-	if (!found)
-		LOG_ERR("Unknown child object with object name: %s",
-				name.c_str());
-	return found;
+
+	LOG_ERR("Unknown child object with object name: %s", fqn.c_str());
+	return false;
 }
+#endif
 
 //
 // CLASS RIBSchemaObject
@@ -173,7 +189,8 @@ rib_schema_res RIBSchema::ribSchemaDefContRelation(
 	}
 }
 
-bool RIBSchema::validateAddObject(const RIBObj* obj) {
+template<typename T>
+bool RIBSchema::validateAddObject(const RIBObj<T>* obj) {
 
 	(void) obj;
 	/*
@@ -203,31 +220,117 @@ const cdap_rib::vers_info_t& RIBSchema::get_version() const {
 	return *version_;
 }
 
+//fwd decl
+class RIBDaemon;
 
 /// A simple RIB implementation, based on a hashtable of RIB objects
 /// indexed by object name
 class RIB {
 
 public:
+
+	///
+	/// Constructor
+	///
+	/// @param schema Schema in which this RIB will be based
+	/// @param cdap_provider CDAP provider
+	///
 	RIB(const RIBSchema *schema,
 				cdap::CDAPProviderInterface *cdap_provider);
+
+	/// Destroy RIB instance
 	~RIB();
 
-	/// Given an objectname of the form "substring\0substring\0...substring" locate
-	/// the RIBObj that corresponds to it
-	/// @param objectName
-	/// @return
-	RIBObj* getRIBObj(const std::string& clas,
-			const std::string& name, bool check=false);
-	RIBObj* getRIBObj(const std::string& clas, long instance,
-			bool check=false);
-	RIBObj* removeRIBObj(const std::string& name);
-	RIBObj* removeRIBObj(long instance);
-	char get_separator() const;
-	void addRIBObj(RIBObj* rib_object);
-	std::string get_parent_name(const std::string child_name) const;
+	/// Add an object to the rib
+	///
+	/// @param fqn Fully qualified name (e.g. /x/y/z)
+	/// @param obj Pointer to a pointer of a RIB object. On success the 
+	/// pointer will be set to NULL, as the RIBObj now will be handled by
+	/// the library. On failure the object remains unaltered
+	///
+	/// @ret instance_id of the objc
+	///
+	template <typename T>
+	int64_t add_obj(const std::string& fqn, RIBObj<T>** obj);
+
+	//
+	// Get the instance id of an object given a fully qualified name (fqn)
+	//
+	// @ret The object instance id or -1 if it does not exist
+	//
+	int64_t get_obj_inst_id(const std::string& fqn) {
+		ReadScopedLock rlock(rwlock);
+		return __get_obj_inst_id(fqn);
+	};
+
+	//
+	// Get the class name given a fully qualified name (fqn)
+	//
+ 	// @ret A string with the class name or an exception if the object
+	//	does not exist
+	//
+	const std::string get_obj_class(int64_t instance_id) const;
+
+	//
+	// Get (a copy) of the user data from an object
+	//
+	// @param inst_id The instance id of the object
+	//
+	template <typename T>
+	T get_obj_user_data(const int64_t inst_id);
+
+	//
+	// Set (copy) the user data to an object
+	//
+	// @param inst_id The instance id of the object
+	// @param user_data_ The new user data (T)
+	//
+	template <typename T>
+	void set_obj_user_data(const int64_t inst_id, T user_data_);
+
+	///
+	/// Get the RIB's path separator
+	///
+	char get_separator(void) const;
+
+	///
+	/// Get the parent's fully qualified name given a fqn of a child
+	///
+	/// @param fqn_child Fully qualified name of the child
+	///
+	std::string get_parent_fqn(const std::string& fqn_child) const;
+
+	///
+	/// Get the child's name (not fqn) given a fqn of the parent
+	///
+	/// @param fqn_parent Fully qualified name of the parent
+	///
+	std::string get_child_fqn(const std::string& fqn_parent) const;
+
+	///
+	/// Remove an object from the RIB by instance id
+	///
+	/// @ret On success 0, otherwise -1
+	///
+	inline int remove_obj(int64_t instance_id){
+		return __remove_obj(instance_id);
+	}
+
+	///
+	/// Remove an object from the RIB by instance name
+	///
+	/// @ret On success 0, otherwise -1
+	///
+	int remove_obj(const std::string& fqn) {
+		return __remove_obj(get_obj_inst_id(fqn));
+	}
+
+	///
+	/// Get RIB's version
+	///
 	const cdap_rib::vers_info_t& get_version() const;
 
+protected:
 	//
 	// Incoming requests to the local RIB
 	//
@@ -260,18 +363,34 @@ public:
 			const cdap_rib::filt_info_t &filt,
 			int invoke_id);
 private:
-	std::map<std::string, RIBObjWrap*> obj_name_map;
-	std::map<long, RIBObjWrap*> obj_inst_map;
+	std::map<std::string, RIBObj_*> obj_name_map;
+	std::map<int64_t, RIBObj_*> obj_inst_map;
 	const RIBSchema *schema;
 
-	RIBObjWrap* getInternalObj(const std::string& name);
-	RIBObjWrap* getInternalObj(long instance);
+	//Next id pointer
+	int64_t next_inst_id;
+
+	//@internal only; must be called with the rwlock acquired
+	RIBObj_* get_obj(int64_t inst_id);
+
+	//@internal: must be called with the rwlock acquired
+	int __remove_obj(int64_t inst_id);
+
+	//@internal: must be called with the rwlock acquired
+	int64_t __get_obj_inst_id(const std::string& fqn) const;
+
+	//@internal Get a new (unused) instance id (strictly > 0);
+	//must be called with the wlock acquired
+	int64_t get_new_inst_id(void);
 
 	//CDAP Provider
 	cdap::CDAPProviderInterface *cdap_provider;
 
 	//rwlock
 	ReadWriteLockable rwlock;
+
+	//RIBDaemon to access operations callbacks
+	friend class RIBDaemon;
 };
 
 RIB::RIB(const RIBSchema *schema_,
@@ -286,10 +405,10 @@ RIB::~RIB() {
 	//Mutual exclusion
 	WriteScopedLock wlock(rwlock);
 
-	for (std::map<std::string, RIBObjWrap*>::iterator it = obj_name_map
+	for (std::map<std::string, RIBObj_*>::iterator it = obj_name_map
 			.begin(); it != obj_name_map.end(); ++it) {
 		LOG_INFO("Object %s removed from the RIB",
-				it->second->object_->get_name().c_str());
+				it->second->fqn.c_str());
 		delete it->second;
 	}
 	obj_name_map.clear();
@@ -315,12 +434,32 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 	obj_reply.value_.message_ = NULL;
 
 	cdap_rib::res_info_t* res;
-	RIBObj* rib_obj = getRIBObj(obj.class_, obj.name_,
-			true);
+	RIBObj_* rib_obj = NULL;
+
+	int64_t id = get_obj_inst_id(obj.name_);
+
+	if(id)
+		rib_obj = get_obj(id);
+
+	//FIXME: this => father delegation????
 	if (rib_obj == NULL) {
-		std::string parent_name = get_parent_name(obj.name_);
-		rib_obj = getRIBObj("", parent_name, false);
+		std::string parent_name = get_parent_fqn(obj.name_);
+		id = get_obj_inst_id(parent_name);
+		rib_obj = get_obj(id);
+	}else{
+		//Verify if the class matches
+		//FIXME
 	}
+
+
+	if(!rib_obj){
+		//FIXME treat error => neither son nor father found
+		return;
+	}
+
+	//Hold the readlock until the end
+	rina::ReadScopedLock rlock(rib_obj->rwlock, false);
+
 	if (rib_obj) {
 		//Call the application
 		res = rib_obj->create(
@@ -350,8 +489,12 @@ void RIB::delete_request(const cdap_rib::con_handle_t &con,
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 
-	RIBObj* rib_obj = getRIBObj(obj.class_, obj.name_,
-			true);
+	//Mutual exclusion
+	ReadScopedLock rlock(rwlock);
+
+	int64_t id = get_obj_inst_id(obj.name_);
+	RIBObj_* rib_obj = get_obj(id);
+
 	if (rib_obj) {
 		cdap_rib::res_info_t* res = rib_obj->delete_(obj.name_);
 		try {
@@ -362,6 +505,9 @@ void RIB::delete_request(const cdap_rib::con_handle_t &con,
 			LOG_ERR("Unable to send the response");
 		}
 		delete res;
+	}else{
+		//TODO
+		///So what?
 	}
 }
 void RIB::read_request(const cdap_rib::con_handle_t &con,
@@ -383,9 +529,15 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 	obj_reply.value_.message_ = NULL;
 
 	cdap_rib::res_info_t* res;
-	RIBObj* ribObj = getRIBObj(obj.class_, obj.name_, true);
-	if (ribObj) {
-		res = ribObj->read(
+
+	//Mutual exclusion
+	ReadScopedLock rlock(rwlock);
+
+	int64_t id = get_obj_inst_id(obj.name_);
+	RIBObj_* rib_obj = get_obj(id);
+
+	if (rib_obj) {
+		res = rib_obj->read(
 				obj.name_, obj_reply.value_);
 	} else {
 		res = new cdap_rib::res_info_t;
@@ -412,9 +564,14 @@ void RIB::cancel_read_request(
 	cdap_rib::flags_t flags;
 	cdap_rib::res_info_t* res;
 
-	RIBObj* ribObj = getRIBObj(obj.class_, obj.name_, true);
-	if (ribObj) {
-		res = ribObj->cancelRead(obj.name_);
+	//Mutual exclusion
+	ReadScopedLock rlock(rwlock);
+
+	int64_t id = get_obj_inst_id(obj.name_);
+	RIBObj_* rib_obj = get_obj(id);
+
+	if (rib_obj) {
+		res = rib_obj->cancelRead(obj.name_);
 	} else {
 		res = new cdap_rib::res_info_t;
 		res->result_ = -1;
@@ -447,9 +604,14 @@ void RIB::write_request(const cdap_rib::con_handle_t &con,
 
 	cdap_rib::res_info_t* res;
 
-	RIBObj* ribObj = getRIBObj(obj.class_, obj.name_, true);
-	if (ribObj) {
-		res = ribObj->write(
+	//Mutual exclusion
+	ReadScopedLock rlock(rwlock);
+
+	int64_t id = get_obj_inst_id(obj.name_);
+	RIBObj_* rib_obj = get_obj(id);
+
+	if (rib_obj) {
+		res = rib_obj->write(
 				obj.name_, obj.value_, obj_reply.value_);
 	} else {
 		res = new cdap_rib::res_info_t;
@@ -484,9 +646,14 @@ void RIB::start_request(const cdap_rib::con_handle_t &con,
 
 	cdap_rib::res_info_t* res;
 
-	RIBObj* ribObj = getRIBObj(obj.class_, obj.name_, true);
-	if (ribObj) {
-		res = ribObj->start(
+	//Mutual exclusion
+	ReadScopedLock rlock(rwlock);
+
+	int64_t id = get_obj_inst_id(obj.name_);
+	RIBObj_* rib_obj = get_obj(id);
+
+	if (rib_obj) {
+		res = rib_obj->start(
 				obj.name_, obj.value_, obj_reply.value_);
 	} else {
 		res = new cdap_rib::res_info_t;
@@ -520,9 +687,11 @@ void RIB::stop_request(const cdap_rib::con_handle_t &con,
 
 	cdap_rib::res_info_t* res;
 
-	RIBObj* ribObj = getRIBObj(obj.class_, obj.name_, true);
-	if (ribObj) {
-		res = ribObj->stop(
+	int64_t id = get_obj_inst_id(obj.name_);
+	RIBObj_* rib_obj = get_obj(id);
+
+	if (rib_obj) {
+		res = rib_obj->stop(
 				obj.name_, obj.value_, obj_reply.value_);
 	} else {
 		res = new cdap_rib::res_info_t;
@@ -539,147 +708,107 @@ void RIB::stop_request(const cdap_rib::con_handle_t &con,
 }
 
 
-RIBObj* RIB::getRIBObj(const std::string& clas,
-		const std::string& name, bool check) {
-
-
-	RIBObjWrap* rib_object = getInternalObj(name);
-
-	if (!rib_object)
+RIBObj_* RIB::get_obj(int64_t inst_id){
+	if(obj_inst_map.find(inst_id) != obj_inst_map.end())
+		return obj_inst_map[inst_id];
+	else
 		return NULL;
-
-	if (check && rib_object->object_->get_class().compare(clas) != 0) {
-		LOG_ERR("RIB object class does not match the user specified one");
-		return NULL;
-	}
-
-	return rib_object->object_;
 }
 
-RIBObj* RIB::getRIBObj(const std::string& clas, long instance,
-		bool check) {
+int64_t RIB::get_new_inst_id(){
+	for(;; ++next_inst_id){
+		//Reuse ids; restart at 1
+		if(next_inst_id < 1)
+			next_inst_id = 1;
 
-	RIBObjWrap* rib_object = getInternalObj(instance);
-
-	if (!rib_object)
-		return NULL;
-
-	if (check && rib_object->object_->get_class().compare(clas) != 0) {
-		LOG_ERR("RIB object class does not match the user specified one");
-		return NULL;
+		if(obj_inst_map.find(next_inst_id) != obj_inst_map.end())
+			break;
 	}
-
-	return rib_object->object_;
+	return next_inst_id;
 }
 
-void RIB::addRIBObj(RIBObj* rib_object) {
+template <typename T>
+int64_t RIB::add_obj(const std::string& fqn, RIBObj<T>** obj_) {
 
-	RIBObjWrap *parent = NULL;
-	RIBObjWrap *obj = NULL;
+	int64_t id, parent_id;
+	std::string parent_fqn = get_parent_fqn(fqn);
+	RIBObj_* obj;
 
-	// Check if the parent exists
-	std::string parent_name = get_parent_name(rib_object->get_name());
-	if (!parent_name.empty()) {
-		parent = getInternalObj(parent_name);
-		if (!parent) {
-			std::stringstream ss;
-			ss << "Exception in object " << rib_object->get_name()
-				<< ". Parent name (" << parent_name
-				<< ") is not in the RIB" << std::endl;
-			throw Exception(ss.str().c_str());
-		}
+	if(!(*obj_)){
+		LOG_ERR("Unable to add object(%p) at '%s'; object is NULL!",
+								*obj,
+								fqn.c_str());
+		return -1;
 	}
-	// TODO: add schema validation
-	//  if (rib_schema_->validateAddObject(rib_object, parent))
-	//  {
 
-	obj = getInternalObj(rib_object->get_name());
-	if (obj) {
-		std::stringstream ss;
-		ss << "Object with the same name (" << obj->object_->get_name()
-			<< ") already exists in the RIB" << std::endl;
-		throw Exception(ss.str().c_str());
-	}
-	obj = getInternalObj(rib_object->get_instance());
-	if (obj) {
-		std::stringstream ss;
-		ss << "Object with the same instance ("
-			<< rib_object->get_instance() << ") already exists "
-			"in the RIB"
-			<< std::endl;
-		throw Exception(ss.str().c_str());
-	}
-	RIBObjWrap *int_object = new RIBObjWrap(rib_object);
-	if (parent) {
-		if (!parent->add_child(int_object)) {
-			std::stringstream ss;
-			ss << "Can not add object '"
-				<< int_object->object_->get_name()
-				<< "' as a child of object '"
-				<< parent->object_->get_name() << std::endl;
-			throw Exception(ss.str().c_str());
-		}
-		int_object->parent_ = parent;
-	}
-	LOG_DBG("Object %s added to the RIB",
-			int_object->object_->get_name().c_str());
+	//Recover the non-templatized part
+	obj = *obj_;
 
+	//Mutual exclusion
 	WriteScopedLock wlock(rwlock);
 
-	obj_name_map[int_object->object_->get_name()] = int_object;
-	obj_inst_map[int_object->object_->get_instance()] = int_object;
+	//Check whether the father exists
+	parent_id = __get_obj_inst_id(parent_fqn);
+	if(parent_id == -1){
+		LOG_ERR("Unable to add object(%p) at '%s'; parent does not exist!",
+								*obj,
+								fqn.c_str());
+		return -1;
+	}
+
+	//Check if the object already exists
+	id = __get_obj_inst_id(fqn);
+	if(id == -1){
+		LOG_ERR("Unable to add object(%p) at '%s'; an object of class '%s' already exists!",
+							*obj,
+							fqn.c_str(),
+							get_obj_class(id).c_str());
+		return -1;
+	}
+
+	//get a (free) instance id
+	id = get_new_inst_id();
+
+	//Add it and return
+	obj_name_map[fqn] = obj;
+	obj_inst_map[id] = obj;
+
+	//Mark pointer as acquired and return
+	*obj_ = NULL;
+	LOG_DBG("Object '%s' of class '%s' succesfully added (id:'%" PRId64 "')",
+								fqn.c_str(),
+								obj->get_class().c_str(),
+								id);
+
+	return id;
 }
 
-RIBObj* RIB::removeRIBObj(const std::string& name) {
-	RIBObjWrap* rib_object = getInternalObj(name);
+int RIB::__remove_obj(int64_t inst_id) {
 
-	if (!rib_object) {
-		LOG_ERR("RIB object %s is not in the RIB", name.c_str());
-		return NULL;
-	}
+	RIBObj_* obj;
 
-	RIBObjWrap* parent = rib_object->parent_;
-
-	if (parent) {
-		if (!parent->remove_child(
-					rib_object->object_->get_name())) {
-			std::stringstream ss;
-			ss << "Can not remove object '"
-				<< rib_object->object_->get_name()
-				<< "' as a child of object '"
-				<< parent->object_->get_name()
-				<< std::endl;
-			throw Exception(ss.str().c_str());
-		}
-	}
-
+	//Mutual exclusion
 	WriteScopedLock wlock(rwlock);
 
-	obj_name_map.erase(rib_object->object_->get_name());
-	obj_inst_map.erase(rib_object->object_->get_instance());
+	obj = get_obj(inst_id);
 
-	LOG_DBG("Object %s removed from the RIB",
-				rib_object->object_->get_name().c_str());
-	return rib_object->object_;
-}
-
-RIBObj * RIB::removeRIBObj(long instance) {
-	RIBObjWrap* rib_object = getInternalObj(instance);
-
-	if (!rib_object){
-		LOG_ERR("RIB object %d is not in the RIB", instance);
-		return NULL;
+	if(!obj){
+		LOG_ERR("Unable to remove with instance id '%" PRId64  "'. Object does not exist!",
+								inst_id);
+		return -1;
 	}
 
-	RIBObjWrap* parent = rib_object->parent_;
-	parent->remove_child(rib_object->object_->get_name());
+	//Remove from the
 
-	WriteScopedLock wlock(rwlock);
+	//If there Remove from the cache
+	if(obj->delegates){
+		//TODO: removed cached delegated objs
+	}
 
-	obj_name_map.erase(rib_object->object_->get_name());
-	obj_inst_map.erase(instance);
+	//Delete object
+	delete obj;
 
-	return rib_object->object_;
+	return 0;
 }
 
 char RIB::get_separator() const {
@@ -687,46 +816,19 @@ char RIB::get_separator() const {
 	return schema->get_separator();
 }
 
-std::string RIB::get_parent_name(const std::string child_name) const {
+std::string RIB::get_parent_fqn(const std::string& fqn_child) const {
 
-	size_t last_separator = child_name.find_last_of(schema->separator_,
+	size_t last_separator = fqn_child.find_last_of(schema->separator_,
 			std::string::npos);
 	if (last_separator == std::string::npos)
 		return "";
 
-	return child_name.substr(0, last_separator);
+	return fqn_child.substr(0, last_separator);
 
 }
 
 const cdap_rib::vers_info_t& RIB::get_version() const {
 	return schema->get_version();
-}
-
-RIBObjWrap* RIB::getInternalObj(const std::string& name) {
-	std::string norm_name = name;
-	norm_name.erase(std::remove_if(norm_name.begin(), norm_name.end(),
-				::isspace),
-			norm_name.end());
-
-	std::map<std::string, RIBObjWrap*>::iterator it;
-
-	it = obj_name_map.find(norm_name);
-
-	if (it == obj_name_map.end())
-		return NULL;
-
-	return it->second;
-}
-
-RIBObjWrap* RIB::getInternalObj(long instance) {
-	std::map<long, RIBObjWrap*>::iterator it;
-
-	it = obj_inst_map.find(instance);
-
-	if (it == obj_inst_map.end())
-		return NULL;
-
-	return it->second;
 }
 
 ///
@@ -1431,7 +1533,6 @@ void RIBDaemon::stop_request(const cdap_rib::con_handle_t &con,
 
 	//Invoke
 	rib->stop_request(con, obj, filt, invoke_id);
-
 }
 
 //
@@ -1457,13 +1558,8 @@ bool AbstractEncoder::operator!=(const AbstractEncoder &other) const {
 		return false;
 }
 
-//RIBObj
-std::string RIBObj::get_displayable_value() {
-
-	return "-";
-}
-
-cdap_rib::res_info_t* RIBObj::create(
+//RIBObj/RIBObj_
+cdap_rib::res_info_t* RIBObj_::create(
 		const std::string& name, const std::string clas,
 		const cdap_rib::SerializedObject &obj_req,
 		cdap_rib::SerializedObject &obj_reply) {
@@ -1479,7 +1575,7 @@ cdap_rib::res_info_t* RIBObj::create(
 	return res;
 }
 
-cdap_rib::res_info_t* RIBObj::delete_(const std::string& name) {
+cdap_rib::res_info_t* RIBObj_::delete_(const std::string& name) {
 
 	(void) name;
 	operation_not_supported();
@@ -1490,7 +1586,7 @@ cdap_rib::res_info_t* RIBObj::delete_(const std::string& name) {
 }
 
 // FIXME remove name, it is not needed
-cdap_rib::res_info_t* RIBObj::read(
+cdap_rib::res_info_t* RIBObj_::read(
 		const std::string& name,
 		cdap_rib::SerializedObject &obj_reply) {
 
@@ -1503,7 +1599,7 @@ cdap_rib::res_info_t* RIBObj::read(
 	return res;
 }
 
-cdap_rib::res_info_t* RIBObj::cancelRead(const std::string& name) {
+cdap_rib::res_info_t* RIBObj_::cancelRead(const std::string& name) {
 
 	(void) name;
 	operation_not_supported();
@@ -1513,22 +1609,7 @@ cdap_rib::res_info_t* RIBObj::cancelRead(const std::string& name) {
 	return res;
 }
 
-cdap_rib::res_info_t* RIBObj::write(
-		const std::string& name,
-		const cdap_rib::SerializedObject &obj_req,
-		cdap_rib::SerializedObject &obj_reply) {
-
-	(void) name;
-	(void) obj_req;
-	(void) obj_reply;
-	operation_not_supported();
-	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
-	// FIXME: change for real opcode
-	res->result_ = -2;
-	return res;
-}
-
-cdap_rib::res_info_t* RIBObj::start(
+cdap_rib::res_info_t* RIBObj_::write(
 		const std::string& name,
 		const cdap_rib::SerializedObject &obj_req,
 		cdap_rib::SerializedObject &obj_reply) {
@@ -1543,7 +1624,7 @@ cdap_rib::res_info_t* RIBObj::start(
 	return res;
 }
 
-cdap_rib::res_info_t* RIBObj::stop(
+cdap_rib::res_info_t* RIBObj_::start(
 		const std::string& name,
 		const cdap_rib::SerializedObject &obj_req,
 		cdap_rib::SerializedObject &obj_reply) {
@@ -1558,22 +1639,22 @@ cdap_rib::res_info_t* RIBObj::stop(
 	return res;
 }
 
-const std::string& RIBObj::get_class() const {
+cdap_rib::res_info_t* RIBObj_::stop(
+		const std::string& name,
+		const cdap_rib::SerializedObject &obj_req,
+		cdap_rib::SerializedObject &obj_reply) {
 
-	return class_;
+	(void) name;
+	(void) obj_req;
+	(void) obj_reply;
+	operation_not_supported();
+	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
+	// FIXME: change for real opcode
+	res->result_ = -2;
+	return res;
 }
 
-const std::string& RIBObj::get_name() const {
-
-	return name_;
-}
-
-long RIBObj::get_instance() const {
-
-	return instance_;
-}
-
-void RIBObj::operation_not_supported() {
+void RIBObj_::operation_not_supported() {
 
 	LOG_ERR("Operation not supported");
 }

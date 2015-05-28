@@ -28,6 +28,7 @@
 #include <list>
 #include <map>
 #include <algorithm>
+#include "librina/concurrency.h"
 #include "librina/exceptions.h"
 
 namespace rina{
@@ -155,16 +156,35 @@ public:
 			T& des_obj) = 0;
 };
 
+//fwd decl
+class RIB;
+template <typename T>
+class RIBObj;
+
+///
+/// @internal non-template dependent base RIBObj
 /// Base RIB Object. API for the create/delete/read/write/start/stop RIB
 /// functionality for certain objects (identified by objectNames)
-class RIBObj {
+///
+class RIBObj_{
 
 public:
-	virtual ~RIBObj(){};
 
-	virtual std::string get_displayable_value();
-	// FIXME fix object data displayable
+	///
+	/// Constructor
+	///
+	/// @param user User-specific context (type associated)
+	/// @param fqn Fully qualifed name (
+	///
+	RIBObj_() : delegates(false){};
 
+	/// Class name
+	const std::string fqn;
+
+	/// Destructor
+	virtual ~RIBObj_(){};
+
+protected:
 	///
 	/// Remote invocations, resulting from CDAP messages
 	///
@@ -251,16 +271,105 @@ public:
 			const cdap_rib::SerializedObject &obj_req,
 			cdap_rib::SerializedObject &obj_reply);
 
-	virtual const std::string& get_class() const;
-	virtual const std::string& get_name() const;
-	virtual long get_instance() const;
-	virtual AbstractEncoder* get_encoder() const = 0;
-protected:
-	std::string class_;
-	std::string name_;
-	unsigned long instance_;
-private:
+	///
+	/// Get the class name.
+	///
+	/// Method that inheriting classes MUST implementing returing the
+	/// class name
+	///
+	///
+	virtual const std::string& get_class() const = 0;
+
+	///
+	/// Throw not supported exception
+	///
 	void operation_not_supported();
+
+	///
+	/// Get the encoder
+	///
+	/// TODO: remove?
+	///
+	virtual AbstractEncoder* get_encoder() const = 0;
+
+	///Rwlock
+	rina::ReadWriteLockable rwlock;
+
+	//Flag used to identify objects which delegates a portion of the tree
+	bool delegates;
+
+	//They love each other
+	template<typename T> friend class RIBObj;
+
+	//Them too; promiscuous?
+	friend class RIB;
+};
+///
+/// Base RIB Object. API for the create/delete/read/write/start/stop RIB
+/// functionality for certain objects (identified by objectNames)
+///
+/// @template T The user-data type. Must support assignation operator
+///
+template<typename T>
+class RIBObj : public RIBObj_{
+
+public:
+
+	///
+	/// Constructor
+	///
+	/// @param user User-specific context (type associated)
+	/// @param fqn Fully qualifed name (
+	///
+	RIBObj(T user_data_){
+		user_data = user_data_;
+	}
+
+
+	///
+	/// Retrieve user data
+	///
+	virtual T get_user_data(void){
+		//Mutual exclusion
+		ReadScopedLock wlock(rwlock);
+
+		return user_data;
+	}
+
+	///
+	/// Set user data
+	///
+	virtual void set_user_data(T new_user_data){
+		//Mutual exclusion
+		WriteScopedLock wlock(rwlock);
+
+		user_data = new_user_data;
+	}
+
+	/// Destructor
+	virtual ~RIBObj(){};
+
+protected:
+	///
+	/// User data
+	///
+	T user_data;
+};
+
+
+///
+/// This class is used to capture operations on objects in a part of the tree
+/// without having to add explicitely the objects (catch all)
+///
+class RIBDelegationObj : public RIBObj<void*>{
+
+	/// Constructor
+	RIBDelegationObj(void) : RIBObj(NULL) {
+		delegates = true;
+	};
+
+	//Destructor
+	~RIBDelegationObj(void){};
 };
 
 /**
@@ -312,9 +421,11 @@ public:
 	char get_separator() const;
 	const cdap_rib::vers_info_t& get_version() const;
 private:
-	bool validateAddObject(const RIBObj* obj);
-	bool validateRemoveObject(const RIBObj* obj,
-			const RIBObj* parent);
+	template<typename T>
+	bool validateAddObject(const RIBObj<T>* obj);
+	template<typename T, typename R>
+	bool validateRemoveObject(const RIBObj<T>* obj,
+			const RIBObj<R>* parent);
 	const cdap_rib::vers_info_t *version_;
 	std::map<std::string, RIBSchemaObject*> rib_schema_;
 	char separator_;
