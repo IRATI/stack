@@ -31,55 +31,63 @@
 struct cwq;
 struct dtp;
 struct dt;
+struct rtxq_entry;
 
-struct cwq *    cwq_create(void);
-struct cwq *    cwq_create_ni(void);
-int             cwq_destroy(struct cwq * q);
+struct cwq *        cwq_create(void);
+struct cwq *        cwq_create_ni(void);
+int                 cwq_destroy(struct cwq * q);
 
-bool            cwq_write_enable(struct cwq * queue);
-void            cwq_write_enable_set(struct cwq * queue,
-                                     bool         flag);
-int             cwq_push(struct cwq * q,
-                         struct pdu * pdu);
-struct pdu *    cwq_pop(struct cwq * q);
-bool            cwq_is_empty(struct cwq * q);
-int             cwq_flush(struct cwq * q);
-ssize_t         cwq_size(struct cwq * q);
-void            cwq_deliver(struct cwq * queue,
-                            struct dt *  dt,
-                            struct rmt * rmt,
-                            address_t    address,
-                            qos_id_t     qos_id);
-seq_num_t        cwq_peek(struct cwq * queue);
+bool                cwq_write_enable(struct cwq * queue);
+void                cwq_write_enable_set(struct cwq * queue,
+                                         bool         flag);
+int                 cwq_push(struct cwq * q,
+                             struct pdu * pdu);
+struct pdu *        cwq_pop(struct cwq * q);
+bool                cwq_is_empty(struct cwq * q);
+int                 cwq_flush(struct cwq * q);
+ssize_t             cwq_size(struct cwq * q);
+void                cwq_deliver(struct cwq * queue,
+                                struct dt *  dt,
+                                struct rmt * rmt,
+                                address_t    address,
+                                qos_id_t     qos_id);
+seq_num_t            cwq_peek(struct cwq * queue);
 
 struct rtxq;
 
-struct rtxq *   rtxq_create(struct dt *  dt,
-                            struct rmt * rmt);
-struct rtxq *   rtxq_create_ni(struct dt *  dt,
-                               struct rmt * rmt);
-int             rtxq_destroy(struct rtxq * q);
+struct rtxq *       rtxq_create(struct dt *  dt,
+                                struct rmt * rmt);
+struct rtxq *       rtxq_create_ni(struct dt *  dt,
+                                   struct rmt * rmt);
+int                 rtxq_destroy(struct rtxq * q);
 
 /* FIXME: Where do we keep the rexmsntimer for the PDU? */
-int             rtxq_push_ni(struct rtxq * q,
-                             struct pdu *  pdu);
-int             rtxq_ack(struct rtxq * q,
-                         seq_num_t     seq_num,
-                         timeout_t     tr);
-int             rtxq_nack(struct rtxq * q,
-                          seq_num_t     seq_num,
-                          timeout_t     tr);
-int             rtxq_flush(struct rtxq * q);
+struct rtxq_entry * rtxq_entry_peek(struct rtxq * q,
+                                    seq_num_t sn);
+unsigned long       rtxq_entry_timestamp(struct rtxq_entry * entry);
+int                 rtxq_entry_retries(struct rtxq_entry * entry);
+int                 rtxq_entry_destroy(struct rtxq_entry * entry);
+int                 rtxq_push_sn(struct rtxq * q,
+                                 seq_num_t sn);
+int                 rtxq_push_ni(struct rtxq * q,
+                                 struct pdu *  pdu);
+int                 rtxq_ack(struct rtxq * q,
+                             seq_num_t     seq_num,
+                             timeout_t     tr);
+int                 rtxq_nack(struct rtxq * q,
+                              seq_num_t     seq_num,
+                              timeout_t     tr);
+int                 rtxq_flush(struct rtxq * q);
 
-int 		dt_pdu_send(struct dt *  dt,
-        		    struct rmt * rmt,
-        		    address_t    address,
-        		    qos_id_t     qos_id,
-                            struct pdu * pdu);
-int 		common_efcp_pdu_send(struct efcp * efcp,
-        		             struct rmt *  rmt,
-        		             address_t     address,
-        			     qos_id_t      qos_id,
-        			     struct pdu *  pdu);
+int 		    dt_pdu_send(struct dt *  dt,
+        	    	    struct rmt * rmt,
+        	    	    address_t    address,
+        	    	    qos_id_t     qos_id,
+                                struct pdu * pdu);
+int 		    common_efcp_pdu_send(struct efcp * efcp,
+        	    	             struct rmt *  rmt,
+        	    	             address_t     address,
+        	    		     qos_id_t      qos_id,
+        	    		     struct pdu *  pdu);
 
 #endif

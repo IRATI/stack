@@ -65,7 +65,7 @@ struct dtcp_ps {
         int (* flow_init)(struct dtcp_ps * instance);
         int (* sv_update)(struct dtcp_ps * instance, seq_num_t seq);
         int (* lost_control_pdu)(struct dtcp_ps * instance);
-        int (* rtt_estimator)(struct dtcp_ps * instance);
+        int (* rtt_estimator)(struct dtcp_ps * instance, seq_num_t sn);
         int (* retransmission_timer_expiry)(struct dtcp_ps * instance);
         int (* received_retransmission)(struct dtcp_ps * instance);
         int (* rcvr_ack)(struct dtcp_ps * instance, seq_num_t seq);
