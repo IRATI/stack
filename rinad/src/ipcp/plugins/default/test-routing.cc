@@ -434,11 +434,9 @@ public:
 	}
 
     std::vector<rina::PsFactory>::iterator
-                    psFactoryLookup(const std::string& component,
-                                   const std::string& name) {
+                    psFactoryLookup(const rina::PsInfo& ps_info) {
     	std::vector<rina::PsFactory>::iterator response;
-    	(void) component;
-    	(void) name;
+    	(void) ps_info;
     	return response;
     }
 
@@ -447,10 +445,8 @@ public:
     	return 0;
     }
 
-    int psFactoryUnpublish(const std::string& component,
-                                          const std::string& name){
-    	(void) component;
-    	(void) name;
+    int psFactoryUnpublish(const rina::PsInfo& ps_info){
+    	(void) ps_info;
     	return 0;
     }
 
