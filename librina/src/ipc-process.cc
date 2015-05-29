@@ -722,6 +722,33 @@ void ExtendedIPCManager::pluginLoadResponse(
 #endif
 }
 
+void ExtendedIPCManager::forwardCDAPResponse(
+				const rina::FwdCDAPMsgEvent& event,
+				const rina::SerializedObject& sermsg,
+				int result)
+{
+#if STUB_API
+	//Do nothing
+	(void) event;
+        (void) sermsg;
+	(void) result;
+#else
+	IpcmFwdCDAPMsgMessage responseMessage;
+
+	responseMessage.sermsg = sermsg;
+	responseMessage.result = result;
+	responseMessage.setSequenceNumber(event.sequenceNumber);
+	responseMessage.setSourceIpcProcessId(ipcProcessId);
+        responseMessage.setDestPortId(ipcManagerPort);
+	responseMessage.setResponseMessage(true);
+	try {
+		rinaManager->sendMessage(&responseMessage, false);
+	} catch (NetlinkException &e) {
+		throw FwdCDAPMsgException(e.what());
+	}
+#endif
+}
+
 Singleton<ExtendedIPCManager> extendedIPCManager;
 
 /* CLASS CONNECTION */

@@ -519,6 +519,15 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
+	case RINA_C_IPCM_FWD_CDAP_MSG_REQUEST: {
+		IpcmFwdCDAPMsgMessage * requestObject =
+			dynamic_cast<IpcmFwdCDAPMsgMessage *>(message);
+		if (putIpcmFwdCDAPMsgMessageObject(netlinkMessage,
+				*requestObject) < 0) {
+			return -1;
+		}
+		return 0;
+	}
 	default: {
 		return -1;
 	}
@@ -745,6 +754,10 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	}
 	case RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE: {
 		return parseIPCPEnableEncryptionResponseMessage(
+				netlinkMessageHeader);
+	}
+	case RINA_C_IPCM_FWD_CDAP_MSG_REQUEST: {
+		return parseIpcmFwdCDAPMsgMessage(
 		                netlinkMessageHeader);
 	}
 	default: {
@@ -5325,6 +5338,22 @@ int putIPCPEnableEncryptionResponseMessage(nl_msg* netlinkMessage,
         return -1;
 }
 
+
+int putIpcmFwdCDAPMsgMessageObject(nl_msg* netlinkMessage,
+		const IpcmFwdCDAPMsgMessage& object){
+	NLA_PUT(netlinkMessage, IFCM_ATTR_CDAP_MSG, object.sermsg.size_,
+		object.sermsg.message_);
+
+	NLA_PUT_U32(netlinkMessage, IFCM_ATTR_RESULT, object.result);
+
+	return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building IpcmFwdCDAPMsgMessage "
+                        "Netlink object");
+        return -1;
+}
+
 AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
 		nlmsghdr *hdr) {
 	struct nla_policy attr_policy[AAFR_ATTR_MAX + 1];
@@ -9152,6 +9181,45 @@ IPCPEnableEncryptionResponseMessage * parseIPCPEnableEncryptionResponseMessage(n
 
 	if (attrs[EEREM_ATTR_N_1_PORT]) {
 		result->port_id = nla_get_u32(attrs[EEREM_ATTR_N_1_PORT]);
+	}
+
+	return result;
+}
+
+IpcmFwdCDAPMsgMessage *
+parseIpcmFwdCDAPMsgMessage(nlmsghdr *hdr){
+	struct nla_policy attr_policy[IFCM_ATTR_MAX + 1];
+	attr_policy[IFCM_ATTR_CDAP_MSG].type = NLA_UNSPEC;
+	attr_policy[IFCM_ATTR_CDAP_MSG].minlen = 0;
+	attr_policy[IFCM_ATTR_CDAP_MSG].maxlen = 65535;
+        attr_policy[IFCM_ATTR_RESULT].type = NLA_U32;
+        attr_policy[IFCM_ATTR_RESULT].minlen = 4;
+        attr_policy[IFCM_ATTR_RESULT].maxlen = 4;
+	struct nlattr *attrs[IFCM_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			        IFCM_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing IpcmFwdCDAPMsgMessage "
+                        "information from Netlink message: %d", err);
+		return 0;
+	}
+
+	IpcmFwdCDAPMsgMessage * result =
+			new IpcmFwdCDAPMsgMessage();
+
+	if (attrs[IFCM_ATTR_CDAP_MSG]) {
+		size_t msglen = nla_len(attrs[IFCM_ATTR_CDAP_MSG]);
+		char *msgbuf = new char[msglen];
+
+		// XXX or nla_get_data() ?
+		memcpy(msgbuf, nla_data(attrs[IFCM_ATTR_CDAP_MSG]), msglen);
+
+		result->sermsg = SerializedObject(msgbuf, msglen);
+	}
+
+	if (attrs[IFCM_ATTR_RESULT]) {
+		result->result = nla_get_u32(attrs[IFCM_ATTR_RESULT]);
 	}
 
 	return result;

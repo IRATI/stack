@@ -343,6 +343,9 @@ const std::string BaseNetlinkMessage::operationCodeToString(RINANetlinkOperation
 	case RINA_C_IPCM_PLUGIN_LOAD_RESPONSE:
 		result = "59_PLUGIN_LOAD_RESP";
 		break;
+	case RINA_C_IPCM_FWD_CDAP_MSG_REQUEST:
+		result = "60_FWD_CDAP_MSG_REQ";
+		break;
 	default:
 		result = "Unknown operation";
 	}
@@ -1601,6 +1604,17 @@ IpcmPluginLoadRequestMessage::IpcmPluginLoadRequestMessage():
 IPCEvent* IpcmPluginLoadRequestMessage::toIPCEvent(){
 	IPCEvent * event = new PluginLoadRequestEvent(name, load,
 			                              getSequenceNumber());
+	return event;
+}
+
+/* CLASS FWD CDAP MSG REQUEST MESSAGE */
+IpcmFwdCDAPMsgMessage::IpcmFwdCDAPMsgMessage():
+                BaseNetlinkMessage(RINA_C_IPCM_FWD_CDAP_MSG_REQUEST) {
+}
+
+IPCEvent* IpcmFwdCDAPMsgMessage::toIPCEvent(){
+	IPCEvent * event = new FwdCDAPMsgEvent(sermsg, result,
+			                       getSequenceNumber());
 	return event;
 }
 
