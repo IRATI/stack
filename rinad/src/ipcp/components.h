@@ -498,6 +498,7 @@ public:
 	IPCPSecurityManager * security_manager_;
 	IRoutingComponent * routing_component_;
 	IPCPRIBDaemon * rib_daemon_;
+	rina::WireMessageProviderInterface *wmpi;
 
 	IPCProcess(const std::string& name, const std::string& instance);
 	virtual ~IPCProcess(){};
@@ -554,6 +555,13 @@ public:
                                  const std::string& object_name,
                                  const void* object_value);
 	virtual void deleteObject(const void* objectValue);
+};
+
+class IPCPCDAPSessDescr : public rina::CDAPSessionDescriptor {
+public:
+	IPCPCDAPSessDescr(unsigned int seqnum) : rina::CDAPSessionDescriptor(),
+						 req_seqnum(seqnum) { }
+	unsigned int req_seqnum;
 };
 
 }

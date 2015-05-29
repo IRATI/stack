@@ -709,14 +709,13 @@ void ExtendedIPCManager::pluginLoadResponse(
 #endif
 }
 
-void ExtendedIPCManager::forwardCDAPResponse(
-				const rina::FwdCDAPMsgEvent& event,
+void ExtendedIPCManager::forwardCDAPResponse(unsigned int sequenceNumber,
 				const rina::SerializedObject& sermsg,
 				int result)
 {
 #if STUB_API
 	//Do nothing
-	(void) event;
+	(void) sequenceNumber;
         (void) sermsg;
 	(void) result;
 #else
@@ -724,7 +723,7 @@ void ExtendedIPCManager::forwardCDAPResponse(
 
 	responseMessage.sermsg = sermsg;
 	responseMessage.result = result;
-	responseMessage.setSequenceNumber(event.sequenceNumber);
+	responseMessage.setSequenceNumber(sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
         responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);

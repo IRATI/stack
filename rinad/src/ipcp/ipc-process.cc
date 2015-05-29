@@ -674,7 +674,6 @@ void IPCProcessImpl::processPluginLoadRequestEvent(
 
 void IPCProcessImpl::processFwdCDAPMsgEvent(
                         const rina::FwdCDAPMsgEvent& event) {
-		rina::ScopedLock g(*lock_);
 	const rina::CDAPMessage * msg;
 	rina::CDAPSessionDescriptor * session_descr;
 
@@ -688,18 +687,13 @@ void IPCProcessImpl::processFwdCDAPMsgEvent(
 	LOG_IPCP_INFO("Forwarded CDAP Message:\n%s",
 		      msg->to_string().c_str());
 
-	session_descr = new rina::CDAPSessionDescriptor();
+	session_descr = new IPCPCDAPSessDescr(event.sequenceNumber);
 
 	rib_daemon_->processIncomingCDAPMessage(msg, session_descr,
 			rina::CDAPSessionInterface::SESSION_STATE_CON);
 
 	delete msg;
 	delete session_descr;
-
-	// Reply to the IPC Manager. For now we don't attach a CDAP
-	// response message
-	rina::extendedIPCManager->forwardCDAPResponse(event,
-					rina::SerializedObject(), 0);
 
         return;
 }

@@ -226,6 +226,7 @@ IPCProcess::IPCProcess(const std::string& name, const std::string& instance)
 	security_manager_ = 0;
 	rib_daemon_ = 0;
 	routing_component_ = 0;
+	wmpi = 0;
 }
 
 }
