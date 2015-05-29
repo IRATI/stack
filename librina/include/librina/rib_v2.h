@@ -178,7 +178,7 @@ public:
 	///
 	RIBObj_() : delegates(false){};
 
-	/// Class name
+	/// Fully qualified name
 	const std::string fqn;
 
 	/// Destructor
@@ -463,6 +463,7 @@ class RIBDaemon;
 //
 class RIBDaemonProxy{
 
+public:
 	///
 	/// Register a RIB to an AE
 	///
