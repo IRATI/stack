@@ -20,8 +20,6 @@
                 "name" : "default",
                 "version" : "0"
               },
-              "partialDelivery" : false,
-              "orderedDelivery" : true,
               "initialATimer" : 300,
               "dtcpPresent" : true,
               "dtcpConfiguration" : {
