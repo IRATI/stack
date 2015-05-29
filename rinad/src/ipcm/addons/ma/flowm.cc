@@ -360,6 +360,28 @@ void* ActiveWorker::run(void* param)
 	return NULL;
 }
 
+void FlowManager::process_fwd_cdap_msg_response(rina::FwdCDAPMsgEvent* fwdevent)
+{
+	rina::WireMessageProviderInterface * wmpi;
+	const rina::CDAPMessage *rmsg;
+
+	LOG_DBG("Received forwarded CDAP response %p, result %d", fwdevent,
+			fwdevent->result);
+
+	if (fwdevent->sermsg.empty()) {
+		LOG_DBG("Received empty delegated CDAP response");
+		return;
+	}
+
+	wmpi = rina::WireMessageProviderFactory().createWireMessageProvider();
+	rmsg = wmpi->deserializeMessage(fwdevent->sermsg);
+
+	LOG_DBG("Delegated CDAP response: %s", rmsg->to_string().c_str());
+
+	delete wmpi;
+	delete rmsg;
+}
+
 //Process an event coming from librina
 void FlowManager::process_librina_event(rina::IPCEvent** event_)
 {
@@ -428,11 +450,8 @@ void FlowManager::process_librina_event(rina::IPCEvent** event_)
 
 		case rina::IPC_PROCESS_FWD_CDAP_MSG:
 		{
-			rina::FwdCDAPMsgEvent *fwdevent =
-				dynamic_cast<rina::FwdCDAPMsgEvent*>(event);
-
-			LOG_INFO("Received forwarded CDAP response %p, result %d", fwdevent,
-				 fwdevent->result);
+			process_fwd_cdap_msg_response(
+				dynamic_cast<rina::FwdCDAPMsgEvent*>(event));
 			break;
 		}
 
