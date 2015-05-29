@@ -759,6 +759,8 @@ public:
         				rina::CDAPSessionDescriptor * descriptor,
         				const std::string& session_state);
 
+        void encodeObject(RIBObjectValue& object_value, rina::CDAPMessage * message);
+
         /// CDAP Message handlers that have sent a CDAP message and are waiting for a reply
         ThreadSafeMapOfPointers<int, ICDAPResponseMessageHandler> handlers_waiting_for_reply_;
 
@@ -786,8 +788,6 @@ private:
         /// @param list
         /// @return true if candidate is on list, false otherwise
         bool isOnList(int candidate, std::list<int> list);
-
-        void encodeObject(RIBObjectValue& object_value, rina::CDAPMessage * message);
 
         void sendMessageToProcess(const rina::CDAPMessage & cdapMessage, const RemoteProcessId& remote_id,
                         ICDAPResponseMessageHandler * response_handler);

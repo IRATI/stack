@@ -1072,6 +1072,8 @@ void OperationalStatusRIBObject::remoteReadObject(int invoke_id,
 					EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_NAME,
 					0, std::string(), invoke_id);
 
+			rib_daemon_->encodeObject(robject_value, rmsg);
+
 			// Reply to the IPC Manager, attaching the response message
 			const rina::SerializedObject * so;
 
