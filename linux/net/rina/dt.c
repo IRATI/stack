@@ -638,6 +638,21 @@ timeout_t dt_sv_tr(struct dt * dt)
 }
 EXPORT_SYMBOL(dt_sv_tr);
 
+int dt_sv_tr_set(struct dt * dt, timeout_t tr)
+{
+        unsigned long flags;
+
+        ASSERT(dt);
+        ASSERT(dt->sv);
+
+        spin_lock_irqsave(&dt->lock, flags);
+        dt->sv->tr = tr;
+        spin_unlock_irqrestore(&dt->lock, flags);
+
+        return 0;
+}
+EXPORT_SYMBOL(dt_sv_tr_set);
+
 bool dt_sv_drf_flag(struct dt * dt)
 {
         bool          flag;

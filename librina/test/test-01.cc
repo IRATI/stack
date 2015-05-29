@@ -33,7 +33,7 @@ bool checkAllocatedFlows(unsigned int expectedFlows) {
         std::vector<FlowInformation> allocatedFlows = ipcManager->getAllocatedFlows();
         if (allocatedFlows.size() != expectedFlows) {
                 std::cout << "ERROR: Expected " << expectedFlows
-                                << " allocated flows, but only found " + allocatedFlows.size()
+                                << " allocated flows, but only found " << allocatedFlows.size()
                                 << "\n";
                 return false;
         }
@@ -53,7 +53,7 @@ bool checkRegisteredApplications(unsigned int expectedApps) {
         if (registeredApplications.size() != expectedApps) {
                 std::cout << "ERROR: Expected " << expectedApps
                                 << " registered applications, but only found "
-                                                + registeredApplications.size() << "²n";
+                                                << registeredApplications.size() << "²n";
                 return false;
         }
 

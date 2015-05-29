@@ -261,6 +261,7 @@ void cwq_deliver(struct cwq * queue,
         struct dtp *            dtp;
         struct pdu  *           tmp;
         bool                    rtx_ctrl;
+        bool                    flow_ctrl;
 
         if (!queue)
                 return;
@@ -276,7 +277,8 @@ void cwq_deliver(struct cwq * queue,
                 return;
 
         rcu_read_lock();
-        rtx_ctrl = dtcp_ps_get(dtcp)->rtx_ctrl;
+        rtx_ctrl  = dtcp_ps_get(dtcp)->rtx_ctrl;
+        flow_ctrl = dtcp_ps_get(dtcp)->flow_ctrl;
         rcu_read_unlock();
 
         dtp = dt_dtp(dt);
@@ -294,7 +296,6 @@ void cwq_deliver(struct cwq * queue,
                         spin_unlock(&queue->lock);
                         return;
                 }
-
                 if (rtx_ctrl) {
                         rtxq = dt_rtxq(dt);
                         if (!rtxq) {
@@ -381,8 +382,6 @@ static struct rtxq_entry * rtxq_entry_create_gfp(struct pdu * pdu, gfp_t flag)
 {
         struct rtxq_entry * tmp;
 
-        ASSERT(pdu_is_ok(pdu));
-
         tmp = rkzalloc(sizeof(*tmp), flag);
         if (!tmp)
                 return NULL;
@@ -404,7 +403,7 @@ static struct rtxq_entry * rtxq_entry_create(struct pdu * pdu)
 static struct rtxq_entry * rtxq_entry_create_ni(struct pdu * pdu)
 { return rtxq_entry_create_gfp(pdu, GFP_ATOMIC); }
 
-static int rtxq_entry_destroy(struct rtxq_entry * entry)
+int rtxq_entry_destroy(struct rtxq_entry * entry)
 {
         if (!entry)
                 return -1;
@@ -415,6 +414,7 @@ static int rtxq_entry_destroy(struct rtxq_entry * entry)
 
         return 0;
 }
+EXPORT_SYMBOL(rtxq_entry_destroy);
 
 struct rtxqueue {
         struct list_head head;
@@ -472,12 +472,12 @@ static int rtxqueue_entries_ack(struct rtxqueue * q,
         ASSERT(q);
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
-                struct pci * pci;
                 seq_num_t    seq;
 
-                pci = pdu_pci_get_rw(cur->pdu);
-                seq = pci_sequence_number_get(pci);
-                if (seq <= seq_num) {
+                seq = pci_sequence_number_get(pdu_pci_get_rw((cur->pdu)));
+                /*NOTE: <= is not used because the entry is needed by RTT
+                 * estimator policy which will destroy it*/
+                if (seq < seq_num) {
                         LOG_DBG("Seq num acked: %u", seq);
                         rtxq_entry_destroy(cur);
                 } else
@@ -529,6 +529,24 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
         return 0;
 }
 
+static struct rtxq_entry * rtxqueue_entry_peek(struct rtxqueue * q,
+                                               seq_num_t sn)
+{
+        struct rtxq_entry * cur;
+        seq_num_t           csn;
+        list_for_each_entry(cur, &q->head, next) {
+                csn = pci_sequence_number_get(pdu_pci_get_rw((cur->pdu)));
+                if (csn > sn) {
+                        LOG_ERR("PDU was already removed from rtxq");
+                        return NULL;
+                }
+                if (csn == sn) {
+                        return cur;
+                }
+        }
+        return NULL;
+}
+
 /* push in seq_num order */
 static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
 {
@@ -539,15 +557,12 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
         if (!q)
                 return -1;
 
-        if (!pdu_is_ok(pdu))
-                return -1;
+        pci  = pdu_pci_get_ro(pdu);
+        csn  = pci_sequence_number_get((struct pci *) pci);
 
         tmp = rtxq_entry_create_ni(pdu);
         if (!tmp)
                 return -1;
-
-        pci  = pdu_pci_get_ro(pdu);
-        csn  = pci_sequence_number_get((struct pci *) pci);
 
         if (list_empty(&q->head)) {
                 list_add(&tmp->next, &q->head);
@@ -560,8 +575,7 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
         if (!last)
                 return -1;
 
-        pci  = pdu_pci_get_ro(last->pdu);
-        psn  = pci_sequence_number_get((struct pci *) pci);
+        psn = pci_sequence_number_get(pdu_pci_get_rw((last->pdu)));
         if (csn == psn) {
                 LOG_ERR("Another PDU with the same seq_num %u, is in "
                         "the rtx queue!", csn);
@@ -575,8 +589,7 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
         }
 
         list_for_each_entry(cur, &q->head, next) {
-                pci = pdu_pci_get_ro(cur->pdu);
-                psn = pci_sequence_number_get((struct pci *) pci);
+                psn = pci_sequence_number_get(pdu_pci_get_rw((cur->pdu)));
                 if (csn == psn) {
                         LOG_ERR("Another PDU with the same seq_num is in "
                                 "the rtx queue!");
@@ -800,6 +813,36 @@ struct rtxq * rtxq_create_ni(struct dt *  dt,
 
         return tmp;
 }
+
+struct rtxq_entry * rtxq_entry_peek(struct rtxq * q, seq_num_t sn)
+{
+        unsigned long       flags;
+        struct rtxq_entry * entry;
+        if (!q)
+                return NULL;
+
+        spin_lock_irqsave(&q->lock, flags);
+        entry = rtxqueue_entry_peek(q->queue, sn);
+        spin_unlock_irqrestore(&q->lock, flags);
+        return entry;
+}
+EXPORT_SYMBOL(rtxq_entry_peek);
+
+unsigned long rtxq_entry_timestamp(struct rtxq_entry * entry)
+{
+        if (!entry)
+                return 0;
+        return entry->time_stamp;
+}
+EXPORT_SYMBOL(rtxq_entry_timestamp);
+
+int rtxq_entry_retries(struct rtxq_entry * entry)
+{
+        if (!entry)
+                return -1;
+        return entry->retries;
+}
+EXPORT_SYMBOL(rtxq_entry_retries);
 
 int rtxq_push_ni(struct rtxq * q,
                  struct pdu *  pdu)
