@@ -37,14 +37,20 @@ using namespace rina;
 class ribBasicOps : public CppUnit::TestFixture {
 
 	CPPUNIT_TEST_SUITE( ribBasicOps );
-	CPPUNIT_TEST( testDestruction );
-/*	CPPUNIT_TEST( testCreation );
+	CPPUNIT_TEST( testInit );
+	CPPUNIT_TEST( testCreationRIB );
+/*
 	CPPUNIT_TEST( testAddObj );
 	CPPUNIT_TEST( testUserData );
 	CPPUNIT_TEST( testRemoveObj );
 */
+	CPPUNIT_TEST( testFini );
 	CPPUNIT_TEST_SUITE_END();
 
+	//RIB daemon proxy
+	rina::rib::RIBDaemonProxy* ribd;
+
+	static const std::string ae;
 private:
 
 
@@ -52,8 +58,12 @@ public:
 	void setUp();
 	void tearDown();
 
-	void testDestruction();
+	void testInit();
+	void testCreationRIB();
+	void testFini();
 };
+
+const std::string ribBasicOps::ae = "ae_name";
 
 //Register
 CPPUNIT_TEST_SUITE_REGISTRATION( ribBasicOps );
@@ -113,18 +123,58 @@ static class AppHandlers app_handlers;
 //
 
 void ribBasicOps::setUp(){
-	cdap_rib::cdap_params params;
-	params.is_IPCP_ = false;
-
-	rina::rib::init(&app_handlers, &remote_handlers, params);
 }
 
 void ribBasicOps::tearDown(){
-	rina::rib::fini();
+
 }
 
-void ribBasicOps::testDestruction(){
+void ribBasicOps::testInit(){
+	rina::rib::RIBDaemonProxy* ribd_;
+	cdap_rib::cdap_params params;
+	params.is_IPCP_ = false;
+	ribd = NULL;
 
+	//Before init getting a proxy should throw an exception
+	try{
+		ribd = rina::rib::RIBDaemonProxyFactory();
+	}catch(...){}
+
+	CPPUNIT_ASSERT_MESSAGE("Invalid ribdproxy before init", ribd == NULL);
+
+	rina::rib::init(&app_handlers, &remote_handlers, params);
+
+	//Double call to init should throw an exception
+	try{
+		rina::rib::init(&app_handlers, &remote_handlers, params);
+		CPPUNIT_ASSERT_MESSAGE("Double call to init did not throw an exception", 0);
+	}catch(...){}
+
+	//Create the proxy
+	ribd = rina::rib::RIBDaemonProxyFactory();
+	CPPUNIT_ASSERT_MESSAGE("Unable to recover a valid proxy", ribd != NULL);
+
+	ribd_ = rina::rib::RIBDaemonProxyFactory();
+	CPPUNIT_ASSERT_MESSAGE("Unable to recover a second valid proxy", ribd_ != NULL);
+	delete ribd_;
+}
+
+void ribBasicOps::testCreationRIB(){
+
+	rina::rib::RIB* rib = NULL;
+
+	//Double call to init should throw an exception
+	try{
+		ribd->unregisterRIB(rib, ae);
+		CPPUNIT_ASSERT_MESSAGE("Unregister an invalid RIB succeeded", 0);
+	}catch(...){}
+
+
+	//Destroy an inexistent RIB
+}
+
+void ribBasicOps::testFini(){
+	rina::rib::fini();
 }
 
 int main(int args, char** argv){
