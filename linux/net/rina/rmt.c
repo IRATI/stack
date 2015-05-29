@@ -643,8 +643,8 @@ static void send_worker(unsigned long o)
                         continue;
                 }
 
-                pdus_sent = 0;
                 spin_unlock(&rmt->n1_ports->lock);
+                pdus_sent = 0;
                 spin_lock(&n1_port->lock);
                 if (n1_port->state == N1_PORT_STATE_DISABLED ||
                     atomic_read(&n1_port->n_sdus) == 0) {
@@ -668,8 +668,8 @@ static void send_worker(unsigned long o)
                                                 LOG_ERR("Could not write scheduled PDU in n1 port");
                                         pdus_sent++;
                                 }
-                        } while((pdus_sent < MAX_PDUS_SENT_PER_CYCLE) ||
-                                (atomic_read(&n1_port->n_sdus) <= 0));
+                        } while((pdus_sent < MAX_PDUS_SENT_PER_CYCLE) &&
+                                (atomic_read(&n1_port->n_sdus) > 0));
                 }
                 rcu_read_unlock();
                 spin_unlock(&n1_port->lock);
