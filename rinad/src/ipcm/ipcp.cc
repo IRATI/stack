@@ -33,6 +33,7 @@
 #include <librina/logs.h>
 
 #include "rina-configuration.h"
+#include "common/debug.h"
 #include "ipcp.h"
 
 using namespace std;
@@ -441,6 +442,21 @@ void IPCMIPCProcess::pluginLoad(const std::string& name, bool load,
 		unsigned int opaque)
 {
 	proxy_->pluginLoad(name, load, opaque);
+}
+
+void IPCMIPCProcess::forwardCDAPMessage(const rina::CDAPMessage& msg,
+					unsigned int opaque)
+{
+	rina::WireMessageProviderInterface * wmpi =
+		rina::WireMessageProviderFactory().createWireMessageProvider();
+	const rina::SerializedObject * so;
+	stringstream ss;
+
+	so = wmpi->serializeMessage(msg);
+	delete wmpi;
+
+	proxy_->forwardCDAPMessage(*so, opaque);
+	delete so;
 }
 
 
