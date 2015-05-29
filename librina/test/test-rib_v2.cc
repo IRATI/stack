@@ -120,7 +120,7 @@ void ribBasicOps::setUp(){
 }
 
 void ribBasicOps::tearDown(){
-	//rina::rib::fini();
+	rina::rib::fini();
 }
 
 void ribBasicOps::testDestruction(){

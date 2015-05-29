@@ -1086,7 +1086,6 @@ RIBDaemon::RIBDaemon(cacep::AppConHandlerInterface *app_con_callback,
 }
 
 RIBDaemon::~RIBDaemon() {
-	delete app_con_callback_;
 }
 
 //
