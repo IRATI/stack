@@ -1425,6 +1425,21 @@ int putIpcmPluginLoadResponseMessageObject(nl_msg* netlinkMessage,
 IpcmPluginLoadResponseMessage *parseIpcmPluginLoadResponseMessage(
 		nlmsghdr *hdr);
 
+/* IpcmFwdCDAPMsgMessage CLASS*/
+enum IpcmFwdCDAPMsgMessageAttributes {
+	IFCM_ATTR_CDAP_MSG = 1,
+	IFCM_ATTR_RESULT,
+	__IFCM_ATTR_MAX,
+};
+
+#define IFCM_ATTR_MAX (__IFCM_ATTR_MAX -1)
+
+int putIpcmFwdCDAPMsgMessageObject(nl_msg* netlinkMessage,
+		const IpcmFwdCDAPMsgMessage& object);
+
+IpcmFwdCDAPMsgMessage * parseIpcmFwdCDAPMsgMessage(
+		nlmsghdr *hdr);
+
 }
 
 #endif

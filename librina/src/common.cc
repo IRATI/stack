@@ -459,8 +459,11 @@ const std::string IPCEvent::eventTypeToString(IPCEventType eventType) {
         case IPC_PROCESS_PLUGIN_LOAD_RESPONSE:
                 result = "40_PLUGIN_LOAD_RESPONSE";
                 break;
+	case IPC_PROCESS_FWD_CDAP_MSG:
+		result = "41_IPC_PROCESS_FWD_CDAP_MSG";
+		break;
 	case NO_EVENT:
-		result = "41_NO_EVENT";
+		result = "42_NO_EVENT";
 		break;
 	default:
 		result = "Unknown event";
