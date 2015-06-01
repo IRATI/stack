@@ -334,7 +334,6 @@ void IPCPRIBDaemonImpl::cdapMessageDelivered(char* message, int length, int port
     delete cdapMessage;
 }
 
-
 void IPCPRIBDaemonImpl::generateCDAPResponse(int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessDescr,
 			rina::CDAPMessage::Opcode opcode,
@@ -363,6 +362,21 @@ void IPCPRIBDaemonImpl::generateCDAPResponse(int invoke_id,
 					rina::CDAPMessage::NONE_FLAGS,
 					obj_class, 0, obj_name, 0,
 					std::string(), invoke_id);
+			break;
+		case rina::CDAPMessage::M_WRITE_R:
+			rmsg = rina::CDAPMessage::getWriteObjectResponseMessage(
+					rina::CDAPMessage::NONE_FLAGS,
+					0, invoke_id, std::string());
+			break;
+		case rina::CDAPMessage::M_START_R:
+			rmsg = rina::CDAPMessage::getStartObjectResponseMessage(
+					rina::CDAPMessage::NONE_FLAGS,
+					0, std::string(), invoke_id);
+			break;
+		case rina::CDAPMessage::M_STOP_R:
+			rmsg = rina::CDAPMessage::getStopObjectResponseMessage(
+					rina::CDAPMessage::NONE_FLAGS,
+					0, std::string(), invoke_id);
 			break;
 		default:
 			LOG_IPCP_WARN("Missing generateCDAPResponse support "
