@@ -26,16 +26,28 @@
 
 #include "pft.h"
 #include "pdu.h"
-#include "rds/rfifo.h"
 #include "ps-factory.h"
 
 struct pft_ps {
         struct ps_base base;
 
-        int (* next_hop)(struct pft_ps * ps,
-                         struct pci *    pci,
-                         port_id_t **    ports,
-                         size_t *        count);
+        int (* pft_add)(struct pft_ps *          ps,
+                        struct modpdufwd_entry * entry);
+        int (* pft_remove)(struct pft_ps *          ps,
+                           struct modpdufwd_entry * entry);
+
+        bool (* pft_is_empty)(struct pft_ps * ps);
+        int  (* pft_flush)(struct pft_ps * ps);
+
+        /* NOTE: ports and entries are in-out parms */
+        int  (* pft_nhop)(struct pft_ps * ps,
+                          struct pci *    pci,
+                          port_id_t **    ports,
+                          size_t *        count);
+
+        /* NOTE: entries are of the type modpdufwd_entry */
+        int  (* pft_dump)(struct pft_ps *    ps,
+                          struct list_head * entries);
 
         /* Reference used to access the PFT data model. */
         struct pft * dm;

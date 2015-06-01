@@ -89,6 +89,14 @@ static port_id_t pft_pe_port(struct pft_port_entry * pe)
         return pe->port_id;
 }
 
+/* FIXME: This representation is crappy and MUST be changed */
+struct pft_entry {
+        address_t        destination;
+        qos_id_t         qos_id;
+        struct list_head ports;
+        struct list_head next;
+};
+
 static struct pft_entry * pfte_create_gfp(gfp_t     flags,
                                           address_t destination,
                                           qos_id_t  qos_id)
