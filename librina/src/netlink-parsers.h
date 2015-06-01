@@ -1276,11 +1276,24 @@ int putIpcpConnectionDestroyResultMessageObject(nl_msg* netlinkMessage,
 IpcpConnectionDestroyResultMessage * parseIpcpConnectionDestroyResultMessage(
                 nlmsghdr *hdr);
 
+/* PortIdAltlist CLASS */
+enum PortIdAltlistAttributes {
+        PIA_ATTR_PORT_IDS = 1,
+        __PIA_ATTR_MAX,
+};
+
+#define PIA_ATTR_MAX (__PIA_ATTR_MAX - 1)
+
+int putPortIdAltlist(nl_msg* netlinkMessage,
+                 const PortIdAltlist& object);
+
+int parsePortIdAltlist(nlattr *nested, PortIdAltlist& portIdAlt);
+
 /* PDUForwardingTableEntry CLASS*/
 enum PDUForwardingTableEntryAttributes {
         PFTE_ATTR_ADDRESS = 1,
         PFTE_ATTR_QOS_ID,
-        PFTE_ATTR_PORT_IDS,
+        PFTE_ATTR_PORT_ID_ALTLISTS,
         __PFTE_ATTR_MAX,
 };
 
@@ -1410,6 +1423,21 @@ int putIpcmPluginLoadResponseMessageObject(nl_msg* netlinkMessage,
 		const IpcmPluginLoadResponseMessage& object);
 
 IpcmPluginLoadResponseMessage *parseIpcmPluginLoadResponseMessage(
+		nlmsghdr *hdr);
+
+/* IpcmFwdCDAPMsgMessage CLASS*/
+enum IpcmFwdCDAPMsgMessageAttributes {
+	IFCM_ATTR_CDAP_MSG = 1,
+	IFCM_ATTR_RESULT,
+	__IFCM_ATTR_MAX,
+};
+
+#define IFCM_ATTR_MAX (__IFCM_ATTR_MAX -1)
+
+int putIpcmFwdCDAPMsgMessageObject(nl_msg* netlinkMessage,
+		const IpcmFwdCDAPMsgMessage& object);
+
+IpcmFwdCDAPMsgMessage * parseIpcmFwdCDAPMsgMessage(
 		nlmsghdr *hdr);
 
 }

@@ -64,6 +64,8 @@ public:
                 const rina::SelectPolicySetResponseEvent& event);
         void processPluginLoadRequestEvent(
                 const rina::PluginLoadRequestEvent& event);
+        void processFwdCDAPMsgEvent(
+                const rina::FwdCDAPMsgEvent& event);
 
 private:
         void init_cdap_session_manager();
@@ -77,6 +79,8 @@ private:
                 pending_select_policy_set_events;
         rina::Lockable * lock_;
 		rina::DIFInformation dif_information_;
+
+	rina::WireMessageProviderInterface *wmpi;
 };
 
 void register_handlers_all(EventLoop& loop);

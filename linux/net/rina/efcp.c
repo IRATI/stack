@@ -296,7 +296,7 @@ static int efcp_destroy(struct efcp * instance)
 
         rkfree(instance);
 
-        LOG_DBG("Instance %pK finalized successfully", instance);
+        LOG_DBG("EFCP instance %pK finalized successfully", instance);
 
         return 0;
 }
@@ -581,8 +581,8 @@ int efcp_container_receive(struct efcp_container * container,
         spin_lock_irqsave(&container->lock, flags);
         if (atomic_dec_and_test(&tmp->pending_ops) &&
             tmp->state == EFCP_DEALLOCATED) {
-                spin_unlock_irqrestore(&container->lock, flags);
                 efcp_destroy(tmp);
+                spin_unlock_irqrestore(&container->lock, flags);
 
                 return ret;
         }
@@ -759,7 +759,9 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 }
         }
 
-        if (dtcp_rtx_ctrl(connection->policies_params->dtcp_cfg)) {
+        if (dtcp_window_based_fctrl(connection->policies_params->dtcp_cfg) ||
+            dtcp_rate_based_fctrl(connection->policies_params->dtcp_cfg) ||
+            dtcp_rtx_ctrl(connection->policies_params->dtcp_cfg)) {
                 rtxq = rtxq_create(tmp->dt, container->rmt);
                 if (!rtxq) {
                         LOG_ERR("Failed to create rexmsn queue");
@@ -887,6 +889,7 @@ int efcp_connection_destroy(struct efcp_container * container,
                 }
                 return 0;
         }
+        LOG_DBG("efcp_connection_destroy con pending ops");
         spin_unlock_irqrestore(&container->lock, flags);
 
         return 0;

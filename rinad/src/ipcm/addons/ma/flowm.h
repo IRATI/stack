@@ -92,7 +92,7 @@ public:
 	*
 	* Shall only be called by the ManagementAgent
 	*/
-	void process_flow_event(rina::IPCEvent** event);
+	void process_librina_event(rina::IPCEvent** event);
 
 	/**
 	* Checks whether an operation has already finalised

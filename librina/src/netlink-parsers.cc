@@ -501,6 +501,15 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
+	case RINA_C_IPCM_FWD_CDAP_MSG_REQUEST: {
+		IpcmFwdCDAPMsgMessage * requestObject =
+			dynamic_cast<IpcmFwdCDAPMsgMessage *>(message);
+		if (putIpcmFwdCDAPMsgMessageObject(netlinkMessage,
+				*requestObject) < 0) {
+			return -1;
+		}
+		return 0;
+	}
 	default: {
 		return -1;
 	}
@@ -719,6 +728,10 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	}
 	case RINA_C_IPCM_PLUGIN_LOAD_RESPONSE: {
 		return parseIpcmPluginLoadResponseMessage(
+		                netlinkMessageHeader);
+	}
+	case RINA_C_IPCM_FWD_CDAP_MSG_REQUEST: {
+		return parseIpcmFwdCDAPMsgMessage(
 		                netlinkMessageHeader);
 	}
 	default: {
@@ -4741,28 +4754,60 @@ int putIpcpConnectionDestroyResultMessageObject(nl_msg* netlinkMessage,
         return -1;
 }
 
+int putPortIdAltlist(nl_msg* netlinkMessage, const PortIdAltlist& object)
+{
+	struct nlattr * portIds;
+	std::list<unsigned int>::const_iterator it;
+	int i = 0;
+
+	if (!(portIds = nla_nest_start(netlinkMessage, PIA_ATTR_PORT_IDS ))) {
+		goto nla_put_failure;
+	}
+
+	for (it = object.alts.begin(); it != object.alts.end(); it++, i++) {
+		NLA_PUT_U32(netlinkMessage, i, *it);
+	}
+
+        nla_nest_end(netlinkMessage, portIds);
+	return 0;
+
+        nla_put_failure:
+		LOG_ERR("Error building PDUForwardingTableEntry Netlink object");
+        return -1;
+}
+
 int putPDUForwardingTableEntryObject(nl_msg* netlinkMessage,
               const PDUForwardingTableEntry& object) {
-        struct nlattr * portIds;
-        std::list<unsigned int>::const_iterator iterator;
-        const std::list<unsigned int> portIdsList = object.getPortIds();
-        int i=0;
+        struct nlattr * portIdAltlists;
+        std::list<PortIdAltlist>::const_iterator iterator;
+        const std::list<PortIdAltlist> portIdsList = object.getPortIdAltlists();
+        int i = 0;
 
         NLA_PUT_U32(netlinkMessage, PFTE_ATTR_ADDRESS, object.getAddress());
         NLA_PUT_U32(netlinkMessage, PFTE_ATTR_QOS_ID, object.getQosId());
 
-        if (!(portIds = nla_nest_start(netlinkMessage, PFTE_ATTR_PORT_IDS))) {
+        if (!(portIdAltlists = nla_nest_start(netlinkMessage,
+					  PFTE_ATTR_PORT_ID_ALTLISTS))) {
                 goto nla_put_failure;
         }
 
         for (iterator = portIdsList.begin();
                         iterator != portIdsList.end();
-                        ++iterator) {
-                NLA_PUT_U32(netlinkMessage, i, *iterator);
-                i++;
+                        ++iterator, ++i) {
+		struct nlattr * portIdAlt;
+
+		if (!(portIdAlt = nla_nest_start(netlinkMessage, i))) {
+			goto nla_put_failure;
+		}
+
+		if (putPortIdAltlist(netlinkMessage, *iterator)) {
+			goto nla_put_failure;
+		}
+
+		nla_nest_end(netlinkMessage, portIdAlt);
         }
 
-        nla_nest_end(netlinkMessage, portIds);
+        nla_nest_end(netlinkMessage, portIdAltlists);
         return 0;
 
         nla_put_failure: LOG_ERR(
@@ -4958,6 +5003,21 @@ int putIpcmPluginLoadResponseMessageObject(nl_msg* netlinkMessage,
 
         nla_put_failure: LOG_ERR(
                         "Error building IpcmPluginLoadResponseMessage "
+                        "Netlink object");
+        return -1;
+}
+
+int putIpcmFwdCDAPMsgMessageObject(nl_msg* netlinkMessage,
+		const IpcmFwdCDAPMsgMessage& object){
+	NLA_PUT(netlinkMessage, IFCM_ATTR_CDAP_MSG, object.sermsg.size_,
+		object.sermsg.message_);
+
+	NLA_PUT_U32(netlinkMessage, IFCM_ATTR_RESULT, object.result);
+
+	return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building IpcmFwdCDAPMsgMessage "
                         "Netlink object");
         return -1;
 }
@@ -8289,14 +8349,53 @@ IpcpConnectionDestroyResultMessage * parseIpcpConnectionDestroyResultMessage(
         return result;
 }
 
-int parseListOfPortIds(nlattr *nested, PDUForwardingTableEntry * entry) {
+int parsePortIdAltlist(nlattr *nested, PortIdAltlist& portIdAlt)
+{
+        struct nla_policy attr_policy[PIA_ATTR_MAX + 1];
+        attr_policy[PIA_ATTR_PORT_IDS].type = NLA_NESTED;
+        attr_policy[PIA_ATTR_PORT_IDS].minlen = 0;
+        attr_policy[PIA_ATTR_PORT_IDS].maxlen = 0;
+        struct nlattr *attrs[PIA_ATTR_MAX + 1];
+	int err = nla_parse_nested(attrs, PIA_ATTR_MAX, nested, attr_policy);
+
+        if (err < 0) {
+                LOG_ERR("Error parsing PortIdAltlist from Netlink message: %d",
+                        err);
+                return err;
+        }
+
+	if (attrs[PIA_ATTR_PORT_IDS]) {
+		nlattr * nla;
+		int rem;
+
+		for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
+				nla_ok(nla, rem);
+				nla = nla_next(nla, &(rem))){
+			portIdAlt.add_alt(nla_get_u32(nla));
+		}
+
+		if (rem > 0){
+			LOG_WARN("Missing bits to parse");
+		}
+	}
+
+        return 0;
+}
+
+int parseListOfPortIdAltlists(nlattr *nested, PDUForwardingTableEntry * entry) {
         nlattr * nla;
         int rem;
 
         for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
                         nla_ok(nla, rem);
                         nla = nla_next(nla, &(rem))){
-                entry->addPortId(nla_get_u32(nla));
+		int err;
+
+		entry->portIdAltlists.push_back(PortIdAltlist());
+		err = parsePortIdAltlist(nla, entry->portIdAltlists.back());
+		if (err) {
+			return err;
+		}
         }
 
         if (rem > 0){
@@ -8314,9 +8413,9 @@ PDUForwardingTableEntry * parsePDUForwardingTableEntry(nlattr *nested) {
         attr_policy[PFTE_ATTR_QOS_ID].type = NLA_U32;
         attr_policy[PFTE_ATTR_QOS_ID].minlen = 4;
         attr_policy[PFTE_ATTR_QOS_ID].maxlen = 4;
-        attr_policy[PFTE_ATTR_PORT_IDS].type = NLA_NESTED;
-        attr_policy[PFTE_ATTR_PORT_IDS].minlen = 0;
-        attr_policy[PFTE_ATTR_PORT_IDS].maxlen = 0;
+        attr_policy[PFTE_ATTR_PORT_ID_ALTLISTS].type = NLA_NESTED;
+        attr_policy[PFTE_ATTR_PORT_ID_ALTLISTS].minlen = 0;
+        attr_policy[PFTE_ATTR_PORT_ID_ALTLISTS].maxlen = 0;
         struct nlattr *attrs[PFTE_ATTR_MAX + 1];
 
         int err = nla_parse_nested(attrs, PFTE_ATTR_MAX, nested, attr_policy);
@@ -8338,8 +8437,8 @@ PDUForwardingTableEntry * parsePDUForwardingTableEntry(nlattr *nested) {
                                 nla_get_u32(attrs[PFTE_ATTR_QOS_ID]));
         }
 
-        if (attrs[PFTE_ATTR_PORT_IDS]){
-                parseListOfPortIds(attrs[PFTE_ATTR_PORT_IDS], result);
+        if (attrs[PFTE_ATTR_PORT_ID_ALTLISTS]){
+                parseListOfPortIdAltlists(attrs[PFTE_ATTR_PORT_ID_ALTLISTS], result);
         }
 
         return result;
@@ -8651,6 +8750,45 @@ parseIpcmPluginLoadResponseMessage(nlmsghdr *hdr){
 
 	if (attrs[IPLRE_ATTR_RESULT]) {
 		result->result = nla_get_u32(attrs[IPLRE_ATTR_RESULT]);
+	}
+
+	return result;
+}
+
+IpcmFwdCDAPMsgMessage *
+parseIpcmFwdCDAPMsgMessage(nlmsghdr *hdr){
+	struct nla_policy attr_policy[IFCM_ATTR_MAX + 1];
+	attr_policy[IFCM_ATTR_CDAP_MSG].type = NLA_UNSPEC;
+	attr_policy[IFCM_ATTR_CDAP_MSG].minlen = 0;
+	attr_policy[IFCM_ATTR_CDAP_MSG].maxlen = 65535;
+        attr_policy[IFCM_ATTR_RESULT].type = NLA_U32;
+        attr_policy[IFCM_ATTR_RESULT].minlen = 4;
+        attr_policy[IFCM_ATTR_RESULT].maxlen = 4;
+	struct nlattr *attrs[IFCM_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			        IFCM_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing IpcmFwdCDAPMsgMessage "
+                        "information from Netlink message: %d", err);
+		return 0;
+	}
+
+	IpcmFwdCDAPMsgMessage * result =
+			new IpcmFwdCDAPMsgMessage();
+
+	if (attrs[IFCM_ATTR_CDAP_MSG]) {
+		size_t msglen = nla_len(attrs[IFCM_ATTR_CDAP_MSG]);
+		char *msgbuf = new char[msglen];
+
+		// XXX or nla_get_data() ?
+		memcpy(msgbuf, nla_data(attrs[IFCM_ATTR_CDAP_MSG]), msglen);
+
+		result->sermsg = SerializedObject(msgbuf, msglen);
+	}
+
+	if (attrs[IFCM_ATTR_RESULT]) {
+		result->result = nla_get_u32(attrs[IFCM_ATTR_RESULT]);
 	}
 
 	return result;

@@ -180,6 +180,10 @@ struct ipcp_instance_ops {
                                       cep_id_t                    dst_cep_id,
                                       struct conn_policies *      cp_params);
 
+        int      (* flow_prebind)(struct ipcp_instance_data * data,
+                                  struct ipcp_instance *      user_ipcp,
+                                  port_id_t                   port_id);
+
         int      (* flow_binding_ipcp)(struct ipcp_instance_data * user_data,
                                        port_id_t                   port_id,
                                        struct ipcp_instance *      n1_ipcp);
@@ -209,16 +213,10 @@ struct ipcp_instance_ops {
                               struct sdu *                sdu);
 
         int (* pft_add)(struct ipcp_instance_data * data,
-                        address_t                   address,
-                        qos_id_t                    qos_id,
-                        port_id_t *                 ports,
-                        size_t                      size);
+			struct modpdufwd_entry	  * entry);
 
         int (* pft_remove)(struct ipcp_instance_data * data,
-                           address_t                   address,
-                           qos_id_t                    qos_id,
-                           port_id_t *                 ports,
-                           size_t                      size);
+			   struct modpdufwd_entry	  * entry);
 
         int (* pft_dump)(struct ipcp_instance_data * data,
                          struct list_head *          entries);

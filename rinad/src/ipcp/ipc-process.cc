@@ -57,9 +57,11 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         state = NOT_INITIALIZED;
         lock_ = new rina::Lockable();
 
+	wmpi = rina::WireMessageProviderFactory().createWireMessageProvider();
+
         // Load the default pluggable components
         if (plugin_load(PLUGINSDIR, "default")) {
-        		throw rina::Exception("Failed to load default plugin");
+		throw rina::Exception("Failed to load default plugin");
         }
 
         // Initialize application entities
@@ -410,14 +412,18 @@ void IPCProcessImpl::logPDUFTE(const rina::DumpFTResponseEvent& event) {
 	}
 
 	std::list<rina::PDUForwardingTableEntry>::const_iterator it;
-	std::list<unsigned int>::const_iterator it2;
+	std::list<rina::PortIdAltlist>::const_iterator it2;
+	std::list<unsigned int>::const_iterator it3;
 	std::stringstream ss;
 	ss << "Contents of the PDU Forwarding Table: " << std::endl;
 	for (it = event.entries.begin(); it != event.entries.end(); ++it) {
 		ss << "Address: " << it->address << "; QoS-id: ";
 		ss << it->qosId << "; Port-ids: ";
-		for (it2 = it->portIds.begin(); it2 != it->portIds.end(); ++it2) {
-			ss << (*it2) << "; ";
+		for (it2 = it->portIdAltlists.begin(); it2 != it->portIdAltlists.end(); ++it2) {
+			for (it3 = it2->alts.begin(); it3 != it2->alts.end(); it3++) {
+				ss << (*it3) << ", ";
+			}
+			ss << ";";
 		}
 		ss << std::endl;
 	}
@@ -662,6 +668,38 @@ void IPCProcessImpl::processPluginLoadRequestEvent(
                 result = plugin_unload(event.name);
         }
         rina::extendedIPCManager->pluginLoadResponse(event, result);
+
+        return;
+}
+
+void IPCProcessImpl::processFwdCDAPMsgEvent(
+                        const rina::FwdCDAPMsgEvent& event) {
+		rina::ScopedLock g(*lock_);
+	const rina::CDAPMessage * msg;
+	rina::CDAPSessionDescriptor * session_descr;
+
+	if (!event.sermsg.message_) {
+		LOG_IPCP_ERR("No CDAP message to be forwarded");
+		return;
+	}
+
+	msg = wmpi->deserializeMessage(event.sermsg);
+
+	LOG_IPCP_INFO("Forwarded CDAP Message:\n%s",
+		      msg->to_string().c_str());
+
+	session_descr = new rina::CDAPSessionDescriptor();
+
+	rib_daemon_->processIncomingCDAPMessage(msg, session_descr,
+			rina::CDAPSessionInterface::SESSION_STATE_CON);
+
+	delete msg;
+	delete session_descr;
+
+	// Reply to the IPC Manager. For now we don't attach a CDAP
+	// response message
+	rina::extendedIPCManager->forwardCDAPResponse(event,
+					rina::SerializedObject(), 0);
 
         return;
 }
@@ -918,6 +956,17 @@ ipc_process_plugin_load_handler(rina::IPCEvent *e,
 }
 
 static void
+ipc_process_fwd_cdap_msg_handler(rina::IPCEvent *e,
+		                 EventLoopData *opaque)
+
+{
+	DOWNCAST_DECL(e, rina::FwdCDAPMsgEvent, event);
+	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
+
+	ipcp->processFwdCDAPMsgEvent(*event);
+}
+
+static void
 ipc_process_default_handler(rina::IPCEvent *e,
 		EventLoopData *opaque)
 {
@@ -973,6 +1022,8 @@ void register_handlers_all(EventLoop& loop) {
                         ipc_process_select_policy_set_response_handler);
         loop.register_event(rina::IPC_PROCESS_PLUGIN_LOAD,
                         ipc_process_plugin_load_handler);
+        loop.register_event(rina::IPC_PROCESS_FWD_CDAP_MSG,
+                        ipc_process_fwd_cdap_msg_handler);
 
 	//Unsupported events
 	loop.register_event(rina::APPLICATION_UNREGISTERED_EVENT,

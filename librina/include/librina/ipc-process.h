@@ -714,6 +714,15 @@ public:
 	void pluginLoadResponse(const PluginLoadRequestEvent& event,
                                 int result);
 
+	/**
+	 * Forward to the IPC Manager a CDAP response message
+	 * @param event The event that triggered the operation
+	 * @param The serialized CDAP message to forward
+	 * @throws FwdCDAPMsgException
+	 */
+	void forwardCDAPResponse(const rina::FwdCDAPMsgEvent& event,
+				 const rina::SerializedObject& sermsg,
+				 int result);
 };
 
 /**
@@ -804,6 +813,14 @@ public:
 	RoutingTableEntry();
 };
 
+struct PortIdAltlist {
+	std::list<unsigned int> alts;
+
+	PortIdAltlist();
+	PortIdAltlist(unsigned int pid);
+	void add_alt(unsigned int pid);
+};
+
 /**
  * Models an entry in the PDU Forwarding Table
  */
@@ -816,7 +833,7 @@ public:
         unsigned int qosId;
 
         /** The N-1 portid */
-        std::list<unsigned int> portIds;
+        std::list<PortIdAltlist> portIdAltlists;
 
         PDUForwardingTableEntry();
         bool operator==(const PDUForwardingTableEntry &other) const;
@@ -824,9 +841,8 @@ public:
 #ifndef SWIG
         unsigned int getAddress() const;
         void setAddress(unsigned int address);
-        const std::list<unsigned int> getPortIds() const;
-        void setPortIds(const std::list<unsigned int>& portIds);
-        void addPortId(unsigned int portId);
+        const std::list<PortIdAltlist> getPortIdAltlists() const;
+        void setPortIdAltlists(const std::list<PortIdAltlist>& portIds);
         unsigned int getQosId() const;
         void setQosId(unsigned int qosId);
 #endif
