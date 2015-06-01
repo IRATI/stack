@@ -69,6 +69,8 @@ IPCPRIBDaemonImpl::IPCPRIBDaemonImpl()
 {
 	management_sdu_reader_ = 0;
 	n_minus_one_flow_manager_ = 0;
+	wmpi = rina::WireMessageProviderFactory().createWireMessageProvider();
+
 }
 
 void IPCPRIBDaemonImpl::set_application_process(rina::ApplicationProcess * ap)
@@ -330,6 +332,43 @@ void IPCPRIBDaemonImpl::cdapMessageDelivered(char* message, int length, int port
     }
 
     delete cdapMessage;
+}
+
+
+void IPCPRIBDaemonImpl::generateCDAPResponse(int invoke_id,
+			rina::CDAPSessionDescriptor * cdapSessDescr,
+			const std::string& obj_class,
+			const std::string& obj_name,
+			rina::RIBObjectValue& robject_value)
+{
+	IPCPCDAPSessDescr *fwdsess =
+		dynamic_cast<IPCPCDAPSessDescr*>(cdapSessDescr);
+
+	if (!fwdsess) {
+		rina::RemoteProcessId remote_id;
+		remote_id.port_id_ = cdapSessDescr->port_id_;
+
+		remoteReadObjectResponse(obj_class, obj_name, robject_value,
+				0, std::string(), false, invoke_id, remote_id);
+	} else {
+		rina::CDAPMessage *rmsg =
+			rina::CDAPMessage::getReadObjectResponseMessage(
+					rina::CDAPMessage::NONE_FLAGS,
+					obj_class, 0, obj_name, 0,
+					std::string(), invoke_id);
+
+		encodeObject(robject_value, rmsg);
+
+		// Reply to the IPC Manager, attaching the response message
+		const rina::SerializedObject * so;
+
+		so = wmpi->serializeMessage(*rmsg);
+		delete rmsg;
+
+		rina::extendedIPCManager->forwardCDAPResponse(
+				fwdsess->req_seqnum, *so, 0);
+		delete so;
+	}
 }
 
 }

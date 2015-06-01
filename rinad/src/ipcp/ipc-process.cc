@@ -57,8 +57,6 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         state = NOT_INITIALIZED;
         lock_ = new rina::Lockable();
 
-	wmpi = rina::WireMessageProviderFactory().createWireMessageProvider();
-
         // Load the default pluggable components
         if (plugin_load(PLUGINSDIR, "default")) {
 		throw rina::Exception("Failed to load default plugin");
@@ -682,7 +680,7 @@ void IPCProcessImpl::processFwdCDAPMsgEvent(
 		return;
 	}
 
-	msg = wmpi->deserializeMessage(event.sermsg);
+	msg = rib_daemon_->wmpi->deserializeMessage(event.sermsg);
 
 	LOG_IPCP_INFO("Forwarded CDAP Message:\n%s",
 		      msg->to_string().c_str());

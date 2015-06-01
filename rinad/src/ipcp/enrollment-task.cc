@@ -1052,38 +1052,10 @@ void OperationalStatusRIBObject::remoteReadObject(int invoke_id,
 		robject_value.type_ = rina::RIBObjectValue::inttype;
 		robject_value.int_value_ = ipc_process_->get_operational_state();
 
-		IPCPCDAPSessDescr *fwdsess =
-			dynamic_cast<IPCPCDAPSessDescr*>(cdapSessionDescriptor);
-
-		if (!fwdsess) {
-			rina::RemoteProcessId remote_id;
-			remote_id.port_id_ = cdapSessionDescriptor->port_id_;
-
-			rib_daemon_->remoteReadObjectResponse(
+		rib_daemon_->generateCDAPResponse(invoke_id, cdapSessionDescriptor,
 					EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_CLASS,
 					EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_NAME,
-					robject_value, 0, "", invoke_id, false, remote_id);
-		} else {
-			rina::CDAPMessage *rmsg =
-				rina::CDAPMessage::getReadObjectResponseMessage(
-					rina::CDAPMessage::NONE_FLAGS,
-					EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_CLASS,
-					0,
-					EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_NAME,
-					0, std::string(), invoke_id);
-
-			rib_daemon_->encodeObject(robject_value, rmsg);
-
-			// Reply to the IPC Manager, attaching the response message
-			const rina::SerializedObject * so;
-
-			so = ipc_process_->wmpi->serializeMessage(*rmsg);
-			delete rmsg;
-
-			rina::extendedIPCManager->forwardCDAPResponse(
-						fwdsess->req_seqnum, *so, 0);
-			delete so;
-		}
+					robject_value);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems generating or sending CDAP Message: %s",
 				e.what());
