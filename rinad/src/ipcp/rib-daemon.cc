@@ -349,16 +349,10 @@ void IPCPRIBDaemonImpl::generateCDAPResponse(int invoke_id,
 		rina::RemoteProcessId remote_id;
 		remote_id.port_id_ = cdapSessDescr->port_id_;
 
-		switch (opcode) {
-		case rina::CDAPMessage::M_READ_R:
-			remoteReadObjectResponse(obj_class, obj_name, robject_value,
-				0, std::string(), false, invoke_id, remote_id);
-			break;
-		default:
-			LOG_IPCP_WARN("Missing generateCDAPResponse support "
-				      "for opcode %d", opcode);
-			break;
-		}
+		remote_operation_response_with_value(opcode, obj_class, obj_name,
+						     robject_value, 0, std::string(),
+						     invoke_id, remote_id,
+						     rina::CDAPMessage::NONE_FLAGS);
 
 	} else {
 		rina::CDAPMessage *rmsg;
