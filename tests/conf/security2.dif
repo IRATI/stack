@@ -65,8 +65,8 @@
                	  "name" : "PSOC_authentication-password",
            	  "version" : "1",
            	  "parameters" : [ {
-           	     "name" : "kf05j.a1234.af0k",
-           	     "value" : "admin123"
+           	     "name" : "password",
+           	     "value" : "kf05j.a1234.af0k"
            	  } ]
                 },
                 "TTLPolicy" : {

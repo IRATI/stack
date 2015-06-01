@@ -43,6 +43,7 @@ void IPCPSecurityManager::set_application_process(rina::ApplicationProcess * ap)
 void IPCPSecurityManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
 {
 	config = dif_configuration.sm_configuration_;
+	LOG_DBG("SM configuration: %s", config.toString().c_str());
 }
 
 rina::AuthSDUProtectionProfile IPCPSecurityManager::get_auth_sdup_profile(const std::string& under_dif_name)
