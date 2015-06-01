@@ -57,6 +57,7 @@ public:
         void cdapMessageDelivered(char* message, int length, int portId);
 	void generateCDAPResponse(int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessDescr,
+			rina::CDAPMessage::Opcode opcode,
 			const std::string& obj_class,
 			const std::string& obj_name,
 			rina::RIBObjectValue& robject_value);

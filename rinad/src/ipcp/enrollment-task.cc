@@ -1053,6 +1053,7 @@ void OperationalStatusRIBObject::remoteReadObject(int invoke_id,
 		robject_value.int_value_ = ipc_process_->get_operational_state();
 
 		rib_daemon_->generateCDAPResponse(invoke_id, cdapSessionDescriptor,
+					rina::CDAPMessage::M_READ_R,
 					EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_CLASS,
 					EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_NAME,
 					robject_value);

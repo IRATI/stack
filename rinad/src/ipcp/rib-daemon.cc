@@ -337,6 +337,7 @@ void IPCPRIBDaemonImpl::cdapMessageDelivered(char* message, int length, int port
 
 void IPCPRIBDaemonImpl::generateCDAPResponse(int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessDescr,
+			rina::CDAPMessage::Opcode opcode,
 			const std::string& obj_class,
 			const std::string& obj_name,
 			rina::RIBObjectValue& robject_value)
@@ -348,14 +349,32 @@ void IPCPRIBDaemonImpl::generateCDAPResponse(int invoke_id,
 		rina::RemoteProcessId remote_id;
 		remote_id.port_id_ = cdapSessDescr->port_id_;
 
-		remoteReadObjectResponse(obj_class, obj_name, robject_value,
+		switch (opcode) {
+		case rina::CDAPMessage::M_READ_R:
+			remoteReadObjectResponse(obj_class, obj_name, robject_value,
 				0, std::string(), false, invoke_id, remote_id);
+			break;
+		default:
+			LOG_IPCP_WARN("Missing generateCDAPResponse support "
+				      "for opcode %d", opcode);
+			break;
+		}
+
 	} else {
-		rina::CDAPMessage *rmsg =
-			rina::CDAPMessage::getReadObjectResponseMessage(
+		rina::CDAPMessage *rmsg;
+
+		switch (opcode) {
+		case rina::CDAPMessage::M_READ_R:
+			rmsg = rina::CDAPMessage::getReadObjectResponseMessage(
 					rina::CDAPMessage::NONE_FLAGS,
 					obj_class, 0, obj_name, 0,
 					std::string(), invoke_id);
+			break;
+		default:
+			LOG_IPCP_WARN("Missing generateCDAPResponse support "
+				      "for opcode %d", opcode);
+			break;
+		}
 
 		encodeObject(robject_value, rmsg);
 

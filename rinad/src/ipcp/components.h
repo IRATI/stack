@@ -482,6 +482,7 @@ public:
 	virtual void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event) = 0;
 	virtual void generateCDAPResponse(int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessDescr,
+			rina::CDAPMessage::Opcode opcode,
 			const std::string& obj_class,
 			const std::string& obj_name,
 			rina::RIBObjectValue& robject_value) = 0;
