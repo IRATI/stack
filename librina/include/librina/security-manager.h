@@ -126,7 +126,6 @@ public:
 		}
 	};
 
-	std::string cipher;
 	std::string password;
 	// Owned by a timer
 	CancelAuthTimerTask * timer_task;
@@ -172,7 +171,6 @@ private:
 			 	    int session_id);
 
 	IRIBDaemon * rib_daemon;
-	std::string cipher;
 	ISecurityManager * sec_man;
 	Timer timer;
 	int timeout;

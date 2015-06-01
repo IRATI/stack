@@ -136,7 +136,6 @@ AuthPasswordSecurityContext::AuthPasswordSecurityContext(int session_id) :
 const std::string AuthPasswordPolicySet::PASSWORD = "password";
 const std::string AuthPasswordPolicySet::CIPHER = "cipher";
 const std::string AuthPasswordPolicySet::CHALLENGE_LENGTH = "challenge-length";
-const std::string AuthPasswordPolicySet::DEFAULT_CIPHER = "default_cipher";
 const std::string AuthPasswordPolicySet::CHALLENGE_REQUEST = "challenge request";
 const std::string AuthPasswordPolicySet::CHALLENGE_REPLY = "challenge reply";
 const int AuthPasswordPolicySet::DEFAULT_TIMEOUT = 10000;
@@ -146,7 +145,6 @@ AuthPasswordPolicySet::AuthPasswordPolicySet(IRIBDaemon * ribd, ISecurityManager
 {
 	rib_daemon = ribd;
 	sec_man = sm;
-	cipher = DEFAULT_CIPHER;
 	timeout = DEFAULT_TIMEOUT;
 }
 
@@ -163,12 +161,11 @@ AuthPolicy AuthPasswordPolicySet::get_auth_policy(int session_id,
 
 	AuthPasswordSecurityContext * sc = new AuthPasswordSecurityContext(session_id);
 	sc->password = profile.authPolicy.get_param_value(PASSWORD);
-	if (string2int(profile.authPolicy.get_param_value(CHALLENGE_LENGTH), sc->challenge_length) != 0) {
-		LOG_ERR("Error parsing challenge length string as integer");
-		delete sc;
+	if (sc->password == std::string()) {
+		LOG_ERR("Could not find password parameter");
 		throw Exception();
 	}
-	sc->cipher = profile.authPolicy.get_param_value(CIPHER);
+	sc->challenge_length = sc->password.length();
 	sc->crcPolicy = profile.crcPolicy;
 	sc->ttlPolicy = profile.ttlPolicy;
 	sec_man->add_security_context(sc);
@@ -244,12 +241,11 @@ rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(
 
 	AuthPasswordSecurityContext * sc = new AuthPasswordSecurityContext(session_id);
 	sc->password = profile.authPolicy.get_param_value(PASSWORD);
-	if (string2int(profile.authPolicy.get_param_value(CHALLENGE_LENGTH), sc->challenge_length) != 0) {
-		LOG_ERR("Error parsing challenge length string as integer");
-		delete sc;
-		return rina::IAuthPolicySet::FAILED;
+	if (sc->password == std::string()) {
+		LOG_ERR("Could not find password parameter");
+		throw Exception();
 	}
-	sc->cipher = profile.authPolicy.get_param_value(CIPHER);
+	sc->challenge_length = sc->password.length();
 	sc->crcPolicy = profile.crcPolicy;
 	sc->ttlPolicy = profile.ttlPolicy;
 	sec_man->add_security_context(sc);
@@ -269,7 +265,7 @@ rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(
 
 		//object class contains challenge request or reply
 		//object name contains cipher name
-		rib_daemon->remoteWriteObject(CHALLENGE_REQUEST, cipher,
+		rib_daemon->remoteWriteObject(CHALLENGE_REQUEST, CHALLENGE_REQUEST,
 				robject_value, 0, remote_id, 0);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
@@ -305,7 +301,7 @@ int AuthPasswordPolicySet::process_challenge_request(const std::string& challeng
 
 		//object class contains challenge request or reply
 		//object name contains cipher name
-		rib_daemon->remoteWriteObject(CHALLENGE_REPLY, cipher,
+		rib_daemon->remoteWriteObject(CHALLENGE_REPLY, CHALLENGE_REPLY,
 				robject_value, 0, remote_id, 0);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());

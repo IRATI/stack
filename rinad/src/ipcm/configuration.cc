@@ -364,24 +364,6 @@ void parse_ipc_to_create(const Json::Value          root,
                 ipc.hostname = ipc_processes[i].get
                         ("hostName", string()).asString();
 
-                // SDU protection options
-                Json::Value sdu_prot =
-                        ipc_processes[i]["sduProtectionOptions"];
-                if (sdu_prot != 0) {
-                        for (unsigned int j = 0; j < sdu_prot.size(); j++) {
-                                string key = sdu_prot[j]
-                                        .get("nMinus1DIFName", string())
-                                        .asString();
-                                string value = sdu_prot[j]
-                                        .get("sduProtectionType", string())
-                                        .asString();
-                                ipc.sduProtectionOptions
-                                        .insert(pair<string, string>(key,
-                                                                     value));
-                        }
-                }
-
-
                 // parameters
                 Json::Value params = ipc_processes[i]["parameters"];
                 if (params != 0) {
