@@ -564,9 +564,9 @@ public:
 	virtual void deleteObject(const void* objectValue);
 };
 
-class IPCPCDAPSessDescr : public rina::CDAPSessionDescriptor {
+class IPCMCDAPSessDesc : public rina::CDAPSessionDescriptor {
 public:
-	IPCPCDAPSessDescr(unsigned int seqnum) : rina::CDAPSessionDescriptor(),
+	IPCMCDAPSessDesc(unsigned int seqnum) : rina::CDAPSessionDescriptor(),
 						 req_seqnum(seqnum) { }
 	unsigned int req_seqnum;
 };

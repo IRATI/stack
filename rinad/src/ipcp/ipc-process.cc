@@ -685,7 +685,7 @@ void IPCProcessImpl::processFwdCDAPMsgEvent(
 	LOG_IPCP_INFO("Forwarded CDAP Message:\n%s",
 		      msg->to_string().c_str());
 
-	session_descr = new IPCPCDAPSessDescr(event.sequenceNumber);
+	session_descr = new IPCMCDAPSessDesc(event.sequenceNumber);
 
 	rib_daemon_->processIncomingCDAPMessage(msg, session_descr,
 			rina::CDAPSessionInterface::SESSION_STATE_CON);

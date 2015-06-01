@@ -341,8 +341,8 @@ void IPCPRIBDaemonImpl::generateCDAPResponse(int invoke_id,
 			const std::string& obj_name,
 			rina::RIBObjectValue& robject_value)
 {
-	IPCPCDAPSessDescr *fwdsess =
-		dynamic_cast<IPCPCDAPSessDescr*>(cdapSessDescr);
+	IPCMCDAPSessDesc *fwdsess =
+		dynamic_cast<IPCMCDAPSessDesc*>(cdapSessDescr);
 
 	if (!fwdsess) {
 		rina::RemoteProcessId remote_id;
