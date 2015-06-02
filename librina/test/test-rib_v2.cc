@@ -34,6 +34,11 @@
 
 using namespace rina;
 
+//RIB daemon proxy
+static rina::rib::RIBDaemonProxy* ribd = NULL;
+//Application Entity name
+static const std::string ae ="ae_name";
+
 class ribBasicOps : public CppUnit::TestFixture {
 
 	CPPUNIT_TEST_SUITE( ribBasicOps );
@@ -47,10 +52,6 @@ class ribBasicOps : public CppUnit::TestFixture {
 	CPPUNIT_TEST( testFini );
 	CPPUNIT_TEST_SUITE_END();
 
-	//RIB daemon proxy
-	rina::rib::RIBDaemonProxy* ribd;
-
-	static const std::string ae;
 private:
 
 
@@ -62,8 +63,6 @@ public:
 	void testCreationRIB();
 	void testFini();
 };
-
-const std::string ribBasicOps::ae = "ae_name";
 
 //Register
 CPPUNIT_TEST_SUITE_REGISTRATION( ribBasicOps );
@@ -138,7 +137,9 @@ void ribBasicOps::testInit(){
 	//Before init getting a proxy should throw an exception
 	try{
 		ribd = rina::rib::RIBDaemonProxyFactory();
-	}catch(...){}
+	}catch(...){
+		printf("Captured exception\n");
+	}
 
 	CPPUNIT_ASSERT_MESSAGE("Invalid ribdproxy before init", ribd == NULL);
 

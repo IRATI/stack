@@ -57,18 +57,32 @@ public:
 namespace rib {
 
 //fwd decl
-class RIB;
 class RIBDaemonProxy;
 class RIBOpsRespHandlers;
 
+/// A schema with the same version has been already created
+DECLARE_EXCEPTION_SUBCLASS(eSchemaExists);
+
+/// The schema cannot removed because there are RIBs using it
+DECLARE_EXCEPTION_SUBCLASS(eSchemaInUse);
+
+/// The schema does not exist
+DECLARE_EXCEPTION_SUBCLASS(eSchemaNotFound);
+
 /// RIB version has been already registered for this AE
-DECLARE_EXCEPTION_SUBCLASS(eRIBAlreadyRegistered);
+DECLARE_EXCEPTION_SUBCLASS(eRIBAlreadyAssociated);
 
 /// Could not find a valid RIB version for this AE
 DECLARE_EXCEPTION_SUBCLASS(eRIBNotFound);
 
+/// RIB is being used by an AE
+DECLARE_EXCEPTION_SUBCLASS(eRIBInUse);
+
 /// RIB is not registered in this AE
-DECLARE_EXCEPTION_SUBCLASS(eRIBNotRegistered);
+DECLARE_EXCEPTION_SUBCLASS(eRIBNotAssociated);
+
+/// RIB is not registered in this AE
+DECLARE_EXCEPTION_SUBCLASS(eNotImplemented);
 
 ///
 /// Initialize the RIB library (RIBDaemon)
@@ -157,7 +171,6 @@ public:
 };
 
 //fwd decl
-class RIB;
 template <typename T>
 class RIBObj;
 
@@ -372,9 +385,9 @@ class RIBDelegationObj : public RIBObj<void*>{
 	~RIBDelegationObj(void){};
 };
 
-/**
- * RIB library result codes
- */
+///
+/// RIB library result codes
+///
 enum rib_schema_res {
 
 	RIB_SUCCESS,
@@ -392,6 +405,9 @@ enum rib_schema_res {
 	//TODO: Other error codes
 };
 
+///
+/// RIB Schema Object
+///
 class RIBSchemaObject {
 
 public:
@@ -408,35 +424,10 @@ private:
 	unsigned max_objs_;
 };
 
-class RIBSchema {
-
-public:
-	friend class RIB;
-	RIBSchema(const cdap_rib::vers_info_t *version, char separator);
-	~RIBSchema();
-	rib_schema_res ribSchemaDefContRelation(const std::string& cont_class_name,
-			const std::string& class_name,
-			const bool mandatory,
-			const unsigned max_objs);
-	char get_separator() const;
-	const cdap_rib::vers_info_t& get_version() const;
-private:
-	template<typename T>
-	bool validateAddObject(const RIBObj<T>* obj);
-	template<typename T, typename R>
-	bool validateRemoveObject(const RIBObj<T>* obj,
-			const RIBObj<R>* parent);
-	const cdap_rib::vers_info_t *version_;
-	std::map<std::string, RIBSchemaObject*> rib_schema_;
-	char separator_;
-};
-
 //
-// EmptyClass
+// EmptyClass (really?)
 //
-class EmptyClass {
-
-};
+class EmptyClass {};
 
 class EmptyEncoder : public rib::Encoder<EmptyClass> {
 
@@ -458,31 +449,96 @@ public:
 //fwd decl
 class RIBDaemon;
 
+
+///
+/// RIB handle type
+///
+typedef int64_t rib_handle_t;
+
 //
 // RIBDaemon Proxy class
 //
 class RIBDaemonProxy{
 
 public:
-	///
-	/// Register a RIB to an AE
-	///
-	void registerRIB(RIB* rib, const std::string& ae_name);
 
+	//-------------------------------------------------------------------//
+	//                         Local RIBs                                //
+	//-------------------------------------------------------------------//
+
+
+	///
+	/// Create a RIB schema
+	///
+	///
+	/// @throws eSchemaExists and Exception
+	///
+	void createSchema(const cdap_rib::vers_info_t& version,
+						const char separator = '/');
 	///
 	/// List registered RIB versions
 	///
 	std::list<uint64_t> listVersions(void);
 
 	///
-	/// Retrieve a pointer to the RIB
+	/// Destroys a RIB schema
+	///
+	/// This method destroy a previously created schema. The schema shall
+	/// not be currently used by any RIB instance or eSchemaInUse exception
+	/// will be thrown.
+	///
+	/// @throws eSchemaInUse, eSchemaNotFound and Exception
+	///
+	void destroySchema(const cdap_rib::vers_info_t& version);
+
+	///
+	/// Create a RIB
+	///
+	/// This method creates an empty RIB and returns a handle to it. The
+	/// RIB instance won't be operational until it has been associated to
+	/// one or more Application Entities (AEs).
+	///
+	/// @ret The RIB handle
+	/// @throws Exception on failure
+	///
+	rib_handle_t createRIB(const cdap_rib::vers_info_t& version);
+
+	///
+	/// Destroy a RIB instance
+	///
+	/// Destroys a previously created RIB instance. The instance shall not
+	/// be assocated to any AE or it will throw eRIBInUse
+	///
+	/// @throws eRIBInUse, eRIBNotFound or Exception on failure
+	void destroyRIB(const rib_handle_t& handle);
+
+	///
+	/// Associate a RIB to an Applicatin Entity (AE)
+	///
+	/// @throws eRIBAlreadyAssociated or Exception on failure
+	///
+	void associateRIBtoAE(const rib_handle_t& handle,
+						const std::string& ae_name);
+
+	/// Deassociate RIB from an Application Entity
+	///
+	/// This method deassociates a RIB from an AE. This method does NOT
+	/// destroy the RIB instance.
+	///
+	/// @throws eRIBNotFound, eRIBNotAssociated and Exception
+	///
+	void deassociateRIBfromAE(const rib_handle_t& handle,
+						const std::string& ae_name);
+
+	///
+	/// Retrieve the handle to a RIB
 	///
 	/// @param version RIB version
 	/// @param Application Entity Name
 	///
-	/// @ret A pointer to the RIB object or NULL.
+	/// @ret A handle to a RIB
 	///
-	RIB* get(uint64_t version, const std::string& ae_name);
+	rib_handle_t get(const uint64_t version, const std::string& ae_name);
 
 	///
 	/// Retrieve a list of pointers to the RIB of a certain version
@@ -491,7 +547,7 @@ public:
 	///
 	/// @ret a list of pointers to RIB objects
 	///
-	//std::list<RIB*> get(uint64_t version);
+	//std::list<rib_handle_t> get(uint64_t version);
 
 	///
 	/// Retrieve a list of pointers to the RIB(s) registered in an AE
@@ -500,25 +556,12 @@ public:
 	///
 	/// @ret a list of pointers to RIB objects
 	///
-	//std::list<RIB*> get(const std::string& ae_name);
+	//std::list<rib_handle_t> get(const std::string& ae_name);
 
 
-	/// Unregister a RIB
-	///
-	/// Unregisters a RIB from the library. This method does NOT
-	/// destroy the RIB instance.
-	///
-	/// @warning Current API does NOT guarantee that the RIB object can
-	/// be removed, even if it is not registered in any other AE.
-	///
-	/// @ret On success, it returns the pointer to the RIB instance
-	///
-	RIB* unregisterRIB(RIB* rib, const std::string& ae_name);
-
-
-	//
-	// RIB Client
-	//
+	//-------------------------------------------------------------------//
+	//                         RIB Client                                //
+	//-------------------------------------------------------------------//
 
 	///
 	/// Establish a CDAP connection to a remote RIB

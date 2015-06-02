@@ -39,90 +39,6 @@
 namespace rina {
 namespace rib {
 
-#if 0
-//
-// Internals Wrap over a RIBObj
-//
-// This class encapsulate the internal state required for a RIBObj, which is
-// deliverately not exposed to the RIB library user
-//
-class RIBObjWrap {
-
-	friend class RIB;
-
-protected:
-
-	//Constructor&destructor
-	RIBObjWrap(RIBObj* object, const std::string& fqn);
-	~RIBObjWrap();
-
-	// Add a child element
-	bool add_child(RIBObjWrap* child);
-
-	// Remove a child element
-	bool remove_child(const std::string& name);
-
-	// Reference to the object
-	RIBObj* object;
-
-	// Parent object, if any
-	RIBObjWrap* parent;
-
-	// List of childs
-	std::list<RIBObjWrap*> children;
-
-	// Fully qualifed name
-	std::string fqn;
-
-	// Read/write lock
-	rina::ReadWriteLockable rwlock;
-};
-
-RIBObjWrap::RIBObjWrap(RIBObj *obj, const std::string& fqn_) :
-							object(obj),
-							fqn(fqn_){
-}
-
-RIBObjWrap::~RIBObjWrap(){
-	//Ensure there is no other thread still using this
-        rwlock.writelock();
-}
-
-bool RIBObjWrap::add_child(RIBObjWrap* child) {
-
-	//Mutual exclusion
-	WriteScopedLock wlock(rwlock);
-
-	for (std::list<RIBObjWrap*>::iterator it = children.begin();
-			it != children.end(); ++it) {
-		if ((*it)->fqn.compare(child->fqn) == 0)
-			return false;
-	}
-
-	children.push_back(child);
-	child->parent = this;
-
-	return true;
-}
-
-bool RIBObjWrap::remove_child(const std::string& fqn) {
-
-	//Mutual exclusion
-	WriteScopedLock wlock(rwlock);
-
-	for (std::list<RIBObjWrap*>::iterator it = children.begin();
-			it != children.end(); ++it) {
-		if ((*it)->fqn.compare(fqn) == 0) {
-			children.erase(it);
-			return true;
-		}
-	}
-
-	LOG_ERR("Unknown child object with object name: %s", fqn.c_str());
-	return false;
-}
-#endif
-
 //
 // CLASS RIBSchemaObject
 //
@@ -152,17 +68,65 @@ unsigned RIBSchemaObject::get_max_objs() const {
 }
 
 //
-// CLASS RIBSchema
+// RIB schema class
 //
-RIBSchema::RIBSchema(const cdap_rib::vers_info_t *version, char separator) {
+class RIBSchema {
 
-	version_ = version;
-	separator_ = separator;
-}
-RIBSchema::~RIBSchema() {
+public:
+	friend class RIB;
+	RIBSchema(const cdap_rib::vers_info_t& version,
+						const char separator = '/');
+	virtual ~RIBSchema();
+	rib_schema_res ribSchemaDefContRelation(
+			const std::string& cont_class_name,
+			const std::string& class_name,
+			const bool mandatory,
+			const unsigned max_objs);
+	char get_separator() const;
+	const cdap_rib::vers_info_t& get_version() const;
 
-	delete version_;
+	//This method IS thread safe
+	void inc_ref_count(){
+		ScopedLock lock(mutex);
+		refs++;
+	}
+
+	//This method IS thread safe
+	void dec_ref_count(){
+		ScopedLock lock(mutex);
+		if(refs > 0){
+			refs--;
+		}else{
+			assert(0);
+			LOG_ERR("Corrupted RIB schema (%p) ref counter",
+									this);
+		}
+	}
+
+private:
+	template<typename T>
+	bool validateAddObject(const RIBObj<T>* obj);
+	template<typename T, typename R>
+	bool validateRemoveObject(const RIBObj<T>* obj,
+			const RIBObj<R>* parent);
+	const cdap_rib::vers_info_t version_;
+	std::map<std::string, RIBSchemaObject*> rib_schema_;
+	const char separator_;
+
+	//number of RIBs using this schema
+	unsigned int refs;
+
+	rina::Lockable mutex;
+};
+
+
+RIBSchema::RIBSchema(const cdap_rib::vers_info_t &version, char separator) :
+							version_(version),
+							separator_(separator),
+							refs(0){
+
 }
+RIBSchema::~RIBSchema() {}
 
 rib_schema_res RIBSchema::ribSchemaDefContRelation(
 		const std::string& cont_class_name,
@@ -193,22 +157,7 @@ template<typename T>
 bool RIBSchema::validateAddObject(const RIBObj<T>* obj) {
 
 	(void) obj;
-	/*
-	   RIBSchemaObject *schema_object = rib_schema_.find(obj->get_class());
-	// CHECKS REGION //
-	// Existance
-	if (schema_object == 0)
-	LOG_INFO();
-	return false;
-	// parent existance
-	RIBSchemaObject *parent_schema_object = rib_schema_[obj->get_parent_class()];
-	if (parent_schema_object == 0)
-	return false;
-	// maximum number of objects
-	if (parent->get_children_size() >= schema_object->get_max_objs()) {
-	return false;
-	}
-	 */
+
 	return true;
 }
 
@@ -217,7 +166,7 @@ char RIBSchema::get_separator() const {
 }
 
 const cdap_rib::vers_info_t& RIBSchema::get_version() const {
-	return *version_;
+	return version_;
 }
 
 //fwd decl
@@ -235,7 +184,7 @@ public:
 	/// @param schema Schema in which this RIB will be based
 	/// @param cdap_provider CDAP provider
 	///
-	RIB(const RIBSchema *schema,
+	RIB(const rib_handle_t& handle_, const RIBSchema *schema,
 				cdap::CDAPProviderInterface *cdap_provider);
 
 	/// Destroy RIB instance
@@ -421,15 +370,18 @@ private:
 	//rwlock
 	ReadWriteLockable rwlock;
 
+	//RIB handle (id)
+	const rib_handle_t handle;
+
 	//RIBDaemon to access operations callbacks
 	friend class RIBDaemon;
 };
 
-RIB::RIB(const RIBSchema *schema_,
-				cdap::CDAPProviderInterface *cdap_provider_){
-
-	schema = schema_;
-	cdap_provider = cdap_provider_;
+RIB::RIB(const rib_handle_t& handle_, const RIBSchema *schema_,
+		cdap::CDAPProviderInterface *cdap_provider_) :
+						schema(schema_),
+						cdap_provider(cdap_provider_),
+						handle(handle_){
 }
 
 RIB::~RIB() {
@@ -445,6 +397,8 @@ RIB::~RIB() {
 	}
 	obj_name_map.clear();
 	obj_inst_map.clear();
+
+	//TODO: remove schema if allocated by us?
 }
 
 void RIB::create_request(const cdap_rib::con_handle_t &con,
@@ -915,52 +869,79 @@ public:
 	//Public API
 
 	///
-	/// Register a RIB to an AE
+	/// Create a RIB schema
 	///
-	void registerRIB(RIB* rib, const std::string& ae_name);
-
+	///
+	/// @throws eSchemaExists and Exception
+	///
+	void createSchema(const cdap_rib::vers_info_t& version,
+						const char separator = '/');
 	///
 	/// List registered RIB versions
 	///
 	std::list<uint64_t> listVersions(void);
 
 	///
-	/// Retrieve a pointer to the RIB
+	/// Destroys a RIB schema
+	///
+	/// This method destroy a previously created schema. The schema shall
+	/// not be currently used by any RIB instance or eSchemaInUse exception
+	/// will be thrown.
+	///
+	/// @throws eSchemaInUse, eSchemaNotFound and Exception
+	///
+	void destroySchema(const cdap_rib::vers_info_t& version);
+
+	///
+	/// Create a RIB
+	///
+	/// This method creates an empty RIB and returns a handle to it. The
+	/// RIB instance won't be operational until it has been associated to
+	/// one or more Application Entities (AEs).
+	///
+	/// @ret The RIB handle
+	/// @throws Exception on failure
+	///
+	rib_handle_t createRIB(const cdap_rib::vers_info_t& version);
+
+
+	///
+	/// Destroy a RIB instance
+	///
+	/// Destroys a previously created RIB instance. The instance shall not
+	/// be assocated to any AE or it will throw eRIBInUse
+	///
+	/// @throws eRIBInUse, eRIBNotFound or Exception on failure
+	void destroyRIB(const rib_handle_t& handle);
+
+	///
+	/// Associate a RIB to an Applicatin Entity (AE)
+	///
+	/// @throws eRIBAlreadyAssociated or Exception on failure
+	///
+	void associateRIBtoAE(const rib_handle_t& handle,
+						const std::string& ae_name);
+
+	/// Deassociate RIB from an Application Entity
+	///
+	/// This method deassociates a RIB from an AE. This method does NOT
+	/// destroy the RIB instance.
+	///
+	/// @throws eRIBNotFound, eRIBNotAssociated and Exception
+	///
+	void deassociateRIBfromAE(const rib_handle_t& handle,
+						const std::string& ae_name);
+
+	///
+	/// Retrieve the handle to a RIB
 	///
 	/// @param version RIB version
 	/// @param Application Entity Name
 	///
-	/// @ret A pointer to the RIB object or NULL.
+	/// @ret A handle to a RIB
 	///
-	RIB* get(uint64_t version, const std::string& ae_name);
+	rib_handle_t get(uint64_t version, const std::string& ae_name);
 
-	///
-	/// Retrieve a list of pointers to the RIB of a certain version
-	///
-	/// @param version RIB version
-	///
-	/// @ret a list of pointers to RIB objects
-	///
-	std::list<RIB*> get(uint64_t version);
-
-	///
-	/// Retrieve a list of pointers to the RIB(s) registered in an AE
-	///
-	/// @param  RIB version
-	///
-	/// @ret a list of pointers to RIB objects
-	///
-	std::list<RIB*> get(const std::string& ae_name);
-
-
-	/// Unregister a RIB
-	///
-	/// Unregisters a RIB from the library. This method does NOT
-	/// destroy the RIB instance.
-	///
-	/// @ret On success, it returns the pointer to the RIB instance
-	///
-	RIB* unregisterRIB(RIB* rib, const std::string& ae_name);
 
 protected:
 	//
@@ -1040,18 +1021,36 @@ private:
 	//Friendship
 	friend class RIBDaemonProxy;
 
-	/**
-	* @internal Get the RIB by port_id.
-	* TODO: this should be deprecated in favour of putting some state
-	* in the (opaque pointer, sort of cookie)
-	*/
+	///
+	/// @internal Get the RIB by port_id.
+	/// @warning This method shall be called with the r or wrlock acquired
+	///
 	RIB* getByPortId(const int port_id);
+
+	///
+	/// @internal Allocate a new handle
+	/// @warning This method shall be called with the wrlock acquired
+	///
+	int64_t get_new_handle(void);
+
+	///
+	/// @internal Get the RIB pointer given the handle
+	/// @warning This method shall be called with the r or wlock acquired
+	///
+	RIB* getRIB(const rib_handle_t& handle);
 
 	cacep::AppConHandlerInterface *app_con_callback_;
 	cdap::CDAPProviderInterface *cdap_provider;
 	RIBOpsRespHandlers* remote_handlers;
 
+	//Key type definition
 	typedef std::pair<std::string, uint64_t> __ae_version_key_t;
+
+	//Handle <-> schema
+	std::map<rib_handle_t, RIB*> handle_rib_map;
+
+	//Version <-> schema
+	std::map<uint64_t, RIBSchema*> ver_schema_map;
 
 	//(AE+version) <-> list of RIB
 	std::map<__ae_version_key_t, RIB*> aeversion_rib_map;
@@ -1059,7 +1058,8 @@ private:
 	//Port id <-> RIB
 	std::map<int, RIB*> port_id_rib_map;
 
-	//TODO add per version and per AE
+	//Next handle possibly available
+	int64_t next_handle_id;
 
 	/**
 	 * read/write lock
@@ -1074,7 +1074,7 @@ private:
 
 RIBDaemon::RIBDaemon(cacep::AppConHandlerInterface *app_con_callback,
 		RIBOpsRespHandlers* remote_handlers_,
-		cdap_rib::cdap_params params) {
+		cdap_rib::cdap_params params) : next_handle_id(1){
 
 	app_con_callback_ = app_con_callback;
 
@@ -1086,54 +1086,110 @@ RIBDaemon::RIBDaemon(cacep::AppConHandlerInterface *app_con_callback,
 }
 
 RIBDaemon::~RIBDaemon() {
+
 }
 
-//
-/// Register a RIB
-///
-void RIBDaemon::registerRIB(RIB* rib, const std::string& ae_name){
+int64_t RIBDaemon::get_new_handle(void){
 
-	__ae_version_key_t key;
+	int64_t curr = next_handle_id;
 
-	key.first = ae_name;
-	key.second = rib->get_version().version_;
+	for(;; ++next_handle_id){
+		//Reuse ids; restart at 1
+		if(next_handle_id < 1)
+			next_handle_id = 1;
+
+		//Check whether we have checked all possible ids
+		if(curr == next_handle_id)
+			return -1;
+
+		//Set stop flag
+		if(curr < 0)
+			curr = next_handle_id;
+
+		if(handle_rib_map.find(next_handle_id) != handle_rib_map.end())
+			break;
+	}
+
+	return next_handle_id;
+}
+
+
+RIB* RIBDaemon::getRIB(const rib_handle_t& handle){
+	std::map<rib_handle_t, RIB*>::iterator it;
+
+	it = handle_rib_map.find(handle);
+
+	if(it == handle_rib_map.end())
+		return NULL;
+
+	return it->second;
+}
+
+// Associate a RIB to an AE
+void RIBDaemon::createSchema(const cdap_rib::vers_info_t& version,
+							const char separator){
+
+	uint64_t ver = version.version_;
+	std::map<uint64_t, RIBSchema*>::iterator it;
 
 	//Mutual exclusion
 	WriteScopedLock wlock(rwlock);
 
-	//Check first if it really exists
-	if(aeversion_rib_map.find(key) != aeversion_rib_map.end()){
-		LOG_ERR("Attempting to register an existing RIB: %p", rib);
-		throw eRIBAlreadyRegistered();
+	//Find schema
+	it = ver_schema_map.find(ver);
+
+	if(it != ver_schema_map.end()){
+		LOG_ERR("Schema version '%" PRIu64 "' exists", ver);
+		throw eSchemaExists();
 	}
 
-	aeversion_rib_map[key] = rib;
+	//Create the schema
+	RIBSchema* schema = new RIBSchema(version, separator);
+	ver_schema_map[ver] = schema;
 }
 
-///
-/// List registered RIB versions
-///
-std::list<uint64_t> RIBDaemon::listVersions(void){
-	std::list<uint64_t> vers;
-	uint64_t ver;
-	std::map<__ae_version_key_t, RIB*>::const_iterator it;
+void RIBDaemon::destroySchema(const cdap_rib::vers_info_t& version){
+	(void)version;
+	throw eNotImplemented();
+}
+
+
+rib_handle_t RIBDaemon::createRIB(const cdap_rib::vers_info_t& version){
+
+	rib_handle_t handle;
+	uint64_t ver = version.version_;
+	std::map<uint64_t, RIBSchema*>::iterator it;
 
 	//Mutual exclusion
-	ReadScopedLock rlock(rwlock);
+	WriteScopedLock wlock(rwlock);
 
-	//Copy keys
-	for(it = aeversion_rib_map.begin(); it != aeversion_rib_map.end();
-									++it){
-		ver = it->first.second;
-		if (std::find(vers.begin(), vers.end(), ver) ==
-								vers.end())
-			vers.push_back(ver);
+	//Find schema
+	it = ver_schema_map.find(ver);
+
+	if(it == ver_schema_map.end()){
+		LOG_ERR("Schema version '%" PRIu64 "' not found. Create a schema first.",
+								ver);
+		throw eSchemaNotFound();
 	}
 
-	return vers;
+	//Get a new (unique) handle
+	handle = get_new_handle();
+	if(handle < 0){
+		LOG_ERR("Could not retrieve a valid handle for RIB creation of %" PRIu64 "'.",
+								ver);
+
+		throw Exception("Invalid RIB handle");
+	}
+
+	//Store&inc schema count ref
+	RIB* rib = new RIB(handle, it->second, cdap_provider);
+	handle_rib_map[handle] = rib;
+	it->second->inc_ref_count();
+
+	return handle;
 }
 
-RIB* RIBDaemon::get(const uint64_t ver, const std::string& ae_name){
+rib_handle_t RIBDaemon::get(const uint64_t ver, const std::string& ae_name){
 
 	__ae_version_key_t key;
 
@@ -1147,11 +1203,71 @@ RIB* RIBDaemon::get(const uint64_t ver, const std::string& ae_name){
 	it = aeversion_rib_map.find(key);
 
 	if(it == aeversion_rib_map.end())
-		return NULL;
+		throw eRIBNotFound();
 
-	return it->second;
+	return it->second->handle;
 }
 
+void RIBDaemon::destroyRIB(const rib_handle_t& handle){
+	(void)handle;
+	throw eNotImplemented();
+}
+
+void RIBDaemon::associateRIBtoAE(const rib_handle_t& handle,
+						const std::string& ae_name){
+
+	__ae_version_key_t key;
+
+	//Mutual exclusion
+	WriteScopedLock wlock(rwlock);
+
+	//Retreive the RIB
+	RIB* rib = getRIB(handle);
+
+	if(rib == NULL){
+		LOG_ERR("Could not find RIB for handle %" PRId64 ". Already deleted?",
+								handle);
+		throw eRIBNotFound();
+	}
+
+	//Prepare the key
+	key.first = ae_name;
+	key.second = rib->get_version().version_;
+
+	//Check first if registration exists
+	if(aeversion_rib_map.find(key) != aeversion_rib_map.end()){
+		LOG_ERR("Cannot associate RIB '%" PRId64 "' (version: '%" PRId64 "') to AE '%s'; an association with the same version already exists!",
+						handle,
+						rib->get_version().version_,
+						ae_name.c_str());
+		throw eRIBAlreadyAssociated();
+	}
+
+	aeversion_rib_map[key] = rib;
+}
+
+///
+/// List registered RIB versions
+///
+std::list<uint64_t> RIBDaemon::listVersions(void){
+	std::list<uint64_t> vers;
+	uint64_t ver;
+	std::map<uint64_t, RIBSchema*>::const_iterator it;
+
+	//Mutual exclusion
+	ReadScopedLock rlock(rwlock);
+
+	//Copy keys
+	for(it = ver_schema_map.begin(); it != ver_schema_map.end();
+									++it){
+		ver = it->first;
+		if (std::find(vers.begin(), vers.end(), ver) ==
+								vers.end())
+			vers.push_back(ver);
+	}
+
+	return vers;
+}
 
 RIB* RIBDaemon::getByPortId(const int port_id){
 
@@ -1164,48 +1280,59 @@ RIB* RIBDaemon::getByPortId(const int port_id){
 }
 
 ///
-/// Unregister RIB
-///
-RIB* RIBDaemon::unregisterRIB(RIB* rib, const std::string& ae_name){
-
+void RIBDaemon::deassociateRIBfromAE(const rib_handle_t& handle,
+						const std::string& ae_name){
 	__ae_version_key_t key;
-	std::map<__ae_version_key_t, RIB*>::iterator it;
-
-	key.first = ae_name;
-	key.second = rib->get_version().version_;
 
 	//Mutual exclusion
 	WriteScopedLock wlock(rwlock);
 
-	it = aeversion_rib_map.find(key);
+	//Retreive the RIB
+	RIB* rib = getRIB(handle);
 
-	//If it is not registered throw an exception
-	if(it == aeversion_rib_map.end()){
-		LOG_ERR("RIB(%p) is not registred in AE %s", rib,
-							ae_name.c_str());
-		throw eRIBNotRegistered();
+	if(rib == NULL){
+		LOG_ERR("Could not find RIB for handle %" PRId64 ". Already deleted?",
+								handle);
+		throw eRIBNotFound();
+	}
+
+	//Prepare the key
+	key.first = ae_name;
+	key.second = rib->get_version().version_;
+
+	//Check first if registration exists
+	if(aeversion_rib_map.find(key) == aeversion_rib_map.end()){
+		LOG_ERR("Cannot deassociate RIB '%" PRId64 "' (version: '%" PRId64 "') from AE '%s' because it is not associated!",
+						handle,
+						rib->get_version().version_,
+						ae_name.c_str());
+		throw eRIBNotAssociated();
 	}
 
 	aeversion_rib_map.erase(key);
-
-	return it->second;
 }
 
 void RIBDaemon::store_connection(const cdap_rib::con_handle_t& con){
 
+	__ae_version_key_t key;
+	std::map<__ae_version_key_t, RIB*>::const_iterator it;
 	const uint64_t ver = con.version_.version_;
 	const std::string& ae = con.dest_.ae_name_;
 	const int port_id = con.port_;
 
-	//FIXME: what if the rib is destroyed...
-	RIB* rib = get(ver, ae);
+	//Prepare the key
+	key.first = ae;
+	key.second = ver;
 
-	if(!rib){
+	if((it = aeversion_rib_map.find(key)) == aeversion_rib_map.end()){
 		LOG_ERR("No RIB version %" PRIu64 " registered for AE %s!",
 								ver,
 								ae.c_str());
 		throw eRIBNotFound();
 	}
+
+	//FIXME: what if the rib is destroyed...
+	RIB* rib = it->second;
 
 	//Mutual exclusion
 	WriteScopedLock wlock(rwlock);
@@ -1739,25 +1866,56 @@ static RIBDaemon* ribd = NULL;
 //Constructor (private)
 RIBDaemonProxy::RIBDaemonProxy(RIBDaemon* ribd_):ribd(ribd_){};
 
-// Register a RIB
-void RIBDaemonProxy::registerRIB(RIB* rib, const std::string& ae_name){
-	ribd->registerRIB(rib, ae_name);
+//
+// Local RIB
+//
+
+void RIBDaemonProxy::createSchema(const cdap_rib::vers_info_t& v,
+								const char s){
+	ribd->createSchema(v, s);
 }
 
-// List registered RIB versions
 std::list<uint64_t> RIBDaemonProxy::listVersions(void){
 	return ribd->listVersions();
 }
 
-// Retrieve a pointer to the RIB
-RIB* RIBDaemonProxy::get(uint64_t version, const std::string& ae_name){
-	return ribd->get(version, ae_name);
+void RIBDaemonProxy::destroySchema(const cdap_rib::vers_info_t& v){
+	ribd->destroySchema(v);
 }
 
-// Unregister a RIB
-RIB* RIBDaemonProxy::unregisterRIB(RIB* rib, const std::string& ae_name){
-	return ribd->unregisterRIB(rib, ae_name);
+rib_handle_t RIBDaemonProxy::createRIB(const cdap_rib::vers_info_t& v){
+	return ribd->createRIB(v);
 }
+
+void RIBDaemonProxy::destroyRIB(const rib_handle_t& h){
+	ribd->destroyRIB(h);
+}
+
+void RIBDaemonProxy::associateRIBtoAE(const rib_handle_t& h,
+						const std::string& ae){
+	ribd->associateRIBtoAE(h, ae);
+}
+
+void RIBDaemonProxy::deassociateRIBfromAE(const rib_handle_t& h,
+						const std::string& ae){
+	ribd->deassociateRIBfromAE(h, ae);
+}
+
+///
+/// Retrieve the handle to a RIB
+///
+/// @param version RIB version
+/// @param Application Entity Name
+///
+/// @ret A handle to a RIB
+///
+rib_handle_t RIBDaemonProxy::get(const uint64_t v, const std::string& ae){
+	return ribd->get(v, ae);
+}
+
+//
+// Client
+//
 
 // Establish a CDAP connection to a remote RIB
 cdap_rib::con_handle_t RIBDaemonProxy::remote_open_connection(
