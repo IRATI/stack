@@ -71,8 +71,6 @@ std::string PolicyParameter::toString()
 
 // CLASS POLICY CONFIGURATION
 PolicyConfig::PolicyConfig() {
-        name_ = RINA_DEFAULT_POLICY_NAME;
-        version_ = RINA_DEFAULT_POLICY_VERSION;
 }
 
 PolicyConfig::PolicyConfig(const std::string& name,
