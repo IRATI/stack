@@ -940,13 +940,13 @@ static struct dup_config_entry * find_dup_config(struct sdup_config * sdup_conf,
 
 	list_for_each_entry(dup_pos, &sdup_conf->specific_dup_confs, next){
 		if (string_cmp(dup_pos->entry->n_1_dif_name, n_1_dif_name)) {
-			LOG_DBG("Returning specific SDU Protection config for port over N-1 DIF %s",
+			LOG_INFO("Returning specific SDU Protection config for port over N-1 DIF %s",
 					n_1_dif_name);
 			return dup_pos->entry;
 		}
 	}
 
-	LOG_DBG("Returning default SDU Protection config for port over N-1 DIF %s",
+	LOG_INFO("Returning default SDU Protection config for port over N-1 DIF %s",
 			n_1_dif_name);
 	return sdup_conf->default_dup_conf;
 }
