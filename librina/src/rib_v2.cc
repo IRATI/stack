@@ -720,12 +720,19 @@ std::string RIB::__get_obj_fqn(const int64_t inst_id) {
 }
 
 int64_t RIB::get_new_inst_id(){
+
+	int64_t curr = -1;
+
 	for(;; ++next_inst_id){
 		//Reuse ids; restart at 1
 		if(next_inst_id < 1)
 			next_inst_id = 1;
 
-		if(obj_inst_map.find(next_inst_id) != obj_inst_map.end())
+		//Set stop flag
+		if(curr < 0)
+			curr = next_inst_id;
+
+		if(obj_inst_map.find(next_inst_id) == obj_inst_map.end())
 			break;
 	}
 	return next_inst_id;
@@ -879,7 +886,7 @@ public:
 	///
 	/// List registered RIB versions
 	///
-	std::list<uint64_t> listVersions(void);
+	std::list<cdap_rib::vers_info_t> listVersions(void);
 
 	///
 	/// Destroys a RIB schema
@@ -940,7 +947,8 @@ public:
 	///
 	/// @ret A handle to a RIB
 	///
-	rib_handle_t get(uint64_t version, const std::string& ae_name);
+	rib_handle_t get(const cdap_rib::vers_info_t& version,
+						const std::string& ae_name);
 
 
 protected:
@@ -1091,7 +1099,7 @@ RIBDaemon::~RIBDaemon() {
 
 int64_t RIBDaemon::get_new_handle(void){
 
-	int64_t curr = next_handle_id;
+	int64_t curr = -1;
 
 	for(;; ++next_handle_id){
 		//Reuse ids; restart at 1
@@ -1106,7 +1114,7 @@ int64_t RIBDaemon::get_new_handle(void){
 		if(curr < 0)
 			curr = next_handle_id;
 
-		if(handle_rib_map.find(next_handle_id) != handle_rib_map.end())
+		if(handle_rib_map.find(next_handle_id) == handle_rib_map.end())
 			break;
 	}
 
@@ -1189,12 +1197,13 @@ rib_handle_t RIBDaemon::createRIB(const cdap_rib::vers_info_t& version){
 	return handle;
 }
 
-rib_handle_t RIBDaemon::get(const uint64_t ver, const std::string& ae_name){
+rib_handle_t RIBDaemon::get(const cdap_rib::vers_info_t& v,
+						const std::string& ae_name){
 
 	__ae_version_key_t key;
 
 	key.first = ae_name;
-	key.second = ver;
+	key.second = v.version_;
 	std::map<__ae_version_key_t, RIB*>::const_iterator it;
 
 	//Mutual exclusion
@@ -1249,9 +1258,9 @@ void RIBDaemon::associateRIBtoAE(const rib_handle_t& handle,
 ///
 /// List registered RIB versions
 ///
-std::list<uint64_t> RIBDaemon::listVersions(void){
-	std::list<uint64_t> vers;
-	uint64_t ver;
+std::list<cdap_rib::vers_info_t> RIBDaemon::listVersions(void){
+	std::list<cdap_rib::vers_info_t> vers;
+	cdap_rib::vers_info_t ver;
 	std::map<uint64_t, RIBSchema*>::const_iterator it;
 
 	//Mutual exclusion
@@ -1260,10 +1269,8 @@ std::list<uint64_t> RIBDaemon::listVersions(void){
 	//Copy keys
 	for(it = ver_schema_map.begin(); it != ver_schema_map.end();
 									++it){
-		ver = it->first;
-		if (std::find(vers.begin(), vers.end(), ver) ==
-								vers.end())
-			vers.push_back(ver);
+		ver.version_ = it->first;
+		vers.push_back(ver);
 	}
 
 	return vers;
@@ -1875,7 +1882,7 @@ void RIBDaemonProxy::createSchema(const cdap_rib::vers_info_t& v,
 	ribd->createSchema(v, s);
 }
 
-std::list<uint64_t> RIBDaemonProxy::listVersions(void){
+std::list<cdap_rib::vers_info_t> RIBDaemonProxy::listVersions(void){
 	return ribd->listVersions();
 }
 
@@ -1909,7 +1916,8 @@ void RIBDaemonProxy::deassociateRIBfromAE(const rib_handle_t& h,
 ///
 /// @ret A handle to a RIB
 ///
-rib_handle_t RIBDaemonProxy::get(const uint64_t v, const std::string& ae){
+rib_handle_t RIBDaemonProxy::get(const cdap_rib::vers_info_t& v,
+							const std::string& ae){
 	return ribd->get(v, ae);
 }
 

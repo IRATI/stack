@@ -478,7 +478,7 @@ public:
 	///
 	/// List registered RIB versions
 	///
-	std::list<uint64_t> listVersions(void);
+	std::list<cdap_rib::vers_info_t> listVersions(void);
 
 	///
 	/// Destroys a RIB schema
@@ -537,8 +537,10 @@ public:
 	/// @param Application Entity Name
 	///
 	/// @ret A handle to a RIB
+	/// @throws eRIBNotFound
 	///
-	rib_handle_t get(const uint64_t version, const std::string& ae_name);
+	rib_handle_t get(const cdap_rib::vers_info_t& version,
+						const std::string& ae_name);
 
 	///
 	/// Retrieve a list of pointers to the RIB of a certain version
