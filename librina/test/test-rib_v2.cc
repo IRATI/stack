@@ -43,19 +43,19 @@ static const std::string ae ="ae_name";
 cdap_rib::vers_info_t version;
 //RIB handle
 static rib_handle_t handle = 1234;
+static rib_handle_t handle2;
 
 class ribBasicOps : public CppUnit::TestFixture {
 
 	CPPUNIT_TEST_SUITE( ribBasicOps );
+
 	CPPUNIT_TEST( testInit );
 	CPPUNIT_TEST( testCreation );
+	CPPUNIT_TEST( testAssociation );
+	CPPUNIT_TEST( testDeassociation );
 	CPPUNIT_TEST( testDestruction );
-/*
-	CPPUNIT_TEST( testAddObj );
-	CPPUNIT_TEST( testUserData );
-	CPPUNIT_TEST( testRemoveObj );
-*/
 	CPPUNIT_TEST( testFini );
+
 	CPPUNIT_TEST_SUITE_END();
 
 private:
@@ -67,6 +67,8 @@ public:
 
 	void testInit();
 	void testCreation();
+	void testAssociation();
+	void testDeassociation();
 	void testDestruction();
 	void testFini();
 };
@@ -237,7 +239,6 @@ void ribBasicOps::testCreation(){
 	CPPUNIT_ASSERT_MESSAGE("Invalid handle during valid RIB creation", handle == 1);
 
 	//Create another valid RIB
-	rib_handle_t handle2;
 	try{
 		handle2 = ribd->createRIB(version);
 	}catch(...){
@@ -247,6 +248,83 @@ void ribBasicOps::testCreation(){
 	//Check handle
 	CPPUNIT_ASSERT_MESSAGE("Invalid handle during valid RIB creation", handle2 == 2);
 	CPPUNIT_ASSERT_MESSAGE("Invalid handle during valid RIB creation", handle2 != handle);
+
+}
+
+void ribBasicOps::testAssociation(){
+
+	rib_handle_t tmp;
+	rib_handle_t wrong_handle = 9999;
+
+	//Associate an invalid RIB handle
+	//Destroy an inexistent schema (not yet implemented)
+	try{
+		ribd->associateRIBtoAE(wrong_handle, ae);
+		CPPUNIT_ASSERT_MESSAGE("Associate to with an invalid RIB handle succeeded", 0);
+	}catch(eRIBNotFound& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception throw during associate with an invalid RIB handle", 0);
+	}
+
+	//Perform a valid association
+	try{
+		ribd->associateRIBtoAE(handle, ae);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception throw during associate with an valid RIB handle", 0);
+	}
+
+	//Check get with a valid version but invalid ae
+	try{
+		std::string wrong_ae = "fff";
+		tmp = ribd->get(version, wrong_ae);
+	}catch(eRIBNotFound& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception throw during get() with a valid version but invalid ae_name", 0);
+	}
+
+	//Check get with a valid an invalid version but valid ae
+	try{
+		cdap_rib::vers_info_t wrong_version;
+		wrong_version.version_ = 0x1234;
+		tmp = ribd->get(wrong_version, ae);
+	}catch(eRIBNotFound& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception throw during get() with an invalid version but a valid ae_name", 0);
+	}
+
+	//Check get with a valid version and ae
+	try{
+		tmp = ribd->get(version, ae);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception throw during get() with a valid version and ae_name", 0);
+	}
+	CPPUNIT_ASSERT_MESSAGE("Bug in get(); invalid handle returned", tmp == handle);
+
+	//Retry with the same handle
+	try{
+		ribd->associateRIBtoAE(handle, ae);
+		CPPUNIT_ASSERT_MESSAGE("Double associate with a valid RIB handle succeeded", 0);
+	}catch(eRIBAlreadyAssociated& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception throw during double associate with a valid RIB handle", 0);
+	}
+
+	//Retry with another handle (same AE+version)
+	try{
+		ribd->associateRIBtoAE(handle2, ae);
+		CPPUNIT_ASSERT_MESSAGE("Associate with a valid RIB handle but with the same version (already registered) succeeded", 0);
+	}catch(eRIBAlreadyAssociated& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception throw during associate with a valid RIB handle but with the same version (already registered) succeeded", 0);
+	}
+}
+
+void ribBasicOps::testDeassociation(){
 
 }
 
