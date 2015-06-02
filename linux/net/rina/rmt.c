@@ -80,11 +80,11 @@ static struct rmt_n1_port * n1_port_create(port_id_t id,
          * specific encryption policy initialization
          */
         if (dup_config != NULL && dup_config->encryption_cipher != NULL){
-            tmp->blkcipher = crypto_alloc_blkcipher(dup_config->encryption_cipher, 0, 0);
-            if (IS_ERR(tmp->blkcipher)) {
-                LOG_ERR("could not allocate blkcipher handle for %s\n", dup_config->encryption_cipher);
-                return NULL;
-            }
+        	tmp->blkcipher = crypto_alloc_blkcipher(dup_config->encryption_cipher, 0, 0);
+        	if (IS_ERR(tmp->blkcipher)) {
+        		LOG_ERR("could not allocate blkcipher handle for %s\n", dup_config->encryption_cipher);
+        		return NULL;
+        	}
         }else
             tmp->blkcipher = NULL;
 
@@ -939,14 +939,15 @@ static struct dup_config_entry * find_dup_config(struct sdup_config * sdup_conf,
 		return NULL;
 
 	list_for_each_entry(dup_pos, &sdup_conf->specific_dup_confs, next){
-		if (string_cmp(dup_pos->entry->n_1_dif_name, n_1_dif_name)) {
-			LOG_INFO("Returning specific SDU Protection config for port over N-1 DIF %s",
+		if (string_cmp(dup_pos->entry->n_1_dif_name, n_1_dif_name) == 0) {
+			LOG_DBG("Returning specific SDU Protection config for port over N-1 DIF %s",
 					n_1_dif_name);
+			if (dup_pos->entry->encryption_policy == NULL) LOG_INFO("Encryption policy is NULL");
 			return dup_pos->entry;
 		}
 	}
 
-	LOG_INFO("Returning default SDU Protection config for port over N-1 DIF %s",
+	LOG_DBG("Returning default SDU Protection config for port over N-1 DIF %s",
 			n_1_dif_name);
 	return sdup_conf->default_dup_conf;
 }

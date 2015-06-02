@@ -12,7 +12,7 @@
         "authSDUProtProfiles" : {
            "default" : {
               "authPolicy" : {
-              	"name" : "PSOC_authentication-sshrsa",
+              	"name" : "PSOC_authentication-ssh2",
           	"version" : "1",
           	"parameters" : [ {
           	   "name" : "keyExchangeAlg",
