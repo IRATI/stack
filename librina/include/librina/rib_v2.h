@@ -515,7 +515,7 @@ public:
 	///
 	/// Associate a RIB to an Applicatin Entity (AE)
 	///
-	/// @throws eRIBAlreadyAssociated or Exception on failure
+	/// @throws eRIBNotFound, eRIBAlreadyAssociated or Exception on failure
 	///
 	void associateRIBtoAE(const rib_handle_t& handle,
 						const std::string& ae_name);
