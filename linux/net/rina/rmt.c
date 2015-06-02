@@ -942,7 +942,6 @@ static struct dup_config_entry * find_dup_config(struct sdup_config * sdup_conf,
 		if (string_cmp(dup_pos->entry->n_1_dif_name, n_1_dif_name) == 0) {
 			LOG_DBG("Returning specific SDU Protection config for port over N-1 DIF %s",
 					n_1_dif_name);
-			if (dup_pos->entry->encryption_policy == NULL) LOG_INFO("Encryption policy is NULL");
 			return dup_pos->entry;
 		}
 	}
