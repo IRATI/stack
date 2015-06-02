@@ -508,8 +508,10 @@ void parse_auth_sduprot_profile(const Json::Value  & root,
 	}
 
 	if (root["encryptPolicy"] != 0) {
+		LOG_DBG("Encrypt policy is not null");
 		parse_policy(root, "encryptPolicy", profile.encryptPolicy);
 	} else {
+		LOG_DBG("Encrypt policy is null");
 		profile.encryptPolicy.name_ = RINA_NO_POLICY_NAME;
 	}
 
