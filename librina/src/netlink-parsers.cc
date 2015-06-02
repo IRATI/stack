@@ -1403,7 +1403,7 @@ int putAuthSDUProtectionProfile(nl_msg* netlinkMessage,
 {
 	struct nlattr *authp, *encryptp, *crcp, *ttlp;
 
-	if (object.authPolicy.name_ != RINA_NO_POLICY_NAME) {
+	if (object.authPolicy.name_ != std::string()) {
 		if (!(authp = nla_nest_start(netlinkMessage, AUTHP_AUTH_POLICY))) {
 			goto nla_put_failure;
 		}
@@ -1414,7 +1414,7 @@ int putAuthSDUProtectionProfile(nl_msg* netlinkMessage,
 		nla_nest_end(netlinkMessage, authp);
 	}
 
-	if (object.encryptPolicy.name_ != RINA_NO_POLICY_NAME) {
+	if (object.encryptPolicy.name_ != std::string()) {
 		if (!(encryptp = nla_nest_start(netlinkMessage, AUTHP_ENCRYPT_POLICY))) {
 			goto nla_put_failure;
 		}
@@ -1425,7 +1425,7 @@ int putAuthSDUProtectionProfile(nl_msg* netlinkMessage,
 		nla_nest_end(netlinkMessage, encryptp);
 	}
 
-	if (object.crcPolicy.name_ != RINA_NO_POLICY_NAME) {
+	if (object.crcPolicy.name_ != std::string()) {
 		if (!(crcp = nla_nest_start(netlinkMessage, AUTHP_CRC_POLICY))) {
 			goto nla_put_failure;
 		}
@@ -1436,7 +1436,7 @@ int putAuthSDUProtectionProfile(nl_msg* netlinkMessage,
 		nla_nest_end(netlinkMessage, crcp);
 	}
 
-	if (object.ttlPolicy.name_ != RINA_NO_POLICY_NAME) {
+	if (object.ttlPolicy.name_ != std::string()) {
 		if (!(ttlp = nla_nest_start(netlinkMessage, AUTHP_TTL_POLICY))) {
 			goto nla_put_failure;
 		}
@@ -1605,8 +1605,6 @@ AuthSDUProtectionProfile * parseAuthSDUProtectionProfile(nlattr *nested)
 			result->authPolicy = *policy_config;
 			delete policy_config;
 		}
-	} else {
-		result->authPolicy.name_ = RINA_NO_POLICY_NAME;
 	}
 
 	if (attrs[AUTHP_ENCRYPT_POLICY]) {
@@ -1619,8 +1617,6 @@ AuthSDUProtectionProfile * parseAuthSDUProtectionProfile(nlattr *nested)
 			result->encryptPolicy = *policy_config;
 			delete policy_config;
 		}
-	} else {
-		result->encryptPolicy.name_ = RINA_NO_POLICY_NAME;
 	}
 
 	if (attrs[AUTHP_CRC_POLICY]) {
@@ -1633,8 +1629,6 @@ AuthSDUProtectionProfile * parseAuthSDUProtectionProfile(nlattr *nested)
 			result->crcPolicy = *policy_config;
 			delete policy_config;
 		}
-	} else {
-		result->crcPolicy.name_ = RINA_NO_POLICY_NAME;
 	}
 
 	if (attrs[AUTHP_TTL_POLICY]) {
@@ -1647,8 +1641,6 @@ AuthSDUProtectionProfile * parseAuthSDUProtectionProfile(nlattr *nested)
 			result->ttlPolicy = *policy_config;
 			delete policy_config;
 		}
-	} else {
-		result->ttlPolicy.name_ = RINA_NO_POLICY_NAME;
 	}
 
 	return result;
