@@ -33,17 +33,23 @@
 #include "librina/rib_v2.h"
 
 using namespace rina;
+using namespace rina::rib;
 
 //RIB daemon proxy
 static rina::rib::RIBDaemonProxy* ribd = NULL;
 //Application Entity name
 static const std::string ae ="ae_name";
+//Version
+cdap_rib::vers_info_t version;
+//RIB handle
+static rib_handle_t handle = 1234;
 
 class ribBasicOps : public CppUnit::TestFixture {
 
 	CPPUNIT_TEST_SUITE( ribBasicOps );
 	CPPUNIT_TEST( testInit );
-	CPPUNIT_TEST( testCreationRIB );
+	CPPUNIT_TEST( testCreation );
+	CPPUNIT_TEST( testDestruction );
 /*
 	CPPUNIT_TEST( testAddObj );
 	CPPUNIT_TEST( testUserData );
@@ -60,7 +66,8 @@ public:
 	void tearDown();
 
 	void testInit();
-	void testCreationRIB();
+	void testCreation();
+	void testDestruction();
 	void testFini();
 };
 
@@ -160,18 +167,134 @@ void ribBasicOps::testInit(){
 	delete ribd_;
 }
 
-void ribBasicOps::testCreationRIB(){
+void ribBasicOps::testCreation(){
 
-	rina::rib::RIB* rib = NULL;
+	version.version_ = 0x1;
 
-	//Double call to init should throw an exception
+		//Get a handle of an inexistent RIB
 	try{
-		ribd->unregisterRIB(rib, ae);
-		CPPUNIT_ASSERT_MESSAGE("Unregister an invalid RIB succeeded", 0);
-	}catch(...){}
+		handle = ribd->get(version, ae);
+		CPPUNIT_ASSERT_MESSAGE("Got an invalid handle for an inexistent RIB", 0);
+	}catch(eRIBNotFound& e){
 
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Wrong exception thrown during get invalid RIB handle", 0);
+	}
 
-	//Destroy an inexistent RIB
+	//Create a schema (empty)
+	try{
+		ribd->createSchema(version);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception throw during the creation of a schema", 0);
+	}
+
+	//try to recreate
+	try{
+		ribd->createSchema(version);
+		CPPUNIT_ASSERT_MESSAGE("Exception not thrown during creation of a duplicate schema", 0);
+	}catch(eSchemaExists& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Wrong exception thrown during creation of a dubplicate schema", 0);
+	}
+
+	//List versions and check if it exists
+	std::list<cdap_rib::vers_info_t> vers;
+	try{
+		vers = ribd->listVersions();
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during listVersions method", 0);
+	}
+
+	//Check the result
+	CPPUNIT_ASSERT_MESSAGE("Invalid list of versions length", vers.size() == 1);
+	if(vers.size() == 1){
+		CPPUNIT_ASSERT_MESSAGE("Schema has not been created with the right version or listVersions() has a bug", version.version_ == (*vers.begin()).version_);
+	}
+
+	//Create a RIB with an invalid schema
+	try{
+		cdap_rib::vers_info_t wrong_version;
+		wrong_version.version_ = 0x11111;
+
+		handle = ribd->createRIB(wrong_version);
+
+		CPPUNIT_ASSERT_MESSAGE("Exception not thrown during creation of a RIB of an invalid version", 0);
+	}catch(eSchemaNotFound& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid Exception thrown during creation of a RIB of an invalid version", 0);
+	}
+
+	//Create a valid RIB
+	try{
+		handle = ribd->createRIB(version);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during creation of a RIB of a valid version", 0);
+	}
+
+	//Check handle
+	CPPUNIT_ASSERT_MESSAGE("Invalid handle during valid RIB creation", handle == 1);
+
+	//Create another valid RIB
+	rib_handle_t handle2;
+	try{
+		handle2 = ribd->createRIB(version);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during creation of a RIB of a valid version", 0);
+	}
+
+	//Check handle
+	CPPUNIT_ASSERT_MESSAGE("Invalid handle during valid RIB creation", handle2 == 2);
+	CPPUNIT_ASSERT_MESSAGE("Invalid handle during valid RIB creation", handle2 != handle);
+
+}
+
+void ribBasicOps::testDestruction(){
+
+	cdap_rib::vers_info_t wrong_version;
+	wrong_version.version_ = 0x99999;
+	rib_handle_t wrong_handle = 9999;
+
+	//Destroy an inexistent schema (not yet implemented)
+	try{
+		ribd->destroySchema(wrong_version);
+		CPPUNIT_ASSERT_MESSAGE("Destroy invalid schema succeeded", 0);
+	}catch(eNotImplemented& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Wrong exception thrown during destroy invalid schema", 0);
+	}
+
+	//Destroy an inexistent RIB (not yet implemented)
+	try{
+		ribd->destroyRIB(wrong_handle);
+		CPPUNIT_ASSERT_MESSAGE("Destroy invalid RIB succeeded", 0);
+	}catch(eNotImplemented& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Wrong exception thrown during destroy invalid RIB", 0);
+	}
+
+	//Destroy an existent schema (not yet implemented)
+	try{
+		ribd->destroySchema(version);
+		CPPUNIT_ASSERT_MESSAGE("Destroy a valid schema succeeded", 0);
+	}catch(eNotImplemented& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Wrong exception thrown during destroy of a valid schema", 0);
+	}
+
+	//Destroy an inexistent RIB (not yet implemented)
+	try{
+		ribd->destroyRIB(handle);
+		CPPUNIT_ASSERT_MESSAGE("Destroy a valid RIB succeeded", 0);
+	}catch(eNotImplemented& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Wrong exception thrown during destroy a valid RIB", 0);
+	}
 }
 
 void ribBasicOps::testFini(){
