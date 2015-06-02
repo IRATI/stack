@@ -1414,6 +1414,7 @@ int putAuthSDUProtectionProfile(nl_msg* netlinkMessage,
 		nla_nest_end(netlinkMessage, authp);
 	}
 
+	LOG_DBG("Encrypt policy name: '%s'", object.encryptPolicy.name_.c_str());
 	if (object.encryptPolicy.name_ != std::string()) {
 		if (!(encryptp = nla_nest_start(netlinkMessage, AUTHP_ENCRYPT_POLICY))) {
 			goto nla_put_failure;
