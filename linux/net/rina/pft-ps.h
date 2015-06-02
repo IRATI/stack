@@ -50,10 +50,10 @@ struct pft_ps {
                           struct list_head * entries);
 
         /* Reference used to access the PFT data model. */
-        struct pft * dm;
+        struct pft * pft;
 
         /* Data private to the policy-set implementation. */
-        void *       priv;
+        void *       dm;
 };
 
 /*
