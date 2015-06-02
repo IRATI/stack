@@ -1290,6 +1290,7 @@ RIB* RIBDaemon::getByPortId(const int port_id){
 void RIBDaemon::deassociateRIBfromAE(const rib_handle_t& handle,
 						const std::string& ae_name){
 	__ae_version_key_t key;
+	std::map<__ae_version_key_t, RIB*>::iterator it;
 
 	//Mutual exclusion
 	WriteScopedLock wlock(rwlock);
@@ -1307,8 +1308,19 @@ void RIBDaemon::deassociateRIBfromAE(const rib_handle_t& handle,
 	key.first = ae_name;
 	key.second = rib->get_version().version_;
 
+	it = aeversion_rib_map.find(key);
+
 	//Check first if registration exists
-	if(aeversion_rib_map.find(key) == aeversion_rib_map.end()){
+	if(it == aeversion_rib_map.end()){
+		LOG_ERR("Cannot deassociate RIB '%" PRId64 "' (version: '%" PRId64 "') from AE '%s' because it is not associated!",
+						handle,
+						rib->get_version().version_,
+						ae_name.c_str());
+		throw eRIBNotAssociated();
+	}
+
+	//And that is the RIB pointed by handle
+	if(it->second != rib){
 		LOG_ERR("Cannot deassociate RIB '%" PRId64 "' (version: '%" PRId64 "') from AE '%s' because it is not associated!",
 						handle,
 						rib->get_version().version_,
