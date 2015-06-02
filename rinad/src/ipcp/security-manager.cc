@@ -43,7 +43,11 @@ void IPCPSecurityManager::set_application_process(rina::ApplicationProcess * ap)
 void IPCPSecurityManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
 {
 	config = dif_configuration.sm_configuration_;
-	LOG_DBG("Secman config: %s", config.toString().c_str());
+
+	// If no default authentication policy is specified, use AUTH_NONE
+	if (config.default_auth_profile.authPolicy.name_ == std::string()) {
+		config.default_auth_profile.authPolicy.name_ = rina::IAuthPolicySet::AUTH_NONE;
+	}
 }
 
 rina::AuthSDUProtectionProfile IPCPSecurityManager::get_auth_sdup_profile(const std::string& under_dif_name)
