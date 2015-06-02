@@ -326,6 +326,56 @@ void ribBasicOps::testAssociation(){
 
 void ribBasicOps::testDeassociation(){
 
+	rib_handle_t wrong_handle = 9999;
+
+	//Deassociate with an invalid RIB handle
+	try{
+		ribd->deassociateRIBfromAE(wrong_handle, ae);
+		CPPUNIT_ASSERT_MESSAGE("Deassociate to with an invalid RIB handle succeeded", 0);
+	}catch(eRIBNotFound& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception throw during deassociate with an invalid RIB handle", 0);
+	}
+
+	//Deassociate with an valid RIB handle but not associated
+	try{
+		ribd->deassociateRIBfromAE(handle2, ae);
+		CPPUNIT_ASSERT_MESSAGE("Deassociate to with a valid not associated RIB handle succeeded", 0);
+	}catch(eRIBNotAssociated& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception throw during deassociate with a valid not associated RIB handle", 0);
+	}
+
+	//Deassociate with an invalid ae
+	try{
+		std::string wrong_ae = "fff";
+		ribd->deassociateRIBfromAE(wrong_handle, wrong_ae);
+		CPPUNIT_ASSERT_MESSAGE("Deassociate to with an invalid RIB handle succeeded", 0);
+	}catch(eRIBNotFound& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception throw during deassociate with an invalid AE name", 0);
+	}
+
+	//Deassociate from an existing association relation
+	try{
+		ribd->deassociateRIBfromAE(handle, ae);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception throw during deassociate with a valid RIB handle and version", 0);
+	}
+
+	//Try it again
+	try{
+		ribd->deassociateRIBfromAE(handle, ae);
+		CPPUNIT_ASSERT_MESSAGE("Deassociate to with an invalid RIB handle succeeded (retry). State not properly cleaned?", 0);
+	}catch(eRIBNotAssociated& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception throw during deassociate with an invalid RIB handle(retry). State not properly cleaned?", 0);
+	}
+
 }
 
 void ribBasicOps::testDestruction(){
