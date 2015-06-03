@@ -3795,10 +3795,20 @@ int putPDUFTableGeneratorConfigurationObject(nl_msg* netlinkMessage,
 
 int putFlowAllocatorConfigurationObject(nl_msg* netlinkMessage,
 		const FlowAllocatorConfiguration& object) {
-	struct nlattr *farPolicy, *fanPolicy, *nfPolicy, *seqPolicy;
+	struct nlattr *farPolicy, *fanPolicy, *nfPolicy, *seqPolicy, *policySet;
 
 	NLA_PUT_U32(netlinkMessage, FLAC_MAX_CREATE_FLOW_RETRIES,
 				object.max_create_flow_retries_);
+
+	if (!(policySet = nla_nest_start(
+			netlinkMessage, FLAC_POLICY_SET))) {
+		goto nla_put_failure;
+	}
+	if (putPolicyConfigObject(netlinkMessage,
+			object.policy_set_) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, policySet);
 
 	if (!(fanPolicy = nla_nest_start(
 			netlinkMessage, FLAC_ALLOC_NOTIFY_POLICY))) {
@@ -3982,7 +3992,7 @@ int putAddressingConfigurationObject(nl_msg* netlinkMessage,
 
 int putNamespaceManagerConfigurationObject(nl_msg* netlinkMessage,
 		const NamespaceManagerConfiguration& object) {
-	struct nlattr *addConf;
+	struct nlattr *addConf, *nsmps;
 
 	if (!(addConf = nla_nest_start(
 			netlinkMessage, NSMC_ADDRESSING_CONF))) {
@@ -3994,6 +4004,16 @@ int putNamespaceManagerConfigurationObject(nl_msg* netlinkMessage,
 	}
 	nla_nest_end(netlinkMessage, addConf);
 
+	if (!(nsmps = nla_nest_start(
+			netlinkMessage, NSMC_POLICY_SET))) {
+		goto nla_put_failure;
+	}
+	if (putPolicyConfigObject(netlinkMessage,
+			object.policy_set_) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, nsmps);
+
 	return 0;
 
 	nla_put_failure: LOG_ERR(
@@ -4003,7 +4023,17 @@ int putNamespaceManagerConfigurationObject(nl_msg* netlinkMessage,
 
 int putSecurityManagerConfigurationObject(nl_msg* netlinkMessage,
 		const SecurityManagerConfiguration& object){
-	struct nlattr *nmPolicy, *nfPolicy, *aPolicy;
+	struct nlattr *nmPolicy, *nfPolicy, *aPolicy, *smps;
+
+	if (!(smps = nla_nest_start(
+			netlinkMessage, SECMANC_POLICY_SET))) {
+		goto nla_put_failure;
+	}
+	if (putPolicyConfigObject(netlinkMessage,
+			object.policy_set_) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, smps);
 
 	if (!(nmPolicy = nla_nest_start(
 			netlinkMessage, SECMANC_DIF_MEM_ACC_CON_POLICY))) {
@@ -4039,6 +4069,27 @@ int putSecurityManagerConfigurationObject(nl_msg* netlinkMessage,
 
 	nla_put_failure: LOG_ERR(
 			"Error building SecurityManagementConfiguration Netlink object");
+	return -1;
+}
+
+int putResourceAllocatorConfigurationObject(nl_msg* netlinkMessage,
+		const ResourceAllocatorConfiguration& object){
+	struct nlattr *pduftgPolicySet;
+
+	if (!(pduftgPolicySet = nla_nest_start(
+			netlinkMessage, RAC_PDUFTG_POLICY_SET))) {
+		goto nla_put_failure;
+	}
+	if (putPolicyConfigObject(netlinkMessage,
+			object.pduftg_policy_set_) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, pduftgPolicySet);
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building ResourceAllocatorConfiguration Netlink object");
 	return -1;
 }
 
@@ -6430,6 +6481,10 @@ FlowAllocatorConfiguration * parseFlowAllocatorConfigurationObject(nlattr *neste
 	attr_policy[FLAC_MAX_CREATE_FLOW_RETRIES].type = NLA_U32;
 	attr_policy[FLAC_MAX_CREATE_FLOW_RETRIES].minlen = 4;
 	attr_policy[FLAC_MAX_CREATE_FLOW_RETRIES].maxlen = 4;
+	attr_policy[FLAC_POLICY_SET].type = NLA_NESTED;
+	attr_policy[FLAC_POLICY_SET].minlen = 0;
+	attr_policy[FLAC_POLICY_SET].maxlen = 0;
+	attr_policy[FLAC_ALLOC_RETRY_POLICY].type = NLA_NESTED;
 	attr_policy[FLAC_ALLOC_NOTIFY_POLICY].type = NLA_NESTED;
 	attr_policy[FLAC_ALLOC_NOTIFY_POLICY].minlen = 0;
 	attr_policy[FLAC_ALLOC_NOTIFY_POLICY].maxlen = 0;
@@ -6453,6 +6508,7 @@ FlowAllocatorConfiguration * parseFlowAllocatorConfigurationObject(nlattr *neste
 	}
 
 	FlowAllocatorConfiguration * result = new FlowAllocatorConfiguration();
+	PolicyConfig * faps;
 	PolicyConfig * fan;
 	PolicyConfig * far;
 	PolicyConfig * fnf;
@@ -6461,6 +6517,18 @@ FlowAllocatorConfiguration * parseFlowAllocatorConfigurationObject(nlattr *neste
 	if (attrs[FLAC_MAX_CREATE_FLOW_RETRIES]) {
 		result->max_create_flow_retries_ =
 				nla_get_u32(attrs[FLAC_MAX_CREATE_FLOW_RETRIES]);
+	}
+
+	if (attrs[FLAC_POLICY_SET]) {
+		faps = parsePolicyConfigObject(
+				attrs[FLAC_POLICY_SET]);
+		if (faps == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->policy_set_ = *faps;
+			delete faps;
+		}
 	}
 
 	if (attrs[FLAC_ALLOC_NOTIFY_POLICY]) {
@@ -6745,6 +6813,9 @@ NamespaceManagerConfiguration * parseNamespaceManagerConfigurationObject(nlattr 
 	attr_policy[NSMC_ADDRESSING_CONF].type = NLA_NESTED;
 	attr_policy[NSMC_ADDRESSING_CONF].minlen = 0;
 	attr_policy[NSMC_ADDRESSING_CONF].maxlen = 0;
+	attr_policy[NSMC_POLICY_SET].type = NLA_NESTED;
+	attr_policy[NSMC_POLICY_SET].minlen = 0;
+	attr_policy[NSMC_POLICY_SET].maxlen = 0;
 	struct nlattr *attrs[NSMC_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, NSMC_ATTR_MAX, nested, attr_policy);
@@ -6757,6 +6828,7 @@ NamespaceManagerConfiguration * parseNamespaceManagerConfigurationObject(nlattr 
 
 	NamespaceManagerConfiguration * result = new NamespaceManagerConfiguration();
 	AddressingConfiguration * addrc;
+        PolicyConfig * nsmps;
 
 	if (attrs[NSMC_ADDRESSING_CONF]) {
 		addrc = parseAddressingConfigurationObject(
@@ -6769,12 +6841,26 @@ NamespaceManagerConfiguration * parseNamespaceManagerConfigurationObject(nlattr 
 			delete addrc;
 		}
 	}
+	if (attrs[NSMC_POLICY_SET]) {
+		nsmps = parsePolicyConfigObject(
+				attrs[NSMC_POLICY_SET]);
+		if (nsmps == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->policy_set_ = *nsmps;
+			delete nsmps;
+		}
+	}
 
 	return result;
 }
 
 SecurityManagerConfiguration * parseSecurityManagerConfigurationObject(nlattr *nested) {
 	struct nla_policy attr_policy[SECMANC_ATTR_MAX + 1];
+	attr_policy[SECMANC_POLICY_SET].type = NLA_NESTED;
+	attr_policy[SECMANC_POLICY_SET].minlen = 0;
+	attr_policy[SECMANC_POLICY_SET].maxlen = 0;
 	attr_policy[SECMANC_DIF_MEM_ACC_CON_POLICY].type = NLA_NESTED;
 	attr_policy[SECMANC_DIF_MEM_ACC_CON_POLICY].minlen = 0;
 	attr_policy[SECMANC_DIF_MEM_ACC_CON_POLICY].maxlen = 0;
@@ -6795,9 +6881,22 @@ SecurityManagerConfiguration * parseSecurityManagerConfigurationObject(nlattr *n
 	}
 
 	SecurityManagerConfiguration * result = new SecurityManagerConfiguration();
+	PolicyConfig * policySet;
 	PolicyConfig * difAc;
 	PolicyConfig * flowAc;
 	PolicyConfig * auth;
+
+	if (attrs[SECMANC_POLICY_SET]) {
+		policySet = parsePolicyConfigObject(
+				attrs[SECMANC_POLICY_SET]);
+		if (policySet == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->policy_set_ = *policySet;
+			delete policySet;
+		}
+	}
 
 	if (attrs[SECMANC_DIF_MEM_ACC_CON_POLICY]) {
 		difAc = parsePolicyConfigObject(
@@ -6836,6 +6935,38 @@ SecurityManagerConfiguration * parseSecurityManagerConfigurationObject(nlattr *n
 	}
 
 	return result;
+}
+
+ResourceAllocatorConfiguration * parseResourceAllocatorConfigurationObject(nlattr *nested) {
+	struct nla_policy attr_policy[RAC_ATTR_MAX + 1];
+	attr_policy[RAC_PDUFTG_POLICY_SET].type = NLA_NESTED;
+	attr_policy[RAC_PDUFTG_POLICY_SET].minlen = 0;
+	attr_policy[RAC_PDUFTG_POLICY_SET].maxlen = 0;
+	struct nlattr *attrs[RAC_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, RAC_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing ResourceAllocatorConfiguration information from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	ResourceAllocatorConfiguration * result = new ResourceAllocatorConfiguration();
+	PolicyConfig * pduftgPolicySet;
+
+	if (attrs[RAC_PDUFTG_POLICY_SET]) {
+		pduftgPolicySet = parsePolicyConfigObject(
+				attrs[RAC_PDUFTG_POLICY_SET]);
+		if (pduftgPolicySet == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->pduftg_policy_set_ = *pduftgPolicySet;
+			delete pduftgPolicySet;
+		}
+	}
+        return result;
 }
 
 DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){

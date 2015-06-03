@@ -536,6 +536,7 @@ PDUFTableGeneratorConfiguration * parsePDUFTableGeneratorConfigurationObject(nla
 /* FlowAllocatorConfiguration CLASS */
 enum FlowAllocatorConfigurationAttributes {
 	FLAC_MAX_CREATE_FLOW_RETRIES = 1,
+	FLAC_POLICY_SET,
 	FLAC_ALLOC_NOTIFY_POLICY,
 	FLAC_ALLOC_RETRY_POLICY,
 	FLAC_NEW_FLOW_REQ_POLICY,
@@ -613,6 +614,7 @@ AddressingConfiguration * parseAddressingConfigurationObject(nlattr *nested);
 /* NamespaceManagerConfiguration CLASS */
 enum NamespaceManagerConfigurationAttributes {
 	NSMC_ADDRESSING_CONF = 1,
+	NSMC_POLICY_SET,
 	__NSMC_ATTR_MAX,
 };
 
@@ -625,13 +627,22 @@ NamespaceManagerConfiguration * parseNamespaceManagerConfigurationObject(nlattr 
 
 /* SecurityManagerConfiguration CLASS */
 enum SecurityManagerConfigurationAttributes {
-	SECMANC_DIF_MEM_ACC_CON_POLICY = 1,
+	SECMANC_POLICY_SET = 1,
+	SECMANC_DIF_MEM_ACC_CON_POLICY,
 	SECMANC_NEW_FLOW_ACC_CON_POLICY,
 	SECMANC_AUTH_POLICY,
 	__SECMANC_ATTR_MAX,
 };
 
 #define SECMANC_ATTR_MAX (__SECMANC_ATTR_MAX -1)
+
+/* SecurityManagerConfiguration CLASS */
+enum ResourceAllocatorConfigurationAttributes {
+	RAC_PDUFTG_POLICY_SET = 1,
+	__RAC_ATTR_MAX,
+};
+
+#define RAC_ATTR_MAX (__RAC_ATTR_MAX -1)
 
 int putSecurityManagerConfigurationObject(nl_msg* netlinkMessage,
 		const SecurityManagerConfiguration& object);
