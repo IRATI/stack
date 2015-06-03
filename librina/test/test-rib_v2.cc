@@ -57,6 +57,7 @@ class ribBasicOps : public CppUnit::TestFixture {
 	CPPUNIT_TEST( testCreation );
 	CPPUNIT_TEST( testAssociation );
 	CPPUNIT_TEST( testAddObj );
+	CPPUNIT_TEST( testRemoveObj );
 	CPPUNIT_TEST( testDeassociation );
 	CPPUNIT_TEST( testDestruction );
 	CPPUNIT_TEST( testFini );
@@ -74,6 +75,7 @@ public:
 	void testCreation();
 	void testAssociation();
 	void testAddObj();
+	void testRemoveObj();
 	void testDeassociation();
 	void testDestruction();
 	void testFini();
@@ -433,7 +435,7 @@ void ribBasicOps::testAddObj(){
 		CPPUNIT_ASSERT_MESSAGE("Invalid exception throw during Add obj with an invalid name to RIB handle", 0);
 	}
 
-	//Add the right object
+	//Add the right object (/x)
 	try{
 		tmp = obj1;
 		inst_id1 = ribd->addObjRIB(handle, name1, &obj1);
@@ -452,10 +454,10 @@ void ribBasicOps::testAddObj(){
 		std::string ts;
 		CPPUNIT_ASSERT_MESSAGE("Insertion id and getObjInstId() mismatch", inst_id1 == ribd->getObjInstId(handle, name1));
 		CPPUNIT_ASSERT_MESSAGE("Class validation in getObjInstId() fails", inst_id1 == ribd->getObjInstId(handle, name1, MyObj::class_));
-		ts = ribd->getObjfqn(handle, inst_id1);
-		CPPUNIT_ASSERT_MESSAGE("FQN mismatch with getObjfqn()", name1 == ts);
-		ts = ribd->getObjfqn(handle, inst_id1, MyObj::class_);
-		CPPUNIT_ASSERT_MESSAGE("Class validation in getObjfqn() fails", name1 == ts);
+		ts = ribd->getObjFqn(handle, inst_id1);
+		CPPUNIT_ASSERT_MESSAGE("FQN mismatch with getObjFqn()", name1 == ts);
+		ts = ribd->getObjFqn(handle, inst_id1, MyObj::class_);
+		CPPUNIT_ASSERT_MESSAGE("Class validation in getObjFqn() fails", name1 == ts);
 		ts = ribd->getObjClass(handle, inst_id1);
 		CPPUNIT_ASSERT_MESSAGE("Class of getObjClass() mismatch", ts.compare(MyObj::class_) == 0);
 	}catch(...){
@@ -472,7 +474,7 @@ void ribBasicOps::testAddObj(){
 		CPPUNIT_ASSERT_MESSAGE("Invalid exception thrown during Add obj with an overlapping object", 0);
 	}
 
-	//Add another valid object
+	//Add another valid object (/y)
 	try{
 		tmp = obj2;
 		inst_id2 = ribd->addObjRIB(handle, name2, &obj2);
@@ -482,8 +484,61 @@ void ribBasicOps::testAddObj(){
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Could not add obj2 with in a valid RIB", 0);
 	}
+
+	//Check that obj2 is the child of obj1 (it shouldn't)
+	std::string parent_fqn;
+	try{
+		parent_fqn = ribd->getObjParentFqn(handle, name2);
+		CPPUNIT_ASSERT_MESSAGE("Parent incorrectly match", parent_fqn != name1);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during child validation", 0);
+	}
+	try{
+		int64_t p_id = ribd->getObjInstId(handle, parent_fqn);
+	}catch(eObjDoesNotExist& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception thrown during getObjInstId()", 0);
+	}
+
+	//Retry overlap should fail
+	tmp = obj2;
+	try{
+		ribd->addObjRIB(handle, name2, &obj2);
+		CPPUNIT_ASSERT_MESSAGE("Add overlapping object to RIB succeeded", 0);
+	}catch(eObjExists& e){
+		CPPUNIT_ASSERT_MESSAGE("Add overlapping object failed, but modified the object pointer",  tmp == obj2);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception thrown during Add obj with an overlapping object", 0);
+	}
+
+	//Add an inner object (/x/z)
+	try{
+		ribd->addObjRIB(handle, name3, &obj3);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during Add obj 3", 0);
+	}
+
+
+	//Check that obj3 is the child of obj1 (it should!)
+	try{
+		parent_fqn = ribd->getObjParentFqn(handle, name3);
+		CPPUNIT_ASSERT_MESSAGE("Parent mismatch", parent_fqn == name1);
+		CPPUNIT_ASSERT_MESSAGE("Parent mismatch", parent_fqn != name2);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during child validation", 0);
+	}
+	try{
+		int64_t p_id = ribd->getObjInstId(handle, parent_fqn);
+		CPPUNIT_ASSERT_MESSAGE("Parent id mismatch", p_id == inst_id1);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception thrown during getObjInstId() obj 3", 0);
+	}
 }
 
+void ribBasicOps::testRemoveObj(){
+
+}
 
 void ribBasicOps::testDeassociation(){
 
