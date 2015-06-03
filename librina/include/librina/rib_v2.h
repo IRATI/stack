@@ -99,6 +99,9 @@ DECLARE_EXCEPTION_SUBCLASS(eNotImplemented);
 /// Invalid object
 DECLARE_EXCEPTION_SUBCLASS(eObjInvalid);
 
+/// Invalid object name
+DECLARE_EXCEPTION_SUBCLASS(eObjInvalidName);
+
 /// Validation error; the operation was rejected by the rules defined in
 /// the schema.
 DECLARE_EXCEPTION_SUBCLASS(eOpValidation);
@@ -586,16 +589,22 @@ public:
 	///
 	/// @param handle The handle of the RIB
 	/// @param fqn Fully qualified name (position in the tree)
-	/// @param obj A pointer (to a pointer) of the object to be added
+	/// @param obj A pointer (to a pointer) to the object, that derives
+	/// from RIBObj<T> (R must derive from RIBObj<T>).
 	///
 	/// @ret The instance id of the object created
 	/// @throws eRIBNotFound, eObjExists, eObjInvalid, eObjNoParent
 	///
-	template<typename T>
+	template<typename R>
 	int64_t addObjRIB(const rib_handle_t& handle, const std::string& fqn,
-							 RIBObj<T>** obj){
+							 R** obj){
+		RIBObj_** obj_;
 		//Recover the non-templatized part
-		RIBObj_** obj_ = obj;
+		try{
+			obj_ = reinterpret_cast<RIBObj_**>(obj);
+		}catch(...){
+			throw eObjInvalid();
+		}
 		return __addObjRIB(handle, fqn, obj_);
 	}
 

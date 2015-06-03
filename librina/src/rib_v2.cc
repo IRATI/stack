@@ -85,6 +85,10 @@ public:
 	char get_separator() const;
 	const cdap_rib::vers_info_t& get_version() const;
 
+	const std::string& get_root_fqn(void) const{
+		return root_fqn;
+	}
+
 	//This method IS thread safe
 	void inc_ref_count(){
 		ScopedLock lock(mutex);
@@ -113,6 +117,9 @@ private:
 	std::map<std::string, RIBSchemaObject*> rib_schema_;
 	const char separator_;
 
+	//Root fqn
+	std::string root_fqn;
+
 	//number of RIBs using this schema
 	unsigned int refs;
 
@@ -124,8 +131,10 @@ RIBSchema::RIBSchema(const cdap_rib::vers_info_t &version, char separator) :
 							version_(version),
 							separator_(separator),
 							refs(0){
-
+	root_fqn = std::string("");
+	root_fqn.push_back(separator);
 }
+
 RIBSchema::~RIBSchema() {}
 
 rib_schema_res RIBSchema::ribSchemaDefContRelation(
@@ -359,6 +368,12 @@ private:
 	//@internal: must be called with the rwlock acquired
 	std::string __get_obj_fqn(const int64_t inst_id);
 
+	//@internal: validate an object name
+	void __validate_fqn(const std::string& fqn);
+
+	//@internal must be called with the rwlock acquired
+	std::string __get_obj_class(const int64_t instance_id);
+
 	//@internal Get a new (unused) instance id (strictly > 0);
 	//must be called with the wlock acquired
 	int64_t get_new_inst_id(void);
@@ -379,6 +394,8 @@ private:
 RIB::RIB(const rib_handle_t& handle_, const RIBSchema *schema_,
 		cdap::CDAPProviderInterface *cdap_provider_) :
 						schema(schema_),
+						next_inst_id(1),
+						num_of_deleg(0),
 						cdap_provider(cdap_provider_),
 						handle(handle_){
 }
@@ -737,6 +754,34 @@ int64_t RIB::get_new_inst_id(){
 	return next_inst_id;
 }
 
+//Checks for fqn sanity.
+void RIB::__validate_fqn(const std::string& fqn){
+
+	char s = schema->get_separator();
+
+	//Empty is an invalid name
+	if(fqn == "") {
+		LOG_ERR("Invalid empty object name.");
+		throw eObjInvalidName();
+	}
+
+	//Ensure the fqn starts with the separator
+	if(*fqn.begin() != s){
+		LOG_ERR("Invalid object name '%s'. First character must be the RIB separator('%c')",
+								fqn.c_str(),
+								s);
+		throw eObjInvalidName();
+	}
+
+	//Check for trailing separators
+	if(*fqn.rbegin() == s){
+		LOG_ERR("Invalid object name '%s'. Trailing RIB separator('%c') characters",
+								fqn.c_str(),
+								s);
+		throw eObjInvalidName();
+	}
+}
+
 int64_t RIB::add_obj(const std::string& fqn, RIBObj_** obj_) {
 
 	int64_t id, parent_id;
@@ -753,12 +798,15 @@ int64_t RIB::add_obj(const std::string& fqn, RIBObj_** obj_) {
 	//Recover the non-templatized part
 	obj = *obj_;
 
+	//Validate the name
+	__validate_fqn(fqn);
+
 	//Mutual exclusion
 	WriteScopedLock wlock(rwlock);
 
 	//Check whether the father exists
 	parent_id = __get_obj_inst_id(parent_fqn);
-	if(parent_id == -1){
+	if(parent_fqn != "" && parent_id == -1){
 		LOG_ERR("Unable to add object(%p) at '%s'; parent does not exist!",
 								obj,
 								fqn.c_str());
@@ -767,11 +815,11 @@ int64_t RIB::add_obj(const std::string& fqn, RIBObj_** obj_) {
 
 	//Check if the object already exists
 	id = __get_obj_inst_id(fqn);
-	if(id == -1){
+	if(id != -1){
 		LOG_ERR("Unable to add object(%p) at '%s'; an object of class '%s' already exists!",
 							obj,
 							fqn.c_str(),
-							get_obj_class(id).c_str());
+							__get_obj_class(id).c_str());
 		throw eObjExists();
 	}
 
@@ -857,10 +905,15 @@ std::string RIB::get_parent_fqn(const std::string& fqn_child) const {
 
 std::string RIB::get_obj_class(const int64_t inst_id){
 
-	RIBObj_* obj;
 
 	//Mutual exclusion
 	ReadScopedLock rlock(rwlock);
+
+	return __get_obj_class(inst_id);
+}
+
+std::string RIB::__get_obj_class(const int64_t inst_id){
+	RIBObj_* obj;
 
 	obj = get_obj(inst_id);
 
