@@ -210,8 +210,21 @@ std::string DIFTemplate::toString()
 		ss <<rmtConfiguration.toString();
 		ss << std::endl;
 
-		ss << "** PDU FORWARDIG TABLE GENERATOR **" <<std::endl;
-		ss << pdufTableGeneratorConfiguration.toString()<<std::endl;
+		ss << "** FLOW ALLOCATOR ** "<<std::endl;
+		ss <<faConfiguration.toString();
+		ss << std::endl;
+
+		ss << "** RESOURCE ALLOCATOR ** "<<std::endl;
+		ss <<raConfiguration.toString();
+		ss << std::endl;
+
+		ss << "** NAMESPACE MANAGER ** "<<std::endl;
+		ss <<nsmConfiguration.toString();
+		ss << std::endl;
+
+		ss << "** SECURITY MANAGER ** "<<std::endl;
+		ss <<smConfiguration.toString();
+		ss << std::endl;
 
 		if (knownIPCProcessAddresses.size() > 0) {
 			ss << "** KNOWN IPCP ADDRESSES **" <<std::endl;
@@ -235,26 +248,6 @@ std::string DIFTemplate::toString()
 			ss << std::endl;
 		}
 
-		if (policySets.size() != 0) {
-			ss << "** POLICY SETS **" << std::endl;
-			std::map<std::string, std::string>::iterator it;
-			for (it = policySets.begin(); it != policySets.end(); ++ it) {
-				ss << "   Name: " << it->first;
-				ss << "; Value: " << it->second << std::endl;
-			}
-			ss << std::endl;
-		}
-
-		if (policySetParameters.size() != 0) {
-			ss << "** POLICY SET PARAMETERS **" << std::endl;
-			std::map<std::string, std::string>::iterator it;
-			for (it = policySetParameters.begin();
-					it != policySetParameters.end(); ++ it) {
-				ss << "   Name: " << it->first;
-				ss << "; Value: " << it->second << std::endl;
-			}
-			ss << std::endl;
-		}
 	}
 
 	if (configParameters.size() != 0) {

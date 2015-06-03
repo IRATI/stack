@@ -644,6 +644,7 @@ private:
 class FlowAllocatorConfiguration {
 public:
         FlowAllocatorConfiguration();
+        std::string toString();
 #ifndef SWIG
         const PolicyConfig& get_policy_set() const;
         void set_policy_set(const PolicyConfig& policy_set);
@@ -693,6 +694,7 @@ public:
 class ResourceAllocatorConfiguration {
 public:
         ResourceAllocatorConfiguration();
+        std::string toString();
 #ifndef SWIG
         const PolicyConfig& get_pduftg_policy_set() const;
         void set_pduftg_policy_set(const PolicyConfig& pduftg_policy_set);
@@ -847,6 +849,7 @@ public:
 class NamespaceManagerConfiguration {
 public:
         NamespaceManagerConfiguration();
+        std::string toString();
 #ifndef SWIG
         const PolicyConfig& get_policy_set() const;
         void set_policy_set(const PolicyConfig& policy_set);
@@ -860,6 +863,7 @@ public:
 class SecurityManagerConfiguration {
 public:
         SecurityManagerConfiguration();
+        std::string toString();
 #ifndef SWIG
         const PolicyConfig& get_policy_set() const;
         void set_policy_set(const PolicyConfig& policy_set);
@@ -888,10 +892,6 @@ public:
 	void set_address(unsigned int address);
 	const EFCPConfiguration& get_efcp_configuration() const;
 	void set_efcp_configuration(const EFCPConfiguration& efcp_configuration);
-	const PDUFTableGeneratorConfiguration&
-	get_pduft_generator_configuration() const;
-	void set_pduft_generator_configuration(
-			const PDUFTableGeneratorConfiguration& pduft_generator_configuration);
 	const RMTConfiguration& get_rmt_configuration() const;
 	void set_rmt_configuration(const RMTConfiguration& rmt_configuration);
 	const std::list<PolicyConfig>& get_policies();
@@ -913,9 +913,6 @@ public:
 
 	/// Configuration of the Relaying and Multiplexing Task
 	RMTConfiguration rmt_configuration_;
-
-	/// PDUFT Configuration parameters of the DIF
-	PDUFTableGeneratorConfiguration pduft_generator_configuration_;
 
 	/// Flow Allocator configuration parameters of the DIF
 	FlowAllocatorConfiguration fa_configuration_;

@@ -1058,6 +1058,15 @@ void NamespaceManagerConfiguration::set_policy_set(
 	policy_set_ = policy_set;
 }
 
+std::string NamespaceManagerConfiguration::toString()
+{
+	std::stringstream ss;
+	ss << "Selected NamespaceManager Policy set. Name: " << policy_set_.name_ ;
+	ss << "; Version: " << policy_set_.version_ << std::endl;
+
+	return ss.str();
+}
+
 // CLASS SecurityManagerConfiguration
 SecurityManagerConfiguration::SecurityManagerConfiguration(){
 }
@@ -1072,6 +1081,15 @@ void SecurityManagerConfiguration::set_policy_set(
 	policy_set_ = policy_set;
 }
 
+std::string SecurityManagerConfiguration::toString()
+{
+	std::stringstream ss;
+	ss << "Selected SecurityManager Policy set. Name: " << policy_set_.name_ ;
+	ss << "; Version: " << policy_set_.version_ << std::endl;
+
+	return ss.str();
+}
+
 // CLASS ResourceAllocatorConfiguration
 ResourceAllocatorConfiguration::ResourceAllocatorConfiguration(){
 }
@@ -1084,6 +1102,15 @@ ResourceAllocatorConfiguration::get_pduftg_policy_set() const {
 void ResourceAllocatorConfiguration::set_pduftg_policy_set(
 		const PolicyConfig& pduftg_policy_set){
 	pduftg_policy_set_ = pduftg_policy_set;
+}
+
+std::string ResourceAllocatorConfiguration::toString()
+{
+	std::stringstream ss;
+	ss << "Selected PDU Forwarding Table Generator Policy Set. Name: " << pduftg_policy_set_.name_ ;
+	ss << "; Version: " << pduftg_policy_set_.version_ << std::endl;
+
+	return ss.str();
 }
 
 // CLASS FlowAllocatorConfiguration
@@ -1145,6 +1172,15 @@ const PolicyConfig& FlowAllocatorConfiguration::get_seq_rollover_policy() const 
 void FlowAllocatorConfiguration::set_seq_rollover_policy(
 		const PolicyConfig& seq_rollover_policy) {
 	seq_rollover_policy_ = seq_rollover_policy;
+}
+
+std::string FlowAllocatorConfiguration::toString()
+{
+	std::stringstream ss;
+	ss << "Selected FlowAllocator Policy set. Name: " << policy_set_.name_ ;
+	ss << "; Version: " << policy_set_.version_ << std::endl;
+
+	return ss.str();
 }
 
 // CLASS RMTConfiguration
@@ -1382,16 +1418,6 @@ const EFCPConfiguration& DIFConfiguration::get_efcp_configuration() const {
 void DIFConfiguration::set_efcp_configuration(
 		const EFCPConfiguration& efcp_configuration) {
 	efcp_configuration_= efcp_configuration;
-}
-
-void DIFConfiguration::set_pduft_generator_configuration(
-		const PDUFTableGeneratorConfiguration& pduft_generator_configuration){
-	pduft_generator_configuration_ = pduft_generator_configuration;
-}
-
-const PDUFTableGeneratorConfiguration&
-DIFConfiguration::get_pduft_generator_configuration() const {
-	return pduft_generator_configuration_;
 }
 
 const RMTConfiguration& DIFConfiguration::get_rmt_configuration() const {

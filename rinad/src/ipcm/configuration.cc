@@ -639,45 +639,58 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 				rc.pft_policy_set_);
 
 		parse_policy(rmt_conf,
-				"rmtPolicySet",
-				rc.rmt_policy_set_);
+			     "rmtPolicySet",
+			     rc.rmt_policy_set_);
 
 		dif_template->rmtConfiguration = rc;
 	}
 
-	// std::map<std::string, std::string> policy_sets
-	Json::Value policy_sets = root["policySets"];
-	if (policy_sets != 0) {
-		Json::Value::Members members =
-				policy_sets.getMemberNames();
-		for (unsigned int j = 0;
-				j < members.size();
-				j++) {
-			string value =
-					policy_sets.get(members[j],
-							string())
-							.asString();
-			dif_template->policySets.insert
-			(pair<string, string>
-			(members[j], value));
-		}
+	// flowAllocatorConfiguration;
+	Json::Value fa_conf = root["flowAllocatorConfiguration"];
+	if (fa_conf != 0) {
+		rina::FlowAllocatorConfiguration fac;
+
+		parse_policy(fa_conf,
+			     "PolicySet",
+			     fac.policy_set_);
+
+		dif_template->faConfiguration = fac;
 	}
 
-	// std::map<std::string, std::string> policyParameters
-	Json::Value policy_set_params = root["policyParameters"];
-	if (policy_set_params != 0) {
-		Json::Value::Members members =
-				policy_set_params.getMemberNames();
-		for (unsigned int j = 0;
-				j < members.size();
-				j++) {
-			string value = policy_set_params
-					.get(members[j],
-							string()).asString();
-			dif_template->policySetParameters.insert
-			(pair<string, string>
-			(members[j], value));
-		}
+	// resourceAllocatorConfiguration;
+	Json::Value ra_conf = root["resourceAllocatorConfiguration"];
+	if (ra_conf != 0) {
+		rina::ResourceAllocatorConfiguration rac;
+
+		parse_policy(ra_conf,
+			     "pduftgPolicySet",
+			     rac.pduftg_policy_set_);
+
+		dif_template->raConfiguration = rac;
+	}
+
+	// namespaceMangerConfiguration;
+	Json::Value nsm_conf = root["namespaceManagerConfiguration"];
+	if (nsm_conf != 0) {
+		rina::NamespaceManagerConfiguration nsmc;
+
+		parse_policy(nsm_conf,
+			     "PolicySet",
+			     nsmc.policy_set_);
+
+		dif_template->nsmConfiguration = nsmc;
+	}
+
+	// namespaceMangerConfiguration;
+	Json::Value sm_conf = root["securityManagerConfiguration"];
+	if (nsm_conf != 0) {
+		rina::SecurityManagerConfiguration smc;
+
+		parse_policy(sm_conf,
+			     "PolicySet",
+			     smc.policy_set_);
+
+		dif_template->smConfiguration = smc;
 	}
 
 	// NMinusOneFlowsConfiguration
@@ -720,58 +733,6 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 
 			dif_template->knownIPCProcessAddresses.push_back(kn);
 		}
-	}
-
-	// rina::PDUFTableGeneratorConfiguration
-	// pdufTableGeneratorConfiguration;
-	Json::Value pft = root["pdufTableGeneratorConfiguration"];
-	if (pft != 0) {
-		rina::PDUFTableGeneratorConfiguration pf;
-
-		parse_policy(pft, "pduFtGeneratorPolicy",
-				pf.pduft_generator_policy_);
-
-		Json::Value lsr_config = pft["linkStateRoutingConfiguration"];
-
-		rina::LinkStateRoutingConfiguration lsr;
-
-		lsr.object_maximum_age_ =
-				lsr_config.get("objectMaximumAge",
-						lsr.object_maximum_age_)
-						.asInt();
-
-		lsr.wait_until_read_cdap_ =
-				lsr_config.get("waitUntilReadCdap",
-						lsr.wait_until_read_cdap_)
-						.asInt();
-
-		lsr.wait_until_error_ =
-				lsr_config.get("waitUntilError",
-						lsr.wait_until_error_)
-						.asInt();
-
-		lsr.wait_until_pduft_computation_ =
-				lsr_config.get("waitUntilPduftComputation",
-						lsr.wait_until_pduft_computation_)
-						.asInt();
-
-		lsr.wait_until_fsodb_propagation_ =
-				lsr_config.get("waitUntilFsodbPropagation",
-						lsr.wait_until_fsodb_propagation_)
-						.asInt();
-
-		lsr.wait_until_age_increment_ =
-				lsr_config.get("waitUntilAgeIncrement",
-						lsr.wait_until_age_increment_)
-						.asInt();
-
-		lsr.routing_algorithm_ =
-				lsr_config.get("routingAlgorithm",
-						string())
-						.asString();
-
-		pf.link_state_routing_configuration_  = lsr;
-		dif_template->pdufTableGeneratorConfiguration = pf;
 	}
 
 	// std::list<AddressPrefixConfiguration> addressPrefixes;

@@ -4046,7 +4046,7 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
                 const DIFConfiguration& object,
                 bool normalIPCProcess){
 	struct nlattr *parameters, *efcpConfig, *rmtConfig, *smConfig,
-		*etConfig, *faConfig, *nsmConfig, *pduftConfig, *policySets;
+		*etConfig, *faConfig, *nsmConfig, *policySets;
 
 	if  (object.get_parameters().size() > 0) {
 	        if (!(parameters = nla_nest_start(
@@ -4080,16 +4080,6 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
 	                goto nla_put_failure;
 	        }
 	        nla_nest_end(netlinkMessage, rmtConfig);
-
-	        if (!(pduftConfig = nla_nest_start(
-	                        netlinkMessage, DCONF_ATTR_PDUFT_CONF))) {
-	                goto nla_put_failure;
-	        }
-	        if (putPDUFTableGeneratorConfigurationObject(netlinkMessage,
-	                        object.pduft_generator_configuration_) < 0) {
-	                goto nla_put_failure;
-	        }
-	        nla_nest_end(netlinkMessage, pduftConfig);
 
 	        if (!(faConfig = nla_nest_start(
 	        		netlinkMessage, DCONF_ATTR_FA_CONF))) {
@@ -6862,9 +6852,6 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 	attr_policy[DCONF_ATTR_RMT_CONF].type = NLA_NESTED;
 	attr_policy[DCONF_ATTR_RMT_CONF].minlen = 0;
 	attr_policy[DCONF_ATTR_RMT_CONF].maxlen = 0;
-	attr_policy[DCONF_ATTR_PDUFT_CONF].type = NLA_NESTED;
-	attr_policy[DCONF_ATTR_PDUFT_CONF].minlen = 0;
-	attr_policy[DCONF_ATTR_PDUFT_CONF].maxlen = 0;
 	attr_policy[DCONF_ATTR_FA_CONF].type = NLA_NESTED;
 	attr_policy[DCONF_ATTR_FA_CONF].minlen = 0;
 	attr_policy[DCONF_ATTR_FA_CONF].maxlen = 0;
@@ -6892,7 +6879,6 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 	DIFConfiguration * result = new DIFConfiguration();
 	EFCPConfiguration * efcpConfig;
 	RMTConfiguration * rmtConfig;
-	PDUFTableGeneratorConfiguration * pduftConfig;
 	FlowAllocatorConfiguration * faConfig;
 	EnrollmentTaskConfiguration * etConfig;
 	NamespaceManagerConfiguration * nsmConfig;
@@ -6934,19 +6920,6 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 			result->set_rmt_configuration(
 					*rmtConfig);
 			delete rmtConfig;
-		}
-	}
-
-	if (attrs[DCONF_ATTR_PDUFT_CONF]) {
-		pduftConfig = parsePDUFTableGeneratorConfigurationObject(
-				attrs[DCONF_ATTR_PDUFT_CONF]);
-		if (pduftConfig == 0) {
-			delete result;
-			return 0;
-		} else {
-			result->pduft_generator_configuration_ =
-					*pduftConfig;
-			delete pduftConfig;
 		}
 	}
 

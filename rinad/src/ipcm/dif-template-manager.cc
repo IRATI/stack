@@ -316,25 +316,6 @@ void DIFTemplateManager::augment_dif_template(rinad::DIFTemplate * dif_template)
 		}
 	}
 
-	if (dif_template->pdufTableGeneratorConfiguration.pduft_generator_policy_.name_ == "" ||
-			dif_template->pdufTableGeneratorConfiguration.link_state_routing_configuration_.routing_algorithm_ == "") {
-		dif_template->pdufTableGeneratorConfiguration = default_template->pdufTableGeneratorConfiguration;
-	}
-
-	if (dif_template->policySets.size() == 0 && default_template->policySets.size() != 0) {
-		for (std::map<std::string, std::string>::iterator it = default_template->policySets.begin();
-				it != default_template->policySets.end(); ++it) {
-			dif_template->policySets[it->first] = it->second;
-		}
-	}
-
-	if (dif_template->policySetParameters.size() == 0 && default_template->policySetParameters.size() != 0) {
-		for (std::map<std::string, std::string>::iterator it = default_template->policySetParameters.begin();
-				it != default_template->policySetParameters.end(); ++it) {
-			dif_template->policySetParameters[it->first] = it->second;
-		}
-	}
-
 	if (dif_template->configParameters.size() == 0 && default_template->configParameters.size() != 0) {
 		for (std::map<std::string, std::string>::iterator it =
 				default_template->configParameters.begin();

@@ -88,9 +88,11 @@ struct DIFTemplate {
         rina::DataTransferConstants dataTransferConstants;
         std::list<rina::QoSCube> qosCubes;
         rina::RMTConfiguration rmtConfiguration;
-        std::map<std::string, std::string> policySets;
-        std::map<std::string, std::string> policySetParameters;
         rina::EnrollmentTaskConfiguration etConfiguration;
+        rina::FlowAllocatorConfiguration faConfiguration;
+        rina::NamespaceManagerConfiguration nsmConfiguration;
+        rina::SecurityManagerConfiguration smConfiguration;
+        rina::ResourceAllocatorConfiguration raConfiguration;
 
         /* Only for normal DIFs */
         NMinusOneFlowsConfiguration nMinusOneFlowsConfiguration;
@@ -100,9 +102,6 @@ struct DIFTemplate {
          * that can potentially be members of the DIFs I know
          */
         std::list<KnownIPCProcessAddress> knownIPCProcessAddresses;
-
-        /* The PDU forwarding table configurations */
-        rina::PDUFTableGeneratorConfiguration pdufTableGeneratorConfiguration;
 
         /* The address prefixes, assigned to different organizations */
         std::list<AddressPrefixConfiguration> addressPrefixes;
