@@ -694,12 +694,12 @@ class ResourceAllocatorConfiguration {
 public:
         ResourceAllocatorConfiguration();
 #ifndef SWIG
-        const PolicyConfig& get_policy_set() const;
-        void set_policy_set(const PolicyConfig& policy_set);
+        const PolicyConfig& get_pduftg_policy_set() const;
+        void set_pduftg_policy_set(const PolicyConfig& pduftg_policy_set);
 #endif
 
         /// Set of policies to define the Resouce Allocator's behaviour.
-        PolicyConfig policy_set_;
+        PolicyConfig pduftg_policy_set_;
 };
 
 /// Contains the configuration data of the Relaying and Multiplexing Task for a

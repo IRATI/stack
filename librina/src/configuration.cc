@@ -1077,13 +1077,13 @@ ResourceAllocatorConfiguration::ResourceAllocatorConfiguration(){
 }
 
 const PolicyConfig&
-ResourceAllocatorConfiguration::get_policy_set() const {
-	return policy_set_;
+ResourceAllocatorConfiguration::get_pduftg_policy_set() const {
+	return pduftg_policy_set_;
 }
 
-void ResourceAllocatorConfiguration::set_policy_set(
-		const PolicyConfig& policy_set){
-	policy_set_ = policy_set;
+void ResourceAllocatorConfiguration::set_pduftg_policy_set(
+		const PolicyConfig& pduftg_policy_set){
+	pduftg_policy_set_ = pduftg_policy_set;
 }
 
 // CLASS FlowAllocatorConfiguration
