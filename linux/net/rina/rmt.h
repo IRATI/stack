@@ -56,6 +56,7 @@ struct rmt;
 enum flow_state {
         N1_PORT_STATE_ENABLED,
         N1_PORT_STATE_DISABLED,
+        N1_PORT_STATE_DEALLOCATED,
 };
 
 struct rmt_n1_port {
@@ -65,6 +66,7 @@ struct rmt_n1_port {
         struct hlist_node      hlist;
         enum flow_state        state;
         atomic_t               n_sdus;
+        atomic_t               pending_ops;
 };
 
 /* The key in this struct is used to filter by cep_ids, qos_id, address... */

@@ -413,7 +413,7 @@ static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
         psn  = pci_sequence_number_get((struct pci *) pci);
         if (csn == psn) {
                 LOG_ERR("Another PDU with the same seq_num is in "
-                        "the rtx queue!");
+                        "the seqq");
                 seq_queue_entry_destroy(tmp);
                 return -1;
         }
