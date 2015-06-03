@@ -626,6 +626,18 @@ public:
 					const std::string& class_="");
 
 	///
+	/// Get parent's fully qualified name
+	///
+	/// @param handle The handle of the RIB
+	/// @param fqn Fully Qualified Name of the child object
+	///
+	/// @ret Parent's Fqn
+	/// @throws eRIBNotFound, eObjDoesNotExist
+	///
+	std::string getObjParentFqn(const rib_handle_t& handle,
+						const std::string& fqn);
+
+	///
 	/// Retrieve the fully qualified name given the instance ID of an
 	/// object
 	///
@@ -637,7 +649,7 @@ public:
 	/// @throws eRIBNotFound, eObjDoesNotExist and eObjClassMismatch
 	/// if class_ is defined
 	///
-	std::string getObjfqn(const rib_handle_t& handle,
+	std::string getObjFqn(const rib_handle_t& handle,
 					const int64_t inst_id,
 					const std::string& class_="");
 	///

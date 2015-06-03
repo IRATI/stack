@@ -1052,6 +1052,19 @@ public:
 					const std::string& class_="");
 
 	///
+	/// Get parent's fully qualified name
+	///
+	/// @param handle The handle of the RIB
+	/// @param fqn Fully Qualified Name of the child object
+	///
+	/// @ret Parent's Fqn
+	/// @throws eRIBNotFound, eObjDoesNotExist
+	///
+	std::string getObjParentFqn(const rib_handle_t& handle,
+						const std::string& fqn);
+
+
+	///
 	/// Retrieve the fully qualified name given the instance ID of an
 	/// object
 	///
@@ -1063,7 +1076,7 @@ public:
 	/// @throws eRIBNotFound, eObjDoesNotExist and eObjClassMismatch
 	/// if class_ is defined
 	///
-	std::string getObjfqn(const rib_handle_t& handle,
+	std::string getObjFqn(const rib_handle_t& handle,
 					const int64_t inst_id,
 					const std::string& class_="");
 	///
@@ -1649,7 +1662,7 @@ int64_t RIBDaemon::getObjInstId(const rib_handle_t& handle,
 	return id;
 }
 
-std::string RIBDaemon::getObjfqn(const rib_handle_t& handle,
+std::string RIBDaemon::getObjFqn(const rib_handle_t& handle,
 				const int64_t inst_id,
 				const std::string& class_){
 
@@ -1678,6 +1691,27 @@ std::string RIBDaemon::getObjfqn(const rib_handle_t& handle,
 	}
 	return fqn;
 }
+
+std::string RIBDaemon::getObjParentFqn(const rib_handle_t& handle,
+						const std::string& fqn){
+	//Mutual exclusion
+	ReadScopedLock rlock(rwlock);
+
+	//Retreive the RIB
+	RIB* rib = getRIB(handle);
+
+	if(rib == NULL){
+		LOG_ERR("Could not recover instance id for object '%s'. RIB ('%" PRId64 "') does not exist",
+								fqn.c_str(),
+								handle);
+		throw eRIBNotFound();
+	}
+
+	std::string parent_fqn = rib->get_parent_fqn(fqn);
+
+	return parent_fqn;
+}
+
 
 std::string RIBDaemon::getObjClass(const rib_handle_t& handle,
 				const int64_t inst_id){
@@ -2192,10 +2226,15 @@ int64_t RIBDaemonProxy::getObjInstId(const rib_handle_t& h,
 	return ribd->getObjInstId(h, fqn, c);
 }
 
-std::string RIBDaemonProxy::getObjfqn(const rib_handle_t& h,
+std::string RIBDaemonProxy::getObjParentFqn(const rib_handle_t& h,
+						const std::string& fqn){
+	return ribd->getObjParentFqn(h, fqn);
+}
+
+std::string RIBDaemonProxy::getObjFqn(const rib_handle_t& h,
 				const int64_t id,
 				const std::string& c){
-	return ribd->getObjfqn(h, id, c);
+	return ribd->getObjFqn(h, id, c);
 }
 
 std::string RIBDaemonProxy::getObjClass(const rib_handle_t& h,
