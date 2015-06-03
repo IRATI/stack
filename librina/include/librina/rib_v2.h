@@ -60,6 +60,10 @@ namespace rib {
 class RIBDaemonProxy;
 class RIBOpsRespHandlers;
 
+//
+// Schema exceptions
+//
+
 /// A schema with the same version has been already created
 DECLARE_EXCEPTION_SUBCLASS(eSchemaExists);
 
@@ -68,6 +72,10 @@ DECLARE_EXCEPTION_SUBCLASS(eSchemaInUse);
 
 /// The schema does not exist
 DECLARE_EXCEPTION_SUBCLASS(eSchemaNotFound);
+
+//
+// RIB&AE management
+//
 
 /// RIB version has been already registered for this AE
 DECLARE_EXCEPTION_SUBCLASS(eRIBAlreadyAssociated);
@@ -83,6 +91,27 @@ DECLARE_EXCEPTION_SUBCLASS(eRIBNotAssociated);
 
 /// RIB is not registered in this AE
 DECLARE_EXCEPTION_SUBCLASS(eNotImplemented);
+
+//
+// RIB object management
+//
+
+/// Validation error; the operation was rejected by the rules defined in
+/// the schema.
+DECLARE_EXCEPTION_SUBCLASS(eOpValidation);
+
+/// An object already exists in the same position of the tree
+DECLARE_EXCEPTION_SUBCLASS(eObjExists);
+
+/// The object does not exist in that position of the tree
+DECLARE_EXCEPTION_SUBCLASS(eObjDoesNotExist);
+
+/// The object exists but the class name mismatches
+DECLARE_EXCEPTION_SUBCLASS(eObjClassMismatch);
+
+
+
+
 
 ///
 /// Initialize the RIB library (RIBDaemon)
@@ -543,22 +572,80 @@ public:
 						const std::string& ae_name);
 
 	///
-	/// Retrieve a list of pointers to the RIB of a certain version
+	/// Add an object to a RIB
 	///
-	/// @param version RIB version
+	/// This method attempts to add an object to the existing RIB (handle).
+	/// On success, *obj is set to NULL and the callee shall not retain any
+	/// copy of that pointer.
 	///
-	/// @ret a list of pointers to RIB objects
+	/// On failure the adequate exception is thrown, and no changes to obj
+	/// will be made.
 	///
-	//std::list<rib_handle_t> get(uint64_t version);
+	/// @param handle The handle of the RIB
+	/// @param obj A pointer (to a pointer) of the object to be added
+	///
+	/// @ret The instance id of the object created
+	/// @throws eRIBNotFound, eObjExists
+	///
+	template<typename T>
+	int64_t addObjRIB(const rib_handle_t& handle, RIBObj<T>** obj);
 
 	///
-	/// Retrieve a list of pointers to the RIB(s) registered in an AE
+	/// Retrieve the instance ID of an object given its fully
+	/// qualified name.
 	///
-	/// @param  RIB version
+	/// @param handle The handle of the RIB
+	/// @param fqn Fully Qualified Name of the object
+	/// @param class__ Optional parameter. When defined (!=""), the class
+	/// name of the object is checked to be strictly equl to class_
 	///
-	/// @ret a list of pointers to RIB objects
+	/// @ret The instance id of the object
+	/// @throws eRIBNotFound, eObjDoesNotExist and eObjClassMismatch
+	/// if class_ is defined.
 	///
-	//std::list<rib_handle_t> get(const std::string& ae_name);
+	int64_t getObjInstId(const rib_handle_t& handle,
+					const std::string& fqn,
+					const std::string& class_="");
+
+	///
+	/// Retrieve the fully qualified name given the instance ID of an
+	/// object
+	///
+	/// @param handle The handle of the RIB
+	/// @param inst_id Object's instance id
+	/// @param class__ Optional parameter. When defined (!=""), the class
+	///
+	/// @ret The fully qualified name
+	/// @throws eRIBNotFound, eObjDoesNotExist and eObjClassMismatch
+	/// if class_ is defined
+	///
+	std::string getObjfqn(const rib_handle_t& handle,
+					const int64_t inst_id,
+					const std::string& class_="");
+	///
+	/// Retrieve the class name of an object given the instance ID.
+	///
+	/// @param handle The handle of the RIB
+	/// @param inst_id Object's instance id
+	/// @ret The class name
+	/// @throws eRIBNotFound, eObjDoesNotExist and eObjClassMismatch
+	///
+	std::string getObjClass(const rib_handle_t& handle,
+					const int64_t inst_id);
+	///
+	/// Remove an object to a RIB
+	///
+	/// This method removes an object previously added to the RIB
+	///
+	/// On failure the adequate exception is thrown and no changes will
+	/// be performed in the RIB.
+	///
+	/// @param handle The handle of the RIB
+	/// @param inst_id The object instance ID
+	///
+	/// @throws eRIBNotFound, eObjDoesNotExist
+	///
+	void removeObjRIB(const rib_handle_t& handle, const int64_t);
 
 
 	//-------------------------------------------------------------------//
