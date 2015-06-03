@@ -113,6 +113,20 @@ void PolicyConfig::set_version(const std::string& version) {
         version_ = version;
 }
 
+std::string PolicyConfig::toString() {
+	std::stringstream ss;
+	ss << "Name: " << name_ << "; Version: " << version_ << std::endl;
+	if (parameters_.size() > 0) {
+		ss << "Parameters:" << std::endl;
+		for (std::list<PolicyParameter>::const_iterator it = parameters_.begin();
+				it != parameters_.end(); ++it) {
+			ss <<"Name: " << it->name_ << "; Value: "<< it->value_ << std::endl;
+		}
+	}
+
+	return ss.str();
+}
+
 // CLASS DTCP WINDOW-BASED FLOW CONTROL CONFIG
 DTCPWindowBasedFlowControlConfig::DTCPWindowBasedFlowControlConfig() {
         initial_credit_ = 0;
@@ -1090,25 +1104,24 @@ std::string SecurityManagerConfiguration::toString()
 	return ss.str();
 }
 
+// CLASS RoutingConfiguration
+std::string RoutingConfiguration::toString()
+{
+	std::stringstream ss;
+	ss << "Routing policy set." << policy_set_.toString();
+
+	return ss.str();
+}
+
+
 // CLASS ResourceAllocatorConfiguration
 ResourceAllocatorConfiguration::ResourceAllocatorConfiguration(){
-}
-
-const PolicyConfig&
-ResourceAllocatorConfiguration::get_pduftg_policy_set() const {
-	return pduftg_policy_set_;
-}
-
-void ResourceAllocatorConfiguration::set_pduftg_policy_set(
-		const PolicyConfig& pduftg_policy_set){
-	pduftg_policy_set_ = pduftg_policy_set;
 }
 
 std::string ResourceAllocatorConfiguration::toString()
 {
 	std::stringstream ss;
-	ss << "Selected PDU Forwarding Table Generator Policy Set. Name: " << pduftg_policy_set_.name_ ;
-	ss << "; Version: " << pduftg_policy_set_.version_ << std::endl;
+	ss << "Selected PDU Forwarding Table Generator Policy Set." << pduftg_policy_set_.toString() ;
 
 	return ss.str();
 }

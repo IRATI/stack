@@ -59,6 +59,7 @@ public:
         PolicyConfig(const std::string& name, const std::string& version);
         bool operator==(const PolicyConfig &other) const;
         bool operator!=(const PolicyConfig &other) const;
+        std::string toString();
 #ifndef SWIG
         const std::string& get_name() const;
         void set_name(const std::string& name);
@@ -695,12 +696,8 @@ class ResourceAllocatorConfiguration {
 public:
         ResourceAllocatorConfiguration();
         std::string toString();
-#ifndef SWIG
-        const PolicyConfig& get_pduftg_policy_set() const;
-        void set_pduftg_policy_set(const PolicyConfig& pduftg_policy_set);
-#endif
 
-        /// Set of policies to define the Resouce Allocator's behaviour.
+        /// Set of policies to define the Resource Allocator's behaviour.
         PolicyConfig pduftg_policy_set_;
 };
 
@@ -882,12 +879,20 @@ public:
 	PolicyConfig policy_set_;
 };
 
+class RoutingConfiguration {
+public:
+	RoutingConfiguration() { };
+        std::string toString();
+
+        PolicyConfig policy_set_;
+};
+
 /// Contains the data about a DIF Configuration
 /// (QoS cubes, policies, parameters, etc)
 class DIFConfiguration {
 public:
 #ifndef SWIG
-  DIFConfiguration();
+	DIFConfiguration();
 	unsigned int get_address() const;
 	void set_address(unsigned int address);
 	const EFCPConfiguration& get_efcp_configuration() const;
@@ -923,17 +928,17 @@ public:
 	/// Configuration of the NamespaceManager
 	NamespaceManagerConfiguration nsm_configuration_;
 
+	// Configuration of routing
+	RoutingConfiguration routing_configuration_;
+
+	// Configuration of the Resource Allocator
+	ResourceAllocatorConfiguration ra_configuration_;
+
 	/// Configuration of the security manager
 	SecurityManagerConfiguration sm_configuration_;
 
-        /// Policy sets
-        std::list<Parameter> policy_sets;
-
 	/// Other configuration parameters of the DIF
 	std::list<Parameter> parameters_;
-
-	/// Other policies of the DIF
-	std::list<PolicyConfig> policies_;
 };
 
 /// Contains the information about a DIF (name, type, configuration)
