@@ -188,6 +188,7 @@ std::string name1 = "/x";
 std::string name2 = "/y";
 std::string name3 = "/x/z";
 std::string name4 = "/x/z/t";
+int64_t inst_id1, inst_id2, inst_id3;
 
 //Setups
 
@@ -392,7 +393,6 @@ void ribBasicOps::testAddObj(){
 	std::string invalid_name1 = "";
 	std::string invalid_name2 = "x";
 	std::string invalid_name3 = "/x/";
-	int64_t inst_id1, inst_id2, inst_id3;
 
 	obj1 = new MyObj(1);
 	obj2 = new MyObj(2);
@@ -514,7 +514,11 @@ void ribBasicOps::testAddObj(){
 
 	//Add an inner object (/x/z)
 	try{
-		ribd->addObjRIB(handle, name3, &obj3);
+		tmp = obj3;
+		inst_id3 = ribd->addObjRIB(handle, name3, &obj3);
+		CPPUNIT_ASSERT_MESSAGE("Did not set to null obj3", obj3 == NULL);
+		CPPUNIT_ASSERT_MESSAGE("Invalid instance id for obj3", inst_id3 == 3);
+		obj3 = tmp;
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during Add obj 3", 0);
 	}
@@ -538,6 +542,31 @@ void ribBasicOps::testAddObj(){
 
 void ribBasicOps::testRemoveObj(){
 
+	rib_handle_t wrong_handle = 9999;
+	int64_t wrong_inst_id = 99999;
+
+	// Invalid RIB
+	try{
+		ribd->removeObjRIB(wrong_handle, inst_id1);
+		CPPUNIT_ASSERT_MESSAGE("Remove object with an invalid RIB handle succeeded", 0);
+	}catch(eRIBNotFound& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception throw during invalid handle remove obj", 0);
+	}
+
+	// Invalid inst id
+	try{
+		ribd->removeObjRIB(handle, wrong_inst_id);
+		CPPUNIT_ASSERT_MESSAGE("Remove inexistent inst_id succeeded", 0);
+	}catch(eObjDoesNotExist& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception thrown during Add obj with an overlapping object", 0);
+	}
+
+	//Remove obj1 which has obj3 as a child should fail
+	//TODO
 }
 
 void ribBasicOps::testDeassociation(){
