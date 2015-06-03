@@ -44,6 +44,8 @@
 #include "serdes.h"
 #include "pdu-ser.h"
 #include "rmt-ps.h"
+#include "ipcp-utils.h"
+#include "policies.h"
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 #define MAX_PDUS_SENT_PER_CYCLE 10
@@ -496,6 +498,46 @@ int rmt_dt_cons_set(struct rmt *     instance,
         return 0;
 }
 EXPORT_SYMBOL(rmt_dt_cons_set);
+
+int rmt_config_set(struct rmt *        instance,
+                   struct rmt_config * rmt_config)
+{
+        const string_t * rmt_ps_name;
+        const string_t * pft_ps_name;
+
+        if (!rmt_config) {
+                LOG_ERR("Bogus rmt_config passed");
+                return -1;
+        }
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                rmt_config_destroy(rmt_config);
+                return -1;
+        }
+
+        rmt_ps_name = policy_name(rmt_config->rmt_policy_set);
+        pft_ps_name = policy_name(rmt_config->pft_policy_set);
+
+        LOG_DBG("RMT PSs: %s, %s", rmt_ps_name, pft_ps_name);
+
+        if (strcmp(rmt_ps_name, RINA_PS_DEFAULT_NAME)) {
+                if (rmt_select_policy_set(instance, "", rmt_ps_name))
+                        LOG_ERR("Could not set policy set %s for RMT,"
+                                "sticked with default", rmt_ps_name);
+        }
+
+        if (strcmp(pft_ps_name, RINA_PS_DEFAULT_NAME)) {
+                if (rmt_select_policy_set(instance, "", pft_ps_name))
+                        LOG_ERR("Could not set policy set %s for PFT,"
+                                "sticked with default", pft_ps_name);
+        }
+
+        rmt_config_destroy(rmt_config);
+        return 0;
+}
+EXPORT_SYMBOL(rmt_config_set);
+
 
 static int n1_port_write(struct serdes *      serdes,
                          struct rmt_n1_port * n1_port,

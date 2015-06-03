@@ -120,6 +120,8 @@ int dtcp_rxctrl_cfg_set(struct dtcp_config * cfg,
                         struct dtcp_rxctrl_config * rxctrl_cfg);
 int dtcp_lost_control_pdu_set(struct dtcp_config * cfg,
                               struct policy * lost_control_pdu);
+int dtcp_ps_set(struct dtcp_config * cfg,
+                struct policy * dtcp_ps);
 int dtcp_rtt_estimator_set(struct dtcp_config * cfg,
                            struct policy * rtt_estimator);
 
@@ -169,6 +171,7 @@ bool                        dtcp_rtx_ctrl(struct dtcp_config * cfg);
 struct dtcp_fctrl_config *  dtcp_fctrl_cfg(struct dtcp_config * cfg);
 struct dtcp_rxctrl_config * dtcp_rxctrl_cfg(struct dtcp_config * cfg);
 struct policy *             dtcp_lost_control_pdu(struct dtcp_config * cfg);
+struct policy *             dtcp_ps(struct dtcp_config * cfg);
 struct policy *             dtcp_rtt_estimator(struct dtcp_config * cfg);
 
 #endif

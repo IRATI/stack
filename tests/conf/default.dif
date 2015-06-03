@@ -16,9 +16,17 @@
          "partialDelivery" : false,
          "orderedDelivery" : true,
          "efcpPolicies" : {
+              "dtpPolicySet" : {
+                "name" : "default",
+                "version" : "0"
+              },
               "initialATimer" : 300,
               "dtcpPresent" : true,
               "dtcpConfiguration" : {
+                   "dtcpPolicySet" : {
+                     "name" : "default",
+                     "version" : "0"
+                   },
                    "rtxControl" : false,
                    "flowControl" : true,
                    "flowControlConfig" : {
@@ -38,9 +46,17 @@
          "orderedDelivery" : true,
          "maxAllowableGap": 0,
          "efcpPolicies" : {
+              "dtpPolicySet" : {
+                "name" : "default",
+                "version" : "0"
+              },
               "initialATimer" : 300,
               "dtcpPresent" : true,
               "dtcpConfiguration" : {
+                   "dtcpPolicySet" : {
+                     "name" : "default",
+                     "version" : "0"
+                   },
                    "rtxControl" : true,
                    "rtxControlConfig" : {
                        "dataRxmsNmax" : 5,
@@ -90,15 +106,11 @@
         }
      },
      "rmtConfiguration" : {
-        "rmtQueueMonitorPolicy" : {
+        "pftPolicySet" : {
           "name" : "default",
           "version" : "0"
         },
-        "rmtSchedulingPolicy" : {
-          "name" : "default",
-          "version" : "0"
-        },
-        "maxQueuePolicy" : {
+        "rmtPolicySet" : {
           "name" : "default",
           "version" : "0"
         }

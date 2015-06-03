@@ -480,6 +480,45 @@ int efcp_config_destroy(struct efcp_config * efcp_config)
 }
 EXPORT_SYMBOL(efcp_config_destroy);
 
+struct rmt_config * rmt_config_create(void)
+{
+        struct rmt_config * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->pft_policy_set = policy_create();
+        if (!tmp->pft_policy_set) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        tmp->rmt_policy_set = policy_create();
+        if (!tmp->rmt_policy_set) {
+        	rkfree(tmp->pft_policy_set);
+                rkfree(tmp);
+                return NULL;
+        }
+
+        return tmp;
+}
+EXPORT_SYMBOL(rmt_config_create);
+
+int rmt_config_destroy(struct rmt_config * rmt_config)
+{
+        if (rmt_config->pft_policy_set)
+                rkfree(rmt_config->pft_policy_set);
+
+        if (rmt_config->rmt_policy_set)
+                policy_destroy(rmt_config->rmt_policy_set);
+
+        rkfree(rmt_config);
+
+        return 0;
+}
+EXPORT_SYMBOL(rmt_config_destroy);
+
 struct dif_config * dif_config_create(void)
 {
         struct dif_config * tmp;
@@ -489,6 +528,7 @@ struct dif_config * dif_config_create(void)
                 return NULL;
 
         tmp->efcp_config = NULL;
+        tmp->rmt_config = NULL;
         INIT_LIST_HEAD(&(tmp->ipcp_config_entries));
 
         return tmp;

@@ -344,6 +344,8 @@ public:
         void set_rtx_control(bool rtx_control);
         const DTCPRtxControlConfig& get_rtx_control_config() const;
         void set_rtx_control_config(const DTCPRtxControlConfig& rtx_control_config);
+        const PolicyConfig& get_dtcp_policy_set() const;
+        void set_dtcp_policy_set(const PolicyConfig& dtcp_policy_set);
         const PolicyConfig& get_rtt_estimator_policy() const;
         void set_rtt_estimator_policy(const PolicyConfig& rtt_estimator_policy);
 #endif
@@ -360,6 +362,9 @@ public:
 
         /// the rtx control configuration of a DTCP instance
         DTCPRtxControlConfig rtx_control_config_;
+
+        /// Policy set for DTCP.
+        PolicyConfig dtcp_policy_set_;
 
         /// This policy determines what action to take when the PM detects that
         /// a control PDU (Ack or Flow Control) may have been lost.  If this
@@ -397,6 +402,10 @@ public:
         void set_partial_delivery(bool partial_delivery);
         bool is_incomplete_delivery() const;
         void set_incomplete_delivery(bool incomplete_delivery);
+        const PolicyConfig& get_dtp_policy_set() const;
+        void set_dtp_policy_set(const PolicyConfig& dtp_policy_set);
+        const PolicyConfig& get_dtcp_policy_set() const;
+        void set_dtcp_policy_set(const PolicyConfig& dtcp_policy_set);
         const PolicyConfig& get_rcvr_timer_inactivity_policy() const;
         void set_rcvr_timer_inactivity_policy(
         		const PolicyConfig& rcvr_timer_inactivity_policy);
@@ -411,6 +420,9 @@ public:
 
         /// The configuration of the DTCP instance
         DTCPConfig dtcp_configuration_;
+
+        /// Policy Set for DTP.
+        PolicyConfig dtp_policy_set_;
 
         /// used when DTCP is in use. If no PDUs arrive in this time period,
         /// the receiver should expect a DRF in the next Transfer PDU. If not,
@@ -632,7 +644,10 @@ private:
 class FlowAllocatorConfiguration {
 public:
         FlowAllocatorConfiguration();
+        std::string toString();
 #ifndef SWIG
+        const PolicyConfig& get_policy_set() const;
+        void set_policy_set(const PolicyConfig& policy_set);
         const PolicyConfig& get_allocate_notify_policy() const;
         void set_allocate_notify_policy(const PolicyConfig& allocate_notify_policy);
         const PolicyConfig& get_allocate_retry_policy() const;
@@ -644,6 +659,8 @@ public:
         const PolicyConfig& get_seq_rollover_policy() const;
         void set_seq_rollover_policy(const PolicyConfig& seq_rollover_policy);
 #endif
+        /// Policy set for Flow Allocator
+        PolicyConfig policy_set_;
 
         /// Maximum number of attempts to retry the flow allocation
         int max_create_flow_retries_;
@@ -672,6 +689,21 @@ public:
         PolicyConfig seq_rollover_policy_;
 };
 
+/// Contains the configuration data of the Resource Allocator, so far its policy
+/// set
+class ResourceAllocatorConfiguration {
+public:
+        ResourceAllocatorConfiguration();
+        std::string toString();
+#ifndef SWIG
+        const PolicyConfig& get_pduftg_policy_set() const;
+        void set_pduftg_policy_set(const PolicyConfig& pduftg_policy_set);
+#endif
+
+        /// Set of policies to define the Resouce Allocator's behaviour.
+        PolicyConfig pduftg_policy_set_;
+};
+
 /// Contains the configuration data of the Relaying and Multiplexing Task for a
 /// particular DIF
 class RMTConfiguration {
@@ -679,32 +711,19 @@ public:
         RMTConfiguration();
         std::string toString();
 #ifndef SWIG
-        const PolicyConfig& get_max_queue_policy() const;
-        void set_max_queue_policy(const PolicyConfig& max_queue_policy);
-        const PolicyConfig& get_rmt_queue_monitor_policy() const;
-        void set_rmt_queue_monitor_policy(const PolicyConfig& rmt_queue_monitor_policy);
-        const PolicyConfig& get_rmt_scheduling_policy() const;
-        void set_rmt_scheduling_policy(const PolicyConfig& rmt_scheduling_policy);
+        const PolicyConfig& get_rmt_policy_set() const;
+        void set_rmt_policy_set(const PolicyConfig& rmt_policy_set);
+        const PolicyConfig& get_pft_policy_set() const;
+        void set_pft_policy_set(const PolicyConfig& pft_policy_set);
 #endif
 
-        /// Three parameters are provided to monitor the queues. This policy
-        /// can be invoked whenever a PDU is placed in a queue and may keep
-        /// additional variables that may be of use to the decision process of
-        /// the RMT-Scheduling Policy and the MaxQPolicy.
-        PolicyConfig rmt_queue_monitor_policy_;
+        /// Set of policies to define RMT's behaviour.
+        // QMonitor Policy, MaxQ Policy and Scheduling Policy
+        PolicyConfig rmt_policy_set_;
 
-        /// This is the meat of the RMT. This is the scheduling algorithm that
-        /// determines the order input and output queues are serviced. We have
-        /// not distinguished inbound from outbound. That is left to the policy.
-        /// To do otherwise, would impose a policy. This policy may implement
-        /// any of the standard scheduling algorithms, FCFS, LIFO,
-        /// longestQfirst, priorities, etc.
-        PolicyConfig rmt_scheduling_policy_;
-
-        /// This policy is invoked when a queue reaches or crosses the threshold
-        /// or maximum queue lengths allowed for this queue. Note that maximum
-        /// length may be exceeded.
-        PolicyConfig max_queue_policy_;
+        /// Set of policies to define PDU Forwarding's behaviour.
+        // pft_nhop
+        PolicyConfig pft_policy_set_;
 };
 
 /// Link State routing configuration
@@ -829,12 +848,27 @@ public:
 /// Configuration of the namespace manager
 class NamespaceManagerConfiguration {
 public:
+        NamespaceManagerConfiguration();
+        std::string toString();
+#ifndef SWIG
+        const PolicyConfig& get_policy_set() const;
+        void set_policy_set(const PolicyConfig& policy_set);
+#endif
+
 	AddressingConfiguration addressing_configuration_;
+	PolicyConfig policy_set_;
 };
 
 /// Configuration of the Security Manager
 class SecurityManagerConfiguration {
 public:
+        SecurityManagerConfiguration();
+        std::string toString();
+#ifndef SWIG
+        const PolicyConfig& get_policy_set() const;
+        void set_policy_set(const PolicyConfig& policy_set);
+#endif
+
 	/// Access control policy for allowing new members into a DIF
 	PolicyConfig difMemberAccessControlPolicy;
 
@@ -843,6 +877,9 @@ public:
 
 	/// The authentication policy for new members of the DIF
 	PolicyConfig authenticationPolicy;
+
+	/// The policy set for the component
+	PolicyConfig policy_set_;
 };
 
 /// Contains the data about a DIF Configuration
@@ -855,10 +892,6 @@ public:
 	void set_address(unsigned int address);
 	const EFCPConfiguration& get_efcp_configuration() const;
 	void set_efcp_configuration(const EFCPConfiguration& efcp_configuration);
-	const PDUFTableGeneratorConfiguration&
-	get_pduft_generator_configuration() const;
-	void set_pduft_generator_configuration(
-			const PDUFTableGeneratorConfiguration& pduft_generator_configuration);
 	const RMTConfiguration& get_rmt_configuration() const;
 	void set_rmt_configuration(const RMTConfiguration& rmt_configuration);
 	const std::list<PolicyConfig>& get_policies();
@@ -880,9 +913,6 @@ public:
 
 	/// Configuration of the Relaying and Multiplexing Task
 	RMTConfiguration rmt_configuration_;
-
-	/// PDUFT Configuration parameters of the DIF
-	PDUFTableGeneratorConfiguration pduft_generator_configuration_;
 
 	/// Flow Allocator configuration parameters of the DIF
 	FlowAllocatorConfiguration fa_configuration_;

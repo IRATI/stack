@@ -45,7 +45,8 @@ LinkStateRoutingPs::LinkStateRoutingPs(IRoutingComponent * rc_) : rc(rc_)
 
 void LinkStateRoutingPs::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
 {
-	rina::PDUFTableGeneratorConfiguration pduftgConfig =
+        /*
+        rina::PDUFTableGeneratorConfiguration pduftgConfig =
 			dif_configuration.get_pduft_generator_configuration();
 
 	if (pduftgConfig.get_pduft_generator_policy().get_name().compare(
@@ -54,6 +55,7 @@ void LinkStateRoutingPs::set_dif_configuration(const rina::DIFConfiguration& dif
 				pduftgConfig.get_pduft_generator_policy().get_name().c_str());
 		throw rina::Exception("Unknown routing Policy");
 	}
+        */
 
 	lsr_policy = new LinkStateRoutingPolicy(rc->ipcp);
 	lsr_policy->set_dif_configuration(dif_configuration);
@@ -970,13 +972,14 @@ void LinkStateRoutingPolicy::subscribeToEvents()
 void LinkStateRoutingPolicy::set_dif_configuration(
 		const rina::DIFConfiguration& dif_configuration)
 {
+        /*
 	pduft_generator_config_ =
 			dif_configuration.get_pduft_generator_configuration();
 	if (pduft_generator_config_.get_link_state_routing_configuration().get_routing_algorithm().compare(
 			"Dijkstra") != 0) {
 		LOG_IPCP_WARN("Unsupported routing algorithm, using Dijkstra instead");
 	}
-
+        */
 	routing_algorithm_ = new DijkstraAlgorithm();
 	source_vertex_ = dif_configuration.get_address();
 

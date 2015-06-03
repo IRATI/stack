@@ -533,6 +533,15 @@ void DTCPConfig::set_rtx_control_config(const DTCPRtxControlConfig& rtx_control_
 	rtx_control_config_ = rtx_control_config;
 }
 
+const PolicyConfig& DTCPConfig::get_dtcp_policy_set() const {
+        return dtcp_policy_set_;
+}
+
+void DTCPConfig::set_dtcp_policy_set(
+                const PolicyConfig& dtcp_policy_set) {
+	dtcp_policy_set_ = dtcp_policy_set;
+}
+
 const PolicyConfig& DTCPConfig::get_rtt_estimator_policy() const {
 	return rtt_estimator_policy_;
 }
@@ -546,6 +555,8 @@ const std::string DTCPConfig::toString() {
         ss<<"Flow control? "<<flow_control_<<"; Retx control? "<<rtx_control_;
         ss<<"; Lost control PDU policy (name/version): "<<lost_control_pdu_policy_.get_name();
         ss<<"/"<<lost_control_pdu_policy_.get_version()<<std::endl;
+        ss<<"DTCP Policy Set (name/version): "<<dtcp_policy_set_.get_name();
+        ss<<"/"<<dtcp_policy_set_.get_version();
         ss<<"RTT estimator policy (name/version): "<<rtt_estimator_policy_.get_name();
         ss<<"/"<<rtt_estimator_policy_.get_version()<<std::endl;
         if (rtx_control_) {
@@ -566,6 +577,15 @@ ConnectionPolicies::ConnectionPolicies(){
 	in_order_delivery_ = false;
 	incomplete_delivery_ = false;
 	max_sdu_gap_ = 0;
+}
+
+const PolicyConfig& ConnectionPolicies::get_dtp_policy_set() const {
+        return dtp_policy_set_;
+}
+
+void ConnectionPolicies::set_dtp_policy_set(
+                const PolicyConfig& dtp_policy_set) {
+	dtp_policy_set_ = dtp_policy_set;
 }
 
 const PolicyConfig& ConnectionPolicies::get_rcvr_timer_inactivity_policy() const {
@@ -660,6 +680,8 @@ void ConnectionPolicies::set_incomplete_delivery(bool incomplete_delivery) {
 
 const std::string ConnectionPolicies::toString() {
         std::stringstream ss;
+        ss<<"DTP Policy Set (name/version): "<<dtp_policy_set_.get_name();
+        ss<<"/"<<dtp_policy_set_.get_version();
         ss<<"Sder time inactivity policy (name/version): "<<sender_timer_inactivity_policy_.get_name();
         ss<<"/"<<sender_timer_inactivity_policy_.get_version();
         ss<<"; Rcvr time inactivity policy (name/version): "<<rcvr_timer_inactivity_policy_.get_name();
@@ -1022,9 +1044,88 @@ void EFCPConfiguration::set_unknown_flow_policy(
 	unknown_flowpolicy_ = unknown_flowpolicy;
 }
 
+// CLASS NamespaceManagerConfiguration
+NamespaceManagerConfiguration::NamespaceManagerConfiguration(){
+}
+
+const PolicyConfig&
+NamespaceManagerConfiguration::get_policy_set() const {
+	return policy_set_;
+}
+
+void NamespaceManagerConfiguration::set_policy_set(
+		const PolicyConfig& policy_set){
+	policy_set_ = policy_set;
+}
+
+std::string NamespaceManagerConfiguration::toString()
+{
+	std::stringstream ss;
+	ss << "Selected NamespaceManager Policy set. Name: " << policy_set_.name_ ;
+	ss << "; Version: " << policy_set_.version_ << std::endl;
+
+	return ss.str();
+}
+
+// CLASS SecurityManagerConfiguration
+SecurityManagerConfiguration::SecurityManagerConfiguration(){
+}
+
+const PolicyConfig&
+SecurityManagerConfiguration::get_policy_set() const {
+	return policy_set_;
+}
+
+void SecurityManagerConfiguration::set_policy_set(
+		const PolicyConfig& policy_set){
+	policy_set_ = policy_set;
+}
+
+std::string SecurityManagerConfiguration::toString()
+{
+	std::stringstream ss;
+	ss << "Selected SecurityManager Policy set. Name: " << policy_set_.name_ ;
+	ss << "; Version: " << policy_set_.version_ << std::endl;
+
+	return ss.str();
+}
+
+// CLASS ResourceAllocatorConfiguration
+ResourceAllocatorConfiguration::ResourceAllocatorConfiguration(){
+}
+
+const PolicyConfig&
+ResourceAllocatorConfiguration::get_pduftg_policy_set() const {
+	return pduftg_policy_set_;
+}
+
+void ResourceAllocatorConfiguration::set_pduftg_policy_set(
+		const PolicyConfig& pduftg_policy_set){
+	pduftg_policy_set_ = pduftg_policy_set;
+}
+
+std::string ResourceAllocatorConfiguration::toString()
+{
+	std::stringstream ss;
+	ss << "Selected PDU Forwarding Table Generator Policy Set. Name: " << pduftg_policy_set_.name_ ;
+	ss << "; Version: " << pduftg_policy_set_.version_ << std::endl;
+
+	return ss.str();
+}
+
 // CLASS FlowAllocatorConfiguration
 FlowAllocatorConfiguration::FlowAllocatorConfiguration(){
 	max_create_flow_retries_ = 0;
+}
+
+const PolicyConfig&
+FlowAllocatorConfiguration::get_policy_set() const {
+	return policy_set_;
+}
+
+void FlowAllocatorConfiguration::set_policy_set(
+		const PolicyConfig& policy_set){
+	policy_set_ = policy_set;
 }
 
 const PolicyConfig&
@@ -1073,50 +1174,46 @@ void FlowAllocatorConfiguration::set_seq_rollover_policy(
 	seq_rollover_policy_ = seq_rollover_policy;
 }
 
+std::string FlowAllocatorConfiguration::toString()
+{
+	std::stringstream ss;
+	ss << "Selected FlowAllocator Policy set. Name: " << policy_set_.name_ ;
+	ss << "; Version: " << policy_set_.version_ << std::endl;
+
+	return ss.str();
+}
+
 // CLASS RMTConfiguration
 RMTConfiguration::RMTConfiguration(){
-	max_queue_policy_ = PolicyConfig();
-	rmt_queue_monitor_policy_ = PolicyConfig();
-	rmt_scheduling_policy_ = PolicyConfig();
+	rmt_policy_set_ = PolicyConfig();
+	pft_policy_set_ = PolicyConfig();
 }
 
 std::string RMTConfiguration::toString()
 {
 	std::stringstream ss;
-	ss << "Max queue policy. Name: " << max_queue_policy_.name_ ;
-	ss << "; Version: " << max_queue_policy_.version_ << std::endl;
-	ss << "Queue monitor policy. Name: " << rmt_queue_monitor_policy_.name_ ;
-	ss << "; Version: " << rmt_queue_monitor_policy_.version_ << std::endl;
-	ss << "Scheduling policy. Name: " << rmt_scheduling_policy_.name_ ;
-	ss << "; Version: " << rmt_scheduling_policy_.version_ << std::endl;
+	ss << "Selected RMT Policy set. Name: " << rmt_policy_set_.name_ ;
+	ss << "; Version: " << rmt_policy_set_.version_ << std::endl;
+	ss << "PDU Forwarding Policy set. Name: " << pft_policy_set_.name_ ;
+	ss << "; Version: " << pft_policy_set_.version_ << std::endl;
 
 	return ss.str();
 }
 
-const PolicyConfig& RMTConfiguration::get_max_queue_policy() const {
-	return max_queue_policy_;
+const PolicyConfig& RMTConfiguration::get_rmt_policy_set() const {
+	return rmt_policy_set_;
 }
 
-void RMTConfiguration::set_max_queue_policy(const PolicyConfig& max_queue_policy) {
-	max_queue_policy_ = max_queue_policy;
+void RMTConfiguration::set_rmt_policy_set(const PolicyConfig& rmt_policy_set) {
+	rmt_policy_set_ = rmt_policy_set;
 }
 
-const PolicyConfig& RMTConfiguration::get_rmt_queue_monitor_policy() const {
-	return rmt_queue_monitor_policy_;
+const PolicyConfig& RMTConfiguration::get_pft_policy_set() const {
+	return pft_policy_set_;
 }
 
-void RMTConfiguration::set_rmt_queue_monitor_policy(
-		const PolicyConfig& rmt_queue_monitor_policy) {
-	rmt_queue_monitor_policy_ = rmt_queue_monitor_policy;
-}
-
-const PolicyConfig& RMTConfiguration::get_rmt_scheduling_policy() const {
-	return rmt_scheduling_policy_;
-}
-
-void RMTConfiguration::set_rmt_scheduling_policy(
-		const PolicyConfig& rmt_scheduling_policy){
-	rmt_scheduling_policy_ = rmt_scheduling_policy;
+void RMTConfiguration::set_pft_policy_set(const PolicyConfig& rmt_policy_set) {
+	pft_policy_set_ = rmt_policy_set;
 }
 
 // CLASS LinkStateRouting Configuraiton
@@ -1257,16 +1354,14 @@ EnrollmentTaskConfiguration::EnrollmentTaskConfiguration() {
 	max_number_of_enrollment_attempts_ = 3;
 }
 
-std::string EnrollmentTaskConfiguration::toString()
-{
+std::string EnrollmentTaskConfiguration::toString() {
 	std::stringstream ss;
 	ss << "Enrollment timeout in ms: " << enrollment_timeout_in_ms_ << std::endl;
 	ss << "Watchdog period in ms: " << watchdog_period_in_ms_ << std::endl;
-	ss << "Declared dead interval in ms: "<< declared_dead_interval_in_ms_ << std::endl;
-	ss << "Neighbor enroller period in ms: "<<neighbor_enroller_period_in_ms_<< std::endl;
+	ss << "Declared dead interval in ms: " << declared_dead_interval_in_ms_ << std::endl;
+	ss << "Neighbor enroller period in ms: " << neighbor_enroller_period_in_ms_<< std::endl;
 	ss << "Max number of enrollment attempts: " << max_number_of_enrollment_attempts_ << std::endl;
 	return ss.str();
-
 }
 
 // Class Static IPC Process Address
@@ -1323,16 +1418,6 @@ const EFCPConfiguration& DIFConfiguration::get_efcp_configuration() const {
 void DIFConfiguration::set_efcp_configuration(
 		const EFCPConfiguration& efcp_configuration) {
 	efcp_configuration_= efcp_configuration;
-}
-
-void DIFConfiguration::set_pduft_generator_configuration(
-		const PDUFTableGeneratorConfiguration& pduft_generator_configuration){
-	pduft_generator_configuration_ = pduft_generator_configuration;
-}
-
-const PDUFTableGeneratorConfiguration&
-DIFConfiguration::get_pduft_generator_configuration() const {
-	return pduft_generator_configuration_;
 }
 
 const RMTConfiguration& DIFConfiguration::get_rmt_configuration() const {

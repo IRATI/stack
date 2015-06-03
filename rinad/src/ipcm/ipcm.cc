@@ -456,15 +456,6 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 			}
 			nsm_config.addressing_configuration_ = address_config;
 
-                        // Copy the por-component policy set names from the configuration
-                        // structure to the dif_config struct
-                        for (map<string, string>::iterator
-                                        it = dif_template->policySets.begin();
-                                        it != dif_template->policySets.end(); it++) {
-                                dif_config.policy_sets.push_back(
-                                                rina::Parameter(it->first, it->second));
-                        }
-
 			bool found = dif_template->
 				lookup_ipcp_address(ipcp->get_name(),
 						address);
@@ -478,8 +469,6 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 			}
 			dif_config.set_efcp_configuration(efcp_config);
 			dif_config.nsm_configuration_ = nsm_config;
-			dif_config.pduft_generator_configuration_ =
-					dif_template->pdufTableGeneratorConfiguration;
 			dif_config.rmt_configuration_ = dif_template->rmtConfiguration;
 			dif_config.set_address(address);
 		}

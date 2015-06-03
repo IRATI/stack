@@ -9,12 +9,12 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -488,9 +488,8 @@ EFCPConfiguration * parseEFCPConfigurationObject(nlattr *nested);
 
 /* RMTConfiguration CLASS */
 enum RMTConfigurationAttributes {
-        RMTC_ATTR_QUEUE_MONITOR_POLICY = 1,
-        RMTC_ATTR_SCHEDULING_POLICY,
-        RMTC_ATTR_MAX_QUEUE_POLICY,
+        RMTC_ATTR_PFT_POLICY_SET = 1,
+        RMTC_ATTR_RMT_POLICY_SET,
         __RMTC_ATTR_MAX,
 };
 
@@ -537,6 +536,7 @@ PDUFTableGeneratorConfiguration * parsePDUFTableGeneratorConfigurationObject(nla
 /* FlowAllocatorConfiguration CLASS */
 enum FlowAllocatorConfigurationAttributes {
 	FLAC_MAX_CREATE_FLOW_RETRIES = 1,
+	FLAC_POLICY_SET,
 	FLAC_ALLOC_NOTIFY_POLICY,
 	FLAC_ALLOC_RETRY_POLICY,
 	FLAC_NEW_FLOW_REQ_POLICY,
@@ -614,6 +614,7 @@ AddressingConfiguration * parseAddressingConfigurationObject(nlattr *nested);
 /* NamespaceManagerConfiguration CLASS */
 enum NamespaceManagerConfigurationAttributes {
 	NSMC_ADDRESSING_CONF = 1,
+	NSMC_POLICY_SET,
 	__NSMC_ATTR_MAX,
 };
 
@@ -626,13 +627,22 @@ NamespaceManagerConfiguration * parseNamespaceManagerConfigurationObject(nlattr 
 
 /* SecurityManagerConfiguration CLASS */
 enum SecurityManagerConfigurationAttributes {
-	SECMANC_DIF_MEM_ACC_CON_POLICY = 1,
+	SECMANC_POLICY_SET = 1,
+	SECMANC_DIF_MEM_ACC_CON_POLICY,
 	SECMANC_NEW_FLOW_ACC_CON_POLICY,
 	SECMANC_AUTH_POLICY,
 	__SECMANC_ATTR_MAX,
 };
 
 #define SECMANC_ATTR_MAX (__SECMANC_ATTR_MAX -1)
+
+/* SecurityManagerConfiguration CLASS */
+enum ResourceAllocatorConfigurationAttributes {
+	RAC_PDUFTG_POLICY_SET = 1,
+	__RAC_ATTR_MAX,
+};
+
+#define RAC_ATTR_MAX (__RAC_ATTR_MAX -1)
 
 int putSecurityManagerConfigurationObject(nl_msg* netlinkMessage,
 		const SecurityManagerConfiguration& object);
@@ -645,7 +655,6 @@ enum DIFConfigurationAttributes {
 	DCONF_ATTR_ADDRESS,
 	DCONF_ATTR_EFCP_CONF,
 	DCONF_ATTR_RMT_CONF,
-	DCONF_ATTR_PDUFT_CONF,
 	DCONF_ATTR_FA_CONF,
 	DCONF_ATTR_ET_CONF,
 	DCONF_ATTR_NSM_CONF,
@@ -1089,6 +1098,7 @@ enum DTCPConfigAttributes {
         DCA_ATTR_FLOW_CONTROL_CONFIG,
         DCA_ATTR_RETX_CONTROL,
         DCA_ATTR_RETX_CONTROL_CONFIG,
+        DCA_ATTR_DTCP_POLICY_SET,
         DCA_ATTR_LOST_CONTROL_PDU_POLICY,
         DCA_ATTR_RTT_EST_POLICY,
         __DCA_ATTR_MAX,
@@ -1106,6 +1116,7 @@ parseDTCPConfigObject(nlattr *nested);
 enum ConnectionPoliciesAttributes {
 	CPA_ATTR_DTCP_PRESENT = 1,
 	CPA_ATTR_DTCP_CONFIG,
+        CPA_ATTR_DTP_POLICY_SET,
 	CPA_ATTR_RCVR_TIMER_INAC_POLICY,
 	CPA_ATTR_SNDR_TIMER_INAC_POLICY,
 	CPA_ATTR_INIT_SEQ_NUM_POLICY,

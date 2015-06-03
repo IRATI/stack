@@ -514,6 +514,11 @@ rina::DTCPConfig* Encoder::get_DTCPConfig(const rina::messages::dtcpConfig_t &gp
 	delete p_conf;
 	p_conf = 0;
 
+	p_conf = Encoder::get_PolicyConfig(gpf_conf.dtcppolicyset());
+	conf->set_dtcp_policy_set(*p_conf);
+	delete p_conf;
+	p_conf = 0;
+
 	return conf;
 }
 
@@ -526,6 +531,7 @@ rina::messages::dtcpConfig_t* Encoder::get_dtcpConfig_t(const rina::DTCPConfig &
 	gpf_conf->set_allocated_rtxcontrolconfig(Encoder::get_dtcpRtxControlConfig_t(conf.get_rtx_control_config()));
 	gpf_conf->set_allocated_lostcontrolpdupolicy(Encoder::get_policyDescriptor_t((conf.get_lost_control_pdu_policy())));
 	gpf_conf->set_allocated_rttestimatorpolicy(Encoder::get_policyDescriptor_t((conf.get_rtt_estimator_policy())));
+	gpf_conf->set_allocated_dtcppolicyset(Encoder::get_policyDescriptor_t((conf.get_dtcp_policy_set())));
 
 	return gpf_conf;
 }
@@ -540,6 +546,7 @@ rina::messages::connectionPolicies_t* Encoder::get_connectionPolicies_t(const ri
 	gpf_polc->set_initialatimer(polc.get_initial_a_timer());
 	gpf_polc->set_allocated_rcvrtimerinactivitypolicy(get_policyDescriptor_t(polc.get_rcvr_timer_inactivity_policy()));
 	gpf_polc->set_allocated_sendertimerinactiviypolicy(get_policyDescriptor_t(polc.get_sender_timer_inactivity_policy()));
+	gpf_polc->set_allocated_dtppolicyset(get_policyDescriptor_t(polc.get_dtp_policy_set()));
 
 	return gpf_polc;
 }
@@ -563,6 +570,11 @@ rina::ConnectionPolicies* Encoder::get_ConnectionPolicies(const rina::messages::
 
 	p_conf = get_PolicyConfig(gpf_polc.initialseqnumpolicy());
 	polc->set_initial_seq_num_policy(*p_conf);
+	delete p_conf;
+	p_conf = 0;
+
+	p_conf = get_PolicyConfig(gpf_polc.dtppolicyset());
+	polc->set_dtp_policy_set(*p_conf);
 	delete p_conf;
 	p_conf = 0;
 
