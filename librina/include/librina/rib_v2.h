@@ -96,12 +96,18 @@ DECLARE_EXCEPTION_SUBCLASS(eNotImplemented);
 // RIB object management
 //
 
+/// Invalid object
+DECLARE_EXCEPTION_SUBCLASS(eObjInvalid);
+
 /// Validation error; the operation was rejected by the rules defined in
 /// the schema.
 DECLARE_EXCEPTION_SUBCLASS(eOpValidation);
 
 /// An object already exists in the same position of the tree
 DECLARE_EXCEPTION_SUBCLASS(eObjExists);
+
+/// Parent's object does not exist
+DECLARE_EXCEPTION_SUBCLASS(eObjNoParent);
 
 /// The object does not exist in that position of the tree
 DECLARE_EXCEPTION_SUBCLASS(eObjDoesNotExist);
@@ -582,13 +588,19 @@ public:
 	/// will be made.
 	///
 	/// @param handle The handle of the RIB
+	/// @param fqn Fully qualified name (position in the tree)
 	/// @param obj A pointer (to a pointer) of the object to be added
 	///
 	/// @ret The instance id of the object created
-	/// @throws eRIBNotFound, eObjExists
+	/// @throws eRIBNotFound, eObjExists, eObjInvalid, eObjNoParent
 	///
 	template<typename T>
-	int64_t addObjRIB(const rib_handle_t& handle, RIBObj<T>** obj);
+	int64_t addObjRIB(const rib_handle_t& handle, const std::string& fqn,
+							 RIBObj<T>** obj){
+		//Recover the non-templatized part
+		RIBObj_** obj_ = obj;
+		return __addObjRIB(handle, fqn, obj_);
+	}
 
 	///
 	/// Retrieve the instance ID of an object given its fully
@@ -645,7 +657,7 @@ public:
 	///
 	/// @throws eRIBNotFound, eObjDoesNotExist
 	///
-	void removeObjRIB(const rib_handle_t& handle, const int64_t);
+	void removeObjRIB(const rib_handle_t& handle, const int64_t inst_id);
 
 
 	//-------------------------------------------------------------------//
@@ -744,6 +756,10 @@ public:
 				const cdap_rib::filt_info_t &filt);
 
 private:
+
+	///@internal
+	int64_t __addObjRIB(const rib_handle_t& h, const std::string& fqn,
+								 RIBObj_** o);
 
 	//Constructor
 	RIBDaemonProxy(RIBDaemon* ribd_);

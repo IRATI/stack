@@ -199,8 +199,7 @@ public:
 	///
 	/// @ret instance_id of the objc
 	///
-	template <typename T>
-	int64_t add_obj(const std::string& fqn, RIBObj<T>** obj);
+	int64_t add_obj(const std::string& fqn, RIBObj_** obj);
 
 	//
 	// Get the instance id of an object given a fully qualified name (fqn)
@@ -228,7 +227,7 @@ public:
  	// @ret A string with the class name or an exception if the object
 	//	does not exist
 	//
-	const std::string get_obj_class(int64_t instance_id) const;
+	std::string get_obj_class(const int64_t instance_id);
 
 	//
 	// Get (a copy) of the user data from an object
@@ -738,8 +737,7 @@ int64_t RIB::get_new_inst_id(){
 	return next_inst_id;
 }
 
-template <typename T>
-int64_t RIB::add_obj(const std::string& fqn, RIBObj<T>** obj_) {
+int64_t RIB::add_obj(const std::string& fqn, RIBObj_** obj_) {
 
 	int64_t id, parent_id;
 	std::string parent_fqn = get_parent_fqn(fqn);
@@ -747,9 +745,9 @@ int64_t RIB::add_obj(const std::string& fqn, RIBObj<T>** obj_) {
 
 	if(!(*obj_)){
 		LOG_ERR("Unable to add object(%p) at '%s'; object is NULL!",
-								*obj,
+								*obj_,
 								fqn.c_str());
-		return -1;
+		throw eObjInvalid();
 	}
 
 	//Recover the non-templatized part
@@ -762,19 +760,19 @@ int64_t RIB::add_obj(const std::string& fqn, RIBObj<T>** obj_) {
 	parent_id = __get_obj_inst_id(parent_fqn);
 	if(parent_id == -1){
 		LOG_ERR("Unable to add object(%p) at '%s'; parent does not exist!",
-								*obj,
+								obj,
 								fqn.c_str());
-		return -1;
+		throw eObjNoParent();
 	}
 
 	//Check if the object already exists
 	id = __get_obj_inst_id(fqn);
 	if(id == -1){
 		LOG_ERR("Unable to add object(%p) at '%s'; an object of class '%s' already exists!",
-							*obj,
+							obj,
 							fqn.c_str(),
 							get_obj_class(id).c_str());
-		return -1;
+		throw eObjExists();
 	}
 
 	//get a (free) instance id
@@ -815,7 +813,7 @@ int RIB::__remove_obj(int64_t inst_id) {
 	if(!obj){
 		LOG_ERR("Unable to remove with instance id '%" PRId64  "'. Object does not exist!",
 								inst_id);
-		return -1;
+		throw eObjDoesNotExist();
 	}
 
 	//Remove from the maps
@@ -855,7 +853,21 @@ std::string RIB::get_parent_fqn(const std::string& fqn_child) const {
 		return "";
 
 	return fqn_child.substr(0, last_separator);
+}
 
+std::string RIB::get_obj_class(const int64_t inst_id){
+
+	RIBObj_* obj;
+
+	//Mutual exclusion
+	ReadScopedLock rlock(rwlock);
+
+	obj = get_obj(inst_id);
+
+	if(obj == NULL)
+		throw eObjDoesNotExist();
+
+	return obj->get_class();
 }
 
 const cdap_rib::vers_info_t& RIB::get_version() const {
@@ -949,6 +961,82 @@ public:
 	///
 	rib_handle_t get(const cdap_rib::vers_info_t& version,
 						const std::string& ae_name);
+	///
+	/// Add an object to a RIB
+	///
+	/// This method attempts to add an object to the existing RIB (handle).
+	/// On success, *obj is set to NULL and the callee shall not retain any
+	/// copy of that pointer.
+	///
+	/// On failure the adequate exception is thrown, and no changes to obj
+	/// will be made.
+	///
+	/// @param handle The handle of the RIB
+	/// @param fqn Fully Qualified Name of the object
+	/// @param obj A pointer (to a pointer) of the object to be added
+	///
+	/// @ret The instance id of the object created
+	/// @throws eRIBNotFound, eObjExists
+	///
+	int64_t addObjRIB(const rib_handle_t& handle, const std::string& fqn,
+								RIBObj_** obj);
+
+	///
+	/// Retrieve the instance ID of an object given its fully
+	/// qualified name.
+	///
+	/// @param handle The handle of the RIB
+	/// @param fqn Fully Qualified Name of the object
+	/// @param class__ Optional parameter. When defined (!=""), the class
+	/// name of the object is checked to be strictly equl to class_
+	///
+	/// @ret The instance id of the object
+	/// @throws eRIBNotFound, eObjDoesNotExist and eObjClassMismatch
+	/// if class_ is defined.
+	///
+	int64_t getObjInstId(const rib_handle_t& handle,
+					const std::string& fqn,
+					const std::string& class_="");
+
+	///
+	/// Retrieve the fully qualified name given the instance ID of an
+	/// object
+	///
+	/// @param handle The handle of the RIB
+	/// @param inst_id Object's instance id
+	/// @param class__ Optional parameter. When defined (!=""), the class
+	///
+	/// @ret The fully qualified name
+	/// @throws eRIBNotFound, eObjDoesNotExist and eObjClassMismatch
+	/// if class_ is defined
+	///
+	std::string getObjfqn(const rib_handle_t& handle,
+					const int64_t inst_id,
+					const std::string& class_="");
+	///
+	/// Retrieve the class name of an object given the instance ID.
+	///
+	/// @param handle The handle of the RIB
+	/// @param inst_id Object's instance id
+	/// @ret The class name
+	/// @throws eRIBNotFound, eObjDoesNotExist and eObjClassMismatch
+	///
+	std::string getObjClass(const rib_handle_t& handle,
+					const int64_t inst_id);
+	///
+	/// Remove an object to a RIB
+	///
+	/// This method removes an object previously added to the RIB
+	///
+	/// On failure the adequate exception is thrown and no changes will
+	/// be performed in the RIB.
+	///
+	/// @param handle The handle of the RIB
+	/// @param inst_id The object instance ID
+	///
+	/// @throws eRIBNotFound, eObjDoesNotExist
+	///
+	void removeObjRIB(const rib_handle_t& handle, const int64_t);
 
 
 protected:
@@ -1295,6 +1383,7 @@ void RIBDaemon::deassociateRIBfromAE(const rib_handle_t& handle,
 	//Mutual exclusion
 	WriteScopedLock wlock(rwlock);
 
+	//FIXME: what if the rib is destroyed...
 	//Retreive the RIB
 	RIB* rib = getRIB(handle);
 
@@ -1448,6 +1537,134 @@ void RIBDaemon::close_connection(const cdap_rib::con_handle_t &con,
 	app_con_callback_->release(invoke_id, con);
 	cdap_provider->send_close_connection_result(con.port_, flags, res,
 			invoke_id);
+}
+
+// Object management
+
+int64_t RIBDaemon::addObjRIB(const rib_handle_t& handle,
+					const std::string& fqn, RIBObj_** obj){
+
+	if(obj == NULL)
+		throw Exception();
+
+	//Mutual exclusion
+	ReadScopedLock rlock(rwlock);
+
+	//Retreive the RIB
+	RIB* rib = getRIB(handle);
+
+	if(rib == NULL){
+		LOG_ERR("Could not add object(%p) to rib('%" PRId64 "'). RIB does not exist",
+								*obj,
+								handle);
+		throw eRIBNotFound();
+	}
+
+	return rib->add_obj(fqn, obj);
+}
+
+int64_t RIBDaemon::getObjInstId(const rib_handle_t& handle,
+				const std::string& fqn,
+				const std::string& class_){
+
+	int64_t id;
+
+	//Mutual exclusion
+	ReadScopedLock rlock(rwlock);
+
+	//Retreive the RIB
+	RIB* rib = getRIB(handle);
+
+	if(rib == NULL){
+		LOG_ERR("Could not recover instance id for object '%s'. RIB ('%" PRId64 "') does not exist",
+								class_.c_str(),
+								handle);
+		throw eRIBNotFound();
+	}
+
+	id = rib->get_obj_inst_id(fqn);
+
+	if(id < 0)
+		throw eObjDoesNotExist();
+
+	if(class_ != ""){
+		std::string obj_c = rib->get_obj_class(id);
+		if(obj_c != class_)
+			throw eObjClassMismatch();
+	}
+
+	return id;
+}
+
+std::string RIBDaemon::getObjfqn(const rib_handle_t& handle,
+				const int64_t inst_id,
+				const std::string& class_){
+
+	//Mutual exclusion
+	ReadScopedLock rlock(rwlock);
+
+	//Retreive the RIB
+	RIB* rib = getRIB(handle);
+
+	if(rib == NULL){
+		LOG_ERR("Could not recover instance id for object '%" PRId64 "'. RIB ('%" PRId64 "') does not exist",
+								inst_id,
+								handle);
+		throw eRIBNotFound();
+	}
+
+	std::string fqn = rib->get_obj_fqn(inst_id);
+
+	if(fqn == "")
+		throw eObjDoesNotExist();
+
+	if(class_ != ""){
+		std::string obj_c = rib->get_obj_class(inst_id);
+		if(obj_c != class_)
+			throw eObjClassMismatch();
+	}
+	return fqn;
+}
+
+std::string RIBDaemon::getObjClass(const rib_handle_t& handle,
+				const int64_t inst_id){
+	//Mutual exclusion
+	ReadScopedLock rlock(rwlock);
+
+	//Retreive the RIB
+	RIB* rib = getRIB(handle);
+
+	if(rib == NULL){
+		LOG_ERR("Could not recover instance id for object '%" PRId64 "'. RIB ('%" PRId64 "') does not exist",
+								inst_id,
+								handle);
+		throw eRIBNotFound();
+	}
+
+	std::string class_ = rib->get_obj_class(inst_id);
+
+	if(class_ == "")
+		throw eObjDoesNotExist();
+
+	return class_;
+}
+
+void RIBDaemon::removeObjRIB(const rib_handle_t& handle,
+							const int64_t inst_id){
+	//Mutual exclusion
+	ReadScopedLock rlock(rwlock);
+
+	//Retreive the RIB
+	RIB* rib = getRIB(handle);
+
+	if(rib == NULL){
+		LOG_ERR("Could not recover instance id for object '%" PRId64 "'. RIB ('%" PRId64 "') does not exist",
+								inst_id,
+								handle);
+		throw eRIBNotFound();
+	}
+
+	rib->remove_obj(inst_id);
 }
 
 
@@ -1920,18 +2137,42 @@ void RIBDaemonProxy::deassociateRIBfromAE(const rib_handle_t& h,
 	ribd->deassociateRIBfromAE(h, ae);
 }
 
-///
-/// Retrieve the handle to a RIB
-///
-/// @param version RIB version
-/// @param Application Entity Name
-///
-/// @ret A handle to a RIB
-///
 rib_handle_t RIBDaemonProxy::get(const cdap_rib::vers_info_t& v,
 							const std::string& ae){
 	return ribd->get(v, ae);
 }
+
+//RIB object mamangement
+
+int64_t RIBDaemonProxy::__addObjRIB(const rib_handle_t& h,
+					const std::string& fqn, RIBObj_** o){
+	return ribd->addObjRIB(h, fqn, o);
+}
+
+int64_t RIBDaemonProxy::getObjInstId(const rib_handle_t& h,
+				const std::string& fqn,
+				const std::string& c){
+	return ribd->getObjInstId(h, fqn, c);
+}
+
+std::string RIBDaemonProxy::getObjfqn(const rib_handle_t& h,
+				const int64_t id,
+				const std::string& c){
+	return ribd->getObjfqn(h, id, c);
+}
+
+std::string RIBDaemonProxy::getObjClass(const rib_handle_t& h,
+				const int64_t id){
+	return ribd->getObjClass(h, id);
+}
+
+void RIBDaemonProxy::removeObjRIB(const rib_handle_t& h, const int64_t id){
+	return ribd->removeObjRIB(h, id);
+}
+
+
+
+
 
 //
 // Client
