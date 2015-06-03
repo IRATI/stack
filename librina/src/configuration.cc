@@ -1044,9 +1044,61 @@ void EFCPConfiguration::set_unknown_flow_policy(
 	unknown_flowpolicy_ = unknown_flowpolicy;
 }
 
+// CLASS NamespaceManagerConfiguration
+NamespaceManagerConfiguration::NamespaceManagerConfiguration(){
+}
+
+const PolicyConfig&
+NamespaceManagerConfiguration::get_policy_set() const {
+	return policy_set_;
+}
+
+void NamespaceManagerConfiguration::set_policy_set(
+		const PolicyConfig& policy_set){
+	policy_set_ = policy_set;
+}
+
+// CLASS SecurityManagerConfiguration
+SecurityManagerConfiguration::SecurityManagerConfiguration(){
+}
+
+const PolicyConfig&
+SecurityManagerConfiguration::get_policy_set() const {
+	return policy_set_;
+}
+
+void SecurityManagerConfiguration::set_policy_set(
+		const PolicyConfig& policy_set){
+	policy_set_ = policy_set;
+}
+
+// CLASS ResourceAllocatorConfiguration
+ResourceAllocatorConfiguration::ResourceAllocatorConfiguration(){
+}
+
+const PolicyConfig&
+ResourceAllocatorConfiguration::get_policy_set() const {
+	return policy_set_;
+}
+
+void ResourceAllocatorConfiguration::set_policy_set(
+		const PolicyConfig& policy_set){
+	policy_set_ = policy_set;
+}
+
 // CLASS FlowAllocatorConfiguration
 FlowAllocatorConfiguration::FlowAllocatorConfiguration(){
 	max_create_flow_retries_ = 0;
+}
+
+const PolicyConfig&
+FlowAllocatorConfiguration::get_policy_set() const {
+	return policy_set_;
+}
+
+void FlowAllocatorConfiguration::set_policy_set(
+		const PolicyConfig& policy_set){
+	policy_set_ = policy_set;
 }
 
 const PolicyConfig&

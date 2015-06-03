@@ -645,6 +645,8 @@ class FlowAllocatorConfiguration {
 public:
         FlowAllocatorConfiguration();
 #ifndef SWIG
+        const PolicyConfig& get_policy_set() const;
+        void set_policy_set(const PolicyConfig& policy_set);
         const PolicyConfig& get_allocate_notify_policy() const;
         void set_allocate_notify_policy(const PolicyConfig& allocate_notify_policy);
         const PolicyConfig& get_allocate_retry_policy() const;
@@ -656,6 +658,8 @@ public:
         const PolicyConfig& get_seq_rollover_policy() const;
         void set_seq_rollover_policy(const PolicyConfig& seq_rollover_policy);
 #endif
+        /// Policy set for Flow Allocator
+        PolicyConfig policy_set_;
 
         /// Maximum number of attempts to retry the flow allocation
         int max_create_flow_retries_;
@@ -682,6 +686,20 @@ public:
         /// action may be required by the Flow Allocator to modify the bindings
         /// between connection-endpoint-ids and port-ids.
         PolicyConfig seq_rollover_policy_;
+};
+
+/// Contains the configuration data of the Resource Allocator, so far its policy
+/// set
+class ResourceAllocatorConfiguration {
+public:
+        ResourceAllocatorConfiguration();
+#ifndef SWIG
+        const PolicyConfig& get_policy_set() const;
+        void set_policy_set(const PolicyConfig& policy_set);
+#endif
+
+        /// Set of policies to define the Resouce Allocator's behaviour.
+        PolicyConfig policy_set_;
 };
 
 /// Contains the configuration data of the Relaying and Multiplexing Task for a
@@ -828,12 +846,25 @@ public:
 /// Configuration of the namespace manager
 class NamespaceManagerConfiguration {
 public:
+        NamespaceManagerConfiguration();
+#ifndef SWIG
+        const PolicyConfig& get_policy_set() const;
+        void set_policy_set(const PolicyConfig& policy_set);
+#endif
+
 	AddressingConfiguration addressing_configuration_;
+	PolicyConfig policy_set_;
 };
 
 /// Configuration of the Security Manager
 class SecurityManagerConfiguration {
 public:
+        SecurityManagerConfiguration();
+#ifndef SWIG
+        const PolicyConfig& get_policy_set() const;
+        void set_policy_set(const PolicyConfig& policy_set);
+#endif
+
 	/// Access control policy for allowing new members into a DIF
 	PolicyConfig difMemberAccessControlPolicy;
 
@@ -842,6 +873,9 @@ public:
 
 	/// The authentication policy for new members of the DIF
 	PolicyConfig authenticationPolicy;
+
+	/// The policy set for the component
+	PolicyConfig policy_set_;
 };
 
 /// Contains the data about a DIF Configuration
