@@ -37,10 +37,10 @@ bool            pft_is_ok(struct pft * instance);
 bool            pft_is_empty(struct pft * instance);
 int             pft_flush(struct pft * instance);
 
-int             pft_add(struct pft *             instance,
-                        struct modpdufwd_entry * entry);
-int             pft_remove(struct pft *             instance,
-                           struct modpdufwd_entry * entry);
+int             pft_add(struct pft *           instance,
+                        struct mod_pft_entry * entry);
+int             pft_remove(struct pft *           instance,
+                           struct mod_pft_entry * entry);
 
 /* NOTE: ports and entries are in-out parms */
 int             pft_nhop(struct pft * instance,
@@ -48,7 +48,7 @@ int             pft_nhop(struct pft * instance,
                          port_id_t ** ports,
                          size_t *     count);
 
-/* NOTE: entries are of the type modpdufwd_entry */
+/* NOTE: entries are of the type mod_pft_entry */
 int             pft_dump(struct pft *       instance,
                          struct list_head * entries);
 

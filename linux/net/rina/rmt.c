@@ -1293,16 +1293,16 @@ EXPORT_SYMBOL(rmt_create);
 static bool is_rmt_pft_ok(struct rmt * instance)
 { return (instance && instance->pft) ? true : false; }
 
-int rmt_pft_add(struct rmt *       instance,
-		struct modpdufwd_entry * entry)
+int rmt_pft_add(struct rmt *           instance,
+		struct mod_pft_entry * entry)
 {
         return is_rmt_pft_ok(instance) ? pft_add(instance->pft,
 						 entry) : -1;
 }
 EXPORT_SYMBOL(rmt_pft_add);
 
-int rmt_pft_remove(struct rmt *       instance,
-		   struct modpdufwd_entry *entry)
+int rmt_pft_remove(struct rmt *           instance,
+		   struct mod_pft_entry * entry)
 {
         return is_rmt_pft_ok(instance) ? pft_remove(instance->pft,
 						    entry) : -1;

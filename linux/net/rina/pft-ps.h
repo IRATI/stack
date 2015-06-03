@@ -31,10 +31,10 @@
 struct pft_ps {
         struct ps_base base;
 
-        int (* pft_add)(struct pft_ps *          ps,
-                        struct modpdufwd_entry * entry);
-        int (* pft_remove)(struct pft_ps *          ps,
-                           struct modpdufwd_entry * entry);
+        int (* pft_add)(struct pft_ps *        ps,
+                        struct mod_pft_entry * entry);
+        int (* pft_remove)(struct pft_ps *        ps,
+                           struct mod_pft_entry * entry);
 
         bool (* pft_is_empty)(struct pft_ps * ps);
         int  (* pft_flush)(struct pft_ps * ps);
@@ -45,15 +45,15 @@ struct pft_ps {
                           port_id_t **    ports,
                           size_t *        count);
 
-        /* NOTE: entries are of the type modpdufwd_entry */
+        /* NOTE: entries are of the type mod_pft_entry */
         int  (* pft_dump)(struct pft_ps *    ps,
                           struct list_head * entries);
 
         /* Reference used to access the PFT data model. */
-        struct pft * pft;
+        struct pft * dm;
 
         /* Data private to the policy-set implementation. */
-        void *       dm;
+        void *       priv;
 };
 
 /*

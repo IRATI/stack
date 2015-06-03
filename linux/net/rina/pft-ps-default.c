@@ -242,24 +242,24 @@ static int pfte_ports_copy(struct pft_entry * entry,
         return 0;
 }
 
-struct pft_ps_dm {
+struct pft_ps_priv {
         struct mutex     write_lock;
         struct list_head entries;
 };
 
-static bool dm_is_ok(struct pft_ps_dm * dm)
-{ return dm != NULL; }
+static bool priv_is_ok(struct pft_ps_priv * priv)
+{ return priv != NULL; }
 
-static struct pft_entry * pft_find(struct pft_ps_dm * dm,
-                                   address_t          destination,
-                                   qos_id_t           qos_id)
+static struct pft_entry * pft_find(struct pft_ps_priv * priv,
+                                   address_t            destination,
+                                   qos_id_t             qos_id)
 {
         struct pft_entry * pos;
 
-        ASSERT(dm_is_ok(dm));
+        ASSERT(priv_is_ok(priv));
         ASSERT(is_address_ok(destination));
 
-        list_for_each_entry_rcu(pos, &dm->entries, next) {
+        list_for_each_entry_rcu(pos, &priv->entries, next) {
                 if ((pos->destination == destination) &&
                     (pos->qos_id      == qos_id)) {
                         return pos;
@@ -269,15 +269,15 @@ static struct pft_entry * pft_find(struct pft_ps_dm * dm,
         return NULL;
 }
 
-static int default_add(struct pft_ps *          ps,
-                       struct modpdufwd_entry * entry)
+static int default_add(struct pft_ps *        ps,
+                       struct mod_pft_entry * entry)
 {
-        struct pft_ps_dm *       dm;
+        struct pft_ps_priv *     priv;
         struct pft_entry *       tmp;
 	struct port_id_altlist * alts;
 
-        dm = (struct pft_ps_dm *) ps->dm;
-        if (!dm_is_ok(dm))
+        priv = (struct pft_ps_priv *) ps->priv;
+        if (!priv_is_ok(priv))
                 return -1;
 
         if (!entry) {
@@ -294,17 +294,17 @@ static int default_add(struct pft_ps *          ps,
                 return -1;
         }
 
-        mutex_lock(&dm->write_lock);
+        mutex_lock(&priv->write_lock);
 
-        tmp = pft_find(dm, entry->fwd_info, entry->qos_id);
+        tmp = pft_find(priv, entry->fwd_info, entry->qos_id);
         if (!tmp) {
                 tmp = pfte_create_ni(entry->fwd_info, entry->qos_id);
                 if (!tmp) {
-                        mutex_unlock(&dm->write_lock);
+                        mutex_unlock(&priv->write_lock);
                         return -1;
                 }
 
-                list_add_rcu(&tmp->next, &dm->entries);
+                list_add_rcu(&tmp->next, &priv->entries);
         }
 
 	list_for_each_entry(alts, &entry->port_id_altlists, next) {
@@ -316,25 +316,25 @@ static int default_add(struct pft_ps *          ps,
 		/* Just add the first alternative and ignore the others. */
                 if (pfte_port_add(tmp, alts->ports[0])) {
                         pfte_destroy(tmp);
-                        mutex_unlock(&dm->write_lock);
+                        mutex_unlock(&priv->write_lock);
                         return -1;
                 }
 	}
 
-        mutex_unlock(&dm->write_lock);
+        mutex_unlock(&priv->write_lock);
 
         return 0;
 }
 
-static int default_remove(struct pft_ps *          ps,
-                          struct modpdufwd_entry * entry)
+static int default_remove(struct pft_ps *        ps,
+                          struct mod_pft_entry * entry)
 {
-        struct pft_ps_dm *       dm;
-        struct port_id_altlist * alts;
-        struct pft_entry *       tmp;
+        struct pft_ps_priv *       priv;
+        struct port_id_altlist *   alts;
+        struct pft_entry *         tmp;
 
-        dm = (struct pft_ps_dm *) ps->dm;
-        if (!dm_is_ok(dm))
+        priv = (struct pft_ps_priv *) ps->priv;
+        if (!priv_is_ok(priv))
                 return -1;
 
         if (!entry) {
@@ -351,11 +351,11 @@ static int default_remove(struct pft_ps *          ps,
                 return -1;
         }
 
-        mutex_lock(&dm->write_lock);
+        mutex_lock(&priv->write_lock);
 
-        tmp = pft_find(dm, entry->fwd_info, entry->qos_id);
+        tmp = pft_find(priv, entry->fwd_info, entry->qos_id);
         if (!tmp) {
-                mutex_unlock(&dm->write_lock);
+                mutex_unlock(&priv->write_lock);
                 return -1;
         }
 
@@ -374,51 +374,51 @@ static int default_remove(struct pft_ps *          ps,
                 pfte_destroy(tmp);
         }
 
-        mutex_unlock(&dm->write_lock);
+        mutex_unlock(&priv->write_lock);
 
         return 0;
 }
 
 static bool default_is_empty(struct pft_ps * ps)
 {
-        struct pft_ps_dm * dm;
-        bool               empty;
+        struct pft_ps_priv * priv;
+        bool                 empty;
 
-        dm = (struct pft_ps_dm *) ps->dm;
-        if (!dm_is_ok(dm))
+        priv = (struct pft_ps_priv *) ps->priv;
+        if (!priv_is_ok(priv))
                 return false;
 
         rcu_read_lock();
-        empty = list_empty(&dm->entries);
+        empty = list_empty(&priv->entries);
         rcu_read_unlock();
 
         return empty;
 }
 
-static void __pft_flush(struct pft_ps_dm * dm)
+static void __pft_flush(struct pft_ps_priv * priv)
 {
         struct pft_entry * pos, * next;
 
-        ASSERT(dm_is_ok(dm));
+        ASSERT(priv_is_ok(priv));
 
-        list_for_each_entry_safe(pos, next, &dm->entries, next) {
+        list_for_each_entry_safe(pos, next, &priv->entries, next) {
                 pfte_destroy(pos);
         }
 }
 
 static int default_flush(struct pft_ps * ps)
 {
-        struct pft_ps_dm * dm;
+        struct pft_ps_priv * priv;
 
-        dm = (struct pft_ps_dm *) ps->dm;
-        if (!dm_is_ok(dm))
+        priv = (struct pft_ps_priv *) ps->priv;
+        if (!priv_is_ok(priv))
                 return -1;
 
-        mutex_lock(&dm->write_lock);
+        mutex_lock(&priv->write_lock);
 
-        __pft_flush(dm);
+        __pft_flush(priv);
 
-        mutex_unlock(&dm->write_lock);
+        mutex_unlock(&priv->write_lock);
 
         return 0;
 }
@@ -428,13 +428,13 @@ static int default_nhop(struct pft_ps * ps,
                         port_id_t **    ports,
                         size_t *        count)
 {
-        struct pft_ps_dm * dm;
-        address_t          destination;
-        qos_id_t           qos_id;
-        struct pft_entry * tmp;
+        struct pft_ps_priv * priv;
+        address_t            destination;
+        qos_id_t             qos_id;
+        struct pft_entry *   tmp;
 
-        dm = (struct pft_ps_dm *) ps->dm;
-        if (!dm_is_ok(dm)) {
+        priv = (struct pft_ps_priv *) ps->priv;
+        if (!priv_is_ok(priv)) {
                 return -1;
         }
 
@@ -456,12 +456,12 @@ static int default_nhop(struct pft_ps * ps,
         }
 
         /*
-         * Taking the lock here since otherwise dm might be deleted when
+         * Taking the lock here since otherwise priv might be deleted when
          * copying the ports
          */
         rcu_read_lock();
 
-        tmp = pft_find(dm, destination, qos_id);
+        tmp = pft_find(priv, destination, qos_id);
         if (!tmp) {
                 LOG_ERR("Could not find any entry for dest address: %u and "
                         "qos_id %d", destination, qos_id);
@@ -512,16 +512,16 @@ static int pfte_port_id_altlists_copy(struct pft_entry * entry,
 static int default_dump(struct pft_ps *    ps,
                         struct list_head * entries)
 {
-        struct pft_ps_dm *       dm;
-        struct pft_entry *       pos;
-        struct modpdufwd_entry * entry;
+        struct pft_ps_priv *   priv;
+        struct pft_entry *     pos;
+        struct mod_pft_entry * entry;
 
-        dm = (struct pft_ps_dm *) ps->dm;
-        if (!dm_is_ok(dm))
+        priv = (struct pft_ps_priv *) ps->priv;
+        if (!priv_is_ok(priv))
                 return -1;
 
         rcu_read_lock();
-        list_for_each_entry_rcu(pos, &dm->entries, next) {
+        list_for_each_entry_rcu(pos, &priv->entries, next) {
                 entry = rkmalloc(sizeof(*entry), GFP_ATOMIC);
                 if (!entry) {
                         rcu_read_unlock();
@@ -549,7 +549,7 @@ static int pft_ps_set_policy_set_param(struct ps_base * bps,
                                        const char *     name,
                                        const char *     value)
 {
-        struct pft_ps *ps = container_of(bps, struct pft_ps, base);
+        struct pft_ps * ps = container_of(bps, struct pft_ps, base);
 
         (void) ps;
 
@@ -572,17 +572,17 @@ static struct ps_base *
 pft_ps_default_create(struct rina_component * component)
 {
         struct pft_ps * ps;
-        struct pft_ps_dm * dm;
+        struct pft_ps_priv * priv;
         struct pft * pft = pft_from_component(component);
 
-        dm = rkzalloc(sizeof(*dm), GFP_KERNEL);
-        if (!dm) {
+        priv = rkzalloc(sizeof(*priv), GFP_KERNEL);
+        if (!priv) {
                 return NULL;
         }
 
-        mutex_init(&dm->write_lock);
+        mutex_init(&priv->write_lock);
 
-        INIT_LIST_HEAD(&dm->entries);
+        INIT_LIST_HEAD(&priv->entries);
 
         ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
         if (!ps) {
@@ -590,8 +590,8 @@ pft_ps_default_create(struct rina_component * component)
         }
 
         ps->base.set_policy_set_param = pft_ps_set_policy_set_param;
-        ps->pft = pft;
-        ps->dm = (void *) dm;
+        ps->dm = pft;
+        ps->priv = (void *) priv;
 
         ps->pft_add = default_add;
         ps->pft_remove = default_remove;
@@ -608,18 +608,18 @@ static void pft_ps_default_destroy(struct ps_base * bps)
         struct pft_ps * ps = container_of(bps, struct pft_ps, base);
 
         if (bps) {
-                struct pft_ps_dm * dm;
+                struct pft_ps_priv * priv;
 
-                dm = (struct pft_ps_dm *) ps->dm;
-                if(!dm_is_ok(dm)) {
+                priv = (struct pft_ps_priv *) ps->priv;
+                if(!priv_is_ok(priv)) {
                         return;
                 }
 
-                mutex_lock(&dm->write_lock);
+                mutex_lock(&priv->write_lock);
 
-                __pft_flush(dm);
+                __pft_flush(priv);
 
-                mutex_unlock(&dm->write_lock);
+                mutex_unlock(&priv->write_lock);
                 rkfree(ps);
         }
 }

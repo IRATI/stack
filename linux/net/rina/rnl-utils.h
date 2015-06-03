@@ -46,7 +46,7 @@ enum port_id_altlist_attrs_list {
 };
 #define PIA_ATTR_MAX (__PIA_ATTR_MAX - 1)
 
-enum modpdufwd_entry_attrs_list {
+enum mod_pft_entry_attrs_list {
         PFTELE_ATTR_ADDRESS = 1,
         PFTELE_ATTR_QOSID,
         PFTELE_ATTR_PORT_ID_ALTLISTS,

@@ -135,15 +135,15 @@ int pft_flush(struct pft * instance)
         return 0;
 }
 
-int pft_add(struct pft * instance,
-	    struct modpdufwd_entry * mpfe)
+int pft_add(struct pft *           instance,
+	    struct mod_pft_entry * mpe)
 {
         struct pft_ps * ps;
 
         if (!__pft_is_ok(instance))
                 return -1;
 
-        if (!mpfe) {
+        if (!mpe) {
                 LOG_ERR("Bogus output parameters, won't remove");
                 return -1;
         }
@@ -154,7 +154,7 @@ int pft_add(struct pft * instance,
                           struct pft_ps, base);
 
         ASSERT(ps->pft_add);
-        if (ps->pft_add(ps, mpfe)) {
+        if (ps->pft_add(ps, mpe)) {
                 rcu_read_unlock();
                 return -1;
         }
@@ -164,15 +164,15 @@ int pft_add(struct pft * instance,
         return 0;
 }
 
-int pft_remove(struct pft * instance,
-	       struct modpdufwd_entry * mpfe)
+int pft_remove(struct pft *           instance,
+	       struct mod_pft_entry * mpe)
 {
         struct pft_ps * ps;
 
         if (!__pft_is_ok(instance))
                 return -1;
 
-        if (!mpfe) {
+        if (!mpe) {
                 LOG_ERR("Bogus output parameters, won't remove");
                 return -1;
         }
@@ -183,7 +183,7 @@ int pft_remove(struct pft * instance,
                           struct pft_ps, base);
 
         ASSERT(ps->pft_remove);
-        if (ps->pft_remove(ps, mpfe)) {
+        if (ps->pft_remove(ps, mpe)) {
                 rcu_read_unlock();
                 return -1;
         }
@@ -252,7 +252,7 @@ int pft_dump(struct pft *       instance,
 }
 
 /* NOTE: Skeleton code, PFT currently has no subcomponents*/
-int pft_select_policy_set(struct pft * pft,
+int pft_select_policy_set(struct pft *     pft,
                           const string_t * path,
                           const string_t * name)
 {

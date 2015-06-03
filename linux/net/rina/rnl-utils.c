@@ -577,7 +577,7 @@ rnl_ipcp_conn_destroy_req_msg_attrs_destroy(struct rnl_ipcp_conn_destroy_req_msg
 static int
 rnl_rmt_mod_pfte_msg_attrs_destroy(struct rnl_rmt_mod_pfte_msg_attrs * attrs)
 {
-        struct modpdufwd_entry * e_pos, * e_nxt;
+        struct mod_pft_entry * e_pos, * e_nxt;
 
         if (!attrs)
                 return -1;
@@ -875,8 +875,8 @@ static int parse_port_id_altlist(struct nlattr * attr,
         return 0;
 }
 
-static int parse_pdu_fte_altlists(struct nlattr *       nested_attr,
-                                  struct modpdufwd_entry * entry)
+static int parse_pdu_fte_altlists(struct nlattr *        nested_attr,
+                                  struct mod_pft_entry * entry)
 {
         int             rem = 0;
         struct nlattr * nla;
@@ -927,8 +927,8 @@ static int parse_pdu_fte_altlists(struct nlattr *       nested_attr,
         return 0;
 }
 
-static int parse_pdu_fte_list_entry(struct nlattr *       attr,
-                                    struct modpdufwd_entry * mpfe)
+static int parse_pdu_fte_list_entry(struct nlattr *        attr,
+                                    struct mod_pft_entry * mpfe)
 {
         struct nla_policy attr_policy[PFTELE_ATTR_MAX + 1];
         struct nlattr *   attrs[PFTELE_ATTR_MAX + 1];
@@ -2159,11 +2159,11 @@ rnl_parse_ipcm_query_rib_req_msg(struct genl_info * info,
 static int parse_list_pfte_conf_e(struct nlattr *     nested_attr,
                                   struct rnl_rmt_mod_pfte_msg_attrs * msg)
 {
-        struct nlattr *       nla;
-        struct modpdufwd_entry * entry;
-        int                   rem                   = 0;
-        int                   entries_with_problems = 0;
-        int                   total_entries         = 0;
+        struct nlattr *        nla;
+        struct mod_pft_entry * entry;
+        int                    rem                   = 0;
+        int                    entries_with_problems = 0;
+        int                    total_entries         = 0;
 
         if (!nested_attr) {
                 LOG_ERR("Bogus attribute passed, bailing out");
@@ -2896,7 +2896,7 @@ static int format_pft_entries_list(struct list_head * entries,
                                    struct sk_buff *   skb_out)
 {
         struct nlattr * msg_entry;
-        struct modpdufwd_entry * pos, * nxt;
+        struct mod_pft_entry * pos, * nxt;
         int i = 0;
 
         if (!skb_out) {
