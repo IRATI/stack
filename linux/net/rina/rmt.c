@@ -369,7 +369,6 @@ static int pft_cache_fini(struct pft_cache * c)
 struct rmt {
         struct rina_component     base;
         address_t                 address;
-        struct rmt_config *       config;
         struct ipcp_instance *    parent;
         struct pft *              pft;
         struct kfa *              kfa;
@@ -447,7 +446,6 @@ int rmt_destroy(struct rmt * instance)
 
         if (instance->pft)            pft_destroy(instance->pft);
         if (instance->serdes)         serdes_destroy(instance->serdes);
-        if (instance->config)	      rmt_config_destroy(instance->config);
 
         rina_component_fini(&instance->base);
 
@@ -507,17 +505,16 @@ int rmt_config_set(struct rmt *        instance,
         const string_t * rmt_ps_name;
         const string_t * pft_ps_name;
 
+        if (!rmt_config) {
+                LOG_ERR("Bogus rmt_config passed");
+                return -1;
+        }
+
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
+                rmt_config_destroy(rmt_config);
                 return -1;
         }
-
-        if (!rmt_config) {
-                 LOG_ERR("Bogus rmt_config passed");
-                return -1;
-        }
-
-        instance->config = rmt_config;
 
         rmt_ps_name = policy_name(rmt_config->rmt_policy_set);
         pft_ps_name = policy_name(rmt_config->pft_policy_set);
@@ -536,6 +533,7 @@ int rmt_config_set(struct rmt *        instance,
                                 "sticked with default", pft_ps_name);
         }
 
+        rmt_config_destroy(rmt_config);
         return 0;
 }
 EXPORT_SYMBOL(rmt_config_set);
