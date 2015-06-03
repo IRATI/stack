@@ -178,9 +178,6 @@ class AbstractEncoder {
 
 public:
 	virtual ~AbstractEncoder();
-	virtual std::string get_type() const = 0;
-	bool operator=(const AbstractEncoder &other) const;
-	bool operator!=(const AbstractEncoder &other) const;
 };
 
 template<class T>
@@ -338,7 +335,7 @@ protected:
 	///
 	/// TODO: remove?
 	///
-	virtual AbstractEncoder* get_encoder() const = 0;
+	virtual AbstractEncoder* get_encoder() = 0;
 
 	///Rwlock
 	rina::ReadWriteLockable rwlock;

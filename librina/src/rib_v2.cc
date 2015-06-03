@@ -1974,22 +1974,6 @@ void RIBDaemon::stop_request(const cdap_rib::con_handle_t &con,
 AbstractEncoder::~AbstractEncoder() {
 }
 
-bool AbstractEncoder::operator=(const AbstractEncoder &other) const {
-
-	if (get_type() == other.get_type())
-		return true;
-	else
-		return false;
-}
-
-bool AbstractEncoder::operator!=(const AbstractEncoder &other) const {
-
-	if (get_type() != other.get_type())
-		return true;
-	else
-		return false;
-}
-
 //RIBObj/RIBObj_
 cdap_rib::res_info_t* RIBObj_::create(
 		const std::string& name, const std::string clas,
