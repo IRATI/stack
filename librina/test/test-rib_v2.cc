@@ -35,6 +35,9 @@
 using namespace rina;
 using namespace rina::rib;
 
+//fwd decl
+class MyObj;
+
 //RIB daemon proxy
 static rina::rib::RIBDaemonProxy* ribd = NULL;
 //Application Entity name
@@ -45,6 +48,7 @@ cdap_rib::vers_info_t version;
 static rib_handle_t handle = 1234;
 static rib_handle_t handle2;
 
+
 class ribBasicOps : public CppUnit::TestFixture {
 
 	CPPUNIT_TEST_SUITE( ribBasicOps );
@@ -52,6 +56,7 @@ class ribBasicOps : public CppUnit::TestFixture {
 	CPPUNIT_TEST( testInit );
 	CPPUNIT_TEST( testCreation );
 	CPPUNIT_TEST( testAssociation );
+	CPPUNIT_TEST( testAddObj );
 	CPPUNIT_TEST( testDeassociation );
 	CPPUNIT_TEST( testDestruction );
 	CPPUNIT_TEST( testFini );
@@ -68,6 +73,7 @@ public:
 	void testInit();
 	void testCreation();
 	void testAssociation();
+	void testAddObj();
 	void testDeassociation();
 	void testDestruction();
 	void testFini();
@@ -126,9 +132,62 @@ public:
 
 static class AppHandlers app_handlers;
 
+
+//
+//
+//
+
+class MyObjEncoder: public Encoder<uint32_t> {
+
+public:
+	virtual ~MyObjEncoder(){}
+
+	void encode(const uint32_t &obj, cdap_rib::ser_obj_t& serobj){
+		//TODO fill in
+		(void)obj;
+		(void)serobj;
+	};
+
+	virtual void decode(const cdap_rib::ser_obj_t &serobj,
+							uint32_t& des_obj){
+		//TODO fill in
+		(void)serobj;
+		(void)des_obj;
+	};
+};
+
+class MyObj : public RIBObj<uint32_t> {
+
+public:
+	MyObj(uint32_t initial_value) : RIBObj<uint32_t>(initial_value){};
+	virtual ~MyObj(){};
+
+	const std::string& get_class() const{
+		return class_;
+	}
+
+	AbstractEncoder* get_encoder(){
+		return &encoder;
+	};
+
+	MyObjEncoder encoder;
+	static const std::string class_;
+};
+
+const std::string MyObj::class_ = "MyObj";
+
 //
 // End of mockups
 //
+
+//Objects
+MyObj *obj1, *obj2, *obj3, *obj4;
+std::string name1 = "/x";
+std::string name2 = "/y";
+std::string name3 = "/x/z";
+std::string name4 = "/x/z/t";
+
+//Setups
 
 void ribBasicOps::setUp(){
 }
@@ -323,6 +382,108 @@ void ribBasicOps::testAssociation(){
 		CPPUNIT_ASSERT_MESSAGE("Invalid exception throw during associate with a valid RIB handle but with the same version (already registered) succeeded", 0);
 	}
 }
+
+void ribBasicOps::testAddObj(){
+
+	MyObj* tmp;
+	rib_handle_t wrong_handle = 9999;
+	std::string invalid_name1 = "";
+	std::string invalid_name2 = "x";
+	std::string invalid_name3 = "/x/";
+	int64_t inst_id1, inst_id2, inst_id3;
+
+	obj1 = new MyObj(1);
+	obj2 = new MyObj(2);
+	obj3 = new MyObj(3);
+	obj4 = new MyObj(4);
+
+	//Attempt to add them into an invalid RIB handle
+	try{
+		ribd->addObjRIB(wrong_handle, name1, &obj1);
+		CPPUNIT_ASSERT_MESSAGE("Add obj to with an invalid RIB handle succeeded", 0);
+	}catch(eRIBNotFound& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception throw during Add obj with an invalid RIB handle", 0);
+	}
+
+	//Attempt to add them into a valid RIB handle but with invalid names
+	try{
+		ribd->addObjRIB(handle, invalid_name1, &obj1);
+		CPPUNIT_ASSERT_MESSAGE("Add obj to with an invalid name to RIB handle succeeded", 0);
+	}catch(eObjInvalidName& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception throw during Add obj with an invalid name to RIB handle", 0);
+	}
+	try{
+		ribd->addObjRIB(handle, invalid_name2, &obj1);
+		CPPUNIT_ASSERT_MESSAGE("Add obj to with an invalid name to RIB handle succeeded", 0);
+	}catch(eObjInvalidName& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception throw during Add obj with an invalid name to RIB handle", 0);
+	}
+	try{
+		ribd->addObjRIB(handle, invalid_name3, &obj1);
+		CPPUNIT_ASSERT_MESSAGE("Add obj to with an invalid name to RIB handle succeeded", 0);
+	}catch(eObjInvalidName& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception throw during Add obj with an invalid name to RIB handle", 0);
+	}
+
+	//Add the right object
+	try{
+		tmp = obj1;
+		inst_id1 = ribd->addObjRIB(handle, name1, &obj1);
+		CPPUNIT_ASSERT_MESSAGE("Did not set to null obj1", obj1 == NULL);
+		CPPUNIT_ASSERT_MESSAGE("Invalid instance id for obj1", inst_id1 == 1);
+		obj1 = tmp;
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Could not add obj with in a valid RIB", 0);
+	}
+
+	//Check that inst_id matches
+	CPPUNIT_ASSERT_MESSAGE("Insertion id and getObjInstId() mismatch", inst_id1 == ribd->getObjInstId(handle, name1));
+
+	//Check that utils work
+	try{
+		std::string ts;
+		CPPUNIT_ASSERT_MESSAGE("Insertion id and getObjInstId() mismatch", inst_id1 == ribd->getObjInstId(handle, name1));
+		CPPUNIT_ASSERT_MESSAGE("Class validation in getObjInstId() fails", inst_id1 == ribd->getObjInstId(handle, name1, MyObj::class_));
+		ts = ribd->getObjfqn(handle, inst_id1);
+		CPPUNIT_ASSERT_MESSAGE("FQN mismatch with getObjfqn()", name1 == ts);
+		ts = ribd->getObjfqn(handle, inst_id1, MyObj::class_);
+		CPPUNIT_ASSERT_MESSAGE("Class validation in getObjfqn() fails", name1 == ts);
+		ts = ribd->getObjClass(handle, inst_id1);
+		CPPUNIT_ASSERT_MESSAGE("Class of getObjClass() mismatch", ts.compare(MyObj::class_) == 0);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during utils API validation", 0);
+	}
+
+	tmp = obj2;
+	try{
+		ribd->addObjRIB(handle, name1, &obj2);
+		CPPUNIT_ASSERT_MESSAGE("Add overlapping object to RIB succeeded", 0);
+	}catch(eObjExists& e){
+		CPPUNIT_ASSERT_MESSAGE("Add overlapping object failed, but modified the object pointer",  tmp == obj2);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception thrown during Add obj with an overlapping object", 0);
+	}
+
+	//Add another valid object
+	try{
+		tmp = obj2;
+		inst_id2 = ribd->addObjRIB(handle, name2, &obj2);
+		CPPUNIT_ASSERT_MESSAGE("Did not set to null obj2", obj2 == NULL);
+		CPPUNIT_ASSERT_MESSAGE("Invalid instance id for obj2", inst_id2 == 2);
+		obj2 = tmp;
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Could not add obj2 with in a valid RIB", 0);
+	}
+}
+
 
 void ribBasicOps::testDeassociation(){
 
