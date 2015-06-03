@@ -1400,18 +1400,6 @@ void DIFConfiguration::set_address(unsigned int address) {
 	address_ = address;
 }
 
-const std::list<PolicyConfig>& DIFConfiguration::get_policies() {
-	return policies_;
-}
-
-void DIFConfiguration::set_policies(const std::list<PolicyConfig>& policies) {
-	policies_ = policies;
-}
-
-void DIFConfiguration::add_policy(const PolicyConfig& policy) {
-	policies_.push_back(policy);
-}
-
 const std::list<Parameter>& DIFConfiguration::get_parameters() const {
 	return parameters_;
 }

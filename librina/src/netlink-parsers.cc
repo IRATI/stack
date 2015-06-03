@@ -1347,31 +1347,6 @@ int parseListOfDIFConfigurationParameters(nlattr *nested,
 	return 0;
 }
 
-int parseListOfDIFConfigurationPolicySets(nlattr *nested,
-		DIFConfiguration * difConfiguration){
-	nlattr * nla;
-	int rem;
-	Parameter * parameter;
-
-	for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
-		     nla_ok(nla, rem);
-		     nla = nla_next(nla, &(rem))){
-		/* validate & parse attribute */
-		parameter = parseParameter(nla);
-		if (parameter == 0){
-			return -1;
-		}
-		difConfiguration->policy_sets.push_back(*parameter);
-		delete parameter;
-	}
-
-	if (rem > 0){
-		LOG_WARN("Missing bits to parse");
-	}
-
-	return 0;
-}
-
 int putNeighborObject(nl_msg* netlinkMessage,
                 const Neighbor& object) {
         struct nlattr *name, *supportingDIFName;
@@ -4110,7 +4085,7 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
                 const DIFConfiguration& object,
                 bool normalIPCProcess){
 	struct nlattr *parameters, *efcpConfig, *rmtConfig, *smConfig,
-		*etConfig, *faConfig, *nsmConfig, *policySets;
+		*etConfig, *faConfig, *nsmConfig;
 
 	if  (object.get_parameters().size() > 0) {
 	        if (!(parameters = nla_nest_start(
@@ -4184,18 +4159,6 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
 	        	goto nla_put_failure;
 	        }
 	        nla_nest_end(netlinkMessage, smConfig);
-
-                if  (object.policy_sets.size() > 0) {
-                        if (!(policySets = nla_nest_start(netlinkMessage,
-                                                        DCONF_ATTR_POLICY_SETS))) {
-                                goto nla_put_failure;
-                        }
-                        if (putListOfParameters(netlinkMessage,
-                                                object.policy_sets) < 0) {
-                                goto nla_put_failure;
-                        }
-                        nla_nest_end(netlinkMessage, policySets);
-                }
 
 	}
 
@@ -7127,15 +7090,6 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 		} else {
 			result->sm_configuration_ = *smConfig;
 			delete smConfig;
-		}
-	}
-
-	if (attrs[DCONF_ATTR_POLICY_SETS]) {
-		status = parseListOfDIFConfigurationPolicySets(
-				attrs[DCONF_ATTR_POLICY_SETS], result);
-		if (status != 0){
-			delete result;
-			return 0;
 		}
 	}
 
