@@ -59,7 +59,8 @@ class ribBasicOps : public CppUnit::TestFixture {
 	CPPUNIT_TEST( testCreation );
 	CPPUNIT_TEST( testAssociation );
 	CPPUNIT_TEST( testAddObj );
-	CPPUNIT_TEST( testObjOperations );
+	CPPUNIT_TEST( testConnect );
+	CPPUNIT_TEST( testDisconnect );
 	CPPUNIT_TEST( testRemoveObj );
 	CPPUNIT_TEST( testDeassociation );
 	CPPUNIT_TEST( testDestruction );
@@ -78,7 +79,8 @@ public:
 	void testCreation();
 	void testAssociation();
 	void testAddObj();
-	void testObjOperations();
+	void testConnect();
+	void testDisconnect();
 	void testRemoveObj();
 	void testDeassociation();
 	void testDestruction();
@@ -649,11 +651,51 @@ void ribBasicOps::testAddObj(){
 	}
 }
 
-void ribBasicOps::testObjOperations(){
+//////// CLIENT /////////////////////
+
+void ribBasicOps::testConnect(){
+
+	cdap_rib::con_handle_t con_ok, con_ko;
+	cdap_rib::flags_t flags_ok;
+
+	//Fill in the necessary stuff (only)
+	con_ok.port_ = 0x1;
+	con_ok.dest_.ae_name_ = ae;
+	con_ok.version_ = version;
+
+	//Fill in the necessary
+	con_ko.port_ = 0x1;
+	con_ko.dest_.ae_name_ = "invalid_ae";
+	con_ko.version_ = version;
+
+	//Invalid AE name
+	try{
+		rib_provider->open_connection(con_ko, flags_ok, 0x1);
+		CPPUNIT_ASSERT_MESSAGE("Connection with an invalid AE name has succeeded", 0);
+	}catch(eRIBNotFound&){
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception thrown during open_connection", 0);
+	}
 
 	//Fake stablishment of a connection
+	try{
+		rib_provider->open_connection(con_ok, flags_ok, 0x1);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during open_connection", 0);
+	}
+
+	//Retry; this should succeed (overwrite)
+	try{
+		rib_provider->open_connection(con_ok, flags_ok, 0x1);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during open_connection (retry)", 0);
+	}
+}
+
+void ribBasicOps::testDisconnect(){
 
 }
+//////// CLIENT /////////////////////
 
 void ribBasicOps::testRemoveObj(){
 
