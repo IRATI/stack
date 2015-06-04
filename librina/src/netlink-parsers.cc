@@ -6366,6 +6366,9 @@ RMTConfiguration * parseRMTConfigurationObject(nlattr *nested) {
         attr_policy[RMTC_ATTR_POLICY_SET].type = NLA_NESTED;
         attr_policy[RMTC_ATTR_POLICY_SET].minlen = 0;
         attr_policy[RMTC_ATTR_POLICY_SET].maxlen = 0;
+        attr_policy[RMTC_ATTR_PFT_CONF].type = NLA_NESTED;
+        attr_policy[RMTC_ATTR_PFT_CONF].minlen = 0;
+        attr_policy[RMTC_ATTR_PFT_CONF].maxlen = 0;
         struct nlattr *attrs[RMTC_ATTR_MAX + 1];
 
         int err = nla_parse_nested(attrs, RMTC_ATTR_MAX, nested, attr_policy);
