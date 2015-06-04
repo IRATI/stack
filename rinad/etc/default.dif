@@ -105,24 +105,24 @@
      "enrollmentTaskConfiguration" : {
         "policySet" : { 
            "name" : "default",
-           "version" : "1" 
-         }
-         "parameters" : [{
-             "name"  : "enrollTimeoutInMs",
-             "value" : "10000"
-           },{
-             "name"  : "watchdogPeriodInMs"
-             "value" : "30000"
-           },{
-             "name"  : "declaredDeadIntervalInMs"
-             "value" : "120000"
-           },{
-             "name"  : "neighborsEnrollerPeriodInMs"
-             "value" : "30000"
-           },{
-             "name"  : "maxEnrollmentRetries"
-             "value" : "3"
-           }]
+           "version" : "1", 
+           "parameters" : [{
+               "name"  : "enrollTimeoutInMs",
+               "value" : "10000"
+             },{
+               "name"  : "watchdogPeriodInMs",
+               "value" : "30000"
+             },{
+               "name"  : "declaredDeadIntervalInMs",
+               "value" : "120000"
+             },{
+               "name"  : "neighborsEnrollerPeriodInMs",
+               "value" : "30000"
+             },{
+               "name"  : "maxEnrollmentRetries",
+               "value" : "3"
+             }]
+        }
      },
      "flowAllocatorConfiguration" : { 
          "policySet" : { 
@@ -146,36 +146,36 @@
          "pduftgConfiguration" : {    
            "policySet" : {
              "name" : "default",
-             "version" : "0",
+             "version" : "0"
            }
          }
      },
      "routingConfiguration" : {
          "policySet" : {
            "name" : "link-state",
-           "version" : "1"
+           "version" : "1",
            "parameters" : [{
              "name"  : "objectMaximumAge",
              "value" : "10000"
            },{
-             "name"  : "waitUntilReadCDAP"
+             "name"  : "waitUntilReadCDAP",
              "value" : "5001"
            },{
-             "name"  : "waitUntilError"
+             "name"  : "waitUntilError",
              "value" : "5001"
            },{
-             "name"  : "waitUntilPDUFTComputation"
+             "name"  : "waitUntilPDUFTComputation",
              "value" : "103"
            },{
-             "name"  : "waitUntilFSODBPropagation"
+             "name"  : "waitUntilFSODBPropagation",
              "value" : "101"
            },{
-             "name"  : "waitUntilAgeIncrement"
+             "name"  : "waitUntilAgeIncrement",
              "value" : "997" 
            },{
-             "name"  : "routingAlgorithm"
+             "name"  : "routingAlgorithm",
              "value" : "Dijkstra"
            }]
-         }
-     },
+     }
   }
+}
