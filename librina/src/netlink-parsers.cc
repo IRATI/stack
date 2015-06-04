@@ -3695,29 +3695,50 @@ int putEFCPConfigurationObject(nl_msg* netlinkMessage,
         return -1;
 }
 
+int putPFTConfigurationObject(nl_msg* netlinkMessage,
+                const PFTConfiguration& object){
+        struct nlattr *pftPolicy;
+
+        if (!(pftPolicy = nla_nest_start(
+                        netlinkMessage, PFTC_ATTR_POLICY_SET))) {
+                goto nla_put_failure;
+        }
+        if (putPolicyConfigObject(netlinkMessage,
+                        object.policy_set_) < 0) {
+                goto nla_put_failure;
+        }
+        nla_nest_end(netlinkMessage, pftPolicy);
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building PFTConfiguration Netlink object");
+        return -1;
+}
+
 int putRMTConfigurationObject(nl_msg* netlinkMessage,
                 const RMTConfiguration& object){
-        struct nlattr *pfPolicy, *rmtPolicy;
-
-        if (!(pfPolicy = nla_nest_start(
-                        netlinkMessage, RMTC_ATTR_PFT_POLICY_SET))) {
-                goto nla_put_failure;
-        }
-        if (putPolicyConfigObject(netlinkMessage,
-                        object.pft_policy_set_) < 0) {
-                goto nla_put_failure;
-        }
-        nla_nest_end(netlinkMessage, pfPolicy);
+        struct nlattr *pftConf, *rmtPolicy;
 
         if (!(rmtPolicy = nla_nest_start(
-                        netlinkMessage, RMTC_ATTR_RMT_POLICY_SET))) {
+                        netlinkMessage, RMTC_ATTR_POLICY_SET))) {
                 goto nla_put_failure;
         }
         if (putPolicyConfigObject(netlinkMessage,
-                        object.rmt_policy_set_) < 0) {
+                        object.policy_set_) < 0) {
                 goto nla_put_failure;
         }
         nla_nest_end(netlinkMessage, rmtPolicy);
+
+        if (!(pftConf = nla_nest_start(
+                        netlinkMessage, RMTC_ATTR_PFT_CONF))) {
+                goto nla_put_failure;
+        }
+        if (putPFTConfigurationObject(netlinkMessage,
+                        object.pft_conf_) < 0) {
+                goto nla_put_failure;
+        }
+        nla_nest_end(netlinkMessage, pftConf);
 
         return 0;
 
@@ -6338,14 +6359,44 @@ EFCPConfiguration * parseEFCPConfigurationObject(nlattr *nested) {
         return result;
 }
 
+PFTConfiguration * parsePFTConfigurationObject(nlattr *nested) {
+        struct nla_policy attr_policy[PFTC_ATTR_MAX + 1];
+        attr_policy[PFTC_ATTR_POLICY_SET].type = NLA_NESTED;
+        attr_policy[PFTC_ATTR_POLICY_SET].minlen = 0;
+        attr_policy[PFTC_ATTR_POLICY_SET].maxlen = 0;
+        struct nlattr *attrs[PFTC_ATTR_MAX + 1];
+
+        int err = nla_parse_nested(attrs, PFTC_ATTR_MAX, nested, attr_policy);
+        if (err < 0) {
+                LOG_ERR(
+                        "Error parsing PFTConfiguration information from Netlink message: %d",
+                        err);
+                return 0;
+        }
+
+        PFTConfiguration * result = new PFTConfiguration();
+        PolicyConfig * pftps;
+
+        if (attrs[PFTC_ATTR_POLICY_SET]) {
+        	pftps = parsePolicyConfigObject(
+                                attrs[PFTC_ATTR_POLICY_SET]);
+                if (pftps == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->policy_set_ = *pftps;
+                        delete pftps;
+                }
+        }
+
+        return result;
+}
+
 RMTConfiguration * parseRMTConfigurationObject(nlattr *nested) {
         struct nla_policy attr_policy[RMTC_ATTR_MAX + 1];
-        attr_policy[RMTC_ATTR_PFT_POLICY_SET].type = NLA_NESTED;
-        attr_policy[RMTC_ATTR_PFT_POLICY_SET].minlen = 0;
-        attr_policy[RMTC_ATTR_PFT_POLICY_SET].maxlen = 0;
-        attr_policy[RMTC_ATTR_RMT_POLICY_SET].type = NLA_NESTED;
-        attr_policy[RMTC_ATTR_RMT_POLICY_SET].minlen = 0;
-        attr_policy[RMTC_ATTR_RMT_POLICY_SET].maxlen = 0;
+        attr_policy[RMTC_ATTR_POLICY_SET].type = NLA_NESTED;
+        attr_policy[RMTC_ATTR_POLICY_SET].minlen = 0;
+        attr_policy[RMTC_ATTR_POLICY_SET].maxlen = 0;
         struct nlattr *attrs[RMTC_ATTR_MAX + 1];
 
         int err = nla_parse_nested(attrs, RMTC_ATTR_MAX, nested, attr_policy);
@@ -6357,30 +6408,30 @@ RMTConfiguration * parseRMTConfigurationObject(nlattr *nested) {
         }
 
         RMTConfiguration * result = new RMTConfiguration();
-        PolicyConfig * pftps;
         PolicyConfig * rmtps;
+        PFTConfiguration * pftConf;
 
-        if (attrs[RMTC_ATTR_PFT_POLICY_SET]) {
-        	pftps = parsePolicyConfigObject(
-                                attrs[RMTC_ATTR_PFT_POLICY_SET]);
-                if (pftps == 0) {
-                        delete result;
-                        return 0;
-                } else {
-                        result->pft_policy_set_ = *pftps;
-                        delete pftps;
-                }
-        }
-
-        if (attrs[RMTC_ATTR_RMT_POLICY_SET]) {
+        if (attrs[RMTC_ATTR_POLICY_SET]) {
         	rmtps = parsePolicyConfigObject(
-                                attrs[RMTC_ATTR_RMT_POLICY_SET]);
+                                attrs[RMTC_ATTR_POLICY_SET]);
                 if (rmtps == 0) {
                         delete result;
                         return 0;
                 } else {
-                        result->rmt_policy_set_ = *rmtps;
+                        result->policy_set_ = *rmtps;
                         delete rmtps;
+                }
+        }
+
+        if (attrs[RMTC_ATTR_PFT_CONF]) {
+        	pftConf = parsePFTConfigurationObject(
+                                attrs[RMTC_ATTR_PFT_CONF]);
+                if (pftConf == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->pft_conf_ = *pftConf;
+                        delete pftConf;
                 }
         }
 

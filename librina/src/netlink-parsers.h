@@ -486,10 +486,18 @@ int putEFCPConfigurationObject(nl_msg* netlinkMessage,
 
 EFCPConfiguration * parseEFCPConfigurationObject(nlattr *nested);
 
+/* PFTConfiguration CLASS */
+enum PFTConfigurationAttributes {
+        PFTC_ATTR_POLICY_SET = 1,
+        __PFTC_ATTR_MAX,
+};
+
+#define PFTC_ATTR_MAX (__PFTC_ATTR_MAX -1)
+
 /* RMTConfiguration CLASS */
 enum RMTConfigurationAttributes {
-        RMTC_ATTR_PFT_POLICY_SET = 1,
-        RMTC_ATTR_RMT_POLICY_SET,
+        RMTC_ATTR_POLICY_SET = 1,
+        RMTC_ATTR_PFT_CONF,
         __RMTC_ATTR_MAX,
 };
 

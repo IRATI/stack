@@ -701,26 +701,31 @@ public:
         PolicyConfig pduftg_policy_set_;
 };
 
+/// Contains the configuration data of the PDU Forwarding Table for a particular
+/// DIF
+class PFTConfiguration {
+public:
+        PFTConfiguration();
+        std::string toString();
+
+        /// Set of policies to define PDU Forwarding's behaviour.
+        // pft_nhop
+        PolicyConfig policy_set_;
+};
+
 /// Contains the configuration data of the Relaying and Multiplexing Task for a
 /// particular DIF
 class RMTConfiguration {
 public:
         RMTConfiguration();
         std::string toString();
-#ifndef SWIG
-        const PolicyConfig& get_rmt_policy_set() const;
-        void set_rmt_policy_set(const PolicyConfig& rmt_policy_set);
-        const PolicyConfig& get_pft_policy_set() const;
-        void set_pft_policy_set(const PolicyConfig& pft_policy_set);
-#endif
 
         /// Set of policies to define RMT's behaviour.
-        // QMonitor Policy, MaxQ Policy and Scheduling Policy
-        PolicyConfig rmt_policy_set_;
+        /// QMonitor Policy, MaxQ Policy and Scheduling Policy
+        PolicyConfig policy_set_;
 
-        /// Set of policies to define PDU Forwarding's behaviour.
-        // pft_nhop
-        PolicyConfig pft_policy_set_;
+        /// Configuration of the PFT
+        PFTConfiguration pft_conf_;
 };
 
 /// Link State routing configuration

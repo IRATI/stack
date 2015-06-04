@@ -91,11 +91,13 @@
     	 "organization" : "IRATI"
       } ], 
      "rmtConfiguration" : {
-        "pftPolicySet" : {
-          "name" : "default",
-          "version" : "0"
+        "pftConfiguration" : {     
+          "policySet" : {
+            "name" : "default",
+            "version" : "0"
+          }
         },
-        "rmtPolicySet" : {
+        "policySet" : {
           "name" : "default",
           "version" : "0"
         }
@@ -126,9 +128,11 @@
            }
      },
      "resourceAllocatorConfiguration" : {
-         "pduftgPolicySet" : {
-           "name" : "default",
-           "version" : "0",
+         "pduftgConfiguration" : {    
+           "policySet" : {
+             "name" : "default",
+             "version" : "0",
+           }
          }
      },
      "routingConfiguration" : {

@@ -1196,37 +1196,33 @@ std::string FlowAllocatorConfiguration::toString()
 	return ss.str();
 }
 
+// CLASS PFTConfiguration
+PFTConfiguration::PFTConfiguration(){
+	policy_set_ = PolicyConfig();
+}
+
+std::string PFTConfiguration::toString()
+{
+	std::stringstream ss;
+	ss << "Selected PFT Policy set. Name: " << policy_set_.name_ ;
+	ss << "; Version: " << policy_set_.version_ << std::endl;
+
+	return ss.str();
+}
+
 // CLASS RMTConfiguration
 RMTConfiguration::RMTConfiguration(){
-	rmt_policy_set_ = PolicyConfig();
-	pft_policy_set_ = PolicyConfig();
+	policy_set_ = PolicyConfig();
 }
 
 std::string RMTConfiguration::toString()
 {
 	std::stringstream ss;
-	ss << "Selected RMT Policy set. Name: " << rmt_policy_set_.name_ ;
-	ss << "; Version: " << rmt_policy_set_.version_ << std::endl;
-	ss << "PDU Forwarding Policy set. Name: " << pft_policy_set_.name_ ;
-	ss << "; Version: " << pft_policy_set_.version_ << std::endl;
+	ss << "Selected RMT Policy set. Name: " << policy_set_.name_ ;
+	ss << "; Version: " << policy_set_.version_ << std::endl;
+	ss << pft_conf_.toString() << std::endl;
 
 	return ss.str();
-}
-
-const PolicyConfig& RMTConfiguration::get_rmt_policy_set() const {
-	return rmt_policy_set_;
-}
-
-void RMTConfiguration::set_rmt_policy_set(const PolicyConfig& rmt_policy_set) {
-	rmt_policy_set_ = rmt_policy_set;
-}
-
-const PolicyConfig& RMTConfiguration::get_pft_policy_set() const {
-	return pft_policy_set_;
-}
-
-void RMTConfiguration::set_pft_policy_set(const PolicyConfig& rmt_policy_set) {
-	pft_policy_set_ = rmt_policy_set;
 }
 
 // CLASS LinkStateRouting Configuraiton
