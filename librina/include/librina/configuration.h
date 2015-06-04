@@ -690,15 +690,25 @@ public:
         PolicyConfig seq_rollover_policy_;
 };
 
-/// Contains the configuration data of the Resource Allocator, so far its policy
+/// Contains the configuration data of the PDUFTG, so far its policy
 /// set
+class PDUFTGConfiguration {
+public:
+        PDUFTGConfiguration();
+        std::string toString();
+
+        /// Set of policies to define the PDUFTG's behaviour.
+        PolicyConfig policy_set_;
+};
+
+/// Contains the configuration data of the Resource Allocator
 class ResourceAllocatorConfiguration {
 public:
         ResourceAllocatorConfiguration();
         std::string toString();
 
         /// Set of policies to define the Resource Allocator's behaviour.
-        PolicyConfig pduftg_policy_set_;
+        PDUFTGConfiguration pduftg_conf_;
 };
 
 /// Contains the configuration data of the PDU Forwarding Table for a particular

@@ -649,9 +649,22 @@ int putSecurityManagerConfigurationObject(nl_msg* netlinkMessage,
 
 SecurityManagerConfiguration * parseSecurityManagerConfigurationObject(nlattr *nested);
 
+/* PDUFTGConfiguration CLASS */
+enum PDUFTGConfigurationAttributes {
+	PDUFTGC_POLICY_SET = 1,
+	__PDUFTGC_ATTR_MAX,
+};
+
+#define PDUFTGC_ATTR_MAX (__PDUFTGC_ATTR_MAX -1)
+
+int putPDUFTGConfigurationObject(nl_msg* netlinkMessage,
+		const PDUFTGConfiguration& object);
+
+PDUFTGConfiguration * parsePDUFTGConfigurationObject(nlattr *nested);
+
 /* ResourceAllocatorConfiguration CLASS */
 enum ResourceAllocatorConfigurationAttributes {
-	RAC_PDUFTG_POLICY_SET = 1,
+	RAC_PDUFTG_CONF = 1,
 	__RAC_ATTR_MAX,
 };
 

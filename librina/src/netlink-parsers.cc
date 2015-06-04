@@ -4081,20 +4081,42 @@ int putSecurityManagerConfigurationObject(nl_msg* netlinkMessage,
 	return -1;
 }
 
-int putResourceAllocatorConfigurationObject(nl_msg* netlinkMessage,
-		const ResourceAllocatorConfiguration& object)
+int putPDUFTGConfigurationObject(nl_msg* netlinkMessage,
+		const PDUFTGConfiguration& object)
 {
 	struct nlattr *pduftgPolicySet;
 
 	if (!(pduftgPolicySet = nla_nest_start(
-			netlinkMessage, RAC_PDUFTG_POLICY_SET))) {
+			netlinkMessage, PDUFTGC_POLICY_SET))) {
 		goto nla_put_failure;
 	}
 	if (putPolicyConfigObject(netlinkMessage,
-			object.pduftg_policy_set_) < 0) {
+			object.policy_set_) < 0) {
 		goto nla_put_failure;
 	}
 	nla_nest_end(netlinkMessage, pduftgPolicySet);
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building PDUFTGConfiguration Netlink object");
+	return -1;
+}
+
+int putResourceAllocatorConfigurationObject(nl_msg* netlinkMessage,
+		const ResourceAllocatorConfiguration& object)
+{
+	struct nlattr *pduftgConf;
+
+	if (!(pduftgConf = nla_nest_start(
+			netlinkMessage, RAC_PDUFTG_CONF))) {
+		goto nla_put_failure;
+	}
+	if (putPDUFTGConfigurationObject(netlinkMessage,
+			object.pduftg_conf_) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, pduftgConf);
 
 	return 0;
 
@@ -7021,12 +7043,45 @@ SecurityManagerConfiguration * parseSecurityManagerConfigurationObject(nlattr *n
 	return result;
 }
 
+PDUFTGConfiguration * parsePDUFTGConfigurationObject(nlattr *nested)
+{
+	struct nla_policy attr_policy[PDUFTGC_ATTR_MAX + 1];
+	attr_policy[PDUFTGC_POLICY_SET].type = NLA_NESTED;
+	attr_policy[PDUFTGC_POLICY_SET].minlen = 0;
+	attr_policy[PDUFTGC_POLICY_SET].maxlen = 0;
+	struct nlattr *attrs[PDUFTGC_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, PDUFTGC_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing PDUFTGConfiguration information from Netlink message: %d",
+			err);
+		return 0;
+	}
+
+	PDUFTGConfiguration * result = new PDUFTGConfiguration();
+	PolicyConfig * pduftgPolicySet;
+
+	if (attrs[PDUFTGC_POLICY_SET]) {
+		pduftgPolicySet = parsePolicyConfigObject(
+				attrs[PDUFTGC_POLICY_SET]);
+		if (pduftgPolicySet == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->policy_set_ = *pduftgPolicySet;
+			delete pduftgPolicySet;
+		}
+	}
+
+        return result;
+}
+
 ResourceAllocatorConfiguration * parseResourceAllocatorConfigurationObject(nlattr *nested)
 {
 	struct nla_policy attr_policy[RAC_ATTR_MAX + 1];
-	attr_policy[RAC_PDUFTG_POLICY_SET].type = NLA_NESTED;
-	attr_policy[RAC_PDUFTG_POLICY_SET].minlen = 0;
-	attr_policy[RAC_PDUFTG_POLICY_SET].maxlen = 0;
+	attr_policy[RAC_PDUFTG_CONF].type = NLA_NESTED;
+	attr_policy[RAC_PDUFTG_CONF].minlen = 0;
+	attr_policy[RAC_PDUFTG_CONF].maxlen = 0;
 	struct nlattr *attrs[RAC_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, RAC_ATTR_MAX, nested, attr_policy);
@@ -7037,17 +7092,17 @@ ResourceAllocatorConfiguration * parseResourceAllocatorConfigurationObject(nlatt
 	}
 
 	ResourceAllocatorConfiguration * result = new ResourceAllocatorConfiguration();
-	PolicyConfig * pduftgPolicySet;
+	PDUFTGConfiguration * pduftgConf;
 
-	if (attrs[RAC_PDUFTG_POLICY_SET]) {
-		pduftgPolicySet = parsePolicyConfigObject(
-				attrs[RAC_PDUFTG_POLICY_SET]);
-		if (pduftgPolicySet == 0) {
+	if (attrs[RAC_PDUFTG_CONF]) {
+		pduftgConf = parsePDUFTGConfigurationObject(
+				attrs[RAC_PDUFTG_CONF]);
+		if (pduftgConf == 0) {
 			delete result;
 			return 0;
 		} else {
-			result->pduftg_policy_set_ = *pduftgPolicySet;
-			delete pduftgPolicySet;
+			result->pduftg_conf_ = *pduftgConf;
+			delete pduftgConf;
 		}
 	}
 

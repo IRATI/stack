@@ -1113,6 +1113,17 @@ std::string RoutingConfiguration::toString()
 	return ss.str();
 }
 
+// CLASS PDUFTGConfiguration
+PDUFTGConfiguration::PDUFTGConfiguration(){
+}
+
+std::string PDUFTGConfiguration::toString()
+{
+	std::stringstream ss;
+	ss << "Selected PDU Forwarding Table Generator Policy Set." << policy_set_.toString() << std::endl;
+
+	return ss.str();
+}
 
 // CLASS ResourceAllocatorConfiguration
 ResourceAllocatorConfiguration::ResourceAllocatorConfiguration(){
@@ -1121,7 +1132,8 @@ ResourceAllocatorConfiguration::ResourceAllocatorConfiguration(){
 std::string ResourceAllocatorConfiguration::toString()
 {
 	std::stringstream ss;
-	ss << "Selected PDU Forwarding Table Generator Policy Set." << pduftg_policy_set_.toString() ;
+        ss << "Resource Allocator Configuration";
+	ss << pduftg_conf_.toString() << std::endl;
 
 	return ss.str();
 }
