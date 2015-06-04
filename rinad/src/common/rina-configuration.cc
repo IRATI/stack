@@ -214,6 +214,10 @@ std::string DIFTemplate::toString()
 		ss <<faConfiguration.toString();
 		ss << std::endl;
 
+		ss << "** ROUTING ** "<<std::endl;
+		ss <<routingConfiguration.toString();
+		ss << std::endl;
+
 		ss << "** RESOURCE ALLOCATOR ** "<<std::endl;
 		ss <<raConfiguration.toString();
 		ss << std::endl;

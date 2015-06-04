@@ -651,10 +651,22 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 		rina::FlowAllocatorConfiguration fac;
 
 		parse_policy(fa_conf,
-			     "PolicySet",
+			     "policySet",
 			     fac.policy_set_);
 
 		dif_template->faConfiguration = fac;
+	}
+
+	// routingConfiguration;
+	Json::Value routing_conf = root["routingConfiguration"];
+	if (fa_conf != 0) {
+		rina::RoutingConfiguration rc;
+
+		parse_policy(fa_conf,
+			     "policySet",
+			     rc.policy_set_);
+
+		dif_template->raConfiguration = rc;
 	}
 
 	// resourceAllocatorConfiguration;
@@ -675,7 +687,7 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 		rina::NamespaceManagerConfiguration nsmc;
 
 		parse_policy(nsm_conf,
-			     "PolicySet",
+			     "policySet",
 			     nsmc.policy_set_);
 
 		dif_template->nsmConfiguration = nsmc;
@@ -687,33 +699,10 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 		rina::SecurityManagerConfiguration smc;
 
 		parse_policy(sm_conf,
-			     "PolicySet",
+			     "policySet",
 			     smc.policy_set_);
 
 		dif_template->smConfiguration = smc;
-	}
-
-	// NMinusOneFlowsConfiguration
-	//       nMinusOneFlowsConfiguration;
-	Json::Value flow_conf = root["nMinusOneFlowsConfiguration"];
-	if (flow_conf != 0) {
-		rinad::NMinusOneFlowsConfiguration fc;
-
-		fc.managementFlowQoSId =
-				flow_conf.get("managementFlowQosId",
-						fc.managementFlowQoSId)
-						.asInt();
-
-		Json::Value data_flow =
-				flow_conf["dataFlowsQosIds"];
-		for (unsigned int j = 0;
-				j < data_flow.size();
-				j++) {
-			fc.dataFlowsQoSIds.push_back
-			(data_flow[j].asInt());
-		}
-
-		dif_template->nMinusOneFlowsConfiguration = fc;
 	}
 
 	// std::list<KnownIPCProcessAddress>

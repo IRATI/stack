@@ -4061,7 +4061,8 @@ int putSecurityManagerConfigurationObject(nl_msg* netlinkMessage,
 }
 
 int putResourceAllocatorConfigurationObject(nl_msg* netlinkMessage,
-		const ResourceAllocatorConfiguration& object){
+		const ResourceAllocatorConfiguration& object)
+{
 	struct nlattr *pduftgPolicySet;
 
 	if (!(pduftgPolicySet = nla_nest_start(
@@ -4081,11 +4082,33 @@ int putResourceAllocatorConfigurationObject(nl_msg* netlinkMessage,
 	return -1;
 }
 
+int putRoutingConfigurationObject(nl_msg* netlinkMessage,
+				  const RoutingConfiguration& object)
+{
+	struct nlattr *ps;
+
+	if (!(ps = nla_nest_start(
+			netlinkMessage, ROUTE_POLICY_SET))) {
+		goto nla_put_failure;
+	}
+	if (putPolicyConfigObject(netlinkMessage,
+				  object.policy_set_) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, ps);
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building RoutingConfiguration Netlink object");
+	return -1;
+}
+
 int putDIFConfigurationObject(nl_msg* netlinkMessage,
                 const DIFConfiguration& object,
                 bool normalIPCProcess){
 	struct nlattr *parameters, *efcpConfig, *rmtConfig, *smConfig,
-		*etConfig, *faConfig, *nsmConfig;
+		*etConfig, *faConfig, *nsmConfig, *raConfig, *routConfig;
 
 	if  (object.get_parameters().size() > 0) {
 	        if (!(parameters = nla_nest_start(
@@ -4160,6 +4183,25 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
 	        }
 	        nla_nest_end(netlinkMessage, smConfig);
 
+	        if (!(raConfig = nla_nest_start(
+	        		netlinkMessage, DCONF_ATTR_RA_CONF))) {
+	        	goto nla_put_failure;
+	        }
+	        if (putResourceAllocatorConfigurationObject(netlinkMessage,
+	        		object.ra_configuration_) < 0) {
+	        	goto nla_put_failure;
+	        }
+	        nla_nest_end(netlinkMessage, raConfig);
+
+	        if (!(routConfig = nla_nest_start(
+	        		netlinkMessage, DCONF_ATTR_ROUTING_CONF))) {
+	        	goto nla_put_failure;
+	        }
+	        if (putRoutingConfigurationObject(netlinkMessage,
+	        		object.routing_configuration_) < 0) {
+	        	goto nla_put_failure;
+	        }
+	        nla_nest_end(netlinkMessage, routConfig);
 	}
 
 	NLA_PUT_U32(netlinkMessage, DCONF_ATTR_ADDRESS,
@@ -6928,7 +6970,8 @@ SecurityManagerConfiguration * parseSecurityManagerConfigurationObject(nlattr *n
 	return result;
 }
 
-ResourceAllocatorConfiguration * parseResourceAllocatorConfigurationObject(nlattr *nested) {
+ResourceAllocatorConfiguration * parseResourceAllocatorConfigurationObject(nlattr *nested)
+{
 	struct nla_policy attr_policy[RAC_ATTR_MAX + 1];
 	attr_policy[RAC_PDUFTG_POLICY_SET].type = NLA_NESTED;
 	attr_policy[RAC_PDUFTG_POLICY_SET].minlen = 0;
@@ -6937,9 +6980,8 @@ ResourceAllocatorConfiguration * parseResourceAllocatorConfigurationObject(nlatt
 
 	int err = nla_parse_nested(attrs, RAC_ATTR_MAX, nested, attr_policy);
 	if (err < 0) {
-		LOG_ERR(
-				"Error parsing ResourceAllocatorConfiguration information from Netlink message: %d",
-				err);
+		LOG_ERR("Error parsing ResourceAllocatorConfiguration information from Netlink message: %d",
+			err);
 		return 0;
 	}
 
@@ -6957,6 +6999,40 @@ ResourceAllocatorConfiguration * parseResourceAllocatorConfigurationObject(nlatt
 			delete pduftgPolicySet;
 		}
 	}
+
+        return result;
+}
+
+RoutingConfiguration * parseRoutingConfigurationObject(nlattr *nested)
+{
+	struct nla_policy attr_policy[ROUTE_ATTR_MAX + 1];
+	attr_policy[ROUTE_POLICY_SET].type = NLA_NESTED;
+	attr_policy[ROUTE_POLICY_SET].minlen = 0;
+	attr_policy[ROUTE_POLICY_SET].maxlen = 0;
+	struct nlattr *attrs[ROUTE_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, ROUTE_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing RoutingConfiguration information from Netlink message: %d",
+			err);
+		return 0;
+	}
+
+	RoutingConfiguration * result = new RoutingConfiguration();
+	PolicyConfig * policySet;
+
+	if (attrs[ROUTE_POLICY_SET]) {
+		policySet = parsePolicyConfigObject(
+				attrs[ROUTE_POLICY_SET]);
+		if (policySet == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->policy_set_ = *policySet;
+			delete policySet;
+		}
+	}
+
         return result;
 }
 
@@ -6986,9 +7062,12 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 	attr_policy[DCONF_ATTR_SM_CONF].type = NLA_NESTED;
 	attr_policy[DCONF_ATTR_SM_CONF].minlen = 0;
 	attr_policy[DCONF_ATTR_SM_CONF].maxlen = 0;
-	attr_policy[DCONF_ATTR_POLICY_SETS].type = NLA_NESTED;
-	attr_policy[DCONF_ATTR_POLICY_SETS].minlen = 0;
-	attr_policy[DCONF_ATTR_POLICY_SETS].maxlen = 0;
+	attr_policy[DCONF_ATTR_RA_CONF].type = NLA_NESTED;
+	attr_policy[DCONF_ATTR_RA_CONF].minlen = 0;
+	attr_policy[DCONF_ATTR_RA_CONF].maxlen = 0;
+	attr_policy[DCONF_ATTR_ROUTING_CONF].type = NLA_NESTED;
+	attr_policy[DCONF_ATTR_ROUTING_CONF].minlen = 0;
+	attr_policy[DCONF_ATTR_ROUTING_CONF].maxlen = 0;
 	struct nlattr *attrs[DCONF_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, DCONF_ATTR_MAX, nested, attr_policy);
@@ -7005,6 +7084,8 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 	EnrollmentTaskConfiguration * etConfig;
 	NamespaceManagerConfiguration * nsmConfig;
 	SecurityManagerConfiguration * smConfig;
+	ResourceAllocatorConfiguration * raConfig;
+	RoutingConfiguration * routingConfig;
 
 	int status = 0;
 	if (attrs[DCONF_ATTR_PARAMETERS]) {
@@ -7090,6 +7171,30 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 		} else {
 			result->sm_configuration_ = *smConfig;
 			delete smConfig;
+		}
+	}
+
+	if (attrs[DCONF_ATTR_RA_CONF]) {
+		raConfig = parseResourceAllocatorConfigurationObject(
+				attrs[DCONF_ATTR_RA_CONF]);
+		if (raConfig == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->ra_configuration_ = *raConfig;
+			delete raConfig;
+		}
+	}
+
+	if (attrs[DCONF_ATTR_ROUTING_CONF]) {
+		routingConfig = parseRoutingConfigurationObject(
+				attrs[DCONF_ATTR_ROUTING_CONF]);
+		if (routingConfig == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->routing_configuration_ = *routingConfig;
+			delete routingConfig;
 		}
 	}
 

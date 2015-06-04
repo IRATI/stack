@@ -636,7 +636,12 @@ enum SecurityManagerConfigurationAttributes {
 
 #define SECMANC_ATTR_MAX (__SECMANC_ATTR_MAX -1)
 
-/* SecurityManagerConfiguration CLASS */
+int putSecurityManagerConfigurationObject(nl_msg* netlinkMessage,
+		const SecurityManagerConfiguration& object);
+
+SecurityManagerConfiguration * parseSecurityManagerConfigurationObject(nlattr *nested);
+
+/* ResourceAllocatorConfiguration CLASS */
 enum ResourceAllocatorConfigurationAttributes {
 	RAC_PDUFTG_POLICY_SET = 1,
 	__RAC_ATTR_MAX,
@@ -644,10 +649,23 @@ enum ResourceAllocatorConfigurationAttributes {
 
 #define RAC_ATTR_MAX (__RAC_ATTR_MAX -1)
 
-int putSecurityManagerConfigurationObject(nl_msg* netlinkMessage,
-		const SecurityManagerConfiguration& object);
+int putResourceAllocatorConfigurationObject(nl_msg* netlinkMessage,
+		const ResourceAllocatorConfiguration& object);
 
-SecurityManagerConfiguration * parseSecurityManagerConfigurationObject(nlattr *nested);
+ResourceAllocatorConfiguration * parseResourceAllocatorConfigurationObject(nlattr *nested);
+
+/* RoutingConfiguration CLASS */
+enum RoutingConfigurationAttributes {
+	ROUTE_POLICY_SET = 1,
+	__ROUTE_ATTR_MAX,
+};
+
+#define ROUTE_ATTR_MAX (__ROUTE_ATTR_MAX -1)
+
+int putRoutingConfigurationObject(nl_msg* netlinkMessage,
+		const RoutingConfiguration& object);
+
+RoutingConfiguration * parseRoutingConfigurationObject(nlattr *nested);
 
 /* DIF Configuration CLASS */
 enum DIFConfigurationAttributes {
@@ -659,7 +677,8 @@ enum DIFConfigurationAttributes {
 	DCONF_ATTR_ET_CONF,
 	DCONF_ATTR_NSM_CONF,
 	DCONF_ATTR_SM_CONF,
-        DCONF_ATTR_POLICY_SETS,
+	DCONF_ATTR_RA_CONF,
+	DCONF_ATTR_ROUTING_CONF,
 	__DCONF_ATTR_MAX,
 };
 

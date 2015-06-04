@@ -93,9 +93,7 @@ struct DIFTemplate {
         rina::NamespaceManagerConfiguration nsmConfiguration;
         rina::SecurityManagerConfiguration smConfiguration;
         rina::ResourceAllocatorConfiguration raConfiguration;
-
-        /* Only for normal DIFs */
-        NMinusOneFlowsConfiguration nMinusOneFlowsConfiguration;
+        rina::RoutingConfiguration routingConfiguration;
 
         /*
          * The addresses of the known IPC Process (apname, address)
