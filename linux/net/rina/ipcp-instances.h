@@ -98,13 +98,20 @@ struct efcp_config {
         struct policy * unknown_flow;
 };
 
+/* Represents the configuration of the PFT */
+struct pft_config {
+	/* The PS name for the PDU Forwarding Table (Next hop) */
+	struct policy * policy_set;
+};
+
 /* Represents the configuration of the RMT */
 struct rmt_config {
-	/* The PS name for the PDU Forwarding Table (Next hop) */
-	struct policy * pft_policy_set;
-
 	/* The PS name for the RMT */
-	struct policy * rmt_policy_set;
+	struct policy * policy_set;
+
+	/* The configuration of the PDU Forwarding Table subcomponent */
+	struct pft_config * pft_conf;
+
 };
 
 /* Represents a DIF configuration (policies, parameters, etc) */

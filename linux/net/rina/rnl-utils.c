@@ -1359,16 +1359,44 @@ static int parse_efcp_config(struct nlattr *      efcp_config_attr,
         return -1;
 }
 
+static int parse_pft_config(struct nlattr *     pft_config_attr,
+                            struct pft_config * pft_config)
+{
+        struct nla_policy attr_policy[PFTC_ATTR_MAX + 1];
+        struct nlattr *   attrs[PFTC_ATTR_MAX + 1];
+
+        attr_policy[PFTC_ATTR_POLICY_SET].type = NLA_NESTED;
+        attr_policy[PFTC_ATTR_POLICY_SET].len  = 0;
+
+        if (nla_parse_nested(attrs,
+        		     PFTC_ATTR_MAX,
+                             pft_config_attr,
+                             attr_policy) < 0)
+                goto parse_fail;
+
+        if (attrs[PFTC_ATTR_POLICY_SET]) {
+                if (parse_policy(attrs[PFTC_ATTR_POLICY_SET],
+                                 pft_config->policy_set))
+                        goto parse_fail;
+        }
+
+        return 0;
+
+ parse_fail:
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("pft config attributes"));
+        return -1;
+}
+
 static int parse_rmt_config(struct nlattr *     rmt_config_attr,
                             struct rmt_config * rmt_config)
 {
         struct nla_policy attr_policy[RMTC_ATTR_MAX + 1];
         struct nlattr *   attrs[RMTC_ATTR_MAX + 1];
 
-        attr_policy[RMTC_ATTR_PFT_POLICY_SET].type = NLA_NESTED;
-        attr_policy[RMTC_ATTR_PFT_POLICY_SET].len  = 0;
-        attr_policy[RMTC_ATTR_RMT_POLICY_SET].type = NLA_NESTED;
-        attr_policy[RMTC_ATTR_RMT_POLICY_SET].len  = 0;
+        attr_policy[RMTC_ATTR_POLICY_SET].type = NLA_NESTED;
+        attr_policy[RMTC_ATTR_POLICY_SET].len  = 0;
+        attr_policy[RMTC_ATTR_PFT_CONFIG].type = NLA_NESTED;
+        attr_policy[RMTC_ATTR_PFT_CONFIG].len  = 0;
 
         if (nla_parse_nested(attrs,
         		     RMTC_ATTR_MAX,
@@ -1376,16 +1404,14 @@ static int parse_rmt_config(struct nlattr *     rmt_config_attr,
                              attr_policy) < 0)
                 goto parse_fail;
 
-        if (attrs[RMTC_ATTR_PFT_POLICY_SET]) {
-                if (parse_policy(attrs[RMTC_ATTR_PFT_POLICY_SET],
-                                 rmt_config->pft_policy_set))
+        if (attrs[RMTC_ATTR_POLICY_SET]) {
+                if (parse_policy(attrs[RMTC_ATTR_POLICY_SET],
+                                 rmt_config->policy_set))
                         goto parse_fail;
-
         }
-
-        if (attrs[RMTC_ATTR_RMT_POLICY_SET]) {
-                if (parse_policy(attrs[RMTC_ATTR_RMT_POLICY_SET],
-                                 rmt_config->rmt_policy_set))
+        if (attrs[RMTC_ATTR_PFT_CONFIG]) {
+                if (parse_pft_config(attrs[RMTC_ATTR_PFT_CONFIG],
+                                 rmt_config->pft_conf))
                         goto parse_fail;
 
         }

@@ -416,9 +416,15 @@ enum efcp_config_attrs_list {
 };
 #define EFCPC_ATTR_MAX (__EFCPC_ATTR_MAX -1)
 
+enum pft_config_attrs_list {
+        PFTC_ATTR_POLICY_SET = 1,
+        __PFTC_ATTR_MAX,
+};
+#define PFTC_ATTR_MAX (__RMTC_ATTR_MAX -1)
+
 enum rmt_config_attrs_list {
-        RMTC_ATTR_PFT_POLICY_SET = 1,
-        RMTC_ATTR_RMT_POLICY_SET,
+        RMTC_ATTR_POLICY_SET = 1,
+        RMTC_ATTR_PFT_CONFIG,
         __RMTC_ATTR_MAX,
 };
 #define RMTC_ATTR_MAX (__RMTC_ATTR_MAX -1)

@@ -488,15 +488,22 @@ struct rmt_config * rmt_config_create(void)
         if (!tmp)
                 return NULL;
 
-        tmp->pft_policy_set = policy_create();
-        if (!tmp->pft_policy_set) {
+        tmp->pft_conf = rkzalloc(sizeof(*tmp->pft_conf), GFP_KERNEL);
+        if (!tmp->pft_conf) {
+                rkfree(tmp);
+                return NULL;
+        }
+        tmp->pft_conf->policy_set = policy_create();
+        if (!tmp->pft_conf->policy_set) {
+                rkfree(tmp->pft_conf);
                 rkfree(tmp);
                 return NULL;
         }
 
-        tmp->rmt_policy_set = policy_create();
-        if (!tmp->rmt_policy_set) {
-        	rkfree(tmp->pft_policy_set);
+        tmp->policy_set = policy_create();
+        if (!tmp->policy_set) {
+        	rkfree(tmp->pft_conf->policy_set);
+                rkfree(tmp->pft_conf);
                 rkfree(tmp);
                 return NULL;
         }
@@ -507,11 +514,13 @@ EXPORT_SYMBOL(rmt_config_create);
 
 int rmt_config_destroy(struct rmt_config * rmt_config)
 {
-        if (rmt_config->pft_policy_set)
-                rkfree(rmt_config->pft_policy_set);
-
-        if (rmt_config->rmt_policy_set)
-                policy_destroy(rmt_config->rmt_policy_set);
+        if (rmt_config->pft_conf) {
+                if (rmt_config->pft_conf->policy_set)
+                        policy_destroy(rmt_config->pft_conf->policy_set);
+                rkfree(rmt_config->pft_conf);
+        }
+        if (rmt_config->policy_set)
+                policy_destroy(rmt_config->policy_set);
 
         rkfree(rmt_config);
 
