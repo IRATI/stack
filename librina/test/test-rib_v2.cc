@@ -566,7 +566,44 @@ void ribBasicOps::testRemoveObj(){
 	}
 
 	//Remove obj1 which has obj3 as a child should fail
-	//TODO
+	try{
+		ribd->removeObjRIB(handle, inst_id1);
+		CPPUNIT_ASSERT_MESSAGE("Remove child object (inst_id3) succeeded", 0);
+	}catch(eObjHasChildren& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception thrown during remove obj with children", 0);
+	}
+
+	//Remove obj2
+	try{
+		ribd->removeObjRIB(handle, inst_id2);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during remove obj inst2", 0);
+	}
+
+	//Remove obj2
+	try{
+		ribd->removeObjRIB(handle, inst_id2);
+	}catch(eObjDoesNotExist& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception thrown during remove obj inst2 not existing anymore", 0);
+	}
+
+	//Remove obj3
+	try{
+		ribd->removeObjRIB(handle, inst_id3);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during remove obj inst3", 0);
+	}
+
+	//Now remove obj1
+	try{
+		ribd->removeObjRIB(handle, inst_id1);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during remove obj inst1", 0);
+	}
 }
 
 void ribBasicOps::testDeassociation(){
