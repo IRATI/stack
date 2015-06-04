@@ -635,13 +635,19 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 		rina::RMTConfiguration rc;
 
 		parse_policy(rmt_conf,
-				"pftPolicySet",
-				rc.pft_policy_set_);
+			     "policySet",
+			     rc.policy_set_);
 
-		parse_policy(rmt_conf,
-			     "rmtPolicySet",
-			     rc.rmt_policy_set_);
+	        Json::Value pft_conf = rmt_conf["pftConfiguration"];
+                if (pft_conf != 0) {
+                        rina::PFTConfiguration pftc;
 
+                        parse_policy(pft_confg,
+                                     "policySet",
+                                     pftc.policy_set_);
+
+                        rmt_conf->pft_conf_ = pftc;
+                }
 		dif_template->rmtConfiguration = rc;
 	}
 
