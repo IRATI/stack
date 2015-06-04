@@ -571,8 +571,7 @@ void EnrollmentTask::eventHappened(rina::InternalEvent * event)
 void EnrollmentTask::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
 {
 	rina::PolicyConfig psconf = dif_configuration.et_configuration_.policy_set_;
-	select_policy_set(std::string(), psconf.name_);
-	if (!ps) {
+	if (select_policy_set(std::string(), psconf.name_) != 0) {
 		throw rina::Exception("Cannot create enrollment task policy-set");
 	}
 	LOG_IPCP_DBG("Selected policy set %s for Enrollment Task", psconf.name_.c_str());

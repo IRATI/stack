@@ -1201,10 +1201,8 @@ void LinkStateRoutingPolicy::routingTableUpdate()
 			routing_algorithm_->computeRoutingTable(flow_state_objects,
 					source_vertex_);
 
-    IResourceAllocatorPs *raps =
-    		dynamic_cast<IResourceAllocatorPs *>(ipc_process_->resource_allocator_->ps);
-    assert(raps);
-    raps->routingTableUpdated(rt);
+	assert(ipc_process_->resource_allocator_->pduft_gen_ps);
+	ipc_process_->resource_allocator_->pduft_gen_ps->routingTableUpdated(rt);
 }
 
 void LinkStateRoutingPolicy::writeMessageReceived(

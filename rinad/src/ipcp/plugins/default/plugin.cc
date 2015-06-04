@@ -33,10 +33,10 @@ extern "C" void
 destroyNamespaceManagerPs(rina::IPolicySet * instance);
 
 extern "C" rina::IPolicySet *
-createResourceAllocatorPs(rina::ApplicationEntity * context);
+createPDUFTGenPs(rina::ApplicationEntity * ctx);
 
 extern "C" void
-destroyResourceAllocatorPs(rina::IPolicySet * instance);
+destroyPDUFTGenPs(rina::IPolicySet * ps);
 
 extern "C" rina::IPolicySet *
 createEnrollmentTaskPs(rina::ApplicationEntity * context);
@@ -58,7 +58,7 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
         struct rina::PsFactory auth_password_factory;
         struct rina::PsFactory fa_factory;
         struct rina::PsFactory nsm_factory;
-        struct rina::PsFactory ra_factory;
+        struct rina::PsFactory pduft_gen_factory;
         struct rina::PsFactory et_factory;
         struct rina::PsFactory rc_factory;
         int ret;
@@ -118,13 +118,16 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
                 return ret;
         }
 
-        ra_factory.plugin_name = plugin_name;
-        ra_factory.info.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;
-        ra_factory.info.app_entity = IResourceAllocator::RESOURCE_ALLOCATOR_AE_NAME;
-        ra_factory.create = createResourceAllocatorPs;
-        ra_factory.destroy = destroyResourceAllocatorPs;
+        pduft_gen_factory.plugin_name = plugin_name;
+        pduft_gen_factory.info.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;
+	std::stringstream ss;
+	ss << IResourceAllocator::RESOURCE_ALLOCATOR_AE_NAME << "/"
+	   << IResourceAllocator::PDUFT_GEN_COMPONENT_NAME;
+        pduft_gen_factory.info.app_entity = ss.str();
+        pduft_gen_factory.create = createPDUFTGenPs;
+        pduft_gen_factory.destroy = destroyPDUFTGenPs;
 
-        ret = ipc_process->psFactoryPublish(ra_factory);
+        ret = ipc_process->psFactoryPublish(pduft_gen_factory);
         if (ret) {
                 return ret;
         }

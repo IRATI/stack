@@ -198,8 +198,7 @@ void ResourceAllocator::set_application_process(rina::ApplicationProcess * ap)
 void ResourceAllocator::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
 {
 	std::string ps_name = dif_configuration.ra_configuration_.pduftg_conf_.policy_set_.name_;
-	select_policy_set(std::string(), ps_name);
-	if (!ps) {
+	if (set_pduft_gen_policy_set(ps_name) != 0) {
 		throw rina::Exception("Cannot create PDU Forwarding Table Generator policy-set");
 	}
 	LOG_IPCP_DBG("Selected policy set %s for PDU Forwarding Table Generator", ps_name.c_str());

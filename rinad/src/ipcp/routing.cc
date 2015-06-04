@@ -45,8 +45,7 @@ void RoutingComponent::set_application_process(rina::ApplicationProcess * ap)
 void RoutingComponent::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
 {
 	std::string ps_name = dif_configuration.routing_configuration_.policy_set_.name_;
-	select_policy_set(std::string(), ps_name);
-	if (!ps) {
+	if (select_policy_set(std::string(), ps_name) != 0) {
 		throw rina::Exception("Cannot create Routing policy-set");
 	}
 	LOG_IPCP_DBG("Selected policy set %s for Routing", ps_name.c_str());
