@@ -36,6 +36,7 @@
 using namespace rina;
 using namespace rina::rib;
 using namespace rina::cdap;
+using namespace rina::cdap_rib;
 
 //fwd decl
 class MyObj;
@@ -60,6 +61,7 @@ class ribBasicOps : public CppUnit::TestFixture {
 	CPPUNIT_TEST( testAssociation );
 	CPPUNIT_TEST( testAddObj );
 	CPPUNIT_TEST( testConnect );
+	CPPUNIT_TEST( testOperations);
 	CPPUNIT_TEST( testDisconnect );
 	CPPUNIT_TEST( testRemoveObj );
 	CPPUNIT_TEST( testDeassociation );
@@ -80,6 +82,7 @@ public:
 	void testAssociation();
 	void testAddObj();
 	void testConnect();
+	void testOperations();
 	void testDisconnect();
 	void testRemoveObj();
 	void testDeassociation();
@@ -652,11 +655,10 @@ void ribBasicOps::testAddObj(){
 }
 
 //////// CLIENT /////////////////////
+cdap_rib::con_handle_t con_ok, con_ko;
+cdap_rib::flags_t flags_ok;
 
 void ribBasicOps::testConnect(){
-
-	cdap_rib::con_handle_t con_ok, con_ko;
-	cdap_rib::flags_t flags_ok;
 
 	//Fill in the necessary stuff (only)
 	con_ok.port_ = 0x1;
@@ -692,8 +694,46 @@ void ribBasicOps::testConnect(){
 	}
 }
 
-void ribBasicOps::testDisconnect(){
+#define PREFIX_MESSAGE 0x11000000
 
+void ribBasicOps::testOperations(){
+
+	obj_info_t obj_info1;
+	cdap_rib::filt_info_t filter;
+	int* message;
+	int invoke_id;
+
+	//Use FQN first
+	obj_info1.inst_ = -1;
+	obj_info1.name_ = "/x/y/z/invalid";
+	obj_info1.value_.size_ = sizeof(int);
+	obj_info1.value_.message_ = new int;
+	message = (int*)obj_info1.value_.message_;
+
+	//Issue a request with an invalid con id
+	invoke_id = 1;
+	try{
+		(*message) = PREFIX_MESSAGE | invoke_id;
+		rib_provider->read_request(con_ko, obj_info1, filter, 0x1);
+		CPPUNIT_ASSERT_MESSAGE("READ operation with an invalid connection name has succeeded", 0);
+	}catch(...){
+
+	}
+
+	//Issue a request to an invalid object
+	invoke_id = 1;
+	try{
+		(*message) = PREFIX_MESSAGE | invoke_id;
+		rib_provider->read_request(con_ok, obj_info1, filter, 0x1);
+		CPPUNIT_ASSERT_MESSAGE("READ operation with an invalid FQN name has succeeded", 0);
+	}catch(...){
+
+	}
+}
+
+
+void ribBasicOps::testDisconnect(){
+	//TODO
 }
 //////// CLIENT /////////////////////
 
