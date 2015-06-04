@@ -1305,6 +1305,7 @@ int testIpcmAssignToDIFRequestMessage() {
 	difConfiguration.routing_configuration_.policy_set_.name_ = "RoutingPS";
 	difConfiguration.nsm_configuration_.policy_set_.name_ = "NSMPS";
 	difConfiguration.fa_configuration_.policy_set_.name_ = "FAPS";
+	difConfiguration.et_configuration_.policy_set_.name_ = "ETPS";
 	difInformation.set_dif_configuration(difConfiguration);
 	message.setDIFInformation(difInformation);
 
@@ -1457,6 +1458,12 @@ int testIpcmAssignToDIFRequestMessage() {
         		compare(recoveredMessage->getDIFInformation().dif_configuration_.fa_configuration_.
         				policy_set_.name_) != 0) {
         	std::cout << "DIFInformation.dif_configuration_.fa_configuration_.policy_set_.name_. original and recovered messages"
+        			<< " are different\n";
+        	returnValue = -1;
+        } else if (message.getDIFInformation().dif_configuration_.et_configuration_.policy_set_.name_.
+        		compare(recoveredMessage->getDIFInformation().dif_configuration_.et_configuration_.
+        				policy_set_.name_) != 0) {
+        	std::cout << "DIFInformation.dif_configuration_.et_configuration_.policy_set_.name_. original and recovered messages"
         			<< " are different\n";
         	returnValue = -1;
         }

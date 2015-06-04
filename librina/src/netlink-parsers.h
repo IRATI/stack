@@ -508,39 +508,6 @@ int putRMTConfigurationObject(nl_msg* netlinkMessage,
 
 RMTConfiguration * parseRMTConfigurationObject(nlattr *nested);
 
-/* LinkStateRoutingConfiguration CLASS */
-enum LinkStateRoutingConfigurationAttributes {
-	LSRC_OBJECT_MAX_AGE = 1,
-	LSRC_WAIT_UNTIL_READ,
-	LSRC_WAIT_UNTIL_ERROR,
-	LSRC_WAIT_UNTIL_PDUFT_COM,
-	LSRC_WAIT_UNTIL_FSDB_PROP,
-	LSRC_WAIT_UNTIL_AGE_INC,
-	LSRC_ROUTING_ALG,
-	__LSRC_ATTR_MAX,
-};
-
-#define LSRC_ATTR_MAX (__LSRC_ATTR_MAX -1)
-
-int putLinkStateRoutingConfigurationObject(nl_msg* netlinkMessage,
-		const LinkStateRoutingConfiguration& object);
-
-LinkStateRoutingConfiguration * parseLinkStateRoutingConfigurationObject(nlattr *nested);
-
-/* PDUFTableGeneratorConfiguration CLASS */
-enum PDUFTableGeneratorConfigurationAttributes {
-	PDUFTC_PDU_FTG_POLICY = 1,
-	PDUFTC_LINK_STATE_CONFIG,
-	__PDUFTC_ATTR_MAX,
-};
-
-#define PDUFTC_ATTR_MAX (__PDUFTC_ATTR_MAX -1)
-
-int putPDUFTableGeneratorConfigurationObject(nl_msg* netlinkMessage,
-		const PDUFTableGeneratorConfiguration& object);
-
-PDUFTableGeneratorConfiguration * parsePDUFTableGeneratorConfigurationObject(nlattr *nested);
-
 /* FlowAllocatorConfiguration CLASS */
 enum FlowAllocatorConfigurationAttributes {
 	FLAC_MAX_CREATE_FLOW_RETRIES = 1,
@@ -561,11 +528,7 @@ FlowAllocatorConfiguration * parseFlowAllocatorConfigurationObject(nlattr *neste
 
 /* EnrollmentTaskConfiguration CLASS */
 enum EnrollmentTaskConfigurationAttributes {
-	ENTC_ENROLLMENT_TIMEOUT_MS = 1,
-	ENTC_WHATCHDOG_PERIOD_MS,
-	ENTC_NEIGH_DECLARED_DEAD_INT_MS,
-	ENTC_MAX_NUM_ENROLL_ATTEMPTS,
-	ENTC_NEIGH_ENROLLER_PERIOD_MS,
+	ENTC_POLICY_SET = 1,
 	__ENTC_ATTR_MAX,
 };
 

@@ -20,6 +20,7 @@
 //
 
 #include <sstream>
+#include <stdlib.h>
 
 #define RINA_PREFIX "librina.configuration"
 
@@ -113,7 +114,62 @@ void PolicyConfig::set_version(const std::string& version) {
         version_ = version;
 }
 
-std::string PolicyConfig::toString() {
+std::string PolicyConfig::get_param_value_as_string(const std::string& name)
+{
+	if (parameters_.size() == 0) {
+		throw Exception("No parameters");
+	}
+
+	for (std::list<PolicyParameter>::const_iterator it = parameters_.begin();
+			it != parameters_.end(); ++it) {
+		if (it->name_ == name) {
+			return it->value_;
+		}
+	}
+
+	throw Exception("Parameter not found");
+}
+
+long PolicyConfig::get_param_value_as_long(const std::string& name)
+{
+	long result;
+	char *dummy;
+
+	std::string value = get_param_value_as_string(name);
+	result = strtol(value.c_str(), &dummy, 10);
+	if (!value.size() || *dummy != '\0') {
+		throw Exception("Error converting value to int");
+	}
+
+	return result;
+}
+
+int PolicyConfig::get_param_value_as_int(const std::string& name)
+{
+	return get_param_value_as_long(name);
+}
+
+unsigned long PolicyConfig::get_param_value_as_ulong(const std::string& name)
+{
+	unsigned long result;
+	char *dummy;
+
+	std::string value = get_param_value_as_string(name);
+	result = strtoul(value.c_str(), &dummy, 10);
+	if (!value.size() || *dummy != '\0') {
+		throw Exception("Error converting value to int");
+	}
+
+	return result;
+}
+
+unsigned int PolicyConfig::get_param_value_as_uint(const std::string& name)
+{
+	return get_param_value_as_ulong(name);
+}
+
+std::string PolicyConfig::toString()
+{
 	std::stringstream ss;
 	ss << "Name: " << name_ << "; Version: " << version_ << std::endl;
 	if (parameters_.size() > 0) {
@@ -1237,151 +1293,14 @@ std::string RMTConfiguration::toString()
 	return ss.str();
 }
 
-// CLASS LinkStateRouting Configuraiton
-
-const std::string LinkStateRoutingConfiguration::DEFAULT_ROUTING_ALGORITHM =
-    "Dijkstra";
-
-LinkStateRoutingConfiguration::LinkStateRoutingConfiguration()
-{
-	wait_until_read_cdap_ = WAIT_UNTIL_READ_CDAP_DEFAULT;
-	wait_until_error_ = WAIT_UNTIL_ERROR_DEFAULT;
-	wait_until_pduft_computation_ = WAIT_UNTIL_PDUFT_COMPUTATION_DEFAULT;
-	wait_until_fsodb_propagation_ = WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT;
-	wait_until_age_increment_ = WAIT_UNTIL_AGE_INCREMENT_DEFAULT;
-	object_maximum_age_ = PULSES_UNTIL_FSO_EXPIRATION_DEFAULT;
-	routing_algorithm_ = DEFAULT_ROUTING_ALGORITHM;
-}
-
-const std::string LinkStateRoutingConfiguration::toString() {
-	std::stringstream ss;
-
-	ss<<"Timer until send a Read CDAP message (ms): " << wait_until_read_cdap_<<std::endl;
-	ss<<"Timer until send CDAP error (ms): "<<wait_until_error_<<std::endl;
-	ss<<"Timer between PDU forwarding table Computation (ms): "<<wait_until_pduft_computation_<<std::endl;
-	ss<<"Timer between FlowStateDataBase propagation (ms): "<<wait_until_fsodb_propagation_<<std::endl;
-	ss<<"Timer between age incrementation pulses (ms): "<<wait_until_age_increment_<<std::endl;
-	ss<<"Number of pulses until FSO expiration: "<<object_maximum_age_<<std::endl;
-	ss<<"Routing algorithm: "<<routing_algorithm_<<std::endl;
-
-	return ss.str();
-}
-
-int LinkStateRoutingConfiguration::get_wait_until_age_increment() const {
-	return wait_until_age_increment_;
-}
-
-void LinkStateRoutingConfiguration::set_wait_until_age_increment(int wait_until_age_increment) {
-	wait_until_age_increment_ = wait_until_age_increment;
-}
-
-int LinkStateRoutingConfiguration::get_wait_until_error() const {
-	return wait_until_error_;
-}
-
-void LinkStateRoutingConfiguration::set_wait_until_error(int wait_until_error) {
-	wait_until_error_ = wait_until_error;
-}
-
-int LinkStateRoutingConfiguration::get_wait_until_fsodb_propagation() const {
-	return wait_until_fsodb_propagation_;
-}
-
-void LinkStateRoutingConfiguration::set_wait_until_fsodb_propagation(int wait_until_fsodb_propagation) {
-	wait_until_fsodb_propagation_ = wait_until_fsodb_propagation;
-}
-
-int LinkStateRoutingConfiguration::get_wait_until_pduft_computation() const {
-	return wait_until_pduft_computation_;
-}
-
-void LinkStateRoutingConfiguration::set_wait_until_pduft_computation(int wait_until_pduft_computation) {
-	wait_until_pduft_computation_ = wait_until_pduft_computation;
-}
-
-int LinkStateRoutingConfiguration::get_wait_until_read_cdap() const {
-	return wait_until_read_cdap_;
-}
-
-void LinkStateRoutingConfiguration::set_wait_until_read_cdap(int wait_until_read_cdap) {
-	wait_until_read_cdap_ = wait_until_read_cdap;
-}
-
-unsigned int LinkStateRoutingConfiguration::get_object_maximum_age() const {
-	return object_maximum_age_;
-}
-
-void LinkStateRoutingConfiguration::set_object_maximum_age(const int object_maximum_age) {
-	object_maximum_age_ = object_maximum_age;
-}
-
-const std::string& LinkStateRoutingConfiguration::get_routing_algorithm() const {
-	return routing_algorithm_;
-}
-
-void LinkStateRoutingConfiguration::set_routing_algorithm(
-		const std::string& routing_algorithm) {
-	routing_algorithm_ = routing_algorithm;
-}
-
-// CLAS PDUFTableGeneratorConfiguration
-PDUFTableGeneratorConfiguration::PDUFTableGeneratorConfiguration(){
-	set_pduft_generator_policy(PolicyConfig("LinkState",
-                        RINA_DEFAULT_POLICY_VERSION));
-}
-
-PDUFTableGeneratorConfiguration::PDUFTableGeneratorConfiguration(
-                const PolicyConfig& pduFTGeneratorPolicy) {
-	set_pduft_generator_policy(pduFTGeneratorPolicy);
-}
-
-std::string PDUFTableGeneratorConfiguration::toString() {
-	std::stringstream ss;
-	ss << "PDU FT generator policy. Name: " << pduft_generator_policy_.name_;
-	ss << "; Version: "<<pduft_generator_policy_.version_ << std::endl;
-	ss << "*** LINK STATE ROUTING CONFIGURATION ***"<<std::endl;
-	ss << link_state_routing_configuration_.toString();
-
-	return ss.str();
-}
-
-const LinkStateRoutingConfiguration&
-PDUFTableGeneratorConfiguration::get_link_state_routing_configuration() const {
-        return link_state_routing_configuration_;
-}
-
-void PDUFTableGeneratorConfiguration::set_link_state_routing_configuration(
-                const LinkStateRoutingConfiguration& link_state_routing_configuration){
-	link_state_routing_configuration_ =
-			link_state_routing_configuration;
-}
-
-const PolicyConfig&
-PDUFTableGeneratorConfiguration::get_pduft_generator_policy() const {
-        return pduft_generator_policy_;
-}
-
-void PDUFTableGeneratorConfiguration::set_pduft_generator_policy(
-                const PolicyConfig& pduft_generator_policy){
-	pduft_generator_policy_ = pduft_generator_policy;
-}
-
 // Class Enrollment Task Configuration
-EnrollmentTaskConfiguration::EnrollmentTaskConfiguration() {
-	enrollment_timeout_in_ms_ = 10000;
-	watchdog_period_in_ms_ = 60000;
-	declared_dead_interval_in_ms_ = 120000;
-	neighbor_enroller_period_in_ms_ = 10000;
-	max_number_of_enrollment_attempts_ = 3;
+EnrollmentTaskConfiguration::EnrollmentTaskConfiguration()
+{
 }
 
 std::string EnrollmentTaskConfiguration::toString() {
 	std::stringstream ss;
-	ss << "Enrollment timeout in ms: " << enrollment_timeout_in_ms_ << std::endl;
-	ss << "Watchdog period in ms: " << watchdog_period_in_ms_ << std::endl;
-	ss << "Declared dead interval in ms: " << declared_dead_interval_in_ms_ << std::endl;
-	ss << "Neighbor enroller period in ms: " << neighbor_enroller_period_in_ms_<< std::endl;
-	ss << "Max number of enrollment attempts: " << max_number_of_enrollment_attempts_ << std::endl;
+	ss << "Policy set: " << policy_set_.toString() << std::endl;
 	return ss.str();
 }
 
