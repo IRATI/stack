@@ -3726,61 +3726,6 @@ int putRMTConfigurationObject(nl_msg* netlinkMessage,
         return -1;
 }
 
-int putLinkStateRoutingConfigurationObject(nl_msg* netlinkMessage,
-		const LinkStateRoutingConfiguration& object) {
-	NLA_PUT_U32(netlinkMessage, LSRC_OBJECT_MAX_AGE,
-			object.object_maximum_age_);
-	NLA_PUT_U32(netlinkMessage, LSRC_WAIT_UNTIL_AGE_INC,
-			object.wait_until_age_increment_);
-	NLA_PUT_U32(netlinkMessage, LSRC_WAIT_UNTIL_ERROR,
-			object.wait_until_error_);
-	NLA_PUT_U32(netlinkMessage, LSRC_WAIT_UNTIL_FSDB_PROP,
-			object.wait_until_fsodb_propagation_);
-	NLA_PUT_U32(netlinkMessage, LSRC_WAIT_UNTIL_PDUFT_COM,
-			object.wait_until_pduft_computation_);
-	NLA_PUT_U32(netlinkMessage, LSRC_WAIT_UNTIL_READ,
-			object.wait_until_read_cdap_);
-	NLA_PUT_STRING(netlinkMessage, LSRC_ROUTING_ALG,
-			object.routing_algorithm_.c_str());
-
-	return 0;
-
-	nla_put_failure: LOG_ERR(
-			"Error building LinkStateRoutingConfiguration Netlink object");
-	return -1;
-}
-
-int putPDUFTableGeneratorConfigurationObject(nl_msg* netlinkMessage,
-		const PDUFTableGeneratorConfiguration& object) {
-	struct nlattr *pduftgPolicy, *linkState;
-
-	if (!(pduftgPolicy = nla_nest_start(
-			netlinkMessage, PDUFTC_PDU_FTG_POLICY))) {
-		goto nla_put_failure;
-	}
-	if (putPolicyConfigObject(netlinkMessage,
-			object.pduft_generator_policy_) < 0) {
-		goto nla_put_failure;
-	}
-	nla_nest_end(netlinkMessage, pduftgPolicy);
-
-	if (!(linkState = nla_nest_start(
-			netlinkMessage, PDUFTC_LINK_STATE_CONFIG))) {
-		goto nla_put_failure;
-	}
-	if (putLinkStateRoutingConfigurationObject(netlinkMessage,
-			object.link_state_routing_configuration_) < 0) {
-		goto nla_put_failure;
-	}
-	nla_nest_end(netlinkMessage, linkState);
-
-	return 0;
-
-	nla_put_failure: LOG_ERR(
-			"Error building PDUFTableGeneratorConfiguration Netlink object");
-	return -1;
-}
-
 int putFlowAllocatorConfigurationObject(nl_msg* netlinkMessage,
 		const FlowAllocatorConfiguration& object) {
 	struct nlattr *farPolicy, *fanPolicy, *nfPolicy, *seqPolicy, *policySet;
@@ -3846,17 +3791,19 @@ int putFlowAllocatorConfigurationObject(nl_msg* netlinkMessage,
 }
 
 int putEnrollmentTaskConfigurationObject(nl_msg* netlinkMessage,
-		const EnrollmentTaskConfiguration& object) {
-	NLA_PUT_U32(netlinkMessage, ENTC_ENROLLMENT_TIMEOUT_MS,
-			object.enrollment_timeout_in_ms_);
-	NLA_PUT_U32(netlinkMessage, ENTC_WHATCHDOG_PERIOD_MS,
-			object.watchdog_period_in_ms_);
-	NLA_PUT_U32(netlinkMessage, ENTC_NEIGH_DECLARED_DEAD_INT_MS,
-			object.declared_dead_interval_in_ms_);
-	NLA_PUT_U32(netlinkMessage, ENTC_MAX_NUM_ENROLL_ATTEMPTS,
-			object.max_number_of_enrollment_attempts_);
-	NLA_PUT_U32(netlinkMessage, ENTC_NEIGH_ENROLLER_PERIOD_MS,
-			object.neighbor_enroller_period_in_ms_);
+		const EnrollmentTaskConfiguration& object)
+{
+	struct nlattr *ps;
+
+	if (!(ps = nla_nest_start(
+			netlinkMessage, ENTC_POLICY_SET))) {
+		goto nla_put_failure;
+	}
+	if (putPolicyConfigObject(netlinkMessage,
+			object.policy_set_) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, ps);
 
 	return 0;
 
@@ -6387,128 +6334,6 @@ RMTConfiguration * parseRMTConfigurationObject(nlattr *nested) {
         return result;
 }
 
-LinkStateRoutingConfiguration * parseLinkStateRoutingConfigurationObject(nlattr *nested) {
-	struct nla_policy attr_policy[LSRC_ATTR_MAX + 1];
-	attr_policy[LSRC_OBJECT_MAX_AGE].type = NLA_U32;
-	attr_policy[LSRC_OBJECT_MAX_AGE].minlen = 4;
-	attr_policy[LSRC_OBJECT_MAX_AGE].maxlen = 4;
-	attr_policy[LSRC_WAIT_UNTIL_READ].type = NLA_U32;
-	attr_policy[LSRC_WAIT_UNTIL_READ].minlen = 4;
-	attr_policy[LSRC_WAIT_UNTIL_READ].maxlen = 4;
-	attr_policy[LSRC_WAIT_UNTIL_ERROR].type = NLA_U32;
-	attr_policy[LSRC_WAIT_UNTIL_ERROR].minlen = 4;
-	attr_policy[LSRC_WAIT_UNTIL_ERROR].maxlen = 4;
-	attr_policy[LSRC_WAIT_UNTIL_PDUFT_COM].type = NLA_U32;
-	attr_policy[LSRC_WAIT_UNTIL_PDUFT_COM].minlen = 4;
-	attr_policy[LSRC_WAIT_UNTIL_PDUFT_COM].maxlen = 4;
-	attr_policy[LSRC_WAIT_UNTIL_FSDB_PROP].type = NLA_U32;
-	attr_policy[LSRC_WAIT_UNTIL_FSDB_PROP].minlen = 4;
-	attr_policy[LSRC_WAIT_UNTIL_FSDB_PROP].maxlen = 4;
-	attr_policy[LSRC_WAIT_UNTIL_AGE_INC].type = NLA_U32;
-	attr_policy[LSRC_WAIT_UNTIL_AGE_INC].minlen = 4;
-	attr_policy[LSRC_WAIT_UNTIL_AGE_INC].maxlen = 4;
-	attr_policy[LSRC_ROUTING_ALG].type = NLA_STRING;
-	attr_policy[LSRC_ROUTING_ALG].minlen = 0;
-	attr_policy[LSRC_ROUTING_ALG].maxlen = 65535;
-	struct nlattr *attrs[LSRC_ATTR_MAX + 1];
-
-	int err = nla_parse_nested(attrs, LSRC_ATTR_MAX, nested, attr_policy);
-	if (err < 0) {
-		LOG_ERR(
-				"Error parsing LinkStateRoutingConfiguration information from Netlink message: %d",
-				err);
-		return 0;
-	}
-
-	LinkStateRoutingConfiguration * result = new LinkStateRoutingConfiguration();
-
-	if (attrs[LSRC_OBJECT_MAX_AGE]) {
-		result->object_maximum_age_ =
-				nla_get_u32(attrs[LSRC_OBJECT_MAX_AGE]);
-	}
-
-	if (attrs[LSRC_WAIT_UNTIL_READ]) {
-		result->wait_until_read_cdap_ =
-				nla_get_u32(attrs[LSRC_WAIT_UNTIL_READ]);
-	}
-
-	if (attrs[LSRC_WAIT_UNTIL_ERROR]) {
-		result->wait_until_error_ =
-				nla_get_u32(attrs[LSRC_WAIT_UNTIL_ERROR]);
-	}
-
-	if (attrs[LSRC_WAIT_UNTIL_PDUFT_COM]) {
-		result->wait_until_pduft_computation_ =
-				nla_get_u32(attrs[LSRC_WAIT_UNTIL_PDUFT_COM]);
-	}
-
-	if (attrs[LSRC_WAIT_UNTIL_FSDB_PROP]) {
-		result->wait_until_fsodb_propagation_ =
-				nla_get_u32(attrs[LSRC_WAIT_UNTIL_FSDB_PROP]);
-	}
-
-	if (attrs[LSRC_WAIT_UNTIL_AGE_INC]) {
-		result->wait_until_age_increment_ =
-				nla_get_u32(attrs[LSRC_WAIT_UNTIL_AGE_INC]);
-	}
-
-	if (attrs[LSRC_ROUTING_ALG]) {
-		result->routing_algorithm_ =
-				nla_get_string(attrs[LSRC_ROUTING_ALG]);
-	}
-
-	return result;
-}
-
-PDUFTableGeneratorConfiguration * parsePDUFTableGeneratorConfigurationObject(nlattr *nested) {
-	struct nla_policy attr_policy[PDUFTC_ATTR_MAX + 1];
-	attr_policy[PDUFTC_PDU_FTG_POLICY].type = NLA_NESTED;
-	attr_policy[PDUFTC_PDU_FTG_POLICY].minlen = 0;
-	attr_policy[PDUFTC_PDU_FTG_POLICY].maxlen = 0;
-	attr_policy[PDUFTC_LINK_STATE_CONFIG].type = NLA_NESTED;
-	attr_policy[PDUFTC_LINK_STATE_CONFIG].minlen = 0;
-	attr_policy[PDUFTC_LINK_STATE_CONFIG].maxlen = 0;
-	struct nlattr *attrs[PDUFTC_ATTR_MAX + 1];
-
-	int err = nla_parse_nested(attrs, PDUFTC_ATTR_MAX, nested, attr_policy);
-	if (err < 0) {
-		LOG_ERR(
-				"Error parsing PDUFTableGeneratorConfiguration information from Netlink message: %d",
-				err);
-		return 0;
-	}
-
-	PDUFTableGeneratorConfiguration * result = new PDUFTableGeneratorConfiguration();
-	PolicyConfig * pduftg;
-	LinkStateRoutingConfiguration * linkState;
-
-	if (attrs[PDUFTC_PDU_FTG_POLICY]) {
-		pduftg = parsePolicyConfigObject(
-				attrs[PDUFTC_PDU_FTG_POLICY]);
-		if (pduftg == 0) {
-			delete result;
-			return 0;
-		} else {
-			result->pduft_generator_policy_ = *pduftg;
-			delete pduftg;
-		}
-	}
-
-	if (attrs[PDUFTC_LINK_STATE_CONFIG]) {
-		linkState = parseLinkStateRoutingConfigurationObject(
-				attrs[PDUFTC_LINK_STATE_CONFIG]);
-		if (linkState == 0) {
-			delete result;
-			return 0;
-		} else {
-			result->link_state_routing_configuration_ = *linkState;
-			delete linkState;
-		}
-	}
-
-	return result;
-}
-
 FlowAllocatorConfiguration * parseFlowAllocatorConfigurationObject(nlattr *nested) {
 	struct nla_policy attr_policy[FLAC_ATTR_MAX + 1];
 	attr_policy[FLAC_MAX_CREATE_FLOW_RETRIES].type = NLA_U32;
@@ -6617,57 +6442,32 @@ FlowAllocatorConfiguration * parseFlowAllocatorConfigurationObject(nlattr *neste
 
 EnrollmentTaskConfiguration * parseEnrollmentTaskConfigurationObject(nlattr *nested) {
 	struct nla_policy attr_policy[ENTC_ATTR_MAX + 1];
-	attr_policy[ENTC_ENROLLMENT_TIMEOUT_MS].type = NLA_U32;
-	attr_policy[ENTC_ENROLLMENT_TIMEOUT_MS].minlen = 4;
-	attr_policy[ENTC_ENROLLMENT_TIMEOUT_MS].maxlen = 4;
-	attr_policy[ENTC_WHATCHDOG_PERIOD_MS].type = NLA_U32;
-	attr_policy[ENTC_WHATCHDOG_PERIOD_MS].minlen = 4;
-	attr_policy[ENTC_WHATCHDOG_PERIOD_MS].maxlen = 4;
-	attr_policy[ENTC_NEIGH_DECLARED_DEAD_INT_MS].type = NLA_U32;
-	attr_policy[ENTC_NEIGH_DECLARED_DEAD_INT_MS].minlen = 4;
-	attr_policy[ENTC_NEIGH_DECLARED_DEAD_INT_MS].maxlen = 4;
-	attr_policy[ENTC_MAX_NUM_ENROLL_ATTEMPTS].type = NLA_U32;
-	attr_policy[ENTC_MAX_NUM_ENROLL_ATTEMPTS].minlen = 4;
-	attr_policy[ENTC_MAX_NUM_ENROLL_ATTEMPTS].maxlen = 4;
-	attr_policy[ENTC_NEIGH_ENROLLER_PERIOD_MS].type = NLA_U32;
-	attr_policy[ENTC_NEIGH_ENROLLER_PERIOD_MS].minlen = 4;
-	attr_policy[ENTC_NEIGH_ENROLLER_PERIOD_MS].maxlen = 4;
+	attr_policy[ENTC_POLICY_SET].type = NLA_NESTED;
+	attr_policy[ENTC_POLICY_SET].minlen = 0;
+	attr_policy[ENTC_POLICY_SET].maxlen = 0;
 	struct nlattr *attrs[ENTC_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, ENTC_ATTR_MAX, nested, attr_policy);
 
 	if (err < 0) {
-		LOG_ERR(
-				"Error parsing EnrollmentTaskConfiguration information from Netlink message: %d",
-				err);
+		LOG_ERR("Error parsing EnrollmentTaskConfiguration information from Netlink message: %d",
+			err);
 		return 0;
 	}
 
 	EnrollmentTaskConfiguration * result = new EnrollmentTaskConfiguration();
+	PolicyConfig * ps;
 
-	if (attrs[ENTC_ENROLLMENT_TIMEOUT_MS]) {
-		result->enrollment_timeout_in_ms_ =
-				nla_get_u32(attrs[ENTC_ENROLLMENT_TIMEOUT_MS]);
-	}
-
-	if (attrs[ENTC_WHATCHDOG_PERIOD_MS]) {
-		result->watchdog_period_in_ms_ =
-				nla_get_u32(attrs[ENTC_WHATCHDOG_PERIOD_MS]);
-	}
-
-	if (attrs[ENTC_NEIGH_DECLARED_DEAD_INT_MS]) {
-		result->declared_dead_interval_in_ms_ =
-				nla_get_u32(attrs[ENTC_NEIGH_DECLARED_DEAD_INT_MS]);
-	}
-
-	if (attrs[ENTC_MAX_NUM_ENROLL_ATTEMPTS]) {
-		result->max_number_of_enrollment_attempts_ =
-				nla_get_u32(attrs[ENTC_MAX_NUM_ENROLL_ATTEMPTS]);
-	}
-
-	if (attrs[ENTC_NEIGH_ENROLLER_PERIOD_MS]) {
-		result->neighbor_enroller_period_in_ms_ =
-				nla_get_u32(attrs[ENTC_NEIGH_ENROLLER_PERIOD_MS]);
+	if (attrs[ENTC_POLICY_SET]) {
+		ps = parsePolicyConfigObject(
+				attrs[ENTC_POLICY_SET]);
+		if (ps == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->policy_set_ = *ps;
+			delete ps;
+		}
 	}
 
 	return result;

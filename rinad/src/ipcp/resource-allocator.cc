@@ -195,7 +195,15 @@ void ResourceAllocator::set_application_process(rina::ApplicationProcess * ap)
 	}
 }
 
-void ResourceAllocator::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
+void ResourceAllocator::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
+{
+	std::string ps_name = dif_configuration.ra_configuration_.pduftg_policy_set_.name_;
+	select_policy_set(std::string(), ps_name);
+	if (!ps) {
+		throw rina::Exception("Cannot create resource allocator policy-set");
+	}
+	LOG_IPCP_DBG("Selected policy set %s for Resource Allocator", ps_name.c_str());
+
 	if (n_minus_one_flow_manager_) {
 		n_minus_one_flow_manager_->set_dif_configuration(dif_configuration);
 	}

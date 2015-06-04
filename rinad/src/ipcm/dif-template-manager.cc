@@ -288,16 +288,28 @@ void DIFTemplateManager::augment_dif_template(rinad::DIFTemplate * dif_template)
 		}
 	}
 
-	if (dif_template->etConfiguration.declared_dead_interval_in_ms_ == 120000 &&
-			dif_template->etConfiguration.enrollment_timeout_in_ms_ == 10000 &&
-			dif_template->etConfiguration.max_number_of_enrollment_attempts_ == 3 &&
-			dif_template->etConfiguration.neighbor_enroller_period_in_ms_ == 10000 &&
-			dif_template->etConfiguration.watchdog_period_in_ms_ == 60000) {
+	if (dif_template->etConfiguration.policy_set_.name_ == std::string()) {
 		dif_template->etConfiguration = default_template->etConfiguration;
 	}
 
-	if (dif_template->rmtConfiguration.rmt_policy_set_.name_ == "") {
+	if (dif_template->rmtConfiguration.rmt_policy_set_.name_ == std::string()) {
 		dif_template->rmtConfiguration = default_template->rmtConfiguration;
+	}
+
+	if (dif_template->routingConfiguration.policy_set_.name_ == std::string()) {
+		dif_template->routingConfiguration = default_template->routingConfiguration;
+	}
+
+	if (dif_template->nsmConfiguration.policy_set_.name_ == std::string()) {
+		dif_template->nsmConfiguration = default_template->nsmConfiguration;
+	}
+
+	if (dif_template->faConfiguration.policy_set_.name_ == std::string()) {
+		dif_template->faConfiguration = default_template->faConfiguration;
+	}
+
+	if (dif_template->raConfiguration.pduftg_policy_set_.name_ == std::string()) {
+		dif_template->raConfiguration = default_template->raConfiguration;
 	}
 
 	if (dif_template->knownIPCProcessAddresses.size() == 0) {

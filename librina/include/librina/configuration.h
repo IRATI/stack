@@ -59,6 +59,19 @@ public:
         PolicyConfig(const std::string& name, const std::string& version);
         bool operator==(const PolicyConfig &other) const;
         bool operator!=(const PolicyConfig &other) const;
+
+        /// Get a parameter value as a string
+        /// @throws Exception if parameter is not found
+        std::string get_param_value_as_string(const std::string& name);
+
+        /// Get a parameter value as long
+        /// @throws Exception if parameter is not found or the conversion
+        /// to long fails
+        long get_param_value_as_long(const std::string& name);
+        int get_param_value_as_int(const std::string& name);
+        unsigned long get_param_value_as_ulong(const std::string& name);
+        unsigned int get_param_value_as_uint(const std::string& name);
+
         std::string toString();
 #ifndef SWIG
         const std::string& get_name() const;
@@ -723,88 +736,13 @@ public:
         PolicyConfig pft_policy_set_;
 };
 
-/// Link State routing configuration
-class LinkStateRoutingConfiguration {
-public:
-        LinkStateRoutingConfiguration();
-        const std::string toString();
-#ifndef SWIG
-        int get_wait_until_age_increment() const;
-        void set_wait_until_age_increment(const int wait_until_age_increment);
-        int get_wait_until_error() const;
-        void set_wait_until_error(const int wait_until_error);
-        int get_wait_until_fsodb_propagation() const;
-        void set_wait_until_fsodb_propagation(const int wait_until_fsodb_propagation);
-        int get_wait_until_pduft_computation() const;
-        void set_wait_until_pduft_computation(const int wait_until_pduft_computation);
-        int get_wait_until_read_cdap() const;
-        void set_wait_until_read_cdap(const int wait_until_read_cdap);
-        unsigned int get_object_maximum_age() const;
-        void set_object_maximum_age(const int object_maximum_age);
-        const std::string& get_routing_algorithm() const;
-        void set_routing_algorithm(const std::string& routing_algorithm);
-#endif
-
-        static const int PULSES_UNTIL_FSO_EXPIRATION_DEFAULT = 100000;
-        static const int WAIT_UNTIL_READ_CDAP_DEFAULT = 5001;
-        static const int WAIT_UNTIL_ERROR_DEFAULT = 5001;
-        static const int WAIT_UNTIL_PDUFT_COMPUTATION_DEFAULT = 103;
-        static const int WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT = 101;
-        static const int WAIT_UNTIL_AGE_INCREMENT_DEFAULT = 997;
-        static const std::string DEFAULT_ROUTING_ALGORITHM;
-
-        unsigned int object_maximum_age_;
-        int wait_until_read_cdap_;
-        int wait_until_error_;
-        int wait_until_pduft_computation_;
-        int wait_until_fsodb_propagation_;
-        int wait_until_age_increment_;
-        std::string routing_algorithm_;
-};
-
-/// PDU F Table Generator Configuration
-class PDUFTableGeneratorConfiguration {
-public:
-        PDUFTableGeneratorConfiguration();
-        PDUFTableGeneratorConfiguration(const PolicyConfig& pduft_generator_policy);
-#ifndef SWIG
-        const PolicyConfig& get_pduft_generator_policy() const;
-        void set_pduft_generator_policy(const PolicyConfig& pduft_generator_policy);
-        const LinkStateRoutingConfiguration& get_link_state_routing_configuration() const;
-        void set_link_state_routing_configuration(
-                        const LinkStateRoutingConfiguration& link_state_routing_configuration);
-#endif
-
-        /// Name, version and configuration of the PDU FT Generator policy
-        PolicyConfig pduft_generator_policy_;
-
-        /// Link state routing configuration parameters - only relevant if a
-        /// link-state routing PDU FT Generation policy is used
-        LinkStateRoutingConfiguration link_state_routing_configuration_;
-
-        std::string toString();
-};
-
 /// Configuration of the resource allocator
 class EnrollmentTaskConfiguration {
 public:
 	EnrollmentTaskConfiguration();
 
-	// The maximum time to wait between steps of the enrollment program,
-	// before considering enrollment failed
-	int enrollment_timeout_in_ms_;
-
-	// The period of the watchdog in ms (monitors status of neighbors)
-	int watchdog_period_in_ms_;
-
-	//The time to declare a neighbor dead (in ms)
-	int declared_dead_interval_in_ms_;
-
-	//The period of the neighbor enroller (in ms)
-	int neighbor_enroller_period_in_ms_;
-
-	//The maximum number of enrollment attempts
-	unsigned int max_number_of_enrollment_attempts_;
+        /// Policy set for Enrollment Task
+        PolicyConfig policy_set_;
 
 	std::string toString();
 };

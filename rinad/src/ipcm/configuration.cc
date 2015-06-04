@@ -666,7 +666,7 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 			     "policySet",
 			     rc.policy_set_);
 
-		dif_template->raConfiguration = rc;
+		dif_template->routingConfiguration = rc;
 	}
 
 	// resourceAllocatorConfiguration;
@@ -750,34 +750,13 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 	// enrollmentTaskConfiguration;
 	Json::Value etc = root["enrollmentTaskConfiguration"];
 	if (etc != 0) {
-		rina::EnrollmentTaskConfiguration et;
+		rina::EnrollmentTaskConfiguration et_conf;
 
-		et.enrollment_timeout_in_ms_ =
-				etc.get("enrollTimeoutInMs",
-						et.enrollment_timeout_in_ms_)
-						.asInt();
+		parse_policy(etc,
+			     "policySet",
+			     et_conf.policy_set_);
 
-		et.watchdog_period_in_ms_ =
-				etc.get("watchdogPeriodInMs",
-						et.watchdog_period_in_ms_)
-						.asInt();
-
-		et.declared_dead_interval_in_ms_ =
-				etc.get("declaredDeadIntervalInMs",
-						et.declared_dead_interval_in_ms_)
-						.asInt();
-
-		et.max_number_of_enrollment_attempts_ =
-				etc.get("maxEnrollmentRetries",
-						et.max_number_of_enrollment_attempts_)
-						.asInt();
-
-		et.neighbor_enroller_period_in_ms_ =
-				etc.get("neighborsEnrollerPeriodInMs",
-						et.neighbor_enroller_period_in_ms_)
-						.asInt();
-
-		dif_template->etConfiguration = et;
+		dif_template->etConfiguration = et_conf;
 	}
 
 	// configParameters;
