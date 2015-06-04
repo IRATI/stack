@@ -420,7 +420,7 @@ enum pft_config_attrs_list {
         PFTC_ATTR_POLICY_SET = 1,
         __PFTC_ATTR_MAX,
 };
-#define PFTC_ATTR_MAX (__RMTC_ATTR_MAX -1)
+#define PFTC_ATTR_MAX (__PFTC_ATTR_MAX -1)
 
 enum rmt_config_attrs_list {
         RMTC_ATTR_POLICY_SET = 1,
