@@ -428,6 +428,13 @@ enum dif_config_attrs_list {
         DCONF_ATTR_ADDRESS,
         DCONF_ATTR_EFCPC,
         DCONF_ATTR_RMTC,
+        /* From here not used in kernel */
+	DCONF_ATTR_FAC,
+	DCONF_ATTR_ETC,
+	DCONF_ATTR_NSMC,
+	DCONF_ATTR_SMC,
+	DCONF_ATTR_RAC,
+	DCONF_ATTR_ROUTINGC,
         __DCONF_ATTR_MAX,
 };
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)
