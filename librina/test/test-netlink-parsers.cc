@@ -1299,9 +1299,9 @@ int testIpcmAssignToDIFRequestMessage() {
 	efcpConfiguration.add_qos_cube(qosCube);
 	qosCube->set_efcp_policies(ConnectionPolicies());
 	difConfiguration.set_efcp_configuration(efcpConfiguration);
-	difConfiguration.rmt_configuration_.rmt_policy_set_.name_ = "FancySchedulingPolicy";
-	difConfiguration.rmt_configuration_.pft_policy_set_.name_ = "PFTPolicySet";
-	difConfiguration.ra_configuration_.pduftg_policy_set_.name_ = "PDUFTGPolicySet";
+	difConfiguration.rmt_configuration_.policy_set_.name_ = "FancySchedulingPolicy";
+	difConfiguration.rmt_configuration_.pft_conf_.policy_set_.name_ = "PFTPolicySet";
+	difConfiguration.ra_configuration_.pduftg_conf_.policy_set_.name_ = "PDUFTGPolicySet";
 	difConfiguration.routing_configuration_.policy_set_.name_ = "RoutingPS";
 	difConfiguration.nsm_configuration_.policy_set_.name_ = "NSMPS";
 	difConfiguration.fa_configuration_.policy_set_.name_ = "FAPS";
@@ -1424,22 +1424,22 @@ int testIpcmAssignToDIFRequestMessage() {
                 std::cout << "DIFInformation.DIFConfiguration.qosCubes.size original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getDIFInformation().dif_configuration_.rmt_configuration_.rmt_policy_set_.name_.
+        } else if (message.getDIFInformation().dif_configuration_.rmt_configuration_.policy_set_.name_.
         		compare(recoveredMessage->getDIFInformation().dif_configuration_.rmt_configuration_.
-        				rmt_policy_set_.name_) != 0) {
-        	std::cout << "DIFInformation.dif_configuration_.rmt_configuration_.rmt_policy_set_.name original and recovered messages"
+        				policy_set_.name_) != 0) {
+        	std::cout << "DIFInformation.dif_configuration_.rmt_configuration_.policy_set_.name original and recovered messages"
         			<< " are different\n";
         	returnValue = -1;
-        } else if (message.getDIFInformation().dif_configuration_.rmt_configuration_.pft_policy_set_.name_.
+        } else if (message.getDIFInformation().dif_configuration_.rmt_configuration_.pft_conf_.policy_set_.name_.
         		compare(recoveredMessage->getDIFInformation().dif_configuration_.rmt_configuration_.
-        				pft_policy_set_.name_) != 0) {
-        	std::cout << "DIFInformation.dif_configuration_.rmt_configuration_.pft_policy_set_.name_. original and recovered messages"
+        				pft_conf_.policy_set_.name_) != 0) {
+        	std::cout << "DIFInformation.dif_configuration_.rmt_configuration_.pft_conf_.policy_set_.name_. original and recovered messages"
         			<< " are different\n";
         	returnValue = -1;
-        } else if (message.getDIFInformation().dif_configuration_.ra_configuration_.pduftg_policy_set_.name_.
+        } else if (message.getDIFInformation().dif_configuration_.ra_configuration_.pduftg_conf_.policy_set_.name_.
         		compare(recoveredMessage->getDIFInformation().dif_configuration_.ra_configuration_.
-        				pduftg_policy_set_.name_) != 0) {
-        	std::cout << "DIFInformation.dif_configuration_.ra_configuration_.pduftg_policy_set_.name_. original and recovered messages"
+        				pduftg_conf_.policy_set_.name_) != 0) {
+        	std::cout << "DIFInformation.dif_configuration_.ra_configuration_.pduftg_conf_.policy_set_.name_. original and recovered messages"
         			<< " are different\n";
         	returnValue = -1;
         } else if (message.getDIFInformation().dif_configuration_.routing_configuration_.policy_set_.name_.
