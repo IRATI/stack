@@ -1613,7 +1613,6 @@ void RIBDaemon::store_connection(const cdap_rib::con_handle_t& con){
 								ver,
 								ae.c_str(),
 								port_id);
-		assert(0);
 	}
 
 	port_id_rib_map[port_id] = rib;
