@@ -2458,6 +2458,9 @@ RIBDaemonProxy* RIBDaemonProxyFactory(){
 void __set_cdap_provider(cdap::CDAPProviderInterface* p){
 	ribd->__set_cdap_provider(p);
 }
+cdap::CDAPCallbackInterface* __get_rib_provider(){
+	return ribd;
+}
 
 void fini(){
 	delete ribd;

@@ -229,6 +229,7 @@ public:
 };
 
 static CDAPProviderMockup cdap_provider_mockup;
+static cdap::CDAPCallbackInterface* rib_provider = NULL;
 //
 //
 //
@@ -289,7 +290,9 @@ int64_t inst_id1, inst_id2, inst_id3;
 //fwd decl
 namespace rina{namespace rib{
 void __set_cdap_provider(cdap::CDAPProviderInterface* p);
+cdap::CDAPCallbackInterface* __get_rib_provider(void);
 }} //namespaces fwd decl
+
 
 void ribBasicOps::setUp(){
 
@@ -316,8 +319,11 @@ void ribBasicOps::testInit(){
 
 	rina::rib::init(&app_handlers, &remote_handlers, params);
 
-	//Set our mockup CDAP provder
+	//Mockups
 	rina::rib::__set_cdap_provider(&cdap_provider_mockup);
+	rib_provider = rina::rib::__get_rib_provider();
+
+	CPPUNIT_ASSERT_MESSAGE("Invalid RIB provider", rib_provider != NULL);
 
 	//Double call to init should throw an exception
 	try{
@@ -644,6 +650,8 @@ void ribBasicOps::testAddObj(){
 }
 
 void ribBasicOps::testObjOperations(){
+
+	//Fake stablishment of a connection
 
 }
 
