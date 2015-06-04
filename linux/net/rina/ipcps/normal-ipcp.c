@@ -883,37 +883,37 @@ static int normal_mgmt_sdu_post(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int normal_pft_add(struct ipcp_instance_data * data,
+static int normal_pff_add(struct ipcp_instance_data * data,
 			  struct mod_pff_entry *      entry)
 
 {
         ASSERT(data);
 
-        return rmt_pft_add(data->rmt, entry);
+        return rmt_pff_add(data->rmt, entry);
 }
 
-static int normal_pft_remove(struct ipcp_instance_data * data,
+static int normal_pff_remove(struct ipcp_instance_data * data,
 			     struct mod_pff_entry *      entry)
 {
         ASSERT(data);
 
-        return rmt_pft_remove(data->rmt, entry);
+        return rmt_pff_remove(data->rmt, entry);
 }
 
-static int normal_pft_dump(struct ipcp_instance_data * data,
+static int normal_pff_dump(struct ipcp_instance_data * data,
                            struct list_head *          entries)
 {
         ASSERT(data);
 
-        return rmt_pft_dump(data->rmt,
+        return rmt_pff_dump(data->rmt,
                             entries);
 }
 
-static int normal_pft_flush(struct ipcp_instance_data * data)
+static int normal_pff_flush(struct ipcp_instance_data * data)
 {
         ASSERT(data);
 
-        return rmt_pft_flush(data->rmt);
+        return rmt_pff_flush(data->rmt);
 }
 
 static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
@@ -999,10 +999,10 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .mgmt_sdu_write            = normal_mgmt_sdu_write,
         .mgmt_sdu_post             = normal_mgmt_sdu_post,
 
-        .pft_add                   = normal_pft_add,
-        .pft_remove                = normal_pft_remove,
-        .pft_dump                  = normal_pft_dump,
-        .pft_flush                 = normal_pft_flush,
+        .pff_add                   = normal_pff_add,
+        .pff_remove                = normal_pff_remove,
+        .pff_dump                  = normal_pff_dump,
+        .pff_flush                 = normal_pff_flush,
 
         .query_rib		   = NULL,
 

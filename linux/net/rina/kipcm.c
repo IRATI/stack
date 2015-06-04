@@ -1103,12 +1103,12 @@ static int notify_ipc_manager_present(void *             data,
         return 0;
 }
 
-static int notify_ipcp_modify_pfte(void *             data,
+static int notify_ipcp_modify_pffe(void *             data,
                                    struct sk_buff *   buff,
                                    struct genl_info * info)
 {
         struct kipcm *                      kipcm;
-        struct rnl_rmt_mod_pfte_msg_attrs * attrs;
+        struct rnl_rmt_mod_pffe_msg_attrs * attrs;
         struct rnl_msg *                    msg;
         struct ipcp_instance *              ipc_process;
         ipc_process_id_t                    ipc_id;
@@ -1130,7 +1130,7 @@ static int notify_ipcp_modify_pfte(void *             data,
         }
 
         ipc_id = 0;
-        msg    = rnl_msg_create(RNL_MSG_ATTRS_RMT_PFTE_MODIFY_REQUEST);
+        msg    = rnl_msg_create(RNL_MSG_ATTRS_RMT_PFFE_MODIFY_REQUEST);
         if (!msg) {
                 rnl_msg_destroy(msg);
                 return -1;
@@ -1153,22 +1153,22 @@ static int notify_ipcp_modify_pfte(void *             data,
 
         switch(attrs->mode) {
         case 2:
-                if (ipc_process->ops->pft_flush(ipc_process->data)) {
-                        LOG_ERR("Problems flushing PFT");
+                if (ipc_process->ops->pff_flush(ipc_process->data)) {
+                        LOG_ERR("Problems flushing PFF");
                         rnl_msg_destroy(msg);
                         return -1;
                 }
 
-                op = ipc_process->ops->pft_add;
+                op = ipc_process->ops->pff_add;
                 break;
         case 1:
-                op = ipc_process->ops->pft_remove;
+                op = ipc_process->ops->pff_remove;
                 break;
         case 0:
-                op = ipc_process->ops->pft_add;
+                op = ipc_process->ops->pff_add;
                 break;
         default:
-                LOG_ERR("Unknown mode for modify PFT operation %d",
+                LOG_ERR("Unknown mode for modify PFF operation %d",
                         attrs->mode);
                 rnl_msg_destroy(msg);
                 return -1;
@@ -1176,7 +1176,7 @@ static int notify_ipcp_modify_pfte(void *             data,
         }
 
         ASSERT(op);
-        list_for_each_entry(entry, &attrs->pft_entries, next) {
+        list_for_each_entry(entry, &attrs->pff_entries, next) {
                 ASSERT(entry);
 
                 if (op(ipc_process->data, entry)) {
@@ -1191,7 +1191,7 @@ static int notify_ipcp_modify_pfte(void *             data,
         return 0;
 }
 
-static int ipcp_dump_pft_free_and_reply(struct rnl_msg *   msg,
+static int ipcp_dump_pff_free_and_reply(struct rnl_msg *   msg,
                                         ipc_process_id_t   ipc_id,
                                         uint_t             result,
                                         struct list_head * entries,
@@ -1200,19 +1200,19 @@ static int ipcp_dump_pft_free_and_reply(struct rnl_msg *   msg,
 {
         rnl_msg_destroy(msg);
 
-        if (rnl_ipcp_pft_dump_resp_msg(ipc_id,
+        if (rnl_ipcp_pff_dump_resp_msg(ipc_id,
                                        result,
                                        entries,
                                        seq_num,
                                        nl_port_id)) {
-                LOG_ERR("Could not snd ipcp_pft_dump_resp_msg");
+                LOG_ERR("Could not snd ipcp_pff_dump_resp_msg");
                 return -1;
         }
 
         return 0;
 }
 
-static int notify_ipcp_dump_pft(void *             data,
+static int notify_ipcp_dump_pff(void *             data,
                                 struct sk_buff *   buff,
                                 struct genl_info * info)
 {
@@ -1236,7 +1236,7 @@ static int notify_ipcp_dump_pft(void *             data,
         }
 
         ipc_id = 0;
-        msg    = rnl_msg_create(RNL_MSG_ATTRS_RMT_PFT_DUMP_REQUEST);
+        msg    = rnl_msg_create(RNL_MSG_ATTRS_RMT_PFF_DUMP_REQUEST);
         if (!msg)
                 goto end;
 
@@ -1251,16 +1251,16 @@ static int notify_ipcp_dump_pft(void *             data,
         }
 
         INIT_LIST_HEAD(&entries);
-        if (ipc_process->ops->pft_dump(ipc_process->data,
+        if (ipc_process->ops->pff_dump(ipc_process->data,
                                        &entries)) {
-                LOG_ERR("Could not dump PFT");
+                LOG_ERR("Could not dump PFF");
                 goto end;
         }
 
         result = 0;
 
  end:
-        return ipcp_dump_pft_free_and_reply(msg,
+        return ipcp_dump_pff_free_and_reply(msg,
                                             ipc_id,
                                             result,
                                             &entries,
@@ -1536,9 +1536,9 @@ static int netlink_handlers_register(struct kipcm * kipcm)
         kipcm_handlers[RINA_C_IPCP_CONN_DESTROY_REQUEST]           =
                 notify_ipcp_conn_destroy_req;
         kipcm_handlers[RINA_C_RMT_MODIFY_FTE_REQUEST]              =
-                notify_ipcp_modify_pfte;
+                notify_ipcp_modify_pffe;
         kipcm_handlers[RINA_C_RMT_DUMP_FT_REQUEST]                 =
-                notify_ipcp_dump_pft;
+                notify_ipcp_dump_pff;
         kipcm_handlers[RINA_C_IPCM_QUERY_RIB_REQUEST]      	   =
         	notify_ipcm_query_rib;
         kipcm_handlers[RINA_C_IPCP_SET_POLICY_SET_PARAM_REQUEST]   =

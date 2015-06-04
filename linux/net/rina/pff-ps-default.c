@@ -1,5 +1,5 @@
 /*
- * Default policy set for PFT
+ * Default policy set for PFF
  *
  *    Vincenzo Maffione <v.maffione@nextworks.it>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
@@ -26,12 +26,12 @@
 #include <linux/string.h>
 #include <linux/random.h>
 
-#define RINA_PREFIX "pft-ps-default"
+#define RINA_PREFIX "pff-ps-default"
 
 #include "logs.h"
 #include "rds/rmem.h"
 #include "rds/rtimer.h"
-#include "pft-ps.h"
+#include "pff-ps.h"
 #include "debug.h"
 
 /* FIXME: This representation is crappy and MUST be changed */
@@ -242,15 +242,15 @@ static int pfte_ports_copy(struct pft_entry * entry,
         return 0;
 }
 
-struct pft_ps_priv {
+struct pff_ps_priv {
         struct mutex     write_lock;
         struct list_head entries;
 };
 
-static bool priv_is_ok(struct pft_ps_priv * priv)
+static bool priv_is_ok(struct pff_ps_priv * priv)
 { return priv != NULL; }
 
-static struct pft_entry * pft_find(struct pft_ps_priv * priv,
+static struct pft_entry * pft_find(struct pff_ps_priv * priv,
                                    address_t            destination,
                                    qos_id_t             qos_id)
 {
@@ -269,14 +269,14 @@ static struct pft_entry * pft_find(struct pft_ps_priv * priv,
         return NULL;
 }
 
-static int default_add(struct pft_ps *        ps,
+static int default_add(struct pff_ps *        ps,
                        struct mod_pff_entry * entry)
 {
-        struct pft_ps_priv *     priv;
+        struct pff_ps_priv *     priv;
         struct pft_entry *       tmp;
 	struct port_id_altlist * alts;
 
-        priv = (struct pft_ps_priv *) ps->priv;
+        priv = (struct pff_ps_priv *) ps->priv;
         if (!priv_is_ok(priv))
                 return -1;
 
@@ -326,14 +326,14 @@ static int default_add(struct pft_ps *        ps,
         return 0;
 }
 
-static int default_remove(struct pft_ps *        ps,
+static int default_remove(struct pff_ps *        ps,
                           struct mod_pff_entry * entry)
 {
-        struct pft_ps_priv *       priv;
+        struct pff_ps_priv *       priv;
         struct port_id_altlist *   alts;
         struct pft_entry *         tmp;
 
-        priv = (struct pft_ps_priv *) ps->priv;
+        priv = (struct pff_ps_priv *) ps->priv;
         if (!priv_is_ok(priv))
                 return -1;
 
@@ -379,12 +379,12 @@ static int default_remove(struct pft_ps *        ps,
         return 0;
 }
 
-static bool default_is_empty(struct pft_ps * ps)
+static bool default_is_empty(struct pff_ps * ps)
 {
-        struct pft_ps_priv * priv;
+        struct pff_ps_priv * priv;
         bool                 empty;
 
-        priv = (struct pft_ps_priv *) ps->priv;
+        priv = (struct pff_ps_priv *) ps->priv;
         if (!priv_is_ok(priv))
                 return false;
 
@@ -395,7 +395,7 @@ static bool default_is_empty(struct pft_ps * ps)
         return empty;
 }
 
-static void __pft_flush(struct pft_ps_priv * priv)
+static void __pft_flush(struct pff_ps_priv * priv)
 {
         struct pft_entry * pos, * next;
 
@@ -406,11 +406,11 @@ static void __pft_flush(struct pft_ps_priv * priv)
         }
 }
 
-static int default_flush(struct pft_ps * ps)
+static int default_flush(struct pff_ps * ps)
 {
-        struct pft_ps_priv * priv;
+        struct pff_ps_priv * priv;
 
-        priv = (struct pft_ps_priv *) ps->priv;
+        priv = (struct pff_ps_priv *) ps->priv;
         if (!priv_is_ok(priv))
                 return -1;
 
@@ -423,17 +423,17 @@ static int default_flush(struct pft_ps * ps)
         return 0;
 }
 
-static int default_nhop(struct pft_ps * ps,
+static int default_nhop(struct pff_ps * ps,
                         struct pci *    pci,
                         port_id_t **    ports,
                         size_t *        count)
 {
-        struct pft_ps_priv * priv;
+        struct pff_ps_priv * priv;
         address_t            destination;
         qos_id_t             qos_id;
         struct pft_entry *   tmp;
 
-        priv = (struct pft_ps_priv *) ps->priv;
+        priv = (struct pff_ps_priv *) ps->priv;
         if (!priv_is_ok(priv)) {
                 return -1;
         }
@@ -509,14 +509,14 @@ static int pfte_port_id_altlists_copy(struct pft_entry * entry,
         return 0;
 }
 
-static int default_dump(struct pft_ps *    ps,
+static int default_dump(struct pff_ps *    ps,
                         struct list_head * entries)
 {
-        struct pft_ps_priv *   priv;
+        struct pff_ps_priv *   priv;
         struct pft_entry *     pos;
         struct mod_pff_entry * entry;
 
-        priv = (struct pft_ps_priv *) ps->priv;
+        priv = (struct pff_ps_priv *) ps->priv;
         if (!priv_is_ok(priv))
                 return -1;
 
@@ -545,11 +545,11 @@ static int default_dump(struct pft_ps *    ps,
 }
 
 /* NOTE: This is skeleton code that was directly copy pasted */
-static int pft_ps_set_policy_set_param(struct ps_base * bps,
+static int pff_ps_set_policy_set_param(struct ps_base * bps,
                                        const char *     name,
                                        const char *     value)
 {
-        struct pft_ps * ps = container_of(bps, struct pft_ps, base);
+        struct pff_ps * ps = container_of(bps, struct pff_ps, base);
 
         (void) ps;
 
@@ -569,11 +569,11 @@ static int pft_ps_set_policy_set_param(struct ps_base * bps,
 }
 
 static struct ps_base *
-pft_ps_default_create(struct rina_component * component)
+pff_ps_default_create(struct rina_component * component)
 {
-        struct pft_ps * ps;
-        struct pft_ps_priv * priv;
-        struct pft * pft = pft_from_component(component);
+        struct pff_ps * ps;
+        struct pff_ps_priv * priv;
+        struct pff * pff = pff_from_component(component);
 
         priv = rkzalloc(sizeof(*priv), GFP_KERNEL);
         if (!priv) {
@@ -589,28 +589,28 @@ pft_ps_default_create(struct rina_component * component)
                 return NULL;
         }
 
-        ps->base.set_policy_set_param = pft_ps_set_policy_set_param;
-        ps->dm = pft;
+        ps->base.set_policy_set_param = pff_ps_set_policy_set_param;
+        ps->dm = pff;
         ps->priv = (void *) priv;
 
-        ps->pft_add = default_add;
-        ps->pft_remove = default_remove;
-        ps->pft_is_empty = default_is_empty;
-        ps->pft_flush = default_flush;
-        ps->pft_nhop = default_nhop;
-        ps->pft_dump = default_dump;
+        ps->pff_add = default_add;
+        ps->pff_remove = default_remove;
+        ps->pff_is_empty = default_is_empty;
+        ps->pff_flush = default_flush;
+        ps->pff_nhop = default_nhop;
+        ps->pff_dump = default_dump;
 
         return &ps->base;
 }
 
-static void pft_ps_default_destroy(struct ps_base * bps)
+static void pff_ps_default_destroy(struct ps_base * bps)
 {
-        struct pft_ps * ps = container_of(bps, struct pft_ps, base);
+        struct pff_ps * ps = container_of(bps, struct pff_ps, base);
 
         if (bps) {
-                struct pft_ps_priv * priv;
+                struct pff_ps_priv * priv;
 
-                priv = (struct pft_ps_priv *) ps->priv;
+                priv = (struct pff_ps_priv *) ps->priv;
                 if(!priv_is_ok(priv)) {
                         return;
                 }
@@ -624,8 +624,8 @@ static void pft_ps_default_destroy(struct ps_base * bps)
         }
 }
 
-struct ps_factory pft_factory = {
+struct ps_factory pff_factory = {
         .owner   = THIS_MODULE,
-        .create  = pft_ps_default_create,
-        .destroy = pft_ps_default_destroy,
+        .create  = pff_ps_default_create,
+        .destroy = pff_ps_default_destroy,
 };

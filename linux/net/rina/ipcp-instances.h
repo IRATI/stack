@@ -212,16 +212,16 @@ struct ipcp_instance_ops {
                               port_id_t                   port_id,
                               struct sdu *                sdu);
 
-        int (* pft_add)(struct ipcp_instance_data * data,
+        int (* pff_add)(struct ipcp_instance_data * data,
 			struct mod_pff_entry	  * entry);
 
-        int (* pft_remove)(struct ipcp_instance_data * data,
+        int (* pff_remove)(struct ipcp_instance_data * data,
 			   struct mod_pff_entry      * entry);
 
-        int (* pft_dump)(struct ipcp_instance_data * data,
+        int (* pff_dump)(struct ipcp_instance_data * data,
                          struct list_head *          entries);
 
-        int (* pft_flush)(struct ipcp_instance_data * data);
+        int (* pff_flush)(struct ipcp_instance_data * data);
 
         int (* query_rib)(struct ipcp_instance_data * data,
                           struct list_head *          entries,

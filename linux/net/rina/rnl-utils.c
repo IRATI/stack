@@ -262,16 +262,16 @@ rnl_ipcp_conn_destroy_req_msg_attrs_create(void)
         return tmp;
 }
 
-static struct rnl_rmt_mod_pfte_msg_attrs *
-rnl_rmt_mod_pfte_msg_attrs_create(void)
+static struct rnl_rmt_mod_pffe_msg_attrs *
+rnl_rmt_mod_pffe_msg_attrs_create(void)
 {
-        struct rnl_rmt_mod_pfte_msg_attrs * tmp;
+        struct rnl_rmt_mod_pffe_msg_attrs * tmp;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if  (!tmp)
                 return NULL;
 
-        INIT_LIST_HEAD(&tmp->pft_entries);
+        INIT_LIST_HEAD(&tmp->pff_entries);
 
         return tmp;
 }
@@ -403,15 +403,15 @@ struct rnl_msg * rnl_msg_create(enum rnl_msg_attr_type type)
                         return NULL;
                 }
                 break;
-        case RNL_MSG_ATTRS_RMT_PFTE_MODIFY_REQUEST:
+        case RNL_MSG_ATTRS_RMT_PFFE_MODIFY_REQUEST:
                 tmp->attrs =
-                        rnl_rmt_mod_pfte_msg_attrs_create();
+                        rnl_rmt_mod_pffe_msg_attrs_create();
                 if (!tmp->attrs) {
                         rkfree(tmp);
                         return NULL;
                 }
                 break;
-        case RNL_MSG_ATTRS_RMT_PFT_DUMP_REQUEST:
+        case RNL_MSG_ATTRS_RMT_PFF_DUMP_REQUEST:
                 tmp->attrs = NULL;
                 break;
         case RNL_MSG_ATTRS_QUERY_RIB_REQUEST:
@@ -575,7 +575,7 @@ rnl_ipcp_conn_destroy_req_msg_attrs_destroy(struct rnl_ipcp_conn_destroy_req_msg
 }
 
 static int
-rnl_rmt_mod_pfte_msg_attrs_destroy(struct rnl_rmt_mod_pfte_msg_attrs * attrs)
+rnl_rmt_mod_pffe_msg_attrs_destroy(struct rnl_rmt_mod_pffe_msg_attrs * attrs)
 {
         struct mod_pff_entry * e_pos, * e_nxt;
 
@@ -583,7 +583,7 @@ rnl_rmt_mod_pfte_msg_attrs_destroy(struct rnl_rmt_mod_pfte_msg_attrs * attrs)
                 return -1;
 
         list_for_each_entry_safe(e_pos, e_nxt,
-                                 &attrs->pft_entries, next) {
+                                 &attrs->pff_entries, next) {
 		struct port_id_altlist * a_pos, * a_nxt;
 
 		list_for_each_entry_safe(a_pos, a_nxt,
@@ -598,7 +598,7 @@ rnl_rmt_mod_pfte_msg_attrs_destroy(struct rnl_rmt_mod_pfte_msg_attrs * attrs)
                 list_del(&e_pos->next);
                 rkfree(e_pos);
         }
-        LOG_DBG("rnl_rmt_mod_pfte_msg_attrs destroy correctly");
+        LOG_DBG("rnl_rmt_mod_pffe_msg_attrs destroy correctly");
         rkfree(attrs);
         return 0;
 }
@@ -706,8 +706,8 @@ int rnl_msg_destroy(struct rnl_msg * msg)
         case RNL_MSG_ATTRS_CONN_DESTROY_REQUEST:
                 rnl_ipcp_conn_destroy_req_msg_attrs_destroy(msg->attrs);
                 break;
-        case RNL_MSG_ATTRS_RMT_PFTE_MODIFY_REQUEST:
-                rnl_rmt_mod_pfte_msg_attrs_destroy(msg->attrs);
+        case RNL_MSG_ATTRS_RMT_PFFE_MODIFY_REQUEST:
+                rnl_rmt_mod_pffe_msg_attrs_destroy(msg->attrs);
                 break;
         case RNL_MSG_ATTRS_QUERY_RIB_REQUEST:
                 rnl_ipcm_query_rib_msg_attrs_destroy(msg->attrs);
@@ -889,7 +889,7 @@ static int parse_pdu_fte_altlists(struct nlattr *        nested_attr,
         }
 
         if (!entry) {
-                LOG_ERR("Bogus PFT entry passed, bailing out");
+                LOG_ERR("Bogus PFF entry passed, bailing out");
                 return -1;
         }
 
@@ -930,32 +930,32 @@ static int parse_pdu_fte_altlists(struct nlattr *        nested_attr,
 static int parse_pdu_fte_list_entry(struct nlattr *        attr,
                                     struct mod_pff_entry * mpfe)
 {
-        struct nla_policy attr_policy[PFTELE_ATTR_MAX + 1];
-        struct nlattr *   attrs[PFTELE_ATTR_MAX + 1];
+        struct nla_policy attr_policy[PFFELE_ATTR_MAX + 1];
+        struct nlattr *   attrs[PFFELE_ATTR_MAX + 1];
 
-        attr_policy[PFTELE_ATTR_ADDRESS].type = NLA_U32;
-        attr_policy[PFTELE_ATTR_ADDRESS].len  = 4;
-        attr_policy[PFTELE_ATTR_QOSID].type   = NLA_U32;
-        attr_policy[PFTELE_ATTR_QOSID].len    = 4;
-        attr_policy[PFTELE_ATTR_PORT_ID_ALTLISTS].type = NLA_NESTED;
-        attr_policy[PFTELE_ATTR_PORT_ID_ALTLISTS].len  = 0;
+        attr_policy[PFFELE_ATTR_ADDRESS].type = NLA_U32;
+        attr_policy[PFFELE_ATTR_ADDRESS].len  = 4;
+        attr_policy[PFFELE_ATTR_QOSID].type   = NLA_U32;
+        attr_policy[PFFELE_ATTR_QOSID].len    = 4;
+        attr_policy[PFFELE_ATTR_PORT_ID_ALTLISTS].type = NLA_NESTED;
+        attr_policy[PFFELE_ATTR_PORT_ID_ALTLISTS].len  = 0;
 
         if (nla_parse_nested(attrs,
-                             PFTELE_ATTR_MAX,
+                             PFFELE_ATTR_MAX,
                              attr,
                              attr_policy) < 0)
                 return -1;
 
-        if (attrs[PFTELE_ATTR_ADDRESS])
+        if (attrs[PFFELE_ATTR_ADDRESS])
                 mpfe->fwd_info =
-                        nla_get_u32(attrs[PFTELE_ATTR_ADDRESS]);
+                        nla_get_u32(attrs[PFFELE_ATTR_ADDRESS]);
 
-        if (attrs[PFTELE_ATTR_QOSID])
+        if (attrs[PFFELE_ATTR_QOSID])
                 mpfe->qos_id =
-                        nla_get_u32(attrs[PFTELE_ATTR_QOSID]);
+                        nla_get_u32(attrs[PFFELE_ATTR_QOSID]);
 
-        if (attrs[PFTELE_ATTR_PORT_ID_ALTLISTS]) {
-                if (parse_pdu_fte_altlists(attrs[PFTELE_ATTR_PORT_ID_ALTLISTS],
+        if (attrs[PFFELE_ATTR_PORT_ID_ALTLISTS]) {
+                if (parse_pdu_fte_altlists(attrs[PFFELE_ATTR_PORT_ID_ALTLISTS],
                                            mpfe))
                         return -1;
 
@@ -2156,8 +2156,8 @@ rnl_parse_ipcm_query_rib_req_msg(struct genl_info * info,
         return 0;
 }
 
-static int parse_list_pfte_conf_e(struct nlattr *     nested_attr,
-                                  struct rnl_rmt_mod_pfte_msg_attrs * msg)
+static int parse_list_pffe_conf_e(struct nlattr *     nested_attr,
+                                  struct rnl_rmt_mod_pffe_msg_attrs * msg)
 {
         struct nlattr *        nla;
         struct mod_pff_entry * entry;
@@ -2194,7 +2194,7 @@ static int parse_list_pfte_conf_e(struct nlattr *     nested_attr,
                         continue;
                 }
 
-                list_add(&entry->next, &msg->pft_entries);
+                list_add(&entry->next, &msg->pff_entries);
         }
 
         if (rem > 0) {
@@ -2211,10 +2211,10 @@ static int parse_list_pfte_conf_e(struct nlattr *     nested_attr,
 
 static int
 rnl_parse_rmt_modify_fte_req_msg(struct genl_info * info,
-                                 struct rnl_rmt_mod_pfte_msg_attrs * msg_attrs)
+                                 struct rnl_rmt_mod_pffe_msg_attrs * msg_attrs)
 {
         if (info->attrs[RMPFE_ATTR_ENTRIES]) {
-                if (parse_list_pfte_conf_e(info->attrs[RMPFE_ATTR_ENTRIES],
+                if (parse_list_pffe_conf_e(info->attrs[RMPFE_ATTR_ENTRIES],
                                            msg_attrs))
                         goto parse_fail;
         }
@@ -2860,7 +2860,7 @@ static int format_port_id_altlist(struct port_id_altlist *pos,
 	return 0;
 }
 
-static int format_pft_entry_altlists(struct list_head * entries,
+static int format_pff_entry_altlists(struct list_head * entries,
                                          struct sk_buff * skb_out)
 {
         struct nlattr * msg_alts;
@@ -2873,7 +2873,7 @@ static int format_pft_entry_altlists(struct list_head * entries,
         }
 
         if (!(msg_alts =
-              nla_nest_start(skb_out, PFTELE_ATTR_PORT_ID_ALTLISTS))) {
+              nla_nest_start(skb_out, PFFELE_ATTR_PORT_ID_ALTLISTS))) {
                 nla_nest_cancel(skb_out, msg_alts);
                 return -1;
         }
@@ -2881,7 +2881,7 @@ static int format_pft_entry_altlists(struct list_head * entries,
 	list_for_each_entry_safe(pos, nxt, entries, next) {
 		if (format_port_id_altlist(pos,
                                            skb_out))
-                        return format_fail("rnl_ipcm_pft_dump_resp_msg");
+                        return format_fail("rnl_ipcm_pff_dump_resp_msg");
 
 		list_del(&pos->next);
 		rkfree(pos);
@@ -2892,7 +2892,7 @@ static int format_pft_entry_altlists(struct list_head * entries,
         return 0;
 }
 
-static int format_pft_entries_list(struct list_head * entries,
+static int format_pff_entries_list(struct list_head * entries,
                                    struct sk_buff *   skb_out)
 {
         struct nlattr * msg_entry;
@@ -2909,17 +2909,17 @@ static int format_pft_entries_list(struct list_head * entries,
                 if (!(msg_entry =
                       nla_nest_start(skb_out, i))) {
                         nla_nest_cancel(skb_out, msg_entry);
-                        LOG_ERR(BUILD_STRERROR("pft entries list attribute"));
-                        return format_fail("rnl_ipcm_pft_dump_resp_msg");
+                        LOG_ERR(BUILD_STRERROR("pff entries list attribute"));
+                        return format_fail("rnl_ipcm_pff_dump_resp_msg");
                 }
 
                 if (nla_put_u32(skb_out,
-                                 PFTELE_ATTR_ADDRESS,
+                                 PFFELE_ATTR_ADDRESS,
                                  pos->fwd_info)                        ||
-                     nla_put_u32(skb_out, PFTELE_ATTR_QOSID, pos->qos_id) ||
-			format_pft_entry_altlists(&pos->port_id_altlists,
+                     nla_put_u32(skb_out, PFFELE_ATTR_QOSID, pos->qos_id) ||
+			format_pff_entry_altlists(&pos->port_id_altlists,
 						      skb_out))
-                        return format_fail("rnl_ipcm_pft_dump_resp_msg");
+                        return format_fail("rnl_ipcm_pff_dump_resp_msg");
 
                 nla_nest_end(skb_out, msg_entry);
                 list_del(&pos->next);
@@ -2929,7 +2929,7 @@ static int format_pft_entries_list(struct list_head * entries,
         return 0;
 }
 
-static int rnl_format_ipcm_pft_dump_resp_msg(int                result,
+static int rnl_format_ipcm_pff_dump_resp_msg(int                result,
                                              struct list_head * entries,
                                              struct sk_buff *   skb_out)
 {
@@ -2941,16 +2941,16 @@ static int rnl_format_ipcm_pft_dump_resp_msg(int                result,
         }
 
         if (nla_put_u32(skb_out, RPFD_ATTR_RESULT, result) < 0)
-                return format_fail("rnl_ipcm_pft_dump_resp_msg");
+                return format_fail("rnl_ipcm_pff_dump_resp_msg");
 
         if (!(msg_entries =
               nla_nest_start(skb_out, RPFD_ATTR_ENTRIES))) {
                 nla_nest_cancel(skb_out, msg_entries);
-                LOG_ERR(BUILD_STRERROR("pft entries list attribute"));
-                return format_fail("rnl_ipcm_pft_dump_resp_msg");
+                LOG_ERR(BUILD_STRERROR("pff entries list attribute"));
+                return format_fail("rnl_ipcm_pff_dump_resp_msg");
         }
-        if (format_pft_entries_list(entries, skb_out))
-                return format_fail("rnl_ipcm_pft_dump_resp_msg");
+        if (format_pff_entries_list(entries, skb_out))
+                return format_fail("rnl_ipcm_pff_dump_resp_msg");
         nla_nest_end(skb_out, msg_entries);
 
         return 0;
@@ -3014,7 +3014,7 @@ static int rnl_format_ipcm_query_rib_resp_msg(int                result,
         }
 
         if (nla_put_u32(skb_out, IDQRE_ATTR_RESULT, result) < 0)
-                return format_fail("rnl_ipcm_pft_dump_resp_msg");
+                return format_fail("rnl_ipcm_pff_dump_resp_msg");
 
         if (!(msg_entries =
               nla_nest_start(skb_out, IDQRE_ATTR_RIB_OBJECTS))) {
@@ -3667,7 +3667,7 @@ int rnl_ipcm_sock_closed_notif_msg(u32 closed_port, u32 dest_port)
 }
 EXPORT_SYMBOL(rnl_ipcm_sock_closed_notif_msg);
 
-int rnl_ipcp_pft_dump_resp_msg(ipc_process_id_t   ipc_id,
+int rnl_ipcp_pff_dump_resp_msg(ipc_process_id_t   ipc_id,
                                int                result,
                                struct list_head * entries,
                                rnl_sn_t           seq_num,
@@ -3699,7 +3699,7 @@ int rnl_ipcp_pft_dump_resp_msg(ipc_process_id_t   ipc_id,
         out_hdr->src_ipc_id = ipc_id; /* This IPC process */
         out_hdr->dst_ipc_id = 0;
 
-        if (rnl_format_ipcm_pft_dump_resp_msg(result, entries, out_msg)) {
+        if (rnl_format_ipcm_pff_dump_resp_msg(result, entries, out_msg)) {
                 nlmsg_free(out_msg);
                 return -1;
         }
@@ -3716,7 +3716,7 @@ int rnl_ipcp_pft_dump_resp_msg(ipc_process_id_t   ipc_id,
         }
         return 0;
 }
-EXPORT_SYMBOL(rnl_ipcp_pft_dump_resp_msg);
+EXPORT_SYMBOL(rnl_ipcp_pff_dump_resp_msg);
 
 int rnl_ipcm_query_rib_resp_msg(ipc_process_id_t   ipc_id,
                                 int                result,

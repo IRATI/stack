@@ -1,5 +1,5 @@
 /*
- * PFT (PDU Forwarding Table)
+ * PFF (PDU Forwarding Function)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
@@ -22,28 +22,28 @@
 #include <linux/rculist.h>
 #include <linux/slab.h>
 
-#define RINA_PREFIX "pft"
+#define RINA_PREFIX "pff"
 
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
-#include "pft.h"
-#include "pft-ps.h"
+#include "pff.h"
+#include "pff-ps.h"
 
 static struct policy_set_list policy_sets = {
         .head = LIST_HEAD_INIT(policy_sets.head)
 };
 
-struct pft {
+struct pff {
         struct rina_component base;
 };
 
-static bool __pft_is_ok(struct pft * instance)
+static bool __pff_is_ok(struct pff * instance)
 { return instance ? true : false; }
 
-static struct pft * pft_create_gfp(gfp_t flags)
+static struct pff * pff_create_gfp(gfp_t flags)
 {
-        struct pft * tmp;
+        struct pff * tmp;
 
         tmp = rkzalloc(sizeof(*tmp), flags);
         if (!tmp)
@@ -52,8 +52,8 @@ static struct pft * pft_create_gfp(gfp_t flags)
         rina_component_init(&tmp->base);
 
         /* Try to select the default policy-set. */
-        if (pft_select_policy_set(tmp, "", RINA_PS_DEFAULT_NAME)) {
-                pft_destroy(tmp);
+        if (pff_select_policy_set(tmp, "", RINA_PS_DEFAULT_NAME)) {
+                pff_destroy(tmp);
                 return NULL;
         }
 
@@ -62,16 +62,16 @@ static struct pft * pft_create_gfp(gfp_t flags)
 
 #if 0
 /* NOTE: Unused at the moment */
-struct pft * pft_create_ni(void)
-{ return pft_create_gfp(GFP_ATOMIC); }
+struct pff * pff_create_ni(void)
+{ return pff_create_gfp(GFP_ATOMIC); }
 #endif
 
-struct pft * pft_create(void)
-{ return pft_create_gfp(GFP_KERNEL); }
+struct pff * pff_create(void)
+{ return pff_create_gfp(GFP_KERNEL); }
 
-int pft_destroy(struct pft * instance)
+int pff_destroy(struct pff * instance)
 {
-        if (!__pft_is_ok(instance))
+        if (!__pff_is_ok(instance))
                 return -1;
 
         rina_component_fini(&instance->base);
@@ -85,24 +85,24 @@ int pft_destroy(struct pft * instance)
  * NOTE: This could break if we do more checks on the instance.
  *       A lock will have to be be taken in that case ...
  */
-bool pft_is_ok(struct pft * instance)
-{ return __pft_is_ok(instance); }
-EXPORT_SYMBOL(pft_is_ok);
+bool pff_is_ok(struct pff * instance)
+{ return __pff_is_ok(instance); }
+EXPORT_SYMBOL(pff_is_ok);
 
-bool pft_is_empty(struct pft * instance)
+bool pff_is_empty(struct pff * instance)
 {
-        struct pft_ps * ps;
+        struct pff_ps * ps;
 
-        if (!__pft_is_ok(instance))
+        if (!__pff_is_ok(instance))
                 return -1;
 
         rcu_read_lock();
 
         ps = container_of(rcu_dereference(instance->base.ps),
-                          struct pft_ps, base);
+                          struct pff_ps, base);
 
-        ASSERT(ps->pft_is_empty);
-        if (ps->pft_is_empty(ps)) {
+        ASSERT(ps->pff_is_empty);
+        if (ps->pff_is_empty(ps)) {
                 rcu_read_unlock();
                 return -1;
         }
@@ -112,20 +112,20 @@ bool pft_is_empty(struct pft * instance)
         return 0;
 }
 
-int pft_flush(struct pft * instance)
+int pff_flush(struct pff * instance)
 {
-        struct pft_ps * ps;
+        struct pff_ps * ps;
 
-        if (!__pft_is_ok(instance))
+        if (!__pff_is_ok(instance))
                 return -1;
 
         rcu_read_lock();
 
         ps = container_of(rcu_dereference(instance->base.ps),
-                          struct pft_ps, base);
+                          struct pff_ps, base);
 
-        ASSERT(ps->pft_flush);
-        if (ps->pft_flush(ps)) {
+        ASSERT(ps->pff_flush);
+        if (ps->pff_flush(ps)) {
                 rcu_read_unlock();
                 return -1;
         }
@@ -135,12 +135,12 @@ int pft_flush(struct pft * instance)
         return 0;
 }
 
-int pft_add(struct pft *           instance,
+int pff_add(struct pff *           instance,
 	    struct mod_pff_entry * mpe)
 {
-        struct pft_ps * ps;
+        struct pff_ps * ps;
 
-        if (!__pft_is_ok(instance))
+        if (!__pff_is_ok(instance))
                 return -1;
 
         if (!mpe) {
@@ -151,10 +151,10 @@ int pft_add(struct pft *           instance,
         rcu_read_lock();
 
         ps = container_of(rcu_dereference(instance->base.ps),
-                          struct pft_ps, base);
+                          struct pff_ps, base);
 
-        ASSERT(ps->pft_add);
-        if (ps->pft_add(ps, mpe)) {
+        ASSERT(ps->pff_add);
+        if (ps->pff_add(ps, mpe)) {
                 rcu_read_unlock();
                 return -1;
         }
@@ -164,12 +164,12 @@ int pft_add(struct pft *           instance,
         return 0;
 }
 
-int pft_remove(struct pft *           instance,
+int pff_remove(struct pff *           instance,
 	       struct mod_pff_entry * mpe)
 {
-        struct pft_ps * ps;
+        struct pff_ps * ps;
 
-        if (!__pft_is_ok(instance))
+        if (!__pff_is_ok(instance))
                 return -1;
 
         if (!mpe) {
@@ -180,10 +180,10 @@ int pft_remove(struct pft *           instance,
         rcu_read_lock();
 
         ps = container_of(rcu_dereference(instance->base.ps),
-                          struct pft_ps, base);
+                          struct pff_ps, base);
 
-        ASSERT(ps->pft_remove);
-        if (ps->pft_remove(ps, mpe)) {
+        ASSERT(ps->pff_remove);
+        if (ps->pff_remove(ps, mpe)) {
                 rcu_read_unlock();
                 return -1;
         }
@@ -193,14 +193,14 @@ int pft_remove(struct pft *           instance,
         return 0;
 }
 
-int pft_nhop(struct pft * instance,
+int pff_nhop(struct pff * instance,
              struct pci * pci,
              port_id_t ** ports,
              size_t *     count)
 {
-        struct pft_ps *ps;
+        struct pff_ps *ps;
 
-        if (!__pft_is_ok(instance))
+        if (!__pff_is_ok(instance))
                 return -1;
 
         if (!pci_is_ok(pci)) {
@@ -215,10 +215,10 @@ int pft_nhop(struct pft * instance,
         rcu_read_lock();
 
         ps = container_of(rcu_dereference(instance->base.ps),
-                          struct pft_ps, base);
+                          struct pff_ps, base);
 
-        ASSERT(ps->pft_nhop);
-        if (ps->pft_nhop(ps, pci, ports, count)) {
+        ASSERT(ps->pff_nhop);
+        if (ps->pff_nhop(ps, pci, ports, count)) {
                 rcu_read_unlock();
                 return -1;
         }
@@ -227,21 +227,21 @@ int pft_nhop(struct pft * instance,
         return 0;
 }
 
-int pft_dump(struct pft *       instance,
+int pff_dump(struct pff *       instance,
              struct list_head * entries)
 {
-        struct pft_ps * ps;
+        struct pff_ps * ps;
 
-        if (!__pft_is_ok(instance))
+        if (!__pff_is_ok(instance))
                 return -1;
 
         rcu_read_lock();
 
         ps = container_of(rcu_dereference(instance->base.ps),
-                          struct pft_ps, base);
+                          struct pff_ps, base);
 
-        ASSERT(ps->pft_dump);
-        if (ps->pft_dump(ps, entries)) {
+        ASSERT(ps->pff_dump);
+        if (ps->pff_dump(ps, entries)) {
                 rcu_read_unlock();
                 return -1;
         }
@@ -251,8 +251,8 @@ int pft_dump(struct pft *       instance,
         return 0;
 }
 
-/* NOTE: Skeleton code, PFT currently has no subcomponents*/
-int pft_select_policy_set(struct pft *     pft,
+/* NOTE: Skeleton code, PFF currently has no subcomponents*/
+int pff_select_policy_set(struct pff *     pff,
                           const string_t * path,
                           const string_t * name)
 {
@@ -263,61 +263,61 @@ int pft_select_policy_set(struct pft *     pft,
                 return -1;
         }
 
-        ret = base_select_policy_set(&pft->base, &policy_sets, name);
+        ret = base_select_policy_set(&pff->base, &policy_sets, name);
 
         return ret;
 }
-EXPORT_SYMBOL(pft_select_policy_set);
+EXPORT_SYMBOL(pff_select_policy_set);
 
-/* NOTE: Skeleton code, PFT currently does not take params */
-int pft_set_policy_set_param(struct pft * pft,
+/* NOTE: Skeleton code, PFF currently does not take params */
+int pff_set_policy_set_param(struct pff * pff,
                              const char * path,
                              const char * name,
                              const char * value)
 {
-        struct pft_ps * ps;
+        struct pff_ps * ps;
         int ret = -1;
 
-        if (!pft || !path || !name || !value) {
-                LOG_ERRF("NULL arguments %p %p %p %p", pft, path, name, value);
+        if (!pff || !path || !name || !value) {
+                LOG_ERRF("NULL arguments %p %p %p %p", pff, path, name, value);
                 return -1;
         }
 
         LOG_DBG("set-policy-set-param '%s' '%s' '%s'", path, name, value);
 
         if (strcmp(path, "") == 0) {
-                /* The request addresses this PFT instance. */
+                /* The request addresses this PFF instance. */
                 rcu_read_lock();
 
-                ps = container_of(rcu_dereference(pft->base.ps),
-                                  struct pft_ps, base);
+                ps = container_of(rcu_dereference(pff->base.ps),
+                                  struct pff_ps, base);
                 if (!ps) {
-                        LOG_ERR("No policy-set selected for this PFT");
+                        LOG_ERR("No policy-set selected for this PFF");
                 } else {
-                        LOG_ERR("Unknown PFT parameter policy '%s'", name);
+                        LOG_ERR("Unknown PFF parameter policy '%s'", name);
                 }
 
                 rcu_read_unlock();
         } else {
-                ret = base_set_policy_set_param(&pft->base, path, name, value);
+                ret = base_set_policy_set_param(&pff->base, path, name, value);
         }
 
         return ret;
 }
-EXPORT_SYMBOL(pft_set_policy_set_param);
+EXPORT_SYMBOL(pff_set_policy_set_param);
 
 /* Must be called under RCU read lock. */
-struct pft_ps * pft_ps_get(struct pft * pft)
+struct pff_ps * pff_ps_get(struct pff * pff)
 {
-        return container_of(rcu_dereference(pft->base.ps),
-                            struct pft_ps, base);
+        return container_of(rcu_dereference(pff->base.ps),
+                            struct pff_ps, base);
 }
 
-struct pft * pft_from_component(struct rina_component * component)
-{ return container_of(component, struct pft, base); }
-EXPORT_SYMBOL(pft_from_component);
+struct pff * pff_from_component(struct rina_component * component)
+{ return container_of(component, struct pff, base); }
+EXPORT_SYMBOL(pff_from_component);
 
-int pft_ps_publish(struct ps_factory * factory)
+int pff_ps_publish(struct ps_factory * factory)
 {
         if (factory == NULL) {
                 LOG_ERR("%s: NULL factory", __func__);
@@ -326,8 +326,8 @@ int pft_ps_publish(struct ps_factory * factory)
 
         return ps_publish(&policy_sets, factory);
 }
-EXPORT_SYMBOL(pft_ps_publish);
+EXPORT_SYMBOL(pff_ps_publish);
 
-int pft_ps_unpublish(const char * name)
+int pff_ps_unpublish(const char * name)
 { return ps_unpublish(&policy_sets, name); }
-EXPORT_SYMBOL(pft_ps_unpublish);
+EXPORT_SYMBOL(pff_ps_unpublish);

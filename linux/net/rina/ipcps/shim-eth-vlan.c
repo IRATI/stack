@@ -1425,10 +1425,10 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .mgmt_sdu_write            = NULL,
         .mgmt_sdu_post             = NULL,
 
-        .pft_add                   = NULL,
-        .pft_remove                = NULL,
-        .pft_dump                  = NULL,
-        .pft_flush                 = NULL,
+        .pff_add                   = NULL,
+        .pff_remove                = NULL,
+        .pff_dump                  = NULL,
+        .pff_flush                 = NULL,
 
         .query_rib		   = eth_vlan_query_rib,
 

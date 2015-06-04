@@ -39,7 +39,7 @@
 #include "debug.h"
 #include "du.h"
 #include "rmt.h"
-#include "pft.h"
+#include "pff.h"
 #include "efcp-utils.h"
 #include "serdes.h"
 #include "pdu-ser.h"
@@ -169,7 +169,7 @@ static struct rmt_n1_port * n1pmap_find(struct n1pmap * m,
         return NULL;
 }
 
-struct pft_cache {
+struct pff_cache {
         port_id_t * pids;  /* Array of port_id_t */
         size_t      count; /* Entries in the pids array */
 };
@@ -333,19 +333,19 @@ EXPORT_SYMBOL(rmt_queue_set_destroy);
 
 /* RMT DATAMODEL FOR RMT PS END */
 
-static int pft_cache_init(struct pft_cache * c)
+static int pff_cache_init(struct pff_cache * c)
 {
         ASSERT(c);
 
         c->pids  = NULL;
         c->count = 0;
 
-        LOG_DBG("PFT cache %pK initialized", c);
+        LOG_DBG("PFF cache %pK initialized", c);
 
         return 0;
 }
 
-static int pft_cache_fini(struct pft_cache * c)
+static int pff_cache_fini(struct pff_cache * c)
 {
         ASSERT(c);
 
@@ -356,7 +356,7 @@ static int pft_cache_fini(struct pft_cache * c)
                 ASSERT(!c->pids);
         }
 
-        LOG_DBG("PFT cache %pK destroyed", c);
+        LOG_DBG("PFF cache %pK destroyed", c);
 
         return 0;
 }
@@ -365,13 +365,13 @@ struct rmt {
         struct rina_component     base;
         address_t                 address;
         struct ipcp_instance *    parent;
-        struct pft *              pft;
+        struct pff *              pff;
         struct kfa *              kfa;
         struct efcp_container *   efcpc;
         struct serdes *           serdes;
         struct tasklet_struct     egress_tasklet;
         struct n1pmap *           n1_ports;
-        struct pft_cache          cache;
+        struct pff_cache          cache;
 };
 
 struct rmt *
@@ -437,9 +437,9 @@ int rmt_destroy(struct rmt * instance)
         tasklet_kill(&instance->egress_tasklet);
         if (instance->n1_ports)
                 n1pmap_destroy(instance->n1_ports);
-        pft_cache_fini(&instance->cache);
+        pff_cache_fini(&instance->cache);
 
-        if (instance->pft)            pft_destroy(instance->pft);
+        if (instance->pff)            pff_destroy(instance->pff);
         if (instance->serdes)         serdes_destroy(instance->serdes);
 
         rina_component_fini(&instance->base);
@@ -773,7 +773,7 @@ int rmt_send(struct rmt * instance,
                 return -1;
         }
 
-        if (pft_nhop(instance->pft,
+        if (pff_nhop(instance->pff,
                      pci,
                      &(instance->cache.pids),
                      &(instance->cache.count))) {
@@ -1303,12 +1303,12 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
         tmp->parent  = parent;
         tmp->kfa     = kfa;
         tmp->efcpc   = efcpc;
-        tmp->pft     = pft_create();
-        if (!tmp->pft)
+        tmp->pff     = pff_create();
+        if (!tmp->pff)
                 goto fail;
 
         tmp->n1_ports = n1pmap_create();
-        if (!tmp->n1_ports || pft_cache_init(&tmp->cache))
+        if (!tmp->n1_ports || pff_cache_init(&tmp->cache))
                 goto fail;
 
         tasklet_init(&tmp->egress_tasklet,
@@ -1330,36 +1330,36 @@ fail:
 EXPORT_SYMBOL(rmt_create);
 
 /* FIXME: To be rearranged */
-static bool is_rmt_pft_ok(struct rmt * instance)
-{ return (instance && instance->pft) ? true : false; }
+static bool is_rmt_pff_ok(struct rmt * instance)
+{ return (instance && instance->pff) ? true : false; }
 
-int rmt_pft_add(struct rmt *           instance,
+int rmt_pff_add(struct rmt *           instance,
 		struct mod_pff_entry * entry)
 {
-        return is_rmt_pft_ok(instance) ? pft_add(instance->pft,
+        return is_rmt_pff_ok(instance) ? pff_add(instance->pff,
 						 entry) : -1;
 }
-EXPORT_SYMBOL(rmt_pft_add);
+EXPORT_SYMBOL(rmt_pff_add);
 
-int rmt_pft_remove(struct rmt *           instance,
+int rmt_pff_remove(struct rmt *           instance,
 		   struct mod_pff_entry * entry)
 {
-        return is_rmt_pft_ok(instance) ? pft_remove(instance->pft,
+        return is_rmt_pff_ok(instance) ? pff_remove(instance->pff,
 						    entry) : -1;
 }
-EXPORT_SYMBOL(rmt_pft_remove);
+EXPORT_SYMBOL(rmt_pff_remove);
 
-int rmt_pft_dump(struct rmt *       instance,
+int rmt_pff_dump(struct rmt *       instance,
                  struct list_head * entries)
 {
-        return is_rmt_pft_ok(instance) ? pft_dump(instance->pft,
+        return is_rmt_pff_ok(instance) ? pff_dump(instance->pff,
                                                   entries) : -1;
 }
-EXPORT_SYMBOL(rmt_pft_dump);
+EXPORT_SYMBOL(rmt_pff_dump);
 
-int rmt_pft_flush(struct rmt * instance)
-{ return is_rmt_pft_ok(instance) ? pft_flush(instance->pft) : -1; }
-EXPORT_SYMBOL(rmt_pft_flush);
+int rmt_pff_flush(struct rmt * instance)
+{ return is_rmt_pff_ok(instance) ? pff_flush(instance->pff) : -1; }
+EXPORT_SYMBOL(rmt_pff_flush);
 
 int rmt_ps_publish(struct ps_factory * factory)
 {

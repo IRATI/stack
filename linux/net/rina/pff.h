@@ -1,5 +1,5 @@
 /*
- * PFT (PDU Forwarding Table)
+ * PFF (PDU Forwarding Function)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
@@ -20,49 +20,49 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_PFT_H
-#define RINA_PFT_H
+#ifndef RINA_PFF_H
+#define RINA_PFF_H
 
 #include "common.h"
 #include "qos.h"
 #include "ps-factory.h"
 
-struct pft;
+struct pff;
 struct pci;
 
-struct pft *    pft_create(void);
-int             pft_destroy(struct pft * instance);
+struct pff *    pff_create(void);
+int             pff_destroy(struct pff * instance);
 
-bool            pft_is_ok(struct pft * instance);
-bool            pft_is_empty(struct pft * instance);
-int             pft_flush(struct pft * instance);
+bool            pff_is_ok(struct pff * instance);
+bool            pff_is_empty(struct pff * instance);
+int             pff_flush(struct pff * instance);
 
-int             pft_add(struct pft *           instance,
+int             pff_add(struct pff *           instance,
                         struct mod_pff_entry * entry);
-int             pft_remove(struct pft *           instance,
+int             pff_remove(struct pff *           instance,
                            struct mod_pff_entry * entry);
 
 /* NOTE: ports and entries are in-out parms */
-int             pft_nhop(struct pft * instance,
+int             pff_nhop(struct pff * instance,
                          struct pci * pci,
                          port_id_t ** ports,
                          size_t *     count);
 
 /* NOTE: entries are of the type mod_pff_entry */
-int             pft_dump(struct pft *       instance,
+int             pff_dump(struct pff *       instance,
                          struct list_head * entries);
 
-int             pft_select_policy_set(struct pft * pft,
+int             pff_select_policy_set(struct pff * pff,
                                       const char * path,
                                       const char * name);
 
-int             pft_set_policy_set_param(struct pft * pft,
+int             pff_set_policy_set_param(struct pff * pff,
                                          const char * path,
                                          const char * name,
                                          const char * value);
 
-struct pft_ps * pft_ps_get(struct pft * pft);
+struct pff_ps * pff_ps_get(struct pff * pff);
 
-struct pft *    pft_from_component(struct rina_component * component);
+struct pff *    pff_from_component(struct rina_component * component);
 
 #endif

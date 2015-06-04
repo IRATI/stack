@@ -47,12 +47,12 @@ enum port_id_altlist_attrs_list {
 #define PIA_ATTR_MAX (__PIA_ATTR_MAX - 1)
 
 enum mod_pff_entry_attrs_list {
-        PFTELE_ATTR_ADDRESS = 1,
-        PFTELE_ATTR_QOSID,
-        PFTELE_ATTR_PORT_ID_ALTLISTS,
-        __PFTELE_ATTR_MAX,
+        PFFELE_ATTR_ADDRESS = 1,
+        PFFELE_ATTR_QOSID,
+        PFFELE_ATTR_PORT_ID_ALTLISTS,
+        __PFFELE_ATTR_MAX,
 };
-#define PFTELE_ATTR_MAX (__PFTELE_ATTR_MAX - 1)
+#define PFFELE_ATTR_MAX (__PFFELE_ATTR_MAX - 1)
 
 enum flow_spec_attrs_list {
         FSPEC_ATTR_AVG_BWITH = 1,
@@ -487,7 +487,7 @@ enum rmt_mod_pdu_fte_entry_req {
 };
 #define RMPFE_ATTR_MAX (__RMPFE_ATTR_MAX -1)
 
-enum rmt_pft_dump_resp {
+enum rmt_pff_dump_resp {
         RPFD_ATTR_RESULT = 1,
         RPFD_ATTR_ENTRIES,
         __RPFD_ATTR_MAX,
@@ -538,8 +538,8 @@ enum rnl_msg_attr_type {
         RNL_MSG_ATTRS_CONN_CREATE_ARRIVED,
         RNL_MSG_ATTRS_CONN_UPDATE_REQUEST,
         RNL_MSG_ATTRS_CONN_DESTROY_REQUEST,
-        RNL_MSG_ATTRS_RMT_PFTE_MODIFY_REQUEST,
-        RNL_MSG_ATTRS_RMT_PFT_DUMP_REQUEST,
+        RNL_MSG_ATTRS_RMT_PFFE_MODIFY_REQUEST,
+        RNL_MSG_ATTRS_RMT_PFF_DUMP_REQUEST,
         RNL_MSG_ATTRS_QUERY_RIB_REQUEST,
         RNL_MSG_ATTRS_SET_POLICY_SET_PARAM_REQUEST,
         RNL_MSG_ATTRS_SELECT_POLICY_SET_REQUEST
@@ -732,14 +732,14 @@ struct rnl_ipcm_unreg_app_resp_msg_attrs {
         uint_t result;
 };
 
-struct rnl_rmt_mod_pfte_msg_attrs {
+struct rnl_rmt_mod_pffe_msg_attrs {
         int32_t   mode;
-        struct list_head pft_entries;
+        struct list_head pff_entries;
 };
 
 struct rnl_rmt_dump_ft_reply_msg_attrs {
         uint_t           result;
-        struct list_head pft_entries;
+        struct list_head pff_entries;
 };
 
 struct rnl_ipcm_query_rib_msg_attrs {
@@ -835,7 +835,7 @@ int rnl_ipcp_conn_destroy_result_msg(ipc_process_id_t ipc_id,
 
 int rnl_ipcm_sock_closed_notif_msg(u32 closed_port, u32 dest_port);
 
-int rnl_ipcp_pft_dump_resp_msg(ipc_process_id_t   ipc_id,
+int rnl_ipcp_pff_dump_resp_msg(ipc_process_id_t   ipc_id,
                                int                result,
                                struct list_head * entries,
                                rnl_sn_t           seq_num,
