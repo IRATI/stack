@@ -680,9 +680,15 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 	if (ra_conf != 0) {
 		rina::ResourceAllocatorConfiguration rac;
 
-		parse_policy(ra_conf,
-			     "pduftgPolicySet",
-			     rac.pduftg_policy_set_);
+	        Json::Value pduftg_conf = root["pduftgConfiguration"];
+                if (pduftg_conf != 0) {
+                        rina::PDUFTGConfiguration pftgc;
+
+		        parse_policy(pduftg_conf,
+			             "policySet",
+			             pftgc.policy_set_);
+		        rac->pduftg_conf_ = pftgc;
+                }
 
 		dif_template->raConfiguration = rac;
 	}
