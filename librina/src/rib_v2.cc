@@ -73,9 +73,9 @@ unsigned RIBSchemaObject::get_max_objs() const {
 class RIBSchema {
 
 public:
-	friend class RIB;
 	RIBSchema(const cdap_rib::vers_info_t& version,
-						const char separator = '/');
+					const char separator = '/',
+					const std::string& root_name="");
 	virtual ~RIBSchema();
 	rib_schema_res ribSchemaDefContRelation(
 			const std::string& cont_class_name,
@@ -83,6 +83,7 @@ public:
 			const bool mandatory,
 			const unsigned max_objs);
 	char get_separator() const;
+	std::string get_root_name() const;
 	const cdap_rib::vers_info_t& get_version() const;
 
 	const std::string& get_root_fqn(void) const{
@@ -113,9 +114,10 @@ private:
 	template<typename T, typename R>
 	bool validateRemoveObject(const RIBObj<T>* obj,
 			const RIBObj<R>* parent);
-	const cdap_rib::vers_info_t version_;
-	std::map<std::string, RIBSchemaObject*> rib_schema_;
-	const char separator_;
+	const cdap_rib::vers_info_t version;
+	std::map<std::string, RIBSchemaObject*> rib_schema;
+	const char separator;
+	const std::string root_name;
 
 	//Root fqn
 	std::string root_fqn;
@@ -127,9 +129,12 @@ private:
 };
 
 
-RIBSchema::RIBSchema(const cdap_rib::vers_info_t &version, char separator) :
-							version_(version),
-							separator_(separator),
+RIBSchema::RIBSchema(const cdap_rib::vers_info_t &version_,
+					const char separator_,
+					const std::string& root_name_) :
+							version(version_),
+							separator(separator_),
+							root_name(root_name_),
 							refs(0){
 	root_fqn = std::string("");
 	root_fqn.push_back(separator);
@@ -145,21 +150,17 @@ rib_schema_res RIBSchema::ribSchemaDefContRelation(
 	RIBSchemaObject *object = new RIBSchemaObject(class_name, mandatory,
 			max_objs);
 	std::map<std::string, RIBSchemaObject*>::iterator parent_it =
-		rib_schema_.find(cont_class_name);
+		rib_schema.find(cont_class_name);
 
-	if (parent_it == rib_schema_.end())
+	if (parent_it == rib_schema.end())
 		return RIB_SCHEMA_FORMAT_ERR;
 
 	std::pair<std::map<std::string, RIBSchemaObject*>::iterator, bool> ret =
-		rib_schema_.insert(
+		rib_schema.insert(
 				std::pair<std::string, RIBSchemaObject*>(
 					class_name, object));
 
-	if (ret.second) {
-		return RIB_SUCCESS;
-	} else {
-		return RIB_SCHEMA_FORMAT_ERR;
-	}
+	return (ret.second)? RIB_SUCCESS : RIB_SCHEMA_FORMAT_ERR;
 }
 
 template<typename T>
@@ -170,12 +171,16 @@ bool RIBSchema::validateAddObject(const RIBObj<T>* obj) {
 	return true;
 }
 
+std::string RIBSchema::get_root_name() const {
+	return root_name;
+}
+
 char RIBSchema::get_separator() const {
-	return separator_;
+	return separator;
 }
 
 const cdap_rib::vers_info_t& RIBSchema::get_version() const {
-	return version_;
+	return version;
 }
 
 //fwd decl
@@ -279,8 +284,8 @@ public:
 	///
 	/// @ret On success 0, otherwise -1
 	///
-	inline int remove_obj(int64_t instance_id){
-		return __remove_obj(instance_id);
+	inline void remove_obj(int64_t instance_id){
+		__remove_obj(instance_id);
 	}
 
 	///
@@ -288,8 +293,8 @@ public:
 	///
 	/// @ret On success 0, otherwise -1
 	///
-	int remove_obj(const std::string& fqn) {
-		return __remove_obj(get_obj_inst_id(fqn));
+	void remove_obj(const std::string& fqn) {
+		__remove_obj(get_obj_inst_id(fqn));
 	}
 
 	///
@@ -343,6 +348,8 @@ private:
 	// fqn <-> instance id
 	std::map<std::string, int64_t> name_inst_map;
 
+	// Children map instance id <-> std<int64_t> children
+	std::map<int64_t, std::list<int64_t>*> obj_inst_child_map;
 
 	// delegation cache: fqn <-> obj
 	std::map<std::string, RIBObj_*> deleg_cache;
@@ -360,7 +367,7 @@ private:
 	RIBObj_* get_obj(int64_t inst_id);
 
 	//@internal: must be called with the rwlock acquired
-	int __remove_obj(int64_t inst_id);
+	void __remove_obj(int64_t inst_id);
 
 	//@internal: must be called with the rwlock acquired
 	int64_t __get_obj_inst_id(const std::string& fqn);
@@ -398,6 +405,22 @@ RIB::RIB(const rib_handle_t& handle_, const RIBSchema *schema_,
 						num_of_deleg(0),
 						cdap_provider(cdap_provider_),
 						handle(handle_){
+
+	std::stringstream root_fqn;
+
+	//Create root object
+	RIBObj_* root = new RootObj();
+
+	// Root fqn
+	root_fqn << schema->get_root_name() << schema->get_separator();
+
+	// Fill in the stuf
+	obj_name_map[root_fqn.str()] = root;
+	obj_inst_map[0] = root;
+	inst_name_map[0] = root_fqn.str();
+	name_inst_map[root_fqn.str()] = 0;
+	std::list<int64_t>* child_list = new std::list<int64_t>();
+	obj_inst_child_map[0] = child_list;
 }
 
 RIB::~RIB() {
@@ -405,15 +428,7 @@ RIB::~RIB() {
 	//Mutual exclusion
 	WriteScopedLock wlock(rwlock);
 
-	for (std::map<std::string, RIBObj_*>::iterator it = obj_name_map
-			.begin(); it != obj_name_map.end(); ++it) {
-		LOG_INFO("Object %s removed from the RIB",
-				it->second->fqn.c_str());
-		delete it->second;
-	}
-	obj_name_map.clear();
-	obj_inst_map.clear();
-
+	//TODO: remove objects
 	//TODO: remove schema if allocated by us?
 }
 
@@ -794,6 +809,11 @@ int64_t RIB::add_obj(const std::string& fqn, RIBObj_** obj_) {
 								fqn.c_str());
 		throw eObjInvalid();
 	}
+	LOG_DBG("Starting add object operation over RIB(%p), of object(%p) with fqn: '%s' (parent '%s')",
+							this,
+							*obj_,
+							fqn.c_str(),
+							parent_fqn.c_str());
 
 	//Recover the non-templatized part
 	obj = *obj_;
@@ -806,7 +826,7 @@ int64_t RIB::add_obj(const std::string& fqn, RIBObj_** obj_) {
 
 	//Check whether the father exists
 	parent_id = __get_obj_inst_id(parent_fqn);
-	if(parent_fqn != "" && parent_id == -1){
+	if(parent_id == -1){
 		LOG_ERR("Unable to add object(%p) at '%s'; parent does not exist!",
 								obj,
 								fqn.c_str());
@@ -823,14 +843,19 @@ int64_t RIB::add_obj(const std::string& fqn, RIBObj_** obj_) {
 		throw eObjExists();
 	}
 
+	//Allocate space
+	std::list<int64_t>* child_list = new std::list<int64_t>();
+
 	//get a (free) instance id
 	id = get_new_inst_id();
+	obj->parent_inst_id = parent_id;
 
 	//Add it and return
 	obj_name_map[fqn] = obj;
 	obj_inst_map[id] = obj;
 	inst_name_map[id] = fqn;
 	name_inst_map[fqn] = id;
+	obj_inst_child_map[id] = child_list;
 
 	if(obj->delegates){
 		//Increase counter number of num_of_deleg
@@ -839,37 +864,103 @@ int64_t RIB::add_obj(const std::string& fqn, RIBObj_** obj_) {
 		deleg_cache.clear();
 	}
 
-	//Mark pointer as acquired and return
-	*obj_ = NULL;
-	LOG_DBG("Object '%s' of class '%s' succesfully added (id:'%" PRId64 "')",
+	//Recover parent's children list  and add ourselves
+	if(parent_id >= 0) {
+		std::list<int64_t>* parent_child_list;
+		try{
+			parent_child_list = obj_inst_child_map[parent_id];
+			if(parent_child_list == NULL)
+				throw Exception();
+		}catch(...){
+			LOG_ERR("Unable to recover the children list for object '" PRId64  "'; corrupted internal state!",
+							parent_id);
+			assert(0);
+			throw Exception("Corrupted internal state");
+		}
+		parent_child_list->push_back(id);
+
+		//Mark pointer as acquired and return
+		*obj_ = NULL;
+		LOG_DBG("Object '%s' of class '%s' succesfully added (id:'%" PRId64 "')",
+									fqn.c_str(),
+									obj->get_class().c_str(),
+									id);
+	}
+
+	LOG_DBG("Add object operation over RIB(%p), of object(%p) with fqn: '%s', succeeded. Instance id: '%" PRId64 "'",
+								this,
+								*obj_,
 								fqn.c_str(),
-								obj->get_class().c_str(),
 								id);
+
 
 	return id;
 }
 
-int RIB::__remove_obj(int64_t inst_id) {
+void RIB::__remove_obj(int64_t inst_id) {
 
 	RIBObj_* obj;
+	std::list<int64_t> *child_list = NULL, *parent_child_list = NULL;
+	std::list<int64_t>::iterator it;
+	int64_t parent_inst_id;
 
 	//Mutual exclusion
 	WriteScopedLock wlock(rwlock);
 
 	obj = get_obj(inst_id);
-
 	if(!obj){
 		LOG_ERR("Unable to remove with instance id '%" PRId64  "'. Object does not exist!",
 								inst_id);
 		throw eObjDoesNotExist();
 	}
 
+	parent_inst_id = obj->parent_inst_id;
+
+	//Check first if it has children
+	try{
+		child_list = obj_inst_child_map[inst_id];
+		if(child_list == NULL)
+			throw Exception();
+		parent_child_list = obj_inst_child_map[parent_inst_id];
+		if(parent_child_list == NULL)
+			throw Exception();
+	}catch(...){
+		LOG_ERR("Unable to recover the children list/parent children list for object '" PRId64  "'; corrupted internal state!",
+							inst_id);
+		assert(0);
+		throw Exception("Corrupted internal state");
+	}
+
+	if(child_list->size() > 0){
+		LOG_ERR("Unable to remove object '" PRId64  "'; the object has children",
+							inst_id);
+		throw eObjHasChildren();
+	}
+
+	//Check if we are in the parent's child list
+	it = std::find(parent_child_list->begin(), parent_child_list->end(),
+								inst_id);
+	if(it == parent_child_list->end()){
+		LOG_ERR("Parent's children list does not contain object '" PRId64  "'; corrupted internal state!",
+							inst_id);
+		throw Exception("Corrupted internal state");
+	}
+
 	//Remove from the maps
-	std::string fqn = get_obj_fqn(inst_id);
+	std::string fqn = __get_obj_fqn(inst_id);
+
+	LOG_DBG("Removing object over RIB(%p) instance id: '%" PRId64 "' fqn: '%s'",
+								this,
+								inst_id,
+								fqn.c_str());
 	obj_inst_map.erase(inst_id);
 	inst_name_map.erase(inst_id);
 	name_inst_map.erase(fqn);
 	obj_name_map.erase(fqn);
+	obj_inst_child_map.erase(inst_id);
+
+	//Remove ourselves from the parent's children list
+	parent_child_list->erase(it);
 
 	//If there Remove from the cache
 	if(obj->delegates){
@@ -883,10 +974,10 @@ int RIB::__remove_obj(int64_t inst_id) {
 							obj->get_class().c_str(),
 							inst_id);
 
+
 	//Delete object
 	delete obj;
-
-	return 0;
+	delete child_list;
 }
 
 char RIB::get_separator() const {
@@ -895,10 +986,12 @@ char RIB::get_separator() const {
 
 std::string RIB::get_parent_fqn(const std::string& fqn_child) const {
 
-	size_t last_separator = fqn_child.find_last_of(schema->separator_,
+	size_t last_separator = fqn_child.find_last_of(schema->get_separator(),
 			std::string::npos);
-	if (last_separator == std::string::npos)
-		return "";
+
+	//Treat the case /x (no root name)
+	if(last_separator == 0)
+		return fqn_child.substr(0,1);
 
 	return fqn_child.substr(0, last_separator);
 }

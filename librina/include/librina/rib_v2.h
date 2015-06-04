@@ -112,6 +112,10 @@ DECLARE_EXCEPTION_SUBCLASS(eObjExists);
 /// Parent's object does not exist
 DECLARE_EXCEPTION_SUBCLASS(eObjNoParent);
 
+/// Object cannot be deleted because it has children (yes, we are nice people)
+DECLARE_EXCEPTION_SUBCLASS(eObjHasChildren);
+
+
 /// The object does not exist in that position of the tree
 DECLARE_EXCEPTION_SUBCLASS(eObjDoesNotExist);
 
@@ -224,7 +228,7 @@ public:
 	/// @param user User-specific context (type associated)
 	/// @param fqn Fully qualifed name (
 	///
-	RIBObj_() : delegates(false){};
+	RIBObj_() : delegates(false), parent_inst_id(-1){};
 
 	/// Fully qualified name
 	const std::string fqn;
@@ -346,6 +350,9 @@ protected:
 	//Flag used to identify objects which delegates a portion of the tree
 	bool delegates;
 
+	//Instance id of the parent
+	int64_t parent_inst_id;
+
 	//They love each other
 	template<typename T> friend class RIBObj;
 
@@ -406,11 +413,35 @@ protected:
 
 
 ///
+/// @internal Root object class
+///
+class RootObj : public RIBObj<void*>{
+
+public:
+
+	const std::string& get_class() const{
+		return class_;
+	};
+	AbstractEncoder* get_encoder(){return NULL;}
+
+private:
+	RootObj(void) : RIBObj(NULL), class_("root") { };
+	~RootObj(void){};
+
+	//Class name
+	const std::string class_;
+
+	//Only the RIB can instantiate a RootObj
+	friend class RIB;
+};
+
+///
 /// This class is used to capture operations on objects in a part of the tree
 /// without having to add explicitely the objects (catch all)
 ///
 class RIBDelegationObj : public RIBObj<void*>{
 
+public:
 	/// Constructor
 	RIBDelegationObj(void) : RIBObj(NULL) {
 		delegates = true;
