@@ -1197,7 +1197,10 @@ public:
 	///
 	void removeObjRIB(const rib_handle_t& handle, const int64_t);
 
-
+	//@internal: for testing purposes only)
+	void __set_cdap_provider(cdap::CDAPProviderInterface* p){
+		cdap_provider = p;
+	}
 protected:
 	//
 	// CDAP provider callbacks
@@ -2450,6 +2453,10 @@ RIBDaemonProxy* RIBDaemonProxyFactory(){
 
 	}
 	return new RIBDaemonProxy(ribd);
+}
+
+void __set_cdap_provider(cdap::CDAPProviderInterface* p){
+	ribd->__set_cdap_provider(p);
 }
 
 void fini(){

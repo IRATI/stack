@@ -30,10 +30,12 @@
 #include "librina/cdap.h"
 #include "librina/ipc-process.h"
 #include "librina/common.h"
+#include "librina/cdap_v2.h"
 #include "librina/rib_v2.h"
 
 using namespace rina;
 using namespace rina::rib;
+using namespace rina::cdap;
 
 //fwd decl
 class MyObj;
@@ -57,6 +59,7 @@ class ribBasicOps : public CppUnit::TestFixture {
 	CPPUNIT_TEST( testCreation );
 	CPPUNIT_TEST( testAssociation );
 	CPPUNIT_TEST( testAddObj );
+	CPPUNIT_TEST( testObjOperations );
 	CPPUNIT_TEST( testRemoveObj );
 	CPPUNIT_TEST( testDeassociation );
 	CPPUNIT_TEST( testDestruction );
@@ -75,6 +78,7 @@ public:
 	void testCreation();
 	void testAssociation();
 	void testAddObj();
+	void testObjOperations();
 	void testRemoveObj();
 	void testDeassociation();
 	void testDestruction();
@@ -134,7 +138,97 @@ public:
 
 static class AppHandlers app_handlers;
 
+//CDAP provider mockup
+class CDAPProviderMockup : public CDAPProviderInterface {
 
+public:
+	virtual ~CDAPProviderMockup(){};
+
+	virtual cdap_rib::con_handle_t remote_open_connection(
+			const cdap_rib::vers_info_t &ver,
+			const cdap_rib::src_info_t &src,
+			const cdap_rib::dest_info_t &dest,
+			const cdap_rib::auth_info &auth, int port_id){
+		 cdap_rib::con_handle_t con;
+		 return con;
+	};
+
+	//remote
+	virtual int remote_close_connection(unsigned int port){ return 0;};
+	virtual int remote_create(unsigned int port,
+				  const cdap_rib::obj_info_t &obj,
+				  const cdap_rib::flags_t &flags,
+				  const cdap_rib::filt_info_t &filt){ return 0;};
+	virtual int remote_delete(unsigned int port,
+				  const cdap_rib::obj_info_t &obj,
+				  const cdap_rib::flags_t &flags,
+				  const cdap_rib::filt_info_t &filt){ return 0;};
+	virtual int remote_read(unsigned int port,
+				const cdap_rib::obj_info_t &obj,
+				const cdap_rib::flags_t &flags,
+				const cdap_rib::filt_info_t &filt){ return 0;};
+	virtual int remote_cancel_read(unsigned int port,
+				       const cdap_rib::flags_t &flags,
+				       int invoke_id){ return 0;};
+	virtual int remote_write(unsigned int port,
+				 const cdap_rib::obj_info_t &obj,
+				 const cdap_rib::flags_t &flags,
+				 const cdap_rib::filt_info_t &filt){ return 0;};
+	virtual int remote_start(unsigned int port,
+				 const cdap_rib::obj_info_t &obj,
+				 const cdap_rib::flags_t &flags,
+				 const cdap_rib::filt_info_t &filt){ return 0;};
+	virtual int remote_stop(unsigned int port,
+				const cdap_rib::obj_info_t &obj,
+				const cdap_rib::flags_t &flags,
+				const cdap_rib::filt_info_t &filt){ return 0;};
+
+	//local
+	virtual void send_open_connection_result(const cdap_rib::con_handle_t &con,
+					      const cdap_rib::res_info_t &res,
+					      int invoke_id){};
+	virtual void send_close_connection_result(unsigned int port,
+					       const cdap_rib::flags_t &flags,
+					       const cdap_rib::res_info_t &res,
+					       int invoke_id){};
+	virtual void send_create_result(unsigned int port,
+					    const cdap_rib::obj_info_t &obj,
+					    const cdap_rib::flags_t &flags,
+					    const cdap_rib::res_info_t &res,
+					    int invoke_id){};
+	virtual void send_delete_result(unsigned int port,
+					    const cdap_rib::obj_info_t &obj,
+					    const cdap_rib::flags_t &flags,
+					    const cdap_rib::res_info_t &res,
+					    int invoke_id){};
+	virtual void send_read_result(unsigned int port,
+					  const cdap_rib::obj_info_t &obj,
+					  const cdap_rib::flags_t &flags,
+					  const cdap_rib::res_info_t &res,
+					  int invoke_id){};
+	virtual void send_cancel_read_result(
+			unsigned int port, const cdap_rib::flags_t &flags,
+			const cdap_rib::res_info_t &res, int invoke_id){};
+	virtual void send_write_result(unsigned int port,
+					   const cdap_rib::flags_t &flags,
+					   const cdap_rib::res_info_t &res,
+					   int invoke_id){};
+	virtual void send_start_result(unsigned int port,
+					   const cdap_rib::obj_info_t &obj,
+					   const cdap_rib::flags_t &flags,
+					   const cdap_rib::res_info_t &res,
+					   int invoke_id){};
+	virtual void send_stop_result(unsigned int port,
+					  const cdap_rib::flags_t &flags,
+					  const cdap_rib::res_info_t &res,
+					  int invoke_id){};
+	virtual void process_message(cdap_rib::SerializedObject &message,
+				     unsigned int port){};
+
+	virtual void destroy_session(int port){ (void)port; /*FIXME*/ };
+};
+
+static CDAPProviderMockup cdap_provider_mockup;
 //
 //
 //
@@ -192,7 +286,13 @@ int64_t inst_id1, inst_id2, inst_id3;
 
 //Setups
 
+//fwd decl
+namespace rina{namespace rib{
+void __set_cdap_provider(cdap::CDAPProviderInterface* p);
+}} //namespaces fwd decl
+
 void ribBasicOps::setUp(){
+
 }
 
 void ribBasicOps::tearDown(){
@@ -215,6 +315,9 @@ void ribBasicOps::testInit(){
 	CPPUNIT_ASSERT_MESSAGE("Invalid ribdproxy before init", ribd == NULL);
 
 	rina::rib::init(&app_handlers, &remote_handlers, params);
+
+	//Set our mockup CDAP provder
+	rina::rib::__set_cdap_provider(&cdap_provider_mockup);
 
 	//Double call to init should throw an exception
 	try{
@@ -538,6 +641,10 @@ void ribBasicOps::testAddObj(){
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Invalid exception thrown during getObjInstId() obj 3", 0);
 	}
+}
+
+void ribBasicOps::testObjOperations(){
+
 }
 
 void ribBasicOps::testRemoveObj(){

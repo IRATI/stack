@@ -107,7 +107,7 @@ test_cdap_LDFLAGS  = $(FUNCTIONALLDFLAGS)
 
 test_rib_v2_SOURCES  = test-rib_v2.cc
 test_rib_v2_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
-test_rib_v2_CXXFLAGS = $(COMMONCXXFLAGS) -Wno-unused-variable
+test_rib_v2_CXXFLAGS = $(COMMONCXXFLAGS) -Wno-unused-variable -Wno-unused-parameter
 test_rib_v2_LDFLAGS  = $(FUNCTIONALLDFLAGS) -lcppunit
 
 
