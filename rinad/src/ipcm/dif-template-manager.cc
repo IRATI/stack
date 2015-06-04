@@ -292,7 +292,11 @@ void DIFTemplateManager::augment_dif_template(rinad::DIFTemplate * dif_template)
 		dif_template->etConfiguration = default_template->etConfiguration;
 	}
 
-	if (dif_template->rmtConfiguration.rmt_policy_set_.name_ == std::string()) {
+	if (dif_template->rmtConfiguration.pft_conf_.policy_set_.name_ == std::string()) {
+		dif_template->rmtConfiguration.pft_conf_ = default_template->rmtConfiguration.pft_conf_;
+	}
+
+	if (dif_template->rmtConfiguration.policy_set_.name_ == std::string()) {
 		dif_template->rmtConfiguration = default_template->rmtConfiguration;
 	}
 
@@ -308,7 +312,7 @@ void DIFTemplateManager::augment_dif_template(rinad::DIFTemplate * dif_template)
 		dif_template->faConfiguration = default_template->faConfiguration;
 	}
 
-	if (dif_template->raConfiguration.pduftg_policy_set_.name_ == std::string()) {
+	if (dif_template->raConfiguration.pduftg_conf_.policy_set_.name_ == std::string()) {
 		dif_template->raConfiguration = default_template->raConfiguration;
 	}
 

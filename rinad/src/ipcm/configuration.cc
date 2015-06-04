@@ -642,11 +642,11 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
                 if (pft_conf != 0) {
                         rina::PFTConfiguration pftc;
 
-                        parse_policy(pft_confg,
+                        parse_policy(pft_conf,
                                      "policySet",
                                      pftc.policy_set_);
 
-                        rmt_conf->pft_conf_ = pftc;
+                        rc.pft_conf_ = pftc;
                 }
 		dif_template->rmtConfiguration = rc;
 	}
@@ -687,7 +687,7 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 		        parse_policy(pduftg_conf,
 			             "policySet",
 			             pftgc.policy_set_);
-		        rac->pduftg_conf_ = pftgc;
+		        rac.pduftg_conf_ = pftgc;
                 }
 
 		dif_template->raConfiguration = rac;
