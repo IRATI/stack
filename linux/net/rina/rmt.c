@@ -1334,7 +1334,7 @@ static bool is_rmt_pft_ok(struct rmt * instance)
 { return (instance && instance->pft) ? true : false; }
 
 int rmt_pft_add(struct rmt *           instance,
-		struct mod_pft_entry * entry)
+		struct mod_pff_entry * entry)
 {
         return is_rmt_pft_ok(instance) ? pft_add(instance->pft,
 						 entry) : -1;
@@ -1342,7 +1342,7 @@ int rmt_pft_add(struct rmt *           instance,
 EXPORT_SYMBOL(rmt_pft_add);
 
 int rmt_pft_remove(struct rmt *           instance,
-		   struct mod_pft_entry * entry)
+		   struct mod_pff_entry * entry)
 {
         return is_rmt_pft_ok(instance) ? pft_remove(instance->pft,
 						    entry) : -1;

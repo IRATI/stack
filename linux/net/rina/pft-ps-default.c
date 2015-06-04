@@ -270,7 +270,7 @@ static struct pft_entry * pft_find(struct pft_ps_priv * priv,
 }
 
 static int default_add(struct pft_ps *        ps,
-                       struct mod_pft_entry * entry)
+                       struct mod_pff_entry * entry)
 {
         struct pft_ps_priv *     priv;
         struct pft_entry *       tmp;
@@ -327,7 +327,7 @@ static int default_add(struct pft_ps *        ps,
 }
 
 static int default_remove(struct pft_ps *        ps,
-                          struct mod_pft_entry * entry)
+                          struct mod_pff_entry * entry)
 {
         struct pft_ps_priv *       priv;
         struct port_id_altlist *   alts;
@@ -514,7 +514,7 @@ static int default_dump(struct pft_ps *    ps,
 {
         struct pft_ps_priv *   priv;
         struct pft_entry *     pos;
-        struct mod_pft_entry * entry;
+        struct mod_pff_entry * entry;
 
         priv = (struct pft_ps_priv *) ps->priv;
         if (!priv_is_ok(priv))

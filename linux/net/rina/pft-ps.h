@@ -32,9 +32,9 @@ struct pft_ps {
         struct ps_base base;
 
         int (* pft_add)(struct pft_ps *        ps,
-                        struct mod_pft_entry * entry);
+                        struct mod_pff_entry * entry);
         int (* pft_remove)(struct pft_ps *        ps,
-                           struct mod_pft_entry * entry);
+                           struct mod_pff_entry * entry);
 
         bool (* pft_is_empty)(struct pft_ps * ps);
         int  (* pft_flush)(struct pft_ps * ps);
@@ -45,7 +45,7 @@ struct pft_ps {
                           port_id_t **    ports,
                           size_t *        count);
 
-        /* NOTE: entries are of the type mod_pft_entry */
+        /* NOTE: entries are of the type mod_pff_entry */
         int  (* pft_dump)(struct pft_ps *    ps,
                           struct list_head * entries);
 

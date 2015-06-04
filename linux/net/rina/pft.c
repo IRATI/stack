@@ -136,7 +136,7 @@ int pft_flush(struct pft * instance)
 }
 
 int pft_add(struct pft *           instance,
-	    struct mod_pft_entry * mpe)
+	    struct mod_pff_entry * mpe)
 {
         struct pft_ps * ps;
 
@@ -165,7 +165,7 @@ int pft_add(struct pft *           instance,
 }
 
 int pft_remove(struct pft *           instance,
-	       struct mod_pft_entry * mpe)
+	       struct mod_pff_entry * mpe)
 {
         struct pft_ps * ps;
 

@@ -213,10 +213,10 @@ struct ipcp_instance_ops {
                               struct sdu *                sdu);
 
         int (* pft_add)(struct ipcp_instance_data * data,
-			struct mod_pft_entry	  * entry);
+			struct mod_pff_entry	  * entry);
 
         int (* pft_remove)(struct ipcp_instance_data * data,
-			   struct mod_pft_entry      * entry);
+			   struct mod_pff_entry      * entry);
 
         int (* pft_dump)(struct ipcp_instance_data * data,
                          struct list_head *          entries);

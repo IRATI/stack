@@ -884,7 +884,7 @@ static int normal_mgmt_sdu_post(struct ipcp_instance_data * data,
 }
 
 static int normal_pft_add(struct ipcp_instance_data * data,
-			  struct mod_pft_entry *      entry)
+			  struct mod_pff_entry *      entry)
 
 {
         ASSERT(data);
@@ -893,7 +893,7 @@ static int normal_pft_add(struct ipcp_instance_data * data,
 }
 
 static int normal_pft_remove(struct ipcp_instance_data * data,
-			     struct mod_pft_entry *      entry)
+			     struct mod_pff_entry *      entry)
 {
         ASSERT(data);
 
