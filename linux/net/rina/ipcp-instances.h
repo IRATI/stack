@@ -94,6 +94,7 @@ struct efcp_config {
         /* The data transfer constants */
         struct dt_cons * dt_cons;
 
+        /* Left here for phase 2 */
         struct policy * unknown_flow;
 };
 
@@ -132,6 +133,21 @@ struct sdup_config {
 	struct list_head	  specific_dup_confs;
 };
 
+/* Represents the configuration of the PFT */
+struct pft_config {
+	/* The PS name for the PDU Forwarding Table (Next hop) */
+	struct policy * policy_set;
+};
+
+/* Represents the configuration of the RMT */
+struct rmt_config {
+	/* The PS name for the RMT */
+	struct policy * policy_set;
+
+	/* The configuration of the PDU Forwarding Table subcomponent */
+	struct pft_config * pft_conf;
+};
+
 /* Represents a DIF configuration (policies, parameters, etc) */
 struct dif_config {
         /* List of configuration entries */
@@ -139,6 +155,9 @@ struct dif_config {
 
         /* the config of the efcp */
         struct efcp_config * efcp_config;
+
+        /* the config of the rmt */
+        struct rmt_config * rmt_config;
 
         /* The address of the IPC Process*/
         address_t           address;

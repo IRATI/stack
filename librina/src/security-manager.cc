@@ -160,7 +160,7 @@ AuthPolicy AuthPasswordPolicySet::get_auth_policy(int session_id,
 	}
 
 	AuthPasswordSecurityContext * sc = new AuthPasswordSecurityContext(session_id);
-	sc->password = profile.authPolicy.get_param_value(PASSWORD);
+	sc->password = profile.authPolicy.get_param_value_as_string(PASSWORD);
 	if (sc->password == std::string()) {
 		LOG_ERR("Could not find password parameter");
 		throw Exception();
@@ -240,7 +240,7 @@ rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(
 	}
 
 	AuthPasswordSecurityContext * sc = new AuthPasswordSecurityContext(session_id);
-	sc->password = profile.authPolicy.get_param_value(PASSWORD);
+	sc->password = profile.authPolicy.get_param_value_as_string(PASSWORD);
 	if (sc->password == std::string()) {
 		LOG_ERR("Could not find password parameter");
 		throw Exception();
@@ -559,15 +559,15 @@ SSH2SecurityContext::SSH2SecurityContext(int session_id,
 				   	 const AuthSDUProtectionProfile& profile)
 		: ISecurityContext(session_id)
 {
-	key_exch_alg = profile.authPolicy.get_param_value(KEY_EXCHANGE_ALGORITHM);
-	encrypt_alg = profile.encryptPolicy.get_param_value(ENCRYPTION_ALGORITHM);
-	mac_alg = profile.encryptPolicy.get_param_value(MAC_ALGORITHM);
-	compress_alg = profile.encryptPolicy.get_param_value(COMPRESSION_ALGORITHM);
-	keystore_path = profile.authPolicy.get_param_value(KEYSTORE_PATH);
+	key_exch_alg = profile.authPolicy.get_param_value_as_string(KEY_EXCHANGE_ALGORITHM);
+	encrypt_alg = profile.encryptPolicy.get_param_value_as_string(ENCRYPTION_ALGORITHM);
+	mac_alg = profile.encryptPolicy.get_param_value_as_string(MAC_ALGORITHM);
+	compress_alg = profile.encryptPolicy.get_param_value_as_string(COMPRESSION_ALGORITHM);
+	keystore_path = profile.authPolicy.get_param_value_as_string(KEYSTORE_PATH);
 	if (keystore_path == std::string()) {
 		//TODO set the configuration directory as the default keystore path
 	}
-	keystore_password = profile.authPolicy.get_param_value(KEYSTORE_PASSWORD);
+	keystore_password = profile.authPolicy.get_param_value_as_string(KEYSTORE_PASSWORD);
 	crcPolicy = profile.crcPolicy;
 	ttlPolicy = profile.ttlPolicy;
 	encrypt_policy_config = profile.encryptPolicy;
@@ -614,11 +614,11 @@ SSH2SecurityContext::SSH2SecurityContext(int session_id,
 
 	//TODO check compression algorithm when we use them
 
-	keystore_path = profile.authPolicy.get_param_value(KEYSTORE_PATH);
+	keystore_path = profile.authPolicy.get_param_value_as_string(KEYSTORE_PATH);
 	if (keystore_path == std::string()) {
 		//TODO set the configuration directory as the default keystore path
 	}
-	keystore_password = profile.authPolicy.get_param_value(KEYSTORE_PASSWORD);
+	keystore_password = profile.authPolicy.get_param_value_as_string(KEYSTORE_PASSWORD);
 	crcPolicy = profile.crcPolicy;
 	ttlPolicy = profile.ttlPolicy;
 	encrypt_policy_config = profile.encryptPolicy;

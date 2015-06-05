@@ -50,7 +50,7 @@ private:
 
 class WatchdogRIBObject: public BaseIPCPRIBObject, public rina::BaseCDAPResponseMessageHandler {
 public:
-	WatchdogRIBObject(IPCProcess * ipc_process, const rina::DIFConfiguration& dif_configuration);
+	WatchdogRIBObject(IPCProcess * ipc_process, int wdog_period_ms, int declared_dead_int_ms);
 	~WatchdogRIBObject();
 	const void* get_value() const;
 	void remoteReadObject(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
@@ -168,6 +168,12 @@ public:
 
 class EnrollmentTask: public IPCPEnrollmentTask, public rina::InternalEventListener {
 public:
+	static const std::string ENROLL_TIMEOUT_IN_MS;
+	static const std::string WATCHDOG_PERIOD_IN_MS;
+	static const std::string DECLARED_DEAD_INTERVAL_IN_MS;
+	static const std::string NEIGHBORS_ENROLLER_PERIOD_IN_MS;
+	static const std::string MAX_ENROLLMENT_RETRIES;
+
 	EnrollmentTask();
 	~EnrollmentTask();
 	void set_application_process(rina::ApplicationProcess * ap);
@@ -194,6 +200,21 @@ public:
 	IEnrollmentStateMachine * getEnrollmentStateMachine(int portId, bool remove);
 	void deallocateFlow(int portId);
 	void add_enrollment_state_machine(int portId, IEnrollmentStateMachine * stateMachine);
+
+	/// The maximum time to wait between steps of the enrollment sequence (in ms)
+	int timeout_;
+
+	/// Maximum number of enrollment attempts
+	unsigned int max_num_enroll_attempts_;
+
+	/// Watchdog period in ms
+	int watchdog_per_ms_;
+
+	/// The neighbor declared dead interval
+	int declared_dead_int_ms_;
+
+	/// The neighbor enroller period in ms
+	int neigh_enroll_per_ms_;
 
 private:
 	void populateRIB();
@@ -225,9 +246,6 @@ private:
 	rina::Thread * neighbors_enroller_;
 
 	rina::Lockable lock_;
-
-	/// The maximum time to wait between steps of the enrollment sequence (in ms)
-	int timeout_;
 
 	/// Stores the enrollment state machines, one per remote IPC process that this IPC
 	/// process is enrolled to.

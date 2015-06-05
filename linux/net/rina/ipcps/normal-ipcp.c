@@ -609,6 +609,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
 {
         struct efcp_config * efcp_config;
         struct sdup_config * sdup_config;
+        struct rmt_config *  rmt_config;
 
         data->info->dif_name = name_dup(dif_information->dif_name);
         data->address        = dif_information->configuration->address;
@@ -626,7 +627,13 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        efcp_container_set_config(efcp_config, data->efcpc);
+        efcp_container_config_set(efcp_config, data->efcpc);
+
+        rmt_config = dif_information->configuration->rmt_config;
+        if (!rmt_config) {
+        	LOG_ERR("No RMT configuration in the dif_info");
+        	return -1;
+        }
 
         sdup_config = dif_information->configuration->sdup_config;
         if (!sdup_config) {
@@ -641,6 +648,10 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         if (rmt_dt_cons_set(data->rmt, dt_cons_dup(efcp_config->dt_cons))) {
                 LOG_ERR("Could not set dt_cons in RMT");
                 return -1;
+        }
+
+        if (rmt_config_set(data-> rmt, rmt_config)) {
+                LOG_ERR("Could not set RMT conf");
         }
 
         return 0;

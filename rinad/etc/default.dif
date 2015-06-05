@@ -16,9 +16,17 @@
          "partialDelivery" : false,
          "orderedDelivery" : true,
          "efcpPolicies" : {
+              "dtpPolicySet" : {
+                "name" : "default",
+                "version" : "0"
+              },
               "initialATimer" : 300,
               "dtcpPresent" : true,
               "dtcpConfiguration" : {
+                   "dtcpPolicySet" : {
+                     "name" : "default",
+                     "version" : "0"
+                   },
                    "rtxControl" : false,
                    "flowControl" : true,
                    "flowControlConfig" : {
@@ -38,9 +46,17 @@
          "orderedDelivery" : true,
          "maxAllowableGap": 0,
          "efcpPolicies" : {
+              "dtpPolicySet" : {
+                "name" : "default",
+                "version" : "0"
+              },
               "initialATimer" : 300,
               "dtcpPresent" : true,
               "dtcpConfiguration" : {
+                   "dtcpPolicySet" : {
+                     "name" : "default",
+                     "version" : "0"
+                   },
                    "rtxControl" : true,
                    "rtxControlConfig" : {
                        "dataRxmsNmax" : 5,
@@ -74,47 +90,92 @@
     	 "addressPrefix" : 16,
     	 "organization" : "IRATI"
       } ], 
-    "pdufTableGeneratorConfiguration" : {
-        "pduFtGeneratorPolicy" : {
-          "name" : "LinkState",
-          "version" : "0"
-        },
-        "linkStateRoutingConfiguration" : {
-          "objectMaximumAge" : 10000,
-          "waitUntilReadCDAP" : 5001,
-          "waitUntilError" : 5001,
-          "waitUntilPDUFTComputation" : 103,
-          "waitUntilFSODBPropagation" : 101,
-          "waitUntilAgeIncrement" : 997, 
-          "routingAlgorithm" : "Dijkstra"
-        }
-     },
      "rmtConfiguration" : {
-        "rmtQueueMonitorPolicy" : {
-          "name" : "default",
-          "version" : "0"
+        "pftConfiguration" : {     
+          "policySet" : {
+            "name" : "default",
+            "version" : "0"
+          }
         },
-        "rmtSchedulingPolicy" : {
+        "policySet" : {
           "name" : "default",
-          "version" : "0"
-        },
-        "maxQueuePolicy" : {
-          "name" : "default",
-          "version" : "0"
+          "version" : "1"
         }
      },
      "enrollmentTaskConfiguration" : {
-        "enrollTimeoutInMs" : 10000,
-        "watchdogPeriodInMs" : 30000,
-        "declaredDeadIntervalInMs" : 120000,
-        "neighborsEnrollerPeriodInMs" : 30000,
-        "maxEnrollmentRetries" : 3
+        "policySet" : { 
+           "name" : "default",
+           "version" : "1", 
+           "parameters" : [{
+               "name"  : "enrollTimeoutInMs",
+               "value" : "10000"
+             },{
+               "name"  : "watchdogPeriodInMs",
+               "value" : "30000"
+             },{
+               "name"  : "declaredDeadIntervalInMs",
+               "value" : "120000"
+             },{
+               "name"  : "neighborsEnrollerPeriodInMs",
+               "value" : "30000"
+             },{
+               "name"  : "maxEnrollmentRetries",
+               "value" : "3"
+             }]
+        }
      },
-     "policySets" : {
-        "security-manager" : "default",
-        "flow-allocator" : "default",
-        "namespace-manager" : "default",
-        "routing" : "link-state",
-        "resource-allocator" : "default"
-    }
+     "flowAllocatorConfiguration" : { 
+         "policySet" : { 
+           "name" : "default",
+           "version" : "1" 
+          }
+     },
+     "namespaceManagerConfiguration" : {
+         "policySet" : {
+           "name" : "default",
+           "version" : "1"
+           }
+     },
+     "securityManagerConfiguration" : {
+         "policySet" : {
+           "name" : "default",
+           "version" : "1"
+           }
+     },
+     "resourceAllocatorConfiguration" : {
+         "pduftgConfiguration" : {    
+           "policySet" : {
+             "name" : "default",
+             "version" : "0"
+           }
+         }
+     },
+     "routingConfiguration" : {
+         "policySet" : {
+           "name" : "link-state",
+           "version" : "1",
+           "parameters" : [{
+             "name"  : "objectMaximumAge",
+             "value" : "10000"
+           },{
+             "name"  : "waitUntilReadCDAP",
+             "value" : "5001"
+           },{
+             "name"  : "waitUntilError",
+             "value" : "5001"
+           },{
+             "name"  : "waitUntilPDUFTComputation",
+             "value" : "103"
+           },{
+             "name"  : "waitUntilFSODBPropagation",
+             "value" : "101"
+           },{
+             "name"  : "waitUntilAgeIncrement",
+             "value" : "997" 
+           },{
+             "name"  : "routingAlgorithm",
+             "value" : "Dijkstra"
+           }]
+     }
   }
+}

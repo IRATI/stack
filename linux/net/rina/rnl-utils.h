@@ -148,6 +148,7 @@ enum dtcp_config_params_attrs_list {
         DCA_ATTR_FLOW_CONTROL_CONFIG,
         DCA_ATTR_RETX_CONTROL,
         DCA_ATTR_RETX_CONTROL_CONFIG,
+        DCA_ATTR_DTCP_POLICY_SET,
         DCA_ATTR_LOST_CONTROL_PDU_POLICY,
         DCA_ATTR_RTT_EST_POLICY,
         __DCA_ATTR_MAX,
@@ -157,6 +158,7 @@ enum dtcp_config_params_attrs_list {
 enum conn_policies_params_attrs_list {
         CPP_ATTR_DTCP_PRESENT = 1,
         CPP_ATTR_DTCP_CONFIG,
+        CPP_ATTR_DTP_POLICY_SET,
         CPP_ATTR_RCVR_TIMER_INAC_POLICY,
         CPP_ATTR_SNDR_TIMER_INAC_POLICY,
         CPP_ATTR_INIT_SEQ_NUM_POLICY,
@@ -431,13 +433,25 @@ enum spec_sdup_config_attrs_list {
 #define SAUTHP_ATTR_MAX (__SAUTHP_ATTR_MAX -1)
 
 enum secman_config_attrs_list {
-	SECMANC_DIF_MEM_ACC_CON_POLICY = 1,
-	SECMANC_NEW_FLOW_ACC_CON_POLICY,
+	SECMANC_POLICY_SET = 1,
 	SECMANC_DEFAULT_AUTH_SDUP_POLICY,
 	SECMANC_SPECIFIC_AUTH_SDUP_POLICIES,
 	__SECMANC_ATTR_MAX,
 };
 #define SECMANC_ATTR_MAX (__SECMANC_ATTR_MAX -1)
+
+enum pft_config_attrs_list {
+        PFTC_ATTR_POLICY_SET = 1,
+        __PFTC_ATTR_MAX,
+};
+#define PFTC_ATTR_MAX (__PFTC_ATTR_MAX -1)
+
+enum rmt_config_attrs_list {
+        RMTC_ATTR_POLICY_SET = 1,
+        RMTC_ATTR_PFT_CONFIG,
+        __RMTC_ATTR_MAX,
+};
+#define RMTC_ATTR_MAX (__RMTC_ATTR_MAX -1)
 
 enum dif_config_attrs_list {
         DCONF_ATTR_IPCP_CONFIG_ENTRIES = 1,
@@ -445,12 +459,13 @@ enum dif_config_attrs_list {
         DCONF_ATTR_EFCPC,
         DCONF_ATTR_RMTC,
         DCONF_ATTR_SECMANC,
-	DCONF_ATTR_PDUFT_CONF,
-	DCONF_ATTR_FA_CONF,
-	DCONF_ATTR_ET_CONF,
-	DCONF_ATTR_NSM_CONF,
-        DCONF_ATTR_POLICY_SETS,
-	__DCONF_ATTR_MAX,
+        /* From here not used in kernel */
+	DCONF_ATTR_FAC,
+	DCONF_ATTR_ETC,
+	DCONF_ATTR_NSMC,
+	DCONF_ATTR_RAC,
+	DCONF_ATTR_ROUTINGC,
+        __DCONF_ATTR_MAX,
 };
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)
 

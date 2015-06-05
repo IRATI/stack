@@ -385,8 +385,8 @@ public:
 			const std::string& api) = 0;
 };
 
-/// Resource Allocator Policy Set Interface
-class IResourceAllocatorPs : public rina::IPolicySet {
+/// PDUFT Generator Policy Set Interface
+class IPDUFTGeneratorPs : public rina::IPolicySet {
 // This class is used by the IPCP to access the plugin functionalities
 public:
 	/// The routing table has been updated; decide if
@@ -394,7 +394,7 @@ public:
 	///	@return true if valid, false otherwise
 	virtual void routingTableUpdated(const std::list<rina::RoutingTableEntry*>& routing_table) = 0;
 
-	virtual ~IResourceAllocatorPs() {}
+	virtual ~IPDUFTGeneratorPs() {}
 };
 
 /// Resource Allocator Interface
@@ -416,9 +416,15 @@ public:
 class IResourceAllocator: public IPCProcessComponent, public rina::ApplicationEntity {
 public:
 	static const std::string RESOURCE_ALLOCATOR_AE_NAME;
-	IResourceAllocator() : rina::ApplicationEntity(RESOURCE_ALLOCATOR_AE_NAME) { };
+	static const std::string PDUFT_GEN_COMPONENT_NAME;
+
+	IResourceAllocator() : rina::ApplicationEntity(RESOURCE_ALLOCATOR_AE_NAME),
+			pduft_gen_ps(NULL){ };
 	virtual ~IResourceAllocator(){};
 	virtual INMinusOneFlowManager * get_n_minus_one_flow_manager() const = 0;
+	int set_pduft_gen_policy_set(const std::string& name);
+
+	IPDUFTGeneratorPs * pduft_gen_ps;
 };
 
 /// Security Management � A DIF requires three security functions:

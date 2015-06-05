@@ -1,11 +1,7 @@
 {
     "difType" : "normal-ipc",
     "securityManager" : {
-    	"newFlowAccessControlPolicy" : {
-          "name" : "default",
-          "version" : "0"
-        },
-        "difMemberAccessControlPolicy" : {
+    	"policySet" : {
           "name" : "default",
           "version" : "0"
         },

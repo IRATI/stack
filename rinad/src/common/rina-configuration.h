@@ -88,22 +88,18 @@ struct DIFTemplate {
         rina::DataTransferConstants dataTransferConstants;
         std::list<rina::QoSCube> qosCubes;
         rina::RMTConfiguration rmtConfiguration;
-        std::map<std::string, std::string> policySets;
-        std::map<std::string, std::string> policySetParameters;
         rina::EnrollmentTaskConfiguration etConfiguration;
         rina::SecurityManagerConfiguration secManConfiguration;
-
-        /* Only for normal DIFs */
-        NMinusOneFlowsConfiguration nMinusOneFlowsConfiguration;
+        rina::FlowAllocatorConfiguration faConfiguration;
+        rina::NamespaceManagerConfiguration nsmConfiguration;
+        rina::ResourceAllocatorConfiguration raConfiguration;
+        rina::RoutingConfiguration routingConfiguration;
 
         /*
          * The addresses of the known IPC Process (apname, address)
          * that can potentially be members of the DIFs I know
          */
         std::list<KnownIPCProcessAddress> knownIPCProcessAddresses;
-
-        /* The PDU forwarding table configurations */
-        rina::PDUFTableGeneratorConfiguration pdufTableGeneratorConfiguration;
 
         /* The address prefixes, assigned to different organizations */
         std::list<AddressPrefixConfiguration> addressPrefixes;

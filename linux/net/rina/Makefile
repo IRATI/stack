@@ -47,6 +47,7 @@ rina-default-plugin-y :=			\
 	dtp-ps-default.o			\
 	dtcp-ps-common.o 		        \
 	dtcp-ps-default.o                       \
+	pft-ps-common.o				\
 	pft-ps-default.o
 
 obj-$(CONFIG_VMPI) += vmpi/

@@ -927,9 +927,11 @@ EXPORT_SYMBOL(dtp_set_policy_set_param);
 struct dtp * dtp_create(struct dt *         dt,
                         struct rmt *        rmt,
                         struct efcp *       efcp,
+                        const string_t *    dtp_ps_name,
                         struct connection * connection)
 {
         struct dtp * tmp;
+        string_t *   ps_name;
 
         if (!dt) {
                 LOG_ERR("No DT passed, bailing out");
@@ -987,9 +989,13 @@ struct dtp * dtp_create(struct dt *         dt,
 
         rina_component_init(&tmp->base);
 
-        /* Try to select the default policy-set. */
-        if (dtp_select_policy_set(tmp, "", RINA_PS_DEFAULT_NAME)) {
+        ps_name = (string_t *) dtp_ps_name;
+        if (!ps_name || !strcmp(ps_name, ""))
+                ps_name = RINA_PS_DEFAULT_NAME;
+
+        if (dtp_select_policy_set(tmp, "", ps_name)) {
                 dtp_destroy(tmp);
+                LOG_ERR("Could not load DTP PS %s", ps_name);
                 return NULL;
         }
 

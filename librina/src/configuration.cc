@@ -20,6 +20,7 @@
 //
 
 #include <sstream>
+#include <stdlib.h>
 
 #define RINA_PREFIX "librina.configuration"
 
@@ -118,16 +119,58 @@ void PolicyConfig::set_version(const std::string& version) {
         version_ = version;
 }
 
-std::string PolicyConfig::get_param_value(const std::string& param_name) const
+std::string PolicyConfig::get_param_value_as_string(const std::string& name) const
 {
-	for(std::list<PolicyParameter>::const_iterator it = parameters_.begin();
-					it != parameters_.end(); ++it) {
-		if (it->name_ == param_name) {
+	if (parameters_.size() == 0) {
+		throw Exception("No parameters");
+	}
+
+	for (std::list<PolicyParameter>::const_iterator it = parameters_.begin();
+			it != parameters_.end(); ++it) {
+		if (it->name_ == name) {
 			return it->value_;
 		}
 	}
 
-	return std::string();
+	throw Exception("Parameter not found");
+}
+
+long PolicyConfig::get_param_value_as_long(const std::string& name) const
+{
+	long result;
+	char *dummy;
+
+	std::string value = get_param_value_as_string(name);
+	result = strtol(value.c_str(), &dummy, 10);
+	if (!value.size() || *dummy != '\0') {
+		throw Exception("Error converting value to int");
+	}
+
+	return result;
+}
+
+int PolicyConfig::get_param_value_as_int(const std::string& name) const
+{
+	return get_param_value_as_long(name);
+}
+
+unsigned long PolicyConfig::get_param_value_as_ulong(const std::string& name) const
+{
+	unsigned long result;
+	char *dummy;
+
+	std::string value = get_param_value_as_string(name);
+	result = strtoul(value.c_str(), &dummy, 10);
+	if (!value.size() || *dummy != '\0') {
+		throw Exception("Error converting value to int");
+	}
+
+	return result;
+}
+
+unsigned int PolicyConfig::get_param_value_as_uint(const std::string& name) const
+{
+	return get_param_value_as_ulong(name);
 }
 
 std::string PolicyConfig::toString()
@@ -135,9 +178,10 @@ std::string PolicyConfig::toString()
 	std::stringstream ss;
 	ss << "Name: " << name_ << "; Version: " << version_ << std::endl;
 	if (parameters_.size() > 0) {
-		for(std::list<PolicyParameter>::iterator it = parameters_.begin();
+		ss << "Parameters:" << std::endl;
+		for (std::list<PolicyParameter>::const_iterator it = parameters_.begin();
 				it != parameters_.end(); ++it) {
-			ss << "Parameter: " << it->toString();
+			ss <<"Name: " << it->name_ << "; Value: "<< it->value_ << std::endl;
 		}
 	}
 
@@ -564,6 +608,15 @@ void DTCPConfig::set_rtx_control_config(const DTCPRtxControlConfig& rtx_control_
 	rtx_control_config_ = rtx_control_config;
 }
 
+const PolicyConfig& DTCPConfig::get_dtcp_policy_set() const {
+        return dtcp_policy_set_;
+}
+
+void DTCPConfig::set_dtcp_policy_set(
+                const PolicyConfig& dtcp_policy_set) {
+	dtcp_policy_set_ = dtcp_policy_set;
+}
+
 const PolicyConfig& DTCPConfig::get_rtt_estimator_policy() const {
 	return rtt_estimator_policy_;
 }
@@ -577,6 +630,8 @@ const std::string DTCPConfig::toString() {
         ss<<"Flow control? "<<flow_control_<<"; Retx control? "<<rtx_control_;
         ss<<"; Lost control PDU policy (name/version): "<<lost_control_pdu_policy_.get_name();
         ss<<"/"<<lost_control_pdu_policy_.get_version()<<std::endl;
+        ss<<"DTCP Policy Set (name/version): "<<dtcp_policy_set_.get_name();
+        ss<<"/"<<dtcp_policy_set_.get_version();
         ss<<"RTT estimator policy (name/version): "<<rtt_estimator_policy_.get_name();
         ss<<"/"<<rtt_estimator_policy_.get_version()<<std::endl;
         if (rtx_control_) {
@@ -597,6 +652,15 @@ ConnectionPolicies::ConnectionPolicies(){
 	in_order_delivery_ = false;
 	incomplete_delivery_ = false;
 	max_sdu_gap_ = 0;
+}
+
+const PolicyConfig& ConnectionPolicies::get_dtp_policy_set() const {
+        return dtp_policy_set_;
+}
+
+void ConnectionPolicies::set_dtp_policy_set(
+                const PolicyConfig& dtp_policy_set) {
+	dtp_policy_set_ = dtp_policy_set;
 }
 
 const PolicyConfig& ConnectionPolicies::get_rcvr_timer_inactivity_policy() const {
@@ -691,6 +755,8 @@ void ConnectionPolicies::set_incomplete_delivery(bool incomplete_delivery) {
 
 const std::string ConnectionPolicies::toString() {
         std::stringstream ss;
+        ss<<"DTP Policy Set (name/version): "<<dtp_policy_set_.get_name();
+        ss<<"/"<<dtp_policy_set_.get_version();
         ss<<"Sder time inactivity policy (name/version): "<<sender_timer_inactivity_policy_.get_name();
         ss<<"/"<<sender_timer_inactivity_policy_.get_version();
         ss<<"; Rcvr time inactivity policy (name/version): "<<rcvr_timer_inactivity_policy_.get_name();
@@ -1053,9 +1119,76 @@ void EFCPConfiguration::set_unknown_flow_policy(
 	unknown_flowpolicy_ = unknown_flowpolicy;
 }
 
+// CLASS NamespaceManagerConfiguration
+NamespaceManagerConfiguration::NamespaceManagerConfiguration(){
+}
+
+const PolicyConfig&
+NamespaceManagerConfiguration::get_policy_set() const {
+	return policy_set_;
+}
+
+void NamespaceManagerConfiguration::set_policy_set(
+		const PolicyConfig& policy_set){
+	policy_set_ = policy_set;
+}
+
+std::string NamespaceManagerConfiguration::toString()
+{
+	std::stringstream ss;
+	ss << "Selected NamespaceManager Policy set. Name: " << policy_set_.name_ ;
+	ss << "; Version: " << policy_set_.version_ << std::endl;
+
+	return ss.str();
+}
+
+// CLASS RoutingConfiguration
+std::string RoutingConfiguration::toString()
+{
+	std::stringstream ss;
+	ss << "Routing policy set." << policy_set_.toString();
+
+	return ss.str();
+}
+
+// CLASS PDUFTGConfiguration
+PDUFTGConfiguration::PDUFTGConfiguration(){
+}
+
+std::string PDUFTGConfiguration::toString()
+{
+	std::stringstream ss;
+	ss << "Selected PDU Forwarding Table Generator Policy Set." << policy_set_.toString() << std::endl;
+
+	return ss.str();
+}
+
+// CLASS ResourceAllocatorConfiguration
+ResourceAllocatorConfiguration::ResourceAllocatorConfiguration(){
+}
+
+std::string ResourceAllocatorConfiguration::toString()
+{
+	std::stringstream ss;
+        ss << "Resource Allocator Configuration";
+	ss << pduftg_conf_.toString() << std::endl;
+
+	return ss.str();
+}
+
 // CLASS FlowAllocatorConfiguration
 FlowAllocatorConfiguration::FlowAllocatorConfiguration(){
 	max_create_flow_retries_ = 0;
+}
+
+const PolicyConfig&
+FlowAllocatorConfiguration::get_policy_set() const {
+	return policy_set_;
+}
+
+void FlowAllocatorConfiguration::set_policy_set(
+		const PolicyConfig& policy_set){
+	policy_set_ = policy_set;
 }
 
 const PolicyConfig&
@@ -1104,200 +1237,53 @@ void FlowAllocatorConfiguration::set_seq_rollover_policy(
 	seq_rollover_policy_ = seq_rollover_policy;
 }
 
+std::string FlowAllocatorConfiguration::toString()
+{
+	std::stringstream ss;
+	ss << "Selected FlowAllocator Policy set. Name: " << policy_set_.name_ ;
+	ss << "; Version: " << policy_set_.version_ << std::endl;
+
+	return ss.str();
+}
+
+// CLASS PFTConfiguration
+PFTConfiguration::PFTConfiguration(){
+	policy_set_ = PolicyConfig();
+}
+
+std::string PFTConfiguration::toString()
+{
+	std::stringstream ss;
+	ss << "Selected PFT Policy set. Name: " << policy_set_.name_ ;
+	ss << "; Version: " << policy_set_.version_ << std::endl;
+
+	return ss.str();
+}
+
 // CLASS RMTConfiguration
 RMTConfiguration::RMTConfiguration(){
-	max_queue_policy_ = PolicyConfig();
-	rmt_queue_monitor_policy_ = PolicyConfig();
-	rmt_scheduling_policy_ = PolicyConfig();
+	policy_set_ = PolicyConfig();
 }
 
 std::string RMTConfiguration::toString()
 {
 	std::stringstream ss;
-	ss << "Max queue policy. Name: " << max_queue_policy_.name_ ;
-	ss << "; Version: " << max_queue_policy_.version_ << std::endl;
-	ss << "Queue monitor policy. Name: " << rmt_queue_monitor_policy_.name_ ;
-	ss << "; Version: " << rmt_queue_monitor_policy_.version_ << std::endl;
-	ss << "Scheduling policy. Name: " << rmt_scheduling_policy_.name_ ;
-	ss << "; Version: " << rmt_scheduling_policy_.version_ << std::endl;
+	ss << "Selected RMT Policy set. Name: " << policy_set_.name_ ;
+	ss << "; Version: " << policy_set_.version_ << std::endl;
+	ss << pft_conf_.toString() << std::endl;
 
 	return ss.str();
-}
-
-const PolicyConfig& RMTConfiguration::get_max_queue_policy() const {
-	return max_queue_policy_;
-}
-
-void RMTConfiguration::set_max_queue_policy(const PolicyConfig& max_queue_policy) {
-	max_queue_policy_ = max_queue_policy;
-}
-
-const PolicyConfig& RMTConfiguration::get_rmt_queue_monitor_policy() const {
-	return rmt_queue_monitor_policy_;
-}
-
-void RMTConfiguration::set_rmt_queue_monitor_policy(
-		const PolicyConfig& rmt_queue_monitor_policy) {
-	rmt_queue_monitor_policy_ = rmt_queue_monitor_policy;
-}
-
-const PolicyConfig& RMTConfiguration::get_rmt_scheduling_policy() const {
-	return rmt_scheduling_policy_;
-}
-
-void RMTConfiguration::set_rmt_scheduling_policy(
-		const PolicyConfig& rmt_scheduling_policy){
-	rmt_scheduling_policy_ = rmt_scheduling_policy;
-}
-
-// CLASS LinkStateRouting Configuraiton
-
-const std::string LinkStateRoutingConfiguration::DEFAULT_ROUTING_ALGORITHM =
-    "Dijkstra";
-
-LinkStateRoutingConfiguration::LinkStateRoutingConfiguration()
-{
-	wait_until_read_cdap_ = WAIT_UNTIL_READ_CDAP_DEFAULT;
-	wait_until_error_ = WAIT_UNTIL_ERROR_DEFAULT;
-	wait_until_pduft_computation_ = WAIT_UNTIL_PDUFT_COMPUTATION_DEFAULT;
-	wait_until_fsodb_propagation_ = WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT;
-	wait_until_age_increment_ = WAIT_UNTIL_AGE_INCREMENT_DEFAULT;
-	object_maximum_age_ = PULSES_UNTIL_FSO_EXPIRATION_DEFAULT;
-	routing_algorithm_ = DEFAULT_ROUTING_ALGORITHM;
-}
-
-const std::string LinkStateRoutingConfiguration::toString() {
-	std::stringstream ss;
-
-	ss<<"Timer until send a Read CDAP message (ms): " << wait_until_read_cdap_<<std::endl;
-	ss<<"Timer until send CDAP error (ms): "<<wait_until_error_<<std::endl;
-	ss<<"Timer between PDU forwarding table Computation (ms): "<<wait_until_pduft_computation_<<std::endl;
-	ss<<"Timer between FlowStateDataBase propagation (ms): "<<wait_until_fsodb_propagation_<<std::endl;
-	ss<<"Timer between age incrementation pulses (ms): "<<wait_until_age_increment_<<std::endl;
-	ss<<"Number of pulses until FSO expiration: "<<object_maximum_age_<<std::endl;
-	ss<<"Routing algorithm: "<<routing_algorithm_<<std::endl;
-
-	return ss.str();
-}
-
-int LinkStateRoutingConfiguration::get_wait_until_age_increment() const {
-	return wait_until_age_increment_;
-}
-
-void LinkStateRoutingConfiguration::set_wait_until_age_increment(int wait_until_age_increment) {
-	wait_until_age_increment_ = wait_until_age_increment;
-}
-
-int LinkStateRoutingConfiguration::get_wait_until_error() const {
-	return wait_until_error_;
-}
-
-void LinkStateRoutingConfiguration::set_wait_until_error(int wait_until_error) {
-	wait_until_error_ = wait_until_error;
-}
-
-int LinkStateRoutingConfiguration::get_wait_until_fsodb_propagation() const {
-	return wait_until_fsodb_propagation_;
-}
-
-void LinkStateRoutingConfiguration::set_wait_until_fsodb_propagation(int wait_until_fsodb_propagation) {
-	wait_until_fsodb_propagation_ = wait_until_fsodb_propagation;
-}
-
-int LinkStateRoutingConfiguration::get_wait_until_pduft_computation() const {
-	return wait_until_pduft_computation_;
-}
-
-void LinkStateRoutingConfiguration::set_wait_until_pduft_computation(int wait_until_pduft_computation) {
-	wait_until_pduft_computation_ = wait_until_pduft_computation;
-}
-
-int LinkStateRoutingConfiguration::get_wait_until_read_cdap() const {
-	return wait_until_read_cdap_;
-}
-
-void LinkStateRoutingConfiguration::set_wait_until_read_cdap(int wait_until_read_cdap) {
-	wait_until_read_cdap_ = wait_until_read_cdap;
-}
-
-unsigned int LinkStateRoutingConfiguration::get_object_maximum_age() const {
-	return object_maximum_age_;
-}
-
-void LinkStateRoutingConfiguration::set_object_maximum_age(const int object_maximum_age) {
-	object_maximum_age_ = object_maximum_age;
-}
-
-const std::string& LinkStateRoutingConfiguration::get_routing_algorithm() const {
-	return routing_algorithm_;
-}
-
-void LinkStateRoutingConfiguration::set_routing_algorithm(
-		const std::string& routing_algorithm) {
-	routing_algorithm_ = routing_algorithm;
-}
-
-// CLAS PDUFTableGeneratorConfiguration
-PDUFTableGeneratorConfiguration::PDUFTableGeneratorConfiguration(){
-	set_pduft_generator_policy(PolicyConfig("LinkState",
-                        RINA_DEFAULT_POLICY_VERSION));
-}
-
-PDUFTableGeneratorConfiguration::PDUFTableGeneratorConfiguration(
-                const PolicyConfig& pduFTGeneratorPolicy) {
-	set_pduft_generator_policy(pduFTGeneratorPolicy);
-}
-
-std::string PDUFTableGeneratorConfiguration::toString() {
-	std::stringstream ss;
-	ss << "PDU FT generator policy. Name: " << pduft_generator_policy_.name_;
-	ss << "; Version: "<<pduft_generator_policy_.version_ << std::endl;
-	ss << "*** LINK STATE ROUTING CONFIGURATION ***"<<std::endl;
-	ss << link_state_routing_configuration_.toString();
-
-	return ss.str();
-}
-
-const LinkStateRoutingConfiguration&
-PDUFTableGeneratorConfiguration::get_link_state_routing_configuration() const {
-        return link_state_routing_configuration_;
-}
-
-void PDUFTableGeneratorConfiguration::set_link_state_routing_configuration(
-                const LinkStateRoutingConfiguration& link_state_routing_configuration){
-	link_state_routing_configuration_ =
-			link_state_routing_configuration;
-}
-
-const PolicyConfig&
-PDUFTableGeneratorConfiguration::get_pduft_generator_policy() const {
-        return pduft_generator_policy_;
-}
-
-void PDUFTableGeneratorConfiguration::set_pduft_generator_policy(
-                const PolicyConfig& pduft_generator_policy){
-	pduft_generator_policy_ = pduft_generator_policy;
 }
 
 // Class Enrollment Task Configuration
-EnrollmentTaskConfiguration::EnrollmentTaskConfiguration() {
-	enrollment_timeout_in_ms_ = 10000;
-	watchdog_period_in_ms_ = 60000;
-	declared_dead_interval_in_ms_ = 120000;
-	neighbor_enroller_period_in_ms_ = 10000;
-	max_number_of_enrollment_attempts_ = 3;
+EnrollmentTaskConfiguration::EnrollmentTaskConfiguration()
+{
 }
 
-std::string EnrollmentTaskConfiguration::toString()
-{
+std::string EnrollmentTaskConfiguration::toString() {
 	std::stringstream ss;
-	ss << "Enrollment timeout in ms: " << enrollment_timeout_in_ms_ << std::endl;
-	ss << "Watchdog period in ms: " << watchdog_period_in_ms_ << std::endl;
-	ss << "Declared dead interval in ms: "<< declared_dead_interval_in_ms_ << std::endl;
-	ss << "Neighbor enroller period in ms: "<<neighbor_enroller_period_in_ms_<< std::endl;
-	ss << "Max number of enrollment attempts: " << max_number_of_enrollment_attempts_ << std::endl;
+	ss << "Policy set: " << policy_set_.toString() << std::endl;
 	return ss.str();
-
 }
 
 // Class Static IPC Process Address
@@ -1330,10 +1316,8 @@ std::string AuthSDUProtectionProfile::to_string()
 std::string SecurityManagerConfiguration::toString()
 {
 	std::stringstream ss;
-	ss << "New flow access control policy" << std::endl;
-	ss << newFlowAccessControlPolicy.toString() << std::endl;
-	ss << "DIF member access control policy" << std::endl;
-	ss << difMemberAccessControlPolicy.toString() << std::endl;
+	ss << "Security Manager policy set" << std::endl;
+	ss << policy_set_.toString() << std::endl;
 	ss << "Default auth-sdup profile" << std::endl;
 	ss << default_auth_profile.to_string() << std::endl;
 	if (specific_auth_profiles.size () > 0) {
@@ -1361,18 +1345,6 @@ void DIFConfiguration::set_address(unsigned int address) {
 	address_ = address;
 }
 
-const std::list<PolicyConfig>& DIFConfiguration::get_policies() {
-	return policies_;
-}
-
-void DIFConfiguration::set_policies(const std::list<PolicyConfig>& policies) {
-	policies_ = policies;
-}
-
-void DIFConfiguration::add_policy(const PolicyConfig& policy) {
-	policies_.push_back(policy);
-}
-
 const std::list<Parameter>& DIFConfiguration::get_parameters() const {
 	return parameters_;
 }
@@ -1392,16 +1364,6 @@ const EFCPConfiguration& DIFConfiguration::get_efcp_configuration() const {
 void DIFConfiguration::set_efcp_configuration(
 		const EFCPConfiguration& efcp_configuration) {
 	efcp_configuration_= efcp_configuration;
-}
-
-void DIFConfiguration::set_pduft_generator_configuration(
-		const PDUFTableGeneratorConfiguration& pduft_generator_configuration){
-	pduft_generator_configuration_ = pduft_generator_configuration;
-}
-
-const PDUFTableGeneratorConfiguration&
-DIFConfiguration::get_pduft_generator_configuration() const {
-	return pduft_generator_configuration_;
 }
 
 const RMTConfiguration& DIFConfiguration::get_rmt_configuration() const {

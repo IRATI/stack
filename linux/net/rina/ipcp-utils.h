@@ -120,6 +120,8 @@ struct efcp_config * efcp_config_create(void);
 int                  efcp_config_destroy(struct efcp_config * efcp_config);
 struct sdup_config * sdup_config_create(void);
 int                  sdup_config_destroy(struct sdup_config * sdup_config);
+struct rmt_config *  rmt_config_create(void);
+int                  rmt_config_destroy(struct rmt_config * rmt_config);
 struct dif_config *  dif_config_create(void);
 int                  dif_config_destroy(struct dif_config * dif_config);
 struct dif_info *    dif_info_create(void);

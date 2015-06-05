@@ -1299,15 +1299,13 @@ int testIpcmAssignToDIFRequestMessage() {
 	efcpConfiguration.add_qos_cube(qosCube);
 	qosCube->set_efcp_policies(ConnectionPolicies());
 	difConfiguration.set_efcp_configuration(efcpConfiguration);
-	difConfiguration.rmt_configuration_.rmt_scheduling_policy_.name_ = "FancySchedulingPolicy";
-	difConfiguration.pduft_generator_configuration_.pduft_generator_policy_.name_ = "LinkStateRouting";
-	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.object_maximum_age_ = 4;
-	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.routing_algorithm_ = "FancyAlgorithm";
-	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.wait_until_age_increment_ = 23;
-	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.wait_until_error_ = 11;
-	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.wait_until_fsodb_propagation_ = 10;
-	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.wait_until_pduft_computation_ = 2;
-	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.wait_until_read_cdap_ = 3;
+	difConfiguration.rmt_configuration_.policy_set_.name_ = "FancySchedulingPolicy";
+	difConfiguration.rmt_configuration_.pft_conf_.policy_set_.name_ = "PFTPolicySet";
+	difConfiguration.ra_configuration_.pduftg_conf_.policy_set_.name_ = "PDUFTGPolicySet";
+	difConfiguration.routing_configuration_.policy_set_.name_ = "RoutingPS";
+	difConfiguration.nsm_configuration_.policy_set_.name_ = "NSMPS";
+	difConfiguration.fa_configuration_.policy_set_.name_ = "FAPS";
+	difConfiguration.et_configuration_.policy_set_.name_ = "ETPS";
 	difInformation.set_dif_configuration(difConfiguration);
 	message.setDIFInformation(difInformation);
 
@@ -1426,16 +1424,46 @@ int testIpcmAssignToDIFRequestMessage() {
                 std::cout << "DIFInformation.DIFConfiguration.qosCubes.size original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getDIFInformation().dif_configuration_.rmt_configuration_.rmt_scheduling_policy_.name_.
+        } else if (message.getDIFInformation().dif_configuration_.rmt_configuration_.policy_set_.name_.
         		compare(recoveredMessage->getDIFInformation().dif_configuration_.rmt_configuration_.
-        				rmt_scheduling_policy_.name_) != 0) {
-        	std::cout << "DIFInformation.dif_configuration_.rmt_configuration_.rmt_scheduling_policy_.name original and recovered messages"
+        				policy_set_.name_) != 0) {
+        	std::cout << "DIFInformation.dif_configuration_.rmt_configuration_.policy_set_.name original and recovered messages"
         			<< " are different\n";
         	returnValue = -1;
-        } else if (message.getDIFInformation().dif_configuration_.pduft_generator_configuration_.pduft_generator_policy_.name_.
-        		compare(recoveredMessage->getDIFInformation().dif_configuration_.pduft_generator_configuration_.
-        				pduft_generator_policy_.name_) != 0) {
-        	std::cout << "DIFInformation.dif_configuration_.pduft_generator_configuration_.pduft_generator_policy_.name_. original and recovered messages"
+        } else if (message.getDIFInformation().dif_configuration_.rmt_configuration_.pft_conf_.policy_set_.name_.
+        		compare(recoveredMessage->getDIFInformation().dif_configuration_.rmt_configuration_.
+        				pft_conf_.policy_set_.name_) != 0) {
+        	std::cout << "DIFInformation.dif_configuration_.rmt_configuration_.pft_conf_.policy_set_.name_. original and recovered messages"
+        			<< " are different\n";
+        	returnValue = -1;
+        } else if (message.getDIFInformation().dif_configuration_.ra_configuration_.pduftg_conf_.policy_set_.name_.
+        		compare(recoveredMessage->getDIFInformation().dif_configuration_.ra_configuration_.
+        				pduftg_conf_.policy_set_.name_) != 0) {
+        	std::cout << "DIFInformation.dif_configuration_.ra_configuration_.pduftg_conf_.policy_set_.name_. original and recovered messages"
+        			<< " are different\n";
+        	returnValue = -1;
+        } else if (message.getDIFInformation().dif_configuration_.routing_configuration_.policy_set_.name_.
+        		compare(recoveredMessage->getDIFInformation().dif_configuration_.routing_configuration_.
+        				policy_set_.name_) != 0) {
+        	std::cout << "DIFInformation.dif_configuration_.routing_configuration_.policy_set_.name_. original and recovered messages"
+        			<< " are different\n";
+        	returnValue = -1;
+        } else if (message.getDIFInformation().dif_configuration_.nsm_configuration_.policy_set_.name_.
+        		compare(recoveredMessage->getDIFInformation().dif_configuration_.nsm_configuration_.
+        				policy_set_.name_) != 0) {
+        	std::cout << "DIFInformation.dif_configuration_.nsm_configuration_.policy_set_.name_. original and recovered messages"
+        			<< " are different\n";
+        	returnValue = -1;
+        } else if (message.getDIFInformation().dif_configuration_.fa_configuration_.policy_set_.name_.
+        		compare(recoveredMessage->getDIFInformation().dif_configuration_.fa_configuration_.
+        				policy_set_.name_) != 0) {
+        	std::cout << "DIFInformation.dif_configuration_.fa_configuration_.policy_set_.name_. original and recovered messages"
+        			<< " are different\n";
+        	returnValue = -1;
+        } else if (message.getDIFInformation().dif_configuration_.et_configuration_.policy_set_.name_.
+        		compare(recoveredMessage->getDIFInformation().dif_configuration_.et_configuration_.
+        				policy_set_.name_) != 0) {
+        	std::cout << "DIFInformation.dif_configuration_.et_configuration_.policy_set_.name_. original and recovered messages"
         			<< " are different\n";
         	returnValue = -1;
         }
@@ -3158,7 +3186,7 @@ int testRmtDumpPDUFTResponseMessage() {
         entry2.setAddress(20);
         entry2.portIdAltlists.push_back(28);
         entry2.portIdAltlists.push_back(35);
-        entry2.portIdAltlists.push_back(43);
+        entry2.portIdAltlists.push_back(54);
         entry2.setQosId(2);
         message.addEntry(entry2);
         message.setResult(3);
