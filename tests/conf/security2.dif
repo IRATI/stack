@@ -3,7 +3,7 @@
     "securityManagerConfiguration" : {
     	"policySet" : {
           "name" : "default",
-          "version" : "0"
+          "version" : "1"
         },
         "authSDUProtProfiles" : {
            "default" : {
