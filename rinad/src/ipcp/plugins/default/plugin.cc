@@ -123,7 +123,7 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
 	std::stringstream ss;
 	ss << IResourceAllocator::RESOURCE_ALLOCATOR_AE_NAME << "/"
 	   << IResourceAllocator::PDUFT_GEN_COMPONENT_NAME;
-        pduft_gen_factory.info.app_entity = ss.str();
+        pduft_gen_factory.info.app_entity =  ss.str();
         pduft_gen_factory.create = createPDUFTGenPs;
         pduft_gen_factory.destroy = destroyPDUFTGenPs;
 

@@ -665,10 +665,10 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 
 	// routingConfiguration;
 	Json::Value routing_conf = root["routingConfiguration"];
-	if (fa_conf != 0) {
+	if (routing_conf != 0) {
 		rina::RoutingConfiguration rc;
 
-		parse_policy(fa_conf,
+		parse_policy(routing_conf,
 			     "policySet",
 			     rc.policy_set_);
 
@@ -680,7 +680,7 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 	if (ra_conf != 0) {
 		rina::ResourceAllocatorConfiguration rac;
 
-	        Json::Value pduftg_conf = root["pduftgConfiguration"];
+	        Json::Value pduftg_conf = ra_conf["pduftgConfiguration"];
                 if (pduftg_conf != 0) {
                         rina::PDUFTGConfiguration pftgc;
 
