@@ -243,7 +243,7 @@ static int pfte_ports_copy(struct pft_entry * entry,
 }
 
 struct pff_ps_priv {
-        struct mutex     write_lock;
+        spinlock_t       write_lock;
         struct list_head entries;
 };
 
@@ -294,13 +294,13 @@ static int default_add(struct pff_ps *        ps,
                 return -1;
         }
 
-        mutex_lock(&priv->write_lock);
+        spin_lock(&priv->write_lock);
 
         tmp = pft_find(priv, entry->fwd_info, entry->qos_id);
         if (!tmp) {
                 tmp = pfte_create_ni(entry->fwd_info, entry->qos_id);
                 if (!tmp) {
-                        mutex_unlock(&priv->write_lock);
+                        spin_unlock(&priv->write_lock);
                         return -1;
                 }
 
@@ -316,12 +316,12 @@ static int default_add(struct pff_ps *        ps,
 		/* Just add the first alternative and ignore the others. */
                 if (pfte_port_add(tmp, alts->ports[0])) {
                         pfte_destroy(tmp);
-                        mutex_unlock(&priv->write_lock);
+                        spin_unlock(&priv->write_lock);
                         return -1;
                 }
 	}
 
-        mutex_unlock(&priv->write_lock);
+        spin_unlock(&priv->write_lock);
 
         return 0;
 }
@@ -351,11 +351,11 @@ static int default_remove(struct pff_ps *        ps,
                 return -1;
         }
 
-        mutex_lock(&priv->write_lock);
+        spin_lock(&priv->write_lock);
 
         tmp = pft_find(priv, entry->fwd_info, entry->qos_id);
         if (!tmp) {
-                mutex_unlock(&priv->write_lock);
+                spin_unlock(&priv->write_lock);
                 return -1;
         }
 
@@ -374,7 +374,7 @@ static int default_remove(struct pff_ps *        ps,
                 pfte_destroy(tmp);
         }
 
-        mutex_unlock(&priv->write_lock);
+        spin_unlock(&priv->write_lock);
 
         return 0;
 }
@@ -414,11 +414,11 @@ static int default_flush(struct pff_ps * ps)
         if (!priv_is_ok(priv))
                 return -1;
 
-        mutex_lock(&priv->write_lock);
+        spin_lock(&priv->write_lock);
 
         __pft_flush(priv);
 
-        mutex_unlock(&priv->write_lock);
+        spin_unlock(&priv->write_lock);
 
         return 0;
 }
@@ -580,7 +580,7 @@ pff_ps_default_create(struct rina_component * component)
                 return NULL;
         }
 
-        mutex_init(&priv->write_lock);
+        spin_lock_init(&priv->write_lock);
 
         INIT_LIST_HEAD(&priv->entries);
 
@@ -615,11 +615,11 @@ static void pff_ps_default_destroy(struct ps_base * bps)
                         return;
                 }
 
-                mutex_lock(&priv->write_lock);
+                spin_lock(&priv->write_lock);
 
                 __pft_flush(priv);
 
-                mutex_unlock(&priv->write_lock);
+                spin_unlock(&priv->write_lock);
                 rkfree(ps);
         }
 }
