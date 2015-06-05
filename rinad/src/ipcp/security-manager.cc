@@ -46,7 +46,6 @@ void IPCPSecurityManager::set_dif_configuration(const rina::DIFConfiguration& di
 	if (select_policy_set(std::string(), ps_name) != 0) {
 		throw rina::Exception("Cannot create Security Manager policy-set");
 	}
-	LOG_IPCP_DBG("Selected policy set %s for Security Manager", ps_name.c_str());
 
         add_auth_policy_set(rina::IAuthPolicySet::AUTH_NONE);
         add_auth_policy_set(rina::IAuthPolicySet::AUTH_PASSWORD);

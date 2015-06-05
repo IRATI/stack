@@ -574,7 +574,6 @@ void EnrollmentTask::set_dif_configuration(const rina::DIFConfiguration& dif_con
 	if (select_policy_set(std::string(), psconf.name_) != 0) {
 		throw rina::Exception("Cannot create enrollment task policy-set");
 	}
-	LOG_IPCP_DBG("Selected policy set %s for Enrollment Task", psconf.name_.c_str());
 
 	// Parse policy config parameters
 	timeout_ = psconf.get_param_value_as_int(ENROLL_TIMEOUT_IN_MS);

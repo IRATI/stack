@@ -425,7 +425,6 @@ void NamespaceManager::set_dif_configuration(const rina::DIFConfiguration& dif_c
 	if (select_policy_set(std::string(), ps_name) != 0) {
 		throw rina::Exception("Cannot create namespace manager policy-set");
 	}
-	LOG_IPCP_DBG("Selected policy set %s for Namespace Manager", ps_name.c_str());
 }
 
 void NamespaceManager::populateRIB()

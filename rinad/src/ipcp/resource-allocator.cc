@@ -201,7 +201,6 @@ void ResourceAllocator::set_dif_configuration(const rina::DIFConfiguration& dif_
 	if (set_pduft_gen_policy_set(ps_name) != 0) {
 		throw rina::Exception("Cannot create PDU Forwarding Table Generator policy-set");
 	}
-	LOG_IPCP_DBG("Selected policy set %s for PDU Forwarding Table Generator", ps_name.c_str());
 
 	if (n_minus_one_flow_manager_) {
 		n_minus_one_flow_manager_->set_dif_configuration(dif_configuration);
