@@ -9,12 +9,12 @@
 // modify it under the terms of the GNU Lesser General Public
 // License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// 
+//
 // This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 // Lesser General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU Lesser General Public
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -379,9 +379,7 @@ void ExtendedIPCManager::assignToDIFResponse(
         responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
 	try {
-                rinaManager->sendMessageOfMaxSize(&responseMessage,
-                                                  5 * get_page_size(),
-                                                  false);
+                rinaManager->sendMessage(&responseMessage, false);
 	} catch (NetlinkException &e) {
 		throw AssignToDIFResponseException(e.what());
 	}
@@ -408,7 +406,9 @@ void ExtendedIPCManager::enrollToDIFResponse(const EnrollToDAFRequestEvent& even
         responseMessage.setSequenceNumber(event.sequenceNumber);
         responseMessage.setResponseMessage(true);
         try {
-                rinaManager->sendMessage(&responseMessage, false);
+                rinaManager->sendMessageOfMaxSize(&responseMessage,
+                                                  5 * get_page_size(),
+                                                  false);
         } catch (NetlinkException &e) {
                 throw EnrollException(e.what());
         }
@@ -1267,7 +1267,7 @@ ReadManagementSDUResult KernelIPCProcess::readManagementSDU(void * sdu,
 
 #if STUB_API
         unsigned char buffer[] = { 0, 23, 43, 32, 45, 23, 78 };
-        
+
         (void) sdu;
         (void) maxBytes;
 
