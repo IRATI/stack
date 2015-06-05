@@ -379,7 +379,9 @@ void ExtendedIPCManager::assignToDIFResponse(
         responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
 	try {
-		rinaManager->sendMessage(&responseMessage, false);
+                rinaManager->sendMessageOfMaxSize(&responseMessage,
+                                                  5 * get_page_size(),
+                                                  false);
 	} catch (NetlinkException &e) {
 		throw AssignToDIFResponseException(e.what());
 	}
