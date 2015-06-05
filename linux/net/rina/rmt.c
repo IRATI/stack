@@ -668,7 +668,7 @@ static void send_worker(unsigned long o)
                                                 LOG_ERR("Could not write scheduled PDU in n1 port");
                                         pdus_sent++;
                                 }
-                        } while((pdus_sent < MAX_PDUS_SENT_PER_CYCLE) &&
+                        } while(pdu && (pdus_sent < MAX_PDUS_SENT_PER_CYCLE) &&
                                 (atomic_read(&n1_port->n_sdus) > 0));
                 }
                 rcu_read_unlock();
