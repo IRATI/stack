@@ -519,11 +519,16 @@ struct rmt_config * rmt_config_create(void)
 {
         struct rmt_config * tmp;
 
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
         tmp->pft_conf = rkzalloc(sizeof(*tmp->pft_conf), GFP_KERNEL);
         if (!tmp->pft_conf) {
                 rkfree(tmp);
                 return NULL;
         }
+
         tmp->pft_conf->policy_set = policy_create();
         if (!tmp->pft_conf->policy_set) {
                 rkfree(tmp->pft_conf);

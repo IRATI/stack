@@ -752,7 +752,7 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 	}
 
         //sduProtectionConfiguration
-        Json::Value secManConf = root["securityManager"];
+        Json::Value secManConf = root["securityManagerConfiguration"];
         if (secManConf != 0){
         	rina::SecurityManagerConfiguration sm_conf;
 

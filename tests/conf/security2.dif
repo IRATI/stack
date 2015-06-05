@@ -1,6 +1,6 @@
 {
     "difType" : "normal-ipc",
-    "securityManager" : {
+    "securityManagerConfiguration" : {
     	"policySet" : {
           "name" : "default",
           "version" : "0"
