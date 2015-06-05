@@ -2253,8 +2253,7 @@ cdap_rib::res_info_t* RIBObj_::stop(
 }
 
 void RIBObj_::operation_not_supported() {
-
-	LOG_ERR("Operation not supported");
+	throw eObjOpNotSupported();
 }
 
 

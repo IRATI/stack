@@ -115,6 +115,9 @@ DECLARE_EXCEPTION_SUBCLASS(eObjNoParent);
 /// Object cannot be deleted because it has children (yes, we are nice people)
 DECLARE_EXCEPTION_SUBCLASS(eObjHasChildren);
 
+/// Object does not support this operation
+DECLARE_EXCEPTION_SUBCLASS(eObjOpNotSupported);
+
 
 /// The object does not exist in that position of the tree
 DECLARE_EXCEPTION_SUBCLASS(eObjDoesNotExist);

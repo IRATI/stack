@@ -681,14 +681,14 @@ void ribBasicOps::testConnect(){
 
 	//Fake stablishment of a connection
 	try{
-		rib_provider->open_connection(con_ok, flags_ok, 0x1);
+		rib_provider->open_connection(con_ok, flags_ok, 0x2);
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during open_connection", 0);
 	}
 
 	//Retry; this should succeed (overwrite)
 	try{
-		rib_provider->open_connection(con_ok, flags_ok, 0x1);
+		rib_provider->open_connection(con_ok, flags_ok, 0x3);
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during open_connection (retry)", 0);
 	}
@@ -714,20 +714,22 @@ void ribBasicOps::testOperations(){
 	invoke_id = 1;
 	try{
 		(*message) = PREFIX_MESSAGE | invoke_id;
-		rib_provider->read_request(con_ko, obj_info1, filter, 0x1);
+		rib_provider->read_request(con_ko, obj_info1, filter, invoke_id);
 		CPPUNIT_ASSERT_MESSAGE("READ operation with an invalid connection name has succeeded", 0);
 	}catch(...){
 
 	}
 
 	//Issue a request to an invalid object
-	invoke_id = 1;
+	invoke_id = 2;
+	obj_info1.name_ = name1;
 	try{
 		(*message) = PREFIX_MESSAGE | invoke_id;
-		rib_provider->read_request(con_ok, obj_info1, filter, 0x1);
+		rib_provider->read_request(con_ok, obj_info1, filter, invoke_id);
 		CPPUNIT_ASSERT_MESSAGE("READ operation with an invalid FQN name has succeeded", 0);
+	}catch(eObjOpNotSupported& e){
 	}catch(...){
-
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception thrown during read_req", 0);
 	}
 }
 
