@@ -1,0 +1,15 @@
+#!/bin/sh
+
+function stats()
+{
+    name=$1
+    shift
+    count=$(find $@ -type f -and \( -name "*.c" -or -name "*.h" -or -name "*.cc" -or -name "*.hpp" \)| grep -v "tclap" | grep -v "jsoncpp" | grep -v "\.mod\.c" | xargs wc -l | tail -n 1 | awk '{print $1}')
+    printf "%-15s %10s lines\n" $name $count
+}
+
+stats kernel linux/net/rina
+stats librina librina/include librina/src
+stats rinad rinad/src
+stats rina-tools rina-tools/src
+stats total linux/net/rina librina/include librina/src rinad/src rina-tools/src
