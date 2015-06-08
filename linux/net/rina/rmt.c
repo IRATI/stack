@@ -680,15 +680,13 @@ static void send_worker(unsigned long o)
                                         spin_unlock(&rmt->n1_ports->lock);
                                 }
                                 pdus_sent++;
-                        } while((pdu && pdus_sent < MAX_PDUS_SENT_PER_CYCLE) &&
+                        } while((pdus_sent < MAX_PDUS_SENT_PER_CYCLE) &&
                                 (atomic_read(&n1_port->n_sdus) > 0));
                 }
                 rcu_read_unlock();
                 spin_unlock(&n1_port->lock);
                 spin_lock(&rmt->n1_ports->lock);
 skip_locks:    ;
-
-
         }
         spin_unlock(&rmt->n1_ports->lock);
 
