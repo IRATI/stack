@@ -272,6 +272,26 @@ public:
 		return &encoder;
 	};
 
+	cdap_rib::res_info_t* read(const cdap_rib::con_handle_t &con,
+					const std::string& fqn,
+					const std::string class_,
+					const cdap_rib::filt_info_t &filt,
+					const int invoke_id,
+					cdap_rib::SerializedObject &obj_reply){
+
+
+		CPPUNIT_ASSERT_MESSAGE("Invalid invoke id", invoke_id>=4);
+
+
+		cdap_rib::res_info_t* res = new cdap_rib::res_info_t;
+		res->code_ = cdap_rib::CDAP_SUCCESS;
+
+
+		return res;
+	};
+
+
+
 	MyObjEncoder encoder;
 	static const std::string class_;
 };
@@ -720,16 +740,37 @@ void ribBasicOps::testOperations(){
 
 	}
 
-	//Issue a request to an invalid object
+	//Issue a request to a valid object but with an invalid operation
 	invoke_id = 2;
 	obj_info1.name_ = name1;
 	try{
 		(*message) = PREFIX_MESSAGE | invoke_id;
-		rib_provider->read_request(con_ok, obj_info1, filter, invoke_id);
+		rib_provider->write_request(con_ok, obj_info1, filter, invoke_id);
 		CPPUNIT_ASSERT_MESSAGE("READ operation with an invalid FQN name has succeeded", 0);
 	}catch(eObjOpNotSupported& e){
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Invalid exception thrown during read_req", 0);
+	}
+
+	invoke_id = 3;
+	obj_info1.name_ = name1;
+	try{
+		(*message) = PREFIX_MESSAGE | invoke_id;
+		rib_provider->write_request(con_ok, obj_info1, filter, invoke_id);
+		CPPUNIT_ASSERT_MESSAGE("READ operation with an invalid class name has succeeded", 0);
+	}catch(eObjOpNotSupported& e){
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception thrown during read_req", 0);
+	}
+
+	//Issue a request to a valid object and a valid operation
+	invoke_id = 4;
+	obj_info1.name_ = name1;
+	try{
+		(*message) = PREFIX_MESSAGE | invoke_id;
+		rib_provider->read_request(con_ok, obj_info1, filter, invoke_id);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during valid read_req", 0);
 	}
 }
 
