@@ -680,8 +680,8 @@ cdap_m_t* CDAPMessageFactory::getOpenConnectionResponseMessage(
 	cdap_message->src_ap_inst_ = con.src_.ap_inst_;
 	cdap_message->src_ap_name_ = con.src_.ap_name_;
 	cdap_message->version_ = 1;
-	cdap_message->result_ = res.result_;
-	cdap_message->result_reason_ = res.result_reason_;
+	cdap_message->result_ = res.code_;
+	cdap_message->result_reason_ = res.reason_;
 
 	return cdap_message;
 }
@@ -703,8 +703,8 @@ cdap_m_t* CDAPMessageFactory::getReleaseConnectionResponseMessage(
 	cdap_message->op_code_ = cdap_m_t::M_RELEASE_R;
 	cdap_message->flags_ = flags.flags_;
 	cdap_message->invoke_id_ = invoke_id;
-	cdap_message->result_ = res.result_;
-	cdap_message->result_reason_ = res.result_reason_;
+	cdap_message->result_ = res.code_;
+	cdap_message->result_reason_ = res.reason_;
 	return cdap_message;
 }
 
@@ -736,8 +736,8 @@ cdap_m_t* CDAPMessageFactory::getCreateObjectResponseMessage(
 	cdap_message->obj_inst_ = obj.inst_;
 	cdap_message->obj_name_ = obj.name_;
 	cdap_message->obj_value_ = obj.value_;
-	cdap_message->result_ = res.result_;
-	cdap_message->result_reason_ = res.result_reason_;
+	cdap_message->result_ = res.code_;
+	cdap_message->result_reason_ = res.reason_;
 
 	return cdap_message;
 }
@@ -767,8 +767,8 @@ cdap_m_t* CDAPMessageFactory::getDeleteObjectResponseMessage(
 	cdap_message->obj_class_ = obj.class_;
 	cdap_message->obj_inst_ = obj.inst_;
 	cdap_message->obj_name_ = obj.name_;
-	cdap_message->result_ = res.result_;
-	cdap_message->result_reason_ = res.result_reason_;
+	cdap_message->result_ = res.code_;
+	cdap_message->result_reason_ = res.reason_;
 	return cdap_message;
 }
 cdap_m_t* CDAPMessageFactory::getStartObjectRequestMessage(
@@ -794,8 +794,8 @@ cdap_m_t* CDAPMessageFactory::getStartObjectResponseMessage(
 	cdap_message->op_code_ = cdap_m_t::M_START_R;
 	cdap_message->flags_ = flags.flags_;
 	cdap_message->invoke_id_ = invoke_id;
-	cdap_message->result_ = res.result_;
-	cdap_message->result_reason_ = res.result_reason_;
+	cdap_message->result_ = res.code_;
+	cdap_message->result_reason_ = res.reason_;
 	return cdap_message;
 }
 cdap_m_t* CDAPMessageFactory::getStartObjectResponseMessage(
@@ -806,8 +806,8 @@ cdap_m_t* CDAPMessageFactory::getStartObjectResponseMessage(
 	cdap_message->op_code_ = cdap_m_t::M_START_R;
 	cdap_message->flags_ = flags.flags_;
 	cdap_message->invoke_id_ = invoke_id;
-	cdap_message->result_ = res.result_;
-	cdap_message->result_reason_ = res.result_reason_;
+	cdap_message->result_ = res.code_;
+	cdap_message->result_reason_ = res.reason_;
 	cdap_message->obj_class_ = obj.class_;
 	cdap_message->obj_inst_ = obj.inst_;
 	cdap_message->obj_name_ = obj.name_;
@@ -837,8 +837,8 @@ cdap_m_t* CDAPMessageFactory::getStopObjectResponseMessage(
 	cdap_message->op_code_ = cdap_m_t::M_STOP_R;
 	cdap_message->flags_ = flags.flags_;
 	cdap_message->invoke_id_ = invoke_id;
-	cdap_message->result_ = res.result_;
-	cdap_message->result_reason_ = res.result_reason_;
+	cdap_message->result_ = res.code_;
+	cdap_message->result_reason_ = res.reason_;
 	return cdap_message;
 }
 cdap_m_t* CDAPMessageFactory::getReadObjectRequestMessage(
@@ -868,8 +868,8 @@ cdap_m_t* CDAPMessageFactory::getReadObjectResponseMessage(
 	cdap_message->obj_inst_ = obj.inst_;
 	cdap_message->obj_name_ = obj.name_;
 	cdap_message->obj_value_ = obj.value_;
-	cdap_message->result_ = res.result_;
-	cdap_message->result_reason_ = res.result_reason_;
+	cdap_message->result_ = res.code_;
+	cdap_message->result_reason_ = res.reason_;
 	return cdap_message;
 }
 
@@ -896,8 +896,8 @@ cdap_m_t* CDAPMessageFactory::getWriteObjectResponseMessage(
 	cdap_message->op_code_ = cdap_m_t::M_WRITE_R;
 	cdap_message->flags_ = flags.flags_;
 	cdap_message->invoke_id_ = invoke_id;
-	cdap_message->result_ = res.result_;
-	cdap_message->result_reason_ = res.result_reason_;
+	cdap_message->result_ = res.code_;
+	cdap_message->result_reason_ = res.reason_;
 	return cdap_message;
 }
 cdap_m_t* CDAPMessageFactory::getCancelReadRequestMessage(
@@ -917,8 +917,8 @@ cdap_m_t* CDAPMessageFactory::getCancelReadResponseMessage(
 	cdap_message->op_code_ = cdap_m_t::M_CANCELREAD_R;
 	cdap_message->flags_ = flags.flags_;
 	cdap_message->invoke_id_ = invoke_id;
-	cdap_message->result_ = res.result_;
-	cdap_message->result_reason_ = res.result_reason_;
+	cdap_message->result_ = res.code_;
+	cdap_message->result_reason_ = res.reason_;
 	return cdap_message;
 }
 
@@ -3020,6 +3020,7 @@ void CDAPProvider::process_message(cdap_rib::SerializedObject &message,
 {
 	const cdap_m_t *m_rcv;
 	m_rcv = manager_->messageReceived(message, port);
+
 	// Fill structures
 	cdap_rib::con_handle_t con;
 	// Auth
@@ -3053,7 +3054,6 @@ void CDAPProvider::process_message(cdap_rib::SerializedObject &message,
 	obj.value_.message_ = new char[obj.value_.size_];
 	memcpy(obj.value_.message_, m_rcv->obj_value_.message_,
 	       m_rcv->obj_value_.size_);
-
 	// Filter
 	cdap_rib::filt_info_t filt;
 	filt.filter_ = m_rcv->filter_;
@@ -3062,8 +3062,9 @@ void CDAPProvider::process_message(cdap_rib::SerializedObject &message,
 	int invoke_id = m_rcv->invoke_id_;
 	// Result
 	cdap_rib::res_info_t res;
-	res.result_ = m_rcv->result_;
-	res.result_reason_ = m_rcv->result_reason_;
+	//FIXME: do not typecast when the codes are an enum in the GPB
+	res.code_ = static_cast<cdap_rib::res_code_t>(m_rcv->result_);
+	res.reason_ = m_rcv->result_reason_;
 
 	switch (m_rcv->op_code_) {
 
@@ -3091,8 +3092,7 @@ void CDAPProvider::process_message(cdap_rib::SerializedObject &message,
 							      invoke_id);
 			break;
 		case cdap_m_t::M_WRITE:
-			callback_->write_request(con, obj, filt,
-							invoke_id);
+			callback_->write_request(con, obj, filt, invoke_id);
 			break;
 		case cdap_m_t::M_START:
 			callback_->start_request(con, obj, filt,

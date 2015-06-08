@@ -141,12 +141,31 @@ typedef struct filtering_info {
 	int scope_;
 } filt_info_t;
 
+typedef enum{
+	/// The operation was successful
+	CDAP_SUCCESS = 0,
+	/// The operation has not been been completed yet
+	CDAP_PENDING = 1,
+
+	/* List of errors */
+
+	/// Unknown error
+	CDAP_ERROR = -1,
+	/// Object does not exist
+	CDAP_INVALID_OBJ = -2,
+	/// Object class does not match
+	CDAP_INVALID_OBJ_CLASS = -3,
+	/// Operation not supported in this object
+	CDAP_OP_NOT_SUPPORTED = -4,
+}res_code_t;
+
 typedef struct result_info {
-	/// Result of the operation
-	int result_;
+	/// Result code of the operation
+	res_code_t code_;
+
 	/// Result-Reason (string), optional in the responses, forbidden in the requests
 	/// Additional explanation of the result_
-	std::string result_reason_;
+	std::string reason_;
 } res_info_t;
 
 typedef struct version_info {

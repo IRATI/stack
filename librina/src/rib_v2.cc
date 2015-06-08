@@ -484,7 +484,7 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 				obj_reply.value_);
 	} else {
 		res = new cdap_rib::res_info_t;
-		res->result_ = -1;
+		res->code_ = cdap_rib::CDAP_ERROR;
 	}
 	try {
 		cdap_provider->send_create_result(con.port_,
@@ -558,7 +558,7 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 				obj.name_, obj_reply.value_);
 	} else {
 		res = new cdap_rib::res_info_t;
-		res->result_ = -1;
+		res->code_ = cdap_rib::CDAP_ERROR;
 	}
 	try {
 		cdap_provider->send_read_result(con.port_,
@@ -591,7 +591,7 @@ void RIB::cancel_read_request(
 		res = rib_obj->cancelRead(obj.name_);
 	} else {
 		res = new cdap_rib::res_info_t;
-		res->result_ = -1;
+		res->code_ = cdap_rib::CDAP_ERROR;
 	}
 
 	try {
@@ -632,7 +632,7 @@ void RIB::write_request(const cdap_rib::con_handle_t &con,
 				obj.name_, obj.value_, obj_reply.value_);
 	} else {
 		res = new cdap_rib::res_info_t;
-		res->result_ = -1;
+		res->code_ = cdap_rib::CDAP_ERROR;
 	}
 	try {
 		cdap_provider->send_write_result(con.port_, flags,
@@ -674,7 +674,7 @@ void RIB::start_request(const cdap_rib::con_handle_t &con,
 				obj.name_, obj.value_, obj_reply.value_);
 	} else {
 		res = new cdap_rib::res_info_t;
-		res->result_ = -1;
+		res->code_ = cdap_rib::CDAP_ERROR;
 	}
 	try {
 		cdap_provider->send_start_result(con.port_, obj,
@@ -712,7 +712,7 @@ void RIB::stop_request(const cdap_rib::con_handle_t &con,
 				obj.name_, obj.value_, obj_reply.value_);
 	} else {
 		res = new cdap_rib::res_info_t;
-		res->result_ = -1;
+		res->code_ = cdap_rib::CDAP_ERROR;
 	}
 	try {
 		cdap_provider->send_stop_result(con.port_, flags,
@@ -1977,7 +1977,7 @@ void RIBDaemon::create_request(const cdap_rib::con_handle_t &con,
 	if(!rib){
 		cdap_rib::res_info_t res;
 		cdap_rib::flags_t flags;
-		res.result_ = -1;
+		res.code_ = cdap_rib::CDAP_ERROR;
 		try {
 			cdap_provider->send_create_result(con.port_,
 					obj,
@@ -2004,7 +2004,7 @@ void RIBDaemon::delete_request(const cdap_rib::con_handle_t &con,
 	if(!rib){
 		cdap_rib::res_info_t res;
 		cdap_rib::flags_t flags;
-		res.result_ = -1;
+		res.code_ = cdap_rib::CDAP_ERROR;
 		try {
 			cdap_provider->send_delete_result(con.port_, obj,
 					flags, res,
@@ -2030,7 +2030,7 @@ void RIBDaemon::read_request(const cdap_rib::con_handle_t &con,
 	if(!rib){
 		cdap_rib::res_info_t res;
 		cdap_rib::flags_t flags;
-		res.result_ = -1;
+		res.code_ = cdap_rib::CDAP_ERROR;
 		try {
 			cdap_provider->send_read_result(con.port_, obj,
 					flags, res,
@@ -2055,7 +2055,7 @@ void RIBDaemon::cancel_read_request(
 	if(!rib){
 		cdap_rib::res_info_t res;
 		cdap_rib::flags_t flags;
-		res.result_ = -1;
+		res.code_ = cdap_rib::CDAP_ERROR;
 		try {
 			cdap_provider->send_cancel_read_result(
 					con.port_,
@@ -2081,7 +2081,7 @@ void RIBDaemon::write_request(const cdap_rib::con_handle_t &con,
 	if(!rib){
 		cdap_rib::res_info_t res;
 		cdap_rib::flags_t flags;
-		res.result_ = -1;
+		res.code_ = cdap_rib::CDAP_ERROR;
 		try {
 			cdap_provider->send_write_result(
 					con.port_,
@@ -2107,7 +2107,7 @@ void RIBDaemon::start_request(const cdap_rib::con_handle_t &con,
 	if(!rib){
 		cdap_rib::res_info_t res;
 		cdap_rib::flags_t flags;
-		res.result_ = -1;
+		res.code_ = cdap_rib::CDAP_ERROR;
 		try {
 			cdap_provider->send_start_result(
 					con.port_, obj,
@@ -2133,7 +2133,7 @@ void RIBDaemon::stop_request(const cdap_rib::con_handle_t &con,
 	if(!rib){
 		cdap_rib::res_info_t res;
 		cdap_rib::flags_t flags;
-		res.result_ = -1;
+		res.code_ = cdap_rib::CDAP_ERROR;
 		try {
 			cdap_provider->send_stop_result(
 					con.port_,
@@ -2168,8 +2168,8 @@ cdap_rib::res_info_t* RIBObj_::create(
 	(void) obj_reply;
 	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
 	operation_not_supported();
-	// FIXME: change for real opcode
-	res->result_ = -2;
+
+	res->code_ = cdap_rib::CDAP_OP_NOT_SUPPORTED;
 	return res;
 }
 
@@ -2178,8 +2178,8 @@ cdap_rib::res_info_t* RIBObj_::delete_(const std::string& name) {
 	(void) name;
 	operation_not_supported();
 	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
-	// FIXME: change for real opcode
-	res->result_ = -2;
+
+	res->code_ = cdap_rib::CDAP_OP_NOT_SUPPORTED;
 	return res;
 }
 
@@ -2192,8 +2192,8 @@ cdap_rib::res_info_t* RIBObj_::read(
 	(void) obj_reply;
 	operation_not_supported();
 	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
-	// FIXME: change for real opcode
-	res->result_ = -2;
+
+	res->code_ = cdap_rib::CDAP_OP_NOT_SUPPORTED;
 	return res;
 }
 
@@ -2202,8 +2202,8 @@ cdap_rib::res_info_t* RIBObj_::cancelRead(const std::string& name) {
 	(void) name;
 	operation_not_supported();
 	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
-	// FIXME: change for real opcode
-	res->result_ = -2;
+
+	res->code_ = cdap_rib::CDAP_OP_NOT_SUPPORTED;
 	return res;
 }
 
@@ -2217,8 +2217,8 @@ cdap_rib::res_info_t* RIBObj_::write(
 	(void) obj_reply;
 	operation_not_supported();
 	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
-	// FIXME: change for real opcode
-	res->result_ = -2;
+
+	res->code_ = cdap_rib::CDAP_OP_NOT_SUPPORTED;
 	return res;
 }
 
@@ -2232,8 +2232,8 @@ cdap_rib::res_info_t* RIBObj_::start(
 	(void) obj_reply;
 	operation_not_supported();
 	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
-	// FIXME: change for real opcode
-	res->result_ = -2;
+
+	res->code_ = cdap_rib::CDAP_OP_NOT_SUPPORTED;
 	return res;
 }
 
@@ -2247,8 +2247,8 @@ cdap_rib::res_info_t* RIBObj_::stop(
 	(void) obj_reply;
 	operation_not_supported();
 	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
-	// FIXME: change for real opcode
-	res->result_ = -2;
+
+	res->code_ = cdap_rib::CDAP_OP_NOT_SUPPORTED;
 	return res;
 }
 
