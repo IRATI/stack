@@ -157,6 +157,9 @@ typedef enum{
 	CDAP_INVALID_OBJ_CLASS = -3,
 	/// Operation not supported in this object
 	CDAP_OP_NOT_SUPPORTED = -4,
+	/// Error serializing/deserializing object value
+	CDAP_SER_DES_ERRORSUPPORTED = -5,
+	/// 
 }res_code_t;
 
 typedef struct result_info {

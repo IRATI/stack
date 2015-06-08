@@ -254,25 +254,25 @@ protected:
 	///                  Shall only be decoded if size != 0
 	///                  Initialized to size = 0 by default.
 	///
-	virtual cdap_rib::res_info_t* create(
-			const cdap_rib::con_handle_t &con,
-			const std::string& fqn,
-			const std::string class_,
-			const cdap_rib::filt_info_t &filt,
-			const int invoke_id,
-			const cdap_rib::SerializedObject &obj_req,
-			cdap_rib::SerializedObject &obj_reply);
+	virtual void create(const cdap_rib::con_handle_t &con,
+				const std::string& fqn,
+				const std::string class_,
+				const cdap_rib::filt_info_t &filt,
+				const int invoke_id,
+				const cdap_rib::SerializedObject &obj_req,
+				cdap_rib::SerializedObject &obj_reply,
+				cdap_rib::res_info_t& res);
 	///
 	/// Process a remote delete operation
 	///
 	/// @param name FQN of the object
 	///
-	virtual cdap_rib::res_info_t* delete_(
-			const cdap_rib::con_handle_t &con,
-			const std::string& fqn,
-			const std::string class_,
-			const cdap_rib::filt_info_t &filt,
-			const int invoke_id);
+	virtual void delete_(const cdap_rib::con_handle_t &con,
+					const std::string& fqn,
+					const std::string class_,
+					const cdap_rib::filt_info_t &filt,
+					const int invoke_id,
+					cdap_rib::res_info_t& res);
 
 	///
 	///
@@ -281,13 +281,13 @@ protected:
 	/// @param fqn FQN of the object
 	/// @obj_reply Serialized object to be returned.
 	///
-	virtual cdap_rib::res_info_t* read(
-					const cdap_rib::con_handle_t &con,
+	virtual void read(const cdap_rib::con_handle_t &con,
 					const std::string& fqn,
 					const std::string class_,
 					const cdap_rib::filt_info_t &filt,
 					const int invoke_id,
-					cdap_rib::SerializedObject &obj_reply);
+					cdap_rib::SerializedObject &obj_reply,
+					cdap_rib::res_info_t& res);
 
 	///
 	///
@@ -295,12 +295,12 @@ protected:
 	///
 	/// @param fqn FQN of the object
 	///
-	virtual cdap_rib::res_info_t* cancelRead(
-					const cdap_rib::con_handle_t &con,
+	virtual void cancelRead(const cdap_rib::con_handle_t &con,
 					const std::string& fqn,
 					const std::string class_,
 					const cdap_rib::filt_info_t &filt,
-					const int invoke_id);
+					const int invoke_id,
+					cdap_rib::res_info_t& res);
 
 	///
 	///
@@ -312,14 +312,14 @@ protected:
 	///                  Will only be decoded by the RIB library if size != 0.
 	///                  Initialized to size = 0 by default.
 	///
-	virtual cdap_rib::res_info_t* write(
-				const cdap_rib::con_handle_t &con,
+	virtual void write(const cdap_rib::con_handle_t &con,
 				const std::string& fqn,
 				const std::string class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
 				const cdap_rib::SerializedObject &obj_req,
-				cdap_rib::SerializedObject &obj_reply);
+				cdap_rib::SerializedObject &obj_reply,
+				cdap_rib::res_info_t& res);
 
 	///
 	///
@@ -332,14 +332,14 @@ protected:
 	///                  Shall only be decoded if size != 0
 	///                  Initialized to size = 0 by default.
 	///
-	virtual cdap_rib::res_info_t* start(
-			const cdap_rib::con_handle_t &con,
-			const std::string& fqn,
-			const std::string class_,
-			const cdap_rib::filt_info_t &filt,
-			const int invoke_id,
-			const cdap_rib::SerializedObject &obj_req,
-			cdap_rib::SerializedObject &obj_reply);
+	virtual void start(const cdap_rib::con_handle_t &con,
+				const std::string& fqn,
+				const std::string class_,
+				const cdap_rib::filt_info_t &filt,
+				const int invoke_id,
+				const cdap_rib::SerializedObject &obj_req,
+				cdap_rib::SerializedObject &obj_reply,
+				cdap_rib::res_info_t& res);
 
 	///
 	///
@@ -352,14 +352,14 @@ protected:
 	///                  Shall only be decoded if size != 0
 	///                  Initialized to size = 0 by default.
 	///
-	virtual cdap_rib::res_info_t* stop(
-			const cdap_rib::con_handle_t &con,
-			const std::string& fqn,
-			const std::string class_,
-			const cdap_rib::filt_info_t &filt,
-			const int invoke_id,
-			const cdap_rib::SerializedObject &obj_req,
-			cdap_rib::SerializedObject &obj_reply);
+	virtual void stop(const cdap_rib::con_handle_t &con,
+				const std::string& fqn,
+				const std::string class_,
+				const cdap_rib::filt_info_t &filt,
+				const int invoke_id,
+				const cdap_rib::SerializedObject &obj_req,
+				cdap_rib::SerializedObject &obj_reply,
+				cdap_rib::res_info_t& res);
 
 	///
 	/// Get the class name.
@@ -373,7 +373,7 @@ protected:
 	///
 	/// Throw not supported exception
 	///
-	void operation_not_supported();
+	void operation_not_supported(cdap_rib::res_info_t& res);
 
 	///
 	/// Get the encoder

@@ -210,14 +210,37 @@ public:
 					  const cdap_rib::obj_info_t &obj,
 					  const cdap_rib::flags_t &flags,
 					  const cdap_rib::res_info_t &res,
-					  int invoke_id){};
+					  int invoke_id){
+
+		switch(invoke_id){
+			case 4:
+				CPPUNIT_ASSERT_MESSAGE("READ result for invoke id 4 != SUCCESS", res.code_ == cdap_rib::CDAP_SUCCESS);
+				break;
+
+			default:
+				CPPUNIT_ASSERT_MESSAGE("READ result for an invalid invoke id", 0);
+				break;
+		}
+
+	};
 	virtual void send_cancel_read_result(
 			unsigned int port, const cdap_rib::flags_t &flags,
 			const cdap_rib::res_info_t &res, int invoke_id){};
 	virtual void send_write_result(unsigned int port,
 					   const cdap_rib::flags_t &flags,
 					   const cdap_rib::res_info_t &res,
-					   int invoke_id){};
+					   int invoke_id){
+		switch(invoke_id){
+			case 2:
+			case 3:
+				CPPUNIT_ASSERT_MESSAGE("WRITE result for invoke id != OPERATION NOT SUPPORTED", res.code_ == cdap_rib::CDAP_OP_NOT_SUPPORTED);
+				break;
+			default:
+				CPPUNIT_ASSERT_MESSAGE("WRITE result for an invalid invoke id", 0);
+				break;
+		}
+
+	};
 	virtual void send_start_result(unsigned int port,
 					   const cdap_rib::obj_info_t &obj,
 					   const cdap_rib::flags_t &flags,
@@ -272,22 +295,17 @@ public:
 		return &encoder;
 	};
 
-	cdap_rib::res_info_t* read(const cdap_rib::con_handle_t &con,
+	void read(const cdap_rib::con_handle_t &con,
 					const std::string& fqn,
 					const std::string class_,
 					const cdap_rib::filt_info_t &filt,
 					const int invoke_id,
-					cdap_rib::SerializedObject &obj_reply){
+					cdap_rib::SerializedObject &obj_reply,
+					cdap_rib::res_info_t& res){
 
 
 		CPPUNIT_ASSERT_MESSAGE("Invalid invoke id", invoke_id>=4);
-
-
-		cdap_rib::res_info_t* res = new cdap_rib::res_info_t;
-		res->code_ = cdap_rib::CDAP_SUCCESS;
-
-
-		return res;
+		res.code_ = cdap_rib::CDAP_SUCCESS;
 	};
 
 
@@ -746,21 +764,18 @@ void ribBasicOps::testOperations(){
 	try{
 		(*message) = PREFIX_MESSAGE | invoke_id;
 		rib_provider->write_request(con_ok, obj_info1, filter, invoke_id);
-		CPPUNIT_ASSERT_MESSAGE("READ operation with an invalid FQN name has succeeded", 0);
-	}catch(eObjOpNotSupported& e){
 	}catch(...){
-		CPPUNIT_ASSERT_MESSAGE("Invalid exception thrown during read_req", 0);
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during read_req", 0);
 	}
 
+	//Invalid operation
 	invoke_id = 3;
 	obj_info1.name_ = name1;
 	try{
 		(*message) = PREFIX_MESSAGE | invoke_id;
 		rib_provider->write_request(con_ok, obj_info1, filter, invoke_id);
-		CPPUNIT_ASSERT_MESSAGE("READ operation with an invalid class name has succeeded", 0);
-	}catch(eObjOpNotSupported& e){
 	}catch(...){
-		CPPUNIT_ASSERT_MESSAGE("Invalid exception thrown during read_req", 0);
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during read_req", 0);
 	}
 
 	//Issue a request to a valid object and a valid operation

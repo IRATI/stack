@@ -437,7 +437,6 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::filt_info_t &filt,
 		const int invoke_id) {
 
-	(void) filt;
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 	flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
@@ -450,7 +449,7 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 	obj_reply.value_.size_ = 0;
 	obj_reply.value_.message_ = NULL;
 
-	cdap_rib::res_info_t* res;
+	cdap_rib::res_info_t res;
 	RIBObj_* rib_obj = NULL;
 
 	int64_t id = get_obj_inst_id(obj.name_);
@@ -468,35 +467,26 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 		//FIXME
 	}
 
-
-	if(!rib_obj){
-		//FIXME treat error => neither son nor father found
-		return;
-	}
-
-	//Hold the readlock until the end
-	rina::ReadScopedLock rlock(rib_obj->rwlock, false);
-
 	if (rib_obj) {
 		//Call the application
-		res = rib_obj->create(con, obj.name_, obj.class_,
+		rib_obj->create(con, obj.name_, obj.class_,
 							filt,
 							invoke_id,
 							obj.value_,
-							obj_reply.value_);
+							obj_reply.value_,
+							res);
 	} else {
-		res = new cdap_rib::res_info_t;
-		res->code_ = cdap_rib::CDAP_ERROR;
+		res.code_ = cdap_rib::CDAP_INVALID_OBJ;
 	}
+
 	try {
 		cdap_provider->send_create_result(con.port_,
 				obj_reply,
-				flags, *res,
+				flags, res,
 				invoke_id);
 	} catch (Exception &e) {
 		LOG_ERR("Unable to send the response");
 	}
-	delete res;
 }
 
 void RIB::delete_request(const cdap_rib::con_handle_t &con,
@@ -504,9 +494,9 @@ void RIB::delete_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::filt_info_t &filt,
 		const int invoke_id) {
 
-	(void) filt;
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
+	cdap_rib::res_info_t res;
 
 	//Mutual exclusion
 	ReadScopedLock rlock(rwlock);
@@ -515,21 +505,18 @@ void RIB::delete_request(const cdap_rib::con_handle_t &con,
 	RIBObj_* rib_obj = get_obj(id);
 
 	if (rib_obj) {
-		cdap_rib::res_info_t* res = rib_obj->delete_(con, obj.name_,
-								obj.class_,
-								filt,
-								invoke_id);
-		try {
+		rib_obj->delete_(con, obj.name_, obj.class_, filt,
+								invoke_id,
+								res);
+	}else{
+		res.code_ = cdap_rib::CDAP_INVALID_OBJ;
+	}
+	try {
 			cdap_provider->send_delete_result(con.port_, obj,
-					flags, *res,
+					flags, res,
 					invoke_id);
 		} catch (Exception &e) {
 			LOG_ERR("Unable to send the response");
-		}
-		delete res;
-	}else{
-		//TODO
-		///So what?
 	}
 }
 void RIB::read_request(const cdap_rib::con_handle_t &con,
@@ -537,7 +524,6 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::filt_info_t &filt,
 		const int invoke_id) {
 
-	(void) filt;
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 	flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
@@ -550,7 +536,7 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 	obj_reply.value_.size_ = 0;
 	obj_reply.value_.message_ = NULL;
 
-	cdap_rib::res_info_t* res;
+	cdap_rib::res_info_t res;
 
 	//Mutual exclusion
 	ReadScopedLock rlock(rwlock);
@@ -559,23 +545,23 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 	RIBObj_* rib_obj = get_obj(id);
 
 	if (rib_obj) {
-		res = rib_obj->read(con, obj.name_, obj.class_,
+		rib_obj->read(con, obj.name_, obj.class_,
 					filt,
 					invoke_id,
-					obj_reply.value_);
+					obj_reply.value_,
+					res);
 	} else {
-		res = new cdap_rib::res_info_t;
-		res->code_ = cdap_rib::CDAP_ERROR;
+		res.code_ = cdap_rib::CDAP_INVALID_OBJ;
 	}
+
 	try {
 		cdap_provider->send_read_result(con.port_,
 				obj_reply,
-				flags, *res,
+				flags, res,
 				invoke_id);
 	} catch (Exception &e) {
 		LOG_ERR("Unable to send the response");
 	}
-	delete res;
 }
 void RIB::cancel_read_request(
 		const cdap_rib::con_handle_t &con,
@@ -586,7 +572,7 @@ void RIB::cancel_read_request(
 
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
-	cdap_rib::res_info_t* res;
+	cdap_rib::res_info_t res;
 
 	//Mutual exclusion
 	ReadScopedLock rlock(rwlock);
@@ -595,20 +581,18 @@ void RIB::cancel_read_request(
 	RIBObj_* rib_obj = get_obj(id);
 
 	if (rib_obj) {
-		res = rib_obj->cancelRead(con, obj.name_, obj.class_,
-						filt, invoke_id);
+		rib_obj->cancelRead(con, obj.name_, obj.class_,
+						filt, invoke_id, res);
 	} else {
-		res = new cdap_rib::res_info_t;
-		res->code_ = cdap_rib::CDAP_ERROR;
+		res.code_ = cdap_rib::CDAP_INVALID_OBJ;
 	}
 
 	try {
 		cdap_provider->send_cancel_read_result(
-				con.port_, flags, *res, invoke_id);
+				con.port_, flags, res, invoke_id);
 	} catch (Exception &e) {
 		LOG_ERR("Unable to send the response");
 	}
-	delete res;
 }
 void RIB::write_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
@@ -627,7 +611,7 @@ void RIB::write_request(const cdap_rib::con_handle_t &con,
 	obj_reply.value_.size_ = 0;
 	obj_reply.value_.message_ = NULL;
 
-	cdap_rib::res_info_t* res;
+	cdap_rib::res_info_t res;
 
 	//Mutual exclusion
 	ReadScopedLock rlock(rwlock);
@@ -636,22 +620,21 @@ void RIB::write_request(const cdap_rib::con_handle_t &con,
 	RIBObj_* rib_obj = get_obj(id);
 
 	if (rib_obj) {
-		res = rib_obj->write(con, obj.name_, obj.class_, filt,
+		rib_obj->write(con, obj.name_, obj.class_, filt,
 							invoke_id,
 							obj.value_,
-							obj_reply.value_);
+							obj_reply.value_,
+							res);
 	} else {
-		res = new cdap_rib::res_info_t;
-		res->code_ = cdap_rib::CDAP_ERROR;
+		res.code_ = cdap_rib::CDAP_INVALID_OBJ;
 	}
 	try {
 		cdap_provider->send_write_result(con.port_, flags,
-				*res,
+				res,
 				invoke_id);
 	} catch (Exception &e) {
 		LOG_ERR("Unable to send the response");
 	}
-	delete res;
 }
 void RIB::start_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
@@ -671,7 +654,7 @@ void RIB::start_request(const cdap_rib::con_handle_t &con,
 	obj_reply.value_.size_ = 0;
 	obj_reply.value_.message_ = NULL;
 
-	cdap_rib::res_info_t* res;
+	cdap_rib::res_info_t res;
 
 	//Mutual exclusion
 	ReadScopedLock rlock(rwlock);
@@ -680,22 +663,21 @@ void RIB::start_request(const cdap_rib::con_handle_t &con,
 	RIBObj_* rib_obj = get_obj(id);
 
 	if (rib_obj) {
-		res = rib_obj->start(con, obj.name_, obj.class_, filt,
+		rib_obj->start(con, obj.name_, obj.class_, filt,
 							invoke_id,
 							obj.value_,
-							obj_reply.value_);
+							obj_reply.value_,
+							res);
 	} else {
-		res = new cdap_rib::res_info_t;
-		res->code_ = cdap_rib::CDAP_ERROR;
+		res.code_ = cdap_rib::CDAP_INVALID_OBJ;
 	}
 	try {
 		cdap_provider->send_start_result(con.port_, obj,
-				flags, *res,
+				flags, res,
 				invoke_id);
 	} catch (Exception &e) {
 		LOG_ERR("Unable to send the response");
 	}
-	delete res;
 }
 void RIB::stop_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
@@ -714,28 +696,27 @@ void RIB::stop_request(const cdap_rib::con_handle_t &con,
 	obj_reply.value_.size_ = 0;
 	obj_reply.value_.message_ = NULL;
 
-	cdap_rib::res_info_t* res;
+	cdap_rib::res_info_t res;
 
 	int64_t id = get_obj_inst_id(obj.name_);
 	RIBObj_* rib_obj = get_obj(id);
 
 	if (rib_obj) {
-		res = rib_obj->stop(con, obj.name_, obj.class_, filt,
+		rib_obj->stop(con, obj.name_, obj.class_, filt,
 							invoke_id,
 							obj.value_,
-							obj_reply.value_);
+							obj_reply.value_,
+							res);
 	} else {
-		res = new cdap_rib::res_info_t;
-		res->code_ = cdap_rib::CDAP_ERROR;
+		res.code_ = cdap_rib::CDAP_INVALID_OBJ;
 	}
 	try {
 		cdap_provider->send_stop_result(con.port_, flags,
-				*res,
+				res,
 				invoke_id);
 	} catch (Exception &e) {
 		LOG_ERR("Unable to send the response");
 	}
-	delete res;
 }
 
 
@@ -2171,13 +2152,14 @@ AbstractEncoder::~AbstractEncoder() {
 }
 
 //RIBObj/RIBObj_
-cdap_rib::res_info_t* RIBObj_::create(const cdap_rib::con_handle_t &con,
+void RIBObj_::create(const cdap_rib::con_handle_t &con,
 				const std::string& fqn,
 				const std::string class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
 				const cdap_rib::SerializedObject &obj_req,
-				cdap_rib::SerializedObject &obj_reply){
+				cdap_rib::SerializedObject &obj_reply,
+				cdap_rib::res_info_t& res){
 
 	(void) con;
 	(void) fqn;
@@ -2186,62 +2168,62 @@ cdap_rib::res_info_t* RIBObj_::create(const cdap_rib::con_handle_t &con,
 	(void) invoke_id;
 	(void) obj_req;
 	(void) obj_reply;
-	operation_not_supported();
-	return NULL;
+	operation_not_supported(res);
 }
 
-cdap_rib::res_info_t* RIBObj_::delete_(const cdap_rib::con_handle_t &con,
-					const std::string& fqn,
-					const std::string class_,
-					const cdap_rib::filt_info_t &filt,
-					const int invoke_id){
-	(void) con;
-	(void) fqn;
-	(void) class_;
-	(void) filt;
-	(void) invoke_id;
-	operation_not_supported();
-	return NULL;
-}
-
-// FIXME remove name, it is not needed
-cdap_rib::res_info_t* RIBObj_::read(const cdap_rib::con_handle_t &con,
+void RIBObj_::delete_(const cdap_rib::con_handle_t &con,
 					const std::string& fqn,
 					const std::string class_,
 					const cdap_rib::filt_info_t &filt,
 					const int invoke_id,
-					cdap_rib::SerializedObject &obj_reply){
+					cdap_rib::res_info_t& res){
+	(void) con;
+	(void) fqn;
+	(void) class_;
+	(void) filt;
+	(void) invoke_id;
+	operation_not_supported(res);
+}
+
+// FIXME remove name, it is not needed
+void RIBObj_::read(const cdap_rib::con_handle_t &con,
+					const std::string& fqn,
+					const std::string class_,
+					const cdap_rib::filt_info_t &filt,
+					const int invoke_id,
+					cdap_rib::SerializedObject &obj_reply,
+					cdap_rib::res_info_t& res){
 	(void) con;
 	(void) fqn;
 	(void) class_;
 	(void) filt;
 	(void) invoke_id;
 	(void) obj_reply;
-	operation_not_supported();
-	return NULL;
+	operation_not_supported(res);
 }
 
-cdap_rib::res_info_t* RIBObj_::cancelRead(const cdap_rib::con_handle_t &con,
+void RIBObj_::cancelRead(const cdap_rib::con_handle_t &con,
 					const std::string& fqn,
 					const std::string class_,
 					const cdap_rib::filt_info_t &filt,
-					const int invoke_id){
+					const int invoke_id,
+					cdap_rib::res_info_t& res){
 	(void) con;
 	(void) fqn;
 	(void) class_;
 	(void) filt;
 	(void) invoke_id;
-	operation_not_supported();
-	return NULL;
+	operation_not_supported(res);
 }
 
-cdap_rib::res_info_t* RIBObj_::write(const cdap_rib::con_handle_t &con,
+void RIBObj_::write(const cdap_rib::con_handle_t &con,
 				const std::string& fqn,
 				const std::string class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
 				const cdap_rib::SerializedObject &obj_req,
-				cdap_rib::SerializedObject &obj_reply){
+				cdap_rib::SerializedObject &obj_reply,
+				cdap_rib::res_info_t& res){
 	(void) con;
 	(void) fqn;
 	(void) class_;
@@ -2249,17 +2231,17 @@ cdap_rib::res_info_t* RIBObj_::write(const cdap_rib::con_handle_t &con,
 	(void) invoke_id;
 	(void) obj_req;
 	(void) obj_reply;
-	operation_not_supported();
-	return NULL;
+	operation_not_supported(res);
 }
 
-cdap_rib::res_info_t* RIBObj_::start(const cdap_rib::con_handle_t &con,
+void RIBObj_::start(const cdap_rib::con_handle_t &con,
 			const std::string& fqn,
 			const std::string class_,
 			const cdap_rib::filt_info_t &filt,
 			const int invoke_id,
 			const cdap_rib::SerializedObject &obj_req,
-			cdap_rib::SerializedObject &obj_reply){
+			cdap_rib::SerializedObject &obj_reply,
+			cdap_rib::res_info_t& res){
 	(void) con;
 	(void) fqn;
 	(void) class_;
@@ -2267,17 +2249,17 @@ cdap_rib::res_info_t* RIBObj_::start(const cdap_rib::con_handle_t &con,
 	(void) invoke_id;
 	(void) obj_req;
 	(void) obj_reply;
-	operation_not_supported();
-	return NULL;
+	operation_not_supported(res);
 }
 
-cdap_rib::res_info_t* RIBObj_::stop(const cdap_rib::con_handle_t &con,
+void RIBObj_::stop(const cdap_rib::con_handle_t &con,
 			const std::string& fqn,
 			const std::string class_,
 			const cdap_rib::filt_info_t &filt,
 			const int invoke_id,
 			const cdap_rib::SerializedObject &obj_req,
-			cdap_rib::SerializedObject &obj_reply){
+			cdap_rib::SerializedObject &obj_reply,
+			cdap_rib::res_info_t& res){
 	(void) con;
 	(void) fqn;
 	(void) class_;
@@ -2285,12 +2267,11 @@ cdap_rib::res_info_t* RIBObj_::stop(const cdap_rib::con_handle_t &con,
 	(void) invoke_id;
 	(void) obj_req;
 	(void) obj_reply;
-	operation_not_supported();
-	return NULL;
+	operation_not_supported(res);
 }
 
-void RIBObj_::operation_not_supported() {
-	throw eObjOpNotSupported();
+void RIBObj_::operation_not_supported(cdap_rib::res_info_t& res) {
+	res.code_ = cdap_rib::CDAP_OP_NOT_SUPPORTED;
 }
 
 
