@@ -672,10 +672,12 @@ public:
 	 * associated to the port-id requested (0 if is an application)
 	 * @param appName The name of the application that requested
 	 * the flow (could be an IPC Process or a regular application)
+	 * @param blocking true if the flow is blocking, false otherwise
 	 * @return the port-id
 	 * @throws PortAllocationException if something goes wrong
 	 */
-	int allocatePortId(const ApplicationProcessNamingInformation& appName);
+	int allocatePortId(const ApplicationProcessNamingInformation& appName,
+			   bool blocking);
 
 	/**
 	 * Request the kernel to free a used port-id

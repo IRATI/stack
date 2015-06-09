@@ -614,7 +614,9 @@ void ExtendedIPCManager::queryRIBResponse(
 #endif
 }
 
-int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingInformation& appName) {
+int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingInformation& appName,
+				       bool blocking)
+{
 #if STUB_API
         // Do nothing
 
@@ -622,7 +624,7 @@ int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingInformation
 
         return 1;
 #else
-        int result = syscallAllocatePortId(ipcProcessId, appName);
+        int result = syscallAllocatePortId(ipcProcessId, appName, blocking);
         if (result < 0) {
                 throw PortAllocationException();
         }

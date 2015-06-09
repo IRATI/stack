@@ -152,9 +152,12 @@ static int normal_sdu_enqueue(struct ipcp_instance_data * data,
 
 static int normal_sdu_write(struct ipcp_instance_data * data,
                             port_id_t                   id,
+                            unsigned int  		timeout,
                             struct sdu *                sdu)
 {
         struct normal_flow * flow;
+
+        (void) timeout;
 
         spin_lock(&data->lock);
         flow = find_flow(data, id);

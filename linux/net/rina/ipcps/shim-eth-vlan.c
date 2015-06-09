@@ -706,6 +706,7 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
 
 static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
                               port_id_t                   id,
+                              unsigned int  		  timeout,
                               struct sdu *                sdu)
 {
         struct shim_eth_flow *   flow;
@@ -717,6 +718,8 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         int                      hlen, tlen, length;
         int                      retval;
         unsigned long            flags;
+
+        (void) timeout;
 
         ASSERT(data);
         ASSERT(sdu);
@@ -860,7 +863,7 @@ static int eth_vlan_rcv_worker(void * o)
 
         if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                 LOG_DBG("This flow goes for an app");
-                if (kfa_flow_create(data->kfa, flow->port_id, ipcp)) {
+                if (kfa_flow_create(data->kfa, flow->port_id, ipcp, false)) {
                         LOG_ERR("Could not create flow in KFA");
                         kfa_port_id_release(data->kfa, flow->port_id);
                         if (flow_destroy(data, flow))

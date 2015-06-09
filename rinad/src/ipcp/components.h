@@ -359,6 +359,9 @@ public:
 			const rina::ApplicationUnregistrationRequestEvent& event) = 0;
 
 	virtual unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name) = 0;
+
+	virtual rina::ApplicationRegistrationInformation
+		get_reg_app_info(const rina::ApplicationProcessNamingInformation name) = 0;
 };
 
 ///N-1 Flow Manager interface

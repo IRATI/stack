@@ -675,12 +675,18 @@ std::vector<ApplicationRegistration *> IPCManager::getRegisteredApplications()
 
 int IPCManager::readSDU(int portId, void * sdu, int maxBytes)
 {
+	return readSDU(portId, sdu, maxBytes, 0);
+}
+
+int IPCManager::readSDU(int portId, void * sdu, int maxBytes, unsigned int timeout)
+{
 #if STUB_API
         memset(sdu, 'v', maxBytes);
         (void) portId;
+        (void) timeout;
 	return maxBytes;
 #else
-	int result = syscallReadSDU(portId, sdu, maxBytes);
+	int result = syscallReadSDU(portId, sdu, maxBytes, timeout);
 	if (result < 0){
 		throw ReadSDUException();
 	}
@@ -691,13 +697,19 @@ int IPCManager::readSDU(int portId, void * sdu, int maxBytes)
 
 void IPCManager::writeSDU(int portId, void * sdu, int size)
 {
+	writeSDU(portId, sdu, size, 0);
+}
+
+void IPCManager::writeSDU(int portId, void * sdu, int size, unsigned int timeout)
+{
 #if STUB_API
 	/* Do nothing. */
 	(void)portId;
         (void)sdu;
         (void)size;
+        (void)timeout;
 #else
-	int result = syscallWriteSDU(portId, sdu, size);
+	int result = syscallWriteSDU(portId, sdu, size, timeout);
 	if (result < 0){
 		throw WriteSDUException();
 	}

@@ -166,8 +166,9 @@ SYSCALL_DEFINE1(ipc_destroy,
 #endif
 }
 
-SYSCALL_DEFINE3(sdu_read,
+SYSCALL_DEFINE4(sdu_read,
                 port_id_t,     id,
+                unsigned int,  timeout,
                 void __user *, buffer,
                 size_t,        size)
 {
@@ -175,6 +176,7 @@ SYSCALL_DEFINE3(sdu_read,
         (void) id;
         (void) buffer;
         (void) size;
+        (void) timeout;
 
         return -ENOSYS;
 #else
@@ -186,7 +188,7 @@ SYSCALL_DEFINE3(sdu_read,
 
         tmp = NULL;
 
-        CALL_DEFAULT_PERSONALITY(retval, sdu_read, id, &tmp);
+        CALL_DEFAULT_PERSONALITY(retval, sdu_read, id, timeout, &tmp);
         /* Taking ownership from the internal layers */
 
         LOG_DBG("Personality returned value %zd", retval);
@@ -231,8 +233,9 @@ SYSCALL_DEFINE3(sdu_read,
 #endif
 }
 
-SYSCALL_DEFINE3(sdu_write,
+SYSCALL_DEFINE4(sdu_write,
                 port_id_t,           id,
+                unsigned int,        timeout,
                 const void __user *, buffer,
                 size_t,              size)
 {
@@ -281,7 +284,7 @@ SYSCALL_DEFINE3(sdu_write,
         ASSERT(sdu_is_ok(sdu));
 
         /* Passing ownership to the internal layers */
-        CALL_DEFAULT_PERSONALITY(retval, sdu_write, id, sdu);
+        CALL_DEFAULT_PERSONALITY(retval, sdu_write, id, timeout, sdu);
         if (retval) {
                 SYSCALL_DUMP_EXIT;
                 /* NOTE: Do not destroy SDU, ownership isn't our anymore */
@@ -294,15 +297,17 @@ SYSCALL_DEFINE3(sdu_write,
 #endif
 }
 
-SYSCALL_DEFINE3(allocate_port,
+SYSCALL_DEFINE4(allocate_port,
                 ipc_process_id_t, id,
                 const char __user *, process_name,
-                const char __user *, process_instance)
+                const char __user *, process_instance,
+                bool, blocking)
 {
 #ifndef CONFIG_RINA
         (void) id;
         (void) process_name;
         (void) process_instance;
+        (void) blocking;
 
         return -ENOSYS;
 #else
@@ -327,7 +332,7 @@ SYSCALL_DEFINE3(allocate_port,
                 return -EFAULT;
         }
 
-        CALL_DEFAULT_PERSONALITY(retval, allocate_port, id, tname);
+        CALL_DEFAULT_PERSONALITY(retval, allocate_port, id, tname, blocking);
 
         SYSCALL_DUMP_EXIT;
 

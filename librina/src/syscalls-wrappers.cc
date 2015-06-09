@@ -74,13 +74,13 @@
 
 namespace rina {
 
-int syscallWriteSDU(int portId, void * sdu, int size)
+int syscallWriteSDU(int portId, void * sdu, int size, unsigned int timeout)
 {
         int result;
 
         DUMP_SYSCALL("SYS_writeSDU", SYS_writeSDU);
 
-        result = syscall(SYS_writeSDU, portId, sdu, size);
+        result = syscall(SYS_writeSDU, portId, timeout, sdu, size);
         if (result < 0) {
                 LOG_ERR("Syscall write SDU failed: %d", result);
         }
@@ -88,13 +88,13 @@ int syscallWriteSDU(int portId, void * sdu, int size)
         return result;
 }
 
-int syscallReadSDU(int portId, void * sdu, int maxBytes)
+int syscallReadSDU(int portId, void * sdu, int maxBytes, unsigned int timeout)
 {
         int result;
 
         DUMP_SYSCALL("SYS_readSDU", SYS_readSDU);
 
-        result = syscall(SYS_readSDU, portId, sdu, maxBytes);
+        result = syscall(SYS_readSDU, portId, timeout, sdu, maxBytes);
         if (result < 0) {
                 LOG_ERR("Syscall read SDU failed: %d", result);
         }
@@ -182,7 +182,8 @@ int syscallCreateIPCProcess(const ApplicationProcessNamingInformation & ipcProce
 }
 
 int syscallAllocatePortId(unsigned short ipcProcessId,
-                          const ApplicationProcessNamingInformation & applicationName)
+                          const ApplicationProcessNamingInformation & applicationName,
+                          bool blocking)
 {
         int result;
 
@@ -191,7 +192,8 @@ int syscallAllocatePortId(unsigned short ipcProcessId,
         result = syscall(SYS_allocatePortId,
                          ipcProcessId,
                          applicationName.processName.c_str(),
-                         applicationName.processInstance.c_str());
+                         applicationName.processInstance.c_str(),
+                         blocking);
 
         if (result < 0) {
                 LOG_ERR("Syscall allocate port id failed: %d", result);

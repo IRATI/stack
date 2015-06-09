@@ -440,20 +440,26 @@ public:
 	 *
 	 * @param sdu A buffer to store the SDU data
 	 * @param maxBytes The maximum number of bytes to read
+	 * @param timeout if the flow is blocking, the max. amount of time to wait
+         * for the operation to complete in ms (0 for not setting a timeout)
 	 * @return int The number of bytes read
 	 * @throws IPCException if the flow is not in the ALLOCATED state
 	 */
 	int readSDU(int portId, void * sdu, int maxBytes);
+	int readSDU(int portId, void * sdu, int maxBytes, unsigned int timeout);
 
 	/**
 	 * Writes an SDU to the flow
 	 *
 	 * @param sdu A buffer that contains the SDU data
 	 * @param size The size of the SDU data, in bytes
+	 * @param timeout if the flow is blocking, the max. amount of time to wait
+         * for the operation to complete in ms (0 for not setting a timeout)
 	 * @throws IPCException if the flow is not in the ALLOCATED state or
 	 * there are problems writing to the flow
 	 */
 	void writeSDU(int portId, void * sdu, int size);
+	void writeSDU(int portId, void * sdu, int size, unsigned int timeout);
 
 	/**
 	 * Returns the flows that are currently allocated

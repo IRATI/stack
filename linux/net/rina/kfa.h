@@ -42,10 +42,12 @@ int          kfa_port_id_release(struct kfa * instance,
 
 int          kfa_flow_sdu_write(struct ipcp_instance_data * data,
                                 port_id_t     id,
+                                unsigned int  timeout,
                                 struct sdu *  sdu);
 
 int          kfa_flow_sdu_read(struct kfa *  instance,
                                port_id_t     id,
+                               unsigned int  timeout,
                                struct sdu ** sdu);
 
 #if 0
@@ -57,6 +59,7 @@ struct rmt;
 
 int          kfa_flow_create(struct kfa *           instance,
                              port_id_t              pid,
+                             bool		    blocking,
                              struct ipcp_instance * ipcp);
 
 struct ipcp_instance * kfa_ipcp_instance(struct kfa * instance);

@@ -280,7 +280,8 @@ void FlowAllocator::createFlowRequestMessageReceived(
 		//the Flow object from the CDAP message and call the FAI
 		try {
 			portId = rina::extendedIPCManager->allocatePortId(
-					flow->destination_naming_info);
+					flow->destination_naming_info,
+					namespace_manager_->get_reg_app_info(flow->destination_naming_info).blocking);
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Problems requesting a port-id: %s. Ignoring the Flow allocation request",
 					e.what());
@@ -329,8 +330,8 @@ void FlowAllocator::submitAllocateRequest(
 	IFlowAllocatorInstance * fai;
 
 	try {
-		portId = rina::extendedIPCManager->allocatePortId(
-				event.localApplicationName);
+		portId = rina::extendedIPCManager->allocatePortId(event.localApplicationName,
+								  event.flowSpecification.blocking);
 		LOG_IPCP_DBG("Got assigned port-id %d", portId);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems requesting an available port-id to the Kernel IPC Manager: %s",

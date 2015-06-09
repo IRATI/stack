@@ -34,22 +34,32 @@ namespace rina {
          * Wrapper of the writeSDU system call
          * @param portId the portId where the data has to be written
          * @param sdu the data to be written
+         * @param timeout if the flow is blocking, the max. amount of time to wait
+         * for the operation to complete in ms (0 for not setting a timeout)
          * @param size the size of the data to be written
          * @return 0 if everything was ok, negative number indicating error
          *         otherwise
          */
-        int syscallWriteSDU(int portId, void * sdu, int size);
+        int syscallWriteSDU(int portId,
+        		    void * sdu,
+        		    int size,
+        		    unsigned int timeout);
 
         /**
          * Wrapper of the readSDU system call
          * @param portId the portId where the data has to be written
          * @param sdu pointer to the memory address of the first byte of the
          *        SDU
+         * @param timeout if the flow is blocking, the max. amount of time to wait
+         * for the operation to complete in ms (0 for not setting a timeout)
          * @param maxBytes Maximum amount of bytes to read
          * @return number of bytes read if successful, a negative number 
          *         indicating an error otherwise
          */
-        int syscallReadSDU(int portId, void * sdu, int maxBytes);
+        int syscallReadSDU(int portId,
+        		   void * sdu,
+        		   int maxBytes,
+        		   unsigned int timeout);
 
         /**
          * Wrapper of the managementSDUWrite system call
@@ -109,7 +119,8 @@ namespace rina {
          * indicating error otherwise
          */
         int syscallAllocatePortId(unsigned short ipcProcessId,
-                        const ApplicationProcessNamingInformation & applicationName);
+                        	  const ApplicationProcessNamingInformation & applicationName,
+                        	  bool blocking);
 
         /**
          * Wrappert of the deallocate port-is system call
