@@ -621,6 +621,7 @@ int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingInformation
         // Do nothing
 
         (void) appName;
+        (void) blocking;
 
         return 1;
 #else

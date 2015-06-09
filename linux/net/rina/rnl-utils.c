@@ -2118,7 +2118,7 @@ rnl_parse_ipcm_reg_app_req_msg(struct genl_info * info,
                 return -1;
         }
 
-        msg_attrs->blocking  = info->attrs[IRAR_ATTR_BLOCKING]);
+        msg_attrs->blocking  = info->attrs[IRAR_ATTR_BLOCKING];
         return 0;
 }
 

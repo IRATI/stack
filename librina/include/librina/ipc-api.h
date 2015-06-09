@@ -72,6 +72,26 @@ public:
 	}
 };
 
+class TryAgainException: public IPCException {
+public:
+	TryAgainException():
+		IPCException("Try again, resource not ready"){
+	}
+	TryAgainException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+class InvalidArgumentsException: public IPCException {
+public:
+	InvalidArgumentsException():
+		IPCException("Invalid arguments"){
+	}
+	InvalidArgumentsException(const std::string& description):
+		IPCException(description){
+	}
+};
+
 /**
  * Thrown when some operation is invoked in a flow that is not allocated
  */
@@ -434,30 +454,37 @@ public:
 	 */
 	void flowDeallocated(int portId);
 
-	/**
-	 * Reads an SDU from the flow. This function will block until there is an
-	 * SDU available.
-	 *
-	 * @param sdu A buffer to store the SDU data
-	 * @param maxBytes The maximum number of bytes to read
-	 * @param timeout if the flow is blocking, the max. amount of time to wait
-         * for the operation to complete in ms (0 for not setting a timeout)
-	 * @return int The number of bytes read
-	 * @throws IPCException if the flow is not in the ALLOCATED state
-	 */
+	/// Reads an SDU from the flow. This function will block until there is an
+	/// SDU available.
+	///
+	/// @param sdu A buffer to store the SDU data
+	/// @param maxBytes The maximum number of bytes to read
+	/// @param timeout if the flow is blocking, the max. amount of time to wait
+        /// for the operation to complete in ms (0 for not setting a timeout)
+	/// @return int The number of bytes read
+	/// @throws UnknownFlowException if the port-id is not valid
+	/// @throws FlowNotAllocatedException if the flow has been deallocated
+	/// @throws InvalidArgumentsException if the arguments of the call are not valid
+	/// @throws TryAgainException if the flow is non-blocking and it is not ready
+	/// for a read operation in this moment
+	/// @throws ReadSDUException if an error happens while reading the SDU
+	/// @throws IPCException if an unknown error happens
 	int readSDU(int portId, void * sdu, int maxBytes);
 	int readSDU(int portId, void * sdu, int maxBytes, unsigned int timeout);
 
-	/**
-	 * Writes an SDU to the flow
-	 *
-	 * @param sdu A buffer that contains the SDU data
-	 * @param size The size of the SDU data, in bytes
-	 * @param timeout if the flow is blocking, the max. amount of time to wait
-         * for the operation to complete in ms (0 for not setting a timeout)
-	 * @throws IPCException if the flow is not in the ALLOCATED state or
-	 * there are problems writing to the flow
-	 */
+	/// Writes an SDU to the flow
+	///
+	/// @param sdu A buffer that contains the SDU data
+	/// @param size The size of the SDU data, in bytes
+	/// @param timeout if the flow is blocking, the max. amount of time to wait
+        /// for the operation to complete in ms (0 for not setting a timeout)
+	/// @throws UnknownFlowException if the port-id is not valid
+	/// @throws FlowNotAllocatedException if the flow has been deallocated
+	/// @throws InvalidArgumentsException if the arguments of the call are not valid
+	/// @throws TryAgainException if the flow is non-blocking and it is not ready
+	/// for a write operation in this moment
+	/// @throws WriteSDUException if an error happens while writing the SDU
+	/// @throws IPCException if an unknown error happens
 	void writeSDU(int portId, void * sdu, int size);
 	void writeSDU(int portId, void * sdu, int size, unsigned int timeout);
 
