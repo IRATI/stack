@@ -161,64 +161,68 @@ void Client::pingFlow(int port_id)
 {
         char *buffer = new char[data_size];
         char *buffer2 = new char[data_size];
-        ulong n = 0;
+        unsigned int sdus_sent = 0;
+        unsigned int sdus_received = 0;
         random_device rd;
         default_random_engine ran(rd());
         uniform_int_distribution<int> dis(0, 255);
-        bool end = false;
+        std::chrono::high_resolution_clock::time_point begintp, endtp;
 
-        while (!end) {
-                IPCEvent* event = ipcEventProducer->eventPoll();
+        for (unsigned long n = 0; n < echo_times; n++) {
+        	int bytes_read = 0;
 
-                if (event) {
-                        switch(event->eventType) {
-                        case FLOW_DEALLOCATED_EVENT:
-                                end = true;
-                                break;
-                        default:
-                                LOG_INFO("Client got new event %d", event->eventType);
-                                break;
-                        }
-                } else if (n < echo_times) {
-                                std::chrono::high_resolution_clock::time_point begintp, endtp;
-                                int bytes_read = 0;
+        	for (uint i = 0; i < data_size; i++) {
+        		buffer[i] = dis(ran);
+        	}
 
-                                for (uint i = 0; i < data_size; i++) {
-                                        buffer[i] = dis(ran);
-                                }
+        	begintp = std::chrono::high_resolution_clock::now();
 
-                                begintp = std::chrono::high_resolution_clock::now();
+        	try {
+        		ipcManager->writeSDU(port_id, buffer, data_size);
+        	} catch (rina::FlowNotAllocatedException &e) {
+        		LOG_ERR("Flow has been deallocated");
+        		break;
+        	} catch (rina::UnknownFlowException &e) {
+        		LOG_ERR("Flow does not exist");
+        		break;
+        	} catch (rina::Exception &e) {
+        		LOG_ERR("Problems writing SDU to flow, continuing");
+        		continue;
+        	}
 
-                                try {
-                                	ipcManager->writeSDU(port_id, buffer, data_size);
-                                } catch (rina::FlowNotAllocatedException &e) {
-                                	LOG_ERR("Flow has been deallocated");
-                                	break;
-                                } catch (rina::UnknownFlowException &e) {
-                                	LOG_ERR("Flow does not exist");
-                                	break;
-                                } catch (rina::Exception &e)Ê{
-                                	LOG_ERR("Problems writing SDU to flow, continuing");
-                                	continue;
-                                }
+        	sdus_sent ++;
 
-                                bytes_read = ipcManager->readSDU(port_id, buffer2, data_size, 2000);
-                                endtp = std::chrono::high_resolution_clock::now();
-                                cout << "SDU size = " << data_size << ", seq = " << n <<
-                                        ", RTT = " << durationToString(endtp - begintp);
-                                if (!((data_size == (uint) bytes_read) &&
-                                      (memcmp(buffer, buffer2, data_size) == 0)))
-                                        cout << " [bad response]";
-                                cout << endl;
+        	try {
+        		bytes_read = ipcManager->readSDU(port_id, buffer2, data_size, 2000);
+        	} catch (rina::FlowAllocationException &e) {
+        		LOG_ERR("Flow has been deallocated");
+        		break;
+        	} catch (rina::UnknownFlowException &e) {
+        		LOG_ERR("Flow does not exist");
+        		break;
+        	} catch (rina::TryAgainException & e) {
+        		cout << "Timeout waiting for echo reply, SDU considered lost";
+        		cout << endl;
+        		continue;
+        	} catch (rina::Exception &e) {
+        		LOG_ERR("Problems reading SDU from flow, continuing");
+        		continue;
+        	}
 
-                                n++;
-                                if (n < echo_times) {
-                                        this_thread::sleep_for(std::chrono::milliseconds(wait));
-                                }
-                } else {
-                        break;
-                }
+        	sdus_received ++;
+        	endtp = std::chrono::high_resolution_clock::now();
+        	cout << "SDU size = " << data_size << ", seq = " << n <<
+        			", RTT = " << durationToString(endtp - begintp);
+        	if (!((data_size == (uint) bytes_read) &&
+        			(memcmp(buffer, buffer2, data_size) == 0)))
+        		cout << " [bad response]";
+        	cout << endl;
+
+        	this_thread::sleep_for(std::chrono::milliseconds(wait));
         }
+
+        cout << "SDUs sent: "<< sdus_sent << "; SDUs received: " << sdus_received;
+        cout << "; " << ((sdus_sent - sdus_received)/sdus_sent)*100 << "% SDU loss" <<endl;
 
         delete [] buffer;
         delete [] buffer2;

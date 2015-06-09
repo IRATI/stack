@@ -2010,13 +2010,13 @@ int kipcm_sdu_write(struct kipcm * kipcm,
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
                 sdu_destroy(sdu);
-                return -1;
+                return -EINVAL;
         }
 
         if (!sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus SDU received, bailing out");
                 sdu_destroy(sdu);
-                return -1;
+                return -EINVAL;
         }
 
         kfa_ipcp = kfa_ipcp_instance(kipcm->kfa);
@@ -2027,34 +2027,27 @@ int kipcm_sdu_write(struct kipcm * kipcm,
         }
         LOG_DBG("Tring to write SDU to port_id %d", port_id);
 
-        if (kfa_ipcp->ops->sdu_write(kfa_ipcp->data, port_id, timeout, sdu))
-                return -1;
-
         /* The SDU is ours */
-
-        return 0;
+        return kfa_ipcp->ops->sdu_write(kfa_ipcp->data,
+        				port_id,
+        				timeout,
+        				sdu);
 }
 
 int kipcm_sdu_read(struct kipcm * kipcm,
                    port_id_t      port_id,
-                   unsigned int  timeout,
+                   unsigned int   timeout,
                    struct sdu **  sdu)
 {
         IRQ_BARRIER;
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
-                return -1;
+                return -EINVAL;
         }
 
         /* The SDU is theirs now */
-
-        if (kfa_flow_sdu_read(kipcm->kfa, port_id, timeout, sdu)) {
-                LOG_DBG("Failed to read sdu");
-                return -1;
-        }
-
-        return 0;
+        return kfa_flow_sdu_read(kipcm->kfa, port_id, timeout, sdu);
 }
 
 int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
