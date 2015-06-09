@@ -57,7 +57,8 @@ class ribBasicOps : public CppUnit::TestFixture {
 	CPPUNIT_TEST_SUITE( ribBasicOps );
 
 	CPPUNIT_TEST( testInit );
-	CPPUNIT_TEST( testCreation );
+	CPPUNIT_TEST( testSchemaCreation );
+	CPPUNIT_TEST( testRIBCreation );
 	CPPUNIT_TEST( testAssociation );
 	CPPUNIT_TEST( testAddObj );
 	CPPUNIT_TEST( testConnect );
@@ -65,7 +66,7 @@ class ribBasicOps : public CppUnit::TestFixture {
 	CPPUNIT_TEST( testDisconnect );
 	CPPUNIT_TEST( testRemoveObj );
 	CPPUNIT_TEST( testDeassociation );
-	CPPUNIT_TEST( testDestruction );
+	CPPUNIT_TEST( testRIBDestruction );
 	CPPUNIT_TEST( testFini );
 
 	CPPUNIT_TEST_SUITE_END();
@@ -78,7 +79,8 @@ public:
 	void tearDown();
 
 	void testInit();
-	void testCreation();
+	void testSchemaCreation();
+	void testRIBCreation();
 	void testAssociation();
 	void testAddObj();
 	void testConnect();
@@ -86,7 +88,7 @@ public:
 	void testDisconnect();
 	void testRemoveObj();
 	void testDeassociation();
-	void testDestruction();
+	void testRIBDestruction();
 	void testFini();
 };
 
@@ -316,6 +318,33 @@ public:
 
 const std::string MyObj::class_ = "MyObj";
 
+
+///
+/// Schema's create callbacks (mockup)
+///
+void create_callback_1(const rib_handle_t rib,
+				const cdap_rib::con_handle_t &con,
+				const std::string& fqn,
+				const std::string& class_,
+				const cdap_rib::filt_info_t &filt,
+				const int invoke_id,
+				const cdap_rib::SerializedObject &obj_req,
+				cdap_rib::SerializedObject &obj_reply,
+				cdap_rib::res_info_t& res){
+
+}
+void create_callback_2(const rib_handle_t rib,
+				const cdap_rib::con_handle_t &con,
+				const std::string& fqn,
+				const std::string& class_,
+				const cdap_rib::filt_info_t &filt,
+				const int invoke_id,
+				const cdap_rib::SerializedObject &obj_req,
+				cdap_rib::SerializedObject &obj_reply,
+				cdap_rib::res_info_t& res){
+
+}
+
 //
 // End of mockups
 //
@@ -326,6 +355,7 @@ std::string name1 = "/x";
 std::string name2 = "/y";
 std::string name3 = "/x/z";
 std::string name4 = "/x/z/t";
+std::string name_create = "/x/z/t/c";
 int64_t inst_id1, inst_id2, inst_id3;
 
 //Setups
@@ -383,19 +413,9 @@ void ribBasicOps::testInit(){
 	delete ribd_;
 }
 
-void ribBasicOps::testCreation(){
+void ribBasicOps::testSchemaCreation(){
 
 	version.version_ = 0x1;
-
-		//Get a handle of an inexistent RIB
-	try{
-		handle = ribd->get(version, ae);
-		CPPUNIT_ASSERT_MESSAGE("Got an invalid handle for an inexistent RIB", 0);
-	}catch(eRIBNotFound& e){
-
-	}catch(...){
-		CPPUNIT_ASSERT_MESSAGE("Wrong exception thrown during get invalid RIB handle", 0);
-	}
 
 	//Create a schema (empty)
 	try{
@@ -427,6 +447,100 @@ void ribBasicOps::testCreation(){
 	if(vers.size() == 1){
 		CPPUNIT_ASSERT_MESSAGE("Schema has not been created with the right version or listVersions() has a bug", version.version_ == (*vers.begin()).version_);
 	}
+
+
+	//Register with an invalid version
+	try{
+		cdap_rib::vers_info_t wrong_version;
+		wrong_version.version_ = 0x2;
+		ribd->addCreateCallbackSchema(wrong_version,
+						MyObj::class_,
+						name1,
+						create_callback_1);
+		CPPUNIT_ASSERT_MESSAGE("Exception not thrown during registration of create callback with an invalid version", 0);
+	}catch(eSchemaNotFound& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Wrong exception thrown during registration of create callback with an invalid version", 0);
+	}
+
+
+	//Register an invalid class name
+	try{
+		std::string class_ = "";
+		ribd->addCreateCallbackSchema(version,
+						class_,
+						name1,
+						create_callback_1);
+		CPPUNIT_ASSERT_MESSAGE("Exception not thrown during registration of create callback with an invalid class name", 0);
+	}catch(eSchemaInvalidClass& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Wrong exception thrown during registration of create callback with an invalid class name", 0);
+	}
+
+	//Register a valid specific path
+	try{
+		ribd->addCreateCallbackSchema(version,
+						MyObj::class_,
+						name_create,
+						create_callback_2);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during registration of create callback with a specific name", 0);
+	}
+
+	//Re-register
+	try{
+		ribd->addCreateCallbackSchema(version,
+						MyObj::class_,
+						name_create,
+						create_callback_2);
+		CPPUNIT_ASSERT_MESSAGE("Exception not thrown during re-registration of create callback (specific)", 0);
+	}catch(eSchemaCBRegExists& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Wrong exception thrown during re-registration of create callback (specific)", 0);
+	}
+
+	//Register non-specific
+	try{
+		ribd->addCreateCallbackSchema(version,
+						MyObj::class_,
+						"",
+						create_callback_1);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during registration of create callback (generic)", 0);
+	}
+	//Re-register
+	try{
+		ribd->addCreateCallbackSchema(version,
+						MyObj::class_,
+						"",
+						create_callback_1);
+		CPPUNIT_ASSERT_MESSAGE("Exception not thrown during re-registration of create callback (generic)", 0);
+	}catch(eSchemaCBRegExists& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Wrong exception thrown during re-registration of create callback (generic)", 0);
+	}
+
+
+}
+
+void ribBasicOps::testRIBCreation(){
+
+	version.version_ = 0x1;
+
+	//Get a handle of an inexistent RIB
+	try{
+		handle = ribd->get(version, ae);
+		CPPUNIT_ASSERT_MESSAGE("Got an invalid handle for an inexistent RIB", 0);
+	}catch(eRIBNotFound& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Wrong exception thrown during get invalid RIB handle", 0);
+	}
+
 
 	//Create a RIB with an invalid schema
 	try{
@@ -915,7 +1029,7 @@ void ribBasicOps::testDeassociation(){
 
 }
 
-void ribBasicOps::testDestruction(){
+void ribBasicOps::testRIBDestruction(){
 
 	cdap_rib::vers_info_t wrong_version;
 	wrong_version.version_ = 0x99999;
