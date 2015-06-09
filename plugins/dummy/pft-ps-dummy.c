@@ -1,10 +1,9 @@
 /*
- * Default policy set for PFT
+ * Dummy PFT PS
  *
- *    Vincenzo Maffione <v.maffione@nextworks.it>
- *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
  *
- * This program is free software; you can redistribute it and/or modify
+ * This program is free software; you can dummyistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
@@ -22,29 +21,31 @@
 #include <linux/export.h>
 #include <linux/module.h>
 #include <linux/string.h>
-#include <linux/random.h>
 
-#define RINA_PREFIX "pft-ps-default"
+#define RINA_PREFIX "dummy-pft-ps"
 
-#include "logs.h"
 #include "rds/rmem.h"
-#include "rds/rtimer.h"
-#include "pft-ps-common.h"
-#include "debug.h"
+#include "pft-ps.h"
 
-static int default_next_hop(struct pft_ps * ps,
+static int dummy_next_hop(struct pft_ps * ps,
                             struct pci *    pci,
                             port_id_t **    ports,
                             size_t *        count)
-{ return common_next_hop(ps, pci, ports, count); }
+{
+        printk("%s: called()\n", __func__);
+        return 0;
+}
 
 static int pft_ps_set_policy_set_param(struct ps_base * bps,
                                        const char *     name,
                                        const char *     value)
-{ return pft_ps_common_set_policy_set_param(bps, name, value); }
+{
+        printk("%s: called()\n", __func__);
+        return 0;
+}
 
 static struct ps_base *
-pft_ps_default_create(struct rina_component * component)
+pft_ps_dummy_create(struct rina_component * component)
 {
         struct pft * dtp = pft_from_component(component);
         struct pft_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
@@ -57,12 +58,12 @@ pft_ps_default_create(struct rina_component * component)
         ps->dm              = dtp;
         ps->priv            = NULL;
 
-        ps->next_hop = default_next_hop;
+        ps->next_hop = dummy_next_hop;
 
         return &ps->base;
 }
 
-static void pft_ps_default_destroy(struct ps_base * bps)
+static void pft_ps_dummy_destroy(struct ps_base * bps)
 {
         struct pft_ps *ps = container_of(bps, struct pft_ps, base);
 
@@ -73,6 +74,6 @@ static void pft_ps_default_destroy(struct ps_base * bps)
 
 struct ps_factory pft_factory = {
         .owner          = THIS_MODULE,
-        .create  = pft_ps_default_create,
-        .destroy = pft_ps_default_destroy,
+        .create  = pft_ps_dummy_create,
+        .destroy = pft_ps_dummy_destroy,
 };

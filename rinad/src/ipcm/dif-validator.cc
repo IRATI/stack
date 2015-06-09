@@ -75,7 +75,7 @@ bool DIFConfigValidator::validateShimDummy()
 bool DIFConfigValidator::validateNormal()
 {
 	return  dataTransferConstants() && qosCubes() &&
-			knownIPCProcessAddresses() && pdufTableGeneratorConfiguration();
+			knownIPCProcessAddresses();
 }
 
 bool DIFConfigValidator::validateBasicDIFConfigs()
@@ -169,6 +169,7 @@ bool DIFConfigValidator::knownIPCProcessAddresses()
 	return result;
 }
 
+/*
 bool DIFConfigValidator::pdufTableGeneratorConfiguration()
 {
 	bool result =
@@ -181,5 +182,6 @@ bool DIFConfigValidator::pdufTableGeneratorConfiguration()
 
 	return result;
 }
+*/
 
 } //rinad namespace

@@ -455,15 +455,7 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 				address_config.static_address_.push_back(static_address);
 			}
 			nsm_config.addressing_configuration_ = address_config;
-
-                        // Copy the por-component policy set names from the configuration
-                        // structure to the dif_config struct
-                        for (map<string, string>::iterator
-                                        it = dif_template->policySets.begin();
-                                        it != dif_template->policySets.end(); it++) {
-                                dif_config.policy_sets.push_back(
-                                                rina::Parameter(it->first, it->second));
-                        }
+			nsm_config.policy_set_ = dif_template->nsmConfiguration.policy_set_;
 
 			bool found = dif_template->
 				lookup_ipcp_address(ipcp->get_name(),
@@ -476,11 +468,14 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 				FLUSH_LOG(ERR, ss);
 				throw rina::Exception();
 			}
-			dif_config.set_efcp_configuration(efcp_config);
+			dif_config.efcp_configuration_ = efcp_config;
 			dif_config.nsm_configuration_ = nsm_config;
-			dif_config.pduft_generator_configuration_ =
-					dif_template->pdufTableGeneratorConfiguration;
 			dif_config.rmt_configuration_ = dif_template->rmtConfiguration;
+			dif_config.fa_configuration_ = dif_template->faConfiguration;
+			dif_config.ra_configuration_ = dif_template->raConfiguration;
+			dif_config.routing_configuration_ = dif_template->routingConfiguration;
+			dif_config.sm_configuration_ = dif_template->smConfiguration;
+			dif_config.et_configuration_ = dif_template->etConfiguration;
 			dif_config.set_address(address);
 		}
 

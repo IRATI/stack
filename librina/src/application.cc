@@ -188,6 +188,8 @@ AppPolicyManager::~AppPolicyManager()
 std::vector<rina::PsFactory>::iterator
 AppPolicyManager::psFactoryLookup(const PsInfo& ps_info)
 {
+	ReadScopedLock g(rwlock);
+
         for (std::vector<PsFactory>::iterator
                 it = ae_policy_factories.begin();
                 it != ae_policy_factories.end(); it++) {
@@ -236,6 +238,8 @@ int AppPolicyManager::psFactoryPublish(const PsFactory& factory)
 	}
 
         // Add the new factory
+	WriteScopedLock g(rwlock);
+
         ae_policy_factories.push_back(factory);
         ae_policy_factories.back().refcnt = 0;
 
@@ -258,6 +262,7 @@ int AppPolicyManager::psFactoryUnpublish(const PsInfo& ps_info)
                 return -1;
         }
 
+        WriteScopedLock g(rwlock);
         LOG_INFO("Pluggable component '%s'/'%s' [%s] unpublished",
                  fi->info.app_entity.c_str(), fi->info.name.c_str(),
                  fi->plugin_name.c_str());
