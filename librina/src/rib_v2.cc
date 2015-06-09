@@ -593,13 +593,15 @@ void RIB::delete_request(const cdap_rib::con_handle_t &con,
 	cdap_rib::flags_t flags;
 	cdap_rib::res_info_t res;
 	RIBObj_* rib_obj = NULL;
+	bool delete_flag = false;
+	int64_t id;
 
 	/* RAII scope for RIB scoped lock (read) */
 	{
 		//Mutual exclusion
 		ReadScopedLock rlock(rwlock);
 
-		int64_t id = get_obj_inst_id(obj.name_);
+		id = get_obj_inst_id(obj.name_);
 		rib_obj = get_obj(id);
 
 		//Acquire the read lock over the object (make sure it is not
@@ -613,7 +615,8 @@ void RIB::delete_request(const cdap_rib::con_handle_t &con,
 		//Mutual exclusion
 		ReadScopedLock rlock(rib_obj->rwlock, false);
 
-		rib_obj->delete_(con, obj.name_, obj.class_, filt,
+		delete_flag = rib_obj->delete_(con, obj.name_, obj.class_,
+								filt,
 								invoke_id,
 								res);
 	}else{
@@ -627,6 +630,17 @@ void RIB::delete_request(const cdap_rib::con_handle_t &con,
 	} catch (Exception &e) {
 		LOG_ERR("Unable to send response for invoke id %d",
 							invoke_id);
+	}
+
+	//Remove the object if so specified by the callback
+	if(delete_flag == false)
+		return;
+
+	try {
+		remove_obj(id);
+	} catch (...) {
+		LOG_ERR("Unable to remove object inst_id '%" PRId64 "' after callback",
+									id);
 	}
 }
 void RIB::read_request(const cdap_rib::con_handle_t &con,
@@ -2452,7 +2466,7 @@ void RIBObj_::create(const cdap_rib::con_handle_t &con,
 	operation_not_supported(res);
 }
 
-void RIBObj_::delete_(const cdap_rib::con_handle_t &con,
+bool RIBObj_::delete_(const cdap_rib::con_handle_t &con,
 					const std::string& fqn,
 					const std::string& class_,
 					const cdap_rib::filt_info_t &filt,
@@ -2464,6 +2478,7 @@ void RIBObj_::delete_(const cdap_rib::con_handle_t &con,
 	(void) filt;
 	(void) invoke_id;
 	operation_not_supported(res);
+	return false;
 }
 
 // FIXME remove name, it is not needed

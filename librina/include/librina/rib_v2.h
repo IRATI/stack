@@ -288,7 +288,10 @@ protected:
 	///            In case of error, a human readable string can be
 	///            be optionally added
 	///
-	virtual void delete_(const cdap_rib::con_handle_t &con,
+	/// @ret True if the object has to be deleted after the callback has
+	///      returned
+	///
+	virtual bool delete_(const cdap_rib::con_handle_t &con,
 					const std::string& fqn,
 					const std::string& class_,
 					const cdap_rib::filt_info_t &filt,

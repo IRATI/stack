@@ -324,7 +324,16 @@ public:
 		res.code_ = cdap_rib::CDAP_SUCCESS;
 	};
 
-
+	bool delete_(const cdap_rib::con_handle_t &con,
+					const std::string& fqn,
+					const std::string& class_,
+					const cdap_rib::filt_info_t &filt,
+					const int invoke_id,
+					cdap_rib::res_info_t& res){
+		CPPUNIT_ASSERT_MESSAGE("Invalid invoke id", invoke_id == 12);
+		res.code_ = cdap_rib::CDAP_SUCCESS;
+		return true;
+	}
 
 	MyObjEncoder encoder;
 	static const std::string class_;
@@ -1105,8 +1114,18 @@ void ribBasicOps::testOperations(){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during valid start_req", 0);
 	}
 
-
 	CPPUNIT_ASSERT_MESSAGE("Delegated object did not capture all requests",deleg_start_operations==3);
+
+	//Issue a delete => should remove the object
+	invoke_id = 12;
+	obj_info1.name_ = name3;
+	obj_info1.class_ = "";
+	try{
+		(*message) = PREFIX_MESSAGE | invoke_id;
+		rib_provider->delete_request(con_ok, obj_info1, filter, invoke_id);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during valid delete_req", 0);
+	}
 }
 
 
@@ -1166,11 +1185,13 @@ void ribBasicOps::testRemoveObj(){
 		CPPUNIT_ASSERT_MESSAGE("Invalid exception thrown during remove obj inst2 not existing anymore", 0);
 	}
 
-	//Remove obj3
+	//Remove obj3 <= removed by delete
 	try{
 		ribd->removeObjRIB(handle, inst_id3);
+		CPPUNIT_ASSERT_MESSAGE("Remove bject (inst_id3) succeeded unexpectedly", 0);
+	}catch(eObjDoesNotExist& e){
 	}catch(...){
-		CPPUNIT_ASSERT_MESSAGE("Exception thrown during remove obj inst3", 0);
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception thrown by remove obj3", 0);
 	}
 
 	//Remove obj4
