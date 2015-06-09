@@ -188,8 +188,21 @@ void Client::pingFlow(int port_id)
                                 }
 
                                 begintp = std::chrono::high_resolution_clock::now();
-                                ipcManager->writeSDU(port_id, buffer, data_size);
-                                bytes_read = ipcManager->readSDU(port_id, buffer2, data_size);
+
+                                try {
+                                	ipcManager->writeSDU(port_id, buffer, data_size);
+                                } catch (rina::FlowNotAllocatedException &e) {
+                                	LOG_ERR("Flow has been deallocated");
+                                	break;
+                                } catch (rina::UnknownFlowException &e) {
+                                	LOG_ERR("Flow does not exist");
+                                	break;
+                                } catch (rina::Exception &e)Ê{
+                                	LOG_ERR("Problems writing SDU to flow, continuing");
+                                	continue;
+                                }
+
+                                bytes_read = ipcManager->readSDU(port_id, buffer2, data_size, 2000);
                                 endtp = std::chrono::high_resolution_clock::now();
                                 cout << "SDU size = " << data_size << ", seq = " << n <<
                                         ", RTT = " << durationToString(endtp - begintp);

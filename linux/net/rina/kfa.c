@@ -495,7 +495,7 @@ int kfa_flow_sdu_write(struct ipcp_instance_data * data,
         		}
         		LOG_DBG("Write woken up (%d)", retval);
 
-        		if (retval) {
+        		if (retval < 0) {
         			LOG_DBG("Wait-event interrupted (%d)", retval);
         			if (signal_pending(current)) {
         				LOG_DBG("A signal is pending");
@@ -520,7 +520,7 @@ int kfa_flow_sdu_write(struct ipcp_instance_data * data,
         			return -EBADF;
         		}
 
-        		if (retval) {
+        		if (retval < 0) {
         			sdu_destroy(sdu);
         			goto finish;
         		}
@@ -671,7 +671,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
         		LOG_DBG("Going to sleep on wait queue %pK (reading)",
         				&flow->read_wqueue);
         		timeout_in_jif = msecs_to_jiffies(timeout);
-        		if (timeout_in_jif == 0) {
+        		if (timeout == 0) {
         			retval = wait_event_interruptible(flow->read_wqueue,
         					queue_ready(flow));
         		} else {
@@ -680,7 +680,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
         		}
         		LOG_DBG("Read woken up (%d)", retval);
 
-        		if (retval) {
+        		if (retval < 0) {
         			LOG_DBG("Wait-event interrupted (%d)", retval);
         			if (signal_pending(current)) {
         				LOG_DBG("A signal is pending");
@@ -704,7 +704,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
         			return -EBADF;
         		}
 
-        		if (retval)
+        		if (retval < 0)
         			goto finish;
 
         		if (flow->state == PORT_STATE_DEALLOCATED) {

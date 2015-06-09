@@ -193,7 +193,7 @@ SYSCALL_DEFINE4(sdu_read,
 
         LOG_DBG("Personality returned value %zd", retval);
 
-        if (retval) {
+        if (retval < 0) {
                 SYSCALL_DUMP_EXIT;
                 return retval;
         }
@@ -285,7 +285,7 @@ SYSCALL_DEFINE4(sdu_write,
 
         /* Passing ownership to the internal layers */
         CALL_DEFAULT_PERSONALITY(retval, sdu_write, id, timeout, sdu);
-        if (retval) {
+        if (retval < 0) {
                 SYSCALL_DUMP_EXIT;
                 /* NOTE: Do not destroy SDU, ownership isn't our anymore */
                 return retval;
