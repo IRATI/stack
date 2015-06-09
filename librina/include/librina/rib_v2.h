@@ -534,16 +534,16 @@ private:
 /// This class is used to capture operations on objects in a part of the tree
 /// without having to add explicitely the objects (catch all)
 ///
-class RIBDelegationObj : public RIBObj<void*>{
+class DelegationObj : public RIBObj<void*>{
 
 public:
 	/// Constructor
-	RIBDelegationObj(void) : RIBObj(NULL) {
+	DelegationObj(void) : RIBObj(NULL) {
 		delegates = true;
 	};
 
 	//Destructor
-	~RIBDelegationObj(void){};
+	~DelegationObj(void){};
 };
 
 ///

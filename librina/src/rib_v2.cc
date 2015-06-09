@@ -423,8 +423,8 @@ private:
 	// Children map instance id <-> std<int64_t> children
 	std::map<int64_t, std::list<int64_t>*> obj_inst_child_map;
 
-	// delegation cache: fqn <-> obj
-	std::map<std::string, RIBObj_*> deleg_cache;
+	// delegation cache: fqn <-> inst id
+	std::map<std::string, int64_t> deleg_cache;
 
 	//Schema
 	RIBSchema *const schema;
@@ -462,6 +462,10 @@ private:
 
 	//rwlock
 	ReadWriteLockable rwlock;
+
+	//Cache rwlock
+	ReadWriteLockable cache_rwlock;
+
 
 	//RIB handle (id)
 	const rib_handle_t handle;
@@ -914,6 +918,54 @@ int64_t RIB::__get_obj_inst_id(const std::string& fqn){
 
 	if(name_inst_map.find(fqn) != name_inst_map.end())
 		id = name_inst_map[fqn];
+
+	//If there are delegated objects
+	//Note: this block of code is specially polluted by RAII
+	//I hate exceptions
+	if(id == -1 && num_of_deleg > 0){
+
+		/* rwlock RAII scope */ {
+			ReadScopedLock rlock(cache_rwlock);
+
+			//Check cache
+			if(deleg_cache.find(fqn) != deleg_cache.end())
+				id = deleg_cache[fqn];
+		} //RAI
+
+		//If found in cache return
+		if(id != -1)
+			return id;
+
+		//If it is still not found, look recursively
+		std::string tmp = fqn;
+		std::string root_name = __get_obj_fqn(0);
+		do{
+			tmp = get_parent_fqn(tmp);
+			if(name_inst_map.find(tmp) != name_inst_map.end())
+				id = name_inst_map[tmp];
+			if(id >= 0 || tmp == root_name)
+				break;
+		}while(1);
+
+		//If not found or is root return
+		if(id == -1)
+			return id;
+
+		//Check if it is a delegated obj
+		RIBObj_ *obj = get_obj(id);
+		if(!obj){
+			assert(0); // neither this one
+			return -1;
+		}
+		if(obj->delegates == false)
+			return -1;
+
+		//Since it is, add to cache
+		/* rwlock RAII scope */ {
+			WriteScopedLock rlock(cache_rwlock);
+			deleg_cache[fqn] = id;
+		} //RAI
+	}
 
 	return id;
 }

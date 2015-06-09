@@ -51,6 +51,19 @@ cdap_rib::vers_info_t version;
 static rib_handle_t handle = 1234;
 static rib_handle_t handle2;
 
+//Names
+std::string name1 = "/x";
+std::string name2 = "/y";
+std::string name3 = "/x/z";
+std::string name4 = "/x/z/t";
+std::string name_other = "/x/other";
+std::string name_create = "/x/z/t/c";
+std::string name_delegated = "/x/delegated_subtree";
+
+//Instance id
+int64_t inst_id1, inst_id2, inst_id3, inst_id4, inst_id5, inst_deleg;
+
+
 
 class ribBasicOps : public CppUnit::TestFixture {
 
@@ -352,6 +365,51 @@ public:
 const std::string OtherObj::class_ = "OtherObj";
 
 
+static int deleg_start_operations = 0;
+//Delegation type
+class MyDelegationObj : public DelegationObj{
+
+public:
+	MyDelegationObj(){}
+	virtual ~MyDelegationObj(){};
+
+	const std::string& get_class() const{
+		return class_;
+	}
+
+	AbstractEncoder* get_encoder(){
+		return &encoder;
+	};
+
+	void start(const cdap_rib::con_handle_t &con,
+				const std::string& fqn,
+				const std::string& class_,
+				const cdap_rib::filt_info_t &filt,
+				const int invoke_id,
+				const cdap_rib::SerializedObject &obj_req,
+				cdap_rib::SerializedObject &obj_reply,
+				cdap_rib::res_info_t& res){
+
+		fprintf(stderr, "Got a START operation for path: '%s'\n", fqn.c_str());
+
+
+		bool valid_name = false;
+		std::size_t found = fqn.find(name_delegated);
+		if(found != std::string::npos)
+			valid_name = true;
+		CPPUNIT_ASSERT_MESSAGE("Delegation object captured an invalid operation", valid_name);
+		CPPUNIT_ASSERT_MESSAGE("Invalid invoke id during create specific", invoke_id>=9 && invoke_id <=11 );
+		res.code_ = cdap_rib::CDAP_SUCCESS;
+		deleg_start_operations++;
+	}
+
+	MyObjEncoder encoder;
+	static const std::string class_;
+};
+
+const std::string MyDelegationObj::class_ = "MyDelegationObj";
+
+
 
 ///
 /// Schema's create callbacks (mockup)
@@ -392,14 +450,6 @@ void create_callback_2(const rib_handle_t rib,
 //Objects
 MyObj *obj1, *obj2, *obj3;
 OtherObj *obj4;
-std::string name1 = "/x";
-std::string name2 = "/y";
-std::string name3 = "/x/z";
-std::string name4 = "/x/z/t";
-std::string name_other = "/x/other";
-std::string name_create = "/x/z/t/c";
-int64_t inst_id1, inst_id2, inst_id3, inst_id4, inst_id5;
-
 //Setups
 
 //fwd decl
@@ -858,6 +908,18 @@ void ribBasicOps::testAddObj(){
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during Add obj 4", 0);
 	}
+
+
+	//Add an inner object (/x/delegated_subtree)
+	MyDelegationObj* deleg = new MyDelegationObj();
+	try{
+		inst_deleg = ribd->addObjRIB(handle, name_delegated, &deleg);
+		CPPUNIT_ASSERT_MESSAGE("Invalid instance id for obj4", inst_deleg == 5);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during delegate obj", 0);
+	}
+
+
 }
 
 //////// CLIENT /////////////////////
@@ -990,6 +1052,61 @@ void ribBasicOps::testOperations(){
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during valid create_req", 0);
 	}
+
+	//Issue a start request to a the parent of a delegated obj
+	//Should not do anything, but not except
+	invoke_id = 8;
+	obj_info1.name_ = name1;
+	obj_info1.class_ = MyObj::class_;
+	try{
+		(*message) = PREFIX_MESSAGE | invoke_id;
+		rib_provider->start_request(con_ok, obj_info1, filter, invoke_id);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during valid start_req", 0);
+	}
+
+	//Issue a start request to the delegated obj
+	invoke_id = 9;
+	obj_info1.name_ = name_delegated;
+	obj_info1.class_ = MyObj::class_;
+	try{
+		(*message) = PREFIX_MESSAGE | invoke_id;
+		rib_provider->start_request(con_ok, obj_info1, filter, invoke_id);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during valid start_req", 0);
+	}
+
+	//Issue a start request to the delegated obj + suffix
+	invoke_id = 10;
+	obj_info1.name_ = name_delegated;
+	obj_info1.class_ = MyObj::class_;
+	try{
+		std::stringstream ss;
+		ss << obj_info1.name_ << "/gg/tt";
+		obj_info1.name_ = ss.str();
+		(*message) = PREFIX_MESSAGE | invoke_id;
+		rib_provider->start_request(con_ok, obj_info1, filter, invoke_id);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during valid start_req", 0);
+	}
+
+	//Issue a start request to the delegated obj + suffix (the same)
+	//this should hit the cached
+	invoke_id = 11;
+	obj_info1.name_ = name_delegated;
+	obj_info1.class_ = MyObj::class_;
+	try{
+		std::stringstream ss;
+		ss << obj_info1.name_ << "/gg/tt";
+		obj_info1.name_ = ss.str();
+		(*message) = PREFIX_MESSAGE | invoke_id;
+		rib_provider->start_request(con_ok, obj_info1, filter, invoke_id);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during valid start_req", 0);
+	}
+
+
+	CPPUNIT_ASSERT_MESSAGE("Delegated object did not capture all requests",deleg_start_operations==3);
 }
 
 
@@ -1061,6 +1178,13 @@ void ribBasicOps::testRemoveObj(){
 		ribd->removeObjRIB(handle, inst_id4);
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during remove obj inst4", 0);
+	}
+
+	//Remove obj_deleg
+	try{
+		ribd->removeObjRIB(handle, inst_deleg);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during remove obj inst deleg", 0);
 	}
 	//Now remove obj1
 	try{
