@@ -528,44 +528,46 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 		//deleted while we process the operation)
 		if(rib_obj)
 			rib_obj->rwlock.readlock();
-	}
+	} //RAII
 
 	/* RAII scope for OBJ scoped lock(read) */
-	{
-		if (rib_obj) {
-			//If the object exists invoke the callback over the
-			//object
-			rib_obj->create(con, obj.name_, obj.class_, filt,
-							invoke_id,
-							obj.value_,
-							obj_reply.value_,
-							res);
-		} else {
-			//Otherwise check the schema for a factory function
-			create_cb_t f = schema->get_create_callback(
-								obj.name_,
-								obj.class_);
+	if(rib_obj) {
+		//Mutual exclusion
+		ReadScopedLock rlock(rib_obj->rwlock, false);
 
-			//If the callback exists then call it otherwise
-			//the operation is not supported
-			if(f)
-				(*f)(handle, con, obj.name_, obj.class_, filt,
-							invoke_id,
-							obj.value_,
-							obj_reply.value_,
-							res);
-			else
-				res.code_ = cdap_rib::CDAP_OP_NOT_SUPPORTED;
-		}
+		//If the object exists invoke the callback over the
+		//object
+		rib_obj->create(con, obj.name_, obj.class_, filt,
+						invoke_id,
+						obj.value_,
+						obj_reply.value_,
+						res);
+	} else {
+		//Otherwise check the schema for a factory function
+		create_cb_t f = schema->get_create_callback(
+							obj.name_,
+							obj.class_);
 
-		try {
-			cdap_provider->send_create_result(con.port_,
-					obj_reply,
-					flags, res,
-					invoke_id);
-		} catch (...) {
-			//FIXME
-		}
+		//If the callback exists then call it otherwise
+		//the operation is not supported
+		if(f)
+			(*f)(handle, con, obj.name_, obj.class_, filt,
+						invoke_id,
+						obj.value_,
+						obj_reply.value_,
+						res);
+		else
+			res.code_ = cdap_rib::CDAP_OP_NOT_SUPPORTED;
+	} //RAII
+
+	try {
+		cdap_provider->send_create_result(con.port_,
+				obj_reply,
+				flags, res,
+				invoke_id);
+	} catch (...) {
+		LOG_ERR("Unable to send response for invoke id %d",
+							invoke_id);
 	}
 }
 
@@ -577,26 +579,41 @@ void RIB::delete_request(const cdap_rib::con_handle_t &con,
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 	cdap_rib::res_info_t res;
+	RIBObj_* rib_obj = NULL;
 
-	//Mutual exclusion
-	ReadScopedLock rlock(rwlock);
+	/* RAII scope for RIB scoped lock (read) */
+	{
+		//Mutual exclusion
+		ReadScopedLock rlock(rwlock);
 
-	int64_t id = get_obj_inst_id(obj.name_);
-	RIBObj_* rib_obj = get_obj(id);
+		int64_t id = get_obj_inst_id(obj.name_);
+		rib_obj = get_obj(id);
 
-	if (rib_obj) {
+		//Acquire the read lock over the object (make sure it is not
+		//deleted while we process the operation)
+		if(rib_obj)
+			rib_obj->rwlock.readlock();
+	} //RAII
+
+	/* RAII scope for OBJ scoped lock(read) */
+	if(rib_obj){
+		//Mutual exclusion
+		ReadScopedLock rlock(rib_obj->rwlock, false);
+
 		rib_obj->delete_(con, obj.name_, obj.class_, filt,
 								invoke_id,
 								res);
 	}else{
 		res.code_ = cdap_rib::CDAP_INVALID_OBJ;
-	}
+	} //RAII
+
 	try {
-			cdap_provider->send_delete_result(con.port_, obj,
-					flags, res,
-					invoke_id);
-		} catch (Exception &e) {
-			LOG_ERR("Unable to send the response");
+		cdap_provider->send_delete_result(con.port_, obj,
+								flags, res,
+								invoke_id);
+	} catch (Exception &e) {
+		LOG_ERR("Unable to send response for invoke id %d",
+							invoke_id);
 	}
 }
 void RIB::read_request(const cdap_rib::con_handle_t &con,
@@ -617,32 +634,46 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 	obj_reply.value_.message_ = NULL;
 
 	cdap_rib::res_info_t res;
+	RIBObj_* rib_obj = NULL;
 
-	//Mutual exclusion
-	ReadScopedLock rlock(rwlock);
+	/* RAII scope for RIB scoped lock (read) */
+	{
+		//Mutual exclusion
+		ReadScopedLock rlock(rwlock);
 
-	int64_t id = get_obj_inst_id(obj.name_);
-	RIBObj_* rib_obj = get_obj(id);
+		int64_t id = get_obj_inst_id(obj.name_);
+		rib_obj = get_obj(id);
 
-	if (rib_obj) {
+		//Acquire the read lock over the object (make sure it is not
+		//deleted while we process the operation)
+		if(rib_obj)
+			rib_obj->rwlock.readlock();
+	} //RAII
+
+	/* RAII scope for OBJ scoped lock(read) */
+	if(rib_obj){
+		//Mutual exclusion
+		ReadScopedLock rlock(rib_obj->rwlock, false);
+
 		rib_obj->read(con, obj.name_, obj.class_,
-					filt,
-					invoke_id,
-					obj_reply.value_,
-					res);
+							filt,
+							invoke_id,
+							obj_reply.value_,
+							res);
 	} else {
 		res.code_ = cdap_rib::CDAP_INVALID_OBJ;
-	}
+	} //RAII
 
 	try {
-		cdap_provider->send_read_result(con.port_,
-				obj_reply,
-				flags, res,
-				invoke_id);
+		cdap_provider->send_read_result(con.port_, obj_reply,
+								flags, res,
+								invoke_id);
 	} catch (Exception &e) {
-		LOG_ERR("Unable to send the response");
+		LOG_ERR("Unable to send response for invoke id %d",
+							invoke_id);
 	}
 }
+
 void RIB::cancel_read_request(
 		const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
@@ -653,25 +684,39 @@ void RIB::cancel_read_request(
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 	cdap_rib::res_info_t res;
+	RIBObj_* rib_obj = NULL;
 
-	//Mutual exclusion
-	ReadScopedLock rlock(rwlock);
+	/* RAII scope for RIB scoped lock (read) */
+	{
+		//Mutual exclusion
+		ReadScopedLock rlock(rwlock);
 
-	int64_t id = get_obj_inst_id(obj.name_);
-	RIBObj_* rib_obj = get_obj(id);
+		int64_t id = get_obj_inst_id(obj.name_);
+		rib_obj = get_obj(id);
 
-	if (rib_obj) {
-		rib_obj->cancelRead(con, obj.name_, obj.class_,
-						filt, invoke_id, res);
+		//Acquire the read lock over the object (make sure it is not
+		//deleted while we process the operation)
+		if(rib_obj)
+			rib_obj->rwlock.readlock();
+	} //RAII
+
+	/* RAII scope for OBJ scoped lock(read) */
+	if(rib_obj){
+		//Mutual exclusion
+		ReadScopedLock rlock(rib_obj->rwlock, false);
+
+		rib_obj->cancelRead(con, obj.name_, obj.class_, filt,
+							invoke_id, res);
 	} else {
 		res.code_ = cdap_rib::CDAP_INVALID_OBJ;
-	}
+	} //RAII
 
 	try {
 		cdap_provider->send_cancel_read_result(
 				con.port_, flags, res, invoke_id);
 	} catch (Exception &e) {
-		LOG_ERR("Unable to send the response");
+		LOG_ERR("Unable to send response for invoke id %d",
+							invoke_id);
 	}
 }
 void RIB::write_request(const cdap_rib::con_handle_t &con,
@@ -692,28 +737,43 @@ void RIB::write_request(const cdap_rib::con_handle_t &con,
 	obj_reply.value_.message_ = NULL;
 
 	cdap_rib::res_info_t res;
+	RIBObj_* rib_obj = NULL;
 
-	//Mutual exclusion
-	ReadScopedLock rlock(rwlock);
+	/* RAII scope for RIB scoped lock (read) */
+	{
+		//Mutual exclusion
+		ReadScopedLock rlock(rwlock);
 
-	int64_t id = get_obj_inst_id(obj.name_);
-	RIBObj_* rib_obj = get_obj(id);
+		int64_t id = get_obj_inst_id(obj.name_);
+		rib_obj = get_obj(id);
 
-	if (rib_obj) {
+		//Acquire the read lock over the object (make sure it is not
+		//deleted while we process the operation)
+		if(rib_obj)
+			rib_obj->rwlock.readlock();
+	} //RAII
+
+	/* RAII scope for OBJ scoped lock(read) */
+	if(rib_obj){
+		//Mutual exclusion
+		ReadScopedLock rlock(rib_obj->rwlock, false);
+
 		rib_obj->write(con, obj.name_, obj.class_, filt,
-							invoke_id,
-							obj.value_,
-							obj_reply.value_,
-							res);
+								invoke_id,
+								obj.value_,
+								obj_reply.value_,
+								res);
 	} else {
 		res.code_ = cdap_rib::CDAP_INVALID_OBJ;
-	}
+	} //RAII
+
 	try {
 		cdap_provider->send_write_result(con.port_, flags,
 				res,
 				invoke_id);
 	} catch (Exception &e) {
-		LOG_ERR("Unable to send the response");
+		LOG_ERR("Unable to send response for invoke id %d",
+							invoke_id);
 	}
 }
 void RIB::start_request(const cdap_rib::con_handle_t &con,
@@ -735,28 +795,43 @@ void RIB::start_request(const cdap_rib::con_handle_t &con,
 	obj_reply.value_.message_ = NULL;
 
 	cdap_rib::res_info_t res;
+	RIBObj_* rib_obj = NULL;
 
-	//Mutual exclusion
-	ReadScopedLock rlock(rwlock);
+	/* RAII scope for RIB scoped lock (read) */
+	{
+		//Mutual exclusion
+		ReadScopedLock rlock(rwlock);
 
-	int64_t id = get_obj_inst_id(obj.name_);
-	RIBObj_* rib_obj = get_obj(id);
+		int64_t id = get_obj_inst_id(obj.name_);
+		rib_obj = get_obj(id);
 
-	if (rib_obj) {
+		//Acquire the read lock over the object (make sure it is not
+		//deleted while we process the operation)
+		if(rib_obj)
+			rib_obj->rwlock.readlock();
+	} //RAII
+
+	/* RAII scope for OBJ scoped lock(read) */
+	if(rib_obj){
+		//Mutual exclusion
+		ReadScopedLock rlock(rib_obj->rwlock, false);
+
 		rib_obj->start(con, obj.name_, obj.class_, filt,
 							invoke_id,
 							obj.value_,
 							obj_reply.value_,
 							res);
-	} else {
+	}else{
 		res.code_ = cdap_rib::CDAP_INVALID_OBJ;
-	}
+	} //RAII
+
 	try {
 		cdap_provider->send_start_result(con.port_, obj,
 				flags, res,
 				invoke_id);
 	} catch (Exception &e) {
-		LOG_ERR("Unable to send the response");
+		LOG_ERR("Unable to send response for invoke id %d",
+							invoke_id);
 	}
 }
 void RIB::stop_request(const cdap_rib::con_handle_t &con,
@@ -777,25 +852,43 @@ void RIB::stop_request(const cdap_rib::con_handle_t &con,
 	obj_reply.value_.message_ = NULL;
 
 	cdap_rib::res_info_t res;
+	RIBObj_* rib_obj = NULL;
 
-	int64_t id = get_obj_inst_id(obj.name_);
-	RIBObj_* rib_obj = get_obj(id);
+	/* RAII scope for RIB scoped lock (read) */
+	{
+		//Mutual exclusion
+		ReadScopedLock rlock(rwlock);
 
-	if (rib_obj) {
+		int64_t id = get_obj_inst_id(obj.name_);
+		rib_obj = get_obj(id);
+
+		//Acquire the read lock over the object (make sure it is not
+		//deleted while we process the operation)
+		if(rib_obj)
+			rib_obj->rwlock.readlock();
+	} //RAII
+
+	/* RAII scope for OBJ scoped lock(read) */
+	if(rib_obj){
+		//Mutual exclusion
+		ReadScopedLock rlock(rib_obj->rwlock, false);
+
 		rib_obj->stop(con, obj.name_, obj.class_, filt,
-							invoke_id,
-							obj.value_,
-							obj_reply.value_,
-							res);
+								invoke_id,
+								obj.value_,
+								obj_reply.value_,
+								res);
 	} else {
 		res.code_ = cdap_rib::CDAP_INVALID_OBJ;
-	}
+	} //RAII
+
 	try {
 		cdap_provider->send_stop_result(con.port_, flags,
 				res,
 				invoke_id);
 	} catch (Exception &e) {
-		LOG_ERR("Unable to send the response");
+		LOG_ERR("Unable to send response for invoke id %d",
+							invoke_id);
 	}
 }
 
