@@ -283,6 +283,7 @@ public:
 	};
 };
 
+//A type
 class MyObj : public RIBObj<uint32_t> {
 
 public:
@@ -318,10 +319,44 @@ public:
 
 const std::string MyObj::class_ = "MyObj";
 
+//Another type
+class OtherObj : public RIBObj<uint32_t> {
+
+public:
+	OtherObj(uint32_t initial_value) : RIBObj<uint32_t>(initial_value){};
+	virtual ~OtherObj(){};
+
+	const std::string& get_class() const{
+		return class_;
+	}
+
+	AbstractEncoder* get_encoder(){
+		return &encoder;
+	};
+
+	void read(const cdap_rib::con_handle_t &con,
+					const std::string& fqn,
+					const std::string& class_,
+					const cdap_rib::filt_info_t &filt,
+					const int invoke_id,
+					cdap_rib::SerializedObject &obj_reply,
+					cdap_rib::res_info_t& res){
+	};
+
+
+
+	MyObjEncoder encoder;
+	static const std::string class_;
+};
+
+const std::string OtherObj::class_ = "OtherObj";
+
+
 
 ///
 /// Schema's create callbacks (mockup)
 ///
+static bool callback_1_called=false;
 void create_callback_1(const rib_handle_t rib,
 				const cdap_rib::con_handle_t &con,
 				const std::string& fqn,
@@ -331,8 +366,11 @@ void create_callback_1(const rib_handle_t rib,
 				const cdap_rib::SerializedObject &obj_req,
 				cdap_rib::SerializedObject &obj_reply,
 				cdap_rib::res_info_t& res){
-
+	CPPUNIT_ASSERT_MESSAGE("Invalid invoke id during create generic", invoke_id==7);
+	res.code_ = cdap_rib::CDAP_SUCCESS;
+	callback_1_called = true;
 }
+static bool callback_2_called=false;
 void create_callback_2(const rib_handle_t rib,
 				const cdap_rib::con_handle_t &con,
 				const std::string& fqn,
@@ -342,7 +380,9 @@ void create_callback_2(const rib_handle_t rib,
 				const cdap_rib::SerializedObject &obj_req,
 				cdap_rib::SerializedObject &obj_reply,
 				cdap_rib::res_info_t& res){
-
+	CPPUNIT_ASSERT_MESSAGE("Invalid invoke id during create specific", invoke_id==6);
+	res.code_ = cdap_rib::CDAP_SUCCESS;
+	callback_2_called = true;
 }
 
 //
@@ -350,13 +390,15 @@ void create_callback_2(const rib_handle_t rib,
 //
 
 //Objects
-MyObj *obj1, *obj2, *obj3, *obj4;
+MyObj *obj1, *obj2, *obj3;
+OtherObj *obj4;
 std::string name1 = "/x";
 std::string name2 = "/y";
 std::string name3 = "/x/z";
 std::string name4 = "/x/z/t";
+std::string name_other = "/x/other";
 std::string name_create = "/x/z/t/c";
-int64_t inst_id1, inst_id2, inst_id3;
+int64_t inst_id1, inst_id2, inst_id3, inst_id4, inst_id5;
 
 //Setups
 
@@ -663,7 +705,7 @@ void ribBasicOps::testAddObj(){
 	obj1 = new MyObj(1);
 	obj2 = new MyObj(2);
 	obj3 = new MyObj(3);
-	obj4 = new MyObj(4);
+	obj4 = new OtherObj(4);
 
 	//Attempt to add them into an invalid RIB handle
 	try{
@@ -804,6 +846,18 @@ void ribBasicOps::testAddObj(){
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Invalid exception thrown during getObjInstId() obj 3", 0);
 	}
+
+
+	//Add an inner object (/x/other)
+	try{
+		OtherObj* tmp2 = obj4;
+		inst_id4 = ribd->addObjRIB(handle, name_other, &obj4);
+		CPPUNIT_ASSERT_MESSAGE("Did not set to null obj4", obj4 == NULL);
+		CPPUNIT_ASSERT_MESSAGE("Invalid instance id for obj4", inst_id4 == 4);
+		obj4 = tmp2;
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during Add obj 4", 0);
+	}
 }
 
 //////// CLIENT /////////////////////
@@ -901,6 +955,41 @@ void ribBasicOps::testOperations(){
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during valid read_req", 0);
 	}
+
+	//Issue a create request for a class that exists but in valid object and a valid operation
+	invoke_id = 5;
+	obj_info1.name_ = name_create;
+	obj_info1.class_ = OtherObj::class_;
+	try{
+		(*message) = PREFIX_MESSAGE | invoke_id;
+		rib_provider->create_request(con_ok, obj_info1, filter, invoke_id);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during \"valid\" create_req", 0);
+	}
+
+	//Issue a create request to specific  => callback 2
+	invoke_id = 6;
+	obj_info1.name_ = name_create;
+	obj_info1.class_ = MyObj::class_;
+	try{
+		(*message) = PREFIX_MESSAGE | invoke_id;
+		rib_provider->create_request(con_ok, obj_info1, filter, invoke_id);
+		CPPUNIT_ASSERT_MESSAGE("Specific create callback not called", callback_2_called == true);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during valid create_req", 0);
+	}
+
+	//Issue a create request to other path => generic callback 1
+	invoke_id = 7;
+	obj_info1.name_ = "/h";
+	obj_info1.class_ = MyObj::class_;
+	try{
+		(*message) = PREFIX_MESSAGE | invoke_id;
+		rib_provider->create_request(con_ok, obj_info1, filter, invoke_id);
+		CPPUNIT_ASSERT_MESSAGE("Generic create callback not called", callback_1_called == true);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during valid create_req", 0);
+	}
 }
 
 
@@ -967,6 +1056,12 @@ void ribBasicOps::testRemoveObj(){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during remove obj inst3", 0);
 	}
 
+	//Remove obj4
+	try{
+		ribd->removeObjRIB(handle, inst_id4);
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Exception thrown during remove obj inst4", 0);
+	}
 	//Now remove obj1
 	try{
 		ribd->removeObjRIB(handle, inst_id1);

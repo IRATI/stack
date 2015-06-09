@@ -218,11 +218,16 @@ void RIBSchema::add_create_callback(const std::string& class_,
 			throw eSchemaCBRegExists();
 
 		class_fqn_cb_map[key] = cb;
+		LOG_DBG("Added create callback (specific) for class '%s' and path '%s'",
+							class_.c_str(),
+							fqn_.c_str());
 	}else{
 		if(class_cb_map.find(class_) != class_cb_map.end())
 			throw eSchemaCBRegExists();
 
 		class_cb_map[class_] = cb;
+		LOG_DBG("Added create callback (generic) for class '%s'",
+							class_.c_str());
 	}
 }
 
@@ -237,6 +242,10 @@ create_cb_t RIBSchema::get_create_callback(const std::string& class_,
 	//First check for a specific reg
 	key.first = class_;
 	key.second = fqn_;
+
+	LOG_DBG("Looking for callback for create operation of class '%s' and path '%s'",
+							class_.c_str(),
+							fqn_.c_str());
 
 	if(class_fqn_cb_map.find(key) != class_fqn_cb_map.end())
 		return class_fqn_cb_map[key];
@@ -545,8 +554,8 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 	} else {
 		//Otherwise check the schema for a factory function
 		create_cb_t f = schema->get_create_callback(
-							obj.name_,
-							obj.class_);
+							obj.class_,
+							obj.name_);
 
 		//If the callback exists then call it otherwise
 		//the operation is not supported
