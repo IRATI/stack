@@ -73,6 +73,14 @@ DECLARE_EXCEPTION_SUBCLASS(eSchemaInUse);
 /// The schema does not exist
 DECLARE_EXCEPTION_SUBCLASS(eSchemaNotFound);
 
+/// The class name is invalid
+DECLARE_EXCEPTION_SUBCLASS(eSchemaInvalidClass);
+
+/// The callback for that class / class&fqn is already registered
+DECLARE_EXCEPTION_SUBCLASS(eSchemaCBRegExists);
+
+
+
 //
 // RIB&AE management
 //
@@ -117,7 +125,6 @@ DECLARE_EXCEPTION_SUBCLASS(eObjHasChildren);
 
 /// Object does not support this operation
 DECLARE_EXCEPTION_SUBCLASS(eObjOpNotSupported);
-
 
 /// The object does not exist in that position of the tree
 DECLARE_EXCEPTION_SUBCLASS(eObjDoesNotExist);
@@ -247,16 +254,23 @@ protected:
 	///
 	/// Process a remote create
 	///
+	/// @param con Connection handle
 	/// @param fqn FQN of the object
+	/// @param class_ Class name
+	/// @param filt Filter parameters
+	/// @param invoke_id Invoke id
 	/// @param obj_req Optional serialized object from the request.
 	///                Shall only be decoded if size != 0
 	/// @param obj_reply Optional serialized object to be returned.
 	///                  Shall only be decoded if size != 0
 	///                  Initialized to size = 0 by default.
+	/// @param res Result. The result code shall be set by the callback.
+	///            In case of error, a human readable string can be
+	///            be optionally added
 	///
 	virtual void create(const cdap_rib::con_handle_t &con,
 				const std::string& fqn,
-				const std::string class_,
+				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
 				const cdap_rib::SerializedObject &obj_req,
@@ -265,11 +279,18 @@ protected:
 	///
 	/// Process a remote delete operation
 	///
-	/// @param name FQN of the object
+	/// @param con Connection handle
+	/// @param fqn FQN of the object
+	/// @param class_ Class name
+	/// @param filt Filter parameters
+	/// @param invoke_id Invoke id
+	/// @param res Result. The result code shall be set by the callback.
+	///            In case of error, a human readable string can be
+	///            be optionally added
 	///
 	virtual void delete_(const cdap_rib::con_handle_t &con,
 					const std::string& fqn,
-					const std::string class_,
+					const std::string& class_,
 					const cdap_rib::filt_info_t &filt,
 					const int invoke_id,
 					cdap_rib::res_info_t& res);
@@ -278,12 +299,19 @@ protected:
 	///
 	/// Process a remote read operation
 	///
+	/// @param con Connection handle
 	/// @param fqn FQN of the object
+	/// @param class_ Class name
+	/// @param filt Filter parameters
+	/// @param invoke_id Invoke id
 	/// @obj_reply Serialized object to be returned.
+	/// @param res Result. The result code shall be set by the callback.
+	///            In case of error, a human readable string can be
+	///            be optionally added
 	///
 	virtual void read(const cdap_rib::con_handle_t &con,
 					const std::string& fqn,
-					const std::string class_,
+					const std::string& class_,
 					const cdap_rib::filt_info_t &filt,
 					const int invoke_id,
 					cdap_rib::SerializedObject &obj_reply,
@@ -294,10 +322,18 @@ protected:
 	/// Process a cancel remote read operation
 	///
 	/// @param fqn FQN of the object
+	/// @param con Connection handle
+	/// @param fqn FQN of the object
+	/// @param class_ Class name
+	/// @param filt Filter parameters
+	/// @param invoke_id Invoke id
+	/// @param res Result. The result code shall be set by the callback.
+	///            In case of error, a human readable string can be
+	///            be optionally added
 	///
 	virtual void cancelRead(const cdap_rib::con_handle_t &con,
 					const std::string& fqn,
-					const std::string class_,
+					const std::string& class_,
 					const cdap_rib::filt_info_t &filt,
 					const int invoke_id,
 					cdap_rib::res_info_t& res);
@@ -306,15 +342,22 @@ protected:
 	///
 	/// Process a remote write operation
 	///
-	/// @param name FQN of the object
+	/// @param con Connection handle
+	/// @param fqn FQN of the object
+	/// @param class_ Class name
+	/// @param filt Filter parameters
+	/// @param invoke_id Invoke id
 	/// @param obj_req Serialized object from the request
 	/// @param obj_reply Optional serialized object to be returned.
 	///                  Will only be decoded by the RIB library if size != 0.
 	///                  Initialized to size = 0 by default.
+	/// @param res Result. The result code shall be set by the callback.
+	///            In case of error, a human readable string can be
+	///            be optionally added
 	///
 	virtual void write(const cdap_rib::con_handle_t &con,
 				const std::string& fqn,
-				const std::string class_,
+				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
 				const cdap_rib::SerializedObject &obj_req,
@@ -325,16 +368,23 @@ protected:
 	///
 	/// Process a remote read operation
 	///
-	/// @param name FQN of the object
+	/// @param con Connection handle
+	/// @param fqn FQN of the object
+	/// @param class_ Class name
+	/// @param filt Filter parameters
+	/// @param invoke_id Invoke id
 	/// @param obj_req Optional serialized object from the request.
 	///                Shall only be decoded if size != 0
 	/// @param obj_reply Optional serialized object to be returned.
 	///                  Shall only be decoded if size != 0
 	///                  Initialized to size = 0 by default.
+	/// @param res Result. The result code shall be set by the callback.
+	///            In case of error, a human readable string can be
+	///            be optionally added
 	///
 	virtual void start(const cdap_rib::con_handle_t &con,
 				const std::string& fqn,
-				const std::string class_,
+				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
 				const cdap_rib::SerializedObject &obj_req,
@@ -345,16 +395,23 @@ protected:
 	///
 	/// Process a remote read operation
 	///
-	/// @param name FQN of the object
+	/// @param con Connection handle
+	/// @param fqn FQN of the object
+	/// @param class_ Class name
+	/// @param filt Filter parameters
+	/// @param invoke_id Invoke id
 	/// @param obj_req Optional serialized object from the request.
 	///                Shall only be decoded if size != 0
 	/// @param obj_reply Optional serialized object to be returned.
 	///                  Shall only be decoded if size != 0
 	///                  Initialized to size = 0 by default.
+	/// @param res Result. The result code shall be set by the callback.
+	///            In case of error, a human readable string can be
+	///            be optionally added
 	///
 	virtual void stop(const cdap_rib::con_handle_t &con,
 				const std::string& fqn,
-				const std::string class_,
+				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
 				const cdap_rib::SerializedObject &obj_req,
@@ -509,6 +566,25 @@ enum rib_schema_res {
 	//TODO: Other error codes
 };
 
+
+///
+/// RIB handle type
+///
+typedef int64_t rib_handle_t;
+
+///
+/// Schema's create callback prototype
+///
+typedef void (*create_cb_t)(const rib_handle_t rib,
+				const cdap_rib::con_handle_t &con,
+				const std::string& fqn,
+				const std::string& class_,
+				const cdap_rib::filt_info_t &filt,
+				const int invoke_id,
+				const cdap_rib::SerializedObject &obj_req,
+				cdap_rib::SerializedObject &obj_reply,
+				cdap_rib::res_info_t& res);
+
 ///
 /// RIB Schema Object
 ///
@@ -553,12 +629,6 @@ public:
 //fwd decl
 class RIBDaemon;
 
-
-///
-/// RIB handle type
-///
-typedef int64_t rib_handle_t;
-
 //
 // RIBDaemon Proxy class
 //
@@ -583,6 +653,30 @@ public:
 	/// List registered RIB versions
 	///
 	std::list<cdap_rib::vers_info_t> listVersions(void);
+
+	///
+	/// Register a callback for CREATE operations
+	///
+	/// This method registers a callback method for CREATE operations. The
+	/// callback can be registered either:
+	///
+	/// * For a class name *and* fully qualified name, in many locations in
+	///   the tree as needed. (specific)
+	/// * For a class name (generic)
+	///
+	/// Specific registrations always have preference over a generic.
+	///
+	/// @param version Schema version
+	/// @param class_ Mandatory classhandle The handle of the RIB
+	/// @param fqn Fully qualified name (position in the tree)
+	/// @param cb Pointer to the callback method
+	///
+	/// @throws eSchemaNotFound, eSchemaInvalidClass and eSchemaCBRegExists
+	///
+	void addCreateCallbackSchema(const cdap_rib::vers_info_t& version,
+						const std::string& class_,
+						const std::string& fqn_,
+						create_cb_t cb);
 
 	///
 	/// Destroys a RIB schema

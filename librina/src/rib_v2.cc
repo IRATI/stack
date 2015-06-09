@@ -92,13 +92,13 @@ public:
 
 	//This method IS thread safe
 	void inc_ref_count(){
-		ScopedLock lock(mutex);
+		WriteScopedLock wlock(rwlock);
 		refs++;
 	}
 
 	//This method IS thread safe
 	void dec_ref_count(){
-		ScopedLock lock(mutex);
+		WriteScopedLock wlock(rwlock);
 		if(refs > 0){
 			refs--;
 		}else{
@@ -108,6 +108,13 @@ public:
 		}
 	}
 
+
+	create_cb_t get_create_callback(const std::string& class_,
+						const std::string& fqn_);
+
+	void add_create_callback(const std::string& class_,
+						const std::string& fqn_,
+						create_cb_t cb);
 private:
 	template<typename T>
 	bool validateAddObject(const RIBObj<T>* obj);
@@ -122,10 +129,19 @@ private:
 	//Root fqn
 	std::string root_fqn;
 
+	//Class name <-> create callback map
+	std::map<std::string, create_cb_t> class_cb_map;
+
+	//Key Classname+fqn
+	typedef std::pair<std::string, std::string> cn_fqn_pair_t;
+
+	// Classname+fqn <-> create callback map
+	std::map<cn_fqn_pair_t, create_cb_t> class_fqn_cb_map;
+
 	//number of RIBs using this schema
 	unsigned int refs;
 
-	rina::Lockable mutex;
+	rina::ReadWriteLockable rwlock;
 };
 
 
@@ -183,6 +199,53 @@ const cdap_rib::vers_info_t& RIBSchema::get_version() const {
 	return version;
 }
 
+void RIBSchema::add_create_callback(const std::string& class_,
+						const std::string& fqn_,
+						create_cb_t cb){
+	cn_fqn_pair_t key;
+
+	if(class_ == "")
+		throw eSchemaInvalidClass();
+
+	//Mutual exclusion
+	WriteScopedLock wlock(rwlock);
+
+	if(fqn_ != "" ){
+		key.first = class_;
+		key.second = fqn_;
+
+		if(class_fqn_cb_map.find(key) != class_fqn_cb_map.end())
+			throw eSchemaCBRegExists();
+
+		class_fqn_cb_map[key] = cb;
+	}else{
+		if(class_cb_map.find(class_) != class_cb_map.end())
+			throw eSchemaCBRegExists();
+
+		class_cb_map[class_] = cb;
+	}
+}
+
+create_cb_t RIBSchema::get_create_callback(const std::string& class_,
+						const std::string& fqn_){
+
+	cn_fqn_pair_t key;
+
+	//Mutual exclusion
+	ReadScopedLock rlock(rwlock);
+
+	//First check for a specific reg
+	key.first = class_;
+	key.second = fqn_;
+
+	if(class_fqn_cb_map.find(key) != class_fqn_cb_map.end())
+		return class_fqn_cb_map[key];
+
+	if(class_cb_map.find(class_) != class_cb_map.end())
+		return class_cb_map[class_];
+	return NULL;
+}
+
 //fwd decl
 class RIBDaemon;
 
@@ -198,7 +261,7 @@ public:
 	/// @param schema Schema in which this RIB will be based
 	/// @param cdap_provider CDAP provider
 	///
-	RIB(const rib_handle_t& handle_, const RIBSchema *schema,
+	RIB(const rib_handle_t& handle_, RIBSchema *const schema,
 				cdap::CDAPProviderInterface *cdap_provider);
 
 	/// Destroy RIB instance
@@ -355,7 +418,7 @@ private:
 	std::map<std::string, RIBObj_*> deleg_cache;
 
 	//Schema
-	const RIBSchema *schema;
+	RIBSchema *const schema;
 
 	//Next id pointer
 	int64_t next_inst_id;
@@ -398,7 +461,7 @@ private:
 	friend class RIBDaemon;
 };
 
-RIB::RIB(const rib_handle_t& handle_, const RIBSchema *schema_,
+RIB::RIB(const rib_handle_t& handle_, RIBSchema *const schema_,
 		cdap::CDAPProviderInterface *cdap_provider_) :
 						schema(schema_),
 						next_inst_id(1),
@@ -452,40 +515,57 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 	cdap_rib::res_info_t res;
 	RIBObj_* rib_obj = NULL;
 
-	int64_t id = get_obj_inst_id(obj.name_);
+	/* RAII scope for RIB scoped lock (read) */
+	{
+		//Mutual exclusion
+		ReadScopedLock rlock(rwlock);
 
-	if(id)
-		rib_obj = get_obj(id);
+		int64_t id = get_obj_inst_id(obj.name_);
+		if(id)
+			rib_obj = get_obj(id);
 
-	//FIXME: this => father delegation????
-	if (rib_obj == NULL) {
-		std::string parent_name = get_parent_fqn(obj.name_);
-		id = get_obj_inst_id(parent_name);
-		rib_obj = get_obj(id);
-	}else{
-		//Verify if the class matches
-		//FIXME
+		//Acquire the read lock over the object (make sure it is not
+		//deleted while we process the operation)
+		if(rib_obj)
+			rib_obj->rwlock.readlock();
 	}
 
-	if (rib_obj) {
-		//Call the application
-		rib_obj->create(con, obj.name_, obj.class_,
-							filt,
+	/* RAII scope for OBJ scoped lock(read) */
+	{
+		if (rib_obj) {
+			//If the object exists invoke the callback over the
+			//object
+			rib_obj->create(con, obj.name_, obj.class_, filt,
 							invoke_id,
 							obj.value_,
 							obj_reply.value_,
 							res);
-	} else {
-		res.code_ = cdap_rib::CDAP_INVALID_OBJ;
-	}
+		} else {
+			//Otherwise check the schema for a factory function
+			create_cb_t f = schema->get_create_callback(
+								obj.name_,
+								obj.class_);
 
-	try {
-		cdap_provider->send_create_result(con.port_,
-				obj_reply,
-				flags, res,
-				invoke_id);
-	} catch (Exception &e) {
-		LOG_ERR("Unable to send the response");
+			//If the callback exists then call it otherwise
+			//the operation is not supported
+			if(f)
+				(*f)(handle, con, obj.name_, obj.class_, filt,
+							invoke_id,
+							obj.value_,
+							obj_reply.value_,
+							res);
+			else
+				res.code_ = cdap_rib::CDAP_OP_NOT_SUPPORTED;
+		}
+
+		try {
+			cdap_provider->send_create_result(con.port_,
+					obj_reply,
+					flags, res,
+					invoke_id);
+		} catch (...) {
+			//FIXME
+		}
 	}
 }
 
@@ -1042,6 +1122,29 @@ public:
 	std::list<cdap_rib::vers_info_t> listVersions(void);
 
 	///
+	/// Register a callback for CREATE operations
+	///
+	/// This method registers a callback method for CREATE operations. The
+	/// callback can be registered either:
+	///
+	/// * For a class name *and* fully qualified name, in many locations in
+	///   the tree as needed. (specific)
+	/// * For a class name (generic)
+	///
+	/// Specific registrations always have preference over a generic.
+	///
+	/// @param version Schema version
+	/// @param class_ Mandatory classhandle The handle of the RIB
+	/// @param fqn Fully qualified name (position in the tree)
+	/// @param cb Pointer to the callback method
+	///
+	/// @throws eSchemaNotFound, eSchemaInvalidClass and eSchemaCBRegExists
+	///
+	void addCreateCallbackSchema(const cdap_rib::vers_info_t& version,
+						const std::string& class_,
+						const std::string& fqn_,
+						create_cb_t cb);
+	///
 	/// Destroys a RIB schema
 	///
 	/// This method destroy a previously created schema. The schema shall
@@ -1399,6 +1502,30 @@ void RIBDaemon::createSchema(const cdap_rib::vers_info_t& version,
 	//Create the schema
 	RIBSchema* schema = new RIBSchema(version, separator);
 	ver_schema_map[ver] = schema;
+}
+
+void RIBDaemon::addCreateCallbackSchema(
+					const cdap_rib::vers_info_t& version,
+					const std::string& class_,
+					const std::string& fqn_,
+					create_cb_t cb){
+
+	uint64_t ver = version.version_;
+	std::map<uint64_t, RIBSchema*>::iterator it;
+
+	//Mutual exclusion
+	ReadScopedLock rlock(rwlock);
+
+	//Find schema
+	it = ver_schema_map.find(ver);
+
+	if(it == ver_schema_map.end()){
+		LOG_ERR("Schema version '%" PRIu64 "' not found. Create a schema first.",
+								ver);
+		throw eSchemaNotFound();
+	}
+
+	it->second->add_create_callback(class_, fqn_, cb);
 }
 
 void RIBDaemon::destroySchema(const cdap_rib::vers_info_t& version){
@@ -2154,7 +2281,7 @@ AbstractEncoder::~AbstractEncoder() {
 //RIBObj/RIBObj_
 void RIBObj_::create(const cdap_rib::con_handle_t &con,
 				const std::string& fqn,
-				const std::string class_,
+				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
 				const cdap_rib::SerializedObject &obj_req,
@@ -2173,7 +2300,7 @@ void RIBObj_::create(const cdap_rib::con_handle_t &con,
 
 void RIBObj_::delete_(const cdap_rib::con_handle_t &con,
 					const std::string& fqn,
-					const std::string class_,
+					const std::string& class_,
 					const cdap_rib::filt_info_t &filt,
 					const int invoke_id,
 					cdap_rib::res_info_t& res){
@@ -2188,7 +2315,7 @@ void RIBObj_::delete_(const cdap_rib::con_handle_t &con,
 // FIXME remove name, it is not needed
 void RIBObj_::read(const cdap_rib::con_handle_t &con,
 					const std::string& fqn,
-					const std::string class_,
+					const std::string& class_,
 					const cdap_rib::filt_info_t &filt,
 					const int invoke_id,
 					cdap_rib::SerializedObject &obj_reply,
@@ -2204,7 +2331,7 @@ void RIBObj_::read(const cdap_rib::con_handle_t &con,
 
 void RIBObj_::cancelRead(const cdap_rib::con_handle_t &con,
 					const std::string& fqn,
-					const std::string class_,
+					const std::string& class_,
 					const cdap_rib::filt_info_t &filt,
 					const int invoke_id,
 					cdap_rib::res_info_t& res){
@@ -2218,7 +2345,7 @@ void RIBObj_::cancelRead(const cdap_rib::con_handle_t &con,
 
 void RIBObj_::write(const cdap_rib::con_handle_t &con,
 				const std::string& fqn,
-				const std::string class_,
+				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
 				const cdap_rib::SerializedObject &obj_req,
@@ -2236,7 +2363,7 @@ void RIBObj_::write(const cdap_rib::con_handle_t &con,
 
 void RIBObj_::start(const cdap_rib::con_handle_t &con,
 			const std::string& fqn,
-			const std::string class_,
+			const std::string& class_,
 			const cdap_rib::filt_info_t &filt,
 			const int invoke_id,
 			const cdap_rib::SerializedObject &obj_req,
@@ -2254,7 +2381,7 @@ void RIBObj_::start(const cdap_rib::con_handle_t &con,
 
 void RIBObj_::stop(const cdap_rib::con_handle_t &con,
 			const std::string& fqn,
-			const std::string class_,
+			const std::string& class_,
 			const cdap_rib::filt_info_t &filt,
 			const int invoke_id,
 			const cdap_rib::SerializedObject &obj_req,
@@ -2296,6 +2423,14 @@ void RIBDaemonProxy::createSchema(const cdap_rib::vers_info_t& v,
 
 std::list<cdap_rib::vers_info_t> RIBDaemonProxy::listVersions(void){
 	return ribd->listVersions();
+}
+
+void RIBDaemonProxy::addCreateCallbackSchema(
+					const cdap_rib::vers_info_t& version,
+					const std::string& class_,
+					const std::string& fqn_,
+					create_cb_t cb){
+	return ribd->addCreateCallbackSchema(version, class_, fqn_, cb);
 }
 
 void RIBDaemonProxy::destroySchema(const cdap_rib::vers_info_t& v){

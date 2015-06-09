@@ -297,7 +297,7 @@ public:
 
 	void read(const cdap_rib::con_handle_t &con,
 					const std::string& fqn,
-					const std::string class_,
+					const std::string& class_,
 					const cdap_rib::filt_info_t &filt,
 					const int invoke_id,
 					cdap_rib::SerializedObject &obj_reply,
