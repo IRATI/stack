@@ -501,7 +501,7 @@ void IPCProcessImpl::processSetPolicySetParamResponseEvent(
 	}
 
 	LOG_IPCP_DBG("The kernel processed successfully the "
-                "set-policy-set-param request");
+                     "set-policy-set-param request");
 
 	try {
 		rina::extendedIPCManager->setPolicySetParamResponse(requestEvent, 0);
@@ -610,7 +610,7 @@ void IPCProcessImpl::processSelectPolicySetResponseEvent(
 	}
 
 	LOG_IPCP_DBG("The kernel processed successfully the "
-                "set-policy-set-param request");
+                     "select-policy-set request");
 
 	try {
 		rina::extendedIPCManager->selectPolicySetResponse(requestEvent, 0);
