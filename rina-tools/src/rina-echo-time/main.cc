@@ -43,10 +43,11 @@ int wrapped_main(int argc, char** argv)
         bool quiet;
         unsigned int count;
         unsigned int size;
-        unsigned int wait;
+        int wait;
         int gap;
         int perf_interval;
         int dw;
+        unsigned int lost_wait;
         string test_type;
         string server_apn;
         string server_api;
@@ -80,12 +81,12 @@ int wrapped_main(int argc, char** argv)
                                                        false,
                                                        20,
                                                        "unsigned integer");
-                TCLAP::ValueArg<unsigned int> wait_arg("w",
-                                                       "wait-time",
-                                                       "Time to wait between two packets (ms)",
-                                                       false,
-                                                       1000,
-                                                       "unsigned integer");
+                TCLAP::ValueArg<int> wait_arg("w",
+                			      "wait-time",
+                			      "Time to wait between two packets (ms)",
+                			      false,
+                			      1000,
+                			      "integer");
                 TCLAP::ValueArg<string> server_apn_arg("",
                                                        "server-apn",
                                                        "Application process name for the server",
@@ -140,6 +141,12 @@ int wrapped_main(int argc, char** argv)
                                              false,
                                              -1,
                                              "integer");
+                TCLAP::ValueArg<unsigned int> lost_wait_arg("o",
+                                                            "lost-wait",
+                                                            "Time to wait (ms) for echo-reply before considering SDU lost",
+                                                            false,
+                                                            2000,
+                                                            "unsigned integer");
 
                 cmd.add(listen_arg);
                 cmd.add(count_arg);
@@ -156,6 +163,7 @@ int wrapped_main(int argc, char** argv)
                 cmd.add(gap_arg);
                 cmd.add(perf_interval_arg);
                 cmd.add(dealloc_wait_arg);
+                cmd.add(lost_wait_arg);
 
                 cmd.parse(argc, argv);
 
@@ -174,6 +182,7 @@ int wrapped_main(int argc, char** argv)
                 gap = gap_arg.getValue();
                 perf_interval = perf_interval_arg.getValue();
                 dw = dealloc_wait_arg.getValue();
+                lost_wait = lost_wait_arg.getValue();
 
                 if (size > Application::max_buffer_size) {
                         size = Application::max_buffer_size;
@@ -199,7 +208,7 @@ int wrapped_main(int argc, char** argv)
                 // Client mode
                 Client c(test_type, dif_name, client_apn, client_api,
                          server_apn, server_api, quiet, count,
-                         registration, size, wait, gap, dw);
+                         registration, size, wait, gap, dw, lost_wait);
 
                 c.run();
         }

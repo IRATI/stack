@@ -21,11 +21,66 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
-#include <librina/librina.h>
-#include <time.h>
-#include <signal.h>
-
+#include <librina/concurrency.h>
+#include <librina/timer.h>
 #include "application.h"
+
+class ServerWorker;
+class Server;
+
+class CancelFlowTimerTask : public rina::TimerTask {
+public:
+	CancelFlowTimerTask(int port_id, ServerWorker * sw);
+	void run();
+
+private:
+	int port_id;
+	ServerWorker * worker;
+};
+
+class ServerWorker : public rina::SimpleThread {
+public:
+	ServerWorker(rina::ThreadAttributes * threadAttributes,
+		     const std::string& test_type,
+		     int port_id,
+		     int deallocate_wait,
+		     int inter,
+		     unsigned int max_buffer_size,
+		     Server * serv);
+	~ServerWorker() throw() { };
+	void destroyFlow(int port_id);
+	int run();
+
+private:
+        void servePingFlow(int port_id);
+        void servePerfFlow(int port_id);
+        void printPerfStats(unsigned long pkt,
+        		    unsigned long bytes,
+        		    unsigned long us);
+
+        std::string test_type;
+        int port_id;
+        int dw;
+        int interval;
+        unsigned int max_buffer_size;
+        rina::Timer timer;
+        CancelFlowTimerTask * last_task;
+        Server * server;
+};
+
+class ServerWorkerCleaner : public rina::SimpleThread {
+public:
+	ServerWorkerCleaner(rina::ThreadAttributes * threadAttributes,
+			    Server * server);
+	~ServerWorkerCleaner() throw() { };
+	void do_stop();
+	int run();
+private:
+	bool stop;
+	rina::Sleep sleep_wrapper;
+	Server * server;
+	rina::Lockable lock;
+};
 
 class Server: public Application
 {
@@ -36,21 +91,22 @@ public:
                const std::string& app_instance,
                const int perf_interval,
                const int dealloc_wait);
+        ~Server();
 
         void run();
-
-protected:
-        void servePingFlow(int port_id);
-        void servePerfFlow(int port_id);
-        static void destroyFlow(sigval_t val);
+        void worker_completed(ServerWorker * worker);
+        void remove_completed_workers();
 
 private:
+        void startWorker(int port_id);
+
         std::string test_type;
         int interval;
         int dw;
-        void startWorker(int port_id);
-        void printPerfStats(unsigned long pkt, unsigned long bytes,
-                unsigned long us);
+        rina::Lockable lock;
+        std::list<ServerWorker *> active_workers;
+        std::list<ServerWorker *> completed_workers;
+        ServerWorkerCleaner * cleaner;
 };
 
 #endif

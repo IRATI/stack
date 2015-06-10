@@ -22,8 +22,7 @@
 #define CLIENT_HPP
 
 #include <string>
-#include <chrono>
-#include <librina/librina.h>
+#include <librina/concurrency.h>
 
 #include "application.h"
 
@@ -40,9 +39,10 @@ public:
                unsigned long count,
                bool  registration,
                unsigned int size,
-               unsigned int wait,
+               int wait,
                int g,
-               int dw);
+               int dw,
+               unsigned int lw);
                void run();
 protected:
         int createFlow();
@@ -59,8 +59,10 @@ private:
         unsigned long echo_times; // -1 is infinite
         bool client_app_reg;
         unsigned int data_size;
-        unsigned int wait;
+        int wait;
         int gap;
         int dealloc_wait;
+        unsigned int lost_wait;
+        rina::Sleep sleep_wrapper;
 };
 #endif//CLIENT_HPP

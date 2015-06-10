@@ -705,7 +705,7 @@ int IPCManager::readSDU(int portId, void * sdu, int maxBytes, unsigned int timeo
 		throw ReadSDUException();
 	}
 
-	if (result == -11) {
+	if (result == -EAGAIN) {
 		throw TryAgainException();
 	}
 

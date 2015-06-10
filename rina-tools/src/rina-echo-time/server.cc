@@ -19,18 +19,237 @@
 //
 
 #include <iostream>
-#include <thread>
 #include <time.h>
 #include <signal.h>
 #include <time.h>
 
 #define RINA_PREFIX     "rina-echo-app"
 #include <librina/logs.h>
+#include <librina/ipc-api.h>
 
 #include "server.h"
 
 using namespace std;
 using namespace rina;
+
+CancelFlowTimerTask::CancelFlowTimerTask(int port, ServerWorker * sw)
+{
+	port_id = port;
+	worker = sw;
+}
+
+void CancelFlowTimerTask::run()
+{
+	worker->destroyFlow(port_id);
+}
+
+ServerWorker::ServerWorker(ThreadAttributes * threadAttributes,
+			   const std::string& type,
+			   int port,
+			   int deallocate_wait,
+			   int inter,
+			   unsigned int max_buf_size,
+			   Server * serv) : SimpleThread(threadAttributes)
+{
+	test_type = type;
+	port_id = port;
+	dw = deallocate_wait;
+	interval = inter;
+	max_buffer_size = max_buf_size;
+	last_task = 0;
+	server = serv;
+}
+
+int ServerWorker::run()
+{
+        if (test_type == "ping")
+                servePingFlow(port_id);
+        else if (test_type == "perf")
+                servePerfFlow(port_id);
+        else {
+                /* This should not happen. The error condition
+                 * must be catched before this point. */
+                LOG_ERR("Unkown test type %s", test_type.c_str());
+
+                return -1;
+        }
+
+        server->worker_completed(this);
+        return 0;
+}
+
+void ServerWorker::servePingFlow(int port_id)
+{
+        char *buffer = new char[max_buffer_size];
+
+        // Setup a timer if dealloc_wait option is set */
+        if (dw > 0) {
+        	last_task = new CancelFlowTimerTask(port_id, this);
+        	timer.scheduleTask(last_task, dw);
+        }
+
+        try {
+                for(;;) {
+                        int bytes_read = ipcManager->readSDU(port_id,
+                        				     buffer,
+                                                             max_buffer_size);
+                        ipcManager->writeSDU(port_id, buffer, bytes_read);
+                        if (dw > 0 && last_task) {
+                                timer.cancelTask(last_task);
+                        	last_task = new CancelFlowTimerTask(port_id, this);
+                        	timer.scheduleTask(last_task, dw);
+                        }
+                }
+        } catch(rina::IPCException &e) {
+                // This thread was blocked in the readSDU() function
+                // when the flow gets deallocated
+        }
+
+        if  (dw > 0 && last_task) {
+        	timer.cancelTask(last_task);
+        }
+
+        delete [] buffer;
+}
+
+static unsigned long
+timespec_diff_us(const struct timespec& before, const struct timespec& later)
+{
+        return ((later.tv_sec - before.tv_sec) * 1000000000 +
+                        (later.tv_nsec - before.tv_nsec))/1000;
+}
+
+void ServerWorker::servePerfFlow(int port_id)
+{
+        unsigned long int us;
+        unsigned long tot_us = 0;
+        char *buffer = new char[max_buffer_size];
+        unsigned long pkt_cnt = 0;
+        unsigned long bytes_cnt = 0;
+        unsigned long tot_pkt = 0;
+        unsigned long tot_bytes = 0;
+        unsigned long interval_cnt = interval;  // counting down
+        int sdu_size;
+        struct timespec last_timestamp;
+        struct timespec now;
+
+        // Setup a timer if dealloc_wait option is set */
+        if (dw > 0) {
+        	last_task = new CancelFlowTimerTask(port_id, this);
+        	timer.scheduleTask(last_task, dw);
+        }
+
+        try {
+                clock_gettime(CLOCK_REALTIME, &last_timestamp);
+                for(;;) {
+                        sdu_size = ipcManager->readSDU(port_id, buffer, max_buffer_size);
+                        if (sdu_size <= 0) {
+                                break;
+                        }
+                        pkt_cnt++;
+                        bytes_cnt += sdu_size;
+
+                        // Report periodic stats if needed
+                        if (interval != -1 && --interval_cnt == 0) {
+                                clock_gettime(CLOCK_REALTIME, &now);
+                                us = timespec_diff_us(last_timestamp, now);
+                                printPerfStats(pkt_cnt, bytes_cnt, us);
+
+                                tot_pkt += pkt_cnt;
+                                tot_bytes += bytes_cnt;
+                                tot_us += us;
+
+                                pkt_cnt = 0;
+                                bytes_cnt = 0;
+
+                                if (dw > 0 && last_task) {
+                                        timer.cancelTask(last_task);
+                                	last_task = new CancelFlowTimerTask(port_id, this);
+                                	timer.scheduleTask(last_task, dw);
+                                }
+                                clock_gettime(CLOCK_REALTIME, &last_timestamp);
+                                interval_cnt = interval;
+                        }
+                }
+        } catch(rina::IPCException &e) {
+                // This thread was blocked in the readSDU() function
+                // when the flow gets deallocated
+        }
+
+        if  (dw > 0 && last_task) {
+        	timer.cancelTask(last_task);
+        }
+
+        /* When dealloc_wait is not set, we can safely add the remaining packets
+         * to the total count */
+        if (dw <= 0) {
+                clock_gettime(CLOCK_REALTIME, &now);
+                us = timespec_diff_us(last_timestamp, now);
+
+                tot_pkt += pkt_cnt;
+                tot_bytes += bytes_cnt;
+                tot_us += us;
+        } else {
+                LOG_INFO("Discarded %lu SDUs", pkt_cnt);
+        }
+
+        LOG_INFO("Received %lu SDUs and %lu bytes in %lu us",
+                        tot_pkt, tot_bytes, tot_us);
+        LOG_INFO("Goodput: %.4f Kpps, %.4f Mbps",
+                        static_cast<float>((tot_pkt * 1000.0)/tot_us),
+                        static_cast<float>((tot_bytes * 8.0)/tot_us));
+
+        delete [] buffer;
+}
+
+void ServerWorker::destroyFlow(int port_id)
+{
+        // TODO here we should store the seqnum (handle) returned by
+        // requestFlowDeallocation() and match it in the event loop
+        try {
+        	ipcManager->requestFlowDeallocation(port_id);
+        } catch(rina::Exception &e) {
+        	//Ignore, flow was already deallocated
+        }
+}
+
+void ServerWorker::printPerfStats(unsigned long pkt,
+				  unsigned long bytes,
+				  unsigned long us)
+{
+        LOG_INFO("%lu SDUs and %lu bytes in %lu us => %.4f Mbps",
+                        pkt, bytes, us, static_cast<float>((bytes * 8.0)/us));
+}
+
+ServerWorkerCleaner::ServerWorkerCleaner(rina::ThreadAttributes * threadAttributes,
+		    	    	         Server * s) : SimpleThread(threadAttributes)
+{
+	stop = false;
+	server = s;
+}
+
+void ServerWorkerCleaner::do_stop()
+{
+	ScopedLock g(lock);
+	stop = true;
+}
+
+int ServerWorkerCleaner::run()
+{
+	while (true) {
+		lock.lock();
+		if (stop) {
+			lock.unlock();
+			break;
+		}
+
+		server->remove_completed_workers();
+		lock.unlock();
+		sleep_wrapper.sleepForMili(1000);
+	}
+
+	return 0;
+}
 
 Server::Server(const string& t_type,
                const string& dif_name,
@@ -40,7 +259,24 @@ Server::Server(const string& t_type,
                const int dealloc_wait) :
         Application(dif_name, app_name, app_instance),
         test_type(t_type), interval(perf_interval), dw(dealloc_wait)
-{ }
+{
+	ThreadAttributes threadAttrs;
+	threadAttrs.setJoinable();
+	cleaner = new ServerWorkerCleaner(&threadAttrs, this);
+}
+
+Server::~Server()
+{
+	cleaner->do_stop();
+	cleaner->join(NULL);
+	lock.lock();
+	if (completed_workers.size() > 0) {
+		remove_completed_workers();
+	}
+	lock.unlock();
+
+	delete cleaner;
+}
 
 void Server::run()
 {
@@ -99,184 +335,36 @@ void Server::run()
 
 void Server::startWorker(int port_id)
 {
-        void (Server::*server_function)(int port_id);
-
-        if (test_type == "ping")
-                server_function = &Server::servePingFlow;
-        else if (test_type == "perf")
-                server_function = &Server::servePerfFlow;
-        else {
-                /* This should not happen. The error condition
-                 * must be catched before this point. */
-                LOG_ERR("Unkown test type %s", test_type.c_str());
-
-                return;
-        }
-
-        thread t(server_function, this, port_id);
-        t.detach();
+	ThreadAttributes threadAttributes;
+        ServerWorker * worker = new ServerWorker(&threadAttributes,
+        		    	    	         test_type,
+        		    	    	         port_id,
+        		    	    	         dw,
+        		    	    	         interval,
+        		    	    	         max_buffer_size,
+        		    	    	         this);
+        worker->detach();
+        lock.lock();
+        active_workers.push_back(worker);
+        lock.unlock();
 }
 
-void Server::servePingFlow(int port_id)
+void Server::worker_completed(ServerWorker * worker)
 {
-        char *buffer = new char[max_buffer_size];
-        struct sigevent event;
-        struct itimerspec itime;
-        timer_t timer_id;
-
-        // Setup a timer if dealloc_wait option is set */
-        if (dw > 0) {
-                event.sigev_notify = SIGEV_THREAD;
-                event.sigev_value.sival_int = port_id;
-                event.sigev_notify_function = &destroyFlow;
-
-                timer_create(CLOCK_REALTIME, &event, &timer_id);
-
-                itime.it_interval.tv_sec = 0;
-                itime.it_interval.tv_nsec = 0;
-                itime.it_value.tv_sec = dw;
-                itime.it_value.tv_nsec = 0;
-
-                timer_settime(timer_id, 0, &itime, NULL);
-        }
-
-        try {
-                for(;;) {
-                        int bytes_read = ipcManager->readSDU(port_id,
-                        				     buffer,
-                                                             max_buffer_size);
-                        ipcManager->writeSDU(port_id, buffer, bytes_read);
-                        if (dw > 0)
-                                timer_settime(timer_id, 0, &itime, NULL);
-                }
-        } catch(rina::IPCException e) {
-                // This thread was blocked in the readSDU() function
-                // when the flow gets deallocated
-        }
-
-        if  (timer_id) {
-                timer_delete(timer_id);
-        }
-
-        delete [] buffer;
+	ScopedLock g(lock);
+	active_workers.remove(worker);
+	completed_workers.push_back(worker);
 }
 
-static unsigned long
-timespec_diff_us(const struct timespec& before, const struct timespec& later)
+void Server::remove_completed_workers()
 {
-        return ((later.tv_sec - before.tv_sec) * 1000000000 +
-                        (later.tv_nsec - before.tv_nsec))/1000;
-}
+	ScopedLock g(lock);
 
-void Server::servePerfFlow(int port_id)
-{
-        unsigned long int us;
-        unsigned long tot_us = 0;
-        char *buffer = new char[max_buffer_size];
-        unsigned long pkt_cnt = 0;
-        unsigned long bytes_cnt = 0;
-        unsigned long tot_pkt = 0;
-        unsigned long tot_bytes = 0;
-        unsigned long interval_cnt = interval;  // counting down
-        int sdu_size;
-        struct sigevent event;
-        struct itimerspec itime;
-        timer_t timer_id;
-        struct timespec last_timestamp;
-        struct timespec now;
-
-        // Setup a timer if dealloc_wait option is set */
-        if (dw > 0) {
-                event.sigev_notify = SIGEV_THREAD;
-                event.sigev_value.sival_int = port_id;
-                event.sigev_notify_function = &destroyFlow;
-
-                timer_create(CLOCK_REALTIME, &event, &timer_id);
-
-                itime.it_interval.tv_sec = 0;
-                itime.it_interval.tv_nsec = 0;
-                itime.it_value.tv_sec = dw;
-                itime.it_value.tv_nsec = 0;
-
-                timer_settime(timer_id, 0, &itime, NULL);
-        }
-
-        try {
-                clock_gettime(CLOCK_REALTIME, &last_timestamp);
-                for(;;) {
-                        sdu_size = ipcManager->readSDU(port_id, buffer, max_buffer_size);
-                        if (sdu_size <= 0) {
-                                break;
-                        }
-                        pkt_cnt++;
-                        bytes_cnt += sdu_size;
-
-                        // Report periodic stats if needed
-                        if (interval != -1 && --interval_cnt == 0) {
-                                clock_gettime(CLOCK_REALTIME, &now);
-                                us = timespec_diff_us(last_timestamp, now);
-                                printPerfStats(pkt_cnt, bytes_cnt, us);
-
-                                tot_pkt += pkt_cnt;
-                                tot_bytes += bytes_cnt;
-                                tot_us += us;
-
-                                pkt_cnt = 0;
-                                bytes_cnt = 0;
-
-                                if (dw > 0)
-                                        timer_settime(timer_id, 0, &itime, NULL);
-                                clock_gettime(CLOCK_REALTIME, &last_timestamp);
-                                interval_cnt = interval;
-                        }
-                }
-        } catch(rina::IPCException e) {
-                // This thread was blocked in the readSDU() function
-                // when the flow gets deallocated
-        }
-
-        if  (timer_id) {
-                timer_delete(timer_id);
-        }
-
-        /* When dealloc_wait is not set, we can safely add the remaining packets
-         * to the total count */
-        if (dw <= 0) {
-                clock_gettime(CLOCK_REALTIME, &now);
-                us = timespec_diff_us(last_timestamp, now);
-
-                tot_pkt += pkt_cnt;
-                tot_bytes += bytes_cnt;
-                tot_us += us;
-        } else {
-                LOG_INFO("Discarded %lu SDUs", pkt_cnt);
-        }
-
-        LOG_INFO("Received %lu SDUs and %lu bytes in %lu us",
-                        tot_pkt, tot_bytes, tot_us);
-        LOG_INFO("Goodput: %.4f Kpps, %.4f Mbps",
-                        static_cast<float>((tot_pkt * 1000.0)/tot_us),
-                        static_cast<float>((tot_bytes * 8.0)/tot_us));
-
-        delete [] buffer;
-}
-
-void Server::printPerfStats(unsigned long pkt, unsigned long bytes,
-                unsigned long us)
-{
-        LOG_INFO("%lu SDUs and %lu bytes in %lu us => %.4f Mbps",
-                        pkt, bytes, us, static_cast<float>((bytes * 8.0)/us));
-}
-
-void Server::destroyFlow(sigval_t val)
-{
-        int port_id = val.sival_int;
-
-        // TODO here we should store the seqnum (handle) returned by
-        // requestFlowDeallocation() and match it in the event loop
-        try {
-        	ipcManager->requestFlowDeallocation(port_id);
-        } catch(rina::Exception &e) {
-        	//Ignore, flow was already deallocated
-        }
+	std::list<ServerWorker *>::iterator it = completed_workers.begin();
+	while (it != completed_workers.end())
+	{
+            delete *it;
+	    it = completed_workers.erase(it);
+	    ++it;
+	}
 }
