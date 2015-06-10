@@ -24,10 +24,7 @@
 #include <iostream>
 #include <sstream>
 #include <cassert>
-#include <random>
-#include <thread>
 #include <unistd.h>
-#include <chrono>
 
 #define RINA_PREFIX     "cdap-echo-client"
 #include <librina/logs.h>

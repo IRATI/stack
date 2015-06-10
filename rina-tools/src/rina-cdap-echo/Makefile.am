@@ -18,7 +18,6 @@ rina_cdap_echo_LDADD    = $(LIBRINA_LIBS) -lrt \
 rina_cdap_echo_CPPFLAGS =			\
 	$(LIBRINA_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)			\
-	-std=c++11				\
 	-I$(srcdir)/../common
 rina_cdap_echo_CXXFLAGS =			\
 	$(CPPFLAGS_EXTRA)

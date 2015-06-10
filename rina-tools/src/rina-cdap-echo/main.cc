@@ -160,7 +160,7 @@ int wrapped_main(int argc, char** argv)
 
         if (listen) {
                 // Server mode
-                Server s(dif_name, server_apn, server_api, dw);
+                CDAPEchoServer s(dif_name, server_apn, server_api, dw);
 
                 s.run();
         } else {

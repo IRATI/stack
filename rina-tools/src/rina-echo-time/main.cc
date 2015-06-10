@@ -30,8 +30,8 @@
 #include "tclap/CmdLine.h"
 
 #include "config.h"
-#include "client.h"
-#include "server.h"
+#include "et-client.h"
+#include "et-server.h"
 
 using namespace std;
 
@@ -200,8 +200,8 @@ int wrapped_main(int argc, char** argv)
 
         if (listen) {
                 // Server mode
-                Server s(test_type, dif_name, server_apn, server_api,
-                                perf_interval, dw);
+                EchoTimeServer s(test_type, dif_name, server_apn, server_api,
+                                 perf_interval, dw);
 
                 s.run();
         } else {

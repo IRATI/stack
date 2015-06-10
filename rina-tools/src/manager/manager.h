@@ -25,24 +25,9 @@
 #include <string>
 #include <librina/application.h>
 #include <librina/cdap_v2.h>
+#include "server.h"
 
 static const unsigned int max_sdu_size_in_bytes = 10000;
-
-class Application {
- public:
-	Application(const std::string& dif_name_, const std::string & app_name_,
-			const std::string & app_instance_);
-
-	static const uint max_buffer_size;
-
- protected:
-	void applicationRegister();
-
-	std::string dif_name;
-	std::string app_name;
-	std::string app_instance;
-
-};
 
 class ConnectionCallback : public rina::cdap::CDAPCallbackInterface {
  public:
@@ -60,24 +45,39 @@ class ConnectionCallback : public rina::cdap::CDAPCallbackInterface {
 	rina::cdap::CDAPProviderInterface **prov_;
 };
 
-class Manager : public Application {
+class ManagerWorker : public ServerWorker {
+public:
+	ManagerWorker(rina::ThreadAttributes * threadAttributes,
+		      int port,
+		      unsigned int max_sdu_size,
+	              Server * serv);
+	~ManagerWorker() throw() { };
+	int internal_run();
+
+private:
+        void operate(int port_id);
+        void cacep(int port_id);
+        void createIPCP(int port_id);
+        void queryRIB(int port_id);
+
+	int port_id;
+	unsigned int max_sdu_size;
+	rina::cdap::CDAPProviderInterface *cdap_prov;
+};
+
+class Manager : public Server {
  public:
-	Manager(const std::string& dif_name, const std::string& apn,
+	Manager(const std::string& dif_name,
+		const std::string& apn,
 		const std::string& api);
-	void run();
-	~Manager();
+	~Manager() { };
+
  protected:
-        void startWorker(rina::FlowInformation flow);
-        void operate(rina::FlowInformation flow);
-        void cacep(rina::FlowInformation flow);
-        void createIPCP(rina::FlowInformation flow);
-        void queryRIB(rina::FlowInformation flow);
+ 	ServerWorker * internal_start_worker(int port_id);
+
  private:
-	std::string dif_name_;
-	bool client_app_reg_;
 	rina::cdap_rib::con_handle_t con_;
 	static const std::string mad_name;
 	static const std::string mad_instance;
-	rina::cdap::CDAPProviderInterface *cdap_prov_;
 };
 #endif//MANAGER_HPP
