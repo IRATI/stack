@@ -45,16 +45,6 @@ LinkStateRoutingPs::LinkStateRoutingPs(IRoutingComponent * rc_) : rc(rc_)
 
 void LinkStateRoutingPs::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
 {
-	rina::PDUFTableGeneratorConfiguration pduftgConfig =
-			dif_configuration.get_pduft_generator_configuration();
-
-	if (pduftgConfig.get_pduft_generator_policy().get_name().compare(
-			LINK_STATE_POLICY) != 0) {
-		LOG_IPCP_WARN("Unsupported routing policy: %s.",
-				pduftgConfig.get_pduft_generator_policy().get_name().c_str());
-		throw rina::Exception("Unknown routing Policy");
-	}
-
 	lsr_policy = new LinkStateRoutingPolicy(rc->ipcp);
 	lsr_policy->set_dif_configuration(dif_configuration);
 }
@@ -898,7 +888,15 @@ void UpdateAgeTimerTask::run()
 	lsr_policy_->timer_->scheduleTask(task, delay_);
 }
 
+const std::string LinkStateRoutingPolicy::OBJECT_MAXIMUM_AGE = "objectMaximumAge";
+const std::string LinkStateRoutingPolicy::WAIT_UNTIL_READ_CDAP = "waitUntilReadCDAP";
+const std::string LinkStateRoutingPolicy::WAIT_UNTIL_ERROR = "waitUntilError";
+const std::string LinkStateRoutingPolicy::WAIT_UNTIL_PDUFT_COMPUTATION = "waitUntilPDUFTComputation";
+const std::string LinkStateRoutingPolicy::WAIT_UNTIL_FSODB_PROPAGATION = "waitUntilFSODBPropagation";
+const std::string LinkStateRoutingPolicy::WAIT_UNTIL_AGE_INCREMENT = "waitUntilAgeIncrement";
+const std::string LinkStateRoutingPolicy::ROUTING_ALGORITHM = "routingAlgorithm";
 const int LinkStateRoutingPolicy::MAXIMUM_BUFFER_SIZE = 4096;
+const std::string LinkStateRoutingPolicy::DIJKSTRA_ALG = "Dijkstra";
 
 LinkStateRoutingPolicy::LinkStateRoutingPolicy(IPCProcess * ipcp)
 {
@@ -970,36 +968,57 @@ void LinkStateRoutingPolicy::subscribeToEvents()
 void LinkStateRoutingPolicy::set_dif_configuration(
 		const rina::DIFConfiguration& dif_configuration)
 {
-	pduft_generator_config_ =
-			dif_configuration.get_pduft_generator_configuration();
-	if (pduft_generator_config_.get_link_state_routing_configuration().get_routing_algorithm().compare(
-			"Dijkstra") != 0) {
-		LOG_IPCP_WARN("Unsupported routing algorithm, using Dijkstra instead");
-	}
+	std::string routing_alg;
+        rina::PolicyConfig psconf;
+        long delay;
 
-	routing_algorithm_ = new DijkstraAlgorithm();
-	source_vertex_ = dif_configuration.get_address();
+        psconf = dif_configuration.routing_configuration_.policy_set_;
+        source_vertex_ = dif_configuration.get_address();
+
+        try {
+        	routing_alg = psconf.get_param_value_as_string(ROUTING_ALGORITHM);
+        } catch (rina::Exception &e) {
+        	LOG_WARN("No routing algorithm specified, using Dijkstra");
+        	routing_alg = DIJKSTRA_ALG;
+        }
+
+        if (routing_alg == DIJKSTRA_ALG) {
+        	routing_algorithm_ = new DijkstraAlgorithm();
+        } else {
+        	throw rina::Exception("Unsupported routing algorithm");
+        }
 
 	if (!test_) {
-		maximum_age_ =
-			pduft_generator_config_.get_link_state_routing_configuration().get_object_maximum_age();
-		long delay = 0;
+		try {
+			maximum_age_ = psconf.get_param_value_as_int(OBJECT_MAXIMUM_AGE);
+		} catch (rina::Exception &e) {
+			maximum_age_ = PULSES_UNTIL_FSO_EXPIRATION_DEFAULT;
+		}
 
 		// Task to compute PDUFT
-		delay =
-			pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_pduft_computation();
+		try {
+			delay = psconf.get_param_value_as_long(WAIT_UNTIL_PDUFT_COMPUTATION);
+		} catch (rina::Exception &e) {
+			delay = WAIT_UNTIL_PDUFT_COMPUTATION_DEFAULT;
+		}
 		ComputeRoutingTimerTask * cttask = new ComputeRoutingTimerTask(this, delay);
 		timer_->scheduleTask(cttask, delay);
 
 		// Task to increment age
-		delay =
-			pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_age_increment();
+		try {
+			delay = psconf.get_param_value_as_long(WAIT_UNTIL_AGE_INCREMENT);
+		} catch (rina::Exception &e) {
+			delay = WAIT_UNTIL_AGE_INCREMENT_DEFAULT;
+		}
 		UpdateAgeTimerTask * uattask = new UpdateAgeTimerTask(this, delay);
 		timer_->scheduleTask(uattask, delay);
 
 		// Task to propagate modified FSO
-		delay =
-			pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_fsodb_propagation();
+		try {
+			delay = psconf.get_param_value_as_long(WAIT_UNTIL_FSODB_PROPAGATION);
+		} catch (rina::Exception &e) {
+			delay = WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT;
+		}
 		PropagateFSODBTimerTask * pfttask = new PropagateFSODBTimerTask(this,
 				delay);
 		timer_->scheduleTask(pfttask, delay);
@@ -1182,10 +1201,8 @@ void LinkStateRoutingPolicy::routingTableUpdate()
 			routing_algorithm_->computeRoutingTable(flow_state_objects,
 					source_vertex_);
 
-    IResourceAllocatorPs *raps =
-    		dynamic_cast<IResourceAllocatorPs *>(ipc_process_->resource_allocator_->ps);
-    assert(raps);
-    raps->routingTableUpdated(rt);
+	assert(ipc_process_->resource_allocator_->pduft_gen_ps);
+	ipc_process_->resource_allocator_->pduft_gen_ps->routingTableUpdated(rt);
 }
 
 void LinkStateRoutingPolicy::writeMessageReceived(

@@ -41,6 +41,7 @@
 #include "rmt.h"
 #include "dt-utils.h"
 #include "dtp-ps.h"
+#include "policies.h"
 
 enum efcp_state {
         EFCP_ALLOCATED = 1,
@@ -387,7 +388,7 @@ struct efcp_config * efcp_container_config(struct efcp_container * container)
 }
 EXPORT_SYMBOL(efcp_container_config);
 
-int efcp_container_set_config(struct efcp_config *    efcp_config,
+int efcp_container_config_set(struct efcp_config *    efcp_config,
                               struct efcp_container * container)
 {
         if (!efcp_config || !container) {
@@ -401,7 +402,7 @@ int efcp_container_set_config(struct efcp_config *    efcp_config,
 
         return 0;
 }
-EXPORT_SYMBOL(efcp_container_set_config);
+EXPORT_SYMBOL(efcp_container_config_set);
 
 static int efcp_write(struct efcp * efcp,
                       struct sdu *  sdu)
@@ -709,6 +710,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         dtp = dtp_create(tmp->dt,
                          container->rmt,
                          tmp,
+                         policy_name(connection->policies_params->dtp_ps),
                          connection);
         if (!dtp) {
                 efcp_destroy(tmp);
@@ -732,7 +734,10 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         dtcp_present = dtp_ps->dtcp_present;
         rcu_read_unlock();
         if (dtcp_present) {
-                dtcp = dtcp_create(tmp->dt, connection, container->rmt);
+                dtcp = dtcp_create(tmp->dt,
+                                   connection,
+                                   policy_name(dtcp_ps(connection->policies_params->dtcp_cfg)),
+                                   container->rmt);
                 if (!dtcp) {
                         efcp_destroy(tmp);
                         return cep_id_bad();
