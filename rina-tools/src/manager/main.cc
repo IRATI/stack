@@ -79,7 +79,7 @@ int wrapped_main(int argc, char** argv)
 
         rina::initialize("INFO", "");
         Manager m(dif_name, manager_apn, manager_api);
-        m.run();
+        m.run(true);
 
         return EXIT_SUCCESS;
 }

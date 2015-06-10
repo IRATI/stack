@@ -60,6 +60,7 @@ private:
 
 	int port_id;
 	unsigned int max_sdu_size;
+	rina::Sleep sleep_wrapper;
 };
 
 class CDAPEchoServer : public Server {

@@ -203,7 +203,7 @@ int wrapped_main(int argc, char** argv)
                 EchoTimeServer s(test_type, dif_name, server_apn, server_api,
                                  perf_interval, dw);
 
-                s.run();
+                s.run(true);
         } else {
                 // Client mode
                 Client c(test_type, dif_name, client_apn, client_api,

@@ -111,9 +111,16 @@ void CDAPEchoWorker::serveEchoFlow(int port_id)
 
 	while (keep_serving) {
 		try {
-			bytes_read = ipcManager->readSDU(port_id,
-							 buffer,
-							 max_sdu_size);
+			while (true) {
+				try {
+					bytes_read = ipcManager->readSDU(port_id,
+							buffer,
+							max_sdu_size);
+					break;
+				} catch (TryAgainException &e) {
+					sleep_wrapper.sleepForMili(50);
+				}
+			}
 		} catch(rina::UnknownFlowException &e) {
 			LOG_ERR("Unknown flow descriptor");
 			break;
