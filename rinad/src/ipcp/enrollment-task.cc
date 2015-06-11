@@ -54,12 +54,12 @@ void WatchdogTimerTask::run() {
 }
 
 // CLASS WatchdogRIBObject
-WatchdogRIBObject::WatchdogRIBObject(IPCProcess * ipc_process, const rina::DIFConfiguration& dif_configuration) :
+WatchdogRIBObject::WatchdogRIBObject(IPCProcess * ipc_process, int wdog_period_ms, int declared_dead_int_ms) :
 		BaseIPCPRIBObject(ipc_process, EncoderConstants::WATCHDOG_RIB_OBJECT_CLASS,
 				rina::objectInstanceGenerator->getObjectInstance(), EncoderConstants::WATCHDOG_RIB_OBJECT_NAME) {
 	cdap_session_manager_ = ipc_process->cdap_session_manager_;
-	wathchdog_period_ = dif_configuration.et_configuration_.watchdog_period_in_ms_;
-	declared_dead_interval_ = dif_configuration.et_configuration_.declared_dead_interval_in_ms_;
+	wathchdog_period_ = wdog_period_ms;
+	declared_dead_interval_ = declared_dead_int_ms;
 	lock_ = new rina::Lockable();
 	timer_ = new rina::Timer();
 	timer_->scheduleTask(new WatchdogTimerTask(this, timer_, wathchdog_period_), wathchdog_period_);
@@ -215,11 +215,13 @@ std::string AddressRIBObject::get_displayable_value() {
 //Main function of the Neighbor Enroller thread
 void * doNeighborsEnrollerWork(void * arg) {
 	IPCProcess * ipcProcess = (IPCProcess *) arg;
-	rina::IEnrollmentTask * enrollmentTask = ipcProcess->enrollment_task_;
+	EnrollmentTask * enrollmentTask = dynamic_cast<EnrollmentTask *>(ipcProcess->enrollment_task_);
+	if (!enrollmentTask) {
+		LOG_IPCP_ERR("Error casting IEnrollmentTask to EnrollmentTask");
+		return (void *) -1;
+	}
 	std::list<rina::Neighbor*> neighbors;
 	std::list<rina::Neighbor*>::const_iterator it;
-	rina::EnrollmentTaskConfiguration configuration = ipcProcess->get_dif_information().
-			dif_configuration_.et_configuration_;
 	rina::Sleep sleepObject;
 
 	while(true){
@@ -231,7 +233,7 @@ void * doNeighborsEnrollerWork(void * arg) {
 			}
 
 			if ((*it)->number_of_enrollment_attempts_ <
-					configuration.max_number_of_enrollment_attempts_) {
+					enrollmentTask->max_num_enroll_attempts_) {
 				(*it)->number_of_enrollment_attempts_++;
 				rina::EnrollmentRequest * request = new rina::EnrollmentRequest((*it));
 				enrollmentTask->initiateEnrollment(request);
@@ -248,7 +250,7 @@ void * doNeighborsEnrollerWork(void * arg) {
 			}
 
 		}
-		sleepObject.sleepForMili(configuration.neighbor_enroller_period_in_ms_);
+		sleepObject.sleepForMili(enrollmentTask->neigh_enroll_per_ms_);
 	}
 
 	return (void *) 0;
@@ -471,6 +473,12 @@ void EnrollmentFailedTimerTask::run() {
 }
 
 //Class Enrollment Task
+const std::string EnrollmentTask::ENROLL_TIMEOUT_IN_MS = "enrollTimeoutInMs";
+const std::string EnrollmentTask::WATCHDOG_PERIOD_IN_MS = "watchdogPeriodInMs";
+const std::string EnrollmentTask::DECLARED_DEAD_INTERVAL_IN_MS = "declaredDeadIntervalInMs";
+const std::string EnrollmentTask::NEIGHBORS_ENROLLER_PERIOD_IN_MS = "neighborsEnrollerPeriodInMs";
+const std::string EnrollmentTask::MAX_ENROLLMENT_RETRIES = "maxEnrollmentRetries";
+
 EnrollmentTask::EnrollmentTask() : IPCPEnrollmentTask()
 {
 	namespace_manager_ = 0;
@@ -479,6 +487,11 @@ EnrollmentTask::EnrollmentTask() : IPCPEnrollmentTask()
 	irm_ = 0;
 	event_manager_ = 0;
 	timeout_ = 10000;
+	timeout_ = 0;
+	max_num_enroll_attempts_ = 0;
+	watchdog_per_ms_ = 0;
+	declared_dead_int_ms_ = 0;
+	neigh_enroll_per_ms_ = 0;
 }
 
 EnrollmentTask::~EnrollmentTask()
@@ -557,11 +570,23 @@ void EnrollmentTask::eventHappened(rina::InternalEvent * event)
 
 void EnrollmentTask::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
 {
-	timeout_ = dif_configuration.et_configuration_.enrollment_timeout_in_ms_;
+	rina::PolicyConfig psconf = dif_configuration.et_configuration_.policy_set_;
+	if (select_policy_set(std::string(), psconf.name_) != 0) {
+		throw rina::Exception("Cannot create enrollment task policy-set");
+	}
+
+	// Parse policy config parameters
+	timeout_ = psconf.get_param_value_as_int(ENROLL_TIMEOUT_IN_MS);
+	max_num_enroll_attempts_ = psconf.get_param_value_as_uint(MAX_ENROLLMENT_RETRIES);
+	watchdog_per_ms_ = psconf.get_param_value_as_int(WATCHDOG_PERIOD_IN_MS);
+	declared_dead_int_ms_ = psconf.get_param_value_as_int(DECLARED_DEAD_INTERVAL_IN_MS);
+	neigh_enroll_per_ms_ = psconf.get_param_value_as_int(NEIGHBORS_ENROLLER_PERIOD_IN_MS);
 
 	//Add Watchdog RIB object to RIB
 	try{
-		BaseIPCPRIBObject * ribObject = new WatchdogRIBObject(ipcp, dif_configuration);
+		BaseIPCPRIBObject * ribObject = new WatchdogRIBObject(ipcp,
+								      watchdog_per_ms_,
+								      declared_dead_int_ms_);
 		rib_daemon_->addRIBObject(ribObject);
 	}catch(rina::Exception &e){
 		LOG_IPCP_ERR("Problems adding object to RIB Daemon: %s", e.what());

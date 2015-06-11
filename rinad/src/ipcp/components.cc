@@ -22,11 +22,14 @@
 #include <sstream>
 #include <iostream>
 
+#define IPCP_MODULE "components"
+#include "ipcp-logging.h"
 #include "components.h"
 
 namespace rinad {
 
 const std::string IResourceAllocator::RESOURCE_ALLOCATOR_AE_NAME = "resource-allocator";
+const std::string IResourceAllocator::PDUFT_GEN_COMPONENT_NAME = "pduft-generator";
 const std::string INamespaceManager::NAMESPACE_MANAGER_AE_NAME = "namespace-manager";
 const std::string IRoutingComponent::ROUTING_COMPONENT_AE_NAME = "routing";
 const std::string IFlowAllocator::FLOW_ALLOCATOR_AE_NAME = "flow-allocator";
@@ -130,6 +133,35 @@ std::string Flow::toString() {
 	ss << "* Index of the current active connection for this flow: "
 			<< current_connection_index << std::endl;
 	return ss.str();
+}
+
+// Class IResourceAllocator
+int IResourceAllocator::set_pduft_gen_policy_set(const std::string& name)
+{
+	if (!ipcp) {
+		LOG_IPCP_ERR("IPCP is null");
+		return -1;
+	}
+
+	if (pduft_gen_ps) {
+		LOG_IPCP_ERR("PDUFT Generator policy set already present");
+		return -1;
+	}
+
+	std::stringstream ss;
+	ss << RESOURCE_ALLOCATOR_AE_NAME << "/" << PDUFT_GEN_COMPONENT_NAME;
+        pduft_gen_ps = (IPDUFTGeneratorPs *) ipcp->psCreate(ss.str(),
+        					     	    name,
+        					     	    this);
+        if (!pduft_gen_ps) {
+                LOG_IPCP_ERR("failed to allocate instance of policy set %s",
+                	     name.c_str());
+                return -1;
+        }
+
+        LOG_INFO("PDUFT Generator policy-set %s added to the resource-allocator",
+                 name.c_str());
+        return 0;
 }
 
 // Class BaseRIBObject
