@@ -673,9 +673,9 @@ int rmt_config_set(struct rmt *        instance,
 }
 EXPORT_SYMBOL(rmt_config_set);
 
-static int n1_port_write(struct rmt *         rmt,
-                         struct rmt_n1_port * n1_port,
-                         struct pdu * pdu)
+static int n1_port_write_noclean(struct rmt *         rmt,
+                                 struct rmt_n1_port * n1_port,
+                                 struct pdu * pdu)
 {
         struct sdu *           sdu;
         struct pdu_ser *       pdu_ser;
@@ -685,7 +685,6 @@ static int n1_port_write(struct rmt *         rmt,
         struct pci *           pci;
         size_t                 ttl;
         struct dup_config_entry * dup_conf;
-        unsigned long          flags;
         int                    ret = 0;
 
         ASSERT(n1_port);
@@ -711,8 +710,7 @@ static int n1_port_write(struct rmt *         rmt,
             if (!pci) {
                     LOG_ERR("Cannot get PCI");
                     pdu_destroy(pdu);
-                    ret = -1;
-                    goto exit;
+                    return -1;
             }
 
             LOG_DBG("TTL to start with is %d", dup_conf->initial_ttl_value);
@@ -720,8 +718,7 @@ static int n1_port_write(struct rmt *         rmt,
             if (pci_ttl_set(pci, dup_conf->initial_ttl_value)) {
                     LOG_ERR("Could not set TTL");
                     pdu_destroy(pdu);
-                    ret = -1;
-                    goto exit;
+                    return -1;
             }
         }
 
@@ -729,23 +726,20 @@ static int n1_port_write(struct rmt *         rmt,
         if (!pdu_ser) {
                 LOG_ERR("Error creating serialized PDU");
                 pdu_destroy(pdu);
-                ret = -1;
-                goto exit;
+                return -1;
         }
 
         buffer = pdu_ser_buffer(pdu_ser);
         if (!buffer_is_ok(buffer)) {
                 LOG_ERR("Buffer is not okay");
                 pdu_ser_destroy(pdu_ser);
-                ret =  -1;
-                goto exit;
+                return  -1;
         }
 
         if (pdu_ser_buffer_disown(pdu_ser)) {
                 LOG_ERR("Could not disown buffer");
                         pdu_ser_destroy(pdu_ser);
-                        ret = -1;
-                        goto exit;
+                        return -1;
         }
 
         pdu_ser_destroy(pdu_ser);
@@ -755,26 +749,36 @@ static int n1_port_write(struct rmt *         rmt,
                 LOG_ERR("Error creating SDU from serialized PDU, "
                         "dropping PDU!");
                 buffer_destroy(buffer);
-                ret = -1;
-                goto exit;
+                return -1;
         }
 
         LOG_DBG("Gonna send SDU to port-id %d", port_id);
         if (n1_ipcp->ops->sdu_write(n1_ipcp->data,port_id, sdu)) {
                 LOG_ERR("Couldn't write SDU to N-1 IPCP");
-                ret = -1;
-                goto exit;
+                return -1;
         }
 
-exit:
-        atomic_dec(&n1_port->n_sdus);
+        return 0;
+}
+
+static int n1_port_write(struct rmt *         rmt,
+                         struct rmt_n1_port * n1_port,
+                         struct pdu * pdu)
+{
+        int           ret = 0;
+        unsigned long flags;
+
+        ASSERT(n1_port);
+        ASSERT(rmt);
+        ASSERT(rmt->serdes);
+
+        ret = n1_port_write_noclean(rmt, n1_port, pdu);
         spin_lock_irqsave(&rmt->n1_ports->lock, flags);
         if (atomic_dec_and_test(&n1_port->pending_ops) &&
             n1_port->state == N1_PORT_STATE_DEALLOCATED) {
                 n1_port_destroy(n1_port);
         }
         spin_unlock_irqrestore(&rmt->n1_ports->lock, flags);
-
         return ret;
 }
 
@@ -846,18 +850,26 @@ static void send_worker(unsigned long o)
                         do {
                                 pdu = ps->rmt_next_scheduled_policy_tx(ps, n1_port);
                                 if (pdu) {
-                                        if (n1_port_write(rmt, n1_port, pdu))
+                                        atomic_dec(&n1_port->n_sdus);
+                                        if (n1_port_write_noclean(rmt, n1_port, pdu))
                                                 LOG_ERR("Could not write scheduled PDU in n1 port");
-                                        pdus_sent++;
+                                        spin_lock(&rmt->n1_ports->lock);
+                                        if (atomic_dec_and_test(&n1_port->pending_ops) &&
+                                            n1_port->state == N1_PORT_STATE_DEALLOCATED) {
+                                                spin_unlock(&n1_port->lock);
+                                                n1_port_destroy(n1_port);
+                                                goto skip_locks;
+                                        }
+                                        spin_unlock(&rmt->n1_ports->lock);
                                 }
+                                pdus_sent++;
                         } while((pdus_sent < MAX_PDUS_SENT_PER_CYCLE) &&
                                 (atomic_read(&n1_port->n_sdus) > 0));
                 }
                 rcu_read_unlock();
                 spin_unlock(&n1_port->lock);
                 spin_lock(&rmt->n1_ports->lock);
-
-
+skip_locks:    ;
         }
         spin_unlock(&rmt->n1_ports->lock);
 
@@ -913,9 +925,8 @@ int rmt_send_port_id(struct rmt * instance,
         spin_unlock_irqrestore(&out_n1_ports->lock, flags);
 
         spin_lock_irqsave(&out_n1_port->lock, flags);
-        atomic_inc(&out_n1_port->n_sdus);
         /* Check if it is needed to schedule */
-        if (atomic_read(&out_n1_port->n_sdus) > 1 || out_n1_port->state ==
+        if (atomic_read(&out_n1_port->n_sdus) > 0 || out_n1_port->state ==
                 N1_PORT_STATE_DISABLED) {
                 rcu_read_lock();
                 ps = container_of(rcu_dereference(instance->base.ps), struct rmt_ps, base);
@@ -925,10 +936,12 @@ int rmt_send_port_id(struct rmt * instance,
                                 ps->rmt_q_monitor_policy_tx(ps, pdu, out_n1_port);
                         }
 
-                        if (ps->rmt_enqueue_scheduling_policy_tx)
+                        if (ps->rmt_enqueue_scheduling_policy_tx) {
                                 ps->rmt_enqueue_scheduling_policy_tx(ps,
                                                                      out_n1_port,
                                                                      pdu);
+                                atomic_inc(&out_n1_port->n_sdus);
+                        }
                 }
                 rcu_read_unlock();
                 spin_unlock_irqrestore(&out_n1_port->lock, flags);
