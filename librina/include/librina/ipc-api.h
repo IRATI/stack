@@ -469,8 +469,7 @@ public:
 	/// for a read operation in this moment
 	/// @throws ReadSDUException if an error happens while reading the SDU
 	/// @throws IPCException if an unknown error happens
-	int readSDU(int portId, void * sdu, int maxBytes);
-	int readSDU(int portId, void * sdu, int maxBytes, unsigned int timeout);
+	int readSDU(int portId, void * sdu, int maxBytes, unsigned int timeout = 0);
 
 	/// Writes an SDU to the flow
 	///
@@ -485,8 +484,7 @@ public:
 	/// for a write operation in this moment
 	/// @throws WriteSDUException if an error happens while writing the SDU
 	/// @throws IPCException if an unknown error happens
-	void writeSDU(int portId, void * sdu, int size);
-	void writeSDU(int portId, void * sdu, int size, unsigned int timeout);
+	void writeSDU(int portId, void * sdu, int size, unsigned int timeout = 0);
 
 	/**
 	 * Returns the flows that are currently allocated

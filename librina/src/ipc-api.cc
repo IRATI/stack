@@ -674,11 +674,6 @@ std::vector<ApplicationRegistration *> IPCManager::getRegisteredApplications()
 	return response;
 }
 
-int IPCManager::readSDU(int portId, void * sdu, int maxBytes)
-{
-	return readSDU(portId, sdu, maxBytes, 0);
-}
-
 int IPCManager::readSDU(int portId, void * sdu, int maxBytes, unsigned int timeout)
 {
 #if STUB_API
@@ -715,11 +710,6 @@ int IPCManager::readSDU(int portId, void * sdu, int maxBytes, unsigned int timeo
 
 	return result;
 #endif
-}
-
-void IPCManager::writeSDU(int portId, void * sdu, int size)
-{
-	writeSDU(portId, sdu, size, 0);
 }
 
 void IPCManager::writeSDU(int portId, void * sdu, int size, unsigned int timeout)
