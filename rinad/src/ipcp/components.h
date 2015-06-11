@@ -478,12 +478,20 @@ public:
 /// Interface that provides the RIB Daemon API
 class IPCPRIBDaemon : public rina::RIBDaemon, public IPCProcessComponent {
 public:
-	IPCPRIBDaemon() { };
+	IPCPRIBDaemon() : wmpi(0) { };
 	virtual ~IPCPRIBDaemon(){};
+
+	rina::WireMessageProviderInterface *wmpi;
 
 	/// Process a Query RIB Request from the IPC Manager
 	/// @param event
 	virtual void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event) = 0;
+	virtual void generateCDAPResponse(int invoke_id,
+			rina::CDAPSessionDescriptor * cdapSessDescr,
+			rina::CDAPMessage::Opcode opcode,
+			const std::string& obj_class,
+			const std::string& obj_name,
+			rina::RIBObjectValue& robject_value) = 0;
 };
 
 /// IPC Process interface
@@ -560,6 +568,13 @@ public:
                                  const std::string& object_name,
                                  const void* object_value);
 	virtual void deleteObject(const void* objectValue);
+};
+
+class IPCMCDAPSessDesc : public rina::CDAPSessionDescriptor {
+public:
+	IPCMCDAPSessDesc(unsigned int seqnum) : rina::CDAPSessionDescriptor(),
+						 req_seqnum(seqnum) { }
+	unsigned int req_seqnum;
 };
 
 }

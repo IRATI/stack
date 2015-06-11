@@ -69,6 +69,8 @@ IPCPRIBDaemonImpl::IPCPRIBDaemonImpl()
 {
 	management_sdu_reader_ = 0;
 	n_minus_one_flow_manager_ = 0;
+	wmpi = rina::WireMessageProviderFactory().createWireMessageProvider();
+
 }
 
 void IPCPRIBDaemonImpl::set_application_process(rina::ApplicationProcess * ap)
@@ -330,6 +332,70 @@ void IPCPRIBDaemonImpl::cdapMessageDelivered(char* message, int length, int port
     }
 
     delete cdapMessage;
+}
+
+void IPCPRIBDaemonImpl::generateCDAPResponse(int invoke_id,
+			rina::CDAPSessionDescriptor * cdapSessDescr,
+			rina::CDAPMessage::Opcode opcode,
+			const std::string& obj_class,
+			const std::string& obj_name,
+			rina::RIBObjectValue& robject_value)
+{
+	IPCMCDAPSessDesc *fwdsess =
+		dynamic_cast<IPCMCDAPSessDesc*>(cdapSessDescr);
+
+	if (!fwdsess) {
+		rina::RemoteProcessId remote_id;
+		remote_id.port_id_ = cdapSessDescr->port_id_;
+
+		remote_operation_response_with_value(opcode, obj_class, obj_name,
+						     robject_value, 0, std::string(),
+						     invoke_id, remote_id,
+						     rina::CDAPMessage::NONE_FLAGS);
+
+	} else {
+		rina::CDAPMessage *rmsg;
+
+		switch (opcode) {
+		case rina::CDAPMessage::M_READ_R:
+			rmsg = rina::CDAPMessage::getReadObjectResponseMessage(
+					rina::CDAPMessage::NONE_FLAGS,
+					obj_class, 0, obj_name, 0,
+					std::string(), invoke_id);
+			break;
+		case rina::CDAPMessage::M_WRITE_R:
+			rmsg = rina::CDAPMessage::getWriteObjectResponseMessage(
+					rina::CDAPMessage::NONE_FLAGS,
+					0, invoke_id, std::string());
+			break;
+		case rina::CDAPMessage::M_START_R:
+			rmsg = rina::CDAPMessage::getStartObjectResponseMessage(
+					rina::CDAPMessage::NONE_FLAGS,
+					0, std::string(), invoke_id);
+			break;
+		case rina::CDAPMessage::M_STOP_R:
+			rmsg = rina::CDAPMessage::getStopObjectResponseMessage(
+					rina::CDAPMessage::NONE_FLAGS,
+					0, std::string(), invoke_id);
+			break;
+		default:
+			LOG_IPCP_WARN("Missing generateCDAPResponse support "
+				      "for opcode %d", opcode);
+			break;
+		}
+
+		encodeObject(robject_value, rmsg);
+
+		// Reply to the IPC Manager, attaching the response message
+		const rina::SerializedObject * so;
+
+		so = wmpi->serializeMessage(*rmsg);
+		delete rmsg;
+
+		rina::extendedIPCManager->forwardCDAPResponse(
+				fwdsess->req_seqnum, *so, 0);
+		delete so;
+	}
 }
 
 }
