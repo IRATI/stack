@@ -69,6 +69,10 @@ static int
 default_rate_reduction(struct dtcp_ps * ps)
 { return common_rate_reduction(ps); }
 
+static int
+default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
+{ return common_rtt_estimator(ps, sn); }
+
 static int dtcp_ps_set_policy_set_param(struct ps_base * bps,
                                        const char    * name,
                                        const char    * value)
@@ -90,7 +94,7 @@ dtcp_ps_default_create(struct rina_component * component)
         ps->flow_init                   = NULL;
         ps->sv_update                   = default_sv_update;
         ps->lost_control_pdu            = default_lost_control_pdu;
-        ps->rtt_estimator               = NULL;
+        ps->rtt_estimator               = default_rtt_estimator;
         ps->retransmission_timer_expiry = NULL;
         ps->received_retransmission     = NULL;
         ps->sender_ack                  = default_sender_ack;

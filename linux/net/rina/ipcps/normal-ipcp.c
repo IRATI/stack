@@ -263,8 +263,10 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
         cep_entry->cep_id = cep_id;
 
         spin_lock(&data->lock);
+
         flow = find_flow(data, port_id);
         if (!flow) {
+                spin_unlock(&data->lock);
                 LOG_ERR("Could not retrieve normal flow to create connection");
                 efcp_connection_destroy(data->efcpc, cep_id);
                 return cep_id_bad();
@@ -297,21 +299,14 @@ static int connection_update_request(struct ipcp_instance_data * data,
                 efcp_connection_destroy(data->efcpc, src_cep_id);
                 return -1;
         }
-        ASSERT(user_ipcp->ops);
-        ASSERT(user_ipcp->ops->flow_binding_ipcp);
-        if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
-                                              port_id,
-                                              n1_ipcp)) {
-                LOG_ERR("Cannot bind flow with user ipcp");
-                efcp_connection_destroy(data->efcpc, src_cep_id);
-                return -1;
-        }
-
         if (efcp_connection_update(data->efcpc,
                                    user_ipcp,
                                    src_cep_id,
                                    dst_cep_id))
                 return -1;
+
+        ASSERT(user_ipcp->ops);
+        ASSERT(user_ipcp->ops->flow_binding_ipcp);
 
         spin_lock(&data->lock);
 
@@ -320,12 +315,22 @@ static int connection_update_request(struct ipcp_instance_data * data,
                 spin_unlock(&data->lock);
                 LOG_ERR("The flow with port-id %d is not pending, "
                         "cannot commit it", port_id);
+                efcp_connection_destroy(data->efcpc, src_cep_id);
+                return -1;
+        }
+        if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
+                                              port_id,
+                                              n1_ipcp)) {
+                spin_unlock(&data->lock);
+                LOG_ERR("Cannot bind flow with user ipcp");
+                efcp_connection_destroy(data->efcpc, src_cep_id);
                 return -1;
         }
 
         if (flow->state != PORT_STATE_PENDING) {
                 spin_unlock(&data->lock);
                 LOG_ERR("Flow on port-id %d already committed", port_id);
+                efcp_connection_destroy(data->efcpc, src_cep_id);
                 return -1;
         }
 
@@ -489,15 +494,6 @@ connection_create_arrived(struct ipcp_instance_data * data,
         INIT_LIST_HEAD(&cep_entry->list);
         cep_entry->cep_id = cep_id;
 
-        spin_lock(&data->lock);
-        flow = find_flow(data, port_id);
-        if (!flow) {
-                spin_unlock(&data->lock);
-                LOG_ERR("Could not create a flow in normal-ipcp");
-                efcp_connection_destroy(data->efcpc, cep_id);
-                return cep_id_bad();
-        }
-
         ipcp = kipcm_find_ipcp(default_kipcm, data->id);
         if (!ipcp) {
                 LOG_ERR("KIPCM could not retrieve this IPCP");
@@ -507,14 +503,22 @@ connection_create_arrived(struct ipcp_instance_data * data,
 
         ASSERT(user_ipcp->ops);
         ASSERT(user_ipcp->ops->flow_binding_ipcp);
+        spin_lock(&data->lock);
+        flow = find_flow(data, port_id);
+        if (!flow) {
+                spin_unlock(&data->lock);
+                LOG_ERR("Could not create a flow in normal-ipcp");
+                efcp_connection_destroy(data->efcpc, cep_id);
+                return cep_id_bad();
+        }
         if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
                                               conn->port_id,
                                               ipcp)) {
+                spin_unlock(&data->lock);
                 LOG_ERR("Could not bind flow with user_ipcp");
                 efcp_connection_destroy(data->efcpc, cep_id);
                 return cep_id_bad();
         }
-
         list_add(&cep_entry->list, &flow->cep_ids_list);
         flow->active = cep_id;
         flow->state = PORT_STATE_ALLOCATED;
@@ -604,6 +608,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
                                 const struct dif_info *     dif_information)
 {
         struct efcp_config * efcp_config;
+        struct rmt_config *  rmt_config;
 
         data->info->dif_name = name_dup(dif_information->dif_name);
         data->address        = dif_information->configuration->address;
@@ -621,7 +626,13 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        efcp_container_set_config(efcp_config, data->efcpc);
+        efcp_container_config_set(efcp_config, data->efcpc);
+
+        rmt_config = dif_information->configuration->rmt_config;
+        if (!rmt_config) {
+        	LOG_ERR("No RMT configuration in the dif_info");
+        	return -1;
+        }
 
         if (rmt_address_set(data->rmt, data->address))
                 return -1;
@@ -629,6 +640,10 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         if (rmt_dt_cons_set(data->rmt, dt_cons_dup(efcp_config->dt_cons))) {
                 LOG_ERR("Could not set dt_cons in RMT");
                 return -1;
+        }
+
+        if (rmt_config_set(data-> rmt, rmt_config)) {
+                LOG_ERR("Could not set RMT conf");
         }
 
         return 0;

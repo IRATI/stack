@@ -40,8 +40,15 @@ void IPCPSecurityManager::set_application_process(rina::ApplicationProcess * ap)
 	}
 }
 
-void IPCPSecurityManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
-	LOG_IPCP_DBG("Set dif configuration: %u", dif_configuration.address_);
+void IPCPSecurityManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
+{
+	std::string ps_name = dif_configuration.sm_configuration_.policy_set_.name_;
+	if (select_policy_set(std::string(), ps_name) != 0) {
+		throw rina::Exception("Cannot create Security Manager policy-set");
+	}
+
+        add_auth_policy_set(rina::IAuthPolicySet::AUTH_NONE);
+        add_auth_policy_set(rina::IAuthPolicySet::AUTH_PASSWORD);
 }
 
 }

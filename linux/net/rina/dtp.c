@@ -413,7 +413,7 @@ static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
         psn  = pci_sequence_number_get((struct pci *) pci);
         if (csn == psn) {
                 LOG_ERR("Another PDU with the same seq_num is in "
-                        "the rtx queue!");
+                        "the seqq");
                 seq_queue_entry_destroy(tmp);
                 return -1;
         }
@@ -927,9 +927,11 @@ EXPORT_SYMBOL(dtp_set_policy_set_param);
 struct dtp * dtp_create(struct dt *         dt,
                         struct rmt *        rmt,
                         struct efcp *       efcp,
+                        const string_t *    dtp_ps_name,
                         struct connection * connection)
 {
         struct dtp * tmp;
+        string_t *   ps_name;
 
         if (!dt) {
                 LOG_ERR("No DT passed, bailing out");
@@ -987,9 +989,13 @@ struct dtp * dtp_create(struct dt *         dt,
 
         rina_component_init(&tmp->base);
 
-        /* Try to select the default policy-set. */
-        if (dtp_select_policy_set(tmp, "", RINA_PS_DEFAULT_NAME)) {
+        ps_name = (string_t *) dtp_ps_name;
+        if (!ps_name || !strcmp(ps_name, ""))
+                ps_name = RINA_PS_DEFAULT_NAME;
+
+        if (dtp_select_policy_set(tmp, "", ps_name)) {
                 dtp_destroy(tmp);
+                LOG_ERR("Could not load DTP PS %s", ps_name);
                 return NULL;
         }
 
@@ -1067,8 +1073,8 @@ int dtp_write(struct dtp * instance,
         struct dtcp *           dtcp;
         struct rtxq *           rtxq;
         struct pdu *            cpdu;
-        struct dtp_ps * ps;
-        seq_num_t               sn;
+        struct dtp_ps *         ps;
+        seq_num_t               sn, csn;
 
         if (!sdu_is_ok(sdu))
                 return -1;
@@ -1135,12 +1141,13 @@ int dtp_write(struct dtp * instance,
          */
         /* Probably needs to be revised */
 
+        csn = nxt_seq_get(sv);
         if (pci_format(pci,
                        sv->connection->source_cep_id,
                        sv->connection->destination_cep_id,
                        sv->connection->source_address,
                        sv->connection->destination_address,
-                       nxt_seq_get(sv),
+                       csn,
                        sv->connection->qos_id,
                        PDU_TYPE_DT)) {
                 pci_destroy(pci);
@@ -1148,8 +1155,8 @@ int dtp_write(struct dtp * instance,
                 return -1;
         }
         sn = dtcp_snd_lf_win(dtcp);
-        if (dt_sv_drf_flag(dt)                         ||
-            (sn == (pci_sequence_number_get(pci) - 1)) ||
+        if (dt_sv_drf_flag(dt)          ||
+            (sn == (csn - 1))           ||
             !sv->rexmsn_ctrl)
                 pci_flags_set(pci, PDU_FLAGS_DATA_RUN);
 
@@ -1177,8 +1184,7 @@ int dtp_write(struct dtp * instance,
         sdu_buffer_disown(sdu);
         sdu_destroy(sdu);
 
-        LOG_DBG("DTP Sending PDU %u (CPU: %d)",
-                pci_sequence_number_get(pci), smp_processor_id());
+        LOG_DBG("DTP Sending PDU %u (CPU: %d)", csn, smp_processor_id());
 
         if (dtcp) {
                 rcu_read_lock();
@@ -1189,7 +1195,7 @@ int dtp_write(struct dtp * instance,
                         if (window_is_closed(sv,
                                              dt,
                                              dtcp,
-                                             pci_sequence_number_get(pci))) {
+                                             csn)) {
                                 if (ps->closed_window(ps, pdu)) {
                                         rcu_read_unlock();
                                         LOG_ERR("Problems with the "

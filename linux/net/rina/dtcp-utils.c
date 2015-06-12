@@ -85,6 +85,7 @@ struct dtcp_config {
         bool                        rtx_ctrl;
         struct dtcp_rxctrl_config * rxctrl_cfg;
         struct policy *             lost_control_pdu;
+        struct policy *             dtcp_ps;
         struct policy *             rtt_estimator;
 };
 
@@ -314,6 +315,8 @@ int dtcp_config_destroy(struct dtcp_config * cfg)
                 dtcp_fctrl_config_destroy(cfg->fctrl_cfg);
         if (cfg->rxctrl_cfg)
                 dtcp_rxctrl_config_destroy(cfg->rxctrl_cfg);
+        if (cfg->dtcp_ps)
+                policy_destroy(cfg->dtcp_ps);
         if (cfg->lost_control_pdu)
                 policy_destroy(cfg->lost_control_pdu);
         if (cfg->rtt_estimator)
@@ -345,6 +348,14 @@ static struct dtcp_config * dtcp_config_create_gfp(gfp_t flags)
           goto clean;
           }
         */
+
+        tmp->dtcp_ps = policy_create();
+        if (!tmp->dtcp_ps) {
+                LOG_ERR("Could not create dtp_ps"
+                        "in dtcp_config_create");
+                goto clean;
+        }
+
 
         tmp->lost_control_pdu = policy_create_gfp(flags);
         if (!tmp->lost_control_pdu) {
@@ -828,6 +839,19 @@ int dtcp_lost_control_pdu_set(struct dtcp_config * cfg,
 }
 EXPORT_SYMBOL(dtcp_lost_control_pdu_set);
 
+int dtcp_ps_set(struct dtcp_config * cfg,
+                struct policy * dtcp_ps)
+{
+        if (!cfg) return -1;
+        if (!dtcp_ps) return -1;
+
+        cfg->dtcp_ps = dtcp_ps;
+
+        return 0;
+}
+EXPORT_SYMBOL(dtcp_ps_set);
+
+
 int dtcp_rtt_estimator_set(struct dtcp_config * cfg,
                            struct policy * rtt_estimator)
 {
@@ -1175,6 +1199,15 @@ struct policy * dtcp_lost_control_pdu(struct dtcp_config * cfg)
         return cfg->lost_control_pdu;
 }
 EXPORT_SYMBOL(dtcp_lost_control_pdu);
+
+struct policy * dtcp_ps(struct dtcp_config * cfg)
+{
+        if (!cfg)
+                return NULL;
+
+        return cfg->dtcp_ps;
+}
+EXPORT_SYMBOL(dtcp_ps);
 
 struct policy * dtcp_rtt_estimator(struct dtcp_config * cfg)
 {
