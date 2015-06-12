@@ -337,6 +337,9 @@ const std::string BaseNetlinkMessage::operationCodeToString(RINANetlinkOperation
 	case RINA_C_IPCM_PLUGIN_LOAD_RESPONSE:
 		result = "57_PLUGIN_LOAD_RESP";
 		break;
+	case RINA_C_IPCM_FWD_CDAP_MSG_REQUEST:
+		result = "58_FWD_CDAP_MSG_REQUEST";
+		break;
 	default:
 		result = "Unknown operation";
 	}
