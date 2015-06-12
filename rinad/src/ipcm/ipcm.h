@@ -462,9 +462,9 @@ public:
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t plugin_load(Addon* callee, Promise* promise,
-						const unsigned short ipcp_id,
-						const std::string& plugin_name,
-						bool load);
+			       const unsigned short ipcp_id,
+			       const std::string& plugin_name,
+			       bool load);
 
 	//
 	// Get information about plugin
@@ -480,15 +480,20 @@ public:
         //
         // Just used for testing support for IPCP RIB delegation
         //
+	// @param promise Promise object containing the future result of the
+	// operation. The promise shall always be accessible until the
+	// operation has been finished, so promise->ret value is different than
+	// IPCM_PENDING.
         // @param ipcp_id the IPCP id
         // @param object_class the class of the object to be read
         // @param object_name the name of the object to be read
         //
-        // @ret IPCM_SUCCESS if the NL message could be send to the IPCP,
+        // @ret IPCM_PENDING if the NL message could be sent to the IPCP,
         // IPCM_FAILURE otherwise
-        ipcm_res_t read_ipcp_ribobj(const unsigned short ipcp_id,
-        			   const std::string& object_class,
-        			   const std::string& object_name);
+	ipcm_res_t read_ipcp_ribobj(Addon* callee, Promise* promise,
+			      const unsigned short ipcp_id,
+			      const std::string& object_class,
+			      const std::string& object_name);
 
 	//
 	// Get the current logging debug level

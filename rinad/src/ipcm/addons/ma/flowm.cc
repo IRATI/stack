@@ -366,7 +366,7 @@ void FlowManager::process_fwd_cdap_msg_response(rina::FwdCDAPMsgEvent* fwdevent)
 	const rina::CDAPMessage *rmsg;
 
 	LOG_DBG("Received forwarded CDAP response, result %d",
-		fwdevent->result);
+			fwdevent->result);
 
 	if (fwdevent->sermsg.empty()) {
 		LOG_DBG("Received empty delegated CDAP response");
@@ -377,7 +377,7 @@ void FlowManager::process_fwd_cdap_msg_response(rina::FwdCDAPMsgEvent* fwdevent)
 	rmsg = wmpi->deserializeMessage(fwdevent->sermsg);
 
 	LOG_DBG("Delegated CDAP response: %s, value %p", rmsg->to_string().c_str(),
-		 rmsg->get_obj_value());
+			rmsg->get_obj_value());
 
 	delete wmpi;
 	delete rmsg;

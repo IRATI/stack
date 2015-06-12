@@ -750,7 +750,7 @@ IPCMConsole::plugin_load_unload(std::vector<std::string>& args, bool load)
 		un = "un";
 	}
 
-	if(IPCManager->plugin_load(this, &promise, ipcp_id, args[2], load) == IPCM_FAILURE ||
+	if (IPCManager->plugin_load(this, &promise, ipcp_id, args[2], load) == IPCM_FAILURE ||
 			promise.wait() != IPCM_SUCCESS) {
 		outstream << "Plugin " << un << "loading failed" << endl;
 		return CMDRETCONT;
@@ -822,6 +822,7 @@ int IPCMConsole::show_dif_templates(std::vector<std::string>& args)
 
 int IPCMConsole::read_ipcp_ribobj(std::vector<std::string>& args)
 {
+	Promise promise;
 	int ipcp_id;
 
 	if (args.size() != 4) {
@@ -839,12 +840,14 @@ int IPCMConsole::read_ipcp_ribobj(std::vector<std::string>& args)
 		return CMDRETCONT;
 	}
 
-	if (IPCManager->read_ipcp_ribobj(ipcp_id, args[2], args[3]) == IPCM_SUCCESS) {
-		outstream << "Successfully sent read object request "
+	if (IPCManager->read_ipcp_ribobj(this, &promise, ipcp_id,
+					 args[2], args[3]) == IPCM_FAILURE ||
+					 promise.wait() != IPCM_SUCCESS) {
+		outstream << "Error occured while forwarding CDAP message to IPCP" << endl;
+	} else {
+		outstream << "Successfully sent M_READ request "
 			  << "with object class = " << args[2]
 			  << " and object name = " << args[3] << endl;
-	} else {
-		outstream << "Error generating or sending message to IPCP" << endl;
 	}
 
 	return CMDRETCONT;
