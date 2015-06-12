@@ -142,7 +142,7 @@ IPCMConsole::IPCMConsole(const unsigned int port_) :
 				"USAGE: plugin-get-info <plugin-name>");
 	commands_map["show-dif-templates"] = ConsoleCmdInfo(&IPCMConsole::show_dif_templates,
 					"USAGE: show-dif-templates");
-	commands_map["read-ipcp-ribojb"] =
+	commands_map["read-ipcp-ribobj"] =
 			ConsoleCmdInfo(&IPCMConsole::read_ipcp_ribobj,
 				"USAGE: read-ipcp-ribobj <ipcp-id> <object-class> "
 				"<object-name>");
