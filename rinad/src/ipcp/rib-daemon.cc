@@ -354,7 +354,7 @@ void IPCPRIBDaemonImpl::generateCDAPResponse(int invoke_id,
 						     rina::CDAPMessage::NONE_FLAGS);
 
 	} else {
-		rina::CDAPMessage *rmsg;
+		rina::CDAPMessage *rmsg = NULL;
 
 		switch (opcode) {
 		case rina::CDAPMessage::M_READ_R:
@@ -383,6 +383,10 @@ void IPCPRIBDaemonImpl::generateCDAPResponse(int invoke_id,
 				      "for opcode %d", opcode);
 			rmsg = 0;
 			break;
+		}
+
+		if (!rmsg) {
+			return;
 		}
 
 		encodeObject(robject_value, rmsg);
