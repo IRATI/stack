@@ -381,6 +381,7 @@ void IPCPRIBDaemonImpl::generateCDAPResponse(int invoke_id,
 		default:
 			LOG_IPCP_WARN("Missing generateCDAPResponse support "
 				      "for opcode %d", opcode);
+			rmsg = 0;
 			break;
 		}
 

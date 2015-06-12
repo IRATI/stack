@@ -1216,6 +1216,37 @@ IPCManager_::plugin_get_info(const std::string& plugin_name,
 	return ret ? IPCM_FAILURE : IPCM_SUCCESS;
 }
 
+ipcm_res_t IPCManager_::read_ipcp_ribobj(const unsigned short ipcp_id,
+			  	  	 const std::string& object_class,
+			  	  	 const std::string& object_name)
+{
+	IPCMIPCProcess * ipcp;
+
+	try {
+		ipcp = lookup_ipcp_by_id(ipcp_id);
+
+		if(!ipcp){
+			LOG_ERR("Invalid IPCP id %hu", ipcp_id);
+			return IPCM_FAILURE;
+		}
+
+		//Auto release the read lock
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
+
+		rina::CDAPMessage *msg = rina::CDAPMessage::getReadObjectRequestMessage(NULL,
+				rina::CDAPMessage::NONE_FLAGS, object_class, 0, object_name, 0);
+
+		ipcp->forwardCDAPMessage(*msg, 78);
+		delete msg;
+
+	} catch  (rina::Exception &e) {
+		LOG_ERR("Problems: %s", e.what());
+		return IPCM_FAILURE;
+	}
+
+	return IPCM_SUCCESS;
+}
+
 ipcm_res_t
 IPCManager_::unregister_app_from_ipcp(Addon* callee, Promise* promise,
 		const rina::ApplicationUnregistrationRequestEvent& req_event,

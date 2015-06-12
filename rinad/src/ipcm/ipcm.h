@@ -474,8 +474,21 @@ public:
 	//               the policy sets supported by the plugin
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_SUCCESS
-        ipcm_res plugin_get_info(const std::string& plugin_name,
-				 std::list<rina::PsInfo>& result);
+        ipcm_res_t plugin_get_info(const std::string& plugin_name,
+				   std::list<rina::PsInfo>& result);
+
+        //
+        // Just used for testing support for IPCP RIB delegation
+        //
+        // @param ipcp_id the IPCP id
+        // @param object_class the class of the object to be read
+        // @param object_name the name of the object to be read
+        //
+        // @ret IPCM_SUCCESS if the NL message could be send to the IPCP,
+        // IPCM_FAILURE otherwise
+        ipcm_res_t read_ipcp_ribobj(const unsigned short ipcp_id,
+        			   const std::string& object_class,
+        			   const std::string& object_name);
 
 	//
 	// Get the current logging debug level
