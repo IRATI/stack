@@ -324,6 +324,10 @@ void DIFTemplateManager::augment_dif_template(rinad::DIFTemplate * dif_template)
 		}
 	}
 
+	if (dif_template->smConfiguration.policy_set_.name_ == std::string()) {
+		dif_template->smConfiguration = default_template->smConfiguration;
+	}
+
 	if (dif_template->addressPrefixes.size() == 0) {
 		for (std::list<rinad::AddressPrefixConfiguration>::iterator it =
 				default_template->addressPrefixes.begin();
