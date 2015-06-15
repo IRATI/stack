@@ -234,6 +234,7 @@ static void dropped_pdus_inc(struct dtp_sv * sv)
         spin_lock_irqsave(&sv->lock, flags);
         sv->dropped_pdus++;
         spin_unlock_irqrestore(&sv->lock, flags);
+        LOG_ERR("PDU Dropped, counter inc");
 }
 
 int dtp_initial_sequence_number(struct dtp * instance)
@@ -1383,7 +1384,7 @@ int dtp_receive(struct dtp * instance,
 
                         return 0;
                 }
-                LOG_DBG("Expecting DRF but not present, dropping PDU %d...",
+                LOG_ERR("Expecting DRF but not present, dropping PDU %d...",
                         seq_num);
                 pdu_destroy(pdu);
                 return 0;
