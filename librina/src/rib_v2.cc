@@ -116,11 +116,9 @@ public:
 						const std::string& fqn_,
 						create_cb_t cb);
 private:
-	template<typename T>
-	bool validateAddObject(const RIBObj<T>* obj);
-	template<typename T, typename R>
-	bool validateRemoveObject(const RIBObj<T>* obj,
-			const RIBObj<R>* parent);
+	bool validateAddObject(const RIBObj* obj);
+	bool validateRemoveObject(const RIBObj* obj,
+			const RIBObj* parent);
 	const cdap_rib::vers_info_t version;
 	std::map<std::string, RIBSchemaObject*> rib_schema;
 	const char separator;
@@ -179,8 +177,8 @@ rib_schema_res RIBSchema::ribSchemaDefContRelation(
 	return (ret.second)? RIB_SUCCESS : RIB_SCHEMA_FORMAT_ERR;
 }
 
-template<typename T>
-bool RIBSchema::validateAddObject(const RIBObj<T>* obj) {
+
+bool RIBSchema::validateAddObject(const RIBObj* obj) {
 
 	(void) obj;
 
@@ -285,7 +283,7 @@ public:
 	///
 	/// @ret instance_id of the objc
 	///
-	int64_t add_obj(const std::string& fqn, RIBObj_** obj);
+	int64_t add_obj(const std::string& fqn, RIBObj* obj);
 
 	//
 	// Get the instance id of an object given a fully qualified name (fqn)
@@ -314,23 +312,6 @@ public:
 	//	does not exist
 	//
 	std::string get_obj_class(const int64_t instance_id);
-
-	//
-	// Get (a copy) of the user data from an object
-	//
-	// @param inst_id The instance id of the object
-	//
-	template <typename T>
-	T get_obj_user_data(const int64_t inst_id);
-
-	//
-	// Set (copy) the user data to an object
-	//
-	// @param inst_id The instance id of the object
-	// @param user_data_ The new user data (T)
-	//
-	template <typename T>
-	void set_obj_user_data(const int64_t inst_id, T user_data_);
 
 	///
 	/// Get the RIB's path separator
@@ -409,10 +390,10 @@ protected:
 private:
 
 	// fqn <-> obj
-	std::map<std::string, RIBObj_*> obj_name_map;
+	std::map<std::string, RIBObj*> obj_name_map;
 
 	// instance id <-> obj
-	std::map<int64_t, RIBObj_*> obj_inst_map;
+	std::map<int64_t, RIBObj*> obj_inst_map;
 
 	// instance id <-> fqn
 	std::map<int64_t, std::string> inst_name_map;
@@ -436,7 +417,7 @@ private:
 	unsigned int num_of_deleg;
 
 	//@internal only; must be called with the rwlock acquired
-	RIBObj_* get_obj(int64_t inst_id);
+	RIBObj* get_obj(int64_t inst_id);
 
 	//@internal: must be called with the rwlock acquired
 	void __remove_obj(int64_t inst_id);
@@ -485,7 +466,7 @@ RIB::RIB(const rib_handle_t& handle_, RIBSchema *const schema_,
 	std::stringstream root_fqn;
 
 	//Create root object
-	RIBObj_* root = new RootObj();
+	RIBObj* root = new RootObj();
 
 	// Root fqn
 	root_fqn << schema->get_root_name() << schema->get_separator();
@@ -526,7 +507,7 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 	obj_reply.value_.message_ = NULL;
 
 	cdap_rib::res_info_t res;
-	RIBObj_* rib_obj = NULL;
+	RIBObj* rib_obj = NULL;
 
 	/* RAII scope for RIB scoped lock (read) */
 	{
@@ -592,7 +573,7 @@ void RIB::delete_request(const cdap_rib::con_handle_t &con,
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 	cdap_rib::res_info_t res;
-	RIBObj_* rib_obj = NULL;
+	RIBObj* rib_obj = NULL;
 	bool delete_flag = false;
 	int64_t id;
 
@@ -661,7 +642,7 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 	obj_reply.value_.message_ = NULL;
 
 	cdap_rib::res_info_t res;
-	RIBObj_* rib_obj = NULL;
+	RIBObj* rib_obj = NULL;
 
 	/* RAII scope for RIB scoped lock (read) */
 	{
@@ -711,7 +692,7 @@ void RIB::cancel_read_request(
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 	cdap_rib::res_info_t res;
-	RIBObj_* rib_obj = NULL;
+	RIBObj* rib_obj = NULL;
 
 	/* RAII scope for RIB scoped lock (read) */
 	{
@@ -764,7 +745,7 @@ void RIB::write_request(const cdap_rib::con_handle_t &con,
 	obj_reply.value_.message_ = NULL;
 
 	cdap_rib::res_info_t res;
-	RIBObj_* rib_obj = NULL;
+	RIBObj* rib_obj = NULL;
 
 	/* RAII scope for RIB scoped lock (read) */
 	{
@@ -822,7 +803,7 @@ void RIB::start_request(const cdap_rib::con_handle_t &con,
 	obj_reply.value_.message_ = NULL;
 
 	cdap_rib::res_info_t res;
-	RIBObj_* rib_obj = NULL;
+	RIBObj* rib_obj = NULL;
 
 	/* RAII scope for RIB scoped lock (read) */
 	{
@@ -879,7 +860,7 @@ void RIB::stop_request(const cdap_rib::con_handle_t &con,
 	obj_reply.value_.message_ = NULL;
 
 	cdap_rib::res_info_t res;
-	RIBObj_* rib_obj = NULL;
+	RIBObj* rib_obj = NULL;
 
 	/* RAII scope for RIB scoped lock (read) */
 	{
@@ -920,7 +901,7 @@ void RIB::stop_request(const cdap_rib::con_handle_t &con,
 }
 
 
-RIBObj_* RIB::get_obj(int64_t inst_id){
+RIBObj* RIB::get_obj(int64_t inst_id){
 	if(obj_inst_map.find(inst_id) != obj_inst_map.end())
 		return obj_inst_map[inst_id];
 	else
@@ -939,6 +920,7 @@ int64_t RIB::__get_obj_inst_id(const std::string& fqn){
 	if(id == -1 && num_of_deleg > 0){
 
 		/* rwlock RAII scope */ {
+
 			ReadScopedLock rlock(cache_rwlock);
 
 			//Check cache
@@ -966,7 +948,7 @@ int64_t RIB::__get_obj_inst_id(const std::string& fqn){
 			return id;
 
 		//Check if it is a delegated obj
-		RIBObj_ *obj = get_obj(id);
+		RIBObj *obj = get_obj(id);
 		if(!obj){
 			assert(0); // neither this one
 			return -1;
@@ -1040,26 +1022,23 @@ void RIB::__validate_fqn(const std::string& fqn){
 	}
 }
 
-int64_t RIB::add_obj(const std::string& fqn, RIBObj_** obj_) {
+int64_t RIB::add_obj(const std::string& fqn, RIBObj* obj) {
 
 	int64_t id, parent_id;
 	std::string parent_fqn = get_parent_fqn(fqn);
-	RIBObj_* obj;
 
-	if(!(*obj_)){
+	if(!obj){
 		LOG_ERR("Unable to add object(%p) at '%s'; object is NULL!",
-								*obj_,
+								obj,
 								fqn.c_str());
 		throw eObjInvalid();
 	}
 	LOG_DBG("Starting add object operation over RIB(%p), of object(%p) with fqn: '%s' (parent '%s')",
 							this,
-							*obj_,
+							obj,
 							fqn.c_str(),
 							parent_fqn.c_str());
 
-	//Recover the non-templatized part
-	obj = *obj_;
 
 	//Validate the name
 	__validate_fqn(fqn);
@@ -1122,8 +1101,6 @@ int64_t RIB::add_obj(const std::string& fqn, RIBObj_** obj_) {
 		}
 		parent_child_list->push_back(id);
 
-		//Mark pointer as acquired and return
-		*obj_ = NULL;
 		LOG_DBG("Object '%s' of class '%s' succesfully added (id:'%" PRId64 "')",
 									fqn.c_str(),
 									obj->get_class().c_str(),
@@ -1132,7 +1109,7 @@ int64_t RIB::add_obj(const std::string& fqn, RIBObj_** obj_) {
 
 	LOG_DBG("Add object operation over RIB(%p), of object(%p) with fqn: '%s', succeeded. Instance id: '%" PRId64 "'",
 								this,
-								*obj_,
+								obj,
 								fqn.c_str(),
 								id);
 
@@ -1142,7 +1119,7 @@ int64_t RIB::add_obj(const std::string& fqn, RIBObj_** obj_) {
 
 void RIB::__remove_obj(int64_t inst_id) {
 
-	RIBObj_* obj;
+	RIBObj* obj;
 	std::list<int64_t> *child_list = NULL, *parent_child_list = NULL;
 	std::list<int64_t>::iterator it;
 	int64_t parent_inst_id;
@@ -1249,7 +1226,7 @@ std::string RIB::get_obj_class(const int64_t inst_id){
 }
 
 std::string RIB::__get_obj_class(const int64_t inst_id){
-	RIBObj_* obj;
+	RIBObj* obj;
 
 	obj = get_obj(inst_id);
 
@@ -1391,7 +1368,7 @@ public:
 	/// @throws eRIBNotFound, eObjExists
 	///
 	int64_t addObjRIB(const rib_handle_t& handle, const std::string& fqn,
-								RIBObj_** obj);
+								RIBObj* obj);
 
 	///
 	/// Retrieve the instance ID of an object given its fully
@@ -1949,7 +1926,6 @@ void RIBDaemon::remove_connection(const cdap_rib::con_handle_t& con){
 
 void RIBDaemon::remote_open_connection_result(const cdap_rib::con_handle_t &con,
 		const cdap_rib::res_info_t &res) {
-
 	// FIXME remove invoke_id
 
 	app_con_callback_->connectResult(res, con);
@@ -1993,20 +1969,18 @@ void RIBDaemon::close_connection(const cdap_rib::con_handle_t &con,
 // Object management
 
 int64_t RIBDaemon::addObjRIB(const rib_handle_t& handle,
-					const std::string& fqn, RIBObj_** obj){
-
+					const std::string& fqn, RIBObj* obj){
 	if(obj == NULL)
 		throw Exception();
 
 	//Mutual exclusion
 	ReadScopedLock rlock(rwlock);
-
 	//Retreive the RIB
 	RIB* rib = getRIB(handle);
 
 	if(rib == NULL){
 		LOG_ERR("Could not add object(%p) to rib('%" PRId64 "'). RIB does not exist",
-								*obj,
+								obj,
 								handle);
 		throw eRIBNotFound();
 	}
@@ -2017,7 +1991,6 @@ int64_t RIBDaemon::addObjRIB(const rib_handle_t& handle,
 int64_t RIBDaemon::getObjInstId(const rib_handle_t& handle,
 				const std::string& fqn,
 				const std::string& class_){
-
 	int64_t id;
 
 	//Mutual exclusion
@@ -2447,7 +2420,7 @@ AbstractEncoder::~AbstractEncoder() {
 }
 
 //RIBObj/RIBObj_
-void RIBObj_::create(const cdap_rib::con_handle_t &con,
+void RIBObj::create(const cdap_rib::con_handle_t &con,
 				const std::string& fqn,
 				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
@@ -2466,7 +2439,7 @@ void RIBObj_::create(const cdap_rib::con_handle_t &con,
 	operation_not_supported(res);
 }
 
-bool RIBObj_::delete_(const cdap_rib::con_handle_t &con,
+bool RIBObj::delete_(const cdap_rib::con_handle_t &con,
 					const std::string& fqn,
 					const std::string& class_,
 					const cdap_rib::filt_info_t &filt,
@@ -2482,7 +2455,7 @@ bool RIBObj_::delete_(const cdap_rib::con_handle_t &con,
 }
 
 // FIXME remove name, it is not needed
-void RIBObj_::read(const cdap_rib::con_handle_t &con,
+void RIBObj::read(const cdap_rib::con_handle_t &con,
 					const std::string& fqn,
 					const std::string& class_,
 					const cdap_rib::filt_info_t &filt,
@@ -2498,7 +2471,7 @@ void RIBObj_::read(const cdap_rib::con_handle_t &con,
 	operation_not_supported(res);
 }
 
-void RIBObj_::cancelRead(const cdap_rib::con_handle_t &con,
+void RIBObj::cancelRead(const cdap_rib::con_handle_t &con,
 					const std::string& fqn,
 					const std::string& class_,
 					const cdap_rib::filt_info_t &filt,
@@ -2512,7 +2485,7 @@ void RIBObj_::cancelRead(const cdap_rib::con_handle_t &con,
 	operation_not_supported(res);
 }
 
-void RIBObj_::write(const cdap_rib::con_handle_t &con,
+void RIBObj::write(const cdap_rib::con_handle_t &con,
 				const std::string& fqn,
 				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
@@ -2530,7 +2503,7 @@ void RIBObj_::write(const cdap_rib::con_handle_t &con,
 	operation_not_supported(res);
 }
 
-void RIBObj_::start(const cdap_rib::con_handle_t &con,
+void RIBObj::start(const cdap_rib::con_handle_t &con,
 			const std::string& fqn,
 			const std::string& class_,
 			const cdap_rib::filt_info_t &filt,
@@ -2548,7 +2521,7 @@ void RIBObj_::start(const cdap_rib::con_handle_t &con,
 	operation_not_supported(res);
 }
 
-void RIBObj_::stop(const cdap_rib::con_handle_t &con,
+void RIBObj::stop(const cdap_rib::con_handle_t &con,
 			const std::string& fqn,
 			const std::string& class_,
 			const cdap_rib::filt_info_t &filt,
@@ -2566,7 +2539,7 @@ void RIBObj_::stop(const cdap_rib::con_handle_t &con,
 	operation_not_supported(res);
 }
 
-void RIBObj_::operation_not_supported(cdap_rib::res_info_t& res) {
+void RIBObj::operation_not_supported(cdap_rib::res_info_t& res) {
 	res.code_ = cdap_rib::CDAP_OP_NOT_SUPPORTED;
 }
 
@@ -2631,8 +2604,8 @@ rib_handle_t RIBDaemonProxy::get(const cdap_rib::vers_info_t& v,
 
 //RIB object mamangement
 
-int64_t RIBDaemonProxy::__addObjRIB(const rib_handle_t& h,
-					const std::string& fqn, RIBObj_** o){
+int64_t RIBDaemonProxy::addObjRIB(const rib_handle_t& h,
+					const std::string& fqn, RIBObj* o){
 	return ribd->addObjRIB(h, fqn, o);
 }
 

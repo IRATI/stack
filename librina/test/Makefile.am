@@ -123,7 +123,7 @@ check_PROGRAMS =				\
 	test-cdap				\
 	test-rib_v2
 
-XFAIL_TESTS =					\
+XFAIL_TESTS =				\	
 	test-03
 
 PASS_TESTS =					\
