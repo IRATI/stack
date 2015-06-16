@@ -260,6 +260,8 @@ public:
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	void startObject(const void* object);
 	void stopObject(const void* object);
+	void remoteReadObject(int invoke_id, rina::CDAPSessionDescriptor *
+			      cdapSessionDescriptor);
 	std::string get_displayable_value();
 
 private:
