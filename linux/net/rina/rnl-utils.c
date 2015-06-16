@@ -577,19 +577,26 @@ rnl_ipcp_conn_destroy_req_msg_attrs_destroy(struct rnl_ipcp_conn_destroy_req_msg
 static int
 rnl_rmt_mod_pfte_msg_attrs_destroy(struct rnl_rmt_mod_pfte_msg_attrs * attrs)
 {
-        struct pdu_ft_entry * pos, * nxt;
+        struct modpdufwd_entry * e_pos, * e_nxt;
 
         if (!attrs)
                 return -1;
 
-        list_for_each_entry_safe(pos, nxt,
-                                 &attrs->pft_entries,
-                                 next) {
+        list_for_each_entry_safe(e_pos, e_nxt,
+                                 &attrs->pft_entries, next) {
+		struct port_id_altlist * a_pos, * a_nxt;
 
-                if (pos->ports) rkfree(pos->ports);
+		list_for_each_entry_safe(a_pos, a_nxt,
+					 &e_pos->port_id_altlists, next) {
+			if (a_pos->ports) {
+				rkfree(a_pos->ports);
+			}
+			list_del(&a_pos->next);
+			rkfree(a_pos);
+		}
 
-                list_del(&pos->next);
-                rkfree(pos);
+                list_del(&e_pos->next);
+                rkfree(e_pos);
         }
         LOG_DBG("rnl_rmt_mod_pfte_msg_attrs destroy correctly");
         rkfree(attrs);
@@ -802,12 +809,79 @@ static int parse_flow_spec(struct nlattr * fspec_attr,
         return 0;
 }
 
-static int parse_pdu_fte_port_list_entries(struct nlattr *       nested_attr,
-                                           struct pdu_ft_entry * entry)
+static int parse_port_id_altlist_entries(struct nlattr * nested_attr,
+					 struct port_id_altlist *alts)
 {
         int             rem = 0;
-        int             i   = 0;
+	int		i = 0;
         struct nlattr * nla;
+
+        if (!nested_attr) {
+                LOG_ERR("Bogus nested attribute (ports) passed, bailing out");
+                return -1;
+        }
+
+        if (!alts) {
+                LOG_ERR("Bogus port_id_altlist entry passed, bailing out");
+                return -1;
+        }
+
+        alts->num_ports	= nla_len(nested_attr);
+        alts->ports	= rkzalloc(alts->num_ports, GFP_KERNEL);
+        LOG_DBG("Allocated %zd bytes in %pk", alts->num_ports, alts->ports);
+
+        if (!alts->ports) {
+                LOG_ERR("Could not allocate memory for port-ids");
+                return -1;
+        }
+
+        for (nla = (struct nlattr*) nla_data(nested_attr),
+                     rem = nla_len(nested_attr);
+             nla_ok(nla, rem);
+             nla = nla_next(nla, &rem), i++) {
+                alts->ports[i] = nla_get_u32(nla);
+        }
+
+        alts->num_ports = (size_t) i;
+
+        if (rem)
+                LOG_WARN("Missing bits to pars");
+
+        return 0;
+}
+
+static int parse_port_id_altlist(struct nlattr * attr,
+			     struct port_id_altlist *alts)
+{
+        struct nla_policy attr_policy[PIA_ATTR_MAX + 1];
+        struct nlattr *   attrs[PIA_ATTR_MAX + 1];
+
+        attr_policy[PIA_ATTR_PORTIDS].type = NLA_NESTED;
+        attr_policy[PIA_ATTR_PORTIDS].len  = 0;
+
+        if (nla_parse_nested(attrs,
+                             PIA_ATTR_MAX,
+                             attr,
+                             attr_policy) < 0)
+                return -1;
+
+        if (attrs[PIA_ATTR_PORTIDS]) {
+                if (parse_port_id_altlist_entries(attrs[PIA_ATTR_PORTIDS],
+                                                   alts))
+                        return -1;
+
+        }
+
+        return 0;
+}
+
+static int parse_pdu_fte_altlists(struct nlattr *       nested_attr,
+                                  struct modpdufwd_entry * entry)
+{
+        int             rem = 0;
+        struct nlattr * nla;
+        int             entries_with_problems = 0;
+        int             total_entries         = 0;
 
         if (!nested_attr) {
                 LOG_ERR("Bogus nested attribute (ports) passed, bailing out");
@@ -819,35 +893,42 @@ static int parse_pdu_fte_port_list_entries(struct nlattr *       nested_attr,
                 return -1;
         }
 
-        entry->ports_size = nla_len(nested_attr);
-        entry->ports      = rkzalloc(entry->ports_size, GFP_KERNEL);
-
-        LOG_DBG("Allocated %zd bytes in %pk", entry->ports_size, entry->ports);
-
-        if (!entry->ports) {
-                LOG_ERR("Could not allocate memory for ports");
-                return -1;
-        }
+	INIT_LIST_HEAD(&entry->port_id_altlists);
 
         for (nla = (struct nlattr*) nla_data(nested_attr),
                      rem = nla_len(nested_attr);
              nla_ok(nla, rem);
-             nla = nla_next(nla, &rem)) {
-                entry->ports[i] = nla_get_u32(nla);
-                i++;
-        }
+             nla = nla_next(nla, &rem), total_entries++) {
+		struct port_id_altlist *alts;
 
-        entry->ports_size = (size_t) i;
+		alts = rkzalloc(sizeof(*entry), GFP_KERNEL);
+		if (!alts) {
+			entries_with_problems++;
+			continue;
+		}
+
+		if (parse_port_id_altlist(nla, alts)) {
+			rkfree(alts);
+			entries_with_problems++;
+			continue;
+		}
+
+		list_add(&alts->next, &entry->port_id_altlists);
+        }
 
         if (rem)
                 LOG_WARN("Missing bits to pars");
 
-        return 0;
+        if (entries_with_problems > 0)
+                LOG_WARN("Problems parsing %d out of %d entries",
+                         entries_with_problems,
+                         total_entries);
 
+        return 0;
 }
 
 static int parse_pdu_fte_list_entry(struct nlattr *       attr,
-                                    struct pdu_ft_entry * pfte_struct)
+                                    struct modpdufwd_entry * mpfe)
 {
         struct nla_policy attr_policy[PFTELE_ATTR_MAX + 1];
         struct nlattr *   attrs[PFTELE_ATTR_MAX + 1];
@@ -856,8 +937,8 @@ static int parse_pdu_fte_list_entry(struct nlattr *       attr,
         attr_policy[PFTELE_ATTR_ADDRESS].len  = 4;
         attr_policy[PFTELE_ATTR_QOSID].type   = NLA_U32;
         attr_policy[PFTELE_ATTR_QOSID].len    = 4;
-        attr_policy[PFTELE_ATTR_PORTIDS].type = NLA_NESTED;
-        attr_policy[PFTELE_ATTR_PORTIDS].len  = 0;
+        attr_policy[PFTELE_ATTR_PORT_ID_ALTLISTS].type = NLA_NESTED;
+        attr_policy[PFTELE_ATTR_PORT_ID_ALTLISTS].len  = 0;
 
         if (nla_parse_nested(attrs,
                              PFTELE_ATTR_MAX,
@@ -866,16 +947,16 @@ static int parse_pdu_fte_list_entry(struct nlattr *       attr,
                 return -1;
 
         if (attrs[PFTELE_ATTR_ADDRESS])
-                pfte_struct->destination =
+                mpfe->fwd_info =
                         nla_get_u32(attrs[PFTELE_ATTR_ADDRESS]);
 
         if (attrs[PFTELE_ATTR_QOSID])
-                pfte_struct->qos_id =
+                mpfe->qos_id =
                         nla_get_u32(attrs[PFTELE_ATTR_QOSID]);
 
-        if (attrs[PFTELE_ATTR_PORTIDS]) {
-                if (parse_pdu_fte_port_list_entries(attrs[PFTELE_ATTR_PORTIDS],
-                                                    pfte_struct))
+        if (attrs[PFTELE_ATTR_PORT_ID_ALTLISTS]) {
+                if (parse_pdu_fte_altlists(attrs[PFTELE_ATTR_PORT_ID_ALTLISTS],
+                                           mpfe))
                         return -1;
 
         }
@@ -1490,8 +1571,6 @@ static int parse_dtcp_fctrl_config(struct nlattr * attr,
         attr_policy[DFCC_ATTR_RBUFFER_THRES].len             = 4;
         attr_policy[DFCC_ATTR_CLOSED_WINDOW_POLICY].type     = NLA_NESTED;
         attr_policy[DFCC_ATTR_CLOSED_WINDOW_POLICY].len      = 0;
-        attr_policy[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY].type = NLA_NESTED;
-        attr_policy[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY].len  = 0;
         attr_policy[DFCC_ATTR_RECON_FLOW_CTRL_POLICY].type   = NLA_NESTED;
         attr_policy[DFCC_ATTR_RECON_FLOW_CTRL_POLICY].len    = 0;
         attr_policy[DFCC_ATTR_RCVING_FLOW_CTRL_POLICY].type  = NLA_NESTED;
@@ -1547,11 +1626,6 @@ static int parse_dtcp_fctrl_config(struct nlattr * attr,
         if (attrs[DFCC_ATTR_CLOSED_WINDOW_POLICY])
                 if (parse_policy(attrs[DFCC_ATTR_CLOSED_WINDOW_POLICY],
                                  dtcp_closed_window(cfg)))
-                        return -1;
-
-        if (attrs[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY])
-                if (parse_policy(attrs[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY],
-                                 dtcp_flow_control_overrun(cfg)))
                         return -1;
 
         if (attrs[DFCC_ATTR_RECON_FLOW_CTRL_POLICY])
@@ -2086,7 +2160,7 @@ static int parse_list_pfte_conf_e(struct nlattr *     nested_attr,
                                   struct rnl_rmt_mod_pfte_msg_attrs * msg)
 {
         struct nlattr *       nla;
-        struct pdu_ft_entry * entry;
+        struct modpdufwd_entry * entry;
         int                   rem                   = 0;
         int                   entries_with_problems = 0;
         int                   total_entries         = 0;
@@ -2759,12 +2833,11 @@ static int send_nl_unicast_msg(struct net *     net,
         return 0;
 }
 
-static int format_pft_entry_port_list(port_id_t *      ports,
-                                      size_t           ports_size,
-                                      struct sk_buff * skb_out)
+static int format_port_id_altlist(struct port_id_altlist *pos,
+				  struct sk_buff * skb_out)
 {
         struct nlattr * msg_ports;
-        int i = 0;
+	int i;
 
         if (!skb_out) {
                 LOG_ERR("Bogus input parameter(s), bailing out");
@@ -2772,17 +2845,50 @@ static int format_pft_entry_port_list(port_id_t *      ports,
         }
 
         if (!(msg_ports =
-              nla_nest_start(skb_out, PFTELE_ATTR_PORTIDS))) {
+              nla_nest_start(skb_out, PIA_ATTR_PORTIDS))) {
                 nla_nest_cancel(skb_out, msg_ports);
                 return -1;
         }
 
-        for (i = 0; i < ports_size; i++) {
-                if (nla_put_u32(skb_out, i, ports[i]))
+        for (i = 1; i <= pos->num_ports; i++) {
+                if (nla_put_u32(skb_out, i, pos->ports[i-1]))
                         return -1;
         }
 
         nla_nest_end(skb_out, msg_ports);
+
+	return 0;
+}
+
+static int format_pft_entry_altlists(struct list_head * entries,
+                                         struct sk_buff * skb_out)
+{
+        struct nlattr * msg_alts;
+	struct port_id_altlist * pos, * nxt;
+
+
+        if (!skb_out) {
+                LOG_ERR("Bogus input parameter(s), bailing out");
+                return -1;
+        }
+
+        if (!(msg_alts =
+              nla_nest_start(skb_out, PFTELE_ATTR_PORT_ID_ALTLISTS))) {
+                nla_nest_cancel(skb_out, msg_alts);
+                return -1;
+        }
+
+	list_for_each_entry_safe(pos, nxt, entries, next) {
+		if (format_port_id_altlist(pos,
+                                           skb_out))
+                        return format_fail("rnl_ipcm_pft_dump_resp_msg");
+
+		list_del(&pos->next);
+		rkfree(pos);
+	}
+
+        nla_nest_end(skb_out, msg_alts);
+
         return 0;
 }
 
@@ -2790,7 +2896,7 @@ static int format_pft_entries_list(struct list_head * entries,
                                    struct sk_buff *   skb_out)
 {
         struct nlattr * msg_entry;
-        struct pdu_ft_entry * pos, *nxt;
+        struct modpdufwd_entry * pos, * nxt;
         int i = 0;
 
         if (!skb_out) {
@@ -2807,18 +2913,16 @@ static int format_pft_entries_list(struct list_head * entries,
                         return format_fail("rnl_ipcm_pft_dump_resp_msg");
                 }
 
-                if ((nla_put_u32(skb_out,
+                if (nla_put_u32(skb_out,
                                  PFTELE_ATTR_ADDRESS,
-                                 pos->destination)                         ||
-                     nla_put_u32(skb_out, PFTELE_ATTR_QOSID, pos->qos_id)) ||
-                    format_pft_entry_port_list(pos->ports,
-                                               pos->ports_size,
-                                               skb_out))
+                                 pos->fwd_info)                        ||
+                     nla_put_u32(skb_out, PFTELE_ATTR_QOSID, pos->qos_id) ||
+			format_pft_entry_altlists(&pos->port_id_altlists,
+						      skb_out))
                         return format_fail("rnl_ipcm_pft_dump_resp_msg");
 
                 nla_nest_end(skb_out, msg_entry);
                 list_del(&pos->next);
-                rkfree(pos->ports);
                 rkfree(pos);
         }
 

@@ -139,7 +139,7 @@ int wrapped_main(int argc, char * argv[])
 	}
 
 	//Initialize IPCM
-	rinad::IPCManager->init(loglevel);
+	rinad::IPCManager->init(loglevel, conf);
 
 	//Dump the config
 	if(dump)

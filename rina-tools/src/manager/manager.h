@@ -44,22 +44,6 @@ class Application {
 
 };
 
-class ConnectionCallback : public rina::cdap::CDAPCallbackInterface {
- public:
-	ConnectionCallback(rina::cdap::CDAPProviderInterface **prov);
-	void open_connection(const rina::cdap_rib::con_handle_t &con,
-				const rina::cdap_rib::flags_t &flags,
-				int message_id);
-	void remote_create_result(const rina::cdap_rib::con_handle_t &con,
-					const rina::cdap_rib::obj_info_t &obj,
-					const rina::cdap_rib::res_info_t &res);
-	void remote_read_result(const rina::cdap_rib::con_handle_t &con,
-				const rina::cdap_rib::obj_info_t &obj,
-				const rina::cdap_rib::res_info_t &res);
- private:
-	rina::cdap::CDAPProviderInterface **prov_;
-};
-
 class Manager : public Application {
  public:
 	Manager(const std::string& dif_name, const std::string& apn,
@@ -67,17 +51,20 @@ class Manager : public Application {
 	void run();
 	~Manager();
  protected:
-        void startWorker(rina::FlowInformation flow);
+        void startWorker(rina::FlowInformation &flow);
         void operate(rina::FlowInformation flow);
-        void cacep(rina::FlowInformation flow);
-        void createIPCP(rina::FlowInformation flow);
-        void queryRIB(rina::FlowInformation flow);
+        bool cacep(rina::FlowInformation &flow);
+        bool createIPCP_1(rina::FlowInformation &flow);
+        bool createIPCP_2(rina::FlowInformation &flow);
+        bool createIPCP_3(rina::FlowInformation &flow);
+        void queryRIB(rina::FlowInformation &flow, std::string name);
  private:
+        const std::string IPCP_1 = "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=4";
+        const std::string IPCP_2 = "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=6";
+        const std::string IPCP_3 = "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=4";
 	std::string dif_name_;
 	bool client_app_reg_;
 	rina::cdap_rib::con_handle_t con_;
-	static const std::string mad_name;
-	static const std::string mad_instance;
 	rina::cdap::CDAPProviderInterface *cdap_prov_;
 };
 #endif//MANAGER_HPP

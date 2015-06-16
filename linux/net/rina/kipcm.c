@@ -1112,13 +1112,10 @@ static int notify_ipcp_modify_pfte(void *             data,
         struct rnl_msg *                    msg;
         struct ipcp_instance *              ipc_process;
         ipc_process_id_t                    ipc_id;
-        struct pdu_ft_entry *               entry;
+        struct modpdufwd_entry *               entry;
 
         int (* op)(struct ipcp_instance_data * data,
-                   address_t                   address,
-                   qos_id_t                    qos_id,
-                   port_id_t *                 ports,
-                   size_t                      size);
+		   struct modpdufwd_entry       * entry);
 
         if (!data) {
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
@@ -1182,11 +1179,7 @@ static int notify_ipcp_modify_pfte(void *             data,
         list_for_each_entry(entry, &attrs->pft_entries, next) {
                 ASSERT(entry);
 
-                if (op(ipc_process->data,
-                       entry->destination,
-                       entry->qos_id,
-                       entry->ports,
-                       entry->ports_size)) {
+                if (op(ipc_process->data, entry)) {
                         LOG_ERR("There were some problematic entries");
                         rnl_msg_destroy(msg);
                         return -1;
@@ -2199,8 +2192,14 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
                 return port_id_bad();
         }
 
+        ASSERT(ipc_process->ops);
+
         user_ipc_process = ipcp_imap_find_by_name(kipcm->instances,
                                                   process_name);
+
+        if (ipc_process->ops->flow_prebind) {
+                ipc_process->ops->flow_prebind(ipc_process->data, user_ipc_process, pid);
+        }
 
         if (user_ipc_process) {
                 KIPCM_UNLOCK(kipcm);
@@ -2247,8 +2246,6 @@ int kipcm_deallocate_port(struct kipcm *   kipcm,
                         "for port id: %d", port_id);
                 return -1;
         }
-
-        kfa_port_id_release(kipcm->kfa, port_id);
 
         return 0;
 }

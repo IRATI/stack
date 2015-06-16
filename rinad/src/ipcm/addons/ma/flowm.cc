@@ -223,6 +223,7 @@ void ActiveWorker::allocateFlow()
 	//TODO Quality of Service specification
 	//FIXME: Move to connection
 	rina::FlowSpecification qos;
+	qos.maxAllowableGap = 0;
 
 	//Perform the flow allocation
 	seqnum = rina::ipcManager->requestFlowAllocationInDIF(
