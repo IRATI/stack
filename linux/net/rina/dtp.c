@@ -1296,6 +1296,7 @@ int dtp_receive(struct dtp * instance,
         bool             rtx_ctrl = false;
         seq_num_t        max_sdu_gap;
         unsigned long    flags;
+        struct rqueue *  to_post;
         /*struct rqueue *       to_post;*/
 
         LOG_DBG("DTP receive started...");
@@ -1483,15 +1484,22 @@ int dtp_receive(struct dtp * instance,
         }
 
         spin_lock_irqsave(&instance->seqq->lock, flags);
+        to_post = rqueue_create_ni();
+        if (!to_post) {
+                LOG_ERR("Could not create to_post queue");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
         LWE = dt_sv_rcv_lft_win(dt);
         LOG_DBG("DTP receive LWE: %u", LWE);
         while (pdu && (seq_num == LWE + 1)) {
                 dt_sv_rcv_lft_win_set(dt, seq_num);
 
-                pdu_post(instance, pdu);
+                rqueue_tail_push(to_post, pdu);
 
-                pdu     = seq_queue_pop(instance->seqq->queue);
-                LWE     = dt_sv_rcv_lft_win(dt);
+                pdu = seq_queue_pop(instance->seqq->queue);
+                LWE = dt_sv_rcv_lft_win(dt);
                 if (!pdu)
                         break;
                 seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
@@ -1506,6 +1514,14 @@ int dtp_receive(struct dtp * instance,
                 LOG_DBG("Going to restart A timer with t = %d", a/AF);
                 rtimer_restart(instance->timers.a, a/AF);
         }
+
+        while (!rqueue_is_empty(to_post)) {
+                pdu = (struct pdu *) rqueue_head_pop(to_post);
+                if (pdu)
+                        pdu_post(instance, pdu);
+        }
+        rqueue_destroy(to_post, (void (*)(void *)) pdu_destroy);
+
 
         if (dtcp) {
                 if (dtcp_sv_update(dtcp, seq_num)) {
