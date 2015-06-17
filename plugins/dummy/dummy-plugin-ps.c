@@ -48,35 +48,35 @@ static int __init mod_init(void)
 
         ret = rmt_ps_publish(&rmt_factory);
         if (ret) {
-                printk("Failed to publish RMT policy set factory");
+                LOG_ERR("Failed to publish RMT policy set factory");
                 return -1;
         }
 
-        LOG_INFO("RMT default policy set loaded successfully");
+        LOG_INFO("RMT dummy policy set loaded successfully");
 
         ret = dtp_ps_publish(&dtp_factory);
         if (ret) {
-                printk("Failed to publish DTP policy set factory");
+                LOG_ERR("Failed to publish DTP policy set factory");
                 return -1;
         }
 
-        printk("DTP default policy set loaded successfully");
+        LOG_INFO("DTP dummy policy set loaded successfully");
 
         ret = dtcp_ps_publish(&dtcp_factory);
         if (ret) {
-                printk("Failed to publish DTCP policy set factory");
+                LOG_ERR("Failed to publish DTCP policy set factory");
                 return -1;
         }
 
-        printk("DTCP default policy set loaded successfully");
+        LOG_INFO("DTCP dummy policy set loaded successfully");
 
         ret = pft_ps_publish(&pft_factory);
         if (ret) {
-                printk("Failed to publish PFT policy set factory");
+                LOG_ERR("Failed to publish PFT policy set factory");
                 return -1;
         }
 
-        printk("PFT default policy set loaded successfully");
+        LOG_INFO("PFT dummy policy set loaded successfully");
 
         return 0;
 }
@@ -87,35 +87,35 @@ static void __exit mod_exit(void)
 
         ret = rmt_ps_unpublish(RINA_DUMMY_PS_NAME);
         if (ret) {
-                printk("Failed to unpublish Dummy RMT policy set factory");
+                LOG_ERR("Failed to unpublish Dummy RMT policy set factory");
                 return;
         }
 
-        printk("Dummy RMT default policy set unloaded successfully");
+        LOG_INFO("Dummy RMT dummy policy set unloaded successfully");
 
         ret = dtp_ps_unpublish(RINA_DUMMY_PS_NAME);
         if (ret) {
-                printk("Failed to unpublish Dummy DTP policy set factory");
+                LOG_ERR("Failed to unpublish Dummy DTP policy set factory");
                 return;
         }
 
-        printk("Dummy DTP default policy set unloaded successfully");
+        LOG_INFO("Dummy DTP dummy policy set unloaded successfully");
 
         ret = dtcp_ps_unpublish(RINA_DUMMY_PS_NAME);
         if (ret) {
-                printk("Failed to unpublish Dummy DTCP policy set factory");
+                LOG_ERR("Failed to unpublish Dummy DTCP policy set factory");
                 return;
         }
 
-        printk("Dummy DTCP default policy set unloaded successfully");
+        LOG_INFO("Dummy DTCP dummy policy set unloaded successfully");
 
         ret = pft_ps_unpublish(RINA_DUMMY_PS_NAME);
         if (ret) {
-                printk("Failed to unpublish Dummy PFT policy set factory");
+                LOG_ERR("Failed to unpublish Dummy PFT policy set factory");
                 return;
         }
 
-        printk("Dummy PFT default policy set unloaded successfully");
+        LOG_INFO("Dummy PFT dummy policy set unloaded successfully");
 }
 
 module_init(mod_init);
