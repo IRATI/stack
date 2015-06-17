@@ -616,6 +616,7 @@ public:
         SerializedObject(char* message, int size);
         ~SerializedObject();
         SerializedObject& operator=(const SerializedObject &other);
+	bool empty() const { return message_ == 0; }
         int size_;
         char* message_;
 
