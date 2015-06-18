@@ -9,12 +9,12 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -486,11 +486,18 @@ int putEFCPConfigurationObject(nl_msg* netlinkMessage,
 
 EFCPConfiguration * parseEFCPConfigurationObject(nlattr *nested);
 
+/* PFTConfiguration CLASS */
+enum PFTConfigurationAttributes {
+        PFTC_ATTR_POLICY_SET = 1,
+        __PFTC_ATTR_MAX,
+};
+
+#define PFTC_ATTR_MAX (__PFTC_ATTR_MAX -1)
+
 /* RMTConfiguration CLASS */
 enum RMTConfigurationAttributes {
-        RMTC_ATTR_QUEUE_MONITOR_POLICY = 1,
-        RMTC_ATTR_SCHEDULING_POLICY,
-        RMTC_ATTR_MAX_QUEUE_POLICY,
+        RMTC_ATTR_POLICY_SET = 1,
+        RMTC_ATTR_PFT_CONF,
         __RMTC_ATTR_MAX,
 };
 
@@ -501,42 +508,10 @@ int putRMTConfigurationObject(nl_msg* netlinkMessage,
 
 RMTConfiguration * parseRMTConfigurationObject(nlattr *nested);
 
-/* LinkStateRoutingConfiguration CLASS */
-enum LinkStateRoutingConfigurationAttributes {
-	LSRC_OBJECT_MAX_AGE = 1,
-	LSRC_WAIT_UNTIL_READ,
-	LSRC_WAIT_UNTIL_ERROR,
-	LSRC_WAIT_UNTIL_PDUFT_COM,
-	LSRC_WAIT_UNTIL_FSDB_PROP,
-	LSRC_WAIT_UNTIL_AGE_INC,
-	LSRC_ROUTING_ALG,
-	__LSRC_ATTR_MAX,
-};
-
-#define LSRC_ATTR_MAX (__LSRC_ATTR_MAX -1)
-
-int putLinkStateRoutingConfigurationObject(nl_msg* netlinkMessage,
-		const LinkStateRoutingConfiguration& object);
-
-LinkStateRoutingConfiguration * parseLinkStateRoutingConfigurationObject(nlattr *nested);
-
-/* PDUFTableGeneratorConfiguration CLASS */
-enum PDUFTableGeneratorConfigurationAttributes {
-	PDUFTC_PDU_FTG_POLICY = 1,
-	PDUFTC_LINK_STATE_CONFIG,
-	__PDUFTC_ATTR_MAX,
-};
-
-#define PDUFTC_ATTR_MAX (__PDUFTC_ATTR_MAX -1)
-
-int putPDUFTableGeneratorConfigurationObject(nl_msg* netlinkMessage,
-		const PDUFTableGeneratorConfiguration& object);
-
-PDUFTableGeneratorConfiguration * parsePDUFTableGeneratorConfigurationObject(nlattr *nested);
-
 /* FlowAllocatorConfiguration CLASS */
 enum FlowAllocatorConfigurationAttributes {
 	FLAC_MAX_CREATE_FLOW_RETRIES = 1,
+	FLAC_POLICY_SET,
 	FLAC_ALLOC_NOTIFY_POLICY,
 	FLAC_ALLOC_RETRY_POLICY,
 	FLAC_NEW_FLOW_REQ_POLICY,
@@ -553,11 +528,7 @@ FlowAllocatorConfiguration * parseFlowAllocatorConfigurationObject(nlattr *neste
 
 /* EnrollmentTaskConfiguration CLASS */
 enum EnrollmentTaskConfigurationAttributes {
-	ENTC_ENROLLMENT_TIMEOUT_MS = 1,
-	ENTC_WHATCHDOG_PERIOD_MS,
-	ENTC_NEIGH_DECLARED_DEAD_INT_MS,
-	ENTC_MAX_NUM_ENROLL_ATTEMPTS,
-	ENTC_NEIGH_ENROLLER_PERIOD_MS,
+	ENTC_POLICY_SET = 1,
 	__ENTC_ATTR_MAX,
 };
 
@@ -614,6 +585,7 @@ AddressingConfiguration * parseAddressingConfigurationObject(nlattr *nested);
 /* NamespaceManagerConfiguration CLASS */
 enum NamespaceManagerConfigurationAttributes {
 	NSMC_ADDRESSING_CONF = 1,
+	NSMC_POLICY_SET,
 	__NSMC_ATTR_MAX,
 };
 
@@ -626,7 +598,8 @@ NamespaceManagerConfiguration * parseNamespaceManagerConfigurationObject(nlattr 
 
 /* SecurityManagerConfiguration CLASS */
 enum SecurityManagerConfigurationAttributes {
-	SECMANC_DIF_MEM_ACC_CON_POLICY = 1,
+	SECMANC_POLICY_SET = 1,
+	SECMANC_DIF_MEM_ACC_CON_POLICY,
 	SECMANC_NEW_FLOW_ACC_CON_POLICY,
 	SECMANC_AUTH_POLICY,
 	__SECMANC_ATTR_MAX,
@@ -639,18 +612,57 @@ int putSecurityManagerConfigurationObject(nl_msg* netlinkMessage,
 
 SecurityManagerConfiguration * parseSecurityManagerConfigurationObject(nlattr *nested);
 
+/* PDUFTGConfiguration CLASS */
+enum PDUFTGConfigurationAttributes {
+	PDUFTGC_POLICY_SET = 1,
+	__PDUFTGC_ATTR_MAX,
+};
+
+#define PDUFTGC_ATTR_MAX (__PDUFTGC_ATTR_MAX -1)
+
+int putPDUFTGConfigurationObject(nl_msg* netlinkMessage,
+		const PDUFTGConfiguration& object);
+
+PDUFTGConfiguration * parsePDUFTGConfigurationObject(nlattr *nested);
+
+/* ResourceAllocatorConfiguration CLASS */
+enum ResourceAllocatorConfigurationAttributes {
+	RAC_PDUFTG_CONF = 1,
+	__RAC_ATTR_MAX,
+};
+
+#define RAC_ATTR_MAX (__RAC_ATTR_MAX -1)
+
+int putResourceAllocatorConfigurationObject(nl_msg* netlinkMessage,
+		const ResourceAllocatorConfiguration& object);
+
+ResourceAllocatorConfiguration * parseResourceAllocatorConfigurationObject(nlattr *nested);
+
+/* RoutingConfiguration CLASS */
+enum RoutingConfigurationAttributes {
+	ROUTE_POLICY_SET = 1,
+	__ROUTE_ATTR_MAX,
+};
+
+#define ROUTE_ATTR_MAX (__ROUTE_ATTR_MAX -1)
+
+int putRoutingConfigurationObject(nl_msg* netlinkMessage,
+		const RoutingConfiguration& object);
+
+RoutingConfiguration * parseRoutingConfigurationObject(nlattr *nested);
+
 /* DIF Configuration CLASS */
 enum DIFConfigurationAttributes {
 	DCONF_ATTR_PARAMETERS = 1,
 	DCONF_ATTR_ADDRESS,
 	DCONF_ATTR_EFCP_CONF,
 	DCONF_ATTR_RMT_CONF,
-	DCONF_ATTR_PDUFT_CONF,
 	DCONF_ATTR_FA_CONF,
 	DCONF_ATTR_ET_CONF,
 	DCONF_ATTR_NSM_CONF,
 	DCONF_ATTR_SM_CONF,
-        DCONF_ATTR_POLICY_SETS,
+	DCONF_ATTR_RA_CONF,
+	DCONF_ATTR_ROUTING_CONF,
 	__DCONF_ATTR_MAX,
 };
 
@@ -1089,6 +1101,7 @@ enum DTCPConfigAttributes {
         DCA_ATTR_FLOW_CONTROL_CONFIG,
         DCA_ATTR_RETX_CONTROL,
         DCA_ATTR_RETX_CONTROL_CONFIG,
+        DCA_ATTR_DTCP_POLICY_SET,
         DCA_ATTR_LOST_CONTROL_PDU_POLICY,
         DCA_ATTR_RTT_EST_POLICY,
         __DCA_ATTR_MAX,
@@ -1106,6 +1119,7 @@ parseDTCPConfigObject(nlattr *nested);
 enum ConnectionPoliciesAttributes {
 	CPA_ATTR_DTCP_PRESENT = 1,
 	CPA_ATTR_DTCP_CONFIG,
+        CPA_ATTR_DTP_POLICY_SET,
 	CPA_ATTR_RCVR_TIMER_INAC_POLICY,
 	CPA_ATTR_SNDR_TIMER_INAC_POLICY,
 	CPA_ATTR_INIT_SEQ_NUM_POLICY,

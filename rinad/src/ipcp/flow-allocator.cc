@@ -230,6 +230,11 @@ void FlowAllocator::set_application_process(rina::ApplicationProcess * ap)
 void FlowAllocator::set_dif_configuration(
 		const rina::DIFConfiguration& dif_configuration)
 {
+	std::string ps_name = dif_configuration.fa_configuration_.policy_set_.name_;
+	if (select_policy_set(std::string(), ps_name) != 0) {
+		throw rina::Exception("Cannot create Flow Allocator policy-set");
+	}
+
 	//Create QoS cubes RIB objects
 	std::list<rina::QoSCube*>::const_iterator it;
 	std::stringstream ss;

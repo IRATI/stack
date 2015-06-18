@@ -53,14 +53,16 @@ message dtcpConfig_t {  //configuration of DTCP for a connection
     optional dtcpRtxControlConfig_t rtxControlConfig = 4;          //the rtx control configuration
     optional policyDescriptor_t lostcontrolpdupolicy = 5;          //Determines what action to take when the PM detects that a control PDU (Ack or Flow Control) may have been lost
     optional policyDescriptor_t rttestimatorpolicy = 6;            //Executed by the sender to estimate the duration of the retx timer
+    optional policyDescriptor_t dtcppolicyset = 7;                 //it indicates the name of the policy set fot the dtcp
 }
 
 message connectionPolicies_t { //configuration of the policies and parameters of an EFCP connection
 	optional bool dtcpPresent = 1;                                 //indicates if this connection is using DTCP
 	optional dtcpConfig_t dtcpConfiguration = 2;                   //the DTCP Configuration for this connection
 	optional policyDescriptor_t rcvrtimerinactivitypolicy = 3;     //If no PDUs arrive in this time period, the receiver should expect a DRF in the next Transfer PDU
-    optional policyDescriptor_t sendertimerinactiviypolicy = 4;    //This timer is used to detect long periods of no traffic, indicating that a DRF should be sent
+        optional policyDescriptor_t sendertimerinactiviypolicy = 4;    //This timer is used to detect long periods of no traffic, indicating that a DRF should be sent
 	optional policyDescriptor_t initialseqnumpolicy = 5;           //allows some discretion in selecting the initial sequence number, when DRF is going to be sent
 	optional uint64 seqnumrolloverthreshold = 6;                   //the sequence number rollover threshold
 	optional uint32 initialATimer = 7;                             //maximum time that a receiver will wait before sending an Ack
+        optional policyDescriptor_t dtppolicyset = 8;                  //it indicates the name of the policy set fot the dtp
 }

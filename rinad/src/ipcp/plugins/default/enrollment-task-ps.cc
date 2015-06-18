@@ -1429,7 +1429,8 @@ IEnrollmentStateMachine * EnrollmentTaskPs::createEnrollmentStateMachine(
 
 void EnrollmentTaskPs::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
 {
-	timeout = dif_configuration.et_configuration_.enrollment_timeout_in_ms_;
+	rina::PolicyConfig psconf = dif_configuration.et_configuration_.policy_set_;
+	timeout = psconf.get_param_value_as_int(EnrollmentTask::ENROLL_TIMEOUT_IN_MS);
 }
 
 int EnrollmentTaskPs::set_policy_set_param(const std::string& name,

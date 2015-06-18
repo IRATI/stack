@@ -148,6 +148,7 @@ enum dtcp_config_params_attrs_list {
         DCA_ATTR_FLOW_CONTROL_CONFIG,
         DCA_ATTR_RETX_CONTROL,
         DCA_ATTR_RETX_CONTROL_CONFIG,
+        DCA_ATTR_DTCP_POLICY_SET,
         DCA_ATTR_LOST_CONTROL_PDU_POLICY,
         DCA_ATTR_RTT_EST_POLICY,
         __DCA_ATTR_MAX,
@@ -157,6 +158,7 @@ enum dtcp_config_params_attrs_list {
 enum conn_policies_params_attrs_list {
         CPP_ATTR_DTCP_PRESENT = 1,
         CPP_ATTR_DTCP_CONFIG,
+        CPP_ATTR_DTP_POLICY_SET,
         CPP_ATTR_RCVR_TIMER_INAC_POLICY,
         CPP_ATTR_SNDR_TIMER_INAC_POLICY,
         CPP_ATTR_INIT_SEQ_NUM_POLICY,
@@ -414,11 +416,31 @@ enum efcp_config_attrs_list {
 };
 #define EFCPC_ATTR_MAX (__EFCPC_ATTR_MAX -1)
 
+enum pff_config_attrs_list {
+        PFFC_ATTR_POLICY_SET = 1,
+        __PFFC_ATTR_MAX,
+};
+#define PFFC_ATTR_MAX (__PFFC_ATTR_MAX -1)
+
+enum rmt_config_attrs_list {
+        RMTC_ATTR_POLICY_SET = 1,
+        RMTC_ATTR_PFF_CONFIG,
+        __RMTC_ATTR_MAX,
+};
+#define RMTC_ATTR_MAX (__RMTC_ATTR_MAX -1)
+
 enum dif_config_attrs_list {
         DCONF_ATTR_IPCP_CONFIG_ENTRIES = 1,
         DCONF_ATTR_ADDRESS,
         DCONF_ATTR_EFCPC,
         DCONF_ATTR_RMTC,
+        /* From here not used in kernel */
+	DCONF_ATTR_FAC,
+	DCONF_ATTR_ETC,
+	DCONF_ATTR_NSMC,
+	DCONF_ATTR_SMC,
+	DCONF_ATTR_RAC,
+	DCONF_ATTR_ROUTINGC,
         __DCONF_ATTR_MAX,
 };
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)
