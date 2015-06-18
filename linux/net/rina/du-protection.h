@@ -33,16 +33,9 @@ bool    dup_ttl_set(struct pdu_ser * pdu, size_t value);
 ssize_t dup_ttl_decrement(struct pdu_ser * pdu);
 bool    dup_ttl_is_expired(struct pdu_ser * pdu);
 
-int dup_encrypt_data(const char              * src,
-                     char                    * dst,
-                     ssize_t                   src_size,
-                     ssize_t                   dst_size,
-                     struct crypto_blkcipher * blkcipher);
-
-int dup_decrypt_data(const char              * src,
-                     char                    * dst,
-                     ssize_t                   src_size,
-                     ssize_t                   dst_size,
-                     struct crypto_blkcipher * blkcipher);
+bool 	dup_encrypt_data(struct pdu_ser * 	   pdu,
+                     	 struct crypto_blkcipher * blkcipher);
+bool 	dup_decrypt_data(struct pdu_ser * 	   pdu,
+                         struct crypto_blkcipher * blkcipher);
 
 #endif

@@ -766,11 +766,11 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
                 }
 
                 /* Encrypt */
-                dup_encrypt_data(buffer_data_ro(buf),
-                                 buffer_data_rw(buf),
-                                 encrypted_size,
-                                 encrypted_size,
-                                 blkcipher);
+                if (!dup_encrypt_data(tmp, blkcipher)) {
+                	LOG_ERR("Failed to encrypt PDU");
+                	pdu_ser_destroy(tmp);
+                	return NULL;
+                }
         }
 
         /* FIXME: this should be moved to specific policy code */
@@ -850,15 +850,12 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                 flags,
         /* FIXME: this should be moved to specific policy code */
         if (blkcipher != NULL && dup_conf != NULL &&
         		dup_conf->enable_decryption){
+        	if (!dup_decrypt_data(pdu, blkcipher)) {
+        		LOG_ERR("Failed to decrypt PDU");
+        		return NULL;
+        	}
+
                 tmp_buff = pdu_ser_buffer(pdu);
-                ASSERT(tmp_buff);
-
-                dup_decrypt_data(buffer_data_ro(tmp_buff),
-                                 buffer_data_rw(tmp_buff),
-                                 buffer_length(tmp_buff),
-                                 buffer_length(tmp_buff),
-                                 blkcipher);
-
                 data = buffer_data_ro(tmp_buff);
                 pad_len = data[buffer_length(tmp_buff)-1];
 

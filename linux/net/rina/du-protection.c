@@ -210,54 +210,72 @@ bool dup_ttl_is_expired(struct pdu_ser * pdu)
 }
 EXPORT_SYMBOL(dup_ttl_is_expired);
 
-int dup_encrypt_data(const char              * src,
-                     char                    * dst,
-                     ssize_t                   src_size,
-                     ssize_t                   dst_size,
-                     struct crypto_blkcipher * blkcipher)
+bool dup_encrypt_data(struct pdu_ser * 	        pdu,
+                      struct crypto_blkcipher * blkcipher)
 {
     struct blkcipher_desc desc;
-    struct scatterlist sg_src;
-    struct scatterlist sg_dst;
+    struct scatterlist    sg_src;
+    struct scatterlist    sg_dst;
+    struct buffer *       buf;
+    ssize_t 		  buffer_size;
+    const void *	  data;
 
     if (blkcipher == NULL){
         LOG_ERR("invalid blk cipher structure!");
-        return -1;
+        return false;
     }
+
+    if (!pdu_ser_is_ok(pdu))
+	    return false;
 
     desc.flags = 0;
     desc.tfm = blkcipher;
+    buf = pdu_ser_buffer(pdu);
+    buffer_size = buffer_length(buf);
+    data = buffer_data_ro(buf);
 
-    sg_init_one(&sg_src, src, src_size);
-    sg_init_one(&sg_dst, dst, dst_size);
+    sg_init_one(&sg_src, data, buffer_size);
+    sg_init_one(&sg_dst, data, buffer_size);
 
-    crypto_blkcipher_encrypt(&desc, &sg_dst, &sg_src, src_size);
-    return 0;
+    if (crypto_blkcipher_encrypt(&desc, &sg_dst, &sg_src, buffer_size)) {
+	    return false;
+    }
+
+    return true;
 }
 EXPORT_SYMBOL(dup_encrypt_data);
 
-int dup_decrypt_data(const char              * src,
-                     char                    * dst,
-                     ssize_t                   src_size,
-                     ssize_t                   dst_size,
-                     struct crypto_blkcipher * blkcipher)
+bool dup_decrypt_data(struct pdu_ser * 	        pdu,
+                      struct crypto_blkcipher * blkcipher)
 {
     struct blkcipher_desc desc;
-    struct scatterlist sg_src;
-    struct scatterlist sg_dst;
+    struct scatterlist    sg_src;
+    struct scatterlist    sg_dst;
+    struct buffer *       buf;
+    ssize_t 		  buffer_size;
+    const void *	  data;
 
     if (blkcipher == NULL){
         LOG_ERR("invalid blk cipher structure!");
-        return -1;
+        return false;
     }
+
+    if (!pdu_ser_is_ok(pdu))
+	    return false;
 
     desc.flags = 0;
     desc.tfm = blkcipher;
+    buf = pdu_ser_buffer(pdu);
+    buffer_size = buffer_length(buf);
+    data = buffer_data_ro(buf);
 
-    sg_init_one(&sg_src, src, src_size);
-    sg_init_one(&sg_dst, dst, dst_size);
+    sg_init_one(&sg_src, data, buffer_size);
+    sg_init_one(&sg_dst, data, buffer_size);
 
-    crypto_blkcipher_decrypt(&desc, &sg_dst, &sg_src, src_size);
-    return 0;
+    if (crypto_blkcipher_decrypt(&desc, &sg_dst, &sg_src, buffer_size)) {
+	    return false;
+    }
+
+    return true;
 }
 EXPORT_SYMBOL(dup_decrypt_data);
