@@ -716,11 +716,11 @@ public:
 
 	/**
 	 * Forward to the IPC Manager a CDAP response message
-	 * @param event The event that triggered the operation
+	 * @param event Seqnum of the event that triggered the operation
 	 * @param The serialized CDAP message to forward
 	 * @throws FwdCDAPMsgException
 	 */
-	void forwardCDAPResponse(const rina::FwdCDAPMsgEvent& event,
+	void forwardCDAPResponse(unsigned sequenceNumber,
 				 const rina::SerializedObject& sermsg,
 				 int result);
 };

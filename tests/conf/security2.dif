@@ -9,31 +9,30 @@
            "default" : {
               "authPolicy" : {
               	"name" : "PSOC_authentication-ssh2",
-          	"version" : "1",
-          	"parameters" : [ {
-          	   "name" : "keyExchangeAlg",
-          	   "value" : "EDH"
-          	}, {
-                   "name" : "keystore",
-                   "value" : "/usr/local/irati/etc/private_key.pem"
-                }, {
-                   "name" : "keystorePass",
-                   "value" : "test"
-                } ]
-
-              },
-              "encryptPolicy" : {
+          		"version" : "1",
+          		"parameters" : [ {
+          	   		"name" : "keyExchangeAlg",
+          	   		"value" : "EDH"
+          	   	}, {
+          	   		"name" : "keystore",
+               		"value" : "/usr/local/irati/etc/private_key.pem"
+            	}, {
+               		"name" : "keystorePass",
+               		"value" : "test"
+           		} ]
+               },
+           	   "encryptPolicy" : {
                  "name" : "default",
                  "version" : "1",
                  "parameters" : [ {
-          	   "name" : "encryptAlg",
-          	   "value" : "AES128"
-          	}, {
-          	   "name" : "macAlg",
-          	   "value" : "SHA1"
-          	}, {
-          	   "name" : "compressAlg",
-          	   "value" : "default"
+          	   		"name" : "encryptAlg",
+          	   		"value" : "AES128"
+          		 }, {
+          	   		"name" : "macAlg",
+          	   		"value" : "SHA1"
+          		 }, {
+          	   		"name" : "compressAlg",
+          	   		"value" : "default"
                 } ]
               },
               "TTLPolicy" : {

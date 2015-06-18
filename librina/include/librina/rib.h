@@ -761,10 +761,34 @@ public:
         				rina::CDAPSessionDescriptor * descriptor,
         				const std::string& session_state);
 
+        void encodeObject(RIBObjectValue& object_value, rina::CDAPMessage * message);
+
         /// CDAP Message handlers that have sent a CDAP message and are waiting for a reply
         ThreadSafeMapOfPointers<int, ICDAPResponseMessageHandler> handlers_waiting_for_reply_;
 
         CDAPSessionManagerInterface * cdap_session_manager_;
+
+protected:
+	void remote_operation_on_object(rina::CDAPMessage::Opcode opcode,
+			const std::string& object_class, const std::string& object_name,
+			int scope, const RemoteProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler);
+
+	void remote_operation_on_object_with_value(rina::CDAPMessage::Opcode opcode,
+			const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int scope,
+			const RemoteProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler);
+
+	void remote_operation_response_with_value(rina::CDAPMessage::Opcode opcode,
+			const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int result, const std::string result_reason,
+			int invoke_id, const RemoteProcessId& remote_id, rina::CDAPMessage::Flags flags);
+
+	void remote_operation_response(rina::CDAPMessage::Opcode opcode,
+			const std::string& object_class, const std::string& object_name,
+			int result, const std::string result_reason,
+			int invoke_id, const RemoteProcessId& remote_id);
 
 private:
         RIB rib_;
@@ -789,33 +813,10 @@ private:
         /// @return true if candidate is on list, false otherwise
         bool isOnList(int candidate, std::list<int> list);
 
-        void encodeObject(RIBObjectValue& object_value, rina::CDAPMessage * message);
-
         void sendMessageToProcess(const rina::CDAPMessage & cdapMessage, const RemoteProcessId& remote_id,
                         ICDAPResponseMessageHandler * response_handler);
 
         void assign_invoke_id_if_needed(CDAPMessage * message, bool invoke_id);
-
-        void remote_operation_on_object(rina::CDAPMessage::Opcode opcode,
-        		const std::string& object_class, const std::string& object_name,
-        		int scope, const RemoteProcessId& remote_id,
-        		ICDAPResponseMessageHandler * response_handler);
-
-        void remote_operation_on_object_with_value(rina::CDAPMessage::Opcode opcode,
-        		const std::string& object_class, const std::string& object_name,
-        		RIBObjectValue& object_value, int scope,
-        		const RemoteProcessId& remote_id,
-        		ICDAPResponseMessageHandler * response_handler);
-
-        void remote_operation_response_with_value(rina::CDAPMessage::Opcode opcode,
-        		const std::string& object_class, const std::string& object_name,
-                        RIBObjectValue& object_value, int result, const std::string result_reason,
-                        int invoke_id, const RemoteProcessId& remote_id, rina::CDAPMessage::Flags flags);
-
-        void remote_operation_response(rina::CDAPMessage::Opcode opcode,
-                		const std::string& object_class, const std::string& object_name,
-                                int result, const std::string result_reason,
-                                int invoke_id, const RemoteProcessId& remote_id);
 };
 
 ///Object exchanged between applications processes that

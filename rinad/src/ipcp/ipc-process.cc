@@ -57,8 +57,6 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         state = NOT_INITIALIZED;
         lock_ = new rina::Lockable();
 
-	wmpi = rina::WireMessageProviderFactory().createWireMessageProvider();
-
         // Load the default pluggable components
         if (plugin_load(PLUGINSDIR, "default")) {
 		throw rina::Exception("Failed to load default plugin");
@@ -636,7 +634,6 @@ void IPCProcessImpl::processPluginLoadRequestEvent(
 
 void IPCProcessImpl::processFwdCDAPMsgEvent(
                         const rina::FwdCDAPMsgEvent& event) {
-		rina::ScopedLock g(*lock_);
 	const rina::CDAPMessage * msg;
 	rina::CDAPSessionDescriptor * session_descr;
 
@@ -645,23 +642,18 @@ void IPCProcessImpl::processFwdCDAPMsgEvent(
 		return;
 	}
 
-	msg = wmpi->deserializeMessage(event.sermsg);
+	msg = rib_daemon_->wmpi->deserializeMessage(event.sermsg);
 
 	LOG_IPCP_INFO("Forwarded CDAP Message:\n%s",
 		      msg->to_string().c_str());
 
-	session_descr = new rina::CDAPSessionDescriptor();
+	session_descr = new IPCMCDAPSessDesc(event.sequenceNumber);
 
 	rib_daemon_->processIncomingCDAPMessage(msg, session_descr,
 			rina::CDAPSessionInterface::SESSION_STATE_CON);
 
 	delete msg;
 	delete session_descr;
-
-	// Reply to the IPC Manager. For now we don't attach a CDAP
-	// response message
-	rina::extendedIPCManager->forwardCDAPResponse(event,
-					rina::SerializedObject(), 0);
 
         return;
 }

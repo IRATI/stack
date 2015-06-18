@@ -489,7 +489,7 @@ public:
 	CDAPSessionDescriptor();
 	CDAPSessionDescriptor(int port_id);
 	CDAPSessionDescriptor(int abs_syntax, const AuthPolicy& auth_policy);
-	~CDAPSessionDescriptor();
+	virtual ~CDAPSessionDescriptor();
 	/// The source naming information is always the naming information of the local Application process
 	const ApplicationProcessNamingInformation get_source_application_process_naming_info();
 	/// The destination naming information is always the naming information of the remote application process

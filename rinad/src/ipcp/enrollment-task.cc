@@ -1075,6 +1075,25 @@ void OperationalStatusRIBObject::stopObject(const void* object) {
 	}
 }
 
+void OperationalStatusRIBObject::remoteReadObject(int invoke_id,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor)
+{
+	try {
+		rina::RIBObjectValue robject_value;
+		robject_value.type_ = rina::RIBObjectValue::inttype;
+		robject_value.int_value_ = ipc_process_->get_operational_state();
+
+		rib_daemon_->generateCDAPResponse(invoke_id, cdapSessionDescriptor,
+					rina::CDAPMessage::M_READ_R,
+					EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_CLASS,
+					EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_NAME,
+					robject_value);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems generating or sending CDAP Message: %s",
+				e.what());
+	}
+}
+
 void OperationalStatusRIBObject::sendErrorMessage(const rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	try{
 		rina::RemoteProcessId remote_id;
