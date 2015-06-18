@@ -28,16 +28,27 @@
 #include "debug.h"
 #include "rds/rmem.h"
 #include "rmt-ps.h"
+#include "pci.h"
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
+struct reg_cycle_t {
+        timeout_t t_start;
+        timeout_t t_last_start;
+        timeout_t t_end;
+        uint      sum_area;
+        uint      avg_len;
+};
+
 struct cas_rmt_queue {
-        struct rfifo *    queue;
-        unsigned int      key;
-        unsigned int      max_q;
-        unsigned int      avg_q;
-        long     int      n;
-        struct hlist_node hlist;
+        struct rfifo *       queue;
+        unsigned int         key;
+        unsigned int         max_q;
+        struct {
+                struct reg_cycle_t prev_cycle;
+                struct reg_cycle_t cur_cycle;
+        } reg_cycles;
+        struct hlist_node    hlist;
 };
 
 struct cas_rmt_ps_data {
@@ -56,9 +67,14 @@ static struct cas_rmt_queue * cas_queue_create(unsigned int key)
                 return NULL;
         }
 
-        tmp->key = key;
-        tmp->avg_q = 0;
-        tmp->n     = 0;
+        tmp->key                                = key;
+        tmp->reg_cycles.prev_cycle.t_start      = 0;
+        tmp->reg_cycles.prev_cycle.t_last_start = 0;
+        tmp->reg_cycles.prev_cycle.t_end        = 0;
+        tmp->reg_cycles.prev_cycle.sum_area     = 0;
+        tmp->reg_cycles.prev_cycle.avg_len      = 0;
+        tmp->reg_cycles.cur_cycle = tmp->reg_cycles.prev_cycle;
+
         INIT_HLIST_NODE(&tmp->hlist);
 
         return tmp;
@@ -113,7 +129,10 @@ static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
                                         struct rmt_n1_port * port)
 {
         struct cas_rmt_queue * q;
-        ssize_t                cur_q;
+        ssize_t                cur_qlen;
+        struct reg_cycle_t *   prev_cycle, * cur_cycle;
+        struct pci *           pci;
+        pdu_flags_t            pci_flags;
 
         ASSERT(ps);
         ASSERT(ps->priv);
@@ -127,12 +146,43 @@ static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
                 return;
         }
 
-        cur_q    = rfifo_length(q->queue) + 1;
-        q->avg_q = ((q->n * q->avg_q + cur_q) / (q->n + 1));
-        q->n     = q->n + 1;
+        cur_qlen   = rfifo_length(q->queue);
+        prev_cycle = &q->reg_cycles.prev_cycle;
+        cur_cycle  = &q->reg_cycles.cur_cycle;
 
-        LOG_ERR("Average queue length for N-1 port %u just calculated: %u",
-                port->port_id, q->avg_q);
+        /* new cycle */
+        if (cur_qlen == 0) {
+                *prev_cycle = *cur_cycle;
+
+                cur_cycle->t_start = jiffies;
+                /* to handle first cycle->*/
+                if (prev_cycle->t_start == 0)
+                        prev_cycle->t_start = cur_cycle->t_start;
+                cur_cycle->t_last_start = cur_cycle->t_start;
+                cur_cycle->t_end        = cur_cycle->t_start;
+                cur_cycle->sum_area     = 0;
+        } else {
+                cur_cycle->t_end        = jiffies;
+                cur_cycle->sum_area    += cur_qlen * (cur_cycle->t_end - cur_cycle->t_last_start);
+                cur_cycle->t_last_start = cur_cycle->t_end;
+        }
+
+        cur_cycle->avg_len = (prev_cycle->sum_area + cur_cycle->sum_area) / (cur_cycle->t_end - prev_cycle->t_start);
+
+        LOG_ERR("The length for N-1 port %u just calculated is: %u",
+                port->port_id, cur_cycle->avg_len);
+
+        if (cur_cycle->avg_len >= 1) {
+                LOG_INFO("Congestion detected in port %u, marking packets...",
+                         port->port_id);
+                pci = pdu_pci_get_rw(pdu);
+                if (!pci) {
+                        LOG_ERR("No PCI to mark in this PDU...");
+                        return;
+                }
+                pci_flags = pci_flags_get(pci);
+                pci_flags_set(pci, pci_flags |= PDU_FLAGS_EXPLICIT_CONGESTION);
+        }
 
         return;
 
