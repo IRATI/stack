@@ -100,7 +100,7 @@ struct efcp_config {
 
 /* Represents the configuration of the PFF */
 struct pff_config {
-	/* The PS name for the PDU Forwarding Table (Next hop) */
+	/* The PS name for the PDU Forwarding Function */
 	struct policy * policy_set;
 };
 
@@ -109,9 +109,8 @@ struct rmt_config {
 	/* The PS name for the RMT */
 	struct policy * policy_set;
 
-	/* The configuration of the PDU Forwarding Table subcomponent */
+	/* The configuration of the PDU Forwarding Function subcomponent */
 	struct pff_config * pff_conf;
-
 };
 
 /* Represents a DIF configuration (policies, parameters, etc) */
