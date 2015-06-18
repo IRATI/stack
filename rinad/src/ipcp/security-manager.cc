@@ -52,6 +52,7 @@ void IPCPSecurityManager::set_dif_configuration(const rina::DIFConfiguration& di
 	// If no default authentication policy is specified, use AUTH_NONE
 	if (config.default_auth_profile.authPolicy.name_ == std::string()) {
 		config.default_auth_profile.authPolicy.name_ = rina::IAuthPolicySet::AUTH_NONE;
+		config.default_auth_profile.authPolicy.version_ = RINA_DEFAULT_POLICY_VERSION;
 	}
 
 	std::string ps_name = dif_configuration.sm_configuration_.policy_set_.name_;
