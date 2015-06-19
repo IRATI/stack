@@ -113,8 +113,8 @@ EXPORT_SYMBOL(common_sender_ack);
 int
 common_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
 {
-        struct dtp * dtp;
-        seq_num_t    seq_num;
+        struct dtp *       dtp;
+        const struct pci * pci;
 
         struct dtcp * dtcp = ps->dm;
 
@@ -131,9 +131,9 @@ common_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
 
         /* Invoke delimiting and update left window edge */
 
-        seq_num = process_A_expiration(dtp, dtcp);
+        pci = process_A_expiration(dtp, dtcp);
 
-        return dtcp_sv_update(ps->dm, seq_num);
+        return dtcp_sv_update(ps->dm, pci);
 }
 EXPORT_SYMBOL(common_sending_ack);
 

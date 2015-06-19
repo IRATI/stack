@@ -1374,25 +1374,31 @@ int dtcp_destroy(struct dtcp * instance)
         return 0;
 }
 
-int dtcp_sv_update(struct dtcp * dtcp, seq_num_t seq)
+int dtcp_sv_update(struct dtcp * dtcp, const struct pci * pci)
 {
         struct dtcp_ps *     ps;
         int                  retval = 0;
         struct dtcp_config * dtcp_cfg;
-
         bool                 flow_ctrl;
         bool                 win_based;
         bool                 rate_based;
         bool                 rtx_ctrl;
+        seq_num_t            seq;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+        if (!pci) {
+                LOG_ERR("No PCI instance passed, cannot run policy");
                 return -1;
         }
 
         dtcp_cfg = dtcp_config_get(dtcp);
         if (!dtcp_cfg)
                 return -1;
+
+        seq = pci_sequence_number_get(pci);
 
         rcu_read_lock();
         ps = container_of(rcu_dereference(dtcp->base.ps),

@@ -575,7 +575,7 @@ static void tf_receiver_inactivity(void * data)
  * function. This has to be refactored and evaluate how much code would be
  * repeated
  */
-seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
+const struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 {
         struct dt *              dt;
         struct dtp_sv *          sv;
@@ -591,9 +591,9 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         struct seq_queue_entry * pos, * n;
         struct dtp_ps *          ps;
         struct dtcp_ps *         dtcp_ps;
-        seq_num_t                ret;
         unsigned long            flags;
         struct rqueue *          to_post;
+        const struct pci *       pci, * pci_ret = NULL;
 
         ASSERT(dtp);
 
@@ -630,12 +630,11 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         to_post = rqueue_create_ni();
         if (!to_post) {
                 LOG_ERR("Could not create to_post list in A timer");
-                return -1;
+                return NULL;
         }
 
         spin_lock_irqsave(&seqq->lock, flags);
         LWE = dt_sv_rcv_lft_win(dt);
-        ret = LWE;
         LOG_DBG("LWEU: Original LWE = %u", LWE);
         LOG_DBG("LWEU: MAX GAPS     = %u", max_sdu_gap);
 
@@ -645,10 +644,11 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         spin_unlock_irqrestore(&seqq->lock, flags);
 
                         LOG_ERR("Bogus data, bailing out");
-                        return LWE;
+                        return NULL;
                 }
 
-                seq_num = pci_sequence_number_get(pdu_pci_get_ro(pdu));
+                pci     = pdu_pci_get_ro(pdu);
+                seq_num = pci_sequence_number_get(pci);
                 LOG_DBG("Seq number: %u", seq_num);
 
                 if (seq_num - LWE - 1 <= max_sdu_gap) {
@@ -667,8 +667,8 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
                         LOG_DBG("Atimer: PDU %u posted", seq_num);
 
-                        LWE = dt_sv_rcv_lft_win(dt);
-                        ret = LWE;
+                        LWE = seq_num;
+                        pci_ret = pci;
                         continue;
                 }
 
@@ -677,7 +677,7 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         LOG_DBG("Processing A timer expired");
                         if (dtcp && dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
                                 LOG_DBG("Retransmissions will be required");
-                                ret = seq_num;
+                                pci_ret = pci;
                                 goto finish;
                         }
 
@@ -695,8 +695,8 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                                         "(expiration)", seq_num);
                         }
 
-                        LWE = dt_sv_rcv_lft_win(dt);
-                        ret = LWE;
+                        LWE = seq_num;
+                        pci_ret = pci;
 
                         continue;
                 }
@@ -714,7 +714,7 @@ finish:
         }
         rqueue_destroy(to_post, (void (*)(void *)) pdu_destroy);
         LOG_DBG("Finish process_Atimer_expiration");
-        return ret;
+        return pci_ret;
 }
 EXPORT_SYMBOL(process_A_expiration);
 
@@ -1364,16 +1364,15 @@ int dtp_receive(struct dtp * instance,
                         spin_lock_irqsave(&instance->seqq->lock, flags);
                         dtp_squeue_flush(instance);
                         dt_sv_rcv_lft_win_set(dt, seq_num);
-                        pdu_post(instance, pdu);
-                        spin_unlock_irqrestore(&instance->seqq->lock, flags);
-                        LOG_DBG("Data run flag DRF");
                         if (dtcp) {
-                                if (dtcp_sv_update(dtcp, seq_num)) {
+                                if (dtcp_sv_update(dtcp, pci)) {
                                         LOG_ERR("Failed to update dtcp sv");
                                         return -1;
                                 }
                         }
-
+                        spin_unlock_irqrestore(&instance->seqq->lock, flags);
+                        pdu_post(instance, pdu);
+                        LOG_DBG("Data run flag DRF");
                         return 0;
                 }
                 LOG_ERR("Expecting DRF but not present, dropping PDU %d...",
@@ -1454,7 +1453,7 @@ int dtp_receive(struct dtp * instance,
                 }
 
                 if (dtcp) {
-                        if (dtcp_sv_update(dtcp, seq_num)) {
+                        if (dtcp_sv_update(dtcp, pci)) {
                                 LOG_ERR("Failed to update dtcp sv");
                                 goto fail;
                         }
@@ -1506,19 +1505,17 @@ int dtp_receive(struct dtp * instance,
                 rtimer_restart(instance->timers.a, a/AF);
         }
 
+        if (dtcp) {
+                if (dtcp_sv_update(dtcp, pci)) {
+                        LOG_ERR("Failed to update dtcp sv");
+                }
+        }
         while (!rqueue_is_empty(to_post)) {
                 pdu = (struct pdu *) rqueue_head_pop(to_post);
                 if (pdu)
                         pdu_post(instance, pdu);
         }
         rqueue_destroy(to_post, (void (*)(void *)) pdu_destroy);
-
-
-        if (dtcp) {
-                if (dtcp_sv_update(dtcp, seq_num)) {
-                        LOG_ERR("Failed to update dtcp sv");
-                }
-        }
 
         LOG_DBG("DTP receive ended...");
         return 0;

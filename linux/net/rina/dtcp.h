@@ -43,8 +43,8 @@ int                  dtcp_send(struct dtcp * instance,
                                struct sdu *  sdu);
 
 /* Used by the DTP to notify the DTCP about events */
-int                  dtcp_sv_update(struct dtcp * instance,
-                                    seq_num_t     seq);
+int                  dtcp_sv_update(struct dtcp *      dtcp,
+                                    const struct pci * pci);
 
 /* Used by EFCP to send an incoming DTCP PDU */
 int                  dtcp_common_rcv_control(struct dtcp * dtcp,

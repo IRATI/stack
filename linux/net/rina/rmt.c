@@ -685,7 +685,6 @@ static int n1_port_write_noclean(struct rmt *         rmt,
         struct pci *           pci;
         size_t                 ttl;
         struct dup_config_entry * dup_conf;
-        int                    ret = 0;
 
         ASSERT(n1_port);
         ASSERT(rmt);
