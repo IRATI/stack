@@ -474,9 +474,11 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 			dif_config.fa_configuration_ = dif_template->faConfiguration;
 			dif_config.ra_configuration_ = dif_template->raConfiguration;
 			dif_config.routing_configuration_ = dif_template->routingConfiguration;
-			dif_config.sm_configuration_ = dif_template->smConfiguration;
+			dif_config.sm_configuration_ = dif_template->secManConfiguration;
 			dif_config.et_configuration_ = dif_template->etConfiguration;
 			dif_config.set_address(address);
+
+			dif_config.sm_configuration_ = dif_template->secManConfiguration;
 		}
 
 		for (map<string, string>::const_iterator

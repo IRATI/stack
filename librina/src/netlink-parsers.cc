@@ -501,6 +501,24 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
+	case RINA_C_IPCP_ENABLE_ENCRYPTION_REQUEST: {
+		IPCPEnableEncryptionRequestMessage * responseObject =
+			dynamic_cast<IPCPEnableEncryptionRequestMessage *>(message);
+		if (putIPCPEnableEncryptionRequestMessage(netlinkMessage,
+				*responseObject) < 0) {
+			return -1;
+		}
+		return 0;
+	}
+	case RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE: {
+		IPCPEnableEncryptionResponseMessage * responseObject =
+			dynamic_cast<IPCPEnableEncryptionResponseMessage *>(message);
+		if (putIPCPEnableEncryptionResponseMessage(netlinkMessage,
+				*responseObject) < 0) {
+			return -1;
+		}
+		return 0;
+	}
 	case RINA_C_IPCM_FWD_CDAP_MSG_REQUEST: {
 		IpcmFwdCDAPMsgMessage * requestObject =
 			dynamic_cast<IpcmFwdCDAPMsgMessage *>(message);
@@ -729,6 +747,14 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	case RINA_C_IPCM_PLUGIN_LOAD_RESPONSE: {
 		return parseIpcmPluginLoadResponseMessage(
 		                netlinkMessageHeader);
+	}
+	case RINA_C_IPCP_ENABLE_ENCRYPTION_REQUEST: {
+		return parseIPCPEnableEncryptionRequestMessage(
+		                netlinkMessageHeader);
+	}
+	case RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE: {
+		return parseIPCPEnableEncryptionResponseMessage(
+				netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_FWD_CDAP_MSG_REQUEST: {
 		return parseIpcmFwdCDAPMsgMessage(
@@ -1347,6 +1373,254 @@ int parseListOfDIFConfigurationParameters(nlattr *nested,
 	return 0;
 }
 
+int putAuthSDUProtectionProfile(nl_msg* netlinkMessage,
+		const AuthSDUProtectionProfile& object)
+{
+	struct nlattr *authp, *encryptp, *crcp, *ttlp;
+
+	if (object.authPolicy.name_ != std::string()) {
+		if (!(authp = nla_nest_start(netlinkMessage, AUTHP_AUTH_POLICY))) {
+			goto nla_put_failure;
+		}
+		if (putPolicyConfigObject(netlinkMessage,
+				object.authPolicy) < 0) {
+			goto nla_put_failure;
+		}
+		nla_nest_end(netlinkMessage, authp);
+	}
+
+	if (object.encryptPolicy.name_ != std::string()) {
+		if (!(encryptp = nla_nest_start(netlinkMessage, AUTHP_ENCRYPT_POLICY))) {
+			goto nla_put_failure;
+		}
+		if (putPolicyConfigObject(netlinkMessage,
+				object.encryptPolicy) < 0) {
+			goto nla_put_failure;
+		}
+		nla_nest_end(netlinkMessage, encryptp);
+	}
+
+	if (object.crcPolicy.name_ != std::string()) {
+		if (!(crcp = nla_nest_start(netlinkMessage, AUTHP_CRC_POLICY))) {
+			goto nla_put_failure;
+		}
+		if (putPolicyConfigObject(netlinkMessage,
+				object.crcPolicy) < 0) {
+			goto nla_put_failure;
+		}
+		nla_nest_end(netlinkMessage, crcp);
+	}
+
+	if (object.ttlPolicy.name_ != std::string()) {
+		if (!(ttlp = nla_nest_start(netlinkMessage, AUTHP_TTL_POLICY))) {
+			goto nla_put_failure;
+		}
+		if (putPolicyConfigObject(netlinkMessage,
+				object.ttlPolicy) < 0) {
+			goto nla_put_failure;
+		}
+		nla_nest_end(netlinkMessage, ttlp);
+	}
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building AuthSDUProtectionProfile Netlink object");
+	return -1;
+}
+
+int putSpecificAuthSDUProtectionProfile(nl_msg* netlinkMessage,
+					const std::string& under_dif,
+			   	        const AuthSDUProtectionProfile& object)
+{
+	struct nlattr *authp;
+
+	NLA_PUT_STRING(netlinkMessage, SAUTHP_UNDER_DIF, under_dif.c_str());
+
+	if (!(authp = nla_nest_start(netlinkMessage, SAUTHP_AUTH_PROFILE))) {
+		goto nla_put_failure;
+	}
+	if (putAuthSDUProtectionProfile(netlinkMessage, object) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, authp);
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building SpecificAuthSDUProtectionProfile Netlink object");
+	return -1;
+}
+
+int putListOfAuthSDUProtectionProfiles(nl_msg* netlinkMessage,
+				       const std::map<std::string, AuthSDUProtectionProfile>& profiles)
+{
+	std::map<std::string, AuthSDUProtectionProfile>::const_iterator iterator;
+	struct nlattr *specific_conf;
+	int i = 0;
+
+	for (iterator = profiles.begin();
+			iterator != profiles.end();
+			++iterator) {
+		if (!(specific_conf = nla_nest_start(netlinkMessage, i))){
+			goto nla_put_failure;
+		}
+		if (putSpecificAuthSDUProtectionProfile(netlinkMessage,
+							iterator->first,
+							iterator->second) < 0) {
+			goto nla_put_failure;
+		}
+		nla_nest_end(netlinkMessage, specific_conf);
+		i++;
+	}
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building List of DUProtectionConfigurations Netlink object");
+	return -1;
+}
+
+int parseListOfAuthSDUProtectionProfiles(nlattr *nested,
+			     	     	 std::map<std::string, AuthSDUProtectionProfile>& profiles)
+{
+	nlattr * nla;
+	int rem;
+
+	for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
+		     nla_ok(nla, rem);
+		     nla = nla_next(nla, &(rem))){
+		/* validate & parse attribute */
+		if (parseSpecificSDUProtectionProfile(nla, profiles) != 0) {
+			return -1;
+		}
+	}
+
+	if (rem > 0){
+		LOG_WARN("Missing bits to parse");
+	}
+
+	return 0;
+}
+
+int parseSpecificSDUProtectionProfile(nlattr *nested,
+			     	       std::map<std::string, AuthSDUProtectionProfile>& profiles)
+{
+	struct nla_policy attr_policy[SAUTHP_ATTR_MAX + 1];
+	attr_policy[SAUTHP_UNDER_DIF].type = NLA_STRING;
+	attr_policy[SAUTHP_UNDER_DIF].minlen = 0;
+	attr_policy[SAUTHP_UNDER_DIF].maxlen = 65535;
+	attr_policy[SAUTHP_AUTH_PROFILE].type = NLA_NESTED;
+	attr_policy[SAUTHP_AUTH_PROFILE].minlen = 0;
+	attr_policy[SAUTHP_AUTH_PROFILE].maxlen = 0;
+	struct nlattr *attrs[SAUTHP_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, SAUTHP_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing SpeficicAuthSDUProtectionProfile from Netlink message: %d",
+			err);
+		return 0;
+	}
+
+	AuthSDUProtectionProfile * profile;
+	std::string under_dif_name;
+
+        if (attrs[SAUTHP_UNDER_DIF]) {
+                under_dif_name = nla_get_string(attrs[SAUTHP_UNDER_DIF]);
+        }
+
+	if (attrs[SAUTHP_AUTH_PROFILE]) {
+		profile = parseAuthSDUProtectionProfile(
+					attrs[SAUTHP_AUTH_PROFILE]);
+		if (profile == 0) {
+			return -1;
+		} else {
+			profiles[under_dif_name] = *profile;
+			delete profile;
+		}
+	}
+
+	return 0;
+}
+
+AuthSDUProtectionProfile * parseAuthSDUProtectionProfile(nlattr *nested)
+{
+	struct nla_policy attr_policy[AUTHP_ATTR_MAX + 1];
+	attr_policy[AUTHP_AUTH_POLICY].type = NLA_NESTED;
+	attr_policy[AUTHP_AUTH_POLICY].minlen = 0;
+	attr_policy[AUTHP_AUTH_POLICY].maxlen = 0;
+	attr_policy[AUTHP_ENCRYPT_POLICY].type = NLA_NESTED;
+	attr_policy[AUTHP_ENCRYPT_POLICY].minlen = 0;
+	attr_policy[AUTHP_ENCRYPT_POLICY].maxlen = 0;
+	attr_policy[AUTHP_CRC_POLICY].type = NLA_NESTED;
+	attr_policy[AUTHP_CRC_POLICY].minlen = 0;
+	attr_policy[AUTHP_CRC_POLICY].maxlen = 0;
+	attr_policy[AUTHP_TTL_POLICY].type = NLA_NESTED;
+	attr_policy[AUTHP_TTL_POLICY].minlen = 0;
+	attr_policy[AUTHP_TTL_POLICY].maxlen = 0;
+	struct nlattr *attrs[AUTHP_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, AUTHP_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing AuthSDUProtectionProfile from Netlink message: %d",
+			err);
+		return 0;
+	}
+
+	AuthSDUProtectionProfile * result = new AuthSDUProtectionProfile();
+	PolicyConfig * policy_config;
+
+	if (attrs[AUTHP_AUTH_POLICY]) {
+		policy_config = parsePolicyConfigObject(
+					attrs[AUTHP_AUTH_POLICY]);
+		if (policy_config == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->authPolicy = *policy_config;
+			delete policy_config;
+		}
+	}
+
+	if (attrs[AUTHP_ENCRYPT_POLICY]) {
+		policy_config = parsePolicyConfigObject(
+					attrs[AUTHP_ENCRYPT_POLICY]);
+		if (policy_config == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->encryptPolicy = *policy_config;
+			delete policy_config;
+		}
+	}
+
+	if (attrs[AUTHP_CRC_POLICY]) {
+		policy_config = parsePolicyConfigObject(
+					attrs[AUTHP_CRC_POLICY]);
+		if (policy_config == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->crcPolicy = *policy_config;
+			delete policy_config;
+		}
+	}
+
+	if (attrs[AUTHP_TTL_POLICY]) {
+		policy_config = parsePolicyConfigObject(
+					attrs[AUTHP_TTL_POLICY]);
+		if (policy_config == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->ttlPolicy = *policy_config;
+			delete policy_config;
+		}
+	}
+
+	return result;
+}
+
 int putNeighborObject(nl_msg* netlinkMessage,
                 const Neighbor& object) {
         struct nlattr *name, *supportingDIFName;
@@ -1575,13 +1849,15 @@ ApplicationRegistrationInformation * parseApplicationRegistrationInformation(
 
 int putPolicyParameterObject(nl_msg * netlinkMessage,
                 const PolicyParameter& object) {
-        NLA_PUT_STRING(netlinkMessage, PPA_ATTR_NAME, object.get_name().c_str());
-        NLA_PUT_STRING(netlinkMessage, PPA_ATTR_VALUE, object.get_value().c_str());
+        NLA_PUT_STRING(netlinkMessage, PPA_ATTR_NAME, object.name_.c_str());
+        NLA_PUT_STRING(netlinkMessage, PPA_ATTR_VALUE, object.value_.c_str());
 
         return 0;
 
         nla_put_failure: LOG_ERR(
-                        "Error building PolicyParameter Netlink object");
+                        "Error building PolicyParameter Netlink object; name: %s, value: %s",
+                         object.name_.c_str(),
+                         object.value_.c_str());
         return -1;
 }
 
@@ -1643,7 +1919,7 @@ int putListOfPolicyParameters(nl_msg* netlinkMessage,
 }
 
 int parseListOfPolicyConfigPolicyParameters(nlattr *nested,
-                PolicyConfig * efcpPolicyConfig) {
+                PolicyConfig * policyConfig) {
         nlattr * nla;
         int rem;
         PolicyParameter * parameter;
@@ -1655,7 +1931,7 @@ int parseListOfPolicyConfigPolicyParameters(nlattr *nested,
                 if (parameter == 0){
                         return -1;
                 }
-                efcpPolicyConfig->add_parameter(*parameter);
+                policyConfig->add_parameter(*parameter);
                 delete parameter;
         }
 
@@ -3978,10 +4254,11 @@ int putNamespaceManagerConfigurationObject(nl_msg* netlinkMessage,
 }
 
 int putSecurityManagerConfigurationObject(nl_msg* netlinkMessage,
-		const SecurityManagerConfiguration& object){
-	struct nlattr *nmPolicy, *nfPolicy, *aPolicy, *smps;
+		const SecurityManagerConfiguration& object)
+{
+	struct nlattr *pset, *defAuth, *specAuth;
 
-	if (!(smps = nla_nest_start(
+	if (!(pset = nla_nest_start(
 			netlinkMessage, SECMANC_POLICY_SET))) {
 		goto nla_put_failure;
 	}
@@ -3989,37 +4266,27 @@ int putSecurityManagerConfigurationObject(nl_msg* netlinkMessage,
 			object.policy_set_) < 0) {
 		goto nla_put_failure;
 	}
-	nla_nest_end(netlinkMessage, smps);
+	nla_nest_end(netlinkMessage, pset);
 
-	if (!(nmPolicy = nla_nest_start(
-			netlinkMessage, SECMANC_DIF_MEM_ACC_CON_POLICY))) {
+	if (!(defAuth = nla_nest_start(
+			netlinkMessage, SECMANC_DEFAULT_AUTH_SDUP_POLICY))) {
 		goto nla_put_failure;
 	}
-	if (putPolicyConfigObject(netlinkMessage,
-			object.difMemberAccessControlPolicy) < 0) {
+	if (putAuthSDUProtectionProfile(netlinkMessage,
+					object.default_auth_profile) < 0) {
 		goto nla_put_failure;
 	}
-	nla_nest_end(netlinkMessage, nmPolicy);
+	nla_nest_end(netlinkMessage, defAuth);
 
-	if (!(nfPolicy = nla_nest_start(
-			netlinkMessage, SECMANC_NEW_FLOW_ACC_CON_POLICY))) {
+	if (!(specAuth = nla_nest_start(
+			netlinkMessage, SECMANC_SPECIFIC_AUTH_SDUP_POLICIES))) {
 		goto nla_put_failure;
 	}
-	if (putPolicyConfigObject(netlinkMessage,
-			object.newFlowAccessControlPolicy) < 0) {
+	if (putListOfAuthSDUProtectionProfiles(netlinkMessage,
+					       object.specific_auth_profiles) < 0) {
 		goto nla_put_failure;
 	}
-	nla_nest_end(netlinkMessage, nfPolicy);
-
-	if (!(aPolicy = nla_nest_start(
-			netlinkMessage, SECMANC_AUTH_POLICY))) {
-		goto nla_put_failure;
-	}
-	if (putPolicyConfigObject(netlinkMessage,
-			object.authenticationPolicy) < 0) {
-		goto nla_put_failure;
-	}
-	nla_nest_end(netlinkMessage, aPolicy);
+	nla_nest_end(netlinkMessage, specAuth);
 
 	return 0;
 
@@ -5086,6 +5353,42 @@ int putIpcmPluginLoadResponseMessageObject(nl_msg* netlinkMessage,
                         "Netlink object");
         return -1;
 }
+
+int putIPCPEnableEncryptionRequestMessage(nl_msg* netlinkMessage,
+		const IPCPEnableEncryptionRequestMessage& object)
+{
+	if (object.profile.enable_decryption) {
+		NLA_PUT_FLAG(netlinkMessage, EERM_ATTR_EN_DECRYPT);
+	}
+	if (object.profile.enable_encryption) {
+		NLA_PUT_FLAG(netlinkMessage, EERM_ATTR_EN_ENCRYPT);
+	}
+	NLA_PUT(netlinkMessage, EERM_ATTR_ENCRYPT_KEY,
+		object.profile.encrypt_key.length, object.profile.encrypt_key.data);
+	NLA_PUT_U32(netlinkMessage, EERM_ATTR_N_1_PORT, object.profile.port_id);
+
+	return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building IpcmPluginLoadRequestMessage "
+                        "Netlink object");
+        return -1;
+}
+
+int putIPCPEnableEncryptionResponseMessage(nl_msg* netlinkMessage,
+		const IPCPEnableEncryptionResponseMessage& object)
+{
+	NLA_PUT_U32(netlinkMessage, EEREM_ATTR_RESULT, object.result);
+	NLA_PUT_U32(netlinkMessage, EEREM_ATTR_N_1_PORT, object.port_id);
+
+	return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building IPCPEnableEncryptionResponseMessage"
+                        "Netlink object");
+        return -1;
+}
+
 
 int putIpcmFwdCDAPMsgMessageObject(nl_msg* netlinkMessage,
 		const IpcmFwdCDAPMsgMessage& object){
@@ -6770,30 +7073,24 @@ SecurityManagerConfiguration * parseSecurityManagerConfigurationObject(nlattr *n
 	attr_policy[SECMANC_POLICY_SET].type = NLA_NESTED;
 	attr_policy[SECMANC_POLICY_SET].minlen = 0;
 	attr_policy[SECMANC_POLICY_SET].maxlen = 0;
-	attr_policy[SECMANC_DIF_MEM_ACC_CON_POLICY].type = NLA_NESTED;
-	attr_policy[SECMANC_DIF_MEM_ACC_CON_POLICY].minlen = 0;
-	attr_policy[SECMANC_DIF_MEM_ACC_CON_POLICY].maxlen = 0;
-	attr_policy[SECMANC_NEW_FLOW_ACC_CON_POLICY].type = NLA_NESTED;
-	attr_policy[SECMANC_NEW_FLOW_ACC_CON_POLICY].minlen = 0;
-	attr_policy[SECMANC_NEW_FLOW_ACC_CON_POLICY].maxlen = 0;
-	attr_policy[SECMANC_AUTH_POLICY].type = NLA_NESTED;
-	attr_policy[SECMANC_AUTH_POLICY].minlen = 0;
-	attr_policy[SECMANC_AUTH_POLICY].maxlen = 0;
+	attr_policy[SECMANC_DEFAULT_AUTH_SDUP_POLICY].type = NLA_NESTED;
+	attr_policy[SECMANC_DEFAULT_AUTH_SDUP_POLICY].minlen = 0;
+	attr_policy[SECMANC_DEFAULT_AUTH_SDUP_POLICY].maxlen = 0;
+	attr_policy[SECMANC_SPECIFIC_AUTH_SDUP_POLICIES].type = NLA_NESTED;
+	attr_policy[SECMANC_SPECIFIC_AUTH_SDUP_POLICIES].minlen = 0;
+	attr_policy[SECMANC_SPECIFIC_AUTH_SDUP_POLICIES].maxlen = 0;
 	struct nlattr *attrs[SECMANC_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, SECMANC_ATTR_MAX, nested, attr_policy);
 	if (err < 0) {
-		LOG_ERR(
-				"Error parsing SecurityManagerConfiguration information from Netlink message: %d",
-				err);
+		LOG_ERR("Error parsing SecurityManagerConfiguration information from Netlink message: %d",
+			err);
 		return 0;
 	}
 
 	SecurityManagerConfiguration * result = new SecurityManagerConfiguration();
 	PolicyConfig * policySet;
-	PolicyConfig * difAc;
-	PolicyConfig * flowAc;
-	PolicyConfig * auth;
+	AuthSDUProtectionProfile * default_profile;
 
 	if (attrs[SECMANC_POLICY_SET]) {
 		policySet = parsePolicyConfigObject(
@@ -6807,40 +7104,22 @@ SecurityManagerConfiguration * parseSecurityManagerConfigurationObject(nlattr *n
 		}
 	}
 
-	if (attrs[SECMANC_DIF_MEM_ACC_CON_POLICY]) {
-		difAc = parsePolicyConfigObject(
-				attrs[SECMANC_DIF_MEM_ACC_CON_POLICY]);
-		if (difAc == 0) {
+	if (attrs[SECMANC_DEFAULT_AUTH_SDUP_POLICY]) {
+		default_profile = parseAuthSDUProtectionProfile(
+					attrs[SECMANC_DEFAULT_AUTH_SDUP_POLICY]);
+		if (default_profile == 0) {
 			delete result;
 			return 0;
 		} else {
-			result->difMemberAccessControlPolicy = *difAc;
-			delete difAc;
+			result->default_auth_profile = *default_profile;
+			delete default_profile;
 		}
 	}
 
-	if (attrs[SECMANC_NEW_FLOW_ACC_CON_POLICY]) {
-		flowAc = parsePolicyConfigObject(
-				attrs[SECMANC_NEW_FLOW_ACC_CON_POLICY]);
-		if (flowAc == 0) {
-			delete result;
-			return 0;
-		} else {
-			result->newFlowAccessControlPolicy = *flowAc;
-			delete flowAc;
-		}
-	}
-
-	if (attrs[SECMANC_AUTH_POLICY]) {
-		auth = parsePolicyConfigObject(
-				attrs[SECMANC_AUTH_POLICY]);
-		if (auth == 0) {
-			delete result;
-			return 0;
-		} else {
-			result->authenticationPolicy = *auth;
-			delete auth;
-		}
+	if (attrs[SECMANC_SPECIFIC_AUTH_SDUP_POLICIES]) {
+		parseListOfAuthSDUProtectionProfiles(
+				attrs[SECMANC_SPECIFIC_AUTH_SDUP_POLICIES],
+				result->specific_auth_profiles);
 	}
 
 	return result;
@@ -8850,6 +9129,95 @@ parseIpcmPluginLoadResponseMessage(nlmsghdr *hdr){
 
 	if (attrs[IPLRE_ATTR_RESULT]) {
 		result->result = nla_get_u32(attrs[IPLRE_ATTR_RESULT]);
+	}
+
+	return result;
+}
+
+IPCPEnableEncryptionRequestMessage * parseIPCPEnableEncryptionRequestMessage(
+		nlmsghdr *hdr)
+{
+	struct nla_policy attr_policy[EERM_ATTR_MAX + 1];
+	attr_policy[EERM_ATTR_EN_ENCRYPT].type = NLA_FLAG;
+	attr_policy[EERM_ATTR_EN_ENCRYPT].minlen = 0;
+	attr_policy[EERM_ATTR_EN_ENCRYPT].maxlen = 0;
+	attr_policy[EERM_ATTR_EN_DECRYPT].type = NLA_FLAG;
+	attr_policy[EERM_ATTR_EN_DECRYPT].minlen = 0;
+	attr_policy[EERM_ATTR_EN_DECRYPT].maxlen = 0;
+	attr_policy[EERM_ATTR_ENCRYPT_KEY].type = NLA_UNSPEC;
+	attr_policy[EERM_ATTR_ENCRYPT_KEY].minlen = 0;
+	attr_policy[EERM_ATTR_ENCRYPT_KEY].maxlen = 65535;
+        attr_policy[EERM_ATTR_N_1_PORT].type = NLA_U32;
+        attr_policy[EERM_ATTR_N_1_PORT].minlen = 4;
+        attr_policy[EERM_ATTR_N_1_PORT].maxlen = 4;
+	struct nlattr *attrs[EERM_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			EERM_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing IPCPEnableEncryptionRequestMessage "
+				"information from Netlink message: %d", err);
+		return 0;
+	}
+
+	IPCPEnableEncryptionRequestMessage * result =
+			new IPCPEnableEncryptionRequestMessage();
+
+	if (attrs[EERM_ATTR_EN_ENCRYPT]) {
+		result->profile.enable_encryption = true;
+	} else {
+		result->profile.enable_encryption = false;
+	}
+
+	if (attrs[EERM_ATTR_EN_DECRYPT]) {
+		result->profile.enable_decryption = true;
+	} else {
+		result->profile.enable_decryption = false;
+	}
+
+	if (attrs[EERM_ATTR_ENCRYPT_KEY]) {
+		result->profile.encrypt_key.length = nla_len(attrs[EERM_ATTR_ENCRYPT_KEY]);
+		result->profile.encrypt_key.data = new unsigned char[result->profile.encrypt_key.length];
+		unsigned char * data = (unsigned char *) nla_data(attrs[EERM_ATTR_ENCRYPT_KEY]);
+		memcpy(result->profile.encrypt_key.data, data, result->profile.encrypt_key.length);
+	}
+
+	if (attrs[EERM_ATTR_N_1_PORT]) {
+		result->profile.port_id =
+				nla_get_u32(attrs[EERM_ATTR_N_1_PORT]);
+	}
+
+	return result;
+}
+
+IPCPEnableEncryptionResponseMessage * parseIPCPEnableEncryptionResponseMessage(nlmsghdr *hdr)
+{
+	struct nla_policy attr_policy[EEREM_ATTR_MAX + 1];
+        attr_policy[EEREM_ATTR_RESULT].type = NLA_U32;
+        attr_policy[EEREM_ATTR_RESULT].minlen = 4;
+        attr_policy[EEREM_ATTR_RESULT].maxlen = 4;
+        attr_policy[EEREM_ATTR_N_1_PORT].type = NLA_U32;
+        attr_policy[EEREM_ATTR_N_1_PORT].minlen = 4;
+        attr_policy[EEREM_ATTR_N_1_PORT].maxlen = 4;
+	struct nlattr *attrs[EEREM_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			EEREM_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing IPCPEnableEncryptionResponseMessage "
+                        "information from Netlink message: %d", err);
+		return 0;
+	}
+
+	IPCPEnableEncryptionResponseMessage * result =
+			new IPCPEnableEncryptionResponseMessage();
+
+	if (attrs[IPLRE_ATTR_RESULT]) {
+		result->result = nla_get_u32(attrs[IPLRE_ATTR_RESULT]);
+	}
+
+	if (attrs[EEREM_ATTR_N_1_PORT]) {
+		result->port_id = nla_get_u32(attrs[EEREM_ATTR_N_1_PORT]);
 	}
 
 	return result;
