@@ -1676,7 +1676,6 @@ int rmt_enable_encryption(struct rmt *    instance,
 		}
 	}
 
-	rmt_port->dup_config->key = encrypt_key;
 	if (!rmt_port->dup_config->enable_decryption) {
 		rmt_port->dup_config->enable_decryption = enable_decryption;
 	}
