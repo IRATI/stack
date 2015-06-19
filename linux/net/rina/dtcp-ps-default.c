@@ -32,10 +32,6 @@
 #include "dtcp-ps-common.h"
 
 static int
-default_sv_update(struct dtcp_ps * ps, seq_num_t seq)
-{ return common_sv_update(ps, seq); }
-
-static int
 default_lost_control_pdu(struct dtcp_ps * ps)
 { return common_lost_control_pdu(ps); }
 
@@ -92,7 +88,6 @@ dtcp_ps_default_create(struct rina_component * component)
         ps->dm                          = dtcp;
         ps->priv                        = NULL;
         ps->flow_init                   = NULL;
-        ps->sv_update                   = default_sv_update;
         ps->lost_control_pdu            = default_lost_control_pdu;
         ps->rtt_estimator               = default_rtt_estimator;
         ps->retransmission_timer_expiry = NULL;

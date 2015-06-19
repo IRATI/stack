@@ -33,9 +33,6 @@
 #include "dtcp-ps.h"
 
 int
-common_sv_update(struct dtcp_ps * ps, seq_num_t seq);
-
-int
 common_lost_control_pdu(struct dtcp_ps * ps);
 
 int common_rcvr_ack(struct dtcp_ps * instance, seq_num_t seq);

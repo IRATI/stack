@@ -28,13 +28,6 @@
 #include "dtcp-ps.h"
 
 static int
-cas_sv_update(struct dtcp_ps * ps, seq_num_t seq)
-{
-        printk("%s: called()\n", __func__);
-        return 0;
-}
-
-static int
 cas_lost_control_pdu(struct dtcp_ps * ps)
 {
         printk("%s: called()\n", __func__);
@@ -104,7 +97,6 @@ dtcp_ps_cas_create(struct rina_component * component)
         ps->dm                          = dtcp;
         ps->priv                        = NULL;
         ps->flow_init                   = NULL;
-        ps->sv_update                   = cas_sv_update;
         ps->lost_control_pdu            = cas_lost_control_pdu;
         ps->rtt_estimator               = NULL;
         ps->retransmission_timer_expiry = NULL;
