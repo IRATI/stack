@@ -364,7 +364,7 @@ static void rinarp_resolve_handler(void *             opaque,
         struct ipcp_instance *      user_ipcp;
         struct ipcp_instance *      ipcp;
         struct shim_eth_flow *      flow;
-        unsigned long 				irqflags;
+        unsigned long 		    irqflags;
 
         LOG_DBG("Entered the ARP resolve handler of the shim-eth");
 
@@ -1183,8 +1183,10 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         info->vlan_id = (uint16_t) temp_vlan;
 
         if (!vlan_id_is_ok(info->vlan_id)) {
-                LOG_ERR("Bad vlan id specified: %d", info->vlan_id);
-                return -1;
+                if (info->vlan_id != 0) {
+                      LOG_ERR("Bad vlan id specified: %d", info->vlan_id);
+                      return -1;
+                }
         }
 
         data->dif_name = name_dup(dif_information->dif_name);
@@ -1201,7 +1203,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                 if (!strcmp(entry->name, "interface-name")) {
                         ASSERT(entry->value);
 
-                        info->interface_name = rkstrdup_ni(entry->value);
+                        info->interface_name = rkstrdup(entry->value);
                         if (!info->interface_name) {
                                 LOG_ERR("Cannot copy interface name");
                                 name_destroy(data->dif_name);
@@ -1223,8 +1225,14 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         data->eth_vlan_packet_type->type = cpu_to_be16(ETH_P_RINA);
         data->eth_vlan_packet_type->func = eth_vlan_rcv;
 
-        complete_interface = create_vlan_interface_name(info->interface_name,
-                                                        info->vlan_id);
+        if (info->vlan_id != 0) {
+                complete_interface =
+                        create_vlan_interface_name(info->interface_name,
+                                                   info->vlan_id);
+        } else {
+                complete_interface = rkstrdup(info->interface_name);
+        }
+
         if (!complete_interface) {
                 name_destroy(data->dif_name);
                 data->dif_name = NULL;
@@ -1328,8 +1336,14 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
         data->eth_vlan_packet_type->type = cpu_to_be16(ETH_P_RINA);
         data->eth_vlan_packet_type->func = eth_vlan_rcv;
 
-        complete_interface = create_vlan_interface_name(info->interface_name,
-                                                        info->vlan_id);
+        if (info->vlan_id != 0) {
+                complete_interface =
+                        create_vlan_interface_name(info->interface_name,
+                                                   info->vlan_id);
+        } else {
+                complete_interface = rkstrdup(info->interface_name);
+        }
+
         if (!complete_interface)
                 return -1;
 
@@ -1370,6 +1384,14 @@ static const struct name * eth_vlan_ipcp_name(struct ipcp_instance_data * data)
         ASSERT(name_is_ok(data->name));
 
         return data->name;
+}
+
+static const struct name * eth_vlan_dif_name(struct ipcp_instance_data * data)
+{
+        ASSERT(data);
+        ASSERT(name_is_ok(data->dif_name));
+
+        return data->dif_name;
 }
 
 static int eth_vlan_query_rib(struct ipcp_instance_data * data,
@@ -1419,9 +1441,12 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .query_rib		   = eth_vlan_query_rib,
 
         .ipcp_name                 = eth_vlan_ipcp_name,
+        .dif_name                  = eth_vlan_dif_name,
 
         .set_policy_set_param      = NULL,
         .select_policy_set         = NULL,
+        .enable_encryption	   = NULL,
+        .dif_name		   = eth_vlan_dif_name
 };
 
 static struct ipcp_factory_data {

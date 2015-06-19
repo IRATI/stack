@@ -9,12 +9,12 @@
 // modify it under the terms of the GNU Lesser General Public
 // License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// 
+//
 // This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 // Lesser General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU Lesser General Public
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -248,6 +248,16 @@ int DumpFTResponseEvent::getResult() const {
         return result;
 }
 
+// Class enable encryption response event
+EnableEncryptionResponseEvent::EnableEncryptionResponseEvent(int res,
+                int port, unsigned int sequenceNumber) :
+                		IPCEvent(IPC_PROCESS_ENABLE_ENCRYPTION_RESPONSE,
+                				sequenceNumber)
+{
+	port_id = port;
+	result = res;
+}
+
 /* CLASS EXTENDED IPC MANAGER */
 const std::string ExtendedIPCManager::error_allocate_flow =
 		"Error allocating flow";
@@ -379,7 +389,7 @@ void ExtendedIPCManager::assignToDIFResponse(
         responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
 	try {
-		rinaManager->sendMessage(&responseMessage, false);
+                rinaManager->sendMessage(&responseMessage, false);
 	} catch (NetlinkException &e) {
 		throw AssignToDIFResponseException(e.what());
 	}
@@ -406,7 +416,10 @@ void ExtendedIPCManager::enrollToDIFResponse(const EnrollToDAFRequestEvent& even
         responseMessage.setSequenceNumber(event.sequenceNumber);
         responseMessage.setResponseMessage(true);
         try {
-                rinaManager->sendMessage(&responseMessage, false);
+        	//FIXME, compute maximum message size dynamically
+        	rinaManager->sendMessageOfMaxSize(&responseMessage,
+        					  5 * get_page_size(),
+        					  false);
         } catch (NetlinkException &e) {
                 throw EnrollException(e.what());
         }
@@ -709,6 +722,32 @@ void ExtendedIPCManager::pluginLoadResponse(
 #endif
 }
 
+void ExtendedIPCManager::forwardCDAPResponse(unsigned int sequenceNumber,
+				const rina::SerializedObject& sermsg,
+				int result)
+{
+#if STUB_API
+	//Do nothing
+	(void) sequenceNumber;
+        (void) sermsg;
+	(void) result;
+#else
+	IpcmFwdCDAPMsgMessage responseMessage;
+
+	responseMessage.sermsg = sermsg;
+	responseMessage.result = result;
+	responseMessage.setSequenceNumber(sequenceNumber);
+	responseMessage.setSourceIpcProcessId(ipcProcessId);
+        responseMessage.setDestPortId(ipcManagerPort);
+	responseMessage.setResponseMessage(true);
+	try {
+		rinaManager->sendMessage(&responseMessage, false);
+	} catch (NetlinkException &e) {
+		throw FwdCDAPMsgException(e.what());
+	}
+#endif
+}
+
 Singleton<ExtendedIPCManager> extendedIPCManager;
 
 /* CLASS CONNECTION */
@@ -805,6 +844,20 @@ RoutingTableEntry::RoutingTableEntry(){
 	qosId = 0;
 }
 
+PortIdAltlist::PortIdAltlist()
+{
+}
+
+PortIdAltlist::PortIdAltlist(unsigned int nh)
+{
+	add_alt(nh);
+}
+
+void PortIdAltlist::add_alt(unsigned int nh)
+{
+	alts.push_back(nh);
+}
+
 /* CLASS PDU FORWARDING TABLE ENTRY */
 PDUForwardingTableEntry::PDUForwardingTableEntry() {
         address = 0;
@@ -837,17 +890,13 @@ void PDUForwardingTableEntry::setAddress(unsigned int address) {
         this->address = address;
 }
 
-const std::list<unsigned int> PDUForwardingTableEntry::getPortIds() const {
-        return portIds;
+const std::list<PortIdAltlist> PDUForwardingTableEntry::getPortIdAltlists() const {
+        return portIdAltlists;
 }
 
 void PDUForwardingTableEntry::
-setPortIds(const std::list<unsigned int>& portIds) {
-        this->portIds = portIds;
-}
-
-void PDUForwardingTableEntry::addPortId(unsigned int portId) {
-        portIds.push_back(portId);
+setPortIdAltlists(const std::list<PortIdAltlist>& portIdAltlists) {
+        this->portIdAltlists = portIdAltlists;
 }
 
 unsigned int PDUForwardingTableEntry::getQosId() const {
@@ -863,9 +912,13 @@ const std::string PDUForwardingTableEntry::toString() {
 
         ss<<"Address: "<<address<<" QoS-id: "<<qosId;
         ss<<"List of N-1 port-ids: ";
-        for (std::list<unsigned int>::iterator it = portIds.begin();
-                        it != portIds.end(); it++)
-                ss<< *it << "; ";
+        for (std::list<PortIdAltlist>::iterator it = portIdAltlists.begin();
+                        it != portIdAltlists.end(); it++)
+		for (std::list<unsigned int>::iterator jt = it->alts.begin();
+				jt != it->alts.end(); jt++) {
+			ss<< *jt << ",";
+		}
+		ss << ";";
         ss<<std::endl;
 
         return ss.str();
@@ -918,7 +971,10 @@ unsigned int KernelIPCProcess::assignToDIF(
         message.setRequestMessage(true);
 
         try {
-                rinaManager->sendMessage(&message, true);
+        	//FIXME, compute maximum message size dynamically
+		rinaManager->sendMessageOfMaxSize(&message,
+                                          	  5 * get_page_size(),
+                                          	  true);
         } catch (NetlinkException &e) {
                 throw AssignToDIFException(e.what());
         }
@@ -1117,6 +1173,33 @@ unsigned int KernelIPCProcess::dumptPDUFT() {
         return seqNum;
 }
 
+unsigned int KernelIPCProcess::enableEncryption(const EncryptionProfile& profile)
+{
+        unsigned int seqNum=0;
+
+#if STUB_API
+        (void) profile;
+        //Do nothing
+#else
+        IPCPEnableEncryptionRequestMessage message;
+        message.setSourceIpcProcessId(ipcProcessId);
+        message.setDestIpcProcessId(ipcProcessId);
+        message.profile = profile;
+        message.setDestPortId(0);
+        message.setRequestMessage(true);
+
+        try {
+                rinaManager->sendMessage(&message, true);
+        } catch (NetlinkException &e) {
+                throw Exception(e.what());
+        }
+
+        seqNum = message.getSequenceNumber();
+#endif
+
+        return seqNum;
+}
+
 unsigned int KernelIPCProcess::setPolicySetParam(
                                 const std::string& path,
                                 const std::string& name,
@@ -1222,7 +1305,7 @@ ReadManagementSDUResult KernelIPCProcess::readManagementSDU(void * sdu,
 
 #if STUB_API
         unsigned char buffer[] = { 0, 23, 43, 32, 45, 23, 78 };
-        
+
         (void) sdu;
         (void) maxBytes;
 

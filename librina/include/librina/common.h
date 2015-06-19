@@ -36,9 +36,13 @@
 #ifdef __cplusplus
 
 #include <string>
+#include <sstream>
 #include <vector>
 #include <list>
 #include <ctime>
+#include <cstdlib>
+#include <iomanip>
+#include <cstring>
 
 #include "librina/concurrency.h"
 #include "librina/exceptions.h"
@@ -52,6 +56,8 @@ static std::string NORMAL_IPC_PROCESS= "normal-ipc";
  * Returns the version number of librina
  */
 std::string getVersion();
+
+extern int string2int(const std::string& s, int& ret);
 
 /**
  * Contains application naming information
@@ -263,6 +269,8 @@ enum IPCEventType {
         IPC_PROCESS_SELECT_POLICY_SET_RESPONSE,
         IPC_PROCESS_PLUGIN_LOAD,
         IPC_PROCESS_PLUGIN_LOAD_RESPONSE,
+        IPC_PROCESS_ENABLE_ENCRYPTION_RESPONSE,
+	IPC_PROCESS_FWD_CDAP_MSG,
 	NO_EVENT
 };
 
@@ -607,11 +615,27 @@ public:
         SerializedObject(char* message, int size);
         ~SerializedObject();
         SerializedObject& operator=(const SerializedObject &other);
+	bool empty() const { return message_ == 0; }
         int size_;
         char* message_;
 
 private:
         void initialize(const SerializedObject& other );
+};
+
+struct UcharArray {
+	UcharArray();
+	UcharArray(int arrayLength);
+	UcharArray(const SerializedObject * sobj);
+	~UcharArray();
+	UcharArray& operator=(const UcharArray &other);
+	bool operator==(const UcharArray &other) const;
+	bool operator!=(const UcharArray &other) const;
+	std::string toString();
+	SerializedObject * get_seralized_object();
+
+	unsigned char * data;
+	int length;
 };
 
 class ConsecutiveUnsignedIntegerGenerator {

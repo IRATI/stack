@@ -312,6 +312,18 @@ rnl_ipcp_select_policy_set_req_msg_attrs_create(void)
         return tmp;
 }
 
+static struct rnl_ipcp_enable_encrypt_req_msg_attrs *
+rnl_ipcp_enable_encryption_req_msg_attrs_create(void)
+{
+        struct rnl_ipcp_enable_encrypt_req_msg_attrs * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if  (!tmp)
+                return NULL;
+
+        return tmp;
+}
+
 struct rnl_msg * rnl_msg_create(enum rnl_msg_attr_type type)
 {
         struct rnl_msg * tmp;
@@ -433,6 +445,14 @@ struct rnl_msg * rnl_msg_create(enum rnl_msg_attr_type type)
         case RNL_MSG_ATTRS_SELECT_POLICY_SET_REQUEST:
                 tmp->attrs =
                         rnl_ipcp_select_policy_set_req_msg_attrs_create();
+                if (!tmp->attrs) {
+                        rkfree(tmp);
+                        return NULL;
+                }
+                break;
+        case RNL_MSG_ATTRS_ENABLE_ENCRYPTION_REQUEST:
+                tmp->attrs =
+                        rnl_ipcp_enable_encryption_req_msg_attrs_create();
                 if (!tmp->attrs) {
                         rkfree(tmp);
                         return NULL;
@@ -577,19 +597,26 @@ rnl_ipcp_conn_destroy_req_msg_attrs_destroy(struct rnl_ipcp_conn_destroy_req_msg
 static int
 rnl_rmt_mod_pfte_msg_attrs_destroy(struct rnl_rmt_mod_pfte_msg_attrs * attrs)
 {
-        struct pdu_ft_entry * pos, * nxt;
+        struct modpdufwd_entry * e_pos, * e_nxt;
 
         if (!attrs)
                 return -1;
 
-        list_for_each_entry_safe(pos, nxt,
-                                 &attrs->pft_entries,
-                                 next) {
+        list_for_each_entry_safe(e_pos, e_nxt,
+                                 &attrs->pft_entries, next) {
+		struct port_id_altlist * a_pos, * a_nxt;
 
-                if (pos->ports) rkfree(pos->ports);
+		list_for_each_entry_safe(a_pos, a_nxt,
+					 &e_pos->port_id_altlists, next) {
+			if (a_pos->ports) {
+				rkfree(a_pos->ports);
+			}
+			list_del(&a_pos->next);
+			rkfree(a_pos);
+		}
 
-                list_del(&pos->next);
-                rkfree(pos);
+                list_del(&e_pos->next);
+                rkfree(e_pos);
         }
         LOG_DBG("rnl_rmt_mod_pfte_msg_attrs destroy correctly");
         rkfree(attrs);
@@ -663,6 +690,24 @@ rnl_ipcp_select_policy_set_msg_attrs_destroy(
         return 0;
 }
 
+static int
+rnl_ipcp_enable_encryption_msg_attrs_destroy(
+                struct rnl_ipcp_enable_encrypt_req_msg_attrs * attrs)
+{
+        if (!attrs)
+                return -1;
+
+        if (attrs->encrypt_key) {
+        	buffer_destroy(attrs->encrypt_key);
+        }
+
+        rkfree(attrs);
+
+        LOG_DBG("rnl_ipcp_enable_encrypt_req_msg_attrs destroyed correctly");
+
+        return 0;
+}
+
 int rnl_msg_destroy(struct rnl_msg * msg)
 {
         if (!msg)
@@ -710,6 +755,9 @@ int rnl_msg_destroy(struct rnl_msg * msg)
                 break;
         case RNL_MSG_ATTRS_SELECT_POLICY_SET_REQUEST:
                 rnl_ipcp_select_policy_set_msg_attrs_destroy(msg->attrs);
+                break;
+        case RNL_MSG_ATTRS_ENABLE_ENCRYPTION_REQUEST:
+                rnl_ipcp_enable_encryption_msg_attrs_destroy(msg->attrs);
                 break;
         default:
                 break;
@@ -802,12 +850,79 @@ static int parse_flow_spec(struct nlattr * fspec_attr,
         return 0;
 }
 
-static int parse_pdu_fte_port_list_entries(struct nlattr *       nested_attr,
-                                           struct pdu_ft_entry * entry)
+static int parse_port_id_altlist_entries(struct nlattr * nested_attr,
+					 struct port_id_altlist *alts)
 {
         int             rem = 0;
-        int             i   = 0;
+	int		i = 0;
         struct nlattr * nla;
+
+        if (!nested_attr) {
+                LOG_ERR("Bogus nested attribute (ports) passed, bailing out");
+                return -1;
+        }
+
+        if (!alts) {
+                LOG_ERR("Bogus port_id_altlist entry passed, bailing out");
+                return -1;
+        }
+
+        alts->num_ports	= nla_len(nested_attr);
+        alts->ports	= rkzalloc(alts->num_ports, GFP_KERNEL);
+        LOG_DBG("Allocated %zd bytes in %pk", alts->num_ports, alts->ports);
+
+        if (!alts->ports) {
+                LOG_ERR("Could not allocate memory for port-ids");
+                return -1;
+        }
+
+        for (nla = (struct nlattr*) nla_data(nested_attr),
+                     rem = nla_len(nested_attr);
+             nla_ok(nla, rem);
+             nla = nla_next(nla, &rem), i++) {
+                alts->ports[i] = nla_get_u32(nla);
+        }
+
+        alts->num_ports = (size_t) i;
+
+        if (rem)
+                LOG_WARN("Missing bits to pars");
+
+        return 0;
+}
+
+static int parse_port_id_altlist(struct nlattr * attr,
+			     struct port_id_altlist *alts)
+{
+        struct nla_policy attr_policy[PIA_ATTR_MAX + 1];
+        struct nlattr *   attrs[PIA_ATTR_MAX + 1];
+
+        attr_policy[PIA_ATTR_PORTIDS].type = NLA_NESTED;
+        attr_policy[PIA_ATTR_PORTIDS].len  = 0;
+
+        if (nla_parse_nested(attrs,
+                             PIA_ATTR_MAX,
+                             attr,
+                             attr_policy) < 0)
+                return -1;
+
+        if (attrs[PIA_ATTR_PORTIDS]) {
+                if (parse_port_id_altlist_entries(attrs[PIA_ATTR_PORTIDS],
+                                                   alts))
+                        return -1;
+
+        }
+
+        return 0;
+}
+
+static int parse_pdu_fte_altlists(struct nlattr *       nested_attr,
+                                  struct modpdufwd_entry * entry)
+{
+        int             rem = 0;
+        struct nlattr * nla;
+        int             entries_with_problems = 0;
+        int             total_entries         = 0;
 
         if (!nested_attr) {
                 LOG_ERR("Bogus nested attribute (ports) passed, bailing out");
@@ -819,35 +934,42 @@ static int parse_pdu_fte_port_list_entries(struct nlattr *       nested_attr,
                 return -1;
         }
 
-        entry->ports_size = nla_len(nested_attr);
-        entry->ports      = rkzalloc(entry->ports_size, GFP_KERNEL);
-
-        LOG_DBG("Allocated %zd bytes in %pk", entry->ports_size, entry->ports);
-
-        if (!entry->ports) {
-                LOG_ERR("Could not allocate memory for ports");
-                return -1;
-        }
+	INIT_LIST_HEAD(&entry->port_id_altlists);
 
         for (nla = (struct nlattr*) nla_data(nested_attr),
                      rem = nla_len(nested_attr);
              nla_ok(nla, rem);
-             nla = nla_next(nla, &rem)) {
-                entry->ports[i] = nla_get_u32(nla);
-                i++;
-        }
+             nla = nla_next(nla, &rem), total_entries++) {
+		struct port_id_altlist *alts;
 
-        entry->ports_size = (size_t) i;
+		alts = rkzalloc(sizeof(*entry), GFP_KERNEL);
+		if (!alts) {
+			entries_with_problems++;
+			continue;
+		}
+
+		if (parse_port_id_altlist(nla, alts)) {
+			rkfree(alts);
+			entries_with_problems++;
+			continue;
+		}
+
+		list_add(&alts->next, &entry->port_id_altlists);
+        }
 
         if (rem)
                 LOG_WARN("Missing bits to pars");
 
-        return 0;
+        if (entries_with_problems > 0)
+                LOG_WARN("Problems parsing %d out of %d entries",
+                         entries_with_problems,
+                         total_entries);
 
+        return 0;
 }
 
 static int parse_pdu_fte_list_entry(struct nlattr *       attr,
-                                    struct pdu_ft_entry * pfte_struct)
+                                    struct modpdufwd_entry * mpfe)
 {
         struct nla_policy attr_policy[PFTELE_ATTR_MAX + 1];
         struct nlattr *   attrs[PFTELE_ATTR_MAX + 1];
@@ -856,8 +978,8 @@ static int parse_pdu_fte_list_entry(struct nlattr *       attr,
         attr_policy[PFTELE_ATTR_ADDRESS].len  = 4;
         attr_policy[PFTELE_ATTR_QOSID].type   = NLA_U32;
         attr_policy[PFTELE_ATTR_QOSID].len    = 4;
-        attr_policy[PFTELE_ATTR_PORTIDS].type = NLA_NESTED;
-        attr_policy[PFTELE_ATTR_PORTIDS].len  = 0;
+        attr_policy[PFTELE_ATTR_PORT_ID_ALTLISTS].type = NLA_NESTED;
+        attr_policy[PFTELE_ATTR_PORT_ID_ALTLISTS].len  = 0;
 
         if (nla_parse_nested(attrs,
                              PFTELE_ATTR_MAX,
@@ -866,16 +988,16 @@ static int parse_pdu_fte_list_entry(struct nlattr *       attr,
                 return -1;
 
         if (attrs[PFTELE_ATTR_ADDRESS])
-                pfte_struct->destination =
+                mpfe->fwd_info =
                         nla_get_u32(attrs[PFTELE_ATTR_ADDRESS]);
 
         if (attrs[PFTELE_ATTR_QOSID])
-                pfte_struct->qos_id =
+                mpfe->qos_id =
                         nla_get_u32(attrs[PFTELE_ATTR_QOSID]);
 
-        if (attrs[PFTELE_ATTR_PORTIDS]) {
-                if (parse_pdu_fte_port_list_entries(attrs[PFTELE_ATTR_PORTIDS],
-                                                    pfte_struct))
+        if (attrs[PFTELE_ATTR_PORT_ID_ALTLISTS]) {
+                if (parse_pdu_fte_altlists(attrs[PFTELE_ATTR_PORT_ID_ALTLISTS],
+                                           mpfe))
                         return -1;
 
         }
@@ -1099,17 +1221,20 @@ static int parse_policy_param_list(struct nlattr * nested_attr,
 
                 param = policy_param_create();
                 if (!param) {
+                	LOG_ERR("Parameter is null");
                         entries_with_problems++;
                         continue;
                 }
 
                 if (parse_policy_param(nla, param)) {
+                	LOG_ERR("Problems parsing parameter");
                         policy_param_destroy(param);
                         entries_with_problems++;
                         continue;
                 }
 
-                if (!policy_param_bind(p, param)) {
+                if (policy_param_bind(p, param)) {
+                	LOG_ERR("Problems binding parameter to policy");
                         policy_param_destroy(param);
                         entries_with_problems++;
                         continue;
@@ -1269,13 +1394,282 @@ static int parse_efcp_config(struct nlattr *      efcp_config_attr,
                 if (parse_policy(attrs[EFCPC_ATTR_UNKNOWN_FLOW_POLICY],
                                  efcp_config->unknown_flow))
                         goto parse_fail;
-
         }
 
         return 0;
 
  parse_fail:
         LOG_ERR(BUILD_STRERROR_BY_MTYPE("efcp config attributes"));
+        return -1;
+}
+
+static int parse_dup_config_entry(struct nlattr *           dup_config_entry_attr,
+                                  struct dup_config_entry * dup_config_entry)
+{
+        struct nla_policy attr_policy[AUTHP_ATTR_MAX + 1];
+        struct nlattr *   attrs[AUTHP_ATTR_MAX + 1];
+
+        if (!dup_config_entry_attr || !dup_config_entry) {
+                LOG_ERR("Bogus input parameters, cannot parse policy info");
+                return -1;
+        }
+
+	attr_policy[AUTHP_AUTH_POLICY].type = NLA_NESTED;
+	attr_policy[AUTHP_AUTH_POLICY].len = 0;
+	attr_policy[AUTHP_ENCRYPT_POLICY].type = NLA_NESTED;
+	attr_policy[AUTHP_ENCRYPT_POLICY].len = 0;
+	attr_policy[AUTHP_ERROR_CHECK_POLICY].type = NLA_NESTED;
+	attr_policy[AUTHP_ERROR_CHECK_POLICY].len = 0;
+	attr_policy[AUTHP_TTL_POLICY].type = NLA_NESTED;
+	attr_policy[AUTHP_TTL_POLICY].len = 0;
+
+        if (nla_parse_nested(attrs,
+        		     AUTHP_ATTR_MAX,
+        		     dup_config_entry_attr,
+                             attr_policy) < 0)
+                goto parse_fail;
+
+        if (attrs[AUTHP_ENCRYPT_POLICY]) {
+        	dup_config_entry->encryption_policy = policy_create();
+        	if (!dup_config_entry->encryption_policy)
+        		goto parse_fail;
+
+        	if (parse_policy(attrs[AUTHP_ENCRYPT_POLICY],
+        			 dup_config_entry->encryption_policy))
+        		goto parse_fail;
+        }
+
+        if (attrs[AUTHP_ERROR_CHECK_POLICY]) {
+        	dup_config_entry->error_check_policy = policy_create();
+        	if (!dup_config_entry->error_check_policy)
+        		goto parse_fail;
+
+        	if (parse_policy(attrs[AUTHP_ERROR_CHECK_POLICY],
+        			 dup_config_entry->error_check_policy))
+        		goto parse_fail;
+        }
+
+        if (attrs[AUTHP_TTL_POLICY]) {
+        	dup_config_entry->ttl_policy = policy_create();
+        	if (!dup_config_entry->ttl_policy)
+        		goto parse_fail;
+
+        	if (parse_policy(attrs[AUTHP_TTL_POLICY],
+        			 dup_config_entry->ttl_policy))
+        		goto parse_fail;
+        }
+
+        return 0;
+
+ parse_fail:
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("dup config attributes"));
+        return -1;
+}
+
+static int parse_s_dup_config_entry(struct nlattr *           sdup_config_entry_attr,
+                                    struct dup_config_entry * dup_config_entry)
+{
+        struct nla_policy attr_policy[SAUTHP_ATTR_MAX + 1];
+        struct nlattr *   attrs[SAUTHP_ATTR_MAX + 1];
+
+        if (!sdup_config_entry_attr || !dup_config_entry) {
+                LOG_ERR("Bogus input parameters, cannot parse policy info");
+                return -1;
+        }
+
+	attr_policy[SAUTHP_UNDER_DIF].type = NLA_STRING;
+	attr_policy[SAUTHP_UNDER_DIF].len = 0;
+	attr_policy[SAUTHP_AUTH_PROFILE].type = NLA_NESTED;
+	attr_policy[SAUTHP_AUTH_PROFILE].len = 0;
+
+        if (nla_parse_nested(attrs,
+        		     SAUTHP_ATTR_MAX,
+        		     sdup_config_entry_attr,
+                             attr_policy) < 0)
+                goto parse_fail;
+
+        if (attrs[SAUTHP_UNDER_DIF]) {
+        	dup_config_entry->n_1_dif_name =
+        			nla_dup_string(attrs[SAUTHP_UNDER_DIF], GFP_KERNEL);
+        }
+
+        if (attrs[SAUTHP_AUTH_PROFILE]) {
+                if (parse_dup_config_entry(attrs[SAUTHP_AUTH_PROFILE],
+                		           dup_config_entry))
+                	goto parse_fail;
+        }
+
+        return 0;
+
+ parse_fail:
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("specific dup config attributes"));
+        return -1;
+}
+
+static int parse_list_of_dup_config_entries(struct nlattr *      nested_attr,
+                             	     	    struct sdup_config * sdup_config)
+{
+        struct nlattr *            nla;
+        struct dup_config_entry *  entry;
+        struct dup_config *        config;
+        int                        rem                   = 0;
+        int                        entries_with_problems = 0;
+        int                        total_entries         = 0;
+
+        if (!nested_attr || !sdup_config) {
+                LOG_ERR("Bogus input parameters, cannot parse policy info");
+                return -1;
+        }
+
+        for (nla = (struct nlattr*) nla_data(nested_attr),
+                     rem = nla_len(nested_attr);
+             nla_ok(nla, rem);
+             nla = nla_next(nla, &(rem))) {
+                total_entries++;
+
+                entry = dup_config_entry_create();
+                if (!entry) {
+                        entries_with_problems++;
+                        continue;
+                }
+
+                if (parse_s_dup_config_entry(nla, entry) < 0) {
+                        dup_config_entry_destroy(entry);
+                        entries_with_problems++;
+                        continue;
+                }
+
+                config = dup_config_create();
+                if (!config) {
+                	dup_config_entry_destroy(entry);
+                        entries_with_problems++;
+                        continue;
+                }
+                config->entry = entry;
+                list_add(&config->next, &sdup_config->specific_dup_confs);
+        }
+
+        if (rem > 0) {
+                LOG_WARN("Missing bits to parse");
+        }
+
+        if (entries_with_problems > 0)
+                LOG_WARN("Problems parsing %d out of %d dup config entries",
+                         entries_with_problems,
+                         total_entries);
+
+        return 0;
+}
+
+static int parse_sdup_config(struct nlattr *      sdup_config_attr,
+                             struct sdup_config * sdup_config)
+{
+        struct nla_policy attr_policy[SECMANC_ATTR_MAX + 1];
+        struct nlattr *   attrs[SECMANC_ATTR_MAX + 1];
+
+        if (!sdup_config_attr || !sdup_config) {
+                LOG_ERR("Bogus input parameters, cannot parse policy info");
+                return -1;
+        }
+
+	attr_policy[SECMANC_POLICY_SET].type = NLA_NESTED;
+	attr_policy[SECMANC_POLICY_SET].len = 0;
+	attr_policy[SECMANC_DEFAULT_AUTH_SDUP_POLICY].type = NLA_NESTED;
+	attr_policy[SECMANC_DEFAULT_AUTH_SDUP_POLICY].len = 0;
+	attr_policy[SECMANC_SPECIFIC_AUTH_SDUP_POLICIES].type = NLA_NESTED;
+	attr_policy[SECMANC_SPECIFIC_AUTH_SDUP_POLICIES].len = 0;
+
+        if (nla_parse_nested(attrs,
+        		     SECMANC_ATTR_MAX,
+        		     sdup_config_attr,
+                             attr_policy) < 0)
+                goto parse_fail;
+
+        if (attrs[SECMANC_DEFAULT_AUTH_SDUP_POLICY]) {
+        	sdup_config->default_dup_conf = dup_config_entry_create();
+        	if (!sdup_config->default_dup_conf)
+        		goto parse_fail;
+
+        	sdup_config->default_dup_conf->n_1_dif_name = get_zero_length_string();
+        	if (parse_dup_config_entry(attrs[SECMANC_DEFAULT_AUTH_SDUP_POLICY],
+        				   sdup_config->default_dup_conf))
+        		goto parse_fail;
+        }
+
+        if (attrs[SECMANC_SPECIFIC_AUTH_SDUP_POLICIES]) {
+                if (parse_list_of_dup_config_entries(attrs[SECMANC_SPECIFIC_AUTH_SDUP_POLICIES],
+                				     sdup_config))
+                	goto parse_fail;
+        }
+
+        return 0;
+
+ parse_fail:
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("sdup config attributes"));
+        return -1;
+}
+
+static int parse_pft_config(struct nlattr *     pft_config_attr,
+                            struct pft_config * pft_config)
+{
+        struct nla_policy attr_policy[PFTC_ATTR_MAX + 1];
+        struct nlattr *   attrs[PFTC_ATTR_MAX + 1];
+
+        attr_policy[PFTC_ATTR_POLICY_SET].type = NLA_NESTED;
+        attr_policy[PFTC_ATTR_POLICY_SET].len  = 0;
+
+        if (nla_parse_nested(attrs,
+        		     PFTC_ATTR_MAX,
+                             pft_config_attr,
+                             attr_policy) < 0)
+                goto parse_fail;
+
+        if (attrs[PFTC_ATTR_POLICY_SET]) {
+                if (parse_policy(attrs[PFTC_ATTR_POLICY_SET],
+                                 pft_config->policy_set))
+                        goto parse_fail;
+        }
+
+        return 0;
+
+ parse_fail:
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("pft config"));
+        return -1;
+}
+
+static int parse_rmt_config(struct nlattr *     rmt_config_attr,
+                            struct rmt_config * rmt_config)
+{
+        struct nla_policy attr_policy[RMTC_ATTR_MAX + 1];
+        struct nlattr *   attrs[RMTC_ATTR_MAX + 1];
+
+        attr_policy[RMTC_ATTR_POLICY_SET].type = NLA_NESTED;
+        attr_policy[RMTC_ATTR_POLICY_SET].len  = 0;
+        attr_policy[RMTC_ATTR_PFT_CONFIG].type = NLA_NESTED;
+        attr_policy[RMTC_ATTR_PFT_CONFIG].len  = 0;
+
+        if (nla_parse_nested(attrs,
+        		     RMTC_ATTR_MAX,
+                             rmt_config_attr,
+                             attr_policy) < 0)
+                goto parse_fail;
+
+        if (attrs[RMTC_ATTR_POLICY_SET]) {
+                if (parse_policy(attrs[RMTC_ATTR_POLICY_SET],
+                                 rmt_config->policy_set))
+                        goto parse_fail;
+        }
+        if (attrs[RMTC_ATTR_PFT_CONFIG]) {
+                if (parse_pft_config(attrs[RMTC_ATTR_PFT_CONFIG],
+                                 rmt_config->pft_conf))
+                        goto parse_fail;
+
+        }
+
+        return 0;
+
+ parse_fail:
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("rmt config attributes"));
         return -1;
 }
 
@@ -1293,6 +1687,18 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
         attr_policy[DCONF_ATTR_EFCPC].len                = 0;
         attr_policy[DCONF_ATTR_RMTC].type                = NLA_NESTED;
         attr_policy[DCONF_ATTR_RMTC].len                 = 0;
+        attr_policy[DCONF_ATTR_SECMANC].type             = NLA_NESTED;
+        attr_policy[DCONF_ATTR_SECMANC].len              = 0;
+        attr_policy[DCONF_ATTR_FAC].type                 = NLA_NESTED;
+        attr_policy[DCONF_ATTR_FAC].len                  = 0;
+        attr_policy[DCONF_ATTR_ETC].type                 = NLA_NESTED;
+        attr_policy[DCONF_ATTR_ETC].len                  = 0;
+        attr_policy[DCONF_ATTR_NSMC].type                = NLA_NESTED;
+        attr_policy[DCONF_ATTR_NSMC].len                 = 0;
+        attr_policy[DCONF_ATTR_RAC].type                 = NLA_NESTED;
+        attr_policy[DCONF_ATTR_RAC].len                  = 0;
+        attr_policy[DCONF_ATTR_ROUTINGC].type            = NLA_NESTED;
+        attr_policy[DCONF_ATTR_ROUTINGC].len             = 0;
 
         if (nla_parse_nested(attrs,
                              DCONF_ATTR_MAX,
@@ -1320,7 +1726,23 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
         }
 
         if (attrs[DCONF_ATTR_RMTC]) {
-                LOG_MISSING;
+                dif_config->rmt_config = rmt_config_create();
+                if (!dif_config->rmt_config)
+                	goto parse_fail;
+
+                if (parse_rmt_config(attrs[DCONF_ATTR_RMTC],
+                		     dif_config->rmt_config))
+                	goto parse_fail;
+        }
+
+        if (attrs[DCONF_ATTR_SECMANC]) {
+        	dif_config->sdup_config = sdup_config_create();
+        	if (!dif_config->sdup_config)
+        		goto parse_fail;
+
+                if (parse_sdup_config(attrs[DCONF_ATTR_SECMANC],
+                		      dif_config->sdup_config))
+                	goto parse_fail;
         }
 
         return 0;
@@ -1490,8 +1912,6 @@ static int parse_dtcp_fctrl_config(struct nlattr * attr,
         attr_policy[DFCC_ATTR_RBUFFER_THRES].len             = 4;
         attr_policy[DFCC_ATTR_CLOSED_WINDOW_POLICY].type     = NLA_NESTED;
         attr_policy[DFCC_ATTR_CLOSED_WINDOW_POLICY].len      = 0;
-        attr_policy[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY].type = NLA_NESTED;
-        attr_policy[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY].len  = 0;
         attr_policy[DFCC_ATTR_RECON_FLOW_CTRL_POLICY].type   = NLA_NESTED;
         attr_policy[DFCC_ATTR_RECON_FLOW_CTRL_POLICY].len    = 0;
         attr_policy[DFCC_ATTR_RCVING_FLOW_CTRL_POLICY].type  = NLA_NESTED;
@@ -1547,11 +1967,6 @@ static int parse_dtcp_fctrl_config(struct nlattr * attr,
         if (attrs[DFCC_ATTR_CLOSED_WINDOW_POLICY])
                 if (parse_policy(attrs[DFCC_ATTR_CLOSED_WINDOW_POLICY],
                                  dtcp_closed_window(cfg)))
-                        return -1;
-
-        if (attrs[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY])
-                if (parse_policy(attrs[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY],
-                                 dtcp_flow_control_overrun(cfg)))
                         return -1;
 
         if (attrs[DFCC_ATTR_RECON_FLOW_CTRL_POLICY])
@@ -1655,6 +2070,8 @@ static int parse_dtcp_config(struct nlattr * attr, struct dtcp_config * cfg)
         attr_policy[DCA_ATTR_RETX_CONTROL].len             = 0;
         attr_policy[DCA_ATTR_RETX_CONTROL_CONFIG].type     = NLA_NESTED;
         attr_policy[DCA_ATTR_RETX_CONTROL_CONFIG].len      = 0;
+        attr_policy[DCA_ATTR_DTCP_POLICY_SET].type         = NLA_NESTED;
+        attr_policy[DCA_ATTR_DTCP_POLICY_SET].len          = 0;
         attr_policy[DCA_ATTR_LOST_CONTROL_PDU_POLICY].type = NLA_NESTED;
         attr_policy[DCA_ATTR_LOST_CONTROL_PDU_POLICY].len  = 0;
         attr_policy[DCA_ATTR_RTT_EST_POLICY].type          = NLA_NESTED;
@@ -1692,6 +2109,12 @@ static int parse_dtcp_config(struct nlattr * attr, struct dtcp_config * cfg)
                                             cfg))
                         return -1;
 
+        if (attrs[DCA_ATTR_DTCP_POLICY_SET])
+                if (parse_policy(attrs[DCA_ATTR_DTCP_POLICY_SET],
+                                 dtcp_ps(cfg)))
+                        return -1;
+
+
         if (attrs[DCA_ATTR_LOST_CONTROL_PDU_POLICY])
                 if (parse_policy(attrs[DCA_ATTR_LOST_CONTROL_PDU_POLICY],
                                  dtcp_lost_control_pdu(cfg)))
@@ -1715,6 +2138,8 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
         attr_policy[CPP_ATTR_DTCP_PRESENT].len            = 0;
         attr_policy[CPP_ATTR_DTCP_CONFIG].type            = NLA_NESTED;
         attr_policy[CPP_ATTR_DTCP_CONFIG].len             = 0;
+        attr_policy[CPP_ATTR_DTP_POLICY_SET].type         = NLA_NESTED;
+        attr_policy[CPP_ATTR_DTP_POLICY_SET].len          = 0;
         attr_policy[CPP_ATTR_RCVR_TIMER_INAC_POLICY].type = NLA_NESTED;
         attr_policy[CPP_ATTR_RCVR_TIMER_INAC_POLICY].len  = 0;
         attr_policy[CPP_ATTR_SNDR_TIMER_INAC_POLICY].type = NLA_NESTED;
@@ -1747,6 +2172,12 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
                         LOG_ERR("Could not parse dtcp config");
                         return -1;
                 }
+
+        if (attrs[CPP_ATTR_DTP_POLICY_SET]) {
+                if (parse_policy(attrs[CPP_ATTR_DTP_POLICY_SET],
+                                 cpp_struct->dtp_ps))
+                        return -1;
+        }
 
         if (attrs[CPP_ATTR_RCVR_TIMER_INAC_POLICY])
                 if (parse_policy(attrs[CPP_ATTR_RCVR_TIMER_INAC_POLICY],
@@ -2086,7 +2517,7 @@ static int parse_list_pfte_conf_e(struct nlattr *     nested_attr,
                                   struct rnl_rmt_mod_pfte_msg_attrs * msg)
 {
         struct nlattr *       nla;
-        struct pdu_ft_entry * entry;
+        struct modpdufwd_entry * entry;
         int                   rem                   = 0;
         int                   entries_with_problems = 0;
         int                   total_entries         = 0;
@@ -2187,6 +2618,33 @@ rnl_parse_ipcp_select_policy_set_req_msg(
         if (info->attrs[ISPS_ATTR_NAME])
                 msg_attrs->name = nla_dup_string(info->attrs[ISPS_ATTR_NAME],
                                                  GFP_KERNEL);
+
+        return 0;
+}
+
+static int
+rnl_parse_ipcp_enable_encryption_req_msg(
+                struct genl_info * info,
+                struct rnl_ipcp_enable_encrypt_req_msg_attrs * msg_attrs)
+{
+        if (info->attrs[IEERM_ATTR_N_1_PORT])
+                msg_attrs->port_id =
+                        nla_get_u32(info->attrs[IEERM_ATTR_N_1_PORT]);
+
+	if (info->attrs[IEERM_ATTR_EN_ENCRYPT])
+		msg_attrs->encryption_enabled = true;
+	else
+		msg_attrs->encryption_enabled = false;
+
+	if (info->attrs[IEERM_ATTR_EN_DECRYPT])
+		msg_attrs->decrption_enabled = true;
+	else
+		msg_attrs->decrption_enabled = false;
+
+        if (info->attrs[IEERM_ATTR_ENCRYPT_KEY]) {
+        	msg_attrs->encrypt_key = buffer_create_from(nla_data(info->attrs[IEERM_ATTR_ENCRYPT_KEY]),
+        						    nla_len(info->attrs[IEERM_ATTR_ENCRYPT_KEY]));
+        }
 
         return 0;
 }
@@ -2318,6 +2776,11 @@ int rnl_parse_msg(struct genl_info * info,
                 break;
         case RINA_C_IPCP_SELECT_POLICY_SET_REQUEST:
                 if (rnl_parse_ipcp_select_policy_set_req_msg(info,
+                                                             msg->attrs) < 0)
+                        goto fail;
+                break;
+        case RINA_C_IPCP_ENABLE_ENCRYPTION_REQUEST:
+                if (rnl_parse_ipcp_enable_encryption_req_msg(info,
                                                              msg->attrs) < 0)
                         goto fail;
                 break;
@@ -2759,12 +3222,11 @@ static int send_nl_unicast_msg(struct net *     net,
         return 0;
 }
 
-static int format_pft_entry_port_list(port_id_t *      ports,
-                                      size_t           ports_size,
-                                      struct sk_buff * skb_out)
+static int format_port_id_altlist(struct port_id_altlist *pos,
+				  struct sk_buff * skb_out)
 {
         struct nlattr * msg_ports;
-        int i = 0;
+	int i;
 
         if (!skb_out) {
                 LOG_ERR("Bogus input parameter(s), bailing out");
@@ -2772,17 +3234,50 @@ static int format_pft_entry_port_list(port_id_t *      ports,
         }
 
         if (!(msg_ports =
-              nla_nest_start(skb_out, PFTELE_ATTR_PORTIDS))) {
+              nla_nest_start(skb_out, PIA_ATTR_PORTIDS))) {
                 nla_nest_cancel(skb_out, msg_ports);
                 return -1;
         }
 
-        for (i = 0; i < ports_size; i++) {
-                if (nla_put_u32(skb_out, i, ports[i]))
+        for (i = 1; i <= pos->num_ports; i++) {
+                if (nla_put_u32(skb_out, i, pos->ports[i-1]))
                         return -1;
         }
 
         nla_nest_end(skb_out, msg_ports);
+
+	return 0;
+}
+
+static int format_pft_entry_altlists(struct list_head * entries,
+                                         struct sk_buff * skb_out)
+{
+        struct nlattr * msg_alts;
+	struct port_id_altlist * pos, * nxt;
+
+
+        if (!skb_out) {
+                LOG_ERR("Bogus input parameter(s), bailing out");
+                return -1;
+        }
+
+        if (!(msg_alts =
+              nla_nest_start(skb_out, PFTELE_ATTR_PORT_ID_ALTLISTS))) {
+                nla_nest_cancel(skb_out, msg_alts);
+                return -1;
+        }
+
+	list_for_each_entry_safe(pos, nxt, entries, next) {
+		if (format_port_id_altlist(pos,
+                                           skb_out))
+                        return format_fail("rnl_ipcm_pft_dump_resp_msg");
+
+		list_del(&pos->next);
+		rkfree(pos);
+	}
+
+        nla_nest_end(skb_out, msg_alts);
+
         return 0;
 }
 
@@ -2790,7 +3285,7 @@ static int format_pft_entries_list(struct list_head * entries,
                                    struct sk_buff *   skb_out)
 {
         struct nlattr * msg_entry;
-        struct pdu_ft_entry * pos, *nxt;
+        struct modpdufwd_entry * pos, * nxt;
         int i = 0;
 
         if (!skb_out) {
@@ -2807,18 +3302,16 @@ static int format_pft_entries_list(struct list_head * entries,
                         return format_fail("rnl_ipcm_pft_dump_resp_msg");
                 }
 
-                if ((nla_put_u32(skb_out,
+                if (nla_put_u32(skb_out,
                                  PFTELE_ATTR_ADDRESS,
-                                 pos->destination)                         ||
-                     nla_put_u32(skb_out, PFTELE_ATTR_QOSID, pos->qos_id)) ||
-                    format_pft_entry_port_list(pos->ports,
-                                               pos->ports_size,
-                                               skb_out))
+                                 pos->fwd_info)                        ||
+                     nla_put_u32(skb_out, PFTELE_ATTR_QOSID, pos->qos_id) ||
+			format_pft_entry_altlists(&pos->port_id_altlists,
+						      skb_out))
                         return format_fail("rnl_ipcm_pft_dump_resp_msg");
 
                 nla_nest_end(skb_out, msg_entry);
                 list_del(&pos->next);
-                rkfree(pos->ports);
                 rkfree(pos);
         }
 
@@ -2945,6 +3438,25 @@ static int rnl_format_ipcp_select_policy_set_resp_msg(
                                                 "rnl_ipcp_select_policy"
                                                 "_set_resp_msg",
                                                 skb_out);
+}
+
+static int rnl_format_ipcp_enable_encryption_resp_msg(
+                                                uint_t           result,
+                                                port_id_t 	 port_id,
+                                                struct sk_buff * skb_out)
+{
+	if (!skb_out) {
+		LOG_ERR("Bogus input parameter(s), bailing out");
+		return -1;
+	}
+
+	if (nla_put_u32(skb_out, IEEREM_ATTR_RESULT, result) < 0)
+		return format_fail("rnl_format_ipcp_enable_encryption_resp_msg");
+
+	if (nla_put_u32(skb_out, IEEREM_ATTR_N_1_PORT, port_id) < 0)
+		return format_fail("rnl_format_ipcp_enable_encryption_resp_msg");
+
+        return 0;
 }
 
 int rnl_assign_dif_response(ipc_process_id_t id,
@@ -3766,3 +4278,54 @@ int rnl_select_policy_set_response(ipc_process_id_t id,
 
 }
 EXPORT_SYMBOL(rnl_select_policy_set_response);
+
+int rnl_enable_encryption_response(ipc_process_id_t id,
+                                   uint_t           res,
+                                   rnl_sn_t         seq_num,
+                                   port_id_t	    n_1_port,
+                                   u32              nl_port_id)
+{
+        struct sk_buff *      out_msg;
+        struct rina_msg_hdr * out_hdr;
+        int                   result;
+
+        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
+        if (!out_msg) {
+                LOG_ERR("Could not allocate memory for message");
+                return -1;
+        }
+
+        out_hdr = (struct rina_msg_hdr *)
+                genlmsg_put(out_msg,
+                            0,
+                            seq_num,
+                            &rnl_nl_family,
+                            0,
+                            RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE);
+        if (!out_hdr) {
+                LOG_ERR("Could not use genlmsg_put");
+                nlmsg_free(out_msg);
+                return -1;
+        }
+
+        out_hdr->src_ipc_id = id;
+        out_hdr->dst_ipc_id = 0;
+
+        if (rnl_format_ipcp_enable_encryption_resp_msg(res, n_1_port, out_msg)) {
+                LOG_ERR("Could not format message ...");
+                nlmsg_free(out_msg);
+                return -1;
+        }
+
+        result = genlmsg_end(out_msg, out_hdr);
+        if (result) {
+                LOG_DBG("Result of genlmesg_end: %d", result);
+        }
+
+        return send_nl_unicast_msg(&init_net,
+                                   out_msg,
+                                   nl_port_id,
+                                   RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE,
+                                   seq_num);
+}
+EXPORT_SYMBOL(rnl_enable_encryption_response);

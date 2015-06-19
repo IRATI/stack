@@ -115,6 +115,9 @@ bool IPCProcessesObj::assignToDIF(
 		int ipcp_id) {
 	// ASSIGN TO DIF
 	Promise assign_promise;
+	bool found;
+	rinad::DIFTemplateMapping template_mapping;
+	rinad::DIFTemplate * dif_template;
 
 	rina::ApplicationProcessNamingInformation dif_name(object.dif_to_assign,
 								std::string());
@@ -124,8 +127,22 @@ bool IPCProcessesObj::assignToDIF(
 		return false;
 	}
 
+	found = IPCManager->getConfig().lookup_dif_template_mappings(dif_name, template_mapping);
+	if (!found) {
+		LOG_ERR("Could not find DIF template for DIF name %s",
+				dif_name.processName.c_str());
+		return false;
+	}
+
+	dif_template = IPCManager->dif_template_manager->get_dif_template(template_mapping.template_name);
+	if (!dif_template) {
+		LOG_ERR("Cannot find template called %s",
+				template_mapping.template_name.c_str());
+		return false;
+	}
+
 	if (IPCManager->assign_to_dif(ManagementAgent::inst, &assign_promise,
-					ipcp_id, dif_name) == IPCM_FAILURE
+					ipcp_id, dif_template, dif_name) == IPCM_FAILURE
 			|| assign_promise.wait() != IPCM_SUCCESS) {
 		LOG_ERR("DIF assignment failed");
 		return false;

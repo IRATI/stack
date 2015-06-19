@@ -92,7 +92,7 @@ public:
 	*
 	* Shall only be called by the ManagementAgent
 	*/
-	void process_flow_event(rina::IPCEvent** event);
+	void process_librina_event(rina::IPCEvent** event);
 
 	/**
 	* Checks whether an operation has already finalised
@@ -136,6 +136,9 @@ private:
 
 	//Stores and notifies the event
 	void store_event(rina::IPCEvent* event);
+
+	// Manage a CDAP response delegated to an IPC process
+	void process_fwd_cdap_msg_response(rina::FwdCDAPMsgEvent* fwdevent);
 
 	// Pending events  seqnum <-> event
 	std::map<unsigned int, rina::IPCEvent*> pending_events;

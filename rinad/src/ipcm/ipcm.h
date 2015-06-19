@@ -34,7 +34,7 @@
 #include <librina/ipc-manager.h>
 #include <librina/patterns.h>
 
-#include "rina-configuration.h"
+#include "dif-template-manager.h"
 
 //Addons
 #include "addon.h"
@@ -249,7 +249,7 @@ public:
 	//
 	// Initialize the IPCManager
 	//
-	void init(const std::string& loglevel);
+	void init(const std::string& loglevel, std::string& config_file);
 
 	//
 	// Load the specified addons
@@ -342,6 +342,7 @@ public:
 	//
 	ipcm_res_t assign_to_dif(Addon* callee, Promise* promise,
 			const unsigned short ipcp_id,
+			rinad::DIFTemplate * dif_template,
 			const rina::ApplicationProcessNamingInformation&
 				difName);
 
@@ -461,9 +462,9 @@ public:
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t plugin_load(Addon* callee, Promise* promise,
-						const unsigned short ipcp_id,
-						const std::string& plugin_name,
-						bool load);
+			       const unsigned short ipcp_id,
+			       const std::string& plugin_name,
+			       bool load);
 
 	//
 	// Get information about plugin
@@ -473,8 +474,26 @@ public:
 	//               the policy sets supported by the plugin
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_SUCCESS
-        ipcm_res plugin_get_info(const std::string& plugin_name,
-				 std::list<rina::PsInfo>& result);
+        ipcm_res_t plugin_get_info(const std::string& plugin_name,
+				   std::list<rina::PsInfo>& result);
+
+        //
+        // Just used for testing support for IPCP RIB delegation
+        //
+	// @param promise Promise object containing the future result of the
+	// operation. The promise shall always be accessible until the
+	// operation has been finished, so promise->ret value is different than
+	// IPCM_PENDING.
+        // @param ipcp_id the IPCP id
+        // @param object_class the class of the object to be read
+        // @param object_name the name of the object to be read
+        //
+        // @ret IPCM_PENDING if the NL message could be sent to the IPCP,
+        // IPCM_FAILURE otherwise
+	ipcm_res_t read_ipcp_ribobj(Addon* callee, Promise* promise,
+			      const unsigned short ipcp_id,
+			      const std::string& object_class,
+			      const std::string& object_name);
 
 	//
 	// Get the current logging debug level
@@ -486,6 +505,10 @@ public:
 	//
 	void loadConfig(rinad::RINAConfiguration& newConf){
 		config = newConf;
+	}
+
+	rinad::RINAConfiguration& getConfig() {
+		return config;
 	}
 
 	//
@@ -761,9 +784,6 @@ protected:
 	//Rwlock for transactions
 	rina::ReadWriteLockable trans_rwlock;
 
-	// RINA configuration internal state
-	rinad::RINAConfiguration config;
-
 	//Current logging level
 	std::string log_level_;
 
@@ -776,9 +796,15 @@ protected:
 	//IPCM factory
 	IPCMIPCProcessFactory ipcp_factory_;
 
+	// RINA configuration internal state
+	rinad::RINAConfiguration config;
+
 public:
 	//Generator of opaque identifiers
 	rina::ConsecutiveUnsignedIntegerGenerator __tid_gen;
+
+	//The DIF template manager
+	DIFTemplateManager * dif_template_manager;
 private:
 	//Singleton
 	IPCManager_();

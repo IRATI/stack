@@ -1,7 +1,7 @@
 /*
  * RIB and CDAP common structures
  *
- *    Bernat Gast√≥n <bernat.gaston@i2cat.net>
+ *    Bernat Gastón <bernat.gaston@i2cat.net>
  *
  * This library is free software{} you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,6 +23,7 @@
 #define CDAP_RIB_STRUCTURES_H_
 
 #include <string>
+#include <list>
 
 namespace rina {
 namespace cdap_rib {
@@ -38,24 +39,14 @@ typedef struct cdap_params {
 } cdap_params_t;
 
 /// Authentication information
-typedef struct auth_info {
-	enum AuthTypes {
-		AUTH_NONE,
-		AUTH_PASSWD,
-		AUTH_SSHRSA,
-		AUTH_SSHDSA
-	};
-	/// Authentication name
-	std::string auth_name_;
-	/// Authentication password
-	std::string auth_password_;
-	/// Additional authentication information
-	std::string auth_other_;
-	/// AuthenticationMechanismName (authtypes), optional, not validated by CDAP.
-	/// Identification of the method to be used by the destination application to
-	/// authenticate the source application
-	AuthTypes auth_mech_;
-} auth_info_t;
+typedef struct auth_policy {
+	/// Policy name
+	std::string name;
+	/// Supported versions
+	std::list<std::string> versions;
+	/// Policy-specific options, encoded in a char array
+	SerializedObject options;
+} auth_policy_t;
 
 typedef struct destination_info {
 	/// DestinationApplication-Entity-Instance-Id (string), optional, not validated by CDAP.
@@ -164,7 +155,7 @@ typedef struct connection_handler {
 	int port_;
 	src_info_t src_;
 	dest_info_t dest_;
-	auth_info_t auth_;
+	auth_policy_t auth_;
 	vers_info_t version_;
 } con_handle_t;
 

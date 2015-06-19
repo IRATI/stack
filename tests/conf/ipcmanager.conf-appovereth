@@ -20,11 +20,8 @@
     ],
     "difConfigurations": [
         {
-            "difName": "300",
-            "difType": "shim-eth-vlan",
-            "configParameters": {
-                "interface-name": "eth1"
-            }
+            "name": "300",
+            "template": "shim-eth-vlan.dif"
         }
     ]
 }

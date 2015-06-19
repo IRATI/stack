@@ -41,4 +41,7 @@ int              pdu_ser_buffer_disown(struct pdu_ser * pdu);
 int              pdu_ser_head_grow_gfp(gfp_t flags, struct pdu_ser * pdu, size_t bytes);
 int              pdu_ser_head_shrink_gfp(gfp_t flags, struct pdu_ser * pdu, size_t bytes);
 
+int              pdu_ser_tail_grow_gfp(struct pdu_ser * pdu, size_t bytes);
+int              pdu_ser_tail_shrink_gfp(struct pdu_ser * pdu, size_t bytes);
+
 #endif

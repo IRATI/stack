@@ -140,14 +140,13 @@ public:
 		std::list<rina::BaseRIBObject *> result;
 		return result;
 	}
-	void openApplicationConnection(rina::CDAPMessage::AuthTypes auth_mech,
-			const rina::AuthValue &auth_value, const std::string &dest_ae_inst,
+	void openApplicationConnection(
+			const rina::AuthPolicy &policy, const std::string &dest_ae_inst,
 			const std::string &dest_ae_name, const std::string &dest_ap_inst,
 			const std::string &dest_ap_name, const std::string &src_ae_inst,
 			const std::string &src_ae_name, const std::string &src_ap_inst,
 			const std::string &src_ap_name, const rina::RemoteProcessId& remote_id) {
-		(void) auth_mech;
-		(void) auth_value;
+		(void) policy;
 		(void) dest_ae_inst;
 		(void) dest_ae_name;
 		(void) dest_ap_inst;
@@ -221,14 +220,13 @@ public:
 		(void) remote_id;
 		(void) response_handler;
 	}
-	void openApplicationConnectionResponse(rina::CDAPMessage::AuthTypes auth_mech,
-				const rina::AuthValue &auth_value, const std::string &dest_ae_inst,
+	void openApplicationConnectionResponse(
+				const rina::AuthPolicy &policy, const std::string &dest_ae_inst,
 				const std::string &dest_ae_name, const std::string &dest_ap_inst, const std::string &dest_ap_name,
 				int result, const std::string &result_reason, const std::string &src_ae_inst,
 				const std::string &src_ae_name, const std::string &src_ap_inst, const std::string &src_ap_name,
 				int invoke_id, const rina::RemoteProcessId& remote_id) {
-		(void) auth_mech;
-		(void) auth_value;
+		(void) policy;
 		(void) dest_ae_inst;
 		(void) dest_ae_name;
 		(void) dest_ap_inst;
@@ -432,23 +430,6 @@ public:
 	const std::list<rina::Neighbor *> get_neighbors() const {
 		return neighbors_;
 	}
-
-    std::vector<rina::PsFactory>::iterator
-                    psFactoryLookup(const rina::PsInfo& ps_info) {
-    	std::vector<rina::PsFactory>::iterator response;
-    	(void) ps_info;
-    	return response;
-    }
-
-    int psFactoryPublish(const rina::PsFactory& factory) {
-    	(void) factory;
-    	return 0;
-    }
-
-    int psFactoryUnpublish(const rina::PsInfo& ps_info){
-    	(void) ps_info;
-    	return 0;
-    }
 
     rina::IPolicySet * psCreate(const std::string& component,
                                  const std::string& name,

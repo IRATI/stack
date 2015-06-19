@@ -95,6 +95,7 @@ librina_la_LIBADD   =			\
 	$(LIBNL3_LIBS)				\
 	$(LIBNLGENL3_LIBS)			\
 	$(LIBPROTOBUF_LIBS)			\
+	$(OPENSSL_LIBS)				\
         $(builddir)/librinajsoncpp.la           \
 	-ldl
 librina_la_CPPFLAGS =				\
@@ -105,6 +106,7 @@ librina_la_CPPFLAGS =				\
 	$(LIBNL3_CFLAGS)			\
 	$(LIBNLGENL3_CFLAGS)			\
 	$(LIBPROTOBUF_CFLAGS)			\
+	$(OPENSSL_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)
 librina_la_CXXFLAGS =				\
 	$(CXXFLAGS_EXTRA)
@@ -115,6 +117,7 @@ librina_stubbed_la_LIBADD   =	\
 	$(LIBNL3_LIBS)				\
 	$(LIBNLGENL3_LIBS)			\
 	$(LIBPROTOBUF_LIBS)			\
+	$(OPENSSL_LIBS)				\
         $(builddir)/librinajsoncpp.la           \
 	-ldl
 librina_stubbed_la_CPPFLAGS =			\
@@ -125,6 +128,7 @@ librina_stubbed_la_CPPFLAGS =			\
 	$(LIBNL3_CFLAGS)			\
 	$(LIBNLGENL3_CFLAGS)			\
 	$(LIBPROTOBUF_CFLAGS)			\
+	$(OPENSSL_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)
 librina_stubbed_la_CXXFLAGS =			\
 	$(CXXFLAGS_EXTRA)
@@ -143,6 +147,7 @@ test_linking_CPPFLAGS =				\
 	$(LIBNL3_CFLAGS)			\
 	$(LIBNLGENL3_CFLAGS)			\
 	$(LIBPROTOBUF_CFLAGS)			\
+	$(OPENSSL_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)
 test_linking_CXXFLAGS =				\
 	$(CXXFLAGS_EXTRA)
@@ -150,6 +155,7 @@ test_linking_LDADD    =			\
 	$(LIBNL3_LIBS)				\
 	$(LIBNLGENL3_LIBS)			\
 	$(LIBPROTOBUF_LIBS)			\
+	$(OPENSSL_LIBS)				\
         $(builddir)/librinajsoncpp.la           \
 	-ldl						\
 	librina.la
@@ -170,6 +176,8 @@ edit = $(SED)								\
 	-e 's|@LIBPROTOBUF_MIN_VERSION[@]|$(LIBPROTOBUF_MIN_VERSION)|g'	\
 	-e 's|@LIBPROTOBUF_CFLAGS[@]|$(LIBPROTOBUF_CFLAGS)|g'		\
 	-e 's|@LIBPROTOBUF_LIBS[@]|$(LIBPROTOBUF_LIBS)|g'		\
+	-e 's|@OPENSSL_CFLAGS[@]|$(OPENSSL_CFLAGS)|g'			\
+	-e 's|@OPENSSL_LIBS[@]|$(OPENSSL_LIBS)|g'			\
         -e 's|@prefix[@]|$(prefix)|g'					\
         -e 's|@includedir[@]|$(includedir)|g'				\
         -e 's|@libdir[@]|$(libdir)|g'

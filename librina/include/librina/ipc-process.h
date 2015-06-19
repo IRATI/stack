@@ -714,6 +714,15 @@ public:
 	void pluginLoadResponse(const PluginLoadRequestEvent& event,
                                 int result);
 
+	/**
+	 * Forward to the IPC Manager a CDAP response message
+	 * @param event Seqnum of the event that triggered the operation
+	 * @param The serialized CDAP message to forward
+	 * @throws FwdCDAPMsgException
+	 */
+	void forwardCDAPResponse(unsigned sequenceNumber,
+				 const rina::SerializedObject& sermsg,
+				 int result);
 };
 
 /**
@@ -804,6 +813,14 @@ public:
 	RoutingTableEntry();
 };
 
+struct PortIdAltlist {
+	std::list<unsigned int> alts;
+
+	PortIdAltlist();
+	PortIdAltlist(unsigned int pid);
+	void add_alt(unsigned int pid);
+};
+
 /**
  * Models an entry in the PDU Forwarding Table
  */
@@ -816,7 +833,7 @@ public:
         unsigned int qosId;
 
         /** The N-1 portid */
-        std::list<unsigned int> portIds;
+        std::list<PortIdAltlist> portIdAltlists;
 
         PDUForwardingTableEntry();
         bool operator==(const PDUForwardingTableEntry &other) const;
@@ -824,9 +841,8 @@ public:
 #ifndef SWIG
         unsigned int getAddress() const;
         void setAddress(unsigned int address);
-        const std::list<unsigned int> getPortIds() const;
-        void setPortIds(const std::list<unsigned int>& portIds);
-        void addPortId(unsigned int portId);
+        const std::list<PortIdAltlist> getPortIdAltlists() const;
+        void setPortIdAltlists(const std::list<PortIdAltlist>& portIds);
         unsigned int getQosId() const;
         void setQosId(unsigned int qosId);
 #endif
@@ -854,6 +870,17 @@ public:
 #endif
 };
 
+class EnableEncryptionResponseEvent: public IPCEvent {
+public:
+        EnableEncryptionResponseEvent(int res,
+                        int port_id, unsigned int sequenceNumber);
+
+        // The N-1 port-id where encryption was to be applied
+        int port_id;
+
+        // Result of the operation, 0 success
+        int result;
+};
 
 /**
  * FIXME: Quick hack to get multiple parameters back
@@ -965,6 +992,9 @@ public:
          * @throws PDUForwardingTabeException if something goes wrong
          */
         unsigned int dumptPDUFT();
+
+        /// Request the kernel to enable encryption, decryption or both on a certain port
+        unsigned int enableEncryption(const EncryptionProfile& profile);
 
         /**
          * Request the Kernel IPC Process to modify a policy-set-related

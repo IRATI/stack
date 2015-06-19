@@ -55,6 +55,12 @@ public:
         void sendMessageSpecific(bool useAddress, const rina::CDAPMessage & cdapMessage, int sessionId,
 			unsigned int address, rina::ICDAPResponseMessageHandler * cdapMessageHandler);
         void cdapMessageDelivered(char* message, int length, int portId);
+	void generateCDAPResponse(int invoke_id,
+			rina::CDAPSessionDescriptor * cdapSessDescr,
+			rina::CDAPMessage::Opcode opcode,
+			const std::string& obj_class,
+			const std::string& obj_name,
+			rina::RIBObjectValue& robject_value);
 
 private:
         INMinusOneFlowManager * n_minus_one_flow_manager_;
