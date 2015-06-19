@@ -2407,7 +2407,7 @@ static int tcp_udp_query_rib(struct ipcp_instance_data * data,
                              const string_t *            object_name,
                              uint64_t                    object_instance,
                              uint32_t                    scope,
-                             const string_t *            filter) 
+                             const string_t *            filter)
 {
 	LOG_MISSING;
 	return -1;
@@ -2417,6 +2417,7 @@ static struct ipcp_instance_ops tcp_udp_instance_ops = {
         .flow_allocate_request     = tcp_udp_flow_allocate_request,
         .flow_allocate_response    = tcp_udp_flow_allocate_response,
         .flow_deallocate           = tcp_udp_flow_deallocate,
+        .flow_prebind              = NULL,
         .flow_binding_ipcp         = NULL,
         .flow_unbinding_ipcp       = NULL,
         .flow_unbinding_user_ipcp  = tcp_udp_unbind_user_ipcp,
