@@ -1490,6 +1490,75 @@ out:
         return 0;
 }
 
+static int notify_ipcp_enable_encryption(void *             data,
+                                         struct sk_buff *   buff,
+                                         struct genl_info * info)
+{
+        struct kipcm *                                 kipcm = data;
+        struct rnl_ipcp_enable_encrypt_req_msg_attrs * attrs;
+        struct rnl_msg *                               msg;
+        struct ipcp_instance *                         ipc_process;
+        ipc_process_id_t                               ipc_id = 0;
+        int retval = 0;
+        port_id_t				       port_id = 0;
+
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
+
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
+
+        msg = rnl_msg_create(RNL_MSG_ATTRS_ENABLE_ENCRYPTION_REQUEST);
+        if (!msg) {
+                retval = -1;
+                goto out;
+        }
+
+        attrs = msg->attrs;
+
+        if (rnl_parse_msg(info, msg)) {
+                retval = -1;
+                goto out;
+        }
+
+        port_id = attrs->port_id;
+        ipc_id      = msg->header.dst_ipc_id;
+        ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+        if (!ipc_process) {
+                LOG_ERR("IPC process %d not found", ipc_id);
+                retval = -1;
+                goto out;
+        }
+        LOG_DBG("Found IPC Process with id %d", ipc_id);
+
+        ASSERT(ipc_process->ops);
+        if (ipc_process->ops->enable_encryption) {
+                retval = ipc_process->ops->enable_encryption(ipc_process->data,
+                                attrs->encryption_enabled, attrs->decrption_enabled,
+                                attrs->encrypt_key, attrs->port_id);
+                if (retval) {
+                        LOG_ERR("Enable encryption operation failed");
+                }
+        } else {
+                retval = -1;
+                LOG_ERR("IPC process %d does not support enabling encryption", ipc_id);
+        }
+
+        LOG_DBG("enable encryption request served");
+out:
+        rnl_msg_destroy(msg);
+
+        if (rnl_enable_encryption_response(ipc_id, retval, info->snd_seq,
+        		port_id, info->snd_portid))
+                return -1;
+
+        return 0;
+}
+
 static int netlink_handlers_unregister(struct rnl_set * rnls)
 {
         int retval = 0;
@@ -1545,6 +1614,10 @@ static int netlink_handlers_register(struct kipcm * kipcm)
                 notify_ipcp_set_policy_set_param;
         kipcm_handlers[RINA_C_IPCP_SELECT_POLICY_SET_REQUEST]      =
                 notify_ipcp_select_policy_set;
+        kipcm_handlers[RINA_C_IPCP_SELECT_POLICY_SET_REQUEST]      =
+                notify_ipcp_select_policy_set;
+        kipcm_handlers[RINA_C_IPCP_ENABLE_ENCRYPTION_REQUEST]      =
+                notify_ipcp_enable_encryption;
 
         for (i = 1; i < RINA_C_MAX; i++) {
                 if (kipcm_handlers[i] != NULL) {

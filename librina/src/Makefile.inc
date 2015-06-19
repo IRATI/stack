@@ -34,3 +34,36 @@ EXTRA_DIST +=                                   \
 protoSOURCES += CDAP.pb.cc CDAP.pb.h
 
 
+auth-policies.stamp: auth-policies.proto
+	rm -f auth-policies.tmp
+	touch auth-policies.tmp
+	$(PROTOC) -I$(builddir) -I$(srcdir)	\
+		--cpp_out=$(builddir)		\
+		$(srcdir)/auth-policies.proto
+	mv -f auth-policies.tmp $@
+
+auth-policies.pb.h auth-policies.pb.cc: auth-policies.stamp
+	if test -f $@; then :; else \
+	  trap 'rm -rf auth-policies.lock auth-policies.stamp' 1 2 13 15; \
+	  if mkdir auth-policies.lock 2>/dev/null; then \
+	    rm -f auth-policies.stamp; \
+	    $(MAKE) $(AM_MAKEFLAGS) auth-policies.stamp; \
+	    result=$$?; rm -rf auth-policies.lock; exit $$result; \
+	  else \
+	    while test -d auth-policies.lock; do sleep 1; done; \
+	    test -f auth-policies.stamp; \
+	  fi; \
+	fi
+
+DISTCLEANFILES +=                               \
+        auth-policies.pb.h auth-policies.pb.cc auth-policies.stamp
+
+MOSTLYCLEANFILES +=                             \
+        auth-policies.tmp
+
+EXTRA_DIST +=                                   \
+        auth-policies.proto
+
+protoSOURCES += auth-policies.pb.cc auth-policies.pb.h
+
+

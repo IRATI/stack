@@ -21,6 +21,12 @@ extern "C" void
 destroyAuthPasswordPs(rina::IPolicySet * instance);
 
 extern "C" rina::IPolicySet *
+createAuthSSH2Ps(rina::ApplicationEntity * context);
+
+extern "C" void
+destroyAuthSSH2Ps(rina::IPolicySet * instance);
+
+extern "C" rina::IPolicySet *
 createFlowAllocatorPs(rina::ApplicationEntity * context);
 
 extern "C" void
@@ -56,6 +62,7 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
         struct rina::PsFactory sm_factory;
         struct rina::PsFactory auth_none_factory;
         struct rina::PsFactory auth_password_factory;
+        struct rina::PsFactory auth_ssh2_factory;
         struct rina::PsFactory fa_factory;
         struct rina::PsFactory nsm_factory;
         struct rina::PsFactory pduft_gen_factory;
@@ -92,6 +99,17 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
         auth_password_factory.destroy = destroyAuthPasswordPs;
 
         ret = ipc_process->psFactoryPublish(auth_password_factory);
+        if (ret) {
+                return ret;
+        }
+
+        auth_ssh2_factory.plugin_name = plugin_name;
+        auth_ssh2_factory.info.name = rina::IAuthPolicySet::AUTH_SSH2;
+        auth_ssh2_factory.info.app_entity = rina::ApplicationEntity::SECURITY_MANAGER_AE_NAME;
+        auth_ssh2_factory.create = createAuthSSH2Ps;
+        auth_ssh2_factory.destroy = destroyAuthSSH2Ps;
+
+        ret = ipc_process->psFactoryPublish(auth_ssh2_factory);
         if (ret) {
                 return ret;
         }

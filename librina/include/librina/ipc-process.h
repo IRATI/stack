@@ -872,6 +872,17 @@ public:
 #endif
 };
 
+class EnableEncryptionResponseEvent: public IPCEvent {
+public:
+        EnableEncryptionResponseEvent(int res,
+                        int port_id, unsigned int sequenceNumber);
+
+        // The N-1 port-id where encryption was to be applied
+        int port_id;
+
+        // Result of the operation, 0 success
+        int result;
+};
 
 /**
  * FIXME: Quick hack to get multiple parameters back
@@ -983,6 +994,9 @@ public:
          * @throws PDUForwardingTabeException if something goes wrong
          */
         unsigned int dumptPDUFT();
+
+        /// Request the kernel to enable encryption, decryption or both on a certain port
+        unsigned int enableEncryption(const EncryptionProfile& profile);
 
         /**
          * Request the Kernel IPC Process to modify a policy-set-related

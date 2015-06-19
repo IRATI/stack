@@ -427,7 +427,7 @@ class RIBDaemon : public RIBDNorthInterface, cdap::CDAPCallbackInterface {
 	void process_message(cdap_rib::SerializedObject &message, int port);
 	void remote_open_connection(const cdap_rib::src_info_t &src,
 					const cdap_rib::dest_info_t &dest,
-					const cdap_rib::auth_info &auth,
+					const cdap_rib::auth_policy_t &auth,
 					int port);
 
  private:
@@ -826,7 +826,7 @@ void RIBDaemon::process_message(cdap_rib::SerializedObject &message, int port) {
 
 void RIBDaemon::remote_open_connection(const cdap_rib::src_info_t &src,
 					const cdap_rib::dest_info_t &dest,
-					const cdap_rib::auth_info &auth,
+					const cdap_rib::auth_policy_t &auth,
 					int port) {
 	cdap_provider_->open_connection(rib_->get_version(), src, dest, auth,
 					port);

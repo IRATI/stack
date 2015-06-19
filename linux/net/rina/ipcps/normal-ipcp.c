@@ -611,6 +611,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
                                 const struct dif_info *     dif_information)
 {
         struct efcp_config * efcp_config;
+        struct sdup_config * sdup_config;
         struct rmt_config *  rmt_config;
 
         data->info->dif_name = name_dup(dif_information->dif_name);
@@ -635,6 +636,13 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         if (!rmt_config) {
         	LOG_ERR("No RMT configuration in the dif_info");
         	return -1;
+        }
+
+        sdup_config = dif_information->configuration->sdup_config;
+        if (!sdup_config) {
+        	LOG_WARN("No SDU protection configuration specified");
+        } else {
+        	rmt_sdup_config_set(data->rmt, sdup_config);
         }
 
         if (rmt_address_set(data->rmt, data->address))
@@ -939,6 +947,15 @@ static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
         return data->info->name;
 }
 
+static const struct name * normal_dif_name(struct ipcp_instance_data * data)
+{
+        ASSERT(data);
+        ASSERT(data->info);
+        ASSERT(name_is_ok(data->info->dif_name));
+
+        return data->info->dif_name;
+}
+
 static int normal_set_policy_set_param(struct ipcp_instance_data * data,
                                        const string_t *path,
                                        const string_t *param_name,
@@ -986,6 +1003,19 @@ static int normal_select_policy_set(struct ipcp_instance_data *data,
         return -1;
 }
 
+int normal_enable_encryption(struct ipcp_instance_data * data,
+			     bool 	      enable_encryption,
+		             bool    	      enable_decryption,
+		             struct buffer *  encrypt_key,
+		             port_id_t 	      port_id)
+{
+	return rmt_enable_encryption(data->rmt,
+				     enable_encryption,
+				     enable_decryption,
+				     encrypt_key,
+				     port_id);
+}
+
 static struct ipcp_instance_ops normal_instance_ops = {
         .flow_allocate_request     = NULL,
         .flow_allocate_response    = NULL,
@@ -1021,12 +1051,15 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .query_rib		   = NULL,
 
         .ipcp_name                 = normal_ipcp_name,
+        .dif_name                  = normal_dif_name,
 
         .set_policy_set_param      = normal_set_policy_set_param,
         .select_policy_set         = normal_select_policy_set,
 
         .enable_write              = enable_write,
-        .disable_write             = disable_write
+        .disable_write             = disable_write,
+        .enable_encryption         = normal_enable_encryption,
+        .dif_name		   = normal_dif_name
 };
 
 static struct mgmt_data * normal_mgmt_data_create(void)
@@ -1179,6 +1212,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         INIT_LIST_HEAD(&instance->data->list);
         spin_lock_init(&instance->data->lock);
         list_add(&(instance->data->list), &(data->instances));
+
         LOG_DBG("Normal IPC process instance created and added to the list");
 
         return instance;
@@ -1236,6 +1270,7 @@ static int normal_destroy(struct ipcp_factory_data * data,
         efcp_container_destroy(tmp->efcpc);
         rmt_destroy(tmp->rmt);
         mgmt_data_destroy(tmp->mgmt_data);
+
         rkfree(tmp);
         rkfree(instance);
 

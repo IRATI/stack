@@ -332,8 +332,8 @@ void DIFTemplateManager::augment_dif_template(rinad::DIFTemplate * dif_template)
 		}
 	}
 
-	if (dif_template->smConfiguration.policy_set_.name_ == std::string()) {
-		dif_template->smConfiguration = default_template->smConfiguration;
+	if (dif_template->secManConfiguration.policy_set_.name_ == std::string()) {
+		dif_template->secManConfiguration = default_template->secManConfiguration;
 	}
 
 	if (dif_template->configParameters.size() == 0 && default_template->configParameters.size() != 0) {

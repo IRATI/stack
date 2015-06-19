@@ -29,6 +29,7 @@
 #define RINA_PREFIX     "cdap-echo-client"
 #include <librina/logs.h>
 #include <librina/cdap_v2.h>
+#include <librina/security-manager.h>
 
 #include "cdap-echo-client.h"
 
@@ -144,8 +145,8 @@ void Client::cacep()
         dest.ae_name_ = flow_.remoteAppName.entityName;
         dest.ap_inst_ = flow_.remoteAppName.processInstance;
         dest.ae_inst_ = flow_.remoteAppName.entityInstance;
-        cdap_rib::auth_info auth;
-        auth.auth_mech_ = auth.AUTH_NONE;
+        cdap_rib::auth_policy auth;
+        auth.name = rina::IAuthPolicySet::AUTH_NONE;
 
         std::cout << "open conection request CDAP message sent" << std::endl;
         con_ = cdap_prov_->open_connection(ver, src, dest, auth,
