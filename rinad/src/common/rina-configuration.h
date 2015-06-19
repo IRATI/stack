@@ -89,9 +89,9 @@ struct DIFTemplate {
         std::list<rina::QoSCube> qosCubes;
         rina::RMTConfiguration rmtConfiguration;
         rina::EnrollmentTaskConfiguration etConfiguration;
+        rina::SecurityManagerConfiguration secManConfiguration;
         rina::FlowAllocatorConfiguration faConfiguration;
         rina::NamespaceManagerConfiguration nsmConfiguration;
-        rina::SecurityManagerConfiguration smConfiguration;
         rina::ResourceAllocatorConfiguration raConfiguration;
         rina::RoutingConfiguration routingConfiguration;
 

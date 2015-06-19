@@ -41,21 +41,10 @@ message objVal_t {							// value of an object
 	optional bool    boolval = 9;
 }
 
-// CDAP-reserved authentication types are 0-99 and >1000
-// Authentication types 100-1000 are reserved for private application use.
-enum authTypes_t {
-	AUTH_NONE = 0;							// No authentication
-	AUTH_PASSWD = 1;						// User name and password provided
-	AUTH_SSHRSA = 2;						// SSH RSA (version 1 or 2)
-	AUTH_SSHDSA = 3;						// SSH DSA (version 2 only)
-}
-
-// Reserved authentication fields 1-99, >1000 are reserved for CDAP future use.
-// Authentication type values 100-1000 are reserved for private application use.
-message authValue_t {
-	optional string authName = 1;			// Authentication name
-	optional string authPassword = 2;		// Authentication password
-	optional bytes authOther = 3;			// Additional authentication information
+message authPolicy_t {
+    	optional string name = 1;            // Policy name
+    	repeated string versions = 2;        // Supported versions
+    	optional bytes options = 3;          // Opaque policy-specific versions
 }
 
 // CDAP message field definition, can be used for all messages.
@@ -75,8 +64,7 @@ message CDAPMessage {
 	optional int32 result = 9 [default = 0]; // result of operation, 0 == success
 	optional int32 scope = 10;				// scope of READ/WRITE operation
 	optional bytes filter = 11;				// filter script
-	optional authTypes_t authMech = 17;		// Authentication mechanism
-	optional authValue_t authValue = 18;	// Authentication information
+	optional authPolicy_t authPolicy = 18;		// Authentication policy information
 	optional string destAEInst = 19;		// Destination AE Instance name
 	optional string destAEName = 20;		// Destination AE name
 	optional string destApInst = 21;		// Destination Application Instance name
