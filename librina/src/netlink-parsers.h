@@ -599,9 +599,8 @@ NamespaceManagerConfiguration * parseNamespaceManagerConfigurationObject(nlattr 
 /* SecurityManagerConfiguration CLASS */
 enum SecurityManagerConfigurationAttributes {
 	SECMANC_POLICY_SET = 1,
-	SECMANC_DIF_MEM_ACC_CON_POLICY,
-	SECMANC_NEW_FLOW_ACC_CON_POLICY,
-	SECMANC_AUTH_POLICY,
+	SECMANC_DEFAULT_AUTH_SDUP_POLICY,
+	SECMANC_SPECIFIC_AUTH_SDUP_POLICIES,
 	__SECMANC_ATTR_MAX,
 };
 
@@ -612,6 +611,39 @@ int putSecurityManagerConfigurationObject(nl_msg* netlinkMessage,
 
 SecurityManagerConfiguration * parseSecurityManagerConfigurationObject(nlattr *nested);
 
+/* AuthSDUProtectionProfile CLASS */
+enum AuthSDUProtectionProfileAttributes {
+    AUTHP_AUTH_POLICY = 1,
+    AUTHP_ENCRYPT_POLICY,
+    AUTHP_TTL_POLICY,
+    AUTHP_CRC_POLICY,
+    __AUTHP_ATTR_MAX,
+};
+
+#define AUTHP_ATTR_MAX (__AUTHP_ATTR_MAX -1)
+
+int putAuthSDUProtectionProfile(nl_msg* netlinkMessage,
+			   	const AuthSDUProtectionProfile& object);
+AuthSDUProtectionProfile * parseAuthSDUProtectionProfile(nlattr *nested);
+
+enum SpecificAuthSDUProtectionProfileAttributes {
+    SAUTHP_UNDER_DIF = 1,
+    SAUTHP_AUTH_PROFILE,
+    __SAUTHP_ATTR_MAX,
+};
+
+#define SAUTHP_ATTR_MAX (__SAUTHP_ATTR_MAX -1)
+
+int putSpecificAuthSDUProtectionProfile(nl_msg* netlinkMessage,
+					const std::string& under_dif,
+			   	        const AuthSDUProtectionProfile& object);
+int parseSpecificSDUProtectionProfile(nlattr *nested,
+			     	      std::map<std::string, AuthSDUProtectionProfile>& profiles);
+
+int putListOfAuthSDUProtectionProfiles(nl_msg* netlinkMessage,
+				       const std::map<std::string, AuthSDUProtectionProfile>& profiles);
+int parseListOfAuthSDUProtectionProfiles(nlattr *nested,
+			     	     	 std::map<std::string, AuthSDUProtectionProfile>& profiles);
 /* PDUFTGConfiguration CLASS */
 enum PDUFTGConfigurationAttributes {
 	PDUFTGC_POLICY_SET = 1,
@@ -657,10 +689,10 @@ enum DIFConfigurationAttributes {
 	DCONF_ATTR_ADDRESS,
 	DCONF_ATTR_EFCP_CONF,
 	DCONF_ATTR_RMT_CONF,
+	DCONF_ATTR_SM_CONF,
 	DCONF_ATTR_FA_CONF,
 	DCONF_ATTR_ET_CONF,
 	DCONF_ATTR_NSM_CONF,
-	DCONF_ATTR_SM_CONF,
 	DCONF_ATTR_RA_CONF,
 	DCONF_ATTR_ROUTING_CONF,
 	__DCONF_ATTR_MAX,
@@ -1438,6 +1470,38 @@ int putIpcmPluginLoadResponseMessageObject(nl_msg* netlinkMessage,
 
 IpcmPluginLoadResponseMessage *parseIpcmPluginLoadResponseMessage(
 		nlmsghdr *hdr);
+
+/* IPCPEnableEncryptionRequestMessageAttributes CLASS */
+enum IPCPEnableEncryptionRequestMessageAttributes {
+        EERM_ATTR_N_1_PORT = 1,
+	EERM_ATTR_EN_ENCRYPT,
+        EERM_ATTR_EN_DECRYPT,
+        EERM_ATTR_ENCRYPT_KEY,
+        __EERM_ATTR_MAX,
+};
+
+#define EERM_ATTR_MAX (__EERM_ATTR_MAX -1)
+
+int putIPCPEnableEncryptionRequestMessage(nl_msg* netlinkMessage,
+                const IPCPEnableEncryptionRequestMessage& object);
+
+IPCPEnableEncryptionRequestMessage * parseIPCPEnableEncryptionRequestMessage(
+                nlmsghdr *hdr);
+
+/* IPCPEnableEncryptionResponseMessageAttributes CLASS */
+enum IPCPEnableEncryptionResponseMessageAttributes {
+        EEREM_ATTR_RESULT = 1,
+        EEREM_ATTR_N_1_PORT,
+        __EEREM_ATTR_MAX,
+};
+
+#define EEREM_ATTR_MAX (__EEREM_ATTR_MAX -1)
+
+int putIPCPEnableEncryptionResponseMessage(nl_msg* netlinkMessage,
+                const IPCPEnableEncryptionResponseMessage& object);
+
+IPCPEnableEncryptionResponseMessage * parseIPCPEnableEncryptionResponseMessage(
+                nlmsghdr *hdr);
 
 /* IpcmFwdCDAPMsgMessage CLASS*/
 enum IpcmFwdCDAPMsgMessageAttributes {

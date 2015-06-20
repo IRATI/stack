@@ -114,6 +114,8 @@ public:
 	virtual void process_authentication_message(const rina::CDAPMessage& message,
 					            rina::CDAPSessionDescriptor * session_descriptor) = 0;
 
+	virtual void authentication_completed(bool success) = 0;
+
 	/// Called by the EnrollmentTask when the flow supporting the CDAP session with the remote peer
 	/// has been deallocated
 	/// @param cdapSessionDescriptor
@@ -191,6 +193,7 @@ public:
 			rina::CDAPSessionDescriptor * session_descriptor);
 	void process_authentication_message(const rina::CDAPMessage& message,
 			rina::CDAPSessionDescriptor * session_descriptor);
+	void authentication_completed(int port_id, bool success);
 	void enrollmentFailed(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
 			int portId, const std::string& reason, bool sendReleaseMessage);
 	void enrollmentCompleted(const rina::Neighbor& neighbor, bool enrollee);
@@ -260,6 +263,8 @@ public:
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	void startObject(const void* object);
 	void stopObject(const void* object);
+	void remoteReadObject(int invoke_id, rina::CDAPSessionDescriptor *
+			      cdapSessionDescriptor);
 	std::string get_displayable_value();
 
 private:

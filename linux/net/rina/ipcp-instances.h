@@ -98,6 +98,41 @@ struct efcp_config {
         struct policy * unknown_flow;
 };
 
+struct dup_config_entry {
+	// The N-1 dif_name this configuration applies to
+	string_t * 	n_1_dif_name;
+
+	// If NULL TTL is disabled,
+	// otherwise contains the TTL policy data
+	struct policy * ttl_policy;
+	u_int32_t  	initial_ttl_value;
+
+	// if NULL error_check is disabled,
+	// otherwise contains the error check policy
+	// data
+	struct policy * error_check_policy;
+
+	//Encryption-related fields
+	struct policy * encryption_policy;
+	bool 		enable_encryption;
+	bool		enable_decryption;
+	string_t * 	encryption_cipher;
+	string_t * 	message_digest;
+	string_t * 	compress_alg;
+	struct buffer * key;
+};
+
+struct dup_config {
+	struct list_head          next;
+	struct dup_config_entry * entry;
+};
+
+/* Represents the configuration of the SDUProtection module */
+struct sdup_config {
+	struct dup_config_entry * default_dup_conf;
+	struct list_head	  specific_dup_confs;
+};
+
 /* Represents the configuration of the PFF */
 struct pff_config {
 	/* The PS name for the PDU Forwarding Function */
@@ -126,6 +161,9 @@ struct dif_config {
 
         /* The address of the IPC Process*/
         address_t           address;
+
+        /* List of Data Unit Protection configuration entries */
+        struct sdup_config * sdup_config;
 };
 
 /* Represents the information about a DIF (name, type, configuration) */
@@ -251,6 +289,7 @@ struct ipcp_instance_ops {
                           const string_t *            filter);
 
         const struct name * (* ipcp_name)(struct ipcp_instance_data * data);
+        const struct name * (* dif_name)(struct ipcp_instance_data * data);
 
         int (* set_policy_set_param)(struct ipcp_instance_data * data,
                                      const string_t * path,
@@ -259,6 +298,12 @@ struct ipcp_instance_ops {
         int (* select_policy_set)(struct ipcp_instance_data * data,
                                   const string_t * path,
                                   const string_t * ps_name);
+
+        int (* enable_encryption)(struct ipcp_instance_data * data,
+        			  bool 		   enable_encryption,
+        		          bool 		   enable_decryption,
+        		          struct buffer *  encrypt_key,
+        		          port_id_t 	   port_id);
 
         int (* enable_write)(struct ipcp_instance_data * data, port_id_t id);
         int (* disable_write)(struct ipcp_instance_data * data, port_id_t id);

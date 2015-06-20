@@ -46,8 +46,8 @@ const std::string EncoderConstants::ENROLLMENT = "enrollment";
 const std::string EncoderConstants::FLOWS = "flows";
 const std::string EncoderConstants::FLOW_ALLOCATOR = "flowallocator";
 const std::string EncoderConstants::IPC = "ipc";
-const std::string EncoderConstants::DIFMANAGEMENT = "dif management";
-const std::string EncoderConstants::DAFMANAGEMENT = "daf management";
+const std::string EncoderConstants::DIFMANAGEMENT = "dif_management";
+const std::string EncoderConstants::DAFMANAGEMENT = "daf_management";
 const std::string EncoderConstants::NEIGHBORS = "neighbors";
 const std::string EncoderConstants::NAMING = "naming";
 const std::string EncoderConstants::NMINUSONEFLOWMANAGER = "nminusoneflowmanager";
@@ -59,7 +59,7 @@ const std::string EncoderConstants::RESOURCE_ALLOCATION = "resourceallocation";
 const std::string EncoderConstants::ROOT = "root";
 const std::string EncoderConstants::SEPARATOR = "/";
 const std::string EncoderConstants::SYNONYMS = "synonyms";
-const std::string EncoderConstants::WHATEVERCAST_NAMES ="whatevercast name";
+const std::string EncoderConstants::WHATEVERCAST_NAMES ="whatevercast_name";
 const std::string EncoderConstants::ROUTING = "routing";
 const std::string EncoderConstants::FLOWSTATEOBJECTGROUP = "flowstateobjectgroup";
 const std::string EncoderConstants::LINKSTATE = "linkstate";
@@ -69,22 +69,22 @@ const std::string EncoderConstants::DAF_RIB_OBJECT_CLASS = "daf";
 const std::string EncoderConstants::DAF_RIB_OBJECT_NAME = SEPARATOR + DAF;
 const std::string EncoderConstants::DIF_RIB_OBJECT_CLASS = "dif";
 const std::string EncoderConstants::DIF_RIB_OBJECT_NAME= SEPARATOR + DIF ;
-const std::string EncoderConstants::DAF_MANAGEMENT_RIB_OBJECT_CLASS = "daf management";
+const std::string EncoderConstants::DAF_MANAGEMENT_RIB_OBJECT_CLASS = "daf_management";
 const std::string EncoderConstants::DAF_MANAGEMENT_RIB_OBJECT_NAME = SEPARATOR + DAF +
     SEPARATOR + DAFMANAGEMENT;
-const std::string EncoderConstants::DIF_MANAGEMENT_RIB_OBJECT_CLASS = "dif management";
+const std::string EncoderConstants::DIF_MANAGEMENT_RIB_OBJECT_CLASS = "dif_management";
 const std::string EncoderConstants::DIF_MANAGEMENT_RIB_OBJECT_NAME = SEPARATOR + DIF +
     SEPARATOR + DIFMANAGEMENT;
-const std::string EncoderConstants::RESOURCE_ALLOCATION_RIB_OBJECT_CLASS =  "reource allocation";
+const std::string EncoderConstants::RESOURCE_ALLOCATION_RIB_OBJECT_CLASS =  "reource_allocation";
 const std::string EncoderConstants::RESOURCE_ALLOCATION_RIB_OBJECT_NAME = SEPARATOR + DIF +
     SEPARATOR + RESOURCE_ALLOCATION;
-const std::string EncoderConstants::NMINUSONEFLOWMANAGER_RIB_OBJECT_CLASS = "n minus one flowmanager";
+const std::string EncoderConstants::NMINUSONEFLOWMANAGER_RIB_OBJECT_CLASS = "n_minus_one_flowmanager";
 const std::string EncoderConstants::NMINUSONEFLOWMANAGER_RIB_OBJECT_NAME = SEPARATOR + DIF +
     SEPARATOR + RESOURCE_ALLOCATION + SEPARATOR + NMINUSONEFLOWMANAGER;
 const std::string EncoderConstants::NAMING_RIB_OBJECT_CLASS = "naming";
 const std::string EncoderConstants::NAMING_RIB_OBJECT_NAME = SEPARATOR + DAF +
     SEPARATOR + DAFMANAGEMENT + SEPARATOR + NAMING;
-const std::string EncoderConstants::FLOW_ALLOCATOR_RIB_OBJECT_CLASS = "flow allocator";
+const std::string EncoderConstants::FLOW_ALLOCATOR_RIB_OBJECT_CLASS = "flow_allocator";
 const std::string EncoderConstants::FLOW_ALLOCATOR_RIB_OBJECT_NAME = SEPARATOR + DIF + SEPARATOR
     + FLOW_ALLOCATOR;
 const std::string EncoderConstants::LINKSTATE_RIB_OBJECT_CLASS = "linkstate";
@@ -94,7 +94,7 @@ const std::string EncoderConstants::LINKSTATE_RIB_OBJECT_NAME = SEPARATOR +
 const std::string EncoderConstants::IPC_RIB_OBJECT_CLASS = "ipc";
 const std::string EncoderConstants::IPC_RIB_OBJECT_NAME = SEPARATOR + DIF +
     SEPARATOR + IPC;
-const std::string EncoderConstants::DATA_TRANSFER_RIB_OBJECT_CLASS = "data transfer";
+const std::string EncoderConstants::DATA_TRANSFER_RIB_OBJECT_CLASS = "data_transfer";
 const std::string EncoderConstants::DATA_TRANSFER_RIB_OBJECT_NAME = SEPARATOR + DIF +
     SEPARATOR + IPC + SEPARATOR + DATA_TRANSFER;
 
@@ -108,7 +108,7 @@ const std::string EncoderConstants::PDU_FORWARDING_TABLE_RIB_OBJECT_NAME = SEPAR
 const std::string EncoderConstants::DIF_NAME_WHATEVERCAST_RULE = "any";
 const std::string EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME = SEPARATOR +
 		DIF + SEPARATOR + DIFMANAGEMENT  + SEPARATOR + DIRECTORY_FORWARDING_TABLE_ENTRIES;
-const std::string EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS = "directoryforwardingtableentry set";
+const std::string EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS = "directoryforwardingtableentry_set";
 const std::string EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS = "directoryforwardingtableentry";
 const std::string EncoderConstants::FLOW_SET_RIB_OBJECT_NAME = SEPARATOR + DIF + SEPARATOR +
     FLOW_ALLOCATOR + SEPARATOR + FLOWS;
@@ -116,19 +116,19 @@ const std::string EncoderConstants::FLOW_SET_RIB_OBJECT_CLASS = "flow set";
 const std::string EncoderConstants::FLOW_RIB_OBJECT_CLASS = "flow";
 const std::string EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME = SEPARATOR + DIF + SEPARATOR + RESOURCE_ALLOCATION
     + SEPARATOR + QOS_CUBES;
-const std::string EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS = "qoscube set";
+const std::string EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS = "qoscube_set";
 const std::string EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS = "qoscube";
 const std::string EncoderConstants::ENROLLMENT_INFO_OBJECT_NAME = SEPARATOR + DAF +
 			SEPARATOR + DAFMANAGEMENT + SEPARATOR + ENROLLMENT;
-const std::string EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS = "enrollment information";
+const std::string EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS = "enrollment_information";
 const std::string EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS = "flowstateobject";
-const std::string EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS = "flowstateobject set";
+const std::string EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS = "flowstateobject_set";
 const std::string EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME = SEPARATOR +
 		DIF + SEPARATOR + RESOURCE_ALLOCATION + SEPARATOR + PDU_FORWARDING_TABLE + SEPARATOR
 		+ LINKSTATE + SEPARATOR + FLOWSTATEOBJECTGROUP;
 const std::string EncoderConstants::WATCHDOG_RIB_OBJECT_NAME = SEPARATOR + DIF + SEPARATOR + DIFMANAGEMENT +
 		SEPARATOR + WATCHDOG;
-const std::string EncoderConstants::WATCHDOG_RIB_OBJECT_CLASS = "watchdog timer";
+const std::string EncoderConstants::WATCHDOG_RIB_OBJECT_CLASS = "watchdog_timer";
 const std::string EncoderConstants::ADDRESS_RIB_OBJECT_CLASS = "address";
 const std::string EncoderConstants::ADDRESS_RIB_OBJECT_NAME = SEPARATOR + DAF +
 		SEPARATOR + DAFMANAGEMENT + SEPARATOR + NAMING + SEPARATOR + ADDRESS;
@@ -137,7 +137,7 @@ const std::string EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME = SE
 		SEPARATOR + IPC + SEPARATOR + DATA_TRANSFER + SEPARATOR + CONSTANTS;
 const std::string EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_NAME = SEPARATOR + DAF +
     SEPARATOR + DAFMANAGEMENT + SEPARATOR + NAMING + SEPARATOR + WHATEVERCAST_NAMES;
-const std::string EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS = "whatname set";
+const std::string EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS = "whatname_set";
 const std::string EncoderConstants::WHATEVERCAST_NAME_RIB_OBJECT_CLASS = "whatname";
 
 /// CLASS Encoder

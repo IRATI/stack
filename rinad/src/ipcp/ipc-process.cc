@@ -57,8 +57,6 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         state = NOT_INITIALIZED;
         lock_ = new rina::Lockable();
 
-	wmpi = rina::WireMessageProviderFactory().createWireMessageProvider();
-
         // Load the default pluggable components
         if (plugin_load(PLUGINSDIR, "default")) {
 		throw rina::Exception("Failed to load default plugin");
@@ -636,7 +634,6 @@ void IPCProcessImpl::processPluginLoadRequestEvent(
 
 void IPCProcessImpl::processFwdCDAPMsgEvent(
                         const rina::FwdCDAPMsgEvent& event) {
-		rina::ScopedLock g(*lock_);
 	const rina::CDAPMessage * msg;
 	rina::CDAPSessionDescriptor * session_descr;
 
@@ -645,23 +642,18 @@ void IPCProcessImpl::processFwdCDAPMsgEvent(
 		return;
 	}
 
-	msg = wmpi->deserializeMessage(event.sermsg);
+	msg = rib_daemon_->wmpi->deserializeMessage(event.sermsg);
 
 	LOG_IPCP_INFO("Forwarded CDAP Message:\n%s",
 		      msg->to_string().c_str());
 
-	session_descr = new rina::CDAPSessionDescriptor();
+	session_descr = new IPCMCDAPSessDesc(event.sequenceNumber);
 
 	rib_daemon_->processIncomingCDAPMessage(msg, session_descr,
 			rina::CDAPSessionInterface::SESSION_STATE_CON);
 
 	delete msg;
 	delete session_descr;
-
-	// Reply to the IPC Manager. For now we don't attach a CDAP
-	// response message
-	rina::extendedIPCManager->forwardCDAPResponse(event,
-					rina::SerializedObject(), 0);
 
         return;
 }
@@ -918,6 +910,16 @@ ipc_process_plugin_load_handler(rina::IPCEvent *e,
 }
 
 static void
+ipc_process_enable_encryption_response_handler(rina::IPCEvent *e,
+					       EventLoopData *opaque)
+{
+	DOWNCAST_DECL(e, rina::EnableEncryptionResponseEvent, event);
+	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
+
+	ipcp->security_manager_->process_enable_encryption_response(*event);
+}
+
+static void
 ipc_process_fwd_cdap_msg_handler(rina::IPCEvent *e,
 		                 EventLoopData *opaque)
 
@@ -984,6 +986,8 @@ void register_handlers_all(EventLoop& loop) {
                         ipc_process_select_policy_set_response_handler);
         loop.register_event(rina::IPC_PROCESS_PLUGIN_LOAD,
                         ipc_process_plugin_load_handler);
+        loop.register_event(rina::IPC_PROCESS_ENABLE_ENCRYPTION_RESPONSE,
+        		ipc_process_enable_encryption_response_handler);
         loop.register_event(rina::IPC_PROCESS_FWD_CDAP_MSG,
                         ipc_process_fwd_cdap_msg_handler);
 

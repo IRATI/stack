@@ -248,6 +248,16 @@ int DumpFTResponseEvent::getResult() const {
         return result;
 }
 
+// Class enable encryption response event
+EnableEncryptionResponseEvent::EnableEncryptionResponseEvent(int res,
+                int port, unsigned int sequenceNumber) :
+                		IPCEvent(IPC_PROCESS_ENABLE_ENCRYPTION_RESPONSE,
+                				sequenceNumber)
+{
+	port_id = port;
+	result = res;
+}
+
 /* CLASS EXTENDED IPC MANAGER */
 const std::string ExtendedIPCManager::error_allocate_flow =
 		"Error allocating flow";
@@ -406,9 +416,10 @@ void ExtendedIPCManager::enrollToDIFResponse(const EnrollToDAFRequestEvent& even
         responseMessage.setSequenceNumber(event.sequenceNumber);
         responseMessage.setResponseMessage(true);
         try {
-                rinaManager->sendMessageOfMaxSize(&responseMessage,
-                                                  5 * get_page_size(),
-                                                  false);
+        	//FIXME, compute maximum message size dynamically
+        	rinaManager->sendMessageOfMaxSize(&responseMessage,
+        					  5 * get_page_size(),
+        					  false);
         } catch (NetlinkException &e) {
                 throw EnrollException(e.what());
         }
@@ -711,14 +722,13 @@ void ExtendedIPCManager::pluginLoadResponse(
 #endif
 }
 
-void ExtendedIPCManager::forwardCDAPResponse(
-				const rina::FwdCDAPMsgEvent& event,
+void ExtendedIPCManager::forwardCDAPResponse(unsigned int sequenceNumber,
 				const rina::SerializedObject& sermsg,
 				int result)
 {
 #if STUB_API
 	//Do nothing
-	(void) event;
+	(void) sequenceNumber;
         (void) sermsg;
 	(void) result;
 #else
@@ -726,7 +736,7 @@ void ExtendedIPCManager::forwardCDAPResponse(
 
 	responseMessage.sermsg = sermsg;
 	responseMessage.result = result;
-	responseMessage.setSequenceNumber(event.sequenceNumber);
+	responseMessage.setSequenceNumber(sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
         responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
@@ -961,9 +971,10 @@ unsigned int KernelIPCProcess::assignToDIF(
         message.setRequestMessage(true);
 
         try {
-                rinaManager->sendMessageOfMaxSize(&message,
-                                                  5 * get_page_size(),
-                                                  true);
+        	//FIXME, compute maximum message size dynamically
+		rinaManager->sendMessageOfMaxSize(&message,
+                                          	  5 * get_page_size(),
+                                          	  true);
         } catch (NetlinkException &e) {
                 throw AssignToDIFException(e.what());
         }
@@ -1154,6 +1165,33 @@ unsigned int KernelIPCProcess::dumptPDUFT() {
                 rinaManager->sendMessage(&message, true);
         } catch (NetlinkException &e) {
                 throw PDUForwardingTableException(e.what());
+        }
+
+        seqNum = message.getSequenceNumber();
+#endif
+
+        return seqNum;
+}
+
+unsigned int KernelIPCProcess::enableEncryption(const EncryptionProfile& profile)
+{
+        unsigned int seqNum=0;
+
+#if STUB_API
+        (void) profile;
+        //Do nothing
+#else
+        IPCPEnableEncryptionRequestMessage message;
+        message.setSourceIpcProcessId(ipcProcessId);
+        message.setDestIpcProcessId(ipcProcessId);
+        message.profile = profile;
+        message.setDestPortId(0);
+        message.setRequestMessage(true);
+
+        try {
+                rinaManager->sendMessage(&message, true);
+        } catch (NetlinkException &e) {
+                throw Exception(e.what());
         }
 
         seqNum = message.getSequenceNumber();

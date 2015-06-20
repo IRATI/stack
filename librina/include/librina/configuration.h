@@ -27,7 +27,8 @@
 #include "librina/common.h"
 
 #define RINA_DEFAULT_POLICY_NAME "default"
-#define RINA_DEFAULT_POLICY_VERSION "0"
+#define RINA_NO_POLICY_NAME "nopolicy"
+#define RINA_DEFAULT_POLICY_VERSION "1"
 
 namespace rina {
 
@@ -38,6 +39,7 @@ public:
         PolicyParameter(const std::string& name, const std::string& value);
         bool operator==(const PolicyParameter &other) const;
         bool operator!=(const PolicyParameter &other) const;
+        std::string toString();
 #ifndef SWIG
         const std::string& get_name() const;
         void set_name(const std::string& name);
@@ -62,15 +64,15 @@ public:
 
         /// Get a parameter value as a string
         /// @throws Exception if parameter is not found
-        std::string get_param_value_as_string(const std::string& name);
+        std::string get_param_value_as_string(const std::string& name) const;
 
         /// Get a parameter value as long
         /// @throws Exception if parameter is not found or the conversion
         /// to long fails
-        long get_param_value_as_long(const std::string& name);
-        int get_param_value_as_int(const std::string& name);
-        unsigned long get_param_value_as_ulong(const std::string& name);
-        unsigned int get_param_value_as_uint(const std::string& name);
+        long get_param_value_as_long(const std::string& name) const;
+        int get_param_value_as_int(const std::string& name) const;
+        unsigned long get_param_value_as_ulong(const std::string& name) const;
+        unsigned int get_param_value_as_uint(const std::string& name) const;
 
         std::string toString();
 #ifndef SWIG
@@ -809,27 +811,34 @@ public:
 	PolicyConfig policy_set_;
 };
 
+/// Configuration of
+class AuthSDUProtectionProfile {
+public:
+	std::string to_string();
+
+	///The authentication-encryption-compression policy set
+	PolicyConfig authPolicy;
+
+	/// The encryption policy configuration (name/version)
+	PolicyConfig encryptPolicy;
+
+	/// The CRC policy config
+	PolicyConfig crcPolicy;
+
+	/// The TTL policy config
+	PolicyConfig ttlPolicy;
+};
+
 /// Configuration of the Security Manager
 class SecurityManagerConfiguration {
 public:
-        SecurityManagerConfiguration();
-        std::string toString();
-#ifndef SWIG
-        const PolicyConfig& get_policy_set() const;
-        void set_policy_set(const PolicyConfig& policy_set);
-#endif
+	SecurityManagerConfiguration() { };
+	std::string toString();
 
-	/// Access control policy for allowing new members into a DIF
-	PolicyConfig difMemberAccessControlPolicy;
-
-	/// Access control policy for accepting flows
-	PolicyConfig newFlowAccessControlPolicy;
-
-	/// The authentication policy for new members of the DIF
-	PolicyConfig authenticationPolicy;
-
-	/// The policy set for the component
 	PolicyConfig policy_set_;
+
+	AuthSDUProtectionProfile default_auth_profile;
+	std::map<std::string, AuthSDUProtectionProfile> specific_auth_profiles;
 };
 
 class RoutingConfiguration {

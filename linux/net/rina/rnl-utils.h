@@ -416,6 +416,30 @@ enum efcp_config_attrs_list {
 };
 #define EFCPC_ATTR_MAX (__EFCPC_ATTR_MAX -1)
 
+enum dup_config_attrs_list {
+	AUTHP_AUTH_POLICY = 1,
+	AUTHP_ENCRYPT_POLICY,
+	AUTHP_TTL_POLICY,
+	AUTHP_ERROR_CHECK_POLICY,
+	__AUTHP_ATTR_MAX,
+};
+#define AUTHP_ATTR_MAX (__AUTHP_ATTR_MAX -1)
+
+enum spec_sdup_config_attrs_list {
+    SAUTHP_UNDER_DIF = 1,
+    SAUTHP_AUTH_PROFILE,
+    __SAUTHP_ATTR_MAX,
+};
+#define SAUTHP_ATTR_MAX (__SAUTHP_ATTR_MAX -1)
+
+enum secman_config_attrs_list {
+	SECMANC_POLICY_SET = 1,
+	SECMANC_DEFAULT_AUTH_SDUP_POLICY,
+	SECMANC_SPECIFIC_AUTH_SDUP_POLICIES,
+	__SECMANC_ATTR_MAX,
+};
+#define SECMANC_ATTR_MAX (__SECMANC_ATTR_MAX -1)
+
 enum pff_config_attrs_list {
         PFFC_ATTR_POLICY_SET = 1,
         __PFFC_ATTR_MAX,
@@ -434,11 +458,11 @@ enum dif_config_attrs_list {
         DCONF_ATTR_ADDRESS,
         DCONF_ATTR_EFCPC,
         DCONF_ATTR_RMTC,
+        DCONF_ATTR_SECMANC,
         /* From here not used in kernel */
 	DCONF_ATTR_FAC,
 	DCONF_ATTR_ETC,
 	DCONF_ATTR_NSMC,
-	DCONF_ATTR_SMC,
 	DCONF_ATTR_RAC,
 	DCONF_ATTR_ROUTINGC,
         __DCONF_ATTR_MAX,
@@ -543,6 +567,22 @@ enum ipcm_select_policy_set_req_result_attrs_list {
 };
 #define ISPSR_ATTR_MAX (__ISPSR_ATTR_MAX -1)
 
+enum ipcp_enable_encryption_req_attrs_list {
+	IEERM_ATTR_N_1_PORT = 1,
+	IEERM_ATTR_EN_ENCRYPT,
+        IEERM_ATTR_EN_DECRYPT,
+        IEERM_ATTR_ENCRYPT_KEY,
+        __IEERM_ATTR_MAX,
+};
+#define IEERM_ATTR_MAX (__IEERM_ATTR_MAX -1)
+
+enum ipcp_enable_encryption_resp_attrs_list {
+        IEEREM_ATTR_RESULT = 1,
+        IEEREM_ATTR_N_1_PORT,
+        __IEEREM_ATTR_MAX,
+};
+#define IEEREM_ATTR_MAX (__IEEREM_ATTR_MAX -1)
+
 /* FIXME: Should be hidden by the API !!! */
 struct rina_msg_hdr {
         unsigned short src_ipc_id;
@@ -564,7 +604,8 @@ enum rnl_msg_attr_type {
         RNL_MSG_ATTRS_RMT_PFF_DUMP_REQUEST,
         RNL_MSG_ATTRS_QUERY_RIB_REQUEST,
         RNL_MSG_ATTRS_SET_POLICY_SET_PARAM_REQUEST,
-        RNL_MSG_ATTRS_SELECT_POLICY_SET_REQUEST
+        RNL_MSG_ATTRS_SELECT_POLICY_SET_REQUEST,
+        RNL_MSG_ATTRS_ENABLE_ENCRYPTION_REQUEST
 };
 
 struct rnl_msg {
@@ -783,6 +824,13 @@ struct rnl_ipcp_select_policy_set_req_msg_attrs {
         string_t * name;
 };
 
+struct rnl_ipcp_enable_encrypt_req_msg_attrs {
+	bool 		encryption_enabled;
+	bool		decrption_enabled;
+	struct buffer * encrypt_key;
+	port_id_t 	port_id;
+};
+
 int rnl_parse_msg(struct genl_info * info,
                   struct rnl_msg *   msg);
 
@@ -877,5 +925,11 @@ int rnl_set_policy_set_param_response(ipc_process_id_t id,
 int rnl_select_policy_set_response(ipc_process_id_t id,
                                    uint_t           res,
                                    rnl_sn_t         seq_num,
+                                   u32              nl_port_id);
+
+int rnl_enable_encryption_response(ipc_process_id_t id,
+                                   uint_t           res,
+                                   rnl_sn_t         seq_num,
+                                   port_id_t	    n_1_port,
                                    u32              nl_port_id);
 #endif

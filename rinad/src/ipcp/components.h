@@ -119,6 +119,7 @@ public:
         				       rina::CDAPSessionDescriptor * session_descriptor) = 0;
         virtual void process_authentication_message(const rina::CDAPMessage& message,
         					    rina::CDAPSessionDescriptor * session_descriptor) = 0;
+	virtual void authentication_completed(int port_id, bool success) = 0;
         virtual void initiate_enrollment(const rina::NMinusOneFlowAllocatedEvent & event,
         				 rina::EnrollmentRequest * request) = 0;
         virtual void inform_ipcm_about_failure(IEnrollmentStateMachine * state_machine) = 0;
@@ -457,6 +458,15 @@ public:
 	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	~IPCPSecurityManager() {};
+	rina::AuthSDUProtectionProfile get_auth_sdup_profile(const std::string& under_dif_name);
+        rina::IAuthPolicySet::AuthStatus enable_encryption(const rina::EncryptionProfile& profile,
+        						   rina::IAuthPolicySet * caller);
+        void process_enable_encryption_response(const rina::EnableEncryptionResponseEvent& event);
+
+private:
+	rina::SecurityManagerConfiguration config;
+	rina::Lockable lock;
+	std::map<unsigned int, rina::IAuthPolicySet *> pending_enable_encryption_requests;
 };
 
 class IPCPRIBDaemon;
@@ -478,12 +488,20 @@ public:
 /// Interface that provides the RIB Daemon API
 class IPCPRIBDaemon : public rina::RIBDaemon, public IPCProcessComponent {
 public:
-	IPCPRIBDaemon() { };
+	IPCPRIBDaemon() : wmpi(0) { };
 	virtual ~IPCPRIBDaemon(){};
+
+	rina::WireMessageProviderInterface *wmpi;
 
 	/// Process a Query RIB Request from the IPC Manager
 	/// @param event
 	virtual void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event) = 0;
+	virtual void generateCDAPResponse(int invoke_id,
+			rina::CDAPSessionDescriptor * cdapSessDescr,
+			rina::CDAPMessage::Opcode opcode,
+			const std::string& obj_class,
+			const std::string& obj_name,
+			rina::RIBObjectValue& robject_value) = 0;
 };
 
 /// IPC Process interface
@@ -560,6 +578,13 @@ public:
                                  const std::string& object_name,
                                  const void* object_value);
 	virtual void deleteObject(const void* objectValue);
+};
+
+class IPCMCDAPSessDesc : public rina::CDAPSessionDescriptor {
+public:
+	IPCMCDAPSessDesc(unsigned int seqnum) : rina::CDAPSessionDescriptor(),
+						 req_seqnum(seqnum) { }
+	unsigned int req_seqnum;
 };
 
 }

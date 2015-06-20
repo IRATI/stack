@@ -98,7 +98,7 @@ createAuthNonePs(rina::ApplicationEntity * ctx)
                 return NULL;
         }
 
-        return new rina::AuthNonePolicySet();
+        return new rina::AuthNonePolicySet(sm);
 }
 
 extern "C" void
@@ -123,11 +123,36 @@ createAuthPasswordPs(rina::ApplicationEntity * ctx)
         	return NULL;
         }
 
-        return new rina::AuthPasswordPolicySet("admin123", 128, rib_daemon);
+        return new rina::AuthPasswordPolicySet(rib_daemon, sm);
 }
 
 extern "C" void
 destroyAuthPasswordPs(rina::IPolicySet * ps)
+{
+        if (ps) {
+                delete ps;
+        }
+}
+
+extern "C" rina::IPolicySet *
+createAuthSSH2Ps(rina::ApplicationEntity * ctx)
+{
+	IPCPSecurityManager * sm = dynamic_cast<IPCPSecurityManager *>(ctx);
+        if (!sm || !sm->get_application_process()) {
+                return NULL;
+        }
+
+        IPCPRIBDaemon * rib_daemon =
+        		dynamic_cast<IPCPRIBDaemon *>(sm->get_application_process()->get_rib_daemon());
+        if (!rib_daemon) {
+        	return NULL;
+        }
+
+        return new rina::AuthSSH2PolicySet(rib_daemon, sm);
+}
+
+extern "C" void
+destroyAuthSSH2Ps(rina::IPolicySet * ps)
 {
         if (ps) {
                 delete ps;

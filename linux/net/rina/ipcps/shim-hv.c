@@ -1109,6 +1109,14 @@ shim_hv_ipcp_name(struct ipcp_instance_data *priv)
         return &priv->name;
 }
 
+shim_hv_dif_name(struct ipcp_instance_data *priv)
+{
+        ASSERT(priv);
+        ASSERT(name_is_ok(&priv->dif_name));
+
+        return &priv->dif_name;
+}
+
 static int shim_hv_query_rib(struct ipcp_instance_data * data,
                              struct list_head *          entries,
                              const string_t *            object_class,
@@ -1159,6 +1167,8 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
 
         .set_policy_set_param      = NULL,
         .select_policy_set         = NULL,
+        .enable_encryption	   = NULL,
+        .dif_name		   = shim_hv_dif_name
 };
 
 /* Initialize the IPC process factory. */

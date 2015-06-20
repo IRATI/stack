@@ -375,23 +375,6 @@ void parse_ipc_to_create(const Json::Value          root,
                 ipc.hostname = ipc_processes[i].get
                         ("hostName", string()).asString();
 
-                // SDU protection options
-                Json::Value sdu_prot =
-                        ipc_processes[i]["sduProtectionOptions"];
-                if (sdu_prot != 0) {
-                        for (unsigned int j = 0; j < sdu_prot.size(); j++) {
-                                string key = sdu_prot[j]
-                                        .get("nMinus1DIFName", string())
-                                        .asString();
-                                string value = sdu_prot[j]
-                                        .get("sduProtectionType", string())
-                                        .asString();
-                                ipc.sduProtectionOptions
-                                        .insert(pair<string, string>(key,
-                                                                     value));
-                        }
-                }
-
                 // parameters
                 Json::Value params = ipc_processes[i]["parameters"];
                 if (params != 0) {
@@ -524,6 +507,15 @@ bool parse_configuration(std::string& file_loc)
         IPCManager->loadConfig(config);
 
         return true;
+}
+
+void parse_auth_sduprot_profile(const Json::Value  & root,
+                  	        rina::AuthSDUProtectionProfile & profile)
+{
+	parse_policy(root, "authPolicy", profile.authPolicy);
+	parse_policy(root, "encryptPolicy", profile.encryptPolicy);
+	parse_policy(root, "TTLPolicy", profile.ttlPolicy);
+	parse_policy(root, "ErrorCheckPolicy", profile.crcPolicy);
 }
 
 rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
@@ -705,18 +697,6 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 		dif_template->nsmConfiguration = nsmc;
 	}
 
-	// namespaceMangerConfiguration;
-	Json::Value sm_conf = root["securityManagerConfiguration"];
-	if (nsm_conf != 0) {
-		rina::SecurityManagerConfiguration smc;
-
-		parse_policy(sm_conf,
-			     "policySet",
-			     smc.policy_set_);
-
-		dif_template->smConfiguration = smc;
-	}
-
 	// std::list<KnownIPCProcessAddress>
 	// knownIPCProcessAddresses;
 	Json::Value known = root["knownIPCProcessAddresses"];
@@ -770,6 +750,47 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 
 		dif_template->etConfiguration = et_conf;
 	}
+
+        //sduProtectionConfiguration
+        Json::Value secManConf = root["securityManagerConfiguration"];
+        if (secManConf != 0){
+        	rina::SecurityManagerConfiguration sm_conf;
+
+        	if (secManConf["policySet"] != 0) {
+        		parse_policy(secManConf,
+        			     "policySet",
+        			     sm_conf.policy_set_);
+        	}
+
+        	Json::Value profiles = secManConf["authSDUProtProfiles"];
+        	if (profiles != 0) {
+        		Json::Value defaultProfile = profiles["default"];
+        		if (defaultProfile != 0) {
+        			parse_auth_sduprot_profile(defaultProfile,
+        						   sm_conf.default_auth_profile);
+        		}
+
+        		Json::Value specifics = profiles["specific"];
+        		if (specifics != 0) {
+        			for (unsigned int j = 0;
+        					j < specifics.size();
+        					j++) {
+        				rina::AuthSDUProtectionProfile profile;
+        				std::string dif_name;
+
+        				parse_auth_sduprot_profile(specifics[j], profile);
+
+        				dif_name = specifics[j]
+        				                   .get("underlyingDIF", dif_name)
+        				                   .asString();
+
+        				sm_conf.specific_auth_profiles[dif_name] = profile;
+        			}
+        		}
+        	}
+
+        	dif_template->secManConfiguration = sm_conf;
+        }
 
 	// configParameters;
 	Json::Value confParams = root["configParameters"];

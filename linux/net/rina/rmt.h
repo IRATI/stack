@@ -24,6 +24,7 @@
 #define RINA_RMT_H
 
 #include <linux/hashtable.h>
+#include <linux/crypto.h>
 
 #include "common.h"
 #include "du.h"
@@ -67,6 +68,8 @@ struct rmt_n1_port {
         struct hlist_node      hlist;
         enum flow_state        state;
         atomic_t               n_sdus;
+        struct dup_config_entry * dup_config;
+        struct crypto_blkcipher * blkcipher;
         atomic_t               pending_ops;
 };
 
@@ -109,6 +112,8 @@ int          rmt_address_set(struct rmt * instance,
                              address_t    address);
 int          rmt_dt_cons_set(struct rmt *     instance,
                              struct dt_cons * dt_cons);
+int 	     rmt_sdup_config_set(struct rmt *         instance,
+                    	         struct sdup_config * sdup_conf);
 int          rmt_config_set(struct rmt *        instance,
                             struct rmt_config * rmt_config);
 
@@ -147,6 +152,12 @@ int          rmt_set_policy_set_param(struct rmt * rmt,
                                       const string_t * path,
                                       const string_t * name,
                                       const string_t * value);
+
+int 	     rmt_enable_encryption(struct rmt *     instance,
+			     	   bool 	    enable_encryption,
+			     	   bool    	    enable_decryption,
+			     	   struct buffer *  encrypt_key,
+			     	   port_id_t 	    port_id);
 
 struct rmt * rmt_from_component(struct rina_component * component);
 

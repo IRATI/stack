@@ -711,8 +711,7 @@ void EnrollmentTask::connect(const rina::CDAPMessage& cdapMessage,
 			rina::RemoteProcessId remote_id;
 			remote_id.port_id_ = session_descriptor->port_id_;
 
-			rib_daemon_->openApplicationConnectionResponse(session_descriptor->auth_mech_,
-								       rina::AuthValue(),
+			rib_daemon_->openApplicationConnectionResponse(rina::AuthPolicy(),
 								       session_descriptor->dest_ae_inst_,
 								       session_descriptor->dest_ae_name_,
 								       session_descriptor->dest_ap_inst_,
@@ -783,6 +782,13 @@ void EnrollmentTask::process_authentication_message(const rina::CDAPMessage& mes
 	IPCPEnrollmentTaskPS * ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);
 	assert(ipcp_ps);
 	ipcp_ps->process_authentication_message(message, session_descriptor);
+}
+
+void EnrollmentTask::authentication_completed(int port_id, bool success)
+{
+	IPCPEnrollmentTaskPS * ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);
+	assert(ipcp_ps);
+	ipcp_ps->authentication_completed(port_id, success);
 }
 
 IEnrollmentStateMachine * EnrollmentTask::getEnrollmentStateMachine(int portId, bool remove)
@@ -1066,6 +1072,25 @@ void OperationalStatusRIBObject::stopObject(const void* object) {
 	(void) object; // Stop compiler barfs
 	if (ipc_process_->get_operational_state() != ASSIGNED_TO_DIF) {
 		ipc_process_->set_operational_state(INITIALIZED);
+	}
+}
+
+void OperationalStatusRIBObject::remoteReadObject(int invoke_id,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor)
+{
+	try {
+		rina::RIBObjectValue robject_value;
+		robject_value.type_ = rina::RIBObjectValue::inttype;
+		robject_value.int_value_ = ipc_process_->get_operational_state();
+
+		rib_daemon_->generateCDAPResponse(invoke_id, cdapSessionDescriptor,
+					rina::CDAPMessage::M_READ_R,
+					EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_CLASS,
+					EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_NAME,
+					robject_value);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems generating or sending CDAP Message: %s",
+				e.what());
 	}
 }
 

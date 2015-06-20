@@ -1,0 +1,18 @@
+package rina.auth.policies.googleprotobuf;
+
+message authOptsSSH2_t {
+	repeated string key_exch_algs = 1;		// Supported key exchange algorithms
+	repeated string encrypt_algs = 2;		// Supported encryption algorithms
+	repeated string mac_algs = 3;			// Supported MAC algorithms
+	repeated string compress_algs = 4;		// Supported compression algorithms
+	optional bytes dh_public_key = 5;		// EDH public key
+}
+
+message clientChallReplySSH2_t {
+	optional bytes client_challenge_rep = 1;	// Client challenge reply
+	optional bytes server_challenge = 2;		// Server challenge request
+}
+
+message authOptsPassword_t {
+	repeated string cipher = 1;		// Supported ciphers
+}

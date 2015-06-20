@@ -474,9 +474,11 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 			dif_config.fa_configuration_ = dif_template->faConfiguration;
 			dif_config.ra_configuration_ = dif_template->raConfiguration;
 			dif_config.routing_configuration_ = dif_template->routingConfiguration;
-			dif_config.sm_configuration_ = dif_template->smConfiguration;
+			dif_config.sm_configuration_ = dif_template->secManConfiguration;
 			dif_config.et_configuration_ = dif_template->etConfiguration;
 			dif_config.set_address(address);
+
+			dif_config.sm_configuration_ = dif_template->secManConfiguration;
 		}
 
 		for (map<string, string>::const_iterator
@@ -1175,6 +1177,7 @@ IPCManager_::plugin_load(Addon* callee, Promise* promise,
 			FLUSH_LOG(ERR, ss);
 			throw rina::Exception();
 		}
+
 		//Store transaction
 		if(add_transaction_state(trans) < 0){
 			ss << "Unable to add transaction; out of memory? ";
@@ -1184,7 +1187,7 @@ IPCManager_::plugin_load(Addon* callee, Promise* promise,
 		ipcp->pluginLoad(plugin_name, load, trans->tid);
 
 		ss << "Issued plugin-load to IPC process " <<
-				ipcp->get_name().toString() << endl;
+		      ipcp->get_name().toString() << endl;
 		FLUSH_LOG(INFO, ss);
 	} catch(rina::ConcurrentException& e) {
 		ss << "Error while issuing plugin-load request "
@@ -1214,6 +1217,59 @@ IPCManager_::plugin_get_info(const std::string& plugin_name,
 	int ret = rina::plugin_get_info(plugin_name, IPCPPLUGINSDIR, result);
 
 	return ret ? IPCM_FAILURE : IPCM_SUCCESS;
+}
+
+ipcm_res_t
+IPCManager_::read_ipcp_ribobj(Addon* callee, Promise* promise,
+			      const unsigned short ipcp_id,
+			      const std::string& object_class,
+			      const std::string& object_name)
+{
+	IPCMIPCProcess * ipcp;
+	TransactionState* trans;
+	ostringstream ss;
+
+	try {
+		ipcp = lookup_ipcp_by_id(ipcp_id);
+
+		if(!ipcp){
+			LOG_ERR("Invalid IPCP id %hu", ipcp_id);
+			return IPCM_FAILURE;
+		}
+
+		//Auto release the read lock
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
+
+		rina::CDAPMessage *msg = rina::CDAPMessage::getReadObjectRequestMessage(NULL,
+				rina::CDAPMessage::NONE_FLAGS, object_class, 0, object_name, 0);
+
+		trans = new TransactionState(callee, promise);
+		if(!trans){
+			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
+			FLUSH_LOG(ERR, ss);
+			throw rina::Exception();
+		}
+
+		//Store transaction
+		if(add_transaction_state(trans) < 0){
+			ss << "Unable to add transaction; out of memory? ";
+			FLUSH_LOG(ERR, ss);
+			throw rina::Exception();
+		}
+
+		ipcp->forwardCDAPMessage(*msg, trans->tid);
+		delete msg;
+
+		ss << "Forwarded CDAPMessage to IPC process " <<
+		      ipcp->get_name().toString() << endl;
+		FLUSH_LOG(INFO, ss);
+
+	} catch  (rina::Exception &e) {
+		LOG_ERR("Problems: %s", e.what());
+		return IPCM_FAILURE;
+	}
+
+	return IPCM_PENDING;
 }
 
 ipcm_res_t
@@ -1627,9 +1683,21 @@ void IPCManager_::io_loop(){
 
 				//Addon specific events
 				default:
+					{
+					TransactionState* trans = get_transaction_state<TransactionState>(
+								  event->sequenceNumber);
+
 					Addon::distribute_flow_event(event);
+
+					if (trans) {
+						//Mark as completed
+						trans->completed(IPCM_SUCCESS);
+						remove_transaction_state(trans->tid);
+					}
+
 					continue;
 					break;
+					}
 			}
 
 		} catch (rina::Exception &e) {
