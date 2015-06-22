@@ -1383,7 +1383,6 @@ int dtcp_sv_update(struct dtcp * dtcp, const struct pci * pci)
         bool                 win_based;
         bool                 rate_based;
         bool                 rtx_ctrl;
-        seq_num_t            seq;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -1398,8 +1397,6 @@ int dtcp_sv_update(struct dtcp * dtcp, const struct pci * pci)
         if (!dtcp_cfg)
                 return -1;
 
-        seq = pci_sequence_number_get(pci);
-
         rcu_read_lock();
         ps = container_of(rcu_dereference(dtcp->base.ps),
                           struct dtcp_ps, base);
@@ -1412,7 +1409,7 @@ int dtcp_sv_update(struct dtcp * dtcp, const struct pci * pci)
 
         if (flow_ctrl) {
                 if (win_based) {
-                        if (ps->rcvr_flow_control(ps, seq)) {
+                        if (ps->rcvr_flow_control(ps, pci)) {
                                 LOG_ERR("Failed Rcvr Flow Control policy");
                                 retval = -1;
                         }
@@ -1428,7 +1425,7 @@ int dtcp_sv_update(struct dtcp * dtcp, const struct pci * pci)
 
                 if (!rtx_ctrl) {
                         LOG_DBG("Receiving flow ctrl invoked");
-                        if (ps->receiving_flow_control(ps, seq)) {
+                        if (ps->receiving_flow_control(ps, pci)) {
                                 LOG_ERR("Failed Receiving Flow Control "
                                         "policy");
                                 retval = -1;
@@ -1440,7 +1437,7 @@ int dtcp_sv_update(struct dtcp * dtcp, const struct pci * pci)
 
         if (rtx_ctrl) {
                 LOG_DBG("Retransmission ctrl invoked");
-                if (ps->rcvr_ack(ps, seq)) {
+                if (ps->rcvr_ack(ps, pci)) {
                         LOG_ERR("Failed Rcvr Ack policy");
                         retval = -1;
                 }

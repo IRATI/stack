@@ -34,7 +34,7 @@ dummy_lost_control_pdu(struct dtcp_ps * ps)
         return 0;
 }
 
-static int dummy_rcvr_ack(struct dtcp_ps * ps, seq_num_t seq)
+static int dummy_rcvr_ack(struct dtcp_ps * ps, const struct pci * pci)
 {
         printk("%s: called()\n", __func__);
         return 0;
@@ -55,14 +55,14 @@ dummy_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
 }
 
 static int
-dummy_receiving_flow_control(struct dtcp_ps * ps, seq_num_t seq)
+dummy_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 {
         printk("%s: called()\n", __func__);
         return 0;
 }
 
 static int
-dummy_rcvr_flow_control(struct dtcp_ps * ps, seq_num_t seq)
+dummy_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 {
         printk("%s: called()\n", __func__);
         return 0;

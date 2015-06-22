@@ -73,15 +73,22 @@ common_lost_control_pdu(struct dtcp_ps * ps)
 }
 EXPORT_SYMBOL(common_lost_control_pdu);
 
-int common_rcvr_ack(struct dtcp_ps * instance, seq_num_t seq)
+int common_rcvr_ack(struct dtcp_ps * instance, const struct pci * pci)
 {
         struct dtcp * dtcp = instance->dm;
+        seq_num_t     seq;
+
+        if (!pci) {
+                LOG_ERR("No PCI passed, cannot run policy");
+                return -1;
+        }
+        seq = pci_sequence_number_get(pci);
 
         return dtcp_ack_flow_control_pdu_send(dtcp, seq);
 }
 EXPORT_SYMBOL(common_rcvr_ack);
 
-int common_rcvr_ack_atimer(struct dtcp_ps * instance, seq_num_t seq)
+int common_rcvr_ack_atimer(struct dtcp_ps * instance, const struct pci * pci)
 { return 0; }
 EXPORT_SYMBOL(common_rcvr_ack_atimer);
 
@@ -138,13 +145,17 @@ common_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
 EXPORT_SYMBOL(common_sending_ack);
 
 int
-common_receiving_flow_control(struct dtcp_ps * ps, seq_num_t seq)
+common_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 {
         struct dtcp * dtcp = ps->dm;
         struct pdu * pdu;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+        if (!pci) {
+                LOG_ERR("No PCI passed, cannot run policy");
                 return -1;
         }
         pdu = pdu_ctrl_generate(dtcp, PDU_TYPE_FC);
@@ -162,13 +173,17 @@ common_receiving_flow_control(struct dtcp_ps * ps, seq_num_t seq)
 EXPORT_SYMBOL(common_receiving_flow_control);
 
 int
-common_rcvr_flow_control(struct dtcp_ps * ps, seq_num_t seq)
+common_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 {
         struct dtcp * dtcp = ps->dm;
         seq_num_t LWE;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+        if (!pci) {
+                LOG_ERR("No PCI passed, cannot run policy");
                 return -1;
         }
 
