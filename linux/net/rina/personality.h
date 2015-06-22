@@ -60,13 +60,11 @@ struct personality_ops {
         /* Takes the ownership of the sdu */
         int (* sdu_write)(struct personality_data * data,
                           port_id_t                 id,
-                          unsigned int              timeout,
                           struct sdu *              sdu);
 
         /* Passes the ownership of the sdu */
         int (* sdu_read)(struct personality_data *  data,
                          port_id_t                  id,
-                         unsigned int               timeout,
                          struct sdu **              sdu);
 
         /* Takes the ownership of the sdu with port-id */

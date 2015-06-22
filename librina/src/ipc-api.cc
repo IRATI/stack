@@ -674,15 +674,14 @@ std::vector<ApplicationRegistration *> IPCManager::getRegisteredApplications()
 	return response;
 }
 
-int IPCManager::readSDU(int portId, void * sdu, int maxBytes, unsigned int timeout)
+int IPCManager::readSDU(int portId, void * sdu, int maxBytes)
 {
 #if STUB_API
         memset(sdu, 'v', maxBytes);
         (void) portId;
-        (void) timeout;
 	return maxBytes;
 #else
-	int result = syscallReadSDU(portId, sdu, maxBytes, timeout);
+	int result = syscallReadSDU(portId, sdu, maxBytes);
 
 	if (result == -EINVAL){
 		throw InvalidArgumentsException();
@@ -712,16 +711,15 @@ int IPCManager::readSDU(int portId, void * sdu, int maxBytes, unsigned int timeo
 #endif
 }
 
-void IPCManager::writeSDU(int portId, void * sdu, int size, unsigned int timeout)
+void IPCManager::writeSDU(int portId, void * sdu, int size)
 {
 #if STUB_API
 	/* Do nothing. */
 	(void)portId;
         (void)sdu;
         (void)size;
-        (void)timeout;
 #else
-	int result = syscallWriteSDU(portId, sdu, size, timeout);
+	int result = syscallWriteSDU(portId, sdu, size);
 
 	if (result == -EINVAL){
 		throw InvalidArgumentsException();

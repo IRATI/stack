@@ -423,7 +423,6 @@ static int enable_write(struct ipcp_instance_data * data, port_id_t id)
 
 int kfa_flow_sdu_write(struct ipcp_instance_data * data,
                        port_id_t                   id,
-                       unsigned int  		   timeout,
                        struct sdu *                sdu)
 {
         struct ipcp_flow *     flow;
@@ -431,7 +430,6 @@ int kfa_flow_sdu_write(struct ipcp_instance_data * data,
         struct kfa *           instance;
         int                    retval = 0;
         unsigned long          flags;
-        unsigned long	       timeout_in_jif;
 
         IRQ_BARRIER;
 
@@ -485,14 +483,8 @@ int kfa_flow_sdu_write(struct ipcp_instance_data * data,
         		LOG_DBG("Going to sleep on wait queue %pK (writing)",
         				&flow->write_wqueue);
         		LOG_DBG("OK_write check called: %d", flow->state);
-        		timeout_in_jif = msecs_to_jiffies(timeout);
-        		if (timeout_in_jif == 0) {
-        			retval = wait_event_interruptible(flow->write_wqueue,
-        					ok_write(flow));
-        		} else {
-        			retval = wait_event_interruptible_timeout(flow->write_wqueue,
-        					ok_write(flow), timeout_in_jif);
-        		}
+        		retval = wait_event_interruptible(flow->write_wqueue,
+        						  ok_write(flow));
         		LOG_DBG("Write woken up (%d)", retval);
 
         		if (retval < 0) {
@@ -530,12 +522,6 @@ int kfa_flow_sdu_write(struct ipcp_instance_data * data,
         			retval = -ESHUTDOWN;
         			goto finish;
         		}
-
-        		if (retval == 0 && timeout != 0) {
-        			sdu_destroy(sdu);
-        			retval = -EAGAIN;
-        			goto finish;
-        		}
         	}
 
         	ipcp = flow->ipc_process;
@@ -549,7 +535,7 @@ int kfa_flow_sdu_write(struct ipcp_instance_data * data,
         	ASSERT(ipcp->ops->sdu_write);
 
         	spin_unlock_irqrestore(&instance->lock, flags);
-        	if (ipcp->ops->sdu_write(ipcp->data, id, 0, sdu)) {
+        	if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
         		LOG_ERR("Couldn't write SDU on port-id %d", id);
         		retval = -EIO;
         	}
@@ -578,7 +564,7 @@ int kfa_flow_sdu_write(struct ipcp_instance_data * data,
         	ASSERT(ipcp->ops->sdu_write);
 
         	spin_unlock_irqrestore(&instance->lock, flags);
-        	if (ipcp->ops->sdu_write(ipcp->data, id, 0, sdu)) {
+        	if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
         		LOG_ERR("Couldn't write SDU on port-id %d", id);
         		retval = -EIO;
         	}
@@ -628,13 +614,11 @@ static bool queue_ready(struct ipcp_flow * flow)
 
 int kfa_flow_sdu_read(struct kfa *  instance,
                       port_id_t     id,
-                      unsigned int  timeout,
                       struct sdu ** sdu)
 {
         struct ipcp_flow * flow;
         int                retval = 0;
         unsigned long      flags;
-        unsigned long	   timeout_in_jif;
 
         IRQ_BARRIER;
 
@@ -676,15 +660,8 @@ int kfa_flow_sdu_read(struct kfa *  instance,
 
         		LOG_DBG("Going to sleep on wait queue %pK (reading)",
         				&flow->read_wqueue);
-        		timeout_in_jif = msecs_to_jiffies(timeout);
-        		if (timeout == 0) {
-        			retval = wait_event_interruptible(flow->read_wqueue,
-        					queue_ready(flow));
-        		} else {
-        			retval = wait_event_interruptible_timeout(flow->read_wqueue,
-        					queue_ready(flow), timeout_in_jif);
-
-        		}
+        		retval = wait_event_interruptible(flow->read_wqueue,
+        						  queue_ready(flow));
         		LOG_DBG("Read woken up (%d)", retval);
 
         		if (retval < 0) {
@@ -720,11 +697,6 @@ int kfa_flow_sdu_read(struct kfa *  instance,
         				goto finish;
         			}
         			break;
-        		}
-
-        		if (retval == 0 && timeout != 0) {
-        			retval = -EAGAIN;
-        			goto finish;
         		}
         	}
 

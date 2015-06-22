@@ -1055,7 +1055,6 @@ shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
 static int
 shim_hv_sdu_write(struct ipcp_instance_data * priv,
 		  port_id_t 		      port_id,
-		  unsigned int  	      timeout,
                   struct sdu *		      sdu)
 {
         unsigned int ch = port_id_to_channel(priv, port_id);
@@ -1063,8 +1062,6 @@ shim_hv_sdu_write(struct ipcp_instance_data * priv,
         struct iovec iov;
         int ret = -1;
         int n;
-
-        (void) timeout;
 
         if (unlikely(!priv->assigned)) {
                 LOG_ERR("%s: IPC process not ready", __func__);

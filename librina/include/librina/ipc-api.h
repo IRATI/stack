@@ -459,8 +459,6 @@ public:
 	///
 	/// @param sdu A buffer to store the SDU data
 	/// @param maxBytes The maximum number of bytes to read
-	/// @param timeout if the flow is blocking, the max. amount of time to wait
-        /// for the operation to complete in ms (0 for not setting a timeout)
 	/// @return int The number of bytes read
 	/// @throws UnknownFlowException if the port-id is not valid
 	/// @throws FlowNotAllocatedException if the flow has been deallocated
@@ -469,14 +467,12 @@ public:
 	/// for a read operation in this moment
 	/// @throws ReadSDUException if an error happens while reading the SDU
 	/// @throws IPCException if an unknown error happens
-	int readSDU(int portId, void * sdu, int maxBytes, unsigned int timeout = 0);
+	int readSDU(int portId, void * sdu, int maxBytes);
 
 	/// Writes an SDU to the flow
 	///
 	/// @param sdu A buffer that contains the SDU data
 	/// @param size The size of the SDU data, in bytes
-	/// @param timeout if the flow is blocking, the max. amount of time to wait
-        /// for the operation to complete in ms (0 for not setting a timeout)
 	/// @throws UnknownFlowException if the port-id is not valid
 	/// @throws FlowNotAllocatedException if the flow has been deallocated
 	/// @throws InvalidArgumentsException if the arguments of the call are not valid
@@ -484,7 +480,7 @@ public:
 	/// for a write operation in this moment
 	/// @throws WriteSDUException if an error happens while writing the SDU
 	/// @throws IPCException if an unknown error happens
-	void writeSDU(int portId, void * sdu, int size, unsigned int timeout = 0);
+	void writeSDU(int portId, void * sdu, int size);
 
 	/**
 	 * Returns the flows that are currently allocated

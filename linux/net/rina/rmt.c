@@ -685,7 +685,6 @@ static int n1_port_write_noclean(struct rmt *         rmt,
         struct pci *           pci;
         size_t                 ttl;
         struct dup_config_entry * dup_conf;
-        int                    ret = 0;
 
         ASSERT(n1_port);
         ASSERT(rmt);
@@ -753,7 +752,7 @@ static int n1_port_write_noclean(struct rmt *         rmt,
         }
 
         LOG_DBG("Gonna send SDU to port-id %d", port_id);
-        if (n1_ipcp->ops->sdu_write(n1_ipcp->data,port_id, 0, sdu)) {
+        if (n1_ipcp->ops->sdu_write(n1_ipcp->data,port_id, sdu)) {
                 LOG_ERR("Couldn't write SDU to N-1 IPCP");
                 return -1;
         }

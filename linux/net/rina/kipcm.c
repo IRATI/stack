@@ -2073,7 +2073,6 @@ EXPORT_SYMBOL(kipcm_find_ipcp);
 /* ONLY USED BY APPS */
 int kipcm_sdu_write(struct kipcm * kipcm,
                     port_id_t      port_id,
-                    unsigned int   timeout,
                     struct sdu *   sdu)
 {
         struct ipcp_instance * kfa_ipcp;
@@ -2103,13 +2102,11 @@ int kipcm_sdu_write(struct kipcm * kipcm,
         /* The SDU is ours */
         return kfa_ipcp->ops->sdu_write(kfa_ipcp->data,
         				port_id,
-        				timeout,
         				sdu);
 }
 
 int kipcm_sdu_read(struct kipcm * kipcm,
                    port_id_t      port_id,
-                   unsigned int   timeout,
                    struct sdu **  sdu)
 {
         IRQ_BARRIER;
@@ -2120,7 +2117,7 @@ int kipcm_sdu_read(struct kipcm * kipcm,
         }
 
         /* The SDU is theirs now */
-        return kfa_flow_sdu_read(kipcm->kfa, port_id, timeout, sdu);
+        return kfa_flow_sdu_read(kipcm->kfa, port_id, sdu);
 }
 
 int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,

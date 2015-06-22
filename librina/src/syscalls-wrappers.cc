@@ -75,13 +75,13 @@
 
 namespace rina {
 
-int syscallWriteSDU(int portId, void * sdu, int size, unsigned int timeout)
+int syscallWriteSDU(int portId, void * sdu, int size)
 {
         int result;
 
         DUMP_SYSCALL("SYS_writeSDU", SYS_writeSDU);
 
-        result = syscall(SYS_writeSDU, portId, timeout, sdu, size);
+        result = syscall(SYS_writeSDU, portId, sdu, size);
         if (result < 0) {
         	LOG_DBG("Syscall write SDU failed: %d", errno);
                 result = -errno;
@@ -90,13 +90,13 @@ int syscallWriteSDU(int portId, void * sdu, int size, unsigned int timeout)
         return result;
 }
 
-int syscallReadSDU(int portId, void * sdu, int maxBytes, unsigned int timeout)
+int syscallReadSDU(int portId, void * sdu, int maxBytes)
 {
         int result;
 
         DUMP_SYSCALL("SYS_readSDU", SYS_readSDU);
 
-        result = syscall(SYS_readSDU, portId, timeout, sdu, maxBytes);
+        result = syscall(SYS_readSDU, portId, sdu, maxBytes);
         if (result < 0) {
                 LOG_DBG("Syscall read SDU failed: %d", errno);
                 result = -errno;

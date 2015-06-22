@@ -49,6 +49,7 @@ protected:
         void pingFlow(int port_id);
         void perfFlow(int port_id);
         void destroyFlow(int port_id);
+        int readSDU(int portId, void * sdu, int maxBytes, unsigned int timout);
 
 private:
         std::string test_type;

@@ -76,26 +76,24 @@ static int default_ipc_destroy(struct personality_data * data,
 
 static int default_sdu_write(struct personality_data * data,
                              port_id_t                 id,
-                             unsigned int  	       timeout,
                              struct sdu *              sdu)
 {
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_sdu_write(data->kipcm, id, timeout, sdu);
+        return kipcm_sdu_write(data->kipcm, id, sdu);
 }
 
 static int default_sdu_read(struct personality_data * data,
                             port_id_t                 id,
-                            unsigned int  	      timeout,
                             struct sdu **             sdu)
 {
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_sdu_read(data->kipcm, id, timeout, sdu);
+        return kipcm_sdu_read(data->kipcm, id, sdu);
 }
 
 static int default_allocate_port(struct personality_data * data,

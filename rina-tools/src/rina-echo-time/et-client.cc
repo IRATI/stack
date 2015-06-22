@@ -103,6 +103,7 @@ int Client::createFlow()
         IPCEvent* event;
         uint seqnum;
 
+        qosspec.blocking = false;
         if (gap >= 0)
                 qosspec.maxAllowableGap = gap;
 
@@ -198,7 +199,7 @@ void Client::pingFlow(int port_id)
         	sdus_sent ++;
 
         	try {
-        		bytes_read = ipcManager->readSDU(port_id, buffer2, data_size, lost_wait);
+        		bytes_read = readSDU(port_id, buffer2, data_size, lost_wait);
         	} catch (rina::FlowAllocationException &e) {
         		LOG_ERR("Flow has been deallocated");
         		break;
@@ -295,4 +296,27 @@ void Client::destroyFlow(int port_id)
         assert(resp);
 
         ipcManager->flowDeallocationResult(port_id, resp->result == 0);
+}
+
+int Client::readSDU(int portId, void * sdu, int maxBytes, unsigned int timeout)
+{
+	timespec begintp, endtp;
+	get_current_time(begintp);
+	int bytes_read;
+
+	while (true) {
+		try {
+			bytes_read = ipcManager->readSDU(portId, sdu, maxBytes);
+			return bytes_read;
+		} catch (rina::TryAgainException & e) {
+			get_current_time(endtp);
+			if ((unsigned int) time_difference_in_ms(begintp, endtp) > timeout) {
+				throw e;
+			}
+		} catch (rina::Exception &e) {
+			throw e;
+		}
+	}
+
+	return 0;
 }

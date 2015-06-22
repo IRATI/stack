@@ -2280,15 +2280,12 @@ static int tcp_sdu_write(struct shim_tcp_udp_flow * flow,
 
 static int tcp_udp_sdu_write(struct ipcp_instance_data * data,
                              port_id_t                   id,
-                             unsigned int  		 timeout,
                              struct sdu *                sdu)
 {
         struct snd_data * snd_data;
         unsigned long     flags;
 
         LOG_DBG("Callback on tcp_udp_sdu_write");
-
-        (void) timeout;
 
         snd_data = rkmalloc(sizeof(*snd_data), GFP_ATOMIC);
         if (!snd_data) {

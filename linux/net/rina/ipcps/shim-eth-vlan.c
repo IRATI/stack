@@ -706,7 +706,6 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
 
 static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
                               port_id_t                   id,
-                              unsigned int  		  timeout,
                               struct sdu *                sdu)
 {
         struct shim_eth_flow *   flow;
@@ -718,8 +717,6 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         int                      hlen, tlen, length;
         int                      retval;
         unsigned long            flags;
-
-        (void) timeout;
 
         ASSERT(data);
         ASSERT(sdu);
