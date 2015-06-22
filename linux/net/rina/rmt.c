@@ -1621,8 +1621,6 @@ int rmt_enable_encryption(struct rmt *    instance,
 {
 	struct rmt_n1_port * rmt_port;
 	unsigned long        flags;
-	char * key;
-	ssize_t key_length;
 
 	if (!instance) {
 		LOG_ERR("Bogus RMT instance passed");
@@ -1663,20 +1661,16 @@ int rmt_enable_encryption(struct rmt *    instance,
 	spin_lock_irqsave(&rmt_port->lock, flags);
 	if (!rmt_port->dup_config->enable_decryption &&
 			!rmt_port->dup_config->enable_encryption) {
-		key_length = buffer_length(encrypt_key);
-		key = rkmalloc(key_length, GFP_KERNEL);
-		memcpy(key, buffer_data_ro(encrypt_key), key_length);
-
 		/* Need to set key. FIXME: Move this to policy specific code */
 		if (crypto_blkcipher_setkey(rmt_port->blkcipher,
-					    key, key_length)) {
+					    buffer_data_ro(encrypt_key),
+					    buffer_length(encrypt_key))) {
 			LOG_ERR("Could not set encryption key for N-1 port %d", port_id);
 			spin_unlock_irqrestore(&rmt_port->lock, flags);
 			return -1;
 		}
 	}
 
-	rmt_port->dup_config->key = encrypt_key;
 	if (!rmt_port->dup_config->enable_decryption) {
 		rmt_port->dup_config->enable_decryption = enable_decryption;
 	}

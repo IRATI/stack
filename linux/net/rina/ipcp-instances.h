@@ -119,7 +119,6 @@ struct dup_config_entry {
 	string_t * 	encryption_cipher;
 	string_t * 	message_digest;
 	string_t * 	compress_alg;
-	struct buffer * key;
 };
 
 struct dup_config {

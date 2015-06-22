@@ -700,9 +700,6 @@ int dup_config_entry_destroy(struct dup_config_entry * entry)
 	if (entry->message_digest)
 		rkfree(entry->message_digest);
 
-	if (entry->key)
-		buffer_destroy(entry->key);
-
 	rkfree(entry);
 
 	return 0;
@@ -761,11 +758,6 @@ int dup_config_entry_cpy(const struct dup_config_entry * src,
                     string_dup(src->message_digest, &dst->message_digest))
                     return -1;
 
-                if (src->key) {
-                	dst->key = buffer_dup(src->key);
-                	if (!dst->key)
-                		return -1;
-                }
                 dst->enable_decryption = src->enable_decryption;
                 dst->enable_encryption = src->enable_encryption;
         }
