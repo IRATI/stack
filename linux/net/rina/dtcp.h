@@ -63,6 +63,8 @@ int                  dtcp_snd_rt_win_set(struct dtcp * dtcp,
                                          seq_num_t rt_win_edge);
 int                  dtcp_rcv_rt_win_set(struct dtcp * instance,
                                          seq_num_t     seq_num);
+void                 dtcp_rcvr_credit_set(struct dtcp * dtcp,
+                                          uint_t credit);
 
 struct dtcp_config * dtcp_config_get(struct dtcp * dtcp);
 

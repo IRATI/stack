@@ -1031,6 +1031,19 @@ int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
 }
 EXPORT_SYMBOL(dtcp_ack_flow_control_pdu_send);
 
+void dtcp_rcvr_credit_set(struct dtcp * dtcp, uint_t credit)
+{
+        unsigned long flags;
+
+        ASSERT(dtcp);
+        ASSERT(dtcp->sv);
+
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        dtcp->sv->rcvr_credit = credit;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+}
+EXPORT_SYMBOL(dtcp_rcvr_credit_set);
+
 void update_rt_wind_edge(struct dtcp * dtcp)
 {
         seq_num_t     seq;
@@ -1210,7 +1223,7 @@ int dtcp_set_policy_set_param(struct dtcp * dtcp,
         if (strcmp(path, "") == 0) {
                 int bool_value;
 
-                /* The request addresses this DTP instance. */
+                /* The request addresses this DTCP instance. */
                 rcu_read_lock();
                 ps = container_of(rcu_dereference(dtcp->base.ps),
                                   struct dtcp_ps,
