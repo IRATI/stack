@@ -26,7 +26,7 @@ obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
 rina-personality-default-y :=					\
 	ipcp-factories.o ipcp-instances.o			\
 	cidm.o dt.o dt-utils.o dtcp.o dtp.o efcp-utils.o efcp.o	\
-	pft.o rmt.o						\
+	pff.o rmt.o						\
 	pim.o pidm.o kfa-utils.o kfa.o				\
 	kipcm-utils.o kipcm.o					\
 	default.o ps-factory.o
@@ -47,8 +47,7 @@ rina-default-plugin-y :=			\
 	dtp-ps-default.o			\
 	dtcp-ps-common.o 		        \
 	dtcp-ps-default.o                       \
-	pft-ps-common.o				\
-	pft-ps-default.o
+	pff-ps-default.o
 
 obj-$(CONFIG_VMPI) += vmpi/
 obj-$(CONFIG_RINA) += ipcps/
