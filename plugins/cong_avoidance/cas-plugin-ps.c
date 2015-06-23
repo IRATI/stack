@@ -31,7 +31,6 @@
 #include "rmt-ps.h"
 #include "dtp-ps.h"
 #include "dtcp-ps.h"
-#include "pft-ps.h"
 
 extern struct ps_factory rmt_factory;
 extern struct ps_factory dtp_factory;
