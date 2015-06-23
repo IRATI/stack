@@ -288,12 +288,12 @@ static int cas_rmt_scheduling_destroy_policy_tx(struct rmt_ps *      ps,
         }
 
         data = ps->priv;
+        ASSERT(data);
 
         q = cas_rmt_queue_find(data, port->port_id);
-        hash_del(&q->hlist);
-        rkfree(q);
+        if (q) return cas_rmt_queue_destroy(q);
 
-        return 0;
+        return -1;
 }
 
 static int rmt_ps_set_policy_set_param(struct ps_base * bps,
@@ -353,6 +353,11 @@ static void rmt_ps_cas_destroy(struct ps_base * bps)
         struct cas_rmt_ps_data * data;
 
         data = ps->priv;
+
+        if (!ps || !data) {
+                LOG_ERR("PS or PS Data to destroy");
+                return;
+        }
 
         if (bps) {
 
