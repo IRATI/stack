@@ -256,7 +256,7 @@ static int cas_rmt_scheduling_create_policy_tx(struct rmt_ps *      ps,
 
         if (!ps || !port || !ps->priv) {
                 LOG_ERR("Wrong input parameters for "
-                        "rmt_scheduling_create_policy_common");
+                        "cas_rmt_scheduling_create_policy");
                 return -1;
         }
 
@@ -324,14 +324,18 @@ rmt_ps_cas_create(struct rina_component * component)
 {
         struct rmt * rmt = rmt_from_component(component);
         struct rmt_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
+        struct cas_rmt_ps_data * data = rkzalloc(sizeof(*data), GFP_KERNEL);
 
-        if (!ps) {
+        if (!ps || !data) {
                 return NULL;
         }
 
         ps->base.set_policy_set_param = rmt_ps_set_policy_set_param;
         ps->dm = rmt;
-        ps->priv = NULL;
+
+        hash_init(data->queues);
+        ps->priv = data;
+
         ps->max_q_policy_tx = cas_max_q_policy_tx;
         ps->max_q_policy_rx = cas_max_q_policy_rx;
         ps->rmt_q_monitor_policy_tx = cas_rmt_q_monitor_policy_tx;
@@ -361,14 +365,16 @@ static void rmt_ps_cas_destroy(struct ps_base * bps)
 
         if (bps) {
 
-                hash_for_each_safe(data->queues, bucket, tmp, entry, hlist) {
-                        ASSERT(entry);
-                        if (cas_rmt_queue_destroy(entry)) {
-                                LOG_ERR("Could not destroy entry %pK", entry);
-                                return;
+                if (data) {
+                        hash_for_each_safe(data->queues, bucket, tmp, entry, hlist) {
+                                ASSERT(entry);
+                                if (cas_rmt_queue_destroy(entry)) {
+                                        LOG_ERR("Could not destroy entry %pK", entry);
+                                        return;
+                                }
                         }
+                        rkfree(data);
                 }
-                rkfree(data);
                 rkfree(ps);
         }
 }
