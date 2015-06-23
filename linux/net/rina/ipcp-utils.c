@@ -523,23 +523,23 @@ struct rmt_config * rmt_config_create(void)
         if (!tmp)
                 return NULL;
 
-        tmp->pft_conf = rkzalloc(sizeof(*tmp->pft_conf), GFP_KERNEL);
-        if (!tmp->pft_conf) {
+        tmp->pff_conf = rkzalloc(sizeof(*tmp->pff_conf), GFP_KERNEL);
+        if (!tmp->pff_conf) {
                 rkfree(tmp);
                 return NULL;
         }
 
-        tmp->pft_conf->policy_set = policy_create();
-        if (!tmp->pft_conf->policy_set) {
-                rkfree(tmp->pft_conf);
+        tmp->pff_conf->policy_set = policy_create();
+        if (!tmp->pff_conf->policy_set) {
+                rkfree(tmp->pff_conf);
                 rkfree(tmp);
                 return NULL;
         }
 
         tmp->policy_set = policy_create();
         if (!tmp->policy_set) {
-        	rkfree(tmp->pft_conf->policy_set);
-                rkfree(tmp->pft_conf);
+        	rkfree(tmp->pff_conf->policy_set);
+                rkfree(tmp->pff_conf);
                 rkfree(tmp);
                 return NULL;
         }
@@ -550,10 +550,10 @@ EXPORT_SYMBOL(rmt_config_create);
 
 int rmt_config_destroy(struct rmt_config * rmt_config)
 {
-        if (rmt_config->pft_conf) {
-                if (rmt_config->pft_conf->policy_set)
-                        policy_destroy(rmt_config->pft_conf->policy_set);
-                rkfree(rmt_config->pft_conf);
+        if (rmt_config->pff_conf) {
+                if (rmt_config->pff_conf->policy_set)
+                        policy_destroy(rmt_config->pff_conf->policy_set);
+                rkfree(rmt_config->pff_conf);
         }
         if (rmt_config->policy_set)
                 policy_destroy(rmt_config->policy_set);
@@ -700,9 +700,6 @@ int dup_config_entry_destroy(struct dup_config_entry * entry)
 	if (entry->message_digest)
 		rkfree(entry->message_digest);
 
-	if (entry->key)
-		buffer_destroy(entry->key);
-
 	rkfree(entry);
 
 	return 0;
@@ -761,11 +758,6 @@ int dup_config_entry_cpy(const struct dup_config_entry * src,
                     string_dup(src->message_digest, &dst->message_digest))
                     return -1;
 
-                if (src->key) {
-                	dst->key = buffer_dup(src->key);
-                	if (!dst->key)
-                		return -1;
-                }
                 dst->enable_decryption = src->enable_decryption;
                 dst->enable_encryption = src->enable_encryption;
         }

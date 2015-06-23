@@ -98,9 +98,9 @@ bool ipcp_instance_is_normal(struct ipcp_instance_ops * ops)
             ops->mgmt_sdu_write            ||
             ops->mgmt_sdu_read             ||
             ops->mgmt_sdu_post             ||
-            ops->pft_add                   ||
-            ops->pft_remove                ||
-            ops->pft_dump                  ||
+            ops->pff_add                   ||
+            ops->pff_remove                ||
+            ops->pff_dump                  ||
             ops->flow_prebind              ||
             ops->flow_binding_ipcp         ||
             ops->flow_unbinding_ipcp       ||

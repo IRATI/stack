@@ -119,7 +119,6 @@ struct dup_config_entry {
 	string_t * 	encryption_cipher;
 	string_t * 	message_digest;
 	string_t * 	compress_alg;
-	struct buffer * key;
 };
 
 struct dup_config {
@@ -133,9 +132,9 @@ struct sdup_config {
 	struct list_head	  specific_dup_confs;
 };
 
-/* Represents the configuration of the PFT */
-struct pft_config {
-	/* The PS name for the PDU Forwarding Table (Next hop) */
+/* Represents the configuration of the PFF */
+struct pff_config {
+	/* The PS name for the PDU Forwarding Function */
 	struct policy * policy_set;
 };
 
@@ -144,8 +143,8 @@ struct rmt_config {
 	/* The PS name for the RMT */
 	struct policy * policy_set;
 
-	/* The configuration of the PDU Forwarding Table subcomponent */
-	struct pft_config * pft_conf;
+	/* The configuration of the PDU Forwarding Function subcomponent */
+	struct pff_config * pff_conf;
 };
 
 /* Represents a DIF configuration (policies, parameters, etc) */
@@ -269,16 +268,16 @@ struct ipcp_instance_ops {
                               port_id_t                   port_id,
                               struct sdu *                sdu);
 
-        int (* pft_add)(struct ipcp_instance_data * data,
-			struct modpdufwd_entry	  * entry);
+        int (* pff_add)(struct ipcp_instance_data * data,
+			struct mod_pff_entry	  * entry);
 
-        int (* pft_remove)(struct ipcp_instance_data * data,
-			   struct modpdufwd_entry	  * entry);
+        int (* pff_remove)(struct ipcp_instance_data * data,
+			   struct mod_pff_entry      * entry);
 
-        int (* pft_dump)(struct ipcp_instance_data * data,
+        int (* pff_dump)(struct ipcp_instance_data * data,
                          struct list_head *          entries);
 
-        int (* pft_flush)(struct ipcp_instance_data * data);
+        int (* pff_flush)(struct ipcp_instance_data * data);
 
         int (* query_rib)(struct ipcp_instance_data * data,
                           struct list_head *          entries,
