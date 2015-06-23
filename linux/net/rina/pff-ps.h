@@ -1,5 +1,5 @@
 /*
- * PFT (PDU Forwarding Table) kRPI
+ * PFF (PDU Forwarding Function) kRPI
  *
  *    Vincenzo Maffione     <v.maffione@nextworks.it>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
@@ -19,26 +19,38 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_PFT_PS_H
-#define RINA_PFT_PS_H
+#ifndef RINA_PFF_PS_H
+#define RINA_PFF_PS_H
 
 #include <linux/types.h>
 
-#include "pft.h"
+#include "pff.h"
 #include "pdu.h"
-#include "rds/rfifo.h"
 #include "ps-factory.h"
 
-struct pft_ps {
+struct pff_ps {
         struct ps_base base;
 
-        int (* next_hop)(struct pft_ps * ps,
-                         struct pci *    pci,
-                         port_id_t **    ports,
-                         size_t *        count);
+        int (* pff_add)(struct pff_ps *        ps,
+                        struct mod_pff_entry * entry);
+        int (* pff_remove)(struct pff_ps *        ps,
+                           struct mod_pff_entry * entry);
 
-        /* Reference used to access the PFT data model. */
-        struct pft * dm;
+        bool (* pff_is_empty)(struct pff_ps * ps);
+        int  (* pff_flush)(struct pff_ps * ps);
+
+        /* NOTE: ports and entries are in-out parms */
+        int  (* pff_nhop)(struct pff_ps * ps,
+                          struct pci *    pci,
+                          port_id_t **    ports,
+                          size_t *        count);
+
+        /* NOTE: entries are of the type mod_pff_entry */
+        int  (* pff_dump)(struct pff_ps *    ps,
+                          struct list_head * entries);
+
+        /* Reference used to access the PFF data model. */
+        struct pff * dm;
 
         /* Data private to the policy-set implementation. */
         void *       priv;
@@ -48,7 +60,7 @@ struct pft_ps {
  * The ownership of @factory is not passed. Plugin module is therefore
  * in charge of deallocate its memory, if necessary.
  */
-int pft_ps_publish(struct ps_factory * factory);
-int pft_ps_unpublish(const char * name);
+int pff_ps_publish(struct ps_factory * factory);
+int pff_ps_unpublish(const char * name);
 
 #endif
