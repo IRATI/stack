@@ -28,6 +28,7 @@
 #include "rds/rmem.h"
 #include "dtcp-ps.h"
 #include "dtcp-utils.h"
+#include "dtcp-ps-common.h"
 #include "policies.h"
 #include "logs.h"
 
@@ -54,23 +55,14 @@ struct cas_dtcp_ps_data {
 
 static int
 cas_lost_control_pdu(struct dtcp_ps * ps)
-{
-        printk("%s: called()\n", __func__);
-        return 0;
-}
+{ return common_lost_control_pdu(ps); }
 
 static int cas_rcvr_ack(struct dtcp_ps * ps, const struct pci * pci)
-{
-        printk("%s: called()\n", __func__);
-        return 0;
-}
+{ return common_rcvr_ack(ps, pci); }
 
 static int
 cas_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num)
-{
-        printk("%s: called()\n", __func__);
-        return 0;
-}
+{ return common_sender_ack(ps, seq_num); }
 
 static int
 cas_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
@@ -81,10 +73,7 @@ cas_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
 
 static int
 cas_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
-{
-        printk("%s: called()\n", __func__);
-        return 0;
-}
+{ return common_receiving_flow_control(ps, pci); }
 
 static int
 cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
@@ -170,10 +159,7 @@ exit:
 
 static int
 cas_rate_reduction(struct dtcp_ps * ps)
-{
-        printk("%s: called()\n", __func__);
-        return 0;
-}
+{ return common_rate_reduction(ps); }
 
 static int dtcp_ps_cas_set_policy_set_param(struct ps_base * bps,
                                             const char    * name,
@@ -216,6 +202,9 @@ static int dtcp_ps_cas_set_policy_set_param(struct ps_base * bps,
         }
         return 0;
 }
+
+static int cas_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
+{ return common_rtt_estimator(ps, sn); }
 
 static struct ps_base *
 dtcp_ps_cas_create(struct rina_component * component)
@@ -272,7 +261,7 @@ dtcp_ps_cas_create(struct rina_component * component)
 
         ps->flow_init                   = NULL;
         ps->lost_control_pdu            = cas_lost_control_pdu;
-        ps->rtt_estimator               = NULL;
+        ps->rtt_estimator               = cas_rtt_estimator;
         ps->retransmission_timer_expiry = NULL;
         ps->received_retransmission     = NULL;
         ps->sender_ack                  = cas_sender_ack;
@@ -295,8 +284,14 @@ dtcp_ps_cas_create(struct rina_component * component)
 static void dtcp_ps_cas_destroy(struct ps_base * bps)
 {
         struct dtcp_ps *ps = container_of(bps, struct dtcp_ps, base);
+        struct cas_dtcp_ps_data * data;
 
         if (bps) {
+                if (ps->priv) {
+                        data = ps->priv;
+                        rkfree(data->rcv_vector);
+                        rkfree(data);
+                }
                 rkfree(ps);
         }
 }
