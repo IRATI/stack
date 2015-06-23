@@ -41,21 +41,21 @@ struct reg_cycle_t {
 };
 
 struct cas_rmt_queue {
-        struct rfifo *       queue;
-        unsigned int         key;
-        unsigned int         max_q;
+        struct rfifo *    queue;
+        port_id_t         port_id;
+        unsigned int      max_q;
         struct {
                 struct reg_cycle_t prev_cycle;
                 struct reg_cycle_t cur_cycle;
         } reg_cycles;
-        struct hlist_node    hlist;
+        struct hlist_node hlist;
 };
 
 struct cas_rmt_ps_data {
         DECLARE_HASHTABLE(queues, RMT_PS_HASHSIZE);
 };
 
-static struct cas_rmt_queue * cas_queue_create(unsigned int key)
+static struct cas_rmt_queue * cas_queue_create(port_id_t port_id)
 {
         struct cas_rmt_queue * tmp;
         tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
@@ -67,7 +67,7 @@ static struct cas_rmt_queue * cas_queue_create(unsigned int key)
                 return NULL;
         }
 
-        tmp->key                                = key;
+        tmp->port_id                            = port_id;
         tmp->reg_cycles.prev_cycle.t_start      = 0;
         tmp->reg_cycles.prev_cycle.t_last_start = 0;
         tmp->reg_cycles.prev_cycle.t_end        = 0;
@@ -97,16 +97,16 @@ static int cas_rmt_queue_destroy(struct cas_rmt_queue * q)
 }
 
 struct cas_rmt_queue * cas_rmt_queue_find(struct cas_rmt_ps_data * data,
-                                          unsigned int             key)
+                                          port_id_t                port_id)
 {
         struct cas_rmt_queue *    entry;
         const struct hlist_head * head;
 
         ASSERT(data);
 
-        head = &data->queues[rmap_hash(data->queues, key)];
+        head = &data->queues[rmap_hash(data->queues, port_id)];
         hlist_for_each_entry(entry, head, hlist) {
-                if (entry->key == key)
+                if (entry->port_id == port_id)
                         return entry;
         }
 
@@ -195,30 +195,104 @@ static void cas_rmt_q_monitor_policy_rx(struct rmt_ps *      ps,
 
 static struct pdu *
 cas_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
-                                      struct rmt_n1_port * port)
+                                 struct rmt_n1_port * port)
 {
-        printk("%s: called()\n", __func__);
-        return NULL;
+        struct cas_rmt_queue *   q;
+        struct cas_rmt_ps_data * data = ps->priv;
+        struct pdu *             ret_pdu;
+
+        if (!ps || !port || !data) {
+                LOG_ERR("Wrong input parameters for "
+                        "rmt_next_scheduled_policy_tx");
+                return NULL;
+        }
+
+        q = cas_rmt_queue_find(data, port->port_id);
+        if (!q) {
+                LOG_ERR("Could not find queue for n1_port %u",
+                        port->port_id);
+                return NULL;
+        }
+
+        ret_pdu = rfifo_pop(q->queue);
+        if (!ret_pdu) {
+                LOG_ERR("Could not dequeue scheduled pdu");
+                return NULL;
+        }
+        return ret_pdu;
 }
 
 static int cas_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
-                                                     struct rmt_n1_port * port,
-                                                     struct pdu *         pdu)
+                                                struct rmt_n1_port * port,
+                                                struct pdu *         pdu)
 {
-        printk("%s: called()\n", __func__);
+        struct cas_rmt_queue *   q;
+        struct cas_rmt_ps_data * data = ps->priv;
+
+        if (!ps || !port || !pdu || data) {
+                LOG_ERR("Wrong input parameters for "
+                        "rmt_enqueu_scheduling_policy_tx");
+                return -1;
+        }
+
+        /* NOTE: The policy is called with the n1_port lock taken */
+        q = cas_rmt_queue_find(data, port->port_id);
+        if (!q) {
+                LOG_ERR("Could not find queue for n1_port %u",
+                        port->port_id);
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        rfifo_push_ni(q->queue, pdu);
         return 0;
 }
 
 static int cas_rmt_scheduling_create_policy_tx(struct rmt_ps *      ps,
-                                                    struct rmt_n1_port * port)
-{ printk("%s: called()\n", __func__);
-  return 0;
+                                               struct rmt_n1_port * port)
+{
+        struct cas_rmt_queue *   q;
+        struct cas_rmt_ps_data * data;
+
+        if (!ps || !port || !ps->priv) {
+                LOG_ERR("Wrong input parameters for "
+                        "rmt_scheduling_create_policy_common");
+                return -1;
+        }
+
+        data = ps->priv;
+
+        q = cas_queue_create(port->port_id);
+        if (!q) {
+                LOG_ERR("Could not create queue for n1_port %u",
+                        port->port_id);
+                return -1;
+        }
+        /* FIXME this is not used in this implementation so far */
+        hash_add(data->queues, &q->hlist, port->port_id);
+
+        LOG_DBG("Structures for scheduling policies created...");
+        return 0;
 }
 
 static int cas_rmt_scheduling_destroy_policy_tx(struct rmt_ps *      ps,
-                                                     struct rmt_n1_port * port)
+                                                struct rmt_n1_port * port)
 {
-        printk("%s: called()\n", __func__);
+        struct cas_rmt_ps_data * data;
+        struct cas_rmt_queue *   q;
+
+        if (!ps || !port || !ps->priv) {
+                LOG_ERR("Wrong input parameters for "
+                        "rmt_scheduling_destroy_policy_common");
+                return -1;
+        }
+
+        data = ps->priv;
+
+        q = cas_rmt_queue_find(data, port->port_id);
+        hash_del(&q->hlist);
+        rkfree(q);
+
         return 0;
 }
 
@@ -272,9 +346,24 @@ rmt_ps_cas_create(struct rina_component * component)
 
 static void rmt_ps_cas_destroy(struct ps_base * bps)
 {
-        struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
+        struct rmt_ps *          ps = container_of(bps, struct rmt_ps, base);
+        struct cas_rmt_queue *   entry;
+        struct hlist_node *      tmp;
+        int                      bucket;
+        struct cas_rmt_ps_data * data;
+
+        data = ps->priv;
 
         if (bps) {
+
+                hash_for_each_safe(data->queues, bucket, tmp, entry, hlist) {
+                        ASSERT(entry);
+                        if (cas_rmt_queue_destroy(entry)) {
+                                LOG_ERR("Could not destroy entry %pK", entry);
+                                return;
+                        }
+                }
+                rkfree(data);
                 rkfree(ps);
         }
 }
