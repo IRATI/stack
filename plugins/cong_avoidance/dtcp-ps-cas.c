@@ -42,6 +42,7 @@
 #define BIT_NUMBER(X) ((X) % BITS_PER_INT)
 
 struct cas_dtcp_ps_data {
+        bool         first_run;
         seq_num_t    wc;
         seq_num_t    wp;
         seq_num_t    wc_lwe;
@@ -94,21 +95,28 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         }
 
         c_seq   = pci_sequence_number_get(pci);
+        if (data->first_run) {
+                data->wc_lwe = c_seq;
+                data->first_run = false;
+        }
 
-        ecn_bit = data->rcv_vector[BIT_INDEX(c_seq -data->wc_lwe)] && (1 << BIT_NUMBER(c_seq -data->wc_lwe));
+
+        LOG_DBG("C_Seq %u, data->wc_lwe: %u", c_seq, data->wc_lwe);
+        LOG_DBG("Bit index: %d, Bit number: %d",
+                BIT_INDEX(c_seq - data->wc_lwe), BIT_NUMBER(c_seq -data->wc_lwe));
+
+        ecn_bit = data->rcv_vector[BIT_INDEX(c_seq - data->wc_lwe)] & (1 << BIT_NUMBER(c_seq -data->wc_lwe));
 
         if (ecn_bit) {
                 LOG_INFO("This pdu was alrady considered, exiting...");
                 goto exit;
         }
 
-        LOG_DBG("new ECN bit to consider (PDU %u)....", c_seq);
-
         /* mark seq num as received */
-        data->rcv_vector[BIT_INDEX(c_seq -data->wc_lwe)] |= 1 << BIT_NUMBER(c_seq -data->wc_lwe);
+        data->rcv_vector[BIT_INDEX(c_seq -data->wc_lwe)] |= (1 << BIT_NUMBER(c_seq -data->wc_lwe));
         /* if we passed the wp bits, consider ecn bit */
         if ((++data->rcv_count > data->wp) &&
-             ((int) (pci_flags_get(pci) && PDU_FLAGS_EXPLICIT_CONGESTION))) {
+             ((int) (pci_flags_get(pci) & PDU_FLAGS_EXPLICIT_CONGESTION))) {
                 data->ecn_count++;
                 LOG_DBG("ECN bit for PDU %u marked, total %u",
                         c_seq, data->ecn_count);
@@ -225,6 +233,7 @@ dtcp_ps_cas_create(struct rina_component * component)
         ps->base.set_policy_set_param   = dtcp_ps_cas_set_policy_set_param;
         ps->dm                          = dtcp;
 
+        data->first_run                 = true;
         data->w_inc_a_p                 = W_INC_A_P_DEFAULT;
         data->w_dec_b_num_p             = W_DEC_B_NUM_P_DEFAULT;
         data->w_dec_b_den_p             = W_DEC_B_DEN_P_DEFAULT;
@@ -233,6 +242,9 @@ dtcp_ps_cas_create(struct rina_component * component)
         data->wc_lwe                    = 0;
         data->ecn_count                 = 0;
         data->rcv_count                 = 0;
+
+        LOG_DBG("Allocating %d bytes for rcv_vector with Wc %u, Wp %u",
+                VECTOR_SIZE(data->wc + data->wp), data->wc, data->wp);
 
         data->rcv_vector = rkmalloc(VECTOR_SIZE(data->wc + data->wp), GFP_KERNEL);
         if (!data->rcv_vector) {
@@ -245,15 +257,28 @@ dtcp_ps_cas_create(struct rina_component * component)
         ps->priv                        = data;
 
         ps_conf = dtcp_ps(dtcp_cfg);
+        if (!ps_conf) {
+                LOG_ERR("No PS conf struct");
+                return NULL;
+        }
         ps_param = policy_param_find(ps_conf, "w_inc_a_p");
+        if (!ps_param) {
+                LOG_WARN("No PS param w_inc_a_p");
+        }
         dtcp_ps_cas_set_policy_set_param(&ps->base,
                                          policy_param_name(ps_param),
                                          policy_param_value(ps_param));
         ps_param = policy_param_find(ps_conf, "w_dec_b_num_p");
+        if (!ps_param) {
+                LOG_WARN("No PS param w_dec_b_num_p");
+        }
         dtcp_ps_cas_set_policy_set_param(&ps->base,
                                         policy_param_name(ps_param),
                                         policy_param_value(ps_param));
         ps_param = policy_param_find(ps_conf, "w_dec_b_den_p");
+        if (!ps_param) {
+                LOG_WARN("No PS param w_dec_b_den_p");
+        }
         dtcp_ps_cas_set_policy_set_param(&ps->base,
                                         policy_param_name(ps_param),
                                         policy_param_value(ps_param));
