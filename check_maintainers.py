@@ -29,7 +29,7 @@ MAINTAINERS_FILE="MAINTAINERS"
 errors=0
 
 def errormsg(msg):
-	print "ERROR: "+msg
+	print("ERROR: "+msg)
 
 def sanitize_path(p):
 	if p[-1] == '/':
@@ -110,7 +110,7 @@ def main():
 	maintainers = parse_maintainers(f)
 	scan_paths(maintainers, PATHS_TO_CHECK)
 	if errors > 0:
-		print "Number of errors: %s" % errors
+		print("Number of errors: %s" % errors)
 	sys.exit(errors)
 
 if __name__ == "__main__":
