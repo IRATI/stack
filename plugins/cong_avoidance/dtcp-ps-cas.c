@@ -34,6 +34,11 @@
 #define W_INC_A_P_DEFAULT     1
 #define W_DEC_B_NUM_P_DEFAULT 7
 #define W_DEC_B_DEN_P_DEFAULT 3
+#define BITS_PER_BYTE 8
+#define BITS_PER_INT (sizeof(int) * BITS_PER_BYTE)
+#define VECTOR_SIZE(X) ((((X) / BITS_PER_INT) + 1) * sizeof(int))
+#define BIT_INDEX(X) ((X) / BITS_PER_INT)
+#define BIT_NUMBER(X) ((X) % BITS_PER_INT)
 
 struct cas_dtcp_ps_data {
         seq_num_t    wc;
@@ -42,8 +47,9 @@ struct cas_dtcp_ps_data {
         unsigned int w_inc_a_p;
         unsigned int w_dec_b_num_p;
         unsigned int w_dec_b_den_p;
-        unsigned int rcv_count;
         unsigned int ecn_count;
+        unsigned int rcv_count;
+        int *        rcv_vector;
 };
 
 static int
@@ -86,6 +92,8 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         struct dtcp *             dtcp = ps->dm;
         struct cas_dtcp_ps_data * data = ps->priv;
         seq_num_t                 c_seq;
+        int                       ecn_bit;
+        size_t                    v_size_n, v_size_c;
 
         if (!dtcp || !data) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -96,37 +104,63 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
                 return -1;
         }
 
-        data->rcv_count++;
         c_seq   = pci_sequence_number_get(pci);
 
-        /* add ecn bit */
-        if (data->rcv_count > (data->wc_lwe + data->wp)) {
-                data->ecn_count += (unsigned int) (pci_flags_get(pci) && PDU_FLAGS_EXPLICIT_CONGESTION);
+        ecn_bit = data->rcv_vector[BIT_INDEX(c_seq -data->wc_lwe)] && (1 << BIT_NUMBER(c_seq -data->wc_lwe));
 
-                if (c_seq - data->wc_lwe <= 0) {
-                        LOG_ERR("Seq_number %u was not expected, current window's LWE"
-                                 " will be used instead",
-                                c_seq);
-                        c_seq = data->wc_lwe;
-                }
+        if (ecn_bit) {
+                LOG_INFO("This pdu was alrady considered, exiting...");
+                goto exit;
         }
 
-        /* it is time to update the window's size */
+        LOG_DBG("new ECN bit to consider (PDU %u)....", c_seq);
+
+        /* mark seq num as received */
+        data->rcv_vector[BIT_INDEX(c_seq -data->wc_lwe)] |= 1 << BIT_NUMBER(c_seq -data->wc_lwe);
+        /* if we passed the wp bits, consider ecn bit */
+        if ((++data->rcv_count > data->wp) &&
+             ((int) (pci_flags_get(pci) && PDU_FLAGS_EXPLICIT_CONGESTION))) {
+                data->ecn_count++;
+                LOG_DBG("ECN bit for PDU %u marked, total %u",
+                        c_seq, data->ecn_count);
+        }
+
+        /* it is time to update the window's size & reset */
         if (data->rcv_count == data->wc + data->wp) {
+                LOG_DBG("Updating window size...");
+                v_size_c = VECTOR_SIZE(data->wp + data->wc);
                 data->wp = data->wc;
                 data->wc_lwe = dt_sv_rcv_lft_win(dtcp_dt(dtcp));
-
                 /*check number of ecn bits set */
+                LOG_DBG("ECN COUNT: %d, Wc: %u", data->ecn_count, data->wc);
                 if (data->ecn_count >= (data->wc >> 1)) {
                         /* decrease window's size*/
                         data->wc = (data->wc * data->w_dec_b_num_p) >> data->w_dec_b_den_p;
+                        v_size_n = VECTOR_SIZE(data->wc + data->wp);
+                        if (v_size_n < v_size_c) {
+                                rkfree(data->rcv_vector);
+                                data->rcv_vector = rkmalloc(v_size_n, GFP_ATOMIC);
+                                memset(data->rcv_vector, 0, v_size_n);
+                        }
+                        LOG_DBG("Window size decreased, new values are Wp: %u, Wc: %u, Wc_LWE: %u",
+                                data->wp, data->wc, data->wc_lwe);
                 } else {
                         /*increment window's size */
                         data->wc += data->w_inc_a_p;
+                        v_size_n = VECTOR_SIZE(data->wc + data->wp);
+                        if (v_size_n > v_size_c) {
+                                rkfree(data->rcv_vector);
+                                data->rcv_vector = rkmalloc(v_size_n, GFP_ATOMIC);
+                                memset(data->rcv_vector, 0, v_size_n);
+                        }
+                        LOG_DBG("Window size increased, new values are Wp: %u, Wc: %u, Wc_LWE: %u",
+                                data->wp, data->wc, data->wc_lwe);
                 }
+                data->rcv_count = 0;
+                data->ecn_count = 0;
                 dtcp_rcvr_credit_set(dtcp, data->wc);
         }
-
+exit:
         update_rt_wind_edge(dtcp);
 
         LOG_DBG("Credit and RWE set: %u, %u", data->wc, rcvr_rt_wind_edge(dtcp));
@@ -208,8 +242,17 @@ dtcp_ps_cas_create(struct rina_component * component)
         data->wc                        = ps->flowctrl.window.initial_credit;
         data->wp                        = 0;
         data->wc_lwe                    = 0;
-        data->rcv_count                 = 0;
         data->ecn_count                 = 0;
+        data->rcv_count                 = 0;
+
+        data->rcv_vector = rkmalloc(VECTOR_SIZE(data->wc + data->wp), GFP_KERNEL);
+        if (!data->rcv_vector) {
+                LOG_ERR("Could not allocate memory for rcv_vector");
+                rkfree(data);
+                rkfree(ps);
+        }
+        memset(data->rcv_vector, 0, VECTOR_SIZE(data->wc + data->wp));
+
         ps->priv                        = data;
 
         ps_conf = dtcp_ps(dtcp_cfg);
