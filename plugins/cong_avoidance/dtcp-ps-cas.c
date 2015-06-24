@@ -67,10 +67,7 @@ cas_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num)
 
 static int
 cas_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
-{
-        printk("%s: called()\n", __func__);
-        return 0;
-}
+{ return common_sending_ack(ps, seq); }
 
 static int
 cas_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
