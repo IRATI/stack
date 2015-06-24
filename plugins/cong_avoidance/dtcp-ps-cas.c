@@ -107,13 +107,18 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 
         ecn_bit = data->rcv_vector[BIT_INDEX(c_seq - data->wc_lwe)] & (1 << BIT_NUMBER(c_seq -data->wc_lwe));
 
+        LOG_DBG("ECN bit: %x, INT in vector: %d (%x)",
+                ecn_bit,
+                data->rcv_vector[BIT_INDEX(c_seq - data->wc_lwe)],
+                data->rcv_vector[BIT_INDEX(c_seq - data->wc_lwe)]);
+
         if (ecn_bit) {
                 LOG_INFO("This pdu was alrady considered, exiting...");
                 goto exit;
         }
 
         /* mark seq num as received */
-        data->rcv_vector[BIT_INDEX(c_seq -data->wc_lwe)] |= (1 << BIT_NUMBER(c_seq -data->wc_lwe));
+        data->rcv_vector[BIT_INDEX(c_seq -data->wc_lwe)] |= (1 << BIT_NUMBER(c_seq - data->wc_lwe));
         /* if we passed the wp bits, consider ecn bit */
         if ((++data->rcv_count > data->wp) &&
              ((int) (pci_flags_get(pci) & PDU_FLAGS_EXPLICIT_CONGESTION))) {
@@ -237,7 +242,10 @@ dtcp_ps_cas_create(struct rina_component * component)
         data->w_inc_a_p                 = W_INC_A_P_DEFAULT;
         data->w_dec_b_num_p             = W_DEC_B_NUM_P_DEFAULT;
         data->w_dec_b_den_p             = W_DEC_B_DEN_P_DEFAULT;
-        data->wc                        = ps->flowctrl.window.initial_credit;
+        /* Cannot use this because it is initialized later on in
+         * dtcp_select_policy_set */
+        /*data->wc                        = ps->flowctrl.window.initial_credit;*/
+        data->wc                        = dtcp_initial_credit(dtcp_cfg);;
         data->wp                        = 0;
         data->wc_lwe                    = 0;
         data->ecn_count                 = 0;
