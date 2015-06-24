@@ -128,18 +128,21 @@ static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
                                         struct pdu *         pdu,
                                         struct rmt_n1_port * port)
 {
-        struct cas_rmt_queue * q;
-        ssize_t                cur_qlen;
-        struct reg_cycle_t *   prev_cycle, * cur_cycle;
-        struct pci *           pci;
-        pdu_flags_t            pci_flags;
+        struct cas_rmt_queue *   q;
+        struct cas_rmt_ps_data * data;
+        ssize_t                  cur_qlen;
+        struct reg_cycle_t *     prev_cycle, * cur_cycle;
+        struct pci *             pci;
+        pdu_flags_t              pci_flags;
 
         ASSERT(ps);
         ASSERT(ps->priv);
         ASSERT(pdu);
         ASSERT(port);
 
-        q = cas_rmt_queue_find(ps->priv, port->port_id);
+        data = ps->priv;
+
+        q = cas_rmt_queue_find(data, port->port_id);
         if (!q) {
                 LOG_ERR("Monitoring: could not find CAS queue for N-1 port %u",
                         port->port_id);
@@ -169,7 +172,7 @@ static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
 
         cur_cycle->avg_len = (prev_cycle->sum_area + cur_cycle->sum_area) / (cur_cycle->t_end - prev_cycle->t_start);
 
-        LOG_ERR("The length for N-1 port %u just calculated is: %u",
+        LOG_DBG("The length for N-1 port %u just calculated is: %u",
                 port->port_id, cur_cycle->avg_len);
 
         if (cur_cycle->avg_len >= 1) {
@@ -268,6 +271,16 @@ static int cas_rmt_scheduling_create_policy_tx(struct rmt_ps *      ps,
                         port->port_id);
                 return -1;
         }
+
+        q->reg_cycles.prev_cycle.t_start = 0;
+        q->reg_cycles.prev_cycle.t_last_start = 0;
+        q->reg_cycles.prev_cycle.t_end = 0;
+        q->reg_cycles.prev_cycle.sum_area = 0;
+        q->reg_cycles.prev_cycle.avg_len = 0;
+
+        q->reg_cycles.cur_cycle = q->reg_cycles.prev_cycle;
+
+
         /* FIXME this is not used in this implementation so far */
         hash_add(data->queues, &q->hlist, port->port_id);
 
