@@ -245,7 +245,7 @@ static int cas_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
         struct cas_rmt_queue *   q;
         struct cas_rmt_ps_data * data = ps->priv;
 
-        if (!ps || !port || !pdu || data) {
+        if (!ps || !port || !pdu || !data) {
                 LOG_ERR("Wrong input parameters for "
                         "rmt_enqueu_scheduling_policy_tx");
                 return -1;
