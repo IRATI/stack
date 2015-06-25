@@ -159,8 +159,9 @@ static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
 
                 cur_cycle->t_start = jiffies;
                 /* to handle first cycle->*/
-                if (prev_cycle->t_start == 0)
+                /*if (prev_cycle->t_start == 0)
                         prev_cycle->t_start = cur_cycle->t_start;
+                */
                 cur_cycle->t_last_start = cur_cycle->t_start;
                 cur_cycle->t_end        = cur_cycle->t_start;
                 cur_cycle->sum_area     = 0;
@@ -170,7 +171,14 @@ static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
                 cur_cycle->t_last_start = cur_cycle->t_end;
         }
 
-        cur_cycle->avg_len = (prev_cycle->sum_area + cur_cycle->sum_area) / (cur_cycle->t_end - prev_cycle->t_start);
+        LOG_DBG(" Avg len inputs: cur_cycle->sum_area: %u, prev_cycle->sum_area %u, (cur_cycle->t_end %u,prev_cycle->t_start %u",
+                cur_cycle->sum_area, prev_cycle->sum_area, cur_cycle->t_end, prev_cycle->t_start);
+        cur_cycle->avg_len = (cur_cycle->sum_area + prev_cycle->sum_area);
+        if (cur_cycle->t_end ==  prev_cycle->t_start)
+                cur_cycle->avg_len /= 2;
+        else
+                cur_cycle->avg_len /= (cur_cycle->t_end - prev_cycle->t_start);
+
 
         LOG_DBG("The length for N-1 port %u just calculated is: %u",
                 port->port_id, cur_cycle->avg_len);
