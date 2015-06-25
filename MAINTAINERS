@@ -133,7 +133,7 @@ F: linux/net/rina/pim*
 
 PFF
 M: Sander Vrijders <sander.vrijders (at) intec.ugent.be>
-F: linux/net/rina/pft*
+F: linux/net/rina/pff*
 
 EFCP
 M: Leonardo Bergesio <leonardo.bergesio (at) i2cat.net>
@@ -198,6 +198,7 @@ F: librina/include/librina/irm.h
 F: librina/include/librina/sdu-protection.h
 F: librina/include/librina/security-manager.h
 F: librina/src/application.cc
+F: librina/src/auth-policies.proto
 F: librina/src/enrollment.cc
 F: librina/src/faux-sockets.cc
 F: librina/src/irm.cc
