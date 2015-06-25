@@ -847,13 +847,14 @@ static void send_worker(unsigned long o)
                 rcu_read_lock();
                 if (ps && ps->rmt_next_scheduled_policy_tx) {
                         do {
-                                pdu = ps->rmt_next_scheduled_policy_tx(ps, n1_port);
+                                if (ps->rmt_q_monitor_policy_tx)
+                                         ps->rmt_q_monitor_policy_tx(ps,
+                                                                     pdu,
+                                                                     n1_port);
+                                pdu = ps->rmt_next_scheduled_policy_tx(ps,
+                                                                       n1_port);
                                 if (pdu) {
                                         atomic_dec(&n1_port->n_sdus);
-                                        if (ps->rmt_q_monitor_policy_tx)
-                                                ps->rmt_q_monitor_policy_tx(ps,
-                                                                            pdu,
-                                                                            n1_port);
                                         if (n1_port_write_noclean(rmt, n1_port, pdu))
                                                 LOG_ERR("Could not write scheduled PDU in n1 port");
                                         spin_lock(&rmt->n1_ports->lock);
