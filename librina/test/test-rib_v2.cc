@@ -273,14 +273,34 @@ public:
 
 static CDAPProviderMockup cdap_provider_mockup;
 static cdap::CDAPCallbackInterface* rib_provider = NULL;
+//
+//
+//
+
+class MyObjEncoder: public Encoder<uint32_t> {
+
+public:
+	virtual ~MyObjEncoder(){}
+
+	void encode(const uint32_t &obj, cdap_rib::ser_obj_t& serobj){
+		//TODO fill in
+		(void)obj;
+		(void)serobj;
+	};
+
+	virtual void decode(const cdap_rib::ser_obj_t &serobj,
+							uint32_t& des_obj){
+		//TODO fill in
+		(void)serobj;
+		(void)des_obj;
+	};
+};
 
 //A type
 class MyObj : public RIBObj {
 
 public:
-	MyObj(uint32_t initial_value) : RIBObj(){
-		initial_value_ = initial_value;
-	};
+	MyObj() : RIBObj(){};
 	virtual ~MyObj(){};
 
 	const std::string& get_class() const{
@@ -311,19 +331,17 @@ public:
 		return true;
 	}
 
+	MyObjEncoder encoder;
 	static const std::string class_;
-	uint32_t initial_value_;
 };
 
 const std::string MyObj::class_ = "MyObj";
 
 //Another type
-class OtherObj : public RIBObj{
+class OtherObj : public RIBObj {
 
 public:
-	OtherObj(uint32_t initial_value) : RIBObj(){
-		initial_value_ = initial_value;
-	};
+	OtherObj() : RIBObj(){};
 	virtual ~OtherObj(){};
 
 	const std::string& get_class() const{
@@ -339,8 +357,10 @@ public:
 					cdap_rib::res_info_t& res){
 	};
 
+
+
+	MyObjEncoder encoder;
 	static const std::string class_;
-	uint32_t initial_value_;
 };
 
 const std::string OtherObj::class_ = "OtherObj";
@@ -358,6 +378,9 @@ public:
 		return class_;
 	}
 
+	AbstractEncoder* get_encoder(){
+		return &encoder;
+	};
 
 	void start(const cdap_rib::con_handle_t &con,
 				const std::string& fqn,
@@ -381,6 +404,7 @@ public:
 		deleg_start_operations++;
 	}
 
+	MyObjEncoder encoder;
 	static const std::string class_;
 };
 
@@ -723,19 +747,20 @@ void ribBasicOps::testAssociation(){
 
 void ribBasicOps::testAddObj(){
 
+	MyObj* tmp;
 	rib_handle_t wrong_handle = 9999;
 	std::string invalid_name1 = "";
 	std::string invalid_name2 = "x";
 	std::string invalid_name3 = "/x/";
 
-	obj1 = new MyObj(1);
-	obj2 = new MyObj(2);
-	obj3 = new MyObj(3);
-	obj4 = new OtherObj(4);
+	obj1 = new MyObj();
+	obj2 = new MyObj();
+	obj3 = new MyObj();
+	obj4 = new OtherObj();
 
 	//Attempt to add them into an invalid RIB handle
 	try{
-		ribd->addObjRIB(wrong_handle, name1, obj1);
+		ribd->addObjRIB(wrong_handle, name1, &obj1);
 		CPPUNIT_ASSERT_MESSAGE("Add obj to with an invalid RIB handle succeeded", 0);
 	}catch(eRIBNotFound& e){
 
@@ -745,7 +770,7 @@ void ribBasicOps::testAddObj(){
 
 	//Attempt to add them into a valid RIB handle but with invalid names
 	try{
-		ribd->addObjRIB(handle, invalid_name1, obj1);
+		ribd->addObjRIB(handle, invalid_name1, &obj1);
 		CPPUNIT_ASSERT_MESSAGE("Add obj to with an invalid name to RIB handle succeeded", 0);
 	}catch(eObjInvalidName& e){
 
@@ -753,7 +778,7 @@ void ribBasicOps::testAddObj(){
 		CPPUNIT_ASSERT_MESSAGE("Invalid exception throw during Add obj with an invalid name to RIB handle", 0);
 	}
 	try{
-		ribd->addObjRIB(handle, invalid_name2, obj1);
+		ribd->addObjRIB(handle, invalid_name2, &obj1);
 		CPPUNIT_ASSERT_MESSAGE("Add obj to with an invalid name to RIB handle succeeded", 0);
 	}catch(eObjInvalidName& e){
 
@@ -761,7 +786,7 @@ void ribBasicOps::testAddObj(){
 		CPPUNIT_ASSERT_MESSAGE("Invalid exception throw during Add obj with an invalid name to RIB handle", 0);
 	}
 	try{
-		ribd->addObjRIB(handle, invalid_name3, obj1);
+		ribd->addObjRIB(handle, invalid_name3, &obj1);
 		CPPUNIT_ASSERT_MESSAGE("Add obj to with an invalid name to RIB handle succeeded", 0);
 	}catch(eObjInvalidName& e){
 
@@ -771,8 +796,11 @@ void ribBasicOps::testAddObj(){
 
 	//Add the right object (/x)
 	try{
-		inst_id1 = ribd->addObjRIB(handle, name1, obj1);
+		tmp = obj1;
+		inst_id1 = ribd->addObjRIB(handle, name1, &obj1);
+		CPPUNIT_ASSERT_MESSAGE("Did not set to null obj1", obj1 == NULL);
 		CPPUNIT_ASSERT_MESSAGE("Invalid instance id for obj1", inst_id1 == 1);
+		obj1 = tmp;
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Could not add obj with in a valid RIB", 0);
 	}
@@ -795,19 +823,23 @@ void ribBasicOps::testAddObj(){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during utils API validation", 0);
 	}
 
+	tmp = obj2;
 	try{
-		ribd->addObjRIB(handle, name1, obj2);
+		ribd->addObjRIB(handle, name1, &obj2);
 		CPPUNIT_ASSERT_MESSAGE("Add overlapping object to RIB succeeded", 0);
 	}catch(eObjExists& e){
-		CPPUNIT_ASSERT_MESSAGE("Add overlapping object failed", 1);
+		CPPUNIT_ASSERT_MESSAGE("Add overlapping object failed, but modified the object pointer",  tmp == obj2);
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Invalid exception thrown during Add obj with an overlapping object", 0);
 	}
 
 	//Add another valid object (/y)
 	try{
-		inst_id2 = ribd->addObjRIB(handle, name2, obj2);
+		tmp = obj2;
+		inst_id2 = ribd->addObjRIB(handle, name2, &obj2);
+		CPPUNIT_ASSERT_MESSAGE("Did not set to null obj2", obj2 == NULL);
 		CPPUNIT_ASSERT_MESSAGE("Invalid instance id for obj2", inst_id2 == 2);
+		obj2 = tmp;
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Could not add obj2 with in a valid RIB", 0);
 	}
@@ -829,19 +861,23 @@ void ribBasicOps::testAddObj(){
 	}
 
 	//Retry overlap should fail
+	tmp = obj2;
 	try{
-		ribd->addObjRIB(handle, name2, obj2);
+		ribd->addObjRIB(handle, name2, &obj2);
 		CPPUNIT_ASSERT_MESSAGE("Add overlapping object to RIB succeeded", 0);
 	}catch(eObjExists& e){
-		CPPUNIT_ASSERT_MESSAGE("Add overlapping object failed", 1);
+		CPPUNIT_ASSERT_MESSAGE("Add overlapping object failed, but modified the object pointer",  tmp == obj2);
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Invalid exception thrown during Add obj with an overlapping object", 0);
 	}
 
 	//Add an inner object (/x/z)
 	try{
-		inst_id3 = ribd->addObjRIB(handle, name3, obj3);
+		tmp = obj3;
+		inst_id3 = ribd->addObjRIB(handle, name3, &obj3);
+		CPPUNIT_ASSERT_MESSAGE("Did not set to null obj3", obj3 == NULL);
 		CPPUNIT_ASSERT_MESSAGE("Invalid instance id for obj3", inst_id3 == 3);
+		obj3 = tmp;
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during Add obj 3", 0);
 	}
@@ -865,8 +901,11 @@ void ribBasicOps::testAddObj(){
 
 	//Add an inner object (/x/other)
 	try{
-		inst_id4 = ribd->addObjRIB(handle, name_other, obj4);
+		OtherObj* tmp2 = obj4;
+		inst_id4 = ribd->addObjRIB(handle, name_other, &obj4);
+		CPPUNIT_ASSERT_MESSAGE("Did not set to null obj4", obj4 == NULL);
 		CPPUNIT_ASSERT_MESSAGE("Invalid instance id for obj4", inst_id4 == 4);
+		obj4 = tmp2;
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during Add obj 4", 0);
 	}
@@ -875,7 +914,7 @@ void ribBasicOps::testAddObj(){
 	//Add an inner object (/x/delegated_subtree)
 	MyDelegationObj* deleg = new MyDelegationObj();
 	try{
-		inst_deleg = ribd->addObjRIB(handle, name_delegated, deleg);
+		inst_deleg = ribd->addObjRIB(handle, name_delegated, &deleg);
 		CPPUNIT_ASSERT_MESSAGE("Invalid instance id for obj4", inst_deleg == 5);
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during delegate obj", 0);

@@ -283,7 +283,7 @@ public:
 	///
 	/// @ret instance_id of the objc
 	///
-	int64_t add_obj(const std::string& fqn, RIBObj* obj);
+	int64_t add_obj(const std::string& fqn, RIBObj** obj);
 
 	//
 	// Get the instance id of an object given a fully qualified name (fqn)
@@ -1022,10 +1022,13 @@ void RIB::__validate_fqn(const std::string& fqn){
 	}
 }
 
-int64_t RIB::add_obj(const std::string& fqn, RIBObj* obj) {
+int64_t RIB::add_obj(const std::string& fqn, RIBObj** obj_) {
 
 	int64_t id, parent_id;
 	std::string parent_fqn = get_parent_fqn(fqn);
+
+	//Note that obj_ cannot be NULL (checked by RIBDaemon)
+	RIBObj* obj = *obj_;
 
 	if(!obj){
 		LOG_ERR("Unable to add object(%p) at '%s'; object is NULL!",
@@ -1038,7 +1041,6 @@ int64_t RIB::add_obj(const std::string& fqn, RIBObj* obj) {
 							obj,
 							fqn.c_str(),
 							parent_fqn.c_str());
-
 
 	//Validate the name
 	__validate_fqn(fqn);
@@ -1087,25 +1089,18 @@ int64_t RIB::add_obj(const std::string& fqn, RIBObj* obj) {
 	}
 
 	//Recover parent's children list  and add ourselves
-	if(parent_id >= 0) {
-		std::list<int64_t>* parent_child_list;
-		try{
-			parent_child_list = obj_inst_child_map[parent_id];
-			if(parent_child_list == NULL)
-				throw Exception();
-		}catch(...){
-			LOG_ERR("Unable to recover the children list for object '" PRId64  "'; corrupted internal state!",
-							parent_id);
-			assert(0);
-			throw Exception("Corrupted internal state");
-		}
-		parent_child_list->push_back(id);
-
-		LOG_DBG("Object '%s' of class '%s' succesfully added (id:'%" PRId64 "')",
-									fqn.c_str(),
-									obj->get_class().c_str(),
-									id);
+	std::list<int64_t>* parent_child_list;
+	try{
+		parent_child_list = obj_inst_child_map[parent_id];
+		if(parent_child_list == NULL)
+			throw Exception();
+	}catch(...){
+		LOG_ERR("Unable to recover the children list for object '" PRId64  "'; corrupted internal state!",
+						parent_id);
+		assert(0);
+		throw Exception("Corrupted internal state");
 	}
+	parent_child_list->push_back(id);
 
 	LOG_DBG("Add object operation over RIB(%p), of object(%p) with fqn: '%s', succeeded. Instance id: '%" PRId64 "'",
 								this,
@@ -1113,6 +1108,8 @@ int64_t RIB::add_obj(const std::string& fqn, RIBObj* obj) {
 								fqn.c_str(),
 								id);
 
+	//Mark pointer as acquired and return
+	*obj_ = NULL;
 
 	return id;
 }
@@ -1368,7 +1365,7 @@ public:
 	/// @throws eRIBNotFound, eObjExists
 	///
 	int64_t addObjRIB(const rib_handle_t& handle, const std::string& fqn,
-								RIBObj* obj);
+								RIBObj** obj);
 
 	///
 	/// Retrieve the instance ID of an object given its fully
@@ -1969,7 +1966,7 @@ void RIBDaemon::close_connection(const cdap_rib::con_handle_t &con,
 // Object management
 
 int64_t RIBDaemon::addObjRIB(const rib_handle_t& handle,
-					const std::string& fqn, RIBObj* obj){
+					const std::string& fqn, RIBObj** obj){
 	if(obj == NULL)
 		throw Exception();
 
@@ -1980,7 +1977,7 @@ int64_t RIBDaemon::addObjRIB(const rib_handle_t& handle,
 
 	if(rib == NULL){
 		LOG_ERR("Could not add object(%p) to rib('%" PRId64 "'). RIB does not exist",
-								obj,
+								*obj,
 								handle);
 		throw eRIBNotFound();
 	}
@@ -2604,8 +2601,8 @@ rib_handle_t RIBDaemonProxy::get(const cdap_rib::vers_info_t& v,
 
 //RIB object mamangement
 
-int64_t RIBDaemonProxy::addObjRIB(const rib_handle_t& h,
-					const std::string& fqn, RIBObj* o){
+int64_t RIBDaemonProxy::__addObjRIB(const rib_handle_t& h,
+					const std::string& fqn, RIBObj** o){
 	return ribd->addObjRIB(h, fqn, o);
 }
 

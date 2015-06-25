@@ -668,13 +668,23 @@ public:
 	/// @param handle The handle of the RIB
 	/// @param fqn Fully qualified name (position in the tree)
 	/// @param obj A pointer (to a pointer) to the object, that derives
-	/// from RIBObj<T> (R must derive from RIBObj<T>).
+	/// from RIBObj.
 	///
 	/// @ret The instance id of the object created
 	/// @throws eRIBNotFound, eObjExists, eObjInvalid, eObjNoParent
 	///
+	template<typename T>
 	int64_t addObjRIB(const rib_handle_t& handle, const std::string& fqn,
-	                  RIBObj* obj);
+							 T** obj){
+		RIBObj** obj_;
+		//Recover the base class
+		try{
+			obj_ = reinterpret_cast<RIBObj**>(obj);
+		}catch(...){
+			throw eObjInvalid();
+		}
+		return __addObjRIB(handle, fqn, obj_);
+	}
 
 	///
 	/// Retrieve the instance ID of an object given its fully
@@ -842,6 +852,9 @@ public:
 				const cdap_rib::filt_info_t &filt);
 
 private:
+	///@internal
+	int64_t __addObjRIB(const rib_handle_t& h, const std::string& fqn,
+								 RIBObj** o);
 	//Constructor
 	RIBDaemonProxy(RIBDaemon* ribd_);
 
