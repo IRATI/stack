@@ -1205,6 +1205,16 @@ void ribBasicOps::testRemoveObj(){
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during remove obj inst1", 0);
 	}
+
+	//Try removing root; should always fail
+	try{
+		ribd->removeObjRIB(handle, ribd->getObjInstId(handle, "/"));
+		CPPUNIT_ASSERT_MESSAGE("Remove root succeeded", 0);
+	}catch(eObjInvalid& e){
+
+	}catch(...){
+		CPPUNIT_ASSERT_MESSAGE("Invalid exception thrown during remove root", 0);
+	}
 }
 
 void ribBasicOps::testDeassociation(){

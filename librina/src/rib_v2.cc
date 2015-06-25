@@ -36,6 +36,8 @@
 #include "librina/cdap.h"
 #include "librina/cdap_v2.h"
 
+#define RIB_ROOT_INST_ID 0
+
 namespace rina {
 namespace rib {
 
@@ -473,11 +475,11 @@ RIB::RIB(const rib_handle_t& handle_, RIBSchema *const schema_,
 
 	// Fill in the stuf
 	obj_name_map[root_fqn.str()] = root;
-	obj_inst_map[0] = root;
-	inst_name_map[0] = root_fqn.str();
-	name_inst_map[root_fqn.str()] = 0;
+	obj_inst_map[RIB_ROOT_INST_ID] = root;
+	inst_name_map[RIB_ROOT_INST_ID] = root_fqn.str();
+	name_inst_map[root_fqn.str()] = RIB_ROOT_INST_ID;
 	std::list<int64_t>* child_list = new std::list<int64_t>();
-	obj_inst_child_map[0] = child_list;
+	obj_inst_child_map[RIB_ROOT_INST_ID] = child_list;
 }
 
 RIB::~RIB() {
@@ -1130,6 +1132,14 @@ void RIB::__remove_obj(int64_t inst_id) {
 								inst_id);
 		throw eObjDoesNotExist();
 	}
+
+	if(inst_id == RIB_ROOT_INST_ID){
+		LOG_ERR("Unable to remove object with instance id '%" PRId64  "'; root can never be removed!",
+								inst_id);
+		throw eObjInvalid();
+	}
+
+
 
 	parent_inst_id = obj->parent_inst_id;
 
