@@ -1,0 +1,334 @@
+IRATI stack maintainers
+=======================
+
+This file contains the names of the individuals that are in charge of
+maintaining the different software modules of the IRATI (RINA) stack.
+
+Maintainers are meant to help in patch reviewing and questions around those
+parts of the code. Please avoid private emails; use the mailing list
+(irati@freelists.org) and add them in CC when necessary.
+
+
+Legend:
+
+	M: Maintainer's Full Name <address@domain>
+	T: Git tree location.
+	F: Files and directories with wildcard patterns.
+	   A trailing slash includes all files and subdirectory files.
+	   A wildcard includes all files but not subdirectories.
+	   One pattern per line. Multiple F: lines acceptable.
+	X: Files and directories exclusion, same rules as F:
+	K: Keyword regex pattern to match content.
+	   One regex pattern per line. Multiple K: lines acceptable.
+	O: Other
+
+
+General repository administration
+---------------------------------
+M: Eduard Grasa <eduard.grasa (at) i2cat.net>
+M: Vincenzo Maffione <v.maffione (at) nextworks.it>
+M: Marc Sune <marc.sune (at) bisdn.de>
+M: Sander Vrijders <sander.vrijders (at) intec.ugent.be>
+T: https://github.com/IRATI/stack.git
+
+
+Issue tracking
+--------------
+M: Eduard Grasa <eduard.grasa (at) i2cat.net>
+M: Vincenzo Maffione <v.maffione (at) nextworks.it>
+M: Marc Sune <marc.sune (at) bisdn.de>
+M: Sander Vrijders <sander.vrijders (at) intec.ugent.be>
+O: irati@freelists.org
+O: https://github.com/IRATI/stack
+
+
+Documentation
+-------------
+M: Marc Sune <marc.sune (at) bisdn.de>
+F: MAINTAINERS
+F: check_maintainers.py
+F: doc/
+
+
+Build System
+------------
+
+Kernel space
+M: Vincenzo Maffione <v.maffione (at) nextworks.it>
+O: kernel/
+
+User space
+M: Marc Sune <marc.sune (at) bisdn.de>
+O: librina/
+O: rinad/
+O: rina-tools/
+
+
+Kernel space
+------------
+
+Core
+M: Vincenzo Maffione <v.maffione (at) nextworks.it>
+F: linux/net/rina/buffer*
+F: linux/net/rina/common*
+F: linux/net/rina/core*
+F: linux/net/rina/debug*
+F: linux/net/rina/default*
+F: linux/net/rina/du.*
+F: linux/net/rina/ipcp-factories*
+F: linux/net/rina/ipcp-instances*
+F: linux/net/rina/ipcp-utils*
+F: linux/net/rina/logs.h
+F: linux/net/rina/personality*
+F: linux/net/rina/pci*
+F: linux/net/rina/pdu.*
+F: linux/net/rina/qos*
+F: linux/net/rina/rds/
+F: linux/net/rina/rina.h
+F: linux/net/rina/rina-personality*
+F: linux/net/rina/sdu*
+F: linux/net/rina/utils*
+
+SDK
+M: Vincenzo Maffione <v.maffione (at) nextworks.it>
+F: linux/net/rina/policies*
+F: linux/net/rina/ps-factory*
+F: linux/net/rina/rina-default-plugin*
+
+Shim eth-vlan and RINA ARP
+M: Sander Vrijders <sander.vrijders (at) intec.ugent.be>
+F: linux/net/rina/ipcps/shim-eth-vlan*
+F: linux/net/rina/rinarp/
+
+Shim tcp-udp
+M: Sander Vrijders <sander.vrijders (at) intec.ugent.be>
+F: linux/net/rina/ipcps/shim-tcp-udp*
+
+Shim hv (and VMPI)
+M: Vincenzo Maffione <v.maffione (at) nextworks.it>
+F: linux/net/rina/ipcps/shim-hv*
+F: linux/net/rina/vmpi/
+
+Shim dummy
+M: Miquel Tarzan <miquel.tarzan (at) i2cat.net>
+F: linux/net/rina/ipcps/shim-dummy*
+
+Kernel IPC process (standard)
+M: Miquel Tarzan <miquel.tarzan (at) i2cat.net>
+F: linux/net/rina/ipcps/normal-ipcp*
+
+KFA
+M: Miquel Tarzan <miquel.tarzan (at) i2cat.net>
+F: linux/net/rina/kfa*
+
+Kernel IPCM
+M: Leonardo Bergesio <leonardo.bergesio (at) i2cat.net>
+F: linux/net/rina/kipcm*
+F: linux/net/rina/pidm*
+
+RMT
+M: Miquel Tarzan <miquel.tarzan (at) i2cat.net>
+F: linux/net/rina/rmt*
+F: linux/net/rina/pim*
+
+PFF
+M: Sander Vrijders <sander.vrijders (at) intec.ugent.be>
+F: linux/net/rina/pff*
+
+EFCP
+M: Leonardo Bergesio <leonardo.bergesio (at) i2cat.net>
+F: linux/net/rina/connection*
+F: linux/net/rina/dt*
+F: linux/net/rina/efcp*
+F: linux/net/rina/cidm*
+
+SDU protection
+M: Ondrej Lichtner <ilichtner (at) fit.vutbr.cz>
+F: linux/net/rina/du-protection.*
+
+Serdes
+M: Sander Vrijders <sander.vrijders (at) intec.ugent.be>
+F: linux/net/rina/pdu-ser*
+F: linux/net/rina/serdes*
+
+Netlink and syscalls
+M: Leonardo Bergesio <leonardo.bergesio (at) i2cat.net>
+F: linux/net/rina/rnl*
+F: linux/net/rina/syscall*
+
+
+User space: librina
+-------------------
+
+Core
+M: Eduard Grasa <eduard.grasa (at) i2cat.net>
+F: librina/include/librina/common.h
+F: librina/include/librina/concurrency.h
+F: librina/include/librina/configuration.h
+F: librina/include/librina/exceptions.h
+F: librina/include/librina/internal-events.h
+F: librina/include/librina/librina.h
+F: librina/include/librina/likely.h
+F: librina/include/librina/logs.h
+F: librina/include/librina/patterns.h
+F: librina/include/librina/time*
+F: librina/src/common.cc
+F: librina/src/concurrency.cc
+F: librina/src/configuration.cc
+F: librina/src/core*
+F: librina/src/exceptions.cc
+F: librina/src/internal-events.cc
+F: librina/src/jsoncpp/
+F: librina/src/librina*
+F: librina/src/logs.cc
+F: librina/src/proto2inc
+F: librina/src/test-linking.cc
+F: librina/src/time*
+F: librina/src/util*
+F: librina/test/
+X: librina/test/*rib*
+X: librina/test/*cdap*
+
+Application framework
+M: Eduard Grasa <eduard.grasa (at) i2cat.net>
+F: librina/include/librina/application.h
+F: librina/include/librina/enrollment.h
+F: librina/include/librina/faux-sockets.h
+F: librina/include/librina/irm.h
+F: librina/include/librina/sdu-protection.h
+F: librina/include/librina/security-manager.h
+F: librina/src/application.cc
+F: librina/src/auth-policies.proto
+F: librina/src/enrollment.cc
+F: librina/src/faux-sockets.cc
+F: librina/src/irm.cc
+F: librina/src/sdu-protection.cc
+F: librina/src/security-manager.cc
+
+IPCP and K-IPCM API
+M: Eduard Grasa <eduard.grasa (at) i2cat.net>
+F: librina/include/librina/ipc-*
+F: librina/src/ipc-*
+
+CDAP
+M: Bernat Gaston <bernat.gaston (at) i2cat.net>
+F: librina/include/librina/cdap*
+F: librina/src/cdap*
+F: librina/src/CDAP.proto
+F: librina/test/*cdap*
+
+RIB
+M: Marc Sune <marc.sune (at) bisdn.de>
+F: librina/include/librina/rib*
+F: librina/src/*rib*
+F: test/*rib*
+
+SDK
+M: Vincenzo Maffione <v.maffione (at) nextworks.it>
+F: librina/include/librina/plugin-info.h
+F: librina/src/plugin*
+
+Netlink and syscalls
+M: Leonardo Bergesio <leonardo.bergesio (at) i2cat.net>
+F: librina/include/librina/netlink*
+F: librina/include/librina/rina-sys*
+F: librina/include/librina/syscalls*
+F: librina/src/netlink*
+F: librina/src/rina-sys*
+F: librina/src/syscalls*
+
+
+RINA Daemons
+------------
+
+> IPC Process
+
+Core
+M: Eduard Grasa <eduard.grasa (at) i2cat.net>
+F: rinad/src/common/
+F: rinad/src/ipcp/
+F: rinad/src/ipcp/plugins/default/default.manifest
+F: rinad/src/ipcp/plugins/default/namespace*
+F: rinad/src/ipcp/plugins/default/plugin.cc
+F: rinad/src/ipcp/plugins/default/test-encoder*
+X: rinad/src/ipcp/plugins/
+X: rinad/src/ipcp/enroll*
+X: rinad/src/ipcp/flow-alloc*
+X: rinad/src/ipcp/resource-alloc*
+X: rinad/src/ipcp/routing*
+X: rinad/src/ipcp/security*
+
+Enrollment
+M: Eduard Grasa <eduard.grasa (at) i2cat.net>
+F: rinad/src/ipcp/enroll*
+F: rinad/src/ipcp/plugins/default/enroll*
+
+Flow allocator
+M: Eduard Grasa <eduard.grasa (at) i2cat.net>
+F: rinad/src/ipcp/flow-alloc*
+F: rinad/src/ipcp/plugins/default/flow-alloc*
+
+Resource Allocator
+M: Vincenzo Maffione <v.maffione (at) nextworks.it>
+F: rinad/src/ipcp/resource-alloc*
+F: rinad/src/ipcp/plugins/default/resource-alloc*
+
+Routing
+M: Bernat Gaston <bernat.gaston (at) i2cat.net>
+F: rinad/src/ipcp/routing*
+F: rinad/src/ipcp/plugins/default/*routing*
+
+Security Manager
+M: Eduard Grasa <eduard.grasa (at) i2cat.net>
+F: rinad/src/ipcp/security*
+F: rinad/src/ipcp/plugins/default/*security*
+F: rinad/src/ipcp/plugins/sm-passwd/
+
+> IPC Manager
+
+Core
+M: Marc Sune <marc.sune (at) bisdn.de>
+F: rinad/src/ipcm/
+X: rinad/src/ipcm/addons/
+
+Console
+M: Vincenzo Maffione <v.maffione (at) nextworks.it>
+F: rinad/src/ipcm/addons/console*
+
+Management Agent
+M: Marc Sune <marc.sune (at) bisdn.de>
+F: rinad/src/ipcm/addons/ma/
+X: rinad/src/ipcm/addons/ma/ribf*
+X: rinad/src/ipcm/addons/ma/ribs/
+
+Management Agent RIB(s)
+M: Bernat Gaston <bernat.gaston (at) i2cat.net>
+F: rinad/src/ipcm/addons/ma/ribf*
+F: rinad/src/ipcm/addons/ma/ribs/
+
+Scripting Engine
+M: Vincenzo Maffione <v.maffione (at) nextworks.it>
+F: rinad/src/ipcm/addons/script*
+
+
+RINA tools
+------------
+
+Core
+M: Bernat Gaston <bernat.gaston (at) i2cat.net>
+F: rina-tools/src/common/
+F: rina-tools/src/rina-*.in
+F: rina-tools/src/rina-*.py
+
+Echo time
+M: Dimitri Staessens <dimitri.staessens (at) intec.ugent.be>
+F: rina-tools/src/rina-echo-time/
+
+CDAP echo
+M: Bernat Gaston <bernat.gaston (at) i2cat.net>
+F: rina-tools/src/rina-cdap-echo/
+
+Test manager
+M: Bernat Gaston <bernat.gaston (at) i2cat.net>
+F: rina-tools/src/manager/
+
