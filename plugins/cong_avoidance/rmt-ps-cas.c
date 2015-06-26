@@ -21,6 +21,7 @@
 #include <linux/export.h>
 #include <linux/module.h>
 #include <linux/string.h>
+#include <linux/time.h>
 
 #define RINA_PREFIX "cas-rmt-ps"
 
@@ -33,11 +34,11 @@
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
 struct reg_cycle_t {
-        timeout_t t_start;
-        timeout_t t_last_start;
-        timeout_t t_end;
-        uint      sum_area;
-        uint      avg_len;
+        struct timespec t_start;
+        struct timespec t_last_start;
+        struct timespec t_end;
+        uint            sum_area;
+        uint            avg_len;
 };
 
 struct cas_rmt_queue {
@@ -67,12 +68,15 @@ static struct cas_rmt_queue * cas_queue_create(port_id_t port_id)
                 return NULL;
         }
 
-        tmp->port_id                            = port_id;
-        tmp->reg_cycles.prev_cycle.t_start      = 0;
-        tmp->reg_cycles.prev_cycle.t_last_start = 0;
-        tmp->reg_cycles.prev_cycle.t_end        = 0;
-        tmp->reg_cycles.prev_cycle.sum_area     = 0;
-        tmp->reg_cycles.prev_cycle.avg_len      = 0;
+        tmp->port_id                                 = port_id;
+        tmp->reg_cycles.prev_cycle.t_start.tv_sec       = 0;
+        tmp->reg_cycles.prev_cycle.t_start.tv_nsec      = 0;
+        tmp->reg_cycles.prev_cycle.t_last_start.tv_sec  = 0;
+        tmp->reg_cycles.prev_cycle.t_last_start.tv_nsec = 0;
+        tmp->reg_cycles.prev_cycle.t_end.tv_sec         = 0;
+        tmp->reg_cycles.prev_cycle.t_end.tv_nsec        = 0;
+        tmp->reg_cycles.prev_cycle.sum_area             = 0;
+        tmp->reg_cycles.prev_cycle.avg_len              = 0;
         tmp->reg_cycles.cur_cycle = tmp->reg_cycles.prev_cycle;
 
         INIT_HLIST_NODE(&tmp->hlist);
@@ -134,6 +138,7 @@ static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
         struct reg_cycle_t *     prev_cycle, * cur_cycle;
         struct pci *             pci;
         pdu_flags_t              pci_flags;
+        struct timespec          t_sub;
 
         ASSERT(ps);
         ASSERT(ps->priv);
@@ -160,43 +165,60 @@ static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
                         LOG_DBG("new cycle");
                         *prev_cycle = *cur_cycle;
 
-                        cur_cycle->t_start      = jiffies;
+                        getnstimeofday(&cur_cycle->t_start);
                         cur_cycle->t_last_start = cur_cycle->t_start;
                         cur_cycle->t_end        = cur_cycle->t_start;
                         cur_cycle->sum_area     = 0;
                 /* end cycle */
                 } else {
                         LOG_DBG("end cycle");
-                        cur_cycle->t_end        = jiffies;
-                        cur_cycle->sum_area     += (uint_t) atomic_read(&port->n_sdus) * (cur_cycle->t_end - cur_cycle->t_last_start);
+                        getnstimeofday(&cur_cycle->t_end);
+                        t_sub = timespec_sub(cur_cycle->t_end,
+                                             cur_cycle->t_last_start);
+                        cur_cycle->sum_area  +=
+                                (uint_t) atomic_read(&port->n_sdus) *          \
+                                timespec_to_ns(&t_sub);
                         cur_cycle->t_last_start = cur_cycle->t_end;
-                        LOG_DBG("n_sdus: %u", (uint_t) atomic_read(&port->n_sdus));
-                        LOG_DBG("t_end - t_last_start = %u - %u = %u", cur_cycle->t_end, cur_cycle->t_last_start,
-                                                                       (cur_cycle->t_end - cur_cycle->t_last_start));
+                        LOG_DBG("n_sdus: %u",
+                                (uint_t) atomic_read(&port->n_sdus));
+                        LOG_DBG("t_end - t_last_start = %llu - %llu = %llu",
+                                timespec_to_ns(&cur_cycle->t_end),
+                                timespec_to_ns(&cur_cycle->t_last_start),
+                                timespec_to_ns(&t_sub));
                         LOG_DBG("sum_area: %u",cur_cycle->sum_area);
                 }
         } else {
                 LOG_DBG("In middle cycle");
                 cur_cycle->t_last_start = cur_cycle->t_end;
-                cur_cycle->t_end        = jiffies;
+                getnstimeofday(&cur_cycle->t_end);
+                t_sub = timespec_sub(cur_cycle->t_end, cur_cycle->t_last_start);
                 LOG_DBG("Prev sum area: %u", cur_cycle->sum_area);
-                cur_cycle->sum_area    += (uint_t) atomic_read(&port->n_sdus) * (cur_cycle->t_end - cur_cycle->t_last_start);
+                cur_cycle->sum_area +=(uint_t) atomic_read(&port->n_sdus) *    \
+                                      timespec_to_ns(&t_sub);
                 LOG_DBG("n_sdus: %u", (uint_t) atomic_read(&port->n_sdus));
-                LOG_DBG("t_end - t_last_start = %u - %u = %u", cur_cycle->t_end, cur_cycle->t_last_start,
-                                                               (cur_cycle->t_end - cur_cycle->t_last_start));
+                LOG_DBG("t_end - t_last_start = %llu - %llu = %llu",
+                        timespec_to_ns(&cur_cycle->t_end),
+                        timespec_to_ns(&cur_cycle->t_last_start),
+                        timespec_to_ns(&t_sub));
                 LOG_DBG("sum_area: %u",cur_cycle->sum_area);
         }
 
         LOG_DBG(" Avg len inputs");
-        LOG_DBG("n_sdus %u, cur_cycle->sum_area: %u, prev_cycle->sum_area %u, cur_cycle->t_end %u,prev_cycle->t_start %u",
-                (uint_t) atomic_read(&port->n_sdus), cur_cycle->sum_area, prev_cycle->sum_area, cur_cycle->t_end, prev_cycle->t_start);
+        LOG_DBG("cur_cycle->avg_len = (cur_cycle->sum_area + prev_cycle->sum_area) / (cur_cycle->t_end - prev_cycle->t_start) =>");
+        LOG_DBG("%u = (%u + %u) / (%llu - %llu)",
+                (uint_t) atomic_read(&port->n_sdus),
+                cur_cycle->sum_area,
+                prev_cycle->sum_area,
+                timespec_to_ns(&cur_cycle->t_end),
+                timespec_to_ns(&prev_cycle->t_start));
 
 
-        if (cur_cycle->t_end == prev_cycle->t_start) {
-                LOG_WARN("Division by 0 avoided..:");
-                cur_cycle->t_end++;
+        if (timespec_equal(&cur_cycle->t_end, &prev_cycle->t_start)) {
+                LOG_WARN("Division by 0 avoided..");
         }
-        cur_cycle->avg_len = (cur_cycle->sum_area + prev_cycle->sum_area) / (cur_cycle->t_end - prev_cycle->t_start);
+        t_sub = timespec_sub(cur_cycle->t_end, prev_cycle->t_start);
+        cur_cycle->avg_len = (cur_cycle->sum_area + prev_cycle->sum_area);
+        do_div(cur_cycle->avg_len, timespec_to_ns(&t_sub));
 
 
         LOG_DBG("The length for N-1 port %u just calculated is: %u",
@@ -212,6 +234,7 @@ static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
                 }
                 pci_flags = pci_flags_get(pci);
                 pci_flags_set(pci, pci_flags |= PDU_FLAGS_EXPLICIT_CONGESTION);
+                LOG_DBG("ECN bit marked");
         }
 
         return;
@@ -299,9 +322,9 @@ static int cas_rmt_scheduling_create_policy_tx(struct rmt_ps *      ps,
                 return -1;
         }
 
-        q->reg_cycles.prev_cycle.t_start = 0;
-        q->reg_cycles.prev_cycle.t_last_start = 0;
-        q->reg_cycles.prev_cycle.t_end = 0;
+        getnstimeofday(&q->reg_cycles.prev_cycle.t_start);
+        getnstimeofday(&q->reg_cycles.prev_cycle.t_last_start);
+        getnstimeofday(&q->reg_cycles.prev_cycle.t_end);
         q->reg_cycles.prev_cycle.sum_area = 0;
         q->reg_cycles.prev_cycle.avg_len = 0;
 
