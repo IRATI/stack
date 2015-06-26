@@ -157,6 +157,7 @@ static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
         if (cur_qlen == 0) {
                 /* new cycle */
                 if (atomic_read(&port->n_sdus) == cur_qlen) {
+                        LOG_DBG("new cycle");
                         *prev_cycle = *cur_cycle;
 
                         cur_cycle->t_start      = jiffies;
@@ -165,24 +166,37 @@ static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
                         cur_cycle->sum_area     = 0;
                 /* end cycle */
                 } else {
+                        LOG_DBG("end cycle");
                         cur_cycle->t_end        = jiffies;
-                        cur_cycle->sum_area     += atomic_read(&port->n_sdus) * (cur_cycle->t_end - cur_cycle->t_last_start);
+                        cur_cycle->sum_area     += (uint_t) atomic_read(&port->n_sdus) * (cur_cycle->t_end - cur_cycle->t_last_start);
                         cur_cycle->t_last_start = cur_cycle->t_end;
+                        LOG_DBG("n_sdus: %u", (uint_t) atomic_read(&port->n_sdus));
+                        LOG_DBG("t_end - t_last_start = %u - %u = %u", cur_cycle->t_end, cur_cycle->t_last_start,
+                                                                       (cur_cycle->t_end - cur_cycle->t_last_start));
+                        LOG_DBG("sum_area: %u",cur_cycle->sum_area);
                 }
         } else {
+                LOG_DBG("In middle cycle");
                 cur_cycle->t_last_start = cur_cycle->t_end;
                 cur_cycle->t_end        = jiffies;
-                cur_cycle->sum_area    += atomic_read(&port->n_sdus) * (cur_cycle->t_end - cur_cycle->t_last_start);
+                LOG_DBG("Prev sum area: %u", cur_cycle->sum_area);
+                cur_cycle->sum_area    += (uint_t) atomic_read(&port->n_sdus) * (cur_cycle->t_end - cur_cycle->t_last_start);
+                LOG_DBG("n_sdus: %u", (uint_t) atomic_read(&port->n_sdus));
+                LOG_DBG("t_end - t_last_start = %u - %u = %u", cur_cycle->t_end, cur_cycle->t_last_start,
+                                                               (cur_cycle->t_end - cur_cycle->t_last_start));
+                LOG_DBG("sum_area: %u",cur_cycle->sum_area);
         }
 
-        LOG_DBG(" Avg len inputs: n_sdus %u, cur_cycle->sum_area: %u, prev_cycle->sum_area %u, (cur_cycle->t_end %u,prev_cycle->t_start %u",
-                atomic_read(&port->n_sdus), cur_cycle->sum_area, prev_cycle->sum_area, cur_cycle->t_end, prev_cycle->t_start);
+        LOG_DBG(" Avg len inputs");
+        LOG_DBG("n_sdus %u, cur_cycle->sum_area: %u, prev_cycle->sum_area %u, cur_cycle->t_end %u,prev_cycle->t_start %u",
+                (uint_t) atomic_read(&port->n_sdus), cur_cycle->sum_area, prev_cycle->sum_area, cur_cycle->t_end, prev_cycle->t_start);
 
-        cur_cycle->avg_len = (cur_cycle->sum_area + prev_cycle->sum_area);
-        if (cur_cycle->t_end ==  prev_cycle->t_start)
-                cur_cycle->avg_len /= 2;
-        else
-                cur_cycle->avg_len /= (cur_cycle->t_end - prev_cycle->t_start);
+
+        if (cur_cycle->t_end == prev_cycle->t_start) {
+                LOG_WARN("Division by 0 avoided..:");
+                cur_cycle->t_end++;
+        }
+        cur_cycle->avg_len = (cur_cycle->sum_area + prev_cycle->sum_area) / (cur_cycle->t_end - prev_cycle->t_start);
 
 
         LOG_DBG("The length for N-1 port %u just calculated is: %u",
