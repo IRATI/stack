@@ -94,7 +94,7 @@ def validate_maintainers(maintainers, fn):
 		errormsg(msg)
 		errors +=1
 	#else:
-	#	print "file '%s' claimed by '%s'" % (fn, c)
+	#	print("file '%s' claimed by '%s'" % (fn, c))
 
 def scan_paths(maintainers, paths):
 	for p in paths:
@@ -138,14 +138,15 @@ def list_maintainers(maintainers, opt):
 			sys.exit(1)
 
 	for f_ in p.stdout.read().split():
+		f_ = str(f_)
 		ms, n = get_maintainers(maintainers, f_)
 		if not check_extension(f_):
 			continue
 		if n == 0:
 			continue
-		print "F: "+f_
+		print("F: "+f_)
 		for m in ms:
-			print "\t"+m
+			print("\t"+m)
 
 #Main routine
 def main():
