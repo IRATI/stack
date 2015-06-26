@@ -554,9 +554,13 @@ static int extract_policy_parameters(struct dup_config_entry * entry)
 			return -1;
 		}
 
-		kstrtouint(policy_param_value(parameter),
-			   10,
-			   &entry->initial_ttl_value);
+		if (kstrtouint(policy_param_value(parameter),
+                               10,
+                               &entry->initial_ttl_value)) {
+                        LOG_ERR("Failed to convert TTL string to int");
+			return -1;
+                }
+
 		LOG_DBG("Initial TTL value is %u", entry->initial_ttl_value);
 	}
 
@@ -685,17 +689,16 @@ EXPORT_SYMBOL(rmt_config_set);
 
 static int n1_port_write_noclean(struct rmt *         rmt,
                                  struct rmt_n1_port * n1_port,
-                                 struct pdu * pdu)
+                                 struct pdu *         pdu)
 {
-        struct sdu *           sdu;
-        struct pdu_ser *       pdu_ser;
-        port_id_t              port_id;
-        struct buffer *        buffer;
-        struct ipcp_instance * n1_ipcp;
-        struct pci *           pci;
-        size_t                 ttl;
+        struct sdu *              sdu;
+        struct pdu_ser *          pdu_ser;
+        port_id_t                 port_id;
+        struct buffer *           buffer;
+        struct ipcp_instance *    n1_ipcp;
+        struct pci *              pci;
+        size_t                    ttl;
         struct dup_config_entry * dup_conf;
-        int                    ret = 0;
 
         ASSERT(n1_port);
         ASSERT(rmt);
