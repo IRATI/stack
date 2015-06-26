@@ -92,11 +92,19 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         }
 
         c_seq   = pci_sequence_number_get(pci);
+
+        if (!data->first_run && (pci_flags_get(pci) & PDU_FLAGS_DATA_RUN)) {
+                LOG_DBG("DRF Flag, reseting...");
+                memset(data->rcv_vector, 0, VECTOR_SIZE(data->wc + data->wp));
+                data->ecn_count = 0;
+                data->rcv_count = 0;
+                data->wc_lwe    = c_seq;
+        }
+
         if (data->first_run) {
                 data->wc_lwe = c_seq;
                 data->first_run = false;
         }
-
 
         LOG_DBG("C_Seq %u, data->wc_lwe: %u", c_seq, data->wc_lwe);
         LOG_DBG("Bit index: %d, Bit number: %d",
