@@ -36,8 +36,6 @@
 #include "librina/cdap.h"
 #include "librina/cdap_v2.h"
 
-#define RIB_ROOT_INST_ID 0
-
 namespace rina {
 namespace rib {
 

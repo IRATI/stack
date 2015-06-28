@@ -300,12 +300,8 @@ public:
 class MyObj : public RIBObj {
 
 public:
-	MyObj() : RIBObj(){};
+	MyObj() : RIBObj(class_){};
 	virtual ~MyObj(){};
-
-	const std::string& get_class() const{
-		return class_;
-	}
 
 	void read(const cdap_rib::con_handle_t &con,
 					const std::string& fqn,
@@ -341,12 +337,8 @@ const std::string MyObj::class_ = "MyObj";
 class OtherObj : public RIBObj {
 
 public:
-	OtherObj() : RIBObj(){};
+	OtherObj() : RIBObj(class_){};
 	virtual ~OtherObj(){};
-
-	const std::string& get_class() const{
-		return class_;
-	}
 
 	void read(const cdap_rib::con_handle_t &con,
 					const std::string& fqn,

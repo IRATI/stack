@@ -232,7 +232,9 @@ public:
 	/// @param user User-specific context (type associated)
 	/// @param fqn Fully qualifed name (
 	///
-	RIBObj() : delegates(false), parent_inst_id(-1){};
+	RIBObj(const std::string& class_) : delegates(false),
+					parent_inst_id(-1),
+					class_name(class_){};
 
 	/// Fully qualified name
 	const std::string fqn;
@@ -422,7 +424,9 @@ protected:
 	/// class name
 	///
 	///
-	virtual const std::string& get_class() const = 0;
+	virtual const std::string& get_class() const{
+		return class_name;
+	};
 
 	///
 	/// Throw not supported exception
@@ -438,33 +442,41 @@ protected:
 	//Instance id of the parent
 	int64_t parent_inst_id;
 
+	//Class name
+	const std::string class_name;
+
 	//Them too; promiscuous?
 	friend class RIB;
 };
 
 
+///
+/// Root object instance ID
+///
+#define RIB_ROOT_INST_ID 0
+
+///
+/// Root object class
+///
+#define RIB_ROOT_CN "Root"
 
 ///
 /// @internal Root object class
 ///
 class RootObj : public RIBObj{
-
-public:
-
-	const std::string& get_class() const{
-		return class_;
-	};
-
 private:
-	RootObj(void) : RIBObj(), class_("root") { };
+	RootObj(void) : RIBObj(RIB_ROOT_CN){ };
 	~RootObj(void){};
-
-	//Class name
-	const std::string class_;
 
 	//Only the RIB can instantiate a RootObj
 	friend class RIB;
 };
+
+///
+/// Delegation object class
+///
+#define RIB_DELEG_CN "DelegationObj"
+
 
 ///
 /// This class is used to capture operations on objects in a part of the tree
@@ -474,7 +486,7 @@ class DelegationObj : public RIBObj{
 
 public:
 	/// Constructor
-	DelegationObj(void) : RIBObj() {
+	DelegationObj(void) : RIBObj(RIB_DELEG_CN) {
 		delegates = true;
 	};
 
