@@ -130,9 +130,10 @@ protected:
 	//Process ipcm event
 	void process_ipcm_event(const IPCMEvent& event);
 
-	//TODO remove this
-	RIBFactory* get_rib() const;
-
+	//Get RIB factory pointer
+	inline RIBFactory* get_ribf(void){
+		return rib_factory;
+	};
 
 	friend class FlowManager;
 private:

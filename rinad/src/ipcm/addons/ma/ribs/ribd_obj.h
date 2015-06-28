@@ -24,21 +24,25 @@ namespace rib_v1{
  *
  * Just adding it to support Query RIB temporally.
  */
-class RIBDaemonObj : public rina::rib::EmptyRIBObject{
+class RIBDaemonObj : public rina::rib::RIBObj{
 
 public:
-	RIBDaemonObj(std::string name, long instance, int ipcp_id);
+	RIBDaemonObj(int ipcp_id);
 
 	//Read
-	rina::cdap_rib::res_info_t* remoteRead(const std::string& name,
-			rina::cdap_rib::SerializedObject &obj_reply);
+	void read(const rina::cdap_rib::con_handle_t &con,
+				const std::string& fqn,
+				const std::string& class_,
+				const rina::cdap_rib::filt_info_t &filt,
+				const int invoke_id,
+				rina::cdap_rib::SerializedObject &obj_reply,
+				rina::cdap_rib::res_info_t& res);
 
 private:
-	//Name of the class
-	const static std::string class_name;
-
 	//Should not be necessary, could be parsed by the name
 	int ipcp_id;
+
+	static const std::string class_name;
 };
 
 }; //namespace rib_v1

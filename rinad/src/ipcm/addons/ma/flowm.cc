@@ -313,9 +313,14 @@ void* ActiveWorker::run(void* param)
 			rina::cdap_rib::auth_info auth;
 			auth.auth_mech_ = auth.AUTH_NONE;
 
+			//Version
+			rina::cdap_rib::vers_info_t vers;
+			vers.version_ = 0x1; //TODO: do not hardcode this
+
 			//TODO: remove this. The API should NOT require a RIB
 			//instance for calling the remote API
-			rib_factory_->getRIB(1).remote_open_connection(src,
+			rib_factory_->getProxy()->remote_open_connection(vers,
+							src,
 							dest,
 							auth,
 							port_id);
@@ -478,7 +483,7 @@ FlowManager::~FlowManager()
 //Connect manager
 unsigned int FlowManager::connectTo(const AppConnection& con)
 {
-	Worker* w = new ActiveWorker(this, agent_->get_rib(), con);
+	Worker* w = new ActiveWorker(this, agent_->get_ribf(), con);
 
 	//Launch worker and return handler
 	return spawnWorker(&w);

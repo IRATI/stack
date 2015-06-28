@@ -36,19 +36,43 @@
 
 #include "ribs/ribd_v1.h"
 
+using namespace rina;
+using namespace rina::rib;
+
+
 namespace rinad {
 namespace mad {
+
+//static (unique) ribd proxy ref
+rina::rib::RIBDaemonProxy* RIBFactory::ribd = NULL;
 
 /*
  * RIBFactory
  */
 
 //Constructors destructors
-RIBFactory::RIBFactory(std::list<uint64_t> supported_versions){
+RIBFactory::RIBFactory(RIBAEassoc ver_assoc){
 
-	for (std::list<uint64_t>::iterator it = supported_versions.begin();
-			it != supported_versions.end(); it++) {
-		createRIB(*it);
+	rib_handle_t rib_handle;
+	RIBAEassoc::const_iterator it;
+
+	for (it = ver_assoc.begin();
+			it != ver_assoc.end(); ++it) {
+		uint64_t ver = it->first;
+		const std::list<std::string>& aes = it->second;
+
+		//If schema for this version does not exist
+		//create it
+		if()
+			createSchema(ver);
+
+		//Create RIB
+		rib_handle = createRIB(ver);
+
+		//Register to all AEs
+		std::list<std::string>::const_iterator itt;
+		for(itt = aes.begin(); itt != aes.end(); ++itt)
+			ribd->associateRIBtoAE(rib_handle, *itt);
 	}
 
 	LOG_DBG("Initialized");
@@ -56,65 +80,70 @@ RIBFactory::RIBFactory(std::list<uint64_t> supported_versions){
 }
 
 RIBFactory::~RIBFactory() throw (){
-
 	// FIXME destroy con handlers and resp handlers
 }
 
 /*
- * Inner API
+ * Internal API
  */
-void RIBFactory::createRIB(uint64_t version){
+void RIBFactory::createSchema(uint64_t version){
+	cdap_rib::vers_info_t ver;
+	ver.ver_ = version;
 
-	char separator = ',';
+	//TODO: we are lazy here... there should be an "exists" call
+	//for the schema
+	try{
+		ribd->createSchema(ver);
+	}catch(){
+
+	}	
+}
+
+rib_handle_t RIBFactory::createRIB(uint64_t version){
+
 	rina::cdap_rib::cdap_params_t params;
-	params.is_IPCP_ = false;
-	params.timeout_ = 2000;
-
-	rina::cdap_rib::vers_info_t *vers = new rina::cdap_rib::vers_info_t;
+	rina::cdap_rib::vers_info_t vers;
 	vers->version_ = (long) version;
 
 	//Scoped lock
 	rina::ScopedLock slock(mutex);
 
-	//Check if it exists
-	if (rib_inst_.find(version) != rib_inst_.end())
-		throw eDuplicatedRIB(
-				"An instance of the RIB with this version already exists");
+	//Create the RIB
+	rib_handle_t handle = ribd->createRIB(vers);
 
 	//Create object
-	switch (version) {
-		case 1:
-			rib_inst_[version] = factory_.create(new rib_v1::RIBConHandler_v1(),
-					new rib_v1::RIBRespHandler_v1(),
-					params, vers, separator);
-			rib_v1::initiateRIB(rib_inst_[version]);
+	switch(version) {
+		case 0x1ULL:
+			//Initialize
+			rib_v1::initRIB(handle);
 			break;
 		default:
+			assert(0); //We cannot reach this point
 			break;
 	}
+
+	return handle;
 }
 
-rina::rib::RIBDNorthInterface& RIBFactory::getRIB(uint64_t version){
+static rina::rib::rib_handle_t RIBFactory::getRIBHandle(
+						const uint64_t& version,
+						const std::string& ae_name){
+	rina::cdap_rib::vers_info_t vers;
+	vers->version_ = (long) version;
 
-
-	rina::rib::RIBDNorthInterface* rib;
-
-	//Scoped lock
-	rina::ScopedLock slock(mutex);
-
-	//Note: it is safe to recover the RIB reference without a RD lock
-	//because removal of RIBs is NOT implemented. However this
-	//implementation already protects it
-	//Check if it exists
-	if (rib_inst_.find(version) == rib_inst_.end())
-		throw eRIBNotFound("RIB instance not found");
-
-	//TODO: reference count to avoid deletion while being used?
-
-	rib = rib_inst_[version];
-
-	return *rib;
+	return ribd->get(vers, ae_name);
 }
+
+//Process IPCP create event to all RIB versions
+void RIBFactory::createIPCPevent(int ipcp_id){
+
+}
+
+//Process IPCP create event to all RIB versions
+void RIBFactory::destroyIPCPevent(int ipcp_id){
+
+}
+
 
 };//namespace mad
 };//namespace rinad

@@ -16,42 +16,55 @@ namespace rinad {
 namespace mad {
 namespace rib_v1 {
 
-class RIBRespHandler_v1 : public rina::rib::ResponseHandlerInterface {
-	void createResponse(const rina::cdap_rib::res_info_t &res,
-				const rina::cdap_rib::obj_info_t &obj,
-				const rina::cdap_rib::con_handle_t &con);
-	void deleteResponse(const rina::cdap_rib::res_info_t &res,
-				const rina::cdap_rib::con_handle_t &con);
-	void readResponse(const rina::cdap_rib::res_info_t &res,
-				const rina::cdap_rib::obj_info_t &obj,
-				const rina::cdap_rib::con_handle_t &con);
-	void cancelReadResponse(const rina::cdap_rib::res_info_t &res,
-				const rina::cdap_rib::con_handle_t &con);
-	void writeResponse(const rina::cdap_rib::res_info_t &res,
-				const rina::cdap_rib::obj_info_t &obj,
-				const rina::cdap_rib::con_handle_t &con);
-	void startResponse(const rina::cdap_rib::res_info_t &res,
-				const rina::cdap_rib::obj_info_t &obj,
-				const rina::cdap_rib::con_handle_t &con);
-	void stopResponse(const rina::cdap_rib::res_info_t &res,
-				const rina::cdap_rib::obj_info_t &obj,
-				const rina::cdap_rib::con_handle_t &con);
+class RIBRespHandler_v1 : public rina::rib::RIBOpsRespHandlers {
+	~RIBRespHandler_v1(){};
+
+	void remoteCreateResult(const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::obj_info_t &obj,
+			const rina::cdap_rib::res_info_t &res);
+	void remoteDeleteResult(const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::res_info_t &res);
+	void remoteReadResult(const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::obj_info_t &obj,
+			const rina::cdap_rib::res_info_t &res);
+	void remoteCancelReadResult(const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::res_info_t &res);
+	void remoteWriteResult(const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::obj_info_t &obj,
+			const rina::cdap_rib::res_info_t &res);
+	void remoteStartResult(const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::obj_info_t &obj,
+			const rina::cdap_rib::res_info_t &res);
+	void remoteStopResult(const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::obj_info_t &obj,
+			const rina::cdap_rib::res_info_t &res);
 };
 
 class RIBConHandler_v1 : public rina::cacep::AppConHandlerInterface {
 
 	void connect(int message_id, const rina::cdap_rib::con_handle_t &con);
-	void connectResponse(const rina::cdap_rib::res_info_t &res,
+	void connectResult(const rina::cdap_rib::res_info_t &res,
 				const rina::cdap_rib::con_handle_t &con);
 	void release(int message_id, const rina::cdap_rib::con_handle_t &con);
-	void releaseResponse(const rina::cdap_rib::res_info_t &res,
+	void releaseResult(const rina::cdap_rib::res_info_t &res,
 				const rina::cdap_rib::con_handle_t &con);
 };
 
-//TODO: remove this
-void initiateRIB(rina::rib::RIBDNorthInterface* ribd);
-void createIPCPObject(rina::rib::RIBDNorthInterface &ribd, int ipcp_id);
-void destroyIPCPObject(rina::rib::RIBDNorthInterface &ribd, int ipcp_id);
+///
+/// Initialize the RIB (populate static objects)
+///
+void initRIB(const rina::rib::rib_handle_t& rib);
+
+///
+/// Add a new IPCP object due to an external creation (e.g. CLI)
+///
+void createIPCPObj(const rina::rib::rib_handle_t& rib, int ipcp_id);
+
+///
+/// Add a new IPCP object due to an external creation (e.g. CLI)
+///
+void destroyIPCPObj(const rina::rib::rib_handle_t& rib, int ipcp_id);
+
 }  //namespace rib_v1
 }  //namespace mad
 }  //namespace rinad
