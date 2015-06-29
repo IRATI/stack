@@ -65,6 +65,8 @@ def get_directory(p):
 	return p.rsplit('/', 1)[0]
 
 def check_extension(f):
+	if f == MAINTAINERS_FILE:
+		return True
 	return os.path.splitext(f)[1] in CHECK_EXTENSIONS
 
 def get_maintainers(maintainers, fn):
@@ -138,7 +140,7 @@ def list_maintainers(maintainers, opt):
 			sys.exit(1)
 
 	for f_ in p.stdout.read().split():
-		f_ = str(f_)
+		f_ = f_.decode('utf-8')
 		ms, n = get_maintainers(maintainers, f_)
 		if not check_extension(f_):
 			continue
