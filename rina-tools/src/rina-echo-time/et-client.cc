@@ -103,7 +103,8 @@ int Client::createFlow()
         IPCEvent* event;
         uint seqnum;
 
-        qosspec.blocking = false;
+        if (test_type == "ping")
+        	qosspec.blocking = false;
         if (gap >= 0)
                 qosspec.maxAllowableGap = gap;
 
