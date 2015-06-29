@@ -1110,6 +1110,7 @@ shim_hv_ipcp_name(struct ipcp_instance_data *priv)
         return &priv->name;
 }
 
+static const struct name *
 shim_hv_dif_name(struct ipcp_instance_data *priv)
 {
         ASSERT(priv);
