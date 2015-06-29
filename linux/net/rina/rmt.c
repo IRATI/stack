@@ -79,10 +79,15 @@ static struct rmt_n1_port * n1_port_create(port_id_t id,
         /* dup state init. FIXME: This has to be moved to the
          * specific encryption policy initialization
          */
-        if (dup_config != NULL && dup_config->encryption_cipher != NULL){
-        	tmp->blkcipher = crypto_alloc_blkcipher(dup_config->encryption_cipher, 0, 0);
+        if (dup_config != NULL &&
+        		dup_config->encryption_cipher != NULL) {
+        	tmp->blkcipher =
+        		crypto_alloc_blkcipher(dup_config->encryption_cipher,
+        				       0,
+        				       0);
         	if (IS_ERR(tmp->blkcipher)) {
-        		LOG_ERR("could not allocate blkcipher handle for %s\n", dup_config->encryption_cipher);
+        		LOG_ERR("could not allocate blkcipher handle for %s\n",
+        			dup_config->encryption_cipher);
         		return NULL;
         	}
         }else
@@ -545,7 +550,7 @@ static int extract_policy_parameters(struct dup_config_entry * entry)
 	if (policy) {
 		parameter = policy_param_find(policy, "initialValue");
 		if (!parameter) {
-			LOG_ERR("Could not find parameter 'initialValue' in TTL policy");
+			LOG_ERR("Could not find 'initialValue' in TTL policy");
 			return -1;
 		}
 
@@ -563,37 +568,40 @@ static int extract_policy_parameters(struct dup_config_entry * entry)
 	if (policy) {
 		parameter = policy_param_find(policy, "encryptAlg");
 		if (!parameter) {
-			LOG_ERR("Could not find parameter 'encryptAlg' in Encryption policy");
+			LOG_ERR("Could not find 'encryptAlg' in Encr. policy");
 			return -1;
 		}
 
 		aux = policy_param_value(parameter);
-		if (string_cmp(aux, "AES128") == 0 || string_cmp(aux, "AES256") == 0) {
-			if (string_dup("ecb(aes)", &entry->encryption_cipher)) {
-				LOG_ERR("Problems copying string ('encryptAlg' parameter value)");
+		if (string_cmp(aux, "AES128") == 0 ||
+				string_cmp(aux, "AES256") == 0) {
+			if (string_dup("ecb(aes)",
+				       &entry->encryption_cipher)) {
+				LOG_ERR("Problems copying 'encryptAlg' value");
 				return -1;
 			}
-			LOG_DBG("Encryption cipher is %s", entry->encryption_cipher);
+			LOG_DBG("Encryption cipher is %s",
+				entry->encryption_cipher);
 		} else {
 			LOG_DBG("Unsupported encryption cipher %s", aux);
 		}
 
 		parameter = policy_param_find(policy, "macAlg");
 		if (!parameter) {
-			LOG_ERR("Could not find parameter 'macAlg' in Encryption policy");
+			LOG_ERR("Could not find 'macAlg' in Encrypt. policy");
 			return -1;
 		}
 
 		aux = policy_param_value(parameter);
-		if (string_cmp(aux, "SHA1") == 0 ) {
+		if (string_cmp(aux, "SHA1") == 0) {
 			if (string_dup("sha1", &entry->message_digest)) {
-				LOG_ERR("Problems copying string ('message_digest' parameter value)");
+				LOG_ERR("Problems copying 'digest' value");
 				return -1;
 			}
 			LOG_DBG("Message digest is %s", entry->message_digest);
-		} else if (string_cmp(aux, "MD5") == 0 ) {
+		} else if (string_cmp(aux, "MD5") == 0) {
 			if (string_dup("md5", &entry->message_digest)) {
-				LOG_ERR("Problems copying string ('message_digest' parameter value)");
+				LOG_ERR("Problems copying 'digest' value)");
 				return -1;
 			}
 			LOG_DBG("Message digest is %s", entry->message_digest);
@@ -626,7 +634,7 @@ int rmt_sdup_config_set(struct rmt *         instance,
         	sdup_config_destroy(sdup_conf);
         	return -1;
         }
-	list_for_each_entry(dup_pos, &sdup_conf->specific_dup_confs, next){
+	list_for_each_entry(dup_pos, &sdup_conf->specific_dup_confs, next) {
 		if (extract_policy_parameters(dup_pos->entry)) {
 			LOG_DBG("Setting sdu protection policies to NULL");
 			sdup_config_destroy(sdup_conf);
@@ -727,7 +735,10 @@ static int n1_port_write_noclean(struct rmt *         rmt,
             }
         }
 
-        pdu_ser = pdu_serialize_ni(rmt->serdes, pdu, dup_conf, n1_port->blkcipher);
+        pdu_ser = pdu_serialize_ni(rmt->serdes,
+        		           pdu,
+        		           dup_conf,
+        		           n1_port->blkcipher);
         if (!pdu_ser) {
                 LOG_ERR("Error creating serialized PDU");
                 pdu_destroy(pdu);
@@ -1024,16 +1035,17 @@ static struct dup_config_entry * find_dup_config(struct sdup_config * sdup_conf,
 	if (!sdup_conf)
 		return NULL;
 
-	list_for_each_entry(dup_pos, &sdup_conf->specific_dup_confs, next){
-		if (string_cmp(dup_pos->entry->n_1_dif_name, n_1_dif_name) == 0) {
-			LOG_DBG("Returning specific SDU Protection config for port over N-1 DIF %s",
-					n_1_dif_name);
+	list_for_each_entry(dup_pos, &sdup_conf->specific_dup_confs, next) {
+		if (string_cmp(dup_pos->entry->n_1_dif_name,
+			       n_1_dif_name) == 0) {
+			LOG_DBG("SDU Protection config for N-1 DIF %s",
+				n_1_dif_name);
 			return dup_pos->entry;
 		}
 	}
 
-	LOG_DBG("Returning default SDU Protection config for port over N-1 DIF %s",
-			n_1_dif_name);
+	LOG_DBG("Returning default SDU Protection config for N-1 DIF %s",
+		n_1_dif_name);
 	return sdup_conf->default_dup_conf;
 }
 
@@ -1052,7 +1064,7 @@ static int __queue_send_add(struct rmt * instance,
         	tmp_dup_config = find_dup_config(instance->sdup_conf,
         				         n_1_dif_name->process_name);
         	if (tmp_dup_config) {
-        		LOG_DBG("Found SDU Protection policy configuration, duplicating it");
+        		LOG_DBG("Found SDU Protection policy configuration");
         		dup_config = dup_config_entry_dup(tmp_dup_config);
         	} else {
         		dup_config = NULL;
@@ -1066,7 +1078,9 @@ static int __queue_send_add(struct rmt * instance,
                 return -1;
 
         rcu_read_lock();
-        ps = container_of(rcu_dereference(instance->base.ps), struct rmt_ps, base);
+        ps = container_of(rcu_dereference(instance->base.ps),
+        		  struct rmt_ps,
+        		  base);
         if (ps && ps->rmt_scheduling_create_policy_tx) {
                 if (ps->rmt_scheduling_create_policy_tx(ps, tmp)) {
                         LOG_ERR("Problems creating structs for scheduling "
@@ -1135,7 +1149,7 @@ int rmt_enable_port_id(struct rmt * instance,
         n1_port = n1pmap_find(instance->n1_ports, id);
         if (!n1_port || n1_port->state == N1_PORT_STATE_DEALLOCATED) {
                 spin_unlock(&instance->n1_ports->lock);
-                LOG_ERR("No queue for this  port-id or already deallocated, %d",
+                LOG_ERR("No queue for this port-id or already deallocated, %d",
                         id);
                 return -1;
         }
@@ -1181,7 +1195,7 @@ int rmt_disable_port_id(struct rmt * instance,
         n1_port = n1pmap_find(instance->n1_ports, id);
         if (!n1_port || n1_port->state == N1_PORT_STATE_DEALLOCATED) {
                 spin_unlock(&instance->n1_ports->lock);
-                LOG_ERR("No n1_port for port-id or alrady deallocated, %d", id);
+                LOG_ERR("No n1_port for port-id or deallocated, %d", id);
                 return -1;
         }
         spin_unlock(&instance->n1_ports->lock);
@@ -1238,7 +1252,9 @@ static int rmt_n1_port_send_delete(struct rmt * instance,
         }
 
         rcu_read_lock();
-        ps = container_of(rcu_dereference(instance->base.ps), struct rmt_ps, base);
+        ps = container_of(rcu_dereference(instance->base.ps),
+        		  struct rmt_ps,
+        		  base);
         if (ps && ps->rmt_scheduling_destroy_policy_tx)
                 ps->rmt_scheduling_destroy_policy_tx(ps, n1_port);
 
@@ -1670,7 +1686,8 @@ int rmt_enable_encryption(struct rmt *    instance,
 		if (crypto_blkcipher_setkey(rmt_port->blkcipher,
 					    buffer_data_ro(encrypt_key),
 					    buffer_length(encrypt_key))) {
-			LOG_ERR("Could not set encryption key for N-1 port %d", port_id);
+			LOG_ERR("Could not set encryption key for N-1 port %d",
+				port_id);
 			spin_unlock_irqrestore(&rmt_port->lock, flags);
 			return -1;
 		}
