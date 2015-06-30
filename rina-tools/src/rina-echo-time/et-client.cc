@@ -237,7 +237,9 @@ void Client::pingFlow(int port_id)
         		cout << " [bad response]";
         	cout << endl;
 
-        	sleep_wrapper.sleepForMili(wait);
+		if (n < echo_times - 1) {
+			sleep_wrapper.sleepForMili(wait);
+		}
         }
 
         variance = m2/((double)sdus_received -1);
