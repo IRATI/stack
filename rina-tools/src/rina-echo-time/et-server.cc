@@ -206,9 +206,6 @@ EchoTimeServer::EchoTimeServer(const string& t_type,
         		Server(dif_name, app_name, app_instance),
         test_type(t_type), interval(perf_interval), dw(dealloc_wait)
 {
-	ThreadAttributes threadAttrs;
-	threadAttrs.setJoinable();
-	cleaner = new ServerWorkerCleaner(&threadAttrs, this);
 }
 
 ServerWorker * EchoTimeServer::internal_start_worker(int port_id)
@@ -221,6 +218,7 @@ ServerWorker * EchoTimeServer::internal_start_worker(int port_id)
         		    	    	         	 	 interval,
         		    	    	         	 	 max_buffer_size,
         		    	    	         	 	 this);
+        worker->start();
         worker->detach();
         return worker;
 }

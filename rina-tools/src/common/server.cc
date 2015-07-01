@@ -106,6 +106,7 @@ Server::Server(const string& dif_name,
 	ThreadAttributes threadAttrs;
 	threadAttrs.setJoinable();
 	cleaner = new ServerWorkerCleaner(&threadAttrs, this);
+	cleaner->start();
 }
 
 Server::~Server()

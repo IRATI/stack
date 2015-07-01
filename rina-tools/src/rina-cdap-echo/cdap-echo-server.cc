@@ -161,6 +161,7 @@ ServerWorker * CDAPEchoServer::internal_start_worker(int port_id)
 						     port_id,
 						     max_sdu_size_in_bytes,
 						     this);
+	worker->start();
         worker->detach();
         return worker;
 }
