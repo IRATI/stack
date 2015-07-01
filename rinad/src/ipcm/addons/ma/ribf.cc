@@ -55,6 +55,7 @@ RIBFactory::RIBFactory(RIBAEassoc ver_assoc){
 
 	rib_handle_t rib_handle;
 	RIBAEassoc::const_iterator it;
+	std::list<std::string>::const_iterator itt;
 
 	for (it = ver_assoc.begin();
 			it != ver_assoc.end(); ++it) {
@@ -62,17 +63,32 @@ RIBFactory::RIBFactory(RIBAEassoc ver_assoc){
 		const std::list<std::string>& aes = it->second;
 
 		//If schema for this version does not exist
-		//create it
-		if()
-			createSchema(ver);
+		switch(ver) {
+			case 0x1ULL:
+				{
+				//Create the schema FIXME there should be an
+				//exists
+				try{
+					rib_v1::createSchema();
+				}catch(eSchemaExists& s){}
 
-		//Create RIB
-		rib_handle = createRIB(ver);
+				//Create the RIB
+				rib_handle = rib_v1::createRIB();
 
-		//Register to all AEs
-		std::list<std::string>::const_iterator itt;
-		for(itt = aes.begin(); itt != aes.end(); ++itt)
-			ribd->associateRIBtoAE(rib_handle, *itt);
+				//Register to all AEs
+				for(itt = aes.begin(); itt != aes.end(); ++itt)
+					rib_v1::associateRIBtoAE(rib_handle,
+									*itt);
+
+				//Store the version
+				ribs[rib_handle] = ver;
+
+				}
+				break;
+			default:
+				assert(0);
+				throw rina::Exception("Invalid version");
+		}
 	}
 
 	LOG_DBG("Initialized");
@@ -86,50 +102,12 @@ RIBFactory::~RIBFactory() throw (){
 /*
  * Internal API
  */
-void RIBFactory::createSchema(uint64_t version){
-	cdap_rib::vers_info_t ver;
-	ver.ver_ = version;
 
-	//TODO: we are lazy here... there should be an "exists" call
-	//for the schema
-	try{
-		ribd->createSchema(ver);
-	}catch(){
-
-	}	
-}
-
-rib_handle_t RIBFactory::createRIB(uint64_t version){
-
-	rina::cdap_rib::cdap_params_t params;
-	rina::cdap_rib::vers_info_t vers;
-	vers->version_ = (long) version;
-
-	//Scoped lock
-	rina::ScopedLock slock(mutex);
-
-	//Create the RIB
-	rib_handle_t handle = ribd->createRIB(vers);
-
-	//Create object
-	switch(version) {
-		case 0x1ULL:
-			//Initialize
-			rib_v1::initRIB(handle);
-			break;
-		default:
-			assert(0); //We cannot reach this point
-			break;
-	}
-
-	return handle;
-}
-
-static rina::rib::rib_handle_t RIBFactory::getRIBHandle(
+rina::rib::rib_handle_t RIBFactory::getRIBHandle(
 						const uint64_t& version,
 						const std::string& ae_name){
 	rina::cdap_rib::vers_info_t vers;
-	vers->version_ = (long) version;
+	vers.version_ = (long) version;
 
 	return ribd->get(vers, ae_name);
 }
@@ -137,11 +115,35 @@ static rina::rib::rib_handle_t RIBFactory::getRIBHandle(
 //Process IPCP create event to all RIB versions
 void RIBFactory::createIPCPevent(int ipcp_id){
 
+	std::map<rib_handle_t, uint64_t>::const_iterator it;
+
+	for(it = ribs.begin(); it != ribs.end(); ++it){
+		switch(it->second){
+			case 0x1ULL:
+				rib_v1::createIPCPObj(it->first, ipcp_id);
+				break;
+			default:
+				assert(0);
+				break;
+		}
+	}
 }
 
 //Process IPCP create event to all RIB versions
 void RIBFactory::destroyIPCPevent(int ipcp_id){
 
+	std::map<rib_handle_t, uint64_t>::const_iterator it;
+
+	for(it = ribs.begin(); it != ribs.end(); ++it){
+		switch(it->second){
+			case 0x1ULL:
+				rib_v1::destroyIPCPObj(it->first, ipcp_id);
+				break;
+			default:
+				assert(0);
+				break;
+		}
+	}
 }
 
 

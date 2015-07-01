@@ -51,9 +51,20 @@ class RIBConHandler_v1 : public rina::cacep::AppConHandlerInterface {
 };
 
 ///
-/// Initialize the RIB (populate static objects)
+/// Create v1 schema
 ///
-void initRIB(const rina::rib::rib_handle_t& rib);
+void createSchema(void);
+
+///
+/// Create and initialize a RIB (populate static objects)
+///
+rina::rib::rib_handle_t createRIB(void);
+
+///
+/// Associate RIB to AE
+///
+void associateRIBtoAE(const rina::rib::rib_handle_t& rib,
+						const std::string& ae_name);
 
 ///
 /// Add a new IPCP object due to an external creation (e.g. CLI)

@@ -89,15 +89,11 @@ public:
 
 
 protected:
-	/**
-	 * Create a RIB instance
-	 * @throwseDuplicatedRIB
-	 */
-	rina::rib::rib_handle_t createRIB(uint64_t version);
-	void createSchema(uint64_t version);
-
 	//Mutex
 	rina::Lockable mutex;
+
+	//Map handle <-> version
+	std::map<rina::rib::rib_handle_t, uint64_t> ribs;
 
 	//RIBProxy instance
 	static rina::rib::RIBDaemonProxy* ribd;

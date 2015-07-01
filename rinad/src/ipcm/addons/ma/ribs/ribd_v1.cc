@@ -116,11 +116,30 @@ void RIBRespHandler_v1::remoteStopResult(
 	(void) obj;
 }
 
-// Initializes the RIB with the current status
-void initRIB(const rina::rib::rib_handle_t& rib){
-
+// Create the schema
+void createSchema(void){
+	rina::cdap_rib::vers_info_t vers;
+	uint64_t version = 0x1ULL;
 	rina::rib::RIBDaemonProxy *const ribd = RIBFactory::getProxy();
+
+	vers.version_ = version;
+
+	//Create schema
+	ribd->createSchema(vers);
+}
+
+
+// Create and initialize the RIB with the current status
+rina::rib::rib_handle_t createRIB(void){
+
 	rina::rib::RIBObj* tmp;
+	rina::cdap_rib::vers_info_t vers;
+	uint64_t version = 0x1ULL;
+	rina::rib::RIBDaemonProxy *const ribd = RIBFactory::getProxy();
+
+	//Create the RIB
+	vers.version_ = version;
+	rina::rib::rib_handle_t rib = ribd->createRIB(vers);
 
 	try {
 		tmp = new rina::rib::RIBObj("DAF");
@@ -198,7 +217,18 @@ void initRIB(const rina::rib::rib_handle_t& rib){
 		LOG_ERR("RIB basic objects were not created because %s",
 			e1.what());
 	}
+
+	return rib;
 }
+
+void associateRIBtoAE(const rina::rib::rib_handle_t& rib,
+						const std::string& ae_name){
+	rina::rib::RIBDaemonProxy *const ribd = RIBFactory::getProxy();
+	ribd->associateRIBtoAE(rib, ae_name);
+}
+
+
+
 
 void createIPCPObj(const rina::rib::rib_handle_t& rib, int ipcp_id){
 
