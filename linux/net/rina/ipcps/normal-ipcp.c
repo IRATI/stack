@@ -549,9 +549,10 @@ static int remove_all_cepid(struct ipcp_instance_data * data,
 static int normal_deallocate(struct ipcp_instance_data * data,
                              port_id_t                   port_id)
 {
-        struct normal_flow * flow;
-        unsigned long        flags;
-        const struct name *   user_ipcp_name;
+        struct normal_flow *   flow;
+        unsigned long          flags;
+        const struct name *    user_ipcp_name;
+        enum normal_flow_state state;
 
         if (!data) {
                 LOG_ERR("Bogus instance passed");
@@ -567,8 +568,11 @@ static int normal_deallocate(struct ipcp_instance_data * data,
         }
 
         user_ipcp_name = flow->user_ipcp->ops->ipcp_name(flow->user_ipcp->data);
+        state          = flow->state;
+        flow->state    = PORT_STATE_DEALLOCATED;
+        spin_unlock_irqrestore(&data->lock, flags);
 
-        if (flow->state == PORT_STATE_PENDING) {
+        if (state == PORT_STATE_PENDING) {
                 flow->user_ipcp->ops->flow_unbinding_ipcp(flow->user_ipcp->data,
                                                           port_id);
         } else {
@@ -577,8 +581,6 @@ static int normal_deallocate(struct ipcp_instance_data * data,
 
         list_del(&flow->list);
         rkfree(flow);
-
-        spin_unlock_irqrestore(&data->lock, flags);
 
         /*NOTE: KFA will take care of releasing the port */
         if (user_ipcp_name)
