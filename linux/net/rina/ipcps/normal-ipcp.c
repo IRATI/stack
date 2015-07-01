@@ -570,6 +570,7 @@ static int normal_deallocate(struct ipcp_instance_data * data,
         user_ipcp_name = flow->user_ipcp->ops->ipcp_name(flow->user_ipcp->data);
         state          = flow->state;
         flow->state    = PORT_STATE_DEALLOCATED;
+        list_del(&flow->list);
         spin_unlock_irqrestore(&data->lock, flags);
 
         if (state == PORT_STATE_PENDING) {
@@ -579,7 +580,6 @@ static int normal_deallocate(struct ipcp_instance_data * data,
                 remove_all_cepid(data, flow);
         }
 
-        list_del(&flow->list);
         rkfree(flow);
 
         /*NOTE: KFA will take care of releasing the port */
