@@ -391,6 +391,22 @@ private:
 /// around failed N-1 flows
 class LinkStateRoutingPolicy: public rina::InternalEventListener {
 public:
+	static const std::string OBJECT_MAXIMUM_AGE;
+	static const std::string WAIT_UNTIL_READ_CDAP;
+	static const std::string WAIT_UNTIL_ERROR;
+	static const std::string WAIT_UNTIL_PDUFT_COMPUTATION;
+	static const std::string WAIT_UNTIL_FSODB_PROPAGATION;
+	static const std::string WAIT_UNTIL_AGE_INCREMENT;
+	static const std::string ROUTING_ALGORITHM;
+
+        static const int PULSES_UNTIL_FSO_EXPIRATION_DEFAULT = 100000;
+        static const int WAIT_UNTIL_READ_CDAP_DEFAULT = 5001;
+        static const int WAIT_UNTIL_ERROR_DEFAULT = 5001;
+        static const int WAIT_UNTIL_PDUFT_COMPUTATION_DEFAULT = 103;
+        static const int WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT = 101;
+        static const int WAIT_UNTIL_AGE_INCREMENT_DEFAULT = 997;
+        static const std::string DIJKSTRA_ALG;
+
 	LinkStateRoutingPolicy(IPCProcess * ipcp);
 	~LinkStateRoutingPolicy();
 	void set_ipc_process(IPCProcess * ipc_process);
@@ -460,7 +476,6 @@ private:
 	rina::IMasterEncoder * encoder_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 	FlowStateRIBObjectGroup * fs_rib_group_;
-	rina::PDUFTableGeneratorConfiguration pduft_generator_config_;
 	IRoutingAlgorithm * routing_algorithm_;
 	IResiliencyAlgorithm * resiliency_algorithm_;
 	unsigned int source_vertex_;

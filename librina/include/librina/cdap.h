@@ -2,7 +2,7 @@
  * CDAP
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Bernat Gast√≥n <bernat.gaston@i2cat.net>
+ *    Bernat Gastón <bernat.gaston@i2cat.net>
  *    Eduard Grasa <eduard.grasa@i2cat.net>
  *
  * This library is free software; you can redistribute it and/or
@@ -38,25 +38,17 @@ public:
 };
 
 /// Encapsulates the data of an AuthValue
-class AuthValue {
+class AuthPolicy {
 public:
-	AuthValue();
-	AuthValue(const std::string &auth_name, const std::string &auth_password,
-			const std::string &auth_other);
-#ifndef SWIG
-	const std::string get_auth_name() const;
-	const std::string get_auth_password() const;
-	const std::string get_auth_other() const;
-#endif
-	bool is_empty() const;
+	AuthPolicy() { };
 	std::string to_string() const;
 
-	/// Authentication name
-	std::string auth_name_;
-	/// Authentication password
-	std::string auth_password_;
-	/// Additional authentication information
-	std::string auth_other_;
+	/// Authentication policy name
+	std::string name_;
+	/// Supported versions of the policy
+	std::list<std::string> versions_;
+	/// Policy specific information, encoded as a byte array
+	SerializedObject options_;
 };
 
 /// Encapsulates the data to set an object value
@@ -206,8 +198,6 @@ public:
 	static void validate(const CDAPMessage *message);
 private:
 	static void validateAbsSyntax(const CDAPMessage *message);
-	static void validateAuthMech(const CDAPMessage *message);
-	static void validateAuthValue(const CDAPMessage *message);
 	static void validateDestAEInst(const CDAPMessage *message);
 	static void validateDestAEName(const CDAPMessage *message);
 	static void validateDestApInst(const CDAPMessage *message);
@@ -272,29 +262,20 @@ public:
 		M_STOP_R,
 		NONE_OPCODE
 	};
-	enum AuthTypes {
-		AUTH_NONE, AUTH_PASSWD, AUTH_SSHRSA, AUTH_SSHDSA
-	};
 	enum Flags {
 		NONE_FLAGS, F_SYNC, F_RD_INCOMPLETE
 	};
 	CDAPMessage();
-	/*CDAPMessage(int abs_syntax, AuthTypes auth_mech, const AuthValue *auth_value, const std::string *dest_ae_inst,
-	 const std::string *dest_ae_name, const std::string *dest_ap_inst, const std::string *dest_ap_name, const char* filter,
-	 Flags flags, const int invoke_id, const std::string *obj_class, const long obj_inst, const std::string *obj_name,
-	 const ObjectValueInterface *obj_value, const Opcode *op_code, int result, const std::string *result_reason,
-	 int scope, const std::string *src_ae_inst, const std::string *src_ae_name, const std::string *src_ap_inst,
-	 const std::string *src_ap_name, long version);*/
 	~CDAPMessage();
 	static CDAPMessage* getOpenConnectionRequestMessage(
-			AuthTypes auth_mech, const AuthValue &auth_value,
+			const AuthPolicy& auth_policy,
 			const std::string &dest_ae_inst, const std::string &dest_ae_name,
 			const std::string &dest_ap_inst, const std::string &dest_ap_name,
 			const std::string &src_ae_inst, const std::string &src_ae_name,
 			const std::string &src_ap_inst, const std::string &src_ap_name,
 			int invoke_id);
 	static CDAPMessage* getOpenConnectionResponseMessage(
-			AuthTypes auth_mech, const AuthValue &auth_value,
+			const AuthPolicy& auth_policy,
 			const std::string &dest_ae_inst, const std::string &dest_ae_name,
 			const std::string &dest_ap_inst, const std::string &dest_ap_name,
 			int result, const std::string &result_reason,
@@ -368,10 +349,8 @@ public:
 	CDAPMessage getReplyMessage();
 	int get_abs_syntax() const;
 	void set_abs_syntax(int abs_syntax);
-	AuthTypes get_auth_mech() const;
-	void set_auth_mech(AuthTypes auth_mech);
-	const AuthValue& get_auth_value() const;
-	void set_auth_value(const AuthValue &auth_value);
+	const AuthPolicy& get_auth_policy() const;
+	void set_auth_policy(const AuthPolicy& auth_policy);
 	const std::string& get_dest_ae_inst() const;
 	void set_dest_ae_inst(const std::string &dest_ae_inst);
 	const std::string& get_dest_ae_name() const;
@@ -418,14 +397,8 @@ public:
 	/// AbstractSyntaxID (int32), mandatory. The specific version of the
 	/// CDAP protocol message declarations that the message conforms to
 	int abs_syntax_;
-	/// AuthenticationMechanismName (authtypes), optional, not validated by CDAP.
-	/// Identification of the method to be used by the destination application to
-	/// authenticate the source application
-	AuthTypes auth_mech_;
-	/// AuthenticationValue (authvalue), optional, not validated by CDAP.
-	/// Authentication information accompanying auth_mech, format and value
-	/// appropiate to the selected auth_mech
-	AuthValue auth_value_;
+	/// Authentication policy parameters
+	AuthPolicy auth_policy_;
 	/// DestinationApplication-Entity-Instance-Id (string), optional, not validated by CDAP.
 	/// Specific instance of the Application Entity that the source application
 	/// wishes to connect to in the destination application.
@@ -515,17 +488,15 @@ class CDAPSessionDescriptor {
 public:
 	CDAPSessionDescriptor();
 	CDAPSessionDescriptor(int port_id);
-	CDAPSessionDescriptor(int abs_syntax, CDAPMessage::AuthTypes auth_mech,
-			AuthValue auth_value);
-	~CDAPSessionDescriptor();
+	CDAPSessionDescriptor(int abs_syntax, const AuthPolicy& auth_policy);
+	virtual ~CDAPSessionDescriptor();
 	/// The source naming information is always the naming information of the local Application process
 	const ApplicationProcessNamingInformation get_source_application_process_naming_info();
 	/// The destination naming information is always the naming information of the remote application process
 	const ApplicationProcessNamingInformation get_destination_application_process_naming_info();
 #ifndef SWIG
 	void set_abs_syntax(const int abs_syntax);
-	void set_auth_mech(const CDAPMessage::AuthTypes auth_mech);
-	void set_auth_value(const AuthValue set_auth_value);
+	void set_auth_policy(const AuthPolicy& auth_policy);
 	void set_dest_ae_inst(const std::string *dest_ae_inst);
 	void set_dest_ae_name(const std::string *dest_ae_name);
 	void set_dest_ap_inst(const std::string *dest_ap_inst);
@@ -546,16 +517,8 @@ public:
 	/// CDAP protocol message declarations that the message conforms to
 	///
 	int abs_syntax_;
-	/// AuthenticationMechanismName (authtypes), optional, not validated by CDAP.
-	/// Identification of the method to be used by the destination application to
-	/// authenticate the source application
-	CDAPMessage::AuthTypes auth_mech_;
-	/**
-	 * AuthenticationValue (authvalue), optional, not validated by CDAP.
-	 * Authentication information accompanying auth_mech, format and value
-	 * appropiate to the selected auth_mech
-	 */
-	AuthValue auth_value_;
+	/// Authenticatio Policy information
+	AuthPolicy auth_policy_;
 	/// DestinationApplication-Entity-Instance-Id (string), optional, not validated by CDAP.
 	/// Specific instance of the Application Entity that the source application
 	/// wishes to connect to in the destination application.
@@ -762,7 +725,7 @@ public:
 	/// @return
 	/// @throws CDAPException
 	virtual CDAPMessage* getOpenConnectionRequestMessage(int port_id,
-			CDAPMessage::AuthTypes auth_mech, const AuthValue &auth_value,
+			const AuthPolicy& auth_policy,
 			const std::string &dest_ae_inst, const std::string &dest_ae_name,
 			const std::string &dest_ap_inst, const std::string &dest_ap_name,
 			const std::string &src_ae_inst, const std::string &src_ae_name,
@@ -785,7 +748,7 @@ public:
 	/// @return
 	/// @throws CDAPException
 	virtual CDAPMessage* getOpenConnectionResponseMessage(
-			CDAPMessage::AuthTypes auth_mech, const AuthValue &auth_value,
+			const AuthPolicy& auth_policy,
 			const std::string &dest_ae_inst, const std::string &dest_ae_name,
 			const std::string &dest_ap_inst, const std::string &dest_ap_name,
 			int result, const std::string &result_reason,

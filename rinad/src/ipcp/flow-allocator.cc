@@ -230,6 +230,11 @@ void FlowAllocator::set_application_process(rina::ApplicationProcess * ap)
 void FlowAllocator::set_dif_configuration(
 		const rina::DIFConfiguration& dif_configuration)
 {
+	std::string ps_name = dif_configuration.fa_configuration_.policy_set_.name_;
+	if (select_policy_set(std::string(), ps_name) != 0) {
+		throw rina::Exception("Cannot create Flow Allocator policy-set");
+	}
+
 	//Create QoS cubes RIB objects
 	std::list<rina::QoSCube*>::const_iterator it;
 	std::stringstream ss;
@@ -280,7 +285,8 @@ void FlowAllocator::createFlowRequestMessageReceived(
 		//the Flow object from the CDAP message and call the FAI
 		try {
 			portId = rina::extendedIPCManager->allocatePortId(
-					flow->destination_naming_info);
+					flow->destination_naming_info,
+					namespace_manager_->get_reg_app_info(flow->destination_naming_info).blocking);
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Problems requesting a port-id: %s. Ignoring the Flow allocation request",
 					e.what());
@@ -329,8 +335,8 @@ void FlowAllocator::submitAllocateRequest(
 	IFlowAllocatorInstance * fai;
 
 	try {
-		portId = rina::extendedIPCManager->allocatePortId(
-				event.localApplicationName);
+		portId = rina::extendedIPCManager->allocatePortId(event.localApplicationName,
+								  event.flowSpecification.blocking);
 		LOG_IPCP_DBG("Got assigned port-id %d", portId);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems requesting an available port-id to the Kernel IPC Manager: %s",

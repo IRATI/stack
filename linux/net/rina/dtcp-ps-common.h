@@ -59,6 +59,8 @@ common_rcvr_flow_control(struct dtcp_ps * ps, seq_num_t seq);
 
 int
 common_rate_reduction(struct dtcp_ps * ps);
+int
+common_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn);
 
 int dtcp_ps_common_set_policy_set_param(struct ps_base * bps,
                                         const char    * name,

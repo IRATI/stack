@@ -860,7 +860,7 @@ static int eth_vlan_rcv_worker(void * o)
 
         if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                 LOG_DBG("This flow goes for an app");
-                if (kfa_flow_create(data->kfa, flow->port_id, ipcp)) {
+                if (kfa_flow_create(data->kfa, flow->port_id, ipcp, false)) {
                         LOG_ERR("Could not create flow in KFA");
                         kfa_port_id_release(data->kfa, flow->port_id);
                         if (flow_destroy(data, flow))
@@ -1386,6 +1386,14 @@ static const struct name * eth_vlan_ipcp_name(struct ipcp_instance_data * data)
         return data->name;
 }
 
+static const struct name * eth_vlan_dif_name(struct ipcp_instance_data * data)
+{
+        ASSERT(data);
+        ASSERT(name_is_ok(data->dif_name));
+
+        return data->dif_name;
+}
+
 static int eth_vlan_query_rib(struct ipcp_instance_data * data,
                               struct list_head *          entries,
                               const string_t *            object_class,
@@ -1425,17 +1433,20 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .mgmt_sdu_write            = NULL,
         .mgmt_sdu_post             = NULL,
 
-        .pft_add                   = NULL,
-        .pft_remove                = NULL,
-        .pft_dump                  = NULL,
-        .pft_flush                 = NULL,
+        .pff_add                   = NULL,
+        .pff_remove                = NULL,
+        .pff_dump                  = NULL,
+        .pff_flush                 = NULL,
 
         .query_rib		   = eth_vlan_query_rib,
 
         .ipcp_name                 = eth_vlan_ipcp_name,
+        .dif_name                  = eth_vlan_dif_name,
 
         .set_policy_set_param      = NULL,
         .select_policy_set         = NULL,
+        .enable_encryption	   = NULL,
+        .dif_name		   = eth_vlan_dif_name
 };
 
 static struct ipcp_factory_data {

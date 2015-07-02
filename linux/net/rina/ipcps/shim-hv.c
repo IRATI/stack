@@ -625,7 +625,7 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
 
         if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                 LOG_DBG("This flow goes for an app");
-                if (kfa_flow_create(priv->kfa, port_id, ipcp)) {
+                if (kfa_flow_create(priv->kfa, port_id, ipcp, false)) {
                         LOG_ERR("Could not create flow in KFA");
                         goto flow_arrived;
                 }
@@ -1053,8 +1053,9 @@ shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
  * SDU to a flow managed by this shim IPC process.
  */
 static int
-shim_hv_sdu_write(struct ipcp_instance_data *priv, port_id_t port_id,
-                  struct sdu *sdu)
+shim_hv_sdu_write(struct ipcp_instance_data * priv,
+		  port_id_t 		      port_id,
+                  struct sdu *		      sdu)
 {
         unsigned int ch = port_id_to_channel(priv, port_id);
         struct buffer *buf = sdu_buffer_rw(sdu);
@@ -1109,6 +1110,15 @@ shim_hv_ipcp_name(struct ipcp_instance_data *priv)
         return &priv->name;
 }
 
+static const struct name *
+shim_hv_dif_name(struct ipcp_instance_data *priv)
+{
+        ASSERT(priv);
+        ASSERT(name_is_ok(&priv->dif_name));
+
+        return &priv->dif_name;
+}
+
 static int shim_hv_query_rib(struct ipcp_instance_data * data,
                              struct list_head *          entries,
                              const string_t *            object_class,
@@ -1148,10 +1158,10 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .mgmt_sdu_write            = NULL,
         .mgmt_sdu_post             = NULL,
 
-        .pft_add                   = NULL,
-        .pft_remove                = NULL,
-        .pft_dump                  = NULL,
-        .pft_flush                 = NULL,
+        .pff_add                   = NULL,
+        .pff_remove                = NULL,
+        .pff_dump                  = NULL,
+        .pff_flush                 = NULL,
 
         .query_rib		   = shim_hv_query_rib,
 
@@ -1159,6 +1169,8 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
 
         .set_policy_set_param      = NULL,
         .select_policy_set         = NULL,
+        .enable_encryption	   = NULL,
+        .dif_name		   = shim_hv_dif_name
 };
 
 /* Initialize the IPC process factory. */

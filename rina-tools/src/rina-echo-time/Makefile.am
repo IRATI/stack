@@ -8,15 +8,14 @@ bin_PROGRAMS                       =
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT =
 
 rina_echo_time_SOURCES  =				\
-	server.cc              server.h			\
-	client.cc              client.h			\
+	et-server.cc              et-server.h			\
+	et-client.cc              et-client.h			\
 	main.cc
 rina_echo_time_LDADD    = $(LIBRINA_LIBS) -lrt \
 	../common/librinaapp.la	
 rina_echo_time_CPPFLAGS =			\
 	$(LIBRINA_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)			\
-	-std=c++11				\
 	-I$(srcdir)/../common
 rina_echo_time_CXXFLAGS =			\
 	$(CPPFLAGS_EXTRA)

@@ -29,34 +29,18 @@ namespace rina {
 //CLASS CDAP Error Code
 const int CDAPErrorCodes::CONNECTION_REJECTED_ERROR = -1;
 
-// CLASS AuthValue
-AuthValue::AuthValue() {
-}
-AuthValue::AuthValue(const std::string &auth_name,
-		const std::string &auth_password, const std::string &auth_other) {
-	auth_name_ = auth_name;
-	auth_password_ = auth_password;
-	auth_other_ = auth_other;
-}
-const std::string AuthValue::get_auth_name() const {
-	return auth_name_;
-}
-const std::string AuthValue::get_auth_password() const {
-	return auth_password_;
-}
-const std::string AuthValue::get_auth_other() const {
-	return auth_other_;
-}
-bool AuthValue::is_empty() const {
-	if (auth_name_.empty() && auth_password_.empty()
-					&& auth_other_.empty()) {
-		return true;
-	} else
-		return false;
-}
-std::string AuthValue::to_string() const {
-	return "Auth name: " + auth_name_ + "; Auth password: " + auth_password_
-			+ "; Auth other: " + auth_other_;
+// CLASS AuthPolicy
+std::string AuthPolicy::to_string() const {
+	std::stringstream ss;
+	ss << "Policy name: " << name_ << std::endl;
+	ss << "Supported versions: ";
+	for (std::list<std::string>::const_iterator it = versions_.begin();
+			it != versions_.end(); ++it){
+		ss << *it << ";";
+	}
+	ss << std::endl;
+
+	return ss.str();
 }
 
 // CLASS IntObjectValue
@@ -209,8 +193,6 @@ CDAPException::ErrorCode CDAPException::get_result() const {
 /* CLASS CDAPMessageValidator */
 void CDAPMessageValidator::validate(const CDAPMessage *message) {
 	validateAbsSyntax(message);
-	validateAuthMech(message);
-	validateAuthValue(message);
 	validateDestAEInst(message);
 	validateDestAEName(message);
 	validateDestApInst(message);
@@ -244,26 +226,6 @@ void CDAPMessageValidator::validateAbsSyntax(const CDAPMessage *message) {
 				&& (message->get_op_code() != CDAPMessage::M_CONNECT_R)) {
 			throw CDAPException(
 					"AbsSyntax can only be set for M_CONNECT and M_CONNECT_R messages");
-		}
-	}
-}
-
-void CDAPMessageValidator::validateAuthMech(const CDAPMessage *message) {
-	if (message->get_auth_mech() != CDAPMessage::AUTH_NONE) {
-		if ((message->get_op_code() != CDAPMessage::M_CONNECT)
-				&& message->get_op_code() != CDAPMessage::M_CONNECT_R) {
-			throw CDAPException(
-					"AuthMech can only be set for M_CONNECT and M_CONNECT_R messages");
-		}
-	}
-}
-
-void CDAPMessageValidator::validateAuthValue(const CDAPMessage *message) {
-	if (!message->get_auth_value().is_empty())	{
-		if ((message->get_op_code() != CDAPMessage::M_CONNECT)
-				&& (message->get_op_code() != CDAPMessage::M_CONNECT_R)) {
-			throw CDAPException(
-					"AuthValue can only be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	}
 }
@@ -543,7 +505,6 @@ void CDAPMessageValidator::validateVersion(const CDAPMessage *message) {
 const int CDAPMessage::ABSTRACT_SYNTAX_VERSION = 0x0073;
 CDAPMessage::CDAPMessage() {
 	abs_syntax_ = 0;
-	auth_mech_ = AUTH_NONE;
 	filter_ = 0;
 	flags_ = NONE_FLAGS;
 	invoke_id_ = 0;
@@ -567,7 +528,7 @@ CDAPMessage::~CDAPMessage() {
 }
 
 CDAPMessage* CDAPMessage::getOpenConnectionRequestMessage(
-		AuthTypes auth_mech, const AuthValue &auth_value,
+		const AuthPolicy &auth_policy,
 		const std::string &dest_ae_inst, const std::string &dest_ae_name,
 		const std::string &dest_ap_inst, const std::string &dest_ap_name,
 		const std::string &src_ae_inst, const std::string &src_ae_name,
@@ -575,8 +536,7 @@ CDAPMessage* CDAPMessage::getOpenConnectionRequestMessage(
 		int invoke_id) {
 	CDAPMessage *cdap_message = new CDAPMessage();
 	cdap_message->set_abs_syntax(ABSTRACT_SYNTAX_VERSION);
-	cdap_message->set_auth_mech(auth_mech);
-	cdap_message->set_auth_value(auth_value);
+	cdap_message->set_auth_policy(auth_policy);
 	cdap_message->set_dest_ae_inst(dest_ae_inst);
 	cdap_message->set_dest_ae_name(dest_ae_name);
 	cdap_message->set_dest_ap_inst(dest_ap_inst);
@@ -592,7 +552,7 @@ CDAPMessage* CDAPMessage::getOpenConnectionRequestMessage(
 }
 
 CDAPMessage* CDAPMessage::getOpenConnectionResponseMessage(
-		AuthTypes auth_mech, const AuthValue &auth_value,
+		const AuthPolicy &auth_policy,
 		const std::string &dest_ae_inst, const std::string &dest_ae_name,
 		const std::string &dest_ap_inst, const std::string &dest_ap_name,
 		int result, const std::string &result_reason,
@@ -601,8 +561,7 @@ CDAPMessage* CDAPMessage::getOpenConnectionResponseMessage(
 		int invoke_id) {
 	CDAPMessage *cdap_message = new CDAPMessage();
 	cdap_message->set_abs_syntax(ABSTRACT_SYNTAX_VERSION);
-	cdap_message->set_auth_mech(auth_mech);
-	cdap_message->set_auth_value(auth_value);
+	cdap_message->set_auth_policy(auth_policy);
 	cdap_message->set_dest_ae_inst(dest_ae_inst);
 	cdap_message->set_dest_ae_name(dest_ae_name);
 	cdap_message->set_dest_ap_inst(dest_ap_inst);
@@ -891,10 +850,7 @@ std::string CDAPMessage::to_string() const {
 			|| op_code_ == CDAPMessage::M_CONNECT_R) {
 		if (abs_syntax_ != 0)
 			ss << "Abstract syntax: " << abs_syntax_ << std::endl;
-		ss << "Authentication mechanism: " << auth_mech_ << std::endl;
-		if (!auth_value_.is_empty())
-			ss << "Authentication value: " << auth_value_.to_string()
-					<< std::endl;
+		ss << "Authentication policy: " << auth_policy_.to_string() << std::endl;
 		if (!src_ap_name_.empty())
 			ss << "Source AP name: " << src_ap_name_ << std::endl;
 		if (!src_ap_inst_.empty())
@@ -959,17 +915,11 @@ int CDAPMessage::get_abs_syntax() const {
 void CDAPMessage::set_abs_syntax(int arg0) {
 	abs_syntax_ = arg0;
 }
-CDAPMessage::AuthTypes CDAPMessage::get_auth_mech() const {
-	return auth_mech_;
+const AuthPolicy& CDAPMessage::get_auth_policy() const {
+	return auth_policy_;
 }
-void CDAPMessage::set_auth_mech(AuthTypes arg0) {
-	auth_mech_ = arg0;
-}
-const AuthValue& CDAPMessage::get_auth_value() const {
-	return auth_value_;
-}
-void CDAPMessage::set_auth_value(const AuthValue &arg0) {
-	auth_value_ = arg0;
+void CDAPMessage::set_auth_policy(const AuthPolicy& policy) {
+	auth_policy_ = policy;
 }
 const std::string& CDAPMessage::get_dest_ae_inst() const {
 	return dest_ae_inst_;
@@ -1165,20 +1115,17 @@ const std::string CDAPMessage::opcodeToString(Opcode opcode) {
 CDAPSessionDescriptor::CDAPSessionDescriptor() {
 	port_id_ = 0;
 	version_ = 0;
-	auth_mech_ = CDAPMessage::AUTH_NONE;
 	abs_syntax_ = 0;
 }
 CDAPSessionDescriptor::CDAPSessionDescriptor(int port_id) {
 	port_id_ = port_id;
 	version_ = 0;
-	auth_mech_ = CDAPMessage::AUTH_NONE;
 	abs_syntax_ = 0;
 }
 CDAPSessionDescriptor::CDAPSessionDescriptor(int abs_syntax,
-		CDAPMessage::AuthTypes auth_mech, AuthValue auth_value) {
+		const AuthPolicy& policy) {
 	abs_syntax_ = abs_syntax;
-	auth_mech_ = auth_mech;
-	auth_value_ = auth_value;
+	auth_policy_ = policy;
 	port_id_ = 0;
 	version_ = 0;
 }
@@ -1209,11 +1156,8 @@ const ApplicationProcessNamingInformation CDAPSessionDescriptor::get_destination
 void CDAPSessionDescriptor::set_abs_syntax(const int abs_syntax) {
 	abs_syntax_ = abs_syntax;
 }
-void CDAPSessionDescriptor::set_auth_mech(const CDAPMessage::AuthTypes auth_mech) {
-	auth_mech_ = auth_mech;
-}
-void CDAPSessionDescriptor::set_auth_value(const AuthValue auth_value) {
-	auth_value_ = auth_value;
+void CDAPSessionDescriptor::set_auth_policy(const AuthPolicy& policy) {
+	auth_policy_ = policy;
 }
 void CDAPSessionDescriptor::set_dest_ae_inst(const std::string *dest_ae_inst) {
 	dest_ae_inst_ = *dest_ae_inst;

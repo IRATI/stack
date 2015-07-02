@@ -8,12 +8,17 @@
                         "Version" : "1"
                 },
                 {
-                        "Name": "authentication-none",
+                        "Name": "PSOC_authentication-none",
                         "Component": "security-manager",
                         "Version" : "1"
                 },
                 {
-                        "Name": "authentication-password",
+                        "Name": "PSOC_authentication-password",
+                        "Component": "security-manager",
+                        "Version" : "1"
+                },
+	        {
+                        "Name": "PSOC_authentication-ssh2",
                         "Component": "security-manager",
                         "Version" : "1"
                 },
@@ -29,7 +34,7 @@
                 },
                 {
                         "Name": "default",
-                        "Component": "resource-allocator",
+                        "Component": "resource-allocator/pduft-generator",
                         "Version" : "1"
                 },
                 {

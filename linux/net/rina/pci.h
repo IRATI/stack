@@ -31,11 +31,7 @@
 #include "buffer.h"
 #include "pdu.h"
 
-#define PDU_FLAGS_FRAG_MIDDLE         0x00
-#define PDU_FLAGS_FRAG_FIRST          0x01
-#define PDU_FLAGS_FRAG_LAST           0x02
-#define PDU_FLAGS_CARRY_COMPLETE_SDU  0x03
-#define PDU_FLAGS_CARRY_MULTIPLE_SDUS 0x07
+#define PDU_FLAGS_EXPLICIT_CONGESTION 0x01
 #define PDU_FLAGS_DATA_RUN            0x80
 /* To be truely defined; internal to stack, needs to be discussed */
 #define PDU_FLAGS_BAD                 0xFF

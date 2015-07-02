@@ -142,9 +142,14 @@ IPCMConsole::IPCMConsole(const unsigned int port_) :
 				"USAGE: plugin-get-info <plugin-name>");
 	commands_map["show-dif-templates"] = ConsoleCmdInfo(&IPCMConsole::show_dif_templates,
 					"USAGE: show-dif-templates");
+	commands_map["read-ipcp-ribobj"] =
+			ConsoleCmdInfo(&IPCMConsole::read_ipcp_ribobj,
+				"USAGE: read-ipcp-ribobj <ipcp-id> <object-class> "
+				"<object-name>");
 
 	rina::ThreadAttributes ta;
-	worker = new rina::Thread(&ta, console_function, this);
+	worker = new rina::Thread(console_function, this, &ta);
+	worker->start();
 }
 
 IPCMConsole::~IPCMConsole() throw()
@@ -746,7 +751,7 @@ IPCMConsole::plugin_load_unload(std::vector<std::string>& args, bool load)
 		un = "un";
 	}
 
-	if(IPCManager->plugin_load(this, &promise, ipcp_id, args[2], load) == IPCM_FAILURE ||
+	if (IPCManager->plugin_load(this, &promise, ipcp_id, args[2], load) == IPCM_FAILURE ||
 			promise.wait() != IPCM_SUCCESS) {
 		outstream << "Plugin " << un << "loading failed" << endl;
 		return CMDRETCONT;
@@ -811,6 +816,39 @@ int IPCMConsole::show_dif_templates(std::vector<std::string>& args)
 	std::list<DIFTemplate*>::iterator it;
 	for (it = dif_templates.begin(); it != dif_templates.end(); ++it) {
 		outstream << (*it)->toString() << endl;
+	}
+
+	return CMDRETCONT;
+}
+
+int IPCMConsole::read_ipcp_ribobj(std::vector<std::string>& args)
+{
+	Promise promise;
+	int ipcp_id;
+
+	if (args.size() != 4) {
+		outstream << commands_map[args[0]].usage << endl;
+		return CMDRETCONT;
+	}
+
+	if (string2int(args[1], ipcp_id)){
+		outstream << "Invalid IPC process id" << endl;
+		return CMDRETCONT;
+	}
+
+	if (!IPCManager->ipcp_exists(ipcp_id)) {
+		outstream << "No such IPC process id" << endl;
+		return CMDRETCONT;
+	}
+
+	if (IPCManager->read_ipcp_ribobj(this, &promise, ipcp_id,
+					 args[2], args[3]) == IPCM_FAILURE ||
+					 promise.wait() != IPCM_SUCCESS) {
+		outstream << "Error occured while forwarding CDAP message to IPCP" << endl;
+	} else {
+		outstream << "Successfully sent M_READ request "
+			  << "with object class = " << args[2]
+			  << " and object name = " << args[3] << endl;
 	}
 
 	return CMDRETCONT;

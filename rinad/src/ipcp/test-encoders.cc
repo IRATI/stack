@@ -53,6 +53,8 @@ bool test_flow (rinad::Encoder * encoder) {
 	connection_policies_to_encode.set_seq_num_rollover_threshold(1234);
 	connection_policies_to_encode.set_initial_a_timer(14561);
 	connection_policies_to_encode.set_initial_seq_num_policy(rina::PolicyConfig("policy1", "23"));
+	connection_policies_to_encode.set_dtp_policy_set(rina::PolicyConfig("policy2", "26"));
+	dtcp_config_to_encode.set_dtcp_policy_set(rina::PolicyConfig("policy3", "27"));
 	dtcp_config_to_encode.set_rtx_control(true);
 	rtx_config.set_data_rxmsn_max(25423);
 	rtx_config.set_initial_rtx_time(100);
@@ -101,12 +103,16 @@ bool test_flow (rinad::Encoder * encoder) {
 		return false;
 	if ( connection_policies_to_encode.get_initial_seq_num_policy() != connection_policies_decoded.get_initial_seq_num_policy())
 		return false;
+	if ( connection_policies_to_encode.get_dtp_policy_set() != connection_policies_decoded.get_dtp_policy_set())
+		return false;
 
 	if ( connection_policies_to_encode.is_dtcp_present() != connection_policies_decoded.is_dtcp_present())
 		return false;
 	else {
 
 		rina::DTCPConfig dtcp_config_decoded = connection_policies_decoded.get_dtcp_configuration();
+	        if (dtcp_config_to_encode.get_dtcp_policy_set() != dtcp_config_decoded.get_dtcp_policy_set())
+		       return false;
 		if(dtcp_config_to_encode.is_rtx_control() != dtcp_config_decoded.is_rtx_control())
 			return false;
 		if(dtcp_config_to_encode.get_rtx_control_config().get_data_rxmsn_max() != dtcp_config_decoded.get_rtx_control_config().get_data_rxmsn_max())

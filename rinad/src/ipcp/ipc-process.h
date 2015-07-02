@@ -64,6 +64,8 @@ public:
                 const rina::SelectPolicySetResponseEvent& event);
         void processPluginLoadRequestEvent(
                 const rina::PluginLoadRequestEvent& event);
+        void processFwdCDAPMsgEvent(
+                const rina::FwdCDAPMsgEvent& event);
 
 private:
         void init_cdap_session_manager();
