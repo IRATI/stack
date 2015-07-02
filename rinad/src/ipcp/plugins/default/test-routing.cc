@@ -397,6 +397,12 @@ public:
 		return 0;
 	}
 
+	 rina::ApplicationRegistrationInformation
+		get_reg_app_info(const rina::ApplicationProcessNamingInformation name) {
+		(void) name;
+		return rina::ApplicationRegistrationInformation();
+	}
+
 private:
 	rinad::IPCProcess * ipc_process_;
 
