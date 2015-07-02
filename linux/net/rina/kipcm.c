@@ -186,7 +186,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 }
         } else {
                 user_ipcp = kfa_ipcp_instance(kipcm->kfa);
-                if (kfa_flow_create(kipcm->kfa, pid, ipc_process)) {
+                if (kfa_flow_create(kipcm->kfa, pid, ipc_process, false)) {
                         LOG_ERR("Could not find the user ipcp of the flow...");
                         kfa_port_id_release(kipcm->kfa, pid);
                         goto fail;
@@ -2082,13 +2082,13 @@ int kipcm_sdu_write(struct kipcm * kipcm,
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
                 sdu_destroy(sdu);
-                return -1;
+                return -EINVAL;
         }
 
         if (!sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus SDU received, bailing out");
                 sdu_destroy(sdu);
-                return -1;
+                return -EINVAL;
         }
 
         kfa_ipcp = kfa_ipcp_instance(kipcm->kfa);
@@ -2099,12 +2099,10 @@ int kipcm_sdu_write(struct kipcm * kipcm,
         }
         LOG_DBG("Tring to write SDU to port_id %d", port_id);
 
-        if (kfa_ipcp->ops->sdu_write(kfa_ipcp->data, port_id, sdu))
-                return -1;
-
         /* The SDU is ours */
-
-        return 0;
+        return kfa_ipcp->ops->sdu_write(kfa_ipcp->data,
+        				port_id,
+        				sdu);
 }
 
 int kipcm_sdu_read(struct kipcm * kipcm,
@@ -2115,17 +2113,11 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
-                return -1;
+                return -EINVAL;
         }
 
         /* The SDU is theirs now */
-
-        if (kfa_flow_sdu_read(kipcm->kfa, port_id, sdu)) {
-                LOG_DBG("Failed to read sdu");
-                return -1;
-        }
-
-        return 0;
+        return kfa_flow_sdu_read(kipcm->kfa, port_id, sdu);
 }
 
 int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
@@ -2234,7 +2226,8 @@ int kipcm_mgmt_sdu_read(struct kipcm *    kipcm,
 /* Only called by the allocate_port syscall used only by the normal IPCP */
 port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
                               ipc_process_id_t ipc_id,
-                              struct name *    process_name)
+                              struct name *    process_name,
+                              bool	       blocking)
 {
         struct ipcp_instance * ipc_process, * user_ipc_process;
         port_id_t              pid;
@@ -2281,7 +2274,7 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
                 return pid;
         }
 
-        if (kfa_flow_create(kipcm->kfa, pid, ipc_process)) {
+        if (kfa_flow_create(kipcm->kfa, pid, blocking, ipc_process)) {
                 KIPCM_UNLOCK(kipcm);
                 kfa_port_id_release(kipcm->kfa, pid);
                 name_destroy(process_name);

@@ -148,7 +148,8 @@ IPCMConsole::IPCMConsole(const unsigned int port_) :
 				"<object-name>");
 
 	rina::ThreadAttributes ta;
-	worker = new rina::Thread(&ta, console_function, this);
+	worker = new rina::Thread(console_function, this, &ta);
+	worker->start();
 }
 
 IPCMConsole::~IPCMConsole() throw()

@@ -20,6 +20,7 @@
 // MA  02110-1301  USA
 //
 
+#include <errno.h>
 #include <unistd.h>
 #include <sys/syscall.h>
 
@@ -82,7 +83,8 @@ int syscallWriteSDU(int portId, void * sdu, int size)
 
         result = syscall(SYS_writeSDU, portId, sdu, size);
         if (result < 0) {
-                LOG_ERR("Syscall write SDU failed: %d", result);
+        	LOG_DBG("Syscall write SDU failed: %d", errno);
+                result = -errno;
         }
 
         return result;
@@ -96,7 +98,8 @@ int syscallReadSDU(int portId, void * sdu, int maxBytes)
 
         result = syscall(SYS_readSDU, portId, sdu, maxBytes);
         if (result < 0) {
-                LOG_ERR("Syscall read SDU failed: %d", result);
+                LOG_DBG("Syscall read SDU failed: %d", errno);
+                result = -errno;
         }
 
         return result;
@@ -115,7 +118,8 @@ int syscallWriteManagementSDU(unsigned short ipcProcessId,
         result = syscall(SYS_writeManagementSDU, ipcProcessId, address,
                          portId,sdu, size);
         if (result < 0) {
-                LOG_ERR("Syscall write SDU failed: %d", result);
+        	LOG_DBG("Syscall write SDU failed: %d", errno);
+                result = -errno;
         }
 
         return result;
@@ -136,7 +140,8 @@ int syscallReadManagementSDU(int    ipcProcessId,
                          portId,
                          maxBytes);
         if (result < 0) {
-                LOG_ERR("Syscall read SDU failed: %d", result);
+        	LOG_DBG("Syscall read SDU failed: %d", errno);
+                result = -errno;
         }
 
         return result;
@@ -150,8 +155,8 @@ int syscallDestroyIPCProcess(unsigned short ipcProcessId)
 
         result = syscall(SYS_destroyIPCProcess, ipcProcessId);
         if (result < 0) {
-                LOG_ERR("Syscall destroy IPC Process failed: %d",
-                        result);
+        	LOG_DBG("Syscall destroy IPC Process failed: %d", errno);
+                result = -errno;
         }
 
         return result;
@@ -174,15 +179,16 @@ int syscallCreateIPCProcess(const ApplicationProcessNamingInformation & ipcProce
                          difType.c_str());
 
         if (result < 0) {
-                LOG_ERR("Syscall create IPC Process failed: %d",
-                        result);
+        	LOG_DBG("Syscall create IPC Process failed: %d", errno);
+                result = -errno;
         }
 
         return result;
 }
 
 int syscallAllocatePortId(unsigned short ipcProcessId,
-                          const ApplicationProcessNamingInformation & applicationName)
+                          const ApplicationProcessNamingInformation & applicationName,
+                          bool blocking)
 {
         int result;
 
@@ -191,10 +197,12 @@ int syscallAllocatePortId(unsigned short ipcProcessId,
         result = syscall(SYS_allocatePortId,
                          ipcProcessId,
                          applicationName.processName.c_str(),
-                         applicationName.processInstance.c_str());
+                         applicationName.processInstance.c_str(),
+                         blocking);
 
         if (result < 0) {
-                LOG_ERR("Syscall allocate port id failed: %d", result);
+        	LOG_DBG("Syscall allocate port id failed: %d", errno);
+                result = -errno;
         }
 
         return result;
@@ -209,8 +217,8 @@ int syscallDeallocatePortId(unsigned short ipcProcessId, int portId)
         result = syscall(SYS_deallocatePortId, ipcProcessId, portId);
 
         if (result < 0) {
-                LOG_ERR("Syscall deallocate port id failed: %d",
-                        result);
+        	LOG_DBG("Syscall deallocate port id failed: %d", result);
+                result = -errno;
         }
 
         return result;

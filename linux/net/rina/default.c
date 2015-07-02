@@ -98,13 +98,14 @@ static int default_sdu_read(struct personality_data * data,
 
 static int default_allocate_port(struct personality_data * data,
                                  ipc_process_id_t          ipc_id,
-                                 struct name *             name)
+                                 struct name *             name,
+                                 bool 			   blocking)
 {
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_allocate_port(data->kipcm, ipc_id, name);
+        return kipcm_allocate_port(data->kipcm, ipc_id, name, blocking);
 }
 
 static int default_deallocate_port(struct personality_data * data,

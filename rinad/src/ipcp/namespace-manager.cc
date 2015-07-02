@@ -562,6 +562,17 @@ int NamespaceManager::replyToIPCManagerUnregister(const rina::ApplicationUnregis
 	return 0;
 }
 
+rina::ApplicationRegistrationInformation
+	NamespaceManager::get_reg_app_info(const rina::ApplicationProcessNamingInformation name)
+{
+	rina::ApplicationRegistrationInformation * result = registrations_.find(name.getEncodedString());
+	if (result != 0) {
+		return *result;
+	} else {
+		throw rina::Exception("Could not locate application registration");
+	}
+}
+
 void NamespaceManager::processApplicationUnregistrationRequestEvent(
 		const rina::ApplicationUnregistrationRequestEvent& event)
 {

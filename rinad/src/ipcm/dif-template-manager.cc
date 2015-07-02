@@ -189,6 +189,7 @@ DIFTemplateManager::DIFTemplateManager(const std::string& folder)
 	rina::ThreadAttributes thread_attrs;
 	thread_attrs.setJoinable();
 	template_monitor = new DIFTemplateMonitor(&thread_attrs, folder, this);
+	template_monitor->start();
 }
 
 DIFTemplateManager::~DIFTemplateManager()
