@@ -59,9 +59,9 @@ void DefaultPDUFTGeneratorPs::routingTableUpdated(
 
 		LOG_IPCP_DBG("Processing entry for destination %u", (*it)->address);
 		LOG_IPCP_DBG("Next hop address %u", (*it)->nextHopAddresses.front());
- 
+
 		port_id = res_alloc->get_n_minus_one_flow_manager()->
-                               getManagementFlowToNeighbour((*it)->nextHopAddresses.front());
+			getManagementFlowToNeighbour((*it)->nextHopAddresses.front());
 
 		if (port_id == -1) {
 			delete entry;
