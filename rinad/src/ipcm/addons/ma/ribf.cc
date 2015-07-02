@@ -45,6 +45,8 @@ namespace mad {
 
 //static (unique) ribd proxy ref
 rina::rib::RIBDaemonProxy* RIBFactory::ribd = NULL;
+RIBConHandler empty_conn_callbacks;
+RIBRespHandler empty_rib_callbacks;
 
 /*
  * RIBFactory
@@ -53,9 +55,14 @@ rina::rib::RIBDaemonProxy* RIBFactory::ribd = NULL;
 //Constructors destructors
 RIBFactory::RIBFactory(RIBAEassoc ver_assoc){
 
+	cdap_rib::cdap_params params;
 	rib_handle_t rib_handle;
 	RIBAEassoc::const_iterator it;
 	std::list<std::string>::const_iterator itt;
+
+
+	//First initialize the RIB library
+	rina::rib::init(&empty_conn_callbacks, &empty_rib_callbacks, params);
 
 	for (it = ver_assoc.begin();
 			it != ver_assoc.end(); ++it) {
@@ -144,6 +151,85 @@ void RIBFactory::destroyIPCPevent(int ipcp_id){
 				break;
 		}
 	}
+}
+
+void RIBConHandler::connect(int message_id,
+				const rina::cdap_rib::con_handle_t &con) {
+	(void) message_id;
+	(void) con;
+}
+
+void RIBConHandler::connectResult(
+		const rina::cdap_rib::res_info_t &res,
+		const rina::cdap_rib::con_handle_t &con) {
+	(void) res;
+	(void) con;
+}
+void RIBConHandler::release(int message_id,
+				const rina::cdap_rib::con_handle_t &con) {
+	(void) message_id;
+	(void) con;
+}
+void RIBConHandler::releaseResult(
+		const rina::cdap_rib::res_info_t &res,
+		const rina::cdap_rib::con_handle_t &con) {
+	(void) res;
+	(void) con;
+}
+
+//RIB ops response
+void RIBRespHandler::remoteCreateResult(
+			const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::obj_info_t &obj,
+			const rina::cdap_rib::res_info_t &res){
+	(void) res;
+	(void) con;
+	(void) obj;
+}
+void RIBRespHandler::remoteDeleteResult(
+			const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::res_info_t &res){
+	(void) res;
+	(void) con;
+}
+
+void RIBRespHandler::remoteReadResult(
+			const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::obj_info_t &obj,
+			const rina::cdap_rib::res_info_t &res){
+	(void) res;
+	(void) con;
+	(void) obj;
+}
+void RIBRespHandler::remoteCancelReadResult(
+			const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::res_info_t &res){
+	(void) res;
+	(void) con;
+}
+void RIBRespHandler::remoteWriteResult(
+			const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::obj_info_t &obj,
+			const rina::cdap_rib::res_info_t &res){
+	(void) res;
+	(void) con;
+	(void) obj;
+}
+void RIBRespHandler::remoteStartResult(
+			const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::obj_info_t &obj,
+			const rina::cdap_rib::res_info_t &res){
+	(void) res;
+	(void) con;
+	(void) obj;
+}
+void RIBRespHandler::remoteStopResult(
+			const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::obj_info_t &obj,
+			const rina::cdap_rib::res_info_t &res){
+	(void) res;
+	(void) con;
+	(void) obj;
 }
 
 

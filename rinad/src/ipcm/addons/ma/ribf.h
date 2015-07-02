@@ -99,6 +99,46 @@ protected:
 	static rina::rib::RIBDaemonProxy* ribd;
 };
 
+//
+// Empty callbacks
+//
+
+class RIBRespHandler : public rina::rib::RIBOpsRespHandlers {
+public:
+	~RIBRespHandler(){};
+
+	void remoteCreateResult(const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::obj_info_t &obj,
+			const rina::cdap_rib::res_info_t &res);
+	void remoteDeleteResult(const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::res_info_t &res);
+	void remoteReadResult(const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::obj_info_t &obj,
+			const rina::cdap_rib::res_info_t &res);
+	void remoteCancelReadResult(const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::res_info_t &res);
+	void remoteWriteResult(const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::obj_info_t &obj,
+			const rina::cdap_rib::res_info_t &res);
+	void remoteStartResult(const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::obj_info_t &obj,
+			const rina::cdap_rib::res_info_t &res);
+	void remoteStopResult(const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::obj_info_t &obj,
+			const rina::cdap_rib::res_info_t &res);
+};
+
+class RIBConHandler : public rina::cacep::AppConHandlerInterface {
+
+public:
+	void connect(int message_id, const rina::cdap_rib::con_handle_t &con);
+	void connectResult(const rina::cdap_rib::res_info_t &res,
+				const rina::cdap_rib::con_handle_t &con);
+	void release(int message_id, const rina::cdap_rib::con_handle_t &con);
+	void releaseResult(const rina::cdap_rib::res_info_t &res,
+				const rina::cdap_rib::con_handle_t &con);
+};
+
 }; //namespace mad
 }; //namespace rinad
 
