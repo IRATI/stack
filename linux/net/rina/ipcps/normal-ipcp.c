@@ -1228,9 +1228,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
 static int normal_deallocate_all(struct ipcp_instance_data * data)
 {
         struct normal_flow *flow, *next;
-        unsigned long       flags;
 
-        spin_lock_irqsave(&data->lock, flags);
         list_for_each_entry_safe(flow, next, &(data->flows), list) {
                 if (remove_all_cepid(data, flow))
                         LOG_ERR("Some efcp structures could not be destroyed"
@@ -1239,7 +1237,6 @@ static int normal_deallocate_all(struct ipcp_instance_data * data)
                 list_del(&flow->list);
                 rkfree(flow);
         }
-        spin_unlock_irqrestore(&data->lock, flags);
 
         return 0;
 }
