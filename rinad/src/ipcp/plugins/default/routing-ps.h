@@ -118,6 +118,8 @@ public:
 	bool contains_vertex(unsigned int address) const;
 	bool contains_edge(unsigned int address1, unsigned int address2) const;
 
+	void print() const;
+
 private:
 	struct CheckedVertex {
 		unsigned int address_;
