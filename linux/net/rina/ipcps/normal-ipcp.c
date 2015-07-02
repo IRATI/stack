@@ -322,25 +322,23 @@ static int connection_update_request(struct ipcp_instance_data * data,
                 efcp_connection_destroy(data->efcpc, src_cep_id);
                 return -1;
         }
-        if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
-                                              port_id,
-                                              n1_ipcp)) {
-                spin_unlock_irqrestore(&data->lock, flags);
-                LOG_ERR("Cannot bind flow with user ipcp");
-                efcp_connection_destroy(data->efcpc, src_cep_id);
-                return -1;
-        }
-
         if (flow->state != PORT_STATE_PENDING) {
                 spin_unlock_irqrestore(&data->lock, flags);
                 LOG_ERR("Flow on port-id %d already committed", port_id);
                 efcp_connection_destroy(data->efcpc, src_cep_id);
                 return -1;
         }
-
         flow->state = PORT_STATE_ALLOCATED;
 
         spin_unlock_irqrestore(&data->lock, flags);
+
+        if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
+                                              port_id,
+                                              n1_ipcp)) {
+                LOG_ERR("Cannot bind flow with user ipcp");
+                efcp_connection_destroy(data->efcpc, src_cep_id);
+                return -1;
+        }
 
         LOG_DBG("Flow bound to port-id %d", port_id);
         return 0;
