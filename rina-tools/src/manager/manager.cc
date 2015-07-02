@@ -97,11 +97,10 @@ void ConnectionCallback::open_connection(
 		const rina::cdap_rib::flags_t &flags, int message_id) {
 	(void) flags;
 	cdap_rib::res_info_t res;
-	res.result_ = 1;
-	res.result_reason_ = "Ok";
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 	std::cout << "open conection request CDAP message received"
 			<< std::endl;
-	cdap::getProvider()->open_connection_response(con, res, message_id);
+	cdap::getProvider()->send_open_connection_result(con, res, message_id);
 	std::cout << "open conection response CDAP message sent" << std::endl;
 }
 
@@ -111,7 +110,7 @@ void ConnectionCallback::remote_create_result(
 		const rina::cdap_rib::res_info_t &res) {
 	(void) con;
 	(void) obj;
-	std::cout << "Result code is: " << res.result_ << std::endl;
+	std::cout << "Result code is: " << res.code_ << std::endl;
 }
 
 void ConnectionCallback::remote_read_result(
@@ -121,7 +120,7 @@ void ConnectionCallback::remote_read_result(
 	// decode object value
 	// print object value
 	(void) con;
-	std::cout << "Query Rib operation returned result " << res.result_
+	std::cout << "Query Rib operation returned result " << res.code_
 			<< std::endl;
 	std::string query_rib;
 	rinad::mad_manager::encoders::StringEncoder().decode(obj.value_,
@@ -140,73 +139,70 @@ Manager::~Manager() {
 
 void Manager::run()
 {
-        applicationRegister();
+	applicationRegister();
 
-        for (;;) {
-                IPCEvent* event = ipcEventProducer->eventWait();
-                rina::FlowInformation flow;
-                unsigned int port_id;
-                DeallocateFlowResponseEvent *resp = 0;
+	for (;;) {
+		IPCEvent* event = ipcEventProducer->eventWait();
+		rina::FlowInformation flow;
+		unsigned int port_id;
+		DeallocateFlowResponseEvent *resp = 0;
 
-                if (!event)
-                        return;
+		if (!event)
+			return;
 
-                switch (event->eventType) {
+		switch (event->eventType) {
 
-                        case REGISTER_APPLICATION_RESPONSE_EVENT:
-                                ipcManager->commitPendingRegistration(
-                                                event->sequenceNumber,
-                                                dynamic_cast<RegisterApplicationResponseEvent*>(event)
-                                                                ->DIFName);
-                                break;
+			case REGISTER_APPLICATION_RESPONSE_EVENT:
+				ipcManager->commitPendingRegistration(
+						event->sequenceNumber,
+						dynamic_cast<RegisterApplicationResponseEvent*>(event)
+								->DIFName);
+				break;
 
-                        case UNREGISTER_APPLICATION_RESPONSE_EVENT:
-                                ipcManager->appUnregistrationResult(
-                                                event->sequenceNumber,
-                                                dynamic_cast<UnregisterApplicationResponseEvent*>(event)
-                                                                ->result == 0);
-                                break;
+			case UNREGISTER_APPLICATION_RESPONSE_EVENT:
+				ipcManager->appUnregistrationResult(
+						event->sequenceNumber,
+						dynamic_cast<UnregisterApplicationResponseEvent*>(event)
+								->result == 0);
+				break;
 
-                        case FLOW_ALLOCATION_REQUESTED_EVENT:
-                                flow =
-                                                ipcManager->allocateFlowResponse(
-                                                                *dynamic_cast<FlowRequestEvent*>(event),
-                                                                0, true);
-                                LOG_INFO("New flow allocated [port-id = %d]",
-                                         flow.portId);
-                                startWorker(flow);
-                                break;
+			case FLOW_ALLOCATION_REQUESTED_EVENT:
+				flow =ipcManager->allocateFlowResponse(
+					*dynamic_cast<FlowRequestEvent*>(event),
+								0, true);
+				LOG_INFO("New flow allocated [port-id = %d]",
+					 flow.portId);
+				startWorker(flow);
+				break;
 
-                        case FLOW_DEALLOCATED_EVENT:
-                                port_id =
-                                                dynamic_cast<FlowDeallocatedEvent*>(event)
-                                                                ->portId;
-                                ipcManager->flowDeallocated(port_id);
-                                LOG_INFO("Flow torn down remotely [port-id = %d]",
-                                         port_id);
-                                break;
+			case FLOW_DEALLOCATED_EVENT:
+				port_id = dynamic_cast<FlowDeallocatedEvent*>(event)
+								->portId;
+				ipcManager->flowDeallocated(port_id);
+				LOG_INFO("Flow torn down remotely [port-id = %d]",
+					 port_id);
+				break;
 
-                        case DEALLOCATE_FLOW_RESPONSE_EVENT:
-                                LOG_INFO("Destroying the flow after time-out");
-                                resp =
-                                                dynamic_cast<DeallocateFlowResponseEvent*>(event);
-                                port_id = resp->portId;
+			case DEALLOCATE_FLOW_RESPONSE_EVENT:
+				LOG_INFO("Destroying the flow after time-out");
+				resp = dynamic_cast<DeallocateFlowResponseEvent*>(event);
+				port_id = resp->portId;
 
-                                ipcManager->flowDeallocationResult(
-                                                port_id, resp->result == 0);
-                                break;
+				ipcManager->flowDeallocationResult(
+						port_id, resp->result == 0);
+				break;
 
-                        default:
-                                LOG_INFO("Server got new event of type %d",
-                                         event->eventType);
-                                break;
-                }
-        }
+			default:
+				LOG_INFO("Server got new event of type %d",
+					 event->eventType);
+				break;
+		}
+	}
 }
 
 void Manager::startWorker(rina::FlowInformation flow)
 {
-        void (Manager::*server_function)(rina::FlowInformation flow);
+	void (Manager::*server_function)(rina::FlowInformation flow);
 
 	server_function = &Manager::operate;
 
@@ -216,73 +212,72 @@ void Manager::startWorker(rina::FlowInformation flow)
 
 void Manager::operate(rina::FlowInformation flow)
 {
-        std::cout << "cdap_prov created" << std::endl;
-        cdap::init(&callback, false);
-        // CACEP
-        cacep(flow);
-        // CREATE IPCP
-        createIPCP(flow);
-        // QUERY RIB
-        queryRIB(flow);
-        // FINISH
-        cdap::destroy(flow.portId);
+	std::cout << "cdap_prov created" << std::endl;
+	cdap::init(&callback, false);
+	// CACEP
+	cacep(flow);
+	// CREATE IPCP
+	createIPCP(flow);
+	// QUERY RIB
+	queryRIB(flow);
+	// FINISH
+	cdap::destroy(flow.portId);
 }
 
 void Manager::cacep(rina::FlowInformation flow)
 {
-        char buffer[max_sdu_size_in_bytes];
-        int bytes_read = ipcManager->readSDU(flow.portId, buffer, max_sdu_size_in_bytes);
-        cdap_rib::SerializedObject message;
-        message.message_ = buffer;
-        message.size_ = bytes_read;
-        cdap::getProvider()->process_message(message, flow.portId);
+	char buffer[max_sdu_size_in_bytes];
+	int bytes_read = ipcManager->readSDU(flow.portId, buffer, max_sdu_size_in_bytes);
+	cdap_rib::SerializedObject message;
+	message.message_ = buffer;
+	message.size_ = bytes_read;
+	cdap::getProvider()->process_message(message, flow.portId);
 }
 
 void Manager::createIPCP(rina::FlowInformation flow)
 {
-        char buffer[max_sdu_size_in_bytes];
+	char buffer[max_sdu_size_in_bytes];
 
-        mad_manager::structures::ipcp_config_t ipc_config;
-        ipc_config.process_instance = "1";
-        ipc_config.process_name = "normal-1.IPCP";
-        ipc_config.process_type = "normal-ipc";
-        ipc_config.dif_to_assign = "normal.DIF";
+	mad_manager::structures::ipcp_config_t ipc_config;
+	ipc_config.process_instance = "1";
+	ipc_config.process_name = "normal-1.IPCP";
+	ipc_config.process_type = "normal-ipc";
+	ipc_config.dif_to_assign = "normal.DIF";
 
-        cdap_rib::obj_info_t obj;
-        obj.name_ =
-                        "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=2";
-        obj.class_ = "IPCProcess";
-        obj.inst_ = 0;
-        mad_manager::encoders::IPCPConfigEncoder().encode(ipc_config,
-                                                          obj.value_);
-        mad_manager::structures::ipcp_config_t object;
-        mad_manager::encoders::IPCPConfigEncoder().decode(obj.value_, object);
+	cdap_rib::obj_info_t obj;
+	obj.name_ = "/computingSystemID = 1/processingSystemID=1/kernelApplicationProcess/osApplicationProcess/ipcProcesses/ipcProcessID=2";
+	obj.class_ = "IPCProcess";
+	obj.inst_ = 0;
+	mad_manager::encoders::IPCPConfigEncoder().encode(ipc_config,
+							  obj.value_);
+	mad_manager::structures::ipcp_config_t object;
+	mad_manager::encoders::IPCPConfigEncoder().decode(obj.value_, object);
 
-        cdap_rib::flags_t flags;
-        flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
+	cdap_rib::flags_t flags;
+	flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
 
-        cdap_rib::filt_info_t filt;
-        filt.filter_ = 0;
-        filt.scope_ = 0;
+	cdap_rib::filt_info_t filt;
+	filt.filter_ = 0;
+	filt.scope_ = 0;
 
-        cdap::getProvider()->remote_create(flow.portId, obj, flags, filt);
-        std::cout << "create IPC request CDAP message sent" << std::endl;
+	cdap::getProvider()->remote_create(flow.portId, obj, flags, filt);
+	std::cout << "create IPC request CDAP message sent" << std::endl;
 
-        int bytes_read = ipcManager->readSDU(flow.portId, buffer,
+	int bytes_read = ipcManager->readSDU(flow.portId, buffer,
 							max_sdu_size_in_bytes);
-        cdap_rib::SerializedObject message;
-        message.message_ = buffer;
-        message.size_ = bytes_read;
-        cdap::getProvider()->process_message(message, flow.portId);
+	cdap_rib::SerializedObject message;
+	message.message_ = buffer;
+	message.size_ = bytes_read;
+	cdap::getProvider()->process_message(message, flow.portId);
 }
 
 void Manager::queryRIB(rina::FlowInformation flow)
 {
-        char buffer[max_sdu_size_in_bytes];
+	char buffer[max_sdu_size_in_bytes];
 
 	cdap_rib::obj_info_t obj;
 	obj.name_ =
-			"root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=2, RIBDaemon";
+			"/computingSystemID = 1/processingSystemID=1/kernelApplicationProcess/osApplicationProcess/ipcProcesses/ipcProcessID=2/RIBDaemon";
 	obj.class_ = "RIBDaemon";
 	obj.inst_ = 0;
 
@@ -293,13 +288,13 @@ void Manager::queryRIB(rina::FlowInformation flow)
 	filt.filter_ = 0;
 	filt.scope_ = 0;
 
-        cdap::getProvider()->remote_read(flow.portId, obj, flags, filt);
-        std::cout << "Read RIBDaemon request CDAP message sent" << std::endl;
+	cdap::getProvider()->remote_read(flow.portId, obj, flags, filt);
+	std::cout << "Read RIBDaemon request CDAP message sent" << std::endl;
 
-        int bytes_read = ipcManager->readSDU(flow.portId, buffer,
+	int bytes_read = ipcManager->readSDU(flow.portId, buffer,
 							max_sdu_size_in_bytes);
-        cdap_rib::SerializedObject message;
-        message.message_ = buffer;
-        message.size_ = bytes_read;
-        cdap::getProvider()->process_message(message, flow.portId);
+	cdap_rib::SerializedObject message;
+	message.message_ = buffer;
+	message.size_ = bytes_read;
+	cdap::getProvider()->process_message(message, flow.portId);
 }

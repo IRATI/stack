@@ -148,7 +148,7 @@ void Client::cacep()
         auth.auth_mech_ = auth.AUTH_NONE;
 
         std::cout << "open conection request CDAP message sent" << std::endl;
-        con_ = cdap_prov_->open_connection(ver, src, dest, auth,
+        con_ = cdap_prov_->remote_open_connection(ver, src, dest, auth,
                                            flow_.portId);
         int bytes_read = ipcManager->readSDU(flow_.portId, buffer, max_buffer_size);
         cdap_rib::SerializedObject message;
@@ -232,7 +232,7 @@ void Client::release()
 {
         char buffer[max_buffer_size];
         std::cout << "release request CDAP message sent" << std::endl;
-        cdap_prov_->close_connection(con_.port_);
+        cdap_prov_->remote_close_connection(con_.port_);
         int bytes_read = ipcManager->readSDU(flow_.portId, buffer, max_buffer_size);
         cdap_rib::SerializedObject message;
         message.message_ = buffer;
