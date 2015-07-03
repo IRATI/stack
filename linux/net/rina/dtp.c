@@ -1135,12 +1135,12 @@ int dtp_write(struct dtp * instance,
 
         csn = nxt_seq_get(sv);
         if (pci_format(pci,
-                       sv->connection->source_cep_id,
-                       sv->connection->destination_cep_id,
-                       sv->connection->source_address,
-                       sv->connection->destination_address,
+                       efcp_src_cep_id(dtp->efcp),
+                       efcp_dst_cep_id(dtp->efcp),
+                       efcp_src_addr(dtp->efcp),
+                       efcp_dst_addr(dtp->efcp),
                        csn,
-                       sv->connection->qos_id,
+                       efcp_qos_id(dtp->efcp),
                        PDU_TYPE_DT)) {
                 pci_destroy(pci);
                 sdu_destroy(sdu);

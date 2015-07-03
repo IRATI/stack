@@ -3,6 +3,7 @@
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Sander Vrijders <sander.vrijders@intec.ugent.be>
+ *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,6 +32,36 @@
 #include "connection.h"
 #include "dtcp-utils.h"
 #include "policies.h"
+
+/* FIXME: Move RNL structure to RNL placeholder files */
+/* FIXME: More params to be added */
+struct conn_policies {
+        /* FIXME: Anyone using this variable? To be removed */
+        bool                 dtcp_present;
+        struct dtp_config *  dtp_cfg;
+        struct dtcp_config * dtcp_cfg;
+
+        /* DTP Policy set configuration */
+        struct policy * dtp_ps;
+};
+
+/* NOTE: Do not use this struct directly, IT MUST BE HIDDEN */
+/* FIXME: Add setters/getters to struct connection*/
+struct connection {
+        port_id_t              port_id;
+
+        address_t              source_address;
+        address_t              destination_address;
+
+        cep_id_t               source_cep_id;
+        cep_id_t               destination_cep_id;
+
+        qos_id_t               qos_id;
+
+        /* FIXME: Are we sure about the next fixme? */
+        /* FIXME: Add the list of policies associated with this connection */
+        struct conn_policies * policies_params;
+};
 
 struct connection * connection_create(void)
 {

@@ -231,23 +231,12 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
                                    struct conn_policies *      cp_params)
 {
         cep_id_t               cep_id;
-        struct connection *    conn;
         struct normal_flow *   flow;
         struct cep_ids_entry * cep_entry;
 
-        conn = connection_create();
-        if (!conn)
-                return -1;
-
-        conn->destination_address = dest;
-        conn->source_address      = source;
-        conn->port_id             = port_id;
-        conn->qos_id              = qos_id;
-        conn->source_cep_id       = cep_id_bad(); /* init value */
-        conn->destination_cep_id  = cep_id_bad(); /* init velue */
-        conn->policies_params     = cp_params;  /* Take the ownership. */
-
-        cep_id = efcp_connection_create(data->efcpc, NULL, conn);
+        cep_id = efcp_connection_create(data->efcpc, NULL, source, dest,
+                                        port_id, qos_id,
+                                        cep_id_bad(), cep_id_bad(), cp_params);
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Failed EFCP connection creation");
                 return cep_id_bad();
@@ -455,7 +444,6 @@ connection_create_arrived(struct ipcp_instance_data * data,
                           cep_id_t                    dst_cep_id,
                           struct conn_policies *      cp_params)
 {
-        struct connection *    conn;
         cep_id_t               cep_id;
         struct normal_flow *   flow;
         struct cep_ids_entry * cep_entry;
@@ -464,20 +452,9 @@ connection_create_arrived(struct ipcp_instance_data * data,
         if (!user_ipcp)
                 return cep_id_bad();
 
-        conn = rkzalloc(sizeof(*conn), GFP_KERNEL);
-        if (!conn) {
-                LOG_ERR("Failed connection creation");
-                return cep_id_bad();
-        }
-        conn->destination_address = dest;
-        conn->source_address      = source;
-        conn->port_id             = port_id;
-        conn->qos_id              = qos_id;
-        conn->source_cep_id       = cep_id_bad(); /* init values */
-        conn->destination_cep_id  = dst_cep_id;
-        conn->policies_params     = cp_params;  /* Take the ownership. */
-
-        cep_id = efcp_connection_create(data->efcpc, user_ipcp, conn);
+        cep_id = efcp_connection_create(data->efcpc, user_ipcp, source, dest,
+                                        port_id, qos_id,
+                                        cep_id_bad(), dst_cep_id, cp_params);
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Failed EFCP connection creation");
                 return cep_id_bad();
@@ -512,7 +489,7 @@ connection_create_arrived(struct ipcp_instance_data * data,
                 return cep_id_bad();
         }
         if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
-                                              conn->port_id,
+                                              port_id,
                                               ipcp)) {
                 spin_unlock(&data->lock);
                 LOG_ERR("Could not bind flow with user_ipcp");

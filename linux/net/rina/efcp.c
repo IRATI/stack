@@ -404,6 +404,23 @@ int efcp_container_config_set(struct efcp_config *    efcp_config,
 }
 EXPORT_SYMBOL(efcp_container_config_set);
 
+cep_id_t efcp_src_cep_id(struct efcp * efcp)
+{ return efcp->connection->source_cep_id; }
+
+cep_id_t efcp_dst_cep_id(struct efcp * efcp)
+{ return efcp->connection->destination_cep_id; }
+
+address_t efcp_src_addr(struct efcp * efcp)
+{ return efcp->connection->source_address; }
+
+address_t efcp_dst_addr(struct efcp * efcp)
+{ return efcp->connection->destination_address; }
+
+qos_id_t efcp_qos_id(struct efcp * efcp)
+{ return efcp->connection->qos_id; }
+
+
+
 static int efcp_write(struct efcp * efcp,
                       struct sdu *  sdu)
 {
@@ -651,7 +668,13 @@ EXPORT_SYMBOL(efcp_disable_write);
  */
 cep_id_t efcp_connection_create(struct efcp_container * container,
                                 struct ipcp_instance *  user_ipcp,
-                                struct connection *     connection)
+                                address_t               src_addr,
+                                address_t               dst_addr,
+                                port_id_t               port_id,
+                                qos_id_t                qos_id,
+                                cep_id_t                src_cep_id,
+                                cep_id_t                dst_cep_id,
+                                struct conn_policies *  cp_params)
 {
         struct efcp * tmp;
         cep_id_t      cep_id;
@@ -669,7 +692,20 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 LOG_ERR("Bogus container passed, bailing out");
                 return cep_id_bad();
         }
-        ASSERT(connection);
+
+        connection = connection_create();
+        if (!connection)
+                return -1;
+
+        ASSERT(cp_params);
+
+        connection->destination_address = dest;
+        connection->source_address      = source;
+        connection->port_id             = port_id;
+        connection->qos_id              = qos_id;
+        connection->source_cep_id       = cep_id_bad(); /* init value */
+        connection->destination_cep_id  = cep_id_bad(); /* init velue */
+        connection->policies_params     = cp_params;  /* Take the ownership. */
 
         tmp = efcp_create();
         if (!tmp) {

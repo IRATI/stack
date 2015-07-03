@@ -33,7 +33,8 @@
 #include "utils.h"
 #include "rnl.h"
 #include "rnl-utils.h"
-#include "dtcp-utils.h"
+#include "dtp-conf-utils.h"
+#include "dtcp-conf-utils.h"
 #include "policies.h"
 
 /*

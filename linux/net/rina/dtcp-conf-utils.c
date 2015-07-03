@@ -1,5 +1,5 @@
 /*
- * DTCP Utils (Data Transfer Control Protocol)
+ * DTCP CONFIG Utils (Data Transfer Control Protocol)
  *
  *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
@@ -21,7 +21,7 @@
 
 #include <linux/kernel.h>
 
-#define RINA_PREFIX "dtcp-utils"
+#define RINA_PREFIX "dtcp-conf-utils"
 
 #include "logs.h"
 #include "utils.h"
