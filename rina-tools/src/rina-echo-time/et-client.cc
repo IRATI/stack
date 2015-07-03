@@ -20,45 +20,37 @@
 //
 
 #include <cstring>
+#include <cmath>
 #include <iostream>
 #include <sstream>
 #include <cassert>
-#include <random>
-#include <thread>
+#include <time.h>
 #include <unistd.h>
+#include <limits.h>
+#include <iomanip>
 
 #define RINA_PREFIX     "rina-echo-time"
+#include <librina/ipc-api.h>
 #include <librina/logs.h>
 
-#include "client.h"
+#include "et-client.h"
 
 using namespace std;
 using namespace rina;
 
+void get_current_time(timespec& time) {
+	clock_gettime(CLOCK_REALTIME, &time);
+}
 
-static std::chrono::seconds      thres_s   = std::chrono::seconds(9);
-static std::chrono::milliseconds thres_ms  = std::chrono::milliseconds(9);
-static std::chrono::microseconds thres_us  = std::chrono::microseconds(9);
+double time_difference_in_ms(timespec start, timespec end) {
+	 double mtime, seconds, nseconds;
 
-static string
-durationToString(const std::chrono::high_resolution_clock::duration&
-                           dur)
-{
-        std::stringstream ss;
+	 seconds  = (double)end.tv_sec  - (double)start.tv_sec;
+	 nseconds = (double)end.tv_nsec - (double)start.tv_nsec;
 
-        if (dur > thres_s)
-                ss << std::chrono::duration_cast<std::chrono::seconds>(dur).count() << "s";
-        else if (dur > thres_ms)
-                ss << std::chrono::duration_cast<std::chrono::milliseconds>
-                        (dur).count() << "ms";
-        else if (dur > thres_us)
-                ss << std::chrono::duration_cast<std::chrono::microseconds>
-                        (dur).count() << "us";
-        else
-                ss << std::chrono::duration_cast<std::chrono::nanoseconds>
-                        (dur).count() << "ns";
+	 mtime = ((seconds) * 1000 + nseconds/1000000.0);
 
-        return ss.str();
+	 return mtime;
 }
 
 Client::Client(const string& t_type,
@@ -66,20 +58,23 @@ Client::Client(const string& t_type,
                const string& server_apn, const string& server_api,
                bool q, unsigned long count,
                bool registration, unsigned int size,
-               unsigned int w, int g, int dw) :
+               int w, int g, int dw, unsigned int lw) :
         Application(dif_nm, apn, api), test_type(t_type), dif_name(dif_nm),
         server_name(server_apn), server_instance(server_api),
         quiet(q), echo_times(count),
         client_app_reg(registration), data_size(size), wait(w), gap(g),
-        dealloc_wait(dw)
+        dealloc_wait(dw), lost_wait(lw)
 {
 }
 
 void Client::run()
 {
 	int port_id = 0;
+
+	cout << setprecision(5);
+
         if (client_app_reg) {
-                applicationRegister();
+                applicationRegister(true);
         }
         port_id = createFlow();
         if (port_id < 0) {
@@ -102,15 +97,18 @@ void Client::run()
 
 int Client::createFlow()
 {
-        std::chrono::high_resolution_clock::time_point begintp =
-                std::chrono::high_resolution_clock::now();
+        timespec begintp, endtp;
         AllocateFlowRequestResultEvent* afrrevent;
         FlowSpecification qosspec;
         IPCEvent* event;
         uint seqnum;
 
+        if (test_type == "ping")
+        	qosspec.blocking = false;
         if (gap >= 0)
                 qosspec.maxAllowableGap = gap;
+
+        get_current_time(begintp);
 
         if (dif_name != string()) {
                 seqnum = ipcManager->requestFlowAllocationInDIF(
@@ -146,12 +144,11 @@ int Client::createFlow()
                 LOG_DBG("[DEBUG] Port id = %d", flow.portId);
         }
 
-        std::chrono::high_resolution_clock::time_point eindtp =
-                std::chrono::high_resolution_clock::now();
-        std::chrono::high_resolution_clock::duration dur = eindtp - begintp;
+        get_current_time(endtp);
 
         if (!quiet) {
-                cout << "Flow allocation time = " << durationToString(dur) << endl;
+                cout << "Flow allocation time = "
+                     << time_difference_in_ms(begintp, endtp) << " ms" << endl;
         }
 
         return flow.portId;
@@ -159,53 +156,100 @@ int Client::createFlow()
 
 void Client::pingFlow(int port_id)
 {
-        char *buffer = new char[data_size];
-        char *buffer2 = new char[data_size];
-        ulong n = 0;
-        random_device rd;
-        default_random_engine ran(rd());
-        uniform_int_distribution<int> dis(0, 255);
-        bool end = false;
+        unsigned char *buffer = new unsigned char[data_size];
+        unsigned char *buffer2 = new unsigned char[data_size];
+        unsigned int sdus_sent = 0;
+        unsigned int sdus_received = 0;
+        timespec begintp, endtp;
+        unsigned char counter = 0;
+        double min_rtt = LONG_MAX;
+        double max_rtt = 0;
+        double average_rtt = 0;
+        double m2 = 0;
+        double delta = 0;
+        double variance = 0;
+        double stdev = 0;
+        double current_rtt = 0;
 
-        while (!end) {
-                IPCEvent* event = ipcEventProducer->eventPoll();
+        for (unsigned long n = 0; n < echo_times; n++) {
+        	int bytes_read = 0;
 
-                if (event) {
-                        switch(event->eventType) {
-                        case FLOW_DEALLOCATED_EVENT:
-                                end = true;
-                                break;
-                        default:
-                                LOG_INFO("Client got new event %d", event->eventType);
-                                break;
-                        }
-                } else if (n < echo_times) {
-                                std::chrono::high_resolution_clock::time_point begintp, endtp;
-                                int bytes_read = 0;
+        	for (uint i = 0; i < data_size; i++) {
+        		if (counter == 255) {
+        			counter = 0;
+        		}
+        		buffer[i] = counter;
+        		counter++;
+        	}
 
-                                for (uint i = 0; i < data_size; i++) {
-                                        buffer[i] = dis(ran);
-                                }
+        	get_current_time(begintp);
 
-                                begintp = std::chrono::high_resolution_clock::now();
-                                ipcManager->writeSDU(port_id, buffer, data_size);
-                                bytes_read = ipcManager->readSDU(port_id, buffer2, data_size);
-                                endtp = std::chrono::high_resolution_clock::now();
-                                cout << "SDU size = " << data_size << ", seq = " << n <<
-                                        ", RTT = " << durationToString(endtp - begintp);
-                                if (!((data_size == (uint) bytes_read) &&
-                                      (memcmp(buffer, buffer2, data_size) == 0)))
-                                        cout << " [bad response]";
-                                cout << endl;
+        	try {
+        		ipcManager->writeSDU(port_id, buffer, data_size);
+        	} catch (rina::FlowNotAllocatedException &e) {
+        		LOG_ERR("Flow has been deallocated");
+        		break;
+        	} catch (rina::UnknownFlowException &e) {
+        		LOG_ERR("Flow does not exist");
+        		break;
+        	} catch (rina::Exception &e) {
+        		LOG_ERR("Problems writing SDU to flow, continuing");
+        		continue;
+        	}
 
-                                n++;
-                                if (n < echo_times) {
-                                        this_thread::sleep_for(std::chrono::milliseconds(wait));
-                                }
-                } else {
-                        break;
-                }
+        	sdus_sent ++;
+
+        	try {
+        		bytes_read = readSDU(port_id, buffer2, data_size, lost_wait);
+        	} catch (rina::FlowAllocationException &e) {
+        		LOG_ERR("Flow has been deallocated");
+        		break;
+        	} catch (rina::UnknownFlowException &e) {
+        		LOG_ERR("Flow does not exist");
+        		break;
+        	} catch (rina::TryAgainException & e) {
+        		cout << "Timeout waiting for echo reply, SDU considered lost";
+        		cout << endl;
+        		continue;
+        	} catch (rina::Exception &e) {
+        		LOG_ERR("Problems reading SDU from flow, continuing");
+        		continue;
+        	}
+
+        	sdus_received ++;
+        	get_current_time(endtp);
+        	current_rtt = time_difference_in_ms(begintp, endtp);
+        	if (current_rtt < min_rtt) {
+        		min_rtt = current_rtt;
+        	}
+        	if (current_rtt > max_rtt) {
+        		max_rtt = current_rtt;
+        	}
+
+        	delta = current_rtt - average_rtt;
+        	average_rtt = average_rtt + delta/(double)sdus_received;
+        	m2 = m2 + delta*(current_rtt - average_rtt);
+
+        	cout << "SDU size = " << data_size << ", seq = " << n <<
+        			", RTT = " << current_rtt << " ms";
+        	if (!((data_size == (uint) bytes_read) &&
+        			(memcmp(buffer, buffer2, data_size) == 0)))
+        		cout << " [bad response]";
+        	cout << endl;
+
+		if (n < echo_times - 1) {
+			sleep_wrapper.sleepForMili(wait);
+		}
         }
+
+        variance = m2/((double)sdus_received -1);
+        stdev = sqrt(variance);
+
+        cout << "SDUs sent: "<< sdus_sent << "; SDUs received: " << sdus_received;
+        cout << "; " << ((sdus_sent - sdus_received)*100/sdus_sent) << "% SDU loss" <<endl;
+        cout << "Minimum RTT: " << min_rtt << " ms; Maximum RTT: " << max_rtt
+             << " ms; Average RTT:" << average_rtt
+             << " ms; Standard deviation: " << stdev<<" ms"<<endl;
 
         delete [] buffer;
         delete [] buffer2;
@@ -237,7 +281,7 @@ void Client::perfFlow(int port_id)
 
 void Client::destroyFlow(int port_id)
 {
-        DeallocateFlowResponseEvent *resp = nullptr;
+        DeallocateFlowResponseEvent *resp = NULL;
         unsigned int seqnum;
         IPCEvent* event;
 
@@ -255,4 +299,27 @@ void Client::destroyFlow(int port_id)
         assert(resp);
 
         ipcManager->flowDeallocationResult(port_id, resp->result == 0);
+}
+
+int Client::readSDU(int portId, void * sdu, int maxBytes, unsigned int timeout)
+{
+	timespec begintp, endtp;
+	get_current_time(begintp);
+	int bytes_read;
+
+	while (true) {
+		try {
+			bytes_read = ipcManager->readSDU(portId, sdu, maxBytes);
+			return bytes_read;
+		} catch (rina::TryAgainException & e) {
+			get_current_time(endtp);
+			if ((unsigned int) time_difference_in_ms(begintp, endtp) > timeout) {
+				throw e;
+			}
+		} catch (rina::Exception &e) {
+			throw e;
+		}
+	}
+
+	return 0;
 }

@@ -534,8 +534,10 @@ void RINAManager::initialize()
   //3 Start Netlink message reader thread
   ThreadAttributes threadAttributes;
   threadAttributes.setJoinable();
-  netlinkMessageReader = new Thread(&threadAttributes,
-                                    &doNetlinkMessageReaderWork, (void *) this);
+  netlinkMessageReader = new Thread(&doNetlinkMessageReaderWork,
+		  	  	    (void *) this,
+		  	  	    &threadAttributes);
+  netlinkMessageReader->start();
   LOG_DBG("Started Netlink Message reader thread");
 }
 

@@ -625,7 +625,7 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
 
         if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                 LOG_DBG("This flow goes for an app");
-                if (kfa_flow_create(priv->kfa, port_id, ipcp)) {
+                if (kfa_flow_create(priv->kfa, port_id, ipcp, false)) {
                         LOG_ERR("Could not create flow in KFA");
                         goto flow_arrived;
                 }
@@ -1053,8 +1053,9 @@ shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
  * SDU to a flow managed by this shim IPC process.
  */
 static int
-shim_hv_sdu_write(struct ipcp_instance_data *priv, port_id_t port_id,
-                  struct sdu *sdu)
+shim_hv_sdu_write(struct ipcp_instance_data * priv,
+		  port_id_t 		      port_id,
+                  struct sdu *		      sdu)
 {
         unsigned int ch = port_id_to_channel(priv, port_id);
         struct buffer *buf = sdu_buffer_rw(sdu);

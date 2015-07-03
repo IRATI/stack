@@ -138,6 +138,11 @@ struct flow_spec {
          * of the DIF where the flow will be created.
          */
         uint_t max_sdu_size;
+
+        /*
+         * True if the flow is blocking, false otherwise
+         */
+        bool blocking;
 };
 
 /* FIXME: Move RNL related types to RNL header(s) */

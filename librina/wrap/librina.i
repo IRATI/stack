@@ -88,6 +88,18 @@
     jenv->ThrowNew(excep, $1.what());
   return $null;
 }
+%typemap(throws, throws="eu.irati.librina.TryAgainException") rina::TryAgainException {
+  jclass excep = jenv->FindClass("eu/irati/librina/TryAgainException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.InvalidArgumentsException") rina::InvalidArgumentsException {
+  jclass excep = jenv->FindClass("eu/irati/librina/InvalidArgumentsException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
 %typemap(throws, throws="eu.irati.librina.ReadSDUException") rina::ReadSDUException {
   jclass excep = jenv->FindClass("eu/irati/librina/ReadSDUException");
   if (excep)

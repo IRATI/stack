@@ -106,9 +106,10 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
 		LOG_DBG("       log folder: %s", config.local.logPath.c_str());
 
 		//Initialize the I/O thread
-		io_thread = new rina::Thread(&io_thread_attrs,
-							io_loop_trampoline,
-							NULL);
+		io_thread = new rina::Thread(io_loop_trampoline,
+				             NULL,
+				             &io_thread_attrs);
+		io_thread->start();
 
 		//Initialize DIF Templates Manager (with its monitor thread)
 		stringstream ss;
