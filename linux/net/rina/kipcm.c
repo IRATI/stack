@@ -186,7 +186,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 }
         } else {
                 user_ipcp = kfa_ipcp_instance(kipcm->kfa);
-                if (kfa_flow_create(kipcm->kfa, pid, ipc_process, false)) {
+                if (kfa_flow_create(kipcm->kfa, pid, false, ipc_process)) {
                         LOG_ERR("Could not find the user ipcp of the flow...");
                         kfa_port_id_release(kipcm->kfa, pid);
                         goto fail;

@@ -625,7 +625,7 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
 
         if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                 LOG_DBG("This flow goes for an app");
-                if (kfa_flow_create(priv->kfa, port_id, ipcp, false)) {
+                if (kfa_flow_create(priv->kfa, port_id, false, ipcp)) {
                         LOG_ERR("Could not create flow in KFA");
                         goto flow_arrived;
                 }

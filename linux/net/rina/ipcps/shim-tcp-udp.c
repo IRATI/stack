@@ -992,7 +992,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
 
                 if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                         LOG_DBG("This flow goes for an app");
-                        if (kfa_flow_create(data->kfa, flow->port_id, ipcp, false)) {
+                        if (kfa_flow_create(data->kfa, flow->port_id, false, ipcp)) {
                                 LOG_ERR("Could not create flow in KFA");
                                 sdu_destroy(du);
                                 kfa_port_id_release(data->kfa, flow->port_id);
@@ -1451,7 +1451,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
 
                 if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                         LOG_DBG("This flow goes for an app");
-                        if (kfa_flow_create(data->kfa, flow->port_id, ipcp, false)) {
+                        if (kfa_flow_create(data->kfa, flow->port_id, false, ipcp)) {
                                 LOG_ERR("Could not create flow in KFA");
                                 kfa_port_id_release(data->kfa, flow->port_id);
                                 if (flow_destroy(data, flow))
