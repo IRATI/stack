@@ -83,7 +83,7 @@ int syscallWriteSDU(int portId, void * sdu, int size)
 
         result = syscall(SYS_writeSDU, portId, sdu, size);
         if (result < 0) {
-        	LOG_DBG("Syscall write SDU failed: %d", errno);
+        	LOG_WARN("Syscall write SDU failed: %d", errno);
                 result = -errno;
         }
 

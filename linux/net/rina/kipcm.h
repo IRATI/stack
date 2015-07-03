@@ -51,13 +51,13 @@ int            kipcm_ipcp_destroy(struct kipcm *   kipcm,
                                   ipc_process_id_t id);
 
 /* If successful: takes the ownership of the SDU */
-int            kipcm_sdu_write(struct kipcm * kipcm,
-                               port_id_t      id,
-                               struct sdu *   sdu);
+int        kipcm_sdu_write(struct kipcm * kipcm,
+                           port_id_t      id,
+                           struct sdu *   sdu);
 /* If successful: passes the ownership of the SDU */
-int            kipcm_sdu_read(struct kipcm * kipcm,
-                              port_id_t      id,
-                              struct sdu **  sdu);
+int        kipcm_sdu_read(struct kipcm * kipcm,
+                          port_id_t      id,
+                          struct sdu **  sdu);
 
 /* If successful: takes the ownership of the SDU */
 int            kipcm_mgmt_sdu_write(struct kipcm *   kipcm,

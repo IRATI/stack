@@ -207,9 +207,9 @@ struct ipcp_instance_ops {
                                    const struct dif_config *   configuration);
 
         /* Takes the ownership of the passed SDU */
-        int  (* sdu_write)(struct ipcp_instance_data * data,
-                           port_id_t                   id,
-                           struct sdu *                sdu);
+        int      (* sdu_write)(struct ipcp_instance_data * data,
+                               port_id_t                   id,
+                               struct sdu *                sdu);
 
         cep_id_t (* connection_create)(struct ipcp_instance_data * data,
                                        port_id_t                   port_id,
