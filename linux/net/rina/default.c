@@ -74,9 +74,9 @@ static int default_ipc_destroy(struct personality_data * data,
         return kipcm_ipcp_destroy(data->kipcm, id);
 }
 
-static ssize_t default_sdu_write(struct personality_data * data,
-                                 port_id_t                 id,
-                                 struct sdu *              sdu)
+static int default_sdu_write(struct personality_data * data,
+                             port_id_t                 id,
+                             struct sdu *              sdu)
 {
         if (!is_personality_ok(data)) return -1;
 
