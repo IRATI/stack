@@ -178,11 +178,12 @@ static int n1pmap_destroy(struct n1pmap * m)
 
         hash_for_each_safe(m->n1_ports, bucket, tmp, entry, hlist) {
                 ASSERT(entry);
-                if (n1_port_n1_user_ipcp_unbind(entry) ||
-                    n1_port_destroy(entry)) {
+                if (n1_port_n1_user_ipcp_unbind(entry))
                         LOG_ERR("Could not destroy entry %pK", entry);
-                        return -1;
-                }
+
+                if (n1_port_destroy(entry))
+                        LOG_ERR("Could not destroy entry %pK", entry);
+
         }
         rkfree(m);
         return 0;
