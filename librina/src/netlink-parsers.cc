@@ -3867,6 +3867,10 @@ int putIpcmRegisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
 	                        object.getRegIpcProcessId());
 	}
 
+	if (object.blocking) {
+		nla_put_flag(netlinkMessage, IRAR_ATTR_BLOCKING);
+	}
+
 	return 0;
 
 	nla_put_failure: LOG_ERR(
@@ -6336,6 +6340,9 @@ parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr) {
 	attr_policy[IRAR_ATTR_REG_IPC_ID].type = NLA_U16;
 	attr_policy[IRAR_ATTR_REG_IPC_ID].minlen = 2;
 	attr_policy[IRAR_ATTR_REG_IPC_ID].maxlen = 2;
+	attr_policy[IRAR_ATTR_BLOCKING].type = NLA_FLAG;
+	attr_policy[IRAR_ATTR_BLOCKING].minlen = 0;
+	attr_policy[IRAR_ATTR_BLOCKING].maxlen = 0;
 	struct nlattr *attrs[IRAR_ATTR_MAX + 1];
 
 	/*
@@ -6385,6 +6392,12 @@ parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr) {
 	if (attrs[IRAR_ATTR_REG_IPC_ID]) {
 	      result->setRegIpcProcessId(
 	                      nla_get_u16(attrs[IRAR_ATTR_REG_IPC_ID]));
+	}
+
+	if (attrs[IRAR_ATTR_BLOCKING]) {
+		result->blocking = true;
+	} else {
+		result->blocking = false;
 	}
 
 	return result;
