@@ -29,6 +29,7 @@
 #include <linux/netdevice.h>
 #include <linux/if_packet.h>
 #include <linux/workqueue.h>
+#include <linux/notifier.h>
 
 #define SHIM_NAME   "shim-eth-vlan"
 
@@ -114,6 +115,9 @@ struct ipcp_instance_data {
 
         /* RINARP related */
         struct rinarp_handle * handle;
+
+	/* To handle device notifications. */
+	struct notifier_block ntfy;
 };
 
 /* Needed for eth_vlan_rcv function */
@@ -1451,16 +1455,38 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
 
 static struct ipcp_factory_data {
         struct list_head instances;
+	struct notifier_block ntfy;
 } eth_vlan_data;
+
+static int eth_vlan_netdev_notify(struct notifier_block *nb,
+				  unsigned long event, void *opaque)
+{
+	struct net_device *dev = netdev_notifier_info_to_dev(opaque);
+        struct ipcp_instance_data * pos;
+
+	LOG_INFO("Notifier invoked");
+
+        list_for_each_entry(pos, &eth_vlan_data.instances, list) {
+		if (pos->dev == dev) {
+			LOG_INFO("GOT EVENT %lu FOR netdev %p", event, pos->dev);
+		}
+	}
+
+	return 0;
+}
 
 static int eth_vlan_init(struct ipcp_factory_data * data)
 {
-        ASSERT(data);
+	ASSERT(data == &eth_vlan_data);
 
-        bzero(&eth_vlan_data, sizeof(eth_vlan_data));
+        bzero(data, sizeof(*data));
         INIT_LIST_HEAD(&(data->instances));
 
         INIT_LIST_HEAD(&data_instances_list);
+
+	memset(&data->ntfy, 0, sizeof(data->ntfy));
+	data->ntfy.notifier_call = eth_vlan_netdev_notify;
+	register_netdevice_notifier(&data->ntfy);
 
         LOG_INFO("%s initialized", SHIM_NAME);
 
@@ -1470,9 +1496,10 @@ static int eth_vlan_init(struct ipcp_factory_data * data)
 static int eth_vlan_fini(struct ipcp_factory_data * data)
 {
 
-        ASSERT(data);
+        ASSERT(data == &eth_vlan_data);
 
         ASSERT(list_empty(&(data->instances)));
+	unregister_netdevice_notifier(&data->ntfy);
 
         return 0;
 }
