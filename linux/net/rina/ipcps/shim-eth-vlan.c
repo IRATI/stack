@@ -1468,7 +1468,23 @@ static int eth_vlan_netdev_notify(struct notifier_block *nb,
 
         list_for_each_entry(pos, &eth_vlan_data.instances, list) {
 		if (pos->dev == dev) {
-			LOG_INFO("GOT EVENT %lu FOR netdev %p", event, pos->dev);
+			switch (event) {
+				case NETDEV_UP:
+					LOG_INFO("Device %s goes up",
+						 dev->name);
+					break;
+
+				case NETDEV_DOWN:
+					LOG_INFO("Device %s goes down",
+						 dev->name);
+					break;
+
+				default:
+					LOG_DBG("Ignoring event %lu "
+						"on device %s",
+						event, dev->name);
+					break;
+			}
 		}
 	}
 
