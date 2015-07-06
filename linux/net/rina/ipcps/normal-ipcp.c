@@ -410,9 +410,11 @@ static int normal_flow_unbinding_user_ipcp(struct ipcp_instance_data * data,
 }
 
 static int normal_nm1_flow_state_change(struct ipcp_instance_data * data,
-				    port_id_t			pid,
-				    bool			up)
+					port_id_t		    pid,
+					bool			    up)
 {
+	LOG_INFO("N-1 flow with pid %d went %s", pid, (up ? "up" : "down"));
+
 	return 0;
 }
 

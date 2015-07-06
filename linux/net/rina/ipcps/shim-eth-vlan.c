@@ -1459,33 +1459,53 @@ static struct ipcp_factory_data {
 	struct notifier_block ntfy;
 } eth_vlan_data;
 
+static int ntfy_user_ipcp_on_if_state_change(struct ipcp_instance_data * data,
+					     bool up)
+{
+        struct shim_eth_flow * flow;
+
+        list_for_each_entry(flow, &data->flows, list) {
+                if (!flow->user_ipcp) {
+			/* This flow is used by an userspace application,
+			 * we are not able to notify that one for now. */
+			continue;
+                }
+
+		flow->user_ipcp->ops->nm1_flow_state_change(data, flow->port_id,
+							    up);
+        }
+
+	return 0;
+}
+
 static int eth_vlan_netdev_notify(struct notifier_block *nb,
 				  unsigned long event, void *opaque)
 {
 	struct net_device *dev = netdev_notifier_info_to_dev(opaque);
         struct ipcp_instance_data * pos;
 
-	LOG_INFO("Notifier invoked");
-
         list_for_each_entry(pos, &eth_vlan_data.instances, list) {
-		if (pos->dev == dev) {
-			switch (event) {
-				case NETDEV_UP:
-					LOG_INFO("Device %s goes up",
-						 dev->name);
-					break;
+		if (pos->dev != dev) {
+			/* We don't care about this network interface. */
+			continue;
+		}
 
-				case NETDEV_DOWN:
-					LOG_INFO("Device %s goes down",
-						 dev->name);
-					break;
+		switch (event) {
 
-				default:
-					LOG_DBG("Ignoring event %lu "
-						"on device %s",
-						event, dev->name);
-					break;
-			}
+		case NETDEV_UP:
+			LOG_INFO("Device %s goes up", dev->name);
+			ntfy_user_ipcp_on_if_state_change(pos, true);
+			break;
+
+		case NETDEV_DOWN:
+			LOG_INFO("Device %s goes down", dev->name);
+			ntfy_user_ipcp_on_if_state_change(pos, false);
+			break;
+
+		default:
+			LOG_DBG("Ignoring event %lu on device %s",
+				event, dev->name);
+			break;
 		}
 	}
 
