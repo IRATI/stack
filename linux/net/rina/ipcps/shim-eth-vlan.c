@@ -1418,6 +1418,7 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .flow_binding_ipcp         = NULL,
         .flow_unbinding_ipcp       = NULL,
         .flow_unbinding_user_ipcp  = eth_vlan_unbind_user_ipcp,
+	.flow_state_change	   = NULL,
 
         .application_register      = eth_vlan_application_register,
         .application_unregister    = eth_vlan_application_unregister,

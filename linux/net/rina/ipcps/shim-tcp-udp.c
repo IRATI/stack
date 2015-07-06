@@ -2431,6 +2431,7 @@ static struct ipcp_instance_ops tcp_udp_instance_ops = {
         .flow_binding_ipcp         = NULL,
         .flow_unbinding_ipcp       = NULL,
         .flow_unbinding_user_ipcp  = tcp_udp_unbind_user_ipcp,
+	.flow_state_change	   = NULL,
 
         .application_register      = tcp_udp_application_register,
         .application_unregister    = tcp_udp_application_unregister,

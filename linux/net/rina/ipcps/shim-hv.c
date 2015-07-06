@@ -1139,6 +1139,7 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .flow_binding_ipcp         = NULL,
         .flow_unbinding_ipcp       = NULL,
         .flow_unbinding_user_ipcp  = shim_hv_unbind_user_ipcp,
+	.flow_state_change	   = NULL,
 
         .application_register      = shim_hv_application_register,
         .application_unregister    = shim_hv_application_unregister,
