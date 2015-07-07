@@ -1391,10 +1391,6 @@ static int parse_efcp_config(struct nlattr *      efcp_config_attr,
                         goto parse_fail;
         }
 
-        if (attrs[EFCPC_ATTR_QOS_CUBES]) {
-                LOG_MISSING;
-        }
-
         if (attrs[EFCPC_ATTR_UNKNOWN_FLOW_POLICY]) {
                 if (parse_policy(attrs[EFCPC_ATTR_UNKNOWN_FLOW_POLICY],
                                  efcp_config->unknown_flow))
@@ -2558,7 +2554,7 @@ static int parse_list_pffe_conf_e(struct nlattr *     nested_attr,
                         continue;
                 }
 
-                list_add(&entry->next, &msg->pff_entries);
+                list_add_tail(&entry->next, &msg->pff_entries);
         }
 
         if (rem > 0) {

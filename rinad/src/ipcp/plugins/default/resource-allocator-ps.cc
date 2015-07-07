@@ -51,7 +51,8 @@ void DefaultPDUFTGeneratorPs::routingTableUpdated(
 	std::list<rina::RoutingTableEntry *>::const_iterator it;
 	rina::PDUForwardingTableEntry * entry;
 	int port_id = 0;
-	for (it = rt.begin(); it!= rt.end(); ++it){
+
+	for (it = rt.begin(); it!= rt.end(); ++it) {
 		entry = new rina::PDUForwardingTableEntry();
 		entry->address = (*it)->address;
 		entry->qosId = (*it)->qosId;
@@ -60,7 +61,7 @@ void DefaultPDUFTGeneratorPs::routingTableUpdated(
 		LOG_IPCP_DBG("Next hop address %u", (*it)->nextHopAddresses.front());
 
 		port_id = res_alloc->get_n_minus_one_flow_manager()->
-				getManagementFlowToNeighbour((*it)->nextHopAddresses.front());
+			getManagementFlowToNeighbour((*it)->nextHopAddresses.front());
 
 		if (port_id == -1) {
 			delete entry;
