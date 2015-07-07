@@ -92,7 +92,7 @@ bool m_Release(CDAPSessionManagerInterface &session_manager,
 	const SerializedObject *serialized_message;
 	bool assert = false;
 
-	// M_CONNECT Message
+	// M_RELEASE Message
 	sent_message = session_manager.getReleaseConnectionRequestMessage(port_A, CDAPMessage::NONE_FLAGS, invoke_id);
 	serialized_message = session_manager.encodeNextMessageToBeSent(*sent_message, port_A);
 	session_manager.messageSent(*sent_message, port_A);
@@ -117,7 +117,7 @@ int m_Release_R(CDAPSessionManagerInterface &session_manager,
 	const SerializedObject *serialized_message;
 	int assert = -1;
 
-	// M_CONNECT_R message
+	// M_RELEASE_R message
 	sent_message = session_manager.getReleaseConnectionResponseMessage(CDAPMessage::NONE_FLAGS, 1, "ok", invoke_id);
 	serialized_message = session_manager.encodeNextMessageToBeSent(*sent_message, port_B);
 	session_manager.messageSent(*sent_message, port_B);
