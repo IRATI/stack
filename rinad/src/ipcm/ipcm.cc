@@ -557,8 +557,8 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 ipcm_res_t
 IPCManager_::register_at_dif(Addon* callee, Promise* promise,
 			const unsigned short ipcp_id,
-			const rina::ApplicationProcessNamingInformation&
-			    dif_name)
+			const rina::ApplicationProcessNamingInformation& dif_name,
+			bool blocking)
 {
 	// Select a slave (N-1) IPC process.
 	IPCMIPCProcess *ipcp, *slave_ipcp;
@@ -608,7 +608,7 @@ IPCManager_::register_at_dif(Addon* callee, Promise* promise,
 
 		//Register
 		slave_ipcp->registerApplication(
-				ipcp->get_name(), ipcp->get_id(), trans->tid);
+				ipcp->get_name(), ipcp->get_id(), trans->tid, blocking);
 
 		ss << "Requested DIF registration of IPC process " <<
 			ipcp->get_name().toString() << " at DIF " <<
@@ -847,7 +847,7 @@ IPCManager_::apply_configuration()
 				for (list<rina::ApplicationProcessNamingInformation>::const_iterator
 						nit = cit->difsToRegisterAt.begin();
 						nit != cit->difsToRegisterAt.end(); nit++) {
-					if (register_at_dif(NULL, &promise, c_promise.ipcp_id, *nit) == IPCM_FAILURE ||
+					if (register_at_dif(NULL, &promise, c_promise.ipcp_id, *nit, true) == IPCM_FAILURE ||
 							promise.wait() != IPCM_SUCCESS) {
 						ss << "Problems registering IPCP " << c_promise.ipcp_id
 								<< " to DIF " << nit->processName << endl;

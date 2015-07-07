@@ -700,7 +700,7 @@ int IPCManager::readSDU(int portId, void * sdu, int maxBytes)
 	}
 
 	if (result == -EAGAIN) {
-		throw TryAgainException();
+		return 0;
 	}
 
 	if (result < 0) {
@@ -711,13 +711,14 @@ int IPCManager::readSDU(int portId, void * sdu, int maxBytes)
 #endif
 }
 
-void IPCManager::writeSDU(int portId, void * sdu, int size)
+int IPCManager::writeSDU(int portId, void * sdu, int size)
 {
 #if STUB_API
 	/* Do nothing. */
 	(void)portId;
         (void)sdu;
-        (void)size;
+
+        return size;
 #else
 	int result = syscallWriteSDU(portId, sdu, size);
 
@@ -738,12 +739,14 @@ void IPCManager::writeSDU(int portId, void * sdu, int size)
 	}
 
 	if (result == -EAGAIN) {
-		throw TryAgainException();
+		return 0;
 	}
 
 	if (result < 0) {
 		throw IPCException("Unknown error");
 	}
+
+	return result;
 #endif
 }
 

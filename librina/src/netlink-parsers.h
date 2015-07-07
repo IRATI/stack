@@ -398,6 +398,7 @@ enum IpcmRegisterApplicationRequestMessageAttributes {
 	IRAR_ATTR_APP_NAME = 1,
 	IRAR_ATTR_DIF_NAME,
 	IRAR_ATTR_REG_IPC_ID,
+	IRAR_ATTR_BLOCKING,
 	__IRAR_ATTR_MAX,
 };
 
