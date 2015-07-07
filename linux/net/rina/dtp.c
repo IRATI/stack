@@ -1487,7 +1487,7 @@ int dtp_receive(struct dtp * instance,
         while (pdu && (seq_num == LWE + 1)) {
                 dt_sv_rcv_lft_win_set(dt, seq_num);
 
-                rqueue_tail_push(to_post, pdu);
+                rqueue_tail_push_ni(to_post, pdu);
 
                 pdu = seq_queue_pop(instance->seqq->queue);
                 LWE = dt_sv_rcv_lft_win(dt);
