@@ -156,7 +156,23 @@ enum dtcp_config_params_attrs_list {
 };
 #define DCA_ATTR_MAX (__DCA_ATTR_MAX - 1)
 
-enum conn_policies_params_attrs_list {
+enum dtp_config_params_attrs_list {
+        DTPCA_ATTR_DTCP_PRESENT = 1,
+        DTPCA_ATTR_RCVR_TIMER_INAC_POLICY,
+        DTPCA_ATTR_SNDR_TIMER_INAC_POLICY,
+        DTPCA_ATTR_INIT_SEQ_NUM_POLICY,
+        DTPCA_ATTR_SEQ_NUM_ROLLOVER,
+        DTPCA_ATTR_INIT_A_TIMER,
+        DTPCA_ATTR_PARTIAL_DELIVERY,
+        DTPCA_ATTR_INCOMPLETE_DELIVERY,
+        DTPCA_ATTR_IN_ORDER_DELIVERY,
+        DTPCA_ATTR_MAX_SDU_GAP,
+        DTPCA_ATTR_DTP_POLICY_SET,
+        __DTPCA_ATTR_MAX,
+};
+#define DTPCA_ATTR_MAX (__DTPCA_ATTR_MAX - 1)
+
+/*enum conn_policies_params_attrs_list {
         CPP_ATTR_DTCP_PRESENT = 1,
         CPP_ATTR_DTCP_CONFIG,
         CPP_ATTR_DTP_POLICY_SET,
@@ -171,7 +187,7 @@ enum conn_policies_params_attrs_list {
         CPP_ATTR_MAX_SDU_GAP,
         __CPP_ATTR_MAX,
 };
-#define CPP_ATTR_MAX (__CPP_ATTR_MAX - 1)
+*/
 
 /* FIXME: in user space these are called without _NAME */
 enum ipcm_alloc_flow_req_attrs_list {
@@ -249,7 +265,8 @@ enum ipcm_conn_create_req_attrs_list {
         ICCRQ_ATTR_SOURCE_ADDR,
         ICCRQ_ATTR_DEST_ADDR,
         ICCRQ_ATTR_QOS_ID,
-        ICCRQ_ATTR_POLICIES_PARAMS,
+        ICCRQ_ATTR_DTP_CONFIG,
+        ICCRQ_ATTR_DTCP_CONFIG,
         __ICCRQ_ATTR_MAX,
 };
 #define ICCRQ_ATTR_MAX (__ICCRQ_ATTR_MAX - 1)
@@ -268,7 +285,8 @@ enum ipcm_conn_create_arrived_attrs_list {
         ICCA_ATTR_DEST_CEP_ID,
         ICCA_ATTR_QOS_ID,
         ICCA_ATTR_FLOW_USER_IPCP_ID,
-        ICCA_ATTR_POLICIES_PARAMS,
+        ICCA_ATTR_DTP_CONFIG,
+        ICCA_ATTR_DTCP_CONFIG,
         __ICCA_ATTR_MAX,
 };
 #define ICCA_ATTR_MAX (__ICCA_ATTR_MAX - 1)
@@ -729,11 +747,12 @@ struct rnl_ipcm_flow_dealloc_noti_msg_attrs {
 
 /*  FIXME: policies should not be int */
 struct rnl_ipcp_conn_create_req_msg_attrs {
-        port_id_t              port_id;
-        address_t              src_addr;
-        address_t              dst_addr;
-        qos_id_t               qos_id;
-        struct conn_policies * cp_params;
+        port_id_t            port_id;
+        address_t            src_addr;
+        address_t            dst_addr;
+        qos_id_t             qos_id;
+        struct dtp_config *  dtp_cfg;
+        struct dtcp_config * dtcp_cfg;
 };
 
 struct rnl_ipcp_conn_create_resp_msg_attrs {
@@ -742,13 +761,14 @@ struct rnl_ipcp_conn_create_resp_msg_attrs {
 };
 
 struct rnl_ipcp_conn_create_arrived_msg_attrs {
-        port_id_t             port_id;
-        address_t             src_addr;
-        address_t             dst_addr;
-        cep_id_t              dst_cep;
-        qos_id_t              qos_id;
-        ipc_process_id_t      flow_user_ipc_process_id;
-        struct conn_policies * cp_params;
+        port_id_t            port_id;
+        address_t            src_addr;
+        address_t            dst_addr;
+        cep_id_t             dst_cep;
+        qos_id_t             qos_id;
+        ipc_process_id_t     flow_user_ipc_process_id;
+        struct dtp_config *  dtp_cfg;
+        struct dtcp_config * dtcp_cfg;
 };
 
 struct rnl_ipcp_conn_create_result_msg_attrs {

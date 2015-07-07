@@ -37,7 +37,8 @@
 #include "dtp.h"
 #include "dtcp.h"
 #include "dtcp-ps.h"
-#include "dtcp-utils.h"
+#include "dtp-conf-utils.h"
+#include "dtcp-conf-utils.h"
 #include "rmt.h"
 #include "dt-utils.h"
 #include "dtp-ps.h"
@@ -255,7 +256,7 @@ static int efcp_destroy(struct efcp * instance)
         if (instance->user_ipcp) {
                 instance->user_ipcp->ops->flow_unbinding_ipcp(
                                 instance->user_ipcp->data,
-                                instance->connection->port_id);
+                                connection_port_id(instance->connection));
         }
 
         if (instance->dt) {
@@ -282,12 +283,12 @@ static int efcp_destroy(struct efcp * instance)
 
         if (instance->connection) {
                 /* FIXME: Connection should release the cep id */
-                if (is_cep_id_ok(instance->connection->source_cep_id)) {
+                if (is_cep_id_ok(connection_src_cep_id(instance->connection))) {
                         ASSERT(instance->container);
                         ASSERT(instance->container->cidm);
 
                         cidm_release(instance->container->cidm,
-                                     instance->connection->source_cep_id);
+                                     connection_src_cep_id(instance->connection));
                 }
                 /* FIXME: Should we release (actually the connection) release
                  * the destination cep id? */
@@ -405,21 +406,22 @@ int efcp_container_config_set(struct efcp_config *    efcp_config,
 EXPORT_SYMBOL(efcp_container_config_set);
 
 cep_id_t efcp_src_cep_id(struct efcp * efcp)
-{ return efcp->connection->source_cep_id; }
+{ return connection_src_cep_id(efcp->connection); }
 
 cep_id_t efcp_dst_cep_id(struct efcp * efcp)
-{ return efcp->connection->destination_cep_id; }
+{ return connection_dst_cep_id(efcp->connection); }
 
 address_t efcp_src_addr(struct efcp * efcp)
-{ return efcp->connection->source_address; }
+{ return connection_src_addr(efcp->connection); }
 
 address_t efcp_dst_addr(struct efcp * efcp)
-{ return efcp->connection->destination_address; }
+{ return connection_dst_addr(efcp->connection); }
 
 qos_id_t efcp_qos_id(struct efcp * efcp)
-{ return efcp->connection->qos_id; }
+{ return connection_qos_id(efcp->connection); }
 
-
+port_id_t efcp_port_id(struct efcp * efcp)
+{ return connection_port_id(efcp->connection); }
 
 static int efcp_write(struct efcp * efcp,
                       struct sdu *  sdu)
@@ -614,9 +616,9 @@ static bool is_candidate_connection_ok(const struct connection * connection)
 {
         /* FIXME: Add checks for policy params */
 
-        if (!connection                                   ||
-            !is_cep_id_ok(connection->source_cep_id)      ||
-            !is_port_id_ok(connection->port_id))
+        if (!connection                                      ||
+            !is_cep_id_ok(connection_src_cep_id(connection)) ||
+            !is_port_id_ok(connection_port_id(connection)))
                 return false;
 
         return true;
@@ -633,7 +635,7 @@ int efcp_enable_write(struct efcp * efcp)
         }
 
         if (efcp->user_ipcp->ops->enable_write(efcp->user_ipcp->data,
-                                               efcp->connection->port_id)) {
+                                               connection_port_id(efcp->connection))) {
                 return -1;
         }
 
@@ -651,7 +653,7 @@ int efcp_disable_write(struct efcp * efcp)
         }
 
         if (efcp->user_ipcp->ops->disable_write(efcp->user_ipcp->data,
-                                                efcp->connection->port_id)) {
+                                                connection_port_id(efcp->connection))) {
                 return -1;
         }
 
@@ -674,19 +676,21 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                                 qos_id_t                qos_id,
                                 cep_id_t                src_cep_id,
                                 cep_id_t                dst_cep_id,
-                                struct conn_policies *  cp_params)
+                                struct dtp_config *     dtp_cfg,
+                                struct dtcp_config *    dtcp_cfg)
 {
-        struct efcp * tmp;
-        cep_id_t      cep_id;
-        struct dtp *  dtp;
-        struct dtcp * dtcp;
-        struct cwq *  cwq;
-        struct rtxq * rtxq;
-        uint_t        mfps, mfss;
-        timeout_t     mpl, a, r = 0, tr = 0;
-        struct dtp_ps * dtp_ps;
-        bool          dtcp_present;
-        unsigned long flags;
+        struct efcp *       tmp;
+        struct connection * connection;
+        cep_id_t            cep_id;
+        struct dtp *        dtp;
+        struct dtcp *       dtcp;
+        struct cwq *        cwq;
+        struct rtxq *       rtxq;
+        uint_t              mfps, mfss;
+        timeout_t           mpl, a, r = 0, tr = 0;
+        struct dtp_ps       * dtp_ps;
+        bool                dtcp_present;
+        unsigned long       flags;
 
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
@@ -697,15 +701,14 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         if (!connection)
                 return -1;
 
-        ASSERT(cp_params);
+        ASSERT(dtp_cfg);
 
-        connection->destination_address = dest;
-        connection->source_address      = source;
-        connection->port_id             = port_id;
-        connection->qos_id              = qos_id;
-        connection->source_cep_id       = cep_id_bad(); /* init value */
-        connection->destination_cep_id  = cep_id_bad(); /* init velue */
-        connection->policies_params     = cp_params;  /* Take the ownership. */
+        connection_dst_addr_set(connection, dst_addr);
+        connection_src_addr_set(connection, src_addr);
+        connection_port_id_set(connection, port_id);
+        connection_qos_id_set(connection, qos_id);
+        connection_src_cep_id_set(connection, cep_id_bad()); /* init value */
+        connection_dst_cep_id_set(connection, cep_id_bad()); /* init velue */
 
         tmp = efcp_create();
         if (!tmp) {
@@ -716,7 +719,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         if (user_ipcp)
                 tmp->user_ipcp = user_ipcp;
 
-        cep_id                    = cidm_allocate(container->cidm);
+        cep_id = cidm_allocate(container->cidm);
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("CIDM generated wrong CEP ID");
                 connection_destroy(connection);
@@ -724,16 +727,15 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         }
 
         /* We must ensure that the DTP is instantiated, at least ... */
-        tmp->container            = container;
-        connection->source_cep_id = cep_id;
-        if (!is_candidate_connection_ok(connection)) {
+        tmp->container = container;
+        connection_src_cep_id_set(connection, cep_id);
+        if (!is_candidate_connection_ok((const struct connection *) connection)) {
                 LOG_ERR("Bogus connection passed, bailing out");
                 connection_destroy(connection);
                 return cep_id_bad();
         }
 
-        tmp->connection           = connection;
-
+        tmp->connection = connection;
         tmp->dt = dt_create();
         if (!tmp->dt) {
                 efcp_destroy(tmp);
@@ -745,9 +747,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         /* FIXME: dtp_create() takes ownership of the connection parameter */
         dtp = dtp_create(tmp->dt,
                          container->rmt,
-                         tmp,
-                         policy_name(connection->policies_params->dtp_ps),
-                         connection);
+                         dtp_cfg);
         if (!dtp) {
                 efcp_destroy(tmp);
                 return cep_id_bad();
@@ -765,14 +765,12 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
 
         rcu_read_lock();
         dtp_ps = dtp_ps_get(dtp);
-        /*a = msecs_to_jiffies(connection->policies_params->initial_a_timer); */
         a = dtp_ps->initial_a_timer;
         dtcp_present = dtp_ps->dtcp_present;
         rcu_read_unlock();
         if (dtcp_present) {
                 dtcp = dtcp_create(tmp->dt,
-                                   connection,
-                                   policy_name(dtcp_ps(connection->policies_params->dtcp_cfg)),
+                                   dtcp_cfg,
                                    container->rmt);
                 if (!dtcp) {
                         efcp_destroy(tmp);
@@ -786,7 +784,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 }
         }
 
-        if (dtcp_window_based_fctrl(connection->policies_params->dtcp_cfg)) {
+        if (dtcp_window_based_fctrl(dtcp_cfg)) {
                 cwq = cwq_create();
                 if (!cwq) {
                         LOG_ERR("Failed to create closed window queue");
@@ -800,9 +798,9 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 }
         }
 
-        if (dtcp_window_based_fctrl(connection->policies_params->dtcp_cfg) ||
-            dtcp_rate_based_fctrl(connection->policies_params->dtcp_cfg) ||
-            dtcp_rtx_ctrl(connection->policies_params->dtcp_cfg)) {
+        if (dtcp_window_based_fctrl(dtcp_cfg) ||
+            dtcp_rate_based_fctrl(dtcp_cfg) ||
+            dtcp_rtx_ctrl(dtcp_cfg)) {
                 rtxq = rtxq_create(tmp->dt, container->rmt);
                 if (!rtxq) {
                         LOG_ERR("Failed to create rexmsn queue");
@@ -830,12 +828,11 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         mfps = container->config->dt_cons->max_pdu_size;
         mfss = container->config->dt_cons->max_pdu_size;
         mpl  = container->config->dt_cons->max_pdu_life;
-        if (dtcp && dtcp_rtx_ctrl(connection->policies_params->dtcp_cfg)) {
-                tr = dtcp_initial_tr(connection->policies_params->dtcp_cfg);
+        if (dtcp && dtcp_rtx_ctrl(dtcp_cfg)) {
+                tr = dtcp_initial_tr(dtcp_cfg);
                 /* tr = msecs_to_jiffies(tr); */
                 /* FIXME: r should be passed and must be a bound */
-                r  = dtcp_data_retransmit_max(connection->policies_params->
-                                              dtcp_cfg) * tr;
+                r  = dtcp_data_retransmit_max(dtcp_cfg) * tr;
         }
 
         LOG_DBG("DT SV initialized with:");
@@ -849,11 +846,9 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         }
 
         if (dtp_sv_init(dtp,
-                        dtcp_rtx_ctrl(connection->policies_params->dtcp_cfg),
-                        dtcp_window_based_fctrl(connection->policies_params
-                                                ->dtcp_cfg),
-                        dtcp_rate_based_fctrl(connection->policies_params
-                                              ->dtcp_cfg),
+                        dtcp_rtx_ctrl(dtcp_cfg),
+                        dtcp_window_based_fctrl(dtcp_cfg),
+                        dtcp_rate_based_fctrl(dtcp_cfg),
                         a)) {
                 LOG_ERR("Could not init dtp_sv");
                 efcp_destroy(tmp);
@@ -864,7 +859,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
 
         spin_lock_irqsave(&container->lock, flags);
         if (efcp_imap_add(container->instances,
-                          connection->source_cep_id,
+                          connection_src_cep_id(connection),
                           tmp)) {
                 spin_unlock_irqrestore(&container->lock, flags);
                 LOG_ERR("Cannot add a new instance into container %pK",
@@ -880,10 +875,10 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 "Destination address %d, "
                 "Destination cep-id %d, "
                 "Source cep-id %d)",
-                connection->source_address,
-                connection->destination_address,
-                connection->destination_cep_id,
-                connection->source_cep_id);
+                connection_src_addr(connection),
+                connection_dst_addr(connection),
+                connection_dst_cep_id(connection),
+                connection_src_cep_id(connection));
 
         return cep_id;
 }
@@ -975,19 +970,19 @@ int efcp_connection_update(struct efcp_container * container,
                 }
                 return 0;
         }
-        tmp->connection->destination_cep_id = to;
+        connection_dst_cep_id_set(tmp->connection, to);
         tmp->user_ipcp = user_ipcp;
         spin_unlock_irqrestore(&container->lock, flags);
 
         LOG_DBG("Connection updated");
         LOG_DBG("  Source address:     %d",
-                tmp->connection->source_address);
+                connection_src_addr(tmp->connection));
         LOG_DBG("  Destination address %d",
-                tmp->connection->destination_address);
+                connection_dst_addr(tmp->connection));
         LOG_DBG("  Destination cep id: %d",
-                tmp->connection->destination_cep_id);
+                connection_dst_cep_id(tmp->connection));
         LOG_DBG("  Source cep id:      %d",
-                tmp->connection->source_cep_id);
+                connection_src_cep_id(tmp->connection));
 
         return 0;
 }

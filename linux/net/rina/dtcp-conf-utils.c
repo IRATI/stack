@@ -26,7 +26,7 @@
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
-#include "dtcp-utils.h"
+#include "dtcp-conf-utils.h"
 #include "policies.h"
 
 /* FIXME: These externs have to disappear from here */

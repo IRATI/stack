@@ -33,7 +33,6 @@
 #include "dtcp-ps.h"
 #include "dtp.h"
 #include "dtcp.h"
-#include "dtcp-utils.h"
 #include "dt-utils.h"
 #include "debug.h"
 
@@ -42,7 +41,6 @@ common_sv_update(struct dtcp_ps * ps, seq_num_t seq)
 {
         struct dtcp * dtcp = ps->dm;
         int                  retval = 0;
-        struct dtcp_config * dtcp_cfg;
 
         bool                 flow_ctrl;
         bool                 win_based;
@@ -53,10 +51,6 @@ common_sv_update(struct dtcp_ps * ps, seq_num_t seq)
                 LOG_ERR("No instance passed, cannot run policy");
                 return -1;
         }
-
-        dtcp_cfg = dtcp_config_get(dtcp);
-        if (!dtcp_cfg)
-                return -1;
 
         flow_ctrl  = ps->flow_ctrl;
         win_based  = ps->flowctrl.window_based;

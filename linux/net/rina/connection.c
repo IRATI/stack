@@ -30,23 +30,10 @@
 #include "debug.h"
 #include "common.h"
 #include "connection.h"
-#include "dtcp-utils.h"
+#include "dtp-conf-utils.h"
+#include "dtcp-conf-utils.h"
 #include "policies.h"
 
-/* FIXME: Move RNL structure to RNL placeholder files */
-/* FIXME: More params to be added */
-struct conn_policies {
-        /* FIXME: Anyone using this variable? To be removed */
-        bool                 dtcp_present;
-        struct dtp_config *  dtp_cfg;
-        struct dtcp_config * dtcp_cfg;
-
-        /* DTP Policy set configuration */
-        struct policy * dtp_ps;
-};
-
-/* NOTE: Do not use this struct directly, IT MUST BE HIDDEN */
-/* FIXME: Add setters/getters to struct connection*/
 struct connection {
         port_id_t              port_id;
 
@@ -57,10 +44,6 @@ struct connection {
         cep_id_t               destination_cep_id;
 
         qos_id_t               qos_id;
-
-        /* FIXME: Are we sure about the next fixme? */
-        /* FIXME: Add the list of policies associated with this connection */
-        struct conn_policies * policies_params;
 };
 
 struct connection * connection_create(void)
@@ -74,55 +57,6 @@ struct connection * connection_create(void)
         return tmp;
 }
 EXPORT_SYMBOL(connection_create);
-
-struct conn_policies * conn_policies_create(void)
-{
-        struct conn_policies * tmp;
-
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
-                return NULL;
-
-        tmp->dtcp_cfg = dtcp_config_create();
-        if (!tmp->dtcp_cfg) {
-                LOG_ERR("Could not create dtcp_config");
-                rkfree(tmp);
-                return NULL;
-        }
-
-        tmp->dtp_ps = policy_create();
-        if (!tmp->dtp_ps) {
-                dtcp_config_destroy(tmp->dtcp_cfg);
-                rkfree(tmp);
-                return NULL;
-        }
-
-        tmp->initial_sequence_number = policy_create();
-        if (!tmp->initial_sequence_number) {
-                LOG_ERR("Could not create initial_sequence_number");
-                dtcp_config_destroy(tmp->dtcp_cfg);
-                rkfree(tmp);
-                return NULL;
-        }
-
-        tmp->receiver_inactivity_timer = policy_create();
-        if (!tmp->receiver_inactivity_timer) {
-                LOG_ERR("Could not create receiver_inactivity_timer policy");
-                dtcp_config_destroy(tmp->dtcp_cfg);
-                rkfree(tmp);
-                return NULL;
-        }
-
-        tmp->sender_inactivity_timer = policy_create();
-        if (!tmp->sender_inactivity_timer) {
-                LOG_ERR("Could not create sender_inactivity_timer policy");
-                dtcp_config_destroy(tmp->dtcp_cfg);
-                rkfree(tmp);
-                return NULL;
-        }
-
-        return tmp;
-}
 
 struct connection *
 connection_dup_from_user(const struct connection __user * conn)
@@ -139,61 +73,113 @@ connection_dup_from_user(const struct connection __user * conn)
         return tmp;
 }
 
-int conn_policies_destroy(struct conn_policies * cp_params)
-{
-        int retval = 0;
-
-        if (!cp_params)
-                return -1;
-
-        if (cp_params->dtcp_cfg)
-                if (dtcp_config_destroy(cp_params->dtcp_cfg))
-                        retval = -1;
-
-        if (cp_params->dtp_ps)
-                if (policy_destroy(cp_params->dtp_ps))
-                        retval = -1;
-
-        if (cp_params->initial_sequence_number)
-                if (policy_destroy(cp_params->initial_sequence_number))
-                        retval = -1;
-
-        if (cp_params->receiver_inactivity_timer)
-                if (policy_destroy(cp_params->receiver_inactivity_timer))
-                        retval = -1;
-
-        if (cp_params->sender_inactivity_timer)
-                if (policy_destroy(cp_params->sender_inactivity_timer))
-                        retval = -1;
-
-        rkfree(cp_params);
-        return retval;
-}
-EXPORT_SYMBOL(conn_policies_destroy);
-
 int connection_destroy(struct connection * conn)
 {
         if (!conn)
                 return -1;
-
-        /* FIXME: The following FIXME should be now obsolete */
-
-        /* FIXME: Here we should make sure that all the asynchronous users
-         * of this connection (e.g. workqueues in the normal ipcp
-         * implementation) are stopped before proceeding to destroy the
-         * connection object. Setting the pointer to NULL is a workaround
-         * to minimize the likelyhood of accessing dellocated memory.
-         * This should be done with reference counting or locking.
-         */
-
-        if (conn->policies_params) {
-                if (conn_policies_destroy(conn->policies_params))
-                        return -1;
-                conn->policies_params = NULL; /* FIXME: Workaround */
-        }
-
         rkfree(conn);
-
         return 0;
 }
 EXPORT_SYMBOL(connection_destroy);
+
+port_id_t connection_port_id(const struct connection * conn)
+{
+        if (!conn)
+                return port_id_bad();
+        return conn->port_id;
+}
+EXPORT_SYMBOL(connection_port_id);
+
+address_t connection_src_addr(const struct connection * conn)
+{
+        if (!conn)
+                return address_bad();
+        return conn->source_address;
+}
+EXPORT_SYMBOL(connection_src_addr);
+
+address_t connection_dst_addr(const struct connection * conn)
+{
+        if (!conn)
+                return address_bad();
+        return conn->destination_address;
+}
+EXPORT_SYMBOL(connection_dst_addr);
+
+cep_id_t connection_src_cep_id(const struct connection * conn)
+{
+        if (!conn)
+                return cep_id_bad();
+        return conn->source_cep_id;
+}
+EXPORT_SYMBOL(connection_src_cep_id);
+
+cep_id_t connection_dst_cep_id(const struct connection * conn)
+{
+        if (!conn)
+                return cep_id_bad();
+        return conn->destination_cep_id;
+}
+EXPORT_SYMBOL(connection_dst_cep_id);
+
+qos_id_t connection_qos_id(const struct connection * conn)
+{
+        if (!conn)
+                return qos_id_bad();
+        return conn->qos_id;
+}
+EXPORT_SYMBOL(connection_qos_id);
+
+int connection_port_id_set(struct connection * conn,
+                           port_id_t           port_id)
+{
+        if (!conn || !(is_port_id_ok(port_id))) return -1;
+        conn->port_id = port_id;
+        return 0;
+}
+EXPORT_SYMBOL(connection_port_id_set);
+
+int connection_src_addr_set(struct connection * conn,
+                            address_t           addr)
+{
+        if (!conn || !(is_address_ok(addr))) return -1;
+        conn->source_address = addr;
+        return 0;
+}
+EXPORT_SYMBOL(connection_src_addr_set);
+
+int connection_dst_addr_set(struct connection * conn,
+                            address_t           addr)
+{
+        if (!conn || !(is_address_ok(addr))) return -1;
+        conn->destination_address = addr;
+        return 0;
+}
+EXPORT_SYMBOL(connection_dst_addr_set);
+
+int connection_src_cep_id_set(struct connection * conn,
+                              cep_id_t            cep_id)
+{
+        if (!conn || !(is_cep_id_ok(cep_id))) return -1;
+        conn->source_cep_id = cep_id;
+        return 0;
+}
+EXPORT_SYMBOL(connection_src_cep_id_set);
+
+int connection_dst_cep_id_set(struct connection * conn,
+                              cep_id_t            cep_id)
+{
+        if (!conn || !(is_cep_id_ok(cep_id))) return -1;
+        conn->destination_cep_id = cep_id;
+        return 0;
+}
+EXPORT_SYMBOL(connection_dst_cep_id_set);
+
+int connection_qos_id_set(struct connection * conn,
+                          qos_id_t            qos_id)
+{
+        if (!conn || !(is_qos_id_ok(qos_id))) return -1;
+        conn->qos_id = qos_id;
+        return 0;
+}
+EXPORT_SYMBOL(connection_qos_id_set);

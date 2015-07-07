@@ -32,7 +32,7 @@
 /* FIXME: Maybe dtcp_cfg should be moved somewhere else and then delete this */
 #include "dtcp.h"
 #include "dtcp-ps.h"
-#include "dtcp-utils.h"
+#include "dtcp-conf-utils.h"
 #include "dt.h"
 #include "dtp.h"
 #include "rmt.h"

@@ -27,6 +27,9 @@
 #include "du.h"
 #include "connection.h"
 
+struct dtp_config;
+struct dtcp_config;
+
 struct ipcp_instance;
 
 enum ipcp_config_type {
@@ -215,7 +218,8 @@ struct ipcp_instance_ops {
                                        address_t                   source,
                                        address_t                   dest,
                                        qos_id_t                    qos_id,
-                                       struct conn_policies *      cp_params);
+                                       struct dtp_config *         dtp_config,
+                                       struct dtcp_config *        dtcp_config);
 
         int      (* connection_update)(struct ipcp_instance_data * data,
                                        struct ipcp_instance *      user_ipcp,
@@ -234,7 +238,8 @@ struct ipcp_instance_ops {
                                       address_t                   dest,
                                       qos_id_t                    qos_id,
                                       cep_id_t                    dst_cep_id,
-                                      struct conn_policies *      cp_params);
+                                      struct dtp_config *         dtp_config,
+                                      struct dtcp_config *        dtcp_config);
 
         int      (* flow_prebind)(struct ipcp_instance_data * data,
                                   struct ipcp_instance *      user_ipcp,

@@ -228,7 +228,8 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
                                    address_t                   source,
                                    address_t                   dest,
                                    qos_id_t                    qos_id,
-                                   struct conn_policies *      cp_params)
+                                   struct dtp_config *         dtp_cfg,
+                                   struct dtcp_config *        dtcp_cfg)
 {
         cep_id_t               cep_id;
         struct normal_flow *   flow;
@@ -236,7 +237,8 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
 
         cep_id = efcp_connection_create(data->efcpc, NULL, source, dest,
                                         port_id, qos_id,
-                                        cep_id_bad(), cep_id_bad(), cp_params);
+                                        cep_id_bad(), cep_id_bad(),
+                                        dtp_cfg, dtcp_cfg);
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Failed EFCP connection creation");
                 return cep_id_bad();
@@ -442,7 +444,8 @@ connection_create_arrived(struct ipcp_instance_data * data,
                           address_t                   dest,
                           qos_id_t                    qos_id,
                           cep_id_t                    dst_cep_id,
-                          struct conn_policies *      cp_params)
+                          struct dtp_config *         dtp_cfg,
+                          struct dtcp_config *        dtcp_cfg)
 {
         cep_id_t               cep_id;
         struct normal_flow *   flow;
@@ -454,7 +457,8 @@ connection_create_arrived(struct ipcp_instance_data * data,
 
         cep_id = efcp_connection_create(data->efcpc, user_ipcp, source, dest,
                                         port_id, qos_id,
-                                        cep_id_bad(), dst_cep_id, cp_params);
+                                        cep_id_bad(), dst_cep_id,
+                                        dtp_cfg, dtcp_cfg);
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Failed EFCP connection creation");
                 return cep_id_bad();

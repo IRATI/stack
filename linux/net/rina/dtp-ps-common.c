@@ -35,7 +35,7 @@
 #include "dtp.h"
 #include "dtcp.h"
 #include "dtcp-ps.h"
-#include "dtcp-utils.h"
+#include "dtcp-conf-utils.h"
 #include "dt-utils.h"
 #include "debug.h"
 
@@ -90,8 +90,6 @@ common_closed_window(struct dtp_ps * ps, struct pdu * pdu)
         struct dtp * dtp = ps->dm;
         struct cwq * cwq;
         struct dt *  dt;
-        struct dtp_sv * sv;
-        struct connection * connection;
         uint_t       max_len;
 
         if (!dtp) {
@@ -119,15 +117,7 @@ common_closed_window(struct dtp_ps * ps, struct pdu * pdu)
 
         ASSERT(dtp);
 
-        sv = dtp_dtp_sv(dtp);
-        ASSERT(sv);
-        connection = dtp_sv_connection(sv);
-        ASSERT(connection);
-        ASSERT(connection->policies_params);
-
-        max_len = dtcp_max_closed_winq_length(connection->
-                                              policies_params->
-                                              dtcp_cfg);
+        max_len = dtcp_max_closed_winq_length(dtcp_config_get(dt_dtcp(dt)));
         if (cwq_size(cwq) < max_len - 1) {
                 if (cwq_push(cwq, pdu)) {
                         LOG_ERR("Failed to push into cwq");

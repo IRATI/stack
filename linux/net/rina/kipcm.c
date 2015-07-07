@@ -760,16 +760,18 @@ static int notify_ipcp_conn_create_req(void *             data,
         if (!ipcp)
                 goto fail;
 
-        /* IPCP takes ownership of the cp_params */
+        /* IPCP takes ownership of the dtp and dtcp cfg params */
         src_cep = ipcp->ops->connection_create(ipcp->data,
                                                attrs->port_id,
                                                attrs->src_addr,
                                                attrs->dst_addr,
                                                attrs->qos_id,
-                                               attrs->cp_params);
+                                               attrs->dtp_cfg,
+                                               attrs->dtcp_cfg);
 
         /* The ownership has been passed to connection_create. */
-        attrs->cp_params = NULL;
+        attrs->dtp_cfg = NULL;
+        attrs->dtcp_cfg = NULL;
 
         if (!is_cep_id_ok(src_cep)) {
                 LOG_ERR("IPC process could not create connection");
@@ -882,10 +884,12 @@ static int notify_ipcp_conn_create_arrived(void *             data,
                                                        attrs->dst_addr,
                                                        attrs->qos_id,
                                                        attrs->dst_cep,
-                                                       attrs->cp_params);
+                                                       attrs->dtp_cfg,
+                                                       attrs->dtcp_cfg);
 
         /* The ownership has been passed to connection_create_arrived. */
-        attrs->cp_params = NULL;
+        attrs->dtp_cfg = NULL;
+        attrs->dtcp_cfg = NULL;
 
         if (!is_cep_id_ok(src_cep)) {
                 LOG_ERR("IPC process could not create connection");
