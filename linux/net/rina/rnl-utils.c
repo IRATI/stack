@@ -2558,7 +2558,7 @@ static int parse_list_pffe_conf_e(struct nlattr *     nested_attr,
                         continue;
                 }
 
-                list_add(&entry->next, &msg->pff_entries);
+                list_add_tail(&entry->next, &msg->pff_entries);
         }
 
         if (rem > 0) {

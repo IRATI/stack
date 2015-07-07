@@ -115,6 +115,11 @@ public:
 	std::list<Edge *> edges_;
 	std::list<unsigned int> vertices_;
 
+	bool contains_vertex(unsigned int address) const;
+	bool contains_edge(unsigned int address1, unsigned int address2) const;
+
+	void print() const;
+
 private:
 	struct CheckedVertex {
 		unsigned int address_;
@@ -141,7 +146,6 @@ private:
 	std::list<FlowStateObject *> flow_state_objects_;
 	std::list<CheckedVertex *> checked_vertices_;
 
-	bool contains_vertex(unsigned int address) const;
 	void init_vertices();
 	CheckedVertex * get_checked_vertex(unsigned int address) const;
 	void init_edges();
@@ -151,11 +155,18 @@ class IRoutingAlgorithm {
 public:
 	virtual ~IRoutingAlgorithm(){};
 
-	//Compute the next hop to other addresses. Ownership of
-	//PDUForwardingTableEntries in the list is passed to the
-	//caller
-	virtual std::list<rina::RoutingTableEntry *> computeRoutingTable(const std::list<FlowStateObject *>& fsoList,
+	//Compute the next hop for the node identified by source_address
+	//towards all the other nodes
+	virtual std::list<rina::RoutingTableEntry *> computeRoutingTable(
+			const Graph& graph,
+			const std::list<FlowStateObject *>& fsoList,
 			unsigned int source_address) = 0;
+
+	//Compute the distance of the shortest path between the node identified
+	//by source_address and all the other nodes
+	virtual void computeShortestDistances(const Graph& graph,
+				unsigned int source_address,
+				std::map<unsigned int, int>& distances) = 0;
 };
 
 /// Contains the information of a predecessor, needed by the Dijkstra Algorithm
@@ -174,21 +185,51 @@ class DijkstraAlgorithm : public IRoutingAlgorithm {
 public:
 	DijkstraAlgorithm();
 	std::list<rina::RoutingTableEntry *> computeRoutingTable(
-			const std::list<FlowStateObject *>& fsoList, unsigned int source_address);
+			const Graph& graph,
+			const std::list<FlowStateObject *>& fsoList,
+			unsigned int source_address);
+	void computeShortestDistances(const Graph& graph,
+				      unsigned int source_address,
+				      std::map<unsigned int, int>& distances);
 private:
-	Graph * graph_;
 	std::set<unsigned int> settled_nodes_;
 	std::set<unsigned int> unsettled_nodes_;
 	std::map<unsigned int, PredecessorInfo *> predecessors_;
 	std::map<unsigned int, int> distances_;
 
-	void execute(unsigned int source);
+	void execute(const Graph& graph, unsigned int source);
 	unsigned int getMinimum() const;
-	void findMinimalDistances (unsigned int node);
+	void findMinimalDistances (const Graph& graph, unsigned int node);
 	int getShortestDistance(unsigned int destination) const;
 	bool isNeighbor(Edge * edge, unsigned int node) const;
 	bool isSettled(unsigned int node) const;
 	unsigned int getNextHop(unsigned int address, unsigned int sourceAddress);
+	void clear();
+};
+
+class IResiliencyAlgorithm {
+public:
+	IResiliencyAlgorithm(IRoutingAlgorithm& ra);
+	virtual ~IResiliencyAlgorithm(){};
+
+	// Starting from the routing table computed by the routing algorithm,
+	// try to add (for each target nod) different next hops in addition to the
+	// existing ones, in order to improve resilency of the source node
+	virtual void fortifyRoutingTable(const Graph& graph, unsigned int source_address,
+					 std::list<rina::RoutingTableEntry *>& rt) = 0;
+
+protected:
+	IRoutingAlgorithm& routing_algorithm;
+};
+
+class LoopFreeAlternateAlgorithm : public IResiliencyAlgorithm {
+public:
+	LoopFreeAlternateAlgorithm(IRoutingAlgorithm& ra);
+	void fortifyRoutingTable(const Graph& graph, unsigned int source_address,
+					 std::list<rina::RoutingTableEntry *>& rt);
+private:
+	void extendRoutingTableEntry(std::list<rina::RoutingTableEntry *>& rt,
+				     unsigned int target_address, unsigned int nexthop);
 };
 
 /// A group of flow state objects. This is the RIB target object
@@ -438,6 +479,7 @@ private:
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 	FlowStateRIBObjectGroup * fs_rib_group_;
 	IRoutingAlgorithm * routing_algorithm_;
+	IResiliencyAlgorithm * resiliency_algorithm_;
 	unsigned int source_vertex_;
 	unsigned int maximum_age_;
 
