@@ -251,21 +251,22 @@ int pff_dump(struct pff *       instance,
         return 0;
 }
 
-/* NOTE: Skeleton code, PFF currently has no subcomponents*/
 int pff_select_policy_set(struct pff *     pff,
                           const string_t * path,
                           const string_t * name)
 {
-        int ret;
+	int ret;
 
-        if (path && strcmp(path, "")) {
-                LOG_ERR("This component has no selectable subcomponents");
-                return -1;
-        }
+	BUG_ON(!path);
 
-        ret = base_select_policy_set(&pff->base, &policy_sets, name);
+	if (strcmp(path, "")) {
+		LOG_ERR("This component has no selectable subcomponents");
+		return -1;
+	}
 
-        return ret;
+	ret = base_select_policy_set(&pff->base, &policy_sets, name);
+
+	return ret;
 }
 EXPORT_SYMBOL(pff_select_policy_set);
 

@@ -267,6 +267,7 @@ int main()
 	threadAttributes->setJoinable();
 	for (intptr_t i = 0; i < NUM_THREADS; i++) {
 		threads[i] = new Thread(&doWork, (void *) i, threadAttributes);
+		threads[i]->start();
 		std::cout << "Created thread " << i << " with id "
                           << threads[i]->getThreadType() << "\n";
 	}
@@ -287,6 +288,7 @@ int main()
 	for (int i = 0; i < NUM_THREADS; i++) {
 		threads[i] = new Thread(&doWorkMutex, (void *) counter,
 		                        threadAttributes);
+		threads[i]->start();
 		std::cout << "Created thread " << i << " with id "
                           << threads[i]->getThreadType() << "\n";
 	}
@@ -312,6 +314,7 @@ int main()
 	for (int i = 0; i < NUM_THREADS; i++) {
 		threads[i] = new Thread( &doWorkReadWriteLock,
 		                         (void *) counter2, threadAttributes);
+		threads[i]->start();
 		std::cout << "Created thread " << i << " with id "
                           << threads[i]->getThreadType() << "\n";
 	}
@@ -338,11 +341,13 @@ int main()
 	ConditionVariableCounter * counter3 = new ConditionVariableCounter();
 	threads[0] = new Thread(&doWorkWaitForTrigger,
                                 (void *) counter3, threadAttributes);
+	threads[0]->start();
 	std::cout << "Created thread 0 with id "
                   << threads[0]->getThreadType() << "\n";
 	for (int i = 1; i < NUM_THREADS; i++) {
 		threads[i] = new Thread(&doWorkConditionVariable,
                                         (void *) counter3, threadAttributes);
+		threads[i]->start();
 		std::cout << "Created thread " << i << " with id "
                           << threads[i]->getThreadType() << "\n";
 	}
@@ -366,11 +371,13 @@ int main()
 	threadAttributes->setJoinable();
 	threads[0] = new Thread(&doWorkProduce,
 			(void *) personQueue, threadAttributes);
+	threads[0]->start();
 	std::cout << "Created producer thread with id "
 			<< threads[0]->getThreadType() << "\n";
 	for (int i = 1; i < NUM_THREADS; i++) {
 		threads[i] = new Thread( &doWorkConsume,
 				(void *) queueWithCounter, threadAttributes);
+		threads[i]->start();
 		std::cout << "Created consumer thread " << i-1 << " with id "
 				<< threads[i]->getThreadType() << "\n";
 	}

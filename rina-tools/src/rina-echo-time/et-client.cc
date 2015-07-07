@@ -207,12 +207,13 @@ void Client::pingFlow(int port_id)
         	} catch (rina::UnknownFlowException &e) {
         		LOG_ERR("Flow does not exist");
         		break;
-        	} catch (rina::TryAgainException & e) {
-        		cout << "Timeout waiting for echo reply, SDU considered lost";
-        		cout << endl;
-        		continue;
         	} catch (rina::Exception &e) {
         		LOG_ERR("Problems reading SDU from flow, continuing");
+        		continue;
+        	}
+
+        	if (bytes_read == 0) {
+        		LOG_WARN("Timeout waiting for reply, SDU considered lost");
         		continue;
         	}
 
@@ -310,16 +311,18 @@ int Client::readSDU(int portId, void * sdu, int maxBytes, unsigned int timeout)
 	while (true) {
 		try {
 			bytes_read = ipcManager->readSDU(portId, sdu, maxBytes);
-			return bytes_read;
-		} catch (rina::TryAgainException & e) {
-			get_current_time(endtp);
-			if ((unsigned int) time_difference_in_ms(begintp, endtp) > timeout) {
-				throw e;
+			if (bytes_read == 0) {
+				get_current_time(endtp);
+				if ((unsigned int) time_difference_in_ms(begintp, endtp) > timeout) {
+					break;
+				}
+			} else {
+				break;
 			}
 		} catch (rina::Exception &e) {
 			throw e;
 		}
 	}
 
-	return 0;
+	return bytes_read;
 }

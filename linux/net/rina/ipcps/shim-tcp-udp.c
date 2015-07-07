@@ -101,6 +101,7 @@ struct reg_app_data {
 
         struct name *    app_name;
         int              port;
+        bool		 blocking;
 };
 
 struct shim_tcp_udp_flow {
@@ -992,7 +993,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
 
                 if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                         LOG_DBG("This flow goes for an app");
-                        if (kfa_flow_create(data->kfa, flow->port_id, ipcp, false)) {
+                        if (kfa_flow_create(data->kfa, flow->port_id, app->blocking, ipcp)) {
                                 LOG_ERR("Could not create flow in KFA");
                                 sdu_destroy(du);
                                 kfa_port_id_release(data->kfa, flow->port_id);
@@ -1451,7 +1452,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
 
                 if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                         LOG_DBG("This flow goes for an app");
-                        if (kfa_flow_create(data->kfa, flow->port_id, ipcp, false)) {
+                        if (kfa_flow_create(data->kfa, flow->port_id, app->blocking, ipcp)) {
                                 LOG_ERR("Could not create flow in KFA");
                                 kfa_port_id_release(data->kfa, flow->port_id);
                                 if (flow_destroy(data, flow))
@@ -1564,7 +1565,8 @@ static void tcp_udp_rcv_worker(struct work_struct * work)
 }
 
 static int tcp_udp_application_register(struct ipcp_instance_data * data,
-                                        const struct name *         name)
+                                        const struct name *         name,
+                                        bool			    blocking)
 {
         struct reg_app_data * app;
         struct sockaddr_in    sin;
@@ -1590,6 +1592,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
                 return -1;
         }
 
+        app->blocking = blocking;
         app->app_name = name_dup(name);
         if (!app->app_name) {
                 LOG_ERR("Application registration has failed");

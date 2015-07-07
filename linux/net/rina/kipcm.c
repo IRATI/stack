@@ -186,7 +186,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 }
         } else {
                 user_ipcp = kfa_ipcp_instance(kipcm->kfa);
-                if (kfa_flow_create(kipcm->kfa, pid, ipc_process, false)) {
+                if (kfa_flow_create(kipcm->kfa, pid, false, ipc_process)) {
                         LOG_ERR("Could not find the user ipcp of the flow...");
                         kfa_port_id_release(kipcm->kfa, pid);
                         goto fail;
@@ -614,7 +614,8 @@ static int notify_ipcp_register_app_request(void *             data,
         ASSERT(ipc_process->ops->application_register);
 
         if (ipc_process->ops->application_register(ipc_process->data,
-                                                   attrs->app_name))
+                                                   attrs->app_name,
+                                                   attrs->blocking))
                 goto fail;
 
         return reg_unreg_resp_free_and_reply(msg,

@@ -72,16 +72,6 @@ public:
 	}
 };
 
-class TryAgainException: public IPCException {
-public:
-	TryAgainException():
-		IPCException("Try again, resource not ready"){
-	}
-	TryAgainException(const std::string& description):
-		IPCException(description){
-	}
-};
-
 class InvalidArgumentsException: public IPCException {
 public:
 	InvalidArgumentsException():
@@ -463,8 +453,6 @@ public:
 	/// @throws UnknownFlowException if the port-id is not valid
 	/// @throws FlowNotAllocatedException if the flow has been deallocated
 	/// @throws InvalidArgumentsException if the arguments of the call are not valid
-	/// @throws TryAgainException if the flow is non-blocking and it is not ready
-	/// for a read operation in this moment
 	/// @throws ReadSDUException if an error happens while reading the SDU
 	/// @throws IPCException if an unknown error happens
 	int readSDU(int portId, void * sdu, int maxBytes);
@@ -473,14 +461,13 @@ public:
 	///
 	/// @param sdu A buffer that contains the SDU data
 	/// @param size The size of the SDU data, in bytes
+	/// @return int The numbe of bytes written
 	/// @throws UnknownFlowException if the port-id is not valid
 	/// @throws FlowNotAllocatedException if the flow has been deallocated
 	/// @throws InvalidArgumentsException if the arguments of the call are not valid
-	/// @throws TryAgainException if the flow is non-blocking and it is not ready
-	/// for a write operation in this moment
 	/// @throws WriteSDUException if an error happens while writing the SDU
 	/// @throws IPCException if an unknown error happens
-	void writeSDU(int portId, void * sdu, int size);
+	int writeSDU(int portId, void * sdu, int size);
 
 	/**
 	 * Returns the flows that are currently allocated

@@ -1282,7 +1282,9 @@ int dtcp_set_policy_set_param(struct dtcp * dtcp,
                         LOG_ERR("Unknown DTP parameter policy '%s'", name);
                 }
                 rcu_read_unlock();
+
         } else {
+                /* The request addresses the DTP policy-set. */
                 ret = base_set_policy_set_param(&dtcp->base, path, name, value);
         }
 
