@@ -395,13 +395,11 @@ public:
         PolicyConfig rtt_estimator_policy_;
 };
 
-/// This class defines the policies paramenters for an EFCP connection
-class ConnectionPolicies {
+/// This class defines the policies paramenters for the DTP Component
+class DTPConfig {
 public:
-        ConnectionPolicies();
+        DTPConfig();
 #ifndef SWIG
-        const DTCPConfig& get_dtcp_configuration() const;
-        void set_dtcp_configuration(const DTCPConfig& dtcp_configuration);
         bool is_dtcp_present() const;
         void set_dtcp_present(bool dtcp_present);
         const PolicyConfig& get_initial_seq_num_policy() const;
@@ -492,8 +490,10 @@ public:
 	unsigned int get_id() const;
 	const std::string& get_name() const;
 	void set_name(const std::string& name);
-	const ConnectionPolicies& get_efcp_policies() const;
-	void set_efcp_policies(const ConnectionPolicies& efcp_policies);
+	const DTPConfig& get_dtp_config() const;
+	void set_dtp_config(const DTPConfig& dtp_config);
+	const DTCPConfig& get_dtcp_config() const;
+	void set_dtcp_config(const DTCPConfig& dtcp_config);
 	unsigned int get_average_bandwidth() const;
 	void set_average_bandwidth(unsigned int average_bandwidth);
 	unsigned int get_average_sdu_bandwidth() const;
@@ -523,8 +523,11 @@ public:
 	/// The id of the QoS cube
 	unsigned int id_;
 
-	/// The EFCP policies associated to this QoS Cube
-	ConnectionPolicies efcp_policies_;
+	/// The DTP policies associated to this QoS Cube
+        DTPConfig dtp_config_;
+
+	/// The DTCP policies associated to this QoS Cube
+        DTCPConfig dtcp_config_;
 
 	/// Average bandwidth in bytes/s. A value of 0 means don't care.
 	unsigned int average_bandwidth_;
