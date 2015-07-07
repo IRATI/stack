@@ -313,6 +313,20 @@ public:
 		(void) remote_id;
 	}
 
+	void generateCDAPResponse(int invoke_id,
+				  rina::CDAPSessionDescriptor * cdapSessDescr,
+				  rina::CDAPMessage::Opcode opcode,
+				  const std::string& obj_class,
+				  const std::string& obj_name,
+				  rina::RIBObjectValue& robject_value) {
+		(void)invoke_id;
+		(void)cdapSessDescr;
+		(void)opcode;
+		(void)obj_class;
+		(void)obj_name;
+		(void)robject_value;
+	};
+
 private:
 	void operationCalled(const std::string& objectClass,
 	                                 const std::string& objectName,

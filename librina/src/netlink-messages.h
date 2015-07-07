@@ -576,7 +576,7 @@ public:
  */
 class IpcmRegisterApplicationRequestMessage:
 		public BaseNetlinkMessage {
-
+public:
 	/** The name of the application to be registered */
 	ApplicationProcessNamingInformation applicationName;
 
@@ -586,7 +586,9 @@ class IpcmRegisterApplicationRequestMessage:
 	/** The DIF name where the application wants to register */
 	ApplicationProcessNamingInformation difName;
 
-public:
+	/** If the flows allocated to the registered app will be blocking or not*/
+	bool blocking;
+
 	IpcmRegisterApplicationRequestMessage();
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	void setApplicationName(

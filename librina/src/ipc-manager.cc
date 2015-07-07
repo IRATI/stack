@@ -274,19 +274,22 @@ void IPCProcessProxy::registerApplication(
 		const ApplicationProcessNamingInformation& applicationName,
 		unsigned short regIpcProcessId,
 		const ApplicationProcessNamingInformation& dif_name,
-		unsigned int opaque)
+		unsigned int opaque,
+		bool blocking)
 {
 #if STUB_API
 	//Do nothing
 	(void)applicationName;
-    (void)regIpcProcessId;
-    (void)dif_name;
-    (void)opaque;
+	(void)regIpcProcessId;
+	(void)dif_name;
+	(void)opaque;
+	(void)blocking;
 #else
 	IpcmRegisterApplicationRequestMessage message;
 	message.setApplicationName(applicationName);
 	message.setDifName(dif_name);
 	message.setRegIpcProcessId(regIpcProcessId);
+	message.blocking = blocking;
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);

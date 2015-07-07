@@ -233,6 +233,7 @@ FlowSpecification::FlowSpecification() {
 	jitter = 0;
 	delay = 0;
 	maxSDUsize = 0;
+	blocking = true;
 }
 
 const std::string FlowSpecification::toString() {
@@ -246,6 +247,7 @@ const std::string FlowSpecification::toString() {
         ss<<"; Average SDU bandwidth (bytes/s): "<<averageSDUBandwidth<<std::endl;
         ss<<"Peak bandwidth duration (ms): "<<peakBandwidthDuration;
         ss<<"; Peak SDU bandwidth duration (ms): "<<peakSDUBandwidthDuration;
+        ss<<"; Blocking: " << blocking;
         return ss.str();
 }
 
@@ -574,12 +576,14 @@ FlowDeallocatedEvent::FlowDeallocatedEvent(
 ApplicationRegistrationInformation::ApplicationRegistrationInformation(){
 	applicationRegistrationType = APPLICATION_REGISTRATION_ANY_DIF;
 	ipcProcessId = 0;
+	blocking = true;
 }
 
 ApplicationRegistrationInformation::ApplicationRegistrationInformation(
 		ApplicationRegistrationType applicationRegistrationType){
 	this->applicationRegistrationType = applicationRegistrationType;
 	ipcProcessId = 0;
+	blocking = true;
 }
 
 const std::string ApplicationRegistrationInformation::toString(){
@@ -588,6 +592,7 @@ const std::string ApplicationRegistrationInformation::toString(){
         ss<<"Application name: "<<appName.toString()<<std::endl;
         ss<<"DIF name: "<<difName.processName;
         ss<<"; IPC Process id: "<<ipcProcessId;
+        ss<<"; Blocking: "<<blocking;
 
         return ss.str();
 }

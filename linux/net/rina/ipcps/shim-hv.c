@@ -114,6 +114,7 @@ struct ipcp_instance_data {
 struct name_list_element {
         struct list_head node;
         struct name      application_name;
+        bool		 blocking;
 };
 
 static unsigned int
@@ -625,7 +626,7 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
 
         if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                 LOG_DBG("This flow goes for an app");
-                if (kfa_flow_create(priv->kfa, port_id, ipcp)) {
+                if (kfa_flow_create(priv->kfa, port_id, false, ipcp)) {
                         LOG_ERR("Could not create flow in KFA");
                         goto flow_arrived;
                 }
@@ -870,8 +871,9 @@ shim_hv_recv_callback(void *opaque, unsigned int ch, const char *data, int len)
 
 /* Register an application to this IPC process. */
 static int
-shim_hv_application_register(struct ipcp_instance_data *priv,
-                             const struct name *application_name)
+shim_hv_application_register(struct ipcp_instance_data * priv,
+                             const struct name         * application_name,
+                             bool		         blocking)
 {
         struct name_list_element *cur;
         char *tmpstr = name_tostring(application_name);
@@ -895,6 +897,7 @@ shim_hv_application_register(struct ipcp_instance_data *priv,
                 goto out;
         }
 
+        cur->blocking = blocking;
         if (name_cpy(application_name, &cur->application_name)) {
                 LOG_ERR("%s: name_cpy() failed", __func__);
                 goto name_alloc;
@@ -1053,8 +1056,9 @@ shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
  * SDU to a flow managed by this shim IPC process.
  */
 static int
-shim_hv_sdu_write(struct ipcp_instance_data *priv, port_id_t port_id,
-                  struct sdu *sdu)
+shim_hv_sdu_write(struct ipcp_instance_data * priv,
+		  port_id_t 		      port_id,
+                  struct sdu *		      sdu)
 {
         unsigned int ch = port_id_to_channel(priv, port_id);
         struct buffer *buf = sdu_buffer_rw(sdu);
@@ -1109,6 +1113,7 @@ shim_hv_ipcp_name(struct ipcp_instance_data *priv)
         return &priv->name;
 }
 
+static const struct name *
 shim_hv_dif_name(struct ipcp_instance_data *priv)
 {
         ASSERT(priv);
