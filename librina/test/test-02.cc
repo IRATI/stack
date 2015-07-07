@@ -69,7 +69,7 @@ int main() {
 	ipcProcess1->assignToDIF(*difInformation, 35);
 
 	/* TEST REGISTER APPLICATION */
-	ipcProcess1->registerApplication(*sourceName, 1, *difName, 45);
+	ipcProcess1->registerApplication(*sourceName, 1, *difName, 45, true);
 
 	/* TEST UNREGISTER APPLICATION */
 	ipcProcess1->unregisterApplication(*sourceName, *difName, 34);
