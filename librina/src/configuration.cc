@@ -761,9 +761,6 @@ const std::string DTPConfig::toString() {
         ss<<"; Partial delivery: "<<partial_delivery_;
         ss<<"; In order delivery: "<<in_order_delivery_;
         ss<<"; Max allowed SDU gap: "<<max_sdu_gap_<<std::endl;
-        if (dtcp_present_) {
-                ss<<"DTCP Configuration: "<<dtcp_configuration_.toString();
-        }
         return ss.str();
 }
 
