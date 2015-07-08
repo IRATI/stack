@@ -41,6 +41,10 @@ int             pff_add(struct pff *           instance,
 int             pff_remove(struct pff *           instance,
                            struct mod_pff_entry * entry);
 
+int		pff_port_state_change(struct pff *	pff,
+				      port_id_t		port_id,
+				      bool		up);
+
 /* NOTE: ports and entries are in-out parms */
 int             pff_nhop(struct pff * instance,
                          struct pci * pci,

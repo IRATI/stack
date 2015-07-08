@@ -418,6 +418,10 @@ static int normal_nm1_flow_state_change(struct ipcp_instance_data * data,
 {
 	LOG_INFO("N-1 flow with pid %d went %s", pid, (up ? "up" : "down"));
 
+	if (rmt_pff_port_state_change(data->rmt, pid, up)) {
+		LOG_ERR("rmt_port_state_change() failed");
+	}
+
 	return 0;
 }
 

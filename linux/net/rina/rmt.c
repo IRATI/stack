@@ -1632,6 +1632,15 @@ int rmt_pff_remove(struct rmt *           instance,
 }
 EXPORT_SYMBOL(rmt_pff_remove);
 
+int rmt_pff_port_state_change(struct rmt *	rmt,
+			      port_id_t		port_id,
+			      bool		up)
+{
+        return is_rmt_pff_ok(rmt) ?
+	       pff_port_state_change(rmt->pff, port_id, up) : -1;
+}
+EXPORT_SYMBOL(rmt_pff_port_state_change);
+
 int rmt_pff_dump(struct rmt *       instance,
                  struct list_head * entries)
 {
