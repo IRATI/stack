@@ -178,11 +178,12 @@ static int n1pmap_destroy(struct n1pmap * m)
 
         hash_for_each_safe(m->n1_ports, bucket, tmp, entry, hlist) {
                 ASSERT(entry);
-                if (n1_port_n1_user_ipcp_unbind(entry) ||
-                    n1_port_destroy(entry)) {
+                if (n1_port_n1_user_ipcp_unbind(entry))
                         LOG_ERR("Could not destroy entry %pK", entry);
-                        return -1;
-                }
+
+                if (n1_port_destroy(entry))
+                        LOG_ERR("Could not destroy entry %pK", entry);
+
         }
         rkfree(m);
         return 0;
@@ -425,12 +426,26 @@ int rmt_select_policy_set(struct rmt * rmt,
                           const string_t * path,
                           const string_t * name)
 {
-        if (path && strcmp(path, "")) {
-                LOG_ERR("This component has no selectable subcomponents");
-                return -1;
-        }
+	size_t cmplen;
+	size_t offset;
 
-        return base_select_policy_set(&rmt->base, &policy_sets, name);
+	BUG_ON(!path);
+
+	parse_component_id(path, &cmplen, &offset);
+
+	if (strcmp(path, "") == 0) {
+		/* The request addresses this policy-set. */
+		return base_select_policy_set(&rmt->base, &policy_sets, name);
+
+	} else if (strncmp(path, "pff", cmplen) == 0) {
+		/* The request addresses the PFF subcomponent. */
+		return pff_select_policy_set(rmt->pff, path + offset, name);
+	}
+
+	LOG_ERR("This component has no subcomponent "
+			"named '%s'", path);
+
+	return -1;
 }
 EXPORT_SYMBOL(rmt_select_policy_set);
 
@@ -439,13 +454,17 @@ int rmt_set_policy_set_param(struct rmt * rmt,
                              const char * name,
                              const char * value)
 {
-        struct rmt_ps *ps;
-        int ret = -1;
+	size_t cmplen;
+	size_t offset;
+	struct rmt_ps *ps;
+	int ret = -1;
 
         if (!rmt || !path || !name || !value) {
                 LOG_ERRF("NULL arguments %p %p %p %p", rmt, path, name, value);
                 return -1;
         }
+
+        parse_component_id(path, &cmplen, &offset);
 
         LOG_DBG("set-policy-set-param '%s' '%s' '%s'", path, name, value);
 
@@ -459,7 +478,13 @@ int rmt_set_policy_set_param(struct rmt * rmt,
                         LOG_ERR("Unknown RMT parameter policy '%s'", name);
                 }
                 rcu_read_unlock();
+
+	} else if (strncmp(path, "pff", cmplen) == 0) {
+		/* The request addresses the PFF subcomponent. */
+		return pff_set_policy_set_param(rmt->pff, path + offset, name, value);
+
         } else {
+		/* The request addresses the RMT policy-set. */
                 ret = base_set_policy_set_param(&rmt->base, path, name, value);
         }
 

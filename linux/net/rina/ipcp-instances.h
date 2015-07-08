@@ -198,7 +198,8 @@ struct ipcp_instance_ops {
                                  port_id_t                   id);
 
         int  (* application_register)(struct ipcp_instance_data *   data,
-                                      const struct name *           source);
+                                      const struct name *           source,
+                                      bool			    blocking);
         int  (* application_unregister)(struct ipcp_instance_data * data,
                                         const struct name *         source);
 

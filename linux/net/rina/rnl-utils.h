@@ -332,6 +332,7 @@ enum ipcm_conn_destroy_result_attrs_list {
 enum ipcm_reg_app_req_attrs_list {
         IRAR_ATTR_APP_NAME = 1,
         IRAR_ATTR_DIF_NAME,
+        IRAR_ATTR_REG_IPCP_ID,
         IRAR_ATTR_BLOCKING,
         __IRAR_ATTR_MAX,
 };

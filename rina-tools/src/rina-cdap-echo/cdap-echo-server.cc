@@ -112,13 +112,13 @@ void CDAPEchoWorker::serveEchoFlow(int port_id)
 	while (keep_serving) {
 		try {
 			while (true) {
-				try {
-					bytes_read = ipcManager->readSDU(port_id,
-							buffer,
-							max_sdu_size);
-					break;
-				} catch (TryAgainException &e) {
+				bytes_read = ipcManager->readSDU(port_id,
+						buffer,
+						max_sdu_size);
+				if (bytes_read == 0) {
 					sleep_wrapper.sleepForMili(50);
+				} else {
+					break;
 				}
 			}
 		} catch(rina::UnknownFlowException &e) {

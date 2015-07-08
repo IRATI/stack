@@ -278,8 +278,8 @@ void ConnectionStateMachine::releaseReceived(const CDAPMessage &message) {
     connection_state_ = AWAITCLOSE;
   } else {
     connection_state_ = NONE;
-    unlock();
   }
+  unlock();
 }
 
 void ConnectionStateMachine::releaseResponse() {

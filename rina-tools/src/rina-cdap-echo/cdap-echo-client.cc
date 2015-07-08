@@ -154,9 +154,14 @@ void Client::cacep()
         while (true) {
         	try {
         		bytes_read = ipcManager->readSDU(flow_.portId, buffer, max_buffer_size);
+        		if (bytes_read == 0) {
+        			sleep_wrapper.sleepForMili(50);
+        		} else {
+        			break;
+        		}
+        	} catch (Exception &e){
+        		LOG_ERR("Exception while reading: %s", e.what());
         		break;
-        	} catch (TryAgainException &e){
-        		sleep_wrapper.sleepForMili(50);
         	}
         }
 
@@ -230,9 +235,14 @@ void Client::sendReadRMessage()
                         	try {
                         		bytes_read = ipcManager->readSDU(flow_.portId, buffer,
                         				max_buffer_size);
+                        		if (bytes_read == 0) {
+                        			sleep_wrapper.sleepForMili(50);
+                        		} else {
+                        			break;
+                        		}
+                        	} catch (Exception & e) {
+                        		LOG_ERR("Exception while reading: %s", e.what());
                         		break;
-                        	} catch (TryAgainException & e) {
-                        		sleep_wrapper.sleepForMili(50);
                         	}
                         }
                         cdap_rib::SerializedObject message;
@@ -257,11 +267,17 @@ void Client::release()
         while(true) {
         	try {
         		bytes_read = ipcManager->readSDU(flow_.portId, buffer, max_buffer_size);
+        		if (bytes_read == 0) {
+        			sleep_wrapper.sleepForMili(50);
+        		} else {
+        			break;
+        		}
+        	}catch (Exception &e) {
+        		LOG_ERR("Exception while reading: %s", e.what());
         		break;
-        	}catch (TryAgainException &e) {
-        		sleep_wrapper.sleepForMili(50);
         	}
         }
+
         cdap_rib::SerializedObject message;
         message.message_ = buffer;
         message.size_ = bytes_read;
