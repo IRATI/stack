@@ -50,6 +50,13 @@ config RINA_SHIM_ETH_VLAN_BURST_LIMIT
        help
          No help for the time being
 
+config RINA_SHIM_ETH_MAX_BUFFER_SIZE
+	int "shim-eth-vlan max SDU size"
+	default 1500
+    depends on RINA_SHIM_ETH_VLAN
+    help
+	  No help for the time being
+
 config RINA_SHIM_ETH_VLAN_REGRESSION_TESTS
 	bool "Perform regression testing upon loading"
 	default n
