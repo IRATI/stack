@@ -25,7 +25,6 @@
 #include <linux/kobject.h>
 
 #include "du.h"
-#include "connection.h"
 
 struct dtp_config;
 struct dtcp_config;

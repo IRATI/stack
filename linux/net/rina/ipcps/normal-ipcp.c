@@ -40,7 +40,6 @@
 #include "efcp.h"
 #include "rmt.h"
 #include "efcp-utils.h"
-#include "connection.h"
 
 /*  FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
