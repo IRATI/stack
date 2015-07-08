@@ -432,9 +432,6 @@ public:
         /// Indicates if DTCP is required
         bool dtcp_present_;
 
-        /// The configuration of the DTCP instance
-        DTCPConfig dtcp_configuration_;
-
         /// Policy Set for DTP.
         PolicyConfig dtp_policy_set_;
 

@@ -83,6 +83,7 @@ Flow * FlowAllocatorPs::newFlowRequest(IPCProcess * ipc_process,
 	} else {
 		dtpConfig.set_max_sdu_gap(qosCube->get_max_allowable_gap());
 	}
+	connection->setDTPConfig(dtpConfig);
         rina::DTCPConfig dtcpConfig = rina::DTCPConfig(
                         qosCube->get_dtcp_config());
 	connection->setDTCPConfig(dtcpConfig);
