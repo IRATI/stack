@@ -737,7 +737,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         }
 
         length = buffer_length(sdu->buffer);
-        if (length > CONFIG_RINA_SHIM_ETH_MAX_BUFFER_SIZE) {
+        if (length > data->dev->mtu) {
         	LOG_ERR("SDU too large (%d), dropping", length);
         	sdu_destroy(sdu);
         	return -1;
