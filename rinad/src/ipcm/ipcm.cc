@@ -1188,12 +1188,16 @@ IPCManager_::plugin_load_kernel(Addon* callee, Promise* promise,
 	} else if (pid == 0) {
 		// child
 		if (load) {
-			execl("modprobe", "modprobe", plugin_name.c_str(), NULL);
-			execlp("modprobe", "modprobe", plugin_name.c_str(), NULL);
+			execl("modprobe", "modprobe", plugin_name.c_str(),
+			      NULL);
+			execlp("modprobe", "modprobe", plugin_name.c_str(),
+			       NULL);
 
 		} else {
-			execl("rmmod", "rmmod", plugin_name.c_str(), NULL);
-			execlp("rmmod", "rmmod", plugin_name.c_str(), NULL);
+			execl("modprobe", "modprobe", "-r",
+			      plugin_name.c_str(), NULL);
+			execlp("modprobe", "modprobe", "-r",
+			       plugin_name.c_str(), NULL);
 		}
 
 		ss << "Kernel plugin (un)loading: exec() failed";
