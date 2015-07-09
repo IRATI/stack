@@ -699,7 +699,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
 
         connection = connection_create();
         if (!connection)
-                return -1;
+                return cep_id_bad();
 
         ASSERT(dtp_cfg);
 
@@ -707,8 +707,8 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         connection_src_addr_set(connection, src_addr);
         connection_port_id_set(connection, port_id);
         connection_qos_id_set(connection, qos_id);
-        connection_src_cep_id_set(connection, cep_id_bad()); /* init value */
-        connection_dst_cep_id_set(connection, cep_id_bad()); /* init velue */
+        connection_src_cep_id_set(connection, src_cep_id);
+        connection_dst_cep_id_set(connection, dst_cep_id);
 
         tmp = efcp_create();
         if (!tmp) {
