@@ -156,6 +156,11 @@ M: Leonardo Bergesio <leonardo.bergesio (at) i2cat.net>
 F: linux/net/rina/rnl*
 F: linux/net/rina/syscall*
 
+Kernelspace plugins:
+M: Leonardo Bergesio <leonardo.bergesio (at) i2cat.net>
+F: plugins/red/*
+F: plugins/dummy/*
+
 
 User space: librina
 -------------------
