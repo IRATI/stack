@@ -688,6 +688,20 @@ protected:
 	void ipc_process_select_policy_set_response_handler(
 					rina::SelectPolicySetResponseEvent *e);
 
+	//
+	// Load kernel space policy plugin
+	//
+	// @param promise Promise object containing the future result of the
+	// operation. The promise shall always be accessible until the
+	// operation has been finished, so promise->ret value is different than
+	// IPCM_PENDING.
+	//
+	// @ret IPCM_SUCCESS when load/unload is successful, otherwise
+	//  IPCM_FAILURE
+	ipcm_res_t plugin_load_kernel(Addon* callee, Promise* promise,
+				const std::string& plugin_name,
+				bool load);
+
 	/*
 	* Get the transaction state. Template parameter is the type of the
 	* specific state required for the type of transaction
