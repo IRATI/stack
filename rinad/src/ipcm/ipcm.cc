@@ -1154,29 +1154,15 @@ IPCManager_::select_policy_set(Addon* callee, Promise* promise,
 	return IPCM_PENDING;
 }
 
-// Returns true if a kernel plugin was successfully loaded/unloaded
+// Returns IPCM_SUCCESS if a kernel plugin was successfully loaded/unloaded,
+// IPCM_FAILURE otherwise
 ipcm_res_t
-IPCManager_::plugin_load_kernel(Addon* callee, Promise* promise,
-				const std::string& plugin_name, bool load)
+IPCManager_::plugin_load_kernel(Addon* callee, const std::string& plugin_name,
+				bool load)
 {
-	TransactionState* trans;
 	ostringstream ss;
 	ipcm_res_t result = IPCM_FAILURE;
 	pid_t pid;
-
-	trans = new TransactionState(callee, promise);
-	if (!trans){
-		ss << "Unable to allocate memory for the transaction object. Out of memory! ";
-		FLUSH_LOG(ERR, ss);
-		throw rina::Exception();
-	}
-
-	// Store transaction
-	if (add_transaction_state(trans) < 0){
-		ss << "Unable to add transaction; out of memory? ";
-		FLUSH_LOG(ERR, ss);
-		throw rina::Exception();
-	}
 
 	pid = fork();
 	if (pid < 0) {
@@ -1214,10 +1200,6 @@ IPCManager_::plugin_load_kernel(Addon* callee, Promise* promise,
 		result = child_status ? IPCM_FAILURE : IPCM_SUCCESS;
 	}
 
-	// Mark as completed
-	trans->completed(result);
-	remove_transaction_state(trans->tid);
-
 	return result;
 }
 
@@ -1232,8 +1214,10 @@ IPCManager_::plugin_load(Addon* callee, Promise* promise,
 
 	try {
 		//First try to see if its a kernel module
-		if (plugin_load_kernel(callee, promise, plugin_name,
+		if (plugin_load_kernel(callee, plugin_name,
 				       load) == IPCM_SUCCESS) {
+			promise->ret = IPCM_SUCCESS;
+
 			return IPCM_SUCCESS;
 		}
 

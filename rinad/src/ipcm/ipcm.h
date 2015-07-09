@@ -691,16 +691,15 @@ protected:
 	//
 	// Load kernel space policy plugin
 	//
-	// @param promise Promise object containing the future result of the
-	// operation. The promise shall always be accessible until the
-	// operation has been finished, so promise->ret value is different than
-	// IPCM_PENDING.
-	//
+	// @param plugin_name Name of the kernel module containing the
+	//		      plugin to be loaded
+	// @param load        True if the plugin is to be loaded,
+	//                    false if the plugin is to be unloaded.
 	// @ret IPCM_SUCCESS when load/unload is successful, otherwise
-	//  IPCM_FAILURE
-	ipcm_res_t plugin_load_kernel(Addon* callee, Promise* promise,
-				const std::string& plugin_name,
-				bool load);
+	//	IPCM_FAILURE
+	ipcm_res_t plugin_load_kernel(Addon* callee,
+				      const std::string& plugin_name,
+				      bool load);
 
 	/*
 	* Get the transaction state. Template parameter is the type of the
