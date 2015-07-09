@@ -30,12 +30,12 @@
 #include "rmt-ps.h"
 #include "dtp-ps.h"
 #include "dtcp-ps.h"
-#include "pft-ps.h"
+#include "pff-ps.h"
 
 extern struct ps_factory rmt_factory;
 extern struct ps_factory dtp_factory;
 extern struct ps_factory dtcp_factory;
-extern struct ps_factory pft_factory;
+extern struct ps_factory pff_factory;
 
 static int __init mod_init(void)
 {
@@ -44,7 +44,7 @@ static int __init mod_init(void)
         strcpy(rmt_factory.name,  RINA_DUMMY_PS_NAME);
         strcpy(dtp_factory.name,  RINA_DUMMY_PS_NAME);
         strcpy(dtcp_factory.name, RINA_DUMMY_PS_NAME);
-        strcpy(pft_factory.name,  RINA_DUMMY_PS_NAME);
+        strcpy(pff_factory.name,  RINA_DUMMY_PS_NAME);
 
         ret = rmt_ps_publish(&rmt_factory);
         if (ret) {
@@ -70,7 +70,7 @@ static int __init mod_init(void)
 
         printk("DTCP default policy set loaded successfully");
 
-        ret = pft_ps_publish(&pft_factory);
+        ret = pff_ps_publish(&pff_factory);
         if (ret) {
                 printk("Failed to publish PFT policy set factory");
                 return -1;
@@ -109,7 +109,7 @@ static void __exit mod_exit(void)
 
         printk("Dummy DTCP default policy set unloaded successfully");
 
-        ret = pft_ps_unpublish(RINA_DUMMY_PS_NAME);
+        ret = pff_ps_unpublish(RINA_DUMMY_PS_NAME);
         if (ret) {
                 printk("Failed to unpublish Dummy PFT policy set factory");
                 return;
