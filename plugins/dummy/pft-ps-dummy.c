@@ -22,12 +22,12 @@
 #include <linux/module.h>
 #include <linux/string.h>
 
-#define RINA_PREFIX "dummy-pft-ps"
+#define RINA_PREFIX "dummy-pff-ps"
 
 #include "rds/rmem.h"
-#include "pft-ps.h"
+#include "pff-ps.h"
 
-static int dummy_next_hop(struct pft_ps * ps,
+static int dummy_next_hop(struct pff_ps * ps,
                             struct pci *    pci,
                             port_id_t **    ports,
                             size_t *        count)
@@ -36,7 +36,7 @@ static int dummy_next_hop(struct pft_ps * ps,
         return 0;
 }
 
-static int pft_ps_set_policy_set_param(struct ps_base * bps,
+static int pff_ps_set_policy_set_param(struct ps_base * bps,
                                        const char *     name,
                                        const char *     value)
 {
@@ -45,35 +45,35 @@ static int pft_ps_set_policy_set_param(struct ps_base * bps,
 }
 
 static struct ps_base *
-pft_ps_dummy_create(struct rina_component * component)
+pff_ps_dummy_create(struct rina_component * component)
 {
-        struct pft * dtp = pft_from_component(component);
-        struct pft_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
+        struct pff * dtp = pff_from_component(component);
+        struct pff_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
 
         if (!ps) {
                 return NULL;
         }
 
-        ps->base.set_policy_set_param = pft_ps_set_policy_set_param;
+        ps->base.set_policy_set_param = pff_ps_set_policy_set_param;
         ps->dm              = dtp;
         ps->priv            = NULL;
 
-        ps->next_hop = dummy_next_hop;
+        ps->pff_nhop = dummy_next_hop;
 
         return &ps->base;
 }
 
-static void pft_ps_dummy_destroy(struct ps_base * bps)
+static void pff_ps_dummy_destroy(struct ps_base * bps)
 {
-        struct pft_ps *ps = container_of(bps, struct pft_ps, base);
+        struct pff_ps *ps = container_of(bps, struct pff_ps, base);
 
         if (bps) {
                 rkfree(ps);
         }
 }
 
-struct ps_factory pft_factory = {
+struct ps_factory pff_factory = {
         .owner          = THIS_MODULE,
-        .create  = pft_ps_dummy_create,
-        .destroy = pft_ps_dummy_destroy,
+        .create  = pff_ps_dummy_create,
+        .destroy = pff_ps_dummy_destroy,
 };
