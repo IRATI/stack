@@ -136,6 +136,8 @@ void parse_flow_ctrl(const Json::Value  root,
                                      "rateReductionPolicy",
                                      rfc.rate_reduction_policy_);
 
+                        fc.rate_based_config_ = rfc;
+
                 }
 
                 fc.sent_bytes_threshold_ = flow_ctrl
