@@ -402,6 +402,15 @@ static int normal_flow_unbinding_user_ipcp(struct ipcp_instance_data * data,
         return 0;
 }
 
+static int normal_nm1_flow_state_change(struct ipcp_instance_data * data,
+					port_id_t		    pid,
+					bool			    up)
+{
+	LOG_INFO("N-1 flow with pid %d went %s", pid, (up ? "up" : "down"));
+
+	return 0;
+}
+
 static int connection_destroy_request(struct ipcp_instance_data * data,
                                       cep_id_t                    src_cep_id)
 {
@@ -1009,6 +1018,7 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .flow_binding_ipcp         = ipcp_flow_binding,
         .flow_unbinding_ipcp       = normal_flow_unbinding_ipcp,
         .flow_unbinding_user_ipcp  = normal_flow_unbinding_user_ipcp,
+	.nm1_flow_state_change	   = normal_nm1_flow_state_change,
 
         .application_register      = NULL,
         .application_unregister    = NULL,
