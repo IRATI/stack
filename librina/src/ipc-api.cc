@@ -22,6 +22,7 @@
 //
 
 #include <cstring>
+#include <errno.h>
 #include <stdexcept>
 
 #define RINA_PREFIX "librina.ipc-api"
@@ -681,26 +682,71 @@ int IPCManager::readSDU(int portId, void * sdu, int maxBytes)
 	return maxBytes;
 #else
 	int result = syscallReadSDU(portId, sdu, maxBytes);
-	if (result < 0){
+
+	if (result == -EINVAL){
+		throw InvalidArgumentsException();
+	}
+
+	if (result == -EBADF) {
+		throw UnknownFlowException();
+	}
+
+	if (result == -ESHUTDOWN) {
+		throw FlowNotAllocatedException();
+	}
+
+	if (result == -EIO) {
 		throw ReadSDUException();
+	}
+
+	if (result == -EAGAIN) {
+		return 0;
+	}
+
+	if (result < 0) {
+		throw IPCException("Unknown error");
 	}
 
 	return result;
 #endif
 }
 
-void IPCManager::writeSDU(int portId, void * sdu, int size)
+int IPCManager::writeSDU(int portId, void * sdu, int size)
 {
 #if STUB_API
 	/* Do nothing. */
 	(void)portId;
         (void)sdu;
-        (void)size;
+
+        return size;
 #else
 	int result = syscallWriteSDU(portId, sdu, size);
-	if (result < 0){
+
+	if (result == -EINVAL){
+		throw InvalidArgumentsException();
+	}
+
+	if (result == -EBADF) {
+		throw UnknownFlowException();
+	}
+
+	if (result == -ESHUTDOWN) {
+		throw FlowNotAllocatedException();
+	}
+
+	if (result == -EIO) {
 		throw WriteSDUException();
 	}
+
+	if (result == -EAGAIN) {
+		return 0;
+	}
+
+	if (result < 0) {
+		throw IPCException("Unknown error");
+	}
+
+	return result;
 #endif
 }
 

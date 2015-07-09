@@ -195,7 +195,8 @@ struct ipcp_instance_ops {
                                  port_id_t                   id);
 
         int  (* application_register)(struct ipcp_instance_data *   data,
-                                      const struct name *           source);
+                                      const struct name *           source,
+                                      bool			    blocking);
         int  (* application_unregister)(struct ipcp_instance_data * data,
                                         const struct name *         source);
 
@@ -248,6 +249,8 @@ struct ipcp_instance_ops {
                                          port_id_t                   port_id);
         int      (* flow_unbinding_user_ipcp)(struct ipcp_instance_data * user_data,
                                               port_id_t                   port_id);
+	int	(* nm1_flow_state_change)(struct ipcp_instance_data *data,
+					  port_id_t port_id, bool up);
 
         int      (* sdu_enqueue)(struct ipcp_instance_data * data,
                                  port_id_t                   id,

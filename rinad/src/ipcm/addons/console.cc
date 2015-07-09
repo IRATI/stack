@@ -148,7 +148,8 @@ IPCMConsole::IPCMConsole(const unsigned int port_) :
 				"<object-name>");
 
 	rina::ThreadAttributes ta;
-	worker = new rina::Thread(&ta, console_function, this);
+	worker = new rina::Thread(console_function, this, &ta);
+	worker->start();
 }
 
 IPCMConsole::~IPCMConsole() throw()
@@ -539,7 +540,7 @@ IPCMConsole::register_at_dif(vector<string>& args)
 		return CMDRETCONT;
 	}
 
-	if(IPCManager->register_at_dif(this, &promise, ipcp_id, dif_name) == IPCM_FAILURE ||
+	if(IPCManager->register_at_dif(this, &promise, ipcp_id, dif_name, true) == IPCM_FAILURE ||
 			promise.wait() != IPCM_SUCCESS) {
 		outstream << "Registration failed" << endl;
 		return CMDRETCONT;

@@ -85,6 +85,7 @@ enum FlowSpecificationAttributes {
 	FSPEC_ATTR_PEAK_BWITH_DURATION,
 	FSPEC_ATTR_PEAK_SDU_BWITH_DURATION,
 	FSPEC_ATTR_UNDETECTED_BER,
+	FSPEC_ATTR_BLOCKING,
 	__FSPEC_ATTR_MAX,
 };
 
@@ -216,6 +217,7 @@ enum ApplicationRegistrationInformationAttributes {
         ARIA_ATTR_APP_NAME = 1,
 	ARIA_ATTR_APP_REG_TYPE,
 	ARIA_ATTR_APP_DIF_NAME,
+	ARIA_ATTR_APP_BLOCKING,
 	__ARIA_ATTR_MAX,
 };
 
@@ -396,6 +398,7 @@ enum IpcmRegisterApplicationRequestMessageAttributes {
 	IRAR_ATTR_APP_NAME = 1,
 	IRAR_ATTR_DIF_NAME,
 	IRAR_ATTR_REG_IPC_ID,
+	IRAR_ATTR_BLOCKING,
 	__IRAR_ATTR_MAX,
 };
 

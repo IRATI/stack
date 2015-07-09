@@ -21,7 +21,6 @@
 
 #include <cstring>
 #include <iostream>
-#include <thread>
 #include <time.h>
 #include <signal.h>
 #include <time.h>
@@ -35,169 +34,134 @@ using namespace std;
 using namespace rina;
 
 ConnectionCallback::ConnectionCallback(bool *keep_serving,
-                                       rina::cdap::CDAPProviderInterface **prov)
+		rina::cdap::CDAPProviderInterface **prov)
 {
-  keep_serving_ = keep_serving;
-  prov_ = prov;
+	keep_serving_ = keep_serving;
+	prov_ = prov;
 }
+
 void ConnectionCallback::open_connection(
-    const rina::cdap_rib::con_handle_t &con,
-    const rina::cdap_rib::flags_t &flags, int message_id)
+		const rina::cdap_rib::con_handle_t &con,
+		const rina::cdap_rib::flags_t &flags, int message_id)
 {
-  (void) flags;
-  cdap_rib::res_info_t res;
-  res.result_ = 1;
-  res.result_reason_ = "Ok";
-  std::cout<<"open conection request CDAP message received"<<std::endl;
-  (*prov_)->open_connection_response(con, res, message_id);
-  std::cout<<"open conection response CDAP message sent"<<std::endl;
+	(void) flags;
+	cdap_rib::res_info_t res;
+	res.result_ = 1;
+	res.result_reason_ = "Ok";
+	std::cout<<"open conection request CDAP message received"<<std::endl;
+	(*prov_)->open_connection_response(con, res, message_id);
+	std::cout<<"open conection response CDAP message sent"<<std::endl;
 }
+
 void ConnectionCallback::remote_read_request(
-    const rina::cdap_rib::con_handle_t &con,
-    const rina::cdap_rib::obj_info_t &obj,
-    const rina::cdap_rib::filt_info_t &filt, int message_id)
+		const rina::cdap_rib::con_handle_t &con,
+		const rina::cdap_rib::obj_info_t &obj,
+		const rina::cdap_rib::filt_info_t &filt, int message_id)
 {
-  (void) filt;
-  cdap_rib::flags_t flags;
-  flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
-  cdap_rib::res_info_t res;
-  res.result_ = 1;
-  res.result_reason_ = "Ok";
-  std::cout<<"read request CDAP message received"<<std::endl;
-  (*prov_)->remote_read_response(con.port_, obj, flags, res, message_id);
-  std::cout<<"read response CDAP message sent"<<std::endl;
+	(void) filt;
+	cdap_rib::flags_t flags;
+	flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
+	cdap_rib::res_info_t res;
+	res.result_ = 1;
+	res.result_reason_ = "Ok";
+	std::cout<<"read request CDAP message received"<<std::endl;
+	(*prov_)->remote_read_response(con.port_, obj, flags, res, message_id);
+	std::cout<<"read response CDAP message sent"<<std::endl;
 }
 
 void ConnectionCallback::close_connection(const rina::cdap_rib::con_handle_t &con,
-                      const rina::cdap_rib::flags_t &flags, int message_id)
+		const rina::cdap_rib::flags_t &flags, int message_id)
 {
-  cdap_rib::res_info_t res;
-  res.result_ = 1;
-  res.result_reason_ = "Ok";
-  std::cout<<"conection close request CDAP message received"<<std::endl;
-  (*prov_)->close_connection_response(con.port_, flags, res, message_id);
-  std::cout<<"conection close response CDAP message sent"<<std::endl;
-  *keep_serving_ = false;
+	cdap_rib::res_info_t res;
+	res.result_ = 1;
+	res.result_reason_ = "Ok";
+	std::cout<<"conection close request CDAP message received"<<std::endl;
+	(*prov_)->close_connection_response(con.port_, flags, res, message_id);
+	std::cout<<"conection close response CDAP message sent"<<std::endl;
+	*keep_serving_ = false;
 }
 
-Server::Server(const string& dif_name, const string& app_name,
-               const string& app_instance, const int dealloc_wait)
-    : Application(dif_name, app_name, app_instance),
+CDAPEchoWorker::CDAPEchoWorker(rina::ThreadAttributes * threadAttributes,
+		     	       int port,
+		     	       unsigned int max_size,
+		     	       Server * serv) : ServerWorker(threadAttributes, serv)
+{
+	port_id = port;
+	max_sdu_size = max_size;
+}
+
+int CDAPEchoWorker::internal_run()
+{
+	serveEchoFlow(port_id);
+	return 0;
+}
+
+void CDAPEchoWorker::serveEchoFlow(int port_id)
+{
+	bool keep_serving = true;
+	char buffer[max_sdu_size];
+	rina::cdap::CDAPProviderInterface *cdap_prov = 0;
+	int bytes_read = 0;
+
+	ConnectionCallback* callback = new ConnectionCallback(&keep_serving, &cdap_prov);
+	std::cout<<"cdap_prov created"<<std::endl;
+
+	cdap::CDAPProviderFactory::init(2000);
+	cdap_prov = cdap::CDAPProviderFactory::create(false, callback);
+
+	while (keep_serving) {
+		try {
+			while (true) {
+				bytes_read = ipcManager->readSDU(port_id,
+						buffer,
+						max_sdu_size);
+				if (bytes_read == 0) {
+					sleep_wrapper.sleepForMili(50);
+				} else {
+					break;
+				}
+			}
+		} catch(rina::UnknownFlowException &e) {
+			LOG_ERR("Unknown flow descriptor");
+			break;
+		} catch(rina::FlowNotAllocatedException &e) {
+			LOG_ERR("Flow has been deallocated");
+			break;
+		} catch (rina::Exception &e){
+			LOG_ERR("Got unkown exception while reading %s", e.what());
+			break;
+		}
+
+		cdap_rib::SerializedObject message;
+		message.message_ = buffer;
+		message.size_ = bytes_read;
+		cdap_prov->process_message(message, port_id);
+	}
+
+	cdap::CDAPProviderFactory::destroy(port_id);
+	delete cdap_prov;
+	delete callback;
+}
+
+const unsigned int CDAPEchoServer::max_sdu_size_in_bytes = 10000;
+
+CDAPEchoServer::CDAPEchoServer(const string& dif_name,
+			       const string& app_name,
+			       const string& app_instance,
+			       const int dealloc_wait)
+    : Server(dif_name, app_name, app_instance),
       dw(dealloc_wait)
 {
 }
-void Server::run()
+
+ServerWorker * CDAPEchoServer::internal_start_worker(int port_id)
 {
-  applicationRegister();
-
-  for (;;) {
-    IPCEvent* event = ipcEventProducer->eventWait();
-    FlowInformation flow;
-    unsigned int port_id;
-    DeallocateFlowResponseEvent *resp = 0;
-
-    if (!event)
-      return;
-
-    switch (event->eventType) {
-
-      case REGISTER_APPLICATION_RESPONSE_EVENT:
-        ipcManager->commitPendingRegistration(
-            event->sequenceNumber,
-            dynamic_cast<RegisterApplicationResponseEvent*>(event)->DIFName);
-        break;
-
-      case UNREGISTER_APPLICATION_RESPONSE_EVENT:
-        ipcManager->appUnregistrationResult(
-            event->sequenceNumber,
-            dynamic_cast<UnregisterApplicationResponseEvent*>(event)->result
-                == 0);
-        break;
-
-      case FLOW_ALLOCATION_REQUESTED_EVENT:
-        flow = ipcManager->allocateFlowResponse(
-            *dynamic_cast<FlowRequestEvent*>(event), 0, true);
-        LOG_INFO("New flow allocated [port-id = %d]", flow.portId);
-        startWorker(flow.portId);
-        break;
-
-      case FLOW_DEALLOCATED_EVENT:
-        port_id = dynamic_cast<FlowDeallocatedEvent*>(event)->portId;
-        ipcManager->flowDeallocated(port_id);
-        LOG_INFO("Flow torn down remotely [port-id = %d]", port_id);
-        break;
-
-      case DEALLOCATE_FLOW_RESPONSE_EVENT:
-        LOG_INFO("Destroying the flow after time-out");
-        resp = dynamic_cast<DeallocateFlowResponseEvent*>(event);
-        port_id = resp->portId;
-
-        ipcManager->flowDeallocationResult(port_id, resp->result == 0);
-        break;
-
-      default:
-        LOG_INFO("Server got new event of type %d", event->eventType);
-        break;
-    }
-  }
+	ThreadAttributes threadAttributes;
+	CDAPEchoWorker * worker = new CDAPEchoWorker(&threadAttributes,
+						     port_id,
+						     max_sdu_size_in_bytes,
+						     this);
+	worker->start();
+        worker->detach();
+        return worker;
 }
-
-void Server::startWorker(int port_id) {
-  void (Server::*server_function)(int port_id);
-
-  server_function = &Server::serveEchoFlow;
-
-  thread t(server_function, this, port_id);
-  t.detach();
-}
-
-void Server::serveEchoFlow(int port_id)
-{
-  bool keep_serving = true;
-  char buffer[max_sdu_size_in_bytes];
-  rina::cdap::CDAPProviderInterface *cdap_prov = 0;
-  ConnectionCallback* callback = new ConnectionCallback(&keep_serving, &cdap_prov);
-  std::cout<<"cdap_prov created"<<std::endl;
-  cdap::CDAPProviderFactory::init(2000);
-  cdap_prov = cdap::CDAPProviderFactory::create(false, callback);
-  while (keep_serving) {
-    int bytes_read = ipcManager->readSDU(port_id, buffer, max_sdu_size_in_bytes);
-    cdap_rib::SerializedObject message;
-    message.message_ = buffer;
-    message.size_ = bytes_read;
-    cdap_prov->process_message(message, port_id);
-  }
-  cdap::CDAPProviderFactory::destroy(port_id);
-  delete cdap_prov;
-  delete callback;
-}
-
-/*
-void Server::destroyFlow(sigval_t val)
-{
-  Flow *flow = (Flow *) val.sival_ptr;
-
-  if (flow->getState() != FlowState::FLOW_ALLOCATED)
-    return;
-
-  int port_id = flow->getPortId();
-
-  // TODO here we should store the seqnum (handle) returned by
-  // requestFlowDeallocation() and match it in the event loop
-  ipcManager->requestFlowDeallocation(port_id);
-=======
-
-void Server::destroyFlow(sigval_t val)
-{
-        int port_id = val.sival_int;
-
-        // TODO here we should store the seqnum (handle) returned by
-        // requestFlowDeallocation() and match it in the event loop
-        try {
-        	ipcManager->requestFlowDeallocation(port_id);
-        } catch(rina::Exception &e) {
-        	//Ignore, flow was already deallocated
-        }
->>>>>>> irati/pr/557
-}
-*/

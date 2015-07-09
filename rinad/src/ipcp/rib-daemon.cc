@@ -94,8 +94,10 @@ void IPCPRIBDaemonImpl::set_application_process(rina::ApplicationProcess * ap)
         rina::ThreadAttributes * threadAttributes = new rina::ThreadAttributes();
         threadAttributes->setJoinable();
         ManagementSDUReaderData * data = new ManagementSDUReaderData(this, max_sdu_size_in_bytes);
-        management_sdu_reader_ = new rina::Thread(threadAttributes,
-			&doManagementSDUReaderWork, (void *) data);
+        management_sdu_reader_ = new rina::Thread(&doManagementSDUReaderWork,
+        					  (void *) data,
+        					  threadAttributes);
+        management_sdu_reader_->start();
 }
 
 void IPCPRIBDaemonImpl::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {

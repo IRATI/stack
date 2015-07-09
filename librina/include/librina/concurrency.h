@@ -119,10 +119,11 @@ private:
 class Thread : public NonCopyable {
 public:
         /** Calls pthreads.create to create a new thread */
-        Thread(ThreadAttributes * threadAttributes,
-               void *(* startFunction)(void *), void * arg);
+        Thread(void *(* startFunction)(void *), void * arg,
+               ThreadAttributes * threadAttributes);
         virtual ~Thread() throw();
 
+        void start();
         pthread_t getThreadType() const;
         void join(void ** status);
         void detach();
@@ -136,6 +137,9 @@ public:
 private:
         Thread(pthread_t thread_id_);
         pthread_t thread_id_;
+        void *(*start_function)(void *);
+        void * start_arg;
+        ThreadAttributes * thread_attrs;
 };
 
 /// A Simple thread that performs all its work in the run method
