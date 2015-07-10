@@ -1999,6 +1999,7 @@ string Catalog::toString() const
 			ss << "    ===================================="
 			   << endl << "    ps name: " << cps.name
 			   << endl << "    ps component: " << cps.app_entity
+			   << endl << "    ps version: " << cps.version
 			   << endl << "    ps loaded: " << cps.loaded
 			   << endl << "    plugin: " << cps.plugin->second.path
 			   << "/" << cps.plugin->second.name
