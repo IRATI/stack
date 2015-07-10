@@ -50,6 +50,9 @@ struct rmt_ps {
         int (* rmt_enqueue_scheduling_policy_tx)(struct rmt_ps *,
                                                  struct rmt_n1_port *,
                                                  struct pdu *);
+        int (* rmt_requeue_scheduling_policy_tx)(struct rmt_ps *,
+                                                 struct rmt_n1_port *,
+                                                 struct pdu *);
         int (* rmt_scheduling_policy_rx)(struct rmt_ps *,
                                          struct rmt_n1_port *, struct sdu *);
         int (* rmt_scheduling_create_policy_tx)(struct rmt_ps *,

@@ -30,13 +30,15 @@
 #include <linux/if_packet.h>
 #include <linux/workqueue.h>
 #include <linux/notifier.h>
+#include <net/sch_generic.h>
 
 #define SHIM_NAME   "shim-eth-vlan"
 
 #define RINA_PREFIX SHIM_NAME
 
 #include "logs.h"
-#include "common.h"
+#include "shim-eth-vlan.h"
+#include "shim-eth-qdisc.h"
 #include "kipcm.h"
 #include "debug.h"
 #include "utils.h"
@@ -64,6 +66,11 @@ struct eth_vlan_info {
         uint16_t vlan_id;
         char *   interface_name;
 };
+
+static struct ipcp_factory_data {
+        struct list_head instances;
+	struct notifier_block ntfy;
+} eth_vlan_data;
 
 enum port_id_state {
         PORT_STATE_NULL = 1,
@@ -101,6 +108,7 @@ struct ipcp_instance_data {
         struct eth_vlan_info * info;
         struct packet_type *   eth_vlan_packet_type;
         struct net_device *    dev;
+        struct Qdisc *	       old_qdisc;
         struct flow_spec *     fspec;
 
         /* The IPC Process using the shim-eth-vlan */
@@ -154,6 +162,23 @@ inst_data_mapping_get(struct net_device * dev)
         spin_unlock(&data_instances_lock);
 
         return NULL;
+}
+
+static struct ipcp_instance_data *
+find_instance(struct ipcp_factory_data * data,
+              ipc_process_id_t           id)
+{
+
+        struct ipcp_instance_data * pos;
+
+        list_for_each_entry(pos, &(data->instances), list) {
+                if (pos->id == id) {
+                        return pos;
+                }
+        }
+
+        return NULL;
+
 }
 
 static struct shim_eth_flow * find_flow(struct ipcp_instance_data * data,
@@ -713,6 +738,29 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
         return 0;
 }
 
+void eth_vlan_enable_write_all(ipc_process_id_t id)
+{
+	struct ipcp_instance_data * ipcp_data;
+	struct shim_eth_flow 	  * flow;
+	unsigned long               flags;
+
+	ipcp_data = find_instance(&eth_vlan_data, id);
+	if (!ipcp_data) {
+		LOG_WARN("Could not find IPCP instance data");
+		return;
+	}
+
+	spin_lock_irqsave(&ipcp_data->lock, flags);
+	list_for_each_entry(flow, &ipcp_data->flows, list) {
+		if (flow->user_ipcp && flow->user_ipcp->ops) {
+			flow->user_ipcp->ops->enable_write(flow->user_ipcp->data,
+							   flow->port_id);
+		}
+	}
+	spin_unlock_irqrestore(&ipcp_data->lock, flags);
+}
+EXPORT_SYMBOL(eth_vlan_enable_write_all);
+
 static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
                               port_id_t                   id,
                               struct sdu *                sdu)
@@ -811,16 +859,19 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         }
 
         retval = dev_queue_xmit(skb);
+        if (retval == -ENETDOWN) {
+        	LOG_ERR("dev_q_xmit returned device down");
+        	return -1;
+        }
         if (retval != NET_XMIT_SUCCESS) {
-                LOG_ERR("Problems in dev_queue_xmit (%d)", retval);
-                return -1;
+        	LOG_WARN("qdisc cannot enqueue now (%d), try later", retval);
+        	return -EAGAIN;
         }
 
         LOG_DBG("Packet sent");
 
         return 0;
 }
-
 
 static int eth_vlan_rcv_worker(void * o)
 {
@@ -1276,6 +1327,21 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                 return -1;
         }
 
+        /* Modfy qdisc by our own */
+        data->old_qdisc = data->dev->qdisc;
+        data->dev->qdisc = shim_eth_qdisc_alloc(data->id, data->dev);
+        if (!data->dev->qdisc) {
+        	LOG_ERR("Problems creating queue discipline");
+        	data->dev->qdisc = data->old_qdisc;
+        	read_unlock(&dev_base_lock);
+        	name_destroy(data->dif_name);
+        	data->dif_name = NULL;
+        	rkfree(info->interface_name);
+        	info->interface_name = NULL;
+        	rkfree(complete_interface);
+        	return -1;
+        }
+
         LOG_DBG("Got device '%s', trying to register handler",
                 complete_interface);
 
@@ -1342,6 +1408,9 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
                 }
         }
 
+        shim_eth_qdisc_destroy(data->dev);
+        data->dev->qdisc = data->old_qdisc;
+
         dev_remove_pack(data->eth_vlan_packet_type);
         /* Remove from list */
         mapping = inst_data_mapping_get(data->dev);
@@ -1372,6 +1441,21 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
         if (!data->dev) {
                 LOG_ERR("Invalid device to configure: %s", complete_interface);
                 return -1;
+        }
+
+        /* Modfy qdisc by our own */
+        data->old_qdisc = data->dev->qdisc;
+        data->dev->qdisc = shim_eth_qdisc_alloc(data->id, data->dev);
+        if (!data->dev->qdisc) {
+        	LOG_ERR("Problems creating queue discipline");
+        	data->dev->qdisc = data->old_qdisc;
+        	read_unlock(&dev_base_lock);
+        	name_destroy(data->dif_name);
+        	data->dif_name = NULL;
+        	rkfree(info->interface_name);
+        	info->interface_name = NULL;
+        	rkfree(complete_interface);
+        	return -1;
         }
 
         /* Store in list for retrieval later on */
@@ -1469,11 +1553,6 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .dif_name		   = eth_vlan_dif_name
 };
 
-static struct ipcp_factory_data {
-        struct list_head instances;
-	struct notifier_block ntfy;
-} eth_vlan_data;
-
 static int ntfy_user_ipcp_on_if_state_change(struct ipcp_instance_data * data,
 					     bool up)
 {
@@ -1554,23 +1633,6 @@ static int eth_vlan_fini(struct ipcp_factory_data * data)
 	unregister_netdevice_notifier(&data->ntfy);
 
         return 0;
-}
-
-static struct ipcp_instance_data *
-find_instance(struct ipcp_factory_data * data,
-              ipc_process_id_t           id)
-{
-
-        struct ipcp_instance_data * pos;
-
-        list_for_each_entry(pos, &(data->instances), list) {
-                if (pos->id == id) {
-                        return pos;
-                }
-        }
-
-        return NULL;
-
 }
 
 static void inst_cleanup(struct ipcp_instance * inst)
@@ -1704,6 +1766,10 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                         list_for_each_entry_safe(flow, nflow, &pos->flows, list) {
                                 unbind_and_destroy_flow(pos, flow);
                         }
+
+                        /* Restore old qdisc */
+                        shim_eth_qdisc_destroy(pos->dev);
+                        pos->dev->qdisc = pos->old_qdisc;
 
                         /* Remove packet handler if there is one */
                         if (pos->eth_vlan_packet_type->dev)

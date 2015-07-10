@@ -44,6 +44,11 @@ int
 common_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
                                         struct rmt_n1_port * n1_port,
                                         struct pdu *         pdu);
+int
+common_rmt_requeue_scheduling_policy_tx(struct rmt_ps *      ps,
+                                        struct rmt_n1_port * n1_port,
+                                        struct pdu *         pdu);
+
 struct pdu *
 common_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
                                     struct rmt_n1_port * n1_port);
