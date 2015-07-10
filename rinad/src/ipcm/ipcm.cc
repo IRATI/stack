@@ -80,7 +80,7 @@ namespace rinad {
 Singleton<IPCManager_> IPCManager;
 
 IPCManager_::IPCManager_() : req_to_stop(false), io_thread(NULL),
-		dif_template_manager(NULL){
+		dif_template_manager(NULL) {
 
 }
 
@@ -1772,6 +1772,16 @@ void IPCManager_::io_loop(){
 	//TODO: probably move this to a private method if it starts to grow
 	LOG_DBG("Stopping I/O loop...");
 
+}
+
+CatalogPsInfo::CatalogPsInfo(const string& n, const string& c, const string& v)
+				: PsInfo(n, c, v)
+{
+	loaded = false;
+}
+
+Catalog::Catalog()
+{
 }
 
 } //rinad namespace
