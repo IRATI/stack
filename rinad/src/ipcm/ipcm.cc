@@ -400,6 +400,26 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 	IPCPTransState* trans;
 
 	try {
+		if (is_any_ipcp_assigned_to_dif(dif_name)) {
+			ss << "There is already an IPCP assigned to DIF "
+				<< dif_name.toString()
+				<< " in this system.";
+			FLUSH_LOG(ERR, ss);
+			throw rina::AssignToDIFException();
+		}
+
+		ipcp = lookup_ipcp_by_id(ipcp_id, false);
+		if (ipcp->get_type() == rina::NORMAL_IPC_PROCESS) {
+			// Load all the plugins required from by template, but
+			// first release the ipcp lock, to avoid lock-ups.
+			ipcp->rwlock.unlock();
+
+			catalog.load_by_template(callee, ipcp_id, dif_template);
+
+		} else {
+			ipcp->rwlock.unlock();
+		}
+
 		ipcp = lookup_ipcp_by_id(ipcp_id, true);
 		if(!ipcp){
 			ss << "Invalid IPCP id "<< ipcp_id;
@@ -410,23 +430,12 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 		//Auto release the write lock
 		rina::WriteScopedLock writelock(ipcp->rwlock, false);
 
-		if (is_any_ipcp_assigned_to_dif(dif_name)) {
-			ss << "There is already an IPCP assigned to DIF "
-				<< dif_name.toString()
-				<< " in this system.";
-			FLUSH_LOG(ERR, ss);
-			throw rina::AssignToDIFException();
-		}
-
 		// Fill in the DIFConfiguration object.
 		if (ipcp->get_type() == rina::NORMAL_IPC_PROCESS) {
 			rina::EFCPConfiguration efcp_config;
 			rina::NamespaceManagerConfiguration nsm_config;
 			rina::AddressingConfiguration address_config;
 			unsigned int address;
-
-			// Load all the plugins required from by template
-			catalog.load_by_template(dif_template);
 
 			// FIll in the EFCPConfiguration object.
 			efcp_config.set_data_transfer_constants(
@@ -1886,7 +1895,8 @@ void Catalog::psinfo_from_psconfig(list< rina::PsInfo >& psinfo_list,
 	}
 }
 
-int Catalog::load_by_template(const rinad::DIFTemplate *t)
+int Catalog::load_by_template(Addon *addon, unsigned int ipcp_id,
+			      const rinad::DIFTemplate *t)
 {
 	list< rina::PsInfo > required_policy_sets;
 
@@ -1919,7 +1929,7 @@ int Catalog::load_by_template(const rinad::DIFTemplate *t)
 	LOG_INFO("Required policy sets:");
 	for (list<rina::PsInfo>::iterator i=required_policy_sets.begin();
 			i != required_policy_sets.end(); i++) {
-		int ret = load_policy_set(*i);
+		int ret = load_policy_set(addon, ipcp_id, *i);
 
 		if (ret) {
 			LOG_WARN("Failed to load policy-set %s/%s",
@@ -1931,8 +1941,11 @@ int Catalog::load_by_template(const rinad::DIFTemplate *t)
 	return 0;
 }
 
-int Catalog::load_policy_set(const rina::PsInfo& psinfo)
+int Catalog::load_policy_set(Addon *addon, unsigned int ipcp_id,
+			     const rina::PsInfo& psinfo)
 {
+	Promise promise;
+
 	LOG_INFO("Looking up %s %s", psinfo.app_entity.c_str(),
 				       psinfo.name.c_str());
 
@@ -1949,7 +1962,20 @@ int Catalog::load_policy_set(const rina::PsInfo& psinfo)
 		return -1;
 	}
 
-	LOG_INFO("FOUND!");
+	CatalogPsInfo& ps = policy_sets[psinfo.app_entity][psinfo.name];
+
+	if (IPCManager->plugin_load(addon, &promise, ipcp_id,
+			ps.plugin->second.name, true) == IPCM_FAILURE ||
+				promise.wait() != IPCM_SUCCESS) {
+		LOG_WARN("Error occurred while loading plugin '%s'",
+			 ps.plugin->second.name.c_str());
+		return -1;
+	}
+
+	ps.plugin->second.loaded = true;
+
+	LOG_INFO("Plugin '%s' successfully loaded",
+		 ps.plugin->second.name.c_str());
 
 	return 0;
 }

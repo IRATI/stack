@@ -276,9 +276,11 @@ public:
 	void import();
 	void add_plugin(const std::string& plugin_name,
 		        const std::string& plugin_path);
-	int load_by_template(const rinad::DIFTemplate *dif_template);
+	int load_by_template(Addon *addon, unsigned int ipcp_id,
+			     const rinad::DIFTemplate *dif_template);
 
-	int load_policy_set(const rina::PsInfo& psinfo);
+	int load_policy_set(Addon *addon, unsigned int ipcp_id,
+			    const rina::PsInfo& psinfo);
 
 	void print() const;
 
