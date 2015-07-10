@@ -29,6 +29,7 @@
 
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <dirent.h>
 
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
@@ -108,13 +109,16 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
 			config.local.libraryPath.c_str());
 		LOG_DBG("       log folder: %s", config.local.logPath.c_str());
 
-		//Initialize the I/O thread
+		// Load the plugins catalog
+		catalog.load();
+
+		// Initialize the I/O thread
 		io_thread = new rina::Thread(io_loop_trampoline,
 				             NULL,
 				             &io_thread_attrs);
 		io_thread->start();
 
-		//Initialize DIF Templates Manager (with its monitor thread)
+		// Initialize DIF Templates Manager (with its monitor thread)
 		stringstream ss;
 		ss << config_file.substr(0, config_file.rfind("/"));
 		dif_template_manager = new DIFTemplateManager(ss.str());
@@ -1782,6 +1786,26 @@ CatalogPsInfo::CatalogPsInfo(const string& n, const string& c, const string& v)
 
 void Catalog::load()
 {
+	const rinad::RINAConfiguration& config = IPCManager->getConfig();
+
+	for (list<string>::const_iterator lit =
+		config.local.pluginsPaths.begin();
+			lit != config.local.pluginsPaths.end(); lit++) {
+		DIR *dir = opendir(lit->c_str());
+		struct dirent *ent;
+
+		if (dir == NULL) {
+			LOG_WARN("Failed to open plugins directory: '%s'",
+				 lit->c_str());
+			continue;
+		}
+
+		while ((ent = readdir(dir)) != NULL) {
+			LOG_INFO("%s: scanning %s", __func__, ent->d_name);
+		}
+
+		closedir(dir);
+	}
 }
 
 } //rinad namespace
