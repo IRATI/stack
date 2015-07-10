@@ -419,7 +419,7 @@ void IPCProcessImpl::processSetPolicySetParamRequestEvent(
                 result = security_manager_->set_policy_set_param(remainder,
                                                                 event.name,
                                                                 event.value);
-        } else if (component == "enrollment") {
+        } else if (component == "enrollment-task") {
                 result = enrollment_task_->set_policy_set_param(remainder,
                                                                event.name,
                                                                event.value);

@@ -149,7 +149,7 @@ int IResourceAllocator::set_pduft_gen_policy_set(const std::string& name)
 	}
 
 	std::stringstream ss;
-	ss << RESOURCE_ALLOCATOR_AE_NAME << "/" << PDUFT_GEN_COMPONENT_NAME;
+	ss << RESOURCE_ALLOCATOR_AE_NAME;
         pduft_gen_ps = (IPDUFTGeneratorPs *) ipcp->psCreate(ss.str(),
         					     	    name,
         					     	    this);

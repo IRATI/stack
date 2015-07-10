@@ -1896,7 +1896,7 @@ int Catalog::load_by_template(const rinad::DIFTemplate *t)
 	psinfo_from_psconfig(required_policy_sets, "pff",
 			     t->rmtConfiguration.pft_conf_.policy_set_);
 
-	psinfo_from_psconfig(required_policy_sets, "enrollment",
+	psinfo_from_psconfig(required_policy_sets, "enrollment-task",
 			     t->etConfiguration.policy_set_);
 
 	psinfo_from_psconfig(required_policy_sets, "security-manager",
