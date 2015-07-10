@@ -1896,7 +1896,7 @@ int Catalog::load_by_template(const rinad::DIFTemplate *t)
 	psinfo_from_psconfig(required_policy_sets, "pff",
 			     t->rmtConfiguration.pft_conf_.policy_set_);
 
-	psinfo_from_psconfig(required_policy_sets, "enrollment-task",
+	psinfo_from_psconfig(required_policy_sets, "enrollment",
 			     t->etConfiguration.policy_set_);
 
 	psinfo_from_psconfig(required_policy_sets, "security-manager",
@@ -1919,9 +1919,37 @@ int Catalog::load_by_template(const rinad::DIFTemplate *t)
 	LOG_INFO("Required policy sets:");
 	for (list<rina::PsInfo>::iterator i=required_policy_sets.begin();
 			i != required_policy_sets.end(); i++) {
-		LOG_INFO("	%s %s", i->name.c_str(), i->app_entity.c_str());
+		int ret = load_policy_set(*i);
+
+		if (ret) {
+			LOG_WARN("Failed to load policy-set %s/%s",
+				  i->app_entity.c_str(), i->name.c_str());
+		}
 	}
 	LOG_INFO("*******************************");
+
+	return 0;
+}
+
+int Catalog::load_policy_set(const rina::PsInfo& psinfo)
+{
+	LOG_INFO("Looking up %s %s", psinfo.app_entity.c_str(),
+				       psinfo.name.c_str());
+
+	if (policy_sets.count(psinfo.app_entity) == 0) {
+		LOG_WARN("Catalog does not contain any policy-set "
+			 "for component %s", psinfo.app_entity.c_str());
+		return -1;
+	}
+
+	if (policy_sets[psinfo.app_entity].count(psinfo.name) == 0) {
+		LOG_WARN("Catalog does not contain a policy-set "
+			 "called %s for component %s",
+			 psinfo.name.c_str(), psinfo.app_entity.c_str());
+		return -1;
+	}
+
+	LOG_INFO("FOUND!");
 
 	return 0;
 }

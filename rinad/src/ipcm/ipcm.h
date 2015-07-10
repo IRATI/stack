@@ -278,6 +278,8 @@ public:
 		        const std::string& plugin_path);
 	int load_by_template(const rinad::DIFTemplate *dif_template);
 
+	int load_policy_set(const rina::PsInfo& psinfo);
+
 	void print() const;
 
 private:
