@@ -425,6 +425,9 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 			rina::AddressingConfiguration address_config;
 			unsigned int address;
 
+			// Load all the plugins required from by template
+			catalog.load_by_template(dif_template);
+
 			// FIll in the EFCPConfiguration object.
 			efcp_config.set_data_transfer_constants(
 					dif_template->dataTransferConstants);
@@ -1865,6 +1868,57 @@ void Catalog::add_plugin(const string& plugin_name, const string& plugin_path)
 
 		cpsets[ps->name] = CatalogPsInfo(*ps, false);
 	}
+}
+
+void Catalog::psinfo_from_psconfig(list< rina::PsInfo >& psinfo_list,
+				   const string& component,
+				   const rina::PolicyConfig& pconfig)
+{
+	if (pconfig.name_ != string()) {
+		psinfo_list.push_back(rina::PsInfo(pconfig.name_,
+						   component,
+						   pconfig.version_));
+	}
+}
+
+int Catalog::load_by_template(const rinad::DIFTemplate *t)
+{
+	list< rina::PsInfo > required_policy_sets;
+
+	psinfo_from_psconfig(required_policy_sets, "rmt",
+			     t->rmtConfiguration.policy_set_);
+
+	psinfo_from_psconfig(required_policy_sets, "pff",
+			     t->rmtConfiguration.pft_conf_.policy_set_);
+
+	psinfo_from_psconfig(required_policy_sets, "enrollment-task",
+			     t->etConfiguration.policy_set_);
+
+	psinfo_from_psconfig(required_policy_sets, "security-manager",
+			     t->secManConfiguration.policy_set_);
+
+	// XXX Probably authentication profiles should be managed here
+
+	psinfo_from_psconfig(required_policy_sets, "flow-allocator",
+			     t->faConfiguration.policy_set_);
+
+	psinfo_from_psconfig(required_policy_sets, "namespace-manager",
+			     t->nsmConfiguration.policy_set_);
+
+	psinfo_from_psconfig(required_policy_sets, "resource-allocator",
+			     t->raConfiguration.pduftg_conf_.policy_set_);
+
+	psinfo_from_psconfig(required_policy_sets, "routing",
+			     t->routingConfiguration.policy_set_);
+
+	LOG_INFO("Required policy sets:");
+	for (list<rina::PsInfo>::iterator i=required_policy_sets.begin();
+			i != required_policy_sets.end(); i++) {
+		LOG_INFO("	%s %s", i->name.c_str(), i->app_entity.c_str());
+	}
+	LOG_INFO("*******************************");
+
+	return 0;
 }
 
 void Catalog::print() const

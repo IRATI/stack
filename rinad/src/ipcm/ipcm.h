@@ -275,10 +275,15 @@ public:
 	void import();
 	void add_plugin(const std::string& plugin_name,
 		        const std::string& plugin_path);
+	int load_by_template(const rinad::DIFTemplate *dif_template);
 
 	void print() const;
 
 private:
+	void psinfo_from_psconfig(std::list< rina::PsInfo >& psinfo_list,
+				  const std::string& component,
+				  const rina::PolicyConfig& pconfig);
+
 	std::map<std::string,
 		 std::map<std::string, CatalogPsInfo>
 		> policy_sets;
