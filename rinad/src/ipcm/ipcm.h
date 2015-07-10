@@ -283,6 +283,7 @@ public:
 			    const rina::PsInfo& psinfo);
 
 	void print() const;
+	std::string toString() const;
 
 private:
 	void psinfo_from_psconfig(std::list< rina::PsInfo >& psinfo_list,
@@ -874,6 +875,10 @@ public:
 
 	//The DIF template manager
 	DIFTemplateManager * dif_template_manager;
+
+	//Catalog of policies
+	Catalog catalog;
+
 private:
 	//Singleton
 	IPCManager_();
@@ -885,9 +890,6 @@ private:
 
 	//Stop condition
 	rina::ConditionVariable stop_cond;
-
-	//Catalog
-	Catalog catalog;
 
 	//Trampoline for the pthread_create
 	static void* io_loop_trampoline(void* param);

@@ -1987,30 +1987,38 @@ int Catalog::load_policy_set(Addon *addon, unsigned int ipcp_id,
 	return 0;
 }
 
-void Catalog::print() const
+string Catalog::toString() const
 {
 	map<string, map< string, CatalogPsInfo > >::const_iterator mit;
 	map<string, CatalogPsInfo>::const_iterator cmit;
+	stringstream ss;
 
-	LOG_INFO("Catalog of plugins and policy sets:");
+	ss << "Catalog of plugins and policy sets:" << endl;
 
 	for (mit = policy_sets.begin(); mit != policy_sets.end(); mit++) {
 		for (cmit = mit->second.begin();
 				cmit != mit->second.end(); cmit++) {
 			const CatalogPsInfo& cps = cmit->second;
 
-			LOG_INFO("      ====================================");
-			LOG_INFO("	ps name: %s", cps.name.c_str());
-			LOG_INFO("	ps component: %s",
-					cps.app_entity.c_str());
-			LOG_INFO("	ps loaded: %d", cps.loaded);
-			LOG_INFO("	plugin: %s/%s [loaded = %d]",
-					cps.plugin->second.path.c_str(),
-					cps.plugin->second.name.c_str(),
-					cps.plugin->second.loaded);
+			ss << "    ===================================="
+			   << endl << "    ps name: " << cps.name
+			   << endl << "    ps component: " << cps.app_entity
+			   << endl << "    ps loaded: " << cps.loaded
+			   << endl << "    plugin: " << cps.plugin->second.path
+			   << "/" << cps.plugin->second.name
+			   << " [loaded = " << cps.plugin->second.loaded
+			   << "]" << endl;
 		}
 	}
-	LOG_INFO("      ====================================");
+
+	ss << "      ====================================" << endl;
+
+	return ss.str();
+}
+
+void Catalog::print() const
+{
+	LOG_INFO("%s", toString().c_str());
 }
 
 } //rinad namespace
