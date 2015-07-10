@@ -1900,6 +1900,8 @@ int Catalog::load_by_template(Addon *addon, unsigned int ipcp_id,
 {
 	list< rina::PsInfo > required_policy_sets;
 
+	// Collect into a list all the policy sets specified
+	// by the template
 	psinfo_from_psconfig(required_policy_sets, "rmt",
 			     t->rmtConfiguration.policy_set_);
 
@@ -1911,8 +1913,6 @@ int Catalog::load_by_template(Addon *addon, unsigned int ipcp_id,
 
 	psinfo_from_psconfig(required_policy_sets, "security-manager",
 			     t->secManConfiguration.policy_set_);
-
-	// XXX Probably authentication profiles should be managed here
 
 	psinfo_from_psconfig(required_policy_sets, "flow-allocator",
 			     t->faConfiguration.policy_set_);
@@ -1926,7 +1926,7 @@ int Catalog::load_by_template(Addon *addon, unsigned int ipcp_id,
 	psinfo_from_psconfig(required_policy_sets, "routing",
 			     t->routingConfiguration.policy_set_);
 
-	LOG_INFO("Required policy sets:");
+	// Load all the policy sets in the list
 	for (list<rina::PsInfo>::iterator i=required_policy_sets.begin();
 			i != required_policy_sets.end(); i++) {
 		int ret = load_policy_set(addon, ipcp_id, *i);
@@ -1936,7 +1936,6 @@ int Catalog::load_by_template(Addon *addon, unsigned int ipcp_id,
 				  i->app_entity.c_str(), i->name.c_str());
 		}
 	}
-	LOG_INFO("*******************************");
 
 	return 0;
 }
@@ -1945,9 +1944,6 @@ int Catalog::load_policy_set(Addon *addon, unsigned int ipcp_id,
 			     const rina::PsInfo& psinfo)
 {
 	Promise promise;
-
-	LOG_INFO("Looking up %s %s", psinfo.app_entity.c_str(),
-				       psinfo.name.c_str());
 
 	if (policy_sets.count(psinfo.app_entity) == 0) {
 		LOG_WARN("Catalog does not contain any policy-set "

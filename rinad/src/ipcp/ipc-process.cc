@@ -57,11 +57,6 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         state = NOT_INITIALIZED;
         lock_ = new rina::Lockable();
 
-        // Load the default pluggable components
-        if (plugin_load(PLUGINSDIR, "default")) {
-		throw rina::Exception("Failed to load default plugin");
-        }
-
         // Initialize application entities
         init_cdap_session_manager();
         init_encoder();
