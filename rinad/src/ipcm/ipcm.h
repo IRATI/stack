@@ -244,8 +244,15 @@ struct CatalogPlugin {
 	// The name of the plugin
 	std::string name;
 
+	// The path of the plugin
+	std::string path;
+
 	// Is the plugin already loaded ?
 	bool loaded;
+
+	CatalogPlugin() { }
+	CatalogPlugin(const std::string& n, const std::string& p, bool l)
+			: name(n), path(p), loaded(l) { }
 };
 
 struct CatalogPsInfo: public rina::PsInfo {
@@ -258,18 +265,23 @@ struct CatalogPsInfo: public rina::PsInfo {
 	bool loaded;
 
 	CatalogPsInfo() : PsInfo() { }
-	CatalogPsInfo(const std::string& n, const std::string& c,
-	              const std::string& v);
+	CatalogPsInfo(const rina::PsInfo& psinfo, bool loaded);
 };
 
 class Catalog {
 public:
 	Catalog() { }
 
-	void load();
+	void import();
+	void add_plugin(const std::string& plugin_name,
+		        const std::string& plugin_path);
+
+	void print() const;
 
 private:
-	std::map<std::string, CatalogPsInfo> policy_sets;
+	std::map<std::string,
+		 std::map<std::string, CatalogPsInfo>
+		> policy_sets;
 	std::map<std::string, CatalogPlugin> plugins;
 };
 

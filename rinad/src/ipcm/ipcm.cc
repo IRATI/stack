@@ -110,7 +110,8 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
 		LOG_DBG("       log folder: %s", config.local.logPath.c_str());
 
 		// Load the plugins catalog
-		catalog.load();
+		catalog.import();
+		catalog.print();
 
 		// Initialize the I/O thread
 		io_thread = new rina::Thread(io_loop_trampoline,
@@ -1778,10 +1779,10 @@ void IPCManager_::io_loop(){
 
 }
 
-CatalogPsInfo::CatalogPsInfo(const string& n, const string& c, const string& v)
-				: PsInfo(n, c, v)
+CatalogPsInfo::CatalogPsInfo(const rina::PsInfo& psinfo, bool l)
+				: PsInfo(psinfo)
 {
-	loaded = false;
+	loaded = l;
 }
 
 static bool endswith(const string& s, const string& suffix)
@@ -1793,7 +1794,9 @@ static bool endswith(const string& s, const string& suffix)
 	return suffix == s.substr(s.size() - suffix.size(), suffix.size());
 }
 
-void Catalog::load()
+#define MANIFEST_SUFFIX ".manifest"
+
+void Catalog::import()
 {
 	const rinad::RINAConfiguration& config = IPCManager->getConfig();
 
@@ -1810,16 +1813,80 @@ void Catalog::load()
 		}
 
 		while ((ent = readdir(dir)) != NULL) {
-			string filename(ent->d_name);
+			string plugin_name(ent->d_name);
 
-			if (endswith(filename, ".manifest")) {
-				LOG_INFO("Catalog: found manifest %s",
-					 filename.c_str());
+			if (!endswith(plugin_name, MANIFEST_SUFFIX)) {
+				continue;
 			}
+
+			LOG_INFO("Catalog: found manifest %s",
+					plugin_name.c_str());
+
+			// Remove the MANIFEST_SUFFIX suffix
+			plugin_name = plugin_name.substr(0,
+						plugin_name.size() -
+						string(MANIFEST_SUFFIX).size());
+
+			add_plugin(plugin_name, *lit);
 		}
 
 		closedir(dir);
 	}
+}
+
+void Catalog::add_plugin(const string& plugin_name, const string& plugin_path)
+{
+	list<rina::PsInfo> new_policy_sets;
+	int ret;
+
+	ret = rina::plugin_get_info(plugin_name, plugin_path, new_policy_sets);
+	if (ret) {
+		LOG_WARN("Failed to load manifest file for plugin '%s'",
+			 plugin_name.c_str());
+		return;
+	}
+
+	if (plugins.count(plugin_name)) {
+		// Plugin already in the catalog
+		return;
+	}
+
+	plugins[plugin_name] = CatalogPlugin(plugin_name, plugin_path, false);
+
+	for (list<rina::PsInfo>::const_iterator ps = new_policy_sets.begin();
+					ps != new_policy_sets.end(); ps++) {
+		map<string, CatalogPsInfo>& cpsets =
+					policy_sets[ps->app_entity];
+		if (cpsets.count(ps->name)) {
+			// Policy set already in the catalog for the
+			// specified component;
+			continue;
+		}
+
+		cpsets[ps->name] = CatalogPsInfo(*ps, false);
+	}
+}
+
+void Catalog::print() const
+{
+	map<string, map< string, CatalogPsInfo > >::const_iterator mit;
+	map<string, CatalogPsInfo>::const_iterator cmit;
+
+	LOG_INFO("Catalog of plugins and policy sets:");
+
+	for (mit = policy_sets.begin(); mit != policy_sets.end(); mit++) {
+		for (cmit = mit->second.begin();
+				cmit != mit->second.end(); cmit++) {
+			const CatalogPsInfo& cps = cmit->second;
+
+			LOG_INFO("      ====================================");
+			LOG_INFO("	ps name: %s", cps.name.c_str());
+			LOG_INFO("	ps component: %s",
+					cps.app_entity.c_str());
+			LOG_INFO("	ps loaded: %d", cps.loaded);
+		}
+	}
+	LOG_INFO("      ====================================");
 }
 
 } //rinad namespace
