@@ -1955,14 +1955,16 @@ int Catalog::load_policy_set(Addon *addon, unsigned int ipcp_id,
 		return -1;
 	}
 
-	if (policy_sets[psinfo.app_entity].count(psinfo.name) == 0) {
+	map<string, CatalogPsInfo>& cmap = policy_sets[psinfo.app_entity];
+
+	if (cmap.count(psinfo.name) == 0) {
 		LOG_WARN("Catalog does not contain a policy-set "
 			 "called %s for component %s",
 			 psinfo.name.c_str(), psinfo.app_entity.c_str());
 		return -1;
 	}
 
-	CatalogPsInfo& ps = policy_sets[psinfo.app_entity][psinfo.name];
+	CatalogPsInfo& ps = cmap[psinfo.name];
 
 	if (IPCManager->plugin_load(addon, &promise, ipcp_id,
 			ps.plugin->second.name, true) == IPCM_FAILURE ||
@@ -1973,6 +1975,11 @@ int Catalog::load_policy_set(Addon *addon, unsigned int ipcp_id,
 	}
 
 	ps.plugin->second.loaded = true;
+
+	for (map<string, CatalogPsInfo>::iterator psit = cmap.begin();
+						psit != cmap.end(); psit++) {
+		psit->second.loaded = true;
+	}
 
 	LOG_INFO("Plugin '%s' successfully loaded",
 		 ps.plugin->second.name.c_str());
