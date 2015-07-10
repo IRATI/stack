@@ -859,7 +859,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
 
         spin_lock_irqsave(&container->lock, flags);
         if (efcp_imap_add(container->instances,
-                          connection_src_cep_id(connection),
+                          cep_id,
                           tmp)) {
                 spin_unlock_irqrestore(&container->lock, flags);
                 LOG_ERR("Cannot add a new instance into container %pK",

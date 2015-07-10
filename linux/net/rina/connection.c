@@ -160,7 +160,7 @@ EXPORT_SYMBOL(connection_dst_addr_set);
 int connection_src_cep_id_set(struct connection * conn,
                               cep_id_t            cep_id)
 {
-        if (!conn || !(is_cep_id_ok(cep_id))) return -1;
+        if (!conn) return -1;
         conn->source_cep_id = cep_id;
         return 0;
 }
@@ -169,7 +169,7 @@ EXPORT_SYMBOL(connection_src_cep_id_set);
 int connection_dst_cep_id_set(struct connection * conn,
                               cep_id_t            cep_id)
 {
-        if (!conn || !(is_cep_id_ok(cep_id))) return -1;
+        if (!conn) return -1;
         conn->destination_cep_id = cep_id;
         return 0;
 }
