@@ -1784,6 +1784,15 @@ CatalogPsInfo::CatalogPsInfo(const string& n, const string& c, const string& v)
 	loaded = false;
 }
 
+static bool endswith(const string& s, const string& suffix)
+{
+	if (s.size() < suffix.size()) {
+		return false;
+	}
+
+	return suffix == s.substr(s.size() - suffix.size(), suffix.size());
+}
+
 void Catalog::load()
 {
 	const rinad::RINAConfiguration& config = IPCManager->getConfig();
@@ -1801,7 +1810,12 @@ void Catalog::load()
 		}
 
 		while ((ent = readdir(dir)) != NULL) {
-			LOG_INFO("%s: scanning %s", __func__, ent->d_name);
+			string filename(ent->d_name);
+
+			if (endswith(filename, ".manifest")) {
+				LOG_INFO("Catalog: found manifest %s",
+					 filename.c_str());
+			}
 		}
 
 		closedir(dir);
