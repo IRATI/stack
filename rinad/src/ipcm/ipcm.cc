@@ -1782,10 +1782,12 @@ void IPCManager_::io_loop(){
 
 }
 
-CatalogPsInfo::CatalogPsInfo(const rina::PsInfo& psinfo, bool l)
+CatalogPsInfo::CatalogPsInfo(const rina::PsInfo& psinfo,
+			     map<string, CatalogPlugin>::iterator plit)
 				: PsInfo(psinfo)
 {
-	loaded = l;
+	plugin = plit;
+	loaded = plugin->second.loaded;
 }
 
 static bool endswith(const string& s, const string& suffix)
@@ -1839,6 +1841,7 @@ void Catalog::import()
 
 void Catalog::add_plugin(const string& plugin_name, const string& plugin_path)
 {
+	map<string, CatalogPlugin>::iterator plit;
 	list<rina::PsInfo> new_policy_sets;
 	int ret;
 
@@ -1855,6 +1858,7 @@ void Catalog::add_plugin(const string& plugin_name, const string& plugin_path)
 	}
 
 	plugins[plugin_name] = CatalogPlugin(plugin_name, plugin_path, false);
+	plit = plugins.find(plugin_name);
 
 	for (list<rina::PsInfo>::const_iterator ps = new_policy_sets.begin();
 					ps != new_policy_sets.end(); ps++) {
@@ -1866,10 +1870,11 @@ void Catalog::add_plugin(const string& plugin_name, const string& plugin_path)
 			continue;
 		}
 
-		cpsets[ps->name] = CatalogPsInfo(*ps, false);
+		cpsets[ps->name] = CatalogPsInfo(*ps, plit);
 	}
 }
 
+// Helper function used by load_by_template()
 void Catalog::psinfo_from_psconfig(list< rina::PsInfo >& psinfo_list,
 				   const string& component,
 				   const rina::PolicyConfig& pconfig)
@@ -1938,6 +1943,10 @@ void Catalog::print() const
 			LOG_INFO("	ps component: %s",
 					cps.app_entity.c_str());
 			LOG_INFO("	ps loaded: %d", cps.loaded);
+			LOG_INFO("	plugin: %s/%s [loaded = %d]",
+					cps.plugin->second.path.c_str(),
+					cps.plugin->second.name.c_str(),
+					cps.plugin->second.loaded);
 		}
 	}
 	LOG_INFO("      ====================================");

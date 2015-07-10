@@ -265,7 +265,8 @@ struct CatalogPsInfo: public rina::PsInfo {
 	bool loaded;
 
 	CatalogPsInfo() : PsInfo() { }
-	CatalogPsInfo(const rina::PsInfo& psinfo, bool loaded);
+	CatalogPsInfo(const rina::PsInfo& psinfo,
+		      std::map<std::string, CatalogPlugin>::iterator plit);
 };
 
 class Catalog {
