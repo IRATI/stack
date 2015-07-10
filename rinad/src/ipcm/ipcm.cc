@@ -1780,7 +1780,7 @@ CatalogPsInfo::CatalogPsInfo(const string& n, const string& c, const string& v)
 	loaded = false;
 }
 
-Catalog::Catalog()
+void Catalog::load()
 {
 }
 

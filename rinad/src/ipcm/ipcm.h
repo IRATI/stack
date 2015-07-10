@@ -264,7 +264,9 @@ struct CatalogPsInfo: public rina::PsInfo {
 
 class Catalog {
 public:
-	Catalog();
+	Catalog() { }
+
+	void load();
 
 private:
 	std::map<std::string, CatalogPsInfo> policy_sets;
