@@ -1157,7 +1157,7 @@ IPCManager_::select_policy_set(Addon* callee, Promise* promise,
 // Returns IPCM_SUCCESS if a kernel plugin was successfully loaded/unloaded,
 // IPCM_FAILURE otherwise
 ipcm_res_t
-IPCManager_::plugin_load_kernel(Addon* callee, const std::string& plugin_name,
+IPCManager_::plugin_load_kernel(const std::string& plugin_name,
 				bool load)
 {
 	ostringstream ss;
@@ -1214,8 +1214,7 @@ IPCManager_::plugin_load(Addon* callee, Promise* promise,
 
 	try {
 		//First try to see if its a kernel module
-		if (plugin_load_kernel(callee, plugin_name,
-				       load) == IPCM_SUCCESS) {
+		if (plugin_load_kernel(plugin_name, load) == IPCM_SUCCESS) {
 			promise->ret = IPCM_SUCCESS;
 
 			return IPCM_SUCCESS;
