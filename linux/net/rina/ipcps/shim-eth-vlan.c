@@ -907,7 +907,6 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         struct shim_eth_flow *   flow;
         struct sk_buff *         skb;
         const unsigned char *    src_hw;
-        struct rinarp_mac_addr * desthw;
         const unsigned char *    dest_hw;
         unsigned char *          sdu_ptr;
         int                      hlen, tlen, length;
@@ -932,7 +931,6 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 
         hlen   = LL_RESERVED_SPACE(data->dev);
         tlen   = data->dev->needed_tailroom;
-        desthw = 0;
 
         flow = find_flow(data, id);
         if (!flow) {
