@@ -25,46 +25,66 @@
 #include <string>
 #include <librina/application.h>
 #include <librina/cdap_v2.h>
+#include "server.h"
 
 static const unsigned int max_sdu_size_in_bytes = 10000;
 
-class Application {
+class ConnectionCallback : public rina::cdap::CDAPCallbackInterface {
  public:
-	Application(const std::string& dif_name_, const std::string & app_name_,
-			const std::string & app_instance_);
-
-	static const uint max_buffer_size;
-
- protected:
-	void applicationRegister();
-
-	std::string dif_name;
-	std::string app_name;
-	std::string app_instance;
-
+	ConnectionCallback(rina::cdap::CDAPProviderInterface **prov);
+	void open_connection(const rina::cdap_rib::con_handle_t &con,
+				const rina::cdap_rib::flags_t &flags,
+				int message_id);
+	void remote_create_result(const rina::cdap_rib::con_handle_t &con,
+					const rina::cdap_rib::obj_info_t &obj,
+					const rina::cdap_rib::res_info_t &res);
+	void remote_read_result(const rina::cdap_rib::con_handle_t &con,
+				const rina::cdap_rib::obj_info_t &obj,
+				const rina::cdap_rib::res_info_t &res);
+ private:
+	rina::cdap::CDAPProviderInterface **prov_;
 };
 
-class Manager : public Application {
- public:
-	Manager(const std::string& dif_name, const std::string& apn,
-		const std::string& api);
-	void run();
-	~Manager();
- protected:
-        void startWorker(rina::FlowInformation &flow);
+class ManagerWorker : public ServerWorker {
+public:
+	ManagerWorker(rina::ThreadAttributes * threadAttributes,
+	              rina::FlowInformation flow,
+		      unsigned int max_sdu_size,
+	              Server * serv);
+	~ManagerWorker() throw() { };
+	int internal_run();
+
+private:
+        static const std::string IPCP_1;
+        static const std::string IPCP_2;
+        static const std::string IPCP_3;
         void operate(rina::FlowInformation flow);
-        bool cacep(rina::FlowInformation &flow);
-        bool createIPCP_1(rina::FlowInformation &flow);
-        bool createIPCP_2(rina::FlowInformation &flow);
-        bool createIPCP_3(rina::FlowInformation &flow);
-        void queryRIB(rina::FlowInformation &flow, std::string name);
+        void cacep(int port_id);
+        void createIPCP_1(int port_id);
+        void createIPCP_2(int port_id);
+        void createIPCP_3(int port_id);
+        void queryRIB(int port_id, std::string name);
+
+        rina::FlowInformation flow_;
+	unsigned int max_sdu_size;
+	rina::cdap::CDAPProviderInterface *cdap_prov_;
+};
+
+class Manager : public Server {
+ public:
+	Manager(const std::string& dif_name,
+		const std::string& apn,
+		const std::string& api);
+	~Manager() { };
+
  private:
-        const std::string IPCP_1 = "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=4";
-        const std::string IPCP_2 = "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=6";
-        const std::string IPCP_3 = "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=4";
 	std::string dif_name_;
 	bool client_app_reg_;
+
+ 	ServerWorker * internal_start_worker(rina::FlowInformation flow);
+
 	rina::cdap_rib::con_handle_t con_;
-	rina::cdap::CDAPProviderInterface *cdap_prov_;
+	static const std::string mad_name;
+	static const std::string mad_instance;
 };
 #endif//MANAGER_HPP

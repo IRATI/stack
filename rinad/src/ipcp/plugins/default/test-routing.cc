@@ -20,6 +20,8 @@
 // MA  02110-1301  USA
 //
 
+#include <iostream>
+
 #define IPCP_MODULE "lsr-tests"
 #include "../../ipcp-logging.h"
 
@@ -140,14 +142,13 @@ public:
 		std::list<rina::BaseRIBObject *> result;
 		return result;
 	}
-	void openApplicationConnection(rina::CDAPMessage::AuthTypes auth_mech,
-			const rina::AuthValue &auth_value, const std::string &dest_ae_inst,
+	void openApplicationConnection(
+			const rina::AuthPolicy &policy, const std::string &dest_ae_inst,
 			const std::string &dest_ae_name, const std::string &dest_ap_inst,
 			const std::string &dest_ap_name, const std::string &src_ae_inst,
 			const std::string &src_ae_name, const std::string &src_ap_inst,
 			const std::string &src_ap_name, const rina::RemoteProcessId& remote_id) {
-		(void) auth_mech;
-		(void) auth_value;
+		(void) policy;
 		(void) dest_ae_inst;
 		(void) dest_ae_name;
 		(void) dest_ap_inst;
@@ -221,14 +222,13 @@ public:
 		(void) remote_id;
 		(void) response_handler;
 	}
-	void openApplicationConnectionResponse(rina::CDAPMessage::AuthTypes auth_mech,
-				const rina::AuthValue &auth_value, const std::string &dest_ae_inst,
+	void openApplicationConnectionResponse(
+				const rina::AuthPolicy &policy, const std::string &dest_ae_inst,
 				const std::string &dest_ae_name, const std::string &dest_ap_inst, const std::string &dest_ap_name,
 				int result, const std::string &result_reason, const std::string &src_ae_inst,
 				const std::string &src_ae_name, const std::string &src_ap_inst, const std::string &src_ap_name,
 				int invoke_id, const rina::RemoteProcessId& remote_id) {
-		(void) auth_mech;
-		(void) auth_value;
+		(void) policy;
 		(void) dest_ae_inst;
 		(void) dest_ae_name;
 		(void) dest_ap_inst;
@@ -315,6 +315,20 @@ public:
 		(void) remote_id;
 	}
 
+	void generateCDAPResponse(int invoke_id,
+				  rina::CDAPSessionDescriptor * cdapSessDescr,
+				  rina::CDAPMessage::Opcode opcode,
+				  const std::string& obj_class,
+				  const std::string& obj_name,
+				  rina::RIBObjectValue& robject_value) {
+		(void)invoke_id;
+		(void)cdapSessDescr;
+		(void)opcode;
+		(void)obj_class;
+		(void)obj_name;
+		(void)robject_value;
+	};
+
 private:
 	void operationCalled(const std::string& objectClass,
 	                                 const std::string& objectName,
@@ -381,6 +395,12 @@ public:
 			throw rina::Exception();
 		}
 		return 0;
+	}
+
+	 rina::ApplicationRegistrationInformation
+		get_reg_app_info(const rina::ApplicationProcessNamingInformation name) {
+		(void) name;
+		return rina::ApplicationRegistrationInformation();
 	}
 
 private:
@@ -698,41 +718,42 @@ int test_graph () {
 }
 
 int getRoutingTable_NoFSO_size0() {
+	std::list<rinad::FlowStateObject *> fsos;
+	std::list<rina::RoutingTableEntry *> rtable;
+	rinad::IRoutingAlgorithm * routingAlgorithm;
 	int result = 0;
 
-	rinad::IRoutingAlgorithm * routingAlgorithm =
-			new rinad::DijkstraAlgorithm();
-	std::list<rinad::FlowStateObject *> fsos;
+	routingAlgorithm = new rinad::DijkstraAlgorithm();
 
-	std::list<rina::RoutingTableEntry *> rtable =
-			routingAlgorithm->computeRoutingTable(fsos, 1);
-
+	rtable = routingAlgorithm->computeRoutingTable(rinad::Graph(fsos),
+						       fsos, 1);
 	if (rtable.size() != 0) {
 		result = -1;
 	}
 
 	delete routingAlgorithm;
+
 	return result;
 }
 
 int getRoutingTable_LinearGraphNumberOfEntries_2() {
-	int result = 0;
-
 	std::list<rinad::FlowStateObject *> objects;
 	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
 	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, true, 1, 1);
 	rinad::FlowStateObject fso3 = rinad::FlowStateObject(2, 3, 1, true, 1, 1);
 	rinad::FlowStateObject fso4 = rinad::FlowStateObject(3, 2, 1, true, 1, 1);
+	rinad::IRoutingAlgorithm * routingAlgorithm;
+	std::list<rina::RoutingTableEntry *> rtable;
+	routingAlgorithm = new rinad::DijkstraAlgorithm();
+	int result = 0;
+
 	objects.push_back(&fso1);
 	objects.push_back(&fso2);
 	objects.push_back(&fso3);
 	objects.push_back(&fso4);
-	rinad::IRoutingAlgorithm * routingAlgorithm =
-			new rinad::DijkstraAlgorithm();
 
-	std::list<rina::RoutingTableEntry *> rtable =
-			routingAlgorithm->computeRoutingTable(objects, 1);
-
+	rtable = routingAlgorithm->computeRoutingTable(rinad::Graph(objects),
+						       objects, 1);
 	if (rtable.size() != 2) {
 		result = -1;
 	}
@@ -742,19 +763,20 @@ int getRoutingTable_LinearGraphNumberOfEntries_2() {
 }
 
 int getRoutingTable_StateFalseNoEntries_True() {
-	int result = 0;
-
 	std::list<rinad::FlowStateObject *> objects;
 	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
 	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, false, 1, 1);
+	rinad::IRoutingAlgorithm * routingAlgorithm;
+	std::list<rina::RoutingTableEntry *> rtable;
+	int result = 0;
+
+	routingAlgorithm = new rinad::DijkstraAlgorithm();
+
 	objects.push_back(&fso1);
 	objects.push_back(&fso2);
-	rinad::IRoutingAlgorithm * routingAlgorithm =
-			new rinad::DijkstraAlgorithm();
 
-	std::list<rina::RoutingTableEntry *> rtable =
-			routingAlgorithm->computeRoutingTable(objects, 1);
-
+	rtable = routingAlgorithm->computeRoutingTable(rinad::Graph(objects),
+						       objects, 1);
 	if (rtable.size() != 0) {
 		result = -1;
 	}
@@ -764,8 +786,6 @@ int getRoutingTable_StateFalseNoEntries_True() {
 }
 
 int getRoutingTable_MultiGraphEntries_True() {
-	int result = 0;
-
 	std::list<rinad::FlowStateObject *> objects;
 	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
 	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, true, 1, 1);
@@ -773,20 +793,111 @@ int getRoutingTable_MultiGraphEntries_True() {
 	rinad::FlowStateObject fso4 = rinad::FlowStateObject(3, 1, 1, true, 1, 1);
 	rinad::FlowStateObject fso5 = rinad::FlowStateObject(2, 3, 1, true, 1, 1);
 	rinad::FlowStateObject fso6 = rinad::FlowStateObject(3, 2, 1, true, 1, 1);
+	rinad::IRoutingAlgorithm * routingAlgorithm;
+	std::list<rina::RoutingTableEntry *> rtable;
+	int result = 0;
+
+	routingAlgorithm = new rinad::DijkstraAlgorithm();
+
 	objects.push_back(&fso1);
 	objects.push_back(&fso2);
 	objects.push_back(&fso3);
 	objects.push_back(&fso4);
 	objects.push_back(&fso5);
 	objects.push_back(&fso6);
-	rinad::IRoutingAlgorithm * routingAlgorithm =
-			new rinad::DijkstraAlgorithm();
 
-	std::list<rina::RoutingTableEntry *> rtable =
-			routingAlgorithm->computeRoutingTable(objects, 1);
-
+	rtable = routingAlgorithm->computeRoutingTable(rinad::Graph(objects),
+						       objects, 1);
 	if (rtable.size() != 2) {
 		result = -1;
+	}
+
+	delete routingAlgorithm;
+	return result;
+}
+
+int getRoutingTable_MoreGraphEntries_True(bool lfa) {
+	std::list<rinad::FlowStateObject *> objects;
+	rinad::IRoutingAlgorithm * routingAlgorithm;
+	std::list<rina::RoutingTableEntry *> rtable;
+	std::vector<unsigned int> exp_nhops;
+	rinad::IResiliencyAlgorithm *resalg;
+	int result = 0;
+
+	routingAlgorithm = new rinad::DijkstraAlgorithm();
+
+	objects.push_back(new rinad::FlowStateObject(1, 2, 1, true, 1, 1));
+	objects.push_back(new rinad::FlowStateObject(2, 1, 1, true, 1, 1));
+	objects.push_back(new rinad::FlowStateObject(1, 4, 1, true, 1, 1));
+	objects.push_back(new rinad::FlowStateObject(4, 1, 1, true, 1, 1));
+	objects.push_back(new rinad::FlowStateObject(1, 3, 1, true, 1, 1));
+	objects.push_back(new rinad::FlowStateObject(3, 1, 1, true, 1, 1));
+	objects.push_back(new rinad::FlowStateObject(2, 5, 1, true, 1, 1));
+	objects.push_back(new rinad::FlowStateObject(5, 2, 1, true, 1, 1));
+	objects.push_back(new rinad::FlowStateObject(4, 5, 1, true, 1, 1));
+	objects.push_back(new rinad::FlowStateObject(5, 4, 1, true, 1, 1));
+	objects.push_back(new rinad::FlowStateObject(4, 6, 1, true, 1, 1));
+	objects.push_back(new rinad::FlowStateObject(6, 4, 1, true, 1, 1));
+	objects.push_back(new rinad::FlowStateObject(5, 7, 1, true, 1, 1));
+	objects.push_back(new rinad::FlowStateObject(7, 5, 1, true, 1, 1));
+	objects.push_back(new rinad::FlowStateObject(6, 7, 1, true, 1, 1));
+	objects.push_back(new rinad::FlowStateObject(7, 6, 1, true, 1, 1));
+	objects.push_back(new rinad::FlowStateObject(3, 7, 1, true, 1, 1));
+	objects.push_back(new rinad::FlowStateObject(7, 3, 1, true, 1, 1));
+
+	exp_nhops.resize(8);
+	exp_nhops[0] = exp_nhops[1] = 1;  // Not meaningful
+	exp_nhops[2] = 2;
+	exp_nhops[3] = 3;
+	exp_nhops[4] = 4;
+	exp_nhops[5] = 2;
+	exp_nhops[6] = 4;
+	exp_nhops[7] = 3;
+
+	rinad::Graph graph(objects);
+
+	rtable = routingAlgorithm->computeRoutingTable(graph, objects, 1);
+
+	for (std::list<rina::RoutingTableEntry *>::iterator
+			rit = rtable.begin(); rit != rtable.end(); rit++) {
+		const rina::RoutingTableEntry& e = **rit;
+		bool ok = false;
+
+		std::cout << "Dest: " << e.address << ", Cost: " << e.cost <<
+				", NextHops: [";
+
+		if (e.address < 1 || e.address > 7) {
+			std::cout << std::endl;
+			result = -1;
+			break;
+		}
+
+		for (std::list<unsigned int>::const_iterator
+			lit = e.nextHopAddresses.begin();
+				lit != e.nextHopAddresses.end(); lit++) {
+			if (*lit == exp_nhops[e.address]) {
+				ok = true;
+			}
+			std::cout << *lit << ", ";
+		}
+
+		if (!ok) {
+			std::cout << std::endl;
+			result = -1;
+			break;
+		}
+
+		std::cout << "]" << std::endl;
+	}
+
+	if (lfa) {
+		resalg = new rinad::LoopFreeAlternateAlgorithm(*routingAlgorithm);
+		resalg->fortifyRoutingTable(graph, 1, rtable);
+	}
+
+	for (std::list<rinad::FlowStateObject *>::iterator
+			it = objects.begin(); it != objects.end(); it++) {
+		delete *it;
 	}
 
 	delete routingAlgorithm;
@@ -823,6 +934,20 @@ int test_dijkstra() {
 		return result;
 	}
 	LOG_IPCP_INFO("getPDUTForwardingTable_MultiGraphEntries_True test passed");
+
+	result = getRoutingTable_MoreGraphEntries_True(false);
+	if (result < 0) {
+		LOG_IPCP_ERR("getPDUTForwardingTable_MoreGraphEntries_True test failed");
+		return result;
+	}
+	LOG_IPCP_INFO("getPDUTForwardingTable_MoreGraphEntries_True test passed");
+
+	result = getRoutingTable_MoreGraphEntries_True(true);
+	if (result < 0) {
+		LOG_IPCP_ERR("getPDUTForwardingTable_MoreGraphEntriesLFA_True test failed");
+		return result;
+	}
+	LOG_IPCP_INFO("getPDUTForwardingTable_MoreGraphEntriesLFA_True test passed");
 
 	return result;
 }

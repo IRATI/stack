@@ -103,3 +103,11 @@ EXPORT_SYMBOL(pdu_ser_head_grow_gfp);
 int pdu_ser_head_shrink_gfp(gfp_t flags, struct pdu_ser * pdu, size_t bytes)
 { return buffer_head_shrink(flags, pdu->buf, bytes); }
 EXPORT_SYMBOL(pdu_ser_head_shrink_gfp);
+
+int pdu_ser_tail_grow_gfp(struct pdu_ser * pdu, size_t bytes)
+{ return buffer_tail_grow(pdu->buf, bytes); }
+EXPORT_SYMBOL(pdu_ser_tail_grow_gfp);
+
+int pdu_ser_tail_shrink_gfp(struct pdu_ser * pdu, size_t bytes)
+{ return buffer_tail_shrink(pdu->buf, bytes); }
+EXPORT_SYMBOL(pdu_ser_tail_shrink_gfp);

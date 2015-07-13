@@ -183,7 +183,7 @@ bool IPCProcessesObj::registerAtDIF(
 		}
 
 		if (IPCManager->register_at_dif(ManagementAgent::inst, &promise,
-						ipcp_id, dif_name) == IPCM_FAILURE
+						ipcp_id, dif_name, false) == IPCM_FAILURE
 				|| promise.wait() != IPCM_SUCCESS) {
 			LOG_ERR("Registration failed");
 			return false;
@@ -214,8 +214,8 @@ bool IPCProcessesObj::enrollToDIF(
 	}
 
 	if (IPCManager->enroll_to_dif(ManagementAgent::inst, &promise, ipcp_id,
-					neighbor_data) == IPCM_FAILURE
-			|| promise.wait() != IPCM_SUCCESS) {
+					neighbor_data) == IPCM_FAILURE)
+	{
 		LOG_ERR("Enrollment operation failed");
 		return false;
 	}

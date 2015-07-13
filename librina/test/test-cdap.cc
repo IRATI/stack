@@ -27,14 +27,14 @@ using namespace rina;
 
 bool m_Connect(CDAPSessionManagerInterface &session_manager,
 		int port_A, int port_B, int &invoke_id) {
-	AuthValue auth_value;
+	AuthPolicy auth_policy;
 	const CDAPMessage *sent_message, *recevied_message;
 	const SerializedObject *serialized_message;
 	bool assert = false;
 
 	// M_CONNECT Message
 	sent_message = session_manager.getOpenConnectionRequestMessage(port_A,
-			CDAPMessage::AUTH_NONE, auth_value, "1", "B instance", "1", "B",
+			auth_policy, "1", "B instance", "1", "B",
 			"1", "A instance", "1", "A");
 	invoke_id = sent_message->get_invoke_id();
 	serialized_message = session_manager.encodeNextMessageToBeSent(*sent_message, port_A);
@@ -56,14 +56,14 @@ bool m_Connect(CDAPSessionManagerInterface &session_manager,
 
 int m_Connect_R(CDAPSessionManagerInterface &session_manager,
 		int port_A, int port_B, int invoke_id) {
-	AuthValue auth_value;
+	AuthPolicy auth_policy;
 	const CDAPMessage *sent_message, *recevied_message;
 	const SerializedObject *serialized_message;
 	int assert = -1;
 
 	// M_CONNECT_R message
 	sent_message = session_manager.getOpenConnectionResponseMessage(
-			CDAPMessage::AUTH_NONE, auth_value, "1", "A instance", "1", "A", 1,
+			auth_policy, "1", "A instance", "1", "A", 1,
 			"OK", "1", "B instance", "1", "B", invoke_id);
 	serialized_message = session_manager.encodeNextMessageToBeSent(*sent_message, port_B);
 	session_manager.messageSent(*sent_message, port_B);
@@ -88,12 +88,11 @@ int m_Connect_R(CDAPSessionManagerInterface &session_manager,
 
 bool m_Release(CDAPSessionManagerInterface &session_manager,
 		int port_A, int port_B, int invoke_id) {
-	AuthValue auth_value;
 	const CDAPMessage *sent_message, *recevied_message;
 	const SerializedObject *serialized_message;
 	bool assert = false;
 
-	// M_CONNECT Message
+	// M_RELEASE Message
 	sent_message = session_manager.getReleaseConnectionRequestMessage(port_A, CDAPMessage::NONE_FLAGS, invoke_id);
 	serialized_message = session_manager.encodeNextMessageToBeSent(*sent_message, port_A);
 	session_manager.messageSent(*sent_message, port_A);
@@ -114,12 +113,11 @@ bool m_Release(CDAPSessionManagerInterface &session_manager,
 
 int m_Release_R(CDAPSessionManagerInterface &session_manager,
 		int port_A, int port_B, int invoke_id) {
-	AuthValue auth_value;
 	const CDAPMessage *sent_message, *recevied_message;
 	const SerializedObject *serialized_message;
 	int assert = -1;
 
-	// M_CONNECT_R message
+	// M_RELEASE_R message
 	sent_message = session_manager.getReleaseConnectionResponseMessage(CDAPMessage::NONE_FLAGS, 1, "ok", invoke_id);
 	serialized_message = session_manager.encodeNextMessageToBeSent(*sent_message, port_B);
 	session_manager.messageSent(*sent_message, port_B);

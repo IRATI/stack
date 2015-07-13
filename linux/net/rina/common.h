@@ -138,6 +138,11 @@ struct flow_spec {
          * of the DIF where the flow will be created.
          */
         uint_t max_sdu_size;
+
+        /*
+         * True if the flow is blocking, false otherwise
+         */
+        bool blocking;
 };
 
 /* FIXME: Move RNL related types to RNL header(s) */
@@ -163,7 +168,7 @@ struct port_id_altlist {
 	struct list_head	next;
 };
 
-struct modpdufwd_entry {
+struct mod_pff_entry {
         address_t        fwd_info; /* dest_addr, neighbor_addr, circuit-id */
         qos_id_t         qos_id;
 	struct list_head port_id_altlists;

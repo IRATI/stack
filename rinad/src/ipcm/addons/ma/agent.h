@@ -125,7 +125,7 @@ public:
 
 protected:
 	//Process flow event
-	void process_flow_event(rina::IPCEvent** event);
+	void process_librina_event(rina::IPCEvent** event);
 
 	//Process ipcm event
 	void process_ipcm_event(const IPCMEvent& event);

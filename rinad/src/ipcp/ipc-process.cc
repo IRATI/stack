@@ -59,7 +59,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 
         // Load the default pluggable components
         if (plugin_load(PLUGINSDIR, "default")) {
-        		throw rina::Exception("Failed to load default plugin");
+		throw rina::Exception("Failed to load default plugin");
         }
 
         // Initialize application entities
@@ -85,39 +85,6 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         add_entity(flow_allocator_);
         add_entity(security_manager_);
         add_entity(routing_component_);
-
-        // Select the default policy sets
-        security_manager_->select_policy_set(std::string(), rina::IPolicySet::DEFAULT_PS_SET_NAME);
-        if (!security_manager_->ps) {
-                throw rina::Exception("Cannot create security manager policy-set");
-        }
-        security_manager_->add_auth_policy_set(rina::IAuthPolicySet::AUTH_NONE);
-        security_manager_->add_auth_policy_set(rina::IAuthPolicySet::AUTH_PASSWORD);
-
-        flow_allocator_->select_policy_set(std::string(), rina::IPolicySet::DEFAULT_PS_SET_NAME);
-        if (!flow_allocator_->ps) {
-                throw rina::Exception("Cannot create flow allocator policy-set");
-        }
-
-        namespace_manager_->select_policy_set(std::string(), rina::IPolicySet::DEFAULT_PS_SET_NAME);
-        if (!namespace_manager_->ps) {
-                throw rina::Exception("Cannot create namespace manager policy-set");
-        }
-
-        resource_allocator_->select_policy_set(std::string(), rina::IPolicySet::DEFAULT_PS_SET_NAME);
-        if (!resource_allocator_->ps) {
-                throw rina::Exception("Cannot create resource allocator policy-set");
-        }
-
-        enrollment_task_->select_policy_set(std::string(), rina::IPolicySet::DEFAULT_PS_SET_NAME);
-        if (!enrollment_task_->ps) {
-                throw rina::Exception("Cannot create enrollment task policy-set");
-        }
-
-        routing_component_->select_policy_set(std::string(), "link-state");
-        if (!routing_component_->ps) {
-                throw rina::Exception("Cannot create routing component policy-set");
-        }
 
         try {
                 rina::ApplicationProcessNamingInformation naming_info(name_, instance_);
@@ -155,48 +122,65 @@ IPCProcessImpl::~IPCProcessImpl() {
 	}
 
 	if (enrollment_task_) {
-		psDestroy(rina::ApplicationEntity::ENROLLMENT_TASK_AE_NAME,
-                   enrollment_task_->selected_ps_name,
-                   enrollment_task_->ps);
+		if (enrollment_task_->ps) {
+			psDestroy(rina::ApplicationEntity::ENROLLMENT_TASK_AE_NAME,
+				  enrollment_task_->selected_ps_name,
+				  enrollment_task_->ps);
+		}
 		delete enrollment_task_;
 	}
 
 	if (flow_allocator_) {
-		psDestroy(IFlowAllocator::FLOW_ALLOCATOR_AE_NAME,
-                   flow_allocator_->selected_ps_name,
-                   flow_allocator_->ps);
+		if (flow_allocator_->ps) {
+			psDestroy(IFlowAllocator::FLOW_ALLOCATOR_AE_NAME,
+				  flow_allocator_->selected_ps_name,
+				  flow_allocator_->ps);
+		}
 		delete flow_allocator_;
 	}
 
 	if (namespace_manager_) {
-		psDestroy(INamespaceManager::NAMESPACE_MANAGER_AE_NAME,
-                   namespace_manager_->selected_ps_name,
-                   namespace_manager_->ps);
+		if (namespace_manager_->ps) {
+			psDestroy(INamespaceManager::NAMESPACE_MANAGER_AE_NAME,
+				  namespace_manager_->selected_ps_name,
+				  namespace_manager_->ps);
+		}
 		delete namespace_manager_;
 	}
 
 	if (resource_allocator_) {
-		psDestroy(IResourceAllocator::RESOURCE_ALLOCATOR_AE_NAME,
-					resource_allocator_->selected_ps_name,
-					resource_allocator_->ps);
+		if (resource_allocator_->ps) {
+			psDestroy(IResourceAllocator::RESOURCE_ALLOCATOR_AE_NAME,
+				  resource_allocator_->selected_ps_name,
+				  resource_allocator_->ps);
+		}
 		delete resource_allocator_;
 	}
 
 	if (security_manager_) {
-		psDestroy(rina::ApplicationEntity::SECURITY_MANAGER_AE_NAME,
-                   security_manager_->selected_ps_name,
-                   security_manager_->ps);
-        delete security_manager_;
+		if (security_manager_->ps) {
+			psDestroy(rina::ApplicationEntity::SECURITY_MANAGER_AE_NAME,
+				  security_manager_->selected_ps_name,
+				  security_manager_->ps);
+		}
+		delete security_manager_;
 	}
 
 	if (routing_component_) {
-		psDestroy(IRoutingComponent::ROUTING_COMPONENT_AE_NAME,
-				routing_component_->selected_ps_name,
-				routing_component_->ps);
-        delete routing_component_;
+		if (routing_component_->ps) {
+			psDestroy(IRoutingComponent::ROUTING_COMPONENT_AE_NAME,
+				  routing_component_->selected_ps_name,
+				  routing_component_->ps);
+		}
+		delete routing_component_;
 	}
 
 	if (rib_daemon_) {
+		if (rib_daemon_->ps) {
+			psDestroy(IPCPRIBDaemon::RIB_DAEMON_AE_NAME,
+				  rib_daemon_->selected_ps_name,
+				  rib_daemon_->ps);
+		}
 		delete rib_daemon_;
 	}
 }
@@ -347,28 +331,6 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 
 	//TODO do stuff
 	LOG_IPCP_DBG("The kernel processed successfully the Assign to DIF request");
-
-        // Select the policy-sets specified in the DIF configuration, for
-        // userspace IPCP components
-        std::list<rina::Parameter>& policy_sets_config =
-                                dif_information_.dif_configuration_.policy_sets;
-        for (std::list<rina::Parameter>::iterator
-                        it = policy_sets_config.begin();
-                                it != policy_sets_config.end(); it++) {
-                std::string path = it->name;
-                std::string name = it->value;
-                bool got_in_userspace;
-                int result;
-
-                result = dispatchSelectPolicySet(path, name, got_in_userspace);
-                if (result) {
-                        LOG_IPCP_ERR("Failed to select policy set %s for component %s",
-                                name.c_str(), path.c_str());
-                } else if (!got_in_userspace) {
-                        LOG_IPCP_ERR("Component %s is not an userspace IPCP component",
-                                path.c_str());
-                }
-        }
 
 	try{
 		rib_daemon_->set_dif_configuration(dif_information_.dif_configuration_);
@@ -537,7 +499,7 @@ void IPCProcessImpl::processSetPolicySetParamResponseEvent(
 	}
 
 	LOG_IPCP_DBG("The kernel processed successfully the "
-                "set-policy-set-param request");
+                     "set-policy-set-param request");
 
 	try {
 		rina::extendedIPCManager->setPolicySetParamResponse(requestEvent, 0);
@@ -646,7 +608,7 @@ void IPCProcessImpl::processSelectPolicySetResponseEvent(
 	}
 
 	LOG_IPCP_DBG("The kernel processed successfully the "
-                "set-policy-set-param request");
+                     "select-policy-set request");
 
 	try {
 		rina::extendedIPCManager->selectPolicySetResponse(requestEvent, 0);
@@ -666,6 +628,32 @@ void IPCProcessImpl::processPluginLoadRequestEvent(
                 result = plugin_unload(event.name);
         }
         rina::extendedIPCManager->pluginLoadResponse(event, result);
+
+        return;
+}
+
+void IPCProcessImpl::processFwdCDAPMsgEvent(
+                        const rina::FwdCDAPMsgEvent& event) {
+	const rina::CDAPMessage * msg;
+	rina::CDAPSessionDescriptor * session_descr;
+
+	if (!event.sermsg.message_) {
+		LOG_IPCP_ERR("No CDAP message to be forwarded");
+		return;
+	}
+
+	msg = rib_daemon_->wmpi->deserializeMessage(event.sermsg);
+
+	LOG_IPCP_INFO("Forwarded CDAP Message:\n%s",
+		      msg->to_string().c_str());
+
+	session_descr = new IPCMCDAPSessDesc(event.sequenceNumber);
+
+	rib_daemon_->processIncomingCDAPMessage(msg, session_descr,
+			rina::CDAPSessionInterface::SESSION_STATE_CON);
+
+	delete msg;
+	delete session_descr;
 
         return;
 }
@@ -922,6 +910,27 @@ ipc_process_plugin_load_handler(rina::IPCEvent *e,
 }
 
 static void
+ipc_process_enable_encryption_response_handler(rina::IPCEvent *e,
+					       EventLoopData *opaque)
+{
+	DOWNCAST_DECL(e, rina::EnableEncryptionResponseEvent, event);
+	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
+
+	ipcp->security_manager_->process_enable_encryption_response(*event);
+}
+
+static void
+ipc_process_fwd_cdap_msg_handler(rina::IPCEvent *e,
+		                 EventLoopData *opaque)
+
+{
+	DOWNCAST_DECL(e, rina::FwdCDAPMsgEvent, event);
+	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
+
+	ipcp->processFwdCDAPMsgEvent(*event);
+}
+
+static void
 ipc_process_default_handler(rina::IPCEvent *e,
 		EventLoopData *opaque)
 {
@@ -977,6 +986,10 @@ void register_handlers_all(EventLoop& loop) {
                         ipc_process_select_policy_set_response_handler);
         loop.register_event(rina::IPC_PROCESS_PLUGIN_LOAD,
                         ipc_process_plugin_load_handler);
+        loop.register_event(rina::IPC_PROCESS_ENABLE_ENCRYPTION_RESPONSE,
+        		ipc_process_enable_encryption_response_handler);
+        loop.register_event(rina::IPC_PROCESS_FWD_CDAP_MSG,
+                        ipc_process_fwd_cdap_msg_handler);
 
 	//Unsupported events
 	loop.register_event(rina::APPLICATION_UNREGISTERED_EVENT,

@@ -119,6 +119,12 @@
     jenv->ThrowNew(excep, $1.what());
   return $null;
 }
+%typemap(throws, throws="eu.irati.librina.InvalidArgumentsException") rina::InvalidArgumentsException {
+  jclass excep = jenv->FindClass("eu/irati/librina/InvalidArgumentsException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
 %typemap(throws, throws="eu.irati.librina.ReadSDUException") rina::ReadSDUException {
   jclass excep = jenv->FindClass("eu/irati/librina/ReadSDUException");
   if (excep)
@@ -400,6 +406,9 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(equals) rina::ApplicationProcessNamingInformation::operator==(const ApplicationProcessNamingInformation &other) const;
 %rename(assign) rina::ApplicationProcessNamingInformation::operator=(const ApplicationProcessNamingInformation &other);
 %rename(assign) rina::SerializedObject::operator=(const SerializedObject &other);
+%rename(assign) rina::UcharArray::operator=(const UcharArray &other);
+%rename(differs) rina::UcharArray::operator!=(const UcharArray &other) const;
+%rename(equals) rina::UcharArray::operator==(const UcharArray &other) const;
 %rename(isLessThanOrEquals) rina::ApplicationProcessNamingInformation::operator<=(const ApplicationProcessNamingInformation &other) const;   
 %rename(isLessThan) rina::ApplicationProcessNamingInformation::operator<(const ApplicationProcessNamingInformation &other) const;
 %rename(isMoreThanOrEquals) rina::ApplicationProcessNamingInformation::operator>=(const ApplicationProcessNamingInformation &other) const;   

@@ -112,7 +112,7 @@ void Addon::distribute_flow_event(rina::IPCEvent* event){
 
 	for(it = event_subscribers.begin(); it != event_subscribers.end();
 								 ++it){
-		(*it)->process_flow_event(&event);
+		(*it)->process_librina_event(&event);
 		if(!event)
 			return;
 	}

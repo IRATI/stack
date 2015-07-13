@@ -195,7 +195,13 @@ void ResourceAllocator::set_application_process(rina::ApplicationProcess * ap)
 	}
 }
 
-void ResourceAllocator::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
+void ResourceAllocator::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
+{
+	std::string ps_name = dif_configuration.ra_configuration_.pduftg_conf_.policy_set_.name_;
+	if (set_pduft_gen_policy_set(ps_name) != 0) {
+		throw rina::Exception("Cannot create PDU Forwarding Table Generator policy-set");
+	}
+
 	if (n_minus_one_flow_manager_) {
 		n_minus_one_flow_manager_->set_dif_configuration(dif_configuration);
 	}

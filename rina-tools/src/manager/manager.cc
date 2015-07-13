@@ -34,76 +34,11 @@ using namespace std;
 using namespace rina;
 using namespace rinad;
 
-Application::Application(const string& dif_name_, const string& app_name_,
-				const string& app_instance_)
-		: 	dif_name(dif_name_),
-			app_name(app_name_),
-			app_instance(app_instance_) {
-}
-
-void Application::applicationRegister() {
-	ApplicationRegistrationInformation ari;
-	RegisterApplicationResponseEvent *resp;
-	unsigned int seqnum;
-	IPCEvent *event;
-
-	ari.ipcProcessId = 0;  // This is an application, not an IPC process
-	ari.appName = ApplicationProcessNamingInformation(app_name,
-								app_instance);
-	if (dif_name == string()) {
-		ari.applicationRegistrationType =
-				rina::APPLICATION_REGISTRATION_ANY_DIF;
-	} else {
-		ari.applicationRegistrationType =
-				rina::APPLICATION_REGISTRATION_SINGLE_DIF;
-		ari.difName = ApplicationProcessNamingInformation(
-				dif_name, string());
-	}
-
-	// Request the registration
-	seqnum = ipcManager->requestApplicationRegistration(ari);
-
-	// Wait for the response to come
-	for (;;) {
-		event = ipcEventProducer->eventWait();
-		if (event
-				&& event->eventType
-						== REGISTER_APPLICATION_RESPONSE_EVENT
-				&& event->sequenceNumber == seqnum) {
-			break;
-		}
-	}
-
-	resp = dynamic_cast<RegisterApplicationResponseEvent*>(event);
-
-	// Update librina state
-	if (resp->result == 0) {
-		ipcManager->commitPendingRegistration(seqnum, resp->DIFName);
-	} else {
-		ipcManager->withdrawPendingRegistration(seqnum);
-		throw ApplicationRegistrationException(
-				"Failed to register application");
-	}
-}
-
-const uint Application::max_buffer_size = 1 << 18;
-
-class ConnectionCallback : public rina::cdap::CDAPCallbackInterface
-{
- public:
-	ConnectionCallback(rina::cdap::CDAPProviderInterface **prov);
-	void open_connection(const rina::cdap_rib::con_handle_t &con,
-				const rina::cdap_rib::flags_t &flags,
-				int message_id);
-	void remote_create_result(const rina::cdap_rib::con_handle_t &con,
-					const rina::cdap_rib::obj_info_t &obj,
-					const rina::cdap_rib::res_info_t &res);
-	void remote_read_result(const rina::cdap_rib::con_handle_t &con,
-				const rina::cdap_rib::obj_info_t &obj,
-				const rina::cdap_rib::res_info_t &res);
- private:
-	rina::cdap::CDAPProviderInterface **prov_;
-};
+const std::string Manager::mad_name = "mad";
+const std::string Manager::mad_instance = "1";
+const std::string ManagerWorker::IPCP_1 = "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=4";
+const std::string ManagerWorker::IPCP_2 = "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=6";
+const std::string ManagerWorker::IPCP_3 = "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=4";
 
 ConnectionCallback::ConnectionCallback(
 		rina::cdap::CDAPProviderInterface **prov) {
@@ -147,183 +82,53 @@ void ConnectionCallback::remote_read_result(
 	std::cout << "QueryRIB:" << std::endl << query_rib << std::endl;
 }
 
-Manager::Manager(const std::string& dif_name, const std::string& apn,
-			const std::string& api)
-		: Application(dif_name, apn, api) {
-	(void) client_app_reg_;
+ManagerWorker::ManagerWorker(rina::ThreadAttributes * threadAttributes,
+                             rina::FlowInformation flow,
+		     	     unsigned int max_size,
+		     	     Server * serv) : ServerWorker(threadAttributes, serv)
+{
+	flow_ = flow;
+	max_sdu_size = max_size;
 	cdap_prov_ = 0;
 }
 
-Manager::~Manager() {
-	if (cdap_prov_)
-		delete cdap_prov_;
+int ManagerWorker::internal_run()
+{
+	operate(flow_);
+	return 0;
 }
 
-void Manager::run() {
-	applicationRegister();
-	int order = 1;
-	std::map<int, rina::FlowInformation> waiting;
-	ConnectionCallback callback(&cdap_prov_);
-	cdap::CDAPProviderFactory::init(2000);
-	cdap_prov_ = cdap::CDAPProviderFactory::create(false, &callback);
-
-	for (;;) {
-		IPCEvent* event = ipcEventProducer->eventWait();
-		rina::FlowInformation flow;
-		unsigned int port_id;
-		DeallocateFlowResponseEvent *resp = 0;
-
-		if (!event)
-			return;
-
-		switch (event->eventType) {
-
-			case REGISTER_APPLICATION_RESPONSE_EVENT:
-				ipcManager->commitPendingRegistration(
-						event->sequenceNumber,
-						dynamic_cast<RegisterApplicationResponseEvent*>(event)
-								->DIFName);
-				break;
-
-			case UNREGISTER_APPLICATION_RESPONSE_EVENT:
-				ipcManager->appUnregistrationResult(
-						event->sequenceNumber,
-						dynamic_cast<UnregisterApplicationResponseEvent*>(event)
-								->result == 0);
-				break;
-
-			case FLOW_ALLOCATION_REQUESTED_EVENT:
-				flow =
-						ipcManager->allocateFlowResponse(
-								*dynamic_cast<FlowRequestEvent*>(event),
-								0, true);
-				LOG_INFO("New flow allocated to app %s [port-id = %d]",
-						flow.remoteAppName.processName.c_str(), flow.portId);
-				cacep(flow);
-				if (flow.remoteAppName.processName
-						== "rina.apps.mad.1") {
-					if (waiting.find(1) == waiting.end()) {
-						waiting[1] = flow;
-					} else {
-						std::cout << "Error, flow with the same mad already exist: "
-								<< flow
-										.remoteAppName
-										.processName
-								<< std::endl;
-						ipcManager
-								->requestFlowDeallocation(
-								flow.portId);
-					}
-				}
-				if (flow.remoteAppName.processName
-						== "rina.apps.mad.2") {
-					if (waiting.find(2) == waiting.end()) {
-						waiting[2] = flow;
-					} else {
-						std::cout << "Error, flow with the same mad already exist: "
-								<< flow
-										.remoteAppName
-										.processName
-								<< std::endl;
-						ipcManager
-								->requestFlowDeallocation(
-								flow.portId);
-					}
-				}
-				if (flow.remoteAppName.processName
-						== "rina.apps.mad.3") {
-					if (waiting.find(3) == waiting.end()) {
-						waiting[3] = flow;
-					} else {
-						std::cout << "Error, flow with the same mad already exist: "
-								<< flow
-										.remoteAppName
-										.processName
-								<< std::endl;
-						ipcManager
-								->requestFlowDeallocation(
-								flow.portId);
-					}
-				}
-				while (waiting.find(order) != waiting.end()) {
-					operate(waiting[order]);
-					order++;
-				}
-
-				break;
-
-			case FLOW_DEALLOCATED_EVENT:
-				port_id =
-						dynamic_cast<FlowDeallocatedEvent*>(event)
-								->portId;
-				ipcManager->flowDeallocated(port_id);
-				LOG_INFO("Flow torn down remotely [port-id = %d]",
-						port_id);
-				break;
-
-			case DEALLOCATE_FLOW_RESPONSE_EVENT:
-				LOG_INFO("Destroying the flow after time-out");
-				resp =
-						dynamic_cast<DeallocateFlowResponseEvent*>(event);
-				port_id = resp->portId;
-
-				ipcManager->flowDeallocationResult(
-						port_id, resp->result == 0);
-				break;
-
-			default:
-				LOG_INFO("Server got new event of type %d",
-						event->eventType);
-				break;
-		}
-	}
-	// FINISH
-	//cdap::CDAPProviderFactory::destroy(flow.portId);
+void ManagerWorker::operate(rina::FlowInformation flow)
+{
+        ConnectionCallback callback(&cdap_prov_);
+        std::cout << "cdap_prov created" << std::endl;
+        cdap::CDAPProviderFactory::init(2000);
+        cdap_prov_ = cdap::CDAPProviderFactory::create(false, &callback);
+        // CACEP
+        cacep(flow.portId);
+        // CREATE IPCP
+        createIPCP_1(flow.portId);
+        // QUERY RIB
+        queryRIB(flow.portId, IPCP_1 + ",RIBDaemon");
+        queryRIB(flow.portId, IPCP_2 + ",RIBDaemon");
+        queryRIB(flow.portId, IPCP_3 + ",RIBDaemon");
+        // FINISH
+        cdap::CDAPProviderFactory::destroy(flow.portId);
+        delete cdap_prov_;
 }
 
-void Manager::operate(rina::FlowInformation flow) {
-	bool create_result = false;
-	// CREATE IPCP
-	std::cout << "flow.remoteAppName.processName: "
-			<< flow.remoteAppName.processName << std::endl;
-	if (flow.remoteAppName.processName == "rina.apps.mad.1") {
-		create_result = createIPCP_1(flow);
-		// QUERY RIB
-		if (create_result)
-			queryRIB(flow, IPCP_1 + ",RIBDaemon");
-
-	}
-	if (flow.remoteAppName.processName == "rina.apps.mad.2") {
-		create_result = createIPCP_2(flow);
-		if (create_result)
-			queryRIB(flow, IPCP_2 + ", RIBDaemon");
-
-	}
-	if (flow.remoteAppName.processName == "rina.apps.mad.3") {
-		create_result = createIPCP_3(flow);
-		if (create_result)
-			queryRIB(flow, IPCP_3 + ", RIBDaemon");
-	}
+void ManagerWorker::cacep(int port_id)
+{
+        char buffer[max_sdu_size_in_bytes];
+        int bytes_read = ipcManager->readSDU(port_id, buffer, max_sdu_size_in_bytes);
+        cdap_rib::ser_obj_t message;
+        message.message_ = buffer;
+        message.size_ = bytes_read;
+        cdap_prov_->process_message(message, port_id);
 }
 
-bool Manager::cacep(rina::FlowInformation &flow) {
-	char buffer[max_sdu_size_in_bytes];
-	try {
-		int bytes_read = ipcManager->readSDU(flow.portId, buffer,
-							max_sdu_size_in_bytes);
-		cdap_rib::SerializedObject message;
-		message.message_ = buffer;
-		message.size_ = bytes_read;
-		cdap_prov_->process_message(message, flow.portId);
-	} catch (Exception &e) {
-		std::cout << "ReadSDUException in CACEP: " << e.what()
-				<< std::endl;
-		return false;
-	}
-	return true;
-}
-
-bool Manager::createIPCP_1(rina::FlowInformation &flow) {
+void ManagerWorker::createIPCP_1(int port_id)
+{
 	char buffer[max_sdu_size_in_bytes];
 
 	mad_manager::structures::ipcp_config_t ipc_config;
@@ -349,26 +154,24 @@ bool Manager::createIPCP_1(rina::FlowInformation &flow) {
 	filt.filter_ = 0;
 	filt.scope_ = 0;
 
-	cdap_prov_->remote_create(flow.portId, obj, flags, filt);
-	std::cout << "create IPC request CDAP message sent to app "
-			<< flow.remoteAppName.processName << std::endl;
+	cdap_prov_->remote_create(port_id, obj, flags, filt);
+	std::cout << "create IPC request CDAP message sent to port "
+			<< port_id << std::endl;
 
 	try {
-		int bytes_read = ipcManager->readSDU(flow.portId, buffer,
+		int bytes_read = ipcManager->readSDU(port_id, buffer,
 							max_sdu_size_in_bytes);
 		cdap_rib::SerializedObject message;
 		message.message_ = buffer;
 		message.size_ = bytes_read;
-		cdap_prov_->process_message(message, flow.portId);
+		cdap_prov_->process_message(message, port_id);
 	} catch (Exception &e) {
 		std::cout << "ReadSDUException in createIPCP_1: " << e.what()
 				<< std::endl;
-		return false;
 	}
-	return true;
 }
 
-bool Manager::createIPCP_2(rina::FlowInformation &flow) {
+void ManagerWorker::createIPCP_2(int port_id) {
 	char buffer[max_sdu_size_in_bytes];
 
 	mad_manager::structures::ipcp_config_t ipc_config;
@@ -398,26 +201,24 @@ bool Manager::createIPCP_2(rina::FlowInformation &flow) {
 	filt.filter_ = 0;
 	filt.scope_ = 0;
 
-	cdap_prov_->remote_create(flow.portId, obj, flags, filt);
-	std::cout << "create IPC request CDAP message sent to app "
-			<< flow.remoteAppName.processName << std::endl;
+	cdap_prov_->remote_create(port_id, obj, flags, filt);
+	std::cout << "create IPC request CDAP message sent to port "
+			<< port_id << std::endl;
 
 	try {
-		int bytes_read = ipcManager->readSDU(flow.portId, buffer,
+		int bytes_read = ipcManager->readSDU(port_id, buffer,
 							max_sdu_size_in_bytes);
 		cdap_rib::SerializedObject message;
 		message.message_ = buffer;
 		message.size_ = bytes_read;
-		cdap_prov_->process_message(message, flow.portId);
+		cdap_prov_->process_message(message, port_id);
 	} catch (Exception &e) {
 		std::cout << "ReadSDUException in createIPCP_2: " << e.what()
 				<< std::endl;
-		return false;
 	}
-	return true;
 }
 
-bool Manager::createIPCP_3(rina::FlowInformation &flow) {
+void ManagerWorker::createIPCP_3(int port_id) {
 	char buffer[max_sdu_size_in_bytes];
 
 	mad_manager::structures::ipcp_config_t ipc_config;
@@ -446,27 +247,26 @@ bool Manager::createIPCP_3(rina::FlowInformation &flow) {
 	filt.filter_ = 0;
 	filt.scope_ = 0;
 
-	cdap_prov_->remote_create(flow.portId, obj, flags, filt);
-	std::cout << "create IPC request CDAP message sent to app "
-			<< flow.remoteAppName.processName << std::endl;
+	cdap_prov_->remote_create(port_id, obj, flags, filt);
+	std::cout << "create IPC request CDAP message sent to port "
+			<< port_id << std::endl;
 
 	try {
-		int bytes_read = ipcManager->readSDU(flow.portId, buffer,
+		int bytes_read = ipcManager->readSDU(port_id, buffer,
 							max_sdu_size_in_bytes);
 		cdap_rib::SerializedObject message;
 		message.message_ = buffer;
 		message.size_ = bytes_read;
-		cdap_prov_->process_message(message, flow.portId);
+		cdap_prov_->process_message(message, port_id);
 	} catch (Exception &e) {
 		std::cout << "ReadSDUException in createIPCP 3: " << e.what()
 				<< std::endl;
-		return false;
 	}
-	return true;
 }
 
-void Manager::queryRIB(rina::FlowInformation &flow, std::string name) {
-	char buffer[max_sdu_size_in_bytes];
+void ManagerWorker::queryRIB(int port_id, std::string name)
+{
+        char buffer[max_sdu_size_in_bytes];
 
 	cdap_rib::obj_info_t obj;
 	obj.name_ = name;
@@ -480,19 +280,32 @@ void Manager::queryRIB(rina::FlowInformation &flow, std::string name) {
 	filt.filter_ = 0;
 	filt.scope_ = 0;
 
-	cdap_prov_->remote_read(flow.portId, obj, flags, filt);
-	std::cout << "Read RIBDaemon request CDAP message sent to port "
-			<< flow.portId << std::endl;
+        cdap_prov_->remote_read(port_id, obj, flags, filt);
+        std::cout << "Read RIBDaemon request CDAP message sent" << std::endl;
 
-	try {
-		int bytes_read = ipcManager->readSDU(flow.portId, buffer,
-							max_sdu_size_in_bytes);
-		cdap_rib::SerializedObject message;
-		message.message_ = buffer;
-		message.size_ = bytes_read;
-		cdap_prov_->process_message(message, flow.portId);
-	} catch (Exception &e) {
-		std::cout << "ReadSDUException in queryRIB: " << e.what()
-				<< std::endl;
-	}
+        int bytes_read = ipcManager->readSDU(port_id,
+        				     buffer,
+        				     max_sdu_size_in_bytes);
+        cdap_rib::SerializedObject message;
+        message.message_ = buffer;
+        message.size_ = bytes_read;
+        cdap_prov_->process_message(message, port_id);
+}
+
+Manager::Manager(const std::string& dif_name, const std::string& apn,
+			const std::string& api)
+		: Server(dif_name, apn, api)
+{
+}
+
+ServerWorker * Manager::internal_start_worker(rina::FlowInformation flow)
+{
+	ThreadAttributes threadAttributes;
+	ManagerWorker * worker = new ManagerWorker(&threadAttributes,
+						   flow,
+						   max_sdu_size_in_bytes,
+						   this);
+	worker->start();
+        worker->detach();
+        return worker;
 }

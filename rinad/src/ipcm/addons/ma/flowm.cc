@@ -37,6 +37,7 @@
 #include <librina/likely.h>
 #include <librina/logs.h>
 #include <librina/rib_v2.h>
+#include <librina/security-manager.h>
 
 namespace rinad {
 namespace mad {
@@ -310,8 +311,8 @@ void* ActiveWorker::run(void* param)
 			dest.ae_name_ = flow_.remoteAppName.entityName;
 			dest.ap_inst_ = flow_.remoteAppName.processInstance;
 			dest.ae_inst_ = flow_.remoteAppName.entityInstance;
-			rina::cdap_rib::auth_info auth;
-			auth.auth_mech_ = auth.AUTH_NONE;
+			rina::cdap_rib::auth_policy_t auth;
+			auth.name = rina::IAuthPolicySet::AUTH_NONE;
 
 			//TODO: remove this. The API should NOT require a RIB
 			//instance for calling the remote API
@@ -361,8 +362,31 @@ void* ActiveWorker::run(void* param)
 	return NULL;
 }
 
+void FlowManager::process_fwd_cdap_msg_response(rina::FwdCDAPMsgEvent* fwdevent)
+{
+	rina::WireMessageProviderInterface * wmpi;
+	const rina::CDAPMessage *rmsg;
+
+	LOG_DBG("Received forwarded CDAP response, result %d",
+			fwdevent->result);
+
+	if (fwdevent->sermsg.empty()) {
+		LOG_DBG("Received empty delegated CDAP response");
+		return;
+	}
+
+	wmpi = rina::WireMessageProviderFactory().createWireMessageProvider();
+	rmsg = wmpi->deserializeMessage(fwdevent->sermsg);
+
+	LOG_DBG("Delegated CDAP response: %s, value %p", rmsg->to_string().c_str(),
+			rmsg->get_obj_value());
+
+	delete wmpi;
+	delete rmsg;
+}
+
 //Process an event coming from librina
-void FlowManager::process_flow_event(rina::IPCEvent** event_)
+void FlowManager::process_librina_event(rina::IPCEvent** event_)
 {
 
 	rina::FlowInformation flow;
@@ -400,17 +424,15 @@ void FlowManager::process_flow_event(rina::IPCEvent** event_)
 			return;  //Do not delete
 		case rina::FLOW_ALLOCATION_REQUESTED_EVENT:
 			//TODO: add pasive worker
-			flow =
-					rina::ipcManager->allocateFlowResponse(
-							*dynamic_cast<rina::FlowRequestEvent*>(event),
-							0, true);
+			flow = rina::ipcManager->allocateFlowResponse(
+					*dynamic_cast<rina::FlowRequestEvent*>(event),
+					0, true);
 			LOG_INFO("New flow allocated [port-id = %d]",
 				 flow.portId);
 			break;
 
 		case rina::FLOW_DEALLOCATED_EVENT:
-			port_id =
-					dynamic_cast<rina::FlowDeallocatedEvent*>(event)
+			port_id = dynamic_cast<rina::FlowDeallocatedEvent*>(event)
 							->portId;
 			rina::ipcManager->flowDeallocated(port_id);
 			LOG_INFO("Flow torn down remotely [port-id = %d]",
@@ -421,14 +443,20 @@ void FlowManager::process_flow_event(rina::IPCEvent** event_)
 
 		case rina::DEALLOCATE_FLOW_RESPONSE_EVENT:
 			LOG_INFO("Destroying the flow after time-out");
-			resp =
-					dynamic_cast<rina::DeallocateFlowResponseEvent*>(event);
+			resp = dynamic_cast<rina::DeallocateFlowResponseEvent*>(event);
 			port_id = resp->portId;
 			rina::ipcManager->flowDeallocationResult(
 					port_id, resp->result == 0);
 			//TODO: add pasive worker
 			//joinWorker(port_id);
 			break;
+
+		case rina::IPC_PROCESS_FWD_CDAP_MSG:
+		{
+			process_fwd_cdap_msg_response(
+				dynamic_cast<rina::FwdCDAPMsgEvent*>(event));
+			break;
+		}
 
 		default:
 			assert(0);

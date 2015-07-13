@@ -208,6 +208,7 @@ private:
 	std::vector<rina::PsFactory> ae_policy_factories;
 	std::map< std::string, void * > plugins_handles;
 	std::list<PsInfo> manifest_policy_sets;
+	ReadWriteLockable rwlock;
 };
 
 // The base class for an Application Process that is member of a

@@ -29,6 +29,7 @@
 #include <linux/netdevice.h>
 #include <linux/if_packet.h>
 #include <linux/workqueue.h>
+#include <linux/notifier.h>
 
 #define SHIM_NAME   "shim-eth-vlan"
 
@@ -105,6 +106,9 @@ struct ipcp_instance_data {
         /* The IPC Process using the shim-eth-vlan */
         struct name *          app_name;
 
+        /* True if the registered app wants blocking flows, false otherwise */
+        bool		       blocking;
+
         /* Stores the state of flows indexed by port_id */
         spinlock_t             lock;
         struct list_head       flows;
@@ -114,6 +118,9 @@ struct ipcp_instance_data {
 
         /* RINARP related */
         struct rinarp_handle * handle;
+
+	/* To handle device notifications. */
+	struct notifier_block ntfy;
 };
 
 /* Needed for eth_vlan_rcv function */
@@ -623,7 +630,8 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
 }
 
 static int eth_vlan_application_register(struct ipcp_instance_data * data,
-                                         const struct name *         name)
+                                         const struct name *         name,
+                                         bool			     blocking)
 {
         struct gpa * pa;
         struct gha * ha;
@@ -638,6 +646,7 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
                 return -1;
         }
 
+        data->blocking = blocking;
         data->app_name = name_dup(name);
         if (!data->app_name) {
                 char * tmp = name_tostring(name);
@@ -719,13 +728,23 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         unsigned long            flags;
 
         ASSERT(data);
-        ASSERT(sdu);
 
         LOG_DBG("Entered the sdu-write");
+        if (!sdu_is_ok(sdu)) {
+        	LOG_ERR("Bogus SDU passed");
+        	sdu_destroy(sdu);
+        	return -1;
+        }
+
+        length = buffer_length(sdu->buffer);
+        if (length > data->dev->mtu) {
+        	LOG_ERR("SDU too large (%d), dropping", length);
+        	sdu_destroy(sdu);
+        	return -1;
+        }
 
         hlen   = LL_RESERVED_SPACE(data->dev);
         tlen   = data->dev->needed_tailroom;
-        length = buffer_length(sdu->buffer);
         desthw = 0;
 
         flow = find_flow(data, id);
@@ -770,7 +789,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         sdu_ptr = (unsigned char *) skb_put(skb, buffer_length(sdu->buffer));
 
         if (!memcpy(sdu_ptr,
-                    buffer_data_ro(sdu->buffer),
+        	    buffer_data_ro(sdu->buffer),
                     buffer_length(sdu->buffer))) {
                 LOG_ERR("Memcpy failed");
                 kfree_skb(skb);
@@ -860,7 +879,7 @@ static int eth_vlan_rcv_worker(void * o)
 
         if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                 LOG_DBG("This flow goes for an app");
-                if (kfa_flow_create(data->kfa, flow->port_id, ipcp)) {
+                if (kfa_flow_create(data->kfa, flow->port_id, data->blocking, ipcp)) {
                         LOG_ERR("Could not create flow in KFA");
                         kfa_port_id_release(data->kfa, flow->port_id);
                         if (flow_destroy(data, flow))
@@ -1386,6 +1405,14 @@ static const struct name * eth_vlan_ipcp_name(struct ipcp_instance_data * data)
         return data->name;
 }
 
+static const struct name * eth_vlan_dif_name(struct ipcp_instance_data * data)
+{
+        ASSERT(data);
+        ASSERT(name_is_ok(data->dif_name));
+
+        return data->dif_name;
+}
+
 static int eth_vlan_query_rib(struct ipcp_instance_data * data,
                               struct list_head *          entries,
                               const string_t *            object_class,
@@ -1406,6 +1433,7 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .flow_binding_ipcp         = NULL,
         .flow_unbinding_ipcp       = NULL,
         .flow_unbinding_user_ipcp  = eth_vlan_unbind_user_ipcp,
+	.nm1_flow_state_change	   = NULL,
 
         .application_register      = eth_vlan_application_register,
         .application_unregister    = eth_vlan_application_unregister,
@@ -1425,31 +1453,92 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .mgmt_sdu_write            = NULL,
         .mgmt_sdu_post             = NULL,
 
-        .pft_add                   = NULL,
-        .pft_remove                = NULL,
-        .pft_dump                  = NULL,
-        .pft_flush                 = NULL,
+        .pff_add                   = NULL,
+        .pff_remove                = NULL,
+        .pff_dump                  = NULL,
+        .pff_flush                 = NULL,
 
         .query_rib		   = eth_vlan_query_rib,
 
         .ipcp_name                 = eth_vlan_ipcp_name,
+        .dif_name                  = eth_vlan_dif_name,
 
         .set_policy_set_param      = NULL,
         .select_policy_set         = NULL,
+        .enable_encryption	   = NULL,
+        .dif_name		   = eth_vlan_dif_name
 };
 
 static struct ipcp_factory_data {
         struct list_head instances;
+	struct notifier_block ntfy;
 } eth_vlan_data;
+
+static int ntfy_user_ipcp_on_if_state_change(struct ipcp_instance_data * data,
+					     bool up)
+{
+        struct shim_eth_flow * flow;
+
+        list_for_each_entry(flow, &data->flows, list) {
+                if (!flow->user_ipcp) {
+			/* This flow is used by an userspace application,
+			 * we are not able to notify that one for now. */
+			continue;
+                }
+
+		flow->user_ipcp->ops->nm1_flow_state_change(data, flow->port_id,
+							    up);
+        }
+
+	return 0;
+}
+
+static int eth_vlan_netdev_notify(struct notifier_block *nb,
+				  unsigned long event, void *opaque)
+{
+	struct net_device *dev = netdev_notifier_info_to_dev(opaque);
+        struct ipcp_instance_data * pos;
+
+        list_for_each_entry(pos, &eth_vlan_data.instances, list) {
+		if (pos->dev != dev) {
+			/* We don't care about this network interface. */
+			continue;
+		}
+
+		switch (event) {
+
+		case NETDEV_UP:
+			LOG_INFO("Device %s goes up", dev->name);
+			ntfy_user_ipcp_on_if_state_change(pos, true);
+			break;
+
+		case NETDEV_DOWN:
+			LOG_INFO("Device %s goes down", dev->name);
+			ntfy_user_ipcp_on_if_state_change(pos, false);
+			break;
+
+		default:
+			LOG_DBG("Ignoring event %lu on device %s",
+				event, dev->name);
+			break;
+		}
+	}
+
+	return 0;
+}
 
 static int eth_vlan_init(struct ipcp_factory_data * data)
 {
-        ASSERT(data);
+	ASSERT(data == &eth_vlan_data);
 
-        bzero(&eth_vlan_data, sizeof(eth_vlan_data));
+        bzero(data, sizeof(*data));
         INIT_LIST_HEAD(&(data->instances));
 
         INIT_LIST_HEAD(&data_instances_list);
+
+	memset(&data->ntfy, 0, sizeof(data->ntfy));
+	data->ntfy.notifier_call = eth_vlan_netdev_notify;
+	register_netdevice_notifier(&data->ntfy);
 
         LOG_INFO("%s initialized", SHIM_NAME);
 
@@ -1459,9 +1548,10 @@ static int eth_vlan_init(struct ipcp_factory_data * data)
 static int eth_vlan_fini(struct ipcp_factory_data * data)
 {
 
-        ASSERT(data);
+        ASSERT(data == &eth_vlan_data);
 
         ASSERT(list_empty(&(data->instances)));
+	unregister_netdevice_notifier(&data->ntfy);
 
         return 0;
 }

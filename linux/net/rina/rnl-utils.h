@@ -46,13 +46,13 @@ enum port_id_altlist_attrs_list {
 };
 #define PIA_ATTR_MAX (__PIA_ATTR_MAX - 1)
 
-enum modpdufwd_entry_attrs_list {
-        PFTELE_ATTR_ADDRESS = 1,
-        PFTELE_ATTR_QOSID,
-        PFTELE_ATTR_PORT_ID_ALTLISTS,
-        __PFTELE_ATTR_MAX,
+enum mod_pff_entry_attrs_list {
+        PFFELE_ATTR_ADDRESS = 1,
+        PFFELE_ATTR_QOSID,
+        PFFELE_ATTR_PORT_ID_ALTLISTS,
+        __PFFELE_ATTR_MAX,
 };
-#define PFTELE_ATTR_MAX (__PFTELE_ATTR_MAX - 1)
+#define PFFELE_ATTR_MAX (__PFFELE_ATTR_MAX - 1)
 
 enum flow_spec_attrs_list {
         FSPEC_ATTR_AVG_BWITH = 1,
@@ -66,6 +66,7 @@ enum flow_spec_attrs_list {
         FSPEC_ATTR_PEAK_BWITH_DURATION,
         FSPEC_ATTR_PEAK_SDU_BWITH_DURATION,
         FSPEC_ATTR_UNDETECTED_BER,
+        FSPEC_ATTR_BLOCKING,
         __FSPEC_ATTR_MAX,
 };
 #define FSPEC_ATTR_MAX (__FSPEC_ATTR_MAX - 1)
@@ -148,6 +149,7 @@ enum dtcp_config_params_attrs_list {
         DCA_ATTR_FLOW_CONTROL_CONFIG,
         DCA_ATTR_RETX_CONTROL,
         DCA_ATTR_RETX_CONTROL_CONFIG,
+        DCA_ATTR_DTCP_POLICY_SET,
         DCA_ATTR_LOST_CONTROL_PDU_POLICY,
         DCA_ATTR_RTT_EST_POLICY,
         __DCA_ATTR_MAX,
@@ -157,6 +159,7 @@ enum dtcp_config_params_attrs_list {
 enum conn_policies_params_attrs_list {
         CPP_ATTR_DTCP_PRESENT = 1,
         CPP_ATTR_DTCP_CONFIG,
+        CPP_ATTR_DTP_POLICY_SET,
         CPP_ATTR_RCVR_TIMER_INAC_POLICY,
         CPP_ATTR_SNDR_TIMER_INAC_POLICY,
         CPP_ATTR_INIT_SEQ_NUM_POLICY,
@@ -311,6 +314,8 @@ enum ipcm_conn_destroy_result_attrs_list {
 enum ipcm_reg_app_req_attrs_list {
         IRAR_ATTR_APP_NAME = 1,
         IRAR_ATTR_DIF_NAME,
+        IRAR_ATTR_REG_IPCP_ID,
+        IRAR_ATTR_BLOCKING,
         __IRAR_ATTR_MAX,
 };
 #define IRAR_ATTR_MAX (__IRAR_ATTR_MAX -1)
@@ -414,11 +419,55 @@ enum efcp_config_attrs_list {
 };
 #define EFCPC_ATTR_MAX (__EFCPC_ATTR_MAX -1)
 
+enum dup_config_attrs_list {
+	AUTHP_AUTH_POLICY = 1,
+	AUTHP_ENCRYPT_POLICY,
+	AUTHP_TTL_POLICY,
+	AUTHP_ERROR_CHECK_POLICY,
+	__AUTHP_ATTR_MAX,
+};
+#define AUTHP_ATTR_MAX (__AUTHP_ATTR_MAX -1)
+
+enum spec_sdup_config_attrs_list {
+    SAUTHP_UNDER_DIF = 1,
+    SAUTHP_AUTH_PROFILE,
+    __SAUTHP_ATTR_MAX,
+};
+#define SAUTHP_ATTR_MAX (__SAUTHP_ATTR_MAX -1)
+
+enum secman_config_attrs_list {
+	SECMANC_POLICY_SET = 1,
+	SECMANC_DEFAULT_AUTH_SDUP_POLICY,
+	SECMANC_SPECIFIC_AUTH_SDUP_POLICIES,
+	__SECMANC_ATTR_MAX,
+};
+#define SECMANC_ATTR_MAX (__SECMANC_ATTR_MAX -1)
+
+enum pff_config_attrs_list {
+        PFFC_ATTR_POLICY_SET = 1,
+        __PFFC_ATTR_MAX,
+};
+#define PFFC_ATTR_MAX (__PFFC_ATTR_MAX -1)
+
+enum rmt_config_attrs_list {
+        RMTC_ATTR_POLICY_SET = 1,
+        RMTC_ATTR_PFF_CONFIG,
+        __RMTC_ATTR_MAX,
+};
+#define RMTC_ATTR_MAX (__RMTC_ATTR_MAX -1)
+
 enum dif_config_attrs_list {
         DCONF_ATTR_IPCP_CONFIG_ENTRIES = 1,
         DCONF_ATTR_ADDRESS,
         DCONF_ATTR_EFCPC,
         DCONF_ATTR_RMTC,
+        DCONF_ATTR_SECMANC,
+        /* From here not used in kernel */
+	DCONF_ATTR_FAC,
+	DCONF_ATTR_ETC,
+	DCONF_ATTR_NSMC,
+	DCONF_ATTR_RAC,
+	DCONF_ATTR_ROUTINGC,
         __DCONF_ATTR_MAX,
 };
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)
@@ -487,7 +536,7 @@ enum rmt_mod_pdu_fte_entry_req {
 };
 #define RMPFE_ATTR_MAX (__RMPFE_ATTR_MAX -1)
 
-enum rmt_pft_dump_resp {
+enum rmt_pff_dump_resp {
         RPFD_ATTR_RESULT = 1,
         RPFD_ATTR_ENTRIES,
         __RPFD_ATTR_MAX,
@@ -521,6 +570,22 @@ enum ipcm_select_policy_set_req_result_attrs_list {
 };
 #define ISPSR_ATTR_MAX (__ISPSR_ATTR_MAX -1)
 
+enum ipcp_enable_encryption_req_attrs_list {
+	IEERM_ATTR_N_1_PORT = 1,
+	IEERM_ATTR_EN_ENCRYPT,
+        IEERM_ATTR_EN_DECRYPT,
+        IEERM_ATTR_ENCRYPT_KEY,
+        __IEERM_ATTR_MAX,
+};
+#define IEERM_ATTR_MAX (__IEERM_ATTR_MAX -1)
+
+enum ipcp_enable_encryption_resp_attrs_list {
+        IEEREM_ATTR_RESULT = 1,
+        IEEREM_ATTR_N_1_PORT,
+        __IEEREM_ATTR_MAX,
+};
+#define IEEREM_ATTR_MAX (__IEEREM_ATTR_MAX -1)
+
 /* FIXME: Should be hidden by the API !!! */
 struct rina_msg_hdr {
         unsigned short src_ipc_id;
@@ -538,11 +603,12 @@ enum rnl_msg_attr_type {
         RNL_MSG_ATTRS_CONN_CREATE_ARRIVED,
         RNL_MSG_ATTRS_CONN_UPDATE_REQUEST,
         RNL_MSG_ATTRS_CONN_DESTROY_REQUEST,
-        RNL_MSG_ATTRS_RMT_PFTE_MODIFY_REQUEST,
-        RNL_MSG_ATTRS_RMT_PFT_DUMP_REQUEST,
+        RNL_MSG_ATTRS_RMT_PFFE_MODIFY_REQUEST,
+        RNL_MSG_ATTRS_RMT_PFF_DUMP_REQUEST,
         RNL_MSG_ATTRS_QUERY_RIB_REQUEST,
         RNL_MSG_ATTRS_SET_POLICY_SET_PARAM_REQUEST,
-        RNL_MSG_ATTRS_SELECT_POLICY_SET_REQUEST
+        RNL_MSG_ATTRS_SELECT_POLICY_SET_REQUEST,
+        RNL_MSG_ATTRS_ENABLE_ENCRYPTION_REQUEST
 };
 
 struct rnl_msg {
@@ -717,6 +783,7 @@ struct rnl_ipcp_conn_destroy_result_msg_attrs {
 struct rnl_ipcm_reg_app_req_msg_attrs {
         struct name * app_name;
         struct name * dif_name;
+        bool	      blocking;
 };
 
 struct rnl_ipcm_reg_app_resp_msg_attrs {
@@ -732,14 +799,14 @@ struct rnl_ipcm_unreg_app_resp_msg_attrs {
         uint_t result;
 };
 
-struct rnl_rmt_mod_pfte_msg_attrs {
+struct rnl_rmt_mod_pffe_msg_attrs {
         int32_t   mode;
-        struct list_head pft_entries;
+        struct list_head pff_entries;
 };
 
 struct rnl_rmt_dump_ft_reply_msg_attrs {
         uint_t           result;
-        struct list_head pft_entries;
+        struct list_head pff_entries;
 };
 
 struct rnl_ipcm_query_rib_msg_attrs {
@@ -759,6 +826,13 @@ struct rnl_ipcp_set_policy_set_param_req_msg_attrs {
 struct rnl_ipcp_select_policy_set_req_msg_attrs {
         string_t * path;
         string_t * name;
+};
+
+struct rnl_ipcp_enable_encrypt_req_msg_attrs {
+	bool 		encryption_enabled;
+	bool		decrption_enabled;
+	struct buffer * encrypt_key;
+	port_id_t 	port_id;
 };
 
 int rnl_parse_msg(struct genl_info * info,
@@ -835,7 +909,7 @@ int rnl_ipcp_conn_destroy_result_msg(ipc_process_id_t ipc_id,
 
 int rnl_ipcm_sock_closed_notif_msg(u32 closed_port, u32 dest_port);
 
-int rnl_ipcp_pft_dump_resp_msg(ipc_process_id_t   ipc_id,
+int rnl_ipcp_pff_dump_resp_msg(ipc_process_id_t   ipc_id,
                                int                result,
                                struct list_head * entries,
                                rnl_sn_t           seq_num,
@@ -855,5 +929,11 @@ int rnl_set_policy_set_param_response(ipc_process_id_t id,
 int rnl_select_policy_set_response(ipc_process_id_t id,
                                    uint_t           res,
                                    rnl_sn_t         seq_num,
+                                   u32              nl_port_id);
+
+int rnl_enable_encryption_response(ipc_process_id_t id,
+                                   uint_t           res,
+                                   rnl_sn_t         seq_num,
+                                   port_id_t	    n_1_port,
                                    u32              nl_port_id);
 #endif

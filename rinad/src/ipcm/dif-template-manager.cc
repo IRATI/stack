@@ -189,6 +189,7 @@ DIFTemplateManager::DIFTemplateManager(const std::string& folder)
 	rina::ThreadAttributes thread_attrs;
 	thread_attrs.setJoinable();
 	template_monitor = new DIFTemplateMonitor(&thread_attrs, folder, this);
+	template_monitor->start();
 }
 
 DIFTemplateManager::~DIFTemplateManager()
@@ -288,16 +289,32 @@ void DIFTemplateManager::augment_dif_template(rinad::DIFTemplate * dif_template)
 		}
 	}
 
-	if (dif_template->etConfiguration.declared_dead_interval_in_ms_ == 120000 &&
-			dif_template->etConfiguration.enrollment_timeout_in_ms_ == 10000 &&
-			dif_template->etConfiguration.max_number_of_enrollment_attempts_ == 3 &&
-			dif_template->etConfiguration.neighbor_enroller_period_in_ms_ == 10000 &&
-			dif_template->etConfiguration.watchdog_period_in_ms_ == 60000) {
+	if (dif_template->etConfiguration.policy_set_.name_ == std::string()) {
 		dif_template->etConfiguration = default_template->etConfiguration;
 	}
 
-	if (dif_template->rmtConfiguration.max_queue_policy_.name_ == "") {
+	if (dif_template->rmtConfiguration.pft_conf_.policy_set_.name_ == std::string()) {
+		dif_template->rmtConfiguration.pft_conf_ = default_template->rmtConfiguration.pft_conf_;
+	}
+
+	if (dif_template->rmtConfiguration.policy_set_.name_ == std::string()) {
 		dif_template->rmtConfiguration = default_template->rmtConfiguration;
+	}
+
+	if (dif_template->routingConfiguration.policy_set_.name_ == std::string()) {
+		dif_template->routingConfiguration = default_template->routingConfiguration;
+	}
+
+	if (dif_template->nsmConfiguration.policy_set_.name_ == std::string()) {
+		dif_template->nsmConfiguration = default_template->nsmConfiguration;
+	}
+
+	if (dif_template->faConfiguration.policy_set_.name_ == std::string()) {
+		dif_template->faConfiguration = default_template->faConfiguration;
+	}
+
+	if (dif_template->raConfiguration.pduftg_conf_.policy_set_.name_ == std::string()) {
+		dif_template->raConfiguration = default_template->raConfiguration;
 	}
 
 	if (dif_template->knownIPCProcessAddresses.size() == 0) {
@@ -316,23 +333,8 @@ void DIFTemplateManager::augment_dif_template(rinad::DIFTemplate * dif_template)
 		}
 	}
 
-	if (dif_template->pdufTableGeneratorConfiguration.pduft_generator_policy_.name_ == "" ||
-			dif_template->pdufTableGeneratorConfiguration.link_state_routing_configuration_.routing_algorithm_ == "") {
-		dif_template->pdufTableGeneratorConfiguration = default_template->pdufTableGeneratorConfiguration;
-	}
-
-	if (dif_template->policySets.size() == 0 && default_template->policySets.size() != 0) {
-		for (std::map<std::string, std::string>::iterator it = default_template->policySets.begin();
-				it != default_template->policySets.end(); ++it) {
-			dif_template->policySets[it->first] = it->second;
-		}
-	}
-
-	if (dif_template->policySetParameters.size() == 0 && default_template->policySetParameters.size() != 0) {
-		for (std::map<std::string, std::string>::iterator it = default_template->policySetParameters.begin();
-				it != default_template->policySetParameters.end(); ++it) {
-			dif_template->policySetParameters[it->first] = it->second;
-		}
+	if (dif_template->secManConfiguration.policy_set_.name_ == std::string()) {
+		dif_template->secManConfiguration = default_template->secManConfiguration;
 	}
 
 	if (dif_template->configParameters.size() == 0 && default_template->configParameters.size() != 0) {

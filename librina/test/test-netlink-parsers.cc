@@ -1299,15 +1299,13 @@ int testIpcmAssignToDIFRequestMessage() {
 	efcpConfiguration.add_qos_cube(qosCube);
 	qosCube->set_efcp_policies(ConnectionPolicies());
 	difConfiguration.set_efcp_configuration(efcpConfiguration);
-	difConfiguration.rmt_configuration_.rmt_scheduling_policy_.name_ = "FancySchedulingPolicy";
-	difConfiguration.pduft_generator_configuration_.pduft_generator_policy_.name_ = "LinkStateRouting";
-	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.object_maximum_age_ = 4;
-	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.routing_algorithm_ = "FancyAlgorithm";
-	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.wait_until_age_increment_ = 23;
-	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.wait_until_error_ = 11;
-	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.wait_until_fsodb_propagation_ = 10;
-	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.wait_until_pduft_computation_ = 2;
-	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.wait_until_read_cdap_ = 3;
+	difConfiguration.rmt_configuration_.policy_set_.name_ = "FancySchedulingPolicy";
+	difConfiguration.rmt_configuration_.pft_conf_.policy_set_.name_ = "PFTPolicySet";
+	difConfiguration.ra_configuration_.pduftg_conf_.policy_set_.name_ = "PDUFTGPolicySet";
+	difConfiguration.routing_configuration_.policy_set_.name_ = "RoutingPS";
+	difConfiguration.nsm_configuration_.policy_set_.name_ = "NSMPS";
+	difConfiguration.fa_configuration_.policy_set_.name_ = "FAPS";
+	difConfiguration.et_configuration_.policy_set_.name_ = "ETPS";
 	difInformation.set_dif_configuration(difConfiguration);
 	message.setDIFInformation(difInformation);
 
@@ -1426,16 +1424,46 @@ int testIpcmAssignToDIFRequestMessage() {
                 std::cout << "DIFInformation.DIFConfiguration.qosCubes.size original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getDIFInformation().dif_configuration_.rmt_configuration_.rmt_scheduling_policy_.name_.
+        } else if (message.getDIFInformation().dif_configuration_.rmt_configuration_.policy_set_.name_.
         		compare(recoveredMessage->getDIFInformation().dif_configuration_.rmt_configuration_.
-        				rmt_scheduling_policy_.name_) != 0) {
-        	std::cout << "DIFInformation.dif_configuration_.rmt_configuration_.rmt_scheduling_policy_.name original and recovered messages"
+        				policy_set_.name_) != 0) {
+        	std::cout << "DIFInformation.dif_configuration_.rmt_configuration_.policy_set_.name original and recovered messages"
         			<< " are different\n";
         	returnValue = -1;
-        } else if (message.getDIFInformation().dif_configuration_.pduft_generator_configuration_.pduft_generator_policy_.name_.
-        		compare(recoveredMessage->getDIFInformation().dif_configuration_.pduft_generator_configuration_.
-        				pduft_generator_policy_.name_) != 0) {
-        	std::cout << "DIFInformation.dif_configuration_.pduft_generator_configuration_.pduft_generator_policy_.name_. original and recovered messages"
+        } else if (message.getDIFInformation().dif_configuration_.rmt_configuration_.pft_conf_.policy_set_.name_.
+        		compare(recoveredMessage->getDIFInformation().dif_configuration_.rmt_configuration_.
+        				pft_conf_.policy_set_.name_) != 0) {
+        	std::cout << "DIFInformation.dif_configuration_.rmt_configuration_.pft_conf_.policy_set_.name_. original and recovered messages"
+        			<< " are different\n";
+        	returnValue = -1;
+        } else if (message.getDIFInformation().dif_configuration_.ra_configuration_.pduftg_conf_.policy_set_.name_.
+        		compare(recoveredMessage->getDIFInformation().dif_configuration_.ra_configuration_.
+        				pduftg_conf_.policy_set_.name_) != 0) {
+        	std::cout << "DIFInformation.dif_configuration_.ra_configuration_.pduftg_conf_.policy_set_.name_. original and recovered messages"
+        			<< " are different\n";
+        	returnValue = -1;
+        } else if (message.getDIFInformation().dif_configuration_.routing_configuration_.policy_set_.name_.
+        		compare(recoveredMessage->getDIFInformation().dif_configuration_.routing_configuration_.
+        				policy_set_.name_) != 0) {
+        	std::cout << "DIFInformation.dif_configuration_.routing_configuration_.policy_set_.name_. original and recovered messages"
+        			<< " are different\n";
+        	returnValue = -1;
+        } else if (message.getDIFInformation().dif_configuration_.nsm_configuration_.policy_set_.name_.
+        		compare(recoveredMessage->getDIFInformation().dif_configuration_.nsm_configuration_.
+        				policy_set_.name_) != 0) {
+        	std::cout << "DIFInformation.dif_configuration_.nsm_configuration_.policy_set_.name_. original and recovered messages"
+        			<< " are different\n";
+        	returnValue = -1;
+        } else if (message.getDIFInformation().dif_configuration_.fa_configuration_.policy_set_.name_.
+        		compare(recoveredMessage->getDIFInformation().dif_configuration_.fa_configuration_.
+        				policy_set_.name_) != 0) {
+        	std::cout << "DIFInformation.dif_configuration_.fa_configuration_.policy_set_.name_. original and recovered messages"
+        			<< " are different\n";
+        	returnValue = -1;
+        } else if (message.getDIFInformation().dif_configuration_.et_configuration_.policy_set_.name_.
+        		compare(recoveredMessage->getDIFInformation().dif_configuration_.et_configuration_.
+        				policy_set_.name_) != 0) {
+        	std::cout << "DIFInformation.dif_configuration_.et_configuration_.policy_set_.name_. original and recovered messages"
         			<< " are different\n";
         	returnValue = -1;
         }
@@ -3058,16 +3086,16 @@ int testRmtModifyPDUFTEntriesRequestMessage() {
         RmtModifyPDUFTEntriesRequestMessage message;
         PDUForwardingTableEntry * entry1 = new PDUForwardingTableEntry();
         entry1->setAddress(23);
-        entry1->addPortId(34);
-        entry1->addPortId(24);
-        entry1->addPortId(39);
+        entry1->portIdAltlists.push_back(34);
+        entry1->portIdAltlists.push_back(29);
+        entry1->portIdAltlists.push_back(36);
         entry1->setQosId(1);
         message.addEntry(entry1);
         PDUForwardingTableEntry * entry2 = new PDUForwardingTableEntry();
         entry2->setAddress(20);
-        entry2->addPortId(28);
-        entry2->addPortId(35);
-        entry2->addPortId(54);
+        entry2->portIdAltlists.push_back(28);
+        entry2->portIdAltlists.push_back(35);
+        entry2->portIdAltlists.push_back(43);
         entry2->setQosId(2);
         message.addEntry(entry2);
         message.setMode(1);
@@ -3112,7 +3140,7 @@ int testRmtModifyPDUFTEntriesRequestMessage() {
         for (iterator = entriesList.begin();
                         iterator != entriesList.end();
                         ++iterator) {
-                portIdsList = (*iterator)->getPortIds();
+                portIdsList = (*iterator)->portIdAltlists;
                 if (portIdsList.size() != 3) {
                         std::cout << "Size of portids in original and recovered messages"
                                         << " are different\n";
@@ -3150,15 +3178,15 @@ int testRmtDumpPDUFTResponseMessage() {
         RmtDumpPDUFTEntriesResponseMessage message;
         PDUForwardingTableEntry entry1, entry2;
         entry1.setAddress(23);
-        entry1.addPortId(34);
-        entry1.addPortId(24);
-        entry1.addPortId(39);
+        entry1.portIdAltlists.push_back(34);
+        entry1.portIdAltlists.push_back(29);
+        entry1.portIdAltlists.push_back(36);
         entry1.setQosId(1);
         message.addEntry(entry1);
         entry2.setAddress(20);
-        entry2.addPortId(28);
-        entry2.addPortId(35);
-        entry2.addPortId(54);
+        entry2.portIdAltlists.push_back(28);
+        entry2.portIdAltlists.push_back(35);
+        entry2.portIdAltlists.push_back(54);
         entry2.setQosId(2);
         message.addEntry(entry2);
         message.setResult(3);
@@ -3203,7 +3231,7 @@ int testRmtDumpPDUFTResponseMessage() {
         for (iterator = entriesList.begin();
                         iterator != entriesList.end();
                         ++iterator) {
-                portIdsList = iterator->getPortIds();
+                portIdsList = iterator->portIdAltlists;
                 if (portIdsList.size() != 3) {
                         std::cout << "Size of portids in original and recovered messages"
                                         << " are different\n";
@@ -3222,6 +3250,83 @@ int testRmtDumpPDUFTResponseMessage() {
 
         if (returnValue == 0) {
                 std::cout << "RmtDumpPDUFTEntriesResponseMessage test ok\n";
+        }
+        nlmsg_free(netlinkMessage);
+        delete recoveredMessage;
+
+        return returnValue;
+}
+
+int testEnableEncryptionRequestMessage() {
+        std::cout << "TESTING ENABLE ENCRYPTION REQUEST MESSAGE\n";
+        int returnValue = 0;
+
+        IPCPEnableEncryptionRequestMessage message;
+        message.profile.enable_decryption = true;
+        message.profile.enable_encryption = true;
+        message.profile.port_id = 232;
+        message.profile.encrypt_key.length = 16;
+        message.profile.encrypt_key.data = new unsigned char[16];
+        message.profile.encrypt_key.data[0] = 0x01;
+        message.profile.encrypt_key.data[1] = 0x02;
+        message.profile.encrypt_key.data[2] = 0x03;
+        message.profile.encrypt_key.data[3] = 0x04;
+        message.profile.encrypt_key.data[4] = 0x05;
+        message.profile.encrypt_key.data[5] = 0x06;
+        message.profile.encrypt_key.data[6] = 0x07;
+        message.profile.encrypt_key.data[7] = 0x08;
+        message.profile.encrypt_key.data[8] = 0x09;
+        message.profile.encrypt_key.data[9] = 0x10;
+        message.profile.encrypt_key.data[10] = 0x11;
+        message.profile.encrypt_key.data[11] = 0x12;
+        message.profile.encrypt_key.data[12] = 0x13;
+        message.profile.encrypt_key.data[13] = 0x14;
+        message.profile.encrypt_key.data[14] = 0x15;
+        message.profile.encrypt_key.data[15] = 0x16;
+
+        struct nl_msg* netlinkMessage = nlmsg_alloc();
+        if (!netlinkMessage) {
+                std::cout << "Error allocating Netlink message\n";
+        }
+        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+        int result = putBaseNetlinkMessage(netlinkMessage, &message);
+        if (result < 0) {
+                std::cout << "Error constructing IPCPEnableEncryptionRequestMessage "
+                                << "message \n";
+                nlmsg_free(netlinkMessage);
+                return result;
+        }
+
+        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+        IPCPEnableEncryptionRequestMessage * recoveredMessage =
+                        dynamic_cast<IPCPEnableEncryptionRequestMessage *>(
+                                        parseBaseNetlinkMessage(netlinkMessageHeader));
+
+        if (recoveredMessage == 0) {
+                std::cout << "Error parsing IPCPEnableEncryptionRequestMessage message "
+                                << "\n";
+                returnValue = -1;
+        } else if (message.profile.enable_decryption != recoveredMessage->profile.enable_decryption) {
+        	std::cout << "Error with enable decryption";
+        	returnValue = -1;
+        } else if (message.profile.enable_encryption != recoveredMessage->profile.enable_encryption) {
+        	std::cout << "Error with enable_encryption";
+        	returnValue = -1;
+        } else if (message.profile.port_id != recoveredMessage->profile.port_id) {
+        	std::cout << "Error with port_id";
+        	returnValue = -1;
+        } else if (message.profile.encrypt_key.length != recoveredMessage->profile.encrypt_key.length) {
+        	std::cout << "Error with encrypt key length";
+        	returnValue = -1;
+        } else if (message.profile.encrypt_key.data[10] != recoveredMessage->profile.encrypt_key.data[10]) {
+        	std::cout << "Error with encrypt key data";
+        	returnValue = -1;
+        }
+
+        if (returnValue == 0) {
+                std::cout << "IPCPEnableEncryptionRequestMessage test ok\n";
         }
         nlmsg_free(netlinkMessage);
         delete recoveredMessage;
@@ -3447,6 +3552,11 @@ int main() {
 	result = testRmtDumpPDUFTResponseMessage();
 	if (result < 0) {
 	        return result;
+	}
+
+	result = testEnableEncryptionRequestMessage();
+	if (result < 0) {
+		return result;
 	}
 
 	return 0;

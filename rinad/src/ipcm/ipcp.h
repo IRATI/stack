@@ -195,12 +195,15 @@ public:
 	 * @param regIpcProcessId The id of the registered IPC process (0 if it
 	 * is an application)
 	 * @param opaque an opaque identifier to correlate requests and responses
+	 * @param blocking says if the flows allocated to the registered app will
+	 * be blocking or not
 	 * @throws IpcmRegisterApplicationException if an error occurs
 	 */
 	void registerApplication(
 			const rina::ApplicationProcessNamingInformation& applicationName,
 			unsigned short regIpcProcessId,
-			unsigned int opaque);
+			unsigned int opaque,
+			bool blocking);
 
 	/**
 	 * Invoked by the IPC Manager to inform about the result of a registration
@@ -416,6 +419,19 @@ public:
 	 */
 	void pluginLoad(const std::string& name, bool load,
 			unsigned int opaque);
+
+	/**
+	 * Invoked by the IPC Manager to forward a CDAP message to
+         * IPC process, so that the latter can process the message
+	 * through its RIB
+	 *
+	 * @param msg The CDAP message to send
+         * @param opaque an opaque identifier to correlate requests and responses
+	 * @throws ForwardCDAPException if an error happens during
+         *         the process
+	 */
+	void forwardCDAPMessage(const rina::CDAPMessage& msg,
+				unsigned int opaque);
 
 private:
 	/** The IPC Process proxy class */

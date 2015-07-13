@@ -24,11 +24,13 @@
 #define RINA_RMT_H
 
 #include <linux/hashtable.h>
+#include <linux/crypto.h>
 
 #include "common.h"
 #include "du.h"
 #include "efcp.h"
 #include "ipcp-factories.h"
+#include "ipcp-instances.h"
 #include "ps-factory.h"
 
 struct rmt;
@@ -56,6 +58,7 @@ struct rmt;
 enum flow_state {
         N1_PORT_STATE_ENABLED,
         N1_PORT_STATE_DISABLED,
+        N1_PORT_STATE_DEALLOCATED,
 };
 
 struct rmt_n1_port {
@@ -65,6 +68,9 @@ struct rmt_n1_port {
         struct hlist_node      hlist;
         enum flow_state        state;
         atomic_t               n_sdus;
+        struct dup_config_entry * dup_config;
+        struct crypto_blkcipher * blkcipher;
+        atomic_t               pending_ops;
 };
 
 /* The key in this struct is used to filter by cep_ids, qos_id, address... */
@@ -106,19 +112,23 @@ int          rmt_address_set(struct rmt * instance,
                              address_t    address);
 int          rmt_dt_cons_set(struct rmt *     instance,
                              struct dt_cons * dt_cons);
+int 	     rmt_sdup_config_set(struct rmt *         instance,
+                    	         struct sdup_config * sdup_conf);
+int          rmt_config_set(struct rmt *        instance,
+                            struct rmt_config * rmt_config);
 
 int          rmt_n1port_bind(struct rmt * instance,
                              port_id_t    id,
                              struct ipcp_instance * n1_ipcp);
 int          rmt_n1port_unbind(struct rmt * instance,
                                port_id_t    id);
-int          rmt_pft_add(struct rmt *       instance,
-			 struct modpdufwd_entry * entry);
-int          rmt_pft_remove(struct rmt *       instance,
-			 struct modpdufwd_entry * entry);
-int          rmt_pft_dump(struct rmt *       instance,
+int          rmt_pff_add(struct rmt *           instance,
+			 struct mod_pff_entry * entry);
+int          rmt_pff_remove(struct rmt *        instance,
+			 struct mod_pff_entry * entry);
+int          rmt_pff_dump(struct rmt *       instance,
                           struct list_head * entries);
-int          rmt_pft_flush(struct rmt * instance);
+int          rmt_pff_flush(struct rmt * instance);
 
 int          rmt_send(struct rmt * instance,
                       struct pci * pci,
@@ -142,6 +152,12 @@ int          rmt_set_policy_set_param(struct rmt * rmt,
                                       const string_t * path,
                                       const string_t * name,
                                       const string_t * value);
+
+int 	     rmt_enable_encryption(struct rmt *     instance,
+			     	   bool 	    enable_encryption,
+			     	   bool    	    enable_decryption,
+			     	   struct buffer *  encrypt_key,
+			     	   port_id_t 	    port_id);
 
 struct rmt * rmt_from_component(struct rina_component * component);
 

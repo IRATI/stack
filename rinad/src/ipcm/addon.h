@@ -156,7 +156,7 @@ protected:
 	*
 	* @param event The event to process
 	*/
-	virtual void process_flow_event(rina::IPCEvent** event){(void)event;};
+	virtual void process_librina_event(rina::IPCEvent** event){(void)event;};
 
 	/**
 	* Process IPCM event callback
@@ -205,7 +205,7 @@ public:
 
 protected:
 	// Event processing routine
-	virtual void process_flow_event(rina::IPCEvent** event)=0;
+	virtual void process_librina_event(rina::IPCEvent** event)=0;
 
 	//IPCM event processing routine
 	virtual void process_ipcm_event(const IPCMEvent& event){(void)event;};
