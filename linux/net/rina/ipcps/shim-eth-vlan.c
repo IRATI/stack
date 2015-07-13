@@ -855,7 +855,8 @@ static int eth_vlan_update_qdisc(struct ipcp_instance_data * data)
 	struct Qdisc * sch;
 	struct nlattr  arg;
 
-	sch = qdisc_create_dflt(data->dev->_tx, &shim_eth_qdisc_ops, 0);
+	sch = qdisc_create_dflt(netdev_get_tx_queue(data->dev, 0),
+			        &shim_eth_qdisc_ops, 0);
 	if (!sch) {
 		LOG_ERR("Problems creating shim-eth-qdisc");
 		return -1;
