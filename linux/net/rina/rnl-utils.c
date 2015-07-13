@@ -1744,6 +1744,11 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
                 if (parse_sdup_config(attrs[DCONF_ATTR_SECMANC],
                 		      dif_config->sdup_config))
                 	goto parse_fail;
+
+                if (!dif_config->sdup_config->default_dup_conf) {
+                	sdup_config_destroy(dif_config->sdup_config);
+                	dif_config->sdup_config = NULL;
+                }
         }
 
         return 0;
