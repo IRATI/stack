@@ -126,6 +126,21 @@ public:
 };
 
 /**
+ * Thrown when there are problems while trying to forward
+ * a CDAP message.
+ */
+class FwdCDAPMsgException: public IPCException {
+public:
+	FwdCDAPMsgException():
+		IPCException("Problems while forwarding a CDAP "
+                                "message to an IPC Process") {
+	}
+	FwdCDAPMsgException(const std::string& description):
+		IPCException(description) {
+	}
+};
+
+/**
  * Event informing about the result of an assign to DIF operation
  */
 class AssignToDIFResponseEvent: public BaseResponseEvent {
@@ -167,6 +182,24 @@ public:
 
 	PluginLoadResponseEvent(int result,
                                 unsigned int sequenceNumber);
+};
+
+/**
+ * The IPC Manager wants to forward a CDAP message to
+ * an IPC process, or the IPC process wants to forwards a
+ * CDAP response back to the IPC Manager.
+ */
+class FwdCDAPMsgEvent: public IPCEvent {
+public:
+	/** The serialized CDAP message to be forwarded */
+	SerializedObject sermsg;
+
+	/** Result of the forwarding operation, used only
+	 * in the direction IPC Process --> IPC Manager. */
+	int result;
+
+	FwdCDAPMsgEvent(const SerializedObject& sm, int result,
+			unsigned int sequenceNumber);
 };
 
 }

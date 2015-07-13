@@ -47,9 +47,12 @@ void RIBDaemonObj::read(const rina::cdap_rib::con_handle_t &con,
 		return;
 	}
 
+	// FIXME cut the query rib to avoid oversizing the shim eth buffer. Erase when spliting is implemented
+	std::string trunk = promise.serialized_rib.substr(0, 1000);
+
 	//Serialize and return
 	mad_manager::encoders::StringEncoder encoder;
-	encoder.encode(promise.serialized_rib, obj_reply);
+	encoder.encode(trunk, obj_reply);
 }
 
 

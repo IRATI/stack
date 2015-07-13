@@ -421,7 +421,10 @@ void NamespaceManager::set_application_process(rina::ApplicationProcess * ap)
 
 void NamespaceManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
 {
-	LOG_IPCP_DBG("DIF configuration set: %u", dif_configuration.address_);
+	std::string ps_name = dif_configuration.nsm_configuration_.policy_set_.name_;
+	if (select_policy_set(std::string(), ps_name) != 0) {
+		throw rina::Exception("Cannot create namespace manager policy-set");
+	}
 }
 
 void NamespaceManager::populateRIB()
@@ -557,6 +560,17 @@ int NamespaceManager::replyToIPCManagerUnregister(const rina::ApplicationUnregis
 	}
 
 	return 0;
+}
+
+rina::ApplicationRegistrationInformation
+	NamespaceManager::get_reg_app_info(const rina::ApplicationProcessNamingInformation name)
+{
+	rina::ApplicationRegistrationInformation * result = registrations_.find(name.getEncodedString());
+	if (result != 0) {
+		return *result;
+	} else {
+		throw rina::Exception("Could not locate application registration");
+	}
 }
 
 void NamespaceManager::processApplicationUnregistrationRequestEvent(

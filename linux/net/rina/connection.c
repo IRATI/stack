@@ -59,6 +59,13 @@ struct conn_policies * conn_policies_create(void)
                 return NULL;
         }
 
+        tmp->dtp_ps = policy_create();
+        if (!tmp->dtp_ps) {
+                dtcp_config_destroy(tmp->dtcp_cfg);
+                rkfree(tmp);
+                return NULL;
+        }
+
         tmp->initial_sequence_number = policy_create();
         if (!tmp->initial_sequence_number) {
                 LOG_ERR("Could not create initial_sequence_number");
@@ -110,6 +117,10 @@ int conn_policies_destroy(struct conn_policies * cp_params)
 
         if (cp_params->dtcp_cfg)
                 if (dtcp_config_destroy(cp_params->dtcp_cfg))
+                        retval = -1;
+
+        if (cp_params->dtp_ps)
+                if (policy_destroy(cp_params->dtp_ps))
                         retval = -1;
 
         if (cp_params->initial_sequence_number)

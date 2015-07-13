@@ -98,9 +98,9 @@ int main() {
 	                        <<result<<std::endl;
 
         //Allocate port-id
-	portId1 = syscallAllocatePortId(5, *ipcProcessName);
+	portId1 = syscallAllocatePortId(5, *ipcProcessName, false);
 	std::cout<<"Allocated port id: "<<portId1<<std::endl;
-	portId2 = syscallAllocatePortId(1, *ipcProcessName);
+	portId2 = syscallAllocatePortId(1, *ipcProcessName, false);
 	std::cout<<"Allocated port id: "<<portId2<<std::endl;
 
 	//Deallocate port-id

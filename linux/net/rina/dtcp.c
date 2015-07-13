@@ -137,6 +137,11 @@ struct dtcp_sv {
          * */
         uint_t       acks;
         uint_t       flow_ctl;
+
+        /* RTT estimation */
+        uint_t       rtt;
+        uint_t       srtt;
+        uint_t       rttvar;
 };
 
 struct dtcp {
@@ -193,6 +198,99 @@ int dtcp_pdu_send(struct dtcp * dtcp, struct pdu * pdu)
         			    pdu);
 }
 EXPORT_SYMBOL(dtcp_pdu_send);
+
+uint_t dtcp_rtt(struct dtcp * dtcp)
+{
+        unsigned long flags;
+        uint_t        tmp;
+
+        if (!dtcp || !dtcp->sv)
+                return 0;
+
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        tmp = dtcp->sv->rtt;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+        return tmp;
+}
+EXPORT_SYMBOL(dtcp_rtt);
+
+int dtcp_rtt_set(struct dtcp * dtcp, uint_t rtt)
+{
+        unsigned long flags;
+
+        if (!dtcp || !dtcp->sv)
+                return -1;
+
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        dtcp->sv->rtt = rtt;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+        return 0;
+}
+EXPORT_SYMBOL(dtcp_rtt_set);
+
+uint_t dtcp_srtt(struct dtcp * dtcp)
+{
+        unsigned long flags;
+        uint_t        tmp;
+
+        if (!dtcp || !dtcp->sv)
+                return 0;
+
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        tmp = dtcp->sv->srtt;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+        return tmp;
+}
+EXPORT_SYMBOL(dtcp_srtt);
+
+int dtcp_srtt_set(struct dtcp * dtcp, uint_t srtt)
+{
+        unsigned long flags;
+
+        if (!dtcp || !dtcp->sv)
+                return -1;
+
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        dtcp->sv->srtt = srtt;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+        return 0;
+}
+EXPORT_SYMBOL(dtcp_srtt_set);
+
+uint_t dtcp_rttvar(struct dtcp * dtcp)
+{
+        unsigned long flags;
+        uint_t        tmp;
+
+        if (!dtcp || !dtcp->sv)
+                return 0;
+
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        tmp = dtcp->sv->rttvar;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+        return tmp;
+}
+EXPORT_SYMBOL(dtcp_rttvar);
+
+int dtcp_rttvar_set(struct dtcp * dtcp, uint_t rttvar)
+{
+        unsigned long flags;
+
+        if (!dtcp || !dtcp->sv)
+                return -1;
+
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        dtcp->sv->rtt = rttvar;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+        return 0;
+}
+EXPORT_SYMBOL(dtcp_rttvar_set);
 
 static int last_rcv_ctrl_seq_set(struct dtcp * dtcp,
                                  seq_num_t     last_rcv_ctrl_seq)
@@ -583,6 +681,7 @@ static int rcv_nack_ctl(struct dtcp * dtcp,
                         return -1;
                 }
                 rtxq_nack(q, seq_num, dt_sv_tr(dtcp->parent));
+                ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
         }
         rcu_read_unlock();
 
@@ -613,6 +712,7 @@ static int rcv_ack(struct dtcp * dtcp,
         ps = container_of(rcu_dereference(dtcp->base.ps),
                           struct dtcp_ps, base);
         ret = ps->sender_ack(ps, seq);
+        ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
         rcu_read_unlock();
 
         LOG_DBG("DTCP received ACK (CPU: %d)", smp_processor_id());
@@ -682,10 +782,11 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         /* This updates sender LWE */
         if (ps->sender_ack(ps, seq))
                 LOG_ERR("Could not update RTXQ and LWE");
+        ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
         rcu_read_unlock();
 
         snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
-        LOG_DBG("Right Window Edge: %d", snd_rt_wind_edge(dtcp));
+        LOG_DBG("Right Window Edge: %u", snd_rt_wind_edge(dtcp));
 
         LOG_DBG("Calling CWQ_deliver for DTCP: %pK", dtcp);
         push_pdus_rmt(dtcp);
@@ -703,7 +804,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         struct dtcp_ps * ps;
         struct pci *     pci;
         pdu_type_t       type;
-        seq_num_t        seq_num;
+        seq_num_t        sn;
         seq_num_t        last_ctrl;
         int              ret;
 
@@ -740,18 +841,10 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
                 return -1;
         }
 
-        seq_num = pci_sequence_number_get(pci);
+        sn = pci_sequence_number_get(pci);
         last_ctrl = last_rcv_ctrl_seq(dtcp);
 
-        if (seq_num > (last_ctrl + 1)) {
-                rcu_read_lock();
-                ps = container_of(rcu_dereference(dtcp->base.ps),
-                                  struct dtcp_ps, base);
-                ps->lost_control_pdu(ps);
-                rcu_read_unlock();
-        }
-
-        if (seq_num <= last_ctrl) {
+        if (sn <= last_ctrl) {
                 switch (type) {
                 case PDU_TYPE_FC:
                         flow_ctrl_inc(dtcp);
@@ -771,15 +864,17 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
                 return 0;
 
         }
+        rcu_read_lock();
+        ps = container_of(rcu_dereference(dtcp->base.ps),
+                          struct dtcp_ps, base);
+        if (sn > (last_ctrl + 1)) {
+                ps->lost_control_pdu(ps);
+        }
+        rcu_read_unlock();
 
-        /* We are in seq_num == last_ctrl + 1 */
+        /* We are in sn >= last_ctrl + 1 */
 
-        last_rcv_ctrl_seq_set(dtcp, seq_num);
-
-        /*
-         * FIXME: Missing step described in the specs: retrieve the time
-         *        of this Ack and calculate the RTT with RTTEstimator policy
-         */
+        last_rcv_ctrl_seq_set(dtcp, sn);
 
         LOG_DBG("dtcp_common_rcv_control sending to proper function...");
 
@@ -971,6 +1066,8 @@ static struct dtcp_sv default_sv = {
         .pdus_rcvd_in_time_unit = 0,
         .acks                   = 0,
         .flow_ctl               = 0,
+        .rtt                    = 0,
+        .srtt                   = 0,
 };
 
 /* FIXME: this should be completed with other parameters from the config */
@@ -1185,7 +1282,9 @@ int dtcp_set_policy_set_param(struct dtcp * dtcp,
                         LOG_ERR("Unknown DTP parameter policy '%s'", name);
                 }
                 rcu_read_unlock();
+
         } else {
+                /* The request addresses the DTP policy-set. */
                 ret = base_set_policy_set_param(&dtcp->base, path, name, value);
         }
 
@@ -1195,9 +1294,11 @@ EXPORT_SYMBOL(dtcp_set_policy_set_param);
 
 struct dtcp * dtcp_create(struct dt *         dt,
                           struct connection * conn,
+                          const string_t *    dtcp_ps_name,
                           struct rmt *        rmt)
 {
         struct dtcp * tmp;
+        string_t *    ps_name;
 
         if (!dt) {
                 LOG_ERR("No DT passed, bailing out");
@@ -1233,9 +1334,13 @@ struct dtcp * dtcp_create(struct dt *         dt,
 
         rina_component_init(&tmp->base);
 
-        /* Try to select the default policy-set. */
-        if (dtcp_select_policy_set(tmp, "", RINA_PS_DEFAULT_NAME)) {
+        ps_name = (string_t *) dtcp_ps_name;
+        if (!ps_name || !strcmp(ps_name, ""))
+                ps_name = RINA_PS_DEFAULT_NAME;
+
+        if (dtcp_select_policy_set(tmp, "", ps_name)) {
                 dtcp_destroy(tmp);
+                LOG_ERR("Could not load DTCP PS %s", ps_name);
                 return NULL;
         }
 

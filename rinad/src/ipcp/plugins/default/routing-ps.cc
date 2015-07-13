@@ -45,16 +45,6 @@ LinkStateRoutingPs::LinkStateRoutingPs(IRoutingComponent * rc_) : rc(rc_)
 
 void LinkStateRoutingPs::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
 {
-	rina::PDUFTableGeneratorConfiguration pduftgConfig =
-			dif_configuration.get_pduft_generator_configuration();
-
-	if (pduftgConfig.get_pduft_generator_policy().get_name().compare(
-			LINK_STATE_POLICY) != 0) {
-		LOG_IPCP_WARN("Unsupported routing policy: %s.",
-				pduftgConfig.get_pduft_generator_policy().get_name().c_str());
-		throw rina::Exception("Unknown routing Policy");
-	}
-
 	lsr_policy = new LinkStateRoutingPolicy(rc->ipcp);
 	lsr_policy->set_dif_configuration(dif_configuration);
 }
@@ -237,6 +227,18 @@ bool Graph::contains_vertex(unsigned int address) const
 	return false;
 }
 
+bool Graph::contains_edge(unsigned int address1, unsigned int address2) const
+{
+	for(std::list<Edge *>::const_iterator eit = edges_.begin();
+					eit != edges_.end(); ++eit) {
+		if (*(*eit) == Edge(address1, address2, (*eit)->weight_)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 void Graph::init_edges()
 {
 	std::list<unsigned int>::const_iterator it;
@@ -296,6 +298,19 @@ Graph::CheckedVertex * Graph::get_checked_vertex(unsigned int address) const
 	return 0;
 }
 
+void Graph::print() const
+{
+	LOG_IPCP_INFO("Graph edges:");
+
+	for (std::list<Edge *>::const_iterator it = edges_.begin();
+					it != edges_.end(); it++) {
+		const Edge& e = **it;
+
+		LOG_IPCP_INFO("    (%u --> %u, %d)", e.address1_,
+			      e.address2_, e.weight_);
+	}
+}
+
 PredecessorInfo::PredecessorInfo(unsigned int nPredecessor)
 {
 	predecessor_ = nPredecessor;
@@ -303,23 +318,43 @@ PredecessorInfo::PredecessorInfo(unsigned int nPredecessor)
 
 DijkstraAlgorithm::DijkstraAlgorithm()
 {
-	graph_ = 0;
+}
+
+void DijkstraAlgorithm::clear()
+{
+	unsettled_nodes_.clear();
+	settled_nodes_.clear();
+	predecessors_.clear();
+	distances_.clear();
+}
+
+void DijkstraAlgorithm::computeShortestDistances(const Graph& graph,
+					unsigned int source_address,
+					std::map<unsigned int, int>& distances)
+{
+	execute(graph, source_address);
+
+	// Write back the result
+	distances = distances_;
+
+	clear();
 }
 
 std::list<rina::RoutingTableEntry *> DijkstraAlgorithm::computeRoutingTable(
+                const Graph& graph,
 		const std::list<FlowStateObject *>& fsoList,
 		unsigned int source_address)
 {
 	std::list<rina::RoutingTableEntry *> result;
-	std::list<unsigned int>::iterator it;
+	std::list<unsigned int>::const_iterator it;
 	unsigned int nextHop;
 	rina::RoutingTableEntry * entry;
 
-	graph_ = new Graph(fsoList);
+	(void)fsoList; // avoid compiler barfs
 
-	execute(source_address);
+	execute(graph, source_address);
 
-	for (it = graph_->vertices_.begin(); it != graph_->vertices_.end(); ++it) {
+	for (it = graph.vertices_.begin(); it != graph.vertices_.end(); ++it) {
 		if ((*it) != source_address) {
 			nextHop = getNextHop((*it), source_address);
 			if (nextHop != 0) {
@@ -335,16 +370,12 @@ std::list<rina::RoutingTableEntry *> DijkstraAlgorithm::computeRoutingTable(
 		}
 	}
 
-	delete graph_;
-	unsettled_nodes_.clear();
-	settled_nodes_.clear();
-	predecessors_.clear();
-	distances_.clear();
+	clear();
 
 	return result;
 }
 
-void DijkstraAlgorithm::execute(unsigned int source)
+void DijkstraAlgorithm::execute(const Graph& graph, unsigned int source)
 {
 	distances_[source] = 0;
 	unsettled_nodes_.insert(source);
@@ -354,7 +385,7 @@ void DijkstraAlgorithm::execute(unsigned int source)
 		node = getMinimum();
 		settled_nodes_.insert(node);
 		unsettled_nodes_.erase(node);
-		findMinimalDistances(node);
+		findMinimalDistances(graph, node);
 	}
 }
 
@@ -389,14 +420,15 @@ int DijkstraAlgorithm::getShortestDistance(unsigned int destination) const
 	return distance;
 }
 
-void DijkstraAlgorithm::findMinimalDistances(unsigned int node)
+void DijkstraAlgorithm::findMinimalDistances(const Graph& graph,
+					     unsigned int node)
 {
 	std::list<unsigned int> adjacentNodes;
-	std::list<Edge *>::iterator edgeIt;
+	std::list<Edge *>::const_iterator edgeIt;
 
 	unsigned int target = 0;
 	int shortestDistance;
-	for (edgeIt = graph_->edges_.begin(); edgeIt != graph_->edges_.end();
+	for (edgeIt = graph.edges_.begin(); edgeIt != graph.edges_.end();
 			++edgeIt) {
 		if (isNeighbor((*edgeIt), node)) {
 			target = (*edgeIt)->getOtherEndpoint(node);
@@ -464,6 +496,102 @@ unsigned int DijkstraAlgorithm::getNextHop(unsigned int target,
 	}
 
 	return nextHop;
+}
+
+//Class IResiliencyAlgorithm
+IResiliencyAlgorithm::IResiliencyAlgorithm(IRoutingAlgorithm& ra)
+						: routing_algorithm(ra)
+{
+}
+
+//Class LoopFreeAlternateAlgorithm
+LoopFreeAlternateAlgorithm::LoopFreeAlternateAlgorithm(IRoutingAlgorithm& ra)
+						: IResiliencyAlgorithm(ra)
+{
+}
+
+void LoopFreeAlternateAlgorithm::extendRoutingTableEntry(
+			std::list<rina::RoutingTableEntry *>& rt,
+			unsigned int target_address, unsigned int nexthop)
+{
+	std::list<rina::RoutingTableEntry *>::iterator rit;
+	bool found = false;
+
+	for (rit = rt.begin(); rit != rt.end(); rit++) {
+		if ((*rit)->address == target_address) {
+			break;
+		}
+	}
+
+	if (rit == rt.end()) {
+		LOG_WARN("LFA: Couldn't find routing table entry for "
+			 "target address %u", target_address);
+		return;
+	}
+
+	//Find the involved routing table entry, try to extend it
+	for (std::list<unsigned int>::iterator
+			hit = (*rit)->nextHopAddresses.begin();
+				hit != (*rit)->nextHopAddresses.end(); hit++) {
+		if (*hit == nexthop) {
+			found = true;
+			break;
+		}
+	}
+
+	if (!found) {
+		(*rit)->nextHopAddresses.push_back(nexthop);
+		LOG_DBG("Node %u selected as LFA node towards the "
+			 "destination node %u", nexthop, target_address);
+	}
+}
+
+void LoopFreeAlternateAlgorithm::fortifyRoutingTable(const Graph& graph,
+						unsigned int source_address,
+						std::list<rina::RoutingTableEntry *>& rt)
+{
+	std::map<unsigned int, std::map< unsigned int, int > > neighbors_dist_trees;
+	std::map<unsigned int, int> src_dist_tree;
+
+	// TODO avoid this, can be computed when invoke computeRoutingTable()
+	routing_algorithm.computeShortestDistances(graph, source_address, src_dist_tree);
+
+	// Collect all the neighbors, and for each one use the routing algorithm to
+	// compute the shortest distance map rooted at that neighbor
+	for (std::list<unsigned int>::const_iterator it = graph.vertices_.begin();
+						it != graph.vertices_.end(); ++it) {
+		if ((*it) != source_address && graph.contains_edge(source_address, *it)) {
+			neighbors_dist_trees[*it] = std::map<unsigned int, int>();
+			routing_algorithm.computeShortestDistances(graph,
+						*it, neighbors_dist_trees[*it]);
+		}
+	}
+
+	// For each node other than than the source node and its neighbors
+	for (std::list<unsigned int>::const_iterator it = graph.vertices_.begin();
+						it != graph.vertices_.end(); ++it) {
+		if ((*it) == source_address || neighbors_dist_trees.count(*it)) {
+			continue;
+		}
+
+		// For each neighbor of the source node
+		for (std::map<unsigned int, std::map<unsigned int, int> >::iterator
+			nit = neighbors_dist_trees.begin();
+				nit != neighbors_dist_trees.end(); nit++) {
+			// If this neighbor is a LFA node for the current
+			// destination (*it) extend the routing table to take it
+			// into account
+			std::map< unsigned int, int>& neigh_dist_map = nit->second;
+			unsigned int neigh = nit->first;
+
+			// dist(neigh, target) < dist(neigh, source) + dist(source, target)
+			if (neigh_dist_map[*it] < src_dist_tree[neigh] + src_dist_tree[*it]) {
+				//LOG_DBG("Node %u is a possible LFA for destination %u",
+				//	neigh, *it);
+				extendRoutingTableEntry(rt, *it, neigh);
+			}
+		}
+	}
 }
 
 //Class FlowState RIB Object Group
@@ -898,7 +1026,15 @@ void UpdateAgeTimerTask::run()
 	lsr_policy_->timer_->scheduleTask(task, delay_);
 }
 
+const std::string LinkStateRoutingPolicy::OBJECT_MAXIMUM_AGE = "objectMaximumAge";
+const std::string LinkStateRoutingPolicy::WAIT_UNTIL_READ_CDAP = "waitUntilReadCDAP";
+const std::string LinkStateRoutingPolicy::WAIT_UNTIL_ERROR = "waitUntilError";
+const std::string LinkStateRoutingPolicy::WAIT_UNTIL_PDUFT_COMPUTATION = "waitUntilPDUFTComputation";
+const std::string LinkStateRoutingPolicy::WAIT_UNTIL_FSODB_PROPAGATION = "waitUntilFSODBPropagation";
+const std::string LinkStateRoutingPolicy::WAIT_UNTIL_AGE_INCREMENT = "waitUntilAgeIncrement";
+const std::string LinkStateRoutingPolicy::ROUTING_ALGORITHM = "routingAlgorithm";
 const int LinkStateRoutingPolicy::MAXIMUM_BUFFER_SIZE = 4096;
+const std::string LinkStateRoutingPolicy::DIJKSTRA_ALG = "Dijkstra";
 
 LinkStateRoutingPolicy::LinkStateRoutingPolicy(IPCProcess * ipcp)
 {
@@ -909,6 +1045,7 @@ LinkStateRoutingPolicy::LinkStateRoutingPolicy(IPCProcess * ipcp)
 	cdap_session_manager_ = ipc_process_->cdap_session_manager_;
 	fs_rib_group_ = 0;
 	routing_algorithm_ = 0;
+	resiliency_algorithm_ = 0;
 	source_vertex_ = 0;
 	maximum_age_ = UINT_MAX;
 	db_ = 0;
@@ -930,6 +1067,10 @@ LinkStateRoutingPolicy::~LinkStateRoutingPolicy()
 {
 	if (routing_algorithm_) {
 		delete routing_algorithm_;
+	}
+
+	if (resiliency_algorithm_) {
+		delete resiliency_algorithm_;
 	}
 
 	if (db_) {
@@ -970,36 +1111,59 @@ void LinkStateRoutingPolicy::subscribeToEvents()
 void LinkStateRoutingPolicy::set_dif_configuration(
 		const rina::DIFConfiguration& dif_configuration)
 {
-	pduft_generator_config_ =
-			dif_configuration.get_pduft_generator_configuration();
-	if (pduft_generator_config_.get_link_state_routing_configuration().get_routing_algorithm().compare(
-			"Dijkstra") != 0) {
-		LOG_IPCP_WARN("Unsupported routing algorithm, using Dijkstra instead");
-	}
+	std::string routing_alg;
+        rina::PolicyConfig psconf;
+        long delay;
 
-	routing_algorithm_ = new DijkstraAlgorithm();
-	source_vertex_ = dif_configuration.get_address();
+        psconf = dif_configuration.routing_configuration_.policy_set_;
+        source_vertex_ = dif_configuration.get_address();
 
+        try {
+        	routing_alg = psconf.get_param_value_as_string(ROUTING_ALGORITHM);
+        } catch (rina::Exception &e) {
+        	LOG_WARN("No routing algorithm specified, using Dijkstra");
+        	routing_alg = DIJKSTRA_ALG;
+        }
+
+        if (routing_alg == DIJKSTRA_ALG) {
+        	routing_algorithm_ = new DijkstraAlgorithm();
+        } else {
+        	throw rina::Exception("Unsupported routing algorithm");
+        }
+#if 0
+	resiliency_algorithm_ = new LoopFreeAlternateAlgorithm(*routing_algorithm_);
+#endif
 	if (!test_) {
-		maximum_age_ =
-			pduft_generator_config_.get_link_state_routing_configuration().get_object_maximum_age();
-		long delay = 0;
+		try {
+			maximum_age_ = psconf.get_param_value_as_int(OBJECT_MAXIMUM_AGE);
+		} catch (rina::Exception &e) {
+			maximum_age_ = PULSES_UNTIL_FSO_EXPIRATION_DEFAULT;
+		}
 
 		// Task to compute PDUFT
-		delay =
-			pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_pduft_computation();
+		try {
+			delay = psconf.get_param_value_as_long(WAIT_UNTIL_PDUFT_COMPUTATION);
+		} catch (rina::Exception &e) {
+			delay = WAIT_UNTIL_PDUFT_COMPUTATION_DEFAULT;
+		}
 		ComputeRoutingTimerTask * cttask = new ComputeRoutingTimerTask(this, delay);
 		timer_->scheduleTask(cttask, delay);
 
 		// Task to increment age
-		delay =
-			pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_age_increment();
+		try {
+			delay = psconf.get_param_value_as_long(WAIT_UNTIL_AGE_INCREMENT);
+		} catch (rina::Exception &e) {
+			delay = WAIT_UNTIL_AGE_INCREMENT_DEFAULT;
+		}
 		UpdateAgeTimerTask * uattask = new UpdateAgeTimerTask(this, delay);
 		timer_->scheduleTask(uattask, delay);
 
 		// Task to propagate modified FSO
-		delay =
-			pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_fsodb_propagation();
+		try {
+			delay = psconf.get_param_value_as_long(WAIT_UNTIL_FSODB_PROPAGATION);
+		} catch (rina::Exception &e) {
+			delay = WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT;
+		}
 		PropagateFSODBTimerTask * pfttask = new PropagateFSODBTimerTask(this,
 				delay);
 		timer_->scheduleTask(pfttask, delay);
@@ -1088,8 +1252,7 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(
 		if (it->portId == event->neighbor_.underlying_port_id_)
 				/*it->remoteAppName.processName.compare(
 				event->neighbor_->get_name().processName) == 0) */{
-			LOG_IPCP_INFO(
-					"There was an allocation flow event waiting for enrollment, launching it");
+			LOG_IPCP_INFO("There was an allocation flow event waiting for enrollment, launching it");
 			try {
 				db_->addObjectToGroup(ipc_process_->get_address(),
 						ipc_process_->namespace_manager_->getAdressByname(
@@ -1170,6 +1333,7 @@ void LinkStateRoutingPolicy::updateAge()
 void LinkStateRoutingPolicy::routingTableUpdate()
 {
 	rina::ScopedLock g(*lock_);
+	Graph *graph;
 
 	if (!db_->modified_) {
 		return;
@@ -1178,14 +1342,29 @@ void LinkStateRoutingPolicy::routingTableUpdate()
 	db_->modified_ = false;
 	std::list<FlowStateObject *> flow_state_objects;
 	db_->getAllFSOs(flow_state_objects);
-	std::list<rina::RoutingTableEntry *> rt =
-			routing_algorithm_->computeRoutingTable(flow_state_objects,
-					source_vertex_);
 
-    IResourceAllocatorPs *raps =
-    		dynamic_cast<IResourceAllocatorPs *>(ipc_process_->resource_allocator_->ps);
-    assert(raps);
-    raps->routingTableUpdated(rt);
+	// Build a graph out of the FSO database
+	graph = new Graph(flow_state_objects);
+
+	// Invoke the routing algorithm to compute the routing table
+	// Main arguments are the graph and the source vertex.
+	// The list of FSOs may be useless, but has been left there
+	// for the moment (and it is currently unused by the Dijkstra
+	// algorithm).
+	std::list<rina::RoutingTableEntry *> rt =
+			routing_algorithm_->computeRoutingTable(*graph,
+					flow_state_objects, source_vertex_);
+
+	// Run the resiliency algorithm, if any, to extend the routing table
+	if (resiliency_algorithm_) {
+		resiliency_algorithm_->fortifyRoutingTable(*graph,
+						source_vertex_, rt);
+	}
+
+	delete graph;
+
+	assert(ipc_process_->resource_allocator_->pduft_gen_ps);
+	ipc_process_->resource_allocator_->pduft_gen_ps->routingTableUpdated(rt);
 }
 
 void LinkStateRoutingPolicy::writeMessageReceived(

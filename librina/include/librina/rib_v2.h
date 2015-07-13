@@ -786,7 +786,7 @@ public:
 			const cdap_rib::vers_info_t &ver,
 			const cdap_rib::src_info_t &src,
 			const cdap_rib::dest_info_t &dest,
-			const cdap_rib::auth_info &auth, int port_id);
+			const cdap_rib::auth_policy &auth, int port_id);
 
 	///
 	/// Close a CDAP connection to a remote RIB

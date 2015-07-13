@@ -1,7 +1,7 @@
 /*
  * CDAP implementation
  *
- *    Bernat Gast√≥n <bernat.gaston@i2cat.net>
+ *    Bernat Gastón <bernat.gaston@i2cat.net>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This library is free software{} you can redistribute it and/or
@@ -38,7 +38,6 @@ namespace cdap {
 CDAPMessage::CDAPMessage()
 {
 	abs_syntax_ = 0;
-	auth_mech_ = cdap_rib::auth_info_t::AUTH_NONE;
 	filter_ = 0;
 	flags_ = cdap_rib::flags_t::NONE_FLAGS;
 	invoke_id_ = 0;
@@ -258,8 +257,6 @@ class CDAPMessageValidator
 	static void validate(const cdap_m_t *message);
  private:
 	static void validateAbsSyntax(const cdap_m_t *message);
-	static void validateAuthMech(const cdap_m_t *message);
-	static void validateAuthValue(const cdap_m_t *message);
 	static void validateDestAEInst(const cdap_m_t *message);
 	static void validateDestAEName(const cdap_m_t *message);
 	static void validateDestApInst(const cdap_m_t *message);
@@ -291,16 +288,8 @@ typedef struct CDAPSessionDescriptor
 	/// CDAP protocol message declarations that the message conforms to
 	///
 	int abs_syntax_;
-	/// AuthenticationMechanismName (authtypes), optional, not validated by CDAP.
-	/// Identification of the method to be used by the destination application to
-	/// authenticate the source application
-	cdap_rib::auth_info_t::AuthTypes auth_mech_;
-	/**
-	 * AuthenticationValue (authvalue), optional, not validated by CDAP.
-	 * Authentication information accompanying auth_mech, format and value
-	 * appropiate to the selected auth_mech
-	 */
-	rina::AuthValue auth_value_;
+	/// Authentication Policy options
+	rina::AuthPolicy auth_policy_;
 	/// DestinationApplication-Entity-Instance-Id (string), optional, not validated by CDAP.
 	/// Specific instance of the Application Entity that the source application
 	/// wishes to connect to in the destination application.
@@ -528,7 +517,7 @@ class CDAPProvider : public CDAPProviderInterface
 			const cdap_rib::vers_info_t &ver,
 			const cdap_rib::src_info_t &src,
 			const cdap_rib::dest_info_t &dest,
-			const cdap_rib::auth_info &auth, int port);
+			const cdap_rib::auth_policy_t &auth, int port);
 	int remote_close_connection(unsigned int port);
 	int remote_create(unsigned int port, const cdap_rib::obj_info_t &obj,
 			  const cdap_rib::flags_t &flags,
@@ -639,12 +628,17 @@ cdap_m_t* CDAPMessageFactory::getOpenConnectionRequestMessage(
 	cdap_m_t *cdap_message = new cdap_m_t();
 	cdap_message->abs_syntax_ = ABSTRACT_SYNTAX_VERSION;
 	cdap_message->op_code_ = cdap_m_t::M_CONNECT;
-	cdap_message->auth_mech_ = con.auth_.auth_mech_;
-	rina::AuthValue auth_value;
-	auth_value.auth_name_ = con.auth_.auth_name_;
-	auth_value.auth_other_ = con.auth_.auth_other_;
-	auth_value.auth_password_ = con.auth_.auth_password_;
-	cdap_message->auth_value_ = auth_value;
+	AuthPolicy auth_policy;
+	auth_policy.name_ = con.auth_.name;
+	auth_policy.versions_ = con.auth_.versions;
+	if (con.auth_.options.size_ > 0) {
+		char * val = new char[con.auth_.options.size_];
+		memcpy(val, con.auth_.options.message_,
+				con.auth_.options.size_);
+		auth_policy.options_ = SerializedObject(val,
+				con.auth_.options.size_);
+	}
+	cdap_message->auth_policy_ = auth_policy;
 	cdap_message->dest_ae_inst_ = con.dest_.ae_inst_;
 	cdap_message->dest_ae_name_ = con.dest_.ae_name_;
 	cdap_message->dest_ap_inst_ = con.dest_.ap_inst_;
@@ -664,12 +658,15 @@ cdap_m_t* CDAPMessageFactory::getOpenConnectionResponseMessage(
 	cdap_m_t *cdap_message = new cdap_m_t();
 	cdap_message->abs_syntax_ = ABSTRACT_SYNTAX_VERSION;
 	cdap_message->op_code_ = cdap_m_t::M_CONNECT_R;
-	cdap_message->auth_mech_ = con.auth_.auth_mech_;
-	rina::AuthValue auth_value;
-	auth_value.auth_name_ = con.auth_.auth_name_;
-	auth_value.auth_other_ = con.auth_.auth_other_;
-	auth_value.auth_password_ = con.auth_.auth_password_;
-	cdap_message->auth_value_ = auth_value;
+	AuthPolicy auth_policy;
+	if (con.auth_.options.size_ > 0) {
+		char * val = new char[con.auth_.options.size_];
+		memcpy(val, con.auth_.options.message_,
+				con.auth_.options.size_);
+		auth_policy.options_ = SerializedObject(val,
+				con.auth_.options.size_);
+	}
+	cdap_message->auth_policy_ = auth_policy;
 	cdap_message->dest_ae_inst_ = con.dest_.ae_inst_;
 	cdap_message->dest_ae_name_ = con.dest_.ae_name_;
 	cdap_message->dest_ap_inst_ = con.dest_.ap_inst_;
@@ -682,7 +679,6 @@ cdap_m_t* CDAPMessageFactory::getOpenConnectionResponseMessage(
 	cdap_message->version_ = 1;
 	cdap_message->result_ = res.code_;
 	cdap_message->result_reason_ = res.reason_;
-
 	return cdap_message;
 }
 
@@ -1240,8 +1236,6 @@ void ReleaseConnectionTimerTask::run()
 void CDAPMessageValidator::validate(const cdap_m_t *message)
 {
 	validateAbsSyntax(message);
-	validateAuthMech(message);
-	validateAuthValue(message);
 	validateDestAEInst(message);
 	validateDestAEName(message);
 	validateDestApInst(message);
@@ -1276,28 +1270,6 @@ void CDAPMessageValidator::validateAbsSyntax(const cdap_m_t *message)
 				&& (message->op_code_ != cdap_m_t::M_CONNECT_R)) {
 			throw rina::CDAPException(
 					"AbsSyntax can only be set for M_CONNECT and M_CONNECT_R messages");
-		}
-	}
-}
-
-void CDAPMessageValidator::validateAuthMech(const cdap_m_t *message)
-{
-	if (message->auth_mech_ != cdap_rib::auth_info_t::AUTH_NONE) {
-		if ((message->op_code_ != cdap_m_t::M_CONNECT)
-				&& message->op_code_ != cdap_m_t::M_CONNECT_R) {
-			throw rina::CDAPException(
-					"AuthMech can only be set for M_CONNECT and M_CONNECT_R messages");
-		}
-	}
-}
-
-void CDAPMessageValidator::validateAuthValue(const cdap_m_t *message)
-{
-	if (!message->auth_value_.is_empty()) {
-		if ((message->op_code_ != cdap_m_t::M_CONNECT)
-				&& (message->op_code_ != cdap_m_t::M_CONNECT_R)) {
-			throw rina::CDAPException(
-					"AuthValue can only be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	}
 }
@@ -2096,8 +2068,7 @@ void CDAPSession::populateSessionDescriptor(const cdap_m_t &cdap_message,
 					    bool send)
 {
 	session_descriptor_->abs_syntax_ = cdap_message.abs_syntax_;
-	session_descriptor_->auth_mech_ = cdap_message.auth_mech_;
-	session_descriptor_->auth_value_ = cdap_message.auth_value_;
+	session_descriptor_->auth_policy_ = cdap_message.auth_policy_;
 
 	if (send) {
 		session_descriptor_->dest_ae_inst_ = cdap_message.dest_ae_inst_;
@@ -2120,6 +2091,7 @@ void CDAPSession::populateSessionDescriptor(const cdap_m_t &cdap_message,
 	}
 	session_descriptor_->version_ = cdap_message.version_;
 }
+
 void CDAPSession::emptySessionDescriptor()
 {
 	cdap_session_t *new_session = new cdap_session_t;
@@ -2215,10 +2187,12 @@ const CDAPMessage* CDAPSessionManager::decodeCDAPMessage(
 void CDAPSessionManager::removeCDAPSession(int port_id)
 {
 	std::map<int, CDAPSession*>::iterator itr = cdap_sessions_.find(
-			port_id);
-	delete itr->second;
-	itr->second = 0;
-	cdap_sessions_.erase(itr);
+		port_id);
+	if (itr != cdap_sessions_.end()){
+		delete itr->second;
+		itr->second = 0;
+		cdap_sessions_.erase(itr);
+	}
 }
 const cdap_rib::SerializedObject* CDAPSessionManager::encodeNextMessageToBeSent(
 		const CDAPMessage &cdap_message, int port_id)
@@ -2526,20 +2500,23 @@ const cdap_m_t* GPBSerializer::deserializeMessage(
 	// ABS_SYNTAX
 	if (gpfCDAPMessage.has_abssyntax())
 		cdapMessage->abs_syntax_ = gpfCDAPMessage.abssyntax();
-	// AUTH_MECH
-	if (gpfCDAPMessage.has_authmech()) {
-		int auth_type_val = gpfCDAPMessage.authmech();
-		cdap_rib::auth_info_t::AuthTypes auth_mech =
-				static_cast<cdap_rib::auth_info_t::AuthTypes>(auth_type_val);
-		cdapMessage->auth_mech_ = auth_mech;
+	// AUTH_POLICY
+	AuthPolicy auth_policy;
+	auth_policy.name_ = gpfCDAPMessage.authpolicy().name();
+	for(int i=0; i<gpfCDAPMessage.authpolicy().versions_size(); i++) {
+		auth_policy.versions_.push_back(
+				gpfCDAPMessage.authpolicy().versions(i));
 	}
-	// AUTH_VALUE
-	if (gpfCDAPMessage.has_authvalue()) {
-		AuthValue auth_value(gpfCDAPMessage.authvalue().authname(),
-				     gpfCDAPMessage.authvalue().authpassword(),
-				     gpfCDAPMessage.authvalue().authother());
-		cdapMessage->auth_value_ = auth_value;
+	if (gpfCDAPMessage.authpolicy().has_options()) {
+		char *val = new char[gpfCDAPMessage.authpolicy().options().size()];
+		memcpy(val,
+		 gpfCDAPMessage.authpolicy().options().data(),
+		 gpfCDAPMessage.authpolicy().options().size());
+		SerializedObject sobj(val,
+				gpfCDAPMessage.authpolicy().options().size());
+		auth_policy.options_ = sobj;
 	}
+	cdapMessage->auth_policy_ = auth_policy;
 	// DEST_AE_INST
 	if (gpfCDAPMessage.has_destaeinst())
 		cdapMessage->dest_ae_inst_ = gpfCDAPMessage.destaeinst();
@@ -2628,23 +2605,20 @@ const cdap_rib::SerializedObject* GPBSerializer::serializeMessage(
 	cdap::impl::googleprotobuf::CDAPMessage gpfCDAPMessage;
 	// ABS_SYNTAX
 	gpfCDAPMessage.set_abssyntax(cdapMessage.abs_syntax_);
-	// AUTH_MECH
-	if (!cdap::impl::googleprotobuf::authTypes_t_IsValid(
-			cdapMessage.auth_mech_)) {
-		throw CDAPException(
-				"Serializing Message: Not a valid AuthType");
+	// AUTH_POLICY
+	cdap::impl::googleprotobuf::authPolicy_t *gpb_auth_policy =
+		new cdap::impl::googleprotobuf::authPolicy_t();
+	AuthPolicy auth_policy = cdapMessage.auth_policy_;
+	gpb_auth_policy->set_name(auth_policy.name_);
+	for(std::list<std::string>::iterator it = auth_policy.versions_.begin();
+		it != auth_policy.versions_.end(); ++it) {
+		gpb_auth_policy->add_versions(*it);
 	}
-	gpfCDAPMessage.set_authmech(
-			(cdap::impl::googleprotobuf::authTypes_t) cdapMessage
-					.auth_mech_);
-	cdap::impl::googleprotobuf::authValue_t *gpb_auth_value =
-			new cdap::impl::googleprotobuf::authValue_t();
-	// AUTH_VALUE
-	AuthValue auth_value = cdapMessage.auth_value_;
-	gpb_auth_value->set_authname(auth_value.get_auth_name());
-	gpb_auth_value->set_authother(auth_value.get_auth_other());
-	gpb_auth_value->set_authpassword(auth_value.get_auth_password());
-	gpfCDAPMessage.set_allocated_authvalue(gpb_auth_value);
+	if (auth_policy.options_.size_ > 0) {
+		gpb_auth_policy->set_options(auth_policy.options_.message_,
+				     auth_policy.options_.size_);
+	}
+	gpfCDAPMessage.set_allocated_authpolicy(gpb_auth_policy);
 	// DEST_AE_INST
 	gpfCDAPMessage.set_destaeinst(cdapMessage.dest_ae_inst_);
 	// DEST_AE_NAME
@@ -2725,7 +2699,7 @@ cdap_rib::con_handle_t CDAPProvider::remote_open_connection(
 		const cdap_rib::vers_info_t &ver,
 		const cdap_rib::src_info_t &src,
 		const cdap_rib::dest_info_t &dest,
-		const cdap_rib::auth_info &auth, int port)
+		const cdap_rib::auth_policy_t &auth, int port)
 {
 	const cdap_m_t *m_sent;
 	cdap_rib::con_handle_t con;
@@ -3024,10 +2998,14 @@ void CDAPProvider::process_message(cdap_rib::SerializedObject &message,
 	// Fill structures
 	cdap_rib::con_handle_t con;
 	// Auth
-	con.auth_.auth_mech_ = m_rcv->auth_mech_;
-	con.auth_.auth_name_ = m_rcv->auth_value_.auth_name_;
-	con.auth_.auth_password_ = m_rcv->auth_value_.auth_password_;
-	con.auth_.auth_other_ = m_rcv->auth_value_.auth_other_;
+	con.auth_.name = m_rcv->auth_policy_.name_;
+	con.auth_.versions = m_rcv->auth_policy_.versions_;
+	if (con.auth_.options.size_ > 0) {
+		con.auth_.options.size_ = m_rcv->auth_policy_.options_.size_;
+		con.auth_.options.message_ = new char[con.auth_.options.size_];
+		memcpy(con.auth_.options.message_, m_rcv->auth_policy_.options_.message_,
+				m_rcv->auth_policy_.options_.size_);
+	}
 	// Src
 	con.src_.ae_name_ = m_rcv->src_ae_name_;
 	con.src_.ae_inst_ = m_rcv->src_ae_inst_;

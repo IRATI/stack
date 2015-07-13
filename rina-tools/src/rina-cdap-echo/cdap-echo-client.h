@@ -23,7 +23,6 @@
 #define CLIENT_HPP
 
 #include <string>
-#include <chrono>
 #include <librina/librina.h>
 #include <librina/cdap_v2.h>
 
@@ -33,31 +32,29 @@ class Client;
 
 class Client : public Application, public rina::cdap::CDAPCallbackInterface
 {
-
-friend class APPcallback;
-
-public:
+	friend class APPcallback;
+ public:
 	Client(const std::string& dif_name, const std::string& apn,
-			const std::string& api, const std::string& server_apn,
-			const std::string& server_api, bool quiet, unsigned long count,
-			bool registration, unsigned int wait, int g, int dw);
+	       const std::string& api, const std::string& server_apn,
+	       const std::string& server_api, bool quiet, unsigned long count,
+	       bool registration, unsigned int wait, int g, int dw);
 	void run();
 	~Client();
 	void open_connection_result(const rina::cdap_rib::con_handle_t &con,
-			const rina::cdap_rib::result_info &res);
+			            const rina::cdap_rib::result_info &res);
 	void close_connection_result(const rina::cdap_rib::con_handle_t &con,
-			const rina::cdap_rib::result_info &res);
+			             const rina::cdap_rib::result_info &res);
 	void remote_read_result(const rina::cdap_rib::con_handle_t &con,
-			const rina::cdap_rib::obj_info_t &onj,
-			const rina::cdap_rib::res_info_t &res);
-protected:
+			        const rina::cdap_rib::obj_info_t &onj,
+			        const rina::cdap_rib::res_info_t &res);
+ protected:
 	void createFlow();
 	void cacep();
 	void sendReadRMessage();
 	void release();
 	void destroyFlow();
 
-private:
+ private:
 	std::string dif_name;
 	std::string server_name;
 	std::string server_instance;
@@ -72,5 +69,7 @@ private:
 	rina::cdap_rib::con_handle_t con_;
 	unsigned long count_;
 	bool keep_running_;
+	rina::Sleep sleep_wrapper;
 };
+
 #endif//CLIENT_HPP

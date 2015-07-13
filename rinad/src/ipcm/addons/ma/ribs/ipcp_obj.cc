@@ -120,8 +120,8 @@ void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
 		return;
 	}
 
-	if (!object.dif_to_register.empty()) {
-		if (!registerAtDIF(object, ipcp_id)){
+	if (!object.difs_to_register.empty()){
+		if (!registerAtDIFs(object, ipcp_id)){
 			LOG_ERR("Create operation failed: unable to register IPCP with id '%d' in path '%s'. Unknown error.",
 								ipcp_id,
 								fqn.c_str());
@@ -176,52 +176,68 @@ int IPCPObj::createIPCP(
 bool IPCPObj::assignToDIF(
 			rinad::mad_manager::structures::ipcp_config_t &object,
 			int ipcp_id) {
-
 	// ASSIGN TO DIF
 	Promise assign_promise;
+	bool found;
+	rinad::DIFTemplateMapping template_mapping;
+	rinad::DIFTemplate * dif_template;
 
-	rina::ApplicationProcessNamingInformation dif_name(
-							object.dif_to_assign,
-							std::string());
-
+	rina::ApplicationProcessNamingInformation dif_name(object.dif_to_assign,
+								std::string());
 	if (!IPCManager->ipcp_exists(ipcp_id)) {
 		LOG_ERR("No such IPC process id %d", ipcp_id);
 		return false;
 	}
 
-	if (IPCManager->assign_to_dif(ManagementAgent::inst, &assign_promise,
-					ipcp_id, dif_name) == IPCM_FAILURE
-			|| assign_promise.wait() != IPCM_SUCCESS) {
-		LOG_ERR("DIF assignment failed");
+	found = IPCManager->getConfig().lookup_dif_template_mappings(dif_name, template_mapping);
+	if (!found) {
+		LOG_ERR("Could not find DIF template for DIF name %s",
+		dif_name.processName.c_str());
 		return false;
+	}
+
+	dif_template = IPCManager->dif_template_manager->get_dif_template(template_mapping.template_name);
+	if (!dif_template) {
+		LOG_ERR("Cannot find template called %s",
+		template_mapping.template_name.c_str());
+		return false;
+	}
+	if (IPCManager->assign_to_dif(ManagementAgent::inst, &assign_promise,
+			ipcp_id, dif_template, dif_name) == IPCM_FAILURE
+				|| assign_promise.wait() != IPCM_SUCCESS) {
+			LOG_ERR("DIF assignment failed");
+			return false;
 	}
 
 	LOG_INFO("DIF assignment completed successfully");
-
 	return true;
 }
 
-bool IPCPObj::registerAtDIF(mad_manager::structures::ipcp_config_t &object,
+bool IPCPObj::registerAtDIFs(mad_manager::structures::ipcp_config_t &object,
 								int ipcp_id) {
+	for(std::list<std::string>::iterator it =
+				object.difs_to_register.begin();
+					it != object.difs_to_register.end();
+					++it){
+		Promise promise;
 
-	Promise promise;
+		LOG_DBG("Dif name is %s", it->c_str());
 
-	rina::ApplicationProcessNamingInformation dif_name(
-			object.dif_to_register, std::string());
+		rina::ApplicationProcessNamingInformation dif_name(*it,
+								std::string());
+		if (!IPCManager->ipcp_exists(ipcp_id)) {
+			LOG_ERR("No such IPC process id");
+			return false;
+		}
+		if (IPCManager->register_at_dif(ManagementAgent::inst, &promise,
+				ipcp_id, dif_name, true) == IPCM_FAILURE
+				|| promise.wait() != IPCM_SUCCESS) {
+			LOG_ERR("Registration failed");
+			return false;
+		}
 
-	if (!IPCManager->ipcp_exists(ipcp_id)) {
-		LOG_ERR("No such IPC process id");
-		return false;
+		LOG_INFO("IPC process registration to dif %s completed successfully", it->c_str());
 	}
-
-	if (IPCManager->register_at_dif(ManagementAgent::inst, &promise,
-					ipcp_id, dif_name) == IPCM_FAILURE
-			|| promise.wait() != IPCM_SUCCESS) {
-		LOG_ERR("Registration failed");
-		return false;
-	}
-
-	LOG_INFO("IPC process registration completed successfully");
 
 	return true;
 }

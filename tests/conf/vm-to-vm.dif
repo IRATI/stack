@@ -1,0 +1,20 @@
+{
+    "difType" : "normal-ipc",
+    "knownIPCProcessAddresses": [
+     {
+         "apName": "h.n.1.IPCP",
+         "apInstance": "1",
+         "address": 16
+      },
+      {
+         "apName": "g.n.1.IPCP",
+         "apInstance": "1",
+         "address": 17
+      },
+      {
+         "apName": "g.n.2.IPCP",
+         "apInstance": "1",
+         "address": 19
+      }
+      ]
+  }

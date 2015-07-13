@@ -24,10 +24,13 @@
 
 #include <string>
 
+#include "rina-configuration.h"
 
 namespace rinad {
 
 bool parse_configuration(std::string& file_loc);
+DIFTemplate * parse_dif_template(const std::string& file_name,
+				 const std::string& template_name);
 
 }
 #endif  /* __IPCM_CONFIGURATION_H__ */

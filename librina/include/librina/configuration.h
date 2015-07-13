@@ -27,7 +27,8 @@
 #include "librina/common.h"
 
 #define RINA_DEFAULT_POLICY_NAME "default"
-#define RINA_DEFAULT_POLICY_VERSION "0"
+#define RINA_NO_POLICY_NAME "nopolicy"
+#define RINA_DEFAULT_POLICY_VERSION "1"
 
 namespace rina {
 
@@ -38,6 +39,7 @@ public:
         PolicyParameter(const std::string& name, const std::string& value);
         bool operator==(const PolicyParameter &other) const;
         bool operator!=(const PolicyParameter &other) const;
+        std::string toString();
 #ifndef SWIG
         const std::string& get_name() const;
         void set_name(const std::string& name);
@@ -59,6 +61,20 @@ public:
         PolicyConfig(const std::string& name, const std::string& version);
         bool operator==(const PolicyConfig &other) const;
         bool operator!=(const PolicyConfig &other) const;
+
+        /// Get a parameter value as a string
+        /// @throws Exception if parameter is not found
+        std::string get_param_value_as_string(const std::string& name) const;
+
+        /// Get a parameter value as long
+        /// @throws Exception if parameter is not found or the conversion
+        /// to long fails
+        long get_param_value_as_long(const std::string& name) const;
+        int get_param_value_as_int(const std::string& name) const;
+        unsigned long get_param_value_as_ulong(const std::string& name) const;
+        unsigned int get_param_value_as_uint(const std::string& name) const;
+
+        std::string toString();
 #ifndef SWIG
         const std::string& get_name() const;
         void set_name(const std::string& name);
@@ -344,6 +360,8 @@ public:
         void set_rtx_control(bool rtx_control);
         const DTCPRtxControlConfig& get_rtx_control_config() const;
         void set_rtx_control_config(const DTCPRtxControlConfig& rtx_control_config);
+        const PolicyConfig& get_dtcp_policy_set() const;
+        void set_dtcp_policy_set(const PolicyConfig& dtcp_policy_set);
         const PolicyConfig& get_rtt_estimator_policy() const;
         void set_rtt_estimator_policy(const PolicyConfig& rtt_estimator_policy);
 #endif
@@ -360,6 +378,9 @@ public:
 
         /// the rtx control configuration of a DTCP instance
         DTCPRtxControlConfig rtx_control_config_;
+
+        /// Policy set for DTCP.
+        PolicyConfig dtcp_policy_set_;
 
         /// This policy determines what action to take when the PM detects that
         /// a control PDU (Ack or Flow Control) may have been lost.  If this
@@ -397,6 +418,10 @@ public:
         void set_partial_delivery(bool partial_delivery);
         bool is_incomplete_delivery() const;
         void set_incomplete_delivery(bool incomplete_delivery);
+        const PolicyConfig& get_dtp_policy_set() const;
+        void set_dtp_policy_set(const PolicyConfig& dtp_policy_set);
+        const PolicyConfig& get_dtcp_policy_set() const;
+        void set_dtcp_policy_set(const PolicyConfig& dtcp_policy_set);
         const PolicyConfig& get_rcvr_timer_inactivity_policy() const;
         void set_rcvr_timer_inactivity_policy(
         		const PolicyConfig& rcvr_timer_inactivity_policy);
@@ -411,6 +436,9 @@ public:
 
         /// The configuration of the DTCP instance
         DTCPConfig dtcp_configuration_;
+
+        /// Policy Set for DTP.
+        PolicyConfig dtp_policy_set_;
 
         /// used when DTCP is in use. If no PDUs arrive in this time period,
         /// the receiver should expect a DRF in the next Transfer PDU. If not,
@@ -632,7 +660,10 @@ private:
 class FlowAllocatorConfiguration {
 public:
         FlowAllocatorConfiguration();
+        std::string toString();
 #ifndef SWIG
+        const PolicyConfig& get_policy_set() const;
+        void set_policy_set(const PolicyConfig& policy_set);
         const PolicyConfig& get_allocate_notify_policy() const;
         void set_allocate_notify_policy(const PolicyConfig& allocate_notify_policy);
         const PolicyConfig& get_allocate_retry_policy() const;
@@ -644,6 +675,8 @@ public:
         const PolicyConfig& get_seq_rollover_policy() const;
         void set_seq_rollover_policy(const PolicyConfig& seq_rollover_policy);
 #endif
+        /// Policy set for Flow Allocator
+        PolicyConfig policy_set_;
 
         /// Maximum number of attempts to retry the flow allocation
         int max_create_flow_retries_;
@@ -672,98 +705,52 @@ public:
         PolicyConfig seq_rollover_policy_;
 };
 
+/// Contains the configuration data of the PDUFTG, so far its policy
+/// set
+class PDUFTGConfiguration {
+public:
+        PDUFTGConfiguration();
+        std::string toString();
+
+        /// Set of policies to define the PDUFTG's behaviour.
+        PolicyConfig policy_set_;
+};
+
+/// Contains the configuration data of the Resource Allocator
+class ResourceAllocatorConfiguration {
+public:
+        ResourceAllocatorConfiguration();
+        std::string toString();
+
+        /// Set of policies to define the Resource Allocator's behaviour.
+        PDUFTGConfiguration pduftg_conf_;
+};
+
+/// Contains the configuration data of the PDU Forwarding Table for a particular
+/// DIF
+class PFTConfiguration {
+public:
+        PFTConfiguration();
+        std::string toString();
+
+        /// Set of policies to define PDU Forwarding's behaviour.
+        // pft_nhop
+        PolicyConfig policy_set_;
+};
+
 /// Contains the configuration data of the Relaying and Multiplexing Task for a
 /// particular DIF
 class RMTConfiguration {
 public:
         RMTConfiguration();
-#ifndef SWIG
-        const PolicyConfig& get_max_queue_policy() const;
-        void set_max_queue_policy(const PolicyConfig& max_queue_policy);
-        const PolicyConfig& get_rmt_queue_monitor_policy() const;
-        void set_rmt_queue_monitor_policy(const PolicyConfig& rmt_queue_monitor_policy);
-        const PolicyConfig& get_rmt_scheduling_policy() const;
-        void set_rmt_scheduling_policy(const PolicyConfig& rmt_scheduling_policy);
-#endif
+        std::string toString();
 
-        /// Three parameters are provided to monitor the queues. This policy
-        /// can be invoked whenever a PDU is placed in a queue and may keep
-        /// additional variables that may be of use to the decision process of
-        /// the RMT-Scheduling Policy and the MaxQPolicy.
-        PolicyConfig rmt_queue_monitor_policy_;
+        /// Set of policies to define RMT's behaviour.
+        /// QMonitor Policy, MaxQ Policy and Scheduling Policy
+        PolicyConfig policy_set_;
 
-        /// This is the meat of the RMT. This is the scheduling algorithm that
-        /// determines the order input and output queues are serviced. We have
-        /// not distinguished inbound from outbound. That is left to the policy.
-        /// To do otherwise, would impose a policy. This policy may implement
-        /// any of the standard scheduling algorithms, FCFS, LIFO,
-        /// longestQfirst, priorities, etc.
-        PolicyConfig rmt_scheduling_policy_;
-
-        /// This policy is invoked when a queue reaches or crosses the threshold
-        /// or maximum queue lengths allowed for this queue. Note that maximum
-        /// length may be exceeded.
-        PolicyConfig max_queue_policy_;
-};
-
-/// Link State routing configuration
-class LinkStateRoutingConfiguration {
-public:
-        LinkStateRoutingConfiguration();
-        const std::string toString();
-#ifndef SWIG
-        int get_wait_until_age_increment() const;
-        void set_wait_until_age_increment(const int wait_until_age_increment);
-        int get_wait_until_error() const;
-        void set_wait_until_error(const int wait_until_error);
-        int get_wait_until_fsodb_propagation() const;
-        void set_wait_until_fsodb_propagation(const int wait_until_fsodb_propagation);
-        int get_wait_until_pduft_computation() const;
-        void set_wait_until_pduft_computation(const int wait_until_pduft_computation);
-        int get_wait_until_read_cdap() const;
-        void set_wait_until_read_cdap(const int wait_until_read_cdap);
-        unsigned int get_object_maximum_age() const;
-        void set_object_maximum_age(const int object_maximum_age);
-        const std::string& get_routing_algorithm() const;
-        void set_routing_algorithm(const std::string& routing_algorithm);
-#endif
-
-        static const int PULSES_UNTIL_FSO_EXPIRATION_DEFAULT = 100000;
-        static const int WAIT_UNTIL_READ_CDAP_DEFAULT = 5001;
-        static const int WAIT_UNTIL_ERROR_DEFAULT = 5001;
-        static const int WAIT_UNTIL_PDUFT_COMPUTATION_DEFAULT = 103;
-        static const int WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT = 101;
-        static const int WAIT_UNTIL_AGE_INCREMENT_DEFAULT = 997;
-        static const std::string DEFAULT_ROUTING_ALGORITHM;
-
-        unsigned int object_maximum_age_;
-        int wait_until_read_cdap_;
-        int wait_until_error_;
-        int wait_until_pduft_computation_;
-        int wait_until_fsodb_propagation_;
-        int wait_until_age_increment_;
-        std::string routing_algorithm_;
-};
-
-/// PDU F Table Generator Configuration
-class PDUFTableGeneratorConfiguration {
-public:
-        PDUFTableGeneratorConfiguration();
-        PDUFTableGeneratorConfiguration(const PolicyConfig& pduft_generator_policy);
-#ifndef SWIG
-        const PolicyConfig& get_pduft_generator_policy() const;
-        void set_pduft_generator_policy(const PolicyConfig& pduft_generator_policy);
-        const LinkStateRoutingConfiguration& get_link_state_routing_configuration() const;
-        void set_link_state_routing_configuration(
-                        const LinkStateRoutingConfiguration& link_state_routing_configuration);
-#endif
-
-        /// Name, version and configuration of the PDU FT Generator policy
-        PolicyConfig pduft_generator_policy_;
-
-        /// Link state routing configuration parameters - only relevant if a
-        /// link-state routing PDU FT Generation policy is used
-        LinkStateRoutingConfiguration link_state_routing_configuration_;
+        /// Configuration of the PFT
+        PFTConfiguration pft_conf_;
 };
 
 /// Configuration of the resource allocator
@@ -771,21 +758,10 @@ class EnrollmentTaskConfiguration {
 public:
 	EnrollmentTaskConfiguration();
 
-	// The maximum time to wait between steps of the enrollment program,
-	// before considering enrollment failed
-	int enrollment_timeout_in_ms_;
+        /// Policy set for Enrollment Task
+        PolicyConfig policy_set_;
 
-	// The period of the watchdog in ms (monitors status of neighbors)
-	int watchdog_period_in_ms_;
-
-	//The time to declare a neighbor dead (in ms)
-	int declared_dead_interval_in_ms_;
-
-	//The period of the neighbor enroller (in ms)
-	int neighbor_enroller_period_in_ms_;
-
-	//The maximum number of enrollment attempts
-	unsigned int max_number_of_enrollment_attempts_;
+	std::string toString();
 };
 
 /// Configuration of a static IPC Process address
@@ -824,20 +800,53 @@ public:
 /// Configuration of the namespace manager
 class NamespaceManagerConfiguration {
 public:
+        NamespaceManagerConfiguration();
+        std::string toString();
+#ifndef SWIG
+        const PolicyConfig& get_policy_set() const;
+        void set_policy_set(const PolicyConfig& policy_set);
+#endif
+
 	AddressingConfiguration addressing_configuration_;
+	PolicyConfig policy_set_;
+};
+
+/// Configuration of
+class AuthSDUProtectionProfile {
+public:
+	std::string to_string();
+
+	///The authentication-encryption-compression policy set
+	PolicyConfig authPolicy;
+
+	/// The encryption policy configuration (name/version)
+	PolicyConfig encryptPolicy;
+
+	/// The CRC policy config
+	PolicyConfig crcPolicy;
+
+	/// The TTL policy config
+	PolicyConfig ttlPolicy;
 };
 
 /// Configuration of the Security Manager
 class SecurityManagerConfiguration {
 public:
-	/// Access control policy for allowing new members into a DIF
-	PolicyConfig difMemberAccessControlPolicy;
+	SecurityManagerConfiguration() { };
+	std::string toString();
 
-	/// Access control policy for accepting flows
-	PolicyConfig newFlowAccessControlPolicy;
+	PolicyConfig policy_set_;
 
-	/// The authentication policy for new members of the DIF
-	PolicyConfig authenticationPolicy;
+	AuthSDUProtectionProfile default_auth_profile;
+	std::map<std::string, AuthSDUProtectionProfile> specific_auth_profiles;
+};
+
+class RoutingConfiguration {
+public:
+	RoutingConfiguration() { };
+        std::string toString();
+
+        PolicyConfig policy_set_;
 };
 
 /// Contains the data about a DIF Configuration
@@ -845,15 +854,11 @@ public:
 class DIFConfiguration {
 public:
 #ifndef SWIG
-  DIFConfiguration();
+	DIFConfiguration();
 	unsigned int get_address() const;
 	void set_address(unsigned int address);
 	const EFCPConfiguration& get_efcp_configuration() const;
 	void set_efcp_configuration(const EFCPConfiguration& efcp_configuration);
-	const PDUFTableGeneratorConfiguration&
-	get_pduft_generator_configuration() const;
-	void set_pduft_generator_configuration(
-			const PDUFTableGeneratorConfiguration& pduft_generator_configuration);
 	const RMTConfiguration& get_rmt_configuration() const;
 	void set_rmt_configuration(const RMTConfiguration& rmt_configuration);
 	const std::list<PolicyConfig>& get_policies();
@@ -876,9 +881,6 @@ public:
 	/// Configuration of the Relaying and Multiplexing Task
 	RMTConfiguration rmt_configuration_;
 
-	/// PDUFT Configuration parameters of the DIF
-	PDUFTableGeneratorConfiguration pduft_generator_configuration_;
-
 	/// Flow Allocator configuration parameters of the DIF
 	FlowAllocatorConfiguration fa_configuration_;
 
@@ -888,17 +890,17 @@ public:
 	/// Configuration of the NamespaceManager
 	NamespaceManagerConfiguration nsm_configuration_;
 
+	// Configuration of routing
+	RoutingConfiguration routing_configuration_;
+
+	// Configuration of the Resource Allocator
+	ResourceAllocatorConfiguration ra_configuration_;
+
 	/// Configuration of the security manager
 	SecurityManagerConfiguration sm_configuration_;
 
-        /// Policy sets
-        std::list<Parameter> policy_sets;
-
 	/// Other configuration parameters of the DIF
 	std::list<Parameter> parameters_;
-
-	/// Other policies of the DIF
-	std::list<PolicyConfig> policies_;
 };
 
 /// Contains the information about a DIF (name, type, configuration)

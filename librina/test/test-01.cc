@@ -106,7 +106,6 @@ int main() {
 
 	/* TEST READ SDU */
 	int bytesRead = ipcManager->readSDU(flow2.portId, (void*)sdu, 5);
-
 	std::cout << "Read an SDU of " << bytesRead << " bytes. Contents: \n";
 	for (int i = 0; i < bytesRead; i++) {
 		std::cout << "SDU[" << i << "]: " << sdu[i] << "\n";

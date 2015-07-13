@@ -985,13 +985,19 @@ void RIBDaemon::encodeObject(RIBObjectValue& object_value, rina::CDAPMessage * m
                 message->obj_value_ = double_value;
                 break;
         }
+        case RIBObjectValue::bytestype : {
+        	rina::ByteArrayObjectValue * bytes_value =
+        			new rina::ByteArrayObjectValue(object_value.bytes_value_);
+        	message->obj_value_ = bytes_value;
+        	break;
+        }
         default :
                 break;
         }
 }
 
-void RIBDaemon::openApplicationConnection(rina::CDAPMessage::AuthTypes auth_mech,
-                        const rina::AuthValue &auth_value, const std::string &dest_ae_inst,
+void RIBDaemon::openApplicationConnection(
+                        const rina::AuthPolicy &auth_policy, const std::string &dest_ae_inst,
                         const std::string &dest_ae_name, const std::string &dest_ap_inst,
                         const std::string &dest_ap_name, const std::string &src_ae_inst,
                         const std::string &src_ae_name, const std::string &src_ap_inst,
@@ -1000,7 +1006,7 @@ void RIBDaemon::openApplicationConnection(rina::CDAPMessage::AuthTypes auth_mech
 
         try {
                 message = cdap_session_manager_->getOpenConnectionRequestMessage(remote_id.port_id_,
-                                auth_mech, auth_value, dest_ae_inst, dest_ae_name, dest_ap_inst,
+                                auth_policy, dest_ae_inst, dest_ae_name, dest_ap_inst,
                                 dest_ap_name, src_ae_inst, src_ae_name, src_ap_inst, src_ap_name);
 
                 sendMessageToProcess(*message, remote_id, 0);
@@ -1156,8 +1162,8 @@ void RIBDaemon::remoteStopObject(const std::string& object_class, const std::str
 			object_value, scope, remote_id, response_handler);;
 }
 
-void RIBDaemon::openApplicationConnectionResponse(rina::CDAPMessage::AuthTypes auth_mech,
-                                const rina::AuthValue &auth_value, const std::string &dest_ae_inst,
+void RIBDaemon::openApplicationConnectionResponse(
+                                const rina::AuthPolicy &auth_policy, const std::string &dest_ae_inst,
                                 const std::string &dest_ae_name, const std::string &dest_ap_inst, const std::string &dest_ap_name,
                                 int result, const std::string &result_reason, const std::string &src_ae_inst,
                                 const std::string &src_ae_name, const std::string &src_ap_inst, const std::string &src_ap_name,
@@ -1165,8 +1171,8 @@ void RIBDaemon::openApplicationConnectionResponse(rina::CDAPMessage::AuthTypes a
         rina::CDAPMessage * message = 0;
 
         try {
-                message = cdap_session_manager_->getOpenConnectionResponseMessage(auth_mech,
-                                auth_value, dest_ae_inst, dest_ae_name, dest_ap_inst, dest_ap_name,
+                message = cdap_session_manager_->getOpenConnectionResponseMessage(auth_policy,
+                                dest_ae_inst, dest_ae_name, dest_ap_inst, dest_ap_name,
                                 result, result_reason, src_ae_inst, src_ae_name, src_ap_inst,
                                 src_ap_name, invoke_id);
 

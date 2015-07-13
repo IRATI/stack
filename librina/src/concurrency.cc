@@ -283,20 +283,33 @@ void ThreadAttributes::setOtherSchedulingPolicy() {
 }
 
 /* CLASS THREAD */
-Thread::Thread(ThreadAttributes * threadAttributes,
-		void *(*startFunction)(void *), void * arg) {
-	if (pthread_create(&thread_id_, threadAttributes->getThreadAttributes(),
-			startFunction, arg)) {
+Thread::Thread(void *(*startFunction)(void *), void * arg,
+	       ThreadAttributes * threadAttributes)
+{
+	start_function = startFunction;
+	start_arg = arg;
+	thread_attrs = threadAttributes;
+}
+
+Thread::Thread(pthread_t thread_id_)
+{
+	this->thread_id_ = thread_id_;
+	start_arg = 0;
+	thread_attrs = 0;
+	start_function = 0;
+}
+
+Thread::~Thread() throw ()
+{
+}
+
+void Thread::start()
+{
+	if (pthread_create(&thread_id_, thread_attrs->getThreadAttributes(),
+			start_function, start_arg)) {
 		LOG_CRIT("%s", ConcurrentException::error_create_thread.c_str());
 		throw ConcurrentException(ConcurrentException::error_create_thread);
 	}
-}
-
-Thread::Thread(pthread_t thread_id_){
-	this->thread_id_ = thread_id_;
-}
-
-Thread::~Thread() throw () {
 }
 
 pthread_t Thread::getThreadType() const{
@@ -348,6 +361,27 @@ bool Thread::operator==(const Thread &other) const{
 
 bool Thread::operator!=(const Thread &other) const {
 	return !(*this == other);
+}
+
+/* Class SimpleThread */
+void * do_simple_thread_work(void * arg)
+{
+	SimpleThread * simple_thread = (SimpleThread *) arg;
+	if (!simple_thread) {
+		LOG_ERR("Bogus simple thread passed");
+		return (void *) -1;
+	}
+
+	return reinterpret_cast<void *>(simple_thread->run());
+}
+
+SimpleThread::SimpleThread(ThreadAttributes * threadAttributes) :
+		Thread(do_simple_thread_work, (void *) this, threadAttributes)
+{
+}
+
+SimpleThread::~SimpleThread() throw()
+{
 }
 
 /* CLASS LOCKABLE*/

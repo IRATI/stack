@@ -19,21 +19,20 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
-#ifndef SERVER_HPP
-#define SERVER_HPP
+#ifndef EC_SERVER_HPP
+#define EC_SERVER_HPP
 
 #include <librina/librina.h>
 #include <time.h>
 #include <signal.h>
 #include <librina/cdap_v2.h>
 
-#include "application.h"
+#include "server.h"
 
-class ConnectionCallback : public rina::cdap::CDAPCallbackInterface
-{
+class ConnectionCallback : public rina::cdap::CDAPCallbackInterface {
+
 public:
-	ConnectionCallback(bool *keep_serving,
-			rina::cdap::CDAPProviderInterface **prov);
+	ConnectionCallback(bool *keep_serving);
 	void open_connection(const rina::cdap_rib::con_handle_t &con,
 			const rina::cdap_rib::flags_t &flags, int message_id);
 	void remote_read_request(const rina::cdap_rib::con_handle_t &con,
@@ -42,27 +41,48 @@ public:
 			int message_id);
 	void close_connection(const rina::cdap_rib::con_handle_t &con,
 			const rina::cdap_rib::flags_t &flags, int message_id);
+
+	rina::cdap::CDAPProviderInterface* get_provider(){
+		if(!prov_)
+			prov_ = rina::cdap::getProvider();
+		return prov_;
+	}
+
 private:
 	bool *keep_serving_;
-	rina::cdap::CDAPProviderInterface **prov_;
+	rina::cdap::CDAPProviderInterface *prov_;
 };
 
-class Server : public Application
-{
+class CDAPEchoWorker : public ServerWorker {
 public:
-	Server(const std::string& dif_name, const std::string& app_name,
-			const std::string& app_instance, const int dealloc_wait);
-	void run();
+	CDAPEchoWorker(rina::ThreadAttributes * threadAttributes,
+			     int port,
+			     unsigned int max_sdu_size,
+			     Server * serv);
+	~CDAPEchoWorker() throw() { };
+	int internal_run();
+
+private:
+	void serveEchoFlow(int port_id);
+
+	int port_id;
+	unsigned int max_sdu_size;
+	rina::Sleep sleep_wrapper;
+};
+
+class CDAPEchoServer : public Server {
+public:
+	CDAPEchoServer(const std::string& dif_name,
+			const std::string& app_name,
+			const std::string& app_instance,
+			const int dealloc_wait);
 
 protected:
-	void serveEchoFlow(int port_id);
-	//static void destroyFlow(sigval_t val);
-private:
-	void startWorker(int port_id);
-	int interval;
-	int dw;
-	const unsigned int max_sdu_size_in_bytes = 10000;
+	ServerWorker * internal_start_worker(rina::FlowInformation flow);
 
+private:
+	int dw;
+	static const unsigned int max_sdu_size_in_bytes;
 };
 
 #endif

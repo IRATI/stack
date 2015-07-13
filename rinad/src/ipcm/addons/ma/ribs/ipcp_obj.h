@@ -75,7 +75,7 @@ public:
 protected:
 	static int createIPCP(rinad::mad_manager::structures::ipcp_config_t &object);
 	static bool assignToDIF(rinad::mad_manager::structures::ipcp_config_t &object, int ipcp_id);
-	static bool registerAtDIF(rinad::mad_manager::structures::ipcp_config_t &object, int ipcp_id);
+	static bool registerAtDIFs(rinad::mad_manager::structures::ipcp_config_t &object, int ipcp_id);
 
 private:
 	mad_manager::encoders::IPCPEncoder encoder;

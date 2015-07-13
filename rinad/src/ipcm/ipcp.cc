@@ -33,6 +33,7 @@
 #include <librina/logs.h>
 
 #include "rina-configuration.h"
+#include "common/debug.h"
 #include "ipcp.h"
 
 using namespace std;
@@ -225,7 +226,8 @@ void IPCMIPCProcess::disconnectFromNeighbor(
 void IPCMIPCProcess::registerApplication(
 		const rina::ApplicationProcessNamingInformation& applicationName,
 		unsigned short regIpcProcessId,
-		unsigned int opaque)
+		unsigned int opaque,
+		bool blocking)
 {
 	if (state_ != IPCM_IPCP_ASSIGNED_TO_DIF)
 		throw rina::IpcmRegisterApplicationException(
@@ -233,7 +235,7 @@ void IPCMIPCProcess::registerApplication(
 
 	try {
 		proxy_->registerApplication(applicationName, regIpcProcessId,
-				dif_name_, opaque);
+				dif_name_, opaque, blocking);
 	}catch (rina::Exception &e) {
 		throw e;
 	}
@@ -441,6 +443,21 @@ void IPCMIPCProcess::pluginLoad(const std::string& name, bool load,
 		unsigned int opaque)
 {
 	proxy_->pluginLoad(name, load, opaque);
+}
+
+void IPCMIPCProcess::forwardCDAPMessage(const rina::CDAPMessage& msg,
+					unsigned int opaque)
+{
+	rina::WireMessageProviderInterface * wmpi =
+		rina::WireMessageProviderFactory().createWireMessageProvider();
+	const rina::SerializedObject * so;
+	stringstream ss;
+
+	so = wmpi->serializeMessage(msg);
+	delete wmpi;
+
+	proxy_->forwardCDAPMessage(*so, opaque);
+	delete so;
 }
 
 

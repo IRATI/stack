@@ -2,7 +2,7 @@
  * CDAP North bound API
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Bernat Gast√≥n <bernat.gaston@i2cat.net>
+ *    Bernat Gastón <bernat.gaston@i2cat.net>
  *    Eduard Grasa <eduard.grasa@i2cat.net>
  *
  * This library is free software; you can redistribute it and/or
@@ -132,7 +132,7 @@ public:
 			const cdap_rib::vers_info_t &ver,
 			const cdap_rib::src_info_t &src,
 			const cdap_rib::dest_info_t &dest,
-			const cdap_rib::auth_info &auth, int port_id) = 0;
+			const cdap_rib::auth_policy &auth, int port) = 0;
 
 	///
 	/// Close a CDAP connection to a remote RIB
@@ -291,15 +291,8 @@ public:
 	/// CDAP protocol message declarations that the message conforms to
 	int abs_syntax_;
 
-	/// AuthenticationMechanismName (authtypes), optional, not validated by CDAP.
-	/// Identification of the method to be used by the destination application to
-	/// authenticate the source application
-	cdap_rib::auth_info_t::AuthTypes auth_mech_;
-
-	/// AuthenticationValue (authvalue), optional, not validated by CDAP.
-	/// Authentication information accompanying auth_mech, format and value
-	/// appropiate to the selected auth_mech
-	rina::AuthValue auth_value_;
+	/// Authentication Policy information
+	rina::AuthPolicy auth_policy_;
 
 	/// DestinationApplication-Entity-Instance-Id (string), optional, not validated by CDAP.
 	/// Specific instance of the Application Entity that the source application

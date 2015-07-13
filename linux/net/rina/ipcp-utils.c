@@ -480,6 +480,90 @@ int efcp_config_destroy(struct efcp_config * efcp_config)
 }
 EXPORT_SYMBOL(efcp_config_destroy);
 
+struct sdup_config * sdup_config_create(void)
+{
+        struct sdup_config * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        INIT_LIST_HEAD(&(tmp->specific_dup_confs));
+
+        return tmp;
+}
+EXPORT_SYMBOL(sdup_config_create);
+
+int sdup_config_destroy(struct sdup_config * sdup_config)
+{
+	struct dup_config  * dup_pos, * dup_nxt;
+
+        if (sdup_config->default_dup_conf)
+        	dup_config_entry_destroy(sdup_config->default_dup_conf);
+
+        list_for_each_entry_safe(dup_pos, dup_nxt,
+        			 &sdup_config->specific_dup_confs,
+        			 next) {
+        	list_del(&dup_pos->next);
+        	dup_config_destroy(dup_pos);
+        }
+
+
+        rkfree(sdup_config);
+
+        return 0;
+}
+EXPORT_SYMBOL(sdup_config_destroy);
+
+struct rmt_config * rmt_config_create(void)
+{
+        struct rmt_config * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->pff_conf = rkzalloc(sizeof(*tmp->pff_conf), GFP_KERNEL);
+        if (!tmp->pff_conf) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        tmp->pff_conf->policy_set = policy_create();
+        if (!tmp->pff_conf->policy_set) {
+                rkfree(tmp->pff_conf);
+                rkfree(tmp);
+                return NULL;
+        }
+
+        tmp->policy_set = policy_create();
+        if (!tmp->policy_set) {
+        	rkfree(tmp->pff_conf->policy_set);
+                rkfree(tmp->pff_conf);
+                rkfree(tmp);
+                return NULL;
+        }
+
+        return tmp;
+}
+EXPORT_SYMBOL(rmt_config_create);
+
+int rmt_config_destroy(struct rmt_config * rmt_config)
+{
+        if (rmt_config->pff_conf) {
+                if (rmt_config->pff_conf->policy_set)
+                        policy_destroy(rmt_config->pff_conf->policy_set);
+                rkfree(rmt_config->pff_conf);
+        }
+        if (rmt_config->policy_set)
+                policy_destroy(rmt_config->policy_set);
+
+        rkfree(rmt_config);
+
+        return 0;
+}
+EXPORT_SYMBOL(rmt_config_destroy);
+
 struct dif_config * dif_config_create(void)
 {
         struct dif_config * tmp;
@@ -489,6 +573,7 @@ struct dif_config * dif_config_create(void)
                 return NULL;
 
         tmp->efcp_config = NULL;
+        tmp->rmt_config = NULL;
         INIT_LIST_HEAD(&(tmp->ipcp_config_entries));
 
         return tmp;
@@ -560,3 +645,143 @@ int dif_info_destroy(struct dif_info * dif_info)
         return 0;
 }
 EXPORT_SYMBOL(dif_info_destroy);
+
+struct dup_config_entry * dup_config_entry_create(void)
+{
+	struct dup_config_entry * tmp;
+
+	tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+	if (!tmp)
+		return NULL;
+
+	tmp->enable_decryption = false;
+	tmp->enable_encryption = false;
+
+	return tmp;
+}
+EXPORT_SYMBOL(dup_config_entry_create);
+
+struct dup_config * dup_config_create(void)
+{
+	struct dup_config * tmp;
+
+	tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+	if (!tmp)
+		return NULL;
+
+	tmp->entry = NULL;
+
+	INIT_LIST_HEAD(&tmp->next);
+
+	return tmp;
+}
+EXPORT_SYMBOL(dup_config_create);
+
+int dup_config_entry_destroy(struct dup_config_entry * entry)
+{
+	if (!entry)
+		return -1;
+
+	if (entry->n_1_dif_name)
+		rkfree(entry->n_1_dif_name);
+
+	if (entry->error_check_policy)
+		policy_destroy(entry->error_check_policy);
+
+	if (entry->ttl_policy)
+		policy_destroy(entry->ttl_policy);
+
+	if (entry->encryption_policy)
+		policy_destroy(entry->encryption_policy);
+
+	if (entry->encryption_cipher)
+		rkfree(entry->encryption_cipher);
+
+	if (entry->message_digest)
+		rkfree(entry->message_digest);
+
+	rkfree(entry);
+
+	return 0;
+}
+EXPORT_SYMBOL(dup_config_entry_destroy);
+
+int dup_config_destroy(struct dup_config * cfg)
+{
+	if (!cfg)
+		return -1;
+
+	if (!cfg->entry)
+		return -1;
+
+	dup_config_entry_destroy(cfg->entry);
+
+	rkfree(cfg);
+
+	return 0;
+}
+EXPORT_SYMBOL(dup_config_destroy);
+
+int dup_config_entry_cpy(const struct dup_config_entry * src,
+                         struct dup_config_entry       * dst)
+{
+        if (!src || !dst)
+                return -1;
+
+        if (string_dup(src->n_1_dif_name, &dst->n_1_dif_name)) {
+        	return -1;
+        }
+
+        if (src->error_check_policy) {
+        	dst->error_check_policy = policy_dup_name_version(src->error_check_policy);
+        	if (!dst->error_check_policy) {
+        		return -1;
+        	}
+        }
+
+        if (src->ttl_policy) {
+        	dst->ttl_policy = policy_dup_name_version(src->ttl_policy);
+        	if (!dst->ttl_policy) {
+        		return -1;
+        	}
+
+        	dst->initial_ttl_value = src->initial_ttl_value;
+        }
+
+        if (src->encryption_policy) {
+        	dst->encryption_policy = policy_dup_name_version(src->encryption_policy);
+        	if (!dst->encryption_policy) {
+        		return -1;
+        	}
+
+                if (string_dup(src->encryption_cipher, &dst->encryption_cipher) ||
+                    string_dup(src->message_digest, &dst->message_digest))
+                    return -1;
+
+                dst->enable_decryption = src->enable_decryption;
+                dst->enable_encryption = src->enable_encryption;
+        }
+
+        return 0;
+}
+EXPORT_SYMBOL(dup_config_entry_cpy);
+
+struct dup_config_entry * dup_config_entry_dup(const struct dup_config_entry * src)
+{
+	struct dup_config_entry * tmp;
+
+	if (!src)
+		return NULL;
+
+	tmp = dup_config_entry_create();
+	if (!tmp)
+		return NULL;
+
+	if (dup_config_entry_cpy(src, tmp) != 0) {
+		dup_config_entry_destroy(tmp);
+		return NULL;
+	}
+
+	return tmp;
+}
+EXPORT_SYMBOL(dup_config_entry_dup);

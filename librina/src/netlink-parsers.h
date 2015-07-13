@@ -9,12 +9,12 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -85,6 +85,7 @@ enum FlowSpecificationAttributes {
 	FSPEC_ATTR_PEAK_BWITH_DURATION,
 	FSPEC_ATTR_PEAK_SDU_BWITH_DURATION,
 	FSPEC_ATTR_UNDETECTED_BER,
+	FSPEC_ATTR_BLOCKING,
 	__FSPEC_ATTR_MAX,
 };
 
@@ -216,6 +217,7 @@ enum ApplicationRegistrationInformationAttributes {
         ARIA_ATTR_APP_NAME = 1,
 	ARIA_ATTR_APP_REG_TYPE,
 	ARIA_ATTR_APP_DIF_NAME,
+	ARIA_ATTR_APP_BLOCKING,
 	__ARIA_ATTR_MAX,
 };
 
@@ -396,6 +398,7 @@ enum IpcmRegisterApplicationRequestMessageAttributes {
 	IRAR_ATTR_APP_NAME = 1,
 	IRAR_ATTR_DIF_NAME,
 	IRAR_ATTR_REG_IPC_ID,
+	IRAR_ATTR_BLOCKING,
 	__IRAR_ATTR_MAX,
 };
 
@@ -486,11 +489,18 @@ int putEFCPConfigurationObject(nl_msg* netlinkMessage,
 
 EFCPConfiguration * parseEFCPConfigurationObject(nlattr *nested);
 
+/* PFTConfiguration CLASS */
+enum PFTConfigurationAttributes {
+        PFTC_ATTR_POLICY_SET = 1,
+        __PFTC_ATTR_MAX,
+};
+
+#define PFTC_ATTR_MAX (__PFTC_ATTR_MAX -1)
+
 /* RMTConfiguration CLASS */
 enum RMTConfigurationAttributes {
-        RMTC_ATTR_QUEUE_MONITOR_POLICY = 1,
-        RMTC_ATTR_SCHEDULING_POLICY,
-        RMTC_ATTR_MAX_QUEUE_POLICY,
+        RMTC_ATTR_POLICY_SET = 1,
+        RMTC_ATTR_PFT_CONF,
         __RMTC_ATTR_MAX,
 };
 
@@ -501,42 +511,10 @@ int putRMTConfigurationObject(nl_msg* netlinkMessage,
 
 RMTConfiguration * parseRMTConfigurationObject(nlattr *nested);
 
-/* LinkStateRoutingConfiguration CLASS */
-enum LinkStateRoutingConfigurationAttributes {
-	LSRC_OBJECT_MAX_AGE = 1,
-	LSRC_WAIT_UNTIL_READ,
-	LSRC_WAIT_UNTIL_ERROR,
-	LSRC_WAIT_UNTIL_PDUFT_COM,
-	LSRC_WAIT_UNTIL_FSDB_PROP,
-	LSRC_WAIT_UNTIL_AGE_INC,
-	LSRC_ROUTING_ALG,
-	__LSRC_ATTR_MAX,
-};
-
-#define LSRC_ATTR_MAX (__LSRC_ATTR_MAX -1)
-
-int putLinkStateRoutingConfigurationObject(nl_msg* netlinkMessage,
-		const LinkStateRoutingConfiguration& object);
-
-LinkStateRoutingConfiguration * parseLinkStateRoutingConfigurationObject(nlattr *nested);
-
-/* PDUFTableGeneratorConfiguration CLASS */
-enum PDUFTableGeneratorConfigurationAttributes {
-	PDUFTC_PDU_FTG_POLICY = 1,
-	PDUFTC_LINK_STATE_CONFIG,
-	__PDUFTC_ATTR_MAX,
-};
-
-#define PDUFTC_ATTR_MAX (__PDUFTC_ATTR_MAX -1)
-
-int putPDUFTableGeneratorConfigurationObject(nl_msg* netlinkMessage,
-		const PDUFTableGeneratorConfiguration& object);
-
-PDUFTableGeneratorConfiguration * parsePDUFTableGeneratorConfigurationObject(nlattr *nested);
-
 /* FlowAllocatorConfiguration CLASS */
 enum FlowAllocatorConfigurationAttributes {
 	FLAC_MAX_CREATE_FLOW_RETRIES = 1,
+	FLAC_POLICY_SET,
 	FLAC_ALLOC_NOTIFY_POLICY,
 	FLAC_ALLOC_RETRY_POLICY,
 	FLAC_NEW_FLOW_REQ_POLICY,
@@ -553,11 +531,7 @@ FlowAllocatorConfiguration * parseFlowAllocatorConfigurationObject(nlattr *neste
 
 /* EnrollmentTaskConfiguration CLASS */
 enum EnrollmentTaskConfigurationAttributes {
-	ENTC_ENROLLMENT_TIMEOUT_MS = 1,
-	ENTC_WHATCHDOG_PERIOD_MS,
-	ENTC_NEIGH_DECLARED_DEAD_INT_MS,
-	ENTC_MAX_NUM_ENROLL_ATTEMPTS,
-	ENTC_NEIGH_ENROLLER_PERIOD_MS,
+	ENTC_POLICY_SET = 1,
 	__ENTC_ATTR_MAX,
 };
 
@@ -614,6 +588,7 @@ AddressingConfiguration * parseAddressingConfigurationObject(nlattr *nested);
 /* NamespaceManagerConfiguration CLASS */
 enum NamespaceManagerConfigurationAttributes {
 	NSMC_ADDRESSING_CONF = 1,
+	NSMC_POLICY_SET,
 	__NSMC_ATTR_MAX,
 };
 
@@ -626,9 +601,9 @@ NamespaceManagerConfiguration * parseNamespaceManagerConfigurationObject(nlattr 
 
 /* SecurityManagerConfiguration CLASS */
 enum SecurityManagerConfigurationAttributes {
-	SECMANC_DIF_MEM_ACC_CON_POLICY = 1,
-	SECMANC_NEW_FLOW_ACC_CON_POLICY,
-	SECMANC_AUTH_POLICY,
+	SECMANC_POLICY_SET = 1,
+	SECMANC_DEFAULT_AUTH_SDUP_POLICY,
+	SECMANC_SPECIFIC_AUTH_SDUP_POLICIES,
 	__SECMANC_ATTR_MAX,
 };
 
@@ -639,18 +614,90 @@ int putSecurityManagerConfigurationObject(nl_msg* netlinkMessage,
 
 SecurityManagerConfiguration * parseSecurityManagerConfigurationObject(nlattr *nested);
 
+/* AuthSDUProtectionProfile CLASS */
+enum AuthSDUProtectionProfileAttributes {
+    AUTHP_AUTH_POLICY = 1,
+    AUTHP_ENCRYPT_POLICY,
+    AUTHP_TTL_POLICY,
+    AUTHP_CRC_POLICY,
+    __AUTHP_ATTR_MAX,
+};
+
+#define AUTHP_ATTR_MAX (__AUTHP_ATTR_MAX -1)
+
+int putAuthSDUProtectionProfile(nl_msg* netlinkMessage,
+			   	const AuthSDUProtectionProfile& object);
+AuthSDUProtectionProfile * parseAuthSDUProtectionProfile(nlattr *nested);
+
+enum SpecificAuthSDUProtectionProfileAttributes {
+    SAUTHP_UNDER_DIF = 1,
+    SAUTHP_AUTH_PROFILE,
+    __SAUTHP_ATTR_MAX,
+};
+
+#define SAUTHP_ATTR_MAX (__SAUTHP_ATTR_MAX -1)
+
+int putSpecificAuthSDUProtectionProfile(nl_msg* netlinkMessage,
+					const std::string& under_dif,
+			   	        const AuthSDUProtectionProfile& object);
+int parseSpecificSDUProtectionProfile(nlattr *nested,
+			     	      std::map<std::string, AuthSDUProtectionProfile>& profiles);
+
+int putListOfAuthSDUProtectionProfiles(nl_msg* netlinkMessage,
+				       const std::map<std::string, AuthSDUProtectionProfile>& profiles);
+int parseListOfAuthSDUProtectionProfiles(nlattr *nested,
+			     	     	 std::map<std::string, AuthSDUProtectionProfile>& profiles);
+/* PDUFTGConfiguration CLASS */
+enum PDUFTGConfigurationAttributes {
+	PDUFTGC_POLICY_SET = 1,
+	__PDUFTGC_ATTR_MAX,
+};
+
+#define PDUFTGC_ATTR_MAX (__PDUFTGC_ATTR_MAX -1)
+
+int putPDUFTGConfigurationObject(nl_msg* netlinkMessage,
+		const PDUFTGConfiguration& object);
+
+PDUFTGConfiguration * parsePDUFTGConfigurationObject(nlattr *nested);
+
+/* ResourceAllocatorConfiguration CLASS */
+enum ResourceAllocatorConfigurationAttributes {
+	RAC_PDUFTG_CONF = 1,
+	__RAC_ATTR_MAX,
+};
+
+#define RAC_ATTR_MAX (__RAC_ATTR_MAX -1)
+
+int putResourceAllocatorConfigurationObject(nl_msg* netlinkMessage,
+		const ResourceAllocatorConfiguration& object);
+
+ResourceAllocatorConfiguration * parseResourceAllocatorConfigurationObject(nlattr *nested);
+
+/* RoutingConfiguration CLASS */
+enum RoutingConfigurationAttributes {
+	ROUTE_POLICY_SET = 1,
+	__ROUTE_ATTR_MAX,
+};
+
+#define ROUTE_ATTR_MAX (__ROUTE_ATTR_MAX -1)
+
+int putRoutingConfigurationObject(nl_msg* netlinkMessage,
+		const RoutingConfiguration& object);
+
+RoutingConfiguration * parseRoutingConfigurationObject(nlattr *nested);
+
 /* DIF Configuration CLASS */
 enum DIFConfigurationAttributes {
 	DCONF_ATTR_PARAMETERS = 1,
 	DCONF_ATTR_ADDRESS,
 	DCONF_ATTR_EFCP_CONF,
 	DCONF_ATTR_RMT_CONF,
-	DCONF_ATTR_PDUFT_CONF,
+	DCONF_ATTR_SM_CONF,
 	DCONF_ATTR_FA_CONF,
 	DCONF_ATTR_ET_CONF,
 	DCONF_ATTR_NSM_CONF,
-	DCONF_ATTR_SM_CONF,
-        DCONF_ATTR_POLICY_SETS,
+	DCONF_ATTR_RA_CONF,
+	DCONF_ATTR_ROUTING_CONF,
 	__DCONF_ATTR_MAX,
 };
 
@@ -1089,6 +1136,7 @@ enum DTCPConfigAttributes {
         DCA_ATTR_FLOW_CONTROL_CONFIG,
         DCA_ATTR_RETX_CONTROL,
         DCA_ATTR_RETX_CONTROL_CONFIG,
+        DCA_ATTR_DTCP_POLICY_SET,
         DCA_ATTR_LOST_CONTROL_PDU_POLICY,
         DCA_ATTR_RTT_EST_POLICY,
         __DCA_ATTR_MAX,
@@ -1106,6 +1154,7 @@ parseDTCPConfigObject(nlattr *nested);
 enum ConnectionPoliciesAttributes {
 	CPA_ATTR_DTCP_PRESENT = 1,
 	CPA_ATTR_DTCP_CONFIG,
+        CPA_ATTR_DTP_POLICY_SET,
 	CPA_ATTR_RCVR_TIMER_INAC_POLICY,
 	CPA_ATTR_SNDR_TIMER_INAC_POLICY,
 	CPA_ATTR_INIT_SEQ_NUM_POLICY,
@@ -1276,11 +1325,24 @@ int putIpcpConnectionDestroyResultMessageObject(nl_msg* netlinkMessage,
 IpcpConnectionDestroyResultMessage * parseIpcpConnectionDestroyResultMessage(
                 nlmsghdr *hdr);
 
+/* PortIdAltlist CLASS */
+enum PortIdAltlistAttributes {
+        PIA_ATTR_PORT_IDS = 1,
+        __PIA_ATTR_MAX,
+};
+
+#define PIA_ATTR_MAX (__PIA_ATTR_MAX - 1)
+
+int putPortIdAltlist(nl_msg* netlinkMessage,
+                 const PortIdAltlist& object);
+
+int parsePortIdAltlist(nlattr *nested, PortIdAltlist& portIdAlt);
+
 /* PDUForwardingTableEntry CLASS*/
 enum PDUForwardingTableEntryAttributes {
         PFTE_ATTR_ADDRESS = 1,
         PFTE_ATTR_QOS_ID,
-        PFTE_ATTR_PORT_IDS,
+        PFTE_ATTR_PORT_ID_ALTLISTS,
         __PFTE_ATTR_MAX,
 };
 
@@ -1410,6 +1472,53 @@ int putIpcmPluginLoadResponseMessageObject(nl_msg* netlinkMessage,
 		const IpcmPluginLoadResponseMessage& object);
 
 IpcmPluginLoadResponseMessage *parseIpcmPluginLoadResponseMessage(
+		nlmsghdr *hdr);
+
+/* IPCPEnableEncryptionRequestMessageAttributes CLASS */
+enum IPCPEnableEncryptionRequestMessageAttributes {
+        EERM_ATTR_N_1_PORT = 1,
+	EERM_ATTR_EN_ENCRYPT,
+        EERM_ATTR_EN_DECRYPT,
+        EERM_ATTR_ENCRYPT_KEY,
+        __EERM_ATTR_MAX,
+};
+
+#define EERM_ATTR_MAX (__EERM_ATTR_MAX -1)
+
+int putIPCPEnableEncryptionRequestMessage(nl_msg* netlinkMessage,
+                const IPCPEnableEncryptionRequestMessage& object);
+
+IPCPEnableEncryptionRequestMessage * parseIPCPEnableEncryptionRequestMessage(
+                nlmsghdr *hdr);
+
+/* IPCPEnableEncryptionResponseMessageAttributes CLASS */
+enum IPCPEnableEncryptionResponseMessageAttributes {
+        EEREM_ATTR_RESULT = 1,
+        EEREM_ATTR_N_1_PORT,
+        __EEREM_ATTR_MAX,
+};
+
+#define EEREM_ATTR_MAX (__EEREM_ATTR_MAX -1)
+
+int putIPCPEnableEncryptionResponseMessage(nl_msg* netlinkMessage,
+                const IPCPEnableEncryptionResponseMessage& object);
+
+IPCPEnableEncryptionResponseMessage * parseIPCPEnableEncryptionResponseMessage(
+                nlmsghdr *hdr);
+
+/* IpcmFwdCDAPMsgMessage CLASS*/
+enum IpcmFwdCDAPMsgMessageAttributes {
+	IFCM_ATTR_CDAP_MSG = 1,
+	IFCM_ATTR_RESULT,
+	__IFCM_ATTR_MAX,
+};
+
+#define IFCM_ATTR_MAX (__IFCM_ATTR_MAX -1)
+
+int putIpcmFwdCDAPMsgMessageObject(nl_msg* netlinkMessage,
+		const IpcmFwdCDAPMsgMessage& object);
+
+IpcmFwdCDAPMsgMessage * parseIpcmFwdCDAPMsgMessage(
 		nlmsghdr *hdr);
 
 }

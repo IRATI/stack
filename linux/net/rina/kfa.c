@@ -58,7 +58,7 @@ enum flow_state {
 
 struct ipcp_flow {
         port_id_t              port_id;
-
+        bool		       blocking;
         enum flow_state        state;
         struct ipcp_instance * ipc_process;
         struct rfifo *         sdu_ready;
@@ -436,24 +436,24 @@ int kfa_flow_sdu_write(struct ipcp_instance_data * data,
         if (!data) {
                 LOG_ERR("Bogus ipcp data passed, bailing out");
                 sdu_destroy(sdu);
-                return -1;
+                return -EINVAL;
         }
 
         instance = data->kfa;
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 sdu_destroy(sdu);
-                return -1;
+                return -EINVAL;
         }
         if (!is_port_id_ok(id)) {
                 LOG_ERR("Bogus port-id, bailing out");
                 sdu_destroy(sdu);
-                return -1;
+                return -EINVAL;
         }
         if (!sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus sdu, bailing out");
                 sdu_destroy(sdu);
-                return -1;
+                return -EINVAL;
         }
 
         LOG_DBG("Trying to write SDU to port-id %d", id);
@@ -465,79 +465,111 @@ int kfa_flow_sdu_write(struct ipcp_instance_data * data,
                 LOG_ERR("There is no flow bound to port-id %d", id);
                 spin_unlock_irqrestore(&instance->lock, flags);
                 sdu_destroy(sdu);
-                return -1;
+                return -EBADF;
         }
         if (flow->state == PORT_STATE_DEALLOCATED) {
                 LOG_ERR("Flow with port-id %d is already deallocated", id);
                 spin_unlock_irqrestore(&instance->lock, flags);
                 sdu_destroy(sdu);
-                return -1;
+                return -ESHUTDOWN;
         }
 
         atomic_inc(&flow->writers);
 
-        while (!ok_write(flow)) {
-                spin_unlock_irqrestore(&instance->lock, flags);
+        if (flow->blocking) {
+        	while (!ok_write(flow)) {
+        		spin_unlock_irqrestore(&instance->lock, flags);
 
-                LOG_DBG("Going to sleep on wait queue %pK (writing)",
-                        &flow->write_wqueue);
-                LOG_DBG("OK_write check called: %d", flow->state);
-                retval = wait_event_interruptible(flow->write_wqueue,
-                                                  ok_write(flow));
-                LOG_DBG("Write woken up (%d)", retval);
+        		LOG_DBG("Going to sleep on wait queue %pK (writing)",
+        				&flow->write_wqueue);
+        		LOG_DBG("OK_write check called: %d", flow->state);
+        		retval = wait_event_interruptible(flow->write_wqueue,
+        						  ok_write(flow));
+        		LOG_DBG("Write woken up (%d)", retval);
 
-                if (retval) {
-                        LOG_DBG("Wait-event interrupted (%d)", retval);
-                        if (signal_pending(current)) {
-                                LOG_DBG("A signal is pending");
+        		if (retval < 0) {
+        			LOG_DBG("Wait-event interrupted (%d)", retval);
+        			if (signal_pending(current)) {
+        				LOG_DBG("A signal is pending");
 #if 0
-                                LOG_DBG("A signal is pending "
-                                        "(sig = 0x%08zx%08zx)",
-                                        current->pending.signal.sig[0],
-                                        current->pending.signal.sig[1]);
+        				LOG_DBG("A signal is pending "
+        						"(sig = 0x%08zx%08zx)",
+        						current->pending.signal.sig[0],
+        						current->pending.signal.sig[1]);
 #endif
-                        }
-                }
+        			}
+        		}
 
-                spin_lock_irqsave(&instance->lock, flags);
+        		spin_lock_irqsave(&instance->lock, flags);
 
-                flow = kfa_pmap_find(instance->flows, id);
-                if (!flow) {
-                        spin_unlock_irqrestore(&instance->lock, flags);
-                        sdu_destroy(sdu);
+        		flow = kfa_pmap_find(instance->flows, id);
+        		if (!flow) {
+        			spin_unlock_irqrestore(&instance->lock, flags);
+        			sdu_destroy(sdu);
 
-                        LOG_ERR("There is no flow bound to port-id %d anymore",
-                                id);
-                        return -1;
-                }
+        			LOG_ERR("There is no flow bound to port-id %d anymore",
+        					id);
+        			return -EBADF;
+        		}
 
-                if (retval) {
-                        sdu_destroy(sdu);
-                        goto finish;
-                }
+        		if (retval < 0 ) {
+        			sdu_destroy(sdu);
+        			goto finish;
+        		}
 
-                if (flow->state == PORT_STATE_DEALLOCATED) {
-                        sdu_destroy(sdu);
-                        goto finish;
-                }
+        		if (flow->state == PORT_STATE_DEALLOCATED) {
+        			sdu_destroy(sdu);
+        			retval = -ESHUTDOWN;
+        			goto finish;
+        		}
+        	}
+
+        	ipcp = flow->ipc_process;
+        	if (!ipcp) {
+        		retval = -EBADF;
+        		sdu_destroy(sdu);
+        		goto finish;
+        	}
+
+        	ASSERT(ipcp->ops);
+        	ASSERT(ipcp->ops->sdu_write);
+
+        	spin_unlock_irqrestore(&instance->lock, flags);
+        	if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
+        		LOG_ERR("Couldn't write SDU on port-id %d", id);
+        		retval = -EIO;
+        	}
+        	spin_lock_irqsave(&instance->lock, flags);
+        } else {
+        	if (flow->state == PORT_STATE_PENDING || flow->state == PORT_STATE_DISABLED) {
+        		LOG_ERR("Flow %d is not ready for writing", id);
+        		retval = -EAGAIN;
+        		goto finish;
+        	}
+
+        	if (flow->state == PORT_STATE_DEALLOCATED) {
+        		LOG_ERR("Flow %d has been deallocated", id);
+        		retval = -ESHUTDOWN;
+        		goto finish;
+        	}
+
+        	ipcp = flow->ipc_process;
+        	if (!ipcp) {
+        		retval = -EBADF;
+        		sdu_destroy(sdu);
+        		goto finish;
+        	}
+
+        	ASSERT(ipcp->ops);
+        	ASSERT(ipcp->ops->sdu_write);
+
+        	spin_unlock_irqrestore(&instance->lock, flags);
+        	if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
+        		LOG_ERR("Couldn't write SDU on port-id %d", id);
+        		retval = -EIO;
+        	}
+        	spin_lock_irqsave(&instance->lock, flags);
         }
-
-        ipcp = flow->ipc_process;
-        if (!ipcp) {
-                retval = -1;
-                sdu_destroy(sdu);
-                goto finish;
-        }
-
-        ASSERT(ipcp->ops);
-        ASSERT(ipcp->ops->sdu_write);
-
-        spin_unlock_irqrestore(&instance->lock, flags);
-        if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
-                LOG_ERR("Couldn't write SDU on port-id %d", id);
-                retval = -1;
-        }
-        spin_lock_irqsave(&instance->lock, flags);
 
  finish:
         LOG_DBG("Finishing (write)");
@@ -592,15 +624,15 @@ int kfa_flow_sdu_read(struct kfa *  instance,
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
-                return -1;
+                return -EINVAL;
         }
         if (!is_port_id_ok(id)) {
                 LOG_ERR("Bogus port-id, bailing out");
-                return -1;
+                return -EINVAL;
         }
         if (!sdu) {
                 LOG_ERR("Bogus output sdu parameter passed, bailing out");
-                return -1;
+                return -EINVAL;
         }
 
         LOG_DBG("Trying to read SDU from port-id %d", id);
@@ -611,70 +643,91 @@ int kfa_flow_sdu_read(struct kfa *  instance,
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", id);
                 spin_unlock_irqrestore(&instance->lock, flags);
-                return -1;
+                return -EBADF;
         }
         if (flow->state == PORT_STATE_DEALLOCATED) {
                 LOG_ERR("Flow with port-id %d is already deallocated", id);
                 spin_unlock_irqrestore(&instance->lock, flags);
-                return -1;
+                return -ESHUTDOWN;
         }
 
         atomic_inc(&flow->readers);
 
-        while (flow->state == PORT_STATE_PENDING ||
-               rfifo_is_empty(flow->sdu_ready)) {
-                spin_unlock_irqrestore(&instance->lock, flags);
+        if (flow->blocking) {
+        	while (flow->state == PORT_STATE_PENDING ||
+        			rfifo_is_empty(flow->sdu_ready)) {
+        		spin_unlock_irqrestore(&instance->lock, flags);
 
-                LOG_DBG("Going to sleep on wait queue %pK (reading)",
-                        &flow->read_wqueue);
-                retval = wait_event_interruptible(flow->read_wqueue,
-                                                  queue_ready(flow));
-                LOG_DBG("Read woken up (%d)", retval);
+        		LOG_DBG("Going to sleep on wait queue %pK (reading)",
+        				&flow->read_wqueue);
+        		retval = wait_event_interruptible(flow->read_wqueue,
+        						  queue_ready(flow));
+        		LOG_DBG("Read woken up (%d)", retval);
 
-                if (retval) {
-                        LOG_DBG("Wait-event interrupted (%d)", retval);
-                        if (signal_pending(current)) {
-                                LOG_DBG("A signal is pending");
+        		if (retval < 0) {
+        			LOG_ERR("Wait-event interrupted (%d)", retval);
+        			if (signal_pending(current)) {
+        				LOG_ERR("A signal is pending");
 #if 0
-                                LOG_DBG("A signal is pending "
-                                        "(sig = 0x%08zx%08zx)",
-                                        current->pending.signal.sig[0],
-                                        current->pending.signal.sig[1]);
+        				LOG_ERR("A signal is pending "
+        						"(sig = 0x%08zx%08zx)",
+        						current->pending.signal.sig[0],
+        						current->pending.signal.sig[1]);
 #endif
-                        }
-                }
+        			}
+        		}
 
-                spin_lock_irqsave(&instance->lock, flags);
+        		spin_lock_irqsave(&instance->lock, flags);
 
-                flow = kfa_pmap_find(instance->flows, id);
-                if (!flow) {
-                        spin_unlock_irqrestore(&instance->lock, flags);
+        		flow = kfa_pmap_find(instance->flows, id);
+        		if (!flow) {
+        			spin_unlock_irqrestore(&instance->lock, flags);
 
-                        LOG_ERR("There is no flow bound to port-id %d anymore",
-                                id);
-                        return -1;
-                }
+        			LOG_ERR("There is no flow bound to port-id %d anymore",
+        					id);
+        			return -EBADF;
+        		}
 
-                if (retval)
-                        goto finish;
+        		if (retval < 0)
+        			goto finish;
 
-                if (flow->state == PORT_STATE_DEALLOCATED) {
-                        if (rfifo_is_empty(flow->sdu_ready)) {
-                                goto finish;
-                        }
-                        break;
-                }
-        }
+        		if (flow->state == PORT_STATE_DEALLOCATED) {
+        			if (rfifo_is_empty(flow->sdu_ready)) {
+        				retval = -ESHUTDOWN;
+        				goto finish;
+        			}
+        			break;
+        		}
+        	}
 
-        if (rfifo_is_empty(flow->sdu_ready)) {
-                retval = -1;
-                goto finish;
-        }
+        	if (rfifo_is_empty(flow->sdu_ready)) {
+        		retval = -EIO;
+        		goto finish;
+        	}
 
-        *sdu = rfifo_pop(flow->sdu_ready);
-        if (!sdu_is_ok(*sdu)) {
-                LOG_ERR("There is not a valid in port-id %d fifo", id);
-                retval = -1;
+        	*sdu = rfifo_pop(flow->sdu_ready);
+        	if (!sdu_is_ok(*sdu)) {
+        		LOG_ERR("There is not a valid in port-id %d fifo", id);
+        		retval = -EIO;
+        	}
+        } else {
+        	if (flow->state == PORT_STATE_PENDING) {
+        		LOG_WARN("Flow %d still not allocated", id);
+        		retval = -EAGAIN;
+        		goto finish;
+        	}
+
+        	if (rfifo_is_empty(flow->sdu_ready)) {
+        		LOG_DBG("No data available in flow %d", id);
+        		retval = -EAGAIN;
+        		goto finish;
+        	}
+
+        	*sdu = rfifo_pop(flow->sdu_ready);
+        	if (!sdu_is_ok(*sdu)) {
+        		LOG_ERR("There is not a valid in port-id %d fifo", id);
+        		retval = -EIO;
+        	}
         }
 
  finish:
@@ -795,6 +848,7 @@ EXPORT_SYMBOL(kfa_flow_find_by_pid);
 
 int kfa_flow_create(struct kfa *           instance,
                     port_id_t              pid,
+                    bool		   blocking,
                     struct ipcp_instance * ipcp)
 {
         struct ipcp_flow * flow;
@@ -834,6 +888,7 @@ int kfa_flow_create(struct kfa *           instance,
         init_waitqueue_head(&flow->write_wqueue);
 
         flow->ipc_process = ipcp;
+        flow->blocking = blocking;
 
         flow->state     = PORT_STATE_PENDING;
         LOG_DBG("Flow pre-bound to port-id %d", pid);

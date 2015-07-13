@@ -12,10 +12,10 @@ bin_PROGRAMS = manager
 manager_CPPFLAGS =					\
 	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)		 \
-	-I$(srcdir)/../common	\		
-	-std=c++11
+	-I$(srcdir)/../common	
 	
-manager_LDADD    = 	$(LIBRINA_LIBS) -ldl -lrinad
+manager_LDADD    = 	$(LIBRINA_LIBS) -ldl -lrinad \
+		../common/librinaapp.la	
 	
 manager_SOURCES  =						\
 	main.cc						\

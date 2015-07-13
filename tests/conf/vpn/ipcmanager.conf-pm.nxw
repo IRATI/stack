@@ -45,120 +45,16 @@
     ],
     "difConfigurations": [
         {
-            "difName": "hv.nxw.DIF",
-            "difType": "shim-hv",
-            "configParameters": {
-                "vmpi-id": "0"
-            }
+            "name": "hv.nxw.DIF",
+            "template": "shim-hv.dif"
         },
         {
-            "difName": "300",
-            "difType": "shim-eth-vlan",
-            "configParameters": {
-                "interface-name": "tap0"
-            }
+            "name": "300",
+            "template": "shim-eth-vlan2.dif"
         },
         {
-            "difName": "n.DIF",
-            "difType": "normal-ipc",
-            "dataTransferConstants": {
-                "addressLength": 2,
-                "cepIdLength": 2,
-                "lengthLength": 2,
-                "portIdLength": 2,
-                "qosIdLength": 2,
-                "sequenceNumberLength": 4,
-                "maxPduSize": 10000,
-                "maxPduLifetime": 60000
-            },
-            "configParameters": {
-                "bar": "foo"
-            },
-            "qosCubes": [
-                {
-                    "name": "unreliablewithflowcontrol",
-                    "id": 1,
-                    "partialDelivery": false,
-                    "orderedDelivery": false,
-                    "efcpPolicies": {
-                        "dtcpPresent": true,
-                        "dtcpConfiguration": {
-                            "rtxcontrol": false,
-                            "flowcontrol": true,
-                            "flowcontrolconfig": {
-                                "ratebased": false,
-                                "windowbased": true,
-                                "windowbasedconfig": {
-                                    "maxclosedwindowqueuelength": 200,
-                                    "initialcredit": 50
-                                }
-                            }
-                        }
-                    }
-                },
-                {
-                    "name": "reliablewithflowcontrol",
-                    "id": 2,
-                    "partialDelivery": false,
-                    "orderedDelivery": false,
-                    "efcpPolicies": {
-                        "dtcpPresent": true,
-                        "dtcpConfiguration": {
-                            "rtxcontrol": true,
-                            "rtxcontrolconfig": {
-                                "datarxmsnmax": 5,
-                                "initialRtxTime": 20
-                            },
-                            "flowcontrol": true,
-                            "flowcontrolconfig": {
-                                "ratebased": false,
-                                "windowbased": true,
-                                "windowbasedconfig": {
-                                    "maxclosedwindowqueuelength": 200,
-                                    "initialcredit": 50
-                                }
-                            }
-                        }
-                    }
-                }
-            ],
-            "knownIPCProcessAddresses": [
-                {
-                    "apName": "h.n.nxw.IPCP",
-                    "apInstance": "1",
-                    "address": 16
-                },
-                {
-                    "apName": "g.n.nxw.IPCP",
-                    "apInstance": "1",
-                    "address": 17
-                },
-                {
-                    "apName": "h.n.i2cat.IPCP",
-                    "apInstance": "1",
-                    "address": 18
-                },
-                {
-                    "apName": "g.n.i2cat.IPCP",
-                    "apInstance": "1",
-                    "address": 19
-                }
-            ],
-            "pdufTableGeneratorConfiguration": {
-                "pduFtGeneratorPolicy": {
-                    "name": "LinkState",
-                    "version": "0"
-                },
-                "linkStateRoutingConfiguration": {
-                    "objectMaximumAge": 10000,
-                    "waitUntilReadCDAP": 5001,
-                    "waitUntilError": 5001,
-                    "waitUntilPDUFTComputation": 103,
-                    "waitUntilFSODBPropagation": 101,
-                    "waitUntilAgeIncrement": 997,
-                    "routingAlgorithm": "Dijkstra"
-                }
-            }
+            "name": "n.DIF",
+            "template": "vpn2.dif"
         }
     ]
 }

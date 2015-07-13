@@ -350,8 +350,7 @@ public:
 	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws AssignToDIFException if an error happens during the process
 	 */
-	void assignToDIF(
-			const DIFInformation& difInformation, unsigned int opaque);
+	void assignToDIF(const DIFInformation& difInformation, unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to modify the configuration of an existing IPC
@@ -433,13 +432,16 @@ public:
 	 * @param regIpcProcessId The id of the registered IPC process (0 if it
 	 * is an application)
 	 * @param opaque an opaque identifier to correlate requests and responses
+	 * @param blocking says if the flows allocated to the registered application
+	 * will be blocking or not
 	 * @throws IpcmRegisterApplicationException if an error occurs
 	 */
 	void registerApplication(
 			const ApplicationProcessNamingInformation& applicationName,
 			unsigned short regIpcProcessId,
 			const ApplicationProcessNamingInformation& dif_name,
-			unsigned int opaque);
+			unsigned int opaque,
+			bool blocking);
 
 	/**
 	 * Invoked by the IPC Manager to unregister an application in a DIF through
@@ -562,6 +564,19 @@ public:
 	 */
 	void pluginLoad(const std::string& name, bool load,
 			unsigned int opaque);
+
+	/**
+	 * Invoked by the IPC Manager to forward a CDAP message to
+         * IPC process, so that the latter can process the message
+	 * through its RIB
+	 *
+	 * @param sermsg The serialized message
+         * @param opaque an opaque identifier to correlate requests and responses
+	 * @throws ForwardCDAPException if an error happens during
+         *         the process
+	 */
+	void forwardCDAPMessage(const SerializedObject& sermsg,
+				unsigned int opaque);
 };
 
 /**
