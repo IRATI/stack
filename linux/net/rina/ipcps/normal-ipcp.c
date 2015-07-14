@@ -396,11 +396,15 @@ static int normal_flow_unbinding_user_ipcp(struct ipcp_instance_data * data,
 
         spin_lock_irqsave(&data->lock, flags);
         flow = find_flow(data, pid);
-        if (!flow || !flow->active) {
+        if (!flow || !is_cep_id_ok(flow->active)) {
                 spin_unlock_irqrestore(&data->lock, flags);
                 LOG_ERR("Could not find flow with port %d to unbind user IPCP",
                         pid);
                 return -1;
+        }
+
+        if (flow->user_ipcp) {
+        	flow->user_ipcp = NULL;
         }
         spin_unlock_irqrestore(&data->lock, flags);
 
@@ -581,13 +585,19 @@ static int normal_deallocate(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        user_ipcp_name = flow->user_ipcp->ops->ipcp_name(flow->user_ipcp->data);
+        if (flow->user_ipcp && flow->user_ipcp->ops->ipcp_name &&
+            flow->user_ipcp->data) {
+        	user_ipcp_name =
+        		flow->user_ipcp->ops->ipcp_name(flow->user_ipcp->data);
+        } else {
+        	user_ipcp_name = NULL;
+        }
         state          = flow->state;
         flow->state    = PORT_STATE_DEALLOCATED;
         list_del(&flow->list);
         spin_unlock_irqrestore(&data->lock, flags);
 
-        if (state == PORT_STATE_PENDING) {
+        if (state == PORT_STATE_PENDING && flow->user_ipcp) {
                 flow->user_ipcp->ops->flow_unbinding_ipcp(flow->user_ipcp->data,
                                                           port_id);
         } else {
