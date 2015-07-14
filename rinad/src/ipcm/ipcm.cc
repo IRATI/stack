@@ -1174,14 +1174,10 @@ IPCManager_::plugin_load_kernel(const std::string& plugin_name,
 	} else if (pid == 0) {
 		// child
 		if (load) {
-			execl("modprobe", "modprobe", plugin_name.c_str(),
-			      NULL);
 			execlp("modprobe", "modprobe", plugin_name.c_str(),
 			       NULL);
 
 		} else {
-			execl("modprobe", "modprobe", "-r",
-			      plugin_name.c_str(), NULL);
 			execlp("modprobe", "modprobe", "-r",
 			       plugin_name.c_str(), NULL);
 		}
