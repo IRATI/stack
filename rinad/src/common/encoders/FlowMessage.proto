@@ -21,9 +21,10 @@ message Flow{  //Contains the information to setup a new flow
 	optional uint32 currentConnectionIdIndex = 8;							//Identifies the index of the current active connection in the flow
 	optional uint32 state = 9; 												//
 	optional qosSpecification_t qosParameters = 10; 			//the QoS parameters specified by the application process that requested this flow
-	optional connectionPolicies_t connectionPolicies = 11;                  //the configuration for the policies and parameters of this EFCP connection
-	optional bytes accessControl = 12; 										// ?
-	optional uint32 maxCreateFlowRetries = 13; 								//Maximum number of retries to create the flow before giving up
-	optional uint32 createFlowRetries = 14; 								//The current number of retries
-	optional uint32 hopCount = 15; 									        //While the search rules that generate the forwarding table should allow for a natural termination condition, it seems wise to have the means to enforce termination
+	optional dtpConfig_t dtpConfig = 12;                  //the configuration for the policies and parameters of this connection's DTP
+	optional dtcpConfig_t dtcpConfig = 13;                  //the configuration for the policies and parameters of this connection's DTCP
+	optional bytes accessControl = 14; 										// ?
+	optional uint32 maxCreateFlowRetries = 15; 								//Maximum number of retries to create the flow before giving up
+	optional uint32 createFlowRetries = 16; 								//The current number of retries
+	optional uint32 hopCount = 17; 									        //While the search rules that generate the forwarding table should allow for a natural termination condition, it seems wise to have the means to enforce termination
 }

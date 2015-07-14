@@ -3,6 +3,7 @@
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Sander Vrijders <sander.vrijders@intec.ugent.be>
+ *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,57 +28,29 @@
 #include "common.h"
 #include "qos.h"
 
-struct dtcp_config;
+struct connection;
 
-/* FIXME: Move RNL structure to RNL placeholder files */
-/* FIXME: More params to be added */
-struct conn_policies {
-        /* FIXME: Anyone using this variable? To be removed */
-        bool                 dtcp_present;
-        struct dtcp_config * dtcp_cfg;
-
-        /* DTP Policy set configuration */
-        struct policy * dtp_ps;
-
-        /* FIXME The following three "policies" are unused, useless
-         * and duplicated - they already exist as function pointers
-         * (dtp-ps.h). They have to be removed here, and therefore
-         * from netlink (kernespace+userspace) and from librina. */
-        struct policy *      initial_sequence_number;
-        struct policy *      receiver_inactivity_timer;
-        struct policy *      sender_inactivity_timer;
-        /* Sequence number rollover threshold */
-        int                  seq_num_ro_th;
-        timeout_t            initial_a_timer;
-        bool                 partial_delivery;
-        bool                 incomplete_delivery;
-        bool                 in_order_delivery;
-        seq_num_t            max_sdu_gap;
-};
-
-/* NOTE: Do not use this struct directly, IT MUST BE HIDDEN */
-/* FIXME: Add setters/getters to struct connection*/
-struct connection {
-        port_id_t              port_id;
-
-        address_t              source_address;
-        address_t              destination_address;
-
-        cep_id_t               source_cep_id;
-        cep_id_t               destination_cep_id;
-
-        qos_id_t               qos_id;
-
-        /* FIXME: Are we sure about the next fixme? */
-        /* FIXME: Add the list of policies associated with this connection */
-        struct conn_policies * policies_params;
-};
-
-struct conn_policies * conn_policies_create(void);
-struct connection *    connection_create(void);
-struct connection *    connection_dup_from_user(const
+struct connection *  connection_create(void);
+struct connection *  connection_dup_from_user(const
                                                 struct connection __user * c);
-int                    conn_policies_destroy(struct conn_policies * cp_params);
-int                    connection_destroy(struct connection * conn);
+int                  connection_destroy(struct connection * conn);
+port_id_t            connection_port_id(const struct connection * conn);
+address_t            connection_src_addr(const struct connection * conn);
+address_t            connection_dst_addr(const struct connection * conn);
+cep_id_t             connection_src_cep_id(const struct connection * conn);
+cep_id_t             connection_dst_cep_id(const struct connection * conn);
+qos_id_t             connection_qos_id(const struct connection * conn);
+int                  connection_port_id_set(struct connection * conn,
+                                            port_id_t           port_id);
+int                  connection_src_addr_set(struct connection * conn,
+                                             address_t           addr);
+int                  connection_dst_addr_set(struct connection * conn,
+                                             address_t           addr);
+int                  connection_src_cep_id_set(struct connection * conn,
+                                               cep_id_t            cep_id);
+int                  connection_dst_cep_id_set(struct connection * conn,
+                                               cep_id_t            cep_id);
+int                  connection_qos_id_set(struct connection * conn,
+                                           qos_id_t            qos_id);
 
 #endif

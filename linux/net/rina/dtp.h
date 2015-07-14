@@ -32,9 +32,7 @@
 
 struct dtp * dtp_create(struct dt *         dt,
                         struct rmt *        rmt,
-                        struct efcp *       efcp,
-                        const string_t *    dtp_ps_name,
-                        struct connection * connection);
+                        struct dtp_config * dtp_cfg);
 int          dtp_destroy(struct dtp * instance);
 
 int          dtp_sv_init(struct dtp * dtp,

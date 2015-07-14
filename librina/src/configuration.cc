@@ -643,8 +643,8 @@ const std::string DTCPConfig::toString() {
         return ss.str();
 }
 
-// CLASS CONNECTION POLICIES
-ConnectionPolicies::ConnectionPolicies(){
+// CLASS DTP CONFIG
+DTPConfig::DTPConfig(){
 	dtcp_present_ = false;
 	seq_num_rollover_threshold_ = 0;
 	initial_a_timer_ = 0;
@@ -654,106 +654,98 @@ ConnectionPolicies::ConnectionPolicies(){
 	max_sdu_gap_ = 0;
 }
 
-const PolicyConfig& ConnectionPolicies::get_dtp_policy_set() const {
+const PolicyConfig& DTPConfig::get_dtp_policy_set() const {
         return dtp_policy_set_;
 }
 
-void ConnectionPolicies::set_dtp_policy_set(
+void DTPConfig::set_dtp_policy_set(
                 const PolicyConfig& dtp_policy_set) {
 	dtp_policy_set_ = dtp_policy_set;
 }
 
-const PolicyConfig& ConnectionPolicies::get_rcvr_timer_inactivity_policy() const {
+const PolicyConfig& DTPConfig::get_rcvr_timer_inactivity_policy() const {
 	return rcvr_timer_inactivity_policy_;
 }
 
-void ConnectionPolicies::set_rcvr_timer_inactivity_policy(
+void DTPConfig::set_rcvr_timer_inactivity_policy(
                 const PolicyConfig& rcvr_timer_inactivity_policy) {
 	rcvr_timer_inactivity_policy_ = rcvr_timer_inactivity_policy;
 }
 
-const PolicyConfig& ConnectionPolicies::get_sender_timer_inactivity_policy() const {
+const PolicyConfig& DTPConfig::get_sender_timer_inactivity_policy() const {
 	return sender_timer_inactivity_policy_;
 }
 
-void ConnectionPolicies::set_sender_timer_inactivity_policy(
+void DTPConfig::set_sender_timer_inactivity_policy(
                 const PolicyConfig& sender_timer_inactivity_policy) {
 	sender_timer_inactivity_policy_ = sender_timer_inactivity_policy;
 }
 
-const DTCPConfig& ConnectionPolicies::get_dtcp_configuration() const {
-	return dtcp_configuration_;
-}
-
-void ConnectionPolicies::set_dtcp_configuration(const DTCPConfig& dtcp_configuration) {
-	dtcp_configuration_ = dtcp_configuration;
-}
-
-bool ConnectionPolicies::is_dtcp_present() const {
+bool DTPConfig::is_dtcp_present() const {
 	return dtcp_present_;
 }
 
-void ConnectionPolicies::set_dtcp_present(bool dtcp_present) {
+void DTPConfig::set_dtcp_present(bool dtcp_present) {
 	dtcp_present_ = dtcp_present;
 }
 
-const PolicyConfig& ConnectionPolicies::get_initial_seq_num_policy() const {
+const PolicyConfig& DTPConfig::get_initial_seq_num_policy() const {
 	return initial_seq_num_policy_;
 }
 
-void ConnectionPolicies::set_initial_seq_num_policy(const PolicyConfig& initial_seq_num_policy) {
+void DTPConfig::set_initial_seq_num_policy(const PolicyConfig& initial_seq_num_policy) {
 	initial_seq_num_policy_ = initial_seq_num_policy;
 }
 
-unsigned int ConnectionPolicies::get_seq_num_rollover_threshold() const {
+unsigned int DTPConfig::get_seq_num_rollover_threshold() const {
 	return seq_num_rollover_threshold_;
 }
 
-void ConnectionPolicies::set_seq_num_rollover_threshold(unsigned int seq_num_rollover_threshold) {
+void DTPConfig::set_seq_num_rollover_threshold(unsigned int seq_num_rollover_threshold) {
 	seq_num_rollover_threshold_ = seq_num_rollover_threshold;
 }
 
-unsigned int ConnectionPolicies::get_initial_a_timer() const {
+unsigned int DTPConfig::get_initial_a_timer() const {
 	return initial_a_timer_;
 }
 
-void ConnectionPolicies::set_initial_a_timer(unsigned int initial_a_timer) {
+void DTPConfig::set_initial_a_timer(unsigned int initial_a_timer) {
 	initial_a_timer_ = initial_a_timer;
 }
 
-bool ConnectionPolicies::is_in_order_delivery() const {
+bool DTPConfig::is_in_order_delivery() const {
 	return in_order_delivery_;
 }
 
-void ConnectionPolicies::set_in_order_delivery(bool in_order_delivery) {
+void DTPConfig::set_in_order_delivery(bool in_order_delivery) {
 	in_order_delivery_ = in_order_delivery;
 }
 
-int ConnectionPolicies::get_max_sdu_gap() const {
+int DTPConfig::get_max_sdu_gap() const {
 	return max_sdu_gap_;
 }
 
-void ConnectionPolicies::set_max_sdu_gap(int max_sdu_gap) {
+void DTPConfig::set_max_sdu_gap(int max_sdu_gap) {
 	max_sdu_gap_ = max_sdu_gap;
 }
 
-bool ConnectionPolicies::is_partial_delivery() const {
+bool DTPConfig::is_partial_delivery() const {
 	return partial_delivery_;
 }
 
-void ConnectionPolicies::set_partial_delivery(bool partial_delivery) {
+void DTPConfig::set_partial_delivery(bool partial_delivery) {
 	partial_delivery_ = partial_delivery;
 }
 
-bool ConnectionPolicies::is_incomplete_delivery() const {
+bool DTPConfig::is_incomplete_delivery() const {
 	return incomplete_delivery_;
 }
 
-void ConnectionPolicies::set_incomplete_delivery(bool incomplete_delivery) {
+void DTPConfig::set_incomplete_delivery(bool incomplete_delivery) {
 	incomplete_delivery_ = incomplete_delivery;
 }
 
-const std::string ConnectionPolicies::toString() {
+const std::string DTPConfig::toString() {
         std::stringstream ss;
         ss<<"DTP Policy Set (name/version): "<<dtp_policy_set_.get_name();
         ss<<"/"<<dtp_policy_set_.get_version();
@@ -769,9 +761,6 @@ const std::string ConnectionPolicies::toString() {
         ss<<"; Partial delivery: "<<partial_delivery_;
         ss<<"; In order delivery: "<<in_order_delivery_;
         ss<<"; Max allowed SDU gap: "<<max_sdu_gap_<<std::endl;
-        if (dtcp_present_) {
-                ss<<"DTCP Configuration: "<<dtcp_configuration_.toString();
-        }
         return ss.str();
 }
 
@@ -829,12 +818,20 @@ void QoSCube::set_name(const std::string& name) {
 	name_ = name;
 }
 
-const ConnectionPolicies& QoSCube::get_efcp_policies() const {
-	return efcp_policies_;
+const DTPConfig& QoSCube::get_dtp_config() const {
+	return dtp_config_;
 }
 
-void QoSCube::set_efcp_policies(const ConnectionPolicies& efcp_policies) {
-	efcp_policies_ = efcp_policies;
+void QoSCube::set_dtp_config(const DTPConfig& dtp_config) {
+	dtp_config_ = dtp_config;
+}
+
+const DTCPConfig& QoSCube::get_dtcp_config() const {
+	return dtcp_config_;
+}
+
+void QoSCube::set_dtcp_config(const DTCPConfig& dtcp_config) {
+	dtcp_config_ = dtcp_config;
 }
 
 unsigned int QoSCube::get_average_bandwidth() const {
@@ -929,7 +926,8 @@ const std::string QoSCube::toString() {
         ss<<"; Average SDU bandwidth (bytes/s): "<<average_sdu_bandwidth_<<std::endl;
         ss<<"Peak bandwidth duration (ms): "<<peak_bandwidth_duration_;
         ss<<"; Peak SDU bandwidth duration (ms): "<<peak_sdu_bandwidth_duration_<<std::endl;
-        ss<<"EFCP policies: "<<efcp_policies_.toString();
+        ss<<"DTP Configuration: "<<dtp_config_.toString();
+        ss<<"DTCP Configuration: "<<dtcp_config_.toString();
         return ss.str();
 }
 

@@ -1030,9 +1030,12 @@ QoSCube * parseQoSCubeObject(nlattr *nested) {
 	attr_policy[QOS_CUBE_ATTR_UND_BER].type = NLA_U32;
 	attr_policy[QOS_CUBE_ATTR_UND_BER].minlen = 4;
 	attr_policy[QOS_CUBE_ATTR_UND_BER].maxlen = 4;
-	attr_policy[QOS_CUBE_ATTR_EFCP_POLICIES].type = NLA_NESTED;
-	attr_policy[QOS_CUBE_ATTR_EFCP_POLICIES].minlen = 0;
-	attr_policy[QOS_CUBE_ATTR_EFCP_POLICIES].maxlen = 0;
+	attr_policy[QOS_CUBE_ATTR_DTP_CONFIG].type = NLA_NESTED;
+	attr_policy[QOS_CUBE_ATTR_DTP_CONFIG].minlen = 0;
+	attr_policy[QOS_CUBE_ATTR_DTP_CONFIG].maxlen = 0;
+	attr_policy[QOS_CUBE_ATTR_DTCP_CONFIG].type = NLA_NESTED;
+	attr_policy[QOS_CUBE_ATTR_DTCP_CONFIG].minlen = 0;
+	attr_policy[QOS_CUBE_ATTR_DTCP_CONFIG].maxlen = 0;
 	struct nlattr *attrs[QOS_CUBE_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, QOS_CUBE_ATTR_MAX, nested, attr_policy);
@@ -1045,7 +1048,8 @@ QoSCube * parseQoSCubeObject(nlattr *nested) {
 
 	QoSCube * result = new QoSCube(nla_get_string(attrs[QOS_CUBE_ATTR_NAME]),
 			nla_get_u32(attrs[QOS_CUBE_ATTR_ID]));
-	ConnectionPolicies * efcpPolicies;
+	DTPConfig  * dtpConfig;
+	DTCPConfig  * dtcpConfig;
 
 	if (attrs[QOS_CUBE_ATTR_AVG_BAND]) {
 		result->set_average_bandwidth(nla_get_u32(attrs[QOS_CUBE_ATTR_AVG_BAND]));
@@ -1090,24 +1094,35 @@ QoSCube * parseQoSCubeObject(nlattr *nested) {
 				nla_get_u32(attrs[QOS_CUBE_ATTR_PEAK_SDU_BAND_DUR]));
 	}
 
-	if (attrs[QOS_CUBE_ATTR_EFCP_POLICIES]) {
-	        efcpPolicies = parseConnectionPoliciesObject(
-	                        attrs[QOS_CUBE_ATTR_EFCP_POLICIES]);
-	        if (efcpPolicies == 0) {
+	if (attrs[QOS_CUBE_ATTR_DTP_CONFIG]) {
+	        dtpConfig = parseDTPConfigObject(
+	                        attrs[QOS_CUBE_ATTR_DTP_CONFIG]);
+	        if (dtpConfig == 0) {
 	                delete result;
 	                return 0;
 	        } else {
-	                result->set_efcp_policies(*efcpPolicies);
-	                delete efcpPolicies;
+	                result->set_dtp_config(*dtpConfig);
+	                delete dtpConfig;
 	        }
 	}
 
+	if (attrs[QOS_CUBE_ATTR_DTCP_CONFIG]) {
+	        dtcpConfig = parseDTCPConfigObject(
+	                        attrs[QOS_CUBE_ATTR_DTCP_CONFIG]);
+	        if (dtcpConfig == 0) {
+	                delete result;
+	                return 0;
+	        } else {
+	                result->set_dtcp_config(*dtcpConfig);
+	                delete dtcpConfig;
+	        }
+	}
 	return result;
 }
 
 int putQoSCubeObject(nl_msg* netlinkMessage,
 		QoSCube* object){
-        struct nlattr *efcpPolicies;
+        struct nlattr *dtpConfig, *dtcpConfig;
 
 	NLA_PUT_STRING(netlinkMessage, QOS_CUBE_ATTR_NAME,
 			object->name_.c_str());
@@ -1160,15 +1175,25 @@ int putQoSCubeObject(nl_msg* netlinkMessage,
 				object.getUndetectedBitErrorRate());
 	}*/
 
-	if (!(efcpPolicies = nla_nest_start(netlinkMessage, QOS_CUBE_ATTR_EFCP_POLICIES))){
+	if (!(dtpConfig = nla_nest_start(netlinkMessage, QOS_CUBE_ATTR_DTP_CONFIG))){
 	        goto nla_put_failure;
 	}
 
-	if (putConnectionPoliciesObject(netlinkMessage, object->efcp_policies_) < 0) {
+	if (putDTPConfigObject(netlinkMessage, object->dtp_config_) < 0) {
 	        goto nla_put_failure;
 	}
 
-	nla_nest_end(netlinkMessage, efcpPolicies);
+	nla_nest_end(netlinkMessage, dtpConfig);
+
+	if (!(dtcpConfig = nla_nest_start(netlinkMessage, QOS_CUBE_ATTR_DTCP_CONFIG))){
+	        goto nla_put_failure;
+	}
+
+	if (putDTCPConfigObject(netlinkMessage, object->dtcp_config_) < 0) {
+	        goto nla_put_failure;
+	}
+
+	nla_nest_end(netlinkMessage, dtcpConfig);
 
 	return 0;
 
@@ -3006,25 +3031,14 @@ parseDTCPConfigObject(nlattr *nested) {
         return result;
 }
 
-int putConnectionPoliciesObject(nl_msg* netlinkMessage,
-		const ConnectionPolicies& object) {
+int putDTPConfigObject(nl_msg* netlinkMessage,
+		const DTPConfig& object) {
 
-        struct nlattr *dtcpConfig, *initSeqNumPolicy, *rtimerInacPolicy,
+        struct nlattr *initSeqNumPolicy, *rtimerInacPolicy,
                 *stimerInacPolicy, *dtpPolicySet;
 
         if (object.is_dtcp_present()){
                 NLA_PUT_FLAG(netlinkMessage, CPA_ATTR_DTCP_PRESENT);
-                if (!(dtcpConfig = nla_nest_start(netlinkMessage,
-                                CPA_ATTR_DTCP_CONFIG))) {
-                        goto nla_put_failure;
-                }
-
-                if (putDTCPConfigObject(netlinkMessage,
-                                object.get_dtcp_configuration())< 0) {
-                        goto nla_put_failure;
-                }
-
-                nla_nest_end(netlinkMessage, dtcpConfig);
         }
 
         if (!(initSeqNumPolicy = nla_nest_start(netlinkMessage,
@@ -3101,15 +3115,12 @@ int putConnectionPoliciesObject(nl_msg* netlinkMessage,
 	return -1;
 }
 
-ConnectionPolicies *
-parseConnectionPoliciesObject(nlattr *nested) {
+DTPConfig *
+parseDTPConfigObject(nlattr *nested) {
 	struct nla_policy attr_policy[CPA_ATTR_MAX + 1];
 	attr_policy[CPA_ATTR_DTCP_PRESENT].type = NLA_FLAG;
 	attr_policy[CPA_ATTR_DTCP_PRESENT].minlen = 0;
 	attr_policy[CPA_ATTR_DTCP_PRESENT].maxlen = 0;
-	attr_policy[CPA_ATTR_DTCP_CONFIG].type = NLA_NESTED;
-	attr_policy[CPA_ATTR_DTCP_CONFIG].minlen = 0;
-	attr_policy[CPA_ATTR_DTCP_CONFIG].maxlen = 0;
         attr_policy[CPA_ATTR_DTP_POLICY_SET].type = NLA_NESTED;
         attr_policy[CPA_ATTR_DTP_POLICY_SET].minlen = 0;
         attr_policy[CPA_ATTR_DTP_POLICY_SET].maxlen = 0;
@@ -3149,9 +3160,8 @@ parseConnectionPoliciesObject(nlattr *nested) {
 		return 0;
 	}
 
-	ConnectionPolicies * result =
-			new ConnectionPolicies();
-	DTCPConfig * dtcpConfig;
+	DTPConfig * result =
+			new DTPConfig();
 	PolicyConfig * initSeqNumPolicy;
         PolicyConfig * sTimerInacPolicy;
         PolicyConfig * rTimerInacPolicy;
@@ -3159,21 +3169,6 @@ parseConnectionPoliciesObject(nlattr *nested) {
 
 	if (attrs[CPA_ATTR_DTCP_PRESENT]) {
 	        result->set_dtcp_present(true);
-
-	        if (attrs[CPA_ATTR_DTCP_CONFIG]){
-	                dtcpConfig = parseDTCPConfigObject(attrs[CPA_ATTR_DTCP_CONFIG]);
-	                if (dtcpConfig == 0) {
-	                        delete result;
-	                        return 0;
-	                } else {
-	                        result->set_dtcp_configuration(*dtcpConfig);
-	                        delete dtcpConfig;
-	                }
-	        } else {
-	                delete result;
-	                LOG_ERR("DTCP Config should have been present but it is not");
-	                return 0;
-	        }
 	} else {
 	        result->set_dtcp_present(false);
 	}
@@ -3264,7 +3259,7 @@ parseConnectionPoliciesObject(nlattr *nested) {
 
 int putConnectionObject(nl_msg* netlinkMessage,
                 const Connection& object) {
-        struct nlattr *policies;
+        struct nlattr *dtpConfig, *dtcpConfig;
 
         NLA_PUT_U32(netlinkMessage, CONN_ATTR_PORT_ID, object.getPortId());
         NLA_PUT_U32(netlinkMessage, CONN_ATTR_SOURCE_ADDRESS,
@@ -3277,16 +3272,27 @@ int putConnectionObject(nl_msg* netlinkMessage,
         NLA_PUT_U32(netlinkMessage, CONN_ATTR_DEST_CEP_ID,
                         object.getDestCepId());
 
-        if (!(policies = nla_nest_start(netlinkMessage, CONN_ATTR_POLICIES))) {
+        if (!(dtpConfig = nla_nest_start(netlinkMessage, CONN_ATTR_DTP_CONFIG))) {
                 goto nla_put_failure;
         }
 
-        if (putConnectionPoliciesObject(netlinkMessage,
-                        object.getPolicies())< 0) {
+        if (putDTPConfigObject(netlinkMessage,
+                        object.getDTPConfig())< 0) {
                 goto nla_put_failure;
         }
 
-        nla_nest_end(netlinkMessage, policies);
+        nla_nest_end(netlinkMessage, dtpConfig);
+
+        if (!(dtcpConfig = nla_nest_start(netlinkMessage, CONN_ATTR_DTCP_CONFIG))) {
+                goto nla_put_failure;
+        }
+
+        if (putDTCPConfigObject(netlinkMessage,
+                        object.getDTCPConfig())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, dtcpConfig);
 
         NLA_PUT_U16(netlinkMessage, CONN_ATTR_FLOW_USER_IPCP_ID,
                         object.getFlowUserIpcProcessId());
@@ -3318,9 +3324,12 @@ Connection * parseConnectionObject(nlattr *nested) {
         attr_policy[CONN_ATTR_DEST_CEP_ID].type = NLA_U32;
         attr_policy[CONN_ATTR_DEST_CEP_ID].minlen = 4;
         attr_policy[CONN_ATTR_DEST_CEP_ID].maxlen = 4;
-        attr_policy[CONN_ATTR_POLICIES].type = NLA_NESTED;
-        attr_policy[CONN_ATTR_POLICIES].minlen = 0;
-        attr_policy[CONN_ATTR_POLICIES].maxlen = 0;
+        attr_policy[CONN_ATTR_DTP_CONFIG].type = NLA_NESTED;
+        attr_policy[CONN_ATTR_DTP_CONFIG].minlen = 0;
+        attr_policy[CONN_ATTR_DTP_CONFIG].maxlen = 0;
+        attr_policy[CONN_ATTR_DTCP_CONFIG].type = NLA_NESTED;
+        attr_policy[CONN_ATTR_DTCP_CONFIG].minlen = 0;
+        attr_policy[CONN_ATTR_DTCP_CONFIG].maxlen = 0;
         attr_policy[CONN_ATTR_FLOW_USER_IPCP_ID].type = NLA_U16;
         attr_policy[CONN_ATTR_FLOW_USER_IPCP_ID].minlen = 2;
         attr_policy[CONN_ATTR_FLOW_USER_IPCP_ID].maxlen = 2;
@@ -3334,7 +3343,8 @@ Connection * parseConnectionObject(nlattr *nested) {
         }
 
         Connection * result = new Connection();
-        ConnectionPolicies * connectionPolicies;
+        DTPConfig * dtpConfig;
+        DTCPConfig * dtcpConfig;
 
         if (attrs[CONN_ATTR_PORT_ID]) {
                 result->setPortId(nla_get_u32(attrs[CONN_ATTR_PORT_ID]));
@@ -3364,15 +3374,27 @@ Connection * parseConnectionObject(nlattr *nested) {
                                 nla_get_u32(attrs[CONN_ATTR_DEST_CEP_ID]));
         }
 
-        if (attrs[CONN_ATTR_POLICIES]){
-                connectionPolicies = parseConnectionPoliciesObject(
-                                attrs[CONN_ATTR_POLICIES]);
-                if (connectionPolicies == 0) {
+        if (attrs[CONN_ATTR_DTP_CONFIG]){
+                dtpConfig = parseDTPConfigObject(
+                                attrs[CONN_ATTR_DTP_CONFIG]);
+                if (dtpConfig == 0) {
                         delete result;
                         return 0;
                 } else {
-                        result->setPolicies(*connectionPolicies);
-                        delete connectionPolicies;
+                        result->setDTPConfig(*dtpConfig);
+                        delete dtpConfig;
+                }
+        }
+
+        if (attrs[CONN_ATTR_DTCP_CONFIG]){
+                dtcpConfig = parseDTCPConfigObject(
+                                attrs[CONN_ATTR_DTCP_CONFIG]);
+                if (dtcpConfig == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setDTCPConfig(*dtcpConfig);
+                        delete dtcpConfig;
                 }
         }
 
@@ -4988,7 +5010,7 @@ int putIpcmDIFQueryRIBResponseMessageObject(nl_msg* netlinkMessage,
 
 int putIpcpConnectionCreateRequestMessageObject(nl_msg* netlinkMessage,
                 const IpcpConnectionCreateRequestMessage& object) {
-        struct nlattr *policies;
+        struct nlattr *dtpConfig, *dtcpConfig;
 
         NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_PORT_ID,
                         object.getConnection().getPortId());
@@ -4999,17 +5021,29 @@ int putIpcpConnectionCreateRequestMessageObject(nl_msg* netlinkMessage,
         NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_QOS_ID,
                         object.getConnection().getQosId());
 
-        if (!(policies = nla_nest_start(
-                        netlinkMessage, ICCRM_ATTR_POLICIES))){
+        if (!(dtpConfig = nla_nest_start(
+                        netlinkMessage, ICCRM_ATTR_DTP_CONFIG))){
                 goto nla_put_failure;
         }
 
-        if (putConnectionPoliciesObject(netlinkMessage,
-                        object.getConnection().getPolicies()) < 0) {
+        if (putDTPConfigObject(netlinkMessage,
+                        object.getConnection().getDTPConfig()) < 0) {
                 goto nla_put_failure;
         }
 
-        nla_nest_end(netlinkMessage, policies);
+        nla_nest_end(netlinkMessage, dtpConfig);
+
+        if (!(dtcpConfig = nla_nest_start(
+                        netlinkMessage, ICCRM_ATTR_DTCP_CONFIG))){
+                goto nla_put_failure;
+        }
+
+        if (putDTCPConfigObject(netlinkMessage,
+                        object.getConnection().getDTCPConfig()) < 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, dtcpConfig);
 
         return 0;
 
@@ -5060,7 +5094,7 @@ int putIpcpConnectionUpdateResultMessageObject(nl_msg* netlinkMessage,
 
 int putIpcpConnectionCreateArrivedMessageObject(nl_msg* netlinkMessage,
                 const IpcpConnectionCreateArrivedMessage& object) {
-        struct nlattr *policies;
+        struct nlattr *dtpConfig, *dtcpConfig;
 
         NLA_PUT_U32(netlinkMessage, ICCAM_ATTR_PORT_ID,
                         object.getConnection().getPortId());
@@ -5075,17 +5109,29 @@ int putIpcpConnectionCreateArrivedMessageObject(nl_msg* netlinkMessage,
         NLA_PUT_U16(netlinkMessage, ICCAM_ATTR_FLOW_USER_IPCP_ID,
                         object.getConnection().getFlowUserIpcProcessId());
 
-        if (!(policies = nla_nest_start(
-                        netlinkMessage, ICCAM_ATTR_POLICIES))){
+        if (!(dtpConfig = nla_nest_start(
+                        netlinkMessage, ICCAM_ATTR_DTP_CONFIG))){
                 goto nla_put_failure;
         }
 
-        if (putConnectionPoliciesObject(netlinkMessage,
-                        object.getConnection().getPolicies()) < 0) {
+        if (putDTPConfigObject(netlinkMessage,
+                        object.getConnection().getDTPConfig()) < 0) {
                 goto nla_put_failure;
         }
 
-        nla_nest_end(netlinkMessage, policies);
+        nla_nest_end(netlinkMessage, dtpConfig);
+
+        if (!(dtcpConfig = nla_nest_start(
+                        netlinkMessage, ICCAM_ATTR_DTCP_CONFIG))){
+                goto nla_put_failure;
+        }
+
+        if (putDTCPConfigObject(netlinkMessage,
+                        object.getConnection().getDTCPConfig()) < 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, dtcpConfig);
 
         return 0;
 
@@ -8406,9 +8452,12 @@ IpcpConnectionCreateRequestMessage * parseIpcpConnectionCreateRequestMessage(
         attr_policy[ICCRM_ATTR_QOS_ID].type = NLA_U32;
         attr_policy[ICCRM_ATTR_QOS_ID].minlen = 4;
         attr_policy[ICCRM_ATTR_QOS_ID].maxlen = 4;
-        attr_policy[ICCRM_ATTR_POLICIES].type = NLA_NESTED;
-        attr_policy[ICCRM_ATTR_POLICIES].minlen = 0;
-        attr_policy[ICCRM_ATTR_POLICIES].maxlen = 0;
+        attr_policy[ICCRM_ATTR_DTP_CONFIG].type = NLA_NESTED;
+        attr_policy[ICCRM_ATTR_DTP_CONFIG].minlen = 0;
+        attr_policy[ICCRM_ATTR_DTP_CONFIG].maxlen = 0;
+        attr_policy[ICCRM_ATTR_DTCP_CONFIG].type = NLA_NESTED;
+        attr_policy[ICCRM_ATTR_DTCP_CONFIG].minlen = 0;
+        attr_policy[ICCRM_ATTR_DTCP_CONFIG].maxlen = 0;
         struct nlattr *attrs[ICCRM_ATTR_MAX + 1];
 
         int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
@@ -8421,7 +8470,8 @@ IpcpConnectionCreateRequestMessage * parseIpcpConnectionCreateRequestMessage(
 
         IpcpConnectionCreateRequestMessage * result;
         Connection * connection = new Connection();
-        ConnectionPolicies * policies;
+        DTPConfig * dtpConfig;
+        DTCPConfig * dtcpConfig;
 
         if (attrs[ICCRM_ATTR_PORT_ID]) {
                 connection->setPortId(nla_get_u32(attrs[ICCRM_ATTR_PORT_ID]));
@@ -8441,15 +8491,27 @@ IpcpConnectionCreateRequestMessage * parseIpcpConnectionCreateRequestMessage(
                 connection->setQosId(nla_get_u32(attrs[ICCRM_ATTR_QOS_ID]));
         }
 
-	if (attrs[ICCRM_ATTR_POLICIES]) {
-	        policies = parseConnectionPoliciesObject(
-	                        attrs[ICCRM_ATTR_POLICIES]);
-		if (policies == 0) {
+	if (attrs[ICCRM_ATTR_DTP_CONFIG]) {
+	        dtpConfig = parseDTPConfigObject(
+	                        attrs[ICCRM_ATTR_DTP_CONFIG]);
+		if (dtpConfig == 0) {
 			delete connection;
 			return 0;
 		} else {
-			connection->setPolicies(*policies);
-			delete policies;
+			connection->setDTPConfig(*dtpConfig);
+			delete dtpConfig;
+		}
+	}
+
+	if (attrs[ICCRM_ATTR_DTCP_CONFIG]) {
+	        dtcpConfig = parseDTCPConfigObject(
+	                        attrs[ICCRM_ATTR_DTCP_CONFIG]);
+		if (dtcpConfig == 0) {
+			delete connection;
+			return 0;
+		} else {
+			connection->setDTCPConfig(*dtcpConfig);
+			delete dtcpConfig;
 		}
 	}
 
@@ -8597,9 +8659,12 @@ IpcpConnectionCreateArrivedMessage * parseIpcpConnectionCreateArrivedMessage(
         attr_policy[ICCAM_ATTR_FLOW_USER_IPCP_ID].type = NLA_U16;
         attr_policy[ICCAM_ATTR_FLOW_USER_IPCP_ID].minlen = 2;
         attr_policy[ICCAM_ATTR_FLOW_USER_IPCP_ID].maxlen = 2;
-        attr_policy[ICCAM_ATTR_POLICIES].type = NLA_NESTED;
-        attr_policy[ICCAM_ATTR_POLICIES].minlen = 0;
-        attr_policy[ICCAM_ATTR_POLICIES].maxlen = 0;
+        attr_policy[ICCAM_ATTR_DTP_CONFIG].type = NLA_NESTED;
+        attr_policy[ICCAM_ATTR_DTP_CONFIG].minlen = 0;
+        attr_policy[ICCAM_ATTR_DTP_CONFIG].maxlen = 0;
+        attr_policy[ICCAM_ATTR_DTCP_CONFIG].type = NLA_NESTED;
+        attr_policy[ICCAM_ATTR_DTCP_CONFIG].minlen = 0;
+        attr_policy[ICCAM_ATTR_DTCP_CONFIG].maxlen = 0;
         struct nlattr *attrs[ICCAM_ATTR_MAX + 1];
 
         int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
@@ -8612,7 +8677,8 @@ IpcpConnectionCreateArrivedMessage * parseIpcpConnectionCreateArrivedMessage(
 
         IpcpConnectionCreateArrivedMessage * result;
         Connection * connection = new Connection();
-        ConnectionPolicies * policies;
+        DTPConfig * dtpConfig;
+        DTCPConfig * dtcpConfig;
 
         if (attrs[ICCAM_ATTR_PORT_ID]) {
                 connection->setPortId(nla_get_u32(attrs[ICCAM_ATTR_PORT_ID]));
@@ -8642,15 +8708,27 @@ IpcpConnectionCreateArrivedMessage * parseIpcpConnectionCreateArrivedMessage(
                                 nla_get_u16(attrs[ICCAM_ATTR_FLOW_USER_IPCP_ID]));
         }
 
-        if (attrs[ICCAM_ATTR_POLICIES]) {
-                policies = parseConnectionPoliciesObject(
-                                attrs[ICCAM_ATTR_POLICIES]);
-                if (policies == 0) {
+        if (attrs[ICCAM_ATTR_DTP_CONFIG]) {
+                dtpConfig = parseDTPConfigObject(
+                                attrs[ICCAM_ATTR_DTP_CONFIG]);
+                if (dtpConfig == 0) {
                         delete connection;
                         return 0;
                 } else {
-                        connection->setPolicies(*policies);
-                        delete policies;
+                        connection->setDTPConfig(*dtpConfig);
+                        delete dtpConfig;
+                }
+        }
+
+        if (attrs[ICCAM_ATTR_DTCP_CONFIG]) {
+                dtcpConfig = parseDTCPConfigObject(
+                                attrs[ICCAM_ATTR_DTCP_CONFIG]);
+                if (dtcpConfig == 0) {
+                        delete connection;
+                        return 0;
+                } else {
+                        connection->setDTCPConfig(*dtcpConfig);
+                        delete dtcpConfig;
                 }
         }
 

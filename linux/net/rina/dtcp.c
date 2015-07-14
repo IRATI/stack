@@ -29,12 +29,12 @@
 #include "debug.h"
 #include "dtcp.h"
 #include "rmt.h"
-#include "connection.h"
 #include "dtp.h"
 #include "dt-utils.h"
-#include "dtcp-utils.h"
+#include "dtcp-conf-utils.h"
 #include "ps-factory.h"
 #include "dtcp-ps.h"
+#include "policies.h"
 
 static struct policy_set_list policy_sets = {
         .head = LIST_HEAD_INIT(policy_sets.head)
@@ -153,7 +153,7 @@ struct dtcp {
          */
         struct dtcp_sv *       sv; /* The state-vector */
         struct rina_component  base;
-        struct connection *    conn;
+        struct dtcp_config *   cfg;
         struct rmt *           rmt;
 
         atomic_t               cpdus_in_transit;
@@ -169,11 +169,7 @@ struct dtcp_config * dtcp_config_get(struct dtcp * dtcp)
 {
         if (!dtcp)
                 return NULL;
-        if (!dtcp->conn)
-                return NULL;
-        if (!dtcp->conn->policies_params)
-                return NULL;
-        return dtcp->conn->policies_params->dtcp_cfg;
+        return dtcp->cfg;
 }
 EXPORT_SYMBOL(dtcp_config_get);
 
@@ -193,8 +189,8 @@ int dtcp_pdu_send(struct dtcp * dtcp, struct pdu * pdu)
 
         return common_efcp_pdu_send(efcp,
         			    dtcp->rmt,
-        			    dtcp->conn->destination_address,
-        			    dtcp->conn->qos_id,
+        			    efcp_dst_addr(efcp),
+        			    efcp_qos_id(efcp),
         			    pdu);
 }
 EXPORT_SYMBOL(dtcp_pdu_send);
@@ -454,9 +450,15 @@ static void last_snd_data_ack_set(struct dtcp * dtcp, seq_num_t seq_num)
 static int push_pdus_rmt(struct dtcp * dtcp)
 {
         struct cwq *  q;
+        struct efcp * efcp;
 
         ASSERT(dtcp);
 
+        efcp = dt_efcp(dtcp->parent);
+        if (!efcp) {
+                LOG_ERR("Passed instance has no EFCP, bailing out");
+                return -1;
+        }
         q = dt_cwq(dtcp->parent);
         if (!q) {
                 LOG_ERR("No Closed Window Queue");
@@ -466,8 +468,8 @@ static int push_pdus_rmt(struct dtcp * dtcp)
         cwq_deliver(q,
                     dtcp->parent,
                     dtcp->rmt,
-                    dtcp->conn->destination_address,
-                    dtcp->conn->qos_id);
+                    efcp_dst_addr(efcp),
+                    efcp_qos_id(efcp));
 
         return 0;
 }
@@ -478,9 +480,16 @@ struct pdu * pdu_ctrl_create_ni(struct dtcp * dtcp, pdu_type_t type)
         struct pci *    pci;
         struct buffer * buffer;
         seq_num_t       seq;
+        struct efcp *   efcp;
 
         if (!pdu_type_is_control(type))
                 return NULL;
+
+        efcp = dt_efcp(dtcp->parent);
+        if (!efcp) {
+                LOG_ERR("Passed instance has no EFCP, bailing out");
+                return NULL;
+        }
 
         buffer = buffer_create_ni(1);
         if (!buffer)
@@ -500,12 +509,12 @@ struct pdu * pdu_ctrl_create_ni(struct dtcp * dtcp, pdu_type_t type)
 
         seq = next_snd_ctl_seq(dtcp);
         if (pci_format(pci,
-                       dtcp->conn->source_cep_id,
-                       dtcp->conn->destination_cep_id,
-                       dtcp->conn->source_address,
-                       dtcp->conn->destination_address,
+                       efcp_src_cep_id(efcp),
+                       efcp_dst_cep_id(efcp),
+                       efcp_src_addr(efcp),
+                       efcp_dst_addr(efcp),
                        seq,
-                       dtcp->conn->qos_id,
+                       efcp_qos_id(efcp),
                        type)) {
                 pdu_destroy(pdu);
                 pci_destroy(pci);
@@ -1145,7 +1154,7 @@ int dtcp_select_policy_set(struct dtcp * dtcp,
                            const string_t * path,
                            const string_t * name)
 {
-        struct dtcp_config * cfg = dtcp->conn->policies_params->dtcp_cfg;
+        struct dtcp_config * cfg = dtcp->cfg;
         struct dtcp_ps *ps;
         int ret;
 
@@ -1292,10 +1301,9 @@ int dtcp_set_policy_set_param(struct dtcp * dtcp,
 }
 EXPORT_SYMBOL(dtcp_set_policy_set_param);
 
-struct dtcp * dtcp_create(struct dt *         dt,
-                          struct connection * conn,
-                          const string_t *    dtcp_ps_name,
-                          struct rmt *        rmt)
+struct dtcp * dtcp_create(struct dt *          dt,
+                          struct dtcp_config * dtcp_cfg,
+                          struct rmt *         rmt)
 {
         struct dtcp * tmp;
         string_t *    ps_name;
@@ -1304,8 +1312,8 @@ struct dtcp * dtcp_create(struct dt *         dt,
                 LOG_ERR("No DT passed, bailing out");
                 return NULL;
         }
-        if (!conn) {
-                LOG_ERR("No connection, bailing out");
+        if (!dtcp_cfg) {
+                LOG_ERR("No DTCP conf, bailing out");
                 return NULL;
         }
         if (!rmt) {
@@ -1328,13 +1336,13 @@ struct dtcp * dtcp_create(struct dt *         dt,
                 return NULL;
         }
 
-        tmp->conn = conn;
+        tmp->cfg  = dtcp_cfg;
         tmp->rmt  = rmt;
         atomic_set(&tmp->cpdus_in_transit, 0);
 
         rina_component_init(&tmp->base);
 
-        ps_name = (string_t *) dtcp_ps_name;
+        ps_name = (string_t *) policy_name(dtcp_ps(dtcp_cfg));
         if (!ps_name || !strcmp(ps_name, ""))
                 ps_name = RINA_PS_DEFAULT_NAME;
 
@@ -1368,6 +1376,7 @@ int dtcp_destroy(struct dtcp * instance)
         }
 
         if (instance->sv)       rkfree(instance->sv);
+        if (instance->cfg)      dtcp_config_destroy(instance->cfg);
         rina_component_fini(&instance->base);
         rkfree(instance);
 
