@@ -27,7 +27,7 @@
 
 #include "rds/rmem.h"
 #include "dtcp-ps.h"
-#include "dtcp-utils.h"
+#include "dtcp-conf-utils.h"
 #include "dtcp-ps-common.h"
 #include "policies.h"
 #include "logs.h"
