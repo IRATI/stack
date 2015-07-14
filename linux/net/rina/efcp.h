@@ -45,9 +45,16 @@ int                     efcp_container_receive(struct efcp_container * c,
                                                struct pdu *            pdu);
 
 /* FIXME: Rename efcp_connection_*() as efcp_*() */
-cep_id_t                efcp_connection_create(struct efcp_container * cont,
+cep_id_t                efcp_connection_create(struct efcp_container * container,
                                                struct ipcp_instance *  user_ipcp,
-                                               struct connection     * conn);
+                                               address_t               src_addr,
+                                               address_t               dst_addr,
+                                               port_id_t               port_id,
+                                               qos_id_t                qos_id,
+                                               cep_id_t                src_cep_id,
+                                               cep_id_t                dst_cep_id,
+                                               struct dtp_config *     dtp_cfg,
+                                               struct dtcp_config *    dtcp_cfg);
 int                     efcp_connection_destroy(struct efcp_container * cont,
                                                 cep_id_t                id);
 int                     efcp_connection_update(struct efcp_container * cont,
@@ -72,6 +79,13 @@ int                     efcp_enqueue(struct efcp * efcp,
                                      struct sdu *  sdu);
 int                     efcp_enable_write(struct efcp * efcp);
 int                     efcp_disable_write(struct efcp * efcp);
+
+cep_id_t                efcp_src_cep_id(struct efcp * efcp);
+cep_id_t                efcp_dst_cep_id(struct efcp * efcp);
+address_t               efcp_src_addr(struct efcp * efcp);
+address_t               efcp_dst_addr(struct efcp * efcp);
+qos_id_t                efcp_qos_id(struct efcp * efcp);
+port_id_t               efcp_port_id(struct efcp * efcp);
 
 int efcp_container_select_policy_set(struct efcp_container * container,
                                      const string_t * path,

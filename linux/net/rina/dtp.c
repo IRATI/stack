@@ -33,9 +33,11 @@
 #include "dt-utils.h"
 #include "dtcp.h"
 #include "dtcp-ps.h"
-#include "dtcp-utils.h"
+#include "dtp-conf-utils.h"
+#include "dtcp-conf-utils.h"
 #include "ps-factory.h"
 #include "dtp-ps.h"
+#include "policies.h"
 
 static struct policy_set_list policy_sets = {
         .head = LIST_HEAD_INIT(policy_sets.head)
@@ -44,9 +46,6 @@ static struct policy_set_list policy_sets = {
 /* This is the DT-SV part maintained by DTP */
 struct dtp_sv {
         spinlock_t          lock;
-
-        /* Configuration values */
-        struct connection * connection; /* FIXME: Are we really sure ??? */
 
         uint_t              seq_number_rollover_threshold;
         uint_t              dropped_pdus;
@@ -70,8 +69,8 @@ struct dtp {
         struct dtp_sv *           sv; /* The state-vector */
 
         struct rina_component     base;
+        struct dtp_config *       cfg;
         struct rmt *              rmt;
-        struct efcp *             efcp;
         struct squeue *           seqq;
         struct {
                 struct rtimer * sender_inactivity;
@@ -81,7 +80,6 @@ struct dtp {
 };
 
 static struct dtp_sv default_sv = {
-        .connection                    = NULL,
         .seq_nr_to_send                = 0,
         .max_seq_nr_sent               = 0,
         .seq_number_rollover_threshold = 0,
@@ -111,12 +109,6 @@ struct dtp_sv * dtp_dtp_sv(struct dtp * dtp)
         return dtp->sv;
 }
 EXPORT_SYMBOL(dtp_dtp_sv);
-
-struct connection * dtp_sv_connection(struct dtp_sv * sv)
-{
-        return sv->connection;
-}
-EXPORT_SYMBOL(dtp_sv_connection);
 
 int nxt_seq_reset(struct dtp_sv * sv, seq_num_t sn)
 {
@@ -484,6 +476,7 @@ static int pdu_post(struct dtp * instance,
 {
         struct sdu *    sdu;
         struct buffer * buffer;
+        struct efcp *   efcp;
 
         ASSERT(instance->sv);
 
@@ -497,10 +490,11 @@ static int pdu_post(struct dtp * instance,
         pdu_buffer_disown(pdu);
         pdu_destroy(pdu);
 
-        ASSERT(instance->sv->connection);
+        efcp = dt_efcp(instance->parent);
+        ASSERT(efcp);
 
-        if (efcp_enqueue(instance->efcp,
-                         instance->sv->connection->port_id,
+        if (efcp_enqueue(efcp,
+                         efcp_port_id(efcp),
                          sdu)) {
                 LOG_ERR("Could not enqueue SDU to EFCP");
                 return -1;
@@ -607,9 +601,6 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         ASSERT(seqq);
 
         a = dt_sv_a(dt);
-
-        ASSERT(sv->connection);
-        ASSERT(sv->connection->policies_params);
 
         rcu_read_lock();
         ps = container_of(rcu_dereference(dtp->base.ps), struct dtp_ps, base);
@@ -820,7 +811,7 @@ int dtp_select_policy_set(struct dtp * dtp,
                           const string_t * path,
                           const string_t * name)
 {
-        struct conn_policies *params = dtp->sv->connection->policies_params;
+        struct dtp_config * cfg = dtp->cfg;
         struct dtp_ps * ps;
         int ret;
 
@@ -839,13 +830,13 @@ int dtp_select_policy_set(struct dtp * dtp,
          * and not from the struct connection. */
         mutex_lock(&dtp->base.ps_lock);
         ps = container_of(dtp->base.ps, struct dtp_ps, base);
-        ps->dtcp_present        = params->dtcp_present;
-        ps->seq_num_ro_th       = params->seq_num_ro_th;
-        ps->initial_a_timer     = params->initial_a_timer;
-        ps->partial_delivery    = params->partial_delivery;
-        ps->incomplete_delivery = params->incomplete_delivery;
-        ps->in_order_delivery   = params->in_order_delivery;
-        ps->max_sdu_gap         = params->max_sdu_gap;
+        ps->dtcp_present        = dtp_conf_dtcp_present(cfg);
+        ps->seq_num_ro_th       = dtp_conf_seq_num_ro_th(cfg);
+        ps->initial_a_timer     = dtp_conf_initial_a_timer(cfg);
+        ps->partial_delivery    = dtp_conf_partial_del(cfg);
+        ps->incomplete_delivery = dtp_conf_incomplete_del(cfg);
+        ps->in_order_delivery   = dtp_conf_in_order_del(cfg);
+        ps->max_sdu_gap         = dtp_conf_max_sdu_gap(cfg);
         mutex_unlock(&dtp->base.ps_lock);
 
         return 0;
@@ -918,9 +909,7 @@ EXPORT_SYMBOL(dtp_set_policy_set_param);
 
 struct dtp * dtp_create(struct dt *         dt,
                         struct rmt *        rmt,
-                        struct efcp *       efcp,
-                        const string_t *    dtp_ps_name,
-                        struct connection * connection)
+                        struct dtp_config * dtp_cfg)
 {
         struct dtp * tmp;
         string_t *   ps_name;
@@ -930,6 +919,11 @@ struct dtp * dtp_create(struct dt *         dt,
                 return NULL;
         }
         dt_sv_drf_flag_set(dt, true);
+
+        if (!dtp_cfg) {
+                LOG_ERR("No DTP conf passed, bailing out");
+                return NULL;
+        }
 
         if (!rmt) {
                 LOG_ERR("No RMT passed, bailing out");
@@ -956,11 +950,10 @@ struct dtp * dtp_create(struct dt *         dt,
 
         spin_lock_init(&tmp->sv->lock);
 
-        tmp->sv->connection = connection;
+        tmp->cfg   = dtp_cfg;
 
-        tmp->rmt            = rmt;
-        tmp->efcp           = efcp;
-        tmp->seqq           = squeue_create(tmp);
+        tmp->rmt  = rmt;
+        tmp->seqq = squeue_create(tmp);
         if (!tmp->seqq) {
                 LOG_ERR("Could not create Sequencing queue");
                 dtp_destroy(tmp);
@@ -981,7 +974,7 @@ struct dtp * dtp_create(struct dt *         dt,
 
         rina_component_init(&tmp->base);
 
-        ps_name = (string_t *) dtp_ps_name;
+        ps_name = (string_t *) policy_name(dtp_conf_ps_get(dtp_cfg));
         if (!ps_name || !strcmp(ps_name, ""))
                 ps_name = RINA_PS_DEFAULT_NAME;
 
@@ -1021,6 +1014,7 @@ int dtp_destroy(struct dtp * instance)
 
         if (instance->seqq) squeue_destroy(instance->seqq);
         if (instance->sv)   rkfree(instance->sv);
+        if (instance->cfg) dtp_config_destroy(instance->cfg);
         rina_component_fini(&instance->base);
 
         rkfree(instance);
@@ -1067,6 +1061,7 @@ int dtp_write(struct dtp * instance,
         struct pdu *            cpdu;
         struct dtp_ps *         ps;
         seq_num_t               sn, csn;
+        struct efcp *           efcp;
 
         if (!sdu_is_ok(sdu))
                 return -1;
@@ -1084,16 +1079,17 @@ int dtp_write(struct dtp * instance,
                 return -1;
         }
 
-        /* State Vector must not be NULL */
-        sv = instance->sv;
-        if (!sv) {
-                LOG_ERR("Bogus DTP-SV passed, bailing out");
+        efcp = dt_efcp(dt);
+        if (!efcp) {
+                LOG_ERR("Bogus EFCP passed, bailing out");
                 sdu_destroy(sdu);
                 return -1;
         }
 
-        if (!sv->connection) {
-                LOG_ERR("Bogus SV connection passed, bailing out");
+        /* State Vector must not be NULL */
+        sv = instance->sv;
+        if (!sv) {
+                LOG_ERR("Bogus DTP-SV passed, bailing out");
                 sdu_destroy(sdu);
                 return -1;
         }
@@ -1135,12 +1131,12 @@ int dtp_write(struct dtp * instance,
 
         csn = nxt_seq_get(sv);
         if (pci_format(pci,
-                       sv->connection->source_cep_id,
-                       sv->connection->destination_cep_id,
-                       sv->connection->source_address,
-                       sv->connection->destination_address,
+                       efcp_src_cep_id(efcp),
+                       efcp_dst_cep_id(efcp),
+                       efcp_src_addr(efcp),
+                       efcp_dst_addr(efcp),
                        csn,
-                       sv->connection->qos_id,
+                       efcp_qos_id(efcp),
                        PDU_TYPE_DT)) {
                 pci_destroy(pci);
                 sdu_destroy(sdu);
@@ -1304,9 +1300,8 @@ int dtp_receive(struct dtp * instance,
         }
 
         if (!instance                  ||
-            !instance->efcp            ||
-            !instance->sv              ||
-            !instance->sv->connection) {
+            !instance->parent          ||
+            !instance->sv) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 pdu_destroy(pdu);
                 return -1;

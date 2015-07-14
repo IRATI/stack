@@ -56,9 +56,8 @@ message dtcpConfig_t {  //configuration of DTCP for a connection
     optional policyDescriptor_t dtcppolicyset = 7;                 //it indicates the name of the policy set fot the dtcp
 }
 
-message connectionPolicies_t { //configuration of the policies and parameters of an EFCP connection
+message dtpConfig_t { //configuration of the policies and parameters of a DTP element
 	optional bool dtcpPresent = 1;                                 //indicates if this connection is using DTCP
-	optional dtcpConfig_t dtcpConfiguration = 2;                   //the DTCP Configuration for this connection
 	optional policyDescriptor_t rcvrtimerinactivitypolicy = 3;     //If no PDUs arrive in this time period, the receiver should expect a DRF in the next Transfer PDU
         optional policyDescriptor_t sendertimerinactiviypolicy = 4;    //This timer is used to detect long periods of no traffic, indicating that a DRF should be sent
 	optional policyDescriptor_t initialseqnumpolicy = 5;           //allows some discretion in selecting the initial sequence number, when DRF is going to be sent

@@ -76,16 +76,17 @@ Flow * FlowAllocatorPs::newFlowRequest(IPCProcess * ipc_process,
 	connection->sourceAddress = ipc_process->get_address();
 	connection->setQosId(1);
 	connection->setFlowUserIpcProcessId(event.flowRequestorIpcProcessId);
-	rina::ConnectionPolicies connectionPolicies = rina::ConnectionPolicies(
-			qosCube->get_efcp_policies());
-	connectionPolicies.set_in_order_delivery(qosCube->is_ordered_delivery());
-	connectionPolicies.set_partial_delivery(qosCube->is_partial_delivery());
+        rina::DTPConfig dtpConfig = rina::DTPConfig(
+                        qosCube->get_dtp_config());
 	if (event.flowSpecification.maxAllowableGap < 0) {
-		connectionPolicies.set_max_sdu_gap(INT_MAX);
+		dtpConfig.set_max_sdu_gap(INT_MAX);
 	} else {
-		connectionPolicies.set_max_sdu_gap(qosCube->get_max_allowable_gap());
+		dtpConfig.set_max_sdu_gap(qosCube->get_max_allowable_gap());
 	}
-	connection->setPolicies(connectionPolicies);
+	connection->setDTPConfig(dtpConfig);
+        rina::DTCPConfig dtcpConfig = rina::DTCPConfig(
+                        qosCube->get_dtcp_config());
+	connection->setDTCPConfig(dtcpConfig);
 	connections.push_back(connection);
 
 	flow->connections = connections;
@@ -108,13 +109,13 @@ rina::QoSCube * FlowAllocatorPs::selectQoSCube(
 	if (flowSpec.maxAllowableGap < 0) {
 	        for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
 		        cube = *iterator;
-		        if (cube->get_efcp_policies().is_dtcp_present()
-			    && !cube->get_efcp_policies().get_dtcp_configuration().is_rtx_control())
+		        if (cube->get_dtp_config().is_dtcp_present()
+			    && !cube->get_dtcp_config().is_rtx_control())
 			        return cube;
 		}
 		for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
 		        cube = *iterator;
-		        if (!cube->get_efcp_policies().is_dtcp_present()) {
+		        if (!cube->get_dtp_config().is_dtcp_present()) {
 				return cube;
 			}
 		}
@@ -123,8 +124,8 @@ rina::QoSCube * FlowAllocatorPs::selectQoSCube(
         //flowSpec.maxAllowableGap >=0
 	for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
 		cube = *iterator;
-		if (cube->get_efcp_policies().is_dtcp_present()) {
-			if (cube->get_efcp_policies().get_dtcp_configuration().is_rtx_control()) {
+		if (cube->get_dtp_config().is_dtcp_present()) {
+			if (cube->get_dtcp_config().is_rtx_control()) {
 				return cube;
 			}
 		}

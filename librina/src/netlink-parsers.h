@@ -338,7 +338,8 @@ enum QoSCubesAttributes {
 	QOS_CUBE_ATTR_MAX_GAP,
 	QOS_CUBE_ATTR_DELAY,
 	QOS_CUBE_ATTR_JITTER,
-	QOS_CUBE_ATTR_EFCP_POLICIES,
+	QOS_CUBE_ATTR_DTP_CONFIG,
+	QOS_CUBE_ATTR_DTCP_CONFIG,
 	__QOS_CUBE_ATTR_MAX,
 };
 
@@ -1151,10 +1152,8 @@ DTCPConfig *
 parseDTCPConfigObject(nlattr *nested);
 
 /* ConnectionPolicies class */
-enum ConnectionPoliciesAttributes {
+enum DTPConfigAttributes {
 	CPA_ATTR_DTCP_PRESENT = 1,
-	CPA_ATTR_DTCP_CONFIG,
-        CPA_ATTR_DTP_POLICY_SET,
 	CPA_ATTR_RCVR_TIMER_INAC_POLICY,
 	CPA_ATTR_SNDR_TIMER_INAC_POLICY,
 	CPA_ATTR_INIT_SEQ_NUM_POLICY,
@@ -1164,16 +1163,17 @@ enum ConnectionPoliciesAttributes {
 	CPA_ATTR_INCOMPLETE_DELIVERY,
 	CPA_ATTR_IN_ORDER_DELIVERY,
 	CPA_ATTR_MAX_SDU_GAP,
+        CPA_ATTR_DTP_POLICY_SET,
 	__CPA_ATTR_MAX,
 };
 
 #define CPA_ATTR_MAX (__CPA_ATTR_MAX -1)
 
-int putConnectionPoliciesObject(nl_msg * netlinkMessage,
-                const ConnectionPolicies& object);
+int putDTPConfigObject(nl_msg * netlinkMessage,
+                const DTPConfig& object);
 
-ConnectionPolicies *
-parseConnectionPoliciesObject(nlattr *nested);
+DTPConfig *
+parseDTPConfigObject(nlattr *nested);
 
 /* Connection class */
 enum ConnectionAttributes {
@@ -1183,7 +1183,8 @@ enum ConnectionAttributes {
         CONN_ATTR_QOS_ID,
         CONN_ATTR_SOURCE_CEP_ID,
         CONN_ATTR_DEST_CEP_ID,
-        CONN_ATTR_POLICIES,
+        CONN_ATTR_DTP_CONFIG,
+        CONN_ATTR_DTCP_CONFIG,
         CONN_ATTR_FLOW_USER_IPCP_ID,
         __CONN_ATTR_MAX,
 };
@@ -1200,7 +1201,8 @@ enum IpcpConnectionCreateRequestMessageAttributes {
         ICCRM_ATTR_SOURCE_ADDR,
         ICCRM_ATTR_DEST_ADDR,
         ICCRM_ATTR_QOS_ID,
-        ICCRM_ATTR_POLICIES,
+        ICCRM_ATTR_DTP_CONFIG,
+        ICCRM_ATTR_DTCP_CONFIG,
         __ICCRM_ATTR_MAX,
 };
 
@@ -1267,7 +1269,8 @@ enum IpcpConnectionCreateArrivedMessageAttributes {
         ICCAM_ATTR_DEST_CEP_ID,
         ICCAM_ATTR_QOS_ID,
         ICCAM_ATTR_FLOW_USER_IPCP_ID,
-        ICCAM_ATTR_POLICIES,
+        ICCAM_ATTR_DTP_CONFIG,
+        ICCAM_ATTR_DTCP_CONFIG,
         __ICCAM_ATTR_MAX,
 };
 
