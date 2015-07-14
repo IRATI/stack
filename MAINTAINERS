@@ -158,7 +158,7 @@ F: linux/net/rina/syscall*
 
 Kernelspace plugins:
 M: Leonardo Bergesio <leonardo.bergesio (at) i2cat.net>
-F: plugins/red/*
+F: plugins/cong_avoidance/*
 F: plugins/dummy/*
 
 
