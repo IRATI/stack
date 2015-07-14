@@ -238,81 +238,81 @@ void parse_rtx_flow_ctrl(const Json::Value  root,
 void parse_efcp_policies(const Json::Value  root,
                          rina::QoSCube    & cube)
 {
-        Json::Value con_pol = root["efcpPolicies"];
-        if (con_pol != 0) {
-                rina::ConnectionPolicies cp;
+        Json::Value efcp_conf = root["efcpPolicies"];
+        if (efcp_conf != 0) {
+                rina::DTPConfig dtpc;
 
-                cp.dtcp_present_ = con_pol.get("dtcpPresent",
-                                               cp.dtcp_present_).asBool();
+                dtpc.dtcp_present_ = efcp_conf.get("dtcpPresent",
+                                               dtpc.dtcp_present_).asBool();
 
-                parse_policy(con_pol,
+                parse_policy(efcp_conf,
                              "dtpPolicySet",
-                             cp.dtp_policy_set_);
+                             dtpc.dtp_policy_set_);
 
                 // DTCPConfig
-                Json::Value dtcp_conf = con_pol["dtcpConfiguration"];
+                Json::Value dtcp_conf = efcp_conf["dtcpConfiguration"];
                 if (dtcp_conf != 0) {
-                        rina::DTCPConfig dc;
+                        rina::DTCPConfig dtpcc;
 
-                        dc.flow_control_ =
+                        dtpcc.flow_control_ =
                                 dtcp_conf.get("flowControl",
-                                              dc.flow_control_).asBool();
+                                              dtpcc.flow_control_).asBool();
                         // flow_control_config_
-                        parse_flow_ctrl(dtcp_conf, dc);
+                        parse_flow_ctrl(dtcp_conf, dtpcc);
 
-                        dc.rtx_control_ =
+                        dtpcc.rtx_control_ =
                                 dtcp_conf.get("rtxControl",
-                                              dc.rtx_control_).asBool();
+                                              dtpcc.rtx_control_).asBool();
 
                         // rtx_control_config_
-                        parse_rtx_flow_ctrl(dtcp_conf, dc);
+                        parse_rtx_flow_ctrl(dtcp_conf, dtpcc);
 
                         parse_policy(dtcp_conf,
                                      "dtcpPolicySet",
-                                     dc.dtcp_policy_set_);
+                                     dtpcc.dtcp_policy_set_);
 
                         parse_policy(dtcp_conf,
                                      "lostControlPduPolicy",
-                                     dc.lost_control_pdu_policy_);
+                                     dtpcc.lost_control_pdu_policy_);
 
                         parse_policy(dtcp_conf,
                                      "rttEstimatorPolicy",
-                                     dc.rtt_estimator_policy_);
+                                     dtpcc.rtt_estimator_policy_);
 
-                        cp.dtcp_configuration_ = dc;
+                        cube.dtcp_config_ = dtpcc;
                 }
 
-                parse_policy(dtcp_conf,
+                parse_policy(efcp_conf,
                              "rcvrTimerInactivityPolicy",
-                             cp.rcvr_timer_inactivity_policy_);
+                             dtpc.rcvr_timer_inactivity_policy_);
 
-                parse_policy(dtcp_conf,
+                parse_policy(efcp_conf,
                              "senderTimerInactivityPolicy",
-                             cp.sender_timer_inactivity_policy_);
+                             dtpc.sender_timer_inactivity_policy_);
 
-                parse_policy(con_pol,
+                parse_policy(efcp_conf,
                              "initialSeqNumPolicy",
-                             cp.initial_seq_num_policy_);
+                             dtpc.initial_seq_num_policy_);
 
-                cp.seq_num_rollover_threshold_ =
-                        con_pol.get("seqNumRolloverThreshold",
-                                    cp.seq_num_rollover_threshold_).asUInt();
-                cp.initial_a_timer_ =
-                        con_pol.get("initialATimer",
-                                    cp.initial_a_timer_).asUInt();
-                cp.partial_delivery_ =
-                        con_pol.get("partialDelivery",
-                                    cp.partial_delivery_).asBool();
-                cp.incomplete_delivery_ =
-                        con_pol.get("incompleteDelivery",
-                                    cp.incomplete_delivery_).asBool();
-                cp.in_order_delivery_ =
-                        con_pol.get("inOrderDelivery",
-                                    cp.in_order_delivery_).asBool();
-                cp.max_sdu_gap_ =
-                        con_pol.get("maxSduGap", cp.max_sdu_gap_).asInt();
+                dtpc.seq_num_rollover_threshold_ =
+                        efcp_conf.get("seqNumRolloverThreshold",
+                                    dtpc.seq_num_rollover_threshold_).asUInt();
+                dtpc.initial_a_timer_ =
+                        efcp_conf.get("initialATimer",
+                                    dtpc.initial_a_timer_).asUInt();
+                dtpc.partial_delivery_ =
+                        efcp_conf.get("partialDelivery",
+                                    dtpc.partial_delivery_).asBool();
+                dtpc.incomplete_delivery_ =
+                        efcp_conf.get("incompleteDelivery",
+                                    dtpc.incomplete_delivery_).asBool();
+                dtpc.in_order_delivery_ =
+                        efcp_conf.get("inOrderDelivery",
+                                    dtpc.in_order_delivery_).asBool();
+                dtpc.max_sdu_gap_ =
+                        efcp_conf.get("maxSduGap", dtpc.max_sdu_gap_).asInt();
 
-                cube.efcp_policies_ = cp;
+                cube.dtp_config_ = dtpc;
         }
 }
 

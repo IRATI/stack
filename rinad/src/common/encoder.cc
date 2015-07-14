@@ -536,52 +536,47 @@ rina::messages::dtcpConfig_t* Encoder::get_dtcpConfig_t(const rina::DTCPConfig &
 	return gpf_conf;
 }
 
-rina::messages::connectionPolicies_t* Encoder::get_connectionPolicies_t(const rina::ConnectionPolicies &polc) {
-	rina::messages::connectionPolicies_t *gpf_polc = new rina::messages::connectionPolicies_t;
+rina::messages::dtpConfig_t* Encoder::get_dtpConfig_t(const rina::DTPConfig &conf) {
+	rina::messages::dtpConfig_t *gpf_conf = new rina::messages::dtpConfig_t;
 
-	gpf_polc->set_dtcppresent(polc.is_dtcp_present());
-	gpf_polc->set_allocated_dtcpconfiguration(get_dtcpConfig_t(polc.get_dtcp_configuration()));
-	gpf_polc->set_allocated_initialseqnumpolicy(get_policyDescriptor_t(polc.get_initial_seq_num_policy()));
-	gpf_polc->set_seqnumrolloverthreshold(polc.get_seq_num_rollover_threshold());
-	gpf_polc->set_initialatimer(polc.get_initial_a_timer());
-	gpf_polc->set_allocated_rcvrtimerinactivitypolicy(get_policyDescriptor_t(polc.get_rcvr_timer_inactivity_policy()));
-	gpf_polc->set_allocated_sendertimerinactiviypolicy(get_policyDescriptor_t(polc.get_sender_timer_inactivity_policy()));
-	gpf_polc->set_allocated_dtppolicyset(get_policyDescriptor_t(polc.get_dtp_policy_set()));
+	gpf_conf->set_dtcppresent(conf.is_dtcp_present());
+	gpf_conf->set_allocated_initialseqnumpolicy(get_policyDescriptor_t(conf.get_initial_seq_num_policy()));
+	gpf_conf->set_seqnumrolloverthreshold(conf.get_seq_num_rollover_threshold());
+	gpf_conf->set_initialatimer(conf.get_initial_a_timer());
+	gpf_conf->set_allocated_rcvrtimerinactivitypolicy(get_policyDescriptor_t(conf.get_rcvr_timer_inactivity_policy()));
+	gpf_conf->set_allocated_sendertimerinactiviypolicy(get_policyDescriptor_t(conf.get_sender_timer_inactivity_policy()));
+	gpf_conf->set_allocated_dtppolicyset(get_policyDescriptor_t(conf.get_dtp_policy_set()));
 
-	return gpf_polc;
+	return gpf_conf;
 }
 
-rina::ConnectionPolicies* Encoder::get_ConnectionPolicies(const rina::messages::connectionPolicies_t &gpf_polc) {
-	rina::ConnectionPolicies *polc = new rina::ConnectionPolicies;
+rina::DTPConfig* Encoder::get_DTPConfig(const rina::messages::dtpConfig_t &gpf_conf) {
+	rina::DTPConfig *conf = new rina::DTPConfig;
 
-	polc->set_dtcp_present(gpf_polc.dtcppresent());
-	rina::DTCPConfig *conf = get_DTCPConfig(gpf_polc.dtcpconfiguration());
-	polc->set_dtcp_configuration(*conf);
-	delete conf;
-	conf = 0;
+	conf->set_dtcp_present(gpf_conf.dtcppresent());
 
-	rina::PolicyConfig *p_conf = get_PolicyConfig(gpf_polc.rcvrtimerinactivitypolicy());
-	polc->set_rcvr_timer_inactivity_policy(*p_conf);
+	rina::PolicyConfig *p_conf = get_PolicyConfig(gpf_conf.rcvrtimerinactivitypolicy());
+	conf->set_rcvr_timer_inactivity_policy(*p_conf);
 	delete p_conf;
 
-	p_conf = get_PolicyConfig(gpf_polc.sendertimerinactiviypolicy());
-	polc->set_sender_timer_inactivity_policy(*p_conf);
+	p_conf = get_PolicyConfig(gpf_conf.sendertimerinactiviypolicy());
+	conf->set_sender_timer_inactivity_policy(*p_conf);
 	delete p_conf;
 
-	p_conf = get_PolicyConfig(gpf_polc.initialseqnumpolicy());
-	polc->set_initial_seq_num_policy(*p_conf);
+	p_conf = get_PolicyConfig(gpf_conf.initialseqnumpolicy());
+	conf->set_initial_seq_num_policy(*p_conf);
 	delete p_conf;
 	p_conf = 0;
 
-	p_conf = get_PolicyConfig(gpf_polc.dtppolicyset());
-	polc->set_dtp_policy_set(*p_conf);
+	p_conf = get_PolicyConfig(gpf_conf.dtppolicyset());
+	conf->set_dtp_policy_set(*p_conf);
 	delete p_conf;
 	p_conf = 0;
 
-	polc->set_seq_num_rollover_threshold(gpf_polc.seqnumrolloverthreshold());
-	polc->set_initial_a_timer(gpf_polc.initialatimer());
+	conf->set_seq_num_rollover_threshold(gpf_conf.seqnumrolloverthreshold());
+	conf->set_initial_a_timer(gpf_conf.initialatimer());
 
-	return polc;
+	return conf;
 }
 
 rina::Connection* Encoder::get_Connection(const rina::messages::connectionId_t &gpf_conn) {
@@ -777,7 +772,8 @@ void* QoSCubeEncoder::decode(
 
 void QoSCubeEncoder::convertModelToGPB(rina::messages::qosCube_t * gpb_cube,
 		rina::QoSCube * cube) {
-	gpb_cube->set_allocated_efcppolicies(Encoder::get_connectionPolicies_t(cube->efcp_policies_));
+	gpb_cube->set_allocated_dtpconfiguration(Encoder::get_dtpConfig_t(cube->dtp_config_));
+	gpb_cube->set_allocated_dtcpconfiguration(Encoder::get_dtcpConfig_t(cube->dtcp_config_));
 	gpb_cube->set_averagebandwidth(cube->average_bandwidth_);
 	gpb_cube->set_averagesdubandwidth(cube->average_sdu_bandwidth_);
 	gpb_cube->set_delay(cube->delay_);
@@ -798,11 +794,17 @@ rina::QoSCube * QoSCubeEncoder::convertGPBToModel(
 			const rina::messages::qosCube_t & gpb_cube) {
 	rina::QoSCube *cube = new rina::QoSCube();
 
-	rina::ConnectionPolicies *conPol =
-			Encoder::get_ConnectionPolicies(gpb_cube.efcppolicies());
-	cube->efcp_policies_ = *conPol;
-	delete conPol;
-	conPol = 0;
+	rina::DTPConfig *dtpConfig =
+			Encoder::get_DTPConfig(gpb_cube.dtpconfiguration());
+	cube->dtp_config_ = *dtpConfig;
+	delete dtpConfig;
+	dtpConfig = 0;
+
+	rina::DTCPConfig *dtcpConfig =
+			Encoder::get_DTCPConfig(gpb_cube.dtcpconfiguration());
+	cube->dtcp_config_ = *dtcpConfig;
+	delete dtcpConfig;
+	dtcpConfig = 0;
 
 	cube->average_bandwidth_ = gpb_cube.averagebandwidth();
 	cube->average_sdu_bandwidth_ = gpb_cube.averagesdubandwidth();

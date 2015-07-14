@@ -820,12 +820,20 @@ void Connection::setSourceCepId(int sourceCepId) {
         this->sourceCepId = sourceCepId;
 }
 
-const ConnectionPolicies& Connection::getPolicies() const {
-        return policies;
+const DTPConfig& Connection::getDTPConfig() const {
+        return dtpConfig;
 }
 
-void Connection::setPolicies(const ConnectionPolicies& policies) {
-        this->policies = policies;
+void Connection::setDTPConfig(const DTPConfig& dtpConfig) {
+        this->dtpConfig = dtpConfig;
+}
+
+const DTCPConfig& Connection::getDTCPConfig() const {
+        return dtcpConfig;
+}
+
+void Connection::setDTCPConfig(const DTCPConfig& dtcpConfig) {
+        this->dtcpConfig = dtcpConfig;
 }
 
 const std::string Connection::toString() {
@@ -836,7 +844,8 @@ const std::string Connection::toString() {
         ss<<"; Dest cep-id: "<<destCepId<<std::endl;
         ss<<"Por-id: "<<portId<<"; QoS-id: "<<qosId;
         ss<<"; Flow user IPC Process id: "<<flowUserIpcProcessId<<std::endl;
-        ss<<"Policies: "<<policies.toString();
+        ss<<"DTP Configuration: "<<dtpConfig.toString();
+        ss<<"DTCP Configuration: "<<dtcpConfig.toString();
         return ss.str();
 }
 
