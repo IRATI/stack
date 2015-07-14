@@ -27,6 +27,9 @@
 #include <map>
 #include <vector>
 
+#include <sys/types.h>
+#include <sys/wait.h>
+
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
 #include <librina/plugin-info.h>
@@ -1151,6 +1154,51 @@ IPCManager_::select_policy_set(Addon* callee, Promise* promise,
 	return IPCM_PENDING;
 }
 
+// Returns IPCM_SUCCESS if a kernel plugin was successfully loaded/unloaded,
+// IPCM_FAILURE otherwise
+ipcm_res_t
+IPCManager_::plugin_load_kernel(const std::string& plugin_name,
+				bool load)
+{
+	ostringstream ss;
+	ipcm_res_t result = IPCM_FAILURE;
+	pid_t pid;
+
+	pid = fork();
+	if (pid < 0) {
+		// parent, fork() failed
+		ss << "Kernel plugin (un)loading: fork() failed";
+		FLUSH_LOG(ERR, ss);
+		result = IPCM_FAILURE;
+
+	} else if (pid == 0) {
+		// child
+		if (load) {
+			execlp("modprobe", "modprobe", plugin_name.c_str(),
+			       NULL);
+
+		} else {
+			execlp("modprobe", "modprobe", "-r",
+			       plugin_name.c_str(), NULL);
+		}
+
+		ss << "Kernel plugin (un)loading: exec() failed";
+		FLUSH_LOG(ERR, ss);
+
+		exit(EXIT_FAILURE);
+
+	} else {
+		// parent, fork() successful
+		int child_status = 0;
+
+		waitpid(pid, &child_status, 0);
+
+		result = child_status ? IPCM_FAILURE : IPCM_SUCCESS;
+	}
+
+	return result;
+}
+
 ipcm_res_t
 IPCManager_::plugin_load(Addon* callee, Promise* promise,
 		const unsigned short ipcp_id,
@@ -1161,6 +1209,13 @@ IPCManager_::plugin_load(Addon* callee, Promise* promise,
 	IPCPTransState* trans;
 
 	try {
+		//First try to see if its a kernel module
+		if (plugin_load_kernel(plugin_name, load) == IPCM_SUCCESS) {
+			promise->ret = IPCM_SUCCESS;
+
+			return IPCM_SUCCESS;
+		}
+
 		ipcp = lookup_ipcp_by_id(ipcp_id);
 
 		if(!ipcp){

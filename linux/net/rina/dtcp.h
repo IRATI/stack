@@ -32,10 +32,9 @@ struct dtcp_rctrl_config;
 struct connection;
 struct rmt;
 
-struct dtcp *        dtcp_create(struct dt *         dt,
-                                 struct connection * conn,
-                                 const string_t *    dtcp_ps_name,
-                                 struct rmt *        rmt);
+struct dtcp *        dtcp_create(struct dt *          dt,
+                                 struct dtcp_config * dtcp_cfg,
+                                 struct rmt *         rmt);
 
 int                  dtcp_destroy(struct dtcp * instance);
 
