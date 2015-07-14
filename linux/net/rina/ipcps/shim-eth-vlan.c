@@ -720,7 +720,6 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         struct shim_eth_flow *   flow;
         struct sk_buff *         skb;
         const unsigned char *    src_hw;
-        struct rinarp_mac_addr * desthw;
         const unsigned char *    dest_hw;
         unsigned char *          sdu_ptr;
         int                      hlen, tlen, length;
@@ -728,14 +727,23 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         unsigned long            flags;
 
         ASSERT(data);
-        ASSERT(sdu);
 
         LOG_DBG("Entered the sdu-write");
+        if (!sdu_is_ok(sdu)) {
+        	LOG_ERR("Bogus SDU passed");
+        	sdu_destroy(sdu);
+        	return -1;
+        }
+
+        length = buffer_length(sdu->buffer);
+        if (length > data->dev->mtu) {
+        	LOG_ERR("SDU too large (%d), dropping", length);
+        	sdu_destroy(sdu);
+        	return -1;
+        }
 
         hlen   = LL_RESERVED_SPACE(data->dev);
         tlen   = data->dev->needed_tailroom;
-        length = buffer_length(sdu->buffer);
-        desthw = 0;
 
         flow = find_flow(data, id);
         if (!flow) {
@@ -779,7 +787,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         sdu_ptr = (unsigned char *) skb_put(skb, buffer_length(sdu->buffer));
 
         if (!memcpy(sdu_ptr,
-                    buffer_data_ro(sdu->buffer),
+        	    buffer_data_ro(sdu->buffer),
                     buffer_length(sdu->buffer))) {
                 LOG_ERR("Memcpy failed");
                 kfree_skb(skb);

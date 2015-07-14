@@ -754,8 +754,7 @@ protected:
 	//                    false if the plugin is to be unloaded.
 	// @ret IPCM_SUCCESS when load/unload is successful, otherwise
 	//	IPCM_FAILURE
-	ipcm_res_t plugin_load_kernel(Addon* callee,
-				      const std::string& plugin_name,
+	ipcm_res_t plugin_load_kernel(const std::string& plugin_name,
 				      bool load);
 
 	/*
