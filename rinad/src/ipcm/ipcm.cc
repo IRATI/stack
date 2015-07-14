@@ -1847,6 +1847,7 @@ void Catalog::add_plugin(const string& plugin_name, const string& plugin_path)
 {
 	map<string, CatalogPlugin>::iterator plit;
 	list<rina::PsInfo> new_policy_sets;
+	rina::WriteScopedLock wlock(rwlock);
 	int ret;
 
 	ret = rina::plugin_get_info(plugin_name, plugin_path, new_policy_sets);
@@ -1939,41 +1940,75 @@ int Catalog::load_policy_set(Addon *addon, unsigned int ipcp_id,
 			     const rina::PsInfo& psinfo)
 {
 	Promise promise;
+	string plugin_name;
 
-	if (policy_sets.count(psinfo.app_entity) == 0) {
-		LOG_WARN("Catalog does not contain any policy-set "
-			 "for component %s", psinfo.app_entity.c_str());
-		return -1;
+	{
+		// Perform a first lookup (under read lock) to see if we
+		// can find a suitable plugin to load
+		rina::ReadScopedLock wlock(rwlock);
+
+		if (policy_sets.count(psinfo.app_entity) == 0) {
+			LOG_WARN("Catalog does not contain any policy-set "
+				 "for component %s",
+				 psinfo.app_entity.c_str());
+			return -1;
+		}
+
+		map<string, CatalogPsInfo>& cmap = policy_sets[psinfo.app_entity];
+
+		if (cmap.count(psinfo.name) == 0) {
+			LOG_WARN("Catalog does not contain a policy-set "
+				 "called %s for component %s",
+				 psinfo.name.c_str(),
+				 psinfo.app_entity.c_str());
+			return -1;
+		}
+
+		plugin_name = cmap[psinfo.name].plugin->second.name;
 	}
 
-	map<string, CatalogPsInfo>& cmap = policy_sets[psinfo.app_entity];
-
-	if (cmap.count(psinfo.name) == 0) {
-		LOG_WARN("Catalog does not contain a policy-set "
-			 "called %s for component %s",
-			 psinfo.name.c_str(), psinfo.app_entity.c_str());
-		return -1;
-	}
-
-	CatalogPsInfo& ps = cmap[psinfo.name];
-
+	// Perform the plugin loading - a blocking and possibly
+	// asynchronous operation - out of the catalog lock
 	if (IPCManager->plugin_load(addon, &promise, ipcp_id,
-			ps.plugin->second.name, true) == IPCM_FAILURE ||
+			plugin_name, true) == IPCM_FAILURE ||
 				promise.wait() != IPCM_SUCCESS) {
 		LOG_WARN("Error occurred while loading plugin '%s'",
-			 ps.plugin->second.name.c_str());
+			 plugin_name.c_str());
 		return -1;
-	}
-
-	ps.plugin->second.loaded = true;
-
-	for (map<string, CatalogPsInfo>::iterator psit = cmap.begin();
-						psit != cmap.end(); psit++) {
-		psit->second.loaded = true;
 	}
 
 	LOG_INFO("Plugin '%s' successfully loaded",
-		 ps.plugin->second.name.c_str());
+			plugin_name.c_str());
+
+	{
+		// Lookup again (the plugin or policy set may have disappeared
+		// in the meanwhile) under the write lock, and update the
+		// catalog data structure.
+		rina::WriteScopedLock wlock(rwlock);
+
+		if (policy_sets.count(psinfo.app_entity) == 0) {
+			LOG_WARN("Policy-sets for component %s disappeared "
+				 "while loading the plugin",
+				 psinfo.app_entity.c_str());
+			return -1;
+		}
+
+		map<string, CatalogPsInfo>& cmap = policy_sets[psinfo.app_entity];
+
+		if (cmap.count(psinfo.name) == 0) {
+			LOG_WARN("Policy-set %s disappeared while "
+				 "loading the plugin",
+				 psinfo.name.c_str());
+			return -1;
+		}
+
+		cmap[psinfo.name].plugin->second.loaded = true;
+
+		for (map<string, CatalogPsInfo>::iterator psit = cmap.begin();
+				psit != cmap.end(); psit++) {
+			psit->second.loaded = true;
+		}
+	}
 
 	return 0;
 }
@@ -1982,6 +2017,7 @@ string Catalog::toString() const
 {
 	map<string, map< string, CatalogPsInfo > >::const_iterator mit;
 	map<string, CatalogPsInfo>::const_iterator cmit;
+	rina::ReadScopedLock rlock(const_cast<Catalog *>(this)->rwlock);
 	stringstream ss;
 
 	ss << "Catalog of plugins and policy sets:" << endl;

@@ -293,7 +293,10 @@ private:
 	std::map<std::string,
 		 std::map<std::string, CatalogPsInfo>
 		> policy_sets;
+
 	std::map<std::string, CatalogPlugin> plugins;
+
+	rina::ReadWriteLockable rwlock;
 };
 
 //
