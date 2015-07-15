@@ -1455,6 +1455,7 @@ int dtcp_sv_update(struct dtcp * dtcp, const struct pci * pci)
                                 retval = -1;
                         }
 
+        		rcu_read_unlock();
                         return retval;
                 }
         }
