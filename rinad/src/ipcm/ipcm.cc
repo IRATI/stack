@@ -1964,6 +1964,11 @@ int Catalog::load_policy_set(Addon *addon, unsigned int ipcp_id,
 			return -1;
 		}
 
+		if (cmap[psinfo.name].plugin->second.loaded) {
+			// Nothing to do, we have already loaded this.
+			return 0;
+		}
+
 		plugin_name = cmap[psinfo.name].plugin->second.name;
 	}
 
