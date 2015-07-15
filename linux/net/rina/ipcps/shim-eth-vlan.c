@@ -1484,8 +1484,9 @@ static int ntfy_user_ipcp_on_if_state_change(struct ipcp_instance_data * data,
 			continue;
                 }
 
-		flow->user_ipcp->ops->nm1_flow_state_change(data, flow->port_id,
-							    up);
+		flow->user_ipcp->ops->
+                            nm1_flow_state_change(flow->user_ipcp->data,
+                                                  flow->port_id, up);
         }
 
 	return 0;
