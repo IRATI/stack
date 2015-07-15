@@ -3,7 +3,8 @@
     "installationPath" : "@prefix@/bin",
     "libraryPath" : "@libdir@",
     "logPath" : "@localstatedir@/log",
-    "consolePort" : 32766
+    "consolePort" : 32766,
+    "pluginsPaths" : ["@libdir@/rinad/ipcp"]
   },
   "applicationToDIFMappings" : [ {
     "encodedAppName" : "rina.utils.apps.echo.server-1--",
