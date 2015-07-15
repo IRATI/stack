@@ -1497,8 +1497,8 @@ int rmt_receive(struct rmt * rmt,
 	spin_lock_irqsave(&rmt->n1_ports->lock, flags);
         n1_port = n1pmap_find(rmt->n1_ports, from);
 	if (!n1_port) {
-		LOG_ERR("Could not retrieve N-1 port for the received PDU...");
 		spin_unlock_irqrestore(&rmt->n1_ports->lock, flags);
+		LOG_ERR("Could not retrieve N-1 port for the received PDU...");
 		return -1;
 	}
 	spin_unlock_irqrestore(&rmt->n1_ports->lock, flags);
@@ -1697,8 +1697,8 @@ int rmt_enable_encryption(struct rmt *    instance,
 	spin_lock_irqsave(&instance->n1_ports->lock, flags);
 	rmt_port = n1pmap_find(instance->n1_ports, port_id);
 	if (!rmt_port) {
-		LOG_ERR("Could not find N-1 port %d", port_id);
 		spin_unlock_irqrestore(&instance->n1_ports->lock, flags);
+		LOG_ERR("Could not find N-1 port %d", port_id);
 		return -1;
 	}
 	spin_unlock_irqrestore(&instance->n1_ports->lock, flags);
