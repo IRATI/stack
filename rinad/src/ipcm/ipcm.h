@@ -260,10 +260,6 @@ struct CatalogPsInfo: public rina::PsInfo {
 	// policy-set
 	std::map<std::string, CatalogPlugin>::iterator plugin;
 
-	// Is the policy-set alread loaded (i.e. is the associated
-	// plugin already loaded ?
-	bool loaded;
-
 	CatalogPsInfo() : PsInfo() { }
 	CatalogPsInfo(const rina::PsInfo& psinfo,
 		      std::map<std::string, CatalogPlugin>::iterator plit);

@@ -1791,7 +1791,6 @@ CatalogPsInfo::CatalogPsInfo(const rina::PsInfo& psinfo,
 				: PsInfo(psinfo)
 {
 	plugin = plit;
-	loaded = plugin->second.loaded;
 }
 
 static bool endswith(const string& s, const string& suffix)
@@ -2007,12 +2006,8 @@ int Catalog::load_policy_set(Addon *addon, unsigned int ipcp_id,
 			return -1;
 		}
 
+		// Mark the plugin as loaded
 		cmap[psinfo.name].plugin->second.loaded = true;
-
-		for (map<string, CatalogPsInfo>::iterator psit = cmap.begin();
-				psit != cmap.end(); psit++) {
-			psit->second.loaded = true;
-		}
 	}
 
 	return 0;
@@ -2036,7 +2031,6 @@ string Catalog::toString() const
 			   << endl << "    ps name: " << cps.name
 			   << endl << "    ps component: " << cps.app_entity
 			   << endl << "    ps version: " << cps.version
-			   << endl << "    ps loaded: " << cps.loaded
 			   << endl << "    plugin: " << cps.plugin->second.path
 			   << "/" << cps.plugin->second.name
 			   << " [loaded = " << cps.plugin->second.loaded
