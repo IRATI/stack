@@ -21,8 +21,7 @@ clean:
 	rm -r -f *.o *.ko *.mod.c *.mod.o Module.symvers .*.cmd .tmp_versions modules.order
 
 install:
-	@echo "This target has not been implemented yet"
-	@exit 1
+	$(MAKE) -C $(KDIR) M=$$PWD modules_install
 
 uninstall:
 	@echo "This target has not been implemented yet"
