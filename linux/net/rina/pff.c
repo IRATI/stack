@@ -193,6 +193,31 @@ int pff_remove(struct pff *           instance,
         return 0;
 }
 
+int pff_port_state_change(struct pff *	pff,
+			  port_id_t	port_id,
+			  bool		up)
+{
+        struct pff_ps * ps;
+
+        if (!__pff_is_ok(pff))
+                return -1;
+
+        rcu_read_lock();
+
+        ps = container_of(rcu_dereference(pff->base.ps),
+                          struct pff_ps, base);
+
+        if (ps->pff_port_state_change &&
+			ps->pff_port_state_change(ps, port_id, up)) {
+                rcu_read_unlock();
+                return -1;
+        }
+
+        rcu_read_unlock();
+
+        return 0;
+}
+
 int pff_nhop(struct pff * instance,
              struct pci * pci,
              port_id_t ** ports,
