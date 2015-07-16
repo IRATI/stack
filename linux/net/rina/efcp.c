@@ -784,7 +784,8 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 }
         }
 
-        if (dtcp_window_based_fctrl(dtcp_cfg)) {
+        if (dtcp_window_based_fctrl(dtcp_cfg) ||
+            dtcp_rate_based_fctrl(dtcp_cfg)) {
                 cwq = cwq_create();
                 if (!cwq) {
                         LOG_ERR("Failed to create closed window queue");
