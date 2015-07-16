@@ -1109,11 +1109,25 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
                 instance->sv->data_retransmit_max =
                         ps->rtx.data_retransmit_max;
 
-        instance->sv->sndr_credit         = ps->flowctrl.window.initial_credit;
-        instance->sv->snd_rt_wind_edge    = ps->flowctrl.window.initial_credit +
-                        dtp_sv_last_nxt_seq_nr(dt_dtp(instance->parent));
-        instance->sv->rcvr_credit         = ps->flowctrl.window.initial_credit;
-        instance->sv->rcvr_rt_wind_edge   = ps->flowctrl.window.initial_credit;
+        if (ps->flow_ctrl) {
+                if (ps->flowctrl.window_based) {
+                        instance->sv->sndr_credit =
+                                ps->flowctrl.window.initial_credit;
+                        instance->sv->snd_rt_wind_edge =
+                                ps->flowctrl.window.initial_credit +
+                                dtp_sv_last_nxt_seq_nr(dt_dtp(instance->parent));
+                        instance->sv->rcvr_credit =
+                                ps->flowctrl.window.initial_credit;
+                        instance->sv->rcvr_rt_wind_edge =
+                                ps->flowctrl.window.initial_credit;
+                }
+                if (ps->flowctrl.rate_based) {
+                        instance->sv->sndr_rate =
+                                ps->flowctrl.rate.sending_rate;
+                        instance->sv->time_unit =
+                                ps->flowctrl.rate.time_period;
+                }
+        }
         rcu_read_unlock();
 
         LOG_DBG("DTCP SV initialized with dtcp_conf:");
@@ -1127,6 +1141,10 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
                 instance->sv->rcvr_credit);
         LOG_DBG("  rcvr_rt_wind_edge:   %u",
                 instance->sv->rcvr_rt_wind_edge);
+        LOG_DBG("  sending_rate:        %u",
+                instance->sv->sndr_rate);
+        LOG_DBG("  time_unit:           %u",
+                instance->sv->time_unit);
 
         return 0;
 }
