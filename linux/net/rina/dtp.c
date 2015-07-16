@@ -1359,13 +1359,13 @@ int dtp_receive(struct dtp * instance,
                         spin_lock_irqsave(&instance->seqq->lock, flags);
                         dtp_squeue_flush(instance);
                         dt_sv_rcv_lft_win_set(dt, seq_num);
+                        spin_unlock_irqrestore(&instance->seqq->lock, flags);
                         if (dtcp) {
                                 if (dtcp_sv_update(dtcp, pci)) {
                                         LOG_ERR("Failed to update dtcp sv");
                                         return -1;
                                 }
                         }
-                        spin_unlock_irqrestore(&instance->seqq->lock, flags);
                         pdu_post(instance, pdu);
                         LOG_DBG("Data run flag DRF");
                         return 0;
