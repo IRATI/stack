@@ -35,6 +35,7 @@
 #include <librina/patterns.h>
 
 #include "dif-template-manager.h"
+#include "catalog.h"
 
 //Addons
 #include "addon.h"
@@ -237,62 +238,6 @@ public:
 	SyscallTransState(Addon* callee, Promise* promise_, const int tid_) :
 				TransactionState(callee, promise_, tid_){};
 	virtual ~SyscallTransState(){};
-};
-
-// Data structure that represent a plugin in the catalog
-struct CatalogPlugin {
-	// The name of the plugin
-	std::string name;
-
-	// The path of the plugin
-	std::string path;
-
-	// Is the plugin already loaded ?
-	bool loaded;
-
-	CatalogPlugin() { }
-	CatalogPlugin(const std::string& n, const std::string& p, bool l)
-			: name(n), path(p), loaded(l) { }
-};
-
-struct CatalogPsInfo: public rina::PsInfo {
-	// Back-reference to the plugin that published this
-	// policy-set
-	std::map<std::string, CatalogPlugin>::iterator plugin;
-
-	CatalogPsInfo() : PsInfo() { }
-	CatalogPsInfo(const rina::PsInfo& psinfo,
-		      std::map<std::string, CatalogPlugin>::iterator plit);
-};
-
-class Catalog {
-public:
-	Catalog() { }
-
-	void import();
-	void add_plugin(const std::string& plugin_name,
-		        const std::string& plugin_path);
-	int load_by_template(Addon *addon, unsigned int ipcp_id,
-			     const rinad::DIFTemplate *dif_template);
-
-	int load_policy_set(Addon *addon, unsigned int ipcp_id,
-			    const rina::PsInfo& psinfo);
-
-	void print() const;
-	std::string toString() const;
-
-private:
-	void psinfo_from_psconfig(std::list< rina::PsInfo >& psinfo_list,
-				  const std::string& component,
-				  const rina::PolicyConfig& pconfig);
-
-	std::map<std::string,
-		 std::map<std::string, CatalogPsInfo>
-		> policy_sets;
-
-	std::map<std::string, CatalogPlugin> plugins;
-
-	rina::ReadWriteLockable rwlock;
 };
 
 //
