@@ -891,10 +891,10 @@ static void send_worker(unsigned long o)
                         do {
                                 pdu = ps->rmt_next_scheduled_policy_tx(ps, n1_port);
                                 if (pdu) {
-                                        if (ps->rmt_q_monitor_policy_tx)
-                                                ps->rmt_q_monitor_policy_tx(ps,
-                                                                            pdu,
-                                                                            n1_port);
+                                        if (ps->rmt_q_monitor_policy_tx_deq)
+                                                ps->rmt_q_monitor_policy_tx_deq(ps,
+                                                                                pdu,
+                                                                                n1_port);
                                         atomic_dec(&n1_port->n_sdus);
                                         if (n1_port_write_noclean(rmt, n1_port, pdu))
                                                 LOG_ERR("Could not write scheduled PDU in n1 port");
@@ -977,8 +977,10 @@ int rmt_send_port_id(struct rmt * instance,
                 ps = container_of(rcu_dereference(instance->base.ps), struct rmt_ps, base);
                 if (ps) {
                         /* RMTQMonitorPolicy hook. */
-                        if (ps->rmt_q_monitor_policy_tx) {
-                                ps->rmt_q_monitor_policy_tx(ps, pdu, out_n1_port);
+                        if (ps->rmt_q_monitor_policy_tx_enq) {
+                                ps->rmt_q_monitor_policy_tx_enq(ps,
+								pdu,
+								out_n1_port);
                         }
                         atomic_inc(&out_n1_port->n_sdus);
                         if (ps->rmt_enqueue_scheduling_policy_tx) {
