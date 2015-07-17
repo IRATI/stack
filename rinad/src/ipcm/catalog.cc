@@ -272,6 +272,17 @@ int Catalog::load_policy_set(Addon *addon, unsigned int ipcp_id,
 	return 0;
 }
 
+void Catalog::ipcp_destroyed(unsigned int ipcp_id)
+{
+	rina::WriteScopedLock wlock(rwlock);
+
+	for (std::map<std::string, CatalogPlugin>::iterator
+			plit = plugins.begin(); plit != plugins.end();
+								plit++) {
+		plit->second.loaded.erase(ipcp_id);
+	}
+}
+
 string Catalog::toString() const
 {
 	map<string, map< string, CatalogPsInfo > >::const_iterator mit;

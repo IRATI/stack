@@ -301,6 +301,11 @@ IPCManager_::destroy_ipcp(Addon* callee, unsigned short ipcp_id)
 		return IPCM_FAILURE;
 	}
 
+	// Synchronize the catalog state, so that
+	// the ipcp_id of the IPCP just destroyed can
+	// be reused without inconsistencies in the catalog
+	catalog.ipcp_destroyed(ipcp_id);
+
 	return IPCM_SUCCESS;
 }
 

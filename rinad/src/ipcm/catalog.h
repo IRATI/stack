@@ -75,6 +75,8 @@ public:
 	int load_policy_set(Addon *addon, unsigned int ipcp_id,
 			    const rina::PsInfo& psinfo);
 
+	void ipcp_destroyed(unsigned int ipcp_id);
+
 	void print() const;
 	std::string toString() const;
 
