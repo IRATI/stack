@@ -85,6 +85,7 @@ void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
 	(void)invoke_id;
 	(void)obj_reply;
 
+	LOG_DBG("[DEBUG] IEHAAAAA");
 	//Set return value
 	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 

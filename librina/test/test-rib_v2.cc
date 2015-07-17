@@ -58,6 +58,7 @@ std::string name3 = "/x/z";
 std::string name4 = "/x/z/t";
 std::string name_other = "/x/other";
 std::string name_create = "/x/z/t/c";
+std::string name_create_child = "/x/z/t/c/d";
 std::string name_delegated = "/x/delegated_subtree";
 
 //Instance id
@@ -168,7 +169,7 @@ public:
 			const cdap_rib::vers_info_t &ver,
 			const cdap_rib::src_info_t &src,
 			const cdap_rib::dest_info_t &dest,
-			const cdap_rib::auth_info &auth, int port_id){
+			const cdap_rib::auth_policy &auth, int port_id){
 		 cdap_rib::con_handle_t con;
 		 return con;
 	};
@@ -1024,7 +1025,7 @@ void ribBasicOps::testOperations(){
 
 	//Issue a create request to specific  => callback 2
 	invoke_id = 6;
-	obj_info1.name_ = name_create;
+	obj_info1.name_ = name_create_child;
 	obj_info1.class_ = MyObj::class_;
 	try{
 		(*message) = PREFIX_MESSAGE | invoke_id;

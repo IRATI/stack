@@ -350,10 +350,12 @@ void* ActiveWorker::run(void* param)
 				message.message_ = buffer;
 				message.size_ = bytes_read;
 
+				LOG_DBG("[DEBUG] si si");
 				//Instruct CDAP provider to process the message
 				rina::cdap::getProvider()->process_message(
 								message,
 								port_id);
+				LOG_DBG("[DEBUG] no no");
 			}
 		}catch(rina::ReadSDUException &e){
 			LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
