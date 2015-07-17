@@ -31,19 +31,34 @@
 #include "pff-ps.h"
 #include "debug.h"
 
-static bool react_to_flow_up = false;
+static bool react_to_flow_up = true;
 module_param(react_to_flow_up, bool, 0644);
 MODULE_PARM_DESC(react_to_flow_up,
 		"Lets LFA policy react to flow up events or not.");
 
-/* FIXME: This representation is crappy and MUST be changed */
 struct pft_port_entry {
 	port_id_t port_id;
 	struct list_head next;
 };
 
-static struct pft_port_entry * pft_pe_create_gfp(gfp_t flags,
-					 	 port_id_t port_id)
+struct pft_entry {
+	address_t destination;
+	qos_id_t qos_id;
+	port_id_t nhop;
+	port_id_t port;
+	struct list_head alt_ports;
+	struct list_head next;
+};
+
+struct pff_ps_priv {
+	spinlock_t lock;
+	struct list_head entries;
+	/* Holds ports that are down */
+	struct list_head ports_down;
+};
+
+static struct pft_port_entry *pft_pe_create_gfp(gfp_t flags,
+						port_id_t port_id)
 {
 	struct pft_port_entry *tmp;
 
@@ -59,14 +74,11 @@ static struct pft_port_entry * pft_pe_create_gfp(gfp_t flags,
 	return tmp;
 }
 
-static struct pft_port_entry * pft_pe_create_ni(port_id_t port_id)
+static struct pft_port_entry *pft_pe_create_ni(port_id_t port_id)
 { return pft_pe_create_gfp(GFP_ATOMIC, port_id); }
 
-/* FIXME: This thing is bogus and has to be fixed properly */
-#ifdef CONFIG_RINA_ASSERTIONS
 static bool pft_pe_is_ok(struct pft_port_entry *pe)
 { return pe ? true : false;  }
-#endif
 
 static void pft_pe_destroy(struct pft_port_entry *pe)
 {
@@ -83,19 +95,9 @@ static port_id_t pft_pe_port(struct pft_port_entry *pe)
 	return pe->port_id;
 }
 
-/* FIXME: This representation is crappy and MUST be changed */
-struct pft_entry {
-	address_t destination;
-	qos_id_t qos_id;
-	port_id_t nhop;
-	port_id_t port;
-	struct list_head alt_ports;
-	struct list_head next;
-};
-
-static struct pft_entry * pfte_create_gfp(gfp_t flags,
-					  address_t destination,
-					  qos_id_t qos_id)
+static struct pft_entry *pfte_create_gfp(gfp_t flags,
+					 address_t destination,
+					 qos_id_t qos_id)
 {
 	struct pft_entry *tmp;
 
@@ -113,15 +115,12 @@ static struct pft_entry * pfte_create_gfp(gfp_t flags,
 	return tmp;
 }
 
-static struct pft_entry * pfte_create_ni(address_t destination,
-					 qos_id_t qos_id)
+static struct pft_entry *pfte_create_ni(address_t destination,
+					qos_id_t qos_id)
 { return pfte_create_gfp(GFP_ATOMIC, destination, qos_id); }
 
-/* FIXME: This thing is bogus and has to be fixed properly */
-#ifdef CONFIG_RINA_ASSERTIONS
 static bool pfte_is_ok(struct pft_entry *entry)
 { return entry ? true : false; }
-#endif
 
 static void pfte_destroy(struct pft_entry *entry)
 {
@@ -129,25 +128,23 @@ static void pfte_destroy(struct pft_entry *entry)
 
 	ASSERT(pfte_is_ok(entry));
 
-	list_for_each_entry_safe(pos, next, &entry->alt_ports, next) {
+	list_for_each_entry_safe(pos, next, &entry->alt_ports, next)
 		pft_pe_destroy(pos);
-	}
 
 	list_del(&entry->next);
 	rkfree(entry);
 }
 
-static struct pft_port_entry * pfte_port_find(struct pft_entry *entry,
-					      port_id_t id)
+static struct pft_port_entry *pfte_port_find(struct pft_entry *entry,
+					     port_id_t id)
 {
 	struct pft_port_entry *pos;
 
 	ASSERT(pfte_is_ok(entry));
 
-	list_for_each_entry(pos, &entry->alt_ports, next) {
+	list_for_each_entry(pos, &entry->alt_ports, next)
 		if (pos->port_id == id)
 			return pos;
-	}
 
 	return NULL;
 }
@@ -196,31 +193,22 @@ static int pfte_ports_copy(struct pft_entry *entry,
 	return 0;
 }
 
-struct pff_ps_priv {
-	spinlock_t lock;
-	struct list_head entries;
-	/* Holds ports that are down */
-	struct list_head ports_down;
-};
-
 static bool priv_is_ok(struct pff_ps_priv *priv)
 { return priv != NULL; }
 
-static struct pft_entry * pft_find(struct pff_ps_priv *priv,
-				address_t destination,
-				qos_id_t qos_id)
+static struct pft_entry *pft_find(struct pff_ps_priv *priv,
+				  address_t destination,
+				  qos_id_t qos_id)
 {
 	struct pft_entry *pos;
 
 	ASSERT(priv_is_ok(priv));
 	ASSERT(is_address_ok(destination));
 
-	list_for_each_entry(pos, &priv->entries, next) {
+	list_for_each_entry(pos, &priv->entries, next)
 		if ((pos->destination == destination) &&
-			(pos->qos_id == qos_id)) {
+			(pos->qos_id == qos_id))
 			return pos;
-		}
-	}
 
 	return NULL;
 }
@@ -367,10 +355,9 @@ static bool pft_is_port_down(struct pff_ps_priv *priv,
 {
 	struct pft_port_entry *pos;
 
-	list_for_each_entry(pos, &priv->ports_down, next) {
+	list_for_each_entry(pos, &priv->ports_down, next)
 		if (pft_pe_port(pos) == port_id)
 			return true;
-	}
 
 	return false;
 }
@@ -395,11 +382,9 @@ static int pft_port_up(struct pff_ps_priv *priv,
 
 	/* Remove port_id from list of ports that are down */
 	list_for_each_entry_safe(pos2, next,
-				&priv->ports_down, next) {
-		if (pft_pe_port(pos2) == port_id) {
+				&priv->ports_down, next)
+		if (pft_pe_port(pos2) == port_id)
 			pft_pe_destroy(pos2);
-		}
-	}
 
 	list_for_each_entry(pos, &priv->entries, next) {
 		/* Check if the primary port is being used */
@@ -433,7 +418,7 @@ static int pft_port_up(struct pff_ps_priv *priv,
 }
 
 static int pft_port_down(struct pff_ps_priv *priv,
-		   	 port_id_t port_id)
+			 port_id_t port_id)
 {
 	struct pft_port_entry *pe;
 	struct pft_entry *pos;
@@ -450,7 +435,7 @@ static int pft_port_down(struct pff_ps_priv *priv,
 	pe = pft_pe_create_ni(port_id);
 	list_add(&pe->next, &priv->ports_down);
 
-	list_for_each_entry(pos, &priv->entries, next) {
+	list_for_each_entry(pos, &priv->entries, next)
 		if (pos->nhop == port_id) {
 			LOG_DBG("Found an entry that requires a LFA");
 			/* See if there is an alternate */
@@ -458,12 +443,11 @@ static int pft_port_down(struct pff_ps_priv *priv,
 				if (!pft_is_port_down(priv,
 						      pft_pe_port(pos2))) {
 					pos->nhop = pft_pe_port(pos2);
-				        break;
+					break;
 				}
 				LOG_DBG("All LFAs are down");
 			}
 		}
-	}
 
 	spin_unlock(&priv->lock);
 	return 0;
@@ -487,9 +471,8 @@ static int lfa_port_state_change(struct pff_ps *ps,
 	}
 
 	priv = (struct pff_ps_priv *) ps->priv;
-	if (!priv_is_ok(priv)) {
+	if (!priv_is_ok(priv))
 		return -1;
-	}
 
 	LOG_DBG("Port-id %d is %s", port_id, up ? "up" : "down");
 
@@ -505,9 +488,8 @@ static void __pft_flush(struct pff_ps_priv *priv)
 
 	ASSERT(priv_is_ok(priv));
 
-	list_for_each_entry_safe(pos, next, &priv->entries, next) {
+	list_for_each_entry_safe(pos, next, &priv->entries, next)
 		pfte_destroy(pos);
-	}
 }
 
 static int lfa_flush(struct pff_ps *ps)
@@ -544,9 +526,8 @@ static int lfa_nhop(struct pff_ps *ps,
 	}
 
 	priv = (struct pff_ps_priv *) ps->priv;
-	if (!priv_is_ok(priv)) {
+	if (!priv_is_ok(priv))
 		return -1;
-	}
 
 	destination = pci_destination(pci);
 	if (!is_address_ok(destination)) {
@@ -578,8 +559,7 @@ static int lfa_nhop(struct pff_ps *ps,
 
 	tmp = pft_find(priv, destination, qos_id);
 	if (!tmp) {
-		LOG_ERR("Could not find any entry for dest address: %u and "
-			"qos_id %d", destination, qos_id);
+		LOG_ERR("No entry for addr %u, qos_id %d", destination, qos_id);
 		spin_unlock_irqrestore(&priv->lock, flags);
 		return -1;
 	}
@@ -604,21 +584,18 @@ static int pfte_port_id_altlists_copy(struct pft_entry *entry,
 	ASSERT(pfte_is_ok(entry));
 
 	alt = rkmalloc(sizeof(*alt), GFP_ATOMIC);
-	if (!alt) {
+	if (!alt)
 		return -1;
-	}
 
 	/* Count the number of alt ports */
 	i = 1;
-	list_for_each_entry(pos, &entry->alt_ports, next) {
+	list_for_each_entry(pos, &entry->alt_ports, next)
 		i++;
-	}
 	alt->num_ports = i;
 
 	alt->ports = rkmalloc(i * sizeof(*(alt->ports)), GFP_ATOMIC);
-	if (!alt->ports) {
+	if (!alt->ports)
 		return -1;
-	}
 
 	/* Fill in the ports */
 	i = 0;
@@ -701,9 +678,8 @@ pff_ps_lfa_create(struct rina_component *component)
 	struct pff *pff = pff_from_component(component);
 
 	priv = rkzalloc(sizeof(*priv), GFP_KERNEL);
-	if (!priv) {
+	if (!priv)
 		return NULL;
-	}
 
 	spin_lock_init(&priv->lock);
 
@@ -711,9 +687,8 @@ pff_ps_lfa_create(struct rina_component *component)
 	INIT_LIST_HEAD(&priv->ports_down);
 
 	ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
-	if (!ps) {
+	if (!ps)
 		return NULL;
-	}
 
 	ps->base.set_policy_set_param = pff_ps_set_policy_set_param;
 	ps->dm = pff;
@@ -738,9 +713,8 @@ static void pff_ps_lfa_destroy(struct ps_base *bps)
 		struct pff_ps_priv *priv;
 
 		priv = (struct pff_ps_priv *) ps->priv;
-		if(!priv_is_ok(priv)) {
+		if (!priv_is_ok(priv))
 			return;
-		}
 
 		spin_lock(&priv->lock);
 

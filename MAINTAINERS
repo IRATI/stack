@@ -158,15 +158,15 @@ F: linux/net/rina/syscall*
 
 Dummy kernel-space plugin:
 M: Leonardo Bergesio <leonardo.bergesio (at) i2cat.net>
-F: plugins/dummy/*
+F: plugins/dummy/
 
 RED plugin:
 M: Leonardo Bergesio <leonardo.bergesio (at) i2cat.net>
-F: plugins/red/*
+F: plugins/red/
 
 Loop-Free Alternate plugin:
 M: Sander Vrijders <sander.vrijders (at) intec.ugent.be>
-F: plugins/lfa/*
+F: plugins/lfa/
 
 User space: librina
 -------------------
