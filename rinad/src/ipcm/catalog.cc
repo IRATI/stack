@@ -119,7 +119,7 @@ void Catalog::add_plugin(const string& plugin_name, const string& plugin_path)
 		return;
 	}
 
-	plugins[plugin_name] = CatalogPlugin(plugin_name, plugin_path, false);
+	plugins[plugin_name] = CatalogPlugin(plugin_name, plugin_path);
 	plit = plugins.find(plugin_name);
 
 	for (list<rina::PsInfo>::const_iterator ps = new_policy_sets.begin();
@@ -221,8 +221,9 @@ int Catalog::load_policy_set(Addon *addon, unsigned int ipcp_id,
 			return -1;
 		}
 
-		if (cmap[psinfo.name].plugin->second.loaded) {
-			// Nothing to do, we have already loaded this.
+		if (cmap[psinfo.name].plugin->second.loaded.count(ipcp_id)) {
+			// Nothing to do, we have already loaded the
+			// plugin for that IPCP.
 			return 0;
 		}
 
@@ -264,8 +265,8 @@ int Catalog::load_policy_set(Addon *addon, unsigned int ipcp_id,
 			return -1;
 		}
 
-		// Mark the plugin as loaded
-		cmap[psinfo.name].plugin->second.loaded = true;
+		// Mark the plugin as loaded for the specified IPCP
+		cmap[psinfo.name].plugin->second.loaded.insert(ipcp_id);
 	}
 
 	return 0;
@@ -291,8 +292,14 @@ string Catalog::toString() const
 			   << endl << "    ps version: " << cps.version
 			   << endl << "    plugin: " << cps.plugin->second.path
 			   << "/" << cps.plugin->second.name
-			   << " [loaded = " << cps.plugin->second.loaded
-			   << "]" << endl;
+			   << ", loaded for ipcps [ ";
+			for (set<unsigned int>::iterator
+				ii = cps.plugin->second.loaded.begin();
+					ii != cps.plugin->second.loaded.end();
+									ii++) {
+				ss << *ii << " ";
+			}
+			ss << "]" << endl;
 		}
 	}
 

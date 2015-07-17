@@ -24,6 +24,7 @@
 #include <string>
 #include <list>
 #include <map>
+#include <set>
 
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
@@ -43,12 +44,12 @@ struct CatalogPlugin {
 	// The path of the plugin
 	std::string path;
 
-	// Is the plugin already loaded ?
-	bool loaded;
+	// The IPCPs for which the plugin is already loaded ?
+	std::set<unsigned int> loaded;
 
 	CatalogPlugin() { }
-	CatalogPlugin(const std::string& n, const std::string& p, bool l)
-			: name(n), path(p), loaded(l) { }
+	CatalogPlugin(const std::string& n, const std::string& p)
+			: name(n), path(p) { }
 };
 
 struct CatalogPsInfo: public rina::PsInfo {
