@@ -250,6 +250,23 @@ int dt_pdu_send(struct dt *  dt,
 }
 EXPORT_SYMBOL(dt_pdu_send);
 
+static bool can_deliver(struct dtp * dtp, struct dtcp * dtcp)
+{
+        bool to_ret = false, w_ret = false, r_ret = false;
+
+        if (dtcp_window_based_fctrl(dtcp_config_get(dtcp)))
+                w_ret = (dtp_sv_max_seq_nr_sent(dtp) < dtcp_snd_rt_win(dtcp));
+
+        if (dtcp_rate_based_fctrl(dtcp_config_get(dtcp)))
+                LOG_DBG("Here rate-based conditions must be introduced");
+
+        to_ret = (w_ret || r_ret);
+        if (w_ret != r_ret)
+                LOG_DBG("Here it goes the reconcile flow control policy");
+
+        return to_ret;
+}
+
 void cwq_deliver(struct cwq * queue,
                  struct dt *  dt,
                  struct rmt * rmt,
@@ -286,8 +303,7 @@ void cwq_deliver(struct cwq * queue,
                 return;
 
         spin_lock(&queue->lock);
-        while (!rqueue_is_empty(queue->q) &&
-               (dtp_sv_max_seq_nr_sent(dtp) < dtcp_snd_rt_win(dtcp))) {
+        while (!rqueue_is_empty(queue->q) && can_deliver(dtp, dtcp)) {
                 struct pdu *       pdu;
                 const struct pci * pci;
 
@@ -321,7 +337,7 @@ void cwq_deliver(struct cwq * queue,
 
         LOG_DBG("CWQ has delivered until %u", dtp_sv_max_seq_nr_sent(dtp));
 
-        if ((dtp_sv_max_seq_nr_sent(dtp) >= dtcp_snd_rt_win(dtcp))) {
+        if (!can_deliver(dtp, dtcp)) {
                 dt_sv_window_closed_set(dt, true);
                 enable_write(queue, dt);
                 return;
