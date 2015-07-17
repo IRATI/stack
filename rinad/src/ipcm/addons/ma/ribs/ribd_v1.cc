@@ -34,6 +34,7 @@ namespace rinad {
 namespace mad {
 namespace rib_v1 {
 
+const std::string IPCProcesses_name = "/computingSystemID=1/processingSystemID=1/kernelApplicationProcess/osApplicationProcess/ipcProcesses";
 // Create the schema
 void createSchema(void){
 	rina::cdap_rib::vers_info_t vers;
@@ -44,6 +45,9 @@ void createSchema(void){
 
 	//Create schema
 	ribd->createSchema(vers);
+
+	// Create callbacks
+	ribd->addCreateCallbackSchema(vers, "IPCProcess", IPCProcesses_name, IPCPObj::create_cb);
 }
 
 
@@ -82,7 +86,7 @@ rina::rib::rib_handle_t createRIB(void){
 		ribd->addObjRIB(rib, "/computingSystemID=1/processingSystemID=1/kernelApplicationProcess/osApplicationProcess", &tmp);
 
 		tmp = new rina::rib::RIBObj("IPCProcesses");
-		ribd->addObjRIB(rib, "/computingSystemID=1/processingSystemID=1/kernelApplicationProcess/osApplicationProcess/ipcProcesses", &tmp);
+		ribd->addObjRIB(rib, IPCProcesses_name, &tmp);
 
 		tmp = new rina::rib::RIBObj("ManagementAgents");
 		ribd->addObjRIB(rib, "/computingSystemID=1/processingSystemID=1/kernelApplicationProcess/osApplicationProcess/managementAgents", &tmp);

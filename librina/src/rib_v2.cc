@@ -508,7 +508,6 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 
 	cdap_rib::res_info_t res;
 	RIBObj* rib_obj = NULL;
-
 	/* RAII scope for RIB scoped lock (read) */
 	{
 		//Mutual exclusion
@@ -523,7 +522,6 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 		if(rib_obj)
 			rib_obj->rwlock.readlock();
 	} //RAII
-
 	/* RAII scope for OBJ scoped lock(read) */
 	if(rib_obj) {
 		//Mutual exclusion
@@ -538,10 +536,10 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 						res);
 	} else {
 		//Otherwise check the schema for a factory function
+		std::string parent_name = get_parent_fqn(obj.name_);
 		create_cb_t f = schema->get_create_callback(
 							obj.class_,
-							obj.name_);
-
+							parent_name);
 		//If the callback exists then call it otherwise
 		//the operation is not supported
 		if(f)
