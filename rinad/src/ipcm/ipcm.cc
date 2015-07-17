@@ -1849,15 +1849,15 @@ void Catalog::add_plugin(const string& plugin_name, const string& plugin_path)
 	rina::WriteScopedLock wlock(rwlock);
 	int ret;
 
+	if (plugins.count(plugin_name)) {
+		// Plugin already in the catalog
+		return;
+	}
+
 	ret = rina::plugin_get_info(plugin_name, plugin_path, new_policy_sets);
 	if (ret) {
 		LOG_WARN("Failed to load manifest file for plugin '%s'",
 			 plugin_name.c_str());
-		return;
-	}
-
-	if (plugins.count(plugin_name)) {
-		// Plugin already in the catalog
 		return;
 	}
 
