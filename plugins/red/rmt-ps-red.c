@@ -1,0 +1,409 @@
+/*
+ * RMT RED PS for Programmable Congestion Control
+ *
+ *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <linux/export.h>
+#include <linux/module.h>
+#include <linux/string.h>
+#include <linux/bitmap.h>
+#include <net/pkt_sched.h>
+#include <net/red.h>
+
+#define RINA_PREFIX "rmt-tcp-red"
+
+#include "logs.h"
+#include "debug.h"
+#include "rds/rmem.h"
+#include "rmt-ps.h"
+#include "rmt-ps-common.h"
+#include "policies.h"
+
+#define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
+
+#define MIN_TH_P_DEFAULT 2
+#define MAX_TH_P_DEFAULT 5
+#define WP_P_DEFAULT 2
+
+struct red_rmt_queue {
+        struct rfifo *    queue;
+        port_id_t         port_id;
+
+	struct red_parms  parms;
+	struct red_vars   vars;
+	struct red_stats  stats;
+
+        struct hlist_node hlist;
+};
+
+struct red_rmt_ps_data {
+        DECLARE_HASHTABLE(queues, RMT_PS_HASHSIZE);
+	struct tc_red_qopt conf_data;
+	u8 * stab;
+	u32  max_P;
+};
+
+static struct red_rmt_queue * red_queue_create(port_id_t          port_id,
+					       struct tc_red_qopt cfg,
+					       u8 *               stab,
+					       u32                max_P)
+{
+	struct red_rmt_queue * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
+        if (!tmp)
+                return NULL;
+        tmp->queue = rfifo_create_ni();
+        if (!tmp->queue) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        tmp->port_id = port_id;
+
+	red_set_parms(&tmp->parms, cfg.qth_min, cfg.qth_max, cfg.Wlog,
+		      cfg.Plog, cfg.Scell_log, stab, max_P);
+
+	red_set_vars(&tmp->vars);
+
+
+        INIT_HLIST_NODE(&tmp->hlist);
+
+        return tmp;
+}
+
+static int red_rmt_queue_destroy(struct red_rmt_queue * q)
+{
+        if (!q) {
+                LOG_ERR("No RMT Key-queue to destroy...");
+                return -1;
+        }
+
+        hash_del(&q->hlist);
+
+        if (q->queue) rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
+
+        rkfree(q);
+
+        return 0;
+}
+
+struct red_rmt_queue * red_rmt_queue_find(struct red_rmt_ps_data * data,
+                                          port_id_t                port_id)
+{
+        struct red_rmt_queue * entry;
+        const struct hlist_head *  head;
+
+        ASSERT(data);
+
+        head = &data->queues[rmap_hash(data->queues, port_id)];
+        hlist_for_each_entry(entry, head, hlist) {
+                if (entry->port_id == port_id)
+                        return entry;
+        }
+
+        return NULL;
+}
+
+static void red_rmt_q_monitor_policy_tx_enq(struct rmt_ps *      ps,
+                                            struct pdu *         pdu,
+                                            struct rmt_n1_port * port)
+{
+        struct red_rmt_queue *   q;
+        struct red_rmt_ps_data * data;
+	uint_t cur_len;
+
+        ASSERT(ps);
+        ASSERT(ps->priv);
+
+        data = ps->priv;
+
+        q = red_rmt_queue_find(data, port->port_id);
+        if (!q) {
+                LOG_ERR("Could not find TCP-RED queue for N-1 port %u",
+                        port->port_id);
+                return;
+        }
+
+	cur_len = rfifo_length(q->queue) +1;
+
+
+        return;
+}
+
+static struct pdu *
+red_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
+                                 struct rmt_n1_port * port)
+{
+        return NULL;
+}
+
+static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
+                                                struct rmt_n1_port * port,
+                                                struct pdu *         pdu)
+{
+        struct red_rmt_queue *   q;
+        struct red_rmt_ps_data * data = ps->priv;
+        /*struct pci *                 pci;
+        unsigned long                pci_flags;*/
+
+        if (!ps || !port || !pdu || !data) {
+                LOG_ERR("Wrong input parameters for "
+                        "rmt_enqueu_scheduling_policy_tx");
+                return -1;
+        }
+
+        q = red_rmt_queue_find(data, port->port_id);
+        if (!q) {
+                LOG_ERR("Could not find queue for n1_port %u",
+                        port->port_id);
+                pdu_destroy(pdu);
+                return -1;
+        }
+/*
+        if (q->avg_l <= q->min_th) {
+                LOG_DBG("PDU can be enqueued...");
+                rfifo_push_ni(q->queue, pdu);
+                return 0;
+        } else if (q->avg_l <= q->max_th) {
+                get_random_bytes(&prob, sizeof(prob));
+                if ((prob * 100 / 0xffffffff) <= q->drop_prob) {
+                        pdu_destroy(pdu);
+                        atomic_dec(&port->n_sdus);
+                        LOG_DBG("PDU dropped between thresholds..");
+                        return 0;
+                }
+                pci = pdu_pci_get_rw(pdu);
+                pci_flags = pci_flags_get(pci);
+                pci_flags_set(pci, pci_flags |= PDU_FLAGS_EXPLICIT_CONGESTION);
+                rfifo_push_ni(q->queue, pdu);
+                return 0;
+        } else {
+                pdu_destroy(pdu);
+                atomic_dec(&port->n_sdus);
+                LOG_DBG("PDU dropped, max_th passed...");
+                return 0;
+        }
+*/
+        return 0;
+}
+
+static int red_rmt_scheduling_create_policy_tx(struct rmt_ps *      ps,
+                                               struct rmt_n1_port * port)
+{
+        struct red_rmt_queue *   q;
+        struct red_rmt_ps_data * data;
+
+        if (!ps || !port || !ps->priv) {
+                LOG_ERR("Wrong input parameters for "
+                        "red_rmt_scheduling_create_policy");
+                return -1;
+        }
+
+        data = ps->priv;
+
+        q = red_queue_create(port->port_id,
+	                     data->conf_data,
+			     data->stab,
+			     data->max_P);
+        if (!q) {
+                LOG_ERR("Could not create queue for n1_port %u",
+                        port->port_id);
+                return -1;
+        }
+
+        hash_add(data->queues, &q->hlist, port->port_id);
+
+        LOG_DBG("Structures for scheduling policies created...");
+        return 0;
+}
+static int red_rmt_scheduling_destroy_policy_tx(struct rmt_ps *      ps,
+                                                struct rmt_n1_port * port)
+{
+        struct red_rmt_ps_data * data;
+        struct red_rmt_queue *   q;
+
+        if (!ps || !port || !ps->priv) {
+                LOG_ERR("Wrong input parameters for "
+                        "red_rmt_scheduling_destroy_policy");
+                return -1;
+        }
+
+        data = ps->priv;
+        ASSERT(data);
+
+        q = red_rmt_queue_find(data, port->port_id);
+        if (q) return red_rmt_queue_destroy(q);
+
+        return -1;
+}
+
+static int red_rmt_ps_set_policy_set_param(struct ps_base * bps,
+                                           const char    * name,
+                                           const char    * value)
+{
+        struct rmt_ps * ps = container_of(bps, struct rmt_ps, base);
+        struct red_rmt_ps_data * data = ps->priv;
+        int bool_value;
+        int ret;
+
+        if (!ps || ! data) {
+                LOG_ERR("Wrong PS or parameters to set");
+                return -1;
+        }
+
+        if (!name) {
+                LOG_ERR("Null parameter name");
+                return -1;
+        }
+
+        if (!value) {
+                LOG_ERR("Null parameter value");
+                return -1;
+        }
+
+        if (strcmp(name, "qmax_p") == 0) {
+                ret = kstrtoint(value, 10, &bool_value);
+                if (!ret)
+                        data->conf_data.limit = bool_value;
+        }
+        if (strcmp(name, "qth_min_p") == 0) {
+                ret = kstrtoint(value, 10, &bool_value);
+                if (!ret)
+                        data->conf_data.qth_min = bool_value;
+        }
+        if (strcmp(name, "qth_max_p") == 0) {
+                ret = kstrtoint(value, 10, &bool_value);
+                if (!ret)
+                        data->conf_data.qth_max = bool_value;
+        }
+        if (strcmp(name, "Wlog_p") == 0) {
+                ret = kstrtoint(value, 10, &bool_value);
+                if (!ret)
+                        data->conf_data.Wlog = bool_value;
+        }
+        if (strcmp(name, "Plog_p") == 0) {
+                ret = kstrtoint(value, 10, &bool_value);
+                if (!ret)
+                        data->conf_data.Plog = bool_value;
+        }
+        if (strcmp(name, "Scell_log_p") == 0) {
+                ret = kstrtoint(value, 10, &bool_value);
+                if (!ret)
+                        data->conf_data.Scell_log = bool_value;
+        }
+	if (strcmp(name, "stab_address") == 0) {
+		int * stab_table = rkmalloc(sizeof(int)*3, GFP_KERNEL);
+		void __user * user_pointer;
+		int user_address;
+		int ret;
+		kstrtoint(value, 16, &user_address);
+		user_pointer = (int *) user_address;
+		LOG_INFO("user_pinter %pk", user_pointer);
+		LOG_INFO("LEO: access_ok? %ld",access_ok(VERIFY_READ, user_pointer, 12));
+		ret = copy_from_user(stab_table, (const void __user *) user_pointer, 3*sizeof(int));
+		LOG_INFO("LEO COPIADO RET %d: %d,%d,%d", ret,stab_table[0], stab_table[1], stab_table[2]);
+		//data->stab = stab_table;
+		data->stab = NULL;
+	}
+        return 0;
+}
+
+static struct ps_base *
+rmt_ps_red_create(struct rina_component * component)
+{
+        struct rmt * rmt = rmt_from_component(component);
+        struct rmt_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
+        struct red_rmt_ps_data * data = rkzalloc(sizeof(*data), GFP_KERNEL);
+	struct policy_parm * ps_param;
+	struct rmt_config * rmt_cfg;
+
+        if (!ps) {
+                return NULL;
+        }
+
+        ps->base.set_policy_set_param = red_rmt_ps_set_policy_set_param;
+        ps->dm = rmt;
+
+/*
+ * 241 struct tc_red_qopt {
+ * 242         __u32           limit;
+ * 243         __u32           qth_min;
+ * 244         __u32           qth_max;
+ * 245         unsigned char   Wlog;
+ * 246         unsigned char   Plog;
+ * 247         unsigned char   Scell_log;
+ * 248         unsigned char   flags;
+ * 249 #define TC_RED_ECN              1
+ * 250 #define TC_RED_HARDDROP         2
+ * 251 #define TC_RED_ADAPTATIVE       4
+ * 252 };
+*/
+	ps->priv = data;
+
+	rmt_cfg = rmt_config_get(rmt);
+	ps_param = policy_param_find(rmt_cfg->policy_set, "stab_address");
+	if (!ps_param) {
+		LOG_WARN("No PS param stab_address");
+	}
+	red_rmt_ps_set_policy_set_param(&ps->base,
+					policy_param_name(ps_param),
+					policy_param_value(ps_param));
+
+        ps->max_q_policy_tx = NULL;
+        ps->max_q_policy_rx = NULL;
+        ps->rmt_q_monitor_policy_tx_enq = red_rmt_q_monitor_policy_tx_enq;
+        ps->rmt_q_monitor_policy_tx_deq = NULL;
+        ps->rmt_q_monitor_policy_rx = NULL;
+        ps->rmt_next_scheduled_policy_tx = red_rmt_next_scheduled_policy_tx;
+        ps->rmt_enqueue_scheduling_policy_tx = red_rmt_enqueue_scheduling_policy_tx;
+        ps->rmt_scheduling_create_policy_tx  = red_rmt_scheduling_create_policy_tx;
+        ps->rmt_scheduling_destroy_policy_tx = red_rmt_scheduling_destroy_policy_tx;
+
+        return &ps->base;
+}
+
+static void rmt_ps_red_destroy(struct ps_base * bps)
+{
+        struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
+        struct red_rmt_ps_data * data;
+        int bucket;
+        struct red_rmt_queue * entry;
+        struct hlist_node * tmp;
+
+        data = ps->priv;
+
+        if (bps) {
+                if (data) {
+                        hash_for_each_safe(data->queues, bucket, tmp, entry,
+                                           hlist) {
+                                ASSERT(entry);
+                                red_rmt_queue_destroy(entry);
+                        }
+			if (data->stab) rkfree(data->stab);
+                        rkfree(data);
+                }
+                rkfree(ps);
+        }
+}
+
+struct ps_factory rmt_factory = {
+        .owner   = THIS_MODULE,
+        .create  = rmt_ps_red_create,
+        .destroy = rmt_ps_red_destroy,
+};

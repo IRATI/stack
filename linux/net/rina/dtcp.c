@@ -1043,6 +1043,19 @@ int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
 }
 EXPORT_SYMBOL(dtcp_ack_flow_control_pdu_send);
 
+uint_t dtcp_rcvr_credit(struct dtcp * dtcp) {
+        unsigned long flags;
+        seq_num_t credit;
+
+        ASSERT(dtcp);
+        ASSERT(dtcp->sv);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        credit = dtcp->sv->rcvr_credit;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+        return credit;
+}
+EXPORT_SYMBOL(dtcp_rcvr_credit);
+
 void dtcp_rcvr_credit_set(struct dtcp * dtcp, uint_t credit)
 {
         unsigned long flags;
