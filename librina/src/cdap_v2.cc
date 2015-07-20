@@ -1,7 +1,7 @@
 /*
  * CDAP implementation
  *
- *    Bernat Gast—n <bernat.gaston@i2cat.net>
+ *    Bernat Gaston <bernat.gaston@i2cat.net>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This library is free software{} you can redistribute it and/or
@@ -2022,13 +2022,12 @@ void CDAPSession::responseMessageSentOrReceived(const cdap_m_t &cdap_message,
 	else
 		pending_messages = &pending_messages_recv_;
 
-	if (op_code != cdap_m_t::M_READ) {
-		if (cdap_message.flags_ != cdap_rib::flags_t::NONE_FLAGS
-				&& cdap_message.flags_
-						!= cdap_rib::flags_t::F_RD_INCOMPLETE) {
+	if (op_code == cdap_m_t::M_READ_R) {
+		if (cdap_message.flags_ == cdap_rib::flags_t::F_RD_INCOMPLETE) {
 			operation_complete = false;
 		}
 	}
+
 	if (operation_complete) {
 		std::map<int, CDAPOperationState*>::iterator it =
 				pending_messages->find(cdap_message.invoke_id_);
