@@ -276,7 +276,7 @@ void* ActiveWorker::run(void* param)
 	char buffer[max_sdu_size_in_bytes];
 	rina::cdap_rib::src_info_t src;
 	rina::cdap_rib::dest_info_t dest;
-	int bytes_read;
+	int bytes_read = 0;
 	(void) param;
 
 	keep_running = true;
@@ -329,22 +329,37 @@ void* ActiveWorker::run(void* param)
 
 			//Recover the response
 			//TODO: add support for other
-			bytes_read = rina::ipcManager->readSDU(port_id, buffer,
+			try{
+				bytes_read = rina::ipcManager->readSDU(port_id, buffer,
 							max_sdu_size_in_bytes);
+			}
+			catch(rina::ReadSDUException &e){
+				LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
+			}
+
 			rina::cdap_rib::SerializedObject message;
 			message.message_ = buffer;
 			message.size_ = bytes_read;
 
 			//Instruct CDAP provider to process the message
-			rina::cdap::getProvider()->process_message(message,
+			try{
+				rina::cdap::getProvider()->process_message(message,
 							port_id);
+			}catch(rina::WriteSDUException &e){
+				LOG_ERR("Cannot write to flow with port id: %u anymore", port_id);
+			}
+
 			LOG_DBG("Connection stablished between MAD and Manager (port id: %u)", port_id);
 
 			//I/O loop
 			while(true) {
-				bytes_read = rina::ipcManager->readSDU(port_id,
+				try{
+					bytes_read = rina::ipcManager->readSDU(port_id,
 									buffer,
-							max_sdu_size_in_bytes);
+									max_sdu_size_in_bytes);
+				}catch(rina::ReadSDUException &e){
+					LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
+				}
 
 				rina::cdap_rib::SerializedObject message;
 				message.message_ = buffer;
@@ -352,16 +367,21 @@ void* ActiveWorker::run(void* param)
 
 				LOG_DBG("[DEBUG] si si");
 				//Instruct CDAP provider to process the message
-				rina::cdap::getProvider()->process_message(
-								message,
-								port_id);
+				try{
+					rina::cdap::getProvider()->process_message(
+									message,
+									port_id);
+				}
+				catch(rina::WriteSDUException &e){
+					LOG_ERR("Cannot write to flow with port id: %u anymore", port_id);
+				}
+				catch(rina::CDAPException &e){
+					LOG_ERR("Error processing message: %s", e.what());
+				}
 				LOG_DBG("[DEBUG] no no");
 			}
-		}catch(rina::ReadSDUException &e){
-			LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
-		}catch(rina::WriteSDUException &e){
-			LOG_ERR("Cannot write to flow with port id: %u anymore", port_id);
-		}catch(...){
+		}
+		catch(...){
 			LOG_CRIT("Unknown error during operation with port id: %u. This is a bug, please report it", port_id);
 		}
 	}
