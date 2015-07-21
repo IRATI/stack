@@ -1146,7 +1146,7 @@ int dtp_write(struct dtp * instance,
         if (dt_sv_drf_flag(dt)          ||
             (sn == (csn - 1))           ||
             !sv->rexmsn_ctrl) {
-		unsigned long pci_flags;
+		pdu_flags_t pci_flags;
 		pci_flags = pci_flags_get(pci);
 		pci_flags &= PDU_FLAGS_DATA_RUN;
                 pci_flags_set(pci, pci_flags);
