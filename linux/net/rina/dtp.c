@@ -1145,8 +1145,12 @@ int dtp_write(struct dtp * instance,
         sn = dtcp_snd_lf_win(dtcp);
         if (dt_sv_drf_flag(dt)          ||
             (sn == (csn - 1))           ||
-            !sv->rexmsn_ctrl)
-                pci_flags_set(pci, PDU_FLAGS_DATA_RUN);
+            !sv->rexmsn_ctrl) {
+		unsigned long pci_flags;
+		pci_flags = pci_flags_get(pci);
+		pci_flags &= PDU_FLAGS_DATA_RUN;
+                pci_flags_set(pci, pci_flags);
+	}
 
         pdu = pdu_create_ni();
         if (!pdu) {
