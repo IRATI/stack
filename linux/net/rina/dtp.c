@@ -1148,7 +1148,7 @@ int dtp_write(struct dtp * instance,
             !sv->rexmsn_ctrl) {
 		pdu_flags_t pci_flags;
 		pci_flags = pci_flags_get(pci);
-		pci_flags &= PDU_FLAGS_DATA_RUN;
+		pci_flags |= PDU_FLAGS_DATA_RUN;
                 pci_flags_set(pci, pci_flags);
 	}
 
