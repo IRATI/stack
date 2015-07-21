@@ -49,7 +49,7 @@ void ConnectionCallback::open_connection(
 	std::cout << "open conection request CDAP message received"
 			<< std::endl;
 	cdap::getProvider()->send_open_connection_result(con, res, message_id);
-	std::cout << "open conection response CDAP message sent" << std::endl;
+	std::cout << "open conection response CDAP message sent to ae" << con.dest_.ae_name_<< std::endl;
 }
 
 void ConnectionCallback::remote_create_result(
@@ -103,8 +103,8 @@ void ManagerWorker::operate(rina::FlowInformation flow)
         createIPCP_1(flow.portId);
         // QUERY RIB
         queryRIB(flow.portId, IPCP_1 + ",RIBDaemon");
-        queryRIB(flow.portId, IPCP_2 + ",RIBDaemon");
-        queryRIB(flow.portId, IPCP_3 + ",RIBDaemon");
+        //queryRIB(flow.portId, IPCP_2 + ",RIBDaemon");
+        //queryRIB(flow.portId, IPCP_3 + ",RIBDaemon");
 }
 
 void ManagerWorker::cacep(int port_id)

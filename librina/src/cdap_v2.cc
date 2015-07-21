@@ -515,8 +515,8 @@ class CDAPProvider : public CDAPProviderInterface
 
 	cdap_rib::con_handle_t remote_open_connection(
 			const cdap_rib::vers_info_t &ver,
-			const cdap_rib::src_info_t &src,
-			const cdap_rib::dest_info_t &dest,
+			const cdap_rib::ep_info_t &src,
+			const cdap_rib::ep_info_t &dest,
 			const cdap_rib::auth_policy_t &auth, int port);
 	int remote_close_connection(unsigned int port);
 	int remote_create(unsigned int port, const cdap_rib::obj_info_t &obj,
@@ -2696,8 +2696,8 @@ CDAPProvider::~CDAPProvider()
 
 cdap_rib::con_handle_t CDAPProvider::remote_open_connection(
 		const cdap_rib::vers_info_t &ver,
-		const cdap_rib::src_info_t &src,
-		const cdap_rib::dest_info_t &dest,
+		const cdap_rib::ep_info_t &src,
+		const cdap_rib::ep_info_t &dest,
 		const cdap_rib::auth_policy_t &auth, int port)
 {
 	const cdap_m_t *m_sent;
@@ -2705,8 +2705,8 @@ cdap_rib::con_handle_t CDAPProvider::remote_open_connection(
 
 	con.port_ = port;
 	con.version_ = ver;
-	con.src_ = src;
-	con.dest_ = dest;
+	con.src_ = dest;
+	con.dest_ = src;
 	con.auth_ = auth;
 
 	m_sent = manager_->getOpenConnectionRequestMessage(con);

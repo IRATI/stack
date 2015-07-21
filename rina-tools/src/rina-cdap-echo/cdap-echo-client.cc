@@ -133,14 +133,14 @@ void Client::cacep()
         cdap_prov_ = cdap::getProvider();
         cdap_rib::vers_info_t ver;
         ver.version_ = 1;
-        cdap_rib::src_info_t src;
+        cdap_rib::ep_info_t src;
         int bytes_read = 0;
 
         src.ap_name_ = flow_.localAppName.processName;
         src.ae_name_ = flow_.localAppName.entityName;
         src.ap_inst_ = flow_.localAppName.processInstance;
         src.ae_inst_ = flow_.localAppName.entityInstance;
-        cdap_rib::dest_info_t dest;
+        cdap_rib::ep_info_t dest;
         dest.ap_name_ = flow_.remoteAppName.processName;
         dest.ae_name_ = flow_.remoteAppName.entityName;
         dest.ap_inst_ = flow_.remoteAppName.processInstance;

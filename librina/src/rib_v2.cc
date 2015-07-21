@@ -493,7 +493,6 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt,
 		const int invoke_id) {
-
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 	flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
@@ -1932,6 +1931,7 @@ void RIBDaemon::remote_open_connection_result(const cdap_rib::con_handle_t &con,
 	// FIXME remove invoke_id
 
 	app_con_callback_->connectResult(res, con);
+	store_connection(con);
 }
 
 void RIBDaemon::open_connection(const cdap_rib::con_handle_t &con,
@@ -2236,7 +2236,6 @@ void RIBDaemon::create_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt,
 		const int invoke_id) {
-
 	//TODO this is not safe if RIB instances can be deleted
 	RIB* rib = getByPortId(con.port_);
 
@@ -2649,8 +2648,8 @@ void RIBDaemonProxy::removeObjRIB(const rib_handle_t& h, const int64_t id){
 // Establish a CDAP connection to a remote RIB
 cdap_rib::con_handle_t RIBDaemonProxy::remote_open_connection(
 		const cdap_rib::vers_info_t &ver,
-		const cdap_rib::src_info_t &src,
-		const cdap_rib::dest_info_t &dest,
+		const cdap_rib::ep_info_t &src,
+		const cdap_rib::ep_info_t &dest,
 		const cdap_rib::auth_policy &auth, int port_id){
 
 	cdap_rib::con_handle_t handle =

@@ -784,8 +784,8 @@ public:
 	///
 	cdap_rib::con_handle_t remote_open_connection(
 			const cdap_rib::vers_info_t &ver,
-			const cdap_rib::src_info_t &src,
-			const cdap_rib::dest_info_t &dest,
+			const cdap_rib::ep_info_t &src,
+			const cdap_rib::ep_info_t &dest,
 			const cdap_rib::auth_policy &auth, int port_id);
 
 	///

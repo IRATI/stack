@@ -1,7 +1,7 @@
 /*
  * RIB and CDAP common structures
  *
- *    Bernat Gast—n <bernat.gaston@i2cat.net>
+ *    Bernat Gastï¿½n <bernat.gaston@i2cat.net>
  *
  * This library is free software{} you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -48,43 +48,17 @@ typedef struct auth_policy {
 	SerializedObject options;
 } auth_policy_t;
 
-typedef struct destination_info {
-	/// DestinationApplication-Entity-Instance-Id (string), optional, not validated by CDAP.
-	/// Specific instance of the Application Entity that the source application
-	/// wishes to connect to in the destination application.
+typedef struct ep_info {
+	/// Application-Entity-Instance-Id (string), optional, not validated by CDAP.
 	std::string ae_inst_;
-	/// DestinationApplication-Entity-Name (string), mandatory (optional for the response).
-	/// Name of the Application Entity that the source application wishes
-	/// to connect to in the destination application.
+	/// Application-Entity-Name (string), mandatory (optional for the response).
 	std::string ae_name_;
-	/// DestinationApplication-Process-Instance-Id (string), optional, not validated by CDAP.
-	/// Name of the Application Process Instance that the source wishes to
-	/// connect to a the destination.
+	/// Application-Process-Instance-Id (string), optional, not validated by CDAP.
 	std::string ap_inst_;
-	/// DestinationApplication-Process-Name (string), mandatory (optional for the response).
-	/// Name of the application process that the source application wishes to connect to
-	/// in the destination application
+	/// Application-Process-Name (string), mandatory (optional for the response).
 	std::string ap_name_;
-} dest_info_t;
+} ep_info_t;
 
-typedef struct source_info {
-	/// DestinationApplication-Entity-Instance-Id (string), optional, not validated by CDAP.
-	/// Specific instance of the Application Entity that the source application
-	/// wishes to connect to in the destination application.
-	std::string ae_inst_;
-	/// DestinationApplication-Entity-Name (string), mandatory (optional for the response).
-	/// Name of the Application Entity that the source application wishes
-	/// to connect to in the destination application.
-	std::string ae_name_;
-	/// DestinationApplication-Process-Instance-Id (string), optional, not validated by CDAP.
-	/// Name of the Application Process Instance that the source wishes to
-	/// connect to a the destination.
-	std::string ap_inst_;
-	/// DestinationApplication-Process-Name (string), mandatory (optional for the response).
-	/// Name of the application process that the source application wishes to connect to
-	/// in the destination application
-	std::string ap_name_;
-} src_info_t;
 
 typedef struct flags {
 	enum Flags {
@@ -175,8 +149,8 @@ typedef struct version_info {
 
 typedef struct connection_handler {
 	int port_;
-	src_info_t src_;
-	dest_info_t dest_;
+	ep_info_t src_;
+	ep_info_t dest_;
 	auth_policy_t auth_;
 	vers_info_t version_;
 } con_handle_t;

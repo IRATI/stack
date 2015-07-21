@@ -2,7 +2,7 @@
  * CDAP North bound API
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Bernat Gast—n <bernat.gaston@i2cat.net>
+ *    Bernat Gastï¿½n <bernat.gaston@i2cat.net>
  *    Eduard Grasa <eduard.grasa@i2cat.net>
  *
  * This library is free software; you can redistribute it and/or
@@ -130,8 +130,8 @@ public:
 	///
 	virtual cdap_rib::con_handle_t remote_open_connection(
 			const cdap_rib::vers_info_t &ver,
-			const cdap_rib::src_info_t &src,
-			const cdap_rib::dest_info_t &dest,
+			const cdap_rib::ep_info_t &src,
+			const cdap_rib::ep_info_t &dest,
 			const cdap_rib::auth_policy &auth, int port) = 0;
 
 	///

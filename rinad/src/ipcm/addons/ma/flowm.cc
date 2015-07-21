@@ -274,8 +274,8 @@ void* ActiveWorker::run(void* param)
 {
 
 	char buffer[max_sdu_size_in_bytes];
-	rina::cdap_rib::src_info_t src;
-	rina::cdap_rib::dest_info_t dest;
+	rina::cdap_rib::ep_info_t src;
+	rina::cdap_rib::ep_info_t dest;
 	int bytes_read = 0;
 	(void) param;
 
@@ -303,7 +303,7 @@ void* ActiveWorker::run(void* param)
 
 			//Fill source parameters
 			src.ap_name_ = flow_.localAppName.processName;
-			src.ae_name_ = flow_.localAppName.entityName;
+			src.ae_name_ = "v1";
 			src.ap_inst_ = flow_.localAppName.processInstance;
 			src.ae_inst_ = flow_.localAppName.entityInstance;
 
