@@ -1,7 +1,7 @@
 /*
  * CDAP implementation
  *
- *    Bernat Gast�n <bernat.gaston@i2cat.net>
+ *    Bernat Gaston <bernat.gaston@i2cat.net>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This library is free software{} you can redistribute it and/or

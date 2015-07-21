@@ -494,7 +494,6 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::filt_info_t &filt,
 		const int invoke_id) {
 
-	LOG_DBG("[DEBUG] HOLA 1");
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 	flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
@@ -509,7 +508,6 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 
 	cdap_rib::res_info_t res;
 	RIBObj* rib_obj = NULL;
-	LOG_DBG("[DEBUG] HOLA 2");
 	/* RAII scope for RIB scoped lock (read) */
 	{
 		//Mutual exclusion
@@ -524,10 +522,8 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 		if(rib_obj)
 			rib_obj->rwlock.readlock();
 	} //RAII
-	LOG_DBG("[DEBUG] HOLA 3");
 	/* RAII scope for OBJ scoped lock(read) */
 	if(rib_obj) {
-		LOG_DBG("[DEBUG] HOLA 4");
 		//Mutual exclusion
 		ReadScopedLock rlock(rib_obj->rwlock, false);
 
@@ -538,10 +534,7 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 						obj.value_,
 						obj_reply.value_,
 						res);
-		LOG_DBG("[DEBUG] HOLA 5");
-
 	} else {
-		LOG_DBG("[DEBUG] HOLA 6");
 		//Otherwise check the schema for a factory function
 		std::string parent_name = get_parent_fqn(obj.name_);
 		create_cb_t f = schema->get_create_callback(
@@ -549,7 +542,6 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 							parent_name);
 		//If the callback exists then call it otherwise
 		//the operation is not supported
-		LOG_DBG("[DEBUG] Arribem aqui");
 		if(f)
 			(*f)(handle, con, obj.name_, obj.class_, filt,
 						invoke_id,
@@ -565,7 +557,6 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 				obj_reply,
 				flags, res,
 				invoke_id);
-		LOG_DBG("[DEBUG] I aqui???");
 	} catch (...) {
 		LOG_ERR("Unable to send response for invoke id %d",
 							invoke_id);
