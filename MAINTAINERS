@@ -156,11 +156,17 @@ M: Leonardo Bergesio <leonardo.bergesio (at) i2cat.net>
 F: linux/net/rina/rnl*
 F: linux/net/rina/syscall*
 
-Kernelspace plugins:
+Dummy kernel-space plugin:
 M: Leonardo Bergesio <leonardo.bergesio (at) i2cat.net>
-F: plugins/red/*
-F: plugins/dummy/*
+F: plugins/dummy/
 
+RED plugin:
+M: Leonardo Bergesio <leonardo.bergesio (at) i2cat.net>
+F: plugins/red/
+
+Loop-Free Alternate plugin:
+M: Sander Vrijders <sander.vrijders (at) intec.ugent.be>
+F: plugins/lfa/
 
 User space: librina
 -------------------
@@ -336,4 +342,3 @@ F: rina-tools/src/rina-cdap-echo/
 Test manager
 M: Bernat Gaston <bernat.gaston (at) i2cat.net>
 F: rina-tools/src/manager/
-
