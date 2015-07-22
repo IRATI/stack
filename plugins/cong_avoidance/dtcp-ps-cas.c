@@ -146,25 +146,21 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
                 if (data->ecn_count >= (data->wc >> 1)) {
                         /* decrease window's size*/
                         data->wc = (data->wc * data->w_dec_b_num_p) >> data->w_dec_b_den_p;
-                        v_size_n = VECTOR_SIZE(data->wc + data->wp);
-                        if (v_size_n < v_size_c) {
-                                rkfree(data->rcv_vector);
-                                data->rcv_vector = rkmalloc(v_size_n, GFP_ATOMIC);
-                                memset(data->rcv_vector, 0, v_size_n);
-                        }
-                        LOG_DBG("Window size decreased, new values are Wp: %u, Wc: %u, Wc_LWE: %u",
+                        LOG_DBG("Window size decreaased, new values are Wp: %u, Wc: %u, Wc_LWE: %u",
                                 data->wp, data->wc, data->wc_lwe);
                 } else {
                         /*increment window's size */
                         data->wc += data->w_inc_a_p;
-                        v_size_n = VECTOR_SIZE(data->wc + data->wp);
-                        if (v_size_n > v_size_c) {
-                                rkfree(data->rcv_vector);
-                                data->rcv_vector = rkmalloc(v_size_n, GFP_ATOMIC);
-                                memset(data->rcv_vector, 0, v_size_n);
-                        }
                         LOG_DBG("Window size increased, new values are Wp: %u, Wc: %u, Wc_LWE: %u",
                                 data->wp, data->wc, data->wc_lwe);
+                }
+		/* reset rcv_vector */
+		/* NOTE: maybe we should resize only when increasing... */
+                v_size_n = VECTOR_SIZE(data->wc + data->wp);
+		if (v_size_n != v_size_c) {
+                        rkfree(data->rcv_vector);
+                        data->rcv_vector = rkmalloc(v_size_n, GFP_ATOMIC);
+                	memset(data->rcv_vector, 0, v_size_n);
                 }
                 data->rcv_count = 0;
                 data->ecn_count = 0;
