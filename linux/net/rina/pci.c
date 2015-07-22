@@ -69,6 +69,9 @@ struct pci {
                 seq_num_t new_lf_wind_edge;
                 seq_num_t my_lf_wind_edge;
                 seq_num_t my_rt_wind_edge;
+                // Rate-based FC.
+		uint_t    sndr_rate;
+		uint_t    time_frame;
         } control;
 };
 
@@ -490,4 +493,42 @@ EXPORT_SYMBOL(pci_control_my_left_wind_edge);
 seq_num_t pci_control_last_seq_num_rcvd(const struct pci * pci)
 { return pci ? pci->control.last_ctrl_seq_num_rcvd : 0; }
 EXPORT_SYMBOL(pci_control_last_seq_num_rcvd);
+
+// Set the sender rate field in the pci control block.
+// 0 on success.
+int pci_control_sndr_rate_set(struct pci * pci, uint_t rate)
+{
+	if (!pci)
+	{
+		LOG_DBG("%s, invalid PCI; pci: %pK.",
+			__FUNCTION__,
+			pci);
+
+		return -1;
+	}
+
+	pci->control.sndr_rate = rate;
+
+	return 0;
+}
+EXPORT_SYMBOL(pci_control_sndr_rate_set);
+
+// Set the time frame field in the pci control block.
+// 0 on success.
+int pci_control_time_frame_set(struct pci * pci, uint_t frame)
+{
+	if (!pci)
+	{
+		LOG_DBG("%s, invalid PCI; pci: %pK.",
+			__FUNCTION__,
+			pci);
+
+		return -1;
+	}
+
+	pci->control.time_frame = frame;
+
+	return 0;
+}
+EXPORT_SYMBOL(pci_control_time_frame_set);
 

@@ -132,6 +132,13 @@ struct dtcp_sv {
          */
         uint_t       pdus_rcvd_in_time_unit;
 
+        /* Rate based both in and out-bound */
+
+	/* Last time-instant when the credit check has been done.
+	 * This is used by rate-based flow control mechanism.
+	 */
+	struct timespec last_time;
+
         /*
          * Control of duplicated control PDUs
          * */
@@ -194,6 +201,332 @@ int dtcp_pdu_send(struct dtcp * dtcp, struct pdu * pdu)
         			    pdu);
 }
 EXPORT_SYMBOL(dtcp_pdu_send);
+
+uint_t dtcp_time_frame(struct dtcp * dtcp)
+{
+	uint_t ret = 0;
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return 0;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	ret = dtcp->sv->time_unit;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return ret;
+}
+EXPORT_SYMBOL(dtcp_time_frame);
+
+int dtcp_time_frame_set(struct dtcp * dtcp, uint_t sec)
+{
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return -1;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	dtcp->sv->time_unit = sec;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL(dtcp_time_frame_set);
+
+int dtcp_last_time(struct dtcp * dtcp, struct timespec * s)
+{
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return -1;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	s->tv_sec = dtcp->sv->last_time.tv_sec;
+	s->tv_nsec = dtcp->sv->last_time.tv_nsec;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL(dtcp_last_time);
+
+int dtcp_last_time_set(struct dtcp * dtcp, struct timespec * s)
+{
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return -1;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	dtcp->sv->last_time.tv_sec = s->tv_sec;
+	dtcp->sv->last_time.tv_nsec = s->tv_nsec;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL(dtcp_last_time_set);
+
+uint_t dtcp_sndr_rate(struct dtcp * dtcp)
+{
+	uint_t ret;
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return 0;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	ret = dtcp->sv->sndr_rate;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return ret;
+}
+EXPORT_SYMBOL(dtcp_sndr_rate);
+
+int dtcp_sndr_rate_set(struct dtcp * dtcp, uint_t rate)
+{
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return -1;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	dtcp->sv->sndr_rate = rate;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL(dtcp_sndr_rate_set);
+
+uint_t dtcp_rcvr_rate(struct dtcp * dtcp)
+{
+	uint_t ret;
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return 0;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	ret = dtcp->sv->rcvr_rate;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return ret;
+}
+EXPORT_SYMBOL(dtcp_rcvr_rate);
+
+int dtcp_rcvr_rate_set(struct dtcp * dtcp, uint_t rate)
+{
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return -1;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	dtcp->sv->rcvr_rate = rate;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL(dtcp_rcvr_rate_set);
+
+uint_t dtcp_recv_itu(struct dtcp * dtcp)
+{
+	uint_t ret = 0;
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return 0;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	ret = dtcp->sv->pdus_rcvd_in_time_unit;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return ret;
+}
+EXPORT_SYMBOL(dtcp_recv_itu);
+
+int dtcp_recv_itu_set(struct dtcp * dtcp, uint_t recv)
+{
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return -1;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	dtcp->sv->pdus_rcvd_in_time_unit = recv;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL(dtcp_recv_itu_set);
+
+int dtcp_recv_itu_inc(struct dtcp * dtcp, uint_t recv)
+{
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return -1;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	dtcp->sv->pdus_rcvd_in_time_unit += recv;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL(dtcp_recv_itu_inc);
+
+uint_t dtcp_sent_itu(struct dtcp * dtcp)
+{
+	uint_t ret = 0;
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return 0;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	ret = dtcp->sv->pdus_sent_in_time_unit;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return ret;
+}
+EXPORT_SYMBOL(dtcp_sent_itu);
+
+int dtcp_sent_itu_set(struct dtcp * dtcp, uint_t sent)
+{
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return -1;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	dtcp->sv->pdus_sent_in_time_unit = sent;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL(dtcp_sent_itu_set);
+
+int dtcp_sent_itu_inc(struct dtcp * dtcp, uint_t sent)
+{
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return -1;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	dtcp->sv->pdus_sent_in_time_unit += sent;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL(dtcp_sent_itu_inc);
+
+int dtcp_rate_fc_reset(struct dtcp * dtcp, struct timespec * now)
+{
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv || !now)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK, now: %pK.",
+			__FUNCTION__,
+			dtcp,
+			now);
+
+		return -1;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	dtcp->sv->pdus_sent_in_time_unit = 0;
+	dtcp->sv->pdus_rcvd_in_time_unit = 0;
+	dtcp->sv->last_time.tv_sec = now->tv_sec;
+	dtcp->sv->last_time.tv_nsec = now->tv_nsec;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL(dtcp_rate_fc_reset);
 
 uint_t dtcp_rtt(struct dtcp * dtcp)
 {
@@ -1124,6 +1457,9 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
                 if (ps->flowctrl.rate_based) {
                         instance->sv->sndr_rate =
                                 ps->flowctrl.rate.sending_rate;
+			// Do like this until we have a separate rate config.
+			instance->sv->rcvr_rate =
+                                instance->sv->sndr_rate;
                         instance->sv->time_unit =
                                 ps->flowctrl.rate.time_period;
                 }
@@ -1143,6 +1479,8 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
                 instance->sv->rcvr_rt_wind_edge);
         LOG_DBG("  sending_rate:        %u",
                 instance->sv->sndr_rate);
+	LOG_DBG("  receiving_rate:      %u",
+                instance->sv->rcvr_rate);
         LOG_DBG("  time_unit:           %u",
                 instance->sv->time_unit);
 
@@ -1509,3 +1847,45 @@ int dtcp_ps_unpublish(const char * name)
 { return ps_unpublish(&policy_sets, name); }
 EXPORT_SYMBOL(dtcp_ps_unpublish);
 
+// Is the given rate exceeded? Reset if the time frame given elapses.
+bool dtcp_rate_exceeded(struct dtcp * dtcp, int send) {
+	struct timespec now  = {0, 0};
+	struct timespec last = {0, 0};
+	struct timespec sub  = {0, 0};
+	uint_t rt = 0, rl = 0; // Rate and rate limit.
+
+	// Get and compute the elapsed time.
+	dtcp_last_time(dtcp, &last);
+	getnstimeofday(&now);
+	sub = timespec_sub(now, last);
+
+	// More than the given time-frame passed.
+	if (sub.tv_sec >= dtcp_time_frame(dtcp))
+	{
+		LOG_DBG("rbfc: %lu:%lu elapsed",
+			sub.tv_sec,
+			sub.tv_nsec);
+
+		// Reset the credit and all the other things.
+		dtcp_rate_fc_reset(dtcp, &now);
+	}
+
+	// Direction: send or receive?
+	if (send) {
+		rt = dtcp_sent_itu(dtcp);
+		rl = dtcp_sndr_rate(dtcp);
+	} else {
+		rt = dtcp_recv_itu(dtcp);
+		rl = dtcp_rcvr_rate(dtcp);
+	}
+
+	// Check if the given credit has expired.
+	if (rt >= rl)
+	{
+		LOG_DBG("rbfc: Rate exceeded, send: %d, rate: %d", send, rt);
+		return true;
+	}
+
+	return false;
+}
+EXPORT_SYMBOL(dtcp_rate_exceeded);

@@ -155,5 +155,7 @@ seq_num_t             pci_control_new_left_wind_edge(const struct pci * pci);
 seq_num_t             pci_control_my_rt_wind_edge(const struct pci * pci);
 seq_num_t             pci_control_my_left_wind_edge(const struct pci * pci);
 seq_num_t             pci_control_last_seq_num_rcvd(const struct pci * pci);
+uint_t                pci_control_sndr_rate(const struct pci * pci);
+uint_t	              pci_control_time_frame(const struct pci * pci);
 
 #endif

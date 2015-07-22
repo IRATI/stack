@@ -615,6 +615,7 @@ int dt_sv_window_closed_set(struct dt * dt, bool closed)
                 return -1;
 
         spin_lock_irqsave(&dt->lock, flags);
+        //dump_stack();
         dt->sv->window_closed = closed;
         spin_unlock_irqrestore(&dt->lock, flags);
 

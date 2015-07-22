@@ -288,3 +288,8 @@ int pdu_destroy(struct pdu * p)
         return 0;
 }
 EXPORT_SYMBOL(pdu_destroy);
+
+uint_t pdu_length(struct pdu * pdu) {
+	return buffer_length(pdu->buffer) + pci_length(pdu->pci);
+}
+EXPORT_SYMBOL(pdu_length);

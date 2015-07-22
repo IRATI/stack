@@ -258,9 +258,13 @@ static bool can_deliver(struct dtp * dtp, struct dtcp * dtcp)
                 w_ret = (dtp_sv_max_seq_nr_sent(dtp) < dtcp_snd_rt_win(dtcp));
 
         if (dtcp_rate_based_fctrl(dtcp_config_get(dtcp)))
-                LOG_DBG("Here rate-based conditions must be introduced");
+                r_ret = !dtcp_rate_exceeded(dtcp, 1);
+
+        LOG_DBG("Can cwq still deliver something, win: %d, rate: %d",
+        	w_ret, r_ret);
 
         to_ret = (w_ret || r_ret);
+
         if (w_ret != r_ret)
                 LOG_DBG("Here it goes the reconcile flow control policy");
 

@@ -63,4 +63,7 @@ int                   pdu_pci_set(struct pdu * pdu, struct pci * pci);
 
 int                   pdu_destroy(struct pdu * pdu);
 
+// Returns the total size of the whole pdu, in bytes.
+uint_t 		      pdu_length(struct pdu * pdu);
+
 #endif

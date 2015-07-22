@@ -1043,10 +1043,21 @@ static bool window_is_closed(struct dtp_sv * sv,
                 w_ret = true;
         }
 
-        if (sv->rate_based)
-                LOG_MISSING;
+        if (sv->rate_based) {
+        	if(dtcp_rate_exceeded(dtcp, 1)) {
+        		dt_sv_window_closed_set(dt, true);
+        		r_ret = true;
+        	} else {
+        		// Only if the window is closed!
+			if (dt_sv_window_closed(dt))
+				dt_sv_window_closed_set(dt, false);
+        	}
+        }
 
         retval = (w_ret || r_ret);
+
+        LOG_DBG("Window closed? win: %d, rate: %d", w_ret, r_ret);
+
         if (w_ret != r_ret) {
                 LOG_DBG("Reconcile flow control TX");
         }
@@ -1066,6 +1077,8 @@ int dtp_write(struct dtp * instance,
         struct pdu *            cpdu;
         struct dtp_ps *         ps;
         seq_num_t               sn, csn;
+        uint_t			sz; // Size of sdu.
+	uint_t			sc; // Sender credit.
         struct efcp *           efcp;
 
         if (!sdu_is_ok(sdu))
@@ -1198,6 +1211,36 @@ int dtp_write(struct dtp * instance,
                                 rcu_read_unlock();
                                 return 0;
                         }
+                        // Window not closed; consume credit.
+			if (sv->rate_based)
+			{
+				// We track the size of the whole pdu, not of
+				// only its data.
+				sz = pdu_length(pdu);
+				// How much credit is left?
+				sc = dtcp_sent_itu(dtcp);
+
+				// Size will consume the credit.
+				if (sz + sc >= dtcp_sndr_rate(dtcp))
+				{
+					// Sent reach the max given.
+					dtcp_sent_itu_set(
+						dtcp, dtcp_sndr_rate(dtcp));
+				}
+				// Size wont consume the credit; subtract it.
+				else
+				{
+					dtcp_sent_itu_inc(dtcp,	sz);
+				}
+
+				LOG_DBG("rbfc: %pK credit, send: %d/%d, "
+					"recv: %d/%d",
+					dtcp,
+					dtcp_sent_itu(dtcp),
+					dtcp_sndr_rate(dtcp),
+					dtcp_recv_itu(dtcp),
+					dtcp_rcvr_rate(dtcp));
+			}
                 }
                 if (sv->rexmsn_ctrl) {
                         /* FIXME: Add timer for PDU */
@@ -1272,7 +1315,8 @@ static bool is_drf_required(struct dtp * dtp)
 }
 */
 
-static bool is_fc_overrun(struct dtcp * dtcp, seq_num_t seq_num)
+static bool is_fc_overrun(
+	struct dt * dt, struct dtcp * dtcp, seq_num_t seq_num, uint_t pdul)
 {
         bool to_ret, w_ret = false, r_ret = false;
 
@@ -1282,10 +1326,24 @@ static bool is_fc_overrun(struct dtcp * dtcp, seq_num_t seq_num)
         if (dtcp_window_based_fctrl(dtcp_config_get(dtcp)))
                 w_ret = (seq_num > dtcp_rcv_rt_win(dtcp));
 
-        if (dtcp_rate_based_fctrl(dtcp_config_get(dtcp)))
-                LOG_DBG("Rate based condition");
+        if (dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
+        	if(dtcp_rate_exceeded(dtcp, 0)) {
+        		//dt_sv_window_closed_set(dt, true);
+        		r_ret = true;
+		} else {
+			// Only if the window is closed!
+			//if (dt_sv_window_closed(dt))
+			//	dt_sv_window_closed_set(dt, false);
+			// Increment the rate of recv.
+                        if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp)))
+                        	dtcp_recv_itu_inc(dtcp, pdul);
+		}
+        }
 
         to_ret = w_ret || r_ret;
+
+	LOG_DBG("Is fc overruned? win: %d, rate: %d", w_ret, r_ret);
+
         if (w_ret || r_ret)
                 LOG_DBG("Reconcile flow control RX");
 
@@ -1406,7 +1464,9 @@ int dtp_receive(struct dtp * instance,
          *   no need to check presence of in_order or dtcp because in case
          *   they are not, LWE is not updated and always 0
          */
-        if ((seq_num <= LWE) || (is_fc_overrun(dtcp, seq_num))) {
+        if ((seq_num <= LWE) || (is_fc_overrun(
+		dt, dtcp, seq_num, pdu_length(pdu)))) {
+
                 pdu_destroy(pdu);
 
                 dropped_pdus_inc(sv);
