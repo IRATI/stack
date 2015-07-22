@@ -332,8 +332,7 @@ void* ActiveWorker::run(void* param)
 			try{
 				bytes_read = rina::ipcManager->readSDU(port_id, buffer,
 							max_sdu_size_in_bytes);
-			}
-			catch(rina::ReadSDUException &e){
+			}catch(rina::ReadSDUException &e){
 				LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
 			}
 
@@ -370,11 +369,9 @@ void* ActiveWorker::run(void* param)
 					rina::cdap::getProvider()->process_message(
 									message,
 									port_id);
-				}
-				catch(rina::WriteSDUException &e){
+				}catch(rina::WriteSDUException &e){
 					LOG_ERR("Cannot write to flow with port id: %u anymore", port_id);
-				}
-				catch(rina::CDAPException &e){
+				}catch(rina::CDAPException &e){
 					LOG_ERR("Error processing message: %s", e.what());
 				}
 			}

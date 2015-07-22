@@ -1,7 +1,7 @@
 /*
  * RIB and CDAP common structures
  *
- *    Bernat Gast�n <bernat.gaston@i2cat.net>
+ *    Bernat Gaston <bernat.gaston@i2cat.net>
  *
  * This library is free software{} you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -48,6 +48,7 @@ typedef struct auth_policy {
 	SerializedObject options;
 } auth_policy_t;
 
+// End-point information
 typedef struct ep_info {
 	/// Application-Entity-Instance-Id (string), optional, not validated by CDAP.
 	std::string ae_inst_;
