@@ -10,7 +10,7 @@ ccflags-y = -Wtype-limits -Inet/rina
 
 obj-m := cas-plugin.o
 
-cas-plugin-y := cas-plugin-ps.o rmt-ps-cas.o dtcp-ps-cas.o dtp-ps-cas.o 
+cas-plugin-y := cas-plugin-ps.o rmt-ps-cas.o dtcp-ps-cas.o 
 
 else
 

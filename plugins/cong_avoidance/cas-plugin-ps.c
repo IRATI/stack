@@ -42,7 +42,6 @@ static int __init mod_init(void)
         int ret;
 
         strcpy(rmt_factory.name,  RINA_CAS_PS_NAME);
-        strcpy(dtp_factory.name,  RINA_CAS_PS_NAME);
         strcpy(dtcp_factory.name, RINA_CAS_PS_NAME);
 
         ret = rmt_ps_publish(&rmt_factory);
@@ -52,14 +51,6 @@ static int __init mod_init(void)
         }
 
         LOG_INFO("RMT CAS policy set loaded successfully");
-
-        ret = dtp_ps_publish(&dtp_factory);
-        if (ret) {
-                printk("Failed to publish DTP CAS policy set factory");
-                return -1;
-        }
-
-        LOG_INFO("DTP CAS policy set loaded successfully");
 
         ret = dtcp_ps_publish(&dtcp_factory);
         if (ret) {
@@ -83,14 +74,6 @@ static void __exit mod_exit(void)
         }
 
         LOG_INFO("Dummy RMT CAS policy set unloaded successfully");
-
-        ret = dtp_ps_unpublish(RINA_CAS_PS_NAME);
-        if (ret) {
-                LOG_ERR("Failed to unpublish DTP CAS policy set factory");
-                return;
-        }
-
-        LOG_INFO("Dummy DTP CAS policy set unloaded successfully");
 
         ret = dtcp_ps_unpublish(RINA_CAS_PS_NAME);
         if (ret) {
