@@ -160,8 +160,8 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 		if (v_size_n != v_size_c) {
                         rkfree(data->rcv_vector);
                         data->rcv_vector = rkmalloc(v_size_n, GFP_ATOMIC);
-                	memset(data->rcv_vector, 0, v_size_n);
                 }
+                memset(data->rcv_vector, 0, v_size_n);
                 data->rcv_count = 0;
                 data->ecn_count = 0;
                 dtcp_rcvr_credit_set(dtcp, data->wc);
