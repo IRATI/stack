@@ -1,0 +1,11 @@
+{
+        "PluginName": "pff-lfa",
+        "PluginVersion": "1",
+        "PolicySets" : [
+                {
+                        "Name": "lfa",
+                        "Component": "pff",
+                        "Version" : "1"
+                }
+        ]
+}
