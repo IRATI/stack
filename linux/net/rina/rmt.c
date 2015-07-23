@@ -1,11 +1,10 @@
 /*
- * Shim IPC Process over Ethernet (using VLANs)
+ * RMT (Relaying and Multiplexing Task)
  *
- *   Francesco Salvestrini <f.salvestrini@nextworks.it>
- *   Sander Vrijders       <sander.vrijders@intec.ugent.be>
- *   Miquel Tarzan         <miquel.tarzan@i2cat.net>
- *   Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
- *   Eduard Grasa	   <eduard.grasa@i2cat.net>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
+ *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,2193 +21,1784 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/if_ether.h>
-#include <linux/string.h>
+#include <linux/export.h>
+#include <linux/types.h>
+#include <linux/hashtable.h>
 #include <linux/list.h>
-#include <linux/if.h>
-#include <linux/if_packet.h>
-#include <linux/workqueue.h>
-#include <linux/notifier.h>
-#include <net/pkt_sched.h>
-#include <net/sch_generic.h>
+#include <linux/kernel.h>
+#include <linux/sched.h>
+#include <linux/wait.h>
+#include <linux/string.h>
+/*FIXME: to be re removed after removing tasklets */
+#include <linux/interrupt.h>
 
-#define SHIM_NAME   "shim-eth-vlan"
-
-#define RINA_PREFIX SHIM_NAME
+#define RINA_PREFIX "rmt"
 
 #include "logs.h"
-#include "kipcm.h"
-#include "debug.h"
 #include "utils.h"
+#include "debug.h"
 #include "du.h"
+#include "rmt.h"
+#include "pff.h"
+#include "efcp-utils.h"
+#include "serdes.h"
+#include "pdu-ser.h"
+#include "rmt-ps.h"
+#include "policies.h"
+#include "rds/rstr.h"
+#include "ipcp-instances.h"
 #include "ipcp-utils.h"
-#include "ipcp-factories.h"
-#include "rinarp/rinarp.h"
-#include "rinarp/arp826-utils.h"
 
-#define DEFAULT_QDISC_MAX_SIZE 50
-#define DEFAULT_QDISC_ENABLE_SIZE 10
+#define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
+#define MAX_PDUS_SENT_PER_CYCLE 10
 
-/* FIXME: To be solved properly */
-static struct workqueue_struct * rcv_wq;
-
-struct rcv_work_data {
-        struct sk_buff *            skb;
-        struct net_device *         dev;
-        struct shim_eth_flow *      flow;
-        struct ipcp_instance_data * data;
+static struct policy_set_list policy_sets = {
+        .head = LIST_HEAD_INIT(policy_sets.head)
 };
 
-/* FIXME: To be removed ABSOLUTELY */
-extern struct kipcm * default_kipcm;
 
-/* Holds the configuration of one shim instance */
-struct eth_vlan_info {
-        uint16_t vlan_id;
-        char *   interface_name;
-        uint16_t qdisc_max_size;
-        uint16_t qdisc_enable_size;
-};
-
-static struct ipcp_factory_data {
-        struct list_head instances;
-	struct notifier_block ntfy;
-} eth_vlan_data;
-
-enum port_id_state {
-        PORT_STATE_NULL = 1,
-        PORT_STATE_PENDING,
-        PORT_STATE_ALLOCATED
-};
-
-/* Holds the information related to one flow */
-struct shim_eth_flow {
-        struct list_head       list;
-
-        struct gha *           dest_ha;
-        struct gpa *           dest_pa;
-
-        /* Only used once for allocate_response */
-        port_id_t              port_id;
-        enum port_id_state     port_id_state;
-
-        /* Used when flow is not allocated yet */
-        struct rfifo *         sdu_queue;
-        struct ipcp_instance * user_ipcp;
-};
-
-/*
- * Contains all the information associated to an instance of a
- * shim Ethernet IPC Process
- */
-struct ipcp_instance_data {
-        struct list_head       list;
-        ipc_process_id_t       id;
-
-        /* IPC Process name */
-        struct name *          name;
-        struct name *          dif_name;
-        struct eth_vlan_info * info;
-        struct packet_type *   eth_vlan_packet_type;
-        struct net_device *    dev;
-        struct net_device *    phy_dev;
-        struct Qdisc *	       old_qdisc;
-        struct flow_spec *     fspec;
-
-        /* The IPC Process using the shim-eth-vlan */
-        struct name *          app_name;
-
-        /* True if the registered app wants blocking flows, false otherwise */
-        bool		       blocking;
-
-        /* Stores the state of flows indexed by port_id */
-        spinlock_t             lock;
-        struct list_head       flows;
-
-        /* FIXME: Remove it as soon as the kipcm_kfa gets removed */
-        struct kfa *           kfa;
-
-        /* RINARP related */
-        struct rinarp_handle * handle;
-
-	/* To handle device notifications. */
-	struct notifier_block ntfy;
-};
-
-/* Needed for eth_vlan_rcv function */
-struct interface_data_mapping {
-        struct list_head            list;
-
-        struct net_device *         dev;
-        struct ipcp_instance_data * data;
-};
-
-static DEFINE_SPINLOCK(data_instances_lock);
-static struct list_head data_instances_list;
-
-static struct interface_data_mapping *
-inst_data_mapping_get(struct net_device * dev)
+static struct rmt_n1_port * n1_port_create(port_id_t id,
+                                           struct ipcp_instance * n1_ipcp,
+                                           struct dup_config_entry * dup_config)
 {
-        struct interface_data_mapping * mapping;
+        struct rmt_n1_port * tmp;
 
-        if (!dev)
-                return NULL;
+        ASSERT(is_port_id_ok(id));
 
-        spin_lock(&data_instances_lock);
-
-        list_for_each_entry(mapping, &data_instances_list, list) {
-                if (mapping->dev == dev) {
-                        spin_unlock(&data_instances_lock);
-                        return mapping;
-                }
-        }
-
-        spin_unlock(&data_instances_lock);
-
-        return NULL;
-}
-
-static struct ipcp_instance_data *
-find_instance(struct ipcp_factory_data * data,
-              ipc_process_id_t           id)
-{
-
-        struct ipcp_instance_data * pos;
-
-        list_for_each_entry(pos, &(data->instances), list) {
-                if (pos->id == id) {
-                        return pos;
-                }
-        }
-
-        return NULL;
-
-}
-
-static struct shim_eth_flow * find_flow(struct ipcp_instance_data * data,
-                                        port_id_t                   id)
-{
-        unsigned long          flags;
-        struct shim_eth_flow * flow;
-
-        spin_lock_irqsave(&data->lock, flags);
-
-        list_for_each_entry(flow, &data->flows, list) {
-                if (flow->port_id == id) {
-                        spin_unlock_irqrestore(&data->lock, flags);
-                        return flow;
-                }
-        }
-
-        spin_unlock_irqrestore(&data->lock, flags);
-
-        return NULL;
-}
-
-static struct gpa * name_to_gpa(const struct name * name)
-{
-        char *       tmp;
-        struct gpa * gpa;
-
-        tmp = name_tostring(name);
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return NULL;
 
-        gpa = gpa_create(tmp, strlen(tmp));
-        if (!gpa) {
+        INIT_HLIST_NODE(&tmp->hlist);
+
+        tmp->port_id = id;
+        tmp->n1_ipcp = n1_ipcp;
+        tmp->state   = N1_PORT_STATE_ENABLED;
+        tmp->dup_config = dup_config;
+
+        /* dup state init. FIXME: This has to be moved to the
+         * specific encryption policy initialization
+         */
+        if (dup_config != NULL &&
+        		dup_config->encryption_cipher != NULL) {
+        	tmp->blkcipher =
+        		crypto_alloc_blkcipher(dup_config->encryption_cipher,
+        				       0,
+        				       0);
+        	if (IS_ERR(tmp->blkcipher)) {
+        		LOG_ERR("could not allocate blkcipher handle for %s\n",
+        			dup_config->encryption_cipher);
+        		return NULL;
+        	}
+        }else
+            tmp->blkcipher = NULL;
+
+        atomic_set(&tmp->n_sdus, 0);
+        atomic_set(&tmp->pending_ops, 0);
+        spin_lock_init(&tmp->lock);
+
+        LOG_DBG("N-1 port %pK created successfully (port-id = %d)", tmp, id);
+
+        return tmp;
+}
+
+static int n1_port_n1_user_ipcp_unbind(struct rmt_n1_port * n1p)
+{
+        struct ipcp_instance * n1_ipcp;
+
+        ASSERT(n1p);
+
+        /* FIXME: this has to be moved to specific encryption policy */
+        if (n1p->blkcipher != NULL){
+            crypto_free_blkcipher(n1p->blkcipher);
+        }
+
+        n1_ipcp = n1p->n1_ipcp;
+        if (n1_ipcp                             &&
+            n1_ipcp->ops                        &&
+            n1_ipcp->data                       &&
+            n1_ipcp->ops->flow_unbinding_user_ipcp) {
+                if (n1_ipcp->ops->flow_unbinding_user_ipcp(n1_ipcp->data,
+                                                           n1p->port_id)) {
+                        LOG_ERR("Could not unbind IPCP as user of an N-1 flow");
+                        return -1;
+                }
+        }
+        return 0;
+}
+
+static int n1_port_destroy(struct rmt_n1_port * n1p)
+{
+        ASSERT(n1p);
+        LOG_DBG("Destroying N-1 port %pK (port-id = %d)", n1p, n1p->port_id);
+
+        hash_del(&n1p->hlist);
+
+        if (n1p->dup_config) {
+        	dup_config_entry_destroy(n1p->dup_config);
+        }
+
+        /* FIXME: this has to be moved to specific encryption policy */
+        if (n1p->blkcipher) {
+        	crypto_free_blkcipher(n1p->blkcipher);
+        }
+
+        rkfree(n1p);
+
+        return 0;
+}
+
+struct n1pmap {
+        spinlock_t lock; /* FIXME: Has to be moved in the pipelines */
+
+        DECLARE_HASHTABLE(n1_ports, 7);
+};
+
+static struct n1pmap * n1pmap_create(void)
+{
+        struct n1pmap * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        hash_init(tmp->n1_ports);
+        spin_lock_init(&tmp->lock);
+
+        return tmp;
+}
+
+static int n1pmap_destroy(struct n1pmap * m)
+{
+        struct rmt_n1_port * entry;
+        struct hlist_node *  tmp;
+        int                  bucket;
+
+        ASSERT(m);
+
+        hash_for_each_safe(m->n1_ports, bucket, tmp, entry, hlist) {
+                ASSERT(entry);
+                if (n1_port_n1_user_ipcp_unbind(entry))
+                        LOG_ERR("Could not destroy entry %pK", entry);
+
+                if (n1_port_destroy(entry))
+                        LOG_ERR("Could not destroy entry %pK", entry);
+
+        }
+        rkfree(m);
+        return 0;
+}
+
+static struct rmt_n1_port * n1pmap_find(struct n1pmap * m,
+                                      port_id_t       id)
+{
+        struct rmt_n1_port *      entry;
+        const struct hlist_head * head;
+
+        ASSERT(m);
+
+        if (!is_port_id_ok(id))
+                return NULL;
+
+        head = &m->n1_ports[rmap_hash(m->n1_ports, id)];
+        hlist_for_each_entry(entry, head, hlist) {
+                if (entry->port_id == id)
+                        return entry;
+        }
+
+        return NULL;
+}
+
+struct pff_cache {
+        port_id_t * pids;  /* Array of port_id_t */
+        size_t      count; /* Entries in the pids array */
+};
+
+/* RMT DATA MODELS FOR RMT PS */
+
+struct rmt_kqueue * rmt_kqueue_create(unsigned int key)
+{
+        struct rmt_kqueue * tmp;
+        tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
+        if (!tmp)
+                return NULL;
+        tmp->queue = rfifo_create_ni();
+        if (!tmp->queue) {
                 rkfree(tmp);
                 return NULL;
         }
 
-        rkfree(tmp);
+        tmp->key = key;
+        INIT_HLIST_NODE(&tmp->hlist);
 
-        return gpa;
+        return tmp;
 }
+EXPORT_SYMBOL(rmt_kqueue_create);
 
-static struct shim_eth_flow *
-find_flow_by_gha(struct ipcp_instance_data * data,
-                 const struct gha *          addr)
+int rmt_kqueue_destroy(struct rmt_kqueue * q)
 {
-        struct shim_eth_flow * flow;
+        if (!q) {
+                LOG_ERR("No RMT Key-queue to destroy...");
+                return -1;
+        }
 
-        if (!data || !gha_is_ok(addr))
-                return NULL;
+        hash_del(&q->hlist);
 
-        list_for_each_entry(flow, &data->flows, list) {
-                if (gha_is_equal(addr, flow->dest_ha)) {
-                        return flow;
-                }
+        if (q->queue) rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
+
+        rkfree(q);
+
+        return 0;
+}
+EXPORT_SYMBOL(rmt_kqueue_destroy);
+
+struct rmt_kqueue * rmt_kqueue_find(struct rmt_qgroup * g,
+                                    unsigned int        key)
+{
+        struct rmt_kqueue * entry;
+        const struct hlist_head * head;
+
+        ASSERT(g);
+
+        head = &g->queues[rmap_hash(g->queues, key)];
+        hlist_for_each_entry(entry, head, hlist) {
+                if (entry->key == key)
+                        return entry;
         }
 
         return NULL;
 }
+EXPORT_SYMBOL(rmt_kqueue_find);
 
-static struct shim_eth_flow *
-find_flow_by_gpa(struct ipcp_instance_data * data,
-                 const struct gpa *          addr)
+struct rmt_qgroup * rmt_qgroup_create(port_id_t pid)
 {
-        struct shim_eth_flow * flow;
+        struct rmt_qgroup * tmp;
 
-        if (!data || !gpa_is_ok(addr))
+        if (!is_port_id_ok(pid)) {
+                LOG_ERR("Could not create qgroup, wrong port id");
+                return NULL;
+        }
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
+        if (!tmp)
                 return NULL;
 
-        spin_lock(&data->lock);
+        tmp->pid = pid;
+        hash_init(tmp->queues);
 
-        list_for_each_entry(flow, &data->flows, list) {
-                if (gpa_is_equal(addr, flow->dest_pa)) {
-                        spin_unlock(&data->lock);
-                        return flow;
+        return tmp;
+}
+EXPORT_SYMBOL(rmt_qgroup_create);
+
+int rmt_qgroup_destroy(struct rmt_qgroup * g)
+{
+        struct rmt_kqueue * entry;
+        struct hlist_node * tmp;
+        int                 bucket;
+
+        ASSERT(g);
+        hash_del(&g->hlist);
+
+        hash_for_each_safe(g->queues, bucket, tmp, entry, hlist) {
+                ASSERT(entry);
+
+                if (rmt_kqueue_destroy(entry)) {
+                        LOG_ERR("Could not destroy entry %pK", entry);
+                        return -1;
                 }
         }
 
-        spin_unlock(&data->lock);
+        LOG_DBG("Qgroup for port: %u destroyed...", g->pid);
+        rkfree(g);
 
+        return 0;
+}
+EXPORT_SYMBOL(rmt_qgroup_destroy);
+
+struct rmt_qgroup * rmt_qgroup_find(struct rmt_queue_set * qs,
+                                    port_id_t              pid)
+{
+        struct rmt_qgroup * entry;
+        const struct hlist_head * head;
+
+        ASSERT(qs);
+
+        head = &qs->qgroups[rmap_hash(qs->qgroups, pid)];
+
+        hlist_for_each_entry(entry, head, hlist) {
+                if (entry->pid == pid)
+                        return entry;
+        }
         return NULL;
 }
+EXPORT_SYMBOL(rmt_qgroup_find);
 
-static bool vlan_id_is_ok(uint16_t vlan_id)
+
+struct rmt_queue_set * rmt_queue_set_create(void)
 {
-        if (vlan_id > 4095 /* 0xFFF */) {
-                /* Out of bounds */
-                return false;
-        }
+        struct rmt_queue_set * tmp;
 
-        ASSERT(vlan_id <= 4095);
+        tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
+        if (!tmp)
+                return NULL;
 
-        /*
-         * Reserved values:
-         *   0    Contains user_priority data (802.1Q)
-         *   1    Default Port VID (802.1Q)
-         *   4095 Reserved (802.1Q)
-         */
+        hash_init(tmp->qgroups);
 
-        if (vlan_id == 0 || vlan_id == 1 || vlan_id == 4095) {
-                /* Reserved */
-                LOG_DBG("Reserved value used for vlan id");
-                return false;
-        }
-
-        return true;
+        return tmp;
 }
+EXPORT_SYMBOL(rmt_queue_set_create);
 
-static string_t * create_vlan_interface_name(string_t * interface_name,
-                                             uint16_t   vlan_id)
+int rmt_queue_set_destroy(struct rmt_queue_set * qs)
 {
-        char       string_vlan_id[5];
-        string_t * complete_interface;
-        size_t     length;
+        struct rmt_qgroup * entry;
+        struct hlist_node * tmp;
+        int                 bucket;
 
-        if (!interface_name)
-                return NULL;
+        ASSERT(qs);
 
-        if (!vlan_id_is_ok(vlan_id)) {
-                LOG_ERR("Wrong vlan-id %d", vlan_id);
-                return NULL;
+        hash_for_each_safe(qs->qgroups, bucket, tmp, entry, hlist) {
+                ASSERT(entry);
+
+                if (rmt_qgroup_destroy(entry)) {
+                        LOG_ERR("Could not destroy entry %pK", entry);
+                        return -1;
+                }
         }
 
-        bzero(string_vlan_id, sizeof(string_vlan_id)); /* Be safe */
-        snprintf(string_vlan_id, sizeof(string_vlan_id), "%d", vlan_id);
+        rkfree(qs);
 
-        length = strlen(interface_name) +
-                sizeof(char)            +
-                strlen(string_vlan_id)  +
-                1 /* Terminator */;
-
-        complete_interface = rkmalloc(length, GFP_KERNEL);
-        if (!complete_interface)
-                return NULL;
-
-        complete_interface[0] = 0;
-        strcat(complete_interface, interface_name);
-        strcat(complete_interface, ".");
-        strcat(complete_interface, string_vlan_id);
-        complete_interface[length - 1] = 0; /* Final terminator */
-
-        LOG_DBG("Complete vlan-interface-name = '%s'", complete_interface);
-
-        return complete_interface;
+        return 0;
 }
+EXPORT_SYMBOL(rmt_queue_set_destroy);
 
-static int flow_destroy(struct ipcp_instance_data * data,
-                        struct shim_eth_flow *      flow)
+/* RMT DATAMODEL FOR RMT PS END */
+
+static int pff_cache_init(struct pff_cache * c)
 {
-        if (!data || !flow) {
-                LOG_ERR("Couldn't destroy flow");
-                return -1;
-        }
+        ASSERT(c);
 
-        spin_lock(&data->lock);
-        if (!list_empty(&flow->list)) {
-                list_del(&flow->list);
-        }
-        spin_unlock(&data->lock);
+        c->pids  = NULL;
+        c->count = 0;
 
-        if (flow->dest_pa) gpa_destroy(flow->dest_pa);
-        if (flow->dest_ha) gha_destroy(flow->dest_ha);
-        if (flow->sdu_queue)
-                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
-        rkfree(flow);
+        LOG_DBG("PFF cache %pK initialized", c);
 
         return 0;
 }
 
-static int unbind_and_destroy_flow(struct ipcp_instance_data * data,
-                                   struct shim_eth_flow *      flow)
+static int pff_cache_fini(struct pff_cache * c)
 {
-        ASSERT(flow);
+        ASSERT(c);
 
-        if (flow->user_ipcp) {
-                ASSERT(flow->user_ipcp->ops);
-
-                flow->user_ipcp->ops->
-                        flow_unbinding_ipcp(flow->user_ipcp->data,
-                                            flow->port_id);
+        if (c->count) {
+                ASSERT(c->pids);
+                rkfree(c->pids);
+        } else {
+                ASSERT(!c->pids);
         }
-        LOG_DBG("Shim ethe vlan unbinded port: %u", flow->port_id);
-        if (flow_destroy(data, flow)) {
-                LOG_ERR("Failed to destroy shim-eth-vlan flow");
+
+        LOG_DBG("PFF cache %pK destroyed", c);
+
+        return 0;
+}
+
+struct rmt {
+        struct rina_component     base;
+        address_t                 address;
+        struct ipcp_instance *    parent;
+        struct pff *              pff;
+        struct kfa *              kfa;
+        struct efcp_container *   efcpc;
+        struct serdes *           serdes;
+        struct tasklet_struct     egress_tasklet;
+        struct n1pmap *           n1_ports;
+        struct sdup_config *      sdup_conf;
+        struct pff_cache          cache;
+};
+
+struct rmt *
+rmt_from_component(struct rina_component * component)
+{
+        return container_of(component, struct rmt, base);
+}
+EXPORT_SYMBOL(rmt_from_component);
+
+int rmt_select_policy_set(struct rmt * rmt,
+                          const string_t * path,
+                          const string_t * name)
+{
+	size_t cmplen;
+	size_t offset;
+
+	BUG_ON(!path);
+
+	parse_component_id(path, &cmplen, &offset);
+
+	if (strcmp(path, "") == 0) {
+		/* The request addresses this policy-set. */
+		return base_select_policy_set(&rmt->base, &policy_sets, name);
+
+	} else if (strncmp(path, "pff", cmplen) == 0) {
+		/* The request addresses the PFF subcomponent. */
+		return pff_select_policy_set(rmt->pff, path + offset, name);
+	}
+
+	LOG_ERR("This component has no subcomponent "
+			"named '%s'", path);
+
+	return -1;
+}
+EXPORT_SYMBOL(rmt_select_policy_set);
+
+int rmt_set_policy_set_param(struct rmt * rmt,
+                             const char * path,
+                             const char * name,
+                             const char * value)
+{
+	size_t cmplen;
+	size_t offset;
+	struct rmt_ps *ps;
+	int ret = -1;
+
+        if (!rmt || !path || !name || !value) {
+                LOG_ERRF("NULL arguments %p %p %p %p", rmt, path, name, value);
+                return -1;
+        }
+
+        parse_component_id(path, &cmplen, &offset);
+
+        LOG_DBG("set-policy-set-param '%s' '%s' '%s'", path, name, value);
+
+        if (strcmp(path, "") == 0) {
+                /* The request addresses this RMT instance. */
+                rcu_read_lock();
+                ps = container_of(rcu_dereference(rmt->base.ps), struct rmt_ps, base);
+                if (!ps) {
+                        LOG_ERR("No policy-set selected for this RMT");
+                } else {
+                        LOG_ERR("Unknown RMT parameter policy '%s'", name);
+                }
+                rcu_read_unlock();
+
+	} else if (strncmp(path, "pff", cmplen) == 0) {
+		/* The request addresses the PFF subcomponent. */
+		return pff_set_policy_set_param(rmt->pff, path + offset, name, value);
+
+        } else {
+		/* The request addresses the RMT policy-set. */
+                ret = base_set_policy_set_param(&rmt->base, path, name, value);
+        }
+
+        return ret;
+}
+EXPORT_SYMBOL(rmt_set_policy_set_param);
+
+int rmt_destroy(struct rmt * instance)
+{
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return -1;
+        }
+
+        tasklet_kill(&instance->egress_tasklet);
+        if (instance->n1_ports)
+                n1pmap_destroy(instance->n1_ports);
+        pff_cache_fini(&instance->cache);
+
+        if (instance->pff)            pff_destroy(instance->pff);
+        if (instance->serdes)         serdes_destroy(instance->serdes);
+        if (instance->sdup_conf)      sdup_config_destroy(instance->sdup_conf);
+
+        rina_component_fini(&instance->base);
+
+        rkfree(instance);
+
+        LOG_DBG("Instance %pK finalized successfully", instance);
+
+        return 0;
+}
+EXPORT_SYMBOL(rmt_destroy);
+
+int rmt_address_set(struct rmt * instance,
+                    address_t    address)
+{
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        if (is_address_ok(instance->address)) {
+                LOG_ERR("The RMT is already configured");
+                return -1;
+        }
+
+        instance->address = address;
+
+        return 0;
+}
+EXPORT_SYMBOL(rmt_address_set);
+
+int rmt_dt_cons_set(struct rmt *     instance,
+                    struct dt_cons * dt_cons)
+{
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        if (!dt_cons) {
+                 LOG_ERR("Bogus dt_cons passed");
+                return -1;
+        }
+
+        instance->serdes = serdes_create(dt_cons);
+        if (!instance->serdes) {
+                LOG_ERR("Serdes creation failed");
                 return -1;
         }
 
         return 0;
 }
+EXPORT_SYMBOL(rmt_dt_cons_set);
 
-static int eth_vlan_unbind_user_ipcp(struct ipcp_instance_data * data,
-                                     port_id_t                   id)
+static int extract_policy_parameters(struct dup_config_entry * entry)
 {
-        struct shim_eth_flow * flow;
-        unsigned long          flags;
+	struct policy * policy;
+	struct policy_parm * parameter;
+	const string_t * aux;
 
-        flow = find_flow(data, id);
-        if (!flow)
+	if (!entry) {
+		LOG_ERR("Bogus entry passed");
+		return -1;
+	}
+
+	policy = entry->ttl_policy;
+	if (policy) {
+		parameter = policy_param_find(policy, "initialValue");
+		if (!parameter) {
+			LOG_ERR("Could not find 'initialValue' in TTL policy");
+			return -1;
+		}
+
+		if (kstrtouint(policy_param_value(parameter),
+                               10,
+                               &entry->initial_ttl_value)) {
+                        LOG_ERR("Failed to convert TTL string to int");
+			return -1;
+                }
+
+		LOG_DBG("Initial TTL value is %u", entry->initial_ttl_value);
+	}
+
+	policy = entry->encryption_policy;
+	if (policy) {
+		parameter = policy_param_find(policy, "encryptAlg");
+		if (!parameter) {
+			LOG_ERR("Could not find 'encryptAlg' in Encr. policy");
+			return -1;
+		}
+
+		aux = policy_param_value(parameter);
+		if (string_cmp(aux, "AES128") == 0 ||
+				string_cmp(aux, "AES256") == 0) {
+			if (string_dup("ecb(aes)",
+				       &entry->encryption_cipher)) {
+				LOG_ERR("Problems copying 'encryptAlg' value");
+				return -1;
+			}
+			LOG_DBG("Encryption cipher is %s",
+				entry->encryption_cipher);
+		} else {
+			LOG_DBG("Unsupported encryption cipher %s", aux);
+		}
+
+		parameter = policy_param_find(policy, "macAlg");
+		if (!parameter) {
+			LOG_ERR("Could not find 'macAlg' in Encrypt. policy");
+			return -1;
+		}
+
+		aux = policy_param_value(parameter);
+		if (string_cmp(aux, "SHA1") == 0) {
+			if (string_dup("sha1", &entry->message_digest)) {
+				LOG_ERR("Problems copying 'digest' value");
+				return -1;
+			}
+			LOG_DBG("Message digest is %s", entry->message_digest);
+		} else if (string_cmp(aux, "MD5") == 0) {
+			if (string_dup("md5", &entry->message_digest)) {
+				LOG_ERR("Problems copying 'digest' value)");
+				return -1;
+			}
+			LOG_DBG("Message digest is %s", entry->message_digest);
+		} else {
+			LOG_DBG("Unsupported message digest %s", aux);
+		}
+	}
+
+	return 0;
+}
+
+int rmt_sdup_config_set(struct rmt *         instance,
+                    	struct sdup_config * sdup_conf)
+{
+	struct dup_config * dup_pos;
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
                 return -1;
-
-        spin_lock_irqsave(&data->lock, flags);
-        if (flow->user_ipcp) {
-                flow->user_ipcp = NULL;
         }
-        spin_unlock_irqrestore(&data->lock, flags);
+
+        if (!sdup_conf) {
+                 LOG_ERR("Bogus sdup_conf passed");
+                return -1;
+        }
+
+	/* FIXME this code should be moved to specific sdup policies */
+        if (extract_policy_parameters(sdup_conf->default_dup_conf)) {
+        	LOG_DBG("Setting SDU protection policies to NULL");
+        	sdup_config_destroy(sdup_conf);
+        	return -1;
+        }
+	list_for_each_entry(dup_pos, &sdup_conf->specific_dup_confs, next) {
+		if (extract_policy_parameters(dup_pos->entry)) {
+			LOG_DBG("Setting sdu protection policies to NULL");
+			sdup_config_destroy(sdup_conf);
+			return -1;
+		}
+	}
+
+        instance->sdup_conf = sdup_conf;
+
+        return 0;
+}
+EXPORT_SYMBOL(rmt_sdup_config_set);
+
+int rmt_config_set(struct rmt *        instance,
+                   struct rmt_config * rmt_config)
+{
+        const string_t * rmt_ps_name;
+        const string_t * pff_ps_name;
+
+        if (!rmt_config || !rmt_config->pff_conf) {
+                LOG_ERR("Bogus rmt_config passed");
+                return -1;
+        }
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                rmt_config_destroy(rmt_config);
+                return -1;
+        }
+
+        rmt_ps_name = policy_name(rmt_config->policy_set);
+        pff_ps_name = policy_name(rmt_config->pff_conf->policy_set);
+
+        LOG_DBG("RMT PSs: %s, %s", rmt_ps_name, pff_ps_name);
+
+        if (strcmp(rmt_ps_name, RINA_PS_DEFAULT_NAME)) {
+                if (rmt_select_policy_set(instance, "", rmt_ps_name))
+                        LOG_ERR("Could not set policy set %s for RMT,"
+                                "sticked with default", rmt_ps_name);
+        }
+
+        if (strcmp(pff_ps_name, RINA_PS_DEFAULT_NAME)) {
+                if (pff_select_policy_set(instance->pff, "", pff_ps_name))
+                        LOG_ERR("Could not set policy set %s for PFF,"
+                                "sticked with default", pff_ps_name);
+        }
+
+        rmt_config_destroy(rmt_config);
+        return 0;
+}
+EXPORT_SYMBOL(rmt_config_set);
+
+static int n1_port_write_noclean(struct rmt *         rmt,
+                                 struct rmt_n1_port * n1_port,
+                                 struct pdu *         pdu)
+{
+        struct sdu *              sdu;
+        struct pdu_ser *          pdu_ser;
+        port_id_t                 port_id;
+        struct buffer *           buffer;
+        struct ipcp_instance *    n1_ipcp;
+        struct pci *              pci;
+        size_t                    ttl;
+        struct dup_config_entry * dup_conf;
+        int			  ret;
+        struct rmt_ps *           ps;
+
+        ASSERT(n1_port);
+        ASSERT(rmt);
+        ASSERT(rmt->serdes);
+
+        if (!pdu) {
+                LOG_DBG("No PDU to work in this queue ...");
+                return -1;
+        }
+
+        port_id = n1_port->port_id;
+        n1_ipcp = n1_port->n1_ipcp;
+
+        dup_conf = n1_port->dup_config;
+
+        pci = 0;
+        ttl = 0;
+
+        /* FIXME, this should be moved to specific TTL policy inside serdes*/
+        if (dup_conf != NULL && dup_conf->ttl_policy != NULL){
+            pci = pdu_pci_get_rw(pdu);
+            if (!pci) {
+                    LOG_ERR("Cannot get PCI");
+                    pdu_destroy(pdu);
+                    return -1;
+            }
+
+            LOG_DBG("TTL to start with is %d", dup_conf->initial_ttl_value);
+
+            if (pci_ttl_set(pci, dup_conf->initial_ttl_value)) {
+                    LOG_ERR("Could not set TTL");
+                    pdu_destroy(pdu);
+                    return -1;
+            }
+        }
+
+        pdu_ser = pdu_serialize_ni(rmt->serdes,
+        		           pdu,
+        		           dup_conf,
+        		           n1_port->blkcipher);
+        if (!pdu_ser) {
+                LOG_ERR("Error creating serialized PDU");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        buffer = pdu_ser_buffer(pdu_ser);
+        if (!buffer_is_ok(buffer)) {
+                LOG_ERR("Buffer is not okay");
+                pdu_destroy(pdu);
+                pdu_ser_destroy(pdu_ser);
+                return  -1;
+        }
+
+        if (pdu_ser_buffer_disown(pdu_ser)) {
+        	LOG_ERR("Could not disown buffer");
+        	pdu_destroy(pdu);
+        	pdu_ser_destroy(pdu_ser);
+        	return -1;
+        }
+
+        pdu_ser_destroy(pdu_ser);
+
+        sdu = sdu_create_buffer_with_ni(buffer);
+        if (!sdu) {
+                LOG_ERR("Error creating SDU from serialized PDU, "
+                        "dropping PDU!");
+                pdu_destroy(pdu);
+                buffer_destroy(buffer);
+                return -1;
+        }
+
+        LOG_DBG("Gonna send SDU to port-id %d", port_id);
+        ret = n1_ipcp->ops->sdu_write(n1_ipcp->data,port_id, sdu);
+        if (ret == -EAGAIN) {
+        	spin_lock(&n1_port->lock);
+        	n1_port->state = N1_PORT_STATE_DISABLED;
+        	rcu_read_lock();
+        	ps = container_of(rcu_dereference(rmt->base.ps), struct rmt_ps, base);
+        	if (ps) {
+        		/* RMTQMonitorPolicy hook. */
+        		if (ps->rmt_q_monitor_policy_tx) {
+        			ps->rmt_q_monitor_policy_tx(ps, pdu, n1_port);
+        		}
+
+        		if (ps->rmt_requeue_scheduling_policy_tx) {
+        			ps->rmt_requeue_scheduling_policy_tx(ps,
+        					n1_port,
+        					pdu);
+        			atomic_inc(&n1_port->n_sdus);
+        		}
+        	}
+        	rcu_read_unlock();
+        	spin_unlock(&n1_port->lock);
+        	return ret;
+        }
+
+        pdu_destroy(pdu);
+
+        if (ret < 0) {
+        	LOG_ERR("Couldn't write SDU to N-1 IPCP");
+        	return -1;
+        }
 
         return 0;
 }
 
-static void rinarp_resolve_handler(void *             opaque,
-                                   const struct gpa * dest_pa,
-                                   const struct gha * dest_ha)
+static int n1_port_write(struct rmt *         rmt,
+                         struct rmt_n1_port * n1_port,
+                         struct pdu * pdu)
 {
-        struct ipcp_instance_data * data;
-        struct ipcp_instance *      user_ipcp;
-        struct ipcp_instance *      ipcp;
-        struct shim_eth_flow *      flow;
-        unsigned long 		    irqflags;
+        int           ret = 0;
+        unsigned long flags;
 
-        LOG_DBG("Entered the ARP resolve handler of the shim-eth");
+        ASSERT(n1_port);
+        ASSERT(rmt);
+        ASSERT(rmt->serdes);
 
-        data = (struct ipcp_instance_data *) opaque;
-        flow = find_flow_by_gpa(data, dest_pa);
-        if (!flow) {
-                LOG_ERR("No flow found for this dest_pa");
+        ret = n1_port_write_noclean(rmt, n1_port, pdu);
+        spin_lock_irqsave(&rmt->n1_ports->lock, flags);
+        if (atomic_dec_and_test(&n1_port->pending_ops) &&
+            n1_port->state == N1_PORT_STATE_DEALLOCATED) {
+                n1_port_destroy(n1_port);
+        }
+        spin_unlock_irqrestore(&rmt->n1_ports->lock, flags);
+        return ret;
+}
+
+static void send_worker(unsigned long o)
+{
+        struct rmt *         rmt;
+        struct rmt_n1_port * n1_port;
+        struct hlist_node *  ntmp;
+        int                  bucket;
+        int                  reschedule = 0;
+        int                  pdus_sent;
+        struct rmt_ps *      ps;
+        struct pdu  *        pdu = NULL;
+        int		     ret;
+
+        LOG_DBG("Send worker called");
+
+        rmt = (struct rmt *) o;
+        if (!rmt) {
+                LOG_ERR("No instance passed to send worker !!!");
                 return;
         }
 
-        spin_lock_irqsave(&data->lock, irqflags);
-        if (flow->port_id_state == PORT_STATE_PENDING) {
-                flow->port_id_state = PORT_STATE_ALLOCATED;
-                spin_unlock_irqrestore(&data->lock, irqflags);
+        rcu_read_lock();
+        ps = container_of(rcu_dereference(rmt->base.ps),
+                          struct rmt_ps,
+                          base);
+        if (!ps) {
+                rcu_read_unlock();
+                LOG_ERR("No ps in send_worker");
+                return;
+        }
+        rcu_read_unlock();
 
-                flow->dest_ha = gha_dup_ni(dest_ha);
+        spin_lock(&rmt->n1_ports->lock);
+        hash_for_each_safe(rmt->n1_ports->n1_ports,
+                           bucket,
+                           ntmp,
+                           n1_port,
+                           hlist) {
+                if (!n1_port)
+                        continue;
 
-                user_ipcp = flow->user_ipcp;
-                ASSERT(user_ipcp);
-
-                ipcp = kipcm_find_ipcp(default_kipcm, data->id);
-                if (!ipcp) {
-                        LOG_ERR("KIPCM could not retrieve this IPCP");
-                        unbind_and_destroy_flow(data, flow);
-                        return;
+                if (n1_port->state == N1_PORT_STATE_DEALLOCATED) {
+                        if (atomic_read(&n1_port->pending_ops) == 0) {
+                                n1_port_destroy(n1_port);
+                        }
+                        spin_unlock(&rmt->n1_ports->lock);
+                        continue;
                 }
 
-                ASSERT(user_ipcp);
-                ASSERT(user_ipcp->ops);
-                ASSERT(user_ipcp->ops->flow_binding_ipcp);
-                if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
-                                                      flow->port_id,
-                                                      ipcp)) {
-                        LOG_ERR("Could not bind flow with user_ipcp");
-                        unbind_and_destroy_flow(data, flow);
-                        return;
+                spin_unlock(&rmt->n1_ports->lock);
+                spin_lock(&n1_port->lock);
+                if (n1_port->state == N1_PORT_STATE_DISABLED ||
+                    atomic_read(&n1_port->n_sdus) == 0) {
+                        spin_unlock(&n1_port->lock);
+                        spin_lock(&rmt->n1_ports->lock);
+                        LOG_DBG("Port state is DISABLED or empty");
+                        continue;
                 }
 
-                ASSERT(flow->sdu_queue);
+                rcu_read_lock();
+                if (ps && ps->rmt_next_scheduled_policy_tx) {
+                	pdus_sent = 0;
+                	ret = 0;
+                        do {
+                        	pdu = ps->rmt_next_scheduled_policy_tx(ps, n1_port);
+                        	if (pdu) {
+                        		spin_unlock(&n1_port->lock);
+                        		ret = n1_port_write_noclean(rmt, n1_port, pdu);
+                        		spin_lock(&n1_port->lock);
 
-                while (!rfifo_is_empty(flow->sdu_queue)) {
-                        struct sdu * tmp = NULL;
+                        		spin_lock(&rmt->n1_ports->lock);
+                        		if (atomic_dec_and_test(&n1_port->pending_ops) &&
+                        				n1_port->state == N1_PORT_STATE_DEALLOCATED) {
+                        			spin_unlock(&n1_port->lock);
+                        			n1_port_destroy(n1_port);
+                        			goto skip_locks;
+                        		}
+                        		spin_unlock(&rmt->n1_ports->lock);
 
-                        tmp = rfifo_pop(flow->sdu_queue);
-                        ASSERT(tmp);
+                        		if (ret) {
+                        			break;
+                        		}
 
-                        LOG_DBG("Got a new element from the fifo");
+                        		atomic_dec(&n1_port->n_sdus);
+                        		pdus_sent++;
+                        	} else {
+                        		LOG_WARN("N1_port->n_sdus > 0 and ps->next failed");
+                        		atomic_set(&n1_port->n_sdus, 0);
+                        		break;
+                        	}
+                        } while((pdus_sent < MAX_PDUS_SENT_PER_CYCLE) &&
+                                (atomic_read(&n1_port->n_sdus) > 0));
 
-                        ASSERT(user_ipcp->ops->sdu_enqueue);
-                        if (user_ipcp->ops->sdu_enqueue(user_ipcp->data,
-                                                        flow->port_id,
-                                                        tmp)) {
-                                LOG_ERR("Couldn't enqueue SDU to KFA ...");
-                                return;
+                        if  (ret == -EAGAIN) {
+                        	n1_port->state = N1_PORT_STATE_DISABLED;
+                        }
+
+                        if (n1_port->state == N1_PORT_STATE_ENABLED &&
+                            atomic_read(&n1_port->n_sdus) > 0) {
+                        	reschedule++;
                         }
                 }
-
-                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
-                flow->sdu_queue = NULL;
-
-                if (kipcm_notify_flow_alloc_req_result(default_kipcm,
-                                                       data->id,
-                                                       flow->port_id,
-                                                       0)) {
-                        LOG_ERR("Couldn't tell flow is allocated to KIPCM");
-                        unbind_and_destroy_flow(data, flow);
-                        return;
-                }
-        } else {
-        	spin_unlock_irqrestore(&data->lock, irqflags);
+                rcu_read_unlock();
+                spin_unlock(&n1_port->lock);
+                spin_lock(&rmt->n1_ports->lock);
+skip_locks:    ;
         }
+        spin_unlock(&rmt->n1_ports->lock);
+
+        if (reschedule) {
+                LOG_DBG("Sheduling policy will schedule again...");
+                tasklet_hi_schedule(&rmt->egress_tasklet);
+        }
+
+        return;
 }
 
-static int
-eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
-                               struct ipcp_instance *      user_ipcp,
-                               const struct name *         source,
-                               const struct name *         dest,
-                               const struct flow_spec *    fspec,
-                               port_id_t                   id)
+int rmt_send_port_id(struct rmt * instance,
+                     port_id_t    id,
+                     struct pdu * pdu)
 {
-        struct shim_eth_flow * flow;
+        struct n1pmap *      out_n1_ports;
+        struct rmt_n1_port * out_n1_port;
+        unsigned long        flags;
+        struct rmt_ps *      ps;
 
-        ASSERT(data);
-        ASSERT(source);
-        ASSERT(dest);
-
-        if (!data->app_name || !name_is_equal(source, data->app_name)) {
-                LOG_ERR("Wrong request, app is not registered");
+        if (!pdu_is_ok(pdu)) {
+                LOG_ERR("Bogus PDU passed");
+                return -1;
+        }
+        if (!instance) {
+                LOG_ERR("Bogus RMT passed");
+                pdu_destroy(pdu);
                 return -1;
         }
 
-        flow = find_flow(data, id);
-        if (!flow) {
-                flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
-                if (!flow)
-                        return -1;
-
-                flow->port_id       = id;
-                flow->port_id_state = PORT_STATE_PENDING;
-                flow->user_ipcp     = user_ipcp;
-                flow->dest_pa       = name_to_gpa(dest);
-
-                if (!gpa_is_ok(flow->dest_pa)) {
-                        LOG_ERR("Destination protocol address is not ok");
-                        unbind_and_destroy_flow(data, flow);
-                        return -1;
-                }
-
-                INIT_LIST_HEAD(&flow->list);
-                spin_lock(&data->lock);
-                list_add(&flow->list, &data->flows);
-                spin_unlock(&data->lock);
-
-                flow->sdu_queue = rfifo_create();
-                if (!flow->sdu_queue) {
-                        LOG_ERR("Couldn't create the sdu queue "
-                                "for a new flow");
-                        unbind_and_destroy_flow(data, flow);
-                        return -1;
-                }
-
-                if (rinarp_resolve_gpa(data->handle,
-                                       flow->dest_pa,
-                                       rinarp_resolve_handler,
-                                       data)) {
-                        LOG_ERR("Failed to lookup ARP entry");
-                        unbind_and_destroy_flow(data, flow);
-                        return -1;
-                }
-        } else if (flow->port_id_state == PORT_STATE_PENDING) {
-                LOG_ERR("Port-id state is already pending ...");
-        } else {
-                LOG_ERR("Allocate called in a wrong state, how dare you!");
+        if (!instance->n1_ports) {
+                LOG_ERR("No n1_ports to push into");
+                pdu_destroy(pdu);
                 return -1;
+        }
+
+        out_n1_ports = instance->n1_ports;
+
+        spin_lock_irqsave(&out_n1_ports->lock, flags);
+        out_n1_port = n1pmap_find(out_n1_ports, id);
+        if (!out_n1_port) {
+                spin_unlock_irqrestore(&out_n1_ports->lock, flags);
+                pdu_destroy(pdu);
+                return -1;
+        }
+        if (out_n1_port->state == N1_PORT_STATE_DEALLOCATED) {
+                spin_unlock_irqrestore(&out_n1_ports->lock, flags);
+                LOG_DBG("n1_port deallocated...");
+                pdu_destroy(pdu);
+                return -1;
+        }
+        atomic_inc(&out_n1_port->pending_ops);
+        spin_unlock_irqrestore(&out_n1_ports->lock, flags);
+
+        spin_lock_irqsave(&out_n1_port->lock, flags);
+        /* Check if it is needed to schedule */
+        if (atomic_read(&out_n1_port->n_sdus) > 0 || out_n1_port->state ==
+                N1_PORT_STATE_DISABLED) {
+                rcu_read_lock();
+                ps = container_of(rcu_dereference(instance->base.ps), struct rmt_ps, base);
+                if (ps) {
+                        /* RMTQMonitorPolicy hook. */
+                        if (ps->rmt_q_monitor_policy_tx) {
+                                ps->rmt_q_monitor_policy_tx(ps, pdu, out_n1_port);
+                        }
+
+                        if (ps->rmt_enqueue_scheduling_policy_tx) {
+                                ps->rmt_enqueue_scheduling_policy_tx(ps,
+                                                                     out_n1_port,
+                                                                     pdu);
+                                atomic_inc(&out_n1_port->n_sdus);
+                        }
+                }
+                rcu_read_unlock();
+                spin_unlock_irqrestore(&out_n1_port->lock, flags);
+                /*tasklet_hi_schedule(&instance->egress_tasklet);*/
+                return 0;
+        }
+        spin_unlock_irqrestore(&out_n1_port->lock, flags);
+        return n1_port_write(instance, out_n1_port, pdu);
+}
+EXPORT_SYMBOL(rmt_send_port_id);
+
+int rmt_send(struct rmt * instance,
+             struct pci * pci,
+             struct pdu * pdu)
+{
+        int i;
+
+        if (!instance) {
+                LOG_ERR("Bogus RMT passed");
+                return -1;
+        }
+        if (!pdu) {
+                LOG_ERR("Bogus PDU passed");
+                return -1;
+        }
+
+        if (pff_nhop(instance->pff,
+                     pci,
+                     &(instance->cache.pids),
+                     &(instance->cache.count))) {
+                LOG_ERR("Cannot get the NHOP for this PDU");
+
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        if (instance->cache.count == 0) {
+                LOG_WARN("No NHOP for this PDU ...");
+
+                pdu_destroy(pdu);
+                return 0;
+        }
+
+        /*
+         * FIXME:
+         *   pdu -> pci-> qos-id | cep_id_t -> connection -> qos-id (former)
+         *   address + qos-id (pdu-fwd-t) -> port-id
+         */
+
+        for (i = 0; i < instance->cache.count; i++) {
+                port_id_t    pid;
+                struct pdu * p;
+
+                pid = instance->cache.pids[i];
+
+                if (i == instance->cache.count -1)
+                        p = pdu;
+                else
+                        p = pdu_dup(pdu);
+
+                LOG_DBG("Gonna send PDU to port-id: %d", pid);
+                if (rmt_send_port_id(instance, pid, p))
+                        LOG_ERR("Failed to send a PDU to port-id %d", pid);
         }
 
         return 0;
 }
+EXPORT_SYMBOL(rmt_send);
 
-static int
-eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
-                                struct ipcp_instance *      user_ipcp,
-                                port_id_t                   port_id,
-                                int                         result)
+static struct dup_config_entry * find_dup_config(struct sdup_config * sdup_conf,
+						 string_t * n_1_dif_name)
 {
-        struct shim_eth_flow * flow;
-        struct ipcp_instance * ipcp;
+	struct dup_config * dup_pos;
 
-        ASSERT(data);
+	if (!sdup_conf)
+		return NULL;
+
+	list_for_each_entry(dup_pos, &sdup_conf->specific_dup_confs, next) {
+		if (string_cmp(dup_pos->entry->n_1_dif_name,
+			       n_1_dif_name) == 0) {
+			LOG_DBG("SDU Protection config for N-1 DIF %s",
+				n_1_dif_name);
+			return dup_pos->entry;
+		}
+	}
+
+	LOG_DBG("Returning default SDU Protection config for N-1 DIF %s",
+		n_1_dif_name);
+	return sdup_conf->default_dup_conf;
+}
+
+static int __queue_send_add(struct rmt * instance,
+                            port_id_t    id,
+                            struct ipcp_instance * n1_ipcp)
+{
+        struct rmt_n1_port * tmp;
+        struct rmt_ps *      ps;
+        const struct name * n_1_dif_name;
+        struct dup_config_entry * dup_config;
+        struct dup_config_entry * tmp_dup_config;
+
+        n_1_dif_name = n1_ipcp->ops->dif_name(n1_ipcp->data);
+        if (n_1_dif_name) {
+        	tmp_dup_config = find_dup_config(instance->sdup_conf,
+        				         n_1_dif_name->process_name);
+        	if (tmp_dup_config) {
+        		LOG_DBG("Found SDU Protection policy configuration");
+        		dup_config = dup_config_entry_dup(tmp_dup_config);
+        	} else {
+        		dup_config = NULL;
+        	}
+        } else {
+        	dup_config = NULL;
+        }
+
+        tmp = n1_port_create(id, n1_ipcp, dup_config);
+        if (!tmp)
+                return -1;
+
+        rcu_read_lock();
+        ps = container_of(rcu_dereference(instance->base.ps),
+        		  struct rmt_ps,
+        		  base);
+        if (ps && ps->rmt_scheduling_create_policy_tx) {
+                if (ps->rmt_scheduling_create_policy_tx(ps, tmp)) {
+                        LOG_ERR("Problems creating structs for scheduling "
+                                "policy");
+                        n1_port_destroy(tmp);
+                        return -1;
+                }
+        }
+        rcu_read_unlock();
+
+        hash_add(instance->n1_ports->n1_ports, &tmp->hlist, id);
+        LOG_DBG("Added send queue to rmt instance %pK for port-id %d",
+                instance, id);
+
+        return 0;
+}
+
+static int rmt_n1_port_send_add(struct rmt * instance,
+                                port_id_t    id,
+                                struct ipcp_instance * n1_ipcp)
+{
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        if (!is_port_id_ok(id)) {
+                LOG_ERR("Wrong port-id %d", id);
+                return -1;
+        }
+
+        if (!instance->n1_ports) {
+                LOG_ERR("Invalid RMT");
+                return -1;
+        }
+
+        if (n1pmap_find(instance->n1_ports, id)) {
+                LOG_ERR("Queue already exists");
+                return -1;
+        }
+
+        return __queue_send_add(instance, id, n1_ipcp);
+}
+
+int rmt_enable_port_id(struct rmt * instance,
+                       port_id_t    id)
+{
+        struct rmt_n1_port * n1_port;
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        if (!is_port_id_ok(id)) {
+                LOG_ERR("Wrong port-id %d", id);
+                return -1;
+        }
+
+        if (!instance->n1_ports) {
+                LOG_ERR("Invalid RMT");
+                return -1;
+        }
+
+        spin_lock(&instance->n1_ports->lock);
+        n1_port = n1pmap_find(instance->n1_ports, id);
+        if (!n1_port || n1_port->state == N1_PORT_STATE_DEALLOCATED) {
+                spin_unlock(&instance->n1_ports->lock);
+                LOG_ERR("No queue for this port-id or already deallocated, %d",
+                        id);
+                return -1;
+        }
+        spin_unlock(&instance->n1_ports->lock);
+
+        spin_lock(&n1_port->lock);
+        if (n1_port->state != N1_PORT_STATE_DISABLED) {
+                spin_unlock(&n1_port->lock);
+                LOG_DBG("Nothing to do for port-id %d", id);
+                return 0;
+        }
+        n1_port->state = N1_PORT_STATE_ENABLED;
+        if (atomic_read(&n1_port->n_sdus) > 0)
+                tasklet_hi_schedule(&instance->egress_tasklet);
+
+        spin_unlock(&n1_port->lock);
+        LOG_DBG("Changed state to ENABLED");
+        return 0;
+}
+EXPORT_SYMBOL(rmt_enable_port_id);
+
+int rmt_disable_port_id(struct rmt * instance,
+                        port_id_t    id)
+{
+        struct rmt_n1_port * n1_port;
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        if (!is_port_id_ok(id)) {
+                LOG_ERR("Wrong port-id %d", id);
+                return -1;
+        }
+
+        if (!instance->n1_ports) {
+                LOG_ERR("Invalid RMT");
+                return -1;
+        }
+
+        spin_lock(&instance->n1_ports->lock);
+        n1_port = n1pmap_find(instance->n1_ports, id);
+        if (!n1_port || n1_port->state == N1_PORT_STATE_DEALLOCATED) {
+                spin_unlock(&instance->n1_ports->lock);
+                LOG_ERR("No n1_port for port-id or deallocated, %d", id);
+                return -1;
+        }
+        spin_unlock(&instance->n1_ports->lock);
+
+        spin_lock(&n1_port->lock);
+        if (n1_port->state == N1_PORT_STATE_DISABLED) {
+                spin_unlock(&n1_port->lock);
+                LOG_DBG("Nothing to do for port-id %d", id);
+                return 0;
+        }
+        n1_port->state = N1_PORT_STATE_DISABLED;
+        spin_unlock(&n1_port->lock);
+        LOG_DBG("Changed state to DISABLED");
+
+        return 0;
+}
+EXPORT_SYMBOL(rmt_disable_port_id);
+
+static int rmt_n1_port_send_delete(struct rmt * instance,
+                                 port_id_t    id)
+{
+        struct rmt_n1_port * n1_port;
+        struct rmt_ps *      ps;
+        unsigned long        flags;
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        if (!instance->n1_ports) {
+                LOG_ERR("Bogus egress instance passed");
+                return -1;
+        }
+
+        if (!is_port_id_ok(id)) {
+                LOG_ERR("Wrong port-id %d", id);
+                return -1;
+        }
+
+        spin_lock_irqsave(&instance->n1_ports->lock, flags);
+        n1_port = n1pmap_find(instance->n1_ports, id);
+        if (!n1_port) {
+                spin_unlock_irqrestore(&instance->n1_ports->lock, flags);
+                LOG_ERR("Queue does not exist");
+                return -1;
+        }
+        n1_port->state = N1_PORT_STATE_DEALLOCATED;
+
+        if (atomic_read(&n1_port->pending_ops) != 0) {
+                LOG_DBG("n1_port set to DEALLOCATED but not destroyed yet...");
+                spin_unlock_irqrestore(&instance->n1_ports->lock, flags);
+                return 0;
+        }
+
+        rcu_read_lock();
+        ps = container_of(rcu_dereference(instance->base.ps),
+        		  struct rmt_ps,
+        		  base);
+        if (ps && ps->rmt_scheduling_destroy_policy_tx)
+                ps->rmt_scheduling_destroy_policy_tx(ps, n1_port);
+
+        rcu_read_unlock();
+        n1_port_destroy(n1_port);
+        spin_unlock_irqrestore(&instance->n1_ports->lock, flags);
+        return 0;
+}
+
+int rmt_n1port_bind(struct rmt * instance,
+                    port_id_t    id,
+                    struct ipcp_instance * n1_ipcp)
+{
+        if (rmt_n1_port_send_add(instance, id, n1_ipcp))
+                return -1;
+
+        return 0;
+}
+EXPORT_SYMBOL(rmt_n1port_bind);
+
+int rmt_n1port_unbind(struct rmt * instance,
+                      port_id_t    id)
+{
+        int retval = 0;
+
+        if (rmt_n1_port_send_delete(instance, id))
+                retval = -1;
+
+        return retval;
+}
+EXPORT_SYMBOL(rmt_n1port_unbind);
+
+/* FIXME: This function is only used in testig and they are disabled */
+#if 0
+static struct pci * sdu_pci_copy(const struct sdu * sdu)
+{
+        if (!sdu_is_ok(sdu))
+                return NULL;
+
+        return pci_create_from(buffer_data_ro(sdu_buffer_ro(sdu)));
+}
+#endif
+#if 0
+static int process_mgmt_pdu(struct rmt * rmt,
+                            port_id_t    port_id,
+                            struct pdu * pdu)
+{
+        struct buffer * buffer;
+        struct sdu *    sdu;
+
+        ASSERT(rmt);
         ASSERT(is_port_id_ok(port_id));
+        ASSERT(pdu_is_ok(pdu));
 
-        if (!user_ipcp) {
-                LOG_ERR("Wrong user_ipcp passed, bailing out");
-                kfa_port_id_release(data->kfa, port_id);
+        buffer = pdu_buffer_get_rw(pdu);
+        if (!buffer_is_ok(buffer)) {
+                LOG_ERR("PDU has no buffer ???");
                 return -1;
         }
 
-        flow = find_flow(data, port_id);
-        if (!flow) {
-                LOG_ERR("Flow does not exist, you shouldn't call this");
-                kfa_port_id_release(data->kfa, port_id);
-                return -1;
-        }
-
-        spin_lock(&data->lock);
-        if (flow->port_id_state != PORT_STATE_PENDING) {
-                LOG_ERR("Flow is already allocated");
-                spin_unlock(&data->lock);
-                return -1;
-        }
-        spin_unlock(&data->lock);
-
-        /* On positive response, flow should transition to allocated state */
-        if (!result) {
-                ipcp = kipcm_find_ipcp(default_kipcm, data->id);
-                if (!ipcp) {
-                        LOG_ERR("KIPCM could not retrieve this IPCP");
-                        kfa_port_id_release(data->kfa, port_id);
-                        unbind_and_destroy_flow(data, flow);
-                        return -1;
-                }
-                ASSERT(user_ipcp);
-                ASSERT(user_ipcp->ops);
-                ASSERT(user_ipcp->ops->flow_binding_ipcp);
-                if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
-                                                      port_id,
-                                                      ipcp)) {
-                        LOG_ERR("Could not bind flow with user_ipcp");
-                        kfa_port_id_release(data->kfa, port_id);
-                        unbind_and_destroy_flow(data, flow);
-                        return -1;
-                }
-
-                spin_lock(&data->lock);
-                flow->port_id_state = PORT_STATE_ALLOCATED;
-                flow->port_id   = port_id;
-                flow->user_ipcp = user_ipcp;
-                spin_unlock(&data->lock);
-
-                ASSERT(flow->sdu_queue);
-
-                while (!rfifo_is_empty(flow->sdu_queue)) {
-                        struct sdu * tmp = NULL;
-
-                        tmp = rfifo_pop(flow->sdu_queue);
-                        ASSERT(tmp);
-
-                        LOG_DBG("Got a new element from the fifo");
-
-                        ASSERT(flow->user_ipcp->ops->sdu_enqueue);
-                        if (flow->user_ipcp->ops->
-                            sdu_enqueue(flow->user_ipcp->data,
-                                        flow->port_id,
-                                        tmp)) {
-                                LOG_ERR("Couldn't enqueue SDU to KFA ...");
-                                return -1;
-                        }
-                }
-
-                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
-                flow->sdu_queue = NULL;
-        } else {
-                spin_lock(&data->lock);
-                flow->port_id_state = PORT_STATE_NULL;
-                spin_unlock(&data->lock);
-
-                /*
-                 *  If we would destroy the flow, the application
-                 *  we refused would constantly try to allocate
-                 *  a flow again. This should only be allowed if
-                 *  the IPC manager deallocates the NULL state flow first.
-                 */
-                ASSERT(flow->sdu_queue);
-                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
-                flow->sdu_queue = NULL;
-        }
-
-        return 0;
-}
-
-static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
-                                    port_id_t                   id)
-{
-        struct shim_eth_flow * flow;
-
-        ASSERT(data);
-
-        flow = find_flow(data, id);
-        if (!flow) {
-                LOG_ERR("Flow does not exist, cannot remove");
-                return -1;
-        }
-
-        return unbind_and_destroy_flow(data, flow);
-}
-
-static int eth_vlan_application_register(struct ipcp_instance_data * data,
-                                         const struct name *         name,
-                                         bool			     blocking)
-{
-        struct gpa * pa;
-        struct gha * ha;
-
-        ASSERT(data);
-        ASSERT(name);
-
-        if (data->app_name) {
-                char * tmp = name_tostring(data->app_name);
-                LOG_ERR("Application %s is already registered", tmp);
-                if (tmp) rkfree(tmp);
-                return -1;
-        }
-
-        data->blocking = blocking;
-        data->app_name = name_dup(name);
-        if (!data->app_name) {
-                char * tmp = name_tostring(name);
-                LOG_ERR("Application %s registration has failed", tmp);
-                if (tmp) rkfree(tmp);
-                return -1;
-        }
-
-        pa = name_to_gpa(name);
-        if (!gpa_is_ok(pa)) {
-                LOG_ERR("Failed to create gpa");
-                name_destroy(data->app_name);
-                return -1;
-        }
-        ha = gha_create(MAC_ADDR_802_3, data->dev->dev_addr);
-        if (!gha_is_ok(ha)) {
-                LOG_ERR("Failed to create gha");
-                name_destroy(data->app_name);
-                gpa_destroy(pa);
-                return -1;
-        }
-        data->handle = rinarp_add(data->dev, pa, ha);
-        if (!data->handle) {
-                LOG_ERR("Failed to register application in ARP");
-                name_destroy(data->app_name);
-                gpa_destroy(pa);
-                gha_destroy(ha);
-
-                return -1;
-        }
-        gpa_destroy(pa);
-        gha_destroy(ha);
-
-        return 0;
-}
-
-static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
-                                           const struct name *         name)
-{
-        ASSERT(data);
-        ASSERT(name);
-
-        if (!data->app_name) {
-                LOG_ERR("Shim-eth-vlan has no application registered");
-                return -1;
-        }
-
-        if (!name_is_equal(data->app_name, name)) {
-                LOG_ERR("Application registered != application specified");
-                return -1;
-        }
-
-        /* Remove from ARP cache */
-        if (data->handle) {
-                if (rinarp_remove(data->handle)) {
-                        LOG_ERR("Failed to remove the entry from the cache");
-                        return -1;
-                }
-                data->handle = NULL;
-        }
-
-        name_destroy(data->app_name);
-        data->app_name = NULL;
-        return 0;
-}
-
-static void eth_vlan_enable_all_port_ids(struct ipcp_instance_data * data)
-{
-	struct shim_eth_flow 	  * flow;
-	unsigned long               flags;
-
-	if (!data) {
-		return;
-	}
-
-	spin_lock_irqsave(&data->lock, flags);
-	list_for_each_entry(flow, &data->flows, list) {
-		if (flow->user_ipcp && flow->user_ipcp->ops) {
-			flow->user_ipcp->ops->enable_write(flow->user_ipcp->data,
-							   flow->port_id);
-		}
-	}
-	spin_unlock_irqrestore(&data->lock, flags);
-}
-
-static void eth_vlan_enable_write_all(struct net_device * dev)
-{
-	struct ipcp_instance_data * pos;
-
-        list_for_each_entry(pos, &(eth_vlan_data.instances), list) {
-                if (pos->phy_dev == dev) {
-                	eth_vlan_enable_all_port_ids(pos);
-                }
-        }
-}
-
-/*
- * Private data for a rina_shim_eth scheduler containing:
- * (only supports a single flow for the moment)
- * 	- queue max_size
- * 	- queue enable_thres (size at which the qdisc will enable N+1 ports)
- */
-struct shim_eth_qdisc_priv {
-	uint16_t            q_max_size;
-	uint16_t            q_enable_thres;
-};
-
-static int shim_eth_qdisc_enqueue(struct sk_buff *skb, struct Qdisc *qdisc)
-{
-	struct shim_eth_qdisc_priv *priv = qdisc_priv(qdisc);
-
-	LOG_DBG("shim-eth-enqueue called; current size is %u", qdisc->q.qlen);
-	if (skb_queue_len(&qdisc->q) < priv->q_max_size) {
-		return __qdisc_enqueue_tail(skb, qdisc, &qdisc->q);
-	}
-
-	return qdisc_drop(skb, qdisc);
-}
-
-static struct sk_buff *shim_eth_qdisc_dequeue(struct Qdisc *qdisc)
-{
-	struct shim_eth_qdisc_priv *priv = qdisc_priv(qdisc);
-
-	if (skb_queue_len(&qdisc->q) > 0) {
-		struct sk_buff *skb = __qdisc_dequeue_head(qdisc, &qdisc->q);
-		if (skb_queue_len(&qdisc->q) == priv->q_enable_thres) {
-			eth_vlan_enable_write_all(qdisc->dev_queue->dev);
-		}
-
-		return skb;
-	}
-
-	return NULL;
-}
-
-static struct sk_buff * shim_eth_qdisc_peek(struct Qdisc *qdisc)
-{
-	return skb_peek(&qdisc->q);
-}
-
-static int shim_eth_qdisc_init(struct Qdisc *qdisc, struct nlattr *opt)
-{
-	struct shim_eth_qdisc_priv * priv;
-
-	if (!opt)
-		return 0;
-
-	priv = qdisc_priv(qdisc);
-	priv->q_max_size = opt->nla_len;
-	priv->q_enable_thres = opt->nla_type;
-	skb_queue_head_init(&qdisc->q);
-
-	LOG_INFO("shim-eth-qdisc-init: max size: %u, enable thres: %u",
-		 priv->q_max_size, priv->q_enable_thres);
-
-	return 0;
-}
-
-static void shim_eth_qdisc_reset(struct Qdisc *qdisc)
-{
-	__qdisc_reset_queue(qdisc, &qdisc->q);
-
-	qdisc->qstats.backlog = 0;
-	qdisc->q.qlen = 0;
-}
-
-static struct Qdisc_ops shim_eth_qdisc_ops __read_mostly = {
-	.id		=	"rina_shim_eth",
-	.priv_size	=	sizeof(struct shim_eth_qdisc_priv),
-	.enqueue	=	shim_eth_qdisc_enqueue,
-	.dequeue	=	shim_eth_qdisc_dequeue,
-	.peek		=	shim_eth_qdisc_peek,
-	.init		=	shim_eth_qdisc_init,
-	.reset		=	shim_eth_qdisc_reset,
-	.dump		=	NULL,
-	.owner		=	THIS_MODULE,
-};
-
-int eth_vlan_update_qdisc(struct net_device *    dev,
-			  struct Qdisc *         old_qdisc,
-			  struct eth_vlan_info * info)
-{
-	struct Qdisc * sch;
-	struct nlattr  attr;
-
-	if (string_cmp(dev->qdisc->ops->id,
-		       shim_eth_qdisc_ops.id) == 0)
-		return 0;
-
-	sch = qdisc_create_dflt(netdev_get_tx_queue(dev, 0),
-			        &shim_eth_qdisc_ops, 0);
-	if (!sch) {
-		LOG_ERR("Problems creating shim-eth-qdisc");
-		return -1;
-	}
-
-	attr.nla_len = info->qdisc_max_size;
-	attr.nla_type = info->qdisc_enable_size;
-	if (shim_eth_qdisc_init(sch, &attr)) {
-		LOG_ERR("Problems initializing shim-eth-qdisc");
-		qdisc_destroy(sch);
-		return -1;
-	}
-
-	old_qdisc = dev->qdisc;
-
-	if (dev->flags & IFF_UP)
-		dev_deactivate(dev);
-
-	dev_graft_qdisc(netdev_get_tx_queue(dev, 0), sch);
-	dev->qdisc = sch;
-
-	if (dev->flags & IFF_UP)
-		dev_activate(dev);
-
-
-	return 0;
-}
-
-static void eth_vlan_restore_qdisc(struct net_device * dev,
-				   struct Qdisc * old_qdisc)
-{
-	struct Qdisc * sch;
-
-	if (!old_qdisc)
-		return;
-
-	sch = dev->qdisc;
-	if (!sch)
-		return;
-
-	if (dev->flags & IFF_UP)
-		dev_deactivate(dev);
-
-	dev_graft_qdisc(netdev_get_tx_queue(dev, 0), old_qdisc);
-	dev->qdisc = old_qdisc;
-	qdisc_destroy(sch);
-
-	if (dev->flags & IFF_UP)
-		dev_activate(dev);
-}
-
-static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
-                              port_id_t                   id,
-                              struct sdu *                sdu)
-{
-        struct shim_eth_flow *   flow;
-        struct sk_buff *         skb;
-        const unsigned char *    src_hw;
-        const unsigned char *    dest_hw;
-        unsigned char *          sdu_ptr;
-        int                      hlen, tlen, length;
-        int                      retval;
-        unsigned long            flags;
-
-        ASSERT(data);
-
-        LOG_DBG("Entered the sdu-write");
+        sdu = sdu_create_buffer_with(buffer);
         if (!sdu_is_ok(sdu)) {
-        	LOG_ERR("Bogus SDU passed");
-        	sdu_destroy(sdu);
-        	return -1;
+                LOG_ERR("Cannot create SDU");
+                pdu_destroy(pdu);
+                return -1;
         }
 
-        length = buffer_length(sdu->buffer);
-        if (length > data->dev->mtu) {
-        	LOG_ERR("SDU too large (%d), dropping", length);
-        	sdu_destroy(sdu);
-        	return -1;
+        pdu_buffer_disown(pdu);
+        pdu_destroy(pdu);
+
+        ASSERT(rmt->parent);
+        ASSERT(rmt->parent->ops);
+        ASSERT(rmt->parent->ops->mgmt_sdu_post);
+
+        return (rmt->parent->ops->mgmt_sdu_post(rmt->parent->data,
+                                                port_id,
+                                                sdu) ? -1 : 0);
+}
+#endif
+static int process_mgmt_pdu_ni(struct rmt * rmt,
+                               port_id_t    port_id,
+                               struct pdu * pdu)
+{
+        struct buffer * buffer;
+        struct sdu *    sdu;
+
+        ASSERT(rmt);
+        ASSERT(is_port_id_ok(port_id));
+        ASSERT(pdu_is_ok(pdu));
+
+        buffer = pdu_buffer_get_rw(pdu);
+        if (!buffer_is_ok(buffer)) {
+                LOG_ERR("PDU has no buffer ???");
+                return -1;
         }
 
-        hlen   = LL_RESERVED_SPACE(data->dev);
-        tlen   = data->dev->needed_tailroom;
+        sdu = sdu_create_buffer_with_ni(buffer);
+        if (!sdu_is_ok(sdu)) {
+                LOG_ERR("Cannot create SDU");
+                pdu_destroy(pdu);
+                return -1;
+        }
 
-        flow = find_flow(data, id);
-        if (!flow) {
-                LOG_ERR("Flow does not exist, you shouldn't call this");
+        pdu_buffer_disown(pdu);
+        pdu_destroy(pdu);
+
+        ASSERT(rmt->parent);
+        ASSERT(rmt->parent->ops);
+        ASSERT(rmt->parent->ops->mgmt_sdu_post);
+
+        return (rmt->parent->ops->mgmt_sdu_post(rmt->parent->data,
+                                                port_id,
+                                                sdu) ? -1 : 0);
+}
+
+static int process_dt_pdu(struct rmt * rmt,
+                          port_id_t    port_id,
+                          struct pdu * pdu)
+{
+        address_t  dst_addr;
+        cep_id_t   c;
+        pdu_type_t pdu_type;
+
+        ASSERT(rmt);
+        ASSERT(is_port_id_ok(port_id));
+        ASSERT(pdu_is_ok(pdu));
+
+        /* (FUTURE) Address and qos-id are the same, do a single match only */
+
+        dst_addr = pci_destination(pdu_pci_get_ro(pdu));
+        if (!is_address_ok(dst_addr)) {
+                LOG_ERR("PDU has Wrong destination address");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        pdu_type = pci_type(pdu_pci_get_ro(pdu));
+
+        if (pdu_type == PDU_TYPE_MGMT) {
+                LOG_ERR("MGMT should not be here");
+                pdu_destroy(pdu);
+                return -1;
+        }
+        c = pci_cep_destination(pdu_pci_get_ro(pdu));
+        if (!is_cep_id_ok(c)) {
+                LOG_ERR("Wrong CEP-id in PDU");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        if (efcp_container_receive(rmt->efcpc, c, pdu)) {
+                LOG_ERR("EFCP container problems");
+                return -1;
+        }
+
+        LOG_DBG("process_dt_pdu internally finished");
+        return 0;
+}
+
+int rmt_receive(struct rmt * rmt,
+                struct sdu * sdu,
+                port_id_t    from)
+{
+        pdu_type_t       pdu_type;
+        struct pci *     pci;
+        struct pdu_ser * pdu_ser;
+        struct pdu *     pdu;
+        address_t        dst_addr;
+        qos_id_t         qos_id;
+        struct serdes *  serdes;
+        struct buffer *  buf;
+        struct rmt_n1_port * n1_port;
+	unsigned long    flags;
+
+        if (!sdu_is_ok(sdu)) {
+                LOG_ERR("Bogus SDU passed");
+                return -1;
+        }
+        if (!rmt) {
+                LOG_ERR("No RMT passed");
+                sdu_destroy(sdu);
+                return -1;
+        }
+        if (!is_port_id_ok(from)) {
+                LOG_ERR("Wrong port-id %d", from);
                 sdu_destroy(sdu);
                 return -1;
         }
 
-        spin_lock_irqsave(&data->lock, flags);
-        if (flow->port_id_state != PORT_STATE_ALLOCATED) {
-                LOG_ERR("Flow is not in the right state to call this");
-                sdu_destroy(sdu);
-                spin_unlock_irqrestore(&data->lock, flags);
-                return -1;
-        }
-        spin_unlock_irqrestore(&data->lock, flags);
-
-        src_hw = data->dev->dev_addr;
-        if (!src_hw) {
-                LOG_ERR("Failed to get source HW addr");
+        buf = sdu_buffer_rw(sdu);
+        if (!buf) {
+                LOG_DBG("No buffer present");
                 sdu_destroy(sdu);
                 return -1;
         }
 
-        dest_hw = gha_address(flow->dest_ha);
-        if (!dest_hw) {
-                LOG_ERR("Destination HW address is unknown");
-                sdu_destroy(sdu);
-                return -1;
-        }
-
-        skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
-        if (skb == NULL) {
-                LOG_ERR("Cannot allocate a skb");
-                sdu_destroy(sdu);
-                return -1;
-        }
-
-        skb_reserve(skb, hlen);
-        skb_reset_network_header(skb);
-        sdu_ptr = (unsigned char *) skb_put(skb, buffer_length(sdu->buffer));
-
-        if (!memcpy(sdu_ptr,
-        	    buffer_data_ro(sdu->buffer),
-                    buffer_length(sdu->buffer))) {
-                LOG_ERR("Memcpy failed");
-                kfree_skb(skb);
+        if (sdu_buffer_disown(sdu)) {
+                LOG_DBG("Could not disown SDU");
                 sdu_destroy(sdu);
                 return -1;
         }
 
         sdu_destroy(sdu);
 
-        skb->dev      = data->dev;
-        skb->protocol = htons(ETH_P_RINA);
-
-        retval = dev_hard_header(skb, data->dev,
-                                 ETH_P_RINA, dest_hw, src_hw, skb->len);
-        if (retval < 0) {
-                LOG_ERR("Problems in dev_hard_header (%d)", retval);
-                kfree_skb(skb);
+        pdu_ser = pdu_ser_create_buffer_with_ni(buf);
+        if (!pdu_ser) {
+                LOG_DBG("No ser PDU to work with");
+                buffer_destroy(buf);
                 return -1;
         }
 
-        retval = dev_queue_xmit(skb);
-        if (retval == -ENETDOWN) {
-        	LOG_ERR("dev_q_xmit returned device down");
-        	return -1;
-        }
-        if (retval != NET_XMIT_SUCCESS) {
-        	LOG_DBG("qdisc cannot enqueue now (%d), try later", retval);
-        	return -EAGAIN;
-        }
+        serdes = rmt->serdes;
+        ASSERT(serdes);
 
-        LOG_DBG("Packet sent");
+	spin_lock_irqsave(&rmt->n1_ports->lock, flags);
+        n1_port = n1pmap_find(rmt->n1_ports, from);
+	if (!n1_port) {
+		spin_unlock_irqrestore(&rmt->n1_ports->lock, flags);
+		LOG_ERR("Could not retrieve N-1 port for the received PDU...");
+		return -1;
+	}
+	spin_unlock_irqrestore(&rmt->n1_ports->lock, flags);
+	spin_lock_irqsave(&n1_port->lock, flags);
+        pdu = pdu_deserialize_ni(serdes, pdu_ser,
+                                 n1_port->dup_config, n1_port->blkcipher);
+	spin_unlock_irqrestore(&n1_port->lock, flags);
 
-        return 0;
-}
-
-static int eth_vlan_rcv_worker(void * o)
-{
-        struct ipcp_instance_data *     data;
-        const struct gpa *              gpaddr;
-        struct name *                   sname;
-        struct ipcp_instance          * ipcp, * user_ipcp;
-
-        struct shim_eth_flow *          flow;
-        struct rcv_work_data *          wdata;
-        struct sk_buff *                skb;
-        struct net_device *             dev;
-
-        LOG_DBG("Worker waking up, going to create a flow");
-
-        wdata = (struct rcv_work_data *) o;
-
-        skb    = wdata->skb;
-        dev    = wdata->dev;
-        flow   = wdata->flow;
-        data   = wdata->data;
-        rkfree(wdata);
-
-        if (!data->app_name) {
-                LOG_ERR("No app registered yet! "
-                        "Someone is doing something bad on the network");
-                kfree_skb(skb);
+        if (!pdu) {
+                LOG_ERR("Failed to deserialize PDU!");
+                pdu_ser_destroy(pdu_ser);
                 return -1;
         }
 
-        user_ipcp = kipcm_find_ipcp_by_name(default_kipcm,
-                                                    data->app_name);
-        if (!user_ipcp)
-                user_ipcp = kfa_ipcp_instance(data->kfa);
-
-        ipcp = kipcm_find_ipcp(default_kipcm, data->id);
-        if (!user_ipcp || !ipcp) {
-                LOG_ERR("Could not find required ipcps");
-                if (flow_destroy(data, flow))
-                        LOG_ERR("Problems destroying shim-eth-vlan "
-                                "flow");
+        pci = pdu_pci_get_rw(pdu);
+        if (!pci) {
+                LOG_ERR("No PCI to work with, dropping SDU!");
+                pdu_destroy(pdu);
                 return -1;
         }
 
-        /* Continue filling the flow data that was started in the interrupt */
-        flow->user_ipcp     = user_ipcp;
-        flow->port_id       = kfa_port_id_reserve(data->kfa, data->id);
+        ASSERT(pdu_is_ok(pdu));
 
-        if (!is_port_id_ok(flow->port_id)) {
-                LOG_DBG("Port id is not ok");
-                if (flow_destroy(data, flow))
-                        LOG_ERR("Problems destroying shim-eth-vlan "
-                                "flow");
+        pdu_type = pci_type(pci);
+        dst_addr = pci_destination(pci);
+        qos_id   = pci_qos_id(pci);
+        if (!pdu_type_is_ok(pdu_type) ||
+            !is_address_ok(dst_addr)  ||
+            !is_qos_id_ok(qos_id)) {
+            LOG_ERR("Wrong PDU type, dst address or qos_id,"
+                    " dropping SDU! %u, %u, %u",
+                    pdu_type, dst_addr, qos_id);
+                pdu_destroy(pdu);
                 return -1;
         }
 
-        if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
-                LOG_DBG("This flow goes for an app");
-                if (kfa_flow_create(data->kfa, flow->port_id, data->blocking, ipcp)) {
-                        LOG_ERR("Could not create flow in KFA");
-                        kfa_port_id_release(data->kfa, flow->port_id);
-                        if (flow_destroy(data, flow))
-                                LOG_ERR("Problems destroying shim-eth-vlan "
-                                        "flow");
-                        return -1;
+        /* pdu is not for me */
+        if (rmt->address != dst_addr) {
+                if (!dst_addr) {
+                        return process_mgmt_pdu_ni(rmt, from, pdu);
+                } else {
+                        /* Forward PDU */
+                        /*NOTE: we could reuse the serialized pdu when
+                         * forwarding */
+                        return rmt_send(rmt,
+                                        pci,
+                                        pdu);
                 }
-        }
-        LOG_DBG("Added flow to the list");
-
-        sname  = NULL;
-        gpaddr = rinarp_find_gpa(data->handle, flow->dest_ha);
-        if (gpaddr && gpa_is_ok(gpaddr)) {
-                flow->dest_pa = gpa_dup_gfp(GFP_KERNEL, gpaddr);
-                if (!flow->dest_pa) {
-                        LOG_ERR("Failed to duplicate gpa");
-                        kfa_port_id_release(data->kfa, flow->port_id);
-                        unbind_and_destroy_flow(data, flow);
-                        return -1;
-                }
-
-                sname = string_toname_ni(gpa_address_value(gpaddr));
-                if (!sname) {
-                        LOG_ERR("Failed to convert name to string");
-                        kfa_port_id_release(data->kfa, flow->port_id);
-                        unbind_and_destroy_flow(data, flow);
-                        return -1;
-                }
-
-                LOG_DBG("Got the address from ARP");
         } else {
-                sname = name_create_ni();
-                if (!name_init_from_ni(sname,
-                        "Unknown app", "", "", "")) {
-                         name_destroy(sname);
-                         kfa_port_id_release(data->kfa, flow->port_id);
-                         unbind_and_destroy_flow(data, flow);
-                         return -1;
-                }
+                /* pdu is for me */
+                switch (pdu_type) {
+                case PDU_TYPE_MGMT:
+                        return process_mgmt_pdu_ni(rmt, from, pdu);
 
-                flow->dest_pa = name_to_gpa(sname);
-                if (!flow->dest_pa) {
-                        LOG_ERR("Failed to create gpa");
+                case PDU_TYPE_CACK:
+                case PDU_TYPE_SACK:
+                case PDU_TYPE_NACK:
+                case PDU_TYPE_FC:
+                case PDU_TYPE_ACK:
+                case PDU_TYPE_ACK_AND_FC:
+                case PDU_TYPE_DT:
+                /*
+                 * (FUTURE)
+                 *
+                 * enqueue PDU in pdus_dt[dest-addr, qos-id]
+                 * don't process it now ...
+                 */
+                        return process_dt_pdu(rmt, from, pdu);
 
-                        kfa_port_id_release(data->kfa, flow->port_id);
-                        unbind_and_destroy_flow(data, flow);
+               default:
+                        LOG_ERR("Unknown PDU type %d", pdu_type);
+                        pdu_destroy(pdu);
                         return -1;
                 }
-
-                LOG_DBG("Flow request from unkown app received");
-        }
-
-        if (kipcm_flow_arrived(default_kipcm,
-                               data->id,
-                               flow->port_id,
-                               data->dif_name,
-                               sname,
-                               data->app_name,
-                               data->fspec)) {
-                LOG_ERR("Couldn't tell the KIPCM about the flow");
-                kfa_port_id_release(data->kfa, flow->port_id);
-                unbind_and_destroy_flow(data, flow);
-                name_destroy(sname);
-                return -1;
-        }
-        name_destroy(sname);
-
-        LOG_DBG("Worker ends...");
-        return 0;
+       }
 }
+EXPORT_SYMBOL(rmt_receive);
 
-static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
-                                        struct net_device * dev)
+struct rmt * rmt_create(struct ipcp_instance *  parent,
+                        struct kfa *            kfa,
+                        struct efcp_container * efcpc)
 {
-        struct ethhdr *                 mh;
-        unsigned char *                 saddr;
-        struct ipcp_instance_data *     data;
-        struct interface_data_mapping * mapping;
-        struct shim_eth_flow *          flow;
-        struct gha *                    ghaddr;
-        struct sdu *                    du;
-        struct buffer *                 buffer;
-        char *                          sk_data;
+        struct rmt * tmp;
 
-        struct rcv_work_data          * wdata;
-        struct rwq_work_item          * item;
-
-        /* C-c-c-checks */
-        mapping = inst_data_mapping_get(dev);
-        if (!mapping) {
-                LOG_ERR("Failed to get mapping");
-                kfree_skb(skb);
-                return -1;
+        if (!parent || !kfa || !efcpc) {
+                LOG_ERR("Bogus input parameters");
+                return NULL;
         }
 
-        data = mapping->data;
-        if (!data) {
-                kfree_skb(skb);
-                return -1;
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->address   = address_bad();
+        tmp->parent    = parent;
+        tmp->kfa       = kfa;
+        tmp->efcpc     = efcpc;
+        tmp->sdup_conf = NULL;
+        tmp->pff     = pff_create();
+        if (!tmp->pff)
+                goto fail;
+
+        tmp->n1_ports = n1pmap_create();
+        if (!tmp->n1_ports || pff_cache_init(&tmp->cache))
+                goto fail;
+
+        tasklet_init(&tmp->egress_tasklet,
+                     send_worker,
+                     (unsigned long) tmp);
+
+        /* Try to select the default policy set factory. */
+        rina_component_init(&tmp->base);
+        if (rmt_select_policy_set(tmp, "", RINA_PS_DEFAULT_NAME)) {
+                goto fail;
         }
 
-        if (!data->app_name) {
-                LOG_ERR("No app registered yet! "
-                        "Someone is doing something bad on the network");
-                kfree_skb(skb);
-                return -1;
-        }
-
-        if (skb->pkt_type == PACKET_OTHERHOST ||
-            skb->pkt_type == PACKET_LOOPBACK) {
-                kfree_skb(skb);
-                return -1;
-        }
-
-        mh    = eth_hdr(skb);
-        saddr = mh->h_source;
-        if (!saddr) {
-                LOG_ERR("Couldn't get source address");
-                kfree_skb(skb);
-                return -1;
-        }
-
-        /* Get correct flow based on hwaddr */
-        ghaddr = gha_create_ni(MAC_ADDR_802_3, saddr);
-        if (!ghaddr) {
-                kfree_skb(skb);
-                return -1;
-        }
-        ASSERT(gha_is_ok(ghaddr));
-
-        /* Get the SDU out of the sk_buff */
-        sk_data = rkmalloc(skb->len, GFP_ATOMIC);
-        if (!sk_data) {
-                gha_destroy(ghaddr);
-                kfree_skb(skb);
-                return -1;
-        }
-
-        /*
-         * FIXME: We should avoid this extra copy, but then we cannot free the
-         *        skb at the end of the eth_vlan_rcv function. To do so we
-         *        have to either find a way to free all the data of the skb
-         *        except for the SDU, or delay freeing the skb until it is
-         *        safe to do so.
-         */
-
-        if (skb_copy_bits(skb, 0, sk_data, skb->len)) {
-                LOG_ERR("Failed to copy data from sk_buff");
-                rkfree(sk_data);
-                gha_destroy(ghaddr);
-                kfree_skb(skb);
-                return -1;
-        }
-
-        buffer = buffer_create_with_ni(sk_data, skb->len);
-        if (!buffer) {
-                rkfree(sk_data);
-                gha_destroy(ghaddr);
-                kfree_skb(skb);
-                return -1;
-        }
-
-        /* We're done with the skb from this point on so ... let's get rid */
-        kfree_skb(skb);
-
-        du = sdu_create_buffer_with_ni(buffer);
-        if (!du) {
-                LOG_ERR("Couldn't create data unit");
-                buffer_destroy(buffer);
-                gha_destroy(ghaddr);
-                return -1;
-        }
-
-        spin_lock(&data->lock);
-        flow = find_flow_by_gha(data, ghaddr);
-        if (!flow) {
-                spin_unlock(&data->lock);
-                /* Create flow and its queue to handle next packets */
-                flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
-                if (!flow) {
-                        sdu_destroy(du);
-                        gha_destroy(ghaddr);
-                        return -1;
-                }
-
-                flow->port_id_state = PORT_STATE_PENDING;
-                flow->dest_ha       = ghaddr;
-                INIT_LIST_HEAD(&flow->list);
-                flow->sdu_queue = rfifo_create_ni();
-                if (!flow->sdu_queue) {
-                        LOG_ERR("Couldn't create the SDU queue "
-                                "for a new flow");
-                        sdu_destroy(du);
-                        gha_destroy(ghaddr);
-                        rkfree(flow);
-                        return -1;
-                }
-
-                /* Store SDU in queue */
-                if (rfifo_push_ni(flow->sdu_queue, du)) {
-                        LOG_ERR("Could not push a SDU into the flow queue");
-                        sdu_destroy(du);
-                        gha_destroy(ghaddr);
-                        rkfree (flow);
-                        rfifo_destroy(flow->sdu_queue,
-                                      (void (*)(void *)) pdu_destroy);
-                        return -1;
-                }
-
-                spin_lock(&data->lock);
-                list_add(&flow->list, &data->flows);
-                spin_unlock(&data->lock);
-
-                /*FIXME: add checks */
-
-                wdata = rkzalloc(sizeof(* wdata), GFP_ATOMIC);
-                wdata->skb  = skb;
-                wdata->dev  = dev;
-                wdata->flow = flow;
-                wdata->data = data;
-                item  = rwq_work_create_ni(eth_vlan_rcv_worker, wdata);
-
-                rwq_work_post(rcv_wq, item);
-
-                LOG_DBG("eth_vlan_recv_process_packet added work");
-        } else {
-                gha_destroy(ghaddr);
-                LOG_DBG("Flow exists, queueing or delivering or dropping");
-                if (flow->port_id_state == PORT_STATE_ALLOCATED) {
-                        spin_unlock(&data->lock);
-
-                        ASSERT(flow->user_ipcp->ops);
-                        ASSERT(flow->user_ipcp->ops->sdu_enqueue);
-                        if (flow->user_ipcp->ops->
-                            sdu_enqueue(flow->user_ipcp->data,
-                                        flow->port_id,
-                                        du)) {
-                                LOG_ERR("Couldn't enqueue SDU to user IPCP");
-                                return -1;
-                        }
-
-                } else if (flow->port_id_state == PORT_STATE_PENDING) {
-                        LOG_DBG("Queueing frame");
-
-                        if (rfifo_push_ni(flow->sdu_queue, du)) {
-                                LOG_ERR("Failed to write %zd bytes"
-                                        "into the fifo",
-                                        sizeof(struct sdu *));
-                                spin_unlock(&data->lock);
-                                sdu_destroy(du);
-                                return -1;
-                        }
-
-                        spin_unlock(&data->lock);
-                } else if (flow->port_id_state == PORT_STATE_NULL) {
-                        spin_unlock(&data->lock);
-                        sdu_destroy(du);
-                }
-
-                LOG_DBG("eth_vlan_recv_process_packet ends ...");
-        }
-
-        return 0;
+        LOG_DBG("Instance %pK initialized successfully", tmp);
+        return tmp;
+fail:
+        rmt_destroy(tmp);
+        return NULL;
 }
+EXPORT_SYMBOL(rmt_create);
 
-static int eth_vlan_rcv(struct sk_buff *     skb,
-                        struct net_device *  dev,
-                        struct packet_type * pt,
-                        struct net_device *  orig_dev)
+/* FIXME: To be rearranged */
+static bool is_rmt_pff_ok(struct rmt * instance)
+{ return (instance && instance->pff) ? true : false; }
+
+int rmt_pff_add(struct rmt *           instance,
+		struct mod_pff_entry * entry)
 {
-
-        LOG_DBG("eth_vlan_rcv started, skb received");
-        skb = skb_share_check(skb, GFP_ATOMIC);
-        if (!skb) {
-                LOG_ERR("Couldn't obtain ownership of the skb");
-                return 0;
-        }
-
-        if (eth_vlan_recv_process_packet(skb, dev))
-                LOG_DBG("Failed to process packet");
-
-        LOG_DBG("eth_vlan_rcv ends");
-        return 0;
-};
-
-static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
-                                  const struct dif_info *     dif_information)
-{
-        struct eth_vlan_info *          info;
-        struct ipcp_config *            tmp;
-        string_t *                      complete_interface;
-        struct interface_data_mapping * mapping;
-        int                             result;
-        unsigned int                    temp;
-
-        ASSERT(data);
-        ASSERT(dif_information);
-
-        info = data->info;
-
-        if (data->dif_name) {
-                ASSERT(data->dif_name->process_name);
-
-                LOG_ERR("This IPC Process is already assigned to the DIF %s. "
-                        "An IPC Process can only be assigned to a DIF once",
-                        data->dif_name->process_name);
-                return -1;
-        }
-
-        /* Get vlan id */
-        result = kstrtouint(dif_information->dif_name->process_name,
-                            10, &temp);
-        if (result) {
-                ASSERT(dif_information->dif_name->process_name);
-
-                LOG_ERR("Error converting DIF Name to VLAN ID: %s",
-                        dif_information->dif_name->process_name);
-                return -1;
-        }
-        info->vlan_id = (uint16_t) temp;
-
-        if (!vlan_id_is_ok(info->vlan_id)) {
-                if (info->vlan_id != 0) {
-                      LOG_ERR("Bad vlan id specified: %d", info->vlan_id);
-                      return -1;
-                }
-        }
-
-        data->dif_name = name_dup(dif_information->dif_name);
-        if (!data->dif_name) {
-                LOG_ERR("Error duplicating name, bailing out");
-                return -1;
-        }
-
-        /* Retrieve configuration of IPC process from params */
-        list_for_each_entry(tmp, &(dif_information->
-                                   configuration->
-                                   ipcp_config_entries), next) {
-                const struct ipcp_config_entry * entry = tmp->entry;
-                if (!strcmp(entry->name, "interface-name")) {
-                        ASSERT(entry->value);
-
-                        info->interface_name = rkstrdup(entry->value);
-                        if (!info->interface_name) {
-                                LOG_ERR("Cannot copy interface name");
-                                name_destroy(data->dif_name);
-                                data->dif_name = NULL;
-                                return -1;
-                        }
-                } else if (!strcmp(entry->name, "qdisc-max-size")) {
-                	ASSERT(entry->value);
-
-                	result = kstrtouint(entry->value, 10, &temp);
-                	if (result) {
-                		LOG_ERR("Cannot conver qdisc-max-size to uint");
-                                name_destroy(data->dif_name);
-                                data->dif_name = NULL;
-                                if (info->interface_name) {
-                                        rkfree(info->interface_name);
-                                        info->interface_name = NULL;
-                                }
-                                return -1;
-                	}
-                	info->qdisc_max_size = (uint16_t) temp;
-                } else if (!strcmp(entry->name, "qdisc-enable-size")) {
-                	ASSERT(entry->value);
-
-                	result = kstrtouint(entry->value, 10, &temp);
-                	if (result) {
-                		LOG_ERR("Cannot conver qdisc-enable-size to uint");
-                		name_destroy(data->dif_name);
-                		data->dif_name = NULL;
-                		if (info->interface_name) {
-                			rkfree(info->interface_name);
-                			info->interface_name = NULL;
-                		}
-                		return -1;
-                	}
-                	info->qdisc_enable_size = (uint16_t) temp;
-                } else
-                	LOG_WARN("Unknown config param for eth shim");
-        }
-
-        /* Fail here if we didn't get an interface */
-        if (!info->interface_name) {
-                LOG_ERR("Didn't get an interface name");
-                name_destroy(data->dif_name);
-                data->dif_name = NULL;
-                return -1;
-        }
-
-        data->eth_vlan_packet_type->type = cpu_to_be16(ETH_P_RINA);
-        data->eth_vlan_packet_type->func = eth_vlan_rcv;
-
-        if (info->vlan_id != 0) {
-                complete_interface =
-                        create_vlan_interface_name(info->interface_name,
-                                                   info->vlan_id);
-        } else {
-                complete_interface = rkstrdup(info->interface_name);
-        }
-
-        if (!complete_interface) {
-                name_destroy(data->dif_name);
-                data->dif_name = NULL;
-                rkfree(info->interface_name);
-                info->interface_name = NULL;
-                return -1;
-        }
-
-        ASSERT(complete_interface);
-
-        /* Add the handler */
-        read_lock(&dev_base_lock);
-        data->dev = __dev_get_by_name(&init_net, complete_interface);
-        if (info->vlan_id != 0)
-        	data->phy_dev = __dev_get_by_name(&init_net,
-        					  info->interface_name);
-        else
-        	data->phy_dev = data->dev;
-        if (!data->dev || !data->phy_dev) {
-                LOG_ERR("Can't get device '%s'", complete_interface);
-                read_unlock(&dev_base_lock);
-                name_destroy(data->dif_name);
-                data->dif_name = NULL;
-                rkfree(info->interface_name);
-                info->interface_name = NULL;
-                rkfree(complete_interface);
-                return -1;
-        }
-
-        /* Modfy qdisc by our own */
-        if (eth_vlan_update_qdisc(data->phy_dev,
-        			  data->old_qdisc,
-        			  data->info)) {
-        	LOG_ERR("Problems creating queue discipline");
-        	read_unlock(&dev_base_lock);
-        	name_destroy(data->dif_name);
-        	data->dif_name = NULL;
-        	rkfree(info->interface_name);
-        	info->interface_name = NULL;
-        	rkfree(complete_interface);
-        	return -1;
-        }
-
-        LOG_DBG("Got device '%s', trying to register handler",
-                complete_interface);
-
-        /* Store in list for retrieval later on */
-        mapping = rkmalloc(sizeof(*mapping), GFP_ATOMIC);
-        if (!mapping) {
-                read_unlock(&dev_base_lock);
-                name_destroy(data->dif_name);
-                data->dif_name = NULL;
-                rkfree(info->interface_name);
-                info->interface_name = NULL;
-                rkfree(complete_interface);
-                return -1;
-        }
-
-        mapping->dev  = data->dev;
-        mapping->data = data;
-        INIT_LIST_HEAD(&mapping->list);
-
-        spin_lock(&data_instances_lock);
-        list_add(&mapping->list, &data_instances_list);
-        spin_unlock(&data_instances_lock);
-
-        data->eth_vlan_packet_type->dev = data->dev;
-        dev_add_pack(data->eth_vlan_packet_type);
-        read_unlock(&dev_base_lock);
-        rkfree(complete_interface);
-
-        LOG_DBG("Configured shim eth vlan IPC Process");
-
-        return 0;
+        return is_rmt_pff_ok(instance) ? pff_add(instance->pff,
+						 entry) : -1;
 }
+EXPORT_SYMBOL(rmt_pff_add);
 
-static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
-                                      const struct dif_config *   new_config)
+int rmt_pff_remove(struct rmt *           instance,
+		   struct mod_pff_entry * entry)
 {
-        struct eth_vlan_info *          info;
-        struct ipcp_config *            tmp;
-        string_t *                      old_interface_name;
-        string_t *                      complete_interface;
-        struct interface_data_mapping * mapping;
-        int				result;
-        unsigned int			temp;
+        return is_rmt_pff_ok(instance) ? pff_remove(instance->pff,
+						    entry) : -1;
+}
+EXPORT_SYMBOL(rmt_pff_remove);
 
-        ASSERT(data);
-        ASSERT(new_config);
+int rmt_pff_port_state_change(struct rmt *	rmt,
+			      port_id_t		port_id,
+			      bool		up)
+{
+        return is_rmt_pff_ok(rmt) ?
+	       pff_port_state_change(rmt->pff, port_id, up) : -1;
+}
+EXPORT_SYMBOL(rmt_pff_port_state_change);
 
-        /* Get configuration struct pertaining to this shim instance */
-        info               = data->info;
-        old_interface_name = info->interface_name;
+int rmt_pff_dump(struct rmt *       instance,
+                 struct list_head * entries)
+{
+        return is_rmt_pff_ok(instance) ? pff_dump(instance->pff,
+                                                  entries) : -1;
+}
+EXPORT_SYMBOL(rmt_pff_dump);
 
-        /* Retrieve configuration of IPC process from params */
-        list_for_each_entry(tmp, &(new_config->ipcp_config_entries), next) {
-                const struct ipcp_config_entry * entry;
+int rmt_pff_flush(struct rmt * instance)
+{ return is_rmt_pff_ok(instance) ? pff_flush(instance->pff) : -1; }
+EXPORT_SYMBOL(rmt_pff_flush);
 
-                entry = tmp->entry;
-                if (!strcmp(entry->name, "interface-name")) {
-                	ASSERT(entry->value);
-
-                	info->interface_name = rkstrdup(entry->value);
-                	if (!info->interface_name) {
-                		LOG_ERR("Cannot copy interface name");
-                		return -1;
-                	}
-                } else if (!strcmp(entry->name, "qdisc-max-size")) {
-                	ASSERT(entry->value);
-
-                	result = kstrtouint(entry->value, 10, &temp);
-                	if (result) {
-                		LOG_ERR("Cannot conver qdisc-max-size to uint");
-                		return -1;
-                	}
-                	info->qdisc_max_size = (uint16_t) temp;
-                } else if (!strcmp(entry->name, "qdisc-enable-size")) {
-                	ASSERT(entry->value);
-
-                	result = kstrtouint(entry->value, 10, &temp);
-                	if (result) {
-                		LOG_ERR("Cannot conver qdisc-enable-size to uint");
-                		return -1;
-                	}
-                	info->qdisc_enable_size = (uint16_t) temp;
-                } else
-                	LOG_WARN("Unknown config param for eth shim");
-        }
-
-        eth_vlan_restore_qdisc(data->phy_dev, data->old_qdisc);
-
-        dev_remove_pack(data->eth_vlan_packet_type);
-        /* Remove from list */
-        mapping = inst_data_mapping_get(data->dev);
-        if (mapping) {
-                spin_lock(&data_instances_lock);
-                list_del(&mapping->list);
-                spin_unlock(&data_instances_lock);
-                rkfree(mapping);
-        }
-
-        data->eth_vlan_packet_type->type = cpu_to_be16(ETH_P_RINA);
-        data->eth_vlan_packet_type->func = eth_vlan_rcv;
-
-        if (info->vlan_id != 0) {
-                complete_interface =
-                        create_vlan_interface_name(info->interface_name,
-                                                   info->vlan_id);
-        } else {
-                complete_interface = rkstrdup(info->interface_name);
-        }
-
-        if (!complete_interface)
-                return -1;
-
-        /* Add the handler */
-        read_lock(&dev_base_lock);
-        data->dev = __dev_get_by_name(&init_net, complete_interface);
-        if (info->vlan_id != 0) {
-        	data->phy_dev = __dev_get_by_name(&init_net,
-        					  info->interface_name);
-        } else {
-        	data->phy_dev = data->dev;
-        }
-        if (!data->dev) {
-                LOG_ERR("Invalid device to configure: %s", complete_interface);
+int rmt_ps_publish(struct ps_factory * factory)
+{
+        if (factory == NULL) {
+                LOG_ERR("%s: NULL factory", __func__);
                 return -1;
         }
 
-        /* Modfy qdisc by our own */
-        if (eth_vlan_update_qdisc(data->phy_dev,
-        			  data->old_qdisc,
-        			  data->info)) {
-        	LOG_ERR("Problems creating queue discipline");
-        	read_unlock(&dev_base_lock);
-        	name_destroy(data->dif_name);
-        	data->dif_name = NULL;
-        	rkfree(info->interface_name);
-        	info->interface_name = NULL;
-        	rkfree(complete_interface);
-        	return -1;
-        }
-
-        /* Store in list for retrieval later on */
-        mapping = rkmalloc(sizeof(*mapping), GFP_KERNEL);
-        if (!mapping)
-                return -1;
-
-        mapping->dev = data->dev;
-        mapping->data = data;
-        INIT_LIST_HEAD(&mapping->list);
-
-        spin_lock(&data_instances_lock);
-        list_add(&mapping->list, &data_instances_list);
-        spin_unlock(&data_instances_lock);
-
-        data->eth_vlan_packet_type->dev = data->dev;
-        dev_add_pack(data->eth_vlan_packet_type);
-        read_unlock(&dev_base_lock);
-        rkfree(complete_interface);
-
-        LOG_DBG("Configured shim eth vlan IPC Process");
-
-        return 0;
+        return ps_publish(&policy_sets, factory);
 }
+EXPORT_SYMBOL(rmt_ps_publish);
 
-static const struct name * eth_vlan_ipcp_name(struct ipcp_instance_data * data)
+int rmt_ps_unpublish(const char * name)
+{ return ps_unpublish(&policy_sets, name); }
+EXPORT_SYMBOL(rmt_ps_unpublish);
+
+int rmt_enable_encryption(struct rmt *    instance,
+			  bool 	    	  enable_encryption,
+			  bool      	  enable_decryption,
+			  struct buffer * encrypt_key,
+			  port_id_t 	  port_id)
 {
-        ASSERT(data);
-        ASSERT(name_is_ok(data->name));
+	struct rmt_n1_port * rmt_port;
+	unsigned long        flags;
 
-        return data->name;
-}
+	if (!instance) {
+		LOG_ERR("Bogus RMT instance passed");
+		return -1;
+	}
 
-static const struct name * eth_vlan_dif_name(struct ipcp_instance_data * data)
-{
-        ASSERT(data);
-        ASSERT(name_is_ok(data->dif_name));
+	if (!encrypt_key) {
+		LOG_ERR("Bogus encryption key passed");
+		return -1;
+	}
 
-        return data->dif_name;
-}
+	if (!enable_decryption && !enable_encryption) {
+		LOG_ERR("Neither encryption nor decryption is being enabled");
+		return -1;
+	}
 
-static int eth_vlan_query_rib(struct ipcp_instance_data * data,
-                              struct list_head *          entries,
-                              const string_t *            object_class,
-                              const string_t *            object_name,
-                              uint64_t                    object_instance,
-                              uint32_t                    scope,
-                              const string_t *            filter)
-{
-	LOG_MISSING;
-	return -1;
-}
+	spin_lock_irqsave(&instance->n1_ports->lock, flags);
+	rmt_port = n1pmap_find(instance->n1_ports, port_id);
+	if (!rmt_port) {
+		spin_unlock_irqrestore(&instance->n1_ports->lock, flags);
+		LOG_ERR("Could not find N-1 port %d", port_id);
+		return -1;
+	}
+	spin_unlock_irqrestore(&instance->n1_ports->lock, flags);
 
-static struct ipcp_instance_ops eth_vlan_instance_ops = {
-        .flow_allocate_request     = eth_vlan_flow_allocate_request,
-        .flow_allocate_response    = eth_vlan_flow_allocate_response,
-        .flow_deallocate           = eth_vlan_flow_deallocate,
-        .flow_prebind              = NULL,
-        .flow_binding_ipcp         = NULL,
-        .flow_unbinding_ipcp       = NULL,
-        .flow_unbinding_user_ipcp  = eth_vlan_unbind_user_ipcp,
-	.nm1_flow_state_change	   = NULL,
+	if (!rmt_port->dup_config) {
+		LOG_ERR("SDU Protection for N-1 port %d is NULL", port_id);
+		return -1;
+	}
 
-        .application_register      = eth_vlan_application_register,
-        .application_unregister    = eth_vlan_application_unregister,
+	if (!rmt_port->dup_config->encryption_policy) {
+		LOG_ERR("Encryption policy for N-1 port %d is NULL", port_id);
+		return -1;
+	}
 
-        .assign_to_dif             = eth_vlan_assign_to_dif,
-        .update_dif_config         = eth_vlan_update_dif_config,
+	if (!rmt_port->blkcipher) {
+		LOG_ERR("Block cipher is not set for N-1 port %d", port_id);
+		return -1;
+	}
 
-        .connection_create         = NULL,
-        .connection_update         = NULL,
-        .connection_destroy        = NULL,
-        .connection_create_arrived = NULL,
-
-        .sdu_enqueue               = NULL,
-        .sdu_write                 = eth_vlan_sdu_write,
-
-        .mgmt_sdu_read             = NULL,
-        .mgmt_sdu_write            = NULL,
-        .mgmt_sdu_post             = NULL,
-
-        .pff_add                   = NULL,
-        .pff_remove                = NULL,
-        .pff_dump                  = NULL,
-        .pff_flush                 = NULL,
-
-        .query_rib		   = eth_vlan_query_rib,
-
-        .ipcp_name                 = eth_vlan_ipcp_name,
-        .dif_name                  = eth_vlan_dif_name,
-
-        .set_policy_set_param      = NULL,
-        .select_policy_set         = NULL,
-        .enable_encryption	   = NULL,
-        .dif_name		   = eth_vlan_dif_name
-};
-
-static int ntfy_user_ipcp_on_if_state_change(struct ipcp_instance_data * data,
-					     bool up)
-{
-        struct shim_eth_flow * flow;
-
-        list_for_each_entry(flow, &data->flows, list) {
-                if (!flow->user_ipcp) {
-			/* This flow is used by an userspace application,
-			 * we are not able to notify that one for now. */
-			continue;
-                }
-
-		flow->user_ipcp->ops->
-                            nm1_flow_state_change(flow->user_ipcp->data,
-                                                  flow->port_id, up);
-        }
-
-	return 0;
-}
-
-static int eth_vlan_netdev_notify(struct notifier_block *nb,
-				  unsigned long event, void *opaque)
-{
-	struct net_device *dev = netdev_notifier_info_to_dev(opaque);
-        struct ipcp_instance_data * pos;
-
-        list_for_each_entry(pos, &eth_vlan_data.instances, list) {
-		if (pos->dev != dev) {
-			/* We don't care about this network interface. */
-			continue;
-		}
-
-		switch (event) {
-
-		case NETDEV_UP:
-			LOG_INFO("Device %s goes up", dev->name);
-			ntfy_user_ipcp_on_if_state_change(pos, true);
-			break;
-
-		case NETDEV_DOWN:
-			LOG_INFO("Device %s goes down", dev->name);
-			ntfy_user_ipcp_on_if_state_change(pos, false);
-			break;
-
-		default:
-			LOG_DBG("Ignoring event %lu on device %s",
-				event, dev->name);
-			break;
+	spin_lock_irqsave(&rmt_port->lock, flags);
+	if (!rmt_port->dup_config->enable_decryption &&
+			!rmt_port->dup_config->enable_encryption) {
+		/* Need to set key. FIXME: Move this to policy specific code */
+		if (crypto_blkcipher_setkey(rmt_port->blkcipher,
+					    buffer_data_ro(encrypt_key),
+					    buffer_length(encrypt_key))) {
+			LOG_ERR("Could not set encryption key for N-1 port %d",
+				port_id);
+			spin_unlock_irqrestore(&rmt_port->lock, flags);
+			return -1;
 		}
 	}
 
+	if (!rmt_port->dup_config->enable_decryption) {
+		rmt_port->dup_config->enable_decryption = enable_decryption;
+	}
+	if (!rmt_port->dup_config->enable_encryption) {
+		rmt_port->dup_config->enable_encryption = enable_encryption;
+	}
+	LOG_DBG("Encryption enabled state: %d", enable_encryption);
+	LOG_DBG("Decryption enabled state: %d", enable_decryption);
+	spin_unlock_irqrestore(&rmt_port->lock, flags);
+
 	return 0;
 }
-
-static int eth_vlan_init(struct ipcp_factory_data * data)
-{
-	ASSERT(data == &eth_vlan_data);
-
-        bzero(data, sizeof(*data));
-        INIT_LIST_HEAD(&(data->instances));
-
-        INIT_LIST_HEAD(&data_instances_list);
-
-	memset(&data->ntfy, 0, sizeof(data->ntfy));
-	data->ntfy.notifier_call = eth_vlan_netdev_notify;
-	register_netdevice_notifier(&data->ntfy);
-
-        LOG_INFO("%s initialized", SHIM_NAME);
-
-        return 0;
-}
-
-static int eth_vlan_fini(struct ipcp_factory_data * data)
-{
-
-        ASSERT(data == &eth_vlan_data);
-
-        ASSERT(list_empty(&(data->instances)));
-	unregister_netdevice_notifier(&data->ntfy);
-
-        return 0;
-}
-
-static void inst_cleanup(struct ipcp_instance * inst)
-{
-        ASSERT(inst);
-
-        if (inst->data) {
-                if (inst->data->fspec)
-                        rkfree(inst->data->fspec);
-                if (inst->data->info)
-                        rkfree(inst->data->info);
-                if (inst->data->name)
-                        name_destroy(inst->data->name);
-                if (inst->data->eth_vlan_packet_type)
-                        rkfree(inst->data->eth_vlan_packet_type);
-
-                rkfree(inst->data);
-        }
-
-        rkfree(inst);
-}
-
-static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
-                                              const struct name *        name,
-                                              ipc_process_id_t           id)
-{
-        struct ipcp_instance * inst;
-
-        ASSERT(data);
-
-        /* Check if there already is an instance with that id */
-        if (find_instance(data,id)) {
-                LOG_ERR("There's a shim instance with id %d already", id);
-                return NULL;
-        }
-
-        /* Create an instance */
-        inst = rkzalloc(sizeof(*inst), GFP_KERNEL);
-        if (!inst)
-                return NULL;
-
-        /* fill it properly */
-        inst->ops  = &eth_vlan_instance_ops;
-        inst->data = rkzalloc(sizeof(struct ipcp_instance_data), GFP_KERNEL);
-        if (!inst->data) {
-                inst_cleanup(inst);
-                return NULL;
-        }
-
-        inst->data->eth_vlan_packet_type =
-                rkzalloc(sizeof(struct packet_type), GFP_KERNEL);
-        if (!inst->data->eth_vlan_packet_type) {
-                LOG_ERR("Instance creation failed (#1)");
-                inst_cleanup(inst);
-                return NULL;
-        }
-
-        inst->data->id = id;
-
-        inst->data->name = name_dup(name);
-        if (!inst->data->name) {
-                LOG_ERR("Failed creation of ipc name");
-                inst_cleanup(inst);
-                return NULL;
-        }
-
-        inst->data->info = rkzalloc(sizeof(*inst->data->info), GFP_KERNEL);
-        if (!inst->data->info) {
-                LOG_ERR("Instance creation failed (#2)");
-                inst_cleanup(inst);
-                return NULL;
-        }
-        inst->data->info->qdisc_max_size = DEFAULT_QDISC_MAX_SIZE;
-        inst->data->info->qdisc_enable_size = DEFAULT_QDISC_ENABLE_SIZE;
-
-        inst->data->fspec = rkzalloc(sizeof(*inst->data->fspec), GFP_KERNEL);
-        if (!inst->data->fspec) {
-                LOG_ERR("Instance creation failed (#3)");
-                inst_cleanup(inst);
-                return NULL;
-        }
-
-        inst->data->fspec->average_bandwidth           = 0;
-        inst->data->fspec->average_sdu_bandwidth       = 0;
-        inst->data->fspec->delay                       = 0;
-        inst->data->fspec->jitter                      = 0;
-        inst->data->fspec->max_allowable_gap           = -1;
-        inst->data->fspec->max_sdu_size                = 1500;
-        inst->data->fspec->ordered_delivery            = 0;
-        inst->data->fspec->partial_delivery            = 1;
-        inst->data->fspec->peak_bandwidth_duration     = 0;
-        inst->data->fspec->peak_sdu_bandwidth_duration = 0;
-        inst->data->fspec->undetected_bit_error_rate   = 0;
-
-        /* FIXME: Remove as soon as the kipcm_kfa gets removed*/
-        inst->data->kfa = kipcm_kfa(default_kipcm);
-
-        ASSERT(inst->data->kfa);
-
-        LOG_DBG("KFA instance %pK bound to the shim eth", inst->data->kfa);
-
-        spin_lock_init(&inst->data->lock);
-
-        INIT_LIST_HEAD(&(inst->data->flows));
-
-        /*
-         * Bind the shim-instance to the shims set, to keep all our data
-         * structures linked (somewhat) together
-         */
-        INIT_LIST_HEAD(&(inst->data->list));
-        list_add(&(inst->data->list), &(data->instances));
-
-        return inst;
-}
-
-static int eth_vlan_destroy(struct ipcp_factory_data * data,
-                            struct ipcp_instance *     instance)
-{
-        struct interface_data_mapping * mapping;
-        struct ipcp_instance_data * pos, * next;
-        struct shim_eth_flow * flow, * nflow;
-
-        ASSERT(data);
-        ASSERT(instance);
-
-        LOG_DBG("Looking for the eth-vlan-instance to destroy");
-
-        /* Retrieve the instance */
-        list_for_each_entry_safe(pos, next, &data->instances, list) {
-                if (pos->id == instance->data->id) {
-
-                        /* Destroy existing flows */
-                        list_for_each_entry_safe(flow, nflow, &pos->flows, list) {
-                                unbind_and_destroy_flow(pos, flow);
-                        }
-
-                        /* Restore old qdisc */
-                        eth_vlan_restore_qdisc(pos->phy_dev, pos->old_qdisc);
-
-                        /* Remove packet handler if there is one */
-                        if (pos->eth_vlan_packet_type->dev)
-                                __dev_remove_pack(pos->eth_vlan_packet_type);
-
-                        /* Unbind from the instances set */
-                        list_del(&pos->list);
-
-                        /* Destroy it */
-                        if (pos->name)
-                                name_destroy(pos->name);
-
-                        if (pos->dif_name)
-                                name_destroy(pos->dif_name);
-
-                        if (pos->app_name)
-                                name_destroy(pos->app_name);
-
-                        if (pos->info->interface_name)
-                                rkfree(pos->info->interface_name);
-
-                        if (pos->info)
-                                rkfree(pos->info);
-
-                        if (pos->fspec)
-                                rkfree(pos->fspec);
-
-                        if (pos->handle) {
-                                if (rinarp_remove(pos->handle)) {
-                                        LOG_ERR("Failed to remove "
-                                                "the entry from the cache");
-                                        return -1;
-                                }
-                        }
-
-                        mapping = inst_data_mapping_get(pos->dev);
-                        if (mapping) {
-                                LOG_DBG("removing mapping from list");
-                                spin_lock(&data_instances_lock);
-                                list_del(&mapping->list);
-                                spin_unlock(&data_instances_lock);
-                                rkfree(mapping);
-                        }
-
-                        /*
-                         * Might cause problems:
-                         * The packet type might still be in use by receivers
-                         * and must not be freed until after all
-                         * the CPU's have gone through a quiescent state.
-                         */
-                        if (pos->eth_vlan_packet_type)
-                                rkfree(pos->eth_vlan_packet_type);
-
-                        rkfree(pos);
-                        rkfree(instance);
-
-                        LOG_DBG("Eth-vlan instance destroyed, returning");
-
-                        return 0;
-                }
-        }
-
-        LOG_DBG("Didn't find instance, returning error");
-
-        return -1;
-}
-
-static struct ipcp_factory_ops eth_vlan_ops = {
-        .init      = eth_vlan_init,
-        .fini      = eth_vlan_fini,
-        .create    = eth_vlan_create,
-        .destroy   = eth_vlan_destroy,
-};
-
-static struct ipcp_factory * shim = NULL;
-
-#ifdef CONFIG_RINA_SHIM_ETH_VLAN_REGRESSION_TESTS
-static bool regression_test_create_vlan_interface_name(void)
-{
-        string_t * tmp;
-
-        LOG_DBG("Create-vlan-name regression tests");
-
-        LOG_DBG("Regression test #1");
-
-        LOG_DBG("Regression test #1.1");
-        tmp = create_vlan_interface_name("eth0", 0);
-        if (tmp) {
-                rkfree(tmp);
-                return false;
-        }
-
-        LOG_DBG("Regression test #1.2");
-        tmp = create_vlan_interface_name("eth0", 1);
-        if (tmp) {
-                rkfree(tmp);
-                return false;
-        }
-
-        LOG_DBG("Regression test #1.3");
-        tmp = create_vlan_interface_name("eth0", 4095);
-        if (tmp) {
-                rkfree(tmp);
-                return false;
-        }
-
-        LOG_DBG("Regression test #1.4");
-        tmp = create_vlan_interface_name("eth0", 4096);
-        if (tmp) {
-                rkfree(tmp);
-                return false;
-        }
-
-        LOG_DBG("Regression test #2");
-
-        LOG_DBG("Regression test #2.1");
-        tmp = create_vlan_interface_name("eth0", 2);
-        if (!tmp)
-                return false;
-        if (strlen(tmp) != 6) {
-                rkfree(tmp);
-                return false;
-        }
-        rkfree(tmp);
-
-        LOG_DBG("Regression test #2.2");
-        tmp = create_vlan_interface_name("eth0", 10);
-        if (!tmp)
-                return false;
-        if (strlen(tmp) != 7) {
-                rkfree(tmp);
-                return false;
-        }
-        rkfree(tmp);
-
-        LOG_DBG("Regression test #2.3");
-        tmp = create_vlan_interface_name("eth0", 100);
-        if (!tmp)
-                return false;
-        if (strlen(tmp) != 8) {
-                rkfree(tmp);
-                return false;
-        }
-        rkfree(tmp);
-
-        LOG_DBG("Regression test #2.4");
-        tmp = create_vlan_interface_name("eth0", 1000);
-        if (!tmp)
-                return false;
-        if (strlen(tmp) != 9) {
-                rkfree(tmp);
-                return false;
-        }
-        rkfree(tmp);
-
-        return true;
-}
-
-static bool regression_tests(void)
-{
-        if (!regression_test_create_vlan_interface_name()) {
-                LOG_ERR("Create-vlan-interface tests failed, bailing out");
-                return false;
-        }
-
-        return true;
-}
-#endif
-
-static int __init mod_init(void)
-{
-#ifdef CONFIG_RINA_SHIM_ETH_VLAN_REGRESSION_TESTS
-        LOG_DBG("Starting regression tests");
-
-        if (!regression_tests()) {
-                LOG_ERR("Regression tests failed, bailing out");
-                return -1;
-        }
-
-        LOG_DBG("Regression tests completed successfully");
-
-#endif
-
-        rcv_wq = alloc_workqueue(SHIM_NAME,
-                                 WQ_MEM_RECLAIM | WQ_HIGHPRI | WQ_UNBOUND,
-                                 1);
-        if (!rcv_wq) {
-                LOG_CRIT("Cannot create a workqueue for shim %s", SHIM_NAME);
-                return -1;
-        }
-
-        shim = kipcm_ipcp_factory_register(default_kipcm,
-                                           SHIM_NAME,
-                                           &eth_vlan_data,
-                                           &eth_vlan_ops);
-        if (!shim)
-                return -1;
-
-        spin_lock_init(&data_instances_lock);
-
-        return 0;
-}
-
-static void __exit mod_exit(void)
-{
-        ASSERT(shim);
-
-        flush_workqueue(rcv_wq);
-        destroy_workqueue(rcv_wq);
-
-        kipcm_ipcp_factory_unregister(default_kipcm, shim);
-}
-
-module_init(mod_init);
-module_exit(mod_exit);
-
-MODULE_DESCRIPTION("RINA Shim IPC Process over Ethernet");
-
-MODULE_LICENSE("GPL");
-
-MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
-MODULE_AUTHOR("Miquel Tarzan <miquel.tarzan@i2cat.net>");
-MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
-MODULE_AUTHOR("Leonardo Bergesio <leonardo.bergesio@i2cat.net>");
-MODULE_AUTHOR("Eduard Grasa <eduard.grasa@i2cat.net>");
+EXPORT_SYMBOL(rmt_enable_encryption);
