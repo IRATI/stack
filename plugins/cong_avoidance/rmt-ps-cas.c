@@ -29,6 +29,7 @@
 #include "debug.h"
 #include "rds/rmem.h"
 #include "rmt-ps.h"
+#include "rmt-ps-common.h"
 #include "pci.h"
 
 #define  N1_CYCLE_DURATION 100
@@ -131,9 +132,14 @@ static void cas_max_q_policy_rx(struct rmt_ps *      ps,
                                 struct rmt_n1_port * port)
 { printk("%s: called()\n", __func__); }
 
-static void cas_rmt_q_monitor_policy_tx_common(struct rmt_ps *      ps,
-                                               struct pdu *         pdu,
-                                               struct rmt_n1_port * port)
+static int cas_rmt_requeue_scheduling_policy_tx(struct rmt_ps *      ps,
+                                         	struct rmt_n1_port * n1_port,
+                                         	struct pdu *         pdu)
+{ return common_rmt_requeue_scheduling_policy_tx(ps, n1_port, pdu); }
+
+static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
+                                        struct pdu *         pdu,
+                                        struct rmt_n1_port * port)
 {
         struct cas_rmt_queue *   q;
         struct cas_rmt_ps_data * data;
