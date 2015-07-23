@@ -38,8 +38,8 @@ struct reg_cycle_t {
         struct timespec t_start;
         struct timespec t_last_start;
         struct timespec t_end;
-        uint            sum_area;
-        uint            avg_len;
+        ulong           sum_area;
+        ulong           avg_len;
 };
 
 struct cas_rmt_queue {
@@ -169,7 +169,8 @@ static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
                         *prev_cycle = *cur_cycle;
 			if (q->first_run) {
 				getnstimeofday(&cur_cycle->t_start);
-				cur_cycle->t_start.tv_nsec -= N1_CYCLE_DURATION;
+				getnstimeofday(&prev_cycle->t_start);
+				prev_cycle->t_start.tv_nsec -= N1_CYCLE_DURATION;
 				q->first_run = false;
 			}
 
@@ -184,7 +185,7 @@ static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
                         t_sub = timespec_sub(cur_cycle->t_end,
                                              cur_cycle->t_last_start);
                         cur_cycle->sum_area  +=
-                                (uint_t) atomic_read(&port->n_sdus) *          \
+                                (ulong) atomic_read(&port->n_sdus) *          \
                                 timespec_to_ns(&t_sub);
                         cur_cycle->t_last_start = cur_cycle->t_end;
                         LOG_DBG("n_sdus: %u",
@@ -201,14 +202,14 @@ static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
                 getnstimeofday(&cur_cycle->t_end);
                 t_sub = timespec_sub(cur_cycle->t_end, cur_cycle->t_last_start);
                 LOG_DBG("Prev sum area: %u", cur_cycle->sum_area);
-                cur_cycle->sum_area +=(uint_t) atomic_read(&port->n_sdus) *    \
+                cur_cycle->sum_area +=(ulong) atomic_read(&port->n_sdus) *    \
                                       timespec_to_ns(&t_sub);
                 LOG_DBG("n_sdus: %u", (uint_t) atomic_read(&port->n_sdus));
                 LOG_DBG("t_end - t_last_start = %llu - %llu = %llu",
                         timespec_to_ns(&cur_cycle->t_end),
                         timespec_to_ns(&cur_cycle->t_last_start),
                         timespec_to_ns(&t_sub));
-                LOG_DBG("sum_area: %u",cur_cycle->sum_area);
+                LOG_DBG("sum_area: %lu",cur_cycle->sum_area);
         }
 
         LOG_DBG(" Avg len inputs");
@@ -229,7 +230,7 @@ static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
         cur_cycle->avg_len /= timespec_to_ns(&t_sub);
 
 
-        LOG_DBG("The length for N-1 port %u just calculated is: %u",
+        LOG_DBG("The length for N-1 port %u just calculated is: %lu",
                 port->port_id, cur_cycle->avg_len);
 
         if (cur_cycle->avg_len >= 1) {
