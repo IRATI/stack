@@ -28,20 +28,13 @@
 #include "dtcp-ps.h"
 
 static int
-dummy_sv_update(struct dtcp_ps * ps, seq_num_t seq)
-{
-        printk("%s: called()\n", __func__);
-        return 0;
-}
-
-static int
 dummy_lost_control_pdu(struct dtcp_ps * ps)
 {
         printk("%s: called()\n", __func__);
         return 0;
 }
 
-static int dummy_rcvr_ack(struct dtcp_ps * ps, seq_num_t seq)
+static int dummy_rcvr_ack(struct dtcp_ps * ps, const struct pci * pci)
 {
         printk("%s: called()\n", __func__);
         return 0;
@@ -62,14 +55,14 @@ dummy_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
 }
 
 static int
-dummy_receiving_flow_control(struct dtcp_ps * ps, seq_num_t seq)
+dummy_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 {
         printk("%s: called()\n", __func__);
         return 0;
 }
 
 static int
-dummy_rcvr_flow_control(struct dtcp_ps * ps, seq_num_t seq)
+dummy_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 {
         printk("%s: called()\n", __func__);
         return 0;
@@ -104,7 +97,6 @@ dtcp_ps_dummy_create(struct rina_component * component)
         ps->dm                          = dtcp;
         ps->priv                        = NULL;
         ps->flow_init                   = NULL;
-        ps->sv_update                   = dummy_sv_update;
         ps->lost_control_pdu            = dummy_lost_control_pdu;
         ps->rtt_estimator               = NULL;
         ps->retransmission_timer_expiry = NULL;

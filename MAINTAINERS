@@ -158,7 +158,8 @@ F: linux/net/rina/syscall*
 
 Dummy kernel-space plugin:
 M: Leonardo Bergesio <leonardo.bergesio (at) i2cat.net>
-F: plugins/dummy/
+F: plugins/cong_avoidance/*
+F: plugins/dummy/*
 
 RED plugin:
 M: Leonardo Bergesio <leonardo.bergesio (at) i2cat.net>

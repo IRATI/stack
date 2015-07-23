@@ -125,7 +125,7 @@ common_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
                 return -1;
         }
         q = rmt_kqueue_find(qg, 0);
-        if (!qg) {
+        if (!q) {
                 LOG_ERR("Could not find queue in the group for n1_port %u",
                         n1_port->port_id);
                 pdu_destroy(pdu);
@@ -196,7 +196,7 @@ common_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
                 return NULL;
         }
         q = rmt_kqueue_find(qg, 0);
-        if (!qg) {
+        if (!q) {
                 LOG_ERR("Could not find queue in the group for n1_port %u",
                         n1_port->port_id);
                 return NULL;
