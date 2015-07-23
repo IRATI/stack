@@ -1500,6 +1500,7 @@ int rmt_receive(struct rmt * rmt,
         struct serdes *  serdes;
         struct buffer *  buf;
         struct rmt_n1_port * n1_port;
+	unsigned long    flags;
 
         if (!sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus SDU passed");
@@ -1515,7 +1516,6 @@ int rmt_receive(struct rmt * rmt,
                 sdu_destroy(sdu);
                 return -1;
         }
-        n1_port = n1pmap_find(rmt->n1_ports, from);
 
         buf = sdu_buffer_rw(sdu);
         if (!buf) {
@@ -1542,8 +1542,19 @@ int rmt_receive(struct rmt * rmt,
         serdes = rmt->serdes;
         ASSERT(serdes);
 
+	spin_lock_irqsave(&rmt->n1_ports->lock, flags);
+        n1_port = n1pmap_find(rmt->n1_ports, from);
+	if (!n1_port) {
+		spin_unlock_irqrestore(&rmt->n1_ports->lock, flags);
+		LOG_ERR("Could not retrieve N-1 port for the received PDU...");
+		return -1;
+	}
+	spin_unlock_irqrestore(&rmt->n1_ports->lock, flags);
+	spin_lock_irqsave(&n1_port->lock, flags);
         pdu = pdu_deserialize_ni(serdes, pdu_ser,
                                  n1_port->dup_config, n1_port->blkcipher);
+	spin_unlock_irqrestore(&n1_port->lock, flags);
+
         if (!pdu) {
                 LOG_ERR("Failed to deserialize PDU!");
                 pdu_ser_destroy(pdu_ser);
@@ -1680,6 +1691,15 @@ int rmt_pff_remove(struct rmt *           instance,
 }
 EXPORT_SYMBOL(rmt_pff_remove);
 
+int rmt_pff_port_state_change(struct rmt *	rmt,
+			      port_id_t		port_id,
+			      bool		up)
+{
+        return is_rmt_pff_ok(rmt) ?
+	       pff_port_state_change(rmt->pff, port_id, up) : -1;
+}
+EXPORT_SYMBOL(rmt_pff_port_state_change);
+
 int rmt_pff_dump(struct rmt *       instance,
                  struct list_head * entries)
 {
@@ -1731,11 +1751,14 @@ int rmt_enable_encryption(struct rmt *    instance,
 		return -1;
 	}
 
+	spin_lock_irqsave(&instance->n1_ports->lock, flags);
 	rmt_port = n1pmap_find(instance->n1_ports, port_id);
 	if (!rmt_port) {
+		spin_unlock_irqrestore(&instance->n1_ports->lock, flags);
 		LOG_ERR("Could not find N-1 port %d", port_id);
 		return -1;
 	}
+	spin_unlock_irqrestore(&instance->n1_ports->lock, flags);
 
 	if (!rmt_port->dup_config) {
 		LOG_ERR("SDU Protection for N-1 port %d is NULL", port_id);
