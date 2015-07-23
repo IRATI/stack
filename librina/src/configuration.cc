@@ -143,7 +143,24 @@ long PolicyConfig::get_param_value_as_long(const std::string& name) const
 	std::string value = get_param_value_as_string(name);
 	result = strtol(value.c_str(), &dummy, 10);
 	if (!value.size() || *dummy != '\0') {
-		throw Exception("Error converting value to int");
+		throw Exception("Error converting value to long");
+	}
+
+	return result;
+}
+
+float PolicyConfig::get_param_value_as_float(const std::string& name) const
+{
+	float result;
+	char *dummy;
+
+	std::string value = get_param_value_as_string(name);
+	result = strtof(value.c_str(), &dummy);
+	LOG_ERR("************");
+	LOG_ERR("str: %s, float: %f", value.c_str(), result);
+	LOG_ERR("************");
+	if (!value.size() || *dummy != '\0') {
+		throw Exception("Error converting value to float");
 	}
 
 	return result;
