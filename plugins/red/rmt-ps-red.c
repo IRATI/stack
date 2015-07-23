@@ -307,19 +307,21 @@ static int red_rmt_ps_set_policy_set_param(struct ps_base * bps,
                 if (!ret)
                         data->conf_data.Scell_log = bool_value;
         }
-	if (strcmp(name, "stab_address") == 0) {
-		int * stab_table = rkmalloc(sizeof(int)*3, GFP_KERNEL);
+	if (strcmp(name, "stab_address_p") == 0) {
 		void __user * user_pointer;
 		int user_address;
 		int ret;
+		int i;
+		int size = 256;
+		u8 * stab_table = rkmalloc(sizeof(*stab_table)*size, GFP_KERNEL);
 		kstrtoint(value, 16, &user_address);
 		user_pointer = (int *) user_address;
 		LOG_INFO("user_pinter %pk", user_pointer);
-		LOG_INFO("LEO: access_ok? %ld",access_ok(VERIFY_READ, user_pointer, 12));
-		ret = copy_from_user(stab_table, (const void __user *) user_pointer, 3*sizeof(int));
-		LOG_INFO("LEO COPIADO RET %d: %d,%d,%d", ret,stab_table[0], stab_table[1], stab_table[2]);
-		//data->stab = stab_table;
-		data->stab = NULL;
+		LOG_INFO("LEO: access_ok? %ld",access_ok(VERIFY_READ, user_pointer, size*sizeof(u8)));
+		ret = copy_from_user(stab_table, (const void __user *) user_pointer, size*sizeof(u8));
+		for (i = 0; i< size; i++)
+			LOG_INFO("stab_table[%d] = %u", i,  stab_table[i]);
+		data->stab = stab_table;
 	}
         return 0;
 }
@@ -357,7 +359,7 @@ rmt_ps_red_create(struct rina_component * component)
 	ps->priv = data;
 
 	rmt_cfg = rmt_config_get(rmt);
-	ps_param = policy_param_find(rmt_cfg->policy_set, "stab_address");
+	ps_param = policy_param_find(rmt_cfg->policy_set, "stab_address_p");
 	if (!ps_param) {
 		LOG_WARN("No PS param stab_address");
 	}
