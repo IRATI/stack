@@ -81,6 +81,7 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         seq_num_t                 c_seq;
         int                       ecn_bit;
         size_t                    v_size_n, v_size_c;
+        cep_id_t		  src_cep_id;
 
         if (!dtcp || !data) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -92,6 +93,7 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         }
 
         c_seq   = pci_sequence_number_get(pci);
+        src_cep_id = pci_cep_source(pci);
 
 	/* FIXME: This has to be considered in the case the sender inactivity
 	 * timers is triggered */
@@ -146,14 +148,15 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
                 if (data->ecn_count >= (data->wc >> 1)) {
                         /* decrease window's size*/
                         data->wc = (data->wc * data->w_dec_b_num_p) >> data->w_dec_b_den_p;
-                        LOG_DBG("Window size decreaased, new values are Wp: %u, Wc: %u, Wc_LWE: %u",
-                                data->wp, data->wc, data->wc_lwe);
+                        LOG_DBG("(src cep-id %d): Window size decreased, new values are Wp: %u, Wc: %u, Wc_LWE: %u",
+                        		src_cep_id, data->wp, data->wc, data->wc_lwe);
                 } else {
                         /*increment window's size */
                         data->wc += data->w_inc_a_p;
-                        LOG_DBG("Window size increased, new values are Wp: %u, Wc: %u, Wc_LWE: %u",
-                                data->wp, data->wc, data->wc_lwe);
+                        LOG_DBG("(src cep-id %d): Window size increased, new values are Wp: %u, Wc: %u, Wc_LWE: %u",
+                                 src_cep_id, data->wp, data->wc, data->wc_lwe);
                 }
+                LOG_INFO("Value = %d, %u", src_cep_id, data->wc);
 		/* reset rcv_vector */
 		/* NOTE: maybe we should resize only when increasing... */
                 v_size_n = VECTOR_SIZE(data->wc + data->wp);

@@ -125,17 +125,12 @@ struct cas_rmt_queue * cas_rmt_queue_find(struct cas_rmt_ps_data * data,
 static void cas_max_q_policy_tx(struct rmt_ps *      ps,
                                 struct pdu *         pdu,
                                 struct rmt_n1_port * port)
-{ printk("%s: called()\n", __func__); }
+{  }
 
 static void cas_max_q_policy_rx(struct rmt_ps *      ps,
                                 struct sdu *         sdu,
                                 struct rmt_n1_port * port)
-{ printk("%s: called()\n", __func__); }
-
-static int cas_rmt_requeue_scheduling_policy_tx(struct rmt_ps *      ps,
-                                         	struct rmt_n1_port * n1_port,
-                                         	struct pdu *         pdu)
-{ return common_rmt_requeue_scheduling_policy_tx(ps, n1_port, pdu); }
+{  }
 
 static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
                                         struct pdu *         pdu,
@@ -235,12 +230,11 @@ static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
         cur_cycle->avg_len = (cur_cycle->sum_area + prev_cycle->sum_area);
         cur_cycle->avg_len /= timespec_to_ns(&t_sub);
 
-
         LOG_DBG("The length for N-1 port %u just calculated is: %lu",
                 port->port_id, cur_cycle->avg_len);
 
         if (cur_cycle->avg_len >= 1) {
-                LOG_INFO("Congestion detected in port %u, marking packets...",
+                LOG_DBG("Congestion detected in port %u, marking packets...",
                          port->port_id);
                 pci = pdu_pci_get_rw(pdu);
                 if (!pci) {
@@ -259,7 +253,7 @@ static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
 static void cas_rmt_q_monitor_policy_rx(struct rmt_ps *      ps,
                                         struct sdu *         sdu,
                                         struct rmt_n1_port * port)
-{ printk("%s: called()\n", __func__); }
+{  }
 
 static struct pdu *
 cas_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
@@ -287,6 +281,7 @@ cas_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
                 LOG_ERR("Could not dequeue scheduled pdu");
                 return NULL;
         }
+
         return ret_pdu;
 }
 
