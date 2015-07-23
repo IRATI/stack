@@ -31,6 +31,7 @@
 #include "rmt-ps.h"
 #include "pci.h"
 
+#define  N1_CYCLE_DURATION 100
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
 struct reg_cycle_t {
@@ -49,6 +50,7 @@ struct cas_rmt_queue {
                 struct reg_cycle_t prev_cycle;
                 struct reg_cycle_t cur_cycle;
         } reg_cycles;
+	bool 		 first_run;
         struct hlist_node hlist;
 };
 
@@ -68,7 +70,7 @@ static struct cas_rmt_queue * cas_queue_create(port_id_t port_id)
                 return NULL;
         }
 
-        tmp->port_id                                 = port_id;
+        tmp->port_id                                    = port_id;
         tmp->reg_cycles.prev_cycle.t_start.tv_sec       = 0;
         tmp->reg_cycles.prev_cycle.t_start.tv_nsec      = 0;
         tmp->reg_cycles.prev_cycle.t_last_start.tv_sec  = 0;
@@ -77,7 +79,8 @@ static struct cas_rmt_queue * cas_queue_create(port_id_t port_id)
         tmp->reg_cycles.prev_cycle.t_end.tv_nsec        = 0;
         tmp->reg_cycles.prev_cycle.sum_area             = 0;
         tmp->reg_cycles.prev_cycle.avg_len              = 0;
-        tmp->reg_cycles.cur_cycle = tmp->reg_cycles.prev_cycle;
+        tmp->reg_cycles.cur_cycle                       = tmp->reg_cycles.prev_cycle;
+	tmp->first_run                                  = true;
 
         INIT_HLIST_NODE(&tmp->hlist);
 
@@ -164,6 +167,11 @@ static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
                 if (atomic_read(&port->n_sdus) == cur_qlen) {
                         LOG_DBG("new cycle");
                         *prev_cycle = *cur_cycle;
+			if (q->first_run) {
+				getnstimeofday(&cur_cycle->t_start);
+				cur_cycle->t_start.tv_nsec -= N1_CYCLE_DURATION;
+				q->first_run = false;
+			}
 
                         getnstimeofday(&cur_cycle->t_start);
                         cur_cycle->t_last_start = cur_cycle->t_start;
@@ -218,7 +226,7 @@ static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
         }
         t_sub = timespec_sub(cur_cycle->t_end, prev_cycle->t_start);
         cur_cycle->avg_len = (cur_cycle->sum_area + prev_cycle->sum_area);
-        do_div(cur_cycle->avg_len, timespec_to_ns(&t_sub));
+        cur_cycle->avg_len /= timespec_to_ns(&t_sub);
 
 
         LOG_DBG("The length for N-1 port %u just calculated is: %u",
