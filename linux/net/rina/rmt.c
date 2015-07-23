@@ -805,18 +805,21 @@ static int n1_port_write_noclean(struct rmt *         rmt,
         	n1_port->state = N1_PORT_STATE_DISABLED;
         	rcu_read_lock();
         	ps = container_of(rcu_dereference(rmt->base.ps), struct rmt_ps, base);
-        	if (ps) {
+        	if (ps && ps->rmt_requeue_scheduling_policy_tx) {
         		/* RMTQMonitorPolicy hook. */
         		if (ps->rmt_q_monitor_policy_tx) {
         			ps->rmt_q_monitor_policy_tx(ps, pdu, n1_port);
         		}
 
-        		if (ps->rmt_requeue_scheduling_policy_tx) {
-        			ps->rmt_requeue_scheduling_policy_tx(ps,
-        					n1_port,
-        					pdu);
-        			atomic_inc(&n1_port->n_sdus);
-        		}
+        		ps->rmt_requeue_scheduling_policy_tx(ps, n1_port, pdu);
+        		atomic_inc(&n1_port->n_sdus);
+        	} else {
+        		rcu_read_unlock();
+        		spin_unlock(&n1_port->lock);
+        		LOG_ERR("ps or ps->requeue_tx null, dropping PDU");
+        		pdu_destroy(pdu);
+        		return -1;
+
         	}
         	rcu_read_unlock();
         	spin_unlock(&n1_port->lock);
@@ -919,6 +922,7 @@ static void send_worker(unsigned long o)
                         do {
                         	pdu = ps->rmt_next_scheduled_policy_tx(ps, n1_port);
                         	if (pdu) {
+                        		atomic_dec(&n1_port->n_sdus);
                                         if (ps->rmt_q_monitor_policy_tx)
                                                 ps->rmt_q_monitor_policy_tx(ps,
                                                                             pdu,
@@ -940,7 +944,6 @@ static void send_worker(unsigned long o)
                         			break;
                         		}
 
-                        		atomic_dec(&n1_port->n_sdus);
                         		pdus_sent++;
                         	} else {
                         		LOG_WARN("N1_port->n_sdus > 0 and ps->next failed");
@@ -1023,26 +1026,34 @@ int rmt_send_port_id(struct rmt * instance,
                 N1_PORT_STATE_DISABLED) {
                 rcu_read_lock();
                 ps = container_of(rcu_dereference(instance->base.ps), struct rmt_ps, base);
-                if (ps) {
+                if (ps && ps->rmt_enqueue_scheduling_policy_tx) {
                         /* RMTQMonitorPolicy hook. */
                         if (ps->rmt_q_monitor_policy_tx) {
                                 ps->rmt_q_monitor_policy_tx(ps, pdu, out_n1_port);
                         }
-                        atomic_inc(&out_n1_port->n_sdus);
-                        if (ps->rmt_enqueue_scheduling_policy_tx) {
-                                ps->rmt_enqueue_scheduling_policy_tx(ps,
-                                                                     out_n1_port,
-                                                                     pdu);
+
+                        if (ps->rmt_enqueue_scheduling_policy_tx(ps,
+                        					 out_n1_port,
+                        					 pdu)) {
+                        	rcu_read_unlock();
+                        	spin_unlock_irqrestore(&out_n1_port->lock, flags);
+                        	return -1;
                         }
+                        atomic_inc(&out_n1_port->n_sdus);
 
                         if (ps->max_q_policy_tx) {
                                 ps->max_q_policy_tx(ps, pdu, out_n1_port);
                         }
 
+                } else {
+                	rcu_read_unlock();
+                	spin_unlock_irqrestore(&out_n1_port->lock, flags);
+                	LOG_ERR("ps or ps->enqueue_tx null, dropping pdu");
+                	pdu_destroy(pdu);
+                	return -1;
                 }
                 rcu_read_unlock();
                 spin_unlock_irqrestore(&out_n1_port->lock, flags);
-                /*tasklet_hi_schedule(&instance->egress_tasklet);*/
                 return 0;
         }
         spin_unlock_irqrestore(&out_n1_port->lock, flags);
