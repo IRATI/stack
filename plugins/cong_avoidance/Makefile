@@ -8,9 +8,9 @@ ifneq ($(KERNELRELEASE),)
 
 ccflags-y = -Wtype-limits -Inet/rina
 
-obj-m := red-pcc.o
+obj-m := cas-plugin.o
 
-red-pcc-y := ps.o
+cas-plugin-y := cas-plugin-ps.o rmt-ps-cas.o dtcp-ps-cas.o 
 
 else
 
