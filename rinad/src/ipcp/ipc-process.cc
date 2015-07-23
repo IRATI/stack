@@ -290,10 +290,13 @@ void IPCProcessImpl::processAssignToDIFRequestEvent(rina::AssignToDIFRequestEven
 	//
 	// This is a workaround in order to avoid harcoding multiple lookup
 	// tables in the kernel.
+
+	std::string STAB_ADDR_PARM = "stab_address_p";
+	std::string RMT_RED_PS_NAME = "red-ps";
 	rina::PolicyConfig * rmt_ps;
 	unsigned char * stab_table = NULL;
 	rmt_ps = &event.difInformation.dif_configuration_.rmt_configuration_.policy_set_;
-	if (!rmt_ps->name_.compare("red-ps")) {
+	if (!rmt_ps->name_.compare(RMT_RED_PS_NAME)) {
 
 		int stab_size = 256;
 		unsigned char U8_MASK = 0xFF;
@@ -309,8 +312,6 @@ void IPCProcessImpl::processAssignToDIFRequestEvent(rina::AssignToDIFRequestEven
 			tmp = fabs(log2(tmp));
 			int temp_int = rint(tmp);
 			stab_table[i] = (unsigned char) (temp_int & U8_MASK);
-			//stab_table[i] = (unsigned char) (rint(fabs(log2(pow(1.0 - 1/pow(2,Wlog), (i<<Scell_log)/t_ave))))) & U8_MASK;
-
 			LOG_ERR("stab_table[%d] = %u", i, stab_table[i]);
 		}
 
@@ -318,7 +319,7 @@ void IPCProcessImpl::processAssignToDIFRequestEvent(rina::AssignToDIFRequestEven
 		ss << (void *) stab_table;
 		rina::PolicyParameter stab_addr;
 
-		stab_addr.name_ = "stab_address_p";
+		stab_addr.name_ = STAB_ADDR_PARM;
 		stab_addr.value_ = ss.str();
 		LOG_ERR("STAB ADDR %s", ss.str().c_str());
 		event.difInformation.dif_configuration_.rmt_configuration_.policy_set_.parameters_.push_back(stab_addr);

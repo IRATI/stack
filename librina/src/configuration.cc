@@ -156,9 +156,6 @@ float PolicyConfig::get_param_value_as_float(const std::string& name) const
 
 	std::string value = get_param_value_as_string(name);
 	result = strtof(value.c_str(), &dummy);
-	LOG_ERR("************");
-	LOG_ERR("str: %s, float: %f", value.c_str(), result);
-	LOG_ERR("************");
 	if (!value.size() || *dummy != '\0') {
 		throw Exception("Error converting value to float");
 	}

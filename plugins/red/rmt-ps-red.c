@@ -312,15 +312,18 @@ static int red_rmt_ps_set_policy_set_param(struct ps_base * bps,
 		int user_address;
 		int ret;
 		int i;
-		int size = 256;
+		size_t size = 256;
 		u8 * stab_table = rkmalloc(sizeof(*stab_table)*size, GFP_KERNEL);
 		kstrtoint(value, 16, &user_address);
 		user_pointer = (int *) user_address;
-		LOG_INFO("user_pinter %pk", user_pointer);
-		LOG_INFO("LEO: access_ok? %ld",access_ok(VERIFY_READ, user_pointer, size*sizeof(u8)));
 		ret = copy_from_user(stab_table, (const void __user *) user_pointer, size*sizeof(u8));
-		for (i = 0; i< size; i++)
-			LOG_INFO("stab_table[%d] = %u", i,  stab_table[i]);
+		if (ret !=0) {
+			LOG_ERR("Stab table for RMT's RED PS was not fully copied, missing %d out of %u bytes",
+				ret, size);
+			LOG_ERR("Padding with 0s");
+			for (i = 0; i< size; i++)
+				stab_table[i] = 0;
+		}
 		data->stab = stab_table;
 	}
         return 0;
