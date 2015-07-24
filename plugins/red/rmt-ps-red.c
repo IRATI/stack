@@ -159,8 +159,8 @@ static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
 {
         struct red_rmt_queue *   q;
         struct red_rmt_ps_data * data = ps->priv;
-        /*struct pci *                 pci;
-        unsigned long                pci_flags;*/
+        struct pci *                 pci;
+        unsigned long                pci_flags;
 
         if (!ps || !port || !pdu || !data) {
                 LOG_ERR("Wrong input parameters for "
@@ -175,6 +175,42 @@ static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
                 pdu_destroy(pdu);
                 return -1;
         }
+
+	/* Compute average queue usage (see RED) */
+	q->vars.qavg = red_calc_qavg(&q->parms, &q->vars, rfifo_length(q->queue)+1);
+	/* NOTE: check this! */
+	if (red_is_idling(&q->vars))
+		red_end_of_idle_period(&q->vars);
+
+	switch (red_action(&q->parms, &q->vars, q->vars.qavg)) {
+	case RED_DONT_MARK:
+		break;
+
+	case RED_PROB_MARK:
+		/*q->red_stats.prob_drop++;*/
+		q->stats.prob_mark++;
+		/* mark ECN bit */
+                pci = pdu_pci_get_rw(pdu);
+                pci_flags = pci_flags_get(pci);
+                pci_flags_set(pci, pci_flags |= PDU_FLAGS_EXPLICIT_CONGESTION);
+		break;
+
+	case RED_HARD_MARK:
+		q->stats.forced_mark++;
+		goto congestion_drop;
+		break;
+	}
+
+	rfifo_push_ni(q->queue, pdu);
+        return 0;
+
+congestion_drop:
+
+        pdu_destroy(pdu);
+        atomic_dec(&port->n_sdus);
+        LOG_DBG("PDU dropped, max_th passed...");
+        return 0;
+
 /*
         if (q->avg_l <= q->min_th) {
                 LOG_DBG("PDU can be enqueued...");
@@ -200,7 +236,6 @@ static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
                 return 0;
         }
 */
-        return 0;
 }
 
 static int red_rmt_scheduling_create_policy_tx(struct rmt_ps *      ps,
@@ -345,20 +380,6 @@ rmt_ps_red_create(struct rina_component * component)
         ps->base.set_policy_set_param = red_rmt_ps_set_policy_set_param;
         ps->dm = rmt;
 
-/*
- * 241 struct tc_red_qopt {
- * 242         __u32           limit;
- * 243         __u32           qth_min;
- * 244         __u32           qth_max;
- * 245         unsigned char   Wlog;
- * 246         unsigned char   Plog;
- * 247         unsigned char   Scell_log;
- * 248         unsigned char   flags;
- * 249 #define TC_RED_ECN              1
- * 250 #define TC_RED_HARDDROP         2
- * 251 #define TC_RED_ADAPTATIVE       4
- * 252 };
-*/
 	ps->priv = data;
 
 	rmt_cfg = rmt_config_get(rmt);
