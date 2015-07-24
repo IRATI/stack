@@ -362,6 +362,48 @@ rmt_ps_red_create(struct rina_component * component)
 	ps->priv = data;
 
 	rmt_cfg = rmt_config_get(rmt);
+	ps_param = policy_param_find(rmt_cfg->policy_set, "qmax_p");
+	if (!ps_param) {
+		LOG_WARN("No PS param qmax_p");
+	}
+	red_rmt_ps_set_policy_set_param(&ps->base,
+					policy_param_name(ps_param),
+					policy_param_value(ps_param));
+	ps_param = policy_param_find(rmt_cfg->policy_set, "qth_min_p");
+	if (!ps_param) {
+		LOG_WARN("No PS param qth_min_p");
+	}
+	red_rmt_ps_set_policy_set_param(&ps->base,
+					policy_param_name(ps_param),
+					policy_param_value(ps_param));
+	ps_param = policy_param_find(rmt_cfg->policy_set, "qth_max_p");
+	if (!ps_param) {
+		LOG_WARN("No PS param qth_max_p");
+	}
+	red_rmt_ps_set_policy_set_param(&ps->base,
+					policy_param_name(ps_param),
+					policy_param_value(ps_param));
+	ps_param = policy_param_find(rmt_cfg->policy_set, "Wlog_p");
+	if (!ps_param) {
+		LOG_WARN("No PS param Wlog_p");
+	}
+	red_rmt_ps_set_policy_set_param(&ps->base,
+					policy_param_name(ps_param),
+					policy_param_value(ps_param));
+	ps_param = policy_param_find(rmt_cfg->policy_set, "Plog_p");
+	if (!ps_param) {
+		LOG_WARN("No PS param Plog_p");
+	}
+	red_rmt_ps_set_policy_set_param(&ps->base,
+					policy_param_name(ps_param),
+					policy_param_value(ps_param));
+	ps_param = policy_param_find(rmt_cfg->policy_set, "Scell_log_p");
+	if (!ps_param) {
+		LOG_WARN("No PS param Scell_log_p");
+	}
+	red_rmt_ps_set_policy_set_param(&ps->base,
+					policy_param_name(ps_param),
+					policy_param_value(ps_param));
 	ps_param = policy_param_find(rmt_cfg->policy_set, "stab_address_p");
 	if (!ps_param) {
 		LOG_WARN("No PS param stab_address");
