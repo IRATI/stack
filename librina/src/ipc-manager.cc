@@ -627,7 +627,6 @@ IPCProcessProxy * IPCProcessFactory::create(
 				(char*) 0
 			};
 
-			LOG_DBG("argv[0]: %s", argv[0]);
 			execve(argv[0], &argv[0], envp);
 
 			LOG_ERR("Problems loading IPC Process program, finalizing OS Process with error %s", strerror(errno));

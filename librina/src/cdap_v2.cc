@@ -377,7 +377,7 @@ class CDAPSession
 					   cdap_m_t::Opcode op_code, bool sent);
 	void cancelReadResponseMessageSentOrReceived(
 			const cdap_m_t &cdap_message, bool sent);
-	const cdap_rib::SerializedObject* serializeMessage(
+	const cdap_rib::ser_obj_t* serializeMessage(
 			const cdap_m_t &cdap_message) const;
 	const cdap_m_t* deserializeMessage(
 			const cdap_rib::SerializedObject &message) const;
@@ -720,6 +720,7 @@ cdap_m_t* CDAPMessageFactory::getCreateObjectRequestMessage(
 
 	return cdap_message;
 }
+
 cdap_m_t* CDAPMessageFactory::getCreateObjectResponseMessage(
 		const cdap_rib::flags_t &flags, const cdap_rib::obj_info_t &obj,
 		const cdap_rib::res_info_t &res, int invoke_id)
@@ -2674,7 +2675,7 @@ const cdap_rib::SerializedObject* GPBSerializer::serializeMessage(
 	int size = gpfCDAPMessage.ByteSize();
 	char *buffer = new char[size];
 	gpfCDAPMessage.SerializeToArray(buffer, size);
-	cdap_rib::SerializedObject *serialized_message =
+	cdap_rib::ser_obj_t *serialized_message =
 			new cdap_rib::SerializedObject;
 	serialized_message->message_ = buffer;
 	serialized_message->size_ = size;

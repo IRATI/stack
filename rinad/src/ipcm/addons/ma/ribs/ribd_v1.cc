@@ -167,7 +167,7 @@ void createIPCPObj(const rina::rib::rib_handle_t& rib, int ipcp_id){
 		tmp = new IPCPObj(ipcp_id);
 		ribd->addObjRIB(rib, ss.str(), &tmp);
 
-		ss << "/ribdaemon";
+		ss << "/ribDaemon";
 		tmp = new RIBDaemonObj(ipcp_id);
 		ribd->addObjRIB(rib, ss.str(), &tmp);
 	} catch (...) {

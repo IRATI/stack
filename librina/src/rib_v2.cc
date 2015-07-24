@@ -241,15 +241,26 @@ create_cb_t RIBSchema::get_create_callback(const std::string& class_,
 	key.first = class_;
 	key.second = fqn_;
 
-	LOG_DBG("Looking for callback for create operation of class '%s' and path '%s'",
-							class_.c_str(),
-							fqn_.c_str());
-
 	if(class_fqn_cb_map.find(key) != class_fqn_cb_map.end())
+	{
+		LOG_DBG("Found a callback for create operation of class '%s' and path '%s'",
+								class_.c_str(),
+								fqn_.c_str());
 		return class_fqn_cb_map[key];
+	}
+
 
 	if(class_cb_map.find(class_) != class_cb_map.end())
+	{
+		LOG_DBG("Found a callback for create operation of class '%s' and path '%s'",
+								class_.c_str(),
+								fqn_.c_str());
 		return class_cb_map[class_];
+	}
+
+	LOG_DBG("Callback not found for create operation of class '%s' and path '%s'",
+							class_.c_str(),
+							fqn_.c_str());
 	return NULL;
 }
 

@@ -36,9 +36,9 @@ using namespace rinad;
 
 const std::string Manager::mad_name = "mad";
 const std::string Manager::mad_instance = "1";
-const std::string ManagerWorker::IPCP_1 = "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=4";
-const std::string ManagerWorker::IPCP_2 = "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=6";
-const std::string ManagerWorker::IPCP_3 = "root, computingSystemID = 1, processingSystemID=1, kernelApplicationProcess, osApplicationProcess, ipcProcesses, ipcProcessID=4";
+const std::string ManagerWorker::IPCP_1 = "/computingSystemID=1/processingSystemID=1/kernelApplicationProcess/osApplicationProcess/ipcProcesses/ipcProcessID=4";
+const std::string ManagerWorker::IPCP_2 = "/computingSystemID=1/processingSystemID=1/kernelApplicationProcess/osApplicationProcess/ipcProcesses/ipcProcessID=6";
+const std::string ManagerWorker::IPCP_3 = "/computingSystemID=1/processingSystemID=1/kernelApplicationProcess/osApplicationProcess/ipcProcesses/ipcProcessID=4";
 
 void ConnectionCallback::open_connection(
 		const rina::cdap_rib::con_handle_t &con,
@@ -102,7 +102,7 @@ void ManagerWorker::operate(rina::FlowInformation flow)
         // CREATE IPCP
         createIPCP_1(flow.portId);
         // QUERY RIB
-        queryRIB(flow.portId, IPCP_1 + ",RIBDaemon");
+        queryRIB(flow.portId, IPCP_1 + "/ribDaemon");
         //queryRIB(flow.portId, IPCP_2 + ",RIBDaemon");
         //queryRIB(flow.portId, IPCP_3 + ",RIBDaemon");
 }
