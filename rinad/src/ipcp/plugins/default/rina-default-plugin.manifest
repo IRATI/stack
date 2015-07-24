@@ -1,0 +1,26 @@
+{
+        "PluginName": "rina-default-plugin",
+        "PluginVersion": "1",
+        "PolicySets" : [
+                {
+                        "Name": "default",
+                        "Component": "rmt",
+                        "Version" : "1"
+                },
+                {
+                        "Name": "default",
+                        "Component": "pff",
+                        "Version" : "1"
+                },
+                {
+                        "Name": "default",
+                        "Component": "dtp",
+                        "Version" : "1"
+                },
+                {
+                        "Name": "default",
+                        "Component": "dtcp",
+                        "Version" : "1"
+                }
+        ]
+}

@@ -1,0 +1,11 @@
+{
+        "PluginName": "red-pcc",
+        "PluginVersion": "1",
+        "PolicySets" : [
+                {
+                        "Name": "red-pcc",
+                        "Component": "rmt",
+                        "Version" : "1"
+                }
+        ]
+}

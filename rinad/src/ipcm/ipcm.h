@@ -35,6 +35,7 @@
 #include <librina/patterns.h>
 
 #include "dif-template-manager.h"
+#include "catalog.h"
 
 //Addons
 #include "addon.h"
@@ -817,6 +818,10 @@ public:
 
 	//The DIF template manager
 	DIFTemplateManager * dif_template_manager;
+
+	//Catalog of policies
+	Catalog catalog;
+
 private:
 	//Singleton
 	IPCManager_();

@@ -157,6 +157,9 @@ struct LocalConfiguration {
         /* The path to the RINA log folder in the system */
         std::string logPath;
 
+	/* The paths where to look for policy plugins. */
+	std::list<std::string> pluginsPaths;
+
         std::string toString() const;
 
         LocalConfiguration() :
