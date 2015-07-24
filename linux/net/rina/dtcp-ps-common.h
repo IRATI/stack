@@ -33,14 +33,11 @@
 #include "dtcp-ps.h"
 
 int
-common_sv_update(struct dtcp_ps * ps, seq_num_t seq);
-
-int
 common_lost_control_pdu(struct dtcp_ps * ps);
 
-int common_rcvr_ack(struct dtcp_ps * instance, seq_num_t seq);
+int common_rcvr_ack(struct dtcp_ps * instance, const struct pci * pci);
 
-int common_rcvr_ack_atimer(struct dtcp_ps * instance, seq_num_t seq);
+int common_rcvr_ack_atimer(struct dtcp_ps * instance, const struct pci * pci);
 
 int
 common_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num);
@@ -49,13 +46,13 @@ int
 common_sending_ack(struct dtcp_ps * ps, seq_num_t seq);
 
 int
-common_receiving_flow_control(struct dtcp_ps * ps, seq_num_t seq);
+common_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci);
 
 int
 common_flow_control_overrun(struct dtcp_ps * instance, struct pdu * pdu);
 
 int
-common_rcvr_flow_control(struct dtcp_ps * ps, seq_num_t seq);
+common_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci);
 
 int
 common_rate_reduction(struct dtcp_ps * ps);
