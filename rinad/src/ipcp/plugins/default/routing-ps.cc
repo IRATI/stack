@@ -360,7 +360,7 @@ std::list<rina::RoutingTableEntry *> DijkstraAlgorithm::computeRoutingTable(
 			if (nextHop != 0) {
 				entry = new rina::RoutingTableEntry();
 				entry->address = (*it);
-				entry->nextHopAddresses.push_back(nextHop);
+				entry->nextHopAddresses.push_back(rina::NHopAltList(nextHop));
 				entry->qosId = 1;
 				entry->cost = 1;
 				result.push_back(entry);
@@ -517,6 +517,7 @@ void LoopFreeAlternateAlgorithm::extendRoutingTableEntry(
 	std::list<rina::RoutingTableEntry *>::iterator rit;
 	bool found = false;
 
+	// Find the involved routing table entry
 	for (rit = rt.begin(); rit != rt.end(); rit++) {
 		if ((*rit)->address == target_address) {
 			break;
@@ -529,18 +530,22 @@ void LoopFreeAlternateAlgorithm::extendRoutingTableEntry(
 		return;
 	}
 
-	//Find the involved routing table entry, try to extend it
+	// Assume unicast and try to extend the routing table entry
+	// with the new alternative 'nexthop'
+	rina::NHopAltList& altlist = (*rit)->nextHopAddresses.front();
+
 	for (std::list<unsigned int>::iterator
-			hit = (*rit)->nextHopAddresses.begin();
-				hit != (*rit)->nextHopAddresses.end(); hit++) {
+			hit = altlist.alts.begin();
+				hit != altlist.alts.end(); hit++) {
 		if (*hit == nexthop) {
+			// The nexthop is already in the alternatives
 			found = true;
 			break;
 		}
 	}
 
 	if (!found) {
-		(*rit)->nextHopAddresses.push_back(nexthop);
+		altlist.alts.push_back(nexthop);
 		LOG_DBG("Node %u selected as LFA node towards the "
 			 "destination node %u", nexthop, target_address);
 	}
