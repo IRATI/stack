@@ -57,11 +57,6 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         state = NOT_INITIALIZED;
         lock_ = new rina::Lockable();
 
-        // Load the default pluggable components
-        if (plugin_load(PLUGINSDIR, "default")) {
-		throw rina::Exception("Failed to load default plugin");
-        }
-
         // Initialize application entities
         init_cdap_session_manager();
         init_encoder();
@@ -419,7 +414,7 @@ void IPCProcessImpl::processSetPolicySetParamRequestEvent(
                 result = security_manager_->set_policy_set_param(remainder,
                                                                 event.name,
                                                                 event.value);
-        } else if (component == "enrollment") {
+        } else if (component == "enrollment-task") {
                 result = enrollment_task_->set_policy_set_param(remainder,
                                                                event.name,
                                                                event.value);

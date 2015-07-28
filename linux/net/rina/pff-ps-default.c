@@ -593,6 +593,7 @@ pff_ps_default_create(struct rina_component * component)
 
         ps->pff_add = default_add;
         ps->pff_remove = default_remove;
+	ps->pff_port_state_change = NULL;
         ps->pff_is_empty = default_is_empty;
         ps->pff_flush = default_flush;
         ps->pff_nhop = default_nhop;
