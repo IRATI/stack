@@ -247,6 +247,7 @@ static int serialize_cc_pci(const struct serdes * instance,
                             int                   offset)
 {
         seq_num_t        seq;
+        u_int32_t        rt;
         struct dt_cons * dt_cons;
 
         ASSERT(instance);
@@ -278,6 +279,14 @@ static int serialize_cc_pci(const struct serdes * instance,
 
         /* Add MyRcvRate here in the future */
 
+        rt = pci_control_sndr_rate(pci);
+        memcpy(data + offset, &rt, dt_cons->rate);
+        offset += dt_cons->rate;
+
+        rt = pci_control_time_frame(pci);
+        memcpy(data + offset, &rt, dt_cons->frame);
+        offset += dt_cons->frame;
+
         return 0;
 }
 
@@ -287,6 +296,7 @@ static int serialize_fc_pci(const struct serdes * instance,
                             int                   offset)
 {
         seq_num_t        seq;
+        u_int32_t        rt;
         struct dt_cons * dt_cons;
 
         ASSERT(instance);
@@ -297,11 +307,6 @@ static int serialize_fc_pci(const struct serdes * instance,
         dt_cons = instance->dt_cons;
         ASSERT(dt_cons);
 
-        /*
-         * Not filling in rate-based fields for now
-         * since they are not defined as a type either
-         * Add them when needed
-         */
         seq = pci_control_new_rt_wind_edge(pci);
         memcpy(data + offset, &seq, dt_cons->seq_num_length);
         offset += dt_cons->seq_num_length;
@@ -312,6 +317,18 @@ static int serialize_fc_pci(const struct serdes * instance,
 
         seq = pci_control_my_rt_wind_edge(pci);
         memcpy(data + offset, &seq, dt_cons->seq_num_length);
+        offset += dt_cons->seq_num_length;
+
+        /* Rate based element filling.
+         */
+
+        rt = pci_control_sndr_rate(pci);
+        memcpy(data + offset, &rt, dt_cons->rate);
+        offset += dt_cons->rate;
+
+        rt = pci_control_time_frame(pci);
+        memcpy(data + offset, &rt, dt_cons->frame);
+        offset += dt_cons->frame;
 
         return 0;
 }
@@ -401,6 +418,7 @@ static int deserialize_fc_pci(const struct serdes * instance,
                               const uint8_t *       ptr)
 {
         seq_num_t        seq;
+        u_int32_t        rt;
         struct dt_cons * dt_cons;
 
         ASSERT(instance);
@@ -418,11 +436,6 @@ static int deserialize_fc_pci(const struct serdes * instance,
         if (pci_control_new_rt_wind_edge_set(new_pci, seq))
                 return -1;
 
-        /*
-         * Note that the same applies here as before
-         * Rate based has to be added
-         */
-
         memcpy(&seq, ptr + *offset, dt_cons->seq_num_length);
         *offset += dt_cons->seq_num_length;
         if (pci_control_my_left_wind_edge_set(new_pci, seq))
@@ -431,6 +444,19 @@ static int deserialize_fc_pci(const struct serdes * instance,
         memcpy(&seq, ptr + *offset, dt_cons->seq_num_length);
         *offset += dt_cons->seq_num_length;
         if (pci_control_my_rt_wind_edge_set(new_pci, seq))
+                return -1;
+
+        /* Rate mechanism de-serialization.
+         */
+
+        memcpy(&rt, ptr + *offset, dt_cons->rate);
+        *offset += dt_cons->rate;
+        if (pci_control_sndr_rate_set(new_pci, rt))
+                return -1;
+
+	memcpy(&rt, ptr + *offset, dt_cons->frame);
+        *offset += dt_cons->frame;
+        if (pci_control_time_frame_set(new_pci, rt))
                 return -1;
 
         return 0;
@@ -468,6 +494,7 @@ static int deserialize_cc_pci(const struct serdes * instance,
                               const uint8_t *       ptr)
 {
         seq_num_t        seq;
+        u_int32_t        rt;
         struct dt_cons * dt_cons;
 
         ASSERT(instance);
@@ -509,6 +536,19 @@ static int deserialize_cc_pci(const struct serdes * instance,
          * Note that the same applies here as before
          * MyRcvRate to be added here in the future
          */
+
+	 /* Rate mechanism de-serialization.
+         */
+
+        memcpy(&rt, ptr + *offset, dt_cons->rate);
+        *offset += dt_cons->rate;
+        if (pci_control_sndr_rate_set(new_pci, rt))
+                return -1;
+
+	memcpy(&rt, ptr + *offset, dt_cons->frame);
+        *offset += dt_cons->frame;
+        if (pci_control_time_frame_set(new_pci, rt))
+                return -1;
 
         return 0;
 }

@@ -1329,24 +1329,29 @@ static int parse_dt_cons(struct nlattr *  attr,
         struct nla_policy attr_policy[DTC_ATTR_MAX + 1];
         struct nlattr *   attrs[DTC_ATTR_MAX + 1];
 
-        attr_policy[DTC_ATTR_QOS_ID].type        = NLA_U16;
-        attr_policy[DTC_ATTR_QOS_ID].len         = 2;
-        attr_policy[DTC_ATTR_PORT_ID].type       = NLA_U16;
-        attr_policy[DTC_ATTR_PORT_ID].len        = 2;
-        attr_policy[DTC_ATTR_CEP_ID].type        = NLA_U16;
-        attr_policy[DTC_ATTR_CEP_ID].len         = 2;
-        attr_policy[DTC_ATTR_SEQ_NUM].type       = NLA_U16;
-        attr_policy[DTC_ATTR_SEQ_NUM].len        = 2;
-        attr_policy[DTC_ATTR_ADDRESS].type       = NLA_U16;
-        attr_policy[DTC_ATTR_ADDRESS].len        = 2;
-        attr_policy[DTC_ATTR_LENGTH].type        = NLA_U16;
-        attr_policy[DTC_ATTR_LENGTH].len         = 2;
-        attr_policy[DTC_ATTR_MAX_PDU_SIZE].type  = NLA_U32;
-        attr_policy[DTC_ATTR_MAX_PDU_SIZE].len   = 4;
-        attr_policy[DTC_ATTR_MAX_PDU_LIFE].type  = NLA_U32;
-        attr_policy[DTC_ATTR_MAX_PDU_LIFE].len   = 4;
-        attr_policy[DTC_ATTR_DIF_INTEGRITY].type = NLA_FLAG;
-        attr_policy[DTC_ATTR_DIF_INTEGRITY].len  = 0;
+        attr_policy[DTC_ATTR_QOS_ID].type          = NLA_U16;
+        attr_policy[DTC_ATTR_QOS_ID].len           = 2;
+        attr_policy[DTC_ATTR_PORT_ID].type         = NLA_U16;
+        attr_policy[DTC_ATTR_PORT_ID].len          = 2;
+        attr_policy[DTC_ATTR_CEP_ID].type          = NLA_U16;
+        attr_policy[DTC_ATTR_CEP_ID].len           = 2;
+        attr_policy[DTC_ATTR_SEQ_NUM].type         = NLA_U16;
+        attr_policy[DTC_ATTR_SEQ_NUM].len          = 2;
+        attr_policy[DTC_ATTR_ADDRESS].type         = NLA_U16;
+        attr_policy[DTC_ATTR_ADDRESS].len          = 2;
+        attr_policy[DTC_ATTR_LENGTH].type          = NLA_U16;
+        attr_policy[DTC_ATTR_LENGTH].len           = 2;
+        attr_policy[DTC_ATTR_MAX_PDU_SIZE].type    = NLA_U32;
+        attr_policy[DTC_ATTR_MAX_PDU_SIZE].len     = 4;
+        attr_policy[DTC_ATTR_MAX_PDU_LIFE].type    = NLA_U32;
+        attr_policy[DTC_ATTR_MAX_PDU_LIFE].len     = 4;
+        attr_policy[DTC_ATTR_DIF_INTEGRITY].type   = NLA_FLAG;
+        attr_policy[DTC_ATTR_DIF_INTEGRITY].len    = 0;
+        // Added for rate based.
+        attr_policy[DTC_ATTR_RATE_SIZE].type       = NLA_U32;
+        attr_policy[DTC_ATTR_RATE_SIZE].len        = 4;
+        attr_policy[DTC_ATTR_TIME_FRAME_SIZE].type = NLA_U32;
+        attr_policy[DTC_ATTR_TIME_FRAME_SIZE].len  = 4;
 
         if (nla_parse_nested(attrs, DTC_ATTR_MAX, attr, attr_policy) < 0)
                 return -1;
@@ -1382,6 +1387,16 @@ static int parse_dt_cons(struct nlattr *  attr,
         if (attrs[DTC_ATTR_MAX_PDU_LIFE])
                 dt_cons->max_pdu_life =
                         nla_get_u32(attrs[DTC_ATTR_MAX_PDU_LIFE]);
+
+        // Added for rate based pci.
+
+        if (attrs[DTC_ATTR_RATE_SIZE])
+                dt_cons->rate =
+                        nla_get_u32(attrs[DTC_ATTR_RATE_SIZE]);
+
+	if (attrs[DTC_ATTR_TIME_FRAME_SIZE])
+                dt_cons->frame =
+                        nla_get_u32(attrs[DTC_ATTR_TIME_FRAME_SIZE]);
 
         dt_cons->dif_integrity = nla_get_flag(attrs[DTC_ATTR_DIF_INTEGRITY]);
 
