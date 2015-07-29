@@ -27,7 +27,6 @@ RIBDaemonObj::RIBDaemonObj(std::string name,
 rina::cdap_rib::res_info_t* RIBDaemonObj::remoteRead(const std::string& name,
 		rina::cdap_rib::SerializedObject &obj_reply){
 
-	(void) name;
 	QueryRIBPromise promise;
 	rina::cdap_rib::res_info_t* r = new rina::cdap_rib::res_info_t;
 	r->result_ = 0;

@@ -831,7 +831,6 @@ ipc_process_destroy_connection_result_handler(rina::IPCEvent *e,
 		EventLoopData *opaque)
 {
 	DOWNCAST_DECL(e, rina::DestroyConnectionResultEvent, event);
-	(void) opaque;
 
 	if (event->result != 0){
 		LOG_IPCP_WARN("Problems destroying connection with associated to port-id %d",
@@ -929,8 +928,6 @@ static void
 ipc_process_default_handler(rina::IPCEvent *e,
 		EventLoopData *opaque)
 {
-	(void) opaque;
-
 	LOG_IPCP_WARN("Received unsupported event: %d", e->eventType);
 }
 

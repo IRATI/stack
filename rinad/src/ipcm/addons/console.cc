@@ -340,15 +340,11 @@ IPCMConsole::process_command(int cfd, char *cmdbuf, int size)
 int
 IPCMConsole::quit(vector<string>& args)
 {
-	(void) args;
-
 	return CMDRETSTOP;
 }
 
 int IPCMConsole::help(vector<string>& args)
 {
-	(void) args;
-
 	if (args.size() < 2) {
 		outstream << "Available commands:" << endl;
 		for (map<string, ConsoleCmdInfo>::iterator mit =
@@ -423,8 +419,6 @@ IPCMConsole::destroy_ipcp(vector<string>& args)
 int
 IPCMConsole::list_ipcps(vector<string>&args)
 {
-	(void) args;
-
 	IPCManager->list_ipcps(outstream);
 
 	return CMDRETCONT;
@@ -433,7 +427,6 @@ IPCMConsole::list_ipcps(vector<string>&args)
 int
 IPCMConsole::list_ipcp_types(std::vector<std::string>& args)
 {
-	(void) args;
 	std::list<std::string> types;
 
 	IPCManager->list_ipcp_types(types);

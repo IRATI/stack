@@ -73,8 +73,6 @@ void NeighborSetRIBObject::remoteCreateObject(void * object_value, const std::st
 	rina::ScopedLock g(lock_);
 	std::list<rina::Neighbor *> neighborsToCreate;
 
-	(void) invoke_id;  // Stop compiler barfs
-	(void) session_descriptor; // Stop compiler barfs
 
 	try {
 		if (object_name.compare(NEIGHBOR_SET_RIB_OBJECT_NAME) == 0) {
@@ -129,7 +127,6 @@ void NeighborSetRIBObject::populateNeighborsToCreateList(rina::Neighbor* neighbo
 void NeighborSetRIBObject::createObject(const std::string& objectClass,
 			const std::string& objectName,
 			const void* objectValue) {
-	(void) objectClass; // Stop compiler barfs
 
 	if (objectName.compare(NEIGHBOR_SET_RIB_OBJECT_NAME) == 0) {
 		std::list<rina::Neighbor *>::const_iterator iterator;

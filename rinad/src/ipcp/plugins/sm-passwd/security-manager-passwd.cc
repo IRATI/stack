@@ -26,7 +26,6 @@ private:
 
 SecurityManagerPasswdPs::SecurityManagerPasswdPs(IPCPSecurityManager * dm_) : dm(dm_)
 {
-	(void)dm;
 }
 
 
