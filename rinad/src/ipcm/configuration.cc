@@ -568,19 +568,6 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 		(dt_const
 				.get("sequenceNumberLength", 0)
 				.asUInt());
-
-		// Rate FC based mechanisms here.
-
-		dt.rate_length_ = static_cast<unsigned short>
-		(dt_const
-				.get("rateLength", 0)
-				.asUInt());
-
-		dt.time_Frame_length = static_cast<unsigned short>
-		(dt_const
-				.get("timeFrameLength", 0)
-				.asUInt());
-
 		dif_template->dataTransferConstants = dt;
 	}
 

@@ -127,7 +127,8 @@ static int base_pci_size(const struct dt_cons * dt_cons)
 static int fc_pci_size(const struct dt_cons * dt_cons)
 {
         return 3 * dt_cons->seq_num_length +
-                dt_cons->rate + dt_cons->frame;
+        		RATE_LEN + TIME_LEN;
+                //dt_cons->rate + dt_cons->frame;
 }
 
 static int serialize_base_pci(const struct serdes * instance,
@@ -279,12 +280,12 @@ static int serialize_cc_pci(const struct serdes * instance,
         /* Add MyRcvRate here in the future */
 
         rt = pci_control_sndr_rate(pci);
-        memcpy(data + offset, &rt, dt_cons->rate);
-        offset += dt_cons->rate;
+        memcpy(data + offset, &rt, RATE_LEN);
+        offset += RATE_LEN;
 
         rt = pci_control_time_frame(pci);
-        memcpy(data + offset, &rt, dt_cons->frame);
-        offset += dt_cons->frame;
+        memcpy(data + offset, &rt, TIME_LEN);
+        offset += TIME_LEN;
 
         return 0;
 }
@@ -322,12 +323,12 @@ static int serialize_fc_pci(const struct serdes * instance,
          */
 
         rt = pci_control_sndr_rate(pci);
-        memcpy(data + offset, &rt, dt_cons->rate);
-        offset += dt_cons->rate;
+        memcpy(data + offset, &rt, RATE_LEN);
+        offset += RATE_LEN;
 
         rt = pci_control_time_frame(pci);
-        memcpy(data + offset, &rt, dt_cons->frame);
-        offset += dt_cons->frame;
+        memcpy(data + offset, &rt, TIME_LEN);
+        offset += TIME_LEN;
 
         return 0;
 }
@@ -448,13 +449,13 @@ static int deserialize_fc_pci(const struct serdes * instance,
         /* Rate mechanism de-serialization.
          */
 
-        memcpy(&rt, ptr + *offset, dt_cons->rate);
-        *offset += dt_cons->rate;
+        memcpy(&rt, ptr + *offset, RATE_LEN);
+        *offset += RATE_LEN;
         if (pci_control_sndr_rate_set(new_pci, rt))
                 return -1;
 
-	memcpy(&rt, ptr + *offset, dt_cons->frame);
-        *offset += dt_cons->frame;
+	memcpy(&rt, ptr + *offset, TIME_LEN);
+        *offset += TIME_LEN;
         if (pci_control_time_frame_set(new_pci, rt))
                 return -1;
 
@@ -539,13 +540,13 @@ static int deserialize_cc_pci(const struct serdes * instance,
 	 /* Rate mechanism de-serialization.
          */
 
-        memcpy(&rt, ptr + *offset, dt_cons->rate);
-        *offset += dt_cons->rate;
+        memcpy(&rt, ptr + *offset, RATE_LEN);
+        *offset += RATE_LEN;
         if (pci_control_sndr_rate_set(new_pci, rt))
                 return -1;
 
-	memcpy(&rt, ptr + *offset, dt_cons->frame);
-        *offset += dt_cons->frame;
+	memcpy(&rt, ptr + *offset, TIME_LEN);
+        *offset += TIME_LEN;
         if (pci_control_time_frame_set(new_pci, rt))
                 return -1;
 

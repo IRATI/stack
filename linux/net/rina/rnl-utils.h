@@ -425,9 +425,6 @@ enum data_transfer_cons_attrs_list {
         DTC_ATTR_MAX_PDU_SIZE,
         DTC_ATTR_MAX_PDU_LIFE,
         DTC_ATTR_DIF_INTEGRITY,
-        // Added for rate based.
-        DTC_ATTR_RATE_SIZE,
-        DTC_ATTR_TIME_FRAME_SIZE,
         __DTC_ATTR_MAX,
 };
 #define DTC_ATTR_MAX (__DTC_ATTR_MAX -1)
