@@ -52,6 +52,7 @@ struct cas_dtcp_ps_data {
         unsigned int ecn_count;
         unsigned int rcv_count;
         int *        rcv_vector;
+        spinlock_t   lock;
 };
 
 static int
@@ -82,6 +83,7 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         int                       ecn_bit;
         size_t                    v_size_n, v_size_c;
         cep_id_t		  src_cep_id;
+        unsigned long 		  flags;
 
         if (!dtcp || !data) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -106,6 +108,7 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
                 data->wc_lwe    = c_seq;
         }
 */
+        spin_lock_irqsave(&data->lock, flags);
         if (data->first_run) {
                 data->wc_lwe = c_seq;
                 data->first_run = false;
@@ -123,7 +126,9 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
                 data->rcv_vector[BIT_INDEX(c_seq - data->wc_lwe)]);
 
         if (ecn_bit) {
-                LOG_INFO("This pdu was alrady considered, exiting...");
+                LOG_INFO("This pdu was already considered, exiting...");
+                LOG_INFO("Vector position: %d; seq-num: %u; lwe: %u",
+                	 BIT_INDEX(c_seq - data->wc_lwe), c_seq, data->wc_lwe);
                 goto exit;
         }
 
@@ -156,13 +161,19 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
                         LOG_DBG("(src cep-id %d): Window size increased, new values are Wp: %u, Wc: %u, Wc_LWE: %u",
                                  src_cep_id, data->wp, data->wc, data->wc_lwe);
                 }
-                LOG_INFO("Value = %d, %u", src_cep_id, data->wc);
+
 		/* reset rcv_vector */
 		/* NOTE: maybe we should resize only when increasing... */
                 v_size_n = VECTOR_SIZE(data->wc + data->wp);
+                LOG_INFO("Int size %d", sizeof(int));
+                LOG_INFO("Value = %d, %u; old value: %d"
+                	 "Current Vsize %zu, old Vsize %zu"
+                	, src_cep_id, data->wc, data->wp,
+                	  v_size_n, v_size_c);
 		if (v_size_n != v_size_c) {
                         rkfree(data->rcv_vector);
                         data->rcv_vector = rkmalloc(v_size_n, GFP_ATOMIC);
+                        LOG_INFO("vector size is %zu", v_size_n);
                 }
                 memset(data->rcv_vector, 0, v_size_n);
                 data->rcv_count = 0;
@@ -170,6 +181,7 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
                 dtcp_rcvr_credit_set(dtcp, data->wc);
         }
 exit:
+	spin_unlock_irqrestore(&data->lock, flags);
         update_rt_wind_edge(dtcp);
 
         LOG_DBG("Credit and RWE set: %u, %u", data->wc, rcvr_rt_wind_edge(dtcp));
