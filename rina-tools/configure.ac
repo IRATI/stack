@@ -41,16 +41,16 @@ AC_PROG_CXXCPP
 AC_PROG_CXX
 AC_PROG_CXX_C_O
 
-AC_CXX_HAVE_SSTREAM
-AC_CXX_HAVE_STRSTREAM
-AC_CXX_HAVE_LONG_LONG
-
 # Just to avoid warning from libtool 1.14
 AM_PROG_AR
 LT_INIT
 
 CPPFLAGS_EXTRA=""
 CXXFLAGS_EXTRA=""
+
+#Set this for TCLAP... we don't support compilers with incomplete std C++ libs
+#so we don't even check it.
+AC_DEFINE([HAVE_SSTREAM], [1], [TCLAP needs this])
 
 AX_CHECK_COMPILE_FLAG([ -Wall ], [
     CXXFLAGS_EXTRA="$CXXFLAGS_EXTRA -Wall"
