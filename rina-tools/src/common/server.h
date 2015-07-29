@@ -73,7 +73,7 @@ public:
                const std::string& app_instance);
         virtual ~Server();
 
-        void run(bool blocking);
+        virtual void run(bool blocking);
         void worker_completed(ServerWorker * worker);
         void remove_completed_workers();
 

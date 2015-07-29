@@ -93,18 +93,32 @@ int ManagerWorker::internal_run()
 
 void ManagerWorker::operate(rina::FlowInformation flow)
 {
+	bool create_result = false;
         ConnectionCallback callback;
         std::cout << "cdap_prov created" << std::endl;
         cdap::init(&callback, false);
         cdap_prov_ = cdap::getProvider();
         // CACEP
         cacep(flow.portId);
-        // CREATE IPCP
-        createIPCP_1(flow.portId);
-        // QUERY RIB
-        queryRIB(flow.portId, IPCP_1 + "/ribDaemon");
-        //queryRIB(flow.portId, IPCP_2 + ",RIBDaemon");
-        //queryRIB(flow.portId, IPCP_3 + ",RIBDaemon");
+
+        if (flow.remoteAppName.processName == "rina.apps.mad.1") {
+        	create_result = createIPCP_1(flow.portId);
+        	// QUERY RIB
+        	if (create_result)
+        	        queryRIB(flow.portId, IPCP_1 + "/ribDaemon");
+
+        }
+        if (flow.remoteAppName.processName == "rina.apps.mad.2") {
+        	create_result = createIPCP_2(flow.portId);
+        	if (create_result)
+        		queryRIB(flow.portId, IPCP_2 + "/ribDaemon");
+
+        }
+        if (flow.remoteAppName.processName == "rina.apps.mad.3") {
+        	create_result = createIPCP_3(flow.portId);
+        	if (create_result)
+        		queryRIB(flow.portId, IPCP_3 + "/ribDaemon");
+        }
 }
 
 void ManagerWorker::cacep(int port_id)
@@ -117,7 +131,7 @@ void ManagerWorker::cacep(int port_id)
 	cdap::getProvider()->process_message(message, port_id);
 }
 
-void ManagerWorker::createIPCP_1(int port_id)
+bool ManagerWorker::createIPCP_1(int port_id)
 {
 	char buffer[max_sdu_size_in_bytes];
 
@@ -158,10 +172,12 @@ void ManagerWorker::createIPCP_1(int port_id)
 	} catch (Exception &e) {
 		std::cout << "ReadSDUException in createIPCP_1: " << e.what()
 				<< std::endl;
+		return false;
 	}
+	return true;
 }
 
-void ManagerWorker::createIPCP_2(int port_id) {
+bool ManagerWorker::createIPCP_2(int port_id) {
 	char buffer[max_sdu_size_in_bytes];
 
 	mad_manager::structures::ipcp_config_t ipc_config;
@@ -205,10 +221,12 @@ void ManagerWorker::createIPCP_2(int port_id) {
 	} catch (Exception &e) {
 		std::cout << "ReadSDUException in createIPCP_2: " << e.what()
 				<< std::endl;
+		return false;
 	}
+	return true;
 }
 
-void ManagerWorker::createIPCP_3(int port_id) {
+bool ManagerWorker::createIPCP_3(int port_id) {
 	char buffer[max_sdu_size_in_bytes];
 
 	mad_manager::structures::ipcp_config_t ipc_config;
@@ -251,7 +269,9 @@ void ManagerWorker::createIPCP_3(int port_id) {
 	} catch (Exception &e) {
 		std::cout << "ReadSDUException in createIPCP 3: " << e.what()
 				<< std::endl;
+		return false;
 	}
+	return true;
 }
 
 void ManagerWorker::queryRIB(int port_id, std::string name)
@@ -286,6 +306,93 @@ Manager::Manager(const std::string& dif_name, const std::string& apn,
 			const std::string& api)
 		: Server(dif_name, apn, api)
 {
+}
+
+void Manager::run(bool blocking)
+{
+	int order = 1;
+	std::map<int, rina::FlowInformation> waiting;
+        rina::FlowInformation flow;
+        applicationRegister(blocking);
+
+        for(;;) {
+                IPCEvent* event = ipcEventProducer->eventWait();
+                int port_id = 0;
+                DeallocateFlowResponseEvent *resp = NULL;
+
+                if (!event)
+                        return;
+
+                switch (event->eventType) {
+
+                case REGISTER_APPLICATION_RESPONSE_EVENT:
+                        ipcManager->commitPendingRegistration(event->sequenceNumber,
+                                                             dynamic_cast<RegisterApplicationResponseEvent*>(event)->DIFName);
+                        break;
+
+                case UNREGISTER_APPLICATION_RESPONSE_EVENT:
+                        ipcManager->appUnregistrationResult(event->sequenceNumber,
+                                                            dynamic_cast<UnregisterApplicationResponseEvent*>(event)->result == 0);
+                        break;
+
+                case FLOW_ALLOCATION_REQUESTED_EVENT:
+                        flow = ipcManager->allocateFlowResponse(*dynamic_cast<FlowRequestEvent*>(event), 0, true);
+                        port_id = flow.portId;
+                        LOG_INFO("New flow allocated [port-id = %d]", port_id);
+
+                        if (flow.remoteAppName.processName == "rina.apps.mad.1")
+                        {
+                        	if (waiting.find(1) == waiting.end()){
+                        		waiting[1] = flow;
+                        	} else {
+                        		std::cout << "Error, flow with the same mad already exist: "<< flow.remoteAppName.processName<< std::endl;
+                        		ipcManager->requestFlowDeallocation(flow.portId);
+                        	}
+                        }
+                        if (flow.remoteAppName.processName== "rina.apps.mad.2") {
+                        	if (waiting.find(2) == waiting.end()) {
+                        		waiting[2] = flow;
+                        	} else {
+                        		std::cout << "Error, flow with the same mad already exist: "<< flow.remoteAppName.processName<< std::endl;
+                        		ipcManager->requestFlowDeallocation(flow.portId);
+                        	}
+                        }
+                        if (flow.remoteAppName.processName== "rina.apps.mad.3") {
+                        	if (waiting.find(3) == waiting.end()) {
+                        		waiting[3] = flow;
+                        	} else {
+                        		std::cout << "Error, flow with the same mad already exist: "<< flow.remoteAppName.processName<< std::endl;
+                        		ipcManager->requestFlowDeallocation(flow.portId);
+                        	}
+                        }
+                       while (waiting.find(order) != waiting.end()) {
+                        	startWorker(waiting[order]);
+                        	order++;
+                        }
+                        startWorker(waiting[order]);
+                        break;
+
+                case FLOW_DEALLOCATED_EVENT:
+                        port_id = dynamic_cast<FlowDeallocatedEvent*>(event)->portId;
+                        ipcManager->flowDeallocated(port_id);
+                        LOG_INFO("Flow torn down remotely [port-id = %d]", port_id);
+                        break;
+
+                case DEALLOCATE_FLOW_RESPONSE_EVENT:
+                        LOG_INFO("Destroying the flow after time-out");
+                        resp = dynamic_cast<DeallocateFlowResponseEvent*>(event);
+                        port_id = resp->portId;
+
+                        ipcManager->flowDeallocationResult(port_id, resp->result == 0);
+                        break;
+
+                default:
+                        LOG_INFO("Server got new event of type %d",
+                                        event->eventType);
+                        break;
+                }
+                sleep(1);
+        }
 }
 
 ServerWorker * Manager::internal_start_worker(rina::FlowInformation flow)
