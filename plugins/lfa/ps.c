@@ -274,7 +274,7 @@ static int lfa_add(struct pff_ps *ps,
 	tmp->port = alts->ports[0];
 	tmp->nhop = tmp->port;
 
-	for (i = 1; i < alts->num_ports-1; i++) {
+	for (i = 1; i < alts->num_ports; i++) {
 		if (pfte_port_add(tmp, alts->ports[i])) {
 			pfte_destroy(tmp);
 			spin_unlock(&priv->lock);
