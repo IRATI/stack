@@ -350,8 +350,6 @@ std::list<rina::RoutingTableEntry *> DijkstraAlgorithm::computeRoutingTable(
 	unsigned int nextHop;
 	rina::RoutingTableEntry * entry;
 
-	(void)fsoList; // avoid compiler barfs
-
 	execute(graph, source_address);
 
 	for (it = graph.vertices_.begin(); it != graph.vertices_.end(); ++it) {
@@ -630,8 +628,6 @@ const void* FlowStateRIBObjectGroup::get_value() const
 void FlowStateRIBObjectGroup::remoteWriteObject(void * object_value,
 		int invoke_id, rina::CDAPSessionDescriptor * cdapSessionDescriptor)
 {
-	(void) invoke_id;
-
 	std::list<FlowStateObject *> * objects =
 			(std::list<FlowStateObject *> *) object_value;
 	lsr_policy_->writeMessageReceived(*objects,
@@ -683,8 +679,6 @@ void FlowStateRIBObject::createObject(const std::string& objectClass, const std:
 
 void FlowStateRIBObject::deleteObject(const void* objectValue)
 {
-        (void) objectValue; // Stop compiler barfs
-
 	parent_->remove_child(name_);
 	rib_daemon_->removeRIBObject(name_);
 }
@@ -935,8 +929,6 @@ void LinkStateRoutingCDAPMessageHandler::readResponse(int result,
 		const std::string& object_name,
 		rina::CDAPSessionDescriptor * session_descriptor)
 {
-	(void) object_name;
-
 	if (result != 0) {
 		LOG_IPCP_ERR("Problems reading Flow State Objects from neighbor: %s",
 				result_reason.c_str());

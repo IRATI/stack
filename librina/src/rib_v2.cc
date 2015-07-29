@@ -480,8 +480,6 @@ void RIBDaemon::open_connection(const cdap_rib::con_handle_t &con,
 
 	// FIXME add result
 	cdap_rib::result_info res;
-	(void) res;
-	(void) flags;
 	app_con_callback_->connect(message_id, con);
 	cdap_provider_->open_connection_response(con, res, message_id);
 }
@@ -498,7 +496,6 @@ void RIBDaemon::close_connection(const cdap_rib::con_handle_t &con,
 
 	// FIXME add result
 	cdap_rib::result_info res;
-	(void) res;
 	app_con_callback_->release(message_id, con);
 	cdap_provider_->close_connection_response(con.port_, flags, res,
 							message_id);
@@ -546,7 +543,6 @@ void RIBDaemon::remote_create_request(const cdap_rib::con_handle_t &con,
 					const cdap_rib::filt_info_t &filt,
 					int message_id) {
 
-	(void) filt;
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 	flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
@@ -593,7 +589,6 @@ void RIBDaemon::remote_delete_request(const cdap_rib::con_handle_t &con,
 					const cdap_rib::filt_info_t &filt,
 					int message_id) {
 
-	(void) filt;
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 
@@ -616,7 +611,6 @@ void RIBDaemon::remote_read_request(const cdap_rib::con_handle_t &con,
 					const cdap_rib::filt_info_t &filt,
 					int message_id) {
 
-	(void) filt;
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 	flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
@@ -655,7 +649,6 @@ void RIBDaemon::remote_cancel_read_request(
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt, int message_id) {
 
-	(void) filt;
 
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
@@ -684,7 +677,6 @@ void RIBDaemon::remote_write_request(const cdap_rib::con_handle_t &con,
 					const cdap_rib::filt_info_t &filt,
 					int message_id) {
 
-	(void) filt;
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 
@@ -722,7 +714,6 @@ void RIBDaemon::remote_start_request(const cdap_rib::con_handle_t &con,
 					const cdap_rib::filt_info_t &filt,
 					int message_id) {
 
-	(void) filt;
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 
@@ -761,7 +752,6 @@ void RIBDaemon::remote_stop_request(const cdap_rib::con_handle_t &con,
 					const cdap_rib::filt_info_t &filt,
 					int message_id) {
 
-	(void) filt;
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 
@@ -920,16 +910,12 @@ bool BaseRIBObject::createObject(const std::string& clas,
 					const std::string& name,
 					const void* value) {
 
-	(void) clas;
-	(void) name;
-	(void) value;
 	operation_not_supported();
 	return false;
 }
 
 bool BaseRIBObject::deleteObject(const void* value) {
 
-	(void) value;
 	operation_not_supported();
 	return false;
 }
@@ -941,21 +927,18 @@ BaseRIBObject* BaseRIBObject::readObject() {
 
 bool BaseRIBObject::writeObject(const void* value) {
 
-	(void) value;
 	operation_not_supported();
 	return false;
 }
 
 bool BaseRIBObject::startObject(const void* object) {
 
-	(void) object;
 	operation_not_supported();
 	return false;
 }
 
 bool BaseRIBObject::stopObject(const void* object) {
 
-	(void) object;
 	operation_not_supported();
 	return false;
 }
@@ -965,10 +948,6 @@ cdap_rib::res_info_t* BaseRIBObject::remoteCreate(
 		const cdap_rib::SerializedObject &obj_req,
 		cdap_rib::SerializedObject &obj_reply) {
 
-	(void) name;
-	(void) clas;
-	(void) obj_req;
-	(void) obj_reply;
 	operation_not_supported();
 	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
 	// FIXME: change for real opcode
@@ -978,7 +957,6 @@ cdap_rib::res_info_t* BaseRIBObject::remoteCreate(
 
 cdap_rib::res_info_t* BaseRIBObject::remoteDelete(const std::string& name) {
 
-	(void) name;
 	operation_not_supported();
 	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
 	// FIXME: change for real opcode
@@ -991,8 +969,6 @@ cdap_rib::res_info_t* BaseRIBObject::remoteRead(
 		const std::string& name,
 		cdap_rib::SerializedObject &obj_reply) {
 
-	(void) name;
-	(void) obj_reply;
 	operation_not_supported();
 	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
 	// FIXME: change for real opcode
@@ -1002,7 +978,6 @@ cdap_rib::res_info_t* BaseRIBObject::remoteRead(
 
 cdap_rib::res_info_t* BaseRIBObject::remoteCancelRead(const std::string& name) {
 
-	(void) name;
 	operation_not_supported();
 	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
 	// FIXME: change for real opcode
@@ -1015,9 +990,6 @@ cdap_rib::res_info_t* BaseRIBObject::remoteWrite(
 		const cdap_rib::SerializedObject &obj_req,
 		cdap_rib::SerializedObject &obj_reply) {
 
-	(void) name;
-	(void) obj_req;
-	(void) obj_reply;
 	operation_not_supported();
 	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
 	// FIXME: change for real opcode
@@ -1030,9 +1002,6 @@ cdap_rib::res_info_t* BaseRIBObject::remoteStart(
 		const cdap_rib::SerializedObject &obj_req,
 		cdap_rib::SerializedObject &obj_reply) {
 
-	(void) name;
-	(void) obj_req;
-	(void) obj_reply;
 	operation_not_supported();
 	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
 	// FIXME: change for real opcode
@@ -1045,9 +1014,6 @@ cdap_rib::res_info_t* BaseRIBObject::remoteStop(
 		const cdap_rib::SerializedObject &obj_req,
 		cdap_rib::SerializedObject &obj_reply) {
 
-	(void) name;
-	(void) obj_req;
-	(void) obj_reply;
 	operation_not_supported();
 	cdap_rib::res_info_t* res= new cdap_rib::res_info_t;
 	// FIXME: change for real opcode
@@ -1083,7 +1049,6 @@ RIBSchemaObject::RIBSchemaObject(const std::string& class_name,
 	class_name_ = class_name;
 	mandatory_ = mandatory;
 	max_objs_ = max_objs;
-	(void) parent_;
 }
 
 void RIBSchemaObject::addChild(RIBSchemaObject *object) {
@@ -1139,7 +1104,6 @@ rib_schema_res RIBSchema::ribSchemaDefContRelation(
 
 bool RIBSchema::validateAddObject(const BaseRIBObject* obj) {
 
-	(void) obj;
 	/*
 	 RIBSchemaObject *schema_object = rib_schema_.find(obj->get_class());
 	 // CHECKS REGION //
@@ -1214,14 +1178,12 @@ RIBDNorthInterface* RIBDFactory::create(
 #if 0
 const cdap_rib::SerializedObject* IntEncoder::encode(const int &object) {
 
-	(void) object;
 	return 0;
 }
 
 int* IntEncoder::decode(
 		const cdap_rib::SerializedObject &serialized_object) const {
 
-	(void) serialized_object;
 	return 0;
 }
 std::string IntEncoder::get_type() const {
@@ -1231,14 +1193,12 @@ std::string IntEncoder::get_type() const {
 
 const cdap_rib::SerializedObject* SIntEncoder::encode(const short int &object) {
 
-	(void) object;
 	return 0;
 }
 
 short int* SIntEncoder::decode(
 		const cdap_rib::SerializedObject &serialized_object) const {
 
-	(void) serialized_object;
 	return 0;
 }
 
@@ -1249,14 +1209,12 @@ std::string SIntEncoder::get_type() const {
 
 const cdap_rib::SerializedObject* LongEncoder::encode(const long long &object) {
 
-	(void) object;
 	return 0;
 }
 
 long long* LongEncoder::decode(
 		const cdap_rib::SerializedObject &serialized_object) const {
 
-	(void) serialized_object;
 	return 0;
 }
 
@@ -1267,14 +1225,12 @@ std::string LongEncoder::get_type() const {
 
 const cdap_rib::SerializedObject* SLongEncoder::encode(const long &object) {
 
-	(void) object;
 	return 0;
 }
 
 long* SLongEncoder::decode(
 		const cdap_rib::SerializedObject &serialized_object) const {
 
-	(void) serialized_object;
 	return 0;
 }
 
@@ -1286,14 +1242,12 @@ std::string SLongEncoder::get_type() const {
 const cdap_rib::SerializedObject* StringEncoder::encode(
 		const std::string &object) {
 
-	(void) object;
 	return 0;
 }
 
 std::string* StringEncoder::decode(
 		const cdap_rib::SerializedObject &serialized_object) const {
 
-	(void) serialized_object;
 	return 0;
 }
 
@@ -1304,14 +1258,12 @@ std::string StringEncoder::get_type() const {
 
 const cdap_rib::SerializedObject* FloatEncoder::encode(const float &object) {
 
-	(void) object;
 	return 0;
 }
 
 float* FloatEncoder::decode(
 		const cdap_rib::SerializedObject &serialized_object) const {
 
-	(void) serialized_object;
 	return 0;
 }
 
@@ -1322,14 +1274,12 @@ std::string FloatEncoder::get_type() const {
 
 const cdap_rib::SerializedObject* DoubleEncoder::encode(const double &object) {
 
-	(void) object;
 	return 0;
 }
 
 double* DoubleEncoder::decode(
 		const cdap_rib::SerializedObject &serialized_object) const {
 
-	(void) serialized_object;
 	return 0;
 }
 
@@ -1340,14 +1290,12 @@ std::string DoubleEncoder::get_type() const {
 
 const cdap_rib::SerializedObject* BoolEncoder::encode(const bool &object) {
 
-	(void) object;
 	return 0;
 }
 
 bool* BoolEncoder::decode(
 		const cdap_rib::SerializedObject &serialized_object) const {
 
-	(void) serialized_object;
 	return 0;
 }
 
@@ -1358,7 +1306,6 @@ std::string BoolEncoder::get_type() const {
 
 const cdap_rib::SerializedObject* EmptyEncoder::encode(const empty &object) {
 
-	(void) object;
 	LOG_ERR("Can not encode an empty object");
 	return 0;
 }

@@ -358,8 +358,6 @@ std::string DIFRegistrationRIBObject::get_displayable_value()
 
 void DIFRegistrationRIBObject::deleteObject(const void* objectValue)
 {
-        (void) objectValue; // Stop compiler barfs
-
         parent_->remove_child(name_);
         base_rib_daemon_->removeRIBObject(name_);
 }
@@ -432,8 +430,6 @@ const void* NMinusOneFlowRIBObject::get_value() const
 
 void NMinusOneFlowRIBObject::deleteObject(const void* objectValue)
 {
-        (void) objectValue; // Stop compiler barfs
-
         parent_->remove_child(name_);
         base_rib_daemon_->removeRIBObject(name_);
 }

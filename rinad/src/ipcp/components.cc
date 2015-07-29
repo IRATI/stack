@@ -237,8 +237,6 @@ SimpleSetMemberIPCPRIBObject::SimpleSetMemberIPCPRIBObject(IPCProcess* ipc_proce
 
 void SimpleSetMemberIPCPRIBObject::deleteObject(const void* objectValue)
 {
-        (void) objectValue; // Stop compiler barfs
-
 	parent_->remove_child(name_);
 	rib_daemon_->removeRIBObject(name_);
 }
