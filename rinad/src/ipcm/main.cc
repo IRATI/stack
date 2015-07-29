@@ -57,6 +57,9 @@ void handler(int signum)
 			dump_backtrace();
 			exit(EXIT_FAILURE);
 		case SIGINT:
+		case SIGQUIT:
+		case SIGTERM:
+		case SIGHUP:
 			rinad::IPCManager->stop();
 			break;
 		default:
@@ -174,6 +177,21 @@ int main(int argc, char * argv[])
 		LOG_ERR("Could not install SIGINT handler!");
 	}
         LOG_DBG("SIGINT handler installed successfully");
+
+	if (signal(SIGQUIT, handler) == SIG_ERR) {
+		LOG_ERR("Could not install SIGQUIT handler!");
+	}
+        LOG_DBG("SIGQUIT handler installed successfully");
+
+	if (signal(SIGTERM, handler) == SIG_ERR) {
+		LOG_ERR("Could not install SIGTERM handler!");
+	}
+        LOG_DBG("SIGTERM handler installed successfully");
+
+	if (signal(SIGHUP, handler) == SIG_ERR) {
+		LOG_ERR("Could not install SIGHUP handler!");
+	}
+        LOG_DBG("SIGHUP handler installed successfully");
 
 	if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
                 LOG_WARN("Cannot ignore SIGPIPE, bailing out");
