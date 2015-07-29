@@ -277,7 +277,6 @@ void* ActiveWorker::run(void* param)
 	rina::cdap_rib::ep_info_t src;
 	rina::cdap_rib::ep_info_t dest;
 	int bytes_read = 0;
-	(void) param;
 
 	keep_running = true;
 

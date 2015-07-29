@@ -1,9 +1,0 @@
-package rina.messages;
-option java_package="rina.encoding.impl.googleprotobuf.neighbor";
-
-message neighbor_t{   //carries information about a neighbor
-        optional string applicationProcessName = 1;
-        optional string applicationProcessInstance = 2;
-        optional uint64 address = 3;
-	repeated string supportingDifs = 4;
-}

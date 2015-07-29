@@ -28,13 +28,7 @@ void IPCPObj::read(const rina::cdap_rib::con_handle_t &con,
 				rina::cdap_rib::SerializedObject &obj_reply,
 				rina::cdap_rib::res_info_t& res){
 
-	(void) con;
-	(void) fqn;
-	(void) class_;
-	(void) filt;
-	(void) invoke_id;
 	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
-
 	mad_manager::structures::ipcp_t info;
 	info.process_id = processID_;
 	info.name = IPCManager->get_ipcp_name(processID_);
@@ -49,11 +43,6 @@ bool IPCPObj::delete_(const rina::cdap_rib::con_handle_t &con,
 				const rina::cdap_rib::filt_info_t &filt,
 				const int invoke_id,
 				rina::cdap_rib::res_info_t& res){
-	(void) con;
-	(void) fqn;
-	(void) class_;
-	(void) filt;
-	(void) invoke_id;
 
 	//Fill in the response
 	res.code_ = rina::cdap_rib::CDAP_SUCCESS;

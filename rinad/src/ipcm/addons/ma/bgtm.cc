@@ -37,7 +37,6 @@ namespace mad {
 /*
 //Handler to stop ciosrv
 void interrupt_handler(int sig) {
-	(void) sig;
 	//Signal background task manager to stop
 	flow_manager->stopIOLoop();
 }
@@ -45,8 +44,6 @@ void interrupt_handler(int sig) {
 
 //Main I/O loop
 void* BGTaskManager::run(void* unused){
-
-	(void)unused;
 
 	while(keep_running){
 

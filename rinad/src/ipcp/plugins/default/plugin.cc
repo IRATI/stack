@@ -138,10 +138,8 @@ init(IPCProcess * ipc_process, const std::string& plugin_name)
 
         pduft_gen_factory.plugin_name = plugin_name;
         pduft_gen_factory.info.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;
-	std::stringstream ss;
-	ss << IResourceAllocator::RESOURCE_ALLOCATOR_AE_NAME << "/"
-	   << IResourceAllocator::PDUFT_GEN_COMPONENT_NAME;
-        pduft_gen_factory.info.app_entity =  ss.str();
+        pduft_gen_factory.info.app_entity =
+				IResourceAllocator::RESOURCE_ALLOCATOR_AE_NAME;
         pduft_gen_factory.create = createPDUFTGenPs;
         pduft_gen_factory.destroy = destroyPDUFTGenPs;
 

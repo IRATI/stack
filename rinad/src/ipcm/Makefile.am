@@ -32,20 +32,21 @@ ipcm_LDADD    =					\
 	$(builddir)/../common/librinad.la	\
 	$(builddir)/addons/libaddons.la		\
 	$(LIBRINA_LIBS)
-ipcm_SOURCES  =					\
-	addon.cc				\
-	app-handlers.cc				\
-	dif-validator.cc			\
-	helpers.cc				\
-	main.cc					\
-	misc-handlers.cc			\
-	ipcm.cc					\
-	ipcp.cc					\
-	ipcp-handlers.cc			\
-	configuration.cc			\
-	flow-alloc-handlers.cc			\
-	policies-handlers.cc			\
-	dif-template-manager.cc			
+ipcm_SOURCES  =								\
+	addon.cc			addon.h				\
+	app-handlers.cc			app-handlers.h			\
+	dif-validator.cc		dif-validator.h			\
+	helpers.cc							\
+	main.cc								\
+	misc-handlers.cc		misc-handlers.h			\
+	ipcm.cc				ipcm.h				\
+	ipcp.cc				ipcp.h				\
+	ipcp-handlers.cc		ipcp-handlers.h			\
+	configuration.cc		configuration.h			\
+	flow-alloc-handlers.cc		flow-alloc-handlers.h		\
+	policies-handlers.cc						\
+	dif-template-manager.cc		dif-template-manager.h		\
+	catalog.cc			catalog.h
 
 test_empty_SOURCES  =				\
 	test-empty.cc

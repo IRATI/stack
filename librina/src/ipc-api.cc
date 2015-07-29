@@ -182,7 +182,6 @@ unsigned int IPCManager::internalRequestFlowAllocation(
         WriteScopedLock writeLock(flows_rw_lock);
 
 #if STUB_API
-        (void)sourceIPCProcessId;
 #else
         AppAllocateFlowRequestMessage message;
         message.setSourceAppName(localAppName);
@@ -224,8 +223,6 @@ unsigned int IPCManager::internalRequestFlowAllocationInDIF(
 	WriteScopedLock writeLock(flows_rw_lock);
 
 #if STUB_API
-        (void)difName;
-        (void)sourceIPCProcessId;
 #else
         AppAllocateFlowRequestMessage message;
         message.setSourceAppName(localAppName);
@@ -264,9 +261,6 @@ FlowInformation IPCManager::internalAllocateFlowResponse(
 	WriteScopedLock writeLock(flows_rw_lock);
 
 #if STUB_API
-        //Do nothing
-        (void)notifySource;
-        (void)ipcProcessId;
 #else
         AppAllocateFlowResponseMessage responseMessage;
         responseMessage.setResult(result);
@@ -304,8 +298,6 @@ unsigned int IPCManager::getDIFProperties(
 		const ApplicationProcessNamingInformation& DIFName) {
 
 #if STUB_API
-        (void)applicationName;
-        (void)DIFName;
 	return 0;
 #else
 	AppGetDIFPropertiesRequestMessage message;
@@ -678,7 +670,6 @@ int IPCManager::readSDU(int portId, void * sdu, int maxBytes)
 {
 #if STUB_API
         memset(sdu, 'v', maxBytes);
-        (void) portId;
 	return maxBytes;
 #else
 	int result = syscallReadSDU(portId, sdu, maxBytes);
@@ -715,8 +706,6 @@ int IPCManager::writeSDU(int portId, void * sdu, int size)
 {
 #if STUB_API
 	/* Do nothing. */
-	(void)portId;
-        (void)sdu;
 
         return size;
 #else

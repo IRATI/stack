@@ -15,7 +15,7 @@ obj-$(CONFIG_RINA) +=				\
 	serdes.o pdu-ser.o du-protection.o	\
 	ipcp-utils.o				\
 	connection.o common.o policies.o	\
-	dtcp-utils.o                            \
+	dtp-conf-utils.o dtcp-conf-utils.o      \
 
 obj-y +=					\
 	syscalls.o

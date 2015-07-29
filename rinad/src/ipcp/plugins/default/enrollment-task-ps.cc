@@ -1105,8 +1105,6 @@ void EnrollerStateMachine::stopResponse(int result, const std::string& result_re
 		void * object_value, rina::CDAPSessionDescriptor * session_descriptor) {
 	rina::ScopedLock g(lock_);
 
-	(void) object_value;
-
 	if (!isValidPortId(session_descriptor->port_id_)){
 		return;
 	}

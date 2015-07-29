@@ -181,8 +181,8 @@ public:
 	static rina::DTCPFlowControlConfig* get_DTCPFlowControlConfig(const rina::messages::dtcpFlowControlConfig_t &gpf_conf);
 	static rina::messages::dtcpConfig_t* get_dtcpConfig_t(const rina::DTCPConfig &conf);
 	static rina::DTCPConfig* get_DTCPConfig(const rina::messages::dtcpConfig_t &gpf_conf);
-	static rina::messages::connectionPolicies_t* get_connectionPolicies_t(const rina::ConnectionPolicies &polc);
-	static rina::ConnectionPolicies* get_ConnectionPolicies(const rina::messages::connectionPolicies_t &gpf_polc);
+	static rina::messages::dtpConfig_t* get_dtpConfig_t(const rina::DTPConfig &conf);
+	static rina::DTPConfig* get_DTPConfig(const rina::messages::dtpConfig_t &gpf_conf);
 	static rina::Connection* get_Connection(const rina::messages::connectionId_t &gpf_conn);
 
 private:

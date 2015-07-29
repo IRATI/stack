@@ -31,11 +31,6 @@ void RIBDaemonObj::read(const rina::cdap_rib::con_handle_t &con,
 				rina::cdap_rib::SerializedObject &obj_reply,
 				rina::cdap_rib::res_info_t& res) {
 
-	(void) con;
-	(void) fqn;
-	(void) class_;
-	(void) filt;
-	(void) invoke_id;
 	QueryRIBPromise promise;
 
 	res.code_ = rina::cdap_rib::CDAP_SUCCESS;

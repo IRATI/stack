@@ -174,8 +174,6 @@ void Client::cacep()
 void Client::open_connection_result(const cdap_rib::con_handle_t &con,
                                     const cdap_rib::result_info &res)
 {
-        (void) con;
-        (void) res;
         std::cout << "open conection response CDAP message received"
                   << std::endl;
 }
@@ -183,17 +181,12 @@ void Client::remote_read_result(const rina::cdap_rib::con_handle_t &con,
                                 const rina::cdap_rib::obj_info_t &obj,
                                 const rina::cdap_rib::res_info_t &res)
 {
-        (void) con;
-        (void) res;
-        (void) obj;
         std::cout << "read response CDAP message received" << std::endl;
 }
 
 void Client::close_connection_result(const cdap_rib::con_handle_t &con,
                                      const cdap_rib::result_info &res)
 {
-        (void) con;
-        (void) res;
         std::cout << "release response CDAP message received" << std::endl;
         destroyFlow();
 }

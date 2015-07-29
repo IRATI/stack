@@ -9,12 +9,12 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -765,9 +765,14 @@ public:
         int destCepId;
 
         /**
-         * The EFCP connection policies
+         * The DTP connection policies
          */
-        ConnectionPolicies policies;
+        DTPConfig dtpConfig;
+
+        /**
+         * The DTCP connection policies
+         */
+        DTCPConfig dtcpConfig;
 
         /**
          * The id of the IPC Process using the flow supported by this
@@ -791,10 +796,20 @@ public:
         void setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId);
         int getSourceCepId() const;
         void setSourceCepId(int sourceCepId);
-        const ConnectionPolicies& getPolicies() const;
-        void setPolicies(const ConnectionPolicies& policies);
+        const DTPConfig& getDTPConfig() const;
+        void setDTPConfig(const DTPConfig& dtpConfig);
+        const DTCPConfig& getDTCPConfig() const;
+        void setDTCPConfig(const DTCPConfig& dtcpConfig);
 #endif
         const std::string toString();
+};
+
+struct NHopAltList {
+	/** Next hop and its alternates */
+	std::list<unsigned int> alts;
+
+	NHopAltList() { }
+	NHopAltList(unsigned int x) { alts.push_back(x); }
 };
 
 /// Models an entry of the routing table
@@ -810,7 +825,7 @@ public:
 	unsigned int cost;
 
 	/** The next hop addresses */
-	std::list<unsigned int> nextHopAddresses;
+	std::list<NHopAltList> nextHopAddresses;
 
 	RoutingTableEntry();
 };

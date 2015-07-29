@@ -243,7 +243,7 @@ int DIFTemplateManager::load_initial_dif_templates()
 		}
 	} while (dp != NULL);
 
-	(void) closedir(dirp);
+	closedir(dirp);
 
 	//Add all templates, cannot be done before because first we need to add
 	//the default template (if present)

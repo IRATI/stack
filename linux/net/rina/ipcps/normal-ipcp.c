@@ -40,7 +40,6 @@
 #include "efcp.h"
 #include "rmt.h"
 #include "efcp-utils.h"
-#include "connection.h"
 
 /*  FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
@@ -230,27 +229,18 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
                                    address_t                   source,
                                    address_t                   dest,
                                    qos_id_t                    qos_id,
-                                   struct conn_policies *      cp_params)
+                                   struct dtp_config *         dtp_cfg,
+                                   struct dtcp_config *        dtcp_cfg)
 {
         cep_id_t               cep_id;
-        struct connection *    conn;
         struct normal_flow *   flow;
         struct cep_ids_entry * cep_entry;
         unsigned long          flags;
 
-        conn = connection_create();
-        if (!conn)
-                return -1;
-
-        conn->destination_address = dest;
-        conn->source_address      = source;
-        conn->port_id             = port_id;
-        conn->qos_id              = qos_id;
-        conn->source_cep_id       = cep_id_bad(); /* init value */
-        conn->destination_cep_id  = cep_id_bad(); /* init velue */
-        conn->policies_params     = cp_params;  /* Take the ownership. */
-
-        cep_id = efcp_connection_create(data->efcpc, NULL, conn);
+        cep_id = efcp_connection_create(data->efcpc, NULL, source, dest,
+                                        port_id, qos_id,
+                                        cep_id_bad(), cep_id_bad(),
+                                        dtp_cfg, dtcp_cfg);
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Failed EFCP connection creation");
                 return cep_id_bad();
@@ -396,11 +386,15 @@ static int normal_flow_unbinding_user_ipcp(struct ipcp_instance_data * data,
 
         spin_lock_irqsave(&data->lock, flags);
         flow = find_flow(data, pid);
-        if (!flow || !flow->active) {
+        if (!flow || !is_cep_id_ok(flow->active)) {
                 spin_unlock_irqrestore(&data->lock, flags);
                 LOG_ERR("Could not find flow with port %d to unbind user IPCP",
                         pid);
                 return -1;
+        }
+
+        if (flow->user_ipcp) {
+        	flow->user_ipcp = NULL;
         }
         spin_unlock_irqrestore(&data->lock, flags);
 
@@ -417,6 +411,10 @@ static int normal_nm1_flow_state_change(struct ipcp_instance_data * data,
 					bool			    up)
 {
 	LOG_INFO("N-1 flow with pid %d went %s", pid, (up ? "up" : "down"));
+
+	if (rmt_pff_port_state_change(data->rmt, pid, up)) {
+		LOG_ERR("rmt_port_state_change() failed");
+	}
 
 	return 0;
 }
@@ -466,9 +464,9 @@ connection_create_arrived(struct ipcp_instance_data * data,
                           address_t                   dest,
                           qos_id_t                    qos_id,
                           cep_id_t                    dst_cep_id,
-                          struct conn_policies *      cp_params)
+                          struct dtp_config *         dtp_cfg,
+                          struct dtcp_config *        dtcp_cfg)
 {
-        struct connection *    conn;
         cep_id_t               cep_id;
         struct normal_flow *   flow;
         struct cep_ids_entry * cep_entry;
@@ -478,20 +476,10 @@ connection_create_arrived(struct ipcp_instance_data * data,
         if (!user_ipcp)
                 return cep_id_bad();
 
-        conn = rkzalloc(sizeof(*conn), GFP_KERNEL);
-        if (!conn) {
-                LOG_ERR("Failed connection creation");
-                return cep_id_bad();
-        }
-        conn->destination_address = dest;
-        conn->source_address      = source;
-        conn->port_id             = port_id;
-        conn->qos_id              = qos_id;
-        conn->source_cep_id       = cep_id_bad(); /* init values */
-        conn->destination_cep_id  = dst_cep_id;
-        conn->policies_params     = cp_params;  /* Take the ownership. */
-
-        cep_id = efcp_connection_create(data->efcpc, user_ipcp, conn);
+        cep_id = efcp_connection_create(data->efcpc, user_ipcp, source, dest,
+                                        port_id, qos_id,
+                                        cep_id_bad(), dst_cep_id,
+                                        dtp_cfg, dtcp_cfg);
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Failed EFCP connection creation");
                 return cep_id_bad();
@@ -526,7 +514,7 @@ connection_create_arrived(struct ipcp_instance_data * data,
                 return cep_id_bad();
         }
         if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
-                                              conn->port_id,
+                                              port_id,
                                               ipcp)) {
                 spin_unlock_irqrestore(&data->lock, flags);
                 LOG_ERR("Could not bind flow with user_ipcp");
@@ -581,13 +569,19 @@ static int normal_deallocate(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        user_ipcp_name = flow->user_ipcp->ops->ipcp_name(flow->user_ipcp->data);
+        if (flow->user_ipcp && flow->user_ipcp->ops->ipcp_name &&
+            flow->user_ipcp->data) {
+        	user_ipcp_name =
+        		flow->user_ipcp->ops->ipcp_name(flow->user_ipcp->data);
+        } else {
+        	user_ipcp_name = NULL;
+        }
         state          = flow->state;
         flow->state    = PORT_STATE_DEALLOCATED;
         list_del(&flow->list);
         spin_unlock_irqrestore(&data->lock, flags);
 
-        if (state == PORT_STATE_PENDING) {
+        if (state == PORT_STATE_PENDING && flow->user_ipcp) {
                 flow->user_ipcp->ops->flow_unbinding_ipcp(flow->user_ipcp->data,
                                                           port_id);
         } else {
@@ -653,7 +647,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
 
         sdup_config = dif_information->configuration->sdup_config;
         if (!sdup_config) {
-        	LOG_WARN("No SDU protection configuration specified");
+        	LOG_INFO("No SDU protection config specified, using default");
         } else {
         	rmt_sdup_config_set(data->rmt, sdup_config);
         }

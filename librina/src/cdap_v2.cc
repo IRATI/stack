@@ -1467,7 +1467,6 @@ void CDAPMessageValidator::validateOpcode(const cdap_m_t *message)
 void CDAPMessageValidator::validateResult(const cdap_m_t *message)
 {
 	/* FIXME: Do something with sense */
-	(void) message->abs_syntax_;
 }
 
 void CDAPMessageValidator::validateResultReason(const cdap_m_t *message)
@@ -2872,7 +2871,6 @@ void CDAPProvider::send_close_connection_result(unsigned int port,
 	const cdap_m_t *m_sent;
 
 	//FIXME: change flags
-	(void) flags;
 	m_sent = manager_->getReleaseConnectionResponseMessage(flags, res,
 							       invoke_id);
 	send(m_sent, port);
@@ -2889,7 +2887,6 @@ void CDAPProvider::send_create_result(unsigned int port,
 	const cdap_m_t *m_sent;
 
 	// FIXME change cdap_rib::flags_t::NONE_FLAGS
-	(void) flags;
 	m_sent = manager_->getCreateObjectResponseMessage(flags, obj, res,
 							  invoke_id);
 	send(m_sent, port);
@@ -2905,7 +2902,6 @@ void CDAPProvider::send_delete_result(unsigned int port,
 	const cdap_m_t *m_sent;
 
 	// FIXME change cdap_rib::flags_t::NONE_FLAGS
-	(void) flags;
 	m_sent = manager_->getDeleteObjectResponseMessage(flags, obj, res,
 							  invoke_id);
 	send(m_sent, port);
@@ -2921,7 +2917,6 @@ void CDAPProvider::send_read_result(unsigned int port,
 	const cdap_m_t *m_sent;
 
 	// FIXME change cdap_rib::flags_t::NONE_FLAGS
-	(void) flags;
 	m_sent = manager_->getReadObjectResponseMessage(flags, obj, res,
 							invoke_id);
 	send(m_sent, port);
@@ -2936,7 +2931,6 @@ void CDAPProvider::send_cancel_read_result(unsigned int port,
 	const cdap_m_t *m_sent;
 
 	// FIXME change cdap_rib::flags_t::NONE_FLAGS
-	(void) flags;
 	m_sent = manager_->getCancelReadResponseMessage(flags, res, invoke_id);
 	send(m_sent, port);
 
@@ -2950,7 +2944,6 @@ void CDAPProvider::send_write_result(unsigned int port,
 	const cdap_m_t *m_sent;
 
 	// FIXME change cdap_rib::flags_t::NONE_FLAGS
-	(void) flags;
 	m_sent = manager_->getWriteObjectResponseMessage(flags, res,
 							 invoke_id);
 	send(m_sent, port);
@@ -2966,7 +2959,6 @@ void CDAPProvider::send_start_result(unsigned int port,
 	const cdap_m_t *m_sent;
 
 	// FIXME change cdap_rib::flags_t::NONE_FLAGS
-	(void) flags;
 	m_sent = manager_->getStartObjectResponseMessage(flags, obj, res,
 							 invoke_id);
 	send(m_sent, port);
@@ -2981,7 +2973,6 @@ void CDAPProvider::send_stop_result(unsigned int port,
 	const cdap_m_t *m_sent;
 
 	// FIXME change cdap_rib::flags_t::NONE_FLAGS
-	(void) flags;
 	m_sent = manager_->getStopObjectResponseMessage(flags, res, invoke_id);
 	send(m_sent, port);
 
@@ -3161,25 +3152,18 @@ void CDAPCallbackInterface::remote_open_connection_result(
 		const cdap_rib::con_handle_t &con,
 		const cdap_rib::result_info &res)
 {
-	(void) con;
-	(void) res;
 	LOG_INFO("Callback open_connection_result operation not implemented");
 }
 void CDAPCallbackInterface::open_connection(const cdap_rib::con_handle_t &con,
 		const cdap_rib::flags_t &flags,
 		int invoke_id)
 {
-	(void) con;
-	(void) flags;
-	(void) invoke_id;
 	LOG_INFO("Callback open_connection operation not implemented");
 }
 void CDAPCallbackInterface::remote_close_connection_result(
 		const cdap_rib::con_handle_t &con,
 		const cdap_rib::result_info &res)
 {
-	(void) con;
-	(void) res;
 	LOG_INFO("Callback close_connection_result operation not implemented");
 
 }
@@ -3187,9 +3171,6 @@ void CDAPCallbackInterface::close_connection(const cdap_rib::con_handle_t &con,
 		const cdap_rib::flags_t &flags,
 		int invoke_id)
 {
-	(void) con;
-	(void) flags;
-	(void) invoke_id;
 	LOG_INFO("Callback close_connection operation not implemented");
 }
 
@@ -3198,17 +3179,12 @@ void CDAPCallbackInterface::remote_create_result(
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::res_info_t &res)
 {
-	(void) con;
-	(void) res;
-	(void) obj;
 	LOG_INFO("Callback create_result operation not implemented");
 }
 void CDAPCallbackInterface::remote_delete_result(
 		const cdap_rib::con_handle_t &con,
 		const cdap_rib::res_info_t &res)
 {
-	(void) con;
-	(void) res;
 	LOG_INFO("Callback delete_result operation not implemented");
 }
 void CDAPCallbackInterface::remote_read_result(
@@ -3216,17 +3192,12 @@ void CDAPCallbackInterface::remote_read_result(
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::res_info_t &res)
 {
-	(void) con;
-	(void) res;
-	(void) obj;
 	LOG_INFO("Callback read_result operation not implemented");
 }
 void CDAPCallbackInterface::remote_cancel_read_result(
 		const cdap_rib::con_handle_t &con,
 		const cdap_rib::res_info_t &res)
 {
-	(void) con;
-	(void) res;
 	LOG_INFO("Callback cancel_read_result operation not implemented");
 }
 void CDAPCallbackInterface::remote_write_result(
@@ -3234,9 +3205,6 @@ void CDAPCallbackInterface::remote_write_result(
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::res_info_t &res)
 {
-	(void) con;
-	(void) res;
-	(void) obj;
 	LOG_INFO("Callback write_result operation not implemented");
 }
 void CDAPCallbackInterface::remote_start_result(
@@ -3244,9 +3212,6 @@ void CDAPCallbackInterface::remote_start_result(
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::res_info_t &res)
 {
-	(void) con;
-	(void) res;
-	(void) obj;
 	LOG_INFO("Callback start_result operation not implemented");
 }
 void CDAPCallbackInterface::remote_stop_result(
@@ -3254,9 +3219,6 @@ void CDAPCallbackInterface::remote_stop_result(
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::res_info_t &res)
 {
-	(void) con;
-	(void) res;
-	(void) obj;
 	LOG_INFO("Callback stop_result operation not implemented");
 }
 
@@ -3265,10 +3227,6 @@ void CDAPCallbackInterface::create_request(
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt, int invoke_id)
 {
-	(void) con;
-	(void) obj;
-	(void) filt;
-	(void) invoke_id;
 	LOG_INFO("Callback create_request operation not implemented");
 }
 void CDAPCallbackInterface::delete_request(
@@ -3276,10 +3234,6 @@ void CDAPCallbackInterface::delete_request(
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt, int invoke_id)
 {
-	(void) con;
-	(void) obj;
-	(void) filt;
-	(void) invoke_id;
 	LOG_INFO("Callback delete_request operation not implemented");
 }
 void CDAPCallbackInterface::read_request(
@@ -3287,10 +3241,6 @@ void CDAPCallbackInterface::read_request(
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt, int invoke_id)
 {
-	(void) con;
-	(void) obj;
-	(void) filt;
-	(void) invoke_id;
 	LOG_INFO("Callback read_request operation not implemented");
 }
 void CDAPCallbackInterface::cancel_read_request(
@@ -3298,10 +3248,6 @@ void CDAPCallbackInterface::cancel_read_request(
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt, int invoke_id)
 {
-	(void) con;
-	(void) obj;
-	(void) filt;
-	(void) invoke_id;
 	LOG_INFO("Callback cancel_read_request operation not implemented");
 }
 void CDAPCallbackInterface::write_request(
@@ -3309,10 +3255,6 @@ void CDAPCallbackInterface::write_request(
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt, int invoke_id)
 {
-	(void) con;
-	(void) obj;
-	(void) filt;
-	(void) invoke_id;
 	LOG_INFO("Callback write_request operation not implemented");
 }
 void CDAPCallbackInterface::start_request(
@@ -3320,10 +3262,6 @@ void CDAPCallbackInterface::start_request(
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt, int invoke_id)
 {
-	(void) con;
-	(void) obj;
-	(void) filt;
-	(void) invoke_id;
 	LOG_INFO("Callback start_request operation not implemented");
 }
 void CDAPCallbackInterface::stop_request(
@@ -3331,10 +3269,6 @@ void CDAPCallbackInterface::stop_request(
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt, int invoke_id)
 {
-	(void) con;
-	(void) obj;
-	(void) filt;
-	(void) invoke_id;
 	LOG_INFO("Callback stop_request operation not implemented");
 }
 
