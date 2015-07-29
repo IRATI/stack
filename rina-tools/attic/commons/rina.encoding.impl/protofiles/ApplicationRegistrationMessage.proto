@@ -1,9 +1,0 @@
-package rina.messages;
-option java_package="rina.encoding.impl.googleprotobuf.applicationregistration";
-import "protofiles/ApplicationProcessNamingInfoMessage.proto";
-
-message ApplicationRegistration{  //Contains the information to register an application to the local IPC Manager
-	optional rina.messages.applicationProcessNamingInfo_t namingInfo = 1;  			//The naming information of the application process
-	optional uint32 socketNumber = 2;           //The TCP port where the registered application will be listening for incoming connections
-	repeated string difNames = 3;             //The list of DIFs the application wants to register to. If it is null it means all the DIFs available in the system. 
-}
