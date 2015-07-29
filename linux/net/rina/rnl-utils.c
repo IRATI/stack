@@ -1394,9 +1394,13 @@ static int parse_dt_cons(struct nlattr *  attr,
                 dt_cons->rate =
                         nla_get_u32(attrs[DTC_ATTR_RATE_SIZE]);
 
+	LOG_DBG("\n\nRnl utils rate read: %u\n\n", dt_cons->rate);
+
 	if (attrs[DTC_ATTR_TIME_FRAME_SIZE])
                 dt_cons->frame =
                         nla_get_u32(attrs[DTC_ATTR_TIME_FRAME_SIZE]);
+
+	LOG_DBG("\n\nRnl utils time frame read: %u\n\n", dt_cons->frame);
 
         dt_cons->dif_integrity = nla_get_flag(attrs[DTC_ATTR_DIF_INTEGRITY]);
 

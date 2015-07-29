@@ -620,6 +620,12 @@ public:
         /// The maximum PDU lifetime in this DIF, in milliseconds. This is MPL
         /// in delta-T
         unsigned int max_pdu_lifetime_;
+
+        // The length of the rate field in the DTCP PCI, in bytes.
+        unsigned int rate_length_;
+
+        // The length of the time frame field in the DTCP PCI, in bytes.
+        unsigned int time_Frame_length;
 };
 
 /// Contains the configuration of the Error and Flow Control Protocol for a

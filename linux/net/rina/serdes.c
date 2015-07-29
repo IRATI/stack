@@ -46,8 +46,8 @@ const uint8_t version = 1;
 #define PDU_TYPE_SIZE 1
 #define FLAGS_SIZE    1
 /* FIXME: To be also defined in dt_cons when rate based fc is added */
-#define RATE_LEN      0
-#define TIME_LEN      0
+#define RATE_LEN      4
+#define TIME_LEN      4
 /* FIXME: To be added in dt_cons ASAP */
 #define CTRL_SEQ_NR   4
 
@@ -127,8 +127,7 @@ static int base_pci_size(const struct dt_cons * dt_cons)
 static int fc_pci_size(const struct dt_cons * dt_cons)
 {
         return 3 * dt_cons->seq_num_length +
-                2 * RATE_LEN               +
-                TIME_LEN;
+                dt_cons->rate + dt_cons->frame;
 }
 
 static int serialize_base_pci(const struct serdes * instance,
