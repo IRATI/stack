@@ -60,9 +60,6 @@ AX_CHECK_COMPILE_FLAG([ -Wnon-virtual-dtor ], [
 AX_CHECK_COMPILE_FLAG([ -Woverloaded-virtual ], [
     CXXFLAGS_EXTRA="$CXXFLAGS_EXTRA -Woverloaded-virtual"
 ])
-AX_CHECK_COMPILE_FLAG([ -Wextra ], [
-    CXXFLAGS_EXTRA="$CXXFLAGS_EXTRA -Wextra"
-])
 AX_CHECK_COMPILE_FLAG([ -Werror ], [
     CXXFLAGS_EXTRA="$CXXFLAGS_EXTRA -Werror"
 ])

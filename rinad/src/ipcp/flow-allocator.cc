@@ -46,8 +46,6 @@ FlowRIBObject::FlowRIBObject(
 void FlowRIBObject::remoteDeleteObject(
 		int invoke_id, rina::CDAPSessionDescriptor * session_descriptor)
 {
-	(void) invoke_id;
-	(void) session_descriptor;
 	flow_allocator_instance_->deleteFlowRequestMessageReceived();
 }
 
@@ -71,7 +69,6 @@ void FlowSetRIBObject::remoteCreateObject(
 		void * object_value, const std::string& object_name,
 		int invoke_id, rina::CDAPSessionDescriptor * session_descriptor)
 {
-	(void) session_descriptor;
 	flow_allocator_->createFlowRequestMessageReceived((Flow *) object_value,
 			object_name, invoke_id);
 }
@@ -147,10 +144,6 @@ void QoSCubeSetRIBObject::remoteCreateObject(
 		int invoke_id, rina::CDAPSessionDescriptor * session_descriptor)
 {
 	//TODO, depending on IEncoder
-	(void) object_value;
-	(void) object_name;
-	(void) invoke_id;
-	(void) session_descriptor;
 	LOG_IPCP_ERR("Missing code");
 }
 
@@ -1049,8 +1042,6 @@ void FlowAllocatorInstance::submitDeallocate(
 {
 	rina::ScopedLock g(*lock_);
 
-	(void) event;  // Stop compiler barfs
-
 	if (state != FLOW_ALLOCATED) {
 		LOG_IPCP_ERR(
 				"Received deallocate request while not in FLOW_ALLOCATED state. Current state is: %d",
@@ -1132,9 +1123,6 @@ void FlowAllocatorInstance::deleteFlowRequestMessageReceived()
 void FlowAllocatorInstance::destroyFlowAllocatorInstance(
 		const std::string& flowObjectName, bool requestor)
 {
-	(void) flowObjectName;  // Stop compiler barfs
-	(void) requestor;  // Stop compiler barfs
-
 	lock_->lock();
 
 	if (state != WAITING_2_MPL_BEFORE_TEARING_DOWN) {
@@ -1159,9 +1147,6 @@ void FlowAllocatorInstance::createResponse(
 		int result, const std::string& result_reason, void * object_value,
 		rina::CDAPSessionDescriptor * session_descriptor)
 {
-	(void) result_reason;  // Stop compiler barfs
-	(void) session_descriptor;  // Stop compiler barfs
-
 	lock_->lock();
 
 	if (state != MESSAGE_TO_PEER_FAI_SENT) {
@@ -1284,25 +1269,18 @@ void DataTransferConstantsRIBObject::remoteCreateObject(
 		int invoke_id, rina::CDAPSessionDescriptor * session_descriptor)
 {
 	//Ignore, since Data Transfer Constants must be set before enrollment (via assign to DIF)
-	(void) object_value;
-	(void) object_name;
-	(void) invoke_id;
-	(void) session_descriptor;
 }
 
 void DataTransferConstantsRIBObject::createObject(
 		const std::string& objectClass, const std::string& objectName,
 		const void* objectValue)
 {
-	(void) objectClass;
-	(void) objectName;
 	writeObject(objectValue);
 }
 
 void DataTransferConstantsRIBObject::writeObject(
 		const void* objectValue)
 {
-	(void) objectValue;
 }
 
 const void* DataTransferConstantsRIBObject::get_value() const

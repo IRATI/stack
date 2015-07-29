@@ -1048,7 +1048,6 @@ void* NeighborListEncoder::decode(const rina::ObjectValueInterface * object_valu
 
 // Class WatchdogEncoder
 const rina::SerializedObject* WatchdogEncoder::encode(const void* object) {
-	(void) object;
 	return 0;
 }
 
