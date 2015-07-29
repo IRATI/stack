@@ -53,25 +53,25 @@ CPPFLAGS_EXTRA=""
 CXXFLAGS_EXTRA=""
 
 AX_CHECK_COMPILE_FLAG([ -Wall ], [
-    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wall"
+    CXXFLAGS_EXTRA="$CXXFLAGS_EXTRA -Wall"
 ])
 AX_CHECK_COMPILE_FLAG([ -Wformat ], [
-    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wformat"
+    CXXFLAGS_EXTRA="$CXXFLAGS_EXTRA -Wformat"
 ])
 AX_CHECK_COMPILE_FLAG([ -Wnon-virtual-dtor ], [
-    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wnon-virtual-dtor"
+    CXXFLAGS_EXTRA="$CXXFLAGS_EXTRA -Wnon-virtual-dtor"
 ])
 AX_CHECK_COMPILE_FLAG([ -Woverloaded-virtual ], [
-    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Woverloaded-virtual"
+    CXXFLAGS_EXTRA="$CXXFLAGS_EXTRA -Woverloaded-virtual"
 ])
 AX_CHECK_COMPILE_FLAG([ -Wextra ], [
-    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wextra"
+    CXXFLAGS_EXTRA="$CXXFLAGS_EXTRA -Wextra"
 ])
 AX_CHECK_COMPILE_FLAG([ -Werror ], [
-    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Werror"
+    CXXFLAGS_EXTRA="$CXXFLAGS_EXTRA -Werror"
 ])
 AX_CHECK_COMPILE_FLAG([ -Wfatal-errors ], [
-    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wfatal-errors"
+    CXXFLAGS_EXTRA="$CXXFLAGS_EXTRA -Wfatal-errors"
 ])
 
 want_debug=no
