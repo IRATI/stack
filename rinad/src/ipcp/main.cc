@@ -38,56 +38,56 @@ int ipcp_id;
 
 int wrapped_main(int argc, char * argv[])
 {
-        std::string log_level = argv[5];
-        std::string log_file = argv[6];
+	std::string log_level = argv[5];
+	std::string log_file = argv[6];
 
-        rina::ApplicationProcessNamingInformation name(argv[1], argv[2]);
+	rina::ApplicationProcessNamingInformation name(argv[1], argv[2]);
 
-        unsigned int   ipcm_port = 0;
+	unsigned int   ipcm_port = 0;
 
-        std::stringstream ss2(argv[4]);
-        if (! (ss2 >> ipcm_port)) {
-                LOG_IPCP_ERR("Problems converting string to unsigned int");
-                return EXIT_FAILURE;
-        }
-
-        rinad::IPCProcessImpl ipcp(name, ipcp_id, ipcm_port, log_level, log_file);
-
-        LOG_IPCP_INFO("IPC Process name:     %s", argv[1]);
-        LOG_IPCP_INFO("IPC Process instance: %s", argv[2]);
-        LOG_IPCP_INFO("IPC Process id:       %u", ipcp_id);
-        LOG_IPCP_INFO("IPC Manager port:     %u", ipcm_port);
-
-        LOG_IPCP_INFO("IPC Process initialized, executing event loop...");
-
-        try {
-		ipcp.event_loop();
-        } catch (rina::Exception &e) {
-        	LOG_IPCP_ERR("Problems running event loop: %s", e.what());
-        } catch (std::exception &e1) {
-        	LOG_IPCP_ERR("Problems running event loop: %s", e1.what());
-        } catch (...) {
-        	LOG_IPCP_ERR("Unhandled exception!!!");
+	std::stringstream ss2(argv[4]);
+	if (! (ss2 >> ipcm_port)) {
+		LOG_IPCP_ERR("Problems converting string to unsigned int");
+		return EXIT_FAILURE;
 	}
 
-        LOG_IPCP_DBG("Exited event loop");
+	rinad::IPCProcessImpl ipcp(name, ipcp_id, ipcm_port, log_level, log_file);
 
-        return EXIT_SUCCESS;
+	LOG_IPCP_INFO("IPC Process name:     %s", argv[1]);
+	LOG_IPCP_INFO("IPC Process instance: %s", argv[2]);
+	LOG_IPCP_INFO("IPC Process id:       %u", ipcp_id);
+	LOG_IPCP_INFO("IPC Manager port:     %u", ipcm_port);
+
+	LOG_IPCP_INFO("IPC Process initialized, executing event loop...");
+
+	try {
+		ipcp.event_loop();
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems running event loop: %s", e.what());
+	} catch (std::exception &e1) {
+		LOG_IPCP_ERR("Problems running event loop: %s", e1.what());
+	} catch (...) {
+		LOG_IPCP_ERR("Unhandled exception!!!");
+	}
+
+	LOG_IPCP_DBG("Exited event loop");
+
+	return EXIT_SUCCESS;
 }
 
 void sighandler_segv(int signum)
 {
-        LOG_IPCP_CRIT("Got signal %d", signum);
+	LOG_IPCP_CRIT("Got signal %d", signum);
 
-        if (signum == SIGSEGV) {
-                dump_backtrace();
-                exit(EXIT_FAILURE);
-        }
+	if (signum == SIGSEGV) {
+		dump_backtrace();
+		exit(EXIT_FAILURE);
+	}
 }
 
 int main(int argc, char * argv[])
 {
-        int retval;
+	int retval;
 
 	//Check first things first
 	if(geteuid() != 0){
@@ -95,41 +95,41 @@ int main(int argc, char * argv[])
 		exit(EXIT_FAILURE);
 	}
 
-        if (argc != 7) {
-                LOG_IPCP_ERR("Wrong number of arguments: expected 7, got %d", argc);
-                return EXIT_FAILURE;
-        }
-
-	//Parse ipcp-id asap
-        std::stringstream ss(argv[3]);
-        if (! (ss >> ipcp_id)) {
-                LOG_IPCP_ERR("Problems converting string to unsigned short");
-                return EXIT_FAILURE;
-        }
-
-        if (signal(SIGSEGV, sighandler_segv) == SIG_ERR)
-                LOG_IPCP_WARN("Cannot install SIGSEGV handler!");
-
-        LOG_IPCP_DBG("SIGSEGV handler installed successfully");
-
-        if (signal(SIGPIPE, SIG_IGN) == SIG_ERR){
-                LOG_IPCP_WARN("Cannot ignore SIGPIPE, bailing out");
+	if (argc != 7) {
+		LOG_IPCP_ERR("Wrong number of arguments: expected 7, got %d", argc);
 		return EXIT_FAILURE;
 	}
-        LOG_IPCP_DBG("SIGPIPE handler installed successfully");
 
-        if (signal(SIGINT, SIG_IGN) == SIG_ERR)
-                LOG_IPCP_WARN("Cannot ignore SIGINT!");
+	//Parse ipcp-id asap
+	std::stringstream ss(argv[3]);
+	if (! (ss >> ipcp_id)) {
+		LOG_IPCP_ERR("Problems converting string to unsigned short");
+		return EXIT_FAILURE;
+	}
 
-        LOG_IPCP_DBG("SIGINT handler installed successfully");
+	if (signal(SIGSEGV, sighandler_segv) == SIG_ERR)
+		LOG_IPCP_WARN("Cannot install SIGSEGV handler!");
+
+	LOG_IPCP_DBG("SIGSEGV handler installed successfully");
+
+	if (signal(SIGPIPE, SIG_IGN) == SIG_ERR){
+		LOG_IPCP_WARN("Cannot ignore SIGPIPE, bailing out");
+		return EXIT_FAILURE;
+	}
+	LOG_IPCP_DBG("SIGPIPE handler installed successfully");
+
+	if (signal(SIGINT, SIG_IGN) == SIG_ERR)
+		LOG_IPCP_WARN("Cannot ignore SIGINT!");
+
+	LOG_IPCP_DBG("SIGINT handler installed successfully");
 
 
-        try {
-                retval = wrapped_main(argc, argv);
-        } catch (std::exception & e) {
-                LOG_IPCP_ERR("Got unhandled exception (%s)", e.what());
-                retval = EXIT_FAILURE;
-        }
+	try {
+		retval = wrapped_main(argc, argv);
+	} catch (std::exception & e) {
+		LOG_IPCP_ERR("Got unhandled exception (%s)", e.what());
+		retval = EXIT_FAILURE;
+	}
 
-        return retval;
+	return retval;
 }
