@@ -41,8 +41,8 @@ AC_CHECK_FUNCS([backtrace backtrace_symbols])
 AM_PROG_AR
 LT_INIT
 
-AC_DEFINE_UNQUOTED([PREFIX], ["$prefix"],
-            [The installation prefix.])
+AC_DEFINE_UNQUOTED([__INSTALLATION_PREFIX], ["$prefix"],
+		[The installation prefix.])
 
 CPPFLAGS_EXTRA=""
 CXXFLAGS_EXTRA=""

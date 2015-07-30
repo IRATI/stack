@@ -93,9 +93,11 @@ int wrapped_main(int argc, char * argv[])
 			conf_arg("c",
 				 "config",
 				 "Configuration file to load; default \""
-				  + std::string(PREFIX) + "/etc/ipcmanager.conf\"",
+				  + std::string(__INSTALLATION_PREFIX)
+				  + "/etc/ipcmanager.conf\"",
 				 false,
-				 std::string(PREFIX) + "/etc/ipcmanager.conf",
+				 std::string(__INSTALLATION_PREFIX)
+				  + "/etc/ipcmanager.conf",
 				 "string");
 		TCLAP::ValueArg<std::string>
 			loglevel_arg("l",
