@@ -1022,4 +1022,4 @@ void register_handlers_all(EventLoop& loop) {
                         ipc_process_default_handler);
 }
 
-}
+} //namespace rinad

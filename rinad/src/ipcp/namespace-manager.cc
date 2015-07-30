@@ -608,4 +608,4 @@ unsigned int NamespaceManager::getAdressByname(const rina::ApplicationProcessNam
 	throw rina::Exception("Unknown neighbor");
 }
 
-}
+} //namespace rinad

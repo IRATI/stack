@@ -1435,4 +1435,4 @@ void* FlowEncoder::decode(
 	return (void*) flow;
 }
 
-} //rinad
+} //namespace rinad

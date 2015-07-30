@@ -76,6 +76,6 @@ private:
         void nMinusOneFlowAllocated(rina::NMinusOneFlowAllocatedEvent * event);
 };
 
-}
+} //namespace rinad
 
-#endif
+#endif //IPCP_RIB_DAEMON_HH

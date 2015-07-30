@@ -279,6 +279,6 @@ public:
 	void* decode(const rina::ObjectValueInterface * object_value) const;
 };
 
-}
+} //namespace rinad
 
-#endif
+#endif //IPCP_ENROLLMENT_TASK_HH

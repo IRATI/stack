@@ -135,6 +135,6 @@ private:
 			int result);
 };
 
-}
+} //namespace rinad
 
-#endif
+#endif //IPCP_NAMESPACE_MANAGER_HH

@@ -81,10 +81,10 @@ private:
 
 void register_handlers_all(EventLoop& loop);
 
-}
+} //namespace rinad
 
 /* Macro useful to perform downcasts in declarations. */
 #define DOWNCAST_DECL(_var,_class,_name)        \
         _class *_name = dynamic_cast<_class*>(_var);
 
-#endif
+#endif //IPCP_IPC_PROCESS_HH

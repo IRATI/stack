@@ -64,6 +64,6 @@ private:
 	INMinusOneFlowManager * n_minus_one_flow_manager_;
 };
 
-}
+} //namespace rinad
 
-#endif
+#endif //IPCP_RESOURCE_ALLOCATOR_HH

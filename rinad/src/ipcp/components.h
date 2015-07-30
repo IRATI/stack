@@ -588,6 +588,6 @@ public:
 	unsigned int req_seqnum;
 };
 
-}
+} //namespace rinad
 
-#endif
+#endif //IPCP_COMPONENTS_HH
