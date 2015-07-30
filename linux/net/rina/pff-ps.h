@@ -36,6 +36,9 @@ struct pff_ps {
         int (* pff_remove)(struct pff_ps *        ps,
                            struct mod_pff_entry * entry);
 
+	int (* pff_port_state_change)(struct pff_ps * ps,
+				      port_id_t port_id, bool up);
+
         bool (* pff_is_empty)(struct pff_ps * ps);
         int  (* pff_flush)(struct pff_ps * ps);
 

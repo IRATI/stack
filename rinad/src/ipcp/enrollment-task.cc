@@ -154,10 +154,6 @@ void WatchdogRIBObject::readResponse(int result, const std::string& result_reaso
 		rina::CDAPSessionDescriptor * session_descriptor) {
 	rina::ScopedLock g(*lock_);
 
-	(void) result;
-	(void) result_reason;
-	(void) object_name;
-
 	if (object_value) {
 		int * address = (int *) object_value;
 		delete address;
@@ -293,8 +289,6 @@ void IEnrollmentStateMachine::release(int invoke_id, rina::CDAPSessionDescriptor
 	rina::ScopedLock g(lock_);
 	LOG_IPCP_DBG("Releasing the CDAP connection");
 
-	(void) invoke_id;
-
 	if (!isValidPortId(session_descriptor->port_id_)) {
 		return;
 	}
@@ -312,9 +306,6 @@ void IEnrollmentStateMachine::releaseResponse(int result, const std::string& res
 					      rina::CDAPSessionDescriptor * session_descriptor)
 {
 	rina::ScopedLock g(lock_);
-
-	(void) result;
-	(void) result_reason;
 
 	if (!isValidPortId(session_descriptor->port_id_)) {
 		return;
@@ -1044,9 +1035,6 @@ OperationalStatusRIBObject::OperationalStatusRIBObject(IPCProcess * ipc_process)
 
 void OperationalStatusRIBObject::remoteStartObject(void * object_value, int invoke_id,
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	(void) object_value;
-	(void) invoke_id;
-
 	try {
 		if (!enrollment_task_->getEnrollmentStateMachine(cdapSessionDescriptor->port_id_, false)) {
 			LOG_IPCP_ERR("Got a CDAP message that is not for me: %s");
@@ -1064,14 +1052,12 @@ void OperationalStatusRIBObject::remoteStartObject(void * object_value, int invo
 }
 
 void OperationalStatusRIBObject::startObject(const void* object) {
-	(void) object; // Stop compiler barfs
 	if (ipc_process_->get_operational_state() != ASSIGNED_TO_DIF) {
 		ipc_process_->set_operational_state(ASSIGNED_TO_DIF);
 	}
 }
 
 void OperationalStatusRIBObject::stopObject(const void* object) {
-	(void) object; // Stop compiler barfs
 	if (ipc_process_->get_operational_state() != ASSIGNED_TO_DIF) {
 		ipc_process_->set_operational_state(INITIALIZED);
 	}

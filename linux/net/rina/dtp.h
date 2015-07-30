@@ -32,9 +32,7 @@
 
 struct dtp * dtp_create(struct dt *         dt,
                         struct rmt *        rmt,
-                        struct efcp *       efcp,
-                        const string_t *    dtp_ps_name,
-                        struct connection * connection);
+                        struct dtp_config * dtp_cfg);
 int          dtp_destroy(struct dtp * instance);
 
 int          dtp_sv_init(struct dtp * dtp,
@@ -65,15 +63,15 @@ struct rtimer * dtp_sender_inactivity_timer(struct dtp * instance);
 
 /* FIXME: temporal addition so that DTCP's sending ack can call this function
  * that was originally static */
-seq_num_t    process_A_expiration(struct dtp * dtp, struct dtcp * dtcp);
+const struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp);
 
-int          dtp_select_policy_set(struct dtp * dtp, const string_t *path,
-                                   const string_t * name);
+int                dtp_select_policy_set(struct dtp * dtp, const string_t *path,
+                                         const string_t * name);
 
-int          dtp_set_policy_set_param(struct dtp* dtp,
-                                      const string_t * path,
-                                      const string_t * name,
-                                      const string_t * value);
+int                dtp_set_policy_set_param(struct dtp* dtp,
+                                            const string_t * path,
+                                            const string_t * name,
+                                            const string_t * value);
 
 struct dtp_ps * dtp_ps_get(struct dtp * dtp);
 

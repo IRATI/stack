@@ -49,7 +49,6 @@ RIBSchemaObject::RIBSchemaObject(const std::string& class_name,
 	class_name_ = class_name;
 	mandatory_ = mandatory;
 	max_objs_ = max_objs;
-	(void) parent_;
 }
 
 void RIBSchemaObject::addChild(RIBSchemaObject *object) {
@@ -179,9 +178,6 @@ rib_schema_res RIBSchema::ribSchemaDefContRelation(
 
 
 bool RIBSchema::validateAddObject(const RIBObj* obj) {
-
-	(void) obj;
-
 	return true;
 }
 
@@ -695,8 +691,6 @@ void RIB::cancel_read_request(
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt, const int invoke_id) {
 
-	(void) filt;
-
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 	cdap_rib::res_info_t res;
@@ -740,7 +734,6 @@ void RIB::write_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::filt_info_t &filt,
 		const int invoke_id) {
 
-	(void) filt;
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 
@@ -797,7 +790,6 @@ void RIB::start_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::filt_info_t &filt,
 		const int invoke_id) {
 
-	(void) filt;
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 
@@ -855,7 +847,6 @@ void RIB::stop_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::filt_info_t &filt,
 		const int invoke_id) {
 
-	(void) filt;
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 
@@ -1687,7 +1678,6 @@ void RIBDaemon::addCreateCallbackSchema(
 }
 
 void RIBDaemon::destroySchema(const cdap_rib::vers_info_t& version){
-	(void)version;
 	throw eNotImplemented();
 }
 
@@ -1748,7 +1738,6 @@ rib_handle_t RIBDaemon::get(const cdap_rib::vers_info_t& v,
 }
 
 void RIBDaemon::destroyRIB(const rib_handle_t& handle){
-	(void)handle;
 	throw eNotImplemented();
 }
 
@@ -1953,8 +1942,6 @@ void RIBDaemon::open_connection(const cdap_rib::con_handle_t &con,
 
 	// FIXME add result
 	cdap_rib::result_info res;
-	(void) res;
-	(void) flags;
 	app_con_callback_->connect(invoke_id, con);
 
 	//The connect was successful store
@@ -1976,7 +1963,6 @@ void RIBDaemon::close_connection(const cdap_rib::con_handle_t &con,
 
 	// FIXME add result
 	cdap_rib::result_info res;
-	(void) res;
 	app_con_callback_->release(invoke_id, con);
 	cdap_provider->send_close_connection_result(con.port_, flags, res,
 			invoke_id);
@@ -2444,13 +2430,6 @@ void RIBObj::create(const cdap_rib::con_handle_t &con,
 				cdap_rib::SerializedObject &obj_reply,
 				cdap_rib::res_info_t& res){
 
-	(void) con;
-	(void) fqn;
-	(void) class_;
-	(void) filt;
-	(void) invoke_id;
-	(void) obj_req;
-	(void) obj_reply;
 	operation_not_supported(res);
 }
 
@@ -2460,11 +2439,6 @@ bool RIBObj::delete_(const cdap_rib::con_handle_t &con,
 					const cdap_rib::filt_info_t &filt,
 					const int invoke_id,
 					cdap_rib::res_info_t& res){
-	(void) con;
-	(void) fqn;
-	(void) class_;
-	(void) filt;
-	(void) invoke_id;
 	operation_not_supported(res);
 	return false;
 }
@@ -2477,12 +2451,6 @@ void RIBObj::read(const cdap_rib::con_handle_t &con,
 					const int invoke_id,
 					cdap_rib::SerializedObject &obj_reply,
 					cdap_rib::res_info_t& res){
-	(void) con;
-	(void) fqn;
-	(void) class_;
-	(void) filt;
-	(void) invoke_id;
-	(void) obj_reply;
 	operation_not_supported(res);
 }
 
@@ -2492,11 +2460,6 @@ void RIBObj::cancelRead(const cdap_rib::con_handle_t &con,
 					const cdap_rib::filt_info_t &filt,
 					const int invoke_id,
 					cdap_rib::res_info_t& res){
-	(void) con;
-	(void) fqn;
-	(void) class_;
-	(void) filt;
-	(void) invoke_id;
 	operation_not_supported(res);
 }
 
@@ -2508,13 +2471,6 @@ void RIBObj::write(const cdap_rib::con_handle_t &con,
 				const cdap_rib::SerializedObject &obj_req,
 				cdap_rib::SerializedObject &obj_reply,
 				cdap_rib::res_info_t& res){
-	(void) con;
-	(void) fqn;
-	(void) class_;
-	(void) filt;
-	(void) invoke_id;
-	(void) obj_req;
-	(void) obj_reply;
 	operation_not_supported(res);
 }
 
@@ -2526,13 +2482,6 @@ void RIBObj::start(const cdap_rib::con_handle_t &con,
 			const cdap_rib::SerializedObject &obj_req,
 			cdap_rib::SerializedObject &obj_reply,
 			cdap_rib::res_info_t& res){
-	(void) con;
-	(void) fqn;
-	(void) class_;
-	(void) filt;
-	(void) invoke_id;
-	(void) obj_req;
-	(void) obj_reply;
 	operation_not_supported(res);
 }
 
@@ -2544,13 +2493,6 @@ void RIBObj::stop(const cdap_rib::con_handle_t &con,
 			const cdap_rib::SerializedObject &obj_req,
 			cdap_rib::SerializedObject &obj_reply,
 			cdap_rib::res_info_t& res){
-	(void) con;
-	(void) fqn;
-	(void) class_;
-	(void) filt;
-	(void) invoke_id;
-	(void) obj_req;
-	(void) obj_reply;
 	operation_not_supported(res);
 }
 

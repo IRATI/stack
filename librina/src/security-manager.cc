@@ -93,9 +93,6 @@ rina::IAuthPolicySet::AuthStatus AuthNonePolicySet::initiate_authentication(cons
 int AuthNonePolicySet::process_incoming_message(const CDAPMessage& message,
 						 int session_id)
 {
-	(void) message;
-	(void) session_id;
-
 	//This function should never be called for this authenticaiton policy
 	return IAuthPolicySet::FAILED;
 }

@@ -33,75 +33,8 @@
 #include "dtcp-ps.h"
 #include "dtp.h"
 #include "dtcp.h"
-#include "dtcp-utils.h"
 #include "dt-utils.h"
 #include "debug.h"
-
-int
-common_sv_update(struct dtcp_ps * ps, seq_num_t seq)
-{
-        struct dtcp * dtcp = ps->dm;
-        int                  retval = 0;
-        struct dtcp_config * dtcp_cfg;
-
-        bool                 flow_ctrl;
-        bool                 win_based;
-        bool                 rate_based;
-        bool                 rtx_ctrl;
-
-        if (!dtcp) {
-                LOG_ERR("No instance passed, cannot run policy");
-                return -1;
-        }
-
-        dtcp_cfg = dtcp_config_get(dtcp);
-        if (!dtcp_cfg)
-                return -1;
-
-        flow_ctrl  = ps->flow_ctrl;
-        win_based  = ps->flowctrl.window_based;
-        rate_based = ps->flowctrl.rate_based;
-        rtx_ctrl   = ps->rtx_ctrl;
-
-        if (flow_ctrl) {
-                if (win_based) {
-                        if (ps->rcvr_flow_control(ps, seq)) {
-                                LOG_ERR("Failed Rcvr Flow Control policy");
-                                retval = -1;
-                        }
-                }
-
-                if (rate_based) {
-                        LOG_DBG("Rate based fctrl invoked");
-                        if (ps->rate_reduction(ps)) {
-                                LOG_ERR("Failed Rate Reduction policy");
-                                retval = -1;
-                        }
-                }
-
-                if (!rtx_ctrl) {
-                        LOG_DBG("Receiving flow ctrl invoked");
-                        if (ps->receiving_flow_control(ps, seq)) {
-                                LOG_ERR("Failed Receiving Flow Control "
-                                        "policy");
-                                retval = -1;
-                        }
-
-                        return retval;
-                }
-        }
-
-        if (rtx_ctrl) {
-                LOG_DBG("Retransmission ctrl invoked");
-                if (ps->rcvr_ack(ps, seq)) {
-                        LOG_ERR("Failed Rcvr Ack policy");
-                        retval = -1;
-                }
-        }
-
-        return retval;
-}
-EXPORT_SYMBOL(common_sv_update);
 
 int
 common_lost_control_pdu(struct dtcp_ps * ps)
@@ -139,15 +72,22 @@ common_lost_control_pdu(struct dtcp_ps * ps)
 }
 EXPORT_SYMBOL(common_lost_control_pdu);
 
-int common_rcvr_ack(struct dtcp_ps * instance, seq_num_t seq)
+int common_rcvr_ack(struct dtcp_ps * instance, const struct pci * pci)
 {
         struct dtcp * dtcp = instance->dm;
+        seq_num_t     seq;
+
+        if (!pci) {
+                LOG_ERR("No PCI passed, cannot run policy");
+                return -1;
+        }
+        seq = pci_sequence_number_get(pci);
 
         return dtcp_ack_flow_control_pdu_send(dtcp, seq);
 }
 EXPORT_SYMBOL(common_rcvr_ack);
 
-int common_rcvr_ack_atimer(struct dtcp_ps * instance, seq_num_t seq)
+int common_rcvr_ack_atimer(struct dtcp_ps * instance, const struct pci * pci)
 { return 0; }
 EXPORT_SYMBOL(common_rcvr_ack_atimer);
 
@@ -179,8 +119,8 @@ EXPORT_SYMBOL(common_sender_ack);
 int
 common_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
 {
-        struct dtp * dtp;
-        seq_num_t    seq_num;
+        struct dtp *       dtp;
+        const struct pci * pci;
 
         struct dtcp * dtcp = ps->dm;
 
@@ -197,20 +137,24 @@ common_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
 
         /* Invoke delimiting and update left window edge */
 
-        seq_num = process_A_expiration(dtp, dtcp);
+        pci = process_A_expiration(dtp, dtcp);
 
-        return ps->sv_update(ps, seq_num);
+        return dtcp_sv_update(ps->dm, pci);
 }
 EXPORT_SYMBOL(common_sending_ack);
 
 int
-common_receiving_flow_control(struct dtcp_ps * ps, seq_num_t seq)
+common_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 {
         struct dtcp * dtcp = ps->dm;
         struct pdu * pdu;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+        if (!pci) {
+                LOG_ERR("No PCI passed, cannot run policy");
                 return -1;
         }
         pdu = pdu_ctrl_generate(dtcp, PDU_TYPE_FC);
@@ -228,13 +172,17 @@ common_receiving_flow_control(struct dtcp_ps * ps, seq_num_t seq)
 EXPORT_SYMBOL(common_receiving_flow_control);
 
 int
-common_rcvr_flow_control(struct dtcp_ps * ps, seq_num_t seq)
+common_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 {
         struct dtcp * dtcp = ps->dm;
         seq_num_t LWE;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+        if (!pci) {
+                LOG_ERR("No PCI passed, cannot run policy");
                 return -1;
         }
 

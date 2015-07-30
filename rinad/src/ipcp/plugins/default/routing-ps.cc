@@ -350,8 +350,6 @@ std::list<rina::RoutingTableEntry *> DijkstraAlgorithm::computeRoutingTable(
 	unsigned int nextHop;
 	rina::RoutingTableEntry * entry;
 
-	(void)fsoList; // avoid compiler barfs
-
 	execute(graph, source_address);
 
 	for (it = graph.vertices_.begin(); it != graph.vertices_.end(); ++it) {
@@ -360,7 +358,7 @@ std::list<rina::RoutingTableEntry *> DijkstraAlgorithm::computeRoutingTable(
 			if (nextHop != 0) {
 				entry = new rina::RoutingTableEntry();
 				entry->address = (*it);
-				entry->nextHopAddresses.push_back(nextHop);
+				entry->nextHopAddresses.push_back(rina::NHopAltList(nextHop));
 				entry->qosId = 1;
 				entry->cost = 1;
 				result.push_back(entry);
@@ -517,6 +515,7 @@ void LoopFreeAlternateAlgorithm::extendRoutingTableEntry(
 	std::list<rina::RoutingTableEntry *>::iterator rit;
 	bool found = false;
 
+	// Find the involved routing table entry
 	for (rit = rt.begin(); rit != rt.end(); rit++) {
 		if ((*rit)->address == target_address) {
 			break;
@@ -529,18 +528,22 @@ void LoopFreeAlternateAlgorithm::extendRoutingTableEntry(
 		return;
 	}
 
-	//Find the involved routing table entry, try to extend it
+	// Assume unicast and try to extend the routing table entry
+	// with the new alternative 'nexthop'
+	rina::NHopAltList& altlist = (*rit)->nextHopAddresses.front();
+
 	for (std::list<unsigned int>::iterator
-			hit = (*rit)->nextHopAddresses.begin();
-				hit != (*rit)->nextHopAddresses.end(); hit++) {
+			hit = altlist.alts.begin();
+				hit != altlist.alts.end(); hit++) {
 		if (*hit == nexthop) {
+			// The nexthop is already in the alternatives
 			found = true;
 			break;
 		}
 	}
 
 	if (!found) {
-		(*rit)->nextHopAddresses.push_back(nexthop);
+		altlist.alts.push_back(nexthop);
 		LOG_DBG("Node %u selected as LFA node towards the "
 			 "destination node %u", nexthop, target_address);
 	}
@@ -567,14 +570,14 @@ void LoopFreeAlternateAlgorithm::fortifyRoutingTable(const Graph& graph,
 		}
 	}
 
-	// For each node other than than the source node and its neighbors
+	// For each node X other than than the source node
 	for (std::list<unsigned int>::const_iterator it = graph.vertices_.begin();
 						it != graph.vertices_.end(); ++it) {
-		if ((*it) == source_address || neighbors_dist_trees.count(*it)) {
+		if ((*it) == source_address) {
 			continue;
 		}
 
-		// For each neighbor of the source node
+		// For each neighbor of the source node, excluding X
 		for (std::map<unsigned int, std::map<unsigned int, int> >::iterator
 			nit = neighbors_dist_trees.begin();
 				nit != neighbors_dist_trees.end(); nit++) {
@@ -583,6 +586,10 @@ void LoopFreeAlternateAlgorithm::fortifyRoutingTable(const Graph& graph,
 			// into account
 			std::map< unsigned int, int>& neigh_dist_map = nit->second;
 			unsigned int neigh = nit->first;
+
+			if (neigh == *it) {
+				continue;
+			}
 
 			// dist(neigh, target) < dist(neigh, source) + dist(source, target)
 			if (neigh_dist_map[*it] < src_dist_tree[neigh] + src_dist_tree[*it]) {
@@ -621,8 +628,6 @@ const void* FlowStateRIBObjectGroup::get_value() const
 void FlowStateRIBObjectGroup::remoteWriteObject(void * object_value,
 		int invoke_id, rina::CDAPSessionDescriptor * cdapSessionDescriptor)
 {
-	(void) invoke_id;
-
 	std::list<FlowStateObject *> * objects =
 			(std::list<FlowStateObject *> *) object_value;
 	lsr_policy_->writeMessageReceived(*objects,
@@ -674,8 +679,6 @@ void FlowStateRIBObject::createObject(const std::string& objectClass, const std:
 
 void FlowStateRIBObject::deleteObject(const void* objectValue)
 {
-        (void) objectValue; // Stop compiler barfs
-
 	parent_->remove_child(name_);
 	rib_daemon_->removeRIBObject(name_);
 }
@@ -926,8 +929,6 @@ void LinkStateRoutingCDAPMessageHandler::readResponse(int result,
 		const std::string& object_name,
 		rina::CDAPSessionDescriptor * session_descriptor)
 {
-	(void) object_name;
-
 	if (result != 0) {
 		LOG_IPCP_ERR("Problems reading Flow State Objects from neighbor: %s",
 				result_reason.c_str());

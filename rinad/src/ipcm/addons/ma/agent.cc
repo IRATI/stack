@@ -143,7 +143,6 @@ void ManagementAgent::connect(void){
 		w_id = flow_manager->connectTo(*it);
 
 		//TODO: store this
-		(void)w_id;
 	}
 }
 

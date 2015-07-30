@@ -46,8 +46,6 @@ FlowRIBObject::FlowRIBObject(
 void FlowRIBObject::remoteDeleteObject(
 		int invoke_id, rina::CDAPSessionDescriptor * session_descriptor)
 {
-	(void) invoke_id;
-	(void) session_descriptor;
 	flow_allocator_instance_->deleteFlowRequestMessageReceived();
 }
 
@@ -71,7 +69,6 @@ void FlowSetRIBObject::remoteCreateObject(
 		void * object_value, const std::string& object_name,
 		int invoke_id, rina::CDAPSessionDescriptor * session_descriptor)
 {
-	(void) session_descriptor;
 	flow_allocator_->createFlowRequestMessageReceived((Flow *) object_value,
 			object_name, invoke_id);
 }
@@ -126,8 +123,10 @@ std::string QoSCubeRIBObject::get_displayable_value()
 		<< cube->peak_bandwidth_duration_;
 	ss << "; Peak SDU bandwidth duration (ms): "
 		<< cube->peak_sdu_bandwidth_duration_ << std::endl;
-	rina::ConnectionPolicies con = cube->efcp_policies_;
-	ss << "EFCP policies: " << con.toString();
+	rina::DTPConfig dtp_conf = cube->dtp_config_;
+	ss << "DTP Configuration: " << dtp_conf.toString();
+	rina::DTCPConfig dtcp_conf = cube->dtcp_config_;
+	ss << "DTCP Configuration: " << dtcp_conf.toString();
 	return ss.str();
 }
 
@@ -145,10 +144,6 @@ void QoSCubeSetRIBObject::remoteCreateObject(
 		int invoke_id, rina::CDAPSessionDescriptor * session_descriptor)
 {
 	//TODO, depending on IEncoder
-	(void) object_value;
-	(void) object_name;
-	(void) invoke_id;
-	(void) session_descriptor;
 	LOG_IPCP_ERR("Missing code");
 }
 
@@ -1047,8 +1042,6 @@ void FlowAllocatorInstance::submitDeallocate(
 {
 	rina::ScopedLock g(*lock_);
 
-	(void) event;  // Stop compiler barfs
-
 	if (state != FLOW_ALLOCATED) {
 		LOG_IPCP_ERR(
 				"Received deallocate request while not in FLOW_ALLOCATED state. Current state is: %d",
@@ -1130,9 +1123,6 @@ void FlowAllocatorInstance::deleteFlowRequestMessageReceived()
 void FlowAllocatorInstance::destroyFlowAllocatorInstance(
 		const std::string& flowObjectName, bool requestor)
 {
-	(void) flowObjectName;  // Stop compiler barfs
-	(void) requestor;  // Stop compiler barfs
-
 	lock_->lock();
 
 	if (state != WAITING_2_MPL_BEFORE_TEARING_DOWN) {
@@ -1157,9 +1147,6 @@ void FlowAllocatorInstance::createResponse(
 		int result, const std::string& result_reason, void * object_value,
 		rina::CDAPSessionDescriptor * session_descriptor)
 {
-	(void) result_reason;  // Stop compiler barfs
-	(void) session_descriptor;  // Stop compiler barfs
-
 	lock_->lock();
 
 	if (state != MESSAGE_TO_PEER_FAI_SENT) {
@@ -1282,25 +1269,18 @@ void DataTransferConstantsRIBObject::remoteCreateObject(
 		int invoke_id, rina::CDAPSessionDescriptor * session_descriptor)
 {
 	//Ignore, since Data Transfer Constants must be set before enrollment (via assign to DIF)
-	(void) object_value;
-	(void) object_name;
-	(void) invoke_id;
-	(void) session_descriptor;
 }
 
 void DataTransferConstantsRIBObject::createObject(
 		const std::string& objectClass, const std::string& objectName,
 		const void* objectValue)
 {
-	(void) objectClass;
-	(void) objectName;
 	writeObject(objectValue);
 }
 
 void DataTransferConstantsRIBObject::writeObject(
 		const void* objectValue)
 {
-	(void) objectValue;
 }
 
 const void* DataTransferConstantsRIBObject::get_value() const
@@ -1359,10 +1339,14 @@ const rina::SerializedObject* FlowEncoder::encode(const void* object)
 	//qosParameters
 	gpf_flow.set_allocated_qosparameters(
 			Encoder::get_qosSpecification_t(flow->flow_specification));
-	//optional connectionPolicies_t connectionPolicies
-	gpf_flow.set_allocated_connectionpolicies(
-			Encoder::get_connectionPolicies_t(
-				flow->getActiveConnection()->getPolicies()));
+	//optional dtpConfig_t dtpConfig
+	gpf_flow.set_allocated_dtpconfig(
+			Encoder::get_dtpConfig_t(
+				flow->getActiveConnection()->getDTPConfig()));
+	//optional dtpConfig_t dtpConfig
+	gpf_flow.set_allocated_dtcpconfig(
+			Encoder::get_dtcpConfig_t(
+				flow->getActiveConnection()->getDTCPConfig()));
 	//accessControl
 	if (flow->access_control != 0)
 		gpf_flow.set_accesscontrol(flow->access_control);
@@ -1430,11 +1414,17 @@ void* FlowEncoder::decode(
 	delete fs;
 	fs = 0;
 
-	rina::ConnectionPolicies *conn_polc =
-		Encoder::get_ConnectionPolicies(gpf_flow.connectionpolicies());
-	flow->getActiveConnection()->setPolicies(*conn_polc);
-	delete conn_polc;
-	conn_polc = 0;
+	rina::DTPConfig *dtp_config =
+		Encoder::get_DTPConfig(gpf_flow.dtpconfig());
+	flow->getActiveConnection()->setDTPConfig(*dtp_config);
+	delete dtp_config;
+	dtp_config = 0;
+
+	rina::DTCPConfig *dtcp_config =
+		Encoder::get_DTCPConfig(gpf_flow.dtcpconfig());
+	flow->getActiveConnection()->setDTCPConfig(*dtcp_config);
+	delete dtcp_config;
+	dtcp_config = 0;
 
 	flow->access_control = const_cast<char*>(gpf_flow.accesscontrol()
 			.c_str());

@@ -32,10 +32,9 @@ struct dtcp_rctrl_config;
 struct connection;
 struct rmt;
 
-struct dtcp *        dtcp_create(struct dt *         dt,
-                                 struct connection * conn,
-                                 const string_t *    dtcp_ps_name,
-                                 struct rmt *        rmt);
+struct dtcp *        dtcp_create(struct dt *          dt,
+                                 struct dtcp_config * dtcp_cfg,
+                                 struct rmt *         rmt);
 
 int                  dtcp_destroy(struct dtcp * instance);
 
@@ -43,8 +42,8 @@ int                  dtcp_send(struct dtcp * instance,
                                struct sdu *  sdu);
 
 /* Used by the DTP to notify the DTCP about events */
-int                  dtcp_sv_update(struct dtcp * instance,
-                                    seq_num_t     seq);
+int                  dtcp_sv_update(struct dtcp *      dtcp,
+                                    const struct pci * pci);
 
 /* Used by EFCP to send an incoming DTCP PDU */
 int                  dtcp_common_rcv_control(struct dtcp * dtcp,
@@ -63,6 +62,8 @@ int                  dtcp_snd_rt_win_set(struct dtcp * dtcp,
                                          seq_num_t rt_win_edge);
 int                  dtcp_rcv_rt_win_set(struct dtcp * instance,
                                          seq_num_t     seq_num);
+void                 dtcp_rcvr_credit_set(struct dtcp * dtcp,
+                                          uint_t credit);
 
 struct dtcp_config * dtcp_config_get(struct dtcp * dtcp);
 

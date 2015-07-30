@@ -35,6 +35,7 @@
 #include <librina/patterns.h>
 
 #include "dif-template-manager.h"
+#include "catalog.h"
 
 //Addons
 #include "addon.h"
@@ -688,6 +689,18 @@ protected:
 	void ipc_process_select_policy_set_response_handler(
 					rina::SelectPolicySetResponseEvent *e);
 
+	//
+	// Load kernel space policy plugin
+	//
+	// @param plugin_name Name of the kernel module containing the
+	//		      plugin to be loaded
+	// @param load        True if the plugin is to be loaded,
+	//                    false if the plugin is to be unloaded.
+	// @ret IPCM_SUCCESS when load/unload is successful, otherwise
+	//	IPCM_FAILURE
+	ipcm_res_t plugin_load_kernel(const std::string& plugin_name,
+				      bool load);
+
 	/*
 	* Get the transaction state. Template parameter is the type of the
 	* specific state required for the type of transaction
@@ -805,6 +818,10 @@ public:
 
 	//The DIF template manager
 	DIFTemplateManager * dif_template_manager;
+
+	//Catalog of policies
+	Catalog catalog;
+
 private:
 	//Singleton
 	IPCManager_();

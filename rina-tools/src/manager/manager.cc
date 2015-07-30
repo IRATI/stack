@@ -43,7 +43,6 @@ const std::string ManagerWorker::IPCP_3 = "/computingSystemID=1/processingSystem
 void ConnectionCallback::open_connection(
 		const rina::cdap_rib::con_handle_t &con,
 		const rina::cdap_rib::flags_t &flags, int message_id) {
-	(void) flags;
 	cdap_rib::res_info_t res;
 	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 	std::cout << "open conection request CDAP message received"
@@ -56,8 +55,6 @@ void ConnectionCallback::remote_create_result(
 		const rina::cdap_rib::con_handle_t &con,
 		const rina::cdap_rib::obj_info_t &obj,
 		const rina::cdap_rib::res_info_t &res) {
-	(void) obj;
-	(void) con;
 	std::cout << "Result code is: " << res.code_ << std::endl;
 }
 
@@ -67,7 +64,6 @@ void ConnectionCallback::remote_read_result(
 		const rina::cdap_rib::res_info_t &res) {
 	// decode object value
 	// print object value
-	(void) con;
 	std::cout << "Query Rib operation returned result " << res.code_
 			<< std::endl;
 	std::string query_rib;

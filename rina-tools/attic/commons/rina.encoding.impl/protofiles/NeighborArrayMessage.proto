@@ -1,7 +1,0 @@
-package rina.messages;
-option java_package="rina.encoding.impl.googleprotobuf.neighbor";
-import "protofiles/NeighborMessage.proto";
-
-message neighbors_t{   //carries information about all the neighbors
-	repeated neighbor_t neighbor = 1;
-}
