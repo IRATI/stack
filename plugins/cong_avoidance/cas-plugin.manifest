@@ -1,0 +1,16 @@
+{
+        "PluginName": "cas-plugin",
+        "PluginVersion": "1",
+        "PolicySets" : [
+                {
+                        "Name": "cas-ps",
+                        "Component": "rmt",
+                        "Version" : "1"
+                },
+                {
+                        "Name": "cas-ps",
+                        "Component": "dtcp",
+                        "Version" : "1"
+                }
+        ]
+}
