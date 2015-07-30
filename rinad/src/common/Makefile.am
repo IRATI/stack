@@ -31,7 +31,6 @@ librinad_la_LIBADD   =				\
 librinad_la_SOURCES  =					\
 	debug.cc              debug.h                   \
 	rina-configuration.cc rina-configuration.h	\
-	event-loop.cc	      event-loop.h		\
 	encoder.cc	      encoder.h			\
 	encoders_mad.cc	      encoders_mad.h			\
 			      concurrency.h

@@ -60,12 +60,8 @@ int wrapped_main(int argc, char * argv[])
 
         LOG_IPCP_INFO("IPC Process initialized, executing event loop...");
 
-        rinad::EventLoop loop(&ipcp);
-
-        rinad::register_handlers_all(loop);
-
         try {
-        	loop.run();
+		ipcp.event_loop();
         } catch (rina::Exception &e) {
         	LOG_IPCP_ERR("Problems running event loop: %s", e.what());
         } catch (std::exception &e1) {
