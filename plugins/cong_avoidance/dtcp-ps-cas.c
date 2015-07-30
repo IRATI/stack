@@ -107,11 +107,11 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
                 /*check number of ecn bits set */
                 LOG_DBG("ECN COUNT: %d, Wc: %u", data->ecn_count, data->wc);
                 if (data->ecn_count > (data->wc >> 1)) {
-                        if (data->wc != 1) {
-                        /* decrease window's size*/
-                        data->wc = (data->wc * data->w_dec_b_num_p) >> data->w_dec_b_den_p;
-                        LOG_DBG("Window size decreased, new values are Wp: %u, Wc: %u",
-                                data->wp, data->wc);
+                	if (data->wc != 1) {
+                		/* decrease window's size*/
+                		data->wc = (data->wc * data->w_dec_b_num_p) >> data->w_dec_b_den_p;
+                		LOG_DBG("Window size decreaased, new values are Wp: %u, Wc: %u",
+                				data->wp, data->wc);
                 	}
                 } else {
                         /*increment window's size */
