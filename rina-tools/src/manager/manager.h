@@ -57,9 +57,9 @@ private:
         static const std::string IPCP_3;
         void operate(rina::FlowInformation flow);
         void cacep(int port_id);
-        void createIPCP_1(int port_id);
-        void createIPCP_2(int port_id);
-        void createIPCP_3(int port_id);
+        bool createIPCP_1(int port_id);
+        bool createIPCP_2(int port_id);
+        bool createIPCP_3(int port_id);
         void queryRIB(int port_id, std::string name);
 
         rina::FlowInformation flow_;
@@ -74,16 +74,16 @@ class Manager : public Server {
 		const std::string& api);
 	~Manager() { };
 
+	void run(bool blocking);
+
  private:
+	static const std::string mad_name;
+	static const std::string mad_instance;
+	rina::cdap_rib::con_handle_t con_;
+        ConnectionCallback callback;
 	std::string dif_name_;
 	bool client_app_reg_;
 
  	ServerWorker * internal_start_worker(rina::FlowInformation flow);
-
-	rina::cdap_rib::con_handle_t con_;
-	static const std::string mad_name;
-	static const std::string mad_instance;
-
-        ConnectionCallback callback;
 };
 #endif//MANAGER_HPP

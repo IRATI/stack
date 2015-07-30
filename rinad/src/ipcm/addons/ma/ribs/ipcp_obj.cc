@@ -7,6 +7,7 @@
 #include "../agent.h"
 #include "../../../ipcm.h"
 #include "../ribf.h"
+#include "ribd_obj.h"
 
 namespace rinad {
 namespace mad {
@@ -132,6 +133,10 @@ void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
 	//Finally add it into the RIB
 	try{
 		RIBFactory::getProxy()->addObjRIB(rib, fqn, &ipcp);
+
+		std::string rib_name = fqn + "/ribDaemon";
+		RIBDaemonObj *tmp = new RIBDaemonObj(ipcp_id);
+		RIBFactory::getProxy()->addObjRIB(rib, rib_name, &tmp);
 	}catch(...) {
 		LOG_ERR("Create operation failed: for ipcp id '%d' in path '%s'. Out of memory.",
 								ipcp_id,
