@@ -365,7 +365,6 @@ void Manager::run(bool blocking)
                         	startWorker(waiting[order]);
                         	order++;
                         }
-                        startWorker(waiting[order]);
                         break;
 
                 case FLOW_DEALLOCATED_EVENT:
