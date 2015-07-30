@@ -26,8 +26,7 @@ ipcm_CPPFLAGS =					\
 	-I$(srcdir)/..				\
 	-I$(srcdir)/../common			\
 	-DPLUGINSDIR=\"$(pkglibdir)/ipcm\"	\
-	-DIPCPPLUGINSDIR=\"$(pkglibdir)/ipcp\"  \
-	-DPREFIX=\"$(prefix)\"
+	-DIPCPPLUGINSDIR=\"$(pkglibdir)/ipcp\"
 
 ipcm_LDADD    =					\
 	$(builddir)/../common/librinad.la	\
