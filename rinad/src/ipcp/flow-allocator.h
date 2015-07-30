@@ -22,8 +22,6 @@
 #ifndef IPCP_FLOW_ALLOCATOR_HH
 #define IPCP_FLOW_ALLOCATOR_HH
 
-#ifdef __cplusplus
-
 #include <librina/timer.h>
 
 #include "common/concurrency.h"
@@ -353,7 +351,5 @@ public:
 };
 
 }
-
-#endif
 
 #endif

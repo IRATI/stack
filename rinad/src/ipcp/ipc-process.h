@@ -21,8 +21,6 @@
 #ifndef IPCP_IPC_PROCESS_HH
 #define IPCP_IPC_PROCESS_HH
 
-#ifdef __cplusplus
-
 #include <map>
 
 #include "common/event-loop.h"
@@ -88,7 +86,5 @@ void register_handlers_all(EventLoop& loop);
 /* Macro useful to perform downcasts in declarations. */
 #define DOWNCAST_DECL(_var,_class,_name)        \
         _class *_name = dynamic_cast<_class*>(_var);
-
-#endif
 
 #endif

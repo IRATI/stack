@@ -22,8 +22,6 @@
 #ifndef IPCP_RESOURCE_ALLOCATOR_HH
 #define IPCP_RESOURCE_ALLOCATOR_HH
 
-#ifdef __cplusplus
-
 #include "ipcp/components.h"
 
 namespace rinad {
@@ -67,7 +65,5 @@ private:
 };
 
 }
-
-#endif
 
 #endif

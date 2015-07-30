@@ -24,8 +24,6 @@
 #ifndef IPCP_COMPONENTS_HH
 #define IPCP_COMPONENTS_HH
 
-#ifdef __cplusplus
-
 #include <list>
 #include <vector>
 #include <string>
@@ -591,7 +589,5 @@ public:
 };
 
 }
-
-#endif
 
 #endif

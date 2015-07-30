@@ -22,8 +22,6 @@
 #ifndef IPCP_ENROLLMENT_TASK_HH
 #define IPCP_ENROLLMENT_TASK_HH
 
-#ifdef __cplusplus
-
 #include <map>
 
 #include "common/concurrency.h"
@@ -282,7 +280,5 @@ public:
 };
 
 }
-
-#endif
 
 #endif
