@@ -3,6 +3,7 @@
 #
 
 KDIR=../../linux
+KREL=`uname -r`
 
 ifneq ($(KERNELRELEASE),)
 
@@ -22,6 +23,7 @@ clean:
 
 install:
 	$(MAKE) -C $(KDIR) M=$$PWD modules_install
+	cp cas-plugin.manifest /lib/modules/$(KREL)/extra/
 
 uninstall:
 	@echo "This target has not been implemented yet"

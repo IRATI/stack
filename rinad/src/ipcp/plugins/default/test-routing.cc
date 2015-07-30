@@ -730,7 +730,7 @@ int getRoutingTable_MoreGraphEntries_True(bool lfa) {
 		bool ok = false;
 
 		std::cout << "Dest: " << e.address << ", Cost: " << e.cost <<
-				", NextHops: [";
+				", NextHopsAlts: {";
 
 		if (e.address < 1 || e.address > 7) {
 			std::cout << std::endl;
@@ -738,13 +738,20 @@ int getRoutingTable_MoreGraphEntries_True(bool lfa) {
 			break;
 		}
 
-		for (std::list<unsigned int>::const_iterator
-			lit = e.nextHopAddresses.begin();
-				lit != e.nextHopAddresses.end(); lit++) {
-			if (*lit == exp_nhops[e.address]) {
-				ok = true;
+		for (std::list<rina::NHopAltList>::const_iterator
+			altl = e.nextHopAddresses.begin();
+				altl != e.nextHopAddresses.end(); altl++) {
+
+			std::cout << "[";
+			for (std::list<unsigned int>::const_iterator
+				lit = altl->alts.begin();
+					lit != altl->alts.end(); lit++) {
+				std::cout << *lit << ", ";
+				if (*lit == exp_nhops[e.address]) {
+					ok = true;
+				}
 			}
-			std::cout << *lit << ", ";
+			std::cout << "] ";
 		}
 
 		if (!ok) {
@@ -753,7 +760,7 @@ int getRoutingTable_MoreGraphEntries_True(bool lfa) {
 			break;
 		}
 
-		std::cout << "]" << std::endl;
+		std::cout << "}" << std::endl;
 	}
 
 	if (lfa) {

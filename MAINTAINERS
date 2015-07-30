@@ -266,6 +266,7 @@ F: rinad/src/ipcp/plugins/default/default.manifest
 F: rinad/src/ipcp/plugins/default/namespace*
 F: rinad/src/ipcp/plugins/default/plugin.cc
 F: rinad/src/ipcp/plugins/default/test-encoder*
+F: rinad/src/ipcp/plugins/default/rina-default-plugin.manifest
 X: rinad/src/ipcp/plugins/
 X: rinad/src/ipcp/enroll*
 X: rinad/src/ipcp/flow-alloc*
