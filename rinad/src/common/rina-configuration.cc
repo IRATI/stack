@@ -94,6 +94,12 @@ string LocalConfiguration::toString() const
         ss << "\tLog path: " << logPath << endl;
         ss << "\tConsole port: " << consolePort << endl;
 
+	ss << "\tPlugins paths:" <<endl;
+	for (list<string>::const_iterator lit = pluginsPaths.begin();
+					lit != pluginsPaths.end(); lit++) {
+		ss << "\t\t" << *lit << endl;
+	}
+
         return ss.str();
 }
 

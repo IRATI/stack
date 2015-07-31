@@ -424,29 +424,43 @@ void parse_local_conf(const Json::Value &         root,
                       rinad::LocalConfiguration & local)
 {
         Json::Value local_conf = root["localConfiguration"];
-        if (local_conf != 0) {
-                local.consolePort = local_conf
-                        .get("consolePort", local.consolePort)
-                        .asInt();
-                local.installationPath = local_conf
-                        .get("installationPath",
-                             local.installationPath)
-                        .asString();
-                if (local.libraryPath.empty())
-                	local.libraryPath = std::string(DEFAULT_BINDIR);
-                local.libraryPath = local_conf
-                        .get("libraryPath",
-                             local.libraryPath)
-                        .asString();
-                if (local.libraryPath.empty())
-                	local.libraryPath = std::string(DEFAULT_LIBDIR);
-                local.logPath = local_conf
-                        .get("logPath",
-                             local.logPath)
-                        .asString();
-                if (local.logPath.empty())
-                	local.logPath = std::string(DEFAULT_LOGDIR);
-        }
+	Json::Value plugins_paths;
+
+	if (local_conf == 0) {
+		return;
+	}
+
+	local.consolePort = local_conf.get("consolePort",
+					   local.consolePort).asInt();
+	if (local.consolePort == 0) {
+		local.consolePort = 32766;
+	}
+
+	local.installationPath = local_conf.get("installationPath",
+				 local.installationPath).asString();
+	if (local.installationPath.empty()) {
+		local.installationPath = std::string(DEFAULT_BINDIR);
+	}
+
+	local.libraryPath = local_conf.get("libraryPath",
+					   local.libraryPath).asString();
+	if (local.libraryPath.empty()) {
+		local.libraryPath = std::string(DEFAULT_LIBDIR);
+	}
+
+	local.logPath = local_conf.get("logPath", local.logPath).asString();
+	if (local.logPath.empty()) {
+		local.logPath = std::string(DEFAULT_LOGDIR);
+	}
+
+	plugins_paths = local_conf["pluginsPaths"];
+	if (plugins_paths != 0) {
+		for (unsigned int j = 0; j < plugins_paths.size();
+				j++) {
+			local.pluginsPaths.push_back(
+					plugins_paths[j].asString());
+		}
+	}
 }
 
 void parse_dif_configs(const Json::Value   & root,
