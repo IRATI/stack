@@ -135,7 +135,9 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
                 LOG_DBG("ECN COUNT: %d, Wc: %u", data->ecn_count, data->wc);
                 if (data->ecn_count > (data->wc >> 1)) {
                 	if (data->wc != 1) {
-                		/* decrease window's size, multiplying by 0,875*/
+                		/* decrease window's size, multiplying by 0,875
+                		 * X*0,875 = x(1-0.125) = x -x/8
+                		 */
                 		data->real_window = data->real_window - (data->real_window >>3);
                 		data->wc = round_half_to_even(data->real_window);
                 		LOG_DBG("Window size decreased, new values are Wp: %u, Wc: %u",
@@ -237,7 +239,7 @@ dtcp_ps_cas_create(struct rina_component * component)
         /* Cannot use this because it is initialized later on in
          * dtcp_select_policy_set */
         /*data->wc                        = ps->flowctrl.window.initial_credit;*/
-        data->wc                        = dtcp_initial_credit(dtcp_cfg);;
+        data->wc                        = dtcp_initial_credit(dtcp_cfg);
         data->real_window		= data->wc << 16;
         data->wp                        = 0;
         data->ecn_count                 = 0;
