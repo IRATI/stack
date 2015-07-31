@@ -45,6 +45,16 @@ struct cas_dtcp_ps_data {
         unsigned int ecn_count;
         unsigned int rcv_count;
         spinlock_t   lock;
+
+        /* Value of window in fixed point, most significant 16 bits are the
+         * integer part, less significant 16 bits are the decimal part (i.e.
+         * 0000 0000 0000 0000 0000 0000 0000 0001 represents 0.00001525878).
+         * With that we can get window values up to 65536 PDUs, and a
+         * resolution of almost 5 decimals. Window values must be computed
+         * using real numbers, otherwise a fair allocation of windows between
+         * competing flows is not guaranteed.
+         */
+        unsigned int real_window;
 };
 
 static int
@@ -65,6 +75,23 @@ cas_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
 static int
 cas_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 { return common_receiving_flow_control(ps, pci); }
+
+static unsigned int round_half_to_even(unsigned int real_window)
+{
+	unsigned int decimal_part = real_window & 0xFFFF;
+	unsigned int integer_part = (real_window & 0xFFFF0000) >> 16;
+
+	if (decimal_part > 0x7FFF)
+		return integer_part +1;
+
+	if (decimal_part < 0x7FFF)
+		return integer_part;
+
+	if ((integer_part & 0x0001) == 0)
+		return integer_part +1;
+
+	return integer_part;
+}
 
 static int
 cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
@@ -108,17 +135,20 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
                 LOG_DBG("ECN COUNT: %d, Wc: %u", data->ecn_count, data->wc);
                 if (data->ecn_count > (data->wc >> 1)) {
                 	if (data->wc != 1) {
-                		/* decrease window's size*/
-                		data->wc = (data->wc * data->w_dec_b_num_p) >> data->w_dec_b_den_p;
-                		LOG_DBG("Window size decreaased, new values are Wp: %u, Wc: %u",
+                		/* decrease window's size, multiplying by 0,875*/
+                		data->real_window = data->real_window - (data->real_window >>3);
+                		data->wc = round_half_to_even(data->real_window);
+                		LOG_DBG("Window size decreased, new values are Wp: %u, Wc: %u",
                 				data->wp, data->wc);
                 	}
                 } else {
                         /*increment window's size */
-                        data->wc += data->w_inc_a_p;
+                	data->real_window += data->w_inc_a_p << 16;
+                	data->wc = round_half_to_even(data->real_window);
                         LOG_DBG("Window size increased, new values are Wp: %u, Wc: %u",
                         	data->wp, data->wc);
                 }
+                LOG_INFO("Value = %d, %u", pci_cep_source(pci), data->wc);
                 data->rcv_count = 0;
                 data->ecn_count = 0;
                 dtcp_rcvr_credit_set(dtcp, data->wc);
