@@ -58,8 +58,6 @@ class MyRIBObject : public rib::IntRIBObject
   }
   cdap_rib::res_info_t* remoteCreateObject(const std::string& name, void* value)
   {
-    (void) name;
-    (void) value;
     cdap_rib::res_info_t *res = new cdap_rib::res_info_t;
     res->result_ = 1;
     res->result_reason_ = "Ok";
@@ -70,8 +68,6 @@ class MyRIBObject : public rib::IntRIBObject
   }
   cdap_rib::res_info_t* remoteDeleteObject(const std::string& name, void* value)
   {
-    (void) name;
-    (void) value;
     cdap_rib::res_info_t *res = new cdap_rib::res_info_t;
     res->result_ = 1;
     res->result_reason_ = "Ok";
@@ -80,8 +76,6 @@ class MyRIBObject : public rib::IntRIBObject
   }
   cdap_rib::res_info_t* remoteReadObject(const std::string& name, void* value)
   {
-    (void) name;
-    (void) value;
     cdap_rib::res_info_t *res = new cdap_rib::res_info_t;
     res->result_ = 1;
     res->result_reason_ = "Ok";
@@ -91,8 +85,6 @@ class MyRIBObject : public rib::IntRIBObject
   cdap_rib::res_info_t* remoteCancelReadObject(const std::string& name,
                                                void * value)
   {
-    (void) name;
-    (void) value;
     cdap_rib::res_info_t *res = new cdap_rib::res_info_t;
     res->result_ = 1;
     res->result_reason_ = "Ok";
@@ -101,8 +93,6 @@ class MyRIBObject : public rib::IntRIBObject
   }
   cdap_rib::res_info_t* remoteWriteObject(const std::string& name, void* value)
   {
-    (void) name;
-    (void) value;
     cdap_rib::res_info_t *res = new cdap_rib::res_info_t;
     res->result_ = 1;
     res->result_reason_ = "Ok";
@@ -111,8 +101,6 @@ class MyRIBObject : public rib::IntRIBObject
   }
   cdap_rib::res_info_t* remoteStartObject(const std::string& name, void* value)
   {
-    (void) name;
-    (void) value;
     cdap_rib::res_info_t *res = new cdap_rib::res_info_t;
     res->result_ = 1;
     res->result_reason_ = "Ok";
@@ -121,8 +109,6 @@ class MyRIBObject : public rib::IntRIBObject
   }
   cdap_rib::res_info_t* remoteStopObject(const std::string& name, void* value)
   {
-    (void) name;
-    (void) value;
     cdap_rib::res_info_t *res = new cdap_rib::res_info_t;
     res->result_ = 1;
     res->result_reason_ = "Ok";
@@ -202,25 +188,17 @@ class ConHandler : public cacep::AppConHandlerInterface
 {
   void connect(int message_id, const cdap_rib::con_handle_t &con)
   {
-    (void) message_id;
-    (void) con;
   }
   void connectResponse(const cdap_rib::res_info_t &res,
                        const cdap_rib::con_handle_t &con)
   {
-    (void) res;
-    (void) con;
   }
   void release(int message_id, const cdap_rib::con_handle_t &con)
   {
-    (void) message_id;
-    (void) con;
   }
   void releaseResponse(const cdap_rib::res_info_t &res,
                        const cdap_rib::con_handle_t &con)
   {
-    (void) res;
-    (void) con;
   }
 };
 
@@ -229,50 +207,36 @@ class RespHandler : public rib::ResponseHandlerInterface
   void createResponse(const cdap_rib::res_info_t &res,
                       const cdap_rib::con_handle_t &con)
   {
-    (void) res;
-    (void) con;
     Checker->check = true;
   }
   void deleteResponse(const cdap_rib::res_info_t &res,
                       const cdap_rib::con_handle_t &con)
   {
-    (void) res;
-    (void) con;
     Checker->check = true;
   }
   void readResponse(const cdap_rib::res_info_t &res,
                     const cdap_rib::con_handle_t &con)
   {
-    (void) res;
-    (void) con;
     Checker->check = true;
   }
   void cancelReadResponse(const cdap_rib::res_info_t &res,
                           const cdap_rib::con_handle_t &con)
   {
-    (void) res;
-    (void) con;
     Checker->check = true;
   }
   void writeResponse(const cdap_rib::res_info_t &res,
                      const cdap_rib::con_handle_t &con)
   {
-    (void) res;
-    (void) con;
     Checker->check = true;
   }
   void startResponse(const cdap_rib::res_info_t &res,
                      const cdap_rib::con_handle_t &con)
   {
-    (void) res;
-    (void) con;
     Checker->check = true;
   }
   void stopResponse(const cdap_rib::res_info_t &res,
                     const cdap_rib::con_handle_t &con)
   {
-    (void) res;
-    (void) con;
     Checker->check = true;
   }
 };

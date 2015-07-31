@@ -3,7 +3,11 @@
         "installationPath": "/usr/local/irati/bin",
         "libraryPath": "/usr/local/irati/lib",
         "logPath": "/usr/local/irati/var/log",
-        "consolePort": 32766
+        "consolePort": 32766,
+	"pluginsPaths": [
+		"/usr/local/irati/lib/rinad/ipcp",
+		"/lib/modules/3.15.0-irati/extra"
+	]
     },
     "applicationToDIFMappings": [
         {

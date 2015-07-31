@@ -93,6 +93,7 @@ class IPCMConsole : public Addon {
                 int plugin_get_info(std::vector<std::string>& args);
                 int show_dif_templates(std::vector<std::string>& args);
                 int read_ipcp_ribobj(std::vector<std::string>& args);
+                int show_catalog(std::vector<std::string>& args);
 
         public:
                 IPCMConsole(const unsigned int port);

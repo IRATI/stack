@@ -158,8 +158,11 @@ F: linux/net/rina/syscall*
 
 Dummy kernel-space plugin:
 M: Leonardo Bergesio <leonardo.bergesio (at) i2cat.net>
-F: plugins/cong_avoidance/*
 F: plugins/dummy/*
+
+Jain's Congestion Avoidance plugin:
+M: Leonardo Bergesio <leonardo.bergesio (at) i2cat.net>
+F: plugins/cong_avoidance/*
 
 RED plugin:
 M: Leonardo Bergesio <leonardo.bergesio (at) i2cat.net>
@@ -263,6 +266,7 @@ F: rinad/src/ipcp/plugins/default/default.manifest
 F: rinad/src/ipcp/plugins/default/namespace*
 F: rinad/src/ipcp/plugins/default/plugin.cc
 F: rinad/src/ipcp/plugins/default/test-encoder*
+F: rinad/src/ipcp/plugins/default/rina-default-plugin.manifest
 X: rinad/src/ipcp/plugins/
 X: rinad/src/ipcp/enroll*
 X: rinad/src/ipcp/flow-alloc*

@@ -69,11 +69,6 @@ public:
 	}
         void sendMessageSpecific(bool useAddress, const rina::CDAPMessage & cdapMessage, int sessionId,
                         unsigned int address, rina::ICDAPResponseMessageHandler * cdapMessageHandler) {
-                (void) useAddress;
-                (void) cdapMessage;
-                (void) sessionId;
-                (void) address;
-                (void) cdapMessageHandler;
         }
 	void sendMessages(const std::list<const rina::CDAPMessage*>& cdapMessages,
 				const rina::IUpdateStrategy& updateStrategy){
@@ -148,79 +143,33 @@ public:
 			const std::string &dest_ap_name, const std::string &src_ae_inst,
 			const std::string &src_ae_name, const std::string &src_ap_inst,
 			const std::string &src_ap_name, const rina::RemoteProcessId& remote_id) {
-		(void) policy;
-		(void) dest_ae_inst;
-		(void) dest_ae_name;
-		(void) dest_ap_inst;
-		(void) dest_ap_name;
-		(void) src_ae_inst;
-		(void) src_ae_name;
-		(void) src_ap_inst;
-		(void) src_ap_name;
-		(void) remote_id;
 	}
 	void closeApplicationConnection(const rina::RemoteProcessId& remote_id,
 				rina::ICDAPResponseMessageHandler * response_handler) {
-		(void) remote_id;
-		(void) response_handler;
 	}
 	void remoteCreateObject(const std::string& object_class, const std::string& object_name,
 				rina::RIBObjectValue& object_value, int scope, const rina::RemoteProcessId& remote_id,
 				rina::ICDAPResponseMessageHandler * response_handler) {
-		(void) object_class;
-		(void) object_name;
-		(void) object_value;
-		(void) scope;
-		(void) remote_id;
-		(void) response_handler;
 	}
 	void remoteDeleteObject(const std::string& object_class, const std::string& object_name,
 				int scope, const rina::RemoteProcessId& remote_id,
 				rina::ICDAPResponseMessageHandler * response_handler) {
-		(void) object_class;
-		(void) object_name;
-		(void) scope;
-		(void) remote_id;
-		(void) response_handler;
 	}
 	void remoteReadObject(const std::string& object_class, const std::string& object_name,
 				int scope, const rina::RemoteProcessId& remote_id,
 				rina::ICDAPResponseMessageHandler * response_handler) {
-		(void) object_class;
-		(void) object_name;
-		(void) scope;
-		(void) remote_id;
-		(void) response_handler;
 	}
 	void remoteWriteObject(const std::string& object_class, const std::string& object_name,
 				rina::RIBObjectValue& object_value, int scope, const rina::RemoteProcessId& remote_id,
 				rina::ICDAPResponseMessageHandler * response_handler) {
-		(void) object_class;
-		(void) object_name;
-		(void) object_value;
-		(void) scope;
-		(void) remote_id;
-		(void) response_handler;
 	}
 	void remoteStartObject(const std::string& object_class, const std::string& object_name,
 				rina::RIBObjectValue& object_value, int scope, const rina::RemoteProcessId& remote_id,
 				rina::ICDAPResponseMessageHandler * response_handler) {
-		(void) object_class;
-		(void) object_name;
-		(void) object_value;
-		(void) scope;
-		(void) remote_id;
-		(void) response_handler;
 	}
 	void remoteStopObject(const std::string& object_class, const std::string& object_name,
 				rina::RIBObjectValue& object_value, int scope, const rina::RemoteProcessId& remote_id,
 				rina::ICDAPResponseMessageHandler * response_handler) {
-		(void) object_class;
-		(void) object_name;
-		(void) object_value;
-		(void) scope;
-		(void) remote_id;
-		(void) response_handler;
 	}
 	void openApplicationConnectionResponse(
 				const rina::AuthPolicy &policy, const std::string &dest_ae_inst,
@@ -228,91 +177,33 @@ public:
 				int result, const std::string &result_reason, const std::string &src_ae_inst,
 				const std::string &src_ae_name, const std::string &src_ap_inst, const std::string &src_ap_name,
 				int invoke_id, const rina::RemoteProcessId& remote_id) {
-		(void) policy;
-		(void) dest_ae_inst;
-		(void) dest_ae_name;
-		(void) dest_ap_inst;
-		(void) dest_ap_name;
-		(void) src_ae_inst;
-		(void) src_ae_name;
-		(void) src_ap_inst;
-		(void) src_ap_name;
-		(void) remote_id;
-		(void) result;
-		(void) result_reason;
-		(void) invoke_id;
 	}
 	void closeApplicationConnectionResponse(int result, const std::string result_reason,
 				int invoke_id, const rina::RemoteProcessId& remote_id) {
-		(void) invoke_id;
-		(void) result;
-		(void) result_reason;
-		(void) remote_id;
 	}
 	void remoteCreateObjectResponse(const std::string& object_class, const std::string& object_name,
 				rina::RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
 				const rina::RemoteProcessId& remote_id) {
-		(void) invoke_id;
-		(void) object_class;
-		(void) object_name;
-		(void) object_value;
-		(void) result;
-		(void) result_reason;
-		(void) remote_id;
 	}
 	void remoteDeleteObjectResponse(const std::string& object_class, const std::string& object_name,
 			int result, const std::string result_reason, int invoke_id,
 			const rina::RemoteProcessId& remote_id) {
-		(void) invoke_id;
-		(void) object_class;
-		(void) object_name;
-		(void) result;
-		(void) result_reason;
-		(void) remote_id;
 	}
 	void remoteReadObjectResponse(const std::string& object_class, const std::string& object_name,
 				rina::RIBObjectValue& object_value, int result, const std::string result_reason,
 				bool read_incomplete, int invoke_id, const rina::RemoteProcessId& remote_id) {
-		(void) invoke_id;
-		(void) object_class;
-		(void) object_name;
-		(void) object_value;
-		(void) result;
-		(void) result_reason;
-		(void) remote_id;
-		(void) read_incomplete;
 	}
 	void remoteWriteObjectResponse(const std::string& object_class, const std::string& object_name,
 			int result, const std::string result_reason, int invoke_id,
 			const rina::RemoteProcessId& remote_id) {
-		(void) invoke_id;
-		(void) object_class;
-		(void) object_name;
-		(void) result;
-		(void) result_reason;
-		(void) remote_id;
 	}
 	void remoteStartObjectResponse(const std::string& object_class, const std::string& object_name,
 				rina::RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
 				const rina::RemoteProcessId& remote_id) {
-		(void) invoke_id;
-		(void) object_class;
-		(void) object_name;
-		(void) object_value;
-		(void) result;
-		(void) result_reason;
-		(void) remote_id;
 	}
 	void remoteStopObjectResponse(const std::string& object_class, const std::string& object_name,
 				rina::RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
 				const rina::RemoteProcessId& remote_id) {
-		(void) invoke_id;
-		(void) object_class;
-		(void) object_name;
-		(void) object_value;
-		(void) result;
-		(void) result_reason;
-		(void) remote_id;
 	}
 
 	void generateCDAPResponse(int invoke_id,
@@ -321,12 +212,6 @@ public:
 				  const std::string& obj_class,
 				  const std::string& obj_name,
 				  rina::RIBObjectValue& robject_value) {
-		(void)invoke_id;
-		(void)cdapSessDescr;
-		(void)opcode;
-		(void)obj_class;
-		(void)obj_name;
-		(void)robject_value;
 	};
 
 private:
@@ -351,43 +236,31 @@ public:
 		LOG_IPCP_DBG("DIF Configuration set: %u", dif_configuration.address_);
 	}
 	unsigned int getDFTNextHop(const rina::ApplicationProcessNamingInformation& apNamingInfo) {
-		(void) apNamingInfo;
 		return 0;
 	}
 	unsigned short getRegIPCProcessId(const rina::ApplicationProcessNamingInformation& apNamingInfo) {
-		(void) apNamingInfo;
 		return 0;
 	}
 	void addDFTEntry(rina::DirectoryForwardingTableEntry * entry){
-		(void) entry;
 	}
 	rina::DirectoryForwardingTableEntry * getDFTEntry(
 				const rina::ApplicationProcessNamingInformation& apNamingInfo){
-		(void) apNamingInfo;
 		return 0;
 	}
 	void removeDFTEntry(const rina::ApplicationProcessNamingInformation& apNamingInfo){
-		(void) apNamingInfo;
 	}
 	void processApplicationRegistrationRequestEvent(
 				const rina::ApplicationRegistrationRequestEvent& event){
-		(void) event;
 	}
 	void processApplicationUnregistrationRequestEvent(
 				const rina::ApplicationUnregistrationRequestEvent& event){
-		(void) event;
 	}
 	bool isValidAddress(unsigned int address, const std::string& ipcp_name,
 				const std::string& ipcp_instance){
-		(void) address;
-		(void) ipcp_name;
-		(void) ipcp_instance;
 		return true;
 	}
 	unsigned int getValidAddress(const std::string& ipcp_name,
 					const std::string& ipcp_instance) {
-		(void) ipcp_name;
-		(void) ipcp_instance;
 		return 0;
 	}
 	unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name) {
@@ -399,7 +272,6 @@ public:
 
 	 rina::ApplicationRegistrationInformation
 		get_reg_app_info(const rina::ApplicationProcessNamingInformation name) {
-		(void) name;
 		return rina::ApplicationRegistrationInformation();
 	}
 
@@ -456,18 +328,12 @@ public:
     rina::IPolicySet * psCreate(const std::string& component,
                                  const std::string& name,
                                  rina::ApplicationEntity * context) {
-    	(void) component;
-    	(void) name;
-    	(void) context;
     	return 0;
     }
 
     int psDestroy(const std::string& component,
                                         const std::string& name,
                                         rina::IPolicySet * instance) {
-    	(void) component;
-    	(void) name;
-    	(void) instance;
     	return 0;
     }
 
@@ -864,7 +730,7 @@ int getRoutingTable_MoreGraphEntries_True(bool lfa) {
 		bool ok = false;
 
 		std::cout << "Dest: " << e.address << ", Cost: " << e.cost <<
-				", NextHops: [";
+				", NextHopsAlts: {";
 
 		if (e.address < 1 || e.address > 7) {
 			std::cout << std::endl;
@@ -872,13 +738,20 @@ int getRoutingTable_MoreGraphEntries_True(bool lfa) {
 			break;
 		}
 
-		for (std::list<unsigned int>::const_iterator
-			lit = e.nextHopAddresses.begin();
-				lit != e.nextHopAddresses.end(); lit++) {
-			if (*lit == exp_nhops[e.address]) {
-				ok = true;
+		for (std::list<rina::NHopAltList>::const_iterator
+			altl = e.nextHopAddresses.begin();
+				altl != e.nextHopAddresses.end(); altl++) {
+
+			std::cout << "[";
+			for (std::list<unsigned int>::const_iterator
+				lit = altl->alts.begin();
+					lit != altl->alts.end(); lit++) {
+				std::cout << *lit << ", ";
+				if (*lit == exp_nhops[e.address]) {
+					ok = true;
+				}
 			}
-			std::cout << *lit << ", ";
+			std::cout << "] ";
 		}
 
 		if (!ok) {
@@ -887,7 +760,7 @@ int getRoutingTable_MoreGraphEntries_True(bool lfa) {
 			break;
 		}
 
-		std::cout << "]" << std::endl;
+		std::cout << "}" << std::endl;
 	}
 
 	if (lfa) {
