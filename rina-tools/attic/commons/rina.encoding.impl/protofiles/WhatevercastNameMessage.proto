@@ -1,8 +1,0 @@
-package rina.messages;
-option java_package="rina.encoding.impl.googleprotobuf.whatevercast";
-
-message whatevercastName_t{	
-	required string name = 1;	//The whatevercast name
-	required string rule = 2;				//The rule that selects one or more members of the set
-	repeated bytes setMembers = 3;			//The members of the whatevercast group
-}

@@ -38,7 +38,6 @@ int ipcp_id;
 
 int wrapped_main(int argc, char * argv[])
 {
-	(void)argc;
         std::string log_level = argv[5];
         std::string log_file = argv[6];
 

@@ -31,14 +31,12 @@ IPCPObj::IPCPObj(std::string name, long instance,
 	: RIBObject<mad_manager::structures::ipcp_t>(class_name, instance, name,
 					(mad_manager::structures::ipcp_t*) NULL,
 					&encoder){
-        (void) object_value;
 }
 
 rina::cdap_rib::res_info_t* IPCPObj::remoteRead(
 				const std::string& name,
 				rina::cdap_rib::SerializedObject &obj_reply){
 
-	(void) name;
 	rina::cdap_rib::res_info_t* r = new rina::cdap_rib::res_info_t;
 	r->result_ = 0;
 
@@ -54,7 +52,6 @@ rina::cdap_rib::res_info_t* IPCPObj::remoteRead(
 //We only support deletion
 rina::cdap_rib::res_info_t* IPCPObj::remoteDelete(const std::string& name){
 
-	(void) name;
 	rina::cdap_rib::res_info_t* r = new rina::cdap_rib::res_info_t;
 
 	//Fill in the response

@@ -39,79 +39,52 @@ Singleton<rina::ConsecutiveUnsignedIntegerGenerator> inst_gen;
 
 void RIBConHandler_v1::connect(int message_id,
 				const rina::cdap_rib::con_handle_t &con) {
-	(void) message_id;
-	(void) con;
 }
 
 void RIBConHandler_v1::connectResponse(
 		const rina::cdap_rib::res_info_t &res,
 		const rina::cdap_rib::con_handle_t &con) {
-	(void) res;
-	(void) con;
 }
 void RIBConHandler_v1::release(int message_id,
 				const rina::cdap_rib::con_handle_t &con) {
-	(void) message_id;
-	(void) con;
 }
 void RIBConHandler_v1::releaseResponse(
 		const rina::cdap_rib::res_info_t &res,
 		const rina::cdap_rib::con_handle_t &con) {
-	(void) res;
-	(void) con;
 }
 
 void RIBRespHandler_v1::createResponse(
 		const rina::cdap_rib::res_info_t &res,
 		const rina::cdap_rib::obj_info_t &obj,
 		const rina::cdap_rib::con_handle_t &con) {
-	(void) res;
-	(void) con;
-	(void) obj;
 }
 void RIBRespHandler_v1::deleteResponse(
 		const rina::cdap_rib::res_info_t &res,
 		const rina::cdap_rib::con_handle_t &con) {
-	(void) res;
-	(void) con;
 }
 void RIBRespHandler_v1::readResponse(
 		const rina::cdap_rib::res_info_t &res,
 		const rina::cdap_rib::obj_info_t &obj,
 		const rina::cdap_rib::con_handle_t &con) {
-	(void) res;
-	(void) con;
-	(void) obj;
 }
 void RIBRespHandler_v1::cancelReadResponse(
 		const rina::cdap_rib::res_info_t &res,
 		const rina::cdap_rib::con_handle_t &con) {
-	(void) res;
-	(void) con;
 }
 void RIBRespHandler_v1::writeResponse(
 		const rina::cdap_rib::res_info_t &res,
 		const rina::cdap_rib::obj_info_t &obj,
 		const rina::cdap_rib::con_handle_t &con) {
-	(void) res;
-	(void) con;
-	(void) obj;
 }
 void RIBRespHandler_v1::startResponse(
 		const rina::cdap_rib::res_info_t &res,
 		const rina::cdap_rib::obj_info_t &obj,
 		const rina::cdap_rib::con_handle_t &con) {
-	(void) res;
-	(void) con;
-	(void) obj;
 }
 void RIBRespHandler_v1::stopResponse(
 		const rina::cdap_rib::res_info_t &res,
 		const rina::cdap_rib::obj_info_t &obj,
 		const rina::cdap_rib::con_handle_t &con) {
-	(void) res;
-	(void) con;
-	(void) obj;
 }
 
 // Initializes the RIB with the current status

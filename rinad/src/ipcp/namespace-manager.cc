@@ -50,8 +50,6 @@ void WhateverCastNameSetRIBObject::remoteCreateObject(void * object_value,
 		const std::string& object_name, int invoke_id,
 		rina::CDAPSessionDescriptor * session_descriptor) {
 	rina::ScopedLock g(*lock_);
-	(void) session_descriptor;
-	(void) invoke_id;
 	std::list<rina::WhatevercastName *> namesToCreate;
 
 	try {
@@ -88,7 +86,6 @@ void WhateverCastNameSetRIBObject::remoteCreateObject(void * object_value,
 void WhateverCastNameSetRIBObject::createObject(const std::string& objectClass,
 		const std::string& objectName,
 		const void* objectValue) {
-	(void) objectName;
 
 	if (objectClass.compare(EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS) == 0) {
 		std::list<rina::WhatevercastName *>::const_iterator iterator;
@@ -133,8 +130,6 @@ void DirectoryForwardingTableEntryRIBObject::remoteCreateObject(void * object_va
 	rina::DirectoryForwardingTableEntry * entry;
 	rina::DirectoryForwardingTableEntry * currentEntry;
 
-	(void) invoke_id;
-
 	try {
 		entry = (rina::DirectoryForwardingTableEntry *) object_value;
 	} catch (rina::Exception & e){
@@ -169,18 +164,12 @@ void DirectoryForwardingTableEntryRIBObject::createObject(const std::string& obj
                                                           const std::string& objectName,
                                                           const void* objectValue)
 {
-        (void) objectClass; // Stop compiler barfs;
-        (void) objectName; // Stop compiler barfs;
-        (void) objectValue; // Stop compiler barfs
-
 	//Do nothing
 }
 
 void DirectoryForwardingTableEntryRIBObject::remoteDeleteObject(int invoke_id,
 		rina::CDAPSessionDescriptor * session_descriptor) {
 	std::list<int> cdapSessionIds;
-
-	(void) invoke_id;
 
 	cdapSessionIds.push_back(session_descriptor->port_id_);
 	rina::NotificationPolicy notificationPolicy = rina::NotificationPolicy(cdapSessionIds);
@@ -193,8 +182,6 @@ void DirectoryForwardingTableEntryRIBObject::remoteDeleteObject(int invoke_id,
 
 void DirectoryForwardingTableEntryRIBObject::deleteObject(const void* objectValue)
 {
-        (void) objectValue;
-
 	namespace_manager_->removeDFTEntry(ap_name_entry_);
 	parent_->remove_child(name_);
 	rib_daemon_->removeRIBObject(name_);
@@ -255,8 +242,6 @@ void DirectoryForwardingTableEntrySetRIBObject::remoteCreateObject(void * object
 		const std::string& object_name, int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
 	std::list<rina::DirectoryForwardingTableEntry *> entriesToCreateOrUpdate;
 
-	(void) invoke_id;
-
 	try {
 		if (object_name.compare(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME) == 0) {
 			std::list<rina::DirectoryForwardingTableEntry *> * entries =
@@ -314,9 +299,6 @@ void DirectoryForwardingTableEntrySetRIBObject::createObject(const std::string& 
                                                              const std::string& objectName,
                                                              const void*        objectValue)
 {
-        (void) objectClass; // Stop compiler barfs
-        (void) objectName;  // Stop compiler barfs
-
 	std::list<rina::DirectoryForwardingTableEntry *>::const_iterator iterator;
 	rina::DirectoryForwardingTableEntry * currentEntry;
 	std::list<rina::DirectoryForwardingTableEntry *> * entries =
