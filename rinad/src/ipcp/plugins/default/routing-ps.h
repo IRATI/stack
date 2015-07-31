@@ -207,6 +207,37 @@ private:
 	void clear();
 };
 
+/// The routing algorithm used to compute the PDU forwarding table is a Shortest
+/// Path First (SPF) algorithm using ECMP approach. Instances of the algorithm 
+/// are run independently and concurrently by all IPC processes in their forwarding 
+/// table generator component, upon detection of an N-1 flow allocation/deallocation/state change.
+class ECMPDijkstraAlgorithm : public IRoutingAlgorithm {
+public:
+    ECMPDijkstraAlgorithm();
+    std::list<rina::RoutingTableEntry *> computeRoutingTable(
+			const Graph& graph,
+            const std::list<FlowStateObject *>& fsoList, 
+			unsigned int source_address);
+	void computeShortestDistances(const Graph& graph,
+						unsigned int source_address,
+						std::map<unsigned int, int>& distances);
+
+private:
+    std::set<unsigned int> settled_nodes_;
+    std::set<unsigned int> unsettled_nodes_;
+    std::map<unsigned int, std::list<PredecessorInfo *> > predecessors_;
+    std::map<unsigned int, int> distances_;
+
+    void execute(const Graph& graph, unsigned int source);
+    unsigned int getMinimum() const;
+    void findMinimalDistances (const Graph& graph, unsigned int node);
+    int getShortestDistance(unsigned int destination) const;
+    bool isNeighbor(Edge * edge, unsigned int node) const;
+    bool isSettled(unsigned int node) const;
+    std::list<unsigned int> getNextHops(unsigned int address, unsigned int sourceAddress);
+	void clear();
+};
+
 class IResiliencyAlgorithm {
 public:
 	IResiliencyAlgorithm(IRoutingAlgorithm& ra);
@@ -237,37 +268,37 @@ private:
 /// information about more than one N-1 flow
 class FlowStateRIBObjectGroup: public rina::BaseRIBObject {
 public:
-	FlowStateRIBObjectGroup(IPCProcess * ipc_process,
-			LinkStateRoutingPolicy * lsr_policy);
-	const void* get_value() const;
-	void remoteWriteObject(void * object_value, int invoke_id,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	void createObject(const std::string& objectClass, const std::string& objectName,
-			const void* objectValue);
+    FlowStateRIBObjectGroup(IPCProcess * ipc_process,
+            LinkStateRoutingPolicy * lsr_policy);
+    const void* get_value() const;
+    void remoteWriteObject(void * object_value, int invoke_id,
+            rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+    void createObject(const std::string& objectClass, const std::string& objectName,
+            const void* objectValue);
 
 private:
-	LinkStateRoutingPolicy * lsr_policy_;
-	IPCProcess * ipc_process_;
-	IPCPRIBDaemon * rib_daemon_;
+    LinkStateRoutingPolicy * lsr_policy_;
+    IPCProcess * ipc_process_;
+    IPCPRIBDaemon * rib_daemon_;
 };
 
 /// A single flow state object
 class FlowStateRIBObject: public rina::BaseRIBObject {
 public:
-	FlowStateRIBObject(IPCProcess * ipc_process,
-			const std::string& objectClass,
-			const std::string& objectName, const void* objectValue);
-	const void* get_value() const;
-	void writeObject(const void* object);
-	void createObject(const std::string& objectClass,
-			const std::string& objectName,
-			const void* objectValue);
-	void deleteObject(const void* objectValue);
+    FlowStateRIBObject(IPCProcess * ipc_process,
+            const std::string& objectClass,
+            const std::string& objectName, const void* objectValue);
+    const void* get_value() const;
+    void writeObject(const void* object);
+    void createObject(const std::string& objectClass,
+            const std::string& objectName,
+            const void* objectValue);
+    void deleteObject(const void* objectValue);
 
 private:
-	IPCProcess * ipc_process_;
-	IPCPRIBDaemon * rib_daemon_;
-	const void* object_value_;
+    IPCProcess * ipc_process_;
+    IPCPRIBDaemon * rib_daemon_;
+    const void* object_value_;
 };
 
 /// The subset of the RIB that contains all the Flow State objects known by the IPC Process.
@@ -282,95 +313,95 @@ private:
 /// FSDB through CDAP).
 class FlowStateDatabase {
 public:
-	static const int NO_AVOID_PORT;
-	static const long WAIT_UNTIL_REMOVE_OBJECT;
+    static const int NO_AVOID_PORT;
+    static const long WAIT_UNTIL_REMOVE_OBJECT;
 
-	FlowStateDatabase(rina::IMasterEncoder * encoder, FlowStateRIBObjectGroup *
-			flow_state_rib_object_group, rina::Timer * timer, IPCPRIBDaemon *rib_daemon, unsigned int *maximum_age);
-	bool isEmpty() const;
-	void setAvoidPort(int avoidPort);
-	void addObjectToGroup(unsigned int address, unsigned int neighborAddress,
-			unsigned int cost, int avoid_port);
-	void deprecateObject(unsigned int address);
+    FlowStateDatabase(rina::IMasterEncoder * encoder, FlowStateRIBObjectGroup *
+            flow_state_rib_object_group, rina::Timer * timer, IPCPRIBDaemon *rib_daemon, unsigned int *maximum_age);
+    bool isEmpty() const;
+    void setAvoidPort(int avoidPort);
+    void addObjectToGroup(unsigned int address, unsigned int neighborAddress,
+            unsigned int cost, int avoid_port);
+    void deprecateObject(unsigned int address);
   std::map <int, std::list<FlowStateObject*> > prepareForPropagation(const std::list<rina::FlowInformation>& flows);
-	void incrementAge();
-	void updateObjects(const std::list<FlowStateObject*>& newObjects, int avoidPort, unsigned int address);
-	std::list<FlowStateObject*> getModifiedFSOs();
-	void getAllFSOs(std::list<FlowStateObject*> &flow_state_objects);
-	unsigned int get_maximum_age() const;
+    void incrementAge();
+    void updateObjects(const std::list<FlowStateObject*>& newObjects, int avoidPort, unsigned int address);
+    std::list<FlowStateObject*> getModifiedFSOs();
+    void getAllFSOs(std::list<FlowStateObject*> &flow_state_objects);
+    unsigned int get_maximum_age() const;
 
-	//Signals a modification in the FlowStateDB
-	bool modified_;
-	std::list<FlowStateObject *> flow_state_objects_;
+    //Signals a modification in the FlowStateDB
+    bool modified_;
+    std::list<FlowStateObject *> flow_state_objects_;
 
 private:
-	rina::IMasterEncoder * encoder_;
-	FlowStateRIBObjectGroup * flow_state_rib_object_group_;
-	rina::Timer * timer_;
-	IPCPRIBDaemon *rib_daemon_;
-	unsigned int *maximum_age_;
+    rina::IMasterEncoder * encoder_;
+    FlowStateRIBObjectGroup * flow_state_rib_object_group_;
+    rina::Timer * timer_;
+    IPCPRIBDaemon *rib_daemon_;
+    unsigned int *maximum_age_;
 
 	FlowStateObject * getByAddress(unsigned int address);
 };
 
 class LinkStateRoutingCDAPMessageHandler: public rina::BaseCDAPResponseMessageHandler {
 public:
-	LinkStateRoutingCDAPMessageHandler(LinkStateRoutingPolicy * lsr_policy);
-	void readResponse(int result, const std::string& result_reason,
-			void * object_value, const std::string& object_name,
-			rina::CDAPSessionDescriptor * session_descriptor);
+    LinkStateRoutingCDAPMessageHandler(LinkStateRoutingPolicy * lsr_policy);
+    void readResponse(int result, const std::string& result_reason,
+            void * object_value, const std::string& object_name,
+            rina::CDAPSessionDescriptor * session_descriptor);
 
 private:
-	LinkStateRoutingPolicy * lsr_policy_;
+    LinkStateRoutingPolicy * lsr_policy_;
 };
 
 class ComputeRoutingTimerTask : public rina::TimerTask {
 public:
-	ComputeRoutingTimerTask(LinkStateRoutingPolicy * lsr_policy,
-			long delay);
-	~ComputeRoutingTimerTask() throw(){};
-	void run();
+    ComputeRoutingTimerTask(LinkStateRoutingPolicy * lsr_policy,
+            long delay);
+    ~ComputeRoutingTimerTask() throw(){};
+    void run();
 
 private:
-	LinkStateRoutingPolicy * lsr_policy_;
-	long delay_;
+    LinkStateRoutingPolicy * lsr_policy_;
+    long delay_;
 };
 
 class KillFlowStateObjectTimerTask : public rina::TimerTask {
 public:
-	KillFlowStateObjectTimerTask(IPCPRIBDaemon * rib_daemon,
-			FlowStateObject * fso, FlowStateDatabase * fs_db);
-	~KillFlowStateObjectTimerTask() throw(){};
-	void run();
+    KillFlowStateObjectTimerTask(IPCPRIBDaemon * rib_daemon,
+            FlowStateObject * fso, FlowStateDatabase * fs_db);
+    ~KillFlowStateObjectTimerTask() throw(){};
+    void run();
 
 private:
-	IPCPRIBDaemon * rib_daemon_;
-	FlowStateObject * fso_;
-	FlowStateDatabase * fs_db_;
+    IPCPRIBDaemon * rib_daemon_;
+    FlowStateObject * fso_;
+    FlowStateDatabase * fs_db_;
 };
 
 class PropagateFSODBTimerTask : public rina::TimerTask {
 public:
-	PropagateFSODBTimerTask(LinkStateRoutingPolicy * lsr_policy,
-			long delay);
-	~PropagateFSODBTimerTask() throw(){};
-	void run();
+    PropagateFSODBTimerTask(LinkStateRoutingPolicy * lsr_policy,
+            long delay);
+    ~PropagateFSODBTimerTask() throw(){};
+    void run();
 
 private:
-	LinkStateRoutingPolicy * lsr_policy_;
-	long delay_;
+    LinkStateRoutingPolicy * lsr_policy_;
+    long delay_;
 };
 
 class UpdateAgeTimerTask : public rina::TimerTask {
 public:
-	UpdateAgeTimerTask(LinkStateRoutingPolicy * lsr_policy,
-			long delay);
-	~UpdateAgeTimerTask() throw(){};
-	void run();
+    UpdateAgeTimerTask(LinkStateRoutingPolicy * lsr_policy,
+            long delay);
+    ~UpdateAgeTimerTask() throw(){};
+    void run();
 
 private:
-	LinkStateRoutingPolicy * lsr_policy_;
-	long delay_;
+    LinkStateRoutingPolicy * lsr_policy_;
+    long delay_;
 };
 
 /// This routing policy uses a Flow State Database
@@ -408,6 +439,7 @@ public:
         static const int WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT = 101;
         static const int WAIT_UNTIL_AGE_INCREMENT_DEFAULT = 997;
         static const std::string DIJKSTRA_ALG;
+        static const std::string ECMP_DIJKSTRA_ALG;
 
 	LinkStateRoutingPolicy(IPCProcess * ipcp);
 	~LinkStateRoutingPolicy();
@@ -529,18 +561,18 @@ private:
 /// Encoder of Flow State object
 class FlowStateObjectEncoder: public rina::EncoderInterface {
 public:
-	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::ObjectValueInterface * object_value) const;
-	static void convertModelToGPB(rina::messages::flowStateObject_t * gpb_fso,
-			FlowStateObject * fso);
-	static FlowStateObject * convertGPBToModel(
-			const rina::messages::flowStateObject_t & gpb_fso);
+    const rina::SerializedObject* encode(const void* object);
+    void* decode(const rina::ObjectValueInterface * object_value) const;
+    static void convertModelToGPB(rina::messages::flowStateObject_t * gpb_fso,
+            FlowStateObject * fso);
+    static FlowStateObject * convertGPBToModel(
+            const rina::messages::flowStateObject_t & gpb_fso);
 };
 
 class FlowStateObjectListEncoder: public rina::EncoderInterface {
 public:
-	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::ObjectValueInterface * object_value) const;
+    const rina::SerializedObject* encode(const void* object);
+    void* decode(const rina::ObjectValueInterface * object_value) const;
 };
 
 }
