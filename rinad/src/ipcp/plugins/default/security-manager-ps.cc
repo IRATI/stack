@@ -44,7 +44,6 @@ private:
 
 SecurityManagerPs::SecurityManagerPs(IPCPSecurityManager * dm_) : dm(dm_)
 {
-	(void)dm;
 }
 
 

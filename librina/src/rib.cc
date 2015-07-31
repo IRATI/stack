@@ -175,55 +175,36 @@ void BaseRIBObject::stopObject(const void* object) {
 
 void BaseRIBObject::remoteCreateObject(void * object_value, const std::string& object_name,
                 int invoke_id, CDAPSessionDescriptor * session_descriptor) {
-        (void) object_value;
-        (void) object_name;
-        (void) invoke_id;
-        (void) session_descriptor;
         operation_not_supported();
 }
 
 void BaseRIBObject::remoteDeleteObject(int invoke_id,
                 CDAPSessionDescriptor * session_descriptor) {
-        (void) invoke_id;
-        (void) session_descriptor;
         operation_not_supported();
 }
 
 void BaseRIBObject::remoteReadObject(int invoke_id,
                 CDAPSessionDescriptor * session_descriptor) {
-        (void) invoke_id;
-        (void) session_descriptor;
         operation_not_supported();
 }
 
 void BaseRIBObject::remoteCancelReadObject(int invoke_id,
                 CDAPSessionDescriptor * session_descriptor) {
-        (void) invoke_id;
-        (void) session_descriptor;
         operation_not_supported();
 }
 
 void BaseRIBObject::remoteWriteObject(void * object_value, int invoke_id,
                 CDAPSessionDescriptor * session_descriptor) {
-        (void) object_value;
-        (void) invoke_id;
-        (void) session_descriptor;
         operation_not_supported();;
 }
 
 void BaseRIBObject::remoteStartObject(void * object_value, int invoke_id,
                 CDAPSessionDescriptor * session_descriptor) {
-        (void) object_value;
-        (void) invoke_id;
-        (void) session_descriptor;
         operation_not_supported();;
 }
 
 void BaseRIBObject::remoteStopObject(void * object_value, int invoke_id,
                 CDAPSessionDescriptor * session_descriptor) {
-        (void) object_value;
-        (void) invoke_id;
-        (void) session_descriptor;
         operation_not_supported();;
 }
 
@@ -352,8 +333,6 @@ SimpleSetMemberRIBObject::SimpleSetMemberRIBObject(IRIBDaemon * rib_daemon,
 
 void SimpleSetMemberRIBObject::deleteObject(const void* objectValue)
 {
-        (void) objectValue; // Stop compiler barfs
-
         parent_->remove_child(name_);
         base_rib_daemon_->removeRIBObject(name_);
 }
@@ -924,9 +903,6 @@ void
 RIBDaemon::sendMessages(const std::list<const rina::CDAPMessage*>& cdapMessages,
                         const IUpdateStrategy& updateStrategy)
 {
-        (void) cdapMessages; // Stop compiler barfs
-        (void) updateStrategy; // Stop compiler barfs
-
         //TODO
 }
 

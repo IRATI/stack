@@ -45,7 +45,6 @@ ConnectionCallback::ConnectionCallback(
 void ConnectionCallback::open_connection(
 		const rina::cdap_rib::con_handle_t &con,
 		const rina::cdap_rib::flags_t &flags, int message_id) {
-	(void) flags;
 	cdap_rib::res_info_t res;
 	res.result_ = 1;
 	res.result_reason_ = "Ok";
@@ -59,8 +58,6 @@ void ConnectionCallback::remote_create_result(
 		const rina::cdap_rib::con_handle_t &con,
 		const rina::cdap_rib::obj_info_t &obj,
 		const rina::cdap_rib::res_info_t &res) {
-	(void) con;
-	(void) obj;
 	std::cout << "Result code is: " << res.result_ << std::endl;
 }
 
@@ -70,7 +67,6 @@ void ConnectionCallback::remote_read_result(
 		const rina::cdap_rib::res_info_t &res) {
 	// decode object value
 	// print object value
-	(void) con;
 	std::cout << "Query Rib operation returned result " << res.result_
 			<< std::endl;
 	std::string query_rib;

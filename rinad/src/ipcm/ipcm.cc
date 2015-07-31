@@ -1594,7 +1594,6 @@ void IPCManager_::run(){
 
 //static
 void* IPCManager_::io_loop_trampoline(void* param){
-	(void)param;
 	IPCManager->io_loop();
 	return NULL;
 }
