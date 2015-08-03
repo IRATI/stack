@@ -98,7 +98,6 @@ dtcp_ps_default_create(struct rina_component * component)
         ps->initial_rate                = NULL;
         ps->receiving_flow_control      = default_receiving_flow_control;
         ps->update_credit               = NULL;
-        ps->reconcile_flow_conflict     = NULL;
 #ifdef CONFIG_RINA_DTCP_RCVR_ACK
         ps->rcvr_ack                    = default_rcvr_ack,
 #endif

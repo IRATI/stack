@@ -1044,7 +1044,8 @@ int dtp_destroy(struct dtp * instance)
 static bool window_is_closed(struct dtp_sv * sv,
                              struct dt *     dt,
                              struct dtcp *   dtcp,
-                             seq_num_t       seq_num)
+                             seq_num_t       seq_num,
+                             struct dtp_ps * ps)
 {
         bool retval = false, w_ret = false, r_ret = false;
 
@@ -1065,7 +1066,8 @@ static bool window_is_closed(struct dtp_sv * sv,
 
         retval = (w_ret || r_ret);
         if (w_ret != r_ret) {
-                LOG_DBG("Reconcile flow control TX");
+                retval = ps->reconcile_flow_conflict(ps);
+                LOG_DBG("Reconcile flow control");
         }
 
         return retval;
@@ -1209,7 +1211,8 @@ int dtp_write(struct dtp * instance,
                         if (window_is_closed(sv,
                                              dt,
                                              dtcp,
-                                             csn)) {
+                                             csn,
+                                             ps)) {
                                 if (ps->closed_window(ps, pdu)) {
                                         rcu_read_unlock();
                                         LOG_ERR("Problems with the "
@@ -1307,8 +1310,6 @@ static bool is_fc_overrun(struct dtcp * dtcp, seq_num_t seq_num)
                 LOG_DBG("Rate based condition");
 
         to_ret = w_ret || r_ret;
-        if (w_ret || r_ret)
-                LOG_DBG("Reconcile flow control RX");
 
         return to_ret;
 }
