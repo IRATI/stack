@@ -651,7 +651,7 @@ const struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         list_del(&pos->next);
                         seq_queue_entry_destroy(pos);
 
-                        if (rqueue_tail_push(to_post, pdu)) {
+                        if (rqueue_tail_push_ni(to_post, pdu)) {
                                 LOG_ERR("Could not post PDU %u while A timer"
                                         "(in-order)", seq_num);
                         }
@@ -681,7 +681,7 @@ const struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         list_del(&pos->next);
                         seq_queue_entry_destroy(pos);
 
-                        if (rqueue_tail_push(to_post, pdu)) {
+                        if (rqueue_tail_push_ni(to_post, pdu)) {
                                 LOG_ERR("Could not post PDU %u while A timer"
                                         "(expiration)", seq_num);
                         }

@@ -39,9 +39,12 @@ struct rmt_ps {
         void (* max_q_policy_rx)(struct rmt_ps *,
                                  struct sdu *,
                                  struct rmt_n1_port *);
-        void (* rmt_q_monitor_policy_tx)(struct rmt_ps *,
-                                 struct pdu *,
-                                 struct rmt_n1_port *);
+        void (* rmt_q_monitor_policy_tx_enq)(struct rmt_ps *,
+                                             struct pdu *,
+                                             struct rmt_n1_port *);
+        void (* rmt_q_monitor_policy_tx_deq)(struct rmt_ps *,
+                                             struct pdu *,
+                                             struct rmt_n1_port *);
         void (* rmt_q_monitor_policy_rx)(struct rmt_ps *,
                                  struct sdu *,
                                  struct rmt_n1_port *);

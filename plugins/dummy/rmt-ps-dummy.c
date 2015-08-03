@@ -38,9 +38,14 @@ static void dummy_max_q_policy_rx(struct rmt_ps *      ps,
                                      struct rmt_n1_port * port)
 { printk("%s: called()\n", __func__); }
 
-static void dummy_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
-                                             struct pdu *         pdu,
-                                             struct rmt_n1_port * port)
+static void dummy_rmt_q_monitor_policy_tx_enq(struct rmt_ps *      ps,
+                                              struct pdu *         pdu,
+                                              struct rmt_n1_port * port)
+{ printk("%s: called()\n", __func__); }
+
+static void dummy_rmt_q_monitor_policy_tx_deq(struct rmt_ps *      ps,
+                                              struct pdu *         pdu,
+                                              struct rmt_n1_port * port)
 { printk("%s: called()\n", __func__); }
 
 static void dummy_rmt_q_monitor_policy_rx(struct rmt_ps *      ps,
@@ -115,7 +120,8 @@ rmt_ps_dummy_create(struct rina_component * component)
         ps->priv = NULL;
         ps->max_q_policy_tx = dummy_max_q_policy_tx;
         ps->max_q_policy_rx = dummy_max_q_policy_rx;
-        ps->rmt_q_monitor_policy_tx = dummy_rmt_q_monitor_policy_tx;
+        ps->rmt_q_monitor_policy_tx_enq = dummy_rmt_q_monitor_policy_tx_enq;
+        ps->rmt_q_monitor_policy_tx_deq = dummy_rmt_q_monitor_policy_tx_deq;
         ps->rmt_q_monitor_policy_rx = dummy_rmt_q_monitor_policy_rx;
         ps->rmt_next_scheduled_policy_tx     = dummy_rmt_next_scheduled_policy_tx;
         ps->rmt_enqueue_scheduling_policy_tx = dummy_rmt_enqueue_scheduling_policy_tx;
