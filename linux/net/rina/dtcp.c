@@ -882,6 +882,8 @@ static int populate_ctrl_pci(struct pci *  pci,
         seq_num_t snd_lft;
         seq_num_t snd_rt;
         seq_num_t LWE;
+        uint_t rt;
+        uint_t tf;
 
         dtcp_cfg = dtcp_config_get(dtcp);
         if (!dtcp_cfg) {
@@ -907,7 +909,16 @@ static int populate_ctrl_pci(struct pci *  pci,
                 }
 
                 if (dtcp_rate_based_fctrl(dtcp_cfg)) {
-                        LOG_MISSING;
+                	rt = dtcp_sndr_rate(dtcp);
+                	tf = dtcp_time_frame(dtcp);
+
+                	LOG_DBG("Populating control pci with rate settings,"
+                		"rate: %u, time: %u",
+                		rt, tf);
+
+                	// Just fill up the header fields.
+                        pci_control_sndr_rate_set(pci, rt);
+                        pci_control_time_frame_set(pci, tf);
                 }
         }
 
@@ -972,6 +983,8 @@ void dump_we(struct dtcp * dtcp, struct pci *  pci)
         seq_num_t    my_rt_we;
         seq_num_t    my_lf_we;
         seq_num_t    ack;
+        uint_t	     rate;
+        uint_t	     tframe;
 
         ASSERT(dtcp);
         ASSERT(pci);
@@ -989,13 +1002,17 @@ void dump_we(struct dtcp * dtcp, struct pci *  pci)
         my_rt_we  = pci_control_my_rt_wind_edge(pci);
         pci_seqn  = pci_sequence_number_get(pci);
         ack       = pci_control_ack_seq_num(pci);
+        rate	  = pci_control_sndr_rate(pci);
+        tframe	  = pci_control_time_frame(pci);
 
         LOG_DBG("SEQN: %u N/Ack: %u SndRWE: %u SndLWE: %u "
                 "RcvRWE: %u RcvLWE: %u "
                 "newRWE: %u newLWE: %u "
-                "myRWE: %u myLWE: %u",
+                "myRWE: %u myLWE: %u "
+                "rate: %u tframe: %u",
                 pci_seqn, ack, snd_rt_we, snd_lf_we, rcv_rt_we, rcv_lf_we,
-                new_rt_we, new_lf_we, my_rt_we, my_lf_we);
+                new_rt_we, new_lf_we, my_rt_we, my_lf_we,
+                rate, tframe);
 }
 EXPORT_SYMBOL(dump_we);
 
@@ -1070,6 +1087,8 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
         struct cwq * q;
         struct dtp * dtp;
         struct pci * pci;
+        uint_t 	     rt;
+        uint_t       tf;
 
         ASSERT(dtcp);
         ASSERT(pdu);
@@ -1077,7 +1096,18 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
         pci = pdu_pci_get_rw(pdu);
         ASSERT(pci);
 
+        rt = pci_control_sndr_rate(pci);
+        tf = pci_control_time_frame(pci);
+
+        // Window based.
         snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
+
+        // Rate based, if any.
+        dtcp_sndr_rate_set(dtcp, rt);
+        dtcp_time_frame_set(dtcp, tf);
+        LOG_DBG("Rate based fields sets on flow ctl, rate: %u, time: %u",
+		rt, tf);
+
         push_pdus_rmt(dtcp);
 
         dtp = dt_dtp(dtcp->parent);
@@ -1108,6 +1138,8 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         struct dtcp_ps * ps;
         seq_num_t        seq;
         struct pci *     pci;
+        uint_t		 rt;
+        uint_t           tf;
 
         ASSERT(dtcp);
 
@@ -1117,6 +1149,8 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         LOG_DBG("Updating Window Edges for DTCP: %pK", dtcp);
 
         seq = pci_control_ack_seq_num(pci);
+        rt = pci_control_sndr_rate(pci);
+        tf = pci_control_time_frame(pci);
 
         rcu_read_lock();
         ps = container_of(rcu_dereference(dtcp->base.ps),
@@ -1127,8 +1161,17 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
         rcu_read_unlock();
 
+        // Window based. Why not separated?
+        // Not a problem in the end; the fields are always there.
         snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
         LOG_DBG("Right Window Edge: %u", snd_rt_wind_edge(dtcp));
+
+        // Rate based, if any.
+        dtcp_sndr_rate_set(dtcp, rt);
+        dtcp_time_frame_set(dtcp, tf);
+        LOG_DBG("Rate based fields sets on flow ctl and ack,"
+		" rate: %u, time: %u",
+		rt, tf);
 
         LOG_DBG("Calling CWQ_deliver for DTCP: %pK", dtcp);
         push_pdus_rmt(dtcp);
