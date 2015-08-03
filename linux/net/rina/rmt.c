@@ -923,10 +923,10 @@ static void send_worker(unsigned long o)
                         	pdu = ps->rmt_next_scheduled_policy_tx(ps, n1_port);
                         	if (pdu) {
                         		atomic_dec(&n1_port->n_sdus);
-                                        if (ps->rmt_q_monitor_policy_tx)
-                                                ps->rmt_q_monitor_policy_tx(ps,
-                                                                            pdu,
-                                                                            n1_port);
+                                        if (ps->rmt_q_monitor_policy_tx_deq)
+                                                ps->rmt_q_monitor_policy_tx_deq(ps,
+                                                                                pdu,
+                                                                                n1_port);
                         		spin_unlock(&n1_port->lock);
                         		ret = n1_port_write_noclean(rmt, n1_port, pdu);
                         		spin_lock(&n1_port->lock);
@@ -1028,8 +1028,10 @@ int rmt_send_port_id(struct rmt * instance,
                 ps = container_of(rcu_dereference(instance->base.ps), struct rmt_ps, base);
                 if (ps && ps->rmt_enqueue_scheduling_policy_tx) {
                         /* RMTQMonitorPolicy hook. */
-                        if (ps->rmt_q_monitor_policy_tx) {
-                                ps->rmt_q_monitor_policy_tx(ps, pdu, out_n1_port);
+                        if (ps->rmt_q_monitor_policy_tx_enq) {
+                                ps->rmt_q_monitor_policy_tx_enq(ps,
+								pdu,
+								out_n1_port);
                         }
 
                         if (ps->rmt_enqueue_scheduling_policy_tx(ps,

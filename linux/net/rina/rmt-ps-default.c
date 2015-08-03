@@ -46,9 +46,15 @@ default_max_q_policy_rx(struct rmt_ps * ps,
 { }
 
 static void
-default_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
-                                struct pdu *         pdu,
-                                struct rmt_n1_port * n1_port)
+default_rmt_q_monitor_policy_tx_enq(struct rmt_ps *      ps,
+                                    struct pdu *         pdu,
+                                    struct rmt_n1_port * n1_port)
+{ }
+
+static void
+default_rmt_q_monitor_policy_tx_deq(struct rmt_ps *      ps,
+                                    struct pdu *         pdu,
+                                    struct rmt_n1_port * n1_port)
 { }
 
 static void
@@ -121,7 +127,8 @@ rmt_ps_default_create(struct rina_component * component)
 
         ps->max_q_policy_tx                  = default_max_q_policy_tx;
         ps->max_q_policy_rx                  = default_max_q_policy_rx;
-        ps->rmt_q_monitor_policy_tx          = default_rmt_q_monitor_policy_tx;
+        ps->rmt_q_monitor_policy_tx_enq      = default_rmt_q_monitor_policy_tx_enq;
+        ps->rmt_q_monitor_policy_tx_deq      = default_rmt_q_monitor_policy_tx_deq;
         ps->rmt_q_monitor_policy_rx          = default_rmt_q_monitor_policy_rx;
         ps->rmt_next_scheduled_policy_tx     = default_rmt_next_scheduled_policy_tx;
         ps->rmt_enqueue_scheduling_policy_tx = default_rmt_enqueue_scheduling_policy_tx;

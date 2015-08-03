@@ -131,9 +131,9 @@ static void cas_max_q_policy_rx(struct rmt_ps *      ps,
                                 struct rmt_n1_port * port)
 { printk("%s: called()\n", __func__); }
 
-static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
-                                        struct pdu *         pdu,
-                                        struct rmt_n1_port * port)
+static void cas_rmt_q_monitor_policy_tx_common(struct rmt_ps *      ps,
+                                               struct pdu *         pdu,
+                                               struct rmt_n1_port * port)
 {
         struct cas_rmt_queue *   q;
         struct cas_rmt_ps_data * data;
@@ -436,7 +436,8 @@ rmt_ps_cas_create(struct rina_component * component)
 
         ps->max_q_policy_tx = cas_max_q_policy_tx;
         ps->max_q_policy_rx = cas_max_q_policy_rx;
-        ps->rmt_q_monitor_policy_tx = cas_rmt_q_monitor_policy_tx;
+        ps->rmt_q_monitor_policy_tx_enq = cas_rmt_q_monitor_policy_tx_common;
+        ps->rmt_q_monitor_policy_tx_deq = cas_rmt_q_monitor_policy_tx_common;
         ps->rmt_q_monitor_policy_rx = cas_rmt_q_monitor_policy_rx;
         ps->rmt_next_scheduled_policy_tx     = cas_rmt_next_scheduled_policy_tx;
         ps->rmt_enqueue_scheduling_policy_tx = cas_rmt_enqueue_scheduling_policy_tx;
