@@ -79,6 +79,12 @@ struct dt_cons {
          */
         u_int32_t max_pdu_life;
 
+        /* Rate for rate based mechanism. */
+        u_int32_t rate;
+
+        /* Time frame for rate based mechanism. */
+        u_int32_t frame;
+
         /*
          * True if the PDUs in this DIF have CRC, TTL, and/or encryption.
          * Since headers are encrypted, not just user data, if any flow uses
