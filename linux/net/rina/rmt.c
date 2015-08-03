@@ -804,12 +804,14 @@ static int n1_port_write_noclean(struct rmt *         rmt,
         	spin_lock(&n1_port->lock);
         	n1_port->state = N1_PORT_STATE_DISABLED;
         	rcu_read_lock();
-        	ps = container_of(rcu_dereference(rmt->base.ps), struct rmt_ps, base);
+        	ps = container_of(rcu_dereference(rmt->base.ps), 
+						  struct rmt_ps, base);
         	if (ps && ps->rmt_requeue_scheduling_policy_tx) {
         		/* RMTQMonitorPolicy hook. */
-        		if (ps->rmt_q_monitor_policy_tx) {
-        			ps->rmt_q_monitor_policy_tx(ps, pdu, n1_port);
-        		}
+        		if (ps->rmt_q_monitor_policy_tx_enq)
+        			ps->rmt_q_monitor_policy_tx_enq(ps, 
+								pdu, 
+								n1_port);
 
         		ps->rmt_requeue_scheduling_policy_tx(ps, n1_port, pdu);
         		atomic_inc(&n1_port->n_sdus);
@@ -920,36 +922,36 @@ static void send_worker(unsigned long o)
                 	pdus_sent = 0;
                 	ret = 0;
                         do {
-                        	pdu = ps->rmt_next_scheduled_policy_tx(ps, n1_port);
-                        	if (pdu) {
-                        		atomic_dec(&n1_port->n_sdus);
-                                        if (ps->rmt_q_monitor_policy_tx_deq)
-                                                ps->rmt_q_monitor_policy_tx_deq(ps,
-                                                                                pdu,
-                                                                                n1_port);
-                        		spin_unlock(&n1_port->lock);
-                        		ret = n1_port_write_noclean(rmt, n1_port, pdu);
-                        		spin_lock(&n1_port->lock);
-
-                        		spin_lock(&rmt->n1_ports->lock);
-                        		if (atomic_dec_and_test(&n1_port->pending_ops) &&
-                        				n1_port->state == N1_PORT_STATE_DEALLOCATED) {
-                        			spin_unlock(&n1_port->lock);
-                        			n1_port_destroy(n1_port);
-                        			goto skip_locks;
-                        		}
-                        		spin_unlock(&rmt->n1_ports->lock);
-
-                        		if (ret) {
-                        			break;
-                        		}
-
-                        		pdus_sent++;
-                        	} else {
-                        		LOG_WARN("N1_port->n_sdus > 0 and ps->next failed");
+                        	pdu = ps->rmt_next_scheduled_policy_tx(ps,
+                        					       n1_port);
+                        	if (!pdu) {
+                        		LOG_WARN("n_sdus > 0 & ps.next failed");
                         		atomic_set(&n1_port->n_sdus, 0);
                         		break;
                         	}
+
+                        	atomic_dec(&n1_port->n_sdus);
+                                if (ps->rmt_q_monitor_policy_tx_deq)
+                                	ps->rmt_q_monitor_policy_tx_deq(ps,
+                                					pdu,
+                                					n1_port);
+                        	spin_unlock(&n1_port->lock);
+                        	ret = n1_port_write_noclean(rmt, n1_port, pdu);
+                        	spin_lock(&n1_port->lock);
+
+                        	spin_lock(&rmt->n1_ports->lock);
+                        	if (atomic_dec_and_test(&n1_port->pending_ops) &&
+                        			n1_port->state == N1_PORT_STATE_DEALLOCATED) {
+                        		spin_unlock(&n1_port->lock);
+                        		n1_port_destroy(n1_port);
+                        			goto skip_locks;
+                        	}
+                        	spin_unlock(&rmt->n1_ports->lock);
+
+                        	if (ret)
+                        		break;
+
+                        	pdus_sent++;
                         } while((pdus_sent < MAX_PDUS_SENT_PER_CYCLE) &&
                                 (atomic_read(&n1_port->n_sdus) > 0));
 
