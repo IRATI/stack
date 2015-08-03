@@ -76,6 +76,7 @@ struct dtp {
                 struct rtimer * sender_inactivity;
                 struct rtimer * receiver_inactivity;
                 struct rtimer * a;
+                struct rtimer * rate_window;
         } timers;
 };
 
@@ -771,6 +772,18 @@ static void tf_a(void * o)
         return;
 }
 
+static void tf_rate_window(void * o)
+{
+        struct dtp * dtp;
+
+        dtp = (struct dtp *) o;
+
+        if (!dtp)
+                return;
+
+        return;
+}
+
 int dtp_sv_init(struct dtp * dtp,
                 bool         rexmsn_ctrl,
                 bool         window_based,
@@ -965,9 +978,11 @@ struct dtp * dtp_create(struct dt *         dt,
         tmp->timers.receiver_inactivity = rtimer_create(tf_receiver_inactivity,
                                                         tmp);
         tmp->timers.a                   = rtimer_create(tf_a, tmp);
+        tmp->timers.rate_window         = rtimer_create(tf_rate_window, tmp);
         if (!tmp->timers.sender_inactivity   ||
             !tmp->timers.receiver_inactivity ||
-            !tmp->timers.a) {
+            !tmp->timers.a                   ||
+            !tmp->timers.rate_window) {
                 dtp_destroy(tmp);
                 return NULL;
         }
@@ -1011,6 +1026,8 @@ int dtp_destroy(struct dtp * instance)
                 rtimer_destroy(instance->timers.sender_inactivity);
         if (instance->timers.receiver_inactivity)
                 rtimer_destroy(instance->timers.receiver_inactivity);
+        if (instance->timers.rate_window)
+                rtimer_destroy(instance->timers.rate_window);
 
         if (instance->seqq) squeue_destroy(instance->seqq);
         if (instance->sv)   rkfree(instance->sv);
