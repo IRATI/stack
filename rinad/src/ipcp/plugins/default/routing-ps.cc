@@ -732,10 +732,14 @@ void LoopFreeAlternateAlgorithm::extendRoutingTableEntry(
 		return;
 	}
 
+	// Assume unicast and try to extend the routing table entry
+	// with the new alternative 'nexthop'
+	rina::NHopAltList& altlist = (*rit)->nextHopAddresses.front();
+
 	//Find the involved routing table entry, try to extend it
 	for (std::list<unsigned int>::iterator
-			hit = (*rit)->nextHopAddresses.begin();
-				hit != (*rit)->nextHopAddresses.end(); hit++) {
+			hit = altlist.alts.begin();
+				hit != altlist.alts.end(); hit++) {
 		if (*hit == nexthop) {
 			found = true;
 			break;
@@ -743,7 +747,7 @@ void LoopFreeAlternateAlgorithm::extendRoutingTableEntry(
 	}
 
 	if (!found) {
-		(*rit)->nextHopAddresses.push_back(nexthop);
+		altlist.alts.push_back(nexthop);
 		LOG_DBG("Node %u selected as LFA node towards the "
 			 "destination node %u", nexthop, target_address);
 	}
