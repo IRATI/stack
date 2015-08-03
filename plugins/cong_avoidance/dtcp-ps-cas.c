@@ -40,8 +40,6 @@ struct cas_dtcp_ps_data {
         seq_num_t    wc;
         seq_num_t    wp;
         unsigned int w_inc_a_p;
-        unsigned int w_dec_b_num_p;
-        unsigned int w_dec_b_den_p;
         unsigned int ecn_count;
         unsigned int rcv_count;
         spinlock_t   lock;
@@ -198,16 +196,6 @@ static int dtcp_ps_cas_set_policy_set_param(struct ps_base * bps,
                 if (!ret)
                         data->w_inc_a_p = bool_value;
         }
-        if (strcmp(name, "w_dec_b_num_p") == 0) {
-                ret = kstrtoint(value, 10, &bool_value);
-                if (!ret)
-                        data->w_dec_b_num_p = bool_value;
-        }
-        if (strcmp(name, "w_dec_b_den_p") == 0) {
-                ret = kstrtoint(value, 10, &bool_value);
-                if (!ret)
-                        data->w_dec_b_den_p = bool_value;
-        }
         return 0;
 }
 
@@ -234,8 +222,6 @@ dtcp_ps_cas_create(struct rina_component * component)
         ps->dm                          = dtcp;
 
         data->w_inc_a_p                 = W_INC_A_P_DEFAULT;
-        data->w_dec_b_num_p             = W_DEC_B_NUM_P_DEFAULT;
-        data->w_dec_b_den_p             = W_DEC_B_DEN_P_DEFAULT;
         /* Cannot use this because it is initialized later on in
          * dtcp_select_policy_set */
         /*data->wc                        = ps->flowctrl.window.initial_credit;*/
@@ -262,21 +248,6 @@ dtcp_ps_cas_create(struct rina_component * component)
         dtcp_ps_cas_set_policy_set_param(&ps->base,
                                          policy_param_name(ps_param),
                                          policy_param_value(ps_param));
-        ps_param = policy_param_find(ps_conf, "w_dec_b_num_p");
-        if (!ps_param) {
-                LOG_WARN("No PS param w_dec_b_num_p");
-        }
-        dtcp_ps_cas_set_policy_set_param(&ps->base,
-                                        policy_param_name(ps_param),
-                                        policy_param_value(ps_param));
-        ps_param = policy_param_find(ps_conf, "w_dec_b_den_p");
-        if (!ps_param) {
-                LOG_WARN("No PS param w_dec_b_den_p");
-        }
-        dtcp_ps_cas_set_policy_set_param(&ps->base,
-                                        policy_param_name(ps_param),
-                                        policy_param_value(ps_param));
-
 
         ps->flow_init                   = NULL;
         ps->lost_control_pdu            = cas_lost_control_pdu;
