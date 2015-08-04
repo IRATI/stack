@@ -45,19 +45,20 @@ static struct policy_set_list policy_sets = {
 
 /* This is the DT-SV part maintained by DTP */
 struct dtp_sv {
-        spinlock_t          lock;
+        spinlock_t lock;
 
-        uint_t              seq_number_rollover_threshold;
-        uint_t              dropped_pdus;
-        seq_num_t           max_seq_nr_rcv;
-        seq_num_t           seq_nr_to_send;
-        seq_num_t           max_seq_nr_sent;
+        uint_t     seq_number_rollover_threshold;
+        uint_t     dropped_pdus;
+        seq_num_t  max_seq_nr_rcv;
+        seq_num_t  seq_nr_to_send;
+        seq_num_t  max_seq_nr_sent;
 
-        bool                window_based;
-        bool                rexmsn_ctrl;
-        bool                rate_based;
-        timeout_t           a;
-        bool                drf_required;
+        bool       window_based;
+        bool       rexmsn_ctrl;
+        bool       rate_based;
+        timeout_t  a;
+        bool       drf_required;
+        bool       rate_fulfiled;
 };
 
 struct dtp {
@@ -91,6 +92,7 @@ static struct dtp_sv default_sv = {
         .window_based                  = false,
         .a                             = 0,
         .drf_required                  = true,
+        .rate_fulfiled                 = false,
 };
 
 struct dt * dtp_dt(struct dtp * dtp)
@@ -202,6 +204,47 @@ int dtp_sv_max_seq_nr_set(struct dtp * instance, seq_num_t num)
         return 0;
 }
 EXPORT_SYMBOL(dtp_sv_max_seq_nr_set);
+
+bool dtp_sv_rate_fulfiled(struct dtp * instance)
+{
+        unsigned long   flags;
+        struct dtp_sv * sv;
+        bool            tmp;
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return false;
+        }
+        sv = instance->sv;
+        ASSERT(sv);
+
+        spin_lock_irqsave(&sv->lock, flags);
+        tmp = sv->rate_fulfiled;
+        spin_unlock_irqrestore(&sv->lock, flags);
+
+        return tmp;
+}
+EXPORT_SYMBOL(dtp_sv_rate_fulfiled);
+
+int dtp_sv_rate_fulfiled_set(struct dtp * instance, bool fulfiled)
+{
+        unsigned long   flags;
+        struct dtp_sv * sv;
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+        sv = instance->sv;
+        ASSERT(sv);
+
+        spin_lock_irqsave(&sv->lock, flags);
+        sv->rate_fulfiled = fulfiled;
+        spin_unlock_irqrestore(&sv->lock, flags);
+
+        return 0;
+}
+EXPORT_SYMBOL(dtp_sv_rate_fulfiled_set);
 
 #if 0
 static uint_t dropped_pdus(struct dtp_sv * sv)
