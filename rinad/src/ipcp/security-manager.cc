@@ -135,4 +135,4 @@ void IPCPSecurityManager::process_enable_encryption_response(const rina::EnableE
 	return;
 }
 
-}
+} //namespace rinad

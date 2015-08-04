@@ -405,4 +405,4 @@ void IPCPRIBDaemonImpl::generateCDAPResponse(int invoke_id,
 	}
 }
 
-}
+} //namespace rinad
