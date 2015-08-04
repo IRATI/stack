@@ -81,6 +81,7 @@ static struct red_rmt_queue * red_queue_create(port_id_t          port_id,
 
 	red_set_vars(&tmp->vars);
 
+	red_start_of_idle_period(&tmp->vars);
 
         INIT_HLIST_NODE(&tmp->hlist);
 
@@ -120,37 +121,35 @@ struct red_rmt_queue * red_rmt_queue_find(struct red_rmt_ps_data * data,
         return NULL;
 }
 
-static void red_rmt_q_monitor_policy_tx_enq(struct rmt_ps *      ps,
-                                            struct pdu *         pdu,
-                                            struct rmt_n1_port * port)
-{
-        struct red_rmt_queue *   q;
-        struct red_rmt_ps_data * data;
-	uint_t cur_len;
-
-        ASSERT(ps);
-        ASSERT(ps->priv);
-
-        data = ps->priv;
-
-        q = red_rmt_queue_find(data, port->port_id);
-        if (!q) {
-                LOG_ERR("Could not find TCP-RED queue for N-1 port %u",
-                        port->port_id);
-                return;
-        }
-
-	cur_len = rfifo_length(q->queue) +1;
-
-
-        return;
-}
-
 static struct pdu *
 red_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
                                  struct rmt_n1_port * port)
 {
-        return NULL;
+        struct red_rmt_queue *   q;
+        struct red_rmt_ps_data * data = ps->priv;
+        struct pdu *             ret_pdu;
+
+        if (!ps || !port || !data) {
+                LOG_ERR("Wrong input parameters for "
+                        "rmt_next_scheduled_policy_tx");
+                return NULL;
+        }
+
+        q = red_rmt_queue_find(data, port->port_id);
+        if (!q) {
+                LOG_ERR("Could not find queue for n1_port %u",
+                        port->port_id);
+                return NULL;
+        }
+
+        ret_pdu = rfifo_pop(q->queue);
+        if (!ret_pdu) {
+                LOG_ERR("Could not dequeue scheduled pdu");
+                ret_pdu = NULL;
+	        if (!red_is_idling(&q->vars))
+			red_start_of_idle_period(&q->vars);
+        }
+        return ret_pdu;
 }
 
 static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
@@ -177,7 +176,7 @@ static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
         }
 
 	/* Compute average queue usage (see RED) */
-	q->vars.qavg = red_calc_qavg(&q->parms, &q->vars, rfifo_length(q->queue)+1);
+	q->vars.qavg = red_calc_qavg(&q->parms, &q->vars, rfifo_length(q->queue));
 	/* NOTE: check this! */
 	if (red_is_idling(&q->vars))
 		red_end_of_idle_period(&q->vars);
@@ -210,32 +209,6 @@ congestion_drop:
         atomic_dec(&port->n_sdus);
         LOG_DBG("PDU dropped, max_th passed...");
         return 0;
-
-/*
-        if (q->avg_l <= q->min_th) {
-                LOG_DBG("PDU can be enqueued...");
-                rfifo_push_ni(q->queue, pdu);
-                return 0;
-        } else if (q->avg_l <= q->max_th) {
-                get_random_bytes(&prob, sizeof(prob));
-                if ((prob * 100 / 0xffffffff) <= q->drop_prob) {
-                        pdu_destroy(pdu);
-                        atomic_dec(&port->n_sdus);
-                        LOG_DBG("PDU dropped between thresholds..");
-                        return 0;
-                }
-                pci = pdu_pci_get_rw(pdu);
-                pci_flags = pci_flags_get(pci);
-                pci_flags_set(pci, pci_flags |= PDU_FLAGS_EXPLICIT_CONGESTION);
-                rfifo_push_ni(q->queue, pdu);
-                return 0;
-        } else {
-                pdu_destroy(pdu);
-                atomic_dec(&port->n_sdus);
-                LOG_DBG("PDU dropped, max_th passed...");
-                return 0;
-        }
-*/
 }
 
 static int red_rmt_scheduling_create_policy_tx(struct rmt_ps *      ps,
@@ -435,7 +408,7 @@ rmt_ps_red_create(struct rina_component * component)
 
         ps->max_q_policy_tx = NULL;
         ps->max_q_policy_rx = NULL;
-        ps->rmt_q_monitor_policy_tx_enq = red_rmt_q_monitor_policy_tx_enq;
+        ps->rmt_q_monitor_policy_tx_enq = NULL;
         ps->rmt_q_monitor_policy_tx_deq = NULL;
         ps->rmt_q_monitor_policy_rx = NULL;
         ps->rmt_next_scheduled_policy_tx = red_rmt_next_scheduled_policy_tx;
