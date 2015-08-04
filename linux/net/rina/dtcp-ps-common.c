@@ -206,7 +206,16 @@ common_rate_reduction(struct dtcp_ps * ps, const struct pci * pci)
                 return -1;
         }
 
-        LOG_MISSING;
+        // Adjust rates.
+        dtcp_sndr_rate_set(dtcp, pci_control_sndr_rate(pci));
+        dtcp_rcvr_rate_set(dtcp, pci_control_sndr_rate(pci));
+
+        // Adjust time frame.
+        dtcp_time_frame_set(dtcp, pci_control_time_frame(pci));
+
+        LOG_DBG("DTCP: %pK", dtcp);
+        LOG_DBG("Rate: %u, Time: %u",
+		dtcp_sndr_rate(dtcp), dtcp_time_frame(dtcp));;
 
         return 0;
 }
