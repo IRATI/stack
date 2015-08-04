@@ -62,8 +62,8 @@ default_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 { return common_rcvr_flow_control(ps, pci); }
 
 static int
-default_rate_reduction(struct dtcp_ps * ps)
-{ return common_rate_reduction(ps); }
+default_rate_reduction(struct dtcp_ps * ps, const struct pci * pci)
+{ return common_rate_reduction(ps, pci); }
 
 static int
 default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)

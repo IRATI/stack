@@ -197,7 +197,7 @@ common_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 EXPORT_SYMBOL(common_rcvr_flow_control);
 
 int
-common_rate_reduction(struct dtcp_ps * ps)
+common_rate_reduction(struct dtcp_ps * ps, const struct pci * pci)
 {
         struct dtcp * dtcp = ps->dm;
 

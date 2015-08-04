@@ -1840,7 +1840,7 @@ int dtcp_sv_update(struct dtcp * dtcp, const struct pci * pci)
 
                 if (rate_based) {
                         LOG_DBG("Rate based fctrl invoked");
-                        if (ps->rate_reduction(ps)) {
+                        if (ps->rate_reduction(ps, pci)) {
                                 LOG_ERR("Failed Rate Reduction policy");
                                 retval = -1;
                         }
