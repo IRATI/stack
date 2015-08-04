@@ -1,7 +1,0 @@
-package rina.messages;
-option java_package="rina.encoding.impl.googleprotobuf.directoryforwardingtable";
-import "protofiles/DirectoryForwardingTableEntryMessage.proto";
-
-message directoryForwardingTableEntrySet_t{   //carries information about directoryforwardingtable entries
-    repeated directoryForwardingTableEntry_t directoryForwardingTableEntry= 1;
-}

@@ -302,8 +302,6 @@ void ExtendedIPCManager::notifyIPCProcessInitialized(
 
 #if STUB_API
         // Do nothing
-
-        (void) name;
 #else
         IpcmIPCProcessInitializedMessage message;
         message.setName(name);
@@ -401,11 +399,6 @@ void ExtendedIPCManager::enrollToDIFResponse(const EnrollToDAFRequestEvent& even
                         const DIFInformation& difInformation) {
 #if STUB_API
         // Do nothing
-
-        (void) event;
-        (void) result;
-        (void) newNeighbors;
-        (void) difInformation;
 #else
         IpcmEnrollToDIFResponseMessage responseMessage;
         responseMessage.setResult(result);
@@ -430,9 +423,6 @@ void ExtendedIPCManager::registerApplicationResponse(
 		const ApplicationRegistrationRequestEvent& event, int result) {
 #if STUB_API
 	//Do nothing
-
-        (void) event;
-        (void) result;
 #else
 	IpcmRegisterApplicationResponseMessage responseMessage;
 	responseMessage.setResult(result);
@@ -452,9 +442,6 @@ void ExtendedIPCManager::unregisterApplicationResponse(
 		const ApplicationUnregistrationRequestEvent& event, int result) {
 #if STUB_API
 	// Do nothing
-
-        (void) event;
-        (void) result;
 #else
 	IpcmUnregisterApplicationResponseMessage responseMessage;
 	responseMessage.setResult(result);
@@ -474,9 +461,6 @@ void ExtendedIPCManager::allocateFlowRequestResult(
 		const FlowRequestEvent& event, int result) {
 #if STUB_API
 	// Do nothing
-
-        (void) event;
-        (void) result;
 #else
 	IpcmAllocateFlowRequestResultMessage responseMessage;
 
@@ -501,11 +485,6 @@ unsigned int ExtendedIPCManager::allocateFlowRequestArrived(
 			const FlowSpecification& flowSpecification,
 			int portId) {
 #if STUP_API
-        (void) localAppName;
-        (void) remoteAppName;
-        (void) flowSpecification;
-        (void) portId;
-
 	return 0;
 #else
 	IpcmAllocateFlowRequestArrivedMessage message;
@@ -559,9 +538,6 @@ void ExtendedIPCManager::notifyflowDeallocated(
 		int result) {
 #if STUB_API
 	// Do nothing
-
-        (void) flowDeallocateEvent;
-        (void) result;
 #else
 	IpcmDeallocateFlowResponseMessage responseMessage;
 	responseMessage.setResult(result);
@@ -581,9 +557,6 @@ void ExtendedIPCManager::flowDeallocatedRemotely(
 		int portId, int code) {
 #if STUB_API
 	// Do nothing
-
-        (void) portId;
-        (void) code;
 #else
 	IpcmFlowDeallocatedNotificationMessage message;
 	message.setPortId(portId);
@@ -604,10 +577,6 @@ void ExtendedIPCManager::queryRIBResponse(
 		const std::list<RIBObjectData>& ribObjects) {
 #if STUB_API
 	//Do nothing
-
-        (void) event;
-        (void) result;
-        (void) ribObjects;
 #else
 	IpcmDIFQueryRIBResponseMessage responseMessage;
 	responseMessage.setResult(result);
@@ -632,10 +601,6 @@ int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingInformation
 {
 #if STUB_API
         // Do nothing
-
-        (void) appName;
-        (void) blocking;
-
         return 1;
 #else
         int result = syscallAllocatePortId(ipcProcessId, appName, blocking);
@@ -650,10 +615,6 @@ int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingInformation
 void ExtendedIPCManager::deallocatePortId(int portId) {
 #if STUB_API
         // Do nothing
-
-        (void) portId;
-
-        return;
 #else
         int result = syscallDeallocatePortId(ipcProcessId, portId);
         if (result < 0) {
@@ -666,8 +627,6 @@ void ExtendedIPCManager::setPolicySetParamResponse(
 		const SetPolicySetParamRequestEvent& event, int result) {
 #if STUB_API
 	//Do nothing
-        (void) event;
-        (void) result;
 #else
 	IpcmSetPolicySetParamResponseMessage responseMessage;
 	responseMessage.result = result;
@@ -687,8 +646,6 @@ void ExtendedIPCManager::selectPolicySetResponse(
 		const SelectPolicySetRequestEvent& event, int result) {
 #if STUB_API
 	//Do nothing
-        (void) event;
-        (void) result;
 #else
 	IpcmSelectPolicySetResponseMessage responseMessage;
 	responseMessage.result = result;
@@ -708,8 +665,6 @@ void ExtendedIPCManager::pluginLoadResponse(
 		const PluginLoadRequestEvent& event, int result) {
 #if STUB_API
 	//Do nothing
-        (void) event;
-        (void) result;
 #else
 	IpcmPluginLoadResponseMessage responseMessage;
 	responseMessage.result = result;
@@ -731,9 +686,6 @@ void ExtendedIPCManager::forwardCDAPResponse(unsigned int sequenceNumber,
 {
 #if STUB_API
 	//Do nothing
-	(void) sequenceNumber;
-        (void) sermsg;
-	(void) result;
 #else
 	IpcmFwdCDAPMsgMessage responseMessage;
 
@@ -973,7 +925,6 @@ unsigned int KernelIPCProcess::assignToDIF(
 
 #if STUB_API
         // Do nothing
-        (void) difInformation;
 #else
         IpcmAssignToDIFRequestMessage message;
         message.setDIFInformation(difInformation);
@@ -1002,8 +953,6 @@ unsigned int KernelIPCProcess::updateDIFConfiguration(
 
 #if STUB_API
         // Do nothing
-
-        (void) difConfiguration;
 #else
         IpcmUpdateDIFConfigurationRequestMessage message;
         message.setDIFConfiguration(difConfiguration);
@@ -1029,7 +978,6 @@ unsigned int KernelIPCProcess::createConnection(const Connection& connection) {
 
 #if STUB_API
         // Do nothing
-        (void) connection;
 #else
         IpcpConnectionCreateRequestMessage message;
         message.setConnection(connection);
@@ -1055,8 +1003,6 @@ unsigned int KernelIPCProcess::updateConnection(const Connection& connection) {
 
 #if STUB_API
         // Do nothing
-
-        (void) connection;
 #else
         IpcpConnectionUpdateRequestMessage message;
         message.setPortId(connection.getPortId());
@@ -1086,8 +1032,6 @@ createConnectionArrived(const Connection& connection) {
 
 #if STUB_API
         // Do nothing
-
-        (void) connection;
 #else
         IpcpConnectionCreateArrivedMessage message;
         message.setConnection(connection);
@@ -1114,7 +1058,6 @@ destroyConnection(const Connection& connection) {
 
 #if STUB_API
         //Do nothing
-        (void) connection;
 #else
         IpcpConnectionDestroyRequestMessage message;
         message.setPortId(connection.getPortId());
@@ -1141,9 +1084,6 @@ modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry *>& entr
                         int mode) {
 #if STUB_API
         //Do nothing
-
-        (void) entries;
-        (void) mode;
 #else
         RmtModifyPDUFTEntriesRequestMessage message;
         message.setEntries(entries);
@@ -1190,7 +1130,6 @@ unsigned int KernelIPCProcess::enableEncryption(const EncryptionProfile& profile
         unsigned int seqNum=0;
 
 #if STUB_API
-        (void) profile;
         //Do nothing
 #else
         IPCPEnableEncryptionRequestMessage message;
@@ -1221,9 +1160,6 @@ unsigned int KernelIPCProcess::setPolicySetParam(
 
 #if STUB_API
         //Do nothing
-        (void) path;
-        (void) name;
-        (void) value;
 #else
         IpcmSetPolicySetParamRequestMessage message;
         message.path = path;
@@ -1254,8 +1190,6 @@ unsigned int KernelIPCProcess::selectPolicySet(
 
 #if STUB_API
         //Do nothing
-        (void) path;
-        (void) name;
 #else
         IpcmSelectPolicySetRequestMessage message;
         message.path = path;
@@ -1281,10 +1215,6 @@ void KernelIPCProcess::writeMgmgtSDUToPortId(void * sdu, int size,
                 unsigned int portId) {
 #if STUB_API
         // Do nothing
-
-        (void) sdu;
-        (void) size;
-        (void) portId;
 #else
         int result = syscallWriteManagementSDU(ipcProcessId, sdu, 0, portId,
                         size);
@@ -1298,9 +1228,6 @@ void KernelIPCProcess::sendMgmgtSDUToAddress(void * sdu, int size,
                 unsigned int address) {
 #if STUB_API
         // Do nothing
-        (void) sdu;
-        (void) size;
-        (void) address;
 #else
         int result = syscallWriteManagementSDU(ipcProcessId, sdu, address, 0,
                         size);
@@ -1317,9 +1244,6 @@ ReadManagementSDUResult KernelIPCProcess::readManagementSDU(void * sdu,
 
 #if STUB_API
         unsigned char buffer[] = { 0, 23, 43, 32, 45, 23, 78 };
-
-        (void) sdu;
-        (void) maxBytes;
 
         sdu = buffer;
         readResult.setPortId(14);

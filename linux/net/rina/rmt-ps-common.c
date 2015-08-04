@@ -125,7 +125,7 @@ common_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
                 return -1;
         }
         q = rmt_kqueue_find(qg, 0);
-        if (!qg) {
+        if (!q) {
                 LOG_ERR("Could not find queue in the group for n1_port %u",
                         n1_port->port_id);
                 pdu_destroy(pdu);
@@ -136,6 +136,42 @@ common_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
         return 0;
 }
 EXPORT_SYMBOL(common_rmt_enqueue_scheduling_policy_tx);
+
+int
+common_rmt_requeue_scheduling_policy_tx(struct rmt_ps *      ps,
+                                        struct rmt_n1_port * n1_port,
+                                        struct pdu *         pdu)
+{
+        struct rmt_kqueue *         q;
+        struct rmt_qgroup *         qg;
+        struct rmt_ps_common_data * data = ps->priv;
+
+        if (!ps || !n1_port || !pdu) {
+                LOG_ERR("Wrong input parameters for "
+                        "rmt_requeu_scheduling_policy_tx");
+                return -1;
+        }
+
+        /* NOTE: The policy is called with the n1_port lock taken */
+        qg = rmt_qgroup_find(data->outqs, n1_port->port_id);
+        if (!qg) {
+                LOG_ERR("Could not find queue group for n1_port %u",
+                        n1_port->port_id);
+                pdu_destroy(pdu);
+                return -1;
+        }
+        q = rmt_kqueue_find(qg, 0);
+        if (!qg) {
+                LOG_ERR("Could not find queue in the group for n1_port %u",
+                        n1_port->port_id);
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        rfifo_head_push_ni(q->queue, pdu);
+        return 0;
+}
+EXPORT_SYMBOL(common_rmt_requeue_scheduling_policy_tx);
 
 struct pdu *
 common_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
@@ -160,7 +196,7 @@ common_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
                 return NULL;
         }
         q = rmt_kqueue_find(qg, 0);
-        if (!qg) {
+        if (!q) {
                 LOG_ERR("Could not find queue in the group for n1_port %u",
                         n1_port->port_id);
                 return NULL;

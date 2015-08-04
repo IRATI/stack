@@ -758,9 +758,6 @@ IPCEvent * IPCEventProducer::eventTimedWait(int seconds,
                                             int nanoseconds)
 {
 #if STUB_API
-        (void) seconds;
-        (void) nanoseconds;
-
 	return getIPCEvent();
 #else
 	return rinaManager->getEventQueue()->timedtake(seconds, nanoseconds);

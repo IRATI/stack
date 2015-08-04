@@ -1416,6 +1416,19 @@ int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
 }
 EXPORT_SYMBOL(dtcp_ack_flow_control_pdu_send);
 
+void dtcp_rcvr_credit_set(struct dtcp * dtcp, uint_t credit)
+{
+        unsigned long flags;
+
+        ASSERT(dtcp);
+        ASSERT(dtcp->sv);
+
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        dtcp->sv->rcvr_credit = credit;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+}
+EXPORT_SYMBOL(dtcp_rcvr_credit_set);
+
 void update_rt_wind_edge(struct dtcp * dtcp)
 {
         seq_num_t     seq;
@@ -1618,7 +1631,7 @@ int dtcp_set_policy_set_param(struct dtcp * dtcp,
         if (strcmp(path, "") == 0) {
                 int bool_value;
 
-                /* The request addresses this DTP instance. */
+                /* The request addresses this DTCP instance. */
                 rcu_read_lock();
                 ps = container_of(rcu_dereference(dtcp->base.ps),
                                   struct dtcp_ps,
@@ -1784,32 +1797,80 @@ int dtcp_destroy(struct dtcp * instance)
         return 0;
 }
 
-int dtcp_sv_update(struct dtcp * instance,
-                   seq_num_t     seq)
+int dtcp_sv_update(struct dtcp * dtcp, const struct pci * pci)
 {
-        struct dtcp_ps * ps;
+        struct dtcp_ps *     ps;
+        int                  retval = 0;
+        struct dtcp_config * dtcp_cfg;
+        bool                 flow_ctrl;
+        bool                 win_based;
+        bool                 rate_based;
+        bool                 rtx_ctrl;
 
-        if (!instance) {
-                LOG_ERR("Bogus instance passed");
+        if (!dtcp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+        if (!pci) {
+                LOG_ERR("No PCI instance passed, cannot run policy");
                 return -1;
         }
 
-        rcu_read_lock();
-        ps = container_of(rcu_dereference(instance->base.ps),
-                          struct dtcp_ps, base);
-
-        ASSERT(ps);
-        ASSERT(ps->sv_update);
-
-        if (ps->sv_update(ps, seq)) {
-                rcu_read_unlock();
+        dtcp_cfg = dtcp_config_get(dtcp);
+        if (!dtcp_cfg)
                 return -1;
+
+        rcu_read_lock();
+        ps = container_of(rcu_dereference(dtcp->base.ps),
+                          struct dtcp_ps, base);
+        ASSERT(ps);
+
+        flow_ctrl  = ps->flow_ctrl;
+        win_based  = ps->flowctrl.window_based;
+        rate_based = ps->flowctrl.rate_based;
+        rtx_ctrl   = ps->rtx_ctrl;
+
+        if (flow_ctrl) {
+                if (win_based) {
+                        if (ps->rcvr_flow_control(ps, pci)) {
+                                LOG_ERR("Failed Rcvr Flow Control policy");
+                                retval = -1;
+                        }
+                }
+
+                if (rate_based) {
+                        LOG_DBG("Rate based fctrl invoked");
+                        if (ps->rate_reduction(ps)) {
+                                LOG_ERR("Failed Rate Reduction policy");
+                                retval = -1;
+                        }
+                }
+
+                if (!rtx_ctrl) {
+                        LOG_DBG("Receiving flow ctrl invoked");
+                        if (ps->receiving_flow_control(ps, pci)) {
+                                LOG_ERR("Failed Receiving Flow Control "
+                                        "policy");
+                                retval = -1;
+                        }
+
+        		rcu_read_unlock();
+                        return retval;
+                }
+        }
+
+        if (rtx_ctrl) {
+                LOG_DBG("Retransmission ctrl invoked");
+                if (ps->rcvr_ack(ps, pci)) {
+                        LOG_ERR("Failed Rcvr Ack policy");
+                        retval = -1;
+                }
         }
 
         rcu_read_unlock();
-
-        return 0;
+        return retval;
 }
+EXPORT_SYMBOL(dtcp_sv_update);
 
 seq_num_t dtcp_rcv_rt_win(struct dtcp * dtcp)
 {

@@ -831,8 +831,6 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
             ASSERT(dup_chksum_is_ok(tmp));
         }
 
-        pdu_destroy(pdu);
-
         return tmp;
 }
 

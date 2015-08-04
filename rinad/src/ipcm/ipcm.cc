@@ -29,6 +29,7 @@
 
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <dirent.h>
 
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
@@ -80,7 +81,7 @@ namespace rinad {
 Singleton<IPCManager_> IPCManager;
 
 IPCManager_::IPCManager_() : req_to_stop(false), io_thread(NULL),
-		dif_template_manager(NULL){
+		dif_template_manager(NULL) {
 
 }
 
@@ -108,13 +109,17 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
 			config.local.libraryPath.c_str());
 		LOG_DBG("       log folder: %s", config.local.logPath.c_str());
 
-		//Initialize the I/O thread
+		// Load the plugins catalog
+		catalog.import();
+		catalog.print();
+
+		// Initialize the I/O thread
 		io_thread = new rina::Thread(io_loop_trampoline,
 				             NULL,
 				             &io_thread_attrs);
 		io_thread->start();
 
-		//Initialize DIF Templates Manager (with its monitor thread)
+		// Initialize DIF Templates Manager (with its monitor thread)
 		stringstream ss;
 		ss << config_file.substr(0, config_file.rfind("/"));
 		dif_template_manager = new DIFTemplateManager(ss.str());
@@ -296,6 +301,11 @@ IPCManager_::destroy_ipcp(Addon* callee, unsigned short ipcp_id)
 		return IPCM_FAILURE;
 	}
 
+	// Synchronize the catalog state, so that
+	// the ipcp_id of the IPCP just destroyed can
+	// be reused without inconsistencies in the catalog
+	catalog.ipcp_destroyed(ipcp_id);
+
 	return IPCM_SUCCESS;
 }
 
@@ -395,6 +405,26 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 	IPCPTransState* trans;
 
 	try {
+		if (is_any_ipcp_assigned_to_dif(dif_name)) {
+			ss << "There is already an IPCP assigned to DIF "
+				<< dif_name.toString()
+				<< " in this system.";
+			FLUSH_LOG(ERR, ss);
+			throw rina::AssignToDIFException();
+		}
+
+		ipcp = lookup_ipcp_by_id(ipcp_id, false);
+		if (ipcp->get_type() == rina::NORMAL_IPC_PROCESS) {
+			// Load all the plugins required from by template, but
+			// first release the ipcp lock, to avoid lock-ups.
+			ipcp->rwlock.unlock();
+
+			catalog.load_by_template(callee, ipcp_id, dif_template);
+
+		} else {
+			ipcp->rwlock.unlock();
+		}
+
 		ipcp = lookup_ipcp_by_id(ipcp_id, true);
 		if(!ipcp){
 			ss << "Invalid IPCP id "<< ipcp_id;
@@ -404,14 +434,6 @@ IPCManager_::assign_to_dif(Addon* callee, Promise* promise,
 
 		//Auto release the write lock
 		rina::WriteScopedLock writelock(ipcp->rwlock, false);
-
-		if (is_any_ipcp_assigned_to_dif(dif_name)) {
-			ss << "There is already an IPCP assigned to DIF "
-				<< dif_name.toString()
-				<< " in this system.";
-			FLUSH_LOG(ERR, ss);
-			throw rina::AssignToDIFException();
-		}
 
 		// Fill in the DIFConfiguration object.
 		if (ipcp->get_type() == rina::NORMAL_IPC_PROCESS) {
@@ -1572,7 +1594,6 @@ void IPCManager_::run(){
 
 //static
 void* IPCManager_::io_loop_trampoline(void* param){
-	(void)param;
 	IPCManager->io_loop();
 	return NULL;
 }

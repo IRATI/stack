@@ -25,9 +25,6 @@
 
 int main(int argc, char * argv[])
 {
-        (void) argc;
-        (void) argv;
-
         rina::initialize("test", "/tmp/test");
 
         return EXIT_SUCCESS;

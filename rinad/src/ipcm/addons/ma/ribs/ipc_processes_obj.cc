@@ -33,7 +33,6 @@ rina::cdap_rib::res_info_t* IPCProcessesObj::remoteCreate(
 		const rina::cdap_rib::SerializedObject &obj_req,
 		rina::cdap_rib::SerializedObject &obj_reply) {
 
-	(void) obj_reply;
 	rina::cdap_rib::res_info_t* res = new rina::cdap_rib::res_info_t;
 
 	if (clas == IPCPObj::class_name) {

@@ -297,7 +297,7 @@ static int kfa_flow_deallocate(struct ipcp_instance_data * data,
         }
 
 
-        wqdata       = rkzalloc(sizeof(*wqdata), GFP_KERNEL);
+        wqdata       = rkzalloc(sizeof(*wqdata), GFP_ATOMIC);
         wqdata->kfa  = instance;
         wqdata->id   = id;
 

@@ -5,6 +5,7 @@
  *   Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *   Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *   Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
+ *   Eduard Grasa	   <eduard.grasa@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,17 +27,18 @@
 #include <linux/if_ether.h>
 #include <linux/string.h>
 #include <linux/list.h>
-#include <linux/netdevice.h>
+#include <linux/if.h>
 #include <linux/if_packet.h>
 #include <linux/workqueue.h>
 #include <linux/notifier.h>
+#include <net/pkt_sched.h>
+#include <net/sch_generic.h>
 
 #define SHIM_NAME   "shim-eth-vlan"
 
 #define RINA_PREFIX SHIM_NAME
 
 #include "logs.h"
-#include "common.h"
 #include "kipcm.h"
 #include "debug.h"
 #include "utils.h"
@@ -45,6 +47,9 @@
 #include "ipcp-factories.h"
 #include "rinarp/rinarp.h"
 #include "rinarp/arp826-utils.h"
+
+#define DEFAULT_QDISC_MAX_SIZE 50
+#define DEFAULT_QDISC_ENABLE_SIZE 10
 
 /* FIXME: To be solved properly */
 static struct workqueue_struct * rcv_wq;
@@ -63,7 +68,14 @@ extern struct kipcm * default_kipcm;
 struct eth_vlan_info {
         uint16_t vlan_id;
         char *   interface_name;
+        uint16_t qdisc_max_size;
+        uint16_t qdisc_enable_size;
 };
+
+static struct ipcp_factory_data {
+        struct list_head instances;
+	struct notifier_block ntfy;
+} eth_vlan_data;
 
 enum port_id_state {
         PORT_STATE_NULL = 1,
@@ -101,6 +113,8 @@ struct ipcp_instance_data {
         struct eth_vlan_info * info;
         struct packet_type *   eth_vlan_packet_type;
         struct net_device *    dev;
+        struct net_device *    phy_dev;
+        struct Qdisc *	       old_qdisc;
         struct flow_spec *     fspec;
 
         /* The IPC Process using the shim-eth-vlan */
@@ -154,6 +168,23 @@ inst_data_mapping_get(struct net_device * dev)
         spin_unlock(&data_instances_lock);
 
         return NULL;
+}
+
+static struct ipcp_instance_data *
+find_instance(struct ipcp_factory_data * data,
+              ipc_process_id_t           id)
+{
+
+        struct ipcp_instance_data * pos;
+
+        list_for_each_entry(pos, &(data->instances), list) {
+                if (pos->id == id) {
+                        return pos;
+                }
+        }
+
+        return NULL;
+
 }
 
 static struct shim_eth_flow * find_flow(struct ipcp_instance_data * data,
@@ -713,6 +744,176 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
         return 0;
 }
 
+static void eth_vlan_enable_all_port_ids(struct ipcp_instance_data * data)
+{
+	struct shim_eth_flow 	  * flow;
+	unsigned long               flags;
+
+	if (!data)
+		return;
+
+	spin_lock_irqsave(&data->lock, flags);
+	list_for_each_entry(flow, &data->flows, list) {
+		if (flow->user_ipcp && flow->user_ipcp->ops)
+			flow->user_ipcp->ops->enable_write(flow->user_ipcp->data,
+							   flow->port_id);
+	}
+	spin_unlock_irqrestore(&data->lock, flags);
+}
+
+static void eth_vlan_enable_write_all(struct net_device * dev)
+{
+	struct ipcp_instance_data * pos;
+
+        list_for_each_entry(pos, &(eth_vlan_data.instances), list) {
+                if (pos->phy_dev == dev)
+                	eth_vlan_enable_all_port_ids(pos);
+        }
+}
+
+/*
+ * Private data for a rina_shim_eth scheduler containing:
+ * (only supports a single flow for the moment)
+ * 	- queue max_size
+ * 	- queue enable_thres (size at which the qdisc will enable N+1 ports)
+ */
+struct shim_eth_qdisc_priv {
+	uint16_t q_max_size;
+	uint16_t q_enable_thres;
+};
+
+static int shim_eth_qdisc_enqueue(struct sk_buff *skb, struct Qdisc *qdisc)
+{
+	struct shim_eth_qdisc_priv *priv = qdisc_priv(qdisc);
+
+	LOG_DBG("shim-eth-enqueue called; current size is %u", qdisc->q.qlen);
+	if (skb_queue_len(&qdisc->q) < priv->q_max_size)
+		return __qdisc_enqueue_tail(skb, qdisc, &qdisc->q);
+
+	return qdisc_drop(skb, qdisc);
+}
+
+static struct sk_buff *shim_eth_qdisc_dequeue(struct Qdisc *qdisc)
+{
+	struct shim_eth_qdisc_priv *priv = qdisc_priv(qdisc);
+
+	if (skb_queue_len(&qdisc->q) > 0) {
+		struct sk_buff *skb = __qdisc_dequeue_head(qdisc, &qdisc->q);
+		if (skb_queue_len(&qdisc->q) == priv->q_enable_thres)
+			eth_vlan_enable_write_all(qdisc->dev_queue->dev);
+
+		return skb;
+	}
+
+	return NULL;
+}
+
+static struct sk_buff * shim_eth_qdisc_peek(struct Qdisc *qdisc)
+{
+	return skb_peek(&qdisc->q);
+}
+
+static int shim_eth_qdisc_init(struct Qdisc *qdisc, struct nlattr *opt)
+{
+	struct shim_eth_qdisc_priv * priv;
+
+	if (!opt)
+		return 0;
+
+	priv = qdisc_priv(qdisc);
+	priv->q_max_size = opt->nla_len;
+	priv->q_enable_thres = opt->nla_type;
+	skb_queue_head_init(&qdisc->q);
+
+	LOG_INFO("shim-eth-qdisc-init: max size: %u, enable thres: %u",
+		 priv->q_max_size, priv->q_enable_thres);
+
+	return 0;
+}
+
+static void shim_eth_qdisc_reset(struct Qdisc *qdisc)
+{
+	__qdisc_reset_queue(qdisc, &qdisc->q);
+
+	qdisc->qstats.backlog = 0;
+	qdisc->q.qlen = 0;
+}
+
+static struct Qdisc_ops shim_eth_qdisc_ops __read_mostly = {
+	.id	   = "rina_shim_eth",
+	.priv_size = sizeof(struct shim_eth_qdisc_priv),
+	.enqueue   = shim_eth_qdisc_enqueue,
+	.dequeue   = shim_eth_qdisc_dequeue,
+	.peek	   = shim_eth_qdisc_peek,
+	.init	   = shim_eth_qdisc_init,
+	.reset	   = shim_eth_qdisc_reset,
+	.dump	   = NULL,
+	.owner	   = THIS_MODULE,
+};
+
+int eth_vlan_update_qdisc(struct net_device *    dev,
+			  struct Qdisc *         old_qdisc,
+			  struct eth_vlan_info * info)
+{
+	struct Qdisc * sch;
+	struct nlattr  attr;
+
+	if (string_cmp(dev->qdisc->ops->id,
+		       shim_eth_qdisc_ops.id) == 0)
+		return 0;
+
+	sch = qdisc_create_dflt(netdev_get_tx_queue(dev, 0),
+			        &shim_eth_qdisc_ops, 0);
+	if (!sch) {
+		LOG_ERR("Problems creating shim-eth-qdisc");
+		return -1;
+	}
+
+	attr.nla_len = info->qdisc_max_size;
+	attr.nla_type = info->qdisc_enable_size;
+	if (shim_eth_qdisc_init(sch, &attr)) {
+		LOG_ERR("Problems initializing shim-eth-qdisc");
+		qdisc_destroy(sch);
+		return -1;
+	}
+
+	old_qdisc = dev->qdisc;
+
+	if (dev->flags & IFF_UP)
+		dev_deactivate(dev);
+
+	dev_graft_qdisc(netdev_get_tx_queue(dev, 0), sch);
+	dev->qdisc = sch;
+
+	if (dev->flags & IFF_UP)
+		dev_activate(dev);
+
+	return 0;
+}
+
+static void eth_vlan_restore_qdisc(struct net_device * dev,
+				   struct Qdisc * old_qdisc)
+{
+	struct Qdisc * sch;
+
+	if (!old_qdisc)
+		return;
+
+	sch = dev->qdisc;
+	if (!sch)
+		return;
+
+	if (dev->flags & IFF_UP)
+		dev_deactivate(dev);
+
+	dev_graft_qdisc(netdev_get_tx_queue(dev, 0), old_qdisc);
+	dev->qdisc = old_qdisc;
+	qdisc_destroy(sch);
+
+	if (dev->flags & IFF_UP)
+		dev_activate(dev);
+}
+
 static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
                               port_id_t                   id,
                               struct sdu *                sdu)
@@ -809,16 +1010,19 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         }
 
         retval = dev_queue_xmit(skb);
+        if (retval == -ENETDOWN) {
+        	LOG_ERR("dev_q_xmit returned device down");
+        	return -1;
+        }
         if (retval != NET_XMIT_SUCCESS) {
-                LOG_ERR("Problems in dev_queue_xmit (%d)", retval);
-                return -1;
+        	LOG_DBG("qdisc cannot enqueue now (%d), try later", retval);
+        	return -EAGAIN;
         }
 
         LOG_DBG("Packet sent");
 
         return 0;
 }
-
 
 static int eth_vlan_rcv_worker(void * o)
 {
@@ -1171,7 +1375,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         string_t *                      complete_interface;
         struct interface_data_mapping * mapping;
         int                             result;
-        unsigned int                    temp_vlan;
+        unsigned int                    temp;
 
         ASSERT(data);
         ASSERT(dif_information);
@@ -1189,7 +1393,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
 
         /* Get vlan id */
         result = kstrtouint(dif_information->dif_name->process_name,
-                            10, &temp_vlan);
+                            10, &temp);
         if (result) {
                 ASSERT(dif_information->dif_name->process_name);
 
@@ -1197,7 +1401,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                         dif_information->dif_name->process_name);
                 return -1;
         }
-        info->vlan_id = (uint16_t) temp_vlan;
+        info->vlan_id = (uint16_t) temp;
 
         if (!vlan_id_is_ok(info->vlan_id)) {
                 if (info->vlan_id != 0) {
@@ -1216,19 +1420,49 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         list_for_each_entry(tmp, &(dif_information->
                                    configuration->
                                    ipcp_config_entries), next) {
-                const struct ipcp_config_entry * entry = tmp->entry;
-                if (!strcmp(entry->name, "interface-name")) {
-                        ASSERT(entry->value);
+		const struct ipcp_config_entry * entry = tmp->entry;
+		if (!strcmp(entry->name, "interface-name")) {
+			ASSERT(entry->value);
 
-                        info->interface_name = rkstrdup(entry->value);
-                        if (!info->interface_name) {
-                                LOG_ERR("Cannot copy interface name");
-                                name_destroy(data->dif_name);
-                                data->dif_name = NULL;
-                                return -1;
-                        }
+			info->interface_name = rkstrdup(entry->value);
+			if (!info->interface_name) {
+				LOG_ERR("Cannot copy interface name");
+				name_destroy(data->dif_name);
+				data->dif_name = NULL;
+				return -1;
+			}
+		} else if (!strcmp(entry->name, "qdisc-max-size")) {
+			ASSERT(entry->value);
+
+			result = kstrtouint(entry->value, 10, &temp);
+			if (result) {
+				LOG_ERR("Can't convert qdisc-max-size to uint");
+				name_destroy(data->dif_name);
+				data->dif_name = NULL;
+				if (info->interface_name) {
+					rkfree(info->interface_name);
+					info->interface_name = NULL;
+				}
+				return -1;
+			}
+			info->qdisc_max_size = (uint16_t) temp;
+		} else if (!strcmp(entry->name, "qdisc-enable-size")) {
+			ASSERT(entry->value);
+
+			result = kstrtouint(entry->value, 10, &temp);
+			if (result) {
+				LOG_ERR("Can't convert qdisc-enable-size to uint");
+				name_destroy(data->dif_name);
+				data->dif_name = NULL;
+				if (info->interface_name) {
+					rkfree(info->interface_name);
+					info->interface_name = NULL;
+				}
+				return -1;
+			}
+			info->qdisc_enable_size = (uint16_t) temp;
                 } else
-                        LOG_WARN("Unknown config param for eth shim");
+                	LOG_WARN("Unknown config param for eth shim");
         }
 
         /* Fail here if we didn't get an interface */
@@ -1263,7 +1497,12 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         /* Add the handler */
         read_lock(&dev_base_lock);
         data->dev = __dev_get_by_name(&init_net, complete_interface);
-        if (!data->dev) {
+        if (info->vlan_id != 0)
+        	data->phy_dev = __dev_get_by_name(&init_net,
+        					  info->interface_name);
+        else
+        	data->phy_dev = data->dev;
+        if (!data->dev || !data->phy_dev) {
                 LOG_ERR("Can't get device '%s'", complete_interface);
                 read_unlock(&dev_base_lock);
                 name_destroy(data->dif_name);
@@ -1273,6 +1512,20 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                 rkfree(complete_interface);
                 return -1;
         }
+
+	/* Modfy qdisc by our own */
+	if (eth_vlan_update_qdisc(data->phy_dev,
+				  data->old_qdisc,
+				  data->info)) {
+		LOG_ERR("Problems creating queue discipline");
+		read_unlock(&dev_base_lock);
+		name_destroy(data->dif_name);
+		data->dif_name = NULL;
+		rkfree(info->interface_name);
+		info->interface_name = NULL;
+		rkfree(complete_interface);
+		return -1;
+	}
 
         LOG_DBG("Got device '%s', trying to register handler",
                 complete_interface);
@@ -1315,6 +1568,8 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
         string_t *                      old_interface_name;
         string_t *                      complete_interface;
         struct interface_data_mapping * mapping;
+        int				result;
+        unsigned int			temp;
 
         ASSERT(data);
         ASSERT(new_config);
@@ -1328,19 +1583,39 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
                 const struct ipcp_config_entry * entry;
 
                 entry = tmp->entry;
-                if (!strcmp(entry->name,"interface-name")) {
-                        if (!strcpy(info->interface_name,
-                                    entry->value)) {
-                                LOG_ERR("Cannot copy interface name");
-                                return -1;
-                        }
-                } else {
-                        LOG_WARN("Unknown config param for eth shim");
-                        continue;
-                }
-        }
+                if (!strcmp(entry->name, "interface-name")) {
+                	ASSERT(entry->value);
 
-        dev_remove_pack(data->eth_vlan_packet_type);
+                	info->interface_name = rkstrdup(entry->value);
+                	if (!info->interface_name) {
+                		LOG_ERR("Cannot copy interface name");
+                		return -1;
+                	}
+		} else if (!strcmp(entry->name, "qdisc-max-size")) {
+ 			ASSERT(entry->value);
+
+			result = kstrtouint(entry->value, 10, &temp);
+			if (result) {
+				LOG_ERR("Can't convert qdisc-max-size to uint");
+				return -1;
+			}
+			info->qdisc_max_size = (uint16_t) temp;
+		} else if (!strcmp(entry->name, "qdisc-enable-size")) {
+			ASSERT(entry->value);
+
+			result = kstrtouint(entry->value, 10, &temp);
+			if (result) {
+				LOG_ERR("Cannot conver qdisc-enable-size to uint");
+				return -1;
+			}
+			info->qdisc_enable_size = (uint16_t) temp;
+                } else
+                	LOG_WARN("Unknown config param for eth shim");
+        }
+	
+	eth_vlan_restore_qdisc(data->phy_dev, data->old_qdisc);
+
+	dev_remove_pack(data->eth_vlan_packet_type);
         /* Remove from list */
         mapping = inst_data_mapping_get(data->dev);
         if (mapping) {
@@ -1367,10 +1642,30 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
         /* Add the handler */
         read_lock(&dev_base_lock);
         data->dev = __dev_get_by_name(&init_net, complete_interface);
+        if (info->vlan_id != 0) {
+        	data->phy_dev = __dev_get_by_name(&init_net,
+        					  info->interface_name);
+        } else {
+        	data->phy_dev = data->dev;
+        }
         if (!data->dev) {
                 LOG_ERR("Invalid device to configure: %s", complete_interface);
                 return -1;
         }
+
+	/* Modfy qdisc by our own */
+	if (eth_vlan_update_qdisc(data->phy_dev,
+				  data->old_qdisc,
+				  data->info)) {
+		LOG_ERR("Problems creating queue discipline");
+		read_unlock(&dev_base_lock);
+		name_destroy(data->dif_name);
+		data->dif_name = NULL;
+		rkfree(info->interface_name);
+		info->interface_name = NULL;
+		rkfree(complete_interface);
+		return -1;
+	}
 
         /* Store in list for retrieval later on */
         mapping = rkmalloc(sizeof(*mapping), GFP_KERNEL);
@@ -1467,11 +1762,6 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .dif_name		   = eth_vlan_dif_name
 };
 
-static struct ipcp_factory_data {
-        struct list_head instances;
-	struct notifier_block ntfy;
-} eth_vlan_data;
-
 static int ntfy_user_ipcp_on_if_state_change(struct ipcp_instance_data * data,
 					     bool up)
 {
@@ -1555,23 +1845,6 @@ static int eth_vlan_fini(struct ipcp_factory_data * data)
         return 0;
 }
 
-static struct ipcp_instance_data *
-find_instance(struct ipcp_factory_data * data,
-              ipc_process_id_t           id)
-{
-
-        struct ipcp_instance_data * pos;
-
-        list_for_each_entry(pos, &(data->instances), list) {
-                if (pos->id == id) {
-                        return pos;
-                }
-        }
-
-        return NULL;
-
-}
-
 static void inst_cleanup(struct ipcp_instance * inst)
 {
         ASSERT(inst);
@@ -1642,6 +1915,8 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
                 inst_cleanup(inst);
                 return NULL;
         }
+	inst->data->info->qdisc_max_size = DEFAULT_QDISC_MAX_SIZE;
+	inst->data->info->qdisc_enable_size = DEFAULT_QDISC_ENABLE_SIZE;
 
         inst->data->fspec = rkzalloc(sizeof(*inst->data->fspec), GFP_KERNEL);
         if (!inst->data->fspec) {
@@ -1703,6 +1978,9 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                         list_for_each_entry_safe(flow, nflow, &pos->flows, list) {
                                 unbind_and_destroy_flow(pos, flow);
                         }
+
+			/* Restore old qdisc */
+			eth_vlan_restore_qdisc(pos->phy_dev, pos->old_qdisc);
 
                         /* Remove packet handler if there is one */
                         if (pos->eth_vlan_packet_type->dev)
@@ -1927,3 +2205,4 @@ MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
 MODULE_AUTHOR("Miquel Tarzan <miquel.tarzan@i2cat.net>");
 MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
 MODULE_AUTHOR("Leonardo Bergesio <leonardo.bergesio@i2cat.net>");
+MODULE_AUTHOR("Eduard Grasa <eduard.grasa@i2cat.net>");
