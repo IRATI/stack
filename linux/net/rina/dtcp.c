@@ -1895,7 +1895,7 @@ bool dtcp_rate_exceeded(struct dtcp * dtcp, int send) {
 	struct timespec now  = {0, 0};
 	struct timespec last = {0, 0};
 	struct timespec sub  = {0, 0};
-	uint_t rt = 0, rl = 0; // Rate and rate limit.
+	uint_t rt = 0, rl = 1; // Rate and rate limit.
 
 	// Get and compute the elapsed time.
 	dtcp_last_time(dtcp, &last);
