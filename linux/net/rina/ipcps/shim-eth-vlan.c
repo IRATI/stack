@@ -1605,7 +1605,7 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
 
 			result = kstrtouint(entry->value, 10, &temp);
 			if (result) {
-				LOG_ERR("Cannot conver qdisc-enable-size to uint");
+				LOG_ERR("Can't convert qdisc-enable-size to uint");
 				return -1;
 			}
 			info->qdisc_enable_size = (uint16_t) temp;
