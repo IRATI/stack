@@ -1159,4 +1159,4 @@ void* EnrollmentInformationRequestEncoder::decode(const rina::ObjectValueInterfa
 	return (void *) request;
 }
 
-}
+} //namespace rinad

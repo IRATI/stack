@@ -22,8 +22,6 @@
 #ifndef IPCP_ENROLLMENT_TASK_HH
 #define IPCP_ENROLLMENT_TASK_HH
 
-#ifdef __cplusplus
-
 #include <map>
 
 #include "common/concurrency.h"
@@ -281,8 +279,6 @@ public:
 	void* decode(const rina::ObjectValueInterface * object_value) const;
 };
 
-}
+} //namespace rinad
 
-#endif
-
-#endif
+#endif //IPCP_ENROLLMENT_TASK_HH

@@ -211,4 +211,4 @@ INMinusOneFlowManager * ResourceAllocator::get_n_minus_one_flow_manager() const 
 	return n_minus_one_flow_manager_;
 }
 
-}
+} //namespace rinad

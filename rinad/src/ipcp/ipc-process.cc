@@ -20,6 +20,7 @@
 
 #include <cstdlib>
 #include <sstream>
+#include <iostream>
 
 #define IPCP_MODULE "core"
 #include "ipcp-logging.h"
@@ -35,6 +36,14 @@
 namespace rinad {
 
 #define IPCP_LOG_IPCP_FILE_PREFIX "/tmp/ipcp-log-file"
+
+/* Macro useful to perform downcasts in declarations. */
+#define DOWNCAST_DECL(_var,_class,_name)        \
+        _class *_name = dynamic_cast<_class*>(_var);
+
+//Timeouts for timed wait
+#define IPCP_EVENT_TIMEOUT_S 0
+#define IPCP_EVENT_TIMEOUT_NS 1000000000 //1 sec
 
 //Class IPCProcessImpl
 IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& nm,
@@ -654,372 +663,212 @@ void IPCProcessImpl::processFwdCDAPMsgEvent(
 }
 
 //Event loop handlers
-static void
-ipc_process_dif_registration_notification_handler(rina::IPCEvent *e,
-		EventLoopData *opaque)
-{
-	DOWNCAST_DECL(e, rina::IPCProcessDIFRegistrationEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
+void IPCProcessImpl::event_loop(void){
 
-	ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
-			processRegistrationNotification(*event);
-}
+	rina::IPCEvent *e;
 
-static void
-assign_to_dif_request_event_handler(rina::IPCEvent *e,
-		EventLoopData *opaque)
-{
-	DOWNCAST_DECL(e, rina::AssignToDIFRequestEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
+	bool keep_running = true;
 
-	ipcp->processAssignToDIFRequestEvent(*event);
-}
+	LOG_DBG("Starting main I/O loop...");
 
-static void
-assign_to_dif_response_event_handler(rina::IPCEvent *e,
-		EventLoopData *opaque)
-{
-	DOWNCAST_DECL(e, rina::AssignToDIFResponseEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
+	while(keep_running) {
+		e = rina::ipcEventProducer->eventTimedWait(
+						IPCP_EVENT_TIMEOUT_S,
+						IPCP_EVENT_TIMEOUT_NS);
+		if(!e)
+			continue;
 
-	ipcp->processAssignToDIFResponseEvent(*event);
-}
+		if(!keep_running)
+			break;
 
-static void
-allocate_flow_request_result_event_handler(rina::IPCEvent *e,
-		EventLoopData *opaque)
-{
-	DOWNCAST_DECL(e, rina::AllocateFlowRequestResultEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
+		LOG_IPCP_DBG("Got event of type %s and sequence number %u",
+							rina::IPCEvent::eventTypeToString(e->eventType).c_str(),
+							e->sequenceNumber);
 
-	ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
-			allocateRequestResult(*event);
-}
+		switch(e->eventType){
+			case rina::IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION:
+				{
+				DOWNCAST_DECL(e, rina::IPCProcessDIFRegistrationEvent, event);
+				resource_allocator_->get_n_minus_one_flow_manager()->processRegistrationNotification(*event);
+				}
+				break;
+			case rina::ASSIGN_TO_DIF_REQUEST_EVENT:
+				{
+				DOWNCAST_DECL(e, rina::AssignToDIFRequestEvent, event);
+				processAssignToDIFRequestEvent(*event);
+				}
+				break;
+			case rina::ASSIGN_TO_DIF_RESPONSE_EVENT:
+				{
+				DOWNCAST_DECL(e, rina::AssignToDIFResponseEvent, event);
+				processAssignToDIFResponseEvent(*event);
+				}
+				break;
+			case rina::ALLOCATE_FLOW_REQUEST_RESULT_EVENT:
+				{
+				DOWNCAST_DECL(e, rina::AllocateFlowRequestResultEvent, event);
+				resource_allocator_->get_n_minus_one_flow_manager()->allocateRequestResult(*event);
+				}
+				break;
+			case rina::FLOW_ALLOCATION_REQUESTED_EVENT:
+				{
+				DOWNCAST_DECL(e, rina::FlowRequestEvent, event);
+				if (event->localRequest)
+					//A local application is requesting this IPC Process to allocate a flow
+					flow_allocator_->submitAllocateRequest(*event);
+				else
+					//A remote IPC process is requesting a flow to this IPC Process
+					resource_allocator_->get_n_minus_one_flow_manager()->flowAllocationRequested(*event);
+				}
+				break;
+			case rina::DEALLOCATE_FLOW_RESPONSE_EVENT:
+				{
+				DOWNCAST_DECL(e, rina::DeallocateFlowResponseEvent, event);
+				resource_allocator_->get_n_minus_one_flow_manager()->deallocateFlowResponse(*event);
+				}
+				break;
+			case rina::FLOW_DEALLOCATED_EVENT:
+				{
+				DOWNCAST_DECL(e, rina::FlowDeallocatedEvent, event);
+				resource_allocator_->get_n_minus_one_flow_manager()->flowDeallocatedRemotely(*event);
+				}
+				break;
+			case rina::FLOW_DEALLOCATION_REQUESTED_EVENT:
+				{
+				DOWNCAST_DECL(e, rina::FlowDeallocateRequestEvent, event);
+				flow_allocator_->submitDeallocate(*event);
+				}
+				break;
+			case rina::ALLOCATE_FLOW_RESPONSE_EVENT:
+				{
+				DOWNCAST_DECL(e, rina::AllocateFlowResponseEvent, event);
+				flow_allocator_->submitAllocateResponse(*event);
+				}
+				break;
+			case rina::APPLICATION_REGISTRATION_REQUEST_EVENT:
+				{
+				DOWNCAST_DECL(e, rina::ApplicationRegistrationRequestEvent, event);
+				namespace_manager_->processApplicationRegistrationRequestEvent(*event);
+				}
+				break;
+			case rina::APPLICATION_UNREGISTRATION_REQUEST_EVENT:
+				{
+				DOWNCAST_DECL(e, rina::ApplicationUnregistrationRequestEvent, event);
+				namespace_manager_->processApplicationUnregistrationRequestEvent(*event);
+				}
+				break;
+			case rina::ENROLL_TO_DIF_REQUEST_EVENT:
+				{
+				DOWNCAST_DECL(e, rina::EnrollToDAFRequestEvent, event);
+				enrollment_task_->processEnrollmentRequestEvent(event);
+				}
+				break;
+			case rina::IPC_PROCESS_QUERY_RIB:
+				{
+				DOWNCAST_DECL(e, rina::QueryRIBRequestEvent, event);
+				rib_daemon_->processQueryRIBRequestEvent(*event);
+				requestPDUFTEDump();
+				}
+				break;
+			case rina::IPC_PROCESS_CREATE_CONNECTION_RESPONSE:
+				{
+				DOWNCAST_DECL(e, rina::CreateConnectionResponseEvent, event);
+				flow_allocator_->processCreateConnectionResponseEvent(*event);
+				}
+				break;
+			case rina::IPC_PROCESS_CREATE_CONNECTION_RESULT:
+				{
+				DOWNCAST_DECL(e, rina::CreateConnectionResultEvent, event);
+				flow_allocator_->processCreateConnectionResultEvent(*event);
+				}
+				break;
+			case rina::IPC_PROCESS_UPDATE_CONNECTION_RESPONSE:
+				{
+				DOWNCAST_DECL(e, rina::UpdateConnectionResponseEvent, event);
+				flow_allocator_->processUpdateConnectionResponseEvent(*event);
+				}
+				break;
+			case rina::IPC_PROCESS_DESTROY_CONNECTION_RESULT:
+				{
+				DOWNCAST_DECL(e, rina::DestroyConnectionResultEvent, event);
+				if (event->result != 0)
+					LOG_IPCP_WARN("Problems destroying connection with associated to port-id %d",
+						event->portId);
+				}
+				break;
+			case rina::IPC_PROCESS_DUMP_FT_RESPONSE:
+				{
+				DOWNCAST_DECL(e, rina::DumpFTResponseEvent, event);
+				logPDUFTE(*event);
+				}
+				break;
+			case rina::IPC_PROCESS_SET_POLICY_SET_PARAM:
+				{
+				DOWNCAST_DECL(e, rina::SetPolicySetParamRequestEvent, event);
+				processSetPolicySetParamRequestEvent(*event);
+				}
+				break;
+			case rina::IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE:
+				{
+				DOWNCAST_DECL(e, rina::SetPolicySetParamResponseEvent, event);
+				processSetPolicySetParamResponseEvent(*event);
+				}
+				break;
+			case rina::IPC_PROCESS_SELECT_POLICY_SET:
+				{
+				DOWNCAST_DECL(e, rina::SelectPolicySetRequestEvent, event);
+				processSelectPolicySetRequestEvent(*event);
+				}
+				break;
+			case rina::IPC_PROCESS_SELECT_POLICY_SET_RESPONSE:
+				{
+				DOWNCAST_DECL(e, rina::SelectPolicySetResponseEvent, event);
+				processSelectPolicySetResponseEvent(*event);
+				}
+				break;
+			case rina::IPC_PROCESS_PLUGIN_LOAD:
+				{
+				DOWNCAST_DECL(e, rina::PluginLoadRequestEvent, event);
+				processPluginLoadRequestEvent(*event);
+				}
+				break;
+			case rina::IPC_PROCESS_ENABLE_ENCRYPTION_RESPONSE:
+				{
+				DOWNCAST_DECL(e, rina::EnableEncryptionResponseEvent, event);
+				security_manager_->process_enable_encryption_response(*event);
+				}
+				break;
+			case rina::IPC_PROCESS_FWD_CDAP_MSG:
+				{
+				DOWNCAST_DECL(e, rina::FwdCDAPMsgEvent, event);
+				processFwdCDAPMsgEvent(*event);
+				}
+				break;
 
-static void
-flow_allocation_requested_event_handler(rina::IPCEvent *e,
-		EventLoopData *opaque)
-{
-	DOWNCAST_DECL(e, rina::FlowRequestEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
-
-	if (event->localRequest) {
-		//A local application is requesting this IPC Process to allocate a flow
-		ipcp->flow_allocator_->submitAllocateRequest(*event);
-	} else {
-		//A remote IPC process is requesting a flow to this IPC Process
-		ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
-				flowAllocationRequested(*event);
+			//Unsupported events
+			case rina::APPLICATION_UNREGISTERED_EVENT:
+			case rina::REGISTER_APPLICATION_RESPONSE_EVENT:
+			case rina::UNREGISTER_APPLICATION_RESPONSE_EVENT:
+			case rina::APPLICATION_REGISTRATION_CANCELED_EVENT:
+			case rina::UPDATE_DIF_CONFIG_REQUEST_EVENT:
+			case rina::UPDATE_DIF_CONFIG_RESPONSE_EVENT:
+			case rina::ENROLL_TO_DIF_RESPONSE_EVENT:
+			case rina::GET_DIF_PROPERTIES:
+			case rina::GET_DIF_PROPERTIES_RESPONSE_EVENT:
+			case rina::OS_PROCESS_FINALIZED:
+			case rina::IPCM_REGISTER_APP_RESPONSE_EVENT:
+			case rina::IPCM_UNREGISTER_APP_RESPONSE_EVENT:
+			case rina::IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT:
+			case rina::IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
+			case rina::QUERY_RIB_RESPONSE_EVENT:
+			case rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT:
+			case rina::TIMER_EXPIRED_EVENT:
+			case rina::IPC_PROCESS_PLUGIN_LOAD_RESPONSE:
+			default:
+				break;
+		}
 	}
-}
-
-static void
-deallocate_flow_response_event_handler(rina::IPCEvent *e,
-		EventLoopData *opaque)
-{
-	DOWNCAST_DECL(e, rina::DeallocateFlowResponseEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
-
-	ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
-					deallocateFlowResponse(*event);
-}
-
-static void
-flow_deallocated_event_handler(rina::IPCEvent *e,
-		EventLoopData *opaque)
-{
-	DOWNCAST_DECL(e, rina::FlowDeallocatedEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
-
-	ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
-					flowDeallocatedRemotely(*event);
-}
-
-static void
-enroll_to_dif_request_event_handler(rina::IPCEvent *e,
-		EventLoopData *opaque)
-{
-	DOWNCAST_DECL(e, rina::EnrollToDAFRequestEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
-
-	ipcp->enrollment_task_->processEnrollmentRequestEvent(event);
-}
-
-static void
-ipc_process_query_rib_handler(rina::IPCEvent *e,
-		EventLoopData *opaque)
-{
-	DOWNCAST_DECL(e, rina::QueryRIBRequestEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
-
-	ipcp->rib_daemon_->processQueryRIBRequestEvent(*event);
-	ipcp->requestPDUFTEDump();
-}
-
-static void
-application_registration_request_event_handler(rina::IPCEvent *e,
-		EventLoopData *opaque)
-{
-	DOWNCAST_DECL(e, rina::ApplicationRegistrationRequestEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
-
-	ipcp->namespace_manager_->processApplicationRegistrationRequestEvent(*event);
-}
-
-static void
-application_unregistration_request_event_handler(rina::IPCEvent *e,
-		EventLoopData *opaque)
-{
-	DOWNCAST_DECL(e, rina::ApplicationUnregistrationRequestEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
-
-	ipcp->namespace_manager_->processApplicationUnregistrationRequestEvent(*event);
-}
-
-static void
-ipc_process_create_connection_response_handler(rina::IPCEvent *e,
-		EventLoopData *opaque)
-{
-	DOWNCAST_DECL(e, rina::CreateConnectionResponseEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
-
-	ipcp->flow_allocator_->processCreateConnectionResponseEvent(*event);
-}
-
-static void
-allocate_flow_response_event_handler(rina::IPCEvent *e,
-		EventLoopData *opaque)
-{
-	DOWNCAST_DECL(e, rina::AllocateFlowResponseEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
-
-	ipcp->flow_allocator_->submitAllocateResponse(*event);
-}
-
-static void
-ipc_process_create_connection_result_handler(rina::IPCEvent *e,
-		EventLoopData *opaque)
-{
-	DOWNCAST_DECL(e, rina::CreateConnectionResultEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
-
-	ipcp->flow_allocator_->processCreateConnectionResultEvent(*event);
-}
-
-static void
-ipc_process_update_connection_response_handler(rina::IPCEvent *e,
-		EventLoopData *opaque)
-{
-	DOWNCAST_DECL(e, rina::UpdateConnectionResponseEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
-
-	ipcp->flow_allocator_->processUpdateConnectionResponseEvent(*event);
-}
-
-static void
-flow_deallocation_requested_event_handler(rina::IPCEvent *e,
-		EventLoopData *opaque)
-{
-	DOWNCAST_DECL(e, rina::FlowDeallocateRequestEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
-
-	ipcp->flow_allocator_->submitDeallocate(*event);
-}
-
-static void
-ipc_process_destroy_connection_result_handler(rina::IPCEvent *e,
-		EventLoopData *opaque)
-{
-	DOWNCAST_DECL(e, rina::DestroyConnectionResultEvent, event);
-
-	if (event->result != 0){
-		LOG_IPCP_WARN("Problems destroying connection with associated to port-id %d",
-				event->portId);
-	}
-}
-
-static void
-ipc_process_dump_ft_response_handler(rina::IPCEvent *e,
-		EventLoopData *opaque)
-{
-	DOWNCAST_DECL(e, rina::DumpFTResponseEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
-
-	ipcp->logPDUFTE(*event);
-}
-
-static void
-ipc_process_set_policy_set_param_handler(rina::IPCEvent *e,
-		                         EventLoopData *opaque)
-
-{
-	DOWNCAST_DECL(e, rina::SetPolicySetParamRequestEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
-
-	ipcp->processSetPolicySetParamRequestEvent(*event);
-}
-
-static void
-ipc_process_set_policy_set_param_response_handler(rina::IPCEvent *e,
-		                                  EventLoopData *opaque)
-
-{
-	DOWNCAST_DECL(e, rina::SetPolicySetParamResponseEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
-
-	ipcp->processSetPolicySetParamResponseEvent(*event);
-}
-
-static void
-ipc_process_select_policy_set_handler(rina::IPCEvent *e,
-		                      EventLoopData *opaque)
-
-{
-	DOWNCAST_DECL(e, rina::SelectPolicySetRequestEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
-
-	ipcp->processSelectPolicySetRequestEvent(*event);
-}
-
-static void
-ipc_process_select_policy_set_response_handler(rina::IPCEvent *e,
-		                               EventLoopData *opaque)
-
-{
-	DOWNCAST_DECL(e, rina::SelectPolicySetResponseEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
-
-	ipcp->processSelectPolicySetResponseEvent(*event);
-}
-
-static void
-ipc_process_plugin_load_handler(rina::IPCEvent *e,
-		                EventLoopData *opaque)
-
-{
-	DOWNCAST_DECL(e, rina::PluginLoadRequestEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
-
-	ipcp->processPluginLoadRequestEvent(*event);
-}
-
-static void
-ipc_process_enable_encryption_response_handler(rina::IPCEvent *e,
-					       EventLoopData *opaque)
-{
-	DOWNCAST_DECL(e, rina::EnableEncryptionResponseEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
-
-	ipcp->security_manager_->process_enable_encryption_response(*event);
-}
-
-static void
-ipc_process_fwd_cdap_msg_handler(rina::IPCEvent *e,
-		                 EventLoopData *opaque)
-
-{
-	DOWNCAST_DECL(e, rina::FwdCDAPMsgEvent, event);
-	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
-
-	ipcp->processFwdCDAPMsgEvent(*event);
-}
-
-static void
-ipc_process_default_handler(rina::IPCEvent *e,
-		EventLoopData *opaque)
-{
-	LOG_IPCP_WARN("Received unsupported event: %d", e->eventType);
-}
-
-void register_handlers_all(EventLoop& loop) {
-	loop.register_event(rina::IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION,
-			ipc_process_dif_registration_notification_handler);
-	loop.register_event(rina::ASSIGN_TO_DIF_REQUEST_EVENT,
-			assign_to_dif_request_event_handler);
-	loop.register_event(rina::ASSIGN_TO_DIF_RESPONSE_EVENT,
-			assign_to_dif_response_event_handler);
-	loop.register_event(rina::ALLOCATE_FLOW_REQUEST_RESULT_EVENT,
-			allocate_flow_request_result_event_handler);
-	loop.register_event(rina::FLOW_ALLOCATION_REQUESTED_EVENT,
-			flow_allocation_requested_event_handler);
-	loop.register_event(rina::DEALLOCATE_FLOW_RESPONSE_EVENT,
-			deallocate_flow_response_event_handler);
-	loop.register_event(rina::FLOW_DEALLOCATED_EVENT,
-			flow_deallocated_event_handler);
-	loop.register_event(rina::FLOW_DEALLOCATION_REQUESTED_EVENT,
-			flow_deallocation_requested_event_handler);
-	loop.register_event(rina::ALLOCATE_FLOW_RESPONSE_EVENT,
-			allocate_flow_response_event_handler);
-	loop.register_event(rina::APPLICATION_REGISTRATION_REQUEST_EVENT,
-			application_registration_request_event_handler);
-	loop.register_event(rina::APPLICATION_UNREGISTRATION_REQUEST_EVENT,
-			application_unregistration_request_event_handler);
-	loop.register_event(rina::ENROLL_TO_DIF_REQUEST_EVENT,
-			enroll_to_dif_request_event_handler);
-	loop.register_event(rina::IPC_PROCESS_QUERY_RIB,
-			ipc_process_query_rib_handler);
-	loop.register_event(rina::IPC_PROCESS_CREATE_CONNECTION_RESPONSE,
-			ipc_process_create_connection_response_handler);
-	loop.register_event(rina::IPC_PROCESS_CREATE_CONNECTION_RESULT,
-			ipc_process_create_connection_result_handler);
-	loop.register_event(rina::IPC_PROCESS_UPDATE_CONNECTION_RESPONSE,
-			ipc_process_update_connection_response_handler);
-	loop.register_event(rina::IPC_PROCESS_DESTROY_CONNECTION_RESULT,
-			ipc_process_destroy_connection_result_handler);
-	loop.register_event(rina::IPC_PROCESS_DUMP_FT_RESPONSE,
-			ipc_process_dump_ft_response_handler);
-        loop.register_event(rina::IPC_PROCESS_SET_POLICY_SET_PARAM,
-                        ipc_process_set_policy_set_param_handler);
-        loop.register_event(rina::IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE,
-                        ipc_process_set_policy_set_param_response_handler);
-        loop.register_event(rina::IPC_PROCESS_SELECT_POLICY_SET,
-                        ipc_process_select_policy_set_handler);
-        loop.register_event(rina::IPC_PROCESS_SELECT_POLICY_SET_RESPONSE,
-                        ipc_process_select_policy_set_response_handler);
-        loop.register_event(rina::IPC_PROCESS_PLUGIN_LOAD,
-                        ipc_process_plugin_load_handler);
-        loop.register_event(rina::IPC_PROCESS_ENABLE_ENCRYPTION_RESPONSE,
-        		ipc_process_enable_encryption_response_handler);
-        loop.register_event(rina::IPC_PROCESS_FWD_CDAP_MSG,
-                        ipc_process_fwd_cdap_msg_handler);
-
-	//Unsupported events
-	loop.register_event(rina::APPLICATION_UNREGISTERED_EVENT,
-			ipc_process_default_handler);
-	loop.register_event(rina::REGISTER_APPLICATION_RESPONSE_EVENT,
-			ipc_process_default_handler);
-	loop.register_event(rina::UNREGISTER_APPLICATION_RESPONSE_EVENT,
-			ipc_process_default_handler);
-	loop.register_event(rina::APPLICATION_REGISTRATION_CANCELED_EVENT,
-			ipc_process_default_handler);
-	loop.register_event(rina::UPDATE_DIF_CONFIG_REQUEST_EVENT,
-			ipc_process_default_handler);
-	loop.register_event(rina::UPDATE_DIF_CONFIG_RESPONSE_EVENT,
-			ipc_process_default_handler);
-	loop.register_event(rina::ENROLL_TO_DIF_RESPONSE_EVENT,
-			ipc_process_default_handler);
-	loop.register_event(rina::GET_DIF_PROPERTIES,
-			ipc_process_default_handler);
-	loop.register_event(rina::GET_DIF_PROPERTIES_RESPONSE_EVENT,
-			ipc_process_default_handler);
-	loop.register_event(rina::OS_PROCESS_FINALIZED,
-			ipc_process_default_handler);
-	loop.register_event(rina::IPCM_REGISTER_APP_RESPONSE_EVENT,
-			ipc_process_default_handler);
-	loop.register_event(rina::IPCM_UNREGISTER_APP_RESPONSE_EVENT,
-			ipc_process_default_handler);
-	loop.register_event(rina::IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT,
-			ipc_process_default_handler);
-	loop.register_event(rina::IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
-			ipc_process_default_handler);
-	loop.register_event(rina::QUERY_RIB_RESPONSE_EVENT,
-			ipc_process_default_handler);
-	loop.register_event(rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT,
-			ipc_process_default_handler);
-	loop.register_event(rina::TIMER_EXPIRED_EVENT,
-			ipc_process_default_handler);
-        loop.register_event(rina::IPC_PROCESS_PLUGIN_LOAD_RESPONSE,
-                        ipc_process_default_handler);
-}
 
 }
+
+} //namespace rinad

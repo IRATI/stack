@@ -22,8 +22,6 @@
 #ifndef IPCP_RIB_DAEMON_HH
 #define IPCP_RIB_DAEMON_HH
 
-#ifdef __cplusplus
-
 #include <librina/concurrency.h>
 
 #include "common/concurrency.h"
@@ -78,8 +76,6 @@ private:
         void nMinusOneFlowAllocated(rina::NMinusOneFlowAllocatedEvent * event);
 };
 
-}
+} //namespace rinad
 
-#endif
-
-#endif
+#endif //IPCP_RIB_DAEMON_HH
