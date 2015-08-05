@@ -102,6 +102,8 @@ int              dtcp_rttvar_set(struct dtcp * dtcp, uint_t rttvar);
 
 /* end SDK */
 
+int              pdus_sent_in_t_unit_set(struct dtcp * dtcp, uint_t s);
+
 /*FIXME: wrapper to be called by dtp in the post_worker */
 int              dtcp_sending_ack_policy(struct dtcp * dtcp);
 #endif

@@ -36,6 +36,7 @@
 #include "dt.h"
 #include "dtp.h"
 #include "rmt.h"
+#include "dtp-ps.h"
 
 #define RTIMER_ENABLED 1
 
@@ -253,16 +254,24 @@ EXPORT_SYMBOL(dt_pdu_send);
 static bool can_deliver(struct dtp * dtp, struct dtcp * dtcp)
 {
         bool to_ret = false, w_ret = false, r_ret = false;
+        bool is_wb, is_rb;
+        struct dtp_ps * ps;
 
-        if (dtcp_window_based_fctrl(dtcp_config_get(dtcp)))
+        is_wb = dtcp_window_based_fctrl(dtcp_config_get(dtcp));
+        if (is_wb)
                 w_ret = (dtp_sv_max_seq_nr_sent(dtp) < dtcp_snd_rt_win(dtcp));
 
-        if (dtcp_rate_based_fctrl(dtcp_config_get(dtcp)))
+        is_rb = dtcp_rate_based_fctrl(dtcp_config_get(dtcp));
+        if (is_rb)
                 LOG_DBG("Here rate-based conditions must be introduced");
 
         to_ret = (w_ret || r_ret);
-        if (w_ret != r_ret)
-                LOG_DBG("Here it goes the reconcile flow control policy");
+        if ((is_wb && is_rb) && (w_ret != r_ret)) {
+                rcu_read_lock();
+                ps = dtp_ps_get(dtp);
+                to_ret = ps->reconcile_flow_conflict(ps);
+                rcu_read_unlock();
+        }
 
         return to_ret;
 }

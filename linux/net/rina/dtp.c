@@ -205,11 +205,21 @@ int dtp_sv_max_seq_nr_set(struct dtp * instance, seq_num_t num)
 }
 EXPORT_SYMBOL(dtp_sv_max_seq_nr_set);
 
+static bool sv_rate_fulfiled(struct dtp_sv * sv)
+{
+        unsigned long flags;
+        bool          tmp;
+
+        spin_lock_irqsave(&sv->lock, flags);
+        tmp = sv->rate_fulfiled;
+        spin_unlock_irqrestore(&sv->lock, flags);
+
+        return tmp;
+}
+
 bool dtp_sv_rate_fulfiled(struct dtp * instance)
 {
-        unsigned long   flags;
         struct dtp_sv * sv;
-        bool            tmp;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
@@ -218,11 +228,7 @@ bool dtp_sv_rate_fulfiled(struct dtp * instance)
         sv = instance->sv;
         ASSERT(sv);
 
-        spin_lock_irqsave(&sv->lock, flags);
-        tmp = sv->rate_fulfiled;
-        spin_unlock_irqrestore(&sv->lock, flags);
-
-        return tmp;
+        return sv_rate_fulfiled(sv);
 }
 EXPORT_SYMBOL(dtp_sv_rate_fulfiled);
 
@@ -817,12 +823,26 @@ static void tf_a(void * o)
 
 static void tf_rate_window(void * o)
 {
-        struct dtp * dtp;
+        struct dtp *  dtp;
+        struct dtcp * dtcp;
+        struct cwq *  q;
 
         dtp = (struct dtp *) o;
 
-        if (!dtp)
+        if (!dtp) {
+                LOG_ERR("No DTP found. Cannot run rate window timer");
                 return;
+        }
+
+        dtp_sv_rate_fulfiled_set(dtp, false);
+        dtcp = dt_dtcp(dtp->parent);
+        pdus_sent_in_t_unit_set(dtcp, 0);
+        q = dt_cwq(dtp->parent);
+        cwq_deliver(q,
+                    dtp->parent,
+                    dtp->rmt,
+                    efcp_dst_addr(dt_efcp(dtp->parent)),
+                    efcp_qos_id(dt_efcp(dtp->parent)));
 
         return;
 }
@@ -1091,24 +1111,27 @@ static bool window_is_closed(struct dtp_sv * sv,
                              struct dtp_ps * ps)
 {
         bool retval = false, w_ret = false, r_ret = false;
+        bool rb, wb;
 
         ASSERT(sv);
         ASSERT(dt);
         ASSERT(dtcp);
 
-        if (dt_sv_window_closed(dt))
+        if (dt_sv_window_closed(dt) || sv_rate_fulfiled(sv))
                 return true;
 
-        if (sv->window_based && seq_num > dtcp_snd_rt_win(dtcp)) {
+        wb = sv->window_based;
+        if (wb && seq_num > dtcp_snd_rt_win(dtcp)) {
                 dt_sv_window_closed_set(dt, true);
                 w_ret = true;
         }
 
-        if (sv->rate_based)
+        rb = sv->rate_based;
+        if (rb)
                 LOG_MISSING;
 
         retval = (w_ret || r_ret);
-        if (w_ret != r_ret) {
+        if ((rb && wb) && (w_ret != r_ret)) {
                 retval = ps->reconcile_flow_conflict(ps);
                 LOG_DBG("Reconcile flow control");
         }

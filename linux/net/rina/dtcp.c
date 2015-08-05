@@ -404,6 +404,23 @@ seq_num_t rcvr_rt_wind_edge(struct dtcp * dtcp)
 }
 EXPORT_SYMBOL(rcvr_rt_wind_edge);
 
+int pdus_sent_in_t_unit_set(struct dtcp * dtcp, uint_t s)
+{
+        unsigned long flags;
+
+        if (!dtcp || !dtcp->sv) {
+                LOG_ERR("Bogus DTCP instance");
+                return -1;
+        }
+
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        dtcp->sv->pdus_sent_in_time_unit = s;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+        return 0;
+}
+EXPORT_SYMBOL(pdus_sent_in_t_unit_set);
+
 static seq_num_t next_snd_ctl_seq(struct dtcp * dtcp)
 {
         seq_num_t     tmp;
