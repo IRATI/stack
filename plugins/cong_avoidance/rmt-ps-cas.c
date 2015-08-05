@@ -132,9 +132,10 @@ static void cas_max_q_policy_rx(struct rmt_ps *      ps,
                                 struct rmt_n1_port * port)
 {  }
 
-static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
-                                        struct pdu *         pdu,
-                                        struct rmt_n1_port * port)
+static void cas_rmt_q_monitor_policy_tx_common(struct rmt_ps *      ps,
+                                               struct pdu *         pdu,
+                                               struct rmt_n1_port * port,
+					       bool                 enqueue)
 {
         struct cas_rmt_queue *   q;
         struct cas_rmt_ps_data * data;
@@ -166,7 +167,7 @@ static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
         /* new cycle or end cycle */
         if (cur_qlen == 0) {
                 /* new cycle */
-                if (atomic_read(&port->n_sdus) == cur_qlen) {
+                if (enqueue) {
                         LOG_DBG("new cycle");
                         *prev_cycle = *cur_cycle;
 			if (q->first_run) {
@@ -259,10 +260,15 @@ static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
 
 }
 
-static void cas_rmt_q_monitor_policy_rx(struct rmt_ps *      ps,
-                                        struct sdu *         sdu,
-                                        struct rmt_n1_port * port)
-{  }
+static void cas_rmt_q_monitor_policy_tx_enq(struct rmt_ps *      ps,
+                                            struct pdu *         pdu,
+                                            struct rmt_n1_port * port)
+{ return cas_rmt_q_monitor_policy_tx_common(ps, pdu, port, true); }
+
+static void cas_rmt_q_monitor_policy_tx_deq(struct rmt_ps *      ps,
+                                            struct pdu *         pdu,
+                                            struct rmt_n1_port * port)
+{ return cas_rmt_q_monitor_policy_tx_common(ps, pdu, port, false); }
 
 static struct pdu *
 cas_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
@@ -446,9 +452,9 @@ rmt_ps_cas_create(struct rina_component * component)
 
         ps->max_q_policy_tx = cas_max_q_policy_tx;
         ps->max_q_policy_rx = cas_max_q_policy_rx;
-        ps->rmt_q_monitor_policy_tx_enq = cas_rmt_q_monitor_policy_tx_common;
-        ps->rmt_q_monitor_policy_tx_deq = cas_rmt_q_monitor_policy_tx_common;
-        ps->rmt_q_monitor_policy_rx = cas_rmt_q_monitor_policy_rx;
+        ps->rmt_q_monitor_policy_tx_enq = cas_rmt_q_monitor_policy_tx_enq;
+        ps->rmt_q_monitor_policy_tx_deq = cas_rmt_q_monitor_policy_tx_deq;
+        ps->rmt_q_monitor_policy_rx = NULL;
         ps->rmt_next_scheduled_policy_tx     = cas_rmt_next_scheduled_policy_tx;
         ps->rmt_enqueue_scheduling_policy_tx = cas_rmt_enqueue_scheduling_policy_tx;
         ps->rmt_requeue_scheduling_policy_tx = cas_rmt_requeue_scheduling_policy_tx;
