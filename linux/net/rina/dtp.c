@@ -1104,7 +1104,7 @@ int dtp_destroy(struct dtp * instance)
         return 0;
 }
 
-static bool window_is_closed(struct dtp_sv * sv,
+static bool window_is_closed(struct dtp *    dtp,
                              struct dt *     dt,
                              struct dtcp *   dtcp,
                              seq_num_t       seq_num,
@@ -1112,10 +1112,14 @@ static bool window_is_closed(struct dtp_sv * sv,
 {
         bool retval = false, w_ret = false, r_ret = false;
         bool rb, wb;
+        struct dtp_sv * sv;
 
-        ASSERT(sv);
+        ASSERT(dtp);
         ASSERT(dt);
         ASSERT(dtcp);
+
+        sv = dtp->sv;
+        ASSERT(sv);
 
         if (dt_sv_window_closed(dt) || sv_rate_fulfiled(sv))
                 return true;
@@ -1134,6 +1138,13 @@ static bool window_is_closed(struct dtp_sv * sv,
         if ((rb && wb) && (w_ret != r_ret)) {
                 retval = ps->reconcile_flow_conflict(ps);
                 LOG_DBG("Reconcile flow control");
+                if (retval) {
+                        uint_t srate;
+
+                        srate = dtcp_sending_rate(dtcp_config_get(dtcp));
+                        /* FIXME: it should be srate - initial time window */
+                        rtimer_start(dtp->timers.rate_window, srate);
+                }
         }
 
         return retval;
@@ -1274,7 +1285,7 @@ int dtp_write(struct dtp * instance,
                                   struct dtp_ps, base);
                 if (sv->window_based || sv->rate_based) {
                         /* NOTE: Might close window */
-                        if (window_is_closed(sv,
+                        if (window_is_closed(instance,
                                              dt,
                                              dtcp,
                                              csn,
