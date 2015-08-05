@@ -231,12 +231,13 @@ static void cas_rmt_q_monitor_policy_tx(struct rmt_ps *      ps,
 	t_sub_ns = timespec_to_ns(&t_sub);
         cur_cycle->avg_len = (cur_cycle->sum_area + prev_cycle->sum_area);
 
-	/* This raise a warning: WARNING: "__divdi3" undefined ?
-	cur_cycle->avg_len /= timespec_to_ns(&t_sub); */
-	if (abs64(t_sub_ns) & 0xFFFFFFFF00000000)
-		cur_cycle->avg_len = 0;
-	else
-		cur_cycle->avg_len /= (s32) timespec_to_ns(&t_sub);
+	/* This raise a warning: WARNING: "__divdi3" undefined. For some reason
+	 * it can not divide by a s64 variable but can do it by an insigned
+	 * long, both of size 64bits */
+	if (t_sub_ns < 0)
+		LOG_ERR("Time delta is < 0!");
+
+	cur_cycle->avg_len /=  (ulong) abs64(t_sub_ns);
 
         LOG_DBG("The length for N-1 port %u just calculated is: %lu",
                 port->port_id, cur_cycle->avg_len);
