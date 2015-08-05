@@ -22,8 +22,6 @@
 #ifndef IPCP_NAMESPACE_MANAGER_HH
 #define IPCP_NAMESPACE_MANAGER_HH
 
-#ifdef __cplusplus
-
 #include <librina/ipc-process.h>
 #include <librina/internal-events.h>
 
@@ -137,8 +135,6 @@ private:
 			int result);
 };
 
-}
+} //namespace rinad
 
-#endif
-
-#endif
+#endif //IPCP_NAMESPACE_MANAGER_HH

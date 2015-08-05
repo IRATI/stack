@@ -22,8 +22,6 @@
 #ifndef IPCP_FLOW_ALLOCATOR_HH
 #define IPCP_FLOW_ALLOCATOR_HH
 
-#ifdef __cplusplus
-
 #include <librina/timer.h>
 
 #include "common/concurrency.h"
@@ -352,8 +350,6 @@ public:
 	void* decode(const rina::ObjectValueInterface * object_value) const;
 };
 
-}
+} //namespace rinad
 
-#endif
-
-#endif
+#endif //IPCP_FLOW_ALLOCATOR_HH
