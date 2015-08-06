@@ -1,0 +1,11 @@
+{
+        "PluginName": "mp-plugin",
+        "PluginVersion": "1",
+        "PolicySets" : [
+                {
+                        "Name": "mp-ps",
+                        "Component": "pff",
+                        "Version" : "1"
+                }
+        ]
+}
