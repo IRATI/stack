@@ -127,9 +127,9 @@ common_closed_window(struct dtp_ps * ps, struct pdu * pdu)
                 return 0;
         }
 
-        ASSERT(ps->flow_control_overrun);
+        ASSERT(ps->snd_flow_control_overrun);
 
-        if (ps->flow_control_overrun(ps, pdu)) {
+        if (ps->snd_flow_control_overrun(ps, pdu)) {
                 LOG_ERR("Failed Flow Control Overrun");
                 return -1;
         }
@@ -285,6 +285,7 @@ common_sender_inactivity_timer(struct dtp_ps * ps)
                         return -1;
                 }
                 dt_sv_window_closed_set(dt, false);
+                dtp_sv_rate_fulfiled_set(dtp, false);
         }
         rcu_read_unlock();
 
@@ -304,6 +305,12 @@ common_sender_inactivity_timer(struct dtp_ps * ps)
         return 0;
 }
 EXPORT_SYMBOL(common_sender_inactivity_timer);
+
+bool common_reconcile_flow_conflict(struct dtp_ps * ps)
+{
+        return true;
+}
+EXPORT_SYMBOL(common_reconcile_flow_conflict);
 
 int dtp_ps_common_set_policy_set_param(struct ps_base * bps,
                                        const char    * name,

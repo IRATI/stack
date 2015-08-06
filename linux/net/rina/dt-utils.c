@@ -36,6 +36,7 @@
 #include "dt.h"
 #include "dtp.h"
 #include "rmt.h"
+#include "dtp-ps.h"
 
 #define RTIMER_ENABLED 1
 
@@ -253,11 +254,16 @@ EXPORT_SYMBOL(dt_pdu_send);
 static bool can_deliver(struct dtp * dtp, struct dtcp * dtcp)
 {
         bool to_ret = false, w_ret = false, r_ret = false;
+        bool is_wb, is_rb;
+        struct dtp_ps * ps;
 
-        if (dtcp_window_based_fctrl(dtcp_config_get(dtcp)))
+        is_wb = dtcp_window_based_fctrl(dtcp_config_get(dtcp));
+        is_rb = dtcp_rate_based_fctrl(dtcp_config_get(dtcp));
+
+        if (is_wb)
                 w_ret = (dtp_sv_max_seq_nr_sent(dtp) < dtcp_snd_rt_win(dtcp));
 
-        if (dtcp_rate_based_fctrl(dtcp_config_get(dtcp)))
+	if (is_rb)
                 r_ret = !dtcp_rate_exceeded(dtcp, 1);
 
         LOG_DBG("Can cwq still deliver something, win: %d, rate: %d",
@@ -265,8 +271,12 @@ static bool can_deliver(struct dtp * dtp, struct dtcp * dtcp)
 
         to_ret = (w_ret || r_ret);
 
-        if (w_ret != r_ret)
-                LOG_DBG("Here it goes the reconcile flow control policy");
+        if ((is_wb && is_rb) && (w_ret != r_ret)) {
+                rcu_read_lock();
+                ps = dtp_ps_get(dtp);
+                to_ret = ps->reconcile_flow_conflict(ps);
+                rcu_read_unlock();
+        }
 
         return to_ret;
 }
@@ -341,8 +351,16 @@ void cwq_deliver(struct cwq * queue,
 
         LOG_DBG("CWQ has delivered until %u", dtp_sv_max_seq_nr_sent(dtp));
 
+        // Cannot deliver means credit has already been consumed again.
         if (!can_deliver(dtp, dtcp)) {
-                dt_sv_window_closed_set(dt, true);
+        	if(dtp_window_based(dtp))
+			dt_sv_window_closed_set(dt, true);
+
+                if(dtp_rate_based(dtp)) {
+                	dtp_sv_rate_fulfiled_set(dtp, true);
+                	dtp_start_rate_timer(dtp, dtcp);
+                }
+
                 enable_write(queue, dt);
                 return;
         }

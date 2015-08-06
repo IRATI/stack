@@ -46,6 +46,9 @@ common_receiver_inactivity_timer(struct dtp_ps * ps);
 int
 common_sender_inactivity_timer(struct dtp_ps * ps);
 
+bool
+common_reconcile_flow_conflict(struct dtp_ps * ps);
+
 int dtp_ps_common_set_policy_set_param(struct ps_base * bps,
                                        const char    * name,
                                        const char    * value);

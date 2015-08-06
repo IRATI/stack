@@ -737,6 +737,23 @@ seq_num_t rcvr_rt_wind_edge(struct dtcp * dtcp)
 }
 EXPORT_SYMBOL(rcvr_rt_wind_edge);
 
+int pdus_sent_in_t_unit_set(struct dtcp * dtcp, uint_t s)
+{
+        unsigned long flags;
+
+        if (!dtcp || !dtcp->sv) {
+                LOG_ERR("Bogus DTCP instance");
+                return -1;
+        }
+
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        dtcp->sv->pdus_sent_in_time_unit = s;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+        return 0;
+}
+EXPORT_SYMBOL(pdus_sent_in_t_unit_set);
+
 static seq_num_t next_snd_ctl_seq(struct dtcp * dtcp)
 {
         seq_num_t     tmp;
@@ -1102,11 +1119,20 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
         // Window based.
         snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
 
-        // Rate based, if any.
-        dtcp_sndr_rate_set(dtcp, rt);
-        dtcp_time_frame_set(dtcp, tf);
-        LOG_DBG("Rate based fields sets on flow ctl, rate: %u, time: %u",
-		rt, tf);
+        // HACK: Consider 0 time frame an error and do not update fields.
+        // Why we get 0? Probably a serdes.c problem, during deser...
+	if(tf != 0) {
+		// Rate based, if any.
+		dtcp_sndr_rate_set(dtcp, rt);
+		dtcp_time_frame_set(dtcp, tf);
+		LOG_DBG("Rate based fields sets on flow ctl, rate: %u, time: %u",
+			rt, tf);
+	} else {
+		LOG_WARN("!!! HACK executed, a time frame of 0 has been recv, "
+			"rate: %u, time: %u",
+			rt, tf);
+		return 0;
+	}
 
         push_pdus_rmt(dtcp);
 
