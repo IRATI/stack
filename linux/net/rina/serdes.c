@@ -283,9 +283,13 @@ static int serialize_cc_pci(const struct serdes * instance,
         memcpy(data + offset, &rt, RATE_LEN);
         offset += RATE_LEN;
 
+        LOG_DBG("<----- %s Serializing sndr rate %u", __func__, rt);
+
         rt = pci_control_time_frame(pci);
         memcpy(data + offset, &rt, TIME_LEN);
         offset += TIME_LEN;
+
+        LOG_DBG("-----> %s Serializing time frame %u", __func__, rt);
 
         return 0;
 }
@@ -326,9 +330,13 @@ static int serialize_fc_pci(const struct serdes * instance,
         memcpy(data + offset, &rt, RATE_LEN);
         offset += RATE_LEN;
 
+        LOG_DBG("-----> %s Serializing sndr rate %u", __func__, rt);
+
         rt = pci_control_time_frame(pci);
         memcpy(data + offset, &rt, TIME_LEN);
         offset += TIME_LEN;
+
+        LOG_DBG("-----> %s Serializing time frame %u", __func__, rt);
 
         return 0;
 }
@@ -454,10 +462,14 @@ static int deserialize_fc_pci(const struct serdes * instance,
         if (pci_control_sndr_rate_set(new_pci, rt))
                 return -1;
 
+        LOG_DBG("<----- %s De-serializing sndr rate %u", __func__, rt);
+
 	memcpy(&rt, ptr + *offset, TIME_LEN);
         *offset += TIME_LEN;
         if (pci_control_time_frame_set(new_pci, rt))
                 return -1;
+
+        LOG_DBG("<----- %s De-serializing time frame %u", __func__, rt);
 
         return 0;
 }
@@ -545,10 +557,14 @@ static int deserialize_cc_pci(const struct serdes * instance,
         if (pci_control_sndr_rate_set(new_pci, rt))
                 return -1;
 
+        LOG_DBG("<----- %s De-serializing sndr rate %u", __func__, rt);
+
 	memcpy(&rt, ptr + *offset, TIME_LEN);
         *offset += TIME_LEN;
         if (pci_control_time_frame_set(new_pci, rt))
                 return -1;
+
+        LOG_DBG("<----- %s De-serializing time frame %u", __func__, rt);
 
         return 0;
 }

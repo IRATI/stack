@@ -1237,8 +1237,8 @@ int dtp_write(struct dtp * instance,
 					dtcp_sent_itu_inc(dtcp,	sz);
 				}
 
-				LOG_DBG("rbfc: %pK credit, send: %d/%d, "
-					"recv: %d/%d",
+				LOG_DBG("rbfc: %pK credit, send: %u/%u, "
+					"recv: %u/%u",
 					dtcp,
 					dtcp_sent_itu(dtcp),
 					dtcp_sndr_rate(dtcp),

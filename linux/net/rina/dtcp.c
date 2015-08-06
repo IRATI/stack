@@ -912,7 +912,7 @@ static int populate_ctrl_pci(struct pci *  pci,
                 	rt = dtcp_sndr_rate(dtcp);
                 	tf = dtcp_time_frame(dtcp);
 
-                	LOG_DBG("Populating control pci with rate settings,"
+                	LOG_DBG("Populating control pci with rate settings, "
                 		"rate: %u, time: %u",
                 		rt, tf);
 
@@ -1513,7 +1513,7 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
                 if (ps->flowctrl.rate_based) {
                         instance->sv->sndr_rate =
                                 ps->flowctrl.rate.sending_rate;
-			// Do like this until we have a separate rate config.
+			// Do like this until we have a separate rate in config.
 			instance->sv->rcvr_rate =
                                 instance->sv->sndr_rate;
                         instance->sv->time_unit =
