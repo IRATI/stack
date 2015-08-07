@@ -33,8 +33,7 @@
 #include "logs.h"
 
 #define W_INC_A_P_DEFAULT     1
-#define W_DEC_B_NUM_P_DEFAULT 7
-#define W_DEC_B_DEN_P_DEFAULT 3
+#define DEBUG_ENABLED         0
 
 struct cas_dtcp_ps_data {
         seq_num_t    wc;
@@ -53,6 +52,14 @@ struct cas_dtcp_ps_data {
          * competing flows is not guaranteed.
          */
         unsigned int real_window;
+
+#if DEBUG_ENABLED
+	/* Used to debug the evolution of the window size withouth penalizing
+	 * the performance of the stack. It should be normally set to 0
+	 */
+	seq_num_t   ws_log[5000];
+	int         ws_index;
+#endif
 };
 
 static int
@@ -148,8 +155,9 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
                         LOG_DBG("Window size increased, new values are Wp: %u, Wc: %u",
                         	data->wp, data->wc);
                 }
-                LOG_INFO("Value (%d) = %u, %u (ECN = %u)",
-                		pci_cep_source(pci), data->wc, data->real_window, data->ecn_count);
+#if DEBUG_ENABLED
+                data->ws_log[data->ws_index++] = data->wc;
+#endif
                 data->rcv_count = 0;
                 data->ecn_count = 0;
                 dtcp_rcvr_credit_set(dtcp, data->wc);
@@ -221,6 +229,10 @@ dtcp_ps_cas_create(struct rina_component * component)
         ps->base.set_policy_set_param   = dtcp_ps_cas_set_policy_set_param;
         ps->dm                          = dtcp;
 
+#if DEBUG_ENABLED
+	data->ws_index = 0;
+#endif
+
         data->w_inc_a_p                 = W_INC_A_P_DEFAULT;
         /* Cannot use this because it is initialized later on in
          * dtcp_select_policy_set */
@@ -275,10 +287,17 @@ static void dtcp_ps_cas_destroy(struct ps_base * bps)
 {
         struct dtcp_ps *ps = container_of(bps, struct dtcp_ps, base);
         struct cas_dtcp_ps_data * data;
-
         if (bps) {
                 if (ps->priv) {
-                        data = ps->priv;
+			data = ps->priv;
+#if DEBUG_ENABLED
+			if (data->ws_index > 0) {
+				int i;
+				for (i=0; i< data->ws_index; i++) {
+					LOG_INFO("(%p) = %u", data, data->ws_log[i] );
+				}
+			}
+#endif
                         rkfree(data);
                 }
                 rkfree(ps);
