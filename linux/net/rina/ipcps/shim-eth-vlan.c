@@ -773,7 +773,6 @@ static void eth_vlan_enable_write_all(struct net_device * dev)
 
 /*
  * Private data for a rina_shim_eth scheduler containing:
- * (only supports a single flow for the moment)
  * 	- queue max_size
  * 	- queue enable_thres (size at which the qdisc will enable N+1 ports)
  */
