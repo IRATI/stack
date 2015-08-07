@@ -310,6 +310,32 @@ static int cas_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
         return 0;
 }
 
+static int cas_rmt_requeue_scheduling_policy_tx(struct rmt_ps *      ps,
+                                        	struct rmt_n1_port * port,
+                                        	struct pdu *         pdu)
+{
+        struct cas_rmt_queue *   q;
+        struct cas_rmt_ps_data * data = ps->priv;
+
+        if (!ps || !port || !pdu) {
+                LOG_ERR("Wrong input parameters for "
+                        "rmt_requeu_scheduling_policy_tx");
+                return -1;
+        }
+
+        /* NOTE: The policy is called with the n1_port lock taken */
+        q = cas_rmt_queue_find(data, port->port_id);
+        if (!q) {
+                LOG_ERR("Could not find queue for n1_port %u",
+                        port->port_id);
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        rfifo_head_push_ni(q->queue, pdu);
+        return 0;
+}
+
 static int cas_rmt_scheduling_create_policy_tx(struct rmt_ps *      ps,
                                                struct rmt_n1_port * port)
 {
@@ -415,6 +441,7 @@ rmt_ps_cas_create(struct rina_component * component)
         ps->rmt_q_monitor_policy_rx = cas_rmt_q_monitor_policy_rx;
         ps->rmt_next_scheduled_policy_tx     = cas_rmt_next_scheduled_policy_tx;
         ps->rmt_enqueue_scheduling_policy_tx = cas_rmt_enqueue_scheduling_policy_tx;
+        ps->rmt_requeue_scheduling_policy_tx = cas_rmt_requeue_scheduling_policy_tx;
         ps->rmt_scheduling_create_policy_tx  = cas_rmt_scheduling_create_policy_tx;
         ps->rmt_scheduling_destroy_policy_tx = cas_rmt_scheduling_destroy_policy_tx;
 
