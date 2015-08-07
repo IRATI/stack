@@ -285,6 +285,7 @@ common_sender_inactivity_timer(struct dtp_ps * ps)
                         return -1;
                 }
                 dt_sv_window_closed_set(dt, false);
+                LOG_DBG("Re-opening the rate mechanism");
                 dtp_sv_rate_fulfiled_set(dtp, false);
         }
         rcu_read_unlock();
@@ -308,6 +309,7 @@ EXPORT_SYMBOL(common_sender_inactivity_timer);
 
 bool common_reconcile_flow_conflict(struct dtp_ps * ps)
 {
+	LOG_DBG("Reconciling window and rate flow controls...");
         return true;
 }
 EXPORT_SYMBOL(common_reconcile_flow_conflict);

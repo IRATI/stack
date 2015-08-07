@@ -913,6 +913,7 @@ static int populate_ctrl_pci(struct pci *  pci,
          * PDU_TYPE_NACK_AND_FC ?
          */
         LWE = dt_sv_rcv_lft_win(dtcp->parent);
+
         if (dtcp_flow_ctrl(dtcp_cfg)) {
                 if (dtcp_window_based_fctrl(dtcp_cfg)) {
                         snd_lft = snd_lft_win(dtcp);
@@ -1116,23 +1117,27 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
         rt = pci_control_sndr_rate(pci);
         tf = pci_control_time_frame(pci);
 
-        // Window based.
-        snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
+        // Is this a window based control flow?
+        if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
+        	snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
+        }
 
-        // HACK: Consider 0 time frame an error and do not update fields.
-        // Why we get 0? Probably a serdes.c problem, during deser...
-	if(tf != 0) {
-		// Rate based, if any.
-		dtcp_sndr_rate_set(dtcp, rt);
-		dtcp_time_frame_set(dtcp, tf);
-		LOG_DBG("Rate based fields sets on flow ctl, rate: %u, time: %u",
-			rt, tf);
-	} else {
-		LOG_WARN("!!! HACK executed, a time frame of 0 has been recv, "
-			"rate: %u, time: %u",
-			rt, tf);
-		return 0;
-	}
+        // Is this a rate based control flow?
+        if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
+		// HACK.
+		if(tf != 0) {
+			dtcp_sndr_rate_set(dtcp, rt);
+			dtcp_time_frame_set(dtcp, tf);
+
+			LOG_DBG("Rate based fields sets on flow ctl, "
+				"rate: %u, time: %u",
+				rt, tf);
+		} else {
+			LOG_WARN("HACK executed, received rate: %u, time: %u",
+				rt, tf);
+			return 0;
+		}
+        }
 
         push_pdus_rmt(dtcp);
 
@@ -1146,9 +1151,22 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
                 LOG_ERR("No Closed Window Queue");
                 return -1;
         }
-        if (cwq_is_empty(q) &&
-            (dtp_sv_max_seq_nr_sent(dtp) < snd_rt_wind_edge(dtcp))) {
-                dt_sv_window_closed_set(dtcp->parent, false);
+
+        // Queue empty?
+        if (cwq_is_empty(q)) {
+
+        	// Window based flow control?
+        	if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
+			if(dtp_sv_max_seq_nr_sent(dtp) <
+				snd_rt_wind_edge(dtcp)) {
+				dt_sv_window_closed_set(dtcp->parent, false);
+			}
+        	}
+        	// Rate based flow control?
+        	//if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
+        	//	LOG_DBG("Re-opening the rate mechanism");
+        	//	dtp_sv_rate_fulfiled_set(dtp, false);
+        	//}
         }
 
         LOG_DBG("DTCP received FC (CPU: %d)", smp_processor_id());
@@ -1175,8 +1193,6 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         LOG_DBG("Updating Window Edges for DTCP: %pK", dtcp);
 
         seq = pci_control_ack_seq_num(pci);
-        rt = pci_control_sndr_rate(pci);
-        tf = pci_control_time_frame(pci);
 
         rcu_read_lock();
         ps = container_of(rcu_dereference(dtcp->base.ps),
@@ -1187,17 +1203,25 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
         rcu_read_unlock();
 
-        // Window based. Why not separated?
-        // Not a problem in the end; the fields are always there.
-        snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
-        LOG_DBG("Right Window Edge: %u", snd_rt_wind_edge(dtcp));
+        // Window based flow control?
+	if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
+		// Window based. Why not separated?
+		// Not a problem in the end; the fields are always there.
+		snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
+		LOG_DBG("Right Window Edge: %u", snd_rt_wind_edge(dtcp));
+	}
 
         // Rate based, if any.
-        dtcp_sndr_rate_set(dtcp, rt);
-        dtcp_time_frame_set(dtcp, tf);
-        LOG_DBG("Rate based fields sets on flow ctl and ack,"
-		" rate: %u, time: %u",
-		rt, tf);
+	if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
+	        rt = pci_control_sndr_rate(pci);
+	        tf = pci_control_time_frame(pci);
+
+		dtcp_sndr_rate_set(dtcp, rt);
+		dtcp_time_frame_set(dtcp, tf);
+		LOG_DBG("Rate based fields sets on flow ctl and ack,"
+			" rate: %u, time: %u",
+			rt, tf);
+	}
 
         LOG_DBG("Calling CWQ_deliver for DTCP: %pK", dtcp);
         push_pdus_rmt(dtcp);
@@ -1858,6 +1882,7 @@ int dtcp_sv_update(struct dtcp * dtcp, const struct pci * pci)
 
         if (flow_ctrl) {
                 if (win_based) {
+                	LOG_DBG("Window based fctrl invoked");
                         if (ps->rcvr_flow_control(ps, pci)) {
                                 LOG_ERR("Failed Rcvr Flow Control policy");
                                 retval = -1;
@@ -1992,7 +2017,7 @@ bool dtcp_rate_exceeded(struct dtcp * dtcp, int send) {
 	// More than the given time-frame passed.
 	if (sub.tv_sec >= dtcp_time_frame(dtcp))
 	{
-		LOG_DBG("rbfc: %lu:%lu elapsed",
+		LOG_DBG("rbfc: Renewing rate after %lu:%lu",
 			sub.tv_sec,
 			sub.tv_nsec);
 

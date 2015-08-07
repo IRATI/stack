@@ -66,9 +66,6 @@ int          dtp_sv_rate_fulfiled_set(struct dtp * instance, bool fulfiled);
 void         dtp_start_rate_timer(struct dtp * dtp, struct dtcp * dtcp);
 struct rtimer * dtp_sender_inactivity_timer(struct dtp * instance);
 
-bool         dtp_window_based(struct dtp * dtp);
-bool         dtp_rate_based(struct dtp * dtp);
-
 /* FIXME: temporal addition so that DTCP's sending ack can call this function
  * that was originally static */
 const struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp);

@@ -614,8 +614,9 @@ int dt_sv_window_closed_set(struct dt * dt, bool closed)
         if (!dt || !dt->sv)
                 return -1;
 
+        LOG_DBG("Window set to %u (0=open, 1=closed)", closed);
+
         spin_lock_irqsave(&dt->lock, flags);
-        //dump_stack();
         dt->sv->window_closed = closed;
         spin_unlock_irqrestore(&dt->lock, flags);
 

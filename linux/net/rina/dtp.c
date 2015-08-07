@@ -244,6 +244,8 @@ int dtp_sv_rate_fulfiled_set(struct dtp * instance, bool fulfiled)
         sv = instance->sv;
         ASSERT(sv);
 
+        LOG_DBG("rbfc Rate set to %u (0=some more, 1=consumed)", fulfiled);
+
         spin_lock_irqsave(&sv->lock, flags);
         sv->rate_fulfiled = fulfiled;
         spin_unlock_irqrestore(&sv->lock, flags);
@@ -841,8 +843,13 @@ static unsigned int msec_to_next_rate(uint time_frame, struct timespec * last) {
 	ret = (diff.tv_sec * 1000) + 		// Sec to msec
 		(diff.tv_nsec / 1000000); 	// Nsec to msec.
 
+	// Avoid to go wait more than a time frame.
 	if(ret > time_frame * 1000)
 		ret = time_frame * 1000;
+
+	// Avoid 0 wait time.
+	if(ret == 0)
+		ret++;
 
 	return ret;
 }
@@ -854,7 +861,6 @@ void dtp_start_rate_timer(struct dtp * dtp, struct dtcp * dtcp) {
 	uint tf = 0;
 	struct timespec t = {0,0};
 
-	//if (dtcp_rate_exceeded(dtcp, 1)) {
 	if(!rtimer_is_pending(dtp->timers.rate_window)) {
 		dtcp_last_time(dtcp, &t);
 		tf = msec_to_next_rate(rtf, &t);
@@ -869,11 +875,6 @@ void dtp_start_rate_timer(struct dtp * dtp, struct dtcp * dtcp) {
 	} else {
 		LOG_DBG("rbfc Rate based timer is still pending...");
 	}
-
-	//} else {
-	//	LOG_DBG("rbfc Timer has opened the flow again...");
-	//	dtp_sv_rate_fulfiled_set(dtp, false);
-	//}
 }
 EXPORT_SYMBOL(dtp_start_rate_timer);
 
@@ -890,25 +891,22 @@ static void tf_rate_window(void * o)
                 return;
         }
 
-        LOG_DBG("rbfc Timer job start");
-
-        //dtp_sv_rate_fulfiled_set(dtp, false);
         dtcp = dt_dtcp(dtp->parent);
 
-        // Rate exceeded again?
-        if(dtcp_rate_exceeded(dtcp, 1)) {
-        	dtp_start_rate_timer(dtp, dtcp);
-        } else {
-        	dtp_sv_rate_fulfiled_set(dtp, false);
+        LOG_DBG("rbfc Timer job start, curr. snd rate: %u / %u",
+		dtcp_sent_itu(dtcp),
+		dtcp_sndr_rate(dtcp));
 
-		// Now that is open flush what has been enqueued.
-		q = dt_cwq(dtp->parent);
-		cwq_deliver(q,
-		    dtp->parent,
-		    dtp->rmt,
-		    efcp_dst_addr(dt_efcp(dtp->parent)),
-		    efcp_qos_id(dt_efcp(dtp->parent)));
-        }
+	LOG_DBG("rbfc Re-opening the rate mechanism");
+	dtp_sv_rate_fulfiled_set(dtp, false);
+
+	// Now that is open flush what has been enqueued.
+	q = dt_cwq(dtp->parent);
+	cwq_deliver(q,
+	    dtp->parent,
+	    dtp->rmt,
+	    efcp_dst_addr(dt_efcp(dtp->parent)),
+	    efcp_qos_id(dt_efcp(dtp->parent)));
 
         return;
 }
@@ -1178,6 +1176,7 @@ static bool window_is_closed(struct dtp *    dtp,
 {
         bool retval = false, w_ret = false, r_ret = false;
         bool rb, wb;
+        uint_t sz, sc;
         struct dtp_sv * sv;
 
         ASSERT(dtp);
@@ -1187,8 +1186,8 @@ static bool window_is_closed(struct dtp *    dtp,
         sv = dtp->sv;
         ASSERT(sv);
 
-        if (dt_sv_window_closed(dt) || dtp_sv_rate_fulfiled(dtp))
-	      return true;
+        //if (dt_sv_window_closed(dt) || dtp_sv_rate_fulfiled(dtp))
+	//      return true;
 
         wb = sv->window_based;
         if (wb && seq_num > dtcp_snd_rt_win(dtcp)) {
@@ -1200,25 +1199,22 @@ static bool window_is_closed(struct dtp *    dtp,
         if (rb) {
         	if(dtcp_rate_exceeded(dtcp, 1)) {
         		dtp_sv_rate_fulfiled_set(dtp, true);
+        		dtp_start_rate_timer(dtp, dtcp);
 			r_ret = true;
 		} else {
 			// Only if the window is closed!
-			if (dtp_sv_rate_fulfiled(dtp))
+			if (dtp_sv_rate_fulfiled(dtp)) {
+				LOG_DBG("rbfc Re-opening the rate mechanism");
 				dtp_sv_rate_fulfiled_set(dtp, false);
+			}
 		}
         }
 
         retval = (w_ret || r_ret);
 
-        LOG_DBG("Window closed? win: %d, rate: %d", w_ret, r_ret);
-
         // Both the mechanism are signaling a conflict?
         if(w_ret && r_ret)
         	retval = ps->reconcile_flow_conflict(ps);
-
-        // Rate based has closed the window?
-        if(r_ret)
-        	dtp_start_rate_timer(dtp, dtcp);
 
         return retval;
 }
@@ -1235,9 +1231,9 @@ int dtp_write(struct dtp * instance,
         struct pdu *            cpdu;
         struct dtp_ps *         ps;
         seq_num_t               sn, csn;
-        uint_t			sz; // Size of sdu.
-	uint_t			sc; // Sender credit.
         struct efcp *           efcp;
+        uint_t sz;
+        uint_t sc;
 
         if (!sdu_is_ok(sdu))
                 return -1;
@@ -1374,9 +1370,7 @@ int dtp_write(struct dtp * instance,
                                 rcu_read_unlock();
                                 return 0;
                         }
-                        // Window not closed; consume credit.
-			if (sv->rate_based)
-			{
+                        if(sv->rate_based) {
 				// We track the size of the whole pdu, not of
 				// only its data.
 				sz = pdu_length(pdu);
@@ -1395,14 +1389,6 @@ int dtp_write(struct dtp * instance,
 				{
 					dtcp_sent_itu_inc(dtcp,	sz);
 				}
-
-				LOG_DBG("rbfc: %pK credit, send: %u/%u, "
-					"recv: %u/%u",
-					dtcp,
-					dtcp_sent_itu(dtcp),
-					dtcp_sndr_rate(dtcp),
-					dtcp_recv_itu(dtcp),
-					dtcp_rcvr_rate(dtcp));
 			}
                 }
                 if (sv->rexmsn_ctrl) {
@@ -1486,25 +1472,15 @@ static bool is_fc_overrun(
         if (!dtcp)
                 return false;
 
-        if (dtcp_window_based_fctrl(dtcp_config_get(dtcp)))
+        if (dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
                 w_ret = (seq_num > dtcp_rcv_rt_win(dtcp));
+        }
 
-        if (dtcp_rate_based_fctrl(dtcp_config_get(dtcp)))
+        if (dtcp_rate_based_fctrl(dtcp_config_get(dtcp))){
+        	r_ret = dtcp_rate_exceeded(dtcp, 0);
         	// Just increment; don't block all during the receiving phase.
 		dtcp_recv_itu_inc(dtcp, pdul);
-
-        // excee
-	//if(dtcp_rate_exceeded(dtcp, 0)) {
-		//dt_sv_window_closed_set(dt, true);
-		//r_ret = true;
-	//} else {
-		// Only if the window is closed!
-		//if (dt_sv_window_closed(dt))
-		//	dt_sv_window_closed_set(dt, false);
-		// Increment the rate of recv.
-		//if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp)))
-
-	//}
+        }
 
         to_ret = w_ret || r_ret;
 
@@ -1772,30 +1748,6 @@ struct rtimer * dtp_sender_inactivity_timer(struct dtp * instance)
         return instance->timers.sender_inactivity;
 }
 EXPORT_SYMBOL(dtp_sender_inactivity_timer);
-
-bool dtp_window_based(struct dtp * dtp) {
-	unsigned long flags;
-
-	if(!dtp)
-		return false;
-
-	spin_lock_irqsave(&dtp->sv->lock, flags);
-	return dtp->sv->window_based;
-	spin_unlock_irqrestore(&dtp->sv->lock, flags);
-}
-EXPORT_SYMBOL(dtp_window_based);
-
-bool dtp_rate_based(struct dtp * dtp) {
-	unsigned long flags;
-
-	if(!dtp)
-		return false;
-
-	spin_lock_irqsave(&dtp->sv->lock, flags);
-	return dtp->sv->rate_based;
-	spin_unlock_irqrestore(&dtp->sv->lock, flags);
-}
-EXPORT_SYMBOL(dtp_rate_based);
 
 int dtp_ps_publish(struct ps_factory * factory)
 {

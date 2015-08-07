@@ -33,6 +33,7 @@
 #include "dtcp-ps.h"
 #include "dtp.h"
 #include "dtcp.h"
+#include "dtcp-conf-utils.h"
 #include "dt-utils.h"
 #include "debug.h"
 
@@ -74,6 +75,7 @@ EXPORT_SYMBOL(common_lost_control_pdu);
 
 int common_rcvr_ack(struct dtcp_ps * instance, const struct pci * pci)
 {
+	int ret = 0;
         struct dtcp * dtcp = instance->dm;
         seq_num_t     seq;
 
@@ -81,9 +83,14 @@ int common_rcvr_ack(struct dtcp_ps * instance, const struct pci * pci)
                 LOG_ERR("No PCI passed, cannot run policy");
                 return -1;
         }
-        seq = pci_sequence_number_get(pci);
 
-        return dtcp_ack_flow_control_pdu_send(dtcp, seq);
+        // Only in case of window based mechanism.
+        if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
+        	seq = pci_sequence_number_get(pci);
+        	ret = dtcp_ack_flow_control_pdu_send(dtcp, seq);
+        }
+
+        return ret;
 }
 EXPORT_SYMBOL(common_rcvr_ack);
 
@@ -213,8 +220,7 @@ common_rate_reduction(struct dtcp_ps * ps, const struct pci * pci)
 
         // HACK: Consider 0 time frame an error and do not update fields.
         if(tf == 0) {
-        	LOG_WARN("!!! HACK executed, a time frame of 0 has been recv, "
-			"rate: %u, time: %u",
+        	LOG_WARN("HACK received rate: %u, time: %u",
 			rt, tf);
         	return 0;
         }

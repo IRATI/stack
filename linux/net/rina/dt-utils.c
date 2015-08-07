@@ -264,7 +264,7 @@ static bool can_deliver(struct dtp * dtp, struct dtcp * dtcp)
                 w_ret = (dtp_sv_max_seq_nr_sent(dtp) < dtcp_snd_rt_win(dtcp));
 
 	if (is_rb)
-                r_ret = !dtcp_rate_exceeded(dtcp, 1);
+                r_ret = !dtcp_rate_exceeded(dtcp, 0);
 
         LOG_DBG("Can cwq still deliver something, win: %d, rate: %d",
         	w_ret, r_ret);
@@ -272,6 +272,7 @@ static bool can_deliver(struct dtp * dtp, struct dtcp * dtcp)
         to_ret = (w_ret || r_ret);
 
         if ((is_wb && is_rb) && (w_ret != r_ret)) {
+        	LOG_DBG("Delivering conflict...");
                 rcu_read_lock();
                 ps = dtp_ps_get(dtp);
                 to_ret = ps->reconcile_flow_conflict(ps);
@@ -353,18 +354,29 @@ void cwq_deliver(struct cwq * queue,
 
         // Cannot deliver means credit has already been consumed again.
         if (!can_deliver(dtp, dtcp)) {
-        	if(dtp_window_based(dtp))
+        	if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
 			dt_sv_window_closed_set(dt, true);
+        	}
 
-                if(dtp_rate_based(dtp)) {
-                	dtp_sv_rate_fulfiled_set(dtp, true);
-                	dtp_start_rate_timer(dtp, dtcp);
-                }
+                //if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
+                //	LOG_DBG("rbfc Cannot deliver anymore, closing...");
+                //	dtp_sv_rate_fulfiled_set(dtp, true);
+                //	dtp_start_rate_timer(dtp, dtcp);
+                //}
 
                 enable_write(queue, dt);
                 return;
         }
-        dt_sv_window_closed_set(dt, false);
+
+        if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
+        	dt_sv_window_closed_set(dt, false);
+        }
+
+        //if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
+        //	LOG_DBG("rbfc Re-opening the rate mechanism");
+        //	dtp_sv_rate_fulfiled_set(dtp, false);
+        //}
+
         enable_write(queue, dt);
 
         return;
