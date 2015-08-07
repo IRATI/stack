@@ -894,7 +894,9 @@ int eth_vlan_update_qdisc(struct net_device *    dev,
 static void eth_vlan_restore_qdisc(struct net_device * dev,
 				   struct Qdisc * old_qdisc)
 {
-	struct Qdisc * sch;
+	struct Qdisc * 		    sch;
+	struct ipcp_instance_data * pos;
+	int			    num_ipcps;
 
 	if (!old_qdisc)
 		return;
@@ -902,6 +904,16 @@ static void eth_vlan_restore_qdisc(struct net_device * dev,
 	sch = dev->qdisc;
 	if (!sch)
 		return;
+
+	/* only do it if there are no more shims on that net_device */
+	num_ipcps = 0;
+	list_for_each_entry(pos, &(eth_vlan_data.instances), list) {
+		if (pos->phy_dev == dev) {
+			num_ipcps ++;
+			if (num_ipcps >= 2)
+				return;
+		}
+	}
 
 	if (dev->flags & IFF_UP)
 		dev_deactivate(dev);
