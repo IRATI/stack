@@ -87,6 +87,8 @@ ssize_t pci_length(const struct pci * pci)
 { return pci ? sizeof(*pci) : -1; }
 EXPORT_SYMBOL(pci_length);
 
+
+
 struct pci * pci_create_gfp(gfp_t flags)
 {
         struct pci * tmp;

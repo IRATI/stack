@@ -295,6 +295,10 @@ void cwq_deliver(struct cwq * queue,
         bool                    rtx_ctrl;
         bool                    flow_ctrl;
 
+        bool			rate_ctrl = false;
+        uint_t 			sz = 0;
+	uint_t 			sc = 0;
+
         if (!queue)
                 return;
 
@@ -316,6 +320,10 @@ void cwq_deliver(struct cwq * queue,
         dtp = dt_dtp(dt);
         if (!dtp)
                 return;
+
+        if(flow_ctrl) {
+        	rate_ctrl = dtcp_rate_based_fctrl(dtcp_config_get(dtcp));
+        }
 
         spin_lock(&queue->lock);
         while (!rqueue_is_empty(queue->q) && can_deliver(dtp, dtcp)) {
@@ -341,6 +349,27 @@ void cwq_deliver(struct cwq * queue,
                         }
                         rtxq_push_ni(rtxq, tmp);
                 }
+                // Maintain the rate while pumping out messages from the cwq.
+                if(rate_ctrl) {
+                	// Port is enabled.
+                	// if !enabled then enable should be better here.
+                	//efcp_enable_write(dt_efcp(dt));
+
+                	sz = pdu_length(pdu);
+			sc = dtcp_sent_itu(dtcp);
+
+			// Size will consume the credit.
+			if (sz + sc >= dtcp_sndr_rate(dtcp)) {
+				dtcp_sent_itu_set(
+					dtcp,
+					dtcp_sndr_rate(dtcp));
+				// Out of this cycle.
+				break;
+			} else {
+				// Simply increment the sent pdu rate.
+				dtcp_sent_itu_inc(dtcp, sz);
+			}
+                }
                 pci = pdu_pci_get_ro(pdu);
                 if (dtp_sv_max_seq_nr_set(dtp,
                                           pci_sequence_number_get(pci)))
@@ -358,11 +387,14 @@ void cwq_deliver(struct cwq * queue,
 			dt_sv_window_closed_set(dt, true);
         	}
 
-                //if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
-                //	LOG_DBG("rbfc Cannot deliver anymore, closing...");
-                //	dtp_sv_rate_fulfiled_set(dtp, true);
-                //	dtp_start_rate_timer(dtp, dtcp);
-                //}
+                if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
+                	LOG_DBG("rbfc Cannot deliver anymore, closing...");
+                	dtp_sv_rate_fulfiled_set(dtp, true);
+                	dtp_start_rate_timer(dtp, dtcp);
+
+                	// Cannot use anymore again the port.
+                	//efcp_disable_write(dt_efcp(dt));
+                }
 
                 enable_write(queue, dt);
                 return;
@@ -372,13 +404,12 @@ void cwq_deliver(struct cwq * queue,
         	dt_sv_window_closed_set(dt, false);
         }
 
-        //if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
-        //	LOG_DBG("rbfc Re-opening the rate mechanism");
-        //	dtp_sv_rate_fulfiled_set(dtp, false);
-        //}
+        if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
+        	LOG_DBG("rbfc Re-opening the rate mechanism");
+        	dtp_sv_rate_fulfiled_set(dtp, false);
+        }
 
         enable_write(queue, dt);
-
         return;
 }
 

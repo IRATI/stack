@@ -88,6 +88,7 @@ int
 common_closed_window(struct dtp_ps * ps, struct pdu * pdu)
 {
         struct dtp * dtp = ps->dm;
+        struct dtcp * dtcp;
         struct cwq * cwq;
         struct dt *  dt;
         uint_t       max_len;
@@ -106,6 +107,9 @@ common_closed_window(struct dtp_ps * ps, struct pdu * pdu)
         dt = dtp_dt(dtp);
         ASSERT(dt);
 
+        dtcp = dt_dtcp(dt);
+        ASSERT(dtcp);
+
         cwq = dt_cwq(dt);
         if (!cwq) {
                 LOG_ERR("Failed to get cwq");
@@ -117,15 +121,32 @@ common_closed_window(struct dtp_ps * ps, struct pdu * pdu)
 
         ASSERT(dtp);
 
-        max_len = dtcp_max_closed_winq_length(dtcp_config_get(dt_dtcp(dt)));
-        if (cwq_size(cwq) < max_len - 1) {
-                if (cwq_push(cwq, pdu)) {
-                        LOG_ERR("Failed to push into cwq");
-                        return -1;
-                }
+        // Stop here if window-based.
+	//if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
 
-                return 0;
+        max_len = dtcp_max_closed_winq_length(dtcp_config_get(dtcp));
+
+        if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
+        	LOG_DBG("rbfc CWQ: %zd, lim: %u", cwq_size(cwq), max_len);
         }
+
+        // Nice here... <_<
+        // What if max = 0? Where are the checks?!?
+        // It was: if (cwq_size(cwq) < max_len - 1)
+	if (max_len != 0 && (cwq_size(cwq) < max_len - 1)) {
+		if (cwq_push(cwq, pdu)) {
+			LOG_ERR("Failed to push into cwq");
+			return -1;
+		}
+
+		return 0;
+	}
+	//}
+
+	// Go on flow control overrun on rate based...
+	//if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
+		// Do nothing...
+	//}
 
         ASSERT(ps->snd_flow_control_overrun);
 
@@ -173,6 +194,8 @@ common_flow_control_overrun(struct dtp_ps * ps,
                 LOG_ERR("Failed to push into cwq");
                 return -1;
         }
+
+        LOG_DBG("rbfc Disabling the write on port...");
 
         if (efcp_disable_write(dt_efcp(dt)))
                 return -1;

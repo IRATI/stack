@@ -127,7 +127,7 @@ static int base_pci_size(const struct dt_cons * dt_cons)
 static int fc_pci_size(const struct dt_cons * dt_cons)
 {
         return 3 * dt_cons->seq_num_length +
-        		RATE_LEN + TIME_LEN;
+		RATE_LEN + TIME_LEN;
                 //dt_cons->rate + dt_cons->frame;
 }
 
@@ -1121,3 +1121,79 @@ struct pdu * pdu_deserialize_ni(const struct serdes * instance,
                                 struct crypto_blkcipher * blkcipher)
 { return pdu_deserialize_gfp(GFP_ATOMIC, instance, pdu, dup_conf, blkcipher); }
 EXPORT_SYMBOL(pdu_deserialize_ni);
+
+// Hard-coded to avoid inclusion hell!
+// Is to twisted!!! to get these parameters from dtp or where dt_cons is not
+// specified. And no... just including ipcp-instances.h does not work!
+// Lost of "warning its scope is only this definition or declaration, which is
+// probably not what you want" are generated, so i leave this to someone which
+// understand better IRATI. <_<
+//
+int serdes_pci_size(pdu_type_t type) {
+	//struct dt_conf * dtc = s->dt_cons;
+	int seqn = 4;
+	int addr = 2;
+	int len  = 2;
+	int cep  = 2;
+	int qos  = 2;
+	//int port = 2;
+
+	int base = //base_pci_size(dtc);
+		VERSION_SIZE	+
+		2 * addr	+
+		qos		+
+		2 * cep		+
+		PDU_TYPE_SIZE	+
+		FLAGS_SIZE	+
+		len;
+
+	switch(type) {
+	case PDU_TYPE_DT:
+		base += seqn;
+		break;
+	case PDU_TYPE_CACK:
+		base +=
+			2 * CTRL_SEQ_NR +
+			4 * seqn +
+			RATE_LEN;
+		break;
+	case PDU_TYPE_ACK:
+		base += CTRL_SEQ_NR + seqn;
+		break;
+	case PDU_TYPE_NACK:
+		break;
+	case PDU_TYPE_FC:
+		base += CTRL_SEQ_NR + //fc_pci_size(dtc);
+			(3 * seqn) +
+			RATE_LEN +
+			TIME_LEN;
+
+		break;
+	case PDU_TYPE_ACK_AND_FC:
+		base +=
+			CTRL_SEQ_NR +
+			//fc_pci_size(dtc) +
+			(3 * seqn) +
+			RATE_LEN +
+			TIME_LEN +
+			seqn;
+			//dtc->seq_num_length;
+		break;
+	case PDU_TYPE_NACK_AND_FC:
+		break;
+	case PDU_TYPE_SACK:
+		break;
+	case PDU_TYPE_SNACK:
+		break;
+	case PDU_TYPE_SACK_AND_FC:
+		break;
+	case PDU_TYPE_SNACK_AND_FC:
+		break;
+	case PDU_TYPE_MGMT:
+		base += seqn; //dtc->seq_num_length;
+		break;
+	}
+
+	return base;
+}
+EXPORT_SYMBOL(serdes_pci_size);

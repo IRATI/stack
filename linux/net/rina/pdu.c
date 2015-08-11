@@ -30,6 +30,9 @@
 #include "pdu.h"
 #include "pci.h"
 #include "qos.h"
+#include "serdes.h"
+
+struct dt_cons;
 
 /* FIXME: These externs have to disappear from here */
 struct buffer * buffer_create_with_gfp(gfp_t  flags,
@@ -290,6 +293,7 @@ int pdu_destroy(struct pdu * p)
 EXPORT_SYMBOL(pdu_destroy);
 
 uint_t pdu_length(struct pdu * pdu) {
-	return buffer_length(pdu->buffer) + pci_length(pdu->pci);
+	return buffer_length(pdu->buffer) +
+		serdes_pci_size(pci_type(pdu->pci));
 }
 EXPORT_SYMBOL(pdu_length);

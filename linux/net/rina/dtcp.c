@@ -325,6 +325,8 @@ int dtcp_sndr_rate_set(struct dtcp * dtcp, uint_t rate)
 	}
 
 	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	LOG_DBG(" AEAE Setting sndr_rate to %u", rate);
+	dump_stack();
 	dtcp->sv->sndr_rate = rate;
 	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 
@@ -899,8 +901,8 @@ static int populate_ctrl_pci(struct pci *  pci,
         seq_num_t snd_lft;
         seq_num_t snd_rt;
         seq_num_t LWE;
-        uint_t rt;
-        uint_t tf;
+        //uint_t rt;
+        //uint_t tf;
 
         dtcp_cfg = dtcp_config_get(dtcp);
         if (!dtcp_cfg) {
@@ -927,16 +929,16 @@ static int populate_ctrl_pci(struct pci *  pci,
                 }
 
                 if (dtcp_rate_based_fctrl(dtcp_cfg)) {
-                	rt = dtcp_sndr_rate(dtcp);
-                	tf = dtcp_time_frame(dtcp);
+                	//rt = dtcp_sndr_rate(dtcp);
+                	//tf = dtcp_time_frame(dtcp);
 
-                	LOG_DBG("Populating control pci with rate settings, "
-                		"rate: %u, time: %u",
-                		rt, tf);
+                	//LOG_DBG("Populating control pci with rate settings, "
+                	//	"rate: %u, time: %u",
+                	//	rt, tf);
 
                 	// Just fill up the header fields.
-                        pci_control_sndr_rate_set(pci, rt);
-                        pci_control_time_frame_set(pci, tf);
+                       // pci_control_sndr_rate_set(pci, rt);
+                        //pci_control_time_frame_set(pci, tf);
                 }
         }
 
@@ -1124,8 +1126,9 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
 
         // Is this a rate based control flow?
         if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
-		// HACK.
-		if(tf != 0) {
+		/*
+        	// HACK.
+		if(tf && rt) {
 			dtcp_sndr_rate_set(dtcp, rt);
 			dtcp_time_frame_set(dtcp, tf);
 
@@ -1137,6 +1140,7 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
 				rt, tf);
 			return 0;
 		}
+		*/
         }
 
         push_pdus_rmt(dtcp);
@@ -1182,8 +1186,8 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         struct dtcp_ps * ps;
         seq_num_t        seq;
         struct pci *     pci;
-        uint_t		 rt;
-        uint_t           tf;
+        //uint_t		 rt;
+        //uint_t           tf;
 
         ASSERT(dtcp);
 
@@ -1213,6 +1217,7 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
 
         // Rate based, if any.
 	if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
+		/*
 	        rt = pci_control_sndr_rate(pci);
 	        tf = pci_control_time_frame(pci);
 
@@ -1221,6 +1226,7 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
 		LOG_DBG("Rate based fields sets on flow ctl and ack,"
 			" rate: %u, time: %u",
 			rt, tf);
+		*/
 	}
 
         LOG_DBG("Calling CWQ_deliver for DTCP: %pK", dtcp);
@@ -2007,7 +2013,8 @@ bool dtcp_rate_exceeded(struct dtcp * dtcp, int send) {
 	struct timespec now  = {0, 0};
 	struct timespec last = {0, 0};
 	struct timespec sub  = {0, 0};
-	uint_t rt = 0, rl = 1; // Rate and rate limit.
+	uint_t rate = 0;
+	uint_t lim = 0;
 
 	// Get and compute the elapsed time.
 	dtcp_last_time(dtcp, &last);
@@ -2027,17 +2034,19 @@ bool dtcp_rate_exceeded(struct dtcp * dtcp, int send) {
 
 	// Direction: send or receive?
 	if (send) {
-		rt = dtcp_sent_itu(dtcp);
-		rl = dtcp_sndr_rate(dtcp);
+		rate = dtcp_sent_itu(dtcp);
+		lim = dtcp_sndr_rate(dtcp);
 	} else {
-		rt = dtcp_recv_itu(dtcp);
-		rl = dtcp_rcvr_rate(dtcp);
+		rate = dtcp_recv_itu(dtcp);
+		lim = dtcp_rcvr_rate(dtcp);
 	}
 
 	// Check if the given credit has expired.
-	if (rt >= rl)
+	if (rate >= lim)
 	{
-		LOG_DBG("rbfc: Rate exceeded, send: %d, rate: %d", send, rt);
+		LOG_DBG("rbfc: Rate exceeded, send: %d, rate: %d, lim: %d",
+			send, rate, lim);
+
 		return true;
 	}
 

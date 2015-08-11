@@ -206,36 +206,38 @@ EXPORT_SYMBOL(common_rcvr_flow_control);
 int
 common_rate_reduction(struct dtcp_ps * ps, const struct pci * pci)
 {
-        struct dtcp * dtcp = ps->dm;
-        u_int32_t rt;
-        u_int32_t tf;
+       struct dtcp * dtcp = ps->dm;
+       //u_int32_t rt;
+       //u_int32_t tf;
 
-        if (!dtcp) {
-                LOG_ERR("No instance passed, cannot run policy");
-                return -1;
-        }
+       if (!dtcp) {
+               LOG_ERR("No instance passed, cannot run policy");
+               return -1;
+       }
 
-        rt = pci_control_sndr_rate(pci);
-        tf = pci_control_time_frame(pci);
+       /*
+       rt = pci_control_sndr_rate(pci);
+       tf = pci_control_time_frame(pci);
 
-        // HACK: Consider 0 time frame an error and do not update fields.
-        if(tf == 0) {
-        	LOG_WARN("HACK received rate: %u, time: %u",
-			rt, tf);
-        	return 0;
-        }
+       // HACK: Consider 0 time frame an error and do not update fields.
+       if(rt == 0 || tf == 0) {
+       	       LOG_WARN("HACK received rate: %u, time: %u",
+       	       rt, tf);
 
-        // Adjust rates.
-        dtcp_sndr_rate_set(dtcp, rt);
-        dtcp_rcvr_rate_set(dtcp, tf);
+       	       return 0;
+       }
 
-        // Adjust time frame.
-        dtcp_time_frame_set(dtcp, pci_control_time_frame(pci));
+       // Adjust rates.
+       dtcp_sndr_rate_set(dtcp, rt);
+       dtcp_rcvr_rate_set(dtcp, tf);
 
-        LOG_DBG("DTCP: %pK", dtcp);
-        LOG_DBG("Rate: %u, Time: %u",
-		dtcp_sndr_rate(dtcp), dtcp_time_frame(dtcp));;
+       // Adjust time frame.
+       dtcp_time_frame_set(dtcp, pci_control_time_frame(pci));
 
+       LOG_DBG("DTCP: %pK", dtcp);
+       LOG_DBG("Rate: %u, Time: %u",
+       dtcp_sndr_rate(dtcp), dtcp_time_frame(dtcp));;
+       */
         return 0;
 }
 EXPORT_SYMBOL(common_rate_reduction);

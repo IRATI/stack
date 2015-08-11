@@ -883,6 +883,7 @@ static void tf_rate_window(void * o)
         struct dtp *  dtp;
         struct dtcp * dtcp;
         struct cwq *  q;
+        struct timespec now  = {0, 0};
 
         dtp = (struct dtp *) o;
 
@@ -893,12 +894,17 @@ static void tf_rate_window(void * o)
 
         dtcp = dt_dtcp(dtp->parent);
 
-        LOG_DBG("rbfc Timer job start, curr. snd rate: %u / %u",
-		dtcp_sent_itu(dtcp),
-		dtcp_sndr_rate(dtcp));
+        LOG_DBG("rbfc Timer job start...");
+        LOG_DBG("rbfc Re-opening the rate mechanism");
 
-	LOG_DBG("rbfc Re-opening the rate mechanism");
+        // Timer resets, reset all the status.
+	getnstimeofday(&now);
+	// Rate limits.
+	dtcp_rate_fc_reset(dtcp, &now);
+	// Rate fulfiled flag.
 	dtp_sv_rate_fulfiled_set(dtp, false);
+	// Port enabled. This crash everything.
+	efcp_enable_write(dt_efcp(dtp_dt(dtp)));
 
 	// Now that is open flush what has been enqueued.
 	q = dt_cwq(dtp->parent);
@@ -1176,7 +1182,6 @@ static bool window_is_closed(struct dtp *    dtp,
 {
         bool retval = false, w_ret = false, r_ret = false;
         bool rb, wb;
-        uint_t sz, sc;
         struct dtp_sv * sv;
 
         ASSERT(dtp);
@@ -1355,39 +1360,32 @@ int dtp_write(struct dtp * instance,
                 ps = container_of(rcu_dereference(instance->base.ps),
                                   struct dtp_ps, base);
                 if (sv->window_based || sv->rate_based) {
-                        /* NOTE: Might close window */
-                        if (window_is_closed(instance,
-                                             dt,
-                                             dtcp,
-                                             csn,
-                                             ps)) {
-                                if (ps->closed_window(ps, pdu)) {
-                                        rcu_read_unlock();
-                                        LOG_ERR("Problems with the "
-                                                "closed window policy");
-                                        return -1;
-                                }
-                                rcu_read_unlock();
-                                return 0;
-                        }
-                        if(sv->rate_based) {
-				// We track the size of the whole pdu, not of
-				// only its data.
+			/* NOTE: Might close window */
+			if (window_is_closed(instance,
+						dt,
+						dtcp,
+						csn,
+						ps)) {
+				if (ps->closed_window(ps, pdu)) {
+					rcu_read_unlock();
+					LOG_ERR("Problems with the "
+						"closed window policy");
+					return -1;
+				}
+				rcu_read_unlock();
+				return 0;
+			}
+			if(sv->rate_based) {
 				sz = pdu_length(pdu);
-				// How much credit is left?
 				sc = dtcp_sent_itu(dtcp);
 
 				// Size will consume the credit.
-				if (sz + sc >= dtcp_sndr_rate(dtcp))
-				{
-					// Sent reach the max given.
+				if (sz + sc >= dtcp_sndr_rate(dtcp)) {
 					dtcp_sent_itu_set(
-						dtcp, dtcp_sndr_rate(dtcp));
-				}
-				// Size wont consume the credit; subtract it.
-				else
-				{
-					dtcp_sent_itu_inc(dtcp,	sz);
+						dtcp,
+						dtcp_sndr_rate(dtcp));
+				} else {
+					dtcp_sent_itu_inc(dtcp, sz);
 				}
 			}
                 }
@@ -1477,7 +1475,7 @@ static bool is_fc_overrun(
         }
 
         if (dtcp_rate_based_fctrl(dtcp_config_get(dtcp))){
-        	r_ret = dtcp_rate_exceeded(dtcp, 0);
+        	//r_ret = dtcp_rate_exceeded(dtcp, 0);
         	// Just increment; don't block all during the receiving phase.
 		dtcp_recv_itu_inc(dtcp, pdul);
         }
@@ -1606,7 +1604,8 @@ int dtp_receive(struct dtp * instance,
          *   they are not, LWE is not updated and always 0
          */
         if ((seq_num <= LWE) || (is_fc_overrun(
-		dt, dtcp, seq_num, pdu_length(pdu)))) {
+		dt, dtcp, seq_num, pdu_length(pdu))))
+        {
 
                 pdu_destroy(pdu);
 
