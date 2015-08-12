@@ -29,10 +29,22 @@ AC_PROG_GREP
 AC_PROG_MKDIR_P
 AC_PROG_LN_S
 
-AC_PATH_PROG([FMT],  [fmt],  [/bin/false])
-AC_PATH_PROG([SORT], [sort], [/bin/false])
-AC_PATH_PROG([UNIQ], [uniq], [/bin/false])
-AC_PATH_PROG([GIT],  [git],  [/bin/false])
+AC_PATH_PROG([FMT],  [fmt],  [no])
+AS_IF([test "x$FMT" = "xno"],[
+	AC_MSG_ERROR([Your system lacks of fmt support])
+])
+AC_PATH_PROG([SORT], [sort], [no])
+AS_IF([test "x$SORT" = "xno"],[
+	AC_MSG_ERROR([Your system lacks of sort support])
+])
+AC_PATH_PROG([UNIQ], [uniq], [no])
+AS_IF([test "x$UNIQ" = "xno"],[
+	AC_MSG_ERROR([Your system lacks of uniq support])
+])
+AC_PATH_PROG([GIT],  [git],  [no])
+AS_IF([test "x$GIT" = "xno"],[
+	AC_MSG_ERROR([Your system lacks of git support])
+])
 
 AC_PROG_CPP
 AC_PROG_CC
@@ -241,7 +253,10 @@ AX_HAVE_SYSCALL([management_sdu_write],[],[
 CFLAGS="$oldcflags"
 AC_LANG_POP([C])
 
-AC_PATH_PROG([PROTOC], [protoc], [/bin/false])
+AC_PATH_PROG([PROTOC], [protoc], [no])
+AS_IF([test "x$PROTOC" = "xno"],[
+	AC_MSG_ERROR([Your system lacks of protoc support])
+])
 
 LIBPROTOBUF_MIN_VERSION=2.5.0
 AC_SUBST(LIBPROTOBUF_MIN_VERSION, $LIBPROTOBUF_MIN_VERSION)
