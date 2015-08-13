@@ -35,6 +35,9 @@ struct dtp_ps {
         /* Behavioural policies. */
         int (* transmission_control)(struct dtp_ps * ps,
                                      struct pdu * pdu);
+        // Controls the incoming part of dtp.
+        int (* rx_control) (struct dtp_ps * ps,
+                        	struct pdu * pdu);
         int (* closed_window)(struct dtp_ps * instance,
                               struct pdu * pdu);
         int (* rcv_flow_control_overrun)(struct dtp_ps * ps,

@@ -576,10 +576,18 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
 {
         struct rtxq_entry * cur, * p;
         struct pdu *        tmp;
+        // Used by rbfc.
+        struct dtp * 	    dtp;
+        struct dtcp *	    dtcp;
+        uint_t sz;
+	uint_t sc;
 
         ASSERT(q);
         ASSERT(dt);
         ASSERT(rmt);
+
+        dtp = dt_dtp(dt);
+        dtcp = dt_dtcp(dt);
 
         /*
          * FIXME: this should be change since we are sending in inverse order
@@ -595,7 +603,32 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
                                 rtxq_entry_destroy(cur);
                                 continue;
                         }
+                        // Rate-limit also retx.
+			// Before heavy duplication of the pdu.
+			if(dtp &&
+				dtcp &&
+				dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
 
+				sz = pdu_length(cur->pdu);
+				sc = dtcp_sent_itu(dtcp);
+
+				// Size will consume the credit.
+				if (sz + sc >= dtcp_sndr_rate(dtcp)) {
+					dtcp_sent_itu_set(
+						dtcp,
+						dtcp_sndr_rate(dtcp));
+				} else {
+					// Simply increment the sent pdu rate.
+					dtcp_sent_itu_inc(dtcp, sz);
+				}
+
+				if(dtcp_rate_exceeded(dtcp, 1)) {
+					// Do not consume the retries.
+					dtp_sv_rate_fulfiled_set(dtp, true);
+					dtp_start_rate_timer(dtp, dtcp);
+					break;
+				}
+			}
                         tmp = pdu_dup_ni(cur->pdu);
                         if (dt_pdu_send(dt,
                                         rmt,
@@ -699,10 +732,18 @@ static int rtxqueue_rtx(struct rtxqueue * q,
         struct pdu *        tmp;
         seq_num_t           seq = 0;
         unsigned long       tr_jiffies;
+        // Used by rbfc.
+        struct dtp *        dtp;
+        struct dtcp *	    dtcp;
+        uint_t sz;
+        uint_t sc;
 
         ASSERT(q);
         ASSERT(dt);
         ASSERT(rmt);
+
+        dtp = dt_dtp(dt);
+        dtcp = dt_dtcp(dt);
 
         tr_jiffies = msecs_to_jiffies(tr);
 
@@ -720,6 +761,32 @@ static int rtxqueue_rtx(struct rtxqueue * q,
                                         "maintain QoS", seq);
                                 rtxq_entry_destroy(cur);
                                 continue;
+                        }
+                        // Rate-limit also retx.
+                        // Before heavy duplication of the pdu.
+                        if(dtp &&
+				dtcp &&
+				dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
+
+                        	sz = pdu_length(cur->pdu);
+				sc = dtcp_sent_itu(dtcp);
+
+				// Size will consume the credit.
+				if (sz + sc >= dtcp_sndr_rate(dtcp)) {
+					dtcp_sent_itu_set(
+						dtcp,
+						dtcp_sndr_rate(dtcp));
+				} else {
+					// Simply increment the sent pdu rate.
+					dtcp_sent_itu_inc(dtcp, sz);
+				}
+
+				if(dtcp_rate_exceeded(dtcp, 1)) {
+					// Do not consume the retries.
+					dtp_sv_rate_fulfiled_set(dtp, true);
+					dtp_start_rate_timer(dtp, dtcp);
+					break;
+				}
                         }
                         tmp = pdu_dup_ni(cur->pdu);
                         if (dt_pdu_send(dt,

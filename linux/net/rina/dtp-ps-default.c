@@ -82,6 +82,7 @@ dtp_ps_default_create(struct rina_component * component)
         ps->priv            = NULL;
 
         ps->transmission_control        = default_transmission_control;
+        ps->rx_control			= NULL;
         ps->closed_window               = default_closed_window;
         ps->snd_flow_control_overrun    = default_snd_flow_control_overrun;
         ps->rcv_flow_control_overrun    = NULL;

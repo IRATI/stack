@@ -325,8 +325,10 @@ int dtcp_sndr_rate_set(struct dtcp * dtcp, uint_t rate)
 	}
 
 	spin_lock_irqsave(&dtcp->sv->lock, flags);
-	LOG_DBG(" AEAE Setting sndr_rate to %u", rate);
-	dump_stack();
+	// For debugging purposes of the review only!
+	if(dtcp->sv->sndr_rate != rate) {
+		LOG_DBG(" ECNL Rate adjusted to %u", rate);
+	}
 	dtcp->sv->sndr_rate = rate;
 	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 
@@ -901,8 +903,8 @@ static int populate_ctrl_pci(struct pci *  pci,
         seq_num_t snd_lft;
         seq_num_t snd_rt;
         seq_num_t LWE;
-        //uint_t rt;
-        //uint_t tf;
+        uint_t rt;
+        uint_t tf;
 
         dtcp_cfg = dtcp_config_get(dtcp);
         if (!dtcp_cfg) {
@@ -929,16 +931,16 @@ static int populate_ctrl_pci(struct pci *  pci,
                 }
 
                 if (dtcp_rate_based_fctrl(dtcp_cfg)) {
-                	//rt = dtcp_sndr_rate(dtcp);
-                	//tf = dtcp_time_frame(dtcp);
+                	rt = dtcp_sndr_rate(dtcp);
+                	tf = dtcp_time_frame(dtcp);
 
-                	//LOG_DBG("Populating control pci with rate settings, "
-                	//	"rate: %u, time: %u",
-                	//	rt, tf);
+                	LOG_DBG("rbfc Populating control pci with rate "
+                		"settings, rate: %u, time: %u",
+                		rt, tf);
 
                 	// Just fill up the header fields.
-                       // pci_control_sndr_rate_set(pci, rt);
-                        //pci_control_time_frame_set(pci, tf);
+                        pci_control_sndr_rate_set(pci, rt);
+                        pci_control_time_frame_set(pci, tf);
                 }
         }
 
@@ -1126,13 +1128,12 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
 
         // Is this a rate based control flow?
         if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
-		/*
         	// HACK.
 		if(tf && rt) {
 			dtcp_sndr_rate_set(dtcp, rt);
 			dtcp_time_frame_set(dtcp, tf);
 
-			LOG_DBG("Rate based fields sets on flow ctl, "
+			LOG_DBG("rbfc Rate based fields sets on flow ctl, "
 				"rate: %u, time: %u",
 				rt, tf);
 		} else {
@@ -1140,7 +1141,6 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
 				rt, tf);
 			return 0;
 		}
-		*/
         }
 
         push_pdus_rmt(dtcp);
@@ -1186,8 +1186,8 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         struct dtcp_ps * ps;
         seq_num_t        seq;
         struct pci *     pci;
-        //uint_t		 rt;
-        //uint_t           tf;
+        uint_t		 rt;
+        uint_t           tf;
 
         ASSERT(dtcp);
 
@@ -1217,16 +1217,20 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
 
         // Rate based, if any.
 	if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
-		/*
 	        rt = pci_control_sndr_rate(pci);
 	        tf = pci_control_time_frame(pci);
 
-		dtcp_sndr_rate_set(dtcp, rt);
-		dtcp_time_frame_set(dtcp, tf);
-		LOG_DBG("Rate based fields sets on flow ctl and ack,"
-			" rate: %u, time: %u",
-			rt, tf);
-		*/
+	        if(tf && rt) {
+			dtcp_sndr_rate_set(dtcp, rt);
+			dtcp_time_frame_set(dtcp, tf);
+			LOG_DBG("rbfc Rate based fields sets on flow ctl and "
+				"ack, rate: %u, time: %u",
+				rt, tf);
+	        } else {
+	        	LOG_WARN("HACK executed, received rate: %u, time: %u",
+				rt, tf);
+			//return 0;
+	        }
 	}
 
         LOG_DBG("Calling CWQ_deliver for DTCP: %pK", dtcp);
