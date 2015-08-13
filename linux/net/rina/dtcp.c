@@ -327,7 +327,7 @@ int dtcp_sndr_rate_set(struct dtcp * dtcp, uint_t rate)
 	spin_lock_irqsave(&dtcp->sv->lock, flags);
 	// For debugging purposes of the review only!
 	if(dtcp->sv->sndr_rate != rate) {
-		LOG_DBG(" ECNL Rate adjusted to %u", rate);
+		LOG_WARN(" ECNL Rate adjusted to %u", rate);
 	}
 	dtcp->sv->sndr_rate = rate;
 	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
