@@ -196,7 +196,7 @@ static struct shim_eth_flow * find_flow(struct ipcp_instance_data * data,
         spin_lock_irqsave(&data->lock, flags);
 
         list_for_each_entry(flow, &data->flows, list) {
-                if (flow->port_id == id) {
+                if (flow && flow->port_id == id) {
                         spin_unlock_irqrestore(&data->lock, flags);
                         return flow;
                 }
@@ -381,14 +381,22 @@ static int eth_vlan_unbind_user_ipcp(struct ipcp_instance_data * data,
         struct shim_eth_flow * flow;
         unsigned long          flags;
 
+        if(!data) {
+        	return -1;
+        }
+
         flow = find_flow(data, id);
         if (!flow)
                 return -1;
 
         spin_lock_irqsave(&data->lock, flags);
-        if (flow->user_ipcp) {
-                flow->user_ipcp = NULL;
+
+        list_for_each_entry(flow, &data->flows, list) {
+		if (flow->user_ipcp) {
+			flow->user_ipcp = NULL;
+		}
         }
+
         spin_unlock_irqrestore(&data->lock, flags);
 
         return 0;
