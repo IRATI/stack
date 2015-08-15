@@ -226,8 +226,7 @@ void IPCMIPCProcess::disconnectFromNeighbor(
 void IPCMIPCProcess::registerApplication(
 		const rina::ApplicationProcessNamingInformation& applicationName,
 		unsigned short regIpcProcessId,
-		unsigned int opaque,
-		bool blocking)
+		unsigned int opaque)
 {
 	if (state_ != IPCM_IPCP_ASSIGNED_TO_DIF)
 		throw rina::IpcmRegisterApplicationException(
@@ -235,7 +234,7 @@ void IPCMIPCProcess::registerApplication(
 
 	try {
 		proxy_->registerApplication(applicationName, regIpcProcessId,
-				dif_name_, opaque, blocking);
+				dif_name_, opaque);
 	}catch (rina::Exception &e) {
 		throw e;
 	}
@@ -244,8 +243,8 @@ void IPCMIPCProcess::registerApplication(
 }
 
 void IPCMIPCProcess::registerApplicationResult(unsigned int sequenceNumber,
-		bool success) {
-
+					       bool success)
+{
 	rina::ApplicationProcessNamingInformation appName;
 
 	try {
@@ -332,16 +331,23 @@ void IPCMIPCProcess::allocateFlowResult(
 		allocatedFlows.push_back(flowInformation);
 }
 
-void IPCMIPCProcess::allocateFlowResponse(const rina::FlowRequestEvent& flowRequest,
-		int result, bool notifySource, int flowAcceptorIpcProcessId)
+void IPCMIPCProcess::allocateFlowResponse(
+	const rina::FlowRequestEvent& flowRequest,
+	int result,
+	bool notifySource,
+	bool blocking,
+	int flowAcceptorIpcProcessId)
 {
 	if (state_ != IPCM_IPCP_ASSIGNED_TO_DIF)
 		throw rina::IpcmRegisterApplicationException(
 				rina::IPCProcessProxy::error_not_a_dif_member);
 
 	try{
-		proxy_->allocateFlowResponse(flowRequest, result,
-				notifySource, flowAcceptorIpcProcessId);
+		proxy_->allocateFlowResponse(flowRequest,
+					     result,
+					     notifySource,
+					     blocking,
+					     flowAcceptorIpcProcessId);
 	} catch(rina::Exception &e){
 		throw e;
 	}

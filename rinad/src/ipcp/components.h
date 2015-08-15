@@ -262,8 +262,10 @@ public:
 	/// Process, it forwards the Create_Request to the IPC Process designated by the address.
 	/// @param cdapMessage
 	/// @param underlyingPortId
-	virtual void createFlowRequestMessageReceived(Flow * flow, const std::string& object_name,
-			int invoke_id) = 0;
+	virtual void createFlowRequestMessageReceived(Flow * flow,
+						      const std::string& object_name,
+						      int invoke_id,
+						      bool blocking) = 0;
 
 	/// Called by the flow allocator instance when it finishes to cleanup the state.
 	/// @param portId

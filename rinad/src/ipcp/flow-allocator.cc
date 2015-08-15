@@ -67,10 +67,13 @@ FlowSetRIBObject::FlowSetRIBObject(IPCProcess * ipc_process,
 
 void FlowSetRIBObject::remoteCreateObject(
 		void * object_value, const std::string& object_name,
-		int invoke_id, rina::CDAPSessionDescriptor * session_descriptor)
+		int invoke_id,
+		rina::CDAPSessionDescriptor * session_descriptor)
 {
 	flow_allocator_->createFlowRequestMessageReceived((Flow *) object_value,
-			object_name, invoke_id);
+							  object_name,
+							  invoke_id,
+							  true);
 }
 
 void FlowSetRIBObject::createObject(const std::string& objectClass,
@@ -261,7 +264,10 @@ void FlowAllocator::populateRIB()
 }
 
 void FlowAllocator::createFlowRequestMessageReceived(
-		Flow * flow, const std::string& object_name, int invoke_id)
+		Flow * flow,
+		const std::string& object_name,
+		int invoke_id,
+		bool blocking)
 {
 	IFlowAllocatorInstance * fai = 0;
 	unsigned int myAddress = 0;
@@ -281,7 +287,8 @@ void FlowAllocator::createFlowRequestMessageReceived(
 		try {
 			portId = rina::extendedIPCManager->allocatePortId(
 					flow->destination_naming_info,
-					namespace_manager_->get_reg_app_info(flow->destination_naming_info).blocking);
+					/* FIXME: get the correct blocking info for this flow */
+				        blocking);
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Problems requesting a port-id: %s. Ignoring the Flow allocation request",
 					e.what());
@@ -726,7 +733,7 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(
 		//Destination application is registered at this IPC Process
 		//Bypass RIB Daemon and call Flow Allocator directly
 		Flow * dest_flow = new Flow(*flow_);
-		flow_allocator_->createFlowRequestMessageReceived(dest_flow, object_name_, 0);
+		flow_allocator_->createFlowRequestMessageReceived(dest_flow, object_name_, 0, true /* FIXME */);
 	}
 
 	state = MESSAGE_TO_PEER_FAI_SENT;

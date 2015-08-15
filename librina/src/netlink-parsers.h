@@ -154,6 +154,7 @@ AppAllocateFlowRequestArrivedMessage * parseAppAllocateFlowRequestArrivedMessage
 enum AppAllocateFlowResponseAttributes {
 	AAFRE_ATTR_RESULT = 1,
 	AAFRE_ATTR_NOTIFY_SOURCE,
+	AAFRE_ATTR_BLOCKING,
 	__AAFRE_ATTR_MAX,
 };
 
@@ -217,7 +218,6 @@ enum ApplicationRegistrationInformationAttributes {
         ARIA_ATTR_APP_NAME = 1,
 	ARIA_ATTR_APP_REG_TYPE,
 	ARIA_ATTR_APP_DIF_NAME,
-	ARIA_ATTR_APP_BLOCKING,
 	__ARIA_ATTR_MAX,
 };
 
@@ -399,7 +399,6 @@ enum IpcmRegisterApplicationRequestMessageAttributes {
 	IRAR_ATTR_APP_NAME = 1,
 	IRAR_ATTR_DIF_NAME,
 	IRAR_ATTR_REG_IPC_ID,
-	IRAR_ATTR_BLOCKING,
 	__IRAR_ATTR_MAX,
 };
 
@@ -867,6 +866,7 @@ IpcmAllocateFlowRequestArrivedMessage * parseIpcmAllocateFlowRequestArrivedMessa
 enum IpcmAllocateFlowResponseAttributes {
 	IAFRE_ATTR_RESULT = 1,
 	IAFRE_ATTR_NOTIFY_SOURCE,
+	IAFRE_ATTR_BLOCKING,
 	__IAFRE_ATTR_MAX,
 };
 

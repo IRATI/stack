@@ -74,7 +74,7 @@ public:
 	/// @param requestMessate the CDAP request message
 	/// @param underlyingPortId the port id to reply later on
 	virtual void createFlowRequestMessageReceived(Flow * flow, const std::string& object_name,
-			int invoke_id) = 0;
+						      int invoke_id) = 0;
 
 	/// When the FAI gets a Allocate_Response from the destination application,
 	/// it formulates a Create_Response on the flow object requested.If the
@@ -178,8 +178,10 @@ public:
 	IFlowAllocatorInstance * getFAI(int portId);
 	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
-	void createFlowRequestMessageReceived(Flow * flow, const std::string& object_name,
-			int invoke_id);
+	void createFlowRequestMessageReceived(Flow * flow,
+					      const std::string& object_name,
+					      int invoke_id,
+					      bool blocking);
 	void submitAllocateRequest(rina::FlowRequestEvent& flowRequestEvent);
 	void processCreateConnectionResponseEvent(
 			const rina::CreateConnectionResponseEvent& event);
@@ -242,8 +244,9 @@ public:
 	void submitAllocateRequest(const rina::FlowRequestEvent& event);
 	void processCreateConnectionResponseEvent(
 			const rina::CreateConnectionResponseEvent& event);
-	void createFlowRequestMessageReceived(Flow * flow, const std::string& object_name,
-			int invoke_id);
+	void createFlowRequestMessageReceived(Flow * flow,
+					      const std::string& object_name,
+					      int invoke_id);
 	void processCreateConnectionResultEvent(
 			const rina::CreateConnectionResultEvent& event);
 	void submitAllocateResponse(const rina::AllocateFlowResponseEvent& event);

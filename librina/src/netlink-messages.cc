@@ -9,12 +9,12 @@
 // modify it under the terms of the GNU Lesser General Public
 // License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// 
+//
 // This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 // Lesser General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU Lesser General Public
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -545,6 +545,7 @@ IPCEvent* AppAllocateFlowRequestArrivedMessage::toIPCEvent(){
 AppAllocateFlowResponseMessage::AppAllocateFlowResponseMessage() :
                 BaseNetlinkResponseMessage(RINA_C_APP_ALLOCATE_FLOW_RESPONSE) {
 	this->notifySource = true;
+	this->blocking = true;
 }
 
 bool AppAllocateFlowResponseMessage::isNotifySource() const {
@@ -555,11 +556,17 @@ void AppAllocateFlowResponseMessage::setNotifySource(bool notifySource) {
 	this->notifySource = notifySource;
 }
 
+void AppAllocateFlowResponseMessage::setBlocking(bool blocking) {
+	this->blocking = blocking;
+}
+
+
 IPCEvent* AppAllocateFlowResponseMessage::toIPCEvent(){
         AllocateFlowResponseEvent * event =
                         new AllocateFlowResponseEvent(
                                         getResult(),
                                         notifySource,
+					blocking,
                                         getSourceIpcProcessId(),
                                         getSequenceNumber());
         return event;
@@ -1334,30 +1341,44 @@ IPCEvent* IpcmAllocateFlowRequestArrivedMessage::toIPCEvent(){
 IpcmAllocateFlowResponseMessage::IpcmAllocateFlowResponseMessage() :
 				BaseNetlinkMessage(RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE) {
 	this->result = 0;
+	this->blocking = true;
 	this->notifySource = false;
 }
 
-void IpcmAllocateFlowResponseMessage::setResult(int result) {
+void IpcmAllocateFlowResponseMessage::setResult(int result)
+{
 	this->result = result;
 }
 
-int IpcmAllocateFlowResponseMessage::getResult() const {
+int IpcmAllocateFlowResponseMessage::getResult() const
+{
 	return result;
 }
 
-bool IpcmAllocateFlowResponseMessage::isNotifySource() const {
+bool IpcmAllocateFlowResponseMessage::isNotifySource() const
+{
 	return notifySource;
 }
 
-void IpcmAllocateFlowResponseMessage::setNotifySource(bool notifySource) {
+void IpcmAllocateFlowResponseMessage::setNotifySource(bool notifySource)
+{
 	this->notifySource = notifySource;
 }
+
+void IpcmAllocateFlowResponseMessage::setBlocking(bool blocking)
+{
+	this->blocking = blocking;
+}
+
+
+
 
 IPCEvent* IpcmAllocateFlowResponseMessage::toIPCEvent(){
         AllocateFlowResponseEvent * event =
                         new AllocateFlowResponseEvent(
                                         result,
                                         notifySource,
+					blocking,
                                         getSourceIpcProcessId(),
                                         getSequenceNumber());
         return event;

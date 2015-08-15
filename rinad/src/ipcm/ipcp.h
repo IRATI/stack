@@ -195,15 +195,12 @@ public:
 	 * @param regIpcProcessId The id of the registered IPC process (0 if it
 	 * is an application)
 	 * @param opaque an opaque identifier to correlate requests and responses
-	 * @param blocking says if the flows allocated to the registered app will
-	 * be blocking or not
 	 * @throws IpcmRegisterApplicationException if an error occurs
 	 */
 	void registerApplication(
 			const rina::ApplicationProcessNamingInformation& applicationName,
 			unsigned short regIpcProcessId,
-			unsigned int opaque,
-			bool blocking);
+			unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to inform about the result of a registration
@@ -304,8 +301,10 @@ public:
 	 * @throws AllocateFlowException if something goes wrong
 	 */
 	void allocateFlowResponse(const rina::FlowRequestEvent& flowRequest,
-			int result, bool notifySource,
-			int flowAcceptorIpcProcessId);
+				  int result,
+				  bool notifySource,
+				  bool blocking,
+				  int flowAcceptorIpcProcessId);
 
 	/**
 	 * Tell the IPC Process to deallocate a flow

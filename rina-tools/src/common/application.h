@@ -36,7 +36,7 @@ protected:
 
         /// @param true if flows directed to this application will
         /// have a blocking read/write behaviour, false otherwise
-        void applicationRegister(bool blocking);
+        void applicationRegister();
 
         std::string dif_name;
         std::string app_name;

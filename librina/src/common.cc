@@ -8,12 +8,12 @@
 // modify it under the terms of the GNU Lesser General Public
 // License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// 
+//
 // This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 // Lesser General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU Lesser General Public
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -576,14 +576,12 @@ FlowDeallocatedEvent::FlowDeallocatedEvent(
 ApplicationRegistrationInformation::ApplicationRegistrationInformation(){
 	applicationRegistrationType = APPLICATION_REGISTRATION_ANY_DIF;
 	ipcProcessId = 0;
-	blocking = true;
 }
 
 ApplicationRegistrationInformation::ApplicationRegistrationInformation(
 		ApplicationRegistrationType applicationRegistrationType){
 	this->applicationRegistrationType = applicationRegistrationType;
 	ipcProcessId = 0;
-	blocking = true;
 }
 
 const std::string ApplicationRegistrationInformation::toString(){
@@ -592,7 +590,6 @@ const std::string ApplicationRegistrationInformation::toString(){
         ss<<"Application name: "<<appName.toString()<<std::endl;
         ss<<"DIF name: "<<difName.processName;
         ss<<"; IPC Process id: "<<ipcProcessId;
-        ss<<"; Blocking: "<<blocking;
 
         return ss.str();
 }
@@ -690,6 +687,7 @@ UnregisterApplicationResponseEvent::UnregisterApplicationResponseEvent(
 AllocateFlowResponseEvent::AllocateFlowResponseEvent(
                 int result,
                 bool notifySource,
+		bool blocking,
                 int flowAcceptorIpcProcessId,
                 unsigned int sequenceNumber) :
         BaseResponseEvent(result,
@@ -697,6 +695,7 @@ AllocateFlowResponseEvent::AllocateFlowResponseEvent(
                           sequenceNumber)
 {
         this->notifySource             = notifySource;
+	this->blocking                 = blocking;
         this->flowAcceptorIpcProcessId = flowAcceptorIpcProcessId;
 }
 

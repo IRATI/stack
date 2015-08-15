@@ -1822,10 +1822,6 @@ int putApplicationRegistrationInformationObject(nl_msg* netlinkMessage,
 		nla_nest_end(netlinkMessage, difName);
 	}
 
-	if (object.blocking) {
-		NLA_PUT_FLAG(netlinkMessage, ARIA_ATTR_APP_BLOCKING);
-	}
-
 	return 0;
 
 	nla_put_failure: LOG_ERR(
@@ -1845,9 +1841,6 @@ ApplicationRegistrationInformation * parseApplicationRegistrationInformation(
 	attr_policy[ARIA_ATTR_APP_DIF_NAME].type = NLA_NESTED;
 	attr_policy[ARIA_ATTR_APP_DIF_NAME].minlen = 0;
 	attr_policy[ARIA_ATTR_APP_DIF_NAME].maxlen = 0;
-	attr_policy[ARIA_ATTR_APP_BLOCKING].type = NLA_FLAG;
-	attr_policy[ARIA_ATTR_APP_BLOCKING].minlen = 0;
-	attr_policy[ARIA_ATTR_APP_BLOCKING].maxlen = 0;
 	struct nlattr *attrs[ARIA_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, ARIA_ATTR_MAX, nested, attr_policy);
@@ -1886,12 +1879,6 @@ ApplicationRegistrationInformation * parseApplicationRegistrationInformation(
 			result->difName = *difName;
 			delete difName;
 		}
-	}
-
-	if (attrs[ARIA_ATTR_APP_BLOCKING]) {
-		result->blocking = true;
-	} else {
-		result->blocking = false;
 	}
 
 	return result;
@@ -3557,6 +3544,7 @@ int putAppAllocateFlowResponseMessageObject(nl_msg* netlinkMessage,
 	NLA_PUT_U32(netlinkMessage, AAFRE_ATTR_RESULT,
 			object.getResult());
 	NLA_PUT_FLAG(netlinkMessage, AAFRE_ATTR_NOTIFY_SOURCE);
+	NLA_PUT_FLAG(netlinkMessage, AAFRE_ATTR_BLOCKING);
 
 	return 0;
 
@@ -3862,8 +3850,10 @@ int putAppGetDIFPropertiesResponseMessageObject(nl_msg* netlinkMessage,
 	return -1;
 }
 
-int putIpcmRegisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
-		const IpcmRegisterApplicationRequestMessage& object) {
+int putIpcmRegisterApplicationRequestMessageObject(
+	nl_msg* netlinkMessage,
+	const IpcmRegisterApplicationRequestMessage& object)
+{
 	struct nlattr *difName, *applicationName;
 
 	if (!(applicationName = nla_nest_start(netlinkMessage, IRAR_ATTR_APP_NAME))) {
@@ -3889,10 +3879,6 @@ int putIpcmRegisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
 	                        object.getRegIpcProcessId());
 	}
 
-	if (object.blocking) {
-		nla_put_flag(netlinkMessage, IRAR_ATTR_BLOCKING);
-	}
-
 	return 0;
 
 	nla_put_failure: LOG_ERR(
@@ -3900,8 +3886,10 @@ int putIpcmRegisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
 	return -1;
 }
 
-int putIpcmRegisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
-		const IpcmRegisterApplicationResponseMessage& object) {
+int putIpcmRegisterApplicationResponseMessageObject(
+	nl_msg* netlinkMessage,
+	const IpcmRegisterApplicationResponseMessage& object)
+{
 	NLA_PUT_U32(netlinkMessage, IRARE_ATTR_RESULT, object.getResult());
 
 	return 0;
@@ -3911,8 +3899,10 @@ int putIpcmRegisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
 	return -1;
 }
 
-int putIpcmUnregisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
-		const IpcmUnregisterApplicationRequestMessage& object) {
+int putIpcmUnregisterApplicationRequestMessageObject(
+	nl_msg* netlinkMessage,
+	const IpcmUnregisterApplicationRequestMessage& object)
+{
 	struct nlattr *difName, *applicationName;
 
 	if (!(applicationName = nla_nest_start(netlinkMessage, IUAR_ATTR_APP_NAME))) {
@@ -4841,6 +4831,7 @@ int putIpcmAllocateFlowResponseMessageObject(nl_msg* netlinkMessage,
 	NLA_PUT_U32(netlinkMessage, IAFRE_ATTR_RESULT,
 			object.getResult());
 	NLA_PUT_FLAG(netlinkMessage, IAFRE_ATTR_NOTIFY_SOURCE);
+	NLA_PUT_FLAG(netlinkMessage, IAFRE_ATTR_BLOCKING);
 
 	return 0;
 
@@ -5748,6 +5739,9 @@ AppAllocateFlowResponseMessage * parseAppAllocateFlowResponseMessage(
 	attr_policy[AAFRE_ATTR_NOTIFY_SOURCE].type = NLA_FLAG;
 	attr_policy[AAFRE_ATTR_NOTIFY_SOURCE].minlen = 0;
 	attr_policy[AAFRE_ATTR_NOTIFY_SOURCE].maxlen = 0;
+	attr_policy[AAFRE_ATTR_BLOCKING].type = NLA_FLAG;
+	attr_policy[AAFRE_ATTR_BLOCKING].minlen = 0;
+	attr_policy[AAFRE_ATTR_BLOCKING].maxlen = 0;
 	struct nlattr *attrs[AAFRE_ATTR_MAX + 1];
 
 	/*
@@ -5775,6 +5769,11 @@ AppAllocateFlowResponseMessage * parseAppAllocateFlowResponseMessage(
 	if (attrs[AAFRE_ATTR_NOTIFY_SOURCE]) {
 		result->setNotifySource(
 				(nla_get_flag(attrs[AAFRE_ATTR_NOTIFY_SOURCE])));
+	}
+
+	if (attrs[AAFRE_ATTR_BLOCKING]) {
+		result->setBlocking(
+				(nla_get_flag(attrs[AAFRE_ATTR_BLOCKING])));
 	}
 
 	return result;
@@ -6386,9 +6385,6 @@ parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr) {
 	attr_policy[IRAR_ATTR_REG_IPC_ID].type = NLA_U16;
 	attr_policy[IRAR_ATTR_REG_IPC_ID].minlen = 2;
 	attr_policy[IRAR_ATTR_REG_IPC_ID].maxlen = 2;
-	attr_policy[IRAR_ATTR_BLOCKING].type = NLA_FLAG;
-	attr_policy[IRAR_ATTR_BLOCKING].minlen = 0;
-	attr_policy[IRAR_ATTR_BLOCKING].maxlen = 0;
 	struct nlattr *attrs[IRAR_ATTR_MAX + 1];
 
 	/*
@@ -6438,12 +6434,6 @@ parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr) {
 	if (attrs[IRAR_ATTR_REG_IPC_ID]) {
 	      result->setRegIpcProcessId(
 	                      nla_get_u16(attrs[IRAR_ATTR_REG_IPC_ID]));
-	}
-
-	if (attrs[IRAR_ATTR_BLOCKING]) {
-		result->blocking = true;
-	} else {
-		result->blocking = false;
 	}
 
 	return result;
@@ -8003,6 +7993,9 @@ IpcmAllocateFlowResponseMessage * parseIpcmAllocateFlowResponseMessage(
 	attr_policy[IAFRE_ATTR_NOTIFY_SOURCE].type = NLA_FLAG;
 	attr_policy[IAFRE_ATTR_NOTIFY_SOURCE].minlen = 0;
 	attr_policy[IAFRE_ATTR_NOTIFY_SOURCE].maxlen = 0;
+	attr_policy[IAFRE_ATTR_BLOCKING].type = NLA_FLAG;
+	attr_policy[IAFRE_ATTR_BLOCKING].minlen = 0;
+	attr_policy[IAFRE_ATTR_BLOCKING].maxlen = 0;
 	struct nlattr *attrs[IAFRE_ATTR_MAX + 1];
 
 	/*
@@ -8030,6 +8023,11 @@ IpcmAllocateFlowResponseMessage * parseIpcmAllocateFlowResponseMessage(
 	if (attrs[IAFRE_ATTR_NOTIFY_SOURCE]) {
 		result->setNotifySource(
 				(nla_get_flag(attrs[IAFRE_ATTR_NOTIFY_SOURCE])));
+	}
+
+	if (attrs[IAFRE_ATTR_BLOCKING]) {
+		result->setBlocking(
+				(nla_get_flag(attrs[IAFRE_ATTR_BLOCKING])));
 	}
 
 	return result;

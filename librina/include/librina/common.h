@@ -10,12 +10,12 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -165,6 +165,9 @@ public:
 	unsigned int maxSDUsize;
 
 	/**
+	 * FIXME: blocking property has to be removed from FlowSpecification
+	 * and moved into descriptor for a flow and eventually file descriptor
+	 *
 	 * True if the flow is blocking, false otherwise
 	 */
 	bool blocking;
@@ -423,9 +426,6 @@ public:
 	/** Optional DIF name where the application wants to register */
 	ApplicationProcessNamingInformation difName;
 
-	/** True if the flows allocated to this AE will be blocking, false otherwise*/
-	bool blocking;
-
 	ApplicationRegistrationInformation();
 	ApplicationRegistrationInformation(
 		ApplicationRegistrationType applicationRegistrationType);
@@ -536,12 +536,16 @@ public:
          */
         bool notifySource;
 
+	/* true if the respondee wants blocking I/O to/from this flow */
+	bool blocking;
+
         /** 0 if it is an application, or the ID of the IPC Process otherwise */
         int flowAcceptorIpcProcessId;
 
         AllocateFlowResponseEvent(
                         int result,
                         bool notifysource,
+			bool blocking,
                         int flowAcceptorIpcProcessId,
                         unsigned int sequenceNumber);
 };

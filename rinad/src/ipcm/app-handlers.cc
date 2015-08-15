@@ -151,7 +151,6 @@ void IPCManager_::app_reg_req_handler(
 			applicationRegistrationInformation;
 	const rina::ApplicationProcessNamingInformation app_name =
 			info.appName;
-	bool blocking = info.blocking;
 	IPCMIPCProcess *slave_ipcp = NULL;
 	ostringstream ss;
 	rina::ApplicationProcessNamingInformation dif_name;
@@ -218,8 +217,7 @@ void IPCManager_::app_reg_req_handler(
 
 		slave_ipcp->registerApplication(app_name,
 				info.ipcProcessId,
-				trans->tid,
-				blocking);
+				trans->tid);
 
 		ss << "Requested registration of application " <<
 				app_name.toString() << " to IPC process " <<

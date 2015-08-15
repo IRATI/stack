@@ -8,12 +8,12 @@
 // modify it under the terms of the GNU Lesser General Public
 // License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// 
+//
 // This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 // Lesser General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU Lesser General Public
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -262,8 +262,7 @@ void IPCProcessProxy::registerApplication(
 		const ApplicationProcessNamingInformation& applicationName,
 		unsigned short regIpcProcessId,
 		const ApplicationProcessNamingInformation& dif_name,
-		unsigned int opaque,
-		bool blocking)
+		unsigned int opaque)
 {
 #if STUB_API
 	//Do nothing
@@ -272,7 +271,6 @@ void IPCProcessProxy::registerApplication(
 	message.setApplicationName(applicationName);
 	message.setDifName(dif_name);
 	message.setRegIpcProcessId(regIpcProcessId);
-	message.blocking = blocking;
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
@@ -341,7 +339,10 @@ void IPCProcessProxy::allocateFlow(const FlowRequestEvent& flowRequest,
 }
 
 void IPCProcessProxy::allocateFlowResponse(const FlowRequestEvent& flowRequest,
-		int result, bool notifySource, int flowAcceptorIpcProcessId)
+					   int result,
+					   bool notifySource,
+					   bool blocking,
+					   int flowAcceptorIpcProcessId)
 {
 #if STUB_API
 	//Do nothing
@@ -349,6 +350,8 @@ void IPCProcessProxy::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 	IpcmAllocateFlowResponseMessage responseMessage;
 	responseMessage.setResult(result);
 	responseMessage.setNotifySource(notifySource);
+	/* FIXME: bool blocking should be fixed */
+	responseMessage.setBlocking (blocking);
 	responseMessage.setSourceIpcProcessId(flowAcceptorIpcProcessId);
 	responseMessage.setDestIpcProcessId(id);
 	responseMessage.setDestPortId(portId);

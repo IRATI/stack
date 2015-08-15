@@ -487,7 +487,7 @@ public:
 	 * an error occurs
 	 */
 	void notifyIPCProcessInitialized(
-	                const ApplicationProcessNamingInformation& name);
+		const ApplicationProcessNamingInformation& name);
 
 	/**
 	 * True if the IPC Process has been successfully initialized, false
@@ -503,8 +503,8 @@ public:
 	 * @return
 	 */
 	ApplicationRegistration * appRegistered(
-	                        const ApplicationProcessNamingInformation& appName,
-	                        const ApplicationProcessNamingInformation& DIFName);
+		const ApplicationProcessNamingInformation& appName,
+		const ApplicationProcessNamingInformation& DIFName);
 
 	/**
 	 * The IPC Process has been unregistered from the DIF called DIFName,
@@ -513,7 +513,7 @@ public:
 	 * @param DIFName
 	 */
 	void appUnregistered(const ApplicationProcessNamingInformation& appName,
-	                const ApplicationProcessNamingInformation& DIFName);
+			     const ApplicationProcessNamingInformation& DIFName);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of an "assign
@@ -535,8 +535,9 @@ public:
 	 * IPC Manager
 	 */
 	void enrollToDIFResponse(const EnrollToDAFRequestEvent& event,
-	                int result, const std::list<Neighbor> & newNeighbors,
-	                const DIFInformation& difInformation);
+				 int result,
+				 const std::list<Neighbor> & newNeighbors,
+				 const DIFInformation& difInformation);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of a "register
@@ -632,8 +633,9 @@ public:
 	 * confirming/denying the flow
 	 */
 	FlowInformation allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
-			int result, bool notifySource);
-
+					     int result,
+					     bool notifySource,
+					     bool blocking = true);
 	/**
 	 * Invoked by the IPC Process to respond to the Application Process that
 	 * requested a flow deallocation
@@ -643,8 +645,9 @@ public:
 	 * @throws DeallocateFlowResponseException if there are issues
 	 * replying ot the application
 	 */
-	void notifyflowDeallocated(const FlowDeallocateRequestEvent flowDeallocateEvent,
-			int result);
+	void notifyflowDeallocated(
+		const FlowDeallocateRequestEvent flowDeallocateEvent,
+		int result);
 
 	/**
 	 * Invoked by the ipC Process to notify that a flow has been remotely
@@ -664,7 +667,7 @@ public:
 	 * @throws QueryRIBResponseException
 	 */
 	void queryRIBResponse(const QueryRIBRequestEvent& event, int result,
-			const std::list<RIBObjectData>& ribObjects);
+			      const std::list<RIBObjectData>& ribObjects);
 
 	/**
 	 * Request an available portId to the kernel

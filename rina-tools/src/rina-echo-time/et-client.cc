@@ -74,7 +74,7 @@ void Client::run()
 	cout << setprecision(5);
 
         if (client_app_reg) {
-                applicationRegister(true);
+                applicationRegister();
         }
         port_id = createFlow();
         if (port_id < 0) {

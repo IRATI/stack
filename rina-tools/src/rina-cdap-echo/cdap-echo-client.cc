@@ -63,7 +63,7 @@ void Client::run()
 {
         keep_running_ = true;
         if (client_app_reg) {
-                applicationRegister(false);
+                applicationRegister();
         }
         createFlow();
         if (flow_.portId >= 0) {
