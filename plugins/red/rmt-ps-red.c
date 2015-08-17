@@ -177,15 +177,18 @@ static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
 
 	/* Compute average queue usage (see RED) */
 	q->vars.qavg = red_calc_qavg(&q->parms, &q->vars, rfifo_length(q->queue));
+	LOG_INFO("New avg calculated: %lu", q->vars.qavg);
 	/* NOTE: check this! */
 	if (red_is_idling(&q->vars))
 		red_end_of_idle_period(&q->vars);
 
 	switch (red_action(&q->parms, &q->vars, q->vars.qavg)) {
 	case RED_DONT_MARK:
+		LOG_INFO("RED_DONT_MARK");
 		break;
 
 	case RED_PROB_MARK:
+		LOG_INFO("RED_PROB_MARK");
 		/*q->red_stats.prob_drop++;*/
 		q->stats.prob_mark++;
 		/* mark ECN bit */
@@ -195,6 +198,7 @@ static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
 		break;
 
 	case RED_HARD_MARK:
+		LOG_INFO("RED_HARD_MARK");
 		q->stats.forced_mark++;
 		goto congestion_drop;
 		break;
@@ -207,7 +211,7 @@ congestion_drop:
 
         pdu_destroy(pdu);
         atomic_dec(&port->n_sdus);
-        LOG_DBG("PDU dropped, max_th passed...");
+        LOG_INFO("PDU dropped, max_th passed...");
         return 0;
 }
 
@@ -317,17 +321,17 @@ static int red_rmt_ps_set_policy_set_param(struct ps_base * bps,
         }
 	if (strcmp(name, "stab_address_p") == 0) {
 		void __user * user_pointer;
-		int user_address;
+		uintptr_t  user_address;
 		int ret;
 		int i;
 		size_t size = 256;
 		u8 * stab_table = rkmalloc(sizeof(*stab_table)*size, GFP_KERNEL);
-		kstrtoint(value, 16, &user_address);
-		user_pointer = (int *) user_address;
+		kstrtoul(value, 16, (unsigned long *) &user_address);
+		user_pointer = (void __user *) user_address;
 		ret = copy_from_user(stab_table, (const void __user *) user_pointer, size*sizeof(u8));
 		if (ret !=0) {
 			LOG_ERR("Stab table for RMT's RED PS was not fully copied, missing %d out of %u bytes",
-				ret, size);
+				ret, (unsigned int) size);
 			LOG_ERR("Padding with 0s");
 			for (i = 0; i< size; i++)
 				stab_table[i] = 0;
