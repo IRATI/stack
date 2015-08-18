@@ -149,6 +149,9 @@ red_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
 	        if (!red_is_idling(&q->vars))
 			red_start_of_idle_period(&q->vars);
         }
+	if (rfifo_is_empty(q->queue) == 0 &&
+	    !red_is_idling(&q->vars))
+		red_start_of_idle_period(&q->vars);
         return ret_pdu;
 }
 
@@ -177,18 +180,18 @@ static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
 
 	/* Compute average queue usage (see RED) */
 	q->vars.qavg = red_calc_qavg(&q->parms, &q->vars, rfifo_length(q->queue));
-	LOG_INFO("New avg calculated: %lu", q->vars.qavg);
+	LOG_DBG("qavg':  %lu, qlen: %lu", q->vars.qavg, rfifo_length(q->queue));
 	/* NOTE: check this! */
 	if (red_is_idling(&q->vars))
 		red_end_of_idle_period(&q->vars);
 
 	switch (red_action(&q->parms, &q->vars, q->vars.qavg)) {
 	case RED_DONT_MARK:
-		LOG_INFO("RED_DONT_MARK");
+		LOG_DBG("RED_DONT_MARK");
 		break;
 
 	case RED_PROB_MARK:
-		LOG_INFO("RED_PROB_MARK");
+		LOG_DBG("RED_PROB_MARK");
 		/*q->red_stats.prob_drop++;*/
 		q->stats.prob_mark++;
 		/* mark ECN bit */
@@ -198,7 +201,7 @@ static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
 		break;
 
 	case RED_HARD_MARK:
-		LOG_INFO("RED_HARD_MARK");
+		LOG_DBG("RED_HARD_MARK");
 		q->stats.forced_mark++;
 		goto congestion_drop;
 		break;
@@ -211,7 +214,7 @@ congestion_drop:
 
         pdu_destroy(pdu);
         atomic_dec(&port->n_sdus);
-        LOG_INFO("PDU dropped, max_th passed...");
+        LOG_DBG("PDU dropped, max_th passed...");
         return 0;
 }
 
