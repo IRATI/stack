@@ -64,19 +64,19 @@ red_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         struct red_dtcp_ps_data * data = ps->priv;
         uint_t new_credit;
 
+        new_credit = dtcp_rcvr_credit(dtcp);
         if (pci_flags_get(pci) & PDU_FLAGS_EXPLICIT_CONGESTION) {
                 /* leave window as it is */
-                new_credit = dtcp_rcvr_credit(dtcp);
                 if (!data->new_ecn_burst) {
-                        data->new_ecn_burst = true;
                         /* halve window */
-                        new_credit = MAX(1, (dtcp_rcvr_credit(dtcp) >> 1));
+                        data->new_ecn_burst = true;
+                        new_credit = MAX(1, new_credit >> 1);
                         LOG_DBG("Credit halved to %u", new_credit);
                 }
         } else {
                 data->new_ecn_burst = false;
                 /* increase window */
-                new_credit = dtcp_rcvr_credit(dtcp) + 1;
+                new_credit++;
                 LOG_DBG("Credit increased by 1 to: %u", new_credit);
         }
         /* set new credit */
