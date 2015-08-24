@@ -178,9 +178,16 @@ static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
                 return -1;
         }
 
-	/* Compute average queue usage (see RED) */
-	q->vars.qavg = red_calc_qavg(&q->parms, &q->vars, rfifo_length(q->queue));
-	LOG_DBG("qavg':  %lu, qlen: %lu", q->vars.qavg, rfifo_length(q->queue));
+	/* Compute average queue usage (see RED)
+	 * Formula is qavg = qavg*(1-W) + backlog*W;
+	 * backlog is the current occupation of the queue normalized
+	 * to Wlog
+	 */
+	q->vars.qavg = red_calc_qavg(&q->parms,
+				     &q->vars,
+				     rfifo_length(q->queue) >> (q->parms.Wlog));
+	LOG_DBG("qavg':  %lu, qlen: %lu", q->vars.qavg,
+					  rfifo_length(q->queue));
 	/* NOTE: check this! */
 	if (red_is_idling(&q->vars))
 		red_end_of_idle_period(&q->vars);

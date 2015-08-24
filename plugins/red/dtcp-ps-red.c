@@ -35,7 +35,8 @@
 #define MAX(A, B) A > B ? A : B
 
 struct red_dtcp_ps_data {
-        bool new_ecn_burst;
+	spinlock_t lock;
+        bool       new_ecn_burst;
 };
 
 static int
@@ -62,25 +63,21 @@ red_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 {
         struct dtcp * dtcp = ps->dm;
         struct red_dtcp_ps_data * data = ps->priv;
-        uint_t new_credit;
+        seq_num_t new_credit;
+	unsigned long flags;
 
+	spin_lock_irqsave(&data->lock, flags);
         new_credit = dtcp_rcvr_credit(dtcp);
-        if (pci_flags_get(pci) & PDU_FLAGS_EXPLICIT_CONGESTION) {
-                /* leave window as it is */
-                if (!data->new_ecn_burst) {
-                        /* halve window */
-                        data->new_ecn_burst = true;
-                        new_credit = MAX(1, new_credit >> 1);
-                        LOG_DBG("Credit halved to %u", new_credit);
-                }
-        } else {
-                data->new_ecn_burst = false;
-                /* increase window */
-                new_credit++;
-                LOG_DBG("Credit increased by 1 to: %u", new_credit);
+        if (!(pci_flags_get(pci) & PDU_FLAGS_EXPLICIT_CONGESTION)) {
+        	data->new_ecn_burst = false;
+        	new_credit++;
+        } else if (!data->new_ecn_burst) {
+                data->new_ecn_burst = true;
+                new_credit = 1 >= new_credit >> 1 ? 1 : new_credit >> 1;
         }
         /* set new credit */
         dtcp_rcvr_credit_set(dtcp, new_credit);
+	spin_unlock_irqrestore(&data->lock, flags);
         update_rt_wind_edge(dtcp);
         return 0;
 }
@@ -129,6 +126,7 @@ dtcp_ps_red_create(struct rina_component * component)
         }
 
         data->new_ecn_burst = true;
+	spin_lock_init(&data->lock);
 
         ps->base.set_policy_set_param   = dtcp_ps_red_set_policy_set_param;
         ps->dm                          = dtcp;
