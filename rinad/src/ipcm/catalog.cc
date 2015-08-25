@@ -193,10 +193,46 @@ int Catalog::load_by_template(Addon *addon, unsigned int ipcp_id,
 	return 0;
 }
 
+int Catalog::load_plugin(Addon *addon, unsigned int ipcp_id,
+			 const string& plugin_name)
+{
+	Promise promise;
+
+	// Perform the plugin loading - a blocking and possibly
+	// asynchronous operation - out of the catalog lock
+	if (IPCManager->plugin_load(addon, &promise, ipcp_id,
+			plugin_name, true) == IPCM_FAILURE ||
+				promise.wait() != IPCM_SUCCESS) {
+		LOG_WARN("Error occurred while loading plugin '%s'",
+			 plugin_name.c_str());
+		return -1;
+	}
+
+	LOG_INFO("Plugin '%s' successfully loaded",
+			plugin_name.c_str());
+
+	{
+		// Lookup again (the plugin or policy set may have disappeared
+		// in the meanwhile) under the write lock, and update the
+		// catalog data structure.
+		rina::WriteScopedLock wlock(rwlock);
+
+		if (plugins.count(plugin_name) == 0) {
+			LOG_WARN("Plugin %s disappeared while "
+				 "loading", plugin_name.c_str());
+			return -1;
+		}
+
+		// Mark the plugin as loaded for the specified IPCP
+		plugins[plugin_name].loaded.insert(ipcp_id);
+	}
+
+	return 0;
+}
+
 int Catalog::load_policy_set(Addon *addon, unsigned int ipcp_id,
 			     const rina::PsInfo& psinfo)
 {
-	Promise promise;
 	string plugin_name;
 
 	{
@@ -230,46 +266,7 @@ int Catalog::load_policy_set(Addon *addon, unsigned int ipcp_id,
 		plugin_name = cmap[psinfo.name].plugin->second.name;
 	}
 
-	// Perform the plugin loading - a blocking and possibly
-	// asynchronous operation - out of the catalog lock
-	if (IPCManager->plugin_load(addon, &promise, ipcp_id,
-			plugin_name, true) == IPCM_FAILURE ||
-				promise.wait() != IPCM_SUCCESS) {
-		LOG_WARN("Error occurred while loading plugin '%s'",
-			 plugin_name.c_str());
-		return -1;
-	}
-
-	LOG_INFO("Plugin '%s' successfully loaded",
-			plugin_name.c_str());
-
-	{
-		// Lookup again (the plugin or policy set may have disappeared
-		// in the meanwhile) under the write lock, and update the
-		// catalog data structure.
-		rina::WriteScopedLock wlock(rwlock);
-
-		if (policy_sets.count(psinfo.app_entity) == 0) {
-			LOG_WARN("Policy-sets for component %s disappeared "
-				 "while loading the plugin",
-				 psinfo.app_entity.c_str());
-			return -1;
-		}
-
-		map<string, CatalogPsInfo>& cmap = policy_sets[psinfo.app_entity];
-
-		if (cmap.count(psinfo.name) == 0) {
-			LOG_WARN("Policy-set %s disappeared while "
-				 "loading the plugin",
-				 psinfo.name.c_str());
-			return -1;
-		}
-
-		// Mark the plugin as loaded for the specified IPCP
-		cmap[psinfo.name].plugin->second.loaded.insert(ipcp_id);
-	}
-
-	return 0;
+	return load_plugin(addon, ipcp_id, plugin_name);
 }
 
 void Catalog::ipcp_destroyed(unsigned int ipcp_id)
