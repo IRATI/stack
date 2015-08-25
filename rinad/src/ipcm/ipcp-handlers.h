@@ -68,6 +68,25 @@ public:
 	int slave_ipcp_id;
 };
 
+/**
+* IPCP plugin load transaction state
+*/
+class IPCPpluginTransState: public TransactionState{
+
+public:
+	IPCPpluginTransState(Addon* callee, Promise* promise, int _ipcp_id,
+			   const std::string& _name)
+					: TransactionState(callee, promise),
+					  ipcp_id(_ipcp_id),
+					  plugin_name(_name) {}
+	virtual ~IPCPpluginTransState(){};
+
+	//IPCP identifier
+	int ipcp_id;
+	//Plugin name
+	std::string plugin_name;
+};
+
 }//rinad namespace
 
 #endif  /* __IPCP_HANDLERS_H__ */

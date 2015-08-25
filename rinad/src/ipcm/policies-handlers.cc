@@ -84,7 +84,7 @@ void IPCManager_::ipc_process_plugin_load_response_handler(rina::PluginLoadRespo
 	ostringstream ss;
         int ret = -1;
 
-        IPCPTransState* trans = get_transaction_state<IPCPTransState>(event->sequenceNumber);
+        IPCPpluginTransState* trans = get_transaction_state<IPCPpluginTransState>(event->sequenceNumber);
 
         if(!trans){
         	ss << ": Warning: unknown plugin load response received: "
@@ -108,10 +108,15 @@ void IPCManager_::ipc_process_plugin_load_response_handler(rina::PluginLoadRespo
         //Auto release the read lock
         rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
-        ss << "plugin-load-op completed on IPC process "
+        ss << "plugin-load-op [plugin=" << trans->plugin_name <<
+	      "]completed on IPC process "
 	       << ipcp->get_name().toString()
 	       << " [success=" << success << "]" << endl;
         FLUSH_LOG(INFO, ss);
+
+	if (success) {
+		catalog.plugin_loaded(trans->plugin_name, trans->ipcp_id);
+	}
 
 	//Mark as completed
 	trans->completed(success ? IPCM_SUCCESS : IPCM_FAILURE);

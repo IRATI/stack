@@ -193,47 +193,28 @@ int Catalog::load_by_template(Addon *addon, unsigned int ipcp_id,
 	return 0;
 }
 
-int Catalog::load_plugin(Addon *addon, unsigned int ipcp_id,
-			 const string& plugin_name)
+int Catalog::plugin_loaded(const string& plugin_name, unsigned int ipcp_id)
 {
-	Promise promise;
+	// Lookup again (the plugin or policy set may have disappeared
+	// in the meanwhile) under the write lock, and update the
+	// catalog data structure.
+	rina::WriteScopedLock wlock(rwlock);
 
-	// Perform the plugin loading - a blocking and possibly
-	// asynchronous operation - out of the catalog lock
-	if (IPCManager->plugin_load(addon, &promise, ipcp_id,
-			plugin_name, true) == IPCM_FAILURE ||
-				promise.wait() != IPCM_SUCCESS) {
-		LOG_WARN("Error occurred while loading plugin '%s'",
-			 plugin_name.c_str());
+	if (plugins.count(plugin_name) == 0) {
+		LOG_WARN("Plugin %s disappeared while "
+				"loading", plugin_name.c_str());
 		return -1;
 	}
 
-	LOG_INFO("Plugin '%s' successfully loaded",
-			plugin_name.c_str());
-
-	{
-		// Lookup again (the plugin or policy set may have disappeared
-		// in the meanwhile) under the write lock, and update the
-		// catalog data structure.
-		rina::WriteScopedLock wlock(rwlock);
-
-		if (plugins.count(plugin_name) == 0) {
-			LOG_WARN("Plugin %s disappeared while "
-				 "loading", plugin_name.c_str());
-			return -1;
-		}
-
-		// Mark the plugin as loaded for the specified IPCP
-		plugins[plugin_name].loaded.insert(ipcp_id);
-	}
-
-	return 0;
+	// Mark the plugin as loaded for the specified IPCP
+	plugins[plugin_name].loaded.insert(ipcp_id);
 }
 
 int Catalog::load_policy_set(Addon *addon, unsigned int ipcp_id,
 			     const rina::PsInfo& psinfo)
 {
 	string plugin_name;
+	Promise promise;
 
 	{
 		// Perform a first lookup (under read lock) to see if we
@@ -266,7 +247,20 @@ int Catalog::load_policy_set(Addon *addon, unsigned int ipcp_id,
 		plugin_name = cmap[psinfo.name].plugin->second.name;
 	}
 
-	return load_plugin(addon, ipcp_id, plugin_name);
+	// Perform the plugin loading - a blocking and possibly
+	// asynchronous operation - out of the catalog lock
+	if (IPCManager->plugin_load(addon, &promise, ipcp_id,
+			plugin_name, true) == IPCM_FAILURE ||
+				promise.wait() != IPCM_SUCCESS) {
+		LOG_WARN("Error occurred while loading plugin '%s'",
+			 plugin_name.c_str());
+		return -1;
+	}
+
+	LOG_INFO("Plugin '%s' successfully loaded",
+			plugin_name.c_str());
+
+	return 0;
 }
 
 void Catalog::ipcp_destroyed(unsigned int ipcp_id)
