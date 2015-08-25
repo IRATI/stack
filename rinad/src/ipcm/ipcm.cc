@@ -1114,6 +1114,18 @@ IPCManager_::set_policy_set_param(Addon* callee, Promise* promise,
 	return IPCM_PENDING;
 }
 
+static string
+extract_subcomponent_name(const string& cpath)
+{
+	size_t l = cpath.rfind(".");
+
+	if (l == string::npos) {
+		return string();
+	}
+
+	return cpath.substr(l+1);
+}
+
 ipcm_res_t
 IPCManager_::select_policy_set(Addon* callee, Promise* promise,
 		const unsigned short ipcp_id,
@@ -1125,6 +1137,19 @@ IPCManager_::select_policy_set(Addon* callee, Promise* promise,
 	IPCPTransState* trans;
 
 	try {
+		/* Load the policy set in the catalog. */
+		rina::PsInfo ps_info;
+		int ret;
+
+		ps_info.name = ps_name;
+		ps_info.app_entity = extract_subcomponent_name(component_path);
+		LOG_INFO("EXTRACTED %s", ps_info.app_entity.c_str());
+		ret = catalog.load_policy_set(callee, ipcp_id, ps_info);
+		if (ret) {
+			throw rina::Exception();
+		}
+
+		/* Select the policy set. */
 		ipcp = lookup_ipcp_by_id(ipcp_id);
 
 		if(!ipcp){
