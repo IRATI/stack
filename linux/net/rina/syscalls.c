@@ -294,6 +294,7 @@ SYSCALL_DEFINE3(sdu_write,
 #endif
 }
 
+/* FIXME: this syscall should be removed */
 SYSCALL_DEFINE4(allocate_port,
                 ipc_process_id_t, id,
                 const char __user *, process_name,
@@ -310,6 +311,7 @@ SYSCALL_DEFINE4(allocate_port,
 #else
         port_id_t     retval;
         struct name * tname;
+	flow_opts_t   flow_opts;
 
         SYSCALL_DUMP_ENTER;
 
@@ -329,7 +331,11 @@ SYSCALL_DEFINE4(allocate_port,
                 return -EFAULT;
         }
 
-        CALL_DEFAULT_PERSONALITY(retval, allocate_port, id, tname, blocking);
+        /* FIXME: remove this crappiness */
+	/* translate bool to flow_opts */
+	flow_opts = blocking ? 0 : FLOW_O_NONBLOCK;
+
+        CALL_DEFAULT_PERSONALITY(retval, flow_create, id, tname, flow_opts);
 
         SYSCALL_DUMP_EXIT;
 
@@ -337,6 +343,7 @@ SYSCALL_DEFINE4(allocate_port,
 #endif
 }
 
+/* FIXME: this syscall should be removed */
 SYSCALL_DEFINE2(deallocate_port,
                 ipc_process_id_t,     ipcp_id,
                 port_id_t,            id)
@@ -350,7 +357,7 @@ SYSCALL_DEFINE2(deallocate_port,
 
         SYSCALL_DUMP_ENTER;
 
-        CALL_DEFAULT_PERSONALITY(retval, deallocate_port, ipcp_id, id);
+        CALL_DEFAULT_PERSONALITY(retval, flow_destroy, ipcp_id, id);
 
         SYSCALL_DUMP_EXIT;
 

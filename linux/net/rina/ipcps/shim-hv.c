@@ -2,7 +2,6 @@
  * Shim IPC process for hypervisors
  *
  *   Vincenzo Maffione <v.maffione@nextworks.it>
- *   Leonardo Bergesio <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -625,7 +624,7 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
 
         if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                 LOG_DBG("This flow goes for an app");
-                if (kfa_flow_create(priv->kfa, port_id, false, ipcp)) {
+                if (kfa_flow_create(priv->kfa, port_id, ipcp)) {
                         LOG_ERR("Could not create flow in KFA");
                         goto flow_arrived;
                 }
@@ -1358,4 +1357,3 @@ module_exit(shim_hv_fini);
 MODULE_DESCRIPTION("RINA Shim IPC for Hypervisors");
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Vincenzo Maffione <v.maffione@nextworks.it>");
-MODULE_AUTHOR("Leonardo Bergesio  <leonardo.bergesio@i2cat.net>");

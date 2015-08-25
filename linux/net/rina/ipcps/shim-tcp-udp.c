@@ -4,7 +4,6 @@
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *    Douwe De Bock         <douwe.debock@ugent.be>
- *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,8 +33,6 @@
 #define SHIM_NAME_WWQ SHIM_NAME "-wwq"
 
 #define RINA_PREFIX SHIM_NAME
-
-#define BLOCKING_FLOW 1
 
 #include "logs.h"
 #include "common.h"
@@ -994,7 +991,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
 
                 if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                         LOG_DBG("This flow goes for an app");
-                        if (kfa_flow_create(data->kfa, flow->port_id, BLOCKING_FLOW, ipcp)) {
+                        if (kfa_flow_create(data->kfa, flow->port_id, ipcp)) {
                                 LOG_ERR("Could not create flow in KFA");
                                 sdu_destroy(du);
                                 kfa_port_id_release(data->kfa, flow->port_id);
@@ -1453,7 +1450,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
 
                 if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                         LOG_DBG("This flow goes for an app");
-                        if (kfa_flow_create(data->kfa, flow->port_id, BLOCKING_FLOW, ipcp)) {
+                        if (kfa_flow_create(data->kfa, flow->port_id, ipcp)) {
                                 LOG_ERR("Could not create flow in KFA");
                                 kfa_port_id_release(data->kfa, flow->port_id);
                                 if (flow_destroy(data, flow))
@@ -2807,4 +2804,3 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
 MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
 MODULE_AUTHOR("Douwe De Bock <douwe.debock@ugent.be>");
-MODULE_AUTHOR("Leonardo Beregsio  <leonardo.bergesio@i2cat.net>");

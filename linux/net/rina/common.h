@@ -27,6 +27,19 @@
 
 #include "rds/rstr.h"
 
+/* FIXME: to be moved elsewhere? */
+/* definition of flow options */
+#ifndef FLOW_O_NONBLOCK
+#define FLOW_O_NONBLOCK 00004000 /* use same value as fcntl.h */
+#endif
+
+#ifndef FLOW_O_DEFAULT
+#define FLOW_O_DEFAULT  00000000 /* default flow option */
+#endif
+
+/* flow options, such as blocking I/O behavior */
+typedef uint         flow_opts_t;
+
 /* FIXME: Shouldn't we keep contrained to int32 ids ? */
 typedef int           port_id_t;
 
@@ -61,6 +74,8 @@ typedef uint          seq_num_t;
 
 /* FIXME: The qos_id_t should be defined correctly in the near future */
 typedef uint          qos_id_t;
+
+
 
 struct uint_range {
         uint_t min;
@@ -138,11 +153,6 @@ struct flow_spec {
          * of the DIF where the flow will be created.
          */
         uint_t max_sdu_size;
-
-        /*
-         * True if the flow is blocking, false otherwise
-         */
-        bool blocking;
 };
 
 /* FIXME: Move RNL related types to RNL header(s) */

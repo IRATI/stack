@@ -66,7 +66,6 @@ enum flow_spec_attrs_list {
         FSPEC_ATTR_PEAK_BWITH_DURATION,
         FSPEC_ATTR_PEAK_SDU_BWITH_DURATION,
         FSPEC_ATTR_UNDETECTED_BER,
-        FSPEC_ATTR_BLOCKING,
         __FSPEC_ATTR_MAX,
 };
 #define FSPEC_ATTR_MAX (__FSPEC_ATTR_MAX - 1)

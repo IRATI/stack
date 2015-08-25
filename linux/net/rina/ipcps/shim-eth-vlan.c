@@ -51,8 +51,6 @@
 #define DEFAULT_QDISC_MAX_SIZE 50
 #define DEFAULT_QDISC_ENABLE_SIZE 10
 
-#define BLOCKING_FLOW 1
-
 /* FIXME: To be solved properly */
 static struct workqueue_struct * rcv_wq;
 
@@ -1089,7 +1087,7 @@ static int eth_vlan_rcv_worker(void * o)
 
         if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                 LOG_DBG("This flow goes for an app");
-                if (kfa_flow_create(data->kfa, flow->port_id, BLOCKING_FLOW, ipcp)) {
+                if (kfa_flow_create(data->kfa, flow->port_id, ipcp)) {
                         LOG_ERR("Could not create flow in KFA");
                         kfa_port_id_release(data->kfa, flow->port_id);
                         if (flow_destroy(data, flow))

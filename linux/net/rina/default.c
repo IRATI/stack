@@ -96,27 +96,27 @@ static int default_sdu_read(struct personality_data * data,
         return kipcm_sdu_read(data->kipcm, id, sdu);
 }
 
-static int default_allocate_port(struct personality_data * data,
-                                 ipc_process_id_t          ipc_id,
-                                 struct name *             name,
-                                 bool 			   blocking)
+static int default_flow_create(struct personality_data * data,
+			       ipc_process_id_t          ipc_id,
+			       struct name *             name,
+			       flow_opts_t 		 flow_opts)
 {
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_allocate_port(data->kipcm, ipc_id, name, blocking);
+        return kipcm_flow_create(data->kipcm, ipc_id, name, flow_opts);
 }
 
-static int default_deallocate_port(struct personality_data * data,
-                                   ipc_process_id_t          ipc_id,
-                                   port_id_t                 port_id)
+static int default_flow_destroy(struct personality_data * data,
+				ipc_process_id_t          ipc_id,
+				port_id_t                 port_id)
 {
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_deallocate_port(data->kipcm, ipc_id, port_id);
+        return kipcm_flow_destroy(data->kipcm, ipc_id, port_id);
 }
 
 static int default_mgmt_sdu_write(struct personality_data * data,
@@ -223,8 +223,8 @@ struct personality_ops ops = {
         .ipc_destroy     = default_ipc_destroy,
         .sdu_read        = default_sdu_read,
         .sdu_write       = default_sdu_write,
-        .allocate_port   = default_allocate_port,
-        .deallocate_port = default_deallocate_port,
+        .flow_create     = default_flow_create,
+        .flow_destroy    = default_flow_destroy,
         .mgmt_sdu_read   = default_mgmt_sdu_read,
         .mgmt_sdu_write  = default_mgmt_sdu_write
 };
