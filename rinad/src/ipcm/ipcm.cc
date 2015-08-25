@@ -1120,7 +1120,7 @@ extract_subcomponent_name(const string& cpath)
 	size_t l = cpath.rfind(".");
 
 	if (l == string::npos) {
-		return string();
+		return cpath;
 	}
 
 	return cpath.substr(l+1);
@@ -1143,7 +1143,6 @@ IPCManager_::select_policy_set(Addon* callee, Promise* promise,
 
 		ps_info.name = ps_name;
 		ps_info.app_entity = extract_subcomponent_name(component_path);
-		LOG_INFO("EXTRACTED %s", ps_info.app_entity.c_str());
 		ret = catalog.load_policy_set(callee, ipcp_id, ps_info);
 		if (ret) {
 			throw rina::Exception();
