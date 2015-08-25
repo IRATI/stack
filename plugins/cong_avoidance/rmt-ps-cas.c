@@ -29,6 +29,7 @@
 #include "debug.h"
 #include "rds/rmem.h"
 #include "rmt-ps.h"
+#include "rmt-ps-common.h"
 #include "pci.h"
 
 #define  N1_CYCLE_DURATION 100
@@ -124,16 +125,17 @@ struct cas_rmt_queue * cas_rmt_queue_find(struct cas_rmt_ps_data * data,
 static void cas_max_q_policy_tx(struct rmt_ps *      ps,
                                 struct pdu *         pdu,
                                 struct rmt_n1_port * port)
-{ printk("%s: called()\n", __func__); }
+{  }
 
 static void cas_max_q_policy_rx(struct rmt_ps *      ps,
                                 struct sdu *         sdu,
                                 struct rmt_n1_port * port)
-{ printk("%s: called()\n", __func__); }
+{  }
 
 static void cas_rmt_q_monitor_policy_tx_common(struct rmt_ps *      ps,
                                                struct pdu *         pdu,
-                                               struct rmt_n1_port * port)
+                                               struct rmt_n1_port * port,
+					       bool                 enqueue)
 {
         struct cas_rmt_queue *   q;
         struct cas_rmt_ps_data * data;
@@ -142,6 +144,7 @@ static void cas_rmt_q_monitor_policy_tx_common(struct rmt_ps *      ps,
         struct pci *             pci;
         pdu_flags_t              pci_flags;
         struct timespec          t_sub;
+        s64			 t_sub_ns;
 
         ASSERT(ps);
         ASSERT(ps->priv);
@@ -164,7 +167,7 @@ static void cas_rmt_q_monitor_policy_tx_common(struct rmt_ps *      ps,
         /* new cycle or end cycle */
         if (cur_qlen == 0) {
                 /* new cycle */
-                if (atomic_read(&port->n_sdus) == cur_qlen) {
+                if (enqueue) {
                         LOG_DBG("new cycle");
                         *prev_cycle = *cur_cycle;
 			if (q->first_run) {
@@ -226,15 +229,22 @@ static void cas_rmt_q_monitor_policy_tx_common(struct rmt_ps *      ps,
                 LOG_WARN("Division by 0 avoided..");
         }
         t_sub = timespec_sub(cur_cycle->t_end, prev_cycle->t_start);
+	t_sub_ns = timespec_to_ns(&t_sub);
         cur_cycle->avg_len = (cur_cycle->sum_area + prev_cycle->sum_area);
-        cur_cycle->avg_len /= timespec_to_ns(&t_sub);
 
+	/* This raise a warning: WARNING: "__divdi3" undefined. For some reason
+	 * it can not divide by a s64 variable but can do it by an insigned
+	 * long, both of size 64bits */
+	if (t_sub_ns < 0)
+		LOG_ERR("Time delta is < 0!");
+
+	cur_cycle->avg_len /=  (ulong) abs64(t_sub_ns);
 
         LOG_DBG("The length for N-1 port %u just calculated is: %lu",
                 port->port_id, cur_cycle->avg_len);
 
         if (cur_cycle->avg_len >= 1) {
-                LOG_INFO("Congestion detected in port %u, marking packets...",
+                LOG_DBG("Congestion detected in port %u, marking packets...",
                          port->port_id);
                 pci = pdu_pci_get_rw(pdu);
                 if (!pci) {
@@ -250,10 +260,15 @@ static void cas_rmt_q_monitor_policy_tx_common(struct rmt_ps *      ps,
 
 }
 
-static void cas_rmt_q_monitor_policy_rx(struct rmt_ps *      ps,
-                                        struct sdu *         sdu,
-                                        struct rmt_n1_port * port)
-{ printk("%s: called()\n", __func__); }
+static void cas_rmt_q_monitor_policy_tx_enq(struct rmt_ps *      ps,
+                                            struct pdu *         pdu,
+                                            struct rmt_n1_port * port)
+{ return cas_rmt_q_monitor_policy_tx_common(ps, pdu, port, true); }
+
+static void cas_rmt_q_monitor_policy_tx_deq(struct rmt_ps *      ps,
+                                            struct pdu *         pdu,
+                                            struct rmt_n1_port * port)
+{ return cas_rmt_q_monitor_policy_tx_common(ps, pdu, port, false); }
 
 static struct pdu *
 cas_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
@@ -281,6 +296,7 @@ cas_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
                 LOG_ERR("Could not dequeue scheduled pdu");
                 return NULL;
         }
+
         return ret_pdu;
 }
 
@@ -436,9 +452,9 @@ rmt_ps_cas_create(struct rina_component * component)
 
         ps->max_q_policy_tx = cas_max_q_policy_tx;
         ps->max_q_policy_rx = cas_max_q_policy_rx;
-        ps->rmt_q_monitor_policy_tx_enq = cas_rmt_q_monitor_policy_tx_common;
-        ps->rmt_q_monitor_policy_tx_deq = cas_rmt_q_monitor_policy_tx_common;
-        ps->rmt_q_monitor_policy_rx = cas_rmt_q_monitor_policy_rx;
+        ps->rmt_q_monitor_policy_tx_enq = cas_rmt_q_monitor_policy_tx_enq;
+        ps->rmt_q_monitor_policy_tx_deq = cas_rmt_q_monitor_policy_tx_deq;
+        ps->rmt_q_monitor_policy_rx = NULL;
         ps->rmt_next_scheduled_policy_tx     = cas_rmt_next_scheduled_policy_tx;
         ps->rmt_enqueue_scheduling_policy_tx = cas_rmt_enqueue_scheduling_policy_tx;
         ps->rmt_requeue_scheduling_policy_tx = cas_rmt_requeue_scheduling_policy_tx;

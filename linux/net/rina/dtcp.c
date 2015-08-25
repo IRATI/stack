@@ -1066,7 +1066,8 @@ static int rcv_nack_ctl(struct dtcp * dtcp,
                         return -1;
                 }
                 rtxq_nack(q, seq_num, dt_sv_tr(dtcp->parent));
-                ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
+		if (ps->rtt_estimator)
+                	ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
         }
         rcu_read_unlock();
 
@@ -1097,7 +1098,8 @@ static int rcv_ack(struct dtcp * dtcp,
         ps = container_of(rcu_dereference(dtcp->base.ps),
                           struct dtcp_ps, base);
         ret = ps->sender_ack(ps, seq);
-        ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
+	if (ps->rtt_estimator)
+        	ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
         rcu_read_unlock();
 
         LOG_DBG("DTCP received ACK (CPU: %d)", smp_processor_id());
@@ -1208,7 +1210,8 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         /* This updates sender LWE */
         if (ps->sender_ack(ps, seq))
                 LOG_ERR("Could not update RTXQ and LWE");
-        ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
+	if (ps->rtt_estimator)
+        	ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
         rcu_read_unlock();
 
         // Window based flow control?
