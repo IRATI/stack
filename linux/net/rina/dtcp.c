@@ -736,8 +736,6 @@ static int rcv_ack(struct dtcp * dtcp,
 static int rcv_flow_ctl(struct dtcp * dtcp,
                         struct pdu *  pdu)
 {
-        struct cwq * q;
-        struct dtp * dtp;
         struct pci * pci;
 
         ASSERT(dtcp);
@@ -748,24 +746,6 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
 
         snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
         push_pdus_rmt(dtcp);
-
-        dtp = dt_dtp(dtcp->parent);
-        if (!dtp) {
-                LOG_ERR("No DTP");
-                return -1;
-        }
-        q = dt_cwq(dtcp->parent);
-        if (!q) {
-                LOG_ERR("No Closed Window Queue");
-                return -1;
-        }
-        if (cwq_is_empty(q) &&
-            (dtp_sv_max_seq_nr_sent(dtp) < snd_rt_wind_edge(dtcp))) {
-                dt_sv_window_closed_set(dtcp->parent, false);
-        }
-
-        LOG_DBG("DTCP received FC (CPU: %d)", smp_processor_id());
-        dump_we(dtcp, pci);
 
         pdu_destroy(pdu);
         return 0;
