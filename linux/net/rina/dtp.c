@@ -844,12 +844,14 @@ static unsigned int msec_to_next_rate(uint time_frame, struct timespec * last) {
 		(diff.tv_nsec / 1000000); 	// Nsec to msec.
 
 	// Avoid to go wait more than a time frame.
-	if(ret > time_frame * 1000)
+	if(ret > time_frame * 1000) {
 		ret = time_frame * 1000;
+	}
 
-	// Avoid 0 wait time.
-	if(ret == 0)
+	// Wait at least 1 msec.
+	if(ret == 0) {
 		ret++;
+	}
 
 	return ret;
 }
@@ -865,8 +867,13 @@ void dtp_start_rate_timer(struct dtp * dtp, struct dtcp * dtcp) {
 		dtcp_last_time(dtcp, &t);
 		tf = msec_to_next_rate(rtf, &t);
 
-		LOG_DBG("rbfc Rate based timer start, time %u millisec",
-			tf);
+		LOG_DBG("rbfc Rate based timer start, time %u millisec, "
+			"last: %lu:%lu, elapse: %lu:%lu",
+			tf,
+			t.tv_sec,
+			t.tv_nsec,
+			t.tv_sec + rtf,
+			t.tv_nsec);
 
 		// NOTE: For the moment our metric is based on seconds.
 		// This is due the way of getting precise time by
@@ -899,12 +906,12 @@ static void tf_rate_window(void * o)
 
         // Timer resets, reset all the status.
 	getnstimeofday(&now);
-	// Rate limits.
-	dtcp_rate_fc_reset(dtcp, &now);
-	// Rate fulfiled flag.
-	dtp_sv_rate_fulfiled_set(dtp, false);
 	// Port enabled. This crash everything.
 	efcp_enable_write(dt_efcp(dtp_dt(dtp)));
+	// Rate fulfiled flag.
+	dtp_sv_rate_fulfiled_set(dtp, false);
+	// Rate limits.
+	dtcp_rate_fc_reset(dtcp, &now);
 
 	// Now that is open flush what has been enqueued.
 	q = dt_cwq(dtp->parent);
@@ -1637,12 +1644,13 @@ int dtp_receive(struct dtp * instance,
                 return 0;
         }
 
-        /*NOTE: Just for debugging */
+        /*NOTE: Just for debugging
         if (dtcp && seq_num > dtcp_rcv_rt_win(dtcp)) {
                 LOG_INFO("PDU Scep-id %u Dcep-id %u SeqN %u, RWE: %u",
                          pci_cep_source(pci), pci_cep_destination(pci),
                          seq_num, dtcp_rcv_rt_win(dtcp));
         }
+        */
 
 #if DTP_INACTIVITY_TIMERS_ENABLE
         /* Start ReceiverInactivityTimer */

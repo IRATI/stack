@@ -522,6 +522,10 @@ int dtcp_rate_fc_reset(struct dtcp * dtcp, struct timespec * now)
 	}
 
 	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	// Let me debug this.
+	LOG_DBG("rbfc: Renewing rate after %lu:%lu",
+		now->tv_sec - dtcp->sv->last_time.tv_sec,
+		now->tv_nsec - dtcp->sv->last_time.tv_nsec);
 	dtcp->sv->pdus_sent_in_time_unit = 0;
 	dtcp->sv->pdus_rcvd_in_time_unit = 0;
 	dtcp->sv->last_time.tv_sec = now->tv_sec;
@@ -2028,10 +2032,6 @@ bool dtcp_rate_exceeded(struct dtcp * dtcp, int send) {
 	// More than the given time-frame passed.
 	if (sub.tv_sec >= dtcp_time_frame(dtcp))
 	{
-		LOG_DBG("rbfc: Renewing rate after %lu:%lu",
-			sub.tv_sec,
-			sub.tv_nsec);
-
 		// Reset the credit and all the other things.
 		dtcp_rate_fc_reset(dtcp, &now);
 	}
