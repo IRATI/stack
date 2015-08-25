@@ -73,12 +73,14 @@ red_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         	new_credit++;
         } else if (!data->new_ecn_burst) {
                 data->new_ecn_burst = true;
-                new_credit = 1 >= new_credit >> 1 ? 1 : new_credit >> 1;
+                new_credit = 2 >= new_credit >> 1 ? 2 : new_credit >> 1;
         }
         /* set new credit */
         dtcp_rcvr_credit_set(dtcp, new_credit);
 	spin_unlock_irqrestore(&data->lock, flags);
-        update_rt_wind_edge(dtcp);
+        //update_rt_wind_edge(dtcp);
+	update_credit_and_rt_wind_edge(dtcp, new_credit);
+
         return 0;
 }
 

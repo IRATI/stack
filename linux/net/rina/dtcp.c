@@ -1074,6 +1074,7 @@ void update_credit_and_rt_wind_edge(struct dtcp * dtcp, uint_t credit)
 
         spin_lock_irqsave(&dtcp->sv->lock, flags);
         dtcp->sv->rcvr_credit = credit;
+	/* applying the TCP rule of not shrinking the window */
 	if (dt_sv_rcv_lft_win(dtcp->parent) + credit > dtcp->sv->rcvr_rt_wind_edge)
         	dtcp->sv->rcvr_rt_wind_edge = dt_sv_rcv_lft_win(dtcp->parent) + credit;
         spin_unlock_irqrestore(&dtcp->sv->lock, flags);
