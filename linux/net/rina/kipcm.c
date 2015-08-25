@@ -2341,7 +2341,7 @@ int kipcm_flow_opts_set(struct kipcm     *kipcm,
 }
 EXPORT_SYMBOL(kipcm_flow_opts_set);
 
-int kipcm_flow_opts(struct kipcm     *kipcm,
+flow_opts_t kipcm_flow_opts(struct kipcm     *kipcm,
 		    port_id_t         pid)
 {
         IRQ_BARRIER;

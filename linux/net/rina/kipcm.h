@@ -82,7 +82,7 @@ int            kipcm_flow_destroy(struct kipcm *   kipcm,
 int            kipcm_flow_opts_set(struct kipcm     *kipcm,
 				   port_id_t         pid,
 				   flow_opts_t       flow_opts);
-int            kipcm_flow_opts(struct kipcm     *kipcm,
+flow_opts_t    kipcm_flow_opts(struct kipcm     *kipcm,
 			       port_id_t         pid);
 
 /*
