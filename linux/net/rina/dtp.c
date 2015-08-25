@@ -1386,7 +1386,6 @@ int dtp_receive(struct dtp * instance,
          */
         if ((seq_num <= LWE) || (dtcp && (seq_num > dtcp_rcv_rt_win(dtcp)))) {
                 pdu_destroy(pdu);
-
                 dropped_pdus_inc(sv);
 
                 /*FIXME: Rtimer should not be restarted here, to be deleted */
@@ -1488,7 +1487,7 @@ int dtp_receive(struct dtp * instance,
                 rqueue_tail_push_ni(to_post, pdu);
 
                 pdu = seq_queue_pop(instance->seqq->queue);
-                LWE = dt_sv_rcv_lft_win(dt);
+                LWE = seq_num;
                 if (!pdu)
                         break;
                 seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));

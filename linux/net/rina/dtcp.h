@@ -95,6 +95,7 @@ struct pdu *     pdu_ctrl_generate(struct dtcp * dtcp, pdu_type_t type);
 uint_t           dtcp_rcvr_credit(struct dtcp * dtcp);
 void             dtcp_rcvr_credit_set(struct dtcp * dtcp, uint_t credit);
 void             update_rt_wind_edge(struct dtcp * dtcp);
+void 		 update_credit_and_rt_wind_edge(struct dtcp * dtcp, uint_t credit);
 uint_t           dtcp_rtt(struct dtcp * dtcp);
 int              dtcp_rtt_set(struct dtcp * dtcp, uint_t rtt);
 uint_t           dtcp_srtt(struct dtcp * dtcp);

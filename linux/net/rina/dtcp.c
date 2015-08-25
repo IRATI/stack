@@ -1065,6 +1065,21 @@ void update_rt_wind_edge(struct dtcp * dtcp)
 }
 EXPORT_SYMBOL(update_rt_wind_edge);
 
+void update_credit_and_rt_wind_edge(struct dtcp * dtcp, uint_t credit)
+{
+        unsigned long flags;
+
+        ASSERT(dtcp);
+        ASSERT(dtcp->sv);
+
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        dtcp->sv->rcvr_credit = credit;
+	if (dt_sv_rcv_lft_win(dtcp->parent) + credit > dtcp->sv->rcvr_rt_wind_edge)
+        	dtcp->sv->rcvr_rt_wind_edge = dt_sv_rcv_lft_win(dtcp->parent) + credit;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+}
+EXPORT_SYMBOL(update_credit_and_rt_wind_edge);
+
 static struct dtcp_sv default_sv = {
         .pdus_per_time_unit     = 0,
         .next_snd_ctl_seq       = 0,
