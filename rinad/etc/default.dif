@@ -38,8 +38,8 @@
                         }
                    }
               }
-          } 
-       }, { 
+          }
+       }, {
      	 "name" : "reliablewithflowcontrol",
          "id" : 2,
          "partialDelivery" : false,
@@ -73,7 +73,7 @@
              		}
            	  }
          }
-     } ], 
+     } ],
      "knownIPCProcessAddresses" : [ {
     	 "apName" : "test1.IRATI",
     	 "apInstance" : "1",
@@ -82,16 +82,16 @@
     	 "apName" : "test2.IRATI",
     	 "apInstance" : "1",
     	 "address" : 17
-  	} ], 
+  	} ],
   	"addressPrefixes" : [ {
     	 "addressPrefix" : 0,
     	 "organization" : "N.Bourbaki"
   	  }, {
     	 "addressPrefix" : 16,
     	 "organization" : "IRATI"
-      } ], 
+      } ],
      "rmtConfiguration" : {
-        "pftConfiguration" : {     
+        "pffConfiguration" : {
           "policySet" : {
             "name" : "default",
             "version" : "0"
@@ -103,9 +103,9 @@
         }
      },
      "enrollmentTaskConfiguration" : {
-        "policySet" : { 
+        "policySet" : {
            "name" : "default",
-           "version" : "1", 
+           "version" : "1",
            "parameters" : [{
                "name"  : "enrollTimeoutInMs",
                "value" : "10000"
@@ -124,10 +124,10 @@
              }]
         }
      },
-     "flowAllocatorConfiguration" : { 
-         "policySet" : { 
+     "flowAllocatorConfiguration" : {
+         "policySet" : {
            "name" : "default",
-           "version" : "1" 
+           "version" : "1"
           }
      },
      "namespaceManagerConfiguration" : {
@@ -143,7 +143,7 @@
            }
      },
      "resourceAllocatorConfiguration" : {
-         "pduftgConfiguration" : {    
+         "pduftgConfiguration" : {
            "policySet" : {
              "name" : "default",
              "version" : "0"
@@ -171,7 +171,7 @@
              "value" : "101"
            },{
              "name"  : "waitUntilAgeIncrement",
-             "value" : "997" 
+             "value" : "997"
            },{
              "name"  : "routingAlgorithm",
              "value" : "Dijkstra"
