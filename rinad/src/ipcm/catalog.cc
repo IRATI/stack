@@ -193,7 +193,8 @@ int Catalog::load_by_template(Addon *addon, unsigned int ipcp_id,
 	return 0;
 }
 
-int Catalog::plugin_loaded(const string& plugin_name, unsigned int ipcp_id)
+int Catalog::plugin_loaded(const string& plugin_name, unsigned int ipcp_id,
+			   bool load)
 {
 	// Lookup again (the plugin or policy set may have disappeared
 	// in the meanwhile) under the write lock, and update the
@@ -201,13 +202,17 @@ int Catalog::plugin_loaded(const string& plugin_name, unsigned int ipcp_id)
 	rina::WriteScopedLock wlock(rwlock);
 
 	if (plugins.count(plugin_name) == 0) {
-		LOG_WARN("Plugin %s disappeared while "
-				"loading", plugin_name.c_str());
+		LOG_WARN("Plugin %s it's not in the catalog",
+			 plugin_name.c_str());
 		return -1;
 	}
 
-	// Mark the plugin as loaded for the specified IPCP
-	plugins[plugin_name].loaded.insert(ipcp_id);
+	// Mark the plugin as (un)loaded for the specified IPCP
+	if (load) {
+		plugins[plugin_name].loaded.insert(ipcp_id);
+	} else {
+		plugins[plugin_name].loaded.erase(ipcp_id);
+	}
 }
 
 int Catalog::load_policy_set(Addon *addon, unsigned int ipcp_id,

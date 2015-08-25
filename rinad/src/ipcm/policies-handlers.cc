@@ -109,13 +109,14 @@ void IPCManager_::ipc_process_plugin_load_response_handler(rina::PluginLoadRespo
         rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
         ss << "plugin-load-op [plugin=" << trans->plugin_name <<
-	      "]completed on IPC process "
+	      ", load=" << trans->load << "] completed on IPC process "
 	       << ipcp->get_name().toString()
 	       << " [success=" << success << "]" << endl;
         FLUSH_LOG(INFO, ss);
 
 	if (success) {
-		catalog.plugin_loaded(trans->plugin_name, trans->ipcp_id);
+		catalog.plugin_loaded(trans->plugin_name, trans->ipcp_id,
+				      trans->load);
 	}
 
 	//Mark as completed

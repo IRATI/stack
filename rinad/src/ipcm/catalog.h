@@ -76,7 +76,7 @@ public:
 			    const rina::PsInfo& psinfo);
 
 	int plugin_loaded(const std::string& plugin_name,
-			  unsigned int ipcp_id);
+			  unsigned int ipcp_id, bool load);
 
 	void ipcp_destroyed(unsigned int ipcp_id);
 

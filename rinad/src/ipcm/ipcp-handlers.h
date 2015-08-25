@@ -75,16 +75,20 @@ class IPCPpluginTransState: public TransactionState{
 
 public:
 	IPCPpluginTransState(Addon* callee, Promise* promise, int _ipcp_id,
-			   const std::string& _name)
+			   const std::string& _name, bool _l)
 					: TransactionState(callee, promise),
 					  ipcp_id(_ipcp_id),
-					  plugin_name(_name) {}
+					  plugin_name(_name), load(_l) {}
 	virtual ~IPCPpluginTransState(){};
 
-	//IPCP identifier
+	// IPCP identifier
 	int ipcp_id;
-	//Plugin name
+
+	// Plugin name
 	std::string plugin_name;
+
+	// Is this a load or unload operation ?
+	bool load;
 };
 
 }//rinad namespace

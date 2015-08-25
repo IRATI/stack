@@ -1259,7 +1259,7 @@ IPCManager_::plugin_load(Addon* callee, Promise* promise,
 		//First try to see if its a kernel module
 		if (plugin_load_kernel(plugin_name, load) == IPCM_SUCCESS) {
 			promise->ret = IPCM_SUCCESS;
-			catalog.plugin_loaded(plugin_name, ipcp_id);
+			catalog.plugin_loaded(plugin_name, ipcp_id, load);
 
 			return IPCM_SUCCESS;
 		}
@@ -1275,7 +1275,8 @@ IPCManager_::plugin_load(Addon* callee, Promise* promise,
 		//Auto release the read lock
 		rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
-		trans = new IPCPpluginTransState(callee, promise, ipcp->get_id(), plugin_name);
+		trans = new IPCPpluginTransState(callee, promise, ipcp->get_id(),
+						 plugin_name, load);
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
 			FLUSH_LOG(ERR, ss);
