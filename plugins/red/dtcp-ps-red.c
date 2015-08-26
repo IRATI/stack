@@ -32,11 +32,35 @@
 #include "policies.h"
 #include "logs.h"
 
-#define MAX(A, B) A > B ? A : B
+#define DEBUG_ENABLED 1
+#define DEC_PRECISION 1000000
+
+#if DEBUG_ENABLED
+#include <linux/fs.h>
+#define DEBUG_FILE "/root/results.txt"
+#define DEBUG_SIZE 300000
+#endif
+
+enum tx_state {
+	SLOW_START,
+	CONG_AVOID
+};
 
 struct red_dtcp_ps_data {
-	spinlock_t lock;
-        bool       new_ecn_burst;
+	spinlock_t    lock;
+        uint_t        new_ecn_burst;
+	uint_t        init_credit;
+	uint_t        sshtresh;
+	enum tx_state state;
+	uint_t        dec_credit;	
+#if DEBUG_ENABLED
+	/* Used to debug the evolution of the window size withouth penalizing
+	 * the performance of the stack. It should be normally set to 0
+	 */
+	s64 	      stimes[DEBUG_SIZE];   
+	seq_num_t     ws_log[DEBUG_SIZE];
+	int           ws_index;
+#endif
 };
 
 static int
@@ -65,21 +89,50 @@ red_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         struct red_dtcp_ps_data * data = ps->priv;
         seq_num_t new_credit;
 	unsigned long flags;
+#if DEBUG_ENABLED
+	struct timespec now;
+	seq_num_t prev_credit;
+#endif
 
 	spin_lock_irqsave(&data->lock, flags);
         new_credit = dtcp_rcvr_credit(dtcp);
-        if (!(pci_flags_get(pci) & PDU_FLAGS_EXPLICIT_CONGESTION)) {
-        	data->new_ecn_burst = false;
-        	new_credit++;
-        } else if (!data->new_ecn_burst) {
-                data->new_ecn_burst = true;
-                new_credit = 2 >= new_credit >> 1 ? 2 : new_credit >> 1;
-        }
+#if DEBUG_ENABLED
+	prev_credit = new_credit;
+#endif
+	if (data->state == SLOW_START) {
+		new_credit++;
+		if (new_credit >= data->sshtresh) {
+			data->state = CONG_AVOID;
+		}
+	} else {
+		data->dec_credit += DEC_PRECISION/new_credit;
+		if (data->dec_credit >= DEC_PRECISION) {
+			new_credit++;
+			data->dec_credit -= DEC_PRECISION;
+		}
+	}
+        if ((pci_flags_get(pci) & PDU_FLAGS_EXPLICIT_CONGESTION) && !data->new_ecn_burst) {
+		new_credit = (2 >= (new_credit >> 1) ? 2 : (new_credit >> 1));
+		data->sshtresh = new_credit;
+		data->state = CONG_AVOID;
+		data->new_ecn_burst = new_credit;
+		LOG_INFO("change enc_burst to %u", data->new_ecn_burst);
+	} else if (data->new_ecn_burst != 0)
+		data->new_ecn_burst--;
+
         /* set new credit */
         dtcp_rcvr_credit_set(dtcp, new_credit);
 	spin_unlock_irqrestore(&data->lock, flags);
         //update_rt_wind_edge(dtcp);
 	update_credit_and_rt_wind_edge(dtcp, new_credit);
+#if DEBUG_ENABLED
+	if ((data->ws_index < DEBUG_SIZE) && (prev_credit != new_credit)) {
+		getnstimeofday(&now);
+        	data->stimes[data->ws_index] = timespec_to_ns(&now); 
+        	data->ws_log[data->ws_index++] = new_credit; 
+		prev_credit = new_credit;
+	}
+#endif
 
         return 0;
 }
@@ -127,8 +180,17 @@ dtcp_ps_red_create(struct rina_component * component)
                 return NULL;
         }
 
-        data->new_ecn_burst = true;
+        data->new_ecn_burst = 0;
+	data->state = SLOW_START;
+	data->init_credit = 3;
+	data->dec_credit = 0;
+	data->sshtresh = 0XFFFFFFFF;
+	dtcp_rcvr_credit_set(dtcp, data->init_credit);
+	
 	spin_lock_init(&data->lock);
+#if DEBUG_ENABLED
+	data->ws_index = 0;
+#endif
 
         ps->base.set_policy_set_param   = dtcp_ps_red_set_policy_set_param;
         ps->dm                          = dtcp;
@@ -159,9 +221,33 @@ dtcp_ps_red_create(struct rina_component * component)
 static void dtcp_ps_red_destroy(struct ps_base * bps)
 {
         struct dtcp_ps *ps = container_of(bps, struct dtcp_ps, base);
-
+	struct red_dtcp_ps_data * data;
+#if DEBUG_ENABLED
+	char* dump_filename = DEBUG_FILE;
+	struct file *file;
+	char string[40];
+	loff_t pos = 0;
+	mm_segment_t old_fs;
+	old_fs = get_fs();
+	set_fs(get_ds());
+	
+	file = filp_open(dump_filename, O_WRONLY|O_CREAT, 0644);
+#endif
         if (bps) {
                 if (ps->priv) {
+			data = ps->priv;
+#if DEBUG_ENABLED
+			if (file && (data->ws_index > 0)) {
+				int i;
+				for (i=0; i< data->ws_index; i++) {
+					snprintf(string, 40, "\t%llu\t%u\n", data->stimes[i], data->ws_log[i]);
+					vfs_write(file, (void *) string, 40, &pos);
+					pos = pos+40;
+				}
+				filp_close(file,NULL);
+			}
+			set_fs(old_fs);
+#endif
                         rkfree((struct red_dtcp_ps_data *) ps->priv);
                 }
                 rkfree(ps);

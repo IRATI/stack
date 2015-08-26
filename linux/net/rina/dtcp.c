@@ -1492,6 +1492,7 @@ seq_num_t dtcp_rcv_rt_win(struct dtcp * dtcp)
 
         return rcvr_rt_wind_edge(dtcp);
 }
+EXPORT_SYMBOL(dtcp_rcv_rt_win);
 
 seq_num_t dtcp_snd_rt_win(struct dtcp * dtcp)
 {

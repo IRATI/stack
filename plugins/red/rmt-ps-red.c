@@ -39,6 +39,12 @@
 #define MIN_TH_P_DEFAULT 2
 #define MAX_TH_P_DEFAULT 5
 #define WP_P_DEFAULT 2
+#define DEBUG_ENABLED 0
+
+#if DEBUG_ENABLED
+#define DEBUG_FILE "/root/q_report.txt"
+#define DEBUG_SIZE 100000
+#endif
 
 struct red_rmt_queue {
         struct rfifo *    queue;
@@ -54,8 +60,16 @@ struct red_rmt_queue {
 struct red_rmt_ps_data {
         DECLARE_HASHTABLE(queues, RMT_PS_HASHSIZE);
 	struct tc_red_qopt conf_data;
-	u8 * stab;
-	u32  max_P;
+	u8 *   stab;
+	u32    max_P;
+#if DEBUG_ENABLED
+	/* Used to debug the evolution of the queue ocuupation withouth penalizing
+	 * the performance of the stack. It should be normally set to 0
+	 */
+	s64    times[DEBUG_SIZE];   
+	size_t q_log[DEBUG_SIZE][2];
+	int    q_index;
+#endif
 };
 
 static struct red_rmt_queue * red_queue_create(port_id_t          port_id,
@@ -128,6 +142,9 @@ red_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
         struct red_rmt_queue *   q;
         struct red_rmt_ps_data * data = ps->priv;
         struct pdu *             ret_pdu;
+#if DEBUG_ENABLED
+	struct timespec          now;
+#endif
 
         if (!ps || !port || !data) {
                 LOG_ERR("Wrong input parameters for "
@@ -152,6 +169,14 @@ red_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
 	if (rfifo_is_empty(q->queue) == 0 &&
 	    !red_is_idling(&q->vars))
 		red_start_of_idle_period(&q->vars);
+#if DEBUG_ENABLED
+	if (data->q_index < DEBUG_SIZE && ret_pdu) {
+		getnstimeofday(&now);
+        	data->times[data->q_index] = timespec_to_ns(&now); 
+        	data->q_log[data->q_index][0] = rfifo_length(q->queue); 
+        	data->q_log[data->q_index++][1] = q->vars.qavg; 
+	} 
+#endif
         return ret_pdu;
 }
 
@@ -161,8 +186,11 @@ static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
 {
         struct red_rmt_queue *   q;
         struct red_rmt_ps_data * data = ps->priv;
-        struct pci *                 pci;
-        unsigned long                pci_flags;
+        struct pci *             pci;
+        unsigned long            pci_flags;
+#if DEBUG_ENABLED
+	struct timespec 	 now;
+#endif
 
         if (!ps || !port || !pdu || !data) {
                 LOG_ERR("Wrong input parameters for "
@@ -215,6 +243,15 @@ static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
 	}
 
 	rfifo_push_ni(q->queue, pdu);
+#if DEBUG_ENABLED
+	if (data->q_index < DEBUG_SIZE && pdu) {
+		getnstimeofday(&now);
+        	data->times[data->q_index] = timespec_to_ns(&now); 
+        	data->q_log[data->q_index][0] = rfifo_length(q->queue); 
+        	data->q_log[data->q_index++][1] = q->vars.qavg; 
+	}
+#endif
+
         return 0;
 
 congestion_drop:
@@ -369,6 +406,10 @@ rmt_ps_red_create(struct rina_component * component)
 
 	ps->priv = data;
 
+#if DEBUG_ENABLED
+	data->q_index = 0;
+#endif
+
 	rmt_cfg = rmt_config_get(rmt);
 	ps_param = policy_param_find(rmt_cfg->policy_set, "qmax_p");
 	if (!ps_param) {
@@ -440,11 +481,36 @@ static void rmt_ps_red_destroy(struct ps_base * bps)
         int bucket;
         struct red_rmt_queue * entry;
         struct hlist_node * tmp;
+#if DEBUG_ENABLED
+	char* dump_filename = DEBUG_FILE;
+	struct file *file;
+	char string[40];
+	loff_t pos = 0;
+	mm_segment_t old_fs;
+	old_fs = get_fs();
+	set_fs(get_ds());
+	
+	file = filp_open(dump_filename, O_WRONLY|O_CREAT, 0644);
+#endif
 
         data = ps->priv;
 
         if (bps) {
                 if (data) {
+#if DEBUG_ENABLED
+			if (file && (data->q_index > 0)) {
+				int i;
+				for (i=0; i< data->q_index; i++) {
+					snprintf(string, 40, "\t%llu\t%zu\t%zu\n", data->times[i],
+									  	   data->q_log[i][0],
+										   data->q_log[i][1]);
+					vfs_write(file, (void *) string, 40, &pos);
+					pos = pos+40;
+				}
+				filp_close(file,NULL);
+			}
+			set_fs(old_fs);
+#endif
                         hash_for_each_safe(data->queues, bucket, tmp, entry,
                                            hlist) {
                                 ASSERT(entry);
