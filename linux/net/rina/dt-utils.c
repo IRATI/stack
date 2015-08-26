@@ -392,7 +392,7 @@ void cwq_deliver(struct cwq * queue,
                 	dtp_sv_rate_fulfiled_set(dtp, true);
                 	dtp_start_rate_timer(dtp, dtcp);
 
-                	// Cannot use anymore again the port.
+                	// Cannot use anymore that port.
                 	//efcp_disable_write(dt_efcp(dt));
                 }
 
@@ -405,7 +405,7 @@ void cwq_deliver(struct cwq * queue,
         }
 
         if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
-        	LOG_DBG("rbfc Re-opening the rate mechanism");
+        	//LOG_DBG("rbfc Re-opening the rate mechanism");
         	dtp_sv_rate_fulfiled_set(dtp, false);
         }
 
@@ -626,6 +626,9 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
 					// Do not consume the retries.
 					dtp_sv_rate_fulfiled_set(dtp, true);
 					dtp_start_rate_timer(dtp, dtcp);
+
+					// Cannot use anymore that port.
+					//efcp_disable_write(dt_efcp(dt));
 					break;
 				}
 			}
@@ -785,6 +788,9 @@ static int rtxqueue_rtx(struct rtxqueue * q,
 					// Do not consume the retries.
 					dtp_sv_rate_fulfiled_set(dtp, true);
 					dtp_start_rate_timer(dtp, dtcp);
+
+					// Cannot use anymore that port.
+					//efcp_disable_write(dt_efcp(dt));
 					break;
 				}
                         }
