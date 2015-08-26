@@ -4,6 +4,9 @@
  *   Francesco Salvestrini <f.salvestrini@nextworks.it>
  *   Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *   Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *
+ * CONTRIBUTORS:
+ *
  *   Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *   Eduard Grasa	   <eduard.grasa@i2cat.net>
  *
@@ -2210,5 +2213,3 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
 MODULE_AUTHOR("Miquel Tarzan <miquel.tarzan@i2cat.net>");
 MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
-MODULE_AUTHOR("Leonardo Bergesio <leonardo.bergesio@i2cat.net>");
-MODULE_AUTHOR("Eduard Grasa <eduard.grasa@i2cat.net>");
