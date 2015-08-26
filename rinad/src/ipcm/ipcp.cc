@@ -335,7 +335,6 @@ void IPCMIPCProcess::allocateFlowResponse(
 	const rina::FlowRequestEvent& flowRequest,
 	int result,
 	bool notifySource,
-	bool blocking,
 	int flowAcceptorIpcProcessId)
 {
 	if (state_ != IPCM_IPCP_ASSIGNED_TO_DIF)
@@ -346,7 +345,6 @@ void IPCMIPCProcess::allocateFlowResponse(
 		proxy_->allocateFlowResponse(flowRequest,
 					     result,
 					     notifySource,
-					     blocking,
 					     flowAcceptorIpcProcessId);
 	} catch(rina::Exception &e){
 		throw e;

@@ -687,7 +687,6 @@ UnregisterApplicationResponseEvent::UnregisterApplicationResponseEvent(
 AllocateFlowResponseEvent::AllocateFlowResponseEvent(
                 int result,
                 bool notifySource,
-		bool blocking,
                 int flowAcceptorIpcProcessId,
                 unsigned int sequenceNumber) :
         BaseResponseEvent(result,
@@ -695,7 +694,6 @@ AllocateFlowResponseEvent::AllocateFlowResponseEvent(
                           sequenceNumber)
 {
         this->notifySource             = notifySource;
-	this->blocking                 = blocking;
         this->flowAcceptorIpcProcessId = flowAcceptorIpcProcessId;
 }
 

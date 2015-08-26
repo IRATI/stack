@@ -545,7 +545,6 @@ IPCEvent* AppAllocateFlowRequestArrivedMessage::toIPCEvent(){
 AppAllocateFlowResponseMessage::AppAllocateFlowResponseMessage() :
                 BaseNetlinkResponseMessage(RINA_C_APP_ALLOCATE_FLOW_RESPONSE) {
 	this->notifySource = true;
-	this->blocking = true;
 }
 
 bool AppAllocateFlowResponseMessage::isNotifySource() const {
@@ -556,17 +555,12 @@ void AppAllocateFlowResponseMessage::setNotifySource(bool notifySource) {
 	this->notifySource = notifySource;
 }
 
-void AppAllocateFlowResponseMessage::setBlocking(bool blocking) {
-	this->blocking = blocking;
-}
-
 
 IPCEvent* AppAllocateFlowResponseMessage::toIPCEvent(){
         AllocateFlowResponseEvent * event =
                         new AllocateFlowResponseEvent(
                                         getResult(),
                                         notifySource,
-					blocking,
                                         getSourceIpcProcessId(),
                                         getSequenceNumber());
         return event;
@@ -1341,7 +1335,6 @@ IPCEvent* IpcmAllocateFlowRequestArrivedMessage::toIPCEvent(){
 IpcmAllocateFlowResponseMessage::IpcmAllocateFlowResponseMessage() :
 				BaseNetlinkMessage(RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE) {
 	this->result = 0;
-	this->blocking = true;
 	this->notifySource = false;
 }
 
@@ -1365,20 +1358,11 @@ void IpcmAllocateFlowResponseMessage::setNotifySource(bool notifySource)
 	this->notifySource = notifySource;
 }
 
-void IpcmAllocateFlowResponseMessage::setBlocking(bool blocking)
-{
-	this->blocking = blocking;
-}
-
-
-
-
 IPCEvent* IpcmAllocateFlowResponseMessage::toIPCEvent(){
         AllocateFlowResponseEvent * event =
                         new AllocateFlowResponseEvent(
                                         result,
                                         notifySource,
-					blocking,
                                         getSourceIpcProcessId(),
                                         getSequenceNumber());
         return event;

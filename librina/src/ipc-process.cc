@@ -529,14 +529,12 @@ unsigned int ExtendedIPCManager::requestFlowAllocationInDIF(
 FlowInformation ExtendedIPCManager::allocateFlowResponse(
                 const FlowRequestEvent& flowRequestEvent,
 		int result,
-                bool notifySource,
-		bool blocking /* = true */)
+                bool notifySource)
 {
         return internalAllocateFlowResponse(flowRequestEvent,
                                             result,
                                             notifySource,
-                                            ipcProcessId,
-					    blocking);
+                                            ipcProcessId);
 }
 
 void ExtendedIPCManager::notifyflowDeallocated(

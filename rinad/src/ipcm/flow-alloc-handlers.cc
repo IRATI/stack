@@ -275,7 +275,7 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 		try {
 			// Inform the IPC process that it was not possible
 			// to allocate the flow
-			ipcp->allocateFlowResponse(*event, -1, true, event->flowSpecification.blocking, 0);
+			ipcp->allocateFlowResponse(*event, -1, true, 0);
 
 			ss << "IPC process " << ipcp->get_name().toString() <<
 				" informed that it was not possible to "
@@ -418,8 +418,6 @@ void IPCManager_::allocate_flow_response_event_handler(rina::AllocateFlowRespons
 			req_event,
 			event->result,
 			event->notifySource,
-			/* FIXME: this should probably not be here */
-			event->blocking,
 			event->flowAcceptorIpcProcessId);
 		if (!success)
 			req_event.portId = -1;

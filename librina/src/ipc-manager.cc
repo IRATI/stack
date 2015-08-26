@@ -341,7 +341,6 @@ void IPCProcessProxy::allocateFlow(const FlowRequestEvent& flowRequest,
 void IPCProcessProxy::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 					   int result,
 					   bool notifySource,
-					   bool blocking,
 					   int flowAcceptorIpcProcessId)
 {
 #if STUB_API
@@ -350,8 +349,6 @@ void IPCProcessProxy::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 	IpcmAllocateFlowResponseMessage responseMessage;
 	responseMessage.setResult(result);
 	responseMessage.setNotifySource(notifySource);
-	/* FIXME: bool blocking should be fixed */
-	responseMessage.setBlocking (blocking);
 	responseMessage.setSourceIpcProcessId(flowAcceptorIpcProcessId);
 	responseMessage.setDestIpcProcessId(id);
 	responseMessage.setDestPortId(portId);

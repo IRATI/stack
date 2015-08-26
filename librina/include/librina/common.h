@@ -536,16 +536,12 @@ public:
          */
         bool notifySource;
 
-	/* true if the respondee wants blocking I/O to/from this flow */
-	bool blocking;
-
         /** 0 if it is an application, or the ID of the IPC Process otherwise */
         int flowAcceptorIpcProcessId;
 
         AllocateFlowResponseEvent(
                         int result,
                         bool notifysource,
-			bool blocking,
                         int flowAcceptorIpcProcessId,
                         unsigned int sequenceNumber);
 };

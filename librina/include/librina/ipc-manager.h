@@ -486,7 +486,6 @@ public:
 	void allocateFlowResponse(const FlowRequestEvent& flowRequest,
 				  int result,
 				  bool notifySource,
-				  bool blocking,
 				  int flowAcceptorIpcProcessId);
 
 	/**

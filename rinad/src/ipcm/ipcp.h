@@ -303,7 +303,6 @@ public:
 	void allocateFlowResponse(const rina::FlowRequestEvent& flowRequest,
 				  int result,
 				  bool notifySource,
-				  bool blocking,
 				  int flowAcceptorIpcProcessId);
 
 	/**

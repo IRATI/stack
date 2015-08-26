@@ -154,7 +154,6 @@ AppAllocateFlowRequestArrivedMessage * parseAppAllocateFlowRequestArrivedMessage
 enum AppAllocateFlowResponseAttributes {
 	AAFRE_ATTR_RESULT = 1,
 	AAFRE_ATTR_NOTIFY_SOURCE,
-	AAFRE_ATTR_BLOCKING,
 	__AAFRE_ATTR_MAX,
 };
 
@@ -866,7 +865,6 @@ IpcmAllocateFlowRequestArrivedMessage * parseIpcmAllocateFlowRequestArrivedMessa
 enum IpcmAllocateFlowResponseAttributes {
 	IAFRE_ATTR_RESULT = 1,
 	IAFRE_ATTR_NOTIFY_SOURCE,
-	IAFRE_ATTR_BLOCKING,
 	__IAFRE_ATTR_MAX,
 };
 

@@ -634,8 +634,7 @@ public:
 	 */
 	FlowInformation allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
 					     int result,
-					     bool notifySource,
-					     bool blocking = true);
+					     bool notifySource);
 	/**
 	 * Invoked by the IPC Process to respond to the Application Process that
 	 * requested a flow deallocation

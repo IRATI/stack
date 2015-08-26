@@ -278,8 +278,6 @@ FlowInformation IPCManager::internalAllocateFlowResponse(
         responseMessage.setSourceIpcProcessId(ipcProcessId);
         responseMessage.setSequenceNumber(flowRequestEvent.sequenceNumber);
         responseMessage.setResponseMessage(true);
-	/* FIXME: flow allocation API for req/resp should be symmetric */
-	responseMessage.setBlocking(blocking);
         try{
                 rinaManager->sendMessage(&responseMessage, false);
         }catch(NetlinkException &e){
@@ -296,12 +294,11 @@ FlowInformation IPCManager::internalAllocateFlowResponse(
         flow->localAppName = flowRequestEvent.localApplicationName;
         flow->remoteAppName = flowRequestEvent.remoteApplicationName;
         flow->flowSpecification = flowRequestEvent.flowSpecification;
-	/* FIXME: blocking property to be removed from FlowSpecification */
-	flow->flowSpecification.blocking = blocking;
         flow->state = FlowInformation::FLOW_ALLOCATED;
         flow->difName = flowRequestEvent.DIFName;
         flow->portId = flowRequestEvent.portId;
 
+	/* TODO: set the options on this port_id */
         allocatedFlows[flowRequestEvent.portId] = flow;
 
         return *flow;
@@ -563,11 +560,7 @@ FlowInformation IPCManager::withdrawPendingFlow(unsigned int sequenceNumber)
         return result;
 }
 
-/* FIXME: bools should be replaced by uint OPTIONS */
-/* FIXME: API should probably be symmetric:
-   flow_alloc (...,
-               FLOW_ALLOC_REQUEST | FLOW_ALLOC_RESPONSE
-               FLOW_OPT_BLOCK | FLOW_OPT_NO_BLOCK */
+/* FIXME: bool blocking should be replaced by flow_opts_t */
 FlowInformation IPCManager::allocateFlowResponse(
 	const FlowRequestEvent& flowRequestEvent,
 	int result,

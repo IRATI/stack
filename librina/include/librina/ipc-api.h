@@ -263,7 +263,7 @@ protected:
 						     int result,
 						     bool notifySource,
 						     unsigned short ipcProcessId,
-						     bool blocking);
+						     bool blocking = true);
 
 public:
 	IPCManager();

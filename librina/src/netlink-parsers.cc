@@ -3544,7 +3544,6 @@ int putAppAllocateFlowResponseMessageObject(nl_msg* netlinkMessage,
 	NLA_PUT_U32(netlinkMessage, AAFRE_ATTR_RESULT,
 			object.getResult());
 	NLA_PUT_FLAG(netlinkMessage, AAFRE_ATTR_NOTIFY_SOURCE);
-	NLA_PUT_FLAG(netlinkMessage, AAFRE_ATTR_BLOCKING);
 
 	return 0;
 
@@ -4831,7 +4830,6 @@ int putIpcmAllocateFlowResponseMessageObject(nl_msg* netlinkMessage,
 	NLA_PUT_U32(netlinkMessage, IAFRE_ATTR_RESULT,
 			object.getResult());
 	NLA_PUT_FLAG(netlinkMessage, IAFRE_ATTR_NOTIFY_SOURCE);
-	NLA_PUT_FLAG(netlinkMessage, IAFRE_ATTR_BLOCKING);
 
 	return 0;
 
@@ -5739,9 +5737,6 @@ AppAllocateFlowResponseMessage * parseAppAllocateFlowResponseMessage(
 	attr_policy[AAFRE_ATTR_NOTIFY_SOURCE].type = NLA_FLAG;
 	attr_policy[AAFRE_ATTR_NOTIFY_SOURCE].minlen = 0;
 	attr_policy[AAFRE_ATTR_NOTIFY_SOURCE].maxlen = 0;
-	attr_policy[AAFRE_ATTR_BLOCKING].type = NLA_FLAG;
-	attr_policy[AAFRE_ATTR_BLOCKING].minlen = 0;
-	attr_policy[AAFRE_ATTR_BLOCKING].maxlen = 0;
 	struct nlattr *attrs[AAFRE_ATTR_MAX + 1];
 
 	/*
@@ -5769,11 +5764,6 @@ AppAllocateFlowResponseMessage * parseAppAllocateFlowResponseMessage(
 	if (attrs[AAFRE_ATTR_NOTIFY_SOURCE]) {
 		result->setNotifySource(
 				(nla_get_flag(attrs[AAFRE_ATTR_NOTIFY_SOURCE])));
-	}
-
-	if (attrs[AAFRE_ATTR_BLOCKING]) {
-		result->setBlocking(
-				(nla_get_flag(attrs[AAFRE_ATTR_BLOCKING])));
 	}
 
 	return result;
@@ -7993,9 +7983,6 @@ IpcmAllocateFlowResponseMessage * parseIpcmAllocateFlowResponseMessage(
 	attr_policy[IAFRE_ATTR_NOTIFY_SOURCE].type = NLA_FLAG;
 	attr_policy[IAFRE_ATTR_NOTIFY_SOURCE].minlen = 0;
 	attr_policy[IAFRE_ATTR_NOTIFY_SOURCE].maxlen = 0;
-	attr_policy[IAFRE_ATTR_BLOCKING].type = NLA_FLAG;
-	attr_policy[IAFRE_ATTR_BLOCKING].minlen = 0;
-	attr_policy[IAFRE_ATTR_BLOCKING].maxlen = 0;
 	struct nlattr *attrs[IAFRE_ATTR_MAX + 1];
 
 	/*
@@ -8023,11 +8010,6 @@ IpcmAllocateFlowResponseMessage * parseIpcmAllocateFlowResponseMessage(
 	if (attrs[IAFRE_ATTR_NOTIFY_SOURCE]) {
 		result->setNotifySource(
 				(nla_get_flag(attrs[IAFRE_ATTR_NOTIFY_SOURCE])));
-	}
-
-	if (attrs[IAFRE_ATTR_BLOCKING]) {
-		result->setBlocking(
-				(nla_get_flag(attrs[IAFRE_ATTR_BLOCKING])));
 	}
 
 	return result;

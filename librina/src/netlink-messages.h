@@ -310,13 +310,10 @@ class AppAllocateFlowResponseMessage: public BaseNetlinkResponseMessage {
 	 * wants the IPC Process to reply to the source or not
 	 */
 	bool notifySource;
-	bool blocking;
-
 public:
 	AppAllocateFlowResponseMessage();
 	bool isNotifySource() const;
 	void setNotifySource(bool notifySource);
-	void setBlocking (bool blocking);
 	IPCEvent* toIPCEvent();
 };
 
@@ -859,18 +856,12 @@ class IpcmAllocateFlowResponseMessage: public BaseNetlinkMessage {
 	 */
 	bool notifySource;
 
-	/**
-	 * true if the application wants blocking I/O from/to this flow
-	 */
-	bool blocking;
-
 public:
 	IpcmAllocateFlowResponseMessage();
 	int getResult() const;
 	void setResult(int result);
 	bool isNotifySource() const;
 	void setNotifySource(bool notifySource);
-	void setBlocking (bool blocking);
 	IPCEvent* toIPCEvent();
 };
 
