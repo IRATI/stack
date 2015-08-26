@@ -29,6 +29,7 @@
 #include <utility>
 
 #include <librina/common.h>
+#include <librina/application.h>
 #include <librina/ipc-manager.h>
 #include <librina/patterns.h>
 
@@ -89,6 +90,30 @@ public:
 
 	// Is this a load or unload operation ?
 	bool load;
+};
+
+/**
+* IPCP select-policy-set transaction state
+*/
+class IPCPSelectPsTransState: public TransactionState{
+
+public:
+	IPCPSelectPsTransState(Addon* callee, Promise* promise,
+			       unsigned _ipcp_id,
+			       const rina::PsInfo& _ps_info, int _id)
+					: TransactionState(callee, promise),
+					  ipcp_id(_ipcp_id),
+					  ps_info(_ps_info), id(_id) { }
+	virtual ~IPCPSelectPsTransState(){};
+
+	// IPCP identifier
+	unsigned int ipcp_id;
+
+	// The policy set to be selected
+	rina::PsInfo ps_info;
+
+	// IPCP or port-id identifier (to be used for the catalog)
+	unsigned int id;
 };
 
 }//rinad namespace

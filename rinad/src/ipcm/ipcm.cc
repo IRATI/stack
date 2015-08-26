@@ -1134,7 +1134,7 @@ IPCManager_::select_policy_set(Addon* callee, Promise* promise,
 {
 	ostringstream ss;
 	IPCMIPCProcess *ipcp;
-	IPCPTransState* trans;
+	IPCPSelectPsTransState* trans;
 
 	try {
 		/* Load the policy set in the catalog. */
@@ -1160,7 +1160,8 @@ IPCManager_::select_policy_set(Addon* callee, Promise* promise,
 		//Auto release the read lock
 		rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
-		trans = new IPCPTransState(callee, promise, ipcp->get_id());
+		trans = new IPCPSelectPsTransState(callee, promise, ipcp->get_id(),
+						   ps_info, ipcp->get_id());
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
 			FLUSH_LOG(ERR, ss);

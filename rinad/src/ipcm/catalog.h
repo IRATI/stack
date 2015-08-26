@@ -55,16 +55,34 @@ struct CatalogPlugin {
 struct CatalogPsInfo: public rina::PsInfo {
 	// Back-reference to the plugin that published this
 	// policy-set
-	std::map<std::string, CatalogPlugin>::iterator plugin;
+	CatalogPlugin *plugin;
+
+	// The resources (IPCP or port-ids of flows) for which this policy set is
+	// selected
+	std::set<unsigned int> selected;
 
 	CatalogPsInfo() : PsInfo() { }
 	CatalogPsInfo(const rina::PsInfo& psinfo,
-		      std::map<std::string, CatalogPlugin>::iterator plit);
+		      CatalogPlugin *pl);
+};
+
+struct CatalogResource {
+	// Back-reference to the policy set entry that
+	// is currently selected for this resource
+	CatalogPsInfo *ps;
+
+	// Id of the resource (port-id or IPCP id)
+	unsigned int id;
+
+	CatalogResource() { }
+	CatalogResource(unsigned int _id, CatalogPsInfo *_ps)
+				: id(_id), ps(_ps) { }
 };
 
 class Catalog {
 public:
 	Catalog() { }
+	~Catalog();
 
 	void import();
 	void add_plugin(const std::string& plugin_name,
@@ -78,6 +96,9 @@ public:
 	int plugin_loaded(const std::string& plugin_name,
 			  unsigned int ipcp_id, bool load);
 
+	int policy_set_selected(const rina::PsInfo& ps_info,
+			        unsigned int id);
+
 	void ipcp_destroyed(unsigned int ipcp_id);
 
 	void print() const;
@@ -88,11 +109,23 @@ private:
 				  const std::string& component,
 				  const rina::PolicyConfig& pconfig);
 
+	CatalogPsInfo *ps_lookup(const rina::PsInfo& psinfo);
+
+	CatalogResource *rsrc_lookup(const std::string& component,
+				     unsigned int id);
+
+	int add_resource(const std::string& component,
+			 unsigned int id, CatalogPsInfo *);
+
 	std::map<std::string,
-		 std::map<std::string, CatalogPsInfo>
+		 std::map<std::string, CatalogPsInfo*>
 		> policy_sets;
 
-	std::map<std::string, CatalogPlugin> plugins;
+	std::map<std::string, CatalogPlugin*> plugins;
+
+	std::map<std::string,
+		 std::map<unsigned int, CatalogResource*>
+		> resources;
 
 	rina::ReadWriteLockable rwlock;
 };

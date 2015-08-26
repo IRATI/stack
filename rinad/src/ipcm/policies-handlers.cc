@@ -131,10 +131,11 @@ void IPCManager_::ipc_process_select_policy_set_response_handler(
 	ostringstream ss;
         int ret = -1;
 
-	IPCPTransState* trans = get_transaction_state<IPCPTransState>(event->sequenceNumber);
+	IPCPSelectPsTransState* trans = get_transaction_state<IPCPSelectPsTransState>(event->sequenceNumber);
 
 	if(!trans){
-		ss << ": Warning: unknown select policy response received: "<<event->sequenceNumber<<endl;
+		ss << ": Warning: unknown select policy response received: "
+			<<event->sequenceNumber<<endl;
 		FLUSH_LOG(WARN, ss);
 		return;
 	}
@@ -156,6 +157,10 @@ void IPCManager_::ipc_process_select_policy_set_response_handler(
 	       << ipcp->get_name().toString() <<
 		" [success=" << success << "]" << endl;
 	FLUSH_LOG(INFO, ss);
+
+	if (success) {
+		catalog.policy_set_selected(trans->ps_info, trans->id);
+	}
 
 	//Mark as completed
 	trans->completed(success ? IPCM_SUCCESS : IPCM_FAILURE);

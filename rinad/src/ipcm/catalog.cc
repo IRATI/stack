@@ -44,11 +44,36 @@ using namespace std;
 
 namespace rinad {
 
-CatalogPsInfo::CatalogPsInfo(const rina::PsInfo& psinfo,
-			     map<string, CatalogPlugin>::iterator plit)
-				: PsInfo(psinfo)
+Catalog::~Catalog()
 {
-	plugin = plit;
+	for (map<string, map<unsigned int, CatalogResource *> >::iterator
+			it = resources.begin(); it != resources.end(); it++) {
+		for (map<unsigned int, CatalogResource *>::iterator
+				rmit = it->second.begin();
+					rmit != it->second.end(); rmit++) {
+			delete rmit->second;
+		}
+	}
+
+	for (map<string, map< string, CatalogPsInfo * > >::iterator
+			it = policy_sets.begin(); it != policy_sets.end(); it++) {
+		for (map<string, CatalogPsInfo *>::iterator
+				cmit = it->second.begin();
+				cmit != it->second.end(); cmit++) {
+			delete cmit->second;
+		}
+	}
+
+	for (map<string, CatalogPlugin *>::iterator
+			it = plugins.begin(); it != plugins.end(); it++) {
+		delete it->second;
+	}
+}
+
+CatalogPsInfo::CatalogPsInfo(const rina::PsInfo& psinfo,
+			     CatalogPlugin *pl) : PsInfo(psinfo)
+{
+	plugin = pl;
 }
 
 static bool endswith(const string& s, const string& suffix)
@@ -102,7 +127,6 @@ void Catalog::import()
 
 void Catalog::add_plugin(const string& plugin_name, const string& plugin_path)
 {
-	map<string, CatalogPlugin>::iterator plit;
 	list<rina::PsInfo> new_policy_sets;
 	rina::WriteScopedLock wlock(rwlock);
 	int ret;
@@ -119,12 +143,11 @@ void Catalog::add_plugin(const string& plugin_name, const string& plugin_path)
 		return;
 	}
 
-	plugins[plugin_name] = CatalogPlugin(plugin_name, plugin_path);
-	plit = plugins.find(plugin_name);
+	plugins[plugin_name] = new CatalogPlugin(plugin_name, plugin_path);
 
 	for (list<rina::PsInfo>::const_iterator ps = new_policy_sets.begin();
 					ps != new_policy_sets.end(); ps++) {
-		map<string, CatalogPsInfo>& cpsets =
+		map<string, CatalogPsInfo*>& cpsets =
 					policy_sets[ps->app_entity];
 		if (cpsets.count(ps->name)) {
 			// Policy set already in the catalog for the
@@ -132,7 +155,7 @@ void Catalog::add_plugin(const string& plugin_name, const string& plugin_path)
 			continue;
 		}
 
-		cpsets[ps->name] = CatalogPsInfo(*ps, plit);
+		cpsets[ps->name] = new CatalogPsInfo(*ps, plugins[plugin_name]);
 	}
 }
 
@@ -188,9 +211,39 @@ int Catalog::load_by_template(Addon *addon, unsigned int ipcp_id,
 			LOG_WARN("Failed to load policy-set %s/%s",
 				  i->app_entity.c_str(), i->name.c_str());
 		}
+
+		// Record that this IPCP has select this policy set (TODO
+		// move this in the assign_to_dif response).
+		if (!ret) {
+			policy_set_selected(*i, ipcp_id);
+		}
 	}
 
 	return 0;
+}
+
+/* To be called under catalog lock. */
+CatalogPsInfo *
+Catalog::ps_lookup(const rina::PsInfo& psinfo)
+{
+	if (policy_sets.count(psinfo.app_entity) == 0) {
+		LOG_WARN("Catalog does not contain any policy-set "
+				"for component %s",
+				psinfo.app_entity.c_str());
+		return NULL;
+	}
+
+	map<string, CatalogPsInfo*>& cmap = policy_sets[psinfo.app_entity];
+
+	if (cmap.count(psinfo.name) == 0) {
+		LOG_WARN("Catalog does not contain a policy-set "
+				"called %s for component %s",
+				psinfo.name.c_str(),
+				psinfo.app_entity.c_str());
+		return NULL;
+	}
+
+	return cmap[psinfo.name];
 }
 
 int Catalog::plugin_loaded(const string& plugin_name, unsigned int ipcp_id,
@@ -209,14 +262,75 @@ int Catalog::plugin_loaded(const string& plugin_name, unsigned int ipcp_id,
 
 	// Mark the plugin as (un)loaded for the specified IPCP
 	if (load) {
-		plugins[plugin_name].loaded.insert(ipcp_id);
+		plugins[plugin_name]->loaded.insert(ipcp_id);
 	} else {
-		plugins[plugin_name].loaded.erase(ipcp_id);
+		plugins[plugin_name]->loaded.erase(ipcp_id);
 	}
 }
 
+CatalogResource *
+Catalog::rsrc_lookup(const std::string& component, unsigned int id)
+{
+	map<string, map<unsigned int, CatalogResource *> >::iterator mit;
+	map<unsigned int, CatalogResource *>::iterator rmit;
+
+	mit = resources.find(component);
+	if (mit == resources.end()) {
+		return NULL;
+	}
+
+	rmit = mit->second.find(id);
+	if (rmit == mit->second.end()) {
+		return NULL;
+	}
+
+	return rmit->second;
+}
+
+int
+Catalog::add_resource(const std::string& component, unsigned int id,
+		      CatalogPsInfo *cpsinfo)
+{
+	if (resources.count(component) == 0) {
+		resources[component] = map<unsigned int, CatalogResource *>();
+	}
+
+	if (resources[component].count(id)) {
+		LOG_ERR("Resource with id %u for component %s "
+			"already exists", id, component.c_str());
+	}
+
+	resources[component][id] = new CatalogResource(id, cpsinfo);
+
+	return 0;
+}
+
+int Catalog::policy_set_selected(const rina::PsInfo& ps_info,
+			         unsigned int id)
+{
+	rina::WriteScopedLock wlock(rwlock);
+	CatalogPsInfo *cpsinfo;
+	CatalogResource *rsrc;
+
+	cpsinfo = ps_lookup(ps_info);
+	if (!cpsinfo) {
+		return -1;
+	}
+
+	rsrc = rsrc_lookup(ps_info.app_entity, id);
+	if (rsrc) {
+		rsrc->ps->selected.erase(id);
+	} else {
+		add_resource(ps_info.app_entity, id, cpsinfo);
+	}
+
+	cpsinfo->selected.insert(id);
+
+	return 0;
+}
+
 int Catalog::load_policy_set(Addon *addon, unsigned int ipcp_id,
-			     const rina::PsInfo& psinfo)
+			     const rina::PsInfo& ps_info)
 {
 	string plugin_name;
 	Promise promise;
@@ -225,31 +339,20 @@ int Catalog::load_policy_set(Addon *addon, unsigned int ipcp_id,
 		// Perform a first lookup (under read lock) to see if we
 		// can find a suitable plugin to load
 		rina::ReadScopedLock wlock(rwlock);
+		CatalogPsInfo *cpsinfo;
 
-		if (policy_sets.count(psinfo.app_entity) == 0) {
-			LOG_WARN("Catalog does not contain any policy-set "
-				 "for component %s",
-				 psinfo.app_entity.c_str());
+		cpsinfo = ps_lookup(ps_info);
+		if (!cpsinfo) {
 			return -1;
 		}
 
-		map<string, CatalogPsInfo>& cmap = policy_sets[psinfo.app_entity];
-
-		if (cmap.count(psinfo.name) == 0) {
-			LOG_WARN("Catalog does not contain a policy-set "
-				 "called %s for component %s",
-				 psinfo.name.c_str(),
-				 psinfo.app_entity.c_str());
-			return -1;
-		}
-
-		if (cmap[psinfo.name].plugin->second.loaded.count(ipcp_id)) {
+		if (cpsinfo->plugin->loaded.count(ipcp_id)) {
 			// Nothing to do, we have already loaded the
 			// plugin for that IPCP.
 			return 0;
 		}
 
-		plugin_name = cmap[psinfo.name].plugin->second.name;
+		plugin_name = cpsinfo->plugin->name;
 	}
 
 	// Perform the plugin loading - a blocking and possibly
@@ -272,17 +375,17 @@ void Catalog::ipcp_destroyed(unsigned int ipcp_id)
 {
 	rina::WriteScopedLock wlock(rwlock);
 
-	for (std::map<std::string, CatalogPlugin>::iterator
+	for (std::map<std::string, CatalogPlugin *>::iterator
 			plit = plugins.begin(); plit != plugins.end();
 								plit++) {
-		plit->second.loaded.erase(ipcp_id);
+		plit->second->loaded.erase(ipcp_id);
 	}
 }
 
 string Catalog::toString() const
 {
-	map<string, map< string, CatalogPsInfo > >::const_iterator mit;
-	map<string, CatalogPsInfo>::const_iterator cmit;
+	map<string, map< string, CatalogPsInfo * > >::const_iterator mit;
+	map<string, CatalogPsInfo *>::const_iterator cmit;
 	rina::ReadScopedLock rlock(const_cast<Catalog *>(this)->rwlock);
 	stringstream ss;
 
@@ -291,19 +394,18 @@ string Catalog::toString() const
 	for (mit = policy_sets.begin(); mit != policy_sets.end(); mit++) {
 		for (cmit = mit->second.begin();
 				cmit != mit->second.end(); cmit++) {
-			const CatalogPsInfo& cps = cmit->second;
+			const CatalogPsInfo *cps = cmit->second;
 
 			ss << "    ===================================="
-			   << endl << "    ps name: " << cps.name
-			   << endl << "    ps component: " << cps.app_entity
-			   << endl << "    ps version: " << cps.version
-			   << endl << "    plugin: " << cps.plugin->second.path
-			   << "/" << cps.plugin->second.name
+			   << endl << "    ps name: " << cps->name
+			   << endl << "    ps component: " << cps->app_entity
+			   << endl << "    ps version: " << cps->version
+			   << endl << "    plugin: " << cps->plugin->path
+			   << "/" << cps->plugin->name
 			   << ", loaded for ipcps [ ";
 			for (set<unsigned int>::iterator
-				ii = cps.plugin->second.loaded.begin();
-					ii != cps.plugin->second.loaded.end();
-									ii++) {
+				ii = cps->plugin->loaded.begin();
+					ii != cps->plugin->loaded.end(); ii++) {
 				ss << *ii << " ";
 			}
 			ss << "]" << endl;
