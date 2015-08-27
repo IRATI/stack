@@ -298,7 +298,7 @@ FlowInformation IPCManager::internalAllocateFlowResponse(
         flow->difName = flowRequestEvent.DIFName;
         flow->portId = flowRequestEvent.portId;
 
-	/* TODO: set the options on this port_id */
+	setFlowOptsBlocking(flow->portId, blocking);
         allocatedFlows[flowRequestEvent.portId] = flow;
 
         return *flow;
@@ -573,6 +573,62 @@ FlowInformation IPCManager::allocateFlowResponse(
 			notifySource,
 			0,
 			blocking);
+}
+
+/* returns 0 if blocking, > 0 if nonblocking, < 0 on error */
+int IPCManager::flowOptsBlocking(int portId)
+{
+#if STUB_API
+	return 0;
+#else
+	FlowInformation * flow;
+
+        WriteScopedLock writeLock(flows_rw_lock);
+
+        flow = getAllocatedFlow(portId);
+        if (flow == 0) {
+		return -1;
+        }
+
+        if (flow->state != FlowInformation::FLOW_ALLOCATED) {
+                return -1;
+        }
+	/* ADD FURTHER CHECKS? */
+
+	/* THIS IS A TEMPORARY FLOW_IO_HACK */
+	/* SYSCALL HAS BEEN ALTERED WITH MAGIC NUMBER */
+        /* TO BE REMOVED ABSOLUTELY */
+        return syscallReadSDU(portId, NULL, 999999999);
+#endif
+}
+
+int IPCManager::setFlowOptsBlocking(int portId, bool blocking)
+{
+#if STUB_API
+        return 0;
+#else
+	FlowInformation * flow;
+
+        WriteScopedLock writeLock(flows_rw_lock);
+
+        flow = getAllocatedFlow(portId);
+        if (flow == 0) {
+		return -1;
+        }
+
+        if (flow->state != FlowInformation::FLOW_ALLOCATED) {
+                return -1;
+        }
+	/* ADD FURTHER CHECKS? */
+
+	/* THIS IS A TEMPORARY FLOW_IO_HACK */
+	/* SYSCALL HAS BEEN ALTERED WITH MAGIC NUMBER */
+        /* TO BE REMOVED ABSOLUTELY */
+	if (!blocking)
+		return syscallWriteSDU(portId, NULL, 999999998);
+	return syscallWriteSDU(portId, NULL, 999999999);
+
+#endif
 }
 
 unsigned int IPCManager::requestFlowDeallocation(int portId)

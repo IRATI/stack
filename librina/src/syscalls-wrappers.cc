@@ -83,7 +83,7 @@ int syscallWriteSDU(int portId, void * sdu, int size)
 
         result = syscall(SYS_writeSDU, portId, sdu, size);
         if (result < 0) {
-        	LOG_WARN("Syscall write SDU failed: %d", errno);
+		LOG_DBG("Syscall write SDU failed: %d", errno);
                 result = -errno;
         }
 
@@ -118,7 +118,7 @@ int syscallWriteManagementSDU(unsigned short ipcProcessId,
         result = syscall(SYS_writeManagementSDU, ipcProcessId, address,
                          portId,sdu, size);
         if (result < 0) {
-        	LOG_DBG("Syscall write SDU failed: %d", errno);
+        	LOG_DBG("Syscall write mgt SDU failed: %d", errno);
                 result = -errno;
         }
 

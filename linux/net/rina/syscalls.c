@@ -184,6 +184,19 @@ SYSCALL_DEFINE3(sdu_read,
 
         SYSCALL_DUMP_ENTER;
 
+	LOG_DBG("Syscall read SDU (size = %zd, port-id = %d)", size, id);
+
+	/* FIXME: FLOW_IO_HACK TO ACCESS FLOW ATTRIBUTES */
+	/* TEMPORARY UNTIL WE HAVE FILE DESCRIPTORS */
+        /* TO BE REMOVED ABSOLUTELY!!!!!!!!!! */
+	if (size == 999999999) {
+		CALL_DEFAULT_PERSONALITY(retval, flow_opts, id);
+		LOG_WARN("Flow_options hack, options for port %d: %d",
+			 id,
+			 retval);
+		return retval;
+	}
+	/* <---- REMOVE */
         tmp = NULL;
 
         CALL_DEFAULT_PERSONALITY(retval, sdu_read, id, &tmp);
@@ -248,12 +261,35 @@ SYSCALL_DEFINE3(sdu_write,
 
         SYSCALL_DUMP_ENTER;
 
+	LOG_DBG("Syscall write SDU (size = %zd, port-id = %d)", size, id);
+
+	/* FIXME: FLOW_IO_HACK TO ACCESS FLOW ATTRIBUTES */
+	/* TEMPORARY UNTIL WE HAVE FILE DESCRIPTORS */
+        /* TO BE REMOVED ABSOLUTELY */
+	if (size == 999999998) {
+		CALL_DEFAULT_PERSONALITY(retval,
+					 flow_opts_set,
+					 id,
+					 FLOW_O_NONBLOCK);
+		LOG_WARN("Flow_options hack called - set flow %d to non-blocking",
+			id);
+		return retval;
+	}
+	if (size == 999999999) {
+		CALL_DEFAULT_PERSONALITY(retval,
+					 flow_opts_set,
+					 id,
+					 FLOW_O_DEFAULT);
+		LOG_WARN("Flow_options hack called - set flow %d to blocking",
+			 id);
+		return retval;
+	}
+	/* <---- REMOVE */
+
         if (!buffer || !size) {
                 SYSCALL_DUMP_EXIT;
                 return -EINVAL;
         }
-
-        LOG_DBG("Syscall write SDU (size = %zd, port-id = %d)", size, id);
 
         tmp_buffer = buffer_create(size);
         if (!tmp_buffer) {

@@ -417,10 +417,29 @@ public:
 	 * @throws FlowAllocationException If there are problems
 	 * confirming/denying the flow
 	 */
-	 FlowInformation allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
+	FlowInformation allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
 				  	      int result,
 				  	      bool notifySource,
 					      bool blocking = true);
+
+        /**
+	 * Checks whether this flow has blocking or non-blocking I/O
+	 *
+	 * @param portId, the portId of the flow
+	 * @return > 0 if blocking, 0 if non-blocking, < 0 upon error
+	 * @throws bricks
+	 */
+	int flowOptsBlocking(int portId);
+
+	/**
+	 * Sets this flow to blocking or non-blocking I/O
+	 *
+	 * @param portId, the portId of the flow
+	 * @param blocking true for blocking, false for non-blocking
+	 * @return > 0 if blocking, 0 if non-blocking, < 0 upon error
+	 * @throws bricks
+	 */
+	int setFlowOptsBlocking(int portId, bool blocking);
 
 	/**
 	 * Requests the deallocation of a flow
