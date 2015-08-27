@@ -149,7 +149,6 @@ int          rmt_pff_dump(struct rmt *       instance,
 int          rmt_pff_flush(struct rmt * instance);
 
 int          rmt_send(struct rmt * instance,
-                      struct pci * pci,
                       struct pdu * pdu);
 
 int          rmt_send_port_id(struct rmt *  instance,

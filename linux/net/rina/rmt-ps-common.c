@@ -31,13 +31,12 @@
 #include "rmt-ps.h"
 #include "rmt-ps-common.h"
 
-int
-common_rmt_scheduling_create_policy_tx(struct rmt_ps *        ps,
-                                       struct rmt_n1_port *   n1_port)
+int common_rmt_scheduling_create_policy_tx(struct rmt_ps      *ps,
+					   struct rmt_n1_port *n1_port)
 {
-        struct rmt_qgroup *         qgroup;
-        struct rmt_kqueue *         kqueue;
-        struct rmt_ps_common_data * data;
+        struct rmt_qgroup         *qgroup;
+        struct rmt_kqueue         *kqueue;
+        struct rmt_ps_common_data *data;
 
         if (!ps || !n1_port || !ps->priv) {
                 LOG_ERR("Wrong input parameters for "
@@ -73,12 +72,11 @@ common_rmt_scheduling_create_policy_tx(struct rmt_ps *        ps,
 }
 EXPORT_SYMBOL(common_rmt_scheduling_create_policy_tx);
 
-int
-common_rmt_scheduling_destroy_policy_tx(struct rmt_ps *        ps,
-                                        struct rmt_n1_port *   n1_port)
+int common_rmt_scheduling_destroy_policy_tx(struct rmt_ps      *ps,
+					    struct rmt_n1_port *n1_port)
 {
-        struct rmt_qgroup *         qgroup;
-        struct rmt_ps_common_data * data;
+        struct rmt_qgroup         *qgroup;
+        struct rmt_ps_common_data *data;
 
         if (!ps || !n1_port || !ps->priv) {
                 LOG_ERR("Wrong input parameters for "
@@ -101,14 +99,13 @@ common_rmt_scheduling_destroy_policy_tx(struct rmt_ps *        ps,
 }
 EXPORT_SYMBOL(common_rmt_scheduling_destroy_policy_tx);
 
-int
-common_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
-                                         struct rmt_n1_port * n1_port,
-                                         struct pdu *         pdu)
+int common_rmt_enqueue_scheduling_policy_tx(struct rmt_ps      *ps,
+					    struct rmt_n1_port *n1_port,
+                                            struct pdu         *pdu)
 {
-        struct rmt_kqueue *         q;
-        struct rmt_qgroup *         qg;
-        struct rmt_ps_common_data * data = ps->priv;
+        struct rmt_kqueue         *q;
+        struct rmt_qgroup         *qg;
+        struct rmt_ps_common_data *data = ps->priv;
 
         if (!ps || !n1_port || !pdu) {
                 LOG_ERR("Wrong input parameters for "
@@ -137,10 +134,9 @@ common_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
 }
 EXPORT_SYMBOL(common_rmt_enqueue_scheduling_policy_tx);
 
-int
-common_rmt_requeue_scheduling_policy_tx(struct rmt_ps *      ps,
-                                        struct rmt_n1_port * n1_port,
-                                        struct pdu *         pdu)
+int common_rmt_requeue_scheduling_policy_tx(struct rmt_ps      *ps,
+                                            struct rmt_n1_port *n1_port,
+                                            struct pdu         *pdu)
 {
         struct rmt_kqueue *         q;
         struct rmt_qgroup *         qg;
@@ -160,6 +156,7 @@ common_rmt_requeue_scheduling_policy_tx(struct rmt_ps *      ps,
                 pdu_destroy(pdu);
                 return -1;
         }
+
         q = rmt_kqueue_find(qg, 0);
         if (!qg) {
                 LOG_ERR("Could not find queue in the group for n1_port %u",
@@ -173,14 +170,13 @@ common_rmt_requeue_scheduling_policy_tx(struct rmt_ps *      ps,
 }
 EXPORT_SYMBOL(common_rmt_requeue_scheduling_policy_tx);
 
-struct pdu *
-common_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
-                                    struct rmt_n1_port * n1_port)
+struct pdu *common_rmt_next_scheduled_policy_tx(struct rmt_ps      *ps,
+					        struct rmt_n1_port *n1_port)
 {
-        struct rmt_kqueue *         q;
-        struct rmt_qgroup *         qg;
-        struct rmt_ps_common_data * data = ps->priv;
-        struct pdu *         ret_pdu;
+        struct rmt_kqueue         *q;
+        struct rmt_qgroup         *qg;
+        struct rmt_ps_common_data *data = ps->priv;
+        struct pdu                *ret_pdu;
 
         if (!ps || !n1_port) {
                 LOG_ERR("Wrong input parameters for "
@@ -195,6 +191,7 @@ common_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
                         n1_port->port_id);
                 return NULL;
         }
+
         q = rmt_kqueue_find(qg, 0);
         if (!q) {
                 LOG_ERR("Could not find queue in the group for n1_port %u",
@@ -207,14 +204,14 @@ common_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
                 LOG_ERR("Could not dequeue scheduled pdu");
                 return NULL;
         }
+
         return ret_pdu;
 }
 EXPORT_SYMBOL(common_rmt_next_scheduled_policy_tx);
 
-int
-common_rmt_scheduling_policy_rx(struct rmt_ps *      ps,
-                                 struct rmt_n1_port * n1_port,
-                                 struct sdu *         sdu)
+int common_rmt_scheduling_policy_rx(struct rmt_ps      *ps,
+				    struct rmt_n1_port *n1_port,
+				    struct sdu         *sdu)
 {
 /*
         struct rmt_ps_common_data * data = ps->priv;
@@ -228,10 +225,9 @@ common_rmt_scheduling_policy_rx(struct rmt_ps *      ps,
 }
 EXPORT_SYMBOL(common_rmt_scheduling_policy_rx);
 
-int
-rmt_ps_common_set_policy_set_param(struct ps_base * bps,
-                                   const char    * name,
-                                   const char    * value)
+int rmt_ps_common_set_policy_set_param(struct ps_base *bps,
+				       const char     *name,
+                                       const char     *value)
 {
         struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
 
