@@ -53,6 +53,12 @@ struct personality_ops {
 			    ipc_process_id_t          pid,
 			    struct name *             name,
 			    flow_opts_t	              flow_opts);
+	int (* flow_opts_set)(struct personality_data *data,
+			      port_id_t                port_id,
+			      flow_opts_t              flow_opts);
+	int (* flow_opts)(struct personality_data *data,
+			      port_id_t                port_id);
+
         int (* flow_destroy)(struct personality_data * data,
 			     ipc_process_id_t          ipc_id,
 			     port_id_t                 pid);

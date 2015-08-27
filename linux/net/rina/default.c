@@ -108,6 +108,27 @@ static int default_flow_create(struct personality_data * data,
         return kipcm_flow_create(data->kipcm, ipc_id, name, flow_opts);
 }
 
+static int default_flow_opts_set(struct personality_data *data,
+				 port_id_t                port_id,
+				 flow_opts_t              flow_opts)
+{
+	  if (!is_personality_ok(data)) return -1;
+
+	  LOG_DBG("Calling wrapped function");
+
+	  return kipcm_flow_opts_set(data->kipcm, port_id, flow_opts);
+}
+
+static int default_flow_opts(struct personality_data *data,
+			     port_id_t                port_id)
+{
+	if (!is_personality_ok(data)) return -1;
+
+        LOG_DBG("Calling wrapped function");
+
+        return kipcm_flow_opts(data->kipcm, port_id);
+}
+
 static int default_flow_destroy(struct personality_data * data,
 				ipc_process_id_t          ipc_id,
 				port_id_t                 port_id)
@@ -224,6 +245,8 @@ struct personality_ops ops = {
         .sdu_read        = default_sdu_read,
         .sdu_write       = default_sdu_write,
         .flow_create     = default_flow_create,
+	.flow_opts_set   = default_flow_opts_set,
+	.flow_opts       = default_flow_opts,
         .flow_destroy    = default_flow_destroy,
         .mgmt_sdu_read   = default_mgmt_sdu_read,
         .mgmt_sdu_write  = default_mgmt_sdu_write
