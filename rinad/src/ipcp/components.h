@@ -265,7 +265,7 @@ public:
 	virtual void createFlowRequestMessageReceived(Flow * flow,
 						      const std::string& object_name,
 						      int invoke_id,
-						      bool blocking) = 0;
+						      bool blocking = true) = 0;
 
 	/// Called by the flow allocator instance when it finishes to cleanup the state.
 	/// @param portId
