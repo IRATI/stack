@@ -153,8 +153,7 @@ inst_data_mapping_get(struct net_device * dev)
 {
         struct interface_data_mapping * mapping;
 
-        if (!dev)
-                return NULL;
+	ASSERT(dev);
 
         spin_lock(&data_instances_lock);
 
@@ -174,8 +173,9 @@ static struct ipcp_instance_data *
 find_instance(struct ipcp_factory_data * data,
               ipc_process_id_t           id)
 {
-
         struct ipcp_instance_data * pos;
+
+	ASSERT(data);
 
         list_for_each_entry(pos, &(data->instances), list) {
                 if (pos->id == id) {
@@ -192,6 +192,9 @@ static struct shim_eth_flow * find_flow(struct ipcp_instance_data * data,
 {
         unsigned long          flags;
         struct shim_eth_flow * flow;
+
+	ASSERT(data);
+	ASSERT(is_port_id_ok(id));
 
         spin_lock_irqsave(&data->lock, flags);
 
@@ -212,7 +215,9 @@ static struct gpa * name_to_gpa(const struct name * name)
         char *       tmp;
         struct gpa * gpa;
 
-        tmp = name_tostring(name);
+	ASSERT(name);
+
+	tmp = name_tostring(name);
         if (!tmp)
                 return NULL;
 
@@ -233,8 +238,8 @@ find_flow_by_gha(struct ipcp_instance_data * data,
 {
         struct shim_eth_flow * flow;
 
-        if (!data || !gha_is_ok(addr))
-                return NULL;
+	ASSERT(data);
+        ASSERT(gha_is_ok(addr));
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (gha_is_equal(addr, flow->dest_ha)) {
@@ -251,8 +256,8 @@ find_flow_by_gpa(struct ipcp_instance_data * data,
 {
         struct shim_eth_flow * flow;
 
-        if (!data || !gpa_is_ok(addr))
-                return NULL;
+        ASSERT(data);
+	ASSERT(gpa_is_ok(addr));
 
         spin_lock(&data->lock);
 
@@ -270,12 +275,8 @@ find_flow_by_gpa(struct ipcp_instance_data * data,
 
 static bool vlan_id_is_ok(uint16_t vlan_id)
 {
-        if (vlan_id > 4095 /* 0xFFF */) {
-                /* Out of bounds */
-                return false;
-        }
-
-        ASSERT(vlan_id <= 4095);
+        if (vlan_id & 0xF000) /* vlan_id > 4095) */
+		return false;
 
         /*
          * Reserved values:
@@ -300,13 +301,8 @@ static string_t * create_vlan_interface_name(string_t * interface_name,
         string_t * complete_interface;
         size_t     length;
 
-        if (!interface_name)
-                return NULL;
-
-        if (!vlan_id_is_ok(vlan_id)) {
-                LOG_ERR("Wrong vlan-id %d", vlan_id);
-                return NULL;
-        }
+        ASSERT(interface_name);
+        ASSERT(vlan_id_is_ok(vlan_id));
 
         bzero(string_vlan_id, sizeof(string_vlan_id)); /* Be safe */
         snprintf(string_vlan_id, sizeof(string_vlan_id), "%d", vlan_id);
@@ -334,10 +330,8 @@ static string_t * create_vlan_interface_name(string_t * interface_name,
 static int flow_destroy(struct ipcp_instance_data * data,
                         struct shim_eth_flow *      flow)
 {
-        if (!data || !flow) {
-                LOG_ERR("Couldn't destroy flow");
-                return -1;
-        }
+        ASSERT(data);
+	ASSERT(flow);
 
         spin_lock(&data->lock);
         if (!list_empty(&flow->list)) {
@@ -357,11 +351,11 @@ static int flow_destroy(struct ipcp_instance_data * data,
 static int unbind_and_destroy_flow(struct ipcp_instance_data * data,
                                    struct shim_eth_flow *      flow)
 {
+	ASSERT(data);
         ASSERT(flow);
 
         if (flow->user_ipcp) {
                 ASSERT(flow->user_ipcp->ops);
-
                 flow->user_ipcp->ops->
                         flow_unbinding_ipcp(flow->user_ipcp->data,
                                             flow->port_id);
@@ -381,11 +375,21 @@ static int eth_vlan_unbind_user_ipcp(struct ipcp_instance_data * data,
         struct shim_eth_flow * flow;
         unsigned long          flags;
 
+	if (!data) {
+		LOG_ERR("Bogus data passed, bailing out");
+		return -1;
+	}
+	if (!is_port_id_ok(id)) {
+		LOG_ERR("Invalid port ID passed, bailing out");
+		return -1;
+	}
+
         flow = find_flow(data, id);
-        if (!flow)
+
+	spin_lock_irqsave(&data->lock, flags);
+	if (!flow)
                 return -1;
 
-        spin_lock_irqsave(&data->lock, flags);
         if (flow->user_ipcp) {
                 flow->user_ipcp = NULL;
         }
@@ -405,6 +409,10 @@ static void rinarp_resolve_handler(void *             opaque,
         unsigned long 		    irqflags;
 
         LOG_DBG("Entered the ARP resolve handler of the shim-eth");
+
+	ASSERT(opaque);
+	ASSERT(dest_pa);
+	ASSERT(dest_ha);
 
         data = (struct ipcp_instance_data *) opaque;
         flow = find_flow_by_gpa(data, dest_pa);
@@ -486,9 +494,26 @@ eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
 {
         struct shim_eth_flow * flow;
 
-        ASSERT(data);
-        ASSERT(source);
-        ASSERT(dest);
+	if (!data) {
+		LOG_ERR("Bogus data passed, bailing out");
+		return -1;
+	}
+
+	if (!source) {
+		LOG_ERR("Bogus source passed, bailing out");
+		return -1;
+	}
+
+	if (!dest) {
+		LOG_ERR("Bogus dest passed, bailing out");
+		return -1;
+	}
+
+	if (!is_port_id_ok(id)) {
+		LOG_ERR("Invalid port ID passed, bailing out");
+		return -1;
+	}
+
 
         if (!data->app_name || !name_is_equal(source, data->app_name)) {
                 LOG_ERR("Wrong request, app is not registered");
@@ -519,8 +544,7 @@ eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
 
                 flow->sdu_queue = rfifo_create();
                 if (!flow->sdu_queue) {
-                        LOG_ERR("Couldn't create the sdu queue "
-                                "for a new flow");
+                        LOG_ERR("Couldn't create the sdu queue for a new flow");
                         unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
@@ -552,8 +576,15 @@ eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
         struct shim_eth_flow * flow;
         struct ipcp_instance * ipcp;
 
-        ASSERT(data);
-        ASSERT(is_port_id_ok(port_id));
+       	if (!data) {
+		LOG_ERR("Bogus data passed, bailing out");
+		return -1;
+	}
+
+	if (!is_port_id_ok(port_id)) {
+		LOG_ERR("Invalid port ID passed, bailing out");
+		return -1;
+	}
 
         if (!user_ipcp) {
                 LOG_ERR("Wrong user_ipcp passed, bailing out");
@@ -585,7 +616,6 @@ eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                         unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
-                ASSERT(user_ipcp);
                 ASSERT(user_ipcp->ops);
                 ASSERT(user_ipcp->ops->flow_binding_ipcp);
                 if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
@@ -649,7 +679,15 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
 {
         struct shim_eth_flow * flow;
 
-        ASSERT(data);
+	if (!data) {
+		LOG_ERR("Bogus data passed, bailing out");
+		return -1;
+	}
+
+	if (!is_port_id_ok(id)) {
+		LOG_ERR("Invalid port ID passed, bailing out");
+		return -1;
+	}
 
         flow = find_flow(data, id);
         if (!flow) {
@@ -667,8 +705,15 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
         struct gpa * pa;
         struct gha * ha;
 
-        ASSERT(data);
-        ASSERT(name);
+	if (!data) {
+		LOG_ERR("Bogus data passed, bailing out");
+		return -1;
+	}
+
+	if (!name) {
+		LOG_ERR("Invalid name passed, bailing out");
+		return -1;
+	}
 
         if (data->app_name) {
                 char * tmp = name_tostring(data->app_name);
@@ -717,8 +762,15 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
 static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
                                            const struct name *         name)
 {
-        ASSERT(data);
-        ASSERT(name);
+      	if (!data) {
+		LOG_ERR("Bogus data passed, bailing out");
+		return -1;
+	}
+
+	if (!name) {
+		LOG_ERR("Invalid name passed, bailing out");
+		return -1;
+	}
 
         if (!data->app_name) {
                 LOG_ERR("Shim-eth-vlan has no application registered");
@@ -744,13 +796,12 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
         return 0;
 }
 
-static void eth_vlan_enable_all_port_ids(struct ipcp_instance_data * data)
+static void enable_all_port_ids(struct ipcp_instance_data * data)
 {
 	struct shim_eth_flow 	  * flow;
 	unsigned long               flags;
 
-	if (!data)
-		return;
+	ASSERT(data);
 
 	spin_lock_irqsave(&data->lock, flags);
 	list_for_each_entry(flow, &data->flows, list) {
@@ -761,13 +812,15 @@ static void eth_vlan_enable_all_port_ids(struct ipcp_instance_data * data)
 	spin_unlock_irqrestore(&data->lock, flags);
 }
 
-static void eth_vlan_enable_write_all(struct net_device * dev)
+static void enable_write_all(struct net_device * dev)
 {
 	struct ipcp_instance_data * pos;
 
+	ASSERT(dev);
+
         list_for_each_entry(pos, &(eth_vlan_data.instances), list) {
                 if (pos->phy_dev == dev)
-                	eth_vlan_enable_all_port_ids(pos);
+                	enable_all_port_ids(pos);
         }
 }
 
@@ -783,7 +836,19 @@ struct shim_eth_qdisc_priv {
 
 static int shim_eth_qdisc_enqueue(struct sk_buff *skb, struct Qdisc *qdisc)
 {
-	struct shim_eth_qdisc_priv *priv = qdisc_priv(qdisc);
+	struct shim_eth_qdisc_priv *priv;
+
+	if (!skb) {
+		LOG_ERR("Bogus skb passed, bailing out");
+		return -1;
+	}
+
+	if (!qdisc) {
+		LOG_ERR("Bogus qdisc passed, bailing out");
+		return -1;
+	}
+
+	priv = qdisc_priv(qdisc);
 
 	LOG_DBG("shim-eth-enqueue called; current size is %u", qdisc->q.qlen);
 	if (skb_queue_len(&qdisc->q) < priv->q_max_size)
@@ -792,15 +857,21 @@ static int shim_eth_qdisc_enqueue(struct sk_buff *skb, struct Qdisc *qdisc)
 	return qdisc_drop(skb, qdisc);
 }
 
-static struct sk_buff *shim_eth_qdisc_dequeue(struct Qdisc *qdisc)
+static struct sk_buff * shim_eth_qdisc_dequeue(struct Qdisc *qdisc)
 {
-	struct shim_eth_qdisc_priv *priv = qdisc_priv(qdisc);
+	struct shim_eth_qdisc_priv *priv;
+
+	if (!qdisc) {
+		LOG_ERR("Bogus qdisc passed, bailing out");
+		return NULL;
+	}
+
+	priv = qdisc_priv(qdisc);
 
 	if (skb_queue_len(&qdisc->q) > 0) {
 		struct sk_buff *skb = __qdisc_dequeue_head(qdisc, &qdisc->q);
 		if (skb_queue_len(&qdisc->q) == priv->q_enable_thres)
-			eth_vlan_enable_write_all(qdisc->dev_queue->dev);
-
+			enable_write_all(qdisc->dev_queue->dev);
 		return skb;
 	}
 
@@ -809,12 +880,22 @@ static struct sk_buff *shim_eth_qdisc_dequeue(struct Qdisc *qdisc)
 
 static struct sk_buff * shim_eth_qdisc_peek(struct Qdisc *qdisc)
 {
+	if (!qdisc) {
+		LOG_ERR("Bogus qdisc passed, bailing out");
+		return NULL;
+	}
+
 	return skb_peek(&qdisc->q);
 }
 
 static int shim_eth_qdisc_init(struct Qdisc *qdisc, struct nlattr *opt)
 {
 	struct shim_eth_qdisc_priv * priv;
+
+	if (!qdisc) {
+		LOG_ERR("Bogus qdisc passed, bailing out");
+		return -1;
+	}
 
 	if (!opt)
 		return 0;
@@ -832,6 +913,11 @@ static int shim_eth_qdisc_init(struct Qdisc *qdisc, struct nlattr *opt)
 
 static void shim_eth_qdisc_reset(struct Qdisc *qdisc)
 {
+	if (!qdisc) {
+		LOG_ERR("Bogus qdisc passed, bailing out");
+		return;
+	}
+
 	__qdisc_reset_queue(qdisc, &qdisc->q);
 
 	qdisc->qstats.backlog = 0;
@@ -850,12 +936,15 @@ static struct Qdisc_ops shim_eth_qdisc_ops __read_mostly = {
 	.owner	   = THIS_MODULE,
 };
 
-int eth_vlan_update_qdisc(struct net_device *    dev,
-			  struct Qdisc *         old_qdisc,
-			  struct eth_vlan_info * info)
+int update_qdisc(struct net_device *    dev,
+		 struct Qdisc *         old_qdisc,
+		 struct eth_vlan_info * info)
 {
 	struct Qdisc * sch;
 	struct nlattr  attr;
+
+	ASSERT(dev);
+	ASSERT(info);
 
 	if (string_cmp(dev->qdisc->ops->id,
 		       shim_eth_qdisc_ops.id) == 0)
@@ -890,15 +979,15 @@ int eth_vlan_update_qdisc(struct net_device *    dev,
 	return 0;
 }
 
-static void eth_vlan_restore_qdisc(struct net_device * dev,
-				   struct Qdisc * old_qdisc)
+static void restore_qdisc(struct net_device * dev,
+			  struct Qdisc * old_qdisc)
 {
 	struct Qdisc * 		    sch;
 	struct ipcp_instance_data * pos;
 	int			    num_ipcps;
 
-	if (!old_qdisc)
-		return;
+	ASSERT(dev);
+	ASSERT(old_qdisc);
 
 	sch = dev->qdisc;
 	if (!sch)
@@ -938,11 +1027,21 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         int                      retval;
         unsigned long            flags;
 
-        ASSERT(data);
 
         LOG_DBG("Entered the sdu-write");
-        if (!sdu_is_ok(sdu)) {
-        	LOG_ERR("Bogus SDU passed");
+
+	if (unlikely(!data)) {
+		LOG_ERR("Bogus data passed, bailing out");
+		return -1;
+	}
+
+	if (unlikely(!is_port_id_ok(id))) {
+		LOG_ERR("Invalide port ID passed, bailing out");
+		return -1;
+	}
+
+        if (unlikely(!sdu_is_ok(sdu))) {
+        	LOG_ERR("Bogus SDU passed, bailing out");
         	sdu_destroy(sdu);
         	return -1;
         }
@@ -1040,7 +1139,8 @@ static int eth_vlan_rcv_worker(void * o)
         struct ipcp_instance_data *     data;
         const struct gpa *              gpaddr;
         struct name *                   sname;
-        struct ipcp_instance          * ipcp, * user_ipcp;
+        struct ipcp_instance           *ipcp;
+	struct ipcp_instance           *user_ipcp;
 
         struct shim_eth_flow *          flow;
         struct rcv_work_data *          wdata;
@@ -1048,6 +1148,8 @@ static int eth_vlan_rcv_worker(void * o)
         struct net_device *             dev;
 
         LOG_DBG("Worker waking up, going to create a flow");
+
+	ASSERT(o);
 
         wdata = (struct rcv_work_data *) o;
 
@@ -1058,8 +1160,7 @@ static int eth_vlan_rcv_worker(void * o)
         rkfree(wdata);
 
         if (!data->app_name) {
-                LOG_ERR("No app registered yet! "
-                        "Someone is doing something bad on the network");
+                LOG_ERR("No app registered yet! Someone is doing something bad on the network");
                 kfree_skb(skb);
                 return -1;
         }
@@ -1165,7 +1266,7 @@ static int eth_vlan_rcv_worker(void * o)
 }
 
 static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
-                                        struct net_device * dev)
+					struct net_device * dev)
 {
         struct ethhdr *                 mh;
         unsigned char *                 saddr;
@@ -1181,6 +1282,16 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         struct rwq_work_item          * item;
 
         /* C-c-c-checks */
+	if (!skb) {
+		LOG_ERR("Bogus skb passed, bailing out");
+		return -1;
+	}
+
+	if (!dev) {
+		LOG_ERR("Bogus dev passed, bailing out");
+		return -1;
+	}
+
         mapping = inst_data_mapping_get(dev);
         if (!mapping) {
                 LOG_ERR("Failed to get mapping");
@@ -1195,8 +1306,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         }
 
         if (!data->app_name) {
-                LOG_ERR("No app registered yet! "
-                        "Someone is doing something bad on the network");
+                LOG_ERR("No app registered yet! Someone is doing something bad on the network");
                 kfree_skb(skb);
                 return -1;
         }
@@ -1360,11 +1470,13 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
 
 static int eth_vlan_rcv(struct sk_buff *     skb,
                         struct net_device *  dev,
-                        struct packet_type * pt,
-                        struct net_device *  orig_dev)
+                        struct packet_type * pt,       /* not used */
+                        struct net_device *  orig_dev) /* not used */
 {
+	ASSERT(skb);
+	ASSERT(dev);
 
-        LOG_DBG("eth_vlan_rcv started, skb received");
+	LOG_DBG("eth_vlan_rcv started, skb received");
         skb = skb_share_check(skb, GFP_ATOMIC);
         if (!skb) {
                 LOG_ERR("Couldn't obtain ownership of the skb");
@@ -1388,16 +1500,22 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         int                             result;
         unsigned int                    temp;
 
-        ASSERT(data);
-        ASSERT(dif_information);
+	if (!data) {
+		LOG_ERR("Bogus data passed, bailing out");
+		return -1;
+	}
+
+        if (!dif_information) {
+		LOG_ERR("Bogus dif_information passed, bailing out");
+		return -1;
+	}
 
         info = data->info;
 
         if (data->dif_name) {
                 ASSERT(data->dif_name->process_name);
 
-                LOG_ERR("This IPC Process is already assigned to the DIF %s. "
-                        "An IPC Process can only be assigned to a DIF once",
+                LOG_ERR("IPCP already assigned to DIF %s, can be assigned only once",
                         data->dif_name->process_name);
                 return -1;
         }
@@ -1525,9 +1643,9 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         }
 
 	/* Modfy qdisc by our own */
-	if (eth_vlan_update_qdisc(data->phy_dev,
-				  data->old_qdisc,
-				  data->info)) {
+	if (update_qdisc(data->phy_dev,
+			 data->old_qdisc,
+			 data->info)) {
 		LOG_ERR("Problems creating queue discipline");
 		read_unlock(&dev_base_lock);
 		name_destroy(data->dif_name);
@@ -1582,8 +1700,15 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
         int				result;
         unsigned int			temp;
 
-        ASSERT(data);
-        ASSERT(new_config);
+	if (!data) {
+		LOG_ERR("Bogus data passed, bailing out");
+		return -1;
+	}
+
+        if (!new_config) {
+		LOG_ERR("Bogus configuration passed, bailing out");
+		return -1;
+	}
 
         /* Get configuration struct pertaining to this shim instance */
         info               = data->info;
@@ -1623,8 +1748,8 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
                 } else
                 	LOG_WARN("Unknown config param for eth shim");
         }
-	
-	eth_vlan_restore_qdisc(data->phy_dev, data->old_qdisc);
+
+	restore_qdisc(data->phy_dev, data->old_qdisc);
 
 	dev_remove_pack(data->eth_vlan_packet_type);
         /* Remove from list */
@@ -1665,9 +1790,9 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
         }
 
 	/* Modfy qdisc by our own */
-	if (eth_vlan_update_qdisc(data->phy_dev,
-				  data->old_qdisc,
-				  data->info)) {
+	if (update_qdisc(data->phy_dev,
+			 data->old_qdisc,
+			 data->info)) {
 		LOG_ERR("Problems creating queue discipline");
 		read_unlock(&dev_base_lock);
 		name_destroy(data->dif_name);
@@ -1711,8 +1836,10 @@ static const struct name * eth_vlan_ipcp_name(struct ipcp_instance_data * data)
 
 static const struct name * eth_vlan_dif_name(struct ipcp_instance_data * data)
 {
-        ASSERT(data);
-        ASSERT(name_is_ok(data->dif_name));
+	if (!data) {
+		LOG_ERR("Bogus data passed, bailing out");
+		return NULL;
+	}
 
         return data->dif_name;
 }
@@ -1778,6 +1905,8 @@ static int ntfy_user_ipcp_on_if_state_change(struct ipcp_instance_data * data,
 {
         struct shim_eth_flow * flow;
 
+	ASSERT(data);
+
         list_for_each_entry(flow, &data->flows, list) {
                 if (!flow->user_ipcp) {
 			/* This flow is used by an userspace application,
@@ -1794,10 +1923,16 @@ static int ntfy_user_ipcp_on_if_state_change(struct ipcp_instance_data * data,
 }
 
 static int eth_vlan_netdev_notify(struct notifier_block *nb,
-				  unsigned long event, void *opaque)
+				  unsigned long event,
+				  void *opaque)
 {
-	struct net_device *dev = netdev_notifier_info_to_dev(opaque);
+	struct net_device *dev;
         struct ipcp_instance_data * pos;
+
+	ASSERT(nb);
+	ASSERT(opaque);
+
+	dev = netdev_notifier_info_to_dev(opaque);
 
         list_for_each_entry(pos, &eth_vlan_data.instances, list) {
 		if (pos->dev != dev) {
@@ -1883,6 +2018,7 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
         struct ipcp_instance * inst;
 
         ASSERT(data);
+	ASSERT(name);
 
         /* Check if there already is an instance with that id */
         if (find_instance(data,id)) {
@@ -1991,7 +2127,7 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                         }
 
 			/* Restore old qdisc */
-			eth_vlan_restore_qdisc(pos->phy_dev, pos->old_qdisc);
+			restore_qdisc(pos->phy_dev, pos->old_qdisc);
 
                         /* Remove packet handler if there is one */
                         if (pos->eth_vlan_packet_type->dev)
