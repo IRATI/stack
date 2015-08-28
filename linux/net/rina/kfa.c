@@ -1106,7 +1106,8 @@ EXPORT_SYMBOL(kfa_flow_opts_set);
 
 flow_opts_t kfa_flow_opts(struct kfa *  instance,
 			  port_id_t     pid)
-{	struct ipcp_flow *     flow;
+{
+	struct ipcp_flow *     flow;
 
         IRQ_BARRIER;
 

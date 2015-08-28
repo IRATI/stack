@@ -2326,9 +2326,9 @@ int kipcm_flow_destroy(struct kipcm *   kipcm,
 }
 EXPORT_SYMBOL(kipcm_flow_destroy);
 
-int kipcm_flow_opts_set(struct kipcm     *kipcm,
-			port_id_t         pid,
-			flow_opts_t       flow_opts)
+int kipcm_flow_opts_set(struct kipcm *kipcm,
+			port_id_t     pid,
+			flow_opts_t   flow_opts)
 {
         IRQ_BARRIER;
 
@@ -2341,8 +2341,8 @@ int kipcm_flow_opts_set(struct kipcm     *kipcm,
 }
 EXPORT_SYMBOL(kipcm_flow_opts_set);
 
-flow_opts_t kipcm_flow_opts(struct kipcm     *kipcm,
-			    port_id_t         pid)
+flow_opts_t kipcm_flow_opts(struct kipcm *kipcm,
+			    port_id_t     pid)
 {
         IRQ_BARRIER;
 
@@ -2356,7 +2356,7 @@ flow_opts_t kipcm_flow_opts(struct kipcm     *kipcm,
 EXPORT_SYMBOL(kipcm_flow_opts);
 
 
-int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
+int kipcm_notify_flow_alloc_req_result(struct kipcm    *kipcm,
                                        ipc_process_id_t ipc_id,
                                        port_id_t        pid,
                                        uint_t           res)

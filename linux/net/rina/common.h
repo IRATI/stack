@@ -75,8 +75,6 @@ typedef uint          seq_num_t;
 /* FIXME: The qos_id_t should be defined correctly in the near future */
 typedef uint          qos_id_t;
 
-
-
 struct uint_range {
         uint_t min;
         uint_t max;
