@@ -66,7 +66,7 @@ struct red_rmt_ps_data {
 	/* Used to debug the evolution of the queue ocuupation withouth penalizing
 	 * the performance of the stack. It should be normally set to 0
 	 */
-	s64    times[DEBUG_SIZE];   
+	//s64    times[DEBUG_SIZE];   
 	size_t q_log[DEBUG_SIZE][2];
 	int    q_index;
 #endif
@@ -172,7 +172,7 @@ red_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
 #if DEBUG_ENABLED
 	if (data->q_index < DEBUG_SIZE && ret_pdu) {
 		getnstimeofday(&now);
-        	data->times[data->q_index] = timespec_to_ns(&now); 
+        	//data->times[data->q_index] = timespec_to_ns(&now); 
         	data->q_log[data->q_index][0] = rfifo_length(q->queue); 
         	data->q_log[data->q_index++][1] = q->vars.qavg; 
 	} 
@@ -246,7 +246,7 @@ static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
 #if DEBUG_ENABLED
 	if (data->q_index < DEBUG_SIZE && pdu) {
 		getnstimeofday(&now);
-        	data->times[data->q_index] = timespec_to_ns(&now); 
+        	//data->times[data->q_index] = timespec_to_ns(&now); 
         	data->q_log[data->q_index][0] = rfifo_length(q->queue); 
         	data->q_log[data->q_index++][1] = q->vars.qavg; 
 	}
@@ -468,6 +468,7 @@ rmt_ps_red_create(struct rina_component * component)
         ps->rmt_q_monitor_policy_rx = NULL;
         ps->rmt_next_scheduled_policy_tx = red_rmt_next_scheduled_policy_tx;
         ps->rmt_enqueue_scheduling_policy_tx = red_rmt_enqueue_scheduling_policy_tx;
+	ps->rmt_requeue_scheduling_policy_tx = red_rmt_enqueue_scheduling_policy_tx;
         ps->rmt_scheduling_create_policy_tx  = red_rmt_scheduling_create_policy_tx;
         ps->rmt_scheduling_destroy_policy_tx = red_rmt_scheduling_destroy_policy_tx;
 
@@ -484,7 +485,7 @@ static void rmt_ps_red_destroy(struct ps_base * bps)
 #if DEBUG_ENABLED
 	char* dump_filename = DEBUG_FILE;
 	struct file *file;
-	char string[40];
+	char string[10];
 	loff_t pos = 0;
 	mm_segment_t old_fs;
 	old_fs = get_fs();
@@ -501,11 +502,13 @@ static void rmt_ps_red_destroy(struct ps_base * bps)
 			if (file && (data->q_index > 0)) {
 				int i;
 				for (i=0; i< data->q_index; i++) {
-					snprintf(string, 40, "\t%llu\t%zu\t%zu\n", data->times[i],
+					/*snprintf(string, 40, "\t%llu\t%zu\t%zu\n", data->times[i],
 									  	   data->q_log[i][0],
-										   data->q_log[i][1]);
-					vfs_write(file, (void *) string, 40, &pos);
-					pos = pos+40;
+										   data->q_log[i][1]);*/
+					snprintf(string, 10, "\t%zu\t%zu\n", data->q_log[i][0],
+									     data->q_log[i][1]);
+					vfs_write(file, (void *) string, 10, &pos);
+					pos = pos+10;
 				}
 				filp_close(file,NULL);
 			}
