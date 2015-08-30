@@ -193,7 +193,7 @@ SYSCALL_DEFINE3(sdu_read,
 		CALL_DEFAULT_PERSONALITY(retval, flow_opts, id);
 		LOG_WARN("Flow_options hack, options for port %d: %d",
 			 id,
-			 retval);
+			 (uint) retval);
 		return retval;
 	}
 	/* <---- REMOVE */
@@ -331,23 +331,20 @@ SYSCALL_DEFINE3(sdu_write,
 }
 
 /* FIXME: this syscall should be removed */
-SYSCALL_DEFINE4(allocate_port,
+SYSCALL_DEFINE3(allocate_port,
                 ipc_process_id_t, id,
                 const char __user *, process_name,
-                const char __user *, process_instance,
-                bool, blocking)
+                const char __user *, process_instance)
 {
 #ifndef CONFIG_RINA
         (void) id;
         (void) process_name;
         (void) process_instance;
-        (void) blocking;
 
         return -ENOSYS;
 #else
         port_id_t     retval;
         struct name * tname;
-	flow_opts_t   flow_opts;
 
         SYSCALL_DUMP_ENTER;
 
@@ -367,11 +364,7 @@ SYSCALL_DEFINE4(allocate_port,
                 return -EFAULT;
         }
 
-        /* FIXME: remove this crappiness */
-	/* translate bool to flow_opts */
-	flow_opts = blocking ? 0 : FLOW_O_NONBLOCK;
-
-        CALL_DEFAULT_PERSONALITY(retval, flow_create, id, tname, flow_opts);
+        CALL_DEFAULT_PERSONALITY(retval, flow_create, id, tname);
 
         SYSCALL_DUMP_EXIT;
 

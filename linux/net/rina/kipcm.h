@@ -69,8 +69,7 @@ int            kipcm_mgmt_sdu_read(struct kipcm *    kipcm,
                                    struct sdu_wpi ** sdu_wpi);
 port_id_t      kipcm_flow_create(struct kipcm *   kipcm,
 				 ipc_process_id_t ipc_id,
-				 struct name *    process_name,
-				 flow_opts_t      flow_opts);
+				 struct name *    process_name);
 
 int            kipcm_flow_destroy(struct kipcm *   kipcm,
 				  ipc_process_id_t ipc_id,

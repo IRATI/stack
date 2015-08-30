@@ -2231,8 +2231,7 @@ int kipcm_mgmt_sdu_read(struct kipcm *    kipcm,
 /* Only called by the allocate_port syscall used only by the normal IPCP */
 port_id_t kipcm_flow_create(struct kipcm     *kipcm,
 			    ipc_process_id_t  ipc_id,
-			    struct name      *process_name,
-			    flow_opts_t       flow_opts)
+			    struct name      *process_name)
 {
         struct ipcp_instance *ipc_process;
 	struct ipcp_instance *user_ipc_process;
@@ -2288,8 +2287,6 @@ port_id_t kipcm_flow_create(struct kipcm     *kipcm,
                 name_destroy(process_name);
                 return port_id_bad();
         }
-	/* flow created, set the options */
-	kfa_flow_opts_set(kipcm->kfa, pid, flow_opts);
         KIPCM_UNLOCK(kipcm);
         name_destroy(process_name);
         return pid;

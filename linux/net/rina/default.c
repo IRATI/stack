@@ -98,14 +98,13 @@ static int default_sdu_read(struct personality_data * data,
 
 static int default_flow_create(struct personality_data * data,
 			       ipc_process_id_t          ipc_id,
-			       struct name *             name,
-			       flow_opts_t 		 flow_opts)
+			       struct name *             name)
 {
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_flow_create(data->kipcm, ipc_id, name, flow_opts);
+        return kipcm_flow_create(data->kipcm, ipc_id, name);
 }
 
 static int default_flow_opts_set(struct personality_data *data,

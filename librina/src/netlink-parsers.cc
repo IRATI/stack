@@ -876,9 +876,6 @@ int putFlowSpecificationObject(nl_msg* netlinkMessage,
 		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_UNDETECTED_BER,
 				object.undetectedBitErrorRate);
 	}
-	if (object.blocking) {
-		NLA_PUT_FLAG(netlinkMessage, FSPEC_ATTR_BLOCKING);
-	}
 
 	return 0;
 
@@ -922,9 +919,6 @@ FlowSpecification * parseFlowSpecificationObject(nlattr *nested) {
 	attr_policy[FSPEC_ATTR_UNDETECTED_BER].type = NLA_U32;
 	attr_policy[FSPEC_ATTR_UNDETECTED_BER].minlen = 4;
 	attr_policy[FSPEC_ATTR_UNDETECTED_BER].maxlen = 4;
-	attr_policy[FSPEC_ATTR_BLOCKING].type = NLA_FLAG;
-	attr_policy[FSPEC_ATTR_BLOCKING].minlen = 0;
-	attr_policy[FSPEC_ATTR_BLOCKING].maxlen = 0;
 	struct nlattr *attrs[FSPEC_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, FSPEC_ATTR_MAX, nested, attr_policy);
@@ -981,12 +975,6 @@ FlowSpecification * parseFlowSpecificationObject(nlattr *nested) {
 	if (attrs[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION]) {
 		result->peakSDUBandwidthDuration =
 				nla_get_u32(attrs[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION]);
-	}
-
-	if (attrs[FSPEC_ATTR_BLOCKING]) {
-		result->blocking = true;
-	} else {
-		result->blocking = false;
 	}
 
 	return result;

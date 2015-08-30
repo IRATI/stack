@@ -164,14 +164,6 @@ public:
 	 */
 	unsigned int maxSDUsize;
 
-	/**
-	 * FIXME: blocking property has to be removed from FlowSpecification
-	 * and moved into descriptor for a flow and eventually file descriptor
-	 *
-	 * True if the flow is blocking, false otherwise
-	 */
-	bool blocking;
-
 	FlowSpecification();
 	bool operator==(const FlowSpecification &other) const;
 	bool operator!=(const FlowSpecification &other) const;

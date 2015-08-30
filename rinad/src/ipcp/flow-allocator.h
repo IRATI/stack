@@ -180,8 +180,7 @@ public:
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	void createFlowRequestMessageReceived(Flow * flow,
 					      const std::string& object_name,
-					      int invoke_id,
-					      bool blocking);
+					      int invoke_id);
 	void submitAllocateRequest(rina::FlowRequestEvent& flowRequestEvent);
 	void processCreateConnectionResponseEvent(
 			const rina::CreateConnectionResponseEvent& event);

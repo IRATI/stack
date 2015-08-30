@@ -265,8 +265,7 @@ void FlowAllocator::populateRIB()
 void FlowAllocator::createFlowRequestMessageReceived(
 		Flow * flow,
 		const std::string& object_name,
-		int invoke_id,
-		bool blocking)
+		int invoke_id)
 {
 	IFlowAllocatorInstance * fai = 0;
 	unsigned int myAddress = 0;
@@ -285,8 +284,7 @@ void FlowAllocator::createFlowRequestMessageReceived(
 		//the Flow object from the CDAP message and call the FAI
 		try {
 			portId = rina::extendedIPCManager->allocatePortId(
-					flow->destination_naming_info,
-				        blocking);
+					flow->destination_naming_info);
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Problems requesting a port-id: %s. Ignoring the Flow allocation request",
 					e.what());
@@ -335,8 +333,7 @@ void FlowAllocator::submitAllocateRequest(
 	IFlowAllocatorInstance * fai;
 
 	try {
-		portId = rina::extendedIPCManager->allocatePortId(event.localApplicationName,
-								  event.flowSpecification.blocking);
+		portId = rina::extendedIPCManager->allocatePortId(event.localApplicationName);
 		LOG_IPCP_DBG("Got assigned port-id %d", portId);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems requesting an available port-id to the Kernel IPC Manager: %s",

@@ -233,7 +233,6 @@ FlowSpecification::FlowSpecification() {
 	jitter = 0;
 	delay = 0;
 	maxSDUsize = 0;
-	blocking = true;
 }
 
 const std::string FlowSpecification::toString() {
@@ -247,7 +246,6 @@ const std::string FlowSpecification::toString() {
         ss<<"; Average SDU bandwidth (bytes/s): "<<averageSDUBandwidth<<std::endl;
         ss<<"Peak bandwidth duration (ms): "<<peakBandwidthDuration;
         ss<<"; Peak SDU bandwidth duration (ms): "<<peakSDUBandwidthDuration;
-        ss<<"; Blocking: " << blocking;
         return ss.str();
 }
 

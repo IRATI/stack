@@ -186,8 +186,7 @@ int syscallCreateIPCProcess(const ApplicationProcessNamingInformation & ipcProce
 }
 
 int syscallAllocatePortId(unsigned short ipcProcessId,
-                          const ApplicationProcessNamingInformation & applicationName,
-                          bool blocking)
+                          const ApplicationProcessNamingInformation & applicationName)
 {
         int result;
 
@@ -196,8 +195,7 @@ int syscallAllocatePortId(unsigned short ipcProcessId,
         result = syscall(SYS_allocatePortId,
                          ipcProcessId,
                          applicationName.processName.c_str(),
-                         applicationName.processInstance.c_str(),
-                         blocking);
+                         applicationName.processInstance.c_str());
 
         if (result < 0) {
         	LOG_DBG("Syscall allocate port id failed: %d", errno);
