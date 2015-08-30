@@ -29,6 +29,7 @@
 #include "rds/rmem.h"
 #include "rmt-ps.h"
 #include "dtcp-ps.h"
+#include "dtcp-ps-debug.h"
 
 extern struct ps_factory rmt_factory;
 extern struct ps_factory dtcp_factory;
@@ -54,6 +55,7 @@ static int __init mod_init(void)
                 return -1;
         }
 
+	red_dtcp_debug_proc_init();
         LOG_INFO("DTCP TCP-RED policy set loaded successfully");
 
         return 0;
@@ -77,6 +79,7 @@ static void __exit mod_exit(void)
                 return;
         }
 
+	red_dtcp_debug_proc_exit();
         LOG_INFO("DTCP TCP-RED policy set unloaded successfully");
 
 }
