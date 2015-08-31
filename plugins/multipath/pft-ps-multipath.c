@@ -65,6 +65,9 @@ static struct pft_entry * pft_find(struct pff_ps_priv * priv,
         list_for_each_entry(it, &priv->entries, next) {
                 if ((it->destination == destination) &&
                     (it->qos_id == qos_id)) {
+
+			LOG_DBG("Match found: %s", it->destination);
+
                         struct pft_entry * tmp = rkmalloc(sizeof(*tmp), GFP_ATOMIC);
                         if (!tmp) {
                                 return res;
@@ -263,6 +266,8 @@ pff_ps_multipath_create(struct rina_component * component)
         ps->base.set_policy_set_param = pff_ps_set_policy_set_param;
         ps->dm              = dtp;
         ps->priv            = NULL;
+
+	LOG_INFO("Multipath create called");
 
         ps->pff_nhop = mp_next_hop;
 
