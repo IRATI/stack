@@ -39,7 +39,7 @@ bool test_flow (rinad::Encoder * encoder) {
 	rinad::Flow *pflow_to_encode;
 	std::list<rina::Connection*> connection_list;
 	rina::Connection *pconnection_to_encode = new rina::Connection;
-	rina::ConnectionPolicies connection_policies_to_encode;
+	rina::DTPConfig dtp_config_to_encode;
 	rina::DTCPConfig dtcp_config_to_encode;
 	rina::DTCPRtxControlConfig rtx_config;
 	rina::DTCPFlowControlConfig flow_config_to_encode;
@@ -49,11 +49,11 @@ bool test_flow (rinad::Encoder * encoder) {
 	// Set
 	flow_to_encode.source_naming_info = rina::ApplicationProcessNamingInformation("test", "1");
 	flow_to_encode.destination_naming_info = rina::ApplicationProcessNamingInformation("test2", "1");
-	connection_policies_to_encode.set_dtcp_present(true);
-	connection_policies_to_encode.set_seq_num_rollover_threshold(1234);
-	connection_policies_to_encode.set_initial_a_timer(14561);
-	connection_policies_to_encode.set_initial_seq_num_policy(rina::PolicyConfig("policy1", "23"));
-	connection_policies_to_encode.set_dtp_policy_set(rina::PolicyConfig("policy2", "26"));
+	dtp_config_to_encode.set_dtcp_present(true);
+	dtp_config_to_encode.set_seq_num_rollover_threshold(1234);
+	dtp_config_to_encode.set_initial_a_timer(14561);
+	dtp_config_to_encode.set_initial_seq_num_policy(rina::PolicyConfig("policy1", "23"));
+	dtp_config_to_encode.set_dtp_policy_set(rina::PolicyConfig("policy2", "26"));
 	dtcp_config_to_encode.set_dtcp_policy_set(rina::PolicyConfig("policy3", "27"));
 	dtcp_config_to_encode.set_rtx_control(true);
 	rtx_config.set_data_rxmsn_max(25423);
@@ -75,8 +75,8 @@ bool test_flow (rinad::Encoder * encoder) {
 	rate_to_encode.set_time_period(1451234);
 	flow_config_to_encode.set_rate_based_config(rate_to_encode);
 	dtcp_config_to_encode.set_flow_control_config(flow_config_to_encode);
-	connection_policies_to_encode.set_dtcp_configuration(dtcp_config_to_encode);
-	pconnection_to_encode->setPolicies(connection_policies_to_encode);
+	pconnection_to_encode->setDTPConfig(dtp_config_to_encode);
+	pconnection_to_encode->setDTCPConfig(dtcp_config_to_encode);
 	connection_list.push_front(pconnection_to_encode);
 	flow_to_encode.connections = connection_list;
 
@@ -96,21 +96,20 @@ bool test_flow (rinad::Encoder * encoder) {
 		return false;
 
 	rina::Connection *pconnection_decoded = pflow_decoded->connections.front();
-	rina::ConnectionPolicies connection_policies_decoded = pconnection_decoded->getPolicies();
-	if ( connection_policies_to_encode.get_seq_num_rollover_threshold() != connection_policies_decoded.get_seq_num_rollover_threshold())
+	rina::DTPConfig dtp_config_decoded = pconnection_decoded->getDTPConfig();
+	if ( dtp_config_to_encode.get_seq_num_rollover_threshold() != dtp_config_decoded.get_seq_num_rollover_threshold())
 		return false;
-	if ( connection_policies_to_encode.get_initial_a_timer() != connection_policies_decoded.get_initial_a_timer())
+	if ( dtp_config_to_encode.get_initial_a_timer() != dtp_config_decoded.get_initial_a_timer())
 		return false;
-	if ( connection_policies_to_encode.get_initial_seq_num_policy() != connection_policies_decoded.get_initial_seq_num_policy())
+	if ( dtp_config_to_encode.get_initial_seq_num_policy() != dtp_config_decoded.get_initial_seq_num_policy())
 		return false;
-	if ( connection_policies_to_encode.get_dtp_policy_set() != connection_policies_decoded.get_dtp_policy_set())
+	if ( dtp_config_to_encode.get_dtp_policy_set() != dtp_config_decoded.get_dtp_policy_set())
 		return false;
 
-	if ( connection_policies_to_encode.is_dtcp_present() != connection_policies_decoded.is_dtcp_present())
+	if ( dtp_config_to_encode.is_dtcp_present() != dtp_config_decoded.is_dtcp_present())
 		return false;
 	else {
-
-		rina::DTCPConfig dtcp_config_decoded = connection_policies_decoded.get_dtcp_configuration();
+		rina::DTCPConfig dtcp_config_decoded = pconnection_decoded->getDTCPConfig();
 	        if (dtcp_config_to_encode.get_dtcp_policy_set() != dtcp_config_decoded.get_dtcp_policy_set())
 		       return false;
 		if(dtcp_config_to_encode.is_rtx_control() != dtcp_config_decoded.is_rtx_control())
@@ -369,9 +368,9 @@ bool test_qos_cube(rinad::Encoder * encoder) {
 	cube.peak_bandwidth_duration_ = 1443;
 	cube.peak_sdu_bandwidth_duration_ = 1341;
 	cube.undetected_bit_error_rate_ = 2;
-	cube.efcp_policies_.dtcp_present_ = true;
-	cube.efcp_policies_.initial_a_timer_ = 23;
-	cube.efcp_policies_.initial_seq_num_policy_.name_ = "test-policy";
+	cube.dtp_config_.dtcp_present_ = true;
+	cube.dtp_config_.initial_a_timer_ = 23;
+	cube.dtp_config_.initial_seq_num_policy_.name_ = "test-policy";
 
 	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
 	cdapMessage.obj_class_ = rinad::EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS;
@@ -428,16 +427,16 @@ bool test_qos_cube(rinad::Encoder * encoder) {
 		return false;
 	}
 
-	if (cube.efcp_policies_.dtcp_present_ != recovered_obj->efcp_policies_.dtcp_present_) {
+	if (cube.dtp_config_.dtcp_present_ != recovered_obj->dtp_config_.dtcp_present_) {
 		return false;
 	}
 
-	if (cube.efcp_policies_.initial_a_timer_ != recovered_obj->efcp_policies_.initial_a_timer_) {
+	if (cube.dtp_config_.initial_a_timer_ != recovered_obj->dtp_config_.initial_a_timer_) {
 		return false;
 	}
 
-	if (cube.efcp_policies_.initial_seq_num_policy_.name_.compare(
-			recovered_obj->efcp_policies_.initial_seq_num_policy_.name_) != 0) {
+	if (cube.dtp_config_.initial_seq_num_policy_.name_.compare(
+			recovered_obj->dtp_config_.initial_seq_num_policy_.name_) != 0) {
 		return false;
 	}
 

@@ -39,15 +39,21 @@ struct rmt_ps {
         void (* max_q_policy_rx)(struct rmt_ps *,
                                  struct sdu *,
                                  struct rmt_n1_port *);
-        void (* rmt_q_monitor_policy_tx)(struct rmt_ps *,
-                                 struct pdu *,
-                                 struct rmt_n1_port *);
+        void (* rmt_q_monitor_policy_tx_enq)(struct rmt_ps *,
+                                             struct pdu *,
+                                             struct rmt_n1_port *);
+        void (* rmt_q_monitor_policy_tx_deq)(struct rmt_ps *,
+                                             struct pdu *,
+                                             struct rmt_n1_port *);
         void (* rmt_q_monitor_policy_rx)(struct rmt_ps *,
                                  struct sdu *,
                                  struct rmt_n1_port *);
         struct pdu * (* rmt_next_scheduled_policy_tx)(struct rmt_ps *,
                                                       struct rmt_n1_port *);
         int (* rmt_enqueue_scheduling_policy_tx)(struct rmt_ps *,
+                                                 struct rmt_n1_port *,
+                                                 struct pdu *);
+        int (* rmt_requeue_scheduling_policy_tx)(struct rmt_ps *,
                                                  struct rmt_n1_port *,
                                                  struct pdu *);
         int (* rmt_scheduling_policy_rx)(struct rmt_ps *,

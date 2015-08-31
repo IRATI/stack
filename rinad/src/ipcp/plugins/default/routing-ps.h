@@ -22,8 +22,6 @@
 #ifndef IPCP_LINK_STATE_ROUTING_HH
 #define IPCP_LINK_STATE_ROUTING_HH
 
-#ifdef __cplusplus
-
 #include <set>
 #include <librina/internal-events.h>
 #include <librina/timer.h>
@@ -576,7 +574,5 @@ public:
 };
 
 }
-
-#endif
 
 #endif

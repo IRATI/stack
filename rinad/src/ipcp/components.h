@@ -24,8 +24,6 @@
 #ifndef IPCP_COMPONENTS_HH
 #define IPCP_COMPONENTS_HH
 
-#ifdef __cplusplus
-
 #include <list>
 #include <vector>
 #include <string>
@@ -590,8 +588,6 @@ public:
 	unsigned int req_seqnum;
 };
 
-}
+} //namespace rinad
 
-#endif
-
-#endif
+#endif //IPCP_COMPONENTS_HH

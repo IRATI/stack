@@ -258,4 +258,4 @@ IPCProcess::IPCProcess(const std::string& name, const std::string& instance)
 	routing_component_ = 0;
 }
 
-}
+} //namespace rinad

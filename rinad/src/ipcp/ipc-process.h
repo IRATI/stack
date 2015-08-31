@@ -21,16 +21,13 @@
 #ifndef IPCP_IPC_PROCESS_HH
 #define IPCP_IPC_PROCESS_HH
 
-#ifdef __cplusplus
-
 #include <map>
 
-#include "common/event-loop.h"
 #include "ipcp/components.h"
 
 namespace rinad {
 
-class IPCProcessImpl: public IPCProcess, public EventLoopData {
+class IPCProcessImpl: public IPCProcess {
 public:
         IPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,
                         unsigned short id, unsigned int ipc_manager_port,
@@ -67,6 +64,10 @@ public:
         void processFwdCDAPMsgEvent(
                 const rina::FwdCDAPMsgEvent& event);
 
+
+	//Event loop (run)
+	void event_loop(void);
+
 private:
         void init_cdap_session_manager();
 		void init_encoder();
@@ -81,14 +82,6 @@ private:
 		rina::DIFInformation dif_information_;
 };
 
-void register_handlers_all(EventLoop& loop);
+} //namespace rinad
 
-}
-
-/* Macro useful to perform downcasts in declarations. */
-#define DOWNCAST_DECL(_var,_class,_name)        \
-        _class *_name = dynamic_cast<_class*>(_var);
-
-#endif
-
-#endif
+#endif //IPCP_IPC_PROCESS_HH

@@ -54,4 +54,4 @@ void RoutingComponent::set_dif_configuration(const rina::DIFConfiguration& dif_c
 	rps->set_dif_configuration(dif_configuration);
 }
 
-}
+} //namespace rinad
