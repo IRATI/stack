@@ -581,18 +581,15 @@ int IPCManager::flowOptsBlocking(int portId)
 #if STUB_API
 	return 0;
 #else
-	FlowInformation * flow;
 
-        WriteScopedLock writeLock(flows_rw_lock);
-
-        flow = getAllocatedFlow(portId);
+	FlowInformation * flow = getAllocatedFlow(portId);
         if (flow == 0) {
 		return -1;
         }
 
         if (flow->state != FlowInformation::FLOW_ALLOCATED) {
                 return -1;
-        }
+	}
 	/* ADD FURTHER CHECKS? */
 
 	/* THIS IS A TEMPORARY FLOW_IO_HACK */
@@ -607,18 +604,15 @@ int IPCManager::setFlowOptsBlocking(int portId, bool blocking)
 #if STUB_API
         return 0;
 #else
-	FlowInformation * flow;
 
-        WriteScopedLock writeLock(flows_rw_lock);
-
-        flow = getAllocatedFlow(portId);
+	FlowInformation * flow = getAllocatedFlow(portId);
         if (flow == 0) {
 		return -1;
         }
 
         if (flow->state != FlowInformation::FLOW_ALLOCATED) {
                 return -1;
-        }
+	}
 	/* ADD FURTHER CHECKS? */
 
 	/* THIS IS A TEMPORARY FLOW_IO_HACK */
