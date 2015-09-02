@@ -27,15 +27,14 @@
 
 #include "rds/rstr.h"
 
-/* FIXME: to be moved elsewhere? */
-/* definition of flow options */
-#ifndef FLOW_O_NONBLOCK
-#define FLOW_O_NONBLOCK 00004000 /* use same value as fcntl.h */
-#endif
 
-#ifndef FLOW_O_DEFAULT
+/* definition of flow options */
+#define FLOW_O_NONBLOCK 00004000 /* use same value as fcntl.h O_NONBLOCK */
 #define FLOW_O_DEFAULT  00000000 /* default flow option */
-#endif
+
+/* definition of flow commands */
+#define FLOW_F_GETFL    3        /* get flow->options, same value as F_GETFL */
+#define FLOW_F_SETFL    4        /* set flow->options, same value as F_SETFL */
 
 /* flow options, such as blocking I/O behavior */
 typedef uint         flow_opts_t;

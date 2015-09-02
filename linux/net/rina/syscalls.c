@@ -186,17 +186,6 @@ SYSCALL_DEFINE3(sdu_read,
 
 	LOG_DBG("Syscall read SDU (size = %zd, port-id = %d)", size, id);
 
-	/* FIXME: FLOW_IO_HACK TO ACCESS FLOW ATTRIBUTES */
-	/* TEMPORARY UNTIL WE HAVE FILE DESCRIPTORS */
-        /* TO BE REMOVED ABSOLUTELY!!!!!!!!!! */
-	if (size == 999999999) {
-		CALL_DEFAULT_PERSONALITY(retval, flow_opts, id);
-		LOG_WARN("Flow_options hack, options for port %d: %d",
-			 id,
-			 (uint) retval);
-		return retval;
-	}
-	/* <---- REMOVE */
         tmp = NULL;
 
         CALL_DEFAULT_PERSONALITY(retval, sdu_read, id, &tmp);
@@ -262,29 +251,6 @@ SYSCALL_DEFINE3(sdu_write,
         SYSCALL_DUMP_ENTER;
 
 	LOG_DBG("Syscall write SDU (size = %zd, port-id = %d)", size, id);
-
-	/* FIXME: FLOW_IO_HACK TO ACCESS FLOW ATTRIBUTES */
-	/* TEMPORARY UNTIL WE HAVE FILE DESCRIPTORS */
-        /* TO BE REMOVED ABSOLUTELY */
-	if (size == 999999998) {
-		CALL_DEFAULT_PERSONALITY(retval,
-					 flow_opts_set,
-					 id,
-					 FLOW_O_NONBLOCK);
-		LOG_WARN("Flow_options hack called - set flow %d to non-blocking",
-			id);
-		return retval;
-	}
-	if (size == 999999999) {
-		CALL_DEFAULT_PERSONALITY(retval,
-					 flow_opts_set,
-					 id,
-					 FLOW_O_DEFAULT);
-		LOG_WARN("Flow_options hack called - set flow %d to blocking",
-			 id);
-		return retval;
-	}
-	/* <---- REMOVE */
 
         if (!buffer || !size) {
                 SYSCALL_DUMP_EXIT;
@@ -392,6 +358,53 @@ SYSCALL_DEFINE2(deallocate_port,
 
         return retval;
 #endif
+}
+
+/* NOTE: this syscall to be removed when we have file descriptors */
+SYSCALL_DEFINE3(flow_io_ctl,
+		port_id_t,     pid,
+		int,	       cmd,
+		unsigned long, arg)
+{
+#ifndef CONFIG_RINA
+	(void) pid;
+	(void) cmd;
+	(void) arg;
+
+	return -ENOSYS;
+#else
+	ssize_t	     retval;
+
+	SYSCALL_DUMP_ENTER;
+
+	switch (cmd) {
+	case FLOW_F_GETFL: /* GET FLOW FLAGS */
+		CALL_DEFAULT_PERSONALITY(retval, flow_opts, pid);
+		LOG_DBG("Got I/O options for port-id = %d: %o",
+			pid, (uint) retval);
+
+		SYSCALL_DUMP_EXIT;
+
+		return retval;
+	case FLOW_F_SETFL: /* SET FLOW FLAGS */
+		CALL_DEFAULT_PERSONALITY(retval,
+					 flow_opts_set,
+					 pid,
+					 (flow_opts_t) arg);
+		LOG_DBG("Set I/O options for port-id %d to %lo",
+			pid, arg);
+
+		SYSCALL_DUMP_EXIT;
+
+		return retval;
+	default:
+		LOG_ERR("Received unknown command");
+
+		SYSCALL_DUMP_EXIT;
+
+		return -EINVAL; /* unknown command */
+	}
+#endif /* !CONFIG_RINA */
 }
 
 SYSCALL_DEFINE4(management_sdu_read,

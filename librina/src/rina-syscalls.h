@@ -125,6 +125,15 @@ namespace rina {
          */
         int syscallDeallocatePortId(unsigned short ipcProcessId, int portId);
 
+	/**
+         * Wrapper of the flow_io_ctl system call
+         * @param portId the port-id to control
+         * @param cmd, the command, only F_GETFL and F_SETFL are supported
+         * @param arg, the flags to be set, only O_NONBLOCK is supported
+         * @return 0 if everything was ok, negative number indicating error
+         *         otherwise
+         */
+        int syscallFlowIOCtl(int portId, int cmd, unsigned long arg);
 }
 
 #endif

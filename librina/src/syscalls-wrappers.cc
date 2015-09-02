@@ -30,6 +30,7 @@
 #define SYS_writeSDU           __NR_sdu_write
 #define SYS_allocatePortId     __NR_allocate_port
 #define SYS_deallocatePortId   __NR_deallocate_port
+#define SYS_flowIOCtl          __NR_flow_io_ctl
 #define SYS_readManagementSDU  __NR_management_sdu_read
 #define SYS_writeManagementSDU __NR_management_sdu_write
 
@@ -51,6 +52,9 @@
 #endif
 #if !defined(__NR_deallocate_port)
 #error No deallocate_port syscall defined
+#endif
+#if !defined(__NR_flow_io_ctl)
+#error No flow_io_ctl syscall defined
 #endif
 #if !defined(__NR_management_sdu_read)
 #error No managment_sdu_read syscall defined
@@ -215,6 +219,21 @@ int syscallDeallocatePortId(unsigned short ipcProcessId, int portId)
 
         if (result < 0) {
         	LOG_DBG("Syscall deallocate port id failed: %d", result);
+                result = -errno;
+        }
+
+        return result;
+}
+
+int syscallFlowIOCtl(int portId, int cmd, unsigned long arg)
+{
+        int result;
+
+        DUMP_SYSCALL("SYS_flowIOCtl", SYS_flowIOCtl);
+
+        result = syscall(SYS_flowIOCtl, portId, cmd, arg);
+        if (result < 0) {
+                LOG_DBG("Syscall flow_io_ctl failed: %d", errno);
                 result = -errno;
         }
 

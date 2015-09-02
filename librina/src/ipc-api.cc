@@ -575,27 +575,27 @@ FlowInformation IPCManager::allocateFlowResponse(
 			blocking);
 }
 
-/* returns 0 if blocking, > 0 if nonblocking, < 0 on error */
+/* returns 0 if nonblocking, > 0 if blocking, < 0 on error */
 int IPCManager::flowOptsBlocking(int portId)
 {
 #if STUB_API
 	return 0;
 #else
 
-	FlowInformation * flow = getAllocatedFlow(portId);
-        if (flow == 0) {
+	FlowInformation *flow;
+	uint             flags;
+
+	flow = getAllocatedFlow(portId);
+	if (flow == 0) {
 		return -1;
         }
 
         if (flow->state != FlowInformation::FLOW_ALLOCATED) {
                 return -1;
 	}
-	/* ADD FURTHER CHECKS? */
 
-	/* THIS IS A TEMPORARY FLOW_IO_HACK */
-	/* SYSCALL HAS BEEN ALTERED WITH MAGIC NUMBER */
-        /* TO BE REMOVED ABSOLUTELY */
-        return syscallReadSDU(portId, NULL, 999999999);
+        flags = syscallFlowIOCtl(portId, F_GETFL, 0 /* ignored */);
+	return !(flags & O_NONBLOCK);
 #endif
 }
 
@@ -605,23 +605,25 @@ int IPCManager::setFlowOptsBlocking(int portId, bool blocking)
         return 0;
 #else
 
-	FlowInformation * flow = getAllocatedFlow(portId);
-        if (flow == 0) {
+	FlowInformation * flow;
+	uint              flags;
+
+	flow = getAllocatedFlow(portId);
+	if (flow == 0) {
 		return -1;
         }
 
         if (flow->state != FlowInformation::FLOW_ALLOCATED) {
                 return -1;
 	}
-	/* ADD FURTHER CHECKS? */
 
-	/* THIS IS A TEMPORARY FLOW_IO_HACK */
-	/* SYSCALL HAS BEEN ALTERED WITH MAGIC NUMBER */
-        /* TO BE REMOVED ABSOLUTELY */
+	/* this mimics the fcntl approach to setting flags */
+	flags = syscallFlowIOCtl(portId, F_GETFL,0);
 	if (!blocking)
-		return syscallWriteSDU(portId, NULL, 999999998);
-	return syscallWriteSDU(portId, NULL, 999999999);
+		flags |= O_NONBLOCK; /* set nonblocking */
+	else flags &= ~O_NONBLOCK; /* clear nonblocking */
 
+	return syscallFlowIOCtl(portId, F_SETFL,flags);
 #endif
 }
 
