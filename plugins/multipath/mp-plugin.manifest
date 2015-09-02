@@ -1,9 +1,9 @@
 {
-        "PluginName": "mp-plugin",
+        "PluginName": "pff-multipath",
         "PluginVersion": "1",
         "PolicySets" : [
                 {
-                        "Name": "mp-ps",
+                        "Name": "multipath",
                         "Component": "pff",
                         "Version" : "1"
                 }

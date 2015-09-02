@@ -26,7 +26,7 @@
 #include <linux/list.h>
 #include <linux/types.h>
 
-#define RINA_PREFIX "pff-ps-multipath"
+#define RINA_PREFIX "pff-multipath"
 
 #include "logs.h"
 #include "rds/rmem.h"

@@ -22,8 +22,8 @@
 #include <linux/module.h>
 #include <linux/string.h>
 
-#define RINA_PREFIX "pff-multipath-plugin"
-#define RINA_PFF_PS_MULTIPATH_NAME "pff-ps-multipath"
+#define RINA_PREFIX "pff-multipath"
+#define RINA_PFF_PS_MULTIPATH_NAME "multipath"
 
 #include "logs.h"
 #include "rds/rmem.h"
