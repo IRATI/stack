@@ -166,11 +166,9 @@ static int n1_port_cleanup(struct rmt *instance,
 			   struct rmt_n1_port *n1_port)
 {
 	struct rmt_ps *ps;
-	unsigned long flags;
 
 	ASSERT(instance);
 
-	spin_lock_irqsave(&n1_port->lock, flags);
 	rcu_read_lock();
 	ps = container_of(rcu_dereference(instance->base.ps),
 			  struct rmt_ps, base);
@@ -179,7 +177,6 @@ static int n1_port_cleanup(struct rmt *instance,
 	rcu_read_unlock();
 
 	n1_port_destroy(n1_port);
-	spin_unlock_irqrestore(&n1_port->lock, flags);
 
 	return 0;
 }
@@ -930,6 +927,15 @@ static void send_worker(unsigned long o)
 		}
 
 		rcu_read_lock();
+		ps = container_of(rcu_dereference(rmt->base.ps),
+				struct rmt_ps,
+				base);
+		if (!ps) {
+			spin_unlock(&n1_port->lock);
+			rcu_read_unlock();
+			LOG_ERR("Could not retrieve the PS");
+			return;
+		}
 		pdus_sent = 0;
 		/* Try to send PDUs on that port-id here */
 		do {
@@ -948,7 +954,7 @@ static void send_worker(unsigned long o)
 			rcu_read_unlock();
 			spin_unlock(&n1_port->lock);
 			if (n1_port_write(rmt, n1_port, pdu))
-				LOG_ERR("Failed to write PDU");
+				LOG_DBG("Failed to write PDU");
 			spin_lock(&n1_port->lock);
 			rcu_read_lock();
 
@@ -973,6 +979,7 @@ static void send_worker(unsigned long o)
 		spin_unlock(&n1_port->lock);
 		spin_lock(&rmt->n1_ports->lock);
 	}
+	spin_unlock(&rmt->n1_ports->lock);
 
 	if (reschedule) {
 		LOG_DBG("Sheduling policy will schedule again...");
@@ -984,7 +991,6 @@ int rmt_send_port_id(struct rmt *instance,
 		     port_id_t id,
 		     struct pdu *pdu)
 {
-	struct n1pmap *out_n1_ports;
 	struct rmt_n1_port *out_n1_port;
 	unsigned long flags;
 	struct rmt_ps *ps;
@@ -1005,8 +1011,6 @@ int rmt_send_port_id(struct rmt *instance,
 		pdu_destroy(pdu);
 		return -1;
 	}
-
-	out_n1_ports = instance->n1_ports;
 
 	out_n1_port = n1pmap_find(instance, id);
 	if (!out_n1_port) {
