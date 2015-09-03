@@ -542,7 +542,7 @@ int kfa_flow_sdu_write(struct ipcp_instance_data * data,
         } else { /* non-blocking I/O */
         	if (flow->state == PORT_STATE_PENDING
 		    || flow->state == PORT_STATE_DISABLED) {
-        		LOG_ERR("Flow %d is not ready for writing", id);
+        		LOG_DBG("Flow %d is not ready for writing", id);
         		retval = -EAGAIN;
         		goto finish;
         	}
