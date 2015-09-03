@@ -48,7 +48,7 @@
 #include "rinarp/rinarp.h"
 #include "rinarp/arp826-utils.h"
 
-#define DEFAULT_QDISC_MAX_SIZE 50
+#define DEFAULT_QDISC_MAX_SIZE 500
 #define DEFAULT_QDISC_ENABLE_SIZE 10
 
 /* FIXME: To be solved properly */
@@ -856,36 +856,39 @@ int eth_vlan_update_qdisc(struct net_device *    dev,
 {
 	struct Qdisc * sch;
 	struct nlattr  attr;
+	unsigned int q_index;
 
 	if (string_cmp(dev->qdisc->ops->id,
 		       shim_eth_qdisc_ops.id) == 0)
 		return 0;
 
-	sch = qdisc_create_dflt(netdev_get_tx_queue(dev, 0),
-			        &shim_eth_qdisc_ops, 0);
-	if (!sch) {
-		LOG_ERR("Problems creating shim-eth-qdisc");
-		return -1;
+	for (q_index = 0; q_index < dev->num_tx_queues; q_index++) {
+		sch = qdisc_create_dflt(netdev_get_tx_queue(dev, q_index),
+					&shim_eth_qdisc_ops, 0);
+		if (!sch) {
+			LOG_ERR("Problems creating shim-eth-qdisc");
+			return -1;
+		}
+
+		attr.nla_len = info->qdisc_max_size;
+		attr.nla_type = info->qdisc_enable_size;
+		if (shim_eth_qdisc_init(sch, &attr)) {
+			LOG_ERR("Problems initializing shim-eth-qdisc");
+			qdisc_destroy(sch);
+			return -1;
+		}
+
+		old_qdisc = dev->qdisc;
+
+		if (dev->flags & IFF_UP)
+			dev_deactivate(dev);
+
+		dev_graft_qdisc(netdev_get_tx_queue(dev, q_index), sch);
+		dev->qdisc = sch;
+
+		if (dev->flags & IFF_UP)
+			dev_activate(dev);
 	}
-
-	attr.nla_len = info->qdisc_max_size;
-	attr.nla_type = info->qdisc_enable_size;
-	if (shim_eth_qdisc_init(sch, &attr)) {
-		LOG_ERR("Problems initializing shim-eth-qdisc");
-		qdisc_destroy(sch);
-		return -1;
-	}
-
-	old_qdisc = dev->qdisc;
-
-	if (dev->flags & IFF_UP)
-		dev_deactivate(dev);
-
-	dev_graft_qdisc(netdev_get_tx_queue(dev, 0), sch);
-	dev->qdisc = sch;
-
-	if (dev->flags & IFF_UP)
-		dev_activate(dev);
 
 	return 0;
 }
