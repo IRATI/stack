@@ -878,8 +878,6 @@ int eth_vlan_update_qdisc(struct net_device *    dev,
 			return -1;
 		}
 
-		old_qdisc = dev->qdisc;
-
 		if (dev->flags & IFF_UP)
 			dev_deactivate(dev);
 
@@ -889,6 +887,8 @@ int eth_vlan_update_qdisc(struct net_device *    dev,
 		if (dev->flags & IFF_UP)
 			dev_activate(dev);
 	}
+
+	old_qdisc = dev->qdisc;
 
 	return 0;
 }
