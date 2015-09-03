@@ -862,6 +862,8 @@ int eth_vlan_update_qdisc(struct net_device *    dev,
 		       shim_eth_qdisc_ops.id) == 0)
 		return 0;
 
+	old_qdisc = dev->qdisc;
+
 	for (q_index = 0; q_index < dev->num_tx_queues; q_index++) {
 		sch = qdisc_create_dflt(netdev_get_tx_queue(dev, q_index),
 					&shim_eth_qdisc_ops, 0);
@@ -888,8 +890,6 @@ int eth_vlan_update_qdisc(struct net_device *    dev,
 			dev_activate(dev);
 	}
 
-	old_qdisc = dev->qdisc;
-
 	return 0;
 }
 
@@ -899,6 +899,7 @@ static void eth_vlan_restore_qdisc(struct net_device * dev,
 	struct Qdisc * 		    sch;
 	struct ipcp_instance_data * pos;
 	int			    num_ipcps;
+	unsigned int 		    q_index;
 
 	if (!old_qdisc)
 		return;
@@ -920,7 +921,8 @@ static void eth_vlan_restore_qdisc(struct net_device * dev,
 	if (dev->flags & IFF_UP)
 		dev_deactivate(dev);
 
-	dev_graft_qdisc(netdev_get_tx_queue(dev, 0), old_qdisc);
+	for (q_index = 0; q_index < dev->num_tx_queues; q_index++)
+		dev_graft_qdisc(netdev_get_tx_queue(dev, q_index), old_qdisc);
 	dev->qdisc = old_qdisc;
 	qdisc_destroy(sch);
 
