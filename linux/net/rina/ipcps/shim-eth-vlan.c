@@ -48,7 +48,7 @@
 #include "rinarp/rinarp.h"
 #include "rinarp/arp826-utils.h"
 
-#define DEFAULT_QDISC_MAX_SIZE 500
+#define DEFAULT_QDISC_MAX_SIZE 50
 #define DEFAULT_QDISC_ENABLE_SIZE 10
 
 /* FIXME: To be solved properly */

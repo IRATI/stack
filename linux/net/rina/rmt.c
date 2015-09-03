@@ -802,7 +802,6 @@ static int n1_port_write_noclean(struct rmt *         rmt,
         ret = n1_ipcp->ops->sdu_write(n1_ipcp->data,port_id, sdu);
         if (ret == -EAGAIN) {
         	spin_lock(&n1_port->lock);
-        	n1_port->state = N1_PORT_STATE_DISABLED;
         	rcu_read_lock();
         	ps = container_of(rcu_dereference(rmt->base.ps),
 						  struct rmt_ps, base);
@@ -824,6 +823,14 @@ static int n1_port_write_noclean(struct rmt *         rmt,
 
         	}
         	rcu_read_unlock();
+
+        	if (n1_port->state == N1_PORT_STATE_DO_NOT_DISABLE) {
+        		n1_port->state = N1_PORT_STATE_ENABLED;
+                        if (atomic_read(&n1_port->n_sdus) > 0)
+                                tasklet_hi_schedule(&rmt->egress_tasklet);
+        	} else {
+        		n1_port->state = N1_PORT_STATE_DISABLED;
+        	}
         	spin_unlock(&n1_port->lock);
         	return ret;
         }
@@ -954,10 +961,6 @@ static void send_worker(unsigned long o)
                         	pdus_sent++;
                         } while((pdus_sent < MAX_PDUS_SENT_PER_CYCLE) &&
                                 (atomic_read(&n1_port->n_sdus) > 0));
-
-                        if  (ret == -EAGAIN) {
-                        	n1_port->state = N1_PORT_STATE_DISABLED;
-                        }
 
                         if (n1_port->state == N1_PORT_STATE_ENABLED &&
                             atomic_read(&n1_port->n_sdus) > 0) {
@@ -1253,9 +1256,9 @@ int rmt_enable_port_id(struct rmt * instance,
         spin_unlock_irqrestore(&instance->n1_ports->lock, flags);
 
         spin_lock_irqsave(&n1_port->lock, flags);
-        if (n1_port->state != N1_PORT_STATE_DISABLED) {
+        if (n1_port->state == N1_PORT_STATE_ENABLED) {
+        	n1_port->state = N1_PORT_STATE_DO_NOT_DISABLE;
                 spin_unlock_irqrestore(&n1_port->lock, flags);
-                LOG_DBG("Nothing to do for port-id %d", id);
                 return 0;
         }
         n1_port->state = N1_PORT_STATE_ENABLED;
@@ -1304,6 +1307,15 @@ int rmt_disable_port_id(struct rmt * instance,
                 LOG_DBG("Nothing to do for port-id %d", id);
                 return 0;
         }
+
+        if (n1_port->state == N1_PORT_STATE_DO_NOT_DISABLE) {
+        	n1_port->state = N1_PORT_STATE_ENABLED;
+                if (atomic_read(&n1_port->n_sdus) > 0)
+                        tasklet_hi_schedule(&instance->egress_tasklet);
+        	spin_unlock_irqrestore(&n1_port->lock, flags);
+        	return 0;
+        }
+
         n1_port->state = N1_PORT_STATE_DISABLED;
         spin_unlock_irqrestore(&n1_port->lock, flags);
         LOG_DBG("Changed state to DISABLED");
