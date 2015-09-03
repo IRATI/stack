@@ -3,14 +3,15 @@
 #
 
 KDIR=../../linux
+KREL=`uname -r`
 
 ifneq ($(KERNELRELEASE),)
 
 ccflags-y = -Wtype-limits -Inet/rina
 
-obj-m := mp-plugin.o
+obj-m := pff-multipath.o
 
-mp-plugin-y := mp-plugin-ps.o pft-ps-multipath.o
+pff-multipath-y := mp-plugin-ps.o pft-ps-multipath.o
 
 else
 
@@ -22,7 +23,7 @@ clean:
 
 install:
 	$(MAKE) -C $(KDIR) M=$$PWD modules_install
-	cp mp-plugin.manifest /lib/modules/3.15.0-pristine-1.3-mp/extra/
+	cp pff-multipath.manifest /lib/modules/$(KREL)/extra/
 
 uninstall:
 	@echo "This target has not been implemented yet"

@@ -23,7 +23,7 @@
 #include <linux/string.h>
 
 #define RINA_PREFIX "pff-multipath"
-#define RINA_PFF_PS_MULTIPATH_NAME "multipath"
+#define RINA_PFF_MULTIPATH_NAME "multipath"
 
 #include "logs.h"
 #include "rds/rmem.h"
@@ -38,7 +38,7 @@ static int __init mod_init(void)
 {
         int ret;
 
-	strcpy(pff_factory.name, RINA_PFF_PS_MULTIPATH_NAME);
+	strcpy(pff_factory.name, RINA_PFF_MULTIPATH_NAME);
 
         ret = pff_ps_publish(&pff_factory);
         if (ret) {
@@ -55,7 +55,7 @@ static void __exit mod_exit(void)
 {
         int ret;
 
-        ret = pff_ps_unpublish(RINA_PFF_PS_MULTIPATH_NAME);
+        ret = pff_ps_unpublish(RINA_PFF_MULTIPATH_NAME);
         if (ret) {
                 LOG_ERR("Failed to unpublish Dummy PFT policy set factory");
                 return;
