@@ -302,7 +302,11 @@ static string_t * create_vlan_interface_name(string_t * interface_name,
         size_t     length;
 
         ASSERT(interface_name);
-        ASSERT(vlan_id_is_ok(vlan_id));
+
+	if (!vlan_id_is_ok(vlan_id)) {
+		LOG_ERR("Wrong vlan-id %d", vlan_id);
+		return NULL;
+	}
 
         bzero(string_vlan_id, sizeof(string_vlan_id)); /* Be safe */
         snprintf(string_vlan_id, sizeof(string_vlan_id), "%d", vlan_id);
