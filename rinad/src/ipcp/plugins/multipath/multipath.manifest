@@ -1,0 +1,11 @@
+{
+        "PluginName": "multipath-routing",
+        "PluginVersion": "1",
+        "PolicySets" : [
+                {
+                        "Name": "multipath",
+                        "Component": "routing",
+                        "Version" : "1"
+                }
+        ]
+}
