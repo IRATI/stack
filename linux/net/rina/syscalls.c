@@ -184,6 +184,8 @@ SYSCALL_DEFINE3(sdu_read,
 
         SYSCALL_DUMP_ENTER;
 
+	LOG_DBG("Syscall read SDU (size = %zd, port-id = %d)", size, id);
+
         tmp = NULL;
 
         CALL_DEFAULT_PERSONALITY(retval, sdu_read, id, &tmp);
@@ -248,12 +250,12 @@ SYSCALL_DEFINE3(sdu_write,
 
         SYSCALL_DUMP_ENTER;
 
+	LOG_DBG("Syscall write SDU (size = %zd, port-id = %d)", size, id);
+
         if (!buffer || !size) {
                 SYSCALL_DUMP_EXIT;
                 return -EINVAL;
         }
-
-        LOG_DBG("Syscall write SDU (size = %zd, port-id = %d)", size, id);
 
         tmp_buffer = buffer_create(size);
         if (!tmp_buffer) {
@@ -294,17 +296,16 @@ SYSCALL_DEFINE3(sdu_write,
 #endif
 }
 
-SYSCALL_DEFINE4(allocate_port,
+/* FIXME: this syscall should be removed */
+SYSCALL_DEFINE3(allocate_port,
                 ipc_process_id_t, id,
                 const char __user *, process_name,
-                const char __user *, process_instance,
-                bool, blocking)
+                const char __user *, process_instance)
 {
 #ifndef CONFIG_RINA
         (void) id;
         (void) process_name;
         (void) process_instance;
-        (void) blocking;
 
         return -ENOSYS;
 #else
@@ -329,7 +330,7 @@ SYSCALL_DEFINE4(allocate_port,
                 return -EFAULT;
         }
 
-        CALL_DEFAULT_PERSONALITY(retval, allocate_port, id, tname, blocking);
+        CALL_DEFAULT_PERSONALITY(retval, flow_create, id, tname);
 
         SYSCALL_DUMP_EXIT;
 
@@ -337,6 +338,7 @@ SYSCALL_DEFINE4(allocate_port,
 #endif
 }
 
+/* FIXME: this syscall should be removed */
 SYSCALL_DEFINE2(deallocate_port,
                 ipc_process_id_t,     ipcp_id,
                 port_id_t,            id)
@@ -350,12 +352,59 @@ SYSCALL_DEFINE2(deallocate_port,
 
         SYSCALL_DUMP_ENTER;
 
-        CALL_DEFAULT_PERSONALITY(retval, deallocate_port, ipcp_id, id);
+        CALL_DEFAULT_PERSONALITY(retval, flow_destroy, ipcp_id, id);
 
         SYSCALL_DUMP_EXIT;
 
         return retval;
 #endif
+}
+
+/* NOTE: this syscall to be removed when we have file descriptors */
+SYSCALL_DEFINE3(flow_io_ctl,
+		port_id_t,     pid,
+		int,	       cmd,
+		unsigned long, arg)
+{
+#ifndef CONFIG_RINA
+	(void) pid;
+	(void) cmd;
+	(void) arg;
+
+	return -ENOSYS;
+#else
+	ssize_t	     retval;
+
+	SYSCALL_DUMP_ENTER;
+
+	switch (cmd) {
+	case FLOW_F_GETFL: /* GET FLOW FLAGS */
+		CALL_DEFAULT_PERSONALITY(retval, flow_opts, pid);
+		LOG_DBG("Got I/O options for port-id = %d: %o",
+			pid, (uint) retval);
+
+		SYSCALL_DUMP_EXIT;
+
+		return retval;
+	case FLOW_F_SETFL: /* SET FLOW FLAGS */
+		CALL_DEFAULT_PERSONALITY(retval,
+					 flow_opts_set,
+					 pid,
+					 (flow_opts_t) arg);
+		LOG_DBG("Set I/O options for port-id %d to %lo",
+			pid, arg);
+
+		SYSCALL_DUMP_EXIT;
+
+		return retval;
+	default:
+		LOG_ERR("Received unknown command");
+
+		SYSCALL_DUMP_EXIT;
+
+		return -EINVAL; /* unknown command */
+	}
+#endif /* !CONFIG_RINA */
 }
 
 SYSCALL_DEFINE4(management_sdu_read,

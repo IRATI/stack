@@ -10,12 +10,12 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -43,6 +43,7 @@
 #include <cstdlib>
 #include <iomanip>
 #include <cstring>
+#include <fcntl.h>
 
 #include "librina/concurrency.h"
 #include "librina/exceptions.h"
@@ -163,11 +164,6 @@ public:
 	 * of the DIF where the flow will be created.
 	 */
 	unsigned int maxSDUsize;
-
-	/**
-	 * True if the flow is blocking, false otherwise
-	 */
-	bool blocking;
 
 	FlowSpecification();
 	bool operator==(const FlowSpecification &other) const;
@@ -422,9 +418,6 @@ public:
 
 	/** Optional DIF name where the application wants to register */
 	ApplicationProcessNamingInformation difName;
-
-	/** True if the flows allocated to this AE will be blocking, false otherwise*/
-	bool blocking;
 
 	ApplicationRegistrationInformation();
 	ApplicationRegistrationInformation(

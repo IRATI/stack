@@ -8,12 +8,12 @@
 // modify it under the terms of the GNU Lesser General Public
 // License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// 
+//
 // This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 // Lesser General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU Lesser General Public
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -233,7 +233,6 @@ FlowSpecification::FlowSpecification() {
 	jitter = 0;
 	delay = 0;
 	maxSDUsize = 0;
-	blocking = true;
 }
 
 const std::string FlowSpecification::toString() {
@@ -247,7 +246,6 @@ const std::string FlowSpecification::toString() {
         ss<<"; Average SDU bandwidth (bytes/s): "<<averageSDUBandwidth<<std::endl;
         ss<<"Peak bandwidth duration (ms): "<<peakBandwidthDuration;
         ss<<"; Peak SDU bandwidth duration (ms): "<<peakSDUBandwidthDuration;
-        ss<<"; Blocking: " << blocking;
         return ss.str();
 }
 
@@ -576,14 +574,12 @@ FlowDeallocatedEvent::FlowDeallocatedEvent(
 ApplicationRegistrationInformation::ApplicationRegistrationInformation(){
 	applicationRegistrationType = APPLICATION_REGISTRATION_ANY_DIF;
 	ipcProcessId = 0;
-	blocking = true;
 }
 
 ApplicationRegistrationInformation::ApplicationRegistrationInformation(
 		ApplicationRegistrationType applicationRegistrationType){
 	this->applicationRegistrationType = applicationRegistrationType;
 	ipcProcessId = 0;
-	blocking = true;
 }
 
 const std::string ApplicationRegistrationInformation::toString(){
@@ -592,7 +588,6 @@ const std::string ApplicationRegistrationInformation::toString(){
         ss<<"Application name: "<<appName.toString()<<std::endl;
         ss<<"DIF name: "<<difName.processName;
         ss<<"; IPC Process id: "<<ipcProcessId;
-        ss<<"; Blocking: "<<blocking;
 
         return ss.str();
 }

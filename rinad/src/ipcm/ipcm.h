@@ -358,8 +358,7 @@ public:
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t register_at_dif(Addon* callee, Promise* promise,
 			const unsigned short ipcp_id,
-			const rina::ApplicationProcessNamingInformation& difName,
-			bool blocking);
+			const rina::ApplicationProcessNamingInformation& difName);
 
 	//
 	// Enroll IPCP to a single DIF
