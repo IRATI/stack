@@ -2019,6 +2019,11 @@ int dtcp_ps_unpublish(const char * name)
 { return ps_unpublish(&policy_sets, name); }
 EXPORT_SYMBOL(dtcp_ps_unpublish);
 
+// Returns the ms represented by the timespec given.
+unsigned long dtcp_ms(struct timespec * ts) {
+	return (ts->tv_sec * 1000) + (ts->tv_nsec / 1000000);
+}
+
 // Is the given rate exceeded? Reset if the time frame given elapses.
 bool dtcp_rate_exceeded(struct dtcp * dtcp, int send) {
 	struct timespec now  = {0, 0};
@@ -2033,7 +2038,7 @@ bool dtcp_rate_exceeded(struct dtcp * dtcp, int send) {
 	sub = timespec_sub(now, last);
 
 	// More than the given time-frame passed.
-	if (sub.tv_sec >= dtcp_time_frame(dtcp))
+	if (dtcp_ms(&sub) >= dtcp_time_frame(dtcp))
 	{
 		// Reset the credit and all the other things.
 		dtcp_rate_fc_reset(dtcp, &now);

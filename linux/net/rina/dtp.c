@@ -834,8 +834,23 @@ static unsigned int msec_to_next_rate(uint time_frame, struct timespec * last) {
 		return -1;
 	}
 
-	next.tv_sec = last->tv_sec + time_frame;
+	next.tv_sec = last->tv_sec;
 	next.tv_nsec = last->tv_nsec;
+
+	// Consume the seconds.
+	while(time_frame >= 1000) {
+		next.tv_sec += 1;
+		time_frame -= 1000;
+	}
+
+	// Add the nano-seconds.
+	next.tv_nsec += time_frame * 1000000;
+
+	// Consume eventual seconds store in the nsec field.
+	if(next.tv_nsec > 1000000000L) {
+		next.tv_sec += 1;
+		next.tv_nsec -= 1000000000L;
+	}
 
 	getnstimeofday(&now);
 
@@ -844,14 +859,14 @@ static unsigned int msec_to_next_rate(uint time_frame, struct timespec * last) {
 		(diff.tv_nsec / 1000000); 	// Nsec to msec.
 
 	// Avoid to go wait more than a time frame.
-	if(ret > time_frame * 1000) {
-		ret = time_frame * 1000;
-	}
+	//if(ret > time_frame * 1000) {
+	//	ret = time_frame * 1000;
+	//}
 
 	// Wait at least 1 msec.
-	if(ret == 0) {
-		ret++;
-	}
+	//if(ret == 0) {
+	//	ret++;
+	//}
 
 	return ret;
 }
@@ -867,12 +882,10 @@ void dtp_start_rate_timer(struct dtp * dtp, struct dtcp * dtcp) {
 		dtcp_last_time(dtcp, &t);
 		tf = msec_to_next_rate(rtf, &t);
 
-		LOG_DBG("rbfc Rate based timer start, time %u millisec, "
-			"last: %lu:%lu, elapse: %lu:%lu",
+		LOG_DBG("rbfc Rate based timer start, time %u msec, "
+			"last: %lu:%lu",
 			tf,
 			t.tv_sec,
-			t.tv_nsec,
-			t.tv_sec + rtf,
 			t.tv_nsec);
 
 		// NOTE: For the moment our metric is based on seconds.
