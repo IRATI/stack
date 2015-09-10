@@ -1640,9 +1640,9 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         					  info->interface_name);
         else
         	data->phy_dev = data->dev;
+	read_unlock(&dev_base_lock);
         if (!data->dev || !data->phy_dev) {
                 LOG_ERR("Can't get device '%s'", complete_interface);
-                read_unlock(&dev_base_lock);
                 name_destroy(data->dif_name);
                 data->dif_name = NULL;
                 rkfree(info->interface_name);
@@ -1656,7 +1656,6 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
 			 data->old_qdisc,
 			 data->info)) {
 		LOG_ERR("Problems creating queue discipline");
-		read_unlock(&dev_base_lock);
 		name_destroy(data->dif_name);
 		data->dif_name = NULL;
 		rkfree(info->interface_name);
@@ -1671,7 +1670,6 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         /* Store in list for retrieval later on */
         mapping = rkmalloc(sizeof(*mapping), GFP_ATOMIC);
         if (!mapping) {
-                read_unlock(&dev_base_lock);
                 name_destroy(data->dif_name);
                 data->dif_name = NULL;
                 rkfree(info->interface_name);
@@ -1690,7 +1688,6 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
 
         data->eth_vlan_packet_type->dev = data->dev;
         dev_add_pack(data->eth_vlan_packet_type);
-        read_unlock(&dev_base_lock);
         rkfree(complete_interface);
 
         LOG_DBG("Configured shim eth vlan IPC Process");
@@ -1794,6 +1791,7 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
         } else {
         	data->phy_dev = data->dev;
         }
+	read_unlock(&dev_base_lock);
         if (!data->dev) {
                 LOG_ERR("Invalid device to configure: %s", complete_interface);
                 return -1;
@@ -1804,7 +1802,6 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
 			 data->old_qdisc,
 			 data->info)) {
 		LOG_ERR("Problems creating queue discipline");
-		read_unlock(&dev_base_lock);
 		name_destroy(data->dif_name);
 		data->dif_name = NULL;
 		rkfree(info->interface_name);
@@ -1828,7 +1825,6 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
 
         data->eth_vlan_packet_type->dev = data->dev;
         dev_add_pack(data->eth_vlan_packet_type);
-        read_unlock(&dev_base_lock);
         rkfree(complete_interface);
 
         LOG_DBG("Configured shim eth vlan IPC Process");
