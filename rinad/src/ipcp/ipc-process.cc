@@ -306,13 +306,11 @@ void IPCProcessImpl::processAssignToDIFRequestEvent(rina::AssignToDIFRequestEven
 		float  t_ave = rmt_ps->get_param_value_as_float("t_ave_p");
 
 		for (int i = 0; i < stab_size; i++) {
-
 			double tmp = 1.0 - 1/pow(2, Wlog);
 			tmp = pow(tmp, (i << Scell_log) / t_ave);
 			tmp = fabs(log2(tmp));
 			int temp_int = rint(tmp);
 			stab_table[i] = (unsigned char) (temp_int & U8_MASK);
-			LOG_ERR("stab_table[%d] = %u", i, stab_table[i]);
 		}
 
 		std::stringstream ss;
@@ -321,7 +319,6 @@ void IPCProcessImpl::processAssignToDIFRequestEvent(rina::AssignToDIFRequestEven
 
 		stab_addr.name_ = STAB_ADDR_PARM;
 		stab_addr.value_ = ss.str();
-		LOG_ERR("STAB ADDR %s", ss.str().c_str());
 		event.difInformation.dif_configuration_.rmt_configuration_.policy_set_.parameters_.push_back(stab_addr);
 	}
 
