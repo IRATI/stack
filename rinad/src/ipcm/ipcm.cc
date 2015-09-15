@@ -111,7 +111,7 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
 
 		// Load the plugins catalog
 		catalog.import();
-		catalog.print();
+		//catalog.print();
 
 		// Initialize the I/O thread
 		io_thread = new rina::Thread(io_loop_trampoline,
