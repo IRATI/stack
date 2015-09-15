@@ -939,65 +939,6 @@ static struct Qdisc_ops shim_eth_qdisc_ops __read_mostly = {
 	.owner	   = THIS_MODULE,
 };
 
-int update_qdisc(struct net_device * dev, struct eth_vlan_info * info)
-{
-	struct Qdisc *        qdisc;
-	struct Qdisc *        oqdisc;
-	struct nlattr         attr;
-	unsigned int   	      q_index;
-	struct netdev_queue * queue;
-
-	ASSERT(dev);
-	ASSERT(info);
-
-	if (!dev->qdisc) {
-		LOG_ERR("qdisc not found on device %s", dev->name);
-		return -1;
-	}
-
-	if (string_cmp(dev->qdisc->ops->id,
-		       shim_eth_qdisc_ops.id) == 0) {
-		LOG_INFO("Shim-eth-qdisc already set on this device");
-		return 0;
-	}
-
-	if (dev->flags & IFF_UP)
-		dev_deactivate(dev);
-
-	/* For each TX queue, create a new shim-eth-qdisc instance, attach
-	 * it to the queue and then destroy the old qdisc
-	 */
-	for (q_index = 0; q_index < dev->num_tx_queues; q_index++) {
-		queue = netdev_get_tx_queue(dev, q_index);
-		qdisc = qdisc_create_dflt(queue, &shim_eth_qdisc_ops, 0);
-		if (!qdisc) {
-			LOG_ERR("Problems creating shim-eth-qdisc");
-			continue;
-		}
-
-		attr.nla_len = info->qdisc_max_size;
-		attr.nla_type = info->qdisc_enable_size;
-		if (shim_eth_qdisc_init(qdisc, &attr)) {
-			LOG_ERR("Problems initializing shim-eth-qdisc");
-			qdisc_destroy(qdisc);
-			continue;
-		}
-
-		oqdisc = dev_graft_qdisc(queue, qdisc);
-		if (oqdisc && oqdisc != &noop_qdisc)
-			qdisc_destroy(oqdisc);
-	}
-
-	queue = netdev_get_tx_queue(dev, 0);
-	dev->qdisc = queue->qdisc_sleeping;
-	atomic_inc(&dev->qdisc->refcnt);
-
-	if (dev->flags & IFF_UP)
-		dev_activate(dev);
-
-	return 0;
-}
-
 static void restore_qdisc(struct net_device * dev)
 {
 	struct Qdisc * 		    qdisc;
@@ -1038,6 +979,67 @@ static void restore_qdisc(struct net_device * dev)
 
 	if (dev->flags & IFF_UP)
 		dev_activate(dev);
+}
+
+int update_qdisc(struct net_device * dev, struct eth_vlan_info * info)
+{
+	struct Qdisc *        qdisc;
+	struct Qdisc *        oqdisc;
+	struct nlattr         attr;
+	unsigned int   	      q_index;
+	struct netdev_queue * queue;
+
+	ASSERT(dev);
+	ASSERT(info);
+
+	if (!dev->qdisc) {
+		LOG_ERR("qdisc not found on device %s", dev->name);
+		return -1;
+	}
+
+	if (string_cmp(dev->qdisc->ops->id,
+		       shim_eth_qdisc_ops.id) == 0) {
+		LOG_INFO("Shim-eth-qdisc already set on this device");
+		return 0;
+	}
+
+	/* For each TX queue, create a new shim-eth-qdisc instance, attach
+	 * it to the queue and then destroy the old qdisc
+	 */
+	for (q_index = 0; q_index < dev->num_tx_queues; q_index++) {
+		queue = netdev_get_tx_queue(dev, q_index);
+		qdisc = qdisc_create_dflt(queue, &shim_eth_qdisc_ops, 0);
+		if (!qdisc) {
+			LOG_ERR("Problems creating shim-eth-qdisc");
+			restore_qdisc(dev);
+			return -1;
+		}
+
+		attr.nla_len = info->qdisc_max_size;
+		attr.nla_type = info->qdisc_enable_size;
+		if (shim_eth_qdisc_init(qdisc, &attr)) {
+			LOG_ERR("Problems initializing shim-eth-qdisc");
+			qdisc_destroy(qdisc);
+			restore_qdisc(dev);
+			return -1;
+		}
+
+		oqdisc = dev_graft_qdisc(queue, qdisc);
+		if (oqdisc && oqdisc != &noop_qdisc)
+			qdisc_destroy(oqdisc);
+	}
+
+	if (dev->flags & IFF_UP)
+		dev_deactivate(dev);
+
+	queue = netdev_get_tx_queue(dev, 0);
+	dev->qdisc = queue->qdisc_sleeping;
+	atomic_inc(&dev->qdisc->refcnt);
+
+	if (dev->flags & IFF_UP)
+		dev_activate(dev);
+
+	return 0;
 }
 
 static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
