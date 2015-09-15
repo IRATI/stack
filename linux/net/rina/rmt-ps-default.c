@@ -79,6 +79,12 @@ default_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
                                          struct pdu *         pdu)
 { return common_rmt_enqueue_scheduling_policy_tx(ps, n1_port, pdu); }
 
+static int
+default_rmt_requeue_scheduling_policy_tx(struct rmt_ps *      ps,
+                                         struct rmt_n1_port * n1_port,
+                                         struct pdu *         pdu)
+{ return common_rmt_requeue_scheduling_policy_tx(ps, n1_port, pdu); }
+
 static struct pdu *
 default_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
                                      struct rmt_n1_port * n1_port)
@@ -126,6 +132,7 @@ rmt_ps_default_create(struct rina_component * component)
         ps->rmt_q_monitor_policy_rx          = default_rmt_q_monitor_policy_rx;
         ps->rmt_next_scheduled_policy_tx     = default_rmt_next_scheduled_policy_tx;
         ps->rmt_enqueue_scheduling_policy_tx = default_rmt_enqueue_scheduling_policy_tx;
+        ps->rmt_requeue_scheduling_policy_tx = default_rmt_requeue_scheduling_policy_tx;
         ps->rmt_scheduling_policy_rx         = default_rmt_scheduling_policy_rx;
         ps->rmt_scheduling_create_policy_tx  = default_rmt_scheduling_create_policy_tx;
         ps->rmt_scheduling_destroy_policy_tx = default_rmt_scheduling_destroy_policy_tx;

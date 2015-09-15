@@ -8,12 +8,12 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -262,7 +262,8 @@ protected:
 	FlowInformation internalAllocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
 						     int result,
 						     bool notifySource,
-						     unsigned short ipcProcessId);
+						     unsigned short ipcProcessId,
+						     bool blocking = true);
 
 public:
 	IPCManager();
@@ -410,13 +411,35 @@ public:
 	 * indicates the deny code
 	 * @param notifySource if true the source IPC Process will get
 	 * the allocate flow response message back, otherwise it will be ignored
+	 * @param blocking if true, read and writeSDU calls from/to this flow
+	 * will block
 	 * @return Flow If the flow is accepted, returns the flow object
 	 * @throws FlowAllocationException If there are problems
 	 * confirming/denying the flow
 	 */
-	 FlowInformation allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
+	FlowInformation allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
 				  	      int result,
-				  	      bool notifySource);
+				  	      bool notifySource,
+					      bool blocking = true);
+
+        /**
+	 * Checks whether this flow has blocking or non-blocking I/O
+	 *
+	 * @param portId, the portId of the flow
+	 * @return > 0 if blocking, 0 if non-blocking, < 0 upon error
+	 * @throws bricks
+	 */
+	int flowOptsBlocking(int portId);
+
+	/**
+	 * Sets this flow to blocking or non-blocking I/O
+	 *
+	 * @param portId, the portId of the flow
+	 * @param blocking true for blocking, false for non-blocking
+	 * @return > 0 if blocking, 0 if non-blocking, < 0 upon error
+	 * @throws bricks
+	 */
+	int setFlowOptsBlocking(int portId, bool blocking);
 
 	/**
 	 * Requests the deallocation of a flow

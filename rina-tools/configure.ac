@@ -28,10 +28,22 @@ AC_PROG_GREP
 AC_PROG_MKDIR_P
 AC_PROG_LN_S
 
-AC_PATH_PROG([FMT],  [fmt],  [/bin/false])
-AC_PATH_PROG([SORT], [sort], [/bin/false])
-AC_PATH_PROG([UNIQ], [uniq], [/bin/false])
-AC_PATH_PROG([GIT],  [git],  [/bin/false])
+AC_PATH_PROG([FMT],  [fmt],  [no])
+AS_IF([test "x$FMT" = "xno"],[
+	AC_MSG_ERROR([Your system lacks of fmt support])
+])
+AC_PATH_PROG([SORT], [sort], [no])
+AS_IF([test "x$SORT" = "xno"],[
+	AC_MSG_ERROR([Your system lacks of sort support])
+])
+AC_PATH_PROG([UNIQ], [uniq], [no])
+AS_IF([test "x$UNIQ" = "xno"],[
+	AC_MSG_ERROR([Your system lacks of uniq support])
+])
+AC_PATH_PROG([GIT],  [git],  [no])
+AS_IF([test "x$GIT" = "xno"],[
+	AC_MSG_ERROR([Your system lacks of git support])
+])
 
 AC_PROG_CPP
 AC_PROG_CC

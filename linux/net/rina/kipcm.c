@@ -186,7 +186,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 }
         } else {
                 user_ipcp = kfa_ipcp_instance(kipcm->kfa);
-                if (kfa_flow_create(kipcm->kfa, pid, false, ipc_process)) {
+		/* NOTE: original function called non-blocking I/O?? */
+                if (kfa_flow_create(kipcm->kfa, pid, ipc_process)) {
                         LOG_ERR("Could not find the user ipcp of the flow...");
                         kfa_port_id_release(kipcm->kfa, pid);
                         goto fail;
@@ -614,8 +615,7 @@ static int notify_ipcp_register_app_request(void *             data,
         ASSERT(ipc_process->ops->application_register);
 
         if (ipc_process->ops->application_register(ipc_process->data,
-                                                   attrs->app_name,
-                                                   attrs->blocking))
+                                                   attrs->app_name))
                 goto fail;
 
         return reg_unreg_resp_free_and_reply(msg,
@@ -2229,13 +2229,13 @@ int kipcm_mgmt_sdu_read(struct kipcm *    kipcm,
 
 
 /* Only called by the allocate_port syscall used only by the normal IPCP */
-port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
-                              ipc_process_id_t ipc_id,
-                              struct name *    process_name,
-                              bool	       blocking)
+port_id_t kipcm_flow_create(struct kipcm     *kipcm,
+			    ipc_process_id_t  ipc_id,
+			    struct name      *process_name)
 {
-        struct ipcp_instance * ipc_process, * user_ipc_process;
-        port_id_t              pid;
+        struct ipcp_instance *ipc_process;
+	struct ipcp_instance *user_ipc_process;
+        port_id_t             pid;
 
         IRQ_BARRIER;
 
@@ -2269,7 +2269,9 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
                                                   process_name);
 
         if (ipc_process->ops->flow_prebind) {
-                ipc_process->ops->flow_prebind(ipc_process->data, user_ipc_process, pid);
+                ipc_process->ops->flow_prebind(ipc_process->data,
+					       user_ipc_process,
+					       pid);
         }
 
         if (user_ipc_process) {
@@ -2278,23 +2280,22 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
                 name_destroy(process_name);
                 return pid;
         }
-
-        if (kfa_flow_create(kipcm->kfa, pid, blocking, ipc_process)) {
+	/* creates a flow, default flow_opts */
+        if (kfa_flow_create(kipcm->kfa, pid, ipc_process)) {
                 KIPCM_UNLOCK(kipcm);
                 kfa_port_id_release(kipcm->kfa, pid);
                 name_destroy(process_name);
                 return port_id_bad();
         }
-
         KIPCM_UNLOCK(kipcm);
         name_destroy(process_name);
         return pid;
 }
-EXPORT_SYMBOL(kipcm_allocate_port);
+EXPORT_SYMBOL(kipcm_flow_create);
 
-int kipcm_deallocate_port(struct kipcm *   kipcm,
-                          ipc_process_id_t ipc_id,
-                          port_id_t        port_id)
+int kipcm_flow_destroy(struct kipcm *   kipcm,
+		       ipc_process_id_t ipc_id,
+		       port_id_t        port_id)
 {
         struct ipcp_instance * ipc_process;
 
@@ -2313,15 +2314,46 @@ int kipcm_deallocate_port(struct kipcm *   kipcm,
         ASSERT(ipc_process->ops->flow_deallocate);
 
         if (ipc_process->ops->flow_deallocate(ipc_process->data, port_id)) {
-                LOG_ERR("Failed deallocate flow request "
-                        "for port id: %d", port_id);
+                LOG_ERR("Failed deallocate flow request for port id: %d",
+			port_id);
                 return -1;
         }
 
         return 0;
 }
+EXPORT_SYMBOL(kipcm_flow_destroy);
 
-int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
+int kipcm_flow_opts_set(struct kipcm *kipcm,
+			port_id_t     pid,
+			flow_opts_t   flow_opts)
+{
+        IRQ_BARRIER;
+
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
+		return -EINVAL;
+        }
+
+	return kfa_flow_opts_set(kipcm->kfa, pid, flow_opts);
+}
+EXPORT_SYMBOL(kipcm_flow_opts_set);
+
+flow_opts_t kipcm_flow_opts(struct kipcm *kipcm,
+			    port_id_t     pid)
+{
+        IRQ_BARRIER;
+
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
+		return -EINVAL;
+        }
+
+	return kfa_flow_opts(kipcm->kfa, pid);
+}
+EXPORT_SYMBOL(kipcm_flow_opts);
+
+
+int kipcm_notify_flow_alloc_req_result(struct kipcm    *kipcm,
                                        ipc_process_id_t ipc_id,
                                        port_id_t        pid,
                                        uint_t           res)

@@ -66,7 +66,6 @@ enum flow_spec_attrs_list {
         FSPEC_ATTR_PEAK_BWITH_DURATION,
         FSPEC_ATTR_PEAK_SDU_BWITH_DURATION,
         FSPEC_ATTR_UNDETECTED_BER,
-        FSPEC_ATTR_BLOCKING,
         __FSPEC_ATTR_MAX,
 };
 #define FSPEC_ATTR_MAX (__FSPEC_ATTR_MAX - 1)
@@ -333,7 +332,6 @@ enum ipcm_reg_app_req_attrs_list {
         IRAR_ATTR_APP_NAME = 1,
         IRAR_ATTR_DIF_NAME,
         IRAR_ATTR_REG_IPCP_ID,
-        IRAR_ATTR_BLOCKING,
         __IRAR_ATTR_MAX,
 };
 #define IRAR_ATTR_MAX (__IRAR_ATTR_MAX -1)
@@ -803,7 +801,6 @@ struct rnl_ipcp_conn_destroy_result_msg_attrs {
 struct rnl_ipcm_reg_app_req_msg_attrs {
         struct name * app_name;
         struct name * dif_name;
-        bool	      blocking;
 };
 
 struct rnl_ipcm_reg_app_resp_msg_attrs {

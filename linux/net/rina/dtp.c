@@ -979,8 +979,8 @@ struct dtp * dtp_create(struct dt *         dt,
                 ps_name = RINA_PS_DEFAULT_NAME;
 
         if (dtp_select_policy_set(tmp, "", ps_name)) {
-                dtp_destroy(tmp);
                 LOG_ERR("Could not load DTP PS %s", ps_name);
+                dtp_destroy(tmp);
                 return NULL;
         }
 

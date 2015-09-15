@@ -1,18 +1,18 @@
 //
 // Echo Server
-// 
+//
 // Addy Bombeke <addy.bombeke@ugent.be>
-// 
+//
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation; either version 2 of the License, or
 // (at your option) any later version.
-// 
+//
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU General Public License
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -124,7 +124,7 @@ Server::~Server()
 
 void Server::run(bool blocking)
 {
-        applicationRegister(blocking);
+	applicationRegister();
 
         rina::FlowInformation flow;
 
@@ -149,7 +149,7 @@ void Server::run(bool blocking)
                         break;
 
                 case FLOW_ALLOCATION_REQUESTED_EVENT:
-                        flow = ipcManager->allocateFlowResponse(*dynamic_cast<FlowRequestEvent*>(event), 0, true);
+                        flow = ipcManager->allocateFlowResponse(*dynamic_cast<FlowRequestEvent*>(event), 0, true, blocking);
                         port_id = flow.portId;
                         LOG_INFO("New flow allocated [port-id = %d]", port_id);
                         startWorker(flow);
