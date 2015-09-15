@@ -408,6 +408,12 @@ string Catalog::toString() const
 					ii != cps->plugin->loaded.end(); ii++) {
 				ss << *ii << " ";
 			}
+			ss << "]" << ", selected for resources [ ";
+			for (set<unsigned int>::iterator
+				ii = cps->selected.begin();
+					ii != cps->selected.end(); ii++) {
+				ss << *ii << " ";
+			}
 			ss << "]" << endl;
 		}
 	}
