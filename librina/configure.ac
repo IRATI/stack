@@ -212,7 +212,7 @@ AS_IF([test -n "$sysheaders"],[
     AS_IF([test x"$GXX" != x"yes"],[
         AC_MSG_ERROR([Your system lacks of GNU C++ compiler])
     ])
-    
+
     CXX_SYSINCLUDES=
 
     for cxxheaders in `$CXX -v -S -x c++ /dev/null -o /dev/null 2>&1 \
@@ -248,6 +248,8 @@ AX_HAVE_SYSCALL([deallocate_port],[],[
 AX_HAVE_SYSCALL([management_sdu_read],[],[
     AC_MSG_ERROR([Your system lacks of a necessary syscall])])
 AX_HAVE_SYSCALL([management_sdu_write],[],[
+    AC_MSG_ERROR([Your system lacks of a necessary syscall])])
+AX_HAVE_SYSCALL([flow_io_ctl],[],[
     AC_MSG_ERROR([Your system lacks of a necessary syscall])])
 
 CFLAGS="$oldcflags"

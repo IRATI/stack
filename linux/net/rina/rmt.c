@@ -804,13 +804,13 @@ static int n1_port_write_noclean(struct rmt *         rmt,
         	spin_lock(&n1_port->lock);
         	n1_port->state = N1_PORT_STATE_DISABLED;
         	rcu_read_lock();
-        	ps = container_of(rcu_dereference(rmt->base.ps), 
+        	ps = container_of(rcu_dereference(rmt->base.ps),
 						  struct rmt_ps, base);
         	if (ps && ps->rmt_requeue_scheduling_policy_tx) {
         		/* RMTQMonitorPolicy hook. */
         		if (ps->rmt_q_monitor_policy_tx_enq)
-        			ps->rmt_q_monitor_policy_tx_enq(ps, 
-								pdu, 
+        			ps->rmt_q_monitor_policy_tx_enq(ps,
+								pdu,
 								n1_port);
 
         		ps->rmt_requeue_scheduling_policy_tx(ps, n1_port, pdu);
@@ -1225,6 +1225,7 @@ int rmt_enable_port_id(struct rmt * instance,
                        port_id_t    id)
 {
         struct rmt_n1_port * n1_port;
+	unsigned long        flags;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
@@ -1241,19 +1242,19 @@ int rmt_enable_port_id(struct rmt * instance,
                 return -1;
         }
 
-        spin_lock(&instance->n1_ports->lock);
+        spin_lock_irqsave(&instance->n1_ports->lock, flags);
         n1_port = n1pmap_find(instance->n1_ports, id);
         if (!n1_port || n1_port->state == N1_PORT_STATE_DEALLOCATED) {
-                spin_unlock(&instance->n1_ports->lock);
+                spin_unlock_irqrestore(&instance->n1_ports->lock, flags);
                 LOG_ERR("No queue for this port-id or already deallocated, %d",
                         id);
                 return -1;
         }
-        spin_unlock(&instance->n1_ports->lock);
+        spin_unlock_irqrestore(&instance->n1_ports->lock, flags);
 
-        spin_lock(&n1_port->lock);
+        spin_lock_irqsave(&n1_port->lock, flags);
         if (n1_port->state != N1_PORT_STATE_DISABLED) {
-                spin_unlock(&n1_port->lock);
+                spin_unlock_irqrestore(&n1_port->lock, flags);
                 LOG_DBG("Nothing to do for port-id %d", id);
                 return 0;
         }
@@ -1261,7 +1262,7 @@ int rmt_enable_port_id(struct rmt * instance,
         if (atomic_read(&n1_port->n_sdus) > 0)
                 tasklet_hi_schedule(&instance->egress_tasklet);
 
-        spin_unlock(&n1_port->lock);
+        spin_unlock_irqrestore(&n1_port->lock, flags);
         LOG_DBG("Changed state to ENABLED");
         return 0;
 }
@@ -1271,6 +1272,7 @@ int rmt_disable_port_id(struct rmt * instance,
                         port_id_t    id)
 {
         struct rmt_n1_port * n1_port;
+	unsigned long        flags;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
@@ -1287,23 +1289,23 @@ int rmt_disable_port_id(struct rmt * instance,
                 return -1;
         }
 
-        spin_lock(&instance->n1_ports->lock);
+        spin_lock_irqsave(&instance->n1_ports->lock, flags);
         n1_port = n1pmap_find(instance->n1_ports, id);
         if (!n1_port || n1_port->state == N1_PORT_STATE_DEALLOCATED) {
-                spin_unlock(&instance->n1_ports->lock);
+                spin_unlock_irqrestore(&instance->n1_ports->lock, flags);
                 LOG_ERR("No n1_port for port-id or deallocated, %d", id);
                 return -1;
         }
-        spin_unlock(&instance->n1_ports->lock);
+        spin_unlock_irqrestore(&instance->n1_ports->lock, flags);
 
-        spin_lock(&n1_port->lock);
+        spin_lock_irqsave(&n1_port->lock, flags);
         if (n1_port->state == N1_PORT_STATE_DISABLED) {
-                spin_unlock(&n1_port->lock);
+                spin_unlock_irqrestore(&n1_port->lock, flags);
                 LOG_DBG("Nothing to do for port-id %d", id);
                 return 0;
         }
         n1_port->state = N1_PORT_STATE_DISABLED;
-        spin_unlock(&n1_port->lock);
+        spin_unlock_irqrestore(&n1_port->lock, flags);
         LOG_DBG("Changed state to DISABLED");
 
         return 0;

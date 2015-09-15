@@ -51,14 +51,25 @@ int          kfa_flow_sdu_read(struct kfa *  instance,
 #if 0
 struct ipcp_flow * kfa_flow_find_by_pid(struct kfa * instance,
                                         port_id_t    pid);
-#endif
+#endif /* 0 */
 
 struct rmt;
 
+/* structure automatically freed when there are no more readers or writers */
 int          kfa_flow_create(struct kfa *           instance,
                              port_id_t              pid,
-                             bool		    blocking,
                              struct ipcp_instance * ipcp);
 
+/* set options associated with a flow e.g
+ * int kfa_flow_opts_set(i, pid, FLOW_O_NONBLOCK)
+ */
+int          kfa_flow_opts_set(struct kfa *  instance,
+			       port_id_t     pid,
+			       flow_opts_t   flow_opts);
+
+/* returns the current options for a flow */
+flow_opts_t  kfa_flow_opts(struct kfa *  instance,
+			   port_id_t     pid);
+
 struct ipcp_instance * kfa_ipcp_instance(struct kfa * instance);
-#endif
+#endif /* RINA_KFA_H */

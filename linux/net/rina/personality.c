@@ -136,8 +136,8 @@ static int are_ops_ok(const struct personality_ops * ops)
                 return 0;
         }
 
-        if (!(ops->allocate_port  &&
-              ops->deallocate_port)) {
+        if (!(ops->flow_create  &&
+              ops->flow_destroy)) {
                 LOG_ERR("Bogus Port ID related ops");
                 return 0;
         }

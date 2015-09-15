@@ -202,6 +202,14 @@ int Catalog::load_by_template(Addon *addon, unsigned int ipcp_id,
 	psinfo_from_psconfig(required_policy_sets, "routing",
 			     t->routingConfiguration.policy_set_);
 
+	for (list<rina::QoSCube>::const_iterator qit = t->qosCubes.begin();
+					qit != t->qosCubes.end(); qit++) {
+		psinfo_from_psconfig(required_policy_sets, "dtp",
+				     qit->dtp_config_.dtp_policy_set_);
+		psinfo_from_psconfig(required_policy_sets, "dtcp",
+				     qit->dtcp_config_.dtcp_policy_set_);
+	}
+
 	// Load all the policy sets in the list
 	for (list<rina::PsInfo>::iterator i=required_policy_sets.begin();
 			i != required_policy_sets.end(); i++) {

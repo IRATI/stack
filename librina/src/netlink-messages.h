@@ -8,12 +8,12 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -310,7 +310,6 @@ class AppAllocateFlowResponseMessage: public BaseNetlinkResponseMessage {
 	 * wants the IPC Process to reply to the source or not
 	 */
 	bool notifySource;
-
 public:
 	AppAllocateFlowResponseMessage();
 	bool isNotifySource() const;
@@ -585,9 +584,6 @@ public:
 
 	/** The DIF name where the application wants to register */
 	ApplicationProcessNamingInformation difName;
-
-	/** If the flows allocated to the registered app will be blocking or not*/
-	bool blocking;
 
 	IpcmRegisterApplicationRequestMessage();
 	const ApplicationProcessNamingInformation& getApplicationName() const;
@@ -1167,7 +1163,7 @@ public:
  * connection to the EFCP module in the kernel.
  */
 class IpcpConnectionCreateRequestMessage: public BaseNetlinkMessage {
-        
+
         /** Contains the data of the connection to be created */
         Connection connection;
 
