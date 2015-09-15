@@ -117,7 +117,6 @@ struct ipcp_instance_data {
         struct packet_type *   eth_vlan_packet_type;
         struct net_device *    dev;
         struct net_device *    phy_dev;
-        struct Qdisc *	       old_qdisc;
         struct flow_spec *     fspec;
 
         /* The IPC Process using the shim-eth-vlan */
@@ -940,67 +939,16 @@ static struct Qdisc_ops shim_eth_qdisc_ops __read_mostly = {
 	.owner	   = THIS_MODULE,
 };
 
-int update_qdisc(struct net_device *    dev,
-		 struct Qdisc *         old_qdisc,
-		 struct eth_vlan_info * info)
+static void restore_qdisc(struct net_device * dev)
 {
-	struct Qdisc * sch;
-	struct nlattr  attr;
-
-	ASSERT(dev);
-	ASSERT(info);
-
-	if (!dev->qdisc) {
-		LOG_ERR("qdisc not found on device %s", dev->name);
-		return -1;
-	}
-
-	if (string_cmp(dev->qdisc->ops->id,
-		       shim_eth_qdisc_ops.id) == 0)
-		return 0;
-
-	sch = qdisc_create_dflt(netdev_get_tx_queue(dev, 0),
-			        &shim_eth_qdisc_ops, 0);
-	if (!sch) {
-		LOG_ERR("Problems creating shim-eth-qdisc");
-		return -1;
-	}
-
-	attr.nla_len = info->qdisc_max_size;
-	attr.nla_type = info->qdisc_enable_size;
-	if (shim_eth_qdisc_init(sch, &attr)) {
-		LOG_ERR("Problems initializing shim-eth-qdisc");
-		qdisc_destroy(sch);
-		return -1;
-	}
-
-	old_qdisc = dev->qdisc;
-
-	if (dev->flags & IFF_UP)
-		dev_deactivate(dev);
-
-	dev_graft_qdisc(netdev_get_tx_queue(dev, 0), sch);
-	dev->qdisc = sch;
-
-	if (dev->flags & IFF_UP)
-		dev_activate(dev);
-
-	return 0;
-}
-
-static void restore_qdisc(struct net_device * dev,
-			  struct Qdisc * old_qdisc)
-{
-	struct Qdisc * 		    sch;
+	struct Qdisc * 		    qdisc;
 	struct ipcp_instance_data * pos;
 	int			    num_ipcps;
+	unsigned int   		    q_index;
+	struct netdev_queue *       queue;
 
 	ASSERT(dev);
 	ASSERT(old_qdisc);
-
-	sch = dev->qdisc;
-	if (!sch)
-		return;
 
 	/* only do it if there are no more shims on that net_device */
 	num_ipcps = 0;
@@ -1015,12 +963,83 @@ static void restore_qdisc(struct net_device * dev,
 	if (dev->flags & IFF_UP)
 		dev_deactivate(dev);
 
-	dev_graft_qdisc(netdev_get_tx_queue(dev, 0), old_qdisc);
-	dev->qdisc = old_qdisc;
-	qdisc_destroy(sch);
+	/* Destroy all qdiscs in TX queues, point them to no-op (so that
+	 * the kernel will create default ones when activating the device)
+	 */
+	for (q_index = 0; q_index < dev->num_tx_queues; q_index++) {
+		queue = netdev_get_tx_queue(dev, q_index);
+		qdisc = queue->qdisc_sleeping;
+		if (qdisc) {
+			rcu_assign_pointer(queue->qdisc, &noop_qdisc);
+			queue->qdisc_sleeping = &noop_qdisc;
+			qdisc_destroy(qdisc);
+		}
+	}
+	dev->qdisc = &noop_qdisc;
 
 	if (dev->flags & IFF_UP)
 		dev_activate(dev);
+}
+
+int update_qdisc(struct net_device * dev, struct eth_vlan_info * info)
+{
+	struct Qdisc *        qdisc;
+	struct Qdisc *        oqdisc;
+	struct nlattr         attr;
+	unsigned int   	      q_index;
+	struct netdev_queue * queue;
+
+	ASSERT(dev);
+	ASSERT(info);
+
+	if (!dev->qdisc) {
+		LOG_ERR("qdisc not found on device %s", dev->name);
+		return -1;
+	}
+
+	if (string_cmp(dev->qdisc->ops->id,
+		       shim_eth_qdisc_ops.id) == 0) {
+		LOG_INFO("Shim-eth-qdisc already set on this device");
+		return 0;
+	}
+
+	/* For each TX queue, create a new shim-eth-qdisc instance, attach
+	 * it to the queue and then destroy the old qdisc
+	 */
+	for (q_index = 0; q_index < dev->num_tx_queues; q_index++) {
+		queue = netdev_get_tx_queue(dev, q_index);
+		qdisc = qdisc_create_dflt(queue, &shim_eth_qdisc_ops, 0);
+		if (!qdisc) {
+			LOG_ERR("Problems creating shim-eth-qdisc");
+			restore_qdisc(dev);
+			return -1;
+		}
+
+		attr.nla_len = info->qdisc_max_size;
+		attr.nla_type = info->qdisc_enable_size;
+		if (shim_eth_qdisc_init(qdisc, &attr)) {
+			LOG_ERR("Problems initializing shim-eth-qdisc");
+			qdisc_destroy(qdisc);
+			restore_qdisc(dev);
+			return -1;
+		}
+
+		oqdisc = dev_graft_qdisc(queue, qdisc);
+		if (oqdisc && oqdisc != &noop_qdisc)
+			qdisc_destroy(oqdisc);
+	}
+
+	if (dev->flags & IFF_UP)
+		dev_deactivate(dev);
+
+	queue = netdev_get_tx_queue(dev, 0);
+	dev->qdisc = queue->qdisc_sleeping;
+	atomic_inc(&dev->qdisc->refcnt);
+
+	if (dev->flags & IFF_UP)
+		dev_activate(dev);
+
+	return 0;
 }
 
 static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
@@ -1652,9 +1671,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         }
 
 	/* Modfy qdisc by our own */
-	if (update_qdisc(data->phy_dev,
-			 data->old_qdisc,
-			 data->info)) {
+	if (update_qdisc(data->phy_dev, data->info)) {
 		LOG_ERR("Problems creating queue discipline");
 		name_destroy(data->dif_name);
 		data->dif_name = NULL;
@@ -1756,7 +1773,7 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
         }
 
 
-	restore_qdisc(data->phy_dev, data->old_qdisc);
+	restore_qdisc(data->phy_dev);
 
 	dev_remove_pack(data->eth_vlan_packet_type);
         /* Remove from list */
@@ -1798,9 +1815,7 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
         }
 
 	/* Modfy qdisc by our own */
-	if (update_qdisc(data->phy_dev,
-			 data->old_qdisc,
-			 data->info)) {
+	if (update_qdisc(data->phy_dev, data->info)) {
 		LOG_ERR("Problems creating queue discipline");
 		name_destroy(data->dif_name);
 		data->dif_name = NULL;
@@ -2132,8 +2147,8 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                                 unbind_and_destroy_flow(pos, flow);
                         }
 
-			/* Restore old qdisc */
-			restore_qdisc(pos->phy_dev, pos->old_qdisc);
+			/* Restore default qdisc */
+			restore_qdisc(pos->phy_dev);
 
                         /* Remove packet handler if there is one */
                         if (pos->eth_vlan_packet_type->dev)
