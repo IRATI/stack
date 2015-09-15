@@ -410,13 +410,13 @@ string Catalog::toString() const
 			   << endl << "    ps version: " << cps->version
 			   << endl << "    plugin: " << cps->plugin->path
 			   << "/" << cps->plugin->name
-			   << ", loaded for ipcps [ ";
+			   << endl << "    loaded for ipcps [ ";
 			for (set<unsigned int>::iterator
 				ii = cps->plugin->loaded.begin();
 					ii != cps->plugin->loaded.end(); ii++) {
 				ss << *ii << " ";
 			}
-			ss << "]" << ", selected for resources [ ";
+			ss << "]" << endl << "    selected for resources [ ";
 			for (set<unsigned int>::iterator
 				ii = cps->selected.begin();
 					ii != cps->selected.end(); ii++) {
