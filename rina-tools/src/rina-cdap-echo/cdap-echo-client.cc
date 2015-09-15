@@ -63,7 +63,7 @@ void Client::run()
 {
         keep_running_ = true;
         if (client_app_reg) {
-                applicationRegister(false);
+                applicationRegister();
         }
         createFlow();
         if (flow_.portId >= 0) {
@@ -81,7 +81,6 @@ void Client::createFlow()
         IPCEvent* event;
         uint seqnum;
 
-        qosspec.blocking = false;
         if (gap >= 0)
                 qosspec.maxAllowableGap = gap;
 
@@ -122,6 +121,7 @@ void Client::createFlow()
         if (flow_.portId < 0) {
                 LOG_ERR("Failed to allocate a flow");
         } else {
+		ipcManager->setFlowOptsBlocking(flow_.portId, false);
                 LOG_DBG("[DEBUG] Port id = %d", flow_.portId);
         }
 }

@@ -74,7 +74,7 @@ void Client::run()
 	cout << setprecision(5);
 
         if (client_app_reg) {
-                applicationRegister(true);
+                applicationRegister();
         }
         port_id = createFlow();
         if (port_id < 0) {
@@ -103,8 +103,6 @@ int Client::createFlow()
         IPCEvent* event;
         uint seqnum;
 
-        if (test_type == "ping")
-        	qosspec.blocking = false;
         if (gap >= 0)
                 qosspec.maxAllowableGap = gap;
 
@@ -170,6 +168,8 @@ void Client::pingFlow(int port_id)
         double variance = 0;
         double stdev = 0;
         double current_rtt = 0;
+
+	ipcManager->setFlowOptsBlocking(port_id, false);
 
         for (unsigned long n = 0; n < echo_times; n++) {
         	int bytes_read = 0;

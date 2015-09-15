@@ -164,7 +164,7 @@ bool IPCProcessesObj::registerAtDIF(
 	}
 
 	if (IPCManager->register_at_dif(ManagementAgent::inst, &promise,
-					ipcp_id, dif_name, true) == IPCM_FAILURE
+					ipcp_id, dif_name) == IPCM_FAILURE
 			|| promise.wait() != IPCM_SUCCESS) {
 		LOG_ERR("Registration failed");
 		return false;

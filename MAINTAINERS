@@ -347,3 +347,9 @@ F: rina-tools/src/rina-cdap-echo/
 Test manager
 M: Bernat Gaston <bernat.gaston (at) i2cat.net>
 F: rina-tools/src/manager/
+
+
+Misc
+-------------
+M: Vincenzo Maffione <v.maffione (at) nextworks.it>
+F: misc/code-stats

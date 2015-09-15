@@ -58,7 +58,7 @@ enum flow_state {
 
 struct ipcp_flow {
         port_id_t              port_id;
-        bool		       blocking;
+      	flow_opts_t            options;
         enum flow_state        state;
         struct ipcp_instance * ipc_process;
         struct rfifo *         sdu_ready;
@@ -476,7 +476,7 @@ int kfa_flow_sdu_write(struct ipcp_instance_data * data,
 
         atomic_inc(&flow->writers);
 
-        if (flow->blocking) {
+        if (!(flow->options & FLOW_O_NONBLOCK)) { /* blocking I/O */
         	while (!ok_write(flow)) {
         		spin_unlock_irqrestore(&instance->lock, flags);
 
@@ -492,10 +492,9 @@ int kfa_flow_sdu_write(struct ipcp_instance_data * data,
         			if (signal_pending(current)) {
         				LOG_DBG("A signal is pending");
 #if 0
-        				LOG_DBG("A signal is pending "
-        						"(sig = 0x%08zx%08zx)",
-        						current->pending.signal.sig[0],
-        						current->pending.signal.sig[1]);
+        				LOG_DBG("A signal is pending (sig = 0x%08zx%08zx)",
+						current->pending.signal.sig[0],
+						current->pending.signal.sig[1]);
 #endif
         			}
         		}
@@ -508,7 +507,7 @@ int kfa_flow_sdu_write(struct ipcp_instance_data * data,
         			sdu_destroy(sdu);
 
         			LOG_ERR("There is no flow bound to port-id %d anymore",
-        					id);
+					id);
         			return -EBADF;
         		}
 
@@ -540,9 +539,10 @@ int kfa_flow_sdu_write(struct ipcp_instance_data * data,
         		retval = -EIO;
         	}
         	spin_lock_irqsave(&instance->lock, flags);
-        } else {
-        	if (flow->state == PORT_STATE_PENDING || flow->state == PORT_STATE_DISABLED) {
-        		LOG_ERR("Flow %d is not ready for writing", id);
+        } else { /* non-blocking I/O */
+        	if (flow->state == PORT_STATE_PENDING
+		    || flow->state == PORT_STATE_DISABLED) {
+        		LOG_DBG("Flow %d is not ready for writing", id);
         		retval = -EAGAIN;
         		goto finish;
         	}
@@ -653,7 +653,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
 
         atomic_inc(&flow->readers);
 
-        if (flow->blocking) {
+        if (!(flow->options & FLOW_O_NONBLOCK)) { /* blocking I/O */
         	while (flow->state == PORT_STATE_PENDING ||
         			rfifo_is_empty(flow->sdu_ready)) {
         		spin_unlock_irqrestore(&instance->lock, flags);
@@ -669,16 +669,14 @@ int kfa_flow_sdu_read(struct kfa *  instance,
         			if (signal_pending(current)) {
         				LOG_ERR("A signal is pending");
 #if 0
-        				LOG_ERR("A signal is pending "
-        						"(sig = 0x%08zx%08zx)",
-        						current->pending.signal.sig[0],
-        						current->pending.signal.sig[1]);
+        				LOG_ERR("A signal is pending (sig = 0x%08zx%08zx)",
+						current->pending.signal.sig[0],
+						current->pending.signal.sig[1]);
 #endif
         			}
         		}
 
         		spin_lock_irqsave(&instance->lock, flags);
-
         		flow = kfa_pmap_find(instance->flows, id);
         		if (!flow) {
         			spin_unlock_irqrestore(&instance->lock, flags);
@@ -710,7 +708,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
         		LOG_ERR("There is not a valid in port-id %d fifo", id);
         		retval = -EIO;
         	}
-        } else {
+        } else { /* non-blocking I/O */
         	if (flow->state == PORT_STATE_PENDING) {
         		LOG_WARN("Flow %d still not allocated", id);
         		retval = -EAGAIN;
@@ -847,39 +845,32 @@ EXPORT_SYMBOL(kfa_flow_find_by_pid);
 #endif
 
 int kfa_flow_create(struct kfa *           instance,
-                    port_id_t              pid,
-                    bool		   blocking,
-                    struct ipcp_instance * ipcp)
+		    port_id_t              pid,
+		    struct ipcp_instance * ipcp)
 {
         struct ipcp_flow * flow;
         unsigned long      flags;
 
         IRQ_BARRIER;
 
-        if (!instance)
-                return -1;
-
-        if (!is_port_id_ok(pid))
-                return -1;
-
-        if (!ipcp)
-                return -1;
-
-        IRQ_BARRIER;
-
         if (!instance) {
-                LOG_ERR("Bogus instance passed, bailing out");
+                LOG_ERR("Bogus kfa instance passed, bailing out");
                 return -1;
         }
         if (!is_port_id_ok(pid)) {
                 LOG_ERR("Bogus PID passed, bailing out");
                 return-1;
         }
+	if (!ipcp) {
+		LOG_ERR("Bogus ipcp passed, bailing out");
+                return -1;
+	}
 
         flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
-        if (!flow)
+        if (!flow) {
+		LOG_ERR("Failed to created flow, bailing out");
                 return -1;
-
+	}
         atomic_set(&flow->readers, 0);
         atomic_set(&flow->writers, 0);
         atomic_set(&flow->posters, 0);
@@ -888,9 +879,9 @@ int kfa_flow_create(struct kfa *           instance,
         init_waitqueue_head(&flow->write_wqueue);
 
         flow->ipc_process = ipcp;
-        flow->blocking = blocking;
+	flow->options     = FLOW_O_DEFAULT;
 
-        flow->state     = PORT_STATE_PENDING;
+        flow->state       = PORT_STATE_PENDING;
         LOG_DBG("Flow pre-bound to port-id %d", pid);
 
         spin_lock_irqsave(&instance->lock, flags);
@@ -918,23 +909,18 @@ static int kfa_flow_ipcp_bind(struct ipcp_instance_data * data,
         unsigned long      flags;
 
         IRQ_BARRIER;
-
         LOG_DBG("Binding IPCP %pK to flow on port %d", ipcp, pid);
 
-        if (!data)
+	if (!ipcp) {
+		LOG_ERR("Bogus IPCP passed, bailing out");
                 return -1;
+	}
 
+        if (!data) {
+		LOG_ERR("Bogus data passed, bailing out");
+                return -EINVAL;
+	}
         instance = data->kfa;
-        if (!instance)
-                return -1;
-
-        if (!is_port_id_ok(pid))
-                return -1;
-
-        if (!ipcp)
-                return -1;
-
-        IRQ_BARRIER;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
@@ -949,8 +935,9 @@ static int kfa_flow_ipcp_bind(struct ipcp_instance_data * data,
         flow = kfa_pmap_find(instance->flows, pid);
         if (!flow) {
                 spin_unlock_irqrestore(&instance->lock, flags);
-                LOG_ERR("Cannot bind IPCP %pK to flow on port %d since "
-                        "flow is missing on that port", ipcp, pid);
+                LOG_ERR("Cannot bind IPCP %pK, missing flow on port %d",
+			ipcp,
+			pid);
                 return -1;
         }
 
@@ -1079,3 +1066,66 @@ int kfa_destroy(struct kfa * instance)
 
         return 0;
 }
+
+int kfa_flow_opts_set(struct kfa *  instance,
+		      port_id_t     pid,
+		      flow_opts_t   flow_opts)
+{
+	struct ipcp_flow *     flow;
+        unsigned long          flags;
+
+        IRQ_BARRIER;
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return -EINVAL;
+        }
+        if (!is_port_id_ok(pid)) {
+                LOG_ERR("Bogus port-id, bailing out");
+                return -EINVAL;
+        }
+
+	spin_lock_irqsave(&instance->lock, flags);
+
+        flow = kfa_pmap_find(instance->flows, pid);
+        if (!flow) {
+                spin_unlock_irqrestore(&instance->lock, flags);
+                LOG_ERR("Cannot change options, missing flow on port_id %d",
+			pid);
+                return -1;
+        }
+	flow->options = flow_opts;
+
+	spin_unlock_irqrestore(&instance->lock, flags);
+
+        LOG_DBG("Set options on port_id %d to %o", pid, flow_opts);
+
+	return 0; /* all is well */
+}
+EXPORT_SYMBOL(kfa_flow_opts_set);
+
+flow_opts_t kfa_flow_opts(struct kfa *  instance,
+			  port_id_t     pid)
+{
+	struct ipcp_flow *     flow;
+
+        IRQ_BARRIER;
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return -EINVAL;
+        }
+        if (!is_port_id_ok(pid)) {
+                LOG_ERR("Bogus port-id, bailing out");
+                return -EINVAL;
+        }
+
+        flow = kfa_pmap_find(instance->flows, pid);
+        if (!flow) {
+                LOG_ERR("Cannot get options, missing flow on port_id %d",
+			pid);
+                return -1;
+        }
+	return flow->options;
+}
+EXPORT_SYMBOL(kfa_flow_opts);

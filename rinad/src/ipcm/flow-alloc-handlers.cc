@@ -414,9 +414,11 @@ void IPCManager_::allocate_flow_response_event_handler(rina::AllocateFlowRespons
 
 		// Inform the IPC process about the response of the flow
 		// allocation procedure
-		slave_ipcp->allocateFlowResponse(req_event, event->result,
-					event->notifySource,
-					event->flowAcceptorIpcProcessId);
+		slave_ipcp->allocateFlowResponse(
+			req_event,
+			event->result,
+			event->notifySource,
+			event->flowAcceptorIpcProcessId);
 		if (!success)
 			req_event.portId = -1;
 

@@ -368,3 +368,4 @@
 359	i386	deallocate_port         sys_deallocate_port
 360     i386    management_sdu_read     sys_management_sdu_read
 361     i386    management_sdu_write    sys_management_sdu_write
+362     i386    flow_io_ctl             sys_flow_io_ctl

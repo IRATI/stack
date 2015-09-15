@@ -510,7 +510,8 @@ unsigned int ExtendedIPCManager::allocateFlowRequestArrived(
 unsigned int ExtendedIPCManager::requestFlowAllocation(
                 const ApplicationProcessNamingInformation& localAppName,
                 const ApplicationProcessNamingInformation& remoteAppName,
-                const FlowSpecification& flowSpec) {
+                const FlowSpecification& flowSpec)
+{
         return internalRequestFlowAllocation(
                         localAppName, remoteAppName, flowSpec, ipcProcessId);
 }
@@ -519,14 +520,17 @@ unsigned int ExtendedIPCManager::requestFlowAllocationInDIF(
                 const ApplicationProcessNamingInformation& localAppName,
                 const ApplicationProcessNamingInformation& remoteAppName,
                 const ApplicationProcessNamingInformation& difName,
-                const FlowSpecification& flowSpec) {
+                const FlowSpecification& flowSpec)
+{
         return internalRequestFlowAllocationInDIF(localAppName,
                         remoteAppName, difName, ipcProcessId, flowSpec);
 }
 
 FlowInformation ExtendedIPCManager::allocateFlowResponse(
-                const FlowRequestEvent& flowRequestEvent, int result,
-                bool notifySource) {
+                const FlowRequestEvent& flowRequestEvent,
+		int result,
+                bool notifySource)
+{
         return internalAllocateFlowResponse(flowRequestEvent,
                                             result,
                                             notifySource,
@@ -535,7 +539,8 @@ FlowInformation ExtendedIPCManager::allocateFlowResponse(
 
 void ExtendedIPCManager::notifyflowDeallocated(
 		const FlowDeallocateRequestEvent flowDeallocateEvent,
-		int result) {
+		int result)
+{
 #if STUB_API
 	// Do nothing
 #else
@@ -596,14 +601,13 @@ void ExtendedIPCManager::queryRIBResponse(
 #endif
 }
 
-int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingInformation& appName,
-				       bool blocking)
+int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingInformation& appName)
 {
 #if STUB_API
         // Do nothing
         return 1;
 #else
-        int result = syscallAllocatePortId(ipcProcessId, appName, blocking);
+        int result = syscallAllocatePortId(ipcProcessId, appName);
         if (result < 0) {
                 throw PortAllocationException();
         }

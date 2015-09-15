@@ -9,12 +9,12 @@
 // modify it under the terms of the GNU Lesser General Public
 // License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// 
+//
 // This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 // Lesser General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU Lesser General Public
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -36,17 +36,20 @@ namespace rina {
 
 /* CLASS APPLICATION REGISTRATION */
 ApplicationRegistration::ApplicationRegistration(
-		const ApplicationProcessNamingInformation& applicationName) {
+		const ApplicationProcessNamingInformation& applicationName)
+{
 	this->applicationName = applicationName;
 }
 
 void ApplicationRegistration::addDIFName(
-		const ApplicationProcessNamingInformation& DIFName) {
+		const ApplicationProcessNamingInformation& DIFName)
+{
 	DIFNames.push_back(DIFName);
 }
 
 void ApplicationRegistration::removeDIFName(
-		const ApplicationProcessNamingInformation& DIFName) {
+		const ApplicationProcessNamingInformation& DIFName)
+{
 	DIFNames.remove(DIFName);
 }
 
@@ -124,8 +127,9 @@ int IPCManager::getPortIdToRemoteApp(const ApplicationProcessNamingInformation& 
 
         ReadScopedLock readLock(flows_rw_lock);
 
-        for(iterator = allocatedFlows.begin(); iterator != allocatedFlows.end();
-                        ++iterator) {
+        for(iterator = allocatedFlows.begin();
+	    iterator != allocatedFlows.end();
+	    ++iterator) {
                 if (iterator->second->remoteAppName == remoteAppName) {
                         return iterator->second->portId;
                 }
@@ -147,7 +151,8 @@ ApplicationRegistrationInformation IPCManager::getRegistrationInfo(unsigned int 
 }
 
 ApplicationRegistration * IPCManager::getApplicationRegistration(
-                const ApplicationProcessNamingInformation& appName) {
+                const ApplicationProcessNamingInformation& appName)
+{
         std::map<ApplicationProcessNamingInformation,
         ApplicationRegistration*>::iterator iterator =
                         applicationRegistrations.find(appName);
@@ -161,12 +166,14 @@ ApplicationRegistration * IPCManager::getApplicationRegistration(
 
 void IPCManager::putApplicationRegistration(
                         const ApplicationProcessNamingInformation& key,
-                        ApplicationRegistration * value) {
+                        ApplicationRegistration * value)
+{
         applicationRegistrations[key] = value;
 }
 
 void IPCManager::removeApplicationRegistration(
-                        const ApplicationProcessNamingInformation& key) {
+                        const ApplicationProcessNamingInformation& key)
+{
         applicationRegistrations.erase(key);
 }
 
@@ -254,7 +261,10 @@ unsigned int IPCManager::internalRequestFlowAllocationInDIF(
 
 FlowInformation IPCManager::internalAllocateFlowResponse(
                 const FlowRequestEvent& flowRequestEvent,
-                int result, bool notifySource, unsigned short ipcProcessId)
+                int result,
+		bool notifySource,
+		unsigned short ipcProcessId,
+		bool blocking)
 {
 	FlowInformation * flow = 0;
 
@@ -288,6 +298,7 @@ FlowInformation IPCManager::internalAllocateFlowResponse(
         flow->difName = flowRequestEvent.DIFName;
         flow->portId = flowRequestEvent.portId;
 
+	setFlowOptsBlocking(flow->portId, blocking);
         allocatedFlows[flowRequestEvent.portId] = flow;
 
         return *flow;
@@ -295,7 +306,8 @@ FlowInformation IPCManager::internalAllocateFlowResponse(
 
 unsigned int IPCManager::getDIFProperties(
 		const ApplicationProcessNamingInformation& applicationName,
-		const ApplicationProcessNamingInformation& DIFName) {
+		const ApplicationProcessNamingInformation& DIFName)
+{
 
 #if STUB_API
 	return 0;
@@ -548,12 +560,71 @@ FlowInformation IPCManager::withdrawPendingFlow(unsigned int sequenceNumber)
         return result;
 }
 
+/* FIXME: bool blocking should be replaced by flow_opts_t */
 FlowInformation IPCManager::allocateFlowResponse(
-		const FlowRequestEvent& flowRequestEvent, int result,
-		bool notifySource)
+	const FlowRequestEvent& flowRequestEvent,
+	int result,
+	bool notifySource,
+	bool blocking /* = true */)
 {
         return internalAllocateFlowResponse(
-                        flowRequestEvent, result, notifySource, 0);
+                        flowRequestEvent,
+			result,
+			notifySource,
+			0,
+			blocking);
+}
+
+/* returns 0 if nonblocking, > 0 if blocking, < 0 on error */
+int IPCManager::flowOptsBlocking(int portId)
+{
+#if STUB_API
+	return 0;
+#else
+
+	FlowInformation *flow;
+	uint             flags;
+
+	flow = getAllocatedFlow(portId);
+	if (flow == 0) {
+		return -1;
+        }
+
+        if (flow->state != FlowInformation::FLOW_ALLOCATED) {
+                return -1;
+	}
+
+        flags = syscallFlowIOCtl(portId, F_GETFL, 0 /* ignored */);
+	return !(flags & O_NONBLOCK);
+#endif
+}
+
+int IPCManager::setFlowOptsBlocking(int portId, bool blocking)
+{
+#if STUB_API
+        return 0;
+#else
+
+	FlowInformation * flow;
+	uint              flags;
+
+	flow = getAllocatedFlow(portId);
+	if (flow == 0) {
+		return -1;
+        }
+
+        if (flow->state != FlowInformation::FLOW_ALLOCATED) {
+                return -1;
+	}
+
+	/* this mimics the fcntl approach to setting flags */
+	flags = syscallFlowIOCtl(portId, F_GETFL,0);
+	if (!blocking)
+		flags |= O_NONBLOCK; /* set nonblocking */
+	else flags &= ~O_NONBLOCK; /* clear nonblocking */
+
+	return syscallFlowIOCtl(portId, F_SETFL,flags);
+#endif
 }
 
 unsigned int IPCManager::requestFlowDeallocation(int portId)
@@ -674,27 +745,25 @@ int IPCManager::readSDU(int portId, void * sdu, int maxBytes)
 #else
 	int result = syscallReadSDU(portId, sdu, maxBytes);
 
-	if (result == -EINVAL){
+	if (result >=0)
+		return result;
+
+	switch(result) {
+	case -EINVAL:
 		throw InvalidArgumentsException();
-	}
-
-	if (result == -EBADF) {
+		break;
+	case -EBADF:
 		throw UnknownFlowException();
-	}
-
-	if (result == -ESHUTDOWN) {
+		break;
+	case -ESHUTDOWN:
 		throw FlowNotAllocatedException();
-	}
-
-	if (result == -EIO) {
+		break;
+	case -EIO:
 		throw ReadSDUException();
-	}
-
-	if (result == -EAGAIN) {
+		break;
+	case -EAGAIN:
 		return 0;
-	}
-
-	if (result < 0) {
+	default:
 		throw IPCException("Unknown error");
 	}
 
@@ -711,27 +780,25 @@ int IPCManager::writeSDU(int portId, void * sdu, int size)
 #else
 	int result = syscallWriteSDU(portId, sdu, size);
 
-	if (result == -EINVAL){
+	if (result >= 0)
+		return result;
+
+	switch(result) {
+	case -EINVAL:
 		throw InvalidArgumentsException();
-	}
-
-	if (result == -EBADF) {
+		break;
+	case -EBADF:
 		throw UnknownFlowException();
-	}
-
-	if (result == -ESHUTDOWN) {
+		break;
+	case -ESHUTDOWN:
 		throw FlowNotAllocatedException();
-	}
-
-	if (result == -EIO) {
+		break;
+	case -EIO:
 		throw WriteSDUException();
-	}
-
-	if (result == -EAGAIN) {
+		break;
+	case -EAGAIN:
 		return 0;
-	}
-
-	if (result < 0) {
+	default:
 		throw IPCException("Unknown error");
 	}
 
@@ -748,7 +815,8 @@ ApplicationUnregisteredEvent::ApplicationUnregisteredEvent(
 		const ApplicationProcessNamingInformation& DIFName,
 		unsigned int sequenceNumber) :
 				IPCEvent(APPLICATION_UNREGISTERED_EVENT,
-						sequenceNumber) {
+						sequenceNumber)
+{
 	this->applicationName = appName;
 	this->DIFName = DIFName;
 }
@@ -758,9 +826,9 @@ AppRegistrationCanceledEvent::AppRegistrationCanceledEvent(int code,
                 const std::string& reason,
                 const ApplicationProcessNamingInformation& difName,
                 unsigned int sequenceNumber):
-			IPCEvent(
-				APPLICATION_REGISTRATION_CANCELED_EVENT,
-				sequenceNumber){
+			IPCEvent(APPLICATION_REGISTRATION_CANCELED_EVENT,
+				 sequenceNumber)
+{
         this->code = code;
         this->reason = reason;
         this->difName = difName;
@@ -772,9 +840,9 @@ AllocateFlowRequestResultEvent::AllocateFlowRequestResultEvent(
                         const ApplicationProcessNamingInformation& difName,
                         int portId,
                         unsigned int sequenceNumber):
-                                IPCEvent(
-                                         ALLOCATE_FLOW_REQUEST_RESULT_EVENT,
-                                         sequenceNumber){
+                                IPCEvent(ALLOCATE_FLOW_REQUEST_RESULT_EVENT,
+                                         sequenceNumber)
+{
         this->sourceAppName = appName;
         this->difName = difName;
         this->portId = portId;
@@ -787,7 +855,8 @@ DeallocateFlowResponseEvent::DeallocateFlowResponseEvent(
                         unsigned int sequenceNumber):
                                 BaseResponseEvent(result,
                                          DEALLOCATE_FLOW_RESPONSE_EVENT,
-                                         sequenceNumber){
+                                         sequenceNumber)
+{
         this->appName = appName;
         this->portId = portId;
 }
@@ -800,7 +869,8 @@ GetDIFPropertiesResponseEvent::GetDIFPropertiesResponseEvent(
                         unsigned int sequenceNumber):
                                 BaseResponseEvent(result,
                                          GET_DIF_PROPERTIES_RESPONSE_EVENT,
-                                         sequenceNumber){
+                                         sequenceNumber)
+{
         this->applicationName = appName;
         this->difProperties = difProperties;
 }
