@@ -74,7 +74,7 @@ class Manager : public Server {
 		const std::string& api);
 	~Manager() { };
 
-	void run(bool blocking);
+	void run();
 
  private:
 	static const std::string mad_name;

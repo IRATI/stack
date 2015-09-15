@@ -304,12 +304,12 @@ Manager::Manager(const std::string& dif_name, const std::string& apn,
 {
 }
 
-void Manager::run(bool blocking)
+void Manager::run()
 {
 	int order = 1;
 	std::map<int, rina::FlowInformation> waiting;
         rina::FlowInformation flow;
-        applicationRegister(blocking);
+        applicationRegister();
 
         for(;;) {
                 IPCEvent* event = ipcEventProducer->eventWait();
