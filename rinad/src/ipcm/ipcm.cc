@@ -1324,6 +1324,14 @@ IPCManager_::plugin_get_info(const std::string& plugin_name,
 }
 
 ipcm_res_t
+IPCManager_::update_catalog(Addon* callee)
+{
+	catalog.import();
+
+	return IPCM_SUCCESS;
+}
+
+ipcm_res_t
 IPCManager_::read_ipcp_ribobj(Addon* callee, Promise* promise,
 			      const unsigned short ipcp_id,
 			      const std::string& object_class,
