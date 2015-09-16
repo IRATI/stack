@@ -50,6 +50,7 @@
 #include "ipcp-factories.h"
 #include "rinarp/rinarp.h"
 #include "rinarp/arp826-utils.h"
+#include "shim-eth.h"
 
 #define DEFAULT_QDISC_MAX_SIZE 50
 #define DEFAULT_QDISC_ENABLE_SIZE 10
@@ -815,7 +816,7 @@ static void enable_all_port_ids(struct ipcp_instance_data * data)
 	spin_unlock_irqrestore(&data->lock, flags);
 }
 
-static void enable_write_all(struct net_device * dev)
+void enable_write_all(struct net_device * dev)
 {
 	struct ipcp_instance_data * pos;
 
@@ -826,220 +827,23 @@ static void enable_write_all(struct net_device * dev)
                 	enable_all_port_ids(pos);
         }
 }
+EXPORT_SYMBOL(enable_write_all);
 
-/*
- * Private data for a rina_shim_eth scheduler containing:
- * 	- queue max_size
- * 	- queue enable_thres (size at which the qdisc will enable N+1 ports)
- */
-struct shim_eth_qdisc_priv {
-	uint16_t q_max_size;
-	uint16_t q_enable_thres;
-};
-
-static int shim_eth_qdisc_enqueue(struct sk_buff *skb, struct Qdisc *qdisc)
+static bool qdisc_should_be_restored(struct net_device * dev)
 {
-	struct shim_eth_qdisc_priv *priv;
-
-	if (!skb) {
-		LOG_ERR("Bogus skb passed, bailing out");
-		return -1;
-	}
-
-	if (!qdisc) {
-		LOG_ERR("Bogus qdisc passed, bailing out");
-		return -1;
-	}
-
-	priv = qdisc_priv(qdisc);
-
-	LOG_DBG("shim-eth-enqueue called; current size is %u", qdisc->q.qlen);
-	if (skb_queue_len(&qdisc->q) < priv->q_max_size)
-		return __qdisc_enqueue_tail(skb, qdisc, &qdisc->q);
-
-	return qdisc_drop(skb, qdisc);
-}
-
-static struct sk_buff * shim_eth_qdisc_dequeue(struct Qdisc *qdisc)
-{
-	struct shim_eth_qdisc_priv *priv;
-
-	if (!qdisc) {
-		LOG_ERR("Bogus qdisc passed, bailing out");
-		return NULL;
-	}
-
-	priv = qdisc_priv(qdisc);
-
-	if (skb_queue_len(&qdisc->q) > 0) {
-		struct sk_buff *skb = __qdisc_dequeue_head(qdisc, &qdisc->q);
-		if (skb_queue_len(&qdisc->q) == priv->q_enable_thres)
-			enable_write_all(qdisc->dev_queue->dev);
-		return skb;
-	}
-
-	return NULL;
-}
-
-static struct sk_buff * shim_eth_qdisc_peek(struct Qdisc *qdisc)
-{
-	if (!qdisc) {
-		LOG_ERR("Bogus qdisc passed, bailing out");
-		return NULL;
-	}
-
-	return skb_peek(&qdisc->q);
-}
-
-static int shim_eth_qdisc_init(struct Qdisc *qdisc, struct nlattr *opt)
-{
-	struct shim_eth_qdisc_priv * priv;
-
-	if (!qdisc) {
-		LOG_ERR("Bogus qdisc passed, bailing out");
-		return -1;
-	}
-
-	if (!opt)
-		return 0;
-
-	priv = qdisc_priv(qdisc);
-	priv->q_max_size = opt->nla_len;
-	priv->q_enable_thres = opt->nla_type;
-	skb_queue_head_init(&qdisc->q);
-
-	LOG_INFO("shim-eth-qdisc-init: max size: %u, enable thres: %u",
-		 priv->q_max_size, priv->q_enable_thres);
-
-	return 0;
-}
-
-static void shim_eth_qdisc_reset(struct Qdisc *qdisc)
-{
-	if (!qdisc) {
-		LOG_ERR("Bogus qdisc passed, bailing out");
-		return;
-	}
-
-	__qdisc_reset_queue(qdisc, &qdisc->q);
-
-	qdisc->qstats.backlog = 0;
-	qdisc->q.qlen = 0;
-}
-
-static struct Qdisc_ops shim_eth_qdisc_ops __read_mostly = {
-	.id	   = "rina_shim_eth",
-	.priv_size = sizeof(struct shim_eth_qdisc_priv),
-	.enqueue   = shim_eth_qdisc_enqueue,
-	.dequeue   = shim_eth_qdisc_dequeue,
-	.peek	   = shim_eth_qdisc_peek,
-	.init	   = shim_eth_qdisc_init,
-	.reset	   = shim_eth_qdisc_reset,
-	.dump	   = NULL,
-	.owner	   = THIS_MODULE,
-};
-
-static void restore_qdisc(struct net_device * dev)
-{
-	struct Qdisc * 		    qdisc;
 	struct ipcp_instance_data * pos;
 	int			    num_ipcps;
-	unsigned int   		    q_index;
-	struct netdev_queue *       queue;
 
-	ASSERT(dev);
-	ASSERT(old_qdisc);
-
-	/* only do it if there are no more shims on that net_device */
 	num_ipcps = 0;
 	list_for_each_entry(pos, &(eth_vlan_data.instances), list) {
 		if (pos->phy_dev == dev) {
 			num_ipcps ++;
-			if (num_ipcps >= 2)
-				return;
+			if (num_ipcps > 1)
+				return false;
 		}
 	}
 
-	if (dev->flags & IFF_UP)
-		dev_deactivate(dev);
-
-	/* Destroy all qdiscs in TX queues, point them to no-op (so that
-	 * the kernel will create default ones when activating the device)
-	 */
-	for (q_index = 0; q_index < dev->num_tx_queues; q_index++) {
-		queue = netdev_get_tx_queue(dev, q_index);
-		qdisc = queue->qdisc_sleeping;
-		if (qdisc) {
-			rcu_assign_pointer(queue->qdisc, &noop_qdisc);
-			queue->qdisc_sleeping = &noop_qdisc;
-			qdisc_destroy(qdisc);
-		}
-	}
-	dev->qdisc = &noop_qdisc;
-
-	if (dev->flags & IFF_UP)
-		dev_activate(dev);
-}
-
-int update_qdisc(struct net_device * dev, struct eth_vlan_info * info)
-{
-	struct Qdisc *        qdisc;
-	struct Qdisc *        oqdisc;
-	struct nlattr         attr;
-	unsigned int   	      q_index;
-	struct netdev_queue * queue;
-
-	ASSERT(dev);
-	ASSERT(info);
-
-	if (!dev->qdisc) {
-		LOG_ERR("qdisc not found on device %s", dev->name);
-		return -1;
-	}
-
-	if (string_cmp(dev->qdisc->ops->id,
-		       shim_eth_qdisc_ops.id) == 0) {
-		LOG_INFO("Shim-eth-qdisc already set on this device");
-		return 0;
-	}
-
-	/* For each TX queue, create a new shim-eth-qdisc instance, attach
-	 * it to the queue and then destroy the old qdisc
-	 */
-	for (q_index = 0; q_index < dev->num_tx_queues; q_index++) {
-		queue = netdev_get_tx_queue(dev, q_index);
-		qdisc = qdisc_create_dflt(queue, &shim_eth_qdisc_ops, 0);
-		if (!qdisc) {
-			LOG_ERR("Problems creating shim-eth-qdisc");
-			restore_qdisc(dev);
-			return -1;
-		}
-
-		attr.nla_len = info->qdisc_max_size;
-		attr.nla_type = info->qdisc_enable_size;
-		if (shim_eth_qdisc_init(qdisc, &attr)) {
-			LOG_ERR("Problems initializing shim-eth-qdisc");
-			qdisc_destroy(qdisc);
-			restore_qdisc(dev);
-			return -1;
-		}
-
-		oqdisc = dev_graft_qdisc(queue, qdisc);
-		if (oqdisc && oqdisc != &noop_qdisc)
-			qdisc_destroy(oqdisc);
-	}
-
-	if (dev->flags & IFF_UP)
-		dev_deactivate(dev);
-
-	queue = netdev_get_tx_queue(dev, 0);
-	dev->qdisc = queue->qdisc_sleeping;
-	atomic_inc(&dev->qdisc->refcnt);
-
-	if (dev->flags & IFF_UP)
-		dev_activate(dev);
-
-	return 0;
+	return true;
 }
 
 static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
@@ -1671,7 +1475,9 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         }
 
 	/* Modfy qdisc by our own */
-	if (update_qdisc(data->phy_dev, data->info)) {
+	if (update_qdisc(data->phy_dev,
+			 data->info->qdisc_max_size,
+			 data->info->qdisc_enable_size)) {
 		LOG_ERR("Problems creating queue discipline");
 		name_destroy(data->dif_name);
 		data->dif_name = NULL;
@@ -1772,8 +1578,8 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
                 	LOG_WARN("Unknown config param for eth shim");
         }
 
-
-	restore_qdisc(data->phy_dev);
+        if (qdisc_should_be_restored(data->phy_dev))
+        	restore_qdisc(data->phy_dev);
 
 	dev_remove_pack(data->eth_vlan_packet_type);
         /* Remove from list */
@@ -1815,7 +1621,9 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
         }
 
 	/* Modfy qdisc by our own */
-	if (update_qdisc(data->phy_dev, data->info)) {
+	if (update_qdisc(data->phy_dev,
+			 data->info->qdisc_max_size,
+			 data->info->qdisc_enable_size)) {
 		LOG_ERR("Problems creating queue discipline");
 		name_destroy(data->dif_name);
 		data->dif_name = NULL;
@@ -2148,7 +1956,8 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                         }
 
 			/* Restore default qdisc */
-			restore_qdisc(pos->phy_dev);
+                        if (qdisc_should_be_restored(pos->phy_dev))
+                        	restore_qdisc(pos->phy_dev);
 
                         /* Remove packet handler if there is one */
                         if (pos->eth_vlan_packet_type->dev)
