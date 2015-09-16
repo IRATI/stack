@@ -1602,6 +1602,7 @@ struct rmt *rmt_create(struct ipcp_instance *parent,
 	tmp->kfa = kfa;
 	tmp->efcpc = efcpc;
 	tmp->sdup_conf = NULL;
+	rina_component_init(&tmp->base);
 	tmp->pff = pff_create();
 	if (!tmp->pff) {
 		rmt_destroy(tmp);
@@ -1609,8 +1610,14 @@ struct rmt *rmt_create(struct ipcp_instance *parent,
 	}
 
 	tmp->n1_ports = n1pmap_create();
-	if (!tmp->n1_ports || pff_cache_init(&tmp->cache)) {
-		pff_destroy(tmp->pff);
+	if (!tmp->n1_ports) {
+		LOG_ERR("Failed to create N-1 ports map");
+		rmt_destroy(tmp);
+		return NULL;
+	}
+
+	if (pff_cache_init(&tmp->cache)) {
+		LOG_ERR("Failed to init pff cache");
 		rmt_destroy(tmp);
 		return NULL;
 	}
@@ -1620,10 +1627,8 @@ struct rmt *rmt_create(struct ipcp_instance *parent,
 		     (unsigned long) tmp);
 
 	/* Try to select the default policy set factory. */
-	rina_component_init(&tmp->base);
 	if (rmt_select_policy_set(tmp, "", RINA_PS_DEFAULT_NAME)) {
-		n1pmap_destroy(tmp);
-		pff_destroy(tmp->pff);
+		LOG_ERR("Could not load RMT PS");
 		rmt_destroy(tmp);
 		return NULL;
 	}
