@@ -390,6 +390,31 @@ void Catalog::ipcp_destroyed(unsigned int ipcp_id)
 	}
 }
 
+string Catalog::toString(const CatalogPsInfo *cps) const
+{
+	stringstream ss;
+
+	ss << "    ===================================="
+	   << endl << "    ps name: " << cps->name
+	   << endl << "    ps component: " << cps->app_entity
+	   << endl << "    ps version: " << cps->version
+	   << endl << "    plugin: " << cps->plugin->path
+	   << "/" << cps->plugin->name
+	   << endl << "    loaded for ipcps [ ";
+	for (set<unsigned int>::iterator
+		ii = cps->plugin->loaded.begin();
+			ii != cps->plugin->loaded.end(); ii++) {
+		ss << *ii << " ";
+	}
+	ss << "]" << endl << "    selected for resources [ ";
+	for (set<unsigned int>::iterator
+		ii = cps->selected.begin();
+			ii != cps->selected.end(); ii++) {
+		ss << *ii << " ";
+	}
+	ss << "]" << endl;
+}
+
 string Catalog::toString() const
 {
 	map<string, map< string, CatalogPsInfo * > >::const_iterator mit;
@@ -404,25 +429,7 @@ string Catalog::toString() const
 				cmit != mit->second.end(); cmit++) {
 			const CatalogPsInfo *cps = cmit->second;
 
-			ss << "    ===================================="
-			   << endl << "    ps name: " << cps->name
-			   << endl << "    ps component: " << cps->app_entity
-			   << endl << "    ps version: " << cps->version
-			   << endl << "    plugin: " << cps->plugin->path
-			   << "/" << cps->plugin->name
-			   << endl << "    loaded for ipcps [ ";
-			for (set<unsigned int>::iterator
-				ii = cps->plugin->loaded.begin();
-					ii != cps->plugin->loaded.end(); ii++) {
-				ss << *ii << " ";
-			}
-			ss << "]" << endl << "    selected for resources [ ";
-			for (set<unsigned int>::iterator
-				ii = cps->selected.begin();
-					ii != cps->selected.end(); ii++) {
-				ss << *ii << " ";
-			}
-			ss << "]" << endl;
+			ss << toString(cps);
 		}
 	}
 
@@ -434,6 +441,31 @@ string Catalog::toString() const
 void Catalog::print() const
 {
 	LOG_INFO("%s", toString().c_str());
+}
+
+int Catalog::print(const string& component) const
+{
+	rina::ReadScopedLock rlock(const_cast<Catalog *>(this)->rwlock);
+	map<string, map< string, CatalogPsInfo * > >::const_iterator mit;
+	map<string, CatalogPsInfo *>::const_iterator cmit;
+	stringstream ss;
+
+	mit = policy_sets.find(component);
+	if (mit == policy_sets.end()) {
+		return -1;
+	}
+
+	for (cmit = mit->second.begin(); cmit != mit->second.end(); cmit++) {
+		const CatalogPsInfo *cps = cmit->second;
+
+		ss << toString(cps);
+	}
+
+	ss << "      ====================================" << endl;
+
+	LOG_INFO("%s", ss.str().c_str());
+
+	return 0;
 }
 
 } // namespace rinad
