@@ -328,6 +328,7 @@ int Catalog::policy_set_selected(const rina::PsInfo& ps_info,
 	rsrc = rsrc_lookup(ps_info.app_entity, id);
 	if (rsrc) {
 		rsrc->ps->selected.erase(id);
+		rsrc->ps = cpsinfo;
 	} else {
 		add_resource(ps_info.app_entity, id, cpsinfo);
 	}
