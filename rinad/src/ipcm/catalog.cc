@@ -216,8 +216,8 @@ int Catalog::load_by_template(Addon *addon, unsigned int ipcp_id,
 		int ret = load_policy_set(addon, ipcp_id, *i);
 
 		if (ret) {
-			LOG_WARN("Failed to load policy-set %s/%s",
-				  i->app_entity.c_str(), i->name.c_str());
+			LOG_WARN("Failed to load policy-set %s",
+				 i->toString().c_str());
 		}
 
 		// Record that this IPCP has select this policy set (TODO
