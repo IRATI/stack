@@ -19,15 +19,18 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include "common.h"
+
 #define RMT_DEBUG 0
 #define RMT_DEBUG_SIZE 300000
 
 struct red_rmt_debug {
 	unsigned int	 q_log[RMT_DEBUG_SIZE][2];
 	unsigned int     q_index;
+	port_id_t        port;
 	struct list_head list;
 };
 
 int    red_rmt_debug_proc_init(void);
 void   red_rmt_debug_proc_exit(void);
-struct red_rmt_debug * red_rmt_debug_create(void);
+struct red_rmt_debug * red_rmt_debug_create(port_id_t port);

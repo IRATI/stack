@@ -38,7 +38,7 @@ q_len_seq_show(struct seq_file *s, void *v)
 	unsigned int i;
 	struct red_rmt_debug * debug = list_entry(v, struct red_rmt_debug, list);
 
-	seq_printf(s, "RED q lengths for RMT %p\n", debug);
+	seq_printf(s, "RED q lengths for Queue %u\n", debug->port);
 	for (i=0; i < debug->q_index; i++)
 		seq_printf(s, "%5u\t%5u\n", debug->q_log[i][0], debug->q_log[i][1]);
 	seq_printf(s, "----------------------------------\n\n");
@@ -75,7 +75,7 @@ static struct file_operations q_len_file_ops = {
 };
 
 struct red_rmt_debug *
-red_rmt_debug_create(void)
+red_rmt_debug_create(port_id_t port)
 {
 	struct red_rmt_debug * debug;
 
@@ -85,6 +85,7 @@ red_rmt_debug_create(void)
 
 	INIT_LIST_HEAD(&debug->list);
 	debug->q_index = 0;
+	debug->port = port;
 
 	list_add(&debug->list, &debug_instances);
 

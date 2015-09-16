@@ -50,6 +50,9 @@ struct red_rmt_queue {
 	struct red_vars   vars;
 	struct red_stats  stats;
 
+#if RMT_DEBUG
+	struct red_rmt_debug * debug;
+#endif
         struct hlist_node hlist;
 };
 
@@ -58,9 +61,6 @@ struct red_rmt_ps_data {
 	struct tc_red_qopt conf_data;
 	u8 *   stab;
 	u32    max_P;
-#if RMT_DEBUG
-	struct red_rmt_debug * debug;
-#endif
 };
 
 static struct red_rmt_queue * red_queue_create(port_id_t          port_id,
@@ -87,6 +87,10 @@ static struct red_rmt_queue * red_queue_create(port_id_t          port_id,
 	red_set_vars(&tmp->vars);
 
 	red_start_of_idle_period(&tmp->vars);
+
+#if RMT_DEBUG
+	tmp->debug = red_rmt_debug_create(port_id);
+#endif
 
         INIT_HLIST_NODE(&tmp->hlist);
 
@@ -158,10 +162,10 @@ red_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
 	    !red_is_idling(&q->vars))
 		red_start_of_idle_period(&q->vars);
 #if RMT_DEBUG
-	if (data->debug->q_index < RMT_DEBUG_SIZE && ret_pdu) {
-        	data->debug->q_log[data->debug->q_index][0] = rfifo_length(q->queue); 
-        	data->debug->q_log[data->debug->q_index++][1] = q->vars.qavg; 
-	} 
+	if (q->debug->q_index < RMT_DEBUG_SIZE && ret_pdu) {
+        	q->debug->q_log[q->debug->q_index][0] = rfifo_length(q->queue); 
+        	q->debug->q_log[q->debug->q_index++][1] = q->vars.qavg; 
+	}
 #endif
         return ret_pdu;
 }
@@ -203,6 +207,11 @@ static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
 	if (red_is_idling(&q->vars))
 		red_end_of_idle_period(&q->vars);
 
+	if(rfifo_length(q->queue) >= data->conf_data.limit) {
+		q->stats.forced_drop++;
+		goto congestion_drop;
+	}
+
 	switch (red_action(&q->parms, &q->vars, q->vars.qavg)) {
 	case RED_DONT_MARK:
 		LOG_DBG("RED_DONT_MARK");
@@ -210,7 +219,6 @@ static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
 
 	case RED_PROB_MARK:
 		LOG_DBG("RED_PROB_MARK");
-		/*q->red_stats.prob_drop++;*/
 		q->stats.prob_mark++;
 		/* mark ECN bit */
                 pci = pdu_pci_get_rw(pdu);
@@ -221,8 +229,10 @@ static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
 	case RED_HARD_MARK:
 		LOG_DBG("RED_HARD_MARK");
 		q->stats.forced_mark++;
-		q->stats.forced_drop++;
-		goto congestion_drop;
+		/* mark ECN bit */
+                pci = pdu_pci_get_rw(pdu);
+                pci_flags = pci_flags_get(pci);
+                pci_flags_set(pci, pci_flags |= PDU_FLAGS_EXPLICIT_CONGESTION);
 		break;
 	}
 
@@ -233,13 +243,13 @@ congestion_drop:
 
         pdu_destroy(pdu);
         atomic_dec(&port->n_sdus);
-        LOG_DBG("PDU dropped, max_th passed...");
+        LOG_DBG("PDU dropped, qmax reached...");
 
 exit:
 #if RMT_DEBUG
-	if (data->debug->q_index < RMT_DEBUG_SIZE && pdu) {
-        	data->debug->q_log[data->debug->q_index][0] = rfifo_length(q->queue); 
-        	data->debug->q_log[data->debug->q_index++][1] = q->vars.qavg; 
+	if (q->debug->q_index < RMT_DEBUG_SIZE && pdu) {
+        	q->debug->q_log[q->debug->q_index][0] = rfifo_length(q->queue); 
+        	q->debug->q_log[q->debug->q_index++][1] = q->vars.qavg; 
 	}
 #endif
 
@@ -389,10 +399,6 @@ rmt_ps_red_create(struct rina_component * component)
         ps->dm = rmt;
 
 	ps->priv = data;
-
-#if RMT_DEBUG
-	data->debug = red_rmt_debug_create();
-#endif
 
 	rmt_cfg = rmt_config_get(rmt);
 	ps_param = policy_param_find(rmt_cfg->policy_set, "qmax_p");
