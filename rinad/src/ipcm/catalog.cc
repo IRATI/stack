@@ -413,6 +413,8 @@ string Catalog::toString(const CatalogPsInfo *cps) const
 		ss << *ii << " ";
 	}
 	ss << "]" << endl;
+
+	return ss.str();
 }
 
 string Catalog::toString() const
@@ -443,8 +445,7 @@ void Catalog::print() const
 	LOG_INFO("%s", toString().c_str());
 }
 
-string
-Catalog::toString(const string& component) const
+string Catalog::toString(const string& component) const
 {
 	rina::ReadScopedLock rlock(const_cast<Catalog *>(this)->rwlock);
 	map<string, map< string, CatalogPsInfo * > >::const_iterator mit;
