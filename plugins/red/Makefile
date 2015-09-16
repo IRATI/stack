@@ -10,7 +10,7 @@ ccflags-y = -Wtype-limits -Inet/rina
 
 obj-m := red-plugin.o
 
-red-plugin-y := dtcp-ps-debug.o red-ps.o rmt-ps-red.o dtcp-ps-red.o
+red-plugin-y := rmt-ps-debug.o dtcp-ps-debug.o red-ps.o rmt-ps-red.o dtcp-ps-red.o
 
 else
 

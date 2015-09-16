@@ -1,6 +1,6 @@
 /*
  * TCP-like RED Congestion avoidance policy set
- * Debug operations for DTCP PS
+ * Debug operations for RMT PS
  *
  *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
  *
@@ -19,15 +19,15 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define DTCP_DEBUG 0
-#define DTCP_DEBUG_SIZE 300000
+#define RMT_DEBUG 0
+#define RMT_DEBUG_SIZE 300000
 
-struct red_dtcp_debug {
-	unsigned long    	ws_log[DTCP_DEBUG_SIZE];
-	unsigned int     	ws_index;
-	struct list_head 	list;
+struct red_rmt_debug {
+	unsigned int	 q_log[RMT_DEBUG_SIZE][2];
+	unsigned int     q_index;
+	struct list_head list;
 };
 
-int    red_dtcp_debug_proc_init(void);
-void   red_dtcp_debug_proc_exit(void);
-struct red_dtcp_debug * red_dtcp_debug_create(void);
+int    red_rmt_debug_proc_init(void);
+void   red_rmt_debug_proc_exit(void);
+struct red_rmt_debug * red_rmt_debug_create(void);

@@ -48,9 +48,11 @@ struct red_dtcp_ps_data {
 	uint_t        sshtresh;
 	enum tx_state state;
 	uint_t        dec_credit;
+#if DTCP_DEBUG
 	/* to allocate debug information and display by procfs
 	 * it is cleaned up in dtcp-ps-debug.c */
 	struct red_dtcp_debug *debug;
+#endif
 };
 
 static int
@@ -110,10 +112,12 @@ red_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         //update_rt_wind_edge(dtcp);
 	update_credit_and_rt_wind_edge(dtcp, new_credit);
 
+#if DTCP_DEBUG
 	/* Debug register */
-	if (data->debug->ws_index < DEBUG_SIZE) {
+	if (data->debug->ws_index < DTCP_DEBUG_SIZE) {
         	data->debug->ws_log[data->debug->ws_index++] = new_credit;
 	}
+#endif
 
         return 0;
 }
@@ -167,7 +171,9 @@ dtcp_ps_red_create(struct rina_component * component)
 	data->dec_credit = 0;
 	data->sshtresh = 0XFFFFFFFF;
 	dtcp_rcvr_credit_set(dtcp, data->init_credit);
+#if DTCP_DEBUG
 	data->debug = red_dtcp_debug_create();
+#endif
 
 	spin_lock_init(&data->lock);
 

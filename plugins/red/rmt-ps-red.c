@@ -33,18 +33,14 @@
 #include "rmt-ps.h"
 #include "rmt-ps-common.h"
 #include "policies.h"
+#include "rmt-ps-debug.h"
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
 #define MIN_TH_P_DEFAULT 2
 #define MAX_TH_P_DEFAULT 5
 #define WP_P_DEFAULT 2
-#define DEBUG_ENABLED 0
 
-#if DEBUG_ENABLED
-#define DEBUG_FILE "/root/q_report.txt"
-#define DEBUG_SIZE 100000
-#endif
 
 struct red_rmt_queue {
         struct rfifo *    queue;
@@ -62,13 +58,8 @@ struct red_rmt_ps_data {
 	struct tc_red_qopt conf_data;
 	u8 *   stab;
 	u32    max_P;
-#if DEBUG_ENABLED
-	/* Used to debug the evolution of the queue ocuupation withouth penalizing
-	 * the performance of the stack. It should be normally set to 0
-	 */
-	//s64    times[DEBUG_SIZE];   
-	size_t q_log[DEBUG_SIZE][2];
-	int    q_index;
+#if RMT_DEBUG
+	struct red_rmt_debug * debug;
 #endif
 };
 
@@ -166,10 +157,10 @@ red_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
 	if (rfifo_is_empty(q->queue) == 0 &&
 	    !red_is_idling(&q->vars))
 		red_start_of_idle_period(&q->vars);
-#if DEBUG_ENABLED
-	if (data->q_index < DEBUG_SIZE && ret_pdu) {
-        	data->q_log[data->q_index][0] = rfifo_length(q->queue); 
-        	data->q_log[data->q_index++][1] = q->vars.qavg; 
+#if RMT_DEBUG
+	if (data->debug->q_index < RMT_DEBUG_SIZE && ret_pdu) {
+        	data->debug->q_log[data->debug->q_index][0] = rfifo_length(q->queue); 
+        	data->debug->q_log[data->debug->q_index++][1] = q->vars.qavg; 
 	} 
 #endif
         return ret_pdu;
@@ -245,10 +236,10 @@ congestion_drop:
         LOG_DBG("PDU dropped, max_th passed...");
 
 exit:
-#if DEBUG_ENABLED
-	if (data->q_index < DEBUG_SIZE && pdu) {
-        	data->q_log[data->q_index][0] = rfifo_length(q->queue); 
-        	data->q_log[data->q_index++][1] = q->vars.qavg; 
+#if RMT_DEBUG
+	if (data->debug->q_index < RMT_DEBUG_SIZE && pdu) {
+        	data->debug->q_log[data->debug->q_index][0] = rfifo_length(q->queue); 
+        	data->debug->q_log[data->debug->q_index++][1] = q->vars.qavg; 
 	}
 #endif
 
@@ -399,8 +390,8 @@ rmt_ps_red_create(struct rina_component * component)
 
 	ps->priv = data;
 
-#if DEBUG_ENABLED
-	data->q_index = 0;
+#if RMT_DEBUG
+	data->debug = red_rmt_debug_create();
 #endif
 
 	rmt_cfg = rmt_config_get(rmt);
@@ -472,49 +463,12 @@ static void rmt_ps_red_destroy(struct ps_base * bps)
 {
         struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
         struct red_rmt_ps_data * data;
-        int bucket;
-        struct red_rmt_queue * entry;
-        struct hlist_node * tmp;
-#if DEBUG_ENABLED
-	char* dump_filename = DEBUG_FILE;
-	struct file *file;
-	char string[10];
-	loff_t pos = 0;
-	mm_segment_t old_fs;
-	old_fs = get_fs();
-	set_fs(get_ds());
-	
-	file = filp_open(dump_filename, O_WRONLY|O_CREAT, 0644);
-#endif
 
         data = ps->priv;
 
         if (bps) {
-                if (data) {
-#if DEBUG_ENABLED
-			if (file && (data->q_index > 0)) {
-				int i;
-				for (i=0; i< data->q_index; i++) {
-					/*snprintf(string, 40, "\t%llu\t%zu\t%zu\n", data->times[i],
-									  	   data->q_log[i][0],
-										   data->q_log[i][1]);*/
-					snprintf(string, 10, "\t%zu\t%zu\n", data->q_log[i][0],
-									     data->q_log[i][1]);
-					vfs_write(file, (void *) string, 10, &pos);
-					pos = pos+10;
-				}
-				filp_close(file,NULL);
-			}
-			set_fs(old_fs);
-#endif
-                        hash_for_each_safe(data->queues, bucket, tmp, entry,
-                                           hlist) {
-                                ASSERT(entry);
-                                red_rmt_queue_destroy(entry);
-                        }
-			if (data->stab) rkfree(data->stab);
+                if (data)
                         rkfree(data);
-                }
                 rkfree(ps);
         }
 }

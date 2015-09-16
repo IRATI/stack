@@ -30,6 +30,7 @@
 #include "rmt-ps.h"
 #include "dtcp-ps.h"
 #include "dtcp-ps-debug.h"
+#include "rmt-ps-debug.h"
 
 extern struct ps_factory rmt_factory;
 extern struct ps_factory dtcp_factory;
@@ -54,8 +55,12 @@ static int __init mod_init(void)
                 LOG_ERR("Failed to publish DTCP policy set factory");
                 return -1;
         }
-
+#if DTCP_DEBUG
 	red_dtcp_debug_proc_init();
+#endif
+#if RMT_DEBUG
+	red_rmt_debug_proc_init();
+#endif
         LOG_INFO("DTCP TCP-RED policy set loaded successfully");
 
         return 0;
@@ -64,6 +69,13 @@ static int __init mod_init(void)
 static void __exit mod_exit(void)
 {
         int ret;
+
+#if DTCP_DEBUG
+	red_dtcp_debug_proc_exit();
+#endif
+#if RMT_DEBUG
+	red_rmt_debug_proc_exit();
+#endif
 
         ret = rmt_ps_unpublish(RINA_PS_RED_NAME);
         if (ret) {
@@ -79,7 +91,6 @@ static void __exit mod_exit(void)
                 return;
         }
 
-	red_dtcp_debug_proc_exit();
         LOG_INFO("DTCP TCP-RED policy set unloaded successfully");
 
 }
