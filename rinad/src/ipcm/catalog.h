@@ -102,9 +102,8 @@ public:
 	void ipcp_destroyed(unsigned int ipcp_id);
 
 	void print() const;
-	int print(const std::string& component) const;
 	std::string toString() const;
-	std::string toString(const CatalogPsInfo *cps) const;
+	std::string toString(const std::string& component) const;
 
 private:
 	void psinfo_from_psconfig(std::list< rina::PsInfo >& psinfo_list,
@@ -118,6 +117,8 @@ private:
 
 	int add_resource(const std::string& component,
 			 unsigned int id, CatalogPsInfo *);
+
+	std::string toString(const CatalogPsInfo *cps) const;
 
 	std::map<std::string,
 		 std::map<std::string, CatalogPsInfo*>

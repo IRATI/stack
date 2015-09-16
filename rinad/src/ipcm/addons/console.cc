@@ -148,7 +148,7 @@ IPCMConsole::IPCMConsole(const unsigned int port_) :
 				"<object-name>");
 	commands_map["show-catalog"] =
 			ConsoleCmdInfo(&IPCMConsole::show_catalog,
-				"USAGE: show-catalog");
+				"USAGE: show-catalog [<component-name>]");
 
 	rina::ThreadAttributes ta;
 	worker = new rina::Thread(console_function, this, &ta);
@@ -852,12 +852,17 @@ int IPCMConsole::read_ipcp_ribobj(std::vector<std::string>& args)
 
 int IPCMConsole::show_catalog(std::vector<std::string>& args)
 {
-	if (args.size() != 1) {
+	if (args.size() < 1) {
 		outstream << commands_map[args[0]].usage << endl;
 		return CMDRETCONT;
 	}
 
-	outstream << IPCManager->catalog.toString();
+	if (args.size() == 1) {
+		outstream << IPCManager->catalog.toString();
+
+	} else {
+		outstream << IPCManager->catalog.toString(args[1]);
+	}
 
 	return CMDRETCONT;
 }

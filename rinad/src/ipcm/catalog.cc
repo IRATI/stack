@@ -443,7 +443,8 @@ void Catalog::print() const
 	LOG_INFO("%s", toString().c_str());
 }
 
-int Catalog::print(const string& component) const
+string
+Catalog::toString(const string& component) const
 {
 	rina::ReadScopedLock rlock(const_cast<Catalog *>(this)->rwlock);
 	map<string, map< string, CatalogPsInfo * > >::const_iterator mit;
@@ -452,7 +453,7 @@ int Catalog::print(const string& component) const
 
 	mit = policy_sets.find(component);
 	if (mit == policy_sets.end()) {
-		return -1;
+		return string();
 	}
 
 	for (cmit = mit->second.begin(); cmit != mit->second.end(); cmit++) {
@@ -463,9 +464,7 @@ int Catalog::print(const string& component) const
 
 	ss << "      ====================================" << endl;
 
-	LOG_INFO("%s", ss.str().c_str());
-
-	return 0;
+	return ss.str();
 }
 
 } // namespace rinad
