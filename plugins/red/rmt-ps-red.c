@@ -142,9 +142,6 @@ red_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
         struct red_rmt_queue *   q;
         struct red_rmt_ps_data * data = ps->priv;
         struct pdu *             ret_pdu;
-#if DEBUG_ENABLED
-	struct timespec          now;
-#endif
 
         if (!ps || !port || !data) {
                 LOG_ERR("Wrong input parameters for "
@@ -171,8 +168,6 @@ red_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
 		red_start_of_idle_period(&q->vars);
 #if DEBUG_ENABLED
 	if (data->q_index < DEBUG_SIZE && ret_pdu) {
-		getnstimeofday(&now);
-        	//data->times[data->q_index] = timespec_to_ns(&now); 
         	data->q_log[data->q_index][0] = rfifo_length(q->queue); 
         	data->q_log[data->q_index++][1] = q->vars.qavg; 
 	} 
@@ -188,9 +183,6 @@ static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
         struct red_rmt_ps_data * data = ps->priv;
         struct pci *             pci;
         unsigned long            pci_flags;
-#if DEBUG_ENABLED
-	struct timespec 	 now;
-#endif
 
         if (!ps || !port || !pdu || !data) {
                 LOG_ERR("Wrong input parameters for "
@@ -238,27 +230,28 @@ static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
 	case RED_HARD_MARK:
 		LOG_DBG("RED_HARD_MARK");
 		q->stats.forced_mark++;
+		q->stats.forced_drop++;
 		goto congestion_drop;
 		break;
 	}
 
 	rfifo_push_ni(q->queue, pdu);
-#if DEBUG_ENABLED
-	if (data->q_index < DEBUG_SIZE && pdu) {
-		getnstimeofday(&now);
-        	//data->times[data->q_index] = timespec_to_ns(&now); 
-        	data->q_log[data->q_index][0] = rfifo_length(q->queue); 
-        	data->q_log[data->q_index++][1] = q->vars.qavg; 
-	}
-#endif
-
-        return 0;
+	goto exit;
 
 congestion_drop:
 
         pdu_destroy(pdu);
         atomic_dec(&port->n_sdus);
         LOG_DBG("PDU dropped, max_th passed...");
+
+exit:
+#if DEBUG_ENABLED
+	if (data->q_index < DEBUG_SIZE && pdu) {
+        	data->q_log[data->q_index][0] = rfifo_length(q->queue); 
+        	data->q_log[data->q_index++][1] = q->vars.qavg; 
+	}
+#endif
+
         return 0;
 }
 
