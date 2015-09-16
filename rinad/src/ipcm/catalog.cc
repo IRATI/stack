@@ -164,11 +164,15 @@ void Catalog::psinfo_from_psconfig(list< rina::PsInfo >& psinfo_list,
 				   const string& component,
 				   const rina::PolicyConfig& pconfig)
 {
-	if (pconfig.name_ != string()) {
-		psinfo_list.push_back(rina::PsInfo(pconfig.name_,
-						   component,
-						   pconfig.version_));
+	std::string ps_name = pconfig.name_;
+	std::string ps_version = pconfig.version_;
+
+	if (ps_name == string()) {
+		ps_name = "default";
+		ps_version = "";
 	}
+
+	psinfo_list.push_back(rina::PsInfo(ps_name, component, ps_version));
 }
 
 int Catalog::load_by_template(Addon *addon, unsigned int ipcp_id,
