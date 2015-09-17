@@ -90,13 +90,11 @@ destroySecurityManagerPasswdPs(rina::IPolicySet * ps)
 }
 
 extern "C" int
-get_factories(const std::string& plugin_name,
-		std::vector<struct rina::PsFactory>& factories)
+get_factories(std::vector<struct rina::PsFactory>& factories)
 {
 	struct rina::PsFactory factory;
 	int ret;
 
-	factory.plugin_name = plugin_name;
 	factory.info.name = "passwd";
 	factory.info.app_entity = rina::ApplicationEntity::SECURITY_MANAGER_AE_NAME;
 	factory.create = createSecurityManagerPasswdPs;

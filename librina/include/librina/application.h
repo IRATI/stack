@@ -148,8 +148,8 @@ extern "C" {
         typedef IPolicySet *(*app_entity_factory_create_t)(
                                                 ApplicationEntity * ctx);
         typedef void (*app_entity_factory_destroy_t)(IPolicySet * ps);
-	typedef int (*plugin_get_factories_t)(const std::string& plugin_name,
-					      std::vector<struct rina::PsFactory>& factories);
+	typedef int (*plugin_get_factories_t)(
+		     std::vector<struct rina::PsFactory>& factories);
 }
 
 /// Info about a policy set
@@ -201,7 +201,6 @@ public:
 	virtual std::vector<PsFactory>::iterator
                   psFactoryLookup(const PsInfo& ps_info);
 	virtual int psFactoryPublish(const PsFactory& factory,
-				     const std::string& plugin_name,
 				     const std::list<PsInfo>& manifest_psets);
 	virtual int psFactoryUnpublish(const PsInfo& ps_info);
 	virtual IPolicySet * psCreate(const std::string& ae_name,

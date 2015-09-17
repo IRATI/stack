@@ -204,7 +204,6 @@ AppPolicyManager::psFactoryLookup(const PsInfo& ps_info)
 }
 
 int AppPolicyManager::psFactoryPublish(const PsFactory& factory,
-				       const std::string& plugin_name,
 				       const std::list<PsInfo>& manifest_psets)
 {
 	bool in_manifest = false;
@@ -222,7 +221,7 @@ int AppPolicyManager::psFactoryPublish(const PsFactory& factory,
 		LOG_WARN("Plugin %s contains policy set factory %s "
 				"but such factory was not declared in the "
 				"manifest. Discarding it.",
-				plugin_name.c_str(),
+				factory.plugin_name.c_str(),
 				factory.info.toString().c_str());
 		return -1;
 	}
@@ -232,7 +231,7 @@ int AppPolicyManager::psFactoryPublish(const PsFactory& factory,
 		LOG_ERR("Factory %s in plugin %s already "
 				"published. Discarding it.",
 				factory.info.toString().c_str(),
-				plugin_name.c_str());
+				factory.plugin_name.c_str());
 	}
 
 	/* Add the new factory to the internal factory list. */
@@ -362,7 +361,7 @@ int AppPolicyManager::plugin_load(const std::string& plugin_dir,
 
         /* Invoke the plugin initialization function, that will publish
          * pluggable components. */
-        ret = get_factories(plugin_name, factories);
+        ret = get_factories(factories);
         if (ret) {
                 dlclose(handle);
                 LOG_ERR("Failed to initialize plugin %s",
@@ -375,7 +374,8 @@ int AppPolicyManager::plugin_load(const std::string& plugin_dir,
         LOG_INFO("Plugin %s loaded successfully", plugin_name.c_str());
 
 	for (unsigned int i = 0; i < factories.size(); i++) {
-		psFactoryPublish(factories[i], plugin_name, manifest_psets);
+		factories[i].plugin_name = plugin_name;
+		psFactoryPublish(factories[i], manifest_psets);
 	}
 
         return 0;
