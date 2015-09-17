@@ -21,6 +21,7 @@
 //
 
 #include <dlfcn.h>
+#include <list>
 
 #define RINA_PREFIX "librina.application"
 
@@ -202,50 +203,47 @@ AppPolicyManager::psFactoryLookup(const PsInfo& ps_info)
         return ae_policy_factories.end();
 }
 
-int AppPolicyManager::psFactoryPublish(const PsFactory& factory)
+int AppPolicyManager::psFactoryPublish(const PsFactory& factory,
+				       const std::string& plugin_name,
+				       const std::list<PsInfo>& manifest_psets)
 {
-	bool declared = false;
+	bool in_manifest = false;
 
-        // TODO check that factory.component is an existing component
-
-        // Check if the (name, component) couple specified by 'factory'
-        // has not already been published.
-        if (psFactoryLookup(factory.info) !=
-        				ae_policy_factories.end()) {
-                LOG_ERR("Factory %s for component %s already "
-                                "published", factory.info.name.c_str(),
-                                factory.info.app_entity.c_str());
-                return -1;
-        }
-
-	// Check if this policy set factory has been declared in the
-	// plugin manifest file
-	for (std::list<PsInfo>::iterator mi = manifest_policy_sets.begin();
-				mi != manifest_policy_sets.end(); mi++) {
-		if (mi->name == factory.info.name &&
-				mi->app_entity == factory.info.app_entity) {
-			declared = true;
+	for (std::list<rina::PsInfo>::const_iterator
+			mi = manifest_psets.begin();
+			mi != manifest_psets.end(); mi++) {
+		if (*mi == factory.info) {
+			in_manifest = true;
 			break;
 		}
 	}
 
-	if (!declared) {
-		LOG_ERR("Pluggable component '%s'/'%s' not declared "
-			"in manifest file for plugin %s",
-			factory.info.app_entity.c_str(), factory.info.name.c_str(),
-			factory.plugin_name.c_str());
+	if (!in_manifest) {
+		LOG_WARN("Plugin %s contains policy set factory %s "
+				"but such factory was not declared in the "
+				"manifest. Discarding it.",
+				plugin_name.c_str(),
+				factory.info.toString().c_str());
 		return -1;
 	}
 
-        // Add the new factory
+	if (psFactoryLookup(factory.info) !=
+			ae_policy_factories.end()) {
+		LOG_ERR("Factory %s in plugin %s already "
+				"published. Discarding it.",
+				factory.info.toString().c_str(),
+				plugin_name.c_str());
+	}
+
+	/* Add the new factory to the internal factory list. */
 	WriteScopedLock g(rwlock);
 
-        ae_policy_factories.push_back(factory);
-        ae_policy_factories.back().refcnt = 0;
+	ae_policy_factories.push_back(factory);
+	ae_policy_factories.back().refcnt = 0;
 
-        LOG_INFO("Pluggable component '%s'/'%s' [%s] published",
-                 factory.info.app_entity.c_str(), factory.info.name.c_str(),
-                 factory.plugin_name.c_str());
+	LOG_INFO("Pluggable component '%s' [%s] published",
+			factory.info.toString().c_str(),
+			factory.plugin_name.c_str());
 
         return 0;
 }
@@ -316,9 +314,11 @@ int AppPolicyManager::psDestroy(const std::string& component,
 int AppPolicyManager::plugin_load(const std::string& plugin_dir,
 				  const std::string& plugin_name)
 {
+	std::vector<struct rina::PsFactory> factories;
+	std::list<PsInfo> manifest_psets;
 	std::string plugin_path = plugin_dir;
         void *handle = NULL;
-        rina::plugin_init_function_t init_func;
+        rina::plugin_get_factories_t get_factories;
         char *errstr;
         int ret;
 
@@ -327,8 +327,8 @@ int AppPolicyManager::plugin_load(const std::string& plugin_dir,
                 return 0;
         }
 
-	// Load the manifest (will overwrite the existing manifest)
-	ret = plugin_get_info(plugin_name, plugin_dir, manifest_policy_sets);
+	// Load the manifest
+	ret = plugin_get_info(plugin_name, plugin_dir, manifest_psets);
 	if (ret) {
 		LOG_ERR("Failed to load manifest for plugin %s",
 			plugin_name.c_str());
@@ -348,21 +348,21 @@ int AppPolicyManager::plugin_load(const std::string& plugin_dir,
         /* Clear any pending error conditions. */
         dlerror();
 
-        /* Try to load the init() function. */
-        init_func = (plugin_init_function_t)dlsym(handle, "init");
+        /* Try to load the get_factories() function. */
+        get_factories = (plugin_get_factories_t)dlsym(handle, "get_factories");
 
         /* Check if an error occurred in dlsym(). */
         errstr = dlerror();
         if (errstr) {
                 dlclose(handle);
-                LOG_ERR("Failed to link the init() function for plugin %s: %s",
+                LOG_ERR("Failed to link the get_factories() function for plugin %s: %s",
                         plugin_name.c_str(), errstr);
                 return -1;
         }
 
         /* Invoke the plugin initialization function, that will publish
          * pluggable components. */
-        ret = init_func(this, plugin_name);
+        ret = get_factories(plugin_name, factories);
         if (ret) {
                 dlclose(handle);
                 LOG_ERR("Failed to initialize plugin %s",
@@ -373,6 +373,10 @@ int AppPolicyManager::plugin_load(const std::string& plugin_dir,
         plugins_handles[plugin_name] = handle;
 
         LOG_INFO("Plugin %s loaded successfully", plugin_name.c_str());
+
+	for (unsigned int i = 0; i < factories.size(); i++) {
+		psFactoryPublish(factories[i], plugin_name, manifest_psets);
+	}
 
         return 0;
 }
