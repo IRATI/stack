@@ -60,13 +60,11 @@ struct red_rmt_ps_data {
         DECLARE_HASHTABLE(queues, RMT_PS_HASHSIZE);
 	struct tc_red_qopt conf_data;
 	u8 *   stab;
-	u32    max_P;
 };
 
 static struct red_rmt_queue * red_queue_create(port_id_t          port_id,
 					       struct tc_red_qopt cfg,
-					       u8 *               stab,
-					       u32                max_P)
+					       u8 *               stab)
 {
 	struct red_rmt_queue * tmp;
 
@@ -81,8 +79,9 @@ static struct red_rmt_queue * red_queue_create(port_id_t          port_id,
 
         tmp->port_id = port_id;
 
+	/* 0 is max_P, it will use Plog to calculate it */
 	red_set_parms(&tmp->parms, cfg.qth_min, cfg.qth_max, cfg.Wlog,
-		      cfg.Plog, cfg.Scell_log, stab, max_P);
+		      cfg.Plog, cfg.Scell_log, stab, 0);
 
 	red_set_vars(&tmp->vars);
 
@@ -94,6 +93,8 @@ static struct red_rmt_queue * red_queue_create(port_id_t          port_id,
 
         INIT_HLIST_NODE(&tmp->hlist);
 
+	LOG_INFO("Plog %x, max_P calculated: %x", tmp->parms.Plog, tmp->parms.max_P);
+	LOG_INFO("qth_max %x, qth_min: %x", tmp->parms.qth_max, tmp->parms.qth_min);
         return tmp;
 }
 
@@ -154,18 +155,17 @@ red_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
         ret_pdu = rfifo_pop(q->queue);
         if (!ret_pdu) {
                 LOG_ERR("Could not dequeue scheduled pdu");
-                ret_pdu = NULL;
 	        if (!red_is_idling(&q->vars))
 			red_start_of_idle_period(&q->vars);
         }
-	if (rfifo_is_empty(q->queue) == 0 &&
-	    !red_is_idling(&q->vars))
+	if (rfifo_is_empty(q->queue) && !red_is_idling(&q->vars))
 		red_start_of_idle_period(&q->vars);
 #if RMT_DEBUG
 	if (q->debug->q_index < RMT_DEBUG_SIZE && ret_pdu) {
-        	q->debug->q_log[q->debug->q_index][0] = rfifo_length(q->queue); 
-        	q->debug->q_log[q->debug->q_index++][1] = q->vars.qavg; 
+		q->debug->q_log[q->debug->q_index][0] = rfifo_length(q->queue); 
+		q->debug->q_log[q->debug->q_index++][1] = q->vars.qavg >> q->parms.Wlog; 
 	}
+	q->debug->stats = q->stats;
 #endif
         return ret_pdu;
 }
@@ -195,13 +195,12 @@ static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
 
 	/* Compute average queue usage (see RED)
 	 * Formula is qavg = qavg*(1-W) + backlog*W;
-	 * backlog is the current occupation of the queue normalized
-	 * to Wlog
+	 * backlog is the current occupation of the queue
 	 */
 	q->vars.qavg = red_calc_qavg(&q->parms,
 				     &q->vars,
-				     rfifo_length(q->queue) >> (q->parms.Wlog));
-	LOG_DBG("qavg':  %lu, qlen: %lu", q->vars.qavg,
+				     rfifo_length(q->queue));
+	LOG_DBG("qavg':  %lu, qlen: %lu", q->vars.qavg >> (q->parms.Wlog),
 					  rfifo_length(q->queue));
 	/* NOTE: check this! */
 	if (red_is_idling(&q->vars))
@@ -248,9 +247,10 @@ congestion_drop:
 exit:
 #if RMT_DEBUG
 	if (q->debug->q_index < RMT_DEBUG_SIZE && pdu) {
-        	q->debug->q_log[q->debug->q_index][0] = rfifo_length(q->queue); 
-        	q->debug->q_log[q->debug->q_index++][1] = q->vars.qavg; 
+		q->debug->q_log[q->debug->q_index][0] = rfifo_length(q->queue); 
+		q->debug->q_log[q->debug->q_index++][1] = q->vars.qavg >> q->parms.Wlog; 
 	}
+	q->debug->stats = q->stats;
 #endif
 
         return 0;
@@ -272,8 +272,7 @@ static int red_rmt_scheduling_create_policy_tx(struct rmt_ps *      ps,
 
         q = red_queue_create(port->port_id,
 	                     data->conf_data,
-			     data->stab,
-			     data->max_P);
+			     data->stab);
         if (!q) {
                 LOG_ERR("Could not create queue for n1_port %u",
                         port->port_id);

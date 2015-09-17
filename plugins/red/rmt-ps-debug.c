@@ -38,7 +38,17 @@ q_len_seq_show(struct seq_file *s, void *v)
 	unsigned int i;
 	struct red_rmt_debug * debug = list_entry(v, struct red_rmt_debug, list);
 
-	seq_printf(s, "RED q lengths for Queue %u\n", debug->port);
+	seq_printf(s, "RED Stats Queue %u\n", debug->port);
+	seq_printf(s, "Prob drops:\t%u\n"	\
+		      "Prob mark:\t%u\n"	\
+		      "Forced drop:\t%u\n"	\
+		      "Forced mark:\t%u\n"	\
+		      "Limit drop:\t%u\n"		\
+		      "Explicit drop:\t%u\n",
+		      debug->stats.prob_drop, debug->stats.prob_mark,
+		      debug->stats.forced_drop, debug->stats.forced_mark,
+		      debug->stats.pdrop, debug->stats.other);
+	seq_printf(s, "Queue occupation:\n");
 	for (i=0; i < debug->q_index; i++)
 		seq_printf(s, "%5u\t%5u\n", debug->q_log[i][0], debug->q_log[i][1]);
 	seq_printf(s, "----------------------------------\n\n");

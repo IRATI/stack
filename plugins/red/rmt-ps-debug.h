@@ -20,6 +20,7 @@
  */
 
 #include "common.h"
+#include <net/red.h>
 
 #define RMT_DEBUG 0
 #define RMT_DEBUG_SIZE 300000
@@ -28,6 +29,7 @@ struct red_rmt_debug {
 	unsigned int	 q_log[RMT_DEBUG_SIZE][2];
 	unsigned int     q_index;
 	port_id_t        port;
+	struct red_stats stats;
 	struct list_head list;
 };
 
