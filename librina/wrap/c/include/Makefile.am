@@ -5,9 +5,4 @@
 #
 
 SUBDIRS = 			\
-	c			\
-	java	
-
-EXTRA_DIST =			\
-	librina.i		\
-	stdlist.i
+	librina-c
