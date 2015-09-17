@@ -191,6 +191,8 @@ struct PsFactory {
         /// Reference counter for the number of policy sets created
         /// by this factory
         unsigned int refcnt;
+
+	PsFactory() : create(NULL), destroy(NULL) { }
 };
 
 /// A class that can manage the policies of an application process

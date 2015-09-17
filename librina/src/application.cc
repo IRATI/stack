@@ -232,6 +232,17 @@ int AppPolicyManager::psFactoryPublish(const PsFactory& factory,
 				"published. Discarding it.",
 				factory.info.toString().c_str(),
 				factory.plugin_name.c_str());
+		return -1;
+	}
+
+	if (!factory.create || !factory.destroy) {
+		LOG_ERR("Factory %s in plugin %s has invalid factory "
+			"methods: constructor=%p, destructor=%p. "
+			"Discarding it.",
+			factory.info.toString().c_str(),
+			factory.plugin_name.c_str(),
+			factory.create, factory.destroy);
+		return -1;
 	}
 
 	/* Add the new factory to the internal factory list. */
