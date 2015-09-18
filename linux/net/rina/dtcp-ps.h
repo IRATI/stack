@@ -75,7 +75,6 @@ struct dtcp_ps {
         int (* receiving_flow_control)(struct dtcp_ps * instance,
                                        const struct pci * pci);
         int (* update_credit)(struct dtcp_ps * instance);
-        int (* reconcile_flow_conflict)(struct dtcp_ps * instance);
         int (* rcvr_flow_control)(struct dtcp_ps * instance,
                                   const struct pci * pci);
         int (* rate_reduction)(struct dtcp_ps * instance);

@@ -76,6 +76,7 @@ struct dtp {
                 struct rtimer * sender_inactivity;
                 struct rtimer * receiver_inactivity;
                 struct rtimer * a;
+                struct rtimer * rate_window;
         } timers;
 };
 
@@ -771,6 +772,18 @@ static void tf_a(void * o)
         return;
 }
 
+static void tf_rate_window(void * o)
+{
+        struct dtp * dtp;
+
+        dtp = (struct dtp *) o;
+
+        if (!dtp)
+                return;
+
+        return;
+}
+
 int dtp_sv_init(struct dtp * dtp,
                 bool         rexmsn_ctrl,
                 bool         window_based,
@@ -965,9 +978,11 @@ struct dtp * dtp_create(struct dt *         dt,
         tmp->timers.receiver_inactivity = rtimer_create(tf_receiver_inactivity,
                                                         tmp);
         tmp->timers.a                   = rtimer_create(tf_a, tmp);
+        tmp->timers.rate_window         = rtimer_create(tf_rate_window, tmp);
         if (!tmp->timers.sender_inactivity   ||
             !tmp->timers.receiver_inactivity ||
-            !tmp->timers.a) {
+            !tmp->timers.a                   ||
+            !tmp->timers.rate_window) {
                 dtp_destroy(tmp);
                 return NULL;
         }
@@ -1011,6 +1026,8 @@ int dtp_destroy(struct dtp * instance)
                 rtimer_destroy(instance->timers.sender_inactivity);
         if (instance->timers.receiver_inactivity)
                 rtimer_destroy(instance->timers.receiver_inactivity);
+        if (instance->timers.rate_window)
+                rtimer_destroy(instance->timers.rate_window);
 
         if (instance->seqq) squeue_destroy(instance->seqq);
         if (instance->sv)   rkfree(instance->sv);
@@ -1027,9 +1044,10 @@ int dtp_destroy(struct dtp * instance)
 static bool window_is_closed(struct dtp_sv * sv,
                              struct dt *     dt,
                              struct dtcp *   dtcp,
-                             seq_num_t       seq_num)
+                             seq_num_t       seq_num,
+                             struct dtp_ps * ps)
 {
-        bool retval = false;
+        bool retval = false, w_ret = false, r_ret = false;
 
         ASSERT(sv);
         ASSERT(dt);
@@ -1040,11 +1058,17 @@ static bool window_is_closed(struct dtp_sv * sv,
 
         if (sv->window_based && seq_num > dtcp_snd_rt_win(dtcp)) {
                 dt_sv_window_closed_set(dt, true);
-                retval = true;
+                w_ret = true;
         }
 
         if (sv->rate_based)
                 LOG_MISSING;
+
+        retval = (w_ret || r_ret);
+        if (w_ret != r_ret) {
+                retval = ps->reconcile_flow_conflict(ps);
+                LOG_DBG("Reconcile flow control");
+        }
 
         return retval;
 }
@@ -1187,7 +1211,8 @@ int dtp_write(struct dtp * instance,
                         if (window_is_closed(sv,
                                              dt,
                                              dtcp,
-                                             csn)) {
+                                             csn,
+                                             ps)) {
                                 if (ps->closed_window(ps, pdu)) {
                                         rcu_read_unlock();
                                         LOG_ERR("Problems with the "
@@ -1270,6 +1295,24 @@ static bool is_drf_required(struct dtp * dtp)
         return ret;
 }
 */
+
+static bool is_fc_overrun(struct dtcp * dtcp, seq_num_t seq_num)
+{
+        bool to_ret, w_ret = false, r_ret = false;
+
+        if (!dtcp)
+                return false;
+
+        if (dtcp_window_based_fctrl(dtcp_config_get(dtcp)))
+                w_ret = (seq_num > dtcp_rcv_rt_win(dtcp));
+
+        if (dtcp_rate_based_fctrl(dtcp_config_get(dtcp)))
+                LOG_DBG("Rate based condition");
+
+        to_ret = w_ret || r_ret;
+
+        return to_ret;
+}
 
 int dtp_receive(struct dtp * instance,
                 struct pdu * pdu)
@@ -1384,7 +1427,7 @@ int dtp_receive(struct dtp * instance,
          *   no need to check presence of in_order or dtcp because in case
          *   they are not, LWE is not updated and always 0
          */
-        if ((seq_num <= LWE) || (dtcp && (seq_num > dtcp_rcv_rt_win(dtcp)))) {
+        if ((seq_num <= LWE) || (is_fc_overrun(dtcp, seq_num))) {
                 pdu_destroy(pdu);
 
                 dropped_pdus_inc(sv);

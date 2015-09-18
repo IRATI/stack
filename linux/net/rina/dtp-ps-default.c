@@ -41,7 +41,7 @@ default_closed_window(struct dtp_ps * ps, struct pdu * pdu)
 { return common_closed_window(ps, pdu); }
 
 static int
-default_flow_control_overrun(struct dtp_ps * ps,
+default_snd_flow_control_overrun(struct dtp_ps * ps,
                              struct pdu *    pdu)
 { return common_flow_control_overrun(ps, pdu); }
 
@@ -57,6 +57,10 @@ default_receiver_inactivity_timer(struct dtp_ps * ps)
 static int
 default_sender_inactivity_timer(struct dtp_ps * ps)
 { return common_sender_inactivity_timer(ps); }
+
+static bool
+default_reconcile_flow_conflict(struct dtp_ps * ps)
+{ return common_reconcile_flow_conflict(ps); }
 
 static int dtp_ps_set_policy_set_param(struct ps_base * bps,
                                        const char    * name,
@@ -79,10 +83,12 @@ dtp_ps_default_create(struct rina_component * component)
 
         ps->transmission_control        = default_transmission_control;
         ps->closed_window               = default_closed_window;
-        ps->flow_control_overrun        = default_flow_control_overrun;
+        ps->snd_flow_control_overrun    = default_snd_flow_control_overrun;
+        ps->rcv_flow_control_overrun    = NULL;
         ps->initial_sequence_number     = default_initial_sequence_number;
         ps->receiver_inactivity_timer   = default_receiver_inactivity_timer;
         ps->sender_inactivity_timer     = default_sender_inactivity_timer;
+        ps->reconcile_flow_conflict     = default_reconcile_flow_conflict;
 
         /* Just zero here. These fields are really initialized by
          * dtp_select_policy_set. */
