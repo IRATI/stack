@@ -31,7 +31,6 @@ static const unsigned int max_sdu_size_in_bytes = 10000;
 
 class ConnectionCallback : public rina::cdap::CDAPCallbackInterface {
  public:
-	ConnectionCallback(rina::cdap::CDAPProviderInterface **prov);
 	void open_connection(const rina::cdap_rib::con_handle_t &con,
 				const rina::cdap_rib::flags_t &flags,
 				int message_id);
@@ -41,28 +40,31 @@ class ConnectionCallback : public rina::cdap::CDAPCallbackInterface {
 	void remote_read_result(const rina::cdap_rib::con_handle_t &con,
 				const rina::cdap_rib::obj_info_t &obj,
 				const rina::cdap_rib::res_info_t &res);
- private:
-	rina::cdap::CDAPProviderInterface **prov_;
 };
 
 class ManagerWorker : public ServerWorker {
 public:
 	ManagerWorker(rina::ThreadAttributes * threadAttributes,
-		      int port,
+	              rina::FlowInformation flow,
 		      unsigned int max_sdu_size,
 	              Server * serv);
 	~ManagerWorker() throw() { };
 	int internal_run();
 
 private:
-        void operate(int port_id);
+        static const std::string IPCP_1;
+        static const std::string IPCP_2;
+        static const std::string IPCP_3;
+        void operate(rina::FlowInformation flow);
         void cacep(int port_id);
-        void createIPCP(int port_id);
-        void queryRIB(int port_id);
+        bool createIPCP_1(int port_id);
+        bool createIPCP_2(int port_id);
+        bool createIPCP_3(int port_id);
+        void queryRIB(int port_id, std::string name);
 
-	int port_id;
+        rina::FlowInformation flow_;
 	unsigned int max_sdu_size;
-	rina::cdap::CDAPProviderInterface *cdap_prov;
+	rina::cdap::CDAPProviderInterface *cdap_prov_;
 };
 
 class Manager : public Server {
@@ -72,12 +74,16 @@ class Manager : public Server {
 		const std::string& api);
 	~Manager() { };
 
- protected:
- 	ServerWorker * internal_start_worker(int port_id);
+	void run();
 
  private:
-	rina::cdap_rib::con_handle_t con_;
 	static const std::string mad_name;
 	static const std::string mad_instance;
+	rina::cdap_rib::con_handle_t con_;
+        ConnectionCallback callback;
+	std::string dif_name_;
+	bool client_app_reg_;
+
+ 	ServerWorker * internal_start_worker(rina::FlowInformation flow);
 };
 #endif//MANAGER_HPP

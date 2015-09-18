@@ -36,6 +36,13 @@ typedef struct ipcp{
 	//TODO: add missing info
 }ipcp_t;
 
+typedef struct enrollment_config{
+	std::string neighbor_name;
+	std::string neighbor_instance;
+	std::string enr_dif;
+	std::string enr_un_dif;
+}enrollment_config_t;
+
 /**
 * IPCP configuration struct
 */
@@ -43,8 +50,9 @@ typedef struct ipcp_config{
 	std::string process_name;
 	std::string process_instance;
 	std::string process_type;
-	std::string dif_to_register;
+	std::list<std::string> difs_to_register;
 	std::string dif_to_assign;
+	enrollment_config_t enr_conf;
 }ipcp_config_t;
 
 } //namespace structures
@@ -70,7 +78,19 @@ public:
 
 
 
-//Specific
+//
+// Encoder of IPCPConfig
+//
+class IPCPConfigEncoder: public rina::rib::Encoder<structures::ipcp_config_t> {
+
+public:
+	void encode (const structures::ipcp_config_t &obj,
+					rina::cdap_rib::ser_obj_t& ser_obj);
+	void decode(const rina::cdap_rib::ser_obj_t &ser_obj,
+			structures::ipcp_config_t& obj);
+	std::string get_type() const{ return "ipcp-config"; };
+};
+
 
 /**
  * Encoder IPCP
@@ -83,20 +103,6 @@ public:
 			structures::ipcp_t& des_obj);
 
 	std::string get_type() const{ return "ipcp"; };
-};
-
-
-/**
-* Encoder of IPCP configuration
-*/
-class IPCPConfigEncoder: public rina::rib::Encoder<structures::ipcp_config_t> {
-
-public:
-	void encode (const structures::ipcp_config_t &obj,
-					rina::cdap_rib::ser_obj_t& ser_obj);
-	void decode(const rina::cdap_rib::ser_obj_t &ser_obj,
-			structures::ipcp_config_t& obj);
-	std::string get_type() const{ return "ipcp-config"; };
 };
 
 } //namespace encoders

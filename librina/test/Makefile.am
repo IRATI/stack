@@ -105,6 +105,12 @@ test_cdap_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_cdap_CXXFLAGS = $(COMMONCXXFLAGS)
 test_cdap_LDFLAGS  = $(FUNCTIONALLDFLAGS)
 
+test_rib_v2_SOURCES  = test-rib_v2.cc
+test_rib_v2_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
+test_rib_v2_CXXFLAGS = $(COMMONCXXFLAGS) -Wno-unused-variable -Wno-unused-parameter
+test_rib_v2_LDFLAGS  = $(FUNCTIONALLDFLAGS) -lcppunit
+
+
 check_PROGRAMS =				\
 	test-01					\
 	test-02					\
@@ -114,14 +120,16 @@ check_PROGRAMS =				\
 	test-concurrency			\
 	test-syscalls				\
 	test-timer				\
-	test-cdap				
+	test-cdap				\
+	test-rib_v2
 
-XFAIL_TESTS =					\
+XFAIL_TESTS =				\	
 	test-03
 
 PASS_TESTS =					\
 	test-01					\
-	test-02
+	test-02					\
+	test-rib_v2
 
 TESTS = $(PASS_TESTS) $(XFAIL_TESTS)			
 	

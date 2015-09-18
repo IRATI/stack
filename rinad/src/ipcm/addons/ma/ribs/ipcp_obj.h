@@ -26,28 +26,56 @@ class IPCPObj;
 /**
  * IPCP object
  */
-class IPCPObj : public rina::rib::RIBObject
-					<mad_manager::structures::ipcp_t>{
+class IPCPObj : public rina::rib::RIBObj{
 
 public:
-	IPCPObj(std::string name, long instance, int ipcp_id);
-	IPCPObj(std::string name, long instance,
-			const rina::cdap_rib::SerializedObject &object_value);
+	IPCPObj(int ipcp_id);
 	virtual ~IPCPObj(){};
 
+	const std::string& get_class() const{
+		return class_name;
+	};
+
 	//Read
-	rina::cdap_rib::res_info_t* remoteRead(const std::string& name,
-			rina::cdap_rib::SerializedObject &obj_reply);
+	void read(const rina::cdap_rib::con_handle_t &con,
+				const std::string& fqn,
+				const std::string& class_,
+				const rina::cdap_rib::filt_info_t &filt,
+				const int invoke_id,
+				rina::cdap_rib::SerializedObject &obj_reply,
+				rina::cdap_rib::res_info_t& res);
+
 
 	//Deletion
-	rina::cdap_rib::res_info_t* remoteDelete(
-			const std::string& name);
+	bool delete_(const rina::cdap_rib::con_handle_t &con,
+				const std::string& fqn,
+				const std::string& class_,
+				const rina::cdap_rib::filt_info_t &filt,
+				const int invoke_id,
+				rina::cdap_rib::res_info_t& res);
+
+	//Create callback
+	static void create_cb(const rina::rib::rib_handle_t rib,
+			const rina::cdap_rib::con_handle_t &con,
+			const std::string& fqn,
+			const std::string& class_,
+			const rina::cdap_rib::filt_info_t &filt,
+			const int invoke_id,
+			const rina::cdap_rib::SerializedObject &obj_req,
+			rina::cdap_rib::SerializedObject &obj_reply,
+			rina::cdap_rib::res_info_t& res);
+
 
 	//Name of the class
 	const static std::string class_name;
 
 	//Process ID
 	int processID_;
+
+protected:
+	static int createIPCP(rinad::mad_manager::structures::ipcp_config_t &object);
+	static bool assignToDIF(rinad::mad_manager::structures::ipcp_config_t &object, int ipcp_id);
+	static bool registerAtDIFs(rinad::mad_manager::structures::ipcp_config_t &object, int ipcp_id);
 
 private:
 	mad_manager::encoders::IPCPEncoder encoder;

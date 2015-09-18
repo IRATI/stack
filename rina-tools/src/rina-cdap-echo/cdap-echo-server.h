@@ -30,9 +30,9 @@
 #include "server.h"
 
 class ConnectionCallback : public rina::cdap::CDAPCallbackInterface {
+
 public:
-	ConnectionCallback(bool *keep_serving,
-			rina::cdap::CDAPProviderInterface **prov);
+	ConnectionCallback(bool *keep_serving);
 	void open_connection(const rina::cdap_rib::con_handle_t &con,
 			const rina::cdap_rib::flags_t &flags, int message_id);
 	void remote_read_request(const rina::cdap_rib::con_handle_t &con,
@@ -41,9 +41,16 @@ public:
 			int message_id);
 	void close_connection(const rina::cdap_rib::con_handle_t &con,
 			const rina::cdap_rib::flags_t &flags, int message_id);
+
+	rina::cdap::CDAPProviderInterface* get_provider(){
+		if(!prov_)
+			prov_ = rina::cdap::getProvider();
+		return prov_;
+	}
+
 private:
 	bool *keep_serving_;
-	rina::cdap::CDAPProviderInterface **prov_;
+	rina::cdap::CDAPProviderInterface *prov_;
 };
 
 class CDAPEchoWorker : public ServerWorker {
@@ -71,7 +78,7 @@ public:
 			const int dealloc_wait);
 
 protected:
-	ServerWorker * internal_start_worker(int port_id);
+	ServerWorker * internal_start_worker(rina::FlowInformation flow);
 
 private:
 	int dw;

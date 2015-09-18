@@ -490,7 +490,7 @@ void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IpcmDealloca
 	try {
 		ipcp = lookup_ipcp_by_id(trans->slave_ipcp_id);
 		if(!ipcp){
-			ss << "Could not complete Flow allocation request result. Invalid IPCP id "<< ipcp->get_id();
+			ss << "Could not complete Flow allocation request result. Invalid IPCP";
 			FLUSH_LOG(ERR, ss);
 			throw rina::IpcmDeallocateFlowException();
 		}

@@ -152,7 +152,7 @@ void Server::run(bool blocking)
                         flow = ipcManager->allocateFlowResponse(*dynamic_cast<FlowRequestEvent*>(event), 0, true, blocking);
                         port_id = flow.portId;
                         LOG_INFO("New flow allocated [port-id = %d]", port_id);
-                        startWorker(port_id);
+                        startWorker(flow);
                         break;
 
                 case FLOW_DEALLOCATED_EVENT:
@@ -177,9 +177,9 @@ void Server::run(bool blocking)
         }
 }
 
-void Server::startWorker(int port_id)
+void Server::startWorker(rina::FlowInformation flow)
 {
-	ServerWorker * worker = internal_start_worker(port_id);
+	ServerWorker * worker = internal_start_worker(flow);
         lock.lock();
         active_workers.push_back(worker);
         lock.unlock();
