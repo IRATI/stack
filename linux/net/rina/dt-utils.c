@@ -953,7 +953,7 @@ int common_efcp_pdu_send(struct efcp * efcp,
 
 	/* Remote flow case */
 	if (pci_source(pci) != pci_destination(pci)) {
-	        if (rmt_send(rmt, pci, pdu)) {
+	        if (rmt_send(rmt, pdu)) {
 	                LOG_ERR("Problems sending PDU to RMT");
 	                return -1;
 	        }

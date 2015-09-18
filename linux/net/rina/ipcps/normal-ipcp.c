@@ -829,7 +829,6 @@ static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
          */
         if (dst_addr) {
                 if (rmt_send(data->rmt,
-                             pdu_pci_get_rw(pdu),
                              pdu)) {
                         LOG_ERR("Could not send to RMT (using dst_addr");
                         return -1;
