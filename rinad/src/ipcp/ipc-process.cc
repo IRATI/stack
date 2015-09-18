@@ -21,7 +21,6 @@
 #include <cstdlib>
 #include <sstream>
 #include <iostream>
-#include <math.h>
 
 #define IPCP_MODULE "core"
 #include "ipcp-logging.h"
@@ -270,7 +269,7 @@ void IPCProcessImpl::set_address(unsigned int address) {
 	dif_information_.dif_configuration_.address_ = address;
 }
 
-void IPCProcessImpl::processAssignToDIFRequestEvent(rina::AssignToDIFRequestEvent& event) {
+void IPCProcessImpl::processAssignToDIFRequestEvent(const rina::AssignToDIFRequestEvent& event) {
 	rina::ScopedLock g(*lock_);
 
 	if (state != INITIALIZED) {
@@ -279,47 +278,6 @@ void IPCProcessImpl::processAssignToDIFRequestEvent(rina::AssignToDIFRequestEven
 				state);
 		rina::extendedIPCManager->assignToDIFResponse(event, -1);
 		return;
-	}
-
-	// FIXME: This completes the data to be passed to the RMT's red-ps. A
-	// lookup table using floating point calculations is calculated in user
-	// space and its address passed to the ps in kernel space via a policy
-	// parameter. In order to be able to push in this new PolicyParameter it
-	// was needed to remove the const qualifier from the event parameter in
-	// the funtion declaration.
-	//
-	// This is a workaround in order to avoid harcoding multiple lookup
-	// tables in the kernel.
-
-	std::string STAB_ADDR_PARM = "stab_address_p";
-	std::string RMT_RED_PS_NAME = "red-ps";
-	rina::PolicyConfig * rmt_ps;
-	unsigned char * stab_table = NULL;
-	rmt_ps = &event.difInformation.dif_configuration_.rmt_configuration_.policy_set_;
-	if (!rmt_ps->name_.compare(RMT_RED_PS_NAME)) {
-
-		int stab_size = 256;
-		unsigned char U8_MASK = 0xFF;
-		stab_table = new unsigned char[stab_size];
-		unsigned int  Wlog  = rmt_ps->get_param_value_as_uint("Wlog_p");
-		unsigned int  Scell_log  = rmt_ps->get_param_value_as_uint("Scell_log_p");
-		float  t_ave = rmt_ps->get_param_value_as_float("t_ave_p");
-
-		for (int i = 0; i < stab_size; i++) {
-			double tmp = 1.0 - 1/pow(2, Wlog);
-			tmp = pow(tmp, (i << Scell_log) / t_ave);
-			tmp = fabs(log2(tmp));
-			int temp_int = rint(tmp);
-			stab_table[i] = (unsigned char) (temp_int & U8_MASK);
-		}
-
-		std::stringstream ss;
-		ss << (void *) stab_table;
-		rina::PolicyParameter stab_addr;
-
-		stab_addr.name_ = STAB_ADDR_PARM;
-		stab_addr.value_ = ss.str();
-		event.difInformation.dif_configuration_.rmt_configuration_.policy_set_.parameters_.push_back(stab_addr);
 	}
 
 	try {
@@ -331,8 +289,6 @@ void IPCProcessImpl::processAssignToDIFRequestEvent(rina::AssignToDIFRequestEven
 		LOG_IPCP_ERR("Problems sending DIF Assignment request to the kernel: %s", e.what());
 		rina::extendedIPCManager->assignToDIFResponse(event, -1);
 	}
-	if (stab_table)
-		delete stab_table;
 }
 
 void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResponseEvent& event) {

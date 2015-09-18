@@ -42,7 +42,7 @@ public:
         unsigned int get_address() const;
         void set_address(unsigned int address);
         unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name);
-        void processAssignToDIFRequestEvent(rina::AssignToDIFRequestEvent& event);
+        void processAssignToDIFRequestEvent(const rina::AssignToDIFRequestEvent& event);
         void processAssignToDIFResponseEvent(const rina::AssignToDIFResponseEvent& event);
         void requestPDUFTEDump();
         void logPDUFTE(const rina::DumpFTResponseEvent& event);

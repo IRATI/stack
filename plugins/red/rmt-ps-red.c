@@ -85,8 +85,6 @@ static struct red_rmt_queue * red_queue_create(port_id_t          port_id,
 
 	red_set_vars(&tmp->vars);
 
-	red_start_of_idle_period(&tmp->vars);
-
 #if RMT_DEBUG
 	tmp->debug = red_rmt_debug_create(port_id);
 #endif
@@ -152,14 +150,20 @@ red_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
                 return NULL;
         }
 
+	/* Compute average queue usage (see RED)
+	 * RED does not do this here and instead uses an approximation
+	 * when the idle period is over. But doing this the qavg 
+	 * calculation seems to be distorted. For this PS we can afford to
+	 * calculate the avg also when pdus are dequeued.
+	 */
+	q->vars.qavg = red_calc_qavg(&q->parms,
+				     &q->vars,
+				     rfifo_length(q->queue));
+
         ret_pdu = rfifo_pop(q->queue);
         if (!ret_pdu) {
                 LOG_ERR("Could not dequeue scheduled pdu");
-	        if (!red_is_idling(&q->vars))
-			red_start_of_idle_period(&q->vars);
         }
-	if (rfifo_is_empty(q->queue) && !red_is_idling(&q->vars))
-		red_start_of_idle_period(&q->vars);
 #if RMT_DEBUG
 	if (q->debug->q_index < RMT_DEBUG_SIZE && ret_pdu) {
 		q->debug->q_log[q->debug->q_index][0] = rfifo_length(q->queue); 
@@ -202,9 +206,6 @@ static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
 				     rfifo_length(q->queue));
 	LOG_DBG("qavg':  %lu, qlen: %lu", q->vars.qavg >> (q->parms.Wlog),
 					  rfifo_length(q->queue));
-	/* NOTE: check this! */
-	if (red_is_idling(&q->vars))
-		red_end_of_idle_period(&q->vars);
 
 	if(rfifo_length(q->queue) >= data->conf_data.limit) {
 		q->stats.forced_drop++;
@@ -401,54 +402,62 @@ rmt_ps_red_create(struct rina_component * component)
 
 	rmt_cfg = rmt_config_get(rmt);
 	ps_param = policy_param_find(rmt_cfg->policy_set, "qmax_p");
-	if (!ps_param) {
+	if (!ps_param)
 		LOG_WARN("No PS param qmax_p");
-	}
-	red_rmt_ps_set_policy_set_param(&ps->base,
-					policy_param_name(ps_param),
-					policy_param_value(ps_param));
+	else 
+		red_rmt_ps_set_policy_set_param(&ps->base,
+						policy_param_name(ps_param),
+						policy_param_value(ps_param));
+
 	ps_param = policy_param_find(rmt_cfg->policy_set, "qth_min_p");
-	if (!ps_param) {
+	if (!ps_param)
 		LOG_WARN("No PS param qth_min_p");
-	}
-	red_rmt_ps_set_policy_set_param(&ps->base,
-					policy_param_name(ps_param),
-					policy_param_value(ps_param));
+	else
+		red_rmt_ps_set_policy_set_param(&ps->base,
+						policy_param_name(ps_param),
+						policy_param_value(ps_param));
+
 	ps_param = policy_param_find(rmt_cfg->policy_set, "qth_max_p");
-	if (!ps_param) {
+	if (!ps_param)
 		LOG_WARN("No PS param qth_max_p");
-	}
-	red_rmt_ps_set_policy_set_param(&ps->base,
-					policy_param_name(ps_param),
-					policy_param_value(ps_param));
+	else
+		red_rmt_ps_set_policy_set_param(&ps->base,
+						policy_param_name(ps_param),
+						policy_param_value(ps_param));
+
 	ps_param = policy_param_find(rmt_cfg->policy_set, "Wlog_p");
-	if (!ps_param) {
+	if (!ps_param)
 		LOG_WARN("No PS param Wlog_p");
-	}
-	red_rmt_ps_set_policy_set_param(&ps->base,
-					policy_param_name(ps_param),
-					policy_param_value(ps_param));
+	else	
+		red_rmt_ps_set_policy_set_param(&ps->base,
+						policy_param_name(ps_param),
+						policy_param_value(ps_param));
+
 	ps_param = policy_param_find(rmt_cfg->policy_set, "Plog_p");
-	if (!ps_param) {
+	if (!ps_param) 
 		LOG_WARN("No PS param Plog_p");
-	}
-	red_rmt_ps_set_policy_set_param(&ps->base,
-					policy_param_name(ps_param),
-					policy_param_value(ps_param));
+	else 
+		red_rmt_ps_set_policy_set_param(&ps->base,
+						policy_param_name(ps_param),
+						policy_param_value(ps_param));
+
 	ps_param = policy_param_find(rmt_cfg->policy_set, "Scell_log_p");
-	if (!ps_param) {
-		LOG_WARN("No PS param Scell_log_p");
-	}
-	red_rmt_ps_set_policy_set_param(&ps->base,
-					policy_param_name(ps_param),
-					policy_param_value(ps_param));
+	if (!ps_param) 
+		LOG_DBG("No PS param Scell_log_p");
+	else 
+		red_rmt_ps_set_policy_set_param(&ps->base,
+						policy_param_name(ps_param),
+						policy_param_value(ps_param));
+	
 	ps_param = policy_param_find(rmt_cfg->policy_set, "stab_address_p");
 	if (!ps_param) {
-		LOG_WARN("No PS param stab_address");
-	}
-	red_rmt_ps_set_policy_set_param(&ps->base,
-					policy_param_name(ps_param),
-					policy_param_value(ps_param));
+		LOG_DBG("No PS param stab_address");
+		data->stab = NULL;
+	} else
+		red_rmt_ps_set_policy_set_param(&ps->base,
+						policy_param_name(ps_param),
+						policy_param_value(ps_param));
+	
 
         ps->max_q_policy_tx = NULL;
         ps->max_q_policy_rx = NULL;
