@@ -856,11 +856,18 @@ int IPCMConsole::read_ipcp_ribobj(std::vector<std::string>& args)
 
 int IPCMConsole::show_catalog(std::vector<std::string>& args)
 {
-	if (args.size() == 1) {
+	switch (args.size()) {
+	case 1:
 		outstream << IPCManager->catalog.toString();
+		break;
 
-	} else {
+	case 2:
 		outstream << IPCManager->catalog.toString(args[1]);
+		break;
+
+	default:
+		outstream << commands_map[args[0]].usage << endl;
+		break;
 	}
 
 	return CMDRETCONT;
