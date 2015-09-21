@@ -164,6 +164,8 @@ struct PsInfo {
 	PsInfo() { }
 	PsInfo(const std::string& n, const std::string& c,
 	       const std::string& v) : name(n), app_entity(c), version(v) { }
+
+	std::string toString() const { return app_entity + std::string("/") + name; }
 };
 
 struct PsFactory {
