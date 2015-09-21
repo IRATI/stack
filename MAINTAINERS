@@ -97,7 +97,7 @@ F: linux/net/rina/rina-default-plugin*
 
 Shim eth-vlan and RINA ARP
 M: Sander Vrijders <sander.vrijders (at) intec.ugent.be>
-F: linux/net/rina/ipcps/shim-eth-vlan*
+F: linux/net/rina/ipcps/shim-eth*
 F: linux/net/rina/rinarp/
 
 Shim tcp-udp
@@ -236,7 +236,7 @@ RIB
 M: Marc Sune <marc.sune (at) bisdn.de>
 F: librina/include/librina/rib*
 F: librina/src/*rib*
-F: test/*rib*
+F: librina/test/*rib*
 
 SDK
 M: Vincenzo Maffione <v.maffione (at) nextworks.it>
