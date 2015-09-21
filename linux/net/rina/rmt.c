@@ -832,8 +832,6 @@ static int n1_port_write(struct rmt *rmt,
 	spin_lock_irqsave(&n1_port->lock, flags);
 
 	if (ret == -EAGAIN) {
-		n1_port->state = N1_PORT_STATE_DISABLED;
-
 		rcu_read_lock();
 		ps = container_of(rcu_dereference(rmt->base.ps),
 				struct rmt_ps, base);
@@ -855,6 +853,15 @@ static int n1_port_write(struct rmt *rmt,
 		atomic_inc(&n1_port->n_sdus);
 
 		rcu_read_unlock();
+
+		if (n1_port->state == N1_PORT_STATE_DO_NOT_DISABLE) {
+			n1_port->state = N1_PORT_STATE_ENABLED;
+		        if (atomic_read(&n1_port->n_sdus) > 0)
+		        	tasklet_hi_schedule(&rmt->egress_tasklet);
+		} else {
+			n1_port->state = N1_PORT_STATE_DISABLED;
+		}
+
 		spin_unlock_irqrestore(&n1_port->lock, flags);
 		return ret;
 	}
@@ -876,6 +883,7 @@ static void send_worker(unsigned long o)
 	int pdus_sent;
 	struct rmt_ps *ps;
 	struct pdu *pdu = NULL;
+	int ret;
 
 	LOG_DBG("Send worker called");
 
@@ -937,6 +945,7 @@ static void send_worker(unsigned long o)
 			return;
 		}
 		pdus_sent = 0;
+		ret = 0;
 		/* Try to send PDUs on that port-id here */
 		do {
 			pdu = ps->rmt_next_scheduled_policy_tx(ps, n1_port);
@@ -953,10 +962,14 @@ static void send_worker(unsigned long o)
 
 			rcu_read_unlock();
 			spin_unlock(&n1_port->lock);
-			if (n1_port_write(rmt, n1_port, pdu))
-				LOG_DBG("Failed to write PDU");
+			ret = n1_port_write(rmt, n1_port, pdu);
 			spin_lock(&n1_port->lock);
 			rcu_read_lock();
+
+			if (ret) {
+				LOG_DBG("Failed to write PDU");
+				break;
+			}
 
 			pdus_sent++;
 		} while ((pdus_sent < MAX_PDUS_SENT_PER_CYCLE) &&
@@ -1190,9 +1203,9 @@ int rmt_enable_port_id(struct rmt *instance,
 	}
 
 	spin_lock_irqsave(&n1_port->lock, flags);
-	if (n1_port->state != N1_PORT_STATE_DISABLED) {
+	if (n1_port->state == N1_PORT_STATE_ENABLED) {
+		n1_port->state = N1_PORT_STATE_DO_NOT_DISABLE;
 		spin_unlock_irqrestore(&n1_port->lock, flags);
-		LOG_DBG("Nothing to do for port-id %d", id);
 		return 0;
 	}
 
@@ -1240,6 +1253,15 @@ int rmt_disable_port_id(struct rmt *instance,
 		LOG_DBG("Nothing to do for port-id %d", id);
 		return 0;
 	}
+
+	if (n1_port->state == N1_PORT_STATE_DO_NOT_DISABLE) {
+		n1_port->state = N1_PORT_STATE_ENABLED;
+		if (atomic_read(&n1_port->n_sdus) > 0)
+			tasklet_hi_schedule(&instance->egress_tasklet);
+		spin_unlock_irqrestore(&n1_port->lock, flags);
+		return 0;
+	}
+
 	n1_port->state = N1_PORT_STATE_DISABLED;
 	spin_unlock_irqrestore(&n1_port->lock, flags);
 
