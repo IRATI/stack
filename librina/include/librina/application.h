@@ -142,12 +142,14 @@ private:
 	ThreadSafeMapOfPointers<std::string, ApplicationEntityInstance> instances;
 };
 
+struct PsFactory;
+
 extern "C" {
         typedef IPolicySet *(*app_entity_factory_create_t)(
                                                 ApplicationEntity * ctx);
         typedef void (*app_entity_factory_destroy_t)(IPolicySet * ps);
-        typedef int (*plugin_init_function_t)(AppPolicyManager * app_process,
-                                              const std::string& plugin_name);
+	typedef int (*plugin_get_factories_t)(
+		     std::vector<struct rina::PsFactory>& factories);
 }
 
 /// Info about a policy set
@@ -165,7 +167,13 @@ struct PsInfo {
 	PsInfo(const std::string& n, const std::string& c,
 	       const std::string& v) : name(n), app_entity(c), version(v) { }
 
-	std::string toString() const { return app_entity + std::string("/") + name; }
+	std::string toString() const
+		{ return app_entity + std::string("/") + name; }
+
+	bool operator==(const PsInfo& o) const
+		{ return o.name == name && o.app_entity == app_entity; }
+
+	bool operator!=(const PsInfo& o) const { return !(*this == o); }
 };
 
 struct PsFactory {
@@ -183,6 +191,8 @@ struct PsFactory {
         /// Reference counter for the number of policy sets created
         /// by this factory
         unsigned int refcnt;
+
+	PsFactory() : create(NULL), destroy(NULL) { }
 };
 
 /// A class that can manage the policies of an application process
@@ -192,7 +202,8 @@ public:
 	virtual ~AppPolicyManager();
 	virtual std::vector<PsFactory>::iterator
                   psFactoryLookup(const PsInfo& ps_info);
-	virtual int psFactoryPublish(const PsFactory& factory);
+	virtual int psFactoryPublish(const PsFactory& factory,
+				     const std::list<PsInfo>& manifest_psets);
 	virtual int psFactoryUnpublish(const PsInfo& ps_info);
 	virtual IPolicySet * psCreate(const std::string& ae_name,
                                       const std::string& name,
@@ -209,7 +220,6 @@ protected:
 private:
 	std::vector<rina::PsFactory> ae_policy_factories;
 	std::map< std::string, void * > plugins_handles;
-	std::list<PsInfo> manifest_policy_sets;
 	ReadWriteLockable rwlock;
 };
 

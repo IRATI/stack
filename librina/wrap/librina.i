@@ -425,9 +425,10 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(differs) rina::FlowInformation::operator!=(const FlowInformation &other) const;
 %rename(equals) rina::rib::RIBObjectData::operator==(const RIBObjectData &other) const;
 %rename(differs) rina::rib::RIBObjectData::operator!=(const RIBObjectData &other) const;
-
 %rename(equals) rina::Neighbor::operator==(const Neighbor &other) const;
 %rename(differs) rina::Neighbor::operator!=(const Neighbor &other) const;
+%rename(equals) rina::PsInfo::operator==(const PsInfo &other) const;
+%rename(differs) rina::PsInfo::operator!=(const PsInfo &other) const;
 
 %ignore SerializedObject;
 
