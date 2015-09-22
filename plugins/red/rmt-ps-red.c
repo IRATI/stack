@@ -91,8 +91,6 @@ static struct red_rmt_queue * red_queue_create(port_id_t          port_id,
 
         INIT_HLIST_NODE(&tmp->hlist);
 
-	LOG_INFO("Plog %x, max_P calculated: %x", tmp->parms.Plog, tmp->parms.max_P);
-	LOG_INFO("qth_max %x, qth_min: %x", tmp->parms.qth_max, tmp->parms.qth_min);
         return tmp;
 }
 

@@ -102,7 +102,7 @@ red_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 		data->sshtresh = new_credit;
 		data->state = CONG_AVOID;
 		data->new_ecn_burst = new_credit;
-		LOG_INFO("change enc_burst to %u", data->new_ecn_burst);
+		LOG_DBG("change enc_burst to %u", data->new_ecn_burst);
 	} else if (data->new_ecn_burst != 0)
 		data->new_ecn_burst--;
 
