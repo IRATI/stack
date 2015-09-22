@@ -134,6 +134,7 @@ build_bindings=no
 build_bindings_swig=no
 build_bindings_java=no
 build_bindings_c=yes
+
 AX_SELECTOR_ENABLE([java-bindings],[
     build_bindings_java=yes
 ],[
@@ -143,7 +144,7 @@ AS_IF([test "$build_bindings_java" = "yes"],[
     build_bindings=yes
     build_bindings_swig=yes
 ])
-AX_SELECTOR_ENABLE([c-bindings],[
+AX_SELECTOR_DISABLE([c-bindings],[
     build_bindings_c=yes
 ],[
     build_bindings_c=no
