@@ -252,6 +252,9 @@ F: librina/src/netlink*
 F: librina/src/rina-sys*
 F: librina/src/syscalls*
 
+C bindings
+M: Dimitri Staessens <dimitri.staessens (at) intec.ugent.be>
+F: librina/wrap/c/*
 
 RINA Daemons
 ------------
