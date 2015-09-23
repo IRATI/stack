@@ -736,8 +736,6 @@ static int rcv_ack(struct dtcp * dtcp,
 static int rcv_flow_ctl(struct dtcp * dtcp,
                         struct pdu *  pdu)
 {
-        struct cwq * q;
-        struct dtp * dtp;
         struct pci * pci;
 
         ASSERT(dtcp);
@@ -748,24 +746,6 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
 
         snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
         push_pdus_rmt(dtcp);
-
-        dtp = dt_dtp(dtcp->parent);
-        if (!dtp) {
-                LOG_ERR("No DTP");
-                return -1;
-        }
-        q = dt_cwq(dtcp->parent);
-        if (!q) {
-                LOG_ERR("No Closed Window Queue");
-                return -1;
-        }
-        if (cwq_is_empty(q) &&
-            (dtp_sv_max_seq_nr_sent(dtp) < snd_rt_wind_edge(dtcp))) {
-                dt_sv_window_closed_set(dtcp->parent, false);
-        }
-
-        LOG_DBG("DTCP received FC (CPU: %d)", smp_processor_id());
-        dump_we(dtcp, pci);
 
         pdu_destroy(pdu);
         return 0;
@@ -793,7 +773,7 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         /* This updates sender LWE */
         if (ps->sender_ack(ps, seq))
                 LOG_ERR("Could not update RTXQ and LWE");
-	if (ps->rtt_estimator)
+	if (ps->rtx_ctrl && ps->rtt_estimator)
         	ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
         rcu_read_unlock();
 
@@ -1043,6 +1023,19 @@ int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
 }
 EXPORT_SYMBOL(dtcp_ack_flow_control_pdu_send);
 
+uint_t dtcp_rcvr_credit(struct dtcp * dtcp) {
+        unsigned long flags;
+        seq_num_t credit;
+
+        ASSERT(dtcp);
+        ASSERT(dtcp->sv);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        credit = dtcp->sv->rcvr_credit;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+        return credit;
+}
+EXPORT_SYMBOL(dtcp_rcvr_credit);
+
 void dtcp_rcvr_credit_set(struct dtcp * dtcp, uint_t credit)
 {
         unsigned long flags;
@@ -1071,6 +1064,22 @@ void update_rt_wind_edge(struct dtcp * dtcp)
         spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 }
 EXPORT_SYMBOL(update_rt_wind_edge);
+
+void update_credit_and_rt_wind_edge(struct dtcp * dtcp, uint_t credit)
+{
+        unsigned long flags;
+
+        ASSERT(dtcp);
+        ASSERT(dtcp->sv);
+
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        dtcp->sv->rcvr_credit = credit;
+	/* applying the TCP rule of not shrinking the window */
+	if (dt_sv_rcv_lft_win(dtcp->parent) + credit > dtcp->sv->rcvr_rt_wind_edge)
+        	dtcp->sv->rcvr_rt_wind_edge = dt_sv_rcv_lft_win(dtcp->parent) + credit;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+}
+EXPORT_SYMBOL(update_credit_and_rt_wind_edge);
 
 static struct dtcp_sv default_sv = {
         .pdus_per_time_unit     = 0,
@@ -1483,6 +1492,7 @@ seq_num_t dtcp_rcv_rt_win(struct dtcp * dtcp)
 
         return rcvr_rt_wind_edge(dtcp);
 }
+EXPORT_SYMBOL(dtcp_rcv_rt_win);
 
 seq_num_t dtcp_snd_rt_win(struct dtcp * dtcp)
 {
