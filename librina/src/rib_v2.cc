@@ -1591,7 +1591,13 @@ RIBDaemon::RIBDaemon(cacep::AppConHandlerInterface *app_con_callback,
 }
 
 RIBDaemon::~RIBDaemon() {
-
+	LOG_INFO("RIBDaemon destructor called");
+	// Delete all schemas
+	std::map<uint64_t, RIBSchema*>::iterator it;
+	for(it = ver_schema_map.begin(); it != ver_schema_map.end(); it++){
+		if(it->second)
+			delete it->second;
+	}
 }
 
 int64_t RIBDaemon::get_new_handle(void){
