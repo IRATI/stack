@@ -878,7 +878,7 @@ static int n1_port_write(struct rmt *rmt,
 		}
 
 		spin_unlock_irqrestore(&n1_port->lock, flags);
-		return ret;
+		return 0;
 	}
 
 	atomic_dec(&n1_port->pending_ops);
