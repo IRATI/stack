@@ -9,7 +9,7 @@ DISTCLEANFILES            =
 MAINTAINERCLEANFILES      =
 BUILT_SOURCES             =
 DISTCHECK_CONFIGURE_FLAGS = \
-	--enable-java-wrappers --with-sysheaders=$(sysheaders)
+	--enable-java-bindings --with-sysheaders=$(sysheaders)
 
 SUBDIRS =					\
 	include					\

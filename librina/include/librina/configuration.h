@@ -70,6 +70,7 @@ public:
         /// @throws Exception if parameter is not found or the conversion
         /// to long fails
         long get_param_value_as_long(const std::string& name) const;
+	float get_param_value_as_float(const std::string& name) const;
         int get_param_value_as_int(const std::string& name) const;
         unsigned long get_param_value_as_ulong(const std::string& name) const;
         unsigned int get_param_value_as_uint(const std::string& name) const;

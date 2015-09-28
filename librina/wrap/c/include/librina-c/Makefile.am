@@ -4,10 +4,7 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-SUBDIRS = 			\
-	c			\
-	java	
+librina_cdir=$(includedir)/librina-c
 
-EXTRA_DIST =			\
-	librina.i		\
-	stdlist.i
+nobase_librina_c_HEADERS = 			\
+	librina-c.h

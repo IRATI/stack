@@ -1,0 +1,11 @@
+prefix=@prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: LibRINA-C
+Description: RINA support libraries for C
+Version: @PACKAGE_VERSION@
+URL: @PACKAGE_URL@
+Requires: librina
+Libs: -L${libdir} -lrina-c
+Cflags: -I${includedir}

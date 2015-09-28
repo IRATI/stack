@@ -75,6 +75,7 @@ struct rmt {
 	struct n1pmap *n1_ports;
 	struct sdup_config *sdup_conf;
 	struct pff_cache cache;
+	struct rmt_config *rmt_cfg;
 };
 
 static struct rmt_n1_port *n1_port_create(port_id_t id,
@@ -531,6 +532,8 @@ int rmt_destroy(struct rmt *instance)
 		serdes_destroy(instance->serdes);
 	if (instance->sdup_conf)
 		sdup_config_destroy(instance->sdup_conf);
+	if (instance->rmt_cfg)
+		rmt_config_destroy(instance->rmt_cfg);
 
 	rina_component_fini(&instance->base);
 
@@ -695,7 +698,17 @@ int rmt_sdup_config_set(struct rmt *instance,
 }
 EXPORT_SYMBOL(rmt_sdup_config_set);
 
-int rmt_config_set(struct rmt *instance,
+struct rmt_config *rmt_config_get(struct rmt *instance)
+{
+	if (!instance) {
+		LOG_ERR("No RMT passed");
+		return NULL;
+	}
+	return instance->rmt_cfg;
+}
+EXPORT_SYMBOL(rmt_config_get);
+
+int rmt_config_set(struct rmt	     *instance,
 		   struct rmt_config *rmt_config)
 {
 	const string_t *rmt_ps_name;
@@ -712,11 +725,12 @@ int rmt_config_set(struct rmt *instance,
 		return -1;
 	}
 
+	instance->rmt_cfg = rmt_config;
+
 	rmt_ps_name = policy_name(rmt_config->policy_set);
 	pff_ps_name = policy_name(rmt_config->pff_conf->policy_set);
 
 	LOG_DBG("RMT PSs: %s, %s", rmt_ps_name, pff_ps_name);
-
 	if (strcmp(rmt_ps_name, RINA_PS_DEFAULT_NAME))
 		if (rmt_select_policy_set(instance, "", rmt_ps_name))
 			LOG_ERR("Could not set policy set %s for RMT",
@@ -728,6 +742,7 @@ int rmt_config_set(struct rmt *instance,
 				pff_ps_name);
 
 	rmt_config_destroy(rmt_config);
+	instance->rmt_cfg = NULL;
 	return 0;
 }
 EXPORT_SYMBOL(rmt_config_set);
