@@ -29,6 +29,7 @@
 #include <utility>
 
 #include <librina/common.h>
+#include <librina/application.h>
 #include <librina/ipc-manager.h>
 #include <librina/patterns.h>
 
@@ -66,6 +67,53 @@ public:
 
 	//IPCP identifier
 	int slave_ipcp_id;
+};
+
+/**
+* IPCP plugin load transaction state
+*/
+class IPCPpluginTransState: public TransactionState{
+
+public:
+	IPCPpluginTransState(Addon* callee, Promise* promise, int _ipcp_id,
+			   const std::string& _name, bool _l)
+					: TransactionState(callee, promise),
+					  ipcp_id(_ipcp_id),
+					  plugin_name(_name), load(_l) {}
+	virtual ~IPCPpluginTransState(){};
+
+	// IPCP identifier
+	int ipcp_id;
+
+	// Plugin name
+	std::string plugin_name;
+
+	// Is this a load or unload operation ?
+	bool load;
+};
+
+/**
+* IPCP select-policy-set transaction state
+*/
+class IPCPSelectPsTransState: public TransactionState{
+
+public:
+	IPCPSelectPsTransState(Addon* callee, Promise* promise,
+			       unsigned _ipcp_id,
+			       const rina::PsInfo& _ps_info, int _id)
+					: TransactionState(callee, promise),
+					  ipcp_id(_ipcp_id),
+					  ps_info(_ps_info), id(_id) { }
+	virtual ~IPCPSelectPsTransState(){};
+
+	// IPCP identifier
+	unsigned int ipcp_id;
+
+	// The policy set to be selected
+	rina::PsInfo ps_info;
+
+	// IPCP or port-id identifier (to be used for the catalog)
+	unsigned int id;
 };
 
 }//rinad namespace

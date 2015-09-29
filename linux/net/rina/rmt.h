@@ -108,57 +108,58 @@ struct rmt_queue_set *rmt_queue_set_create(void);
 int		      rmt_queue_set_destroy(struct rmt_queue_set *qs);
 
 
-struct rmt *rmt_create(struct ipcp_instance *parent,
-			struct kfa *kfa,
-			struct efcp_container *efcpc);
-int	    rmt_destroy(struct rmt *instance);
-int	    rmt_address_set(struct rmt *instance,
-			    address_t address);
-int	    rmt_dt_cons_set(struct rmt *instance,
-			    struct dt_cons *dt_cons);
-int	    rmt_sdup_config_set(struct rmt *instance,
-				struct sdup_config *sdup_conf);
-int	    rmt_config_set(struct rmt *instance,
-			    struct rmt_config *rmt_config);
-int	    rmt_n1port_bind(struct rmt *instance,
-			     port_id_t id,
-			     struct ipcp_instance *n1_ipcp);
-int	    rmt_n1port_unbind(struct rmt *instance,
-			       port_id_t id);
-int	    rmt_pff_add(struct rmt *instance,
-			 struct mod_pff_entry *entry);
-int	    rmt_pff_remove(struct rmt *instance,
-			 struct mod_pff_entry *entry);
-int	    rmt_pff_port_state_change(struct rmt *rmt,
-				      port_id_t	port_id,
-				      bool up);
-int	    rmt_pff_dump(struct rmt *instance,
-			  struct list_head *entries);
-int	    rmt_pff_flush(struct rmt *instance);
-int	    rmt_send(struct rmt *instance,
-		     struct pdu *pdu);
-int	    rmt_send_port_id(struct rmt *instance,
-			      port_id_t id,
-			      struct pdu *pdu);
-int	    rmt_receive(struct rmt *instance,
-			 struct sdu *sdu,
-			 port_id_t from);
-int	    rmt_enable_port_id(struct rmt *instance,
-				port_id_t id);
-int	    rmt_disable_port_id(struct rmt *instance,
-				 port_id_t id);
-int	    rmt_select_policy_set(struct rmt *rmt,
-				  const string_t *path,
-				  const string_t *name);
-int	    rmt_set_policy_set_param(struct rmt *rmt,
-				      const string_t *path,
-				      const string_t *name,
-				      const string_t *value);
-int	    rmt_enable_encryption(struct rmt *instance,
-				   bool	enable_encryption,
-				   bool	enable_decryption,
-				   struct buffer *encrypt_key,
-				   port_id_t port_id);
-struct rmt *rmt_from_component(struct rina_component *component);
+struct rmt	  *rmt_create(struct ipcp_instance *parent,
+			      struct kfa *kfa,
+			      struct efcp_container *efcpc);
+int		   rmt_destroy(struct rmt *instance);
+int		   rmt_address_set(struct rmt *instance,
+				   address_t address);
+int		   rmt_dt_cons_set(struct rmt *instance,
+				   struct dt_cons *dt_cons);
+int		   rmt_sdup_config_set(struct rmt *instance,
+				       struct sdup_config *sdup_conf);
+int		   rmt_config_set(struct rmt *instance,
+				  struct rmt_config *rmt_config);
+struct rmt_config *rmt_config_get(struct rmt *instance);
+int		   rmt_n1port_bind(struct rmt *instance,
+				   port_id_t id,
+				   struct ipcp_instance *n1_ipcp);
+int		   rmt_n1port_unbind(struct rmt *instance,
+				     port_id_t id);
+int		   rmt_pff_add(struct rmt *instance,
+			       struct mod_pff_entry *entry);
+int		   rmt_pff_remove(struct rmt *instance,
+				  struct mod_pff_entry *entry);
+int		   rmt_pff_port_state_change(struct rmt *rmt,
+					     port_id_t	port_id,
+					     bool up);
+int		   rmt_pff_dump(struct rmt *instance,
+				struct list_head *entries);
+int		   rmt_pff_flush(struct rmt *instance);
+int		   rmt_send(struct rmt *instance,
+			    struct pdu *pdu);
+int		   rmt_send_port_id(struct rmt *instance,
+				    port_id_t id,
+				    struct pdu *pdu);
+int		   rmt_receive(struct rmt *instance,
+			       struct sdu *sdu,
+			       port_id_t from);
+int		   rmt_enable_port_id(struct rmt *instance,
+				      port_id_t id);
+int		   rmt_disable_port_id(struct rmt *instance,
+				       port_id_t id);
+int		   rmt_select_policy_set(struct rmt *rmt,
+					 const string_t *path,
+					 const string_t *name);
+int		   rmt_set_policy_set_param(struct rmt *rmt,
+					    const string_t *path,
+					    const string_t *name,
+					    const string_t *value);
+int		   rmt_enable_encryption(struct rmt *instance,
+					 bool	enable_encryption,
+					 bool	enable_decryption,
+					 struct buffer *encrypt_key,
+					 port_id_t port_id);
+struct rmt	  *rmt_from_component(struct rina_component *component);
 
 #endif
