@@ -36,31 +36,24 @@
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
-/* The key in this struct is used to filter by cep_ids, qos_id, address... */
-struct rmt_kqueue {
-	struct rfifo *queue;
-	unsigned int key;
-	unsigned int max_q;
+struct rmt_queue {
+	struct rfifo	 *queue;
+	port_id_t	  pid;
 	struct hlist_node hlist;
-};
-
-struct rmt_qgroup {
-	port_id_t pid;
-	struct hlist_node hlist;
-	DECLARE_HASHTABLE(queues, RMT_PS_HASHSIZE);
 };
 
 struct rmt_queue_set {
-	DECLARE_HASHTABLE(qgroups, RMT_PS_HASHSIZE);
+	DECLARE_HASHTABLE(queues, RMT_PS_HASHSIZE);
 };
 
 struct rmt_ps_default_data {
 	struct rmt_queue_set *outqs;
+	unsigned int max_q;
 };
 
-static struct rmt_kqueue *rmt_kqueue_create(unsigned int key)
+static struct rmt_queue *rmt_queue_create(port_id_t port)
 {
-	struct rmt_kqueue *tmp;
+	struct rmt_queue *tmp;
 
 	tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
 	if (!tmp)
@@ -72,13 +65,13 @@ static struct rmt_kqueue *rmt_kqueue_create(unsigned int key)
 		return NULL;
 	}
 
-	tmp->key = key;
+	tmp->pid = port;
 	INIT_HLIST_NODE(&tmp->hlist);
 
 	return tmp;
 }
 
-static int rmt_kqueue_destroy(struct rmt_kqueue *q)
+static int rmt_queue_destroy(struct rmt_queue *q)
 {
 	if (!q) {
 		LOG_ERR("No RMT Key-queue to destroy...");
@@ -95,74 +88,17 @@ static int rmt_kqueue_destroy(struct rmt_kqueue *q)
 	return 0;
 }
 
-static struct rmt_kqueue *rmt_kqueue_find(struct rmt_qgroup *g,
-					  unsigned int	     key)
+static struct rmt_queue *rmt_queue_find(struct rmt_queue_set *qs,
+					port_id_t port)
 {
-	struct rmt_kqueue *entry;
-	const struct hlist_head *head;
-
-	ASSERT(g);
-
-	head = &g->queues[rmap_hash(g->queues, key)];
-	hlist_for_each_entry(entry, head, hlist)
-		if (entry->key == key)
-			return entry;
-
-	return NULL;
-}
-
-static struct rmt_qgroup *rmt_qgroup_create(port_id_t pid)
-{
-	struct rmt_qgroup *tmp;
-
-	if (!is_port_id_ok(pid)) {
-		LOG_ERR("Could not create qgroup, wrong port id");
-		return NULL;
-	}
-
-	tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
-	if (!tmp)
-		return NULL;
-
-	tmp->pid = pid;
-	hash_init(tmp->queues);
-
-	return tmp;
-}
-
-static int rmt_qgroup_destroy(struct rmt_qgroup *g)
-{
-	struct rmt_kqueue *entry;
-	struct hlist_node *tmp;
-	int		   bucket;
-
-	ASSERT(g);
-	hash_del(&g->hlist);
-
-	hash_for_each_safe(g->queues, bucket, tmp, entry, hlist)
-		if (rmt_kqueue_destroy(entry)) {
-			LOG_ERR("Could not destroy entry %pK", entry);
-			return -1;
-		}
-
-	LOG_DBG("Qgroup for port: %u destroyed...", g->pid);
-	rkfree(g);
-
-	return 0;
-}
-
-static struct rmt_qgroup *rmt_qgroup_find(struct rmt_queue_set *qs,
-					  port_id_t		pid)
-{
-	struct rmt_qgroup *entry;
+	struct rmt_queue *entry;
 	const struct hlist_head *head;
 
 	ASSERT(qs);
 
-	head = &qs->qgroups[rmap_hash(qs->qgroups, pid)];
-
+	head = &qs->queues[rmap_hash(qs->queues, port)];
 	hlist_for_each_entry(entry, head, hlist)
-		if (entry->pid == pid)
+		if (entry->pid == port)
 			return entry;
 
 	return NULL;
@@ -176,21 +112,21 @@ static struct rmt_queue_set *rmt_queue_set_create(void)
 	if (!tmp)
 		return NULL;
 
-	hash_init(tmp->qgroups);
+	hash_init(tmp->queues);
 
 	return tmp;
 }
 
 static int rmt_queue_set_destroy(struct rmt_queue_set *qs)
 {
-	struct rmt_qgroup *entry;
+	struct rmt_queue  *entry;
 	struct hlist_node *tmp;
 	int bucket;
 
 	ASSERT(qs);
 
-	hash_for_each_safe(qs->qgroups, bucket, tmp, entry, hlist)
-		if (rmt_qgroup_destroy(entry)) {
+	hash_for_each_safe(qs->queues, bucket, tmp, entry, hlist)
+		if (rmt_queue_destroy(entry)) {
 			LOG_ERR("Could not destroy entry %pK", entry);
 			return -1;
 		}
@@ -203,8 +139,7 @@ static int rmt_queue_set_destroy(struct rmt_queue_set *qs)
 int default_rmt_scheduling_create_policy_tx(struct rmt_ps      *ps,
 					    struct rmt_n1_port *n1_port)
 {
-	struct rmt_qgroup *qgroup;
-	struct rmt_kqueue *kqueue;
+	struct rmt_queue *queue;
 	struct rmt_ps_default_data *data;
 
 	if (!ps || !n1_port || !ps->priv) {
@@ -214,25 +149,14 @@ int default_rmt_scheduling_create_policy_tx(struct rmt_ps      *ps,
 
 	data = ps->priv;
 
-	qgroup = rmt_qgroup_create(n1_port->port_id);
-	if (!qgroup) {
-		LOG_ERR("Could not create queues group struct for n1_port %u",
+	queue = rmt_queue_create(n1_port->port_id);
+	if (!queue) {
+		LOG_ERR("Could not create queue for n1_port %u",
 			n1_port->port_id);
 		return -1;
 	}
-	hash_add(data->outqs->qgroups, &qgroup->hlist, qgroup->pid);
 
-	kqueue = rmt_kqueue_create(0);
-	if (!kqueue) {
-		LOG_ERR("Could not create kqueue for n1_port %u and key %u",
-			n1_port->port_id, 0);
-		rmt_qgroup_destroy(qgroup);
-		return -1;
-	}
-
-	/* FIXME this is not used in this implementation so far */
-	kqueue->max_q	= 256;
-	hash_add(qgroup->queues, &kqueue->hlist, 0);
+	hash_add(data->outqs->queues, &queue->hlist, n1_port->port_id);
 
 	LOG_DBG("Structures for scheduling policies created...");
 	return 0;
@@ -241,7 +165,7 @@ int default_rmt_scheduling_create_policy_tx(struct rmt_ps      *ps,
 int default_rmt_scheduling_destroy_policy_tx(struct rmt_ps *ps,
 					    struct rmt_n1_port *n1_port)
 {
-	struct rmt_qgroup *qgroup;
+	struct rmt_queue *queue;
 	struct rmt_ps_default_data *data;
 
 	if (!ps || !n1_port || !ps->priv) {
@@ -251,15 +175,15 @@ int default_rmt_scheduling_destroy_policy_tx(struct rmt_ps *ps,
 
 	data = ps->priv;
 
-	qgroup = rmt_qgroup_find(data->outqs, n1_port->port_id);
-	if (!qgroup) {
-		LOG_ERR("Could not find queues group for n1_port %u",
+	queue = rmt_queue_find(data->outqs, n1_port->port_id);
+	if (!queue) {
+		LOG_ERR("Could not find queue for n1_port %u",
 			n1_port->port_id);
 		return -1;
 	}
 
-	hash_del(&qgroup->hlist);
-	rmt_qgroup_destroy(qgroup);
+	hash_del(&queue->hlist);
+	rmt_queue_destroy(queue);
 
 	return 0;
 }
@@ -268,8 +192,7 @@ int default_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *ps,
 					    struct rmt_n1_port *n1_port,
 					    struct pdu *pdu)
 {
-	struct rmt_kqueue *q;
-	struct rmt_qgroup *qg;
+	struct rmt_queue *q;
 	struct rmt_ps_default_data *data = ps->priv;
 
 	if (!ps || !n1_port || !pdu) {
@@ -277,16 +200,9 @@ int default_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *ps,
 		return -1;
 	}
 
-	qg = rmt_qgroup_find(data->outqs, n1_port->port_id);
-	if (!qg) {
-		LOG_ERR("Could not find queue group for n1_port %u",
-			n1_port->port_id);
-		pdu_destroy(pdu);
-		return -1;
-	}
-	q = rmt_kqueue_find(qg, 0);
+	q = rmt_queue_find(data->outqs, n1_port->port_id);
 	if (!q) {
-		LOG_ERR("Could not find queue in the group for n1_port %u",
+		LOG_ERR("Could not find queue for n1_port %u",
 			n1_port->port_id);
 		pdu_destroy(pdu);
 		return -1;
@@ -297,44 +213,10 @@ int default_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *ps,
 	return 0;
 }
 
-int default_rmt_requeue_scheduling_policy_tx(struct rmt_ps *ps,
-					    struct rmt_n1_port *n1_port,
-					    struct pdu *pdu)
-{
-	struct rmt_kqueue *q;
-	struct rmt_qgroup *qg;
-	struct rmt_ps_default_data *data = ps->priv;
-
-	if (!ps || !n1_port || !pdu) {
-		LOG_ERR("Wrong input parameters");
-		return -1;
-	}
-
-	qg = rmt_qgroup_find(data->outqs, n1_port->port_id);
-	if (!qg) {
-		LOG_ERR("Could not find queue group for n1_port %u",
-			n1_port->port_id);
-		pdu_destroy(pdu);
-		return -1;
-	}
-
-	q = rmt_kqueue_find(qg, 0);
-	if (!qg) {
-		LOG_ERR("Could not find queue in the group for n1_port %u",
-			n1_port->port_id);
-		pdu_destroy(pdu);
-		return -1;
-	}
-
-	rfifo_head_push_ni(q->queue, pdu);
-	return 0;
-}
-
 struct pdu *default_rmt_next_scheduled_policy_tx(struct rmt_ps *ps,
 						struct rmt_n1_port *n1_port)
 {
-	struct rmt_kqueue *q;
-	struct rmt_qgroup *qg;
+	struct rmt_queue *q;
 	struct rmt_ps_default_data *data = ps->priv;
 	struct pdu *ret_pdu;
 
@@ -344,16 +226,9 @@ struct pdu *default_rmt_next_scheduled_policy_tx(struct rmt_ps *ps,
 	}
 
 	/* NOTE: The policy is called with the n1_port lock taken */
-	qg = rmt_qgroup_find(data->outqs, n1_port->port_id);
-	if (!qg) {
-		LOG_ERR("Could not find queue group for n1_port %u",
-			n1_port->port_id);
-		return NULL;
-	}
-
-	q = rmt_kqueue_find(qg, 0);
+	q = rmt_queue_find(data->outqs, n1_port->port_id);
 	if (!q) {
-		LOG_ERR("Could not find queue in the group for n1_port %u",
+		LOG_ERR("Could not find queue for n1_port %u",
 			n1_port->port_id);
 		return NULL;
 	}
@@ -370,17 +245,7 @@ struct pdu *default_rmt_next_scheduled_policy_tx(struct rmt_ps *ps,
 int default_rmt_scheduling_policy_rx(struct rmt_ps *ps,
 				    struct rmt_n1_port *n1_port,
 				    struct sdu *sdu)
-{
-/*
-	struct rmt_ps_default_data * data = ps->priv;
-	atomic_inc(&in_n1_port->n_sdus);
-
-	tasklet_hi_schedule(&instance->ingress.ingress_tasklet);
-
-	LOG_DBG("RMT tasklet scheduled");
-*/
-	return 0;
-}
+{ return 0; }
 
 int rmt_ps_default_set_policy_set_param(struct ps_base *bps,
 				       const char *name,
@@ -446,7 +311,7 @@ static struct ps_base *rmt_ps_default_create(struct rina_component *component)
 	ps->rmt_enqueue_scheduling_policy_tx =
 		default_rmt_enqueue_scheduling_policy_tx;
 	ps->rmt_requeue_scheduling_policy_tx =
-		default_rmt_requeue_scheduling_policy_tx;
+		default_rmt_enqueue_scheduling_policy_tx;
 	ps->rmt_scheduling_policy_rx =
 		default_rmt_scheduling_policy_rx;
 	ps->rmt_scheduling_create_policy_tx  =
