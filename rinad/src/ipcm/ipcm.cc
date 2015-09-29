@@ -31,6 +31,8 @@
 #include <sys/wait.h>
 #include <dirent.h>
 
+#include <google/protobuf/stubs/common.h>
+
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
 #include <librina/plugin-info.h>
@@ -1786,6 +1788,7 @@ void IPCManager_::io_loop(){
 
 	//TODO: probably move this to a private method if it starts to grow
 	LOG_DBG("Stopping I/O loop...");
+	google::protobuf::ShutdownProtobufLibrary();
 
 }
 
