@@ -662,6 +662,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
 
         if (rmt_config_set(data-> rmt, rmt_config)) {
                 LOG_ERR("Could not set RMT conf");
+		return -1;
         }
 
         return 0;

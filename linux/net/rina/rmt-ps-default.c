@@ -33,7 +33,9 @@
 #include "rmt-ps.h"
 #include "rmt.h"
 #include "debug.h"
+#include "policies.h"
 
+#define DEFAULT_Q_MAX 1000
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
 struct rmt_queue {
@@ -48,7 +50,7 @@ struct rmt_queue_set {
 
 struct rmt_ps_default_data {
 	struct rmt_queue_set *outqs;
-	unsigned int max_q;
+	unsigned int q_max;
 };
 
 static struct rmt_queue *rmt_queue_create(port_id_t port)
@@ -136,8 +138,8 @@ static int rmt_queue_set_destroy(struct rmt_queue_set *qs)
 	return 0;
 }
 
-int default_rmt_scheduling_create_policy_tx(struct rmt_ps      *ps,
-					    struct rmt_n1_port *n1_port)
+static int default_rmt_scheduling_create_policy_tx(struct rmt_ps      *ps,
+						   struct rmt_n1_port *n1_port)
 {
 	struct rmt_queue *queue;
 	struct rmt_ps_default_data *data;
@@ -162,8 +164,8 @@ int default_rmt_scheduling_create_policy_tx(struct rmt_ps      *ps,
 	return 0;
 }
 
-int default_rmt_scheduling_destroy_policy_tx(struct rmt_ps *ps,
-					    struct rmt_n1_port *n1_port)
+static int default_rmt_scheduling_destroy_policy_tx(struct rmt_ps      *ps,
+						    struct rmt_n1_port *n1_port)
 {
 	struct rmt_queue *queue;
 	struct rmt_ps_default_data *data;
@@ -242,16 +244,19 @@ struct pdu *default_rmt_next_scheduled_policy_tx(struct rmt_ps *ps,
 	return ret_pdu;
 }
 
-int default_rmt_scheduling_policy_rx(struct rmt_ps *ps,
-				    struct rmt_n1_port *n1_port,
-				    struct sdu *sdu)
+static int default_rmt_scheduling_policy_rx(struct rmt_ps *ps,
+					    struct rmt_n1_port *n1_port,
+					    struct sdu *sdu)
 { return 0; }
 
-int rmt_ps_default_set_policy_set_param(struct ps_base *bps,
-				       const char *name,
-				       const char *value)
+static int rmt_ps_default_set_policy_set_param(struct ps_base *bps,
+					       const char *name,
+					       const char *value)
 {
 	struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
+	struct rmt_ps_default_data *data = ps->priv;
+	int bool_value;
+	int ret;
 
 	(void) ps;
 
@@ -265,19 +270,27 @@ int rmt_ps_default_set_policy_set_param(struct ps_base *bps,
 		return -1;
 	}
 
-	LOG_ERR("No such parameter to set");
+	if (strcmp(name, "q_max") == 0) {
+		ret = kstrtoint(value, 10, &bool_value);
+		if (!ret)
+			data->q_max = bool_value;
+	}
 
-	return -1;
+	return 0;
 }
 
->>>>>>> kernel:rmt: rmt-ps-common removed
 static struct ps_base *rmt_ps_default_create(struct rina_component *component)
 {
 	struct rmt *rmt;
 	struct rmt_ps *ps;
 	struct rmt_ps_default_data *data;
+	struct rmt_config *rmt_cfg;
+	struct policy_parm *parm;
 
 	rmt = rmt_from_component(component);
+	if(!rmt)
+		return NULL;
+
 	ps = rkmalloc(sizeof(*ps), GFP_KERNEL);
 	if (!ps)
 		return NULL;
@@ -296,10 +309,26 @@ static struct ps_base *rmt_ps_default_create(struct rina_component *component)
 		return NULL;
 	}
 
-	ps->priv = data;
-
 	ps->base.set_policy_set_param = NULL; /* default */
 	ps->dm = rmt;
+	ps->priv = data;
+
+	rmt_cfg = rmt_config_get(rmt);
+	if(!rmt_cfg) {
+		rmt_queue_set_destroy(data->outqs);
+		rkfree(data);
+		rkfree(ps);
+		return NULL;
+	}
+
+	parm = policy_param_find(rmt_cfg->policy_set, "q_max");
+	if (!parm) {
+		LOG_WARN("No PS param q_max");
+		data->q_max = DEFAULT_Q_MAX;
+	} else
+		rmt_ps_default_set_policy_set_param(&ps->base,
+						    policy_param_name(parm),
+						    policy_param_value(parm));
 
 	ps->max_q_policy_tx = NULL;
 	ps->max_q_policy_rx = NULL;

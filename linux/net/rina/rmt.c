@@ -1545,13 +1545,6 @@ struct rmt *rmt_create(struct ipcp_instance *parent,
 		     send_worker,
 		     (unsigned long) tmp);
 
-	/* Try to select the default policy set factory. */
-	if (rmt_select_policy_set(tmp, "", RINA_PS_DEFAULT_NAME)) {
-		LOG_ERR("Could not load RMT PS");
-		rmt_destroy(tmp);
-		return NULL;
-	}
-
 	LOG_DBG("Instance %pK initialized successfully", tmp);
 	return tmp;
 }
