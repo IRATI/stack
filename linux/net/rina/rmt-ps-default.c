@@ -34,6 +34,7 @@
 #include "rmt.h"
 #include "debug.h"
 #include "policies.h"
+#include "rmt-ps-default.h"
 
 #define DEFAULT_Q_MAX 1000
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
@@ -138,8 +139,8 @@ static int rmt_queue_set_destroy(struct rmt_queue_set *qs)
 	return 0;
 }
 
-static int default_rmt_scheduling_create_policy_tx(struct rmt_ps      *ps,
-						   struct rmt_n1_port *n1_port)
+int default_rmt_q_create_policy(struct rmt_ps      *ps,
+			        struct rmt_n1_port *n1_port)
 {
 	struct rmt_queue *queue;
 	struct rmt_ps_default_data *data;
@@ -163,9 +164,10 @@ static int default_rmt_scheduling_create_policy_tx(struct rmt_ps      *ps,
 	LOG_DBG("Structures for scheduling policies created...");
 	return 0;
 }
+EXPORT_SYMBOL(default_rmt_q_create_policy);
 
-static int default_rmt_scheduling_destroy_policy_tx(struct rmt_ps      *ps,
-						    struct rmt_n1_port *n1_port)
+int default_rmt_q_destroy_policy(struct rmt_ps      *ps,
+				 struct rmt_n1_port *n1_port)
 {
 	struct rmt_queue *queue;
 	struct rmt_ps_default_data *data;
@@ -189,17 +191,18 @@ static int default_rmt_scheduling_destroy_policy_tx(struct rmt_ps      *ps,
 
 	return 0;
 }
+EXPORT_SYMBOL(default_rmt_q_destroy_policy);
 
-int default_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *ps,
-					    struct rmt_n1_port *n1_port,
-					    struct pdu *pdu)
+int default_rmt_enqueue_policy(struct rmt_ps	  *ps,
+			       struct rmt_n1_port *n1_port,
+			       struct pdu	  *pdu)
 {
 	struct rmt_queue *q;
 	struct rmt_ps_default_data *data = ps->priv;
 
 	if (!ps || !n1_port || !pdu) {
 		LOG_ERR("Wrong input parameters");
-		return -1;
+		return RMT_PS_ENQ_ERR;
 	}
 
 	q = rmt_queue_find(data->outqs, n1_port->port_id);
@@ -207,16 +210,25 @@ int default_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *ps,
 		LOG_ERR("Could not find queue for n1_port %u",
 			n1_port->port_id);
 		pdu_destroy(pdu);
-		return -1;
+		return RMT_PS_ENQ_ERR;
 	}
 
-	rfifo_push_ni(q->queue, pdu);
+	if (n1_port->state == N1_PORT_STATE_DISABLED	||
+	    !rfifo_is_empty(q->queue)) {
+		if (rfifo_length(q->queue) >= data->q_max) {
+			pdu_destroy(pdu);
+			return RMT_PS_ENQ_DROP;
+		}
+		rfifo_push_ni(q->queue, pdu);
+		return RMT_PS_ENQ_SCHED;
+	}
 
-	return 0;
+	return RMT_PS_ENQ_DSEND;
 }
+EXPORT_SYMBOL(default_rmt_enqueue_policy);
 
-struct pdu *default_rmt_next_scheduled_policy_tx(struct rmt_ps *ps,
-						struct rmt_n1_port *n1_port)
+struct pdu *default_rmt_dequeue_policy(struct rmt_ps	  *ps,
+				       struct rmt_n1_port *n1_port)
 {
 	struct rmt_queue *q;
 	struct rmt_ps_default_data *data = ps->priv;
@@ -227,7 +239,12 @@ struct pdu *default_rmt_next_scheduled_policy_tx(struct rmt_ps *ps,
 		return NULL;
 	}
 
-	/* NOTE: The policy is called with the n1_port lock taken */
+	if (n1_port->pending_pdu) {
+		ret_pdu = n1_port->pending_pdu;
+		n1_port->pending_pdu = NULL;
+		return ret_pdu;
+	}
+
 	q = rmt_queue_find(data->outqs, n1_port->port_id);
 	if (!q) {
 		LOG_ERR("Could not find queue for n1_port %u",
@@ -243,11 +260,23 @@ struct pdu *default_rmt_next_scheduled_policy_tx(struct rmt_ps *ps,
 
 	return ret_pdu;
 }
+EXPORT_SYMBOL(default_rmt_dequeue_policy);
 
-static int default_rmt_scheduling_policy_rx(struct rmt_ps *ps,
-					    struct rmt_n1_port *n1_port,
-					    struct sdu *sdu)
-{ return 0; }
+bool default_rmt_needs_sched_policy(struct rmt_ps      *ps,
+				    struct rmt_n1_port *n1_port)
+{
+	struct rmt_queue *q;
+	struct rmt_ps_default_data *data = ps->priv;
+
+	q = rmt_queue_find(data->outqs, n1_port->port_id);
+	if (!q) {
+		LOG_ERR("Could not find queue for n1_port %u",
+			n1_port->port_id);
+		return false;
+	}
+	return !rfifo_is_empty(q->queue);
+}
+EXPORT_SYMBOL(default_rmt_needs_sched_policy);
 
 static int rmt_ps_default_set_policy_set_param(struct ps_base *bps,
 					       const char *name,
@@ -330,23 +359,11 @@ static struct ps_base *rmt_ps_default_create(struct rina_component *component)
 						    policy_param_name(parm),
 						    policy_param_value(parm));
 
-	ps->max_q_policy_tx = NULL;
-	ps->max_q_policy_rx = NULL;
-	ps->rmt_q_monitor_policy_tx_enq = NULL;
-	ps->rmt_q_monitor_policy_tx_deq = NULL;
-	ps->rmt_q_monitor_policy_rx = NULL;
-	ps->rmt_next_scheduled_policy_tx =
-		default_rmt_next_scheduled_policy_tx;
-	ps->rmt_enqueue_scheduling_policy_tx =
-		default_rmt_enqueue_scheduling_policy_tx;
-	ps->rmt_requeue_scheduling_policy_tx =
-		default_rmt_enqueue_scheduling_policy_tx;
-	ps->rmt_scheduling_policy_rx =
-		default_rmt_scheduling_policy_rx;
-	ps->rmt_scheduling_create_policy_tx  =
-		default_rmt_scheduling_create_policy_tx;
-	ps->rmt_scheduling_destroy_policy_tx =
-		default_rmt_scheduling_destroy_policy_tx;
+	ps->rmt_dequeue_policy = default_rmt_dequeue_policy;
+	ps->rmt_enqueue_policy = default_rmt_enqueue_policy;
+	ps->rmt_q_create_policy = default_rmt_q_create_policy;
+	ps->rmt_q_destroy_policy = default_rmt_q_destroy_policy;
+	ps->rmt_needs_sched_policy = default_rmt_needs_sched_policy;
 
 	return &ps->base;
 }

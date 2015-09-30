@@ -64,15 +64,15 @@ enum flow_state {
 };
 
 struct rmt_n1_port {
-	spinlock_t lock;
-	port_id_t port_id;
-	struct ipcp_instance *n1_ipcp;
-	struct hlist_node hlist;
-	enum flow_state	state;
-	atomic_t n_sdus;
+	spinlock_t		lock;
+	port_id_t		port_id;
+	struct ipcp_instance	*n1_ipcp;
+	struct hlist_node	hlist;
+	enum flow_state		state;
 	struct dup_config_entry *dup_config;
 	struct crypto_blkcipher *blkcipher;
-	atomic_t pending_ops;
+	atomic_t		pending_ops;
+	struct pdu		*pending_pdu;
 };
 
 struct rmt	  *rmt_create(struct ipcp_instance *parent,
