@@ -75,7 +75,6 @@ get_factories(std::vector<struct rina::PsFactory>& factories)
         struct rina::PsFactory pduft_gen_factory;
         struct rina::PsFactory et_factory;
         struct rina::PsFactory rc_factory;
-        int ret;
 
         sm_factory.info.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;
         sm_factory.info.app_entity = rina::ApplicationEntity::SECURITY_MANAGER_AE_NAME;
@@ -107,23 +106,12 @@ get_factories(std::vector<struct rina::PsFactory>& factories)
         fa_factory.destroy = destroyFlowAllocatorPs;
 	factories.push_back(fa_factory);
 
-        ret = ipc_process->psFactoryPublish(fa_factory);
-        if (ret) {
-                return ret;
-        }
-
-        farr_factory.plugin_name = plugin_name;
         farr_factory.info.name = "RoundRobin";
         farr_factory.info.app_entity = IFlowAllocator::FLOW_ALLOCATOR_AE_NAME;
         farr_factory.create = createFlowAllocatorRoundRobinPs;
         farr_factory.destroy = destroyFlowAllocatorRoundRobinPs;
+        factories.push_back(farr_factory);
 
-        ret = ipc_process->psFactoryPublish(farr_factory);
-        if (ret) {
-                return ret;
-        }
-
-        nsm_factory.plugin_name = plugin_name;
         nsm_factory.info.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;
         nsm_factory.info.app_entity = INamespaceManager::NAMESPACE_MANAGER_AE_NAME;
         nsm_factory.create = createNamespaceManagerPs;

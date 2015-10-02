@@ -36,11 +36,10 @@ public:
                                  const std::string& value);
         virtual ~FlowAllocatorPs() {}
 
-protected:
+private:
         // Data model of the security manager component.
         IFlowAllocator * dm;
 
-private:
         rina::QoSCube * selectQoSCube(const rina::FlowSpecification& flowSpec);
 };
 
@@ -142,15 +141,19 @@ int FlowAllocatorPs::set_policy_set_param(const std::string& name,
         return -1;
 }
 
-class FlowAllocatorRoundRobinPs: public FlowAllocatorPs {
+class FlowAllocatorRoundRobinPs: public IFlowAllocatorPs {
 public:
 	FlowAllocatorRoundRobinPs(IFlowAllocator * dm_) :
-		FlowAllocatorPs(dm), last_qos_index(0) {};
+		dm(dm_), last_qos_index(0) {};
         Flow *newFlowRequest(IPCProcess * ipc_process,
                              const rina::FlowRequestEvent& event);
+        int set_policy_set_param(const std::string& name,
+        			 const std::string& value);
         virtual ~FlowAllocatorRoundRobinPs() {}
 
 private:
+        // Data model of the security manager component.
+        IFlowAllocator * dm;
         int last_qos_index;
 };
 
@@ -182,6 +185,8 @@ Flow * FlowAllocatorRoundRobinPs::newFlowRequest(IPCProcess * ipc_process,
 			last_qos_index = count;
 		}
 	}
+
+	LOG_IPCP_DBG("Selected qos cube with name %s", qosCube->get_name().c_str());
 
 	flow = dm->createFlow();
 	flow->destination_naming_info = event.remoteApplicationName;
@@ -216,16 +221,24 @@ Flow * FlowAllocatorRoundRobinPs::newFlowRequest(IPCProcess * ipc_process,
 	return flow;
 }
 
+int FlowAllocatorRoundRobinPs::set_policy_set_param(const std::string& name,
+                                            	    const std::string& value)
+{
+        LOG_IPCP_DBG("No policy-set-specific parameters to set (%s, %s)",
+                        name.c_str(), value.c_str());
+        return -1;
+}
+
 extern "C" rina::IPolicySet *
 createFlowAllocatorPs(rina::ApplicationEntity * ctx)
 {
-        IFlowAllocator * sm = dynamic_cast<IFlowAllocator *>(ctx);
+        IFlowAllocator * fa = dynamic_cast<IFlowAllocator *>(ctx);
 
-        if (!sm) {
+        if (!fa) {
                 return NULL;
         }
 
-        return new FlowAllocatorPs(sm);
+        return new FlowAllocatorPs(fa);
 }
 
 extern "C" void
@@ -239,13 +252,13 @@ destroyFlowAllocatorPs(rina::IPolicySet * ps)
 extern "C" rina::IPolicySet *
 createFlowAllocatorRoundRobinPs(rina::ApplicationEntity * ctx)
 {
-        IFlowAllocator * sm = dynamic_cast<IFlowAllocator *>(ctx);
+        IFlowAllocator * fa = dynamic_cast<IFlowAllocator *>(ctx);
 
-        if (!sm) {
+        if (!fa) {
                 return NULL;
         }
 
-        return new FlowAllocatorRoundRobinPs(sm);
+        return new FlowAllocatorRoundRobinPs(fa);
 }
 
 extern "C" void
