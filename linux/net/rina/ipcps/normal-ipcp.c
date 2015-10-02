@@ -652,8 +652,10 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         	rmt_sdup_config_set(data->rmt, sdup_config);
         }
 
-        if (rmt_address_set(data->rmt, data->address))
+        if (rmt_address_set(data->rmt, data->address)) {
+		LOG_ERR("Could not set local Address to RMT");
                 return -1;
+	}
 
         if (rmt_dt_cons_set(data->rmt, dt_cons_dup(efcp_config->dt_cons))) {
                 LOG_ERR("Could not set dt_cons in RMT");

@@ -605,16 +605,13 @@ int rmt_config_set(struct rmt	     *instance,
 	rmt_ps_name = policy_name(rmt_config->policy_set);
 	pff_ps_name = policy_name(rmt_config->pff_conf->policy_set);
 
-	LOG_DBG("RMT PSs: %s, %s", rmt_ps_name, pff_ps_name);
-	if (strcmp(rmt_ps_name, RINA_PS_DEFAULT_NAME))
-		if (rmt_select_policy_set(instance, "", rmt_ps_name))
-			LOG_ERR("Could not set policy set %s for RMT",
-				rmt_ps_name);
+	LOG_INFO("RMT PS to be selected: %s", rmt_ps_name);
+	if (rmt_select_policy_set(instance, "", rmt_ps_name))
+		LOG_ERR("Could not set policy set %s for RMT", rmt_ps_name);
 
-	if (strcmp(pff_ps_name, RINA_PS_DEFAULT_NAME))
-		if (pff_select_policy_set(instance->pff, "", pff_ps_name))
-			LOG_ERR("Could not set policy set %s for PFF",
-				pff_ps_name);
+	LOG_INFO("PFF PS to be selected: %s", pff_ps_name);
+	if (pff_select_policy_set(instance->pff, "", pff_ps_name))
+		LOG_ERR("Could not set policy set %s for PFF", pff_ps_name);
 
 	rmt_config_destroy(rmt_config);
 	instance->rmt_cfg = NULL;
@@ -1213,12 +1210,18 @@ int rmt_n1port_bind(struct rmt *instance,
 	ps = container_of(rcu_dereference(instance->base.ps),
 			  struct rmt_ps,
 			  base);
-	if (ps && ps->rmt_q_create_policy)
-		if (ps->rmt_q_create_policy(ps, tmp)) {
-			LOG_ERR("Cannot create structs for scheduling policy");
-			n1_port_destroy(tmp);
-			return -1;
-		}
+	if (!ps || !ps->rmt_q_create_policy) {
+		rcu_read_unlock();
+		LOG_ERR("No PS in the RMT, can't bind");
+		return -1;
+	}
+
+	if (ps->rmt_q_create_policy(ps, tmp)) {
+		rcu_read_unlock();
+		LOG_ERR("Cannot create structs for scheduling policy");
+		n1_port_destroy(tmp);
+		return -1;
+	}
 	rcu_read_unlock();
 
 	hash_add(instance->n1_ports->n1_ports, &tmp->hlist, id);
