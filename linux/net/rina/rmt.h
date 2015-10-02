@@ -71,7 +71,7 @@ struct rmt_n1_port {
 	enum flow_state		state;
 	struct dup_config_entry *dup_config;
 	struct crypto_blkcipher *blkcipher;
-	atomic_t		pending_ops;
+	atomic_t		refs_c;
 	struct pdu		*pending_pdu;
 };
 

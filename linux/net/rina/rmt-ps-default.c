@@ -214,6 +214,7 @@ int default_rmt_enqueue_policy(struct rmt_ps	  *ps,
 	}
 
 	if (n1_port->state == N1_PORT_STATE_DISABLED	||
+	    n1_port->pending_pdu			||
 	    !rfifo_is_empty(q->queue)) {
 		if (rfifo_length(q->queue) >= data->q_max) {
 			pdu_destroy(pdu);
@@ -267,6 +268,9 @@ bool default_rmt_needs_sched_policy(struct rmt_ps      *ps,
 {
 	struct rmt_queue *q;
 	struct rmt_ps_default_data *data = ps->priv;
+
+	if (n1_port->pending_pdu)
+		return true;
 
 	q = rmt_queue_find(data->outqs, n1_port->port_id);
 	if (!q) {
