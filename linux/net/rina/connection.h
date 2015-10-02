@@ -26,7 +26,6 @@
 #include <linux/uaccess.h>
 
 #include "common.h"
-#include "qos.h"
 
 struct connection;
 
