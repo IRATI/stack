@@ -834,8 +834,9 @@ int getRoutingTable_MultipathGraphRoutesTo4_2() {
 	*      \               /
 	*          node3
 	*/
-
+	
 	std::list<rinad::FlowStateObject *> objects;
+
 	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
 	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, true, 1, 1);
 	rinad::FlowStateObject fso3 = rinad::FlowStateObject(1, 3, 1, true, 1, 1);
@@ -867,11 +868,117 @@ int getRoutingTable_MultipathGraphRoutesTo4_2() {
 
 	std::list<rina::RoutingTableEntry *>::iterator it;
 	for (it = rtable.begin(); it != rtable.end(); ++it) {
-		if ((*it)->address == 4) {
-			if ((*it)->nextHopAddresses.size() != 2) {
+		const rina::RoutingTableEntry& e = **it;
+		if (e.address == 4) {
+			if (e.nextHopAddresses.size() != 2) {
 				result = -1;
 			}
 		}
+		
+		std::cout << "To address: " << e.address << ", ";
+		std::cout << "Next hops: ";
+
+		for (std::list<rina::NHopAltList>::const_iterator
+			altl = e.nextHopAddresses.begin();
+				altl != e.nextHopAddresses.end(); altl++) {
+			
+			std::cout << "[";
+			for (std::list<unsigned int>::const_iterator
+				lit = altl->alts.begin();
+					lit != altl->alts.end(); lit++) {
+				std::cout << *lit;
+			}
+			std::cout << "] ";
+	
+		}
+		std::cout << std::endl;
+	}
+
+	delete routingAlgorithm;
+	return result;
+}
+
+int getRoutingTable_MultipathGraphRoutesTest() {
+	int result = 0;
+
+	/*         -- node2 --
+	*      /2      |       \1
+	* node1        |1         node4
+	*      \1      |       /2
+	*     |    -- node3 --   |
+	*      \1	       /2
+	*	   -- node5 --
+	*/
+
+	std::list<rinad::FlowStateObject *> objects;
+	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 2, true, 1, 1);
+	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 2, true, 1, 1);
+	rinad::FlowStateObject fso3 = rinad::FlowStateObject(1, 3, 1, true, 1, 1);
+	rinad::FlowStateObject fso4 = rinad::FlowStateObject(3, 1, 1, true, 1, 1);
+	rinad::FlowStateObject fso5 = rinad::FlowStateObject(2, 3, 1, true, 1, 1);
+	rinad::FlowStateObject fso6 = rinad::FlowStateObject(3, 2, 1, true, 1, 1);
+	rinad::FlowStateObject fso7 = rinad::FlowStateObject(4, 2, 1, true, 1, 1);
+	rinad::FlowStateObject fso8 = rinad::FlowStateObject(2, 4, 1, true, 1, 1);
+	rinad::FlowStateObject fso9 = rinad::FlowStateObject(4, 3, 2, true, 1, 1);
+	rinad::FlowStateObject fso10 = rinad::FlowStateObject(3, 4, 2, true, 1, 1);
+	rinad::FlowStateObject fso11 = rinad::FlowStateObject(1, 5, 1, true, 1, 1);
+	rinad::FlowStateObject fso12 = rinad::FlowStateObject(5, 4, 2, true, 1, 1);
+	rinad::FlowStateObject fso13 = rinad::FlowStateObject(5, 1, 1, true, 1, 1);
+	rinad::FlowStateObject fso14 = rinad::FlowStateObject(4, 5, 2, true, 1, 1);
+	objects.push_back(&fso1);
+	objects.push_back(&fso2);
+	objects.push_back(&fso3);
+	objects.push_back(&fso4);
+	objects.push_back(&fso5);
+	objects.push_back(&fso6);
+	objects.push_back(&fso7);
+	objects.push_back(&fso8);
+	objects.push_back(&fso9);
+	objects.push_back(&fso10);
+	objects.push_back(&fso11);
+	objects.push_back(&fso12);
+	objects.push_back(&fso13);
+	objects.push_back(&fso14);
+
+	rinad::IRoutingAlgorithm * routingAlgorithm =
+	    new rinad::ECMPDijkstraAlgorithm();
+
+	rinad::Graph graph(objects);
+
+	std::list<rina::RoutingTableEntry *> rtable =
+	    routingAlgorithm->computeRoutingTable(graph, objects, 1);
+
+
+	if (rtable.size() != 4) {
+		result = -1;
+	}
+
+	std::list<rina::RoutingTableEntry *>::iterator it;
+	for (it = rtable.begin(); it != rtable.end(); ++it) {
+		const rina::RoutingTableEntry& e = **it;
+		if (e.address == 4) {
+		    if (e.nextHopAddresses.size() != 3) {
+			result = -1;
+		    }
+		}
+	
+		std::cout << "To address: " << e.address << ", ";
+		std::cout << "Next hops: ";
+		
+		for (std::list<rina::NHopAltList>::const_iterator
+			altl = e.nextHopAddresses.begin();
+				altl != e.nextHopAddresses.end(); altl++) {
+			
+			std::cout << "[";
+			for (std::list<unsigned int>::const_iterator
+				lit = altl->alts.begin();
+					lit != altl->alts.end(); lit++) {
+				std::cout << *lit;
+			}
+			std::cout << "] ";
+	
+		}
+		std::cout << std::endl;
 	}
 
 	delete routingAlgorithm;
@@ -895,13 +1002,13 @@ int test_mp_dijkstra() {
 //	}
 //	LOG_IPCP_INFO("getRoutingTable_MultipathGraphCost2 test passed");
 //
-//	result = getRoutingTable_MultipathGraphRoutesTest();
-//	if (result < 0) {
-//		LOG_IPCP_ERR("getRoutingTable_MultipathGraphMultipleLinkCosts test failed");
-//		return result;
-//	}
-//	LOG_IPCP_INFO("getRoutingTable_MultipathGraphMultipleLinkCosts test passed");
-//	return result;
+	result = getRoutingTable_MultipathGraphRoutesTest();
+	if (result < 0) {
+		LOG_IPCP_ERR("getRoutingTable_MultipathGraphMultipleLinkCosts test failed");
+		return result;
+	}
+	LOG_IPCP_INFO("getRoutingTable_MultipathGraphMultipleLinkCosts test passed");
+	return result;
 }
 
 int main()
