@@ -1122,13 +1122,7 @@ struct pdu * pdu_deserialize_ni(const struct serdes * instance,
 { return pdu_deserialize_gfp(GFP_ATOMIC, instance, pdu, dup_conf, blkcipher); }
 EXPORT_SYMBOL(pdu_deserialize_ni);
 
-// Hard-coded to avoid inclusion hell!
-// Is to twisted!!! to get these parameters from dtp or where dt_cons is not
-// specified. And no... just including ipcp-instances.h does not work!
-// Lost of "warning its scope is only this definition or declaration, which is
-// probably not what you want" are generated, so i leave this to someone which
-// understand better IRATI. <_<
-//
+// Kewin: Fix my hardcoded crap.
 int serdes_pci_size(pdu_type_t type) {
 	//struct dt_conf * dtc = s->dt_cons;
 	int seqn = 4;
