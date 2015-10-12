@@ -154,7 +154,7 @@ static const unsigned int out_sidetone_tlv[] = {
 static int wm899x_outpga_put_volsw_vu(struct snd_kcontrol *kcontrol,
 				      struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	int reg = kcontrol->private_value & 0xff;
 	int ret;
 	u16 val;
@@ -382,13 +382,14 @@ static const struct snd_kcontrol_new wm8991_snd_controls[] = {
 static int outmixer_event(struct snd_soc_dapm_widget *w,
 			  struct snd_kcontrol *kcontrol, int event)
 {
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	u32 reg_shift = kcontrol->private_value & 0xfff;
 	int ret = 0;
 	u16 reg;
 
 	switch (reg_shift) {
 	case WM8991_SPEAKER_MIXER | (WM8991_LDSPK_BIT << 8):
-		reg = snd_soc_read(w->codec, WM8991_OUTPUT_MIXER1);
+		reg = snd_soc_read(codec, WM8991_OUTPUT_MIXER1);
 		if (reg & WM8991_LDLO) {
 			printk(KERN_WARNING
 			       "Cannot set as Output Mixer 1 LDLO Set\n");
@@ -397,7 +398,7 @@ static int outmixer_event(struct snd_soc_dapm_widget *w,
 		break;
 
 	case WM8991_SPEAKER_MIXER | (WM8991_RDSPK_BIT << 8):
-		reg = snd_soc_read(w->codec, WM8991_OUTPUT_MIXER2);
+		reg = snd_soc_read(codec, WM8991_OUTPUT_MIXER2);
 		if (reg & WM8991_RDRO) {
 			printk(KERN_WARNING
 			       "Cannot set as Output Mixer 2 RDRO Set\n");
@@ -406,7 +407,7 @@ static int outmixer_event(struct snd_soc_dapm_widget *w,
 		break;
 
 	case WM8991_OUTPUT_MIXER1 | (WM8991_LDLO_BIT << 8):
-		reg = snd_soc_read(w->codec, WM8991_SPEAKER_MIXER);
+		reg = snd_soc_read(codec, WM8991_SPEAKER_MIXER);
 		if (reg & WM8991_LDSPK) {
 			printk(KERN_WARNING
 			       "Cannot set as Speaker Mixer LDSPK Set\n");
@@ -415,7 +416,7 @@ static int outmixer_event(struct snd_soc_dapm_widget *w,
 		break;
 
 	case WM8991_OUTPUT_MIXER2 | (WM8991_RDRO_BIT << 8):
-		reg = snd_soc_read(w->codec, WM8991_SPEAKER_MIXER);
+		reg = snd_soc_read(codec, WM8991_SPEAKER_MIXER);
 		if (reg & WM8991_RDSPK) {
 			printk(KERN_WARNING
 			       "Cannot set as Speaker Mixer RDSPK Set\n");
@@ -1081,16 +1082,16 @@ static int wm8991_hw_params(struct snd_pcm_substream *substream,
 
 	audio1 &= ~WM8991_AIF_WL_MASK;
 	/* bit size */
-	switch (params_format(params)) {
-	case SNDRV_PCM_FORMAT_S16_LE:
+	switch (params_width(params)) {
+	case 16:
 		break;
-	case SNDRV_PCM_FORMAT_S20_3LE:
+	case 20:
 		audio1 |= WM8991_AIF_WL_20BITS;
 		break;
-	case SNDRV_PCM_FORMAT_S24_LE:
+	case 24:
 		audio1 |= WM8991_AIF_WL_24BITS;
 		break;
-	case SNDRV_PCM_FORMAT_S32_LE:
+	case 32:
 		audio1 |= WM8991_AIF_WL_32BITS;
 		break;
 	}
@@ -1227,32 +1228,6 @@ static int wm8991_set_bias_level(struct snd_soc_codec *codec,
 	return 0;
 }
 
-static int wm8991_suspend(struct snd_soc_codec *codec)
-{
-	wm8991_set_bias_level(codec, SND_SOC_BIAS_OFF);
-	return 0;
-}
-
-static int wm8991_resume(struct snd_soc_codec *codec)
-{
-	wm8991_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
-	return 0;
-}
-
-/* power down chip */
-static int wm8991_remove(struct snd_soc_codec *codec)
-{
-	wm8991_set_bias_level(codec, SND_SOC_BIAS_OFF);
-	return 0;
-}
-
-static int wm8991_probe(struct snd_soc_codec *codec)
-{
-	wm8991_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
-
-	return 0;
-}
-
 #define WM8991_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S20_3LE |\
 			SNDRV_PCM_FMTBIT_S24_LE)
 
@@ -1293,11 +1268,9 @@ static struct snd_soc_dai_driver wm8991_dai = {
 };
 
 static struct snd_soc_codec_driver soc_codec_dev_wm8991 = {
-	.probe = wm8991_probe,
-	.remove = wm8991_remove,
-	.suspend = wm8991_suspend,
-	.resume = wm8991_resume,
 	.set_bias_level = wm8991_set_bias_level,
+	.suspend_bias_off = true,
+
 	.controls = wm8991_snd_controls,
 	.num_controls = ARRAY_SIZE(wm8991_snd_controls),
 	.dapm_widgets = wm8991_dapm_widgets,

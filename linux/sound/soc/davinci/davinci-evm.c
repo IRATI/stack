@@ -14,7 +14,6 @@
 #include <linux/timer.h>
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
-#include <linux/platform_data/edma.h>
 #include <linux/i2c.h>
 #include <linux/of_platform.h>
 #include <linux/clk.h>
@@ -25,11 +24,6 @@
 #include <asm/dma.h>
 #include <asm/mach-types.h>
 
-#include <linux/edma.h>
-
-#include "davinci-pcm.h"
-#include "davinci-i2s.h"
-
 struct snd_soc_card_drvdata_davinci {
 	struct clk *mclk;
 	unsigned sysclk;
@@ -38,7 +32,7 @@ struct snd_soc_card_drvdata_davinci {
 static int evm_startup(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_card *soc_card = rtd->codec->card;
+	struct snd_soc_card *soc_card = rtd->card;
 	struct snd_soc_card_drvdata_davinci *drvdata =
 		snd_soc_card_get_drvdata(soc_card);
 
@@ -51,7 +45,7 @@ static int evm_startup(struct snd_pcm_substream *substream)
 static void evm_shutdown(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_card *soc_card = rtd->codec->card;
+	struct snd_soc_card *soc_card = rtd->card;
 	struct snd_soc_card_drvdata_davinci *drvdata =
 		snd_soc_card_get_drvdata(soc_card);
 
@@ -65,8 +59,7 @@ static int evm_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
-	struct snd_soc_codec *codec = rtd->codec;
-	struct snd_soc_card *soc_card = codec->card;
+	struct snd_soc_card *soc_card = rtd->card;
 	int ret = 0;
 	unsigned sysclk = ((struct snd_soc_card_drvdata_davinci *)
 			   snd_soc_card_get_drvdata(soc_card))->sysclk;
@@ -124,8 +117,7 @@ static const struct snd_soc_dapm_route audio_map[] = {
 static int evm_aic3x_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_card *card = rtd->card;
-	struct snd_soc_codec *codec = rtd->codec;
-	struct device_node *np = codec->card->dev->of_node;
+	struct device_node *np = card->dev->of_node;
 	int ret;
 
 	/* Add davinci-evm specific widgets */
@@ -143,9 +135,9 @@ static int evm_aic3x_init(struct snd_soc_pcm_runtime *rtd)
 	}
 
 	/* not connected */
-	snd_soc_dapm_nc_pin(&codec->dapm, "MONO_LOUT");
-	snd_soc_dapm_nc_pin(&codec->dapm, "HPLCOM");
-	snd_soc_dapm_nc_pin(&codec->dapm, "HPRCOM");
+	snd_soc_dapm_nc_pin(&card->dapm, "MONO_LOUT");
+	snd_soc_dapm_nc_pin(&card->dapm, "HPLCOM");
+	snd_soc_dapm_nc_pin(&card->dapm, "HPRCOM");
 
 	return 0;
 }
@@ -432,21 +424,10 @@ static int davinci_evm_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int davinci_evm_remove(struct platform_device *pdev)
-{
-	struct snd_soc_card *card = platform_get_drvdata(pdev);
-
-	snd_soc_unregister_card(card);
-
-	return 0;
-}
-
 static struct platform_driver davinci_evm_driver = {
 	.probe		= davinci_evm_probe,
-	.remove		= davinci_evm_remove,
 	.driver		= {
 		.name	= "davinci_evm",
-		.owner	= THIS_MODULE,
 		.pm	= &snd_soc_pm_ops,
 		.of_match_table = of_match_ptr(davinci_evm_dt_ids),
 	},

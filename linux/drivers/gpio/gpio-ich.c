@@ -173,6 +173,11 @@ static bool ichx_gpio_check_available(struct gpio_chip *gpio, unsigned nr)
 	return !!(ichx_priv.use_gpio & (1 << (nr / 32)));
 }
 
+static int ichx_gpio_get_direction(struct gpio_chip *gpio, unsigned nr)
+{
+	return ichx_read_bit(GPIO_IO_SEL, nr) ? GPIOF_DIR_IN : GPIOF_DIR_OUT;
+}
+
 static int ichx_gpio_direction_input(struct gpio_chip *gpio, unsigned nr)
 {
 	/*
@@ -286,6 +291,7 @@ static void ichx_gpiolib_setup(struct gpio_chip *chip)
 		ichx_priv.desc->get : ichx_gpio_get;
 
 	chip->set = ichx_gpio_set;
+	chip->get_direction = ichx_gpio_get_direction;
 	chip->direction_input = ichx_gpio_direction_input;
 	chip->direction_output = ichx_gpio_direction_output;
 	chip->base = modparam_gpiobase;
@@ -514,14 +520,7 @@ add_err:
 
 static int ichx_gpio_remove(struct platform_device *pdev)
 {
-	int err;
-
-	err = gpiochip_remove(&ichx_priv.chip);
-	if (err) {
-		dev_err(&pdev->dev, "%s failed, %d\n",
-				"gpiochip_remove()", err);
-		return err;
-	}
+	gpiochip_remove(&ichx_priv.chip);
 
 	ichx_gpio_release_regions(ichx_priv.gpio_base, ichx_priv.use_gpio);
 	if (ichx_priv.pm_base)
@@ -533,7 +532,6 @@ static int ichx_gpio_remove(struct platform_device *pdev)
 
 static struct platform_driver ichx_gpio_driver = {
 	.driver		= {
-		.owner	= THIS_MODULE,
 		.name	= DRV_NAME,
 	},
 	.probe		= ichx_gpio_probe,

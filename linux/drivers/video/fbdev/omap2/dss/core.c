@@ -179,10 +179,14 @@ static int omap_dss_pm_notif(struct notifier_block *b, unsigned long v, void *d)
 
 	switch (v) {
 	case PM_SUSPEND_PREPARE:
+	case PM_HIBERNATION_PREPARE:
+	case PM_RESTORE_PREPARE:
 		DSSDBG("suspending displays\n");
 		return dss_suspend_all_devices();
 
 	case PM_POST_SUSPEND:
+	case PM_POST_HIBERNATION:
+	case PM_POST_RESTORE:
 		DSSDBG("resuming displays\n");
 		return dss_resume_all_devices();
 
@@ -244,7 +248,6 @@ static struct platform_driver omap_dss_driver = {
 	.shutdown	= omap_dss_shutdown,
 	.driver         = {
 		.name   = "omapdss",
-		.owner  = THIS_MODULE,
 	},
 };
 
@@ -268,6 +271,9 @@ static int (*dss_output_drv_reg_funcs[])(void) __initdata = {
 #ifdef CONFIG_OMAP4_DSS_HDMI
 	hdmi4_init_platform_driver,
 #endif
+#ifdef CONFIG_OMAP5_DSS_HDMI
+	hdmi5_init_platform_driver,
+#endif
 };
 
 static void (*dss_output_drv_unreg_funcs[])(void) __exitdata = {
@@ -288,6 +294,9 @@ static void (*dss_output_drv_unreg_funcs[])(void) __exitdata = {
 #endif
 #ifdef CONFIG_OMAP4_DSS_HDMI
 	hdmi4_uninit_platform_driver,
+#endif
+#ifdef CONFIG_OMAP5_DSS_HDMI
+	hdmi5_uninit_platform_driver,
 #endif
 };
 

@@ -5,7 +5,7 @@
  *****************************************************************************/
 
 /*
- * Copyright (C) 2000 - 2014, Intel Corp.
+ * Copyright (C) 2000 - 2015, Intel Corp.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -62,8 +62,6 @@
 #include <acpi/acrestyp.h>		/* Resource Descriptor structs */
 #include <acpi/acpiosxf.h>		/* OSL interfaces (ACPICA-to-OS) */
 #include <acpi/acpixf.h>		/* ACPI core subsystem external interfaces */
-#ifdef ACPI_NATIVE_INTERFACE_HEADER
-#include ACPI_NATIVE_INTERFACE_HEADER
-#endif
+#include <acpi/platform/acenvex.h>	/* Extra environment-specific items */
 
 #endif				/* __ACPI_H__ */

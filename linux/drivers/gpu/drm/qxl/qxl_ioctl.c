@@ -122,8 +122,10 @@ static struct qxl_bo *qxlhw_handle_to_bo(struct qxl_device *qdev,
 	qobj = gem_to_qxl_bo(gobj);
 
 	ret = qxl_release_list_add(release, qobj);
-	if (ret)
+	if (ret) {
+		drm_gem_object_unreference_unlocked(gobj);
 		return NULL;
+	}
 
 	return qobj;
 }
@@ -451,4 +453,4 @@ const struct drm_ioctl_desc qxl_ioctls[] = {
 			  DRM_AUTH|DRM_UNLOCKED),
 };
 
-int qxl_max_ioctls = DRM_ARRAY_SIZE(qxl_ioctls);
+int qxl_max_ioctls = ARRAY_SIZE(qxl_ioctls);

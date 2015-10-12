@@ -1,6 +1,6 @@
 /* visorchipset_umode.h
  *
- * Copyright © 2010 - 2013 UNISYS CORPORATION
+ * Copyright (C) 2010 - 2013 UNISYS CORPORATION
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -25,8 +25,6 @@
 
 #ifndef __VISORCHIPSET_UMODE_H
 #define __VISORCHIPSET_UMODE_H
-
-
 
 /** The user-mode program can access the control channel buffer directly
  *  via this memory map.

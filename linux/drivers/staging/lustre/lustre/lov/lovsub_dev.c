@@ -67,7 +67,7 @@ static void lovsub_req_completion(const struct lu_env *env,
 static void lovsub_req_attr_set(const struct lu_env *env,
 				const struct cl_req_slice *slice,
 				const struct cl_object *obj,
-				struct cl_req_attr *attr, obd_valid flags)
+				struct cl_req_attr *attr, u64 flags)
 {
 	struct lovsub_object *subobj;
 
@@ -146,7 +146,7 @@ static int lovsub_req_init(const struct lu_env *env, struct cl_device *dev,
 	struct lovsub_req *lsr;
 	int result;
 
-	OBD_SLAB_ALLOC_PTR_GFP(lsr, lovsub_req_kmem, __GFP_IO);
+	OBD_SLAB_ALLOC_PTR_GFP(lsr, lovsub_req_kmem, GFP_NOFS);
 	if (lsr != NULL) {
 		cl_req_slice_add(req, &lsr->lsrq_cl, dev, &lovsub_req_ops);
 		result = 0;

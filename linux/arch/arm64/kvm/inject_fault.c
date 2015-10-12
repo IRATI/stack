@@ -118,27 +118,27 @@ static void inject_abt64(struct kvm_vcpu *vcpu, bool is_iabt, unsigned long addr
 	 * instruction set. Report an external synchronous abort.
 	 */
 	if (kvm_vcpu_trap_il_is32bit(vcpu))
-		esr |= ESR_EL1_IL;
+		esr |= ESR_ELx_IL;
 
 	/*
 	 * Here, the guest runs in AArch64 mode when in EL1. If we get
 	 * an AArch32 fault, it means we managed to trap an EL0 fault.
 	 */
 	if (is_aarch32 || (cpsr & PSR_MODE_MASK) == PSR_MODE_EL0t)
-		esr |= (ESR_EL1_EC_IABT_EL0 << ESR_EL1_EC_SHIFT);
+		esr |= (ESR_ELx_EC_IABT_LOW << ESR_ELx_EC_SHIFT);
 	else
-		esr |= (ESR_EL1_EC_IABT_EL1 << ESR_EL1_EC_SHIFT);
+		esr |= (ESR_ELx_EC_IABT_CUR << ESR_ELx_EC_SHIFT);
 
 	if (!is_iabt)
-		esr |= ESR_EL1_EC_DABT_EL0;
+		esr |= ESR_ELx_EC_DABT_LOW;
 
-	vcpu_sys_reg(vcpu, ESR_EL1) = esr | ESR_EL2_EC_xABT_xFSR_EXTABT;
+	vcpu_sys_reg(vcpu, ESR_EL1) = esr | ESR_ELx_FSC_EXTABT;
 }
 
 static void inject_undef64(struct kvm_vcpu *vcpu)
 {
 	unsigned long cpsr = *vcpu_cpsr(vcpu);
-	u32 esr = (ESR_EL1_EC_UNKNOWN << ESR_EL1_EC_SHIFT);
+	u32 esr = (ESR_ELx_EC_UNKNOWN << ESR_ELx_EC_SHIFT);
 
 	*vcpu_spsr(vcpu) = cpsr;
 	*vcpu_elr_el1(vcpu) = *vcpu_pc(vcpu);
@@ -151,7 +151,7 @@ static void inject_undef64(struct kvm_vcpu *vcpu)
 	 * set.
 	 */
 	if (kvm_vcpu_trap_il_is32bit(vcpu))
-		esr |= ESR_EL1_IL;
+		esr |= ESR_ELx_IL;
 
 	vcpu_sys_reg(vcpu, ESR_EL1) = esr;
 }
@@ -168,8 +168,8 @@ void kvm_inject_dabt(struct kvm_vcpu *vcpu, unsigned long addr)
 {
 	if (!(vcpu->arch.hcr_el2 & HCR_RW))
 		inject_abt32(vcpu, false, addr);
-
-	inject_abt64(vcpu, false, addr);
+	else
+		inject_abt64(vcpu, false, addr);
 }
 
 /**
@@ -184,8 +184,8 @@ void kvm_inject_pabt(struct kvm_vcpu *vcpu, unsigned long addr)
 {
 	if (!(vcpu->arch.hcr_el2 & HCR_RW))
 		inject_abt32(vcpu, true, addr);
-
-	inject_abt64(vcpu, true, addr);
+	else
+		inject_abt64(vcpu, true, addr);
 }
 
 /**
@@ -198,6 +198,6 @@ void kvm_inject_undefined(struct kvm_vcpu *vcpu)
 {
 	if (!(vcpu->arch.hcr_el2 & HCR_RW))
 		inject_undef32(vcpu);
-
-	inject_undef64(vcpu);
+	else
+		inject_undef64(vcpu);
 }

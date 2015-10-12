@@ -57,7 +57,7 @@
 #define DRV_NAME "airo"
 
 #ifdef CONFIG_PCI
-static DEFINE_PCI_DEVICE_TABLE(card_ids) = {
+static const struct pci_device_id card_ids[] = {
 	{ 0x14b9, 1, PCI_ANY_ID, PCI_ANY_ID, },
 	{ 0x14b9, 0x4500, PCI_ANY_ID, PCI_ANY_ID },
 	{ 0x14b9, 0x4800, PCI_ANY_ID, PCI_ANY_ID, },
@@ -2676,7 +2676,7 @@ static void wifi_setup(struct net_device *dev)
 	dev->addr_len           = ETH_ALEN;
 	dev->tx_queue_len       = 100; 
 
-	memset(dev->broadcast,0xFF, ETH_ALEN);
+	eth_broadcast_addr(dev->broadcast);
 
 	dev->flags              = IFF_BROADCAST|IFF_MULTICAST;
 }
@@ -2685,7 +2685,8 @@ static struct net_device *init_wifidev(struct airo_info *ai,
 					struct net_device *ethdev)
 {
 	int err;
-	struct net_device *dev = alloc_netdev(0, "wifi%d", wifi_setup);
+	struct net_device *dev = alloc_netdev(0, "wifi%d", NET_NAME_UNKNOWN,
+					      wifi_setup);
 	if (!dev)
 		return NULL;
 	dev->ml_priv = ethdev->ml_priv;
@@ -2785,7 +2786,7 @@ static struct net_device *_init_airo_card( unsigned short irq, int port,
 	CapabilityRid cap_rid;
 
 	/* Create the network device object. */
-	dev = alloc_netdev(sizeof(*ai), "", ether_setup);
+	dev = alloc_netdev(sizeof(*ai), "", NET_NAME_UNKNOWN, ether_setup);
 	if (!dev) {
 		airo_print_err("", "Couldn't alloc_etherdev");
 		return NULL;
@@ -3210,7 +3211,7 @@ static void airo_print_status(const char *devname, u16 status)
 			airo_print_dbg(devname, "link lost (TSF sync lost)");
 			break;
 		default:
-			airo_print_dbg(devname, "unknow status %x\n", status);
+			airo_print_dbg(devname, "unknown status %x\n", status);
 			break;
 		}
 		break;
@@ -3232,7 +3233,7 @@ static void airo_print_status(const char *devname, u16 status)
 	case STAT_REASSOC:
 		break;
 	default:
-		airo_print_dbg(devname, "unknow status %x\n", status);
+		airo_print_dbg(devname, "unknown status %x\n", status);
 		break;
 	}
 }
@@ -3272,7 +3273,7 @@ static void airo_handle_link(struct airo_info *ai)
 		}
 
 		/* Send event to user space */
-		memset(wrqu.ap_addr.sa_data, '\0', ETH_ALEN);
+		eth_zero_addr(wrqu.ap_addr.sa_data);
 		wrqu.ap_addr.sa_family = ARPHRD_ETHER;
 		wireless_send_event(ai->dev, SIOCGIWAP, &wrqu, NULL);
 	}
@@ -7817,7 +7818,6 @@ static int readrids(struct net_device *dev, aironet_ioctl *comp) {
 	case AIRORRID:      ridcode = comp->ridnum;     break;
 	default:
 		return -EINVAL;
-		break;
 	}
 
 	if ((iobuf = kmalloc(RIDSIZE, GFP_KERNEL)) == NULL)

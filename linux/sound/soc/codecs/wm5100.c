@@ -390,7 +390,7 @@ static int wm5100_mixer_values[] = {
 
 #define WM5100_MUX_CTL_DECL(name) \
 	const struct snd_kcontrol_new name##_mux =	\
-		SOC_DAPM_VALUE_ENUM("Route", name##_enum)
+		SOC_DAPM_ENUM("Route", name##_enum)
 
 #define WM5100_MIXER_ENUMS(name, base_reg) \
 	static WM5100_MUX_ENUM_DECL(name##_in1_enum, base_reg);	     \
@@ -448,7 +448,7 @@ WM5100_MIXER_ENUMS(LHPF3, WM5100_HPLP3MIX_INPUT_1_SOURCE);
 WM5100_MIXER_ENUMS(LHPF4, WM5100_HPLP4MIX_INPUT_1_SOURCE);
 
 #define WM5100_MUX(name, ctrl) \
-	SND_SOC_DAPM_VALUE_MUX(name, SND_SOC_NOPM, 0, 0, ctrl)
+	SND_SOC_DAPM_MUX(name, SND_SOC_NOPM, 0, 0, ctrl)
 
 #define WM5100_MIXER_WIDGETS(name, name_str)	\
 	WM5100_MUX(name_str " Input 1", &name##_in1_mux), \
@@ -735,8 +735,7 @@ WM5100_MIXER_CONTROLS("LHPF4", WM5100_HPLP4MIX_INPUT_1_SOURCE),
 static void wm5100_seq_notifier(struct snd_soc_dapm_context *dapm,
 				enum snd_soc_dapm_type event, int subseq)
 {
-	struct snd_soc_codec *codec = container_of(dapm,
-						   struct snd_soc_codec, dapm);
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(dapm);
 	struct wm5100_priv *wm5100 = snd_soc_codec_get_drvdata(codec);
 	u16 val, expect, i;
 
@@ -776,7 +775,8 @@ static int wm5100_out_ev(struct snd_soc_dapm_widget *w,
 			 struct snd_kcontrol *kcontrol,
 			 int event)
 {
-	struct wm5100_priv *wm5100 = snd_soc_codec_get_drvdata(w->codec);
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+	struct wm5100_priv *wm5100 = snd_soc_codec_get_drvdata(codec);
 
 	switch (w->reg) {
 	case WM5100_CHANNEL_ENABLES_1:
@@ -840,7 +840,7 @@ static int wm5100_post_ev(struct snd_soc_dapm_widget *w,
 			  struct snd_kcontrol *kcontrol,
 			  int event)
 {
-	struct snd_soc_codec *codec = w->codec;
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct wm5100_priv *wm5100 = snd_soc_codec_get_drvdata(codec);
 	int ret;
 
@@ -1762,6 +1762,7 @@ static int wm5100_set_fll(struct snd_soc_codec *codec, int fll_id, int source,
 	struct _fll_div factors;
 	struct wm5100_fll *fll;
 	int ret, base, lock, i, timeout;
+	unsigned long time_left;
 
 	switch (fll_id) {
 	case WM5100_FLL1:
@@ -1842,9 +1843,9 @@ static int wm5100_set_fll(struct snd_soc_codec *codec, int fll_id, int source,
 	/* Poll for the lock; will use interrupt when we can test */
 	for (i = 0; i < timeout; i++) {
 		if (i2c->irq) {
-			ret = wait_for_completion_timeout(&fll->lock,
-							  msecs_to_jiffies(25));
-			if (ret > 0)
+			time_left = wait_for_completion_timeout(&fll->lock,
+							msecs_to_jiffies(25));
+			if (time_left > 0)
 				break;
 		} else {
 			msleep(1);
@@ -2320,11 +2321,8 @@ static void wm5100_init_gpio(struct i2c_client *i2c)
 static void wm5100_free_gpio(struct i2c_client *i2c)
 {
 	struct wm5100_priv *wm5100 = i2c_get_clientdata(i2c);
-	int ret;
 
-	ret = gpiochip_remove(&wm5100->gpio_chip);
-	if (ret != 0)
-		dev_err(&i2c->dev, "Failed to remove GPIOs: %d\n", ret);
+	gpiochip_remove(&wm5100->gpio_chip);
 }
 #else
 static void wm5100_init_gpio(struct i2c_client *i2c)
@@ -2668,7 +2666,7 @@ static int wm5100_i2c_remove(struct i2c_client *i2c)
 	return 0;
 }
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static int wm5100_runtime_suspend(struct device *dev)
 {
 	struct wm5100_priv *wm5100 = dev_get_drvdata(dev);

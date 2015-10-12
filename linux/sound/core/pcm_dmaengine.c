@@ -65,13 +65,15 @@ int snd_hwparams_to_dma_slave_config(const struct snd_pcm_substream *substream,
 	enum dma_slave_buswidth buswidth;
 	int bits;
 
-	bits = snd_pcm_format_physical_width(params_format(params));
+	bits = params_physical_width(params);
 	if (bits < 8 || bits > 64)
 		return -EINVAL;
 	else if (bits == 8)
 		buswidth = DMA_SLAVE_BUSWIDTH_1_BYTE;
 	else if (bits == 16)
 		buswidth = DMA_SLAVE_BUSWIDTH_2_BYTES;
+	else if (bits == 24)
+		buswidth = DMA_SLAVE_BUSWIDTH_3_BYTES;
 	else if (bits <= 32)
 		buswidth = DMA_SLAVE_BUSWIDTH_4_BYTES;
 	else
@@ -287,7 +289,7 @@ EXPORT_SYMBOL_GPL(snd_dmaengine_pcm_request_channel);
  *
  * The function should usually be called from the pcm open callback. Note that
  * this function will use private_data field of the substream's runtime. So it
- * is not availabe to your pcm driver implementation.
+ * is not available to your pcm driver implementation.
  */
 int snd_dmaengine_pcm_open(struct snd_pcm_substream *substream,
 	struct dma_chan *chan)
@@ -326,7 +328,7 @@ EXPORT_SYMBOL_GPL(snd_dmaengine_pcm_open);
  * This function will request a DMA channel using the passed filter function and
  * data. The function should usually be called from the pcm open callback. Note
  * that this function will use private_data field of the substream's runtime. So
- * it is not availabe to your pcm driver implementation.
+ * it is not available to your pcm driver implementation.
  */
 int snd_dmaengine_pcm_open_request_chan(struct snd_pcm_substream *substream,
 	dma_filter_fn filter_fn, void *filter_data)

@@ -14,11 +14,6 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
- *
  */
 
 #include <linux/kernel.h>
@@ -149,6 +144,7 @@ struct omap2_mcspi_cs {
 	void __iomem		*base;
 	unsigned long		phys;
 	int			word_len;
+	u16			mode;
 	struct list_head	node;
 	/* Context save and restore shadow register */
 	u32			chconf0, chctrl0;
@@ -328,7 +324,8 @@ static void omap2_mcspi_set_fifo(const struct spi_device *spi,
 disable_fifo:
 	if (t->rx_buf != NULL)
 		chconf &= ~OMAP2_MCSPI_CHCONF_FFER;
-	else
+
+	if (t->tx_buf != NULL)
 		chconf &= ~OMAP2_MCSPI_CHCONF_FFET;
 
 	mcspi_write_chconf0(spi, chconf);
@@ -926,6 +923,8 @@ static int omap2_mcspi_setup_transfer(struct spi_device *spi,
 
 	mcspi_write_chconf0(spi, l);
 
+	cs->mode = spi->mode;
+
 	dev_dbg(&spi->dev, "setup: speed %d, sample %s edge, clk %s\n",
 			speed_hz,
 			(spi->mode & SPI_CPHA) ? "trailing" : "leading",
@@ -998,6 +997,7 @@ static int omap2_mcspi_setup(struct spi_device *spi)
 			return -ENOMEM;
 		cs->base = mcspi->base + spi->chip_select * 0x14;
 		cs->phys = mcspi->phys + spi->chip_select * 0x14;
+		cs->mode = 0;
 		cs->chconf0 = 0;
 		cs->chctrl0 = 0;
 		spi->controller_state = cs;
@@ -1078,6 +1078,16 @@ static void omap2_mcspi_work(struct omap2_mcspi *mcspi, struct spi_message *m)
 	mcspi_dma = mcspi->dma_channels + spi->chip_select;
 	cs = spi->controller_state;
 	cd = spi->controller_data;
+
+	/*
+	 * The slave driver could have changed spi->mode in which case
+	 * it will be different from cs->mode (the current hardware setup).
+	 * If so, set par_override (even though its not a parity issue) so
+	 * omap2_mcspi_setup_transfer will be called to configure the hardware
+	 * with the correct mode on the first iteration of the loop below.
+	 */
+	if (spi->mode != cs->mode)
+		par_override = 1;
 
 	omap2_mcspi_set_enable(spi, 0);
 	list_for_each_entry(t, &m->transfers, transfer_list) {
@@ -1200,6 +1210,7 @@ static int omap2_mcspi_transfer_one_message(struct spi_master *master,
 	struct omap2_mcspi	*mcspi;
 	struct omap2_mcspi_dma	*mcspi_dma;
 	struct spi_transfer	*t;
+	int status;
 
 	spi = m->spi;
 	mcspi = spi_master_get_devdata(master);
@@ -1219,7 +1230,8 @@ static int omap2_mcspi_transfer_one_message(struct spi_master *master,
 					tx_buf ? "tx" : "",
 					rx_buf ? "rx" : "",
 					t->bits_per_word);
-			return -EINVAL;
+			status = -EINVAL;
+			goto out;
 		}
 
 		if (m->is_dma_mapped || len < DMA_MIN_BYTES)
@@ -1231,7 +1243,8 @@ static int omap2_mcspi_transfer_one_message(struct spi_master *master,
 			if (dma_mapping_error(mcspi->dev, t->tx_dma)) {
 				dev_dbg(mcspi->dev, "dma %cX %d bytes error\n",
 						'T', len);
-				return -EINVAL;
+				status = -EINVAL;
+				goto out;
 			}
 		}
 		if (mcspi_dma->dma_rx && rx_buf != NULL) {
@@ -1243,14 +1256,19 @@ static int omap2_mcspi_transfer_one_message(struct spi_master *master,
 				if (tx_buf != NULL)
 					dma_unmap_single(mcspi->dev, t->tx_dma,
 							len, DMA_TO_DEVICE);
-				return -EINVAL;
+				status = -EINVAL;
+				goto out;
 			}
 		}
 	}
 
 	omap2_mcspi_work(mcspi, m);
+	/* spi_finalize_current_message() changes the status inside the
+	 * spi_message, save the status here. */
+	status = m->status;
+out:
 	spi_finalize_current_message(master);
-	return 0;
+	return status;
 }
 
 static int omap2_mcspi_master_setup(struct omap2_mcspi *mcspi)
@@ -1506,7 +1524,6 @@ static const struct dev_pm_ops omap2_mcspi_pm_ops = {
 static struct platform_driver omap2_mcspi_driver = {
 	.driver = {
 		.name =		"omap2_mcspi",
-		.owner =	THIS_MODULE,
 		.pm =		&omap2_mcspi_pm_ops,
 		.of_match_table = omap_mcspi_of_match,
 	},

@@ -16,6 +16,7 @@ menuconfig ATA
 	depends on BLOCK
 	depends on !(M32R || M68K || S390) || BROKEN
 	select SCSI
+	select GLOB
 	---help---
 	  If you want to use an ATA hard disk, ATA tape drive, ATA CD-ROM or
 	  any other ATA device under Linux, say Y and make sure that you know
@@ -60,7 +61,7 @@ config ATA_ACPI
 
 config SATA_ZPODD
 	bool "SATA Zero Power Optical Disc Drive (ZPODD) support"
-	depends on ATA_ACPI && PM_RUNTIME
+	depends on ATA_ACPI && PM
 	default n
 	help
 	  This option adds support for SATA Zero Power Optical Disc
@@ -123,11 +124,29 @@ config AHCI_IMX
 
 	  If unsure, say N.
 
+config AHCI_MVEBU
+	tristate "Marvell EBU AHCI SATA support"
+	depends on ARCH_MVEBU
+	help
+	  This option enables support for the Marvebu EBU SoC's
+	  onboard AHCI SATA.
+
+	  If unsure, say N.
+
 config AHCI_SUNXI
 	tristate "Allwinner sunxi AHCI SATA support"
 	depends on ARCH_SUNXI
 	help
 	  This option enables support for the Allwinner sunxi SoC's
+	  onboard AHCI SATA.
+
+	  If unsure, say N.
+
+config AHCI_TEGRA
+	tristate "NVIDIA Tegra124 AHCI SATA support"
+	depends on ARCH_TEGRA
+	help
+	  This option enables support for the NVIDIA Tegra124 SoC's
 	  onboard AHCI SATA.
 
 	  If unsure, say N.
@@ -251,6 +270,7 @@ config ATA_PIIX
 config SATA_DWC
 	tristate "DesignWare Cores SATA support"
 	depends on 460EX
+	select DW_DMAC
 	help
 	  This option enables support for the on-chip SATA controller of the
 	  AppliedMicro processor 460EX.
@@ -280,7 +300,7 @@ config SATA_HIGHBANK
 
 config SATA_MV
 	tristate "Marvell SATA support"
-	depends on PCI || ARCH_DOVE || ARCH_KIRKWOOD || ARCH_MV78XX0 || \
+	depends on PCI || ARCH_DOVE || ARCH_MV78XX0 || \
 		   ARCH_MVEBU || ARCH_ORION5X || COMPILE_TEST
 	select GENERIC_PHY
 	help
@@ -710,15 +730,6 @@ config PATA_SC1200
 
 	  If unsure, say N.
 
-config PATA_SCC
-	tristate "Toshiba's Cell Reference Set IDE support"
-	depends on PCI && PPC_CELLEB
-	help
-	  This option enables support for the built-in IDE controller on
-	  Toshiba Cell Reference Board.
-
-	  If unsure, say N.
-
 config PATA_SCH
 	tristate "Intel SCH PATA support"
 	depends on PCI
@@ -816,6 +827,7 @@ config PATA_AT32
 config PATA_AT91
 	tristate "PATA support for AT91SAM9260"
 	depends on ARM && SOC_AT91SAM9
+	depends on !ARCH_MULTIPLATFORM
 	help
 	  This option enables support for IDE devices on the Atmel AT91SAM9260 SoC.
 

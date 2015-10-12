@@ -5,7 +5,7 @@ include config/Makefile.arch
 
 # FIXME looks like x86 is the only arch running tests ;-)
 # we need some IS_(32/64) flag to make this generic
-ifeq ($(IS_X86_64),1)
+ifeq ($(ARCH)$(IS_64_BIT), x861)
 lib = lib64
 else
 lib = lib
@@ -205,8 +205,7 @@ $(run):
 	( eval $$cmd ) >> $@ 2>&1; \
 	echo "  test: $(call test,$@)" >> $@ 2>&1; \
 	$(call test,$@) && \
-	rm -f $@ \
-	rm -rf $$TMP_DEST
+	rm -rf $@ $$TMP_DEST || (cat $@ ; false)
 
 $(run_O):
 	$(call clean)
@@ -217,15 +216,12 @@ $(run_O):
 	( eval $$cmd ) >> $@ 2>&1 && \
 	echo "  test: $(call test_O,$@)" >> $@ 2>&1; \
 	$(call test_O,$@) && \
-	rm -f $@ && \
-	rm -rf $$TMP_O \
-	rm -rf $$TMP_DEST
+	rm -rf $@ $$TMP_O $$TMP_DEST || (cat $@ ; false)
 
 tarpkg:
 	@cmd="$(PERF)/tests/perf-targz-src-pkg $(PERF)"; \
 	echo "- $@: $$cmd" && echo $$cmd > $@ && \
 	( eval $$cmd ) >> $@ 2>&1
-	
 
 all: $(run) $(run_O) tarpkg
 	@echo OK

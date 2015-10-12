@@ -41,9 +41,6 @@ static enum shutdown_state shutting_down = SHUTDOWN_INVALID;
 
 struct suspend_info {
 	int cancelled;
-	unsigned long arg; /* extra hypercall argument */
-	void (*pre)(void);
-	void (*post)(int cancelled);
 };
 
 static RAW_NOTIFIER_HEAD(xen_resume_notifier);
@@ -61,26 +58,6 @@ void xen_resume_notifier_unregister(struct notifier_block *nb)
 EXPORT_SYMBOL_GPL(xen_resume_notifier_unregister);
 
 #ifdef CONFIG_HIBERNATE_CALLBACKS
-static void xen_hvm_post_suspend(int cancelled)
-{
-	xen_arch_hvm_post_suspend(cancelled);
-	gnttab_resume();
-}
-
-static void xen_pre_suspend(void)
-{
-	xen_mm_pin_all();
-	gnttab_suspend();
-	xen_arch_pre_suspend();
-}
-
-static void xen_post_suspend(int cancelled)
-{
-	xen_arch_post_suspend(cancelled);
-	gnttab_resume();
-	xen_mm_unpin_all();
-}
-
 static int xen_suspend(void *data)
 {
 	struct suspend_info *si = data;
@@ -94,22 +71,23 @@ static int xen_suspend(void *data)
 		return err;
 	}
 
-	if (si->pre)
-		si->pre();
+	gnttab_suspend();
+	xen_arch_pre_suspend();
 
 	/*
 	 * This hypercall returns 1 if suspend was cancelled
 	 * or the domain was merely checkpointed, and 0 if it
 	 * is resuming in a new domain.
 	 */
-	si->cancelled = HYPERVISOR_suspend(si->arg);
+	si->cancelled = HYPERVISOR_suspend(xen_pv_domain()
+                                           ? virt_to_mfn(xen_start_info)
+                                           : 0);
 
-	if (si->post)
-		si->post(si->cancelled);
+	xen_arch_post_suspend(si->cancelled);
+	gnttab_resume();
 
 	if (!si->cancelled) {
 		xen_irq_resume();
-		xen_console_resume();
 		xen_timer_resume();
 	}
 
@@ -125,16 +103,17 @@ static void do_suspend(void)
 
 	shutting_down = SHUTDOWN_SUSPEND;
 
-#ifdef CONFIG_PREEMPT
-	/* If the kernel is preemptible, we need to freeze all the processes
-	   to prevent them from being in the middle of a pagetable update
-	   during suspend. */
 	err = freeze_processes();
 	if (err) {
-		pr_err("%s: freeze failed %d\n", __func__, err);
+		pr_err("%s: freeze processes failed %d\n", __func__, err);
 		goto out;
 	}
-#endif
+
+	err = freeze_kernel_threads();
+	if (err) {
+		pr_err("%s: freeze kernel threads failed %d\n", __func__, err);
+		goto out_thaw;
+	}
 
 	err = dpm_suspend_start(PMSG_FREEZE);
 	if (err) {
@@ -152,19 +131,15 @@ static void do_suspend(void)
 		goto out_resume;
 	}
 
+	xen_arch_suspend();
+
 	si.cancelled = 1;
 
-	if (xen_hvm_domain()) {
-		si.arg = 0UL;
-		si.pre = NULL;
-		si.post = &xen_hvm_post_suspend;
-	} else {
-		si.arg = virt_to_mfn(xen_start_info);
-		si.pre = &xen_pre_suspend;
-		si.post = &xen_post_suspend;
-	}
-
 	err = stop_machine(xen_suspend, &si, cpumask_of(0));
+
+	/* Resume console as early as possible. */
+	if (!si.cancelled)
+		xen_console_resume();
 
 	raw_notifier_call_chain(&xen_resume_notifier, 0, NULL);
 
@@ -175,20 +150,19 @@ static void do_suspend(void)
 		si.cancelled = 1;
 	}
 
+	xen_arch_resume();
+
 out_resume:
-	if (!si.cancelled) {
-		xen_arch_resume();
+	if (!si.cancelled)
 		xs_resume();
-	} else
+	else
 		xs_suspend_cancel();
 
 	dpm_resume_end(si.cancelled ? PMSG_THAW : PMSG_RESTORE);
 
 out_thaw:
-#ifdef CONFIG_PREEMPT
 	thaw_processes();
 out:
-#endif
 	shutting_down = SHUTDOWN_INVALID;
 }
 #endif	/* CONFIG_HIBERNATE_CALLBACKS */

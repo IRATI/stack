@@ -38,6 +38,7 @@
 #include <linux/types.h>
 #include <linux/skbuff.h>
 #include <net/sock.h>
+#include <net/busy_poll.h>
 #include <net/sctp/structs.h>
 #include <net/sctp/sctp.h>
 #include <net/sctp/sm.h>
@@ -204,6 +205,10 @@ int sctp_ulpq_tail_event(struct sctp_ulpq *ulpq, struct sctp_ulpevent *event)
 	if (sock_flag(sk, SOCK_DEAD) || (sk->sk_shutdown & RCV_SHUTDOWN))
 		goto out_free;
 
+	if (!sctp_ulpevent_is_notification(event)) {
+		sk_mark_napi_id(sk, skb);
+		sk_incoming_cpu_update(sk);
+	}
 	/* Check if the user wishes to receive this event.  */
 	if (!sctp_ulpevent_is_enabled(event, &sctp_sk(sk)->subscribe))
 		goto out_free;

@@ -22,12 +22,16 @@
 
 #include <asm/asmmacro.h>
 
+/* preprocessor replaces the fp in ".set fp=64" with $30 otherwise */
+#undef fp
+
 /*
  * Offset to the current process status flags, the first 32 bytes of the
  * stack are not used.
  */
 #define ST_OFF (_THREAD_SIZE - 32 - PT_SIZE + PT_STATUS)
 
+#ifndef USE_ALTERNATE_RESUME_IMPL
 /*
  * task_struct *resume(task_struct *prev, task_struct *next,
  *		       struct thread_info *next_ti, s32 fp_save)
@@ -63,8 +67,14 @@
 	/* Check whether we're saving scalar or vector context. */
 	bgtz	a3, 1f
 
-	/* Save 128b MSA vector context. */
+	/* Save 128b MSA vector context + scalar FP control & status. */
+	.set push
+	SET_HARDFLOAT
+	cfc1	t1, fcr31
 	msa_save_all	a0
+	.set pop	/* SET_HARDFLOAT */
+
+	sw	t1, THREAD_FCR31(a0)
 	b	2f
 
 1:	/* Save 32b/64b scalar FP context. */
@@ -87,18 +97,6 @@
 
 	PTR_ADDU	t0, $28, _THREAD_SIZE - 32
 	set_saved_sp	t0, t1, t2
-#ifdef CONFIG_MIPS_MT_SMTC
-	/* Read-modify-writes of Status must be atomic on a VPE */
-	mfc0	t2, CP0_TCSTATUS
-	ori	t1, t2, TCSTATUS_IXMT
-	mtc0	t1, CP0_TCSTATUS
-	andi	t2, t2, TCSTATUS_IXMT
-	_ehb
-	DMT	8				# dmt	t0
-	move	t1,ra
-	jal	mips_ihb
-	move	ra,t1
-#endif /* CONFIG_MIPS_MT_SMTC */
 	mfc0	t1, CP0_STATUS		/* Do we really need this? */
 	li	a3, 0xff01
 	and	t1, a3
@@ -107,27 +105,18 @@
 	and	a2, a3
 	or	a2, t1
 	mtc0	a2, CP0_STATUS
-#ifdef CONFIG_MIPS_MT_SMTC
-	_ehb
-	andi	t0, t0, VPECONTROL_TE
-	beqz	t0, 1f
-	emt
-1:
-	mfc0	t1, CP0_TCSTATUS
-	xori	t1, t1, TCSTATUS_IXMT
-	or	t1, t1, t2
-	mtc0	t1, CP0_TCSTATUS
-	_ehb
-#endif /* CONFIG_MIPS_MT_SMTC */
 	move	v0, a0
 	jr	ra
 	END(resume)
+
+#endif /* USE_ALTERNATE_RESUME_IMPL */
 
 /*
  * Save a thread's fp context.
  */
 LEAF(_save_fp)
-#if defined(CONFIG_64BIT) || defined(CONFIG_CPU_MIPS32_R2)
+#if defined(CONFIG_64BIT) || defined(CONFIG_CPU_MIPS32_R2) || \
+		defined(CONFIG_CPU_MIPS32_R6)
 	mfc0	t0, CP0_STATUS
 #endif
 	fpu_save_double a0 t0 t1		# clobbers t1
@@ -138,7 +127,8 @@ LEAF(_save_fp)
  * Restore a thread's fp context.
  */
 LEAF(_restore_fp)
-#if defined(CONFIG_64BIT) || defined(CONFIG_CPU_MIPS32_R2)
+#if defined(CONFIG_64BIT) || defined(CONFIG_CPU_MIPS32_R2) || \
+		defined(CONFIG_CPU_MIPS32_R6)
 	mfc0	t0, CP0_STATUS
 #endif
 	fpu_restore_double a0 t0 t1		# clobbers t1
@@ -163,6 +153,11 @@ LEAF(_restore_msa)
 	jr	ra
 	END(_restore_msa)
 
+LEAF(_init_msa_upper)
+	msa_init_all_upper
+	jr	ra
+	END(_init_msa_upper)
+
 #endif
 
 /*
@@ -170,29 +165,20 @@ LEAF(_restore_msa)
  * the property that no matter whether considered as single or as double
  * precision represents signaling NANS.
  *
- * We initialize fcr31 to rounding to nearest, no exceptions.
+ * The value to initialize fcr31 to comes in $a0.
  */
 
-#define FPU_DEFAULT  0x00000000
+	.set push
+	SET_HARDFLOAT
 
 LEAF(_init_fpu)
-#ifdef CONFIG_MIPS_MT_SMTC
-	/* Rather than manipulate per-VPE Status, set per-TC bit in TCStatus */
-	mfc0	t0, CP0_TCSTATUS
-	/* Bit position is the same for Status, TCStatus */
-	li	t1, ST0_CU1
-	or	t0, t1
-	mtc0	t0, CP0_TCSTATUS
-#else /* Normal MIPS CU1 enable */
 	mfc0	t0, CP0_STATUS
 	li	t1, ST0_CU1
 	or	t0, t1
 	mtc0	t0, CP0_STATUS
-#endif /* CONFIG_MIPS_MT_SMTC */
 	enable_fpu_hazard
 
-	li	t1, FPU_DEFAULT
-	ctc1	t1, fcr31
+	ctc1	a0, fcr31
 
 	li	t1, -1				# SNaN
 
@@ -253,9 +239,10 @@ LEAF(_init_fpu)
 	mtc1	t1, $f30
 	mtc1	t1, $f31
 
-#ifdef CONFIG_CPU_MIPS32_R2
+#if defined(CONFIG_CPU_MIPS32_R2) || defined(CONFIG_CPU_MIPS32_R6)
 	.set    push
-	.set    mips64r2
+	.set    MIPS_ISA_LEVEL_RAW
+	.set	fp=64
 	sll     t0, t0, 5			# is Status.FR set?
 	bgez    t0, 1f				# no: skip setting upper 32b
 
@@ -292,9 +279,9 @@ LEAF(_init_fpu)
 	mthc1   t1, $f30
 	mthc1   t1, $f31
 1:	.set    pop
-#endif /* CONFIG_CPU_MIPS32_R2 */
+#endif /* CONFIG_CPU_MIPS32_R2 || CONFIG_CPU_MIPS32_R6 */
 #else
-	.set	arch=r4000
+	.set	MIPS_ISA_ARCH_LEVEL_RAW
 	dmtc1	t1, $f0
 	dmtc1	t1, $f2
 	dmtc1	t1, $f4
@@ -314,3 +301,5 @@ LEAF(_init_fpu)
 #endif
 	jr	ra
 	END(_init_fpu)
+
+	.set pop	/* SET_HARDFLOAT */

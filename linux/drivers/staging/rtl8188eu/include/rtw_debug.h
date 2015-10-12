@@ -23,7 +23,7 @@
 #include <osdep_service.h>
 #include <drv_types.h>
 
-
+#define DRIVERVERSION	"v4.1.4_6773.20130222"
 #define _drv_always_			1
 #define _drv_emerg_			2
 #define _drv_alert_			3
@@ -106,7 +106,7 @@ extern u32 GlobalDebugLevel;
 			u8	*ptr = (u8 *)_hexdata;			\
 			pr_info("%s", DRIVER_PREFIX);			\
 			pr_info(_titlestring);				\
-			for (__i = 0; __i < (int)_hexdatalen; __i++ ) {	\
+			for (__i = 0; __i < (int)_hexdatalen; __i++) {	\
 				pr_info("%02X%s", ptr[__i],		\
 					 (((__i + 1) % 4) == 0) ?	\
 					 "  " : " ");	\

@@ -38,6 +38,7 @@
 #include <linux/videodev2.h>
 #include <linux/workqueue.h>
 #include <linux/v4l2-dv-timings.h>
+#include <linux/hdmi.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-dv-timings.h>
@@ -220,19 +221,9 @@ static inline struct v4l2_subdev *to_sd(struct v4l2_ctrl *ctrl)
 	return &container_of(ctrl->handler, struct adv7842_state, hdl)->sd;
 }
 
-static inline unsigned hblanking(const struct v4l2_bt_timings *t)
-{
-	return V4L2_DV_BT_BLANKING_WIDTH(t);
-}
-
 static inline unsigned htotal(const struct v4l2_bt_timings *t)
 {
 	return V4L2_DV_BT_FRAME_WIDTH(t);
-}
-
-static inline unsigned vblanking(const struct v4l2_bt_timings *t)
-{
-	return V4L2_DV_BT_BLANKING_HEIGHT(t);
 }
 
 static inline unsigned vtotal(const struct v4l2_bt_timings *t)
@@ -1128,7 +1119,7 @@ static void set_rgb_quantization_range(struct v4l2_subdev *sd)
 		/* Receiving DVI-D signal
 		 * ADV7842 selects RGB limited range regardless of
 		 * input format (CE/IT) in automatic mode */
-		if (state->timings.bt.standards & V4L2_DV_BT_STD_CEA861) {
+		if (state->timings.bt.flags & V4L2_DV_FL_IS_CE_VIDEO) {
 			/* RGB limited range (16-235) */
 			io_write_and_or(sd, 0x02, 0x0f, 0x00);
 		} else {
@@ -1399,6 +1390,9 @@ static int read_stdi(struct v4l2_subdev *sd, struct stdi_readback *stdi)
 static int adv7842_enum_dv_timings(struct v4l2_subdev *sd,
 				   struct v4l2_enum_dv_timings *timings)
 {
+	if (timings->pad != 0)
+		return -EINVAL;
+
 	return v4l2_enum_dv_timings_cap(timings,
 		adv7842_get_dv_timings_cap(sd), adv7842_check_dv_timings, NULL);
 }
@@ -1406,6 +1400,9 @@ static int adv7842_enum_dv_timings(struct v4l2_subdev *sd,
 static int adv7842_dv_timings_cap(struct v4l2_subdev *sd,
 				  struct v4l2_dv_timings_cap *cap)
 {
+	if (cap->pad != 0)
+		return -EINVAL;
+
 	*cap = *adv7842_get_dv_timings_cap(sd);
 	return 0;
 }
@@ -1428,6 +1425,8 @@ static int adv7842_query_dv_timings(struct v4l2_subdev *sd,
 	struct stdi_readback stdi = { 0 };
 
 	v4l2_dbg(1, debug, sd, "%s:\n", __func__);
+
+	memset(timings, 0, sizeof(struct v4l2_dv_timings));
 
 	/* SDP block */
 	if (state->mode == ADV7842_MODE_SDP)
@@ -1477,7 +1476,7 @@ static int adv7842_query_dv_timings(struct v4l2_subdev *sd,
 					hdmi_read(sd, 0x2d)) / 2;
 			bt->il_vsync = ((hdmi_read(sd, 0x30) & 0x1f) * 256 +
 					hdmi_read(sd, 0x31)) / 2;
-			bt->vbackporch = ((hdmi_read(sd, 0x34) & 0x1f) * 256 +
+			bt->il_vbackporch = ((hdmi_read(sd, 0x34) & 0x1f) * 256 +
 					hdmi_read(sd, 0x35)) / 2;
 		}
 		adv7842_fill_optional_dv_timings_fields(sd, timings);
@@ -1869,12 +1868,12 @@ static int adv7842_s_routing(struct v4l2_subdev *sd,
 }
 
 static int adv7842_enum_mbus_fmt(struct v4l2_subdev *sd, unsigned int index,
-				 enum v4l2_mbus_pixelcode *code)
+				 u32 *code)
 {
 	if (index)
 		return -EINVAL;
 	/* Good enough for now */
-	*code = V4L2_MBUS_FMT_FIXED;
+	*code = MEDIA_BUS_FMT_FIXED;
 	return 0;
 }
 
@@ -1885,7 +1884,7 @@ static int adv7842_g_mbus_fmt(struct v4l2_subdev *sd,
 
 	fmt->width = state->timings.bt.width;
 	fmt->height = state->timings.bt.height;
-	fmt->code = V4L2_MBUS_FMT_FIXED;
+	fmt->code = MEDIA_BUS_FMT_FIXED;
 	fmt->field = V4L2_FIELD_NONE;
 
 	if (state->mode == ADV7842_MODE_SDP) {
@@ -1902,7 +1901,8 @@ static int adv7842_g_mbus_fmt(struct v4l2_subdev *sd,
 		return 0;
 	}
 
-	if (state->timings.bt.standards & V4L2_DV_BT_STD_CEA861) {
+	fmt->colorspace = V4L2_COLORSPACE_SRGB;
+	if (state->timings.bt.flags & V4L2_DV_FL_IS_CE_VIDEO) {
 		fmt->colorspace = (state->timings.bt.height <= 576) ?
 			V4L2_COLORSPACE_SMPTE170M : V4L2_COLORSPACE_REC709;
 	}
@@ -2000,6 +2000,7 @@ static int adv7842_isr(struct v4l2_subdev *sd, u32 status, bool *handled)
 	if (irq_status[5] & 0x08) {
 		v4l2_dbg(1, debug, sd, "%s: irq %s mode\n", __func__,
 			 (io_read(sd, 0x65) & 0x08) ? "HDMI" : "DVI");
+		set_rgb_quantization_range(sd);
 		if (handled)
 			*handled = true;
 	}
@@ -2019,18 +2020,7 @@ static int adv7842_get_edid(struct v4l2_subdev *sd, struct v4l2_edid *edid)
 	struct adv7842_state *state = to_state(sd);
 	u8 *data = NULL;
 
-	if (edid->pad > ADV7842_EDID_PORT_VGA)
-		return -EINVAL;
-	if (edid->blocks == 0)
-		return -EINVAL;
-	if (edid->blocks > 2)
-		return -EINVAL;
-	if (edid->start_block > 1)
-		return -EINVAL;
-	if (edid->start_block == 1)
-		edid->blocks = 1;
-	if (!edid->edid)
-		return -EINVAL;
+	memset(edid->reserved, 0, sizeof(edid->reserved));
 
 	switch (edid->pad) {
 	case ADV7842_EDID_PORT_A:
@@ -2045,12 +2035,23 @@ static int adv7842_get_edid(struct v4l2_subdev *sd, struct v4l2_edid *edid)
 	default:
 		return -EINVAL;
 	}
+
+	if (edid->start_block == 0 && edid->blocks == 0) {
+		edid->blocks = data ? 2 : 0;
+		return 0;
+	}
+
 	if (!data)
 		return -ENODATA;
 
-	memcpy(edid->edid,
-	       data + edid->start_block * 128,
-	       edid->blocks * 128);
+	if (edid->start_block >= 2)
+		return -EINVAL;
+
+	if (edid->start_block + edid->blocks > 2)
+		edid->blocks = 2 - edid->start_block;
+
+	memcpy(edid->edid, data + edid->start_block * 128, edid->blocks * 128);
+
 	return 0;
 }
 
@@ -2059,14 +2060,16 @@ static int adv7842_set_edid(struct v4l2_subdev *sd, struct v4l2_edid *e)
 	struct adv7842_state *state = to_state(sd);
 	int err = 0;
 
+	memset(e->reserved, 0, sizeof(e->reserved));
+
 	if (e->pad > ADV7842_EDID_PORT_VGA)
 		return -EINVAL;
 	if (e->start_block != 0)
 		return -EINVAL;
-	if (e->blocks > 2)
+	if (e->blocks > 2) {
+		e->blocks = 2;
 		return -E2BIG;
-	if (!e->edid)
-		return -EINVAL;
+	}
 
 	/* todo, per edid */
 	state->aspect_ratio = v4l2_calc_aspect_ratio(e->edid[0x15],
@@ -2097,149 +2100,65 @@ static int adv7842_set_edid(struct v4l2_subdev *sd, struct v4l2_edid *e)
 	return err;
 }
 
-/*********** avi info frame CEA-861-E **************/
-/* TODO move to common library */
-
-struct avi_info_frame {
-	uint8_t f17;
-	uint8_t y10;
-	uint8_t a0;
-	uint8_t b10;
-	uint8_t s10;
-	uint8_t c10;
-	uint8_t m10;
-	uint8_t r3210;
-	uint8_t itc;
-	uint8_t ec210;
-	uint8_t q10;
-	uint8_t sc10;
-	uint8_t f47;
-	uint8_t vic;
-	uint8_t yq10;
-	uint8_t cn10;
-	uint8_t pr3210;
-	uint16_t etb;
-	uint16_t sbb;
-	uint16_t elb;
-	uint16_t srb;
+struct adv7842_cfg_read_infoframe {
+	const char *desc;
+	u8 present_mask;
+	u8 head_addr;
+	u8 payload_addr;
 };
 
-static const char *y10_txt[4] = {
-	"RGB",
-	"YCbCr 4:2:2",
-	"YCbCr 4:4:4",
-	"Future",
-};
-
-static const char *c10_txt[4] = {
-	"No Data",
-	"SMPTE 170M",
-	"ITU-R 709",
-	"Extended Colorimetry information valied",
-};
-
-static const char *itc_txt[2] = {
-	"No Data",
-	"IT content",
-};
-
-static const char *ec210_txt[8] = {
-	"xvYCC601",
-	"xvYCC709",
-	"sYCC601",
-	"AdobeYCC601",
-	"AdobeRGB",
-	"5 reserved",
-	"6 reserved",
-	"7 reserved",
-};
-
-static const char *q10_txt[4] = {
-	"Default",
-	"Limited Range",
-	"Full Range",
-	"Reserved",
-};
-
-static void parse_avi_infoframe(struct v4l2_subdev *sd, uint8_t *buf,
-				struct avi_info_frame *avi)
-{
-	avi->f17 = (buf[1] >> 7) & 0x1;
-	avi->y10 = (buf[1] >> 5) & 0x3;
-	avi->a0 = (buf[1] >> 4) & 0x1;
-	avi->b10 = (buf[1] >> 2) & 0x3;
-	avi->s10 = buf[1] & 0x3;
-	avi->c10 = (buf[2] >> 6) & 0x3;
-	avi->m10 = (buf[2] >> 4) & 0x3;
-	avi->r3210 = buf[2] & 0xf;
-	avi->itc = (buf[3] >> 7) & 0x1;
-	avi->ec210 = (buf[3] >> 4) & 0x7;
-	avi->q10 = (buf[3] >> 2) & 0x3;
-	avi->sc10 = buf[3] & 0x3;
-	avi->f47 = (buf[4] >> 7) & 0x1;
-	avi->vic = buf[4] & 0x7f;
-	avi->yq10 = (buf[5] >> 6) & 0x3;
-	avi->cn10 = (buf[5] >> 4) & 0x3;
-	avi->pr3210 = buf[5] & 0xf;
-	avi->etb = buf[6] + 256*buf[7];
-	avi->sbb = buf[8] + 256*buf[9];
-	avi->elb = buf[10] + 256*buf[11];
-	avi->srb = buf[12] + 256*buf[13];
-}
-
-static void print_avi_infoframe(struct v4l2_subdev *sd)
+static void log_infoframe(struct v4l2_subdev *sd, struct adv7842_cfg_read_infoframe *cri)
 {
 	int i;
-	uint8_t buf[14];
-	u8 avi_len;
-	u8 avi_ver;
-	struct avi_info_frame avi;
+	uint8_t buffer[32];
+	union hdmi_infoframe frame;
+	u8 len;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct device *dev = &client->dev;
+
+	if (!(io_read(sd, 0x60) & cri->present_mask)) {
+		v4l2_info(sd, "%s infoframe not received\n", cri->desc);
+		return;
+	}
+
+	for (i = 0; i < 3; i++)
+		buffer[i] = infoframe_read(sd, cri->head_addr + i);
+
+	len = buffer[2] + 1;
+
+	if (len + 3 > sizeof(buffer)) {
+		v4l2_err(sd, "%s: invalid %s infoframe length %d\n", __func__, cri->desc, len);
+		return;
+	}
+
+	for (i = 0; i < len; i++)
+		buffer[i + 3] = infoframe_read(sd, cri->payload_addr + i);
+
+	if (hdmi_infoframe_unpack(&frame, buffer) < 0) {
+		v4l2_err(sd, "%s: unpack of %s infoframe failed\n", __func__, cri->desc);
+		return;
+	}
+
+	hdmi_infoframe_log(KERN_INFO, dev, &frame);
+}
+
+static void adv7842_log_infoframes(struct v4l2_subdev *sd)
+{
+	int i;
+	struct adv7842_cfg_read_infoframe cri[] = {
+		{ "AVI", 0x01, 0xe0, 0x00 },
+		{ "Audio", 0x02, 0xe3, 0x1c },
+		{ "SDP", 0x04, 0xe6, 0x2a },
+		{ "Vendor", 0x10, 0xec, 0x54 }
+	};
 
 	if (!(hdmi_read(sd, 0x05) & 0x80)) {
-		v4l2_info(sd, "receive DVI-D signal (AVI infoframe not supported)\n");
-		return;
-	}
-	if (!(io_read(sd, 0x60) & 0x01)) {
-		v4l2_info(sd, "AVI infoframe not received\n");
+		v4l2_info(sd, "receive DVI-D signal, no infoframes\n");
 		return;
 	}
 
-	if (io_read(sd, 0x88) & 0x10) {
-		v4l2_info(sd, "AVI infoframe checksum error has occurred earlier\n");
-		io_write(sd, 0x8a, 0x10); /* clear AVI_INF_CKS_ERR_RAW */
-		if (io_read(sd, 0x88) & 0x10) {
-			v4l2_info(sd, "AVI infoframe checksum error still present\n");
-			io_write(sd, 0x8a, 0x10); /* clear AVI_INF_CKS_ERR_RAW */
-		}
-	}
-
-	avi_len = infoframe_read(sd, 0xe2);
-	avi_ver = infoframe_read(sd, 0xe1);
-	v4l2_info(sd, "AVI infoframe version %d (%d byte)\n",
-		  avi_ver, avi_len);
-
-	if (avi_ver != 0x02)
-		return;
-
-	for (i = 0; i < 14; i++)
-		buf[i] = infoframe_read(sd, i);
-
-	v4l2_info(sd, "\t%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
-		  buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7],
-		  buf[8], buf[9], buf[10], buf[11], buf[12], buf[13]);
-
-	parse_avi_infoframe(sd, buf, &avi);
-
-	if (avi.vic)
-		v4l2_info(sd, "\tVIC: %d\n", avi.vic);
-	if (avi.itc)
-		v4l2_info(sd, "\t%s\n", itc_txt[avi.itc]);
-
-	if (avi.y10)
-		v4l2_info(sd, "\t%s %s\n", y10_txt[avi.y10], !avi.c10 ? "" :
-			(avi.c10 == 0x3 ? ec210_txt[avi.ec210] : c10_txt[avi.c10]));
-	else
-		v4l2_info(sd, "\t%s %s\n", y10_txt[avi.y10], q10_txt[avi.q10]);
+	for (i = 0; i < ARRAY_SIZE(cri); i++)
+		log_infoframe(sd, &cri[i]);
 }
 
 static const char * const prim_mode_txt[] = {
@@ -2453,7 +2372,8 @@ static int adv7842_cp_log_status(struct v4l2_subdev *sd)
 	v4l2_info(sd, "Deep color mode: %s\n",
 			deep_color_mode_txt[hdmi_read(sd, 0x0b) >> 6]);
 
-	print_avi_infoframe(sd);
+	adv7842_log_infoframes(sd);
+
 	return 0;
 }
 
@@ -2610,6 +2530,12 @@ static int adv7842_core_init(struct v4l2_subdev *sd)
 
 	disable_input(sd);
 
+	/*
+	 * Disable I2C access to internal EDID ram from HDMI DDC ports
+	 * Disable auto edid enable when leaving powerdown mode
+	 */
+	rep_write_and_or(sd, 0x77, 0xd3, 0x20);
+
 	/* power */
 	io_write(sd, 0x0c, 0x42);   /* Power up part and power down VDP */
 	io_write(sd, 0x15, 0x80);   /* Power up pads */
@@ -2689,9 +2615,6 @@ static int adv7842_core_init(struct v4l2_subdev *sd)
 	select_input(sd, pdata->vid_std_select);
 
 	enable_input(sd);
-
-	/* disable I2C access to internal EDID ram from HDMI DDC ports */
-	rep_write_and_or(sd, 0x77, 0xf3, 0x00);
 
 	if (pdata->hpa_auto) {
 		/* HPA auto, HPA 0.5s after Edid set and Cable detect */
@@ -2869,8 +2792,6 @@ static const struct v4l2_ctrl_ops adv7842_ctrl_ops = {
 
 static const struct v4l2_subdev_core_ops adv7842_core_ops = {
 	.log_status = adv7842_log_status,
-	.g_std = adv7842_g_std,
-	.s_std = adv7842_s_std,
 	.ioctl = adv7842_ioctl,
 	.interrupt_service_routine = adv7842_isr,
 #ifdef CONFIG_VIDEO_ADV_DEBUG
@@ -2880,14 +2801,14 @@ static const struct v4l2_subdev_core_ops adv7842_core_ops = {
 };
 
 static const struct v4l2_subdev_video_ops adv7842_video_ops = {
+	.g_std = adv7842_g_std,
+	.s_std = adv7842_s_std,
 	.s_routing = adv7842_s_routing,
 	.querystd = adv7842_querystd,
 	.g_input_status = adv7842_g_input_status,
 	.s_dv_timings = adv7842_s_dv_timings,
 	.g_dv_timings = adv7842_g_dv_timings,
 	.query_dv_timings = adv7842_query_dv_timings,
-	.enum_dv_timings = adv7842_enum_dv_timings,
-	.dv_timings_cap = adv7842_dv_timings_cap,
 	.enum_mbus_fmt = adv7842_enum_mbus_fmt,
 	.g_mbus_fmt = adv7842_g_mbus_fmt,
 	.try_mbus_fmt = adv7842_g_mbus_fmt,
@@ -2897,6 +2818,8 @@ static const struct v4l2_subdev_video_ops adv7842_video_ops = {
 static const struct v4l2_subdev_pad_ops adv7842_pad_ops = {
 	.get_edid = adv7842_get_edid,
 	.set_edid = adv7842_set_edid,
+	.enum_dv_timings = adv7842_enum_dv_timings,
+	.dv_timings_cap = adv7842_dv_timings_cap,
 };
 
 static const struct v4l2_subdev_ops adv7842_ops = {

@@ -12,6 +12,9 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  * The full GNU General Public License is included in this distribution in
  * the file called "COPYING".
  *
@@ -77,7 +80,7 @@ struct i40e_vsi {
 #define I40EVF_MIN_TXD       64
 #define I40EVF_MAX_RXD       4096
 #define I40EVF_MIN_RXD       64
-#define I40EVF_REQ_DESCRIPTOR_MULTIPLE  8
+#define I40EVF_REQ_DESCRIPTOR_MULTIPLE  32
 
 /* Supported Rx Buffer Sizes */
 #define I40EVF_RXBUFFER_64    64     /* Used for packet split */
@@ -188,15 +191,18 @@ struct i40evf_adapter {
 	struct i40e_q_vector *q_vector[MAX_MSIX_Q_VECTORS];
 	struct list_head vlan_filter_list;
 	char misc_vector_name[IFNAMSIZ + 9];
+	int num_active_queues;
 
 	/* TX */
 	struct i40e_ring *tx_rings[I40E_MAX_VSI_QP];
 	u32 tx_timeout_count;
 	struct list_head mac_filter_list;
+	u32 tx_desc_count;
 
 	/* RX */
 	struct i40e_ring *rx_rings[I40E_MAX_VSI_QP];
 	u64 hw_csum_rx_error;
+	u32 rx_desc_count;
 	int num_msix_vectors;
 	struct msix_entry *msix_entries;
 
@@ -219,7 +225,6 @@ struct i40evf_adapter {
 #define I40E_FLAG_RX_CSUM_ENABLED                I40EVF_FLAG_RX_CSUM_ENABLED
 	/* flags for admin queue service task */
 	u32 aq_required;
-	u32 aq_pending;
 #define I40EVF_FLAG_AQ_ENABLE_QUEUES		(u32)(1)
 #define I40EVF_FLAG_AQ_DISABLE_QUEUES		(u32)(1 << 1)
 #define I40EVF_FLAG_AQ_ADD_MAC_FILTER		(u32)(1 << 2)
@@ -238,7 +243,7 @@ struct i40evf_adapter {
 	struct i40e_hw hw; /* defined in i40e_type.h */
 
 	enum i40evf_state_t state;
-	volatile unsigned long crit_section;
+	unsigned long crit_section;
 
 	struct work_struct watchdog_task;
 	bool netdev_registered;
@@ -266,6 +271,8 @@ void i40evf_update_stats(struct i40evf_adapter *adapter);
 void i40evf_reset_interrupt_capability(struct i40evf_adapter *adapter);
 int i40evf_init_interrupt_scheme(struct i40evf_adapter *adapter);
 void i40evf_irq_enable_queues(struct i40evf_adapter *adapter, u32 mask);
+void i40evf_free_all_tx_resources(struct i40evf_adapter *adapter);
+void i40evf_free_all_rx_resources(struct i40evf_adapter *adapter);
 
 void i40e_napi_add_all(struct i40evf_adapter *adapter);
 void i40e_napi_del_all(struct i40evf_adapter *adapter);

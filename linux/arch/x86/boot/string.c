@@ -12,14 +12,9 @@
  * Very basic string functions
  */
 
-#include "boot.h"
+#include <linux/types.h>
+#include "ctype.h"
 
-/*
- * This file gets included in compressed/string.c which might pull in
- * string_32.h and which in turn maps memcmp to __builtin_memcmp(). Undo
- * that first.
- */
-#undef memcmp
 int memcmp(const void *s1, const void *s2, size_t len)
 {
 	u8 diff;
@@ -35,7 +30,7 @@ int strcmp(const char *str1, const char *str2)
 	int delta = 0;
 
 	while (*s1 || *s2) {
-		delta = *s2 - *s1;
+		delta = *s1 - *s2;
 		if (delta)
 			return delta;
 		s1++;

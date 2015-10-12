@@ -64,20 +64,16 @@ int core_tmr_alloc_req(
 }
 EXPORT_SYMBOL(core_tmr_alloc_req);
 
-void core_tmr_release_req(
-	struct se_tmr_req *tmr)
+void core_tmr_release_req(struct se_tmr_req *tmr)
 {
 	struct se_device *dev = tmr->tmr_dev;
 	unsigned long flags;
 
-	if (!dev) {
-		kfree(tmr);
-		return;
+	if (dev) {
+		spin_lock_irqsave(&dev->se_tmr_lock, flags);
+		list_del(&tmr->tmr_list);
+		spin_unlock_irqrestore(&dev->se_tmr_lock, flags);
 	}
-
-	spin_lock_irqsave(&dev->se_tmr_lock, flags);
-	list_del(&tmr->tmr_list);
-	spin_unlock_irqrestore(&dev->se_tmr_lock, flags);
 
 	kfree(tmr);
 }
@@ -90,9 +86,8 @@ static void core_tmr_handle_tas_abort(
 	bool remove = true;
 	/*
 	 * TASK ABORTED status (TAS) bit support
-	*/
-	if ((tmr_nacl &&
-	     (tmr_nacl != cmd->se_sess->se_node_acl)) && tas) {
+	 */
+	if ((tmr_nacl && (tmr_nacl != cmd->se_sess->se_node_acl)) && tas) {
 		remove = false;
 		transport_send_task_abort(cmd);
 	}
@@ -120,19 +115,18 @@ void core_tmr_abort_task(
 	struct se_tmr_req *tmr,
 	struct se_session *se_sess)
 {
-	struct se_cmd *se_cmd, *tmp_cmd;
+	struct se_cmd *se_cmd;
 	unsigned long flags;
 	int ref_tag;
 
 	spin_lock_irqsave(&se_sess->sess_cmd_lock, flags);
-	list_for_each_entry_safe(se_cmd, tmp_cmd,
-			&se_sess->sess_cmd_list, se_cmd_list) {
+	list_for_each_entry(se_cmd, &se_sess->sess_cmd_list, se_cmd_list) {
 
 		if (dev != se_cmd->se_dev)
 			continue;
 
-		/* skip se_cmd associated with tmr */
-		if (tmr->task_cmd == se_cmd)
+		/* skip task management functions, including tmr->task_cmd */
+		if (se_cmd->se_cmd_flags & SCF_SCSI_TMR_CDB)
 			continue;
 
 		ref_tag = se_cmd->se_tfo->get_task_tag(se_cmd);

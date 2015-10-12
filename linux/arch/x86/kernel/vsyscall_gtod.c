@@ -31,29 +31,30 @@ void update_vsyscall(struct timekeeper *tk)
 	gtod_write_begin(vdata);
 
 	/* copy vsyscall data */
-	vdata->vclock_mode	= tk->clock->archdata.vclock_mode;
-	vdata->cycle_last	= tk->clock->cycle_last;
-	vdata->mask		= tk->clock->mask;
-	vdata->mult		= tk->mult;
-	vdata->shift		= tk->shift;
+	vdata->vclock_mode	= tk->tkr_mono.clock->archdata.vclock_mode;
+	vdata->cycle_last	= tk->tkr_mono.cycle_last;
+	vdata->mask		= tk->tkr_mono.mask;
+	vdata->mult		= tk->tkr_mono.mult;
+	vdata->shift		= tk->tkr_mono.shift;
 
 	vdata->wall_time_sec		= tk->xtime_sec;
-	vdata->wall_time_snsec		= tk->xtime_nsec;
+	vdata->wall_time_snsec		= tk->tkr_mono.xtime_nsec;
 
 	vdata->monotonic_time_sec	= tk->xtime_sec
 					+ tk->wall_to_monotonic.tv_sec;
-	vdata->monotonic_time_snsec	= tk->xtime_nsec
+	vdata->monotonic_time_snsec	= tk->tkr_mono.xtime_nsec
 					+ ((u64)tk->wall_to_monotonic.tv_nsec
-						<< tk->shift);
+						<< tk->tkr_mono.shift);
 	while (vdata->monotonic_time_snsec >=
-					(((u64)NSEC_PER_SEC) << tk->shift)) {
+					(((u64)NSEC_PER_SEC) << tk->tkr_mono.shift)) {
 		vdata->monotonic_time_snsec -=
-					((u64)NSEC_PER_SEC) << tk->shift;
+					((u64)NSEC_PER_SEC) << tk->tkr_mono.shift;
 		vdata->monotonic_time_sec++;
 	}
 
 	vdata->wall_time_coarse_sec	= tk->xtime_sec;
-	vdata->wall_time_coarse_nsec	= (long)(tk->xtime_nsec >> tk->shift);
+	vdata->wall_time_coarse_nsec	= (long)(tk->tkr_mono.xtime_nsec >>
+						 tk->tkr_mono.shift);
 
 	vdata->monotonic_time_coarse_sec =
 		vdata->wall_time_coarse_sec + tk->wall_to_monotonic.tv_sec;

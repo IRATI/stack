@@ -142,6 +142,8 @@
 	  hw_name ## _ ## offset }
 #define FALCON_OTHER_STAT(ext_name)					\
 	[FALCON_STAT_ ## ext_name] = { #ext_name, 0, 0 }
+#define GENERIC_SW_STAT(ext_name)				\
+	[GENERIC_STAT_ ## ext_name] = { #ext_name, 0, 0 }
 
 static const struct efx_hw_stat_desc falcon_stat_desc[FALCON_STAT_COUNT] = {
 	FALCON_DMA_STAT(tx_bytes, XgTxOctets),
@@ -191,6 +193,8 @@ static const struct efx_hw_stat_desc falcon_stat_desc[FALCON_STAT_COUNT] = {
 	FALCON_DMA_STAT(rx_length_error, XgRxLengthError),
 	FALCON_DMA_STAT(rx_internal_error, XgRxInternalMACError),
 	FALCON_OTHER_STAT(rx_nodesc_drop_cnt),
+	GENERIC_SW_STAT(rx_nodesc_trunc),
+	GENERIC_SW_STAT(rx_noskb_drops),
 };
 static const unsigned long falcon_stat_mask[] = {
 	[0 ... BITS_TO_LONGS(FALCON_STAT_COUNT) - 1] = ~0UL,
@@ -2574,6 +2578,7 @@ static size_t falcon_update_nic_stats(struct efx_nic *efx, u64 *full_stats,
 				     stats[FALCON_STAT_rx_bytes] -
 				     stats[FALCON_STAT_rx_good_bytes] -
 				     stats[FALCON_STAT_rx_control] * 64);
+		efx_update_sw_stats(efx, stats);
 	}
 
 	if (full_stats)
@@ -2584,7 +2589,9 @@ static size_t falcon_update_nic_stats(struct efx_nic *efx, u64 *full_stats,
 		core_stats->tx_packets = stats[FALCON_STAT_tx_packets];
 		core_stats->rx_bytes = stats[FALCON_STAT_rx_bytes];
 		core_stats->tx_bytes = stats[FALCON_STAT_tx_bytes];
-		core_stats->rx_dropped = stats[FALCON_STAT_rx_nodesc_drop_cnt];
+		core_stats->rx_dropped = stats[FALCON_STAT_rx_nodesc_drop_cnt] +
+					 stats[GENERIC_STAT_rx_nodesc_trunc] +
+					 stats[GENERIC_STAT_rx_noskb_drops];
 		core_stats->multicast = stats[FALCON_STAT_rx_multicast];
 		core_stats->rx_length_errors =
 			stats[FALCON_STAT_rx_gtjumbo] +
@@ -2759,6 +2766,11 @@ const struct efx_nic_type falcon_a1_nic_type = {
 	.mtd_write = falcon_mtd_write,
 	.mtd_sync = falcon_mtd_sync,
 #endif
+	.sriov_init = efx_falcon_sriov_init,
+	.sriov_fini = efx_falcon_sriov_fini,
+	.sriov_mac_address_changed = efx_falcon_sriov_mac_address_changed,
+	.sriov_wanted = efx_falcon_sriov_wanted,
+	.sriov_reset = efx_falcon_sriov_reset,
 
 	.revision = EFX_REV_FALCON_A1,
 	.txd_ptr_tbl_base = FR_AA_TX_DESC_PTR_TBL_KER,
@@ -2855,6 +2867,11 @@ const struct efx_nic_type falcon_b0_nic_type = {
 	.mtd_write = falcon_mtd_write,
 	.mtd_sync = falcon_mtd_sync,
 #endif
+	.sriov_init = efx_falcon_sriov_init,
+	.sriov_fini = efx_falcon_sriov_fini,
+	.sriov_mac_address_changed = efx_falcon_sriov_mac_address_changed,
+	.sriov_wanted = efx_falcon_sriov_wanted,
+	.sriov_reset = efx_falcon_sriov_reset,
 
 	.revision = EFX_REV_FALCON_B0,
 	.txd_ptr_tbl_base = FR_BZ_TX_DESC_PTR_TBL,

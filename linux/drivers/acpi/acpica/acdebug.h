@@ -5,7 +5,7 @@
  *****************************************************************************/
 
 /*
- * Copyright (C) 2000 - 2014, Intel Corp.
+ * Copyright (C) 2000 - 2015, Intel Corp.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -232,9 +232,6 @@ acpi_status acpi_db_load_acpi_table(char *filename);
 
 acpi_status
 acpi_db_get_table_from_file(char *filename, struct acpi_table_header **table);
-
-acpi_status
-acpi_db_read_table_from_file(char *filename, struct acpi_table_header **table);
 
 /*
  * dbhistry - debugger HISTORY command

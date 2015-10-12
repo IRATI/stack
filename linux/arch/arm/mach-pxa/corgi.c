@@ -26,6 +26,7 @@
 #include <linux/i2c.h>
 #include <linux/i2c/pxa-i2c.h>
 #include <linux/io.h>
+#include <linux/regulator/machine.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/ads7846.h>
 #include <linux/spi/corgi_lcd.h>
@@ -34,6 +35,7 @@
 #include <linux/input/matrix_keypad.h>
 #include <linux/gpio_keys.h>
 #include <linux/module.h>
+#include <linux/memblock.h>
 #include <video/w100fb.h>
 
 #include <asm/setup.h>
@@ -513,7 +515,7 @@ static struct pxa2xx_udc_mach_info udc_info __initdata = {
 	.gpio_pullup		= CORGI_GPIO_USB_PULLUP,
 };
 
-#if defined(CONFIG_SPI_PXA2XX) || defined(CONFIG_SPI_PXA2XX_MASTER)
+#if IS_ENABLED(CONFIG_SPI_PXA2XX)
 static struct pxa2xx_spi_master corgi_spi_info = {
 	.num_chipselect	= 3,
 };
@@ -751,18 +753,17 @@ static void __init corgi_init(void)
 		sharpsl_nand_partitions[1].size = 53 * 1024 * 1024;
 
 	platform_add_devices(devices, ARRAY_SIZE(devices));
+
+	regulator_has_full_constraints();
 }
 
-static void __init fixup_corgi(struct tag *tags, char **cmdline,
-			       struct meminfo *mi)
+static void __init fixup_corgi(struct tag *tags, char **cmdline)
 {
 	sharpsl_save_param();
-	mi->nr_banks=1;
-	mi->bank[0].start = 0xa0000000;
 	if (machine_is_corgi())
-		mi->bank[0].size = (32*1024*1024);
+		memblock_add(0xa0000000, SZ_32M);
 	else
-		mi->bank[0].size = (64*1024*1024);
+		memblock_add(0xa0000000, SZ_64M);
 }
 
 #ifdef CONFIG_MACH_CORGI

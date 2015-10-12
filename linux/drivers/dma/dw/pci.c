@@ -82,7 +82,7 @@ static int dw_pci_suspend_late(struct device *dev)
 	struct pci_dev *pci = to_pci_dev(dev);
 	struct dw_dma_chip *chip = pci_get_drvdata(pci);
 
-	return dw_dma_suspend(chip);
+	return dw_dma_disable(chip);
 };
 
 static int dw_pci_resume_early(struct device *dev)
@@ -90,22 +90,16 @@ static int dw_pci_resume_early(struct device *dev)
 	struct pci_dev *pci = to_pci_dev(dev);
 	struct dw_dma_chip *chip = pci_get_drvdata(pci);
 
-	return dw_dma_resume(chip);
+	return dw_dma_enable(chip);
 };
 
-#else /* !CONFIG_PM_SLEEP */
-
-#define dw_pci_suspend_late	NULL
-#define dw_pci_resume_early	NULL
-
-#endif /* !CONFIG_PM_SLEEP */
+#endif /* CONFIG_PM_SLEEP */
 
 static const struct dev_pm_ops dw_pci_dev_pm_ops = {
-	.suspend_late = dw_pci_suspend_late,
-	.resume_early = dw_pci_resume_early,
+	SET_LATE_SYSTEM_SLEEP_PM_OPS(dw_pci_suspend_late, dw_pci_resume_early)
 };
 
-static DEFINE_PCI_DEVICE_TABLE(dw_pci_id_table) = {
+static const struct pci_device_id dw_pci_id_table[] = {
 	/* Medfield */
 	{ PCI_VDEVICE(INTEL, 0x0827), (kernel_ulong_t)&dw_pci_pdata },
 	{ PCI_VDEVICE(INTEL, 0x0830), (kernel_ulong_t)&dw_pci_pdata },
@@ -113,6 +107,10 @@ static DEFINE_PCI_DEVICE_TABLE(dw_pci_id_table) = {
 	/* BayTrail */
 	{ PCI_VDEVICE(INTEL, 0x0f06), (kernel_ulong_t)&dw_pci_pdata },
 	{ PCI_VDEVICE(INTEL, 0x0f40), (kernel_ulong_t)&dw_pci_pdata },
+
+	/* Braswell */
+	{ PCI_VDEVICE(INTEL, 0x2286), (kernel_ulong_t)&dw_pci_pdata },
+	{ PCI_VDEVICE(INTEL, 0x22c0), (kernel_ulong_t)&dw_pci_pdata },
 
 	/* Haswell */
 	{ PCI_VDEVICE(INTEL, 0x9c60), (kernel_ulong_t)&dw_pci_pdata },

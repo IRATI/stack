@@ -363,6 +363,18 @@ static struct clk ethclk = {
 	.ops	    = &dummy_clk_ops,
 };
 
+static struct clk ethpclk = {
+	.name       = "pclk",
+	.parent     = &sclk0,
+	.ops	    = &dummy_clk_ops,
+};
+
+static struct clk spiclk = {
+	.name       = "spi",
+	.parent     = &sclk1,
+	.ops        = &dummy_clk_ops,
+};
+
 static struct clk_lookup bf609_clks[] = {
 	CLK(sys_clkin, NULL, "SYS_CLKIN"),
 	CLK(pll_clk, NULL, "PLLCLK"),
@@ -375,6 +387,8 @@ static struct clk_lookup bf609_clks[] = {
 	CLK(dclk, NULL, "DCLK"),
 	CLK(oclk, NULL, "OCLK"),
 	CLK(ethclk, NULL, "stmmaceth"),
+	CLK(ethpclk, NULL, "pclk"),
+	CLK(spiclk, NULL, "spi"),
 };
 
 int __init clk_init(void)

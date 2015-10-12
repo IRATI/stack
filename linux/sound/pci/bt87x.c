@@ -27,7 +27,7 @@
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/bitops.h>
-#include <asm/io.h>
+#include <linux/io.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -443,7 +443,7 @@ static int snd_bt87x_pcm_open(struct snd_pcm_substream *substream)
 
 _error:
 	clear_bit(0, &chip->opened);
-	smp_mb__after_clear_bit();
+	smp_mb__after_atomic();
 	return err;
 }
 
@@ -458,7 +458,7 @@ static int snd_bt87x_close(struct snd_pcm_substream *substream)
 
 	chip->substream = NULL;
 	clear_bit(0, &chip->opened);
-	smp_mb__after_clear_bit();
+	smp_mb__after_atomic();
 	return 0;
 }
 
@@ -690,8 +690,7 @@ static int snd_bt87x_free(struct snd_bt87x *chip)
 		snd_bt87x_stop(chip);
 	if (chip->irq >= 0)
 		free_irq(chip->irq, chip);
-	if (chip->mmio)
-		iounmap(chip->mmio);
+	iounmap(chip->mmio);
 	pci_release_regions(chip->pci);
 	pci_disable_device(chip->pci);
 	kfree(chip);
@@ -796,7 +795,7 @@ fail:
 	  .driver_data = SND_BT87X_BOARD_ ## id }
 /* driver_data is the card id for that device */
 
-static DEFINE_PCI_DEVICE_TABLE(snd_bt87x_ids) = {
+static const struct pci_device_id snd_bt87x_ids[] = {
 	/* Hauppauge WinTV series */
 	BT_DEVICE(PCI_DEVICE_ID_BROOKTREE_878, 0x0070, 0x13eb, GENERIC),
 	/* Hauppauge WinTV series */
@@ -966,7 +965,7 @@ static void snd_bt87x_remove(struct pci_dev *pci)
 
 /* default entries for all Bt87x cards - it's not exported */
 /* driver_data is set to 0 to call detection */
-static DEFINE_PCI_DEVICE_TABLE(snd_bt87x_default_ids) = {
+static const struct pci_device_id snd_bt87x_default_ids[] = {
 	BT_DEVICE(PCI_DEVICE_ID_BROOKTREE_878, PCI_ANY_ID, PCI_ANY_ID, UNKNOWN),
 	BT_DEVICE(PCI_DEVICE_ID_BROOKTREE_879, PCI_ANY_ID, PCI_ANY_ID, UNKNOWN),
 	{ }

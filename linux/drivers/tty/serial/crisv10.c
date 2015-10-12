@@ -3676,12 +3676,6 @@ rs_close(struct tty_struct *tty, struct file * filp)
 	}
 	info->port.flags |= ASYNC_CLOSING;
 	/*
-	 * Save the termios structure, since this port may have
-	 * separate termios for callout and dialin.
-	 */
-	if (info->port.flags & ASYNC_NORMAL_ACTIVE)
-		info->normal_termios = tty->termios;
-	/*
 	 * Now we wait for the transmit buffer to clear; and we notify
 	 * the line discipline to only process XON/XOFF characters.
 	 */
@@ -3831,14 +3825,13 @@ block_til_ready(struct tty_struct *tty, struct file * filp,
 	DECLARE_WAITQUEUE(wait, current);
 	unsigned long	flags;
 	int		retval;
-	int		do_clocal = 0, extra_count = 0;
+	int		do_clocal = 0;
 
 	/*
 	 * If the device is in the middle of being closed, then block
 	 * until it's done, and then try again.
 	 */
-	if (tty_hung_up_p(filp) ||
-	    (info->port.flags & ASYNC_CLOSING)) {
+	if (info->port.flags & ASYNC_CLOSING) {
 		wait_event_interruptible_tty(tty, info->port.close_wait,
 			!(info->port.flags & ASYNC_CLOSING));
 #ifdef SERIAL_DO_RESTART
@@ -3879,10 +3872,7 @@ block_til_ready(struct tty_struct *tty, struct file * filp,
 	       info->line, info->port.count);
 #endif
 	local_irq_save(flags);
-	if (!tty_hung_up_p(filp)) {
-		extra_count++;
-		info->port.count--;
-	}
+	info->port.count--;
 	local_irq_restore(flags);
 	info->port.blocked_open++;
 	while (1) {
@@ -3921,7 +3911,7 @@ block_til_ready(struct tty_struct *tty, struct file * filp,
 	}
 	set_current_state(TASK_RUNNING);
 	remove_wait_queue(&info->port.open_wait, &wait);
-	if (extra_count)
+	if (!tty_hung_up_p(filp))
 		info->port.count++;
 	info->port.blocked_open--;
 #ifdef SERIAL_DEBUG_OPEN
@@ -3976,8 +3966,7 @@ rs_open(struct tty_struct *tty, struct file * filp)
 	/*
 	 * If the port is in the middle of closing, bail out now
 	 */
-	if (tty_hung_up_p(filp) ||
-	    (info->port.flags & ASYNC_CLOSING)) {
+	if (info->port.flags & ASYNC_CLOSING) {
 		wait_event_interruptible_tty(tty, info->port.close_wait,
 			!(info->port.flags & ASYNC_CLOSING));
 #ifdef SERIAL_DO_RESTART
@@ -4079,11 +4068,6 @@ rs_open(struct tty_struct *tty, struct file * filp)
 			deinit_port(info);
 
 		return retval;
-	}
-
-	if ((info->port.count == 1) && (info->port.flags & ASYNC_SPLIT_TERMIOS)) {
-		tty->termios = info->normal_termios;
-		change_speed(info);
 	}
 
 #ifdef SERIAL_DEBUG_OPEN
@@ -4332,7 +4316,6 @@ static int __init rs_init(void)
 		info->custom_divisor = 0;
 		info->x_char = 0;
 		info->event = 0;
-		info->normal_termios = driver->init_termios;
 		info->xmit.buf = NULL;
 		info->xmit.tail = info->xmit.head = 0;
 		info->first_recv_buffer = info->last_recv_buffer = NULL;

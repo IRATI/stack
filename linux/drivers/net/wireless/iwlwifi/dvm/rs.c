@@ -1453,7 +1453,7 @@ static int rs_move_legacy_other(struct iwl_priv *priv,
 			tbl->action = IWL_LEGACY_SWITCH_SISO;
 		break;
 	default:
-		IWL_ERR(priv, "Invalid BT load %d", priv->bt_traffic_load);
+		IWL_ERR(priv, "Invalid BT load %d\n", priv->bt_traffic_load);
 		break;
 	}
 
@@ -1628,7 +1628,7 @@ static int rs_move_siso_to_other(struct iwl_priv *priv,
 			tbl->action = IWL_SISO_SWITCH_ANTENNA1;
 		break;
 	default:
-		IWL_ERR(priv, "Invalid BT load %d", priv->bt_traffic_load);
+		IWL_ERR(priv, "Invalid BT load %d\n", priv->bt_traffic_load);
 		break;
 	}
 
@@ -1799,7 +1799,7 @@ static int rs_move_mimo2_to_other(struct iwl_priv *priv,
 			tbl->action = IWL_MIMO2_SWITCH_SISO_A;
 		break;
 	default:
-		IWL_ERR(priv, "Invalid BT load %d", priv->bt_traffic_load);
+		IWL_ERR(priv, "Invalid BT load %d\n", priv->bt_traffic_load);
 		break;
 	}
 
@@ -1969,7 +1969,7 @@ static int rs_move_mimo3_to_other(struct iwl_priv *priv,
 			tbl->action = IWL_MIMO3_SWITCH_SISO_A;
 		break;
 	default:
-		IWL_ERR(priv, "Invalid BT load %d", priv->bt_traffic_load);
+		IWL_ERR(priv, "Invalid BT load %d\n", priv->bt_traffic_load);
 		break;
 	}
 
@@ -2709,7 +2709,7 @@ static void rs_initialize_lq(struct iwl_priv *priv,
 	rs_set_expected_tpt_table(lq_sta, tbl);
 	rs_fill_link_cmd(NULL, lq_sta, rate);
 	priv->stations[lq_sta->lq.sta_id].lq = &lq_sta->lq;
-	iwl_send_lq_cmd(priv, ctx, &lq_sta->lq, CMD_SYNC, true);
+	iwl_send_lq_cmd(priv, ctx, &lq_sta->lq, 0, true);
 }
 
 static void rs_get_rate(void *priv_r, struct ieee80211_sta *sta, void *priv_sta,
@@ -3153,12 +3153,13 @@ static ssize_t rs_sta_dbgfs_scale_table_read(struct file *file,
 	desc += sprintf(buff+desc, "lq type %s\n",
 	   (is_legacy(tbl->lq_type)) ? "legacy" : "HT");
 	if (is_Ht(tbl->lq_type)) {
-		desc += sprintf(buff+desc, " %s",
+		desc += sprintf(buff + desc, " %s",
 		   (is_siso(tbl->lq_type)) ? "SISO" :
 		   ((is_mimo2(tbl->lq_type)) ? "MIMO2" : "MIMO3"));
-		   desc += sprintf(buff+desc, " %s",
+		desc += sprintf(buff + desc, " %s",
 		   (tbl->is_ht40) ? "40MHz" : "20MHz");
-		   desc += sprintf(buff+desc, " %s %s %s\n", (tbl->is_SGI) ? "SGI" : "",
+		desc += sprintf(buff + desc, " %s %s %s\n",
+		   (tbl->is_SGI) ? "SGI" : "",
 		   (lq_sta->is_green) ? "GF enabled" : "",
 		   (lq_sta->is_agg) ? "AGG on" : "");
 	}

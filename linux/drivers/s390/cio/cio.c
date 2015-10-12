@@ -46,6 +46,9 @@ debug_info_t *cio_debug_msg_id;
 debug_info_t *cio_debug_trace_id;
 debug_info_t *cio_debug_crw_id;
 
+DEFINE_PER_CPU_ALIGNED(struct irb, cio_irb);
+EXPORT_PER_CPU_SYMBOL(cio_irb);
+
 /*
  * Function: cio_debug_init
  * Initializes three debug logs for common I/O:
@@ -140,13 +143,11 @@ cio_start_key (struct subchannel *sch,	/* subchannel structure */
 	orb->cmd.spnd = priv->options.suspend;
 	orb->cmd.ssic = priv->options.suspend && priv->options.inter;
 	orb->cmd.lpm = (lpm != 0) ? lpm : sch->lpm;
-#ifdef CONFIG_64BIT
 	/*
 	 * for 64 bit we always support 64 bit IDAWs with 4k page size only
 	 */
 	orb->cmd.c64 = 1;
 	orb->cmd.i2k = 0;
-#endif
 	orb->cmd.key = key >> 4;
 	/* issue "Start Subchannel" */
 	orb->cmd.cpa = (__u32) __pa(cpa);
@@ -558,9 +559,9 @@ static irqreturn_t do_cio_interrupt(int irq, void *dummy)
 	struct subchannel *sch;
 	struct irb *irb;
 
-	__this_cpu_write(s390_idle.nohz_delay, 1);
+	set_cpu_flag(CIF_NOHZ_DELAY);
 	tpi_info = (struct tpi_info *) &get_irq_regs()->int_code;
-	irb = (struct irb *) &S390_lowcore.irb;
+	irb = this_cpu_ptr(&cio_irb);
 	sch = (struct subchannel *)(unsigned long) tpi_info->intparm;
 	if (!sch) {
 		/* Clear pending interrupt condition. */
@@ -599,6 +600,7 @@ void __init init_cio_interrupts(void)
 
 #ifdef CONFIG_CCW_CONSOLE
 static struct subchannel *console_sch;
+static struct lock_class_key console_sch_key;
 
 /*
  * Use cio_tsch to update the subchannel status and call the interrupt handler
@@ -609,7 +611,7 @@ void cio_tsch(struct subchannel *sch)
 	struct irb *irb;
 	int irq_context;
 
-	irb = (struct irb *)&S390_lowcore.irb;
+	irb = this_cpu_ptr(&cio_irb);
 	/* Store interrupt response block to lowcore. */
 	if (tsch(sch->schid, irb) != 0)
 		/* Not status pending or not operational. */
@@ -683,6 +685,7 @@ struct subchannel *cio_probe_console(void)
 	if (IS_ERR(sch))
 		return sch;
 
+	lockdep_set_class(sch->lock, &console_sch_key);
 	isc_register(CONSOLE_ISC);
 	sch->config.isc = CONSOLE_ISC;
 	sch->config.intparm = (u32)(addr_t)sch;
@@ -746,7 +749,7 @@ __clear_io_subchannel_easy(struct subchannel_id schid)
 		struct tpi_info ti;
 
 		if (tpi(&ti)) {
-			tsch(ti.schid, (struct irb *)&S390_lowcore.irb);
+			tsch(ti.schid, this_cpu_ptr(&cio_irb));
 			if (schid_equal(&ti.schid, &schid))
 				return 0;
 		}
@@ -933,7 +936,7 @@ void reipl_ccw_dev(struct ccw_dev_id *devid)
 {
 	struct subchannel_id uninitialized_var(schid);
 
-	s390_reset_system(NULL, NULL);
+	s390_reset_system(NULL, NULL, NULL);
 	if (reipl_find_schid(devid, &schid) != 0)
 		panic("IPL Device not found\n");
 	do_reipl_asm(*((__u32*)&schid));
