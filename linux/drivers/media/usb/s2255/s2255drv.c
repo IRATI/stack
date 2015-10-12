@@ -558,27 +558,30 @@ static void s2255_fwchunk_complete(struct urb *urb)
 
 }
 
-static int s2255_got_frame(struct s2255_vc *vc, int jpgsize)
+static void s2255_got_frame(struct s2255_vc *vc, int jpgsize)
 {
 	struct s2255_buffer *buf;
 	struct s2255_dev *dev = to_s2255_dev(vc->vdev.v4l2_dev);
 	unsigned long flags = 0;
-	int rc = 0;
+
 	spin_lock_irqsave(&vc->qlock, flags);
 	if (list_empty(&vc->buf_list)) {
 		dprintk(dev, 1, "No active queue to serve\n");
-		rc = -1;
-		goto unlock;
+		spin_unlock_irqrestore(&vc->qlock, flags);
+		return;
 	}
 	buf = list_entry(vc->buf_list.next,
 			 struct s2255_buffer, list);
 	list_del(&buf->list);
 	v4l2_get_timestamp(&buf->vb.v4l2_buf.timestamp);
-	s2255_fillbuff(vc, buf, jpgsize);
-	dprintk(dev, 2, "%s: [buf] [%p]\n", __func__, buf);
-unlock:
+	buf->vb.v4l2_buf.field = vc->field;
+	buf->vb.v4l2_buf.sequence = vc->frame_count;
 	spin_unlock_irqrestore(&vc->qlock, flags);
-	return rc;
+
+	s2255_fillbuff(vc, buf, jpgsize);
+	/* tell v4l buffer was filled */
+	vb2_buffer_done(&buf->vb, VB2_BUF_STATE_DONE);
+	dprintk(dev, 2, "%s: [buf] [%p]\n", __func__, buf);
 }
 
 static const struct s2255_fmt *format_by_fourcc(int fourcc)
@@ -632,7 +635,7 @@ static void s2255_fillbuff(struct s2255_vc *vc,
 			break;
 		case V4L2_PIX_FMT_JPEG:
 		case V4L2_PIX_FMT_MJPEG:
-			buf->vb.v4l2_buf.length = jpgsize;
+			vb2_set_plane_payload(&buf->vb, 0, jpgsize);
 			memcpy(vbuf, tmpbuf, jpgsize);
 			break;
 		case V4L2_PIX_FMT_YUV422P:
@@ -649,11 +652,6 @@ static void s2255_fillbuff(struct s2255_vc *vc,
 	}
 	dprintk(dev, 2, "s2255fill at : Buffer 0x%08lx size= %d\n",
 		(unsigned long)vbuf, pos);
-	/* tell v4l buffer was filled */
-	buf->vb.v4l2_buf.field = vc->field;
-	buf->vb.v4l2_buf.sequence = vc->frame_count;
-	v4l2_get_timestamp(&buf->vb.v4l2_buf.timestamp);
-	vb2_buffer_done(&buf->vb, VB2_BUF_STATE_DONE);
 }
 
 
@@ -714,7 +712,7 @@ static void buffer_queue(struct vb2_buffer *vb)
 }
 
 static int start_streaming(struct vb2_queue *vq, unsigned int count);
-static int stop_streaming(struct vb2_queue *vq);
+static void stop_streaming(struct vb2_queue *vq);
 
 static struct vb2_ops s2255_video_qops = {
 	.queue_setup = queue_setup,
@@ -1109,7 +1107,7 @@ static int start_streaming(struct vb2_queue *vq, unsigned int count)
 }
 
 /* abort streaming and wait for last buffer */
-static int stop_streaming(struct vb2_queue *vq)
+static void stop_streaming(struct vb2_queue *vq)
 {
 	struct s2255_vc *vc = vb2_get_drv_priv(vq);
 	struct s2255_buffer *buf, *node;
@@ -1123,7 +1121,6 @@ static int stop_streaming(struct vb2_queue *vq)
 			buf, buf->vb.v4l2_buf.index);
 	}
 	spin_unlock_irqrestore(&vc->qlock, flags);
-	return 0;
 }
 
 static int vidioc_s_std(struct file *file, void *priv, v4l2_std_id i)
@@ -1522,7 +1519,7 @@ static void s2255_destroy(struct s2255_dev *dev)
 	/* board shutdown stops the read pipe if it is running */
 	s2255_board_shutdown(dev);
 	/* make sure firmware still not trying to load */
-	del_timer(&dev->timer);  /* only started in .probe and .open */
+	del_timer_sync(&dev->timer);  /* only started in .probe and .open */
 	if (dev->fw_data->fw_urb) {
 		usb_kill_urb(dev->fw_data->fw_urb);
 		usb_free_urb(dev->fw_data->fw_urb);
@@ -1677,7 +1674,6 @@ static int s2255_probe_v4l(struct s2255_dev *dev)
 		vc->vdev.ctrl_handler = &vc->hdl;
 		vc->vdev.lock = &dev->lock;
 		vc->vdev.v4l2_dev = &dev->v4l2_dev;
-		set_bit(V4L2_FL_USE_FH_PRIO, &vc->vdev.flags);
 		video_set_drvdata(&vc->vdev, vc);
 		if (video_nr == -1)
 			ret = video_register_device(&vc->vdev,
@@ -1978,8 +1974,7 @@ static int s2255_release_sys_buffers(struct s2255_vc *vc)
 {
 	unsigned long i;
 	for (i = 0; i < SYS_FRAMES; i++) {
-		if (vc->buffer.frame[i].lpvbits)
-			vfree(vc->buffer.frame[i].lpvbits);
+		vfree(vc->buffer.frame[i].lpvbits);
 		vc->buffer.frame[i].lpvbits = NULL;
 	}
 	return 0;
@@ -2243,11 +2238,11 @@ static int s2255_probe(struct usb_interface *interface,
 	dev->cmdbuf = kzalloc(S2255_CMDBUF_SIZE, GFP_KERNEL);
 	if (dev->cmdbuf == NULL) {
 		s2255_dev_err(&interface->dev, "out of memory\n");
-		return -ENOMEM;
+		goto errorFWDATA1;
 	}
 
 	atomic_set(&dev->num_channels, 0);
-	dev->pid = le16_to_cpu(id->idProduct);
+	dev->pid = id->idProduct;
 	dev->fw_data = kzalloc(sizeof(struct s2255_fw), GFP_KERNEL);
 	if (!dev->fw_data)
 		goto errorFWDATA1;
@@ -2279,9 +2274,7 @@ static int s2255_probe(struct usb_interface *interface,
 		dev_err(&interface->dev, "Could not find bulk-in endpoint\n");
 		goto errorEP;
 	}
-	init_timer(&dev->timer);
-	dev->timer.function = s2255_timer;
-	dev->timer.data = (unsigned long)dev->fw_data;
+	setup_timer(&dev->timer, s2255_timer, (unsigned long)dev->fw_data);
 	init_waitqueue_head(&dev->fw_data->wait_fw);
 	for (i = 0; i < MAX_CHANNELS; i++) {
 		struct s2255_vc *vc = &dev->vc[i];
@@ -2352,7 +2345,7 @@ errorREQFW:
 errorFWDATA2:
 	usb_free_urb(dev->fw_data->fw_urb);
 errorFWURB:
-	del_timer(&dev->timer);
+	del_timer_sync(&dev->timer);
 errorEP:
 	usb_put_dev(dev->udev);
 errorUDEV:

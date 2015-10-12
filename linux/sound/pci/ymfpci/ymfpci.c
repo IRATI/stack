@@ -66,7 +66,7 @@ MODULE_PARM_DESC(joystick_port, "Joystick port address");
 module_param_array(rear_switch, bool, NULL, 0444);
 MODULE_PARM_DESC(rear_switch, "Enable shared rear/line-in switch");
 
-static DEFINE_PCI_DEVICE_TABLE(snd_ymfpci_ids) = {
+static const struct pci_device_id snd_ymfpci_ids[] = {
 	{ PCI_VDEVICE(YAMAHA, 0x0004), 0, },   /* YMF724 */
 	{ PCI_VDEVICE(YAMAHA, 0x000d), 0, },   /* YMF724F */
 	{ PCI_VDEVICE(YAMAHA, 0x000a), 0, },   /* YMF740 */
@@ -283,11 +283,11 @@ static int snd_card_ymfpci_probe(struct pci_dev *pci,
 		card->shortname,
 		chip->reg_area_phys,
 		chip->irq);
-	if ((err = snd_ymfpci_pcm(chip, 0, NULL)) < 0) {
+	if ((err = snd_ymfpci_pcm(chip, 0)) < 0) {
 		snd_card_free(card);
 		return err;
 	}
-	if ((err = snd_ymfpci_pcm_spdif(chip, 1, NULL)) < 0) {
+	if ((err = snd_ymfpci_pcm_spdif(chip, 1)) < 0) {
 		snd_card_free(card);
 		return err;
 	}
@@ -297,12 +297,12 @@ static int snd_card_ymfpci_probe(struct pci_dev *pci,
 		return err;
 	}
 	if (chip->ac97->ext_id & AC97_EI_SDAC) {
-		err = snd_ymfpci_pcm_4ch(chip, 2, NULL);
+		err = snd_ymfpci_pcm_4ch(chip, 2);
 		if (err < 0) {
 			snd_card_free(card);
 			return err;
 		}
-		err = snd_ymfpci_pcm2(chip, 3, NULL);
+		err = snd_ymfpci_pcm2(chip, 3);
 		if (err < 0) {
 			snd_card_free(card);
 			return err;

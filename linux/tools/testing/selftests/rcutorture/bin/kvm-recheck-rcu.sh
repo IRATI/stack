@@ -2,7 +2,7 @@
 #
 # Analyze a given results directory for rcutorture progress.
 #
-# Usage: sh kvm-recheck-rcu.sh resdir
+# Usage: kvm-recheck-rcu.sh resdir
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,12 +30,13 @@ else
 	echo Unreadable results directory: $i
 	exit 1
 fi
+. tools/testing/selftests/rcutorture/bin/functions.sh
 
 configfile=`echo $i | sed -e 's/^.*\///'`
 ngps=`grep ver: $i/console.log 2> /dev/null | tail -1 | sed -e 's/^.* ver: //' -e 's/ .*$//'`
 if test -z "$ngps"
 then
-	echo $configfile
+	echo "$configfile -------"
 else
 	title="$configfile ------- $ngps grace periods"
 	dur=`sed -e 's/^.* rcutorture.shutdown_secs=//' -e 's/ .*$//' < $i/qemu-cmd 2> /dev/null`
@@ -48,4 +49,21 @@ else
 		title="$title ($ngpsps per second)"
 	fi
 	echo $title
+	nclosecalls=`grep --binary-files=text 'torture: Reader Batch' $i/console.log | tail -1 | awk '{for (i=NF-8;i<=NF;i++) sum+=$i; } END {print sum}'`
+	if test -z "$nclosecalls"
+	then
+		exit 0
+	fi
+	if test "$nclosecalls" -eq 0
+	then
+		exit 0
+	fi
+	# Compute number of close calls per tenth of an hour
+	nclosecalls10=`awk -v nclosecalls=$nclosecalls -v dur=$dur 'BEGIN { print int(nclosecalls * 36000 / dur) }' < /dev/null`
+	if test $nclosecalls10 -gt 5 -a $nclosecalls -gt 1
+	then
+		print_bug $nclosecalls "Reader Batch close calls in" $(($dur/60)) minute run: $i
+	else
+		print_warning $nclosecalls "Reader Batch close calls in" $(($dur/60)) minute run: $i
+	fi
 fi

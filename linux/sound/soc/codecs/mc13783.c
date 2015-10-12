@@ -22,6 +22,7 @@
  */
 #include <linux/module.h>
 #include <linux/device.h>
+#include <linux/of.h>
 #include <linux/mfd/mc13xxx.h>
 #include <linux/slab.h>
 #include <sound/core.h>
@@ -327,16 +328,16 @@ static int mc13783_set_tdm_slot_dac(struct snd_soc_dai *dai,
 	}
 
 	switch (rx_mask) {
-	case 0xfffffffc:
+	case 0x03:
 		val |= SSI_NETWORK_DAC_RXSLOT_0_1;
 		break;
-	case 0xfffffff3:
+	case 0x0c:
 		val |= SSI_NETWORK_DAC_RXSLOT_2_3;
 		break;
-	case 0xffffffcf:
+	case 0x30:
 		val |= SSI_NETWORK_DAC_RXSLOT_4_5;
 		break;
-	case 0xffffff3f:
+	case 0xc0:
 		val |= SSI_NETWORK_DAC_RXSLOT_6_7;
 		break;
 	default:
@@ -359,7 +360,7 @@ static int mc13783_set_tdm_slot_codec(struct snd_soc_dai *dai,
 	if (slots != 4)
 		return -EINVAL;
 
-	if (tx_mask != 0xfffffffc)
+	if (tx_mask != 0x3)
 		return -EINVAL;
 
 	val |= (0x00 << 2);	/* primary timeslot RX/TX(?) is 0 */
@@ -409,7 +410,7 @@ static const char * const adcl_enum_text[] = {
 static SOC_ENUM_SINGLE_VIRT_DECL(adcl_enum, adcl_enum_text);
 
 static const struct snd_kcontrol_new left_input_mux =
-	SOC_DAPM_ENUM_VIRT("Route", adcl_enum);
+	SOC_DAPM_ENUM("Route", adcl_enum);
 
 static const char * const adcr_enum_text[] = {
 	"MC1R", "MC2", "RXINR", "TXIN",
@@ -418,7 +419,7 @@ static const char * const adcr_enum_text[] = {
 static SOC_ENUM_SINGLE_VIRT_DECL(adcr_enum, adcr_enum_text);
 
 static const struct snd_kcontrol_new right_input_mux =
-	SOC_DAPM_ENUM_VIRT("Route", adcr_enum);
+	SOC_DAPM_ENUM("Route", adcr_enum);
 
 static const struct snd_kcontrol_new samp_ctl =
 	SOC_DAPM_SINGLE("Switch", MC13783_AUDIO_RX0, 3, 1, 0);
@@ -478,9 +479,9 @@ static const struct snd_soc_dapm_widget mc13783_dapm_widgets[] = {
 	SND_SOC_DAPM_SWITCH("MC2 Amp", MC13783_AUDIO_TX, 9, 0, &mc2_amp_ctl),
 	SND_SOC_DAPM_SWITCH("TXIN Amp", MC13783_AUDIO_TX, 11, 0, &atx_amp_ctl),
 
-	SND_SOC_DAPM_VIRT_MUX("PGA Left Input Mux", SND_SOC_NOPM, 0, 0,
+	SND_SOC_DAPM_MUX("PGA Left Input Mux", SND_SOC_NOPM, 0, 0,
 			      &left_input_mux),
-	SND_SOC_DAPM_VIRT_MUX("PGA Right Input Mux", SND_SOC_NOPM, 0, 0,
+	SND_SOC_DAPM_MUX("PGA Right Input Mux", SND_SOC_NOPM, 0, 0,
 			      &right_input_mux),
 
 	SND_SOC_DAPM_MUX("Speaker Amp Source MUX", SND_SOC_NOPM, 0, 0,
@@ -608,14 +609,6 @@ static struct snd_kcontrol_new mc13783_control_list[] = {
 static int mc13783_probe(struct snd_soc_codec *codec)
 {
 	struct mc13783_priv *priv = snd_soc_codec_get_drvdata(codec);
-	int ret;
-
-	ret = snd_soc_codec_set_cache_io(codec,
-			dev_get_regmap(codec->dev->parent, NULL));
-	if (ret != 0) {
-		dev_err(codec->dev, "Failed to set cache I/O: %d\n", ret);
-		return ret;
-	}
 
 	/* these are the reset values */
 	mc13xxx_reg_write(priv->mc13xxx, MC13783_AUDIO_RX0, 0x25893);
@@ -630,14 +623,14 @@ static int mc13783_probe(struct snd_soc_codec *codec)
 				AUDIO_SSI_SEL, 0);
 	else
 		mc13xxx_reg_rmw(priv->mc13xxx, MC13783_AUDIO_CODEC,
-				0, AUDIO_SSI_SEL);
+				AUDIO_SSI_SEL, AUDIO_SSI_SEL);
 
 	if (priv->dac_ssi_port == MC13783_SSI1_PORT)
 		mc13xxx_reg_rmw(priv->mc13xxx, MC13783_AUDIO_DAC,
 				AUDIO_SSI_SEL, 0);
 	else
 		mc13xxx_reg_rmw(priv->mc13xxx, MC13783_AUDIO_DAC,
-				0, AUDIO_SSI_SEL);
+				AUDIO_SSI_SEL, AUDIO_SSI_SEL);
 
 	return 0;
 }
@@ -735,9 +728,15 @@ static struct snd_soc_dai_driver mc13783_dai_sync[] = {
 	}
 };
 
+static struct regmap *mc13783_get_regmap(struct device *dev)
+{
+	return dev_get_regmap(dev->parent, NULL);
+}
+
 static struct snd_soc_codec_driver soc_codec_dev_mc13783 = {
 	.probe		= mc13783_probe,
 	.remove		= mc13783_remove,
+	.get_regmap	= mc13783_get_regmap,
 	.controls	= mc13783_control_list,
 	.num_controls	= ARRAY_SIZE(mc13783_control_list),
 	.dapm_widgets	= mc13783_dapm_widgets,
@@ -750,6 +749,7 @@ static int __init mc13783_codec_probe(struct platform_device *pdev)
 {
 	struct mc13783_priv *priv;
 	struct mc13xxx_codec_platform_data *pdata = pdev->dev.platform_data;
+	struct device_node *np;
 	int ret;
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
@@ -760,7 +760,23 @@ static int __init mc13783_codec_probe(struct platform_device *pdev)
 		priv->adc_ssi_port = pdata->adc_ssi_port;
 		priv->dac_ssi_port = pdata->dac_ssi_port;
 	} else {
-		return -ENOSYS;
+		np = of_get_child_by_name(pdev->dev.parent->of_node, "codec");
+		if (!np)
+			return -ENOSYS;
+
+		ret = of_property_read_u32(np, "adc-port", &priv->adc_ssi_port);
+		if (ret) {
+			of_node_put(np);
+			return ret;
+		}
+
+		ret = of_property_read_u32(np, "dac-port", &priv->dac_ssi_port);
+		if (ret) {
+			of_node_put(np);
+			return ret;
+		}
+
+		of_node_put(np);
 	}
 
 	dev_set_drvdata(&pdev->dev, priv);
@@ -786,7 +802,6 @@ static int mc13783_codec_remove(struct platform_device *pdev)
 static struct platform_driver mc13783_codec_driver = {
 	.driver = {
 		.name	= "mc13783-codec",
-		.owner	= THIS_MODULE,
 	},
 	.remove = mc13783_codec_remove,
 };

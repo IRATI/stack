@@ -1381,7 +1381,7 @@ static ssize_t ims_pcu_ofn_reg_addr_store(struct device *dev,
 	pcu->ofn_reg_addr = value;
 	mutex_unlock(&pcu->cmd_mutex);
 
-	return error ?: count;
+	return count;
 }
 
 static DEVICE_ATTR(reg_addr, S_IRUGO | S_IWUSR,
@@ -1566,6 +1566,7 @@ static int ims_pcu_buffers_alloc(struct ims_pcu *pcu)
 	if (!pcu->urb_ctrl_buf) {
 		dev_err(pcu->dev,
 			"Failed to allocate memory for read buffer\n");
+		error = -ENOMEM;
 		goto err_free_urb_out_buf;
 	}
 
@@ -1850,7 +1851,7 @@ static int ims_pcu_identify_type(struct ims_pcu *pcu, u8 *device_id)
 
 static int ims_pcu_init_application_mode(struct ims_pcu *pcu)
 {
-	static atomic_t device_no = ATOMIC_INIT(0);
+	static atomic_t device_no = ATOMIC_INIT(-1);
 
 	const struct ims_pcu_device_info *info;
 	int error;
@@ -1881,7 +1882,7 @@ static int ims_pcu_init_application_mode(struct ims_pcu *pcu)
 	}
 
 	/* Device appears to be operable, complete initialization */
-	pcu->device_no = atomic_inc_return(&device_no) - 1;
+	pcu->device_no = atomic_inc_return(&device_no);
 
 	/*
 	 * PCU-B devices, both GEN_1 and GEN_2 do not have OFN sensor

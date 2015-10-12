@@ -185,7 +185,7 @@ static int clps711x_keypad_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static struct of_device_id clps711x_keypad_of_match[] = {
+static const struct of_device_id clps711x_keypad_of_match[] = {
 	{ .compatible = "cirrus,clps711x-keypad", },
 	{ }
 };
@@ -194,7 +194,6 @@ MODULE_DEVICE_TABLE(of, clps711x_keypad_of_match);
 static struct platform_driver clps711x_keypad_driver = {
 	.driver	= {
 		.name		= "clps711x-keypad",
-		.owner		= THIS_MODULE,
 		.of_match_table	= clps711x_keypad_of_match,
 	},
 	.probe	= clps711x_keypad_probe,

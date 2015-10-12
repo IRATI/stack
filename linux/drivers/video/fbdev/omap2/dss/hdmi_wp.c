@@ -185,7 +185,6 @@ void hdmi_wp_init_vid_fmt_timings(struct hdmi_video_format *video_fmt,
 	timings->interlace = param->timings.interlace;
 }
 
-#if defined(CONFIG_OMAP4_DSS_HDMI_AUDIO)
 void hdmi_wp_audio_config_format(struct hdmi_wp_data *wp,
 		struct hdmi_audio_format *aud_fmt)
 {
@@ -194,8 +193,12 @@ void hdmi_wp_audio_config_format(struct hdmi_wp_data *wp,
 	DSSDBG("Enter hdmi_wp_audio_config_format\n");
 
 	r = hdmi_read_reg(wp->base, HDMI_WP_AUDIO_CFG);
-	r = FLD_MOD(r, aud_fmt->stereo_channels, 26, 24);
-	r = FLD_MOD(r, aud_fmt->active_chnnls_msk, 23, 16);
+	if (omapdss_get_version() == OMAPDSS_VER_OMAP4430_ES1 ||
+	    omapdss_get_version() == OMAPDSS_VER_OMAP4430_ES2 ||
+	    omapdss_get_version() == OMAPDSS_VER_OMAP4) {
+		r = FLD_MOD(r, aud_fmt->stereo_channels, 26, 24);
+		r = FLD_MOD(r, aud_fmt->active_chnnls_msk, 23, 16);
+	}
 	r = FLD_MOD(r, aud_fmt->en_sig_blk_strt_end, 5, 5);
 	r = FLD_MOD(r, aud_fmt->type, 4, 4);
 	r = FLD_MOD(r, aud_fmt->justification, 3, 3);
@@ -236,40 +239,28 @@ int hdmi_wp_audio_core_req_enable(struct hdmi_wp_data *wp, bool enable)
 
 	return 0;
 }
-#endif
-
-#define WP_SIZE	0x200
 
 int hdmi_wp_init(struct platform_device *pdev, struct hdmi_wp_data *wp)
 {
 	struct resource *res;
-	struct resource temp_res;
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "wp");
 	if (!res) {
-		DSSDBG("can't get WP mem resource by name\n");
-		/*
-		 * if hwmod/DT doesn't have the memory resource information
-		 * split into HDMI sub blocks by name, we try again by getting
-		 * the platform's first resource. this code will be removed when
-		 * the driver can get the mem resources by name
-		 */
-		res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-		if (!res) {
-			DSSERR("can't get WP mem resource\n");
-			return -EINVAL;
-		}
-
-		temp_res.start = res->start;
-		temp_res.end = temp_res.start + WP_SIZE - 1;
-		res = &temp_res;
+		DSSERR("can't get WP mem resource\n");
+		return -EINVAL;
 	}
+	wp->phys_base = res->start;
 
-	wp->base = devm_ioremap(&pdev->dev, res->start, resource_size(res));
-	if (!wp->base) {
+	wp->base = devm_ioremap_resource(&pdev->dev, res);
+	if (IS_ERR(wp->base)) {
 		DSSERR("can't ioremap HDMI WP\n");
-		return -ENOMEM;
+		return PTR_ERR(wp->base);
 	}
 
 	return 0;
+}
+
+phys_addr_t hdmi_wp_get_audio_dma_addr(struct hdmi_wp_data *wp)
+{
+	return wp->phys_base + HDMI_WP_AUDIO_DATA;
 }

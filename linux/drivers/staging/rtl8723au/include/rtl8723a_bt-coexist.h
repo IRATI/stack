@@ -19,19 +19,6 @@
 #include "odm_precomp.h"
 
 
-#define __BT_C__ 1
-#define __BT_HANDLEPACKET_C__ 1
-#define __BT_HCI_C__ 1
-#define __HALBTC87231ANT_C__ 1
-#define __HALBTC87232ANT_C__ 1
-#define __HALBTC8723_C__ 1
-#define __HALBTCCSR1ANT_C__ 1
-#define __HALBTCCSR2ANT_C__ 1
-#define __HALBTCOEXIST_C__ 1
-#define __HALBT_C__ 1
-
-#ifdef __BT_C__ /*  COMMON/BT.h */
-
 /*  HEADER/PlatformDef.h */
 enum rt_media_status {
 	RT_MEDIA_DISCONNECT	= 0,
@@ -44,20 +31,12 @@ enum rt_media_status {
 
 void BT_SignalCompensation(struct rtw_adapter *padapter,
 			   u8 *rssi_wifi, u8 *rssi_bt);
-void BT_WifiScanNotify(struct rtw_adapter *padapter, u8 scanType);
-void BT_WifiAssociateNotify(struct rtw_adapter *padapter, u8 action);
-void BT_WifiMediaStatusNotify(struct rtw_adapter *padapter,
-			      enum rt_media_status mstatus);
-void BT_SpecialPacketNotify(struct rtw_adapter * padapter);
-void BT_HaltProcess(struct rtw_adapter * padapter);
-void BT_LpsLeave(struct rtw_adapter * padapter);
+void BT_HaltProcess(struct rtw_adapter *padapter);
+void BT_LpsLeave(struct rtw_adapter *padapter);
 
 
 #define	BT_HsConnectionEstablished(Adapter)		false
 /*  ===== End of sync from SD7 driver COMMON/BT.h ===== */
-#endif /*  __BT_C__ */
-
-#ifdef __BT_HCI_C__ /*  COMMON/bt_hci.h */
 
 /*  HEADER/SecurityType.h */
 #define TKIP_ENC_KEY_POS		32		/* KEK_LEN+KEK_LEN) */
@@ -1107,34 +1086,29 @@ enum hci_ext_bp_operation {
 	HCI_BT_OP_MAX
 };
 
-/*	Function proto type */
-struct btdata_entry {
-	struct list_head	List;
-	void			*pDataBlock;
-};
-
 #define BTHCI_SM_WITH_INFO(_Adapter, _StateToEnter, _StateCmd, _EntryNum)	\
 {										\
-	RTPRINT(FIOCTL, IOCTL_STATE, ("[BT state change] caused by ""%s"", line =%d\n", __FUNCTION__, __LINE__));							\
+	RTPRINT(FIOCTL, IOCTL_STATE, ("[BT state change] caused by ""%s"", line =%d\n", __func__, __LINE__));							\
 	BTHCI_StateMachine(_Adapter, _StateToEnter, _StateCmd, _EntryNum);\
 }
 
-void BTHCI_EventParse(struct rtw_adapter * padapter, void *pEvntData, u32 dataLen);
+void BTHCI_EventParse(struct rtw_adapter *padapter, void *pEvntData,
+		      u32 dataLen);
 #define BT_EventParse BTHCI_EventParse
-u8 BTHCI_HsConnectionEstablished(struct rtw_adapter * padapter);
-void BTHCI_UpdateBTProfileRTKToMoto(struct rtw_adapter * padapter);
-void BTHCI_WifiScanNotify(struct rtw_adapter * padapter, u8 scanType);
-void BTHCI_StateMachine(struct rtw_adapter * padapter, u8 StateToEnter, enum hci_state_with_cmd StateCmd, u8 EntryNum);
-void BTHCI_DisconnectPeer(struct rtw_adapter * padapter, u8 EntryNum);
-void BTHCI_EventNumOfCompletedDataBlocks(struct rtw_adapter * padapter);
-void BTHCI_EventAMPStatusChange(struct rtw_adapter * padapter, u8 AMP_Status);
-void BTHCI_DisconnectAll(struct rtw_adapter * padapter);
-enum hci_status BTHCI_HandleHCICMD(struct rtw_adapter * padapter, struct packet_irp_hcicmd_data *pHciCmd);
+u8 BTHCI_HsConnectionEstablished(struct rtw_adapter *padapter);
+void BTHCI_UpdateBTProfileRTKToMoto(struct rtw_adapter *padapter);
+void BTHCI_WifiScanNotify(struct rtw_adapter *padapter, u8 scanType);
+void BTHCI_StateMachine(struct rtw_adapter *padapter, u8 StateToEnter,
+			enum hci_state_with_cmd StateCmd, u8 EntryNum);
+void BTHCI_DisconnectPeer(struct rtw_adapter *padapter, u8 EntryNum);
+void BTHCI_EventNumOfCompletedDataBlocks(struct rtw_adapter *padapter);
+void BTHCI_EventAMPStatusChange(struct rtw_adapter *padapter, u8 AMP_Status);
+void BTHCI_DisconnectAll(struct rtw_adapter *padapter);
+enum hci_status BTHCI_HandleHCICMD(struct rtw_adapter *padapter,
+				   struct packet_irp_hcicmd_data *pHciCmd);
 
 /*  ===== End of sync from SD7 driver COMMON/bt_hci.h ===== */
-#endif /*  __BT_HCI_C__ */
 
-#ifdef __HALBTC87231ANT_C__ /*  HAL/BTCoexist/HalBtc87231Ant.h */
 /*  ===== Below this line is sync from SD7 driver HAL/BTCoexist/HalBtc87231Ant.h ===== */
 #define GET_BT_INFO(padapter)	(&GET_HAL_DATA(padapter)->BtInfo)
 
@@ -1186,14 +1160,13 @@ struct btdm_8723a_1ant {
 	u8		bRAChanged;
 };
 
-void BTDM_1AntSignalCompensation(struct rtw_adapter * padapter, u8 *rssi_wifi, u8 *rssi_bt);
-void BTDM_1AntForDhcp(struct rtw_adapter * padapter);
-void BTDM_1AntBtCoexist8723A(struct rtw_adapter * padapter);
+void BTDM_1AntSignalCompensation(struct rtw_adapter *padapter,
+				 u8 *rssi_wifi, u8 *rssi_bt);
+void BTDM_1AntForDhcp(struct rtw_adapter *padapter);
+void BTDM_1AntBtCoexist8723A(struct rtw_adapter *padapter);
 
 /*  ===== End of sync from SD7 driver HAL/BTCoexist/HalBtc87231Ant.h ===== */
-#endif /*  __HALBTC87231ANT_C__ */
 
-#ifdef __HALBTC87232ANT_C__ /*  HAL/BTCoexist/HalBtc87232Ant.h */
 /*  ===== Below this line is sync from SD7 driver HAL/BTCoexist/HalBtc87232Ant.h ===== */
 enum bt_2ant_bt_status {
 	BT_2ANT_BT_STATUS_IDLE			= 0x0,
@@ -1272,11 +1245,9 @@ struct btdm_8723a_2ant {
 	u8	btStatus;
 };
 
-void BTDM_2AntBtCoexist8723A(struct rtw_adapter * padapter);
+void BTDM_2AntBtCoexist8723A(struct rtw_adapter *padapter);
 /*  ===== End of sync from SD7 driver HAL/BTCoexist/HalBtc87232Ant.h ===== */
-#endif /*  __HALBTC87232ANT_C__ */
 
-#ifdef __HALBTC8723_C__ /*  HAL/BTCoexist/HalBtc8723.h */
 /*  ===== Below this line is sync from SD7 driver HAL/BTCoexist/HalBtc8723.h ===== */
 
 #define	BT_Q_PKT_OFF		0
@@ -1343,22 +1314,20 @@ struct bt_coexist_8723a {
 	struct btdm_8723a_1ant			btdm1Ant;
 };
 
-void BTDM_SetFwChnlInfo(struct rtw_adapter * padapter, enum rt_media_status mstatus);
-u8 BTDM_IsWifiConnectionExist(struct rtw_adapter * padapter);
-void BTDM_SetFw3a(struct rtw_adapter * padapter, u8 byte1, u8 byte2, u8 byte3, u8 byte4, u8 byte5);
-void BTDM_QueryBtInformation(struct rtw_adapter * padapter);
-void BTDM_SetSwRfRxLpfCorner(struct rtw_adapter * padapter, u8 type);
-void BTDM_SetSwPenaltyTxRateAdaptive(struct rtw_adapter * padapter, u8 raType);
-void BTDM_SetFwDecBtPwr(struct rtw_adapter * padapter, u8 bDecBtPwr);
-u8 BTDM_BtProfileSupport(struct rtw_adapter * padapter);
-void BTDM_LpsLeave(struct rtw_adapter * padapter);
-u8 BTDM_1Ant8723A(struct rtw_adapter * padapter);
-#define BT_1Ant BTDM_1Ant8723A
+void BTDM_SetFwChnlInfo(struct rtw_adapter *padapter,
+			enum rt_media_status mstatus);
+u8 BTDM_IsWifiConnectionExist(struct rtw_adapter *padapter);
+void BTDM_SetFw3a(struct rtw_adapter *padapter, u8 byte1, u8 byte2, u8 byte3,
+		  u8 byte4, u8 byte5);
+void BTDM_QueryBtInformation(struct rtw_adapter *padapter);
+void BTDM_SetSwRfRxLpfCorner(struct rtw_adapter *padapter, u8 type);
+void BTDM_SetSwPenaltyTxRateAdaptive(struct rtw_adapter *padapter, u8 raType);
+void BTDM_SetFwDecBtPwr(struct rtw_adapter *padapter, u8 bDecBtPwr);
+u8 BTDM_BtProfileSupport(struct rtw_adapter *padapter);
+void BTDM_LpsLeave(struct rtw_adapter *padapter);
 
 /*  ===== End of sync from SD7 driver HAL/BTCoexist/HalBtc8723.h ===== */
-#endif /*  __HALBTC8723_C__ */
 
-#ifdef __HALBTCCSR1ANT_C__ /*  HAL/BTCoexist/HalBtcCsr1Ant.h */
 /*  ===== Below this line is sync from SD7 driver HAL/BTCoexist/HalBtcCsr1Ant.h ===== */
 
 enum BT_A2DP_INDEX{
@@ -1377,35 +1346,32 @@ enum BT_A2DP_INDEX{
 #define BTDM_ANT_BT						2
 
 
-void BTDM_SingleAnt(struct rtw_adapter * padapter, u8 bSingleAntOn, u8 bInterruptOn, u8 bMultiNAVOn);
-void BTDM_CheckBTIdleChange1Ant(struct rtw_adapter * padapter);
+void BTDM_SingleAnt(struct rtw_adapter *padapter, u8 bSingleAntOn,
+		    u8 bInterruptOn, u8 bMultiNAVOn);
+void BTDM_CheckBTIdleChange1Ant(struct rtw_adapter *padapter);
 
 /*  ===== End of sync from SD7 driver HAL/BTCoexist/HalBtcCsr1Ant.h ===== */
-#endif /*  __HALBTCCSR1ANT_C__ */
 
-#ifdef __HALBTCCSR2ANT_C__ /*  HAL/BTCoexist/HalBtcCsr2Ant.h */
 /*  ===== Below this line is sync from SD7 driver HAL/BTCoexist/HalBtcCsr2Ant.h ===== */
 
 /*  */
 /*  For old core stack before v251 */
 /*  */
-#define BT_RSSI_STATE_NORMAL_POWER	BIT0
-#define BT_RSSI_STATE_AMDPU_OFF		BIT1
-#define BT_RSSI_STATE_SPECIAL_LOW	BIT2
-#define BT_RSSI_STATE_BG_EDCA_LOW	BIT3
-#define BT_RSSI_STATE_TXPOWER_LOW	BIT4
+#define BT_RSSI_STATE_NORMAL_POWER	BIT(0)
+#define BT_RSSI_STATE_AMDPU_OFF		BIT(1)
+#define BT_RSSI_STATE_SPECIAL_LOW	BIT(2)
+#define BT_RSSI_STATE_BG_EDCA_LOW	BIT(3)
+#define BT_RSSI_STATE_TXPOWER_LOW	BIT(4)
 
 #define	BT_DACSWING_OFF				0
 #define	BT_DACSWING_M4				1
 #define	BT_DACSWING_M7				2
 #define	BT_DACSWING_M10				3
 
-void BTDM_DiminishWiFi(struct rtw_adapter * Adapter, u8 bDACOn, u8 bInterruptOn, u8 DACSwingLevel, u8 bNAVOn);
+void BTDM_DiminishWiFi(struct rtw_adapter *Adapter, u8 bDACOn, u8 bInterruptOn,
+		       u8 DACSwingLevel, u8 bNAVOn);
 
 /*  ===== End of sync from SD7 driver HAL/BTCoexist/HalBtcCsr2Ant.h ===== */
-#endif /*  __HALBTCCSR2ANT_C__ */
-
-#ifdef __HALBTCOEXIST_C__ /*  HAL/BTCoexist/HalBtCoexist.h */
 
 /*  HEADER/TypeDef.h */
 #define MAX_FW_SUPPORT_MACID_NUM			64
@@ -1440,61 +1406,61 @@ void BTDM_DiminishWiFi(struct rtw_adapter * Adapter, u8 bDACOn, u8 bInterruptOn,
 #define BT_FW_COEX_THRESH_55				55
 #define BT_FW_COEX_THRESH_65				65
 
-#define BT_COEX_STATE_BT30					BIT(0)
+#define BT_COEX_STATE_BT30			BIT(0)
 #define BT_COEX_STATE_WIFI_HT20			BIT(1)
 #define BT_COEX_STATE_WIFI_HT40			BIT(2)
-#define BT_COEX_STATE_WIFI_LEGACY			BIT(3)
+#define BT_COEX_STATE_WIFI_LEGACY		BIT(3)
 
 #define BT_COEX_STATE_WIFI_RSSI_LOW		BIT(4)
-#define BT_COEX_STATE_WIFI_RSSI_MEDIUM	BIT(5)
+#define BT_COEX_STATE_WIFI_RSSI_MEDIUM		BIT(5)
 #define BT_COEX_STATE_WIFI_RSSI_HIGH		BIT(6)
 #define BT_COEX_STATE_DEC_BT_POWER		BIT(7)
 
 #define BT_COEX_STATE_WIFI_IDLE			BIT(8)
-#define BT_COEX_STATE_WIFI_UPLINK			BIT(9)
+#define BT_COEX_STATE_WIFI_UPLINK		BIT(9)
 #define BT_COEX_STATE_WIFI_DOWNLINK		BIT(10)
 
-#define BT_COEX_STATE_BT_INQ_PAGE	BIT(11)
-#define BT_COEX_STATE_BT_IDLE				BIT(12)
+#define BT_COEX_STATE_BT_INQ_PAGE		BIT(11)
+#define BT_COEX_STATE_BT_IDLE			BIT(12)
 #define BT_COEX_STATE_BT_UPLINK			BIT(13)
 #define BT_COEX_STATE_BT_DOWNLINK		BIT(14)
 /*  */
 /*  Todo: Remove these definitions */
-#define BT_COEX_STATE_BT_PAN_IDLE			BIT(15)
+#define BT_COEX_STATE_BT_PAN_IDLE		BIT(15)
 #define BT_COEX_STATE_BT_PAN_UPLINK		BIT(16)
-#define BT_COEX_STATE_BT_PAN_DOWNLINK	BIT(17)
+#define BT_COEX_STATE_BT_PAN_DOWNLINK		BIT(17)
 #define BT_COEX_STATE_BT_A2DP_IDLE		BIT(18)
 /*  */
-#define BT_COEX_STATE_BT_RSSI_LOW			BIT(19)
+#define BT_COEX_STATE_BT_RSSI_LOW		BIT(19)
 
-#define BT_COEX_STATE_PROFILE_HID			BIT(20)
+#define BT_COEX_STATE_PROFILE_HID		BIT(20)
 #define BT_COEX_STATE_PROFILE_A2DP		BIT(21)
-#define BT_COEX_STATE_PROFILE_PAN			BIT(22)
-#define BT_COEX_STATE_PROFILE_SCO			BIT(23)
+#define BT_COEX_STATE_PROFILE_PAN		BIT(22)
+#define BT_COEX_STATE_PROFILE_SCO		BIT(23)
 
 #define BT_COEX_STATE_WIFI_RSSI_1_LOW		BIT(24)
 #define BT_COEX_STATE_WIFI_RSSI_1_MEDIUM	BIT(25)
 #define BT_COEX_STATE_WIFI_RSSI_1_HIGH		BIT(26)
 
-#define BT_COEX_STATE_WIFI_RSSI_BEACON_LOW		BIT(27)
-#define BT_COEX_STATE_WIFI_RSSI_BEACON_MEDIUM		BIT(28)
-#define BT_COEX_STATE_WIFI_RSSI_BEACON_HIGH		BIT(29)
+#define BT_COEX_STATE_WIFI_RSSI_BEACON_LOW	BIT(27)
+#define BT_COEX_STATE_WIFI_RSSI_BEACON_MEDIUM	BIT(28)
+#define BT_COEX_STATE_WIFI_RSSI_BEACON_HIGH	BIT(29)
 
 
-#define BT_COEX_STATE_BTINFO_COMMON				BIT30
-#define BT_COEX_STATE_BTINFO_B_HID_SCOESCO		BIT31
-#define BT_COEX_STATE_BTINFO_B_FTP_A2DP			BIT32
+#define BT_COEX_STATE_BTINFO_COMMON		BIT(30)
+#define BT_COEX_STATE_BTINFO_B_HID_SCOESCO	BIT(31)
+#define BT_COEX_STATE_BTINFO_B_FTP_A2DP		BIT(32)
 
-#define BT_COEX_STATE_BT_CNT_LEVEL_0				BIT33
-#define BT_COEX_STATE_BT_CNT_LEVEL_1				BIT34
-#define BT_COEX_STATE_BT_CNT_LEVEL_2				BIT35
-#define BT_COEX_STATE_BT_CNT_LEVEL_3				BIT36
+#define BT_COEX_STATE_BT_CNT_LEVEL_0		BIT(33)
+#define BT_COEX_STATE_BT_CNT_LEVEL_1		BIT(34)
+#define BT_COEX_STATE_BT_CNT_LEVEL_2		BIT(35)
+#define BT_COEX_STATE_BT_CNT_LEVEL_3		BIT(36)
 
-#define BT_RSSI_STATE_HIGH					0
-#define BT_RSSI_STATE_MEDIUM				1
-#define BT_RSSI_STATE_LOW					2
+#define BT_RSSI_STATE_HIGH			0
+#define BT_RSSI_STATE_MEDIUM			1
+#define BT_RSSI_STATE_LOW			2
 #define BT_RSSI_STATE_STAY_HIGH			3
-#define BT_RSSI_STATE_STAY_MEDIUM			4
+#define BT_RSSI_STATE_STAY_MEDIUM		4
 #define BT_RSSI_STATE_STAY_LOW			5
 
 #define	BT_AGCTABLE_OFF				0
@@ -1576,91 +1542,80 @@ struct bt_coexist_str {
 	u8			fw3aVal[5];
 };
 
-void BTDM_CheckAntSelMode(struct rtw_adapter * padapter);
-void BTDM_FwC2hBtRssi(struct rtw_adapter * padapter, u8 *tmpBuf);
+void BTDM_CheckAntSelMode(struct rtw_adapter *padapter);
+void BTDM_FwC2hBtRssi(struct rtw_adapter *padapter, u8 *tmpBuf);
 #define BT_FwC2hBtRssi BTDM_FwC2hBtRssi
-void BTDM_FwC2hBtInfo(struct rtw_adapter * padapter, u8 *tmpBuf, u8 length);
-#define BT_FwC2hBtInfo BTDM_FwC2hBtInfo
-void BTDM_DisplayBtCoexInfo(struct rtw_adapter * padapter);
+void BTDM_DisplayBtCoexInfo(struct rtw_adapter *padapter);
 #define BT_DisplayBtCoexInfo BTDM_DisplayBtCoexInfo
-void BTDM_RejectAPAggregatedPacket(struct rtw_adapter * padapter, u8 bReject);
-u8 BTDM_IsHT40(struct rtw_adapter * padapter);
-u8 BTDM_Legacy(struct rtw_adapter * padapter);
-void BTDM_CheckWiFiState(struct rtw_adapter * padapter);
-s32 BTDM_GetRxSS(struct rtw_adapter * padapter);
-u8 BTDM_CheckCoexBcnRssiState(struct rtw_adapter * padapter, u8 levelNum, u8 RssiThresh, u8 RssiThresh1);
-u8 BTDM_CheckCoexRSSIState1(struct rtw_adapter * padapter, u8 levelNum, u8 RssiThresh, u8 RssiThresh1);
-u8 BTDM_CheckCoexRSSIState(struct rtw_adapter * padapter, u8 levelNum, u8 RssiThresh, u8 RssiThresh1);
-u8 BTDM_DisableEDCATurbo(struct rtw_adapter * padapter);
-#define BT_DisableEDCATurbo BTDM_DisableEDCATurbo
-void BTDM_Balance(struct rtw_adapter * padapter, u8 bBalanceOn, u8 ms0, u8 ms1);
-void BTDM_AGCTable(struct rtw_adapter * padapter, u8 type);
-void BTDM_BBBackOffLevel(struct rtw_adapter * padapter, u8 type);
-void BTDM_FWCoexAllOff(struct rtw_adapter * padapter);
-void BTDM_SWCoexAllOff(struct rtw_adapter * padapter);
-void BTDM_HWCoexAllOff(struct rtw_adapter * padapter);
-void BTDM_CoexAllOff(struct rtw_adapter * padapter);
-void BTDM_TurnOffBtCoexistBeforeEnterIPS(struct rtw_adapter * padapter);
-void BTDM_SignalCompensation(struct rtw_adapter * padapter, u8 *rssi_wifi, u8 *rssi_bt);
-void BTDM_Coexist(struct rtw_adapter * padapter);
-#define BT_CoexistMechanism BTDM_Coexist
-void BTDM_UpdateCoexState(struct rtw_adapter * padapter);
-u8 BTDM_IsSameCoexistState(struct rtw_adapter * padapter);
-void BTDM_PWDBMonitor(struct rtw_adapter * padapter);
-u8 BTDM_IsBTBusy(struct rtw_adapter * padapter);
+void BTDM_RejectAPAggregatedPacket(struct rtw_adapter *padapter, u8 bReject);
+u8 BTDM_IsHT40(struct rtw_adapter *padapter);
+u8 BTDM_Legacy(struct rtw_adapter *padapter);
+void BTDM_CheckWiFiState(struct rtw_adapter *padapter);
+s32 BTDM_GetRxSS(struct rtw_adapter *padapter);
+u8 BTDM_CheckCoexBcnRssiState(struct rtw_adapter *padapter, u8 levelNum,
+			      u8 RssiThresh, u8 RssiThresh1);
+u8 BTDM_CheckCoexRSSIState1(struct rtw_adapter *padapter, u8 levelNum,
+			    u8 RssiThresh, u8 RssiThresh1);
+u8 BTDM_CheckCoexRSSIState(struct rtw_adapter *padapter, u8 levelNum,
+			   u8 RssiThresh, u8 RssiThresh1);
+void BTDM_Balance(struct rtw_adapter *padapter, u8 bBalanceOn, u8 ms0, u8 ms1);
+void BTDM_AGCTable(struct rtw_adapter *padapter, u8 type);
+void BTDM_BBBackOffLevel(struct rtw_adapter *padapter, u8 type);
+void BTDM_FWCoexAllOff(struct rtw_adapter *padapter);
+void BTDM_SWCoexAllOff(struct rtw_adapter *padapter);
+void BTDM_HWCoexAllOff(struct rtw_adapter *padapter);
+void BTDM_CoexAllOff(struct rtw_adapter *padapter);
+void BTDM_TurnOffBtCoexistBeforeEnterIPS(struct rtw_adapter *padapter);
+void BTDM_SignalCompensation(struct rtw_adapter *padapter, u8 *rssi_wifi,
+			     u8 *rssi_bt);
+void BTDM_UpdateCoexState(struct rtw_adapter *padapter);
+u8 BTDM_IsSameCoexistState(struct rtw_adapter *padapter);
+void BTDM_PWDBMonitor(struct rtw_adapter *padapter);
+u8 BTDM_IsBTBusy(struct rtw_adapter *padapter);
 #define BT_IsBtBusy BTDM_IsBTBusy
-u8 BTDM_IsWifiBusy(struct rtw_adapter * padapter);
-u8 BTDM_IsCoexistStateChanged(struct rtw_adapter * padapter);
-u8 BTDM_IsWifiUplink(struct rtw_adapter * padapter);
-u8 BTDM_IsWifiDownlink(struct rtw_adapter * padapter);
-u8 BTDM_IsBTHSMode(struct rtw_adapter * padapter);
-u8 BTDM_IsBTUplink(struct rtw_adapter * padapter);
-u8 BTDM_IsBTDownlink(struct rtw_adapter * padapter);
-void BTDM_AdjustForBtOperation(struct rtw_adapter * padapter);
-void BTDM_ForHalt(struct rtw_adapter * padapter);
-void BTDM_WifiScanNotify(struct rtw_adapter * padapter, u8 scanType);
-void BTDM_WifiAssociateNotify(struct rtw_adapter * padapter, u8 action);
-void BTDM_MediaStatusNotify(struct rtw_adapter * padapter, enum rt_media_status mstatus);
-void BTDM_ForDhcp(struct rtw_adapter * padapter);
-void BTDM_ResetActionProfileState(struct rtw_adapter * padapter);
-void BTDM_SetBtCoexCurrAntNum(struct rtw_adapter * padapter, u8 antNum);
+u8 BTDM_IsWifiBusy(struct rtw_adapter *padapter);
+u8 BTDM_IsCoexistStateChanged(struct rtw_adapter *padapter);
+u8 BTDM_IsWifiUplink(struct rtw_adapter *padapter);
+u8 BTDM_IsWifiDownlink(struct rtw_adapter *padapter);
+u8 BTDM_IsBTHSMode(struct rtw_adapter *padapter);
+u8 BTDM_IsBTUplink(struct rtw_adapter *padapter);
+u8 BTDM_IsBTDownlink(struct rtw_adapter *padapter);
+void BTDM_AdjustForBtOperation(struct rtw_adapter *padapter);
+void BTDM_ForHalt(struct rtw_adapter *padapter);
+void BTDM_WifiScanNotify(struct rtw_adapter *padapter, u8 scanType);
+void BTDM_WifiAssociateNotify(struct rtw_adapter *padapter, u8 action);
+void BTDM_MediaStatusNotify(struct rtw_adapter *padapter,
+			    enum rt_media_status mstatus);
+void BTDM_ForDhcp(struct rtw_adapter *padapter);
+void BTDM_ResetActionProfileState(struct rtw_adapter *padapter);
+void BTDM_SetBtCoexCurrAntNum(struct rtw_adapter *padapter, u8 antNum);
 #define BT_SetBtCoexCurrAntNum BTDM_SetBtCoexCurrAntNum
-u8 BTDM_IsActionSCO(struct rtw_adapter * padapter);
-u8 BTDM_IsActionHID(struct rtw_adapter * padapter);
-u8 BTDM_IsActionA2DP(struct rtw_adapter * padapter);
-u8 BTDM_IsActionPAN(struct rtw_adapter * padapter);
-u8 BTDM_IsActionHIDA2DP(struct rtw_adapter * padapter);
-u8 BTDM_IsActionHIDPAN(struct rtw_adapter * padapter);
-u8 BTDM_IsActionPANA2DP(struct rtw_adapter * padapter);
-u8 BTDM_IsBtDisabled(struct rtw_adapter * padapter);
-#define BT_IsBtDisabled BTDM_IsBtDisabled
-u32 BTDM_BtTxRxCounterH(struct rtw_adapter * padapter);
-u32 BTDM_BtTxRxCounterL(struct rtw_adapter * padapter);
+u8 BTDM_IsActionSCO(struct rtw_adapter *padapter);
+u8 BTDM_IsActionHID(struct rtw_adapter *padapter);
+u8 BTDM_IsActionA2DP(struct rtw_adapter *padapter);
+u8 BTDM_IsActionPAN(struct rtw_adapter *padapter);
+u8 BTDM_IsActionHIDA2DP(struct rtw_adapter *padapter);
+u8 BTDM_IsActionHIDPAN(struct rtw_adapter *padapter);
+u8 BTDM_IsActionPANA2DP(struct rtw_adapter *padapter);
+u32 BTDM_BtTxRxCounterH(struct rtw_adapter *padapter);
+u32 BTDM_BtTxRxCounterL(struct rtw_adapter *padapter);
 
 /*  ===== End of sync from SD7 driver HAL/BTCoexist/HalBtCoexist.h ===== */
-#endif /*  __HALBTCOEXIST_C__ */
 
-#ifdef __HALBT_C__ /*  HAL/HalBT.h */
 /*  ===== Below this line is sync from SD7 driver HAL/HalBT.h ===== */
 
 #define RTS_CTS_NO_LEN_LIMIT	0
 
-u8 HALBT_GetPGAntNum(struct rtw_adapter * padapter);
+u8 HALBT_GetPGAntNum(struct rtw_adapter *padapter);
 #define BT_GetPGAntNum HALBT_GetPGAntNum
-void HALBT_SetKey(struct rtw_adapter * padapter, u8 EntryNum);
-void HALBT_RemoveKey(struct rtw_adapter * padapter, u8 EntryNum);
-void HALBT_InitBTVars8723A(struct rtw_adapter * padapter);
-#define HALBT_InitHalVars HALBT_InitBTVars8723A
-#define BT_InitHalVars HALBT_InitHalVars
-u8 HALBT_IsBTExist(struct rtw_adapter * padapter);
+void HALBT_SetKey(struct rtw_adapter *padapter, u8 EntryNum);
+void HALBT_RemoveKey(struct rtw_adapter *padapter, u8 EntryNum);
+u8 HALBT_IsBTExist(struct rtw_adapter *padapter);
 #define BT_IsBtExist HALBT_IsBTExist
-u8 HALBT_BTChipType(struct rtw_adapter * padapter);
-void HALBT_InitHwConfig(struct rtw_adapter * padapter);
-#define BT_InitHwConfig HALBT_InitHwConfig
-void HALBT_SetRtsCtsNoLenLimit(struct rtw_adapter * padapter);
+u8 HALBT_BTChipType(struct rtw_adapter *padapter);
+void HALBT_SetRtsCtsNoLenLimit(struct rtw_adapter *padapter);
 
 /*  ===== End of sync from SD7 driver HAL/HalBT.c ===== */
-#endif /*  __HALBT_C__ */
 
 #define _bt_dbg_off_		0
 #define _bt_dbg_on_		1

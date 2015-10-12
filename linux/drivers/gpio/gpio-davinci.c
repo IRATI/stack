@@ -230,17 +230,10 @@ static int davinci_gpio_probe(struct platform_device *pdev)
 	chips = devm_kzalloc(dev,
 			     ngpio * sizeof(struct davinci_gpio_controller),
 			     GFP_KERNEL);
-	if (!chips) {
-		dev_err(dev, "Memory allocation failed\n");
+	if (!chips)
 		return -ENOMEM;
-	}
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!res) {
-		dev_err(dev, "Invalid memory resource\n");
-		return -EBUSY;
-	}
-
 	gpio_base = devm_ioremap_resource(dev, res);
 	if (IS_ERR(gpio_base))
 		return PTR_ERR(gpio_base);
@@ -621,7 +614,6 @@ static struct platform_driver davinci_gpio_driver = {
 	.probe		= davinci_gpio_probe,
 	.driver		= {
 		.name		= "davinci_gpio",
-		.owner		= THIS_MODULE,
 		.of_match_table	= of_match_ptr(davinci_gpio_ids),
 	},
 };

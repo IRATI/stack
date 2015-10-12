@@ -121,8 +121,8 @@ static int men_z188_probe(struct mcb_device *dev,
 	indio_dev->num_channels = ARRAY_SIZE(z188_adc_iio_channels);
 
 	mem = mcb_request_mem(dev, "z188-adc");
-	if (!mem)
-		return -ENOMEM;
+	if (IS_ERR(mem))
+		return PTR_ERR(mem);
 
 	adc->base = ioremap(mem->start, resource_size(mem));
 	if (adc->base == NULL)
@@ -152,6 +152,7 @@ static void men_z188_remove(struct mcb_device *dev)
 
 static const struct mcb_device_id men_z188_ids[] = {
 	{ .device = 0xbc },
+	{ }
 };
 MODULE_DEVICE_TABLE(mcb, men_z188_ids);
 

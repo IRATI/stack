@@ -37,24 +37,24 @@
 #include "socklnd.h"
 
 int
-ksocknal_lib_get_conn_addrs (ksock_conn_t *conn)
+ksocknal_lib_get_conn_addrs(ksock_conn_t *conn)
 {
 	int rc = libcfs_sock_getaddr(conn->ksnc_sock, 1,
 				     &conn->ksnc_ipaddr,
 				     &conn->ksnc_port);
 
 	/* Didn't need the {get,put}connsock dance to deref ksnc_sock... */
-	LASSERT (!conn->ksnc_closing);
+	LASSERT(!conn->ksnc_closing);
 
 	if (rc != 0) {
-		CERROR ("Error %d getting sock peer IP\n", rc);
+		CERROR("Error %d getting sock peer IP\n", rc);
 		return rc;
 	}
 
 	rc = libcfs_sock_getaddr(conn->ksnc_sock, 0,
 				 &conn->ksnc_myipaddr, NULL);
 	if (rc != 0) {
-		CERROR ("Error %d getting sock local IP\n", rc);
+		CERROR("Error %d getting sock local IP\n", rc);
 		return rc;
 	}
 
@@ -75,7 +75,7 @@ ksocknal_lib_zc_capable(ksock_conn_t *conn)
 }
 
 int
-ksocknal_lib_send_iov (ksock_conn_t *conn, ksock_tx_t *tx)
+ksocknal_lib_send_iov(ksock_conn_t *conn, ksock_tx_t *tx)
 {
 	struct socket *sock = conn->ksnc_sock;
 	int	    nob;
@@ -92,11 +92,11 @@ ksocknal_lib_send_iov (ksock_conn_t *conn, ksock_tx_t *tx)
 
 	{
 #if SOCKNAL_SINGLE_FRAG_TX
-		struct iovec    scratch;
-		struct iovec   *scratchiov = &scratch;
+		struct kvec    scratch;
+		struct kvec   *scratchiov = &scratch;
 		unsigned int    niov = 1;
 #else
-		struct iovec   *scratchiov = conn->ksnc_scheduler->kss_scratch_iov;
+		struct kvec   *scratchiov = conn->ksnc_scheduler->kss_scratch_iov;
 		unsigned int    niov = tx->tx_niov;
 #endif
 		struct msghdr msg = {.msg_flags = MSG_DONTWAIT};
@@ -111,13 +111,13 @@ ksocknal_lib_send_iov (ksock_conn_t *conn, ksock_tx_t *tx)
 		    nob < tx->tx_resid)
 			msg.msg_flags |= MSG_MORE;
 
-		rc = kernel_sendmsg(sock, &msg, (struct kvec *)scratchiov, niov, nob);
+		rc = kernel_sendmsg(sock, &msg, scratchiov, niov, nob);
 	}
 	return rc;
 }
 
 int
-ksocknal_lib_send_kiov (ksock_conn_t *conn, ksock_tx_t *tx)
+ksocknal_lib_send_kiov(ksock_conn_t *conn, ksock_tx_t *tx)
 {
 	struct socket *sock = conn->ksnc_sock;
 	lnet_kiov_t   *kiov = tx->tx_kiov;
@@ -125,7 +125,7 @@ ksocknal_lib_send_kiov (ksock_conn_t *conn, ksock_tx_t *tx)
 	int	    nob;
 
 	/* Not NOOP message */
-	LASSERT (tx->tx_lnetmsg != NULL);
+	LASSERT(tx->tx_lnetmsg != NULL);
 
 	/* NB we can't trust socket ops to either consume our iovs
 	 * or leave them alone. */
@@ -153,14 +153,14 @@ ksocknal_lib_send_kiov (ksock_conn_t *conn, ksock_tx_t *tx)
 		}
 	} else {
 #if SOCKNAL_SINGLE_FRAG_TX || !SOCKNAL_RISK_KMAP_DEADLOCK
-		struct iovec  scratch;
-		struct iovec *scratchiov = &scratch;
+		struct kvec  scratch;
+		struct kvec *scratchiov = &scratch;
 		unsigned int  niov = 1;
 #else
 #ifdef CONFIG_HIGHMEM
 #warning "XXX risk of kmap deadlock on multiple frags..."
 #endif
-		struct iovec *scratchiov = conn->ksnc_scheduler->kss_scratch_iov;
+		struct kvec *scratchiov = conn->ksnc_scheduler->kss_scratch_iov;
 		unsigned int  niov = tx->tx_nkiov;
 #endif
 		struct msghdr msg = {.msg_flags = MSG_DONTWAIT};
@@ -185,10 +185,9 @@ ksocknal_lib_send_kiov (ksock_conn_t *conn, ksock_tx_t *tx)
 }
 
 void
-ksocknal_lib_eager_ack (ksock_conn_t *conn)
+ksocknal_lib_eager_ack(ksock_conn_t *conn)
 {
 	int	    opt = 1;
-	mm_segment_t   oldmm = get_fs();
 	struct socket *sock = conn->ksnc_sock;
 
 	/* Remind the socket to ACK eagerly.  If I don't, the socket might
@@ -196,24 +195,22 @@ ksocknal_lib_eager_ack (ksock_conn_t *conn)
 	 * on, introducing delay in completing zero-copy sends in my
 	 * peer. */
 
-	set_fs(KERNEL_DS);
-	sock->ops->setsockopt (sock, SOL_TCP, TCP_QUICKACK,
-			       (char *)&opt, sizeof (opt));
-	set_fs(oldmm);
+	kernel_setsockopt(sock, SOL_TCP, TCP_QUICKACK,
+			       (char *)&opt, sizeof(opt));
 }
 
 int
-ksocknal_lib_recv_iov (ksock_conn_t *conn)
+ksocknal_lib_recv_iov(ksock_conn_t *conn)
 {
 #if SOCKNAL_SINGLE_FRAG_RX
-	struct iovec  scratch;
-	struct iovec *scratchiov = &scratch;
+	struct kvec  scratch;
+	struct kvec *scratchiov = &scratch;
 	unsigned int  niov = 1;
 #else
-	struct iovec *scratchiov = conn->ksnc_scheduler->kss_scratch_iov;
+	struct kvec *scratchiov = conn->ksnc_scheduler->kss_scratch_iov;
 	unsigned int  niov = conn->ksnc_rx_niov;
 #endif
-	struct iovec *iov = conn->ksnc_rx_iov;
+	struct kvec *iov = conn->ksnc_rx_iov;
 	struct msghdr msg = {
 		.msg_flags      = 0
 	};
@@ -226,16 +223,16 @@ ksocknal_lib_recv_iov (ksock_conn_t *conn)
 
 	/* NB we can't trust socket ops to either consume our iovs
 	 * or leave them alone. */
-	LASSERT (niov > 0);
+	LASSERT(niov > 0);
 
 	for (nob = i = 0; i < niov; i++) {
 		scratchiov[i] = iov[i];
 		nob += scratchiov[i].iov_len;
 	}
-	LASSERT (nob <= conn->ksnc_rx_nob_wanted);
+	LASSERT(nob <= conn->ksnc_rx_nob_wanted);
 
 	rc = kernel_recvmsg(conn->ksnc_sock, &msg,
-		(struct kvec *)scratchiov, niov, nob, MSG_DONTWAIT);
+		scratchiov, niov, nob, MSG_DONTWAIT);
 
 	saved_csum = 0;
 	if (conn->ksnc_proto == &ksocknal_protocol_v2x) {
@@ -246,7 +243,7 @@ ksocknal_lib_recv_iov (ksock_conn_t *conn)
 	if (saved_csum != 0) {
 		/* accumulate checksum */
 		for (i = 0, sum = rc; sum > 0; i++, sum -= fragnob) {
-			LASSERT (i < niov);
+			LASSERT(i < niov);
 
 			fragnob = iov[i].iov_len;
 			if (fragnob > sum)
@@ -272,7 +269,7 @@ ksocknal_lib_kiov_vunmap(void *addr)
 
 static void *
 ksocknal_lib_kiov_vmap(lnet_kiov_t *kiov, int niov,
-		       struct iovec *iov, struct page **pages)
+		       struct kvec *iov, struct page **pages)
 {
 	void	     *addr;
 	int	       nob;
@@ -281,7 +278,7 @@ ksocknal_lib_kiov_vmap(lnet_kiov_t *kiov, int niov,
 	if (!*ksocknal_tunables.ksnd_zc_recv || pages == NULL)
 		return NULL;
 
-	LASSERT (niov <= LNET_MAX_IOV);
+	LASSERT(niov <= LNET_MAX_IOV);
 
 	if (niov < 2 ||
 	    niov < *ksocknal_tunables.ksnd_zc_recv_min_nfrags)
@@ -307,18 +304,18 @@ ksocknal_lib_kiov_vmap(lnet_kiov_t *kiov, int niov,
 }
 
 int
-ksocknal_lib_recv_kiov (ksock_conn_t *conn)
+ksocknal_lib_recv_kiov(ksock_conn_t *conn)
 {
 #if SOCKNAL_SINGLE_FRAG_RX || !SOCKNAL_RISK_KMAP_DEADLOCK
-	struct iovec   scratch;
-	struct iovec  *scratchiov = &scratch;
+	struct kvec   scratch;
+	struct kvec  *scratchiov = &scratch;
 	struct page  **pages      = NULL;
 	unsigned int   niov       = 1;
 #else
 #ifdef CONFIG_HIGHMEM
 #warning "XXX risk of kmap deadlock on multiple frags..."
 #endif
-	struct iovec  *scratchiov = conn->ksnc_scheduler->kss_scratch_iov;
+	struct kvec  *scratchiov = conn->ksnc_scheduler->kss_scratch_iov;
 	struct page  **pages      = conn->ksnc_scheduler->kss_rx_scratch_pgs;
 	unsigned int   niov       = conn->ksnc_rx_nkiov;
 #endif
@@ -351,14 +348,14 @@ ksocknal_lib_recv_kiov (ksock_conn_t *conn)
 		n = niov;
 	}
 
-	LASSERT (nob <= conn->ksnc_rx_nob_wanted);
+	LASSERT(nob <= conn->ksnc_rx_nob_wanted);
 
 	rc = kernel_recvmsg(conn->ksnc_sock, &msg,
 			(struct kvec *)scratchiov, n, nob, MSG_DONTWAIT);
 
 	if (conn->ksnc_msg.ksm_csum != 0) {
 		for (i = 0, sum = rc; sum > 0; i++, sum -= fragnob) {
-			LASSERT (i < niov);
+			LASSERT(i < niov);
 
 			/* Dang! have to kmap again because I have nowhere to stash the
 			 * mapped address.  But by doing it while the page is still
@@ -383,7 +380,7 @@ ksocknal_lib_recv_kiov (ksock_conn_t *conn)
 			kunmap(kiov[i].kiov_page);
 	}
 
-	return (rc);
+	return rc;
 }
 
 void
@@ -393,13 +390,13 @@ ksocknal_lib_csum_tx(ksock_tx_t *tx)
 	__u32	csum;
 	void	*base;
 
-	LASSERT(tx->tx_iov[0].iov_base == (void *)&tx->tx_msg);
+	LASSERT(tx->tx_iov[0].iov_base == &tx->tx_msg);
 	LASSERT(tx->tx_conn != NULL);
 	LASSERT(tx->tx_conn->ksnc_proto == &ksocknal_protocol_v2x);
 
 	tx->tx_msg.ksm_csum = 0;
 
-	csum = ksocknal_csum(~0, (void *)tx->tx_iov[0].iov_base,
+	csum = ksocknal_csum(~0, tx->tx_iov[0].iov_base,
 			     tx->tx_iov[0].iov_len);
 
 	if (tx->tx_kiov != NULL) {
@@ -426,27 +423,24 @@ ksocknal_lib_csum_tx(ksock_tx_t *tx)
 }
 
 int
-ksocknal_lib_get_conn_tunables (ksock_conn_t *conn, int *txmem, int *rxmem, int *nagle)
+ksocknal_lib_get_conn_tunables(ksock_conn_t *conn, int *txmem, int *rxmem, int *nagle)
 {
-	mm_segment_t   oldmm = get_fs ();
 	struct socket *sock = conn->ksnc_sock;
 	int	    len;
 	int	    rc;
 
 	rc = ksocknal_connsock_addref(conn);
 	if (rc != 0) {
-		LASSERT (conn->ksnc_closing);
+		LASSERT(conn->ksnc_closing);
 		*txmem = *rxmem = *nagle = 0;
-		return (-ESHUTDOWN);
+		return -ESHUTDOWN;
 	}
 
 	rc = libcfs_sock_getbuf(sock, txmem, rxmem);
 	if (rc == 0) {
 		len = sizeof(*nagle);
-		set_fs(KERNEL_DS);
-		rc = sock->ops->getsockopt(sock, SOL_TCP, TCP_NODELAY,
+		rc = kernel_getsockopt(sock, SOL_TCP, TCP_NODELAY,
 					   (char *)nagle, &len);
-		set_fs(oldmm);
 	}
 
 	ksocknal_connsock_decref(conn);
@@ -456,13 +450,12 @@ ksocknal_lib_get_conn_tunables (ksock_conn_t *conn, int *txmem, int *rxmem, int 
 	else
 		*txmem = *rxmem = *nagle = 0;
 
-	return (rc);
+	return rc;
 }
 
 int
-ksocknal_lib_setup_sock (struct socket *sock)
+ksocknal_lib_setup_sock(struct socket *sock)
 {
-	mm_segment_t    oldmm = get_fs ();
 	int	     rc;
 	int	     option;
 	int	     keep_idle;
@@ -479,35 +472,29 @@ ksocknal_lib_setup_sock (struct socket *sock)
 	linger.l_onoff = 0;
 	linger.l_linger = 0;
 
-	set_fs (KERNEL_DS);
-	rc = sock_setsockopt (sock, SOL_SOCKET, SO_LINGER,
-			      (char *)&linger, sizeof (linger));
-	set_fs (oldmm);
+	rc = kernel_setsockopt(sock, SOL_SOCKET, SO_LINGER,
+			      (char *)&linger, sizeof(linger));
 	if (rc != 0) {
-		CERROR ("Can't set SO_LINGER: %d\n", rc);
-		return (rc);
+		CERROR("Can't set SO_LINGER: %d\n", rc);
+		return rc;
 	}
 
 	option = -1;
-	set_fs (KERNEL_DS);
-	rc = sock->ops->setsockopt (sock, SOL_TCP, TCP_LINGER2,
-				    (char *)&option, sizeof (option));
-	set_fs (oldmm);
+	rc = kernel_setsockopt(sock, SOL_TCP, TCP_LINGER2,
+				    (char *)&option, sizeof(option));
 	if (rc != 0) {
-		CERROR ("Can't set SO_LINGER2: %d\n", rc);
-		return (rc);
+		CERROR("Can't set SO_LINGER2: %d\n", rc);
+		return rc;
 	}
 
 	if (!*ksocknal_tunables.ksnd_nagle) {
 		option = 1;
 
-		set_fs (KERNEL_DS);
-		rc = sock->ops->setsockopt (sock, SOL_TCP, TCP_NODELAY,
-					    (char *)&option, sizeof (option));
-		set_fs (oldmm);
+		rc = kernel_setsockopt(sock, SOL_TCP, TCP_NODELAY,
+					    (char *)&option, sizeof(option));
 		if (rc != 0) {
-			CERROR ("Can't disable nagle: %d\n", rc);
-			return (rc);
+			CERROR("Can't disable nagle: %d\n", rc);
+			return rc;
 		}
 	}
 
@@ -515,10 +502,10 @@ ksocknal_lib_setup_sock (struct socket *sock)
 				*ksocknal_tunables.ksnd_tx_buffer_size,
 				*ksocknal_tunables.ksnd_rx_buffer_size);
 	if (rc != 0) {
-		CERROR ("Can't set buffer tx %d, rx %d buffers: %d\n",
+		CERROR("Can't set buffer tx %d, rx %d buffers: %d\n",
 			*ksocknal_tunables.ksnd_tx_buffer_size,
 			*ksocknal_tunables.ksnd_rx_buffer_size, rc);
-		return (rc);
+		return rc;
 	}
 
 /* TCP_BACKOFF_* sockopt tunables unsupported in stock kernels */
@@ -531,57 +518,48 @@ ksocknal_lib_setup_sock (struct socket *sock)
 	do_keepalive = (keep_idle > 0 && keep_count > 0 && keep_intvl > 0);
 
 	option = (do_keepalive ? 1 : 0);
-	set_fs (KERNEL_DS);
-	rc = sock_setsockopt (sock, SOL_SOCKET, SO_KEEPALIVE,
-			      (char *)&option, sizeof (option));
-	set_fs (oldmm);
+	rc = kernel_setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE,
+			      (char *)&option, sizeof(option));
 	if (rc != 0) {
-		CERROR ("Can't set SO_KEEPALIVE: %d\n", rc);
-		return (rc);
+		CERROR("Can't set SO_KEEPALIVE: %d\n", rc);
+		return rc;
 	}
 
 	if (!do_keepalive)
-		return (0);
+		return 0;
 
-	set_fs (KERNEL_DS);
-	rc = sock->ops->setsockopt (sock, SOL_TCP, TCP_KEEPIDLE,
-				    (char *)&keep_idle, sizeof (keep_idle));
-	set_fs (oldmm);
+	rc = kernel_setsockopt(sock, SOL_TCP, TCP_KEEPIDLE,
+				    (char *)&keep_idle, sizeof(keep_idle));
 	if (rc != 0) {
-		CERROR ("Can't set TCP_KEEPIDLE: %d\n", rc);
-		return (rc);
+		CERROR("Can't set TCP_KEEPIDLE: %d\n", rc);
+		return rc;
 	}
 
-	set_fs (KERNEL_DS);
-	rc = sock->ops->setsockopt (sock, SOL_TCP, TCP_KEEPINTVL,
-				    (char *)&keep_intvl, sizeof (keep_intvl));
-	set_fs (oldmm);
+	rc = kernel_setsockopt(sock, SOL_TCP, TCP_KEEPINTVL,
+				    (char *)&keep_intvl, sizeof(keep_intvl));
 	if (rc != 0) {
-		CERROR ("Can't set TCP_KEEPINTVL: %d\n", rc);
-		return (rc);
+		CERROR("Can't set TCP_KEEPINTVL: %d\n", rc);
+		return rc;
 	}
 
-	set_fs (KERNEL_DS);
-	rc = sock->ops->setsockopt (sock, SOL_TCP, TCP_KEEPCNT,
-				    (char *)&keep_count, sizeof (keep_count));
-	set_fs (oldmm);
+	rc = kernel_setsockopt(sock, SOL_TCP, TCP_KEEPCNT,
+				    (char *)&keep_count, sizeof(keep_count));
 	if (rc != 0) {
-		CERROR ("Can't set TCP_KEEPCNT: %d\n", rc);
-		return (rc);
+		CERROR("Can't set TCP_KEEPCNT: %d\n", rc);
+		return rc;
 	}
 
-	return (0);
+	return 0;
 }
 
 void
-ksocknal_lib_push_conn (ksock_conn_t *conn)
+ksocknal_lib_push_conn(ksock_conn_t *conn)
 {
 	struct sock    *sk;
 	struct tcp_sock *tp;
 	int	     nonagle;
 	int	     val = 1;
 	int	     rc;
-	mm_segment_t    oldmm;
 
 	rc = ksocknal_connsock_addref(conn);
 	if (rc != 0)			    /* being shut down */
@@ -590,34 +568,29 @@ ksocknal_lib_push_conn (ksock_conn_t *conn)
 	sk = conn->ksnc_sock->sk;
 	tp = tcp_sk(sk);
 
-	lock_sock (sk);
+	lock_sock(sk);
 	nonagle = tp->nonagle;
 	tp->nonagle = 1;
-	release_sock (sk);
+	release_sock(sk);
 
-	oldmm = get_fs ();
-	set_fs (KERNEL_DS);
+	rc = kernel_setsockopt(conn->ksnc_sock, SOL_TCP, TCP_NODELAY,
+				      (char *)&val, sizeof(val));
+	LASSERT(rc == 0);
 
-	rc = sk->sk_prot->setsockopt (sk, SOL_TCP, TCP_NODELAY,
-				      (char *)&val, sizeof (val));
-	LASSERT (rc == 0);
-
-	set_fs (oldmm);
-
-	lock_sock (sk);
+	lock_sock(sk);
 	tp->nonagle = nonagle;
-	release_sock (sk);
+	release_sock(sk);
 
 	ksocknal_connsock_decref(conn);
 }
 
-extern void ksocknal_read_callback (ksock_conn_t *conn);
-extern void ksocknal_write_callback (ksock_conn_t *conn);
+extern void ksocknal_read_callback(ksock_conn_t *conn);
+extern void ksocknal_write_callback(ksock_conn_t *conn);
 /*
  * socket call back in Linux
  */
 static void
-ksocknal_data_ready (struct sock *sk)
+ksocknal_data_ready(struct sock *sk)
 {
 	ksock_conn_t  *conn;
 
@@ -627,8 +600,8 @@ ksocknal_data_ready (struct sock *sk)
 
 	conn = sk->sk_user_data;
 	if (conn == NULL) {	     /* raced with ksocknal_terminate_conn */
-		LASSERT (sk->sk_data_ready != &ksocknal_data_ready);
-		sk->sk_data_ready (sk);
+		LASSERT(sk->sk_data_ready != &ksocknal_data_ready);
+		sk->sk_data_ready(sk);
 	} else
 		ksocknal_read_callback(conn);
 
@@ -636,7 +609,7 @@ ksocknal_data_ready (struct sock *sk)
 }
 
 static void
-ksocknal_write_space (struct sock *sk)
+ksocknal_write_space(struct sock *sk)
 {
 	ksock_conn_t  *conn;
 	int	    wspace;
@@ -656,12 +629,12 @@ ksocknal_write_space (struct sock *sk)
 				      " ready" : " blocked"),
 	       (conn == NULL) ? "" : (conn->ksnc_tx_scheduled ?
 				      " scheduled" : " idle"),
-	       (conn == NULL) ? "" : (list_empty (&conn->ksnc_tx_queue) ?
+	       (conn == NULL) ? "" : (list_empty(&conn->ksnc_tx_queue) ?
 				      " empty" : " queued"));
 
 	if (conn == NULL) {	     /* raced with ksocknal_terminate_conn */
-		LASSERT (sk->sk_write_space != &ksocknal_write_space);
-		sk->sk_write_space (sk);
+		LASSERT(sk->sk_write_space != &ksocknal_write_space);
+		sk->sk_write_space(sk);
 
 		read_unlock(&ksocknal_data.ksnd_global_lock);
 		return;
@@ -674,7 +647,7 @@ ksocknal_write_space (struct sock *sk)
 		 * ENOMEM check in ksocknal_transmit is race-free (think about
 		 * it). */
 
-		clear_bit (SOCK_NOSPACE, &sk->sk_socket->flags);
+		clear_bit(SOCK_NOSPACE, &sk->sk_socket->flags);
 	}
 
 	read_unlock(&ksocknal_data.ksnd_global_lock);
@@ -722,7 +695,7 @@ ksocknal_lib_memory_pressure(ksock_conn_t *conn)
 	sched = conn->ksnc_scheduler;
 	spin_lock_bh(&sched->kss_lock);
 
-	if (!SOCK_TEST_NOSPACE(conn->ksnc_sock) &&
+	if (!test_bit(SOCK_NOSPACE, &conn->ksnc_sock->flags) &&
 	    !conn->ksnc_tx_ready) {
 		/* SOCK_NOSPACE is set when the socket fills
 		 * and cleared in the write_space callback

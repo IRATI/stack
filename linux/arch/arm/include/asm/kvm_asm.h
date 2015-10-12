@@ -61,6 +61,24 @@
 #define ARM_EXCEPTION_FIQ	  6
 #define ARM_EXCEPTION_HVC	  7
 
+/*
+ * The rr_lo_hi macro swaps a pair of registers depending on
+ * current endianness. It is used in conjunction with ldrd and strd
+ * instructions that load/store a 64-bit value from/to memory to/from
+ * a pair of registers which are used with the mrrc and mcrr instructions.
+ * If used with the ldrd/strd instructions, the a1 parameter is the first
+ * source/destination register and the a2 parameter is the second
+ * source/destination register. Note that the ldrd/strd instructions
+ * already swap the bytes within the words correctly according to the
+ * endianness setting, but the order of the registers need to be effectively
+ * swapped when used with the mrrc/mcrr instructions.
+ */
+#ifdef CONFIG_CPU_ENDIAN_BE8
+#define rr_lo_hi(a1, a2) a2, a1
+#else
+#define rr_lo_hi(a1, a2) a1, a2
+#endif
+
 #ifndef __ASSEMBLY__
 struct kvm;
 struct kvm_vcpu;
@@ -78,6 +96,7 @@ extern char __kvm_hyp_code_end[];
 
 extern void __kvm_flush_vm_context(void);
 extern void __kvm_tlb_flush_vmid_ipa(struct kvm *kvm, phys_addr_t ipa);
+extern void __kvm_tlb_flush_vmid(struct kvm *kvm);
 
 extern int __kvm_vcpu_run(struct kvm_vcpu *vcpu);
 #endif

@@ -14,7 +14,7 @@
 
 #include "mpc85xx.h"
 
-static struct of_device_id __initdata mpc85xx_common_ids[] = {
+static const struct of_device_id mpc85xx_common_ids[] __initconst = {
 	{ .type = "soc", },
 	{ .compatible = "soc", },
 	{ .compatible = "simple-bus", },
@@ -40,6 +40,7 @@ static struct of_device_id __initdata mpc85xx_common_ids[] = {
 	{ .compatible = "fsl,qoriq-pcie-v2.4", },
 	{ .compatible = "fsl,qoriq-pcie-v2.3", },
 	{ .compatible = "fsl,qoriq-pcie-v2.2", },
+	{ .compatible = "fsl,fman", },
 	{},
 };
 

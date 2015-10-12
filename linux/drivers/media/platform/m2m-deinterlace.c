@@ -127,7 +127,7 @@ static struct deinterlace_fmt *find_format(struct v4l2_format *f)
 
 struct deinterlace_dev {
 	struct v4l2_device	v4l2_dev;
-	struct video_device	*vfd;
+	struct video_device	vfd;
 
 	atomic_t		busy;
 	struct mutex		dev_mutex;
@@ -983,7 +983,7 @@ static struct video_device deinterlace_videodev = {
 	.fops		= &deinterlace_fops,
 	.ioctl_ops	= &deinterlace_ioctl_ops,
 	.minor		= -1,
-	.release	= video_device_release,
+	.release	= video_device_release_empty,
 	.vfl_dir	= VFL_DIR_M2M,
 };
 
@@ -1002,7 +1002,7 @@ static int deinterlace_probe(struct platform_device *pdev)
 	dma_cap_mask_t mask;
 	int ret = 0;
 
-	pcdev = kzalloc(sizeof *pcdev, GFP_KERNEL);
+	pcdev = devm_kzalloc(&pdev->dev, sizeof(*pcdev), GFP_KERNEL);
 	if (!pcdev)
 		return -ENOMEM;
 
@@ -1012,7 +1012,7 @@ static int deinterlace_probe(struct platform_device *pdev)
 	dma_cap_set(DMA_INTERLEAVE, mask);
 	pcdev->dma_chan = dma_request_channel(mask, NULL, pcdev);
 	if (!pcdev->dma_chan)
-		goto free_dev;
+		return -ENODEV;
 
 	if (!dma_has_cap(DMA_INTERLEAVE, pcdev->dma_chan->device->cap_mask)) {
 		v4l2_err(&pcdev->v4l2_dev, "DMA does not support INTERLEAVE\n");
@@ -1026,13 +1026,7 @@ static int deinterlace_probe(struct platform_device *pdev)
 	atomic_set(&pcdev->busy, 0);
 	mutex_init(&pcdev->dev_mutex);
 
-	vfd = video_device_alloc();
-	if (!vfd) {
-		v4l2_err(&pcdev->v4l2_dev, "Failed to allocate video device\n");
-		ret = -ENOMEM;
-		goto unreg_dev;
-	}
-
+	vfd = &pcdev->vfd;
 	*vfd = deinterlace_videodev;
 	vfd->lock = &pcdev->dev_mutex;
 	vfd->v4l2_dev = &pcdev->v4l2_dev;
@@ -1040,12 +1034,11 @@ static int deinterlace_probe(struct platform_device *pdev)
 	ret = video_register_device(vfd, VFL_TYPE_GRABBER, 0);
 	if (ret) {
 		v4l2_err(&pcdev->v4l2_dev, "Failed to register video device\n");
-		goto rel_vdev;
+		goto unreg_dev;
 	}
 
 	video_set_drvdata(vfd, pcdev);
 	snprintf(vfd->name, sizeof(vfd->name), "%s", deinterlace_videodev.name);
-	pcdev->vfd = vfd;
 	v4l2_info(&pcdev->v4l2_dev, MEM2MEM_TEST_MODULE_NAME
 			" Device registered as /dev/video%d\n", vfd->num);
 
@@ -1069,17 +1062,13 @@ static int deinterlace_probe(struct platform_device *pdev)
 
 	v4l2_m2m_release(pcdev->m2m_dev);
 err_m2m:
-	video_unregister_device(pcdev->vfd);
+	video_unregister_device(&pcdev->vfd);
 err_ctx:
 	vb2_dma_contig_cleanup_ctx(pcdev->alloc_ctx);
-rel_vdev:
-	video_device_release(vfd);
 unreg_dev:
 	v4l2_device_unregister(&pcdev->v4l2_dev);
 rel_dma:
 	dma_release_channel(pcdev->dma_chan);
-free_dev:
-	kfree(pcdev);
 
 	return ret;
 }
@@ -1090,11 +1079,10 @@ static int deinterlace_remove(struct platform_device *pdev)
 
 	v4l2_info(&pcdev->v4l2_dev, "Removing " MEM2MEM_TEST_MODULE_NAME);
 	v4l2_m2m_release(pcdev->m2m_dev);
-	video_unregister_device(pcdev->vfd);
+	video_unregister_device(&pcdev->vfd);
 	v4l2_device_unregister(&pcdev->v4l2_dev);
 	vb2_dma_contig_cleanup_ctx(pcdev->alloc_ctx);
 	dma_release_channel(pcdev->dma_chan);
-	kfree(pcdev);
 
 	return 0;
 }
@@ -1104,7 +1092,6 @@ static struct platform_driver deinterlace_pdrv = {
 	.remove		= deinterlace_remove,
 	.driver		= {
 		.name	= MEM2MEM_NAME,
-		.owner	= THIS_MODULE,
 	},
 };
 module_platform_driver(deinterlace_pdrv);
