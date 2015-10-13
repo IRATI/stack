@@ -2413,12 +2413,6 @@ void RIBDaemon::stop_request(const cdap_rib::con_handle_t &con,
 	rib->stop_request(con, obj, filt, invoke_id);
 }
 
-//
-// Encoder AbstractEncoder and base class
-//
-
-AbstractEncoder::~AbstractEncoder() {
-}
 
 //RIBObj/RIBObj_
 void RIBObj::create(const cdap_rib::con_handle_t &con,
@@ -2426,8 +2420,8 @@ void RIBObj::create(const cdap_rib::con_handle_t &con,
 				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
-				const cdap_rib::SerializedObject &obj_req,
-				cdap_rib::SerializedObject &obj_reply,
+				const cdap_rib::ser_obj_t &obj_req,
+				cdap_rib::ser_obj_t &obj_reply,
 				cdap_rib::res_info_t& res){
 
 	operation_not_supported(res);
@@ -2449,7 +2443,7 @@ void RIBObj::read(const cdap_rib::con_handle_t &con,
 					const std::string& class_,
 					const cdap_rib::filt_info_t &filt,
 					const int invoke_id,
-					cdap_rib::SerializedObject &obj_reply,
+					cdap_rib::ser_obj_t &obj_reply,
 					cdap_rib::res_info_t& res){
 	operation_not_supported(res);
 }
@@ -2468,8 +2462,8 @@ void RIBObj::write(const cdap_rib::con_handle_t &con,
 				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
-				const cdap_rib::SerializedObject &obj_req,
-				cdap_rib::SerializedObject &obj_reply,
+				const cdap_rib::ser_obj_t &obj_req,
+				cdap_rib::ser_obj_t &obj_reply,
 				cdap_rib::res_info_t& res){
 	operation_not_supported(res);
 }
@@ -2479,8 +2473,8 @@ void RIBObj::start(const cdap_rib::con_handle_t &con,
 			const std::string& class_,
 			const cdap_rib::filt_info_t &filt,
 			const int invoke_id,
-			const cdap_rib::SerializedObject &obj_req,
-			cdap_rib::SerializedObject &obj_reply,
+			const cdap_rib::ser_obj_t &obj_req,
+			cdap_rib::ser_obj_t &obj_reply,
 			cdap_rib::res_info_t& res){
 	operation_not_supported(res);
 }
@@ -2490,8 +2484,8 @@ void RIBObj::stop(const cdap_rib::con_handle_t &con,
 			const std::string& class_,
 			const cdap_rib::filt_info_t &filt,
 			const int invoke_id,
-			const cdap_rib::SerializedObject &obj_req,
-			cdap_rib::SerializedObject &obj_reply,
+			const cdap_rib::ser_obj_t &obj_req,
+			cdap_rib::ser_obj_t &obj_reply,
 			cdap_rib::res_info_t& res){
 	operation_not_supported(res);
 }

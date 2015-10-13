@@ -123,7 +123,7 @@ void CDAPEchoWorker::serveEchoFlow(int port_id)
 			break;
 		}
 
-		cdap_rib::SerializedObject message;
+		cdap_rib::ser_obj_t message;
 		message.message_ = buffer;
 		message.size_ = bytes_read;
 		cdap_prov->process_message(message, port_id);

@@ -14,7 +14,8 @@ lib_LTLIBRARIES = librinad.la
 librinad_ladir = $(pkgincludedir)/ipcm
 
 #Distributable headers
-librinad_la_HEADERS = encoders_mad.h
+librinad_la_HEADERS = structures_mad.h \
+					  encoders_mad.h
 
 librinad_la_CFLAGS   =
 librinad_la_CPPFLAGS =				\
@@ -32,5 +33,6 @@ librinad_la_SOURCES  =					\
 	debug.cc              debug.h                   \
 	rina-configuration.cc rina-configuration.h	\
 	encoder.cc	      encoder.h			\
+	structures_mad.h 					\
 	encoders_mad.cc	      encoders_mad.h			\
 			      concurrency.h

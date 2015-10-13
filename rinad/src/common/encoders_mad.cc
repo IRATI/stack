@@ -27,7 +27,6 @@
 
 namespace rinad {
 namespace mad_manager {
-namespace encoders {
 
 //
 // Simple types
@@ -57,7 +56,7 @@ void StringEncoder::decode(const rina::cdap_rib::ser_obj_t& ser_obj,
 
 namespace ipcpConfigEncoder {
 
-void encode_enrollment(const structures::enrollment_config_t &obj,
+void encode_enrollment(const enrollment_config_t &obj,
 			messages::enrollment_config &ser_obj) {
 	ser_obj.set_neighbor_name(obj.neighbor_name);
 	ser_obj.set_neighbor_instance(obj.neighbor_instance);
@@ -65,7 +64,7 @@ void encode_enrollment(const structures::enrollment_config_t &obj,
 	ser_obj.set_enrollment_underlying_dif(obj.enr_un_dif);
 }
 void decode_enrollment(const messages::enrollment_config &ser_obj,
-			structures::enrollment_config_t &obj) {
+			enrollment_config_t &obj) {
 	obj.neighbor_name = ser_obj.neighbor_name();
 	obj.neighbor_instance = ser_obj.neighbor_instance();
 	obj.enr_dif = ser_obj.enrollment_dif();
@@ -73,7 +72,7 @@ void decode_enrollment(const messages::enrollment_config &ser_obj,
 }
 }
 
-void IPCPConfigEncoder::encode(const structures::ipcp_config_t& obj,
+void IPCPConfigEncoder::encode(const rinad::mad_manager::ipcp_config_t& obj,
 				rina::cdap_rib::ser_obj_t& ser_obj) {
 	messages::ipcp_config gpf_obj;
 	gpf_obj.set_process_name(obj.process_name);
@@ -104,7 +103,7 @@ void IPCPConfigEncoder::encode(const structures::ipcp_config_t& obj,
 }
 
 void IPCPConfigEncoder::decode(const rina::cdap_rib::ser_obj_t& ser_obj,
-				structures::ipcp_config_t& obj) {
+				rinad::mad_manager::ipcp_config_t& obj) {
 	messages::ipcp_config gpf_obj;
 	gpf_obj.ParseFromArray(ser_obj.message_, ser_obj.size_);
 	obj.process_name = gpf_obj.process_name();
@@ -125,8 +124,8 @@ void IPCPConfigEncoder::decode(const rina::cdap_rib::ser_obj_t& ser_obj,
 //
 //IPCP encoder (read)
 //
-void IPCPEncoder::encode(const structures::ipcp_t& obj,
-				rina::cdap_rib::SerializedObject& serobj) {
+void IPCPEncoder::encode(const ipcp_t& obj,
+				rina::cdap_rib::ser_obj_t& serobj) {
 
 	messages::ipcp m;
 	m.set_processid(obj.process_id);
@@ -144,8 +143,8 @@ void IPCPEncoder::encode(const structures::ipcp_t& obj,
 	m.SerializeToArray(serobj.message_, serobj.size_);
 }
 
-void IPCPEncoder::decode(const rina::cdap_rib::SerializedObject& serobj,
-				structures::ipcp_t& des_obj) {
+void IPCPEncoder::decode(const rina::cdap_rib::ser_obj_t& serobj,
+				ipcp_t& des_obj) {
 
 	messages::ipcp m;
 	if (!m.ParseFromArray(serobj.message_, serobj.size_))
@@ -154,6 +153,5 @@ void IPCPEncoder::decode(const rina::cdap_rib::SerializedObject& serobj,
 	des_obj.process_id = m.processid();
 }
 
-}  //namespace encoders
 }  //namespace mad_manager
 }  //namespace rinad

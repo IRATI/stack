@@ -24,7 +24,6 @@
 #define RIB_PROVIDER_H_
 #include "cdap_rib_structures.h"
 #include <string>
-#include <inttypes.h>
 #include <list>
 #include <map>
 #include <algorithm>
@@ -191,33 +190,6 @@ public:
 			const cdap_rib::res_info_t &res) = 0;
 };
 
-class AbstractEncoder {
-
-public:
-	virtual ~AbstractEncoder();
-};
-
-template<class T>
-class Encoder: public AbstractEncoder {
-
-public:
-	virtual ~Encoder(){}
-
-	/// Converts an object to a byte array, if this object is recognized by the encoder
-	/// @param object
-	/// @throws exception if the object is not recognized by the encoder
-	/// @return
-	virtual void encode(const T &obj, cdap_rib::ser_obj_t& serobj) = 0;
-	/// Converts a byte array to an object of the type specified by "className"
-	/// @param byte[] serializedObject
-	/// @param objectClass The type of object to be decoded
-	/// @throws exception if the byte array is not an encoded in a way that the
-	/// encoder can recognize, or the byte array value doesn't correspond to an
-	/// object of the type "className"
-	/// @return
-	virtual void decode(const cdap_rib::ser_obj_t &serobj,
-			T& des_obj) = 0;
-};
 
 ///
 /// Base RIB Object. API for the create/delete/read/write/start/stop RIB
@@ -269,8 +241,8 @@ protected:
 				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
-				const cdap_rib::SerializedObject &obj_req,
-				cdap_rib::SerializedObject &obj_reply,
+				const cdap_rib::ser_obj_t &obj_req,
+				cdap_rib::ser_obj_t &obj_reply,
 				cdap_rib::res_info_t& res);
 	///
 	/// Process a remote delete operation
@@ -313,7 +285,7 @@ protected:
 					const std::string& class_,
 					const cdap_rib::filt_info_t &filt,
 					const int invoke_id,
-					cdap_rib::SerializedObject &obj_reply,
+					cdap_rib::ser_obj_t &obj_reply,
 					cdap_rib::res_info_t& res);
 
 	///
@@ -359,8 +331,8 @@ protected:
 				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
-				const cdap_rib::SerializedObject &obj_req,
-				cdap_rib::SerializedObject &obj_reply,
+				const cdap_rib::ser_obj_t &obj_req,
+				cdap_rib::ser_obj_t &obj_reply,
 				cdap_rib::res_info_t& res);
 
 	///
@@ -386,8 +358,8 @@ protected:
 				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
-				const cdap_rib::SerializedObject &obj_req,
-				cdap_rib::SerializedObject &obj_reply,
+				const cdap_rib::ser_obj_t &obj_req,
+				cdap_rib::ser_obj_t &obj_reply,
 				cdap_rib::res_info_t& res);
 
 	///
@@ -413,8 +385,8 @@ protected:
 				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
-				const cdap_rib::SerializedObject &obj_req,
-				cdap_rib::SerializedObject &obj_reply,
+				const cdap_rib::ser_obj_t &obj_req,
+				cdap_rib::ser_obj_t &obj_reply,
 				cdap_rib::res_info_t& res);
 
 	///
@@ -529,8 +501,8 @@ typedef void (*create_cb_t)(const rib_handle_t rib,
 				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
-				const cdap_rib::SerializedObject &obj_req,
-				cdap_rib::SerializedObject &obj_reply,
+				const cdap_rib::ser_obj_t &obj_req,
+				cdap_rib::ser_obj_t &obj_reply,
 				cdap_rib::res_info_t& res);
 
 ///
