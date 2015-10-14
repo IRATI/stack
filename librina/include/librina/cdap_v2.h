@@ -254,7 +254,7 @@ public:
 	///
 	/// Process an incoming CDAP message
 	///
-	virtual void process_message(cdap_rib::SerializedObject &message,
+	virtual void process_message(cdap_rib::ser_obj_t &message,
 				unsigned int port) = 0;
 
 	virtual void destroy_session(int port){ (void)port; /*FIXME*/ };
@@ -345,7 +345,7 @@ public:
 	std::string obj_name_;
 
 	/// ObjectValueInterface (ObjectValueInterface). The value of the object.
-	cdap_rib::SerializedObject obj_value_;
+	cdap_rib::ser_obj_t obj_value_;
 
 	/// Opcode (enum, int32), mandatory.
 	/// Message type of this message.
@@ -409,12 +409,12 @@ public:
 	/// @return
 	/// @throws CDAPException
 	virtual const cdap_m_t* deserializeMessage(
-			const cdap_rib::SerializedObject &message) = 0;
+			const cdap_rib::ser_obj_t &message) = 0;
 	/// Convert from CDAP messages to wire format
 	/// @param cdapMessage
 	/// @return
 	/// @throws CDAPException
-	virtual const cdap_rib::SerializedObject* serializeMessage(
+	virtual const cdap_rib::ser_obj_t* serializeMessage(
 			const cdap_m_t &cdapMessage) = 0;
 };
 

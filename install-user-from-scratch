@@ -37,6 +37,13 @@ if test -n "$BUILDDIR" ; then
     }
 fi
 
+echo "$ME: Java directory will be \`$BUILDDIR/java'"
+if test -n "$BUILDDIR/java" ; then
+    mkdir -p $BUILDDIR/java || {
+        echo "$ME: Cannot create directory \`$BUILDDIR/java'"
+    }
+fi
+
 echo "$ME: Starting librina phase"
 (cd librina && ./bootstrap) || {
     echo "$ME: Cannot bootstrap"
@@ -52,7 +59,7 @@ echo "$ME: Starting rinad phase"
     echo "$ME: Cannot bootstrap"
     exit 1
 }
-(mkdir -p $BUILDDIR/rinad && cd $BUILDDIR/rinad && PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH $SRCDIR/rinad/configure --prefix=$PREFIX $FLAGS && make $MAKEFLAGS clean install installcheck) || {
+(mkdir -p $BUILDDIR/rinad && cd $BUILDDIR/rinad && PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH $SRCDIR/rinad/configure --prefix=$PREFIX --enable-java-bindings $FLAGS && make $MAKEFLAGS clean install installcheck) || {
     echo "$ME: Cannot complete rinad phase"
     exit 1
 }

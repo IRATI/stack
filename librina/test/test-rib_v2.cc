@@ -266,7 +266,7 @@ public:
 					  const cdap_rib::flags_t &flags,
 					  const cdap_rib::res_info_t &res,
 					  int invoke_id){};
-	virtual void process_message(cdap_rib::SerializedObject &message,
+	virtual void process_message(cdap_rib::ser_obj_t &message,
 				     unsigned int port){};
 
 	virtual void destroy_session(int port){ (void)port; /*FIXME*/ };
@@ -274,28 +274,6 @@ public:
 
 static CDAPProviderMockup cdap_provider_mockup;
 static cdap::CDAPCallbackInterface* rib_provider = NULL;
-//
-//
-//
-
-class MyObjEncoder: public Encoder<uint32_t> {
-
-public:
-	virtual ~MyObjEncoder(){}
-
-	void encode(const uint32_t &obj, cdap_rib::ser_obj_t& serobj){
-		//TODO fill in
-		(void)obj;
-		(void)serobj;
-	};
-
-	virtual void decode(const cdap_rib::ser_obj_t &serobj,
-							uint32_t& des_obj){
-		//TODO fill in
-		(void)serobj;
-		(void)des_obj;
-	};
-};
 
 //A type
 class MyObj : public RIBObj {
@@ -309,7 +287,7 @@ public:
 					const std::string& class_,
 					const cdap_rib::filt_info_t &filt,
 					const int invoke_id,
-					cdap_rib::SerializedObject &obj_reply,
+					cdap_rib::ser_obj_t &obj_reply,
 					cdap_rib::res_info_t& res){
 
 
@@ -327,8 +305,6 @@ public:
 		res.code_ = cdap_rib::CDAP_SUCCESS;
 		return true;
 	}
-
-	MyObjEncoder encoder;
 	static const std::string class_;
 };
 
@@ -346,13 +322,9 @@ public:
 					const std::string& class_,
 					const cdap_rib::filt_info_t &filt,
 					const int invoke_id,
-					cdap_rib::SerializedObject &obj_reply,
+					cdap_rib::ser_obj_t &obj_reply,
 					cdap_rib::res_info_t& res){
 	};
-
-
-
-	MyObjEncoder encoder;
 	static const std::string class_;
 };
 
@@ -371,17 +343,13 @@ public:
 		return class_;
 	}
 
-	AbstractEncoder* get_encoder(){
-		return &encoder;
-	};
-
 	void start(const cdap_rib::con_handle_t &con,
 				const std::string& fqn,
 				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
-				const cdap_rib::SerializedObject &obj_req,
-				cdap_rib::SerializedObject &obj_reply,
+				const cdap_rib::ser_obj_t &obj_req,
+				cdap_rib::ser_obj_t &obj_reply,
 				cdap_rib::res_info_t& res){
 
 		fprintf(stderr, "Got a START operation for path: '%s'\n", fqn.c_str());
@@ -396,8 +364,6 @@ public:
 		res.code_ = cdap_rib::CDAP_SUCCESS;
 		deleg_start_operations++;
 	}
-
-	MyObjEncoder encoder;
 	static const std::string class_;
 };
 
@@ -415,8 +381,8 @@ void create_callback_1(const rib_handle_t rib,
 				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
-				const cdap_rib::SerializedObject &obj_req,
-				cdap_rib::SerializedObject &obj_reply,
+				const cdap_rib::ser_obj_t &obj_req,
+				cdap_rib::ser_obj_t &obj_reply,
 				cdap_rib::res_info_t& res){
 	CPPUNIT_ASSERT_MESSAGE("Invalid invoke id during create generic", invoke_id==7);
 	res.code_ = cdap_rib::CDAP_SUCCESS;
@@ -429,8 +395,8 @@ void create_callback_2(const rib_handle_t rib,
 				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
-				const cdap_rib::SerializedObject &obj_req,
-				cdap_rib::SerializedObject &obj_reply,
+				const cdap_rib::ser_obj_t &obj_req,
+				cdap_rib::ser_obj_t &obj_reply,
 				cdap_rib::res_info_t& res){
 	CPPUNIT_ASSERT_MESSAGE("Invalid invoke id during create specific", invoke_id==6);
 	res.code_ = cdap_rib::CDAP_SUCCESS;

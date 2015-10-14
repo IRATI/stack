@@ -28,7 +28,7 @@ void RIBDaemonObj::read(const rina::cdap_rib::con_handle_t &con,
 				const std::string& class_,
 				const rina::cdap_rib::filt_info_t &filt,
 				const int invoke_id,
-				rina::cdap_rib::SerializedObject &obj_reply,
+				rina::cdap_rib::ser_obj_t &obj_reply,
 				rina::cdap_rib::res_info_t& res) {
 
 	QueryRIBPromise promise;
@@ -46,7 +46,7 @@ void RIBDaemonObj::read(const rina::cdap_rib::con_handle_t &con,
 	std::string trunk = promise.serialized_rib.substr(0, 1000);
 
 	//Serialize and return
-	mad_manager::encoders::StringEncoder encoder;
+	mad_manager::StringEncoder encoder;
 	encoder.encode(trunk, obj_reply);
 }
 

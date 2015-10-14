@@ -335,11 +335,11 @@ void* ActiveWorker::run(void* param)
 				LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
 			}
 
-			rina::cdap_rib::SerializedObject message;
+			rina::cdap_rib::ser_obj_t message;
 			message.message_ = buffer;
 			message.size_ = bytes_read;
 
-			//Instruct CDAP provider to process the message
+			//Instruct CDAP provider to process the CACEP message
 			try{
 				rina::cdap::getProvider()->process_message(message,
 							port_id);
@@ -359,11 +359,11 @@ void* ActiveWorker::run(void* param)
 					LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
 				}
 
-				rina::cdap_rib::SerializedObject message;
+				rina::cdap_rib::ser_obj_t message;
 				message.message_ = buffer;
 				message.size_ = bytes_read;
 
-				//Instruct CDAP provider to process the message
+				//Instruct CDAP provider to process the RIB operation message
 				try{
 					rina::cdap::getProvider()->process_message(
 									message,
