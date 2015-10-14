@@ -1654,8 +1654,10 @@ void IPCManager_::io_loop(){
 		if(!event)
 			continue;
 
-		if (!keep_running)
+		if (!keep_running){
+			delete event;
 			break;
+		}
 
 		LOG_DBG("Got event of type %s and sequence number %u",
 		rina::IPCEvent::eventTypeToString(event->eventType).c_str(),
