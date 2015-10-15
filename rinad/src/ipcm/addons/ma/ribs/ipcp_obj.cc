@@ -144,6 +144,7 @@ void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
 		res.code_ = rina::cdap_rib::CDAP_ERROR;
 		return;
 	}
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }
 
 int IPCPObj::createIPCP(
