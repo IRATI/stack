@@ -105,7 +105,8 @@ int vmpi_provider_register(unsigned int provider, unsigned int id,
         list_add_tail(&elem->node, &providers);
         mutex_unlock(&lock);
 
-        printk("%s: Provider %u:%u registered\n", __func__, provider, id);
+        printk("%s: Provider %s:%u registered\n", __func__,
+               (provider == VMPI_PROVIDER_HOST) ? "HOST" : "GUEST", id);
 
         return 0;
 }
@@ -133,7 +134,8 @@ int vmpi_provider_unregister(unsigned int provider, unsigned int id)
 
         kfree(elem);
 
-        printk("%s: Provider %u:%u unregistered\n", __func__, provider, id);
+        printk("%s: Provider %s:%u unregistered\n", __func__,
+               (provider == VMPI_PROVIDER_HOST) ? "HOST" : "GUEST", id);
 
         return 0;
 }
