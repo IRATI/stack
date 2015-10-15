@@ -93,7 +93,6 @@ EXPORT_SYMBOL_GPL(vmpi_buf_len);
 void
 vmpi_buf_set_len(struct vmpi_buf *vb, size_t len)
 {
-        (void) vb;
-        (void) len;
+        buffer_set_length(sdu_buffer_rw(vb), len);
 }
 EXPORT_SYMBOL_GPL(vmpi_buf_set_len);
