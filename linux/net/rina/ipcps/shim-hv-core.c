@@ -39,7 +39,7 @@
 #include "du.h"
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
-#include "vmpi-provider.h"
+#include "vmpi.h"
 
 /* FIXME: Pigsty workaround, to be removed immediately */
 #if defined(CONFIG_VMPI_KVM_GUEST) && !defined(CONFIG_VMPI_KVM_GUEST_MODULE)
@@ -221,19 +221,14 @@ static int des_string(const uint8_t **from, const string_t **str, int *len)
 }
 
 static int
-shim_hv_send_ctrl_msg(struct ipcp_instance_data *priv,
-                      uint8_t *msg, int len)
+shim_hv_send_ctrl_msg(struct ipcp_instance_data *priv, struct vmpi_buf *vb)
 {
-        struct iovec iov;
         int ret;
 
-        iov.iov_base = msg;
-        iov.iov_len = len;
-        ret = priv->vmpi.ops.write(&priv->vmpi.ops, 0, &iov, 1);
-        LOG_DBGF("vmpi_write_kernel(0, %d) --> %d",
-                 (int) len, (int) ret);
+        ret = priv->vmpi.ops.write(&priv->vmpi.ops, 0, vb);
+        LOG_DBGF("vmpi_write_kernel(0) --> %d", (int) ret);
 
-        return !(ret == len);
+        return ret < 0 ? -1 : 0;
 }
 
 /* Build and send an ALLOCATE_RESP message on the control channel. */
@@ -241,30 +236,44 @@ static int
 shim_hv_send_allocate_resp(struct ipcp_instance_data *priv,
                            unsigned int ch, int response)
 {
-        uint8_t msg[sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint8_t)];
+        struct vmpi_buf *vb;
         uint8_t *msg_ptr;
 
+        vb = vmpi_buf_alloc(sizeof(uint8_t) + sizeof(uint32_t)
+                               + sizeof(uint8_t), 0, GFP_ATOMIC);
+        if (!vb) {
+                LOG_ERR("%s: Failed to alloc buffer", __func__);
+                return -1;
+        }
+
         /* Build the message by serialization. */
-        msg_ptr = msg;
+        msg_ptr = vmpi_buf_data(vb);
         ser_uint8(&msg_ptr, CMD_ALLOCATE_RESP);
         ser_uint32(&msg_ptr, ch);
         ser_uint8(&msg_ptr, response);
 
-        return shim_hv_send_ctrl_msg(priv, msg, sizeof(msg));
+        return shim_hv_send_ctrl_msg(priv, vb);
 }
 
 static int
 shim_hv_send_deallocate(struct ipcp_instance_data *priv, unsigned int ch)
 {
-        uint8_t msg[sizeof(uint8_t) + sizeof(uint32_t)];
+        struct vmpi_buf *vb;
         uint8_t *msg_ptr;
 
+        vb = vmpi_buf_alloc(sizeof(uint8_t) + sizeof(uint32_t),
+                            0, GFP_ATOMIC);
+        if (!vb) {
+                LOG_ERR("%s: Failed to alloc buffer", __func__);
+                return -1;
+        }
+
         /* Build the message by serialization. */
-        msg_ptr = msg;
+        msg_ptr = vmpi_buf_data(vb);
         ser_uint8(&msg_ptr, CMD_DEALLOCATE);
         ser_uint32(&msg_ptr, ch);
 
-        return shim_hv_send_ctrl_msg(priv, msg, sizeof(msg));
+        return shim_hv_send_ctrl_msg(priv, vb);
 }
 
 /* Invoked from the RINA stack when an application issues a
@@ -281,8 +290,8 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
         uint32_t ch;
         string_t *src_name;
         string_t *dst_name;
+        struct vmpi_buf *vb;
         size_t msg_len;
-        uint8_t *msg_buf;
         uint8_t *msg_ptr;
         uint32_t slen, dlen;
         int err = -ENOMEM;
@@ -333,21 +342,22 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
                 LOG_ERR("%s: message too long %d", __func__, (int)msg_len);
                 goto msg_alloc;
         }
-        msg_buf = rkmalloc(msg_len, GFP_KERNEL);
-        if (msg_buf == NULL) {
-                LOG_ERR("%s: message buffer allocation failed", __func__);
+
+        vb = vmpi_buf_alloc(msg_len, 0, GFP_KERNEL);
+        if (vb == NULL) {
+                LOG_ERR("%s: vmpi buffer allocation failed", __func__);
                 goto msg_alloc;
         }
 
         /* Build the message by serialization. */
-        msg_ptr = msg_buf;
+        msg_ptr = vmpi_buf_data(vb);
         ser_uint8(&msg_ptr, CMD_ALLOCATE_REQ);
         ser_uint32(&msg_ptr, ch);
         ser_string(&msg_ptr, src_name, slen);
         ser_string(&msg_ptr, dst_name, dlen);
 
         /* Send the message on the control channel. */
-        shim_hv_send_ctrl_msg(priv, msg_buf, msg_len);
+        shim_hv_send_ctrl_msg(priv, vb);
 
         err = 0;
         priv->vmpi.channels[ch].state = CHANNEL_STATE_PENDING;
@@ -357,7 +367,6 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
 
         LOG_DBGF("channel %d --> PENDING", ch);
 
-        rkfree(msg_buf);
  msg_alloc:
         rkfree(dst_name);
  dst_name_alloc:
@@ -784,9 +793,14 @@ static void shim_hv_handle_deallocate(struct ipcp_instance_data *priv,
 }
 
 static void shim_hv_handle_control_msg(struct ipcp_instance_data *priv,
-                                       const uint8_t *msg, int len)
+                                       struct vmpi_buf *vb)
 {
+        const uint8_t *msg;
+        int len;
         uint8_t cmd;
+
+        msg = vmpi_buf_data(vb);
+        len = vmpi_buf_len(vb);
 
         /* Deserialize the control command code. */
         if (des_uint8(&msg, &cmd, &len)) {
@@ -809,24 +823,24 @@ static void shim_hv_handle_control_msg(struct ipcp_instance_data *priv,
                 LOG_ERR("%s: unknown cmd %u", __func__, cmd);
                 break;
         }
+
+        vmpi_buf_free(vb);
 }
 
 /* Invoked from the VMPI worker thread when a new message comes from
  * a channel.
  */
 static void
-shim_hv_recv_callback(void *opaque, unsigned int ch, const char *data, int len)
+shim_hv_recv_cb(void *opaque, unsigned int ch, struct vmpi_buf *vb)
 {
         struct ipcp_instance_data *priv = opaque;
         port_id_t port_id;
-        struct sdu *sdu;
-        struct buffer *buf;
         struct shim_hv_channel channel;
         int ret = 0;
 
         if (unlikely(ch == 0)) {
                 /* Control channel. */
-                shim_hv_handle_control_msg(priv, data, len);
+                shim_hv_handle_control_msg(priv, vb);
                 return;
         }
 
@@ -846,29 +860,21 @@ shim_hv_recv_callback(void *opaque, unsigned int ch, const char *data, int len)
         channel = priv->vmpi.channels[ch];
         port_id = channel.port_id;
 
-        buf = buffer_create_from(data, len);
-        if (unlikely(buf == NULL)) {
-                LOG_ERR("%s: buffer_create_from_ni() failed", __func__);
-                return;
-        }
-
-        sdu = sdu_create_buffer_with(buf);
-        if (unlikely(sdu == NULL)) {
-                LOG_ERR("%s: sdu_create_buffer_with_ni() failed", __func__);
-                buffer_destroy(buf);
-                return;
-        }
-
         ASSERT(channel.user_ipcp->ops);
         ASSERT(channel.user_ipcp->ops->sdu_enqueue);
         ret = channel.user_ipcp->ops->sdu_enqueue(channel.user_ipcp->data,
                                                   port_id,
-                                                  sdu);
+                                                  vb);
         if (unlikely(ret)) {
                 LOG_ERR("%s: sdu_enqueue() failed", __func__);
                 return;
         }
         LOG_DBGF("SDU received");
+}
+
+static void
+shim_hv_write_restart_cb(void *opaque)
+{
 }
 
 /* Register an application to this IPC process. */
@@ -1035,9 +1041,10 @@ shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
                 return -1;
         }
 
-        ret = priv->vmpi.ops.register_read_callback(&priv->vmpi.ops,
-                                                    shim_hv_recv_callback,
-                                                    priv);
+        ret = priv->vmpi.ops.register_cbs(&priv->vmpi.ops,
+                                          shim_hv_recv_cb,
+                                          shim_hv_write_restart_cb,
+                                          priv);
         if (ret) {
                 LOG_ERR("%s: vmpi_register_read_callback() failed", __func__);
                 return -1;
@@ -1056,24 +1063,21 @@ shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
  * SDU to a flow managed by this shim IPC process.
  */
 static int
-shim_hv_sdu_write(struct ipcp_instance_data * priv,
-		  port_id_t 		      port_id,
-                  struct sdu *		      sdu)
+shim_hv_sdu_write(struct ipcp_instance_data *   priv,
+		  port_id_t 		        port_id,
+                  struct vmpi_buf *	        vb)
 {
         unsigned int ch = port_id_to_channel(priv, port_id);
-        struct buffer *buf = sdu_buffer_rw(sdu);
-        struct iovec iov;
-        int ret = -1;
-        int n;
+        int ret;
 
         if (unlikely(!priv->assigned)) {
                 LOG_ERR("%s: IPC process not ready", __func__);
-                goto out;
+                return -1;
         }
 
         if (unlikely(!ch)) {
                 LOG_ERR("%s: unknown port-id %d", __func__, port_id);
-                goto out;
+                return -1;
         }
 
         rmb();
@@ -1082,24 +1086,14 @@ shim_hv_sdu_write(struct ipcp_instance_data * priv,
                      CHANNEL_STATE_ALLOCATED)) {
                 LOG_ERR("%s: channel %u in invalid state %d", __func__,
                         ch, priv->vmpi.channels[ch].state);
-                goto out;
+                return -1;
         }
 
-        if (unlikely(buf == NULL)) {
-                LOG_ERR("%s: NULL buffer", __func__);
-                goto out;
-        }
-
-        iov.iov_base = buffer_data_rw(buf);
-        iov.iov_len = buffer_length(buf);
-        n = priv->vmpi.ops.write(&priv->vmpi.ops, ch, &iov, 1);
-        if (likely(n == iov.iov_len))
+        ret = priv->vmpi.ops.write(&priv->vmpi.ops, ch, vb);
+        if (likely(ret > 0)) {
+                LOG_DBGF("vmpi_write_kernel(%u) --> %d", ch, ret);
                 ret = 0;
-        LOG_DBGF("vmpi_write_kernel(%u, %d) --> %d",
-                 ch, (int) iov.iov_len, (int) n);
-
- out:
-        sdu_destroy(sdu);
+        }
 
         return ret;
 }
@@ -1329,7 +1323,7 @@ static struct ipcp_factory *shim_hv_ipcp_factory = NULL;
 
 static int __init shim_hv_init(void)
 {
-        vmpi_num_channels = vmpi_get_num_channels();
+        vmpi_num_channels = 64;
 
         shim_hv_ipcp_factory =
                 kipcm_ipcp_factory_register(default_kipcm, SHIM_NAME,

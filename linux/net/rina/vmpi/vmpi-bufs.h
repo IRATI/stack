@@ -1,5 +1,5 @@
 /*
- * Test interface for VMPI.
+ * VMPI buffer adapter
  *
  *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
@@ -18,15 +18,24 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef __VMPI_TEST_H__
-#define __VMPI_TEST_H__
+#ifndef __VMPI_BUFS_H__
+#define __VMPI_BUFS_H__
 
-/* Enable guest-side test interface. */
-#define VMPI_TEST
+#include "../sdu.h"
 
-#ifdef VMPI_TEST
-int vmpi_test_init(void *, bool deferred);
-void vmpi_test_fini(void *, bool deferred);
-#endif  /* VMPI_TEST */
 
-#endif  /* __VMPI_TEST_H__ */
+#define vmpi_buf                sdu
+
+struct vmpi_buf * vmpi_buf_alloc(size_t size, size_t unused, gfp_t gfp);
+
+void vmpi_buf_free(struct vmpi_buf *vb);
+
+uint8_t * vmpi_buf_data(struct vmpi_buf *vb);
+
+size_t vmpi_buf_size(struct vmpi_buf *vb);
+
+size_t vmpi_buf_len(struct vmpi_buf *vb);
+
+void vmpi_buf_set_len(struct vmpi_buf *vb, size_t len);
+
+#endif /* __VMPI_BUFS_H__ */

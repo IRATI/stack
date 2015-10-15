@@ -14,3 +14,4 @@ shim-eth-vlan-y :=				\
 	shim-eth-vlan-core.o shim-eth-utils.o
 obj-$(CONFIG_RINA_SHIM_TCP_UDP)   += shim-tcp-udp.o
 obj-$(CONFIG_RINA_SHIM_HV)        += shim-hv.o
+shim-hv-y := shim-hv-core.o vmpi-bufs.o
