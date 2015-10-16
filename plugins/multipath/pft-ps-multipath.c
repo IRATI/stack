@@ -250,25 +250,21 @@ struct pff_ps_priv {
 static bool priv_is_ok(struct pff_ps_priv * priv)
 { return priv != NULL; }
 
-static struct list_head * pft_find(struct pff_ps_priv * priv,
+static struct pft_entry * pft_find(struct pff_ps_priv * priv,
                                    address_t            destination,
                                    qos_id_t             qos_id)
 {
-        //struct pft_entry * res = NULL;
-        struct pft_entry * it;
-	struct pft_entry * it2;
-        //struct pft_entry * previous;
-	struct pft_entry * tmp;
-	struct list_head * header;
+        struct pft_entry * pos;
+
 	LOG_DBG("In pft_find");
 	
-	header = kmalloc(sizeof(*header), GFP_KERNEL);
-        if (!header) {
-		LOG_DBG("fallo kmalloc");
-        	return header;
-        }
-	LOG_DBG("kmalloc correcto");
-	INIT_LIST_HEAD(header);
+//	header = kmalloc(sizeof(*header), GFP_KERNEL);
+ //       if (!header) {
+//		LOG_DBG("fallo kmalloc");
+ //       	return header;
+  //      }
+//	LOG_DBG("pft_find: header kmalloc correct");
+//	INIT_LIST_HEAD(header);
 
 	//Modificaciones para depurar
 
@@ -276,71 +272,34 @@ static struct list_head * pft_find(struct pff_ps_priv * priv,
 
 	//Fin modificacion
 
-        ASSERT(priv != NULL);
+        ASSERT(priv_is_ok(priv));
         ASSERT(is_address_ok(destination));
 
-	
-
-	//Modificaciones para depurar
-
-	
-	//deb_aux=list_entry(&priv->entries, struct pft_entry, next);
-	//LOG_DBG("%lu Dirección tabla", (unsigned long)deb_aux->destination);
-	if(list_empty(&priv->entries)==0)
-	{
-		LOG_DBG("La lisa no está vacía");
-	}
-	else if(list_empty(&priv->entries)>0)
-	{
-		LOG_DBG("La lisa está vacía");
-	}
-	else
-	{
-		LOG_DBG("Error");
-	}
-
-	//Fin modificaciones	
-	
-
-        list_for_each_entry(it, &priv->entries, next) {
-		//Modificaciones para depurar
+        list_for_each_entry(pos, &priv->entries, next) {
 		
-		LOG_DBG("%lu Dirección tabla iteración", (unsigned long)it->destination);
-		LOG_DBG("%lu Calidad tabla iteración", (unsigned long)it->qos_id);
+		LOG_DBG("%lu Address entry inside loop", (unsigned long)pos->destination);
+		LOG_DBG("%lu QoS entry inside loop", (unsigned long)pos->qos_id);
 		
 		//Fin de modificaciones
               
-		if ((it->destination == destination) &&
-                    (it->qos_id == qos_id)) {
+		if ((pos->destination == destination) &&
+                    (pos->qos_id == qos_id)) {
 
 			LOG_DBG("Match found!");
-
-                        tmp = rkmalloc(sizeof(*tmp), GFP_ATOMIC);
-                        if (!tmp) {
-				LOG_DBG("Malloc Fail");
-                                return header;
-                        }
-			LOG_DBG("rkmalloc correcto");
-
-                        *tmp = *it;
-			//tmp->destination=it->destination;
-			//tmp->qos_id=it->qos_id;			
-			LOG_DBG("Elemento copiado");
-			list_add(&tmp->next, header);
-			LOG_DBG("Elemento enlazado");
+			return pos;
                 }
         }
 	
-	LOG_DBG("exiting pft_find");
-	if(list_empty(header)>0)
-	{
-		LOG_DBG("La lista esta vacía antes de mandarla");
-	}
+//	LOG_DBG("exiting pft_find");
+//	if(list_empty(header)>0)
+//	{
+//		LOG_DBG("The list is empty before sending it from pft_find");
+//	}
 
-        return header;
+        return NULL;
 }
 
-static int default_add(struct pff_ps *        ps,
+static int mp_add(struct pff_ps *        ps,
                        struct mod_pff_entry * entry)
 {
         struct pff_ps_priv *     priv;
@@ -367,9 +326,8 @@ static int default_add(struct pff_ps *        ps,
 
         spin_lock(&priv->lock);
 	
-	//In multipath scenario can exist two entries with the same information
-        //tmp = pft_find(priv, entry->fwd_info, entry->qos_id);
-        //if (!tmp) {
+        tmp = pft_find(priv, entry->fwd_info, entry->qos_id);
+        if (!tmp) {
                 tmp = pfte_create_ni(entry->fwd_info, entry->qos_id);
                 if (!tmp) {
                         spin_unlock(&priv->lock);
@@ -377,20 +335,18 @@ static int default_add(struct pff_ps *        ps,
                 }
 
                 list_add(&tmp->next, &priv->entries);
-		//Modificaciones para depurar
-		LOG_DBG("%lu Dirección add", (unsigned long)tmp->destination);
-		LOG_DBG("%lu Calidad add", (unsigned long)tmp->qos_id);
-		//Fin de modificaciones
-        //}
+        }
 
+	LOG_DBG("mp_add: address: %lu", (unsigned long)tmp->destination);
+	LOG_DBG("mp_add: QoS %lu", (unsigned long)tmp->qos_id);
+	int index = 0;
 	list_for_each_entry(alts, &entry->port_id_altlists, next) {
 		if (alts->num_ports < 1) {
 			LOG_INFO("Port id alternative set is empty");
 			continue;
 		}
 
-		/* Just add the first alternative and ignore the others. */
-                if (pfte_port_add(tmp, alts->ports[0])) {
+                if (pfte_port_add(tmp, alts->ports[index++])) {
                         pfte_destroy(tmp);
                         spin_unlock(&priv->lock);
                         return -1;
@@ -402,7 +358,7 @@ static int default_add(struct pff_ps *        ps,
         return 0;
 }
 
-static int default_remove(struct pff_ps *        ps,
+static int mp_remove(struct pff_ps *        ps,
                           struct mod_pff_entry * entry)
 {
 	
@@ -411,7 +367,7 @@ static int default_remove(struct pff_ps *        ps,
         struct pft_entry *         tmp;
 	struct list_head *         header;
 
-	LOG_DBG("Entrando a remove");
+	LOG_DBG("Inside mp_remove");
 
         priv = (struct pff_ps_priv *) ps->priv;
         if (!priv_is_ok(priv))
@@ -433,13 +389,13 @@ static int default_remove(struct pff_ps *        ps,
 
         spin_lock(&priv->lock);
 
-        header = pft_find(priv, entry->fwd_info, entry->qos_id);
+        tmp = pft_find(priv, entry->fwd_info, entry->qos_id);
         if (list_empty(header)>0) {
                 spin_unlock(&priv->lock);
                 return -1;
         }
-	LOG_DBG("%lu Dirección remove", (unsigned long)entry->fwd_info);
-	LOG_DBG("%lu Calidad remove", (unsigned long)entry->qos_id);
+	LOG_DBG("%lu Address in mp_remove", (unsigned long)entry->fwd_info);
+	LOG_DBG("%lu QoS in mp_remove", (unsigned long)entry->qos_id);
 
 	list_for_each_entry(alts, &entry->port_id_altlists, next) {
 		if (alts->num_ports < 1) {
@@ -473,7 +429,7 @@ static int default_remove(struct pff_ps *        ps,
         return 0;
 }
 
-static bool default_is_empty(struct pff_ps * ps)
+static bool mp_is_empty(struct pff_ps * ps)
 {
         struct pff_ps_priv * priv;
         bool                 empty;
@@ -500,7 +456,7 @@ static void __pft_flush(struct pff_ps_priv * priv)
         }
 }
 
-static int default_flush(struct pff_ps * ps)
+static int mp_flush(struct pff_ps * ps)
 {
         struct pff_ps_priv * priv;
 
@@ -539,7 +495,7 @@ struct pft_entry * select_entry(struct list_head * header,
         int region_size;
         unsigned short region;
         
-	/*typedef struct {
+	typedef struct {
 		address_t pci_source;
 		address_t pci_destination;
 		address_t pci_qos_id;
@@ -555,19 +511,17 @@ struct pft_entry * select_entry(struct list_head * header,
                 num_entries++;
         }
 
-	LOG_DBG("Número de entradas %d", num_entries);
+	LOG_DBG("Number of entries in select_entry%d", num_entries);
         
         hash_key = crc16(0, (const u8 *)&c_id, sizeof(c_id));
         
         region_size = KEYSPACE / num_entries;
-        region = hash_key / region_size;*/
+        region = hash_key / region_size;
         
         i = 0;
         list_for_each_entry(pos, header, next) {
-		LOG_DBG("Iterando");
-                //if (region == i++) {
-		if(i==0){
-			LOG_DBG("Sacando elemento");
+                if (region == i++) {
+			LOG_DBG("Returning position %d from select_entry", i);
                         return pos;
                 }
         }
@@ -587,10 +541,6 @@ static int mp_next_hop(struct pff_ps * ps,
         unsigned long        flags;
 	struct list_head *   header;
 
-	//No necesarias
-	int i;
-	struct pft_entry *   pos;
-
         priv = (struct pff_ps_priv *) ps->priv;
         if (priv == NULL) {
                 return -1;
@@ -599,30 +549,17 @@ static int mp_next_hop(struct pff_ps * ps,
 	//Modificación para depurar
 	if(list_empty(&priv->entries)==0)
 	{
-		LOG_DBG("La lisa priv no está vacía");
+		LOG_DBG("mp_next_hop: Entry list is not empty");
 	}
 	else if(list_empty(&priv->entries)>0)
 	{
-		LOG_DBG("La lisa priv está vacía");
+		LOG_DBG("mp_next_hop: Entry list is empty");
 	}
 	else
 	{
-		LOG_DBG("Error priv");
+		LOG_DBG("mp_next_hop: Error in entries");
 	}
 
-
-	if(list_empty(&((struct pff_ps_priv *)(ps->priv))->entries)==0)
-	{
-		LOG_DBG("La lisa ps no está vacía");
-	}
-	else if(list_empty(&((struct pff_ps_priv *)(ps->priv))->entries)>0)
-	{
-		LOG_DBG("La lisa ps está vacía");
-	}
-	else
-	{
-		LOG_DBG("Error ps");
-	}
 	//Fin modificaciones
 
         destination = pci_destination(pci);
@@ -648,28 +585,26 @@ static int mp_next_hop(struct pff_ps * ps,
          */
         spin_lock_irqsave(&priv->lock, flags);
 
-        header = pft_find(priv, destination, qos_id);
-        if (list_empty(header)>0) {
+        tmp = pft_find(priv, destination, qos_id);
+        if (!tmp) {
                 LOG_ERR("Could not find any entry for dest address: %u and "
                         "qos_id %d", destination, qos_id);
                 spin_unlock_irqrestore(&priv->lock, flags);
                 return -1;
         }
-	list_for_each_entry(pos, header, next)
-	{
-		LOG_DBG("%lu Dirección tabla iteración header", (unsigned long)pos->destination);
-		LOG_DBG("%lu Calidad tabla iteración header", (unsigned long)pos->qos_id);
-	}
+//	list_for_each_entry(pos, header, next)
+//	{
+//		LOG_DBG("mp_next_hop: destination after pft_find call: %lu", (unsigned long)pos->destination);
+//		LOG_DBG("mp_next_hop: QoS after pft_find call: %lu", (unsigned long)pos->qos_id);
+//	}
 
         /* 
          * Hash-threshold algorithm based on
          * CRC16 Linux kernel implementation
         */
         //tmp = select_entry(header, pci);
-	LOG_DBG("paso por aquí");
-	//Simulando el codigo de Select_entry	
-	i = 0;
-        list_for_each_entry(pos, header, next) {
+	//i = 0;
+        /*list_for_each_entry(pos, header, next) {
 		LOG_DBG("Iterando");
                 //if (region == i++) {
 		if(i==0){
@@ -679,13 +614,9 @@ static int mp_next_hop(struct pff_ps * ps,
                 }
         }
 	LOG_DBG("%lu Dirección tabla iteración", (unsigned long)tmp->destination);
-	LOG_DBG("%lu Calidad tabla iteración", (unsigned long)tmp->qos_id);
+	LOG_DBG("%lu Calidad tabla iteración", (unsigned long)tmp->qos_id);*/
 	//FIN
 
-	if(!tmp)
-	{
-		LOG_DBG("El puntero es nulo");
-	}
         if (pfte_ports_copy(tmp, ports, count)) {
                 spin_unlock_irqrestore(&priv->lock, flags);
                 return -1;
@@ -726,7 +657,7 @@ static int pfte_port_id_altlists_copy(struct pft_entry * entry,
         return 0;
 }
 
-static int default_dump(struct pff_ps *    ps,
+static int mp_dump(struct pff_ps *    ps,
                         struct list_head * entries)
 {
         struct pff_ps_priv *   priv;
@@ -809,13 +740,13 @@ pff_ps_multipath_create(struct rina_component * component)
         ps->base.set_policy_set_param = pff_ps_set_policy_set_param;
         ps->dm = pff;
         ps->priv = (void *) priv;
-        ps->pff_add = default_add;
-        ps->pff_remove = default_remove;
+        ps->pff_add = mp_add;
+        ps->pff_remove = mp_remove;
 	ps->pff_port_state_change = NULL;
-        ps->pff_is_empty = default_is_empty;
-        ps->pff_flush = default_flush;
+        ps->pff_is_empty = mp_is_empty;
+        ps->pff_flush = mp_flush;
         ps->pff_nhop = mp_next_hop;
-        ps->pff_dump = default_dump;
+        ps->pff_dump = mp_dump;
 
 	LOG_INFO("Multipath create called");
 
