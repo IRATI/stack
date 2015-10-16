@@ -646,7 +646,7 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 			     "policySet",
 			     rc.policy_set_);
 
-	        Json::Value pft_conf = rmt_conf["pftConfiguration"];
+	        Json::Value pft_conf = rmt_conf["pffConfiguration"];
                 if (pft_conf != 0) {
                         rina::PFTConfiguration pftc;
 

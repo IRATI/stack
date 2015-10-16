@@ -16,42 +16,32 @@ namespace rinad {
 namespace mad {
 namespace rib_v1 {
 
-class RIBRespHandler_v1 : public rina::rib::ResponseHandlerInterface {
-	void createResponse(const rina::cdap_rib::res_info_t &res,
-				const rina::cdap_rib::obj_info_t &obj,
-				const rina::cdap_rib::con_handle_t &con);
-	void deleteResponse(const rina::cdap_rib::res_info_t &res,
-				const rina::cdap_rib::con_handle_t &con);
-	void readResponse(const rina::cdap_rib::res_info_t &res,
-				const rina::cdap_rib::obj_info_t &obj,
-				const rina::cdap_rib::con_handle_t &con);
-	void cancelReadResponse(const rina::cdap_rib::res_info_t &res,
-				const rina::cdap_rib::con_handle_t &con);
-	void writeResponse(const rina::cdap_rib::res_info_t &res,
-				const rina::cdap_rib::obj_info_t &obj,
-				const rina::cdap_rib::con_handle_t &con);
-	void startResponse(const rina::cdap_rib::res_info_t &res,
-				const rina::cdap_rib::obj_info_t &obj,
-				const rina::cdap_rib::con_handle_t &con);
-	void stopResponse(const rina::cdap_rib::res_info_t &res,
-				const rina::cdap_rib::obj_info_t &obj,
-				const rina::cdap_rib::con_handle_t &con);
-};
+///
+/// Create v1 schema
+///
+void createSchema(void);
 
-class RIBConHandler_v1 : public rina::cacep::AppConHandlerInterface {
+///
+/// Create and initialize a RIB (populate static objects)
+///
+rina::rib::rib_handle_t createRIB(void);
 
-	void connect(int message_id, const rina::cdap_rib::con_handle_t &con);
-	void connectResponse(const rina::cdap_rib::res_info_t &res,
-				const rina::cdap_rib::con_handle_t &con);
-	void release(int message_id, const rina::cdap_rib::con_handle_t &con);
-	void releaseResponse(const rina::cdap_rib::res_info_t &res,
-				const rina::cdap_rib::con_handle_t &con);
-};
+///
+/// Associate RIB to AE
+///
+void associateRIBtoAE(const rina::rib::rib_handle_t& rib,
+						const std::string& ae_name);
 
-//TODO: remove this
-void initiateRIB(rina::rib::RIBDNorthInterface* ribd);
-void createIPCPObject(rina::rib::RIBDNorthInterface &ribd, int ipcp_id);
-void destroyIPCPObject(rina::rib::RIBDNorthInterface &ribd, int ipcp_id);
+///
+/// Add a new IPCP object due to an external creation (e.g. CLI)
+///
+void createIPCPObj(const rina::rib::rib_handle_t& rib, int ipcp_id);
+
+///
+/// Add a new IPCP object due to an external creation (e.g. CLI)
+///
+void destroyIPCPObj(const rina::rib::rib_handle_t& rib, int ipcp_id);
+
 }  //namespace rib_v1
 }  //namespace mad
 }  //namespace rinad

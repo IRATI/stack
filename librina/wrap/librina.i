@@ -26,6 +26,10 @@
 #ifdef SWIGJAVA
 #endif
 
+SWIG_JAVABODY_PROXY(public, public, SWIGTYPE)
+SWIG_JAVABODY_TYPEWRAPPER(public, public, public, SWIGTYPE)
+
+
 /**
  * void * typemaps. 
  * These are input typemaps for mapping a Java byte[] array to a C void array.
@@ -56,6 +60,37 @@
         return $jnicall;
  }
 
+/**
+ * char * typemaps. 
+ * These are input typemaps for mapping a Java byte[] array to a C char array.
+ * Note that as a Java array is used and thus passeed by reference, the C
+ * routine can return data to Java via the parameter.
+ *
+ * Example usage wrapping:
+ *   void foo(char *array);
+ *  
+ * Java usage:
+ *   byte b[] = new byte[20];
+ *   modulename.foo(b);
+ */
+/*
+%typemap(jni)    char * "jbyteArray"
+%typemap(jtype)  char * "byte[]"
+%typemap(jstype) char * "byte[]"
+%typemap(in)     char * {
+        $1 = (char *) JCALL2(GetByteArrayElements, jenv, $input, 0); 
+}
+
+%typemap(argout) char * {
+        JCALL3(ReleaseByteArrayElements, jenv, $input, (jbyte *) $1, 0); 
+}
+
+%typemap(javain) char * "$javainput"
+
+%typemap(javaout) char * {
+        return $jnicall;
+ }
+*/
 /* Define the class Exception */
 %typemap(javabase) Exception "java.lang.Exception";
 %typemap(javacode) Exception %{
@@ -361,6 +396,8 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventWait);
 DOWNCAST_IPC_EVENT_CONSUMER(eventPoll);
 DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 
+%module(directors="1") cdapcallbackjava
+
 %{
 #include "librina/exceptions.h"
 #include "librina/patterns.h"
@@ -369,7 +406,10 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 #include "librina/application.h"
 #include "librina/cdap_rib_structures.h"
 #include "librina/cdap_v2.h"
+#include "librina/ipc-api.h"
 %}
+
+%feature("director") rina::cdap::CDAPCallbackInterface;
 
 %rename(differs) rina::ApplicationProcessNamingInformation::operator!=(const ApplicationProcessNamingInformation &other) const;
 %rename(equals) rina::ApplicationProcessNamingInformation::operator==(const ApplicationProcessNamingInformation &other) const;
@@ -394,9 +434,10 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(differs) rina::FlowInformation::operator!=(const FlowInformation &other) const;
 %rename(equals) rina::rib::RIBObjectData::operator==(const RIBObjectData &other) const;
 %rename(differs) rina::rib::RIBObjectData::operator!=(const RIBObjectData &other) const;
-
 %rename(equals) rina::Neighbor::operator==(const Neighbor &other) const;
 %rename(differs) rina::Neighbor::operator!=(const Neighbor &other) const;
+%rename(equals) rina::PsInfo::operator==(const PsInfo &other) const;
+%rename(differs) rina::PsInfo::operator!=(const PsInfo &other) const;
 
 %include "librina/exceptions.h"
 %include "librina/patterns.h"
@@ -405,6 +446,7 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %include "librina/application.h"
 %include "librina/cdap_rib_structures.h"
 %include "librina/cdap_v2.h"
+%include "librina/ipc-api.h"
 
 /* Macro for defining collection iterators */
 %define MAKE_COLLECTION_ITERABLE( ITERATORNAME, JTYPE, CPPCOLLECTION, CPPTYPE )
@@ -468,3 +510,4 @@ MAKE_COLLECTION_ITERABLE(UnsignedIntListIterator, Long, std::list, unsigned int)
 %template(StringList) std::list<std::string>;
 %template(FlowInformationList) std::list<rina::FlowInformation>;
 %template(UnsignedIntList) std::list<unsigned int>;
+

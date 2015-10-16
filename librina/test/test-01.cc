@@ -77,14 +77,11 @@ bool checkRegisteredApplications(unsigned int expectedApps) {
 
 int main() {
 	std::cout << "TESTING LIBRINA-APPLICATION\n";
-	ApplicationProcessNamingInformation sourceName =
-			ApplicationProcessNamingInformation("/apps/test/source", "1");
-	ApplicationProcessNamingInformation destinationName =
-			ApplicationProcessNamingInformation("/apps/test/destination",
+	ApplicationProcessNamingInformation sourceName("/apps/test/source", "1");
+	ApplicationProcessNamingInformation destinationName("/apps/test/destination",
 					"1");
 	FlowSpecification flowSpecification;
-	ApplicationProcessNamingInformation difName =
-	                ApplicationProcessNamingInformation("test.DIF", "");
+	ApplicationProcessNamingInformation difName("test.DIF", "");
 
 	/* TEST ALLOCATE REQUEST */
 	unsigned int seqNumber = ipcManager->requestFlowAllocation(
@@ -118,14 +115,12 @@ int main() {
 	if (!checkAllocatedFlows(2)) {
 		return 1;
 	}
-
 	/* TEST DEALLOCATE FLOW */
 	ipcManager->requestFlowDeallocation(flow.portId);
 	ipcManager->flowDeallocationResult(flow.portId, true);
 	if (!checkAllocatedFlows(1)) {
 		return 1;
 	}
-
 	ipcManager->requestFlowDeallocation(flow2.portId);
 	ipcManager->flowDeallocationResult(flow2.portId, true);
 	if (!checkAllocatedFlows(0)) {
@@ -137,7 +132,6 @@ int main() {
 	} catch (IPCException &e) {
 		std::cout << "Caught expected exception: " << e.what() << "\n";
 	}
-
 	/* TEST REGISTER APPLICATION */
 	ApplicationRegistrationInformation info =
 			 ApplicationRegistrationInformation(
@@ -149,7 +143,6 @@ int main() {
 	if (!checkRegisteredApplications(1)) {
 	        return -1;
 	}
-
 	/* TEST UNREGISTER APPLICATION */
 	seqNumber = ipcManager->requestApplicationUnregistration(sourceName, difName);
 	ipcManager->appUnregistrationResult(seqNumber, true);

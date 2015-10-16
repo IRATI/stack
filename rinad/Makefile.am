@@ -14,7 +14,8 @@ SUBDIRS =					\
 	src					\
 	doc					\
 	tools					\
-	etc
+	etc					\
+	wrap
 
 EXTRA_DIST =					\
 	bootstrap				\

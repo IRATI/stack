@@ -208,12 +208,12 @@ EchoTimeServer::EchoTimeServer(const string& t_type,
 {
 }
 
-ServerWorker * EchoTimeServer::internal_start_worker(int port_id)
+ServerWorker * EchoTimeServer::internal_start_worker(rina::FlowInformation flow)
 {
 	ThreadAttributes threadAttributes;
         EchoTimeServerWorker * worker = new EchoTimeServerWorker(&threadAttributes,
         		    	    	         	 	 test_type,
-        		    	    	         	 	 port_id,
+        		    	    	         	 	 flow.portId,
         		    	    	         	 	 dw,
         		    	    	         	 	 interval,
         		    	    	         	 	 max_buffer_size,

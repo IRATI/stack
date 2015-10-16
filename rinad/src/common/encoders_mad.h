@@ -1,5 +1,5 @@
 /*
- * Common interfaces and classes for encoding/decoding RIB objects for MAD-Manager communication
+ * Common encoders for RIB objects for MAD-Manager communication
  *
  *    Bernat Gaston <bernat.gaston@i2cat.net>
  *    Marc Sune <marc.sune@bisdn.de>
@@ -21,85 +21,48 @@
 #ifndef ENCODERS_MAD_H_
 #define ENCODERS_MAD_H_
 
-#include <librina/rib_v2.h>
+#include <librina/cdap_rib_structures.h>
+#include "structures_mad.h"
 
 namespace rinad {
 namespace mad_manager {
-namespace structures{
-
-/**
-* IPCP (read) struct
-*/
-typedef struct ipcp{
-	int32_t process_id;
-	std::string name;
-	//TODO: add missing info
-}ipcp_t;
-
-/**
-* IPCP configuration struct
-*/
-typedef struct ipcp_config{
-	std::string process_name;
-	std::string process_instance;
-	std::string process_type;
-	std::string dif_to_register;
-	std::string dif_to_assign;
-}ipcp_config_t;
-
-} //namespace structures
-
-
-namespace encoders {
 
 // Generic (simple) types
 
-/**
- * String encoder
- */
-class StringEncoder : public rina::rib::Encoder<std::string>{
+/// String encoder
+class StringEncoder : public Encoder<std::string>{
 public:
-	virtual void encode(const std::string &obj,
-			rina::cdap_rib::SerializedObject& serobj);
-	virtual void decode(const rina::cdap_rib::SerializedObject &serobj,
-			std::string& des_obj);
+	void encode(const std::string &obj,
+			rina::cdap_rib::ser_obj_t& serobj);
+	void decode(const rina::cdap_rib::ser_obj_t &serobj,
+			std::string &des_obj);
 
 	std::string get_type() const{ return "string"; };
 };
 
 
-
-
-//Specific
-
-/**
- * Encoder IPCP
- */
-class IPCPEncoder : public rina::rib::Encoder<structures::ipcp_t>{
-public:
-	virtual void encode(const structures::ipcp_t &obj,
-			rina::cdap_rib::SerializedObject& serobj);
-	virtual void decode(const rina::cdap_rib::SerializedObject &serobj,
-			structures::ipcp_t& des_obj);
-
-	std::string get_type() const{ return "ipcp"; };
-};
-
-
-/**
-* Encoder of IPCP configuration
-*/
-class IPCPConfigEncoder: public rina::rib::Encoder<structures::ipcp_config_t> {
+/// Encoder of IPCPConfig
+class IPCPConfigEncoder: public Encoder<ipcp_config_t> {
 
 public:
-	void encode (const structures::ipcp_config_t &obj,
+	void encode (const ipcp_config_t &obj,
 					rina::cdap_rib::ser_obj_t& ser_obj);
 	void decode(const rina::cdap_rib::ser_obj_t &ser_obj,
-			structures::ipcp_config_t& obj);
+			ipcp_config_t& obj);
 	std::string get_type() const{ return "ipcp-config"; };
 };
 
-} //namespace encoders
+
+/// Encoder IPCP
+class IPCPEncoder : public Encoder<ipcp_t>{
+public:
+	void encode(const ipcp_t &obj,
+			rina::cdap_rib::ser_obj_t& serobj);
+	void decode(const rina::cdap_rib::ser_obj_t &serobj,
+			ipcp_t& des_obj);
+
+	std::string get_type() const{ return "ipcp"; };
+};
 
 } //namespace mad_manager
 } //namespace rinad

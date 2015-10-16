@@ -63,7 +63,7 @@ public:
         ~EchoTimeServer() { };
 
 protected:
-        ServerWorker * internal_start_worker(int port_id);
+        ServerWorker * internal_start_worker(rina::FlowInformation flow);
 
 private:
         std::string test_type;

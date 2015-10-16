@@ -496,6 +496,13 @@ public:
 			      const std::string& object_name);
 
 	//
+	// Update policy-set catalog, with the plugins stored in
+	// the pluginsPaths configuration variable
+	//
+	// @ret IPCM_FAILURE on failure, otherwise the IPCM_SUCCESS
+	ipcm_res_t update_catalog(Addon* callee);
+
+	//
 	// Get the current logging debug level
 	//
 	std::string get_log_level() const;

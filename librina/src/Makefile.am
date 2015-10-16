@@ -86,12 +86,12 @@ allsources =							\
         netlink-manager.cc   netlink-manager.h			\
         syscalls-wrappers.cc rina-systypes.h    rina-syscalls.h	\
         $(protoSOURCES)						\
-        cdap-impl.cc         cdap-impl.h			\
-	plugin-info.cc	      plugin-info.h
+        cdap-impl.cc	     cdap-impl.h			\
+	plugin-info.cc	     plugin-info.h
 
 librina_la_SOURCES  = $(allsources)
 librina_la_LDFLAGS  =
-librina_la_LIBADD   =			\
+librina_la_LIBADD   =				\
 	$(LIBNL3_LIBS)				\
 	$(LIBNLGENL3_LIBS)			\
 	$(LIBPROTOBUF_LIBS)			\
@@ -110,6 +110,7 @@ librina_la_CPPFLAGS =				\
 	$(CPPFLAGS_EXTRA)
 librina_la_CXXFLAGS =				\
 	$(CXXFLAGS_EXTRA)
+
 
 librina_stubbed_la_SOURCES  = $(allsources)
 librina_stubbed_la_LDFLAGS  =
@@ -151,13 +152,13 @@ test_linking_CPPFLAGS =				\
 	$(CPPFLAGS_EXTRA)
 test_linking_CXXFLAGS =				\
 	$(CXXFLAGS_EXTRA)
-test_linking_LDADD    =			\
+test_linking_LDADD    =				\
 	$(LIBNL3_LIBS)				\
 	$(LIBNLGENL3_LIBS)			\
 	$(LIBPROTOBUF_LIBS)			\
 	$(OPENSSL_LIBS)				\
         $(builddir)/librinajsoncpp.la           \
-	-ldl						\
+	-ldl					\
 	librina.la
 
 check-local: test-linking

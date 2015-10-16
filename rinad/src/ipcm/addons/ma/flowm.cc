@@ -36,6 +36,7 @@
 #define RINA_PREFIX "ipcm.mad.flowm"
 #include <librina/likely.h>
 #include <librina/logs.h>
+#include <librina/cdap_v2.h>
 #include <librina/rib_v2.h>
 #include <librina/security-manager.h>
 
@@ -224,6 +225,7 @@ void ActiveWorker::allocateFlow()
 	//TODO Quality of Service specification
 	//FIXME: Move to connection
 	rina::FlowSpecification qos;
+	qos.maxAllowableGap = 0;
 
 	//Perform the flow allocation
 	seqnum = rina::ipcManager->requestFlowAllocationInDIF(
@@ -272,9 +274,9 @@ void* ActiveWorker::run(void* param)
 {
 
 	char buffer[max_sdu_size_in_bytes];
-	rina::cdap_rib::src_info_t src;
-	rina::cdap_rib::dest_info_t dest;
-	int bytes_read;
+	rina::cdap_rib::ep_info_t src;
+	rina::cdap_rib::ep_info_t dest;
+	int bytes_read = 0;
 
 	keep_running = true;
 
@@ -300,7 +302,7 @@ void* ActiveWorker::run(void* param)
 
 			//Fill source parameters
 			src.ap_name_ = flow_.localAppName.processName;
-			src.ae_name_ = flow_.localAppName.entityName;
+			src.ae_name_ = "v1";
 			src.ap_inst_ = flow_.localAppName.processInstance;
 			src.ae_inst_ = flow_.localAppName.entityInstance;
 
@@ -312,47 +314,68 @@ void* ActiveWorker::run(void* param)
 			rina::cdap_rib::auth_policy_t auth;
 			auth.name = rina::IAuthPolicySet::AUTH_NONE;
 
+			//Version
+			rina::cdap_rib::vers_info_t vers;
+			vers.version_ = 0x1; //TODO: do not hardcode this
+
 			//TODO: remove this. The API should NOT require a RIB
 			//instance for calling the remote API
-			rib_factory_->getRIB(1).remote_open_connection(src,
+			rib_factory_->getProxy()->remote_open_connection(vers,
+							src,
 							dest,
 							auth,
 							port_id);
 
 			//Recover the response
 			//TODO: add support for other
-			bytes_read = rina::ipcManager->readSDU(port_id, buffer,
+			try{
+				bytes_read = rina::ipcManager->readSDU(port_id, buffer,
 							max_sdu_size_in_bytes);
-			rina::cdap_rib::SerializedObject message;
+			}catch(rina::ReadSDUException &e){
+				LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
+			}
+
+			rina::cdap_rib::ser_obj_t message;
 			message.message_ = buffer;
 			message.size_ = bytes_read;
 
-			// FIXME this should be injected through the
-			// CDAP library not the RIB
-			rib_factory_->getRIB(1).process_message(message,
+			//Instruct CDAP provider to process the CACEP message
+			try{
+				rina::cdap::getProvider()->process_message(message,
 							port_id);
+			}catch(rina::WriteSDUException &e){
+				LOG_ERR("Cannot write to flow with port id: %u anymore", port_id);
+			}
+
 			LOG_DBG("Connection stablished between MAD and Manager (port id: %u)", port_id);
 
 			//I/O loop
 			while(true) {
-				bytes_read = rina::ipcManager->readSDU(port_id,
+				try{
+					bytes_read = rina::ipcManager->readSDU(port_id,
 									buffer,
-							max_sdu_size_in_bytes);
+									max_sdu_size_in_bytes);
+				}catch(rina::ReadSDUException &e){
+					LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
+				}
 
-				rina::cdap_rib::SerializedObject message;
+				rina::cdap_rib::ser_obj_t message;
 				message.message_ = buffer;
 				message.size_ = bytes_read;
 
-				// FIXME this should be injected through the
-				// CDAP library not the RIB
-				rib_factory_->getRIB(1).process_message(message,
-							port_id);
+				//Instruct CDAP provider to process the RIB operation message
+				try{
+					rina::cdap::getProvider()->process_message(
+									message,
+									port_id);
+				}catch(rina::WriteSDUException &e){
+					LOG_ERR("Cannot write to flow with port id: %u anymore", port_id);
+				}catch(rina::CDAPException &e){
+					LOG_ERR("Error processing message: %s", e.what());
+				}
 			}
-		}catch(rina::ReadSDUException &e){
-			LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
-		}catch(rina::WriteSDUException &e){
-			LOG_ERR("Cannot write to flow with port id: %u anymore", port_id);
-		}catch(...){
+		}
+		catch(...){
 			LOG_CRIT("Unknown error during operation with port id: %u. This is a bug, please report it", port_id);
 		}
 	}
@@ -505,7 +528,7 @@ FlowManager::~FlowManager()
 //Connect manager
 unsigned int FlowManager::connectTo(const AppConnection& con)
 {
-	Worker* w = new ActiveWorker(this, agent_->get_rib(), con);
+	Worker* w = new ActiveWorker(this, agent_->get_ribf(), con);
 
 	//Launch worker and return handler
 	return spawnWorker(&w);
