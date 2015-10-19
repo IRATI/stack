@@ -339,6 +339,7 @@ static int mp_add(struct pff_ps *        ps,
 
 	LOG_DBG("mp_add: address: %lu", (unsigned long)tmp->destination);
 	LOG_DBG("mp_add: QoS %lu", (unsigned long)tmp->qos_id);
+
 	list_for_each_entry(alts, &entry->port_id_altlists, next) {
 		if (alts->num_ports < 1) {
 			LOG_INFO("Port id alternative set is empty");
@@ -566,6 +567,7 @@ static int mp_next_hop(struct pff_ps * ps,
                 spin_unlock_irqrestore(&priv->lock, flags);
                 return -1;
         }
+
 	list_for_each_entry(pos, &tmp->ports, next) {
 	LOG_DBG("Puerto en la entrada elegida: %d",(int)pos->port_id);
 	}
