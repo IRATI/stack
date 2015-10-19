@@ -31,7 +31,7 @@
 #define __GPFX "rina-"
 
 #define __LOG(PFX, LVL, BAN, FMT, ARGS...)                                   \
-        do { printk(LVL __GPFX PFX "(" BAN "): [%s] " FMT "\n", __func__, ##ARGS); } while (0)
+        do { printk(LVL __GPFX PFX "(" BAN "): " FMT "\n", ##ARGS); } while (0)
 
 /* Sorted by "urgency" (high to low) */
 #define LOG_EMERG(FMT, ARGS...) __LOG(RINA_PREFIX, KERN_EMERG,      \
