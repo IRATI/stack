@@ -220,8 +220,8 @@ void rina_component_fini(struct rina_component * comp)
         mutex_unlock(&comp->ps_lock);
 }
 
-void parse_component_id(const string_t *path, size_t *cmplen,
-                               size_t *offset)
+void ps_factory_parse_component_id(const string_t *path, size_t *cmplen,
+                                   size_t *offset)
 {
         const string_t *dot = strchr(path, '.');
 
@@ -235,5 +235,10 @@ void parse_component_id(const string_t *path, size_t *cmplen,
                 (*offset)++;
         }
 }
-EXPORT_SYMBOL(parse_component_id);
+EXPORT_SYMBOL(ps_factory_parse_component_id);
 
+void
+ps_factory_nop_policy(void)
+{
+}
+EXPORT_SYMBOL(ps_factory_nop_policy);

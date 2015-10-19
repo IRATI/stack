@@ -74,7 +74,7 @@ static int efcp_select_policy_set(struct efcp * efcp,
         size_t cmplen;
         size_t offset;
 
-        parse_component_id(path, &cmplen, &offset);
+        ps_factory_parse_component_id(path, &cmplen, &offset);
 
         if (strncmp(path, "dtp", cmplen) == 0) {
                 return dtp_select_policy_set(dt_dtp(efcp->dt), path + offset,
@@ -110,7 +110,7 @@ efcp_container_parse_component_id(struct efcp_container * container,
                 return NULL;
         }
 
-        parse_component_id(*path, &cmplen, &offset);
+        ps_factory_parse_component_id(*path, &cmplen, &offset);
         if (cmplen > sizeof(numbuf)-1) {
                 LOG_ERR("Invalid cep-id' %s'", *path);
                 return NULL;
@@ -160,7 +160,7 @@ static int efcp_set_policy_set_param(struct efcp * efcp,
         size_t cmplen;
         size_t offset;
 
-        parse_component_id(path, &cmplen, &offset);
+        ps_factory_parse_component_id(path, &cmplen, &offset);
 
         if (strncmp(path, "dtp", cmplen) == 0) {
                 return dtp_set_policy_set_param(dt_dtp(efcp->dt),

@@ -971,7 +971,7 @@ static int normal_set_policy_set_param(struct ipcp_instance_data * data,
         size_t cmplen;
         size_t offset;
 
-        parse_component_id(path, &cmplen, &offset);
+        ps_factory_parse_component_id(path, &cmplen, &offset);
 
         if (strncmp(path, "rmt", cmplen) == 0) {
                 return rmt_set_policy_set_param(data->rmt, path + offset,
@@ -994,7 +994,7 @@ static int normal_select_policy_set(struct ipcp_instance_data *data,
         size_t cmplen;
         size_t offset;
 
-        parse_component_id(path, &cmplen, &offset);
+        ps_factory_parse_component_id(path, &cmplen, &offset);
 
         if (strncmp(path, "rmt", cmplen) == 0) {
                 return rmt_select_policy_set(data->rmt, path + offset,

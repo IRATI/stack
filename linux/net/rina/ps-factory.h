@@ -88,7 +88,9 @@ int base_set_policy_set_param(struct rina_component *comp,
                               const char * name,
                               const char * value);
 
-void parse_component_id(const string_t *path, size_t *cmplen,
-                        size_t *offset);
+void ps_factory_parse_component_id(const string_t *path, size_t *cmplen,
+				   size_t *offset);
+
+void ps_factory_nop_policy(void);
 
 #endif

@@ -456,7 +456,7 @@ int rmt_select_policy_set(struct rmt *rmt,
 
 	ASSERT(path);
 
-	parse_component_id(path, &cmplen, &offset);
+	ps_factory_parse_component_id(path, &cmplen, &offset);
 
 	if (strcmp(path, "") == 0)
 		/* The request addresses this policy-set. */
@@ -486,7 +486,7 @@ int rmt_set_policy_set_param(struct rmt *rmt,
 		return -1;
 	}
 
-	parse_component_id(path, &cmplen, &offset);
+	ps_factory_parse_component_id(path, &cmplen, &offset);
 
 	LOG_DBG("set-policy-set-param '%s' '%s' '%s'", path, name, value);
 
