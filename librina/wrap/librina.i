@@ -91,9 +91,9 @@ SWIG_JAVABODY_TYPEWRAPPER(public, public, public, SWIGTYPE)
         return $jnicall;
  }
 */
-/* Define the class Exception */
-%typemap(javabase) Exception "java.lang.Exception";
-%typemap(javacode) Exception %{
+/* Define the class eu.irati.librina.Exception */
+%typemap(javabase) rina::Exception "java.lang.RuntimeException";
+%typemap(javacode) rina::Exception %{
   public String getMessage() {
     return what();
   }
@@ -255,6 +255,13 @@ SWIG_JAVABODY_TYPEWRAPPER(public, public, public, SWIGTYPE)
     jenv->ThrowNew(excep, $1.what());
   return $null;
 }
+%typemap(throws, throws="eu.irati.librina.CDAPException") rina::cdap::CDAPException {
+  jclass excep = jenv->FindClass("eu/irati/librina/CDAPException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+
 
 
 /* Typemaps to allow eventWait, eventPoll and eventTimedWait to downcast IPCEvent to the correct class */
