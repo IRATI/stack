@@ -24,12 +24,12 @@
 
 #include <librina/logs.h>
 
-#include "common/encoder.h"
-#include "common/encoders/DataTransferConstantsMessage.pb.h"
-#include "common/encoders/DirectoryForwardingTableEntryArrayMessage.pb.h"
-#include "common/encoders/QoSCubeArrayMessage.pb.h"
-#include "common/encoders/WhatevercastNameArrayMessage.pb.h"
-#include "common/encoders/NeighborArrayMessage.pb.h"
+#include "encoder.h"
+#include "encoders/DataTransferConstantsMessage.pb.h"
+#include "encoders/DirectoryForwardingTableEntryArrayMessage.pb.h"
+#include "encoders/QoSCubeArrayMessage.pb.h"
+#include "encoders/WhatevercastNameArrayMessage.pb.h"
+#include "encoders/NeighborArrayMessage.pb.h"
 
 namespace rinad {
 
