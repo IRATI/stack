@@ -34,7 +34,6 @@ rina-personality-default-y :=					\
 	rmt-ps-common.o						\
 	rmt-ps-default.o					\
 	dtp-ps-default.o					\
-	dtcp-ps-common.o 		        		\
 	dtcp-ps-default.o                       		\
 	pff-ps-default.o
 

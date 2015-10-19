@@ -34,7 +34,10 @@
 #include "dtcp-conf-utils.h"
 #include "ps-factory.h"
 #include "dtcp-ps.h"
+#include "dtcp-ps-default.h"
 #include "policies.h"
+#include "rds/rmem.h"
+#include "debug.h"
 
 static struct policy_set_list policy_sets = {
         .head = LIST_HEAD_INIT(policy_sets.head)
@@ -1193,10 +1196,11 @@ int dtcp_select_policy_set(struct dtcp * dtcp,
                 return ret;
         }
 
+        mutex_lock(&dtcp->base.ps_lock);
+
         /* Copy the connection parameter to the policy-set. From now on
          * these connection parameters must be accessed by the DTCP policy set,
          * and not from the struct connection. */
-        mutex_lock(&dtcp->base.ps_lock);
         ps = container_of(dtcp->base.ps, struct dtcp_ps, base);
         ps->flow_ctrl                   = dtcp_flow_ctrl(cfg);
         ps->rtx_ctrl                    = dtcp_rtx_ctrl(cfg);
@@ -1219,6 +1223,40 @@ int dtcp_select_policy_set(struct dtcp * dtcp,
                                         = dtcp_initial_credit(cfg);
         ps->flowctrl.rate.sending_rate  = dtcp_sending_rate(cfg);
         ps->flowctrl.rate.time_period   = dtcp_time_period(cfg);
+
+	/* Fill in default policies. */
+	if (!ps->lost_control_pdu) {
+		ps->lost_control_pdu = default_lost_control_pdu;
+	}
+#ifdef CONFIG_RINA_DTCP_RCVR_ACK
+	if (!ps->rcvr_ack) {
+		ps->rcvr_ack = default_rcvr_ack;
+	}
+#endif /* CONFIG_RINA_DTCP_RCVR_ACK */
+#ifdef CONFIG_RINA_DTCP_RCVR_ACK_ATIMER
+	if (!ps->rcvr_ack_atimer) {
+		ps->rcvr_ack_atimer = default_rcvr_ack_atimer;
+	}
+#endif /* CONFIG_RINA_DTCP_RCVR_ACK_ATIMER */
+	if (!ps->sender_ack) {
+		ps->sender_ack = default_sender_ack;
+	}
+	if (!ps->sending_ack) {
+		ps->sending_ack = default_sending_ack;
+	}
+	if (!ps->receiving_flow_control) {
+		ps->receiving_flow_control = default_receiving_flow_control;
+	}
+	if (!ps->rcvr_flow_control) {
+		ps->rcvr_flow_control = default_rcvr_flow_control;
+	}
+	if (!ps->rate_reduction) {
+		ps->rate_reduction = default_rate_reduction;
+	}
+	if (!ps->rtt_estimator) {
+		ps->rtt_estimator = default_rtt_estimator;
+	}
+
         mutex_unlock(&dtcp->base.ps_lock);
 
         return ret;
