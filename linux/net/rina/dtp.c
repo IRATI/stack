@@ -28,6 +28,7 @@
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
+#include "dtp-ps-default.h"
 #include "dtp.h"
 #include "dt.h"
 #include "dt-utils.h"
@@ -825,10 +826,11 @@ int dtp_select_policy_set(struct dtp * dtp,
                 return ret;
         }
 
+        mutex_lock(&dtp->base.ps_lock);
+
         /* Copy the connection parameter to the policy-set. From now on
          * these connection parameters must be accessed by the DTP policy set,
          * and not from the struct connection. */
-        mutex_lock(&dtp->base.ps_lock);
         ps = container_of(dtp->base.ps, struct dtp_ps, base);
         ps->dtcp_present        = dtp_conf_dtcp_present(cfg);
         ps->seq_num_ro_th       = dtp_conf_seq_num_ro_th(cfg);
@@ -837,6 +839,27 @@ int dtp_select_policy_set(struct dtp * dtp,
         ps->incomplete_delivery = dtp_conf_incomplete_del(cfg);
         ps->in_order_delivery   = dtp_conf_in_order_del(cfg);
         ps->max_sdu_gap         = dtp_conf_max_sdu_gap(cfg);
+
+	/* Fill in default policies. */
+	if (!ps->transmission_control) {
+		ps->transmission_control = default_transmission_control;
+	}
+	if (!ps->closed_window) {
+		ps->closed_window = default_closed_window;
+	}
+	if (!ps->flow_control_overrun) {
+		ps->flow_control_overrun = default_flow_control_overrun;
+	}
+	if (!ps->initial_sequence_number) {
+		ps->initial_sequence_number = default_initial_sequence_number;
+	}
+	if (!ps->receiver_inactivity_timer) {
+		ps->receiver_inactivity_timer = default_receiver_inactivity_timer;
+	}
+	if (!ps->sender_inactivity_timer) {
+		ps->sender_inactivity_timer = default_sender_inactivity_timer;
+	}
+
         mutex_unlock(&dtp->base.ps_lock);
 
         return 0;

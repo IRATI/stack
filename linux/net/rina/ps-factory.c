@@ -29,6 +29,28 @@
 #include "ps-factory.h"
 #include "debug.h"
 
+static int
+default_set_policy_set_param(struct ps_base * bps,
+			     const char    * name,
+			     const char    * value)
+{
+	(void) bps;
+
+        if (!name) {
+                LOG_ERR("Null parameter name");
+                return -1;
+        }
+
+        if (!value) {
+                LOG_ERR("Null parameter value");
+                return -1;
+        }
+
+        LOG_ERR("No such parameter to set");
+
+        return -1;
+}
+
 int ps_publish(struct policy_set_list * list,
                struct ps_factory * factory)
 {
@@ -154,6 +176,12 @@ int base_select_policy_set(struct rina_component * comp,
                 return -1;
         }
 
+	/* Fill in default set_policy_set_param, if missing. */
+	if (!candidate_ps->set_policy_set_param) {
+		candidate_ps->set_policy_set_param =
+					default_set_policy_set_param;
+	}
+
         /* Save old RCU-protected pointer. */
         old_ps = comp->ps;
 
@@ -242,3 +270,4 @@ ps_factory_nop_policy(void)
 {
 }
 EXPORT_SYMBOL(ps_factory_nop_policy);
+
