@@ -625,8 +625,9 @@ static void pff_ps_default_destroy(struct ps_base * bps)
         }
 }
 
-struct ps_factory pff_factory = {
+struct ps_factory default_pff_ps_factory = {
         .owner   = THIS_MODULE,
         .create  = pff_ps_default_create,
         .destroy = pff_ps_default_destroy,
 };
+EXPORT_SYMBOL(default_pff_ps_factory);

@@ -136,8 +136,9 @@ static void rmt_ps_default_destroy(struct ps_base *bps)
 	}
 }
 
-struct ps_factory rmt_factory = {
+struct ps_factory default_rmt_ps_factory = {
 	.owner = THIS_MODULE,
 	.create = rmt_ps_default_create,
 	.destroy = rmt_ps_default_destroy,
 };
+EXPORT_SYMBOL(default_rmt_ps_factory );

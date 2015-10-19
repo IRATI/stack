@@ -106,8 +106,9 @@ static void dtp_ps_default_destroy(struct ps_base * bps)
         }
 }
 
-struct ps_factory dtp_factory = {
+struct ps_factory default_dtp_ps_factory = {
         .owner          = THIS_MODULE,
         .create  = dtp_ps_default_create,
         .destroy = dtp_ps_default_destroy,
 };
+EXPORT_SYMBOL(default_dtp_ps_factory);

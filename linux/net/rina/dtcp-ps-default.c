@@ -123,8 +123,9 @@ static void dtcp_ps_default_destroy(struct ps_base * bps)
         }
 }
 
-struct ps_factory dtcp_factory = {
+struct ps_factory default_dtcp_ps_factory = {
         .owner          = THIS_MODULE,
         .create  = dtcp_ps_default_create,
         .destroy = dtcp_ps_default_destroy,
 };
+EXPORT_SYMBOL(default_dtcp_ps_factory);
