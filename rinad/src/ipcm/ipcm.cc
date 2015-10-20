@@ -120,9 +120,7 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
 		io_thread->start();
 
 		// Initialize DIF Templates Manager (with its monitor thread)
-		stringstream ss;
-		ss << config_file.substr(0, config_file.rfind("/"));
-		dif_template_manager = new DIFTemplateManager(ss.str());
+		dif_template_manager = new DIFTemplateManager(config_file);
 	} catch (rina::InitializationException& e) {
 		LOG_ERR("Error while initializing librina-ipc-manager");
 		exit(EXIT_FAILURE);
