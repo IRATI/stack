@@ -452,6 +452,7 @@ int rmt_select_policy_set(struct rmt *rmt,
 			  const string_t *path,
 			  const string_t *name)
 {
+        bool revert = false;
         struct rmt_ps * ps;
         size_t cmplen;
         size_t offset;
@@ -477,34 +478,33 @@ int rmt_select_policy_set(struct rmt *rmt,
                 return ret;
         }
 
-        /* Fill in default policies. TODO common_xxx --> default_xxx */
+        /* Check consistency. */
         mutex_lock(&rmt->base.ps_lock);
         ps = container_of(rmt->base.ps, struct rmt_ps, base);
-        if (!ps->rmt_next_scheduled_policy_tx) {
-                ps->rmt_next_scheduled_policy_tx =
-                        common_rmt_next_scheduled_policy_tx;
-        }
-        if (!ps->rmt_enqueue_scheduling_policy_tx) {
-                ps->rmt_enqueue_scheduling_policy_tx =
-                        common_rmt_enqueue_scheduling_policy_tx;
-        }
-        if (!ps->rmt_requeue_scheduling_policy_tx) {
-                ps->rmt_requeue_scheduling_policy_tx =
-                        common_rmt_requeue_scheduling_policy_tx;
-        }
-        if (!ps->rmt_scheduling_policy_rx) {
-                ps->rmt_scheduling_policy_rx =
-                        common_rmt_scheduling_policy_rx;
-        }
-        if (!ps->rmt_scheduling_create_policy_tx) {
-                ps->rmt_scheduling_create_policy_tx =
-                        common_rmt_scheduling_create_policy_tx;
-        }
-        if (!ps->rmt_scheduling_destroy_policy_tx) {
-                ps->rmt_scheduling_destroy_policy_tx =
-                        common_rmt_scheduling_destroy_policy_tx;
+        if (!ps->rmt_next_scheduled_policy_tx ||
+                        !ps->rmt_enqueue_scheduling_policy_tx ||
+                        !ps->rmt_requeue_scheduling_policy_tx ||
+                        !ps->rmt_scheduling_create_policy_tx ||
+                        !ps->rmt_scheduling_destroy_policy_tx) {
+                LOG_ERR("RMT policy set is invalid, missing policies:\n"
+                        "       rmt_next_scheduled_policy_tx=%p\n"
+                        "       rmt_enqueue_scheduling_policy_tx =%p\n"
+                        "       rmt_requeue_scheduling_policy_tx =%p\n"
+                        "       rmt_scheduling_create_policy_tx =%p\n"
+                        "       rmt_scheduling_destroy_policy_tx=%p\n",
+                        ps->rmt_next_scheduled_policy_tx,
+                        ps->rmt_enqueue_scheduling_policy_tx,
+                        ps->rmt_requeue_scheduling_policy_tx,
+                        ps->rmt_scheduling_create_policy_tx,
+                        ps->rmt_scheduling_destroy_policy_tx);
+                revert = true;
         }
         mutex_unlock(&rmt->base.ps_lock);
+
+        if (revert) {
+                return base_select_policy_set(&rmt->base, &policy_sets,
+                                              RINA_PS_DEFAULT_NAME);
+        }
 
         return 0;
 }
