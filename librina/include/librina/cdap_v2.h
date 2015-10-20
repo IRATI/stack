@@ -407,6 +407,8 @@ public:
 
 	//Constructor
 	CDAPMessage();
+
+	bool is_request_message() const;
 };
 
 //TODO: remove this => convert to a pure struct or use the class directly

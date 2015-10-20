@@ -67,6 +67,19 @@ CDAPMessage::CDAPMessage()
 	version_ = 0;
 }
 
+bool CDAPMessage::is_request_message() const
+{
+	if (op_code_ == M_CONNECT || op_code_ == M_RELEASE ||
+			op_code_ == M_CREATE || op_code_ == M_DELETE ||
+			op_code_ == M_READ || op_code_ == M_WRITE ||
+			op_code_ == M_START || op_code_ == M_STOP ||
+			op_code_ == M_CANCELREAD) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
 class CDAPMessageFactory
 {
  public:
@@ -510,6 +523,9 @@ class CDAPSessionManager
 	cdap_m_t* getCancelReadResponseMessage(const cdap_rib::flags_t &flags,
 					       const cdap_rib::res_info_t &res,
 					       int invoke_id);
+
+	CDAPInvokeIdManagerImpl *invoke_id_manager_;
+
  private:
 	void assignInvokeId(cdap_m_t &cdap_message, bool invoke_id, int port_id,
 			    bool sent);
@@ -518,7 +534,6 @@ class CDAPSessionManager
 	SerializerInterface *serializer_;
 	/// The maximum time the CDAP state machine of a session will wait for connect or release responses (in ms)
 	long timeout_;
-	CDAPInvokeIdManagerImpl *invoke_id_manager_;
 };
 
 class CDAPProvider : public CDAPProviderInterface
@@ -606,6 +621,11 @@ class CDAPProvider : public CDAPProviderInterface
  protected:
 	CDAPSessionManager *manager_;
 	cdap::CDAPCallbackInterface *callback_;
+
+        // Lock to control that when sending a message requiring
+	// a reply the CDAP Session manager has been updated before
+	// receiving the response message
+        rina::Lockable atomic_send_lock_;
  private:
 	virtual void send(const cdap_m_t *m_sent, int port) = 0;
 };
@@ -3000,7 +3020,15 @@ void CDAPProvider::process_message(cdap_rib::ser_obj_t &message,
 				   unsigned int port)
 {
 	const cdap_m_t *m_rcv;
-	m_rcv = manager_->messageReceived(message, port);
+
+	atomic_send_lock_.lock();
+	try {
+		m_rcv = manager_->messageReceived(message, port);
+	} catch (rina::Exception &e) {
+		atomic_send_lock_.unlock();
+		throw e;
+	}
+	atomic_send_lock_.lock();
 
 	// Fill structures
 	cdap_rib::con_handle_t con;
@@ -3134,9 +3162,31 @@ void AppCDAPProvider::send(const cdap_m_t *m_sent, int port)
 {
 	const cdap_rib::ser_obj_t *ser_sent_m = manager_
 			->encodeNextMessageToBeSent(*m_sent, port);
-	manager_->messageSent(*m_sent, port);
-	rina::ipcManager->writeSDU(port, ser_sent_m->message_,
-							   ser_sent_m->size_);
+
+	rina::ScopedLock slock(atomic_send_lock_);
+
+	try{
+		rina::ipcManager->writeSDU(port,
+					   ser_sent_m->message_,
+					   ser_sent_m->size_);
+		manager_->messageSent(*m_sent, port);
+	} catch (rina::Exception &e) {
+		if (ser_sent_m) {
+			delete[] (char*) ser_sent_m->message_;
+			delete ser_sent_m;
+		}
+
+		if (m_sent->invoke_id_ != 0 && m_sent->is_request_message())
+			manager_->invoke_id_manager_->freeInvokeId(m_sent->invoke_id_,
+								   false);
+
+		std::string reason = std::string(e.what());
+		if (reason.compare("Flow closed") == 0)
+			manager_->removeCDAPSession(port);
+
+		throw e;
+	}
+
 	delete[] (char*) ser_sent_m->message_;
 	delete ser_sent_m;
 }
@@ -3151,9 +3201,30 @@ void IPCPCDAPProvider::send(const cdap_m_t *m_sent, int port)
 {
 	const cdap_rib::ser_obj_t *ser_sent_m = manager_
 			->encodeNextMessageToBeSent(*m_sent, port);
-	manager_->messageSent(*m_sent, port);
-	rina::kernelIPCProcess->writeMgmgtSDUToPortId(ser_sent_m->message_,
-						      ser_sent_m->size_, port);
+
+	rina::ScopedLock slock(atomic_send_lock_);
+
+	try {
+		rina::kernelIPCProcess->writeMgmgtSDUToPortId(ser_sent_m->message_,
+				ser_sent_m->size_, port);
+		manager_->messageSent(*m_sent, port);
+	} catch (rina::Exception &e) {
+		if (ser_sent_m) {
+			delete[] (char*) ser_sent_m->message_;
+			delete ser_sent_m;
+		}
+
+		if (m_sent->invoke_id_ != 0 && m_sent->is_request_message())
+			manager_->invoke_id_manager_->freeInvokeId(m_sent->invoke_id_,
+					false);
+
+		std::string reason = std::string(e.what());
+		if (reason.compare("Flow closed") == 0)
+			manager_->removeCDAPSession(port);
+
+		throw e;
+	}
+
 	delete[] (char*) ser_sent_m->message_;
 	delete ser_sent_m;
 }
