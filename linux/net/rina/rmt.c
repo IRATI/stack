@@ -48,6 +48,7 @@
 #include "rds/rstr.h"
 #include "ipcp-instances.h"
 #include "ipcp-utils.h"
+#include "rmt-ps-common.h" // TODO --> rmt-ps-default.h
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 #define MAX_PDUS_SENT_PER_CYCLE 10
@@ -451,23 +452,61 @@ int rmt_select_policy_set(struct rmt *rmt,
 			  const string_t *path,
 			  const string_t *name)
 {
-	size_t cmplen;
-	size_t offset;
+        struct rmt_ps * ps;
+        size_t cmplen;
+        size_t offset;
+        int ret;
 
-	ASSERT(path);
+        ASSERT(path);
 
-	ps_factory_parse_component_id(path, &cmplen, &offset);
+        ps_factory_parse_component_id(path, &cmplen, &offset);
 
-	if (strcmp(path, "") == 0)
-		/* The request addresses this policy-set. */
-		return base_select_policy_set(&rmt->base, &policy_sets, name);
-	else if (strncmp(path, "pff", cmplen) == 0)
-		/* The request addresses the PFF subcomponent. */
-		return pff_select_policy_set(rmt->pff, path + offset, name);
+        if (strncmp(path, "pff", cmplen) == 0) {
+                /* The request addresses the PFF subcomponent. */
+                return pff_select_policy_set(rmt->pff, path + offset, name);
+        }
 
-	LOG_ERR("This component has no subcomponent named '%s'", path);
+        if (strcmp(path, "") != 0) {
+                LOG_ERR("This component has no subcomponent named '%s'", path);
+                return -1;
+        }
 
-	return -1;
+        /* The request addresses this policy-set. */
+        ret = base_select_policy_set(&rmt->base, &policy_sets, name);
+        if (ret) {
+                return ret;
+        }
+
+        /* Fill in default policies. TODO common_xxx --> default_xxx */
+        mutex_lock(&rmt->base.ps_lock);
+        ps = container_of(rmt->base.ps, struct rmt_ps, base);
+        if (!ps->rmt_next_scheduled_policy_tx) {
+                ps->rmt_next_scheduled_policy_tx =
+                        common_rmt_next_scheduled_policy_tx;
+        }
+        if (!ps->rmt_enqueue_scheduling_policy_tx) {
+                ps->rmt_enqueue_scheduling_policy_tx =
+                        common_rmt_enqueue_scheduling_policy_tx;
+        }
+        if (!ps->rmt_requeue_scheduling_policy_tx) {
+                ps->rmt_requeue_scheduling_policy_tx =
+                        common_rmt_requeue_scheduling_policy_tx;
+        }
+        if (!ps->rmt_scheduling_policy_rx) {
+                ps->rmt_scheduling_policy_rx =
+                        common_rmt_scheduling_policy_rx;
+        }
+        if (!ps->rmt_scheduling_create_policy_tx) {
+                ps->rmt_scheduling_create_policy_tx =
+                        common_rmt_scheduling_create_policy_tx;
+        }
+        if (!ps->rmt_scheduling_destroy_policy_tx) {
+                ps->rmt_scheduling_destroy_policy_tx =
+                        common_rmt_scheduling_destroy_policy_tx;
+        }
+        mutex_unlock(&rmt->base.ps_lock);
+
+        return 0;
 }
 EXPORT_SYMBOL(rmt_select_policy_set);
 

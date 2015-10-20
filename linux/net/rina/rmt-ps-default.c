@@ -62,11 +62,6 @@ static int default_rmt_scheduling_policy_rx(struct rmt_ps *ps,
 					    struct sdu *sdu)
 { return common_rmt_scheduling_policy_rx(ps, n1_port, sdu); }
 
-static int rmt_ps_set_policy_set_param(struct ps_base *bps,
-				       const char *name,
-				       const char *value)
-{ return rmt_ps_common_set_policy_set_param(bps, name, value); }
-
 static struct ps_base *rmt_ps_default_create(struct rina_component *component)
 {
 	struct rmt *rmt;
@@ -94,7 +89,7 @@ static struct ps_base *rmt_ps_default_create(struct rina_component *component)
 
 	ps->priv = data;
 
-	ps->base.set_policy_set_param = rmt_ps_set_policy_set_param;
+	ps->base.set_policy_set_param = NULL; /* default */
 	ps->dm = rmt;
 
 	ps->max_q_policy_tx = NULL;
