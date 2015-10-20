@@ -202,20 +202,12 @@ static void pfte_port_remove(struct pft_entry * entry,
 
 }
 
-static int pfte_ports_copy(struct pft_entry * entry,
+static int pfte_ports_copy(struct  pft_port_entry * port,
                            port_id_t **       port_ids,
                            size_t *           entries)
 {
-        struct pft_port_entry * pos;
-        size_t                  count;
-        int                     i;
-
-        ASSERT(pfte_is_ok(entry));
-
-        count = 0;
-        list_for_each_entry(pos, &entry->ports, next) {
-                count++;
-        }
+        size_t	count;
+        count = 1;
 
         ASSERT(entries);
 
@@ -233,11 +225,7 @@ static int pfte_ports_copy(struct pft_entry * entry,
                 *entries = count;
         }
 
-        /* Get the first port, and so on, fill in the port_ids */
-        i = 0;
-        list_for_each_entry(pos, &entry->ports, next) {
-                (*port_ids)[i++] = pft_pe_port(pos);
-        }
+        (*port_ids)[0] = pft_pe_port(port);
 
         return 0;
 }
@@ -579,13 +567,10 @@ static int mp_next_hop(struct pff_ps * ps,
         port = select_entry(tmp, pci);
 	LOG_DBG("Puerto final elegido: %d",(int)port->port_id);
 
-	*count=1;
-	(*ports)[0] = port->port_id;
-
-        /*if (pfte_ports_copy(tmp, ports, count)) {
+        if (pfte_ports_copy(port, ports, count)) {
                 spin_unlock_irqrestore(&priv->lock, flags);
                 return -1;
-        }*/
+        }
 
         spin_unlock_irqrestore(&priv->lock, flags);  
 	
