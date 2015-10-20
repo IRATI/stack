@@ -542,30 +542,6 @@ static int default_dump(struct pff_ps *    ps,
         return 0;
 }
 
-/* NOTE: This is skeleton code that was directly copy pasted */
-static int pff_ps_set_policy_set_param(struct ps_base * bps,
-                                       const char *     name,
-                                       const char *     value)
-{
-        struct pff_ps * ps = container_of(bps, struct pff_ps, base);
-
-        (void) ps;
-
-        if (!name) {
-                LOG_ERR("Null parameter name");
-                return -1;
-        }
-
-        if (!value) {
-                LOG_ERR("Null parameter value");
-                return -1;
-        }
-
-        LOG_ERR("No such parameter to set");
-
-        return -1;
-}
-
 static struct ps_base *
 pff_ps_default_create(struct rina_component * component)
 {
@@ -587,7 +563,7 @@ pff_ps_default_create(struct rina_component * component)
                 return NULL;
         }
 
-        ps->base.set_policy_set_param = pff_ps_set_policy_set_param;
+        ps->base.set_policy_set_param = NULL; /* default */
         ps->dm = pff;
         ps->priv = (void *) priv;
 

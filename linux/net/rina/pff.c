@@ -280,18 +280,47 @@ int pff_select_policy_set(struct pff *     pff,
                           const string_t * path,
                           const string_t * name)
 {
-	int ret;
+        struct pff_ps *ps;
+        bool revert = false;
+        int ret;
 
-	BUG_ON(!path);
+        BUG_ON(!path);
 
-	if (strcmp(path, "")) {
-		LOG_ERR("This component has no selectable subcomponents");
-		return -1;
-	}
+        if (strcmp(path, "")) {
+                LOG_ERR("This component has no selectable subcomponents");
+                return -1;
+        }
 
-	ret = base_select_policy_set(&pff->base, &policy_sets, name);
+        ret = base_select_policy_set(&pff->base, &policy_sets, name);
+        if (ret) {
+                return ret;
+        }
 
-	return ret;
+        mutex_lock(&pff->base.ps_lock);
+
+        ps = container_of(pff->base.ps, struct pff_ps, base);
+        if (!ps->pff_add || !ps->pff_remove || !ps->pff_is_empty ||
+                        !ps->pff_flush || !ps->pff_nhop || !ps->pff_dump) {
+                LOG_ERR("PFF policy set is invalid, policies are missing:\n"
+                                "       pff_add=%p\n"
+                                "       pff_remove=%p\n"
+                                "       pff_is_empty=%p\n"
+                                "       pff_flush=%p\n"
+                                "       pff_nhop=%p\n"
+                                "       pff_dump=%p\n",
+                                ps->pff_add, ps->pff_remove, ps->pff_is_empty,
+                                ps->pff_flush, ps->pff_nhop, ps->pff_dump);
+                revert = true;
+        }
+
+        mutex_unlock(&pff->base.ps_lock);
+
+        if (revert) {
+                return base_select_policy_set(&pff->base, &policy_sets,
+                                              RINA_PS_DEFAULT_NAME);
+        }
+
+        return 0;
 }
 EXPORT_SYMBOL(pff_select_policy_set);
 
