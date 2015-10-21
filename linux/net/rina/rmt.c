@@ -452,11 +452,9 @@ int rmt_select_policy_set(struct rmt *rmt,
 			  const string_t *path,
 			  const string_t *name)
 {
-        bool revert = false;
-        struct rmt_ps * ps;
+        struct ps_select_transaction trans;
         size_t cmplen;
         size_t offset;
-        int ret;
 
         ASSERT(path);
 
@@ -473,40 +471,37 @@ int rmt_select_policy_set(struct rmt *rmt,
         }
 
         /* The request addresses this policy-set. */
-        ret = base_select_policy_set(&rmt->base, &policy_sets, name);
-        if (ret) {
-                return ret;
+        base_select_policy_set_start(&rmt->base, &trans, &policy_sets, name);
+
+        if (trans.state == PS_SEL_TRANS_PENDING) {
+                struct rmt_ps * ps;
+
+                /* Check consistency. */
+                ps = container_of(trans.candidate_ps, struct rmt_ps, base);
+                if (!ps->rmt_next_scheduled_policy_tx ||
+                                !ps->rmt_enqueue_scheduling_policy_tx ||
+                                !ps->rmt_requeue_scheduling_policy_tx ||
+                                !ps->rmt_scheduling_create_policy_tx ||
+                                !ps->rmt_scheduling_destroy_policy_tx) {
+                        LOG_ERR("RMT policy set is invalid, missing "
+                                "policies:\n"
+                                "       rmt_next_scheduled_policy_tx=%p\n"
+                                "       rmt_enqueue_scheduling_policy_tx=%p\n"
+                                "       rmt_requeue_scheduling_policy_tx=%p\n"
+                                "       rmt_scheduling_create_policy_tx=%p\n"
+                                "       rmt_scheduling_destroy_policy_tx=%p\n",
+                                ps->rmt_next_scheduled_policy_tx,
+                                ps->rmt_enqueue_scheduling_policy_tx,
+                                ps->rmt_requeue_scheduling_policy_tx,
+                                ps->rmt_scheduling_create_policy_tx,
+                                ps->rmt_scheduling_destroy_policy_tx);
+                        trans.state = PS_SEL_TRANS_ABORTED;
+                }
         }
 
-        /* Check consistency. */
-        mutex_lock(&rmt->base.ps_lock);
-        ps = container_of(rmt->base.ps, struct rmt_ps, base);
-        if (!ps->rmt_next_scheduled_policy_tx ||
-                        !ps->rmt_enqueue_scheduling_policy_tx ||
-                        !ps->rmt_requeue_scheduling_policy_tx ||
-                        !ps->rmt_scheduling_create_policy_tx ||
-                        !ps->rmt_scheduling_destroy_policy_tx) {
-                LOG_ERR("RMT policy set is invalid, missing policies:\n"
-                        "       rmt_next_scheduled_policy_tx=%p\n"
-                        "       rmt_enqueue_scheduling_policy_tx =%p\n"
-                        "       rmt_requeue_scheduling_policy_tx =%p\n"
-                        "       rmt_scheduling_create_policy_tx =%p\n"
-                        "       rmt_scheduling_destroy_policy_tx=%p\n",
-                        ps->rmt_next_scheduled_policy_tx,
-                        ps->rmt_enqueue_scheduling_policy_tx,
-                        ps->rmt_requeue_scheduling_policy_tx,
-                        ps->rmt_scheduling_create_policy_tx,
-                        ps->rmt_scheduling_destroy_policy_tx);
-                revert = true;
-        }
-        mutex_unlock(&rmt->base.ps_lock);
+        base_select_policy_set_finish(&rmt->base, &trans);
 
-        if (revert) {
-                return base_select_policy_set(&rmt->base, &policy_sets,
-                                              RINA_PS_DEFAULT_NAME);
-        }
-
-        return 0;
+        return trans.state == PS_SEL_TRANS_COMMITTED ? 0 : -1;
 }
 EXPORT_SYMBOL(rmt_select_policy_set);
 

@@ -280,9 +280,7 @@ int pff_select_policy_set(struct pff *     pff,
                           const string_t * path,
                           const string_t * name)
 {
-        struct pff_ps *ps;
-        bool revert = false;
-        int ret;
+        struct ps_select_transaction trans;
 
         BUG_ON(!path);
 
@@ -291,17 +289,16 @@ int pff_select_policy_set(struct pff *     pff,
                 return -1;
         }
 
-        ret = base_select_policy_set(&pff->base, &policy_sets, name);
-        if (ret) {
-                return ret;
-        }
+        base_select_policy_set_start(&pff->base, &trans, &policy_sets, name);
 
-        mutex_lock(&pff->base.ps_lock);
+        if (trans.state == PS_SEL_TRANS_PENDING) {
+                struct pff_ps *ps;
 
-        ps = container_of(pff->base.ps, struct pff_ps, base);
-        if (!ps->pff_add || !ps->pff_remove || !ps->pff_is_empty ||
+                ps = container_of(trans.candidate_ps, struct pff_ps, base);
+                if (!ps->pff_add || !ps->pff_remove || !ps->pff_is_empty ||
                         !ps->pff_flush || !ps->pff_nhop || !ps->pff_dump) {
-                LOG_ERR("PFF policy set is invalid, policies are missing:\n"
+                        LOG_ERR("PFF policy set is invalid, policies are "
+                                "missing:\n"
                                 "       pff_add=%p\n"
                                 "       pff_remove=%p\n"
                                 "       pff_is_empty=%p\n"
@@ -310,17 +307,13 @@ int pff_select_policy_set(struct pff *     pff,
                                 "       pff_dump=%p\n",
                                 ps->pff_add, ps->pff_remove, ps->pff_is_empty,
                                 ps->pff_flush, ps->pff_nhop, ps->pff_dump);
-                revert = true;
+                        trans.state = PS_SEL_TRANS_ABORTED;
+                }
         }
 
-        mutex_unlock(&pff->base.ps_lock);
+        base_select_policy_set_finish(&pff->base, &trans);
 
-        if (revert) {
-                return base_select_policy_set(&pff->base, &policy_sets,
-                                              RINA_PS_DEFAULT_NAME);
-        }
-
-        return 0;
+        return trans.state = PS_SEL_TRANS_COMMITTED ? 0 : -1;
 }
 EXPORT_SYMBOL(pff_select_policy_set);
 
