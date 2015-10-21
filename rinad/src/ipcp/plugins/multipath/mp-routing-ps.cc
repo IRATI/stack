@@ -481,9 +481,11 @@ std::list<unsigned int> ECMPDijkstraAlgorithm::getNextHops(unsigned int target,
         for (std::list<PredecessorInfo *>::iterator predIt = it->second.begin(); predIt != it->second.end(); predIt++) {
             step = (*predIt);
             innerIt = predecessors_.find(step->predecessor_);
-            nextHop = step->predecessor_;
+            //nextHop = step->predecessor_;
+	    LOG_IPCP_INFO("Soy el ECMP de mp-routing-ps");
             
             while (innerIt != predecessors_.end()) {
+		nextHop = step->predecessor_;
                 step = *(innerIt->second.begin());
                 if (step->predecessor_ == source) {
                     break;
