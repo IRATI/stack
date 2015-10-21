@@ -462,7 +462,7 @@ int rmt_select_policy_set(struct rmt *rmt,
 
         ps_factory_parse_component_id(path, &cmplen, &offset);
 
-        if (strncmp(path, "pff", cmplen) == 0) {
+        if (cmplen && strncmp(path, "pff", cmplen) == 0) {
                 /* The request addresses the PFF subcomponent. */
                 return pff_select_policy_set(rmt->pff, path + offset, name);
         }
@@ -540,7 +540,7 @@ int rmt_set_policy_set_param(struct rmt *rmt,
 			LOG_ERR("Unknown RMT parameter policy '%s'", name);
 
 		rcu_read_unlock();
-	} else if (strncmp(path, "pff", cmplen) == 0)
+	} else if (cmplen && strncmp(path, "pff", cmplen) == 0)
 		/* The request addresses the PFF subcomponent. */
 		return pff_set_policy_set_param(rmt->pff,
 						path + offset,
