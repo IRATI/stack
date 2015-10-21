@@ -23,7 +23,6 @@
 
 #include "common.h"
 #include "du.h"
-#include "qos.h"
 #include "ipcp-instances.h"
 #include "kfa.h"
 #include "connection.h"
