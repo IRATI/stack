@@ -149,11 +149,14 @@ typedef struct version_info {
 } vers_info_t;
 
 typedef struct connection_handler {
-	int port_;
+	unsigned int handle_;
+	bool is_port_;
 	ep_info_t src_;
 	ep_info_t dest_;
 	auth_policy_t auth_;
 	vers_info_t version_;
+
+	connection_handler() { is_port_ = true; };
 } con_handle_t;
 
 } //cdap_rib namespace

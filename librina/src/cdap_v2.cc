@@ -2219,9 +2219,9 @@ int CDAPSessionManager::get_port_id(
 
 cdap_m_t* CDAPSessionManager::getOpenConnectionRequestMessage(const cdap_rib::con_handle_t &con)
 {
-	CDAPSession *cdap_session = get_cdap_session(con.port_);
+	CDAPSession *cdap_session = get_cdap_session(con.handle_);
 	if (cdap_session == 0) {
-		cdap_session = createCDAPSession(con.port_);
+		cdap_session = createCDAPSession(con.handle_);
 	}
 	return CDAPMessageFactory::getOpenConnectionRequestMessage(
 			con,
@@ -2771,14 +2771,14 @@ cdap_rib::con_handle_t
 	const cdap_m_t *m_sent;
 	cdap_rib::con_handle_t con;
 
-	con.port_ = port;
+	con.handle_ = port;
 	con.version_ = ver;
 	con.src_ = dest;
 	con.dest_ = src;
 	con.auth_ = auth;
 
 	m_sent = manager_->getOpenConnectionRequestMessage(con);
-	send(m_sent, con.port_, true);
+	send(m_sent, con.handle_, true);
 
 	delete m_sent;
 
@@ -2953,7 +2953,7 @@ void CDAPProvider::send_open_connection_result(const cdap_rib::con_handle_t &con
 	m_sent = manager_->getOpenConnectionResponseMessage(con,
 							    res,
 							    invoke_id);
-	send(m_sent, con.port_, true);
+	send(m_sent, con.handle_, true);
 
 	delete m_sent;
 }
@@ -3166,7 +3166,7 @@ void AppCDAPIOHandler::process_message(cdap_rib::ser_obj_t &message,
 	con.dest_.ap_name_ = m_rcv->dest_ap_name_;
 	con.dest_.ae_inst_ = m_rcv->dest_ae_inst_;
 	// Port
-	con.port_ = port;
+	con.handle_ = port;
 	// Version
 	con.version_.version_ = m_rcv->version_;
 	// Flags
