@@ -24,7 +24,6 @@
 #include "librina/logs.h"
 #include "librina/cdap.h"
 #include "librina/application.h"
-#include "librina/ipc-process.h"
 #include "librina/timer.h"
 #include "librina/cdap_v2.h"
 
@@ -456,37 +455,34 @@ class CDAPSessionManager : public CDAPSessionManagerInterface
 		&encodedcdap_m_t, int portId);
 	void messageSent(const cdap_m_t &cdap_message, int port_id);
 	int get_port_id(std::string destination_application_process_name);
-	cdap_m_t* getOpenConnectionRequestMessage(
-			const cdap_rib::con_handle_t &con);
-	cdap_m_t* getOpenConnectionResponseMessage(
-			const cdap_rib::con_handle_t &con,
-			const cdap_rib::res_info_t &res, int invoke_id);
-	cdap_m_t* getReleaseConnectionRequestMessage(
-			int port_id, const cdap_rib::flags_t &flags,
-			bool invoke_id);
-	cdap_m_t* getReleaseConnectionResponseMessage(
-			const cdap_rib::flags_t &flags,
-			const cdap_rib::res_info_t &res, int invoke_id);
-	cdap_m_t* getCreateObjectRequestMessage(
-			int port_id, const cdap_rib::filt_info_t &filt,
-			const cdap_rib::flags_t &flags,
-			const cdap_rib::obj_info_t &obj, bool invoke_id);
-	cdap_m_t* getCreateObjectResponseMessage(
-			const cdap_rib::flags_t &flags,
-			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::res_info_t &res, int invoke_id);
-	cdap_m_t* getDeleteObjectRequestMessage(
-			int port_id, const cdap_rib::filt_info_t &filt,
-			const cdap_rib::flags_t &flags,
-			const cdap_rib::obj_info_t &obj, bool invoke_id);
-	cdap_m_t* getDeleteObjectResponseMessage(
-			const cdap_rib::flags_t &flags,
-			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::res_info_t &res, int invoke_id);
-	cdap_m_t* getStartObjectRequestMessage(
-			int port_id, const cdap_rib::filt_info_t &filt,
-			const cdap_rib::flags_t &flags,
-			const cdap_rib::obj_info_t &obj, bool invoke_id);
+	cdap_m_t* getOpenConnectionRequestMessage(const cdap_rib::con_handle_t &con);
+	cdap_m_t* getOpenConnectionResponseMessage(const cdap_rib::con_handle_t &con,
+						   const cdap_rib::res_info_t &res,
+						   int invoke_id);
+	cdap_m_t* getReleaseConnectionRequestMessage(const cdap_rib::flags_t &flags,
+						     bool invoke_id);
+	cdap_m_t* getReleaseConnectionResponseMessage(const cdap_rib::flags_t &flags,
+						      const cdap_rib::res_info_t &res,
+						      int invoke_id);
+	cdap_m_t* getCreateObjectRequestMessage(const cdap_rib::filt_info_t &filt,
+						const cdap_rib::flags_t &flags,
+						const cdap_rib::obj_info_t &obj,
+						bool invoke_id);
+	cdap_m_t* getCreateObjectResponseMessage(const cdap_rib::flags_t &flags,
+						 const cdap_rib::obj_info_t &obj,
+						 const cdap_rib::res_info_t &res,
+						 int invoke_id);
+	cdap_m_t* getDeleteObjectRequestMessage(const cdap_rib::filt_info_t &filt,
+						const cdap_rib::flags_t &flags,
+						const cdap_rib::obj_info_t &obj,
+						bool invoke_id);
+	cdap_m_t* getDeleteObjectResponseMessage(const cdap_rib::flags_t &flags,
+						 const cdap_rib::obj_info_t &obj,
+						 const cdap_rib::res_info_t &res, int invoke_id);
+	cdap_m_t* getStartObjectRequestMessage(const cdap_rib::filt_info_t &filt,
+					       const cdap_rib::flags_t &flags,
+					       const cdap_rib::obj_info_t &obj,
+					       bool invoke_id);
 	cdap_m_t* getStartObjectResponseMessage(const cdap_rib::flags_t &flags,
 						const cdap_rib::res_info_t &res,
 						int invoke_id);
@@ -494,16 +490,14 @@ class CDAPSessionManager : public CDAPSessionManagerInterface
 						const cdap_rib::obj_info_t &obj,
 						const cdap_rib::res_info_t &res,
 						int invoke_id);
-	cdap_m_t* getStopObjectRequestMessage(int port_id,
-					      const cdap_rib::filt_info_t &filt,
+	cdap_m_t* getStopObjectRequestMessage(const cdap_rib::filt_info_t &filt,
 					      const cdap_rib::flags_t &flags,
 					      const cdap_rib::obj_info_t &obj,
 					      bool invoke_id);
 	cdap_m_t* getStopObjectResponseMessage(const cdap_rib::flags_t &flags,
 					       const cdap_rib::res_info_t &res,
 					       int invoke_id);
-	cdap_m_t* getReadObjectRequestMessage(int port_id,
-					      const cdap_rib::filt_info_t &filt,
+	cdap_m_t* getReadObjectRequestMessage(const cdap_rib::filt_info_t &filt,
 					      const cdap_rib::flags_t &flags,
 					      const cdap_rib::obj_info_t &obj,
 					      bool invoke_id);
@@ -511,10 +505,10 @@ class CDAPSessionManager : public CDAPSessionManagerInterface
 					       const cdap_rib::obj_info_t &obj,
 					       const cdap_rib::res_info_t &res,
 					       int invoke_id);
-	cdap_m_t* getWriteObjectRequestMessage(
-			int port_id, const cdap_rib::filt_info_t &filt,
-			const cdap_rib::flags_t &flags,
-			const cdap_rib::obj_info_t &obj, bool invoke_id);
+	cdap_m_t* getWriteObjectRequestMessage(const cdap_rib::filt_info_t &filt,
+					       const cdap_rib::flags_t &flags,
+					       const cdap_rib::obj_info_t &obj,
+					       bool invoke_id);
 	cdap_m_t* getWriteObjectResponseMessage(const cdap_rib::flags_t &flags,
 						const cdap_rib::res_info_t &res,
 						int invoke_id);
@@ -526,8 +520,6 @@ class CDAPSessionManager : public CDAPSessionManagerInterface
 	CDAPInvokeIdManager * get_invoke_id_manager();
 
  private:
-	void assignInvokeId(cdap_m_t &cdap_message, bool invoke_id, int port_id,
-			    bool sent);
 	std::map<int, CDAPSession*> cdap_sessions_;
 	/// Used by the serialize and unserialize operations
 	SerializerInterface *serializer_;
@@ -540,7 +532,9 @@ class AppCDAPIOHandler : public CDAPIOHandler
 {
  public:
 	AppCDAPIOHandler(){};
-	void send(const cdap_m_t *m_sent, int port);
+	void send(const cdap_m_t *m_sent,
+		  unsigned int handle,
+		  bool is_port);
 	void process_message(cdap_rib::ser_obj_t &message,
 			     unsigned int port);
 
@@ -2223,8 +2217,7 @@ int CDAPSessionManager::get_port_id(
 	throw CDAPException(ss.str());
 }
 
-cdap_m_t* CDAPSessionManager::getOpenConnectionRequestMessage(
-		const cdap_rib::con_handle_t &con)
+cdap_m_t* CDAPSessionManager::getOpenConnectionRequestMessage(const cdap_rib::con_handle_t &con)
 {
 	CDAPSession *cdap_session = get_cdap_session(con.port_);
 	if (cdap_session == 0) {
@@ -2232,25 +2225,27 @@ cdap_m_t* CDAPSessionManager::getOpenConnectionRequestMessage(
 	}
 	return CDAPMessageFactory::getOpenConnectionRequestMessage(
 			con,
-			cdap_session->get_invoke_id_manager()->newInvokeId(
-					true));
+			invoke_id_manager_->newInvokeId(true));
 }
 
-cdap_m_t* CDAPSessionManager::getOpenConnectionResponseMessage(
-		const cdap_rib::con_handle_t &con,
-		const cdap_rib::res_info_t &res, int invoke_id)
+cdap_m_t* CDAPSessionManager::getOpenConnectionResponseMessage(const cdap_rib::con_handle_t &con,
+							       const cdap_rib::res_info_t &res,
+							       int invoke_id)
 {
-	return CDAPMessageFactory::getOpenConnectionResponseMessage(con, res,
+	return CDAPMessageFactory::getOpenConnectionResponseMessage(con,
+								    res,
 								    invoke_id);
 }
 
-cdap_m_t* CDAPSessionManager::getReleaseConnectionRequestMessage(
-		int port_id, const cdap_rib::flags_t &flags, bool invoke_id)
+cdap_m_t* CDAPSessionManager::getReleaseConnectionRequestMessage(const cdap_rib::flags_t &flags,
+								 bool invoke_id)
 {
 	cdap_m_t *cdap_message =
 			CDAPMessageFactory::getReleaseConnectionRequestMessage(
 					flags);
-	assignInvokeId(*cdap_message, invoke_id, port_id, true);
+	if (invoke_id)
+		cdap_message->invoke_id_ = invoke_id_manager_->newInvokeId(true);
+
 	return cdap_message;
 }
 
@@ -2261,176 +2256,186 @@ cdap_m_t* CDAPSessionManager::getReleaseConnectionResponseMessage(
 	return CDAPMessageFactory::getReleaseConnectionResponseMessage(
 			flags, res, invoke_id);
 }
-cdap_m_t* CDAPSessionManager::getCreateObjectRequestMessage(
-		int port_id, const cdap_rib::filt_info_t &filt,
-		const cdap_rib::flags_t &flags, const cdap_rib::obj_info_t &obj,
-		bool invoke_id)
+cdap_m_t* CDAPSessionManager::getCreateObjectRequestMessage(const cdap_rib::filt_info_t &filt,
+							    const cdap_rib::flags_t &flags,
+							    const cdap_rib::obj_info_t &obj,
+							    bool invoke_id)
 {
 
 	cdap_m_t *cdap_message =
 			CDAPMessageFactory::getCreateObjectRequestMessage(filt,
 									  flags,
 									  obj);
-	assignInvokeId(*cdap_message, invoke_id, port_id, true);
+	if (invoke_id)
+		cdap_message->invoke_id_ = invoke_id_manager_->newInvokeId(true);
+
 	return cdap_message;
 
 }
 
-cdap_m_t* CDAPSessionManager::getCreateObjectResponseMessage(
-		const cdap_rib::flags_t &flags, const cdap_rib::obj_info_t &obj,
-		const cdap_rib::res_info_t &res, int invoke_id)
+cdap_m_t* CDAPSessionManager::getCreateObjectResponseMessage(const cdap_rib::flags_t &flags,
+							     const cdap_rib::obj_info_t &obj,
+							     const cdap_rib::res_info_t &res,
+							     int invoke_id)
 {
-	return CDAPMessageFactory::getCreateObjectResponseMessage(flags, obj,
+	return CDAPMessageFactory::getCreateObjectResponseMessage(flags,
+								  obj,
 								  res,
 								  invoke_id);
 }
 
-cdap_m_t* CDAPSessionManager::getDeleteObjectRequestMessage(
-		int port_id, const cdap_rib::filt_info_t &filt,
-		const cdap_rib::flags_t &flags, const cdap_rib::obj_info_t &obj,
-		bool invoke_id)
+cdap_m_t* CDAPSessionManager::getDeleteObjectRequestMessage(const cdap_rib::filt_info_t &filt,
+							    const cdap_rib::flags_t &flags,
+							    const cdap_rib::obj_info_t &obj,
+							    bool invoke_id)
 {
 	cdap_m_t *cdap_message =
 			CDAPMessageFactory::getDeleteObjectRequestMessage(filt,
 									  flags,
 									  obj);
-	assignInvokeId(*cdap_message, invoke_id, port_id, true);
+	if (invoke_id)
+		cdap_message->invoke_id_ = invoke_id_manager_->newInvokeId(true);
+
 	return cdap_message;
 }
 
-cdap_m_t* CDAPSessionManager::getDeleteObjectResponseMessage(
-		const cdap_rib::flags_t &flags, const cdap_rib::obj_info_t &obj,
-		const cdap_rib::res_info_t &res, int invoke_id)
+cdap_m_t* CDAPSessionManager::getDeleteObjectResponseMessage(const cdap_rib::flags_t &flags,
+							     const cdap_rib::obj_info_t &obj,
+							     const cdap_rib::res_info_t &res, int invoke_id)
 {
-	return CDAPMessageFactory::getDeleteObjectResponseMessage(flags, obj,
+	return CDAPMessageFactory::getDeleteObjectResponseMessage(flags,
+								  obj,
 								  res,
 								  invoke_id);
 }
 
-cdap_m_t* CDAPSessionManager::getStartObjectRequestMessage(
-		int port_id, const cdap_rib::filt_info_t &filt,
-		const cdap_rib::flags_t &flags, const cdap_rib::obj_info_t &obj,
-		bool invoke_id)
+cdap_m_t* CDAPSessionManager::getStartObjectRequestMessage(const cdap_rib::filt_info_t &filt,
+							   const cdap_rib::flags_t &flags,
+							   const cdap_rib::obj_info_t &obj,
+							   bool invoke_id)
 {
 	cdap_m_t *cdap_message =
 			CDAPMessageFactory::getStartObjectRequestMessage(filt,
 									 flags,
 									 obj);
-	assignInvokeId(*cdap_message, invoke_id, port_id, true);
+	if (invoke_id)
+		cdap_message->invoke_id_ = invoke_id_manager_->newInvokeId(true);
+
 	return cdap_message;
 }
 
-cdap_m_t* CDAPSessionManager::getStartObjectResponseMessage(
-		const cdap_rib::flags_t &flags, const cdap_rib::res_info_t &res,
-		int invoke_id)
+cdap_m_t* CDAPSessionManager::getStartObjectResponseMessage(const cdap_rib::flags_t &flags,
+							    const cdap_rib::res_info_t &res,
+							    int invoke_id)
 {
-	return CDAPMessageFactory::getStartObjectResponseMessage(flags, res,
+	return CDAPMessageFactory::getStartObjectResponseMessage(flags,
+								 res,
 								 invoke_id);
 }
 
-cdap_m_t* CDAPSessionManager::getStartObjectResponseMessage(
-		const cdap_rib::flags_t &flags, const cdap_rib::obj_info_t &obj,
-		const cdap_rib::res_info_t &res, int invoke_id)
+cdap_m_t* CDAPSessionManager::getStartObjectResponseMessage(const cdap_rib::flags_t &flags,
+							    const cdap_rib::obj_info_t &obj,
+							    const cdap_rib::res_info_t &res,
+							    int invoke_id)
 {
-	return CDAPMessageFactory::getStartObjectResponseMessage(flags, obj,
-								 res, invoke_id);
+	return CDAPMessageFactory::getStartObjectResponseMessage(flags,
+								 obj,
+								 res,
+								 invoke_id);
 }
 
-cdap_m_t* CDAPSessionManager::getStopObjectRequestMessage(
-		int port_id, const cdap_rib::filt_info_t &filt,
-		const cdap_rib::flags_t &flags, const cdap_rib::obj_info_t &obj,
-		bool invoke_id)
+cdap_m_t* CDAPSessionManager::getStopObjectRequestMessage(const cdap_rib::filt_info_t &filt,
+							  const cdap_rib::flags_t &flags,
+							  const cdap_rib::obj_info_t &obj,
+							  bool invoke_id)
 {
 	cdap_m_t *cdap_message =
 			CDAPMessageFactory::getStopObjectRequestMessage(filt,
 									flags,
 									obj);
-	assignInvokeId(*cdap_message, invoke_id, port_id, true);
+	if (invoke_id)
+		cdap_message->invoke_id_ = invoke_id_manager_->newInvokeId(true);
+
 	return cdap_message;
 }
 
-cdap_m_t* CDAPSessionManager::getStopObjectResponseMessage(
-		const cdap_rib::flags_t &flags, const cdap_rib::res_info_t &res,
-		int invoke_id)
+cdap_m_t* CDAPSessionManager::getStopObjectResponseMessage(const cdap_rib::flags_t &flags,
+							   const cdap_rib::res_info_t &res,
+							   int invoke_id)
 {
-	return CDAPMessageFactory::getStopObjectResponseMessage(flags, res,
+	return CDAPMessageFactory::getStopObjectResponseMessage(flags,
+								res,
 								invoke_id);
 }
 
-cdap_m_t* CDAPSessionManager::getReadObjectRequestMessage(
-		int port_id, const cdap_rib::filt_info_t &filt,
-		const cdap_rib::flags_t &flags, const cdap_rib::obj_info_t &obj,
-		bool invoke_id)
+cdap_m_t* CDAPSessionManager::getReadObjectRequestMessage(const cdap_rib::filt_info_t &filt,
+							  const cdap_rib::flags_t &flags,
+							  const cdap_rib::obj_info_t &obj,
+							  bool invoke_id)
 {
 	cdap_m_t *cdap_message =
 			CDAPMessageFactory::getReadObjectRequestMessage(filt,
 									flags,
 									obj);
-	assignInvokeId(*cdap_message, invoke_id, port_id, true);
+	if (invoke_id)
+		cdap_message->invoke_id_ = invoke_id_manager_->newInvokeId(true);
+
 	return cdap_message;
 }
 
-cdap_m_t* CDAPSessionManager::getReadObjectResponseMessage(
-		const cdap_rib::flags_t &flags, const cdap_rib::obj_info_t &obj,
-		const cdap_rib::res_info_t &res, int invoke_id)
+cdap_m_t* CDAPSessionManager::getReadObjectResponseMessage(const cdap_rib::flags_t &flags,
+							   const cdap_rib::obj_info_t &obj,
+							   const cdap_rib::res_info_t &res,
+							   int invoke_id)
 {
-	return CDAPMessageFactory::getReadObjectResponseMessage(flags, obj, res,
+	return CDAPMessageFactory::getReadObjectResponseMessage(flags,
+								obj,
+								res,
 								invoke_id);
 }
 
-cdap_m_t* CDAPSessionManager::getWriteObjectRequestMessage(
-		int port_id, const cdap_rib::filt_info_t &filt,
-		const cdap_rib::flags_t &flags, const cdap_rib::obj_info_t &obj,
-		bool invoke_id)
+cdap_m_t* CDAPSessionManager::getWriteObjectRequestMessage(const cdap_rib::filt_info_t &filt,
+							   const cdap_rib::flags_t &flags,
+							   const cdap_rib::obj_info_t &obj,
+							   bool invoke_id)
 {
 	cdap_m_t *cdap_message =
 			CDAPMessageFactory::getWriteObjectRequestMessage(filt,
 									 flags,
 									 obj);
-	assignInvokeId(*cdap_message, invoke_id, port_id, true);
+	if (invoke_id)
+		cdap_message->invoke_id_ = invoke_id_manager_->newInvokeId(true);
+
 	return cdap_message;
 }
 
-cdap_m_t* CDAPSessionManager::getWriteObjectResponseMessage(
-		const cdap_rib::flags_t &flags, const cdap_rib::res_info_t &res,
-		int invoke_id)
+cdap_m_t* CDAPSessionManager::getWriteObjectResponseMessage(const cdap_rib::flags_t &flags,
+							    const cdap_rib::res_info_t &res,
+							    int invoke_id)
 {
-	return CDAPMessageFactory::getWriteObjectResponseMessage(flags, res,
+	return CDAPMessageFactory::getWriteObjectResponseMessage(flags,
+								 res,
 								 invoke_id);
 }
 
-cdap_m_t* CDAPSessionManager::getCancelReadRequestMessage(
-		const cdap_rib::flags_t &flags, int invoke_id)
+cdap_m_t* CDAPSessionManager::getCancelReadRequestMessage(const cdap_rib::flags_t &flags,
+							  int invoke_id)
 {
 	return CDAPMessageFactory::getCancelReadRequestMessage(flags, invoke_id);
 }
 
-cdap_m_t* CDAPSessionManager::getCancelReadResponseMessage(
-		const cdap_rib::flags_t &flags, const cdap_rib::res_info_t &res,
-		int invoke_id)
+cdap_m_t* CDAPSessionManager::getCancelReadResponseMessage(const cdap_rib::flags_t &flags,
+							   const cdap_rib::res_info_t &res,
+							   int invoke_id)
 {
-	return CDAPMessageFactory::getCancelReadResponseMessage(flags, res,
+	return CDAPMessageFactory::getCancelReadResponseMessage(flags,
+								res,
 								invoke_id);
 }
 
 CDAPInvokeIdManager * CDAPSessionManager::get_invoke_id_manager()
 {
 	return invoke_id_manager_;
-}
-
-void CDAPSessionManager::assignInvokeId(cdap_m_t &cdap_message, bool invoke_id,
-					int port_id, bool sent)
-{
-	CDAPSession *cdap_session = 0;
-
-	if (invoke_id) {
-		cdap_session = get_cdap_session(port_id);
-		if (cdap_session) {
-			cdap_message.invoke_id_ = cdap_session
-					->get_invoke_id_manager()->newInvokeId(
-					sent);
-		}
-	}
 }
 
 // CLASS GPBWireMessageProvider
@@ -2642,68 +2647,89 @@ class CDAPProvider : public CDAPProviderInterface
 			const cdap_rib::ep_info_t &dest,
 			const cdap_rib::auth_policy_t &auth, int port);
 	int remote_close_connection(unsigned int port);
-	int remote_create(unsigned int port, const cdap_rib::obj_info_t &obj,
+	int remote_create(unsigned int handle,
+			  const cdap_rib::obj_info_t &obj,
 			  const cdap_rib::flags_t &flags,
-			  const cdap_rib::filt_info_t &filt);
-	int remote_delete(unsigned int port, const cdap_rib::obj_info_t &obj,
+			  const cdap_rib::filt_info_t &filt,
+			  bool is_port = true);
+	int remote_delete(unsigned int handle,
+			  const cdap_rib::obj_info_t &obj,
 			  const cdap_rib::flags_t &flags,
-			  const cdap_rib::filt_info_t &filt);
-	int remote_read(unsigned int port, const cdap_rib::obj_info_t &obj,
+			  const cdap_rib::filt_info_t &filt,
+			  bool is_port = true);
+	int remote_read(unsigned int handle,
+			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::flags_t &flags,
-			const cdap_rib::filt_info_t &filt);
-	int remote_cancel_read(unsigned int port,
-			       const cdap_rib::flags_t &flags, int invoke_id);
-	int remote_write(unsigned int port, const cdap_rib::obj_info_t &obj,
+			const cdap_rib::filt_info_t &filt,
+			bool is_port = true);
+	int remote_cancel_read(unsigned int handle,
+			       const cdap_rib::flags_t &flags,
+			       int invoke_id,
+			       bool is_port = true);
+	int remote_write(unsigned int handle,
+			 const cdap_rib::obj_info_t &obj,
 			 const cdap_rib::flags_t &flags,
-			 const cdap_rib::filt_info_t &filt);
-	int remote_start(unsigned int port, const cdap_rib::obj_info_t &obj,
+			 const cdap_rib::filt_info_t &filt,
+			 bool is_port = true);
+	int remote_start(unsigned int handle,
+			 const cdap_rib::obj_info_t &obj,
 			 const cdap_rib::flags_t &flags,
-			 const cdap_rib::filt_info_t &filt);
-	int remote_stop(unsigned int port, const cdap_rib::obj_info_t &obj,
+			 const cdap_rib::filt_info_t &filt,
+			 bool is_port = true);
+	int remote_stop(unsigned int handle,
+			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::flags_t &flags,
-			const cdap_rib::filt_info_t &filt);
+			const cdap_rib::filt_info_t &filt,
+			bool is_port = true);
 
 	//Local
 
 	void send_open_connection_result(const cdap_rib::con_handle_t &con,
-				      const cdap_rib::res_info_t &res,
-				      int invoke_id);
+				        const cdap_rib::res_info_t &res,
+				        int invoke_id);
 	void send_close_connection_result(unsigned int port,
-				       const cdap_rib::flags_t &flags,
-				       const cdap_rib::res_info_t &res,
-				       int invoke_id);
-	void send_create_result(unsigned int port,
-				    const cdap_rib::obj_info_t &obj,
-				    const cdap_rib::flags_t &flags,
-				    const cdap_rib::res_info_t &res,
-				    int invoke_id);
-	void send_delete_result(unsigned int port,
-				    const cdap_rib::obj_info_t &obj,
-				    const cdap_rib::flags_t &flags,
-				    const cdap_rib::res_info_t &res,
-				    int invoke_id);
-	void send_read_result(unsigned int port,
-				  const cdap_rib::obj_info_t &obj,
-				  const cdap_rib::flags_t &flags,
-				  const cdap_rib::res_info_t &res,
-				  int invoke_id);
-	void send_cancel_read_result(unsigned int port,
-					 const cdap_rib::flags_t &flags,
-					 const cdap_rib::res_info_t &res,
-					 int invoke_id);
-	void send_write_result(unsigned int port,
-				   const cdap_rib::flags_t &flags,
-				   const cdap_rib::res_info_t &res,
-				   int invoke_id);
-	void send_start_result(unsigned int port,
-				   const cdap_rib::obj_info_t &obj,
-				   const cdap_rib::flags_t &flags,
-				   const cdap_rib::res_info_t &res,
-				   int invoke_id);
-	void send_stop_result(unsigned int port,
-				  const cdap_rib::flags_t &flags,
-				  const cdap_rib::res_info_t &res,
-				  int invoke_id);
+				       	  const cdap_rib::flags_t &flags,
+				       	  const cdap_rib::res_info_t &res,
+				       	  int invoke_id);
+	void send_create_result(unsigned int handle,
+				const cdap_rib::obj_info_t &obj,
+				const cdap_rib::flags_t &flags,
+				const cdap_rib::res_info_t &res,
+				int invoke_id,
+				bool is_port = true);
+	void send_delete_result(unsigned int handle,
+				const cdap_rib::obj_info_t &obj,
+				const cdap_rib::flags_t &flags,
+				const cdap_rib::res_info_t &res,
+				int invoke_id,
+				bool is_port = true);
+	void send_read_result(unsigned int handle,
+			      const cdap_rib::obj_info_t &obj,
+			      const cdap_rib::flags_t &flags,
+			      const cdap_rib::res_info_t &res,
+			      int invoke_id,
+			      bool is_port = true);
+	void send_cancel_read_result(unsigned int handle,
+				     const cdap_rib::flags_t &flags,
+				     const cdap_rib::res_info_t &res,
+				     int invoke_id,
+				     bool is_port = true);
+	void send_write_result(unsigned int handle,
+			       const cdap_rib::flags_t &flags,
+			       const cdap_rib::res_info_t &res,
+			       int invoke_id,
+			       bool is_port = true);
+	void send_start_result(unsigned int handle,
+			       const cdap_rib::obj_info_t &obj,
+			       const cdap_rib::flags_t &flags,
+			       const cdap_rib::res_info_t &res,
+			       int invoke_id,
+			       bool is_port = true);
+	void send_stop_result(unsigned int handle,
+			      const cdap_rib::flags_t &flags,
+			      const cdap_rib::res_info_t &res,
+			      int invoke_id,
+			      bool is_port = true);
 
 	// Process and incoming CDAP message
 	void process_message(cdap_rib::ser_obj_t &message,
@@ -2717,7 +2743,9 @@ class CDAPProvider : public CDAPProviderInterface
 	CDAPIOHandler *io_handler_;
 
  private:
-	void send(const cdap_m_t *m_sent, int port);
+	void send(const cdap_m_t *m_sent,
+		  unsigned int handle,
+		  bool is_port);
 };
 
 // CLASS CDAPProvider
@@ -2733,11 +2761,12 @@ CDAPProvider::~CDAPProvider()
 {
 }
 
-cdap_rib::con_handle_t CDAPProvider::remote_open_connection(
-		const cdap_rib::vers_info_t &ver,
-		const cdap_rib::ep_info_t &src,
-		const cdap_rib::ep_info_t &dest,
-		const cdap_rib::auth_policy_t &auth, int port)
+cdap_rib::con_handle_t
+	CDAPProvider::remote_open_connection(const cdap_rib::vers_info_t &ver,
+					     const cdap_rib::ep_info_t &src,
+					     const cdap_rib::ep_info_t &dest,
+					     const cdap_rib::auth_policy_t &auth,
+					     int port)
 {
 	const cdap_m_t *m_sent;
 	cdap_rib::con_handle_t con;
@@ -2749,7 +2778,7 @@ cdap_rib::con_handle_t CDAPProvider::remote_open_connection(
 	con.auth_ = auth;
 
 	m_sent = manager_->getOpenConnectionRequestMessage(con);
-	send(m_sent, con.port_);
+	send(m_sent, con.port_, true);
 
 	delete m_sent;
 
@@ -2764,257 +2793,310 @@ int CDAPProvider::remote_close_connection(unsigned int port)
 	// FIXME change cdap_rib::flags_t::NONE_FLAGS
 	cdap_rib::flags_t flags;
 	flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
-	m_sent = manager_->getReleaseConnectionRequestMessage(port, flags,
+	m_sent = manager_->getReleaseConnectionRequestMessage(flags,
 							      true);
 	invoke_id = m_sent->invoke_id_;
-	send(m_sent, port);
+	send(m_sent, port, true);
 
 	delete m_sent;
 
 	return invoke_id;
 }
 
-int CDAPProvider::remote_create(unsigned int port,
+int CDAPProvider::remote_create(unsigned int handle,
 				const cdap_rib::obj_info_t &obj,
 				const cdap_rib::flags_t &flags,
-				const cdap_rib::filt_info_t &filt)
+				const cdap_rib::filt_info_t &filt,
+				bool is_port)
 {
 	int invoke_id;
 	const cdap_m_t *m_sent;
 
-	m_sent = manager_->getCreateObjectRequestMessage(port, filt, flags, obj,
+	m_sent = manager_->getCreateObjectRequestMessage(filt,
+							 flags,
+							 obj,
 							 true);
 	invoke_id = m_sent->invoke_id_;
-	send(m_sent, port);
+	send(m_sent, handle, is_port);
 
 	delete m_sent;
 
 	return invoke_id;
 }
-int CDAPProvider::remote_delete(unsigned int port,
+
+int CDAPProvider::remote_delete(unsigned int handle,
 				const cdap_rib::obj_info_t &obj,
 				const cdap_rib::flags_t &flags,
-				const cdap_rib::filt_info_t &filt)
+				const cdap_rib::filt_info_t &filt,
+				bool is_port)
 {
 	int invoke_id;
 	const cdap_m_t *m_sent;
 
-	m_sent = manager_->getDeleteObjectRequestMessage(port, filt, flags, obj,
+	m_sent = manager_->getDeleteObjectRequestMessage(filt,
+							 flags,
+							 obj,
 							 true);
 	invoke_id = m_sent->invoke_id_;
-	send(m_sent, port);
+	send(m_sent, handle, is_port);
 
 	delete m_sent;
 
 	return invoke_id;
 }
-int CDAPProvider::remote_read(unsigned int port,
+
+int CDAPProvider::remote_read(unsigned int handle,
 			      const cdap_rib::obj_info_t &obj,
 			      const cdap_rib::flags_t &flags,
-			      const cdap_rib::filt_info_t &filt)
+			      const cdap_rib::filt_info_t &filt,
+			      bool is_port)
 {
 	int invoke_id;
 	const cdap_m_t *m_sent;
 
-	m_sent = manager_->getReadObjectRequestMessage(port, filt, flags, obj,
+	m_sent = manager_->getReadObjectRequestMessage(filt,
+						       flags,
+						       obj,
 						       true);
 	invoke_id = m_sent->invoke_id_;
-	send(m_sent, port);
+	send(m_sent, handle, is_port);
 
 	delete m_sent;
 
 	return invoke_id;
 }
-int CDAPProvider::remote_cancel_read(unsigned int port,
+
+int CDAPProvider::remote_cancel_read(unsigned int handle,
 				     const cdap_rib::flags_t &flags,
-				     int invoke_id)
+				     int invoke_id,
+				     bool is_port)
 {
 	const cdap_m_t *m_sent;
 
 	m_sent = manager_->getCancelReadRequestMessage(flags, invoke_id);
-	send(m_sent, port);
+	send(m_sent, handle, is_port);
 
 	delete m_sent;
 
 	return invoke_id;
 }
-int CDAPProvider::remote_write(unsigned int port,
+
+int CDAPProvider::remote_write(unsigned int handle,
 			       const cdap_rib::obj_info_t &obj,
 			       const cdap_rib::flags_t &flags,
-			       const cdap_rib::filt_info_t &filt)
+			       const cdap_rib::filt_info_t &filt,
+			       bool is_port)
 {
 	int invoke_id;
 	const cdap_m_t *m_sent;
 
-	m_sent = manager_->getWriteObjectRequestMessage(port, filt, flags, obj,
+	m_sent = manager_->getWriteObjectRequestMessage(filt,
+							flags,
+							obj,
 							true);
 	invoke_id = m_sent->invoke_id_;
-	send(m_sent, port);
+	send(m_sent, handle, is_port);
 
 	delete m_sent;
 
 	return invoke_id;
 }
-int CDAPProvider::remote_start(unsigned int port,
+
+int CDAPProvider::remote_start(unsigned int handle,
 			       const cdap_rib::obj_info_t &obj,
 			       const cdap_rib::flags_t &flags,
-			       const cdap_rib::filt_info_t &filt)
+			       const cdap_rib::filt_info_t &filt,
+			       bool is_port)
 {
 	int invoke_id;
 	const cdap_m_t *m_sent;
 
-	m_sent = manager_->getStartObjectRequestMessage(port, filt, flags, obj,
+	m_sent = manager_->getStartObjectRequestMessage(filt,
+							flags,
+							obj,
 							true);
 	invoke_id = m_sent->invoke_id_;
-	send(m_sent, port);
+	send(m_sent, handle, is_port);
 
 	delete m_sent;
 
 	return invoke_id;
 }
-int CDAPProvider::remote_stop(unsigned int port,
+
+int CDAPProvider::remote_stop(unsigned int handle,
 			      const cdap_rib::obj_info_t &obj,
 			      const cdap_rib::flags_t &flags,
-			      const cdap_rib::filt_info_t &filt)
+			      const cdap_rib::filt_info_t &filt,
+			      bool is_port)
 {
 	int invoke_id;
 	const cdap_m_t *m_sent;
 
-	m_sent = manager_->getStopObjectRequestMessage(port, filt, flags, obj,
+	m_sent = manager_->getStopObjectRequestMessage(filt,
+						       flags,
+						       obj,
 						       true);
 	invoke_id = m_sent->invoke_id_;
-	send(m_sent, port);
+	send(m_sent, handle, is_port);
 
 	delete m_sent;
 
 	return invoke_id;
 }
 
-void CDAPProvider::send_open_connection_result(
-					const cdap_rib::con_handle_t &con,
-					const cdap_rib::res_info_t &res,
-					int invoke_id)
-{
-	const cdap_m_t *m_sent;
-
-	m_sent = manager_->getOpenConnectionResponseMessage(con, res,
-							    invoke_id);
-	send(m_sent, con.port_);
-
-	delete m_sent;
-}
-void CDAPProvider::send_close_connection_result(unsigned int port,
-					     const cdap_rib::flags_t &flags,
-					     const cdap_rib::res_info_t &res,
-					     int invoke_id)
-{
-	const cdap_m_t *m_sent;
-
-	//FIXME: change flags
-	m_sent = manager_->getReleaseConnectionResponseMessage(flags, res,
-							       invoke_id);
-	send(m_sent, port);
-
-	delete m_sent;
-}
-
-void CDAPProvider::send_create_result(unsigned int port,
-					  const cdap_rib::obj_info_t &obj,
-					  const cdap_rib::flags_t &flags,
-					  const cdap_rib::res_info_t &res,
-					  int invoke_id)
-{
-	const cdap_m_t *m_sent;
-
-	// FIXME change cdap_rib::flags_t::NONE_FLAGS
-	m_sent = manager_->getCreateObjectResponseMessage(flags, obj, res,
-							  invoke_id);
-	send(m_sent, port);
-
-	delete m_sent;
-}
-void CDAPProvider::send_delete_result(unsigned int port,
-					  const cdap_rib::obj_info_t &obj,
-					  const cdap_rib::flags_t &flags,
-					  const cdap_rib::res_info_t &res,
-					  int invoke_id)
-{
-	const cdap_m_t *m_sent;
-
-	// FIXME change cdap_rib::flags_t::NONE_FLAGS
-	m_sent = manager_->getDeleteObjectResponseMessage(flags, obj, res,
-							  invoke_id);
-	send(m_sent, port);
-
-	delete m_sent;
-}
-void CDAPProvider::send_read_result(unsigned int port,
-					const cdap_rib::obj_info_t &obj,
-					const cdap_rib::flags_t &flags,
-					const cdap_rib::res_info_t &res,
-					int invoke_id)
-{
-	const cdap_m_t *m_sent;
-
-	// FIXME change cdap_rib::flags_t::NONE_FLAGS
-	m_sent = manager_->getReadObjectResponseMessage(flags, obj, res,
-							invoke_id);
-	send(m_sent, port);
-
-	delete m_sent;
-}
-void CDAPProvider::send_cancel_read_result(unsigned int port,
-					       const cdap_rib::flags_t &flags,
+void CDAPProvider::send_open_connection_result(const cdap_rib::con_handle_t &con,
 					       const cdap_rib::res_info_t &res,
 					       int invoke_id)
 {
 	const cdap_m_t *m_sent;
 
-	// FIXME change cdap_rib::flags_t::NONE_FLAGS
-	m_sent = manager_->getCancelReadResponseMessage(flags, res, invoke_id);
-	send(m_sent, port);
+	m_sent = manager_->getOpenConnectionResponseMessage(con,
+							    res,
+							    invoke_id);
+	send(m_sent, con.port_, true);
 
 	delete m_sent;
 }
-void CDAPProvider::send_write_result(unsigned int port,
-					 const cdap_rib::flags_t &flags,
-					 const cdap_rib::res_info_t &res,
-					 int invoke_id)
+
+void CDAPProvider::send_close_connection_result(unsigned int port,
+					        const cdap_rib::flags_t &flags,
+					        const cdap_rib::res_info_t &res,
+					        int invoke_id)
+{
+	const cdap_m_t *m_sent;
+
+	//FIXME: change flags
+	m_sent = manager_->getReleaseConnectionResponseMessage(flags,
+							       res,
+							       invoke_id);
+	send(m_sent, port, true);
+
+	delete m_sent;
+}
+
+void CDAPProvider::send_create_result(unsigned int handle,
+				      const cdap_rib::obj_info_t &obj,
+				      const cdap_rib::flags_t &flags,
+				      const cdap_rib::res_info_t &res,
+				      int invoke_id,
+				      bool is_port)
 {
 	const cdap_m_t *m_sent;
 
 	// FIXME change cdap_rib::flags_t::NONE_FLAGS
-	m_sent = manager_->getWriteObjectResponseMessage(flags, res,
+	m_sent = manager_->getCreateObjectResponseMessage(flags,
+							  obj,
+							  res,
+							  invoke_id);
+	send(m_sent, handle, is_port);
+
+	delete m_sent;
+}
+
+void CDAPProvider::send_delete_result(unsigned int handle,
+				      const cdap_rib::obj_info_t &obj,
+				      const cdap_rib::flags_t &flags,
+				      const cdap_rib::res_info_t &res,
+				      int invoke_id,
+				      bool is_port)
+{
+	const cdap_m_t *m_sent;
+
+	// FIXME change cdap_rib::flags_t::NONE_FLAGS
+	m_sent = manager_->getDeleteObjectResponseMessage(flags,
+							  obj,
+							  res,
+							  invoke_id);
+	send(m_sent, handle, is_port);
+
+	delete m_sent;
+}
+
+void CDAPProvider::send_read_result(unsigned int handle,
+				    const cdap_rib::obj_info_t &obj,
+				    const cdap_rib::flags_t &flags,
+				    const cdap_rib::res_info_t &res,
+				    int invoke_id,
+				    bool is_port)
+{
+	const cdap_m_t *m_sent;
+
+	// FIXME change cdap_rib::flags_t::NONE_FLAGS
+	m_sent = manager_->getReadObjectResponseMessage(flags,
+							obj,
+							res,
+							invoke_id);
+	send(m_sent, handle, is_port);
+
+	delete m_sent;
+}
+
+void CDAPProvider::send_cancel_read_result(unsigned int handle,
+					   const cdap_rib::flags_t &flags,
+					   const cdap_rib::res_info_t &res,
+					   int invoke_id,
+					   bool is_port)
+{
+	const cdap_m_t *m_sent;
+
+	// FIXME change cdap_rib::flags_t::NONE_FLAGS
+	m_sent = manager_->getCancelReadResponseMessage(flags,
+							res,
+							invoke_id);
+	send(m_sent, handle, is_port);
+
+	delete m_sent;
+}
+
+void CDAPProvider::send_write_result(unsigned int handle,
+				     const cdap_rib::flags_t &flags,
+				     const cdap_rib::res_info_t &res,
+				     int invoke_id,
+				     bool is_port)
+{
+	const cdap_m_t *m_sent;
+
+	// FIXME change cdap_rib::flags_t::NONE_FLAGS
+	m_sent = manager_->getWriteObjectResponseMessage(flags,
+							 res,
 							 invoke_id);
-	send(m_sent, port);
+	send(m_sent, handle, is_port);
 
 	delete m_sent;
 }
-void CDAPProvider::send_start_result(unsigned int port,
-					 const cdap_rib::obj_info_t &obj,
-					 const cdap_rib::flags_t &flags,
-					 const cdap_rib::res_info_t &res,
-					 int invoke_id)
+
+void CDAPProvider::send_start_result(unsigned int handle,
+				     const cdap_rib::obj_info_t &obj,
+				     const cdap_rib::flags_t &flags,
+				     const cdap_rib::res_info_t &res,
+				     int invoke_id,
+				     bool is_port)
 {
 	const cdap_m_t *m_sent;
 
 	// FIXME change cdap_rib::flags_t::NONE_FLAGS
-	m_sent = manager_->getStartObjectResponseMessage(flags, obj, res,
+	m_sent = manager_->getStartObjectResponseMessage(flags,
+							 obj,
+							 res,
 							 invoke_id);
-	send(m_sent, port);
+	send(m_sent, handle, is_port);
 
 	delete m_sent;
 }
-void CDAPProvider::send_stop_result(unsigned int port,
-					const cdap_rib::flags_t &flags,
-					const cdap_rib::res_info_t &res,
-					int invoke_id)
+
+void CDAPProvider::send_stop_result(unsigned int handle,
+				    const cdap_rib::flags_t &flags,
+				    const cdap_rib::res_info_t &res,
+				    int invoke_id,
+				    bool is_port)
 {
 	const cdap_m_t *m_sent;
 
 	// FIXME change cdap_rib::flags_t::NONE_FLAGS
-	m_sent = manager_->getStopObjectResponseMessage(flags, res, invoke_id);
-	send(m_sent, port);
+	m_sent = manager_->getStopObjectResponseMessage(flags,
+							res,
+							invoke_id);
+	send(m_sent, handle, is_port);
 
 	delete m_sent;
 }
@@ -3028,12 +3110,14 @@ void CDAPProvider::process_message(cdap_rib::ser_obj_t &message,
 	io_handler_->process_message(message, port);
 }
 
-void CDAPProvider::send(const cdap_m_t *m_sent, int port)
+void CDAPProvider::send(const cdap_m_t *m_sent,
+			unsigned int handle,
+			bool is_port)
 {
 	if (!io_handler_)
 		throw Exception("CDAP IO Handler not set!");
 
-	io_handler_->send(m_sent, port);
+	io_handler_->send(m_sent, handle, is_port);
 }
 
 void CDAPProvider::set_cdap_io_handler(CDAPIOHandler * handler)
@@ -3182,18 +3266,22 @@ void AppCDAPIOHandler::process_message(cdap_rib::ser_obj_t &message,
 	delete m_rcv;
 }
 
-void AppCDAPIOHandler::send(const cdap_m_t *m_sent, int port)
+void AppCDAPIOHandler::send(const cdap_m_t *m_sent,
+			    unsigned int handle,
+			    bool is_port)
 {
+	(void) is_port;
+
 	const cdap_rib::ser_obj_t *ser_sent_m = manager_
-			->encodeNextMessageToBeSent(*m_sent, port);
+			->encodeNextMessageToBeSent(*m_sent, handle);
 
 	rina::ScopedLock slock(atomic_send_lock_);
 
 	try{
-		rina::ipcManager->writeSDU(port,
+		rina::ipcManager->writeSDU(handle,
 					   ser_sent_m->message_,
 					   ser_sent_m->size_);
-		manager_->messageSent(*m_sent, port);
+		manager_->messageSent(*m_sent, handle);
 	} catch (rina::Exception &e) {
 		if (ser_sent_m) {
 			delete[] (char*) ser_sent_m->message_;
@@ -3206,7 +3294,7 @@ void AppCDAPIOHandler::send(const cdap_m_t *m_sent, int port)
 
 		std::string reason = std::string(e.what());
 		if (reason.compare("Flow closed") == 0)
-			manager_->removeCDAPSession(port);
+			manager_->removeCDAPSession(handle);
 
 		throw e;
 	}
