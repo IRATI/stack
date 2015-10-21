@@ -2619,58 +2619,99 @@ int RIBDaemonProxy::remote_close_connection(unsigned int port){
 }
 
 // Perform a create operation over an object of the remote RIB
-int RIBDaemonProxy::remote_create(unsigned int port,
-			  const cdap_rib::obj_info_t &obj,
-			  const cdap_rib::flags_t &flags,
-			  const cdap_rib::filt_info_t &filt){
-	return ribd->cdap_provider->remote_create(port,	obj, flags, filt);
+int RIBDaemonProxy::remote_create(unsigned int handle,
+				  const cdap_rib::obj_info_t &obj,
+				  const cdap_rib::flags_t &flags,
+				  const cdap_rib::filt_info_t &filt,
+				  bool is_port)
+{
+	return ribd->cdap_provider->remote_create(handle,
+						  obj,
+						  flags,
+						  filt,
+						  is_port);
 }
 
 // Perform a delete operation over an object of the remote RIB
-int RIBDaemonProxy::remote_delete(unsigned int port,
-			  const cdap_rib::obj_info_t &obj,
-			  const cdap_rib::flags_t &flags,
-			  const cdap_rib::filt_info_t &filt){
-	return ribd->cdap_provider->remote_delete(port, obj, flags, filt);
+int RIBDaemonProxy::remote_delete(unsigned int handle,
+			  	  const cdap_rib::obj_info_t &obj,
+			  	  const cdap_rib::flags_t &flags,
+			  	  const cdap_rib::filt_info_t &filt,
+			  	  bool is_port)
+{
+	return ribd->cdap_provider->remote_delete(handle,
+						  obj,
+						  flags,
+						  filt,
+						  is_port);
 }
 
 // Perform a read operation over an object of the remote RIB
-int RIBDaemonProxy::remote_read(unsigned int port,
-			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::flags_t &flags,
-			const cdap_rib::filt_info_t &filt){
-	return ribd->cdap_provider->remote_read(port, obj, flags, filt);
+int RIBDaemonProxy::remote_read(unsigned int handle,
+				const cdap_rib::obj_info_t &obj,
+				const cdap_rib::flags_t &flags,
+				const cdap_rib::filt_info_t &filt,
+				bool is_port)
+{
+	return ribd->cdap_provider->remote_read(handle,
+						obj,
+						flags,
+						filt,
+						is_port);
 }
 
 // Perform a cancel read operation over an object of the remote RIB
-int RIBDaemonProxy::remote_cancel_read(unsigned int port,
-			       const cdap_rib::flags_t &flags,
-			       const int invoke_id){
-	return ribd->cdap_provider->remote_cancel_read(port, flags, invoke_id);
+int RIBDaemonProxy::remote_cancel_read(unsigned int handle,
+				       const cdap_rib::flags_t &flags,
+				       const int invoke_id,
+				       bool is_port)
+{
+	return ribd->cdap_provider->remote_cancel_read(handle,
+						       flags,
+						       invoke_id,
+						       is_port);
 }
 
 // Perform a write operation over an object of the remote RIB
-int RIBDaemonProxy::remote_write(unsigned int port,
-			 const cdap_rib::obj_info_t &obj,
-			 const cdap_rib::flags_t &flags,
-			 const cdap_rib::filt_info_t &filt){
-	return ribd->cdap_provider->remote_write(port, obj, flags, filt);
+int RIBDaemonProxy::remote_write(unsigned int handle,
+			 	 const cdap_rib::obj_info_t &obj,
+			 	 const cdap_rib::flags_t &flags,
+			 	 const cdap_rib::filt_info_t &filt,
+			 	 bool is_port)
+{
+	return ribd->cdap_provider->remote_write(handle,
+						 obj,
+						 flags,
+						 filt,
+						 is_port);
 }
 
 // Perform a start operation over an object of the remote RIB
-int RIBDaemonProxy::remote_start(unsigned int port,
-			 const cdap_rib::obj_info_t &obj,
-			 const cdap_rib::flags_t &flags,
-			 const cdap_rib::filt_info_t &filt){
-	return ribd->cdap_provider->remote_start(port, obj, flags, filt);
+int RIBDaemonProxy::remote_start(unsigned int handle,
+			 	 const cdap_rib::obj_info_t &obj,
+			 	 const cdap_rib::flags_t &flags,
+			 	 const cdap_rib::filt_info_t &filt,
+			 	 bool is_port)
+{
+	return ribd->cdap_provider->remote_start(handle,
+						 obj,
+						 flags,
+						 filt,
+						 is_port);
 }
 
 // Perform a stop operation over an object of the remote RIB
-int RIBDaemonProxy::remote_stop(unsigned int port,
-			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::flags_t &flags,
-			const cdap_rib::filt_info_t &filt){
-	return ribd->cdap_provider->remote_stop(port, obj, flags, filt);
+int RIBDaemonProxy::remote_stop(unsigned int handle,
+				const cdap_rib::obj_info_t &obj,
+				const cdap_rib::flags_t &flags,
+				const cdap_rib::filt_info_t &filt,
+				bool is_port)
+{
+	return ribd->cdap_provider->remote_stop(handle,
+						obj,
+						flags,
+						filt,
+						is_port);
 }
 
 //

@@ -772,68 +772,75 @@ public:
 	///
 	/// @ret success/failure
 	///
-	int remote_create(unsigned int port,
-				  const cdap_rib::obj_info_t &obj,
-				  const cdap_rib::flags_t &flags,
-				  const cdap_rib::filt_info_t &filt);
+	int remote_create(unsigned int handle,
+			  const cdap_rib::obj_info_t &obj,
+			  const cdap_rib::flags_t &flags,
+			  const cdap_rib::filt_info_t &filt,
+			  bool is_port = true);
 
 	///
 	/// Perform a delete operation over an object of the remote RIB
 	///
 	/// @ret success/failure
 	///
-	int remote_delete(unsigned int port,
-				  const cdap_rib::obj_info_t &obj,
-				  const cdap_rib::flags_t &flags,
-				  const cdap_rib::filt_info_t &filt);
+	int remote_delete(unsigned int handle,
+			  const cdap_rib::obj_info_t &obj,
+			  const cdap_rib::flags_t &flags,
+			  const cdap_rib::filt_info_t &filt,
+			  bool is_port = true);
 
 	///
 	/// Perform a read operation over an object of the remote RIB
 	///
 	/// @ret success/failure
 	///
-	int remote_read(unsigned int port,
-				const cdap_rib::obj_info_t &obj,
-				const cdap_rib::flags_t &flags,
-				const cdap_rib::filt_info_t &filt);
+	int remote_read(unsigned int handle,
+			const cdap_rib::obj_info_t &obj,
+			const cdap_rib::flags_t &flags,
+			const cdap_rib::filt_info_t &filt,
+			bool is_port = true);
 	///
 	/// Perform a cancel read operation over an object of the remote RIB
 	///
 	/// @ret success/failure
 	///
-	int remote_cancel_read(unsigned int port,
-				       const cdap_rib::flags_t &flags,
-				       int invoke_id);
+	int remote_cancel_read(unsigned int handle,
+			       const cdap_rib::flags_t &flags,
+			       int invoke_id,
+			       bool is_port = true);
 
 	///
 	/// Perform a write operation over an object of the remote RIB
 	///
 	/// @ret success/failure
 	///
-	int remote_write(unsigned int port,
-				 const cdap_rib::obj_info_t &obj,
-				 const cdap_rib::flags_t &flags,
-				 const cdap_rib::filt_info_t &filt);
+	int remote_write(unsigned int handle,
+			 const cdap_rib::obj_info_t &obj,
+			 const cdap_rib::flags_t &flags,
+			 const cdap_rib::filt_info_t &filt,
+			 bool is_port = true);
 
 	///
 	/// Perform a start operation over an object of the remote RIB
 	///
 	/// @ret success/failure
 	///
-	int remote_start(unsigned int port,
-				 const cdap_rib::obj_info_t &obj,
-				 const cdap_rib::flags_t &flags,
-				 const cdap_rib::filt_info_t &filt);
+	int remote_start(unsigned int handle,
+			 const cdap_rib::obj_info_t &obj,
+			 const cdap_rib::flags_t &flags,
+			 const cdap_rib::filt_info_t &filt,
+			 bool is_port = true);
 
 	///
 	/// Perform a stop operation over an object of the remote RIB
 	///
 	/// @ret success/failure
 	///
-	int remote_stop(unsigned int port,
-				const cdap_rib::obj_info_t &obj,
-				const cdap_rib::flags_t &flags,
-				const cdap_rib::filt_info_t &filt);
+	int remote_stop(unsigned int handle,
+			const cdap_rib::obj_info_t &obj,
+			const cdap_rib::flags_t &flags,
+			const cdap_rib::filt_info_t &filt,
+			bool is_port = true);
 
 private:
 	///@internal
