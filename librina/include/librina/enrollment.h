@@ -30,6 +30,7 @@
 #include "irm.h"
 #include "timer.h"
 #include "security-manager.h"
+#include "rib_v2.h"
 
 namespace rina {
 
@@ -79,43 +80,49 @@ public:
 	bool ipcm_initiated_;
 };
 
-class NeighborRIBObject: public SimpleSetMemberRIBObject {
+class NeighborRIBObj: public rib::RIBObj {
 public:
-	NeighborRIBObject(IRIBDaemon * ribdaemon,
-			const std::string& object_class,
-			const std::string& object_name,
-			const rina::Neighbor* neighbor);
-	std::string get_displayable_value();
-};
+	NeighborRIBObj(ApplicationProcess * app,
+		       rib::RIBDaemonProxy * rib_daemon,
+		       rib::rib_handle_t rib_handle,
+		       const Neighbor* neigh);
+	const std::string get_displayable_value() const;
+	const std::string& get_class() const {
+		return class_name;
+	};
 
-class NeighborSetRIBObject: public BaseRIBObject {
-public:
-	static const std::string NEIGHBOR_SET_RIB_OBJECT_CLASS;
-	static const std::string NEIGHBOR_RIB_OBJECT_CLASS;
-	static const std::string NEIGHBOR_SET_RIB_OBJECT_NAME;
+	//Create callback
+	static void create_cb(const rib::rib_handle_t rib,
+			      const cdap_rib::con_handle_t &con,
+			      const std::string& fqn,
+			      const std::string& class_,
+			      const cdap_rib::filt_info_t &filt,
+			      const int invoke_id,
+			      const ser_obj_t &obj_req,
+			      ser_obj_t &obj_reply,
+			      cdap_rib::res_info_t& res);
 
-	NeighborSetRIBObject(ApplicationProcess * app, IRIBDaemon * rib_daemon);
-	~NeighborSetRIBObject() { };
-	const void* get_value() const;
-	void remoteCreateObject(void * object_value, const std::string& object_name,
-			int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
-	void createObject(const std::string& objectClass,
-			const std::string& objectName,
-			const void* objectValue);
+	const static std::string class_name;
+	const static std::string object_name_prefix;
+	const static std::string parent_class_name;
+	const static std::string parent_object_name;
 
 private:
 	void populateNeighborsToCreateList(rina::Neighbor * neighbor,
-			std::list<rina::Neighbor *> * list);
+					   std::list<rina::Neighbor *> * list);
 	void createNeighbor(rina::Neighbor * neighbor);
 
 	Lockable lock_;
 	ApplicationProcess * app_;
+	rib::RIBDaemonProxy * ribd;
+	rib::rib_handle_t rib;
+	Neighbor * neighbor;
 };
 
 /// Interface that must be implementing by classes that provide
 /// the behavior of an enrollment task
 class IEnrollmentTask : public rina::ApplicationEntity,
-			public rina::CACEPHandler {
+			public rina::cacep::AppConHandlerInterface {
 public:
 	IEnrollmentTask() : rina::ApplicationEntity(ApplicationEntity::ENROLLMENT_TASK_AE_NAME) { };
 	virtual ~IEnrollmentTask() { };

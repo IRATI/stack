@@ -28,11 +28,6 @@
 namespace rina {
 namespace cdap_rib {
 
-typedef struct{
-	int size_;
-	void* message_;
-} ser_obj_t;
-
 typedef struct cdap_params {
 	long timeout_;
 	bool is_IPCP_;

@@ -791,38 +791,6 @@ bool Parameter::operator!=(const Parameter &other) const {
 	return !(*this == other);
 }
 
-// Class SerializedObject
-SerializedObject::SerializedObject() {
-        size_ = 0;
-        message_ = 0;
-}
-
-SerializedObject::SerializedObject(const SerializedObject& other ) {
-        initialize(other);
-}
-
-SerializedObject& SerializedObject::operator= (const SerializedObject &other) {
-        initialize(other);
-        return *this;
-}
-
-void SerializedObject::initialize(const SerializedObject& other ) {
-        size_ = other.size_;
-        message_ = new char[size_];
-        memcpy(message_, other.message_, size_);
-}
-
-SerializedObject::SerializedObject(char* message, int size){
-        size_ = size;
-        message_ = message;
-}
-SerializedObject::~SerializedObject(){
-        if (message_) {
-                delete[] message_;
-                message_ = 0;
-        }
-}
-
 //Class UCharArray
 UcharArray::UcharArray()
 {
@@ -836,7 +804,7 @@ UcharArray::UcharArray(int arrayLength)
 	length = arrayLength;
 }
 
-UcharArray::UcharArray(const SerializedObject * sobj)
+UcharArray::UcharArray(const ser_obj_t * sobj)
 {
 	data = new unsigned char[sobj->size_];
 	length = sobj->size_;
@@ -889,14 +857,39 @@ std::string UcharArray::toString()
 	return ss.str();
 }
 
-SerializedObject * UcharArray::get_seralized_object()
+ser_obj_t * UcharArray::get_seralized_object()
 {
-	SerializedObject * result = new SerializedObject();
+	ser_obj_t * result = new ser_obj_t();
 	result->size_ = length;
 	result->message_ = new char[result->size_];
 	memcpy(result->message_, data, result->size_);
 
 	return result;
+}
+
+/// Class ADataObject
+const std::string ADataObject::A_DATA_OBJECT_CLASS = "a_data";
+const std::string ADataObject::A_DATA = "a_data";
+const std::string ADataObject::A_DATA_OBJECT_NAME = A_DATA;
+
+ADataObject::ADataObject() {
+	source_address_ = 0;
+	dest_address_ = 0;
+	encoded_cdap_message_ = 0;
+}
+
+ADataObject::ADataObject(unsigned int source_address,
+		unsigned int dest_address) {
+	source_address_ = source_address;
+	dest_address_ = dest_address;
+	encoded_cdap_message_ = 0;
+}
+
+ADataObject::~ADataObject() {
+	if (encoded_cdap_message_) {
+		delete encoded_cdap_message_;
+		encoded_cdap_message_ = 0;
+	}
 }
 
 //Class ConsecutiveUnsignedIntegerGenerator

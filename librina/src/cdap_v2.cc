@@ -19,15 +19,15 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA  02110-1301  USA
  */
+#include <algorithm>
 
 #define RINA_PREFIX "cdap"
+
 #include "librina/logs.h"
-#include "librina/cdap.h"
 #include "librina/application.h"
 #include "librina/timer.h"
 #include "librina/cdap_v2.h"
 
-#include <algorithm>
 #include "CDAP.pb.h"
 
 namespace rina {
@@ -49,6 +49,21 @@ Exception(error_message.c_str()) {
 }
 CDAPException::ErrorCode CDAPException::get_result() const {
 	return result_;
+}
+
+// CLASS AuthPolicy
+std::string AuthPolicy::to_string() const
+{
+	std::stringstream ss;
+	ss << "Policy name: " << name_ << std::endl;
+	ss << "Supported versions: ";
+	for (std::list<std::string>::const_iterator it = versions_.begin();
+			it != versions_.end(); ++it){
+		ss << *it << ";";
+	}
+	ss << std::endl;
+
+	return ss.str();
 }
 
 // STRUCT CDAPMessage
@@ -319,7 +334,7 @@ typedef struct CDAPSessionDescriptor
 	///
 	int abs_syntax_;
 	/// Authentication Policy options
-	rina::AuthPolicy auth_policy_;
+	AuthPolicy auth_policy_;
 	/// DestinationApplication-Entity-Instance-Id (string), optional, not validated by CDAP.
 	/// Specific instance of the Application Entity that the source application
 	/// wishes to connect to in the destination application.
@@ -375,11 +390,9 @@ class CDAPSession
 	~CDAPSession() throw ();
 	//const CDAPSessionInvokeIdManagerInterface* getInvokeIdManager();
 	//bool isConnected() const;
-	const cdap_rib::ser_obj_t* encodeNextMessageToBeSent(
-			const cdap_m_t &cdap_message);
+	const ser_obj_t* encodeNextMessageToBeSent(const cdap_m_t &cdap_message);
 	void messageSent(const cdap_m_t &cdap_message);
-	const cdap_m_t* messageReceived(
-			const cdap_rib::ser_obj_t &message);
+	const cdap_m_t* messageReceived(ser_obj_t &message);
 	void messageReceived(const cdap_m_t &cdap_message);
 	void set_session_descriptor(cdap_session_t *session_descriptor);
 	int get_port_id() const;
@@ -407,10 +420,8 @@ class CDAPSession
 					   cdap_m_t::Opcode op_code, bool sent);
 	void cancelReadResponseMessageSentOrReceived(
 			const cdap_m_t &cdap_message, bool sent);
-	const cdap_rib::ser_obj_t* serializeMessage(
-			const cdap_m_t &cdap_message) const;
-	const cdap_m_t* deserializeMessage(
-			const cdap_rib::ser_obj_t &message) const;
+	const ser_obj_t* serializeMessage(const cdap_m_t &cdap_message) const;
+	const cdap_m_t* deserializeMessage(ser_obj_t &message) const;
 	void populateSessionDescriptor(const cdap_m_t &cdap_message, bool send);
 	void emptySessionDescriptor();
 	/// This map contains the invokeIds of the messages that
@@ -444,15 +455,13 @@ class CDAPSessionManager : public CDAPSessionManagerInterface
 	CDAPSession* createCDAPSession(int port_id);
 	void getAllCDAPSessionIds(std::vector<int> &vector);
 	CDAPSession* get_cdap_session(int port_id);
-	const cdap_rib::ser_obj_t* encodeCDAPMessage(
-			const cdap_m_t &cdap_message);
-	const cdap_m_t* decodeCDAPMessage(
-			const cdap_rib::ser_obj_t &cdap_message);
+	const ser_obj_t* encodeCDAPMessage(const cdap_m_t &cdap_message);
+	const cdap_m_t* decodeCDAPMessage(const ser_obj_t &cdap_message);
 	void removeCDAPSession(int portId);
-	const cdap_rib::ser_obj_t* encodeNextMessageToBeSent(
-			const cdap_m_t &cdap_message, int port_id);
-	const cdap_m_t* messageReceived (const cdap_rib::ser_obj_t
-		&encodedcdap_m_t, int portId);
+	const ser_obj_t* encodeNextMessageToBeSent(const cdap_m_t &cdap_message,
+						   int port_id);
+	const cdap_m_t* messageReceived (const ser_obj_t &encodedcdap_m_t,
+					 int portId);
 	void messageSent(const cdap_m_t &cdap_message, int port_id);
 	int get_port_id(std::string destination_application_process_name);
 	cdap_m_t* getOpenConnectionRequestMessage(const cdap_rib::con_handle_t &con);
@@ -535,7 +544,7 @@ class AppCDAPIOHandler : public CDAPIOHandler
 	void send(const cdap_m_t *m_sent,
 		  unsigned int handle,
 		  bool is_port);
-	void process_message(cdap_rib::ser_obj_t &message,
+	void process_message(ser_obj_t &message,
 			     unsigned int port);
 
  private:
@@ -549,10 +558,8 @@ class AppCDAPIOHandler : public CDAPIOHandler
 class GPBSerializer : public SerializerInterface
 {
  public:
-	const cdap_m_t* deserializeMessage(
-			const cdap_rib::ser_obj_t &message);
-	const cdap_rib::ser_obj_t* serializeMessage(
-			const cdap_m_t &cdapMessage);
+	const cdap_m_t* deserializeMessage(const ser_obj_t &message);
+	const ser_obj_t* serializeMessage(const cdap_m_t &cdapMessage);
 };
 
 // CLASS CDAPMessageFactory
@@ -569,8 +576,8 @@ cdap_m_t* CDAPMessageFactory::getOpenConnectionRequestMessage(
 		char * val = new char[con.auth_.options.size_];
 		memcpy(val, con.auth_.options.message_,
 				con.auth_.options.size_);
-		auth_policy.options_ = SerializedObject(val,
-				con.auth_.options.size_);
+		auth_policy.options_.message_ = val;
+		auth_policy.options_.size_ = con.auth_.options.size_;
 	}
 	cdap_message->auth_policy_ = auth_policy;
 	cdap_message->dest_ae_inst_ = con.dest_.ae_inst_;
@@ -597,8 +604,8 @@ cdap_m_t* CDAPMessageFactory::getOpenConnectionResponseMessage(
 		char * val = new char[con.auth_.options.size_];
 		memcpy(val, con.auth_.options.message_,
 				con.auth_.options.size_);
-		auth_policy.options_ = SerializedObject(val,
-				con.auth_.options.size_);
+		auth_policy.options_.message_ = val;
+		auth_policy.options_.size_ = con.auth_.options.size_;
 	}
 	cdap_message->auth_policy_ = auth_policy;
 	cdap_message->dest_ae_inst_ = con.dest_.ae_inst_;
@@ -1538,8 +1545,7 @@ CDAPSession::~CDAPSession() throw ()
 	}
 	cancel_read_pending_messages_.clear();
 }
-const cdap_rib::ser_obj_t* CDAPSession::encodeNextMessageToBeSent(
-		const cdap_m_t &cdap_message)
+const ser_obj_t* CDAPSession::encodeNextMessageToBeSent(const cdap_m_t &cdap_message)
 {
 	CDAPMessageValidator::validate(&cdap_message);
 
@@ -1633,13 +1639,12 @@ void CDAPSession::messageSent(const cdap_m_t &cdap_message)
 {
 	messageSentOrReceived(cdap_message, true);
 }
-const cdap_m_t* CDAPSession::messageReceived(
-		const cdap_rib::ser_obj_t &message)
+/*const cdap_m_t* CDAPSession::messageReceived(const ser_obj_t &message)
 {
 	const cdap_m_t *cdap_message = deserializeMessage(message);
 	messageSentOrReceived(*cdap_message, false);
 	return cdap_message;
-}
+}*/
 void CDAPSession::messageReceived(const cdap_m_t &cdap_message)
 {
 	messageSentOrReceived(cdap_message, false);
@@ -1987,13 +1992,11 @@ void CDAPSession::cancelReadResponseMessageSentOrReceived(
 	else
 		pending_messages_recv_.erase(cdap_message.invoke_id_);
 }
-const cdap_rib::ser_obj_t* CDAPSession::serializeMessage(
-		const cdap_m_t &cdap_message) const
+const ser_obj_t* CDAPSession::serializeMessage(const cdap_m_t &cdap_message) const
 {
 	return serializer_->serializeMessage(cdap_message);
 }
-const cdap_m_t* CDAPSession::deserializeMessage(
-		const cdap_rib::ser_obj_t &message) const
+const cdap_m_t* CDAPSession::deserializeMessage(const ser_obj_t &message) const
 {
 	return serializer_->deserializeMessage(message);
 }
@@ -2107,13 +2110,11 @@ CDAPSession* CDAPSessionManager::get_cdap_session(int port_id)
 	else
 		return 0;
 }
-const cdap_rib::ser_obj_t* CDAPSessionManager::encodeCDAPMessage(
-		const cdap_m_t &cdap_message)
+const ser_obj_t* CDAPSessionManager::encodeCDAPMessage(const cdap_m_t &cdap_message)
 {
 	return serializer_->serializeMessage(cdap_message);
 }
-const CDAPMessage* CDAPSessionManager::decodeCDAPMessage(
-		const cdap_rib::ser_obj_t &cdap_message)
+const CDAPMessage* CDAPSessionManager::decodeCDAPMessage(const ser_obj_t &cdap_message)
 {
 	return serializer_->deserializeMessage(cdap_message);
 }
@@ -2127,8 +2128,8 @@ void CDAPSessionManager::removeCDAPSession(int port_id)
 		cdap_sessions_.erase(itr);
 	}
 }
-const cdap_rib::ser_obj_t* CDAPSessionManager::encodeNextMessageToBeSent(
-		const CDAPMessage &cdap_message, int port_id)
+const ser_obj_t* CDAPSessionManager::encodeNextMessageToBeSent(const CDAPMessage &cdap_message,
+							       int port_id)
 {
 	std::map<int, CDAPSession*>::iterator it = cdap_sessions_.find(port_id);
 	CDAPSession *cdap_session;
@@ -2148,8 +2149,8 @@ const cdap_rib::ser_obj_t* CDAPSessionManager::encodeNextMessageToBeSent(
 
 	return cdap_session->encodeNextMessageToBeSent(cdap_message);
 }
-const cdap_m_t* CDAPSessionManager::messageReceived (const cdap_rib::ser_obj_t
-	&encoded_cdap_message, int port_id)
+const cdap_m_t* CDAPSessionManager::messageReceived(const ser_obj_t &encoded_cdap_message,
+						    int port_id)
 {
 	const CDAPMessage *cdap_message = decodeCDAPMessage(
 			encoded_cdap_message);
@@ -2439,8 +2440,7 @@ CDAPInvokeIdManager * CDAPSessionManager::get_invoke_id_manager()
 }
 
 // CLASS GPBWireMessageProvider
-const cdap_m_t* GPBSerializer::deserializeMessage(
-		const cdap_rib::ser_obj_t &message)
+const cdap_m_t* GPBSerializer::deserializeMessage(const ser_obj_t &message)
 {
 	cdap::impl::googleprotobuf::CDAPMessage gpfCDAPMessage;
 	cdap_m_t *cdapMessage = new cdap_m_t;
@@ -2548,8 +2548,7 @@ const cdap_m_t* GPBSerializer::deserializeMessage(
 	return cdapMessage;
 }
 // FIXME: check existanc of fields before seting
-const cdap_rib::ser_obj_t* GPBSerializer::serializeMessage(
-		const cdap_m_t &cdapMessage)
+const ser_obj_t* GPBSerializer::serializeMessage(const cdap_m_t &cdapMessage)
 {
 	cdap::impl::googleprotobuf::CDAPMessage gpfCDAPMessage;
 	// ABS_SYNTAX
@@ -2624,8 +2623,7 @@ const cdap_rib::ser_obj_t* GPBSerializer::serializeMessage(
 	int size = gpfCDAPMessage.ByteSize();
 	char *buffer = new char[size];
 	gpfCDAPMessage.SerializeToArray(buffer, size);
-	cdap_rib::ser_obj_t *serialized_message =
-			new cdap_rib::ser_obj_t;
+	ser_obj_t *serialized_message = new cdap_rib::ser_obj_t;
 	serialized_message->message_ = buffer;
 	serialized_message->size_ = size;
 
@@ -2732,7 +2730,7 @@ class CDAPProvider : public CDAPProviderInterface
 			      bool is_port = true);
 
 	// Process and incoming CDAP message
-	void process_message(cdap_rib::ser_obj_t &message,
+	void process_message(ser_obj_t &message,
 			     unsigned int port);
 
 	void set_cdap_io_handler(CDAPIOHandler * handler);
@@ -3101,7 +3099,7 @@ void CDAPProvider::send_stop_result(unsigned int handle,
 	delete m_sent;
 }
 
-void CDAPProvider::process_message(cdap_rib::ser_obj_t &message,
+void CDAPProvider::process_message(ser_obj_t &message,
 				   unsigned int port)
 {
 	if (!io_handler_)
@@ -3130,7 +3128,7 @@ void CDAPProvider::set_cdap_io_handler(CDAPIOHandler * handler)
 	io_handler_->manager_ = manager_;
 }
 
-void AppCDAPIOHandler::process_message(cdap_rib::ser_obj_t &message,
+void AppCDAPIOHandler::process_message(ser_obj_t &message,
 				       unsigned int port)
 {
 	const cdap_m_t *m_rcv;
@@ -3142,7 +3140,7 @@ void AppCDAPIOHandler::process_message(cdap_rib::ser_obj_t &message,
 		atomic_send_lock_.unlock();
 		throw e;
 	}
-	atomic_send_lock_.lock();
+	atomic_send_lock_.unlock();
 
 	// Fill structures
 	cdap_rib::con_handle_t con;
@@ -3272,8 +3270,8 @@ void AppCDAPIOHandler::send(const cdap_m_t *m_sent,
 {
 	(void) is_port;
 
-	const cdap_rib::ser_obj_t *ser_sent_m = manager_
-			->encodeNextMessageToBeSent(*m_sent, handle);
+	const ser_obj_t *ser_sent_m = manager_->encodeNextMessageToBeSent(*m_sent,
+									  handle);
 
 	rina::ScopedLock slock(atomic_send_lock_);
 
@@ -3487,6 +3485,29 @@ void fini(){
 	delete serializer;
 	delete manager;
 	delete iface;
+}
+
+void StringEncoder::encode(const std::string& obj, ser_obj_t& serobj)
+{
+	messages::str s;
+	s.set_value(obj);
+
+	//Allocate memory
+	serobj.size_ = s.ByteSize();
+	serobj.message_ = new char[serobj.size_];
+
+	if (!serobj.message_)
+		throw rina::Exception("out of memory");  //TODO improve this
+
+	s.SerializeToArray(serobj.message_, serobj.size_);
+}
+
+void StringEncoder::decode(const ser_obj_t& ser_obj, std::string& obj)
+{
+	messages::str s;
+	s.ParseFromArray(ser_obj.message_, ser_obj.size_);
+
+	obj = s.value();
 }
 
 } //namespace cdap

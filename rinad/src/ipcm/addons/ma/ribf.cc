@@ -176,6 +176,12 @@ void RIBConHandler::releaseResult(
 	(void) res;
 	(void) con;
 }
+void RIBConHandler::process_authentication_message(const rina::cdap::CDAPMessage& message,
+				    	    	   const rina::cdap_rib::con_handle_t &con)
+{
+	(void) message;
+	(void) con;
+}
 
 //RIB ops response
 void RIBRespHandler::remoteCreateResult(

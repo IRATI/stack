@@ -22,41 +22,73 @@
 #define IPCP_MODULE "rib-daemon"
 #include "ipcp-logging.h"
 
+#include <librina/cdap_v2.h>
 #include <librina/common.h>
+#include <librina/rib_v2.h>
 #include "rib-daemon.h"
 
 namespace rinad {
 
+//TODO remove
+template<class T>
+class Encoder{
+public:
+ virtual ~Encoder(){}
+ /// Converts an object to a byte array, if this object is recognized by the encoder
+ /// @param object
+ /// @throws exception if the object is not recognized by the encoder
+ /// @return
+ virtual static void encode(const T &obj, rina::cdap_rib::ser_obj_t& serobj) = 0;
+ /// Converts a byte array to an object of the type specified by "className"
+ /// @param byte[] serializedObject
+ /// @param objectClass The type of object to be decoded
+ /// @throws exception if the byte array is not an encoded in a way that the
+ /// encoder can recognize, or the byte array value doesn't correspond to an
+ /// object of the type "className"
+ /// @return
+ virtual static void decode(const rina::cdap_rib::ser_obj_t &serobj,T &des_obj) = 0;
+};/// Encoder of the AData object
+
+class ADataObjectEncoder: public Encoder<rina::ADataObject> {
+public:
+ void static encode(const rina::ADataObject &obj, rina::cdap_rib::ser_obj_t& serobj);
+ void static decode(const rina::cdap_rib::ser_obj_t &serobj, rina::ADataObject &des_obj);
+};
+
 //Class ManagementSDUReader data
-ManagementSDUReaderData::ManagementSDUReaderData(IPCPRIBDaemon * rib_daemon,
-                                                 unsigned int max_sdu_size)
+ManagementSDUReaderData::ManagementSDUReaderData(unsigned int max_sdu_size)
 {
-	rib_daemon_ = rib_daemon;
 	max_sdu_size_ = max_sdu_size;
 }
 
 void * doManagementSDUReaderWork(void* arg)
 {
 	ManagementSDUReaderData * data = (ManagementSDUReaderData *) arg;
+	rina::cdap_rib::ser_obj_t message;
 	char* buffer = new char[data->max_sdu_size_];
-	char* sdu;
 
 	rina::ReadManagementSDUResult result;
 	LOG_IPCP_INFO("Starting Management SDU reader ...");
 	while (true) {
 		try {
-		result = rina::kernelIPCProcess->readManagementSDU(buffer, data->max_sdu_size_);
+			result = rina::kernelIPCProcess->readManagementSDU(buffer,
+									   data->max_sdu_size_);
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Problems reading management SDU: %s", e.what());
 			continue;
 		}
 
-		sdu = new char[result.getBytesRead()];
-		for (int i=0; i<result.getBytesRead(); i++) {
-			sdu[i] = buffer[i];
-		}
+		message.message_ = buffer;
+		message.size_ = result.bytesRead;
 
-		data->rib_daemon_->cdapMessageDelivered(sdu, result.getBytesRead(), result.getPortId());
+		//Instruct CDAP provider to process the CACEP message
+		try{
+			rina::cdap::getProvider()->process_message(message,
+								   result.portId);
+		}catch(rina::WriteSDUException &e){
+			LOG_ERR("Cannot write to flow with port id: %u anymore",
+				result.portId);
+		}
 	}
 
 	delete buffer;
@@ -64,13 +96,179 @@ void * doManagementSDUReaderWork(void* arg)
 	return 0;
 }
 
+class IPCPCDAPIOHandler : public rina::cdap::CDAPIOHandler
+{
+ public:
+	IPCPCDAPIOHandler(){};
+	void send(const rina::cdap::cdap_m_t *m_sent,
+		  unsigned int handle,
+		  bool is_port);
+	void process_message(rina::cdap_rib::ser_obj_t &message,
+			     unsigned int port);
+
+ private:
+        // Lock to control that when sending a message requiring
+	// a reply the CDAP Session manager has been updated before
+	// receiving the response message
+        rina::Lockable atomic_send_lock_;
+};
+
+void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t *m_sent,
+			     unsigned int handle,
+			     bool is_port)
+{
+	//TODO
+}
+
+void IPCPCDAPIOHandler::process_message(rina::cdap_rib::ser_obj_t &message,
+		     	     	        unsigned int port)
+{
+	const rina::cdap::cdap_m_t *m_rcv;
+	rina::ADataObject * adata;
+
+	//1 Decode the message and obtain the CDAP session descriptor
+	atomic_send_lock_.lock();
+	try {
+		m_rcv = manager_->messageReceived(message, port);
+	} catch (rina::Exception &e) {
+		atomic_send_lock_.unlock();
+		LOG_IPCP_ERR("Error decoding CDAP message: %s", e.what());
+		return;
+	}
+	atomic_send_lock_.unlock();
+
+	//2 If it is an A-Data PDU extract the real message
+	if (m_rcv->obj_name_ == rina::ADataObject::A_DATA_OBJECT_NAME) {
+		try {
+			adata = (rina::ADataObject *) ipcp->encoder_->decode(cdapMessage);
+			if (!adata) {
+				delete cdapMessage;
+				atomic_send_lock_.unlock();
+				return;
+			}
+
+			aDataCDAPMessage = cdap_session_manager_->decodeCDAPMessage(*adata->encoded_cdap_message_);
+
+			if (aDataCDAPMessage->invoke_id_ != 0) {
+				if (aDataCDAPMessage->is_request_message()) {
+					cdap_session_manager_->get_invoke_id_manager()->reserveInvokeId(aDataCDAPMessage->invoke_id_,
+							false);
+				} else {
+					cdap_session_manager_->get_invoke_id_manager()->freeInvokeId(aDataCDAPMessage->invoke_id_,
+							false);
+				}
+			}
+
+			descriptor = new rina::CDAPSessionDescriptor();
+
+			LOG_IPCP_DBG("Received A-Data CDAP message from address %u : %s", adata->source_address_,
+					aDataCDAPMessage->to_string().c_str());
+
+			atomic_send_lock_.unlock();
+			processIncomingCDAPMessage(aDataCDAPMessage,
+					descriptor,
+					rina::CDAPSessionInterface::SESSION_STATE_CON);
+			delete aDataCDAPMessage;
+			delete adata;
+			delete descriptor;
+			delete cdapMessage;
+			return;
+		} catch (rina::Exception &e) {
+			atomic_send_lock_.unlock();
+			LOG_IPCP_ERR("Error processing A-data message: %s", e.what());
+			return;
+		}
+	}
+
+
+	    const rina::CDAPMessage * aDataCDAPMessage;
+	    const rina::CDAPSessionInterface * cdapSession;
+	    rina::CDAPSessionDescriptor * descriptor;
+
+
+
+	    cdapSession = cdap_session_manager_->get_cdap_session(portId);
+	    if (!cdapSession) {
+	            atomic_send_lock_.unlock();
+	            LOG_IPCP_ERR("Could not find open CDAP session related to portId %d", portId);
+	            delete cdapMessage;
+	            return;
+	    }
+
+	    descriptor = cdapSession->get_session_descriptor();
+	    LOG_IPCP_DBG("Received CDAP message through portId %d: %s", portId,
+	                    cdapMessage->to_string().c_str());
+	    atomic_send_lock_.unlock();
+
+	    processIncomingCDAPMessage(cdapMessage, descriptor,
+			    	       cdapSession->get_session_state());
+
+	    //Check if CDAP session has been closed due to the message received
+	    if (cdapSession->is_closed()) {
+		    cdap_session_manager_->removeCDAPSession(portId);
+	    }
+
+	    delete cdapMessage;
+}
+
 ///Class RIBDaemon
-IPCPRIBDaemonImpl::IPCPRIBDaemonImpl()
+IPCPRIBDaemonImpl::IPCPRIBDaemonImpl(rina::cacep::AppConHandlerInterface *app_con_callback)
 {
 	management_sdu_reader_ = 0;
 	n_minus_one_flow_manager_ = 0;
 	wmpi = rina::WireMessageProviderFactory().createWireMessageProvider();
+	initialize_rib_daemon(app_con_callback);
+}
 
+void IPCPRIBDaemonImpl::initialize_rib_daemon(rina::cacep::AppConHandlerInterface *app_con_callback)
+{
+	rina::cdap_rib::cdap_params params;
+	rina::cdap_rib::vers_info_t vers;
+	rina::rib::RIBObj* robj;
+
+	//Initialize the RIB library and cdap
+	params.is_IPCP_ = true;
+	rina::rib::init(app_con_callback, 0, params);
+	rina::cdap::set_cdap_io_handler(new IPCPCDAPIOHandler());
+
+	//Create schema
+	vers.version_ = 0x1ULL;
+	ribd = rina::rib::RIBDaemonProxyFactory();
+	ribd->createSchema(vers);
+	//TODO create callbacks
+
+	//Create RIB
+	rib = ribd->createRIB(vers);
+
+	//TODO populate RIB with some objects
+	try {
+		robj = new rina::rib::RIBObj("DIFManagement");
+		ribd->addObjRIB(rib, "/difmanagement", &robj);
+
+		robj = new rina::rib::RIBObj("DataTransfer");
+		ribd->addObjRIB(rib, "/dt", &robj);
+
+		robj = new rina::rib::RIBObj("FlowAllocator");
+		ribd->addObjRIB(rib, "/fa", &robj);
+
+		robj = new rina::rib::RIBObj("IPCManagement");
+		ribd->addObjRIB(rib, "/ipcmanagement", &robj);
+
+		robj = new rina::rib::RIBObj("ResourceAllocator");
+		ribd->addObjRIB(rib, "/resalloc", &robj);
+
+		robj = new rina::rib::RIBObj("RIBDaemon");
+		ribd->addObjRIB(rib, "/ribdaemon", &robj);
+
+		robj = new rina::rib::RIBObj("RMT");
+		ribd->addObjRIB(rib, "/rmt", &robj);
+
+		robj = new rina::rib::RIBObj("SDUDelimiting");
+		ribd->addObjRIB(rib, "/sdudel", &robj);
+	} catch (rina::Exception &e1) {
+		LOG_ERR("RIB basic objects were not created because %s",
+				e1.what());
+	}
 }
 
 void IPCPRIBDaemonImpl::set_application_process(rina::ApplicationProcess * ap)
@@ -78,15 +276,13 @@ void IPCPRIBDaemonImpl::set_application_process(rina::ApplicationProcess * ap)
 	if (!ap)
 		return;
 
-	app = ap;
-	ipcp = dynamic_cast<IPCProcess*>(app);
+	ipcp = dynamic_cast<IPCProcess*>(ap);
 	if (!ipcp) {
 		LOG_IPCP_ERR("Bogus instance of IPCP passed, return");
 		return;
 	}
 
-        initialize(EncoderConstants::SEPARATOR, ipcp->encoder_,
-                        ipcp->cdap_session_manager_, ipcp->enrollment_task_);
+
         n_minus_one_flow_manager_ = ipcp->resource_allocator_->get_n_minus_one_flow_manager();
 
         subscribeToEvents();

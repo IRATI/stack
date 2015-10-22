@@ -24,7 +24,7 @@
 
 #ifdef __cplusplus
 
-#include "librina/rib.h"
+#include "common.h"
 
 namespace rina {
 
@@ -33,7 +33,7 @@ namespace rina {
  */
 class AssignToDIFException: public IPCException {
 public:
-        AssignToDIFException():
+        AssignToDIFException() :
                 IPCException("Problems assigning IPC Process to DIF"){
         }
         AssignToDIFException(const std::string& description):
@@ -192,13 +192,13 @@ public:
 class FwdCDAPMsgEvent: public IPCEvent {
 public:
 	/** The serialized CDAP message to be forwarded */
-	SerializedObject sermsg;
+	ser_obj_t sermsg;
 
 	/** Result of the forwarding operation, used only
 	 * in the direction IPC Process --> IPC Manager. */
 	int result;
 
-	FwdCDAPMsgEvent(const SerializedObject& sm, int result,
+	FwdCDAPMsgEvent(const ser_obj_t& sm, int result,
 			unsigned int sequenceNumber);
 };
 

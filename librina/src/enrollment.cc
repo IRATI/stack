@@ -29,43 +29,89 @@
 namespace rina {
 
 // Class Neighbor RIB object
-NeighborRIBObject::NeighborRIBObject(IRIBDaemon * rib_daemon,
-		const std::string& object_class, const std::string& object_name,
-		const rina::Neighbor* neighbor) :
-				SimpleSetMemberRIBObject(rib_daemon, object_class,
-						object_name, neighbor)
-{
-};
+const std::string NeighborRIBObj::class_name = "Neighbor";
+const std::string NeighborRIBObj::object_name_prefix = "/difmanagement/enrollment/neighbors/processName=";
+const std::string NeighborRIBObj::parent_class_name = "Neighbors";
+const std::string NeighborRIBObj::parent_object_name = "/difmanagement/enrollment/neighbors";
 
-std::string NeighborRIBObject::get_displayable_value() {
-    const rina::Neighbor * nei = (const rina::Neighbor *) get_value();
+NeighborRIBObj::NeighborRIBObj(ApplicationProcess * app,
+			      rib::RIBDaemonProxy * rib_daemon,
+			      rib::rib_handle_t rib_handle,
+			      const Neighbor* neigh) : rib::RIBObj(class_name)
+{
+	neighbor = neigh;
+	app_ = app;
+	ribd = rib_daemon;
+	rib = rib_handle;
+}
+
+const std::string NeighborRIBObj::get_displayable_value() const
+{
     std::stringstream ss;
-    ss << "Name: " << nei->name_.getEncodedString();
-    ss << "; Address: " << nei->address_;
-    ss << "; Enrolled: " << nei->enrolled_ << std::endl;
-    ss << "; Supporting DIF Name: " << nei->supporting_dif_name_.processName;
-    ss << "; Underlying port-id: " << nei->underlying_port_id_;
-    ss << "; Number of enroll. attempts: " << nei->number_of_enrollment_attempts_;
+    ss << "Name: " << neighbor->name_.getEncodedString();
+    ss << "; Address: " << neighbor->address_;
+    ss << "; Enrolled: " << neighbor->enrolled_ << std::endl;
+    ss << "; Supporting DIF Name: " << neighbor->supporting_dif_name_.processName;
+    ss << "; Underlying port-id: " << neighbor->underlying_port_id_;
+    ss << "; Number of enroll. attempts: " << neighbor->number_of_enrollment_attempts_;
 
     return ss.str();
 }
 
-// Class Neighbor Set RIB Object
-const std::string NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_CLASS = "neighbor set";
-const std::string NeighborSetRIBObject::NEIGHBOR_RIB_OBJECT_CLASS = "neighbor";
-const std::string NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_NAME =
-		RIBNamingConstants::SEPARATOR + RIBNamingConstants::DAF + RIBNamingConstants::SEPARATOR +
-		RIBNamingConstants::MANAGEMENT + RIBNamingConstants::SEPARATOR + RIBNamingConstants::NEIGHBORS;
+void NeighborRIBObj::create_cb(const rib::rib_handle_t rib,
+			       const cdap_rib::con_handle_t &con,
+			       const std::string& fqn,
+			       const std::string& class_,
+			       const cdap_rib::filt_info_t &filt,
+			       const int invoke_id,
+			       const ser_obj_t &obj_req,
+			       ser_obj_t &obj_reply,
+			       cdap_rib::res_info_t& res)
+{
+	rina::ScopedLock g(lock_);
+	rina::Neighbor * neighbor;
+	res.code_ = cdap_rib::CDAP_SUCCESS;
 
-NeighborSetRIBObject::NeighborSetRIBObject(ApplicationProcess * app, IRIBDaemon * rib_daemon) :
-	BaseRIBObject(rib_daemon, NEIGHBOR_SET_RIB_OBJECT_CLASS,
-			objectInstanceGenerator->getObjectInstance(),
-			NEIGHBOR_SET_RIB_OBJECT_NAME){
-	app_ = app;
-}
+	//TODO 1 decode neighbor from ser_obj_t
 
-const void* NeighborSetRIBObject::get_value() const {
-	return 0;
+	//2 If neighbor is already in RIB, exit
+	if (ribd->containsObj(rib, fqn))
+		return;
+
+	//3 Avoid creating myself as a neighbor
+	if (neighbor->name_.processName.compare(app_->get_name()) == 0)
+		return;
+
+	//4 Only create neighbours with whom I have an N-1 DIF in common
+	std::list<rina::ApplicationProcessNamingInformation>::const_iterator it;
+	IPCResourceManager * irm =
+			dynamic_cast<IPCResourceManager*>(app_->get_ipc_resource_manager());
+	bool supportingDifInCommon = false;
+	for(it = neighbor->supporting_difs_.begin(); it != neighbor->supporting_difs_.end(); ++it) {
+		if (irm->isSupportingDIF((*it))) {
+			neighbor->supporting_dif_name_ = (*it);
+			supportingDifInCommon = true;
+			break;
+		}
+	}
+
+	if (!supportingDifInCommon) {
+		LOG_INFO("Ignoring neighbor %s because we don't have an N-1 DIF in common",
+				neighbor->name_.processName.c_str());
+		return;
+	}
+
+	//5 Create object
+	try {
+		std::stringstream ss;
+		ss << NeighborRIBObj::object_name_prefix << neighbor->name_.processName;
+
+		NeighborRIBObj * nrobj = new NeighborRIBObj(app_, ribd, rib, neighbor);
+		ribd->addObjRIB(rib, ss.str(), &nrobj);
+	} catch (Exception &e) {
+		res.code_ = cdap_rib::CDAP_ERROR;
+		LOG_ERR("Problems creating RIB object: %s", e.what());
+	}
 }
 
 void NeighborSetRIBObject::remoteCreateObject(void * object_value, const std::string& object_name,
@@ -107,22 +153,7 @@ void NeighborSetRIBObject::remoteCreateObject(void * object_value, const std::st
 	}
 }
 
-void NeighborSetRIBObject::populateNeighborsToCreateList(rina::Neighbor* neighbor,
-		std::list<rina::Neighbor *> * list) {
-	const rina::Neighbor * candidate;
-	std::list<BaseRIBObject*>::const_iterator it;
-	bool found = false;
 
-	for(it = get_children().begin(); it != get_children().end(); ++it) {
-		candidate = (const rina::Neighbor *) (*it)->get_value();
-		if (candidate->get_name().processName.compare(neighbor->name_.processName) == 0)
-			found = true;
-	}
-	if (!found)
-		list->push_back(neighbor);
-	else
-		delete neighbor;
-}
 
 void NeighborSetRIBObject::createObject(const std::string& objectClass,
 			const std::string& objectName,

@@ -24,9 +24,9 @@
 #ifndef CDAP_PROVIDER_H_
 #define CDAP_PROVIDER_H_
 #include <string>
+
 #include <librina/concurrency.h>
 #include "cdap_rib_structures.h"
-#include "cdap.h"
 
 namespace rina {
 namespace cdap {
@@ -47,6 +47,20 @@ public:
 private:
 	/// Operation result code
 	ErrorCode result_;
+};
+
+/// Encapsulates the data of an AuthValue
+class AuthPolicy {
+public:
+	AuthPolicy() { };
+	std::string to_string() const;
+
+	/// Authentication policy name
+	std::string name_;
+	/// Supported versions of the policy
+	std::list<std::string> versions_;
+	/// Policy specific information, encoded as a byte array
+	ser_obj_t options_;
 };
 
 class CDAPCallbackInterface
@@ -285,7 +299,7 @@ public:
 	///
 	/// Process an incoming CDAP message
 	///
-	virtual void process_message(cdap_rib::ser_obj_t &message,
+	virtual void process_message(ser_obj_t &message,
 				     unsigned int port) = 0;
 
 	virtual void set_cdap_io_handler(CDAPIOHandler * handler) = 0;
@@ -317,15 +331,13 @@ class CDAPSessionManagerInterface
 	virtual CDAPSession* createCDAPSession(int port_id) = 0;
 	virtual void getAllCDAPSessionIds(std::vector<int> &vector) = 0;
 	virtual CDAPSession* get_cdap_session(int port_id) = 0;
-	virtual const cdap_rib::ser_obj_t*
-		encodeCDAPMessage(const cdap_m_t &cdap_message) = 0;
-	virtual const cdap_m_t*
-		decodeCDAPMessage(const cdap_rib::ser_obj_t &cdap_message) = 0;
+	virtual const ser_obj_t* encodeCDAPMessage(const cdap_m_t &cdap_message) = 0;
+	virtual const cdap_m_t* decodeCDAPMessage(const ser_obj_t &cdap_message) = 0;
 	virtual void removeCDAPSession(int portId) = 0;
-	virtual const cdap_rib::ser_obj_t*
-		encodeNextMessageToBeSent(const cdap_m_t &cdap_message, int port_id) = 0;
-	virtual const cdap_m_t* messageReceived(const cdap_rib::ser_obj_t
-						&encodedcdap_m_t, int portId) = 0;
+	virtual const ser_obj_t* encodeNextMessageToBeSent(const cdap_m_t &cdap_message,
+							   int port_id) = 0;
+	virtual const cdap_m_t* messageReceived(const ser_obj_t &encodedcdap_m_t,
+						int portId) = 0;
 	virtual void messageSent(const cdap_m_t &cdap_message, int port_id) = 0;
 	virtual int get_port_id(std::string destination_application_process_name) = 0;
 	virtual cdap_m_t*
@@ -403,7 +415,7 @@ class CDAPIOHandler {
 public:
 	CDAPIOHandler() : manager_(0), callback_(0) {};
 	virtual ~CDAPIOHandler(){};
-	virtual void process_message(cdap_rib::ser_obj_t &message,
+	virtual void process_message(ser_obj_t &message,
 				     unsigned int port) = 0;
 	virtual void send(const cdap_m_t *m_sent,
 			  unsigned int handle,
@@ -443,7 +455,7 @@ public:
 	int abs_syntax_;
 
 	/// Authentication Policy information
-	rina::AuthPolicy auth_policy_;
+	AuthPolicy auth_policy_;
 
 	/// DestinationApplication-Entity-Instance-Id (string), optional, not validated by CDAP.
 	/// Specific instance of the Application Entity that the source application
@@ -496,7 +508,7 @@ public:
 	std::string obj_name_;
 
 	/// ObjectValueInterface (ObjectValueInterface). The value of the object.
-	cdap_rib::ser_obj_t obj_value_;
+	ser_obj_t obj_value_;
 
 	/// Opcode (enum, int32), mandatory.
 	/// Message type of this message.
@@ -558,14 +570,12 @@ public:
 	/// @param message
 	/// @return
 	/// @throws CDAPException
-	virtual const cdap_m_t* deserializeMessage(
-			const cdap_rib::ser_obj_t &message) = 0;
+	virtual const cdap_m_t* deserializeMessage(const ser_obj_t &message) = 0;
 	/// Convert from CDAP messages to wire format
 	/// @param cdapMessage
 	/// @return
 	/// @throws CDAPException
-	virtual const cdap_rib::ser_obj_t* serializeMessage(
-			const cdap_m_t &cdapMessage) = 0;
+	virtual const ser_obj_t* serializeMessage(const cdap_m_t &cdapMessage) = 0;
 };
 
 ///
@@ -596,6 +606,34 @@ extern void fini(void);
 
 //TODO remove
 extern void destroy(int port);
+
+template<class T>
+class Encoder{
+public:
+	virtual ~Encoder(){}
+	/// Converts an object to a byte array, if this object is recognized by the encoder
+	/// @param object
+	/// @throws exception if the object is not recognized by the encoder
+	/// @return
+	virtual void encode(const T &obj, ser_obj_t& serobj) = 0;
+	/// Converts a byte array to an object of the type specified by "className"
+	/// @param byte[] serializedObject
+	/// @param objectClass The type of object to be decoded
+	/// @throws exception if the byte array is not an encoded in a way that the
+	/// encoder can recognize, or the byte array value doesn't correspond to an
+	/// object of the type "className"
+	/// @return
+	virtual void decode(const ser_obj_t &serobj,T &des_obj) = 0;
+};
+
+/// String encoder
+class StringEncoder : public Encoder<std::string>{
+public:
+	void encode(const std::string &obj, ser_obj_t& serobj);
+	void decode(const ser_obj_t &serobj, std::string &des_obj);
+
+	std::string get_type() const { return "string"; };
+};
 
 
 } //namespace cdap
