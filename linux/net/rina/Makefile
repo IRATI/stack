@@ -11,7 +11,7 @@ obj-$(CONFIG_RINA) +=				\
 	rds/					\
 	core.o personality.o			\
 	rnl-utils.o rnl-workarounds.o rnl.o	\
-	buffer.o qos.o pci.o pdu.o sdu.o du.o	\
+	buffer.o pci.o pdu.o sdu.o du.o	        \
 	serdes.o pdu-ser.o du-protection.o	\
 	ipcp-utils.o				\
 	connection.o common.o policies.o	\

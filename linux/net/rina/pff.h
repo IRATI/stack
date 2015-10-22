@@ -23,7 +23,6 @@
 #define RINA_PFF_H
 
 #include "common.h"
-#include "qos.h"
 #include "ps-factory.h"
 
 struct pff;

@@ -25,7 +25,6 @@
 #include <linux/types.h>
 
 #include "common.h"
-#include "qos.h"
 #include "buffer.h"
 #include "sdu.h"
 #include "pci.h"
