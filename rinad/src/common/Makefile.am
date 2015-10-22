@@ -22,8 +22,7 @@ librinad_la_CPPFLAGS =				\
 	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)			\
 	$(LIBPROTOBUF_CFLAGS)			\
-	-I$(srcdir)/tclap			\
-	-I$(srcdir)/..
+	-I$(srcdir)/tclap			
 librinad_la_LIBADD   =				\
 	$(LIBRINA_LIBS)				\
 	$(LIBPROTOBUF_LIBS)			\

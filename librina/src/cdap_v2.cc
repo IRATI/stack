@@ -34,6 +34,24 @@
 namespace rina {
 namespace cdap {
 
+// CLASS CDAPException
+CDAPException::CDAPException() :
+Exception("CDAP message caused an Exception") {
+	result_ = OTHER;
+}
+
+CDAPException::CDAPException(std::string result_reason) :
+Exception(result_reason.c_str()) {
+	result_ = OTHER;
+}
+CDAPException::CDAPException(ErrorCode result, std::string error_message) :
+Exception(error_message.c_str()) {
+	result_ = result;
+}
+CDAPException::ErrorCode CDAPException::get_result() const {
+	return result_;
+}
+
 // STRUCT CDAPMessage
 CDAPMessage::CDAPMessage()
 {
@@ -134,19 +152,19 @@ class ConnectionStateMachine : public rina::Lockable
 	~ConnectionStateMachine() throw ();
 	bool is_connected() const;
 	/// Checks if a the CDAP connection can be opened (i.e. an M_CONNECT message can be sent)
-	/// @throws rina::CDAPException
+	/// @throws CDAPException
 	void checkConnect();
 	void connectSentOrReceived(bool sent);
 	/// Checks if the CDAP M_CONNECT_R message can be sent
-	/// @throws rina::CDAPException
+	/// @throws CDAPException
 	void checkConnectResponse();
 	void connectResponseSentOrReceived(bool sent);
 	/// Checks if the CDAP M_RELEASE message can be sent
-	/// @throws rina::CDAPException
+	/// @throws CDAPException
 	void checkRelease();
 	void releaseSentOrReceived(const cdap_m_t &cdap_message, bool sent);
 	/// Checks if the CDAP M_RELEASE_R message can be sent
-	/// @throws rina::CDAPException
+	/// @throws CDAPException
 	void checkReleaseResponse();
 	void releaseResponseSentOrReceived(bool sent);
  private:
@@ -160,28 +178,28 @@ class ConnectionStateMachine : public rina::Lockable
 	void resetConnection();
 	void noConnectionResponse();
 	/// The AE has sent an M_CONNECT message
-	/// @throws rina::CDAPException
+	/// @throws CDAPException
 	void connect();
 	/// An M_CONNECT message has been received, update the state
 	/// @param message
 	void connectReceived();
 	/// The AE has sent an M_CONNECT_R  message
 	/// @param openConnectionResponseMessage
-	/// @throws rina::CDAPException
+	/// @throws CDAPException
 	void connectResponse();
 	/// An M_CONNECT_R message has been received
 	/// @param message
 	void connectResponseReceived();
 	/// The AE has sent an M_RELEASE message
 	/// @param releaseConnectionRequestMessage
-	/// @throws rina::CDAPException
+	/// @throws CDAPException
 	void release(const cdap_m_t &cdap_m_t);
 	/// An M_RELEASE message has been received
 	/// @param message
 	void releaseReceived(const cdap_m_t &message);
 	/// The AE has called the close response operation
 	/// @param releaseConnectionRequestMessage
-	/// @throws rina::CDAPException
+	/// @throws CDAPException
 	void releaseResponse();
 	/// An M_RELEASE_R message has been received
 	/// @param message
@@ -421,9 +439,8 @@ class CDAPSessionManager
 	void removeCDAPSession(int portId);
 	const cdap_rib::ser_obj_t* encodeNextMessageToBeSent(
 			const cdap_m_t &cdap_message, int port_id);
-	const cdap_m_t* messageReceived(
-			const cdap_rib::ser_obj_t &encodedcdap_m_t,
-			int portId);
+	const cdap_m_t* messageReceived (const cdap_rib::ser_obj_t 
+		&encodedcdap_m_t, int portId);
 	void messageSent(const cdap_m_t &cdap_message, int port_id);
 	int get_port_id(std::string destination_application_process_name);
 	cdap_m_t* getOpenConnectionRequestMessage(
@@ -584,8 +601,8 @@ class CDAPProvider : public CDAPProviderInterface
 
 	// Process and incoming CDAP message
 
-	void process_message(cdap_rib::ser_obj_t &message,
-			     unsigned int port);
+	void process_message (cdap_rib::ser_obj_t &message,
+		unsigned int port);
  protected:
 	CDAPSessionManager *manager_;
 	cdap::CDAPCallbackInterface *callback_;
@@ -1014,7 +1031,7 @@ void ConnectionStateMachine::checkConnect()
 		   << "this CDAP session is currently in " << connection_state_
 		   << " state";
 		unlock();
-		throw rina::CDAPException(ss.str());
+		throw CDAPException(ss.str());
 	}
 	unlock();
 }
@@ -1034,7 +1051,7 @@ void ConnectionStateMachine::checkConnectResponse()
 		ss << "Cannot send a connection response because this CDAP session is currently in "
 		   << connection_state_ << " state";
 		unlock();
-		throw rina::CDAPException(ss.str());
+		throw CDAPException(ss.str());
 	}
 	unlock();
 }
@@ -1055,7 +1072,7 @@ void ConnectionStateMachine::checkRelease()
 		   << "this CDAP session is " << "currently in "
 		   << connection_state_ << " state";
 		unlock();
-		throw rina::CDAPException(ss.str());
+		throw CDAPException(ss.str());
 	}
 	unlock();
 }
@@ -1076,7 +1093,7 @@ void ConnectionStateMachine::checkReleaseResponse()
 		ss << "Cannot send a release connection response message because this CDAP session is currently in "
 		   << connection_state_ << " state";
 		unlock();
-		throw rina::CDAPException(ss.str());
+		throw CDAPException(ss.str());
 	}
 	unlock();
 }
@@ -1115,7 +1132,7 @@ void ConnectionStateMachine::connectReceived()
 		ss << "Cannot open a new connection because this CDAP session is currently in"
 		   << connection_state_ << " state";
 		unlock();
-		throw rina::CDAPException(ss.str());
+		throw CDAPException(ss.str());
 	}
 	connection_state_ = AWAITCON;
 	unlock();
@@ -1135,7 +1152,7 @@ void ConnectionStateMachine::connectResponseReceived()
 		ss << "Received an M_CONNECT_R message, but this CDAP session is currently in "
 		   << connection_state_ << " state";
 		unlock();
-		throw rina::CDAPException(ss.str());
+		throw CDAPException(ss.str());
 	}
 	LOG_DBG("Connection response received");
 	delete open_timer_;
@@ -1167,7 +1184,7 @@ void ConnectionStateMachine::releaseReceived(const cdap_m_t &message)
 		ss << "Cannot close the connection because this CDAP session is currently in "
 		   << connection_state_ << " state";
 		unlock();
-		throw rina::CDAPException(ss.str());
+		throw CDAPException(ss.str());
 	}
 	if (message.invoke_id_ != 0 && connection_state_ != AWAITCLOSE) {
 		connection_state_ = AWAITCLOSE;
@@ -1190,7 +1207,7 @@ void ConnectionStateMachine::releaseResponseReceived()
 		std::stringstream ss;
 		ss << "Received an M_RELEASE_R message, but this CDAP session is currently in "
 		   << connection_state_ << " state";
-		throw rina::CDAPException(ss.str());
+		throw CDAPException(ss.str());
 	}
 	LOG_DBG("Release response received");
 	delete close_timer_;
@@ -1263,13 +1280,13 @@ void CDAPMessageValidator::validateAbsSyntax(const cdap_m_t *message)
 	if (message->abs_syntax_ == 0) {
 		if (message->op_code_ == cdap_m_t::M_CONNECT
 				|| message->op_code_ == cdap_m_t::M_CONNECT_R) {
-			throw rina::CDAPException(
+			throw CDAPException(
 					"AbsSyntax must be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	} else {
 		if ((message->op_code_ != cdap_m_t::M_CONNECT)
 				&& (message->op_code_ != cdap_m_t::M_CONNECT_R)) {
-			throw rina::CDAPException(
+			throw CDAPException(
 					"AbsSyntax can only be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	}
@@ -1280,7 +1297,7 @@ void CDAPMessageValidator::validateDestAEInst(const cdap_m_t *message)
 	if (!message->dest_ae_inst_.empty()) {
 		if ((message->op_code_ != cdap_m_t::M_CONNECT)
 				&& (message->op_code_ != cdap_m_t::M_CONNECT_R)) {
-			throw rina::CDAPException(
+			throw CDAPException(
 					"dest_ae_inst can only be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	}
@@ -1291,7 +1308,7 @@ void CDAPMessageValidator::validateDestAEName(const cdap_m_t *message)
 	if (!message->dest_ae_name_.empty()) {
 		if ((message->op_code_ != cdap_m_t::M_CONNECT)
 				&& (message->op_code_ != cdap_m_t::M_CONNECT_R)) {
-			throw rina::CDAPException(
+			throw CDAPException(
 					"DestAEName can only be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	}
@@ -1302,7 +1319,7 @@ void CDAPMessageValidator::validateDestApInst(const cdap_m_t *message)
 	if (!message->dest_ap_inst_.empty()) {
 		if (message->op_code_ != cdap_m_t::M_CONNECT
 				&& message->op_code_ != cdap_m_t::M_CONNECT_R) {
-			throw rina::CDAPException(
+			throw CDAPException(
 					"DestApInst can only be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	}
@@ -1312,7 +1329,7 @@ void CDAPMessageValidator::validateDestApName(const cdap_m_t *message)
 {
 	if (message->dest_ap_name_.empty()) {
 		if (message->op_code_ == cdap_m_t::M_CONNECT) {
-			throw rina::CDAPException(
+			throw CDAPException(
 					"DestApName must be set for the M_CONNECT message");
 		} else if (message->op_code_ == cdap_m_t::M_CONNECT_R) {
 			//TODO not sure what to do
@@ -1320,7 +1337,7 @@ void CDAPMessageValidator::validateDestApName(const cdap_m_t *message)
 	} else {
 		if (message->op_code_ != cdap_m_t::M_CONNECT
 				&& message->op_code_ != cdap_m_t::M_CONNECT_R) {
-			throw rina::CDAPException(
+			throw CDAPException(
 					"DestApName can only be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	}
@@ -1335,7 +1352,7 @@ void CDAPMessageValidator::validateFilter(const cdap_m_t *message)
 				&& message->op_code_ != cdap_m_t::M_WRITE
 				&& message->op_code_ != cdap_m_t::M_START
 				&& message->op_code_ != cdap_m_t::M_STOP) {
-			throw rina::CDAPException(
+			throw CDAPException(
 					"The filter parameter can only be set for M_CREATE, M_DELETE, M_READ, M_WRITE, M_START or M_STOP messages");
 		}
 	}
@@ -1355,7 +1372,7 @@ void CDAPMessageValidator::validateInvokeID(const cdap_m_t *message)
 				|| message->op_code_ == cdap_m_t::M_WRITE_R
 				|| message->op_code_ == cdap_m_t::M_START_R
 				|| message->op_code_ == cdap_m_t::M_STOP_R) {
-			throw rina::CDAPException(
+			throw CDAPException(
 					"The invoke id parameter cannot be 0");
 		}
 	}
@@ -1365,7 +1382,7 @@ void CDAPMessageValidator::validateObjClass(const cdap_m_t *message)
 {
 	if (!message->obj_class_.empty()) {
 		if (message->obj_name_.empty()) {
-			throw rina::CDAPException(
+			throw CDAPException(
 					"If the objClass parameter is set, the objName parameter also has to be set");
 		}
 		if (message->op_code_ != cdap_m_t::M_CREATE
@@ -1380,7 +1397,7 @@ void CDAPMessageValidator::validateObjClass(const cdap_m_t *message)
 				&& message->op_code_ != cdap_m_t::M_STOP
 				&& message->op_code_ != cdap_m_t::M_START_R
 				&& message->op_code_ != cdap_m_t::M_STOP_R) {
-			throw rina::CDAPException(
+			throw CDAPException(
 					"The objClass parameter can only be set for M_CREATE, M_CREATE_R, M_DELETE, M_DELETE_R, M_READ, M_READ_R, M_WRITE, M_WRITE_R, M_START, M_STOP, M_START_R, M_STOP_R messages");
 		}
 	}
@@ -1401,7 +1418,7 @@ void CDAPMessageValidator::validateObjInst(const cdap_m_t *message)
 				&& message->op_code_ != cdap_m_t::M_STOP
 				&& message->op_code_ != cdap_m_t::M_START_R
 				&& message->op_code_ != cdap_m_t::M_STOP_R) {
-			throw rina::CDAPException(
+			throw CDAPException(
 					"The objInst parameter can only be set for M_CREATE, M_CREATE_R, M_DELETE, M_DELETE_R, M_READ, M_READ_R, M_WRITE, M_WRITE_R, M_START, M_START_R, M_STOP and M_STOP_R messages");
 		}
 	}
@@ -1411,7 +1428,7 @@ void CDAPMessageValidator::validateObjName(const cdap_m_t *message)
 {
 	if (!message->obj_name_.empty()) {
 		if (message->obj_class_.empty()) {
-			throw new rina::CDAPException(
+			throw new CDAPException(
 					"If the objName parameter is set, the objClass parameter also has to be set");
 		}
 		if (message->op_code_ != cdap_m_t::M_CREATE
@@ -1426,7 +1443,7 @@ void CDAPMessageValidator::validateObjName(const cdap_m_t *message)
 				&& message->op_code_ != cdap_m_t::M_STOP
 				&& message->op_code_ != cdap_m_t::M_START_R
 				&& message->op_code_ != cdap_m_t::M_STOP_R) {
-			throw rina::CDAPException(
+			throw CDAPException(
 					"The objName parameter can only be set for M_CREATE, M_CREATE_R, M_DELETE, M_DELETE_R, M_READ, M_READ_R, M_WRITE, M_WRITE_R, M_START, M_STOP, M_START_R and M_STOP_R messages");
 		}
 	}
@@ -1436,7 +1453,7 @@ void CDAPMessageValidator::validateObjValue(const cdap_m_t *message)
 {
 	if (message->obj_value_.size_ == 0) {
 		if (message->op_code_ == cdap_m_t::M_WRITE) {
-			throw rina::CDAPException(
+			throw CDAPException(
 					"The objValue parameter must be set for M_WRITE messages");
 		}
 	} else {
@@ -1451,7 +1468,7 @@ void CDAPMessageValidator::validateObjValue(const cdap_m_t *message)
 				&& message->op_code_ != cdap_m_t::M_WRITE_R
 				&& message->op_code_ != cdap_m_t::M_DELETE
 				&& message->op_code_ != cdap_m_t::M_READ) {
-			throw rina::CDAPException(
+			throw CDAPException(
 					"The objValue parameter can only be set for M_CREATE, M_DELETE, M_CREATE_R, M_READ_R, M_WRITE, M_START, M_START_R, M_STOP, M_STOP_R and M_WRITE_R messages");
 		}
 	}
@@ -1460,7 +1477,7 @@ void CDAPMessageValidator::validateObjValue(const cdap_m_t *message)
 void CDAPMessageValidator::validateOpcode(const cdap_m_t *message)
 {
 	if (message->op_code_ == cdap_m_t::NONE_OPCODE) {
-		throw rina::CDAPException(
+		throw CDAPException(
 				"The opcode must be set for all the messages");
 	}
 }
@@ -1483,7 +1500,7 @@ void CDAPMessageValidator::validateResultReason(const cdap_m_t *message)
 				&& message->op_code_ != cdap_m_t::M_CANCELREAD_R
 				&& message->op_code_ != cdap_m_t::M_START_R
 				&& message->op_code_ != cdap_m_t::M_STOP_R) {
-			throw rina::CDAPException(
+			throw CDAPException(
 					"The resultReason parameter can only be set for M_CREATE_R, M_DELETE_R, M_READ_R, M_WRITE_R, M_START_R, M_STOP_R, M_CONNECT_R, M_RELEASE_R, M_CANCELREAD and M_CANCELREAD_R messages");
 		}
 	}
@@ -1498,7 +1515,7 @@ void CDAPMessageValidator::validateScope(const cdap_m_t *message)
 				&& message->op_code_ != cdap_m_t::M_WRITE
 				&& message->op_code_ != cdap_m_t::M_START
 				&& message->op_code_ != cdap_m_t::M_STOP) {
-			throw rina::CDAPException(
+			throw CDAPException(
 					"The scope parameter can only be set for M_CREATE, M_DELETE, M_READ, M_WRITE, M_START or M_STOP messages");
 		}
 	}
@@ -1509,7 +1526,7 @@ void CDAPMessageValidator::validateSrcAEInst(const cdap_m_t *message)
 	if (!message->src_ae_inst_.empty()) {
 		if (message->op_code_ != cdap_m_t::M_CONNECT
 				&& message->op_code_ != cdap_m_t::M_CONNECT_R) {
-			throw rina::CDAPException(
+			throw CDAPException(
 					"SrcAEInst can only be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	}
@@ -1520,7 +1537,7 @@ void CDAPMessageValidator::validateSrcAEName(const cdap_m_t *message)
 	if (!message->src_ae_name_.empty()) {
 		if (message->op_code_ != cdap_m_t::M_CONNECT
 				&& message->op_code_ != cdap_m_t::M_CONNECT_R) {
-			throw rina::CDAPException(
+			throw CDAPException(
 					"SrcAEName can only be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	}
@@ -1531,7 +1548,7 @@ void CDAPMessageValidator::validateSrcApInst(const cdap_m_t *message)
 	if (!message->src_ap_inst_.empty()) {
 		if (message->op_code_ != cdap_m_t::M_CONNECT
 				&& message->op_code_ != cdap_m_t::M_CONNECT_R) {
-			throw rina::CDAPException(
+			throw CDAPException(
 					"SrcApInst can only be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	}
@@ -1541,7 +1558,7 @@ void CDAPMessageValidator::validateSrcApName(const cdap_m_t *message)
 {
 	if (message->src_ap_name_.empty()) {
 		if (message->op_code_ == cdap_m_t::M_CONNECT) {
-			throw rina::CDAPException(
+			throw CDAPException(
 					"SrcApName must be set for the M_CONNECT message");
 		} else if (message->op_code_ == cdap_m_t::M_CONNECT_R) {
 			//TODO not sure what to do
@@ -1549,7 +1566,7 @@ void CDAPMessageValidator::validateSrcApName(const cdap_m_t *message)
 	} else {
 		if (message->op_code_ != cdap_m_t::M_CONNECT
 				&& message->op_code_ != cdap_m_t::M_CONNECT_R) {
-			throw rina::CDAPException(
+			throw CDAPException(
 					"SrcApName can only be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	}
@@ -1560,7 +1577,7 @@ void CDAPMessageValidator::validateVersion(const cdap_m_t *message)
 	if (message->version_ == 0) {
 		if (message->op_code_ == cdap_m_t::M_CONNECT
 				|| message->op_code_ == cdap_m_t::M_CONNECT_R) {
-			throw rina::CDAPException(
+			throw CDAPException(
 					"Version must be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	}
@@ -1690,7 +1707,7 @@ const cdap_rib::ser_obj_t* CDAPSession::encodeNextMessageToBeSent(
 			std::stringstream ss;
 			ss << "Unrecognized operation code: "
 			   << cdap_message.op_code_;
-			throw rina::CDAPException(ss.str());
+			throw CDAPException(ss.str());
 	}
 
 	return serializeMessage(cdap_message);
@@ -1808,7 +1825,7 @@ void CDAPSession::messageSentOrReceived(const cdap_m_t &cdap_message, bool sent)
 			std::stringstream ss;
 			ss << "Unrecognized operation code: "
 			   << cdap_message.op_code_;
-			throw rina::CDAPException(ss.str());
+			throw CDAPException(ss.str());
 	}
 	freeOrReserveInvokeId(cdap_message, sent);
 }
@@ -1847,7 +1864,7 @@ void CDAPSession::freeOrReserveInvokeId(const cdap_m_t &cdap_message, bool sent)
 void CDAPSession::checkIsConnected() const
 {
 	if (!connection_state_machine_->is_connected()) {
-		throw rina::CDAPException(
+		throw CDAPException(
 				"Cannot send a message because the CDAP session is not in CONNECTED state");
 	}
 }
@@ -1864,7 +1881,7 @@ void CDAPSession::checkInvokeIdNotExists(const cdap_m_t &cdap_message,
 			!= pending_messages->end()) {
 		std::stringstream ss;
 		ss << cdap_message.invoke_id_;
-		throw rina::CDAPException(
+		throw CDAPException(
 				"The invokeid " + ss.str() + " already exists");
 	}
 }
@@ -1894,14 +1911,14 @@ void CDAPSession::checkCanSendOrReceiveCancelReadRequest(
 		if (validationFailed) {
 			std::stringstream ss;
 			ss << cdap_message.invoke_id_;
-			throw rina::CDAPException(
+			throw CDAPException(
 					"Cannot set an M_CANCELREAD message because there is no READ transaction associated to the invoke id "
 							+ ss.str());
 		}
 	} else {
 		std::stringstream ss;
 		ss << cdap_message.invoke_id_;
-		throw rina::CDAPException(
+		throw CDAPException(
 				"Cannot set an M_CANCELREAD message because there is no READ transaction associated to the invoke id "
 						+ ss.str());
 	}
@@ -1958,7 +1975,7 @@ void CDAPSession::checkCanSendOrReceiveResponse(const cdap_m_t &cdap_message,
 		   << " operation with invokeId " << cdap_message.invoke_id_
 		   << std::endl;
 		ss << "There are " << pending_messages->size() << " entries";
-		throw rina::CDAPException(ss.str());
+		throw CDAPException(ss.str());
 	}
 	CDAPOperationState* state = iterator->second;
 	if (state->get_op_code() != op_code) {
@@ -1974,7 +1991,7 @@ void CDAPSession::checkCanSendOrReceiveResponse(const cdap_m_t &cdap_message,
 		std::stringstream ss;
 		ss << "Cannot send a response for the " << op_code
 		   << " operation with invokeId " << cdap_message.invoke_id_;
-		throw rina::CDAPException(ss.str());
+		throw CDAPException(ss.str());
 	}
 }
 void CDAPSession::checkCanSendOrReceiveCancelReadResponse(
@@ -1988,7 +2005,7 @@ void CDAPSession::checkCanSendOrReceiveCancelReadResponse(
 		ss << "Cannot send a response for the "
 		   << cdap_m_t::M_CANCELREAD << " operation with invokeId "
 		   << cdap_message.invoke_id_;
-		throw rina::CDAPException(ss.str());
+		throw CDAPException(ss.str());
 	}
 	CDAPOperationState *state = cancel_read_pending_messages_.find(
 			cdap_message.invoke_id_)->second;
@@ -2006,7 +2023,7 @@ void CDAPSession::checkCanSendOrReceiveCancelReadResponse(
 		ss << "Cannot send a response for the "
 		   << cdap_m_t::M_CANCELREAD << " operation with invokeId "
 		   << cdap_message.invoke_id_;
-		throw rina::CDAPException(ss.str());
+		throw CDAPException(ss.str());
 	}
 }
 void CDAPSession::responseMessageSentOrReceived(const cdap_m_t &cdap_message,
@@ -2104,7 +2121,7 @@ void CDAPSession::emptySessionDescriptor()
 // CLASS CDAPSessionManager
 CDAPSessionManager::CDAPSessionManager()
 {
-	throw rina::CDAPException(
+	throw CDAPException(
 			"Not allowed default constructor of CDAPSessionManager has been called.");
 }
 
@@ -2206,7 +2223,7 @@ const cdap_rib::ser_obj_t* CDAPSessionManager::encodeNextMessageToBeSent(
 			std::stringstream ss;
 			ss << "There are no open CDAP sessions associated to the flow identified by "
 			   << port_id << " right now";
-			throw rina::CDAPException(ss.str());
+			throw CDAPException(ss.str());
 		}
 	} else {
 		cdap_session = it->second;
@@ -2214,9 +2231,8 @@ const cdap_rib::ser_obj_t* CDAPSessionManager::encodeNextMessageToBeSent(
 
 	return cdap_session->encodeNextMessageToBeSent(cdap_message);
 }
-const cdap_m_t* CDAPSessionManager::messageReceived(
-		const cdap_rib::ser_obj_t &encoded_cdap_message,
-		int port_id)
+const cdap_m_t* CDAPSessionManager::messageReceived (const cdap_rib::ser_obj_t
+	&encoded_cdap_message, int port_id)
 {
 	const CDAPMessage *cdap_message = decodeCDAPMessage(
 			encoded_cdap_message);
@@ -2232,7 +2248,7 @@ const cdap_m_t* CDAPSessionManager::messageReceived(
 				std::stringstream ss;
 				ss << "M_CONNECT received on an already open CDAP Session, over flow "
 				   << port_id;
-				throw rina::CDAPException(ss.str());
+				throw CDAPException(ss.str());
 			}
 			break;
 		default:
@@ -2244,7 +2260,7 @@ const cdap_m_t* CDAPSessionManager::messageReceived(
 				   << cdap_message->op_code_
 				   << " CDAP message on a CDAP session that is not open, over flow "
 				   << port_id;
-				throw rina::CDAPException(ss.str());
+				throw CDAPException(ss.str());
 			}
 			break;
 	}
@@ -2262,7 +2278,7 @@ void CDAPSessionManager::messageSent(const CDAPMessage &cdap_message,
 		std::stringstream ss;
 		ss << "There are no open CDAP sessions associated to the flow identified by "
 		   << port_id << " right now";
-		throw rina::CDAPException(ss.str());
+		throw CDAPException(ss.str());
 	}
 	cdap_session->messageSent(cdap_message);
 }
@@ -2281,7 +2297,7 @@ int CDAPSessionManager::get_port_id(
 	std::stringstream ss;
 	ss << "Don't have a running CDAP sesion to "
 	   << destination_application_process_name;
-	throw rina::CDAPException(ss.str());
+	throw CDAPException(ss.str());
 }
 
 cdap_m_t* CDAPSessionManager::getOpenConnectionRequestMessage(

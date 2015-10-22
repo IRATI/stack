@@ -359,7 +359,7 @@ std::list<rina::RoutingTableEntry *> DijkstraAlgorithm::computeRoutingTable(
 				entry = new rina::RoutingTableEntry();
 				entry->address = (*it);
 				entry->nextHopAddresses.push_back(rina::NHopAltList(nextHop));
-				entry->qosId = 1;
+				entry->qosId = 0;
 				entry->cost = 1;
 				result.push_back(entry);
 				LOG_IPCP_DBG("Added entry to routing table: destination %u, next-hop %u",

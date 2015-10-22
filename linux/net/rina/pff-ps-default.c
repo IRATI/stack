@@ -258,7 +258,7 @@ static struct pft_entry * pft_find(struct pff_ps_priv * priv,
 
         list_for_each_entry(pos, &priv->entries, next) {
                 if ((pos->destination == destination) &&
-                    (pos->qos_id      == qos_id)) {
+                    ((pos->qos_id == 0) || (pos->qos_id == qos_id))) {
                         return pos;
                 }
         }

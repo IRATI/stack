@@ -31,9 +31,23 @@
 namespace rina {
 namespace cdap {
 
-///
-/// TODO 
-///
+/// Exception produced in the CDAP
+class CDAPMessage;
+class CDAPException: public Exception {
+public:
+	enum ErrorCode {
+		RELEASE_CONNECITON,
+		OTHER
+	};
+	CDAPException();
+	CDAPException(std::string result_reason);
+	CDAPException(ErrorCode result, std::string error_message);
+	virtual ~CDAPException() throw () {};
+	ErrorCode get_result() const;
+private:
+	/// Operation result code
+	ErrorCode result_;
+};
 
 class CDAPCallbackInterface
 {
@@ -254,8 +268,8 @@ public:
 	///
 	/// Process an incoming CDAP message
 	///
-	virtual void process_message(cdap_rib::ser_obj_t &message,
-				unsigned int port) = 0;
+	virtual void process_message (cdap_rib::ser_obj_t &message,
+		unsigned int port) = 0;
 
 	virtual void destroy_session(int port){ (void)port; /*FIXME*/ };
 
