@@ -28,9 +28,11 @@
 
 #include <map>
 
+#include "common.h"
 #include "librina/concurrency.h"
 #include "librina/configuration.h"
 #include "librina/ipc-daemons.h"
+#include "librina/rib_v2.h"
 
 namespace rina {
 
@@ -573,7 +575,7 @@ public:
 	 * @throws ForwardCDAPException if an error happens during
          *         the process
 	 */
-	void forwardCDAPMessage(const SerializedObject& sermsg,
+	void forwardCDAPMessage(const ser_obj_t& sermsg,
 				unsigned int opaque);
 };
 
@@ -766,13 +768,13 @@ public:
  */
 class QueryRIBResponseEvent: public BaseResponseEvent {
 public:
-        std::list<RIBObjectData> ribObjects;
+        std::list<rib::RIBObjectData> ribObjects;
 
-        QueryRIBResponseEvent(const std::list<RIBObjectData>& ribObjects,
+        QueryRIBResponseEvent(const std::list<rib::RIBObjectData>& ribObjects,
                         int result,
                         unsigned int sequenceNumber);
 #ifndef SWIG
-        const std::list<RIBObjectData>& getRIBObject() const;
+        const std::list<rib::RIBObjectData>& getRIBObject() const;
 #endif
 };
 

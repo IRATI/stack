@@ -609,34 +609,50 @@ public:
         bool operator!=(const Parameter &other) const;
 };
 
-class SerializedObject {
-public:
-        SerializedObject();
-        SerializedObject( const SerializedObject& other );
-        SerializedObject(char* message, int size);
-        ~SerializedObject();
-        SerializedObject& operator=(const SerializedObject &other);
-	bool empty() const { return message_ == 0; }
-        int size_;
-        char* message_;
-
-private:
-        void initialize(const SerializedObject& other );
-};
+typedef struct{
+	int size_;
+	void* message_;
+} ser_obj_t;
 
 struct UcharArray {
 	UcharArray();
 	UcharArray(int arrayLength);
-	UcharArray(const SerializedObject * sobj);
+	UcharArray(const ser_obj_t * sobj);
 	~UcharArray();
 	UcharArray& operator=(const UcharArray &other);
 	bool operator==(const UcharArray &other) const;
 	bool operator!=(const UcharArray &other) const;
 	std::string toString();
-	SerializedObject * get_seralized_object();
+	ser_obj_t * get_seralized_object();
 
 	unsigned char * data;
 	int length;
+};
+
+///Object exchanged between applications processes that
+///contains the source and destination addresses of the processes
+///and optional authentication information, as well as an
+///encoded CDAP Message. It is used to exchange CDAP messages
+///between APs without having a CDAP session previously established
+///(it can be seen as a one message session)
+class ADataObject {
+public:
+	static const std::string A_DATA;
+	static const std::string A_DATA_OBJECT_CLASS;
+	static const std::string A_DATA_OBJECT_NAME;
+
+	ADataObject();
+	ADataObject(unsigned int source_address,
+			unsigned int dest_address);
+	~ADataObject();
+
+	//The address of the source AP (or IPCP)
+	unsigned int source_address_;
+
+	//The address of the destination AP (or IPCP)
+	unsigned int dest_address_;
+
+	const ser_obj_t * encoded_cdap_message_;
 };
 
 class ConsecutiveUnsignedIntegerGenerator {

@@ -22,11 +22,15 @@
  */
 #ifndef RIB_PROVIDER_H_
 #define RIB_PROVIDER_H_
-#include "cdap_rib_structures.h"
+
 #include <string>
 #include <list>
 #include <map>
 #include <algorithm>
+
+#include "application.h"
+#include "cdap_rib_structures.h"
+#include "cdap_v2.h"
 #include "librina/concurrency.h"
 #include "librina/exceptions.h"
 
@@ -40,15 +44,20 @@ public:
 	virtual ~AppConHandlerInterface(){};
 
 	/// A remote Connect request has been received.
-	virtual void connect(int invoke_id, const cdap_rib::con_handle_t &con) = 0;
+	virtual void connect(int invoke_id,
+			     const cdap_rib::con_handle_t &con) = 0;
 	/// A remote Connect response has been received.
 	virtual void connectResult(const cdap_rib::res_info_t &res,
-			const cdap_rib::con_handle_t &con) = 0;
+				   const cdap_rib::con_handle_t &con) = 0;
 	/// A remote Release request has been received.
-	virtual void release(int invoke_id, const cdap_rib::con_handle_t &con) = 0;
+	virtual void release(int invoke_id,
+			     const cdap_rib::con_handle_t &con) = 0;
 	/// A remote Release response has been received.
 	virtual void releaseResult(const cdap_rib::res_info_t &res,
-			const cdap_rib::con_handle_t &con) = 0;
+				   const cdap_rib::con_handle_t &con) = 0;
+	/// Process an authentication message
+	virtual void process_authentication_message(const rina::cdap::CDAPMessage& message,
+						    const cdap_rib::con_handle_t &con) = 0;
 };
 
 }//namespace cacep
@@ -130,9 +139,6 @@ DECLARE_EXCEPTION_SUBCLASS(eObjDoesNotExist);
 
 /// The object exists but the class name mismatches
 DECLARE_EXCEPTION_SUBCLASS(eObjClassMismatch);
-
-
-
 
 
 ///
@@ -241,8 +247,8 @@ protected:
 				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
-				const cdap_rib::ser_obj_t &obj_req,
-				cdap_rib::ser_obj_t &obj_reply,
+				const ser_obj_t &obj_req,
+				ser_obj_t &obj_reply,
 				cdap_rib::res_info_t& res);
 	///
 	/// Process a remote delete operation
@@ -285,7 +291,7 @@ protected:
 					const std::string& class_,
 					const cdap_rib::filt_info_t &filt,
 					const int invoke_id,
-					cdap_rib::ser_obj_t &obj_reply,
+					ser_obj_t &obj_reply,
 					cdap_rib::res_info_t& res);
 
 	///
@@ -331,8 +337,8 @@ protected:
 				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
-				const cdap_rib::ser_obj_t &obj_req,
-				cdap_rib::ser_obj_t &obj_reply,
+				const ser_obj_t &obj_req,
+				ser_obj_t &obj_reply,
 				cdap_rib::res_info_t& res);
 
 	///
@@ -358,8 +364,8 @@ protected:
 				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
-				const cdap_rib::ser_obj_t &obj_req,
-				cdap_rib::ser_obj_t &obj_reply,
+				const ser_obj_t &obj_req,
+				ser_obj_t &obj_reply,
 				cdap_rib::res_info_t& res);
 
 	///
@@ -385,8 +391,8 @@ protected:
 				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
-				const cdap_rib::ser_obj_t &obj_req,
-				cdap_rib::ser_obj_t &obj_reply,
+				const ser_obj_t &obj_req,
+				ser_obj_t &obj_reply,
 				cdap_rib::res_info_t& res);
 
 	///
@@ -399,6 +405,13 @@ protected:
 	virtual const std::string& get_class() const{
 		return class_name;
 	};
+
+	///
+	/// Get a textual representation of the object value
+	///
+	virtual const std::string get_displayable_value() const{
+		return "-";
+	}
 
 	///
 	/// Throw not supported exception
@@ -501,8 +514,8 @@ typedef void (*create_cb_t)(const rib_handle_t rib,
 				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
-				const cdap_rib::ser_obj_t &obj_req,
-				cdap_rib::ser_obj_t &obj_reply,
+				const ser_obj_t &obj_req,
+				ser_obj_t &obj_reply,
 				cdap_rib::res_info_t& res);
 
 ///
@@ -531,7 +544,7 @@ class RIBDaemon;
 //
 // RIBDaemon Proxy class
 //
-class RIBDaemonProxy{
+class RIBDaemonProxy : public ApplicationEntity {
 
 public:
 
@@ -738,6 +751,17 @@ public:
 	/// @throws eRIBNotFound, eObjDoesNotExist
 	///
 	void removeObjRIB(const rib_handle_t& handle, const int64_t inst_id);
+	void removeObjRIB(const rib_handle_t& handle, const std::string fqdn);
+
+	///
+	/// Check if an object is already in the RIB
+	///
+	/// Returns true if the object is in the RIB, false otherwise
+	///
+	/// @param handle The handle of the RIB
+	/// @param fqdn The object fqdn
+	///
+	bool containsObj(const rib_handle_t& handle, const std::string fqdn);
 
 
 	//-------------------------------------------------------------------//
@@ -842,6 +866,8 @@ public:
 			const cdap_rib::filt_info_t &filt,
 			bool is_port = true);
 
+	void set_application_process(ApplicationProcess * ap);
+
 private:
 	///@internal
 	int64_t __addObjRIB(const rib_handle_t& h, const std::string& fqn,
@@ -854,6 +880,40 @@ private:
 	RIBDaemon* ribd;
 };
 
+/// Contains the data of an object in the RIB
+class RIBObjectData{
+public:
+        RIBObjectData();
+        RIBObjectData(std::string clazz, std::string name,
+                        long long instance);
+        bool operator==(const RIBObjectData &other) const;
+        bool operator!=(const RIBObjectData &other) const;
+#ifndef SWIG
+        const std::string& get_class() const;
+        void set_class(const std::string& clazz);
+        unsigned long get_instance() const;
+        void set_instance(unsigned long  instance);
+        const std::string& get_name() const;
+        void set_name(const std::string& name);
+        const std::string& get_displayable_value() const;
+        void set_displayable_value(const std::string& displayable_value);
+#endif
+
+        /** The class (type) of object */
+        std::string class_;
+
+        /** The name of the object (unique within a class)*/
+        std::string name_;
+
+        /** A synonim for clazz+name (unique within the RIB) */
+        unsigned long instance_;
+
+        /**
+         * The value of the object, encoded in an string for
+         * displayable purposes
+         */
+        std::string displayable_value_;
+};
 
 } //namespace rib
 } //namespace rina

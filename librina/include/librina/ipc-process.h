@@ -666,7 +666,7 @@ public:
 	 * @throws QueryRIBResponseException
 	 */
 	void queryRIBResponse(const QueryRIBRequestEvent& event, int result,
-			      const std::list<RIBObjectData>& ribObjects);
+			      const std::list<rib::RIBObjectData>& ribObjects);
 
 	/**
 	 * Request an available portId to the kernel
@@ -723,7 +723,7 @@ public:
 	 * @throws FwdCDAPMsgException
 	 */
 	void forwardCDAPResponse(unsigned sequenceNumber,
-				 const rina::SerializedObject& sermsg,
+				 const ser_obj_t& sermsg,
 				 int result);
 };
 

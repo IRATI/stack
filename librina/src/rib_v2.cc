@@ -558,7 +558,8 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 			res.code_ = cdap_rib::CDAP_OP_NOT_SUPPORTED;
 	} //RAII
 
-	if (res.code_ == cdap_rib::CDAP_PENDING)
+	if (res.code_ == cdap_rib::CDAP_PENDING ||
+			invoke_id == 0)
 		return;
 
 	try {
@@ -577,8 +578,8 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 void RIB::delete_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt,
-		const int invoke_id) {
-
+		const int invoke_id)
+{
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 	cdap_rib::res_info_t res;
@@ -623,7 +624,8 @@ void RIB::delete_request(const cdap_rib::con_handle_t &con,
 		}
 	}
 
-	if (res.code_ == cdap_rib::CDAP_PENDING)
+	if (res.code_ == cdap_rib::CDAP_PENDING ||
+			invoke_id == 0)
 		return;
 
 	try {
@@ -638,11 +640,12 @@ void RIB::delete_request(const cdap_rib::con_handle_t &con,
 							invoke_id);
 	}
 }
+
 void RIB::read_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt,
-		const int invoke_id) {
-
+		const int invoke_id)
+{
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 	flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
@@ -686,7 +689,8 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 		res.code_ = cdap_rib::CDAP_INVALID_OBJ;
 	} //RAII
 
-	if (res.code_ == cdap_rib::CDAP_PENDING)
+	if (res.code_ == cdap_rib::CDAP_PENDING ||
+			invoke_id == 0)
 		return;
 
 	try {
@@ -705,8 +709,8 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 void RIB::cancel_read_request(
 		const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
-		const cdap_rib::filt_info_t &filt, const int invoke_id) {
-
+		const cdap_rib::filt_info_t &filt, const int invoke_id)
+{
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 	cdap_rib::res_info_t res;
@@ -737,7 +741,8 @@ void RIB::cancel_read_request(
 		res.code_ = cdap_rib::CDAP_INVALID_OBJ;
 	} //RAII
 
-	if (res.code_ == cdap_rib::CDAP_PENDING)
+	if (res.code_ == cdap_rib::CDAP_PENDING ||
+			invoke_id == 0)
 		return;
 
 	try {
@@ -798,7 +803,8 @@ void RIB::write_request(const cdap_rib::con_handle_t &con,
 		res.code_ = cdap_rib::CDAP_INVALID_OBJ;
 	} //RAII
 
-	if (res.code_ == cdap_rib::CDAP_PENDING)
+	if (res.code_ == cdap_rib::CDAP_PENDING ||
+			invoke_id == 0)
 		return;
 
 	try {
@@ -860,7 +866,8 @@ void RIB::start_request(const cdap_rib::con_handle_t &con,
 		res.code_ = cdap_rib::CDAP_INVALID_OBJ;
 	} //RAII
 
-	if (res.code_ == cdap_rib::CDAP_PENDING)
+	if (res.code_ == cdap_rib::CDAP_PENDING ||
+			invoke_id == 0)
 		return;
 
 	try {
@@ -922,7 +929,8 @@ void RIB::stop_request(const cdap_rib::con_handle_t &con,
 		res.code_ = cdap_rib::CDAP_INVALID_OBJ;
 	} //RAII
 
-	if (res.code_ == cdap_rib::CDAP_PENDING)
+	if (res.code_ == cdap_rib::CDAP_PENDING ||
+			invoke_id == 0)
 		return;
 
 	try {
@@ -2467,77 +2475,83 @@ void RIBDaemon::stop_request(const cdap_rib::con_handle_t &con,
 
 //RIBObj/RIBObj_
 void RIBObj::create(const cdap_rib::con_handle_t &con,
-				const std::string& fqn,
-				const std::string& class_,
-				const cdap_rib::filt_info_t &filt,
-				const int invoke_id,
-				const cdap_rib::ser_obj_t &obj_req,
-				cdap_rib::ser_obj_t &obj_reply,
-				cdap_rib::res_info_t& res){
-
+		    const std::string& fqn,
+		    const std::string& class_,
+		    const cdap_rib::filt_info_t &filt,
+		    const int invoke_id,
+		    const ser_obj_t &obj_req,
+		    ser_obj_t &obj_reply,
+		    cdap_rib::res_info_t& res)
+{
 	operation_not_supported(res);
 }
 
 bool RIBObj::delete_(const cdap_rib::con_handle_t &con,
-					const std::string& fqn,
-					const std::string& class_,
-					const cdap_rib::filt_info_t &filt,
-					const int invoke_id,
-					cdap_rib::res_info_t& res){
+		     const std::string& fqn,
+		     const std::string& class_,
+		     const cdap_rib::filt_info_t &filt,
+		     const int invoke_id,
+		     cdap_rib::res_info_t& res)
+{
 	operation_not_supported(res);
 	return false;
 }
 
 // FIXME remove name, it is not needed
 void RIBObj::read(const cdap_rib::con_handle_t &con,
-					const std::string& fqn,
-					const std::string& class_,
-					const cdap_rib::filt_info_t &filt,
-					const int invoke_id,
-					cdap_rib::ser_obj_t &obj_reply,
-					cdap_rib::res_info_t& res){
+		  const std::string& fqn,
+		  const std::string& class_,
+		  const cdap_rib::filt_info_t &filt,
+		  const int invoke_id,
+		  ser_obj_t &obj_reply,
+		  cdap_rib::res_info_t& res)
+{
 	operation_not_supported(res);
 }
 
 void RIBObj::cancelRead(const cdap_rib::con_handle_t &con,
-					const std::string& fqn,
-					const std::string& class_,
-					const cdap_rib::filt_info_t &filt,
-					const int invoke_id,
-					cdap_rib::res_info_t& res){
+			const std::string& fqn,
+			const std::string& class_,
+			const cdap_rib::filt_info_t &filt,
+			const int invoke_id,
+			cdap_rib::res_info_t& res)
+{
 	operation_not_supported(res);
 }
 
 void RIBObj::write(const cdap_rib::con_handle_t &con,
-				const std::string& fqn,
-				const std::string& class_,
-				const cdap_rib::filt_info_t &filt,
-				const int invoke_id,
-				const cdap_rib::ser_obj_t &obj_req,
-				cdap_rib::ser_obj_t &obj_reply,
-				cdap_rib::res_info_t& res){
+		   const std::string& fqn,
+		   const std::string& class_,
+		   const cdap_rib::filt_info_t &filt,
+		   const int invoke_id,
+		   const ser_obj_t &obj_req,
+		   ser_obj_t &obj_reply,
+		   cdap_rib::res_info_t& res)
+{
 	operation_not_supported(res);
 }
 
 void RIBObj::start(const cdap_rib::con_handle_t &con,
-			const std::string& fqn,
-			const std::string& class_,
-			const cdap_rib::filt_info_t &filt,
-			const int invoke_id,
-			const cdap_rib::ser_obj_t &obj_req,
-			cdap_rib::ser_obj_t &obj_reply,
-			cdap_rib::res_info_t& res){
+		   const std::string& fqn,
+		   const std::string& class_,
+		   const cdap_rib::filt_info_t &filt,
+		   const int invoke_id,
+		   const ser_obj_t &obj_req,
+		   ser_obj_t &obj_reply,
+		   cdap_rib::res_info_t& res)
+{
 	operation_not_supported(res);
 }
 
 void RIBObj::stop(const cdap_rib::con_handle_t &con,
-			const std::string& fqn,
-			const std::string& class_,
-			const cdap_rib::filt_info_t &filt,
-			const int invoke_id,
-			const cdap_rib::ser_obj_t &obj_req,
-			cdap_rib::ser_obj_t &obj_reply,
-			cdap_rib::res_info_t& res){
+		  const std::string& fqn,
+		  const std::string& class_,
+		  const cdap_rib::filt_info_t &filt,
+		  const int invoke_id,
+		  const ser_obj_t &obj_req,
+		  ser_obj_t &obj_reply,
+		  cdap_rib::res_info_t& res)
+{
 	operation_not_supported(res);
 }
 
@@ -2554,7 +2568,11 @@ static RIBDaemon* ribd = NULL;
 //
 
 //Constructor (private)
-RIBDaemonProxy::RIBDaemonProxy(RIBDaemon* ribd_):ribd(ribd_){};
+RIBDaemonProxy::RIBDaemonProxy(RIBDaemon* ribd_):
+		ApplicationEntity(ApplicationEntity::RIB_DAEMON_AE_NAME)
+{
+	ribd = ribd_;
+};
 
 //
 // Local RIB
@@ -2637,9 +2655,22 @@ void RIBDaemonProxy::removeObjRIB(const rib_handle_t& h, const int64_t id){
 	return ribd->removeObjRIB(h, id);
 }
 
+void RIBDaemonProxy::removeObjRIB(const rib_handle_t& handle,
+				  const std::string fqdn)
+{
+	removeObjRIB(handle, getObjInstId(handle, fqdn));
+}
 
-
-
+bool RIBDaemonProxy::containsObj(const rib_handle_t& handle,
+		 	 	 const std::string fqdn)
+{
+	try {
+		getObjInstId(handle, fqdn);
+		return true;
+	} catch (Exception &e) {
+		return false;
+	}
+}
 
 //
 // Client
@@ -2765,6 +2796,11 @@ int RIBDaemonProxy::remote_stop(unsigned int handle,
 						is_port);
 }
 
+void RIBDaemonProxy::set_application_process(ApplicationProcess * ap)
+{
+	(void) ap;
+}
+
 //
 // RIB library routines
 //
@@ -2802,6 +2838,66 @@ void fini(){
 	delete ribd;
 }
 
+/* Class RIBObjectData*/
+RIBObjectData::RIBObjectData(){
+        instance_ = 0;
+}
+
+RIBObjectData::RIBObjectData(
+                std::string clazz, std::string name,
+                long long instance){
+        this->class_ = clazz;
+        this->name_ = name;
+        this->instance_ = instance;
+}
+
+bool RIBObjectData::operator==(const RIBObjectData &other) const{
+        if (class_.compare(other.get_class()) != 0) {
+                return false;
+        }
+
+        if (name_.compare(other.get_name()) != 0) {
+                return false;
+        }
+
+        return instance_ == other.get_instance();
+}
+
+bool RIBObjectData::operator!=(const RIBObjectData &other) const{
+        return !(*this == other);
+}
+
+const std::string& RIBObjectData::get_class() const {
+        return class_;
+}
+
+void RIBObjectData::set_class(const std::string& clazz) {
+        class_ = clazz;
+}
+
+unsigned long RIBObjectData::get_instance() const {
+        return instance_;
+}
+
+void RIBObjectData::set_instance(unsigned long instance) {
+        instance_ = instance;
+}
+
+const std::string& RIBObjectData::get_name() const {
+        return name_;
+}
+
+void RIBObjectData::set_name(const std::string& name) {
+        name_ = name;
+}
+
+const std::string& RIBObjectData::get_displayable_value() const {
+        return displayable_value_;
+}
+
+void RIBObjectData::set_displayable_value(const std::string& displayable_value) {
+        displayable_value_ = displayable_value;
+}
 
 }  //namespace rib
 }  //namespace rina

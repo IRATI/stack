@@ -579,7 +579,7 @@ void ExtendedIPCManager::flowDeallocatedRemotely(
 
 void ExtendedIPCManager::queryRIBResponse(
 		const QueryRIBRequestEvent& event, int result,
-		const std::list<RIBObjectData>& ribObjects) {
+		const std::list<rib::RIBObjectData>& ribObjects) {
 #if STUB_API
 	//Do nothing
 #else
@@ -685,8 +685,8 @@ void ExtendedIPCManager::pluginLoadResponse(
 }
 
 void ExtendedIPCManager::forwardCDAPResponse(unsigned int sequenceNumber,
-				const rina::SerializedObject& sermsg,
-				int result)
+					     const ser_obj_t& sermsg,
+					     int result)
 {
 #if STUB_API
 	//Do nothing
