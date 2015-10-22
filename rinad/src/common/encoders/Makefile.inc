@@ -331,6 +331,39 @@ EXTRA_DIST +=                                   \
 protoSOURCES += FlowStateMessage.pb.cc FlowStateMessage.pb.h
 
 
+IntType.stamp: IntType.proto
+	rm -f IntType.tmp
+	touch IntType.tmp
+	$(PROTOC) -I$(builddir) -I$(srcdir)	\
+		--cpp_out=$(builddir)		\
+		$(srcdir)/IntType.proto
+	mv -f IntType.tmp $@
+
+IntType.pb.h IntType.pb.cc: IntType.stamp
+	if test -f $@; then :; else \
+	  trap 'rm -rf IntType.lock IntType.stamp' 1 2 13 15; \
+	  if mkdir IntType.lock 2>/dev/null; then \
+	    rm -f IntType.stamp; \
+	    $(MAKE) $(AM_MAKEFLAGS) IntType.stamp; \
+	    result=$$?; rm -rf IntType.lock; exit $$result; \
+	  else \
+	    while test -d IntType.lock; do sleep 1; done; \
+	    test -f IntType.stamp; \
+	  fi; \
+	fi
+
+DISTCLEANFILES +=                               \
+        IntType.pb.h IntType.pb.cc IntType.stamp
+
+MOSTLYCLEANFILES +=                             \
+        IntType.tmp
+
+EXTRA_DIST +=                                   \
+        IntType.proto
+
+protoSOURCES += IntType.pb.cc IntType.pb.h
+
+
 MA-IPCP.stamp: MA-IPCP.proto
 	rm -f MA-IPCP.tmp
 	touch MA-IPCP.tmp

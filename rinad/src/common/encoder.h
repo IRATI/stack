@@ -24,21 +24,6 @@
 
 #ifdef __cplusplus
 
-#include <string>
-#include <map>
-
-#include <librina/ipc-process.h>
-#include "common/encoders/ApplicationProcessNamingInfoMessage.pb.h"
-#include "common/encoders/CommonMessages.pb.h"
-#include "common/encoders/ConnectionPoliciesMessage.pb.h"
-#include "common/encoders/DirectoryForwardingTableEntryMessage.pb.h"
-#include "common/encoders/FlowMessage.pb.h"
-#include "common/encoders/NeighborMessage.pb.h"
-#include "common/encoders/PolicyDescriptorMessage.pb.h"
-#include "common/encoders/QoSCubeMessage.pb.h"
-#include "common/encoders/QoSSpecification.pb.h"
-#include "common/encoders/WhatevercastNameMessage.pb.h"
-
 namespace rinad {
 
 /// Definition of names of object names and object values
@@ -130,162 +115,85 @@ public:
 	static const std::string WHATEVERCAST_NAME_RIB_OBJECT_CLASS;
 };
 
-/// Implements an encoder that delegates the encoding/decoding
-/// tasks to different subencoders. A different encoder is registered
-/// by each type of object. The encoder also implements static helper functions
-/// to encode/decode sub-objects that are shared between two or more classes.
-class Encoder: public rina::IMasterEncoder {
+template<class T>
+class Encoder{
 public:
-	~Encoder();
-	/// Set the class that serializes/unserializes an object class
-	/// @param objectClass The object class
-	/// @param serializer
-
-	void addEncoder(const std::string& object_class, rina::EncoderInterface *encoder);
-	/// Converts an object of the type specified by "className" to a byte array.
+	virtual ~Encoder(){}
+	/// Converts an object to a byte array, if this object is recognized by the 
+	///encoder
 	/// @param object
+	/// @throws exception if the object is not recognized by the encoder
 	/// @return
-
-	void encode(const void* object, rina::CDAPMessage * cdapMessage);
-
+	virtual void encode(const T &obj, rina::cdap_rib::ser_obj_t& serobj) = 0;
 	/// Converts a byte array to an object of the type specified by "className"
-	/// @param serializedObject
-	/// @param The type of object to be decoded
-	/// @throws exception if the byte array is not an encoded in a way that the encoder can recognize, or the
-	/// byte array value doesn't correspond to an object of the type "className"
+	/// @param byte[] serializedObject
+	/// @param objectClass The type of object to be decoded
+	/// @throws exception if the byte array is not an encoded in a way that the
+	/// encoder can recognize, or the byte array value doesn't correspond to an
+	/// object of the type "className"
 	/// @return
-	void* decode(const rina::CDAPMessage * cdapMessage);
-
-	static rina::SerializedObject * get_serialized_object(const rina::ObjectValueInterface * object_value);
-	static rina::messages::applicationProcessNamingInfo_t* get_applicationProcessNamingInfo_t(
-			const rina::ApplicationProcessNamingInformation &name);
-	static rina::ApplicationProcessNamingInformation* get_ApplicationProcessNamingInformation(
-			const rina::messages::applicationProcessNamingInfo_t &gpf_app);
-	static rina::messages::qosSpecification_t* get_qosSpecification_t(const rina::FlowSpecification &flow_spec);
-	static rina::FlowSpecification* get_FlowSpecification(const rina::messages::qosSpecification_t &gpf_qos);
-	static void get_property_t(rina::messages::property_t * gpb_conf, const rina::PolicyParameter &conf);
-	static rina::PolicyParameter* get_PolicyParameter(const rina::messages::property_t &gpf_conf);
-	static rina::messages::policyDescriptor_t* get_policyDescriptor_t(const rina::PolicyConfig &conf);
-	static rina::PolicyConfig* get_PolicyConfig(const rina::messages::policyDescriptor_t &gpf_conf);
-	static rina::messages::dtcpRtxControlConfig_t* get_dtcpRtxControlConfig_t(const rina::DTCPRtxControlConfig &conf);
-	static rina::DTCPRtxControlConfig* get_DTCPRtxControlConfig(const rina::messages::dtcpRtxControlConfig_t &gpf_conf);
-	static rina::messages::dtcpWindowBasedFlowControlConfig_t* get_dtcpWindowBasedFlowControlConfig_t(
-			const rina::DTCPWindowBasedFlowControlConfig &conf);
-	static rina::DTCPWindowBasedFlowControlConfig* get_DTCPWindowBasedFlowControlConfig(
-			const rina::messages::dtcpWindowBasedFlowControlConfig_t &gpf_conf);
-	static rina::messages::dtcpRateBasedFlowControlConfig_t* get_dtcpRateBasedFlowControlConfig_t(
-			const rina::DTCPRateBasedFlowControlConfig &conf);
-	static rina::DTCPRateBasedFlowControlConfig* get_DTCPRateBasedFlowControlConfig(
-			const rina::messages::dtcpRateBasedFlowControlConfig_t &gpf_conf);
-	static rina::messages::dtcpFlowControlConfig_t* get_dtcpFlowControlConfig_t(const rina::DTCPFlowControlConfig &conf);
-	static rina::DTCPFlowControlConfig* get_DTCPFlowControlConfig(const rina::messages::dtcpFlowControlConfig_t &gpf_conf);
-	static rina::messages::dtcpConfig_t* get_dtcpConfig_t(const rina::DTCPConfig &conf);
-	static rina::DTCPConfig* get_DTCPConfig(const rina::messages::dtcpConfig_t &gpf_conf);
-	static rina::messages::dtpConfig_t* get_dtpConfig_t(const rina::DTPConfig &conf);
-	static rina::DTPConfig* get_DTPConfig(const rina::messages::dtpConfig_t &gpf_conf);
-	static rina::Connection* get_Connection(const rina::messages::connectionId_t &gpf_conn);
-
-private:
-	/// Get the encoder associated to object class, throwing
-	/// and exception if no encoder is found
-	/// @param object_class
-	/// @return A pointer to the encoder associated to object class
-	rina::EncoderInterface * get_encoder(const std::string& object_class);
-
-	std::map<std::string, rina::EncoderInterface*> encoders_;
+	virtual void decode(const rina::cdap_rib::ser_obj_t &serobj,T &des_obj) = 0;
 };
 
 /// Encoder of the DataTransferConstants object
-class DataTransferConstantsEncoder: public rina::EncoderInterface {
+class DataTransferConstantsEncoder: public Encoder<rina::DataTransferConstants> {
 public:
-	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::ObjectValueInterface * object_value) const;
+	void encode(const rina::DataTransferConstants &obj, 
+		rina::cdap_rib::ser_obj_t& serobj);
+	void decode(const rina::cdap_rib::ser_obj_t &serobj, 
+		rina::DataTransferConstants &des_obj);
 };
 
 /// Encoder of DirectoryForwardingTableEntry object
-class DirectoryForwardingTableEntryEncoder: public rina::EncoderInterface {
+class DirectoryForwardingTableEntryEncoder: 
+	public Encoder<rina::DirectoryForwardingTableEntry> {
 public:
-	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::ObjectValueInterface * object_value) const;
-	static void convertModelToGPB(rina::messages::directoryForwardingTableEntry_t * gpb_dfte,
-			rina::DirectoryForwardingTableEntry * dfte);
-	static rina::DirectoryForwardingTableEntry * convertGPBToModel(
-			const rina::messages::directoryForwardingTableEntry_t& gpb_dfte);
-};
-
-/// Encoder of a list of DirectoryForwardingTableEntries
-class DirectoryForwardingTableEntryListEncoder: public rina::EncoderInterface {
-public:
-	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::ObjectValueInterface * object_value) const;
+	void encode(const rina::DirectoryForwardingTableEntry &obj, 
+		rina::cdap_rib::ser_obj_t& serobj);
+	void decode(const rina::cdap_rib::ser_obj_t &serobj, 
+		rina::DirectoryForwardingTableEntry &des_obj);
 };
 
 /// Encoder of QoSCube object
-class QoSCubeEncoder: public rina::EncoderInterface {
+class QoSCubeEncoder: public Encoder<rina::QoSCube> {
 public:
-	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::ObjectValueInterface * object_value) const;
-	static void convertModelToGPB(rina::messages::qosCube_t * gpb_cube,
-			rina::QoSCube * cube);
-	static rina::QoSCube * convertGPBToModel(
-			const rina::messages::qosCube_t & gpb_cube);
+	void encode(const rina::QoSCube &obj, rina::cdap_rib::ser_obj_t& serobj);
+	void decode(const rina::cdap_rib::ser_obj_t &serobj, 
+		rina::QoSCube &des_obj);
 };
 
-/// Encoder of a list of QoSCubes
-class QoSCubeListEncoder: public rina::EncoderInterface {
-public:
-	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::ObjectValueInterface * object_value) const;
-};
 
 /// Encoder of WhatevercastName object
-class WhatevercastNameEncoder: public rina::EncoderInterface {
+class WhatevercastNameEncoder: public Encoder<rina::WhatevercastName> {
 public:
-	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::ObjectValueInterface * object_value) const;
-	static void convertModelToGPB(rina::messages::whatevercastName_t * gpb_name,
-			rina::WhatevercastName * name);
-	static rina::WhatevercastName * convertGPBToModel(
-			const rina::messages::whatevercastName_t & gpb_name);
-};
-
-/// Encoder of a list of WhatevercastNames
-class WhatevercastNameListEncoder: public rina::EncoderInterface {
-public:
-	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::ObjectValueInterface * object_value) const;
+	void encode(const rina::WhatevercastName &obj, 
+		rina::cdap_rib::ser_obj_t& serobj);
+	void decode(const rina::cdap_rib::ser_obj_t &serobj, 
+		rina::WhatevercastName &des_obj);
 };
 
 /// Encoder of Neighbor object
-class NeighborEncoder: public rina::EncoderInterface {
+class NeighborEncoder: public Encoder<rina::Neighbor> {
 public:
-	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::ObjectValueInterface * object_value) const;
-	static void convertModelToGPB(rina::messages::neighbor_t * gpb_nei,
-			rina::Neighbor * nei);
-	static rina::Neighbor * convertGPBToModel(
-			const rina::messages::neighbor_t & gpb_nei);
-};
-
-/// Encoder of a list of Neighbors
-class NeighborListEncoder: public rina::EncoderInterface {
-public:
-	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::ObjectValueInterface * object_value) const;
+	void encode(const rina::Neighbor &obj, rina::cdap_rib::ser_obj_t& serobj);
+	void decode(const rina::cdap_rib::ser_obj_t &serobj, 
+		rina::Neighbor &des_obj);
 };
 
 /// Encoder of Watchdog
-class WatchdogEncoder: public rina::EncoderInterface {
+class IntEncoder: public Encoder<int>{
 public:
-	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::ObjectValueInterface * object_value) const;
+	void encode(const int &obj, rina::cdap_rib::ser_obj_t& serobj);
+	void decode(const rina::cdap_rib::ser_obj_t &serobj, int &des_obj);
 };
 
 /// Encoder of the AData object
-class ADataObjectEncoder: public rina::EncoderInterface {
+class ADataObjectEncoder: public Encoder<rina::ADataObject> {
 public:
-	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::ObjectValueInterface * object_value) const;
+	void encode(const rina::ADataObject &obj, 
+		rina::cdap_rib::ser_obj_t& serobj);
+	void decode(const rina::cdap_rib::ser_obj_t &serobj, 
+		rina::ADataObject &des_obj);
 };
 
 }
