@@ -428,7 +428,6 @@ const std::string UnderlayingDIFRIBObj::class_name = "UnderlayingDIF";
 const std::string UnderlayingDIFRIBObj::object_name_prefix = "/ipcmanagement/irm/underdifs/difName=";
 const std::string UnderlayingDIFRIBObj::parent_class_name = "UnderlayingDIFs";
 const std::string UnderlayingDIFRIBObj::parent_object_name = "/ipcmanagement/irm/underdifs";
-
 UnderlayingDIFRIBObj::UnderlayingDIFRIBObj(const DIFProperties& dif_info)
 		: rib::RIBObj(class_name), dif_properties(dif_info)
 {

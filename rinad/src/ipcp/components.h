@@ -427,6 +427,7 @@ public:
 
 /// Interface that provides the RIB Daemon API
 class IPCPRIBDaemon : public rina::rib::RIBDaemonAE, public IPCProcessComponent {
+
 public:
 	IPCPRIBDaemon() { };
 	virtual ~IPCPRIBDaemon(){};

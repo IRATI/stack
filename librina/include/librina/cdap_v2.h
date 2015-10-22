@@ -24,8 +24,8 @@
 #ifndef CDAP_PROVIDER_H_
 #define CDAP_PROVIDER_H_
 #include <string>
-
 #include <librina/common.h>
+
 #include <librina/concurrency.h>
 #include "cdap_rib_structures.h"
 
@@ -159,7 +159,6 @@ class CDAPMessageFactory
 						 int invoke_id);
  private:
 	static const int ABSTRACT_SYNTAX_VERSION;
-	;
 };
 
 class CDAPCallbackInterface
@@ -580,6 +579,7 @@ public:
 
 	/// Authentication Policy information
 	cdap_rib::auth_policy_t auth_policy_;
+
 
 	/// DestinationApplication-Entity-Instance-Id (string), optional, not validated by CDAP.
 	/// Specific instance of the Application Entity that the source application

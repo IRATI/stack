@@ -51,6 +51,21 @@ CDAPException::ErrorCode CDAPException::get_result() const {
 	return result_;
 }
 
+// CLASS AuthPolicy
+std::string AuthPolicy::to_string() const
+{
+	std::stringstream ss;
+	ss << "Policy name: " << name_ << std::endl;
+	ss << "Supported versions: ";
+	for (std::list<std::string>::const_iterator it = versions_.begin();
+			it != versions_.end(); ++it){
+		ss << *it << ";";
+	}
+	ss << std::endl;
+
+	return ss.str();
+}
+
 // STRUCT CDAPMessage
 CDAPMessage::CDAPMessage()
 {
@@ -390,6 +405,7 @@ class CDAPSession
 	void messageSent(const cdap_m_t &cdap_message);
 	void messageReceived(const ser_obj_t& message,
 			     cdap_m_t& result);
+
 	void messageReceived(const cdap_m_t &cdap_message);
 	int get_port_id() const;
 	CDAPInvokeIdManagerImpl* get_invoke_id_manager() const;
@@ -619,6 +635,7 @@ void CDAPMessageFactory::getOpenConnectionResponseMessage(cdap_m_t & msg,
 							  const cdap_rib::con_handle_t &con,
 							  const cdap_rib::res_info_t &res,
 							  int invoke_id)
+
 {
 	msg.abs_syntax_ = ABSTRACT_SYNTAX_VERSION;
 	msg.op_code_ = cdap_m_t::M_CONNECT_R;
