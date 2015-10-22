@@ -42,24 +42,25 @@ namespace rinad {
 
 namespace helpers{
 
+
 rina::messages::applicationProcessNamingInfo_t* get_applicationProcessNamingInfo_t(
 	const rina::ApplicationProcessNamingInformation &name) {
-		rina::messages::applicationProcessNamingInfo_t *gpf_name =
+	rina::messages::applicationProcessNamingInfo_t *gpf_name =
 			new rina::messages::applicationProcessNamingInfo_t;
-		gpf_name->set_applicationprocessname(name.processName);
-		gpf_name->set_applicationprocessinstance(name.processInstance);
-		gpf_name->set_applicationentityname(name.entityName);
-		gpf_name->set_applicationentityinstance(name.entityInstance);
+	gpf_name->set_applicationprocessname(name.processName);
+	gpf_name->set_applicationprocessinstance(name.processInstance);
+	gpf_name->set_applicationentityname(name.entityName);
+	gpf_name->set_applicationentityinstance(name.entityInstance);
 		return gpf_name;
 }
 
 void get_ApplicationProcessNamingInformation(
 	const rina::messages::applicationProcessNamingInfo_t &gpf_app,
 	rina::ApplicationProcessNamingInformation &app) {
-		app.processName = gpf_app.applicationprocessname();
-		app.processInstance = gpf_app.applicationprocessinstance();
-		app.entityName = gpf_app.applicationentityname();
-		app.entityInstance = gpf_app.applicationentityinstance();
+	app.processName = gpf_app.applicationprocessname();
+	app.processInstance = gpf_app.applicationprocessinstance();
+	app.entityName = gpf_app.applicationentityname();
+	app.entityInstance = gpf_app.applicationentityinstance();
 }
 
 void get_property_t(rina::messages::property_t* gpb_conf, const rina::PolicyParameter &conf) {

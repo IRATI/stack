@@ -12,7 +12,6 @@ SUBDIRS = tclap encoders
 lib_LTLIBRARIES = librinad.la
 
 #Distributable headers
-librinad_ladir = $(pkgincludedir)/ipcm
 librinad_la_HEADERS = encoder.h
 
 librinad_la_CFLAGS   =
@@ -28,11 +27,16 @@ librinad_la_LIBADD   =				\
 
 librinad_la_SOURCES  =					\
 	debug.cc              debug.h                   \
+<<<<<<< HEAD
 	rina-configuration.cc rina-configuration.h	\
 	configuration.h    configuration.cc   \
 	encoder.cc	      encoder.h			\
 	structures_mad.h 					\
 	encoders_mad.h		encoders_mad.cc \
+=======
+	rina-configuration.cc rina-configuration.h	\
+	encoder.cc	      encoder.h			\
+>>>>>>> RINAD: RIB Encoders changed to rib_v2 structure
 			      concurrency.h
 
 commonheadersdir = $(includedir)/rinad/common
