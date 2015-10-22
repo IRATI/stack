@@ -5,6 +5,10 @@
 # Set INSTALLDIR environment variable to the directory containing
 # the IRATI installation
 
+ifndef INSTALLDIR
+$(error The INSTALLDIR environment variable is not set)
+endif
+
 PLUGIN_NAME = sm-example
 SOURCES     =					\
 	plugin.cc				\
