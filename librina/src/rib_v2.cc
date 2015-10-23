@@ -361,6 +361,8 @@ public:
 	///
 	const cdap_rib::vers_info_t& get_version() const;
 
+	std::list<RIBObj*> get_all_rib_objects();
+
 protected:
 	//
 	// Incoming requests to the local RIB
@@ -1288,6 +1290,18 @@ const cdap_rib::vers_info_t& RIB::get_version() const {
 	return schema->get_version();
 }
 
+std::list<RIBObj*> RIB::get_all_rib_objects()
+{
+	std::list<RIBObj*> result;
+
+	for (std::map<std::string, RIBObj*>::iterator it = obj_name_map.begin();
+			it != obj_name_map.end(); ++it) {
+		result.push_back(it->second);
+	}
+
+	return result;
+}
+
 ///
 /// RIBDaemon main class
 ///
@@ -1492,6 +1506,9 @@ public:
 	void __set_cdap_provider(cdap::CDAPProviderInterface* p){
 		cdap_provider = p;
 	}
+
+	std::list<RIBObj*> get_rib_objects(const rib_handle_t& handle);
+
 protected:
 	//
 	// CDAP provider callbacks
@@ -1528,6 +1545,8 @@ protected:
 			const cdap_rib::flags_t &flags, const int invoke_id);
 	void close_connection(const cdap_rib::con_handle_t &con,
 			const cdap_rib::flags_t &flags, const int invoke_id);
+	void process_authentication_message(const cdap::CDAPMessage& message,
+					    const cdap_rib::con_handle_t &con);
 
 	void create_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
@@ -2013,6 +2032,12 @@ void RIBDaemon::close_connection(const cdap_rib::con_handle_t &con,
 						    invoke_id);
 }
 
+void RIBDaemon::process_authentication_message(const cdap::CDAPMessage& message,
+				    	       const cdap_rib::con_handle_t &con)
+{
+	app_con_callback_->process_authentication_message(message, con);
+}
+
 // Object management
 
 int64_t RIBDaemon::addObjRIB(const rib_handle_t& handle,
@@ -2159,6 +2184,21 @@ void RIBDaemon::removeObjRIB(const rib_handle_t& handle,
 	rib->remove_obj(inst_id);
 }
 
+std::list<RIBObj*> RIBDaemon::get_rib_objects(const rib_handle_t& handle)
+{
+	//Mutual exclusion
+	ReadScopedLock rlock(rwlock);
+
+	//Retreive the RIB
+	RIB* rib = getRIB(handle);
+
+	if(rib == NULL){
+		LOG_ERR("RIB ('%" PRId64 "') does not exist", handle);
+		throw eRIBNotFound();
+	}
+
+	return rib->get_all_rib_objects();
+}
 
 //
 // Callbacks from events coming from the CDAP provider
@@ -2471,8 +2511,17 @@ void RIBDaemon::stop_request(const cdap_rib::con_handle_t &con,
 	rib->stop_request(con, obj, filt, invoke_id);
 }
 
-
 //RIBObj/RIBObj_
+RIBObjectData RIBObj::get_object_data()
+{
+	RIBObjectData result;
+	result.name_ = fqn;
+	result.class_ = class_name;
+	result.displayable_value_ = get_displayable_value();
+
+	return result;
+}
+
 void RIBObj::create(const cdap_rib::con_handle_t &con,
 		    const std::string& fqn,
 		    const std::string& class_,
@@ -2668,6 +2717,11 @@ bool RIBDaemonProxy::containsObj(const rib_handle_t& handle,
 	} catch (Exception &e) {
 		return false;
 	}
+}
+
+std::list<RIBObj*> RIBDaemonProxy::get_rib_objects(const rib_handle_t& handle)
+{
+	return ribd->get_rib_objects(handle);
 }
 
 //

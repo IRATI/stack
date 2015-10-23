@@ -107,6 +107,8 @@ class CDAPCallbackInterface
 	virtual void close_connection(const cdap_rib::con_handle_t &con,
 				const cdap_rib::flags_t &flags,
 				const int invoke_id);
+	virtual void process_authentication_message(const cdap::CDAPMessage& message,
+						    const cdap_rib::con_handle_t &con);
 	virtual void create_request(const cdap_rib::con_handle_t &con,
 					const cdap_rib::obj_info_t &obj,
 					const cdap_rib::filt_info_t &filt,
@@ -139,6 +141,7 @@ class CDAPCallbackInterface
 };
 
 class CDAPIOHandler;
+class CDAPSessionManagerInterface;
 
 class CDAPProviderInterface {
 
@@ -306,6 +309,8 @@ public:
 
 	virtual void set_cdap_io_handler(CDAPIOHandler * handler) = 0;
 
+	virtual CDAPSessionManagerInterface * get_session_manager() = 0;
+
 	virtual void destroy_session(int port){ (void)port; /*FIXME*/ };
 };
 
@@ -336,6 +341,7 @@ class CDAPSessionManagerInterface
 	virtual const ser_obj_t* encodeCDAPMessage(const cdap_m_t &cdap_message) = 0;
 	virtual const cdap_m_t* decodeCDAPMessage(const ser_obj_t &cdap_message) = 0;
 	virtual void removeCDAPSession(int portId) = 0;
+	virtual bool session_in_await_con_state(int portId) = 0;
 	virtual const ser_obj_t* encodeNextMessageToBeSent(const cdap_m_t &cdap_message,
 							   int port_id) = 0;
 	virtual const cdap_m_t* messageReceived(const ser_obj_t &encodedcdap_m_t,
@@ -561,6 +567,10 @@ public:
 	CDAPMessage();
 
 	bool is_request_message() const;
+	std::string to_string() const;
+
+private:
+	std::string opcodeToString() const;
 };
 
 /// Provides a wire format for CDAP messages

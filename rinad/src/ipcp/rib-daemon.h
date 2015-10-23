@@ -60,9 +60,6 @@ public:
 private:
 	void initialize_rib_daemon(rina::cacep::AppConHandlerInterface *app_con_callback);
 
-	//RIBProxy instance
-	static rina::rib::RIBDaemonProxy* ribd;
-
 	//Handle to the RIB
 	rina::rib::rib_handle_t rib;
 

@@ -196,6 +196,7 @@ public:
 			const cdap_rib::res_info_t &res) = 0;
 };
 
+class RIBObjectData;
 
 ///
 /// Base RIB Object. API for the create/delete/read/write/start/stop RIB
@@ -219,6 +220,8 @@ public:
 
 	/// Destructor
 	virtual ~RIBObj(){};
+
+	RIBObjectData get_object_data();
 
 protected:
 	///
@@ -762,6 +765,15 @@ public:
 	/// @param fqdn The object fqdn
 	///
 	bool containsObj(const rib_handle_t& handle, const std::string fqdn);
+
+	///
+	/// Get the list of all the objects in the RIB
+	///
+	/// @param handle The handle of the RIB
+	///
+	/// @throws eRIBNotFound, eObjDoesNotExist
+	///
+	std::list<RIBObj*> get_rib_objects(const rib_handle_t& handle);
 
 
 	//-------------------------------------------------------------------//

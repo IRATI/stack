@@ -38,7 +38,7 @@ ManagementSDUReaderData::ManagementSDUReaderData(unsigned int max_sdu_size)
 void * doManagementSDUReaderWork(void* arg)
 {
 	ManagementSDUReaderData * data = (ManagementSDUReaderData *) arg;
-	rina::cdap_rib::ser_obj_t message;
+	rina::ser_obj_t message;
 	char* buffer = new char[data->max_sdu_size_];
 
 	rina::ReadManagementSDUResult result;
@@ -76,9 +76,10 @@ class IPCPCDAPIOHandler : public rina::cdap::CDAPIOHandler
 	IPCPCDAPIOHandler(){};
 	void send(const rina::cdap::cdap_m_t *m_sent,
 		  unsigned int handle,
-		  bool is_port);
-	void process_message(rina::cdap_rib::ser_obj_t &message,
-			     unsigned int port);
+		  rina::cdap_rib::cdap_dest_t cdap_dest);
+	void process_message(rina::ser_obj_t &message,
+			     unsigned int handle,
+			     rina::cdap_rib::cdap_dest_t cdap_dest);
 
  private:
         // Lock to control that when sending a message requiring
@@ -89,100 +90,205 @@ class IPCPCDAPIOHandler : public rina::cdap::CDAPIOHandler
 
 void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t *m_sent,
 			     unsigned int handle,
-			     bool is_port)
+			     rina::cdap_rib::cdap_dest_t cdap_dest)
 {
 	//TODO
 }
 
-void IPCPCDAPIOHandler::process_message(rina::cdap_rib::ser_obj_t &message,
-		     	     	        unsigned int port)
+void IPCPCDAPIOHandler::process_message(rina::ser_obj_t &message,
+		     	     	        unsigned int handle,
+		     	     	        rina::cdap_rib::cdap_dest_t cdap_dest)
 {
 	const rina::cdap::cdap_m_t *m_rcv;
-	rina::ADataObject * adata;
+	rina::cdap_rib::con_handle_t con_handle;
+	bool is_auth_message = false;
 
-	//1 Decode the message and obtain the CDAP session descriptor
-	atomic_send_lock_.lock();
-	try {
-		m_rcv = manager_->messageReceived(message, port);
-	} catch (rina::Exception &e) {
-		atomic_send_lock_.unlock();
-		LOG_IPCP_ERR("Error decoding CDAP message: %s", e.what());
-		return;
-	}
-	atomic_send_lock_.unlock();
-
-	//2 If it is an A-Data PDU extract the real message
-	if (m_rcv->obj_name_ == rina::ADataObject::A_DATA_OBJECT_NAME) {
+	if (cdap_dest == rina::cdap_rib::CDAP_DEST_IPCM) {
 		try {
-			adata = (rina::ADataObject *) ipcp->encoder_->decode(cdapMessage);
-			if (!adata) {
-				delete cdapMessage;
-				atomic_send_lock_.unlock();
-				return;
-			}
+			m_rcv = manager_->decodeCDAPMessage(message);
+			con_handle.cdap_dest = rina::cdap_rib::CDAP_DEST_IPCM;
 
-			aDataCDAPMessage = cdap_session_manager_->decodeCDAPMessage(*adata->encoded_cdap_message_);
-
-			if (aDataCDAPMessage->invoke_id_ != 0) {
-				if (aDataCDAPMessage->is_request_message()) {
-					cdap_session_manager_->get_invoke_id_manager()->reserveInvokeId(aDataCDAPMessage->invoke_id_,
-							false);
-				} else {
-					cdap_session_manager_->get_invoke_id_manager()->freeInvokeId(aDataCDAPMessage->invoke_id_,
-							false);
-				}
-			}
-
-			descriptor = new rina::CDAPSessionDescriptor();
-
-			LOG_IPCP_DBG("Received A-Data CDAP message from address %u : %s", adata->source_address_,
-					aDataCDAPMessage->to_string().c_str());
-
-			atomic_send_lock_.unlock();
-			processIncomingCDAPMessage(aDataCDAPMessage,
-					descriptor,
-					rina::CDAPSessionInterface::SESSION_STATE_CON);
-			delete aDataCDAPMessage;
-			delete adata;
-			delete descriptor;
-			delete cdapMessage;
+			LOG_IPCP_DBG("Received delegated CDAP message from IPCM : %s",
+					m_rcv->to_string().c_str());
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Error decoding CDAP message : %s", e.what());
 			return;
+		}
+	} else {
+
+		//1 Decode the message and obtain the CDAP session descriptor
+		atomic_send_lock_.lock();
+		try {
+			m_rcv = manager_->messageReceived(message, handle);
 		} catch (rina::Exception &e) {
 			atomic_send_lock_.unlock();
-			LOG_IPCP_ERR("Error processing A-data message: %s", e.what());
+			LOG_IPCP_ERR("Error decoding CDAP message: %s", e.what());
 			return;
+		}
+		atomic_send_lock_.unlock();
+
+		//2 If it is an A-Data PDU extract the real message
+		if (m_rcv->obj_name_ == rina::ADataObject::A_DATA_OBJECT_NAME) {
+			try {
+				ADataObjectEncoder encoder;
+				rina::ADataObject a_data_obj;
+				rina::cdap::cdap_m_t * old_msg = m_rcv;
+
+				encoder.decode(m_rcv->obj_value_, a_data_obj);
+
+				m_rcv = manager_->decodeCDAPMessage(*(a_data_obj.encoded_cdap_message_));
+				if (m_rcv->invoke_id_ != 0) {
+					if (m_rcv->is_request_message()){
+						manager_->get_invoke_id_manager()->reserveInvokeId(m_rcv->invoke_id_,
+								false);
+					} else {
+						manager_->get_invoke_id_manager()->freeInvokeId(m_rcv->invoke_id_,
+								false);
+					}
+				}
+
+				LOG_IPCP_DBG("Received A-Data CDAP message from address %u : %s",
+						a_data_obj.source_address_,
+						m_rcv->to_string().c_str());
+
+				con_handle.cdap_dest = rina::cdap_rib::CDAP_DEST_ADDRESS;
+				delete old_msg;
+			} catch (rina::Exception &e) {
+				LOG_IPCP_ERR("Error processing A-data message: %s", e.what());
+				return;
+			}
+		} else {
+			rina::cdap::CDAPSession * cdap_session;
+
+			LOG_IPCP_DBG("Received CDAP message from N-1 port %u : %s",
+					handle, m_rcv->to_string().c_str());
+			if (manager_->session_in_await_con_state(handle) &&
+					m_rcv->op_code_ != rina::cdap::cdap_m_t::M_CONNECT)
+				is_auth_message = true;
 		}
 	}
 
+	// Fill structures
+	// Auth
+	con_handle.auth_.name = m_rcv->auth_policy_.name_;
+	con_handle.auth_.versions = m_rcv->auth_policy_.versions_;
+	if (con_handle.auth_.options.size_ > 0) {
+		con_handle.auth_.options.size_ = m_rcv->auth_policy_.options_.size_;
+		con_handle.auth_.options.message_ = new char[con_handle.auth_.options.size_];
+		memcpy(con_handle.auth_.options.message_,
+		       m_rcv->auth_policy_.options_.message_,
+		       m_rcv->auth_policy_.options_.size_);
+	}
+	// Src
+	con_handle.src_.ae_name_ = m_rcv->src_ae_name_;
+	con_handle.src_.ae_inst_ = m_rcv->src_ae_inst_;
+	con_handle.src_.ap_name_ = m_rcv->src_ap_name_;
+	con_handle.src_.ae_inst_ = m_rcv->src_ae_inst_;
+	// Dest
+	con_handle.dest_.ae_name_ = m_rcv->dest_ae_name_;
+	con_handle.dest_.ae_inst_ = m_rcv->dest_ae_inst_;
+	con_handle.dest_.ap_name_ = m_rcv->dest_ap_name_;
+	con_handle.dest_.ae_inst_ = m_rcv->dest_ae_inst_;
+	// Handle
+	con_handle.handle_ = handle;
+	// Version
+	con_handle.version_.version_ = m_rcv->version_;
+	// Flags
+	rina::cdap_rib::flags_t flags;
+	flags.flags_ = m_rcv->flags_;
+	// Object
+	rina::cdap_rib::obj_info_t obj;
+	obj.class_ = m_rcv->obj_class_;
+	obj.inst_ = m_rcv->obj_inst_;
+	obj.name_ = m_rcv->obj_name_;
+	obj.value_.size_ = m_rcv->obj_value_.size_;
+	obj.value_.message_ = new char[obj.value_.size_];
+	memcpy(obj.value_.message_, m_rcv->obj_value_.message_,
+			m_rcv->obj_value_.size_);
+	// Filter
+	rina::cdap_rib::filt_info_t filt;
+	filt.filter_ = m_rcv->filter_;
+	filt.scope_ = m_rcv->scope_;
+	// Invoke id
+	int invoke_id = m_rcv->invoke_id_;
+	// Result
+	rina::cdap_rib::res_info_t res;
+	//FIXME: do not typecast when the codes are an enum in the GPB
+	res.code_ = static_cast<rina::cdap_rib::res_code_t>(m_rcv->result_);
+	res.reason_ = m_rcv->result_reason_;
 
-	    const rina::CDAPMessage * aDataCDAPMessage;
-	    const rina::CDAPSessionInterface * cdapSession;
-	    rina::CDAPSessionDescriptor * descriptor;
+	// If authentication-related message, process here
+	if (is_auth_message) {
+		callback_->process_authentication_message(*m_rcv, con_handle);
+		delete m_rcv;
+		return;
+	}
 
+	// Process all other messages
+	switch (m_rcv->op_code_) {
+		//Local
+		case rina::cdap::cdap_m_t::M_CONNECT:
+			callback_->open_connection(con_handle, flags, invoke_id);
+			break;
+		case rina::cdap::cdap_m_t::M_RELEASE:
+			callback_->close_connection(con_handle, flags, invoke_id);
+			break;
+		case rina::cdap::cdap_m_t::M_DELETE:
+			callback_->delete_request(con_handle, obj, filt, invoke_id);
+			break;
+		case rina::cdap::cdap_m_t::M_CREATE:
+			callback_->create_request(con_handle, obj, filt, invoke_id);
+			break;
+		case rina::cdap::cdap_m_t::M_READ:
+			callback_->read_request(con_handle, obj, filt, invoke_id);
+			break;
+		case rina::cdap::cdap_m_t::M_CANCELREAD:
+			callback_->cancel_read_request(con_handle, obj, filt, invoke_id);
+			break;
+		case rina::cdap::cdap_m_t::M_WRITE:
+			callback_->write_request(con_handle, obj, filt, invoke_id);
+			break;
+		case rina::cdap::cdap_m_t::M_START:
+			callback_->start_request(con_handle, obj, filt, invoke_id);
+			break;
+		case rina::cdap::cdap_m_t::M_STOP:
+			callback_->stop_request(con_handle, obj, filt, invoke_id);
+			break;
 
+		//Remote
+		case rina::cdap::cdap_m_t::M_CONNECT_R:
+			callback_->remote_open_connection_result(con_handle, res);
+			break;
+		case rina::cdap::cdap_m_t::M_RELEASE_R:
+			callback_->remote_close_connection_result(con_handle, res);
+			break;
+		case rina::cdap::cdap_m_t::M_CREATE_R:
+			callback_->remote_create_result(con_handle, obj, res);
+			break;
+		case rina::cdap::cdap_m_t::M_DELETE_R:
+			callback_->remote_delete_result(con_handle, res);
+			break;
+		case rina::cdap::cdap_m_t::M_READ_R:
+			callback_->remote_read_result(con_handle, obj, res);
+			break;
+		case rina::cdap::cdap_m_t::M_CANCELREAD_R:
+			callback_->remote_cancel_read_result(con_handle, res);
+			break;
+		case rina::cdap::cdap_m_t::M_WRITE_R:
+			callback_->remote_write_result(con_handle, obj, res);
+			break;
+		case rina::cdap::cdap_m_t::M_START_R:
+			callback_->remote_start_result(con_handle, obj, res);
+			break;
+		case rina::cdap::cdap_m_t::M_STOP_R:
+			callback_->remote_stop_result(con_handle, obj, res);
+			break;
+		default:
+			LOG_ERR("Operation not recognized");
+			break;
+	}
 
-	    cdapSession = cdap_session_manager_->get_cdap_session(portId);
-	    if (!cdapSession) {
-	            atomic_send_lock_.unlock();
-	            LOG_IPCP_ERR("Could not find open CDAP session related to portId %d", portId);
-	            delete cdapMessage;
-	            return;
-	    }
-
-	    descriptor = cdapSession->get_session_descriptor();
-	    LOG_IPCP_DBG("Received CDAP message through portId %d: %s", portId,
-	                    cdapMessage->to_string().c_str());
-	    atomic_send_lock_.unlock();
-
-	    processIncomingCDAPMessage(cdapMessage, descriptor,
-			    	       cdapSession->get_session_state());
-
-	    //Check if CDAP session has been closed due to the message received
-	    if (cdapSession->is_closed()) {
-		    cdap_session_manager_->removeCDAPSession(portId);
-	    }
-
-	    delete cdapMessage;
+	delete m_rcv;
 }
 
 ///Class RIBDaemon
@@ -190,7 +296,6 @@ IPCPRIBDaemonImpl::IPCPRIBDaemonImpl(rina::cacep::AppConHandlerInterface *app_co
 {
 	management_sdu_reader_ = 0;
 	n_minus_one_flow_manager_ = 0;
-	wmpi = rina::WireMessageProviderFactory().createWireMessageProvider();
 	initialize_rib_daemon(app_con_callback);
 }
 
@@ -204,10 +309,10 @@ void IPCPRIBDaemonImpl::initialize_rib_daemon(rina::cacep::AppConHandlerInterfac
 	params.is_IPCP_ = true;
 	rina::rib::init(app_con_callback, 0, params);
 	rina::cdap::set_cdap_io_handler(new IPCPCDAPIOHandler());
+	getProxy();
 
 	//Create schema
 	vers.version_ = 0x1ULL;
-	ribd = rina::rib::RIBDaemonProxyFactory();
 	ribd->createSchema(vers);
 	//TODO create callbacks
 
@@ -309,13 +414,13 @@ void IPCPRIBDaemonImpl::nMinusOneFlowAllocated(rina::NMinusOneFlowAllocatedEvent
 
 void IPCPRIBDaemonImpl::processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event)
 {
-	std::list<rina::BaseRIBObject *> ribObjects = RIBDaemon::getRIBObjects();
-	std::list<rina::RIBObjectData> result;
+	std::list<rina::rib::RIBObj *> ribObjects = ribd->get_rib_objects(rib);
+	std::list<rina::rib::RIBObjectData> result;
 
-	std::list<rina::BaseRIBObject*>::iterator it;
+	std::list<rina::rib::RIBObj*>::iterator it;
 	for (it = ribObjects.begin(); it != ribObjects.end(); ++it) {
-		LOG_IPCP_DBG("Object name: %s", (*it)->name_.c_str());
-		result.push_back((*it)->get_data());
+		LOG_IPCP_DBG("Object name: %s", (*it)->fqn.c_str());
+		result.push_back((*it)->get_object_data());
 	}
 
 	try {
@@ -419,91 +524,6 @@ void IPCPRIBDaemonImpl::sendMessageSpecific(bool useAddress, const rina::CDAPMes
     }
 
 	atomic_send_lock_.unlock();
-}
-
-void IPCPRIBDaemonImpl::cdapMessageDelivered(char* message, int length, int portId) {
-    const rina::CDAPMessage * cdapMessage;
-    const rina::CDAPMessage * aDataCDAPMessage;
-    const rina::CDAPSessionInterface * cdapSession;
-    rina::CDAPSessionDescriptor * descriptor;
-    rina::ADataObject * adata;
-
-    //1 Decode the message and obtain the CDAP session descriptor
-    atomic_send_lock_.lock();
-    try {
-            rina::SerializedObject serializedMessage = rina::SerializedObject(message, length);
-            cdapMessage = cdap_session_manager_->messageReceived(serializedMessage, portId);
-    } catch (rina::Exception &e) {
-            atomic_send_lock_.unlock();
-            LOG_IPCP_ERR("Error decoding CDAP message: %s", e.what());
-            return;
-    }
-
-    //2 If it is an A-Data PDU extract the real message
-    if (cdapMessage->obj_name_ == rina::ADataObject::A_DATA_OBJECT_NAME) {
-    	try {
-    		adata = (rina::ADataObject *) ipcp->encoder_->decode(cdapMessage);
-    		if (!adata) {
-    			delete cdapMessage;
-    			atomic_send_lock_.unlock();
-    			return;
-    		}
-
-    		aDataCDAPMessage = cdap_session_manager_->decodeCDAPMessage(*adata->encoded_cdap_message_);
-
-    		if (aDataCDAPMessage->invoke_id_ != 0) {
-    			if (aDataCDAPMessage->is_request_message()) {
-    				cdap_session_manager_->get_invoke_id_manager()->reserveInvokeId(aDataCDAPMessage->invoke_id_,
-    												false);
-    			} else {
-    				cdap_session_manager_->get_invoke_id_manager()->freeInvokeId(aDataCDAPMessage->invoke_id_,
-    				    							     false);
-    			}
-    		}
-
-    		descriptor = new rina::CDAPSessionDescriptor();
-
-    		LOG_IPCP_DBG("Received A-Data CDAP message from address %u : %s", adata->source_address_,
-    	    		aDataCDAPMessage->to_string().c_str());
-
-    		atomic_send_lock_.unlock();
-    		processIncomingCDAPMessage(aDataCDAPMessage,
-    					   descriptor,
-    					   rina::CDAPSessionInterface::SESSION_STATE_CON);
-    		delete aDataCDAPMessage;
-    		delete adata;
-    		delete descriptor;
-    		delete cdapMessage;
-    		return;
-    	} catch (rina::Exception &e) {
-    		atomic_send_lock_.unlock();
-    		LOG_IPCP_ERR("Error processing A-data message: %s", e.what());
-    		return;
-    	}
-    }
-
-    cdapSession = cdap_session_manager_->get_cdap_session(portId);
-    if (!cdapSession) {
-            atomic_send_lock_.unlock();
-            LOG_IPCP_ERR("Could not find open CDAP session related to portId %d", portId);
-            delete cdapMessage;
-            return;
-    }
-
-    descriptor = cdapSession->get_session_descriptor();
-    LOG_IPCP_DBG("Received CDAP message through portId %d: %s", portId,
-                    cdapMessage->to_string().c_str());
-    atomic_send_lock_.unlock();
-
-    processIncomingCDAPMessage(cdapMessage, descriptor,
-		    	       cdapSession->get_session_state());
-
-    //Check if CDAP session has been closed due to the message received
-    if (cdapSession->is_closed()) {
-	    cdap_session_manager_->removeCDAPSession(portId);
-    }
-
-    delete cdapMessage;
 }
 
 void IPCPRIBDaemonImpl::generateCDAPResponse(int invoke_id,
