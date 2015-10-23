@@ -3130,7 +3130,8 @@ void RIBDaemonAE::set_application_process(ApplicationProcess * ap)
 	(void) ap;
 }
 
-void RIBDaemonProxy::set_application_process(ApplicationProcess * ap)
+// Class RIBDaemonAE
+void RIBDaemonAE::set_application_process(ApplicationProcess * ap)
 {
 	(void) ap;
 }

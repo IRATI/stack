@@ -887,8 +887,6 @@ public:
 			const cdap_rib::filt_info_t &filt,
 			RIBOpsRespHandler * resp_handler);
 
-	void set_application_process(ApplicationProcess * ap);
-
 private:
 	///@internal
 	int64_t __addObjRIB(const rib_handle_t& h,
