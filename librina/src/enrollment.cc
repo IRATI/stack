@@ -32,13 +32,9 @@ namespace rina {
 const std::string NeighborRIBObj::class_name = "Neighbor";
 const std::string NeighborRIBObj::object_name_prefix = "/difmanagement/enrollment/neighbors/processName=";
 
-NeighborRIBObj::NeighborRIBObj(ApplicationProcess * app,
-			      rib::RIBDaemonProxy * rib_daemon,
-			      Neighbor* neigh) : rib::RIBObj(class_name)
+NeighborRIBObj::NeighborRIBObj(Neighbor* neigh) :
+		rib::RIBObj(class_name), neighbor(neigh)
 {
-	neighbor = neigh;
-	app_ = app;
-	ribd = rib_daemon;
 }
 
 const std::string NeighborRIBObj::get_displayable_value() const
@@ -54,62 +50,6 @@ const std::string NeighborRIBObj::get_displayable_value() const
     return ss.str();
 }
 
-void NeighborRIBObj::create_cb(const rib::rib_handle_t rib,
-			       const cdap_rib::con_handle_t &con,
-			       const std::string& fqn,
-			       const std::string& class_,
-			       const cdap_rib::filt_info_t &filt,
-			       const int invoke_id,
-			       const ser_obj_t &obj_req,
-			       ser_obj_t &obj_reply,
-			       cdap_rib::res_info_t& res)
-{
-	Lockable lock;
-	ScopedLock g(lock);
-	Neighbor * neighbor = 0;
-	res.code_ = cdap_rib::CDAP_SUCCESS;
-
-	//TODO 1 decode neighbor from ser_obj_t
-
-	//2 If neighbor is already in RIB, exit
-	if (ribd->containsObj(rib, fqn))
-		return;
-
-	//3 Avoid creating myself as a neighbor
-	if (neighbor->name_.processName.compare(app_->get_name()) == 0)
-		return;
-
-	//4 Only create neighbours with whom I have an N-1 DIF in common
-	std::list<rina::ApplicationProcessNamingInformation>::const_iterator it;
-	IPCResourceManager * irm =
-			dynamic_cast<IPCResourceManager*>(app_->get_ipc_resource_manager());
-	bool supportingDifInCommon = false;
-	for(it = neighbor->supporting_difs_.begin(); it != neighbor->supporting_difs_.end(); ++it) {
-		if (irm->isSupportingDIF((*it))) {
-			neighbor->supporting_dif_name_ = (*it);
-			supportingDifInCommon = true;
-			break;
-		}
-	}
-
-	if (!supportingDifInCommon) {
-		LOG_INFO("Ignoring neighbor %s because we don't have an N-1 DIF in common",
-				neighbor->name_.processName.c_str());
-		return;
-	}
-
-	//5 Create object
-	try {
-		std::stringstream ss;
-		ss << NeighborRIBObj::object_name_prefix << neighbor->name_.processName;
-
-		NeighborRIBObj * nrobj = new NeighborRIBObj(app_, ribd, neighbor);
-		ribd->addObjRIB(rib, ss.str(), &nrobj);
-	} catch (Exception &e) {
-		res.code_ = cdap_rib::CDAP_ERROR;
-		LOG_ERR("Problems creating RIB object: %s", e.what());
-	}
-}
 
 // Class Neighbor RIB object
 const std::string NeighborsRIBObj::class_name = "Neighbors";
@@ -181,7 +121,7 @@ void NeighborsRIBObj::create(const cdap_rib::con_handle_t &con,
 			std::stringstream ss2;
 			ss2 << NeighborRIBObj::object_name_prefix << (*iterator)->name_.processName;
 
-			NeighborRIBObj * nrobj = new NeighborRIBObj(app_, ribd, *iterator);
+			NeighborRIBObj * nrobj = new NeighborRIBObj(*iterator);
 			ribd->addObjRIB(rib, ss2.str(), &nrobj);
 		} catch (Exception &e) {
 			res.code_ = cdap_rib::CDAP_ERROR;
