@@ -740,6 +740,26 @@ public:
 	}
 };
 
+/// Template interface for encoding and decoding of objects (object <--> buffer)
+template<class T>
+class Encoder{
+public:
+	virtual ~Encoder(){}
+	/// Converts an object to a byte array, if this object is recognized by the encoder
+	/// @param object
+	/// @throws exception if the object is not recognized by the encoder
+	/// @return
+	virtual void encode(const T &obj, ser_obj_t& serobj) = 0;
+	/// Converts a byte array to an object of the type specified by "className"
+	/// @param byte[] serializedObject
+	/// @param objectClass The type of object to be decoded
+	/// @throws exception if the byte array is not an encoded in a way that the
+	/// encoder can recognize, or the byte array value doesn't correspond to an
+	/// object of the type "className"
+	/// @return
+	virtual void decode(const ser_obj_t &serobj,T &des_obj) = 0;
+};
+
 /**
  * Initialize librina providing the local Netlink port-id where this librina
  * instantiation will be bound
