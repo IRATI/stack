@@ -31,6 +31,8 @@
 #include "encoders/WhatevercastNameArrayMessage.pb.h"
 #include "encoders/NeighborArrayMessage.pb.h"
 #include "encoders/IntType.pb.h"
+#include "encoders/QoSSpecification.pb.h"
+#include "encoders/FlowMessage.pb.h"
 
 namespace rinad {
 
@@ -157,13 +159,15 @@ rina::messages::applicationProcessNamingInfo_t* get_applicationProcessNamingInfo
 void get_ApplicationProcessNamingInformation(
 	const rina::messages::applicationProcessNamingInfo_t &gpf_app,
 	rina::ApplicationProcessNamingInformation &app) {
+		app.processName = gpf_app.applicationprocessname();
+		app.processInstance = gpf_app.applicationprocessinstance();
+		app.entityName = gpf_app.applicationentityname();
+		app.entityInstance = gpf_app.applicationentityinstance();
+}
 
-		app->processName = gpf_app.applicationprocessname();
-		app->processInstance = gpf_app.applicationprocessinstance();
-		app->entityName = gpf_app.applicationentityname();
-		app->entityInstance = gpf_app.applicationentityinstance();
-
-		return app;
+void get_property_t(rina::messages::property_t* gpb_conf, const rina::PolicyParameter &conf) {
+	gpb_conf->set_name(conf.get_name());
+	gpb_conf->set_value(conf.get_value());
 }
 
 void get_PolicyParameter(const rina::messages::property_t &gpf_conf,
@@ -179,11 +183,9 @@ void get_PolicyConfig(const rina::messages::policyDescriptor_t &gpf_conf,
 	conf.set_version(gpf_conf.version());
 	for (int i =0; i < gpf_conf.policyparameters_size(); ++i)	{
 		rina::PolicyParameter param;
-		Encoder::get_PolicyParameter(gpf_conf.policyparameters(i), param);
+		get_PolicyParameter(gpf_conf.policyparameters(i), param);
 		conf.parameters_.push_back(param);
 	}
-
-	return conf;
 }
 
 rina::messages::policyDescriptor_t* get_policyDescriptor_t(const rina::PolicyConfig &conf) {
@@ -195,29 +197,27 @@ rina::messages::policyDescriptor_t* get_policyDescriptor_t(const rina::PolicyCon
 	for (std::list<rina::PolicyParameter>::const_iterator it = conf.get_parameters().begin();
 		it != conf.get_parameters().end(); ++it) {
 			rina::messages::property_t * pro = gpf_conf->add_policyparameters();
-			Encoder::get_property_t(pro, *it);
+			get_property_t(pro, *it);
 	}
-
-	return gpf_conf;
 }
 }//namespace helpers
 
 // CLASS DataTransferConstantsEncoder
 void DataTransferConstantsEncoderencode(
 	const rina::DataTransferConstants &obj, 
-	rina::cdap_rib::ser_obj_t& serobj)
+	rina::ser_obj_t& serobj)
 {
 	rina::messages::dataTransferConstants_t gpb;
 
-	gpb.set_addresslength(obj->address_length_);
-	gpb.set_cepidlength(obj->cep_id_length_);
-	gpb.set_difintegrity(obj->dif_integrity_);
-	gpb.set_lengthlength(obj->length_length_);
-	gpb.set_maxpdulifetime(obj->max_pdu_lifetime_);
-	gpb.set_maxpdusize(obj->max_pdu_size_);
-	gpb.set_portidlength(obj->port_id_length_);
-	gpb.set_qosidlength(obj->qos_id_length_);
-	gpb.set_sequencenumberlength(obj->sequence_number_length_);
+	gpb.set_addresslength(obj.address_length_);
+	gpb.set_cepidlength(obj.cep_id_length_);
+	gpb.set_difintegrity(obj.dif_integrity_);
+	gpb.set_lengthlength(obj.length_length_);
+	gpb.set_maxpdulifetime(obj.max_pdu_lifetime_);
+	gpb.set_maxpdusize(obj.max_pdu_size_);
+	gpb.set_portidlength(obj.port_id_length_);
+	gpb.set_qosidlength(obj.qos_id_length_);
+	gpb.set_sequencenumberlength(obj.sequence_number_length_);
 
 	serobj.size_ = gpb.ByteSize();
 	serobj.message_ = new char[serobj.size_];
@@ -225,16 +225,16 @@ void DataTransferConstantsEncoderencode(
 }
 
 void DataTransferConstantsEncoder::decode(
-	const rina::cdap_rib::ser_obj_t &serobj,
+	const rina::ser_obj_t &serobj,
 	rina::DataTransferConstants &des_obj)
 {
 	rina::messages::dataTransferConstants_t gpb;
 
 	gpb.ParseFromArray(serobj.message_, serobj.size_);
 
-	des_obj->address_length_ = gpb.addresslength();
-	des_obj->cep_id_length_ = gpb.cepidlength();
-	des_obj->dif_integrity_ = gpb.difintegrity();
+	des_obj.address_length_ = gpb.addresslength();
+	des_obj.cep_id_length_ = gpb.cepidlength();
+	des_obj.dif_integrity_ = gpb.difintegrity();
 	des_obj.length_length_ = gpb.lengthlength();
 	des_obj.max_pdu_lifetime_ = gpb.maxpdulifetime();
 	des_obj.max_pdu_size_ = gpb.maxpdusize();
@@ -247,14 +247,14 @@ void DataTransferConstantsEncoder::decode(
 // CLASS DirectoryForwardingTableEntryEncoder
 void DFTEEncoder::encode(
 	const rina::DirectoryForwardingTableEntry &obj, 
-	rina::cdap_rib::ser_obj_t& serobj)
+	rina::ser_obj_t& serobj)
 {
 	rina::messages::directoryForwardingTableEntry_t gpb;
 
-	gpb->set_allocated_applicationname(
-		helpers::get_applicationProcessNamingInfo_t(obj->ap_naming_info_));
-	gpb->set_ipcprocesssynonym(obj->address_);
-	gpb->set_timestamp(obj->timestamp_);
+	gpb.set_allocated_applicationname(
+		helpers::get_applicationProcessNamingInfo_t(obj.ap_naming_info_));
+	gpb.set_ipcprocesssynonym(obj.address_);
+	gpb.set_timestamp(obj.timestamp_);
 
 	serobj.size_ = gpb.ByteSize();
 	serobj.message_ = new char[serobj.size_];
@@ -262,7 +262,7 @@ void DFTEEncoder::encode(
 }
 
 void DFTEEncoder::decode(
-	const rina::cdap_rib::ser_obj_t &serobj, 
+	const rina::ser_obj_t &serobj, 
 	rina::DirectoryForwardingTableEntry &des_obj)
 {
 	rina::messages::directoryForwardingTableEntry_t gpb;
@@ -272,20 +272,20 @@ void DFTEEncoder::decode(
 	helpers::get_ApplicationProcessNamingInformation(gpb.applicationname(),
 		app_name);
 	des_obj.ap_naming_info_ = app_name;
-	dtfe.address_ = gpb_dfte.ipcprocesssynonym();
-	dtfe.timestamp_ = gpb_dfte.timestamp();
+	des_obj.address_ = gpb.ipcprocesssynonym();
+	des_obj.timestamp_ = gpb.timestamp();
 
 }
 
 // CLASS DFTEListEncoder
 void DFTEListEncoder::encode(
 	const std::list<rina::DirectoryForwardingTableEntry> &obj,
-	rina::cdap_rib::ser_obj_t& serobj)
+	rina::ser_obj_t& serobj)
 {
 
 
 }
-void DFTEListEncoder::decode(const rina::cdap_rib::ser_obj_t &serobj, 
+void DFTEListEncoder::decode(const rina::ser_obj_t &serobj, 
 	std::list<rina::DirectoryForwardingTableEntry> &des_obj)
 {
 
@@ -319,17 +319,17 @@ void get_DTPConfig(const rina::messages::dtpConfig_t &gpf_conf,
 {
 	conf.set_dtcp_present(gpf_conf.dtcppresent());
 	rina::PolicyConfig p_conf;
-	get_PolicyConfig(gpf_conf.rcvrtimerinactivitypolicy(), p_conf);
+	helpers::get_PolicyConfig(gpf_conf.rcvrtimerinactivitypolicy(), p_conf);
 	conf.set_rcvr_timer_inactivity_policy(p_conf);
-	get_PolicyConfig(gpf_conf.sendertimerinactiviypolicy(), p_conf);
-	conf->set_sender_timer_inactivity_policy(p_conf);
-	get_PolicyConfig(gpf_conf.initialseqnumpolicy(), p_conf);
-	conf->set_initial_seq_num_policy(p_conf);
-	get_PolicyConfig(gpf_conf.dtppolicyset(), p_conf);
-	conf->set_dtp_policy_set(p_conf);
-	conf->set_seq_num_rollover_threshold(
+	helpers::get_PolicyConfig(gpf_conf.sendertimerinactiviypolicy(), p_conf);
+	conf.set_sender_timer_inactivity_policy(p_conf);
+	helpers::get_PolicyConfig(gpf_conf.initialseqnumpolicy(), p_conf);
+	conf.set_initial_seq_num_policy(p_conf);
+	helpers::get_PolicyConfig(gpf_conf.dtppolicyset(), p_conf);
+	conf.set_dtp_policy_set(p_conf);
+	conf.set_seq_num_rollover_threshold(
 		gpf_conf.seqnumrolloverthreshold());
-	conf->set_initial_a_timer(gpf_conf.initialatimer());
+	conf.set_initial_a_timer(gpf_conf.initialatimer());
 }
 
 
@@ -431,7 +431,7 @@ rina::messages::dtcpRtxControlConfig_t* get_dtcpRtxControlConfig_t(
 	return gpf_conf;
 }
 
-rina::messages::dtcpConfig_t* Encoder::get_dtcpConfig_t(
+rina::messages::dtcpConfig_t* get_dtcpConfig_t(
 	const rina::DTCPConfig &conf) {
 	rina::messages::dtcpConfig_t *gpf_conf = new rina::messages::dtcpConfig_t;
 
@@ -463,7 +463,7 @@ void get_DTCPWindowBasedFlowControlConfig(
 	conf.set_rcvr_flow_control_policy(poli);
 
 	helpers::get_PolicyConfig(gpf_conf.txcontrolpolicy(), poli);
-	conf->set_tx_control_policy(*poli);
+	conf.set_tx_control_policy(poli);
 }
 
 void get_DTCPRateBasedFlowControlConfig(
@@ -474,13 +474,13 @@ void get_DTCPRateBasedFlowControlConfig(
 		conf.set_sending_rate(gpf_conf.sendingrate());
 		conf.set_time_period(gpf_conf.timeperiod());
 		helpers::get_PolicyConfig(gpf_conf.norateslowdownpolicy(), poli);
-		conf->set_no_rate_slow_down_policy(poli);
+		conf.set_no_rate_slow_down_policy(poli);
 
-		helpers::get_PolicyConfig(gpf_conf.nooverridedefaultpeakpolicy());
-		conf->set_no_override_default_peak_policy(poli);
+		helpers::get_PolicyConfig(gpf_conf.nooverridedefaultpeakpolicy(), poli);
+		conf.set_no_override_default_peak_policy(poli);
 
-		helpers::get_PolicyConfig(gpf_conf.ratereductionpolicy());
-		conf->set_rate_reduction_policy(*poli);
+		helpers::get_PolicyConfig(gpf_conf.ratereductionpolicy(), poli);
+		conf.set_rate_reduction_policy(poli);
 }
 
 void get_DTCPFlowControlConfig(
@@ -515,7 +515,7 @@ void get_DTCPFlowControlConfig(
 	helpers::get_PolicyConfig(gpf_conf.reconcileflowcontrolpolicy(), poli);
 	conf.set_reconcile_flow_control_policy(poli);
 
-	helpers::get_PolicyConfig(gpf_conf.receivingflowcontrolpolicy());
+	helpers::get_PolicyConfig(gpf_conf.receivingflowcontrolpolicy(), poli);
 	conf.set_receiving_flow_control_policy(poli);
 }
 
@@ -525,8 +525,8 @@ void get_DTCPRtxControlConfig(
 {
 	rina::PolicyConfig polc;
 
-	conf->set_max_time_to_retry(gpf_conf.maxtimetoretry());
-	conf->set_data_rxmsn_max(gpf_conf.datarxmsnmax());
+	conf.set_max_time_to_retry(gpf_conf.maxtimetoretry());
+	conf.set_data_rxmsn_max(gpf_conf.datarxmsnmax());
 	helpers::get_PolicyConfig(gpf_conf.rtxtimerexpirypolicy(), polc);
 	conf.set_rtx_timer_expiry_policy(polc);
 	helpers::get_PolicyConfig(gpf_conf.senderackpolicy(), polc);
@@ -542,7 +542,7 @@ void get_DTCPRtxControlConfig(
 	conf.set_initial_rtx_time(gpf_conf.initialrtxtime());
 }
 
-rina::DTCPConfig* Encoder::get_DTCPConfig(
+rina::DTCPConfig* get_DTCPConfig(
 	const rina::messages::dtcpConfig_t &gpf_conf, rina::DTCPConfig &conf)
 {
 	conf.flow_control_ = gpf_conf.flowcontrol();
@@ -557,21 +557,16 @@ rina::DTCPConfig* Encoder::get_DTCPConfig(
 	conf.set_lost_control_pdu_policy(p_conf);
 	helpers::get_PolicyConfig(gpf_conf.rttestimatorpolicy(), p_conf);
 	conf.set_rtt_estimator_policy(p_conf);
-	helpers::get_PolicyConfig(gpf_conf.dtcppolicyset());
+	helpers::get_PolicyConfig(gpf_conf.dtcppolicyset(), p_conf);
 	conf.set_dtcp_policy_set(p_conf);
 }
 
-} // namespace cube_enc_helpers
-
-void QoSCubeEncoder::encode(const rina::QoSCube &obj, 
-	rina::cdap_rib::ser_obj_t& serobj)
+void toGPB(const rina::QoSCube &obj, rina::messages::qosCube_t &gpb)
 {
-	rina::messages::qosCube_t gpb;
-
 	gpb.set_allocated_dtpconfiguration(
-		QoSCubeEncoderHelpers::get_dtpConfig_t(obj.dtp_config_));
+		cube_enc_helpers::get_dtpConfig_t(obj.dtp_config_));
 	gpb.set_allocated_dtcpconfiguration(
-		QoSCubeEncoderHelpers::get_dtcpConfig_t(obj.dtcp_config_));
+		cube_enc_helpers::get_dtcpConfig_t(obj.dtcp_config_));
 	gpb.set_averagebandwidth(obj.average_bandwidth_);
 	gpb.set_averagesdubandwidth(obj.average_sdu_bandwidth_);
 	gpb.set_delay(obj.delay_);
@@ -584,23 +579,15 @@ void QoSCubeEncoder::encode(const rina::QoSCube &obj,
 	gpb.set_peaksdubandwidthduration(obj.peak_sdu_bandwidth_duration_);
 	gpb.set_qosid(obj.id_);
 	gpb.set_undetectedbiterrorrate(obj.undetected_bit_error_rate_);
-
-	serobj.size_ = gpb.ByteSize();
-	serobj.message_ = new char[serobj.size_];
-	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
 
-void QoSCubeEncoder::decode(const rina::cdap_rib::ser_obj_t &serobj, 
-	rina::QoSCube &des_obj)
-
+void toModel (const rina::messages::qosCube_t &gpb, rina::QoSCube &des_obj)
 {
-	rina::messages::qosCube_t gpb;
-	gpb.ParseFromArray(serobj.message_, serobj.size_);
-
 	rina::DTPConfig dtpConfig;
-	cube_enc_helpers::get_DTPConfig(gpb.dtpconfiguration(), dtpConfig);
+	get_DTPConfig(gpb.dtpconfiguration(), dtpConfig);
 	des_obj.dtp_config_ = dtpConfig;
-	cube_enc_helpers::get_DTCPConfig(gpb.dtcpconfiguration(), dtpConfig);
+	rina::DTCPConfig dtcpConfig;
+	get_DTCPConfig(gpb.dtcpconfiguration(), dtcpConfig);
 	des_obj.dtcp_config_ = dtcpConfig;
 	des_obj.average_bandwidth_ = gpb.averagebandwidth();
 	des_obj.average_sdu_bandwidth_ = gpb.averagesdubandwidth();
@@ -615,96 +602,156 @@ void QoSCubeEncoder::decode(const rina::cdap_rib::ser_obj_t &serobj,
 	des_obj.id_ = gpb.qosid();
 	des_obj.undetected_bit_error_rate_ = gpb.undetectedbiterrorrate();
 }
+} // namespace cube_enc_helpers
 
-/// CLASS QoSCubeListEncoder
-void QoSCubeListEncoder::encode(const <std::list<rina::QoSCube> &obj, 
-	rina::cdap_rib::ser_obj_t& serobj)
+void QoSCubeEncoder::encode(const rina::QoSCube &obj, 
+	rina::ser_obj_t &serobj)
 {
+	rina::messages::qosCube_t gpb;
 
-
-}
-void QoSCubeListEncoder::decode(const rina::cdap_rib::ser_obj_t &serobj, 
-	<std::list<rina::QoSCube> &des_obj)
-{
-
-
-}
-
-//Class WhatevercastNameEncoder
-void WhatevercastNameEncoder::encode(const rina::WhatevercastName &obj,
-	rina::cdap_rib::ser_obj_t& serobj)
-{
-	rina::messages::whatevercastName_t gpb;
-
-	gpb.set_name(obj.name_);
-	gpb.set_rule(obj.rule_);
-	for (std::list<std::string>::iterator it=obj.set_members_.begin();
-		it != obj.set_members_.end(); ++it) 
-	{
-		gpb.add_setmembers(*it);
-	}
+	cube_enc_helpers::toGPB(obj, gpb);
 
 	serobj.size_ = gpb.ByteSize();
 	serobj.message_ = new char[serobj.size_];
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
 
-void WhatevercastNameEncoder::decode(const rina::cdap_rib::ser_obj_t &serobj,
-	rina::WhatevercastName &des_obj)
+void QoSCubeEncoder::decode(const rina::ser_obj_t &serobj, 
+	rina::QoSCube &des_obj)
+
 {
-	rina::messages::whatevercastName_t gpb;
+	rina::messages::qosCube_t gpb;
 	gpb.ParseFromArray(serobj.message_, serobj.size_);
 
+	cube_enc_helpers::toModel(gpb, des_obj);
+}
 
+/// CLASS QoSCubeListEncoder
+void QoSCubeListEncoder::encode(const std::list<rina::QoSCube> &obj, 
+	rina::ser_obj_t& serobj)
+{
+	rina::messages::qosCubes_t gpb;
+
+	for (std::list<rina::QoSCube>::const_iterator it = obj.begin(); 
+		it != obj.end(); ++it) {
+		rina::messages::qosCube_t *gpb_cube;
+		gpb_cube = gpb.add_qoscube();
+		cube_enc_helpers::toGPB((*it), *gpb_cube);
+	}
+
+	serobj.size_ = gpb.ByteSize();
+	serobj.message_ = new char[serobj.size_];
+	gpb.SerializeToArray(serobj.message_, serobj.size_);
+
+}
+void QoSCubeListEncoder::decode(const rina::ser_obj_t &serobj, 
+	std::list<rina::QoSCube> &des_obj)
+{
+	rina::messages::qosCubes_t gpb;
+	gpb.ParseFromArray(serobj.message_, serobj.size_);
+
+	for (int i = 0; i < gpb.qoscube_size(); i++)
+	{
+		rina::QoSCube cube;
+		cube_enc_helpers::toModel(gpb.qoscube(i), cube);
+		des_obj.push_back(cube);
+	}
+}
+
+//Class WhatevercastNameEncoder
+namespace whatever_helpers{
+void toGPB(const rina::WhatevercastName &obj, 
+	rina::messages::whatevercastName_t &gpb)
+{
+	gpb.set_name(obj.name_);
+	gpb.set_rule(obj.rule_);
+	for (std::list<std::string>::const_iterator it=obj.set_members_.begin();
+		it != obj.set_members_.end(); ++it) 
+	{
+		gpb.add_setmembers(*it);
+	}
+}
+
+void toModel(const rina::messages::whatevercastName_t &gpb, 
+	rina::WhatevercastName &des_obj)
+{
 	des_obj.name_ = gpb.name();
 	des_obj.rule_ = gpb.rule();
 	for(int i=0; i<gpb.setmembers_size(); i++) {
 		des_obj.set_members_.push_back(gpb.setmembers(i));
 	}
 }
+} // namespace whatever_helpers
 
-/// Class WhatevercastNameListEncoder
-void WhatevercastNameListEncoder::encode(
-	const std::list<rina::Encoder<rina::WhatevercastName> &obj,
-	rina::cdap_rib::ser_obj_t& serobj)
+void WhatevercastNameEncoder::encode(const rina::WhatevercastName &obj,
+	rina::ser_obj_t& serobj)
 {
+	rina::messages::whatevercastName_t gpb;
 
-
-}
-void WhatevercastNameListEncoder::decode(const rina::cdap_rib::ser_obj_t &serobj, 
-	std::list<rina::Encoder<rina::WhatevercastName> &des_obj)
-{
-
-
-}
-
-//Class NeighborEncoder
-void NeighborEncoder::encode(const rina::Neighbor &obj, 
-	rina::cdap_rib::ser_obj_t& serobj)
-{
-	rina::messages::neighbor_t gpb;
-
-	gpb.set_address(obj.address_);
-	gpb.set_applicationprocessname(obj.name_.processName);
-	gpb.set_applicationprocessinstance(obj.name_.processInstance);
-	for (std::list<rina::ApplicationProcessNamingInformation>::iterator it
-		= obj.supporting_difs_.begin();	it != obj.supporting_difs_.end(); ++it)
-	{
-			gpb->add_supportingdifs(it->processName);
-	}
+	whatever_helpers::toGPB(obj, gpb);
 
 	serobj.size_ = gpb.ByteSize();
 	serobj.message_ = new char[serobj.size_];
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
 
-void NeighborEncoder::decode(const rina::cdap_rib::ser_obj_t &serobj, 
-	rina::Neighbor &des_obj)
+void WhatevercastNameEncoder::decode(const rina::ser_obj_t &serobj,
+	rina::WhatevercastName &des_obj)
 {
-	rina::messages::neighbor_t gpb;
+	rina::messages::whatevercastName_t gpb;
 	gpb.ParseFromArray(serobj.message_, serobj.size_);
 
+	whatever_helpers::toModel(gpb, des_obj);
+}
 
+/// Class WhatevercastNameListEncoder
+void WhatevercastNameListEncoder::encode(
+	const std::list<rina::WhatevercastName> &obj,
+	rina::ser_obj_t& serobj)
+{
+	rina::messages::whatevercastNames_t gpb;
+
+	for (std::list<rina::WhatevercastName>::const_iterator it = obj.begin();
+		it != obj.end(); ++it) {
+			rina::messages::whatevercastName_t *gpb_name;
+			gpb_name = gpb.add_whatevercastname();
+			whatever_helpers::toGPB((*it), *gpb_name);
+	}
+
+	serobj.size_ = gpb.ByteSize();
+	serobj.message_ = new char[serobj.size_];
+	gpb.SerializeToArray(serobj.message_, serobj.size_);
+}
+void WhatevercastNameListEncoder::decode(const rina::ser_obj_t &serobj, 
+	std::list<rina::WhatevercastName> &des_obj)
+{
+	rina::messages::whatevercastNames_t gpb;
+	gpb.ParseFromArray(serobj.message_, serobj.size_);
+
+	for (int i = 0; i < gpb.whatevercastname_size(); i++)
+	{
+		rina::WhatevercastName name;
+		whatever_helpers::toModel(gpb.whatevercastname(i), name);
+		des_obj.push_back(name);
+	}
+}
+
+namespace neighbor_helpers{
+void toGPB(const rina::Neighbor &obj, rina::messages::neighbor_t &gpb)
+{
+	gpb.set_address(obj.address_);
+	gpb.set_applicationprocessname(obj.name_.processName);
+	gpb.set_applicationprocessinstance(obj.name_.processInstance);
+	for (std::list<rina::ApplicationProcessNamingInformation>::const_iterator
+		it = obj.supporting_difs_.begin(); it != obj.supporting_difs_.end();
+		++it)
+	{
+		gpb.add_supportingdifs(it->processName);
+	}
+}
+void toModel(const rina::messages::neighbor_t &gpb, 
+	rina::Neighbor &des_obj)
+{
 	des_obj.address_ = gpb.address();
 	des_obj.name_.processName = gpb.applicationprocessname();
 	des_obj.name_.processInstance = gpb.applicationprocessinstance();
@@ -714,46 +761,65 @@ void NeighborEncoder::decode(const rina::cdap_rib::ser_obj_t &serobj,
 			""));
 	}
 }
-
-
-/// CLASS NeighborListEncoder
-void NeighborListEncoder::encode(
-	const std::list<rina::Encoder<rina::Neighbor> > &obj,
-	rina::cdap_rib::ser_obj_t& serobj)
+} // namespace neighbor_helpers
+//Class NeighborEncoder
+void NeighborEncoder::encode(const rina::Neighbor &obj, 
+	rina::ser_obj_t& serobj)
 {
+	rina::messages::neighbor_t gpb;
 
-}
-void NeighborListEncoder::decode(const rina::cdap_rib::ser_obj_t &serobj, 
-	std::list<rina::Encoder<rina::Neighbor> > &des_obj
-{
-
-
-}
-
-
-// Class IntEncoder
-void IntEncoder::encode(const int &obj, rina::cdap_rib::ser_obj_t& serobj)
-{
-	rina::messages::int_t gpb;
-
-	gpb.set_value(obj);
+	neighbor_helpers::toGPB(obj, gpb);
 
 	serobj.size_ = gpb.ByteSize();
 	serobj.message_ = new char[serobj.size_];
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
-void IntEncoder::decode(const rina::cdap_rib::ser_obj_t &serobj, 
-	int &des_obj)
+
+void NeighborEncoder::decode(const rina::ser_obj_t &serobj, 
+	rina::Neighbor &des_obj)
 {
-	rina::messages::int_t gpb;
+	rina::messages::neighbor_t gpb;
+	gpb.ParseFromArray(serobj.message_, serobj.size_);
+	neighbor_helpers::toModel(gpb, des_obj);
+}
+
+
+/// CLASS NeighborListEncoder
+void NeighborListEncoder::encode(
+	const std::list<rina::Neighbor> &obj,
+	rina::ser_obj_t& serobj)
+{
+	rina::messages::neighbors_t gpb;
+
+	for (std::list<rina::Neighbor>::const_iterator it = obj.begin();
+		it != obj.end(); ++it) {
+			rina::messages::neighbor_t *gpb_neigh;
+			gpb_neigh = gpb.add_neighbor();
+			neighbor_helpers::toGPB((*it), *gpb_neigh);
+	}
+
+	serobj.size_ = gpb.ByteSize();
+	serobj.message_ = new char[serobj.size_];
+	gpb.SerializeToArray(serobj.message_, serobj.size_);
+}
+void NeighborListEncoder::decode(const rina::ser_obj_t &serobj, 
+	std::list<rina::Neighbor> &des_obj)
+{
+
+	rina::messages::neighbors_t gpb;
 	gpb.ParseFromArray(serobj.message_, serobj.size_);
 
-	des_obj = gpb.value();
+	for (int i = 0; i < gpb.neighbor_size(); i++)
+	{
+		rina::Neighbor neigh;
+		neighbor_helpers::toModel(gpb.neighbor(i), neigh);
+		des_obj.push_back(neigh);
+	}
 }
 
 // CLASS ADataObjectEncoder
 void ADataObjectEncoder::encode(const rina::ADataObject &obj, 
-	rina::cdap_rib::ser_obj_t& serobj)
+	rina::ser_obj_t& serobj)
 {
 	rina::messages::a_data_t gpb;
 
@@ -766,7 +832,8 @@ void ADataObjectEncoder::encode(const rina::ADataObject &obj,
 	serobj.message_ = new char[serobj.size_];
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
-void ADataObjectEncoder::decode(const rina::cdap_rib::ser_obj_t &serobj, 
+
+void ADataObjectEncoder::decode(const rina::ser_obj_t &serobj, 
 	rina::ADataObject &des_obj)
 {
 	rina::messages::a_data_t gpb;
@@ -774,35 +841,37 @@ void ADataObjectEncoder::decode(const rina::cdap_rib::ser_obj_t &serobj,
 
 	des_obj.source_address_ = gpb.sourceaddress();
 	des_obj.dest_address_ = gpb.destaddress();
-	des_obj.encoded_cdap_message_->size_ = gpb.cdapmessage().size();
-	des_obj.encoded_cdap_message_->message_ = new char[
-		des_obj.encoded_cdap_message_->size_];
-	memcpy(des_obj.encoded_cdap_message_->message_, gpb.cdapmessage().data(), 
+	
+	rina::ser_obj_t* cdap;
+	cdap->size_ = gpb.cdapmessage().size();
+	cdap->message_ = new char[cdap->size_];
+	memcpy(cdap->message_, gpb.cdapmessage().data(), 
 		gpb.cdapmessage().size());
+	des_obj.encoded_cdap_message_ = cdap;
 }
 
 namespace flow_enc_helpers
 {
 rina::messages::qosSpecification_t* get_qosSpecification_t(
 	const rina::FlowSpecification &flow_spec) {
-		rina::messages::qosSpecification_t *gpf_flow_spec =
-			new rina::messages::qosSpecification_t;
+	rina::messages::qosSpecification_t *gpf_flow_spec =
+		new rina::messages::qosSpecification_t;
 
-		gpf_flow_spec->set_averagebandwidth(flow_spec.averageBandwidth);
-		gpf_flow_spec->set_averagesdubandwidth(flow_spec.averageSDUBandwidth);
-		gpf_flow_spec->set_peakbandwidthduration(
-			flow_spec.peakBandwidthDuration);
-		gpf_flow_spec->set_peaksdubandwidthduration(
-			flow_spec.peakSDUBandwidthDuration);
-		gpf_flow_spec->set_undetectedbiterrorrate(
-			flow_spec.undetectedBitErrorRate);
-		gpf_flow_spec->set_partialdelivery(flow_spec.partialDelivery);
-		gpf_flow_spec->set_order(flow_spec.orderedDelivery);
-		gpf_flow_spec->set_maxallowablegapsdu(flow_spec.maxAllowableGap);
-		gpf_flow_spec->set_delay(flow_spec.delay);
-		gpf_flow_spec->set_jitter(flow_spec.jitter);
+	gpf_flow_spec->set_averagebandwidth(flow_spec.averageBandwidth);
+	gpf_flow_spec->set_averagesdubandwidth(flow_spec.averageSDUBandwidth);
+	gpf_flow_spec->set_peakbandwidthduration(
+		flow_spec.peakBandwidthDuration);
+	gpf_flow_spec->set_peaksdubandwidthduration(
+		flow_spec.peakSDUBandwidthDuration);
+	gpf_flow_spec->set_undetectedbiterrorrate(
+		flow_spec.undetectedBitErrorRate);
+	gpf_flow_spec->set_partialdelivery(flow_spec.partialDelivery);
+	gpf_flow_spec->set_order(flow_spec.orderedDelivery);
+	gpf_flow_spec->set_maxallowablegapsdu(flow_spec.maxAllowableGap);
+	gpf_flow_spec->set_delay(flow_spec.delay);
+	gpf_flow_spec->set_jitter(flow_spec.jitter);
 
-		return gpf_flow_spec;
+	return gpf_flow_spec;
 }
 
 void get_Connection(const rina::messages::connectionId_t &gpf_conn,
@@ -814,7 +883,7 @@ void get_Connection(const rina::messages::connectionId_t &gpf_conn,
 }
 
 void get_FlowSpecification(const rina::messages::qosSpecification_t &gpf_qos,
-	new rina::FlowSpecification &qos)
+	rina::FlowSpecification &qos)
 {
 	qos.averageBandwidth = gpf_qos.averagebandwidth();
 	qos.averageSDUBandwidth = gpf_qos.averagesdubandwidth();
