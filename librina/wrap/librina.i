@@ -482,6 +482,7 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(assign) rina::cdap_rib::auth_policy::operator=(const auth_policy &other);
 %rename(assign) rina::Neighbor::operator=(const Neighbor &other);
 
+
 %include "librina/exceptions.h"
 %include "librina/patterns.h"
 %include "librina/concurrency.h"

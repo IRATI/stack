@@ -23,7 +23,6 @@
 #ifndef ENCODER_H_
 #define ENCODER_H_
 #ifdef __cplusplus
-
 #include <librina/common.h>
 #include <librina/configuration.h>
 #include <librina/ipc-process.h>

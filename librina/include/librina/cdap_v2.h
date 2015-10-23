@@ -26,6 +26,7 @@
 #include <string>
 #include <librina/common.h>
 
+#include <librina/common.h>
 #include <librina/concurrency.h>
 #include "cdap_rib_structures.h"
 
