@@ -361,6 +361,8 @@ public:
 	///
 	const cdap_rib::vers_info_t& get_version() const;
 
+	std::list<RIBObj*> get_all_rib_objects();
+
 protected:
 	//
 	// Incoming requests to the local RIB
@@ -567,7 +569,7 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 						  flags,
 						  res,
 						  invoke_id,
-						  con.is_port_);
+						  con.cdap_dest);
 	} catch (...) {
 		LOG_ERR("Unable to send response for invoke id %d",
 							invoke_id);
@@ -633,7 +635,7 @@ void RIB::delete_request(const cdap_rib::con_handle_t &con,
 						  flags,
 						  res,
 						  invoke_id,
-						  con.is_port_);
+						  con.cdap_dest);
 	} catch (Exception &e) {
 		LOG_ERR("Unable to send response for invoke id %d",
 							invoke_id);
@@ -698,7 +700,7 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 						flags,
 						res,
 						invoke_id,
-						con.is_port_);
+						con.cdap_dest);
 	} catch (Exception &e) {
 		LOG_ERR("Unable to send response for invoke id %d",
 							invoke_id);
@@ -749,7 +751,7 @@ void RIB::cancel_read_request(
 						       flags,
 						       res,
 						       invoke_id,
-						       con.is_port_);
+						       con.cdap_dest);
 	} catch (Exception &e) {
 		LOG_ERR("Unable to send response for invoke id %d",
 							invoke_id);
@@ -811,7 +813,7 @@ void RIB::write_request(const cdap_rib::con_handle_t &con,
 						flags,
 						res,
 						invoke_id,
-						con.is_port_);
+						con.cdap_dest);
 	} catch (Exception &e) {
 		LOG_ERR("Unable to send response for invoke id %d",
 							invoke_id);
@@ -875,7 +877,7 @@ void RIB::start_request(const cdap_rib::con_handle_t &con,
 						 flags,
 						 res,
 						 invoke_id,
-						 con.is_port_);
+						 con.cdap_dest);
 	} catch (Exception &e) {
 		LOG_ERR("Unable to send response for invoke id %d",
 							invoke_id);
@@ -937,7 +939,7 @@ void RIB::stop_request(const cdap_rib::con_handle_t &con,
 						flags,
 						res,
 						invoke_id,
-						con.is_port_);
+						con.cdap_dest);
 	} catch (Exception &e) {
 		LOG_ERR("Unable to send response for invoke id %d",
 							invoke_id);
@@ -1288,6 +1290,18 @@ const cdap_rib::vers_info_t& RIB::get_version() const {
 	return schema->get_version();
 }
 
+std::list<RIBObj*> RIB::get_all_rib_objects()
+{
+	std::list<RIBObj*> result;
+
+	for (std::map<std::string, RIBObj*>::iterator it = obj_name_map.begin();
+			it != obj_name_map.end(); ++it) {
+		result.push_back(it->second);
+	}
+
+	return result;
+}
+
 ///
 /// RIBDaemon main class
 ///
@@ -1492,6 +1506,9 @@ public:
 	void __set_cdap_provider(cdap::CDAPProviderInterface* p){
 		cdap_provider = p;
 	}
+
+	std::list<RIBObj*> get_rib_objects(const rib_handle_t& handle);
+
 protected:
 	//
 	// CDAP provider callbacks
@@ -1528,6 +1545,8 @@ protected:
 			const cdap_rib::flags_t &flags, const int invoke_id);
 	void close_connection(const cdap_rib::con_handle_t &con,
 			const cdap_rib::flags_t &flags, const int invoke_id);
+	void process_authentication_message(const cdap::CDAPMessage& message,
+					    const cdap_rib::con_handle_t &con);
 
 	void create_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
@@ -2013,6 +2032,12 @@ void RIBDaemon::close_connection(const cdap_rib::con_handle_t &con,
 						    invoke_id);
 }
 
+void RIBDaemon::process_authentication_message(const cdap::CDAPMessage& message,
+				    	       const cdap_rib::con_handle_t &con)
+{
+	app_con_callback_->process_authentication_message(message, con);
+}
+
 // Object management
 
 int64_t RIBDaemon::addObjRIB(const rib_handle_t& handle,
@@ -2159,6 +2184,21 @@ void RIBDaemon::removeObjRIB(const rib_handle_t& handle,
 	rib->remove_obj(inst_id);
 }
 
+std::list<RIBObj*> RIBDaemon::get_rib_objects(const rib_handle_t& handle)
+{
+	//Mutual exclusion
+	ReadScopedLock rlock(rwlock);
+
+	//Retreive the RIB
+	RIB* rib = getRIB(handle);
+
+	if(rib == NULL){
+		LOG_ERR("RIB ('%" PRId64 "') does not exist", handle);
+		throw eRIBNotFound();
+	}
+
+	return rib->get_all_rib_objects();
+}
 
 //
 // Callbacks from events coming from the CDAP provider
@@ -2294,7 +2334,7 @@ void RIBDaemon::create_request(const cdap_rib::con_handle_t &con,
 							  flags,
 							  res,
 							  invoke_id,
-							  con.is_port_);
+							  con.cdap_dest);
 		} catch (Exception &e) {
 			LOG_ERR("Unable to send the response");
 		}
@@ -2323,7 +2363,7 @@ void RIBDaemon::delete_request(const cdap_rib::con_handle_t &con,
 							  flags,
 							  res,
 							  invoke_id,
-							  con.is_port_);
+							  con.cdap_dest);
 		} catch (Exception &e) {
 			LOG_ERR("Unable to send the response");
 		}
@@ -2378,7 +2418,7 @@ void RIBDaemon::cancel_read_request(
 							       flags,
 							       res,
 							       invoke_id,
-							       con.is_port_);
+							       con.cdap_dest);
 		} catch (Exception &e) {
 			LOG_ERR("Unable to send the response");
 		}
@@ -2405,7 +2445,7 @@ void RIBDaemon::write_request(const cdap_rib::con_handle_t &con,
 							 flags,
 							 res,
 							 invoke_id,
-							 con.is_port_);
+							 con.cdap_dest);
 		} catch (Exception &e) {
 			LOG_ERR("Unable to send the response");
 		}
@@ -2433,7 +2473,7 @@ void RIBDaemon::start_request(const cdap_rib::con_handle_t &con,
 							 flags,
 							 res,
 							 invoke_id,
-							 con.is_port_);
+							 con.cdap_dest);
 		} catch (Exception &e) {
 			LOG_ERR("Unable to send the response");
 		}
@@ -2460,7 +2500,7 @@ void RIBDaemon::stop_request(const cdap_rib::con_handle_t &con,
 							flags,
 							res,
 							invoke_id,
-							con.is_port_);
+							con.cdap_dest);
 		} catch (Exception &e) {
 			LOG_ERR("Unable to send the response");
 		}
@@ -2471,8 +2511,17 @@ void RIBDaemon::stop_request(const cdap_rib::con_handle_t &con,
 	rib->stop_request(con, obj, filt, invoke_id);
 }
 
-
 //RIBObj/RIBObj_
+RIBObjectData RIBObj::get_object_data()
+{
+	RIBObjectData result;
+	result.name_ = fqn;
+	result.class_ = class_name;
+	result.displayable_value_ = get_displayable_value();
+
+	return result;
+}
+
 void RIBObj::create(const cdap_rib::con_handle_t &con,
 		    const std::string& fqn,
 		    const std::string& class_,
@@ -2567,8 +2616,7 @@ static RIBDaemon* ribd = NULL;
 //
 
 //Constructor (private)
-RIBDaemonProxy::RIBDaemonProxy(RIBDaemon* ribd_):
-		ApplicationEntity(ApplicationEntity::RIB_DAEMON_AE_NAME)
+RIBDaemonProxy::RIBDaemonProxy(RIBDaemon* ribd_)
 {
 	ribd = ribd_;
 };
@@ -2671,6 +2719,11 @@ bool RIBDaemonProxy::containsObj(const rib_handle_t& handle,
 	}
 }
 
+std::list<RIBObj*> RIBDaemonProxy::get_rib_objects(const rib_handle_t& handle)
+{
+	return ribd->get_rib_objects(handle);
+}
+
 //
 // Client
 //
@@ -2704,13 +2757,13 @@ int RIBDaemonProxy::remote_create(unsigned int handle,
 				  const cdap_rib::obj_info_t &obj,
 				  const cdap_rib::flags_t &flags,
 				  const cdap_rib::filt_info_t &filt,
-				  bool is_port)
+				  cdap_rib::cdap_dest_t cdap_dest)
 {
 	return ribd->cdap_provider->remote_create(handle,
 						  obj,
 						  flags,
 						  filt,
-						  is_port);
+						  cdap_dest);
 }
 
 // Perform a delete operation over an object of the remote RIB
@@ -2718,13 +2771,13 @@ int RIBDaemonProxy::remote_delete(unsigned int handle,
 			  	  const cdap_rib::obj_info_t &obj,
 			  	  const cdap_rib::flags_t &flags,
 			  	  const cdap_rib::filt_info_t &filt,
-			  	  bool is_port)
+			  	  cdap_rib::cdap_dest_t cdap_dest)
 {
 	return ribd->cdap_provider->remote_delete(handle,
 						  obj,
 						  flags,
 						  filt,
-						  is_port);
+						  cdap_dest);
 }
 
 // Perform a read operation over an object of the remote RIB
@@ -2732,25 +2785,25 @@ int RIBDaemonProxy::remote_read(unsigned int handle,
 				const cdap_rib::obj_info_t &obj,
 				const cdap_rib::flags_t &flags,
 				const cdap_rib::filt_info_t &filt,
-				bool is_port)
+				cdap_rib::cdap_dest_t cdap_dest)
 {
 	return ribd->cdap_provider->remote_read(handle,
 						obj,
 						flags,
 						filt,
-						is_port);
+						cdap_dest);
 }
 
 // Perform a cancel read operation over an object of the remote RIB
 int RIBDaemonProxy::remote_cancel_read(unsigned int handle,
 				       const cdap_rib::flags_t &flags,
 				       const int invoke_id,
-				       bool is_port)
+				       cdap_rib::cdap_dest_t cdap_dest)
 {
 	return ribd->cdap_provider->remote_cancel_read(handle,
 						       flags,
 						       invoke_id,
-						       is_port);
+						       cdap_dest);
 }
 
 // Perform a write operation over an object of the remote RIB
@@ -2758,13 +2811,13 @@ int RIBDaemonProxy::remote_write(unsigned int handle,
 			 	 const cdap_rib::obj_info_t &obj,
 			 	 const cdap_rib::flags_t &flags,
 			 	 const cdap_rib::filt_info_t &filt,
-			 	 bool is_port)
+			 	 cdap_rib::cdap_dest_t cdap_dest)
 {
 	return ribd->cdap_provider->remote_write(handle,
 						 obj,
 						 flags,
 						 filt,
-						 is_port);
+						 cdap_dest);
 }
 
 // Perform a start operation over an object of the remote RIB
@@ -2772,13 +2825,13 @@ int RIBDaemonProxy::remote_start(unsigned int handle,
 			 	 const cdap_rib::obj_info_t &obj,
 			 	 const cdap_rib::flags_t &flags,
 			 	 const cdap_rib::filt_info_t &filt,
-			 	 bool is_port)
+			 	 cdap_rib::cdap_dest_t cdap_dest)
 {
 	return ribd->cdap_provider->remote_start(handle,
 						 obj,
 						 flags,
 						 filt,
-						 is_port);
+						 cdap_dest);
 }
 
 // Perform a stop operation over an object of the remote RIB
@@ -2786,16 +2839,17 @@ int RIBDaemonProxy::remote_stop(unsigned int handle,
 				const cdap_rib::obj_info_t &obj,
 				const cdap_rib::flags_t &flags,
 				const cdap_rib::filt_info_t &filt,
-				bool is_port)
+				cdap_rib::cdap_dest_t cdap_dest)
 {
 	return ribd->cdap_provider->remote_stop(handle,
 						obj,
 						flags,
 						filt,
-						is_port);
+						cdap_dest);
 }
 
-void RIBDaemonProxy::set_application_process(ApplicationProcess * ap)
+// Class RIBDaemonAE
+void RIBDaemonAE::set_application_process(ApplicationProcess * ap)
 {
 	(void) ap;
 }

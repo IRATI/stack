@@ -31,6 +31,7 @@
 #include <librina/ipc-process.h>
 #include <librina/internal-events.h>
 #include <librina/irm.h>
+#include <librina/rib_v2.h>
 #include <librina/security-manager.h>
 
 #include "common/encoder.h"
@@ -110,13 +111,13 @@ public:
 class IPCPEnrollmentTaskPS : public rina::IPolicySet {
 public:
         virtual ~IPCPEnrollmentTaskPS() {};
-        virtual void connect_received(const rina::CDAPMessage& cdapMessage,
-        			      rina::CDAPSessionDescriptor * session_descriptor) = 0;
+	virtual void connect_received(const rina::cdap::CDAPMessage& cdapMessage,
+			     	      const rina::cdap_rib::con_handle_t &con) = 0;
         virtual void connect_response_received(int result,
         				       const std::string& result_reason,
-        				       rina::CDAPSessionDescriptor * session_descriptor) = 0;
-        virtual void process_authentication_message(const rina::CDAPMessage& message,
-        					    rina::CDAPSessionDescriptor * session_descriptor) = 0;
+        				       const rina::cdap_rib::con_handle_t &con) = 0;
+        virtual void process_authentication_message(const rina::cdap::CDAPMessage& message,
+        					    const rina::cdap_rib::con_handle_t &con) = 0;
 	virtual void authentication_completed(int port_id, bool success) = 0;
         virtual void initiate_enrollment(const rina::NMinusOneFlowAllocatedEvent & event,
         				 rina::EnrollmentRequest * request) = 0;
@@ -475,35 +476,31 @@ class IPCPRIBDaemon;
 
 /// Base RIB Object. API for the create/delete/read/write/start/stop RIB
 /// functionality for certain objects (identified by objectNames)
-class BaseIPCPRIBObject: public rina::BaseRIBObject {
+class IPCPRIBObj: public rina::rib::RIBObj {
 public:
-	virtual ~BaseIPCPRIBObject(){};
-	BaseIPCPRIBObject(IPCProcess* ipc_process,
-                      const std::string& object_class,
-                      long object_instance,
-                      const std::string& object_name);
+	virtual ~IPCPRIBObj(){};
+	IPCPRIBObj(IPCProcess* ipc_process,
+                   const std::string& object_class);
 
 	IPCProcess * ipc_process_;
 	IPCPRIBDaemon * rib_daemon_;
 };
 
 /// Interface that provides the RIB Daemon API
-class IPCPRIBDaemon : public IPCProcessComponent {
+class IPCPRIBDaemon : public rina::rib::RIBDaemonAE, IPCProcessComponent {
 public:
-	IPCPRIBDaemon() : wmpi(0) { };
+	IPCPRIBDaemon() { };
 	virtual ~IPCPRIBDaemon(){};
-
-	rina::WireMessageProviderInterface *wmpi;
 
 	/// Process a Query RIB Request from the IPC Manager
 	/// @param event
 	virtual void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event) = 0;
 	virtual void generateCDAPResponse(int invoke_id,
-			rina::CDAPSessionDescriptor * cdapSessDescr,
-			rina::CDAPMessage::Opcode opcode,
+			rina::cdap::CDAPSessionDescriptor * cdapSessDescr,
+			rina::cdap::CDAPMessage::Opcode opcode,
 			const std::string& obj_class,
 			const std::string& obj_name,
-			rina::RIBObjectValue& robject_value) = 0;
+			rina::ser_obj_t& robject_value) = 0;
 };
 
 /// IPC Process interface
@@ -514,8 +511,7 @@ public:
 	static const int DEFAULT_MAX_SDU_SIZE_IN_BYTES;
 
 	IDelimiter * delimiter_;
-	rina::IMasterEncoder * encoder_;
-	rina::CDAPSessionManagerInterface* cdap_session_manager_;
+	rina::cdap::CDAPSessionManagerInterface* cdap_session_manager_;
 	rina::InternalEventManager * internal_event_manager_;
 	IPCPEnrollmentTask * enrollment_task_;
 	IFlowAllocator * flow_allocator_;
@@ -534,59 +530,6 @@ public:
 	virtual const rina::DIFInformation& get_dif_information() const = 0;
 	virtual void set_dif_information(const rina::DIFInformation& dif_information) = 0;
 	virtual const std::list<rina::Neighbor*> get_neighbors() const = 0;
-};
-
-/// A simple RIB object that just acts as a wrapper. Represents an object in the RIB that just
-/// can be read or written, and whose read/write operations have no side effects other than
-/// updating the value of the object
-class SimpleIPCPRIBObject: public BaseIPCPRIBObject {
-public:
-        SimpleIPCPRIBObject(IPCProcess* ipc_process,
-                        const std::string& object_class,
-			const std::string& object_name,
-                        const void* object_value);
-	virtual const void* get_value() const;
-	virtual void        writeObject(const void* object);
-
-	/// Create has the semantics of update
-	virtual void createObject(const std::string& objectClass,
-                                  const std::string& objectName,
-                                  const void* objectValue);
-
-private:
-	const void* object_value_;
-};
-
-/// Class SimpleSetRIBObject. A RIB object that is a set and has no side effects
-class SimpleSetIPCPRIBObject: public SimpleIPCPRIBObject {
-public:
-        SimpleSetIPCPRIBObject(IPCProcess * ipc_process,
-                           const std::string& object_class,
-                           const std::string& set_member_object_class,
-                           const std::string& object_name);
-	void createObject(const std::string& objectClass,
-                          const std::string& objectName,
-                          const void* objectValue);
-
-private:
-	std::string set_member_object_class_;
-};
-
-/// Class SimpleSetMemberRIBObject. A RIB object that is member of a set
-class SimpleSetMemberIPCPRIBObject: public SimpleIPCPRIBObject {
-public:
-        SimpleSetMemberIPCPRIBObject(IPCProcess* ipc_process,
-                                 const std::string& object_class,
-                                 const std::string& object_name,
-                                 const void* object_value);
-	virtual void deleteObject(const void* objectValue);
-};
-
-class IPCMCDAPSessDesc : public rina::CDAPSessionDescriptor {
-public:
-	IPCMCDAPSessDesc(unsigned int seqnum) : rina::CDAPSessionDescriptor(),
-						 req_seqnum(seqnum) { }
-	unsigned int req_seqnum;
 };
 
 } //namespace rinad

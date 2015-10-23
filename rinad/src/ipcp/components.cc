@@ -165,18 +165,15 @@ int IResourceAllocator::set_pduft_gen_policy_set(const std::string& name)
 }
 
 // Class BaseRIBObject
-BaseIPCPRIBObject::BaseIPCPRIBObject(IPCProcess * ipc_process, const std::string& object_class,
-		long object_instance, const std::string& object_name):
-		        rina::BaseRIBObject(ipc_process->rib_daemon_,
-		                        object_class, object_instance, object_name){
+IPCPRIBObj::IPCPRIBObj(IPCProcess * ipc_process,
+		       const std::string& object_class):
+				       rina::rib::RIBObj(object_class)
+{
 	ipc_process_ = ipc_process;
-	if (ipc_process) {
+	if (ipc_process)
 		rib_daemon_ =  ipc_process->rib_daemon_;
-		encoder_ = ipc_process->encoder_;
-	} else {
+	else
 		rib_daemon_ = 0;
-		encoder_ = 0;
-	}
 }
 
 // CLASS IPC Process
@@ -184,69 +181,11 @@ const std::string IPCProcess::MANAGEMENT_AE = "Management";
 const std::string IPCProcess::DATA_TRANSFER_AE = "Data Transfer";
 const int IPCProcess::DEFAULT_MAX_SDU_SIZE_IN_BYTES = 10000;
 
-//Class SimpleIPCPRIBObject
-SimpleIPCPRIBObject::SimpleIPCPRIBObject(IPCProcess* ipc_process, const std::string& object_class,
-			const std::string& object_name, const void* object_value) :
-					BaseIPCPRIBObject(ipc_process, object_class,
-							rina::objectInstanceGenerator->getObjectInstance(), object_name) {
-	object_value_ = object_value;
-}
-
-const void* SimpleIPCPRIBObject::get_value() const {
-	return object_value_;
-}
-
-void SimpleIPCPRIBObject::writeObject(const void* object_value) {
-	object_value_ = object_value;
-}
-
-void SimpleIPCPRIBObject::createObject(const std::string& objectClass, const std::string& objectName,
-		const void* objectValue) {
-	if (objectName.compare("") != 0 && objectClass.compare("") != 0) {
-		object_value_ = objectValue;
-	}
-}
-
-//Class SimpleSetRIBObject
-SimpleSetIPCPRIBObject::SimpleSetIPCPRIBObject(IPCProcess * ipc_process, const std::string& object_class,
-		const std::string& set_member_object_class, const std::string& object_name) :
-					SimpleIPCPRIBObject(ipc_process, object_class, object_name, 0){
-	set_member_object_class_ = set_member_object_class;
-}
-
-void SimpleSetIPCPRIBObject::createObject(const std::string& objectClass, const std::string& objectName,
-		const void* objectValue) {
-	if (set_member_object_class_.compare(objectClass) != 0) {
-		throw rina::Exception("Class of set member does not match the expected value");
-	}
-
-	SimpleSetMemberIPCPRIBObject * ribObject = new SimpleSetMemberIPCPRIBObject(ipc_process_, objectClass,
-			objectName, objectValue);
-	add_child(ribObject);
-	rib_daemon_->addRIBObject(ribObject);
-}
-
-//Class SimpleSetMemberRIBObject
-SimpleSetMemberIPCPRIBObject::SimpleSetMemberIPCPRIBObject(IPCProcess* ipc_process,
-                                                   const std::string& object_class,
-                                                   const std::string& object_name,
-                                                   const void* object_value) :
-        SimpleIPCPRIBObject(ipc_process, object_class, object_name, object_value)
-{
-}
-
-void SimpleSetMemberIPCPRIBObject::deleteObject(const void* objectValue)
-{
-	parent_->remove_child(name_);
-	rib_daemon_->removeRIBObject(name_);
-}
-
 //Class IPCProcess
 IPCProcess::IPCProcess(const std::string& name, const std::string& instance)
 			: rina::ApplicationProcess(name, instance)
 {
 	delimiter_ = 0;
-	encoder_ = 0;
 	cdap_session_manager_ = 0;
 	internal_event_manager_ = 0;
 	enrollment_task_ = 0;
