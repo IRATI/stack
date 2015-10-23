@@ -30,14 +30,12 @@
 namespace rina {
 
 IPCResourceManager::IPCResourceManager() : ApplicationEntity(ApplicationEntity::IRM_AE_NAME),
-		rib_daemon_(NULL), event_manager_(NULL), flow_acceptor_(NULL), ipcp(false),
-		rib(0)
+		ipcp(false), rib_daemon_(NULL), rib(0), event_manager_(NULL), flow_acceptor_(NULL)
 {
 }
 
 IPCResourceManager::IPCResourceManager(bool isIPCP) : ApplicationEntity(ApplicationEntity::IRM_AE_NAME),
-		rib_daemon_(NULL), event_manager_(NULL), flow_acceptor_(NULL), ipcp(isIPCP),
-		rib(0)
+		ipcp(isIPCP), rib_daemon_(NULL), rib(0), event_manager_(NULL), flow_acceptor_(NULL)
 {
 }
 
@@ -300,8 +298,6 @@ void IPCResourceManager::flowDeallocatedRemotely(const FlowDeallocatedEvent& eve
 void IPCResourceManager::cleanFlowAndNotify(int portId)
 {
 	try{
-		std::stringstream ss;
-
 		std::stringstream ss;
 		ss << UnderlayingFlowRIBObj::object_name_prefix << portId;
 		rib_daemon_->removeObjRIB(rib, ss.str());

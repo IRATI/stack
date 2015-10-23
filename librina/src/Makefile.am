@@ -84,7 +84,6 @@ allsources =							\
         netlink-manager.cc   netlink-manager.h			\
         syscalls-wrappers.cc rina-systypes.h    rina-syscalls.h	\
         $(protoSOURCES)						\
-        cdap-impl.cc	     cdap-impl.h			\
 	plugin-info.cc	     plugin-info.h
 
 librina_la_SOURCES  = $(allsources)

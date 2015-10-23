@@ -60,13 +60,12 @@ public:
 	std::list<FlowInformation> getAllNMinusOneFlowInformation() const;
 
 protected:
+	/// true if the IRM is used by an IPC Process, false otherwise
+	bool ipcp;
 	rib::RIBDaemonProxy * rib_daemon_;
 	rina::rib::rib_handle_t rib;
 	InternalEventManager * event_manager_;
 	FlowAcceptor * flow_acceptor_;
-
-	/// true if the IRM is used by an IPC Process, false otherwise
-	bool ipcp;
 
 	///Populate the IPC Process RIB with the objects related to N-1 Flow Management
 	void populateRIB();

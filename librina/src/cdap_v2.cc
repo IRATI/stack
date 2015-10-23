@@ -1639,12 +1639,12 @@ void CDAPSession::messageSent(const cdap_m_t &cdap_message)
 {
 	messageSentOrReceived(cdap_message, true);
 }
-/*const cdap_m_t* CDAPSession::messageReceived(const ser_obj_t &message)
+const cdap_m_t* CDAPSession::messageReceived(ser_obj_t &message)
 {
 	const cdap_m_t *cdap_message = deserializeMessage(message);
 	messageSentOrReceived(*cdap_message, false);
 	return cdap_message;
-}*/
+}
 void CDAPSession::messageReceived(const cdap_m_t &cdap_message)
 {
 	messageSentOrReceived(cdap_message, false);
@@ -1996,7 +1996,7 @@ const ser_obj_t* CDAPSession::serializeMessage(const cdap_m_t &cdap_message) con
 {
 	return serializer_->serializeMessage(cdap_message);
 }
-const cdap_m_t* CDAPSession::deserializeMessage(const ser_obj_t &message) const
+const cdap_m_t* CDAPSession::deserializeMessage(ser_obj_t &message) const
 {
 	return serializer_->deserializeMessage(message);
 }
@@ -2442,7 +2442,7 @@ CDAPInvokeIdManager * CDAPSessionManager::get_invoke_id_manager()
 // CLASS GPBWireMessageProvider
 const cdap_m_t* GPBSerializer::deserializeMessage(const ser_obj_t &message)
 {
-	cdap::impl::googleprotobuf::CDAPMessage gpfCDAPMessage;
+	messages::CDAPMessage gpfCDAPMessage;
 	cdap_m_t *cdapMessage = new cdap_m_t;
 
 	gpfCDAPMessage.ParseFromArray(message.message_, message.size_);
@@ -2461,9 +2461,8 @@ const cdap_m_t* GPBSerializer::deserializeMessage(const ser_obj_t &message)
 		memcpy(val,
 		 gpfCDAPMessage.authpolicy().options().data(),
 		 gpfCDAPMessage.authpolicy().options().size());
-		SerializedObject sobj(val,
-				gpfCDAPMessage.authpolicy().options().size());
-		auth_policy.options_ = sobj;
+		auth_policy.options_.message_ = val;
+		auth_policy.options_.size_ = gpfCDAPMessage.authpolicy().options().size();
 	}
 	cdapMessage->auth_policy_ = auth_policy;
 	// DEST_AE_INST
@@ -2505,8 +2504,7 @@ const cdap_m_t* GPBSerializer::deserializeMessage(const ser_obj_t &message)
 		cdapMessage->obj_name_ = gpfCDAPMessage.objname();
 	// OBJ_VALUE
 	if (gpfCDAPMessage.has_objvalue()) {
-		cdap::impl::googleprotobuf::objVal_t obj_val_t = gpfCDAPMessage
-				.objvalue();
+		messages::objVal_t obj_val_t = gpfCDAPMessage.objvalue();
 		char *byte_val = new char[obj_val_t.byteval().size()];
 		memcpy(byte_val, obj_val_t.byteval().data(),
 		       obj_val_t.byteval().size());
@@ -2550,12 +2548,11 @@ const cdap_m_t* GPBSerializer::deserializeMessage(const ser_obj_t &message)
 // FIXME: check existanc of fields before seting
 const ser_obj_t* GPBSerializer::serializeMessage(const cdap_m_t &cdapMessage)
 {
-	cdap::impl::googleprotobuf::CDAPMessage gpfCDAPMessage;
+	messages::CDAPMessage gpfCDAPMessage;
 	// ABS_SYNTAX
 	gpfCDAPMessage.set_abssyntax(cdapMessage.abs_syntax_);
 	// AUTH_POLICY
-	cdap::impl::googleprotobuf::authPolicy_t *gpb_auth_policy =
-		new cdap::impl::googleprotobuf::authPolicy_t();
+	messages::authPolicy_t *gpb_auth_policy = new messages::authPolicy_t();
 	AuthPolicy auth_policy = cdapMessage.auth_policy_;
 	gpb_auth_policy->set_name(auth_policy.name_);
 	for(std::list<std::string>::iterator it = auth_policy.versions_.begin();
@@ -2589,20 +2586,16 @@ const ser_obj_t* GPBSerializer::serializeMessage(const cdap_m_t &cdapMessage)
 	gpfCDAPMessage.set_objname(cdapMessage.obj_name_);
 	// OBJ_VALUE
 	if (cdapMessage.obj_value_.size_ > 0) {
-		cdap::impl::googleprotobuf::objVal_t *gpb_obj_val =
-				new cdap::impl::googleprotobuf::objVal_t();
+		messages::objVal_t *gpb_obj_val = new messages::objVal_t();
 		gpb_obj_val->set_byteval(cdapMessage.obj_value_.message_,
 					 cdapMessage.obj_value_.size_);
 		gpfCDAPMessage.set_allocated_objvalue(gpb_obj_val);
 	}
 	// OP_CODE
-	if (!cdap::impl::googleprotobuf::opCode_t_IsValid(
-			cdapMessage.op_code_)) {
+	if (!messages::opCode_t_IsValid(cdapMessage.op_code_)) {
 		throw CDAPException("Serializing Message: Not a valid OpCode");
 	}
-	gpfCDAPMessage.set_opcode(
-			(cdap::impl::googleprotobuf::opCode_t) cdapMessage
-					.op_code_);
+	gpfCDAPMessage.set_opcode((messages::opCode_t) cdapMessage.op_code_);
 	// RESULT
 	gpfCDAPMessage.set_result(cdapMessage.result_);
 	// RESULT_REASON
@@ -2623,7 +2616,7 @@ const ser_obj_t* GPBSerializer::serializeMessage(const cdap_m_t &cdapMessage)
 	int size = gpfCDAPMessage.ByteSize();
 	char *buffer = new char[size];
 	gpfCDAPMessage.SerializeToArray(buffer, size);
-	ser_obj_t *serialized_message = new cdap_rib::ser_obj_t;
+	ser_obj_t *serialized_message = new ser_obj_t;
 	serialized_message->message_ = buffer;
 	serialized_message->size_ = size;
 
@@ -3489,7 +3482,7 @@ void fini(){
 
 void StringEncoder::encode(const std::string& obj, ser_obj_t& serobj)
 {
-	messages::str s;
+	messages::string_t s;
 	s.set_value(obj);
 
 	//Allocate memory
@@ -3504,10 +3497,30 @@ void StringEncoder::encode(const std::string& obj, ser_obj_t& serobj)
 
 void StringEncoder::decode(const ser_obj_t& ser_obj, std::string& obj)
 {
-	messages::str s;
+	messages::string_t s;
 	s.ParseFromArray(ser_obj.message_, ser_obj.size_);
 
 	obj = s.value();
+}
+
+// Class IntEncoder
+void IntEncoder::encode(const int &obj, ser_obj_t& serobj)
+{
+	messages::int_t gpb;
+
+	gpb.set_value(obj);
+
+	serobj.size_ = gpb.ByteSize();
+	serobj.message_ = new char[serobj.size_];
+	gpb.SerializeToArray(serobj.message_, serobj.size_);
+}
+
+void IntEncoder::decode(const ser_obj_t &serobj, int &des_obj)
+{
+	messages::int_t gpb;
+	gpb.ParseFromArray(serobj.message_, serobj.size_);
+
+	des_obj = gpb.value();
 }
 
 } //namespace cdap

@@ -915,6 +915,26 @@ public:
         std::string displayable_value_;
 };
 
+/// Get a singleton for RIBDaemonProxy
+class RIBDaemonProxyFactory {
+
+public:
+
+	/**
+	* Get the RIB provider proxy
+	*/
+	static inline rina::rib::RIBDaemonProxy* getProxy(){
+		if(!ribd)
+			ribd = rina::rib::RIBDaemonProxyFactory();
+		return ribd;
+	}
+
+protected:
+
+	//RIBProxy instance
+	static rina::rib::RIBDaemonProxy* ribd;
+};
+
 } //namespace rib
 } //namespace rina
 #endif /* RIB_PROVIDER_H_ */

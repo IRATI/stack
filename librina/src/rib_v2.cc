@@ -33,7 +33,6 @@
 //#include <iostream>
 
 #include "librina/rib_v2.h"
-#include "librina/cdap.h"
 #include "librina/cdap_v2.h"
 
 namespace rina {
@@ -43,9 +42,9 @@ namespace rib {
 // CLASS RIBSchemaObject
 //
 RIBSchemaObject::RIBSchemaObject(const std::string& class_name,
-		const bool mandatory,
-		const unsigned max_objs) {
-
+				 const bool mandatory,
+				 const unsigned max_objs)
+{
 	class_name_ = class_name;
 	mandatory_ = mandatory;
 	max_objs_ = max_objs;
