@@ -23,6 +23,9 @@
 #define ENCODER_H_
 #ifdef __cplusplus
 
+#include <librina/common.h>
+#include <librina/configuration.h>
+#include <librina/ipc-process.h>
 #include <librina/cdap_v2.h>
 
 #include <list>
@@ -124,8 +127,8 @@ class DataTransferConstantsEncoder:
 {
 public:
 	void encode(const rina::DataTransferConstants &obj, 
-		rina::cdap_rib::ser_obj_t& serobj);
-	void decode(const rina::cdap_rib::ser_obj_t &serobj, 
+		rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj, 
 		rina::DataTransferConstants &des_obj);
 };
 
@@ -135,8 +138,8 @@ class DFTEEncoder:
 {
 public:
 	void encode(const rina::DirectoryForwardingTableEntry &obj, 
-		rina::cdap_rib::ser_obj_t& serobj);
-	void decode(const rina::cdap_rib::ser_obj_t &serobj, 
+		rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj, 
 		rina::DirectoryForwardingTableEntry &des_obj);
 };
 
@@ -146,8 +149,8 @@ class DFTEListEncoder:
 {
 public:
 	void encode(const std::list<rina::DirectoryForwardingTableEntry> &obj,
-		rina::cdap_rib::ser_obj_t& serobj);
-	void decode(const rina::cdap_rib::ser_obj_t &serobj, 
+		rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj, 
 		std::list<rina::DirectoryForwardingTableEntry> &des_obj);
 };
 
@@ -155,8 +158,8 @@ public:
 class QoSCubeEncoder: public rina::Encoder<rina::QoSCube> 
 {
 public:
-	void encode(const rina::QoSCube &obj, rina::cdap_rib::ser_obj_t& serobj);
-	void decode(const rina::cdap_rib::ser_obj_t &serobj, 
+	void encode(const rina::QoSCube &obj, rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj, 
 		rina::QoSCube &des_obj);
 };
 
@@ -164,10 +167,10 @@ public:
 class QoSCubeListEncoder: public rina::Encoder<std::list<rina::QoSCube> >
 {
 public:
-	void encode(const <std::list<rina::QoSCube> &obj, 
-		rina::cdap_rib::ser_obj_t& serobj);
-	void decode(const rina::cdap_rib::ser_obj_t &serobj, 
-		<std::list<rina::QoSCube> &des_obj);
+	void encode(const std::list<rina::QoSCube> &obj, 
+		rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj, 
+		std::list<rina::QoSCube> &des_obj);
 };
 
 /// Encoder of WhatevercastName object
@@ -175,20 +178,20 @@ class WhatevercastNameEncoder: public rina::Encoder<rina::WhatevercastName>
 {
 public:
 	void encode(const rina::WhatevercastName &obj, 
-		rina::cdap_rib::ser_obj_t& serobj);
-	void decode(const rina::cdap_rib::ser_obj_t &serobj, 
+		rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj, 
 		rina::WhatevercastName &des_obj);
 };
 
 /// Encoder of WhatevercastName list object
 class WhatevercastNameListEncoder: 
-	public std::list<rina::Encoder<rina::WhatevercastName> >
+	public rina::Encoder<std::list<rina::WhatevercastName> >
 {
 public:
-	void encode(const std::list<rina::Encoder<rina::WhatevercastName> &obj,
-		rina::cdap_rib::ser_obj_t& serobj);
-	void decode(const rina::cdap_rib::ser_obj_t &serobj, 
-		std::list<rina::Encoder<rina::WhatevercastName> &des_obj);
+	void encode(const std::list<rina::WhatevercastName> &obj,
+		rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj, 
+		std::list<rina::WhatevercastName> &des_obj);
 };
 
 
@@ -196,27 +199,19 @@ public:
 class NeighborEncoder: public rina::Encoder<rina::Neighbor> 
 {
 public:
-	void encode(const rina::Neighbor &obj, rina::cdap_rib::ser_obj_t& serobj);
-	void decode(const rina::cdap_rib::ser_obj_t &serobj, 
+	void encode(const rina::Neighbor &obj, rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj, 
 		rina::Neighbor &des_obj);
 };
 
 /// Encoder of Neighbor list object
-class NeighborListEncoder: public std::list<rina::Encoder<rina::Neighbor> > 
+class NeighborListEncoder: public rina::Encoder<std::list<rina::Neighbor> > 
 {
 public:
-	void encode(const std::list<rina::Encoder<rina::Neighbor> > &obj,
-		rina::cdap_rib::ser_obj_t& serobj);
-	void decode(const rina::cdap_rib::ser_obj_t &serobj, 
-		std::list<rina::Encoder<rina::Neighbor> > &des_obj);
-};
-
-/// Encoder of Watchdog
-class IntEncoder: public rina::Encoder<int>
-{
-public:
-	void encode(const int &obj, rina::cdap_rib::ser_obj_t& serobj);
-	void decode(const rina::cdap_rib::ser_obj_t &serobj, int &des_obj);
+	void encode(const std::list<rina::Neighbor> &obj,
+		rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj, 
+		std::list<rina::Neighbor> &des_obj);
 };
 
 /// Encoder of the AData object
@@ -224,8 +219,8 @@ class ADataObjectEncoder: public rina::Encoder<rina::ADataObject>
 {
 public:
 	void encode(const rina::ADataObject &obj, 
-		rina::cdap_rib::ser_obj_t& serobj);
-	void decode(const rina::cdap_rib::ser_obj_t &serobj, 
+		rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj, 
 		rina::ADataObject &des_obj);
 };
 
