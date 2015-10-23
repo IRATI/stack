@@ -84,8 +84,7 @@ class NeighborRIBObj: public rib::RIBObj {
 public:
 	NeighborRIBObj(ApplicationProcess * app,
 		       rib::RIBDaemonProxy * rib_daemon,
-		       rib::rib_handle_t rib_handle,
-		       const Neighbor* neigh);
+		       Neighbor* neigh);
 	const std::string get_displayable_value() const;
 	const std::string& get_class() const {
 		return class_name;
@@ -104,19 +103,40 @@ public:
 
 	const static std::string class_name;
 	const static std::string object_name_prefix;
-	const static std::string parent_class_name;
-	const static std::string parent_object_name;
 
 private:
-	void populateNeighborsToCreateList(rina::Neighbor * neighbor,
-					   std::list<rina::Neighbor *> * list);
-	void createNeighbor(rina::Neighbor * neighbor);
 
-	Lockable lock_;
-	ApplicationProcess * app_;
-	rib::RIBDaemonProxy * ribd;
-	rib::rib_handle_t rib;
+	static ApplicationProcess * app_;
+	static rib::RIBDaemonProxy * ribd;
 	Neighbor * neighbor;
+};
+
+class NeighborsRIBObj: public rib::RIBObj {
+public:
+	NeighborsRIBObj(ApplicationProcess * app,
+		       rib::RIBDaemonProxy * rib_daemon,
+		       rib::rib_handle_t rib_handle);
+	const std::string& get_class() const {
+		return class_name;
+	};
+
+	//Create
+	void create(const cdap_rib::con_handle_t &con,
+		    const std::string& fqn,
+		    const std::string& class_,
+		    const cdap_rib::filt_info_t &filt,
+		    const int invoke_id,
+		    const ser_obj_t &obj_req,
+		    ser_obj_t &obj_reply,
+		    cdap_rib::res_info_t& res);
+
+	const static std::string class_name;
+	const static std::string object_name;
+
+private:
+	static ApplicationProcess * app_;
+	static rib::RIBDaemonProxy * ribd;
+	static rib::rib_handle_t rib;
 };
 
 /// Interface that must be implementing by classes that provide

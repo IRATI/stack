@@ -635,6 +635,13 @@ public:
 	std::string get_type() const { return "string"; };
 };
 
+/// Encoder of Integers
+class IntEncoder: public Encoder<int>{
+public:
+	void encode(const int &obj, ser_obj_t& serobj);
+	void decode(const ser_obj_t &serobj, int &des_obj);
+};
+
 
 } //namespace cdap
 } //namespace rina

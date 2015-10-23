@@ -353,7 +353,7 @@ int AuthPasswordPolicySet::process_incoming_message(const cdap::CDAPMessage& mes
 		return IAuthPolicySet::FAILED;
 	}
 
-	if (message.obj_value_ == 0) {
+	if (message.obj_value_.message_ == 0) {
 		LOG_ERR("Null object value");
 		return IAuthPolicySet::FAILED;
 	}
@@ -425,7 +425,7 @@ void decode_ssh2_auth_options(const ser_obj_t &message, SSH2AuthOptions &options
 	if (gpb_options.has_dh_public_key()) {
 		  options.dh_public_key.data =
 				  new unsigned char[gpb_options.dh_public_key().size()];
-		  memcpy(result->dh_public_key.data,
+		  memcpy(options.dh_public_key.data,
 			 gpb_options.dh_public_key().data(),
 			 gpb_options.dh_public_key().size());
 		  options.dh_public_key.length = gpb_options.dh_public_key().size();
@@ -1383,7 +1383,6 @@ int AuthSSH2PolicySet::process_client_challenge_reply_message(const cdap::CDAPMe
 							      int session_id)
 {
 	SSH2SecurityContext * sc;
-	const ser_obj_t * sobj;
 
 	if (message.obj_value_.message_ == 0) {
 		LOG_ERR("Null object value");
