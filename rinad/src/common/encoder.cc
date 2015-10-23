@@ -245,7 +245,7 @@ void DataTransferConstantsEncoder::decode(
 
 
 // CLASS DirectoryForwardingTableEntryEncoder
-void DirectoryForwardingTableEntryEncoder::encode(
+void DFTEEncoder::encode(
 	const rina::DirectoryForwardingTableEntry &obj, 
 	rina::cdap_rib::ser_obj_t& serobj)
 {
@@ -261,7 +261,7 @@ void DirectoryForwardingTableEntryEncoder::encode(
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
 
-void DirectoryForwardingTableEntryEncoder::decode(
+void DFTEEncoder::decode(
 	const rina::cdap_rib::ser_obj_t &serobj, 
 	rina::DirectoryForwardingTableEntry &des_obj)
 {
@@ -277,6 +277,20 @@ void DirectoryForwardingTableEntryEncoder::decode(
 
 }
 
+// CLASS DFTEListEncoder
+void DFTEListEncoder::encode(
+	const std::list<rina::DirectoryForwardingTableEntry> &obj,
+	rina::cdap_rib::ser_obj_t& serobj)
+{
+
+
+}
+void DFTEListEncoder::decode(const rina::cdap_rib::ser_obj_t &serobj, 
+	std::list<rina::DirectoryForwardingTableEntry> &des_obj)
+{
+
+
+}
 
 // CLASS QoSCubeEncoder
 namespace cube_enc_helpers
@@ -602,6 +616,20 @@ void QoSCubeEncoder::decode(const rina::cdap_rib::ser_obj_t &serobj,
 	des_obj.undetected_bit_error_rate_ = gpb.undetectedbiterrorrate();
 }
 
+/// CLASS QoSCubeListEncoder
+void QoSCubeListEncoder::encode(const <std::list<rina::QoSCube> &obj, 
+	rina::cdap_rib::ser_obj_t& serobj)
+{
+
+
+}
+void QoSCubeListEncoder::decode(const rina::cdap_rib::ser_obj_t &serobj, 
+	<std::list<rina::QoSCube> &des_obj)
+{
+
+
+}
+
 //Class WhatevercastNameEncoder
 void WhatevercastNameEncoder::encode(const rina::WhatevercastName &obj,
 	rina::cdap_rib::ser_obj_t& serobj)
@@ -633,6 +661,21 @@ void WhatevercastNameEncoder::decode(const rina::cdap_rib::ser_obj_t &serobj,
 	for(int i=0; i<gpb.setmembers_size(); i++) {
 		des_obj.set_members_.push_back(gpb.setmembers(i));
 	}
+}
+
+/// Class WhatevercastNameListEncoder
+void WhatevercastNameListEncoder::encode(
+	const std::list<rina::Encoder<rina::WhatevercastName> &obj,
+	rina::cdap_rib::ser_obj_t& serobj)
+{
+
+
+}
+void WhatevercastNameListEncoder::decode(const rina::cdap_rib::ser_obj_t &serobj, 
+	std::list<rina::Encoder<rina::WhatevercastName> &des_obj)
+{
+
+
 }
 
 //Class NeighborEncoder
@@ -671,6 +714,22 @@ void NeighborEncoder::decode(const rina::cdap_rib::ser_obj_t &serobj,
 			""));
 	}
 }
+
+
+/// CLASS NeighborListEncoder
+void NeighborListEncoder::encode(
+	const std::list<rina::Encoder<rina::Neighbor> > &obj,
+	rina::cdap_rib::ser_obj_t& serobj)
+{
+
+}
+void NeighborListEncoder::decode(const rina::cdap_rib::ser_obj_t &serobj, 
+	std::list<rina::Encoder<rina::Neighbor> > &des_obj
+{
+
+
+}
+
 
 // Class IntEncoder
 void IntEncoder::encode(const int &obj, rina::cdap_rib::ser_obj_t& serobj)
