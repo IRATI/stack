@@ -678,8 +678,10 @@ void IPCProcessImpl::event_loop(void){
 		if(!e)
 			continue;
 
-		if(!keep_running)
+		if(!keep_running){
+			delete e;
 			break;
+		}
 
 		LOG_IPCP_DBG("Got event of type %s and sequence number %u",
 							rina::IPCEvent::eventTypeToString(e->eventType).c_str(),
@@ -867,6 +869,7 @@ void IPCProcessImpl::event_loop(void){
 			default:
 				break;
 		}
+		delete e;
 	}
 
 }

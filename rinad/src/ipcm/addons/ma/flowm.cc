@@ -267,6 +267,9 @@ void ActiveWorker::allocateFlow()
 							   rrevent->difName);
 		LOG_INFO("[w:%u] Flow allocated, port id = %d", id, flow_.portId);
 	}
+
+	// Delete the event
+	delete event;
 }
 
 // Flow active worker
@@ -521,6 +524,12 @@ FlowManager::~FlowManager()
 
 		//Remove
 		it = next;
+	}
+
+	// Delete pending elements
+	for (std::map<unsigned int, rina::IPCEvent*>::const_iterator it = pending_events.begin();
+			it != pending_events.end(); it++){
+		delete it->second;
 	}
 
 }

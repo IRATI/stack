@@ -79,6 +79,8 @@ class NetlinkPortIdMap {
 		applicationNameMappings;
 
 public:
+	~NetlinkPortIdMap();
+
 	void putIPCProcessIdToNelinkPortIdMapping(
 			unsigned int netlinkPortId, unsigned short ipcProcessId);
 	RINANetlinkEndpoint * getNetlinkPortIdFromIPCProcessId(
