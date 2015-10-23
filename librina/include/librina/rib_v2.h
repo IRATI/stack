@@ -800,7 +800,7 @@ public:
 			  const cdap_rib::obj_info_t &obj,
 			  const cdap_rib::flags_t &flags,
 			  const cdap_rib::filt_info_t &filt,
-			  bool is_port = true);
+			  cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
 
 	///
 	/// Perform a delete operation over an object of the remote RIB
@@ -811,7 +811,7 @@ public:
 			  const cdap_rib::obj_info_t &obj,
 			  const cdap_rib::flags_t &flags,
 			  const cdap_rib::filt_info_t &filt,
-			  bool is_port = true);
+			  cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
 
 	///
 	/// Perform a read operation over an object of the remote RIB
@@ -822,7 +822,7 @@ public:
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::flags_t &flags,
 			const cdap_rib::filt_info_t &filt,
-			bool is_port = true);
+			cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
 	///
 	/// Perform a cancel read operation over an object of the remote RIB
 	///
@@ -831,7 +831,7 @@ public:
 	int remote_cancel_read(unsigned int handle,
 			       const cdap_rib::flags_t &flags,
 			       int invoke_id,
-			       bool is_port = true);
+			       cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
 
 	///
 	/// Perform a write operation over an object of the remote RIB
@@ -842,7 +842,7 @@ public:
 			 const cdap_rib::obj_info_t &obj,
 			 const cdap_rib::flags_t &flags,
 			 const cdap_rib::filt_info_t &filt,
-			 bool is_port = true);
+			 cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
 
 	///
 	/// Perform a start operation over an object of the remote RIB
@@ -853,7 +853,7 @@ public:
 			 const cdap_rib::obj_info_t &obj,
 			 const cdap_rib::flags_t &flags,
 			 const cdap_rib::filt_info_t &filt,
-			 bool is_port = true);
+			 cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
 
 	///
 	/// Perform a stop operation over an object of the remote RIB
@@ -864,7 +864,7 @@ public:
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::flags_t &flags,
 			const cdap_rib::filt_info_t &filt,
-			bool is_port = true);
+			cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
 
 private:
 	///@internal

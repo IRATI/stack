@@ -52,10 +52,10 @@ public:
         void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event);
 	void generateCDAPResponse(int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessDescr,
-			rina::CDAPMessage::Opcode opcode,
+			rina::cdap::CDAPMessage::Opcode opcode,
 			const std::string& obj_class,
 			const std::string& obj_name,
-			rina::RIBObjectValue& robject_value);
+			rina::ser_obj_t& robject_value);
 
 private:
 	void initialize_rib_daemon(rina::cacep::AppConHandlerInterface *app_con_callback);

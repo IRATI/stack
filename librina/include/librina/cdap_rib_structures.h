@@ -143,15 +143,19 @@ typedef struct version_info {
 
 } vers_info_t;
 
+enum cdap_dest_t { CDAP_DEST_PORT,
+		   CDAP_DEST_ADDRESS,
+		   CDAP_DEST_IPCM };
+
 typedef struct connection_handler {
 	unsigned int handle_;
-	bool is_port_;
+	cdap_dest_t cdap_dest;
 	ep_info_t src_;
 	ep_info_t dest_;
 	auth_policy_t auth_;
 	vers_info_t version_;
 
-	connection_handler() { is_port_ = true; };
+	connection_handler() { cdap_dest = CDAP_DEST_PORT; };
 } con_handle_t;
 
 } //cdap_rib namespace
