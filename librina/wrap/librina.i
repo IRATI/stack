@@ -450,10 +450,16 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %include "librina/patterns.h"
 %include "librina/concurrency.h"
 %include "librina/common.h"
+
+%template(TempStringEncoder) rina::Encoder<std::string>;
+%template(TempIntEncoder) rina::Encoder<int>;
+
+
 %include "librina/application.h"
 %include "librina/cdap_rib_structures.h"
 %include "librina/cdap_v2.h"
 %include "librina/ipc-api.h"
+
 
 /* Macro for defining collection iterators */
 %define MAKE_COLLECTION_ITERABLE( ITERATORNAME, JTYPE, CPPCOLLECTION, CPPTYPE )
@@ -517,4 +523,3 @@ MAKE_COLLECTION_ITERABLE(UnsignedIntListIterator, Long, std::list, unsigned int)
 %template(StringList) std::list<std::string>;
 %template(FlowInformationList) std::list<rina::FlowInformation>;
 %template(UnsignedIntList) std::list<unsigned int>;
-

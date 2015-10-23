@@ -21,8 +21,11 @@
 
 #ifndef ENCODER_H_
 #define ENCODER_H_
-
 #ifdef __cplusplus
+
+#include <librina/cdap_v2.h>
+
+#include <list>
 
 namespace rinad {
 
@@ -115,28 +118,10 @@ public:
 	static const std::string WHATEVERCAST_NAME_RIB_OBJECT_CLASS;
 };
 
-template<class T>
-class Encoder{
-public:
-	virtual ~Encoder(){}
-	/// Converts an object to a byte array, if this object is recognized by the 
-	///encoder
-	/// @param object
-	/// @throws exception if the object is not recognized by the encoder
-	/// @return
-	virtual void encode(const T &obj, rina::cdap_rib::ser_obj_t& serobj) = 0;
-	/// Converts a byte array to an object of the type specified by "className"
-	/// @param byte[] serializedObject
-	/// @param objectClass The type of object to be decoded
-	/// @throws exception if the byte array is not an encoded in a way that the
-	/// encoder can recognize, or the byte array value doesn't correspond to an
-	/// object of the type "className"
-	/// @return
-	virtual void decode(const rina::cdap_rib::ser_obj_t &serobj,T &des_obj) = 0;
-};
-
 /// Encoder of the DataTransferConstants object
-class DataTransferConstantsEncoder: public Encoder<rina::DataTransferConstants> {
+class DataTransferConstantsEncoder: 
+	public rina::Encoder<rina::DataTransferConstants> 
+{
 public:
 	void encode(const rina::DataTransferConstants &obj, 
 		rina::cdap_rib::ser_obj_t& serobj);
@@ -145,8 +130,9 @@ public:
 };
 
 /// Encoder of DirectoryForwardingTableEntry object
-class DirectoryForwardingTableEntryEncoder: 
-	public Encoder<rina::DirectoryForwardingTableEntry> {
+class DFTEEncoder: 
+	public rina::Encoder<rina::DirectoryForwardingTableEntry> 
+{
 public:
 	void encode(const rina::DirectoryForwardingTableEntry &obj, 
 		rina::cdap_rib::ser_obj_t& serobj);
@@ -154,17 +140,39 @@ public:
 		rina::DirectoryForwardingTableEntry &des_obj);
 };
 
+/// Encoder of DirectoryForwardingTableEntryList object
+class DFTEListEncoder: 
+	public rina::Encoder< std::list<rina::DirectoryForwardingTableEntry> >
+{
+public:
+	void encode(const std::list<rina::DirectoryForwardingTableEntry> &obj,
+		rina::cdap_rib::ser_obj_t& serobj);
+	void decode(const rina::cdap_rib::ser_obj_t &serobj, 
+		std::list<rina::DirectoryForwardingTableEntry> &des_obj);
+};
+
 /// Encoder of QoSCube object
-class QoSCubeEncoder: public Encoder<rina::QoSCube> {
+class QoSCubeEncoder: public rina::Encoder<rina::QoSCube> 
+{
 public:
 	void encode(const rina::QoSCube &obj, rina::cdap_rib::ser_obj_t& serobj);
 	void decode(const rina::cdap_rib::ser_obj_t &serobj, 
 		rina::QoSCube &des_obj);
 };
 
+/// Encoder of QoSCube list object
+class QoSCubeListEncoder: public rina::Encoder<std::list<rina::QoSCube> >
+{
+public:
+	void encode(const <std::list<rina::QoSCube> &obj, 
+		rina::cdap_rib::ser_obj_t& serobj);
+	void decode(const rina::cdap_rib::ser_obj_t &serobj, 
+		<std::list<rina::QoSCube> &des_obj);
+};
 
 /// Encoder of WhatevercastName object
-class WhatevercastNameEncoder: public Encoder<rina::WhatevercastName> {
+class WhatevercastNameEncoder: public rina::Encoder<rina::WhatevercastName> 
+{
 public:
 	void encode(const rina::WhatevercastName &obj, 
 		rina::cdap_rib::ser_obj_t& serobj);
@@ -172,23 +180,48 @@ public:
 		rina::WhatevercastName &des_obj);
 };
 
+/// Encoder of WhatevercastName list object
+class WhatevercastNameListEncoder: 
+	public std::list<rina::Encoder<rina::WhatevercastName> >
+{
+public:
+	void encode(const std::list<rina::Encoder<rina::WhatevercastName> &obj,
+		rina::cdap_rib::ser_obj_t& serobj);
+	void decode(const rina::cdap_rib::ser_obj_t &serobj, 
+		std::list<rina::Encoder<rina::WhatevercastName> &des_obj);
+};
+
+
 /// Encoder of Neighbor object
-class NeighborEncoder: public Encoder<rina::Neighbor> {
+class NeighborEncoder: public rina::Encoder<rina::Neighbor> 
+{
 public:
 	void encode(const rina::Neighbor &obj, rina::cdap_rib::ser_obj_t& serobj);
 	void decode(const rina::cdap_rib::ser_obj_t &serobj, 
 		rina::Neighbor &des_obj);
 };
 
+/// Encoder of Neighbor list object
+class NeighborListEncoder: public std::list<rina::Encoder<rina::Neighbor> > 
+{
+public:
+	void encode(const std::list<rina::Encoder<rina::Neighbor> > &obj,
+		rina::cdap_rib::ser_obj_t& serobj);
+	void decode(const rina::cdap_rib::ser_obj_t &serobj, 
+		std::list<rina::Encoder<rina::Neighbor> > &des_obj);
+};
+
 /// Encoder of Watchdog
-class IntEncoder: public Encoder<int>{
+class IntEncoder: public rina::Encoder<int>
+{
 public:
 	void encode(const int &obj, rina::cdap_rib::ser_obj_t& serobj);
 	void decode(const rina::cdap_rib::ser_obj_t &serobj, int &des_obj);
 };
 
 /// Encoder of the AData object
-class ADataObjectEncoder: public Encoder<rina::ADataObject> {
+class ADataObjectEncoder: public rina::Encoder<rina::ADataObject> 
+{
 public:
 	void encode(const rina::ADataObject &obj, 
 		rina::cdap_rib::ser_obj_t& serobj);

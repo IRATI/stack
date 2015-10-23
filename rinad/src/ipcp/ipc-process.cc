@@ -202,7 +202,7 @@ void IPCProcessImpl::init_encoder() {
 	encoder_->addEncoder(EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS,
 			new DataTransferConstantsEncoder());
 	encoder_->addEncoder(EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS,
-			new DirectoryForwardingTableEntryEncoder());
+			new DFTEEncoder());
 	encoder_->addEncoder(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
 			new DirectoryForwardingTableEntryListEncoder());
 	encoder_->addEncoder(EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS,

@@ -625,7 +625,7 @@ int main()
 	encoder.addEncoder(rinad::EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS,
 			new rinad::DataTransferConstantsEncoder());
 	encoder.addEncoder(rinad::EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS,
-			new rinad::DirectoryForwardingTableEntryEncoder());
+			new rinad::DFTEEncoder());
 	encoder.addEncoder(rinad::EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
 			new rinad::DirectoryForwardingTableEntryListEncoder());
 	encoder.addEncoder(rinad::EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,

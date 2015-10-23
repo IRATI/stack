@@ -29,32 +29,6 @@
 
 namespace rinad {
 
-//TODO remove
-template<class T>
-class Encoder{
-public:
- virtual ~Encoder(){}
- /// Converts an object to a byte array, if this object is recognized by the encoder
- /// @param object
- /// @throws exception if the object is not recognized by the encoder
- /// @return
- virtual static void encode(const T &obj, rina::cdap_rib::ser_obj_t& serobj) = 0;
- /// Converts a byte array to an object of the type specified by "className"
- /// @param byte[] serializedObject
- /// @param objectClass The type of object to be decoded
- /// @throws exception if the byte array is not an encoded in a way that the
- /// encoder can recognize, or the byte array value doesn't correspond to an
- /// object of the type "className"
- /// @return
- virtual static void decode(const rina::cdap_rib::ser_obj_t &serobj,T &des_obj) = 0;
-};/// Encoder of the AData object
-
-class ADataObjectEncoder: public Encoder<rina::ADataObject> {
-public:
- void static encode(const rina::ADataObject &obj, rina::cdap_rib::ser_obj_t& serobj);
- void static decode(const rina::cdap_rib::ser_obj_t &serobj, rina::ADataObject &des_obj);
-};
-
 //Class ManagementSDUReader data
 ManagementSDUReaderData::ManagementSDUReaderData(unsigned int max_sdu_size)
 {
