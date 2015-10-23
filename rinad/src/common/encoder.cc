@@ -2,6 +2,7 @@
  * Common interfaces and classes for encoding/decoding RIB objects
  *
  *    Bernat Gaston <bernat.gaston@i2cat.net>
+ *    Eduard Grasa <eduard.grasa@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -245,16 +246,37 @@ void DataTransferConstantsEncoder::decode(
 
 
 // CLASS DirectoryForwardingTableEntryEncoder
+
+namespace dft_helpers
+{
+void toGPB(const rina::DirectoryForwardingTableEntry &obj, 
+	rina::messages::directoryForwardingTableEntry_t &gpb)
+{
+	gpb.set_allocated_applicationname(
+		helpers::get_applicationProcessNamingInfo_t(obj.ap_naming_info_));
+	gpb.set_ipcprocesssynonym(obj.address_);
+	gpb.set_timestamp(obj.timestamp_);
+}
+
+void toModel (const rina::messages::directoryForwardingTableEntry_t &gpb,
+	rina::DirectoryForwardingTableEntry &des_obj)
+{
+	rina::ApplicationProcessNamingInformation app_name;
+	helpers::get_ApplicationProcessNamingInformation(gpb.applicationname(),
+		app_name);
+	des_obj.ap_naming_info_ = app_name;
+	des_obj.address_ = gpb.ipcprocesssynonym();
+	des_obj.timestamp_ = gpb.timestamp();
+}
+}// namespace dft_helpers
+
 void DFTEEncoder::encode(
 	const rina::DirectoryForwardingTableEntry &obj, 
 	rina::ser_obj_t& serobj)
 {
 	rina::messages::directoryForwardingTableEntry_t gpb;
 
-	gpb.set_allocated_applicationname(
-		helpers::get_applicationProcessNamingInfo_t(obj.ap_naming_info_));
-	gpb.set_ipcprocesssynonym(obj.address_);
-	gpb.set_timestamp(obj.timestamp_);
+	dft_helpers::toGPB(obj, gpb);
 
 	serobj.size_ = gpb.ByteSize();
 	serobj.message_ = new char[serobj.size_];
@@ -267,14 +289,7 @@ void DFTEEncoder::decode(
 {
 	rina::messages::directoryForwardingTableEntry_t gpb;
 	gpb.ParseFromArray(serobj.message_, serobj.size_);
-
-	rina::ApplicationProcessNamingInformation app_name;
-	helpers::get_ApplicationProcessNamingInformation(gpb.applicationname(),
-		app_name);
-	des_obj.ap_naming_info_ = app_name;
-	des_obj.address_ = gpb.ipcprocesssynonym();
-	des_obj.timestamp_ = gpb.timestamp();
-
+	dft_helpers::toModel(gpb, des_obj);
 }
 
 // CLASS DFTEListEncoder
@@ -282,18 +297,35 @@ void DFTEListEncoder::encode(
 	const std::list<rina::DirectoryForwardingTableEntry> &obj,
 	rina::ser_obj_t& serobj)
 {
+	rina::messages::directoryForwardingTableEntrySet_t gpb;
 
+	for (std::list<rina::DirectoryForwardingTableEntry>::const_iterator 
+		it = obj.begin(); it != obj.end(); ++it) {
+			rina::messages::directoryForwardingTableEntry_t *gpb_dft;
+			gpb_dft = gpb.add_directoryforwardingtableentry();
+			dft_helpers::toGPB((*it), *gpb_dft);
+	}
 
+	serobj.size_ = gpb.ByteSize();
+	serobj.message_ = new char[serobj.size_];
+	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
 void DFTEListEncoder::decode(const rina::ser_obj_t &serobj, 
 	std::list<rina::DirectoryForwardingTableEntry> &des_obj)
 {
+	rina::messages::directoryForwardingTableEntrySet_t gpb;
+	gpb.ParseFromArray(serobj.message_, serobj.size_);
 
-
+	for (int i = 0; i < gpb.directoryforwardingtableentry_size(); i++)
+	{
+		rina::DirectoryForwardingTableEntry dfte;
+		dft_helpers::toModel(gpb.directoryforwardingtableentry(i), dfte);
+		des_obj.push_back(dfte);
+	}
 }
 
 // CLASS QoSCubeEncoder
-namespace cube_enc_helpers
+namespace cube_helpers
 {
 rina::messages::dtpConfig_t* get_dtpConfig_t(const rina::DTPConfig &conf) 
 {
@@ -564,9 +596,9 @@ rina::DTCPConfig* get_DTCPConfig(
 void toGPB(const rina::QoSCube &obj, rina::messages::qosCube_t &gpb)
 {
 	gpb.set_allocated_dtpconfiguration(
-		cube_enc_helpers::get_dtpConfig_t(obj.dtp_config_));
+		cube_helpers::get_dtpConfig_t(obj.dtp_config_));
 	gpb.set_allocated_dtcpconfiguration(
-		cube_enc_helpers::get_dtcpConfig_t(obj.dtcp_config_));
+		cube_helpers::get_dtcpConfig_t(obj.dtcp_config_));
 	gpb.set_averagebandwidth(obj.average_bandwidth_);
 	gpb.set_averagesdubandwidth(obj.average_sdu_bandwidth_);
 	gpb.set_delay(obj.delay_);
@@ -602,14 +634,14 @@ void toModel (const rina::messages::qosCube_t &gpb, rina::QoSCube &des_obj)
 	des_obj.id_ = gpb.qosid();
 	des_obj.undetected_bit_error_rate_ = gpb.undetectedbiterrorrate();
 }
-} // namespace cube_enc_helpers
+} // namespace cube_helpers
 
 void QoSCubeEncoder::encode(const rina::QoSCube &obj, 
 	rina::ser_obj_t &serobj)
 {
 	rina::messages::qosCube_t gpb;
 
-	cube_enc_helpers::toGPB(obj, gpb);
+	cube_helpers::toGPB(obj, gpb);
 
 	serobj.size_ = gpb.ByteSize();
 	serobj.message_ = new char[serobj.size_];
@@ -623,7 +655,7 @@ void QoSCubeEncoder::decode(const rina::ser_obj_t &serobj,
 	rina::messages::qosCube_t gpb;
 	gpb.ParseFromArray(serobj.message_, serobj.size_);
 
-	cube_enc_helpers::toModel(gpb, des_obj);
+	cube_helpers::toModel(gpb, des_obj);
 }
 
 /// CLASS QoSCubeListEncoder
@@ -636,7 +668,7 @@ void QoSCubeListEncoder::encode(const std::list<rina::QoSCube> &obj,
 		it != obj.end(); ++it) {
 		rina::messages::qosCube_t *gpb_cube;
 		gpb_cube = gpb.add_qoscube();
-		cube_enc_helpers::toGPB((*it), *gpb_cube);
+		cube_helpers::toGPB((*it), *gpb_cube);
 	}
 
 	serobj.size_ = gpb.ByteSize();
@@ -653,7 +685,7 @@ void QoSCubeListEncoder::decode(const rina::ser_obj_t &serobj,
 	for (int i = 0; i < gpb.qoscube_size(); i++)
 	{
 		rina::QoSCube cube;
-		cube_enc_helpers::toModel(gpb.qoscube(i), cube);
+		cube_helpers::toModel(gpb.qoscube(i), cube);
 		des_obj.push_back(cube);
 	}
 }
