@@ -516,5 +516,3 @@ MAKE_COLLECTION_ITERABLE(UnsignedIntListIterator, Long, std::list, unsigned int)
 %template(IPCEventProducerSingleton) Singleton<rina::IPCEventProducer>;
 %template(StringList) std::list<std::string>;
 %template(FlowInformationList) std::list<rina::FlowInformation>;
-%template(UnsignedIntList) std::list<unsigned int>;
-

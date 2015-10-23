@@ -2567,8 +2567,7 @@ static RIBDaemon* ribd = NULL;
 //
 
 //Constructor (private)
-RIBDaemonProxy::RIBDaemonProxy(RIBDaemon* ribd_):
-		ApplicationEntity(ApplicationEntity::RIB_DAEMON_AE_NAME)
+RIBDaemonProxy::RIBDaemonProxy(RIBDaemon* ribd_)
 {
 	ribd = ribd_;
 };
@@ -2795,7 +2794,8 @@ int RIBDaemonProxy::remote_stop(unsigned int handle,
 						is_port);
 }
 
-void RIBDaemonProxy::set_application_process(ApplicationProcess * ap)
+// Class RIBDaemonAE
+void RIBDaemonAE::set_application_process(ApplicationProcess * ap)
 {
 	(void) ap;
 }

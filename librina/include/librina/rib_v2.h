@@ -544,7 +544,7 @@ class RIBDaemon;
 //
 // RIBDaemon Proxy class
 //
-class RIBDaemonProxy : public ApplicationEntity {
+class RIBDaemonProxy {
 
 public:
 
@@ -866,8 +866,6 @@ public:
 			const cdap_rib::filt_info_t &filt,
 			bool is_port = true);
 
-	void set_application_process(ApplicationProcess * ap);
-
 private:
 	///@internal
 	int64_t __addObjRIB(const rib_handle_t& h, const std::string& fqn,
@@ -915,10 +913,14 @@ public:
         std::string displayable_value_;
 };
 
-/// Get a singleton for RIBDaemonProxy
-class RIBDaemonProxyFactory {
+/// The RIB Daemon Application Entity
+class RIBDaemonAE : public ApplicationEntity {
 
 public:
+	RIBDaemonAE() :
+		ApplicationEntity(ApplicationEntity::RIB_DAEMON_AE_NAME) {};
+
+	virtual void set_application_process(ApplicationProcess * ap);
 
 	/**
 	* Get the RIB provider proxy
