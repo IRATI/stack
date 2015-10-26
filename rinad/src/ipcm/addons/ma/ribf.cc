@@ -104,6 +104,8 @@ RIBFactory::RIBFactory(RIBAEassoc ver_assoc){
 
 RIBFactory::~RIBFactory() throw (){
 	// FIXME destroy con handlers and resp handlers
+	LOG_INFO("RIBFactory destructor called");
+	rina::rib::fini();
 }
 
 /*

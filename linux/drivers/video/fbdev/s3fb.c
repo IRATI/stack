@@ -1182,7 +1182,7 @@ static int s3_pci_probe(struct pci_dev *dev, const struct pci_device_id *id)
 
 	pcibios_bus_to_resource(dev->bus, &vga_res, &bus_reg);
 
-	par->state.vgabase = (void __iomem *) vga_res.start;
+	par->state.vgabase = (void __iomem *) (unsigned long) vga_res.start;
 
 	/* Unlock regs */
 	cr38 = vga_rcrt(par->state.vgabase, 0x38);
@@ -1401,9 +1401,10 @@ err_enable_device:
 static void s3_pci_remove(struct pci_dev *dev)
 {
 	struct fb_info *info = pci_get_drvdata(dev);
-	struct s3fb_info __maybe_unused *par = info->par;
+	struct s3fb_info __maybe_unused *par;
 
 	if (info) {
+		par = info->par;
 
 #ifdef CONFIG_MTRR
 		if (par->mtrr_reg >= 0) {

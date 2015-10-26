@@ -18,43 +18,69 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef __VMPI_H__
-#define __VMPI_H__
+#ifndef __VMPI_OPS_H__
+#define __VMPI_OPS_H__
 
+#include <asm/page.h>
+#include <linux/uio.h>
+#include <linux/list.h>
 
-typedef struct vmpi_info vmpi_info_t;
+#include "vmpi-bufs.h"
 
-/* Do not call this function directly, use the wrappers instead. */
-ssize_t vmpi_write_common(vmpi_info_t *mpi, unsigned int channel,
-                          const struct iovec *iv, unsigned long iovlen,
-                          bool user);
-
-/* Use vmpi_write() when writing an userspace buffer. */
-static inline ssize_t
-vmpi_write(vmpi_info_t *mpi, unsigned int channel,
-           const struct iovec *iv, unsigned long iovlen)
-{
-        return vmpi_write_common(mpi, channel, iv, iovlen, 1);
-}
-
-/* Use vmpi_write_kernel() when writing a kernelspace buffer. */
-static inline ssize_t
-vmpi_write_kernel(vmpi_info_t *mpi, unsigned int channel,
-                  const struct iovec *iv, unsigned long iovlen)
-{
-        return vmpi_write_common(mpi, channel, iv, iovlen, 0);
-}
-
-/* Use vmpi_read() when reading into an userspace buffer. */
-ssize_t vmpi_read(vmpi_info_t *mpi, unsigned int channel,
-                  const struct iovec *iv, unsigned long iovcnt);
 
 typedef void (*vmpi_read_cb_t)(void *opaque, unsigned int channel,
-                               const char *buffer, int len);
+                               struct vmpi_buf *vb);
+typedef void (*vmpi_write_restart_cb_t)(void *opaque);
 
-int vmpi_register_read_callback(vmpi_info_t *mpi, vmpi_read_cb_t rcb,
-                                void *opaque);
+struct vmpi_ops {
+        /* Write a kernelspace buffer. */
+        ssize_t (*write)(struct vmpi_ops *ops, unsigned int channel,
+                         struct vmpi_buf *vb);
+        int (*register_cbs)(struct vmpi_ops *ops, vmpi_read_cb_t rcb,
+                            vmpi_write_restart_cb_t wcb, void *opaque);
+        int (*unregister_cbs)(struct vmpi_ops *ops);
 
-#include "vmpi-limits.h"
+        /* Private: do not use. */
+        void *priv;
+};
 
-#endif  /* __VMPI_H__ */
+unsigned int vmpi_get_max_payload_size(void);
+
+
+#define VMPI_PROVIDER_HOST       0U
+#define VMPI_PROVIDER_GUEST      1U
+#define VMPI_PROVIDER_AUTO       2U
+
+int vmpi_provider_find_instance(unsigned int provider, int id,
+                                struct vmpi_ops *ops);
+
+int vmpi_provider_register(unsigned int provider, unsigned int id,
+                           const struct vmpi_ops *ops);
+
+int vmpi_provider_unregister(unsigned int provider, unsigned int id);
+
+
+#define VMPI_RING_SIZE_BITS             8
+/* VMPI_RING_SIZE Must match virtio ring size. */
+#define VMPI_RING_SIZE                  (1 << VMPI_RING_SIZE_BITS)
+#define VMPI_RING_SIZE_MASK             (VMPI_RING_SIZE - 1)
+#define VMPI_BUF_SIZE                   PAGE_SIZE
+
+#if (PAGE_SIZE > 4096)
+#warning "Page size is greater than 4096: this situation has never been tested"
+#endif
+
+struct vmpi_hdr {
+        uint32_t channel;
+} __attribute__((packed));
+
+//#define VMPI_BUF_CAN_PUSH
+
+//#define VERBOSE
+#ifdef VERBOSE
+#define IFV(x) x
+#else   /* !VERBOSE */
+#define IFV(x)
+#endif  /* !VERBOSE */
+
+#endif  /* __VMPI_OPS_H__ */

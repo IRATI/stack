@@ -20,7 +20,6 @@
 
 #include <linux/compat.h>
 #include <linux/eventfd.h>
-#include <linux/vhost.h>
 #include <linux/miscdevice.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
@@ -28,30 +27,24 @@
 #include <linux/workqueue.h>
 #include <linux/file.h>
 #include <linux/slab.h>
+#include <linux/vmalloc.h>
 #include <linux/aio.h>
 #include <linux/sched.h>
 
 #include "../../../drivers/vhost/vhost.h"
 
 #include "vmpi-iovec.h"
-#include "vmpi-structs.h"
 #include "vmpi.h"
 #include "vmpi-host-impl.h"
+#include "vmpi-stats.h"
 
-
-#ifdef VERBOSE
-#define IFV(x) x
-#else  /* VERBOSE */
-#define IFV(x)
-#endif /* VERBOSE */
 
 /* Max number of bytes transferred before requeueing the job.
  * Using this limit prevents one virtqueue from starving others. */
-#define VHOST_MPI_WEIGHT_X  0x80000
-#define VHOST_MPI_WEIGHT    150
+#define VHOST_MPI_WEIGHT 0x80000
 
 enum {
-        VHOST_MPI_FEATURES = VHOST_FEATURES,
+        VHOST_MPI_FEATURES = VHOST_FEATURES | (1ULL << VIRTIO_F_VERSION_1),
 };
 
 enum {
@@ -64,6 +57,11 @@ extern unsigned int vmpi_max_channels;
 
 struct vmpi_impl_queue {
         struct vhost_virtqueue vq;
+#ifndef VMPI_BUF_CAN_PUSH
+        struct vmpi_hdr hdrs[VMPI_RING_SIZE];
+        unsigned int hdr_head;
+        unsigned int hdr_tail;
+#endif /* !VMPI_BUF_CAN_PUSH */
 };
 
 struct vmpi_impl_info {
@@ -75,21 +73,62 @@ struct vmpi_impl_info {
         wait_queue_head_t wqh_poll;
 
         struct vmpi_info *mpi;
-        struct vmpi_ring *write;
-        struct vmpi_queue *read;
-        struct vmpi_stats *stats;
+
+        struct list_head write;
+        unsigned int write_len;
+        spinlock_t write_lock;
+
         vmpi_read_cb_t read_cb;
-        void *read_cb_data;
-        struct vmpi_queue read_cb_queue;
-        struct work_struct read_cb_worker;
+        vmpi_write_restart_cb_t write_restart_cb;
+        void *cb_data;
+
+        struct vmpi_stats stats;
 };
 
 int
-vmpi_impl_register_read_callback(vmpi_impl_info_t *vi, vmpi_read_cb_t cb,
-                                 void *opaque)
+vmpi_impl_register_cbs(vmpi_impl_info_t *vi, vmpi_read_cb_t rcb,
+                       vmpi_write_restart_cb_t wcb, void *opaque)
 {
-        vi->read_cb = cb;
-        vi->read_cb_data = opaque;
+        struct vhost_virtqueue *txvq = &vi->vqs[VHOST_MPI_VQ_TX].vq;
+        struct vhost_virtqueue *rxvq = &vi->vqs[VHOST_MPI_VQ_RX].vq;
+        int ret = 0;
+
+        if (!rcb || !wcb) {
+                return -EINVAL;
+        }
+
+        mutex_lock(&txvq->mutex);
+        mutex_lock(&rxvq->mutex);
+
+        if (vi->read_cb) {
+                ret = -EBUSY;
+        } else {
+                vi->read_cb = rcb;
+                vi->write_restart_cb = wcb;
+                vi->cb_data = opaque;
+        }
+
+        mutex_unlock(&txvq->mutex);
+        mutex_unlock(&rxvq->mutex);
+
+        return ret;
+}
+
+int
+vmpi_impl_unregister_cbs(vmpi_impl_info_t *vi)
+{
+        struct vhost_virtqueue *txvq = &vi->vqs[VHOST_MPI_VQ_TX].vq;
+        struct vhost_virtqueue *rxvq = &vi->vqs[VHOST_MPI_VQ_RX].vq;
+
+        mutex_lock(&txvq->mutex);
+        mutex_lock(&rxvq->mutex);
+
+        vi->read_cb = NULL;
+        vi->write_restart_cb = NULL;
+        vi->cb_data = NULL;
+
+        mutex_unlock(&txvq->mutex);
+        mutex_unlock(&rxvq->mutex);
 
         return 0;
 }
@@ -99,29 +138,6 @@ vhost_mpi_vq_reset(struct vmpi_impl_info *vi)
 {
 }
 
-static void
-read_cb_worker_function(struct work_struct *work)
-{
-        struct vmpi_impl_info *vi =
-                container_of(work, struct vmpi_impl_info, read_cb_worker);
-
-        for (;;) {
-                struct vmpi_buffer *buf;
-
-                mutex_lock(&vi->read_cb_queue.lock);
-                buf = vmpi_queue_pop_front(&vi->read_cb_queue);
-                mutex_unlock(&vi->read_cb_queue.lock);
-                if (buf == NULL) {
-                        break;
-                }
-                vi->read_cb(vi->read_cb_data,
-                            vmpi_buffer_hdr(buf)->channel,
-                            vmpi_buffer_data(buf),
-                            buf->len - sizeof(struct vmpi_hdr));
-                vmpi_buffer_destroy(buf);
-        }
-}
-
 /* Expects to be always run from workqueue - which acts as
  * read-size critical section for our kind of RCU. */
 static void
@@ -129,13 +145,13 @@ handle_guest_tx(struct vmpi_impl_info *vi)
 {
         struct vmpi_impl_queue *nvq = &vi->vqs[VHOST_MPI_VQ_TX];
         struct vhost_virtqueue *vq = &nvq->vq;
-        struct vmpi_queue *read;
         unsigned out, in;
         int head;
         size_t len, total_len = 0;
         void *opaque;
-        struct vmpi_buffer *buf = NULL;
-        unsigned int channel;
+        struct vmpi_buf *vb = NULL;
+        struct iovec *iov;
+        struct vmpi_hdr hdr;
 
         mutex_lock(&vq->mutex);
         opaque = vq->private_data;
@@ -144,8 +160,10 @@ handle_guest_tx(struct vmpi_impl_info *vi)
 
         vhost_disable_notify(&vi->dev, vq);
 
+        vi->stats.rxint++;
+
         for (;;) {
-                head = vhost_get_vq_desc(&vi->dev, vq, vq->iov,
+                head = vhost_get_vq_desc(vq, vq->iov,
                                          ARRAY_SIZE(vq->iov),
                                          &out, &in,
                                          NULL, NULL);
@@ -165,47 +183,35 @@ handle_guest_tx(struct vmpi_impl_info *vi)
                                "out %d, int %d\n", out, in);
                         break;
                 }
-
                 len = iov_length(vq->iov, out);
-                buf = vmpi_buffer_create(VMPI_BUF_SIZE);
-                if (unlikely(buf == NULL)) {
-                        printk("vmpi_buffer_create(%lu) failed\n",
-                               VMPI_BUF_SIZE);
+                IFV(printk("popped %d bytes and %d out descs from "
+                           "the TX ring\n", (int)len, out));
+                vb = vmpi_buf_alloc(len, 0, GFP_KERNEL);
+                if (unlikely(vb == NULL)) {
+                        printk("vmpi_buf_alloc(%lu) failed\n", len);
                 } else {
-                        IFV(printk("transmit (%u, %d)\n", out, (int)len));
-                        len = iovec_to_buf(vq->iov, out, buf->p, buf->size);
-                        buf->len = len;
-                        IFV(printk("popped %d bytes from the TX ring\n",
-                                   (int)len));
+                        iov = vq->iov;
+#ifdef VMPI_CAN_PUSH
+                        len = iovec_to_buf(&iov, &out, vmpi_buf_data(vb),
+                                           vmpi_buf_size(vb));
+                        vmpi_buf_set_len(vb, len);
+                        hdr.channel = ((struct vmpi_hdr *)
+                                      vmpi_buf_data(vb))->channel;
+                        vmpi_buf_pop(vb, sizeof(struct vmpi_hdr));
+#else
+                        iovec_to_buf(&iov, &out, &hdr, sizeof(hdr));
+                        len = iovec_to_buf(&iov, &out, vmpi_buf_data(vb),
+                                           vmpi_buf_size(vb));
+                        vmpi_buf_set_len(vb, len);
+#endif
 
-                        if (!vi->read_cb) {
-                                channel = vmpi_buffer_hdr(buf)->channel;
-                                if (unlikely(channel >= vmpi_max_channels)) {
-                                        printk("bogus channel request: %u\n", channel);
-                                        channel = 0;
-                                }
-
-                                read = &vi->read[channel];
-                                mutex_lock(&read->lock);
-                                if (unlikely(vmpi_queue_len(read) >=
-                                             VMPI_RING_SIZE)) {
-                                        vmpi_buffer_destroy(buf);
-                                } else {
-                                        vmpi_queue_push_back(read, buf);
-                                }
-                                mutex_unlock(&read->lock);
-
-                                wake_up_interruptible_poll(&read->wqh,
-                                                           POLLIN |
-                                                           POLLRDNORM |
-                                                           POLLRDBAND);
+                        if (unlikely(!vi->read_cb)) {
+                                vmpi_buf_free(vb);
                         } else {
-                                mutex_lock(&vi->read_cb_queue.lock);
-                                vmpi_queue_push_back(&vi->read_cb_queue, buf);
-                                mutex_unlock(&vi->read_cb_queue.lock);
-                                schedule_work(&vi->read_cb_worker);
+                                vi->read_cb(vi->cb_data, hdr.channel, vb);
                         }
-                        vi->stats->rxres++;
+
+                        vi->stats.rxres++;
                 }
 
                 vhost_add_used_and_signal(&vi->dev, vq, head, 0);
@@ -219,79 +225,141 @@ handle_guest_tx(struct vmpi_impl_info *vi)
         mutex_unlock(&vq->mutex);
 }
 
+#ifdef VMPI_BUF_CAN_PUSH
+#define WR_Q_MAXLEN     (VMPI_RING_SIZE << 1)
+#else /* !VMPI_BUF_CAN_PUSH */
+#define WR_Q_MAXLEN     VMPI_RING_SIZE
+#endif /* !VMPI_BUF_CAN_PUSH */
+
+int
+vmpi_impl_write_buf(struct vmpi_impl_info *vi, struct vmpi_buf *vb,
+                    unsigned int channel)
+{
+        struct vmpi_impl_queue *nvq = &vi->vqs[VHOST_MPI_VQ_RX];
+
+        spin_lock_bh(&vi->write_lock);
+        if (vi->write_len >= WR_Q_MAXLEN) {
+                spin_unlock_bh(&vi->write_lock);
+                return -EAGAIN;
+        }
+#ifdef VMPI_BUF_CAN_PUSH
+        vmpi_buf_push(vb, sizeof(struct vmpi_hdr));
+        ((struct vmpi_hdr *)vmpi_buf_data(vb))->channel = channel;
+#else
+        nvq->hdrs[nvq->hdr_tail].channel = channel;
+        nvq->hdr_tail = (nvq->hdr_tail + 1) & VMPI_RING_SIZE_MASK;
+#endif
+        list_add_tail(&vb->node, &vi->write);
+        vi->write_len++;
+        vi->stats.txreq++;
+        spin_unlock_bh(&vi->write_lock);
+
+        return 0;
+}
+
+int
+vmpi_impl_txkick(struct vmpi_impl_info *vi)
+{
+        wake_up_interruptible_poll(&vi->wqh_poll, POLLIN |
+                                   POLLRDNORM | POLLRDBAND);
+
+        return 0;
+
+}
+
 static int
-peek_head_len(struct vmpi_ring *ring)
+peek_head_len(struct vmpi_impl_info *vi)
 {
         int ret = 0;
 
-        if (vmpi_ring_pending(ring)) {
-                ret = ring->bufs[ring->np].len;
+        spin_lock_bh(&vi->write_lock);
+        if (vi->write_len) {
+                ret = vmpi_buf_len(list_first_entry(&vi->write,
+                                                    struct vmpi_buf, node));
+#ifndef VMPI_BUF_CAN_PUSH
+                ret += sizeof(struct vmpi_hdr);
+#endif /* ! VMPI_BUF_CAN_PUSH */
         }
+        spin_unlock_bh(&vi->write_lock);
 
         return ret;
 }
 
 /* This is a multi-buffer version of vhost_get_desc, that works if
- *      vq has read descriptors only.
- * XXX probably useless for us (for now)
- * @vq          - the relevant virtqueue
- * @datalen     - data length we'll be reading
- * @iovcount    - returned count of io vectors we fill
- * @log         - vhost log
- * @log_num     - log offset
+ *	vq has read descriptors only.
+ * @vq		- the relevant virtqueue
+ * @datalen	- data length we'll be reading
+ * @iovcount	- returned count of io vectors we fill
+ * @log		- vhost log
+ * @log_num	- log offset
  * @quota       - headcount quota, 1 for big buffer
- *      returns number of buffer heads allocated, negative on error
+ *	returns number of buffer heads allocated, negative on error
  */
 static int get_rx_bufs(struct vhost_virtqueue *vq,
-                       struct vring_used_elem *heads,
-                       int datalen,
-                       unsigned *iovcount,
-                       struct vhost_log *log,
-                       unsigned *log_num,
-                       unsigned int quota)
+		       struct vring_used_elem *heads,
+		       int datalen,
+		       unsigned *iovcount,
+		       struct vhost_log *log,
+		       unsigned *log_num,
+		       unsigned int quota)
 {
-        unsigned int out, in;
-        int seg = 0;
-        int headcount = 0;
-        unsigned d;
-        int r, nlogs = 0;
+	unsigned int out, in;
+	int seg = 0;
+	int headcount = 0;
+	unsigned d;
+	int r, nlogs = 0;
+	/* len is always initialized before use since we are always called with
+	 * datalen > 0.
+	 */
+	u32 uninitialized_var(len);
 
-        while (datalen > 0 && headcount < quota) {
-                if (unlikely(seg >= UIO_MAXIOV)) {
-                        r = -ENOBUFS;
-                        goto err;
-                }
-                d = vhost_get_vq_desc(vq->dev, vq, vq->iov + seg,
-                                      ARRAY_SIZE(vq->iov) - seg, &out,
-                                      &in, log, log_num);
-                if (d == vq->num) {
-                        r = 0;
-                        goto err;
-                }
-                if (unlikely(out || in <= 0)) {
-                        vq_err(vq, "unexpected descriptor format for RX: "
-                               "out %d, in %d\n", out, in);
-                        r = -EINVAL;
-                        goto err;
-                }
-                if (unlikely(log)) {
-                        nlogs += *log_num;
-                        log += *log_num;
-                }
-                heads[headcount].id = d;
-                heads[headcount].len = iov_length(vq->iov + seg, in);
-                datalen -= heads[headcount].len;
-                ++headcount;
-                seg += in;
-        }
-        heads[headcount - 1].len += datalen;
-        *iovcount = seg;
-        if (unlikely(log))
-                *log_num = nlogs;
-        return headcount;
- err:
-        vhost_discard_vq_desc(vq, headcount);
-        return r;
+	while (datalen > 0 && headcount < quota) {
+		if (unlikely(seg >= UIO_MAXIOV)) {
+			r = -ENOBUFS;
+			goto err;
+		}
+		r = vhost_get_vq_desc(vq, vq->iov + seg,
+				      ARRAY_SIZE(vq->iov) - seg, &out,
+				      &in, log, log_num);
+		if (unlikely(r < 0))
+			goto err;
+
+		d = r;
+		if (d == vq->num) {
+			r = 0;
+			goto err;
+		}
+		if (unlikely(out || in <= 0)) {
+			printk("unexpected descriptor format for RX: "
+				"out %d, in %d\n", out, in);
+			r = -EINVAL;
+			goto err;
+		}
+		if (unlikely(log)) {
+			nlogs += *log_num;
+			log += *log_num;
+		}
+		heads[headcount].id = cpu_to_vhost32(vq, d);
+		len = iov_length(vq->iov + seg, in);
+		heads[headcount].len = cpu_to_vhost32(vq, len);
+		datalen -= len;
+		++headcount;
+		seg += in;
+	}
+	heads[headcount - 1].len = cpu_to_vhost32(vq, len + datalen);
+	*iovcount = seg;
+	if (unlikely(log))
+		*log_num = nlogs;
+
+	/* Detect overrun */
+	if (unlikely(datalen > 0)) {
+		r = UIO_MAXIOV + 1;
+		goto err;
+	}
+	return headcount;
+err:
+	vhost_discard_vq_desc(vq, headcount);
+	return r;
 }
 
 /* Expects to be always run from workqueue - which acts as
@@ -301,14 +369,14 @@ handle_guest_rx(struct vmpi_impl_info *vi)
 {
         struct vmpi_impl_queue *nvq = &vi->vqs[VHOST_MPI_VQ_RX];
         struct vhost_virtqueue *vq = &nvq->vq;
-        struct vmpi_ring *ring = vi->write;
         unsigned uninitialized_var(in), log;
         struct vhost_log *vq_log;
         size_t total_len = 0;
         s16 headcount;
         size_t len;
         void *opaque;
-        struct vmpi_buffer *buf = NULL;
+        struct vmpi_buf *vb = NULL;
+        struct iovec *iov;
 
         mutex_lock(&vq->mutex);
         opaque = vq->private_data;
@@ -316,16 +384,20 @@ handle_guest_rx(struct vmpi_impl_info *vi)
                 goto out;
         vhost_disable_notify(&vi->dev, vq);
 
-        vq_log = unlikely(vhost_has_feature(&vi->dev, VHOST_F_LOG_ALL)) ?
+        vq_log = unlikely(vhost_has_feature(vq, VHOST_F_LOG_ALL)) ?
                 vq->log : NULL;
 
-        while ((len = peek_head_len(ring))) {
-                IFV(printk("peek %d bytes\n", (int)len));
+        vi->stats.txint++;
+
+        while ((len = peek_head_len(vi))) {
+                IFV(printk("peek %d bytes from write queue\n", (int)len));
                 headcount = get_rx_bufs(vq, vq->heads, len,
                                         &in, vq_log, &log, 1);
                 /* On error, stop handling until the next kick. */
-                if (unlikely(headcount < 0))
+                if (unlikely(headcount < 0)) {
+                        printk("get_rx_bufs() failed --> %d\n", headcount);
                         break;
+                }
                 /* OK, now we need to know about added descriptors. */
                 if (!headcount) {
                         if (unlikely(vhost_enable_notify(&vi->dev, vq))) {
@@ -340,19 +412,31 @@ handle_guest_rx(struct vmpi_impl_info *vi)
                 }
                 /* We don't need to be notified again. */
 
-                buf = &ring->bufs[ring->np];
-                IFV(printk("received %d\n", (int)len));
-                len = iovec_from_buf(vq->iov, in, buf->p, len);
-                buf->len = 0;
-                VMPI_RING_INC(ring->np);
-                VMPI_RING_INC(ring->nr);
+                iov = vq->iov;
 
-#ifdef VMPI_TX_MUTEX
-                wake_up_interruptible_poll(&ring->wqh, POLLOUT |
-                                           POLLWRNORM | POLLWRBAND);
-#endif
-                IFV(printk("pushed %d bytes in the RX ring\n", (int)len));
-                vi->stats->txres++;
+                spin_lock_bh(&vi->write_lock);
+                vb = list_first_entry(&vi->write, struct vmpi_buf, node);
+                list_del(&vb->node);
+                vi->write_len--;
+#ifndef VMPI_BUF_CAN_PUSH
+                iovec_from_buf(&iov, &in, nvq->hdrs + nvq->hdr_head,
+                               sizeof(struct vmpi_hdr));
+                nvq->hdr_head = (nvq->hdr_head + 1) & VMPI_RING_SIZE_MASK;
+                len -= sizeof(struct vmpi_hdr);
+#endif /* ! VMPI_BUF_CAN_PUSH */
+                spin_unlock_bh(&vi->write_lock);
+
+                len = iovec_from_buf(&iov, &in, vmpi_buf_data(vb), len);
+                vmpi_buf_free(vb);
+
+                /* More room to write. */
+                if (likely(vi->write_restart_cb)) {
+                        vi->write_restart_cb(vi->cb_data);
+                }
+
+                IFV(printk("pushed %d bytes and %d in descs in the RX ring\n",
+                           (int)len, in));
+                vi->stats.txres++;
 
                 vhost_add_used_and_signal_n(&vi->dev, vq, vq->heads,
                                             headcount);
@@ -409,16 +493,21 @@ handle_rx_mpi(struct vhost_work *work)
 static int
 vhost_mpi_open(struct inode *inode, struct file *f)
 {
-        struct vmpi_impl_info *vi = kmalloc(sizeof *vi, GFP_KERNEL);
+        struct vmpi_impl_info *vi;
         struct vhost_dev *dev;
         struct vhost_virtqueue **vqs;
         int r;
 
-        if (!vi)
-                return -ENOMEM;
-        vqs = kmalloc(VHOST_MPI_VQ_MAX * sizeof(*vqs), GFP_KERNEL);
+        vi = kzalloc(sizeof *vi, GFP_KERNEL | __GFP_NOWARN | __GFP_REPEAT);
+        if (!vi) {
+                vi = vmalloc(sizeof *vi);
+                if (!vi)
+                        return -ENOMEM;
+       }
+
+        vqs = kzalloc(VHOST_MPI_VQ_MAX * sizeof(*vqs), GFP_KERNEL);
         if (!vqs) {
-                kfree(vi);
+                kvfree(vi);
                 return -ENOMEM;
         }
 
@@ -440,23 +529,15 @@ vhost_mpi_open(struct inode *inode, struct file *f)
 
         init_waitqueue_head(&vi->wqh_poll);
 
-        /* We tell vmpi_test_init() to do its work in another
-         * process context, in order to avoid a deadlock.
-         * The deadlock would show up because in this point
-         * we hold the misc_open() mutex, and the same mutex
-         * is required by misc_register(), which is necessary
-         * to init the test device.
-         */
-        vi->mpi = vmpi_init(vi, &r, true);
+        vi->mpi = vmpi_init(vi, &r);
         if (vi->mpi == NULL) {
                 goto buf_alloc_fail;
         }
-        vi->write = vmpi_get_write_ring(vi->mpi);
-        vi->read = vmpi_get_read_queue(vi->mpi);
-        vi->stats = vmpi_get_stats(vi->mpi);
-        vi->read_cb = NULL;
-        INIT_WORK(&vi->read_cb_worker, read_cb_worker_function);
-        vmpi_queue_init(&vi->read_cb_queue, 0, VMPI_BUF_SIZE);
+        INIT_LIST_HEAD(&vi->write);
+        vi->write_len = 0;
+        spin_lock_init(&vi->write_lock);
+
+        vmpi_stats_init(&vi->stats);
 
         printk("vhost_mpi_open completed\n");
 
@@ -465,7 +546,7 @@ vhost_mpi_open(struct inode *inode, struct file *f)
  buf_alloc_fail:
         vhost_dev_cleanup(&vi->dev, false);
         kfree(vqs);
-        kfree(vi);
+        kvfree(vi);
 
         return r;
 }
@@ -487,6 +568,9 @@ vhost_mpi_enable_vq(struct vmpi_impl_info *vi, struct vhost_virtqueue *vq)
         struct vmpi_impl_queue *nvq =
                 container_of(vq, struct vmpi_impl_queue, vq);
         struct vhost_poll *poll = vi->poll + (nvq - vi->vqs);
+
+        if (!vq->private_data)
+                return 0;
 
         return vhost_poll_start(poll, vi->file);
 }
@@ -534,12 +618,13 @@ vhost_mpi_release(struct inode *inode, struct file *f)
         /* We do an extra flush before freeing memory,
          * since jobs can re-queue themselves. */
         vhost_mpi_flush(vi);
+        vmpi_stats_fini(&vi->stats);
         /* Here the same reasoning explained above (right
          * before the vmpi_init() call) apply.
          */
-        vmpi_fini(vi->mpi, true);
+        vmpi_fini(vi->mpi);
         kfree(vi->dev.vqs);
-        kfree(vi);
+        kvfree(vi);
 
         printk("vhost_mpi_release completed\n");
 
@@ -640,15 +725,21 @@ vhost_mpi_reset_owner(struct vmpi_impl_info *vi)
 static int
 vhost_mpi_set_features(struct vmpi_impl_info *vi, u64 features)
 {
+        int i;
+
         mutex_lock(&vi->dev.mutex);
         if ((features & (1 << VHOST_F_LOG_ALL)) &&
             !vhost_log_access_ok(&vi->dev)) {
                 mutex_unlock(&vi->dev.mutex);
                 return -EFAULT;
         }
-        vi->dev.acked_features = features;
-        smp_wmb();
-        vhost_mpi_flush(vi);
+
+        for (i = 0; i < VHOST_MPI_VQ_MAX; ++i) {
+                mutex_lock(&vi->vqs[i].vq.mutex);
+                vi->vqs[i].vq.acked_features = features;
+                mutex_unlock(&vi->vqs[i].vq.mutex);
+        }
+
         mutex_unlock(&vi->dev.mutex);
         return 0;
 }
@@ -670,13 +761,13 @@ vhost_mpi_set_owner(struct vmpi_impl_info *vi)
         return r;
 }
 
+/* Name overloading and struct overwrite. It should be a temporary solution. */
+#define VHOST_MPI_STARTSTOP VHOST_NET_SET_BACKEND
 struct vhost_mpi_command {
         unsigned int index;
         unsigned int enable;
 };
 
-/* Name overloading. Should be a temporary solution. */
-#define VHOST_MPI_STARTSTOP VHOST_NET_SET_BACKEND
 
 static long
 vhost_mpi_ioctl(struct file *f, unsigned int ioctl,
@@ -693,16 +784,14 @@ vhost_mpi_ioctl(struct file *f, unsigned int ioctl,
         case VHOST_MPI_STARTSTOP:
                 if (copy_from_user(&mpi_cmd, argp, sizeof mpi_cmd))
                         return -EFAULT;
-                return vhost_mpi_startstop(vi, mpi_cmd.index,
-                                           mpi_cmd.enable);
+                return vhost_mpi_startstop(vi, mpi_cmd.index, mpi_cmd.enable);
         case VHOST_GET_FEATURES:
                 features = VHOST_MPI_FEATURES;
                 if (copy_to_user(featurep, &features, sizeof features))
                         return -EFAULT;
                 return 0;
         case VHOST_SET_FEATURES:
-                if (copy_from_user(&features, featurep,
-                                   sizeof features))
+                if (copy_from_user(&features, featurep, sizeof features))
                         return -EFAULT;
                 if (features & ~VHOST_MPI_FEATURES)
                         return -EOPNOTSUPP;
@@ -736,7 +825,6 @@ static unsigned int
 vhost_mpi_poll(struct file *file, poll_table *wait)
 {
         struct vmpi_impl_info *vi = file->private_data;
-        struct vmpi_ring *write = vi->write;
         unsigned int mask = 0;
 
         if (!vi)
@@ -746,38 +834,19 @@ vhost_mpi_poll(struct file *file, poll_table *wait)
 
         /*
          * Are there host resources for the guest to receive
-         * (e.g. pending rx packets)?
+         * (e.g. pending rx packets) ?
          */
-#ifdef VMPI_TX_MUTEX
-        mutex_lock(&write->lock);
-#else
-        spin_lock(&write->lock);
-#endif
-        if (vmpi_ring_pending(write))
+        spin_lock_bh(&vi->write_lock);
+        if (vi->write_len > 0)
                 mask |= POLLIN | POLLRDNORM;
-#ifdef VMPI_TX_MUTEX
-        mutex_unlock(&write->lock);
-#else
-        spin_unlock(&write->lock);
-#endif
+        spin_unlock_bh(&vi->write_lock);
 
         /*
-         * Are there host resources for the guest to send
-         * (e.g. buffers in the read pool)?
+         * Are there host resources for the guest to send ?
          */
         mask |= POLLOUT | POLLWRNORM;
 
         return mask;
-}
-
-int
-vmpi_impl_txkick(struct vmpi_impl_info *vi)
-{
-        wake_up_interruptible_poll(&vi->wqh_poll, POLLIN |
-                                   POLLRDNORM | POLLRDBAND);
-
-        return 0;
-
 }
 
 static const struct file_operations vhost_mpi_fops = {
@@ -817,6 +886,6 @@ module_exit(vhost_mpi_exit);
 MODULE_VERSION("0.0.1");
 MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Vincenzo Maffione");
-MODULE_DESCRIPTION("Host kernel server for virtio mpi");
+MODULE_DESCRIPTION("Host kernel emulation for virtio mpi");
 MODULE_ALIAS_MISCDEV(VHOST_MPI_MINOR);
 MODULE_ALIAS("devname:vhost-mpi");

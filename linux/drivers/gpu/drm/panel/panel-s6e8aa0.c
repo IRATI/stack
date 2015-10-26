@@ -120,7 +120,10 @@ struct s6e8aa0 {
 	int error;
 };
 
-#define panel_to_s6e8aa0(p) container_of(p, struct s6e8aa0, panel)
+static inline struct s6e8aa0 *panel_to_s6e8aa0(struct drm_panel *panel)
+{
+	return container_of(panel, struct s6e8aa0, panel);
+}
 
 static int s6e8aa0_clear_error(struct s6e8aa0 *ctx)
 {
@@ -133,15 +136,15 @@ static int s6e8aa0_clear_error(struct s6e8aa0 *ctx)
 static void s6e8aa0_dcs_write(struct s6e8aa0 *ctx, const void *data, size_t len)
 {
 	struct mipi_dsi_device *dsi = to_mipi_dsi_device(ctx->dev);
-	int ret;
+	ssize_t ret;
 
 	if (ctx->error < 0)
 		return;
 
-	ret = mipi_dsi_dcs_write(dsi, dsi->channel, data, len);
+	ret = mipi_dsi_dcs_write_buffer(dsi, data, len);
 	if (ret < 0) {
-		dev_err(ctx->dev, "error %d writing dcs seq: %*ph\n", ret, len,
-			data);
+		dev_err(ctx->dev, "error %zd writing dcs seq: %*ph\n", ret,
+			(int)len, data);
 		ctx->error = ret;
 	}
 }
@@ -154,7 +157,7 @@ static int s6e8aa0_dcs_read(struct s6e8aa0 *ctx, u8 cmd, void *data, size_t len)
 	if (ctx->error < 0)
 		return ctx->error;
 
-	ret = mipi_dsi_dcs_read(dsi, dsi->channel, cmd, data, len);
+	ret = mipi_dsi_dcs_read(dsi, cmd, data, len);
 	if (ret < 0) {
 		dev_err(ctx->dev, "error %d reading dcs seq(%#x)\n", ret, cmd);
 		ctx->error = ret;
@@ -797,27 +800,15 @@ static void s6e8aa0_panel_init(struct s6e8aa0 *ctx)
 }
 
 static void s6e8aa0_set_maximum_return_packet_size(struct s6e8aa0 *ctx,
-						   int size)
+						   u16 size)
 {
 	struct mipi_dsi_device *dsi = to_mipi_dsi_device(ctx->dev);
-	const struct mipi_dsi_host_ops *ops = dsi->host->ops;
-	u8 buf[] = {size, 0};
-	struct mipi_dsi_msg msg = {
-		.channel = dsi->channel,
-		.type = MIPI_DSI_SET_MAXIMUM_RETURN_PACKET_SIZE,
-		.tx_len = sizeof(buf),
-		.tx_buf = buf
-	};
 	int ret;
 
 	if (ctx->error < 0)
 		return;
 
-	if (!ops || !ops->transfer)
-		ret = -EIO;
-	else
-		ret = ops->transfer(dsi->host, &msg);
-
+	ret = mipi_dsi_set_maximum_return_packet_size(dsi, size);
 	if (ret < 0) {
 		dev_err(ctx->dev,
 			"error %d setting maximum return packet size to %d\n",
@@ -847,6 +838,7 @@ static void s6e8aa0_read_mtp_id(struct s6e8aa0 *ctx)
 	if (i >= ARRAY_SIZE(s6e8aa0_variants)) {
 		dev_err(ctx->dev, "unsupported display version %d\n", id[1]);
 		ctx->error = -EINVAL;
+		return;
 	}
 
 	ctx->variant = &s6e8aa0_variants[i];
@@ -888,6 +880,11 @@ static int s6e8aa0_power_off(struct s6e8aa0 *ctx)
 
 static int s6e8aa0_disable(struct drm_panel *panel)
 {
+	return 0;
+}
+
+static int s6e8aa0_unprepare(struct drm_panel *panel)
+{
 	struct s6e8aa0 *ctx = panel_to_s6e8aa0(panel);
 
 	s6e8aa0_dcs_write_seq_static(ctx, MIPI_DCS_ENTER_SLEEP_MODE);
@@ -899,7 +896,7 @@ static int s6e8aa0_disable(struct drm_panel *panel)
 	return s6e8aa0_power_off(ctx);
 }
 
-static int s6e8aa0_enable(struct drm_panel *panel)
+static int s6e8aa0_prepare(struct drm_panel *panel)
 {
 	struct s6e8aa0 *ctx = panel_to_s6e8aa0(panel);
 	int ret;
@@ -912,9 +909,14 @@ static int s6e8aa0_enable(struct drm_panel *panel)
 	ret = ctx->error;
 
 	if (ret < 0)
-		s6e8aa0_disable(panel);
+		s6e8aa0_unprepare(panel);
 
 	return ret;
+}
+
+static int s6e8aa0_enable(struct drm_panel *panel)
+{
+	return 0;
 }
 
 static int s6e8aa0_get_modes(struct drm_panel *panel)
@@ -943,6 +945,8 @@ static int s6e8aa0_get_modes(struct drm_panel *panel)
 
 static const struct drm_panel_funcs s6e8aa0_drm_funcs = {
 	.disable = s6e8aa0_disable,
+	.unprepare = s6e8aa0_unprepare,
+	.prepare = s6e8aa0_prepare,
 	.enable = s6e8aa0_enable,
 	.get_modes = s6e8aa0_get_modes,
 };
@@ -1003,16 +1007,11 @@ static int s6e8aa0_probe(struct mipi_dsi_device *dsi)
 		return ret;
 	}
 
-	ctx->reset_gpio = devm_gpiod_get(dev, "reset");
+	ctx->reset_gpio = devm_gpiod_get(dev, "reset", GPIOD_OUT_HIGH);
 	if (IS_ERR(ctx->reset_gpio)) {
 		dev_err(dev, "cannot get reset-gpios %ld\n",
 			PTR_ERR(ctx->reset_gpio));
 		return PTR_ERR(ctx->reset_gpio);
-	}
-	ret = gpiod_direction_output(ctx->reset_gpio, 1);
-	if (ret < 0) {
-		dev_err(dev, "cannot configure reset-gpios %d\n", ret);
-		return ret;
 	}
 
 	ctx->brightness = GAMMA_LEVEL_NUM - 1;
@@ -1053,7 +1052,6 @@ static struct mipi_dsi_driver s6e8aa0_driver = {
 	.remove = s6e8aa0_remove,
 	.driver = {
 		.name = "panel_s6e8aa0",
-		.owner = THIS_MODULE,
 		.of_match_table = s6e8aa0_of_match,
 	},
 };

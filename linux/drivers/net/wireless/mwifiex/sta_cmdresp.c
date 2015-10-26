@@ -1,7 +1,7 @@
 /*
  * Marvell Wireless LAN device driver: station command response handling
  *
- * Copyright (C) 2011, Marvell International Ltd.
+ * Copyright (C) 2011-2014, Marvell International Ltd.
  *
  * This software file (the "File") is distributed by Marvell International
  * Ltd. under the terms of the GNU General Public License Version 2, June 1991
@@ -85,11 +85,13 @@ mwifiex_process_cmdresp_error(struct mwifiex_private *priv,
 		spin_lock_irqsave(&adapter->mwifiex_cmd_lock, flags);
 		adapter->scan_processing = false;
 		spin_unlock_irqrestore(&adapter->mwifiex_cmd_lock, flags);
-		if (priv->report_scan_result)
-			priv->report_scan_result = false;
 		break;
 
 	case HostCmd_CMD_MAC_CONTROL:
+		break;
+
+	case HostCmd_CMD_SDIO_SP_RX_AGGR_CFG:
+		dev_err(priv->adapter->dev, "SDIO RX single-port aggregation Not support\n");
 		break;
 
 	default:
@@ -250,6 +252,8 @@ static int mwifiex_ret_get_log(struct mwifiex_private *priv,
 			le32_to_cpu(get_log->wep_icv_err_cnt[2]);
 		stats->wep_icv_error[3] =
 			le32_to_cpu(get_log->wep_icv_err_cnt[3]);
+		stats->bcn_rcv_cnt = le32_to_cpu(get_log->bcn_rcv_cnt);
+		stats->bcn_miss_cnt = le32_to_cpu(get_log->bcn_miss_cnt);
 	}
 
 	return 0;
@@ -637,7 +641,7 @@ static int mwifiex_ret_802_11_key_material_v2(struct mwifiex_private *priv,
 static int mwifiex_ret_802_11_key_material(struct mwifiex_private *priv,
 					   struct host_cmd_ds_command *resp)
 {
-	if (priv->adapter->fw_key_api_major_ver == FW_KEY_API_VER_MAJOR_V2)
+	if (priv->adapter->key_api_major_ver == KEY_API_VER_MAJOR_V2)
 		return mwifiex_ret_802_11_key_material_v2(priv, resp);
 	else
 		return mwifiex_ret_802_11_key_material_v1(priv, resp);
@@ -865,14 +869,20 @@ static int mwifiex_ret_tdls_oper(struct mwifiex_private *priv,
 
 	switch (action) {
 	case ACT_TDLS_DELETE:
-		if (reason)
-			dev_err(priv->adapter->dev,
-				"TDLS link delete for %pM failed: reason %d\n",
-				cmd_tdls_oper->peer_mac, reason);
-		else
+		if (reason) {
+			if (!node || reason == TDLS_ERR_LINK_NONEXISTENT)
+				dev_dbg(priv->adapter->dev,
+					"TDLS link delete for %pM failed: reason %d\n",
+					cmd_tdls_oper->peer_mac, reason);
+			else
+				dev_err(priv->adapter->dev,
+					"TDLS link delete for %pM failed: reason %d\n",
+					cmd_tdls_oper->peer_mac, reason);
+		} else {
 			dev_dbg(priv->adapter->dev,
-				"TDLS link config for %pM successful\n",
+				"TDLS link delete for %pM successful\n",
 				cmd_tdls_oper->peer_mac);
+		}
 		break;
 	case ACT_TDLS_CREATE:
 		if (reason) {
@@ -902,7 +912,7 @@ static int mwifiex_ret_tdls_oper(struct mwifiex_private *priv,
 		break;
 	default:
 		dev_err(priv->adapter->dev,
-			"Unknown TDLS command action respnse %d", action);
+			"Unknown TDLS command action response %d", action);
 		return -1;
 	}
 
@@ -933,6 +943,20 @@ static int mwifiex_ret_cfg_data(struct mwifiex_private *priv,
 		dev_err(priv->adapter->dev, "Cal data cmd resp failed\n");
 		return -1;
 	}
+
+	return 0;
+}
+
+/** This Function handles the command response of sdio rx aggr */
+static int mwifiex_ret_sdio_rx_aggr_cfg(struct mwifiex_private *priv,
+					struct host_cmd_ds_command *resp)
+{
+	struct mwifiex_adapter *adapter = priv->adapter;
+	struct host_cmd_sdio_sp_rx_aggr_cfg *cfg =
+				&resp->params.sdio_rx_aggr_cfg;
+
+	adapter->sdio_rx_aggr_enable = cfg->enable;
+	adapter->sdio_rx_block_size = le16_to_cpu(cfg->block_size);
 
 	return 0;
 }
@@ -979,7 +1003,7 @@ int mwifiex_process_sta_cmdresp(struct mwifiex_private *priv, u16 cmdresp_no,
 		adapter->curr_cmd->wait_q_enabled = false;
 		break;
 	case HostCmd_CMD_802_11_SCAN_EXT:
-		ret = mwifiex_ret_802_11_scan_ext(priv);
+		ret = mwifiex_ret_802_11_scan_ext(priv, resp);
 		adapter->curr_cmd->wait_q_enabled = false;
 		break;
 	case HostCmd_CMD_802_11_BG_SCAN_QUERY:
@@ -1099,6 +1123,9 @@ int mwifiex_process_sta_cmdresp(struct mwifiex_private *priv, u16 cmdresp_no,
 	case HostCmd_CMD_UAP_SYS_CONFIG:
 		break;
 	case HostCmd_CMD_UAP_BSS_START:
+		adapter->tx_lock_flag = false;
+		adapter->pps_uapsd_mode = false;
+		adapter->delay_null_pkt = false;
 		priv->bss_started = 1;
 		break;
 	case HostCmd_CMD_UAP_BSS_STOP:
@@ -1112,6 +1139,11 @@ int mwifiex_process_sta_cmdresp(struct mwifiex_private *priv, u16 cmdresp_no,
 		break;
 	case HostCmd_CMD_TDLS_OPER:
 		ret = mwifiex_ret_tdls_oper(priv, resp);
+		break;
+	case HostCmd_CMD_CHAN_REPORT_REQUEST:
+		break;
+	case HostCmd_CMD_SDIO_SP_RX_AGGR_CFG:
+		ret = mwifiex_ret_sdio_rx_aggr_cfg(priv, resp);
 		break;
 	default:
 		dev_err(adapter->dev, "CMD_RESP: unknown cmd response %#x\n",

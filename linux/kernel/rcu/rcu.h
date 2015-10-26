@@ -99,6 +99,10 @@ static inline void debug_rcu_head_unqueue(struct rcu_head *head)
 
 void kfree(const void *);
 
+/*
+ * Reclaim the specified callback, either by invoking it (non-lazy case)
+ * or freeing it directly (lazy case).  Return true if lazy, false otherwise.
+ */
 static inline bool __rcu_reclaim(const char *rn, struct rcu_head *head)
 {
 	unsigned long offset = (unsigned long)head->func;
@@ -108,12 +112,12 @@ static inline bool __rcu_reclaim(const char *rn, struct rcu_head *head)
 		RCU_TRACE(trace_rcu_invoke_kfree_callback(rn, head, offset));
 		kfree((void *)head - offset);
 		rcu_lock_release(&rcu_callback_map);
-		return 1;
+		return true;
 	} else {
 		RCU_TRACE(trace_rcu_invoke_callback(rn, head));
 		head->func(head);
 		rcu_lock_release(&rcu_callback_map);
-		return 0;
+		return false;
 	}
 }
 
@@ -130,5 +134,13 @@ int rcu_jiffies_till_stall_check(void);
  * translate the string address pointers to actual text.
  */
 #define TPS(x)  tracepoint_string(x)
+
+void rcu_early_boot_tests(void);
+
+/*
+ * This function really isn't for public consumption, but RCU is special in
+ * that context switches can allow the state machine to make progress.
+ */
+extern void resched_cpu(int cpu);
 
 #endif /* __LINUX_RCU_H */

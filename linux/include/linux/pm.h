@@ -93,13 +93,23 @@ typedef struct pm_message {
  *	been registered) to recover from the race condition.
  *	This method is executed for all kinds of suspend transitions and is
  *	followed by one of the suspend callbacks: @suspend(), @freeze(), or
- *	@poweroff().  The PM core executes subsystem-level @prepare() for all
- *	devices before starting to invoke suspend callbacks for any of them, so
- *	generally devices may be assumed to be functional or to respond to
- *	runtime resume requests while @prepare() is being executed.  However,
- *	device drivers may NOT assume anything about the availability of user
- *	space at that time and it is NOT valid to request firmware from within
- *	@prepare() (it's too late to do that).  It also is NOT valid to allocate
+ *	@poweroff().  If the transition is a suspend to memory or standby (that
+ *	is, not related to hibernation), the return value of @prepare() may be
+ *	used to indicate to the PM core to leave the device in runtime suspend
+ *	if applicable.  Namely, if @prepare() returns a positive number, the PM
+ *	core will understand that as a declaration that the device appears to be
+ *	runtime-suspended and it may be left in that state during the entire
+ *	transition and during the subsequent resume if all of its descendants
+ *	are left in runtime suspend too.  If that happens, @complete() will be
+ *	executed directly after @prepare() and it must ensure the proper
+ *	functioning of the device after the system resume.
+ *	The PM core executes subsystem-level @prepare() for all devices before
+ *	starting to invoke suspend callbacks for any of them, so generally
+ *	devices may be assumed to be functional or to respond to runtime resume
+ *	requests while @prepare() is being executed.  However, device drivers
+ *	may NOT assume anything about the availability of user space at that
+ *	time and it is NOT valid to request firmware from within @prepare()
+ *	(it's too late to do that).  It also is NOT valid to allocate
  *	substantial amounts of memory from @prepare() in the GFP_KERNEL mode.
  *	[To work around these limitations, drivers may register suspend and
  *	hibernation notifiers to be executed before the freezing of tasks.]
@@ -112,7 +122,16 @@ typedef struct pm_message {
  *	of the other devices that the PM core has unsuccessfully attempted to
  *	suspend earlier).
  *	The PM core executes subsystem-level @complete() after it has executed
- *	the appropriate resume callbacks for all devices.
+ *	the appropriate resume callbacks for all devices.  If the corresponding
+ *	@prepare() at the beginning of the suspend transition returned a
+ *	positive number and the device was left in runtime suspend (without
+ *	executing any suspend and resume callbacks for it), @complete() will be
+ *	the only callback executed for the device during resume.  In that case,
+ *	@complete() must be prepared to do whatever is necessary to ensure the
+ *	proper functioning of the device after the system resume.  To this end,
+ *	@complete() can check the power.direct_complete flag of the device to
+ *	learn whether (unset) or not (set) the previous suspend and resume
+ *	callbacks have been executed for it.
  *
  * @suspend: Executed before putting the system into a sleep state in which the
  *	contents of main memory are preserved.  The exact action to perform
@@ -323,22 +342,13 @@ struct dev_pm_ops {
 #define SET_LATE_SYSTEM_SLEEP_PM_OPS(suspend_fn, resume_fn)
 #endif
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 #define SET_RUNTIME_PM_OPS(suspend_fn, resume_fn, idle_fn) \
 	.runtime_suspend = suspend_fn, \
 	.runtime_resume = resume_fn, \
 	.runtime_idle = idle_fn,
 #else
 #define SET_RUNTIME_PM_OPS(suspend_fn, resume_fn, idle_fn)
-#endif
-
-#ifdef CONFIG_PM
-#define SET_PM_RUNTIME_PM_OPS(suspend_fn, resume_fn, idle_fn) \
-	.runtime_suspend = suspend_fn, \
-	.runtime_resume = resume_fn, \
-	.runtime_idle = idle_fn,
-#else
-#define SET_PM_RUNTIME_PM_OPS(suspend_fn, resume_fn, idle_fn)
 #endif
 
 /*
@@ -519,11 +529,7 @@ enum rpm_request {
 };
 
 struct wakeup_source;
-
-struct pm_domain_data {
-	struct list_head list_node;
-	struct device *dev;
-};
+struct pm_domain_data;
 
 struct pm_subsys_data {
 	spinlock_t lock;
@@ -546,6 +552,7 @@ struct dev_pm_info {
 	bool			is_late_suspended:1;
 	bool			ignore_children:1;
 	bool			early_init:1;	/* Owned by the PM core */
+	bool			direct_complete:1;	/* Owned by the PM core */
 	spinlock_t		lock;
 #ifdef CONFIG_PM_SLEEP
 	struct list_head	entry;
@@ -556,7 +563,7 @@ struct dev_pm_info {
 #else
 	unsigned int		should_wakeup:1;
 #endif
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	struct timer_list	suspend_timer;
 	unsigned long		timer_expires;
 	struct work_struct	work;
@@ -590,15 +597,24 @@ struct dev_pm_info {
 
 extern void update_pm_runtime_accounting(struct device *dev);
 extern int dev_pm_get_subsys_data(struct device *dev);
-extern int dev_pm_put_subsys_data(struct device *dev);
+extern void dev_pm_put_subsys_data(struct device *dev);
 
 /*
  * Power domains provide callbacks that are executed during system suspend,
  * hibernation, system resume and during runtime PM transitions along with
  * subsystem-level and driver-level callbacks.
+ *
+ * @detach: Called when removing a device from the domain.
+ * @activate: Called before executing probe routines for bus types and drivers.
+ * @sync: Called after successful driver probe.
+ * @dismiss: Called after unsuccessful driver probe and after driver removal.
  */
 struct dev_pm_domain {
 	struct dev_pm_ops	ops;
+	void (*detach)(struct device *dev, bool power_off);
+	int (*activate)(struct device *dev);
+	void (*sync)(struct device *dev);
+	void (*dismiss)(struct device *dev);
 };
 
 /*
@@ -659,12 +675,16 @@ struct dev_pm_domain {
 extern void device_pm_lock(void);
 extern void dpm_resume_start(pm_message_t state);
 extern void dpm_resume_end(pm_message_t state);
+extern void dpm_resume_noirq(pm_message_t state);
+extern void dpm_resume_early(pm_message_t state);
 extern void dpm_resume(pm_message_t state);
 extern void dpm_complete(pm_message_t state);
 
 extern void device_pm_unlock(void);
 extern int dpm_suspend_end(pm_message_t state);
 extern int dpm_suspend_start(pm_message_t state);
+extern int dpm_suspend_noirq(pm_message_t state);
+extern int dpm_suspend_late(pm_message_t state);
 extern int dpm_suspend(pm_message_t state);
 extern int dpm_prepare(pm_message_t state);
 

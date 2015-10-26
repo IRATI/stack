@@ -279,6 +279,9 @@ ManagementAgent::~ManagementAgent(){
 	//Conf Manager
 	delete conf_manager;
 
+	//RIB Factory
+	delete rib_factory;
+
 	LOG_INFO("Goodbye!");
 }
 

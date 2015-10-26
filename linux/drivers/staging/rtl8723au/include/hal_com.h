@@ -65,36 +65,6 @@
 #define RATE_36M				BIT(9)
 #define RATE_48M				BIT(10)
 #define RATE_54M				BIT(11)
-/* MCS 1 Spatial Stream */
-#define RATE_MCS0				BIT(12)
-#define RATE_MCS1				BIT(13)
-#define RATE_MCS2				BIT(14)
-#define RATE_MCS3				BIT(15)
-#define RATE_MCS4				BIT(16)
-#define RATE_MCS5				BIT(17)
-#define RATE_MCS6				BIT(18)
-#define RATE_MCS7				BIT(19)
-/* MCS 2 Spatial Stream */
-#define RATE_MCS8				BIT(20)
-#define RATE_MCS9				BIT(21)
-#define RATE_MCS10				BIT(22)
-#define RATE_MCS11				BIT(23)
-#define RATE_MCS12				BIT(24)
-#define RATE_MCS13				BIT(25)
-#define RATE_MCS14				BIT(26)
-#define RATE_MCS15				BIT(27)
-
-/*  ALL CCK Rate */
-#define	RATE_ALL_CCK	(RATR_1M | RATR_2M | RATR_55M | RATR_11M)
-#define	RATE_ALL_OFDM_AG				\
-	(RATR_6M | RATR_9M | RATR_12M | RATR_18M | RATR_24M| \
-	 RATR_36M|RATR_48M|RATR_54M)
-#define	RATE_ALL_OFDM_1SS				\
-	(RATR_MCS0 | RATR_MCS1 | RATR_MCS2 | RATR_MCS3 |	\
-	 RATR_MCS4 | RATR_MCS5 | RATR_MCS6 | RATR_MCS7)
-#define	RATE_ALL_OFDM_2SS				\
-	(RATR_MCS8 | RATR_MCS9 | RATR_MCS10 | RATR_MCS11|	\
-	 RATR_MCS12 | RATR_MCS13 | RATR_MCS14 | RATR_MCS15)
 
 /*------------------------------ Tx Desc definition Macro ------------------------*/
 /* pragma mark -- Tx Desc related definition. -- */
@@ -146,7 +116,6 @@
 #define REG_NOA_DESC_COUNT			0x05EC
 
 #include "HalVerDef.h"
-void dump_chip_info23a(struct hal_version	ChipVersion);
 
 
 u8	/* return the final channel plan decision */
@@ -165,8 +134,6 @@ void HalSetBrateCfg23a(struct rtw_adapter *padapter, u8 *mBratesOS);
 bool
 Hal_MappingOutPipe23a(struct rtw_adapter *pAdapter, u8 NumOutPipe);
 
-void hal_init_macaddr23a(struct rtw_adapter *adapter);
-
 void c2h_evt_clear23a(struct rtw_adapter *adapter);
 s32 c2h_evt_read23a(struct rtw_adapter *adapter, u8 *buf);
 
@@ -184,12 +151,13 @@ void rtl8723a_set_slot_time(struct rtw_adapter *padapter, u8 slottime);
 void rtl8723a_ack_preamble(struct rtw_adapter *padapter, u8 bShortPreamble);
 void rtl8723a_set_sec_cfg(struct rtw_adapter *padapter, u8 sec);
 void rtl8723a_cam_empty_entry(struct rtw_adapter *padapter, u8 ucIndex);
-void rtl8723a_cam_invalid_all(struct rtw_adapter *padapter);
-void rtl8723a_cam_write(struct rtw_adapter *padapter, u32 val1, u32 val2);
+void rtl8723a_cam_invalidate_all(struct rtw_adapter *padapter);
+void rtl8723a_cam_write(struct rtw_adapter *padapter,
+			u8 entry, u16 ctrl, const u8 *mac, const u8 *key);
 void rtl8723a_fifo_cleanup(struct rtw_adapter *padapter);
 void rtl8723a_set_apfm_on_mac(struct rtw_adapter *padapter, u8 val);
 void rtl8723a_bcn_valid(struct rtw_adapter *padapter);
-void rtl8723a_set_tx_pause(struct rtw_adapter *padapter, u8 pause);
+bool rtl8723a_get_bcn_valid(struct rtw_adapter *padapter);
 void rtl8723a_set_beacon_interval(struct rtw_adapter *padapter, u16 interval);
 void rtl8723a_set_resp_sifs(struct rtw_adapter *padapter,
 			    u8 r2t1, u8 r2t2, u8 t2t1, u8 t2t2);
@@ -198,14 +166,17 @@ void rtl8723a_set_ac_param_vi(struct rtw_adapter *padapter, u32 vi);
 void rtl8723a_set_ac_param_be(struct rtw_adapter *padapter, u32 be);
 void rtl8723a_set_ac_param_bk(struct rtw_adapter *padapter, u32 bk);
 void rtl8723a_set_rxdma_agg_pg_th(struct rtw_adapter *padapter, u8 val);
-void rtl8723a_set_nav_upper(struct rtw_adapter *padapter, u32 usNavUpper);
 void rtl8723a_set_initial_gain(struct rtw_adapter *padapter, u32 rx_gain);
 
 void rtl8723a_odm_support_ability_write(struct rtw_adapter *padapter, u32 val);
-void rtl8723a_odm_support_ability_backup(struct rtw_adapter *padapter, u8 val);
+void rtl8723a_odm_support_ability_backup(struct rtw_adapter *padapter);
+void rtl8723a_odm_support_ability_restore(struct rtw_adapter *padapter);
 void rtl8723a_odm_support_ability_set(struct rtw_adapter *padapter, u32 val);
 void rtl8723a_odm_support_ability_clr(struct rtw_adapter *padapter, u32 val);
 
 void rtl8723a_set_rpwm(struct rtw_adapter *padapter, u8 val);
+u8 rtl8723a_get_rf_type(struct rtw_adapter *padapter);
+bool rtl8723a_get_fwlps_rf_on(struct rtw_adapter *padapter);
+bool rtl8723a_chk_hi_queue_empty(struct rtw_adapter *padapter);
 
 #endif /* __HAL_COMMON_H__ */

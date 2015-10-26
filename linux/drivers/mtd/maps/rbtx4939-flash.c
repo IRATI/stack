@@ -35,8 +35,6 @@ static int rbtx4939_flash_remove(struct platform_device *dev)
 		return 0;
 
 	if (info->mtd) {
-		struct rbtx4939_flash_data *pdata = dev_get_platdata(&dev->dev);
-
 		mtd_device_unregister(info->mtd);
 		map_destroy(info->mtd);
 	}
@@ -129,7 +127,6 @@ static struct platform_driver rbtx4939_flash_driver = {
 	.shutdown	= rbtx4939_flash_shutdown,
 	.driver		= {
 		.name	= "rbtx4939-flash",
-		.owner	= THIS_MODULE,
 	},
 };
 

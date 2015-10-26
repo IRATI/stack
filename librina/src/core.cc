@@ -100,7 +100,19 @@ void RINANetlinkEndpoint::setApplicationProcessName(
   this->applicationProcessName = applicationProcessName;
 }
 
+
 /* CLASS NETLINK PORT ID MAP */
+NetlinkPortIdMap::~NetlinkPortIdMap(){
+  std::map<std::string, RINANetlinkEndpoint*>::iterator iterator;
+
+  for (iterator = applicationNameMappings.begin();
+      iterator != applicationNameMappings.end(); ++iterator) {
+    if (iterator->second) {
+      delete iterator->second;
+    }
+  }
+}
+
 void NetlinkPortIdMap::putIPCProcessIdToNelinkPortIdMapping(
     unsigned int netlinkPortId, unsigned short ipcProcessId)
 {

@@ -19,8 +19,10 @@ vmpi_stats_show(struct seq_file *m, void *v)
         }
 
         seq_printf(m, "rxres[%u]\n", stats_instance->rxres);
+        seq_printf(m, "rxint[%u]\n", stats_instance->rxint);
         seq_printf(m, "txreq[%u]\n", stats_instance->txreq);
         seq_printf(m, "txres[%u]\n", stats_instance->txres);
+        seq_printf(m, "txint[%u]\n", stats_instance->txint);
 
         return 0;
 }

@@ -102,6 +102,15 @@ static inline u64 get_rtc(void)
 	return (u64)hi * 1000000000 + lo;
 }
 
+static inline u64 get_vtb(void)
+{
+#ifdef CONFIG_PPC_BOOK3S_64
+	if (cpu_has_feature(CPU_FTR_ARCH_207S))
+		return mfvtb();
+#endif
+	return 0;
+}
+
 #ifdef CONFIG_PPC64
 static inline u64 get_tb(void)
 {
@@ -201,6 +210,9 @@ DECLARE_PER_CPU(struct cpu_usage, cpu_usage_array);
 extern void secondary_cpu_time_init(void);
 
 DECLARE_PER_CPU(u64, decrementers_next_tb);
+
+/* Convert timebase ticks to nanoseconds */
+unsigned long long tb_to_ns(unsigned long long tb_ticks);
 
 #endif /* __KERNEL__ */
 #endif /* __POWERPC_TIME_H */

@@ -108,7 +108,7 @@ static const struct omap_video_timings acx565akm_panel_timings = {
 
 	.data_pclk_edge	= OMAPDSS_DRIVE_SIG_RISING_EDGE,
 	.de_level	= OMAPDSS_SIG_ACTIVE_HIGH,
-	.sync_pclk_edge	= OMAPDSS_DRIVE_SIG_OPPOSITE_EDGES,
+	.sync_pclk_edge	= OMAPDSS_DRIVE_SIG_FALLING_EDGE,
 };
 
 #define to_panel_data(p) container_of(p, struct panel_drv_data, dssdev)
@@ -817,6 +817,10 @@ static int acx565akm_probe(struct spi_device *spi)
 
 	bldev = backlight_device_register("acx565akm", &ddata->spi->dev,
 			ddata, &acx565akm_bl_ops, &props);
+	if (IS_ERR(bldev)) {
+		r = PTR_ERR(bldev);
+		goto err_reg_bl;
+	}
 	ddata->bl_dev = bldev;
 	if (ddata->has_cabc) {
 		r = sysfs_create_group(&bldev->dev.kobj, &bldev_attr_group);
@@ -862,6 +866,7 @@ err_reg:
 	sysfs_remove_group(&bldev->dev.kobj, &bldev_attr_group);
 err_sysfs:
 	backlight_device_unregister(bldev);
+err_reg_bl:
 err_detect:
 err_gpio:
 	omap_dss_put_device(ddata->in);
@@ -899,6 +904,7 @@ static struct spi_driver acx565akm_driver = {
 		.name	= "acx565akm",
 		.owner	= THIS_MODULE,
 		.of_match_table = acx565akm_of_match,
+		.suppress_bind_attrs = true,
 	},
 	.probe	= acx565akm_probe,
 	.remove	= acx565akm_remove,

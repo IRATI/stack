@@ -14,7 +14,7 @@
 #include <linux/init.h>
 #include <linux/string.h>
 #include <linux/kernel.h>
-#include <linux/serial_8250.h>
+#include <linux/serial_core.h>
 
 #include <asm/cacheflush.h>
 #include <asm/smp-ops.h>
@@ -75,7 +75,7 @@ static void __init console_config(void)
 	if ((strstr(fw_getcmdline(), "earlycon=")) == NULL) {
 		sprintf(console_string, "uart8250,io,0x3f8,%d%c%c", baud,
 			parity, bits);
-		setup_early_serial8250_console(console_string);
+		setup_earlycon(console_string);
 	}
 
 	if ((strstr(fw_getcmdline(), "console=")) == NULL) {
@@ -111,12 +111,10 @@ static void __init mips_ejtag_setup(void)
 	flush_icache_range((unsigned long)base, (unsigned long)base + 0x80);
 }
 
-phys_t mips_cpc_default_phys_base(void)
+phys_addr_t mips_cpc_default_phys_base(void)
 {
 	return CPC_BASE_ADDR;
 }
-
-extern struct plat_smp_ops msmtc_smp_ops;
 
 void __init prom_init(void)
 {
@@ -304,8 +302,4 @@ mips_pci_controller:
 		return;
 	if (!register_vsmp_smp_ops())
 		return;
-
-#ifdef CONFIG_MIPS_MT_SMTC
-	register_smp_ops(&msmtc_smp_ops);
-#endif
 }

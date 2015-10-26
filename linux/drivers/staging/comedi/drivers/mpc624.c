@@ -56,9 +56,6 @@ Configuration Options:
 
 #include <linux/delay.h>
 
-/* Consecutive I/O port addresses */
-#define MPC624_SIZE             16
-
 /* Offsets of different ports */
 #define MPC624_MASTER_CONTROL	0 /* not used */
 #define MPC624_GNMUXCH          1 /* Gain, Mux, Channel of ADC */
@@ -118,7 +115,6 @@ Configuration Options:
 	(MPC624_OSR4 | MPC624_OSR3 | MPC624_OSR2 | MPC624_OSR1 | MPC624_OSR0)
 /* -------------------------------------------------------------------------- */
 struct mpc624_private {
-
 	/*  set by mpc624_attach() from driver's parameters */
 	unsigned long int ulConvertionRate;
 };
@@ -279,7 +275,7 @@ static int mpc624_attach(struct comedi_device *dev, struct comedi_devconfig *it)
 	struct comedi_subdevice *s;
 	int ret;
 
-	ret = comedi_request_region(dev, it->options[0], MPC624_SIZE);
+	ret = comedi_request_region(dev, it->options[0], 0x10);
 	if (ret)
 		return ret;
 
