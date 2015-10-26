@@ -34,8 +34,6 @@
 #include <librina/rib_v2.h>
 #include <librina/security-manager.h>
 
-#include "common/encoder.h"
-
 namespace rinad {
 
 const unsigned int max_sdu_size_in_bytes = 10000;

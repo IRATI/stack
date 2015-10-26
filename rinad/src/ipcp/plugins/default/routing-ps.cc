@@ -32,7 +32,7 @@
 
 #include "ipcp/components.h"
 #include "routing-ps.h"
-#include "common/encoders/FlowStateGroupMessage.pb.h"
+#include "encoders/FlowStateMessage.pb.h"
 
 namespace rinad {
 
@@ -613,10 +613,8 @@ FlowStateRIBObjectGroup::FlowStateRIBObjectGroup(IPCProcess * ipc_process,
 	ipc_process_ = ipc_process;
 	if (ipc_process) {
 		rib_daemon_ =  ipc_process->rib_daemon_;
-		encoder_ = ipc_process->encoder_;
 	} else {
 		rib_daemon_ = 0;
-		encoder_ = 0;
 	}
 }
 
@@ -655,10 +653,8 @@ FlowStateRIBObject::FlowStateRIBObject(IPCProcess * ipc_process,
 	object_value_ = object_value;
 	if (ipc_process) {
 		rib_daemon_ =  ipc_process->rib_daemon_;
-		encoder_ = ipc_process->encoder_;
 	} else {
 		rib_daemon_ = 0;
-		encoder_ = 0;
 	}
 }
 
@@ -686,11 +682,9 @@ void FlowStateRIBObject::deleteObject(const void* objectValue)
 const int FlowStateDatabase::NO_AVOID_PORT = -1;
 const long FlowStateDatabase::WAIT_UNTIL_REMOVE_OBJECT = 23000;
 
-FlowStateDatabase::FlowStateDatabase(rina::IMasterEncoder * encoder,
-		FlowStateRIBObjectGroup * flow_state_rib_object_group,
+FlowStateDatabase::FlowStateDatabase(FlowStateRIBObjectGroup * flow_state_rib_object_group,
 		rina::Timer * timer, IPCPRIBDaemon *rib_daemon, unsigned int *maximum_age)
 {
-	encoder_ = encoder;
 	flow_state_rib_object_group_ = flow_state_rib_object_group;
 	modified_ = false;
 	timer_ = timer;
@@ -1042,7 +1036,6 @@ LinkStateRoutingPolicy::LinkStateRoutingPolicy(IPCProcess * ipcp)
 	test_ = false;
 	ipc_process_ = ipcp;
 	rib_daemon_ = ipc_process_->rib_daemon_;
-	encoder_ = ipc_process_->encoder_;
 	cdap_session_manager_ = ipc_process_->cdap_session_manager_;
 	fs_rib_group_ = 0;
 	routing_algorithm_ = 0;
@@ -1053,14 +1046,9 @@ LinkStateRoutingPolicy::LinkStateRoutingPolicy(IPCProcess * ipcp)
 	timer_ = new rina::Timer();
 	lock_ = new rina::Lockable();
 
-	encoder_->addEncoder(EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
-			new FlowStateObjectEncoder());
-	encoder_->addEncoder(EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
-			new FlowStateObjectListEncoder());
-
 	populateRIB();
 	subscribeToEvents();
-	db_ = new FlowStateDatabase(encoder_, fs_rib_group_, timer_, rib_daemon_,
+	db_ = new FlowStateDatabase(fs_rib_group_, timer_, rib_daemon_,
 			&maximum_age_);
 }
 
@@ -1402,100 +1390,80 @@ void LinkStateRoutingPolicy::readMessageRecieved(int invoke_id,
 	}
 }
 
-const rina::SerializedObject* FlowStateObjectEncoder::encode(const void* object)
+// CLASS FlowStateObjectEncoder
+namespace fso_helpers{
+void toGPB(	const FlowStateObject &fso, 
+	rina::messages::flowStateObject_t &gpb_fso)
 {
-	FlowStateObject * fso = (FlowStateObject*) object;
-	rina::messages::flowStateObject_t gpb_fso;
-
-	FlowStateObjectEncoder::convertModelToGPB(&gpb_fso, fso);
-
-	int size = gpb_fso.ByteSize();
-	char *serialized_message = new char[size];
-	gpb_fso.SerializeToArray(serialized_message, size);
-	rina::SerializedObject *serialized_object = new rina::SerializedObject(
-			serialized_message, size);
-
-	return serialized_object;
+	gpb_fso.set_address(fso->address_);
+	gpb_fso.set_age(fso->age_);
+	gpb_fso.set_neighbor_address(fso->neighbor_address_);
+	gpb_fso.set_cost(fso->cost_);
+	gpb_fso.set_state(fso->up_);
+	gpb_fso.set_sequence_number(fso->sequence_number_);
 }
 
-void* FlowStateObjectEncoder::decode(
-		const rina::ObjectValueInterface * object_value) const
+void toModel(
+	const rina::messages::flowStateObject_t &gpb_fso, FlowStateObject &fso)
 {
-	rina::messages::flowStateObject_t gpb_fso;
+	fso.address_ = gpb_fso.address();
+	fso.neighbor_address_ = gpb_fso.neighbor_address();
+	fso.cost_ = gpb_fso.cost();
+	fso.up_ = gpb_fso.state();
+	fso.sequence_number_ = gpb_fso.sequence_number();
+	fso.age_ = gpb_fso.age();
+}
+} //namespace fso_helpers
 
-	rina::SerializedObject * serializedObject = Encoder::get_serialized_object(
-			object_value);
+void FlowStateObjectEncoder::encode(const FlowStateObject &obj, 
+	rina::ser_obj_t &serobj)
+{
+	rina::messages::flowStateObject_t gpb;
 
-	gpb_fso.ParseFromArray(serializedObject->message_, serializedObject->size_);
+	fso_helpers::toGPB(fso, gpb);
 
-	return (void*) FlowStateObjectEncoder::convertGPBToModel(gpb_fso);
+	serobj.size_ = gpb.ByteSize();
+	serobj.message_ = new char[serobj.size_];
+	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
 
-void FlowStateObjectEncoder::convertModelToGPB(
-		rina::messages::flowStateObject_t * gpb_fso, FlowStateObject * fso)
+void decode(const rina::ser_obj_t &serobj, FlowStateObject &des_obj)
 {
-	gpb_fso->set_address(fso->address_);
-	gpb_fso->set_age(fso->age_);
-	gpb_fso->set_neighbor_address(fso->neighbor_address_);
-	gpb_fso->set_cost(fso->cost_);
-	gpb_fso->set_state(fso->up_);
-	gpb_fso->set_sequence_number(fso->sequence_number_);
+	rina::messages::flowStateObject_t gpb;
+	gpb.ParseFromArray(serobj.message_, serobj.size_);
 
-	return;
+	fso_helpers::toModel(gpb, des_obj);
 }
 
-FlowStateObject * FlowStateObjectEncoder::convertGPBToModel(
-		const rina::messages::flowStateObject_t & gpb_fso)
+void encode(const std::list<FlowStateObject> &obj, rina::ser_obj_t& serobj)
 {
-	FlowStateObject * fso = new FlowStateObject(gpb_fso.address(),
-			gpb_fso.neighbor_address(), gpb_fso.cost(),
-			gpb_fso.state(), gpb_fso.sequence_number(), gpb_fso.age());
+	rina::messages::flowStateObjectGroup_t gpb;
 
-	return fso;
-}
-
-const rina::SerializedObject* FlowStateObjectListEncoder::encode(
-		const void* object)
-{
-	std::list<FlowStateObject*> * list = (std::list<FlowStateObject*> *) object;
-	std::list<FlowStateObject*>::const_iterator it;
-	rina::messages::flowStateObjectGroup_t gpb_list;
-
-	rina::messages::flowStateObject_t * gpb_fso;
-	for (it = list->begin(); it != list->end(); ++it) {
+	for (std::list<FlowStateObject>::const_iterator it= obj.begin(); 
+		it != obj.end(); ++it) {
+		rina::messages::flowStateObject_t *gpb_fso;
 		gpb_fso = gpb_list.add_flow_state_objects();
-		FlowStateObjectEncoder::convertModelToGPB(gpb_fso, (*it));
+		fso_helpers::toGPB(*gpb_fso, *it);
 	}
 
-	int size = gpb_list.ByteSize();
-	char *serialized_message = new char[size];
-	gpb_list.SerializeToArray(serialized_message, size);
-	rina::SerializedObject *serialized_object = new rina::SerializedObject(
-			serialized_message, size);
-
-	return serialized_object;
+	serobj.size_ = gpb.ByteSize();
+	serobj.message_ = new char[serobj.size_];
+	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
 
-void* FlowStateObjectListEncoder::decode(
-		const rina::ObjectValueInterface * object_value) const
+void decode(const rina::ser_obj_t &serobj, std::list<FlowStateObject> &des_obj)
 {
-	rina::messages::flowStateObjectGroup_t gpb_list;
-
-	rina::SerializedObject * serializedObject = Encoder::get_serialized_object(
-			object_value);
-
-	gpb_list.ParseFromArray(serializedObject->message_,
-			serializedObject->size_);
+	rina::messages::flowStateObjectGroup_t gpb;
+	gpb.ParseFromArray(serobj.message_, serobj.size_);
 
 	std::list<FlowStateObject*> * list = new std::list<FlowStateObject*>();
 
-	for (int i = 0; i < gpb_list.flow_state_objects_size(); ++i) {
-		list->push_back(
-				FlowStateObjectEncoder::convertGPBToModel(
-						gpb_list.flow_state_objects(i)));
+	for(int i=0; i<gpb.flow_state_objects_size(); i++)
+	{
+		FlowStateObject fso;
+		fso_helpers::toModel(gpb.flow_state_objects(i), fso);
+		des_obj.push_back(fso);
 	}
-
-	return (void *) list;
 }
 
-}
+}// namespace rinad
