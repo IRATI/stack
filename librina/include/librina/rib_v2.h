@@ -151,8 +151,7 @@ DECLARE_EXCEPTION_SUBCLASS(eObjClassMismatch);
 ///
 ///
 void init(cacep::AppConHandlerInterface *app_con_callback,
-		RIBOpsRespHandlers* remote_handlers,
-		cdap_rib::cdap_params params);
+	  cdap_rib::cdap_params params);
 
 //
 // Get a proxy object to interface the RIBDaemon
@@ -170,30 +169,36 @@ void fini(void);
 //
 // RIB operations response handlers
 //
-class RIBOpsRespHandlers {
+class RIBOpsRespHandler {
 
 public:
-	virtual ~RIBOpsRespHandlers(){};
+	virtual ~RIBOpsRespHandler(){};
 
 	virtual void remoteCreateResult(const cdap_rib::con_handle_t &con,
-			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::res_info_t &res) = 0;
+					const cdap_rib::obj_info_t &obj,
+					const cdap_rib::res_info_t &res);
 	virtual void remoteDeleteResult(const cdap_rib::con_handle_t &con,
-			const cdap_rib::res_info_t &res) = 0;
+					const cdap_rib::res_info_t &res);
 	virtual void remoteReadResult(const cdap_rib::con_handle_t &con,
-			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::res_info_t &res) = 0;
+				      const cdap_rib::obj_info_t &obj,
+				      const cdap_rib::res_info_t &res);
 	virtual void remoteCancelReadResult(const cdap_rib::con_handle_t &con,
-			const cdap_rib::res_info_t &res) = 0;
+					    const cdap_rib::res_info_t &res);
 	virtual void remoteWriteResult(const cdap_rib::con_handle_t &con,
-			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::res_info_t &res) = 0;
+				       const cdap_rib::obj_info_t &obj,
+				       const cdap_rib::res_info_t &res);
 	virtual void remoteStartResult(const cdap_rib::con_handle_t &con,
-			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::res_info_t &res) = 0;
+				       const cdap_rib::obj_info_t &obj,
+				       const cdap_rib::res_info_t &res);
 	virtual void remoteStopResult(const cdap_rib::con_handle_t &con,
-			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::res_info_t &res) = 0;
+				      const cdap_rib::obj_info_t &obj,
+				      const cdap_rib::res_info_t &res);
+
+private:
+	///
+	/// Throw not supported exception
+	///
+	void operation_not_supported();
 };
 
 class RIBObjectData;
@@ -812,6 +817,7 @@ public:
 			  const cdap_rib::obj_info_t &obj,
 			  const cdap_rib::flags_t &flags,
 			  const cdap_rib::filt_info_t &filt,
+			  RIBOpsRespHandler * resp_handler,
 			  cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
 
 	///
@@ -823,6 +829,7 @@ public:
 			  const cdap_rib::obj_info_t &obj,
 			  const cdap_rib::flags_t &flags,
 			  const cdap_rib::filt_info_t &filt,
+			  RIBOpsRespHandler * resp_handler,
 			  cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
 
 	///
@@ -834,6 +841,7 @@ public:
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::flags_t &flags,
 			const cdap_rib::filt_info_t &filt,
+			RIBOpsRespHandler * resp_handler,
 			cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
 	///
 	/// Perform a cancel read operation over an object of the remote RIB
@@ -843,6 +851,7 @@ public:
 	int remote_cancel_read(unsigned int handle,
 			       const cdap_rib::flags_t &flags,
 			       int invoke_id,
+			       RIBOpsRespHandler * resp_handler,
 			       cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
 
 	///
@@ -854,6 +863,7 @@ public:
 			 const cdap_rib::obj_info_t &obj,
 			 const cdap_rib::flags_t &flags,
 			 const cdap_rib::filt_info_t &filt,
+			 RIBOpsRespHandler * resp_handler,
 			 cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
 
 	///
@@ -865,6 +875,7 @@ public:
 			 const cdap_rib::obj_info_t &obj,
 			 const cdap_rib::flags_t &flags,
 			 const cdap_rib::filt_info_t &filt,
+			 RIBOpsRespHandler * resp_handler,
 			 cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
 
 	///
@@ -876,6 +887,7 @@ public:
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::flags_t &flags,
 			const cdap_rib::filt_info_t &filt,
+			RIBOpsRespHandler * resp_handler,
 			cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
 
 private:

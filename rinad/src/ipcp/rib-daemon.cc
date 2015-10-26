@@ -391,7 +391,7 @@ void IPCPRIBDaemonImpl::initialize_rib_daemon(rina::cacep::AppConHandlerInterfac
 
 	//Initialize the RIB library and cdap
 	params.is_IPCP_ = true;
-	rina::rib::init(app_con_callback, 0, params);
+	rina::rib::init(app_con_callback, params);
 	rina::cdap::set_cdap_io_handler(new IPCPCDAPIOHandler());
 	getProxy();
 
