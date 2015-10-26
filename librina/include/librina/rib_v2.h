@@ -66,7 +66,6 @@ namespace rib {
 
 //fwd decl
 class RIBDaemonProxy;
-class RIBOpsRespHandlers;
 
 //
 // Schema exceptions

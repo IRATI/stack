@@ -458,60 +458,6 @@ class CDAPMessageValidator
 	static void validateVersion(const cdap_m_t *message);
 };
 
-///Describes a CDAPSession, by identifying the source and destination application processes.
-///Note that "source" and "destination" are just placeholders, as both parties in a CDAP exchange have
-///the same role, because the CDAP session is bidirectional.
-typedef struct CDAPSessionDescriptor
-{
- public:
-	/// AbstractSyntaxID (int32), mandatory. The specific version of the
-	/// CDAP protocol message declarations that the message conforms to
-	///
-	int abs_syntax_;
-	/// Authentication Policy options
-	AuthPolicy auth_policy_;
-	/// DestinationApplication-Entity-Instance-Id (string), optional, not validated by CDAP.
-	/// Specific instance of the Application Entity that the source application
-	/// wishes to connect to in the destination application.
-	std::string dest_ae_inst_;
-	/// DestinationApplication-Entity-Name (string), mandatory (optional for the response).
-	/// Name of the Application Entity that the source application wishes
-	/// to connect to in the destination application.
-	std::string dest_ae_name_;
-	/// DestinationApplication-Process-Instance-Id (string), optional, not validated by CDAP.
-	/// Name of the Application Process Instance that the source wishes to
-	/// connect to a the destination.
-	std::string dest_ap_inst_;
-	/// DestinationApplication-Process-Name (string), mandatory (optional for the response).
-	/// Name of the application process that the source application wishes to connect to
-	/// in the destination application
-	std::string dest_ap_name_;
-	/// SourceApplication-Entity-Instance-Id (string).
-	/// AE instance within the application originating the message
-	std::string src_ae_inst_;
-	/// SourceApplication-Entity-Name (string).
-	/// Name of the AE within the application originating the message
-	std::string src_ae_name_;
-	/// SourceApplication-Process-Instance-Id (string), optional, not validated by CDAP.
-	/// Application instance originating the message
-	std::string src_ap_inst_;
-	/// SourceApplicatio-Process-Name (string), mandatory (optional in the response).
-	/// Name of the application originating the message
-	std::string src_ap_name_;
-	/// Version (int32). Mandatory in connect request and response, optional otherwise.
-	/// Version of RIB and object set_ to use in the conversation. Note that the
-	/// abstract syntax refers to the CDAP message syntax, while version refers to the
-	/// version of the AE RIB objects, their values, vocabulary of object id's, and
-	/// related behaviors that are subject to change over time. See text for details
-	/// of use.
-	long version_;
-	/// Uniquely identifies this CDAP session in this IPC process. It matches the port_id
-	/// of the (N-1) flow that supports the CDAP Session
-	int port_id_;
-
-	rina::ApplicationProcessNamingInformation ap_naming_info_;
-} cdap_session_t;
-
 /// Implements a CDAP session. Has the necessary logic to ensure that a
 /// the operation of the CDAP protocol is consistent (correct states and proper
 /// invocation of operations)
@@ -529,12 +475,12 @@ class CDAPSession
 	void messageSent(const cdap_m_t &cdap_message);
 	const cdap_m_t* messageReceived(ser_obj_t &message);
 	void messageReceived(const cdap_m_t &cdap_message);
-	void set_session_descriptor(cdap_session_t *session_descriptor);
 	int get_port_id() const;
-	cdap_session_t* get_session_descriptor() const;
 	CDAPInvokeIdManagerImpl* get_invoke_id_manager() const;
 	void stopConnection();
 	bool is_in_await_con_state();
+	const cdap_rib::con_handle_t& get_con_handle();
+	void set_port_id(int port_id);
  private:
 	void messageSentOrReceived(const cdap_m_t &cdap_message, bool sent);
 	void freeOrReserveInvokeId(const cdap_m_t &cdap_message, bool sent);
@@ -558,8 +504,7 @@ class CDAPSession
 			const cdap_m_t &cdap_message, bool sent);
 	const ser_obj_t* serializeMessage(const cdap_m_t &cdap_message) const;
 	const cdap_m_t* deserializeMessage(ser_obj_t &message) const;
-	void populateSessionDescriptor(const cdap_m_t &cdap_message, bool send);
-	void emptySessionDescriptor();
+	void populate_con_handle(const cdap_m_t &cdap_message, bool send);
 	/// This map contains the invokeIds of the messages that
 	/// have requested a response, except for the M_CANCELREADs
 	std::map<int, CDAPOperationState*> pending_messages_sent_;
@@ -572,7 +517,7 @@ class CDAPSession
 	//std::map<int, CDAPOperationState> pending_messages_;
 	//std::map<int, CDAPOperationState> cancel_read_pending_messages_;
 	SerializerInterface *serializer_;
-	cdap_session_t *session_descriptor_;
+	cdap_rib::con_handle_t con_handle;
 	CDAPSessionManager *cdap_session_manager_;
 	CDAPInvokeIdManagerImpl *invoke_id_manager_;
 };
@@ -664,6 +609,7 @@ class CDAPSessionManager : public CDAPSessionManagerInterface
 					       const cdap_rib::res_info_t &res,
 					       int invoke_id);
 	CDAPInvokeIdManager * get_invoke_id_manager();
+	const cdap_rib::con_handle_t& get_con_handle(int port_id);
 
  private:
 	std::map<int, CDAPSession*> cdap_sessions_;
@@ -1658,15 +1604,12 @@ CDAPSession::CDAPSession(CDAPSessionManager *cdap_session_manager, long timeout,
 	connection_state_machine_ = new ConnectionStateMachine(this, timeout);
 	serializer_ = serializer;
 	invoke_id_manager_ = invoke_id_manager;
-	session_descriptor_ = 0;
 }
 
 CDAPSession::~CDAPSession() throw ()
 {
 	delete connection_state_machine_;
 	connection_state_machine_ = 0;
-	delete session_descriptor_;
-	session_descriptor_ = 0;
 	for (std::map<int, CDAPOperationState*>::iterator iter =
 			pending_messages_sent_.begin();
 			iter != pending_messages_sent_.end(); ++iter) {
@@ -1782,6 +1725,17 @@ bool CDAPSession::is_in_await_con_state()
 {
 	return connection_state_machine_->is_await_conn();
 }
+
+const cdap_rib::con_handle_t& CDAPSession::get_con_handle()
+{
+	return con_handle;
+}
+
+void CDAPSession::set_port_id(int port_id)
+{
+	con_handle.handle_ = port_id;
+}
+
 void CDAPSession::messageSent(const cdap_m_t &cdap_message)
 {
 	messageSentOrReceived(cdap_message, true);
@@ -1796,18 +1750,12 @@ void CDAPSession::messageReceived(const cdap_m_t &cdap_message)
 {
 	messageSentOrReceived(cdap_message, false);
 }
-void CDAPSession::set_session_descriptor(cdap_session_t *session_descriptor)
-{
-	session_descriptor_ = session_descriptor;
-}
+
 int CDAPSession::get_port_id() const
 {
-	return session_descriptor_->port_id_;
+	return con_handle.handle_;
 }
-cdap_session_t* CDAPSession::get_session_descriptor() const
-{
-	return session_descriptor_;
-}
+
 CDAPInvokeIdManagerImpl* CDAPSession::get_invoke_id_manager() const
 {
 	return invoke_id_manager_;
@@ -1821,7 +1769,7 @@ void CDAPSession::messageSentOrReceived(const cdap_m_t &cdap_message, bool sent)
 	switch (cdap_message.op_code_) {
 		case cdap_m_t::M_CONNECT:
 			connection_state_machine_->connectSentOrReceived(sent);
-			populateSessionDescriptor(cdap_message, sent);
+			populate_con_handle(cdap_message, sent);
 			break;
 		case cdap_m_t::M_CONNECT_R:
 			connection_state_machine_->connectResponseSentOrReceived(
@@ -2147,42 +2095,41 @@ const cdap_m_t* CDAPSession::deserializeMessage(ser_obj_t &message) const
 {
 	return serializer_->deserializeMessage(message);
 }
-void CDAPSession::populateSessionDescriptor(const cdap_m_t &cdap_message,
-					    bool send)
+void CDAPSession::populate_con_handle(const cdap_m_t &cdap_message,
+				       bool send)
 {
-	session_descriptor_->abs_syntax_ = cdap_message.abs_syntax_;
-	session_descriptor_->auth_policy_ = cdap_message.auth_policy_;
+	con_handle.abs_syntax = cdap_message.abs_syntax_;
+	con_handle.auth_.name = cdap_message.auth_policy_.name_;
+	con_handle.auth_.versions = cdap_message.auth_policy_.versions_;
+	if (cdap_message.auth_policy_.options_.size_ > 0) {
+		con_handle.auth_.options.size_ = cdap_message.auth_policy_.options_.size_;
+		con_handle.auth_.options.message_ = new char[con_handle.auth_.options.size_];
+		memcpy(con_handle.auth_.options.message_,
+		       cdap_message.auth_policy_.options_.message_,
+		       cdap_message.auth_policy_.options_.size_);
+	}
 
 	if (send) {
-		session_descriptor_->dest_ae_inst_ = cdap_message.dest_ae_inst_;
-		session_descriptor_->dest_ae_name_ = cdap_message.dest_ae_name_;
-		session_descriptor_->dest_ap_inst_ = cdap_message.dest_ap_inst_;
-		session_descriptor_->dest_ap_name_ = cdap_message.dest_ap_name_;
-		session_descriptor_->src_ae_inst_ = cdap_message.src_ae_inst_;
-		session_descriptor_->src_ae_name_ = cdap_message.src_ae_name_;
-		session_descriptor_->src_ap_inst_ = cdap_message.src_ap_inst_;
-		session_descriptor_->src_ap_name_ = cdap_message.src_ap_name_;
+		con_handle.dest_.ae_inst_ = cdap_message.dest_ae_inst_;
+		con_handle.dest_.ae_name_ = cdap_message.dest_ae_name_;
+		con_handle.dest_.ap_inst_ = cdap_message.dest_ap_inst_;
+		con_handle.dest_.ap_name_ = cdap_message.dest_ap_name_;
+		con_handle.src_.ae_inst_ = cdap_message.src_ae_inst_;
+		con_handle.src_.ae_name_ = cdap_message.src_ae_name_;
+		con_handle.src_.ap_inst_ = cdap_message.src_ap_inst_;
+		con_handle.src_.ap_name_ = cdap_message.src_ap_name_;
 	} else {
-		session_descriptor_->dest_ae_inst_ = cdap_message.src_ae_inst_;
-		session_descriptor_->dest_ae_name_ = cdap_message.src_ae_name_;
-		session_descriptor_->dest_ap_inst_ = cdap_message.src_ap_inst_;
-		session_descriptor_->dest_ap_name_ = cdap_message.src_ap_name_;
-		session_descriptor_->src_ae_inst_ = cdap_message.dest_ae_inst_;
-		session_descriptor_->src_ae_name_ = cdap_message.dest_ae_name_;
-		session_descriptor_->src_ap_inst_ = cdap_message.dest_ap_inst_;
-		session_descriptor_->src_ap_name_ = cdap_message.dest_ap_name_;
+		con_handle.dest_.ae_inst_ = cdap_message.src_ae_inst_;
+		con_handle.dest_.ae_name_ = cdap_message.src_ae_name_;
+		con_handle.dest_.ap_inst_ = cdap_message.src_ap_inst_;
+		con_handle.dest_.ap_name_ = cdap_message.src_ap_name_;
+		con_handle.src_.ae_inst_ = cdap_message.dest_ae_inst_;
+		con_handle.src_.ae_name_ = cdap_message.dest_ae_name_;
+		con_handle.src_.ap_inst_ = cdap_message.dest_ap_inst_;
+		con_handle.src_.ap_name_ = cdap_message.dest_ap_name_;
 	}
-	session_descriptor_->version_ = cdap_message.version_;
-}
 
-void CDAPSession::emptySessionDescriptor()
-{
-	cdap_session_t *new_session = new cdap_session_t;
-	new_session->port_id_ = session_descriptor_->port_id_;
-	new_session->ap_naming_info_ = session_descriptor_->ap_naming_info_;
-	delete session_descriptor_;
-	session_descriptor_ = 0;
-	session_descriptor_ = new_session;
+	con_handle.version_.version_ = cdap_message.version_;
 }
 
 // CLASS CDAPSessionManager
@@ -2215,9 +2162,7 @@ CDAPSession* CDAPSessionManager::createCDAPSession(int port_id)
 		CDAPSession *cdap_session = new CDAPSession(this, timeout_,
 							    serializer_,
 							    invoke_id_manager_);
-		cdap_session_t *descriptor = new cdap_session_t;
-		descriptor->port_id_ = port_id;
-		cdap_session->set_session_descriptor(descriptor);
+		cdap_session->set_port_id(port_id);
 		cdap_sessions_.insert(
 				std::pair<int, CDAPSession*>(port_id,
 							     cdap_session));
@@ -2362,7 +2307,7 @@ int CDAPSessionManager::get_port_id(
 	CDAPSession *current_session;
 	while (itr != cdap_sessions_.end()) {
 		current_session = itr->second;
-		if (current_session->get_session_descriptor()->dest_ap_name_
+		if (current_session->get_con_handle().dest_.ap_name_
 				== (destination_application_process_name)) {
 			return current_session->get_port_id();
 		}
@@ -2592,6 +2537,16 @@ cdap_m_t* CDAPSessionManager::getCancelReadResponseMessage(const cdap_rib::flags
 CDAPInvokeIdManager * CDAPSessionManager::get_invoke_id_manager()
 {
 	return invoke_id_manager_;
+}
+
+const cdap_rib::con_handle_t& CDAPSessionManager::get_con_handle(int port_id)
+{
+	CDAPSession *cdap_session = get_cdap_session(port_id);
+	if (!cdap_session) {
+		throw Exception("Could not find CDAP session associated to port-id");
+	}
+
+	return cdap_session->get_con_handle();
 }
 
 // CLASS GPBWireMessageProvider
@@ -3308,30 +3263,7 @@ void AppCDAPIOHandler::process_message(ser_obj_t &message,
 	atomic_send_lock_.unlock();
 
 	// Fill structures
-	cdap_rib::con_handle_t con;
-	// Auth
-	con.auth_.name = m_rcv->auth_policy_.name_;
-	con.auth_.versions = m_rcv->auth_policy_.versions_;
-	if (con.auth_.options.size_ > 0) {
-		con.auth_.options.size_ = m_rcv->auth_policy_.options_.size_;
-		con.auth_.options.message_ = new char[con.auth_.options.size_];
-		memcpy(con.auth_.options.message_, m_rcv->auth_policy_.options_.message_,
-				m_rcv->auth_policy_.options_.size_);
-	}
-	// Src
-	con.src_.ae_name_ = m_rcv->src_ae_name_;
-	con.src_.ae_inst_ = m_rcv->src_ae_inst_;
-	con.src_.ap_name_ = m_rcv->src_ap_name_;
-	con.src_.ae_inst_ = m_rcv->src_ae_inst_;
-	// Dest
-	con.dest_.ae_name_ = m_rcv->dest_ae_name_;
-	con.dest_.ae_inst_ = m_rcv->dest_ae_inst_;
-	con.dest_.ap_name_ = m_rcv->dest_ap_name_;
-	con.dest_.ae_inst_ = m_rcv->dest_ae_inst_;
-	// Port
-	con.handle_ = port;
-	// Version
-	con.version_.version_ = m_rcv->version_;
+	cdap_rib::con_handle_t con = manager_->get_con_handle(port);
 	// Flags
 	cdap_rib::flags_t flags;
 	flags.flags_ = m_rcv->flags_;

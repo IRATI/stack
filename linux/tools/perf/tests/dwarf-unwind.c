@@ -1,5 +1,5 @@
 #include <linux/compiler.h>
-#include <sys/types.h>
+#include <linux/types.h>
 #include <unistd.h>
 #include "tests.h"
 #include "debug.h"
@@ -9,13 +9,17 @@
 #include "perf_regs.h"
 #include "map.h"
 #include "thread.h"
+#include "callchain.h"
+
+/* For bsearch. We try to unwind functions in shared object. */
+#include <stdlib.h>
 
 static int mmap_handler(struct perf_tool *tool __maybe_unused,
 			union perf_event *event,
 			struct perf_sample *sample __maybe_unused,
 			struct machine *machine)
 {
-	return machine__process_mmap_event(machine, event, NULL);
+	return machine__process_mmap2_event(machine, event, NULL);
 }
 
 static int init_live_machine(struct machine *machine)
@@ -27,7 +31,7 @@ static int init_live_machine(struct machine *machine)
 						  mmap_handler, machine, true);
 }
 
-#define MAX_STACK 6
+#define MAX_STACK 8
 
 static int unwind_entry(struct unwind_entry *entry, void *arg)
 {
@@ -36,6 +40,8 @@ static int unwind_entry(struct unwind_entry *entry, void *arg)
 	static const char *funcs[MAX_STACK] = {
 		"test__arch_unwind_sample",
 		"unwind_thread",
+		"compare",
+		"bsearch",
 		"krava_3",
 		"krava_2",
 		"krava_1",
@@ -58,7 +64,7 @@ static int unwind_entry(struct unwind_entry *entry, void *arg)
 }
 
 __attribute__ ((noinline))
-static int unwind_thread(struct thread *thread, struct machine *machine)
+static int unwind_thread(struct thread *thread)
 {
 	struct perf_sample sample;
 	unsigned long cnt = 0;
@@ -71,7 +77,7 @@ static int unwind_thread(struct thread *thread, struct machine *machine)
 		goto out;
 	}
 
-	err = unwind__get_entries(unwind_entry, &cnt, machine, thread,
+	err = unwind__get_entries(unwind_entry, &cnt, thread,
 				  &sample, MAX_STACK);
 	if (err)
 		pr_debug("unwind failed\n");
@@ -87,22 +93,49 @@ static int unwind_thread(struct thread *thread, struct machine *machine)
 	return err;
 }
 
+static int global_unwind_retval = -INT_MAX;
+
 __attribute__ ((noinline))
-static int krava_3(struct thread *thread, struct machine *machine)
+static int compare(void *p1, void *p2)
 {
-	return unwind_thread(thread, machine);
+	/* Any possible value should be 'thread' */
+	struct thread *thread = *(struct thread **)p1;
+
+	if (global_unwind_retval == -INT_MAX)
+		global_unwind_retval = unwind_thread(thread);
+
+	return p1 - p2;
 }
 
 __attribute__ ((noinline))
-static int krava_2(struct thread *thread, struct machine *machine)
+static int krava_3(struct thread *thread)
 {
-	return krava_3(thread, machine);
+	struct thread *array[2] = {thread, thread};
+	void *fp = &bsearch;
+	/*
+	 * make _bsearch a volatile function pointer to
+	 * prevent potential optimization, which may expand
+	 * bsearch and call compare directly from this function,
+	 * instead of libc shared object.
+	 */
+	void *(*volatile _bsearch)(void *, void *, size_t,
+			size_t, int (*)(void *, void *));
+
+	_bsearch = fp;
+	_bsearch(array, &thread, 2, sizeof(struct thread **), compare);
+	return global_unwind_retval;
 }
 
 __attribute__ ((noinline))
-static int krava_1(struct thread *thread, struct machine *machine)
+static int krava_2(struct thread *thread)
 {
-	return krava_2(thread, machine);
+	return krava_3(thread);
+}
+
+__attribute__ ((noinline))
+static int krava_1(struct thread *thread)
+{
+	return krava_2(thread);
 }
 
 int test__dwarf_unwind(void)
@@ -120,6 +153,8 @@ int test__dwarf_unwind(void)
 		return -1;
 	}
 
+	callchain_param.record_mode = CALLCHAIN_DWARF;
+
 	if (init_live_machine(machine)) {
 		pr_err("Could not init machine\n");
 		goto out;
@@ -134,7 +169,7 @@ int test__dwarf_unwind(void)
 		goto out;
 	}
 
-	err = krava_1(thread, machine);
+	err = krava_1(thread);
 
  out:
 	machine__delete_threads(machine);

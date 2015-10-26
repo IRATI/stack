@@ -23,6 +23,10 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_AD1980 if SND_SOC_AC97_BUS
 	select SND_SOC_AD73311
 	select SND_SOC_ADAU1373 if I2C
+	select SND_SOC_ADAU1761_I2C if I2C
+	select SND_SOC_ADAU1761_SPI if SPI
+	select SND_SOC_ADAU1781_I2C if I2C
+	select SND_SOC_ADAU1781_SPI if SPI
 	select SND_SOC_ADAV801 if SPI_MASTER
 	select SND_SOC_ADAV803 if I2C
 	select SND_SOC_ADAU1977_SPI if SPI_MASTER
@@ -39,18 +43,25 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_ALC5623 if I2C
 	select SND_SOC_ALC5632 if I2C
 	select SND_SOC_CQ0093VC if MFD_DAVINCI_VOICECODEC
-	select SND_SOC_CS42L51 if I2C
-	select SND_SOC_CS42L52 if I2C
+	select SND_SOC_CS35L32 if I2C
+	select SND_SOC_CS42L51_I2C if I2C
+	select SND_SOC_CS42L52 if I2C && INPUT
+	select SND_SOC_CS42L56 if I2C && INPUT
 	select SND_SOC_CS42L73 if I2C
+	select SND_SOC_CS4265 if I2C
 	select SND_SOC_CS4270 if I2C
-	select SND_SOC_CS4271 if SND_SOC_I2C_AND_SPI
+	select SND_SOC_CS4271_I2C if I2C
+	select SND_SOC_CS4271_SPI if SPI_MASTER
 	select SND_SOC_CS42XX8_I2C if I2C
 	select SND_SOC_CX20442 if TTY
 	select SND_SOC_DA7210 if I2C
 	select SND_SOC_DA7213 if I2C
 	select SND_SOC_DA732X if I2C
 	select SND_SOC_DA9055 if I2C
+	select SND_SOC_DMIC
 	select SND_SOC_BT_SCO
+	select SND_SOC_ES8328_SPI if SPI_MASTER
+	select SND_SOC_ES8328_I2C if I2C
 	select SND_SOC_ISABELLE if I2C
 	select SND_SOC_JZ4740_CODEC
 	select SND_SOC_LM4857 if I2C
@@ -58,6 +69,8 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_MAX98088 if I2C
 	select SND_SOC_MAX98090 if I2C
 	select SND_SOC_MAX98095 if I2C
+	select SND_SOC_MAX98357A if GPIOLIB
+	select SND_SOC_MAX98925 if I2C
 	select SND_SOC_MAX9850 if I2C
 	select SND_SOC_MAX9768 if I2C
 	select SND_SOC_MAX9877 if I2C
@@ -69,8 +82,13 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_PCM3008
 	select SND_SOC_PCM512x_I2C if I2C
 	select SND_SOC_PCM512x_SPI if SPI_MASTER
+	select SND_SOC_RT286 if I2C
 	select SND_SOC_RT5631 if I2C
 	select SND_SOC_RT5640 if I2C
+	select SND_SOC_RT5645 if I2C
+	select SND_SOC_RT5651 if I2C
+	select SND_SOC_RT5670 if I2C
+	select SND_SOC_RT5677 if I2C && SPI_MASTER
 	select SND_SOC_SGTL5000 if I2C
 	select SND_SOC_SI476X if MFD_SI476X_CORE
 	select SND_SOC_SIRF_AUDIO_CODEC
@@ -79,10 +97,14 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_SSM2518 if I2C
 	select SND_SOC_SSM2602_SPI if SPI_MASTER
 	select SND_SOC_SSM2602_I2C if I2C
+	select SND_SOC_SSM4567 if I2C
 	select SND_SOC_STA32X if I2C
+	select SND_SOC_STA350 if I2C
 	select SND_SOC_STA529 if I2C
 	select SND_SOC_STAC9766 if SND_SOC_AC97_BUS
+	select SND_SOC_TAS2552 if I2C
 	select SND_SOC_TAS5086 if I2C
+	select SND_SOC_TFA9879 if I2C
 	select SND_SOC_TLV320AIC23_I2C if I2C
 	select SND_SOC_TLV320AIC23_SPI if SPI_MASTER
 	select SND_SOC_TLV320AIC26 if SPI_MASTER
@@ -91,6 +113,7 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_TLV320AIC3X if I2C
 	select SND_SOC_TPA6130A2 if I2C
 	select SND_SOC_TLV320DAC33 if I2C
+	select SND_SOC_TS3A227E if I2C
 	select SND_SOC_TWL4030 if TWL4030_CORE
 	select SND_SOC_TWL6040 if TWL6040_CORE
 	select SND_SOC_UDA134X
@@ -119,7 +142,8 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_WM8770 if SPI_MASTER
 	select SND_SOC_WM8776 if SND_SOC_I2C_AND_SPI
 	select SND_SOC_WM8782
-	select SND_SOC_WM8804 if SND_SOC_I2C_AND_SPI
+	select SND_SOC_WM8804_I2C if I2C
+	select SND_SOC_WM8804_SPI if SPI_MASTER
 	select SND_SOC_WM8900 if I2C
 	select SND_SOC_WM8903 if I2C
 	select SND_SOC_WM8904 if I2C
@@ -127,7 +151,7 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_WM8955 if I2C
 	select SND_SOC_WM8960 if I2C
 	select SND_SOC_WM8961 if I2C
-	select SND_SOC_WM8962 if I2C
+	select SND_SOC_WM8962 if I2C && INPUT
 	select SND_SOC_WM8971 if I2C
 	select SND_SOC_WM8974 if I2C
 	select SND_SOC_WM8978 if I2C
@@ -205,18 +229,51 @@ config SND_SOC_AD193X_I2C
 	select SND_SOC_AD193X
 
 config SND_SOC_AD1980
+	select REGMAP_AC97
 	tristate
 
 config SND_SOC_AD73311
 	tristate
 
+config SND_SOC_ADAU1373
+	tristate
+
 config SND_SOC_ADAU1701
 	tristate "Analog Devices ADAU1701 CODEC"
 	depends on I2C
-	select SND_SOC_SIGMADSP
+	select SND_SOC_SIGMADSP_I2C
 
-config SND_SOC_ADAU1373
+config SND_SOC_ADAU17X1
 	tristate
+	select SND_SOC_SIGMADSP_REGMAP
+
+config SND_SOC_ADAU1761
+	tristate
+	select SND_SOC_ADAU17X1
+
+config SND_SOC_ADAU1761_I2C
+	tristate
+	select SND_SOC_ADAU1761
+	select REGMAP_I2C
+
+config SND_SOC_ADAU1761_SPI
+	tristate
+	select SND_SOC_ADAU1761
+	select REGMAP_SPI
+
+config SND_SOC_ADAU1781
+	select SND_SOC_ADAU17X1
+	tristate
+
+config SND_SOC_ADAU1781_I2C
+	tristate
+	select SND_SOC_ADAU1781
+	select REGMAP_I2C
+
+config SND_SOC_ADAU1781_SPI
+	tristate
+	select SND_SOC_ADAU1781
+	select REGMAP_SPI
 
 config SND_SOC_ADAU1977
 	tristate
@@ -269,7 +326,8 @@ config SND_SOC_AK5386
 	tristate "AKM AK5638 CODEC"
 
 config SND_SOC_ALC5623
-       tristate
+       tristate "Realtek ALC5623 CODEC"
+	depends on I2C
 
 config SND_SOC_ALC5632
 	tristate
@@ -277,16 +335,34 @@ config SND_SOC_ALC5632
 config SND_SOC_CQ0093VC
 	tristate
 
+config SND_SOC_CS35L32
+	tristate "Cirrus Logic CS35L32 CODEC"
+	depends on I2C
+
 config SND_SOC_CS42L51
 	tristate
 
+config SND_SOC_CS42L51_I2C
+	tristate "Cirrus Logic CS42L51 CODEC (I2C)"
+	depends on I2C
+	select SND_SOC_CS42L51
+
 config SND_SOC_CS42L52
 	tristate "Cirrus Logic CS42L52 CODEC"
-	depends on I2C
+	depends on I2C && INPUT
+
+config SND_SOC_CS42L56
+	tristate "Cirrus Logic CS42L56 CODEC"
+	depends on I2C && INPUT
 
 config SND_SOC_CS42L73
 	tristate "Cirrus Logic CS42L73 CODEC"
 	depends on I2C
+
+config SND_SOC_CS4265
+	tristate "Cirrus Logic CS4265 CODEC"
+	depends on I2C
+	select REGMAP_I2C
 
 # Cirrus Logic CS4270 Codec
 config SND_SOC_CS4270
@@ -302,8 +378,19 @@ config SND_SOC_CS4270_VD33_ERRATA
 	depends on SND_SOC_CS4270
 
 config SND_SOC_CS4271
-	tristate "Cirrus Logic CS4271 CODEC"
-	depends on SND_SOC_I2C_AND_SPI
+	tristate
+
+config SND_SOC_CS4271_I2C
+	tristate "Cirrus Logic CS4271 CODEC (I2C)"
+	depends on I2C
+	select SND_SOC_CS4271
+	select REGMAP_I2C
+
+config SND_SOC_CS4271_SPI
+	tristate "Cirrus Logic CS4271 CODEC (SPI)"
+	depends on SPI_MASTER
+	select SND_SOC_CS4271
+	select REGMAP_SPI
 
 config SND_SOC_CS42XX8
 	tristate
@@ -346,6 +433,17 @@ config SND_SOC_DMIC
 config SND_SOC_HDMI_CODEC
        tristate "HDMI stub CODEC"
 
+config SND_SOC_ES8328
+	tristate "Everest Semi ES8328 CODEC"
+
+config SND_SOC_ES8328_I2C
+	tristate
+	select SND_SOC_ES8328
+
+config SND_SOC_ES8328_SPI
+	tristate
+	select SND_SOC_ES8328
+
 config SND_SOC_ISABELLE
         tristate
 
@@ -359,6 +457,12 @@ config SND_SOC_MAX98090
        tristate
 
 config SND_SOC_MAX98095
+       tristate
+
+config SND_SOC_MAX98357A
+       tristate
+
+config SND_SOC_MAX98925
        tristate
 
 config SND_SOC_MAX9850
@@ -390,11 +494,47 @@ config SND_SOC_PCM512x_SPI
 	select SND_SOC_PCM512x
 	select REGMAP_SPI
 
-config SND_SOC_RT5631
+config SND_SOC_RL6231
 	tristate
+	default y if SND_SOC_RT5640=y
+	default y if SND_SOC_RT5645=y
+	default y if SND_SOC_RT5651=y
+	default y if SND_SOC_RT5670=y
+	default y if SND_SOC_RT5677=y
+	default m if SND_SOC_RT5640=m
+	default m if SND_SOC_RT5645=m
+	default m if SND_SOC_RT5651=m
+	default m if SND_SOC_RT5670=m
+	default m if SND_SOC_RT5677=m
+
+config SND_SOC_RT286
+	tristate
+	depends on I2C
+
+config SND_SOC_RT5631
+	tristate "Realtek ALC5631/RT5631 CODEC"
+	depends on I2C
 
 config SND_SOC_RT5640
 	tristate
+
+config SND_SOC_RT5645
+        tristate
+
+config SND_SOC_RT5651
+	tristate
+
+config SND_SOC_RT5670
+	tristate
+
+config SND_SOC_RT5677
+	tristate
+	select REGMAP_I2C
+	select REGMAP_IRQ
+
+config SND_SOC_RT5677_SPI
+	tristate
+	default SND_SOC_RT5677 && SPI
 
 #Freescale sgtl5000 codec
 config SND_SOC_SGTL5000
@@ -407,6 +547,14 @@ config SND_SOC_SI476X
 config SND_SOC_SIGMADSP
 	tristate
 	select CRC32
+
+config SND_SOC_SIGMADSP_I2C
+	tristate
+	select SND_SOC_SIGMADSP
+
+config SND_SOC_SIGMADSP_REGMAP
+	tristate
+	select SND_SOC_SIGMADSP
 
 config SND_SOC_SIRF_AUDIO_CODEC
 	tristate "SiRF SoC internal audio codec"
@@ -425,15 +573,29 @@ config SND_SOC_SSM2602
 	tristate
 
 config SND_SOC_SSM2602_SPI
+	tristate "Analog Devices SSM2602 CODEC - SPI"
+	depends on SPI_MASTER
 	select SND_SOC_SSM2602
-	tristate
+	select REGMAP_SPI
 
 config SND_SOC_SSM2602_I2C
+	tristate "Analog Devices SSM2602 CODEC - I2C"
+	depends on I2C
 	select SND_SOC_SSM2602
-	tristate
+	select REGMAP_I2C
+
+config SND_SOC_SSM4567
+	tristate "Analog Devices ssm4567 amplifier driver support"
+	depends on I2C
 
 config SND_SOC_STA32X
-	tristate
+	tristate "STA326, STA328 and STA329 speaker amplifier"
+	depends on I2C
+	select REGMAP_I2C
+
+config SND_SOC_STA350
+	tristate "STA350 speaker amplifier"
+	depends on I2C
 
 config SND_SOC_STA529
 	tristate
@@ -441,19 +603,29 @@ config SND_SOC_STA529
 config SND_SOC_STAC9766
 	tristate
 
+config SND_SOC_TAS2552
+	tristate "Texas Instruments TAS2552 Mono Audio amplifier"
+	depends on I2C
+
 config SND_SOC_TAS5086
 	tristate "Texas Instruments TAS5086 speaker amplifier"
+	depends on I2C
+
+config SND_SOC_TFA9879
+	tristate "NXP Semiconductors TFA9879 amplifier"
 	depends on I2C
 
 config SND_SOC_TLV320AIC23
 	tristate
 
 config SND_SOC_TLV320AIC23_I2C
-	tristate
+	tristate "Texas Instruments TLV320AIC23 audio CODEC - I2C"
+	depends on I2C
 	select SND_SOC_TLV320AIC23
 
 config SND_SOC_TLV320AIC23_SPI
-	tristate
+	tristate "Texas Instruments TLV320AIC23 audio CODEC - SPI"
+	depends on SPI_MASTER
 	select SND_SOC_TLV320AIC23
 
 config SND_SOC_TLV320AIC26
@@ -461,7 +633,9 @@ config SND_SOC_TLV320AIC26
 	depends on SPI
 
 config SND_SOC_TLV320AIC31XX
-        tristate
+	tristate "Texas Instruments TLV320AIC31xx CODECs"
+	depends on I2C
+	select REGMAP_I2C
 
 config SND_SOC_TLV320AIC32X4
 	tristate
@@ -472,6 +646,10 @@ config SND_SOC_TLV320AIC3X
 
 config SND_SOC_TLV320DAC33
 	tristate
+
+config SND_SOC_TS3A227E
+	tristate "TI Headset/Mic detect and keypress chip"
+	depends on I2C
 
 config SND_SOC_TWL4030
 	select MFD_TWL4030_AUDIO
@@ -571,8 +749,19 @@ config SND_SOC_WM8782
 	tristate
 
 config SND_SOC_WM8804
-	tristate "Wolfson Microelectronics WM8804 S/PDIF transceiver"
-	depends on SND_SOC_I2C_AND_SPI
+	tristate
+
+config SND_SOC_WM8804_I2C
+	tristate "Wolfson Microelectronics WM8804 S/PDIF transceiver I2C"
+	depends on I2C
+	select SND_SOC_WM8804
+	select REGMAP_I2C
+
+config SND_SOC_WM8804_SPI
+	tristate "Wolfson Microelectronics WM8804 S/PDIF transceiver SPI"
+	depends on SPI_MASTER
+	select SND_SOC_WM8804
+	select REGMAP_SPI
 
 config SND_SOC_WM8900
 	tristate
@@ -598,7 +787,7 @@ config SND_SOC_WM8961
 
 config SND_SOC_WM8962
 	tristate "Wolfson Microelectronics WM8962 CODEC"
-	depends on I2C
+	depends on I2C && INPUT
 
 config SND_SOC_WM8971
 	tristate
@@ -607,7 +796,8 @@ config SND_SOC_WM8974
 	tristate
 
 config SND_SOC_WM8978
-	tristate
+	tristate "Wolfson Microelectronics WM8978 codec"
+	depends on I2C
 
 config SND_SOC_WM8983
 	tristate

@@ -54,8 +54,7 @@ affs_readdir(struct file *file, struct dir_context *ctx)
 	u32			 ino;
 	int			 error = 0;
 
-	pr_debug("AFFS: readdir(ino=%lu,f_pos=%lx)\n",
-		 inode->i_ino, (unsigned long)ctx->pos);
+	pr_debug("%s(ino=%lu,f_pos=%llx)\n", __func__, inode->i_ino, ctx->pos);
 
 	if (ctx->pos < 2) {
 		file->private_data = (void *)0;
@@ -81,7 +80,7 @@ affs_readdir(struct file *file, struct dir_context *ctx)
 	 */
 	ino = (u32)(long)file->private_data;
 	if (ino && file->f_version == inode->i_version) {
-		pr_debug("AFFS: readdir() left off=%d\n", ino);
+		pr_debug("readdir() left off=%d\n", ino);
 		goto inside;
 	}
 
@@ -115,11 +114,11 @@ inside:
 				break;
 			}
 
-			namelen = min(AFFS_TAIL(sb, fh_bh)->name[0], (u8)30);
+			namelen = min(AFFS_TAIL(sb, fh_bh)->name[0],
+				      (u8)AFFSNAMEMAX);
 			name = AFFS_TAIL(sb, fh_bh)->name + 1;
-			pr_debug("AFFS: readdir(): dir_emit(\"%.*s\", "
-				 "ino=%u), hash=%d, f_pos=%x\n",
-				 namelen, name, ino, hash_pos, (u32)ctx->pos);
+			pr_debug("readdir(): dir_emit(\"%.*s\", ino=%u), hash=%d, f_pos=%llx\n",
+				 namelen, name, ino, hash_pos, ctx->pos);
 
 			if (!dir_emit(ctx, name, namelen, ino, DT_UNKNOWN))
 				goto done;

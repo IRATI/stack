@@ -13,6 +13,7 @@
 
 / {
 	aliases {
+		ethernet0 = &fec;
 		gpio0 = &gpio1;
 		gpio1 = &gpio2;
 		gpio2 = &gpio3;
@@ -113,6 +114,7 @@
 			};
 
 			ssi1: ssi@43fa0000 {
+				#sound-dai-cells = <0>;
 				compatible = "fsl,imx35-ssi", "fsl,imx21-ssi";
 				reg = <0x43fa0000 0x4000>;
 				interrupts = <11>;
@@ -190,6 +192,14 @@
 				reg = <0x53f80000 0x4000>;
 				interrupts = <31>;
 				#clock-cells = <1>;
+			};
+
+			gpt: timer@53f90000 {
+				compatible = "fsl,imx35-gpt", "fsl,imx31-gpt";
+				reg = <0x53f90000 0x4000>;
+				interrupts = <29>;
+				clocks = <&clks 9>, <&clks 50>;
+				clock-names = "ipg", "per";
 			};
 
 			gpio3: gpio@53fa4000 {
@@ -276,8 +286,8 @@
 			can1: can@53fe4000 {
 				compatible = "fsl,imx35-flexcan", "fsl,p1010-flexcan";
 				reg = <0x53fe4000 0x1000>;
-				clocks = <&clks 33>;
-				clock-names = "ipg";
+				clocks = <&clks 33>, <&clks 33>;
+				clock-names = "ipg", "per";
 				interrupts = <43>;
 				status = "disabled";
 			};
@@ -285,8 +295,8 @@
 			can2: can@53fe8000 {
 				compatible = "fsl,imx35-flexcan", "fsl,p1010-flexcan";
 				reg = <0x53fe8000 0x1000>;
-				clocks = <&clks 34>;
-				clock-names = "ipg";
+				clocks = <&clks 34>, <&clks 34>;
+				clock-names = "ipg", "per";
 				interrupts = <44>;
 				status = "disabled";
 			};
@@ -295,9 +305,9 @@
 				compatible = "fsl,imx35-usb", "fsl,imx27-usb";
 				reg = <0x53ff4000 0x0200>;
 				interrupts = <37>;
-				clocks = <&clks 9>, <&clks 73>, <&clks 28>;
-				clock-names = "ipg", "ahb", "per";
+				clocks = <&clks 73>;
 				fsl,usbmisc = <&usbmisc 0>;
+				fsl,usbphy = <&usbphy0>;
 				status = "disabled";
 			};
 
@@ -305,9 +315,10 @@
 				compatible = "fsl,imx35-usb", "fsl,imx27-usb";
 				reg = <0x53ff4400 0x0200>;
 				interrupts = <35>;
-				clocks = <&clks 9>, <&clks 73>, <&clks 28>;
-				clock-names = "ipg", "ahb", "per";
+				clocks = <&clks 73>;
 				fsl,usbmisc = <&usbmisc 1>;
+				fsl,usbphy = <&usbphy1>;
+				dr_mode = "host";
 				status = "disabled";
 			};
 
@@ -354,6 +365,22 @@
 				>;
 				status = "disabled";
 			};
+		};
+	};
+
+	usbphy {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		usbphy0: usb-phy@0 {
+			reg = <0>;
+			compatible = "usb-nop-xceiv";
+		};
+
+		usbphy1: usb-phy@1 {
+			reg = <1>;
+			compatible = "usb-nop-xceiv";
 		};
 	};
 };

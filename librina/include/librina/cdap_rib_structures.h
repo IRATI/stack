@@ -150,12 +150,17 @@ enum cdap_dest_t { CDAP_DEST_PORT,
 typedef struct connection_handler {
 	unsigned int handle_;
 	cdap_dest_t cdap_dest;
+	int abs_syntax;
 	ep_info_t src_;
 	ep_info_t dest_;
 	auth_policy_t auth_;
 	vers_info_t version_;
 
-	connection_handler() { cdap_dest = CDAP_DEST_PORT; };
+	connection_handler() {
+		cdap_dest = CDAP_DEST_PORT;
+		abs_syntax = 0;
+		handle_ = 0;
+	};
 } con_handle_t;
 
 } //cdap_rib namespace

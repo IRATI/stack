@@ -117,7 +117,7 @@ bool xenmpi_rx_ring_slots_available(struct vmpi_impl_info *vif, int needed)
  * frontend-side LRO).
  */
 static int xenmpi_gop_buf(struct vmpi_impl_info *vif,
-                          struct vmpi_buffer *buf)
+                          struct vmpi_buf *buf)
 {
 	struct xen_mpi_rx_request *req;
 	struct xenmpi_rx_meta *rx_meta;
@@ -135,7 +135,7 @@ static int xenmpi_gop_buf(struct vmpi_impl_info *vif,
         IFV(printk("%s: get rx req: [id=%d] [off=%d] [gref=%d] [len=%d]\n",
                 __func__, req->id, req->offset, req->gref, req->len));
 
-	src_data = vmpi_buffer_hdr(buf);
+	src_data = vmpi_buf_hdr(buf);
         src_offset = offset_in_page(src_data);
 	/* Data must not cross a page boundary. */
         copy_len = PAGE_SIZE - src_offset;
@@ -193,7 +193,7 @@ static void xenmpi_rx_action(struct vmpi_impl_info *vif)
 	s8 status;
 	struct xen_mpi_rx_response *resp;
         struct vmpi_queue rxq;
-        struct vmpi_buffer *buf;
+        struct vmpi_buf *buf;
 	LIST_HEAD(notify);
 	int ret;
 	bool need_to_notify = false;
@@ -248,10 +248,8 @@ static void xenmpi_rx_action(struct vmpi_impl_info *vif)
                 len = buf->len;
                 buf->len = 0;
                 VMPI_RING_INC(ring->nr);
-#ifdef VMPI_TX_MUTEX
                 wake_up_interruptible_poll(&ring->wqh, POLLOUT |
                                            POLLWRNORM | POLLWRBAND);
-#endif
                 IFV(printk("%s: pushed %d bytes in the RX ring\n", __func__, len));
 
 		resp = make_rx_response(vif, vif->rx_meta[vif->rx_pending_cons].id,
@@ -342,11 +340,11 @@ static struct page *xenmpi_alloc_page(struct vmpi_impl_info *vif,
 }
 
 static int xenmpi_tx_check_gop(struct vmpi_impl_info *vif,
-                               struct vmpi_buffer *buf,
+                               struct vmpi_buf *buf,
 			       struct gnttab_copy **gopp)
 {
 	struct gnttab_copy *gop = *gopp;
-	u16 pending_idx = *((u16 *)vmpi_buffer_data(buf));
+	u16 pending_idx = *((u16 *)vmpi_buf_data(buf));
 	int err;
 
 	/* Check status of header. */
@@ -393,7 +391,7 @@ static bool tx_credit_exceeded(struct vmpi_impl_info *vif, unsigned size)
 static unsigned xenmpi_tx_build_gops(struct vmpi_impl_info *vif, int budget)
 {
 	struct gnttab_copy *gop = vif->tx_copy_ops;
-        struct vmpi_buffer *buf;
+        struct vmpi_buf *buf;
 
 	while ((nr_pending_reqs(vif) + 2 < XEN_MPI_TX_RING_SIZE) &&
 	       (vmpi_queue_len(&vif->tx_queue) < budget)) {
@@ -446,10 +444,10 @@ static unsigned xenmpi_tx_build_gops(struct vmpi_impl_info *vif, int budget)
 		pending_cons_idx = pending_index(vif->pending_cons);
 		pending_idx = vif->pending_ring[pending_cons_idx];
 
-                buf = vmpi_buffer_create(txreq.size);
+                buf = vmpi_buf_create(txreq.size);
 		if (unlikely(buf == NULL)) {
 			printk(
-				   "Can't allocate a vmpi_buffer in start_xmit.\n");
+				   "Can't allocate a vmpi_buf in start_xmit.\n");
 			xenmpi_tx_err(vif, &txreq, cons);
 			break;
 		}
@@ -458,7 +456,7 @@ static unsigned xenmpi_tx_build_gops(struct vmpi_impl_info *vif, int budget)
 		page = xenmpi_alloc_page(vif, pending_idx);
 		if (!page) {
                         printk("%s: page allocation failed\n", __func__);
-                        vmpi_buffer_destroy(buf);
+                        vmpi_buf_destroy(buf);
 			xenmpi_tx_err(vif, &txreq, cons);
 			break;
 		}
@@ -479,7 +477,7 @@ static unsigned xenmpi_tx_build_gops(struct vmpi_impl_info *vif, int budget)
 		memcpy(&vif->pending_tx_info[pending_idx].req,
 		       &txreq, sizeof(txreq));
 		vif->pending_tx_info[pending_idx].head = pending_cons_idx;
-		*((u16 *)vmpi_buffer_data(buf)) = pending_idx;
+		*((u16 *)vmpi_buf_data(buf)) = pending_idx;
 
                 buf->len = txreq.size;
 
@@ -499,7 +497,7 @@ static unsigned xenmpi_tx_build_gops(struct vmpi_impl_info *vif, int budget)
 static int xenmpi_tx_submit(struct vmpi_impl_info *vif)
 {
 	struct gnttab_copy *gop = vif->tx_copy_ops;
-        struct vmpi_buffer *buf;
+        struct vmpi_buf *buf;
 	int work_done = 0;
         struct vmpi_queue *read;
         unsigned int channel;
@@ -508,17 +506,17 @@ static int xenmpi_tx_submit(struct vmpi_impl_info *vif)
 		struct xen_mpi_tx_request *txp;
 		u16 pending_idx;
 
-		pending_idx = *((u16 *)vmpi_buffer_data(buf));
+		pending_idx = *((u16 *)vmpi_buf_data(buf));
 		txp = &vif->pending_tx_info[pending_idx].req;
 
 		/* Check the remap error code. */
 		if (unlikely(xenmpi_tx_check_gop(vif, buf, &gop))) {
 			printk( "mpiback grant failed.\n");
-                        vmpi_buffer_destroy(buf);
+                        vmpi_buf_destroy(buf);
 			continue;
 		}
 
-		memcpy(vmpi_buffer_hdr(buf),
+		memcpy(vmpi_buf_hdr(buf),
 		       (void *)(idx_to_kaddr(vif, pending_idx)|txp->offset),
 		       buf->len);
 
@@ -526,7 +524,7 @@ static int xenmpi_tx_submit(struct vmpi_impl_info *vif)
                 xenmpi_idx_release(vif, pending_idx,
                                 XEN_MPI_RSP_OKAY);
 
-                channel = vmpi_buffer_hdr(buf)->channel;
+                channel = vmpi_buf_hdr(buf)->channel;
 
                 IFV(printk("%s: submitting len=%d channel=%d\n", __func__,
                                 (int)buf->len, channel));
@@ -542,7 +540,7 @@ static int xenmpi_tx_submit(struct vmpi_impl_info *vif)
                         mutex_lock(&read->lock);
                         if (unlikely(vmpi_queue_len(read) >=
                                                 VMPI_RING_SIZE)) {
-                                vmpi_buffer_destroy(buf);
+                                vmpi_buf_destroy(buf);
                         } else {
                                 vmpi_queue_push_back(read, buf);
                         }
@@ -554,9 +552,9 @@ static int xenmpi_tx_submit(struct vmpi_impl_info *vif)
                                         POLLRDBAND);
                 } else {
                         vif->read_cb(vif->read_cb_data, channel,
-                                     vmpi_buffer_data(buf),
+                                     vmpi_buf_data(buf),
                                      buf->len - sizeof(struct vmpi_hdr));
-                        vmpi_buffer_destroy(buf);
+                        vmpi_buf_destroy(buf);
                 }
                 vif->stats->rxres++;
 

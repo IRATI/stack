@@ -20,7 +20,6 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
-#include <linux/workqueue.h>
 
 #include <linux/spi/spi.h>
 
@@ -471,7 +470,6 @@ static struct platform_driver sun6i_spi_driver = {
 	.remove	= sun6i_spi_remove,
 	.driver	= {
 		.name		= "sun6i-spi",
-		.owner		= THIS_MODULE,
 		.of_match_table	= sun6i_spi_match,
 		.pm		= &sun6i_spi_pm_ops,
 	},

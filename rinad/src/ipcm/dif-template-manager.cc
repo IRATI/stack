@@ -211,7 +211,11 @@ DIFTemplateManager::~DIFTemplateManager()
 		delete template_monitor;
 	}
 
-	//TODO destroy all DIF templates in the map
+	// Destroy all DIF templates in the map
+	for (std::map<std::string, rinad::DIFTemplate *>::iterator it = dif_templates.begin();
+			it != dif_templates.end(); ++it){
+		delete it->second;
+	}
 }
 
 int DIFTemplateManager::load_initial_dif_templates()

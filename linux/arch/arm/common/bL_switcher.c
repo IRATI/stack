@@ -58,16 +58,6 @@ static int read_mpidr(void)
 }
 
 /*
- * Get a global nanosecond time stamp for tracing.
- */
-static s64 get_ns(void)
-{
-	struct timespec ts;
-	getnstimeofday(&ts);
-	return timespec_to_ns(&ts);
-}
-
-/*
  * bL switcher core code.
  */
 
@@ -161,8 +151,6 @@ static int bL_switch_to(unsigned int new_cluster_id)
 	unsigned int mpidr, this_cpu, that_cpu;
 	unsigned int ob_mpidr, ob_cpu, ob_cluster, ib_mpidr, ib_cpu, ib_cluster;
 	struct completion inbound_alive;
-	struct tick_device *tdev;
-	enum clock_event_mode tdev_mode;
 	long volatile *handshake_ptr;
 	int ipi_nr, ret;
 
@@ -224,18 +212,12 @@ static int bL_switch_to(unsigned int new_cluster_id)
 	 */
 	local_irq_disable();
 	local_fiq_disable();
-	trace_cpu_migrate_begin(get_ns(), ob_mpidr);
+	trace_cpu_migrate_begin(ktime_get_real_ns(), ob_mpidr);
 
 	/* redirect GIC's SGIs to our counterpart */
 	gic_migrate_target(bL_gic_id[ib_cpu][ib_cluster]);
 
-	tdev = tick_get_device(this_cpu);
-	if (tdev && !cpumask_equal(tdev->evtdev->cpumask, cpumask_of(this_cpu)))
-		tdev = NULL;
-	if (tdev) {
-		tdev_mode = tdev->evtdev->mode;
-		clockevents_set_mode(tdev->evtdev, CLOCK_EVT_MODE_SHUTDOWN);
-	}
+	tick_suspend_local();
 
 	ret = cpu_pm_enter();
 
@@ -261,13 +243,9 @@ static int bL_switch_to(unsigned int new_cluster_id)
 
 	ret = cpu_pm_exit();
 
-	if (tdev) {
-		clockevents_set_mode(tdev->evtdev, tdev_mode);
-		clockevents_program_event(tdev->evtdev,
-					  tdev->evtdev->next_event, 1);
-	}
+	tick_resume_local();
 
-	trace_cpu_migrate_finish(get_ns(), ib_mpidr);
+	trace_cpu_migrate_finish(ktime_get_real_ns(), ib_mpidr);
 	local_fiq_enable();
 	local_irq_enable();
 
@@ -558,7 +536,7 @@ int bL_switcher_get_logical_index(u32 mpidr)
 
 static void bL_switcher_trace_trigger_cpu(void *__always_unused info)
 {
-	trace_cpu_migrate_current(get_ns(), read_mpidr());
+	trace_cpu_migrate_current(ktime_get_real_ns(), read_mpidr());
 }
 
 int bL_switcher_trace_trigger(void)

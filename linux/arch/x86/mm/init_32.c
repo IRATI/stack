@@ -137,6 +137,7 @@ page_table_range_init_count(unsigned long start, unsigned long end)
 
 	vaddr = start;
 	pgd_idx = pgd_index(vaddr);
+	pmd_idx = pmd_index(vaddr);
 
 	for ( ; (pgd_idx < PTRS_PER_PGD) && (vaddr != end); pgd_idx++) {
 		for (; (pmd_idx < PTRS_PER_PMD) && (vaddr != end);
@@ -537,7 +538,7 @@ static void __init pagetable_init(void)
 	permanent_kmaps_init(pgd_base);
 }
 
-pteval_t __supported_pte_mask __read_mostly = ~(_PAGE_NX | _PAGE_GLOBAL | _PAGE_IOMAP);
+pteval_t __supported_pte_mask __read_mostly = ~(_PAGE_NX | _PAGE_GLOBAL);
 EXPORT_SYMBOL_GPL(__supported_pte_mask);
 
 /* user-defined highmem size */
@@ -825,7 +826,8 @@ void __init mem_init(void)
 int arch_add_memory(int nid, u64 start, u64 size)
 {
 	struct pglist_data *pgdata = NODE_DATA(nid);
-	struct zone *zone = pgdata->node_zones + ZONE_HIGHMEM;
+	struct zone *zone = pgdata->node_zones +
+		zone_for_memory(nid, start, size, ZONE_HIGHMEM);
 	unsigned long start_pfn = start >> PAGE_SHIFT;
 	unsigned long nr_pages = size >> PAGE_SHIFT;
 

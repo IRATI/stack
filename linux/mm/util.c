@@ -12,12 +12,29 @@
 #include <linux/hugetlb.h>
 #include <linux/vmalloc.h>
 
+#include <asm/sections.h>
 #include <asm/uaccess.h>
 
 #include "internal.h"
 
-#define CREATE_TRACE_POINTS
-#include <trace/events/kmem.h>
+static inline int is_kernel_rodata(unsigned long addr)
+{
+	return addr >= (unsigned long)__start_rodata &&
+		addr < (unsigned long)__end_rodata;
+}
+
+/**
+ * kfree_const - conditionally free memory
+ * @x: pointer to the memory
+ *
+ * Function calls kfree only if @x is not in .rodata section.
+ */
+void kfree_const(const void *x)
+{
+	if (!is_kernel_rodata((unsigned long)x))
+		kfree(x);
+}
+EXPORT_SYMBOL(kfree_const);
 
 /**
  * kstrdup - allocate space for and copy an existing string
@@ -39,6 +56,24 @@ char *kstrdup(const char *s, gfp_t gfp)
 	return buf;
 }
 EXPORT_SYMBOL(kstrdup);
+
+/**
+ * kstrdup_const - conditionally duplicate an existing const string
+ * @s: the string to duplicate
+ * @gfp: the GFP mask used in the kmalloc() call when allocating memory
+ *
+ * Function returns source string if it is in .rodata section otherwise it
+ * fallbacks to kstrdup.
+ * Strings allocated by kstrdup_const should be freed by kfree_const.
+ */
+const char *kstrdup_const(const char *s, gfp_t gfp)
+{
+	if (is_kernel_rodata((unsigned long)s))
+		return s;
+
+	return kstrdup(s, gfp);
+}
+EXPORT_SYMBOL(kstrdup_const);
 
 /**
  * kstrndup - allocate space for and copy an existing string
@@ -112,97 +147,6 @@ void *memdup_user(const void __user *src, size_t len)
 }
 EXPORT_SYMBOL(memdup_user);
 
-static __always_inline void *__do_krealloc(const void *p, size_t new_size,
-					   gfp_t flags)
-{
-	void *ret;
-	size_t ks = 0;
-
-	if (p)
-		ks = ksize(p);
-
-	if (ks >= new_size)
-		return (void *)p;
-
-	ret = kmalloc_track_caller(new_size, flags);
-	if (ret && p)
-		memcpy(ret, p, ks);
-
-	return ret;
-}
-
-/**
- * __krealloc - like krealloc() but don't free @p.
- * @p: object to reallocate memory for.
- * @new_size: how many bytes of memory are required.
- * @flags: the type of memory to allocate.
- *
- * This function is like krealloc() except it never frees the originally
- * allocated buffer. Use this if you don't want to free the buffer immediately
- * like, for example, with RCU.
- */
-void *__krealloc(const void *p, size_t new_size, gfp_t flags)
-{
-	if (unlikely(!new_size))
-		return ZERO_SIZE_PTR;
-
-	return __do_krealloc(p, new_size, flags);
-
-}
-EXPORT_SYMBOL(__krealloc);
-
-/**
- * krealloc - reallocate memory. The contents will remain unchanged.
- * @p: object to reallocate memory for.
- * @new_size: how many bytes of memory are required.
- * @flags: the type of memory to allocate.
- *
- * The contents of the object pointed to are preserved up to the
- * lesser of the new and old sizes.  If @p is %NULL, krealloc()
- * behaves exactly like kmalloc().  If @new_size is 0 and @p is not a
- * %NULL pointer, the object pointed to is freed.
- */
-void *krealloc(const void *p, size_t new_size, gfp_t flags)
-{
-	void *ret;
-
-	if (unlikely(!new_size)) {
-		kfree(p);
-		return ZERO_SIZE_PTR;
-	}
-
-	ret = __do_krealloc(p, new_size, flags);
-	if (ret && p != ret)
-		kfree(p);
-
-	return ret;
-}
-EXPORT_SYMBOL(krealloc);
-
-/**
- * kzfree - like kfree but zero memory
- * @p: object to free memory of
- *
- * The memory of the object @p points to is zeroed before freed.
- * If @p is %NULL, kzfree() does nothing.
- *
- * Note: this function zeroes the whole allocated buffer which can be a good
- * deal bigger than the requested buffer size passed to kmalloc(). So be
- * careful when using this function in performance sensitive code.
- */
-void kzfree(const void *p)
-{
-	size_t ks;
-	void *mem = (void *)p;
-
-	if (unlikely(ZERO_OR_NULL_PTR(mem)))
-		return;
-	ks = ksize(mem);
-	memset(mem, 0, ks);
-	kfree(mem);
-}
-EXPORT_SYMBOL(kzfree);
-
 /*
  * strndup_user - duplicate an existing string from user space
  * @s: The string to duplicate
@@ -264,35 +208,25 @@ static int vm_is_stack_for_task(struct task_struct *t,
 /*
  * Check if the vma is being used as a stack.
  * If is_group is non-zero, check in the entire thread group or else
- * just check in the current task. Returns the pid of the task that
- * the vma is stack for.
+ * just check in the current task. Returns the task_struct of the task
+ * that the vma is stack for. Must be called under rcu_read_lock().
  */
-pid_t vm_is_stack(struct task_struct *task,
-		  struct vm_area_struct *vma, int in_group)
+struct task_struct *task_of_stack(struct task_struct *task,
+				struct vm_area_struct *vma, bool in_group)
 {
-	pid_t ret = 0;
-
 	if (vm_is_stack_for_task(task, vma))
-		return task->pid;
+		return task;
 
 	if (in_group) {
 		struct task_struct *t;
-		rcu_read_lock();
-		if (!pid_alive(task))
-			goto done;
 
-		t = task;
-		do {
-			if (vm_is_stack_for_task(t, vma)) {
-				ret = t->pid;
-				goto done;
-			}
-		} while_each_thread(task, t);
-done:
-		rcu_read_unlock();
+		for_each_thread(task, t) {
+			if (vm_is_stack_for_task(t, vma))
+				return t;
+		}
 	}
 
-	return ret;
+	return NULL;
 }
 
 #if defined(CONFIG_MMU) && !defined(HAVE_ARCH_PICK_MMAP_LAYOUT)
@@ -344,14 +278,8 @@ int __weak get_user_pages_fast(unsigned long start,
 				int nr_pages, int write, struct page **pages)
 {
 	struct mm_struct *mm = current->mm;
-	int ret;
-
-	down_read(&mm->mmap_sem);
-	ret = get_user_pages(current, mm, start, nr_pages,
-					write, 0, pages, NULL);
-	up_read(&mm->mmap_sem);
-
-	return ret;
+	return get_user_pages_unlocked(current, mm, start, nr_pages,
+				       write, 0, pages);
 }
 EXPORT_SYMBOL_GPL(get_user_pages_fast);
 
@@ -397,9 +325,37 @@ void kvfree(const void *addr)
 }
 EXPORT_SYMBOL(kvfree);
 
+static inline void *__page_rmapping(struct page *page)
+{
+	unsigned long mapping;
+
+	mapping = (unsigned long)page->mapping;
+	mapping &= ~PAGE_MAPPING_FLAGS;
+
+	return (void *)mapping;
+}
+
+/* Neutral page->mapping pointer to address_space or anon_vma or other */
+void *page_rmapping(struct page *page)
+{
+	page = compound_head(page);
+	return __page_rmapping(page);
+}
+
+struct anon_vma *page_anon_vma(struct page *page)
+{
+	unsigned long mapping;
+
+	page = compound_head(page);
+	mapping = (unsigned long)page->mapping;
+	if ((mapping & PAGE_MAPPING_FLAGS) != PAGE_MAPPING_ANON)
+		return NULL;
+	return __page_rmapping(page);
+}
+
 struct address_space *page_mapping(struct page *page)
 {
-	struct address_space *mapping = page->mapping;
+	unsigned long mapping;
 
 	/* This happens if someone calls flush_dcache_page on slab page */
 	if (unlikely(PageSlab(page)))
@@ -409,10 +365,13 @@ struct address_space *page_mapping(struct page *page)
 		swp_entry_t entry;
 
 		entry.val = page_private(page);
-		mapping = swap_address_space(entry);
-	} else if ((unsigned long)mapping & PAGE_MAPPING_ANON)
-		mapping = NULL;
-	return mapping;
+		return swap_address_space(entry);
+	}
+
+	mapping = (unsigned long)page->mapping;
+	if (mapping & PAGE_MAPPING_FLAGS)
+		return NULL;
+	return page->mapping;
 }
 
 int overcommit_ratio_handler(struct ctl_table *table, int write,
@@ -504,11 +463,3 @@ out_mm:
 out:
 	return res;
 }
-
-/* Tracepoints definitions. */
-EXPORT_TRACEPOINT_SYMBOL(kmalloc);
-EXPORT_TRACEPOINT_SYMBOL(kmem_cache_alloc);
-EXPORT_TRACEPOINT_SYMBOL(kmalloc_node);
-EXPORT_TRACEPOINT_SYMBOL(kmem_cache_alloc_node);
-EXPORT_TRACEPOINT_SYMBOL(kfree);
-EXPORT_TRACEPOINT_SYMBOL(kmem_cache_free);

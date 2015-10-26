@@ -54,7 +54,7 @@ static int psb_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent);
  * PowerVR SGX545    - Cedartrail - Intel GMA 3650, Intel Atom D2550, D2700,
  *                                  N2800
  */
-static DEFINE_PCI_DEVICE_TABLE(pciidlist) = {
+static const struct pci_device_id pciidlist[] = {
 	{ 0x8086, 0x8108, PCI_ANY_ID, PCI_ANY_ID, 0, 0, (long) &psb_chip_ops },
 	{ 0x8086, 0x8109, PCI_ANY_ID, PCI_ANY_ID, 0, 0, (long) &psb_chip_ops },
 #if defined(CONFIG_DRM_GMA600)
@@ -112,11 +112,9 @@ static void psb_driver_lastclose(struct drm_device *dev)
 	struct drm_psb_private *dev_priv = dev->dev_private;
 	struct psb_fbdev *fbdev = dev_priv->fbdev;
 
-	drm_modeset_lock_all(dev);
-	ret = drm_fb_helper_restore_fbdev_mode(&fbdev->psb_fb_helper);
+	ret = drm_fb_helper_restore_fbdev_mode_unlocked(&fbdev->psb_fb_helper);
 	if (ret)
 		DRM_DEBUG("failed to restore crtc mode\n");
-	drm_modeset_unlock_all(dev);
 
 	return;
 }
@@ -214,6 +212,8 @@ static int psb_driver_unload(struct drm_device *dev)
 		}
 		if (dev_priv->aux_pdev)
 			pci_dev_put(dev_priv->aux_pdev);
+		if (dev_priv->lpc_pdev)
+			pci_dev_put(dev_priv->lpc_pdev);
 
 		/* Destroy VBT data */
 		psb_intel_destroy_bios(dev);
@@ -282,6 +282,24 @@ static int psb_driver_load(struct drm_device *dev, unsigned long flags)
 			DRM_DEBUG_KMS("Couldn't find aux pci device");
 		}
 		dev_priv->gmbus_reg = dev_priv->aux_reg;
+
+		dev_priv->lpc_pdev = pci_get_bus_and_slot(0, PCI_DEVFN(31, 0));
+		if (dev_priv->lpc_pdev) {
+			pci_read_config_word(dev_priv->lpc_pdev, PSB_LPC_GBA,
+				&dev_priv->lpc_gpio_base);
+			pci_write_config_dword(dev_priv->lpc_pdev, PSB_LPC_GBA,
+				(u32)dev_priv->lpc_gpio_base | (1L<<31));
+			pci_read_config_word(dev_priv->lpc_pdev, PSB_LPC_GBA,
+				&dev_priv->lpc_gpio_base);
+			dev_priv->lpc_gpio_base &= 0xffc0;
+			if (dev_priv->lpc_gpio_base)
+				DRM_DEBUG_KMS("Found LPC GPIO at 0x%04x\n",
+						dev_priv->lpc_gpio_base);
+			else {
+				pci_dev_put(dev_priv->lpc_pdev);
+				dev_priv->lpc_pdev = NULL;
+			}
+		}
 	} else {
 		dev_priv->gmbus_reg = dev_priv->vdc_reg;
 	}
@@ -354,7 +372,7 @@ static int psb_driver_load(struct drm_device *dev, unsigned long flags)
 	PSB_WVDC32(0xFFFFFFFF, PSB_INT_MASK_R);
 	spin_unlock_irqrestore(&dev_priv->irqmask_lock, irqflags);
 
-	drm_irq_install(dev);
+	drm_irq_install(dev, dev->pdev->irq);
 
 	dev->vblank_disable_allowed = true;
 	dev->max_vblank_count = 0xffffff; /* only 24 bits of frame count */
@@ -478,8 +496,9 @@ static struct drm_driver driver = {
 	.unload = psb_driver_unload,
 	.lastclose = psb_driver_lastclose,
 	.preclose = psb_driver_preclose,
+	.set_busid = drm_pci_set_busid,
 
-	.num_ioctls = DRM_ARRAY_SIZE(psb_ioctls),
+	.num_ioctls = ARRAY_SIZE(psb_ioctls),
 	.device_is_agp = psb_driver_device_is_agp,
 	.irq_preinstall = psb_irq_preinstall,
 	.irq_postinstall = psb_irq_postinstall,

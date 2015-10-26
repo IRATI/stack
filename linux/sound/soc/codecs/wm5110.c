@@ -134,7 +134,7 @@ static const struct reg_default wm5110_sysclk_revd_patch[] = {
 static int wm5110_sysclk_ev(struct snd_soc_dapm_widget *w,
 			    struct snd_kcontrol *kcontrol, int event)
 {
-	struct snd_soc_codec *codec = w->codec;
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct arizona *arizona = dev_get_drvdata(codec->dev->parent);
 	struct regmap *regmap = arizona->regmap;
 	const struct reg_default *patch = NULL;
@@ -167,7 +167,7 @@ static int wm5110_sysclk_ev(struct snd_soc_dapm_widget *w,
 static DECLARE_TLV_DB_SCALE(ana_tlv, 0, 100, 0);
 static DECLARE_TLV_DB_SCALE(eq_tlv, -1200, 100, 0);
 static DECLARE_TLV_DB_SCALE(digital_tlv, -6400, 50, 0);
-static DECLARE_TLV_DB_SCALE(noise_tlv, 0, 600, 0);
+static DECLARE_TLV_DB_SCALE(noise_tlv, -13200, 600, 0);
 static DECLARE_TLV_DB_SCALE(ng_tlv, -10200, 600, 0);
 
 #define WM5110_NG_SRC(name, base) \
@@ -324,13 +324,13 @@ SOC_ENUM("LHPF2 Mode", arizona_lhpf2_mode),
 SOC_ENUM("LHPF3 Mode", arizona_lhpf3_mode),
 SOC_ENUM("LHPF4 Mode", arizona_lhpf4_mode),
 
-SOC_VALUE_ENUM("ISRC1 FSL", arizona_isrc_fsl[0]),
-SOC_VALUE_ENUM("ISRC2 FSL", arizona_isrc_fsl[1]),
-SOC_VALUE_ENUM("ISRC3 FSL", arizona_isrc_fsl[2]),
-SOC_VALUE_ENUM("ISRC1 FSH", arizona_isrc_fsh[0]),
-SOC_VALUE_ENUM("ISRC2 FSH", arizona_isrc_fsh[1]),
-SOC_VALUE_ENUM("ISRC3 FSH", arizona_isrc_fsh[2]),
-SOC_VALUE_ENUM("ASRC RATE 1", arizona_asrc_rate1),
+SOC_ENUM("ISRC1 FSL", arizona_isrc_fsl[0]),
+SOC_ENUM("ISRC2 FSL", arizona_isrc_fsl[1]),
+SOC_ENUM("ISRC3 FSL", arizona_isrc_fsl[2]),
+SOC_ENUM("ISRC1 FSH", arizona_isrc_fsh[0]),
+SOC_ENUM("ISRC2 FSH", arizona_isrc_fsh[1]),
+SOC_ENUM("ISRC3 FSH", arizona_isrc_fsh[2]),
+SOC_ENUM("ASRC RATE 1", arizona_asrc_rate1),
 
 ARIZONA_MIXER_CONTROLS("DSP1L", ARIZONA_DSP1LMIX_INPUT_1_SOURCE),
 ARIZONA_MIXER_CONTROLS("DSP1R", ARIZONA_DSP1RMIX_INPUT_1_SOURCE),
@@ -366,6 +366,11 @@ SOC_SINGLE("HPOUT2 SC Protect Switch", ARIZONA_HP2_SHORT_CIRCUIT_CTRL,
 	   ARIZONA_HP2_SC_ENA_SHIFT, 1, 0),
 SOC_SINGLE("HPOUT3 SC Protect Switch", ARIZONA_HP3_SHORT_CIRCUIT_CTRL,
 	   ARIZONA_HP3_SC_ENA_SHIFT, 1, 0),
+
+SOC_SINGLE("SPKDAT1 High Performance Switch", ARIZONA_OUTPUT_PATH_CONFIG_5L,
+	   ARIZONA_OUT5_OSR_SHIFT, 1, 0),
+SOC_SINGLE("SPKDAT2 High Performance Switch", ARIZONA_OUTPUT_PATH_CONFIG_6L,
+	   ARIZONA_OUT6_OSR_SHIFT, 1, 0),
 
 SOC_DOUBLE_R("HPOUT1 Digital Switch", ARIZONA_DAC_DIGITAL_VOLUME_1L,
 	     ARIZONA_DAC_DIGITAL_VOLUME_1R, ARIZONA_OUT1L_MUTE_SHIFT, 1, 1),
@@ -592,7 +597,7 @@ static const struct soc_enum wm5110_aec_loopback =
 			      wm5110_aec_loopback_values);
 
 static const struct snd_kcontrol_new wm5110_aec_loopback_mux =
-	SOC_DAPM_VALUE_ENUM("AEC Loopback", wm5110_aec_loopback);
+	SOC_DAPM_ENUM("AEC Loopback", wm5110_aec_loopback);
 
 static const struct snd_soc_dapm_widget wm5110_dapm_widgets[] = {
 SND_SOC_DAPM_SUPPLY("SYSCLK", ARIZONA_SYSTEM_CLOCK_1, ARIZONA_SYSCLK_ENA_SHIFT,
@@ -774,7 +779,7 @@ SND_SOC_DAPM_PGA("ISRC3DEC3", ARIZONA_ISRC_3_CTRL_3,
 SND_SOC_DAPM_PGA("ISRC3DEC4", ARIZONA_ISRC_3_CTRL_3,
 		 ARIZONA_ISRC3_DEC3_ENA_SHIFT, 0, NULL, 0),
 
-SND_SOC_DAPM_VALUE_MUX("AEC Loopback", ARIZONA_DAC_AEC_CONTROL_1,
+SND_SOC_DAPM_MUX("AEC Loopback", ARIZONA_DAC_AEC_CONTROL_1,
 		       ARIZONA_AEC_LOOPBACK_ENA_SHIFT, 0,
 		       &wm5110_aec_loopback_mux),
 
@@ -900,22 +905,28 @@ SND_SOC_DAPM_AIF_IN("AIF3RX2", NULL, 0,
 
 SND_SOC_DAPM_PGA_E("OUT1L", SND_SOC_NOPM,
 		   ARIZONA_OUT1L_ENA_SHIFT, 0, NULL, 0, arizona_hp_ev,
-		   SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMU),
+		   SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD |
+		   SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU),
 SND_SOC_DAPM_PGA_E("OUT1R", SND_SOC_NOPM,
 		   ARIZONA_OUT1R_ENA_SHIFT, 0, NULL, 0, arizona_hp_ev,
-		   SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMU),
+		   SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD |
+		   SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU),
 SND_SOC_DAPM_PGA_E("OUT2L", ARIZONA_OUTPUT_ENABLES_1,
 		   ARIZONA_OUT2L_ENA_SHIFT, 0, NULL, 0, arizona_out_ev,
-		   SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMU),
+		   SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD |
+		   SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU),
 SND_SOC_DAPM_PGA_E("OUT2R", ARIZONA_OUTPUT_ENABLES_1,
 		   ARIZONA_OUT2R_ENA_SHIFT, 0, NULL, 0, arizona_out_ev,
-		   SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMU),
+		   SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD |
+		   SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU),
 SND_SOC_DAPM_PGA_E("OUT3L", ARIZONA_OUTPUT_ENABLES_1,
 		   ARIZONA_OUT3L_ENA_SHIFT, 0, NULL, 0, arizona_out_ev,
-		   SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMU),
+		   SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD |
+		   SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU),
 SND_SOC_DAPM_PGA_E("OUT3R", ARIZONA_OUTPUT_ENABLES_1,
 		   ARIZONA_OUT3R_ENA_SHIFT, 0, NULL, 0, arizona_out_ev,
-		   SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMU),
+		   SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD |
+		   SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU),
 SND_SOC_DAPM_PGA_E("OUT5L", ARIZONA_OUTPUT_ENABLES_1,
 		   ARIZONA_OUT5L_ENA_SHIFT, 0, NULL, 0, arizona_out_ev,
 		   SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMU),
@@ -1480,6 +1491,7 @@ static struct snd_soc_dai_driver wm5110_dai[] = {
 		 },
 		.ops = &arizona_dai_ops,
 		.symmetric_rates = 1,
+		.symmetric_samplebits = 1,
 	},
 	{
 		.name = "wm5110-aif2",
@@ -1501,6 +1513,7 @@ static struct snd_soc_dai_driver wm5110_dai[] = {
 		 },
 		.ops = &arizona_dai_ops,
 		.symmetric_rates = 1,
+		.symmetric_samplebits = 1,
 	},
 	{
 		.name = "wm5110-aif3",
@@ -1522,6 +1535,7 @@ static struct snd_soc_dai_driver wm5110_dai[] = {
 		 },
 		.ops = &arizona_dai_ops,
 		.symmetric_rates = 1,
+		.symmetric_samplebits = 1,
 	},
 	{
 		.name = "wm5110-slim1",
@@ -1589,12 +1603,9 @@ static int wm5110_codec_probe(struct snd_soc_codec *codec)
 
 	priv->core.arizona->dapm = &codec->dapm;
 
-	ret = snd_soc_codec_set_cache_io(codec, priv->core.arizona->regmap);
-	if (ret != 0)
-		return ret;
-
 	arizona_init_spk(codec);
 	arizona_init_gpio(codec);
+	arizona_init_mono(codec);
 
 	ret = snd_soc_add_codec_controls(codec, wm_adsp2_fw_controls, 8);
 	if (ret != 0)
@@ -1633,9 +1644,17 @@ static unsigned int wm5110_digital_vu[] = {
 	ARIZONA_DAC_DIGITAL_VOLUME_6R,
 };
 
+static struct regmap *wm5110_get_regmap(struct device *dev)
+{
+	struct wm5110_priv *priv = dev_get_drvdata(dev);
+
+	return priv->core.arizona->regmap;
+}
+
 static struct snd_soc_codec_driver soc_codec_dev_wm5110 = {
 	.probe = wm5110_codec_probe,
 	.remove = wm5110_codec_remove,
+	.get_regmap = wm5110_get_regmap,
 
 	.idle_bias_off = true,
 
@@ -1725,7 +1744,6 @@ static int wm5110_remove(struct platform_device *pdev)
 static struct platform_driver wm5110_codec_driver = {
 	.driver = {
 		.name = "wm5110-codec",
-		.owner = THIS_MODULE,
 	},
 	.probe = wm5110_probe,
 	.remove = wm5110_remove,

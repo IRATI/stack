@@ -199,6 +199,14 @@ static int format_corename(struct core_name *cn, struct coredump_params *cprm)
 				err = cn_printf(cn, "%d",
 					      task_tgid_nr(current));
 				break;
+			case 'i':
+				err = cn_printf(cn, "%d",
+					      task_pid_vnr(current));
+				break;
+			case 'I':
+				err = cn_printf(cn, "%d",
+					      task_pid_nr(current));
+				break;
 			/* uid */
 			case 'u':
 				err = cn_printf(cn, "%d", cred->uid);
@@ -306,7 +314,7 @@ static int zap_threads(struct task_struct *tsk, struct mm_struct *mm,
 	if (unlikely(nr < 0))
 		return nr;
 
-	tsk->flags = PF_DUMPCORE;
+	tsk->flags |= PF_DUMPCORE;
 	if (atomic_read(&mm->mm_users) == nr + 1)
 		goto done;
 	/*
@@ -498,10 +506,10 @@ void do_coredump(const siginfo_t *siginfo)
 	const struct cred *old_cred;
 	struct cred *cred;
 	int retval = 0;
-	int flag = 0;
 	int ispipe;
 	struct files_struct *displaced;
-	bool need_nonrelative = false;
+	/* require nonrelative corefile path and be extra careful */
+	bool need_suid_safe = false;
 	bool core_dumped = false;
 	static atomic_t core_dump_count = ATOMIC_INIT(0);
 	struct coredump_params cprm = {
@@ -535,9 +543,8 @@ void do_coredump(const siginfo_t *siginfo)
 	 */
 	if (__get_dumpable(cprm.mm_flags) == SUID_DUMP_ROOT) {
 		/* Setuid core dump mode */
-		flag = O_EXCL;		/* Stop rewrite attacks */
 		cred->fsuid = GLOBAL_ROOT_UID;	/* Dump root private */
-		need_nonrelative = true;
+		need_suid_safe = true;
 	}
 
 	retval = coredump_wait(siginfo->si_signo, &core_state);
@@ -564,7 +571,7 @@ void do_coredump(const siginfo_t *siginfo)
 			 *
 			 * Normally core limits are irrelevant to pipes, since
 			 * we're not writing to the file system, but we use
-			 * cprm.limit of 1 here as a speacial value, this is a
+			 * cprm.limit of 1 here as a special value, this is a
 			 * consistent way to catch recursive crashes.
 			 * We can still crash if the core_pattern binary sets
 			 * RLIM_CORE = !1, but it runs as root, and can do
@@ -618,7 +625,7 @@ void do_coredump(const siginfo_t *siginfo)
 		if (cprm.limit < binfmt->min_coredump)
 			goto fail_unlock;
 
-		if (need_nonrelative && cn.corename[0] != '/') {
+		if (need_suid_safe && cn.corename[0] != '/') {
 			printk(KERN_WARNING "Pid %d(%s) can only dump core "\
 				"to fully qualified path!\n",
 				task_tgid_vnr(current), current->comm);
@@ -626,8 +633,35 @@ void do_coredump(const siginfo_t *siginfo)
 			goto fail_unlock;
 		}
 
+		/*
+		 * Unlink the file if it exists unless this is a SUID
+		 * binary - in that case, we're running around with root
+		 * privs and don't want to unlink another user's coredump.
+		 */
+		if (!need_suid_safe) {
+			mm_segment_t old_fs;
+
+			old_fs = get_fs();
+			set_fs(KERNEL_DS);
+			/*
+			 * If it doesn't exist, that's fine. If there's some
+			 * other problem, we'll catch it at the filp_open().
+			 */
+			(void) sys_unlink((const char __user *)cn.corename);
+			set_fs(old_fs);
+		}
+
+		/*
+		 * There is a race between unlinking and creating the
+		 * file, but if that causes an EEXIST here, that's
+		 * fine - another process raced with us while creating
+		 * the corefile, and the other process won. To userspace,
+		 * what matters is that at least one of the two processes
+		 * writes its coredump successfully, not which one.
+		 */
 		cprm.file = filp_open(cn.corename,
-				 O_CREAT | 2 | O_NOFOLLOW | O_LARGEFILE | flag,
+				 O_CREAT | 2 | O_NOFOLLOW |
+				 O_LARGEFILE | O_EXCL,
 				 0600);
 		if (IS_ERR(cprm.file))
 			goto fail_unlock;
@@ -644,12 +678,16 @@ void do_coredump(const siginfo_t *siginfo)
 		if (!S_ISREG(inode->i_mode))
 			goto close_fail;
 		/*
-		 * Dont allow local users get cute and trick others to coredump
-		 * into their pre-created files.
+		 * Don't dump core if the filesystem changed owner or mode
+		 * of the file during file creation. This is an issue when
+		 * a process dumps core while its cwd is e.g. on a vfat
+		 * filesystem.
 		 */
 		if (!uid_eq(inode->i_uid, current_fsuid()))
 			goto close_fail;
-		if (!cprm.file->f_op->write)
+		if ((inode->i_mode & 0677) != 0600)
+			goto close_fail;
+		if (!(cprm.file->f_mode & FMODE_CAN_WRITE))
 			goto close_fail;
 		if (do_truncate(cprm.file->f_path.dentry, 0, 0, cprm.file))
 			goto close_fail;

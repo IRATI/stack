@@ -19,51 +19,60 @@
  */
 
 #include <linux/string.h>
+#include <asm/uaccess.h>
 
 #include "vmpi-iovec.h"
 
 
 size_t
-iovec_to_buf(const struct iovec *iov, unsigned int iovcnt,
-             void *to, size_t len)
+iovec_to_buf(struct iovec **iov, unsigned int *iovcnt,
+             void *to, size_t tolen)
 {
         size_t copylen;
         size_t tot  = 0;
 
-        while (iovcnt && len) {
-                copylen = iov->iov_len;
-                if (len < copylen) {
-                        copylen = len;
+        while (*iovcnt && tolen) {
+                copylen = (*iov)->iov_len;
+                if (tolen < copylen) {
+                        copylen = tolen;
                 }
-                memcpy(to, iov->iov_base, copylen);
+                memcpy(to, (*iov)->iov_base, copylen);
                 tot += copylen;
-                len -= copylen;
+                tolen -= copylen;
                 to += copylen;
-                iovcnt--;
-                iov++;
+                (*iov)->iov_base += copylen;
+                (*iov)->iov_len -= copylen;
+                if ((*iov)->iov_len == 0) {
+                    (*iovcnt)--;
+                    (*iov)++;
+                }
         }
 
         return tot;
 }
 
 size_t
-iovec_from_buf(struct iovec *iov, unsigned int iovcnt,
-               void *from, size_t len)
+iovec_from_buf(struct iovec **iov, unsigned int *iovcnt,
+               const void *from, size_t fromlen)
 {
         size_t copylen;
         size_t tot  = 0;
 
-        while (iovcnt && len) {
-                copylen = iov->iov_len;
-                if (len < copylen) {
-                        copylen = len;
+        while (*iovcnt && fromlen) {
+                copylen = (*iov)->iov_len;
+                if (fromlen < copylen) {
+                        copylen = fromlen;
                 }
-                memcpy(iov->iov_base, from, copylen);
+                memcpy((*iov)->iov_base, from, copylen);
                 tot += copylen;
-                len -= copylen;
+                fromlen -= copylen;
                 from += copylen;
-                iovcnt--;
-                iov++;
+                (*iov)->iov_base += copylen;
+                (*iov)->iov_len -= copylen;
+                if ((*iov)->iov_len == 0) {
+                        (*iovcnt)--;
+                        (*iov)++;
+                }
         }
 
         return tot;

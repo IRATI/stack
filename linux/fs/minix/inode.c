@@ -267,12 +267,12 @@ static int minix_fill_super(struct super_block *s, void *data, int silent)
 	block = minix_blocks_needed(sbi->s_ninodes, s->s_blocksize);
 	if (sbi->s_imap_blocks < block) {
 		printk("MINIX-fs: file system does not have enough "
-				"imap blocks allocated.  Refusing to mount\n");
+				"imap blocks allocated.  Refusing to mount.\n");
 		goto out_no_bitmap;
 	}
 
 	block = minix_blocks_needed(
-			(sbi->s_nzones - (sbi->s_firstdatazone + 1)),
+			(sbi->s_nzones - sbi->s_firstdatazone + 1),
 			s->s_blocksize);
 	if (sbi->s_zmap_blocks < block) {
 		printk("MINIX-fs: file system does not have enough "
@@ -626,8 +626,8 @@ static int minix_write_inode(struct inode *inode, struct writeback_control *wbc)
 int minix_getattr(struct vfsmount *mnt, struct dentry *dentry, struct kstat *stat)
 {
 	struct super_block *sb = dentry->d_sb;
-	generic_fillattr(dentry->d_inode, stat);
-	if (INODE_VERSION(dentry->d_inode) == MINIX_V1)
+	generic_fillattr(d_inode(dentry), stat);
+	if (INODE_VERSION(d_inode(dentry)) == MINIX_V1)
 		stat->blocks = (BLOCK_SIZE / 512) * V1_minix_blocks(stat->size, sb);
 	else
 		stat->blocks = (sb->s_blocksize / 512) * V2_minix_blocks(stat->size, sb);

@@ -59,7 +59,7 @@ static unsigned short keymap_Lifebook_Tseries[KEYMAP_LEN] __initdata = {
 	KEY_RESERVED,
 	KEY_SCROLLDOWN,
 	KEY_SCROLLUP,
-	KEY_DIRECTION,
+	KEY_ROTATE_DISPLAY,
 	KEY_LEFTCTRL,
 	KEY_BRIGHTNESSUP,
 	KEY_BRIGHTNESSDOWN,
@@ -116,7 +116,7 @@ static unsigned short keymap_Lifebook_U810[KEYMAP_LEN] __initdata = {
 	KEY_RESERVED,
 	KEY_PROG1,
 	KEY_PROG2,
-	KEY_DIRECTION,
+	KEY_ROTATE_DISPLAY,
 	KEY_RESERVED,
 	KEY_RESERVED,
 	KEY_RESERVED,
@@ -153,7 +153,7 @@ static unsigned short keymap_Stylistic_ST5xxx[KEYMAP_LEN] __initdata = {
 	KEY_RESERVED,
 	KEY_RESERVED,
 	KEY_MAIL,
-	KEY_DIRECTION,
+	KEY_ROTATE_DISPLAY,
 	KEY_ESC,
 	KEY_ENTER,
 	KEY_BRIGHTNESSUP,
@@ -315,21 +315,21 @@ static irqreturn_t fujitsu_interrupt(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static void fujitsu_dmi_common(const struct dmi_system_id *dmi)
+static void __init fujitsu_dmi_common(const struct dmi_system_id *dmi)
 {
 	pr_info("%s\n", dmi->ident);
 	memcpy(fujitsu.config.keymap, dmi->driver_data,
 			sizeof(fujitsu.config.keymap));
 }
 
-static int fujitsu_dmi_lifebook(const struct dmi_system_id *dmi)
+static int __init fujitsu_dmi_lifebook(const struct dmi_system_id *dmi)
 {
 	fujitsu_dmi_common(dmi);
 	fujitsu.config.quirks |= INVERT_TABLET_MODE_BIT;
 	return 1;
 }
 
-static int fujitsu_dmi_stylistic(const struct dmi_system_id *dmi)
+static int __init fujitsu_dmi_stylistic(const struct dmi_system_id *dmi)
 {
 	fujitsu_dmi_common(dmi);
 	fujitsu.config.quirks |= FORCE_TABLET_MODE_IF_UNDOCK;

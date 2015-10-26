@@ -53,8 +53,7 @@ static irqreturn_t pwrkey_release_irq(int irq, void *_pwr)
 	return IRQ_HANDLED;
 }
 
-#ifdef CONFIG_PM_SLEEP
-static int pmic8xxx_pwrkey_suspend(struct device *dev)
+static int __maybe_unused pmic8xxx_pwrkey_suspend(struct device *dev)
 {
 	struct pmic8xxx_pwrkey *pwrkey = dev_get_drvdata(dev);
 
@@ -64,7 +63,7 @@ static int pmic8xxx_pwrkey_suspend(struct device *dev)
 	return 0;
 }
 
-static int pmic8xxx_pwrkey_resume(struct device *dev)
+static int __maybe_unused pmic8xxx_pwrkey_resume(struct device *dev)
 {
 	struct pmic8xxx_pwrkey *pwrkey = dev_get_drvdata(dev);
 
@@ -73,7 +72,6 @@ static int pmic8xxx_pwrkey_resume(struct device *dev)
 
 	return 0;
 }
-#endif
 
 static SIMPLE_DEV_PM_OPS(pm8xxx_pwr_key_pm_ops,
 		pmic8xxx_pwrkey_suspend, pmic8xxx_pwrkey_resume);
@@ -92,14 +90,14 @@ static int pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 	bool pull_up;
 
 	if (of_property_read_u32(pdev->dev.of_node, "debounce", &kpd_delay))
-		kpd_delay = 0;
+		kpd_delay = 15625;
 
-	pull_up = of_property_read_bool(pdev->dev.of_node, "pull-up");
-
-	if (kpd_delay > 62500) {
+	if (kpd_delay > 62500 || kpd_delay == 0) {
 		dev_err(&pdev->dev, "invalid power key trigger delay\n");
 		return -EINVAL;
 	}
+
+	pull_up = of_property_read_bool(pdev->dev.of_node, "pull-up");
 
 	regmap = dev_get_regmap(pdev->dev.parent, NULL);
 	if (!regmap) {
@@ -195,7 +193,6 @@ static struct platform_driver pmic8xxx_pwrkey_driver = {
 	.remove		= pmic8xxx_pwrkey_remove,
 	.driver		= {
 		.name	= "pm8xxx-pwrkey",
-		.owner	= THIS_MODULE,
 		.pm	= &pm8xxx_pwr_key_pm_ops,
 		.of_match_table = pm8xxx_pwr_key_id_table,
 	},

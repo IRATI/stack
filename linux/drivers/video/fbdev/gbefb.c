@@ -54,7 +54,8 @@ struct gbefb_par {
 #endif
 #endif
 #ifdef CONFIG_X86
-#define pgprot_fb(_prot) ((_prot) | _PAGE_PCD)
+#define pgprot_fb(_prot) (((_prot) & ~_PAGE_CACHE_MASK) |	\
+			  cachemode2protval(_PAGE_CACHE_MODE_UC_MINUS))
 #endif
 
 /*
@@ -1068,7 +1069,7 @@ static struct fb_ops gbefb_ops = {
 
 static ssize_t gbefb_show_memsize(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	return snprintf(buf, PAGE_SIZE, "%d\n", gbe_mem_size);
+	return snprintf(buf, PAGE_SIZE, "%u\n", gbe_mem_size);
 }
 
 static DEVICE_ATTR(size, S_IRUGO, gbefb_show_memsize, NULL);

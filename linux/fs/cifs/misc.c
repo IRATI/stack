@@ -226,6 +226,15 @@ cifs_small_buf_release(void *buf_to_free)
 	return;
 }
 
+void
+free_rsp_buf(int resp_buftype, void *rsp)
+{
+	if (resp_buftype == CIFS_SMALL_BUFFER)
+		cifs_small_buf_release(rsp);
+	else if (resp_buftype == CIFS_LARGE_BUFFER)
+		cifs_buf_release(rsp);
+}
+
 /* NB: MID can not be set if treeCon not passed in, in that
    case it is responsbility of caller to set the mid */
 void
@@ -414,7 +423,7 @@ is_valid_oplock_break(char *buffer, struct TCP_Server_Info *srv)
 			return true;
 		}
 		if (pSMBr->hdr.Status.CifsError) {
-			cifs_dbg(FYI, "notify err 0x%d\n",
+			cifs_dbg(FYI, "notify err 0x%x\n",
 				 pSMBr->hdr.Status.CifsError);
 			return true;
 		}
@@ -441,7 +450,7 @@ is_valid_oplock_break(char *buffer, struct TCP_Server_Info *srv)
 	if (pSMB->hdr.WordCount != 8)
 		return false;
 
-	cifs_dbg(FYI, "oplock type 0x%d level 0x%d\n",
+	cifs_dbg(FYI, "oplock type 0x%x level 0x%x\n",
 		 pSMB->LockType, pSMB->OplockLevel);
 	if (!(pSMB->LockType & LOCKING_ANDX_OPLOCK_RELEASE))
 		return false;
@@ -464,7 +473,7 @@ is_valid_oplock_break(char *buffer, struct TCP_Server_Info *srv)
 					continue;
 
 				cifs_dbg(FYI, "file id match, oplock break\n");
-				pCifsInode = CIFS_I(netfile->dentry->d_inode);
+				pCifsInode = CIFS_I(d_inode(netfile->dentry));
 
 				set_bit(CIFS_INODE_PENDING_OPLOCK_BREAK,
 					&pCifsInode->flags);
@@ -504,39 +513,11 @@ is_valid_oplock_break(char *buffer, struct TCP_Server_Info *srv)
 void
 dump_smb(void *buf, int smb_buf_length)
 {
-	int i, j;
-	char debug_line[17];
-	unsigned char *buffer = buf;
-
 	if (traceSMB == 0)
 		return;
 
-	for (i = 0, j = 0; i < smb_buf_length; i++, j++) {
-		if (i % 8 == 0) {
-			/* have reached the beginning of line */
-			printk(KERN_DEBUG "| ");
-			j = 0;
-		}
-		printk("%0#4x ", buffer[i]);
-		debug_line[2 * j] = ' ';
-		if (isprint(buffer[i]))
-			debug_line[1 + (2 * j)] = buffer[i];
-		else
-			debug_line[1 + (2 * j)] = '_';
-
-		if (i % 8 == 7) {
-			/* reached end of line, time to print ascii */
-			debug_line[16] = 0;
-			printk(" | %s\n", debug_line);
-		}
-	}
-	for (; j < 8; j++) {
-		printk("     ");
-		debug_line[2 * j] = ' ';
-		debug_line[1 + (2 * j)] = ' ';
-	}
-	printk(" | %s\n", debug_line);
-	return;
+	print_hex_dump(KERN_DEBUG, "", DUMP_PREFIX_NONE, 8, 2, buf,
+		       smb_buf_length, true);
 }
 
 void
@@ -565,13 +546,6 @@ void cifs_set_oplock_level(struct cifsInodeInfo *cinode, __u32 oplock)
 		cinode->oplock = 0;
 }
 
-static int
-cifs_oplock_break_wait(void *unused)
-{
-	schedule();
-	return signal_pending(current) ? -ERESTARTSYS : 0;
-}
-
 /*
  * We wait for oplock breaks to be processed before we attempt to perform
  * writes.
@@ -582,7 +556,7 @@ int cifs_get_writer(struct cifsInodeInfo *cinode)
 
 start:
 	rc = wait_on_bit(&cinode->flags, CIFS_INODE_PENDING_OPLOCK_BREAK,
-				   cifs_oplock_break_wait, TASK_KILLABLE);
+			 TASK_KILLABLE);
 	if (rc)
 		return rc;
 

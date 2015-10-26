@@ -554,7 +554,7 @@ no_irqs:
 
 	platform_set_drvdata(pdev, priv);
 
-	if (pdata && pdata->setup) {
+	if (pdata->setup) {
 		int status;
 
 		status = pdata->setup(&pdev->dev, priv->gpio_chip.base,
@@ -583,9 +583,7 @@ static int gpio_twl4030_remove(struct platform_device *pdev)
 		}
 	}
 
-	status = gpiochip_remove(&priv->gpio_chip);
-	if (status < 0)
-		return status;
+	gpiochip_remove(&priv->gpio_chip);
 
 	if (is_module())
 		return 0;
@@ -607,7 +605,6 @@ MODULE_ALIAS("platform:twl4030_gpio");
 static struct platform_driver gpio_twl4030_driver = {
 	.driver = {
 		.name	= "twl4030_gpio",
-		.owner	= THIS_MODULE,
 		.of_match_table = twl_gpio_match,
 	},
 	.probe		= gpio_twl4030_probe,

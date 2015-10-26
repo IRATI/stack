@@ -84,7 +84,7 @@ static unsigned int iio_event_poll(struct file *filep,
 	unsigned int events = 0;
 
 	if (!indio_dev->info)
-		return -ENODEV;
+		return events;
 
 	poll_wait(filep, &ev_int->wait, wait);
 
@@ -197,6 +197,7 @@ static const char * const iio_ev_type_text[] = {
 	[IIO_EV_TYPE_ROC] = "roc",
 	[IIO_EV_TYPE_THRESH_ADAPTIVE] = "thresh_adaptive",
 	[IIO_EV_TYPE_MAG_ADAPTIVE] = "mag_adaptive",
+	[IIO_EV_TYPE_CHANGE] = "change",
 };
 
 static const char * const iio_ev_dir_text[] = {
@@ -209,6 +210,7 @@ static const char * const iio_ev_info_text[] = {
 	[IIO_EV_INFO_ENABLE] = "en",
 	[IIO_EV_INFO_VALUE] = "value",
 	[IIO_EV_INFO_HYSTERESIS] = "hysteresis",
+	[IIO_EV_INFO_PERIOD] = "period",
 };
 
 static enum iio_event_direction iio_ev_attr_dir(struct iio_dev_attr *attr)
@@ -270,7 +272,7 @@ static ssize_t iio_ev_value_show(struct device *dev,
 {
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
-	int val, val2;
+	int val, val2, val_arr[2];
 	int ret;
 
 	ret = indio_dev->info->read_event_value(indio_dev,
@@ -279,7 +281,9 @@ static ssize_t iio_ev_value_show(struct device *dev,
 		&val, &val2);
 	if (ret < 0)
 		return ret;
-	return iio_format_value(buf, ret, val, val2);
+	val_arr[0] = val;
+	val_arr[1] = val2;
+	return iio_format_value(buf, ret, 2, val_arr);
 }
 
 static ssize_t iio_ev_value_store(struct device *dev,
@@ -321,10 +325,18 @@ static int iio_device_add_event(struct iio_dev *indio_dev,
 	char *postfix;
 	int ret;
 
-	for_each_set_bit(i, mask, sizeof(*mask)) {
-		postfix = kasprintf(GFP_KERNEL, "%s_%s_%s",
-				iio_ev_type_text[type], iio_ev_dir_text[dir],
-				iio_ev_info_text[i]);
+	for_each_set_bit(i, mask, sizeof(*mask)*8) {
+		if (i >= ARRAY_SIZE(iio_ev_info_text))
+			return -EINVAL;
+		if (dir != IIO_EV_DIR_NONE)
+			postfix = kasprintf(GFP_KERNEL, "%s_%s_%s",
+					iio_ev_type_text[type],
+					iio_ev_dir_text[dir],
+					iio_ev_info_text[i]);
+		else
+			postfix = kasprintf(GFP_KERNEL, "%s_%s",
+					iio_ev_type_text[type],
+					iio_ev_info_text[i]);
 		if (postfix == NULL)
 			return -ENOMEM;
 
@@ -340,6 +352,9 @@ static int iio_device_add_event(struct iio_dev *indio_dev,
 			 (i << 16) | spec_index, shared_by, &indio_dev->dev,
 			&indio_dev->event_interface->dev_attr_list);
 		kfree(postfix);
+
+		if ((ret == -EBUSY) && (shared_by != IIO_SEPARATE))
+			continue;
 
 		if (ret)
 			return ret;
@@ -396,7 +411,7 @@ static inline int __iio_add_event_config_attrs(struct iio_dev *indio_dev)
 {
 	int j, ret, attrcount = 0;
 
-	/* Dynically created from the channels array */
+	/* Dynamically created from the channels array */
 	for (j = 0; j < indio_dev->num_channels; j++) {
 		ret = iio_device_add_event_sysfs(indio_dev,
 						 &indio_dev->channels[j]);
@@ -485,6 +500,7 @@ int iio_device_register_eventset(struct iio_dev *indio_dev)
 error_free_setup_event_lines:
 	iio_free_chan_devattr_list(&indio_dev->event_interface->dev_attr_list);
 	kfree(indio_dev->event_interface);
+	indio_dev->event_interface = NULL;
 	return ret;
 }
 

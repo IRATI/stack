@@ -14,8 +14,12 @@ typedef struct {
 	unsigned long asce_bits;
 	unsigned long asce_limit;
 	unsigned long vdso_base;
-	/* The mmu context has extended page tables. */
+	/* The mmu context allocates 4K page tables. */
+	unsigned int alloc_pgste:1;
+	/* The mmu context uses extended page tables. */
 	unsigned int has_pgste:1;
+	/* The mmu context uses storage keys. */
+	unsigned int use_skey:1;
 } mm_context_t;
 
 #define INIT_MM_CONTEXT(name)						      \

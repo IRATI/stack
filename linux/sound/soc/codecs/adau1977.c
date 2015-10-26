@@ -938,22 +938,15 @@ int adau1977_probe(struct device *dev, struct regmap *regmap,
 		adau1977->dvdd_reg = NULL;
 	}
 
-	adau1977->reset_gpio = devm_gpiod_get(dev, "reset");
-	if (IS_ERR(adau1977->reset_gpio)) {
-		ret = PTR_ERR(adau1977->reset_gpio);
-		if (ret != -ENOENT && ret != -ENOSYS)
-			return PTR_ERR(adau1977->reset_gpio);
-		adau1977->reset_gpio = NULL;
-	}
+	adau1977->reset_gpio = devm_gpiod_get_optional(dev, "reset",
+						       GPIOD_OUT_LOW);
+	if (IS_ERR(adau1977->reset_gpio))
+		return PTR_ERR(adau1977->reset_gpio);
 
 	dev_set_drvdata(dev, adau1977);
 
-	if (adau1977->reset_gpio) {
-		ret = gpiod_direction_output(adau1977->reset_gpio, 0);
-		if (ret)
-			return ret;
+	if (adau1977->reset_gpio)
 		ndelay(100);
-	}
 
 	ret = adau1977_power_enable(adau1977);
 	if (ret)
@@ -968,7 +961,7 @@ int adau1977_probe(struct device *dev, struct regmap *regmap,
 	if (adau1977->dvdd_reg)
 		power_off_mask = ~0;
 	else
-		power_off_mask = ~ADAU1977_BLOCK_POWER_SAI_LDO_EN;
+		power_off_mask = (unsigned int)~ADAU1977_BLOCK_POWER_SAI_LDO_EN;
 
 	ret = regmap_update_bits(adau1977->regmap, ADAU1977_REG_BLOCK_POWER_SAI,
 				power_off_mask, 0x00);

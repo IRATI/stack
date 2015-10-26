@@ -19,7 +19,6 @@
  ******************************************************************************/
 #define _XMIT_OSDEP_C_
 
-#include <linux/version.h>
 #include <osdep_service.h>
 #include <drv_types.h>
 
@@ -27,7 +26,6 @@
 #include <mlme_osdep.h>
 #include <xmit_osdep.h>
 #include <osdep_intf.h>
-#include <usb_osintf.h>
 
 uint rtw_remainder_len(struct pkt_file *pfile)
 {
@@ -48,7 +46,7 @@ void _rtw_open_pktfile(struct sk_buff *pktptr, struct pkt_file *pfile)
 
 }
 
-uint _rtw_pktfile_read (struct pkt_file *pfile, u8 *rmem, uint rlen)
+uint _rtw_pktfile_read(struct pkt_file *pfile, u8 *rmem, uint rlen)
 {
 	uint	len = 0;
 
@@ -68,24 +66,14 @@ uint _rtw_pktfile_read (struct pkt_file *pfile, u8 *rmem, uint rlen)
 
 int rtw_endofpktfile(struct pkt_file *pfile)
 {
-
-	if (pfile->pkt_len == 0) {
-		return true;
-	}
-
-
-	return false;
-}
-
-void rtw_set_tx_chksum_offload(struct sk_buff *pkt, struct pkt_attrib *pattrib)
-{
+	return pfile->pkt_len == 0;
 }
 
 int rtw_os_xmit_resource_alloc(struct adapter *padapter, struct xmit_buf *pxmitbuf, u32 alloc_sz)
 {
 	int i;
 
-	pxmitbuf->pallocated_buf = rtw_zmalloc(alloc_sz);
+	pxmitbuf->pallocated_buf = kzalloc(alloc_sz, GFP_KERNEL);
 	if (pxmitbuf->pallocated_buf == NULL)
 		return _FAIL;
 
@@ -117,7 +105,6 @@ void rtw_os_xmit_resource_free(struct adapter *padapter,
 
 void rtw_os_pkt_complete(struct adapter *padapter, struct sk_buff *pkt)
 {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 35))
 	u16	queue;
 	struct xmit_priv *pxmitpriv = &padapter->xmitpriv;
 
@@ -130,10 +117,6 @@ void rtw_os_pkt_complete(struct adapter *padapter, struct sk_buff *pkt)
 		if (__netif_subqueue_stopped(padapter->pnetdev, queue))
 			netif_wake_subqueue(padapter->pnetdev, queue);
 	}
-#else
-	if (netif_queue_stopped(padapter->pnetdev))
-		netif_wake_queue(padapter->pnetdev);
-#endif
 
 	dev_kfree_skb_any(pkt);
 }
@@ -194,7 +177,7 @@ static int rtw_mlcst2unicst(struct adapter *padapter, struct sk_buff *skb)
 	plist = phead->next;
 
 	/* free sta asoc_queue */
-	while (!rtw_end_of_queue_search(phead, plist)) {
+	while (phead != plist) {
 		psta = container_of(plist, struct sta_info, asoc_list);
 
 		plist = plist->next;

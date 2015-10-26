@@ -57,12 +57,28 @@ static u32 rsnd_adg_ssi_ws_timing_gen2(struct rsnd_dai_stream *io)
 	return (0x6 + ws) << 8;
 }
 
-static int rsnd_adg_set_src_timsel_gen2(struct rsnd_dai *rdai,
-					struct rsnd_mod *mod,
+int rsnd_adg_set_cmd_timsel_gen2(struct rsnd_mod *mod,
+				 struct rsnd_dai_stream *io)
+{
+	int id = rsnd_mod_id(mod);
+	int shift = (id % 2) ? 16 : 0;
+	u32 mask, val;
+
+	val = rsnd_adg_ssi_ws_timing_gen2(io);
+
+	val  = val	<< shift;
+	mask = 0xffff	<< shift;
+
+	rsnd_mod_bset(mod, CMDOUT_TIMSEL, mask, val);
+
+	return 0;
+}
+
+static int rsnd_adg_set_src_timsel_gen2(struct rsnd_mod *mod,
 					struct rsnd_dai_stream *io,
 					u32 timsel)
 {
-	int is_play = rsnd_dai_is_play(rdai, io);
+	int is_play = rsnd_io_is_play(io);
 	int id = rsnd_mod_id(mod);
 	int shift = (id % 2) ? 16 : 0;
 	u32 mask, ws;
@@ -104,7 +120,6 @@ static int rsnd_adg_set_src_timsel_gen2(struct rsnd_dai *rdai,
 }
 
 int rsnd_adg_set_convert_clk_gen2(struct rsnd_mod *mod,
-				  struct rsnd_dai *rdai,
 				  struct rsnd_dai_stream *io,
 				  unsigned int src_rate,
 				  unsigned int dst_rate)
@@ -160,7 +175,7 @@ int rsnd_adg_set_convert_clk_gen2(struct rsnd_mod *mod,
 		return -EIO;
 	}
 
-	ret = rsnd_adg_set_src_timsel_gen2(rdai, mod, io, val);
+	ret = rsnd_adg_set_src_timsel_gen2(mod, io, val);
 	if (ret < 0) {
 		dev_err(dev, "timsel error\n");
 		return ret;
@@ -168,16 +183,17 @@ int rsnd_adg_set_convert_clk_gen2(struct rsnd_mod *mod,
 
 	rsnd_mod_bset(mod, DIV_EN, en, en);
 
+	dev_dbg(dev, "convert rate %d <-> %d\n", src_rate, dst_rate);
+
 	return 0;
 }
 
 int rsnd_adg_set_convert_timing_gen2(struct rsnd_mod *mod,
-				     struct rsnd_dai *rdai,
 				     struct rsnd_dai_stream *io)
 {
 	u32 val = rsnd_adg_ssi_ws_timing_gen2(io);
 
-	return rsnd_adg_set_src_timsel_gen2(rdai, mod, io, val);
+	return rsnd_adg_set_src_timsel_gen2(mod, io, val);
 }
 
 int rsnd_adg_set_convert_clk_gen1(struct rsnd_priv *priv,
@@ -397,9 +413,8 @@ int rsnd_adg_probe(struct platform_device *pdev,
 {
 	struct rsnd_adg *adg;
 	struct device *dev = rsnd_priv_to_dev(priv);
-	struct clk *clk, *clk_orig;
+	struct clk *clk;
 	int i;
-	bool use_old_style = false;
 
 	adg = devm_kzalloc(dev, sizeof(*adg), GFP_KERNEL);
 	if (!adg) {
@@ -407,51 +422,17 @@ int rsnd_adg_probe(struct platform_device *pdev,
 		return -ENOMEM;
 	}
 
-	clk_orig	= devm_clk_get(dev, NULL);
 	adg->clk[CLKA]	= devm_clk_get(dev, "clk_a");
 	adg->clk[CLKB]	= devm_clk_get(dev, "clk_b");
 	adg->clk[CLKC]	= devm_clk_get(dev, "clk_c");
 	adg->clk[CLKI]	= devm_clk_get(dev, "clk_i");
 
-	/*
-	 * It request device dependent audio clock.
-	 * But above all clks will indicate rsnd module clock
-	 * if platform doesn't it
-	 */
-	for_each_rsnd_clk(clk, adg, i) {
-		if (clk_orig == clk) {
-			dev_warn(dev,
-				 "doesn't have device dependent clock, use independent clock\n");
-			use_old_style = true;
-			break;
-		}
-	}
-
-	/*
-	 * note:
-	 * these exist in order to keep compatible with
-	 * platform which has device independent audio clock,
-	 * but will be removed soon
-	 */
-	if (use_old_style) {
-		adg->clk[CLKA] = devm_clk_get(NULL, "audio_clk_a");
-		adg->clk[CLKB] = devm_clk_get(NULL, "audio_clk_b");
-		adg->clk[CLKC] = devm_clk_get(NULL, "audio_clk_c");
-		adg->clk[CLKI] = devm_clk_get(NULL, "audio_clk_internal");
-	}
-
-	for_each_rsnd_clk(clk, adg, i) {
-		if (IS_ERR(clk)) {
-			dev_err(dev, "Audio clock failed\n");
-			return -EIO;
-		}
-	}
+	for_each_rsnd_clk(clk, adg, i)
+		dev_dbg(dev, "clk %d : %p : %ld\n", i, clk, clk_get_rate(clk));
 
 	rsnd_adg_ssi_clk_init(priv, adg);
 
 	priv->adg = adg;
-
-	dev_dbg(dev, "adg probed\n");
 
 	return 0;
 }

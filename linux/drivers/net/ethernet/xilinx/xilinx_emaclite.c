@@ -695,14 +695,14 @@ static irqreturn_t xemaclite_interrupt(int irq, void *dev_id)
 
 static int xemaclite_mdio_wait(struct net_local *lp)
 {
-	long end = jiffies + 2;
+	unsigned long end = jiffies + 2;
 
 	/* wait for the MDIO interface to not be busy or timeout
 	   after some time.
 	*/
 	while (__raw_readl(lp->base_addr + XEL_MDIOCTRL_OFFSET) &
 			XEL_MDIOCTRL_MDIOSTS_MASK) {
-		if (end - jiffies <= 0) {
+		if (time_before_eq(end, jiffies)) {
 			WARN_ON(1);
 			return -ETIMEDOUT;
 		}
@@ -1062,7 +1062,7 @@ static bool get_bool(struct platform_device *ofdev, const char *s)
 	} else {
 		dev_warn(&ofdev->dev, "Parameter %s not found,"
 			"defaulting to false\n", s);
-		return 0;
+		return false;
 	}
 }
 
@@ -1109,6 +1109,7 @@ static int xemaclite_of_probe(struct platform_device *ofdev)
 	res = platform_get_resource(ofdev, IORESOURCE_IRQ, 0);
 	if (!res) {
 		dev_err(dev, "no IRQ found\n");
+		rc = -ENXIO;
 		goto error;
 	}
 
@@ -1200,8 +1201,7 @@ static int xemaclite_of_remove(struct platform_device *of_dev)
 
 	unregister_netdev(ndev);
 
-	if (lp->phy_node)
-		of_node_put(lp->phy_node);
+	of_node_put(lp->phy_node);
 	lp->phy_node = NULL;
 
 	xemaclite_remove_ndev(ndev);
@@ -1231,7 +1231,7 @@ static struct net_device_ops xemaclite_netdev_ops = {
 };
 
 /* Match table for OF platform binding */
-static struct of_device_id xemaclite_of_match[] = {
+static const struct of_device_id xemaclite_of_match[] = {
 	{ .compatible = "xlnx,opb-ethernetlite-1.01.a", },
 	{ .compatible = "xlnx,opb-ethernetlite-1.01.b", },
 	{ .compatible = "xlnx,xps-ethernetlite-1.00.a", },
@@ -1245,7 +1245,6 @@ MODULE_DEVICE_TABLE(of, xemaclite_of_match);
 static struct platform_driver xemaclite_of_driver = {
 	.driver = {
 		.name = DRIVER_NAME,
-		.owner = THIS_MODULE,
 		.of_match_table = xemaclite_of_match,
 	},
 	.probe		= xemaclite_of_probe,

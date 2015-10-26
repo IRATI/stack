@@ -37,9 +37,10 @@
 #define DEBUG_SUBSYSTEM S_CLASS
 
 #include <linux/seq_file.h>
-#include <asm/statfs.h>
-#include <lprocfs_status.h>
-#include <obd_class.h>
+#include <linux/statfs.h>
+#include "../include/lprocfs_status.h"
+#include "../include/obd_class.h"
+#include "lmv_internal.h"
 
 static int lmv_numobd_seq_show(struct seq_file *m, void *v)
 {
@@ -48,7 +49,8 @@ static int lmv_numobd_seq_show(struct seq_file *m, void *v)
 
 	LASSERT(dev != NULL);
 	desc = &dev->u.lmv.desc;
-	return seq_printf(m, "%u\n", desc->ld_tgt_count);
+	seq_printf(m, "%u\n", desc->ld_tgt_count);
+	return 0;
 }
 LPROC_SEQ_FOPS_RO(lmv_numobd);
 
@@ -58,7 +60,7 @@ static const char *placement_name[] = {
 	[PLACEMENT_INVAL_POLICY]  = "INVAL"
 };
 
-static placement_policy_t placement_name2policy(char *name, int len)
+static enum placement_policy placement_name2policy(char *name, int len)
 {
 	int		     i;
 
@@ -69,7 +71,7 @@ static placement_policy_t placement_name2policy(char *name, int len)
 	return PLACEMENT_INVAL_POLICY;
 }
 
-static const char *placement_policy2name(placement_policy_t placement)
+static const char *placement_policy2name(enum placement_policy placement)
 {
 	LASSERT(placement < PLACEMENT_MAX_POLICY);
 	return placement_name[placement];
@@ -82,7 +84,8 @@ static int lmv_placement_seq_show(struct seq_file *m, void *v)
 
 	LASSERT(dev != NULL);
 	lmv = &dev->u.lmv;
-	return seq_printf(m, "%s\n", placement_policy2name(lmv->lmv_placement));
+	seq_printf(m, "%s\n", placement_policy2name(lmv->lmv_placement));
+	return 0;
 }
 
 #define MAX_POLICY_STRING_SIZE 64
@@ -94,7 +97,7 @@ static ssize_t lmv_placement_seq_write(struct file *file,
 	struct obd_device *dev = ((struct seq_file *)file->private_data)->private;
 	char		     dummy[MAX_POLICY_STRING_SIZE + 1];
 	int		      len = count;
-	placement_policy_t       policy;
+	enum placement_policy       policy;
 	struct lmv_obd	  *lmv;
 
 	if (copy_from_user(dummy, buffer, MAX_POLICY_STRING_SIZE))
@@ -130,7 +133,8 @@ static int lmv_activeobd_seq_show(struct seq_file *m, void *v)
 
 	LASSERT(dev != NULL);
 	desc = &dev->u.lmv.desc;
-	return seq_printf(m, "%u\n", desc->ld_active_tgt_count);
+	seq_printf(m, "%u\n", desc->ld_active_tgt_count);
+	return 0;
 }
 LPROC_SEQ_FOPS_RO(lmv_activeobd);
 
@@ -141,7 +145,8 @@ static int lmv_desc_uuid_seq_show(struct seq_file *m, void *v)
 
 	LASSERT(dev != NULL);
 	lmv = &dev->u.lmv;
-	return seq_printf(m, "%s\n", lmv->desc.ld_uuid.uuid);
+	seq_printf(m, "%s\n", lmv->desc.ld_uuid.uuid);
+	return 0;
 }
 LPROC_SEQ_FOPS_RO(lmv_desc_uuid);
 
@@ -171,11 +176,13 @@ static int lmv_tgt_seq_show(struct seq_file *p, void *v)
 
 	if (tgt == NULL)
 		return 0;
-	return seq_printf(p, "%d: %s %sACTIVE\n", tgt->ltd_idx,
-			  tgt->ltd_uuid.uuid, tgt->ltd_active ? "" : "IN");
+	seq_printf(p, "%d: %s %sACTIVE\n",
+		   tgt->ltd_idx, tgt->ltd_uuid.uuid,
+		   tgt->ltd_active ? "" : "IN");
+	return 0;
 }
 
-struct seq_operations lmv_tgt_sops = {
+static struct seq_operations lmv_tgt_sops = {
 	.start		 = lmv_tgt_seq_start,
 	.stop		  = lmv_tgt_seq_stop,
 	.next		  = lmv_tgt_seq_next,
@@ -199,20 +206,20 @@ static int lmv_target_seq_open(struct inode *inode, struct file *file)
 
 LPROC_SEQ_FOPS_RO_TYPE(lmv, uuid);
 
-struct lprocfs_vars lprocfs_lmv_obd_vars[] = {
-	{ "numobd",	  &lmv_numobd_fops,	  0, 0 },
-	{ "placement",	  &lmv_placement_fops,    0, 0 },
-	{ "activeobd",	  &lmv_activeobd_fops,    0, 0 },
-	{ "uuid",	  &lmv_uuid_fops,	  0, 0 },
-	{ "desc_uuid",	  &lmv_desc_uuid_fops,    0, 0 },
-	{ 0 }
+static struct lprocfs_vars lprocfs_lmv_obd_vars[] = {
+	{ "numobd",	  &lmv_numobd_fops,	  NULL, 0 },
+	{ "placement",	  &lmv_placement_fops,    NULL, 0 },
+	{ "activeobd",	  &lmv_activeobd_fops,    NULL, 0 },
+	{ "uuid",	  &lmv_uuid_fops,	  NULL, 0 },
+	{ "desc_uuid",	  &lmv_desc_uuid_fops,    NULL, 0 },
+	{ NULL }
 };
 
 LPROC_SEQ_FOPS_RO_TYPE(lmv, numrefs);
 
 static struct lprocfs_vars lprocfs_lmv_module_vars[] = {
-	{ "num_refs",	   &lmv_numrefs_fops, 0, 0 },
-	{ 0 }
+	{ "num_refs",	   &lmv_numrefs_fops, NULL, 0 },
+	{ NULL }
 };
 
 struct file_operations lmv_proc_target_fops = {

@@ -29,7 +29,7 @@ static int polling_pipe = 1;
 module_param(polling_pipe, int, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(polling_pipe, "polling pipe (0: ctl, 1: bulk)");
 
-static struct mfd_cell rtsx_usb_cells[] = {
+static const struct mfd_cell rtsx_usb_cells[] = {
 	[RTSX_USB_SD_CARD] = {
 		.name = "rtsx_usb_sdmmc",
 		.pdata_size = 0,
@@ -67,7 +67,7 @@ static int rtsx_usb_bulk_transfer_sglist(struct rtsx_ucr *ucr,
 	ucr->sg_timer.expires = jiffies + msecs_to_jiffies(timeout);
 	add_timer(&ucr->sg_timer);
 	usb_sg_wait(&ucr->current_sg);
-	del_timer(&ucr->sg_timer);
+	del_timer_sync(&ucr->sg_timer);
 
 	if (act_len)
 		*act_len = ucr->current_sg.bytes;
@@ -196,18 +196,27 @@ EXPORT_SYMBOL_GPL(rtsx_usb_ep0_write_register);
 int rtsx_usb_ep0_read_register(struct rtsx_ucr *ucr, u16 addr, u8 *data)
 {
 	u16 value;
+	u8 *buf;
+	int ret;
 
 	if (!data)
 		return -EINVAL;
-	*data = 0;
+
+	buf = kzalloc(sizeof(u8), GFP_KERNEL);
+	if (!buf)
+		return -ENOMEM;
 
 	addr |= EP0_READ_REG_CMD << EP0_OP_SHIFT;
 	value = swab16(addr);
 
-	return usb_control_msg(ucr->pusb_dev,
+	ret = usb_control_msg(ucr->pusb_dev,
 			usb_rcvctrlpipe(ucr->pusb_dev, 0), RTSX_USB_REQ_REG_OP,
 			USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-			value, 0, data, 1, 100);
+			value, 0, buf, 1, 100);
+	*data = *buf;
+
+	kfree(buf);
+	return ret;
 }
 EXPORT_SYMBOL_GPL(rtsx_usb_ep0_read_register);
 
@@ -288,18 +297,27 @@ static int rtsx_usb_get_status_with_bulk(struct rtsx_ucr *ucr, u16 *status)
 int rtsx_usb_get_card_status(struct rtsx_ucr *ucr, u16 *status)
 {
 	int ret;
+	u16 *buf;
 
 	if (!status)
 		return -EINVAL;
 
-	if (polling_pipe == 0)
+	if (polling_pipe == 0) {
+		buf = kzalloc(sizeof(u16), GFP_KERNEL);
+		if (!buf)
+			return -ENOMEM;
+
 		ret = usb_control_msg(ucr->pusb_dev,
 				usb_rcvctrlpipe(ucr->pusb_dev, 0),
 				RTSX_USB_REQ_POLL,
 				USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-				0, 0, status, 2, 100);
-	else
+				0, 0, buf, 2, 100);
+		*status = *buf;
+
+		kfree(buf);
+	} else {
 		ret = rtsx_usb_get_status_with_bulk(ucr, status);
+	}
 
 	/* usb_control_msg may return positive when success */
 	if (ret < 0)
@@ -644,14 +662,14 @@ static int rtsx_usb_probe(struct usb_interface *intf,
 	if (ret)
 		goto out_init_fail;
 
-	ret = mfd_add_devices(&intf->dev, usb_dev->devnum, rtsx_usb_cells,
-			ARRAY_SIZE(rtsx_usb_cells), NULL, 0, NULL);
+	/* initialize USB SG transfer timer */
+	setup_timer(&ucr->sg_timer, rtsx_usb_sg_timed_out, (unsigned long) ucr);
+
+	ret = mfd_add_hotplug_devices(&intf->dev, rtsx_usb_cells,
+				      ARRAY_SIZE(rtsx_usb_cells));
 	if (ret)
 		goto out_init_fail;
 
-	/* initialize USB SG transfer timer */
-	init_timer(&ucr->sg_timer);
-	setup_timer(&ucr->sg_timer, rtsx_usb_sg_timed_out, (unsigned long) ucr);
 #ifdef CONFIG_PM
 	intf->needs_remote_wakeup = 1;
 	usb_enable_autosuspend(usb_dev);
@@ -683,13 +701,25 @@ static int rtsx_usb_suspend(struct usb_interface *intf, pm_message_t message)
 {
 	struct rtsx_ucr *ucr =
 		(struct rtsx_ucr *)usb_get_intfdata(intf);
+	u16 val = 0;
 
-	dev_dbg(&intf->dev, "%s called with pm message 0x%04u\n",
+	dev_dbg(&intf->dev, "%s called with pm message 0x%04x\n",
 			__func__, message.event);
 
-	mutex_lock(&ucr->dev_mutex);
-	rtsx_usb_turn_off_led(ucr);
-	mutex_unlock(&ucr->dev_mutex);
+	if (PMSG_IS_AUTO(message)) {
+		if (mutex_trylock(&ucr->dev_mutex)) {
+			rtsx_usb_get_card_status(ucr, &val);
+			mutex_unlock(&ucr->dev_mutex);
+
+			/* Defer the autosuspend if card exists */
+			if (val & (SD_CD | MS_CD))
+				return -EAGAIN;
+		} else {
+			/* There is an ongoing operation*/
+			return -EAGAIN;
+		}
+	}
+
 	return 0;
 }
 
@@ -738,6 +768,7 @@ static struct usb_device_id rtsx_usb_usb_ids[] = {
 	{ USB_DEVICE(0x0BDA, 0x0140) },
 	{ }
 };
+MODULE_DEVICE_TABLE(usb, rtsx_usb_usb_ids);
 
 static struct usb_driver rtsx_usb_driver = {
 	.name			= "rtsx_usb",

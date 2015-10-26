@@ -73,6 +73,7 @@ static const struct syscfg_reset_channel_data stih415_softresets[] = {
 	[STIH415_USB0_SOFTRESET] = STIH415_SRST_REAR(SYSCFG_376, 9),
 	[STIH415_USB1_SOFTRESET] = STIH415_SRST_REAR(SYSCFG_376, 10),
 	[STIH415_USB2_SOFTRESET] = STIH415_SRST_REAR(SYSCFG_376, 11),
+	[STIH415_KEYSCAN_SOFTRESET] = STIH415_SRST_LPM(LPM_SYSCFG_1, 8),
 };
 
 static struct syscfg_reset_controller_data stih415_powerdown_controller = {
@@ -100,7 +101,6 @@ static struct platform_driver stih415_reset_driver = {
 	.probe = syscfg_reset_probe,
 	.driver = {
 		.name = "reset-stih415",
-		.owner = THIS_MODULE,
 		.of_match_table = stih415_reset_match,
 	},
 };

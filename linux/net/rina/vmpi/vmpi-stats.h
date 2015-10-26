@@ -3,8 +3,10 @@
 
 struct vmpi_stats {
         unsigned int rxres;
+        unsigned int rxint;
         unsigned int txreq;
         unsigned int txres;
+        unsigned int txint;
 };
 
 int vmpi_stats_init(struct vmpi_stats *);

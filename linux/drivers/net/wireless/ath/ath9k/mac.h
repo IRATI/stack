@@ -121,6 +121,7 @@ struct ath_tx_status {
 	u32 evm0;
 	u32 evm1;
 	u32 evm2;
+	u32 duration;
 };
 
 struct ath_rx_status {
@@ -346,8 +347,14 @@ struct ar5416_desc {
 #define AR_FrameLen         0x00000fff
 #define AR_VirtMoreFrag     0x00001000
 #define AR_TxCtlRsvd00      0x0000e000
-#define AR_XmitPower        0x003f0000
-#define AR_XmitPower_S      16
+#define AR_XmitPower0       0x003f0000
+#define AR_XmitPower0_S     16
+#define AR_XmitPower1	    0x3f000000
+#define AR_XmitPower1_S     24
+#define AR_XmitPower2	    0x3f000000
+#define AR_XmitPower2_S     24
+#define AR_XmitPower3	    0x3f000000
+#define AR_XmitPower3_S     24
 #define AR_RTSEnable        0x00400000
 #define AR_VEOL             0x00800000
 #define AR_ClrDestMask      0x01000000
@@ -697,7 +704,7 @@ struct ath_tx_info {
 	enum ath9k_pkt_type type;
 	enum ath9k_key_type keytype;
 	u8 keyix;
-	u8 txpower;
+	u8 txpower[4];
 };
 
 struct ath_hw;
@@ -729,6 +736,7 @@ void ath9k_hw_startpcureceive(struct ath_hw *ah, bool is_scanning);
 void ath9k_hw_abortpcurecv(struct ath_hw *ah);
 bool ath9k_hw_stopdmarecv(struct ath_hw *ah, bool *reset);
 int ath9k_hw_beaconq_setup(struct ath_hw *ah);
+void ath9k_hw_set_tx_filter(struct ath_hw *ah, u8 destidx, bool set);
 
 /* Interrupt Handling */
 bool ath9k_hw_intrpend(struct ath_hw *ah);
