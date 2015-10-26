@@ -172,14 +172,8 @@ IPCPRIBObj::IPCPRIBObj(IPCProcess * ipc_process,
 	ipc_process_ = ipc_process;
 	if (ipc_process)
 		rib_daemon_ =  ipc_process->rib_daemon_;
-<<<<<<< HEAD
 	else
 		rib_daemon_ = 0;
-=======
-	} else {
-		rib_daemon_ = 0;
-	}
->>>>>>> rinad: distributed encoders unified
 }
 
 // CLASS IPC Process
