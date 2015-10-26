@@ -34,6 +34,7 @@
 #include "encoders/IntType.pb.h"
 #include "encoders/QoSSpecification.pb.h"
 #include "encoders/FlowMessage.pb.h"
+#include "encoders/EnrollmentInformationMessage.pb.h"
 
 namespace rinad {
 
@@ -837,7 +838,6 @@ void NeighborListEncoder::encode(
 void NeighborListEncoder::decode(const rina::ser_obj_t &serobj, 
 	std::list<rina::Neighbor> &des_obj)
 {
-
 	rina::messages::neighbors_t gpb;
 	gpb.ParseFromArray(serobj.message_, serobj.size_);
 
@@ -882,7 +882,43 @@ void ADataObjectEncoder::decode(const rina::ser_obj_t &serobj,
 	des_obj.encoded_cdap_message_ = cdap;
 }
 
-namespace flow_enc_helpers
+// Class EnrollmentInformationRequestEncoder
+void EnrollmentInformationRequestEncoder::encode(
+	const EnrollmentInformationRequest &obj, rina::ser_obj_t& serobj)
+{
+	rina::messages::enrollmentInformation_t gpb;
+
+	gpb.set_address(obj.address_);
+	gpb.set_startearly(obj.allowed_to_start_early_);
+
+	for(std::list<rina::ApplicationProcessNamingInformation>::const_iterator 
+		it = obj.supporting_difs_.begin(); it != obj.supporting_difs_.end(); ++it) 
+	{
+		gpb.add_supportingdifs(it->processName);
+	}
+
+	serobj.size_ = gpb.ByteSize();
+	serobj.message_ = new char[serobj.size_];
+	gpb.SerializeToArray(serobj.message_, serobj.size_);
+}
+
+void decode(const rina::ser_obj_t &serobj, EnrollmentInformationRequest &des_obj)
+{
+	rina::messages::enrollmentInformation_t gpb;
+	gpb.ParseFromArray(serobj.message_, serobj.size_);
+
+	des_obj.address_ = gpb.address();
+	//FIXME that should read gpb_eir.startearly() but always returns false
+	des_obj.allowed_to_start_early_ = true;
+
+	for (int i = 0; i < gpb.supportingdifs_size(); ++i) {
+		des_obj.supporting_difs_.push_back(rina::ApplicationProcessNamingInformation(
+			gpb.supportingdifs(i), ""));
+	}
+}
+
+// CLASS FlowEncoder
+namespace flow_helpers
 {
 rina::messages::qosSpecification_t* get_qosSpecification_t(
 	const rina::FlowSpecification &flow_spec) {
@@ -928,5 +964,122 @@ void get_FlowSpecification(const rina::messages::qosSpecification_t &gpf_qos,
 	qos.delay = gpf_qos.delay();
 	qos.jitter = gpf_qos.jitter();
 }
+
+void FlowEncoder::encode(const Flow &obj, rina::ser_obj_t& serobj)
+{
+	rina::messages::Flow gpf;
+
+	// SourceNamingInfo
+	gpf.set_allocated_sourcenaminginfo(
+		helpers::get_applicationProcessNamingInfo_t(
+		obj.source_naming_info));
+	// DestinationNamingInfo
+	gpf.set_allocated_destinationnaminginfo(
+		helpers::get_applicationProcessNamingInfo_t(
+		obj.destination_naming_info));
+	// sourcePortId
+	gpf.set_sourceportid(obj.source_port_id);
+	//destinationPortId
+	gpf.set_destinationportid(obj.destination_port_id);
+	//sourceAddress
+	gpf.set_sourceaddress(obj.source_address);
+	//destinationAddress
+	gpf.set_destinationaddress(obj.destination_address);
+	//connectionIds
+	for (std::list<rina::Connection>::const_iterator it = 
+		obj.connections.begin(); it != obj.connections.end(); ++it) 
+	{
+			rina::messages::connectionId_t *gpf_connection = gpf
+				.add_connectionids();
+			//qosId
+			gpf_connection->set_qosid((*it)->getQosId());
+			//sourceCEPId
+			gpf_connection->set_sourcecepid((*it)->getSourceCepId());
+			//destinationCEPId
+			gpf_connection->set_destinationcepid((*it)->getDestCepId());
+	}
+	//currentConnectionIdIndex
+	gpf.set_currentconnectionidindex(
+		obj.current_connection_index);
+	//state
+	gpf.set_state(obj.state);
+	//qosParameters
+	gpf.set_allocated_qosparameters(
+		flow_helpers::get_qosSpecification_t(obj.flow_specification));
+	//optional dtpConfig_t dtpConfig
+	gpf.set_allocated_dtpconfig(
+		flow_enc_helpers::get_dtpConfig_t(
+		obj.getActiveConnection()->getDTPConfig()));
+	//optional dtpConfig_t dtpConfig
+	gpf.set_allocated_dtcpconfig(
+		flow_enc_helpers::get_dtcpConfig_t(
+		obj.getActiveConnection()->getDTCPConfig()));
+	//accessControl
+	if (obj.access_control != 0)
+		gpf.set_accesscontrol(obj.access_control);
+	//maxCreateFlowRetries
+	gpf.set_maxcreateflowretries(obj.max_create_flow_retries);
+	//createFlowRetries
+	gpf.set_createflowretries(obj.create_flow_retries);
+	//hopCount
+	gpf.set_hopcount(obj.hop_count);
+
+	serobj.size_ = gpb.ByteSize();
+	serobj.message_ = new char[serobj.size_];
+	gpb.SerializeToArray(serobj.message_, serobj.size_);
+}
+
+void FlowEncoder::decode(const rina::ser_obj_t &serobj, Flow &des_obj)
+{
+	rina::messages::Flow gpf;
+
+	gpf.ParseFromArray(serobj->message_, serobj->size_);
+
+	rina::ApplicationProcessNamingInformation src_app =
+		helpers::get_ApplicationProcessNamingInformation(
+		gpf.sourcenaminginfo());
+	des_obj.source_naming_info = src_app;
+
+	rina::ApplicationProcessNamingInformation dest_app =
+		helpers::get_ApplicationProcessNamingInformation(
+		gpf.destinationnaminginfo());
+	des_obj.destination_naming_info = dest_app;
+	
+	des_obj.source_port_id = gpf.sourceportid();
+	des_obj.destination_port_id = gpf.destinationportid();
+	des_obj.source_address = gpf.sourceaddress();
+	des_obj.destination_address = gpf.destinationaddress();
+
+	for (int i = 0; i < gpf.connectionids_size(); ++i) {
+		rina::Connection connection;
+		flow_helpers::get_Connection(gpf.connectionids(i), connection);
+		connection->sourceAddress = gpf.source_address;
+		connection->destAddress = gpf.destination_address;
+		obj.connections.push_back(connection);
+	}
+	des_obj.current_connection_index =
+		gpf.currentconnectionidindex();
+	des_obj.state =
+		static_cast<rinad::Flow::IPCPFlowState>(gpf.state());
+	rina::FlowSpecification fs;
+	flow_helpers::get_FlowSpecification(
+		gpf.qosparameters(), fs);
+	des_obj.flow_specification = fs;
+
+	rina::DTPConfig dtp_config;
+	cube_helpers::get_DTPConfig(gpf.dtpconfig(), dtp_config);
+	des_obj.getActiveConnection()->setDTPConfig(dtp_config);
+
+	rina::DTCPConfig dtcp_config;
+	cube_helpers::get_DTCPConfig(gpf.dtcpconfig(), dtcp_config);
+	des_obj.getActiveConnection()->setDTCPConfig(dtcp_config);
+
+	des_obj.access_control = const_cast<char*>(gpf.accesscontrol()
+		.c_str());
+	des_obj.max_create_flow_retries = gpf.maxcreateflowretries();
+	des_obj.create_flow_retries = gpf.createflowretries();
+	des_obj.hop_count = gpf.hopcount();
+}
+
 }// namespace flow_enc_helpers
 }// namespace rinad

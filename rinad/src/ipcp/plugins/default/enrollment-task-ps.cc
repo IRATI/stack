@@ -77,7 +77,6 @@ protected:
 
 	IPCProcess * ipc_process_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
-	rina::IMasterEncoder * encoder_;
 	IPCPSecurityManager * sec_man_;
 };
 
@@ -142,7 +141,6 @@ BaseEnrollmentStateMachine::BaseEnrollmentStateMachine(IPCProcess * ipc_process,
 {
 	ipc_process_ = ipc_process;
 	cdap_session_manager_ = ipc_process->cdap_session_manager_;
-	encoder_ = ipc_process->encoder_;
 	sec_man_ = ipc_process->security_manager_;
 }
 

@@ -200,7 +200,6 @@ public:
 private:
 	IPCPRIBDaemon * rib_daemon_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
-	rina::IMasterEncoder * encoder_;
 	INamespaceManager * namespace_manager_;
 
 	/// Create initial RIB objects
@@ -284,7 +283,6 @@ private:
 	IPCProcess * ipc_process_;
 	IFlowAllocator * flow_allocator_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
-	rina::IMasterEncoder * encoder_;
 	IPCPRIBDaemon * rib_daemon_;
 	INamespaceManager * namespace_manager_;
 	IPCPSecurityManager * security_manager_;
@@ -344,14 +342,6 @@ public:
 private:
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 };
-
-/// Encoder of the Flow
-class FlowEncoder: public rina::EncoderInterface {
-public:
-	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::ObjectValueInterface * object_value) const;
-};
-
 } //namespace rinad
 
 #endif //IPCP_FLOW_ALLOCATOR_HH

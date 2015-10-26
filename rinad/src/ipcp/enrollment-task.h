@@ -272,13 +272,6 @@ private:
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 };
 
-/// Encoder of a list of EnrollmentInformationRequest
-class EnrollmentInformationRequestEncoder: public rina::EncoderInterface {
-public:
-	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::ObjectValueInterface * object_value) const;
-};
-
 } //namespace rinad
 
 #endif //IPCP_ENROLLMENT_TASK_HH

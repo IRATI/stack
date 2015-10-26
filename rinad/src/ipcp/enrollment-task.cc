@@ -1116,47 +1116,4 @@ std::string OperationalStatusRIBObject::get_displayable_value() {
 
 	return "Unknown State";
 }
-
-// Class EnrollmentInformationRequestEncoder
-const rina::SerializedObject* EnrollmentInformationRequestEncoder::encode(const void* object) {
-	EnrollmentInformationRequest *eir = (EnrollmentInformationRequest*) object;
-	rina::messages::enrollmentInformation_t gpb_eir;
-
-	gpb_eir.set_address(eir->address_);
-	gpb_eir.set_startearly(eir->allowed_to_start_early_);
-
-	std::list<rina::ApplicationProcessNamingInformation>::const_iterator it;
-	for(it = eir->supporting_difs_.begin(); it != eir->supporting_difs_.end(); ++it) {
-		gpb_eir.add_supportingdifs(it->processName);
-	}
-
-	int size = gpb_eir.ByteSize();
-	char *serialized_message = new char[size];
-	gpb_eir.SerializeToArray(serialized_message, size);
-	rina::SerializedObject *serialized_object =  new rina::SerializedObject(serialized_message,size);
-
-	return serialized_object;
-}
-
-void* EnrollmentInformationRequestEncoder::decode(const rina::ObjectValueInterface * object_value) const {
-	rina::messages::enrollmentInformation_t gpb_eir;
-
-	rina::SerializedObject * serializedObject =
-			Encoder::get_serialized_object(object_value);
-
-	gpb_eir.ParseFromArray(serializedObject->message_, serializedObject->size_);
-
-	EnrollmentInformationRequest * request = new EnrollmentInformationRequest();
-	request->address_ = gpb_eir.address();
-	//FIXME that should read gpb_eir.startearly() but always returns false
-	request->allowed_to_start_early_ = true;
-
-	for (int i = 0; i < gpb_eir.supportingdifs_size(); ++i) {
-		request->supporting_difs_.push_back(rina::ApplicationProcessNamingInformation(
-				gpb_eir.supportingdifs(i), ""));
-	}
-
-	return (void *) request;
-}
-
 } //namespace rinad
