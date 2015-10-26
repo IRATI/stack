@@ -428,6 +428,7 @@ class CDAPSessionManagerInterface
 					               const cdap_rib::res_info_t &res,
 					               int invoke_id) = 0;
 	virtual CDAPInvokeIdManager * get_invoke_id_manager() = 0;
+	virtual const cdap_rib::con_handle_t& get_con_handle(int port_id) = 0;
 };
 
 ///Implements handling of CDAP send and receive message operations

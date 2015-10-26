@@ -46,13 +46,13 @@ private:
 	int delay_;
 };
 
-class WatchdogRIBObject: public IPCPRIBObj {
+class WatchdogRIBObject: public IPCPRIBObj, rina::rib::RIBOpsRespHandler {
 public:
 	WatchdogRIBObject(IPCProcess * ipc_process,
 			  int wdog_period_ms,
 			  int declared_dead_int_ms);
 	~WatchdogRIBObject();
-	void read(const cdap_rib::con_handle_t &con,
+	void read(const rina::cdap_rib::con_handle_t &con,
 		  const std::string& fqn,
 		  const std::string& class_,
 		  const rina::cdap_rib::filt_info_t &filt,
@@ -65,12 +65,12 @@ public:
 
 	/// Take advantadge of the watchdog message responses to measure the RTT,
 	/// and store it in the neighbor object (average of the last 4 RTTs)
-	void readResponse(int result, const std::string& result_reason,
-			void * object_value, const std::string& object_name,
-			rina::CDAPSessionDescriptor * session_descriptor);
+	void remoteReadResult(const rina::cdap_rib::con_handle_t &con,
+			      const rina::cdap_rib::obj_info_t &obj,
+			      const rina::cdap_rib::res_info_t &res);
 
 	const static std::string class_name;
-	const static std::string object_name_prefix;
+	const static std::string object_name;
 
 private:
 	rina::Timer * timer_;

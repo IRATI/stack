@@ -191,6 +191,7 @@ void IPCPCDAPIOHandler::process_message(rina::ser_obj_t &message,
 		try {
 			m_rcv = manager_->decodeCDAPMessage(message);
 			con_handle.cdap_dest = rina::cdap_rib::CDAP_DEST_IPCM;
+			con_handle.handle_ = handle;
 
 			LOG_IPCP_DBG("Received delegated CDAP message from IPCM : %s",
 					m_rcv->to_string().c_str());
@@ -236,6 +237,7 @@ void IPCPCDAPIOHandler::process_message(rina::ser_obj_t &message,
 						m_rcv->to_string().c_str());
 
 				con_handle.cdap_dest = rina::cdap_rib::CDAP_DEST_ADDRESS;
+				con_handle.handle_ = handle;
 				delete old_msg;
 			} catch (rina::Exception &e) {
 				LOG_IPCP_ERR("Error processing A-data message: %s", e.what());
@@ -249,34 +251,12 @@ void IPCPCDAPIOHandler::process_message(rina::ser_obj_t &message,
 			if (manager_->session_in_await_con_state(handle) &&
 					m_rcv->op_code_ != rina::cdap::cdap_m_t::M_CONNECT)
 				is_auth_message = true;
+
+			con_handle = manager_->get_con_handle(handle);
 		}
 	}
 
 	// Fill structures
-	// Auth
-	con_handle.auth_.name = m_rcv->auth_policy_.name_;
-	con_handle.auth_.versions = m_rcv->auth_policy_.versions_;
-	if (con_handle.auth_.options.size_ > 0) {
-		con_handle.auth_.options.size_ = m_rcv->auth_policy_.options_.size_;
-		con_handle.auth_.options.message_ = new char[con_handle.auth_.options.size_];
-		memcpy(con_handle.auth_.options.message_,
-		       m_rcv->auth_policy_.options_.message_,
-		       m_rcv->auth_policy_.options_.size_);
-	}
-	// Src
-	con_handle.src_.ae_name_ = m_rcv->src_ae_name_;
-	con_handle.src_.ae_inst_ = m_rcv->src_ae_inst_;
-	con_handle.src_.ap_name_ = m_rcv->src_ap_name_;
-	con_handle.src_.ae_inst_ = m_rcv->src_ae_inst_;
-	// Dest
-	con_handle.dest_.ae_name_ = m_rcv->dest_ae_name_;
-	con_handle.dest_.ae_inst_ = m_rcv->dest_ae_inst_;
-	con_handle.dest_.ap_name_ = m_rcv->dest_ap_name_;
-	con_handle.dest_.ae_inst_ = m_rcv->dest_ae_inst_;
-	// Handle
-	con_handle.handle_ = handle;
-	// Version
-	con_handle.version_.version_ = m_rcv->version_;
 	// Flags
 	rina::cdap_rib::flags_t flags;
 	flags.flags_ = m_rcv->flags_;
@@ -312,60 +292,107 @@ void IPCPCDAPIOHandler::process_message(rina::ser_obj_t &message,
 	switch (m_rcv->op_code_) {
 		//Local
 		case rina::cdap::cdap_m_t::M_CONNECT:
-			callback_->open_connection(con_handle, flags, invoke_id);
+			callback_->open_connection(con_handle,
+						   flags,
+						   invoke_id);
 			break;
 		case rina::cdap::cdap_m_t::M_RELEASE:
-			callback_->close_connection(con_handle, flags, invoke_id);
+			callback_->close_connection(con_handle,
+						    flags,
+						    invoke_id);
 			break;
 		case rina::cdap::cdap_m_t::M_DELETE:
-			callback_->delete_request(con_handle, obj, filt, invoke_id);
+			callback_->delete_request(con_handle,
+						  obj,
+						  filt,
+						  invoke_id);
 			break;
 		case rina::cdap::cdap_m_t::M_CREATE:
-			callback_->create_request(con_handle, obj, filt, invoke_id);
+			callback_->create_request(con_handle,
+						  obj,
+						  filt,
+						  invoke_id);
 			break;
 		case rina::cdap::cdap_m_t::M_READ:
-			callback_->read_request(con_handle, obj, filt, invoke_id);
+			callback_->read_request(con_handle,
+						obj,
+						filt,
+						invoke_id);
 			break;
 		case rina::cdap::cdap_m_t::M_CANCELREAD:
-			callback_->cancel_read_request(con_handle, obj, filt, invoke_id);
+			callback_->cancel_read_request(con_handle,
+						       obj,
+						       filt,
+						       invoke_id);
 			break;
 		case rina::cdap::cdap_m_t::M_WRITE:
-			callback_->write_request(con_handle, obj, filt, invoke_id);
+			callback_->write_request(con_handle,
+						 obj,
+						 filt,
+						 invoke_id);
 			break;
 		case rina::cdap::cdap_m_t::M_START:
-			callback_->start_request(con_handle, obj, filt, invoke_id);
+			callback_->start_request(con_handle,
+						 obj,
+						 filt,
+						 invoke_id);
 			break;
 		case rina::cdap::cdap_m_t::M_STOP:
-			callback_->stop_request(con_handle, obj, filt, invoke_id);
+			callback_->stop_request(con_handle,
+						obj,
+						filt,
+						invoke_id);
 			break;
 
 		//Remote
 		case rina::cdap::cdap_m_t::M_CONNECT_R:
-			callback_->remote_open_connection_result(con_handle, res);
+			callback_->remote_open_connection_result(con_handle,
+								 res);
 			break;
 		case rina::cdap::cdap_m_t::M_RELEASE_R:
-			callback_->remote_close_connection_result(con_handle, res);
+			callback_->remote_close_connection_result(con_handle,
+								  res);
 			break;
 		case rina::cdap::cdap_m_t::M_CREATE_R:
-			callback_->remote_create_result(con_handle, obj, res);
+			callback_->remote_create_result(con_handle,
+							obj,
+							res,
+							invoke_id);
 			break;
 		case rina::cdap::cdap_m_t::M_DELETE_R:
-			callback_->remote_delete_result(con_handle, res);
+			callback_->remote_delete_result(con_handle,
+							res,
+							invoke_id);
 			break;
 		case rina::cdap::cdap_m_t::M_READ_R:
-			callback_->remote_read_result(con_handle, obj, res);
+			callback_->remote_read_result(con_handle,
+						      obj,
+						      res,
+						      flags,
+						      invoke_id);
 			break;
 		case rina::cdap::cdap_m_t::M_CANCELREAD_R:
-			callback_->remote_cancel_read_result(con_handle, res);
+			callback_->remote_cancel_read_result(con_handle,
+							     res,
+							     invoke_id);
 			break;
 		case rina::cdap::cdap_m_t::M_WRITE_R:
-			callback_->remote_write_result(con_handle, obj, res);
+			callback_->remote_write_result(con_handle,
+						       obj,
+						       res,
+						       invoke_id);
 			break;
 		case rina::cdap::cdap_m_t::M_START_R:
-			callback_->remote_start_result(con_handle, obj, res);
+			callback_->remote_start_result(con_handle,
+						       obj,
+						       res,
+						       invoke_id);
 			break;
 		case rina::cdap::cdap_m_t::M_STOP_R:
-			callback_->remote_stop_result(con_handle, obj, res);
+			callback_->remote_stop_result(con_handle,
+						      obj,
+						      res,
+						      invoke_id);
 			break;
 		default:
 			LOG_ERR("Operation not recognized");

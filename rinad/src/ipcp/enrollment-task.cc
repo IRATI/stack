@@ -54,18 +54,26 @@ void WatchdogTimerTask::run() {
 }
 
 // CLASS WatchdogRIBObject
-WatchdogRIBObject::WatchdogRIBObject(IPCProcess * ipc_process, int wdog_period_ms, int declared_dead_int_ms) :
-		BaseIPCPRIBObject(ipc_process, EncoderConstants::WATCHDOG_RIB_OBJECT_CLASS,
-				rina::objectInstanceGenerator->getObjectInstance(), EncoderConstants::WATCHDOG_RIB_OBJECT_NAME) {
-	cdap_session_manager_ = ipc_process->cdap_session_manager_;
+const std::string WatchdogRIBObject::class_name = "watchdog_timer";
+const std::string WatchdogRIBObject::object_name = "/difmanagement/enrollment/watchdog";
+
+WatchdogRIBObject::WatchdogRIBObject(IPCProcess * ipc_process,
+				     int wdog_period_ms,
+				     int declared_dead_int_ms) :
+		IPCPRIBObj(ipc_process, class_name)
+{
 	wathchdog_period_ = wdog_period_ms;
 	declared_dead_interval_ = declared_dead_int_ms;
 	lock_ = new rina::Lockable();
 	timer_ = new rina::Timer();
-	timer_->scheduleTask(new WatchdogTimerTask(this, timer_, wathchdog_period_), wathchdog_period_);
+	timer_->scheduleTask(new WatchdogTimerTask(this,
+						   timer_,
+						   wathchdog_period_),
+			     wathchdog_period_);
 }
 
-WatchdogRIBObject::~WatchdogRIBObject() {
+WatchdogRIBObject::~WatchdogRIBObject()
+{
 	if (timer_) {
 		delete timer_;
 	}
@@ -75,34 +83,45 @@ WatchdogRIBObject::~WatchdogRIBObject() {
 	}
 }
 
-const void* WatchdogRIBObject::get_value() const {
-	return 0;
-}
-
-void WatchdogRIBObject::remoteReadObject(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
+void WatchdogRIBObject::read(const rina::cdap_rib::con_handle_t &con,
+			     const std::string& fqn,
+			     const std::string& class_,
+			     const rina::cdap_rib::filt_info_t &filt,
+			     const int invoke_id,
+			     rina::ser_obj_t &obj_reply,
+			     rina::cdap_rib::res_info_t& res)
+{
 	rina::ScopedLock g(*lock_);
 
 	//1 Send M_READ_R message
 	try {
-		rina::RIBObjectValue robject_value;
-		robject_value.type_ = rina::RIBObjectValue::inttype;
-		robject_value.int_value_ = ipc_process_->get_address();
-		rina::RemoteProcessId remote_id;
-		remote_id.port_id_ = session_descriptor->port_id_;
+		rina::cdap_rib::obj_info_t obj;
+		rina::cdap_rib::flags_t flags;
+		rina::cdap::IntEncoder encoder;
+		obj.class_ = class_name;
+		obj.name_ = object_name;
+		encoder.encode(ipc_process_->get_address(), obj.value_);
+		res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 
-		rib_daemon_->remoteReadObjectResponse(class_, name_, robject_value, 0,
-				"", false, invoke_id, remote_id);
+		rina::cdap::getProvider()->send_read_result(con.handle_,
+							    obj,
+							    flags,
+							    res,
+							    invoke_id,
+							    con.cdap_dest);
 	} catch(rina::Exception &e) {
-		LOG_IPCP_ERR("Problems creating or sending CDAP Message: %s", e.what());
+		LOG_IPCP_ERR("Problems creating or sending CDAP Message: %s",
+			     e.what());
 	}
 
 	//2 Update last heard from attribute of the relevant neighbor
 	std::list<rina::Neighbor*> neighbors = ipc_process_->get_neighbors();
 	std::list<rina::Neighbor*>::const_iterator it;
 	for (it = neighbors.begin(); it != neighbors.end(); ++it) {
-		if ((*it)->name_.processName.compare(session_descriptor->dest_ap_name_) == 0) {
+		if ((*it)->name_.processName.compare(con.dest_.ap_name_) == 0) {
 			rina::Time currentTime;
-			(*it)->last_heard_from_time_in_ms_ = currentTime.get_current_time_in_ms();
+			(*it)->last_heard_from_time_in_ms_ =
+					currentTime.get_current_time_in_ms();
 			break;
 		}
 	}
@@ -131,16 +150,24 @@ void WatchdogRIBObject::sendMessages() {
 		//dead and fire a NEIGHBOR_DECLARED_DEAD event
 		if ((*it)->last_heard_from_time_in_ms_ != 0 &&
 				(*it)->last_heard_from_time_in_ms_ + declared_dead_interval_ < currentTimeInMs) {
-			rina::NeighborDeclaredDeadEvent * event = new rina::NeighborDeclaredDeadEvent(*(*it));
+			rina::NeighborDeclaredDeadEvent * event =
+					new rina::NeighborDeclaredDeadEvent(*(*it));
 			ipc_process_->internal_event_manager_->deliverEvent(event);
 			continue;
 		}
 
 		try{
-			rina::RemoteProcessId remote_id;
-			remote_id.port_id_ = (*it)->underlying_port_id_;
+			rina::cdap_rib::obj_info_t obj;
+			rina::cdap_rib::flags_t flags;
+			rina::cdap_rib::filt_info_t filt;
+			obj.class_ = class_name;
+			obj.name_ = object_name;
 
-			rib_daemon_->remoteReadObject(class_, name_, 0, remote_id, this);
+			rib_daemon_->getProxy()->remote_read((*it)->underlying_port_id_,
+							     obj,
+							     flags,
+							     filt,
+							     this);
 
 			neighbor_statistics_[(*it)->name_.processName] = currentTimeInMs;
 		}catch(rina::Exception &e){
@@ -149,20 +176,16 @@ void WatchdogRIBObject::sendMessages() {
 	}
 }
 
-void WatchdogRIBObject::readResponse(int result, const std::string& result_reason,
-		void * object_value, const std::string& object_name,
-		rina::CDAPSessionDescriptor * session_descriptor) {
+void WatchdogRIBObject::remoteReadResult(const rina::cdap_rib::con_handle_t &con,
+		      	      	         const rina::cdap_rib::obj_info_t &obj,
+		      	      	         const rina::cdap_rib::res_info_t &res)
+{
 	rina::ScopedLock g(*lock_);
 
-	if (object_value) {
-		int * address = (int *) object_value;
-		delete address;
-	}
-
-	std::map<std::string, int>::iterator it = neighbor_statistics_.find(session_descriptor->dest_ap_name_);
-	if (it == neighbor_statistics_.end()) {
+	std::map<std::string, int>::iterator it =
+			neighbor_statistics_.find(con.dest_.ap_name_);
+	if (it == neighbor_statistics_.end())
 		return;
-	}
 
 	int storedTime = it->second;
 	neighbor_statistics_.erase(it);
@@ -171,7 +194,7 @@ void WatchdogRIBObject::readResponse(int result, const std::string& result_reaso
 	std::list<rina::Neighbor*> neighbors = ipc_process_->get_neighbors();
 	std::list<rina::Neighbor*>::const_iterator it2;
 	for (it2 = neighbors.begin(); it2 != neighbors.end(); ++it2) {
-		if ((*it2)->name_.processName.compare(session_descriptor->dest_ap_name_) == 0) {
+		if ((*it2)->name_.processName.compare(con.dest_.ap_name_) == 0) {
 			(*it2)->average_rtt_in_ms_ = currentTimeInMs - storedTime;
 			(*it2)->last_heard_from_time_in_ms_ = currentTimeInMs;
 			break;
@@ -236,9 +259,8 @@ void * doNeighborsEnrollerWork(void * arg) {
 			} else {
 				try {
 					std::stringstream ss;
-					ss << rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_NAME
-					   << EncoderConstants::SEPARATOR;
-					ss<<(*it)->name_.processName;
+					ss << rina::NeighborRIBObj::object_name_prefix
+				           << (*it)->name_.processName;
 					ipcProcess->rib_daemon_->deleteObject(rina::NeighborSetRIBObject::NEIGHBOR_RIB_OBJECT_CLASS,
 							ss.str(), 0, 0);
 				} catch (rina::Exception &e){
