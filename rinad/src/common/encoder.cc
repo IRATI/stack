@@ -965,31 +965,33 @@ void get_FlowSpecification(const rina::messages::qosSpecification_t &gpf_qos,
 	qos.jitter = gpf_qos.jitter();
 }
 
+}// namespace flow_enc_helpers
+
 void FlowEncoder::encode(const Flow &obj, rina::ser_obj_t& serobj)
 {
-	rina::messages::Flow gpf;
+	rina::messages::Flow gpb;
 
 	// SourceNamingInfo
-	gpf.set_allocated_sourcenaminginfo(
+	gpb.set_allocated_sourcenaminginfo(
 		helpers::get_applicationProcessNamingInfo_t(
 		obj.source_naming_info));
 	// DestinationNamingInfo
-	gpf.set_allocated_destinationnaminginfo(
+	gpb.set_allocated_destinationnaminginfo(
 		helpers::get_applicationProcessNamingInfo_t(
 		obj.destination_naming_info));
 	// sourcePortId
-	gpf.set_sourceportid(obj.source_port_id);
+	gpb.set_sourceportid(obj.source_port_id);
 	//destinationPortId
-	gpf.set_destinationportid(obj.destination_port_id);
+	gpb.set_destinationportid(obj.destination_port_id);
 	//sourceAddress
-	gpf.set_sourceaddress(obj.source_address);
+	gpb.set_sourceaddress(obj.source_address);
 	//destinationAddress
-	gpf.set_destinationaddress(obj.destination_address);
+	gpb.set_destinationaddress(obj.destination_address);
 	//connectionIds
-	for (std::list<rina::Connection>::const_iterator it = 
+	for (std::list<rina::Connection*>::const_iterator it = 
 		obj.connections.begin(); it != obj.connections.end(); ++it) 
 	{
-			rina::messages::connectionId_t *gpf_connection = gpf
+			rina::messages::connectionId_t *gpf_connection = gpb
 				.add_connectionids();
 			//qosId
 			gpf_connection->set_qosid((*it)->getQosId());
@@ -999,30 +1001,30 @@ void FlowEncoder::encode(const Flow &obj, rina::ser_obj_t& serobj)
 			gpf_connection->set_destinationcepid((*it)->getDestCepId());
 	}
 	//currentConnectionIdIndex
-	gpf.set_currentconnectionidindex(
+	gpb.set_currentconnectionidindex(
 		obj.current_connection_index);
 	//state
-	gpf.set_state(obj.state);
+	gpb.set_state(obj.state);
 	//qosParameters
-	gpf.set_allocated_qosparameters(
+	gpb.set_allocated_qosparameters(
 		flow_helpers::get_qosSpecification_t(obj.flow_specification));
 	//optional dtpConfig_t dtpConfig
-	gpf.set_allocated_dtpconfig(
-		flow_enc_helpers::get_dtpConfig_t(
+	gpb.set_allocated_dtpconfig(
+		cube_helpers::get_dtpConfig_t(
 		obj.getActiveConnection()->getDTPConfig()));
 	//optional dtpConfig_t dtpConfig
-	gpf.set_allocated_dtcpconfig(
-		flow_enc_helpers::get_dtcpConfig_t(
+	gpb.set_allocated_dtcpconfig(
+		cube_helpers::get_dtcpConfig_t(
 		obj.getActiveConnection()->getDTCPConfig()));
 	//accessControl
 	if (obj.access_control != 0)
-		gpf.set_accesscontrol(obj.access_control);
+		gpb.set_accesscontrol(obj.access_control);
 	//maxCreateFlowRetries
-	gpf.set_maxcreateflowretries(obj.max_create_flow_retries);
+	gpb.set_maxcreateflowretries(obj.max_create_flow_retries);
 	//createFlowRetries
-	gpf.set_createflowretries(obj.create_flow_retries);
+	gpb.set_createflowretries(obj.create_flow_retries);
 	//hopCount
-	gpf.set_hopcount(obj.hop_count);
+	gpb.set_hopcount(obj.hop_count);
 
 	serobj.size_ = gpb.ByteSize();
 	serobj.message_ = new char[serobj.size_];
@@ -1031,55 +1033,54 @@ void FlowEncoder::encode(const Flow &obj, rina::ser_obj_t& serobj)
 
 void FlowEncoder::decode(const rina::ser_obj_t &serobj, Flow &des_obj)
 {
-	rina::messages::Flow gpf;
+	rina::messages::Flow gpb;
 
-	gpf.ParseFromArray(serobj->message_, serobj->size_);
+	gpb.ParseFromArray(serobj.message_, serobj.size_);
 
-	rina::ApplicationProcessNamingInformation src_app =
-		helpers::get_ApplicationProcessNamingInformation(
-		gpf.sourcenaminginfo());
+	rina::ApplicationProcessNamingInformation src_app;
+	helpers::get_ApplicationProcessNamingInformation(
+		gpb.sourcenaminginfo(), src_app);
 	des_obj.source_naming_info = src_app;
 
-	rina::ApplicationProcessNamingInformation dest_app =
-		helpers::get_ApplicationProcessNamingInformation(
-		gpf.destinationnaminginfo());
+	rina::ApplicationProcessNamingInformation dest_app;
+	helpers::get_ApplicationProcessNamingInformation(
+		gpb.destinationnaminginfo(), dest_app);
 	des_obj.destination_naming_info = dest_app;
 	
-	des_obj.source_port_id = gpf.sourceportid();
-	des_obj.destination_port_id = gpf.destinationportid();
-	des_obj.source_address = gpf.sourceaddress();
-	des_obj.destination_address = gpf.destinationaddress();
+	des_obj.source_port_id = gpb.sourceportid();
+	des_obj.destination_port_id = gpb.destinationportid();
+	des_obj.source_address = gpb.sourceaddress();
+	des_obj.destination_address = gpb.destinationaddress();
 
-	for (int i = 0; i < gpf.connectionids_size(); ++i) {
-		rina::Connection connection;
-		flow_helpers::get_Connection(gpf.connectionids(i), connection);
-		connection->sourceAddress = gpf.source_address;
-		connection->destAddress = gpf.destination_address;
-		obj.connections.push_back(connection);
+	for (int i = 0; i < gpb.connectionids_size(); ++i) {
+		rina::Connection* connection = new rina::Connection;
+		flow_helpers::get_Connection(gpb.connectionids(i), *connection);
+		connection->sourceAddress = gpb.sourceaddress();
+		connection->destAddress = gpb.destinationaddress();
+		des_obj.connections.push_back(connection);
 	}
 	des_obj.current_connection_index =
-		gpf.currentconnectionidindex();
+		gpb.currentconnectionidindex();
 	des_obj.state =
-		static_cast<rinad::Flow::IPCPFlowState>(gpf.state());
+		static_cast<rinad::Flow::IPCPFlowState>(gpb.state());
 	rina::FlowSpecification fs;
 	flow_helpers::get_FlowSpecification(
-		gpf.qosparameters(), fs);
+		gpb.qosparameters(), fs);
 	des_obj.flow_specification = fs;
 
 	rina::DTPConfig dtp_config;
-	cube_helpers::get_DTPConfig(gpf.dtpconfig(), dtp_config);
+	cube_helpers::get_DTPConfig(gpb.dtpconfig(), dtp_config);
 	des_obj.getActiveConnection()->setDTPConfig(dtp_config);
 
 	rina::DTCPConfig dtcp_config;
-	cube_helpers::get_DTCPConfig(gpf.dtcpconfig(), dtcp_config);
+	cube_helpers::get_DTCPConfig(gpb.dtcpconfig(), dtcp_config);
 	des_obj.getActiveConnection()->setDTCPConfig(dtcp_config);
 
-	des_obj.access_control = const_cast<char*>(gpf.accesscontrol()
+	des_obj.access_control = const_cast<char*>(gpb.accesscontrol()
 		.c_str());
-	des_obj.max_create_flow_retries = gpf.maxcreateflowretries();
-	des_obj.create_flow_retries = gpf.createflowretries();
-	des_obj.hop_count = gpf.hopcount();
+	des_obj.max_create_flow_retries = gpb.maxcreateflowretries();
+	des_obj.create_flow_retries = gpb.createflowretries();
+	des_obj.hop_count = gpb.hopcount();
 }
 
-}// namespace flow_enc_helpers
 }// namespace rinad
