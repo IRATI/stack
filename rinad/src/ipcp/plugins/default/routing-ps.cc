@@ -1899,7 +1899,6 @@ void FlowStateObjectListEncoder::decode(const rina::ser_obj_t &serobj,
 {
 	rina::messages::flowStateObjectGroup_t gpb;
 	gpb.ParseFromArray(serobj.message_, serobj.size_);
-
 	for(int i=0; i<gpb.flow_state_objects_size(); i++)
 	{
 		FlowStateObject fso;

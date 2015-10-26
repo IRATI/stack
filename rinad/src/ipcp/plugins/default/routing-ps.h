@@ -438,7 +438,6 @@ class FlowStateManager {
 public:
 	static const int NO_AVOID_PORT;
 	static const long WAIT_UNTIL_REMOVE_OBJECT;
-
 	FlowStateManager(rina::Timer* new_timer,
 			unsigned int max_age);
 	~FlowStateManager();

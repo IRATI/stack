@@ -884,7 +884,6 @@ void get_FlowSpecification(const rina::messages::qosSpecification_t &gpf_qos,
 	qos.delay = gpf_qos.delay();
 	qos.jitter = gpf_qos.jitter();
 }
-
 }// namespace flow_enc_helpers
 
 void FlowEncoder::encode(const Flow &obj, rina::ser_obj_t& serobj)
