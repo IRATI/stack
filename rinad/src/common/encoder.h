@@ -27,6 +27,7 @@
 #include <librina/configuration.h>
 #include <librina/ipc-process.h>
 #include <librina/cdap_v2.h>
+#include "configuration.h"
 
 #include <list>
 

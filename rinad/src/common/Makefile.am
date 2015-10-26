@@ -30,5 +30,6 @@ librinad_la_LIBADD   =				\
 librinad_la_SOURCES  =					\
 	debug.cc              debug.h                   \
 	rina-configuration.cc rina-configuration.h	\
+	configuration.h    configuration.cc   \
 	encoder.cc	      encoder.h			\
 			      concurrency.h
