@@ -29,7 +29,6 @@
 #include "debug.h"
 #include "pdu.h"
 #include "pci.h"
-#include "qos.h"
 
 /* FIXME: These externs have to disappear from here */
 struct buffer * buffer_create_with_gfp(gfp_t  flags,

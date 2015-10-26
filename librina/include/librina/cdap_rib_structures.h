@@ -28,7 +28,7 @@
 namespace rina {
 namespace cdap_rib {
 
-typedef struct SerializedObject {
+typedef struct{
 	int size_;
 	void* message_;
 } ser_obj_t;
@@ -45,7 +45,7 @@ typedef struct auth_policy {
 	/// Supported versions
 	std::list<std::string> versions;
 	/// Policy-specific options, encoded in a char array
-	SerializedObject options;
+	ser_obj_t options;
 } auth_policy_t;
 
 // End-point information

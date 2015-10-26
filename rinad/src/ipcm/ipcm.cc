@@ -31,6 +31,8 @@
 #include <sys/wait.h>
 #include <dirent.h>
 
+#include <google/protobuf/stubs/common.h>
+
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
 #include <librina/plugin-info.h>
@@ -120,9 +122,7 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
 		io_thread->start();
 
 		// Initialize DIF Templates Manager (with its monitor thread)
-		stringstream ss;
-		ss << config_file.substr(0, config_file.rfind("/"));
-		dif_template_manager = new DIFTemplateManager(ss.str());
+		dif_template_manager = new DIFTemplateManager(config_file);
 	} catch (rina::InitializationException& e) {
 		LOG_ERR("Error while initializing librina-ipc-manager");
 		exit(EXIT_FAILURE);
@@ -1652,8 +1652,10 @@ void IPCManager_::io_loop(){
 		if(!event)
 			continue;
 
-		if (!keep_running)
+		if (!keep_running){
+			delete event;
 			break;
+		}
 
 		LOG_DBG("Got event of type %s and sequence number %u",
 		rina::IPCEvent::eventTypeToString(event->eventType).c_str(),
@@ -1821,6 +1823,7 @@ void IPCManager_::io_loop(){
 
 	//TODO: probably move this to a private method if it starts to grow
 	LOG_DBG("Stopping I/O loop...");
+	google::protobuf::ShutdownProtobufLibrary();
 
 }
 

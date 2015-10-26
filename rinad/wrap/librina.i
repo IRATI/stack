@@ -29,7 +29,6 @@
 SWIG_JAVABODY_PROXY(public, public, SWIGTYPE)
 SWIG_JAVABODY_TYPEWRAPPER(public, public, public, SWIGTYPE)
 
-
 /**
  * void * typemaps. 
  * These are input typemaps for mapping a Java byte[] array to a C void array.
@@ -91,9 +90,9 @@ SWIG_JAVABODY_TYPEWRAPPER(public, public, public, SWIGTYPE)
         return $jnicall;
  }
 */
-/* Define the class eu.irati.librina.Exception */
-%typemap(javabase) rina::Exception "java.lang.RuntimeException";
-%typemap(javacode) rina::Exception %{
+/* Define the class Exception */
+%typemap(javabase) Exception "java.lang.Exception";
+%typemap(javacode) Exception %{
   public String getMessage() {
     return what();
   }
@@ -255,13 +254,6 @@ SWIG_JAVABODY_TYPEWRAPPER(public, public, public, SWIGTYPE)
     jenv->ThrowNew(excep, $1.what());
   return $null;
 }
-%typemap(throws, throws="eu.irati.librina.CDAPException") rina::cdap::CDAPException {
-  jclass excep = jenv->FindClass("eu/irati/librina/CDAPException");
-  if (excep)
-    jenv->ThrowNew(excep, $1.what());
-  return $null;
-}
-
 
 
 /* Typemaps to allow eventWait, eventPoll and eventTimedWait to downcast IPCEvent to the correct class */
@@ -441,12 +433,11 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(differs) rina::FlowInformation::operator!=(const FlowInformation &other) const;
 %rename(equals) rina::rib::RIBObjectData::operator==(const RIBObjectData &other) const;
 %rename(differs) rina::rib::RIBObjectData::operator!=(const RIBObjectData &other) const;
+
 %rename(equals) rina::Neighbor::operator==(const Neighbor &other) const;
 %rename(differs) rina::Neighbor::operator!=(const Neighbor &other) const;
-%rename(equals) rina::PsInfo::operator==(const PsInfo &other) const;
-%rename(differs) rina::PsInfo::operator!=(const PsInfo &other) const;
 
-%include "librina/exceptions.h"
+%include "../include/librina/exceptions.h"
 %include "librina/patterns.h"
 %include "librina/concurrency.h"
 %include "librina/common.h"
@@ -497,24 +488,3 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
   }
 }
 %enddef
-
-/* Define iterator for ApplicationProcessNamingInformation list */
-MAKE_COLLECTION_ITERABLE(ApplicationProcessNamingInformationListIterator, ApplicationProcessNamingInformation, std::list, rina::ApplicationProcessNamingInformation);
-/* Define iterator for String list */
-MAKE_COLLECTION_ITERABLE(StringListIterator, String, std::list, std::string);
-/* Define iterator for Flow Information list */
-MAKE_COLLECTION_ITERABLE(FlowInformationListIterator, FlowInformation, std::list, rina::FlowInformation);
-/* Define iterator for Unsigned int list */
-MAKE_COLLECTION_ITERABLE(UnsignedIntListIterator, Long, std::list, unsigned int);
-
-%template(DIFPropertiesVector) std::vector<rina::DIFProperties>;
-%template(FlowInformationVector) std::vector<rina::FlowInformation>;
-%template(ApplicationRegistrationVector) std::vector<rina::ApplicationRegistration *>;
-%template(ParameterList) std::list<rina::Parameter>;
-%template(ApplicationProcessNamingInformationList) std::list<rina::ApplicationProcessNamingInformation>;
-%template(IPCManagerSingleton) Singleton<rina::IPCManager>;
-%template(IPCEventProducerSingleton) Singleton<rina::IPCEventProducer>;
-%template(StringList) std::list<std::string>;
-%template(FlowInformationList) std::list<rina::FlowInformation>;
-%template(UnsignedIntList) std::list<unsigned int>;
-

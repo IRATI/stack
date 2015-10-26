@@ -26,11 +26,11 @@ void IPCPObj::read(const rina::cdap_rib::con_handle_t &con,
 				const std::string& class_,
 				const rina::cdap_rib::filt_info_t &filt,
 				const int invoke_id,
-				rina::cdap_rib::SerializedObject &obj_reply,
+				rina::cdap_rib::ser_obj_t &obj_reply,
 				rina::cdap_rib::res_info_t& res){
 
 	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
-	mad_manager::structures::ipcp_t info;
+	mad_manager::ipcp_t info;
 	info.process_id = processID_;
 	info.name = IPCManager->get_ipcp_name(processID_);
 	//TODO: Add missing stuff...
@@ -64,8 +64,8 @@ void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
 			const std::string& class_,
 			const rina::cdap_rib::filt_info_t &filt,
 			const int invoke_id,
-			const rina::cdap_rib::SerializedObject &obj_req,
-			rina::cdap_rib::SerializedObject &obj_reply,
+			const rina::cdap_rib::ser_obj_t &obj_req,
+			rina::cdap_rib::ser_obj_t &obj_reply,
 			rina::cdap_rib::res_info_t& res){
 
 	IPCPObj* ipcp;
@@ -87,8 +87,8 @@ void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
 	}
 
 
-	mad_manager::structures::ipcp_config_t object;
-	rinad::mad_manager::encoders::IPCPConfigEncoder().decode(
+	mad_manager::ipcp_config_t object;
+	rinad::mad_manager::IPCPConfigEncoder().decode(
 			obj_req, object);
 
 	//Call the IPCManager
@@ -144,10 +144,11 @@ void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
 		res.code_ = rina::cdap_rib::CDAP_ERROR;
 		return;
 	}
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }
 
 int IPCPObj::createIPCP(
-		rinad::mad_manager::structures::ipcp_config_t &object) {
+		rinad::mad_manager::ipcp_config_t &object) {
 
 	CreateIPCPPromise ipcp_promise;
 
@@ -168,7 +169,7 @@ int IPCPObj::createIPCP(
 }
 
 bool IPCPObj::assignToDIF(
-			rinad::mad_manager::structures::ipcp_config_t &object,
+			rinad::mad_manager::ipcp_config_t &object,
 			int ipcp_id) {
 	// ASSIGN TO DIF
 	Promise assign_promise;
@@ -207,7 +208,7 @@ bool IPCPObj::assignToDIF(
 	return true;
 }
 
-bool IPCPObj::registerAtDIFs(mad_manager::structures::ipcp_config_t &object,
+bool IPCPObj::registerAtDIFs(mad_manager::ipcp_config_t &object,
 								int ipcp_id) {
 	for(std::list<std::string>::iterator it =
 				object.difs_to_register.begin();

@@ -26,7 +26,6 @@
 #include <linux/list.h>
 
 #include "common.h"
-#include "qos.h"
 #include "buffer.h"
 
 /*

@@ -6,6 +6,7 @@
 
 if BUILD_BINDINGS_JAVA
 
+JAVA_DIR		= $(top_builddir)/../java
 SWIG_DEBUG      = -v
 SWIG_CPPFLAGS   = -I$(top_srcdir)/include
 SWIG_FLAGS      = $(SWIG_DEBUG) $(SWIG_CPPFLAGS) -Werror -Wall
@@ -17,35 +18,36 @@ CLEANFILES =
 wrap.stamp: $(top_srcdir)/wrap/*.i $(top_srcdir)/include/librina/*.h
 	rm -f wrap.tmp
 	touch wrap.tmp
-	rm -r -f eu/irati/librina   &&			\
-	$(MKDIR_P) eu/irati/librina &&			\
+	rm -r -f $(JAVA_DIR)/eu/irati/librina   &&			\
+	$(MKDIR_P) $(JAVA_DIR)/eu/irati/librina &&			\
 	$(SWIG) $(SWIG_FLAGS) $(SWIG_JAVA_FLAGS)	\
 		-c++					\
 		-o librina_java.cc			\
-		-outdir ./eu/irati/librina		\
+		-outdir $(JAVA_DIR)/eu/irati/librina		\
 		$(top_srcdir)/wrap/librina.i || {	\
 		echo "Cannot wrap input file" ;		\
 		rm -f wrap.tmp ;			\
-		rm -r -f eu/irati/librina ;		\
+		rm -r -f $(JAVA_DIR)/eu/irati/librina ;		\
 		exit 1 ;				\
 	}
 	mv -f wrap.tmp $@
 
 CLEANFILES += wrap.stamp wrap.tmp
-CLEANFILES += librina_java.cc
+CLEANFILES += librina_java.cc+
 
 librina-java-classes: wrap.stamp
-	$(JAVAC) eu/irati/librina/*.java
+	$(JAVAC) $(JAVA_DIR)/eu/irati/librina/*.java
 
 librina.jar: librina-java-classes
+	cd $(JAVA_DIR) &&	\
 	$(JAR) -cvf librina.jar eu/irati/librina/*.class
-
+	mv $(JAVA_DIR)/librina.jar $(builddir)
 CLEANFILES += librina.jar
 
 pkgdata_DATA = librina.jar
 
 clean-local:
-	rm -r -f eu/irati/librina
+	rm -r -f $(JAVA_DIR)/eu/irati/librina
 
 librina_java.cc: wrap.stamp
 
