@@ -5,7 +5,7 @@
  *****************************************************************************/
 
 /*
- * Copyright (C) 2000 - 2014, Intel Corp.
+ * Copyright (C) 2000 - 2015, Intel Corp.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -124,8 +124,8 @@
 #ifndef ACPI_USE_SYSTEM_INTTYPES
 
 typedef unsigned char u8;
-typedef unsigned char u8;
 typedef unsigned short u16;
+typedef short s16;
 typedef COMPILER_DEPENDENT_UINT64 u64;
 typedef COMPILER_DEPENDENT_INT64 s64;
 
@@ -198,8 +198,28 @@ typedef int s32;
 typedef s32 acpi_native_int;
 
 typedef u32 acpi_size;
+
+#ifdef ACPI_32BIT_PHYSICAL_ADDRESS
+
+/*
+ * OSPMs can define this to shrink the size of the structures for 32-bit
+ * none PAE environment. ASL compiler may always define this to generate
+ * 32-bit OSPM compliant tables.
+ */
 typedef u32 acpi_io_address;
 typedef u32 acpi_physical_address;
+
+#else				/* ACPI_32BIT_PHYSICAL_ADDRESS */
+
+/*
+ * It is reported that, after some calculations, the physical addresses can
+ * wrap over the 32-bit boundary on 32-bit PAE environment.
+ * https://bugzilla.kernel.org/show_bug.cgi?id=87971
+ */
+typedef u64 acpi_io_address;
+typedef u64 acpi_physical_address;
+
+#endif				/* ACPI_32BIT_PHYSICAL_ADDRESS */
 
 #define ACPI_MAX_PTR                    ACPI_UINT32_MAX
 #define ACPI_SIZE_MAX                   ACPI_UINT32_MAX
@@ -329,6 +349,15 @@ typedef u32 acpi_physical_address;
  *
  ******************************************************************************/
 
+#ifdef ACPI_NO_MEM_ALLOCATIONS
+
+#define ACPI_ALLOCATE(a)                NULL
+#define ACPI_ALLOCATE_ZEROED(a)         NULL
+#define ACPI_FREE(a)
+#define ACPI_MEM_TRACKING(a)
+
+#else				/* ACPI_NO_MEM_ALLOCATIONS */
+
 #ifdef ACPI_DBG_TRACK_ALLOCATIONS
 /*
  * Memory allocation tracking (used by acpi_exec to detect memory leaks)
@@ -349,6 +378,8 @@ typedef u32 acpi_physical_address;
 #define ACPI_MEM_TRACKING(a)
 
 #endif				/* ACPI_DBG_TRACK_ALLOCATIONS */
+
+#endif				/* ACPI_NO_MEM_ALLOCATIONS */
 
 /******************************************************************************
  *
@@ -505,7 +536,7 @@ typedef u64 acpi_integer;
 
 #define ACPI_TO_POINTER(i)              ACPI_ADD_PTR (void, (void *) NULL,(acpi_size) i)
 #define ACPI_TO_INTEGER(p)              ACPI_PTR_DIFF (p, (void *) NULL)
-#define ACPI_OFFSET(d, f)               (acpi_size) ACPI_PTR_DIFF (&(((d *)0)->f), (void *) NULL)
+#define ACPI_OFFSET(d, f)               ACPI_PTR_DIFF (&(((d *) 0)->f), (void *) NULL)
 #define ACPI_PHYSADDR_TO_PTR(i)         ACPI_TO_POINTER(i)
 #define ACPI_PTR_TO_PHYSADDR(i)         ACPI_TO_INTEGER(i)
 
@@ -541,6 +572,7 @@ typedef u64 acpi_integer;
 #define ACPI_NO_ACPI_ENABLE             0x10
 #define ACPI_NO_DEVICE_INIT             0x20
 #define ACPI_NO_OBJECT_INIT             0x40
+#define ACPI_NO_FACS_INIT               0x80
 
 /*
  * Initialization state
@@ -600,8 +632,9 @@ typedef u64 acpi_integer;
 #define ACPI_NOTIFY_RESERVED            (u8) 0x0A
 #define ACPI_NOTIFY_LOCALITY_UPDATE     (u8) 0x0B
 #define ACPI_NOTIFY_SHUTDOWN_REQUEST    (u8) 0x0C
+#define ACPI_NOTIFY_AFFINITY_UPDATE     (u8) 0x0D
 
-#define ACPI_NOTIFY_MAX                 0x0C
+#define ACPI_NOTIFY_MAX                 0x0D
 
 /*
  * Types associated with ACPI names and objects. The first group of
@@ -700,23 +733,26 @@ typedef u32 acpi_event_type;
  * The encoding of acpi_event_status is illustrated below.
  * Note that a set bit (1) indicates the property is TRUE
  * (e.g. if bit 0 is set then the event is enabled).
- * +-------------+-+-+-+-+
- * |   Bits 31:4 |3|2|1|0|
- * +-------------+-+-+-+-+
- *          |     | | | |
- *          |     | | | +- Enabled?
- *          |     | | +--- Enabled for wake?
- *          |     | +----- Set?
- *          |     +------- Has a handler?
- *          +----------- <Reserved>
+ * +-------------+-+-+-+-+-+
+ * |   Bits 31:5 |4|3|2|1|0|
+ * +-------------+-+-+-+-+-+
+ *          |     | | | | |
+ *          |     | | | | +- Enabled?
+ *          |     | | | +--- Enabled for wake?
+ *          |     | | +----- Status bit set?
+ *          |     | +------- Enable bit set?
+ *          |     +--------- Has a handler?
+ *          +--------------- <Reserved>
  */
 typedef u32 acpi_event_status;
 
 #define ACPI_EVENT_FLAG_DISABLED        (acpi_event_status) 0x00
 #define ACPI_EVENT_FLAG_ENABLED         (acpi_event_status) 0x01
 #define ACPI_EVENT_FLAG_WAKE_ENABLED    (acpi_event_status) 0x02
-#define ACPI_EVENT_FLAG_SET             (acpi_event_status) 0x04
-#define ACPI_EVENT_FLAG_HANDLE		(acpi_event_status) 0x08
+#define ACPI_EVENT_FLAG_STATUS_SET      (acpi_event_status) 0x04
+#define ACPI_EVENT_FLAG_ENABLE_SET      (acpi_event_status) 0x08
+#define ACPI_EVENT_FLAG_HAS_HANDLER     (acpi_event_status) 0x10
+#define ACPI_EVENT_FLAG_SET             ACPI_EVENT_FLAG_STATUS_SET
 
 /* Actions for acpi_set_gpe, acpi_gpe_wakeup, acpi_hw_low_set_gpe */
 
@@ -727,7 +763,7 @@ typedef u32 acpi_event_status;
 /*
  * GPE info flags - Per GPE
  * +-------+-+-+---+
- * |  7:4  |3|2|1:0|
+ * |  7:5  |4|3|2:0|
  * +-------+-+-+---+
  *     |    | |  |
  *     |    | |  +-- Type of dispatch:to method, handler, notify, or none
@@ -739,13 +775,15 @@ typedef u32 acpi_event_status;
 #define ACPI_GPE_DISPATCH_METHOD        (u8) 0x01
 #define ACPI_GPE_DISPATCH_HANDLER       (u8) 0x02
 #define ACPI_GPE_DISPATCH_NOTIFY        (u8) 0x03
-#define ACPI_GPE_DISPATCH_MASK          (u8) 0x03
+#define ACPI_GPE_DISPATCH_RAW_HANDLER   (u8) 0x04
+#define ACPI_GPE_DISPATCH_MASK          (u8) 0x07
+#define ACPI_GPE_DISPATCH_TYPE(flags)   ((u8) ((flags) & ACPI_GPE_DISPATCH_MASK))
 
-#define ACPI_GPE_LEVEL_TRIGGERED        (u8) 0x04
+#define ACPI_GPE_LEVEL_TRIGGERED        (u8) 0x08
 #define ACPI_GPE_EDGE_TRIGGERED         (u8) 0x00
-#define ACPI_GPE_XRUPT_TYPE_MASK        (u8) 0x04
+#define ACPI_GPE_XRUPT_TYPE_MASK        (u8) 0x08
 
-#define ACPI_GPE_CAN_WAKE               (u8) 0x08
+#define ACPI_GPE_CAN_WAKE               (u8) 0x10
 
 /*
  * Flags for GPE and Lock interfaces
@@ -928,8 +966,18 @@ struct acpi_object_list {
  * Miscellaneous common Data Structures used by the interfaces
  */
 #define ACPI_NO_BUFFER              0
+
+#ifdef ACPI_NO_MEM_ALLOCATIONS
+
+#define ACPI_ALLOCATE_BUFFER        (acpi_size) (0)
+#define ACPI_ALLOCATE_LOCAL_BUFFER  (acpi_size) (0)
+
+#else				/* ACPI_NO_MEM_ALLOCATIONS */
+
 #define ACPI_ALLOCATE_BUFFER        (acpi_size) (-1)	/* Let ACPICA allocate buffer */
 #define ACPI_ALLOCATE_LOCAL_BUFFER  (acpi_size) (-2)	/* For internal use only (enables tracking) */
+
+#endif				/* ACPI_NO_MEM_ALLOCATIONS */
 
 struct acpi_buffer {
 	acpi_size length;	/* Length in bytes of the buffer */
@@ -1222,5 +1270,19 @@ struct acpi_memory_list {
 #define ACPI_OSI_WIN_VISTA_SP2          0x0A
 #define ACPI_OSI_WIN_7                  0x0B
 #define ACPI_OSI_WIN_8                  0x0C
+#define ACPI_OSI_WIN_10                 0x0D
+
+/* Definitions of file IO */
+
+#define ACPI_FILE_READING               0x01
+#define ACPI_FILE_WRITING               0x02
+#define ACPI_FILE_BINARY                0x04
+
+#define ACPI_FILE_BEGIN                 0x01
+#define ACPI_FILE_END                   0x02
+
+/* Definitions of getopt */
+
+#define ACPI_OPT_END                    -1
 
 #endif				/* __ACTYPES_H__ */

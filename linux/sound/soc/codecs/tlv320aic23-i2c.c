@@ -13,6 +13,7 @@
 
 #include <linux/i2c.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/regmap.h>
 #include <sound/soc.h>
 
@@ -30,7 +31,7 @@ static int tlv320aic23_i2c_probe(struct i2c_client *i2c,
 	return tlv320aic23_probe(&i2c->dev, regmap);
 }
 
-static int __exit tlv320aic23_i2c_remove(struct i2c_client *i2c)
+static int tlv320aic23_i2c_remove(struct i2c_client *i2c)
 {
 	snd_soc_unregister_codec(&i2c->dev);
 	return 0;
@@ -55,7 +56,7 @@ static struct i2c_driver tlv320aic23_i2c_driver = {
 		   .of_match_table = of_match_ptr(tlv320aic23_of_match),
 		   },
 	.probe = tlv320aic23_i2c_probe,
-	.remove = __exit_p(tlv320aic23_i2c_remove),
+	.remove = tlv320aic23_i2c_remove,
 	.id_table = tlv320aic23_id,
 };
 

@@ -62,22 +62,22 @@ static struct var_t vars[] = {
  * These attributes will appear in /sys/accessibility/speakup/acntpc.
  */
 static struct kobj_attribute caps_start_attribute =
-	__ATTR(caps_start, S_IWUGO|S_IRUGO, spk_var_show, spk_var_store);
+	__ATTR(caps_start, S_IWUSR|S_IRUGO, spk_var_show, spk_var_store);
 static struct kobj_attribute caps_stop_attribute =
-	__ATTR(caps_stop, S_IWUGO|S_IRUGO, spk_var_show, spk_var_store);
+	__ATTR(caps_stop, S_IWUSR|S_IRUGO, spk_var_show, spk_var_store);
 static struct kobj_attribute pitch_attribute =
-	__ATTR(pitch, S_IWUGO|S_IRUGO, spk_var_show, spk_var_store);
+	__ATTR(pitch, S_IWUSR|S_IRUGO, spk_var_show, spk_var_store);
 static struct kobj_attribute rate_attribute =
-	__ATTR(rate, S_IWUGO|S_IRUGO, spk_var_show, spk_var_store);
+	__ATTR(rate, S_IWUSR|S_IRUGO, spk_var_show, spk_var_store);
 static struct kobj_attribute tone_attribute =
-	__ATTR(tone, S_IWUGO|S_IRUGO, spk_var_show, spk_var_store);
+	__ATTR(tone, S_IWUSR|S_IRUGO, spk_var_show, spk_var_store);
 static struct kobj_attribute vol_attribute =
-	__ATTR(vol, S_IWUGO|S_IRUGO, spk_var_show, spk_var_store);
+	__ATTR(vol, S_IWUSR|S_IRUGO, spk_var_show, spk_var_store);
 
 static struct kobj_attribute delay_time_attribute =
 	__ATTR(delay_time, S_IWUSR|S_IRUGO, spk_var_show, spk_var_store);
 static struct kobj_attribute direct_attribute =
-	__ATTR(direct, S_IWUGO|S_IRUGO, spk_var_show, spk_var_store);
+	__ATTR(direct, S_IWUSR|S_IRUGO, spk_var_show, spk_var_store);
 static struct kobj_attribute full_time_attribute =
 	__ATTR(full_time, S_IWUSR|S_IRUGO, spk_var_show, spk_var_store);
 static struct kobj_attribute jiffy_delta_attribute =
@@ -152,8 +152,10 @@ static inline bool synth_full(void)
 static const char *synth_immediate(struct spk_synth *synth, const char *buf)
 {
 	u_char ch;
+
 	while ((ch = *buf)) {
 		int timeout = SPK_XMITR_TIMEOUT;
+
 		if (ch == '\n')
 			ch = PROCSPEECH;
 		if (synth_full())
@@ -257,6 +259,7 @@ static int synth_probe(struct spk_synth *synth)
 {
 	unsigned int port_val = 0;
 	int i = 0;
+
 	pr_info("Probing for %s.\n", synth->long_name);
 	if (port_forced) {
 		speakup_info.port_tts = port_forced;
@@ -315,18 +318,8 @@ module_param_named(start, synth_acntpc.startup, short, S_IRUGO);
 MODULE_PARM_DESC(port, "Set the port for the synthesizer (override probing).");
 MODULE_PARM_DESC(start, "Start the synthesizer once it is loaded.");
 
-static int __init acntpc_init(void)
-{
-	return synth_add(&synth_acntpc);
-}
+module_spk_synth(synth_acntpc);
 
-static void __exit acntpc_exit(void)
-{
-	synth_remove(&synth_acntpc);
-}
-
-module_init(acntpc_init);
-module_exit(acntpc_exit);
 MODULE_AUTHOR("Kirk Reiser <kirk@braille.uwo.ca>");
 MODULE_AUTHOR("David Borowski");
 MODULE_DESCRIPTION("Speakup support for Accent PC synthesizer");

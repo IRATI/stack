@@ -23,6 +23,7 @@
 #include <linux/i2c.h>
 #include <linux/regmap.h>
 #include <linux/slab.h>
+#include <linux/of.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -54,18 +55,20 @@ static inline int alc5623_reset(struct snd_soc_codec *codec)
 static int amp_mixer_event(struct snd_soc_dapm_widget *w,
 	struct snd_kcontrol *kcontrol, int event)
 {
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+
 	/* to power-on/off class-d amp generators/speaker */
 	/* need to write to 'index-46h' register :        */
 	/* so write index num (here 0x46) to reg 0x6a     */
 	/* and then 0xffff/0 to reg 0x6c                  */
-	snd_soc_write(w->codec, ALC5623_HID_CTRL_INDEX, 0x46);
+	snd_soc_write(codec, ALC5623_HID_CTRL_INDEX, 0x46);
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
-		snd_soc_write(w->codec, ALC5623_HID_CTRL_DATA, 0xFFFF);
+		snd_soc_write(codec, ALC5623_HID_CTRL_DATA, 0xFFFF);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
-		snd_soc_write(w->codec, ALC5623_HID_CTRL_DATA, 0);
+		snd_soc_write(codec, ALC5623_HID_CTRL_DATA, 0);
 		break;
 	}
 
@@ -865,7 +868,6 @@ static int alc5623_suspend(struct snd_soc_codec *codec)
 {
 	struct alc5623_priv *alc5623 = snd_soc_codec_get_drvdata(codec);
 
-	alc5623_set_bias_level(codec, SND_SOC_BIAS_OFF);
 	regcache_cache_only(alc5623->regmap, true);
 
 	return 0;
@@ -886,15 +888,6 @@ static int alc5623_resume(struct snd_soc_codec *codec)
 		return ret;
 	}
 
-	alc5623_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
-
-	/* charge alc5623 caps */
-	if (codec->dapm.suspend_bias_level == SND_SOC_BIAS_ON) {
-		alc5623_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
-		codec->dapm.bias_level = SND_SOC_BIAS_ON;
-		alc5623_set_bias_level(codec, codec->dapm.bias_level);
-	}
-
 	return 0;
 }
 
@@ -904,9 +897,6 @@ static int alc5623_probe(struct snd_soc_codec *codec)
 	struct snd_soc_dapm_context *dapm = &codec->dapm;
 
 	alc5623_reset(codec);
-
-	/* power on device */
-	alc5623_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 
 	if (alc5623->add_ctrl) {
 		snd_soc_write(codec, ALC5623_ADD_CTRL_REG,
@@ -963,19 +953,12 @@ static int alc5623_probe(struct snd_soc_codec *codec)
 	return 0;
 }
 
-/* power down chip */
-static int alc5623_remove(struct snd_soc_codec *codec)
-{
-	alc5623_set_bias_level(codec, SND_SOC_BIAS_OFF);
-	return 0;
-}
-
 static struct snd_soc_codec_driver soc_codec_device_alc5623 = {
 	.probe = alc5623_probe,
-	.remove = alc5623_remove,
 	.suspend = alc5623_suspend,
 	.resume = alc5623_resume,
 	.set_bias_level = alc5623_set_bias_level,
+	.suspend_bias_off = true,
 };
 
 static const struct regmap_config alc5623_regmap = {
@@ -998,8 +981,10 @@ static int alc5623_i2c_probe(struct i2c_client *client,
 {
 	struct alc5623_platform_data *pdata;
 	struct alc5623_priv *alc5623;
+	struct device_node *np;
 	unsigned int vid1, vid2;
 	int ret;
+	u32 val32;
 
 	alc5623 = devm_kzalloc(&client->dev, sizeof(struct alc5623_priv),
 			       GFP_KERNEL);
@@ -1040,6 +1025,16 @@ static int alc5623_i2c_probe(struct i2c_client *client,
 	if (pdata) {
 		alc5623->add_ctrl = pdata->add_ctrl;
 		alc5623->jack_det_ctrl = pdata->jack_det_ctrl;
+	} else {
+		if (client->dev.of_node) {
+			np = client->dev.of_node;
+			ret = of_property_read_u32(np, "add-ctrl", &val32);
+			if (!ret)
+				alc5623->add_ctrl = val32;
+			ret = of_property_read_u32(np, "jack-det-ctrl", &val32);
+			if (!ret)
+				alc5623->jack_det_ctrl = val32;
+		}
 	}
 
 	alc5623->id = vid2;
@@ -1081,11 +1076,18 @@ static const struct i2c_device_id alc5623_i2c_table[] = {
 };
 MODULE_DEVICE_TABLE(i2c, alc5623_i2c_table);
 
+static const struct of_device_id alc5623_of_match[] = {
+	{ .compatible = "realtek,alc5623", },
+	{ }
+};
+MODULE_DEVICE_TABLE(of, alc5623_of_match);
+
 /*  i2c codec control layer */
 static struct i2c_driver alc5623_i2c_driver = {
 	.driver = {
 		.name = "alc562x-codec",
 		.owner = THIS_MODULE,
+		.of_match_table = of_match_ptr(alc5623_of_match),
 	},
 	.probe = alc5623_i2c_probe,
 	.remove =  alc5623_i2c_remove,

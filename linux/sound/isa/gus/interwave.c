@@ -442,17 +442,11 @@ static void snd_interwave_detect_memory(struct snd_gus_card *gus)
 	for (bank_pos = 0; bank_pos < 16L * 1024L * 1024L; bank_pos += 4L * 1024L * 1024L) {
 		for (i = 0; i < 8; ++i)
 			iwave[i] = snd_gf1_peek(gus, bank_pos + i);
-#ifdef CONFIG_SND_DEBUG_ROM
-		printk(KERN_DEBUG "ROM at 0x%06x = %8phC\n", bank_pos, iwave);
-#endif
 		if (strncmp(iwave, "INTRWAVE", 8))
 			continue;	/* first check */
 		csum = 0;
 		for (i = 0; i < sizeof(struct rom_hdr); i++)
 			csum += snd_gf1_peek(gus, bank_pos + i);
-#ifdef CONFIG_SND_DEBUG_ROM
-		printk(KERN_DEBUG "ROM checksum = 0x%x (computed)\n", csum);
-#endif
 		if (csum != 0)
 			continue;	/* not valid rom */
 		gus->gf1.rom_banks++;
@@ -653,7 +647,6 @@ static int snd_interwave_probe(struct snd_card *card, int dev)
 #ifdef SNDRV_STB
 	struct snd_i2c_bus *i2c_bus;
 #endif
-	struct snd_pcm *pcm;
 	char *str;
 	int err;
 
@@ -701,14 +694,15 @@ static int snd_interwave_probe(struct snd_card *card, int dev)
 	if (err < 0)
 		return err;
 
-	err = snd_wss_pcm(wss, 0, &pcm);
+	err = snd_wss_pcm(wss, 0);
 	if (err < 0)
 		return err;
 
-	sprintf(pcm->name + strlen(pcm->name), " rev %c", gus->revision + 'A');
-	strcat(pcm->name, " (codec)");
+	sprintf(wss->pcm->name + strlen(wss->pcm->name), " rev %c",
+		gus->revision + 'A');
+	strcat(wss->pcm->name, " (codec)");
 
-	err = snd_wss_timer(wss, 2, NULL);
+	err = snd_wss_timer(wss, 2);
 	if (err < 0)
 		return err;
 
@@ -717,7 +711,7 @@ static int snd_interwave_probe(struct snd_card *card, int dev)
 		return err;
 
 	if (pcm_channels[dev] > 0) {
-		err = snd_gf1_pcm_new(gus, 1, 1, NULL);
+		err = snd_gf1_pcm_new(gus, 1, 1);
 		if (err < 0)
 			return err;
 	}
@@ -746,7 +740,7 @@ static int snd_interwave_probe(struct snd_card *card, int dev)
 #endif
 
 	gus->uart_enable = midi[dev];
-	if ((err = snd_gf1_rawmidi_new(gus, 0, NULL)) < 0)
+	if ((err = snd_gf1_rawmidi_new(gus, 0)) < 0)
 		return err;
 
 #ifndef SNDRV_STB

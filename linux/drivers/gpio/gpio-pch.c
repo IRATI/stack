@@ -20,6 +20,7 @@
 #include <linux/gpio.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
+#include <linux/slab.h>
 
 #define PCH_EDGE_FALLING	0
 #define PCH_EDGE_RISING		BIT(0)
@@ -170,6 +171,7 @@ static int pch_gpio_direction_input(struct gpio_chip *gpio, unsigned nr)
 	return 0;
 }
 
+#ifdef CONFIG_PM
 /*
  * Save register configuration and disable interrupts.
  */
@@ -205,6 +207,7 @@ static void pch_gpio_restore_reg_conf(struct pch_gpio *chip)
 		iowrite32(chip->pch_gpio_reg.gpio_use_sel_reg,
 			  &chip->reg->gpio_use_sel);
 }
+#endif
 
 static int pch_gpio_to_irq(struct gpio_chip *gpio, unsigned offset)
 {
@@ -425,9 +428,7 @@ end:
 
 err_request_irq:
 	irq_free_descs(irq_base, gpio_pins[chip->ioh]);
-
-	if (gpiochip_remove(&chip->gpio))
-		dev_err(&pdev->dev, "%s gpiochip_remove failed\n", __func__);
+	gpiochip_remove(&chip->gpio);
 
 err_gpiochip_add:
 	pci_iounmap(pdev, chip->base);
@@ -446,7 +447,6 @@ err_pci_enable:
 
 static void pch_gpio_remove(struct pci_dev *pdev)
 {
-	int err;
 	struct pch_gpio *chip = pci_get_drvdata(pdev);
 
 	if (chip->irq_base != -1) {
@@ -455,10 +455,7 @@ static void pch_gpio_remove(struct pci_dev *pdev)
 		irq_free_descs(chip->irq_base, gpio_pins[chip->ioh]);
 	}
 
-	err = gpiochip_remove(&chip->gpio);
-	if (err)
-		dev_err(&pdev->dev, "Failed gpiochip_remove\n");
-
+	gpiochip_remove(&chip->gpio);
 	pci_iounmap(pdev, chip->base);
 	pci_release_regions(pdev);
 	pci_disable_device(pdev);

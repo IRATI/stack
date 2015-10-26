@@ -39,14 +39,8 @@
 
 #include "vmpi-structs.h"
 #include "vmpi-host-impl.h"
+#include "vmpi.h"
 
-
-//#define VERBOSE
-#ifdef VERBOSE
-#define IFV(x) x
-#else   /* !VERBOSE */
-#define IFV(x)
-#endif  /* !VERBOSE */
 
 typedef unsigned int pending_ring_idx_t;
 #define INVALID_PENDING_RING_IDX (~0U)

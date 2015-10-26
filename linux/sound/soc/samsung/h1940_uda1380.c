@@ -76,7 +76,6 @@ static int h1940_hw_params(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	int div;
 	int ret;
 	unsigned int rate = params_rate(params);
@@ -94,18 +93,6 @@ static int h1940_hw_params(struct snd_pcm_substream *substream,
 			__func__, rate);
 		return -EINVAL;
 	}
-
-	/* set codec DAI configuration */
-	ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_I2S |
-		SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
-	if (ret < 0)
-		return ret;
-
-	/* set cpu DAI configuration */
-	ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_I2S |
-		SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
-	if (ret < 0)
-		return ret;
 
 	/* select clock source */
 	ret = snd_soc_dai_set_sysclk(cpu_dai, S3C24XX_CLKSRC_PCLK, rate,
@@ -175,20 +162,18 @@ static struct platform_device *s3c24xx_snd_device;
 
 static int h1940_uda1380_init(struct snd_soc_pcm_runtime *rtd)
 {
-	struct snd_soc_codec *codec = rtd->codec;
-	struct snd_soc_dapm_context *dapm = &codec->dapm;
-
-	snd_soc_dapm_enable_pin(dapm, "Headphone Jack");
-	snd_soc_dapm_enable_pin(dapm, "Speaker");
-	snd_soc_dapm_enable_pin(dapm, "Mic Jack");
-
-	snd_soc_jack_new(codec, "Headphone Jack", SND_JACK_HEADPHONE,
-		&hp_jack);
-
-	snd_soc_jack_add_pins(&hp_jack, ARRAY_SIZE(hp_jack_pins),
-		hp_jack_pins);
+	snd_soc_card_jack_new(rtd->card, "Headphone Jack", SND_JACK_HEADPHONE,
+		&hp_jack, hp_jack_pins, ARRAY_SIZE(hp_jack_pins));
 
 	snd_soc_jack_add_gpios(&hp_jack, ARRAY_SIZE(hp_jack_gpios),
+		hp_jack_gpios);
+
+	return 0;
+}
+
+static int h1940_uda1380_card_remove(struct snd_soc_card *card)
+{
+	snd_soc_jack_free_gpios(&hp_jack, ARRAY_SIZE(hp_jack_gpios),
 		hp_jack_gpios);
 
 	return 0;
@@ -204,6 +189,8 @@ static struct snd_soc_dai_link h1940_uda1380_dai[] = {
 		.init		= h1940_uda1380_init,
 		.platform_name	= "s3c24xx-iis",
 		.codec_name	= "uda1380-codec.0-001a",
+		.dai_fmt	= SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
+				  SND_SOC_DAIFMT_CBS_CFS,
 		.ops		= &h1940_ops,
 	},
 };
@@ -211,6 +198,7 @@ static struct snd_soc_dai_link h1940_uda1380_dai[] = {
 static struct snd_soc_card h1940_asoc = {
 	.name = "h1940",
 	.owner = THIS_MODULE,
+	.remove = h1940_uda1380_card_remove,
 	.dai_link = h1940_uda1380_dai,
 	.num_links = ARRAY_SIZE(h1940_uda1380_dai),
 
@@ -262,8 +250,6 @@ err_out:
 static void __exit h1940_exit(void)
 {
 	platform_device_unregister(s3c24xx_snd_device);
-	snd_soc_jack_free_gpios(&hp_jack, ARRAY_SIZE(hp_jack_gpios),
-		hp_jack_gpios);
 	gpio_free(S3C_GPIO_END + 9);
 }
 

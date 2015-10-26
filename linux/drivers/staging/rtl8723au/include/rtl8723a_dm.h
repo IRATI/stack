@@ -37,11 +37,7 @@ enum{
 #define IQK_BB_REG_NUM			9
 #define HP_THERMAL_NUM		8
 /*  duplicate code,will move to ODM ######### */
-struct dm_priv
-{
-	u8	DM_Type;
-	u8	DMFlag;
-	u8	InitDMFlag;
+struct dm_priv {
 	u32	InitODMFlag;
 
 	/*  Upper and Lower Signal threshold for Rate Adaptive*/
@@ -59,8 +55,6 @@ struct dm_priv
 	#endif
 
 	/* for High Power */
-	u8 bDynamicTxPowerEnable;
-	u8 LastDTPLvl;
 	u8 DynamicTxHighPowerLvl;/* Add by Jacken Tx Power Control for Near/Far Range 2008/03/06 */
 
 	/* for tx power tracking */
@@ -136,7 +130,6 @@ struct dm_priv
 /*  */
 
 void rtl8723a_init_dm_priv(struct rtw_adapter *padapter);
-void rtl8723a_deinit_dm_priv(struct rtw_adapter *padapter);
 
 void rtl8723a_InitHalDm(struct rtw_adapter *padapter);
 void rtl8723a_HalDmWatchDog(struct rtw_adapter *padapter);

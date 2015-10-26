@@ -6,14 +6,49 @@
  * Gregory CLEMENT <gregory.clement@free-electrons.com>
  * Thomas Petazzoni <thomas.petazzoni@free-electrons.com>
  *
- * This file is licensed under the terms of the GNU General Public
- * License version 2.  This program is licensed "as is" without any
- * warranty of any kind, whether express or implied.
+ * This file is dual-licensed: you can use it either under the terms
+ * of the GPL or the X11 license, at your option. Note that this dual
+ * licensing only applies to this file, and not this project as a
+ * whole.
+ *
+ *  a) This file is free software; you can redistribute it and/or
+ *     modify it under the terms of the GNU General Public License as
+ *     published by the Free Software Foundation; either version 2 of the
+ *     License, or (at your option) any later version.
+ *
+ *     This file is distributed in the hope that it will be useful
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU General Public License for more details.
+ *
+ * Or, alternatively
+ *
+ *  b) Permission is hereby granted, free of charge, to any person
+ *     obtaining a copy of this software and associated documentation
+ *     files (the "Software"), to deal in the Software without
+ *     restriction, including without limitation the rights to use
+ *     copy, modify, merge, publish, distribute, sublicense, and/or
+ *     sell copies of the Software, and to permit persons to whom the
+ *     Software is furnished to do so, subject to the following
+ *     conditions:
+ *
+ *     The above copyright notice and this permission notice shall be
+ *     included in all copies or substantial portions of the Software.
+ *
+ *     THE SOFTWARE IS PROVIDED , WITHOUT WARRANTY OF ANY KIND
+ *     EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ *     OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ *     NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ *     HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY
+ *     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ *     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ *     OTHER DEALINGS IN THE SOFTWARE.
  */
 
 #include "skeleton.dtsi"
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/phy/phy.h>
 
 #define MBUS_ID(target,attributes) (((target) << 24) | ((attributes) << 16))
 
@@ -25,6 +60,8 @@
 		gpio0 = &gpio0;
 		gpio1 = &gpio1;
 		gpio2 = &gpio2;
+		serial0 = &uart0;
+		serial1 = &uart1;
 	};
 
 	clocks {
@@ -32,13 +69,21 @@
 		mainpll: mainpll {
 			compatible = "fixed-clock";
 			#clock-cells = <0>;
-			clock-frequency = <2000000000>;
+			clock-frequency = <1000000000>;
+		};
+		/* 25 MHz reference crystal */
+		refclk: oscillator {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <25000000>;
 		};
 	};
 
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
+		enable-method = "marvell,armada-375-smp";
+
 		cpu@0 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a9";
@@ -51,8 +96,13 @@
 		};
 	};
 
+	pmu {
+		compatible = "arm,cortex-a9-pmu";
+		interrupts-extended = <&mpic 3>;
+	};
+
 	soc {
-		compatible = "marvell,armada375-mbus", "marvell,armada370-mbus", "simple-bus";
+		compatible = "marvell,armada375-mbus", "simple-bus";
 		#address-cells = <2>;
 		#size-cells = <1>;
 		controller = <&mbusc>;
@@ -128,6 +178,11 @@
 				cache-level = <2>;
 			};
 
+			scu@c000 {
+				compatible = "arm,cortex-a9-scu";
+				reg = <0xc000 0x58>;
+			};
+
 			timer@c600 {
 				compatible = "arm,cortex-a9-twd-timer";
 				reg = <0xc600 0x20>;
@@ -142,6 +197,44 @@
 				interrupt-controller;
 				reg = <0xd000 0x1000>,
 				      <0xc100 0x100>;
+			};
+
+			mdio {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "marvell,orion-mdio";
+				reg = <0xc0054 0x4>;
+				clocks = <&gateclk 19>;
+			};
+
+			/* Network controller */
+			ethernet@f0000 {
+				compatible = "marvell,armada-375-pp2";
+				reg = <0xf0000 0xa000>, /* Packet Processor regs */
+				      <0xc0000 0x3060>, /* LMS regs */
+				      <0xc4000 0x100>,  /* eth0 regs */
+				      <0xc5000 0x100>;  /* eth1 regs */
+				clocks = <&gateclk 3>, <&gateclk 19>;
+				clock-names = "pp_clk", "gop_clk";
+				status = "disabled";
+
+				eth0: eth0@c4000 {
+					interrupts = <GIC_SPI 37 IRQ_TYPE_LEVEL_HIGH>;
+					port-id = <0>;
+					status = "disabled";
+				};
+
+				eth1: eth1@c5000 {
+					interrupts = <GIC_SPI 41 IRQ_TYPE_LEVEL_HIGH>;
+					port-id = <1>;
+					status = "disabled";
+				};
+			};
+
+			rtc@10300 {
+				compatible = "marvell,orion-rtc";
+				reg = <0x10300 0x20>;
+				interrupts = <GIC_SPI 21 IRQ_TYPE_LEVEL_HIGH>;
 			};
 
 			spi0: spi@10600 {
@@ -188,21 +281,23 @@
 				status = "disabled";
 			};
 
-			serial@12000 {
+			uart0: serial@12000 {
 				compatible = "snps,dw-apb-uart";
 				reg = <0x12000 0x100>;
 				reg-shift = <2>;
 				interrupts = <GIC_SPI 12 IRQ_TYPE_LEVEL_HIGH>;
 				reg-io-width = <1>;
+				clocks = <&coreclk 0>;
 				status = "disabled";
 			};
 
-			serial@12100 {
+			uart1: serial@12100 {
 				compatible = "snps,dw-apb-uart";
 				reg = <0x12100 0x100>;
 				reg-shift = <2>;
 				interrupts = <GIC_SPI 13 IRQ_TYPE_LEVEL_HIGH>;
 				reg-io-width = <1>;
+				clocks = <&coreclk 0>;
 				status = "disabled";
 			};
 
@@ -293,12 +388,18 @@
 				#clock-cells = <1>;
 			};
 
+			usbcluster: usb-cluster@18400 {
+				compatible = "marvell,armada-375-usb-cluster";
+				reg = <0x18400 0x4>;
+				#phy-cells = <1>;
+			};
+
 			mbusc: mbus-controller@20000 {
 				compatible = "marvell,mbus-controller";
 				reg = <0x20000 0x100>, <0x20180 0x20>;
 			};
 
-			mpic: interrupt-controller@20000 {
+			mpic: interrupt-controller@20a00 {
 				compatible = "marvell,mpic";
 				reg = <0x20a00 0x2d0>, <0x21070 0x58>;
 				#interrupt-cells = <1>;
@@ -317,7 +418,53 @@
 						      <&gic  GIC_SPI 11 IRQ_TYPE_LEVEL_HIGH>,
 						      <&mpic 5>,
 						      <&mpic 6>;
-				clocks = <&coreclk 0>;
+				clocks = <&coreclk 0>, <&refclk>;
+				clock-names = "nbclk", "fixed";
+			};
+
+			watchdog@20300 {
+				compatible = "marvell,armada-375-wdt";
+				reg = <0x20300 0x34>, <0x20704 0x4>, <0x18254 0x4>;
+				clocks = <&coreclk 0>, <&refclk>;
+				clock-names = "nbclk", "fixed";
+			};
+
+			cpurst@20800 {
+				compatible = "marvell,armada-370-cpu-reset";
+				reg = <0x20800 0x10>;
+			};
+
+			coherency-fabric@21010 {
+				compatible = "marvell,armada-375-coherency-fabric";
+				reg = <0x21010 0x1c>;
+			};
+
+			usb@50000 {
+				compatible = "marvell,orion-ehci";
+				reg = <0x50000 0x500>;
+				interrupts = <GIC_SPI 17 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&gateclk 18>;
+				phys = <&usbcluster PHY_TYPE_USB2>;
+				phy-names = "usb";
+				status = "disabled";
+			};
+
+			usb@54000 {
+				compatible = "marvell,orion-ehci";
+				reg = <0x54000 0x500>;
+				interrupts = <GIC_SPI 18 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&gateclk 26>;
+				status = "disabled";
+			};
+
+			usb3@58000 {
+				compatible = "marvell,armada-375-xhci";
+				reg = <0x58000 0x20000>,<0x5b880 0x80>;
+				interrupts = <GIC_SPI 16 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&gateclk 16>;
+				phys = <&usbcluster PHY_TYPE_USB3>;
+				phy-names = "usb";
+				status = "disabled";
 			};
 
 			xor@60800 {
@@ -389,6 +536,12 @@
 				cap-sd-highspeed;
 				cap-mmc-highspeed;
 				status = "disabled";
+			};
+
+			thermal@e8078 {
+				compatible = "marvell,armada375-thermal";
+				reg = <0xe8078 0x4>, <0xe807c 0x8>;
+				status = "okay";
 			};
 
 			coreclk: mvebu-sar@e8204 {

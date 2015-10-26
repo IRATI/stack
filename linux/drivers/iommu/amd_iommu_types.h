@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007-2010 Advanced Micro Devices, Inc.
- * Author: Joerg Roedel <joerg.roedel@amd.com>
+ * Author: Joerg Roedel <jroedel@suse.de>
  *         Leo Duran <leo.duran@amd.com>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -282,6 +282,12 @@
 #define PTE_PAGE_SIZE(pte) \
 	(1ULL << (1 + ffz(((pte) | 0xfffULL))))
 
+/*
+ * Takes a page-table level and returns the default page-size for this level
+ */
+#define PTE_LEVEL_PAGE_SIZE(level)			\
+	(1ULL << (12 + (9 * (level))))
+
 #define IOMMU_PTE_P  (1ULL << 0)
 #define IOMMU_PTE_TV (1ULL << 1)
 #define IOMMU_PTE_U  (1ULL << 59)
@@ -390,12 +396,6 @@ struct amd_iommu_fault {
 
 };
 
-#define PPR_FAULT_EXEC	(1 << 1)
-#define PPR_FAULT_READ  (1 << 2)
-#define PPR_FAULT_WRITE (1 << 5)
-#define PPR_FAULT_USER  (1 << 6)
-#define PPR_FAULT_RSVD  (1 << 7)
-#define PPR_FAULT_GN    (1 << 8)
 
 struct iommu_domain;
 
@@ -406,6 +406,8 @@ struct iommu_domain;
 struct protection_domain {
 	struct list_head list;  /* for list of all protection domains */
 	struct list_head dev_list; /* List of all devices in this domain */
+	struct iommu_domain domain; /* generic domain handle used by
+				       iommu core code */
 	spinlock_t lock;	/* mostly used to lock the page table*/
 	struct mutex api_lock;	/* protect page tables in the iommu-api path */
 	u16 id;			/* the domain id written to the device table */
@@ -417,32 +419,7 @@ struct protection_domain {
 	bool updated;		/* complete domain flush required */
 	unsigned dev_cnt;	/* devices assigned to this domain */
 	unsigned dev_iommu[MAX_IOMMUS]; /* per-IOMMU reference count */
-	void *priv;		/* private data */
-	struct iommu_domain *iommu_domain; /* Pointer to generic
-					      domain structure */
-
-};
-
-/*
- * This struct contains device specific data for the IOMMU
- */
-struct iommu_dev_data {
-	struct list_head list;		  /* For domain->dev_list */
-	struct list_head dev_data_list;	  /* For global dev_data_list */
-	struct iommu_dev_data *alias_data;/* The alias dev_data */
-	struct protection_domain *domain; /* Domain the device is bound to */
-	atomic_t bind;			  /* Domain attach reference count */
-	struct iommu_group *group;	  /* IOMMU group for virtual aliases */
-	u16 devid;			  /* PCI Device ID */
-	bool iommu_v2;			  /* Device can make use of IOMMUv2 */
-	bool passthrough;		  /* Default for device is pt_domain */
-	struct {
-		bool enabled;
-		int qdep;
-	} ats;				  /* ATS state */
-	bool pri_tlp;			  /* PASID TLB required for
-					     PPR completions */
-	u32 errata;			  /* Bitmap for errata to apply */
+	void *priv;             /* private data */
 };
 
 /*
@@ -577,6 +554,9 @@ struct amd_iommu {
 
 	/* default dma_ops domain for that IOMMU */
 	struct dma_ops_domain *default_dom;
+
+	/* IOMMU sysfs device */
+	struct device *iommu_dev;
 
 	/*
 	 * We can't rely on the BIOS to restore all values on reinit, so we

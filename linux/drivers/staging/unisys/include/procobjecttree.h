@@ -1,6 +1,6 @@
 /* procobjecttree.h
  *
- * Copyright © 2010 - 2013 UNISYS CORPORATION
+ * Copyright (C) 2010 - 2013 UNISYS CORPORATION
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -26,7 +26,6 @@
 #ifndef __PROCOBJECTTREE_H__
 #define __PROCOBJECTTREE_H__
 
-#include "uniklog.h"
 #include "timskmod.h"
 
 /* These are opaque structures to users.

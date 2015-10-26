@@ -1,7 +1,7 @@
 /*
  * Marvell Wireless LAN device driver: commands and events
  *
- * Copyright (C) 2011, Marvell International Ltd.
+ * Copyright (C) 2011-2014, Marvell International Ltd.
  *
  * This software file (the "File") is distributed by Marvell International
  * Ltd. under the terms of the GNU General Public License Version 2, June 1991
@@ -137,7 +137,6 @@ static int mwifiex_dnld_cmd_to_fw(struct mwifiex_private *priv,
 	struct host_cmd_ds_command *host_cmd;
 	uint16_t cmd_code;
 	uint16_t cmd_size;
-	struct timeval tstamp;
 	unsigned long flags;
 	__le32 tmp;
 
@@ -198,10 +197,8 @@ static int mwifiex_dnld_cmd_to_fw(struct mwifiex_private *priv,
 		 */
 		skb_put(cmd_node->cmd_skb, cmd_size - cmd_node->cmd_skb->len);
 
-	do_gettimeofday(&tstamp);
-	dev_dbg(adapter->dev, "cmd: DNLD_CMD: (%lu.%lu): %#x, act %#x, len %d,"
-		" seqno %#x\n",
-		tstamp.tv_sec, tstamp.tv_usec, cmd_code,
+	dev_dbg(adapter->dev,
+		"cmd: DNLD_CMD: %#x, act %#x, len %d, seqno %#x\n", cmd_code,
 		le16_to_cpu(*(__le16 *) ((u8 *) host_cmd + S_DS_GEN)), cmd_size,
 		le16_to_cpu(host_cmd->seq_num));
 
@@ -283,6 +280,13 @@ static int mwifiex_dnld_sleep_confirm_cmd(struct mwifiex_adapter *adapter)
 					(adapter->seq_num, priv->bss_num,
 					 priv->bss_type)));
 
+	dev_dbg(adapter->dev,
+		"cmd: DNLD_CMD: %#x, act %#x, len %d, seqno %#x\n",
+		le16_to_cpu(sleep_cfm_buf->command),
+		le16_to_cpu(sleep_cfm_buf->action),
+		le16_to_cpu(sleep_cfm_buf->size),
+		le16_to_cpu(sleep_cfm_buf->seq_num));
+
 	if (adapter->iface_type == MWIFIEX_USB) {
 		sleep_cfm_tmp =
 			dev_alloc_skb(sizeof(struct mwifiex_opt_sleep_confirm)
@@ -311,22 +315,19 @@ static int mwifiex_dnld_sleep_confirm_cmd(struct mwifiex_adapter *adapter)
 		adapter->dbg.num_cmd_sleep_cfm_host_to_card_failure++;
 		return -1;
 	}
-	if (GET_BSS_ROLE(mwifiex_get_priv(adapter, MWIFIEX_BSS_ROLE_ANY))
-	    == MWIFIEX_BSS_ROLE_STA) {
-		if (!le16_to_cpu(sleep_cfm_buf->resp_ctrl))
-			/* Response is not needed for sleep
-			   confirm command */
-			adapter->ps_state = PS_STATE_SLEEP;
-		else
-			adapter->ps_state = PS_STATE_SLEEP_CFM;
 
-		if (!le16_to_cpu(sleep_cfm_buf->resp_ctrl) &&
-		    (adapter->is_hs_configured &&
-		     !adapter->sleep_period.period)) {
-			adapter->pm_wakeup_card_req = true;
-			mwifiex_hs_activated_event(mwifiex_get_priv
-					(adapter, MWIFIEX_BSS_ROLE_STA), true);
-		}
+	if (!le16_to_cpu(sleep_cfm_buf->resp_ctrl))
+		/* Response is not needed for sleep confirm command */
+		adapter->ps_state = PS_STATE_SLEEP;
+	else
+		adapter->ps_state = PS_STATE_SLEEP_CFM;
+
+	if (!le16_to_cpu(sleep_cfm_buf->resp_ctrl) &&
+	    (adapter->is_hs_configured &&
+	     !adapter->sleep_period.period)) {
+		adapter->pm_wakeup_card_req = true;
+		mwifiex_hs_activated_event(mwifiex_get_priv
+				(adapter, MWIFIEX_BSS_ROLE_ANY), true);
 	}
 
 	return ret;
@@ -433,7 +434,6 @@ int mwifiex_process_event(struct mwifiex_adapter *adapter)
 		mwifiex_get_priv(adapter, MWIFIEX_BSS_ROLE_ANY);
 	struct sk_buff *skb = adapter->event_skb;
 	u32 eventcause = adapter->event_cause;
-	struct timeval tstamp;
 	struct mwifiex_rxinfo *rx_info;
 
 	/* Save the last event to debug log */
@@ -447,26 +447,19 @@ int mwifiex_process_event(struct mwifiex_adapter *adapter)
 				      EVENT_GET_BSS_TYPE(eventcause));
 	if (!priv)
 		priv = mwifiex_get_priv(adapter, MWIFIEX_BSS_ROLE_ANY);
+
 	/* Clear BSS_NO_BITS from event */
 	eventcause &= EVENT_ID_MASK;
 	adapter->event_cause = eventcause;
 
 	if (skb) {
 		rx_info = MWIFIEX_SKB_RXCB(skb);
+		memset(rx_info, 0, sizeof(*rx_info));
 		rx_info->bss_num = priv->bss_num;
 		rx_info->bss_type = priv->bss_type;
 	}
 
-	if (eventcause != EVENT_PS_SLEEP && eventcause != EVENT_PS_AWAKE) {
-		do_gettimeofday(&tstamp);
-		dev_dbg(adapter->dev, "event: %lu.%lu: cause: %#x\n",
-			tstamp.tv_sec, tstamp.tv_usec, eventcause);
-	} else {
-		/* Handle PS_SLEEP/AWAKE events on STA */
-		priv = mwifiex_get_priv(adapter, MWIFIEX_BSS_ROLE_STA);
-		if (!priv)
-			priv = mwifiex_get_priv(adapter, MWIFIEX_BSS_ROLE_ANY);
-	}
+	dev_dbg(adapter->dev, "EVENT: cause: %#x\n", eventcause);
 
 	if (priv->bss_role == MWIFIEX_BSS_ROLE_UAP)
 		ret = mwifiex_process_uap_event(priv);
@@ -772,7 +765,6 @@ int mwifiex_process_cmdresp(struct mwifiex_adapter *adapter)
 	uint16_t orig_cmdresp_no;
 	uint16_t cmdresp_no;
 	uint16_t cmdresp_result;
-	struct timeval tstamp;
 	unsigned long flags;
 
 	/* Now we got response from FW, cancel the command timer */
@@ -830,11 +822,10 @@ int mwifiex_process_cmdresp(struct mwifiex_adapter *adapter)
 	adapter->dbg.last_cmd_resp_id[adapter->dbg.last_cmd_resp_index] =
 								orig_cmdresp_no;
 
-	do_gettimeofday(&tstamp);
-	dev_dbg(adapter->dev, "cmd: CMD_RESP: (%lu.%lu): 0x%x, result %d,"
-		" len %d, seqno 0x%x\n",
-	       tstamp.tv_sec, tstamp.tv_usec, orig_cmdresp_no, cmdresp_result,
-	       le16_to_cpu(resp->size), le16_to_cpu(resp->seq_num));
+	dev_dbg(adapter->dev,
+		"cmd: CMD_RESP: 0x%x, result %d, len %d, seqno 0x%x\n",
+		orig_cmdresp_no, cmdresp_result,
+		le16_to_cpu(resp->size), le16_to_cpu(resp->seq_num));
 
 	if (!(orig_cmdresp_no & HostCmd_RET_BIT)) {
 		dev_err(adapter->dev, "CMD_RESP: invalid cmd resp\n");
@@ -894,7 +885,6 @@ mwifiex_cmd_timeout_func(unsigned long function_context)
 	struct mwifiex_adapter *adapter =
 		(struct mwifiex_adapter *) function_context;
 	struct cmd_ctrl_node *cmd_node;
-	struct timeval tstamp;
 
 	adapter->is_cmd_timedout = 1;
 	if (!adapter->curr_cmd) {
@@ -907,10 +897,8 @@ mwifiex_cmd_timeout_func(unsigned long function_context)
 			adapter->dbg.last_cmd_id[adapter->dbg.last_cmd_index];
 		adapter->dbg.timeout_cmd_act =
 			adapter->dbg.last_cmd_act[adapter->dbg.last_cmd_index];
-		do_gettimeofday(&tstamp);
 		dev_err(adapter->dev,
-			"%s: Timeout cmd id (%lu.%lu) = %#x, act = %#x\n",
-			__func__, tstamp.tv_sec, tstamp.tv_usec,
+			"%s: Timeout cmd id = %#x, act = %#x\n", __func__,
 			adapter->dbg.timeout_cmd_id,
 			adapter->dbg.timeout_cmd_act);
 
@@ -955,12 +943,13 @@ mwifiex_cmd_timeout_func(unsigned long function_context)
 			adapter->cmd_wait_q.status = -ETIMEDOUT;
 			wake_up_interruptible(&adapter->cmd_wait_q.wait);
 			mwifiex_cancel_pending_ioctl(adapter);
-			/* reset cmd_sent flag to unblock new commands */
-			adapter->cmd_sent = false;
 		}
 	}
 	if (adapter->hw_status == MWIFIEX_HW_STATUS_INITIALIZING)
 		mwifiex_init_fw_complete(adapter);
+
+	if (adapter->if_ops.fw_dump)
+		adapter->if_ops.fw_dump(adapter);
 
 	if (adapter->if_ops.card_reset)
 		adapter->if_ops.card_reset(adapter);
@@ -1011,11 +1000,9 @@ mwifiex_cancel_all_pending_cmd(struct mwifiex_adapter *adapter)
 	list_for_each_entry_safe(cmd_node, tmp_node,
 				 &adapter->scan_pending_q, list) {
 		list_del(&cmd_node->list);
-		spin_unlock_irqrestore(&adapter->scan_pending_q_lock, flags);
 
 		cmd_node->wait_q_enabled = false;
 		mwifiex_insert_cmd_to_free_q(adapter, cmd_node);
-		spin_lock_irqsave(&adapter->scan_pending_q_lock, flags);
 	}
 	spin_unlock_irqrestore(&adapter->scan_pending_q_lock, flags);
 
@@ -1073,12 +1060,8 @@ mwifiex_cancel_pending_ioctl(struct mwifiex_adapter *adapter)
 	list_for_each_entry_safe(cmd_node, tmp_node,
 				 &adapter->scan_pending_q, list) {
 		list_del(&cmd_node->list);
-		spin_unlock_irqrestore(&adapter->scan_pending_q_lock,
-				       scan_pending_q_flags);
 		cmd_node->wait_q_enabled = false;
 		mwifiex_insert_cmd_to_free_q(adapter, cmd_node);
-		spin_lock_irqsave(&adapter->scan_pending_q_lock,
-				  scan_pending_q_flags);
 	}
 	spin_unlock_irqrestore(&adapter->scan_pending_q_lock,
 			       scan_pending_q_flags);
@@ -1232,6 +1215,10 @@ mwifiex_process_sleep_confirm_resp(struct mwifiex_adapter *adapter,
 		dev_err(adapter->dev, "%s: cmd size is 0\n", __func__);
 		return;
 	}
+
+	dev_dbg(adapter->dev,
+		"cmd: CMD_RESP: 0x%x, result %d, len %d, seqno 0x%x\n",
+		command, result, le16_to_cpu(cmd->size), seq_num);
 
 	/* Get BSS number and corresponding priv */
 	priv = mwifiex_get_priv_by_id(adapter, HostCmd_GET_BSS_NO(seq_num),
@@ -1469,7 +1456,7 @@ int mwifiex_ret_get_hw_spec(struct mwifiex_private *priv,
 	struct host_cmd_ds_get_hw_spec *hw_spec = &resp->params.hw_spec;
 	struct mwifiex_adapter *adapter = priv->adapter;
 	struct mwifiex_ie_types_header *tlv;
-	struct hw_spec_fw_api_rev *api_rev;
+	struct hw_spec_api_rev *api_rev;
 	u16 resp_size, api_id;
 	int i, left_len, parsed_len = 0;
 
@@ -1537,23 +1524,30 @@ int mwifiex_ret_get_hw_spec(struct mwifiex_private *priv,
 		while (left_len > sizeof(struct mwifiex_ie_types_header)) {
 			tlv = (void *)&hw_spec->tlvs + parsed_len;
 			switch (le16_to_cpu(tlv->type)) {
-			case TLV_TYPE_FW_API_REV:
-				api_rev = (struct hw_spec_fw_api_rev *)tlv;
+			case TLV_TYPE_API_REV:
+				api_rev = (struct hw_spec_api_rev *)tlv;
 				api_id = le16_to_cpu(api_rev->api_id);
 				switch (api_id) {
 				case KEY_API_VER_ID:
-					adapter->fw_key_api_major_ver =
+					adapter->key_api_major_ver =
 							api_rev->major_ver;
-					adapter->fw_key_api_minor_ver =
+					adapter->key_api_minor_ver =
 							api_rev->minor_ver;
 					dev_dbg(adapter->dev,
-						"fw_key_api v%d.%d\n",
-						adapter->fw_key_api_major_ver,
-						adapter->fw_key_api_minor_ver);
+						"key_api v%d.%d\n",
+						adapter->key_api_major_ver,
+						adapter->key_api_minor_ver);
+					break;
+				case FW_API_VER_ID:
+					adapter->fw_api_ver =
+							api_rev->major_ver;
+					dev_dbg(adapter->dev,
+						"Firmware api version %d\n",
+						adapter->fw_api_ver);
 					break;
 				default:
 					dev_warn(adapter->dev,
-						 "Unknown FW api_id: %d\n",
+						 "Unknown api_id: %d\n",
 						 api_id);
 					break;
 				}
@@ -1566,7 +1560,8 @@ int mwifiex_ret_get_hw_spec(struct mwifiex_private *priv,
 			}
 			parsed_len += le16_to_cpu(tlv->len) +
 				      sizeof(struct mwifiex_ie_types_header);
-			left_len -= parsed_len;
+			left_len -= le16_to_cpu(tlv->len) +
+				      sizeof(struct mwifiex_ie_types_header);
 		}
 	}
 
@@ -1579,9 +1574,7 @@ int mwifiex_ret_get_hw_spec(struct mwifiex_private *priv,
 		le16_to_cpu(hw_spec->hw_if_version),
 		le16_to_cpu(hw_spec->version));
 
-	if (priv->curr_addr[0] == 0xff)
-		memmove(priv->curr_addr, hw_spec->permanent_addr, ETH_ALEN);
-
+	ether_addr_copy(priv->adapter->perm_addr, hw_spec->permanent_addr);
 	adapter->region_code = le16_to_cpu(hw_spec->region_code);
 
 	for (i = 0; i < MWIFIEX_MAX_REGION_CODE; i++)
@@ -1603,6 +1596,9 @@ int mwifiex_ret_get_hw_spec(struct mwifiex_private *priv,
 	if (adapter->if_ops.update_mp_end_port)
 		adapter->if_ops.update_mp_end_port(adapter,
 					le16_to_cpu(hw_spec->mp_end_port));
+
+	if (adapter->fw_api_ver == MWIFIEX_FW_V15)
+		adapter->scan_chan_gap_enabled = true;
 
 	return 0;
 }

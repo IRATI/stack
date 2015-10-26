@@ -66,7 +66,7 @@ struct snd_cs5530 {
 	unsigned long pci_base;
 };
 
-static DEFINE_PCI_DEVICE_TABLE(snd_cs5530_ids) = {
+static const struct pci_device_id snd_cs5530_ids[] = {
 	{PCI_VENDOR_ID_CYRIX, PCI_DEVICE_ID_CYRIX_5530_AUDIO, PCI_ANY_ID,
 							PCI_ANY_ID, 0, 0},
 	{0,}
@@ -223,7 +223,7 @@ static int snd_cs5530_create(struct snd_card *card,
 		return err;
 	}
 
-	err = snd_sb16dsp_pcm(chip->sb, 0, &chip->sb->pcm);
+	err = snd_sb16dsp_pcm(chip->sb, 0);
 	if (err < 0) {
 		dev_err(card->dev, "Could not create PCM\n");
 		snd_cs5530_free(chip);

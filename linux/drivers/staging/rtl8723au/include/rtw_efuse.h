@@ -55,7 +55,7 @@ enum _EFUSE_DEF_TYPE {
 #define		EFUSE_MAX_HW_SIZE		512
 #define		EFUSE_MAX_SECTION_BASE	16
 
-#define EXT_HEADER(header) ((header & 0x1F ) == 0x0F)
+#define EXT_HEADER(header) ((header & 0x1F) == 0x0F)
 #define ALL_WORDS_DISABLED(wde)	((wde & 0x0F) == 0x0F)
 #define GET_HDR_OFFSET_2_0(header) ( (header & 0xE0) >> 5)
 
@@ -81,22 +81,22 @@ struct pg_pkt_struct {
 
 /*------------------------Export global variable----------------------------*/
 
-u8	efuse_GetCurrentSize23a(struct rtw_adapter *padapter, u16 *size);
 u16	efuse_GetMaxSize23a(struct rtw_adapter *padapter);
-u8	rtw_efuse_access23a(struct rtw_adapter *padapter, u8 bRead, u16 start_addr, u16 cnts, u8 *data);
-u8	rtw_efuse_map_read23a(struct rtw_adapter *padapter, u16 addr, u16 cnts, u8 *data);
+int	rtw_efuse_access23a(struct rtw_adapter *padapter, u8 bRead, u16 start_addr, u16 cnts, u8 *data);
+int	rtw_efuse_map_read23a(struct rtw_adapter *padapter, u16 addr, u16 cnts, u8 *data);
 u8	rtw_efuse_map_write(struct rtw_adapter *padapter, u16 addr, u16 cnts, u8 *data);
-u8	rtw_BT_efuse_map_read23a(struct rtw_adapter *padapter, u16 addr, u16 cnts, u8 *data);
+int	rtw_BT_efuse_map_read23a(struct rtw_adapter *padapter, u16 addr, u16 cnts, u8 *data);
 u8	rtw_BT_efuse_map_write(struct rtw_adapter *padapter, u16 addr, u16 cnts, u8 *data);
 
 u16	Efuse_GetCurrentSize23a(struct rtw_adapter *pAdapter, u8 efuseType);
 u8	Efuse_CalculateWordCnts23a(u8 word_en);
 void	ReadEFuseByte23a(struct rtw_adapter *Adapter, u16 _offset, u8 *pbuf);
 void	EFUSE_GetEfuseDefinition23a(struct rtw_adapter *pAdapter, u8 efuseType, u8 type, void *pOut);
-u8	efuse_OneByteRead23a(struct rtw_adapter *pAdapter, u16 addr, u8 *data);
-u8	efuse_OneByteWrite23a(struct rtw_adapter *pAdapter, u16 addr, u8 data);
+int	efuse_OneByteRead23a(struct rtw_adapter *pAdapter, u16 addr, u8 *data);
+int	efuse_OneByteWrite23a(struct rtw_adapter *pAdapter, u16 addr, u8 data);
 
-void	Efuse_PowerSwitch23a(struct rtw_adapter *pAdapter,u8	bWrite,u8	 PwrState);
+void	Efuse_PowerSwitch23a(struct rtw_adapter *pAdapter, u8 bWrite,
+			     u8 PwrState);
 int	Efuse_PgPacketRead23a(struct rtw_adapter *pAdapter, u8 offset, u8 *data);
 int	Efuse_PgPacketWrite23a(struct rtw_adapter *pAdapter, u8 offset, u8 word_en, u8 *data);
 void	efuse_WordEnableDataRead23a(u8 word_en, u8 *sourdata, u8 *targetdata);

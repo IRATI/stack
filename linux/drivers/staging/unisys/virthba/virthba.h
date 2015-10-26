@@ -1,6 +1,6 @@
 /* virthba.h
  *
- * Copyright © 2010 - 2013 UNISYS CORPORATION
+ * Copyright (C) 2010 - 2013 UNISYS CORPORATION
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -19,13 +19,9 @@
  * Unisys Virtual HBA driver header
  */
 
-
-
 #ifndef __VIRTHBA_H__
 #define __VIRTHBA_H__
 
-
 #define VIRTHBA_VERSION "01.00"
-
 
 #endif /* __VIRTHBA_H__ */

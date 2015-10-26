@@ -675,15 +675,6 @@ bool prcmu_has_arm_maxopp(void)
 }
 
 /**
- * prcmu_get_boot_status - PRCMU boot status checking
- * Returns: the current PRCMU boot status
- */
-int prcmu_get_boot_status(void)
-{
-	return readb(tcdm_base + PRCM_BOOT_STATUS);
-}
-
-/**
  * prcmu_set_rc_a2p - This function is used to run few power state sequences
  * @val: Value to be set, i.e. transition requested
  * Returns: 0 on success, -EINVAL on invalid argument
@@ -1734,18 +1725,17 @@ static struct cpufreq_frequency_table db8500_cpufreq_table[] = {
 
 static long round_armss_rate(unsigned long rate)
 {
+	struct cpufreq_frequency_table *pos;
 	long freq = 0;
-	int i = 0;
 
 	/* cpufreq table frequencies is in KHz. */
 	rate = rate / 1000;
 
 	/* Find the corresponding arm opp from the cpufreq table. */
-	while (db8500_cpufreq_table[i].frequency != CPUFREQ_TABLE_END) {
-		freq = db8500_cpufreq_table[i].frequency;
+	cpufreq_for_each_entry(pos, db8500_cpufreq_table) {
+		freq = pos->frequency;
 		if (freq == rate)
 			break;
-		i++;
 	}
 
 	/* Return the last valid value, even if a match was not found. */
@@ -1886,23 +1876,21 @@ static void set_clock_rate(u8 clock, unsigned long rate)
 
 static int set_armss_rate(unsigned long rate)
 {
-	int i = 0;
+	struct cpufreq_frequency_table *pos;
 
 	/* cpufreq table frequencies is in KHz. */
 	rate = rate / 1000;
 
 	/* Find the corresponding arm opp from the cpufreq table. */
-	while (db8500_cpufreq_table[i].frequency != CPUFREQ_TABLE_END) {
-		if (db8500_cpufreq_table[i].frequency == rate)
+	cpufreq_for_each_entry(pos, db8500_cpufreq_table)
+		if (pos->frequency == rate)
 			break;
-		i++;
-	}
 
-	if (db8500_cpufreq_table[i].frequency != rate)
+	if (pos->frequency != rate)
 		return -EINVAL;
 
 	/* Set the new arm opp. */
-	return db8500_prcmu_set_arm_opp(db8500_cpufreq_table[i].driver_data);
+	return db8500_prcmu_set_arm_opp(pos->driver_data);
 }
 
 static int set_plldsi_rate(unsigned long rate)
@@ -2303,9 +2291,6 @@ int prcmu_ac_wake_req(void)
 
 	if (!wait_for_completion_timeout(&mb0_transfer.ac_wake_work,
 			msecs_to_jiffies(5000))) {
-#if defined(CONFIG_DBX500_PRCMU_DEBUG)
-		db8500_prcmu_debug_dump(__func__, true, true);
-#endif
 		pr_crit("prcmu: %s timed out (5 s) waiting for a reply.\n",
 			__func__);
 		ret = -EFAULT;
@@ -3115,7 +3100,7 @@ static int db8500_prcmu_register_ab8500(struct device *parent,
 {
 	struct device_node *np;
 	struct resource ab8500_resource;
-	struct mfd_cell ab8500_cell = {
+	const struct mfd_cell ab8500_cell = {
 		.name = "ab8500-core",
 		.of_compatible = "stericsson,ab8500",
 		.id = AB8500_VERSION_AB8500,
@@ -3156,23 +3141,28 @@ static int db8500_prcmu_probe(struct platform_device *pdev)
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "prcmu");
 	if (!res) {
 		dev_err(&pdev->dev, "no prcmu memory region provided\n");
-		return -ENOENT;
+		return -EINVAL;
 	}
 	prcmu_base = devm_ioremap(&pdev->dev, res->start, resource_size(res));
 	if (!prcmu_base) {
 		dev_err(&pdev->dev,
 			"failed to ioremap prcmu register memory\n");
-		return -ENOENT;
+		return -ENOMEM;
 	}
 	init_prcm_registers();
 	dbx500_fw_version_init(pdev, pdata->version_offset);
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "prcmu-tcdm");
 	if (!res) {
 		dev_err(&pdev->dev, "no prcmu tcdm region provided\n");
-		return -ENOENT;
+		return -EINVAL;
 	}
 	tcdm_base = devm_ioremap(&pdev->dev, res->start,
 			resource_size(res));
+	if (!tcdm_base) {
+		dev_err(&pdev->dev,
+			"failed to ioremap prcmu-tcdm register memory\n");
+		return -ENOMEM;
+	}
 
 	/* Clean up the mailbox interrupts after pre-kernel code. */
 	writel(ALL_MBOX_BITS, PRCM_ARM_IT1_CLR);
@@ -3180,15 +3170,14 @@ static int db8500_prcmu_probe(struct platform_device *pdev)
 	irq = platform_get_irq(pdev, 0);
 	if (irq <= 0) {
 		dev_err(&pdev->dev, "no prcmu irq provided\n");
-		return -ENOENT;
+		return irq;
 	}
 
 	err = request_threaded_irq(irq, prcmu_irq_handler,
 	        prcmu_irq_thread_fn, IRQF_NO_SUSPEND, "prcmu", NULL);
 	if (err < 0) {
 		pr_err("prcmu: Failed to allocate IRQ_DB8500_PRCMU1.\n");
-		err = -EBUSY;
-		goto no_irq_return;
+		return err;
 	}
 
 	db8500_irq_init(np);
@@ -3212,7 +3201,7 @@ static int db8500_prcmu_probe(struct platform_device *pdev)
 		if (err) {
 			mfd_remove_devices(&pdev->dev);
 			pr_err("prcmu: Failed to add subdevices\n");
-			goto no_irq_return;
+			return err;
 		}
 	}
 
@@ -3220,12 +3209,10 @@ static int db8500_prcmu_probe(struct platform_device *pdev)
 	if (err) {
 		mfd_remove_devices(&pdev->dev);
 		pr_err("prcmu: Failed to add ab8500 subdevice\n");
-		goto no_irq_return;
+		return err;
 	}
 
 	pr_info("DB8500 PRCMU initialized\n");
-
-no_irq_return:
 	return err;
 }
 static const struct of_device_id db8500_prcmu_match[] = {
@@ -3236,7 +3223,6 @@ static const struct of_device_id db8500_prcmu_match[] = {
 static struct platform_driver db8500_prcmu_driver = {
 	.driver = {
 		.name = "db8500-prcmu",
-		.owner = THIS_MODULE,
 		.of_match_table = db8500_prcmu_match,
 	},
 	.probe = db8500_prcmu_probe,

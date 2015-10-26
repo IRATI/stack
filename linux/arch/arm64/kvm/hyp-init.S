@@ -20,6 +20,7 @@
 #include <asm/assembler.h>
 #include <asm/kvm_arm.h>
 #include <asm/kvm_mmu.h>
+#include <asm/pgtable-hwdef.h>
 
 	.text
 	.pushsection	.hyp.idmap.text, "ax"
@@ -65,6 +66,25 @@ __do_hyp_init:
 	and	x4, x4, x5
 	ldr	x5, =TCR_EL2_FLAGS
 	orr	x4, x4, x5
+
+#ifndef CONFIG_ARM64_VA_BITS_48
+	/*
+	 * If we are running with VA_BITS < 48, we may be running with an extra
+	 * level of translation in the ID map. This is only the case if system
+	 * RAM is out of range for the currently configured page size and number
+	 * of translation levels, in which case we will also need the extra
+	 * level for the HYP ID map, or we won't be able to enable the EL2 MMU.
+	 *
+	 * However, at EL2, there is only one TTBR register, and we can't switch
+	 * between translation tables *and* update TCR_EL2.T0SZ at the same
+	 * time. Bottom line: we need the extra level in *both* our translation
+	 * tables.
+	 *
+	 * So use the same T0SZ value we use for the ID map.
+	 */
+	ldr_l	x5, idmap_t0sz
+	bfi	x4, x5, TCR_T0SZ_OFFSET, TCR_TxSZ_WIDTH
+#endif
 	msr	tcr_el2, x4
 
 	ldr	x4, =VTCR_EL2_FLAGS
@@ -80,12 +100,20 @@ __do_hyp_init:
 	msr	mair_el2, x4
 	isb
 
+	/* Invalidate the stale TLBs from Bootloader */
+	tlbi	alle2
+	dsb	sy
+
 	mrs	x4, sctlr_el2
 	and	x4, x4, #SCTLR_EL2_EE	// preserve endianness of EL2
 	ldr	x5, =SCTLR_EL2_FLAGS
 	orr	x4, x4, x5
 	msr	sctlr_el2, x4
 	isb
+
+	/* Skip the trampoline dance if we merged the boot and runtime PGDs */
+	cmp	x0, x1
+	b.eq	merged
 
 	/* MMU is now enabled. Get ready for the trampoline dance */
 	ldr	x4, =TRAMPOLINE_VA
@@ -101,6 +129,7 @@ target: /* We're now in the trampoline code, switch page tables */
 	tlbi	alle2
 	dsb	sy
 
+merged:
 	/* Set the stack and new vectors */
 	kern_hyp_va	x2
 	mov	sp, x2

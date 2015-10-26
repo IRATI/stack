@@ -597,6 +597,9 @@ static netdev_tx_t yam_send_packet(struct sk_buff *skb,
 {
 	struct yam_port *yp = netdev_priv(dev);
 
+	if (skb->protocol == htons(ETH_P_IP))
+		return ax25_ip_xmit(skb);
+
 	skb_queue_tail(&yp->send_queue, skb);
 	dev->trans_start = jiffies;
 	return NETDEV_TX_OK;
@@ -1147,7 +1150,7 @@ static int __init yam_init_driver(void)
 		sprintf(name, "yam%d", i);
 		
 		dev = alloc_netdev(sizeof(struct yam_port), name,
-				   yam_setup);
+				   NET_NAME_UNKNOWN, yam_setup);
 		if (!dev) {
 			pr_err("yam: cannot allocate net device\n");
 			err = -ENOMEM;

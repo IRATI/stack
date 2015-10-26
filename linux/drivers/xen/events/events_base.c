@@ -246,7 +246,7 @@ static void xen_irq_info_cleanup(struct irq_info *info)
  */
 unsigned int evtchn_from_irq(unsigned irq)
 {
-	if (unlikely(WARN(irq < 0 || irq >= nr_irqs, "Invalid irq %d!\n", irq)))
+	if (unlikely(WARN(irq >= nr_irqs, "Invalid irq %d!\n", irq)))
 		return 0;
 
 	return info_for_irq(irq)->evtchn;
@@ -390,22 +390,7 @@ static void xen_irq_init(unsigned irq)
 
 static int __must_check xen_allocate_irqs_dynamic(int nvec)
 {
-	int first = 0;
-	int i, irq;
-
-#ifdef CONFIG_X86_IO_APIC
-	/*
-	 * For an HVM guest or domain 0 which see "real" (emulated or
-	 * actual respectively) GSIs we allocate dynamic IRQs
-	 * e.g. those corresponding to event channels or MSIs
-	 * etc. from the range above those "real" GSIs to avoid
-	 * collisions.
-	 */
-	if (xen_initial_domain() || xen_hvm_domain())
-		first = get_nr_irqs_gsi();
-#endif
-
-	irq = irq_alloc_descs_from(first, nvec, -1);
+	int i, irq = irq_alloc_descs(-1, 0, nvec, -1);
 
 	if (irq >= 0) {
 		for (i = 0; i < nvec; i++)
@@ -541,19 +526,25 @@ static unsigned int __startup_pirq(unsigned int irq)
 	pirq_query_unmask(irq);
 
 	rc = set_evtchn_to_irq(evtchn, irq);
-	if (rc != 0) {
-		pr_err("irq%d: Failed to set port to irq mapping (%d)\n",
-		       irq, rc);
-		xen_evtchn_close(evtchn);
-		return 0;
-	}
-	bind_evtchn_to_cpu(evtchn, 0);
+	if (rc)
+		goto err;
+
 	info->evtchn = evtchn;
+	bind_evtchn_to_cpu(evtchn, 0);
+
+	rc = xen_evtchn_port_setup(info);
+	if (rc)
+		goto err;
 
 out:
 	unmask_evtchn(evtchn);
 	eoi_pirq(irq_get_irq_data(irq));
 
+	return 0;
+
+err:
+	pr_err("irq%d: Failed to set port to irq mapping (%d)\n", irq, rc);
+	xen_evtchn_close(evtchn);
 	return 0;
 }
 
@@ -915,8 +906,8 @@ static int bind_ipi_to_irq(unsigned int ipi, unsigned int cpu)
 	return irq;
 }
 
-static int bind_interdomain_evtchn_to_irq(unsigned int remote_domain,
-					  unsigned int remote_port)
+int bind_interdomain_evtchn_to_irq(unsigned int remote_domain,
+				   unsigned int remote_port)
 {
 	struct evtchn_bind_interdomain bind_interdomain;
 	int err;
@@ -929,6 +920,7 @@ static int bind_interdomain_evtchn_to_irq(unsigned int remote_domain,
 
 	return err ? : bind_evtchn_to_irq(bind_interdomain.local_port);
 }
+EXPORT_SYMBOL_GPL(bind_interdomain_evtchn_to_irq);
 
 static int find_virq(unsigned int virq, unsigned int cpu)
 {
@@ -965,7 +957,7 @@ unsigned xen_evtchn_nr_channels(void)
 }
 EXPORT_SYMBOL_GPL(xen_evtchn_nr_channels);
 
-int bind_virq_to_irq(unsigned int virq, unsigned int cpu)
+int bind_virq_to_irq(unsigned int virq, unsigned int cpu, bool percpu)
 {
 	struct evtchn_bind_virq bind_virq;
 	int evtchn, irq, ret;
@@ -979,8 +971,12 @@ int bind_virq_to_irq(unsigned int virq, unsigned int cpu)
 		if (irq < 0)
 			goto out;
 
-		irq_set_chip_and_handler_name(irq, &xen_percpu_chip,
-					      handle_percpu_irq, "virq");
+		if (percpu)
+			irq_set_chip_and_handler_name(irq, &xen_percpu_chip,
+						      handle_percpu_irq, "virq");
+		else
+			irq_set_chip_and_handler_name(irq, &xen_dynamic_chip,
+						      handle_edge_irq, "virq");
 
 		bind_virq.virq = virq;
 		bind_virq.vcpu = cpu;
@@ -1070,7 +1066,7 @@ int bind_virq_to_irqhandler(unsigned int virq, unsigned int cpu,
 {
 	int irq, retval;
 
-	irq = bind_virq_to_irq(virq, cpu);
+	irq = bind_virq_to_irq(virq, cpu, irqflags & IRQF_PERCPU);
 	if (irq < 0)
 		return irq;
 	retval = request_irq(irq, handler, irqflags, devname, dev_id);
@@ -1287,8 +1283,9 @@ void rebind_evtchn_irq(int evtchn, int irq)
 
 	mutex_unlock(&irq_mapping_update_lock);
 
-	/* new event channels are always bound to cpu 0 */
-	irq_set_affinity(irq, cpumask_of(0));
+        bind_evtchn_to_cpu(evtchn, info->cpu);
+	/* This will be deferred until interrupt is processed */
+	irq_set_affinity(irq, cpumask_of(info->cpu));
 
 	/* Unmask the event channel. */
 	enable_irq(irq);

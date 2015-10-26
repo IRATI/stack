@@ -195,7 +195,7 @@ static int cdv_hdmi_set_property(struct drm_connector *connector,
 					    encoder->crtc->x, encoder->crtc->y, encoder->crtc->primary->fb))
 					return -1;
 			} else {
-				struct drm_encoder_helper_funcs *helpers
+				const struct drm_encoder_helper_funcs *helpers
 						    = encoder->helper_private;
 				helpers->mode_set(encoder, &crtc->saved_mode,
 					     &crtc->saved_adjusted_mode);
@@ -248,7 +248,7 @@ static void cdv_hdmi_destroy(struct drm_connector *connector)
 
 	if (gma_encoder->i2c_bus)
 		psb_intel_i2c_destroy(gma_encoder->i2c_bus);
-	drm_sysfs_connector_remove(connector);
+	drm_connector_unregister(connector);
 	drm_connector_cleanup(connector);
 	kfree(connector);
 }
@@ -356,7 +356,7 @@ void cdv_hdmi_init(struct drm_device *dev,
 
 	hdmi_priv->hdmi_i2c_adapter = &(gma_encoder->i2c_bus->adapter);
 	hdmi_priv->dev = dev;
-	drm_sysfs_connector_add(connector);
+	drm_connector_register(connector);
 	return;
 
 failed_ddc:

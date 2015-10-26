@@ -446,7 +446,7 @@ static void cdv_intel_lvds_destroy(struct drm_connector *connector)
 
 	if (gma_encoder->i2c_bus)
 		psb_intel_i2c_destroy(gma_encoder->i2c_bus);
-	drm_sysfs_connector_remove(connector);
+	drm_connector_unregister(connector);
 	drm_connector_cleanup(connector);
 	kfree(connector);
 }
@@ -505,7 +505,7 @@ static int cdv_intel_lvds_set_property(struct drm_connector *connector,
 		else
                         gma_backlight_set(encoder->dev, value);
 	} else if (!strcmp(property->name, "DPMS") && encoder) {
-		struct drm_encoder_helper_funcs *helpers =
+		const struct drm_encoder_helper_funcs *helpers =
 					encoder->helper_private;
 		helpers->dpms(encoder, value);
 	}
@@ -774,7 +774,7 @@ void cdv_intel_lvds_init(struct drm_device *dev,
 
 out:
 	mutex_unlock(&dev->mode_config.mutex);
-	drm_sysfs_connector_add(connector);
+	drm_connector_register(connector);
 	return;
 
 failed_find:

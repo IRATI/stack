@@ -27,7 +27,7 @@
 #include <linux/pci.h>
 #include <linux/slab.h>
 #include <linux/module.h>
-#include <asm/io.h>
+#include <linux/io.h>
 #include <sound/core.h>
 #include <sound/control.h>
 #include <sound/pcm.h>
@@ -43,7 +43,7 @@ static char *ac97_quirk;
 module_param(ac97_quirk, charp, 0444);
 MODULE_PARM_DESC(ac97_quirk, "AC'97 board specific workarounds.");
 
-static struct ac97_quirk ac97_quirks[] = {
+static const struct ac97_quirk ac97_quirks[] = {
 #if 0 /* Not yet confirmed if all 5536 boards are HP only */
 	{
 		.subvendor = PCI_VENDOR_ID_AMD, 
@@ -66,7 +66,7 @@ MODULE_PARM_DESC(id, "ID string for " DRIVER_NAME);
 module_param_array(enable, bool, NULL, 0444);
 MODULE_PARM_DESC(enable, "Enable " DRIVER_NAME);
 
-static DEFINE_PCI_DEVICE_TABLE(snd_cs5535audio_ids) = {
+static const struct pci_device_id snd_cs5535audio_ids[] = {
 	{ PCI_DEVICE(PCI_VENDOR_ID_NS, PCI_DEVICE_ID_NS_CS5535_AUDIO) },
 	{ PCI_DEVICE(PCI_VENDOR_ID_AMD, PCI_DEVICE_ID_AMD_CS5536_AUDIO) },
 	{}

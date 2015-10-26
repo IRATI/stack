@@ -59,7 +59,7 @@ static void writeq(u64 val, void __iomem *reg)
 }
 #endif
 
-static DEFINE_PCI_DEVICE_TABLE(niu_pci_tbl) = {
+static const struct pci_device_id niu_pci_tbl[] = {
 	{PCI_DEVICE(PCI_VENDOR_ID_SUN, 0xabcd)},
 	{}
 };
@@ -2584,7 +2584,6 @@ static int niu_determine_phy_disposition(struct niu *np)
 				break;
 			default:
 				return -EINVAL;
-				break;
 			}
 			phy_addr_off = niu_atca_port_num[np->port];
 			break;
@@ -3342,8 +3341,7 @@ static int niu_rbr_add_page(struct niu *np, struct rx_ring_info *rp,
 
 	niu_hash_page(rp, page, addr);
 	if (rp->rbr_blocks_per_page > 1)
-		atomic_add(rp->rbr_blocks_per_page - 1,
-			   &compound_head(page)->_count);
+		atomic_add(rp->rbr_blocks_per_page - 1, &page->_count);
 
 	for (i = 0; i < rp->rbr_blocks_per_page; i++) {
 		__le32 *rbr = &rp->rbr[start_index + i];
@@ -6652,13 +6650,8 @@ static netdev_tx_t niu_start_xmit(struct sk_buff *skb,
 		return NETDEV_TX_BUSY;
 	}
 
-	if (skb->len < ETH_ZLEN) {
-		unsigned int pad_bytes = ETH_ZLEN - skb->len;
-
-		if (skb_pad(skb, pad_bytes))
-			goto out;
-		skb_put(skb, pad_bytes);
-	}
+	if (eth_skb_pad(skb))
+		goto out;
 
 	len = sizeof(struct tx_pkt_hdr) + 15;
 	if (skb_headroom(skb) < len) {
@@ -6996,10 +6989,10 @@ static int niu_class_to_ethflow(u64 class, int *flow_type)
 		*flow_type = IP_USER_FLOW;
 		break;
 	default:
-		return 0;
+		return -EINVAL;
 	}
 
-	return 1;
+	return 0;
 }
 
 static int niu_ethflow_to_class(int flow_type, u64 *class)
@@ -7205,11 +7198,9 @@ static int niu_get_ethtool_tcam_entry(struct niu *np,
 	class = (tp->key[0] & TCAM_V4KEY0_CLASS_CODE) >>
 		TCAM_V4KEY0_CLASS_CODE_SHIFT;
 	ret = niu_class_to_ethflow(class, &fsp->flow_type);
-
 	if (ret < 0) {
 		netdev_info(np->dev, "niu%d: niu_class_to_ethflow failed\n",
 			    parent->index);
-		ret = -EINVAL;
 		goto out;
 	}
 
@@ -8718,8 +8709,8 @@ static void niu_divide_channels(struct niu_parent *parent,
 			parent->txchan_per_port[i] = 1;
 	}
 	if (tot_rx < NIU_NUM_RXCHAN || tot_tx < NIU_NUM_TXCHAN) {
-		pr_warning("niu%d: Driver bug, wasted channels, RX[%d] TX[%d]\n",
-			   parent->index, tot_rx, tot_tx);
+		pr_warn("niu%d: Driver bug, wasted channels, RX[%d] TX[%d]\n",
+			parent->index, tot_rx, tot_tx);
 	}
 }
 
@@ -10186,7 +10177,6 @@ MODULE_DEVICE_TABLE(of, niu_match);
 static struct platform_driver niu_of_driver = {
 	.driver = {
 		.name = "niu",
-		.owner = THIS_MODULE,
 		.of_match_table = niu_match,
 	},
 	.probe		= niu_of_probe,

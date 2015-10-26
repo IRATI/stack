@@ -551,7 +551,6 @@ int jbd2_journal_extend(handle_t *handle, int nblocks)
 	int result;
 	int wanted;
 
-	WARN_ON(!transaction);
 	if (is_handle_aborted(handle))
 		return -EROFS;
 	journal = transaction->t_journal;
@@ -627,7 +626,6 @@ int jbd2__journal_restart(handle_t *handle, int nblocks, gfp_t gfp_mask)
 	tid_t		tid;
 	int		need_to_start, ret;
 
-	WARN_ON(!transaction);
 	/* If we've had an abort of any type, don't even think about
 	 * actually doing the restart! */
 	if (is_handle_aborted(handle))
@@ -763,12 +761,6 @@ static void warn_dirty_buffer(struct buffer_head *bh)
 	       bdevname(bh->b_bdev, b), (unsigned long long)bh->b_blocknr);
 }
 
-static int sleep_on_shadow_bh(void *word)
-{
-	io_schedule();
-	return 0;
-}
-
 /*
  * If the buffer is already part of the current transaction, then there
  * is nothing we need to do.  If it is already part of a prior
@@ -791,7 +783,6 @@ do_get_write_access(handle_t *handle, struct journal_head *jh,
 	int need_copy = 0;
 	unsigned long start_lock, time_lock;
 
-	WARN_ON(!transaction);
 	if (is_handle_aborted(handle))
 		return -EROFS;
 	journal = transaction->t_journal;
@@ -906,8 +897,8 @@ repeat:
 		if (buffer_shadow(bh)) {
 			JBUFFER_TRACE(jh, "on shadow: sleep");
 			jbd_unlock_bh_state(bh);
-			wait_on_bit(&bh->b_state, BH_Shadow,
-				    sleep_on_shadow_bh, TASK_UNINTERRUPTIBLE);
+			wait_on_bit_io(&bh->b_state, BH_Shadow,
+				       TASK_UNINTERRUPTIBLE);
 			goto repeat;
 		}
 
@@ -1057,7 +1048,6 @@ int jbd2_journal_get_create_access(handle_t *handle, struct buffer_head *bh)
 	int err;
 
 	jbd_debug(5, "journal_head %p\n", jh);
-	WARN_ON(!transaction);
 	err = -EROFS;
 	if (is_handle_aborted(handle))
 		goto out;
@@ -1272,7 +1262,6 @@ int jbd2_journal_dirty_metadata(handle_t *handle, struct buffer_head *bh)
 	struct journal_head *jh;
 	int ret = 0;
 
-	WARN_ON(!transaction);
 	if (is_handle_aborted(handle))
 		return -EROFS;
 	journal = transaction->t_journal;
@@ -1403,7 +1392,6 @@ int jbd2_journal_forget (handle_t *handle, struct buffer_head *bh)
 	int err = 0;
 	int was_modified = 0;
 
-	WARN_ON(!transaction);
 	if (is_handle_aborted(handle))
 		return -EROFS;
 	journal = transaction->t_journal;
@@ -1536,8 +1524,22 @@ int jbd2_journal_stop(handle_t *handle)
 	tid_t tid;
 	pid_t pid;
 
-	if (!transaction)
-		goto free_and_exit;
+	if (!transaction) {
+		/*
+		 * Handle is already detached from the transaction so
+		 * there is nothing to do other than decrease a refcount,
+		 * or free the handle if refcount drops to zero
+		 */
+		if (--handle->h_ref > 0) {
+			jbd_debug(4, "h_ref %d -> %d\n", handle->h_ref + 1,
+							 handle->h_ref);
+			return err;
+		} else {
+			if (handle->h_rsv_handle)
+				jbd2_free_handle(handle->h_rsv_handle);
+			goto free_and_exit;
+		}
+	}
 	journal = transaction->t_journal;
 
 	J_ASSERT(journal_current_handle() == handle);
@@ -1588,9 +1590,12 @@ int jbd2_journal_stop(handle_t *handle)
 	 * to perform a synchronous write.  We do this to detect the
 	 * case where a single process is doing a stream of sync
 	 * writes.  No point in waiting for joiners in that case.
+	 *
+	 * Setting max_batch_time to 0 disables this completely.
 	 */
 	pid = current->pid;
-	if (handle->h_sync && journal->j_last_sync_writer != pid) {
+	if (handle->h_sync && journal->j_last_sync_writer != pid &&
+	    journal->j_max_batch_time) {
 		u64 commit_time, trans_time;
 
 		journal->j_last_sync_writer = pid;
@@ -2376,7 +2381,6 @@ int jbd2_journal_file_inode(handle_t *handle, struct jbd2_inode *jinode)
 	transaction_t *transaction = handle->h_transaction;
 	journal_t *journal;
 
-	WARN_ON(!transaction);
 	if (is_handle_aborted(handle))
 		return -EROFS;
 	journal = transaction->t_journal;

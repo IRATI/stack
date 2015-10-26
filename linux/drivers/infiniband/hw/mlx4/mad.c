@@ -64,6 +64,14 @@ enum {
 #define GUID_TBL_BLK_NUM_ENTRIES 8
 #define GUID_TBL_BLK_SIZE (GUID_TBL_ENTRY_SIZE * GUID_TBL_BLK_NUM_ENTRIES)
 
+/* Counters should be saturate once they reach their maximum value */
+#define ASSIGN_32BIT_COUNTER(counter, value) do {\
+	if ((value) > U32_MAX)			 \
+		counter = cpu_to_be32(U32_MAX); \
+	else					 \
+		counter = cpu_to_be32(value);	 \
+} while (0)
+
 struct mlx4_mad_rcv_buf {
 	struct ib_grh grh;
 	u8 payload[256];
@@ -478,10 +486,6 @@ int mlx4_ib_send_to_slave(struct mlx4_ib_dev *dev, int slave, u8 port,
 	if (!tun_ctx || tun_ctx->state != DEMUX_PV_STATE_ACTIVE)
 		return -EAGAIN;
 
-	/* QP0 forwarding only for Dom0 */
-	if (!dest_qpt && (mlx4_master_func_num(dev->dev) != slave))
-		return -EINVAL;
-
 	if (!dest_qpt)
 		tun_qp = &tun_ctx->qp[0];
 	else
@@ -667,6 +671,21 @@ static int mlx4_ib_demux_mad(struct ib_device *ibdev, u8 port,
 	}
 	/* Class-specific handling */
 	switch (mad->mad_hdr.mgmt_class) {
+	case IB_MGMT_CLASS_SUBN_LID_ROUTED:
+	case IB_MGMT_CLASS_SUBN_DIRECTED_ROUTE:
+		/* 255 indicates the dom0 */
+		if (slave != 255 && slave != mlx4_master_func_num(dev->dev)) {
+			if (!mlx4_vf_smi_enabled(dev->dev, slave, port))
+				return -EPERM;
+			/* for a VF. drop unsolicited MADs */
+			if (!(mad->mad_hdr.method & IB_MGMT_METHOD_RESP)) {
+				mlx4_ib_warn(ibdev, "demux QP0. rejecting unsolicited mad for slave %d class 0x%x, method 0x%x\n",
+					     slave, mad->mad_hdr.mgmt_class,
+					     mad->mad_hdr.method);
+				return -EINVAL;
+			}
+		}
+		break;
 	case IB_MGMT_CLASS_SUBN_ADM:
 		if (mlx4_ib_demux_sa_handler(ibdev, port, slave,
 					     (struct ib_sa_mad *) mad))
@@ -795,10 +814,14 @@ static int ib_process_mad(struct ib_device *ibdev, int mad_flags, u8 port_num,
 static void edit_counter(struct mlx4_counter *cnt,
 					struct ib_pma_portcounters *pma_cnt)
 {
-	pma_cnt->port_xmit_data = cpu_to_be32((be64_to_cpu(cnt->tx_bytes)>>2));
-	pma_cnt->port_rcv_data  = cpu_to_be32((be64_to_cpu(cnt->rx_bytes)>>2));
-	pma_cnt->port_xmit_packets = cpu_to_be32(be64_to_cpu(cnt->tx_frames));
-	pma_cnt->port_rcv_packets  = cpu_to_be32(be64_to_cpu(cnt->rx_frames));
+	ASSIGN_32BIT_COUNTER(pma_cnt->port_xmit_data,
+			     (be64_to_cpu(cnt->tx_bytes) >> 2));
+	ASSIGN_32BIT_COUNTER(pma_cnt->port_rcv_data,
+			     (be64_to_cpu(cnt->rx_bytes) >> 2));
+	ASSIGN_32BIT_COUNTER(pma_cnt->port_xmit_packets,
+			     be64_to_cpu(cnt->tx_frames));
+	ASSIGN_32BIT_COUNTER(pma_cnt->port_rcv_packets,
+			     be64_to_cpu(cnt->rx_frames));
 }
 
 static int iboe_process_mad(struct ib_device *ibdev, int mad_flags, u8 port_num,
@@ -880,7 +903,7 @@ int mlx4_ib_mad_init(struct mlx4_ib_dev *dev)
 				agent = ib_register_mad_agent(&dev->ib_dev, p + 1,
 							      q ? IB_QPT_GSI : IB_QPT_SMI,
 							      NULL, 0, send_handler,
-							      NULL, NULL);
+							      NULL, NULL, 0);
 				if (IS_ERR(agent)) {
 					ret = PTR_ERR(agent);
 					goto err;
@@ -1165,10 +1188,6 @@ int mlx4_ib_send_to_wire(struct mlx4_ib_dev *dev, int slave, u8 port,
 	if (!sqp_ctx || sqp_ctx->state != DEMUX_PV_STATE_ACTIVE)
 		return -EAGAIN;
 
-	/* QP0 forwarding only for Dom0 */
-	if (dest_qpt == IB_QPT_SMI && (mlx4_master_func_num(dev->dev) != slave))
-		return -EINVAL;
-
 	if (dest_qpt == IB_QPT_SMI) {
 		src_qpnum = 0;
 		sqp = &sqp_ctx->qp[0];
@@ -1285,11 +1304,6 @@ static void mlx4_ib_multiplex_mad(struct mlx4_ib_demux_pv_ctx *ctx, struct ib_wc
 			     "belongs to another slave\n", wc->src_qp);
 		return;
 	}
-	if (slave != mlx4_master_func_num(dev->dev) && !(wc->src_qp & 0x2)) {
-		mlx4_ib_warn(ctx->ib_dev, "can't multiplex bad sqp:%d: "
-			     "non-master trying to send QP0 packets\n", wc->src_qp);
-		return;
-	}
 
 	/* Map transaction ID */
 	ib_dma_sync_single_for_cpu(ctx->ib_dev, tun_qp->ring[wr_ix].map,
@@ -1317,6 +1331,12 @@ static void mlx4_ib_multiplex_mad(struct mlx4_ib_demux_pv_ctx *ctx, struct ib_wc
 
 	/* Class-specific handling */
 	switch (tunnel->mad.mad_hdr.mgmt_class) {
+	case IB_MGMT_CLASS_SUBN_LID_ROUTED:
+	case IB_MGMT_CLASS_SUBN_DIRECTED_ROUTE:
+		if (slave != mlx4_master_func_num(dev->dev) &&
+		    !mlx4_vf_smi_enabled(dev->dev, slave, ctx->port))
+			return;
+		break;
 	case IB_MGMT_CLASS_SUBN_ADM:
 		if (mlx4_ib_multiplex_sa_handler(ctx->ib_dev, ctx->port, slave,
 			      (struct ib_sa_mad *) &tunnel->mad))
@@ -1410,6 +1430,10 @@ static int mlx4_ib_alloc_pv_bufs(struct mlx4_ib_demux_pv_ctx *ctx,
 							tun_qp->ring[i].addr,
 							rx_buf_size,
 							DMA_FROM_DEVICE);
+		if (ib_dma_mapping_error(ctx->ib_dev, tun_qp->ring[i].map)) {
+			kfree(tun_qp->ring[i].addr);
+			goto err;
+		}
 	}
 
 	for (i = 0; i < MLX4_NUM_TUNNEL_BUFS; i++) {
@@ -1422,6 +1446,11 @@ static int mlx4_ib_alloc_pv_bufs(struct mlx4_ib_demux_pv_ctx *ctx,
 					  tun_qp->tx_ring[i].buf.addr,
 					  tx_buf_size,
 					  DMA_TO_DEVICE);
+		if (ib_dma_mapping_error(ctx->ib_dev,
+					 tun_qp->tx_ring[i].buf.map)) {
+			kfree(tun_qp->tx_ring[i].buf.addr);
+			goto tx_err;
+		}
 		tun_qp->tx_ring[i].ah = NULL;
 	}
 	spin_lock_init(&tun_qp->tx_lock);
@@ -1749,9 +1778,9 @@ static int create_pv_resources(struct ib_device *ibdev, int slave, int port,
 		return -EEXIST;
 
 	ctx->state = DEMUX_PV_STATE_STARTING;
-	/* have QP0 only on port owner, and only if link layer is IB */
-	if (ctx->slave == mlx4_master_func_num(to_mdev(ctx->ib_dev)->dev) &&
-	    rdma_port_get_link_layer(ibdev, ctx->port) == IB_LINK_LAYER_INFINIBAND)
+	/* have QP0 only if link layer is IB */
+	if (rdma_port_get_link_layer(ibdev, ctx->port) ==
+	    IB_LINK_LAYER_INFINIBAND)
 		ctx->has_smi = 1;
 
 	if (ctx->has_smi) {
@@ -1943,7 +1972,8 @@ static int mlx4_ib_alloc_demux_ctx(struct mlx4_ib_dev *dev,
 	ctx->ib_dev = &dev->ib_dev;
 
 	for (i = 0;
-	     i < min(dev->dev->caps.sqp_demux, (u16)(dev->dev->num_vfs + 1));
+	     i < min(dev->dev->caps.sqp_demux,
+	     (u16)(dev->dev->persist->num_vfs + 1));
 	     i++) {
 		struct mlx4_active_ports actv_ports =
 			mlx4_get_active_ports(dev->dev, i);

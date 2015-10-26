@@ -486,7 +486,7 @@ static irqreturn_t xadc_axi_interrupt_handler(int irq, void *devid)
 		return IRQ_NONE;
 
 	if ((status & XADC_AXI_INT_EOS) && xadc->trigger)
-		iio_trigger_poll(xadc->trigger, 0);
+		iio_trigger_poll(xadc->trigger);
 
 	if (status & XADC_AXI_INT_ALARM_MASK) {
 		/*
@@ -856,6 +856,7 @@ static int xadc_read_raw(struct iio_dev *indio_dev,
 			switch (chan->address) {
 			case XADC_REG_VCCINT:
 			case XADC_REG_VCCAUX:
+			case XADC_REG_VREFP:
 			case XADC_REG_VCCBRAM:
 			case XADC_REG_VCCPINT:
 			case XADC_REG_VCCPAUX:
@@ -996,7 +997,7 @@ static const struct iio_event_spec xadc_voltage_events[] = {
 	.num_event_specs = (_alarm) ? ARRAY_SIZE(xadc_voltage_events) : 0, \
 	.scan_index = (_scan_index), \
 	.scan_type = { \
-		.sign = 'u', \
+		.sign = ((_addr) == XADC_REG_VREFN) ? 's' : 'u', \
 		.realbits = 12, \
 		.storagebits = 16, \
 		.shift = 4, \
@@ -1008,7 +1009,7 @@ static const struct iio_event_spec xadc_voltage_events[] = {
 static const struct iio_chan_spec xadc_channels[] = {
 	XADC_CHAN_TEMP(0, 8, XADC_REG_TEMP),
 	XADC_CHAN_VOLTAGE(0, 9, XADC_REG_VCCINT, "vccint", true),
-	XADC_CHAN_VOLTAGE(1, 10, XADC_REG_VCCINT, "vccaux", true),
+	XADC_CHAN_VOLTAGE(1, 10, XADC_REG_VCCAUX, "vccaux", true),
 	XADC_CHAN_VOLTAGE(2, 14, XADC_REG_VCCBRAM, "vccbram", true),
 	XADC_CHAN_VOLTAGE(3, 5, XADC_REG_VCCPINT, "vccpint", true),
 	XADC_CHAN_VOLTAGE(4, 6, XADC_REG_VCCPAUX, "vccpaux", true),
@@ -1126,7 +1127,7 @@ static int xadc_parse_dt(struct iio_dev *indio_dev, struct device_node *np,
 				chan->address = XADC_REG_VPVN;
 			} else {
 				chan->scan_index = 15 + reg;
-				chan->scan_index = XADC_REG_VAUX(reg - 1);
+				chan->address = XADC_REG_VAUX(reg - 1);
 			}
 			num_channels++;
 			chan++;
@@ -1201,12 +1202,16 @@ static int xadc_probe(struct platform_device *pdev)
 			goto err_device_free;
 
 		xadc->convst_trigger = xadc_alloc_trigger(indio_dev, "convst");
-		if (IS_ERR(xadc->convst_trigger))
+		if (IS_ERR(xadc->convst_trigger)) {
+			ret = PTR_ERR(xadc->convst_trigger);
 			goto err_triggered_buffer_cleanup;
+		}
 		xadc->samplerate_trigger = xadc_alloc_trigger(indio_dev,
 			"samplerate");
-		if (IS_ERR(xadc->samplerate_trigger))
+		if (IS_ERR(xadc->samplerate_trigger)) {
+			ret = PTR_ERR(xadc->samplerate_trigger);
 			goto err_free_convst_trigger;
+		}
 	}
 
 	xadc->clk = devm_clk_get(&pdev->dev, NULL);
@@ -1322,7 +1327,6 @@ static struct platform_driver xadc_driver = {
 	.remove = xadc_remove,
 	.driver = {
 		.name = "xadc",
-		.owner = THIS_MODULE,
 		.of_match_table = xadc_of_match_table,
 	},
 };

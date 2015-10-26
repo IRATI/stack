@@ -172,14 +172,14 @@ static ADAV80X_MUX_ENUM_DECL(adav80x_capture_enum, ADAV80X_DPATH_CTRL1, 3);
 static ADAV80X_MUX_ENUM_DECL(adav80x_dac_enum, ADAV80X_DPATH_CTRL2, 3);
 
 static const struct snd_kcontrol_new adav80x_aux_capture_mux_ctrl =
-	SOC_DAPM_VALUE_ENUM("Route", adav80x_aux_capture_enum);
+	SOC_DAPM_ENUM("Route", adav80x_aux_capture_enum);
 static const struct snd_kcontrol_new adav80x_capture_mux_ctrl =
-	SOC_DAPM_VALUE_ENUM("Route", adav80x_capture_enum);
+	SOC_DAPM_ENUM("Route", adav80x_capture_enum);
 static const struct snd_kcontrol_new adav80x_dac_mux_ctrl =
-	SOC_DAPM_VALUE_ENUM("Route", adav80x_dac_enum);
+	SOC_DAPM_ENUM("Route", adav80x_dac_enum);
 
 #define ADAV80X_MUX(name, ctrl) \
-	SND_SOC_DAPM_VALUE_MUX(name, SND_SOC_NOPM, 0, 0, ctrl)
+	SND_SOC_DAPM_MUX(name, SND_SOC_NOPM, 0, 0, ctrl)
 
 static const struct snd_soc_dapm_widget adav80x_dapm_widgets[] = {
 	SND_SOC_DAPM_DAC("DAC", NULL, ADAV80X_DAC_CTRL1, 7, 1),
@@ -212,7 +212,7 @@ static const struct snd_soc_dapm_widget adav80x_dapm_widgets[] = {
 static int adav80x_dapm_sysclk_check(struct snd_soc_dapm_widget *source,
 			 struct snd_soc_dapm_widget *sink)
 {
-	struct snd_soc_codec *codec = source->codec;
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(source->dapm);
 	struct adav80x *adav80x = snd_soc_codec_get_drvdata(codec);
 	const char *clk;
 
@@ -236,7 +236,7 @@ static int adav80x_dapm_sysclk_check(struct snd_soc_dapm_widget *source,
 static int adav80x_dapm_pll_check(struct snd_soc_dapm_widget *source,
 			 struct snd_soc_dapm_widget *sink)
 {
-	struct snd_soc_codec *codec = source->codec;
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(source->dapm);
 	struct adav80x *adav80x = snd_soc_codec_get_drvdata(codec);
 
 	return adav80x->pll_src == ADAV80X_PLL_SRC_XTAL;
@@ -315,9 +315,9 @@ static int adav80x_set_deemph(struct snd_soc_codec *codec)
 static int adav80x_put_deemph(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct adav80x *adav80x = snd_soc_codec_get_drvdata(codec);
-	unsigned int deemph = ucontrol->value.enumerated.item[0];
+	unsigned int deemph = ucontrol->value.integer.value[0];
 
 	if (deemph > 1)
 		return -EINVAL;
@@ -330,10 +330,10 @@ static int adav80x_put_deemph(struct snd_kcontrol *kcontrol,
 static int adav80x_get_deemph(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct adav80x *adav80x = snd_soc_codec_get_drvdata(codec);
 
-	ucontrol->value.enumerated.item[0] = adav80x->deemph;
+	ucontrol->value.integer.value[0] = adav80x->deemph;
 	return 0;
 };
 
@@ -812,42 +812,23 @@ static int adav80x_probe(struct snd_soc_codec *codec)
 	/* Disable DAC zero flag */
 	regmap_write(adav80x->regmap, ADAV80X_DAC_CTRL3, 0x6);
 
-	return adav80x_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
-}
-
-static int adav80x_suspend(struct snd_soc_codec *codec)
-{
-	struct adav80x *adav80x = snd_soc_codec_get_drvdata(codec);
-	int ret;
-
-	ret = adav80x_set_bias_level(codec, SND_SOC_BIAS_OFF);
-	regcache_cache_only(adav80x->regmap, true);
-
-	return ret;
+	return 0;
 }
 
 static int adav80x_resume(struct snd_soc_codec *codec)
 {
 	struct adav80x *adav80x = snd_soc_codec_get_drvdata(codec);
 
-	regcache_cache_only(adav80x->regmap, false);
-	adav80x_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 	regcache_sync(adav80x->regmap);
 
 	return 0;
 }
 
-static int adav80x_remove(struct snd_soc_codec *codec)
-{
-	return adav80x_set_bias_level(codec, SND_SOC_BIAS_OFF);
-}
-
 static struct snd_soc_codec_driver adav80x_codec_driver = {
 	.probe = adav80x_probe,
-	.remove = adav80x_remove,
-	.suspend = adav80x_suspend,
 	.resume = adav80x_resume,
 	.set_bias_level = adav80x_set_bias_level,
+	.suspend_bias_off = true,
 
 	.set_pll = adav80x_set_pll,
 	.set_sysclk = adav80x_set_sysclk,
@@ -883,7 +864,6 @@ const struct regmap_config adav80x_regmap_config = {
 	.val_bits = 8,
 	.pad_bits = 1,
 	.reg_bits = 7,
-	.read_flag_mask = 0x01,
 
 	.max_register = ADAV80X_PLL_OUTE,
 

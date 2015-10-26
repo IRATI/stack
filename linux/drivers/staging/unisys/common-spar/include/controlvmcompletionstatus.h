@@ -1,6 +1,6 @@
 /* controlvmcompletionstatus.c
  *
- * Copyright © 2010 - 2013 UNISYS CORPORATION
+ * Copyright (C) 2010 - 2013 UNISYS CORPORATION
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -62,14 +62,16 @@
 							 * DEVICE_CREATE,
 							 * DEVICE_DESTROY */
 /* Unable to invoke VIRTPCI callback */
-#define CONTROLVM_RESP_ERROR_VIRTPCI_DRIVER_CALLBACK_ERROR 605 /* BUS_CREATE,
-								* BUS_DESTROY,
-								* DEVICE_CREATE,
-								* DEVICE_DESTROY */
+#define CONTROLVM_RESP_ERROR_VIRTPCI_DRIVER_CALLBACK_ERROR 605
+							/* BUS_CREATE,
+							 * BUS_DESTROY,
+							 * DEVICE_CREATE,
+							 * DEVICE_DESTROY */
 /* VIRTPCI Callback returned error */
-#define CONTROLVM_RESP_ERROR_GENERIC_DRIVER_CALLBACK_ERROR 606 /* SWITCH_ATTACHEXTPORT,
-								* SWITCH_DETACHEXTPORT
-								* DEVICE_CONFIGURE */
+#define CONTROLVM_RESP_ERROR_GENERIC_DRIVER_CALLBACK_ERROR 606
+							/* SWITCH_ATTACHEXTPORT,
+							 * SWITCH_DETACHEXTPORT
+							 * DEVICE_CONFIGURE */
 
 /* generic device callback returned error */
 /* Bus Related------------------------------------------------------[700-799] */

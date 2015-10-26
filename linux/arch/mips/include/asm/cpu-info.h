@@ -44,11 +44,13 @@ struct cpuinfo_mips {
 	/*
 	 * Capability and feature descriptor structure for MIPS CPU
 	 */
-	unsigned long		options;
 	unsigned long		ases;
+	unsigned long long	options;
 	unsigned int		udelay_val;
 	unsigned int		processor_id;
 	unsigned int		fpu_id;
+	unsigned int		fpu_csr31;
+	unsigned int		fpu_msk31;
 	unsigned int		msa_id;
 	unsigned int		cputype;
 	int			isa_level;
@@ -61,21 +63,17 @@ struct cpuinfo_mips {
 	struct cache_desc	scache; /* Secondary cache */
 	struct cache_desc	tcache; /* Tertiary/split secondary cache */
 	int			srsets; /* Shadow register sets */
+	int			package;/* physical package number */
 	int			core;	/* physical core number */
 #ifdef CONFIG_64BIT
 	int			vmbits; /* Virtual memory size in bits */
 #endif
-#if defined(CONFIG_MIPS_MT_SMP) || defined(CONFIG_MIPS_MT_SMTC)
+#ifdef CONFIG_MIPS_MT_SMP
 	/*
-	 * In the MIPS MT "SMTC" model, each TC is considered
-	 * to be a "CPU" for the purposes of scheduling, but
-	 * exception resources, ASID spaces, etc, are common
-	 * to all TCs within the same VPE.
+	 * There is not necessarily a 1:1 mapping of VPE num to CPU number
+	 * in particular on multi-core systems.
 	 */
 	int			vpe_id;	 /* Virtual Processor number */
-#endif
-#ifdef CONFIG_MIPS_MT_SMTC
-	int			tc_id;	 /* Thread Context number */
 #endif
 	void			*data;	/* Additional data */
 	unsigned int		watch_reg_count;   /* Number that exist */
@@ -83,6 +81,16 @@ struct cpuinfo_mips {
 #define NUM_WATCH_REGS 4
 	u16			watch_reg_masks[NUM_WATCH_REGS];
 	unsigned int		kscratch_mask; /* Usable KScratch mask. */
+	/*
+	 * Cache Coherency attribute for write-combine memory writes.
+	 * (shifted by _CACHE_SHIFT)
+	 */
+	unsigned int		writecombine;
+	/*
+	 * Simple counter to prevent enabling HTW in nested
+	 * htw_start/htw_stop calls
+	 */
+	unsigned int		htw_seq;
 } __attribute__((aligned(SMP_CACHE_BYTES)));
 
 extern struct cpuinfo_mips cpu_data[];
@@ -117,10 +125,10 @@ struct proc_cpuinfo_notifier_args {
 	unsigned long n;
 };
 
-#if defined(CONFIG_MIPS_MT_SMP) || defined(CONFIG_MIPS_MT_SMTC)
+#ifdef CONFIG_MIPS_MT_SMP
 # define cpu_vpe_id(cpuinfo)	((cpuinfo)->vpe_id)
 #else
-# define cpu_vpe_id(cpuinfo)	0
+# define cpu_vpe_id(cpuinfo)	({ (void)cpuinfo; 0; })
 #endif
 
 #endif /* __ASM_CPU_INFO_H */

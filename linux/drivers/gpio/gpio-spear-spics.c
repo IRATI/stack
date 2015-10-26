@@ -129,10 +129,8 @@ static int spics_gpio_probe(struct platform_device *pdev)
 	int ret;
 
 	spics = devm_kzalloc(&pdev->dev, sizeof(*spics), GFP_KERNEL);
-	if (!spics) {
-		dev_err(&pdev->dev, "memory allocation fail\n");
+	if (!spics)
 		return -ENOMEM;
-	}
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	spics->base = devm_ioremap_resource(&pdev->dev, res);
@@ -193,7 +191,6 @@ MODULE_DEVICE_TABLE(of, spics_gpio_of_match);
 static struct platform_driver spics_gpio_driver = {
 	.probe = spics_gpio_probe,
 	.driver = {
-		.owner = THIS_MODULE,
 		.name = "spear-spics-gpio",
 		.of_match_table = spics_gpio_of_match,
 	},
@@ -206,5 +203,5 @@ static int __init spics_gpio_init(void)
 subsys_initcall(spics_gpio_init);
 
 MODULE_AUTHOR("Shiraz Hashim <shiraz.linux.kernel@gmail.com>");
-MODULE_DESCRIPTION("ST Microlectronics SPEAr SPI Chip Select Abstraction");
+MODULE_DESCRIPTION("STMicroelectronics SPEAr SPI Chip Select Abstraction");
 MODULE_LICENSE("GPL");

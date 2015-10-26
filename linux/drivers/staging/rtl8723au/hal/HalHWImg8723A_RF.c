@@ -30,12 +30,12 @@ static bool CheckCondition(const u32  Condition, const u32  Hex)
 		return false;
 
 	cond = Condition & 0x0000FF00;
-	cond = cond >> 8;
+	cond >>= 8;
 	if ((_interface & cond) == 0 && cond != 0x07)
 		return false;
 
 	cond = Condition & 0x00FF0000;
-	cond = cond >> 16;
+	cond >>= 16;
 	if ((_platform & cond) == 0 && cond != 0x0F)
 		return false;
 	return true;
@@ -214,13 +214,12 @@ void ODM_ReadAndConfig_RadioA_1T_8723A(struct dm_odm_t *pDM_Odm)
 	u32     hex         = 0;
 	u32     i           = 0;
 	u8     platform    = 0x04;
-	u8     interfaceValue   = pDM_Odm->SupportInterface;
 	u8     board       = pDM_Odm->BoardType;
 	u32     ArrayLen    = sizeof(Array_RadioA_1T_8723A)/sizeof(u32);
 	u32 *Array = Array_RadioA_1T_8723A;
 
 	hex += board;
-	hex += interfaceValue << 8;
+	hex += ODM_ITRF_USB << 8;
 	hex += platform << 16;
 	hex += 0xFF000000;
 
@@ -230,7 +229,7 @@ void ODM_ReadAndConfig_RadioA_1T_8723A(struct dm_odm_t *pDM_Odm)
 
 		/*  This (offset, data) pair meets the condition. */
 		if (v1 < 0xCDCDCDCD) {
-			odm_ConfigRF_RadioA_8723A(pDM_Odm, v1, v2);
+			odm_ConfigRFReg_8723A(pDM_Odm, v1, v2, RF_PATH_A, v1);
 			continue;
 		} else {
 			if (!CheckCondition(Array[i], hex)) {
@@ -247,7 +246,8 @@ void ODM_ReadAndConfig_RadioA_1T_8723A(struct dm_odm_t *pDM_Odm)
 				while (v2 != 0xDEAD &&
 				       v2 != 0xCDEF &&
 				       v2 != 0xCDCD && i < ArrayLen - 2) {
-					odm_ConfigRF_RadioA_8723A(pDM_Odm, v1, v2);
+					odm_ConfigRFReg_8723A(pDM_Odm, v1, v2,
+							      RF_PATH_A, v1);
 					READ_NEXT_PAIR(v1, v2, i);
 				}
 
