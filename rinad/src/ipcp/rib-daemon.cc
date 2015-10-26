@@ -92,7 +92,91 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t *m_sent,
 			     unsigned int handle,
 			     rina::cdap_rib::cdap_dest_t cdap_dest)
 {
-	//TODO
+	rina::ser_obj_t * sdu = 0;
+	rina::cdap::cdap_m_t * a_data_m = 0;
+
+	atomic_send_lock_.lock();
+	try {
+		if (cdap_dest == rina::cdap_rib::CDAP_DEST_ADDRESS) {
+			rina::ADataObject adata;
+			ADataObjectEncoder encoder;
+			rina::cdap_rib::flags_t flags;
+			rina::cdap_rib::filt_info_t filt;
+			rina::cdap_rib::obj_info_t obj;
+
+			adata.source_address_ = 0;
+			adata.dest_address_ = handle;
+			adata.encoded_cdap_message_ = manager_->encodeCDAPMessage(*m_sent);
+			obj.class_ = rina::ADataObject::A_DATA_OBJECT_CLASS;
+			obj.name_ = rina::ADataObject::A_DATA_OBJECT_NAME;
+			encoder.encode(adata, obj.value_);
+
+			a_data_m = manager_->getWriteObjectRequestMessage(filt,
+									  flags,
+									  obj,
+									  0);
+
+			sdu = manager_->encodeCDAPMessage(*a_data_m);
+			rina::kernelIPCProcess->sendMgmgtSDUToAddress(sdu->message_,
+								      sdu->size_,
+								      handle);
+			LOG_IPCP_DBG("Sent A-Data CDAP message to address %u: %s",
+				     handle,
+				     m_sent->to_string().c_str());
+			if (m_sent->invoke_id_ != 0 && !m_sent->is_request_message()) {
+				manager_->get_invoke_id_manager()->freeInvokeId(m_sent->invoke_id_,
+										true);
+			}
+
+			delete[] (char*) sdu->message_;
+			delete sdu;
+			delete a_data_m;
+		} else if (cdap_dest == rina::cdap_rib::CDAP_DEST_PORT) {
+			sdu = manager_->encodeNextMessageToBeSent(*m_sent, handle);
+			rina::kernelIPCProcess->writeMgmgtSDUToPortId(sdu->message_,
+								      sdu->size_,
+								      handle);
+			LOG_IPCP_DBG("Sent CDAP message of size %d through port-id %u: %s" ,
+				      sdu->size_, handle,
+				      m_sent->to_string().c_str());
+
+			manager_->messageSent(*m_sent, handle);
+			delete[] (char*) sdu->message_;
+			delete sdu;
+		} else if (cdap_dest == rina::cdap_rib::CDAP_DEST_IPCM) {
+			sdu = manager_->encodeCDAPMessage(*m_sent);
+			rina::extendedIPCManager->forwardCDAPResponse(handle,
+								      *sdu,
+								      0);
+
+			delete[] (char*) sdu->message_;
+			delete sdu;
+		}
+	} catch (rina::Exception &e) {
+		if (sdu) {
+			delete[] (char*) sdu->message_;
+			delete sdu;
+		}
+
+		if (a_data_m)
+			delete a_data_m;
+
+		if (m_sent->invoke_id_ != 0 && m_sent->is_request_message()) {
+			manager_->get_invoke_id_manager()->freeInvokeId(m_sent->invoke_id_,
+									false);
+		}
+
+		std::string reason = std::string(e.what());
+		if (reason.compare("Flow closed") == 0) {
+			manager_->removeCDAPSession(handle);
+		}
+
+		atomic_send_lock_.unlock();
+
+		throw e;
+	}
+
+	atomic_send_lock_.unlock();
 }
 
 void IPCPCDAPIOHandler::process_message(rina::ser_obj_t &message,
@@ -307,7 +391,7 @@ void IPCPRIBDaemonImpl::initialize_rib_daemon(rina::cacep::AppConHandlerInterfac
 
 	//Initialize the RIB library and cdap
 	params.is_IPCP_ = true;
-	rina::rib::init(app_con_callback, 0, params);
+	rina::rib::init(app_con_callback, params);
 	rina::cdap::set_cdap_io_handler(new IPCPCDAPIOHandler());
 	getProxy();
 
@@ -428,170 +512,6 @@ void IPCPRIBDaemonImpl::processQueryRIBRequestEvent(const rina::QueryRIBRequestE
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems sending query RIB response to IPC Manager: %s",
 				e.what());
-	}
-}
-
-void IPCPRIBDaemonImpl::sendMessageSpecific(bool useAddress, const rina::CDAPMessage& cdapMessage, int sessionId,
-			unsigned int address, rina::ICDAPResponseMessageHandler * cdapMessageHandler) {
-	const rina::SerializedObject * sdu;
-	rina::ADataObject adata;
-	rina::CDAPMessage * adataCDAPMessage;
-	rina::CDAPSessionManagerInterface * cdsm = ipcp->cdap_session_manager_;
-
-	if (!cdapMessageHandler && cdapMessage.get_invoke_id() != 0
-			&& cdapMessage.get_op_code() != rina::CDAPMessage::M_CONNECT
-			&& cdapMessage.get_op_code() != rina::CDAPMessage::M_CONNECT_R
-			&& cdapMessage.get_op_code() != rina::CDAPMessage::M_RELEASE
-			&& cdapMessage.get_op_code() != rina::CDAPMessage::M_RELEASE_R
-			&& cdapMessage.get_op_code() != rina::CDAPMessage::M_CANCELREAD_R
-			&& cdapMessage.get_op_code() != rina::CDAPMessage::M_WRITE_R
-			&& cdapMessage.get_op_code() != rina::CDAPMessage::M_READ_R
-			&& cdapMessage.get_op_code() != rina::CDAPMessage::M_CREATE_R
-			&& cdapMessage.get_op_code() != rina::CDAPMessage::M_DELETE_R
-			&& cdapMessage.get_op_code() != rina::CDAPMessage::M_START_R
-			&& cdapMessage.get_op_code() != rina::CDAPMessage::M_STOP_R) {
-		throw rina::Exception("Requested a response message but message handler is null");
-	}
-
-	atomic_send_lock_.lock();
-	sdu = 0;
-	try {
-		if (useAddress) {
-			adata.source_address_ = ipcp->get_address();
-			adata.dest_address_ = address;
-			adata.encoded_cdap_message_ = cdsm->encodeCDAPMessage(cdapMessage);
-			adataCDAPMessage = rina::CDAPMessage::getWriteObjectRequestMessage(0,
-					rina::CDAPMessage::NONE_FLAGS, rina::ADataObject::A_DATA_OBJECT_CLASS,
-					0, rina::ADataObject::A_DATA_OBJECT_NAME, 0);
-			ipcp->encoder_->encode(&adata, adataCDAPMessage);
-			sdu = cdsm->encodeCDAPMessage(*adataCDAPMessage);
-			rina::kernelIPCProcess->sendMgmgtSDUToAddress(sdu->message_, sdu->size_, address);
-			LOG_IPCP_DBG("Sent A-Data CDAP message to address %u: %s", address,
-					cdapMessage.to_string().c_str());
-			if (cdapMessage.invoke_id_ != 0 && !cdapMessage.is_request_message()) {
-				cdsm->get_invoke_id_manager()->freeInvokeId(cdapMessage.invoke_id_, true);
-			}
-
-			delete sdu;
-			delete adataCDAPMessage;
-		} else {
-			sdu = cdsm->encodeNextMessageToBeSent(cdapMessage, sessionId);
-			rina::kernelIPCProcess->writeMgmgtSDUToPortId(sdu->message_, sdu->size_, sessionId);
-			LOG_IPCP_DBG("Sent CDAP message of size %d through port-id %d: %s" , sdu->size_, sessionId,
-					cdapMessage.to_string().c_str());
-
-			cdsm->messageSent(cdapMessage, sessionId);
-			delete sdu;
-
-			//Check if CDAP session was closed due to the message sent
-			const rina::CDAPSessionInterface* cdap_session = cdsm->get_cdap_session(sessionId);
-			if (cdap_session && cdap_session->is_closed()) {
-				cdsm->removeCDAPSession(sessionId);
-			}
-		}
-	} catch (rina::Exception &e) {
-		if (sdu) {
-			delete sdu;
-		}
-
-		if (cdapMessage.invoke_id_ != 0 && cdapMessage.is_request_message()) {
-			cdsm->get_invoke_id_manager()->freeInvokeId(cdapMessage.invoke_id_, false);
-		}
-
-		std::string reason = std::string(e.what());
-		if (reason.compare("Flow closed") == 0) {
-			cdsm->removeCDAPSession(sessionId);
-		}
-
-		atomic_send_lock_.unlock();
-
-		throw e;
-	}
-
-    if (cdapMessage.get_invoke_id() != 0
-    		&& cdapMessage.get_op_code() != rina::CDAPMessage::M_CONNECT
-    		&& cdapMessage.get_op_code() != rina::CDAPMessage::M_CONNECT_R
-    		&& cdapMessage.get_op_code() != rina::CDAPMessage::M_RELEASE
-    		&& cdapMessage.get_op_code() != rina::CDAPMessage::M_RELEASE_R
-    		&& cdapMessage.get_op_code() != rina::CDAPMessage::M_CANCELREAD_R
-    		&& cdapMessage.get_op_code() != rina::CDAPMessage::M_WRITE_R
-    		&& cdapMessage.get_op_code() != rina::CDAPMessage::M_READ_R
-    		&& cdapMessage.get_op_code() != rina::CDAPMessage::M_CREATE_R
-    		&& cdapMessage.get_op_code() != rina::CDAPMessage::M_DELETE_R
-    		&& cdapMessage.get_op_code() != rina::CDAPMessage::M_START_R
-    		&& cdapMessage.get_op_code() != rina::CDAPMessage::M_STOP_R) {
-    	handlers_waiting_for_reply_.put(cdapMessage.get_invoke_id(), cdapMessageHandler);
-    }
-
-	atomic_send_lock_.unlock();
-}
-
-void IPCPRIBDaemonImpl::generateCDAPResponse(int invoke_id,
-			rina::CDAPSessionDescriptor * cdapSessDescr,
-			rina::CDAPMessage::Opcode opcode,
-			const std::string& obj_class,
-			const std::string& obj_name,
-			rina::RIBObjectValue& robject_value)
-{
-	IPCMCDAPSessDesc *fwdsess =
-		dynamic_cast<IPCMCDAPSessDesc*>(cdapSessDescr);
-
-	if (!fwdsess) {
-		rina::RemoteProcessId remote_id;
-		remote_id.port_id_ = cdapSessDescr->port_id_;
-
-		remote_operation_response_with_value(opcode, obj_class, obj_name,
-						     robject_value, 0, std::string(),
-						     invoke_id, remote_id,
-						     rina::CDAPMessage::NONE_FLAGS);
-
-	} else {
-		rina::CDAPMessage *rmsg = NULL;
-
-		switch (opcode) {
-		case rina::CDAPMessage::M_READ_R:
-			rmsg = rina::CDAPMessage::getReadObjectResponseMessage(
-					rina::CDAPMessage::NONE_FLAGS,
-					obj_class, 0, obj_name, 0,
-					std::string(), invoke_id);
-			break;
-		case rina::CDAPMessage::M_WRITE_R:
-			rmsg = rina::CDAPMessage::getWriteObjectResponseMessage(
-					rina::CDAPMessage::NONE_FLAGS,
-					0, invoke_id, std::string());
-			break;
-		case rina::CDAPMessage::M_START_R:
-			rmsg = rina::CDAPMessage::getStartObjectResponseMessage(
-					rina::CDAPMessage::NONE_FLAGS,
-					0, std::string(), invoke_id);
-			break;
-		case rina::CDAPMessage::M_STOP_R:
-			rmsg = rina::CDAPMessage::getStopObjectResponseMessage(
-					rina::CDAPMessage::NONE_FLAGS,
-					0, std::string(), invoke_id);
-			break;
-		default:
-			LOG_IPCP_WARN("Missing generateCDAPResponse support "
-				      "for opcode %d", opcode);
-			rmsg = 0;
-			break;
-		}
-
-		if (!rmsg) {
-			return;
-		}
-
-		encodeObject(robject_value, rmsg);
-
-		// Reply to the IPC Manager, attaching the response message
-		const rina::SerializedObject * so;
-
-		so = wmpi->serializeMessage(*rmsg);
-		delete rmsg;
-
-		rina::extendedIPCManager->forwardCDAPResponse(
-				fwdsess->req_seqnum, *so, 0);
-		delete so;
 	}
 }
 

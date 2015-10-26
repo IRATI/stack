@@ -267,7 +267,7 @@ rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(
 
 		//object class contains challenge request or reply
 		//object name contains cipher name
-		rib_daemon->remote_write(session_id, obj_info, flags, filt);
+		rib_daemon->remote_write(session_id, obj_info, flags, filt, NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 	}
@@ -307,7 +307,7 @@ int AuthPasswordPolicySet::process_challenge_request(const std::string& challeng
 
 		//object class contains challenge request or reply
 		//object name contains cipher name
-		rib_daemon->remote_write(session_id, obj_info, flags, filt);
+		rib_daemon->remote_write(session_id, obj_info, flags, filt, NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 	}
@@ -1043,7 +1043,7 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::decryption_enabled_server(SSH2Secu
 		encode_ssh2_auth_options(auth_options, ser_obj);
 		obj_info.value_ = ser_obj;
 
-		rib_daemon->remote_write(sc->id, obj_info, flags, filt);
+		rib_daemon->remote_write(sc->id, obj_info, flags, filt, NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 		sec_man->destroy_security_context(sc->id);
@@ -1207,7 +1207,7 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::encryption_decryption_enabled_clie
 		obj_info.value_.message_ = sobj->message_;
 		obj_info.value_.size_ = sobj->size_;
 
-		rib_daemon->remote_write(sc->id, obj_info, flags, filt);
+		rib_daemon->remote_write(sc->id, obj_info, flags, filt, NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 		sec_man->destroy_security_context(sc->id);
@@ -1309,7 +1309,7 @@ int AuthSSH2PolicySet::process_client_challenge_message(const cdap::CDAPMessage&
 					       encrypted_server_challenge,
 					       obj_info.value_);
 
-		rib_daemon->remote_write(sc->id, obj_info, flags, filt);
+		rib_daemon->remote_write(sc->id, obj_info, flags, filt, NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 		sec_man->destroy_security_context(sc->id);
@@ -1446,7 +1446,7 @@ int AuthSSH2PolicySet::process_client_challenge_reply_message(const cdap::CDAPMe
 		obj_info.value_.message_ = sobj2->message_;
 		obj_info.value_.size_ = sobj2->size_;
 
-		rib_daemon->remote_write(sc->id, obj_info, flags, filt);
+		rib_daemon->remote_write(sc->id, obj_info, flags, filt,  NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 		sec_man->destroy_security_context(sc->id);

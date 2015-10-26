@@ -26,7 +26,7 @@
 
 #include "common/concurrency.h"
 #include "ipcp/components.h"
-#include <librina/cdap.h>
+#include <librina/rib_v2.h>
 #include <librina/internal-events.h>
 
 namespace rinad {
@@ -46,12 +46,19 @@ private:
 	int delay_;
 };
 
-class WatchdogRIBObject: public BaseIPCPRIBObject, public rina::BaseCDAPResponseMessageHandler {
+class WatchdogRIBObject: public IPCPRIBObj {
 public:
-	WatchdogRIBObject(IPCProcess * ipc_process, int wdog_period_ms, int declared_dead_int_ms);
+	WatchdogRIBObject(IPCProcess * ipc_process,
+			  int wdog_period_ms,
+			  int declared_dead_int_ms);
 	~WatchdogRIBObject();
-	const void* get_value() const;
-	void remoteReadObject(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
+	void read(const cdap_rib::con_handle_t &con,
+		  const std::string& fqn,
+		  const std::string& class_,
+		  const rina::cdap_rib::filt_info_t &filt,
+		  const int invoke_id,
+		  rina::ser_obj_t &obj_reply,
+		  rina::cdap_rib::res_info_t& res);
 
 	/// Send watchdog messages to the IPC processes that are our neighbors and we're enrolled to
 	void sendMessages();
@@ -62,8 +69,10 @@ public:
 			void * object_value, const std::string& object_name,
 			rina::CDAPSessionDescriptor * session_descriptor);
 
+	const static std::string class_name;
+	const static std::string object_name_prefix;
+
 private:
-	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 	rina::Timer * timer_;
 	int wathchdog_period_;
 	int declared_dead_interval_;

@@ -71,32 +71,38 @@ class CDAPCallbackInterface
 	//
 	// Remote operation results
 	//
-	virtual void remote_open_connection_result(
-					const cdap_rib::con_handle_t &con,
-					const cdap_rib::result_info &res);
-	virtual void remote_close_connection_result(
-					const cdap_rib::con_handle_t &con,
-					const cdap_rib::result_info &res);
+	virtual void remote_open_connection_result(const cdap_rib::con_handle_t &con,
+						   const cdap_rib::result_info &res);
+	virtual void remote_close_connection_result(const cdap_rib::con_handle_t &con,
+						    const cdap_rib::result_info &res);
 	virtual void remote_create_result(const cdap_rib::con_handle_t &con,
-					const cdap_rib::obj_info_t &obj,
-					const cdap_rib::res_info_t &res);
+					  const cdap_rib::obj_info_t &obj,
+					  const cdap_rib::res_info_t &res,
+					  const int invoke_id);
 	virtual void remote_delete_result(const cdap_rib::con_handle_t &con,
-					const cdap_rib::res_info_t &res);
+					  const cdap_rib::res_info_t &res,
+					  const int invoke_id);
 	virtual void remote_read_result(const cdap_rib::con_handle_t &con,
 					const cdap_rib::obj_info_t &obj,
-					const cdap_rib::res_info_t &res);
+					const cdap_rib::res_info_t &res,
+					const cdap_rib::flags_t &flags,
+					const int invoke_id);
 	virtual void remote_cancel_read_result(
 					const cdap_rib::con_handle_t &con,
-					const cdap_rib::res_info_t &res);
+					const cdap_rib::res_info_t &res,
+					const int invoke_id);
 	virtual void remote_write_result(const cdap_rib::con_handle_t &con,
-					const cdap_rib::obj_info_t &obj,
-					const cdap_rib::res_info_t &res);
+					 const cdap_rib::obj_info_t &obj,
+					 const cdap_rib::res_info_t &res,
+					 const int invoke_id);
 	virtual void remote_start_result(const cdap_rib::con_handle_t &con,
 					const cdap_rib::obj_info_t &obj,
-					const cdap_rib::res_info_t &res);
+					const cdap_rib::res_info_t &res,
+					const int invoke_id);
 	virtual void remote_stop_result(const cdap_rib::con_handle_t &con,
 					const cdap_rib::obj_info_t &obj,
-					const cdap_rib::res_info_t &res);
+					const cdap_rib::res_info_t &res,
+					const int invoke_id);
 
 	//
 	// Requests coming from the peer to our RIB
@@ -184,6 +190,7 @@ public:
 				  const cdap_rib::obj_info_t &obj,
 				  const cdap_rib::flags_t &flags,
 				  const cdap_rib::filt_info_t &filt,
+				  const int invoke_id,
 				  cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT) = 0;
 
 	///
@@ -195,6 +202,7 @@ public:
 				  const cdap_rib::obj_info_t &obj,
 				  const cdap_rib::flags_t &flags,
 				  const cdap_rib::filt_info_t &filt,
+				  const int invoke_id,
 				  cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT) = 0;
 
 	///
@@ -206,6 +214,7 @@ public:
 				const cdap_rib::obj_info_t &obj,
 				const cdap_rib::flags_t &flags,
 				const cdap_rib::filt_info_t &filt,
+				const int invoke_id,
 				cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT)= 0;
 	///
 	/// Perform a cancel read operation over an object of the remote RIB
@@ -214,7 +223,7 @@ public:
 	///
 	virtual int remote_cancel_read(unsigned int handle,
 				       const cdap_rib::flags_t &flags,
-				       int invoke_id,
+				       const int invoke_id,
 				       cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT) = 0;
 
 	///
@@ -226,6 +235,7 @@ public:
 				 const cdap_rib::obj_info_t &obj,
 				 const cdap_rib::flags_t &flags,
 				 const cdap_rib::filt_info_t &filt,
+				 const int invoke_id,
 				 cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT) = 0;
 
 	///
@@ -237,6 +247,7 @@ public:
 				 const cdap_rib::obj_info_t &obj,
 				 const cdap_rib::flags_t &flags,
 				 const cdap_rib::filt_info_t &filt,
+				 const int invoke_id,
 				 cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT) = 0;
 
 	///
@@ -248,6 +259,7 @@ public:
 				const cdap_rib::obj_info_t &obj,
 				const cdap_rib::flags_t &flags,
 				const cdap_rib::filt_info_t &filt,
+				const int invoke_id,
 				cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT) = 0;
 
 	//

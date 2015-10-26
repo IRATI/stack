@@ -493,12 +493,6 @@ public:
 	/// Process a Query RIB Request from the IPC Manager
 	/// @param event
 	virtual void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event) = 0;
-	virtual void generateCDAPResponse(int invoke_id,
-			rina::cdap::CDAPSessionDescriptor * cdapSessDescr,
-			rina::cdap::CDAPMessage::Opcode opcode,
-			const std::string& obj_class,
-			const std::string& obj_name,
-			rina::ser_obj_t& robject_value) = 0;
 };
 
 /// IPC Process interface
