@@ -193,7 +193,6 @@ FlowAllocator::FlowAllocator() : IFlowAllocator()
 	ipcp = 0;
 	rib_daemon_ = 0;
 	cdap_session_manager_ = 0;
-	encoder_ = 0;
 	namespace_manager_ = 0;
 }
 
@@ -218,7 +217,6 @@ void FlowAllocator::set_application_process(rina::ApplicationProcess * ap)
 		return;
 	}
 	rib_daemon_ = ipcp->rib_daemon_;
-	encoder_ = ipcp->encoder_;
 	cdap_session_manager_ = ipcp->cdap_session_manager_;
 	namespace_manager_ = ipcp->namespace_manager_;
 	populateRIB();
@@ -553,7 +551,6 @@ void FlowAllocatorInstance::initialize(
 	ipc_process_ = ipc_process;
 	port_id_ = port_id;
 	rib_daemon_ = ipc_process->rib_daemon_;
-	encoder_ = ipc_process->encoder_;
 	namespace_manager_ = ipc_process->namespace_manager_;
 	security_manager_ = ipc_process->security_manager_;
 	state = NO_STATE;
@@ -1297,144 +1294,6 @@ std::string DataTransferConstantsRIBObject::get_displayable_value()
 		ipc_process_->get_dif_information().dif_configuration_
 		.efcp_configuration_.data_transfer_constants_;
 	return dtc.toString();
-}
-
-// CLASS FlowEncoder
-const rina::SerializedObject* FlowEncoder::encode(const void* object)
-{
-	Flow *flow = (Flow*) object;
-	rina::messages::Flow gpf_flow;
-
-	// SourceNamingInfo
-	gpf_flow.set_allocated_sourcenaminginfo(
-			Encoder::get_applicationProcessNamingInfo_t(
-				flow->source_naming_info));
-	// DestinationNamingInfo
-	gpf_flow.set_allocated_destinationnaminginfo(
-			Encoder::get_applicationProcessNamingInfo_t(
-				flow->destination_naming_info));
-	// sourcePortId
-	gpf_flow.set_sourceportid(flow->source_port_id);
-	//destinationPortId
-	gpf_flow.set_destinationportid(flow->destination_port_id);
-	//sourceAddress
-	gpf_flow.set_sourceaddress(flow->source_address);
-	//destinationAddress
-	gpf_flow.set_destinationaddress(flow->destination_address);
-	//connectionIds
-	for (std::list<rina::Connection*>::const_iterator it = flow
-			->connections.begin(); it != flow->connections.end(); ++it) {
-		rina::messages::connectionId_t *gpf_connection = gpf_flow
-			.add_connectionids();
-		//qosId
-		gpf_connection->set_qosid((*it)->getQosId());
-		//sourceCEPId
-		gpf_connection->set_sourcecepid((*it)->getSourceCepId());
-		//destinationCEPId
-		gpf_connection->set_destinationcepid((*it)->getDestCepId());
-	}
-	//currentConnectionIdIndex
-	gpf_flow.set_currentconnectionidindex(
-			flow->current_connection_index);
-	//state
-	gpf_flow.set_state(flow->state);
-	//qosParameters
-	gpf_flow.set_allocated_qosparameters(
-			Encoder::get_qosSpecification_t(flow->flow_specification));
-	//optional dtpConfig_t dtpConfig
-	gpf_flow.set_allocated_dtpconfig(
-			Encoder::get_dtpConfig_t(
-				flow->getActiveConnection()->getDTPConfig()));
-	//optional dtpConfig_t dtpConfig
-	gpf_flow.set_allocated_dtcpconfig(
-			Encoder::get_dtcpConfig_t(
-				flow->getActiveConnection()->getDTCPConfig()));
-	//accessControl
-	if (flow->access_control != 0)
-		gpf_flow.set_accesscontrol(flow->access_control);
-	//maxCreateFlowRetries
-	gpf_flow.set_maxcreateflowretries(flow->max_create_flow_retries);
-	//createFlowRetries
-	gpf_flow.set_createflowretries(flow->create_flow_retries);
-	//hopCount
-	gpf_flow.set_hopcount(flow->hop_count);
-
-	int size = gpf_flow.ByteSize();
-	char *serialized_message = new char[size];
-	gpf_flow.SerializeToArray(serialized_message, size);
-	rina::SerializedObject *serialized_object =
-		new rina::SerializedObject(serialized_message, size);
-
-	return serialized_object;
-}
-
-void* FlowEncoder::decode(
-		const rina::ObjectValueInterface * object_value) const
-{
-	Flow *flow = new Flow();
-	rina::Connection * connection;
-	rina::messages::Flow gpf_flow;
-
-	rina::SerializedObject * serializedObject =
-		Encoder::get_serialized_object(object_value);
-
-	gpf_flow.ParseFromArray(serializedObject->message_,
-			serializedObject->size_);
-
-	rina::ApplicationProcessNamingInformation *src_app =
-		Encoder::get_ApplicationProcessNamingInformation(
-				gpf_flow.sourcenaminginfo());
-	flow->source_naming_info = *src_app;
-	delete src_app;
-	src_app = 0;
-
-	rina::ApplicationProcessNamingInformation *dest_app =
-		Encoder::get_ApplicationProcessNamingInformation(
-				gpf_flow.destinationnaminginfo());
-	flow->destination_naming_info = *dest_app;
-	delete dest_app;
-	dest_app = 0;
-
-	flow->source_port_id = gpf_flow.sourceportid();
-	flow->destination_port_id = gpf_flow.destinationportid();
-	flow->source_address = gpf_flow.sourceaddress();
-	flow->destination_address = gpf_flow.destinationaddress();
-
-	for (int i = 0; i < gpf_flow.connectionids_size(); ++i) {
-		connection = Encoder::get_Connection(gpf_flow.connectionids(i));
-		connection->sourceAddress = flow->source_address;
-		connection->destAddress = flow->destination_address;
-		flow->connections.push_back(connection);
-	}
-	flow->current_connection_index =
-		gpf_flow.currentconnectionidindex();
-	flow->state =
-		static_cast<rinad::Flow::IPCPFlowState>(gpf_flow.state());
-	rina::FlowSpecification *fs = Encoder::get_FlowSpecification(
-			gpf_flow.qosparameters());
-	flow->flow_specification = *fs;
-	delete fs;
-	fs = 0;
-
-	rina::DTPConfig *dtp_config =
-		Encoder::get_DTPConfig(gpf_flow.dtpconfig());
-	flow->getActiveConnection()->setDTPConfig(*dtp_config);
-	delete dtp_config;
-	dtp_config = 0;
-
-	rina::DTCPConfig *dtcp_config =
-		Encoder::get_DTCPConfig(gpf_flow.dtcpconfig());
-	flow->getActiveConnection()->setDTCPConfig(*dtcp_config);
-	delete dtcp_config;
-	dtcp_config = 0;
-
-	flow->access_control = const_cast<char*>(gpf_flow.accesscontrol()
-			.c_str());
-	flow->max_create_flow_retries = gpf_flow.maxcreateflowretries();
-	flow->create_flow_retries = gpf_flow.createflowretries();
-	flow->hop_count = gpf_flow.hopcount();
-
-	return (void*) flow;
 }
 
 } //namespace rinad

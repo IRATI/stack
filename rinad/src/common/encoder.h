@@ -218,10 +218,25 @@ public:
 class ADataObjectEncoder: public rina::Encoder<rina::ADataObject> 
 {
 public:
-	void encode(const rina::ADataObject &obj, 
+	void encode(const rina::ADataObject &obj, rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj, rina::ADataObject &des_obj);
+};
+
+/// Encoder of a list of EnrollmentInformationRequest
+class EnrollmentInformationRequestEncoder: 
+	public rina::Encoder<EnrollmentInformationRequest> {
+public:
+	void encode(const EnrollmentInformationRequest &obj, 
 		rina::ser_obj_t& serobj);
 	void decode(const rina::ser_obj_t &serobj, 
-		rina::ADataObject &des_obj);
+		EnrollmentInformationRequest &des_obj);
+};
+
+/// Encoder of the Flow
+class FlowEncoder: public rina::Encoder<Flow> {
+public:
+	void encode(const Flow &obj, rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj, Flow &des_obj);
 };
 
 }

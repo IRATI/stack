@@ -283,16 +283,19 @@ public:
 	static const int NO_AVOID_PORT;
 	static const long WAIT_UNTIL_REMOVE_OBJECT;
 
-	FlowStateDatabase(rina::IMasterEncoder * encoder, FlowStateRIBObjectGroup *
-			flow_state_rib_object_group, rina::Timer * timer, IPCPRIBDaemon *rib_daemon, unsigned int *maximum_age);
+	FlowStateDatabase(FlowStateRIBObjectGroup *	flow_state_rib_object_group, 
+		rina::Timer * timer, IPCPRIBDaemon *rib_daemon, 
+		unsigned int *maximum_age);
 	bool isEmpty() const;
 	void setAvoidPort(int avoidPort);
 	void addObjectToGroup(unsigned int address, unsigned int neighborAddress,
 			unsigned int cost, int avoid_port);
 	void deprecateObject(unsigned int address);
-  std::map <int, std::list<FlowStateObject*> > prepareForPropagation(const std::list<rina::FlowInformation>& flows);
+  std::map <int, std::list<FlowStateObject*> > prepareForPropagation
+	  (const std::list<rina::FlowInformation>& flows);
 	void incrementAge();
-	void updateObjects(const std::list<FlowStateObject*>& newObjects, int avoidPort, unsigned int address);
+	void updateObjects(const std::list<FlowStateObject*>& newObjects, 
+		int avoidPort, unsigned int address);
 	std::list<FlowStateObject*> getModifiedFSOs();
 	void getAllFSOs(std::list<FlowStateObject*> &flow_state_objects);
 	unsigned int get_maximum_age() const;
@@ -311,7 +314,8 @@ private:
 	FlowStateObject * getByAddress(unsigned int address);
 };
 
-class LinkStateRoutingCDAPMessageHandler: public rina::BaseCDAPResponseMessageHandler {
+class LinkStateRoutingCDAPMessageHandler: 
+	public rina::BaseCDAPResponseMessageHandler {
 public:
 	LinkStateRoutingCDAPMessageHandler(LinkStateRoutingPolicy * lsr_policy);
 	void readResponse(int result, const std::string& result_reason,
@@ -473,7 +477,6 @@ private:
 	static const int MAXIMUM_BUFFER_SIZE;
 	IPCProcess * ipc_process_;
 	IPCPRIBDaemon * rib_daemon_;
-	rina::IMasterEncoder * encoder_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 	FlowStateRIBObjectGroup * fs_rib_group_;
 	IRoutingAlgorithm * routing_algorithm_;
@@ -525,20 +528,19 @@ private:
 };
 
 /// Encoder of Flow State object
-class FlowStateObjectEncoder: public rina::EncoderInterface {
+class FlowStateObjectEncoder: public rina::Encoder<FlowStateObject>{
 public:
-	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::ObjectValueInterface * object_value) const;
-	static void convertModelToGPB(rina::messages::flowStateObject_t * gpb_fso,
-			FlowStateObject * fso);
-	static FlowStateObject * convertGPBToModel(
-			const rina::messages::flowStateObject_t & gpb_fso);
+	void encode(const FlowStateObject &obj, rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj, FlowStateObject &des_obj);
 };
 
-class FlowStateObjectListEncoder: public rina::EncoderInterface {
+class FlowStateObjectListEncoder: 
+	public rina::Encoder<std::list<FlowStateObject> > {
 public:
-	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::ObjectValueInterface * object_value) const;
+	void encode(const std::list<FlowStateObject> &obj, 
+		rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj, 
+		std::list<FlowStateObject> &des_obj);
 };
 
 }
