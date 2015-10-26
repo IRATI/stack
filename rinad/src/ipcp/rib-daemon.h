@@ -50,12 +50,6 @@ public:
         void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
         void eventHappened(rina::InternalEvent * event);
         void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event);
-	void generateCDAPResponse(int invoke_id,
-			rina::CDAPSessionDescriptor * cdapSessDescr,
-			rina::cdap::CDAPMessage::Opcode opcode,
-			const std::string& obj_class,
-			const std::string& obj_name,
-			rina::ser_obj_t& robject_value);
 
 private:
 	void initialize_rib_daemon(rina::cacep::AppConHandlerInterface *app_con_callback);
