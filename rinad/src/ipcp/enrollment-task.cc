@@ -37,6 +37,100 @@
 
 namespace rinad {
 
+// Class Neighbor RIB object
+const std::string NeighborRIBObj::class_name = "Neighbor";
+const std::string NeighborRIBObj::object_name_prefix = "/difmanagement/enrollment/neighbors/processName=";
+
+NeighborRIBObj::NeighborRIBObj(rina::Neighbor* neigh) :
+		rina::rib::RIBObj(class_name), neighbor(neigh)
+{
+}
+
+const std::string NeighborRIBObj::get_displayable_value() const
+{
+    std::stringstream ss;
+    ss << "Name: " << neighbor->name_.getEncodedString();
+    ss << "; Address: " << neighbor->address_;
+    ss << "; Enrolled: " << neighbor->enrolled_ << std::endl;
+    ss << "; Supporting DIF Name: " << neighbor->supporting_dif_name_.processName;
+    ss << "; Underlying port-id: " << neighbor->underlying_port_id_;
+    ss << "; Number of enroll. attempts: " << neighbor->number_of_enrollment_attempts_;
+
+    return ss.str();
+}
+
+
+// Class Neighbor RIB object
+const std::string NeighborsRIBObj::class_name = "Neighbors";
+const std::string NeighborsRIBObj::object_name = "/difmanagement/enrollment/neighbors";
+
+NeighborsRIBObj::NeighborsRIBObj(IPCProcess * ipcp) :
+		IPCPRIBObj(ipcp, class_name)
+{
+}
+
+void NeighborsRIBObj::create(const rina::cdap_rib::con_handle_t &con,
+			     const std::string& fqn,
+			     const std::string& class_,
+			     const rina::cdap_rib::filt_info_t &filt,
+			     const int invoke_id,
+			     const rina::ser_obj_t &obj_req,
+			     rina::ser_obj_t &obj_reply,
+			     rina::cdap_rib::res_info_t& res)
+{
+	rina::Lockable lock;
+	rina::ScopedLock g(lock);
+	NeighborListEncoder encoder;
+	std::list<rina::Neighbor> neighbors;
+	std::stringstream ss;
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+
+	//TODO 1 decode neighbor list from ser_obj_t
+	encoder.decode(obj_req, neighbors);
+
+	std::list<rina::Neighbor>::const_iterator iterator;
+	for(iterator = neighbors.begin(); iterator != neighbors.end(); ++iterator) {
+		ss.flush();
+		ss << NeighborRIBObj::object_name_prefix;
+		ss << iterator->name_.processName;
+
+		//2 If neighbor is already in RIB, exit
+		if (rib_daemon_->getProxy()->containsObj(rib_daemon_->get_rib_handle(),
+							 ss.str()))
+			continue;
+
+		//3 Avoid creating myself as a neighbor
+		if (iterator->name_.processName.compare(ipc_process_->get_name()) == 0)
+			continue;
+
+		//4 Only create neighbours with whom I have an N-1 DIF in common
+		std::list<rina::ApplicationProcessNamingInformation>::const_iterator it;
+		rina::IPCResourceManager * irm =
+				dynamic_cast<rina::IPCResourceManager*>(ipc_process_->get_ipc_resource_manager());
+		bool supportingDifInCommon = false;
+		for(it = iterator->supporting_difs_.begin();
+				it != iterator->supporting_difs_.end(); ++it) {
+			if (irm->isSupportingDIF((*it))) {
+				iterator->supporting_dif_name_ = (*it);
+				supportingDifInCommon = true;
+				break;
+			}
+		}
+
+		if (!supportingDifInCommon) {
+			LOG_INFO("Ignoring neighbor %s because we don't have an N-1 DIF in common",
+					iterator->name_.processName.c_str());
+			continue;
+		}
+
+		//5 Add the neighbor
+		rina::Neighbor * neigh = new rina::Neighbor(*iterator);
+		ipc_process_->enrollment_task_->add_neighbor(neigh);
+	}
+
+	delete neighbors;
+}
+
 //Class WatchdogTimerTask
 WatchdogTimerTask::WatchdogTimerTask(WatchdogRIBObject * watchdog,
                                      rina::Timer *       timer,
@@ -393,8 +487,8 @@ void IEnrollmentStateMachine::sendNeighbors()
 		rina::cdap_rib::flags_t flags;
 		rina::cdap_rib::filt_info_t filt;
 		NeighborListEncoder encoder;
-		obj.class_ = rina::NeighborsRIBObj::class_name;
-		obj.name_ = rina::NeighborsRIBObj::object_name;
+		obj.class_ = NeighborsRIBObj::class_name;
+		obj.name_ = NeighborsRIBObj::object_name;
 		encoder.encode(neighbors_to_send, obj.value_);
 
 		rib_daemon_->getProxy()->remote_create(port_id_,
@@ -482,10 +576,8 @@ void EnrollmentTask::populateRIB()
 		tmp = new rina::rib::RIBObj("Enrollment");
 		rib_daemon_->addObjRIB("/difmanagement/enrollment", &tmp);
 
-		tmp = new rina::NeighborsRIBObj(ipcp,
-						rib_daemon_->getProxy(),
-						rib_daemon_->get_rib_handle());
-		rib_daemon_->addObjRIB(rina::NeighborsRIBObj::object_name, &tmp);
+		tmp = new NeighborsRIBObj(ipcp);
+		rib_daemon_->addObjRIB(NeighborsRIBObj::object_name, &tmp);
 
 		tmp = new OperationalStatusRIBObject(ipcp);
 		rib_daemon_->addObjRIB(OperationalStatusRIBObject::object_name, &tmp);
@@ -781,10 +873,10 @@ void EnrollmentTask::add_neighbor(rina::Neighbor * neighbor)
 
 	try {
 		std::stringstream ss;
-		ss << rina::NeighborRIBObj::object_name_prefix
+		ss << NeighborRIBObj::object_name_prefix
 		   << neighbor->name_.processName;
 
-		rina::rib::RIBObj * nrobj = new rina::NeighborRIBObj(neighbor);
+		rina::rib::RIBObj * nrobj = new NeighborRIBObj(neighbor);
 		rib_daemon_->addObjRIB(ss.str(), &nrobj);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems creating RIB object: %s",
@@ -809,7 +901,7 @@ void EnrollmentTask::remove_neighbor(const std::string& neighbor_key)
 
 	try {
 		std::stringstream ss;
-		ss << rina::NeighborRIBObj::object_name_prefix
+		ss << NeighborRIBObj::object_name_prefix
 	           << neighbor->name_.processName;
 		rib_daemon_->removeObjRIB(ss.str());
 	} catch (rina::Exception &e){

@@ -188,7 +188,7 @@ AS_IF([test "$build_bindings_java" = "yes"],[
 AM_CONDITIONAL(BUILD_BINDINGS_JAVA, [test $build_bindings_java = yes])
 
 AC_PATH_PROG([MVN],[mvn],[])
-AS_IF([test x"$MVN" != x""],[
+AS_IF([test x"$MVN" = x""],[
     AC_MSG_WARN([Your system lacks of maven support, Java parts will not be built/installed])
 ])
 AM_CONDITIONAL(BUILD_MAVEN_SUPPORT, [test x"$MVN" != x""])

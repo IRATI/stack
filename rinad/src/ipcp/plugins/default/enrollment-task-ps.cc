@@ -76,7 +76,6 @@ protected:
 	void sendDFTEntries();
 
 	IPCProcess * ipc_process_;
-	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 	IPCPSecurityManager * sec_man_;
 };
 
@@ -140,7 +139,6 @@ BaseEnrollmentStateMachine::BaseEnrollmentStateMachine(IPCProcess * ipc_process,
 						timeout, supporting_dif_name)
 {
 	ipc_process_ = ipc_process;
-	cdap_session_manager_ = ipc_process->cdap_session_manager_;
 	sec_man_ = ipc_process->security_manager_;
 }
 

@@ -1299,7 +1299,7 @@ void DirectoryForwardingTableEntry::set_timestamp(long timestamp) {
 	timestamp_ = timestamp;
 }
 
-std::string DirectoryForwardingTableEntry::getKey() {
+const std::string DirectoryForwardingTableEntry::getKey() const{
 	return ap_naming_info_.getEncodedString();
 }
 

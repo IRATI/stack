@@ -253,17 +253,22 @@ public:
 
 	/// Add an entry to the directory forwarding table
 	/// @param entry
-	virtual void addDFTEntry(rina::DirectoryForwardingTableEntry * entry) = 0;
+	virtual void addDFTEntries(const std::list<rina::DirectoryForwardingTableEntry>& entries,
+				   bool notify_neighs,
+				   std::list<int>& neighs_to_exclude) = 0;
 
 	/// Get an entry from the application name
 	/// @param apNamingInfo
 	/// @return
-	virtual rina::DirectoryForwardingTableEntry * getDFTEntry(
-			const rina::ApplicationProcessNamingInformation& apNamingInfo) = 0;
+	virtual rina::DirectoryForwardingTableEntry * getDFTEntry(const std::string& key) = 0;
+
+	virtual std::list<rina::DirectoryForwardingTableEntry> getDFTEntries() = 0;
 
 	/// Remove an entry from the directory forwarding table
 	/// @param apNamingInfo
-	virtual void removeDFTEntry(const rina::ApplicationProcessNamingInformation& apNamingInfo) = 0;
+	virtual void removeDFTEntry(const std::string& key,
+			 	    bool notify_neighs,
+			 	    std::list<int>& neighs_to_exclude) = 0;
 
 	/// Process an application registration request
 	/// @param event
@@ -279,6 +284,12 @@ public:
 
 	virtual rina::ApplicationRegistrationInformation
 		get_reg_app_info(const rina::ApplicationProcessNamingInformation name) = 0;
+
+	virtual std::list<rina::WhatevercastName> get_whatevercast_names() = 0;
+
+	virtual void add_whatevercast_name(rina::WhatevercastName * name) = 0;
+
+	virtual void remove_whatevercast_name(const std::string& name_key) = 0;
 };
 
 ///N-1 Flow Manager interface
