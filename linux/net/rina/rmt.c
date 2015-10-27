@@ -89,7 +89,7 @@ static struct rmt_n1_port *n1_port_create(port_id_t id,
 
 	ASSERT(is_port_id_ok(id));
 
-	tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+	tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
 	if (!tmp)
 		return NULL;
 
