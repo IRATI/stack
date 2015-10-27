@@ -93,28 +93,7 @@ void WatchdogRIBObject::read(const rina::cdap_rib::con_handle_t &con,
 {
 	rina::ScopedLock g(*lock_);
 
-	//1 Send M_READ_R message
-	try {
-		rina::cdap_rib::obj_info_t obj;
-		rina::cdap_rib::flags_t flags;
-		rina::cdap::IntEncoder encoder;
-		obj.class_ = class_name;
-		obj.name_ = object_name;
-		encoder.encode(ipc_process_->get_address(), obj.value_);
-		res.code_ = rina::cdap_rib::CDAP_SUCCESS;
-
-		rina::cdap::getProvider()->send_read_result(con.handle_,
-							    obj,
-							    flags,
-							    res,
-							    invoke_id,
-							    con.cdap_dest);
-	} catch(rina::Exception &e) {
-		LOG_IPCP_ERR("Problems creating or sending CDAP Message: %s",
-			     e.what());
-	}
-
-	//2 Update last heard from attribute of the relevant neighbor
+	//1 Update last heard from attribute of the relevant neighbor
 	std::list<rina::Neighbor*> neighbors = ipc_process_->get_neighbors();
 	std::list<rina::Neighbor*>::const_iterator it;
 	for (it = neighbors.begin(); it != neighbors.end(); ++it) {
@@ -125,6 +104,11 @@ void WatchdogRIBObject::read(const rina::cdap_rib::con_handle_t &con,
 			break;
 		}
 	}
+
+	//2 Prepare response (RIBDaemon will send it)
+	rina::cdap::IntEncoder encoder;
+	encoder.encode(ipc_process_->get_address(), obj_reply);
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }
 
 void WatchdogRIBObject::sendMessages() {
@@ -203,37 +187,39 @@ void WatchdogRIBObject::remoteReadResult(const rina::cdap_rib::con_handle_t &con
 }
 
 //Class AddressRIBObject
+const static std::string AddressRIBObject::class_name = "address";
+const static std::string AddressRIBObject::object_name = "/difmanagement/naming/address";
+
 AddressRIBObject::AddressRIBObject(IPCProcess * ipc_process):
-	BaseIPCPRIBObject(ipc_process, EncoderConstants::ADDRESS_RIB_OBJECT_CLASS,
-			rina::objectInstanceGenerator->getObjectInstance(),
-			EncoderConstants::ADDRESS_RIB_OBJECT_NAME) {
+	IPCPRIBObj(ipc_process, class_name)
+{
 	address_ = ipc_process_->get_address();
 }
 
-AddressRIBObject::~AddressRIBObject() {
+AddressRIBObject::~AddressRIBObject()
+{
 }
 
-const void* AddressRIBObject::get_value() const {
-	return &address_;
-}
-
-void AddressRIBObject::writeObject(const void* object_value) {
-	int * address = (int *) object_value;
-	address_ = *address;
+void AddressRIBObject::set_address(unsigned int address)
+{
+	address_ = address;
 	rina::DIFInformation dif_information = ipc_process_->get_dif_information();
-	dif_information.dif_configuration_.address_ = *address;
+	dif_information.dif_configuration_.address_ = address;
 	ipc_process_->set_dif_information(dif_information);
 }
 
-std::string AddressRIBObject::get_displayable_value() {
+const std::string AddressRIBObject::get_displayable_value() const
+{
     std::stringstream ss;
     ss<<"Address: "<<address_;
     return ss.str();
 }
 
 //Main function of the Neighbor Enroller thread
-void * doNeighborsEnrollerWork(void * arg) {
+void * doNeighborsEnrollerWork(void * arg)
+{
 	IPCProcess * ipcProcess = (IPCProcess *) arg;
+	IPCPRIBDaemon * ribd = ipcProcess->rib_daemon_;
 	EnrollmentTask * enrollmentTask = dynamic_cast<EnrollmentTask *>(ipcProcess->enrollment_task_);
 	if (!enrollmentTask) {
 		LOG_IPCP_ERR("Error casting IEnrollmentTask to EnrollmentTask");
@@ -244,7 +230,7 @@ void * doNeighborsEnrollerWork(void * arg) {
 	rina::Sleep sleepObject;
 
 	while(true){
-		neighbors = ipcProcess->get_neighbors();
+		neighbors = enrollmentTask->get_neighbors();
 		for(it = neighbors.begin(); it != neighbors.end(); ++it) {
 			if (enrollmentTask->isEnrolledTo((*it)->name_.processName)) {
 				//We're already enrolled to this guy, continue
@@ -257,14 +243,7 @@ void * doNeighborsEnrollerWork(void * arg) {
 				rina::EnrollmentRequest * request = new rina::EnrollmentRequest((*it));
 				enrollmentTask->initiateEnrollment(request);
 			} else {
-				try {
-					std::stringstream ss;
-					ss << rina::NeighborRIBObj::object_name_prefix
-				           << (*it)->name_.processName;
-					ipcProcess->rib_daemon_->deleteObject(rina::NeighborSetRIBObject::NEIGHBOR_RIB_OBJECT_CLASS,
-							ss.str(), 0, 0);
-				} catch (rina::Exception &e){
-				}
+				enrollmentTask->remove_neighbor((*it)->name_.getEncodedString());
 			}
 
 		}
@@ -306,36 +285,33 @@ IEnrollmentStateMachine::IEnrollmentStateMachine(IPCProcess * ipcp,
 IEnrollmentStateMachine::~IEnrollmentStateMachine() {
 }
 
-void IEnrollmentStateMachine::release(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor)
+void IEnrollmentStateMachine::release(int invoke_id,
+		     	     	      const rina::cdap_rib::con_handle_t &con_handle)
 {
 	rina::ScopedLock g(lock_);
 	LOG_IPCP_DBG("Releasing the CDAP connection");
 
-	if (!isValidPortId(session_descriptor->port_id_)) {
+	if (!isValidPortId(con_handle.handle_))
 		return;
-	}
 
-	if (last_scheduled_task_) {
+	if (last_scheduled_task_)
 		timer_.cancelTask(last_scheduled_task_);
-	}
 
 	createOrUpdateNeighborInformation(false);
 
 	state_ = STATE_NULL;
 }
 
-void IEnrollmentStateMachine::releaseResponse(int result, const std::string& result_reason,
-					      rina::CDAPSessionDescriptor * session_descriptor)
+void IEnrollmentStateMachine::releaseResult(const rina::cdap_rib::res_info_t &res,
+		   	   	   	    const rina::cdap_rib::con_handle_t &con_handle)
 {
 	rina::ScopedLock g(lock_);
 
-	if (!isValidPortId(session_descriptor->port_id_)) {
+	if (!isValidPortId(con_handle.handle_))
 		return;
-	}
 
-	if (state_ != STATE_NULL) {
+	if (state_ != STATE_NULL)
 		state_ = STATE_NULL;
-	}
 }
 
 void IEnrollmentStateMachine::flowDeallocated(int portId)
@@ -383,89 +359,54 @@ void IEnrollmentStateMachine::createOrUpdateNeighborInformation(bool enrolled)
 		remote_peer_->underlying_port_id_ = 0;
 	}
 
-	try {
-		std::stringstream ss;
-		ss<<rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_NAME
-				<<rina::RIBNamingConstants::SEPARATOR;
-		ss<<remote_peer_->name_.processName;
-		rib_daemon_->createObject(rina::NeighborSetRIBObject::NEIGHBOR_RIB_OBJECT_CLASS,
-					  ss.str(), remote_peer_, 0);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems creating RIB object: %s", e.what());
-	}
+	enrollment_task_->add_neighbor(remote_peer_);
 }
 
 void IEnrollmentStateMachine::sendNeighbors()
 {
-	rina::BaseRIBObject * neighborSet;
-	std::list<rina::BaseRIBObject *>::const_iterator it;
-	std::list<rina::Neighbor *> neighbors;
-	rina::Neighbor * myself = 0;
+	std::list<rina::Neighbor *> neighbors = enrollment_task_->get_neighbors();
+	std::list<rina::Neighbor *>::iterator it;
+	std::list<rina::Neighbor> neighbors_to_send;
+	rina::Neighbor myself;
 	std::vector<rina::ApplicationRegistration *> registrations;
 	std::list<rina::ApplicationProcessNamingInformation>::const_iterator it2;
-	try {
-		neighborSet = rib_daemon_->readObject(rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_CLASS,
-						      rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_NAME);
-		for (it = neighborSet->get_children().begin();
-				it != neighborSet->get_children().end(); ++it) {
-			neighbors.push_back((rina::Neighbor*) (*it)->get_value());
-		}
 
-		myself = new rina::Neighbor();
-		myself->address_ = ipcp_->get_address();
-		myself->name_.processName = ipcp_->get_name();
-		myself->name_.processInstance = ipcp_->get_instance();
+	try {
+		for (it = neighbors.begin(); it != neighbors.end(); ++it)
+			neighbors_to_send.push_back(**it);
+
+		myself.address_ = ipcp_->get_address();
+		myself.name_.processName = ipcp_->get_name();
+		myself.name_.processInstance = ipcp_->get_instance();
 		registrations = rina::extendedIPCManager->getRegisteredApplications();
 
 		for (unsigned int i=0; i<registrations.size(); i++) {
 			for(it2 = registrations[i]->DIFNames.begin();
 					it2 != registrations[i]->DIFNames.end(); ++it2) {
-				myself->add_supporting_dif((*it2));
+				myself.add_supporting_dif((*it2));
 			}
 		}
-		neighbors.push_back(myself);
+		neighbors_to_send.push_back(myself);
 
-		rina::RIBObjectValue robject_value;
-		robject_value.type_ = rina::RIBObjectValue::complextype;
-		robject_value.complex_value_ = &neighbors;
-		rina::RemoteProcessId remote_id;
-		remote_id.port_id_ = port_id_;
 
-		rib_daemon_->remoteCreateObject(rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_CLASS,
-				rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_NAME, robject_value,
-				0, remote_id, 0);
+		rina::cdap_rib::obj_info_t obj;
+		rina::cdap_rib::flags_t flags;
+		rina::cdap_rib::filt_info_t filt;
+		NeighborListEncoder encoder;
+		obj.class_ = rina::NeighborsRIBObj::class_name;
+		obj.name_ = rina::NeighborsRIBObj::object_name;
+		encoder.encode(neighbors_to_send, obj.value_);
+
+		rib_daemon_->getProxy()->remote_create(port_id_,
+						       obj,
+						       flags,
+						       filt,
+						       NULL);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems sending neighbors: %s", e.what());
 	}
 
 	delete myself;
-}
-
-void IEnrollmentStateMachine::sendCreateInformation(const std::string& objectClass,
-		const std::string& objectName)
-{
-	rina::BaseRIBObject * ribObject = 0;
-
-	try {
-		ribObject = rib_daemon_->readObject(objectClass, objectName);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems reading object from RIB: %s", e.what());
-		return;
-	}
-
-	if (ribObject->get_value()) {
-		try {
-			rina::RIBObjectValue robject_value;
-			robject_value.type_ = rina::RIBObjectValue::complextype;
-			robject_value.complex_value_ = const_cast<void*> (ribObject->get_value());
-			rina::RemoteProcessId remote_id;
-			remote_id.port_id_ = port_id_;
-
-			rib_daemon_->remoteCreateObject(objectClass, objectName, robject_value, 0, remote_id, 0);
-		} catch (rina::Exception &e) {
-			LOG_ERR("Problems generating or sending CDAP message: %s", e.what());
-		}
-	}
 }
 
 //Class EnrollmentFailedTimerTask
@@ -535,16 +476,24 @@ void EnrollmentTask::set_application_process(rina::ApplicationProcess * ap)
 
 void EnrollmentTask::populateRIB()
 {
-	try{
-		rina::BaseRIBObject * ribObject = new rina::NeighborSetRIBObject(ipcp,
-									         ipcp->rib_daemon_);
-		rib_daemon_->addRIBObject(ribObject);
-		ribObject = new OperationalStatusRIBObject(ipcp);
-		rib_daemon_->addRIBObject(ribObject);
-		ribObject = new AddressRIBObject(ipcp);
-		rib_daemon_->addRIBObject(ribObject);
-	}catch(rina::Exception &e){
-		LOG_IPCP_ERR("Problems adding object to RIB Daemon: %s", e.what());
+	rina::rib::RIBObj* tmp;
+
+	try {
+		tmp = new rina::rib::RIBObj("Enrollment");
+		rib_daemon_->addObjRIB("/difmanagement/enrollment", &tmp);
+
+		tmp = new rina::NeighborsRIBObj(ipcp,
+						rib_daemon_->getProxy(),
+						rib_daemon_->get_rib_handle());
+		rib_daemon_->addObjRIB(rina::NeighborsRIBObj::object_name, &tmp);
+
+		tmp = new OperationalStatusRIBObject(ipcp);
+		rib_daemon_->addObjRIB(OperationalStatusRIBObject::object_name, &tmp);
+
+		tmp = new AddressRIBObject(ipcp);
+		rib_daemon_->addObjRIB(AddressRIBObject::object_name, &tmp);
+	} catch (rina::Exception &e) {
+		LOG_ERR("Problems adding object to the RIB : %s", e.what());
 	}
 }
 
@@ -597,10 +546,11 @@ void EnrollmentTask::set_dif_configuration(const rina::DIFConfiguration& dif_con
 
 	//Add Watchdog RIB object to RIB
 	try{
-		BaseIPCPRIBObject * ribObject = new WatchdogRIBObject(ipcp,
-								      watchdog_per_ms_,
-								      declared_dead_int_ms_);
-		rib_daemon_->addRIBObject(ribObject);
+		rina::rib::RIBObj * ribObj = new WatchdogRIBObject(ipcp,
+								   watchdog_per_ms_,
+								   declared_dead_int_ms_);
+		rib_daemon_->addObjRIB(WatchdogRIBObject::object_name,
+				       &ribObj);
 	}catch(rina::Exception &e){
 		LOG_IPCP_ERR("Problems adding object to RIB Daemon: %s", e.what());
 	}
@@ -705,45 +655,36 @@ void EnrollmentTask::initiateEnrollment(rina::EnrollmentRequest * request)
 	port_ids_pending_to_be_allocated_.put(handle, request);
 }
 
-void EnrollmentTask::connect(const rina::CDAPMessage& cdapMessage,
-			     rina::CDAPSessionDescriptor * session_descriptor)
+void EnrollmentTask::connect(const rina::cdap::CDAPMessage& cdap_m,
+		     	     const rina::cdap_rib::con_handle_t &con_handle)
 {
-	LOG_IPCP_DBG("Received M_CONNECT CDAP message from port-id %d",
-			session_descriptor->port_id_);
+	LOG_IPCP_DBG("Received M_CONNECT CDAP message from port-id %u",
+		     con_handle.handle_);
 
 	//1 Find out if the sender is really connecting to us
-	if(session_descriptor->src_ap_name_.compare(ipcp->get_name())!= 0){
+	if(con_handle.src_.ap_name_(ipcp->get_name())!= 0){
 		LOG_IPCP_WARN("Received an M_CONNECT message whose destination was not this IPC Process, ignoring it");
 		return;
 	}
 
 	//2 Find out if we are already enrolled to the remote IPC process
-	if (isEnrolledTo(session_descriptor->dest_ap_name_)){
+	if (isEnrolledTo(con_handle.dest_.ap_name_)){
 		std::string message = "Received an enrollment request for an IPC process I'm already enrolled to";
 		LOG_IPCP_ERR("%s", message.c_str());
 
 		try {
-			rina::RemoteProcessId remote_id;
-			remote_id.port_id_ = session_descriptor->port_id_;
+			rina::cdap_rib::res_info_t res;
+			res.code_ = rina::cdap_rib::CDAP_APP_CONNECTION_REJECTED;
 
-			rib_daemon_->openApplicationConnectionResponse(rina::AuthPolicy(),
-								       session_descriptor->dest_ae_inst_,
-								       session_descriptor->dest_ae_name_,
-								       session_descriptor->dest_ap_inst_,
-								       session_descriptor->dest_ap_name_,
-								       rina::CDAPErrorCodes::CONNECTION_REJECTED_ERROR,
-								       message,
-								       session_descriptor->src_ae_inst_,
-								       session_descriptor->src_ae_name_,
-								       session_descriptor->src_ap_inst_,
-								       session_descriptor->src_ap_name_,
-								       cdapMessage.invoke_id_,
-								       remote_id);
+			rina::cdap::getProvider()->send_open_connection_result(con_handle,
+									       res,
+									       cdap_m.invoke_id_);
 		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Problems sending CDAP message: %s", e.what());
+			LOG_IPCP_ERR("Problems sending CDAP message: %s",
+				     e.what());
 		}
 
-		deallocateFlow(session_descriptor->port_id_);
+		deallocateFlow(con_handle.handle_);
 
 		return;
 	}
@@ -751,52 +692,58 @@ void EnrollmentTask::connect(const rina::CDAPMessage& cdapMessage,
 	//3 Delegate further processing to the policy
 	IPCPEnrollmentTaskPS * ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);
 	assert(ipcp_ps);
-	ipcp_ps->connect_received(cdapMessage, session_descriptor);
+	ipcp_ps->connect_received(cdap_m, con_handle);
 }
 
-void EnrollmentTask::connectResponse(int result, const std::string& result_reason,
-		rina::CDAPSessionDescriptor * session_descriptor)
+void EnrollmentTask::connectResult(const rina::cdap_rib::res_info_t &res,
+				   const rina::cdap_rib::con_handle_t &con_handle)
 {
-	LOG_IPCP_DBG("Received M_CONNECT_R cdapMessage from portId %d", session_descriptor->port_id_);
+	LOG_IPCP_DBG("Received M_CONNECT_R cdapMessage from portId %u",
+		     con_handle.handle_);
 
 	IPCPEnrollmentTaskPS * ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);
 	assert(ipcp_ps);
-	ipcp_ps->connect_response_received(result, result_reason, session_descriptor);
+	ipcp_ps->connect_response_received(res.code_,
+					   res.reason_,
+					   con_handle);
 }
 
-void EnrollmentTask::releaseResponse(int result, const std::string& result_reason,
-		rina::CDAPSessionDescriptor * session_descriptor)
+void EnrollmentTask::releaseResult(const rina::cdap_rib::res_info_t &res,
+				   const rina::cdap_rib::con_handle_t &con_handle)
 {
-	LOG_IPCP_DBG("Received M_RELEASE_R cdapMessage from portId %d",
-			session_descriptor->port_id_);
+	LOG_IPCP_DBG("Received M_RELEASE_R cdapMessage from portId %u",
+		     con_handle.handle_);
 
 	try{
 		IEnrollmentStateMachine * stateMachine =
-				getEnrollmentStateMachine(session_descriptor->port_id_, false);
-		stateMachine->releaseResponse(result, result_reason, session_descriptor);
+				getEnrollmentStateMachine(con_handle.handle_,
+							  false);
+		stateMachine->releaseResult(res,
+					    con_handle);
 	}catch(rina::Exception &e){
 		//Error getting the enrollment state machine
-		LOG_IPCP_ERR("Problems getting enrollment state machine: %s", e.what());
+		LOG_IPCP_ERR("Problems getting enrollment state machine: %s",
+			     e.what());
 
 		try {
-			rina::RemoteProcessId remote_id;
-			remote_id.port_id_ = session_descriptor->port_id_;
 
-			rib_daemon_->closeApplicationConnection(remote_id, 0);
+			rib_daemon_->getProxy()->remote_close_connection(con_handle.handle_);
 		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Problems closing application connection: %s", e.what());
+			LOG_IPCP_ERR("Problems closing application connection: %s",
+				     e.what());
 		}
 
-		deallocateFlow(session_descriptor->port_id_);
+		deallocateFlow(con_handle.handle_);
 	}
 }
 
-void EnrollmentTask::process_authentication_message(const rina::CDAPMessage& message,
-		rina::CDAPSessionDescriptor * session_descriptor)
+void EnrollmentTask::process_authentication_message(const rina::cdap::CDAPMessage& message,
+					    	    const rina::cdap_rib::con_handle_t &con_handle)
 {
 	IPCPEnrollmentTaskPS * ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);
 	assert(ipcp_ps);
-	ipcp_ps->process_authentication_message(message, session_descriptor);
+	ipcp_ps->process_authentication_message(message,
+						con_handle);
 }
 
 void EnrollmentTask::authentication_completed(int port_id, bool success)
@@ -817,30 +764,60 @@ IEnrollmentStateMachine * EnrollmentTask::getEnrollmentStateMachine(int portId, 
 	}
 }
 
-const std::list<rina::Neighbor *> EnrollmentTask::get_neighbors() const
+const std::list<rina::Neighbor> EnrollmentTask::get_neighbors() const
 {
-	std::list<rina::Neighbor *> result;
-	rina::BaseRIBObject * ribObject = 0;
+	return neighbors.getCopyofentries();
+}
 
-	try{
-		ribObject = rib_daemon_->readObject(rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_CLASS,
-						    rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_NAME);
+void EnrollmentTask::add_neighbor(rina::Neighbor * neighbor)
+{
+	rina::ScopedLock(lock_);
+
+	if (neighbors.find(neighbor->name_.getEncodedString()) != 0) {
+		LOG_IPCP_WARN("Tried to add an already existing neighbor: %s",
+			      neighbor->name_.getEncodedString().c_str());
+		return;
+	}
+
+	try {
+		std::stringstream ss;
+		ss << rina::NeighborRIBObj::object_name_prefix
+		   << neighbor->name_.processName;
+
+		rina::rib::RIBObj * nrobj = new rina::NeighborRIBObj(neighbor);
+		rib_daemon_->addObjRIB(ss.str(), &nrobj);
 	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems reading RIB object: %s", e.what());
-		return result;
+		LOG_IPCP_ERR("Problems creating RIB object: %s",
+			     e.what());
 	}
 
-	if (!ribObject) {
-		return result;
+	neighbors.put(neighbor->name_.getEncodedString(), neighbor);
+}
+
+void EnrollmentTask::remove_neighbor(const std::string& neighbor_key)
+{
+	rina::Neighbor * neighbor;
+
+	rina::ScopedLock(lock_);
+
+	neighbor = neighbors.erase(neighbor_key);
+	if (neighbor == 0) {
+		LOG_IPCP_WARN("Could not find neighbor for key: %s",
+			      neighbor_key.c_str());
+		return;
 	}
 
-	std::list<rina::BaseRIBObject *>::const_iterator it;
-	for (it = ribObject->get_children().begin();
-			it != ribObject->get_children().end(); ++it) {
-		result.push_back((rina::Neighbor *) (*it)->get_value());
+	try {
+		std::stringstream ss;
+		ss << rina::NeighborRIBObj::object_name_prefix
+	           << neighbor->name_.processName;
+		rib_daemon_->removeObjRIB(ss.str());
+	} catch (rina::Exception &e){
+		LOG_IPCP_ERR("Error removing object from RIB %s",
+			     e.what());
 	}
 
-	return result;
+	delete neighbor;
 }
 
 bool EnrollmentTask::isEnrolledTo(const std::string& processName)
@@ -967,17 +944,21 @@ void EnrollmentTask::nMinusOneFlowAllocationFailed(rina::NMinusOneFlowAllocation
 }
 
 void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
-		int portId, const std::string& reason, bool sendReleaseMessage)
+				      int portId,
+				      const std::string& reason,
+				      bool sendReleaseMessage)
 {
 	LOG_IPCP_ERR("An error happened during enrollment of remote IPC Process %s because of %s",
-			remotePeerNamingInfo.getEncodedString().c_str(), reason.c_str());
+		      remotePeerNamingInfo.getEncodedString().c_str(),
+		      reason.c_str());
 
 	//1 Remove enrollment state machine from the store
 	IEnrollmentStateMachine * stateMachine =
 			getEnrollmentStateMachine(portId, true);
 	if (!stateMachine) {
 		LOG_IPCP_ERR("Could not find the enrollment state machine associated to neighbor %s and portId %d",
-				remotePeerNamingInfo.processName.c_str(), portId);
+			     remotePeerNamingInfo.processName.c_str(),
+			     portId);
 		return;
 	}
 
@@ -992,36 +973,40 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 	//3 Send message and deallocate flow if required
 	if(sendReleaseMessage){
 		try {
-			rina::RemoteProcessId remote_id;
-			remote_id.port_id_ = portId;
-
-			rib_daemon_->closeApplicationConnection(remote_id, 0);
+			rib_daemon_->getProxy()->remote_close_connection(portId);
 		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Problems closing application connection: %s", e.what());
+			LOG_IPCP_ERR("Problems closing application connection: %s",
+				      e.what());
 		}
 	}
 
 	deallocateFlow(portId);
 }
 
-void EnrollmentTask::enrollmentCompleted(const rina::Neighbor& neighbor, bool enrollee)
+void EnrollmentTask::enrollmentCompleted(const rina::Neighbor& neighbor,
+					 bool enrollee)
 {
-	rina::NeighborAddedEvent * event = new rina::NeighborAddedEvent(neighbor, enrollee);
+	rina::NeighborAddedEvent * event = new rina::NeighborAddedEvent(neighbor,
+									enrollee);
 	event_manager_->deliverEvent(event);
 }
 
-void EnrollmentTask::release(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor)
+void EnrollmentTask::release(int invoke_id,
+		     	     const rina::cdap_rib::con_handle_t &con_handle)
 {
-	LOG_DBG("Received M_RELEASE cdapMessage from portId %d",
-			session_descriptor->port_id_);
+	LOG_DBG("Received M_RELEASE cdapMessage from portId %u",
+		con_handle.handle_);
 	IEnrollmentStateMachine * stateMachine = 0;
 
 	try{
-		stateMachine = getEnrollmentStateMachine(session_descriptor->port_id_, true);
-		stateMachine->release(invoke_id, session_descriptor);
+		stateMachine = getEnrollmentStateMachine(con_handle.handle_,
+							 true);
+		stateMachine->release(invoke_id,
+				      con_handle);
 	}catch(rina::Exception &e){
 		//Error getting the enrollment state machine
-		LOG_IPCP_ERR("Problems getting enrollment state machine: %s", e.what());
+		LOG_IPCP_ERR("Problems getting enrollment state machine: %s",
+			     e.what());
 	}
 
 	//2 In the case of the enrollee state machine, reply to the IPC Manager
@@ -1034,37 +1019,50 @@ void EnrollmentTask::release(int invoke_id, rina::CDAPSessionDescriptor * sessio
 
 	if (invoke_id != 0) {
 		try {
-			rina::RemoteProcessId remote_id;
-			remote_id.port_id_ = session_descriptor->port_id_;
-
-			rib_daemon_->closeApplicationConnectionResponse(0, "", invoke_id, remote_id);
+			rina::cdap_rib::flags_t flags;
+			rina::cdap_rib::res_info_t res;
+			res.code_ = 0;
+			rina::cdap::getProvider()->send_close_connection_result(con_handle.handle_,
+										flags,
+										res,
+										invoke_id);
 		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Problems generating or sending CDAP Message: %s", e.what());
+			LOG_IPCP_ERR("Problems generating or sending CDAP Message: %s",
+				     e.what());
 		}
 	}
 
-	deallocateFlow(session_descriptor->port_id_);
+	deallocateFlow(con_handle.handle_);
 }
 
 // Class Operational Status RIB Object
+const std::string OperationalStatusRIBObject::class_name = "OperationalStatus";
+const std::string OperationalStatusRIBObject::object_name = "/difmanagement/opstatus";
+
 OperationalStatusRIBObject::OperationalStatusRIBObject(IPCProcess * ipc_process) :
-		BaseIPCPRIBObject(ipc_process, EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_CLASS,
-						rina::objectInstanceGenerator->getObjectInstance(),
-						EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_NAME) {
+		IPCPRIBObj(ipc_process, class_name)
+{
 	enrollment_task_ = (EnrollmentTask *) ipc_process->enrollment_task_;
-	cdap_session_manager_ = ipc_process->cdap_session_manager_;
 }
 
-void OperationalStatusRIBObject::remoteStartObject(void * object_value, int invoke_id,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+void OperationalStatusRIBObject::start(const rina::cdap_rib::con_handle_t &con_handle,
+				       const std::string& fqn,
+				       const std::string& class_,
+				       const rina::cdap_rib::filt_info_t &filt,
+				       const int invoke_id,
+				       const rina::ser_obj_t &obj_req,
+				       rina::ser_obj_t &obj_reply,
+				       rina::cdap_rib::res_info_t& res)
+{
 	try {
-		if (!enrollment_task_->getEnrollmentStateMachine(cdapSessionDescriptor->port_id_, false)) {
+		if (!enrollment_task_->getEnrollmentStateMachine(con_handle.handle_,
+								 false)) {
 			LOG_IPCP_ERR("Got a CDAP message that is not for me: %s");
 			return;
 		}
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems retrieving state machine: %s", e.what());
-		sendErrorMessage(cdapSessionDescriptor);
+		sendErrorMessage(con_handle);
 		return;
 	}
 
@@ -1073,53 +1071,42 @@ void OperationalStatusRIBObject::remoteStartObject(void * object_value, int invo
 	}
 }
 
-void OperationalStatusRIBObject::startObject(const void* object) {
+void OperationalStatusRIBObject::startObject() {
 	if (ipc_process_->get_operational_state() != ASSIGNED_TO_DIF) {
 		ipc_process_->set_operational_state(ASSIGNED_TO_DIF);
 	}
 }
 
-void OperationalStatusRIBObject::stopObject(const void* object) {
+void OperationalStatusRIBObject::stopObject() {
 	if (ipc_process_->get_operational_state() != ASSIGNED_TO_DIF) {
 		ipc_process_->set_operational_state(INITIALIZED);
 	}
 }
 
-void OperationalStatusRIBObject::remoteReadObject(int invoke_id,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor)
+void OperationalStatusRIBObject::read(const rina::cdap_rib::con_handle_t &con_handle,
+				      const std::string& fqn,
+				      const std::string& class_,
+				      const rina::cdap_rib::filt_info_t &filt,
+				      const int invoke_id,
+				      rina::ser_obj_t &obj_reply,
+				      rina::cdap_rib::res_info_t& res)
 {
-	try {
-		rina::RIBObjectValue robject_value;
-		robject_value.type_ = rina::RIBObjectValue::inttype;
-		robject_value.int_value_ = ipc_process_->get_operational_state();
-
-		rib_daemon_->generateCDAPResponse(invoke_id, cdapSessionDescriptor,
-					rina::CDAPMessage::M_READ_R,
-					EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_CLASS,
-					EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_NAME,
-					robject_value);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems generating or sending CDAP Message: %s",
-				e.what());
-	}
+	rina::cdap::IntEncoder encoder;
+	encoder.encode(ipc_process_->get_operational_state(), obj_reply);
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }
 
-void OperationalStatusRIBObject::sendErrorMessage(const rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+void OperationalStatusRIBObject::sendErrorMessage(const rina::cdap_rib::con_handle_t &con_handle)
+{
 	try{
-		rina::RemoteProcessId remote_id;
-		remote_id.port_id_ = cdapSessionDescriptor->port_id_;
-
-		rib_daemon_->closeApplicationConnection(remote_id, 0);
+		rib_daemon_->getProxy()->remote_close_connection(con_handle.handle_);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems sending CDAP message: %s", e.what());
 	}
 }
 
-const void* OperationalStatusRIBObject::get_value() const {
-	return &(ipc_process_->get_operational_state());
-}
-
-std::string OperationalStatusRIBObject::get_displayable_value() {
+const std::string OperationalStatusRIBObject::get_displayable_value() const
+{
 	if (ipc_process_->get_operational_state() == INITIALIZED) {
 		return "Initialized";
 	}

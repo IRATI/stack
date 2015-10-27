@@ -3292,7 +3292,7 @@ void AppCDAPIOHandler::process_message(ser_obj_t &message,
 
 		//Local
 		case cdap_m_t::M_CONNECT:
-			callback_->open_connection(con, flags, invoke_id);
+			callback_->open_connection(con, *m_rcv);
 			break;
 		case cdap_m_t::M_RELEASE:
 			callback_->close_connection(con, flags, invoke_id);
@@ -3412,8 +3412,7 @@ void CDAPCallbackInterface::remote_open_connection_result(
 	LOG_INFO("Callback open_connection_result operation not implemented");
 }
 void CDAPCallbackInterface::open_connection(const cdap_rib::con_handle_t &con,
-		const cdap_rib::flags_t &flags,
-		int invoke_id)
+					    const cdap::CDAPMessage& message)
 {
 	LOG_INFO("Callback open_connection operation not implemented");
 }

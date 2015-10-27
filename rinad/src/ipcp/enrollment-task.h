@@ -52,6 +52,11 @@ public:
 			  int wdog_period_ms,
 			  int declared_dead_int_ms);
 	~WatchdogRIBObject();
+
+	const std::string& get_class() const {
+		return class_name;
+	};
+
 	void read(const rina::cdap_rib::con_handle_t &con,
 		  const std::string& fqn,
 		  const std::string& class_,
@@ -81,20 +86,26 @@ private:
 };
 
 /// Handles the operations related to the "daf.management.naming.currentsynonym" objects
-class AddressRIBObject: public BaseIPCPRIBObject {
+class AddressRIBObject: public IPCPRIBObj {
 public:
 	AddressRIBObject(IPCProcess * ipc_process);
 	~AddressRIBObject();
-	const void* get_value() const;
-	void writeObject(const void* object_value);
-	std::string get_displayable_value();
+	const std::string get_displayable_value() const;
+	const std::string& get_class() const {
+		return class_name;
+	};
+
+	void set_address(unsigned int address);
+
+	const static std::string class_name;
+	const static std::string object_name;
 
 private:
 	unsigned int address_;
 };
 
 // The common elements of an enrollment state machine
-class IEnrollmentStateMachine : public rina::BaseCDAPResponseMessageHandler {
+class IEnrollmentStateMachine : public rina::rib::RIBOpsRespHandler {
 	friend class EnrollmentFailedTimerTask;
 public:
 	static const std::string STATE_NULL;
@@ -107,19 +118,19 @@ public:
 
 	/// Called by the EnrollmentTask when it got an M_RELEASE message
 	/// @param invoke_id the invoke_id of the release message
-	/// @param cdapSessionDescriptor
+	/// @param con_handle
 	void release(int invoke_id,
-		     rina::CDAPSessionDescriptor * session_descriptor);
+		     const rina::cdap_rib::con_handle_t &con_handle);
 
 	/// Called by the EnrollmentTask when it got an M_RELEASE_R message
 	/// @param result
 	/// @param result_reason
 	/// @param session_descriptor
-	void releaseResponse(int result, const std::string& result_reason,
-			     rina::CDAPSessionDescriptor * session_descriptor);
+	void releaseResult(const rina::cdap_rib::res_info_t &res,
+			   const rina::cdap_rib::con_handle_t &con_handle);
 
-	virtual void process_authentication_message(const rina::CDAPMessage& message,
-					            rina::CDAPSessionDescriptor * session_descriptor) = 0;
+	virtual void process_authentication_message(const rina::cdap::CDAPMessage& message,
+			    	    	    	    const rina::cdap_rib::con_handle_t &con) = 0;
 
 	virtual void authentication_completed(bool success) = 0;
 
@@ -146,13 +157,8 @@ protected:
 	/// Send the neighbors (if any)
 	void sendNeighbors();
 
-	/// Gets the object value from the RIB and send it as a CDAP Mesage
-	/// @param objectClass the class of the object to be send
-	/// @param objectName the name of the object to be send
-	void sendCreateInformation(const std::string& objectClass, const std::string& objectName);
-
 	IPCProcess * ipcp_;
-	rina::IRIBDaemon * rib_daemon_;
+	IPCPRIBDaemon * rib_daemon_;
 	rina::IEnrollmentTask * enrollment_task_;
 	rina::IAuthPolicySet * auth_ps_;
 	int timeout_;
@@ -186,20 +192,23 @@ public:
 	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	void eventHappened(rina::InternalEvent * event);
-	const std::list<rina::Neighbor *> get_neighbors() const;
+	const std::list<rina::Neighbor> get_neighbors() const;
+	void add_neighbor(rina::Neighbor * neighbor);
+	void remove_neighbor(const std::string& neighbor_key);
 	bool isEnrolledTo(const std::string& applicationProcessName);
 	const std::list<std::string> get_enrolled_app_names() const;
 	void processEnrollmentRequestEvent(rina::EnrollToDAFRequestEvent * event);
 	void initiateEnrollment(rina::EnrollmentRequest * request);
-	void connect(const rina::CDAPMessage& message,
-		     rina::CDAPSessionDescriptor * session_descriptor);
-	void connectResponse(int result, const std::string& result_reason,
-			rina::CDAPSessionDescriptor * session_descriptor);
-	void release(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
-	void releaseResponse(int result, const std::string& result_reason,
-			rina::CDAPSessionDescriptor * session_descriptor);
-	void process_authentication_message(const rina::CDAPMessage& message,
-			rina::CDAPSessionDescriptor * session_descriptor);
+	void connect(const rina::cdap::CDAPMessage& message,
+	             const rina::cdap_rib::con_handle_t &con) = 0;
+	void connectResult(const rina::cdap_rib::res_info_t &res,
+			   const rina::cdap_rib::con_handle_t &con);
+	void release(int invoke_id,
+		     const rina::cdap_rib::con_handle_t &con);
+	void releaseResult(const rina::cdap_rib::res_info_t &res,
+			   const rina::cdap_rib::con_handle_t &con);
+	void process_authentication_message(const rina::cdap::CDAPMessage& message,
+					    const rina::cdap_rib::con_handle_t &con);
 	void authentication_completed(int port_id, bool success);
 	void enrollmentFailed(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
 			int portId, const std::string& reason, bool sendReleaseMessage);
@@ -246,7 +255,7 @@ private:
 	/// @param resultReason
 	void nMinusOneFlowAllocationFailed(rina::NMinusOneFlowAllocationFailedEvent * event);
 
-	rina::IRIBDaemon * rib_daemon_;
+	IPCPRIBDaemon * rib_daemon_;
 	rina::InternalEventManager * event_manager_;
 	rina::IPCResourceManager * irm_;
 	INamespaceManager * namespace_manager_;
@@ -259,26 +268,47 @@ private:
 	rina::ThreadSafeMapOfPointers<int, IEnrollmentStateMachine> state_machines_;
 
 	rina::ThreadSafeMapOfPointers<unsigned int, rina::EnrollmentRequest> port_ids_pending_to_be_allocated_;
+
+	rina::ThreadSafeMapOfPointers<std::string, rina::Neighbor> neighbors;
 };
 
 /// Handles the operations related to the "daf.management.operationalStatus" object
-class OperationalStatusRIBObject: public BaseIPCPRIBObject {
+class OperationalStatusRIBObject: public IPCPRIBObj {
 public:
 	OperationalStatusRIBObject(IPCProcess * ipc_process);
-	const void* get_value() const;
-	void remoteStartObject(void * object_value, int invoke_id,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	void startObject(const void* object);
-	void stopObject(const void* object);
-	void remoteReadObject(int invoke_id, rina::CDAPSessionDescriptor *
-			      cdapSessionDescriptor);
-	std::string get_displayable_value();
+
+	void start(const rina::cdap_rib::con_handle_t &con,
+		   const std::string& fqn,
+		   const std::string& class_,
+		   const rina::cdap_rib::filt_info_t &filt,
+		   const int invoke_id,
+		   const rina::ser_obj_t &obj_req,
+		   rina::ser_obj_t &obj_reply,
+		   rina::cdap_rib::res_info_t& res);
+
+	void read(const rina::cdap_rib::con_handle_t &con,
+		  const std::string& fqn,
+		  const std::string& class_,
+		  const rina::cdap_rib::filt_info_t &filt,
+		  const int invoke_id,
+		  rina::ser_obj_t &obj_reply,
+		  rina::cdap_rib::res_info_t& res);
+
+	void startObject();
+	void stopObject();
+
+	const std::string get_displayable_value() const;
+
+	const std::string& get_class() const {
+		return class_name;
+	};
+
+	const static std::string class_name;
+	const static std::string object_name;
 
 private:
-	void sendErrorMessage(const rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-
+	void sendErrorMessage(const rina::cdap_rib::con_handle_t &con);
 	EnrollmentTask * enrollment_task_;
-	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 };
 
 } //namespace rinad
