@@ -76,7 +76,6 @@ allsources =							\
         cdap_v2.cc						\
         rib_v2.cc						\
         security-manager.cc					\
-        enrollment.cc						\
         irm.cc							\
         sdu-protection.cc					\
         netlink-messages.cc  netlink-messages.h			\

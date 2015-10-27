@@ -1098,7 +1098,7 @@ public:
 	 * Returns a key identifying this entry
 	 * @return
 	 */
-	std::string getKey();
+	const std::string getKey() const;
 	std::string toString();
 
 	/// The name of the application process
