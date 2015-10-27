@@ -120,6 +120,8 @@ typedef enum{
 	CDAP_OP_NOT_SUPPORTED = -4,
 	/// Error serializing/deserializing object value
 	CDAP_SER_DES_ERRORSUPPORTED = -5,
+	/// Connection rejected
+	CDAP_APP_CONNECTION_REJECTED = -6,
 	/// 
 }res_code_t;
 

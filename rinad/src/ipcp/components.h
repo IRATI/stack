@@ -411,6 +411,10 @@ public:
 	/// Process a Query RIB Request from the IPC Manager
 	/// @param event
 	virtual void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event) = 0;
+	virtual const rina::rib::rib_handle_t & get_rib_handle() = 0;
+        virtual int64_t addObjRIB(const std::string& fqn,
+        			  rina::rib::RIBObj** obj) = 0;
+        virtual void removeObjRIB(const std::string& fqn) = 0;
 };
 
 /// IPC Process interface

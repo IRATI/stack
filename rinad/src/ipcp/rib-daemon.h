@@ -50,6 +50,9 @@ public:
         void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
         void eventHappened(rina::InternalEvent * event);
         void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event);
+        const rina::rib::rib_handle_t & get_rib_handle();
+        int64_t addObjRIB(const std::string& fqn, rina::rib::RIBObj** obj);
+        void removeObjRIB(const std::string& fqn);
 
 private:
 	void initialize_rib_daemon(rina::cacep::AppConHandlerInterface *app_con_callback);

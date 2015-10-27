@@ -108,8 +108,7 @@ class CDAPCallbackInterface
 	// Requests coming from the peer to our RIB
 	//
 	virtual void open_connection(const cdap_rib::con_handle_t &con,
-				const cdap_rib::flags_t &flags,
-				const int invoke_id);
+				     const cdap::CDAPMessage& message);
 	virtual void close_connection(const cdap_rib::con_handle_t &con,
 				const cdap_rib::flags_t &flags,
 				const int invoke_id);

@@ -293,8 +293,7 @@ void IPCPCDAPIOHandler::process_message(rina::ser_obj_t &message,
 		//Local
 		case rina::cdap::cdap_m_t::M_CONNECT:
 			callback_->open_connection(con_handle,
-						   flags,
-						   invoke_id);
+						   *m_rcv);
 			break;
 		case rina::cdap::cdap_m_t::M_RELEASE:
 			callback_->close_connection(con_handle,
@@ -525,21 +524,33 @@ void IPCPRIBDaemonImpl::nMinusOneFlowAllocated(rina::NMinusOneFlowAllocatedEvent
 
 void IPCPRIBDaemonImpl::processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event)
 {
-	std::list<rina::rib::RIBObj *> ribObjects = ribd->get_rib_objects(rib);
-	std::list<rina::rib::RIBObjectData> result;
-
-	std::list<rina::rib::RIBObj*>::iterator it;
-	for (it = ribObjects.begin(); it != ribObjects.end(); ++it) {
-		LOG_IPCP_DBG("Object name: %s", (*it)->fqn.c_str());
-		result.push_back((*it)->get_object_data());
-	}
+	std::list<rina::rib::RIBObjectData> result =
+			ribd->get_rib_objects_data(rib);
 
 	try {
-		rina::extendedIPCManager->queryRIBResponse(event, 0, result);
+		rina::extendedIPCManager->queryRIBResponse(event,
+							   0,
+							   result);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems sending query RIB response to IPC Manager: %s",
-				e.what());
+			     e.what());
 	}
+}
+
+const rina::rib::rib_handle_t & IPCPRIBDaemonImpl::get_rib_handle()
+{
+	return rib;
+}
+
+int64_t IPCPRIBDaemonImpl::addObjRIB(const std::string& fqn,
+				     rina::rib::RIBObj** obj)
+{
+	return ribd->addObjRIB(rib, fqn, obj);
+}
+
+void IPCPRIBDaemonImpl::removeObjRIB(const std::string& fqn)
+{
+	ribd->removeObjRIB(rib, fqn);
 }
 
 } //namespace rinad

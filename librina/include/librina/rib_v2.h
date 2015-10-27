@@ -44,7 +44,7 @@ public:
 	virtual ~AppConHandlerInterface(){};
 
 	/// A remote Connect request has been received.
-	virtual void connect(int invoke_id,
+	virtual void connect(const rina::cdap::CDAPMessage& message,
 			     const cdap_rib::con_handle_t &con) = 0;
 	/// A remote Connect response has been received.
 	virtual void connectResult(const cdap_rib::res_info_t &res,
@@ -645,7 +645,7 @@ public:
 	/// @throws eRIBNotFound, eRIBNotAssociated and Exception
 	///
 	void deassociateRIBfromAE(const rib_handle_t& handle,
-						const std::string& ae_name);
+				  const std::string& ae_name);
 
 	///
 	/// Retrieve the handle to a RIB
@@ -657,7 +657,7 @@ public:
 	/// @throws eRIBNotFound
 	///
 	rib_handle_t get(const cdap_rib::vers_info_t& version,
-						const std::string& ae_name);
+			 const std::string& ae_name);
 
 	///
 	/// Add an object to a RIB
@@ -678,8 +678,10 @@ public:
 	/// @throws eRIBNotFound, eObjExists, eObjInvalid, eObjNoParent
 	///
 	template<typename T>
-	int64_t addObjRIB(const rib_handle_t& handle, const std::string& fqn,
-							 T** obj){
+	int64_t addObjRIB(const rib_handle_t& handle,
+			  const std::string& fqn,
+			  T** obj)
+	{
 		RIBObj** obj_;
 		//Recover the base class
 		try{
@@ -704,8 +706,8 @@ public:
 	/// if class_ is defined.
 	///
 	int64_t getObjInstId(const rib_handle_t& handle,
-					const std::string& fqn,
-					const std::string& class_="");
+			     const std::string& fqn,
+			     const std::string& class_="");
 
 	///
 	/// Get parent's fully qualified name
@@ -717,7 +719,7 @@ public:
 	/// @throws eRIBNotFound, eObjDoesNotExist
 	///
 	std::string getObjParentFqn(const rib_handle_t& handle,
-						const std::string& fqn);
+				    const std::string& fqn);
 
 	///
 	/// Retrieve the fully qualified name given the instance ID of an
@@ -732,8 +734,8 @@ public:
 	/// if class_ is defined
 	///
 	std::string getObjFqn(const rib_handle_t& handle,
-					const int64_t inst_id,
-					const std::string& class_="");
+			      const int64_t inst_id,
+			      const std::string& class_="");
 	///
 	/// Retrieve the class name of an object given the instance ID.
 	///
@@ -743,7 +745,7 @@ public:
 	/// @throws eRIBNotFound, eObjDoesNotExist and eObjClassMismatch
 	///
 	std::string getObjClass(const rib_handle_t& handle,
-					const int64_t inst_id);
+				const int64_t inst_id);
 	///
 	/// Remove an object to a RIB
 	///
@@ -777,7 +779,7 @@ public:
 	///
 	/// @throws eRIBNotFound, eObjDoesNotExist
 	///
-	std::list<RIBObj*> get_rib_objects(const rib_handle_t& handle);
+	std::list<RIBObjectData> get_rib_objects_data(const rib_handle_t& handle);
 
 
 	//-------------------------------------------------------------------//

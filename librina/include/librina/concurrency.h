@@ -447,6 +447,20 @@ public:
                 return result;
         }
 
+        /// Returns a copy of the entries in the map
+        std::list<T> getCopyofentries() const {
+                typename std::map<K, T*>::const_iterator iterator;
+                std::list<T> result;
+
+                rina::ScopedLock g(*lock_);
+                for(iterator = map.begin();
+                                iterator != map.end(); ++iterator){
+                        result.push_back(*iterator->second);
+                }
+
+                return result;
+        }
+
         /// Delete all the values of the map
         void deleteValues() {
                 typename std::map<K, T*>::const_iterator iterator;

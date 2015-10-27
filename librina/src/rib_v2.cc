@@ -361,7 +361,7 @@ public:
 	///
 	const cdap_rib::vers_info_t& get_version() const;
 
-	std::list<RIBObj*> get_all_rib_objects();
+	std::list<RIBObjectData> get_all_rib_objects_data();
 
 protected:
 	//
@@ -498,9 +498,10 @@ RIB::~RIB() {
 }
 
 void RIB::create_request(const cdap_rib::con_handle_t &con,
-		const cdap_rib::obj_info_t &obj,
-		const cdap_rib::filt_info_t &filt,
-		const int invoke_id) {
+			 const cdap_rib::obj_info_t &obj,
+			 const cdap_rib::filt_info_t &filt,
+			 const int invoke_id)
+{
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 	flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
@@ -1290,13 +1291,13 @@ const cdap_rib::vers_info_t& RIB::get_version() const {
 	return schema->get_version();
 }
 
-std::list<RIBObj*> RIB::get_all_rib_objects()
+std::list<RIBObjectData> RIB::get_all_rib_objects_data()
 {
-	std::list<RIBObj*> result;
+	std::list<RIBObjectData> result;
 
 	for (std::map<std::string, RIBObj*>::iterator it = obj_name_map.begin();
 			it != obj_name_map.end(); ++it) {
-		result.push_back(it->second);
+		result.push_back(it->second->get_object_data());
 	}
 
 	return result;
@@ -1445,8 +1446,8 @@ public:
 	/// if class_ is defined.
 	///
 	int64_t getObjInstId(const rib_handle_t& handle,
-					const std::string& fqn,
-					const std::string& class_="");
+			     const std::string& fqn,
+			     const std::string& class_="");
 
 	///
 	/// Get parent's fully qualified name
@@ -1458,8 +1459,7 @@ public:
 	/// @throws eRIBNotFound, eObjDoesNotExist
 	///
 	std::string getObjParentFqn(const rib_handle_t& handle,
-						const std::string& fqn);
-
+				    const std::string& fqn);
 
 	///
 	/// Retrieve the fully qualified name given the instance ID of an
@@ -1474,8 +1474,8 @@ public:
 	/// if class_ is defined
 	///
 	std::string getObjFqn(const rib_handle_t& handle,
-					const int64_t inst_id,
-					const std::string& class_="");
+			      const int64_t inst_id,
+			      const std::string& class_="");
 	///
 	/// Retrieve the class name of an object given the instance ID.
 	///
@@ -1485,7 +1485,7 @@ public:
 	/// @throws eRIBNotFound, eObjDoesNotExist and eObjClassMismatch
 	///
 	std::string getObjClass(const rib_handle_t& handle,
-					const int64_t inst_id);
+				const int64_t inst_id);
 	///
 	/// Remove an object to a RIB
 	///
@@ -1506,7 +1506,7 @@ public:
 		cdap_provider = p;
 	}
 
-	std::list<RIBObj*> get_rib_objects(const rib_handle_t& handle);
+	std::list<RIBObjectData> get_rib_objects_data(const rib_handle_t& handle);
 
 	///
 	/// Perform an operation on a remote object. If resp_handler
@@ -1561,41 +1561,40 @@ protected:
 
 	//Local
 	void open_connection(const cdap_rib::con_handle_t &con,
-			const cdap_rib::flags_t &flags, const int invoke_id);
+			     const cdap::CDAPMessage& message);
 	void close_connection(const cdap_rib::con_handle_t &con,
-			const cdap_rib::flags_t &flags, const int invoke_id);
+			      const cdap_rib::flags_t &flags,
+			      const int invoke_id);
 	void process_authentication_message(const cdap::CDAPMessage& message,
 					    const cdap_rib::con_handle_t &con);
-
 	void create_request(const cdap_rib::con_handle_t &con,
-			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::filt_info_t &filt,
-			const int invoke_id);
+			    const cdap_rib::obj_info_t &obj,
+			    const cdap_rib::filt_info_t &filt,
+			    const int invoke_id);
 	void delete_request(const cdap_rib::con_handle_t &con,
-			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::filt_info_t &filt,
-			const int invoke_id);
+			    const cdap_rib::obj_info_t &obj,
+			    const cdap_rib::filt_info_t &filt,
+			    const int invoke_id);
 	void read_request(const cdap_rib::con_handle_t &con,
-			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::filt_info_t &filt,
-			const int invoke_id);
+			  const cdap_rib::obj_info_t &obj,
+			  const cdap_rib::filt_info_t &filt,
+			  const int invoke_id);
 	void cancel_read_request(const cdap_rib::con_handle_t &con,
-			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::filt_info_t &filt,
-			const int invoke_id);
+				 const cdap_rib::obj_info_t &obj,
+				 const cdap_rib::filt_info_t &filt,
+				 const int invoke_id);
 	void write_request(const cdap_rib::con_handle_t &con,
-			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::filt_info_t &filt,
-			const int invoke_id);
+			   const cdap_rib::obj_info_t &obj,
+			   const cdap_rib::filt_info_t &filt,
+			   const int invoke_id);
 	void start_request(const cdap_rib::con_handle_t &con,
-			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::filt_info_t &filt,
-			const int invoke_id);
+			   const cdap_rib::obj_info_t &obj,
+			   const cdap_rib::filt_info_t &filt,
+			   const int invoke_id);
 	void stop_request(const cdap_rib::con_handle_t &con,
-			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::filt_info_t &filt,
-			const int invoke_id);
-
+			  const cdap_rib::obj_info_t &obj,
+			  const cdap_rib::filt_info_t &filt,
+			  const int invoke_id);
 
 	//
 	//Incoming connections (proxy only)
@@ -1662,7 +1661,6 @@ private:
 	 */
 	ReadWriteLockable rwlock;
 };
-
 
 //
 // Constructors and destructors
@@ -2060,17 +2058,14 @@ void RIBDaemon::remote_open_connection_result(const cdap_rib::con_handle_t &con,
 }
 
 void RIBDaemon::open_connection(const cdap_rib::con_handle_t &con,
-				const cdap_rib::flags_t &flags,
-				const int invoke_id)
+				const cdap::CDAPMessage& message)
 {
 	// FIXME add result
 	cdap_rib::result_info res;
-	app_con_callback_->connect(invoke_id, con);
+	app_con_callback_->connect(message, con);
 
 	//The connect was successful store
 	store_connection(con);
-
-	cdap_provider->send_open_connection_result(con, res, invoke_id);
 }
 
 void RIBDaemon::remote_close_connection_result(const cdap_rib::con_handle_t &con,
@@ -2084,12 +2079,8 @@ void RIBDaemon::close_connection(const cdap_rib::con_handle_t &con,
 				 const cdap_rib::flags_t &flags,
 				 const int invoke_id)
 {
-	// FIXME add result
 	cdap_rib::result_info res;
 	app_con_callback_->release(invoke_id, con);
-	cdap_provider->send_close_connection_result(con.handle_,
-						    flags, res,
-						    invoke_id);
 }
 
 void RIBDaemon::process_authentication_message(const cdap::CDAPMessage& message,
@@ -2244,7 +2235,7 @@ void RIBDaemon::removeObjRIB(const rib_handle_t& handle,
 	rib->remove_obj(inst_id);
 }
 
-std::list<RIBObj*> RIBDaemon::get_rib_objects(const rib_handle_t& handle)
+std::list<RIBObjectData> RIBDaemon::get_rib_objects_data(const rib_handle_t& handle)
 {
 	//Mutual exclusion
 	ReadScopedLock rlock(rwlock);
@@ -2257,7 +2248,7 @@ std::list<RIBObj*> RIBDaemon::get_rib_objects(const rib_handle_t& handle)
 		throw eRIBNotFound();
 	}
 
-	return rib->get_all_rib_objects();
+	return rib->get_all_rib_objects_data();
 }
 
 int RIBDaemon::remote_operation(unsigned int handle,
@@ -2903,9 +2894,9 @@ bool RIBDaemonProxy::containsObj(const rib_handle_t& handle,
 	}
 }
 
-std::list<RIBObj*> RIBDaemonProxy::get_rib_objects(const rib_handle_t& handle)
+std::list<RIBObjectData> RIBDaemonProxy::get_rib_objects_data(const rib_handle_t& handle)
 {
-	return ribd->get_rib_objects(handle);
+	return ribd->get_rib_objects_data(handle);
 }
 
 //

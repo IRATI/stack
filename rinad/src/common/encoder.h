@@ -206,7 +206,7 @@ public:
 };
 
 /// Encoder of Neighbor list object
-class NeighborListEncoder: public rina::Encoder<std::list<rina::Neighbor> > 
+class NeighborListEncoder: public rina::Encoder<std::list<rina::Neighbor> >
 {
 public:
 	void encode(const std::list<rina::Neighbor> &obj,
