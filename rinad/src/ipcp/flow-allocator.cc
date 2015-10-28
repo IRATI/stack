@@ -136,10 +136,16 @@ void FlowAllocator::set_dif_configuration(const rina::DIFConfiguration& dif_conf
 void FlowAllocator::populateRIB()
 {
 	rina::rib::RIBObj* tmp;
+	rina::cdap_rib::vers_info_t vers;
+	vers.version_ = 0x1ULL;
 
 	try {
 		tmp = new FlowsRIBObject(ipcp);
 		rib_daemon_->addObjRIB(FlowsRIBObject::object_name, &tmp);
+		rib_daemon_->getProxy()->addCreateCallbackSchema(vers,
+								 FlowRIBObject::class_name,
+								 FlowsRIBObject::object_name,
+								 FlowRIBObject::create_cb);
 
 		tmp = new DataTransferRIBObj(ipcp);
 		rib_daemon_->addObjRIB(DataTransferRIBObj::object_name, &tmp);

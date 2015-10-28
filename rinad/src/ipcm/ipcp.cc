@@ -449,19 +449,15 @@ void IPCMIPCProcess::pluginLoad(const std::string& name, bool load,
 	proxy_->pluginLoad(name, load, opaque);
 }
 
-void IPCMIPCProcess::forwardCDAPMessage(const rina::CDAPMessage& msg,
+void IPCMIPCProcess::forwardCDAPMessage(const rina::cdap::CDAPMessage& msg,
 					unsigned int opaque)
 {
-	rina::WireMessageProviderInterface * wmpi =
-		rina::WireMessageProviderFactory().createWireMessageProvider();
-	const rina::SerializedObject * so;
-	stringstream ss;
+	rina::ser_obj_t * encoded_msg;
 
-	so = wmpi->serializeMessage(msg);
-	delete wmpi;
+	encoded_msg = rina::cdap::getProvider()->get_session_manager()->encodeCDAPMessage(msg);
 
-	proxy_->forwardCDAPMessage(*so, opaque);
-	delete so;
+	proxy_->forwardCDAPMessage(*encoded_msg, opaque);
+	delete encoded_msg;
 }
 
 

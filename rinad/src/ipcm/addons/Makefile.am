@@ -7,7 +7,7 @@
 EXTRA_DIST   =
 CLEANFILES   =
 
-SUBDIRS= ma
+#SUBDIRS= ma
 
 #
 #Addons

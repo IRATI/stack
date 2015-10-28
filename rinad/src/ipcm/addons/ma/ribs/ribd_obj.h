@@ -35,7 +35,7 @@ public:
 				const std::string& class_,
 				const rina::cdap_rib::filt_info_t &filt,
 				const int invoke_id,
-				rina::cdap_rib::ser_obj_t &obj_reply,
+				rina::ser_obj_t &obj_reply,
 				rina::cdap_rib::res_info_t& res);
 
 private:

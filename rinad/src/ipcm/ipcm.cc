@@ -1352,8 +1352,10 @@ IPCManager_::read_ipcp_ribobj(Addon* callee, Promise* promise,
 		//Auto release the read lock
 		rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
-		rina::CDAPMessage *msg = rina::CDAPMessage::getReadObjectRequestMessage(NULL,
-				rina::CDAPMessage::NONE_FLAGS, object_class, 0, object_name, 0);
+		rina::cdap::CDAPMessage msg;
+		msg.op_code_ = rina::cdap::cdap_m_t::M_READ;
+		msg.obj_class_ = object_class;
+		msg.obj_name_ = object_name;
 
 		trans = new TransactionState(callee, promise);
 		if(!trans){
@@ -1369,8 +1371,7 @@ IPCManager_::read_ipcp_ribobj(Addon* callee, Promise* promise,
 			throw rina::Exception();
 		}
 
-		ipcp->forwardCDAPMessage(*msg, trans->tid);
-		delete msg;
+		ipcp->forwardCDAPMessage(msg, trans->tid);
 
 		ss << "Forwarded CDAPMessage to IPC process " <<
 		      ipcp->get_name().toString() << endl;
