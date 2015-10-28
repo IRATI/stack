@@ -311,10 +311,17 @@ bool test_directory_forwarding_table_entry_list() {
 	dfte2.ap_naming_info_.entityName = "adfs";
 	dfte2.ap_naming_info_.entityInstance = "2";
 	dfte_list.push_back(dfte2);
+<<<<<<< HEAD
 
 	encoder.encode(dfte_list, encoded_obj);
 	encoder.decode(encoded_obj, recovered_obj);
 
+=======
+
+	encoder.encode(dfte_list, encoded_obj);
+	encoder.decode(encoded_obj, recovered_obj);
+
+>>>>>>> rinad: ipcp: fixed encoder tests
 	if (dfte_list.size() != recovered_obj.size()) {
 		return false;
 	}
@@ -559,6 +566,7 @@ bool test_neighbor_list() {
 	rina::Neighbor nei1;
 	rina::Neighbor nei2;
 	std::list<rina::Neighbor> recovered_obj;
+<<<<<<< HEAD
 
 	nei_list.push_back(nei1);
 	nei_list.push_back(nei2);
@@ -655,8 +663,36 @@ bool test_pduft_entry() {
 		return false;
 
 	if (entry.qosId != recovered_obj.qosId)
+=======
+
+	nei_list.push_back(nei1);
+	nei_list.push_back(nei2);
+
+	encoder.encode(nei_list, encoded_obj);
+	encoder.decode(encoded_obj, recovered_obj);
+
+	if (nei_list.size() != recovered_obj.size()) {
+		return false;
+	}
+
+	LOG_IPCP_INFO("Neighbor List Encoder tested successfully");
+	return true;
+}
+
+bool test_watchdog() {
+	rina::cdap::IntEncoder encoder;
+	rina::ser_obj_t encoded_obj;
+	int address = 23;
+	int recovered_obj = 0;
+
+	encoder.encode(address, encoded_obj);
+	encoder.decode(encoded_obj, recovered_obj);
+
+	if (recovered_obj != address ) {
+>>>>>>> rinad: ipcp: fixed encoder tests
 		return false;
 
+<<<<<<< HEAD
 	if (entry.cost != recovered_obj.cost)
 		return false;
 
@@ -664,6 +700,9 @@ bool test_pduft_entry() {
 		return false;
 
 	LOG_IPCP_INFO("PDU Forwarding Table Entry Encoder tested successfully");
+=======
+	LOG_IPCP_INFO("Watchdog Encoder tested successfully");
+>>>>>>> rinad: ipcp: fixed encoder tests
 	return true;
 }
 
