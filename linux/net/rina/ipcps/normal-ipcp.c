@@ -971,12 +971,12 @@ static int normal_set_policy_set_param(struct ipcp_instance_data * data,
         size_t cmplen;
         size_t offset;
 
-        parse_component_id(path, &cmplen, &offset);
+        ps_factory_parse_component_id(path, &cmplen, &offset);
 
-        if (strncmp(path, "rmt", cmplen) == 0) {
+        if (cmplen && strncmp(path, "rmt", cmplen) == 0) {
                 return rmt_set_policy_set_param(data->rmt, path + offset,
                                                 param_name, param_value);
-        } else if (strncmp(path, "efcp", cmplen) == 0) {
+        } else if (cmplen && strncmp(path, "efcp", cmplen) == 0) {
                 return efcp_container_set_policy_set_param(data->efcpc,
                                 path + offset, param_name, param_value);
         } else {
@@ -994,12 +994,12 @@ static int normal_select_policy_set(struct ipcp_instance_data *data,
         size_t cmplen;
         size_t offset;
 
-        parse_component_id(path, &cmplen, &offset);
+        ps_factory_parse_component_id(path, &cmplen, &offset);
 
-        if (strncmp(path, "rmt", cmplen) == 0) {
+        if (cmplen && strncmp(path, "rmt", cmplen) == 0) {
                 return rmt_select_policy_set(data->rmt, path + offset,
                                              ps_name);
-        } else if (strncmp(path, "efcp", cmplen) == 0) {
+        } else if (cmplen && strncmp(path, "efcp", cmplen) == 0) {
                 return efcp_container_select_policy_set(data->efcpc,
                                                 path + offset, ps_name);
         } else {
