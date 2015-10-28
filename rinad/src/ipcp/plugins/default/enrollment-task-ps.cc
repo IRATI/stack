@@ -1125,7 +1125,7 @@ void EnrollerStateMachine::sendDIFStaticInformation()
 	std::list<rina::QoSCube*> cubes =
 			ipc_process_->resource_allocator_->getQoSCubes();
 
-	if (names.size() > 0) {
+	if (cubes.size() > 0) {
 		try {
 			QoSCubeListEncoder encoder;
 			rina::cdap_rib::obj_info_t obj;
