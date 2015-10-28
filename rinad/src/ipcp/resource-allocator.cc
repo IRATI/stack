@@ -30,12 +30,68 @@
 
 namespace rinad {
 
+// Class QoSCube RIB object
+const std::string QoSCubeRIBObject::class_name = "QoSCube";
+const std::string QoSCubeRIBObject::object_name_prefix = "/resalloc/qoscubes/id=";
+
+QoSCubeRIBObject::QoSCubeRIBObject(rina::QoSCube* cube)
+	: rina::rib::RIBObj(class_name), qos_cube(cube)
+{
+}
+
+const std::string QoSCubeRIBObject::get_displayable_value() const
+{
+	std::stringstream ss;
+	ss << "Name: " << qos_cube->name_ << "; Id: " << qos_cube->id_;
+	ss << "; Jitter: " << qos_cube->jitter_ << "; Delay: " << qos_cube->delay_
+		<< std::endl;
+	ss << "In oder delivery: " << qos_cube->ordered_delivery_;
+	ss << "; Partial delivery allowed: " << qos_cube->partial_delivery_
+		<< std::endl;
+	ss << "Max allowed gap between SDUs: " << qos_cube->max_allowable_gap_;
+	ss << "; Undetected bit error rate: "
+		<< qos_cube->undetected_bit_error_rate_ << std::endl;
+	ss << "Average bandwidth (bytes/s): " << qos_cube->average_bandwidth_;
+	ss << "; Average SDU bandwidth (bytes/s): "
+		<< qos_cube->average_sdu_bandwidth_ << std::endl;
+	ss << "Peak bandwidth duration (ms): "
+		<< qos_cube->peak_bandwidth_duration_;
+	ss << "; Peak SDU bandwidth duration (ms): "
+		<< qos_cube->peak_sdu_bandwidth_duration_ << std::endl;
+	rina::DTPConfig dtp_conf = qos_cube->dtp_config_;
+	ss << "DTP Configuration: " << dtp_conf.toString();
+	rina::DTCPConfig dtcp_conf = qos_cube->dtcp_config_;
+	ss << "DTCP Configuration: " << dtcp_conf.toString();
+	return ss.str();
+}
+
+//Class QoS Cube Set RIB Object
+const std::string NeighborsRIBObj::class_name = "QoSCubes";
+const std::string NeighborsRIBObj::object_name = "/resalloc/qoscubes";
+
+QoSCubesRIBObject::QoSCubesRIBObject(IPCProcess * ipc_process)
+	: IPCPRIBObj(ipc_process, class_name)
+{
+}
+
+void QoSCubesRIBObject::create(const rina::cdap_rib::con_handle_t &con,
+			       const std::string& fqn,
+			       const std::string& class_,
+			       const rina::cdap_rib::filt_info_t &filt,
+			       const int invoke_id,
+			       const rina::ser_obj_t &obj_req,
+			       rina::ser_obj_t &obj_reply,
+			       rina::cdap_rib::res_info_t& res)
+{
+	//TODO
+	LOG_IPCP_ERR("Missing code");
+}
+
 //Class NMinusOneFlowManager
 NMinusOneFlowManager::NMinusOneFlowManager()
 {
 	rib_daemon_ = 0;
 	ipc_process_ = 0;
-	cdap_session_manager_ = 0;
 	flow_acceptor_ = 0;
 }
 
@@ -51,7 +107,6 @@ void NMinusOneFlowManager::set_ipc_process(IPCProcess * ipc_process)
 	app = ipc_process;
 	ipc_process_ = ipc_process;
 	rib_daemon_ = ipc_process->rib_daemon_;
-	cdap_session_manager_ = ipc_process->cdap_session_manager_;
 	event_manager_ = ipc_process->internal_event_manager_;
 	flow_acceptor_ = new IPCPFlowAcceptor(ipc_process_);
 	set_flow_acceptor(flow_acceptor_);
@@ -74,12 +129,15 @@ void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProces
 				event.getDIFName().processName.c_str());
 		try{
 			std::stringstream ss;
-			ss<<rina::DIFRegistrationSetRIBObject::DIF_REGISTRATION_SET_RIB_OBJECT_NAME;
-			ss<<rina::RIBNamingConstants::SEPARATOR<<event.getDIFName().processName;
-			rib_daemon_->createObject(rina::DIFRegistrationSetRIBObject::DIF_REGISTRATION_RIB_OBJECT_CLASS,
-					ss.str(), &(event.getDIFName().processName), 0);
+			ss << rina::UnderlayingRegistrationRIBObj::object_name_prefix;
+			ss << event.getDIFName().processName;
+			rina::rib::RIBObj * obj =
+					new rina::UnderlayingRegistrationRIBObj(event.getDIFName().processName);
+
+			ipc_process_->rib_daemon_->addObjRIB(ss.str(), &obj);
 		}catch(rina::Exception &e){
-			LOG_IPCP_ERR("Problems creating RIB object: %s", e.what());;
+			LOG_IPCP_ERR("Problems adding object to RIB: %s",
+				     e.what());
 		}
 
 		return;
@@ -92,16 +150,17 @@ void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProces
 	}
 
 	LOG_IPCP_INFO("IPC Process unregistered from N-1 DIF %s",
-			event.getDIFName().processName.c_str());
+		      event.getDIFName().processName.c_str());
 
 	try {
 		std::stringstream ss;
-		ss<<rina::DIFRegistrationSetRIBObject::DIF_REGISTRATION_SET_RIB_OBJECT_NAME;
-		ss<<rina::RIBNamingConstants::SEPARATOR<<event.getDIFName().processName;
-		rib_daemon_->deleteObject(rina::DIFRegistrationSetRIBObject::DIF_REGISTRATION_RIB_OBJECT_CLASS,
-								  ss.str(), 0, 0);
+		ss << rina::UnderlayingRegistrationRIBObj::object_name_prefix;
+		ss << event.getDIFName().processName;
+
+		ipc_process_->rib_daemon_->removeObjRIB(ss.str());
 	}catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems deleting object from RIB: %s", e.what());
+		LOG_IPCP_ERR("Problems removing object from RIB: %s",
+			     e.what());
 	}
 }
 
@@ -170,6 +229,7 @@ bool IPCPFlowAcceptor::accept_flow(const rina::FlowRequestEvent& event)
 ResourceAllocator::ResourceAllocator() : IResourceAllocator() {
 	n_minus_one_flow_manager_ = new NMinusOneFlowManager();
 	ipcp = 0;
+	rib_daemon_ = 0;
 }
 
 ResourceAllocator::~ResourceAllocator() {
@@ -193,6 +253,23 @@ void ResourceAllocator::set_application_process(rina::ApplicationProcess * ap)
 	if (n_minus_one_flow_manager_) {
 		n_minus_one_flow_manager_->set_ipc_process(ipcp);
 	}
+
+	rib_daemon_ = ipcp->rib_daemon_;
+
+	populateRIB();
+}
+
+/// Create initial RIB objects
+void ResourceAllocator::populateRIB()
+{
+	rina::rib::RIBObj* tmp;
+
+	try {
+		tmp = new QoSCubesRIBObject(ipcp);
+		rib_daemon_->addObjRIB(QoSCubesRIBObject::object_name, &tmp);
+	} catch (rina::Exception &e) {
+		LOG_ERR("Problems adding object to the RIB : %s", e.what());
+	}
 }
 
 void ResourceAllocator::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
@@ -204,6 +281,25 @@ void ResourceAllocator::set_dif_configuration(const rina::DIFConfiguration& dif_
 
 	if (n_minus_one_flow_manager_) {
 		n_minus_one_flow_manager_->set_dif_configuration(dif_configuration);
+	}
+
+	//Create QoS cubes RIB objects
+	std::list<rina::QoSCube*>::const_iterator it;
+	std::stringstream ss;
+	const std::list<rina::QoSCube*>& cubes = dif_configuration
+		.efcp_configuration_.qos_cubes_;
+	for (it = cubes.begin(); it != cubes.end(); ++it) {
+		try {
+			ss << QoSCubeRIBObject::object_name_prefix
+			   << (*it)->id_;
+			rina::rib::RIBObj * nrobj = new QoSCubeRIBObject(*it);
+			rib_daemon_->addObjRIB(ss.str(), &nrobj);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems creating RIB object: %s",
+					e.what());
+		}
+		ss.str(std::string());
+		ss.clear();
 	}
 }
 

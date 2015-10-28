@@ -82,6 +82,40 @@ private:
 		rina::DIFInformation dif_information_;
 };
 
+class IPCPFactory{
+
+public:
+	/**
+	* Create IPCP
+	*/
+	static IPCProcessImpl* createIPCP(const rina::ApplicationProcessNamingInformation& name,
+					  unsigned short id,
+					  unsigned int ipc_manager_port,
+					  std::string log_level,
+					  std::string log_file)
+	{
+		if(!ipcp) {
+			ipcp = new IPCProcessImpl(name,
+						  ipcp_id,
+						  ipc_manager_port,
+						  log_level,
+						  log_file);
+			return ipcp;
+		} else
+			return 0;
+	}
+
+	static IPCProcessImpl* getIPCP() {
+		return ipcp;
+	}
+
+protected:
+
+	//IPCP instance
+	static IPCProcessImpl* ipcp;
+};
+
+
 } //namespace rinad
 
 #endif //IPCP_IPC_PROCESS_HH

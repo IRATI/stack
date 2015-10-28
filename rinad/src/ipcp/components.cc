@@ -34,7 +34,6 @@ const std::string INamespaceManager::NAMESPACE_MANAGER_AE_NAME = "namespace-mana
 const std::string IRoutingComponent::ROUTING_COMPONENT_AE_NAME = "routing";
 const std::string IFlowAllocator::FLOW_ALLOCATOR_AE_NAME = "flow-allocator";
 
-
 // Class IResourceAllocator
 int IResourceAllocator::set_pduft_gen_policy_set(const std::string& name)
 {
