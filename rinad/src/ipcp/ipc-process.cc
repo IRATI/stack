@@ -203,7 +203,7 @@ void IPCProcessImpl::set_operational_state(const IPCProcessOperationalState& ope
 	state = operational_state;
 }
 
-const rina::DIFInformation& IPCProcessImpl::get_dif_information() const {
+rina::DIFInformation& IPCProcessImpl::get_dif_information() {
 	rina::ScopedLock g(*lock_);
 	return dif_information_;
 }

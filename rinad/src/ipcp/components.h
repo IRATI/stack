@@ -33,7 +33,7 @@
 #include <librina/irm.h>
 #include <librina/rib_v2.h>
 #include <librina/security-manager.h>
-#include "common/configuration.h"
+#include "common/encoder.h"
 
 namespace rinad {
 
@@ -454,7 +454,7 @@ public:
 	virtual void set_address(unsigned int address) = 0;
 	virtual const IPCProcessOperationalState& get_operational_state() const = 0;
 	virtual void set_operational_state(const IPCProcessOperationalState& operational_state) = 0;
-	virtual const rina::DIFInformation& get_dif_information() const = 0;
+	virtual rina::DIFInformation& get_dif_information() = 0;
 	virtual void set_dif_information(const rina::DIFInformation& dif_information) = 0;
 	virtual const std::list<rina::Neighbor*> get_neighbors() const = 0;
 };
