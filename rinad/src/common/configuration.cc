@@ -121,4 +121,11 @@ std::string Flow::toString() {
 		<< current_connection_index << std::endl;
 	return ss.str();
 }
+
+const std::string Flow::getKey() const
+{
+	std::stringstream ss;
+	ss << source_address << "-" << source_port_id;
+	return ss.str();
+}
 } //namespace rinad

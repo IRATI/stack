@@ -307,4 +307,45 @@ INMinusOneFlowManager * ResourceAllocator::get_n_minus_one_flow_manager() const 
 	return n_minus_one_flow_manager_;
 }
 
+std::list<rina::QoSCube*> ResourceAllocator::getQoSCubes()
+{
+	rina::ScopedLock(lock);
+	return ipcp->get_dif_information().dif_configuration_.efcp_configuration_.qos_cubes_;
+}
+
+
+void ResourceAllocator::addQoSCube(const rina::QoSCube& cube)
+{
+	rina::ScopedLock(lock);
+
+	rina::QoSCube * qos_cube;
+	std::list<rina::QoSCube*> cubes =
+			ipcp->get_dif_information().dif_configuration_.efcp_configuration_.qos_cubes_;
+
+	std::list<rina::QoSCube*>::const_iterator it;
+	for (it = cubes.begin(); it != cubes.end(); ++it) {
+		if ((*it)->id_ == cube.id_) {
+			LOG_IPCP_WARN("Tried to add an already existing QoS cube: %u",
+				      cube.id_);
+			return;
+		}
+	}
+
+	qos_cube = new rina::QoSCube(cube);
+
+	try {
+		std::stringstream ss;
+		ss << QoSCubeRIBObject::object_name_prefix
+		   << cube.id_;
+
+		rina::rib::RIBObj * nrobj = new QoSCubeRIBObject(qos_cube);
+		rib_daemon_->addObjRIB(ss.str(), &nrobj);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems creating RIB object: %s",
+			     e.what());
+	}
+
+	cubes.push_back(qos_cube);
+}
+
 } //namespace rinad

@@ -168,6 +168,8 @@ public:
 class QoSCubeListEncoder: public rina::Encoder<std::list<rina::QoSCube> >
 {
 public:
+	void encodePointers(const std::list<rina::QoSCube*> &obj,
+			    rina::ser_obj_t& serobj);
 	void encode(const std::list<rina::QoSCube> &obj, 
 		rina::ser_obj_t& serobj);
 	void decode(const rina::ser_obj_t &serobj, 

@@ -384,11 +384,6 @@ void FlowAllocator::removeFlowAllocatorInstance(int portId)
 	}
 }
 
-std::list<rina::QoSCube*> FlowAllocator::getQoSCubes()
-{
-	return ipcp->get_dif_information().dif_configuration_.efcp_configuration_.qos_cubes_;
-}
-
 //Class Flow Allocator Instance
 FlowAllocatorInstance::FlowAllocatorInstance(IPCProcess * ipc_process,
 					     IFlowAllocator * flow_allocator,
@@ -545,7 +540,7 @@ void FlowAllocatorInstance::releaseUnlockRemove()
 
 void FlowAllocatorInstance::processCreateConnectionResponseEvent(const rina::CreateConnectionResponseEvent& event)
 {
-	lock_->lock();
+	lock_.lock();
 
 	if (state != CONNECTION_CREATE_REQUESTED) {
 		LOG_IPCP_ERR("Received a process Create Connection Response Event while in %d state. Ignoring it",

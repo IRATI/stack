@@ -99,6 +99,7 @@ public:
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	INMinusOneFlowManager * get_n_minus_one_flow_manager() const;
 	std::list<rina::QoSCube*> getQoSCubes();
+	void addQoSCube(const rina::QoSCube& cube);
 
 private:
 	/// Create initial RIB objects
@@ -106,6 +107,7 @@ private:
 
 	INMinusOneFlowManager * n_minus_one_flow_manager_;
 	IPCPRIBDaemon * rib_daemon_;
+	rina::Lockable lock;
 };
 
 } //namespace rinad

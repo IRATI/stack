@@ -54,6 +54,7 @@ public:
 	~Flow();
 	rina::Connection* getActiveConnection() const;
 	std::string toString();
+	const std::string getKey() const;
 
 	/// The application that requested the flow
 	rina::ApplicationProcessNamingInformation source_naming_info;

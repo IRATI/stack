@@ -354,6 +354,7 @@ public:
 	virtual INMinusOneFlowManager * get_n_minus_one_flow_manager() const = 0;
 	virtual std::list<rina::QoSCube*> getQoSCubes() = 0;
 	int set_pduft_gen_policy_set(const std::string& name);
+	virtual void addQoSCube(const rina::QoSCube& cube) = 0;
 
 	IPDUFTGeneratorPs * pduft_gen_ps;
 };

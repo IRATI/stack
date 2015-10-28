@@ -287,25 +287,16 @@ const static std::string AddressRIBObject::object_name = "/difmanagement/naming/
 AddressRIBObject::AddressRIBObject(IPCProcess * ipc_process):
 	IPCPRIBObj(ipc_process, class_name)
 {
-	address_ = ipc_process_->get_address();
 }
 
 AddressRIBObject::~AddressRIBObject()
 {
 }
 
-void AddressRIBObject::set_address(unsigned int address)
-{
-	address_ = address;
-	rina::DIFInformation dif_information = ipc_process_->get_dif_information();
-	dif_information.dif_configuration_.address_ = address;
-	ipc_process_->set_dif_information(dif_information);
-}
-
 const std::string AddressRIBObject::get_displayable_value() const
 {
     std::stringstream ss;
-    ss<<"Address: "<<address_;
+    ss<<"Address: "<< ipc_process_->get_dif_information().dif_configuration_.address_;
     return ss.str();
 }
 
@@ -573,9 +564,6 @@ void EnrollmentTask::populateRIB()
 	rina::rib::RIBObj* tmp;
 
 	try {
-		tmp = new rina::rib::RIBObj("Enrollment");
-		rib_daemon_->addObjRIB("/difmanagement/enrollment", &tmp);
-
 		tmp = new NeighborsRIBObj(ipcp);
 		rib_daemon_->addObjRIB(NeighborsRIBObj::object_name, &tmp);
 
@@ -868,6 +856,7 @@ void EnrollmentTask::add_neighbor(rina::Neighbor * neighbor)
 	if (neighbors.find(neighbor->name_.getEncodedString()) != 0) {
 		LOG_IPCP_WARN("Tried to add an already existing neighbor: %s",
 			      neighbor->name_.getEncodedString().c_str());
+		delete neighbor;
 		return;
 	}
 
