@@ -659,6 +659,23 @@ void QoSCubeEncoder::decode(const rina::ser_obj_t &serobj,
 	cube_helpers::toModel(gpb, des_obj);
 }
 
+void QoSCubeListEncoder::encodePointers(const std::list<rina::QoSCube*> &obj,
+		    	    	        rina::ser_obj_t& serobj)
+{
+	rina::messages::qosCubes_t gpb;
+
+	for (std::list<rina::QoSCube*>::const_iterator it = obj.begin();
+		it != obj.end(); ++it) {
+		rina::messages::qosCube_t *gpb_cube;
+		gpb_cube = gpb.add_qoscube();
+		cube_helpers::toGPB(*(*it), *gpb_cube);
+	}
+
+	serobj.size_ = gpb.ByteSize();
+	serobj.message_ = new char[serobj.size_];
+	gpb.SerializeToArray(serobj.message_, serobj.size_);
+}
+
 /// CLASS QoSCubeListEncoder
 void QoSCubeListEncoder::encode(const std::list<rina::QoSCube> &obj, 
 	rina::ser_obj_t& serobj)

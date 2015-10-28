@@ -132,13 +132,8 @@ public:
 		return class_name;
 	};
 
-	void set_address(unsigned int address);
-
 	const static std::string class_name;
 	const static std::string object_name;
-
-private:
-	unsigned int address_;
 };
 
 // The common elements of an enrollment state machine
@@ -185,7 +180,9 @@ protected:
 
 	/// Called by the enrollment state machine when the enrollment sequence fails
 	void abortEnrollment(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
-			     int portId, const std::string& reason, bool sendReleaseMessage);
+			     int portId,
+			     const std::string& reason,
+			     bool sendReleaseMessage);
 
 	/// Create or update the neighbor information in the RIB
 	/// @param enrolled true if the neighbor is enrolled, false otherwise
@@ -237,7 +234,7 @@ public:
 	void processEnrollmentRequestEvent(rina::EnrollToDAFRequestEvent * event);
 	void initiateEnrollment(rina::EnrollmentRequest * request);
 	void connect(const rina::cdap::CDAPMessage& message,
-	             const rina::cdap_rib::con_handle_t &con) = 0;
+	             const rina::cdap_rib::con_handle_t &con);
 	void connectResult(const rina::cdap_rib::res_info_t &res,
 			   const rina::cdap_rib::con_handle_t &con);
 	void release(int invoke_id,
