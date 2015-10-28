@@ -46,7 +46,6 @@ namespace mad {
 //static (unique) ribd proxy ref
 rina::rib::RIBDaemonProxy* RIBFactory::ribd = NULL;
 RIBConHandler empty_conn_callbacks;
-RIBRespHandler empty_rib_callbacks;
 
 /*
  * RIBFactory
@@ -62,7 +61,7 @@ RIBFactory::RIBFactory(RIBAEassoc ver_assoc){
 
 
 	//First initialize the RIB library
-	rina::rib::init(&empty_conn_callbacks, &empty_rib_callbacks, params);
+	rina::rib::init(&empty_conn_callbacks, params);
 
 	for (it = ver_assoc.begin();
 			it != ver_assoc.end(); ++it) {
@@ -155,9 +154,9 @@ void RIBFactory::destroyIPCPevent(int ipcp_id){
 	}
 }
 
-void RIBConHandler::connect(int message_id,
-				const rina::cdap_rib::con_handle_t &con) {
-	(void) message_id;
+void RIBConHandler::connect(const rina::cdap::CDAPMessage& message,
+			    const rina::cdap_rib::con_handle_t &con) {
+	(void) message;
 	(void) con;
 }
 
@@ -184,62 +183,6 @@ void RIBConHandler::process_authentication_message(const rina::cdap::CDAPMessage
 	(void) message;
 	(void) con;
 }
-
-//RIB ops response
-void RIBRespHandler::remoteCreateResult(
-			const rina::cdap_rib::con_handle_t &con,
-			const rina::cdap_rib::obj_info_t &obj,
-			const rina::cdap_rib::res_info_t &res){
-	(void) res;
-	(void) con;
-	(void) obj;
-}
-void RIBRespHandler::remoteDeleteResult(
-			const rina::cdap_rib::con_handle_t &con,
-			const rina::cdap_rib::res_info_t &res){
-	(void) res;
-	(void) con;
-}
-
-void RIBRespHandler::remoteReadResult(
-			const rina::cdap_rib::con_handle_t &con,
-			const rina::cdap_rib::obj_info_t &obj,
-			const rina::cdap_rib::res_info_t &res){
-	(void) res;
-	(void) con;
-	(void) obj;
-}
-void RIBRespHandler::remoteCancelReadResult(
-			const rina::cdap_rib::con_handle_t &con,
-			const rina::cdap_rib::res_info_t &res){
-	(void) res;
-	(void) con;
-}
-void RIBRespHandler::remoteWriteResult(
-			const rina::cdap_rib::con_handle_t &con,
-			const rina::cdap_rib::obj_info_t &obj,
-			const rina::cdap_rib::res_info_t &res){
-	(void) res;
-	(void) con;
-	(void) obj;
-}
-void RIBRespHandler::remoteStartResult(
-			const rina::cdap_rib::con_handle_t &con,
-			const rina::cdap_rib::obj_info_t &obj,
-			const rina::cdap_rib::res_info_t &res){
-	(void) res;
-	(void) con;
-	(void) obj;
-}
-void RIBRespHandler::remoteStopResult(
-			const rina::cdap_rib::con_handle_t &con,
-			const rina::cdap_rib::obj_info_t &obj,
-			const rina::cdap_rib::res_info_t &res){
-	(void) res;
-	(void) con;
-	(void) obj;
-}
-
 
 };//namespace mad
 };//namespace rinad

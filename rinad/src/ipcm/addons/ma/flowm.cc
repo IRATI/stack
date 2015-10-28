@@ -338,7 +338,7 @@ void* ActiveWorker::run(void* param)
 				LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
 			}
 
-			rina::cdap_rib::ser_obj_t message;
+			rina::ser_obj_t message;
 			message.message_ = buffer;
 			message.size_ = bytes_read;
 
@@ -362,7 +362,7 @@ void* ActiveWorker::run(void* param)
 					LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
 				}
 
-				rina::cdap_rib::ser_obj_t message;
+				rina::ser_obj_t message;
 				message.message_ = buffer;
 				message.size_ = bytes_read;
 
@@ -373,7 +373,7 @@ void* ActiveWorker::run(void* param)
 									port_id);
 				}catch(rina::WriteSDUException &e){
 					LOG_ERR("Cannot write to flow with port id: %u anymore", port_id);
-				}catch(rina::CDAPException &e){
+				}catch(rina::cdap::CDAPException &e){
 					LOG_ERR("Error processing message: %s", e.what());
 				}
 			}
@@ -388,24 +388,21 @@ void* ActiveWorker::run(void* param)
 
 void FlowManager::process_fwd_cdap_msg_response(rina::FwdCDAPMsgEvent* fwdevent)
 {
-	rina::WireMessageProviderInterface * wmpi;
-	const rina::CDAPMessage *rmsg;
+	const rina::cdap::CDAPMessage *rmsg;
 
 	LOG_DBG("Received forwarded CDAP response, result %d",
 			fwdevent->result);
 
-	if (fwdevent->sermsg.empty()) {
+	if (fwdevent->sermsg.message_ == 0) {
 		LOG_DBG("Received empty delegated CDAP response");
 		return;
 	}
 
-	wmpi = rina::WireMessageProviderFactory().createWireMessageProvider();
-	rmsg = wmpi->deserializeMessage(fwdevent->sermsg);
+	rmsg = rina::cdap::getProvider()->get_session_manager()->decodeCDAPMessage(fwdevent->sermsg);
 
 	LOG_DBG("Delegated CDAP response: %s, value %p", rmsg->to_string().c_str(),
-			rmsg->get_obj_value());
+			rmsg->obj_value_.message_);
 
-	delete wmpi;
 	delete rmsg;
 }
 
