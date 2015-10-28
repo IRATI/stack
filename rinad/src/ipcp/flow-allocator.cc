@@ -55,15 +55,15 @@ bool FlowRIBObject::delete_(const rina::cdap_rib::con_handle_t &con,
 	return false;
 }
 
-static void FlowRIBObject::create_cb(const rina::rib::rib_handle_t rib,
-		      	      	     const rina::cdap_rib::con_handle_t &con,
-		      	      	     const std::string& fqn,
-		      	      	     const std::string& class_,
-		      	      	     const rina::cdap_rib::filt_info_t &filt,
-		      	      	     const int invoke_id,
-		      	      	     const rina::ser_obj_t &obj_req,
-		      	      	     rina::ser_obj_t &obj_reply,
-		      	      	     rina::cdap_rib::res_info_t& res)
+void FlowRIBObject::create_cb(const rina::rib::rib_handle_t rib,
+			      const rina::cdap_rib::con_handle_t &con,
+			      const std::string& fqn,
+			      const std::string& class_,
+			      const rina::cdap_rib::filt_info_t &filt,
+			      const int invoke_id,
+			      const rina::ser_obj_t &obj_req,
+			      rina::ser_obj_t &obj_reply,
+			      rina::cdap_rib::res_info_t& res)
 {
 	FlowEncoder encoder;
 	Flow rcv_flow;
@@ -140,7 +140,7 @@ void FlowAllocator::populateRIB()
 	vers.version_ = 0x1ULL;
 
 	try {
-		tmp = new FlowsRIBObject(ipcp);
+		tmp = new FlowsRIBObject(ipcp, this);
 		rib_daemon_->addObjRIB(FlowsRIBObject::object_name, &tmp);
 		rib_daemon_->getProxy()->addCreateCallbackSchema(vers,
 								 FlowRIBObject::class_name,
@@ -408,10 +408,6 @@ FlowAllocatorInstance::~FlowAllocatorInstance()
 		delete flow_;
 	}
 
-	if (lock_) {
-		delete lock_;
-	}
-
 	if (timer_) {
 		delete timer_;
 	}
@@ -430,7 +426,6 @@ void FlowAllocatorInstance::initialize(
 	state = NO_STATE;
 	allocate_response_message_handle_ = 0;
 	flow_ = 0;
-	lock_ = new rina::Lockable();
 	timer_ = new rina::Timer();
 }
 
@@ -459,7 +454,7 @@ unsigned int FlowAllocatorInstance::get_allocate_response_message_handle() const
 	unsigned int t;
 
 	{
-		rina::ScopedLock g(*lock_);
+		rina::ScopedLock g(rina::Lockable lock);
 		t = allocate_response_message_handle_;
 	}
 
@@ -469,7 +464,7 @@ unsigned int FlowAllocatorInstance::get_allocate_response_message_handle() const
 void FlowAllocatorInstance::set_allocate_response_message_handle(
 		unsigned int allocate_response_message_handle)
 {
-	rina::ScopedLock g(*lock_);
+	rina::ScopedLock g(lock_);
 	allocate_response_message_handle_ =
 		allocate_response_message_handle;
 }
@@ -479,7 +474,7 @@ void FlowAllocatorInstance::submitAllocateRequest(
 {
 	IFlowAllocatorPs * faps =
 		dynamic_cast<IFlowAllocatorPs *>(flow_allocator_->ps);
-	rina::ScopedLock g(*lock_);
+	rina::ScopedLock g(lock_);
 
 	flow_request_event_ = event;
 
@@ -653,7 +648,7 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(Flow * flow,
 				obj.name_ = object_name_;
 				encoder.encode(*flow_, obj.value_);
 				rina::cdap_rib::res_info_t res;
-				res.code_ = -1;
+				res.code_ = rina::cdap_rib::CDAP_ERROR;
 
 				rina::cdap::getProvider()->send_create_result(flow_->source_address,
 									      obj,
@@ -757,7 +752,7 @@ void FlowAllocatorInstance::submitAllocateResponse(const rina::AllocateFlowRespo
 				obj.name_ = object_name_;
 				encoder.encode(*flow_, obj.value_);
 				rina::cdap_rib::res_info_t res;
-				res.code_ = 0;
+				res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 
 				rina::cdap::getProvider()->send_create_result(flow_->source_address,
 									      obj,
@@ -834,7 +829,7 @@ void FlowAllocatorInstance::submitAllocateResponse(const rina::AllocateFlowRespo
 			obj.name_ = object_name_;
 			encoder.encode(*flow_, obj.value_);
 			rina::cdap_rib::res_info_t res;
-			res.code_ = -1;
+			res.code_ = rina::cdap_rib::CDAP_ERROR;
 			res.reason_ = "Application has rejected the flow";
 
 			rina::cdap::getProvider()->send_create_result(flow_->source_address,
@@ -937,7 +932,7 @@ void FlowAllocatorInstance::processUpdateConnectionResponseEvent(
 void FlowAllocatorInstance::submitDeallocate(
 		const rina::FlowDeallocateRequestEvent& event)
 {
-	rina::ScopedLock g(*lock_);
+	rina::ScopedLock g(lock_);
 
 	if (state != FLOW_ALLOCATED) {
 		LOG_IPCP_ERR("Received deallocate request while not in FLOW_ALLOCATED state. Current state is: %d",
@@ -996,7 +991,7 @@ void FlowAllocatorInstance::submitDeallocate(
 
 void FlowAllocatorInstance::deleteFlowRequestMessageReceived()
 {
-	rina::ScopedLock g(*lock_);
+	rina::ScopedLock g(lock_);
 
 	if (state != FLOW_ALLOCATED) {
 		LOG_IPCP_ERR("Received deallocate request while not in FLOW_ALLOCATED state. Current state is: %d",
@@ -1088,8 +1083,6 @@ void FlowAllocatorInstance::remoteCreateResult(const rina::cdap_rib::con_handle_
 			flow_->destination_port_id = receivedFlow.destination_port_id;
 			flow_->getActiveConnection()->setDestCepId(
 					receivedFlow.getActiveConnection()->getSourceCepId());
-
-			delete receivedFlow;
 		}
 		state = CONNECTION_UPDATE_REQUESTED;
 		rina::kernelIPCProcess->updateConnection(

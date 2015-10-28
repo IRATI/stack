@@ -155,6 +155,8 @@ public:
 	void remove_whatevercast_name(const std::string& name_key);
 
 private:
+	rina::Lockable lock;
+
 	/// The directory forwarding table
 	rina::ThreadSafeMapOfPointers<std::string, rina::DirectoryForwardingTableEntry> dft_;
 

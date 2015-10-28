@@ -78,7 +78,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         resource_allocator_ = new ResourceAllocator();
         security_manager_ = new IPCPSecurityManager();
         routing_component_ = new RoutingComponent();
-        rib_daemon_ = new IPCPRIBDaemonImpl();
+        rib_daemon_ = new IPCPRIBDaemonImpl(enrollment_task_);
 
         add_entity(internal_event_manager_);
         add_entity(rib_daemon_);
@@ -189,7 +189,7 @@ unsigned short IPCProcessImpl::get_id() {
 	return rina::extendedIPCManager->ipcProcessId;
 }
 
-const std::list<rina::Neighbor*> IPCProcessImpl::get_neighbors() const {
+const std::list<rina::Neighbor> IPCProcessImpl::get_neighbors() const {
 	return enrollment_task_->get_neighbors();
 }
 

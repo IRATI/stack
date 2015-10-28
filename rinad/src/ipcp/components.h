@@ -416,7 +416,7 @@ public:
 };
 
 /// Interface that provides the RIB Daemon API
-class IPCPRIBDaemon : public rina::rib::RIBDaemonAE, IPCProcessComponent {
+class IPCPRIBDaemon : public rina::rib::RIBDaemonAE, public IPCProcessComponent {
 public:
 	IPCPRIBDaemon() { };
 	virtual ~IPCPRIBDaemon(){};
@@ -456,7 +456,7 @@ public:
 	virtual void set_operational_state(const IPCProcessOperationalState& operational_state) = 0;
 	virtual rina::DIFInformation& get_dif_information() = 0;
 	virtual void set_dif_information(const rina::DIFInformation& dif_information) = 0;
-	virtual const std::list<rina::Neighbor*> get_neighbors() const = 0;
+	virtual const std::list<rina::Neighbor> get_neighbors() const = 0;
 };
 
 } //namespace rinad

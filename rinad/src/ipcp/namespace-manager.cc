@@ -153,7 +153,7 @@ void DFTRIBObj::eventHappened(rina::InternalEvent * event)
 
 	std::list<int> exc_neighs;
 	std::list<std::string>::const_iterator it;
-	for (it = entriesToDelete.begin(); it < entriesToDelete.end(); ++it) {
+	for (it = entriesToDelete.begin(); it != entriesToDelete.end(); ++it) {
 		namespace_manager_->removeDFTEntry(*it, true, exc_neighs);
 	}
 }
@@ -258,7 +258,7 @@ void NamespaceManager::addDFTEntries(const std::list<rina::DirectoryForwardingTa
 			    	     bool notify_neighs,
 			    	     std::list<int>& neighs_to_exclude)
 {
-	rina::ScopedLock(lock);
+	rina::ScopedLock g(lock);
 	rina::DirectoryForwardingTableEntry * entry;
 
 	std::list<rina::DirectoryForwardingTableEntry>::const_iterator it;
@@ -276,7 +276,7 @@ void NamespaceManager::addDFTEntries(const std::list<rina::DirectoryForwardingTa
 			ss << DFTEntryRIBObj::object_name_prefix
 			   << entry->getKey();
 
-			rina::rib::RIBObj * nrobj = new DFTEntryRIBObj(entry);
+			rina::rib::RIBObj * nrobj = new DFTEntryRIBObj(ipcp, entry);
 			rib_daemon_->addObjRIB(ss.str(), &nrobj);
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Problems creating RIB object: %s",
@@ -329,7 +329,7 @@ void NamespaceManager::removeDFTEntry(const std::string& key,
 			 	      bool notify_neighs,
 			 	      std::list<int>& neighs_to_exclude)
 {
-	rina::ScopedLock(lock);
+	rina::ScopedLock g(lock);
 	std::string obj_name;
 
 	rina::DirectoryForwardingTableEntry * entry = dft_.erase(key);
@@ -492,7 +492,7 @@ std::list<rina::WhatevercastName> NamespaceManager::get_whatevercast_names()
 
 void NamespaceManager::add_whatevercast_name(rina::WhatevercastName * name)
 {
-	rina::ScopedLock(lock_);
+	rina::ScopedLock g(lock);
 
 	if (what_names.find(name->name_) != 0) {
 		LOG_IPCP_WARN("Tried to add an already existing Whatevercast name: %s",
@@ -519,7 +519,7 @@ void NamespaceManager::remove_whatevercast_name(const std::string& name_key)
 {
 	rina::WhatevercastName * name;
 
-	rina::ScopedLock(lock_);
+	rina::ScopedLock g(lock);
 
 	name = what_names.erase(name_key);
 	if (name == 0) {
@@ -573,7 +573,8 @@ void NamespaceManager::processApplicationUnregistrationRequestEvent(
 
 unsigned int NamespaceManager::getAdressByname(const rina::ApplicationProcessNamingInformation& name)
 {
-	std::list<rina::Neighbor *> neighbors = ipcp->get_neighbors();
+	std::list<rina::Neighbor *> neighbors =
+			ipcp->enrollment_task_->get_neighbor_pointers();
 	std::list<rina::Neighbor *>::const_iterator it;
 	for (it = neighbors.begin(); it != neighbors.end(); ++it) {
 		if ((*it)->name_.processName.compare(name.processName) == 0) {

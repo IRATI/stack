@@ -26,7 +26,6 @@
 
 #include "common/concurrency.h"
 #include "ipcp/components.h"
-#include <librina/rib_v2.h>
 #include <librina/internal-events.h>
 
 namespace rinad {
@@ -227,6 +226,7 @@ public:
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	void eventHappened(rina::InternalEvent * event);
 	const std::list<rina::Neighbor> get_neighbors() const;
+	std::list<rina::Neighbor*> get_neighbor_pointers();
 	void add_neighbor(rina::Neighbor * neighbor);
 	void remove_neighbor(const std::string& neighbor_key);
 	bool isEnrolledTo(const std::string& applicationProcessName);

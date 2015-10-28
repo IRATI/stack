@@ -77,7 +77,7 @@ class IPCPCDAPIOHandler : public rina::cdap::CDAPIOHandler
 	void send(const rina::cdap::cdap_m_t *m_sent,
 		  unsigned int handle,
 		  rina::cdap_rib::cdap_dest_t cdap_dest);
-	void process_message(rina::ser_obj_t &message,
+	void process_message(const rina::ser_obj_t &message,
 			     unsigned int handle,
 			     rina::cdap_rib::cdap_dest_t cdap_dest);
 
@@ -92,7 +92,7 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t *m_sent,
 			     unsigned int handle,
 			     rina::cdap_rib::cdap_dest_t cdap_dest)
 {
-	rina::ser_obj_t * sdu = 0;
+	const rina::ser_obj_t * sdu = 0;
 	rina::cdap::cdap_m_t * a_data_m = 0;
 
 	atomic_send_lock_.lock();
@@ -179,7 +179,7 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t *m_sent,
 	atomic_send_lock_.unlock();
 }
 
-void IPCPCDAPIOHandler::process_message(rina::ser_obj_t &message,
+void IPCPCDAPIOHandler::process_message(const rina::ser_obj_t &message,
 		     	     	        unsigned int handle,
 		     	     	        rina::cdap_rib::cdap_dest_t cdap_dest)
 {
@@ -217,7 +217,7 @@ void IPCPCDAPIOHandler::process_message(rina::ser_obj_t &message,
 			try {
 				ADataObjectEncoder encoder;
 				rina::ADataObject a_data_obj;
-				rina::cdap::cdap_m_t * old_msg = m_rcv;
+				const rina::cdap::cdap_m_t * old_msg = m_rcv;
 
 				encoder.decode(m_rcv->obj_value_, a_data_obj);
 
@@ -478,7 +478,7 @@ void IPCPRIBDaemonImpl::set_application_process(rina::ApplicationProcess * ap)
 
         rina::ThreadAttributes * threadAttributes = new rina::ThreadAttributes();
         threadAttributes->setJoinable();
-        ManagementSDUReaderData * data = new ManagementSDUReaderData(this, max_sdu_size_in_bytes);
+        ManagementSDUReaderData * data = new ManagementSDUReaderData(max_sdu_size_in_bytes);
         management_sdu_reader_ = new rina::Thread(&doManagementSDUReaderWork,
         					  (void *) data,
         					  threadAttributes);

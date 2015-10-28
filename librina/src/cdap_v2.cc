@@ -627,7 +627,7 @@ class AppCDAPIOHandler : public CDAPIOHandler
 	void send(const cdap_m_t *m_sent,
 		  unsigned int handle,
 		  cdap_rib::cdap_dest_t cdap_dest);
-	void process_message(ser_obj_t &message,
+	void process_message(const ser_obj_t &message,
 			     unsigned int port,
 			     cdap_rib::cdap_dest_t cdap_dest);
 
@@ -2839,7 +2839,7 @@ class CDAPProvider : public CDAPProviderInterface
 			      cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
 
 	// Process and incoming CDAP message
-	void process_message(ser_obj_t &message,
+	void process_message(const ser_obj_t &message,
 			     unsigned int port,
 			     cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
 
@@ -3211,7 +3211,7 @@ void CDAPProvider::send_stop_result(unsigned int handle,
 	delete m_sent;
 }
 
-void CDAPProvider::process_message(ser_obj_t &message,
+void CDAPProvider::process_message(const ser_obj_t &message,
 				   unsigned int port,
 				   cdap_rib::cdap_dest_t cdap_dest)
 {
@@ -3246,7 +3246,7 @@ CDAPSessionManagerInterface * CDAPProvider::get_session_manager()
 	return manager_;
 }
 
-void AppCDAPIOHandler::process_message(ser_obj_t &message,
+void AppCDAPIOHandler::process_message(const ser_obj_t &message,
 				       unsigned int port,
 				       cdap_rib::cdap_dest_t cdap_dest)
 {
