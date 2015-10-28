@@ -92,63 +92,6 @@ FlowsRIBObject::FlowsRIBObject(IPCProcess * ipc_process,
 	flow_allocator_ = flow_allocator;
 }
 
-// Class Neighbor RIB object
-const std::string QoSCubeRIBObject::class_name = "QoSCube";
-const std::string QoSCubeRIBObject::object_name_prefix = "/resalloc/qoscubes/id=";
-
-QoSCubeRIBObject::QoSCubeRIBObject(rina::QoSCube* cube)
-	: rina::rib::RIBObj(class_name), qos_cube(cube)
-{
-}
-
-const std::string QoSCubeRIBObject::get_displayable_value() const
-{
-	std::stringstream ss;
-	ss << "Name: " << qos_cube->name_ << "; Id: " << qos_cube->id_;
-	ss << "; Jitter: " << qos_cube->jitter_ << "; Delay: " << qos_cube->delay_
-		<< std::endl;
-	ss << "In oder delivery: " << qos_cube->ordered_delivery_;
-	ss << "; Partial delivery allowed: " << qos_cube->partial_delivery_
-		<< std::endl;
-	ss << "Max allowed gap between SDUs: " << qos_cube->max_allowable_gap_;
-	ss << "; Undetected bit error rate: "
-		<< qos_cube->undetected_bit_error_rate_ << std::endl;
-	ss << "Average bandwidth (bytes/s): " << qos_cube->average_bandwidth_;
-	ss << "; Average SDU bandwidth (bytes/s): "
-		<< qos_cube->average_sdu_bandwidth_ << std::endl;
-	ss << "Peak bandwidth duration (ms): "
-		<< qos_cube->peak_bandwidth_duration_;
-	ss << "; Peak SDU bandwidth duration (ms): "
-		<< qos_cube->peak_sdu_bandwidth_duration_ << std::endl;
-	rina::DTPConfig dtp_conf = qos_cube->dtp_config_;
-	ss << "DTP Configuration: " << dtp_conf.toString();
-	rina::DTCPConfig dtcp_conf = qos_cube->dtcp_config_;
-	ss << "DTCP Configuration: " << dtcp_conf.toString();
-	return ss.str();
-}
-
-//Class QoS Cube Set RIB Object
-const std::string NeighborsRIBObj::class_name = "QoSCubes";
-const std::string NeighborsRIBObj::object_name = "/resalloc/qoscubes";
-
-QoSCubesRIBObject::QoSCubesRIBObject(IPCProcess * ipc_process)
-	: IPCPRIBObj(ipc_process, class_name)
-{
-}
-
-void QoSCubesRIBObject::create(const rina::cdap_rib::con_handle_t &con,
-			       const std::string& fqn,
-			       const std::string& class_,
-			       const rina::cdap_rib::filt_info_t &filt,
-			       const int invoke_id,
-			       const rina::ser_obj_t &obj_req,
-			       rina::ser_obj_t &obj_reply,
-			       rina::cdap_rib::res_info_t& res)
-{
-	//TODO
-	LOG_IPCP_ERR("Missing code");
-}
-
 //Class Flow Allocator
 FlowAllocator::FlowAllocator() : IFlowAllocator()
 {
@@ -188,25 +131,6 @@ void FlowAllocator::set_dif_configuration(const rina::DIFConfiguration& dif_conf
 	if (select_policy_set(std::string(), ps_name) != 0) {
 		throw rina::Exception("Cannot create Flow Allocator policy-set");
 	}
-
-	//Create QoS cubes RIB objects
-	std::list<rina::QoSCube*>::const_iterator it;
-	std::stringstream ss;
-	const std::list<rina::QoSCube*>& cubes = dif_configuration
-		.efcp_configuration_.qos_cubes_;
-	for (it = cubes.begin(); it != cubes.end(); ++it) {
-		try {
-			ss << QoSCubeRIBObject::object_name_prefix
-			   << (*it)->id_;
-			rina::rib::RIBObj * nrobj = new QoSCubeRIBObject(*it);
-			rib_daemon_->addObjRIB(ss.str(), &nrobj);
-		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Problems creating RIB object: %s",
-					e.what());
-		}
-		ss.str(std::string());
-		ss.clear();
-	}
 }
 
 void FlowAllocator::populateRIB()
@@ -214,9 +138,6 @@ void FlowAllocator::populateRIB()
 	rina::rib::RIBObj* tmp;
 
 	try {
-		tmp = new QoSCubesRIBObject(ipcp);
-		rib_daemon_->addObjRIB(QoSCubesRIBObject::object_name, &tmp);
-
 		tmp = new FlowsRIBObject(ipcp);
 		rib_daemon_->addObjRIB(FlowsRIBObject::object_name, &tmp);
 

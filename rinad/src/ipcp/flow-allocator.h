@@ -171,45 +171,6 @@ private:
 	IFlowAllocator * flow_allocator_;
 };
 
-class QoSCubeRIBObject: public rina::rib::RIBObj {
-public:
-	QoSCubeRIBObject(rina::QoSCube* cube);
-	const std::string get_displayable_value() const;
-
-	const std::string& get_class() const {
-		return class_name;
-	};
-
-	const static std::string class_name;
-	const static std::string object_name_prefix;
-
-private:
-	rina::QoSCube * qos_cube;
-
-};
-
-/// Representation of a set of QoS cubes in the RIB
-class QoSCubesRIBObject: public IPCPRIBObj {
-public:
-	QoSCubesRIBObject(IPCProcess * ipc_process);
-	const std::string& get_class() const {
-		return class_name;
-	};
-
-	//Create
-	void create(const rina::cdap_rib::con_handle_t &con,
-		    const std::string& fqn,
-		    const std::string& class_,
-		    const rina::cdap_rib::filt_info_t &filt,
-		    const int invoke_id,
-		    const rina::ser_obj_t &obj_req,
-		    rina::ser_obj_t &obj_reply,
-		    rina::cdap_rib::res_info_t& res);
-
-	const static std::string class_name;
-	const static std::string object_name;
-};
-
 /// Implementation of the Flow Allocator component
 class FlowAllocator: public IFlowAllocator {
 public:
@@ -233,7 +194,6 @@ public:
 	void removeFlowAllocatorInstance(int portId);
 
         // Plugin support
-	std::list<rina::QoSCube*> getQoSCubes();
         Flow * createFlow() { return new Flow(); }
         void destroyFlow(Flow *flow) { if (flow) delete flow; }
 

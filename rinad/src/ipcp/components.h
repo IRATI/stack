@@ -189,7 +189,6 @@ public:
 	virtual void removeFlowAllocatorInstance(int portId) = 0;
 
         // Plugin support
-	virtual std::list<rina::QoSCube*> getQoSCubes() = 0;
 	virtual Flow * createFlow() = 0;
 	virtual void destroyFlow(Flow *) = 0;
 };
@@ -353,6 +352,7 @@ public:
 			pduft_gen_ps(NULL){ };
 	virtual ~IResourceAllocator(){};
 	virtual INMinusOneFlowManager * get_n_minus_one_flow_manager() const = 0;
+	virtual std::list<rina::QoSCube*> getQoSCubes() = 0;
 	int set_pduft_gen_policy_set(const std::string& name);
 
 	IPDUFTGeneratorPs * pduft_gen_ps;
