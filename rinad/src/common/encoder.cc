@@ -664,7 +664,7 @@ void QoSCubeListEncoder::encodePointers(const std::list<rina::QoSCube*> &obj,
 {
 	rina::messages::qosCubes_t gpb;
 
-	for (std::list<rina::QoSCub*>::const_iterator it = obj.begin();
+	for (std::list<rina::QoSCube*>::const_iterator it = obj.begin();
 		it != obj.end(); ++it) {
 		rina::messages::qosCube_t *gpb_cube;
 		gpb_cube = gpb.add_qoscube();
