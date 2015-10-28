@@ -349,7 +349,7 @@ public:
 		    rina::cdap_rib::res_info_t& res);
 
 	const static std::string class_name;
-	const static std::string object_name;_;
+	const static std::string object_name;
 };
 } //namespace rinad
 

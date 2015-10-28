@@ -37,7 +37,7 @@ public:
         const std::list<rina::Neighbor*> get_neighbors() const;
         const IPCProcessOperationalState& get_operational_state() const;
         void set_operational_state(const IPCProcessOperationalState& operational_state);
-        const rina::DIFInformation& get_dif_information() const;
+        rina::DIFInformation& get_dif_information();
         void set_dif_information(const rina::DIFInformation& dif_information);
         unsigned int get_address() const;
         void set_address(unsigned int address);

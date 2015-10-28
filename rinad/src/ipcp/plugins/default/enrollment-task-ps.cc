@@ -27,6 +27,9 @@
 
 #include "ipcp/ipc-process.h"
 #include "ipcp/enrollment-task.h"
+#include "ipcp/flow-allocator.h"
+#include "ipcp/namespace-manager.h"
+#include "ipcp/resource-allocator.h"
 
 namespace rinad {
 
@@ -869,7 +872,7 @@ private:
 	/// @param result the error code
 	/// @param resultReason the reason of the bad result
 	/// @param requestMessage the received M_START enrollment message
-	void sendNegativeStartResponseAndAbortEnrollment(int result,
+	void sendNegativeStartResponseAndAbortEnrollment(rina::cdap_rib::res_code_t result,
 							 const std::string&
 							 resultReason,
 							 int invoke_id);
@@ -1052,7 +1055,7 @@ void EnrollerStateMachine::authentication_successful()
 	}
 }
 
-void EnrollerStateMachine::sendNegativeStartResponseAndAbortEnrollment(int result,
+void EnrollerStateMachine::sendNegativeStartResponseAndAbortEnrollment(rina::cdap_rib::res_code_t result,
 								       const std::string&
 								       resultReason,
 								       int invoke_id)
@@ -1190,7 +1193,9 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest& eiRequest,
 			}
 		}catch (rina::Exception &e) {
 			LOG_IPCP_ERR("%s", e.what());
-			sendNegativeStartResponseAndAbortEnrollment(-1, std::string(e.what()), invoke_id);
+			sendNegativeStartResponseAndAbortEnrollment(rina::cdap_rib::CDAP_ERROR,
+								    std::string(e.what()),
+								    invoke_id);
 			return;
 		}
 	}
@@ -1200,7 +1205,9 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest& eiRequest,
 				remote_peer_->name_.processInstance);
 
 		if (address == 0){
-			sendNegativeStartResponseAndAbortEnrollment(-1, "Could not assign a valid address", invoke_id);
+			sendNegativeStartResponseAndAbortEnrollment(rina::cdap_rib::CDAP_ERROR,
+								    "Could not assign a valid address",
+								    invoke_id);
 			return;
 		}
 
@@ -1229,7 +1236,9 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest& eiRequest,
 		remote_peer_->address_ = eiRequest.address_;
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems sending CDAP message: %s", e.what());
-		sendNegativeStartResponseAndAbortEnrollment(-1, std::string(e.what()), invoke_id);
+		sendNegativeStartResponseAndAbortEnrollment(rina::cdap_rib::CDAP_ERROR,
+							    std::string(e.what()),
+							    invoke_id);
 		return;
 	}
 
@@ -1257,7 +1266,9 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest& eiRequest,
 						     this);
 	} catch(rina::Exception &e) {
 		LOG_IPCP_ERR("Problems sending CDAP message: %s", e.what());
-		sendNegativeStartResponseAndAbortEnrollment(-1, std::string(e.what()), invoke_id);
+		sendNegativeStartResponseAndAbortEnrollment(rina::cdap_rib::CDAP_ERROR,
+							    std::string(e.what()),
+							    invoke_id);
 		return;
 	}
 
