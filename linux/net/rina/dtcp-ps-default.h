@@ -32,34 +32,26 @@
 
 #include "dtcp-ps.h"
 
-int
-common_lost_control_pdu(struct dtcp_ps * ps);
+int default_lost_control_pdu(struct dtcp_ps * ps);
 
-int common_rcvr_ack(struct dtcp_ps * instance, const struct pci * pci);
+#ifdef CONFIG_RINA_DTCP_RCVR_ACK
+int default_rcvr_ack(struct dtcp_ps * ps, const struct pci * pci);
+#endif /* CONFIG_RINA_DTCP_RCVR_ACK */
 
-int common_rcvr_ack_atimer(struct dtcp_ps * instance, const struct pci * pci);
-
-int
-common_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num);
-
-int
-common_sending_ack(struct dtcp_ps * ps, seq_num_t seq);
-
-int
-common_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci);
-
-int
-common_flow_control_overrun(struct dtcp_ps * instance, struct pdu * pdu);
-
-int
-common_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci);
-
-int
-common_rate_reduction(struct dtcp_ps * ps);
-int
-common_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn);
-
-int dtcp_ps_common_set_policy_set_param(struct ps_base * bps,
-                                        const char    * name,
-                                        const char    * value);
+#ifdef CONFIG_RINA_DTCP_RCVR_ACK_ATIMER
+int default_rcvr_ack_atimer(struct dtcp_ps * ps, const struct pci * pci);
 #endif
+
+int default_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num);
+
+int default_sending_ack(struct dtcp_ps * ps, seq_num_t seq);
+
+int default_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci);
+
+int default_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci);
+
+int default_rate_reduction(struct dtcp_ps * ps);
+
+int default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn);
+
+#endif /* RINA_DTCP_PS_COMMON_H */

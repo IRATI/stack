@@ -66,8 +66,8 @@ const std::string QoSCubeRIBObject::get_displayable_value() const
 }
 
 //Class QoS Cube Set RIB Object
-const std::string NeighborsRIBObj::class_name = "QoSCubes";
-const std::string NeighborsRIBObj::object_name = "/resalloc/qoscubes";
+const std::string QoSCubesRIBObject::class_name = "QoSCubes";
+const std::string QoSCubesRIBObject::object_name = "/resalloc/qoscubes";
 
 QoSCubesRIBObject::QoSCubesRIBObject(IPCProcess * ipc_process)
 	: IPCPRIBObj(ipc_process, class_name)
@@ -106,7 +106,7 @@ void NMinusOneFlowManager::set_ipc_process(IPCProcess * ipc_process)
 {
 	app = ipc_process;
 	ipc_process_ = ipc_process;
-	rib_daemon_ = ipc_process->rib_daemon_;
+	rib_daemon_ = ipc_process->rib_daemon_->getProxy();
 	event_manager_ = ipc_process->internal_event_manager_;
 	flow_acceptor_ = new IPCPFlowAcceptor(ipc_process_);
 	set_flow_acceptor(flow_acceptor_);
@@ -180,7 +180,8 @@ std::list<int> NMinusOneFlowManager::getNMinusOneFlowsToNeighbour(unsigned int a
 }
 
 int NMinusOneFlowManager::getManagementFlowToNeighbour(unsigned int address) {
-	const std::list<rina::Neighbor*> neighbors = ipc_process_->get_neighbors();
+	const std::list<rina::Neighbor*> neighbors =
+			ipc_process_->enrollment_task_->get_neighbor_pointers();
 	for (std::list<rina::Neighbor*>::const_iterator it = neighbors.begin();
 			it != neighbors.end(); ++it) {
 		if ((*it)->address_ == address) {
@@ -309,14 +310,14 @@ INMinusOneFlowManager * ResourceAllocator::get_n_minus_one_flow_manager() const 
 
 std::list<rina::QoSCube*> ResourceAllocator::getQoSCubes()
 {
-	rina::ScopedLock(lock);
+	rina::ScopedLock g(lock);
 	return ipcp->get_dif_information().dif_configuration_.efcp_configuration_.qos_cubes_;
 }
 
 
 void ResourceAllocator::addQoSCube(const rina::QoSCube& cube)
 {
-	rina::ScopedLock(lock);
+	rina::ScopedLock g(lock);
 
 	rina::QoSCube * qos_cube;
 	std::list<rina::QoSCube*> cubes =

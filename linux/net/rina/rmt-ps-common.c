@@ -220,27 +220,3 @@ int common_rmt_scheduling_policy_rx(struct rmt_ps *ps,
 	return 0;
 }
 EXPORT_SYMBOL(common_rmt_scheduling_policy_rx);
-
-int rmt_ps_common_set_policy_set_param(struct ps_base *bps,
-				       const char *name,
-				       const char *value)
-{
-	struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
-
-	(void) ps;
-
-	if (!name) {
-		LOG_ERR("Null parameter name");
-		return -1;
-	}
-
-	if (!value) {
-		LOG_ERR("Null parameter value");
-		return -1;
-	}
-
-	LOG_ERR("No such parameter to set");
-
-	return -1;
-}
-EXPORT_SYMBOL(rmt_ps_common_set_policy_set_param);

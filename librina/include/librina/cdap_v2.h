@@ -314,7 +314,7 @@ public:
 	///
 	/// Process an incoming CDAP message
 	///
-	virtual void process_message(ser_obj_t &message,
+	virtual void process_message(const ser_obj_t &message,
 				     unsigned int port,
 				     cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT) = 0;
 
@@ -435,7 +435,7 @@ class CDAPIOHandler {
 public:
 	CDAPIOHandler() : manager_(0), callback_(0) {};
 	virtual ~CDAPIOHandler(){};
-	virtual void process_message(ser_obj_t &message,
+	virtual void process_message(const ser_obj_t &message,
 				     unsigned int port,
 				     cdap_rib::cdap_dest_t cdap_dest) = 0;
 	virtual void send(const cdap_m_t *m_sent,

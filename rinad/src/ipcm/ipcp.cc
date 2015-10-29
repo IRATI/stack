@@ -452,7 +452,7 @@ void IPCMIPCProcess::pluginLoad(const std::string& name, bool load,
 void IPCMIPCProcess::forwardCDAPMessage(const rina::cdap::CDAPMessage& msg,
 					unsigned int opaque)
 {
-	rina::ser_obj_t * encoded_msg;
+	const rina::ser_obj_t * encoded_msg;
 
 	encoded_msg = rina::cdap::getProvider()->get_session_manager()->encodeCDAPMessage(msg);
 
