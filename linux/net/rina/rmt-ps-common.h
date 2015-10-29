@@ -50,8 +50,5 @@ struct pdu *common_rmt_next_scheduled_policy_tx(struct rmt_ps *ps,
 int common_rmt_scheduling_policy_rx(struct rmt_ps *ps,
 				    struct rmt_n1_port *n1_port,
 				    struct sdu *sdu);
-/* FIXME: This name should be common_X as well */
-int rmt_ps_common_set_policy_set_param(struct ps_base *bps,
-				       const char *name,
-				       const char *value);
+
 #endif

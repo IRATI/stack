@@ -29,6 +29,28 @@
 #include "ps-factory.h"
 #include "debug.h"
 
+static int
+default_set_policy_set_param(struct ps_base * bps,
+			     const char    * name,
+			     const char    * value)
+{
+	(void) bps;
+
+        if (!name) {
+                LOG_ERR("Null parameter name");
+                return -1;
+        }
+
+        if (!value) {
+                LOG_ERR("Null parameter value");
+                return -1;
+        }
+
+        LOG_ERR("No such parameter to set");
+
+        return -1;
+}
+
 int ps_publish(struct policy_set_list * list,
                struct ps_factory * factory)
 {
@@ -109,56 +131,101 @@ void rina_component_init(struct rina_component * comp)
         comp->ps_factory = NULL;
 }
 
-int base_select_policy_set(struct rina_component * comp,
-                           struct policy_set_list *list,
-                           const string_t * name)
+void base_select_policy_set_start(struct rina_component * comp,
+                                  struct ps_select_transaction *trans,
+                                  struct policy_set_list *list,
+                                  const string_t * name)
 {
-        struct ps_base *candidate_ps = NULL;
-        struct ps_base *old_ps;
-        struct ps_factory *candidate_ps_factory = NULL;
+        struct ps_factory *candidate_ps_factory;
+
+        trans->state = PS_SEL_TRANS_ABORTED;
+        trans->candidate_ps = NULL;
+        trans->candidate_ps_factory = NULL;
 
         if (!name) {
                 LOG_ERR("NULL name");
-                return -1;
+                return;
         }
 
         candidate_ps_factory = ps_lookup(list, name);
         if (!candidate_ps_factory) {
                 LOG_ERR("No policy-set '%s' published", name);
-                return -1;
+                return;
         }
 
+        /* Hold the mutex until transaction completes. */
         mutex_lock(&comp->ps_lock);
 
         if (candidate_ps_factory == comp->ps_factory) {
-                mutex_unlock(&comp->ps_lock);
+                trans->state = PS_SEL_TRANS_COMMITTED;
                 LOG_INFO("Policy-set '%s' already selected", name);
-                return 0;
+
+                return;
         }
 
         /* Take a reference to the plugin module, to prevent
          * rmmodding. */
         if (!try_module_get(candidate_ps_factory->owner)) {
-                mutex_unlock(&comp->ps_lock);
                 LOG_ERR("Module %p is not alive as it should",
                         candidate_ps_factory->owner);
-                return -1;
+                return;
         }
 
         /* Instantiate the new policy set. */
-        candidate_ps = candidate_ps_factory->create(comp);
-        if (!candidate_ps) {
+        trans->candidate_ps = candidate_ps_factory->create(comp);
+        if (!trans->candidate_ps) {
                 module_put(candidate_ps_factory->owner);
-                mutex_unlock(&comp->ps_lock);
                 LOG_ERR("Policy-set instantiation failed");
-                return -1;
+
+                return;
         }
+
+	/* Fill in default set_policy_set_param, if missing. */
+	if (!trans->candidate_ps->set_policy_set_param) {
+		trans->candidate_ps->set_policy_set_param =
+					default_set_policy_set_param;
+	}
+
+        trans->state = PS_SEL_TRANS_PENDING;
+        trans->candidate_ps_factory = candidate_ps_factory;
+}
+
+void base_select_policy_set_finish(struct rina_component * comp,
+                                   struct ps_select_transaction * trans)
+{
+        struct ps_base *old_ps;
+
+        if (trans->state != PS_SEL_TRANS_PENDING) {
+                mutex_unlock(&comp->ps_lock);
+
+                if (trans->state == PS_SEL_TRANS_COMMITTED) {
+                        /* Transaction already committed during the first
+                         * phase. */
+                        BUG_ON(trans->candidate_ps_factory ||
+                               trans->candidate_ps);
+                        return;
+                }
+
+                /* Transaction aborted during the first phase or was aborted
+                 * by the caller. Clean up if needed. */
+                if (trans->candidate_ps) {
+                        BUG_ON(!trans->candidate_ps_factory);
+                        trans->candidate_ps_factory->
+                                destroy(trans->candidate_ps);
+                        trans->candidate_ps = NULL;
+                        trans->candidate_ps_factory = NULL;
+                }
+
+                return;
+        }
+
+        BUG_ON(!trans->candidate_ps || !trans->candidate_ps_factory);
 
         /* Save old RCU-protected pointer. */
         old_ps = comp->ps;
 
         /* Removal old pointer and replace it with a new one. */
-        rcu_assign_pointer(comp->ps, candidate_ps);
+        rcu_assign_pointer(comp->ps, trans->candidate_ps);
         if (old_ps) {
                 /* Wait for a grace period. */
                 synchronize_rcu();
@@ -168,11 +235,13 @@ int base_select_policy_set(struct rina_component * comp,
                 module_put(comp->ps_factory->owner);
         }
 
-        comp->ps_factory = candidate_ps_factory;
+        comp->ps_factory = trans->candidate_ps_factory;
 
         mutex_unlock(&comp->ps_lock);
 
-        return 0;
+        trans->state = PS_SEL_TRANS_COMMITTED;
+
+        return;
 }
 
 int base_set_policy_set_param(struct rina_component *comp,
@@ -220,8 +289,8 @@ void rina_component_fini(struct rina_component * comp)
         mutex_unlock(&comp->ps_lock);
 }
 
-void parse_component_id(const string_t *path, size_t *cmplen,
-                               size_t *offset)
+void ps_factory_parse_component_id(const string_t *path, size_t *cmplen,
+                                   size_t *offset)
 {
         const string_t *dot = strchr(path, '.');
 
@@ -235,5 +304,11 @@ void parse_component_id(const string_t *path, size_t *cmplen,
                 (*offset)++;
         }
 }
-EXPORT_SYMBOL(parse_component_id);
+EXPORT_SYMBOL(ps_factory_parse_component_id);
+
+void
+ps_factory_nop_policy(void)
+{
+}
+EXPORT_SYMBOL(ps_factory_nop_policy);
 

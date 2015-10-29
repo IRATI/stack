@@ -28,6 +28,7 @@
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
+#include "dtp-ps-default.h"
 #include "dtp.h"
 #include "dt.h"
 #include "dt-utils.h"
@@ -811,35 +812,55 @@ int dtp_select_policy_set(struct dtp * dtp,
                           const string_t * path,
                           const string_t * name)
 {
+        struct ps_select_transaction trans;
         struct dtp_config * cfg = dtp->cfg;
-        struct dtp_ps * ps;
-        int ret;
 
         if (path && strcmp(path, "")) {
                 LOG_ERR("This component has no selectable subcomponents");
                 return -1;
         }
 
-        ret = base_select_policy_set(&dtp->base, &policy_sets, name);
-        if (ret) {
-                return ret;
+        base_select_policy_set_start(&dtp->base, &trans, &policy_sets, name);
+
+        if (trans.state == PS_SEL_TRANS_PENDING) {
+                struct dtp_ps * ps;
+
+                /* Copy the connection parameters to the policy-set. From now
+                 * on these connection parameters must be accessed by the DTP
+                 * policy set, and not from the struct connection. */
+                ps = container_of(trans.candidate_ps, struct dtp_ps, base);
+                ps->dtcp_present        = dtp_conf_dtcp_present(cfg);
+                ps->seq_num_ro_th       = dtp_conf_seq_num_ro_th(cfg);
+                ps->initial_a_timer     = dtp_conf_initial_a_timer(cfg);
+                ps->partial_delivery    = dtp_conf_partial_del(cfg);
+                ps->incomplete_delivery = dtp_conf_incomplete_del(cfg);
+                ps->in_order_delivery   = dtp_conf_in_order_del(cfg);
+                ps->max_sdu_gap         = dtp_conf_max_sdu_gap(cfg);
+
+                /* Fill in default policies. */
+                if (!ps->transmission_control) {
+                        ps->transmission_control = default_transmission_control;
+                }
+                if (!ps->closed_window) {
+                        ps->closed_window = default_closed_window;
+                }
+                if (!ps->flow_control_overrun) {
+                        ps->flow_control_overrun = default_flow_control_overrun;
+                }
+                if (!ps->initial_sequence_number) {
+                        ps->initial_sequence_number = default_initial_sequence_number;
+                }
+                if (!ps->receiver_inactivity_timer) {
+                        ps->receiver_inactivity_timer = default_receiver_inactivity_timer;
+                }
+                if (!ps->sender_inactivity_timer) {
+                        ps->sender_inactivity_timer = default_sender_inactivity_timer;
+                }
         }
 
-        /* Copy the connection parameter to the policy-set. From now on
-         * these connection parameters must be accessed by the DTP policy set,
-         * and not from the struct connection. */
-        mutex_lock(&dtp->base.ps_lock);
-        ps = container_of(dtp->base.ps, struct dtp_ps, base);
-        ps->dtcp_present        = dtp_conf_dtcp_present(cfg);
-        ps->seq_num_ro_th       = dtp_conf_seq_num_ro_th(cfg);
-        ps->initial_a_timer     = dtp_conf_initial_a_timer(cfg);
-        ps->partial_delivery    = dtp_conf_partial_del(cfg);
-        ps->incomplete_delivery = dtp_conf_incomplete_del(cfg);
-        ps->in_order_delivery   = dtp_conf_in_order_del(cfg);
-        ps->max_sdu_gap         = dtp_conf_max_sdu_gap(cfg);
-        mutex_unlock(&dtp->base.ps_lock);
+        base_select_policy_set_finish(&dtp->base, &trans);
 
-        return 0;
+        return trans.state == PS_SEL_TRANS_COMMITTED ? 0 : -1;
 }
 EXPORT_SYMBOL(dtp_select_policy_set);
 

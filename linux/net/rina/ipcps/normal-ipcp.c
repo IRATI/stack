@@ -987,7 +987,7 @@ efcp_container_parse_component_id(struct ipcp_instance_data * data,
                 return NULL;
         }
 
-        parse_component_id(*path, &cmplen, &offset);
+        ps_factory_parse_component_id(*path, &cmplen, &offset);
         if (cmplen > sizeof(numbuf)-1) {
                 LOG_ERR("Invalid cep-id' %s'", *path);
                 return NULL;
@@ -1030,12 +1030,12 @@ static int efcp_select_policy_set(struct efcp * efcp,
         size_t cmplen;
         size_t offset;
 
-        parse_component_id(path, &cmplen, &offset);
+        ps_factory_parse_component_id(path, &cmplen, &offset);
 
-        if (strncmp(path, "dtp", cmplen) == 0) {
+        if (cmplen && strncmp(path, "dtp", cmplen) == 0) {
                 return dtp_select_policy_set(dt_dtp(efcp_dt(efcp)), path + offset,
                                              ps_name);
-        } else if (strncmp(path, "dtcp", cmplen) == 0 && dt_dtcp(efcp_dt(efcp))) {
+        } else if (cmplen && strncmp(path, "dtcp", cmplen) == 0 && dt_dtcp(efcp_dt(efcp))) {
                 return dtcp_select_policy_set(dt_dtcp(efcp_dt(efcp)), path + offset,
                                              ps_name);
         }
@@ -1071,12 +1071,12 @@ static int normal_select_policy_set(struct ipcp_instance_data *data,
         size_t cmplen;
         size_t offset;
 
-        parse_component_id(path, &cmplen, &offset);
+        ps_factory_parse_component_id(path, &cmplen, &offset);
 
-        if (strncmp(path, "rmt", cmplen) == 0) {
+        if (cmplen && strncmp(path, "rmt", cmplen) == 0) {
                 return rmt_select_policy_set(data->rmt, path + offset,
                                              ps_name);
-        } else if (strncmp(path, "efcp", cmplen) == 0) {
+        } else if (cmplen && strncmp(path, "efcp", cmplen) == 0) {
                 return efcp_container_select_policy_set(data->efcpc,
                                                 path + offset, ps_name, data);
         } else {
@@ -1095,7 +1095,7 @@ static int efcp_set_policy_set_param(struct efcp * efcp,
         size_t cmplen;
         size_t offset;
 
-        parse_component_id(path, &cmplen, &offset);
+        ps_factory_parse_component_id(path, &cmplen, &offset);
 
         if (strncmp(path, "dtp", cmplen) == 0) {
                 return dtp_set_policy_set_param(dt_dtp(efcp_dt(efcp)),
@@ -1137,7 +1137,7 @@ static int normal_set_policy_set_param(struct ipcp_instance_data * data,
         size_t cmplen;
         size_t offset;
 
-        parse_component_id(path, &cmplen, &offset);
+        ps_factory_parse_component_id(path, &cmplen, &offset);
 
         if (strncmp(path, "rmt", cmplen) == 0) {
                 return rmt_set_policy_set_param(data->rmt, path + offset,

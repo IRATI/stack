@@ -455,13 +455,12 @@ rmt_ps_red_create(struct rina_component * component)
 		red_rmt_ps_set_policy_set_param(&ps->base,
 						policy_param_name(ps_param),
 						policy_param_value(ps_param));
-	
 
-        ps->max_q_policy_tx = NULL;
-        ps->max_q_policy_rx = NULL;
-        ps->rmt_q_monitor_policy_tx_enq = NULL;
-        ps->rmt_q_monitor_policy_tx_deq = NULL;
-        ps->rmt_q_monitor_policy_rx = NULL;
+        ps->max_q_policy_tx = NULL; /* default (== NULL) */
+        ps->max_q_policy_rx = NULL; /* default (== NULL) */
+        ps->rmt_q_monitor_policy_tx_enq = NULL; /* default (== NULL) */
+        ps->rmt_q_monitor_policy_tx_deq = NULL; /* default (== NULL) */
+        ps->rmt_q_monitor_policy_rx = NULL; /* default (== NULL) */
         ps->rmt_next_scheduled_policy_tx = red_rmt_next_scheduled_policy_tx;
         ps->rmt_enqueue_scheduling_policy_tx = red_rmt_enqueue_scheduling_policy_tx;
 	ps->rmt_requeue_scheduling_policy_tx = red_rmt_enqueue_scheduling_policy_tx;

@@ -32,21 +32,21 @@
 #include "dtcp-ps.h"
 #include "pff-ps.h"
 
-extern struct ps_factory rmt_factory;
-extern struct ps_factory dtp_factory;
-extern struct ps_factory dtcp_factory;
-extern struct ps_factory pff_factory;
+extern struct ps_factory default_rmt_ps_factory;
+extern struct ps_factory default_dtp_ps_factory;
+extern struct ps_factory default_dtcp_ps_factory;
+extern struct ps_factory default_pff_ps_factory;
 
 static int __init mod_init(void)
 {
         int ret;
 
-        strcpy(rmt_factory.name,  RINA_PS_DEFAULT_NAME);
-        strcpy(dtp_factory.name,  RINA_PS_DEFAULT_NAME);
-        strcpy(dtcp_factory.name, RINA_PS_DEFAULT_NAME);
-        strcpy(pff_factory.name, RINA_PS_DEFAULT_NAME);
+        strcpy(default_rmt_ps_factory.name, RINA_PS_DEFAULT_NAME);
+        strcpy(default_dtp_ps_factory.name, RINA_PS_DEFAULT_NAME);
+        strcpy(default_dtcp_ps_factory.name, RINA_PS_DEFAULT_NAME);
+        strcpy(default_pff_ps_factory.name, RINA_PS_DEFAULT_NAME);
 
-        ret = rmt_ps_publish(&rmt_factory);
+        ret = rmt_ps_publish(&default_rmt_ps_factory);
         if (ret) {
                 LOG_ERR("Failed to publish RMT policy set factory");
                 return -1;
@@ -54,7 +54,7 @@ static int __init mod_init(void)
 
         LOG_INFO("RMT default policy set loaded successfully");
 
-        ret = dtp_ps_publish(&dtp_factory);
+        ret = dtp_ps_publish(&default_dtp_ps_factory);
         if (ret) {
                 LOG_ERR("Failed to publish DTP policy set factory");
                 return -1;
@@ -62,7 +62,7 @@ static int __init mod_init(void)
 
         LOG_INFO("DTP default policy set loaded successfully");
 
-        ret = dtcp_ps_publish(&dtcp_factory);
+        ret = dtcp_ps_publish(&default_dtcp_ps_factory);
         if (ret) {
                 LOG_ERR("Failed to publish DTCP policy set factory");
                 return -1;
@@ -70,7 +70,7 @@ static int __init mod_init(void)
 
         LOG_INFO("DTCP default policy set loaded successfully");
 
-        ret = pff_ps_publish(&pff_factory);
+        ret = pff_ps_publish(&default_pff_ps_factory);
         if (ret) {
                 LOG_ERR("Failed to publish PFF policy set factory");
                 return -1;
