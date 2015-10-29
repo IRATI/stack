@@ -153,12 +153,12 @@ unsigned int NamespaceManagerPs::getAddressPrefix(const std::string& process_nam
 
 bool NamespaceManagerPs::isAddressInUse(unsigned int address,
 		const std::string& ipcp_name) {
-	std::list<rina::Neighbor * >::const_iterator it;
-	std::list<rina::Neighbor *> neighbors = nsm->ipcp->get_neighbors();
+	std::list<rina::Neighbor> neighbors = nsm->ipcp->get_neighbors();
 
-	for (it = neighbors.begin(); it != neighbors.end(); ++it) {
-		if ((*it)->address_ == address) {
-			if ((*it)->name_.processName.compare(ipcp_name) == 0) {
+	for (std::list<rina::Neighbor>::const_iterator it = neighbors.begin();
+		it != neighbors.end(); ++it) {
+		if (it->address_ == address) {
+			if (it->name_.processName.compare(ipcp_name) == 0) {
 				return false;
 			} else {
 				return true;
