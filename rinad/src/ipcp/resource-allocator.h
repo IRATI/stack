@@ -65,6 +65,42 @@ public:
 	const static std::string object_name;
 };
 
+class NextHopTEntryRIBObj: public rina::rib::RIBObj {
+public:
+	NextHopTEntryRIBObj(rina::RoutingTableEntry* entry);
+	const std::string get_displayable_value() const;
+
+	const std::string& get_class() const {
+		return class_name;
+	};
+
+	const static std::string parent_class_name;
+	const static std::string parent_object_name;
+	const static std::string class_name;
+	const static std::string object_name_prefix;
+
+private:
+	rina::RoutingTableEntry * rt_entry;
+};
+
+class PDUFTEntryRIBObj: public rina::rib::RIBObj {
+public:
+	PDUFTEntryRIBObj(rina::PDUForwardingTableEntry* entry);
+	const std::string get_displayable_value() const;
+
+	const std::string& get_class() const {
+		return class_name;
+	};
+
+	const static std::string parent_class_name;
+	const static std::string parent_object_name;
+	const static std::string class_name;
+	const static std::string object_name_prefix;
+
+private:
+	rina::PDUForwardingTableEntry * ft_entry;
+};
+
 class NMinusOneFlowManager: public INMinusOneFlowManager {
 public:
 	NMinusOneFlowManager();
@@ -84,11 +120,11 @@ private:
 
 class IPCPFlowAcceptor : public rina::FlowAcceptor {
 public:
-		IPCPFlowAcceptor(IPCProcess * ipcp) : ipcp_(ipcp) { };
-		~IPCPFlowAcceptor() { };
-		bool accept_flow(const rina::FlowRequestEvent& event);
+	IPCPFlowAcceptor(IPCProcess * ipcp) : ipcp_(ipcp) { };
+	~IPCPFlowAcceptor() { };
+	bool accept_flow(const rina::FlowRequestEvent& event);
 
-		IPCProcess * ipcp_;
+	IPCProcess * ipcp_;
 };
 
 class ResourceAllocator: public IResourceAllocator {
@@ -101,6 +137,14 @@ public:
 	std::list<rina::QoSCube*> getQoSCubes();
 	void addQoSCube(const rina::QoSCube& cube);
 
+	std::list<rina::PDUForwardingTableEntry> get_pduft_entries();
+	/// This operation takes ownership of the entries
+	void set_pduft_entries(const std::list<rina::PDUForwardingTableEntry*>& pduft);
+
+	std::list<rina::RoutingTableEntry> get_rt_entries();
+	/// This operation takes ownership of the entries
+	void set_rt_entries(const std::list<rina::RoutingTableEntry*>& rt);
+
 private:
 	/// Create initial RIB objects
 	void populateRIB();
@@ -108,6 +152,8 @@ private:
 	INMinusOneFlowManager * n_minus_one_flow_manager_;
 	IPCPRIBDaemon * rib_daemon_;
 	rina::Lockable lock;
+	rina::ThreadSafeMapOfPointers<std::string, rina::PDUForwardingTableEntry> pduft;
+	rina::ThreadSafeMapOfPointers<std::string, rina::RoutingTableEntry> rt;
 };
 
 } //namespace rinad
