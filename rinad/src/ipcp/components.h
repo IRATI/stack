@@ -356,6 +356,14 @@ public:
 	int set_pduft_gen_policy_set(const std::string& name);
 	virtual void addQoSCube(const rina::QoSCube& cube) = 0;
 
+	virtual std::list<rina::PDUForwardingTableEntry> get_pduft_entries() = 0;
+	/// This operation takes ownership of the entries
+	virtual void set_pduft_entries(const std::list<rina::PDUForwardingTableEntry*>& pduft) = 0;
+
+	virtual std::list<rina::RoutingTableEntry> get_rt_entries() = 0;
+	/// This operation takes ownership of the entries
+	virtual void set_rt_entries(const std::list<rina::RoutingTableEntry*>& rt) = 0;
+
 	IPDUFTGeneratorPs * pduft_gen_ps;
 };
 

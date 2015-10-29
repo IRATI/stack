@@ -87,6 +87,57 @@ void QoSCubesRIBObject::create(const rina::cdap_rib::con_handle_t &con,
 	LOG_IPCP_ERR("Missing code");
 }
 
+// Class NextHopTEntryRIBObj
+const std::string NextHopTEntryRIBObj::parent_class_name = "NextHopTable";
+const std::string NextHopTEntryRIBObj::parent_object_name = "/resalloc/nhopt";
+const std::string NextHopTEntryRIBObj::class_name = "NextHopTableEntry";
+const std::string NextHopTEntryRIBObj::object_name_prefix = "/resalloc/nhopt/key=";
+
+NextHopTEntryRIBObj::NextHopTEntryRIBObj(rina::RoutingTableEntry* entry)
+	: rina::rib::RIBObj(class_name), rt_entry(entry)
+{
+}
+
+const std::string NextHopTEntryRIBObj::get_displayable_value() const
+{
+	std::stringstream ss;
+	ss << "Destination address: " << rt_entry->address
+	   << "; QoS-id: " << rt_entry->qosId
+	   << "; Cost: " << rt_entry->cost
+	   << "; Next hop addresses: ";
+	std::list<rina::NHopAltList>::iterator it;
+	for (it = rt_entry->nextHopAddresses.begin(); it !=
+			rt_entry->nextHopAddresses.end(); ++it) {
+		ss << it->alts.front() << "/ ";
+	}
+	return ss.str();
+}
+
+// Class PDUFTEntryRIBObj
+const std::string PDUFTEntryRIBObj::parent_class_name = "PDUForwardingTable";
+const std::string PDUFTEntryRIBObj::parent_object_name = "/resalloc/pduft";
+const std::string PDUFTEntryRIBObj::class_name = "PDUForwardingTableEntry";
+const std::string PDUFTEntryRIBObj::object_name_prefix = "/resalloc/pduft/key=";
+
+PDUFTEntryRIBObj::PDUFTEntryRIBObj(rina::PDUForwardingTableEntry* entry)
+	: rina::rib::RIBObj(class_name), ft_entry(entry)
+{
+}
+
+const std::string PDUFTEntryRIBObj::get_displayable_value() const
+{
+	std::stringstream ss;
+	ss << "Destination address: " << ft_entry->address
+	   << "; QoS-id: " << ft_entry->qosId
+	   << "; Port-ids to be forwarded: ";
+	std::list<rina::PortIdAltlist>::iterator it;
+	for (it = ft_entry->portIdAltlists.begin(); it !=
+			ft_entry->portIdAltlists.end(); ++it) {
+		ss << it->alts.front() << "/ ";
+	}
+	return ss.str();
+}
+
 //Class NMinusOneFlowManager
 NMinusOneFlowManager::NMinusOneFlowManager()
 {
@@ -268,6 +319,12 @@ void ResourceAllocator::populateRIB()
 	try {
 		tmp = new QoSCubesRIBObject(ipcp);
 		rib_daemon_->addObjRIB(QoSCubesRIBObject::object_name, &tmp);
+
+		tmp = new rina::rib::RIBObj(NextHopTEntryRIBObj::parent_class_name);
+		rib_daemon_->addObjRIB(NextHopTEntryRIBObj::parent_object_name, &tmp);
+
+		tmp = new rina::rib::RIBObj(PDUFTEntryRIBObj::parent_class_name);
+		rib_daemon_->addObjRIB(PDUFTEntryRIBObj::parent_object_name, &tmp);
 	} catch (rina::Exception &e) {
 		LOG_ERR("Problems adding object to the RIB : %s", e.what());
 	}
@@ -304,16 +361,15 @@ void ResourceAllocator::set_dif_configuration(const rina::DIFConfiguration& dif_
 	}
 }
 
-INMinusOneFlowManager * ResourceAllocator::get_n_minus_one_flow_manager() const {
+INMinusOneFlowManager * ResourceAllocator::get_n_minus_one_flow_manager() const
+{
 	return n_minus_one_flow_manager_;
 }
 
 std::list<rina::QoSCube*> ResourceAllocator::getQoSCubes()
 {
-	rina::ScopedLock g(lock);
 	return ipcp->get_dif_information().dif_configuration_.efcp_configuration_.qos_cubes_;
 }
-
 
 void ResourceAllocator::addQoSCube(const rina::QoSCube& cube)
 {
@@ -347,6 +403,107 @@ void ResourceAllocator::addQoSCube(const rina::QoSCube& cube)
 	}
 
 	cubes.push_back(qos_cube);
+}
+
+std::list<rina::PDUForwardingTableEntry> ResourceAllocator::get_pduft_entries()
+{
+	return pduft.getCopyofentries();
+}
+
+/// This operation takes ownership of the entries
+void ResourceAllocator::set_pduft_entries(const std::list<rina::PDUForwardingTableEntry*>& pduft_entries)
+{
+	rina::ScopedLock g(lock);
+	rina::PDUForwardingTableEntry * pdufte;
+	rina::rib::RIBObj * ribObj;
+	std::string obj_name;
+	std::stringstream ss;
+
+	//1 Scrap the old entries
+	std::list<std::string> obj_names = pduft.getKeys();
+	std::list<std::string>::iterator it;
+	for (it = obj_names.begin(); it != obj_names.end(); ++it) {
+		try {
+			rib_daemon_->removeObjRIB(*it);
+		} catch (rina::Exception &e) {
+			LOG_WARN("Problems removing RIB obj: %s", e.what());
+		}
+
+		pdufte = pduft.erase(*it);
+		if (pdufte)
+			delete pdufte;
+	}
+
+	//2 Add the new entries
+	std::list<rina::PDUForwardingTableEntry*>::const_iterator it2;
+	for (it2 = pduft_entries.begin();
+			it2 != pduft_entries.end(); ++it2) {
+		ss << PDUFTEntryRIBObj::object_name_prefix;
+		ss << (*it2)->getKey();
+		obj_name = ss.str();
+		ss.str(std::string());
+		ss.clear();
+
+		try {
+			ribObj = new PDUFTEntryRIBObj(*it2);
+			rib_daemon_->addObjRIB(obj_name, &ribObj);
+		} catch (rina::Exception &e) {
+			LOG_WARN("Problems adding RIB obj: %s", e.what());
+			continue;
+		}
+
+		pduft.put(obj_name, *it2);
+	}
+}
+
+std::list<rina::RoutingTableEntry> ResourceAllocator::get_rt_entries()
+{
+	return rt.getCopyofentries();
+}
+
+void ResourceAllocator::set_rt_entries(const std::list<rina::RoutingTableEntry*>& rt_entries)
+{
+	rina::ScopedLock g(lock);
+	rina::RoutingTableEntry * rte;
+	rina::rib::RIBObj * ribObj;
+	std::string obj_name;
+	std::stringstream ss;
+
+	//1 Scrap the old entries
+	std::list<std::string> obj_names = rt.getKeys();
+	std::list<std::string>::iterator it;
+	for (it = obj_names.begin(); it != obj_names.end(); ++it) {
+		try {
+			rib_daemon_->removeObjRIB(*it);
+		} catch (rina::Exception &e) {
+			LOG_WARN("Problems removing RIB obj: %s", e.what());
+		}
+
+		rte = rt.erase(*it);
+		if (rte)
+			delete rte;
+	}
+
+	//2 Add the new entries
+	std::list<rina::RoutingTableEntry*>::const_iterator it2;
+	for (it2 = rt_entries.begin();
+			it2 != rt_entries.end(); ++it2) {
+		ss << NextHopTEntryRIBObj::object_name_prefix;
+		ss << (*it2)->getKey();
+		obj_name = ss.str();
+		ss.str(std::string());
+		ss.clear();
+
+		try {
+			ribObj = new NextHopTEntryRIBObj(*it2);
+			rib_daemon_->addObjRIB(obj_name, &ribObj);
+		} catch (rina::Exception &e) {
+			LOG_WARN("Problems adding RIB obj: %s", e.what());
+			continue;
+		}
+
+		rt.put(obj_name, *it2);
+	}
 }
 
 } //namespace rinad

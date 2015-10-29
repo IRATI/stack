@@ -812,6 +812,14 @@ RoutingTableEntry::RoutingTableEntry(){
 	qosId = 0;
 }
 
+const std::string RoutingTableEntry::getKey() const
+{
+	std::stringstream ss;
+	ss << address << "-" << qosId;
+
+	return ss.str();
+}
+
 PortIdAltlist::PortIdAltlist()
 {
 }
@@ -891,6 +899,15 @@ const std::string PDUForwardingTableEntry::toString() {
 
         return ss.str();
 }
+
+const std::string PDUForwardingTableEntry::getKey() const
+{
+	std::stringstream ss;
+	ss << address << "-" << qosId;
+
+	return ss.str();
+}
+
 
 /* CLASS READ MANAGEMENT SDU RESULT */
 ReadManagementSDUResult::ReadManagementSDUResult() {

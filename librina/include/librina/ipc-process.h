@@ -828,6 +828,7 @@ public:
 	std::list<NHopAltList> nextHopAddresses;
 
 	RoutingTableEntry();
+	const std::string getKey() const;
 };
 
 struct PortIdAltlist {
@@ -864,6 +865,7 @@ public:
         void setQosId(unsigned int qosId);
 #endif
         const std::string toString();
+        const std::string getKey() const;
 };
 
 /**
