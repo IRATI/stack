@@ -140,6 +140,9 @@ void FlowAllocator::populateRIB()
 	vers.version_ = 0x1ULL;
 
 	try {
+		tmp = new rina::rib::RIBObj("FlowAllocator");
+		rib_daemon_->addObjRIB("/fa", &tmp);
+
 		tmp = new FlowsRIBObject(ipcp, this);
 		rib_daemon_->addObjRIB(FlowsRIBObject::object_name, &tmp);
 		rib_daemon_->getProxy()->addCreateCallbackSchema(vers,

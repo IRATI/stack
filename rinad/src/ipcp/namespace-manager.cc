@@ -232,6 +232,9 @@ void NamespaceManager::populateRIB()
 	rina::rib::RIBObj* tmp;
 
 	try {
+		tmp = new rina::rib::RIBObj("NamespaceManager");
+		rib_daemon_->addObjRIB("/difmanagement/nsm", &tmp);
+
 		tmp = new WhateverCastNamesRIBObj(ipcp);
 		rib_daemon_->addObjRIB(WhateverCastNamesRIBObj::object_name, &tmp);
 

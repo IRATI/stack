@@ -267,7 +267,6 @@ public:
 	int neigh_enroll_per_ms_;
 
 private:
-	void populateRIB();
 	void subscribeToEvents();
 
 	///  If the N-1 flow with the neighbor is still allocated, request its deallocation

@@ -222,6 +222,7 @@ public:
 	void has_modified(bool modified);
 	void set_avoidport(unsigned int avoid_port);
 	void has_beingerased(bool being_erased);
+	const std::string getKey() const;
 private:
 	// The address of the IPC Process
 	unsigned int address_;
@@ -264,6 +265,9 @@ public:
 		const rina::cdap_rib::filt_info_t &filt,
 		const int invoke_id, rina::cdap_rib::res_info_t& res);
 	FlowStateObject* obj;
+
+	const static std::string clazz_name;
+	const static std::string object_name_prefix;
 private:
 	FlowStateManager *manager;
 };
@@ -288,13 +292,15 @@ public:
 	~FlowStateObjects();
 	bool addObject(FlowStateObject* object);
 	void deprecateObject(const std::string& fqn, 
-		unsigned int max_age);
+			     unsigned int max_age);
 	FlowStateObject* getObject(const std::string& fqn);
 	void setToModified();
-	void getModifiedFSOs(std::list<FlowStateObject*> result);
-	void incrementAge(unsigned int max_age, rina::Timer* timer);
+	void getModifiedFSOs(std::list<FlowStateObject*>& result);
+	void getAllFSOs(std::list<FlowStateObject*>& result);
+	void incrementAge(unsigned int max_age,
+			  rina::Timer* timer);
 	void updateObject(const std::string& fqn, 
-		unsigned int avoid_port);
+			  unsigned int avoid_port);
 	void encodeAllFSOs(rina::ser_obj_t& obj);
 private:
 	void removeObject(const std::string& 
@@ -315,14 +321,24 @@ class FlowStateRIBObjects: public rina::rib::RIBObj {
 public:
 	FlowStateRIBObjects(FlowStateObjects* new_objs, FlowStateManager *manager);
 	const std::string toString();
-	void read(const rina::cdap_rib::con_handle_t &con, const std::string& fqn,
-		const std::string& clas, const rina::cdap_rib::filt_info_t &filt,
-		const int invoke_id, rina::ser_obj_t &obj_reply, 
-		rina::cdap_rib::res_info_t& res);
-	void write(const rina::cdap_rib::con_handle_t &con, const std::string& fqn,
-		const std::string& clas, const rina::cdap_rib::filt_info_t &filt,
-		const int invoke_id, const rina::ser_obj_t &obj_req, 
-		rina::ser_obj_t &obj_reply,	rina::cdap_rib::res_info_t& res);
+	void read(const rina::cdap_rib::con_handle_t &con,
+		  const std::string& fqn,
+		  const std::string& clas,
+		  const rina::cdap_rib::filt_info_t &filt,
+		  const int invoke_id,
+		  rina::ser_obj_t &obj_reply,
+		  rina::cdap_rib::res_info_t& res);
+	void write(const rina::cdap_rib::con_handle_t &con,
+		   const std::string& fqn,
+		   const std::string& clas,
+		   const rina::cdap_rib::filt_info_t &filt,
+		   const int invoke_id,
+		   const rina::ser_obj_t &obj_req,
+		   rina::ser_obj_t &obj_reply,
+		   rina::cdap_rib::res_info_t& res);
+
+	const static std::string clazz_name;
+	const static std::string object_name;
 private:
 	FlowStateObjects *objs;
 	FlowStateManager *manager;
@@ -351,7 +367,6 @@ public:
 			unsigned int cost, int avoid_port);
 	/// Set a FSO ready for removal
 	void deprecateObject(std::string fqn);
-	// TODO implement
 	void deprecateObjectsNeighbor(unsigned int address);
 	std::map <int, std::list<FlowStateObject*> > prepareForPropagation
 	  (const std::list<rina::FlowInformation>& flows);

@@ -445,17 +445,8 @@ void IPCPRIBDaemonImpl::initialize_rib_daemon(rina::cacep::AppConHandlerInterfac
 		robj = new rina::rib::RIBObj("DIFManagement");
 		ribd->addObjRIB(rib, "/difmanagement", &robj);
 
-		robj = new rina::rib::RIBObj("DataTransfer");
-		ribd->addObjRIB(rib, "/dt", &robj);
-
-		robj = new rina::rib::RIBObj("FlowAllocator");
-		ribd->addObjRIB(rib, "/fa", &robj);
-
 		robj = new rina::rib::RIBObj("IPCManagement");
 		ribd->addObjRIB(rib, "/ipcmanagement", &robj);
-
-		robj = new rina::rib::RIBObj("ResourceAllocator");
-		ribd->addObjRIB(rib, "/resalloc", &robj);
 
 		robj = new rina::rib::RIBObj("RIBDaemon");
 		ribd->addObjRIB(rib, "/ribdaemon", &robj);

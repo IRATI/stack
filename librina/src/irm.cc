@@ -350,7 +350,7 @@ std::list<FlowInformation> IPCResourceManager::getAllNMinusOneFlowInformation() 
 
 //Class UnderlayingRegistrationRIBObjt
 const std::string UnderlayingRegistrationRIBObj::class_name = "UnderlayingRegistration";
-const std::string UnderlayingRegistrationRIBObj::object_name_prefix = "/ipcmanagement/irm/underflows/entityName=";
+const std::string UnderlayingRegistrationRIBObj::object_name_prefix = "/ipcmanagement/irm/underregs/difName=";
 const std::string UnderlayingRegistrationRIBObj::parent_class_name = "UnderlayingRegistrations";
 const std::string UnderlayingRegistrationRIBObj::parent_object_name = "/ipcmanagement/irm/underregs";
 

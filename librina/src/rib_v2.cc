@@ -1069,7 +1069,6 @@ void RIB::__validate_fqn(const std::string& fqn){
 }
 
 int64_t RIB::add_obj(const std::string& fqn, RIBObj** obj_) {
-
 	int64_t id, parent_id;
 	std::string parent_fqn = get_parent_fqn(fqn);
 
@@ -1090,6 +1089,7 @@ int64_t RIB::add_obj(const std::string& fqn, RIBObj** obj_) {
 
 	//Validate the name
 	__validate_fqn(fqn);
+	obj->fqn = fqn;
 
 	//Mutual exclusion
 	WriteScopedLock wlock(rwlock);
@@ -1104,7 +1104,7 @@ int64_t RIB::add_obj(const std::string& fqn, RIBObj** obj_) {
 	}
 
 	//Check if the object already exists
-	id = __get_obj_inst_id(fqn);
+	id = __get_obj_inst_id(obj->fqn);
 	if(id != -1){
 		LOG_ERR("Unable to add object(%p) at '%s'; an object of class '%s' already exists!",
 							obj,
@@ -1429,8 +1429,9 @@ public:
 	/// @ret The instance id of the object created
 	/// @throws eRIBNotFound, eObjExists
 	///
-	int64_t addObjRIB(const rib_handle_t& handle, const std::string& fqn,
-								RIBObj** obj);
+	int64_t addObjRIB(const rib_handle_t& handle,
+			  const std::string& fqn,
+			  RIBObj** obj);
 
 	///
 	/// Retrieve the instance ID of an object given its fully
@@ -2092,7 +2093,8 @@ void RIBDaemon::process_authentication_message(const cdap::CDAPMessage& message,
 // Object management
 
 int64_t RIBDaemon::addObjRIB(const rib_handle_t& handle,
-					const std::string& fqn, RIBObj** obj){
+			     const std::string& fqn,
+			     RIBObj** obj){
 	if(obj == NULL)
 		throw Exception();
 
@@ -2847,7 +2849,8 @@ rib_handle_t RIBDaemonProxy::get(const cdap_rib::vers_info_t& v,
 //RIB object mamangement
 
 int64_t RIBDaemonProxy::__addObjRIB(const rib_handle_t& h,
-					const std::string& fqn, RIBObj** o){
+				    const std::string& fqn,
+				    RIBObj** o){
 	return ribd->addObjRIB(h, fqn, o);
 }
 
