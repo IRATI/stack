@@ -27,11 +27,11 @@
 
 namespace rinad {
 
+class IPCPFactory;
+
 class IPCProcessImpl: public IPCProcess {
+	friend class IPCPFactory;
 public:
-        IPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,
-                        unsigned short id, unsigned int ipc_manager_port,
-                        std::string log_level, std::string log_file);
         ~IPCProcessImpl();
         unsigned short get_id();
         const std::list<rina::Neighbor> get_neighbors() const;
@@ -69,8 +69,9 @@ public:
 	void event_loop(void);
 
 private:
-        void init_cdap_session_manager();
-		void init_encoder();
+        IPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,
+                        unsigned short id, unsigned int ipc_manager_port,
+                        std::string log_level, std::string log_file);
 
         IPCProcessOperationalState state;
 		std::map<unsigned int, rina::AssignToDIFRequestEvent> pending_events_;
@@ -92,27 +93,9 @@ public:
 					  unsigned short id,
 					  unsigned int ipc_manager_port,
 					  std::string log_level,
-					  std::string log_file)
-	{
-		if(!ipcp) {
-			ipcp = new IPCProcessImpl(name,
-						  ipcp_id,
-						  ipc_manager_port,
-						  log_level,
-						  log_file);
-			return ipcp;
-		} else
-			return 0;
-	}
+					  std::string log_file);
 
-	static IPCProcessImpl* getIPCP() {
-		return ipcp;
-	}
-
-protected:
-
-	//IPCP instance
-	static IPCProcessImpl* ipcp;
+	static IPCProcessImpl* getIPCP();
 };
 
 

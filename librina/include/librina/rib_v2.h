@@ -946,20 +946,7 @@ public:
 		ApplicationEntity(ApplicationEntity::RIB_DAEMON_AE_NAME) {};
 
 	virtual void set_application_process(ApplicationProcess * ap);
-
-	/**
-	* Get the RIB provider proxy
-	*/
-	static inline rina::rib::RIBDaemonProxy* getProxy(){
-		if(!ribd)
-			ribd = rina::rib::RIBDaemonProxyFactory();
-		return ribd;
-	}
-
-protected:
-
-	//RIBProxy instance
-	static rina::rib::RIBDaemonProxy* ribd;
+	virtual RIBDaemonProxy * getProxy() = 0;
 };
 
 } //namespace rib

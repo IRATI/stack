@@ -401,12 +401,23 @@ void IPCPCDAPIOHandler::process_message(const rina::ser_obj_t &message,
 	delete m_rcv;
 }
 
-///Class RIBDaemon
+//Class RIBDaemon
+///Single instance of RIBDaemonProxy
+static rina::rib::RIBDaemonProxy* ribd = NULL;
+
 IPCPRIBDaemonImpl::IPCPRIBDaemonImpl(rina::cacep::AppConHandlerInterface *app_con_callback)
 {
 	management_sdu_reader_ = 0;
 	n_minus_one_flow_manager_ = 0;
 	initialize_rib_daemon(app_con_callback);
+}
+
+rina::rib::RIBDaemonProxy * IPCPRIBDaemonImpl::getProxy()
+{
+	if (ribd)
+		return ribd;
+
+	return NULL;
 }
 
 void IPCPRIBDaemonImpl::initialize_rib_daemon(rina::cacep::AppConHandlerInterface *app_con_callback)
@@ -419,7 +430,7 @@ void IPCPRIBDaemonImpl::initialize_rib_daemon(rina::cacep::AppConHandlerInterfac
 	params.is_IPCP_ = true;
 	rina::rib::init(app_con_callback, params);
 	rina::cdap::set_cdap_io_handler(new IPCPCDAPIOHandler());
-	getProxy();
+	ribd = rina::rib::RIBDaemonProxyFactory();
 
 	//Create schema
 	vers.version_ = 0x1ULL;
