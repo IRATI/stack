@@ -482,7 +482,7 @@ class CDAPSession
 	bool is_in_await_con_state();
 	const cdap_rib::con_handle_t& get_con_handle();
 	void set_port_id(int port_id);
-	bool check_can_send_or_receive_messages() const;
+	void check_can_send_or_receive_messages() const;
  private:
 	void messageSentOrReceived(const cdap_m_t &cdap_message, bool sent);
 	void freeOrReserveInvokeId(const cdap_m_t &cdap_message, bool sent);
@@ -1696,7 +1696,7 @@ const ser_obj_t* CDAPSession::encodeNextMessageToBeSent(const cdap_m_t &cdap_mes
 			checkInvokeIdNotExists(cdap_message, true);
 			break;
 		case cdap_m_t::M_STOP_R:
-			ccheck_can_send_or_receive_messages();
+			check_can_send_or_receive_messages();
 			checkCanSendOrReceiveResponse(cdap_message,
 						      cdap_m_t::M_STOP, true);
 			break;
@@ -1714,7 +1714,7 @@ const ser_obj_t* CDAPSession::encodeNextMessageToBeSent(const cdap_m_t &cdap_mes
 			checkInvokeIdNotExists(cdap_message, true);
 			break;
 		case cdap_m_t::M_READ_R:
-			ccheck_can_send_or_receive_messages();
+			check_can_send_or_receive_messages();
 			checkCanSendOrReceiveResponse(cdap_message,
 						      cdap_m_t::M_READ, true);
 			break;
