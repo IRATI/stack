@@ -554,26 +554,7 @@ void EnrollmentTask::set_application_process(rina::ApplicationProcess * ap)
 	rib_daemon_ = ipcp->rib_daemon_;
 	event_manager_ = ipcp->internal_event_manager_;
 	namespace_manager_ = ipcp->namespace_manager_;
-	populateRIB();
 	subscribeToEvents();
-}
-
-void EnrollmentTask::populateRIB()
-{
-	rina::rib::RIBObj* tmp;
-
-	try {
-		tmp = new NeighborsRIBObj(ipcp);
-		rib_daemon_->addObjRIB(NeighborsRIBObj::object_name, &tmp);
-
-		tmp = new OperationalStatusRIBObject(ipcp);
-		rib_daemon_->addObjRIB(OperationalStatusRIBObject::object_name, &tmp);
-
-		tmp = new AddressRIBObject(ipcp);
-		rib_daemon_->addObjRIB(AddressRIBObject::object_name, &tmp);
-	} catch (rina::Exception &e) {
-		LOG_ERR("Problems adding object to the RIB : %s", e.what());
-	}
 }
 
 void EnrollmentTask::subscribeToEvents()

@@ -596,9 +596,8 @@ FlowStateObject::FlowStateObject(unsigned int address,
 	sequence_number_ = sequence_number;
 	age_ = age;
 	std::stringstream ss;
-	ss << EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME
-		<< EncoderConstants::SEPARATOR;
-	ss << address_ << "-" << neighbor_address_;
+	ss << FlowStateRIBObject::object_name_prefix
+	   << getKey();
 	object_name_ = ss.str();
 	modified_ = true;
 	being_erased_ = false;
@@ -622,8 +621,7 @@ const std::string FlowStateObject::toString()
 	return ss.str();
 }
 
-FlowStateObject& FlowStateObject::operator=(
-	const FlowStateObject& other)
+FlowStateObject& FlowStateObject::operator=(const FlowStateObject& other)
 {
 	address_ = other.get_address();
 	neighbor_address_ = other.get_neighboraddress();
@@ -723,11 +721,20 @@ void FlowStateObject::deprecateObject(unsigned int max_age)
 	modified_ = true;
 }
 
+const std::string FlowStateObject::getKey() const
+{
+	std::stringstream ss;
+	ss << address_ << "-" << neighbor_address_;
+	return ss.str();
+}
+
 // CLASS FlowStateRIBObject
+const std::string FlowStateRIBObject::clazz_name = "FlowStateObject";
+const std::string FlowStateRIBObject::object_name_prefix = "/resalloc/fsos/key=";
 
 FlowStateRIBObject::FlowStateRIBObject(FlowStateObject* new_obj, 
 	FlowStateManager* new_manager): 
-rina::rib::RIBObj(EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS)
+rina::rib::RIBObj(clazz_name)
 {
 	obj = new_obj;
 	manager = new_manager;
@@ -785,7 +792,7 @@ FlowStateObjects::FlowStateObjects(FlowStateManager* manager)
 	rina::rib::RIBObj *rib_objects = new FlowStateRIBObjects(this, manager_);
 	IPCPRIBDaemon* rib_daemon = (IPCPRIBDaemon*)IPCPFactory::getIPCP()
 		->get_rib_daemon();
-	rib_daemon->addObjRIB(rib_objects->fqn, &rib_objects);
+	rib_daemon->addObjRIB(FlowStateRIBObjects::object_name, &rib_objects);
 }
 
 FlowStateObjects::~FlowStateObjects()
@@ -798,8 +805,7 @@ FlowStateObjects::~FlowStateObjects()
 	objects.clear();
 	IPCPRIBDaemon* rib_daemon = (IPCPRIBDaemon*)IPCPFactory::getIPCP()
 		->get_rib_daemon();
-	rib_daemon->removeObjRIB(
-		EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME);
+	rib_daemon->removeObjRIB(FlowStateRIBObjects::object_name);
 }
 
 bool FlowStateObjects::addObject(FlowStateObject* object)
@@ -865,7 +871,7 @@ void FlowStateObjects::setToModified()
 	modified_ = true;
 }
 
-void FlowStateObjects::getModifiedFSOs(std::list<FlowStateObject*> result)
+void FlowStateObjects::getModifiedFSOs(std::list<FlowStateObject*>& result)
 {
 	for (std::map<std::string, FlowStateObject*>::iterator it
 		= objects.begin(); it != objects.end();++it)
@@ -874,6 +880,15 @@ void FlowStateObjects::getModifiedFSOs(std::list<FlowStateObject*> result)
 		{
 			result.push_back(it->second);
 		}
+	}
+}
+
+void FlowStateObjects::getAllFSOs(std::list<FlowStateObject*>& result)
+{
+	for (std::map<std::string, FlowStateObject*>::iterator it
+			= objects.begin(); it != objects.end();++it)
+	{
+		result.push_back(it->second);
 	}
 }
 
@@ -929,19 +944,36 @@ void FlowStateObjects::encodeAllFSOs(rina::ser_obj_t& obj)
 }
 
 //Class FlowStateRIBObjects
+const std::string FlowStateRIBObjects::clazz_name = "FlowStateObjects";
+const std::string FlowStateRIBObjects::object_name= "/resalloc/fsos";
+
 FlowStateRIBObjects::FlowStateRIBObjects(FlowStateObjects* new_objs, 
-	FlowStateManager* new_manager) :
-rina::rib::RIBObj(EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS)
+					 FlowStateManager* new_manager) :
+		rina::rib::RIBObj(clazz_name)
 {
 	objs = new_objs;
 	manager = new_manager;
 }
 
+void FlowStateRIBObjects::read(const rina::cdap_rib::con_handle_t &con,
+			       const std::string& fqn,
+			       const std::string& clas,
+			       const rina::cdap_rib::filt_info_t &filt,
+			       const int invoke_id,
+			       rina::ser_obj_t &obj_reply,
+			       rina::cdap_rib::res_info_t& res)
+{
+	//TODO, implement following LSR policy specification
+}
 
-void FlowStateRIBObjects::write(const rina::cdap_rib::con_handle_t &con, const std::string& fqn,
-	const std::string& clas, const rina::cdap_rib::filt_info_t &filt,
-	const int invoke_id, const rina::ser_obj_t &obj_req, 
-	rina::ser_obj_t &obj_reply,	rina::cdap_rib::res_info_t& res)
+void FlowStateRIBObjects::write(const rina::cdap_rib::con_handle_t &con,
+				const std::string& fqn,
+				const std::string& clas,
+				const rina::cdap_rib::filt_info_t &filt,
+				const int invoke_id,
+				const rina::ser_obj_t &obj_req,
+				rina::ser_obj_t &obj_reply,
+				rina::cdap_rib::res_info_t& res)
 {
 	FlowStateObjectListEncoder encoder;
 	std::list<FlowStateObject*> new_objects;
@@ -963,7 +995,6 @@ void FlowStateRIBObjects::write(const rina::cdap_rib::con_handle_t &con, const s
 		}
 	}
 }
-
 
 // CLASS FlowStateManager
 const int FlowStateManager::NO_AVOID_PORT = -1;
@@ -1106,6 +1137,22 @@ void FlowStateManager::set_maximum_age(unsigned int max_age)
 {
 	maximum_age = max_age;
 }
+
+void FlowStateManager::getAllFSOs(std::list<FlowStateObject*>& list) const
+{
+	fsos->getAllFSOs(list);
+}
+
+void FlowStateManager::deprecateObjectsNeighbor(unsigned int address)
+{
+	//TODO implement
+}
+
+bool FlowStateManager::tableUpdate() const
+{
+	//TODO implement
+}
+
 // ComputeRoutingTimerTask
 ComputeRoutingTimerTask::ComputeRoutingTimerTask(
 		LinkStateRoutingPolicy * lsr_policy, long delay)
@@ -1390,8 +1437,8 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(
 
 	try {
 		rina::cdap_rib::obj_info_t obj;
-		obj.class_ = EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS;
-		obj.name_ = EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME;
+		obj.class_ = FlowStateRIBObjects::clazz_name;
+		obj.name_ = FlowStateRIBObjects::object_name;
 		db_->encodeAllFSOs(obj.value_);
 		obj.inst_ = 0;
 		rina::cdap_rib::flags_t flags;
@@ -1435,8 +1482,8 @@ void LinkStateRoutingPolicy::propagateFSDB()
 		try
 		{
 			rina::cdap_rib::object_info obj;
-			obj.class_ = EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS;
-			obj.name_ = EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME;
+			obj.class_ = FlowStateRIBObjects::clazz_name;
+			obj.name_ = FlowStateRIBObjects::object_name;
 			obj.inst_ = 0;
 			obj.value_ = it->second;
 			rib_daemon_->getProxy()->remote_write(it->first, obj, flags, filter, 0);
@@ -1516,7 +1563,7 @@ void toModel(
 } //namespace fso_helpers
 
 void FlowStateObjectEncoder::encode(const FlowStateObject &obj, 
-	rina::ser_obj_t &serobj)
+				    rina::ser_obj_t &serobj)
 {
 	rina::messages::flowStateObject_t gpb;
 
@@ -1527,7 +1574,8 @@ void FlowStateObjectEncoder::encode(const FlowStateObject &obj,
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
 
-void decode(const rina::ser_obj_t &serobj, FlowStateObject &des_obj)
+void FlowStateObjectEncoder::decode(const rina::ser_obj_t &serobj,
+				    FlowStateObject &des_obj)
 {
 	rina::messages::flowStateObject_t gpb;
 	gpb.ParseFromArray(serobj.message_, serobj.size_);
@@ -1535,7 +1583,8 @@ void decode(const rina::ser_obj_t &serobj, FlowStateObject &des_obj)
 	fso_helpers::toModel(gpb, des_obj);
 }
 
-void encode(const std::list<FlowStateObject*> &obj, rina::ser_obj_t& serobj)
+void FlowStateObjectListEncoder::encode(const std::list<FlowStateObject*> &obj,
+					rina::ser_obj_t& serobj)
 {
 	rina::messages::flowStateObjectGroup_t gpb;
 
@@ -1552,7 +1601,8 @@ void encode(const std::list<FlowStateObject*> &obj, rina::ser_obj_t& serobj)
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
 
-void decode(const rina::ser_obj_t &serobj, std::list<FlowStateObject> &des_obj)
+void FlowStateObjectListEncoder::decode(const rina::ser_obj_t &serobj,
+					std::list<FlowStateObject*> &des_obj)
 {
 	rina::messages::flowStateObjectGroup_t gpb;
 	gpb.ParseFromArray(serobj.message_, serobj.size_);
@@ -1561,8 +1611,8 @@ void decode(const rina::ser_obj_t &serobj, std::list<FlowStateObject> &des_obj)
 
 	for(int i=0; i<gpb.flow_state_objects_size(); i++)
 	{
-		FlowStateObject fso;
-		fso_helpers::toModel(gpb.flow_state_objects(i), fso);
+		FlowStateObject * fso;
+		fso_helpers::toModel(gpb.flow_state_objects(i), *fso);
 		des_obj.push_back(fso);
 	}
 }

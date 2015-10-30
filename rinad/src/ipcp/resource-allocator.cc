@@ -303,6 +303,7 @@ void ResourceAllocator::set_application_process(rina::ApplicationProcess * ap)
 	}
 
 	if (n_minus_one_flow_manager_) {
+		n_minus_one_flow_manager_->set_rib_handle(ipcp->rib_daemon_->get_rib_handle());
 		n_minus_one_flow_manager_->set_ipc_process(ipcp);
 	}
 
@@ -317,6 +318,9 @@ void ResourceAllocator::populateRIB()
 	rina::rib::RIBObj* tmp;
 
 	try {
+		tmp = new rina::rib::RIBObj("ResourceAllocator");
+		rib_daemon_->addObjRIB("/resalloc", &tmp);
+
 		tmp = new QoSCubesRIBObject(ipcp);
 		rib_daemon_->addObjRIB(QoSCubesRIBObject::object_name, &tmp);
 

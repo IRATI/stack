@@ -1483,6 +1483,14 @@ void EnrollmentTaskPs::populate_rib()
 		tmp = new EnrollmentRIBObject(ipcp);
 		rib_daemon->addObjRIB(EnrollmentRIBObject::object_name, &tmp);
 
+		tmp = new NeighborsRIBObj(ipcp);
+		rib_daemon->addObjRIB(NeighborsRIBObj::object_name, &tmp);
+
+		tmp = new OperationalStatusRIBObject(ipcp);
+		rib_daemon->addObjRIB(OperationalStatusRIBObject::object_name, &tmp);
+
+		tmp = new AddressRIBObject(ipcp);
+		rib_daemon->addObjRIB(AddressRIBObject::object_name, &tmp);
 	} catch (rina::Exception &e) {
 		LOG_ERR("Problems adding object to the RIB : %s", e.what());
 	}

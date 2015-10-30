@@ -216,11 +216,11 @@ public:
 	/// @param fqn Fully qualifed name (
 	///
 	RIBObj(const std::string& class_) : delegates(false),
-					parent_inst_id(-1),
-					class_name(class_){};
+					  parent_inst_id(-1),
+					  class_name(class_){};
 
 	/// Fully qualified name
-	const std::string fqn;
+	std::string fqn;
 
 	/// Destructor
 	virtual ~RIBObj(){};
@@ -893,8 +893,9 @@ public:
 
 private:
 	///@internal
-	int64_t __addObjRIB(const rib_handle_t& h, const std::string& fqn,
-								 RIBObj** o);
+	int64_t __addObjRIB(const rib_handle_t& h,
+			    const std::string& fqn,
+			    RIBObj** o);
 	//Constructor
 	RIBDaemonProxy(RIBDaemon* ribd_);
 
