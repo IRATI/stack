@@ -27,33 +27,6 @@
 
 namespace rinad {
 namespace mad_manager {
-
-//
-// Simple types
-//
-void StringEncoder::encode(const std::string& obj,
-				rina::ser_obj_t& serobj) {
-	messages::str s;
-	s.set_value(obj);
-
-	//Allocate memory
-	serobj.size_ = s.ByteSize();
-	serobj.message_ = new char[serobj.size_];
-
-	if (!serobj.message_)
-		throw rina::Exception("out of memory");  //TODO improve this
-
-	s.SerializeToArray(serobj.message_, serobj.size_);
-}
-
-void StringEncoder::decode(const rina::ser_obj_t& ser_obj,
-				std::string& obj) {
-	messages::str s;
-	s.ParseFromArray(ser_obj.message_, ser_obj.size_);
-
-	obj = s.value();
-}
-
 namespace ipcpConfigEncoder {
 
 void encode_enrollment(const enrollment_config_t &obj,
