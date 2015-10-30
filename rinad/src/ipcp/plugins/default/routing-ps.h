@@ -203,7 +203,6 @@ public:
 	FlowStateObject& operator=(const FlowStateObject& other);
 	void deprecateObject(unsigned int max_age);
 	//accessors
-	// TODO implement missing ones
 	unsigned int get_address() const;
 	unsigned int get_neighboraddress() const;
 	unsigned int get_cost() const;
@@ -248,12 +247,10 @@ private:
 
 class FlowStateManager;
 /// A single flow state object
-// TODO: destructor
 class FlowStateRIBObject: public rina::rib::RIBObj {
 public:
 	FlowStateRIBObject(FlowStateObject* new_obj, FlowStateManager *manager);
 	const std::string toString();
-
 	void read(const rina::cdap_rib::con_handle_t &con, const std::string& fqn,
 		const std::string& clas, const rina::cdap_rib::filt_info_t &filt,
 		const int invoke_id, rina::ser_obj_t &obj_reply, 
@@ -318,7 +315,6 @@ class FlowStateRIBObjects: public rina::rib::RIBObj {
 public:
 	FlowStateRIBObjects(FlowStateObjects* new_objs, FlowStateManager *manager);
 	const std::string toString();
-
 	void read(const rina::cdap_rib::con_handle_t &con, const std::string& fqn,
 		const std::string& clas, const rina::cdap_rib::filt_info_t &filt,
 		const int invoke_id, rina::ser_obj_t &obj_reply, 
