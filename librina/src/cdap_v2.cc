@@ -329,6 +329,7 @@ class ConnectionStateMachine : public rina::Lockable
 	/// @throws CDAPException
 	void checkReleaseResponse();
 	void releaseResponseSentOrReceived(bool sent);
+	bool can_send_or_receive_messages();
  private:
 	enum ConnectionState
 	{
@@ -481,6 +482,7 @@ class CDAPSession
 	bool is_in_await_con_state();
 	const cdap_rib::con_handle_t& get_con_handle();
 	void set_port_id(int port_id);
+	bool check_can_send_or_receive_messages() const;
  private:
 	void messageSentOrReceived(const cdap_m_t &cdap_message, bool sent);
 	void freeOrReserveInvokeId(const cdap_m_t &cdap_message, bool sent);
@@ -1117,6 +1119,21 @@ void ConnectionStateMachine::releaseResponseSentOrReceived(bool sent)
 		releaseResponseReceived();
 	}
 }
+bool ConnectionStateMachine::can_send_or_receive_messages()
+{
+	bool result = false;
+	lock();
+
+	//Messages can be sent or received after the M_CONNECT
+	//since there might be authentication messages exchanged
+	//before the M_CONNECT_R
+	if (connection_state_ == CONNECTED ||
+			connection_state_ == AWAITCON) {
+		result = true;
+	}
+	unlock();
+	return result;
+}
 void ConnectionStateMachine::resetConnection()
 {
 	connection_state_ = NONE;
@@ -1648,66 +1665,66 @@ const ser_obj_t* CDAPSession::encodeNextMessageToBeSent(const cdap_m_t &cdap_mes
 			connection_state_machine_->checkReleaseResponse();
 			break;
 		case cdap_m_t::M_CREATE:
-			checkIsConnected();
+			check_can_send_or_receive_messages();
 			checkInvokeIdNotExists(cdap_message, true);
 			break;
 		case cdap_m_t::M_CREATE_R:
-			checkIsConnected();
+			check_can_send_or_receive_messages();
 			checkCanSendOrReceiveResponse(cdap_message,
 						      cdap_m_t::M_CREATE, true);
 			break;
 		case cdap_m_t::M_DELETE:
-			checkIsConnected();
+			check_can_send_or_receive_messages();
 			checkInvokeIdNotExists(cdap_message, true);
 			break;
 		case cdap_m_t::M_DELETE_R:
-			checkIsConnected();
+			check_can_send_or_receive_messages();
 			checkCanSendOrReceiveResponse(cdap_message,
 						      cdap_m_t::M_DELETE, true);
 			break;
 		case cdap_m_t::M_START:
-			checkIsConnected();
+			check_can_send_or_receive_messages();
 			checkInvokeIdNotExists(cdap_message, true);
 			break;
 		case cdap_m_t::M_START_R:
-			checkIsConnected();
+			check_can_send_or_receive_messages();
 			checkCanSendOrReceiveResponse(cdap_message,
 						      cdap_m_t::M_START, true);
 			break;
 		case cdap_m_t::M_STOP:
-			checkIsConnected();
+			check_can_send_or_receive_messages();
 			checkInvokeIdNotExists(cdap_message, true);
 			break;
 		case cdap_m_t::M_STOP_R:
-			checkIsConnected();
+			ccheck_can_send_or_receive_messages();
 			checkCanSendOrReceiveResponse(cdap_message,
 						      cdap_m_t::M_STOP, true);
 			break;
 		case cdap_m_t::M_WRITE:
-			checkIsConnected();
+			check_can_send_or_receive_messages();
 			checkInvokeIdNotExists(cdap_message, true);
 			break;
 		case cdap_m_t::M_WRITE_R:
-			checkIsConnected();
+			check_can_send_or_receive_messages();
 			checkCanSendOrReceiveResponse(cdap_message,
 						      cdap_m_t::M_WRITE, true);
 			break;
 		case cdap_m_t::M_READ:
-			checkIsConnected();
+			check_can_send_or_receive_messages();
 			checkInvokeIdNotExists(cdap_message, true);
 			break;
 		case cdap_m_t::M_READ_R:
-			checkIsConnected();
+			ccheck_can_send_or_receive_messages();
 			checkCanSendOrReceiveResponse(cdap_message,
 						      cdap_m_t::M_READ, true);
 			break;
 		case cdap_m_t::M_CANCELREAD:
-			checkIsConnected();
+			check_can_send_or_receive_messages();
 			checkCanSendOrReceiveCancelReadRequest(cdap_message,
 							       true);
 			break;
 		case cdap_m_t::M_CANCELREAD_R:
-			checkIsConnected();
+			check_can_send_or_receive_messages();
 			checkCanSendOrReceiveCancelReadResponse(cdap_message,
 								true);
 			break;
@@ -1734,6 +1751,13 @@ const cdap_rib::con_handle_t& CDAPSession::get_con_handle()
 void CDAPSession::set_port_id(int port_id)
 {
 	con_handle.handle_ = port_id;
+}
+
+void CDAPSession::check_can_send_or_receive_messages() const
+{
+	if (!connection_state_machine_->can_send_or_receive_messages()) {
+		throw CDAPException("The CDAP session is not in CONN or AWAITCON state");
+	}
 }
 
 void CDAPSession::messageSent(const cdap_m_t &cdap_message)
@@ -1944,7 +1968,7 @@ void CDAPSession::requestMessageSentOrReceived(const cdap_m_t &cdap_message,
 					       cdap_m_t::Opcode op_code,
 					       bool sent)
 {
-	checkIsConnected();
+	check_can_send_or_receive_messages();
 	checkInvokeIdNotExists(cdap_message, sent);
 
 	std::map<int, CDAPOperationState*>* pending_messages;
@@ -2047,7 +2071,7 @@ void CDAPSession::responseMessageSentOrReceived(const cdap_m_t &cdap_message,
 						cdap_m_t::Opcode op_code,
 						bool sent)
 {
-	checkIsConnected();
+	check_can_send_or_receive_messages();
 	checkCanSendOrReceiveResponse(cdap_message, op_code, sent);
 	bool operation_complete = true;
 	std::map<int, CDAPOperationState*>* pending_messages;
