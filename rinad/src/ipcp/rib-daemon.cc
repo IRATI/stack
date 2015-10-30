@@ -193,7 +193,7 @@ void IPCPCDAPIOHandler::process_message(const rina::ser_obj_t &message,
 			con_handle.cdap_dest = rina::cdap_rib::CDAP_DEST_IPCM;
 			con_handle.handle_ = handle;
 
-			LOG_IPCP_DBG("Received delegated CDAP message from IPCM : %s",
+			LOG_IPCP_DBG("Received delegated CDAP message from IPCM \n %s",
 					m_rcv->to_string().c_str());
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Error decoding CDAP message : %s", e.what());
@@ -232,7 +232,7 @@ void IPCPCDAPIOHandler::process_message(const rina::ser_obj_t &message,
 					}
 				}
 
-				LOG_IPCP_DBG("Received A-Data CDAP message from address %u : %s",
+				LOG_IPCP_DBG("Received A-Data CDAP message from address %u \n %s",
 						a_data_obj.source_address_,
 						m_rcv->to_string().c_str());
 
@@ -246,7 +246,7 @@ void IPCPCDAPIOHandler::process_message(const rina::ser_obj_t &message,
 		} else {
 			rina::cdap::CDAPSession * cdap_session;
 
-			LOG_IPCP_DBG("Received CDAP message from N-1 port %u : %s",
+			LOG_IPCP_DBG("Received CDAP message from N-1 port %u \n %s",
 					handle, m_rcv->to_string().c_str());
 			if (manager_->session_in_await_con_state(handle) &&
 					m_rcv->op_code_ != rina::cdap::cdap_m_t::M_CONNECT)
@@ -439,6 +439,7 @@ void IPCPRIBDaemonImpl::initialize_rib_daemon(rina::cacep::AppConHandlerInterfac
 
 	//Create RIB
 	rib = ribd->createRIB(vers);
+	ribd->associateRIBtoAE(rib, IPCProcess::MANAGEMENT_AE);
 
 	//TODO populate RIB with some objects
 	try {

@@ -14,7 +14,7 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
+// You should have a copy of the GNU General Public License
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
@@ -418,7 +418,7 @@ void IEnrollmentStateMachine::flowDeallocated(int portId)
 bool IEnrollmentStateMachine::isValidPortId(int portId)
 {
 	if (portId != port_id_) {
-		LOG_ERR("Received a CDAP message form port-id %d, but was expecting it form port-id %d",
+		LOG_ERR("a CDAP message form port-id %d, but was expecting it form port-id %d",
 				portId, port_id_);
 		return false;
 	}
@@ -718,18 +718,18 @@ void EnrollmentTask::initiateEnrollment(rina::EnrollmentRequest * request)
 void EnrollmentTask::connect(const rina::cdap::CDAPMessage& cdap_m,
 		     	     const rina::cdap_rib::con_handle_t &con_handle)
 {
-	LOG_IPCP_DBG("Received M_CONNECT CDAP message from port-id %u",
+	LOG_IPCP_DBG("M_CONNECT CDAP message from port-id %u",
 		     con_handle.handle_);
 
 	//1 Find out if the sender is really connecting to us
 	if(con_handle.src_.ap_name_.compare(ipcp->get_name())!= 0){
-		LOG_IPCP_WARN("Received an M_CONNECT message whose destination was not this IPC Process, ignoring it");
+		LOG_IPCP_WARN("an M_CONNECT message whose destination was not this IPC Process, ignoring it");
 		return;
 	}
 
 	//2 Find out if we are already enrolled to the remote IPC process
 	if (isEnrolledTo(con_handle.dest_.ap_name_)){
-		std::string message = "Received an enrollment request for an IPC process I'm already enrolled to";
+		std::string message = "an enrollment request for an IPC process I'm already enrolled to";
 		LOG_IPCP_ERR("%s", message.c_str());
 
 		try {
@@ -758,7 +758,7 @@ void EnrollmentTask::connect(const rina::cdap::CDAPMessage& cdap_m,
 void EnrollmentTask::connectResult(const rina::cdap_rib::res_info_t &res,
 				   const rina::cdap_rib::con_handle_t &con_handle)
 {
-	LOG_IPCP_DBG("Received M_CONNECT_R cdapMessage from portId %u",
+	LOG_IPCP_DBG("M_CONNECT_R cdapMessage from portId %u",
 		     con_handle.handle_);
 
 	IPCPEnrollmentTaskPS * ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);
@@ -771,7 +771,7 @@ void EnrollmentTask::connectResult(const rina::cdap_rib::res_info_t &res,
 void EnrollmentTask::releaseResult(const rina::cdap_rib::res_info_t &res,
 				   const rina::cdap_rib::con_handle_t &con_handle)
 {
-	LOG_IPCP_DBG("Received M_RELEASE_R cdapMessage from portId %u",
+	LOG_IPCP_DBG("M_RELEASE_R cdapMessage from portId %u",
 		     con_handle.handle_);
 
 	try{
@@ -1061,7 +1061,7 @@ void EnrollmentTask::enrollmentCompleted(const rina::Neighbor& neighbor,
 void EnrollmentTask::release(int invoke_id,
 		     	     const rina::cdap_rib::con_handle_t &con_handle)
 {
-	LOG_DBG("Received M_RELEASE cdapMessage from portId %u",
+	LOG_DBG("M_RELEASE cdapMessage from portId %u",
 		con_handle.handle_);
 	IEnrollmentStateMachine * stateMachine = 0;
 

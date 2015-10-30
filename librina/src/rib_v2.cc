@@ -2054,8 +2054,14 @@ void RIBDaemon::remote_open_connection_result(const cdap_rib::con_handle_t &con,
 
 	app_con_callback_->connectResult(res, con);
 
-	if (res.code_ == cdap_rib::CDAP_SUCCESS)
-		store_connection(con);
+	if (res.code_ == cdap_rib::CDAP_SUCCESS) {
+		try {
+			store_connection(con);
+		} catch (Exception &e) {
+			LOG_WARN("Problems storing connection: %s",
+				 e.what());
+		}
+	}
 }
 
 void RIBDaemon::open_connection(const cdap_rib::con_handle_t &con,
@@ -2066,14 +2072,25 @@ void RIBDaemon::open_connection(const cdap_rib::con_handle_t &con,
 	app_con_callback_->connect(message, con);
 
 	//The connect was successful store
-	store_connection(con);
+	try {
+		store_connection(con);
+	} catch (Exception & e) {
+		LOG_WARN("Problems storing connection: %s",
+			 e.what());
+	}
 }
 
 void RIBDaemon::remote_close_connection_result(const cdap_rib::con_handle_t &con,
 					       const cdap_rib::result_info &res)
 {
 	app_con_callback_->releaseResult(res, con);
-	remove_connection(con);
+
+	try {
+		remove_connection(con);
+	} catch (Exception & e) {
+		LOG_WARN("Problems removing connection: %s",
+			 e.what());
+	}
 }
 
 void RIBDaemon::close_connection(const cdap_rib::con_handle_t &con,

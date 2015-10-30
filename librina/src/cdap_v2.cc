@@ -2883,8 +2883,8 @@ cdap_rib::con_handle_t
 
 	con.handle_ = port;
 	con.version_ = ver;
-	con.src_ = dest;
-	con.dest_ = src;
+	con.src_ = src;
+	con.dest_ = dest;
 	con.auth_ = auth;
 
 	m_sent = manager_->getOpenConnectionRequestMessage(con);
