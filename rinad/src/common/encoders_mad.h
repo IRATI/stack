@@ -28,19 +28,6 @@
 namespace rinad {
 namespace mad_manager {
 
-// Generic (simple) types
-
-/// String encoder
-class StringEncoder : public Encoder<std::string>{
-public:
-	void encode(const std::string &obj,
-			rina::ser_obj_t& serobj);
-	void decode(const rina::ser_obj_t &serobj,
-			std::string &des_obj);
-
-	std::string get_type() const{ return "string"; };
-};
-
 
 /// Encoder of IPCPConfig
 class IPCPConfigEncoder: public Encoder<ipcp_config_t> {
