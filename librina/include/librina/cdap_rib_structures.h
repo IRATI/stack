@@ -24,6 +24,7 @@
 
 #include <string>
 #include <list>
+#include "common.h"
 
 namespace rina {
 namespace cdap_rib {
