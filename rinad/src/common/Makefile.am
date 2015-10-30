@@ -31,6 +31,8 @@ librinad_la_SOURCES  =					\
 	rina-configuration.cc rina-configuration.h	\
 	configuration.h    configuration.cc   \
 	encoder.cc	      encoder.h			\
+	structures_mad.h 					\
+	encoders_mad.h		encoders_mad.cc \
 			      concurrency.h
 
 commonheadersdir = $(includedir)/rinad/common

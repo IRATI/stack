@@ -661,6 +661,59 @@ unsigned int FlowStateObject::get_age() const
 	return age_;
 }
 
+bool FlowStateObject::is_modified() const
+{
+	return modified_;
+}
+unsigned int FlowStateObject::get_avoidport() const
+{
+	return avoid_port_;
+}
+bool FlowStateObject::is_beingerased() const
+{
+	return being_erased_;
+}
+std::string FlowStateObject::get_objectname() const
+{
+	return object_name_;
+}
+void FlowStateObject::set_address(unsigned int address)
+{
+	address_ = address;
+}
+void FlowStateObject::set_neighboraddress(unsigned int neighbor_address)
+{
+	neighbor_address_ = neighbor_address;
+}
+void FlowStateObject::set_cost(unsigned int cost)
+{
+	cost_ = cost;
+}
+void FlowStateObject::has_state(bool state)
+{
+	state_ = state;
+}
+void FlowStateObject::set_sequencenumber(unsigned int sequence_number)
+{
+	sequence_number_ = sequence_number;
+}
+void FlowStateObject::set_age(unsigned int age)
+{
+	age_ = age;
+}
+void FlowStateObject::has_modified(bool modified)
+{
+	modified_ = modified;
+}
+void FlowStateObject::set_avoidport(unsigned int avoid_port)
+{
+	avoid_port_ = avoid_port;
+}
+void FlowStateObject::has_beingerased(bool being_erased)
+{
+	being_erased_ = being_erased;
+}
+
 void FlowStateObject::deprecateObject(unsigned int max_age)
 {
 	LOG_IPCP_DBG("Object %s deprecated", object_name_.c_str());
