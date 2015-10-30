@@ -32,7 +32,9 @@
 
 #include "ipcp/components.h"
 #include "routing-ps.h"
-#include "encoders/FlowStateMessage.pb.h"
+#include "common/encoders/FlowStateMessage.pb.h"
+#include "common/encoders/FlowStateGroupMessage.pb.h"
+#include "ipcp/ipc-process.h"
 
 namespace rinad {
 
@@ -75,37 +77,6 @@ destroyRoutingComponentPs(rina::IPolicySet * ps)
         if (ps) {
                 delete ps;
         }
-}
-
-FlowStateObject::FlowStateObject(unsigned int address,
-		unsigned int neighbor_address, unsigned int cost, bool up,
-		int sequence_number, unsigned int age)
-{
-	address_ = address;
-	neighbor_address_ = neighbor_address;
-	cost_ = cost;
-	up_ = up;
-	sequence_number_ = sequence_number;
-	age_ = age;
-	std::stringstream ss;
-	ss << EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME
-			<< EncoderConstants::SEPARATOR;
-	ss << address_ << "-" << neighbor_address_;
-	object_name_ = ss.str();
-	modified_ = true;
-	being_erased_ = false;
-	avoid_port_ = 0;
-}
-
-const std::string FlowStateObject::toString()
-{
-	std::stringstream ss;
-	ss << "Address: " << address_ << "; Neighbor address: " << neighbor_address_
-			<< "; cost: " << cost_ << std::endl;
-	ss << "Up: " << up_ << "; Sequence number: " << sequence_number_
-			<< "; Age: " << age_;
-
-	return ss.str();
 }
 
 Edge::Edge(unsigned int address1, unsigned int address2, int weight)
@@ -205,12 +176,12 @@ void Graph::init_vertices()
 	std::list<FlowStateObject *>::const_iterator it;
 	for (it = flow_state_objects_.begin(); it != flow_state_objects_.end();
 			++it) {
-		if (!contains_vertex((*it)->address_)) {
-			vertices_.push_back((*it)->address_);
+		if (!contains_vertex((*it)->get_address())) {
+			vertices_.push_back((*it)->get_address());
 		}
 
-		if (!contains_vertex((*it)->neighbor_address_)) {
-			vertices_.push_back((*it)->neighbor_address_);
+		if (!contains_vertex((*it)->get_neighboraddress())) {
+			vertices_.push_back((*it)->get_neighboraddress());
 		}
 	}
 }
@@ -252,24 +223,24 @@ void Graph::init_edges()
 	CheckedVertex * dest = 0;
 	for (flowIt = flow_state_objects_.begin();
 			flowIt != flow_state_objects_.end(); ++flowIt) {
-		if (!(*flowIt)->up_) {
+		if (!(*flowIt)->is_state()) {
 			continue;
 		}
 
 		LOG_IPCP_DBG("Processing flow state object: %s",
-				(*flowIt)->object_name_.c_str());
+				(*flowIt)->get_objectname().c_str());
 
-		origin = get_checked_vertex((*flowIt)->address_);
+		origin = get_checked_vertex((*flowIt)->get_address());
 		if (origin == 0) {
 			LOG_IPCP_WARN("Could not find checked vertex for address %ud",
-					(*flowIt)->address_);
+					(*flowIt)->get_address());
 			continue;
 		}
 
-		dest = get_checked_vertex((*flowIt)->neighbor_address_);
+		dest = get_checked_vertex((*flowIt)->get_neighboraddress());
 		if (dest == 0) {
 			LOG_IPCP_WARN("Could not find checked vertex for address %ud",
-					(*flowIt)->neighbor_address_);
+					(*flowIt)->get_neighboraddress());
 			continue;
 		}
 
@@ -601,340 +572,488 @@ void LoopFreeAlternateAlgorithm::fortifyRoutingTable(const Graph& graph,
 	}
 }
 
-//Class FlowState RIB Object Group
-FlowStateRIBObjectGroup::FlowStateRIBObjectGroup(IPCProcess * ipc_process,
-		LinkStateRoutingPolicy * lsr_policy) :
-		rina::BaseRIBObject(ipc_process->rib_daemon_,
-				EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
-				rina::objectInstanceGenerator->getObjectInstance(),
-				EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME)
+// CLASS FlowStateObject
+FlowStateObject::FlowStateObject()
 {
-	lsr_policy_ = lsr_policy;
-	ipc_process_ = ipc_process;
-	if (ipc_process) {
-		rib_daemon_ =  ipc_process->rib_daemon_;
-	} else {
-		rib_daemon_ = 0;
+	address_ = 0;
+	neighbor_address_ = 0;
+	cost_ = 0;
+	state_ = false;
+	sequence_number_ = 0;
+	age_ = 0;
+	modified_ = false;
+	avoid_port_ = 0;
+	being_erased_ = true;
+}
+FlowStateObject::FlowStateObject(unsigned int address,
+	unsigned int neighbor_address, unsigned int cost, bool up,
+	int sequence_number, unsigned int age)
+{
+	address_ = address;
+	neighbor_address_ = neighbor_address;
+	cost_ = cost;
+	state_ = up;
+	sequence_number_ = sequence_number;
+	age_ = age;
+	std::stringstream ss;
+	ss << EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME
+		<< EncoderConstants::SEPARATOR;
+	ss << address_ << "-" << neighbor_address_;
+	object_name_ = ss.str();
+	modified_ = true;
+	being_erased_ = false;
+	avoid_port_ = 0;
+}
+
+FlowStateObject::~FlowStateObject()
+{
+	IPCPRIBDaemon* rib_daemon = (IPCPRIBDaemon*)IPCPFactory::getIPCP()->get_rib_daemon();
+	rib_daemon->removeObjRIB(object_name_);
+}
+
+const std::string FlowStateObject::toString()
+{
+	std::stringstream ss;
+	ss << "Address: " << address_ << "; Neighbor address: " << neighbor_address_
+		<< "; cost: " << cost_ << std::endl;
+	ss << "Up: " << state_ << "; Sequence number: " << sequence_number_
+		<< "; Age: " << age_;
+
+	return ss.str();
+}
+
+FlowStateObject& FlowStateObject::operator=(
+	const FlowStateObject& other)
+{
+	address_ = other.get_address();
+	neighbor_address_ = other.get_neighboraddress();
+	cost_ = other.get_cost();
+	state_ = other.is_state();
+	sequence_number_ = other.get_sequencenumber();
+	age_ = other.get_age();
+	modified_ = true;
+}
+
+unsigned int FlowStateObject::get_address() const
+{
+	return address_;
+}
+
+unsigned int FlowStateObject::get_neighboraddress() const
+{
+	return neighbor_address_;
+}
+
+unsigned int FlowStateObject::get_cost() const
+{
+	return cost_;
+}
+bool FlowStateObject::is_state() const
+{
+	return state_;
+}
+unsigned int FlowStateObject::get_sequencenumber() const
+{
+	return sequence_number_;
+}
+unsigned int FlowStateObject::get_age() const
+{
+	return age_;
+}
+
+void FlowStateObject::deprecateObject(unsigned int max_age)
+{
+	LOG_IPCP_DBG("Object %s deprecated", object_name_.c_str());
+	state_ = false;
+	age_ = max_age;
+	sequence_number_ = sequence_number_ + 1;
+	modified_ = true;
+}
+
+// CLASS FlowStateRIBObject
+
+FlowStateRIBObject::FlowStateRIBObject(FlowStateObject* new_obj, 
+	FlowStateManager* new_manager): 
+rina::rib::RIBObj(EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS)
+{
+	obj = new_obj;
+	manager = new_manager;
+}
+
+void FlowStateRIBObject::read(const rina::cdap_rib::con_handle_t &con, 
+	const std::string& fqn, const std::string& clas, 
+	const rina::cdap_rib::filt_info_t &filt, const int invoke_id,
+	rina::ser_obj_t &obj_reply, rina::cdap_rib::res_info_t& res)
+{
+	FlowStateObjectEncoder encoder;
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+	encoder.encode(*obj, obj_reply);
+}
+
+void FlowStateRIBObject::write(const rina::cdap_rib::con_handle_t &con, 
+	const std::string& fqn,	const std::string& clas, 
+	const rina::cdap_rib::filt_info_t &filt, const int invoke_id, 
+	const rina::ser_obj_t &obj_req, rina::ser_obj_t &obj_reply,	
+	rina::cdap_rib::res_info_t& res)
+{
+	//1 Decode & overwrite the object
+	FlowStateObjectEncoder encoder;
+	FlowStateObject new_obj;
+	encoder.decode(obj_req, new_obj);
+
+	//2 Check & overwrite
+	if (obj->get_address() == new_obj.get_address() && 
+		obj->get_neighboraddress() == new_obj.get_neighboraddress())
+	{
+		*obj = new_obj;
+		obj->set_avoidport(con.handle_);
+		res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+	}
+	else
+	{
+		res.code_ = rina::cdap_rib::CDAP_INVALID_OBJ;
 	}
 }
 
-const void* FlowStateRIBObjectGroup::get_value() const
+bool FlowStateRIBObject::delete_(const rina::cdap_rib::con_handle_t &con, 
+	const std::string& fqn,	const std::string& clas, 
+	const rina::cdap_rib::filt_info_t &filt,
+	const int invoke_id, rina::cdap_rib::res_info_t& res)
 {
+	manager->deprecateObject(fqn);
+	return false;
+}
+
+// CLASS FlowStateObjects
+FlowStateObjects::FlowStateObjects(FlowStateManager* manager)
+{
+	modified_ = false;
+	manager_ = manager;
+	rina::rib::RIBObj *rib_objects = new FlowStateRIBObjects(this, manager_);
+	IPCPRIBDaemon* rib_daemon = (IPCPRIBDaemon*)IPCPFactory::getIPCP()
+		->get_rib_daemon();
+	rib_daemon->addObjRIB(rib_objects->fqn, &rib_objects);
+}
+
+FlowStateObjects::~FlowStateObjects()
+{
+	for (std::map<std::string, FlowStateObject*>::iterator it = 
+		objects.begin(); it != objects.end(); ++it)
+	{
+		delete it->second;
+	}
+	objects.clear();
+	IPCPRIBDaemon* rib_daemon = (IPCPRIBDaemon*)IPCPFactory::getIPCP()
+		->get_rib_daemon();
+	rib_daemon->removeObjRIB(
+		EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME);
+}
+
+bool FlowStateObjects::addObject(FlowStateObject* object)
+{
+	if (objects.find(object->get_objectname()) != objects.end())
+	{
+		addCheckedObject(object);
+		return true;
+	}
+	else
+	{
+		LOG_DBG("FlowStateObject with name %s already present in the database",
+			object->get_objectname().c_str());
+		return false;
+	}
+}
+
+
+bool FlowStateObjects::addCheckedObject(FlowStateObject* object)
+{
+	objects[object->get_objectname()] = object;
+	rina::rib::RIBObj* rib_obj = new FlowStateRIBObject(object, manager_);
+	IPCPRIBDaemon* rib_daemon = (IPCPRIBDaemon*)IPCPFactory::getIPCP()->
+		get_rib_daemon();
+	rib_daemon->addObjRIB(rib_obj->fqn, &rib_obj);
+}
+
+void FlowStateObjects::deprecateObject(const std::string& fqn, 
+	unsigned int max_age)
+{
+	std::map<std::string, FlowStateObject*>::iterator it=
+		objects.find(fqn);
+	if(it != objects.end())
+	{
+		it->second->deprecateObject(max_age);
+	}
+}
+
+void FlowStateObjects::removeObject(const std::string& fqn)
+{
+	std::map<std::string, FlowStateObject*>::iterator it=
+		objects.find(fqn);
+	if( it != objects.end())
+	{
+		delete it->second;
+		objects.erase(it);
+	}
+}
+
+FlowStateObject* FlowStateObjects::getObject(const std::string& fqn)
+{
+	std::map<std::string, FlowStateObject*>::iterator it=
+		objects.find(fqn);
+	if ( it != objects.end())
+	{
+		return it->second;
+	}
 	return 0;
 }
 
-void FlowStateRIBObjectGroup::remoteWriteObject(void * object_value,
-		int invoke_id, rina::CDAPSessionDescriptor * cdapSessionDescriptor)
+void FlowStateObjects::setToModified()
 {
-	std::list<FlowStateObject *> * objects =
-			(std::list<FlowStateObject *> *) object_value;
-	lsr_policy_->writeMessageReceived(*objects,
-			cdapSessionDescriptor->get_port_id());
-	delete objects;
+	modified_ = true;
 }
 
-void FlowStateRIBObjectGroup::createObject(const std::string& objectClass,
-		const std::string& objectName, const void* objectValue)
+void FlowStateObjects::getModifiedFSOs(std::list<FlowStateObject*> result)
 {
-	FlowStateRIBObject * ribObject = new FlowStateRIBObject(
-			ipc_process_, objectClass, objectName, objectValue);
-	add_child(ribObject);
-	rib_daemon_->addRIBObject(ribObject);
-}
-
-FlowStateRIBObject::FlowStateRIBObject(IPCProcess * ipc_process,
-		const std::string& objectClass,
-		const std::string& objectName, const void* object_value) :
-					rina::BaseRIBObject(ipc_process->rib_daemon_,
-							objectClass,
-							rina::objectInstanceGenerator->getObjectInstance(),
-							objectName){
-	ipc_process_ = ipc_process;
-	object_value_ = object_value;
-	if (ipc_process) {
-		rib_daemon_ =  ipc_process->rib_daemon_;
-	} else {
-		rib_daemon_ = 0;
+	for (std::map<std::string, FlowStateObject*>::iterator it
+		= objects.begin(); it != objects.end();++it)
+	{
+		if (it->second->is_modified()) 
+		{
+			result.push_back(it->second);
+		}
 	}
 }
 
-const void* FlowStateRIBObject::get_value() const {
-	return object_value_;
-}
+void FlowStateObjects::incrementAge(unsigned int max_age, rina::Timer* timer)
+{
+	for (std::map<std::string, FlowStateObject *>::iterator
+		it = objects.begin(); it != objects.end(); ++it) 
+	{
+		if (it->second->get_age() < UINT_MAX)
+			it->second->set_age(it->second->get_age() + 1);
 
-void FlowStateRIBObject::writeObject(const void* object_value) {
-	object_value_ = object_value;
-}
-
-void FlowStateRIBObject::createObject(const std::string& objectClass, const std::string& objectName,
-		const void* objectValue) {
-	if (objectName.compare("") != 0 && objectClass.compare("") != 0) {
-		object_value_ = objectValue;
+		if (it->second->get_age() >= max_age && !it->second->is_beingerased()) {
+			LOG_IPCP_DBG("Object to erase age: %d", it->second->get_age());
+			KillFlowStateObjectTimerTask* ksttask =
+				new KillFlowStateObjectTimerTask(this, it->second->get_objectname());
+			timer->scheduleTask(ksttask, FlowStateManager::WAIT_UNTIL_REMOVE_OBJECT);
+			it->second->has_beingerased(true);
+		}
 	}
 }
 
-void FlowStateRIBObject::deleteObject(const void* objectValue)
+void FlowStateObjects::updateObject(const std::string& fqn, 
+	unsigned int avoid_port)
 {
-	parent_->remove_child(name_);
-	rib_daemon_->removeRIBObject(name_);
+	FlowStateObject* obj = objects.find(fqn)->second;
+	obj->set_age(0);
+	obj->set_avoidport(avoid_port);
+	obj->has_beingerased(false);
+	obj->has_state(true);
+	obj->set_sequencenumber(1);
+	obj->has_modified(true);
 }
 
-const int FlowStateDatabase::NO_AVOID_PORT = -1;
-const long FlowStateDatabase::WAIT_UNTIL_REMOVE_OBJECT = 23000;
-
-FlowStateDatabase::FlowStateDatabase(FlowStateRIBObjectGroup * flow_state_rib_object_group,
-		rina::Timer * timer, IPCPRIBDaemon *rib_daemon, unsigned int *maximum_age)
+void FlowStateObjects::encodeAllFSOs(rina::ser_obj_t& obj)
 {
-	flow_state_rib_object_group_ = flow_state_rib_object_group;
-	modified_ = false;
-	timer_ = timer;
-	rib_daemon_ = rib_daemon;
-	maximum_age_ = maximum_age;
-}
 
-bool FlowStateDatabase::isEmpty() const
-{
-	return flow_state_objects_.size() == 0;
-}
-
-void FlowStateDatabase::setAvoidPort(int avoidPort)
-{
-	std::list<FlowStateObject *>::iterator it;
-	for (it = flow_state_objects_.begin(); it != flow_state_objects_.end();
-			++it) {
-		(*it)->avoid_port_ = avoidPort;
+	FlowStateObjectListEncoder encoder;
+	std::list<FlowStateObject* > result;
+	if (!objects.empty())
+	{
+		for (std::map<std::string, FlowStateObject *>::iterator it
+			= objects.begin(); it != objects.end();++it)
+		{
+			result.push_back(it->second);
+		}
+		encoder.encode(result, obj);
+	}
+	else
+	{
+		obj.size_ = 0;
+		obj.message_ = 0;
 	}
 }
 
-void FlowStateDatabase::addObjectToGroup(unsigned int address,
+//Class FlowStateRIBObjects
+FlowStateRIBObjects::FlowStateRIBObjects(FlowStateObjects* new_objs, 
+	FlowStateManager* new_manager) :
+rina::rib::RIBObj(EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS)
+{
+	objs = new_objs;
+	manager = new_manager;
+}
+
+
+void FlowStateRIBObjects::write(const rina::cdap_rib::con_handle_t &con, const std::string& fqn,
+	const std::string& clas, const rina::cdap_rib::filt_info_t &filt,
+	const int invoke_id, const rina::ser_obj_t &obj_req, 
+	rina::ser_obj_t &obj_reply,	rina::cdap_rib::res_info_t& res)
+{
+	FlowStateObjectListEncoder encoder;
+	std::list<FlowStateObject*> new_objects;
+	encoder.decode(obj_req, new_objects);
+	for (std::list<FlowStateObject*>::iterator it = new_objects.begin();
+		it != new_objects.end(); ++it)
+	{
+		FlowStateObject *obj = objs->getObject((*it)->get_objectname());
+		if (obj != NULL)
+		{
+			if (obj->get_sequencenumber() < (*it)->get_sequencenumber())
+			{
+				*obj = **it;
+			}
+		}
+		else
+		{
+			objs->addObject(*it);
+		}
+	}
+}
+
+
+// CLASS FlowStateManager
+const int FlowStateManager::NO_AVOID_PORT = -1;
+const long FlowStateManager::WAIT_UNTIL_REMOVE_OBJECT = 23000;
+
+FlowStateManager::FlowStateManager(rina::Timer *new_timer, unsigned int max_age)
+{
+	maximum_age = max_age;
+	fsos = new FlowStateObjects(this);
+	timer = new_timer;
+}
+
+FlowStateManager::~FlowStateManager()
+{
+	delete fsos;
+}
+
+bool FlowStateManager::addNewFSO(unsigned int address,
 		unsigned int neighborAddress, unsigned int cost, int avoid_port)
 {
 	FlowStateObject * newObject = new FlowStateObject(address,
 			neighborAddress, cost, true, 1, 0);
-
-	for (std::list<FlowStateObject *>::iterator it =
-			flow_state_objects_.begin(); it != flow_state_objects_.end();
-			++it) {
-		if ((*it)->object_name_.compare(newObject->object_name_) == 0) {
-			delete newObject;
-			(*it)->age_ = 0;
-			(*it)->avoid_port_ = avoid_port;
-			(*it)->being_erased_ = false;
-			(*it)->up_ = true;
-			(*it)->sequence_number_ = 1;
-			(*it)->modified_ = true;
-			(*it)->being_erased_ = false;
-			return;
-		}
-	}
-	flow_state_objects_.push_back(newObject);
-	flow_state_rib_object_group_->createObject(
-			EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
-			newObject->object_name_, newObject);
-	modified_ = true;
+	return fsos->addObject(newObject);
 }
 
-FlowStateObject * FlowStateDatabase::getByAddress(unsigned int address)
+void FlowStateManager::deprecateObject(std::string fqn)
 {
-	std::list<FlowStateObject *>::iterator it;
-	for (it = flow_state_objects_.begin(); it != flow_state_objects_.end();
-			++it) {
-		if ((*it)->neighbor_address_ == address) {
-			return (*it);
-		}
-	}
-
-	return 0;
+	fsos->deprecateObject(fqn, maximum_age);
 }
 
-void FlowStateDatabase::deprecateObject(unsigned int address)
+void FlowStateManager::incrementAge()
 {
-	FlowStateObject * fso = getByAddress(address);
-	if (!fso) {
-		return;
-	}
-	LOG_IPCP_DBG("Object %s deprecated", fso->object_name_.c_str());
-
-	fso->up_ = false;
-	fso->age_ = *maximum_age_;
-	fso->sequence_number_ = fso->sequence_number_ + 1;
-	fso->modified_ = true;
-	modified_ = true;
+	fsos->incrementAge(maximum_age, timer);
 }
 
-std::list<FlowStateObject*> FlowStateDatabase::getModifiedFSOs()
-{
-	std::list<FlowStateObject*> result;
-	std::list<FlowStateObject *>::iterator it;
-	for (it = flow_state_objects_.begin(); it != flow_state_objects_.end();
-			++it) {
-		if ((*it)->modified_) {
-			result.push_back((*it));
-		}
-	}
-
-	return result;
-}
-
-void FlowStateDatabase::getAllFSOs(
-		std::list<FlowStateObject*> &flow_state_objects)
-{
-	flow_state_objects = flow_state_objects_;
-}
-
-unsigned int FlowStateDatabase::get_maximum_age() const
-{
-	return *maximum_age_;
-}
-
-std::map <int, std::list<FlowStateObject*> > FlowStateDatabase::prepareForPropagation(
-		const std::list<rina::FlowInformation>& flows)
-{
-	std::map <int, std::list<FlowStateObject*> > result;
-	for (std::list<rina::FlowInformation>::const_iterator it = flows.begin();
-	    it != flows.end(); ++it ){
-	  std::list<FlowStateObject*> list;
-	  result[it->portId] = list;
-	}
-
-	std::list<FlowStateObject*> modifiedFSOs = getModifiedFSOs();
-	if (modifiedFSOs.size() == 0) {
-		return result;
-	}
-
-  for (std::list<FlowStateObject*>::iterator it = modifiedFSOs.begin();
-      it != modifiedFSOs.end(); ++it) {
-
-    LOG_IPCP_DBG("Propagation: Check modified object %s with age %d and status %d",
-    (*it)->object_name_.c_str(), (*it)->age_, (*it)->up_);
-
-    for(std::map<int, std::list<FlowStateObject*> >::iterator it2 =
-        result.begin(); it2 != result.end(); ++it2){
-      if(it2->first != (*it)->avoid_port_){
-        it2->second.push_back(*it);
-      }
-    }
-    (*it)->modified_ = false;
-    (*it)->avoid_port_ = NO_AVOID_PORT;
-  }
-	return result;
-}
-
-void FlowStateDatabase::incrementAge()
-{
-	std::list<FlowStateObject *>::iterator it;
-	for (it = flow_state_objects_.begin(); it != flow_state_objects_.end();
-			++it) {
-		if ((*it)->age_ < UINT_MAX)
-			(*it)->age_ = (*it)->age_ + 1;
-
-		if ((*it)->age_ >= *maximum_age_ && !(*it)->being_erased_) {
-			LOG_IPCP_DBG("Object to erase age: %d", (*it)->age_);
-			KillFlowStateObjectTimerTask * ksttask =
-					new KillFlowStateObjectTimerTask(rib_daemon_, (*it), this);
-			timer_->scheduleTask(ksttask, WAIT_UNTIL_REMOVE_OBJECT);
-			(*it)->being_erased_ = true;
-		}
-	}
-}
-
-void FlowStateDatabase::updateObjects(
-		const std::list<FlowStateObject*>& newObjects, int avoidPort,
-		unsigned int address)
+void FlowStateManager::updateObjects(
+	const std::list<FlowStateObject*>& newObjects, int avoidPort,
+	unsigned int address)
 {
 	LOG_IPCP_DBG("Update objects from DB launched");
 
-	std::list<FlowStateObject*>::const_iterator newIt, oldIt;
-	;
-	bool found = false;
-	for (newIt = newObjects.begin(); newIt != newObjects.end(); ++newIt) {
-		for (oldIt = flow_state_objects_.begin();
-				oldIt != flow_state_objects_.end(); ++oldIt) {
-
-			if ((*newIt)->address_ == (*oldIt)->address_
-					&& (*newIt)->neighbor_address_
-							== (*oldIt)->neighbor_address_) {
-				LOG_IPCP_DBG("Found the object in the DB. Object: %s",
-						(*oldIt)->object_name_.c_str());
-
-				if ((*newIt)->sequence_number_ > (*oldIt)->sequence_number_
-						|| (*oldIt)->age_ >= *maximum_age_) {
-					if ((*newIt)->address_ == address) {
-						(*oldIt)->sequence_number_ = (*newIt)->sequence_number_
-								+ 1;
-						(*oldIt)->avoid_port_ = NO_AVOID_PORT;
-						LOG_IPCP_DBG(
-								"Object is self generated, updating the sequence number of %s to %d",
-								(*oldIt)->object_name_.c_str(), (*oldIt)->sequence_number_);
-					} else {
-						LOG_IPCP_DBG("Update the object %s with seq num %d",
-								(*oldIt)->object_name_.c_str(), (*newIt)->sequence_number_);
-						(*oldIt)->age_ = (*newIt)->age_;
-						(*oldIt)->up_ = (*newIt)->up_;
-						(*oldIt)->sequence_number_ = (*newIt)->sequence_number_;
-						(*oldIt)->avoid_port_ = avoidPort;
-					}
-
-					(*oldIt)->modified_ = true;
-					modified_ = true;
+	for (std::list<FlowStateObject*>::const_iterator 
+		newIt = newObjects.begin(); newIt != newObjects.end(); ++newIt) 
+	{
+		FlowStateObject *obj_to_up = fsos->getObject((*newIt)->get_objectname());
+		//1 If the object exists update
+		if (obj_to_up != NULL)
+		{
+			LOG_IPCP_DBG("Found the object in the DB. Object: %s",
+				obj_to_up->get_objectname().c_str());
+			//1.1 If the object has a higher sequence number update
+			if ((*newIt)->get_sequencenumber() > obj_to_up->get_sequencenumber())
+			{
+				if ((*newIt)->get_address() == address) 
+				{
+					LOG_IPCP_DBG("Object is self generated, updating the sequence number and age	of %s to %d", obj_to_up->
+						get_objectname().c_str(), obj_to_up->get_sequencenumber());
+					obj_to_up->set_sequencenumber((*newIt)->get_sequencenumber()
+						+ 1);
+					obj_to_up->set_avoidport(NO_AVOID_PORT);
+					obj_to_up->set_age(0);
+				} 
+				else 
+				{
+					LOG_IPCP_DBG("Update the object %s with seq num %d",
+						obj_to_up->get_objectname().c_str(), (*newIt)->get_sequencenumber());
+					obj_to_up->set_age(0);
+					obj_to_up->set_sequencenumber((*newIt)->get_sequencenumber());
+					obj_to_up->set_avoidport(avoidPort);
 				}
-
-				found = true;
-				delete (*newIt);
-				break;
+				obj_to_up->has_modified(true);
+				fsos->setToModified();
 			}
 		}
-
-		if (found) {
-			found = false;
-			continue;
-		}
-
-		if ((*newIt)->address_ == address) {
-			LOG_IPCP_DBG("Object has origin myself, discard object %s",
-					(*newIt)->object_name_.c_str());
-			delete (*newIt);
-			continue;
-		}
-
-		LOG_IPCP_DBG("New object added");
-		(*newIt)->avoid_port_ = avoidPort;
-		(*newIt)->modified_ = true;
-		flow_state_objects_.push_back((*newIt));
-		modified_ = true;
-		try {
-			flow_state_rib_object_group_->createObject(
-					EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
-					(*newIt)->object_name_, (*newIt));
-		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Problems creating RIB object: %s", e.what());
+		//2. If the object does not exist create
+		else
+		{
+			if((*newIt)->get_address() != address)
+			{
+				LOG_IPCP_DBG("New object added");
+				(*newIt)->set_avoidport(avoidPort);
+				(*newIt)->has_modified(true);
+				fsos->addObject(*newIt);
+				fsos->setToModified();
+			}
 		}
 	}
 }
 
-LinkStateRoutingCDAPMessageHandler::LinkStateRoutingCDAPMessageHandler(
-		LinkStateRoutingPolicy * lsr_policy)
-{
-	lsr_policy_ = lsr_policy;
-}
 
-void LinkStateRoutingCDAPMessageHandler::readResponse(int result,
-		const std::string& result_reason, void * object_value,
-		const std::string& object_name,
-		rina::CDAPSessionDescriptor * session_descriptor)
+void FlowStateManager::prepareForPropagation(
+	std::map<int, rina::ser_obj_t>&  to_propagate) const
 {
-	if (result != 0) {
-		LOG_IPCP_ERR("Problems reading Flow State Objects from neighbor: %s",
-				result_reason.c_str());
+	//1 Get the FSOs to propagate
+	std::list<FlowStateObject*> modifiedFSOs;
+	fsos->getModifiedFSOs(modifiedFSOs);
+
+	//2 Initialize the auxiliar map flows - objects
+	std::map<int, std::list<FlowStateObject*> > fsos_port;
+	for (std::map <int, rina::ser_obj_t>::iterator it 
+		= to_propagate.begin(); it != to_propagate.end(); ++it)
+	{
+		std::list<FlowStateObject*> list;
+		fsos_port[it->first] = list;
 	}
 
-	std::list<FlowStateObject *> * objects =
-			(std::list<FlowStateObject *> *) object_value;
-	lsr_policy_->writeMessageReceived(*objects,
-			session_descriptor->port_id_);
-	delete objects;
+	//2 add each modified object to its port list
+	for (std::list<FlowStateObject*>::iterator it = modifiedFSOs.begin();
+      it != modifiedFSOs.end(); ++it)
+	{
+		LOG_DBG("Propagation: Check modified object %s with age %d and status %d",
+			(*it)->get_objectname().c_str(), (*it)->get_age(), (*it)->is_state());
+
+		for(std::map<int, std::list<FlowStateObject*> >::iterator it2 =
+			fsos_port.begin(); it2 != fsos_port.end(); ++it2)
+		{
+			if(it2->first != (*it)->get_avoidport())
+			{
+				it2->second.push_back(*it);
+			}
+		}
+		(*it)->has_modified(false);
+		(*it)->set_avoidport(NO_AVOID_PORT);
+	}
+	//3 codify
+	FlowStateObjectListEncoder encoder;
+	for(std::map<int, std::list<FlowStateObject*> >::iterator it =
+		fsos_port.begin(); it != fsos_port.end(); ++it)
+	{
+		encoder.encode(it->second, to_propagate[it->first]);
+	}
 }
 
+void FlowStateManager::encodeAllFSOs(rina::ser_obj_t& obj) const
+{
+	fsos->encodeAllFSOs(obj);
+}
+
+void FlowStateManager::set_maximum_age(unsigned int max_age)
+{
+	maximum_age = max_age;
+}
+// ComputeRoutingTimerTask
 ComputeRoutingTimerTask::ComputeRoutingTimerTask(
 		LinkStateRoutingPolicy * lsr_policy, long delay)
 {
@@ -949,42 +1068,18 @@ void ComputeRoutingTimerTask::run()
 	//Re-schedule
 	ComputeRoutingTimerTask * task = new ComputeRoutingTimerTask(
 			lsr_policy_, delay_);
-	lsr_policy_->timer_->scheduleTask(task, delay_);
+	lsr_policy_->timer_.scheduleTask(task, delay_);
 }
 
-KillFlowStateObjectTimerTask::KillFlowStateObjectTimerTask(
-		IPCPRIBDaemon * rib_daemon, FlowStateObject * fso,
-		FlowStateDatabase * fs_db)
+KillFlowStateObjectTimerTask::KillFlowStateObjectTimerTask(FlowStateObjects *fsos, std::string fqn)
 {
-	rib_daemon_ = rib_daemon;
-	fso_ = fso;
-	fs_db_ = fs_db;
+	fsos_ = fsos;
+	fqn_ = fqn;
 }
 
 void KillFlowStateObjectTimerTask::run()
 {
-	std::list<FlowStateObject *>::iterator it;
-	if (fso_->age_ >= fs_db_->get_maximum_age()) {
-		for (it = fs_db_->flow_state_objects_.begin();
-				it != fs_db_->flow_state_objects_.end(); ++it) {
-			if ((*it)->address_ == fso_->address_
-					&& (*it)->neighbor_address_ == fso_->neighbor_address_) {
-				fs_db_->flow_state_objects_.erase(it);
-				break;
-			}
-		}
-
-		try {
-			SimpleSetMemberIPCPRIBObject *fs_rib_o =
-					(SimpleSetMemberIPCPRIBObject*) rib_daemon_->readObject(
-							EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
-							fso_->object_name_);
-			fs_rib_o->deleteObject(fso_);
-		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Object could not be removed from the RIB");
-		}
-		delete fso_;
-	}
+	fsos_->removeObject(fqn_);
 }
 
 PropagateFSODBTimerTask::PropagateFSODBTimerTask(
@@ -1001,7 +1096,7 @@ void PropagateFSODBTimerTask::run()
 	//Re-schedule
 	PropagateFSODBTimerTask * task = new PropagateFSODBTimerTask(
 			lsr_policy_, delay_);
-	lsr_policy_->timer_->scheduleTask(task, delay_);
+	lsr_policy_->timer_.scheduleTask(task, delay_);
 }
 
 UpdateAgeTimerTask::UpdateAgeTimerTask(
@@ -1018,9 +1113,10 @@ void UpdateAgeTimerTask::run()
 	//Re-schedule
 	UpdateAgeTimerTask * task = new UpdateAgeTimerTask(lsr_policy_,
 			delay_);
-	lsr_policy_->timer_->scheduleTask(task, delay_);
+	lsr_policy_->timer_.scheduleTask(task, delay_);
 }
 
+// CLASS LinkStateRoutingPolicy
 const std::string LinkStateRoutingPolicy::OBJECT_MAXIMUM_AGE = "objectMaximumAge";
 const std::string LinkStateRoutingPolicy::WAIT_UNTIL_READ_CDAP = "waitUntilReadCDAP";
 const std::string LinkStateRoutingPolicy::WAIT_UNTIL_ERROR = "waitUntilError";
@@ -1036,54 +1132,36 @@ LinkStateRoutingPolicy::LinkStateRoutingPolicy(IPCProcess * ipcp)
 	test_ = false;
 	ipc_process_ = ipcp;
 	rib_daemon_ = ipc_process_->rib_daemon_;
-	cdap_session_manager_ = ipc_process_->cdap_session_manager_;
-	fs_rib_group_ = 0;
 	routing_algorithm_ = 0;
 	resiliency_algorithm_ = 0;
 	source_vertex_ = 0;
-	maximum_age_ = UINT_MAX;
 	db_ = 0;
-	timer_ = new rina::Timer();
-	lock_ = new rina::Lockable();
 
 	populateRIB();
 	subscribeToEvents();
-	db_ = new FlowStateDatabase(fs_rib_group_, timer_, rib_daemon_,
-			&maximum_age_);
+	db_ = new FlowStateManager(&timer_, UINT_MAX);
 }
 
 LinkStateRoutingPolicy::~LinkStateRoutingPolicy()
 {
-	if (routing_algorithm_) {
-		delete routing_algorithm_;
-	}
-
-	if (resiliency_algorithm_) {
-		delete resiliency_algorithm_;
-	}
-
-	if (db_) {
-		delete db_;
-	}
-
-	if (timer_) {
-		delete timer_;
-	}
-
-	if (lock_) {
-		delete lock_;
-	}
+	delete routing_algorithm_;
+	delete resiliency_algorithm_;
+	delete db_;
 }
 
 void LinkStateRoutingPolicy::populateRIB()
 {
+	// TODO: check this
+	/*
 	try {
-		fs_rib_group_ = new FlowStateRIBObjectGroup(ipc_process_, this);
-		rib_daemon_->addRIBObject(fs_rib_group_);
+		fs_rib_grostate_ = new FlowStateRIBObjectGroup(ipc_process_, this);
+		rib_daemon_->addRIBObject(fs_rib_grostate_);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems adding object to RIB: %s", e.what());
 	}
+	*/
 }
+
 
 void LinkStateRoutingPolicy::subscribeToEvents()
 {
@@ -1124,9 +1202,10 @@ void LinkStateRoutingPolicy::set_dif_configuration(
 #endif
 	if (!test_) {
 		try {
-			maximum_age_ = psconf.get_param_value_as_int(OBJECT_MAXIMUM_AGE);
+
+			db_->set_maximum_age(psconf.get_param_value_as_int(OBJECT_MAXIMUM_AGE));
 		} catch (rina::Exception &e) {
-			maximum_age_ = PULSES_UNTIL_FSO_EXPIRATION_DEFAULT;
+			db_->set_maximum_age(PULSES_UNTIL_FSO_EXPIRATION_DEFAULT);
 		}
 
 		// Task to compute PDUFT
@@ -1136,7 +1215,7 @@ void LinkStateRoutingPolicy::set_dif_configuration(
 			delay = WAIT_UNTIL_PDUFT_COMPUTATION_DEFAULT;
 		}
 		ComputeRoutingTimerTask * cttask = new ComputeRoutingTimerTask(this, delay);
-		timer_->scheduleTask(cttask, delay);
+		timer_.scheduleTask(cttask, delay);
 
 		// Task to increment age
 		try {
@@ -1145,7 +1224,7 @@ void LinkStateRoutingPolicy::set_dif_configuration(
 			delay = WAIT_UNTIL_AGE_INCREMENT_DEFAULT;
 		}
 		UpdateAgeTimerTask * uattask = new UpdateAgeTimerTask(this, delay);
-		timer_->scheduleTask(uattask, delay);
+		timer_.scheduleTask(uattask, delay);
 
 		// Task to propagate modified FSO
 		try {
@@ -1155,7 +1234,7 @@ void LinkStateRoutingPolicy::set_dif_configuration(
 		}
 		PropagateFSODBTimerTask * pfttask = new PropagateFSODBTimerTask(this,
 				delay);
-		timer_->scheduleTask(pfttask, delay);
+		timer_.scheduleTask(pfttask, delay);
 	}
 }
 
@@ -1169,7 +1248,7 @@ void LinkStateRoutingPolicy::eventHappened(rina::InternalEvent * event)
 	if (!event)
 		return;
 
-	rina::ScopedLock g(*lock_);
+	rina::ScopedLock g(lock_);
 
 	if (event->type == rina::InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED) {
 			rina::NMinusOneFlowDeallocatedEvent * flowEvent =
@@ -1192,9 +1271,8 @@ void LinkStateRoutingPolicy::eventHappened(rina::InternalEvent * event)
 void LinkStateRoutingPolicy::processFlowDeallocatedEvent(
 		rina::NMinusOneFlowDeallocatedEvent * event)
 {
-	std::list<rina::FlowInformation>::iterator it;
-
-	for (it = allocated_flows_.begin(); it != allocated_flows_.end(); ++it) {
+	for (std::list<rina::FlowInformation>::iterator it
+		= allocated_flows_.begin(); it != allocated_flows_.end(); ++it) {
 		if (it->portId == event->port_id_) {
 			allocated_flows_.erase(it);
 			return;
@@ -1206,9 +1284,10 @@ void LinkStateRoutingPolicy::processFlowDeallocatedEvent(
 }
 
 void LinkStateRoutingPolicy::processNeighborLostEvent(
-		rina::ConnectiviyToNeighborLostEvent * event) {
-	db_->deprecateObject(event->neighbor_.address_);
+		rina::ConnectiviyToNeighborLostEvent* event) {
+	db_->deprecateObjectsNeighbor(event->neighbor_.address_);
 }
+
 
 void LinkStateRoutingPolicy::processFlowAllocatedEvent(
 		rina::NMinusOneFlowAllocatedEvent * event)
@@ -1221,12 +1300,14 @@ void LinkStateRoutingPolicy::processFlowAllocatedEvent(
 		return;
 	}
 
-	try {
-		db_->addObjectToGroup(ipc_process_->get_address(),
-				ipc_process_->namespace_manager_->getAdressByname(
-						event->flow_information_.remoteAppName), 1,
-						event->flow_information_.portId);
-	} catch (rina::Exception &e) {
+	try 
+	{
+		db_->addNewFSO(ipc_process_->get_address(), 
+			ipc_process_->namespace_manager_->getAdressByname(
+			event->flow_information_.remoteAppName), 1,
+			event->flow_information_.portId);
+	} catch (rina::Exception &e) 
+	{
 		LOG_IPCP_DBG("flow allocation waiting for enrollment");
 		allocated_flows_.push_back(event->flow_information_);
 	}
@@ -1235,15 +1316,15 @@ void LinkStateRoutingPolicy::processFlowAllocatedEvent(
 void LinkStateRoutingPolicy::processNeighborAddedEvent(
 		rina::NeighborAddedEvent * event)
 {
-	std::list<rina::FlowInformation>::iterator it;
-
-	for (it = allocated_flows_.begin(); it != allocated_flows_.end(); ++it) {
-		if (it->portId == event->neighbor_.underlying_port_id_)
-				/*it->remoteAppName.processName.compare(
-				event->neighbor_->get_name().processName) == 0) */{
+	int portId = event->neighbor_.get_underlying_port_id();
+	for (std::list<rina::FlowInformation>::iterator it = 
+		allocated_flows_.begin(); it != allocated_flows_.end(); ++it) 
+	{
+		if (it->portId == portId)
+		{
 			LOG_IPCP_INFO("There was an allocation flow event waiting for enrollment, launching it");
 			try {
-				db_->addObjectToGroup(ipc_process_->get_address(),
+				db_->addNewFSO(ipc_process_->get_address(),
 						ipc_process_->namespace_manager_->getAdressByname(
 								event->neighbor_.get_name()), 1, it->portId);
 				allocated_flows_.erase(it);
@@ -1254,81 +1335,81 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(
 		}
 	}
 
-	if (db_->isEmpty()) {
-		return;
-	}
-
-	int portId = event->neighbor_.get_underlying_port_id();
-
 	try {
-		rina::RIBObjectValue robject_value;
-		robject_value.type_ = rina::RIBObjectValue::complextype;
-		robject_value.complex_value_ = &(db_->flow_state_objects_);
-
-		rina::RemoteProcessId remote_id;
-		remote_id.port_id_ = portId;
-
-		rib_daemon_->remoteWriteObject(
-				EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
-				EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME,
-				robject_value, 0, remote_id, 0);
-		db_->setAvoidPort(portId);
+		rina::cdap_rib::obj_info_t obj;
+		obj.class_ = EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS;
+		obj.name_ = EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME;
+		db_->encodeAllFSOs(obj.value_);
+		obj.inst_ = 0;
+		rina::cdap_rib::flags_t flags;
+		rina::cdap_rib::filt_info_t filt;
+		if (obj.value_.size_ != 0)
+			rib_daemon_->getProxy()->remote_write(portId, obj, flags, filt, 0, 
+				rina::cdap_rib::CDAP_DEST_PORT);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems encoding and sending CDAP message: %s", e.what());
 	}
 }
 
-void LinkStateRoutingPolicy::propagateFSDB() const
+void LinkStateRoutingPolicy::propagateFSDB()
 {
-	rina::ScopedLock g(*lock_);
-
+	rina::ScopedLock g(lock_);
+	//1 Get the active flows
 	std::list<rina::FlowInformation> nMinusOneFlows =
 			ipc_process_->resource_allocator_->get_n_minus_one_flow_manager()->getAllNMinusOneFlowInformation();
+	//2 Initilize the map
+	std::map <int, rina::ser_obj_t > objectsToSend;
+	for(std::list<rina::FlowInformation>::iterator it = nMinusOneFlows.begin();
+		it != nMinusOneFlows.end(); ++it) 
+	{
+		rina::ser_obj_t obj_to_fill;
+		objectsToSend[it->portId] = obj_to_fill;
+	}
 
-  std::map <int, std::list<FlowStateObject*> > objectsToSend =
-			db_->prepareForPropagation(nMinusOneFlows);
+	//3 Get the objects to send
+	db_->prepareForPropagation(objectsToSend);
 
 	if (objectsToSend.size() == 0) {
 		return;
 	}
 
-	for (std::map <int, std::list<FlowStateObject*> >::iterator it =
-	    objectsToSend.begin(); it != objectsToSend.end(); ++it){
-	  if (!it->second.empty()){
-	    rina::RIBObjectValue robject_value;
-	    robject_value.type_ = rina::RIBObjectValue::complextype;
-	    robject_value.complex_value_ = &(it->second);
-	    rina::RemoteProcessId remote_id;
-      remote_id.port_id_ = it->first;
-      try {
-      rib_daemon_->remoteWriteObject(
-          EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
-          EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME,
-          robject_value, 0, remote_id, 0);
-      } catch (rina::Exception &e) {
-        LOG_IPCP_ERR("Errors sending message: %s", e.what());
-      }
-	  }
+	for (std::map<int, rina::ser_obj_t>::iterator it = objectsToSend.begin(); 
+		it != objectsToSend.end(); ++it)
+
+	{
+		rina::cdap_rib::flags flags;
+		rina::cdap_rib::filt_info_t filter;
+		try
+		{
+			rina::cdap_rib::object_info obj;
+			obj.class_ = EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS;
+			obj.name_ = EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME;
+			obj.inst_ = 0;
+			obj.value_ = it->second;
+			rib_daemon_->getProxy()->remote_write(it->first, obj, flags, filter, 0);
+		}
+		catch (rina::Exception &e) 
+		{
+			LOG_IPCP_ERR("Errors sending message: %s", e.what());
+		}
 	}
 }
 
 void LinkStateRoutingPolicy::updateAge()
 {
-	rina::ScopedLock g(*lock_);
-
+	rina::ScopedLock g(lock_);
 	db_->incrementAge();
 }
 
 void LinkStateRoutingPolicy::routingTableUpdate()
 {
-	rina::ScopedLock g(*lock_);
+	rina::ScopedLock g(lock_);
 	Graph *graph;
 
-	if (!db_->modified_) {
+	if (!db_->tableUpdate()) {
 		return;
 	}
 
-	db_->modified_ = false;
 	std::list<FlowStateObject *> flow_state_objects;
 	db_->getAllFSOs(flow_state_objects);
 
@@ -1356,62 +1437,28 @@ void LinkStateRoutingPolicy::routingTableUpdate()
 	ipc_process_->resource_allocator_->pduft_gen_ps->routingTableUpdated(rt);
 }
 
-void LinkStateRoutingPolicy::writeMessageReceived(
-		const std::list<FlowStateObject *> & flow_state_objects, int portId)
-{
-	rina::ScopedLock g(*lock_);
-
-	try {
-		db_->updateObjects(flow_state_objects, portId,
-				ipc_process_->get_address());
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems decoding Flow State Object Group: %s", e.what());
-	}
-}
-
-void LinkStateRoutingPolicy::readMessageRecieved(int invoke_id,
-		int portId) const
-{
-	rina::ScopedLock g(*lock_);
-
-	try {
-		rina::RIBObjectValue robject_value;
-		robject_value.type_ = rina::RIBObjectValue::complextype;
-		robject_value.complex_value_ = &(db_->flow_state_objects_);
-
-		rina::RemoteProcessId remote_id;
-		remote_id.port_id_ = portId;
-
-		rib_daemon_->remoteReadObjectResponse(fs_rib_group_->class_,
-				fs_rib_group_->name_, robject_value, 0, "", invoke_id, false,
-				remote_id);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems encoding and sending CDAP message: %s", e.what());
-	}
-}
-
 // CLASS FlowStateObjectEncoder
 namespace fso_helpers{
 void toGPB(	const FlowStateObject &fso, 
 	rina::messages::flowStateObject_t &gpb_fso)
 {
-	gpb_fso.set_address(fso->address_);
-	gpb_fso.set_age(fso->age_);
-	gpb_fso.set_neighbor_address(fso->neighbor_address_);
-	gpb_fso.set_cost(fso->cost_);
-	gpb_fso.set_state(fso->up_);
-	gpb_fso.set_sequence_number(fso->sequence_number_);
+	gpb_fso.set_address(fso.get_address());
+	gpb_fso.set_age(fso.get_age());
+	gpb_fso.set_neighbor_address(fso.get_neighboraddress());
+	gpb_fso.set_cost(fso.get_cost());
+	gpb_fso.set_state(fso.is_state());
+	gpb_fso.set_sequence_number(fso.get_sequencenumber());
 }
 
 void toModel(
 	const rina::messages::flowStateObject_t &gpb_fso, FlowStateObject &fso)
 {
-	fso.address_ = gpb_fso.address();
-	fso.neighbor_address_ = gpb_fso.neighbor_address();
-	fso.cost_ = gpb_fso.cost();
-	fso.up_ = gpb_fso.state();
-	fso.sequence_number_ = gpb_fso.sequence_number();
-	fso.age_ = gpb_fso.age();
+	fso.set_address(gpb_fso.address());
+	fso.set_neighboraddress(gpb_fso.neighbor_address());
+	fso.set_cost(gpb_fso.cost());
+	fso.has_state(gpb_fso.state());
+	fso.set_sequencenumber(gpb_fso.sequence_number());
+	fso.set_age(gpb_fso.age());
 }
 } //namespace fso_helpers
 
@@ -1420,7 +1467,7 @@ void FlowStateObjectEncoder::encode(const FlowStateObject &obj,
 {
 	rina::messages::flowStateObject_t gpb;
 
-	fso_helpers::toGPB(fso, gpb);
+	fso_helpers::toGPB(obj, gpb);
 
 	serobj.size_ = gpb.ByteSize();
 	serobj.message_ = new char[serobj.size_];
@@ -1435,15 +1482,16 @@ void decode(const rina::ser_obj_t &serobj, FlowStateObject &des_obj)
 	fso_helpers::toModel(gpb, des_obj);
 }
 
-void encode(const std::list<FlowStateObject> &obj, rina::ser_obj_t& serobj)
+void encode(const std::list<FlowStateObject*> &obj, rina::ser_obj_t& serobj)
 {
 	rina::messages::flowStateObjectGroup_t gpb;
 
-	for (std::list<FlowStateObject>::const_iterator it= obj.begin(); 
-		it != obj.end(); ++it) {
+	for (std::list<FlowStateObject*>::const_iterator it= obj.begin(); 
+		it != obj.end(); ++it) 
+	{
 		rina::messages::flowStateObject_t *gpb_fso;
-		gpb_fso = gpb_list.add_flow_state_objects();
-		fso_helpers::toGPB(*gpb_fso, *it);
+		gpb_fso = gpb.add_flow_state_objects();
+		fso_helpers::toGPB(**it, *gpb_fso);
 	}
 
 	serobj.size_ = gpb.ByteSize();
