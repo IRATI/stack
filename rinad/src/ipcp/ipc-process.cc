@@ -67,9 +67,6 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         lock_ = new rina::Lockable();
 
         // Initialize application entities
-        init_cdap_session_manager();
-        init_encoder();
-
         delimiter_ = 0; //TODO initialize Delimiter once it is implemented
         internal_event_manager_ = new rina::SimpleInternalEventManager();
         enrollment_task_ = new EnrollmentTask();
@@ -819,6 +816,34 @@ void IPCProcessImpl::event_loop(void){
 		delete e;
 	}
 
+}
+
+//Class IPCPFactory
+static IPCProcessImpl * ipcp = NULL;
+
+IPCProcessImpl* IPCPFactory::createIPCP(const rina::ApplicationProcessNamingInformation& name,
+				  	unsigned short id,
+				  	unsigned int ipc_manager_port,
+				  	std::string log_level,
+				  	std::string log_file)
+{
+	if(!ipcp) {
+		ipcp = new IPCProcessImpl(name,
+					  ipcp_id,
+					  ipc_manager_port,
+					  log_level,
+					  log_file);
+		return ipcp;
+	} else
+		return 0;
+}
+
+IPCProcessImpl* IPCPFactory::getIPCP()
+{
+	if (ipcp)
+		return ipcp;
+
+	return NULL;
 }
 
 } //namespace rinad

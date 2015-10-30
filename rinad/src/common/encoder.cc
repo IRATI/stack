@@ -205,9 +205,8 @@ rina::messages::policyDescriptor_t* get_policyDescriptor_t(const rina::PolicyCon
 }//namespace helpers
 
 // CLASS DataTransferConstantsEncoder
-void DataTransferConstantsEncoderencode(
-	const rina::DataTransferConstants &obj, 
-	rina::ser_obj_t& serobj)
+void DataTransferConstantsEncoder::encode(const rina::DataTransferConstants &obj,
+					  rina::ser_obj_t& serobj)
 {
 	rina::messages::dataTransferConstants_t gpb;
 
@@ -226,9 +225,8 @@ void DataTransferConstantsEncoderencode(
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
 
-void DataTransferConstantsEncoder::decode(
-	const rina::ser_obj_t &serobj,
-	rina::DataTransferConstants &des_obj)
+void DataTransferConstantsEncoder::decode(const rina::ser_obj_t &serobj,
+					  rina::DataTransferConstants &des_obj)
 {
 	rina::messages::dataTransferConstants_t gpb;
 
@@ -900,8 +898,8 @@ void ADataObjectEncoder::decode(const rina::ser_obj_t &serobj,
 }
 
 // Class EnrollmentInformationRequestEncoder
-void EnrollmentInformationRequestEncoder::encode(
-	const EnrollmentInformationRequest &obj, rina::ser_obj_t& serobj)
+void EnrollmentInformationRequestEncoder::encode(const EnrollmentInformationRequest &obj,
+						 rina::ser_obj_t& serobj)
 {
 	rina::messages::enrollmentInformation_t gpb;
 
@@ -919,7 +917,8 @@ void EnrollmentInformationRequestEncoder::encode(
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
 
-void decode(const rina::ser_obj_t &serobj, EnrollmentInformationRequest &des_obj)
+void EnrollmentInformationRequestEncoder::decode(const rina::ser_obj_t &serobj,
+						 EnrollmentInformationRequest &des_obj)
 {
 	rina::messages::enrollmentInformation_t gpb;
 	gpb.ParseFromArray(serobj.message_, serobj.size_);
