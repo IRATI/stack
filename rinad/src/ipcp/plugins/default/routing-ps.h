@@ -302,6 +302,7 @@ public:
 	void updateObject(const std::string& fqn, 
 			  unsigned int avoid_port);
 	void encodeAllFSOs(rina::ser_obj_t& obj);
+	bool is_modified() const;
 private:
 	void removeObject(const std::string& 
 		fqn);
