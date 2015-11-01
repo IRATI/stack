@@ -36,7 +36,9 @@ rina-personality-default-y :=					\
 	rmt-ps-default.o					\
 	dtp-ps-default.o					\
 	dtcp-ps-default.o                       		\
-	pff-ps-default.o
+	pff-ps-default.o					\
+	sdup-ps-common.o					\
+	sdup-ps-default.o
 
 ifeq  ($(CONFIG_RINA_PERSONALITY_DEFAULT),m)
 rina-personality-default-y +=			\
