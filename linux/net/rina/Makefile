@@ -30,6 +30,7 @@ rina-personality-default-y :=					\
 	pff.o rmt.o						\
 	pim.o pidm.o kfa-utils.o kfa.o				\
 	kipcm-utils.o kipcm.o					\
+	sdup.o							\
 	default.o ps-factory.o					\
 	rmt-ps-common.o						\
 	rmt-ps-default.o					\
