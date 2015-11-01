@@ -943,6 +943,11 @@ void FlowStateObjects::encodeAllFSOs(rina::ser_obj_t& obj)
 	}
 }
 
+bool FlowStateObjects::is_modified() const
+{
+	return modified_;
+}
+
 //Class FlowStateRIBObjects
 const std::string FlowStateRIBObjects::clazz_name = "FlowStateObjects";
 const std::string FlowStateRIBObjects::object_name= "/resalloc/fsos";
@@ -1150,7 +1155,7 @@ void FlowStateManager::deprecateObjectsNeighbor(unsigned int address)
 
 bool FlowStateManager::tableUpdate() const
 {
-	//TODO implement
+	return fsos->is_modified();
 }
 
 // ComputeRoutingTimerTask
