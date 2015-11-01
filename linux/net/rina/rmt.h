@@ -32,6 +32,7 @@
 #include "ipcp-factories.h"
 #include "ipcp-instances.h"
 #include "ps-factory.h"
+#include "sdup.h"
 
 struct rmt;
 
@@ -111,14 +112,13 @@ int		      rmt_queue_set_destroy(struct rmt_queue_set *qs);
 
 struct rmt	  *rmt_create(struct ipcp_instance *parent,
 			      struct kfa *kfa,
-			      struct efcp_container *efcpc);
+			      struct efcp_container *efcpc,
+			      struct sdup *sdup);
 int		   rmt_destroy(struct rmt *instance);
 int		   rmt_address_set(struct rmt *instance,
 				   address_t address);
 int		   rmt_dt_cons_set(struct rmt *instance,
 				   struct dt_cons *dt_cons);
-int		   rmt_sdup_config_set(struct rmt *instance,
-				       struct sdup_config *sdup_conf);
 int		   rmt_config_set(struct rmt *instance,
 				  struct rmt_config *rmt_config);
 struct rmt_config *rmt_config_get(struct rmt *instance);

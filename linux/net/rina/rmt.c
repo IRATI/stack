@@ -77,6 +77,7 @@ struct rmt {
 	struct sdup_config *sdup_conf;
 	struct pff_cache cache;
 	struct rmt_config *rmt_cfg;
+	struct sdup *sdup;
 };
 
 static struct rmt_n1_port *n1_port_create(port_id_t id,
@@ -695,42 +696,6 @@ static int extract_policy_parameters(struct dup_config_entry *entry)
 
 	return 0;
 }
-
-int rmt_sdup_config_set(struct rmt *instance,
-			struct sdup_config *sdup_conf)
-{
-	struct dup_config *dup_pos;
-
-	if (!instance) {
-		LOG_ERR("Bogus instance passed");
-		return -1;
-	}
-
-	if (!sdup_conf) {
-		LOG_ERR("Bogus sdup_conf passed");
-		return -1;
-	}
-
-	/* FIXME this code should be moved to specific sdup policies */
-	if (extract_policy_parameters(sdup_conf->default_dup_conf)) {
-		LOG_DBG("Setting SDU protection policies to NULL");
-		sdup_config_destroy(sdup_conf);
-		return -1;
-	}
-
-	list_for_each_entry(dup_pos, &sdup_conf->specific_dup_confs, next) {
-		if (extract_policy_parameters(dup_pos->entry)) {
-			LOG_DBG("Setting sdu protection policies to NULL");
-			sdup_config_destroy(sdup_conf);
-			return -1;
-		}
-	}
-
-	instance->sdup_conf = sdup_conf;
-
-	return 0;
-}
-EXPORT_SYMBOL(rmt_sdup_config_set);
 
 struct rmt_config *rmt_config_get(struct rmt *instance)
 {
@@ -1655,7 +1620,8 @@ EXPORT_SYMBOL(rmt_receive);
 
 struct rmt *rmt_create(struct ipcp_instance *parent,
 		       struct kfa *kfa,
-		       struct efcp_container *efcpc)
+		       struct efcp_container *efcpc,
+		       struct sdup *sdup)
 {
 	struct rmt *tmp;
 
@@ -1673,6 +1639,7 @@ struct rmt *rmt_create(struct ipcp_instance *parent,
 	tmp->kfa = kfa;
 	tmp->efcpc = efcpc;
 	tmp->sdup_conf = NULL;
+	tmp->sdup      = sdup;
 	rina_component_init(&tmp->base);
 	tmp->pff = pff_create();
 	if (!tmp->pff) {
