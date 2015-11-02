@@ -866,9 +866,9 @@ FlowStateObject* FlowStateObjects::getObject(const std::string& fqn)
 	return 0;
 }
 
-void FlowStateObjects::setToModified()
+void FlowStateObjects::has_modified(bool modified)
 {
-	modified_ = true;
+	modified_ = modified;
 }
 
 void FlowStateObjects::getModifiedFSOs(std::list<FlowStateObject*>& result)
@@ -1071,7 +1071,7 @@ void FlowStateManager::updateObjects(
 					obj_to_up->set_avoidport(avoidPort);
 				}
 				obj_to_up->has_modified(true);
-				fsos->setToModified();
+				fsos->has_modified(true);
 			}
 		}
 		//2. If the object does not exist create
@@ -1083,7 +1083,7 @@ void FlowStateManager::updateObjects(
 				(*newIt)->set_avoidport(avoidPort);
 				(*newIt)->has_modified(true);
 				fsos->addObject(*newIt);
-				fsos->setToModified();
+				fsos->has_modified(true);
 			}
 		}
 	}
@@ -1155,7 +1155,10 @@ void FlowStateManager::deprecateObjectsNeighbor(unsigned int address)
 
 bool FlowStateManager::tableUpdate() const
 {
-	return fsos->is_modified();
+	bool result = fsos->is_modified();
+	if (result)
+		fsos->has_modified(false);
+	return result;
 }
 
 // ComputeRoutingTimerTask

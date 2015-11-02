@@ -294,7 +294,6 @@ public:
 	void deprecateObject(const std::string& fqn, 
 			     unsigned int max_age);
 	FlowStateObject* getObject(const std::string& fqn);
-	void setToModified();
 	void getModifiedFSOs(std::list<FlowStateObject*>& result);
 	void getAllFSOs(std::list<FlowStateObject*>& result);
 	void incrementAge(unsigned int max_age,
@@ -303,6 +302,7 @@ public:
 			  unsigned int avoid_port);
 	void encodeAllFSOs(rina::ser_obj_t& obj);
 	bool is_modified() const;
+	void has_modified(bool modified);
 private:
 	void removeObject(const std::string& 
 		fqn);
