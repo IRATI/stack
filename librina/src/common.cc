@@ -857,14 +857,11 @@ std::string UcharArray::toString()
 	return ss.str();
 }
 
-ser_obj_t * UcharArray::get_seralized_object()
+void UcharArray::get_seralized_object(ser_obj_t& result)
 {
-	ser_obj_t * result = new ser_obj_t();
-	result->size_ = length;
-	result->message_ = new char[result->size_];
-	memcpy(result->message_, data, result->size_);
-
-	return result;
+	result.size_ = length;
+	result.message_ = new char[result.size_];
+	memcpy(result.message_, data, result.size_);
 }
 
 //Class ConsecutiveUnsignedIntegerGenerator

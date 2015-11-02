@@ -1091,20 +1091,11 @@ void FlowStateManager::updateObjects(
 
 
 void FlowStateManager::prepareForPropagation(
-	std::map<int, rina::ser_obj_t>&  to_propagate) const
+	std::map<int, std::list<FlowStateObject*>>&  to_propagate) const
 {
 	//1 Get the FSOs to propagate
 	std::list<FlowStateObject*> modifiedFSOs;
 	fsos->getModifiedFSOs(modifiedFSOs);
-
-	//2 Initialize the auxiliar map flows - objects
-	std::map<int, std::list<FlowStateObject*> > fsos_port;
-	for (std::map <int, rina::ser_obj_t>::iterator it 
-		= to_propagate.begin(); it != to_propagate.end(); ++it)
-	{
-		std::list<FlowStateObject*> list;
-		fsos_port[it->first] = list;
-	}
 
 	//2 add each modified object to its port list
 	for (std::list<FlowStateObject*>::iterator it = modifiedFSOs.begin();
@@ -1114,7 +1105,7 @@ void FlowStateManager::prepareForPropagation(
 			(*it)->get_objectname().c_str(), (*it)->get_age(), (*it)->is_state());
 
 		for(std::map<int, std::list<FlowStateObject*> >::iterator it2 =
-			fsos_port.begin(); it2 != fsos_port.end(); ++it2)
+				to_propagate.begin(); it2 != to_propagate.end(); ++it2)
 		{
 			if(it2->first != (*it)->get_avoidport())
 			{
@@ -1123,13 +1114,6 @@ void FlowStateManager::prepareForPropagation(
 		}
 		(*it)->has_modified(false);
 		(*it)->set_avoidport(NO_AVOID_PORT);
-	}
-	//3 codify
-	FlowStateObjectListEncoder encoder;
-	for(std::map<int, std::list<FlowStateObject*> >::iterator it =
-		fsos_port.begin(); it != fsos_port.end(); ++it)
-	{
-		encoder.encode(it->second, to_propagate[it->first]);
 	}
 }
 
@@ -1466,12 +1450,11 @@ void LinkStateRoutingPolicy::propagateFSDB()
 	std::list<rina::FlowInformation> nMinusOneFlows =
 			ipc_process_->resource_allocator_->get_n_minus_one_flow_manager()->getAllNMinusOneFlowInformation();
 	//2 Initilize the map
-	std::map <int, rina::ser_obj_t > objectsToSend;
+	std::map <int, std::list<FlowStateObject*>> objectsToSend;
 	for(std::list<rina::FlowInformation>::iterator it = nMinusOneFlows.begin();
 		it != nMinusOneFlows.end(); ++it) 
 	{
-		rina::ser_obj_t obj_to_fill;
-		objectsToSend[it->portId] = obj_to_fill;
+		objectsToSend[it->portId] = std::list<FlowStateObject*>();
 	}
 
 	//3 Get the objects to send
@@ -1481,7 +1464,8 @@ void LinkStateRoutingPolicy::propagateFSDB()
 		return;
 	}
 
-	for (std::map<int, rina::ser_obj_t>::iterator it = objectsToSend.begin(); 
+	FlowStateObjectListEncoder encoder;
+	for (std::map<int, std::list<FlowStateObject*>>::iterator it = objectsToSend.begin();
 		it != objectsToSend.end(); ++it)
 
 	{
@@ -1492,9 +1476,12 @@ void LinkStateRoutingPolicy::propagateFSDB()
 			rina::cdap_rib::object_info obj;
 			obj.class_ = FlowStateRIBObjects::clazz_name;
 			obj.name_ = FlowStateRIBObjects::object_name;
-			obj.inst_ = 0;
-			obj.value_ = it->second;
-			rib_daemon_->getProxy()->remote_write(it->first, obj, flags, filter, 0);
+			encoder.encode(it->second, obj.value_);
+			rib_daemon_->getProxy()->remote_write(it->first,
+							      obj,
+							      flags,
+							      filter,
+							      0);
 		}
 		catch (rina::Exception &e) 
 		{

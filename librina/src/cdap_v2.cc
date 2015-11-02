@@ -2789,8 +2789,12 @@ void GPBSerializer::serializeMessage(const cdap_m_t &cdapMessage,
 		gpb_auth_policy->add_versions(*it);
 	}
 	if (auth_policy.options_.size_ > 0) {
-		gpb_auth_policy->set_options(auth_policy.options_.message_,
-				     auth_policy.options_.size_);
+		char * gpb_opts = new char[auth_policy.options_.size_];
+		memcpy(gpb_opts,
+		       auth_policy.options_.message_,
+		       auth_policy.options_.size_);
+		gpb_auth_policy->set_options(gpb_opts,
+				     	     auth_policy.options_.size_);
 	}
 	gpfCDAPMessage.set_allocated_authpolicy(gpb_auth_policy);
 	// DEST_AE_INST
@@ -2816,7 +2820,11 @@ void GPBSerializer::serializeMessage(const cdap_m_t &cdapMessage,
 	// OBJ_VALUE
 	if (cdapMessage.obj_value_.size_ > 0) {
 		messages::objVal_t *gpb_obj_val = new messages::objVal_t();
-		gpb_obj_val->set_byteval(cdapMessage.obj_value_.message_,
+		char * gpb_val = new char[cdapMessage.obj_value_.size_];
+		memcpy(gpb_val,
+		       cdapMessage.obj_value_.message_,
+		       cdapMessage.obj_value_.size_);
+		gpb_obj_val->set_byteval(gpb_val,
 					 cdapMessage.obj_value_.size_);
 		gpfCDAPMessage.set_allocated_objvalue(gpb_obj_val);
 	}
@@ -2843,10 +2851,9 @@ void GPBSerializer::serializeMessage(const cdap_m_t &cdapMessage,
 	gpfCDAPMessage.set_version(cdapMessage.version_);
 
 	int size = gpfCDAPMessage.ByteSize();
-	char *buffer = new char[size];
-	gpfCDAPMessage.SerializeToArray(buffer, size);
-	result.message_ = buffer;
+	result.message_ = new char[size];
 	result.size_ = size;
+	gpfCDAPMessage.SerializeToArray(result.message_, size);
 }
 
 class CDAPProvider : public CDAPProviderInterface

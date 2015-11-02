@@ -257,13 +257,11 @@ rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(
 		cdap_rib::filt_info_t filt;
 		cdap_rib::obj_info_t obj_info;
 		cdap::StringEncoder encoder;
-		ser_obj_t ser_obj;
 
 		obj_info.class_ = CHALLENGE_REQUEST;
 		obj_info.name_ = CHALLENGE_REQUEST;
 		obj_info.inst_ = 0;
-		encoder.encode(*(sc->challenge), ser_obj);
-		obj_info.value_ = ser_obj;
+		encoder.encode(*(sc->challenge), obj_info.value_);
 
 		//object class contains challenge request or reply
 		//object name contains cipher name
@@ -297,13 +295,11 @@ int AuthPasswordPolicySet::process_challenge_request(const std::string& challeng
 		cdap_rib::filt_info_t filt;
 		cdap_rib::obj_info_t obj_info;
 		cdap::StringEncoder encoder;
-		ser_obj_t ser_obj;
 
 		obj_info.class_ = CHALLENGE_REPLY;
 		obj_info.name_ = CHALLENGE_REPLY;
 		obj_info.inst_ = 0;
-		encoder.encode(sc->password, ser_obj);
-		obj_info.value_ = ser_obj;
+		encoder.encode(sc->password, obj_info.value_);
 
 		//object class contains challenge request or reply
 		//object name contains cipher name
@@ -463,10 +459,9 @@ void encode_ssh2_auth_options(const SSH2AuthOptions& options,
 	}
 
 	int size = gpb_options.ByteSize();
-	char *serialized_message = new char[size];
-	gpb_options.SerializeToArray(serialized_message, size);
-	result.message_ = serialized_message;
+	result.message_ = new char[size];
 	result.size_ = size;
+	gpb_options.SerializeToArray(result.message_, size);
 }
 
 void encode_client_chall_reply_ssh2(const UcharArray& client_chall_reply,
@@ -487,10 +482,9 @@ void encode_client_chall_reply_ssh2(const UcharArray& client_chall_reply,
 	}
 
 	int size = gpb_chall.ByteSize();
-	char *serialized_message = new char[size];
-	gpb_chall.SerializeToArray(serialized_message, size);
-	result.message_ = serialized_message;
+	result.message_ = new char[size];
 	result.size_ = size;
+	gpb_chall.SerializeToArray(result.message_ , size);
 }
 
 //AuthSSH2Options encoder and decoder operations
@@ -786,9 +780,8 @@ cdap::AuthPolicy AuthSSH2PolicySet::get_auth_policy(int session_id,
 		throw Exception();
 	}
 
-	ser_obj_t sobj;
-	encode_ssh2_auth_options(options, sobj);
-	auth_policy.options_ = sobj;
+	encode_ssh2_auth_options(options,
+				 auth_policy.options_);
 
 	//Store security context
 	sc->state = SSH2SecurityContext::WAIT_EDH_EXCHANGE;
@@ -1035,17 +1028,21 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::decryption_enabled_server(SSH2Secu
 		cdap_rib::filt_info_t filt;
 		cdap_rib::obj_info_t obj_info;
 		cdap::StringEncoder encoder;
-		ser_obj_t ser_obj;
 
 		obj_info.class_ = EDH_EXCHANGE;
 		obj_info.name_ = EDH_EXCHANGE;
 		obj_info.inst_ = 0;
-		encode_ssh2_auth_options(auth_options, ser_obj);
-		obj_info.value_ = ser_obj;
+		encode_ssh2_auth_options(auth_options,
+					 obj_info.value_);
 
-		rib_daemon->remote_write(sc->id, obj_info, flags, filt, NULL);
+		rib_daemon->remote_write(sc->id,
+					 obj_info,
+					 flags,
+					 filt,
+					 NULL);
 	} catch (Exception &e) {
-		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
+		LOG_ERR("Problems encoding and sending CDAP message: %s",
+			e.what());
 		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
@@ -1185,13 +1182,6 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::encryption_decryption_enabled_clie
 		return IAuthPolicySet::FAILED;
 	}
 
-	ser_obj_t * sobj = encrypted_challenge.get_seralized_object();
-	if (!sobj) {
-		LOG_ERR("Error generating serialized object from uchar array");
-		sec_man->destroy_security_context(sc->id);
-		return IAuthPolicySet::FAILED;
-	}
-
 	sc->state = SSH2SecurityContext::WAIT_CLIENT_CHALLENGE_REPLY;
 
 	//Send message to peer with selected algorithms and public key
@@ -1204,18 +1194,15 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::encryption_decryption_enabled_clie
 		obj_info.class_ = CLIENT_CHALLENGE;
 		obj_info.name_ = CLIENT_CHALLENGE;
 		obj_info.inst_ = 0;
-		obj_info.value_.message_ = sobj->message_;
-		obj_info.value_.size_ = sobj->size_;
+		encrypted_challenge.get_seralized_object(obj_info.value_);
 
 		rib_daemon->remote_write(sc->id, obj_info, flags, filt, NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 		sec_man->destroy_security_context(sc->id);
-		delete sobj;
 		return IAuthPolicySet::FAILED;
 	}
 
-	delete sobj;
 	return IAuthPolicySet::IN_PROGRESS;
 }
 
@@ -1424,13 +1411,6 @@ int AuthSSH2PolicySet::process_client_challenge_reply_message(const cdap::CDAPMe
 		return IAuthPolicySet::FAILED;
 	}
 
-	ser_obj_t * sobj2 = hashed_ser_challenge.get_seralized_object();
-	if (!sobj2) {
-		LOG_ERR("Error generating serialized object from uchar array");
-		sec_man->destroy_security_context(sc->id);
-		return IAuthPolicySet::FAILED;
-	}
-
 	sc->state = SSH2SecurityContext::DONE;
 
 	//Send message to peer with selected algorithms and public key
@@ -1443,18 +1423,14 @@ int AuthSSH2PolicySet::process_client_challenge_reply_message(const cdap::CDAPMe
 		obj_info.class_ = SERVER_CHALLENGE_REPLY;
 		obj_info.name_ = SERVER_CHALLENGE_REPLY;
 		obj_info.inst_ = 0;
-		obj_info.value_.message_ = sobj2->message_;
-		obj_info.value_.size_ = sobj2->size_;
+		hashed_ser_challenge.get_seralized_object(obj_info.value_);
 
 		rib_daemon->remote_write(sc->id, obj_info, flags, filt,  NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 		sec_man->destroy_security_context(sc->id);
-		delete sobj2;
 		return IAuthPolicySet::FAILED;
 	}
-
-	delete sobj2;
 
 	return IAuthPolicySet::IN_PROGRESS;
 }

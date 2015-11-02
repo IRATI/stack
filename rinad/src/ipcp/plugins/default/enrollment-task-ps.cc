@@ -425,16 +425,20 @@ void EnrolleeStateMachine::connectResponse(int result,
 	rina::ScopedLock g(lock_);
 
 	if (state_ != STATE_WAIT_CONNECT_RESPONSE) {
-		abortEnrollment(remote_peer_->name_, port_id_,
-				"Message received in wrong order", true);
+		abortEnrollment(remote_peer_->name_,
+				port_id_,
+				"Message received in wrong order",
+				true);
 		return;
 	}
 
 	timer_.cancelTask(last_scheduled_task_);
 	if (result != 0) {
 		state_ = STATE_NULL;
-		enrollment_task_->enrollmentFailed(remote_peer_->name_, port_id_,
-				result_reason, true);
+		enrollment_task_->enrollmentFailed(remote_peer_->name_,
+						   port_id_,
+						   result_reason,
+						   true);
 		return;
 	}
 
@@ -451,6 +455,8 @@ void EnrolleeStateMachine::connectResponse(int result,
 			}
 		}
 
+		LOG_IPCP_DBG("Aqui");
+
 		if (ipc_process_->get_address() != 0) {
 			was_dif_member_before_enrollment_ = true;
 			eiRequest.address_ = ipc_process_->get_address();
@@ -460,14 +466,17 @@ void EnrolleeStateMachine::connectResponse(int result,
 			ipc_process_->set_dif_information(difInformation);
 		}
 
+		LOG_IPCP_DBG("Aqui2");
 		EnrollmentInformationRequestEncoder encoder;
 		rina::cdap_rib::obj_info_t obj;
 		obj.class_ = EnrollmentRIBObject::class_name;
 		obj.name_ = EnrollmentRIBObject::object_name;
+		LOG_IPCP_DBG("Aqui3");
 		encoder.encode(eiRequest, obj.value_);
 		rina::cdap_rib::flags_t flags;
 		rina::cdap_rib::filt_info_t filt;
 
+		LOG_IPCP_DBG("Aqui4");
 		rib_daemon_->getProxy()->remote_start(port_id_,
 						      obj,
 						      flags,

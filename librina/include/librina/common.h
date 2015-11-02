@@ -609,9 +609,18 @@ public:
         bool operator!=(const Parameter &other) const;
 };
 
-typedef struct{
+typedef struct ser_obj {
 	int size_;
-	void* message_;
+	char* message_;
+
+	ser_obj() : size_(0), message_(0) {};
+
+	~ser_obj()
+	{
+		if (message_)
+			delete message_;
+		message_ = 0;
+	}
 } ser_obj_t;
 
 struct UcharArray {
@@ -623,7 +632,7 @@ struct UcharArray {
 	bool operator==(const UcharArray &other) const;
 	bool operator!=(const UcharArray &other) const;
 	std::string toString();
-	ser_obj_t * get_seralized_object();
+	void get_seralized_object(ser_obj_t& result);
 
 	unsigned char * data;
 	int length;

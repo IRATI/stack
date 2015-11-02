@@ -39,20 +39,19 @@ void * doManagementSDUReaderWork(void* arg)
 {
 	ManagementSDUReaderData * data = (ManagementSDUReaderData *) arg;
 	rina::ser_obj_t message;
-	char* buffer = new char[data->max_sdu_size_];
+	message.message_ = new char[data->max_sdu_size_];
 
 	rina::ReadManagementSDUResult result;
 	LOG_IPCP_INFO("Starting Management SDU reader ...");
 	while (true) {
 		try {
-			result = rina::kernelIPCProcess->readManagementSDU(buffer,
+			result = rina::kernelIPCProcess->readManagementSDU(message.message_,
 									   data->max_sdu_size_);
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Problems reading management SDU: %s", e.what());
 			continue;
 		}
 
-		message.message_ = buffer;
 		message.size_ = result.bytesRead;
 
 		//Instruct CDAP provider to process the CACEP message
@@ -64,8 +63,6 @@ void * doManagementSDUReaderWork(void* arg)
 				result.portId);
 		}
 	}
-
-	delete buffer;
 
 	return 0;
 }
@@ -122,7 +119,7 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t& m_sent,
 			rina::kernelIPCProcess->sendMgmgtSDUToAddress(sdu.message_,
 								      sdu.size_,
 								      handle);
-			LOG_IPCP_DBG("Sent A-Data CDAP message to address %u: %s",
+			LOG_IPCP_DBG("Sent A-Data CDAP message to address %u: \n%s",
 				     handle,
 				     m_sent.to_string().c_str());
 			if (m_sent.invoke_id_ != 0 && !m_sent.is_request_message()) {
@@ -134,7 +131,7 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t& m_sent,
 			rina::kernelIPCProcess->writeMgmgtSDUToPortId(sdu.message_,
 								      sdu.size_,
 								      handle);
-			LOG_IPCP_DBG("Sent CDAP message of size %d through port-id %u: %s" ,
+			LOG_IPCP_DBG("Sent CDAP message of size %d through port-id %u: \n%s" ,
 				      sdu.size_, handle,
 				      m_sent.to_string().c_str());
 
@@ -144,6 +141,8 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t& m_sent,
 			rina::extendedIPCManager->forwardCDAPResponse(handle,
 								      sdu,
 								      0);
+			LOG_IPCP_DBG("Forwarded CDAP message to IPCM: \n%s",
+				     m_sent.to_string().c_str());
 		}
 	} catch (rina::Exception &e) {
 		if (m_sent.invoke_id_ != 0 && m_sent.is_request_message()) {
