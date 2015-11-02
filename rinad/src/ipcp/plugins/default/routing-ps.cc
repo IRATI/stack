@@ -1091,7 +1091,7 @@ void FlowStateManager::updateObjects(
 
 
 void FlowStateManager::prepareForPropagation(
-	std::map<int, std::list<FlowStateObject*>>&  to_propagate) const
+	std::map<int, std::list<FlowStateObject*> >&  to_propagate) const
 {
 	//1 Get the FSOs to propagate
 	std::list<FlowStateObject*> modifiedFSOs;
@@ -1450,7 +1450,7 @@ void LinkStateRoutingPolicy::propagateFSDB()
 	std::list<rina::FlowInformation> nMinusOneFlows =
 			ipc_process_->resource_allocator_->get_n_minus_one_flow_manager()->getAllNMinusOneFlowInformation();
 	//2 Initilize the map
-	std::map <int, std::list<FlowStateObject*>> objectsToSend;
+	std::map <int, std::list<FlowStateObject*> > objectsToSend;
 	for(std::list<rina::FlowInformation>::iterator it = nMinusOneFlows.begin();
 		it != nMinusOneFlows.end(); ++it) 
 	{
@@ -1465,7 +1465,7 @@ void LinkStateRoutingPolicy::propagateFSDB()
 	}
 
 	FlowStateObjectListEncoder encoder;
-	for (std::map<int, std::list<FlowStateObject*>>::iterator it = objectsToSend.begin();
+	for (std::map<int, std::list<FlowStateObject*> >::iterator it = objectsToSend.begin();
 		it != objectsToSend.end(); ++it)
 
 	{
