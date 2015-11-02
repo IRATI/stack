@@ -405,7 +405,6 @@ class CDAPSession
 	void messageSent(const cdap_m_t &cdap_message);
 	void messageReceived(const ser_obj_t& message,
 			     cdap_m_t& result);
-
 	void messageReceived(const cdap_m_t &cdap_message);
 	int get_port_id() const;
 	CDAPInvokeIdManagerImpl* get_invoke_id_manager() const;
@@ -635,7 +634,6 @@ void CDAPMessageFactory::getOpenConnectionResponseMessage(cdap_m_t & msg,
 							  const cdap_rib::con_handle_t &con,
 							  const cdap_rib::res_info_t &res,
 							  int invoke_id)
-
 {
 	msg.abs_syntax_ = ABSTRACT_SYNTAX_VERSION;
 	msg.op_code_ = cdap_m_t::M_CONNECT_R;
@@ -668,6 +666,7 @@ void CDAPMessageFactory::getReleaseConnectionResponseMessage(cdap_m_t & msg,
 							     int invoke_id)
 {
 	msg.op_code_ = cdap_m_t::M_RELEASE_R;
+
 	msg.flags_ = flags.flags_;
 	msg.invoke_id_ = invoke_id;
 	msg.result_ = res.code_;
@@ -3047,7 +3046,6 @@ int CDAPProvider::remote_write(const cdap_rib::con_handle_t &con,
 		m_sent.invoke_id_ = invoke_id;
 		inv_id = invoke_id;
 	}
-
 	send(m_sent, con);
 	return inv_id;
 }

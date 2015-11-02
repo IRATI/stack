@@ -868,31 +868,6 @@ void UcharArray::get_seralized_object(ser_obj_t& result)
 	memcpy(result.message_, data, result.size_);
 }
 
-/// Class ADataObject
-const std::string ADataObject::A_DATA_OBJECT_CLASS = "a_data";
-const std::string ADataObject::A_DATA = "a_data";
-const std::string ADataObject::A_DATA_OBJECT_NAME = A_DATA;
-
-ADataObject::ADataObject() {
-	source_address_ = 0;
-	dest_address_ = 0;
-	encoded_cdap_message_ = 0;
-}
-
-ADataObject::ADataObject(unsigned int source_address,
-		unsigned int dest_address) {
-	source_address_ = source_address;
-	dest_address_ = dest_address;
-	encoded_cdap_message_ = 0;
-}
-
-ADataObject::~ADataObject() {
-	if (encoded_cdap_message_) {
-		delete encoded_cdap_message_;
-		encoded_cdap_message_ = 0;
-	}
-}
-
 //Class ConsecutiveUnsignedIntegerGenerator
 ConsecutiveUnsignedIntegerGenerator::ConsecutiveUnsignedIntegerGenerator() {
 	counter_ = 0;

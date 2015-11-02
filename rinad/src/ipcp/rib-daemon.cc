@@ -75,6 +75,7 @@ class IPCPCDAPIOHandler : public rina::cdap::CDAPIOHandler
 	IPCPCDAPIOHandler(){};
 	void send(const rina::cdap::cdap_m_t &m_sent,
 		  const rina::cdap_rib::con_handle_t& con_handle);
+
 	void process_message(const rina::ser_obj_t &message,
 			     unsigned int handle,
 			     rina::cdap_rib::cdap_dest_t cdap_dest);
