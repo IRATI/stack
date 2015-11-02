@@ -758,15 +758,15 @@ void NeighborListEncoder::decode(const rina::ser_obj_t &serobj,
 }
 
 // CLASS ADataObjectEncoder
-void ADataObjectEncoder::encode(const rina::ADataObject &obj, 
-	rina::ser_obj_t& serobj)
+void ADataObjectEncoder::encode(const rina::cdap::ADataObject &obj,
+				rina::ser_obj_t& serobj)
 {
 	rina::messages::a_data_t gpb;
 
 	gpb.set_sourceaddress(obj.source_address_);
 	gpb.set_destaddress(obj.dest_address_);
-	gpb.set_cdapmessage(obj.encoded_cdap_message_->message_,
-		obj.encoded_cdap_message_->size_);
+	gpb.set_cdapmessage(obj.encoded_cdap_message_.message_,
+			    obj.encoded_cdap_message_.size_);
 
 	serobj.size_ = gpb.ByteSize();
 	serobj.message_ = new char[serobj.size_];
@@ -774,7 +774,7 @@ void ADataObjectEncoder::encode(const rina::ADataObject &obj,
 }
 
 void ADataObjectEncoder::decode(const rina::ser_obj_t &serobj, 
-	rina::ADataObject &des_obj)
+				rina::cdap::ADataObject &des_obj)
 {
 	rina::messages::a_data_t gpb;
 	gpb.ParseFromArray(serobj.message_, serobj.size_);
@@ -782,12 +782,11 @@ void ADataObjectEncoder::decode(const rina::ser_obj_t &serobj,
 	des_obj.source_address_ = gpb.sourceaddress();
 	des_obj.dest_address_ = gpb.destaddress();
 	
-	rina::ser_obj_t* cdap;
-	cdap->size_ = gpb.cdapmessage().size();
-	cdap->message_ = new char[cdap->size_];
-	memcpy(cdap->message_, gpb.cdapmessage().data(), 
-		gpb.cdapmessage().size());
-	des_obj.encoded_cdap_message_ = cdap;
+	des_obj.encoded_cdap_message_.size_ = gpb.cdapmessage().size();
+	des_obj.encoded_cdap_message_.message_ = new char[des_obj.encoded_cdap_message_.size_];
+	memcpy(des_obj.encoded_cdap_message_.message_,
+	       gpb.cdapmessage().data(),
+	       gpb.cdapmessage().size());
 }
 
 // Class EnrollmentInformationRequestEncoder

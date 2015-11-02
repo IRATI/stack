@@ -289,7 +289,7 @@ public:
 				      const cdap_rib::res_info_t &res,
 				      int invoke_id,
 				      cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT) {};
-	virtual void process_message(ser_obj_t &message,
+	virtual void process_message(const ser_obj_t &message,
 				     unsigned int port,
 				     cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT) {};
 

@@ -129,11 +129,11 @@ public:
 };
 
 /// Encoder of the AData object
-class ADataObjectEncoder: public rina::Encoder<rina::ADataObject> 
+class ADataObjectEncoder: public rina::Encoder<rina::cdap::ADataObject>
 {
 public:
-	void encode(const rina::ADataObject &obj, rina::ser_obj_t& serobj);
-	void decode(const rina::ser_obj_t &serobj, rina::ADataObject &des_obj);
+	void encode(const rina::cdap::ADataObject &obj, rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj, rina::cdap::ADataObject &des_obj);
 };
 
 /// Encoder of a list of EnrollmentInformationRequest

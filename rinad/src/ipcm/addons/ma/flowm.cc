@@ -388,7 +388,7 @@ void* ActiveWorker::run(void* param)
 
 void FlowManager::process_fwd_cdap_msg_response(rina::FwdCDAPMsgEvent* fwdevent)
 {
-	const rina::cdap::CDAPMessage *rmsg;
+	rina::cdap::CDAPMessage rmsg;
 
 	LOG_DBG("Received forwarded CDAP response, result %d",
 			fwdevent->result);
@@ -398,12 +398,12 @@ void FlowManager::process_fwd_cdap_msg_response(rina::FwdCDAPMsgEvent* fwdevent)
 		return;
 	}
 
-	rmsg = rina::cdap::getProvider()->get_session_manager()->decodeCDAPMessage(fwdevent->sermsg);
+	rina::cdap::getProvider()->get_session_manager()->decodeCDAPMessage(fwdevent->sermsg,
+									    rmsg);
 
-	LOG_DBG("Delegated CDAP response: %s, value %p", rmsg->to_string().c_str(),
-			rmsg->obj_value_.message_);
-
-	delete rmsg;
+	LOG_DBG("Delegated CDAP response: %s, value %p",
+		rmsg.to_string().c_str(),
+		rmsg.obj_value_.message_);
 }
 
 //Process an event coming from librina

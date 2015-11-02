@@ -629,32 +629,6 @@ struct UcharArray {
 	int length;
 };
 
-///Object exchanged between applications processes that
-///contains the source and destination addresses of the processes
-///and optional authentication information, as well as an
-///encoded CDAP Message. It is used to exchange CDAP messages
-///between APs without having a CDAP session previously established
-///(it can be seen as a one message session)
-class ADataObject {
-public:
-	static const std::string A_DATA;
-	static const std::string A_DATA_OBJECT_CLASS;
-	static const std::string A_DATA_OBJECT_NAME;
-
-	ADataObject();
-	ADataObject(unsigned int source_address,
-			unsigned int dest_address);
-	~ADataObject();
-
-	//The address of the source AP (or IPCP)
-	unsigned int source_address_;
-
-	//The address of the destination AP (or IPCP)
-	unsigned int dest_address_;
-
-	const ser_obj_t * encoded_cdap_message_;
-};
-
 class ConsecutiveUnsignedIntegerGenerator {
 public:
 	ConsecutiveUnsignedIntegerGenerator();

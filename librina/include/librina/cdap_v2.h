@@ -64,6 +64,32 @@ public:
 	ser_obj_t options_;
 };
 
+///Object exchanged between applications processes that
+///contains the source and destination addresses of the processes
+///and optional authentication information, as well as an
+///encoded CDAP Message. It is used to exchange CDAP messages
+///between APs without having a CDAP session previously established
+///(it can be seen as a one message session)
+class ADataObject {
+public:
+	static const std::string A_DATA;
+	static const std::string A_DATA_OBJECT_CLASS;
+	static const std::string A_DATA_OBJECT_NAME;
+
+	ADataObject();
+	ADataObject(unsigned int source_address,
+		    unsigned int dest_address);
+	~ADataObject();
+
+	//The address of the source AP (or IPCP)
+	unsigned int source_address_;
+
+	//The address of the destination AP (or IPCP)
+	unsigned int dest_address_;
+
+	ser_obj_t encoded_cdap_message_;
+};
+
 class CDAPCallbackInterface
 {
  public:
@@ -349,83 +375,107 @@ class CDAPSessionManagerInterface
 	virtual CDAPSession* createCDAPSession(int port_id) = 0;
 	virtual void getAllCDAPSessionIds(std::vector<int> &vector) = 0;
 	virtual CDAPSession* get_cdap_session(int port_id) = 0;
-	virtual const ser_obj_t* encodeCDAPMessage(const cdap_m_t &cdap_message) = 0;
-	virtual const cdap_m_t* decodeCDAPMessage(const ser_obj_t &cdap_message) = 0;
+	virtual void encodeCDAPMessage(const cdap_m_t& cdap_message,
+				       ser_obj_t& result) = 0;
+	virtual void decodeCDAPMessage(const ser_obj_t &cdap_message,
+			               cdap_m_t& result) = 0;
 	virtual void removeCDAPSession(int portId) = 0;
 	virtual bool session_in_await_con_state(int portId) = 0;
-	virtual const ser_obj_t* encodeNextMessageToBeSent(const cdap_m_t &cdap_message,
-							   int port_id) = 0;
-	virtual const cdap_m_t* messageReceived(const ser_obj_t &encodedcdap_m_t,
-						int portId) = 0;
-	virtual void messageSent(const cdap_m_t &cdap_message, int port_id) = 0;
+	virtual void encodeNextMessageToBeSent(const cdap_m_t &cdap_message,
+			                       ser_obj_t& result,
+			                       int port_id) = 0;
+	virtual void messageReceived(const ser_obj_t &encodedcdap_m_t,
+				     cdap_m_t& result,
+				     int portId) = 0;
+	virtual void messageSent(const cdap_m_t &cdap_message,
+				 int port_id) = 0;
 	virtual int get_port_id(std::string destination_application_process_name) = 0;
-	virtual cdap_m_t*
-		getOpenConnectionRequestMessage(const cdap_rib::con_handle_t &con) = 0;
-	virtual cdap_m_t*
-		getOpenConnectionResponseMessage(const cdap_rib::con_handle_t &con,
+	virtual void
+		getOpenConnectionRequestMessage(cdap_m_t & msg,
+						const cdap_rib::con_handle_t &con) = 0;
+	virtual void
+		getOpenConnectionResponseMessage(cdap_m_t & msg,
+						 const cdap_rib::con_handle_t &con,
 						 const cdap_rib::res_info_t &res,
 						 int invoke_id) = 0;
-	virtual cdap_m_t*
-		getReleaseConnectionRequestMessage(const cdap_rib::flags_t &flags,
+	virtual void
+		getReleaseConnectionRequestMessage(cdap_m_t & msg,
+						   const cdap_rib::flags_t &flags,
 						   bool invoke_id) = 0;
-	virtual cdap_m_t*
-		getReleaseConnectionResponseMessage(const cdap_rib::flags_t &flags,
+	virtual void
+		getReleaseConnectionResponseMessage(cdap_m_t & msg,
+						    const cdap_rib::flags_t &flags,
 						    const cdap_rib::res_info_t &res,
 						    int invoke_id) = 0;
-	virtual cdap_m_t* getCreateObjectRequestMessage(const cdap_rib::filt_info_t &filt,
-							const cdap_rib::flags_t &flags,
-							const cdap_rib::obj_info_t &obj,
-							bool invoke_id) = 0;
-	virtual cdap_m_t* getCreateObjectResponseMessage(const cdap_rib::flags_t &flags,
-							 const cdap_rib::obj_info_t &obj,
-							 const cdap_rib::res_info_t &res,
-							 int invoke_id) = 0;
-	virtual cdap_m_t* getDeleteObjectRequestMessage(const cdap_rib::filt_info_t &filt,
-							const cdap_rib::flags_t &flags,
-							const cdap_rib::obj_info_t &obj,
-							bool invoke_id) = 0;
-	virtual cdap_m_t* getDeleteObjectResponseMessage(const cdap_rib::flags_t &flags,
-							 const cdap_rib::obj_info_t &obj,
-							 const cdap_rib::res_info_t &res,
-							 int invoke_id) = 0;
-	virtual cdap_m_t* getStartObjectRequestMessage(const cdap_rib::filt_info_t &filt,
-						       const cdap_rib::flags_t &flags,
-						       const cdap_rib::obj_info_t &obj,
-						       bool invoke_id) = 0;
-	virtual cdap_m_t* getStartObjectResponseMessage(const cdap_rib::flags_t &flags,
-							const cdap_rib::res_info_t &res,
-							int invoke_id) = 0;
-	virtual cdap_m_t* getStartObjectResponseMessage(const cdap_rib::flags_t &flags,
-							const cdap_rib::obj_info_t &obj,
-							const cdap_rib::res_info_t &res,
-							int invoke_id) = 0;
-	virtual cdap_m_t* getStopObjectRequestMessage(const cdap_rib::filt_info_t &filt,
-					      	      const cdap_rib::flags_t &flags,
-					      	      const cdap_rib::obj_info_t &obj,
-					      	      bool invoke_id) = 0;
-	virtual cdap_m_t* getStopObjectResponseMessage(const cdap_rib::flags_t &flags,
-					       	       const cdap_rib::res_info_t &res,
-					       	       int invoke_id) = 0;
-	virtual cdap_m_t* getReadObjectRequestMessage(const cdap_rib::filt_info_t &filt,
-					      	      const cdap_rib::flags_t &flags,
-					      	      const cdap_rib::obj_info_t &obj,
-					      	      bool invoke_id) = 0;
-	virtual cdap_m_t* getReadObjectResponseMessage(const cdap_rib::flags_t &flags,
-					       	       const cdap_rib::obj_info_t &obj,
-					       	       const cdap_rib::res_info_t &res,
-					       	       int invoke_id) = 0;
-	virtual cdap_m_t* getWriteObjectRequestMessage(const cdap_rib::filt_info_t &filt,
-						       const cdap_rib::flags_t &flags,
-						       const cdap_rib::obj_info_t &obj,
-						       bool invoke_id) = 0;
-	virtual cdap_m_t* getWriteObjectResponseMessage(const cdap_rib::flags_t &flags,
-							const cdap_rib::res_info_t &res,
-							int invoke_id) = 0;
-	virtual cdap_m_t* getCancelReadRequestMessage(const cdap_rib::flags_t &flags,
-					              int invoke_id) = 0;
-	virtual cdap_m_t* getCancelReadResponseMessage(const cdap_rib::flags_t &flags,
-					               const cdap_rib::res_info_t &res,
-					               int invoke_id) = 0;
+	virtual void getCreateObjectRequestMessage(cdap_m_t & msg,
+						   const cdap_rib::filt_info_t &filt,
+						   const cdap_rib::flags_t &flags,
+						   const cdap_rib::obj_info_t &obj,
+						   bool invoke_id) = 0;
+	virtual void getCreateObjectResponseMessage(cdap_m_t & msg,
+						    const cdap_rib::flags_t &flags,
+						    const cdap_rib::obj_info_t &obj,
+						    const cdap_rib::res_info_t &res,
+						    int invoke_id) = 0;
+	virtual void getDeleteObjectRequestMessage(cdap_m_t & msg,
+						   const cdap_rib::filt_info_t &filt,
+						   const cdap_rib::flags_t &flags,
+						   const cdap_rib::obj_info_t &obj,
+						   bool invoke_id) = 0;
+	virtual void getDeleteObjectResponseMessage(cdap_m_t & msg,
+						    const cdap_rib::flags_t &flags,
+						    const cdap_rib::obj_info_t &obj,
+						    const cdap_rib::res_info_t &res,
+						    int invoke_id) = 0;
+	virtual void getStartObjectRequestMessage(cdap_m_t & msg,
+						  const cdap_rib::filt_info_t &filt,
+						  const cdap_rib::flags_t &flags,
+						  const cdap_rib::obj_info_t &obj,
+						  bool invoke_id) = 0;
+	virtual void getStartObjectResponseMessage(cdap_m_t & msg,
+						   const cdap_rib::flags_t &flags,
+						   const cdap_rib::res_info_t &res,
+						   int invoke_id) = 0;
+	virtual void getStartObjectResponseMessage(cdap_m_t & msg,
+						   const cdap_rib::flags_t &flags,
+						   const cdap_rib::obj_info_t &obj,
+						   const cdap_rib::res_info_t &res,
+						   int invoke_id) = 0;
+	virtual void getStopObjectRequestMessage(cdap_m_t & msg,
+						 const cdap_rib::filt_info_t &filt,
+						 const cdap_rib::flags_t &flags,
+						 const cdap_rib::obj_info_t &obj,
+						 bool invoke_id) = 0;
+	virtual void getStopObjectResponseMessage(cdap_m_t & msg,
+						  const cdap_rib::flags_t &flags,
+						  const cdap_rib::res_info_t &res,
+						  int invoke_id) = 0;
+	virtual void getReadObjectRequestMessage(cdap_m_t & msg,
+						 const cdap_rib::filt_info_t &filt,
+						 const cdap_rib::flags_t &flags,
+						 const cdap_rib::obj_info_t &obj,
+						 bool invoke_id) = 0;
+	virtual void getReadObjectResponseMessage(cdap_m_t & msg,
+						  const cdap_rib::flags_t &flags,
+						  const cdap_rib::obj_info_t &obj,
+						  const cdap_rib::res_info_t &res,
+						  int invoke_id) = 0;
+	virtual void getWriteObjectRequestMessage(cdap_m_t & msg,
+						  const cdap_rib::filt_info_t &filt,
+						  const cdap_rib::flags_t &flags,
+						  const cdap_rib::obj_info_t &obj,
+						  bool invoke_id) = 0;
+	virtual void getWriteObjectResponseMessage(cdap_m_t & msg,
+						   const cdap_rib::flags_t &flags,
+						   const cdap_rib::res_info_t &res,
+						   int invoke_id) = 0;
+	virtual void getCancelReadRequestMessage(cdap_m_t & msg,
+						 const cdap_rib::flags_t &flags,
+						 int invoke_id) = 0;
+	virtual void getCancelReadResponseMessage(cdap_m_t & msg,
+						  const cdap_rib::flags_t &flags,
+						  const cdap_rib::res_info_t &res,
+						  int invoke_id) = 0;
 	virtual CDAPInvokeIdManager * get_invoke_id_manager() = 0;
 	virtual const cdap_rib::con_handle_t& get_con_handle(int port_id) = 0;
 };
@@ -438,7 +488,7 @@ public:
 	virtual void process_message(const ser_obj_t &message,
 				     unsigned int port,
 				     cdap_rib::cdap_dest_t cdap_dest) = 0;
-	virtual void send(const cdap_m_t *m_sent,
+	virtual void send(const cdap_m_t & m_sent,
 			  unsigned int handle,
 			  cdap_rib::cdap_dest_t cdap_dest) = 0;
 
@@ -595,12 +645,14 @@ public:
 	/// @param message
 	/// @return
 	/// @throws CDAPException
-	virtual const cdap_m_t* deserializeMessage(const ser_obj_t &message) = 0;
+	virtual void deserializeMessage(const ser_obj_t &message,
+					cdap_m_t& result) = 0;
 	/// Convert from CDAP messages to wire format
 	/// @param cdapMessage
 	/// @return
 	/// @throws CDAPException
-	virtual const ser_obj_t* serializeMessage(const cdap_m_t &cdapMessage) = 0;
+	virtual void serializeMessage(const cdap_m_t &cdapMessage,
+				      ser_obj_t& result) = 0;
 };
 
 ///
