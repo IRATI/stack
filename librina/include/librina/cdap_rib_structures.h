@@ -32,6 +32,8 @@ namespace cdap_rib {
 typedef struct cdap_params {
 	long timeout_;
 	bool is_IPCP_;
+
+	cdap_params() : timeout_(0), is_IPCP_(false) {};
 } cdap_params_t;
 
 /// Authentication information
@@ -67,6 +69,8 @@ typedef struct flags {
 	/// set_ of Boolean values that modify the meaning of a
 	/// message in a uniform way when true.
 	Flags flags_;
+
+	flags() : flags_(NONE_FLAGS) {};
 } flags_t;
 
 typedef struct object_info {
@@ -90,6 +94,8 @@ typedef struct object_info {
 	/// The result of an operation, indicating its success (which has the value zero,
 	/// the default for this field), partial success in the case of
 	/// synchronized operations, or reason for failure
+
+	object_info() : inst_(0) {};
 } obj_info_t;
 
 typedef struct filtering_info {
@@ -101,6 +107,8 @@ typedef struct filtering_info {
 	/// is to apply (if missing or present and having the value 0, the default,
 	/// only the target_ed application's objects are addressed)
 	int scope_;
+
+	filtering_info() : filter_(0), scope_(0) {};
 } filt_info_t;
 
 typedef enum{
@@ -133,6 +141,8 @@ typedef struct result_info {
 	/// Result-Reason (string), optional in the responses, forbidden in the requests
 	/// Additional explanation of the result_
 	std::string reason_;
+
+	result_info() : code_(CDAP_SUCCESS) {};
 } res_info_t;
 
 typedef struct version_info {
@@ -144,6 +154,7 @@ typedef struct version_info {
 	/// of use.
 	long version_;
 
+	version_info() : version_(1L) {};
 } vers_info_t;
 
 enum cdap_dest_t { CDAP_DEST_PORT,
