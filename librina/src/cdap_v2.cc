@@ -51,21 +51,6 @@ CDAPException::ErrorCode CDAPException::get_result() const {
 	return result_;
 }
 
-// CLASS AuthPolicy
-std::string AuthPolicy::to_string() const
-{
-	std::stringstream ss;
-	ss << "Policy name: " << name_ << std::endl;
-	ss << "Supported versions: ";
-	for (std::list<std::string>::const_iterator it = versions_.begin();
-			it != versions_.end(); ++it){
-		ss << *it << ";";
-	}
-	ss << std::endl;
-
-	return ss.str();
-}
-
 // STRUCT CDAPMessage
 CDAPMessage::CDAPMessage()
 {
@@ -699,17 +684,10 @@ void CDAPMessageFactory::getOpenConnectionRequestMessage(cdap_m_t & msg,
 {
 	msg.abs_syntax_ = ABSTRACT_SYNTAX_VERSION;
 	msg.op_code_ = cdap_m_t::M_CONNECT;
-	AuthPolicy auth_policy;
-	auth_policy.name_ = con.auth_.name;
-	auth_policy.versions_ = con.auth_.versions;
-	if (con.auth_.options.size_ > 0) {
-		char * val = new char[con.auth_.options.size_];
-		memcpy(val, con.auth_.options.message_,
-				con.auth_.options.size_);
-		auth_policy.options_.message_ = val;
-		auth_policy.options_.size_ = con.auth_.options.size_;
-	}
-	msg.auth_policy_ = auth_policy;
+	msg.auth_policy_.name = con.auth_.name;
+	msg.auth_policy_.versions = con.auth_.versions;
+	if (con.auth_.options.size_ > 0)
+		msg.auth_policy_.options = con.auth_.options;
 	msg.dest_ae_inst_ = con.dest_.ae_inst_;
 	msg.dest_ae_name_ = con.dest_.ae_name_;
 	msg.dest_ap_inst_ = con.dest_.ap_inst_;
@@ -729,15 +707,8 @@ void CDAPMessageFactory::getOpenConnectionResponseMessage(cdap_m_t & msg,
 {
 	msg.abs_syntax_ = ABSTRACT_SYNTAX_VERSION;
 	msg.op_code_ = cdap_m_t::M_CONNECT_R;
-	AuthPolicy auth_policy;
-	if (con.auth_.options.size_ > 0) {
-		char * val = new char[con.auth_.options.size_];
-		memcpy(val, con.auth_.options.message_,
-				con.auth_.options.size_);
-		auth_policy.options_.message_ = val;
-		auth_policy.options_.size_ = con.auth_.options.size_;
-	}
-	msg.auth_policy_ = auth_policy;
+	if (con.auth_.options.size_ > 0)
+		msg.auth_policy_.options = con.auth_.options;
 	msg.dest_ae_inst_ = con.dest_.ae_inst_;
 	msg.dest_ae_name_ = con.dest_.ae_name_;
 	msg.dest_ap_inst_ = con.dest_.ap_inst_;
@@ -2189,18 +2160,13 @@ void CDAPSession::deserializeMessage(const ser_obj_t &message,
 }
 
 void CDAPSession::populate_con_handle(const cdap_m_t &cdap_message,
-				       bool send)
+				      bool send)
 {
 	con_handle.abs_syntax = cdap_message.abs_syntax_;
-	con_handle.auth_.name = cdap_message.auth_policy_.name_;
-	con_handle.auth_.versions = cdap_message.auth_policy_.versions_;
-	if (cdap_message.auth_policy_.options_.size_ > 0) {
-		con_handle.auth_.options.size_ = cdap_message.auth_policy_.options_.size_;
-		con_handle.auth_.options.message_ = new char[con_handle.auth_.options.size_];
-		memcpy(con_handle.auth_.options.message_,
-		       cdap_message.auth_policy_.options_.message_,
-		       cdap_message.auth_policy_.options_.size_);
-	}
+	con_handle.auth_.name = cdap_message.auth_policy_.name;
+	con_handle.auth_.versions = cdap_message.auth_policy_.versions;
+	if (cdap_message.auth_policy_.options.size_ > 0)
+		con_handle.auth_.options = cdap_message.auth_policy_.options;
 
 	if (send) {
 		con_handle.dest_.ae_inst_ = cdap_message.dest_ae_inst_;
@@ -2680,21 +2646,18 @@ void GPBSerializer::deserializeMessage(const ser_obj_t &message,
 	if (gpfCDAPMessage.has_abssyntax())
 		result.abs_syntax_ = gpfCDAPMessage.abssyntax();
 	// AUTH_POLICY
-	AuthPolicy auth_policy;
-	auth_policy.name_ = gpfCDAPMessage.authpolicy().name();
+	result.auth_policy_.name = gpfCDAPMessage.authpolicy().name();
 	for(int i=0; i<gpfCDAPMessage.authpolicy().versions_size(); i++) {
-		auth_policy.versions_.push_back(
+		result.auth_policy_.versions.push_back(
 				gpfCDAPMessage.authpolicy().versions(i));
 	}
 	if (gpfCDAPMessage.authpolicy().has_options()) {
-		char *val = new char[gpfCDAPMessage.authpolicy().options().size()];
-		memcpy(val,
-		 gpfCDAPMessage.authpolicy().options().data(),
-		 gpfCDAPMessage.authpolicy().options().size());
-		auth_policy.options_.message_ = val;
-		auth_policy.options_.size_ = gpfCDAPMessage.authpolicy().options().size();
+		result.auth_policy_.options.message_ = new char[gpfCDAPMessage.authpolicy().options().size()];
+		result.auth_policy_.options.size_ = gpfCDAPMessage.authpolicy().options().size();
+		memcpy(result.auth_policy_.options.message_,
+		       gpfCDAPMessage.authpolicy().options().data(),
+		       gpfCDAPMessage.authpolicy().options().size());
 	}
-	result.auth_policy_ = auth_policy;
 	// DEST_AE_INST
 	if (gpfCDAPMessage.has_destaeinst())
 		result.dest_ae_inst_ = gpfCDAPMessage.destaeinst();
@@ -2782,19 +2745,19 @@ void GPBSerializer::serializeMessage(const cdap_m_t &cdapMessage,
 	gpfCDAPMessage.set_abssyntax(cdapMessage.abs_syntax_);
 	// AUTH_POLICY
 	messages::authPolicy_t *gpb_auth_policy = new messages::authPolicy_t();
-	AuthPolicy auth_policy = cdapMessage.auth_policy_;
-	gpb_auth_policy->set_name(auth_policy.name_);
-	for(std::list<std::string>::iterator it = auth_policy.versions_.begin();
-		it != auth_policy.versions_.end(); ++it) {
+	gpb_auth_policy->set_name(cdapMessage.auth_policy_.name);
+	std::list<std::string> versions = cdapMessage.auth_policy_.versions;
+	for(std::list<std::string>::iterator it = versions.begin();
+		it != versions.end(); ++it) {
 		gpb_auth_policy->add_versions(*it);
 	}
-	if (auth_policy.options_.size_ > 0) {
-		char * gpb_opts = new char[auth_policy.options_.size_];
+	if (cdapMessage.auth_policy_.options.size_ > 0) {
+		char * gpb_opts = new char[cdapMessage.auth_policy_.options.size_];
 		memcpy(gpb_opts,
-		       auth_policy.options_.message_,
-		       auth_policy.options_.size_);
+		       cdapMessage.auth_policy_.options.message_,
+		       cdapMessage.auth_policy_.options.size_);
 		gpb_auth_policy->set_options(gpb_opts,
-				     	     auth_policy.options_.size_);
+					     cdapMessage.auth_policy_.options.size_);
 	}
 	gpfCDAPMessage.set_allocated_authpolicy(gpb_auth_policy);
 	// DEST_AE_INST

@@ -44,6 +44,20 @@ typedef struct auth_policy {
 	std::list<std::string> versions;
 	/// Policy-specific options, encoded in a char array
 	ser_obj_t options;
+
+	std::string to_string() const
+	{
+		std::stringstream ss;
+		ss << "Policy name: " << name << std::endl;
+		ss << "Supported versions: ";
+		for (std::list<std::string>::const_iterator it = versions.begin();
+				it != versions.end(); ++it){
+			ss << *it << ";";
+		}
+		ss << std::endl;
+
+		return ss.str();
+	}
 } auth_policy_t;
 
 // End-point information

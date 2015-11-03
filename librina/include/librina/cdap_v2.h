@@ -50,20 +50,6 @@ private:
 	ErrorCode result_;
 };
 
-/// Encapsulates the data of an AuthValue
-class AuthPolicy {
-public:
-	AuthPolicy() { };
-	std::string to_string() const;
-
-	/// Authentication policy name
-	std::string name_;
-	/// Supported versions of the policy
-	std::list<std::string> versions_;
-	/// Policy specific information, encoded as a byte array
-	ser_obj_t options_;
-};
-
 ///Object exchanged between applications processes that
 ///contains the source and destination addresses of the processes
 ///and optional authentication information, as well as an
@@ -526,7 +512,7 @@ public:
 	int abs_syntax_;
 
 	/// Authentication Policy information
-	AuthPolicy auth_policy_;
+	cdap_rib::auth_policy_t auth_policy_;
 
 	/// DestinationApplication-Entity-Instance-Id (string), optional, not validated by CDAP.
 	/// Specific instance of the Application Entity that the source application

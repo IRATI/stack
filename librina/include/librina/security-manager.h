@@ -60,13 +60,13 @@ public:
 	virtual ~IAuthPolicySet() { };
 
 	/// get auth_policy
-	virtual cdap::AuthPolicy get_auth_policy(int session_id,
-					   	 const AuthSDUProtectionProfile& profile) = 0;
+	virtual cdap_rib::auth_policy_t get_auth_policy(int session_id,
+					   	 	const AuthSDUProtectionProfile& profile) = 0;
 
 	/// initiate the authentication of a remote AE. Any values originated
 	/// from authentication such as sesion keys will be stored in the
 	/// corresponding security context
-	virtual AuthStatus initiate_authentication(const cdap::AuthPolicy& auth_policy,
+	virtual AuthStatus initiate_authentication(const cdap_rib::auth_policy_t& auth_policy,
 						   const AuthSDUProtectionProfile& profile,
 						   int session_id) = 0;
 
@@ -89,9 +89,9 @@ public:
 	AuthNonePolicySet(ISecurityManager * sm) :
 		IAuthPolicySet(IAuthPolicySet::AUTH_NONE), sec_man(sm) { };
 	virtual ~AuthNonePolicySet() { };
-	cdap::AuthPolicy get_auth_policy(int session_id,
-				   	 const AuthSDUProtectionProfile& profile);
-	AuthStatus initiate_authentication(const cdap::AuthPolicy& auth_policy,
+	cdap_rib::auth_policy_t get_auth_policy(int session_id,
+				   	 	const AuthSDUProtectionProfile& profile);
+	AuthStatus initiate_authentication(const cdap_rib::auth_policy_t& auth_policy,
 					   const AuthSDUProtectionProfile& profile,
 					   int session_id);
 	int process_incoming_message(const cdap::CDAPMessage& message, int session_id);
@@ -148,9 +148,9 @@ public:
 	AuthPasswordPolicySet(rib::RIBDaemonProxy * ribd,
 			      ISecurityManager * sec_man);
 	~AuthPasswordPolicySet() { };
-	cdap::AuthPolicy get_auth_policy(int session_id,
-				   	 const AuthSDUProtectionProfile& profile);
-	AuthStatus initiate_authentication(const cdap::AuthPolicy& auth_policy,
+	cdap_rib::auth_policy_t get_auth_policy(int session_id,
+				   	        const AuthSDUProtectionProfile& profile);
+	AuthStatus initiate_authentication(const cdap_rib::auth_policy_t& auth_policy,
 					   const AuthSDUProtectionProfile& profile,
 					   int session_id);
 	int process_incoming_message(const cdap::CDAPMessage& message,
@@ -323,9 +323,9 @@ public:
 
 	AuthSSH2PolicySet(rib::RIBDaemonProxy * ribd, ISecurityManager * sm);
 	virtual ~AuthSSH2PolicySet();
-	cdap::AuthPolicy get_auth_policy(int session_id,
-				   const AuthSDUProtectionProfile& profile);
-	AuthStatus initiate_authentication(const cdap::AuthPolicy& auth_policy,
+	cdap_rib::auth_policy_t get_auth_policy(int session_id,
+				   	        const AuthSDUProtectionProfile& profile);
+	AuthStatus initiate_authentication(const cdap_rib::auth_policy_t& auth_policy,
 				           const AuthSDUProtectionProfile& profile,
 					   int session_id);
 	int process_incoming_message(const cdap::CDAPMessage& message, int session_id);

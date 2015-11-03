@@ -47,8 +47,8 @@ IAuthPolicySet::IAuthPolicySet(const std::string& type_)
 }
 
 //Class AuthNonePolicySet
-cdap::AuthPolicy AuthNonePolicySet::get_auth_policy(int session_id,
-					            const AuthSDUProtectionProfile& profile)
+cdap_rib::auth_policy_t AuthNonePolicySet::get_auth_policy(int session_id,
+					                   const AuthSDUProtectionProfile& profile)
 {
 	if (profile.authPolicy.name_ != type) {
 		LOG_ERR("Wrong policy name: %s", profile.authPolicy.name_.c_str());
@@ -60,24 +60,24 @@ cdap::AuthPolicy AuthNonePolicySet::get_auth_policy(int session_id,
 	sc->ttlPolicy = profile.ttlPolicy;
 	sec_man->add_security_context(sc);
 
-	cdap::AuthPolicy result;
-	result.name_ = IAuthPolicySet::AUTH_NONE;
-	result.versions_.push_back(profile.authPolicy.version_);
+	cdap_rib::auth_policy_t result;
+	result.name = IAuthPolicySet::AUTH_NONE;
+	result.versions.push_back(profile.authPolicy.version_);
 	return result;
 }
 
-rina::IAuthPolicySet::AuthStatus AuthNonePolicySet::initiate_authentication(const cdap::AuthPolicy& auth_policy,
+rina::IAuthPolicySet::AuthStatus AuthNonePolicySet::initiate_authentication(const cdap_rib::auth_policy_t& auth_policy,
 									    const AuthSDUProtectionProfile& profile,
 								      	    int session_id)
 {
-	if (auth_policy.name_ != type) {
-		LOG_ERR("Wrong policy name: %s", auth_policy.name_.c_str());
+	if (auth_policy.name != type) {
+		LOG_ERR("Wrong policy name: %s", auth_policy.name.c_str());
 		return rina::IAuthPolicySet::FAILED;
 	}
 
-	if (auth_policy.versions_.front() != RINA_DEFAULT_POLICY_VERSION) {
+	if (auth_policy.versions.front() != RINA_DEFAULT_POLICY_VERSION) {
 		LOG_ERR("Unsupported policy version: %s",
-				auth_policy.versions_.front().c_str());
+				auth_policy.versions.front().c_str());
 		return rina::IAuthPolicySet::FAILED;
 	}
 
@@ -148,8 +148,8 @@ AuthPasswordPolicySet::AuthPasswordPolicySet(rib::RIBDaemonProxy * ribd, ISecuri
 // No credentials required, since the process being authenticated
 // will have to demonstrate that it knows the password by encrypting
 // a random challenge with a password string
-cdap::AuthPolicy AuthPasswordPolicySet::get_auth_policy(int session_id,
-						        const AuthSDUProtectionProfile& profile)
+cdap_rib::auth_policy_t AuthPasswordPolicySet::get_auth_policy(int session_id,
+						               const AuthSDUProtectionProfile& profile)
 {
 	if (profile.authPolicy.name_ != type) {
 		LOG_ERR("Wrong policy name: %s", profile.authPolicy.name_.c_str());
@@ -167,9 +167,9 @@ cdap::AuthPolicy AuthPasswordPolicySet::get_auth_policy(int session_id,
 	sc->ttlPolicy = profile.ttlPolicy;
 	sec_man->add_security_context(sc);
 
-	cdap::AuthPolicy result;
-	result.name_ = IAuthPolicySet::AUTH_PASSWORD;
-	result.versions_.push_back(profile.authPolicy.version_);
+	cdap_rib::auth_policy_t result;
+	result.name = IAuthPolicySet::AUTH_PASSWORD;
+	result.versions.push_back(profile.authPolicy.version_);
 	return result;
 }
 
@@ -221,18 +221,18 @@ std::string AuthPasswordPolicySet::decrypt_challenge(const std::string& encrypte
 	return encrypt_challenge(encrypted_challenge, password);
 }
 
-rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(const cdap::AuthPolicy& auth_policy,
+rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(const cdap_rib::auth_policy_t& auth_policy,
 										const AuthSDUProtectionProfile& profile,
 								      	        int session_id)
 {
-	if (auth_policy.name_ != type) {
-		LOG_ERR("Wrong policy name: %s", auth_policy.name_.c_str());
+	if (auth_policy.name != type) {
+		LOG_ERR("Wrong policy name: %s", auth_policy.name.c_str());
 		return rina::IAuthPolicySet::FAILED;
 	}
 
-	if (auth_policy.versions_.front() != RINA_DEFAULT_POLICY_VERSION) {
+	if (auth_policy.versions.front() != RINA_DEFAULT_POLICY_VERSION) {
 		LOG_ERR("Unsupported policy version: %s",
-				auth_policy.versions_.front().c_str());
+				auth_policy.versions.front().c_str());
 		return rina::IAuthPolicySet::FAILED;
 	}
 
@@ -730,8 +730,8 @@ unsigned char * AuthSSH2PolicySet::BN_to_binary(BIGNUM *b, int *len)
 	return ret;
 }
 
-cdap::AuthPolicy AuthSSH2PolicySet::get_auth_policy(int session_id,
-					            const AuthSDUProtectionProfile& profile)
+cdap_rib::auth_policy_t AuthSSH2PolicySet::get_auth_policy(int session_id,
+					            	   const AuthSDUProtectionProfile& profile)
 {
 	if (profile.authPolicy.name_ != type) {
 		LOG_ERR("Wrong policy name: %s, expected: %s",
@@ -748,9 +748,9 @@ cdap::AuthPolicy AuthSSH2PolicySet::get_auth_policy(int session_id,
 	}
 
 	LOG_DBG("Initiating authentication for session_id: %d", session_id);
-	cdap::AuthPolicy auth_policy;
-	auth_policy.name_ = IAuthPolicySet::AUTH_SSH2;
-	auth_policy.versions_.push_back(profile.authPolicy.version_);
+	cdap_rib::auth_policy_t auth_policy;
+	auth_policy.name = IAuthPolicySet::AUTH_SSH2;
+	auth_policy.versions.push_back(profile.authPolicy.version_);
 
 	SSH2SecurityContext * sc = new SSH2SecurityContext(session_id, profile);
 
@@ -781,7 +781,7 @@ cdap::AuthPolicy AuthSSH2PolicySet::get_auth_policy(int session_id,
 	}
 
 	encode_ssh2_auth_options(options,
-				 auth_policy.options_);
+				 auth_policy.options);
 
 	//Store security context
 	sc->state = SSH2SecurityContext::WAIT_EDH_EXCHANGE;
@@ -860,18 +860,18 @@ int AuthSSH2PolicySet::edh_init_keys(SSH2SecurityContext * sc)
 	return 0;
 }
 
-IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(const cdap::AuthPolicy& auth_policy,
-									    const AuthSDUProtectionProfile& profile,
-								      	    int session_id)
+IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(const cdap_rib::auth_policy_t& auth_policy,
+								      const AuthSDUProtectionProfile& profile,
+								      int session_id)
 {
-	if (auth_policy.name_ != type) {
-		LOG_ERR("Wrong policy name: %s", auth_policy.name_.c_str());
+	if (auth_policy.name != type) {
+		LOG_ERR("Wrong policy name: %s", auth_policy.name.c_str());
 		return IAuthPolicySet::FAILED;
 	}
 
-	if (auth_policy.versions_.front() != RINA_DEFAULT_POLICY_VERSION) {
+	if (auth_policy.versions.front() != RINA_DEFAULT_POLICY_VERSION) {
 		LOG_ERR("Unsupported policy version: %s",
-				auth_policy.versions_.front().c_str());
+				auth_policy.versions.front().c_str());
 		return IAuthPolicySet::FAILED;
 	}
 
@@ -884,7 +884,7 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(const cdap
 
 	LOG_DBG("Initiating authentication for session_id: %d", session_id);
 	SSH2AuthOptions options;
-	decode_ssh2_auth_options(auth_policy.options_, options);
+	decode_ssh2_auth_options(auth_policy.options, options);
 
 	SSH2SecurityContext * sc;
 	try {

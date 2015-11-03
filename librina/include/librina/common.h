@@ -618,8 +618,16 @@ typedef struct ser_obj {
 	~ser_obj()
 	{
 		if (message_)
-			delete message_;
+			delete[] message_;
 		message_ = 0;
+	}
+
+	ser_obj& operator=(const ser_obj &other)
+	{
+		size_ = other.size_;
+		message_ = new char[size_];
+		memcpy(message_, other.message_, size_);
+		return *this;
 	}
 } ser_obj_t;
 

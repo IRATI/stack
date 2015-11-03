@@ -334,12 +334,11 @@ void EnrolleeStateMachine::initiateEnrollment(rina::EnrollmentRequest * enrollme
 			return;
 		}
 
-		rina::cdap::AuthPolicy auth_policy = auth_ps_->get_auth_policy(portId,
-									       profile);
 		rina::cdap_rib::ep_info_t src_ep;
 		rina::cdap_rib::ep_info_t dest_ep;
 		rina::cdap_rib::vers_info_t vers;
-		rina::cdap_rib::auth_policy_t auth;
+		rina::cdap_rib::auth_policy_t auth = auth_ps_->get_auth_policy(portId,
+									       profile);
 
 		src_ep.ap_name_ = ipc_process_->get_name();
 		src_ep.ap_inst_ = ipc_process_->get_instance();
@@ -351,19 +350,11 @@ void EnrolleeStateMachine::initiateEnrollment(rina::EnrollmentRequest * enrollme
 
 		vers.version_ = 0x01;
 
-		auth.name = auth_policy.name_;
-		auth.options.message_ = auth_policy.options_.message_;
-		auth.options.size_ = auth_policy.options_.size_;
-		std::list<std::string>::const_iterator it;
-		for (it = auth_policy.versions_.begin(); it != auth_policy.versions_.end(); ++it)
-			auth.versions.push_back(*it);
-
 		rib_daemon_->getProxy()->remote_open_connection(vers,
 								src_ep,
 								dest_ep,
 								auth,
 								portId);
-
 		port_id_ = portId;
 
 		//Set timer
@@ -939,7 +930,7 @@ void EnrollerStateMachine::connect(const rina::cdap::CDAPMessage& message,
 	port_id_ = con_handle.handle_;
 	con_handle_ = con_handle;
 
-	auth_ps_ = security_manager_->get_auth_policy_set(message.auth_policy_.name_);
+	auth_ps_ = security_manager_->get_auth_policy_set(message.auth_policy_.name);
 	if (!auth_ps_) {
 		lock_.unlock();
 		abortEnrollment(remote_peer_->name_, port_id_,
