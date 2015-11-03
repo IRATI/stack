@@ -251,7 +251,6 @@ class FlowStateManager;
 class FlowStateRIBObject: public rina::rib::RIBObj {
 public:
 	FlowStateRIBObject(FlowStateObject* new_obj, FlowStateManager *manager);
-	const std::string toString();
 	void read(const rina::cdap_rib::con_handle_t &con, const std::string& fqn,
 		const std::string& clas, const rina::cdap_rib::filt_info_t &filt,
 		const int invoke_id, rina::ser_obj_t &obj_reply, 
@@ -264,6 +263,8 @@ public:
 		const std::string& fqn,	const std::string& clas, 
 		const rina::cdap_rib::filt_info_t &filt,
 		const int invoke_id, rina::cdap_rib::res_info_t& res);
+	const std::string get_displayable_value() const;
+
 	FlowStateObject* obj;
 
 	const static std::string clazz_name;
@@ -517,7 +518,6 @@ private:
 	/// until a flow deallocation over the same flow is called.
 	std::list<rina::FlowInformation> allocated_flows_;
 
-	void populateRIB();
 	void subscribeToEvents();
 
 	/// The Resource Allocator has deallocated an existing N-1 flow dedicated to data

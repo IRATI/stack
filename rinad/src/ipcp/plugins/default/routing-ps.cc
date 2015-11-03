@@ -784,6 +784,11 @@ bool FlowStateRIBObject::delete_(const rina::cdap_rib::con_handle_t &con,
 	return false;
 }
 
+const std::string FlowStateRIBObject::get_displayable_value() const
+{
+	return obj->toString();
+}
+
 // CLASS FlowStateObjects
 FlowStateObjects::FlowStateObjects(FlowStateManager* manager)
 {
@@ -810,7 +815,7 @@ FlowStateObjects::~FlowStateObjects()
 
 bool FlowStateObjects::addObject(FlowStateObject* object)
 {
-	if (objects.find(object->get_objectname()) != objects.end())
+	if (objects.find(object->get_objectname()) == objects.end())
 	{
 		addCheckedObject(object);
 		return true;
@@ -823,14 +828,12 @@ bool FlowStateObjects::addObject(FlowStateObject* object)
 	}
 }
 
-
 bool FlowStateObjects::addCheckedObject(FlowStateObject* object)
 {
 	objects[object->get_objectname()] = object;
 	rina::rib::RIBObj* rib_obj = new FlowStateRIBObject(object, manager_);
-	IPCPRIBDaemon* rib_daemon = (IPCPRIBDaemon*)IPCPFactory::getIPCP()->
-		get_rib_daemon();
-	rib_daemon->addObjRIB(rib_obj->fqn, &rib_obj);
+	IPCPRIBDaemon* rib_daemon = (IPCPRIBDaemon*)IPCPFactory::getIPCP()->get_rib_daemon();
+	rib_daemon->addObjRIB(object->get_objectname(), &rib_obj);
 }
 
 void FlowStateObjects::deprecateObject(const std::string& fqn, 
@@ -1021,7 +1024,11 @@ bool FlowStateManager::addNewFSO(unsigned int address,
 		unsigned int neighborAddress, unsigned int cost, int avoid_port)
 {
 	FlowStateObject * newObject = new FlowStateObject(address,
-			neighborAddress, cost, true, 1, 0);
+							  neighborAddress,
+							  cost,
+							  true,
+							  1,
+							  0);
 	return fsos->addObject(newObject);
 }
 
@@ -1229,7 +1236,6 @@ LinkStateRoutingPolicy::LinkStateRoutingPolicy(IPCProcess * ipcp)
 	source_vertex_ = 0;
 	db_ = 0;
 
-	populateRIB();
 	subscribeToEvents();
 	db_ = new FlowStateManager(&timer_, UINT_MAX);
 }
@@ -1240,20 +1246,6 @@ LinkStateRoutingPolicy::~LinkStateRoutingPolicy()
 	delete resiliency_algorithm_;
 	delete db_;
 }
-
-void LinkStateRoutingPolicy::populateRIB()
-{
-	// TODO: check this
-	/*
-	try {
-		fs_rib_grostate_ = new FlowStateRIBObjectGroup(ipc_process_, this);
-		rib_daemon_->addRIBObject(fs_rib_grostate_);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems adding object to RIB: %s", e.what());
-	}
-	*/
-}
-
 
 void LinkStateRoutingPolicy::subscribeToEvents()
 {
@@ -1417,8 +1409,9 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(
 			LOG_IPCP_INFO("There was an allocation flow event waiting for enrollment, launching it");
 			try {
 				db_->addNewFSO(ipc_process_->get_address(),
-						ipc_process_->namespace_manager_->getAdressByname(
-								event->neighbor_.get_name()), 1, it->portId);
+					       ipc_process_->namespace_manager_->getAdressByname(event->neighbor_.get_name()),
+					       1,
+					       it->portId);
 				allocated_flows_.erase(it);
 				break;
 			} catch (rina::Exception &e) {
@@ -1606,7 +1599,7 @@ void FlowStateObjectListEncoder::decode(const rina::ser_obj_t &serobj,
 
 	for(int i=0; i<gpb.flow_state_objects_size(); i++)
 	{
-		FlowStateObject * fso;
+		FlowStateObject * fso = new FlowStateObject();
 		fso_helpers::toModel(gpb.flow_state_objects(i), *fso);
 		des_obj.push_back(fso);
 	}
