@@ -196,8 +196,12 @@ private:
 class FlowStateObject {
 public:
 	FlowStateObject();
-	FlowStateObject(unsigned int address, unsigned int neighbor_address,
-		unsigned int cost, bool state, int sequence_number, unsigned int age);
+	FlowStateObject(unsigned int address,
+			unsigned int neighbor_address,
+			unsigned int cost,
+			bool state,
+			int sequence_number,
+			unsigned int age);
 	~FlowStateObject();
 	const std::string toString();
 	FlowStateObject& operator=(const FlowStateObject& other);
@@ -219,6 +223,7 @@ public:
 	void has_state(bool state);
 	void set_sequencenumber(unsigned int sequence_number);
 	void set_age(unsigned int age);
+	void set_object_name(const std::string& name);
 	void has_modified(bool modified);
 	void set_avoidport(unsigned int avoid_port);
 	void has_beingerased(bool being_erased);

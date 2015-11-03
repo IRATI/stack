@@ -699,6 +699,10 @@ void FlowStateObject::set_age(unsigned int age)
 {
 	age_ = age;
 }
+void FlowStateObject::set_object_name(const std::string& name)
+{
+	object_name_ = name;
+}
 void FlowStateObject::has_modified(bool modified)
 {
 	modified_ = modified;
@@ -1601,6 +1605,10 @@ void FlowStateObjectListEncoder::decode(const rina::ser_obj_t &serobj,
 	{
 		FlowStateObject * fso = new FlowStateObject();
 		fso_helpers::toModel(gpb.flow_state_objects(i), *fso);
+		std::stringstream ss;
+		ss << FlowStateRIBObject::object_name_prefix
+		   << fso->getKey();
+		fso->set_object_name(ss.str());
 		des_obj.push_back(fso);
 	}
 }
