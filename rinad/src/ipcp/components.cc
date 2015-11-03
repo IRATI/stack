@@ -85,7 +85,6 @@ IPCProcess::IPCProcess(const std::string& name, const std::string& instance)
 			: rina::ApplicationProcess(name, instance)
 {
 	delimiter_ = 0;
-	cdap_session_manager_ = 0;
 	internal_event_manager_ = 0;
 	enrollment_task_ = 0;
 	flow_allocator_ = 0;

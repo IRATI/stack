@@ -45,6 +45,17 @@ typedef struct auth_policy {
 	/// Policy-specific options, encoded in a char array
 	ser_obj_t options;
 
+	auth_policy& operator=(const auth_policy &other)
+	{
+		name = other.name;
+		options = other.options;
+		for (std::list<std::string>::const_iterator it = other.versions.begin();
+				it != other.versions.end(); ++it)
+			versions.push_back(*it);
+
+		return *this;
+	}
+
 	std::string to_string() const
 	{
 		std::stringstream ss;

@@ -962,15 +962,15 @@ void ribBasicOps::testOperations(){
 
 	obj_info_t obj_info1;
 	cdap_rib::filt_info_t filter;
-	int* message;
+	char* message;
 	int invoke_id;
 
 	//Use FQN first
 	obj_info1.inst_ = -1;
 	obj_info1.name_ = "/x/y/z/invalid";
-	obj_info1.value_.size_ = sizeof(int);
-	obj_info1.value_.message_ = new int;
-	message = (int*)obj_info1.value_.message_;
+	obj_info1.value_.size_ = sizeof(char[1]);
+	obj_info1.value_.message_ = new char[1];
+	message = (char*)obj_info1.value_.message_;
 
 	//Issue a request with an invalid con id
 	invoke_id = 1;

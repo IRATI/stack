@@ -114,10 +114,6 @@ IPCProcessImpl::~IPCProcessImpl() {
 		delete internal_event_manager_;
 	}
 
-	if (cdap_session_manager_) {
-		delete cdap_session_manager_;
-	}
-
 	if (enrollment_task_) {
 		if (enrollment_task_->ps) {
 			psDestroy(rina::ApplicationEntity::ENROLLMENT_TASK_AE_NAME,

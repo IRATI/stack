@@ -479,6 +479,8 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(equals) rina::PsInfo::operator==(const PsInfo &other) const;
 %rename(differs) rina::PsInfo::operator!=(const PsInfo &other) const;
 %rename(assign) rina::ser_obj::operator=(const ser_obj &other);
+%rename(assign) rina::cdap_rib::auth_policy::operator=(const auth_policy &other);
+%rename(assign) rina::Neighbor::operator=(const Neighbor &other);
 
 %include "librina/exceptions.h"
 %include "librina/patterns.h"

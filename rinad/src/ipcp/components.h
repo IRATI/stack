@@ -119,7 +119,7 @@ public:
         					    const rina::cdap_rib::con_handle_t &con) = 0;
 	virtual void authentication_completed(int port_id, bool success) = 0;
         virtual void initiate_enrollment(const rina::NMinusOneFlowAllocatedEvent & event,
-        				 rina::EnrollmentRequest * request) = 0;
+        				 const rina::EnrollmentRequest& request) = 0;
         virtual void inform_ipcm_about_failure(IEnrollmentStateMachine * state_machine) = 0;
         virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
 };
@@ -446,7 +446,6 @@ public:
 	static const int DEFAULT_MAX_SDU_SIZE_IN_BYTES;
 
 	IDelimiter * delimiter_;
-	rina::cdap::CDAPSessionManagerInterface* cdap_session_manager_;
 	rina::InternalEventManager * internal_event_manager_;
 	IPCPEnrollmentTask * enrollment_task_;
 	IFlowAllocator * flow_allocator_;

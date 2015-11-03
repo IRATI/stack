@@ -64,14 +64,23 @@ public:
 class EnrollmentRequest
 {
 public:
-	EnrollmentRequest(Neighbor * neighbor) : neighbor_(neighbor),
+	EnrollmentRequest() : ipcm_initiated_(false) {};
+	EnrollmentRequest(const rina::Neighbor& neighbor) : neighbor_(neighbor),
 		ipcm_initiated_(false) { };
-	EnrollmentRequest(Neighbor * neighbor,
+	EnrollmentRequest(const rina::Neighbor& neighbor,
                           const EnrollToDAFRequestEvent & event) : neighbor_(neighbor),
                  event_(event), ipcm_initiated_(true) { };
 
+	EnrollmentRequest& operator=(const EnrollmentRequest &other)
+	{
+		neighbor_ = other.neighbor_;
+		event_ = other.event_;
+		ipcm_initiated_ = other.ipcm_initiated_;
+		return *this;
+	}
+
 	/// The neighbor to enroll to
-	Neighbor * neighbor_;
+	Neighbor neighbor_;
 
 	/// The request event that triggered the Enrollment
 	EnrollToDAFRequestEvent event_;
@@ -89,7 +98,7 @@ public:
 	virtual ~IEnrollmentTask() { };
 	virtual const std::list<Neighbor> get_neighbors() const = 0;
 	virtual std::list<rina::Neighbor*> get_neighbor_pointers() = 0;
-	virtual void add_neighbor(Neighbor * neighbor) = 0;
+	virtual void add_neighbor(const Neighbor& neighbor) = 0;
 	virtual void remove_neighbor(const std::string& neighbor_key) = 0;
 	virtual const std::list<std::string> get_enrolled_app_names() const = 0;
 
@@ -100,7 +109,7 @@ public:
 	/// Starts the enrollment program
 	/// @param cdapMessage
 	/// @param cdapSessionDescriptor
-	virtual void initiateEnrollment(EnrollmentRequest * request) = 0;
+	virtual void initiateEnrollment(const EnrollmentRequest& request) = 0;
 
 	/// Called by the enrollment state machine when the enrollment request has been completed,
 	/// either successfully or unsuccessfully

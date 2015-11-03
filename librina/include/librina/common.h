@@ -659,6 +659,8 @@ class Neighbor {
 
 public:
         Neighbor();
+        Neighbor(const Neighbor &other);
+        Neighbor& operator=(const Neighbor &other);
         bool operator==(const Neighbor &other) const;
         bool operator!=(const Neighbor &other) const;
 #ifndef SWIG

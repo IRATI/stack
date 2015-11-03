@@ -892,6 +892,33 @@ Neighbor::Neighbor() {
 	number_of_enrollment_attempts_ = 0;
 }
 
+Neighbor::Neighbor(const Neighbor &other)
+{
+	address_ = other.address_;
+	average_rtt_in_ms_ = other.average_rtt_in_ms_;
+	last_heard_from_time_in_ms_ = other.last_heard_from_time_in_ms_;
+	enrolled_ = other.enrolled_;
+	underlying_port_id_ = other.underlying_port_id_;
+	number_of_enrollment_attempts_ = other.number_of_enrollment_attempts_;
+	name_ = other.name_;
+	supporting_dif_name_ = other.supporting_dif_name_;
+	supporting_difs_ = other.supporting_difs_;
+}
+
+Neighbor& Neighbor::operator=(const Neighbor &other)
+{
+	address_ = other.address_;
+	average_rtt_in_ms_ = other.average_rtt_in_ms_;
+	last_heard_from_time_in_ms_ = other.last_heard_from_time_in_ms_;
+	enrolled_ = other.enrolled_;
+	underlying_port_id_ = other.underlying_port_id_;
+	number_of_enrollment_attempts_ = other.number_of_enrollment_attempts_;
+	name_ = other.name_;
+	supporting_dif_name_ = other.supporting_dif_name_;
+	supporting_difs_ = other.supporting_difs_;
+	return *this;
+}
+
 bool Neighbor::operator==(const Neighbor &other) const{
 	return name_ == other.get_name();
 }

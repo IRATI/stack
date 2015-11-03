@@ -170,7 +170,7 @@ public:
 	/// @param cdapSessionDescriptor
 	void flowDeallocated(int portId);
 
-	rina::Neighbor * remote_peer_;
+	rina::Neighbor remote_peer_;
 	bool enroller_;
 	std::string state_;
 
@@ -227,12 +227,12 @@ public:
 	void eventHappened(rina::InternalEvent * event);
 	const std::list<rina::Neighbor> get_neighbors() const;
 	std::list<rina::Neighbor*> get_neighbor_pointers();
-	void add_neighbor(rina::Neighbor * neighbor);
+	void add_neighbor(const rina::Neighbor& neighbor);
 	void remove_neighbor(const std::string& neighbor_key);
 	bool isEnrolledTo(const std::string& applicationProcessName);
 	const std::list<std::string> get_enrolled_app_names() const;
 	void processEnrollmentRequestEvent(rina::EnrollToDAFRequestEvent * event);
-	void initiateEnrollment(rina::EnrollmentRequest * request);
+	void initiateEnrollment(const rina::EnrollmentRequest& request);
 	void connect(const rina::cdap::CDAPMessage& message,
 	             const rina::cdap_rib::con_handle_t &con);
 	void connectResult(const rina::cdap_rib::res_info_t &res,
