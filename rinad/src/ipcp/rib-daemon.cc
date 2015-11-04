@@ -105,7 +105,7 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t& m_sent,
 			rina::cdap_rib::filt_info_t filt;
 			rina::cdap_rib::obj_info_t obj;
 
-			adata.source_address_ = 0;
+			adata.source_address_ = IPCPFactory::getIPCP()->get_address();
 			adata.dest_address_ = handle;
 			manager_->encodeCDAPMessage(m_sent,
 						    adata.encoded_cdap_message_);
