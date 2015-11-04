@@ -26,6 +26,7 @@
 #include <librina/common.h>
 #include <librina/rib_v2.h>
 #include "rib-daemon.h"
+#include "ipc-process.h"
 
 namespace rinad {
 
