@@ -30,14 +30,12 @@
 namespace rina {
 
 IPCResourceManager::IPCResourceManager() : ApplicationEntity(ApplicationEntity::IRM_AE_NAME),
-		rib_daemon_(NULL), cdap_session_manager_(NULL) ,
-		event_manager_(NULL), flow_acceptor_(NULL), ipcp(false)
+		ipcp(false), rib_daemon_(NULL), rib(0), event_manager_(NULL), flow_acceptor_(NULL)
 {
 }
 
 IPCResourceManager::IPCResourceManager(bool isIPCP) : ApplicationEntity(ApplicationEntity::IRM_AE_NAME),
-		rib_daemon_(NULL), cdap_session_manager_(NULL) ,
-		event_manager_(NULL), flow_acceptor_(NULL), ipcp(isIPCP)
+		ipcp(isIPCP), rib_daemon_(NULL), rib(0), event_manager_(NULL), flow_acceptor_(NULL)
 {
 }
 
@@ -56,7 +54,7 @@ void IPCResourceManager::set_application_process(rina::ApplicationProcess * ap)
 		LOG_ERR("App has no RIB Daemon AE, return");
 		return;
 	}
-	rib_daemon_ = dynamic_cast<IRIBDaemon*>(ae);
+	rib_daemon_ = dynamic_cast<rib::RIBDaemonProxy*>(ae);
 
 	ae = app->get_internal_event_manager();
 	if (!ae) {
@@ -71,13 +69,33 @@ void IPCResourceManager::set_flow_acceptor(FlowAcceptor * fa)
 	flow_acceptor_ = fa;
 }
 
+void IPCResourceManager::set_rib_handle(rina::rib::rib_handle_t rib_handle)
+{
+	rib = rib_handle;
+}
+
 void IPCResourceManager::populateRIB()
 {
+	rina::rib::RIBObj* tmp;
+
 	try {
-		BaseRIBObject * object = new DIFRegistrationSetRIBObject(rib_daemon_);
-		rib_daemon_->addRIBObject(object);
-		object = new NMinusOneFlowSetRIBObject(rib_daemon_);
-		rib_daemon_->addRIBObject(object);
+		tmp = new rina::rib::RIBObj("IPCResourceManager");
+		rib_daemon_->addObjRIB(rib, "/ipcmanagement/irm", &tmp);
+
+		tmp = new rina::rib::RIBObj(UnderlayingDIFRIBObj::parent_class_name);
+		rib_daemon_->addObjRIB(rib,
+				       UnderlayingDIFRIBObj::parent_object_name,
+				       &tmp);
+
+		tmp = new rina::rib::RIBObj(UnderlayingRegistrationRIBObj::parent_class_name);
+		rib_daemon_->addObjRIB(rib,
+				       UnderlayingRegistrationRIBObj::parent_object_name,
+				       &tmp);
+
+		tmp = new rina::rib::RIBObj(UnderlayingFlowRIBObj::parent_class_name);
+		rib_daemon_->addObjRIB(rib,
+				       UnderlayingFlowRIBObj::parent_object_name,
+				       &tmp);
 	} catch (Exception &e) {
 		LOG_ERR("Problems adding object to the RIB : %s", e.what());
 	}
@@ -152,10 +170,10 @@ void IPCResourceManager::allocateRequestResult(const AllocateFlowRequestResultEv
 
 	try {
 		std::stringstream ss;
-		ss<<NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
-		ss<<RIBNamingConstants::SEPARATOR<<event.portId;
-		rib_daemon_->createObject(NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
-					  ss.str(), &flow, 0);
+		ss << UnderlayingFlowRIBObj::object_name_prefix << event.portId;
+
+		UnderlayingFlowRIBObj * ufrobj = new UnderlayingFlowRIBObj(flow);
+		rib_daemon_->addObjRIB(rib, ss.str(), &ufrobj);
 	} catch (Exception &e) {
 		LOG_ERR("Problems creating RIB object: %s", e.what());
 	}
@@ -219,10 +237,10 @@ void IPCResourceManager::flowAllocationRequested(const FlowRequestEvent& event)
 	          event.remoteApplicationName.processInstance.c_str());
 	try {
 		std::stringstream ss;
-		ss<<NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
-		ss<<RIBNamingConstants::SEPARATOR<<event.portId;
-		rib_daemon_->createObject(NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
-					  ss.str(), &flow, 0);
+		ss << UnderlayingFlowRIBObj::object_name_prefix << event.portId;
+
+		UnderlayingFlowRIBObj * ufrobj = new UnderlayingFlowRIBObj(flow);
+		rib_daemon_->addObjRIB(rib, ss.str(), &ufrobj);
 	} catch (Exception &e){
 		LOG_ERR("Error creating RIB object: %s", e.what());
 	}
@@ -281,10 +299,8 @@ void IPCResourceManager::cleanFlowAndNotify(int portId)
 {
 	try{
 		std::stringstream ss;
-		ss<<NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
-		ss<<RIBNamingConstants::SEPARATOR<<portId;
-		rib_daemon_->deleteObject(NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
-				          ss.str(), 0, 0);
+		ss << UnderlayingFlowRIBObj::object_name_prefix << portId;
+		rib_daemon_->removeObjRIB(rib, ss.str());
 	}catch(Exception &e) {
 		LOG_ERR("Problems deleting object from the RIB: %s", e.what());
 	}
@@ -332,23 +348,18 @@ std::list<FlowInformation> IPCResourceManager::getAllNMinusOneFlowInformation() 
 	return result;
 }
 
-//Class DIF registration RIB Object
-DIFRegistrationRIBObject::DIFRegistrationRIBObject(IRIBDaemon* rib_daemon,
-						   const std::string& object_class,
-						   const std::string& object_name,
-						   const std::string& dif_name_) :
-			BaseRIBObject(rib_daemon, object_class, objectInstanceGenerator->getObjectInstance(),
-				      object_name)
+//Class UnderlayingRegistrationRIBObjt
+const std::string UnderlayingRegistrationRIBObj::class_name = "UnderlayingRegistration";
+const std::string UnderlayingRegistrationRIBObj::object_name_prefix = "/ipcmanagement/irm/underregs/difName=";
+const std::string UnderlayingRegistrationRIBObj::parent_class_name = "UnderlayingRegistrations";
+const std::string UnderlayingRegistrationRIBObj::parent_object_name = "/ipcmanagement/irm/underregs";
+
+UnderlayingRegistrationRIBObj::UnderlayingRegistrationRIBObj(const std::string& dif_name_) :
+			rib::RIBObj(class_name), dif_name(dif_name_)
 {
-	dif_name = dif_name_;
 }
 
-const void* DIFRegistrationRIBObject::get_value() const
-{
-	return &dif_name;
-}
-
-std::string DIFRegistrationRIBObject::get_displayable_value()
+const std::string UnderlayingRegistrationRIBObj::get_displayable_value() const
 {
 	std::stringstream ss;
 	ss << "N-1 DIF name: " << dif_name;
@@ -356,59 +367,18 @@ std::string DIFRegistrationRIBObject::get_displayable_value()
 	return ss.str();
 }
 
-void DIFRegistrationRIBObject::deleteObject(const void* objectValue)
-{
-        parent_->remove_child(name_);
-        base_rib_daemon_->removeRIBObject(name_);
-}
+//Class UnderlayingFlowRIBObj
+const std::string UnderlayingFlowRIBObj::class_name = "UnderlayingFlow";
+const std::string UnderlayingFlowRIBObj::object_name_prefix = "/ipcmanagement/irm/underflows/portId=";
+const std::string UnderlayingFlowRIBObj::parent_class_name = "UnderlayingFlows";
+const std::string UnderlayingFlowRIBObj::parent_object_name = "/ipcmanagement/irm/underflows";
 
-// Class DIF registration set RIB Object
-const std::string DIFRegistrationSetRIBObject::DIF_REGISTRATION_SET_RIB_OBJECT_CLASS =
-		"DIF registration set";
-const std::string DIFRegistrationSetRIBObject::DIF_REGISTRATION_RIB_OBJECT_CLASS =
-		"DIF registration";
-const std::string DIFRegistrationSetRIBObject::DIF_REGISTRATION_SET_RIB_OBJECT_NAME =
-		RIBNamingConstants::SEPARATOR + RIBNamingConstants::DAF + RIBNamingConstants::SEPARATOR +
-		RIBNamingConstants::IRM + RIBNamingConstants::SEPARATOR + RIBNamingConstants::DIF_REGISTRATIONS;
-
-DIFRegistrationSetRIBObject::DIFRegistrationSetRIBObject(IRIBDaemon* rib_daemon):
-			BaseRIBObject(rib_daemon, DIF_REGISTRATION_SET_RIB_OBJECT_CLASS,
-			objectInstanceGenerator->getObjectInstance(),
-			DIF_REGISTRATION_SET_RIB_OBJECT_NAME)
+UnderlayingFlowRIBObj::UnderlayingFlowRIBObj(const rina::FlowInformation& flow_info)
+		: rib::RIBObj(class_name), flow_information(flow_info)
 {
 }
 
-const void* DIFRegistrationSetRIBObject::get_value() const
-{
-	return 0;
-}
-
-void DIFRegistrationSetRIBObject::createObject(const std::string& objectClass,
-	const std::string& objectName,
-	const void* objectValue)
-{
-	const std::string * dif_name = (const std::string *) objectValue;
-	DIFRegistrationRIBObject * ribObject =
-		new DIFRegistrationRIBObject(base_rib_daemon_,
-					     objectClass,
-					     objectName,
-					     *dif_name);
-	add_child(ribObject);
-	base_rib_daemon_->addRIBObject(ribObject);
-}
-
-//Class N-1 Flow RIB Object
-NMinusOneFlowRIBObject::NMinusOneFlowRIBObject(IRIBDaemon * rib_daemon,
-				 	       const std::string& object_class,
-					       const std::string& object_name,
-					       const rina::FlowInformation& flow_info)
-		: BaseRIBObject(rib_daemon, object_class, objectInstanceGenerator->getObjectInstance(),
-				object_name)
-{
-	flow_information = flow_info;
-}
-
-std::string NMinusOneFlowRIBObject::get_displayable_value()
+const std::string UnderlayingFlowRIBObj::get_displayable_value() const
 {
 	std::stringstream ss;
 	ApplicationProcessNamingInformation name;
@@ -423,51 +393,23 @@ std::string NMinusOneFlowRIBObject::get_displayable_value()
 	return ss.str();
 }
 
-const void* NMinusOneFlowRIBObject::get_value() const
-{
-	return &flow_information;
-}
+//Class UnderlayingDIFRIBObj
+const std::string UnderlayingDIFRIBObj::class_name = "UnderlayingDIF";
+const std::string UnderlayingDIFRIBObj::object_name_prefix = "/ipcmanagement/irm/underdifs/difName=";
+const std::string UnderlayingDIFRIBObj::parent_class_name = "UnderlayingDIFs";
+const std::string UnderlayingDIFRIBObj::parent_object_name = "/ipcmanagement/irm/underdifs";
 
-void NMinusOneFlowRIBObject::deleteObject(const void* objectValue)
-{
-        parent_->remove_child(name_);
-        base_rib_daemon_->removeRIBObject(name_);
-}
-
-// Class N-1 Flow set RIB Object
-const std::string NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_CLASS =
-		"nminusone flow set";
-const std::string NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS =
-		"nminusone flow";
-const std::string NMinusOneFlowSetRIBObject::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME =
-		RIBNamingConstants::SEPARATOR + RIBNamingConstants::DAF + RIBNamingConstants::SEPARATOR +
-		RIBNamingConstants::IRM + RIBNamingConstants::SEPARATOR + RIBNamingConstants::N_MINUS_ONE_FLOWS;
-
-NMinusOneFlowSetRIBObject::NMinusOneFlowSetRIBObject(IRIBDaemon * rib_daemon):
-		BaseRIBObject(rib_daemon, N_MINUS_ONE_FLOW_SET_RIB_OBJECT_CLASS,
-			      rina::objectInstanceGenerator->getObjectInstance(),
-			      N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME)
+UnderlayingDIFRIBObj::UnderlayingDIFRIBObj(const DIFProperties& dif_info)
+		: rib::RIBObj(class_name), dif_properties(dif_info)
 {
 }
 
-const void* NMinusOneFlowSetRIBObject::get_value() const
+const std::string UnderlayingDIFRIBObj::get_displayable_value() const
 {
-	return 0;
-}
-
-void NMinusOneFlowSetRIBObject::createObject(const std::string& objectClass,
-		const std::string& objectName,
-		const void* objectValue)
-{
-	const FlowInformation * flow_info = (const FlowInformation *) objectValue;
-	NMinusOneFlowRIBObject * ribObject =
-		new NMinusOneFlowRIBObject(base_rib_daemon_,
-					   objectClass,
-					   objectName,
-					   *flow_info);
-	add_child(ribObject);
-	base_rib_daemon_->addRIBObject(ribObject);
+	std::stringstream ss;
+	ss << "DIF name: " << dif_properties.DIFName.getEncodedString();
+	ss << "; Max SDU size: " << dif_properties.maxSDUSize;
+	return ss.str();
 }
 
 }
-

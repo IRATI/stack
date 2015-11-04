@@ -22,23 +22,11 @@
 #define ENCODERS_MAD_H_
 
 #include <librina/cdap_rib_structures.h>
+#include <librina/common.h>
 #include "structures_mad.h"
 
 namespace rinad {
 namespace mad_manager {
-
-// Generic (simple) types
-
-/// String encoder
-class StringEncoder : public Encoder<std::string>{
-public:
-	void encode(const std::string &obj,
-			rina::cdap_rib::ser_obj_t& serobj);
-	void decode(const rina::cdap_rib::ser_obj_t &serobj,
-			std::string &des_obj);
-
-	std::string get_type() const{ return "string"; };
-};
 
 
 /// Encoder of IPCPConfig
@@ -46,8 +34,8 @@ class IPCPConfigEncoder: public Encoder<ipcp_config_t> {
 
 public:
 	void encode (const ipcp_config_t &obj,
-					rina::cdap_rib::ser_obj_t& ser_obj);
-	void decode(const rina::cdap_rib::ser_obj_t &ser_obj,
+					rina::ser_obj_t& ser_obj);
+	void decode(const rina::ser_obj_t &ser_obj,
 			ipcp_config_t& obj);
 	std::string get_type() const{ return "ipcp-config"; };
 };
@@ -57,8 +45,8 @@ public:
 class IPCPEncoder : public Encoder<ipcp_t>{
 public:
 	void encode(const ipcp_t &obj,
-			rina::cdap_rib::ser_obj_t& serobj);
-	void decode(const rina::cdap_rib::ser_obj_t &serobj,
+			rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj,
 			ipcp_t& des_obj);
 
 	std::string get_type() const{ return "ipcp"; };

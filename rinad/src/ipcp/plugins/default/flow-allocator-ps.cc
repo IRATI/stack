@@ -99,7 +99,7 @@ Flow * FlowAllocatorPs::newFlowRequest(IPCProcess * ipc_process,
 rina::QoSCube * FlowAllocatorPs::selectQoSCube(
                 const rina::FlowSpecification& flowSpec)
 {
-        std::list<rina::QoSCube*> qosCubes = dm->getQoSCubes();
+        std::list<rina::QoSCube*> qosCubes = dm->ipcp->resource_allocator_->getQoSCubes();
         std::list<rina::QoSCube*>::const_iterator iterator;
         rina::QoSCube* cube;
 

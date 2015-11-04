@@ -609,31 +609,38 @@ public:
         bool operator!=(const Parameter &other) const;
 };
 
-class SerializedObject {
-public:
-        SerializedObject();
-        SerializedObject( const SerializedObject& other );
-        SerializedObject(char* message, int size);
-        ~SerializedObject();
-        SerializedObject& operator=(const SerializedObject &other);
-	bool empty() const { return message_ == 0; }
-        int size_;
-        char* message_;
+typedef struct ser_obj {
+	int size_;
+	char* message_;
 
-private:
-        void initialize(const SerializedObject& other );
-};
+	ser_obj() : size_(0), message_(0) {};
+
+	~ser_obj()
+	{
+		if (message_)
+			delete[] message_;
+		message_ = 0;
+	}
+
+	ser_obj& operator=(const ser_obj &other)
+	{
+		size_ = other.size_;
+		message_ = new char[size_];
+		memcpy(message_, other.message_, size_);
+		return *this;
+	}
+} ser_obj_t;
 
 struct UcharArray {
 	UcharArray();
 	UcharArray(int arrayLength);
-	UcharArray(const SerializedObject * sobj);
+	UcharArray(const ser_obj_t * sobj);
 	~UcharArray();
 	UcharArray& operator=(const UcharArray &other);
 	bool operator==(const UcharArray &other) const;
 	bool operator!=(const UcharArray &other) const;
 	std::string toString();
-	SerializedObject * get_seralized_object();
+	void get_seralized_object(ser_obj_t& result);
 
 	unsigned char * data;
 	int length;
@@ -652,6 +659,8 @@ class Neighbor {
 
 public:
         Neighbor();
+        Neighbor(const Neighbor &other);
+        Neighbor& operator=(const Neighbor &other);
         bool operator==(const Neighbor &other) const;
         bool operator!=(const Neighbor &other) const;
 #ifndef SWIG
@@ -722,6 +731,26 @@ public:
 	InitializationException(const std::string& description):
 		IPCException(description){
 	}
+};
+
+/// Template interface for encoding and decoding of objects (object <--> buffer)
+template<class T>
+class Encoder{
+public:
+	virtual ~Encoder(){}
+	/// Converts an object to a byte array, if this object is recognized by the encoder
+	/// @param object
+	/// @throws exception if the object is not recognized by the encoder
+	/// @return
+	virtual void encode(const T &obj, ser_obj_t& serobj) = 0;
+	/// Converts a byte array to an object of the type specified by "className"
+	/// @param byte[] serializedObject
+	/// @param objectClass The type of object to be decoded
+	/// @throws exception if the byte array is not an encoded in a way that the
+	/// encoder can recognize, or the byte array value doesn't correspond to an
+	/// object of the type "className"
+	/// @return
+	virtual void decode(const ser_obj_t &serobj,T &des_obj) = 0;
 };
 
 /**

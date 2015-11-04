@@ -791,38 +791,6 @@ bool Parameter::operator!=(const Parameter &other) const {
 	return !(*this == other);
 }
 
-// Class SerializedObject
-SerializedObject::SerializedObject() {
-        size_ = 0;
-        message_ = 0;
-}
-
-SerializedObject::SerializedObject(const SerializedObject& other ) {
-        initialize(other);
-}
-
-SerializedObject& SerializedObject::operator= (const SerializedObject &other) {
-        initialize(other);
-        return *this;
-}
-
-void SerializedObject::initialize(const SerializedObject& other ) {
-        size_ = other.size_;
-        message_ = new char[size_];
-        memcpy(message_, other.message_, size_);
-}
-
-SerializedObject::SerializedObject(char* message, int size){
-        size_ = size;
-        message_ = message;
-}
-SerializedObject::~SerializedObject(){
-        if (message_) {
-                delete[] message_;
-                message_ = 0;
-        }
-}
-
 //Class UCharArray
 UcharArray::UcharArray()
 {
@@ -836,7 +804,7 @@ UcharArray::UcharArray(int arrayLength)
 	length = arrayLength;
 }
 
-UcharArray::UcharArray(const SerializedObject * sobj)
+UcharArray::UcharArray(const ser_obj_t * sobj)
 {
 	data = new unsigned char[sobj->size_];
 	length = sobj->size_;
@@ -889,14 +857,11 @@ std::string UcharArray::toString()
 	return ss.str();
 }
 
-SerializedObject * UcharArray::get_seralized_object()
+void UcharArray::get_seralized_object(ser_obj_t& result)
 {
-	SerializedObject * result = new SerializedObject();
-	result->size_ = length;
-	result->message_ = new char[result->size_];
-	memcpy(result->message_, data, result->size_);
-
-	return result;
+	result.size_ = length;
+	result.message_ = new char[result.size_];
+	memcpy(result.message_, data, result.size_);
 }
 
 //Class ConsecutiveUnsignedIntegerGenerator
@@ -925,6 +890,33 @@ Neighbor::Neighbor() {
 	enrolled_ = false;
 	underlying_port_id_ = 0;
 	number_of_enrollment_attempts_ = 0;
+}
+
+Neighbor::Neighbor(const Neighbor &other)
+{
+	address_ = other.address_;
+	average_rtt_in_ms_ = other.average_rtt_in_ms_;
+	last_heard_from_time_in_ms_ = other.last_heard_from_time_in_ms_;
+	enrolled_ = other.enrolled_;
+	underlying_port_id_ = other.underlying_port_id_;
+	number_of_enrollment_attempts_ = other.number_of_enrollment_attempts_;
+	name_ = other.name_;
+	supporting_dif_name_ = other.supporting_dif_name_;
+	supporting_difs_ = other.supporting_difs_;
+}
+
+Neighbor& Neighbor::operator=(const Neighbor &other)
+{
+	address_ = other.address_;
+	average_rtt_in_ms_ = other.average_rtt_in_ms_;
+	last_heard_from_time_in_ms_ = other.last_heard_from_time_in_ms_;
+	enrolled_ = other.enrolled_;
+	underlying_port_id_ = other.underlying_port_id_;
+	number_of_enrollment_attempts_ = other.number_of_enrollment_attempts_;
+	name_ = other.name_;
+	supporting_dif_name_ = other.supporting_dif_name_;
+	supporting_difs_ = other.supporting_difs_;
+	return *this;
 }
 
 bool Neighbor::operator==(const Neighbor &other) const{

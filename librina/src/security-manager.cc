@@ -47,8 +47,8 @@ IAuthPolicySet::IAuthPolicySet(const std::string& type_)
 }
 
 //Class AuthNonePolicySet
-AuthPolicy AuthNonePolicySet::get_auth_policy(int session_id,
-					      const AuthSDUProtectionProfile& profile)
+cdap_rib::auth_policy_t AuthNonePolicySet::get_auth_policy(int session_id,
+					                   const AuthSDUProtectionProfile& profile)
 {
 	if (profile.authPolicy.name_ != type) {
 		LOG_ERR("Wrong policy name: %s", profile.authPolicy.name_.c_str());
@@ -60,24 +60,24 @@ AuthPolicy AuthNonePolicySet::get_auth_policy(int session_id,
 	sc->ttlPolicy = profile.ttlPolicy;
 	sec_man->add_security_context(sc);
 
-	AuthPolicy result;
-	result.name_ = IAuthPolicySet::AUTH_NONE;
-	result.versions_.push_back(profile.authPolicy.version_);
+	cdap_rib::auth_policy_t result;
+	result.name = IAuthPolicySet::AUTH_NONE;
+	result.versions.push_back(profile.authPolicy.version_);
 	return result;
 }
 
-rina::IAuthPolicySet::AuthStatus AuthNonePolicySet::initiate_authentication(const AuthPolicy& auth_policy,
+rina::IAuthPolicySet::AuthStatus AuthNonePolicySet::initiate_authentication(const cdap_rib::auth_policy_t& auth_policy,
 									    const AuthSDUProtectionProfile& profile,
 								      	    int session_id)
 {
-	if (auth_policy.name_ != type) {
-		LOG_ERR("Wrong policy name: %s", auth_policy.name_.c_str());
+	if (auth_policy.name != type) {
+		LOG_ERR("Wrong policy name: %s", auth_policy.name.c_str());
 		return rina::IAuthPolicySet::FAILED;
 	}
 
-	if (auth_policy.versions_.front() != RINA_DEFAULT_POLICY_VERSION) {
+	if (auth_policy.versions.front() != RINA_DEFAULT_POLICY_VERSION) {
 		LOG_ERR("Unsupported policy version: %s",
-				auth_policy.versions_.front().c_str());
+				auth_policy.versions.front().c_str());
 		return rina::IAuthPolicySet::FAILED;
 	}
 
@@ -90,8 +90,8 @@ rina::IAuthPolicySet::AuthStatus AuthNonePolicySet::initiate_authentication(cons
 }
 
 // No authentication messages exchanged
-int AuthNonePolicySet::process_incoming_message(const CDAPMessage& message,
-						 int session_id)
+int AuthNonePolicySet::process_incoming_message(const cdap::CDAPMessage& message,
+						int session_id)
 {
 	//This function should never be called for this authenticaiton policy
 	return IAuthPolicySet::FAILED;
@@ -137,7 +137,7 @@ const std::string AuthPasswordPolicySet::CHALLENGE_REQUEST = "challenge request"
 const std::string AuthPasswordPolicySet::CHALLENGE_REPLY = "challenge reply";
 const int AuthPasswordPolicySet::DEFAULT_TIMEOUT = 10000;
 
-AuthPasswordPolicySet::AuthPasswordPolicySet(IRIBDaemon * ribd, ISecurityManager * sm) :
+AuthPasswordPolicySet::AuthPasswordPolicySet(rib::RIBDaemonProxy * ribd, ISecurityManager * sm) :
 		IAuthPolicySet(IAuthPolicySet::AUTH_PASSWORD)
 {
 	rib_daemon = ribd;
@@ -148,8 +148,8 @@ AuthPasswordPolicySet::AuthPasswordPolicySet(IRIBDaemon * ribd, ISecurityManager
 // No credentials required, since the process being authenticated
 // will have to demonstrate that it knows the password by encrypting
 // a random challenge with a password string
-AuthPolicy AuthPasswordPolicySet::get_auth_policy(int session_id,
-						  const AuthSDUProtectionProfile& profile)
+cdap_rib::auth_policy_t AuthPasswordPolicySet::get_auth_policy(int session_id,
+						               const AuthSDUProtectionProfile& profile)
 {
 	if (profile.authPolicy.name_ != type) {
 		LOG_ERR("Wrong policy name: %s", profile.authPolicy.name_.c_str());
@@ -167,9 +167,9 @@ AuthPolicy AuthPasswordPolicySet::get_auth_policy(int session_id,
 	sc->ttlPolicy = profile.ttlPolicy;
 	sec_man->add_security_context(sc);
 
-	rina::AuthPolicy result;
-	result.name_ = IAuthPolicySet::AUTH_PASSWORD;
-	result.versions_.push_back(profile.authPolicy.version_);
+	cdap_rib::auth_policy_t result;
+	result.name = IAuthPolicySet::AUTH_PASSWORD;
+	result.versions.push_back(profile.authPolicy.version_);
 	return result;
 }
 
@@ -221,18 +221,18 @@ std::string AuthPasswordPolicySet::decrypt_challenge(const std::string& encrypte
 	return encrypt_challenge(encrypted_challenge, password);
 }
 
-rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(const AuthPolicy& auth_policy,
+rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(const cdap_rib::auth_policy_t& auth_policy,
 										const AuthSDUProtectionProfile& profile,
 								      	        int session_id)
 {
-	if (auth_policy.name_ != type) {
-		LOG_ERR("Wrong policy name: %s", auth_policy.name_.c_str());
+	if (auth_policy.name != type) {
+		LOG_ERR("Wrong policy name: %s", auth_policy.name.c_str());
 		return rina::IAuthPolicySet::FAILED;
 	}
 
-	if (auth_policy.versions_.front() != RINA_DEFAULT_POLICY_VERSION) {
+	if (auth_policy.versions.front() != RINA_DEFAULT_POLICY_VERSION) {
 		LOG_ERR("Unsupported policy version: %s",
-				auth_policy.versions_.front().c_str());
+				auth_policy.versions.front().c_str());
 		return rina::IAuthPolicySet::FAILED;
 	}
 
@@ -253,17 +253,24 @@ rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(
 	sc->challenge = generate_random_challenge(sc->challenge_length);
 
 	try {
-		RIBObjectValue robject_value;
-		robject_value.type_ = RIBObjectValue::stringtype;
-		robject_value.string_value_ = *(sc->challenge);
+		cdap_rib::flags_t flags;
+		cdap_rib::filt_info_t filt;
+		cdap_rib::obj_info_t obj_info;
+		cdap::StringEncoder encoder;
 
-		RemoteProcessId remote_id;
-		remote_id.port_id_ = session_id;
+		obj_info.class_ = CHALLENGE_REQUEST;
+		obj_info.name_ = CHALLENGE_REQUEST;
+		obj_info.inst_ = 0;
+		encoder.encode(*(sc->challenge),
+			       obj_info.value_);
 
 		//object class contains challenge request or reply
 		//object name contains cipher name
-		rib_daemon->remoteWriteObject(CHALLENGE_REQUEST, CHALLENGE_REQUEST,
-				robject_value, 0, remote_id, 0);
+		rib_daemon->remote_write(session_id,
+					 obj_info,
+					 flags,
+					 filt,
+					 NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 	}
@@ -289,17 +296,24 @@ int AuthPasswordPolicySet::process_challenge_request(const std::string& challeng
 	}
 
 	try {
-		RIBObjectValue robject_value;
-		robject_value.type_ = RIBObjectValue::stringtype;
-		robject_value.string_value_ = encrypt_challenge(challenge, sc->password);
+		cdap_rib::flags_t flags;
+		cdap_rib::filt_info_t filt;
+		cdap_rib::obj_info_t obj_info;
+		cdap::StringEncoder encoder;
 
-		RemoteProcessId remote_id;
-		remote_id.port_id_ = session_id;
+		obj_info.class_ = CHALLENGE_REPLY;
+		obj_info.name_ = CHALLENGE_REPLY;
+		obj_info.inst_ = 0;
+		encoder.encode(encrypt_challenge(challenge, sc->password),
+			       obj_info.value_);
 
 		//object class contains challenge request or reply
 		//object name contains cipher name
-		rib_daemon->remoteWriteObject(CHALLENGE_REPLY, CHALLENGE_REPLY,
-				robject_value, 0, remote_id, 0);
+		rib_daemon->remote_write(session_id,
+					 obj_info,
+					 flags,
+					 filt,
+					 NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 	}
@@ -324,7 +338,8 @@ int AuthPasswordPolicySet::process_challenge_reply(const std::string& encrypted_
 
 	timer.cancelTask(sc->timer_task);
 
-	std::string recovered_challenge = decrypt_challenge(encrypted_challenge, sc->password);
+	std::string recovered_challenge = decrypt_challenge(encrypted_challenge,
+							    sc->password);
 	if (*(sc->challenge) == recovered_challenge) {
 		result = IAuthPolicySet::SUCCESSFULL;
 	} else {
@@ -334,41 +349,41 @@ int AuthPasswordPolicySet::process_challenge_reply(const std::string& encrypted_
 	return result;
 }
 
-int AuthPasswordPolicySet::process_incoming_message(const CDAPMessage& message,
+int AuthPasswordPolicySet::process_incoming_message(const cdap::CDAPMessage& message,
 						     int session_id)
 {
-	StringObjectValue * string_value = 0;
-	const std::string * challenge = 0;
+	cdap::StringEncoder encoder;
+	std::string challenge;
 
-	if (message.op_code_ != CDAPMessage::M_WRITE) {
+	if (message.op_code_ != cdap::CDAPMessage::M_WRITE) {
 		LOG_ERR("Wrong operation type");
 		return IAuthPolicySet::FAILED;
 	}
 
-	if (message.obj_value_ == 0) {
+	if (message.obj_value_.message_ == 0) {
 		LOG_ERR("Null object value");
 		return IAuthPolicySet::FAILED;
 	}
 
-	string_value = dynamic_cast<StringObjectValue *>(message.obj_value_);
-	if (!string_value) {
+	if (!message.obj_value_.message_) {
 		LOG_ERR("Object value of wrong type");
 		return IAuthPolicySet::FAILED;
 	}
 
-	challenge = (const std::string *) string_value->get_value();
-	if (!challenge) {
-		LOG_ERR("Error decoding challenge");
+	try {
+		encoder.decode(message.obj_value_, challenge);
+	} catch  (Exception &e) {
+		LOG_ERR("Error decoding challenge: %s", e.what());
 		return IAuthPolicySet::FAILED;
 	}
 
 	if (message.obj_class_ == CHALLENGE_REQUEST) {
-		return process_challenge_request(*challenge,
+		return process_challenge_request(challenge,
 						 session_id);
 	}
 
 	if (message.obj_class_ == CHALLENGE_REPLY) {
-		return process_challenge_reply(*challenge,
+		return process_challenge_reply(challenge,
 					       session_id);
 	}
 
@@ -392,41 +407,41 @@ IAuthPolicySet::AuthStatus AuthPasswordPolicySet::encryption_enabled(int port_id
 }
 
 //AuthSSH2Options encoder and decoder operations
-SSH2AuthOptions * decode_ssh2_auth_options(const SerializedObject &message) {
+void decode_ssh2_auth_options(const ser_obj_t &message, SSH2AuthOptions &options)
+{
 	rina::auth::policies::googleprotobuf::authOptsSSH2_t gpb_options;
-	SSH2AuthOptions * result = new SSH2AuthOptions();
 
 	gpb_options.ParseFromArray(message.message_, message.size_);
 
 	for(int i=0; i<gpb_options.key_exch_algs_size(); i++) {
-		result->key_exch_algs.push_back(gpb_options.key_exch_algs(i));
+		options.key_exch_algs.push_back(gpb_options.key_exch_algs(i));
 	}
 
 	for(int i=0; i<gpb_options.encrypt_algs_size(); i++) {
-		result->encrypt_algs.push_back(gpb_options.encrypt_algs(i));
+		options.encrypt_algs.push_back(gpb_options.encrypt_algs(i));
 	}
 
 	for(int i=0; i<gpb_options.mac_algs_size(); i++) {
-		result->mac_algs.push_back(gpb_options.mac_algs(i));
+		options.mac_algs.push_back(gpb_options.mac_algs(i));
 	}
 
 	for(int i=0; i<gpb_options.compress_algs_size(); i++) {
-		result->compress_algs.push_back(gpb_options.compress_algs(i));
+		options.compress_algs.push_back(gpb_options.compress_algs(i));
 	}
 
 	if (gpb_options.has_dh_public_key()) {
-		  result->dh_public_key.data =
+		  options.dh_public_key.data =
 				  new unsigned char[gpb_options.dh_public_key().size()];
-		  memcpy(result->dh_public_key.data,
+		  memcpy(options.dh_public_key.data,
 			 gpb_options.dh_public_key().data(),
 			 gpb_options.dh_public_key().size());
-		  result->dh_public_key.length = gpb_options.dh_public_key().size();
+		  options.dh_public_key.length = gpb_options.dh_public_key().size();
 	}
-
-	return result;
 }
 
-SerializedObject * encode_ssh2_auth_options(const SSH2AuthOptions& options){
+void encode_ssh2_auth_options(const SSH2AuthOptions& options,
+			      ser_obj_t& result)
+{
 	rina::auth::policies::googleprotobuf::authOptsSSH2_t gpb_options;
 
 	for(std::list<std::string>::const_iterator it = options.key_exch_algs.begin();
@@ -455,15 +470,14 @@ SerializedObject * encode_ssh2_auth_options(const SSH2AuthOptions& options){
 	}
 
 	int size = gpb_options.ByteSize();
-	char *serialized_message = new char[size];
-	gpb_options.SerializeToArray(serialized_message, size);
-	SerializedObject *object = new SerializedObject(serialized_message, size);
-
-	return object;
+	result.message_ = new char[size];
+	result.size_ = size;
+	gpb_options.SerializeToArray(result.message_, size);
 }
 
-SerializedObject * encode_client_chall_reply_ssh2(const UcharArray& client_chall_reply,
-						  const UcharArray& server_chall)
+void encode_client_chall_reply_ssh2(const UcharArray& client_chall_reply,
+				    const UcharArray& server_chall,
+				    ser_obj_t& result)
 {
 	rina::auth::policies::googleprotobuf::clientChallReplySSH2_t gpb_chall;
 
@@ -479,15 +493,13 @@ SerializedObject * encode_client_chall_reply_ssh2(const UcharArray& client_chall
 	}
 
 	int size = gpb_chall.ByteSize();
-	char *serialized_message = new char[size];
-	gpb_chall.SerializeToArray(serialized_message, size);
-	SerializedObject *object = new SerializedObject(serialized_message, size);
-
-	return object;
+	result.message_ = new char[size];
+	result.size_ = size;
+	gpb_chall.SerializeToArray(result.message_ , size);
 }
 
 //AuthSSH2Options encoder and decoder operations
-void decode_client_chall_reply_ssh2(const SerializedObject &message,
+void decode_client_chall_reply_ssh2(const ser_obj_t &message,
 				    UcharArray& client_chall_reply,
 				    UcharArray& server_chall)
 {
@@ -636,7 +648,7 @@ const std::string AuthSSH2PolicySet::CLIENT_CHALLENGE = "Client challenge";
 const std::string AuthSSH2PolicySet::CLIENT_CHALLENGE_REPLY = "Client challenge reply and server challenge";
 const std::string AuthSSH2PolicySet::SERVER_CHALLENGE_REPLY = "Server challenge reply";
 
-AuthSSH2PolicySet::AuthSSH2PolicySet(IRIBDaemon * ribd, ISecurityManager * sm) :
+AuthSSH2PolicySet::AuthSSH2PolicySet(rib::RIBDaemonProxy * ribd, ISecurityManager * sm) :
 		IAuthPolicySet(IAuthPolicySet::AUTH_SSH2)
 {
 	rib_daemon = ribd;
@@ -729,8 +741,8 @@ unsigned char * AuthSSH2PolicySet::BN_to_binary(BIGNUM *b, int *len)
 	return ret;
 }
 
-AuthPolicy AuthSSH2PolicySet::get_auth_policy(int session_id,
-					      const AuthSDUProtectionProfile& profile)
+cdap_rib::auth_policy_t AuthSSH2PolicySet::get_auth_policy(int session_id,
+					            	   const AuthSDUProtectionProfile& profile)
 {
 	if (profile.authPolicy.name_ != type) {
 		LOG_ERR("Wrong policy name: %s, expected: %s",
@@ -747,9 +759,9 @@ AuthPolicy AuthSSH2PolicySet::get_auth_policy(int session_id,
 	}
 
 	LOG_DBG("Initiating authentication for session_id: %d", session_id);
-	AuthPolicy auth_policy;
-	auth_policy.name_ = IAuthPolicySet::AUTH_SSH2;
-	auth_policy.versions_.push_back(profile.authPolicy.version_);
+	cdap_rib::auth_policy_t auth_policy;
+	auth_policy.name = IAuthPolicySet::AUTH_SSH2;
+	auth_policy.versions.push_back(profile.authPolicy.version_);
 
 	SSH2SecurityContext * sc = new SSH2SecurityContext(session_id, profile);
 
@@ -779,15 +791,8 @@ AuthPolicy AuthSSH2PolicySet::get_auth_policy(int session_id,
 		throw Exception();
 	}
 
-	SerializedObject * sobj = encode_ssh2_auth_options(options);
-	if (!sobj) {
-		LOG_ERR("Problems encoding SSHRSAAuthOptions");
-		delete sc;
-		throw Exception();
-	}
-
-	auth_policy.options_ = *sobj;
-	delete sobj;
+	encode_ssh2_auth_options(options,
+				 auth_policy.options);
 
 	//Store security context
 	sc->state = SSH2SecurityContext::WAIT_EDH_EXCHANGE;
@@ -866,18 +871,18 @@ int AuthSSH2PolicySet::edh_init_keys(SSH2SecurityContext * sc)
 	return 0;
 }
 
-IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(const AuthPolicy& auth_policy,
-									    const AuthSDUProtectionProfile& profile,
-								      	    int session_id)
+IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(const cdap_rib::auth_policy_t& auth_policy,
+								      const AuthSDUProtectionProfile& profile,
+								      int session_id)
 {
-	if (auth_policy.name_ != type) {
-		LOG_ERR("Wrong policy name: %s", auth_policy.name_.c_str());
+	if (auth_policy.name != type) {
+		LOG_ERR("Wrong policy name: %s", auth_policy.name.c_str());
 		return IAuthPolicySet::FAILED;
 	}
 
-	if (auth_policy.versions_.front() != RINA_DEFAULT_POLICY_VERSION) {
+	if (auth_policy.versions.front() != RINA_DEFAULT_POLICY_VERSION) {
 		LOG_ERR("Unsupported policy version: %s",
-				auth_policy.versions_.front().c_str());
+				auth_policy.versions.front().c_str());
 		return IAuthPolicySet::FAILED;
 	}
 
@@ -889,17 +894,13 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(const Auth
 	}
 
 	LOG_DBG("Initiating authentication for session_id: %d", session_id);
-	SSH2AuthOptions * options = decode_ssh2_auth_options(auth_policy.options_);
-	if (!options) {
-		LOG_ERR("Could not decode SSHARSA options");
-		return IAuthPolicySet::FAILED;
-	}
+	SSH2AuthOptions options;
+	decode_ssh2_auth_options(auth_policy.options, options);
 
 	SSH2SecurityContext * sc;
 	try {
-		sc = new SSH2SecurityContext(session_id, profile, options);
+		sc = new SSH2SecurityContext(session_id, profile, &options);
 	} catch (Exception &e){
-		delete options;
 		return IAuthPolicySet::FAILED;
 	}
 
@@ -912,23 +913,18 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(const Auth
 	//Initialize Diffie-Hellman machinery and generate private/public key pairs
 	if (edh_init_keys(sc) != 0) {
 		delete sc;
-		delete options;
 		return IAuthPolicySet::FAILED;
 	}
 
 	//Add peer public key to security context
-	sc->dh_peer_pub_key = BN_bin2bn(options->dh_public_key.data,
-			       	        options->dh_public_key.length,
+	sc->dh_peer_pub_key = BN_bin2bn(options.dh_public_key.data,
+			       	        options.dh_public_key.length,
 			       	        NULL);
 	if (!sc->dh_peer_pub_key) {
 		LOG_ERR("Error converting public key to a BIGNUM");
 		delete sc;
-		delete options;
 		return IAuthPolicySet::FAILED;
 	}
-
-	//Options is not needed anymore
-	delete options;
 
 	//Generate the shared secret
 	if (edh_generate_shared_secret(sc) != 0) {
@@ -1037,34 +1033,30 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::decryption_enabled_server(SSH2Secu
 		return IAuthPolicySet::FAILED;
 	}
 
-	SerializedObject * sobj = encode_ssh2_auth_options(auth_options);
-	if (!sobj) {
-		LOG_ERR("Problems encoding SSH2AuthOptions");
-		sec_man->destroy_security_context(sc->id);
-		return IAuthPolicySet::FAILED;
-	}
-
 	//Send message to peer with selected algorithms and public key
 	try {
-		RIBObjectValue robject_value;
-		robject_value.type_ = RIBObjectValue::bytestype;
-		robject_value.bytes_value_ = *sobj;
+		cdap_rib::flags_t flags;
+		cdap_rib::filt_info_t filt;
+		cdap_rib::obj_info_t obj_info;
+		cdap::StringEncoder encoder;
 
-		RemoteProcessId remote_id;
-		remote_id.port_id_ = sc->id;
+		obj_info.class_ = EDH_EXCHANGE;
+		obj_info.name_ = EDH_EXCHANGE;
+		obj_info.inst_ = 0;
+		encode_ssh2_auth_options(auth_options,
+					 obj_info.value_);
 
-		//object class contains challenge request or reply
-		//object name contains cipher name
-		rib_daemon->remoteWriteObject(EDH_EXCHANGE, EDH_EXCHANGE,
-				robject_value, 0, remote_id, 0);
+		rib_daemon->remote_write(sc->id,
+					 obj_info,
+					 flags,
+					 filt,
+					 NULL);
 	} catch (Exception &e) {
-		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
+		LOG_ERR("Problems encoding and sending CDAP message: %s",
+			e.what());
 		sec_man->destroy_security_context(sc->id);
-		delete sobj;
 		return IAuthPolicySet::FAILED;
 	}
-
-	delete sobj;
 
 	// Configure kernel SDU protection policy with shared secret and algorithms
 	// tell it to enable encryption
@@ -1097,9 +1089,10 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::encryption_enabled_server(SSH2Secu
 	return IAuthPolicySet::IN_PROGRESS;
 }
 
-int AuthSSH2PolicySet::process_incoming_message(const CDAPMessage& message, int session_id)
+int AuthSSH2PolicySet::process_incoming_message(const cdap::CDAPMessage& message,
+						int session_id)
 {
-	if (message.op_code_ != CDAPMessage::M_WRITE) {
+	if (message.op_code_ != cdap::CDAPMessage::M_WRITE) {
 		LOG_ERR("Wrong operation type");
 		return IAuthPolicySet::FAILED;
 	}
@@ -1123,59 +1116,42 @@ int AuthSSH2PolicySet::process_incoming_message(const CDAPMessage& message, int 
 	return rina::IAuthPolicySet::FAILED;
 }
 
-int AuthSSH2PolicySet::process_edh_exchange_message(const CDAPMessage& message, int session_id)
+int AuthSSH2PolicySet::process_edh_exchange_message(const cdap::CDAPMessage& message,
+						    int session_id)
 {
-	ByteArrayObjectValue * bytes_value;
 	SSH2SecurityContext * sc;
-	const SerializedObject * sobj;
+	SSH2AuthOptions options;
 
-	if (message.obj_value_ == 0) {
+	if (message.obj_value_.message_ == 0) {
 		LOG_ERR("Null object value");
 		return IAuthPolicySet::FAILED;
 	}
 
-	bytes_value = dynamic_cast<ByteArrayObjectValue *>(message.obj_value_);
-	if (!bytes_value) {
-		LOG_ERR("Object value of wrong type");
-		return IAuthPolicySet::FAILED;
-	}
-
-	sobj = static_cast<const SerializedObject *>(bytes_value->get_value());
-	SSH2AuthOptions * options = decode_ssh2_auth_options(*sobj);
-	if (!options) {
-		LOG_ERR("Could not decode SSHARSA options");
-		return rina::IAuthPolicySet::FAILED;
-	}
+	decode_ssh2_auth_options(message.obj_value_, options);
 
 	ScopedLock sc_lock(lock);
 
 	sc = dynamic_cast<SSH2SecurityContext *>(sec_man->get_security_context(session_id));
 	if (!sc) {
 		LOG_ERR("Could not retrieve Security Context for session: %d", session_id);
-		delete options;
 		return IAuthPolicySet::FAILED;
 	}
 
 	if (sc->state != SSH2SecurityContext::WAIT_EDH_EXCHANGE) {
 		LOG_ERR("Wrong session state: %d", sc->state);
 		sec_man->remove_security_context(session_id);
-		delete options;
 		return IAuthPolicySet::FAILED;
 	}
 
 	//Add peer public key to security context
-	sc->dh_peer_pub_key = BN_bin2bn(options->dh_public_key.data,
-			       	        options->dh_public_key.length,
+	sc->dh_peer_pub_key = BN_bin2bn(options.dh_public_key.data,
+			       	        options.dh_public_key.length,
 			       	        NULL);
 	if (!sc->dh_peer_pub_key) {
 		LOG_ERR("Error converting public key to a BIGNUM");
 		delete sc;
-		delete options;
 		return rina::IAuthPolicySet::FAILED;
 	}
-
-	//Options is not needed anymore
-	delete options;
 
 	//Generate the shared secret
 	if (edh_generate_shared_secret(sc) != 0) {
@@ -1217,36 +1193,27 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::encryption_decryption_enabled_clie
 		return IAuthPolicySet::FAILED;
 	}
 
-	SerializedObject * sobj = encrypted_challenge.get_seralized_object();
-	if (!sobj) {
-		LOG_ERR("Error generating serialized object from uchar array");
-		sec_man->destroy_security_context(sc->id);
-		return IAuthPolicySet::FAILED;
-	}
-
 	sc->state = SSH2SecurityContext::WAIT_CLIENT_CHALLENGE_REPLY;
 
 	//Send message to peer with selected algorithms and public key
 	try {
-		RIBObjectValue robject_value;
-		robject_value.type_ = RIBObjectValue::bytestype;
-		robject_value.bytes_value_ = *sobj;
+		cdap_rib::flags_t flags;
+		cdap_rib::filt_info_t filt;
+		cdap_rib::obj_info_t obj_info;
+		cdap::StringEncoder encoder;
 
-		RemoteProcessId remote_id;
-		remote_id.port_id_ = sc->id;
+		obj_info.class_ = CLIENT_CHALLENGE;
+		obj_info.name_ = CLIENT_CHALLENGE;
+		obj_info.inst_ = 0;
+		encrypted_challenge.get_seralized_object(obj_info.value_);
 
-		//object class contains challenge request or reply
-		//object name contains cipher name
-		rib_daemon->remoteWriteObject(CLIENT_CHALLENGE, CLIENT_CHALLENGE,
-				robject_value, 0, remote_id, 0);
+		rib_daemon->remote_write(sc->id, obj_info, flags, filt, NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 		sec_man->destroy_security_context(sc->id);
-		delete sobj;
 		return IAuthPolicySet::FAILED;
 	}
 
-	delete sobj;
 	return IAuthPolicySet::IN_PROGRESS;
 }
 
@@ -1282,27 +1249,13 @@ int AuthSSH2PolicySet::encrypt_chall_with_pub_key(SSH2SecurityContext * sc,
 	return 0;
 }
 
-int AuthSSH2PolicySet::process_client_challenge_message(const CDAPMessage& message, int session_id)
+int AuthSSH2PolicySet::process_client_challenge_message(const cdap::CDAPMessage& message, int session_id)
 {
-	ByteArrayObjectValue * bytes_value;
 	SSH2SecurityContext * sc;
-	const SerializedObject * sobj;
 
-	if (message.obj_value_ == 0) {
+	if (message.obj_value_.message_ == 0) {
 		LOG_ERR("Null object value");
 		return IAuthPolicySet::FAILED;
-	}
-
-	bytes_value = dynamic_cast<ByteArrayObjectValue *>(message.obj_value_);
-	if (!bytes_value) {
-		LOG_ERR("Object value of wrong type");
-		return IAuthPolicySet::FAILED;
-	}
-
-	sobj = static_cast<const SerializedObject *>(bytes_value->get_value());
-	if (!sobj) {
-		LOG_ERR("Could not parse CDAP message value");
-		return rina::IAuthPolicySet::FAILED;
 	}
 
 	encryption_ready_condition.wait_until_condition_is_true();
@@ -1323,7 +1276,7 @@ int AuthSSH2PolicySet::process_client_challenge_message(const CDAPMessage& messa
 
 	// Decrypt challenge with private key, XOR with shared secret
 	// compute MD5 hash and sent back to client
-	UcharArray encrypted_challenge(sobj);
+	UcharArray encrypted_challenge(&message.obj_value_);
 	UcharArray hashed_challenge;
 	if (decrypt_combine_and_hash(sc, encrypted_challenge, hashed_challenge) != 0) {
 		sec_man->destroy_security_context(sc->id);
@@ -1338,37 +1291,29 @@ int AuthSSH2PolicySet::process_client_challenge_message(const CDAPMessage& messa
 		return IAuthPolicySet::FAILED;
 	}
 
-	SerializedObject * sobj2 = encode_client_chall_reply_ssh2(hashed_challenge,
-								  encrypted_server_challenge);
-	if (!sobj2) {
-		LOG_ERR("Error generating serialized object from uchar array");
-		sec_man->destroy_security_context(sc->id);
-		return IAuthPolicySet::FAILED;
-	}
-
 	sc->state = SSH2SecurityContext::WAIT_SERVER_CHALLENGE_REPLY;
 
 	//Send message to peer with selected algorithms and public key
 	try {
-		RIBObjectValue robject_value;
-		robject_value.type_ = RIBObjectValue::bytestype;
-		robject_value.bytes_value_ = *sobj2;
+		cdap_rib::flags_t flags;
+		cdap_rib::filt_info_t filt;
+		cdap_rib::obj_info_t obj_info;
+		cdap::StringEncoder encoder;
 
-		RemoteProcessId remote_id;
-		remote_id.port_id_ = sc->id;
+		obj_info.class_ = CLIENT_CHALLENGE_REPLY;
+		obj_info.name_ = CLIENT_CHALLENGE_REPLY;
+		obj_info.inst_ = 0;
+		encode_client_chall_reply_ssh2(hashed_challenge,
+					       encrypted_server_challenge,
+					       obj_info.value_);
 
-		//object class contains challenge request or reply
-		//object name contains cipher name
-		rib_daemon->remoteWriteObject(CLIENT_CHALLENGE_REPLY, CLIENT_CHALLENGE_REPLY,
-				robject_value, 0, remote_id, 0);
+		rib_daemon->remote_write(sc->id, obj_info, flags, filt, NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 		sec_man->destroy_security_context(sc->id);
-		delete sobj2;
 		return IAuthPolicySet::FAILED;
 	}
 
-	delete sobj2;
 	return IAuthPolicySet::IN_PROGRESS;
 }
 
@@ -1432,27 +1377,14 @@ int AuthSSH2PolicySet::decrypt_chall_with_priv_key(SSH2SecurityContext * sc,
 	return 0;
 }
 
-int AuthSSH2PolicySet::process_client_challenge_reply_message(const CDAPMessage& message, int session_id)
+int AuthSSH2PolicySet::process_client_challenge_reply_message(const cdap::CDAPMessage& message,
+							      int session_id)
 {
-	ByteArrayObjectValue * bytes_value;
 	SSH2SecurityContext * sc;
-	const SerializedObject * sobj;
 
-	if (message.obj_value_ == 0) {
+	if (message.obj_value_.message_ == 0) {
 		LOG_ERR("Null object value");
 		return IAuthPolicySet::FAILED;
-	}
-
-	bytes_value = dynamic_cast<ByteArrayObjectValue *>(message.obj_value_);
-	if (!bytes_value) {
-		LOG_ERR("Object value of wrong type");
-		return IAuthPolicySet::FAILED;
-	}
-
-	sobj = static_cast<const SerializedObject *>(bytes_value->get_value());
-	if (!sobj) {
-		LOG_ERR("Could not parse CDAP message value");
-		return rina::IAuthPolicySet::FAILED;
 	}
 
 	ScopedLock sc_lock(lock);
@@ -1473,7 +1405,9 @@ int AuthSSH2PolicySet::process_client_challenge_reply_message(const CDAPMessage&
 	// result is equal to received challenge
 	UcharArray received_challenge;
 	UcharArray server_challenge;
-	decode_client_chall_reply_ssh2(*sobj, received_challenge, server_challenge);
+	decode_client_chall_reply_ssh2(message.obj_value_,
+				       received_challenge,
+				       server_challenge);
 
 	if (check_challenge_reply(sc, received_challenge) != 0) {
 		sec_man->remove_security_context(session_id);
@@ -1488,36 +1422,26 @@ int AuthSSH2PolicySet::process_client_challenge_reply_message(const CDAPMessage&
 		return IAuthPolicySet::FAILED;
 	}
 
-	SerializedObject * sobj2 = hashed_ser_challenge.get_seralized_object();
-	if (!sobj2) {
-		LOG_ERR("Error generating serialized object from uchar array");
-		sec_man->destroy_security_context(sc->id);
-		return IAuthPolicySet::FAILED;
-	}
-
 	sc->state = SSH2SecurityContext::DONE;
 
 	//Send message to peer with selected algorithms and public key
 	try {
-		RIBObjectValue robject_value;
-		robject_value.type_ = RIBObjectValue::bytestype;
-		robject_value.bytes_value_ = *sobj2;
+		cdap_rib::flags_t flags;
+		cdap_rib::filt_info_t filt;
+		cdap_rib::obj_info_t obj_info;
+		cdap::StringEncoder encoder;
 
-		RemoteProcessId remote_id;
-		remote_id.port_id_ = sc->id;
+		obj_info.class_ = SERVER_CHALLENGE_REPLY;
+		obj_info.name_ = SERVER_CHALLENGE_REPLY;
+		obj_info.inst_ = 0;
+		hashed_ser_challenge.get_seralized_object(obj_info.value_);
 
-		//object class contains challenge request or reply
-		//object name contains cipher name
-		rib_daemon->remoteWriteObject(SERVER_CHALLENGE_REPLY, SERVER_CHALLENGE_REPLY,
-				robject_value, 0, remote_id, 0);
+		rib_daemon->remote_write(sc->id, obj_info, flags, filt,  NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 		sec_man->destroy_security_context(sc->id);
-		delete sobj2;
 		return IAuthPolicySet::FAILED;
 	}
-
-	delete sobj2;
 
 	return IAuthPolicySet::IN_PROGRESS;
 }
@@ -1551,27 +1475,13 @@ int AuthSSH2PolicySet::check_challenge_reply(SSH2SecurityContext * sc,
 	return 0;
 }
 
-int AuthSSH2PolicySet::process_server_challenge_reply_message(const CDAPMessage& message, int session_id)
+int AuthSSH2PolicySet::process_server_challenge_reply_message(const cdap::CDAPMessage& message, int session_id)
 {
-	ByteArrayObjectValue * bytes_value;
 	SSH2SecurityContext * sc;
-	const SerializedObject * sobj;
 
-	if (message.obj_value_ == 0) {
+	if (message.obj_value_.message_ == 0) {
 		LOG_ERR("Null object value");
 		return IAuthPolicySet::FAILED;
-	}
-
-	bytes_value = dynamic_cast<ByteArrayObjectValue *>(message.obj_value_);
-	if (!bytes_value) {
-		LOG_ERR("Object value of wrong type");
-		return IAuthPolicySet::FAILED;
-	}
-
-	sobj = static_cast<const SerializedObject *>(bytes_value->get_value());
-	if (!sobj) {
-		LOG_ERR("Could not parse CDAP message value");
-		return rina::IAuthPolicySet::FAILED;
 	}
 
 	ScopedLock sc_lock(lock);
@@ -1590,7 +1500,7 @@ int AuthSSH2PolicySet::process_server_challenge_reply_message(const CDAPMessage&
 
 	// XOR original challenge with shared secret, compute MD5 hash and check if
 	// result is equal to received challenge
-	UcharArray received_challenge(sobj);
+	UcharArray received_challenge(&message.obj_value_);
 	if (check_challenge_reply(sc, received_challenge) != 0) {
 		sec_man->remove_security_context(session_id);
 		return IAuthPolicySet::FAILED;

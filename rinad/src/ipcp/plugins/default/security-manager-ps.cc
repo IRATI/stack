@@ -23,6 +23,7 @@
 #include "../../ipcp-logging.h"
 
 #include <string>
+#include <librina/security-manager.h>
 
 #include "ipcp/components.h"
 
@@ -122,7 +123,7 @@ createAuthPasswordPs(rina::ApplicationEntity * ctx)
         	return NULL;
         }
 
-        return new rina::AuthPasswordPolicySet(rib_daemon, sm);
+        return new rina::AuthPasswordPolicySet(rib_daemon->getProxy(), sm);
 }
 
 extern "C" void
@@ -147,7 +148,7 @@ createAuthSSH2Ps(rina::ApplicationEntity * ctx)
         	return NULL;
         }
 
-        return new rina::AuthSSH2PolicySet(rib_daemon, sm);
+        return new rina::AuthSSH2PolicySet(rib_daemon->getProxy(), sm);
 }
 
 extern "C" void

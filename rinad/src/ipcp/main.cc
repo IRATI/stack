@@ -51,7 +51,11 @@ int wrapped_main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 
-	rinad::IPCProcessImpl ipcp(name, ipcp_id, ipcm_port, log_level, log_file);
+	rinad::IPCProcessImpl * ipcp = rinad::IPCPFactory::createIPCP(name,
+							              ipcp_id,
+							              ipcm_port,
+							              log_level,
+							              log_file);
 
 	LOG_IPCP_INFO("IPC Process name:     %s", argv[1]);
 	LOG_IPCP_INFO("IPC Process instance: %s", argv[2]);
@@ -61,7 +65,7 @@ int wrapped_main(int argc, char * argv[])
 	LOG_IPCP_INFO("IPC Process initialized, executing event loop...");
 
 	try {
-		ipcp.event_loop();
+		ipcp->event_loop();
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems running event loop: %s", e.what());
 	} catch (std::exception &e1) {
@@ -71,6 +75,8 @@ int wrapped_main(int argc, char * argv[])
 	}
 
 	LOG_IPCP_DBG("Exited event loop");
+
+	delete ipcp;
 
 	return EXIT_SUCCESS;
 }

@@ -579,7 +579,7 @@ void ExtendedIPCManager::flowDeallocatedRemotely(
 
 void ExtendedIPCManager::queryRIBResponse(
 		const QueryRIBRequestEvent& event, int result,
-		const std::list<RIBObjectData>& ribObjects) {
+		const std::list<rib::RIBObjectData>& ribObjects) {
 #if STUB_API
 	//Do nothing
 #else
@@ -685,8 +685,8 @@ void ExtendedIPCManager::pluginLoadResponse(
 }
 
 void ExtendedIPCManager::forwardCDAPResponse(unsigned int sequenceNumber,
-				const rina::SerializedObject& sermsg,
-				int result)
+					     const ser_obj_t& sermsg,
+					     int result)
 {
 #if STUB_API
 	//Do nothing
@@ -812,6 +812,14 @@ RoutingTableEntry::RoutingTableEntry(){
 	qosId = 0;
 }
 
+const std::string RoutingTableEntry::getKey() const
+{
+	std::stringstream ss;
+	ss << address << "-" << qosId;
+
+	return ss.str();
+}
+
 PortIdAltlist::PortIdAltlist()
 {
 }
@@ -891,6 +899,15 @@ const std::string PDUForwardingTableEntry::toString() {
 
         return ss.str();
 }
+
+const std::string PDUForwardingTableEntry::getKey() const
+{
+	std::stringstream ss;
+	ss << address << "-" << qosId;
+
+	return ss.str();
+}
+
 
 /* CLASS READ MANAGEMENT SDU RESULT */
 ReadManagementSDUResult::ReadManagementSDUResult() {
@@ -1299,7 +1316,7 @@ void DirectoryForwardingTableEntry::set_timestamp(long timestamp) {
 	timestamp_ = timestamp;
 }
 
-std::string DirectoryForwardingTableEntry::getKey() {
+const std::string DirectoryForwardingTableEntry::getKey() const{
 	return ap_naming_info_.getEncodedString();
 }
 

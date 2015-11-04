@@ -27,6 +27,7 @@
 
 #include "librina/configuration.h"
 #include "librina/ipc-process.h"
+#include "librina/rib_v2.h"
 
 namespace rina {
 
@@ -991,13 +992,13 @@ public:
 class IpcmDIFQueryRIBResponseMessage:
 		public BaseNetlinkResponseMessage {
 
-	std::list<RIBObjectData> ribObjects;
+	std::list<rib::RIBObjectData> ribObjects;
 
 public:
 	IpcmDIFQueryRIBResponseMessage();
-	const std::list<RIBObjectData>& getRIBObjects() const;
-	void setRIBObjects(const std::list<RIBObjectData>& ribObjects);
-	void addRIBObject(const RIBObjectData& ribObject);
+	const std::list<rib::RIBObjectData>& getRIBObjects() const;
+	void setRIBObjects(const std::list<rib::RIBObjectData>& ribObjects);
+	void addRIBObject(const rib::RIBObjectData& ribObject);
 	IPCEvent* toIPCEvent();
 };
 
@@ -1091,7 +1092,7 @@ class IpcmFwdCDAPMsgMessage:
 		public BaseNetlinkMessage {
 public:
 	/** The serialized object containing the message to be forwarded */
-	SerializedObject sermsg;
+	ser_obj_t sermsg;
 
 	/** Result of a forward operation, used only when IPC Process forwards
 	 *  back a CDAP response to the IPC Manager. */

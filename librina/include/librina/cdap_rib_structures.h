@@ -24,18 +24,16 @@
 
 #include <string>
 #include <list>
+#include "common.h"
 
 namespace rina {
 namespace cdap_rib {
 
-typedef struct{
-	int size_;
-	void* message_;
-} ser_obj_t;
-
 typedef struct cdap_params {
 	long timeout_;
 	bool is_IPCP_;
+
+	cdap_params() : timeout_(0), is_IPCP_(false) {};
 } cdap_params_t;
 
 /// Authentication information
@@ -46,6 +44,31 @@ typedef struct auth_policy {
 	std::list<std::string> versions;
 	/// Policy-specific options, encoded in a char array
 	ser_obj_t options;
+
+	auth_policy& operator=(const auth_policy &other)
+	{
+		name = other.name;
+		options = other.options;
+		for (std::list<std::string>::const_iterator it = other.versions.begin();
+				it != other.versions.end(); ++it)
+			versions.push_back(*it);
+
+		return *this;
+	}
+
+	std::string to_string() const
+	{
+		std::stringstream ss;
+		ss << "Policy name: " << name << std::endl;
+		ss << "Supported versions: ";
+		for (std::list<std::string>::const_iterator it = versions.begin();
+				it != versions.end(); ++it){
+			ss << *it << ";";
+		}
+		ss << std::endl;
+
+		return ss.str();
+	}
 } auth_policy_t;
 
 // End-point information
@@ -71,6 +94,8 @@ typedef struct flags {
 	/// set_ of Boolean values that modify the meaning of a
 	/// message in a uniform way when true.
 	Flags flags_;
+
+	flags() : flags_(NONE_FLAGS) {};
 } flags_t;
 
 typedef struct object_info {
@@ -94,6 +119,8 @@ typedef struct object_info {
 	/// The result of an operation, indicating its success (which has the value zero,
 	/// the default for this field), partial success in the case of
 	/// synchronized operations, or reason for failure
+
+	object_info() : inst_(0) {};
 } obj_info_t;
 
 typedef struct filtering_info {
@@ -105,6 +132,8 @@ typedef struct filtering_info {
 	/// is to apply (if missing or present and having the value 0, the default,
 	/// only the target_ed application's objects are addressed)
 	int scope_;
+
+	filtering_info() : filter_(0), scope_(0) {};
 } filt_info_t;
 
 typedef enum{
@@ -125,6 +154,8 @@ typedef enum{
 	CDAP_OP_NOT_SUPPORTED = -4,
 	/// Error serializing/deserializing object value
 	CDAP_SER_DES_ERRORSUPPORTED = -5,
+	/// Connection rejected
+	CDAP_APP_CONNECTION_REJECTED = -6,
 	/// 
 }res_code_t;
 
@@ -135,6 +166,8 @@ typedef struct result_info {
 	/// Result-Reason (string), optional in the responses, forbidden in the requests
 	/// Additional explanation of the result_
 	std::string reason_;
+
+	result_info() : code_(CDAP_SUCCESS) {};
 } res_info_t;
 
 typedef struct version_info {
@@ -146,14 +179,27 @@ typedef struct version_info {
 	/// of use.
 	long version_;
 
+	version_info() : version_(1L) {};
 } vers_info_t;
 
+enum cdap_dest_t { CDAP_DEST_PORT,
+		   CDAP_DEST_ADDRESS,
+		   CDAP_DEST_IPCM };
+
 typedef struct connection_handler {
-	int port_;
+	unsigned int handle_;
+	cdap_dest_t cdap_dest;
+	int abs_syntax;
 	ep_info_t src_;
 	ep_info_t dest_;
 	auth_policy_t auth_;
 	vers_info_t version_;
+
+	connection_handler() {
+		cdap_dest = CDAP_DEST_PORT;
+		abs_syntax = 0;
+		handle_ = 0;
+	};
 } con_handle_t;
 
 } //cdap_rib namespace

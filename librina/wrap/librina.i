@@ -478,15 +478,23 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(differs) rina::Neighbor::operator!=(const Neighbor &other) const;
 %rename(equals) rina::PsInfo::operator==(const PsInfo &other) const;
 %rename(differs) rina::PsInfo::operator!=(const PsInfo &other) const;
+%rename(assign) rina::ser_obj::operator=(const ser_obj &other);
+%rename(assign) rina::cdap_rib::auth_policy::operator=(const auth_policy &other);
+%rename(assign) rina::Neighbor::operator=(const Neighbor &other);
 
 %include "librina/exceptions.h"
 %include "librina/patterns.h"
 %include "librina/concurrency.h"
 %include "librina/common.h"
+
+%template(TempStringEncoder) rina::Encoder<std::string>;
+%template(TempIntEncoder) rina::Encoder<int>;
+
 %include "librina/application.h"
 %include "librina/cdap_rib_structures.h"
 %include "librina/cdap_v2.h"
 %include "librina/ipc-api.h"
+
 
 /* Macro for defining collection iterators */
 %define MAKE_COLLECTION_ITERABLE( ITERATORNAME, JTYPE, CPPCOLLECTION, CPPTYPE )

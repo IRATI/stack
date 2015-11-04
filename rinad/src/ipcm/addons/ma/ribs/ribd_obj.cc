@@ -4,9 +4,6 @@
 #include <librina/logs.h>
 #include <librina/exceptions.h>
 
-//Encoders and structs
-#include "encoders_mad.h"
-
 #include "../agent.h"
 #include "../../../ipcm.h"
 
@@ -28,7 +25,7 @@ void RIBDaemonObj::read(const rina::cdap_rib::con_handle_t &con,
 				const std::string& class_,
 				const rina::cdap_rib::filt_info_t &filt,
 				const int invoke_id,
-				rina::cdap_rib::ser_obj_t &obj_reply,
+				rina::ser_obj_t &obj_reply,
 				rina::cdap_rib::res_info_t& res) {
 
 	QueryRIBPromise promise;
@@ -46,7 +43,7 @@ void RIBDaemonObj::read(const rina::cdap_rib::con_handle_t &con,
 	std::string trunk = promise.serialized_rib.substr(0, 1000);
 
 	//Serialize and return
-	mad_manager::StringEncoder encoder;
+	rina::cdap::StringEncoder encoder;
 	encoder.encode(trunk, obj_reply);
 }
 

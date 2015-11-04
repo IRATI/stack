@@ -378,12 +378,11 @@ public:
 template <class K, class T> class ThreadSafeMapOfPointers {
 public:
         ThreadSafeMapOfPointers() {
-                lock_ = new rina::Lockable();
+        	lock_ = new Lockable();
         };
         ~ThreadSafeMapOfPointers() throw() {
-                if (lock_) {
-                        delete lock_;
-                }
+        	if (lock_)
+        		delete lock_;
         };
 
         /// Insert element T* at position K
@@ -445,6 +444,33 @@ public:
                 }
 
                 return result;
+        }
+
+        /// Returns a copy of the entries in the map
+        std::list<T> getCopyofentries() const {
+                typename std::map<K, T*>::const_iterator iterator;
+                std::list<T> result;
+
+                rina::ScopedLock g(*lock_);
+                for(iterator = map.begin();
+                                iterator != map.end(); ++iterator){
+                        result.push_back(*iterator->second);
+                }
+
+                return result;
+        }
+
+        std::list<K> getKeys() const {
+        	typename std::map<K, T*>::const_iterator iterator;
+        	std::list<K> result;
+
+        	rina::ScopedLock g(*lock_);
+        	for(iterator = map.begin();
+        			iterator != map.end(); ++iterator) {
+        		result.push_back(iterator->first);
+        	}
+
+        	return result;
         }
 
         /// Delete all the values of the map

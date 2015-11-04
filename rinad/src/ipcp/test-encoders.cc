@@ -34,9 +34,11 @@
 
 int ipcp_id = 1;
 
-bool test_flow (rinad::Encoder * encoder) {
+bool test_flow () {
+	rinad::FlowEncoder encoder;
+	rina::ser_obj_t encoded_obj;
+
 	rinad::Flow flow_to_encode;
-	rinad::Flow *pflow_to_encode;
 	std::list<rina::Connection*> connection_list;
 	rina::Connection *pconnection_to_encode = new rina::Connection;
 	rina::DTPConfig dtp_config_to_encode;
@@ -81,21 +83,19 @@ bool test_flow (rinad::Encoder * encoder) {
 	flow_to_encode.connections = connection_list;
 
 	// Encode
-	pflow_to_encode = &flow_to_encode;
-	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
-		cdapMessage.obj_class_ = rinad::EncoderConstants::FLOW_RIB_OBJECT_CLASS;
-	encoder->encode((void*)pflow_to_encode, &cdapMessage);
+	encoder.encode(flow_to_encode, encoded_obj);
 
 	// Decode
-	rinad::Flow *pflow_decoded = (rinad::Flow*) encoder->decode(&cdapMessage);
+	rinad::Flow flow_decoded;
+	encoder.decode(encoded_obj, flow_decoded);
 
 	// Assert
-	if (pflow_to_encode->source_naming_info.processName != pflow_decoded->source_naming_info.processName)
+	if (flow_to_encode.source_naming_info.processName != flow_decoded.source_naming_info.processName)
 		return false;
-	if (pflow_to_encode->source_naming_info.processInstance != pflow_decoded->source_naming_info.processInstance)
+	if (flow_to_encode.source_naming_info.processInstance != flow_decoded.source_naming_info.processInstance)
 		return false;
 
-	rina::Connection *pconnection_decoded = pflow_decoded->connections.front();
+	rina::Connection *pconnection_decoded = flow_decoded.connections.front();
 	rina::DTPConfig dtp_config_decoded = pconnection_decoded->getDTPConfig();
 	if ( dtp_config_to_encode.get_seq_num_rollover_threshold() != dtp_config_decoded.get_seq_num_rollover_threshold())
 		return false;
@@ -161,14 +161,14 @@ bool test_flow (rinad::Encoder * encoder) {
 
 	LOG_IPCP_INFO("Flow Encoder tested successfully");
 
-	delete pflow_decoded;
-
 	return true;
 }
 
-bool test_data_transfer_constants(rinad::Encoder * encoder) {
+bool test_data_transfer_constants() {
+	rinad::DataTransferConstantsEncoder encoder;
+	rina::ser_obj_t encoded_obj;
 	rina::DataTransferConstants dtc;
-	rina::DataTransferConstants * recovered_obj = 0;
+	rina::DataTransferConstants recovered_obj;
 
 	dtc.address_length_ = 23;
 	dtc.cep_id_length_ = 15;
@@ -180,58 +180,56 @@ bool test_data_transfer_constants(rinad::Encoder * encoder) {
 	dtc.qos_id_length_ = 3414;
 	dtc.sequence_number_length_ = 123;
 
-	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
-	cdapMessage.obj_class_ = rinad::EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS;
-	encoder->encode(&dtc, &cdapMessage);
-	recovered_obj = (rina::DataTransferConstants*) encoder->decode(&cdapMessage);
+	encoder.encode(dtc, encoded_obj);
+	encoder.decode(encoded_obj, recovered_obj);
 
-	if (dtc.address_length_ != recovered_obj->address_length_) {
+	if (dtc.address_length_ != recovered_obj.address_length_) {
 		return false;
 	}
 
-	if (dtc.cep_id_length_ != recovered_obj->cep_id_length_) {
+	if (dtc.cep_id_length_ != recovered_obj.cep_id_length_) {
 		LOG_IPCP_DBG("Aqui");
 		return false;
 	}
 
-	if (dtc.dif_integrity_ != recovered_obj->dif_integrity_) {
+	if (dtc.dif_integrity_ != recovered_obj.dif_integrity_) {
 		return false;
 	}
 
-	if (dtc.length_length_ != recovered_obj->length_length_) {
+	if (dtc.length_length_ != recovered_obj.length_length_) {
 		return false;
 	}
 
-	if (dtc.max_pdu_lifetime_ != recovered_obj->max_pdu_lifetime_) {
+	if (dtc.max_pdu_lifetime_ != recovered_obj.max_pdu_lifetime_) {
 		return false;
 	}
 
-	if (dtc.max_pdu_size_ != recovered_obj->max_pdu_size_) {
+	if (dtc.max_pdu_size_ != recovered_obj.max_pdu_size_) {
 		return false;
 	}
 
-	if (dtc.port_id_length_ != recovered_obj->port_id_length_) {
+	if (dtc.port_id_length_ != recovered_obj.port_id_length_) {
 		return false;
 	}
 
-	if (dtc.qos_id_length_ != recovered_obj->qos_id_length_) {
+	if (dtc.qos_id_length_ != recovered_obj.qos_id_length_) {
 		return false;
 	}
 
-	if (dtc.sequence_number_length_ != recovered_obj->sequence_number_length_) {
+	if (dtc.sequence_number_length_ != recovered_obj.sequence_number_length_) {
 		return false;
 	}
-
-	delete recovered_obj;
 
 	LOG_IPCP_INFO("Data Transfer Constants Encoder tested successfully");
 
 	return true;
 }
 
-bool test_directory_forwarding_table_entry(rinad::Encoder * encoder) {
+bool test_directory_forwarding_table_entry() {
+	rinad::DFTEEncoder encoder;
+	rina::ser_obj_t encoded_obj;
 	rina::DirectoryForwardingTableEntry dfte;
-	rina::DirectoryForwardingTableEntry * recovered_obj = 0;
+	rina::DirectoryForwardingTableEntry recovered_obj;
 
 	dfte.address_ = 232;
 	dfte.timestamp_ = 5265235;
@@ -240,51 +238,48 @@ bool test_directory_forwarding_table_entry(rinad::Encoder * encoder) {
 	dfte.ap_naming_info_.entityName = "ae";
 	dfte.ap_naming_info_.entityInstance = "1";
 
-	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
-	cdapMessage.obj_class_ = rinad::EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS;
+	encoder.encode(dfte, encoded_obj);
+	encoder.decode(encoded_obj, recovered_obj);
 
-	encoder->encode(&dfte, &cdapMessage);
-	recovered_obj = (rina::DirectoryForwardingTableEntry*) encoder->decode(&cdapMessage);
-
-	if (dfte.address_ != recovered_obj->address_) {
+	if (dfte.address_ != recovered_obj.address_) {
 		return false;
 	}
 
-	if (dfte.timestamp_ != recovered_obj->timestamp_) {
+	if (dfte.timestamp_ != recovered_obj.timestamp_) {
 		return false;
 	}
 
 	if (dfte.ap_naming_info_.processName.compare(
-			recovered_obj->ap_naming_info_.processName) != 0) {
+			recovered_obj.ap_naming_info_.processName) != 0) {
 		return false;
 	}
 
 	if (dfte.ap_naming_info_.processInstance.compare(
-			recovered_obj->ap_naming_info_.processInstance) != 0) {
+			recovered_obj.ap_naming_info_.processInstance) != 0) {
 		return false;
 	}
 
 	if (dfte.ap_naming_info_.entityName.compare(
-			recovered_obj->ap_naming_info_.entityName) != 0) {
+			recovered_obj.ap_naming_info_.entityName) != 0) {
 		return false;
 	}
 
 	if (dfte.ap_naming_info_.entityInstance.compare(
-			recovered_obj->ap_naming_info_.entityInstance) != 0) {
+			recovered_obj.ap_naming_info_.entityInstance) != 0) {
 		return false;
 	}
-
-	delete recovered_obj;
 
 	LOG_IPCP_INFO("Directory Forwarding Table Entry Encoder tested successfully");
 	return true;
 }
 
-bool test_directory_forwarding_table_entry_list(rinad::Encoder * encoder) {
-	std::list<rina::DirectoryForwardingTableEntry*> dfte_list;
+bool test_directory_forwarding_table_entry_list() {
+	rinad::DFTEListEncoder encoder;
+	rina::ser_obj_t encoded_obj;
+	std::list<rina::DirectoryForwardingTableEntry> dfte_list;
 	rina::DirectoryForwardingTableEntry dfte1;
 	rina::DirectoryForwardingTableEntry dfte2;
-	std::list<rina::DirectoryForwardingTableEntry*> * recovered_obj = 0;
+	std::list<rina::DirectoryForwardingTableEntry> recovered_obj;
 
 	dfte1.address_ = 232;
 	dfte1.timestamp_ = 5265235;
@@ -292,37 +287,34 @@ bool test_directory_forwarding_table_entry_list(rinad::Encoder * encoder) {
 	dfte1.ap_naming_info_.processInstance = "1";
 	dfte1.ap_naming_info_.entityName = "ae";
 	dfte1.ap_naming_info_.entityInstance = "1";
-	dfte_list.push_back(&dfte1);
+	dfte_list.push_back(dfte1);
 	dfte2.address_ = 2312;
 	dfte2.timestamp_ = 52265235;
 	dfte2.ap_naming_info_.processName = "atest";
 	dfte2.ap_naming_info_.processInstance = "2";
 	dfte2.ap_naming_info_.entityName = "adfs";
 	dfte2.ap_naming_info_.entityInstance = "2";
-	dfte_list.push_back(&dfte2);
+	dfte_list.push_back(dfte2);
 
-	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
-	cdapMessage.obj_class_ = rinad::EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS;
+	encoder.encode(dfte_list, encoded_obj);
+	encoder.decode(encoded_obj, recovered_obj);
 
-	encoder->encode(&dfte_list, &cdapMessage);
-
-	recovered_obj = (std::list<rina::DirectoryForwardingTableEntry*> *) encoder->decode(&cdapMessage);
-
-	if (dfte_list.size() != recovered_obj->size()) {
+	if (dfte_list.size() != recovered_obj.size()) {
 		return false;
 	}
-
-	delete recovered_obj;
 
 	LOG_IPCP_INFO("Directory Forwarding Table Entry List Encoder tested successfully");
 	return true;
 }
 
-bool test_enrollment_information_request(rinad::Encoder * encoder) {
+bool test_enrollment_information_request() {
+	rinad::EnrollmentInformationRequestEncoder encoder;
+	rina::ser_obj_t encoded_obj;
+
 	rinad::EnrollmentInformationRequest request;
 	rina::ApplicationProcessNamingInformation name1;
 	rina::ApplicationProcessNamingInformation name2;
-	rinad::EnrollmentInformationRequest * recovered_obj = 0;
+	rinad::EnrollmentInformationRequest recovered_obj;
 
 	name1.processName = "dif1";
 	name2.processName = "dif2";
@@ -330,31 +322,26 @@ bool test_enrollment_information_request(rinad::Encoder * encoder) {
 	request.supporting_difs_.push_back(name2);
 	request.address_ = 141234;
 
+	encoder.encode(request, encoded_obj);
+	encoder.decode(encoded_obj, recovered_obj);
 
-	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
-	cdapMessage.obj_class_ = rinad::EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS;
-
-	encoder->encode(&request, &cdapMessage);
-
-	recovered_obj = (rinad::EnrollmentInformationRequest *) encoder->decode(&cdapMessage);
-
-	if (request.address_ != recovered_obj->address_) {
+	if (request.address_ != recovered_obj.address_) {
 		return false;
 	}
 
-	if (request.supporting_difs_.size() != recovered_obj->supporting_difs_.size()) {
+	if (request.supporting_difs_.size() != recovered_obj.supporting_difs_.size()) {
 		return false;
 	}
-
-	delete recovered_obj;
 
 	LOG_IPCP_INFO("Enrollment Information Request Encoder tested successfully");
 	return true;
 }
 
-bool test_qos_cube(rinad::Encoder * encoder) {
+bool test_qos_cube() {
+	rinad::QoSCubeEncoder encoder;
+	rina::ser_obj_t encoded_obj;
 	rina::QoSCube cube;
-	rina::QoSCube * recovered_obj = 0;
+	rina::QoSCube recovered_obj;
 
 	cube.average_bandwidth_ = 12134;
 	cube.average_sdu_bandwidth_ = 3141234;
@@ -372,169 +359,153 @@ bool test_qos_cube(rinad::Encoder * encoder) {
 	cube.dtp_config_.initial_a_timer_ = 23;
 	cube.dtp_config_.initial_seq_num_policy_.name_ = "test-policy";
 
-	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
-	cdapMessage.obj_class_ = rinad::EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS;
+	encoder.encode(cube, encoded_obj);
+	encoder.decode(encoded_obj, recovered_obj);
 
-	encoder->encode(&cube, &cdapMessage);
-
-	recovered_obj = (rina::QoSCube *) encoder->decode(&cdapMessage);
-
-	if (cube.average_bandwidth_ != recovered_obj->average_bandwidth_) {
+	if (cube.average_bandwidth_ != recovered_obj.average_bandwidth_) {
 		return false;
 	}
 
-	if (cube.average_sdu_bandwidth_ != recovered_obj->average_sdu_bandwidth_) {
+	if (cube.average_sdu_bandwidth_ != recovered_obj.average_sdu_bandwidth_) {
 		return false;
 	}
 
-	if (cube.delay_ != recovered_obj->delay_) {
+	if (cube.delay_ != recovered_obj.delay_) {
 		return false;
 	}
 
-	if (cube.jitter_ != recovered_obj->jitter_) {
+	if (cube.jitter_ != recovered_obj.jitter_) {
 		return false;
 	}
 
-	if (cube.id_ != recovered_obj->id_) {
+	if (cube.id_ != recovered_obj.id_) {
 		return false;
 	}
 
-	if (cube.max_allowable_gap_ != recovered_obj->max_allowable_gap_) {
+	if (cube.max_allowable_gap_ != recovered_obj.max_allowable_gap_) {
 		return false;
 	}
 
-	if (cube.name_.compare(recovered_obj->name_)!= 0 ){
+	if (cube.name_.compare(recovered_obj.name_)!= 0 ){
 		return false;
 	}
 
-	if (cube.ordered_delivery_ != recovered_obj->ordered_delivery_) {
+	if (cube.ordered_delivery_ != recovered_obj.ordered_delivery_) {
 		return false;
 	}
 
-	if (cube.partial_delivery_ != recovered_obj->partial_delivery_) {
+	if (cube.partial_delivery_ != recovered_obj.partial_delivery_) {
 		return false;
 	}
 
-	if (cube.peak_bandwidth_duration_ != recovered_obj->peak_bandwidth_duration_) {
+	if (cube.peak_bandwidth_duration_ != recovered_obj.peak_bandwidth_duration_) {
 		return false;
 	}
 
-	if (cube.peak_sdu_bandwidth_duration_ != recovered_obj->peak_sdu_bandwidth_duration_) {
+	if (cube.peak_sdu_bandwidth_duration_ != recovered_obj.peak_sdu_bandwidth_duration_) {
 		return false;
 	}
 
-	if (cube.undetected_bit_error_rate_ != recovered_obj->undetected_bit_error_rate_) {
+	if (cube.undetected_bit_error_rate_ != recovered_obj.undetected_bit_error_rate_) {
 		return false;
 	}
 
-	if (cube.dtp_config_.dtcp_present_ != recovered_obj->dtp_config_.dtcp_present_) {
+	if (cube.dtp_config_.dtcp_present_ != recovered_obj.dtp_config_.dtcp_present_) {
 		return false;
 	}
 
-	if (cube.dtp_config_.initial_a_timer_ != recovered_obj->dtp_config_.initial_a_timer_) {
+	if (cube.dtp_config_.initial_a_timer_ != recovered_obj.dtp_config_.initial_a_timer_) {
 		return false;
 	}
 
 	if (cube.dtp_config_.initial_seq_num_policy_.name_.compare(
-			recovered_obj->dtp_config_.initial_seq_num_policy_.name_) != 0) {
+			recovered_obj.dtp_config_.initial_seq_num_policy_.name_) != 0) {
 		return false;
 	}
-
-	delete recovered_obj;
 
 	LOG_IPCP_INFO("QoS Cube Encoder tested successfully");
 	return true;
 }
 
-bool test_qos_cube_list(rinad::Encoder * encoder) {
-	std::list<rina::QoSCube*> cube_list;
+bool test_qos_cube_list() {
+	rinad::QoSCubeListEncoder encoder;
+	rina::ser_obj_t encoded_obj;
+	std::list<rina::QoSCube> cube_list;
 	rina::QoSCube cube1;
 	rina::QoSCube cube2;
-	std::list<rina::QoSCube*> * recovered_obj = 0;
+	std::list<rina::QoSCube> recovered_obj;
 
-	cube_list.push_back(&cube1);
-	cube_list.push_back(&cube2);
+	cube_list.push_back(cube1);
+	cube_list.push_back(cube2);
 
-	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
-	cdapMessage.obj_class_ = rinad::EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS;
+	encoder.encode(cube_list, encoded_obj);
+	encoder.decode(encoded_obj, recovered_obj);
 
-	encoder->encode(&cube_list, &cdapMessage);
-
-	recovered_obj = (std::list<rina::QoSCube*> *) encoder->decode(&cdapMessage);
-
-	if (cube_list.size() != recovered_obj->size()) {
+	if (cube_list.size() != recovered_obj.size()) {
 		return false;
 	}
-
-	delete recovered_obj;
 
 	LOG_IPCP_INFO("QoS Cube List Encoder tested successfully");
 	return true;
 }
 
-bool test_whatevercast_name(rinad::Encoder * encoder) {
+bool test_whatevercast_name() {
+	rinad::WhatevercastNameEncoder encoder;
+	rina::ser_obj_t encoded_obj;
 	rina::WhatevercastName name;
-	rina::WhatevercastName * recovered_obj = 0;
+	rina::WhatevercastName recovered_obj;
 
 	name.name_ = "all members";
 	name.rule_ = "fancy rule";
 	name.set_members_.push_back("member1");
 	name.set_members_.push_back("member2");
 
-	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
-	cdapMessage.obj_class_ = rinad::EncoderConstants::WHATEVERCAST_NAME_RIB_OBJECT_CLASS;
+	encoder.encode(name, encoded_obj);
+	encoder.decode(encoded_obj, recovered_obj);
 
-	encoder->encode(&name, &cdapMessage);
-
-	recovered_obj = (rina::WhatevercastName *) encoder->decode(&cdapMessage);
-
-	if (name.name_.compare(recovered_obj->name_) != 0) {
+	if (name.name_.compare(recovered_obj.name_) != 0) {
 		return false;
 	}
 
-	if (name.rule_.compare(recovered_obj->rule_) != 0) {
+	if (name.rule_.compare(recovered_obj.rule_) != 0) {
 		return false;
 	}
 
-	if (name.set_members_.size() != recovered_obj->set_members_.size()) {
+	if (name.set_members_.size() != recovered_obj.set_members_.size()) {
 		return false;
 	}
-
-	delete recovered_obj;
 
 	LOG_IPCP_INFO("Whatevercast Name Encoder tested successfully");
 	return true;
 }
 
-bool test_whatevercast_name_list(rinad::Encoder * encoder) {
-	std::list<rina::WhatevercastName*> name_list;
+bool test_whatevercast_name_list() {
+	rinad::WhatevercastNameListEncoder encoder;
+	rina::ser_obj_t encoded_obj;
+	std::list<rina::WhatevercastName> name_list;
 	rina::WhatevercastName name1;
 	rina::WhatevercastName name2;
-	std::list<rina::WhatevercastName*> * recovered_obj = 0;
+	std::list<rina::WhatevercastName> recovered_obj;
 
-	name_list.push_back(&name1);
-	name_list.push_back(&name2);
+	name_list.push_back(name1);
+	name_list.push_back(name2);
 
-	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
-	cdapMessage.obj_class_ = rinad::EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS;
+	encoder.encode(name_list, encoded_obj);
+	encoder.decode(encoded_obj, recovered_obj);
 
-	encoder->encode(&name_list, &cdapMessage);
-
-	recovered_obj = (std::list<rina::WhatevercastName*> *) encoder->decode(&cdapMessage);
-
-	if (name_list.size() != recovered_obj->size()) {
+	if (name_list.size() != recovered_obj.size()) {
 		return false;
 	}
-
-	delete recovered_obj;
 
 	LOG_IPCP_INFO("Whatevercast Name List Encoder tested successfully");
 	return true;
 }
 
-bool test_neighbor(rinad::Encoder * encoder) {
+bool test_neighbor() {
+	rinad::NeighborEncoder encoder;
+	rina::ser_obj_t encoded_obj;
 	rina::Neighbor nei;
-	rina::Neighbor * recovered_obj = 0;
+	rina::Neighbor recovered_obj;
 
 	nei.name_.processName = "test1.IRATI",
 	nei.name_.processInstance = "1";
@@ -542,78 +513,63 @@ bool test_neighbor(rinad::Encoder * encoder) {
 	nei.supporting_difs_.push_back(rina::ApplicationProcessNamingInformation("test2.IRATI", "1"));
 	nei.supporting_difs_.push_back(rina::ApplicationProcessNamingInformation("Castefa.i2CAT", "1"));
 
-	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
-	cdapMessage.obj_class_ = rina::NeighborSetRIBObject::NEIGHBOR_RIB_OBJECT_CLASS;
+	encoder.encode(nei, encoded_obj);
+	encoder.decode(encoded_obj, recovered_obj);
 
-	encoder->encode(&nei, &cdapMessage);
-
-	recovered_obj = (rina::Neighbor *) encoder->decode(&cdapMessage);
-
-	if (nei.name_.processName.compare(recovered_obj->name_.processName) != 0) {
+	if (nei.name_.processName.compare(recovered_obj.name_.processName) != 0) {
 		return false;
 	}
 
-	if (nei.name_.processInstance.compare(recovered_obj->name_.processInstance) != 0) {
+	if (nei.name_.processInstance.compare(recovered_obj.name_.processInstance) != 0) {
 		return false;
 	}
 
-	if (nei.address_ != recovered_obj->address_) {
+	if (nei.address_ != recovered_obj.address_) {
 		return false;
 	}
 
-	if (nei.supporting_difs_.size() != recovered_obj->supporting_difs_.size()) {
+	if (nei.supporting_difs_.size() != recovered_obj.supporting_difs_.size()) {
 		return false;
 	}
-
-	delete recovered_obj;
 
 	LOG_IPCP_INFO("Neighbor Encoder tested successfully");
 	return true;
 }
 
-bool test_neighbor_list(rinad::Encoder * encoder) {
-	std::list<rina::Neighbor*> nei_list;
+bool test_neighbor_list() {
+	rinad::NeighborListEncoder encoder;
+	rina::ser_obj_t encoded_obj;
+	std::list<rina::Neighbor> nei_list;
 	rina::Neighbor nei1;
 	rina::Neighbor nei2;
-	std::list<rina::Neighbor*> * recovered_obj = 0;
+	std::list<rina::Neighbor> recovered_obj;
 
-	nei_list.push_back(&nei1);
-	nei_list.push_back(&nei2);
+	nei_list.push_back(nei1);
+	nei_list.push_back(nei2);
 
-	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
-	cdapMessage.obj_class_ = rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_CLASS;
+	encoder.encode(nei_list, encoded_obj);
+	encoder.decode(encoded_obj, recovered_obj);
 
-	encoder->encode(&nei_list, &cdapMessage);
-
-	recovered_obj = (std::list<rina::Neighbor*> *) encoder->decode(&cdapMessage);
-
-	if (nei_list.size() != recovered_obj->size()) {
+	if (nei_list.size() != recovered_obj.size()) {
 		return false;
 	}
-
-	delete recovered_obj;
 
 	LOG_IPCP_INFO("Neighbor List Encoder tested successfully");
 	return true;
 }
 
-bool test_watchdog(rinad::Encoder * encoder) {
+bool test_watchdog() {
+	rina::cdap::IntEncoder encoder;
+	rina::ser_obj_t encoded_obj;
 	int address = 23;
-	int * recovered_obj = 0;
+	int recovered_obj = 0;
 
-	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
-	cdapMessage.obj_class_ = rinad::EncoderConstants::WATCHDOG_RIB_OBJECT_CLASS;
+	encoder.encode(address, encoded_obj);
+	encoder.decode(encoded_obj, recovered_obj);
 
-	rina::IntObjectValue * int_value = new rina::IntObjectValue(address);
-	cdapMessage.obj_value_ = int_value;
-
-	recovered_obj = (int*) encoder->decode(&cdapMessage);
-
-	if (*recovered_obj != address ) {
+	if (recovered_obj != address ) {
 		return false;
 	}
-
-	delete recovered_obj;
 
 	LOG_IPCP_INFO("Watchdog Encoder tested successfully");
 	return true;
@@ -621,101 +577,73 @@ bool test_watchdog(rinad::Encoder * encoder) {
 
 int main()
 {
-	rinad::Encoder encoder;
-	encoder.addEncoder(rinad::EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS,
-			new rinad::DataTransferConstantsEncoder());
-	encoder.addEncoder(rinad::EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS,
-			new rinad::DirectoryForwardingTableEntryEncoder());
-	encoder.addEncoder(rinad::EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
-			new rinad::DirectoryForwardingTableEntryListEncoder());
-	encoder.addEncoder(rinad::EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
-			new rinad::DirectoryForwardingTableEntryListEncoder());
-	encoder.addEncoder(rinad::EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS,
-			new rinad::EnrollmentInformationRequestEncoder());
-	encoder.addEncoder(rinad::EncoderConstants::FLOW_RIB_OBJECT_CLASS,
-			new rinad::FlowEncoder());
-	encoder.addEncoder(rina::NeighborSetRIBObject::NEIGHBOR_RIB_OBJECT_CLASS,
-			new rinad::NeighborEncoder());
-	encoder.addEncoder(rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_CLASS,
-			new rinad::NeighborListEncoder());
-	encoder.addEncoder(rinad::EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS,
-			new rinad::QoSCubeEncoder());
-	encoder.addEncoder(rinad::EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS,
-			new rinad::QoSCubeListEncoder());
-	encoder.addEncoder(rinad::EncoderConstants::WHATEVERCAST_NAME_RIB_OBJECT_CLASS,
-			new rinad::WhatevercastNameEncoder());
-	encoder.addEncoder(rinad::EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS,
-			new rinad::WhatevercastNameListEncoder());
-	encoder.addEncoder(rinad::EncoderConstants::WATCHDOG_RIB_OBJECT_CLASS,
-			new rinad::WatchdogEncoder());
-
-	bool result = test_data_transfer_constants(&encoder);
+	bool result = test_data_transfer_constants();
 	if (!result) {
 		LOG_IPCP_ERR("Problems testing Data Transfer Constants Encoder");
 		return -1;
 	}
 
-	result = test_directory_forwarding_table_entry(&encoder);
+	result = test_directory_forwarding_table_entry();
 	if (!result) {
 		LOG_IPCP_ERR("Problems testing Directory Forwarding Table Entry Encoder");
 		return -1;
 	}
 
-	result = test_directory_forwarding_table_entry_list(&encoder);
+	result = test_directory_forwarding_table_entry_list();
 	if (!result) {
 		LOG_IPCP_ERR("Problems testing Directory Forwarding Table Entry List Encoder");
 		return -1;
 	}
 
-	result = test_enrollment_information_request(&encoder);
+	result = test_enrollment_information_request();
 	if (!result) {
 		LOG_IPCP_ERR("Problems testing Enrollment Information Request Encoder");
 		return -1;
 	}
 
-	result = test_flow(&encoder);
+	result = test_flow();
 	if (!result) {
 		LOG_IPCP_ERR("Problems testing Flow Encoder");
 		return -1;
 	}
 
-	result = test_neighbor(&encoder);
+	result = test_neighbor();
 	if (!result) {
 		LOG_IPCP_ERR("Problems testing Neighbor Encoder");
 		return -1;
 	}
 
-	result = test_neighbor_list(&encoder);
+	result = test_neighbor_list();
 	if (!result) {
 		LOG_IPCP_ERR("Problems testing Neighbor List Encoder");
 		return -1;
 	}
 
-	result = test_qos_cube(&encoder);
+	result = test_qos_cube();
 	if (!result) {
 		LOG_IPCP_ERR("Problems testing QoS Cube Encoder");
 		return -1;
 	}
 
-	result = test_qos_cube_list(&encoder);
+	result = test_qos_cube_list();
 	if (!result) {
 		LOG_IPCP_ERR("Problems testing QoS Cube List Encoder");
 		return -1;
 	}
 
-	result = test_whatevercast_name(&encoder);
+	result = test_whatevercast_name();
 	if (!result) {
 		LOG_IPCP_ERR("Problems testing Whatevercast Name Encoder");
 		return -1;
 	}
 
-	result = test_whatevercast_name_list(&encoder);
+	result = test_whatevercast_name_list();
 	if (!result) {
 		LOG_IPCP_ERR("Problems testing Whatevercast Name List Encoder");
 		return -1;
 	}
 
-	result = test_watchdog(&encoder);
+	result = test_watchdog();
 	if (!result) {
 		LOG_IPCP_ERR("Problems testing Watchdog Encoder");
 		return -1;

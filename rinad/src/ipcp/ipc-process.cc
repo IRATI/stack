@@ -67,9 +67,6 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         lock_ = new rina::Lockable();
 
         // Initialize application entities
-        init_cdap_session_manager();
-        init_encoder();
-
         delimiter_ = 0; //TODO initialize Delimiter once it is implemented
         internal_event_manager_ = new rina::SimpleInternalEventManager();
         enrollment_task_ = new EnrollmentTask();
@@ -78,7 +75,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         resource_allocator_ = new ResourceAllocator();
         security_manager_ = new IPCPSecurityManager();
         routing_component_ = new RoutingComponent();
-        rib_daemon_ = new IPCPRIBDaemonImpl();
+        rib_daemon_ = new IPCPRIBDaemonImpl(enrollment_task_);
 
         add_entity(internal_event_manager_);
         add_entity(rib_daemon_);
@@ -113,16 +110,8 @@ IPCProcessImpl::~IPCProcessImpl() {
 		delete delimiter_;
 	}
 
-	if (encoder_) {
-		delete encoder_;
-	}
-
 	if (internal_event_manager_) {
 		delete internal_event_manager_;
-	}
-
-	if (cdap_session_manager_) {
-		delete cdap_session_manager_;
 	}
 
 	if (enrollment_task_) {
@@ -189,49 +178,11 @@ IPCProcessImpl::~IPCProcessImpl() {
 	}
 }
 
-void IPCProcessImpl::init_cdap_session_manager() {
-	rina::WireMessageProviderFactory wire_factory_;
-	rina::CDAPSessionManagerFactory cdap_manager_factory_;
-	long timeout = 180000;
-	cdap_session_manager_ = cdap_manager_factory_.createCDAPSessionManager(
-			&wire_factory_, timeout);
-}
-
-void IPCProcessImpl::init_encoder() {
-	encoder_ = new rinad::Encoder();
-	encoder_->addEncoder(EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS,
-			new DataTransferConstantsEncoder());
-	encoder_->addEncoder(EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS,
-			new DirectoryForwardingTableEntryEncoder());
-	encoder_->addEncoder(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
-			new DirectoryForwardingTableEntryListEncoder());
-	encoder_->addEncoder(EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS,
-			new EnrollmentInformationRequestEncoder());
-	encoder_->addEncoder(EncoderConstants::FLOW_RIB_OBJECT_CLASS,
-			new FlowEncoder());
-	encoder_->addEncoder(rina::NeighborSetRIBObject::NEIGHBOR_RIB_OBJECT_CLASS,
-			new NeighborEncoder());
-	encoder_->addEncoder(rina::NeighborSetRIBObject::NEIGHBOR_SET_RIB_OBJECT_CLASS,
-			new NeighborListEncoder());
-	encoder_->addEncoder(EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS,
-			new QoSCubeEncoder());
-	encoder_->addEncoder(EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS,
-			new QoSCubeListEncoder());
-	encoder_->addEncoder(EncoderConstants::WHATEVERCAST_NAME_RIB_OBJECT_CLASS,
-			new WhatevercastNameEncoder());
-	encoder_->addEncoder(EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS,
-			new WhatevercastNameListEncoder());
-	encoder_->addEncoder(EncoderConstants::WATCHDOG_RIB_OBJECT_CLASS,
-			new WatchdogEncoder());
-	encoder_->addEncoder(rina::ADataObject::A_DATA_OBJECT_CLASS,
-			new ADataObjectEncoder());
-}
-
 unsigned short IPCProcessImpl::get_id() {
 	return rina::extendedIPCManager->ipcProcessId;
 }
 
-const std::list<rina::Neighbor*> IPCProcessImpl::get_neighbors() const {
+const std::list<rina::Neighbor> IPCProcessImpl::get_neighbors() const {
 	return enrollment_task_->get_neighbors();
 }
 
@@ -245,7 +196,7 @@ void IPCProcessImpl::set_operational_state(const IPCProcessOperationalState& ope
 	state = operational_state;
 }
 
-const rina::DIFInformation& IPCProcessImpl::get_dif_information() const {
+rina::DIFInformation& IPCProcessImpl::get_dif_information() {
 	rina::ScopedLock g(*lock_);
 	return dif_information_;
 }
@@ -637,27 +588,16 @@ void IPCProcessImpl::processPluginLoadRequestEvent(
 }
 
 void IPCProcessImpl::processFwdCDAPMsgEvent(
-                        const rina::FwdCDAPMsgEvent& event) {
-	const rina::CDAPMessage * msg;
-	rina::CDAPSessionDescriptor * session_descr;
-
+                        const rina::FwdCDAPMsgEvent& event)
+{
 	if (!event.sermsg.message_) {
 		LOG_IPCP_ERR("No CDAP message to be forwarded");
 		return;
 	}
 
-	msg = rib_daemon_->wmpi->deserializeMessage(event.sermsg);
-
-	LOG_IPCP_INFO("Forwarded CDAP Message:\n%s",
-		      msg->to_string().c_str());
-
-	session_descr = new IPCMCDAPSessDesc(event.sequenceNumber);
-
-	rib_daemon_->processIncomingCDAPMessage(msg, session_descr,
-			rina::CDAPSessionInterface::SESSION_STATE_CON);
-
-	delete msg;
-	delete session_descr;
+	rina::cdap::getProvider()->process_message(event.sermsg,
+						   event.sequenceNumber,
+						   rina::cdap_rib::CDAP_DEST_IPCM);
 
         return;
 }
@@ -872,6 +812,34 @@ void IPCProcessImpl::event_loop(void){
 		delete e;
 	}
 
+}
+
+//Class IPCPFactory
+static IPCProcessImpl * ipcp = NULL;
+
+IPCProcessImpl* IPCPFactory::createIPCP(const rina::ApplicationProcessNamingInformation& name,
+				  	unsigned short id,
+				  	unsigned int ipc_manager_port,
+				  	std::string log_level,
+				  	std::string log_file)
+{
+	if(!ipcp) {
+		ipcp = new IPCProcessImpl(name,
+					  ipcp_id,
+					  ipc_manager_port,
+					  log_level,
+					  log_file);
+		return ipcp;
+	} else
+		return 0;
+}
+
+IPCProcessImpl* IPCPFactory::getIPCP()
+{
+	if (ipcp)
+		return ipcp;
+
+	return NULL;
 }
 
 } //namespace rinad

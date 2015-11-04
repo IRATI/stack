@@ -4917,7 +4917,8 @@ int putIpcmDIFQueryRIBRequestMessageObject(nl_msg* netlinkMessage,
 	return -1;
 }
 
-int putRIBObject(nl_msg* netlinkMessage, const RIBObjectData& object){
+int putRIBObject(nl_msg* netlinkMessage, const rib::RIBObjectData& object)
+{
         NLA_PUT_STRING(netlinkMessage, RIBO_ATTR_OBJECT_CLASS,
                         object.get_class().c_str());
         NLA_PUT_STRING(netlinkMessage, RIBO_ATTR_OBJECT_NAME,
@@ -4935,9 +4936,10 @@ int putRIBObject(nl_msg* netlinkMessage, const RIBObjectData& object){
 	return -1;
 }
 
-int putListOfRIBObjects(
-		nl_msg* netlinkMessage, const std::list<RIBObjectData>& ribObjects){
-	std::list<RIBObjectData>::const_iterator iterator;
+int putListOfRIBObjects(nl_msg* netlinkMessage,
+			const std::list<rib::RIBObjectData>& ribObjects)
+{
+	std::list<rib::RIBObjectData>::const_iterator iterator;
 	struct nlattr *ribObject;
 	int i = 0;
 
@@ -8227,7 +8229,8 @@ IpcmDIFQueryRIBRequestMessage *
 	return result;
 }
 
-RIBObjectData * parseRIBObject(nlattr *nested){
+rib::RIBObjectData * parseRIBObject(nlattr *nested)
+{
 	struct nla_policy attr_policy[RIBO_ATTR_MAX + 1];
 	attr_policy[RIBO_ATTR_OBJECT_CLASS].type = NLA_STRING;
 	attr_policy[RIBO_ATTR_OBJECT_CLASS].minlen = 0;
@@ -8251,7 +8254,7 @@ RIBObjectData * parseRIBObject(nlattr *nested){
 		return 0;
 	}
 
-	RIBObjectData * result = new RIBObjectData();
+	rib::RIBObjectData * result = new rib::RIBObjectData();
 
 	if (attrs[RIBO_ATTR_OBJECT_CLASS]){
 		result->set_class(
@@ -8277,10 +8280,11 @@ RIBObjectData * parseRIBObject(nlattr *nested){
 }
 
 int parseListOfRIBObjects(nlattr *nested,
-		IpcmDIFQueryRIBResponseMessage * message){
+			  IpcmDIFQueryRIBResponseMessage * message)
+{
 	nlattr * nla;
 	int rem;
-	RIBObjectData * ribObject;
+	rib::RIBObjectData * ribObject;
 
 	for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
 		     nla_ok(nla, rem);
@@ -9336,7 +9340,8 @@ parseIpcmFwdCDAPMsgMessage(nlmsghdr *hdr){
 		// XXX or nla_get_data() ?
 		memcpy(msgbuf, nla_data(attrs[IFCM_ATTR_CDAP_MSG]), msglen);
 
-		result->sermsg = SerializedObject(msgbuf, msglen);
+		result->sermsg.message_ = msgbuf;
+		result->sermsg.size_ = msglen;
 	}
 
 	if (attrs[IFCM_ATTR_RESULT]) {

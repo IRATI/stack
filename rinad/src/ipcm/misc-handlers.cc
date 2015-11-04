@@ -45,7 +45,7 @@ void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *
 {
 	ostringstream ss;
 	IPCMIPCProcess *ipcp;
-	list<rina::RIBObjectData>::iterator lit;
+	list<rina::rib::RIBObjectData>::iterator lit;
 	RIBqTransState* trans =
 		get_transaction_state<RIBqTransState>(e->sequenceNumber);
 
