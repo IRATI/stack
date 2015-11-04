@@ -224,9 +224,12 @@ int Catalog::load_by_template(Addon *addon, unsigned int ipcp_id,
 				 i->toString().c_str());
 		}
 
-		// Record that this IPCP has select this policy set (TODO
-		// move this in the assign_to_dif response).
-		if (!ret) {
+                // Record that this IPCP has selected this policy set
+                // (TODO move this in the assign_to_dif response).
+                // This must not be done for DTCP and DTP policy sets,
+                // since they associated to a flow and not to an IPCP.
+                if (!ret && i->app_entity != "dtcp"
+                         && i->app_entity != "dtp" ) {
 			policy_set_selected(*i, ipcp_id);
 		}
 	}

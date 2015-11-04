@@ -117,6 +117,7 @@ struct efcp * efcp_imap_find(struct efcp_imap * map,
 
         return entry->value;
 }
+EXPORT_SYMBOL(efcp_imap_find);
 
 int efcp_imap_update(struct efcp_imap * map,
                      cep_id_t           key,
