@@ -297,8 +297,8 @@ public:
 	bool addObject(const FlowStateObject& object);
 	void deprecateObject(const std::string& fqn, 
 			     unsigned int max_age);
-	void deprecateObject(unsigned int address,
-			     unsigned int max_age);
+	void deprecateObjects(unsigned int address,
+			      unsigned int max_age);
 	FlowStateObject * getObject(const std::string& fqn);
 	void getModifiedFSOs(std::list<FlowStateObject *>& result);
 	void getAllFSOs(std::list<FlowStateObject>& result);

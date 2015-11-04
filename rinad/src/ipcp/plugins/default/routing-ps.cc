@@ -586,8 +586,11 @@ FlowStateObject::FlowStateObject()
 	being_erased_ = true;
 }
 FlowStateObject::FlowStateObject(unsigned int address,
-	unsigned int neighbor_address, unsigned int cost, bool up,
-	int sequence_number, unsigned int age)
+				 unsigned int neighbor_address,
+				 unsigned int cost,
+				 bool up,
+				 int sequence_number,
+				 unsigned int age)
 {
 	address_ = address;
 	neighbor_address_ = neighbor_address;
@@ -834,7 +837,12 @@ bool FlowStateObjects::addObject(const FlowStateObject& object)
 
 bool FlowStateObjects::addCheckedObject(const FlowStateObject& object)
 {
-	FlowStateObject * fso = new FlowStateObject(object);
+	FlowStateObject * fso = new FlowStateObject(object.get_address(),
+						    object.get_neighboraddress(),
+						    object.get_cost(),
+						    object.is_state(),
+						    object.get_sequencenumber(),
+						    object.get_age());
 	objects[object.get_objectname()] = fso;
 	rina::rib::RIBObj* rib_obj = new FlowStateRIBObject(fso, manager_);
 	IPCPRIBDaemon* rib_daemon = (IPCPRIBDaemon*)IPCPFactory::getIPCP()->get_rib_daemon();
@@ -855,15 +863,16 @@ void FlowStateObjects::deprecateObject(const std::string& fqn,
 	}
 }
 
-void FlowStateObjects::deprecateObject(unsigned int address,
-		     	     	       unsigned int max_age)
+void FlowStateObjects::deprecateObjects(unsigned int address,
+		     	     	        unsigned int max_age)
 {
 	rina::ScopedLock g(lock);
 
 	std::map<std::string, FlowStateObject *>::iterator it;
 	for (it = objects.begin(); it != objects.end();
 			++it) {
-		if (it->second->get_neighboraddress() == address) {
+		if (it->second->get_neighboraddress() == address ||
+				it->second->get_address() == address) {
 			it->second->deprecateObject(max_age);
 			modified_ = true;
 		}
@@ -873,6 +882,8 @@ void FlowStateObjects::deprecateObject(unsigned int address,
 void FlowStateObjects::removeObject(const std::string& fqn)
 {
 	rina::ScopedLock g(lock);
+
+	LOG_IPCP_DBG("Trying to remove object %s", fqn.c_str());
 
 	std::map<std::string, FlowStateObject*>::iterator it =
 			objects.find(fqn);
@@ -941,10 +952,10 @@ void FlowStateObjects::incrementAge(unsigned int max_age, rina::Timer* timer)
 
 		if (it->second->get_age() >= max_age && !it->second->is_beingerased()) {
 			LOG_IPCP_DBG("Object to erase age: %d", it->second->get_age());
+			it->second->has_beingerased(true);
 			KillFlowStateObjectTimerTask* ksttask =
 				new KillFlowStateObjectTimerTask(this, it->second->get_objectname());
 			timer->scheduleTask(ksttask, FlowStateManager::WAIT_UNTIL_REMOVE_OBJECT);
-			it->second->has_beingerased(true);
 		}
 	}
 }
@@ -1177,8 +1188,8 @@ void FlowStateManager::getAllFSOs(std::list<FlowStateObject>& list) const
 
 void FlowStateManager::deprecateObjectsNeighbor(unsigned int address)
 {
-	fsos->deprecateObject(address,
-			      maximum_age);
+	fsos->deprecateObjects(address,
+			       maximum_age);
 }
 
 bool FlowStateManager::tableUpdate() const
