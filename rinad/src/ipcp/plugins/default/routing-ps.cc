@@ -865,6 +865,7 @@ void FlowStateObjects::deprecateObject(unsigned int address,
 			++it) {
 		if (it->second->get_neighboraddress() == address) {
 			it->second->deprecateObject(max_age);
+			modified_ = true;
 		}
 	}
 }
@@ -1502,6 +1503,9 @@ void LinkStateRoutingPolicy::propagateFSDB()
 		it != objectsToSend.end(); ++it)
 
 	{
+		if (it->second.size() == 0)
+			continue;
+
 		rina::cdap_rib::flags flags;
 		rina::cdap_rib::filt_info_t filter;
 		try

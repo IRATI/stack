@@ -443,7 +443,7 @@ void IEnrollmentStateMachine::createOrUpdateNeighborInformation(bool enrolled)
 		remote_peer_.underlying_port_id_ = 0;
 	}
 
-	enrollment_task_->add_neighbor(remote_peer_);
+	enrollment_task_->add_or_update_neighbor(remote_peer_);
 }
 
 void IEnrollmentStateMachine::sendNeighbors()
@@ -838,11 +838,8 @@ std::list<rina::Neighbor*> EnrollmentTask::get_neighbor_pointers()
 	return neighbors.getEntries();
 }
 
-
 void EnrollmentTask::add_neighbor(const rina::Neighbor& neighbor)
 {
-	rina::Neighbor * neigh = 0;
-
 	rina::ScopedLock g(lock_);
 
 	if (neighbors.find(neighbor.name_.getEncodedString()) != 0) {
@@ -851,17 +848,39 @@ void EnrollmentTask::add_neighbor(const rina::Neighbor& neighbor)
 		return;
 	}
 
+	_add_neighbor(neighbor);
+}
+
+void EnrollmentTask::add_or_update_neighbor(const rina::Neighbor& neighbor)
+{
+	rina::Neighbor * neigh = 0;
+
+	rina::ScopedLock g(lock_);
+
+	neigh = neighbors.find(neighbor.name_.getEncodedString());
+	if (neigh) {
+		neigh->enrolled_ = neighbor.enrolled_;
+		neigh->underlying_port_id_ = neighbor.underlying_port_id_;
+		neigh->last_heard_from_time_in_ms_ = neighbor.last_heard_from_time_in_ms_;
+	} else
+		_add_neighbor(neighbor);
+}
+
+void EnrollmentTask::_add_neighbor(const rina::Neighbor& neighbor)
+{
+	rina::Neighbor * neigh = 0;
+
 	try {
 		std::stringstream ss;
 		ss << NeighborRIBObj::object_name_prefix
-		   << neighbor.name_.processName;
+				<< neighbor.name_.processName;
 
 		neigh = new rina::Neighbor(neighbor);
 		rina::rib::RIBObj * nrobj = new NeighborRIBObj(neigh);
 		rib_daemon_->addObjRIB(ss.str(), &nrobj);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems creating RIB object: %s",
-			     e.what());
+				e.what());
 	}
 
 	neighbors.put(neigh->name_.getEncodedString(), neigh);
