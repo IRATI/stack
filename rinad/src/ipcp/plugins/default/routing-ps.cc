@@ -903,7 +903,7 @@ void FlowStateObjects::has_modified(bool modified)
 	modified_ = modified;
 }
 
-void FlowStateObjects::getModifiedFSOs(std::list<FlowStateObject>& result)
+void FlowStateObjects::getModifiedFSOs(std::list<FlowStateObject *>& result)
 {
 	rina::ScopedLock g(lock);
 
@@ -912,7 +912,7 @@ void FlowStateObjects::getModifiedFSOs(std::list<FlowStateObject>& result)
 	{
 		if (it->second->is_modified()) 
 		{
-			result.push_back(*(it->second));
+			result.push_back(it->second);
 		}
 	}
 }
@@ -1134,28 +1134,28 @@ void FlowStateManager::prepareForPropagation(
 	std::map<int, std::list<FlowStateObject> >&  to_propagate) const
 {
 	//1 Get the FSOs to propagate
-	std::list<FlowStateObject> modifiedFSOs;
+	std::list<FlowStateObject *> modifiedFSOs;
 	fsos->getModifiedFSOs(modifiedFSOs);
 
 	//2 add each modified object to its port list
-	for (std::list<FlowStateObject>::iterator it = modifiedFSOs.begin();
+	for (std::list<FlowStateObject*>::iterator it = modifiedFSOs.begin();
 			it != modifiedFSOs.end(); ++it)
 	{
 		LOG_DBG("Propagation: Check modified object %s with age %d and status %d",
-			it->get_objectname().c_str(),
-			it->get_age(),
-			it->is_state());
+			(*it)->get_objectname().c_str(),
+			(*it)->get_age(),
+			(*it)->is_state());
 
 		for(std::map<int, std::list<FlowStateObject> >::iterator it2 =
 				to_propagate.begin(); it2 != to_propagate.end(); ++it2)
 		{
-			if(it2->first != it->get_avoidport())
+			if(it2->first != (*it)->get_avoidport())
 			{
-				it2->second.push_back(*it);
+				it2->second.push_back(**it);
 			}
 		}
-		it->has_modified(false);
-		it->set_avoidport(NO_AVOID_PORT);
+		(*it)->has_modified(false);
+		(*it)->set_avoidport(NO_AVOID_PORT);
 	}
 }
 

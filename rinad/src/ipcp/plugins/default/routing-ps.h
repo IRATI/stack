@@ -300,7 +300,7 @@ public:
 	void deprecateObject(unsigned int address,
 			     unsigned int max_age);
 	FlowStateObject * getObject(const std::string& fqn);
-	void getModifiedFSOs(std::list<FlowStateObject>& result);
+	void getModifiedFSOs(std::list<FlowStateObject *>& result);
 	void getAllFSOs(std::list<FlowStateObject>& result);
 	void incrementAge(unsigned int max_age,
 			  rina::Timer* timer);
