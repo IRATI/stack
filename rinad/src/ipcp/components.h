@@ -268,6 +268,7 @@ public:
 	/// @param apNamingInfo
 	virtual void removeDFTEntry(const std::string& key,
 			 	    bool notify_neighs,
+			 	    bool remove_from_rib,
 			 	    std::list<int>& neighs_to_exclude) = 0;
 
 	/// Process an application registration request

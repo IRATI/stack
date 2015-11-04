@@ -114,11 +114,11 @@ bool DFTEntryRIBObj::delete_(const rina::cdap_rib::con_handle_t &con_handle,
 {
 	std::list<int> exc_neighs;
 	exc_neighs.push_back(con_handle.handle_);
-	std::string key = entry->getKey();
-	nsm->removeDFTEntry(key,
+	nsm->removeDFTEntry(entry->getKey(),
 			    true,
+			    false,
 			    exc_neighs);
-	return false;
+	return true;
 }
 
 // Class DirectoryForwardingTableEntry Set RIB Object
@@ -155,7 +155,10 @@ void DFTRIBObj::eventHappened(rina::InternalEvent * event)
 	std::list<int> exc_neighs;
 	std::list<std::string>::const_iterator it;
 	for (it = entriesToDelete.begin(); it != entriesToDelete.end(); ++it) {
-		namespace_manager_->removeDFTEntry(*it, true, exc_neighs);
+		namespace_manager_->removeDFTEntry(*it,
+						   true,
+						   true,
+						   exc_neighs);
 	}
 }
 
@@ -331,6 +334,7 @@ std::list<rina::DirectoryForwardingTableEntry> NamespaceManager::getDFTEntries()
 
 void NamespaceManager::removeDFTEntry(const std::string& key,
 			 	      bool notify_neighs,
+			 	      bool remove_from_rib,
 			 	      std::list<int>& neighs_to_exclude)
 {
 	rina::ScopedLock g(lock);
@@ -343,15 +347,17 @@ void NamespaceManager::removeDFTEntry(const std::string& key,
 		return;
 	}
 
-	try {
-		std::stringstream ss;
-		ss << DFTEntryRIBObj::object_name_prefix
-	           << key;
-		obj_name = ss.str();
-		rib_daemon_->removeObjRIB(obj_name);
-	} catch (rina::Exception &e){
-		LOG_IPCP_ERR("Error removing object from RIB %s",
-			     e.what());
+	if (remove_from_rib) {
+		try {
+			std::stringstream ss;
+			ss << DFTEntryRIBObj::object_name_prefix
+					<< key;
+			obj_name = ss.str();
+			rib_daemon_->removeObjRIB(obj_name);
+		} catch (rina::Exception &e){
+			LOG_IPCP_ERR("Error removing object from RIB %s",
+					e.what());
+		}
 	}
 
 	LOG_IPCP_DBG("Removed entry from DFT: %s",

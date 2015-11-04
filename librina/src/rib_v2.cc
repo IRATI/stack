@@ -608,10 +608,12 @@ void RIB::delete_request(const cdap_rib::con_handle_t &con,
 		//Mutual exclusion
 		ReadScopedLock rlock(rib_obj->rwlock, false);
 
-		delete_flag = rib_obj->delete_(con, obj.name_, obj.class_,
-								filt,
-								invoke_id,
-								res);
+		delete_flag = rib_obj->delete_(con,
+					       obj.name_,
+					       obj.class_,
+					       filt,
+					       invoke_id,
+					       res);
 	}else{
 		res.code_ = cdap_rib::CDAP_INVALID_OBJ;
 	} //RAII

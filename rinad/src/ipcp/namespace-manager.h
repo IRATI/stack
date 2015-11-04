@@ -140,6 +140,7 @@ public:
 	std::list<rina::DirectoryForwardingTableEntry> getDFTEntries();
 	void removeDFTEntry(const std::string& key,
 			    bool notify_neighs,
+			    bool remove_from_rib,
 			    std::list<int>& neighs_to_exclude);
 	unsigned short getRegIPCProcessId(const rina::ApplicationProcessNamingInformation& apNamingInfo);
 	void processApplicationRegistrationRequestEvent(
