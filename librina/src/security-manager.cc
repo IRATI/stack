@@ -261,11 +261,16 @@ rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(
 		obj_info.class_ = CHALLENGE_REQUEST;
 		obj_info.name_ = CHALLENGE_REQUEST;
 		obj_info.inst_ = 0;
-		encoder.encode(*(sc->challenge), obj_info.value_);
+		encoder.encode(*(sc->challenge),
+			       obj_info.value_);
 
 		//object class contains challenge request or reply
 		//object name contains cipher name
-		rib_daemon->remote_write(session_id, obj_info, flags, filt, NULL);
+		rib_daemon->remote_write(session_id,
+					 obj_info,
+					 flags,
+					 filt,
+					 NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 	}
@@ -299,11 +304,16 @@ int AuthPasswordPolicySet::process_challenge_request(const std::string& challeng
 		obj_info.class_ = CHALLENGE_REPLY;
 		obj_info.name_ = CHALLENGE_REPLY;
 		obj_info.inst_ = 0;
-		encoder.encode(sc->password, obj_info.value_);
+		encoder.encode(encrypt_challenge(challenge, sc->password),
+			       obj_info.value_);
 
 		//object class contains challenge request or reply
 		//object name contains cipher name
-		rib_daemon->remote_write(session_id, obj_info, flags, filt, NULL);
+		rib_daemon->remote_write(session_id,
+					 obj_info,
+					 flags,
+					 filt,
+					 NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 	}
@@ -328,7 +338,8 @@ int AuthPasswordPolicySet::process_challenge_reply(const std::string& encrypted_
 
 	timer.cancelTask(sc->timer_task);
 
-	std::string recovered_challenge = decrypt_challenge(encrypted_challenge, sc->password);
+	std::string recovered_challenge = decrypt_challenge(encrypted_challenge,
+							    sc->password);
 	if (*(sc->challenge) == recovered_challenge) {
 		result = IAuthPolicySet::SUCCESSFULL;
 	} else {
