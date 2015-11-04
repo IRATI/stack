@@ -1125,6 +1125,38 @@ extract_subcomponent_name(const string& cpath)
 	return cpath.substr(l+1);
 }
 
+/* If cpath is in the form "efcp.NN.xxx", extract NN,
+ * otherwise just return ipcp_id. */
+unsigned int
+extract_resource_id(const unsigned short ipcp_id,
+                    string cpath)
+{
+        stringstream ss;
+        string prefix("efcp.");
+        unsigned int port_id;
+        size_t dot;
+
+        if (cpath.find(prefix) != 0) {
+                return ipcp_id;
+        }
+
+        cpath = cpath.substr(prefix.size());
+        dot = cpath.find(".");
+        if (dot == string::npos) {
+                return ipcp_id;
+        }
+
+        cpath = cpath.substr(0, dot);
+
+        ss << cpath;
+        ss >> port_id;
+        if (ss.fail()) {
+                return ipcp_id;
+        }
+
+        return port_id;
+}
+
 ipcm_res_t
 IPCManager_::select_policy_set(Addon* callee, Promise* promise,
 		const unsigned short ipcp_id,
@@ -1138,10 +1170,12 @@ IPCManager_::select_policy_set(Addon* callee, Promise* promise,
 	try {
 		/* Load the policy set in the catalog. */
 		rina::PsInfo ps_info;
+                unsigned int rsrc_id;
 		int ret;
 
 		ps_info.name = ps_name;
 		ps_info.app_entity = extract_subcomponent_name(component_path);
+                rsrc_id = extract_resource_id(ipcp_id, component_path);
 		ret = catalog.load_policy_set(callee, ipcp_id, ps_info);
 		if (ret) {
 			throw rina::Exception();
@@ -1159,8 +1193,8 @@ IPCManager_::select_policy_set(Addon* callee, Promise* promise,
 		//Auto release the read lock
 		rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
-		trans = new IPCPSelectPsTransState(callee, promise, ipcp->get_id(),
-						   ps_info, ipcp->get_id());
+		trans = new IPCPSelectPsTransState(callee, promise, ipcp_id,
+						   ps_info, rsrc_id);
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
 			FLUSH_LOG(ERR, ss);
