@@ -576,7 +576,10 @@ void NamespaceManager::processApplicationUnregistrationRequestEvent(
 	}
 
 	std::list<int> exc_neighs;
-	removeDFTEntry(unregisteredApp->appName.getEncodedString(), true, exc_neighs);
+	removeDFTEntry(unregisteredApp->appName.getEncodedString(),
+		       true,
+		       true,
+		       exc_neighs);
 
 	delete unregisteredApp;
 }
