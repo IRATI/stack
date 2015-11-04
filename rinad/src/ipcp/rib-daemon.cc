@@ -208,18 +208,18 @@ void IPCPCDAPIOHandler::process_message(const rina::ser_obj_t &message,
 		try {
 			ADataObjectEncoder encoder;
 			rina::cdap::ADataObject a_data_obj;
+			rina::cdap::cdap_m_t inner_m;
 
 			encoder.decode(m_rcv.obj_value_, a_data_obj);
-			delete m_rcv.obj_value_.message_;
 
 			manager_->decodeCDAPMessage(a_data_obj.encoded_cdap_message_,
-					m_rcv);
-			if (m_rcv.invoke_id_ != 0) {
-				if (m_rcv.is_request_message()){
-					manager_->get_invoke_id_manager()->reserveInvokeId(m_rcv.invoke_id_,
+						    inner_m);
+			if (inner_m.invoke_id_ != 0) {
+				if (inner_m.is_request_message()){
+					manager_->get_invoke_id_manager()->reserveInvokeId(inner_m.invoke_id_,
 											   false);
 				} else {
-					manager_->get_invoke_id_manager()->freeInvokeId(m_rcv.invoke_id_,
+					manager_->get_invoke_id_manager()->freeInvokeId(inner_m.invoke_id_,
 											false);
 				}
 			}
@@ -230,9 +230,9 @@ void IPCPCDAPIOHandler::process_message(const rina::ser_obj_t &message,
 
 			LOG_IPCP_DBG("Received A-Data CDAP message from address %u \n%s",
 				     a_data_obj.source_address_,
-				     m_rcv.to_string().c_str());
+				     inner_m.to_string().c_str());
 
-			invoke_callback(con_handle, m_rcv, false);
+			invoke_callback(con_handle, inner_m, false);
 			return;
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Error processing A-data message: %s", e.what());

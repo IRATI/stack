@@ -303,7 +303,6 @@ private:
 	unsigned int allocate_response_message_handle_;
 	int invoke_id_;
 	rina::Lockable lock_;
-	rina::Timer * timer_;
 };
 
 class TearDownFlowTimerTask: public rina::TimerTask {

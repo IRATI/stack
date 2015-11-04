@@ -410,10 +410,6 @@ FlowAllocatorInstance::~FlowAllocatorInstance()
 	if (flow_) {
 		delete flow_;
 	}
-
-	if (timer_) {
-		delete timer_;
-	}
 }
 
 void FlowAllocatorInstance::initialize(
@@ -429,7 +425,6 @@ void FlowAllocatorInstance::initialize(
 	state = NO_STATE;
 	allocate_response_message_handle_ = 0;
 	flow_ = 0;
-	timer_ = new rina::Timer();
 }
 
 void FlowAllocatorInstance::set_application_entity(rina::ApplicationEntity * app_entity)
@@ -985,7 +980,7 @@ void FlowAllocatorInstance::submitDeallocate(
 		//3 Wait 2*MPL before tearing down the flow
 		TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(
 				this, object_name_, true);
-		timer_->scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
+		timer.scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems processing flow deallocation request: %s",
 				+e.what());
@@ -1007,9 +1002,10 @@ void FlowAllocatorInstance::deleteFlowRequestMessageReceived()
 	state = WAITING_2_MPL_BEFORE_TEARING_DOWN;
 
 	//3 Wait 2*MPL before tearing down the flow
-	TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(
-			this, object_name_, true);
-	timer_->scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
+	TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(this,
+								      object_name_,
+								      true);
+	timer.scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
 
 	//4 Inform IPC Manager
 	try {
