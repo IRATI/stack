@@ -606,8 +606,6 @@ FlowStateObject::FlowStateObject(unsigned int address,
 
 FlowStateObject::~FlowStateObject()
 {
-	IPCPRIBDaemon* rib_daemon = (IPCPRIBDaemon*)IPCPFactory::getIPCP()->get_rib_daemon();
-	rib_daemon->removeObjRIB(object_name_);
 }
 
 const std::string FlowStateObject::toString()
@@ -845,7 +843,7 @@ bool FlowStateObjects::addCheckedObject(const FlowStateObject& object)
 }
 
 void FlowStateObjects::deprecateObject(const std::string& fqn, 
-	unsigned int max_age)
+				       unsigned int max_age)
 {
 	rina::ScopedLock g(lock);
 
@@ -857,17 +855,35 @@ void FlowStateObjects::deprecateObject(const std::string& fqn,
 	}
 }
 
+void FlowStateObjects::deprecateObject(unsigned int address,
+		     	     	       unsigned int max_age)
+{
+	rina::ScopedLock g(lock);
+
+	std::map<std::string, FlowStateObject *>::iterator it;
+	for (it = objects.begin(); it != objects.end();
+			++it) {
+		if (it->second->get_neighboraddress() == address) {
+			it->second->deprecateObject(max_age);
+		}
+	}
+}
+
 void FlowStateObjects::removeObject(const std::string& fqn)
 {
 	rina::ScopedLock g(lock);
 
-	std::map<std::string, FlowStateObject*>::iterator it=
-		objects.find(fqn);
-	if( it != objects.end())
-	{
-		objects.erase(it);
-		delete it->second;
-	}
+	std::map<std::string, FlowStateObject*>::iterator it =
+			objects.find(fqn);
+
+	if (it == objects.end())
+		return;
+
+	IPCPRIBDaemon* rib_daemon = (IPCPRIBDaemon*) IPCPFactory::getIPCP()->get_rib_daemon();
+	rib_daemon->removeObjRIB(it->second->get_objectname());
+
+	objects.erase(it);
+	delete it->second;
 }
 
 FlowStateObject* FlowStateObjects::getObject(const std::string& fqn)
@@ -1160,7 +1176,8 @@ void FlowStateManager::getAllFSOs(std::list<FlowStateObject>& list) const
 
 void FlowStateManager::deprecateObjectsNeighbor(unsigned int address)
 {
-	//TODO implement
+	fsos->deprecateObject(address,
+			      maximum_age);
 }
 
 bool FlowStateManager::tableUpdate() const
@@ -1448,8 +1465,11 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(
 		rina::cdap_rib::flags_t flags;
 		rina::cdap_rib::filt_info_t filt;
 		if (obj.value_.size_ != 0)
-			rib_daemon_->getProxy()->remote_write(portId, obj, flags, filt, 0, 
-				rina::cdap_rib::CDAP_DEST_PORT);
+			rib_daemon_->getProxy()->remote_write(portId,
+							      obj,
+							      flags,
+							      filt,
+							      0);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems encoding and sending CDAP message: %s", e.what());
 	}
@@ -1458,6 +1478,7 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(
 void LinkStateRoutingPolicy::propagateFSDB()
 {
 	rina::ScopedLock g(lock_);
+
 	//1 Get the active flows
 	std::list<rina::FlowInformation> nMinusOneFlows =
 			ipc_process_->resource_allocator_->get_n_minus_one_flow_manager()->getAllNMinusOneFlowInformation();
