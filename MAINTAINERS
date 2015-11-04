@@ -228,16 +228,17 @@ F: librina/src/ipc-*
 
 CDAP
 M: Bernat Gaston <bernat.gaston (at) i2cat.net>
-F: librina/include/librina/cdap*
-F: librina/src/cdap*
+F: librina/include/librina/cdap_rib_structures.h
+F: librina/include/librina/cdap_v2.h
+F: librina/src/cdap_v2.cc
 F: librina/src/CDAP.proto
 F: librina/test/*cdap*
 
 RIB
 M: Marc Sune <marc.sune (at) bisdn.de>
-F: librina/include/librina/rib*
-F: librina/src/*rib*
-F: librina/test/*rib*
+F: librina/include/librina/rib_v2.h
+F: librina/src/rib_v2.cc
+F: librina/test/test-rib_v2.cc
 
 SDK
 M: Vincenzo Maffione <v.maffione (at) nextworks.it>
