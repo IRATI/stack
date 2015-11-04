@@ -114,7 +114,8 @@ bool DFTEntryRIBObj::delete_(const rina::cdap_rib::con_handle_t &con_handle,
 {
 	std::list<int> exc_neighs;
 	exc_neighs.push_back(con_handle.handle_);
-	nsm->removeDFTEntry(entry->getKey(),
+	std::string key = entry->getKey();
+	nsm->removeDFTEntry(key,
 			    true,
 			    exc_neighs);
 	return false;
