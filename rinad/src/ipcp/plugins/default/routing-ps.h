@@ -65,7 +65,7 @@ public:
 class FlowStateObject;
 class Graph {
 public:
-	Graph(const std::list<FlowStateObject *>& flow_state_objects);
+	Graph(const std::list<FlowStateObject>& flow_state_objects);
 	~Graph();
 
 	std::list<Edge *> edges_;
@@ -99,7 +99,7 @@ private:
 		}
 	};
 
-	std::list<FlowStateObject *> flow_state_objects_;
+	std::list<FlowStateObject> flow_state_objects_;
 	std::list<CheckedVertex *> checked_vertices_;
 
 	void init_vertices();
@@ -113,10 +113,9 @@ public:
 
 	//Compute the next hop for the node identified by source_address
 	//towards all the other nodes
-	virtual std::list<rina::RoutingTableEntry *> computeRoutingTable(
-			const Graph& graph,
-			const std::list<FlowStateObject *>& fsoList,
-			unsigned int source_address) = 0;
+	virtual std::list<rina::RoutingTableEntry *> computeRoutingTable(const Graph& graph,
+									 const std::list<FlowStateObject>& fsoList,
+									 unsigned int source_address) = 0;
 
 	//Compute the distance of the shortest path between the node identified
 	//by source_address and all the other nodes
@@ -140,10 +139,9 @@ public:
 class DijkstraAlgorithm : public IRoutingAlgorithm {
 public:
 	DijkstraAlgorithm();
-	std::list<rina::RoutingTableEntry *> computeRoutingTable(
-			const Graph& graph,
-			const std::list<FlowStateObject *>& fsoList,
-			unsigned int source_address);
+	std::list<rina::RoutingTableEntry *> computeRoutingTable(const Graph& graph,
+								 const std::list<FlowStateObject>& fsoList,
+								 unsigned int source_address);
 	void computeShortestDistances(const Graph& graph,
 				      unsigned int source_address,
 				      std::map<unsigned int, int>& distances);
@@ -296,12 +294,12 @@ class FlowStateObjects
 public:
 	FlowStateObjects(FlowStateManager* manager);
 	~FlowStateObjects();
-	bool addObject(FlowStateObject* object);
+	bool addObject(const FlowStateObject& object);
 	void deprecateObject(const std::string& fqn, 
 			     unsigned int max_age);
-	FlowStateObject* getObject(const std::string& fqn);
-	void getModifiedFSOs(std::list<FlowStateObject*>& result);
-	void getAllFSOs(std::list<FlowStateObject*>& result);
+	FlowStateObject * getObject(const std::string& fqn);
+	void getModifiedFSOs(std::list<FlowStateObject>& result);
+	void getAllFSOs(std::list<FlowStateObject>& result);
 	void incrementAge(unsigned int max_age,
 			  rina::Timer* timer);
 	void updateObject(const std::string& fqn, 
@@ -310,13 +308,13 @@ public:
 	bool is_modified() const;
 	void has_modified(bool modified);
 private:
-	void removeObject(const std::string& 
-		fqn);
-	bool addCheckedObject(FlowStateObject* object);
+	void removeObject(const std::string& fqn);
+	bool addCheckedObject(const FlowStateObject& object);
 	std::map<std::string,FlowStateObject*> objects;
 	//Signals a modification in the FlowStateDB
 	bool modified_;
 	FlowStateManager* manager_;
+	rina::Lockable lock;
 	friend class KillFlowStateObjectTimerTask;
 };
 
@@ -326,7 +324,8 @@ private:
 // TODO: destructor
 class FlowStateRIBObjects: public rina::rib::RIBObj {
 public:
-	FlowStateRIBObjects(FlowStateObjects* new_objs, FlowStateManager *manager);
+	FlowStateRIBObjects(FlowStateObjects* new_objs,
+			    FlowStateManager *manager);
 	const std::string toString();
 	void read(const rina::cdap_rib::con_handle_t &con,
 		  const std::string& fqn,
@@ -366,26 +365,27 @@ public:
 	static const int NO_AVOID_PORT;
 	static const long WAIT_UNTIL_REMOVE_OBJECT;
 
-	FlowStateManager(rina::Timer* new_timer, unsigned int max_age);
+	FlowStateManager(rina::Timer* new_timer,
+			unsigned int max_age);
 	~FlowStateManager();
 	//void setAvoidPort(int avoidPort);
 	/// add a FlowStateObject
-	bool addNewFSO(unsigned int address, unsigned int neighborAddress,
-			unsigned int cost, int avoid_port);
+	bool addNewFSO(unsigned int address,
+		       unsigned int neighborAddress,
+		       unsigned int cost,
+		       int avoid_port);
 	/// Set a FSO ready for removal
 	void deprecateObject(std::string fqn);
 	void deprecateObjectsNeighbor(unsigned int address);
-	std::map <int, std::list<FlowStateObject*> > prepareForPropagation
-	  (const std::list<rina::FlowInformation>& flows);
+	std::map <int, std::list<FlowStateObject*> > prepareForPropagation(const std::list<rina::FlowInformation>& flows);
 	void incrementAge();
-	void updateObjects(const std::list<FlowStateObject*>& newObjects, 
-		int avoidPort, unsigned int address);
-	void prepareForPropagation(std::map<int, std::list<FlowStateObject*> >&
-		to_propagate) const;
+	void updateObjects(const std::list<FlowStateObject>& newObjects,
+			   unsigned int avoidPort,
+			   unsigned int address);
+	void prepareForPropagation(std::map<int, std::list<FlowStateObject> >& to_propagate) const;
 	void encodeAllFSOs(rina::ser_obj_t& obj) const;
-	void getAllFSOs(std::list<FlowStateObject*>& list) const;
+	void getAllFSOs(std::list<FlowStateObject>& list) const;
 	bool tableUpdate() const;
-
 
 	// accessors
 	void set_maximum_age(unsigned int max_age);
@@ -565,12 +565,12 @@ public:
 };
 
 class FlowStateObjectListEncoder: 
-	public rina::Encoder<std::list<FlowStateObject*> > {
+	public rina::Encoder<std::list<FlowStateObject> > {
 public:
-	void encode(const std::list<FlowStateObject*> &obj, 
+	void encode(const std::list<FlowStateObject> &obj,
 		rina::ser_obj_t& serobj);
 	void decode(const rina::ser_obj_t &serobj, 
-		std::list<FlowStateObject*> &des_obj);
+		std::list<FlowStateObject> &des_obj);
 };
 
 }
