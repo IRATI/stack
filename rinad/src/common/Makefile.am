@@ -36,7 +36,10 @@ librinad_la_SOURCES  =					\
 			      concurrency.h
 
 commonheadersdir = $(includedir)/rinad/common
-commonheaders_HEADERS = encoder.h
+commonheaders_HEADERS =   \
+	encoder.h         \
+	encoders_mad.h    \
+	structures_mad.h
 
 encodersheadersdir = $(includedir)/rinad/common/encoders
 # Here 'make' has entered the build/rinad/src/common directory,

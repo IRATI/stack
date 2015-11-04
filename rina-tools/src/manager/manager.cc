@@ -26,8 +26,8 @@
 #include <librina/logs.h>
 #include <librina/cdap_v2.h>
 #include <librina/common.h>
-#include <rinad/ipcm/encoders_mad.h>
-#include <rinad/ipcm/structures_mad.h>
+#include <rinad/common/encoders_mad.h>
+#include <rinad/common/structures_mad.h>
 
 #include "manager.h"
 
