@@ -347,12 +347,13 @@ void NamespaceManager::removeDFTEntry(const std::string& key,
 		return;
 	}
 
+	std::stringstream ss;
+	ss << DFTEntryRIBObj::object_name_prefix
+	   << key;
+	obj_name = ss.str();
+
 	if (remove_from_rib) {
 		try {
-			std::stringstream ss;
-			ss << DFTEntryRIBObj::object_name_prefix
-					<< key;
-			obj_name = ss.str();
 			rib_daemon_->removeObjRIB(obj_name);
 		} catch (rina::Exception &e){
 			LOG_IPCP_ERR("Error removing object from RIB %s",
