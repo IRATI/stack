@@ -1,6 +1,6 @@
 /*
  * QLogic Fibre Channel HBA Driver
- * Copyright (c)  2003-2013 QLogic Corporation
+ * Copyright (c)  2003-2014 QLogic Corporation
  *
  * See LICENSE.qla2xxx for copyright and licensing details.
  */
@@ -52,6 +52,8 @@ struct __packed qla27xx_fwdt_template {
 #define ENTRY_TYPE_WRREMREG		271
 #define ENTRY_TYPE_RDREMRAM		272
 #define ENTRY_TYPE_PCICFG		273
+#define ENTRY_TYPE_GET_SHADOW		274
+#define ENTRY_TYPE_WRITE_BUF		275
 
 #define CAPTURE_FLAG_PHYS_ONLY		BIT_0
 #define CAPTURE_FLAG_PHYS_VIRT		BIT_1
@@ -109,12 +111,12 @@ struct __packed qla27xx_fwdt_entry {
 		} t259;
 
 		struct __packed {
-			uint8_t pci_addr;
+			uint8_t pci_offset;
 			uint8_t reserved[3];
 		} t260;
 
 		struct __packed {
-			uint8_t pci_addr;
+			uint8_t pci_offset;
 			uint8_t reserved[3];
 			uint32_t write_data;
 		} t261;
@@ -186,6 +188,17 @@ struct __packed qla27xx_fwdt_entry {
 			uint32_t addr;
 			uint32_t count;
 		} t273;
+
+		struct __packed {
+			uint32_t num_queues;
+			uint8_t  queue_type;
+			uint8_t  reserved[3];
+		} t274;
+
+		struct __packed {
+			uint32_t length;
+			uint8_t  buffer[];
+		} t275;
 	};
 };
 
@@ -201,5 +214,11 @@ struct __packed qla27xx_fwdt_entry {
 #define T268_BUF_TYPE_EXTD_TRACE	1
 #define T268_BUF_TYPE_EXCH_BUFOFF	2
 #define T268_BUF_TYPE_EXTD_LOGIN	3
+#define T268_BUF_TYPE_REQ_MIRROR	4
+#define T268_BUF_TYPE_RSP_MIRROR	5
+
+#define T274_QUEUE_TYPE_REQ_SHAD	1
+#define T274_QUEUE_TYPE_RSP_SHAD	2
+#define T274_QUEUE_TYPE_ATIO_SHAD	3
 
 #endif

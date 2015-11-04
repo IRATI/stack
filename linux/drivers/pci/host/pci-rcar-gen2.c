@@ -99,6 +99,7 @@ struct rcar_pci_priv {
 	struct resource io_res;
 	struct resource mem_res;
 	struct resource *cfg_res;
+	unsigned busnr;
 	int irq;
 	unsigned long window_size;
 };
@@ -128,52 +129,6 @@ static void __iomem *rcar_pci_cfg_base(struct pci_bus *bus, unsigned int devfn,
 
 	iowrite32(val, priv->reg + RCAR_AHBPCI_WIN1_CTR_REG);
 	return priv->reg + (slot >> 1) * 0x100 + where;
-}
-
-static int rcar_pci_read_config(struct pci_bus *bus, unsigned int devfn,
-				int where, int size, u32 *val)
-{
-	void __iomem *reg = rcar_pci_cfg_base(bus, devfn, where);
-
-	if (!reg)
-		return PCIBIOS_DEVICE_NOT_FOUND;
-
-	switch (size) {
-	case 1:
-		*val = ioread8(reg);
-		break;
-	case 2:
-		*val = ioread16(reg);
-		break;
-	default:
-		*val = ioread32(reg);
-		break;
-	}
-
-	return PCIBIOS_SUCCESSFUL;
-}
-
-static int rcar_pci_write_config(struct pci_bus *bus, unsigned int devfn,
-				 int where, int size, u32 val)
-{
-	void __iomem *reg = rcar_pci_cfg_base(bus, devfn, where);
-
-	if (!reg)
-		return PCIBIOS_DEVICE_NOT_FOUND;
-
-	switch (size) {
-	case 1:
-		iowrite8(val, reg);
-		break;
-	case 2:
-		iowrite16(val, reg);
-		break;
-	default:
-		iowrite32(val, reg);
-		break;
-	}
-
-	return PCIBIOS_SUCCESSFUL;
 }
 
 /* PCI interrupt mapping */
@@ -318,14 +273,15 @@ static int rcar_pci_setup(int nr, struct pci_sys_data *sys)
 	pci_add_resource(&sys->resources, &priv->io_res);
 	pci_add_resource(&sys->resources, &priv->mem_res);
 
-	/* Setup bus number based on platform device id */
-	sys->busnr = to_platform_device(priv->dev)->id;
+	/* Setup bus number based on platform device id / of bus-range */
+	sys->busnr = priv->busnr;
 	return 1;
 }
 
 static struct pci_ops rcar_pci_ops = {
-	.read	= rcar_pci_read_config,
-	.write	= rcar_pci_write_config,
+	.map_bus = rcar_pci_cfg_base,
+	.read	= pci_generic_config_read,
+	.write	= pci_generic_config_write,
 };
 
 static int rcar_pci_probe(struct platform_device *pdev)
@@ -344,6 +300,9 @@ static int rcar_pci_probe(struct platform_device *pdev)
 	mem_res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	if (!mem_res || !mem_res->start)
 		return -ENODEV;
+
+	if (mem_res->start & 0xFFFF)
+		return -EINVAL;
 
 	priv = devm_kzalloc(&pdev->dev,
 			    sizeof(struct rcar_pci_priv), GFP_KERNEL);
@@ -372,6 +331,23 @@ static int rcar_pci_probe(struct platform_device *pdev)
 
 	priv->window_size = SZ_1G;
 
+	if (pdev->dev.of_node) {
+		struct resource busnr;
+		int ret;
+
+		ret = of_pci_parse_bus_range(pdev->dev.of_node, &busnr);
+		if (ret < 0) {
+			dev_err(&pdev->dev, "failed to parse bus-range\n");
+			return ret;
+		}
+
+		priv->busnr = busnr.start;
+		if (busnr.end != busnr.start)
+			dev_warn(&pdev->dev, "only one bus number supported\n");
+	} else {
+		priv->busnr = pdev->id;
+	}
+
 	hw_private[0] = priv;
 	memset(&hw, 0, sizeof(hw));
 	hw.nr_controllers = ARRAY_SIZE(hw_private);
@@ -383,11 +359,19 @@ static int rcar_pci_probe(struct platform_device *pdev)
 	return 0;
 }
 
+static struct of_device_id rcar_pci_of_match[] = {
+	{ .compatible = "renesas,pci-r8a7790", },
+	{ .compatible = "renesas,pci-r8a7791", },
+	{ },
+};
+
+MODULE_DEVICE_TABLE(of, rcar_pci_of_match);
+
 static struct platform_driver rcar_pci_driver = {
 	.driver = {
 		.name = "pci-rcar-gen2",
-		.owner = THIS_MODULE,
 		.suppress_bind_attrs = true,
+		.of_match_table = rcar_pci_of_match,
 	},
 	.probe = rcar_pci_probe,
 };

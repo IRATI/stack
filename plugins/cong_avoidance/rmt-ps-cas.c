@@ -122,16 +122,6 @@ struct cas_rmt_queue * cas_rmt_queue_find(struct cas_rmt_ps_data * data,
 }
 
 
-static void cas_max_q_policy_tx(struct rmt_ps *      ps,
-                                struct pdu *         pdu,
-                                struct rmt_n1_port * port)
-{  }
-
-static void cas_max_q_policy_rx(struct rmt_ps *      ps,
-                                struct sdu *         sdu,
-                                struct rmt_n1_port * port)
-{  }
-
 static void cas_rmt_q_monitor_policy_tx_common(struct rmt_ps *      ps,
                                                struct pdu *         pdu,
                                                struct rmt_n1_port * port,
@@ -269,6 +259,7 @@ static void cas_rmt_q_monitor_policy_tx_deq(struct rmt_ps *      ps,
                                             struct pdu *         pdu,
                                             struct rmt_n1_port * port)
 { return cas_rmt_q_monitor_policy_tx_common(ps, pdu, port, false); }
+
 
 static struct pdu *
 cas_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
@@ -410,29 +401,6 @@ static int cas_rmt_scheduling_destroy_policy_tx(struct rmt_ps *      ps,
         return -1;
 }
 
-static int rmt_ps_set_policy_set_param(struct ps_base * bps,
-                                       const char    * name,
-                                       const char    * value)
-{
-        struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
-
-        (void) ps;
-
-        if (!name) {
-                LOG_ERR("Null parameter name");
-                return -1;
-        }
-
-        if (!value) {
-                LOG_ERR("Null parameter value");
-                return -1;
-        }
-
-        LOG_ERR("No such parameter to set");
-
-        return -1;
-}
-
 static struct ps_base *
 rmt_ps_cas_create(struct rina_component * component)
 {
@@ -444,17 +412,17 @@ rmt_ps_cas_create(struct rina_component * component)
                 return NULL;
         }
 
-        ps->base.set_policy_set_param = rmt_ps_set_policy_set_param;
+        ps->base.set_policy_set_param = NULL; /* default */
         ps->dm = rmt;
 
         hash_init(data->queues);
         ps->priv = data;
 
-        ps->max_q_policy_tx = cas_max_q_policy_tx;
-        ps->max_q_policy_rx = cas_max_q_policy_rx;
+        ps->max_q_policy_tx = NULL; /* default (== NULL) */
+        ps->max_q_policy_rx = NULL; /* default (== NULL) */
         ps->rmt_q_monitor_policy_tx_enq = cas_rmt_q_monitor_policy_tx_enq;
         ps->rmt_q_monitor_policy_tx_deq = cas_rmt_q_monitor_policy_tx_deq;
-        ps->rmt_q_monitor_policy_rx = NULL;
+        ps->rmt_q_monitor_policy_rx = NULL; /* default (== NULL) */
         ps->rmt_next_scheduled_policy_tx     = cas_rmt_next_scheduled_policy_tx;
         ps->rmt_enqueue_scheduling_policy_tx = cas_rmt_enqueue_scheduling_policy_tx;
         ps->rmt_requeue_scheduling_policy_tx = cas_rmt_requeue_scheduling_policy_tx;

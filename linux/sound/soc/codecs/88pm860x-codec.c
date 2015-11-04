@@ -146,7 +146,7 @@ struct pm860x_priv {
 	struct pm860x_det	det;
 
 	int			irq[4];
-	unsigned char		name[4][MAX_NAME_LEN];
+	unsigned char		name[4][MAX_NAME_LEN+1];
 };
 
 /* -9450dB to 0dB in 150dB steps ( mute instead of -9450dB) */
@@ -276,7 +276,7 @@ static int snd_soc_get_volsw_2r_st(struct snd_kcontrol *kcontrol,
 {
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	unsigned int reg = mc->reg;
 	unsigned int reg2 = mc->rreg;
 	int val[2], val2[2], i;
@@ -300,7 +300,7 @@ static int snd_soc_put_volsw_2r_st(struct snd_kcontrol *kcontrol,
 {
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	unsigned int reg = mc->reg;
 	unsigned int reg2 = mc->rreg;
 	int err;
@@ -333,7 +333,7 @@ static int snd_soc_get_volsw_2r_out(struct snd_kcontrol *kcontrol,
 {
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	unsigned int reg = mc->reg;
 	unsigned int reg2 = mc->rreg;
 	unsigned int shift = mc->shift;
@@ -353,7 +353,7 @@ static int snd_soc_put_volsw_2r_out(struct snd_kcontrol *kcontrol,
 {
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	unsigned int reg = mc->reg;
 	unsigned int reg2 = mc->rreg;
 	unsigned int shift = mc->shift;
@@ -386,7 +386,7 @@ static int snd_soc_put_volsw_2r_out(struct snd_kcontrol *kcontrol,
 static int pm860x_rsync_event(struct snd_soc_dapm_widget *w,
 			      struct snd_kcontrol *kcontrol, int event)
 {
-	struct snd_soc_codec *codec = w->codec;
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 
 	/*
 	 * In order to avoid current on the load, mute power-on and power-off
@@ -403,7 +403,7 @@ static int pm860x_rsync_event(struct snd_soc_dapm_widget *w,
 static int pm860x_dac_event(struct snd_soc_dapm_widget *w,
 			    struct snd_kcontrol *kcontrol, int event)
 {
-	struct snd_soc_codec *codec = w->codec;
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	unsigned int dac = 0;
 	int data;
 
@@ -945,11 +945,11 @@ static int pm860x_pcm_hw_params(struct snd_pcm_substream *substream,
 	unsigned char inf = 0, mask = 0;
 
 	/* bit size */
-	switch (params_format(params)) {
-	case SNDRV_PCM_FORMAT_S16_LE:
+	switch (params_width(params)) {
+	case 16:
 		inf &= ~PCM_INF2_18WL;
 		break;
-	case SNDRV_PCM_FORMAT_S18_3LE:
+	case 18:
 		inf |= PCM_INF2_18WL;
 		break;
 	default:
@@ -1044,11 +1044,11 @@ static int pm860x_i2s_hw_params(struct snd_pcm_substream *substream,
 	unsigned char inf;
 
 	/* bit size */
-	switch (params_format(params)) {
-	case SNDRV_PCM_FORMAT_S16_LE:
+	switch (params_width(params)) {
+	case 16:
 		inf = 0;
 		break;
-	case SNDRV_PCM_FORMAT_S18_3LE:
+	case 18:
 		inf = PCM_INF2_18WL;
 		break;
 	default:
@@ -1327,10 +1327,6 @@ static int pm860x_probe(struct snd_soc_codec *codec)
 
 	pm860x->codec = codec;
 
-	ret = snd_soc_codec_set_cache_io(codec, pm860x->regmap);
-	if (ret)
-		return ret;
-
 	for (i = 0; i < 4; i++) {
 		ret = request_threaded_irq(pm860x->irq[i], NULL,
 					   pm860x_codec_handler, IRQF_ONESHOT,
@@ -1340,8 +1336,6 @@ static int pm860x_probe(struct snd_soc_codec *codec)
 			goto out;
 		}
 	}
-
-	pm860x_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 
 	return 0;
 
@@ -1358,14 +1352,21 @@ static int pm860x_remove(struct snd_soc_codec *codec)
 
 	for (i = 3; i >= 0; i--)
 		free_irq(pm860x->irq[i], pm860x);
-	pm860x_set_bias_level(codec, SND_SOC_BIAS_OFF);
 	return 0;
+}
+
+static struct regmap *pm860x_get_regmap(struct device *dev)
+{
+	struct pm860x_priv *pm860x = dev_get_drvdata(dev);
+
+	return pm860x->regmap;
 }
 
 static struct snd_soc_codec_driver soc_codec_dev_pm860x = {
 	.probe		= pm860x_probe,
 	.remove		= pm860x_remove,
 	.set_bias_level	= pm860x_set_bias_level,
+	.get_regmap	= pm860x_get_regmap,
 
 	.controls = pm860x_snd_controls,
 	.num_controls = ARRAY_SIZE(pm860x_snd_controls),
@@ -1422,7 +1423,6 @@ static int pm860x_codec_remove(struct platform_device *pdev)
 static struct platform_driver pm860x_codec_driver = {
 	.driver	= {
 		.name	= "88pm860x-codec",
-		.owner	= THIS_MODULE,
 	},
 	.probe	= pm860x_codec_probe,
 	.remove	= pm860x_codec_remove,

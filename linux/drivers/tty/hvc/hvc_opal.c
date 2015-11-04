@@ -41,7 +41,7 @@
 
 static const char hvc_opal_name[] = "hvc_opal";
 
-static struct of_device_id hvc_opal_match[] = {
+static const struct of_device_id hvc_opal_match[] = {
 	{ .name = "serial", .compatible = "ibm,opal-console-raw" },
 	{ .name = "serial", .compatible = "ibm,opal-console-hvsi" },
 	{ },
@@ -262,7 +262,6 @@ static struct platform_driver hvc_opal_driver = {
 	.remove		= hvc_opal_remove,
 	.driver		= {
 		.name	= hvc_opal_name,
-		.owner	= THIS_MODULE,
 		.of_match_table	= hvc_opal_match,
 	}
 };
@@ -342,22 +341,13 @@ static void udbg_init_opal_common(void)
 
 void __init hvc_opal_init_early(void)
 {
-	struct device_node *stdout_node = NULL;
+	struct device_node *stdout_node = of_node_get(of_stdout);
 	const __be32 *termno;
-	const char *name = NULL;
 	const struct hv_ops *ops;
 	u32 index;
 
-	/* find the boot console from /chosen/stdout */
-	if (of_chosen)
-		name = of_get_property(of_chosen, "linux,stdout-path", NULL);
-	if (name) {
-		stdout_node = of_find_node_by_path(name);
-		if (!stdout_node) {
-			pr_err("hvc_opal: Failed to locate default console!\n");
-			return;
-		}
-	} else {
+	/* If the console wasn't in /chosen, try /ibm,opal */
+	if (!stdout_node) {
 		struct device_node *opal, *np;
 
 		/* Current OPAL takeover doesn't provide the stdout

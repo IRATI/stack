@@ -23,7 +23,6 @@
 
 #include "common.h"
 #include "du.h"
-#include "qos.h"
 #include "ipcp-instances.h"
 #include "kfa.h"
 #include "connection.h"
@@ -87,12 +86,8 @@ address_t               efcp_dst_addr(struct efcp * efcp);
 qos_id_t                efcp_qos_id(struct efcp * efcp);
 port_id_t               efcp_port_id(struct efcp * efcp);
 
-int efcp_container_select_policy_set(struct efcp_container * container,
-                                     const string_t * path,
-                                     const string_t * name);
+struct dt *             efcp_dt(struct efcp * efcp);
 
-int efcp_container_set_policy_set_param(struct efcp_container * container,
-                                        const char * path, const char * name,
-                                        const char * value);
+struct efcp_imap * efcp_container_get_instances(struct efcp_container *efcpc);
 
 #endif

@@ -133,6 +133,47 @@ PKG_CHECK_MODULES(LIBPROTOBUF, [protobuf >= $LIBPROTOBUF_MIN_VERSION],, [
 AC_PATH_PROG([PERL], [perl], [no])
 AM_CONDITIONAL([HAVE_PERL], [ test "$PERL" != "no" ])
 
+build_bindings=yes
+build_bindings_java=yes
+AS_IF([test "$build_bindings" = "yes"],[
+    AX_PKG_SWIG([2.0],[
+        #
+        # SWIG version > 2.0.4 && < 2.0.8 have a bug preventing correct
+        # bindings generation
+        #
+
+        SWIG_VERSION=`$SWIG -version 2>&1 | $GREP 'SWIG Version' | $SED 's/.*\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/g'`
+        AX_COMPARE_VERSION($SWIG_VERSION, le, [2.0.4],,[
+            AX_COMPARE_VERSION($SWIG_VERSION, ge, [2.0.8],,[
+                AC_MSG_ERROR([SWIG versions in 2.0.4, ..., 2.0.8 range will not compile])
+            ])
+        ])
+    ],[
+        AC_MSG_ERROR([Your system lacks of SWIG (>2.0) support, bindings generation is not possible])
+    ])
+])
+
+AS_IF([test "$build_bindings_java" = "yes"],[
+    AX_PROG_JAVAC
+    AX_JNI_INCLUDE_DIR
+
+    # FIXME: Ugly as hell ...
+    JNI_CPPFLAGS=""
+    for JNI_INCLUDE_DIR in $JNI_INCLUDE_DIRS ;
+    do
+        JNI_CPPFLAGS="$JNI_CPPFLAGS -I$JNI_INCLUDE_DIR" ;
+    done
+    AC_SUBST(JNI_CPPFLAGS, $JNI_CPPFLAGS)
+    AX_PROG_JAR
+])
+AM_CONDITIONAL(BUILD_BINDINGS_JAVA, [test $build_bindings_java = yes])
+
+AC_PATH_PROG([MVN],[mvn],[])
+AS_IF([test x"$MVN" = x""],[
+    AC_MSG_WARN([Your system lacks of maven support, Java parts will not be built/installed])
+])
+AM_CONDITIONAL(BUILD_MAVEN_SUPPORT, [test x"$MVN" != x""])
+
 AC_CONFIG_FILES([
     Makefile
 
@@ -150,6 +191,9 @@ AC_CONFIG_FILES([
     src/ipcm/addons/ma/ribs/Makefile
     src/ipcm/include/Makefile
     src/ipcm/include/ipcm/Makefile
+
+    wrap/Makefile
+    wrap/java/Makefile
 
     doc/Makefile
     tools/Makefile

@@ -504,33 +504,11 @@ static void pvscsi_setup_all_rings(const struct pvscsi_adapter *adapter)
 	}
 }
 
-static int pvscsi_change_queue_depth(struct scsi_device *sdev,
-				     int qdepth,
-				     int reason)
+static int pvscsi_change_queue_depth(struct scsi_device *sdev, int qdepth)
 {
-	int max_depth;
-	struct Scsi_Host *shost = sdev->host;
-
-	if (reason != SCSI_QDEPTH_DEFAULT)
-		/*
-		 * We support only changing default.
-		 */
-		return -EOPNOTSUPP;
-
-	max_depth = shost->can_queue;
 	if (!sdev->tagged_supported)
-		max_depth = 1;
-	if (qdepth > max_depth)
-		qdepth = max_depth;
-	scsi_adjust_queue_depth(sdev, scsi_get_tag_type(sdev), qdepth);
-
-	if (sdev->inquiry_len > 7)
-		sdev_printk(KERN_INFO, sdev,
-			    "qdepth(%d), tagged(%d), simple(%d), ordered(%d), scsi_level(%d), cmd_que(%d)\n",
-			    sdev->queue_depth, sdev->tagged_supported,
-			    sdev->simple_tags, sdev->ordered_tags,
-			    sdev->scsi_level, (sdev->inquiry[7] & 2) >> 1);
-	return sdev->queue_depth;
+		qdepth = 1;
+	return scsi_change_queue_depth(sdev, qdepth);
 }
 
 /*
@@ -723,10 +701,6 @@ static int pvscsi_queue_ring(struct pvscsi_adapter *adapter,
 	memcpy(e->cdb, cmd->cmnd, e->cdbLen);
 
 	e->tag = SIMPLE_QUEUE_TAG;
-	if (sdev->tagged_supported &&
-	    (cmd->tag == HEAD_OF_QUEUE_TAG ||
-	     cmd->tag == ORDERED_QUEUE_TAG))
-		e->tag = cmd->tag;
 
 	if (cmd->sc_data_direction == DMA_FROM_DEVICE)
 		e->flags = PVSCSI_FLAG_CMD_DIR_TOHOST;
@@ -1194,7 +1168,7 @@ static int pvscsi_setup_msix(const struct pvscsi_adapter *adapter,
 	struct msix_entry entry = { 0, PVSCSI_VECTOR_COMPLETION };
 	int ret;
 
-	ret = pci_enable_msix(adapter->dev, &entry, 1);
+	ret = pci_enable_msix_exact(adapter->dev, &entry, 1);
 	if (ret)
 		return ret;
 

@@ -1,0 +1,11 @@
+{
+        "PluginName": "sm-example",
+        "PluginVersion": "1",
+        "PolicySets" : [
+                {
+                        "Name": "example",
+                        "Component": "security-manager",
+                        "Version" : "1"
+                }
+        ]
+}

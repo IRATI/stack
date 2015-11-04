@@ -11,7 +11,7 @@ obj-$(CONFIG_RINA) +=				\
 	rds/					\
 	core.o personality.o			\
 	rnl-utils.o rnl-workarounds.o rnl.o	\
-	buffer.o qos.o pci.o pdu.o sdu.o du.o	\
+	buffer.o pci.o pdu.o sdu.o du.o	        \
 	serdes.o pdu-ser.o du-protection.o	\
 	ipcp-utils.o				\
 	connection.o common.o policies.o	\
@@ -23,13 +23,19 @@ obj-y +=					\
 obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
 	rina-personality-default.o
 
+# TODO rmt-ps-common will be removed soon by a different patch
 rina-personality-default-y :=					\
 	ipcp-factories.o ipcp-instances.o			\
 	cidm.o dt.o dt-utils.o dtcp.o dtp.o efcp-utils.o efcp.o	\
 	pff.o rmt.o						\
 	pim.o pidm.o kfa-utils.o kfa.o				\
 	kipcm-utils.o kipcm.o					\
-	default.o ps-factory.o
+	default.o ps-factory.o					\
+	rmt-ps-common.o						\
+	rmt-ps-default.o					\
+	dtp-ps-default.o					\
+	dtcp-ps-default.o                       		\
+	pff-ps-default.o
 
 ifeq  ($(CONFIG_RINA_PERSONALITY_DEFAULT),m)
 rina-personality-default-y +=			\
@@ -40,14 +46,7 @@ obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
 	rina-default-plugin.o
 
 rina-default-plugin-y :=			\
-	default-plugin.o			\
-	rmt-ps-common.o				\
-	rmt-ps-default.o			\
-	dtp-ps-common.o				\
-	dtp-ps-default.o			\
-	dtcp-ps-common.o 		        \
-	dtcp-ps-default.o                       \
-	pff-ps-default.o
+	default-plugin.o
 
 obj-$(CONFIG_VMPI) += vmpi/
 obj-$(CONFIG_RINA) += ipcps/

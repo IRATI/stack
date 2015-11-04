@@ -70,7 +70,8 @@ static void ima_show_template_data_ascii(struct seq_file *m,
 					 enum data_formats datafmt,
 					 struct ima_field_data *field_data)
 {
-	u8 *buf_ptr = field_data->data, buflen = field_data->len;
+	u8 *buf_ptr = field_data->data;
+	u32 buflen = field_data->len;
 
 	switch (datafmt) {
 	case DATA_FMT_DIGEST_WITH_ALGO:
@@ -284,7 +285,7 @@ static int ima_eventname_init_common(struct integrity_iint_cache *iint,
 	}
 
 	if (file) {
-		cur_filename = file->f_dentry->d_name.name;
+		cur_filename = file->f_path.dentry->d_name.name;
 		cur_filename_len = strlen(cur_filename);
 	} else
 		/*

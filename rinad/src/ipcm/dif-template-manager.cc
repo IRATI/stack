@@ -177,7 +177,15 @@ const std::string DIFTemplateManager::DEFAULT_TEMPLATE_NAME = "default.dif";
 
 DIFTemplateManager::DIFTemplateManager(const std::string& folder)
 {
-	folder_name = folder;
+	stringstream ss;
+	std::string::size_type pos = folder.rfind("/");
+	if (pos == std::string::npos) {
+		ss << ".";
+	} else {
+		ss << folder.substr(0, pos);
+	}
+	folder_name = ss.str();
+	LOG_INFO("Template folder: %s", folder_name.c_str());
 	default_template = 0;
 
 	//load current templates from template folder
@@ -203,7 +211,11 @@ DIFTemplateManager::~DIFTemplateManager()
 		delete template_monitor;
 	}
 
-	//TODO destroy all DIF templates in the map
+	// Destroy all DIF templates in the map
+	for (std::map<std::string, rinad::DIFTemplate *>::iterator it = dif_templates.begin();
+			it != dif_templates.end(); ++it){
+		delete it->second;
+	}
 }
 
 int DIFTemplateManager::load_initial_dif_templates()

@@ -68,6 +68,16 @@ struct policy_set_list {
         struct list_head head;
 };
 
+#define PS_SEL_TRANS_PENDING            0x02
+#define PS_SEL_TRANS_COMMITTED          0x09
+#define PS_SEL_TRANS_ABORTED            0x10
+
+struct ps_select_transaction {
+        unsigned int state;
+        struct ps_base *candidate_ps;
+        struct ps_factory *candidate_ps_factory;
+};
+
 int                      ps_publish(struct policy_set_list * list,
                                     struct ps_factory * factory);
 struct ps_factory * ps_lookup(struct policy_set_list * list,
@@ -79,16 +89,22 @@ void rina_component_init(struct rina_component * comp);
 
 void rina_component_fini(struct rina_component * comp);
 
-int base_select_policy_set(struct rina_component * comp,
-                           struct policy_set_list *list,
-                           const string_t * name);
+void base_select_policy_set_start(struct rina_component * comp,
+                                  struct ps_select_transaction * trans,
+                                  struct policy_set_list * list,
+                                  const string_t * name);
+
+void base_select_policy_set_finish(struct rina_component * comp,
+                                   struct ps_select_transaction * trans);
 
 int base_set_policy_set_param(struct rina_component *comp,
                               const char * path,
                               const char * name,
                               const char * value);
 
-void parse_component_id(const string_t *path, size_t *cmplen,
-                        size_t *offset);
+void ps_factory_parse_component_id(const string_t *path, size_t *cmplen,
+				   size_t *offset);
+
+void ps_factory_nop_policy(void);
 
 #endif

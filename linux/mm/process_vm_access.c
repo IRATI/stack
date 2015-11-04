@@ -46,11 +46,7 @@ static int process_vm_rw_pages(struct page **pages,
 			copy = len;
 
 		if (vm_write) {
-			if (copy > iov_iter_count(iter))
-				copy = iov_iter_count(iter);
-			copied = iov_iter_copy_from_user(page, iter,
-					offset, copy);
-			iov_iter_advance(iter, copied);
+			copied = copy_page_from_iter(page, offset, copy, iter);
 			set_page_dirty_lock(page);
 		} else {
 			copied = copy_page_to_iter(page, offset, copy, iter);
@@ -103,11 +99,8 @@ static int process_vm_rw_single_vec(unsigned long addr,
 		size_t bytes;
 
 		/* Get the pages we're interested in */
-		down_read(&mm->mmap_sem);
-		pages = get_user_pages(task, mm, pa, pages,
-				      vm_write, 0, process_pages, NULL);
-		up_read(&mm->mmap_sem);
-
+		pages = get_user_pages_unlocked(task, mm, pa, pages,
+						vm_write, 0, process_pages);
 		if (pages <= 0)
 			return -EFAULT;
 
@@ -264,21 +257,17 @@ static ssize_t process_vm_rw(pid_t pid,
 	struct iovec *iov_r = iovstack_r;
 	struct iov_iter iter;
 	ssize_t rc;
+	int dir = vm_write ? WRITE : READ;
 
 	if (flags != 0)
 		return -EINVAL;
 
 	/* Check iovecs */
-	if (vm_write)
-		rc = rw_copy_check_uvector(WRITE, lvec, liovcnt, UIO_FASTIOV,
-					   iovstack_l, &iov_l);
-	else
-		rc = rw_copy_check_uvector(READ, lvec, liovcnt, UIO_FASTIOV,
-					   iovstack_l, &iov_l);
-	if (rc <= 0)
+	rc = import_iovec(dir, lvec, liovcnt, UIO_FASTIOV, &iov_l, &iter);
+	if (rc < 0)
+		return rc;
+	if (!iov_iter_count(&iter))
 		goto free_iovecs;
-
-	iov_iter_init(&iter, iov_l, liovcnt, rc, 0);
 
 	rc = rw_copy_check_uvector(CHECK_IOVEC_ONLY, rvec, riovcnt, UIO_FASTIOV,
 				   iovstack_r, &iov_r);
@@ -290,8 +279,7 @@ static ssize_t process_vm_rw(pid_t pid,
 free_iovecs:
 	if (iov_r != iovstack_r)
 		kfree(iov_r);
-	if (iov_l != iovstack_l)
-		kfree(iov_l);
+	kfree(iov_l);
 
 	return rc;
 }
@@ -327,21 +315,16 @@ compat_process_vm_rw(compat_pid_t pid,
 	struct iovec *iov_r = iovstack_r;
 	struct iov_iter iter;
 	ssize_t rc = -EFAULT;
+	int dir = vm_write ? WRITE : READ;
 
 	if (flags != 0)
 		return -EINVAL;
 
-	if (vm_write)
-		rc = compat_rw_copy_check_uvector(WRITE, lvec, liovcnt,
-						  UIO_FASTIOV, iovstack_l,
-						  &iov_l);
-	else
-		rc = compat_rw_copy_check_uvector(READ, lvec, liovcnt,
-						  UIO_FASTIOV, iovstack_l,
-						  &iov_l);
-	if (rc <= 0)
+	rc = compat_import_iovec(dir, lvec, liovcnt, UIO_FASTIOV, &iov_l, &iter);
+	if (rc < 0)
+		return rc;
+	if (!iov_iter_count(&iter))
 		goto free_iovecs;
-	iov_iter_init(&iter, iov_l, liovcnt, rc, 0);
 	rc = compat_rw_copy_check_uvector(CHECK_IOVEC_ONLY, rvec, riovcnt,
 					  UIO_FASTIOV, iovstack_r,
 					  &iov_r);
@@ -353,8 +336,7 @@ compat_process_vm_rw(compat_pid_t pid,
 free_iovecs:
 	if (iov_r != iovstack_r)
 		kfree(iov_r);
-	if (iov_l != iovstack_l)
-		kfree(iov_l);
+	kfree(iov_l);
 	return rc;
 }
 

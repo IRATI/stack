@@ -83,8 +83,6 @@
  */
 #define IOREMAP_MAX_ORDER	24
 
-#define CONSISTENT_END		(0xffe00000UL)
-
 #else /* CONFIG_MMU */
 
 /*
@@ -93,9 +91,7 @@
  * of this define that was meant to.
  * Fortunately, there is no reference for this in noMMU mode, for now.
  */
-#ifndef TASK_SIZE
-#define TASK_SIZE		(CONFIG_DRAM_SIZE)
-#endif
+#define TASK_SIZE		UL(0xffffffff)
 
 #ifndef TASK_UNMAPPED_BASE
 #define TASK_UNMAPPED_BASE	UL(0x00000000)
@@ -152,13 +148,11 @@
 
 /*
  * PLAT_PHYS_OFFSET is the offset (from zero) of the start of physical
- * memory.  This is used for XIP and NoMMU kernels, or by kernels which
- * have their own mach/memory.h.  Assembly code must always use
+ * memory.  This is used for XIP and NoMMU kernels, and on platforms that don't
+ * have CONFIG_ARM_PATCH_PHYS_VIRT. Assembly code must always use
  * PLAT_PHYS_OFFSET and not PHYS_OFFSET.
  */
-#ifndef PLAT_PHYS_OFFSET
 #define PLAT_PHYS_OFFSET	UL(CONFIG_PHYS_OFFSET)
-#endif
 
 #ifndef __ASSEMBLY__
 
@@ -280,11 +274,13 @@ static inline unsigned long __phys_to_virt(phys_addr_t x)
  * translation for translating DMA addresses.  Use the driver
  * DMA support - see dma-mapping.h.
  */
+#define virt_to_phys virt_to_phys
 static inline phys_addr_t virt_to_phys(const volatile void *x)
 {
 	return __virt_to_phys((unsigned long)(x));
 }
 
+#define phys_to_virt phys_to_virt
 static inline void *phys_to_virt(phys_addr_t x)
 {
 	return (void *)__phys_to_virt(x);
@@ -328,11 +324,13 @@ static inline phys_addr_t __virt_to_idmap(unsigned long x)
 #endif
 
 #ifdef CONFIG_VIRT_TO_BUS
+#define virt_to_bus virt_to_bus
 static inline __deprecated unsigned long virt_to_bus(void *x)
 {
 	return __virt_to_bus((unsigned long)x);
 }
 
+#define bus_to_virt bus_to_virt
 static inline __deprecated void *bus_to_virt(unsigned long x)
 {
 	return (void *)__bus_to_virt(x);

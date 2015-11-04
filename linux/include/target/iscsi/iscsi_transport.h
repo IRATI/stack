@@ -1,6 +1,6 @@
 #include <linux/module.h>
 #include <linux/list.h>
-#include "../../../drivers/target/iscsi/iscsi_target_core.h"
+#include "iscsi_target_core.h"
 
 struct iscsit_transport {
 #define ISCSIT_TRANSPORT_NAME	16
@@ -70,7 +70,8 @@ extern void iscsit_build_nopin_rsp(struct iscsi_cmd *, struct iscsi_conn *,
 extern void iscsit_build_task_mgt_rsp(struct iscsi_cmd *, struct iscsi_conn *,
 				struct iscsi_tm_rsp *);
 extern int iscsit_build_text_rsp(struct iscsi_cmd *, struct iscsi_conn *,
-				struct iscsi_text_rsp *);
+				struct iscsi_text_rsp *,
+				enum iscsit_transport_type);
 extern void iscsit_build_reject(struct iscsi_cmd *, struct iscsi_conn *,
 				struct iscsi_reject *);
 extern int iscsit_build_logout_rsp(struct iscsi_cmd *, struct iscsi_conn *,

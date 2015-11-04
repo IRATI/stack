@@ -6,7 +6,7 @@
         "consolePort": 32766,
 	"pluginsPaths": [
 		"/usr/local/irati/lib/rinad/ipcp",
-		"/lib/modules/3.15.0-irati/extra"
+		"/lib/modules/4.1.10-irati/extra"
 	]
     },
     "applicationToDIFMappings": [

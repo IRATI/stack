@@ -89,7 +89,7 @@ static int crush_decode_tree_bucket(void **p, void *end,
 {
 	int j;
 	dout("crush_decode_tree_bucket %p to %p\n", *p, end);
-	ceph_decode_32_safe(p, end, b->num_nodes, bad);
+	ceph_decode_8_safe(p, end, b->num_nodes, bad);
 	b->node_weights = kcalloc(b->num_nodes, sizeof(u32), GFP_NOFS);
 	if (b->node_weights == NULL)
 		return -ENOMEM;
@@ -117,6 +117,22 @@ static int crush_decode_straw_bucket(void **p, void *end,
 		b->item_weights[j] = ceph_decode_32(p);
 		b->straws[j] = ceph_decode_32(p);
 	}
+	return 0;
+bad:
+	return -EINVAL;
+}
+
+static int crush_decode_straw2_bucket(void **p, void *end,
+				      struct crush_bucket_straw2 *b)
+{
+	int j;
+	dout("crush_decode_straw2_bucket %p to %p\n", *p, end);
+	b->item_weights = kcalloc(b->h.size, sizeof(u32), GFP_NOFS);
+	if (b->item_weights == NULL)
+		return -ENOMEM;
+	ceph_decode_need(p, end, b->h.size * sizeof(u32), bad);
+	for (j = 0; j < b->h.size; j++)
+		b->item_weights[j] = ceph_decode_32(p);
 	return 0;
 bad:
 	return -EINVAL;
@@ -204,6 +220,9 @@ static struct crush_map *crush_decode(void *pbyval, void *end)
 		case CRUSH_BUCKET_STRAW:
 			size = sizeof(struct crush_bucket_straw);
 			break;
+		case CRUSH_BUCKET_STRAW2:
+			size = sizeof(struct crush_bucket_straw2);
+			break;
 		default:
 			err = -EINVAL;
 			goto bad;
@@ -258,6 +277,12 @@ static struct crush_map *crush_decode(void *pbyval, void *end)
 		case CRUSH_BUCKET_STRAW:
 			err = crush_decode_straw_bucket(p, end,
 				(struct crush_bucket_straw *)b);
+			if (err < 0)
+				goto bad;
+			break;
+		case CRUSH_BUCKET_STRAW2:
+			err = crush_decode_straw2_bucket(p, end,
+				(struct crush_bucket_straw2 *)b);
 			if (err < 0)
 				goto bad;
 			break;
@@ -521,11 +546,11 @@ static int decode_pool(void **p, void *end, struct ceph_pg_pool_info *pi)
 	ev = ceph_decode_8(p);  /* encoding version */
 	cv = ceph_decode_8(p); /* compat version */
 	if (ev < 5) {
-		pr_warning("got v %d < 5 cv %d of ceph_pg_pool\n", ev, cv);
+		pr_warn("got v %d < 5 cv %d of ceph_pg_pool\n", ev, cv);
 		return -EINVAL;
 	}
 	if (cv > 9) {
-		pr_warning("got v %d cv %d > 9 of ceph_pg_pool\n", ev, cv);
+		pr_warn("got v %d cv %d > 9 of ceph_pg_pool\n", ev, cv);
 		return -EINVAL;
 	}
 	len = ceph_decode_32(p);
@@ -671,25 +696,25 @@ static int osdmap_set_max_osd(struct ceph_osdmap *map, int max)
 	int i;
 
 	state = krealloc(map->osd_state, max*sizeof(*state), GFP_NOFS);
-	weight = krealloc(map->osd_weight, max*sizeof(*weight), GFP_NOFS);
-	addr = krealloc(map->osd_addr, max*sizeof(*addr), GFP_NOFS);
-	if (!state || !weight || !addr) {
-		kfree(state);
-		kfree(weight);
-		kfree(addr);
-
+	if (!state)
 		return -ENOMEM;
-	}
+	map->osd_state = state;
+
+	weight = krealloc(map->osd_weight, max*sizeof(*weight), GFP_NOFS);
+	if (!weight)
+		return -ENOMEM;
+	map->osd_weight = weight;
+
+	addr = krealloc(map->osd_addr, max*sizeof(*addr), GFP_NOFS);
+	if (!addr)
+		return -ENOMEM;
+	map->osd_addr = addr;
 
 	for (i = map->max_osd; i < max; i++) {
-		state[i] = 0;
-		weight[i] = CEPH_OSD_OUT;
-		memset(addr + i, 0, sizeof(*addr));
+		map->osd_state[i] = 0;
+		map->osd_weight[i] = CEPH_OSD_OUT;
+		memset(map->osd_addr + i, 0, sizeof(*map->osd_addr));
 	}
-
-	map->osd_state = state;
-	map->osd_weight = weight;
-	map->osd_addr = addr;
 
 	if (map->osd_primary_affinity) {
 		u32 *affinity;
@@ -698,11 +723,11 @@ static int osdmap_set_max_osd(struct ceph_osdmap *map, int max)
 				    max*sizeof(*affinity), GFP_NOFS);
 		if (!affinity)
 			return -ENOMEM;
+		map->osd_primary_affinity = affinity;
 
 		for (i = map->max_osd; i < max; i++)
-			affinity[i] = CEPH_OSD_DEFAULT_PRIMARY_AFFINITY;
-
-		map->osd_primary_affinity = affinity;
+			map->osd_primary_affinity[i] =
+			    CEPH_OSD_DEFAULT_PRIMARY_AFFINITY;
 	}
 
 	map->max_osd = max;
@@ -729,9 +754,9 @@ static int get_osdmap_client_data_v(void **p, void *end,
 
 		ceph_decode_8_safe(p, end, struct_compat, e_inval);
 		if (struct_compat > OSDMAP_WRAPPER_COMPAT_VER) {
-			pr_warning("got v %d cv %d > %d of %s ceph_osdmap\n",
-				   struct_v, struct_compat,
-				   OSDMAP_WRAPPER_COMPAT_VER, prefix);
+			pr_warn("got v %d cv %d > %d of %s ceph_osdmap\n",
+				struct_v, struct_compat,
+				OSDMAP_WRAPPER_COMPAT_VER, prefix);
 			return -EINVAL;
 		}
 		*p += 4; /* ignore wrapper struct_len */
@@ -739,9 +764,9 @@ static int get_osdmap_client_data_v(void **p, void *end,
 		ceph_decode_8_safe(p, end, struct_v, e_inval);
 		ceph_decode_8_safe(p, end, struct_compat, e_inval);
 		if (struct_compat > OSDMAP_CLIENT_DATA_COMPAT_VER) {
-			pr_warning("got v %d cv %d > %d of %s ceph_osdmap client data\n",
-				   struct_v, struct_compat,
-				   OSDMAP_CLIENT_DATA_COMPAT_VER, prefix);
+			pr_warn("got v %d cv %d > %d of %s ceph_osdmap client data\n",
+				struct_v, struct_compat,
+				OSDMAP_CLIENT_DATA_COMPAT_VER, prefix);
 			return -EINVAL;
 		}
 		*p += 4; /* ignore client data struct_len */
@@ -751,8 +776,8 @@ static int get_osdmap_client_data_v(void **p, void *end,
 		*p -= 1;
 		ceph_decode_16_safe(p, end, version, e_inval);
 		if (version < 6) {
-			pr_warning("got v %d < 6 of %s ceph_osdmap\n", version,
-				   prefix);
+			pr_warn("got v %d < 6 of %s ceph_osdmap\n",
+				version, prefix);
 			return -EINVAL;
 		}
 

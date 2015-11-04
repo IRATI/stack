@@ -19,11 +19,6 @@
 
 #include "odm_precomp.h"
 
-#define READ_AND_CONFIG     READ_AND_CONFIG_MP
-
-#define READ_AND_CONFIG_MP(ic, txt) (ODM_ReadAndConfig##txt##ic(pDM_Odm))
-#define READ_AND_CONFIG_TC(ic, txt) (ODM_ReadAndConfig_TC##txt##ic(pDM_Odm))
-
 static u8 odm_QueryRxPwrPercentage(s8 AntPower)
 {
 	if ((AntPower <= -100) || (AntPower >= 20))
@@ -38,24 +33,23 @@ static s32 odm_SignalScaleMapping_92CSeries(struct dm_odm_t *pDM_Odm, s32 CurrSi
 {
 	s32 RetSig = 0;
 
-	if ((pDM_Odm->SupportInterface  == ODM_ITRF_USB) || (pDM_Odm->SupportInterface  == ODM_ITRF_SDIO)) {
-		if (CurrSig >= 51 && CurrSig <= 100)
-			RetSig = 100;
-		else if (CurrSig >= 41 && CurrSig <= 50)
-			RetSig = 80 + ((CurrSig - 40)*2);
-		else if (CurrSig >= 31 && CurrSig <= 40)
-			RetSig = 66 + (CurrSig - 30);
-		else if (CurrSig >= 21 && CurrSig <= 30)
-			RetSig = 54 + (CurrSig - 20);
-		else if (CurrSig >= 10 && CurrSig <= 20)
-			RetSig = 42 + (((CurrSig - 10) * 2) / 3);
-		else if (CurrSig >= 5 && CurrSig <= 9)
-			RetSig = 22 + (((CurrSig - 5) * 3) / 2);
-		else if (CurrSig >= 1 && CurrSig <= 4)
-			RetSig = 6 + (((CurrSig - 1) * 3) / 2);
-		else
-			RetSig = CurrSig;
-	}
+	if (CurrSig >= 51 && CurrSig <= 100)
+		RetSig = 100;
+	else if (CurrSig >= 41 && CurrSig <= 50)
+		RetSig = 80 + ((CurrSig - 40)*2);
+	else if (CurrSig >= 31 && CurrSig <= 40)
+		RetSig = 66 + (CurrSig - 30);
+	else if (CurrSig >= 21 && CurrSig <= 30)
+		RetSig = 54 + (CurrSig - 20);
+	else if (CurrSig >= 10 && CurrSig <= 20)
+		RetSig = 42 + (((CurrSig - 10) * 2) / 3);
+	else if (CurrSig >= 5 && CurrSig <= 9)
+		RetSig = 22 + (((CurrSig - 5) * 3) / 2);
+	else if (CurrSig >= 1 && CurrSig <= 4)
+		RetSig = 6 + (((CurrSig - 1) * 3) / 2);
+	else
+		RetSig = CurrSig;
+
 	return RetSig;
 }
 
@@ -91,7 +85,7 @@ odm_EVMdbToPercentage(
 }
 
 static void odm_RxPhyStatus92CSeries_Parsing(struct dm_odm_t *pDM_Odm,
-					     struct odm_phy_info *pPhyInfo,
+					     struct phy_info *pPhyInfo,
 					     u8 *pPhyStatus,
 					     struct odm_packet_info *pPktinfo)
 {
@@ -118,7 +112,7 @@ static void odm_RxPhyStatus92CSeries_Parsing(struct dm_odm_t *pDM_Odm,
 
 		cck_highpwr = pDM_Odm->bCckHighPower;
 
-		cck_agc_rpt =  pPhyStaRpt->cck_agc_rpt_ofdm_cfosho_a ;
+		cck_agc_rpt =  pPhyStaRpt->cck_agc_rpt_ofdm_cfosho_a;
 
 		/* The RSSI formula should be modified according to the gain table */
 		if (!cck_highpwr) {
@@ -143,16 +137,16 @@ static void odm_RxPhyStatus92CSeries_Parsing(struct dm_odm_t *pDM_Odm,
 			report = (cck_agc_rpt & 0x60)>>5;
 			switch (report) {
 			case 0x3:
-				rx_pwr_all = -46 - ((cck_agc_rpt & 0x1f)<<1) ;
+				rx_pwr_all = -46 - ((cck_agc_rpt & 0x1f)<<1);
 				break;
 			case 0x2:
 				rx_pwr_all = -26 - ((cck_agc_rpt & 0x1f)<<1);
 				break;
 			case 0x1:
-				rx_pwr_all = -12 - ((cck_agc_rpt & 0x1f)<<1) ;
+				rx_pwr_all = -12 - ((cck_agc_rpt & 0x1f)<<1);
 				break;
 			case 0x0:
-				rx_pwr_all = 16 - ((cck_agc_rpt & 0x1f)<<1) ;
+				rx_pwr_all = 16 - ((cck_agc_rpt & 0x1f)<<1);
 				break;
 			}
 		}
@@ -281,7 +275,7 @@ void odm_Init_RSSIForDM23a(struct dm_odm_t *pDM_Odm)
 }
 
 static void odm_Process_RSSIForDM(struct dm_odm_t *pDM_Odm,
-				  struct odm_phy_info *pPhyInfo,
+				  struct phy_info *pPhyInfo,
 				  struct odm_packet_info *pPktinfo)
 {
 	s32 UndecoratedSmoothedPWDB, UndecoratedSmoothedCCK;
@@ -296,7 +290,7 @@ static void odm_Process_RSSIForDM(struct dm_odm_t *pDM_Odm,
 		return;
 
 	pEntry = pDM_Odm->pODM_StaInfo[pPktinfo->StationID];
-	if (!IS_STA_VALID(pEntry))
+	if (!pEntry)
 		return;
 	if ((!pPktinfo->bPacketMatchBSSID))
 		return;
@@ -347,7 +341,8 @@ static void odm_Process_RSSIForDM(struct dm_odm_t *pDM_Odm,
 							(RSSI_Ave)) / (Rx_Smooth_Factor);
 				}
 			}
-			pEntry->rssi_stat.PacketMap = (pEntry->rssi_stat.PacketMap<<1) | BIT0;
+			pEntry->rssi_stat.PacketMap =
+				(pEntry->rssi_stat.PacketMap<<1) | BIT(0);
 		} else {
 			RSSI_Ave = pPhyInfo->RxPWDBAll;
 
@@ -377,7 +372,8 @@ static void odm_Process_RSSIForDM(struct dm_odm_t *pDM_Odm,
 			pEntry->rssi_stat.ValidBit++;
 
 		for (i = 0; i < pEntry->rssi_stat.ValidBit; i++)
-			OFDM_pkt += (u8)(pEntry->rssi_stat.PacketMap>>i)&BIT0;
+			OFDM_pkt +=
+				(u8)(pEntry->rssi_stat.PacketMap>>i) & BIT(0);
 
 		if (pEntry->rssi_stat.ValidBit == 64) {
 			Weighting = ((OFDM_pkt<<4) > 64)?64:(OFDM_pkt<<4);
@@ -394,88 +390,11 @@ static void odm_Process_RSSIForDM(struct dm_odm_t *pDM_Odm,
 	}
 }
 
-/*  Endianness before calling this API */
-static void ODM_PhyStatusQuery23a_92CSeries(struct dm_odm_t *pDM_Odm,
-					 struct odm_phy_info *pPhyInfo,
-					 u8 *pPhyStatus,
-					 struct odm_packet_info *pPktinfo)
+void ODM_PhyStatusQuery23a(struct dm_odm_t *pDM_Odm, struct phy_info *pPhyInfo,
+			   u8 *pPhyStatus, struct odm_packet_info *pPktinfo)
 {
 	odm_RxPhyStatus92CSeries_Parsing(pDM_Odm, pPhyInfo,
 					 pPhyStatus, pPktinfo);
-	if (pDM_Odm->RSSI_test) {
-		/*  Select the packets to do RSSI checking for antenna switching. */
-		if (pPktinfo->bPacketToSelf || pPktinfo->bPacketBeacon)
-			ODM_SwAntDivChkPerPktRssi(pDM_Odm, pPktinfo->StationID, pPhyInfo);
-	} else {
-		odm_Process_RSSIForDM(pDM_Odm, pPhyInfo, pPktinfo);
-	}
-}
 
-void ODM_PhyStatusQuery23a(struct dm_odm_t *pDM_Odm, struct odm_phy_info *pPhyInfo,
-			   u8 *pPhyStatus, struct odm_packet_info *pPktinfo)
-{
-	ODM_PhyStatusQuery23a_92CSeries(pDM_Odm, pPhyInfo, pPhyStatus, pPktinfo);
-}
-
-/*  For future use. */
-void ODM_MacStatusQuery23a(struct dm_odm_t *pDM_Odm, u8 *pMacStatus, u8 MacID,
-			bool bPacketMatchBSSID, bool bPacketToSelf,
-			bool bPacketBeacon)
-{
-	/*  2011/10/19 Driver team will handle in the future. */
-
-}
-
-enum hal_status
-ODM_ConfigRFWithHeaderFile23a(
-	struct dm_odm_t *pDM_Odm,
-	enum RF_RADIO_PATH	Content,
-	enum RF_RADIO_PATH	eRFPath
-  )
-{
-	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD,
-		     ("===>ODM_ConfigRFWithHeaderFile23a\n"));
-	if (pDM_Odm->SupportICType == ODM_RTL8723A) {
-		if (eRFPath == RF_PATH_A)
-			READ_AND_CONFIG_MP(8723A, _RadioA_1T_);
-
-		ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD,
-			     (" ===> ODM_ConfigRFWithHeaderFile23a() Radio_A:Rtl8723RadioA_1TArray\n"));
-		ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD,
-			     (" ===> ODM_ConfigRFWithHeaderFile23a() Radio_B:Rtl8723RadioB_1TArray\n"));
-	}
-	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_TRACE,
-		     ("ODM_ConfigRFWithHeaderFile23a: Radio No %x\n", eRFPath));
-	return HAL_STATUS_SUCCESS;
-}
-
-enum hal_status
-ODM_ConfigBBWithHeaderFile23a(
-	struct dm_odm_t *pDM_Odm,
-	enum odm_bb_config_type		ConfigType
-	)
-{
-	if (pDM_Odm->SupportICType == ODM_RTL8723A) {
-		if (ConfigType == CONFIG_BB_PHY_REG)
-			READ_AND_CONFIG_MP(8723A, _PHY_REG_1T_);
-		else if (ConfigType == CONFIG_BB_AGC_TAB)
-			READ_AND_CONFIG_MP(8723A, _AGC_TAB_1T_);
-		ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD,
-			     (" ===> phy_ConfigBBWithHeaderFile() phy:Rtl8723AGCTAB_1TArray\n"));
-		ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD,
-			     (" ===> phy_ConfigBBWithHeaderFile() agc:Rtl8723PHY_REG_1TArray\n"));
-	}
-	return HAL_STATUS_SUCCESS;
-}
-
-enum hal_status
-ODM_ConfigMACWithHeaderFile23a(
-	struct dm_odm_t *pDM_Odm
-	)
-{
-	u8 result = HAL_STATUS_SUCCESS;
-
-	if (pDM_Odm->SupportICType == ODM_RTL8723A)
-		READ_AND_CONFIG_MP(8723A, _MAC_REG_);
-	return result;
+	odm_Process_RSSIForDM(pDM_Odm, pPhyInfo, pPktinfo);
 }

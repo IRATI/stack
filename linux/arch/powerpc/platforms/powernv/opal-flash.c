@@ -20,6 +20,7 @@
 #include <linux/mm.h>
 #include <linux/vmalloc.h>
 #include <linux/pagemap.h>
+#include <linux/delay.h>
 
 #include <asm/opal.h>
 
@@ -119,7 +120,11 @@ static struct image_header_t	image_header;
 static struct image_data_t	image_data;
 static struct validate_flash_t	validate_flash_data;
 static struct manage_flash_t	manage_flash_data;
-static struct update_flash_t	update_flash_data;
+
+/* Initialize update_flash_data status to No Operation */
+static struct update_flash_t	update_flash_data = {
+	.status = FLASH_NO_OP,
+};
 
 static DEFINE_MUTEX(image_data_mutex);
 
@@ -130,7 +135,8 @@ static inline void opal_flash_validate(void)
 {
 	long ret;
 	void *buf = validate_flash_data.buf;
-	__be32 size, result;
+	__be32 size = cpu_to_be32(validate_flash_data.buf_size);
+	__be32 result;
 
 	ret = opal_validate_flash(__pa(buf), &size, &result);
 
@@ -290,16 +296,52 @@ static int opal_flash_update(int op)
 	/* First entry address */
 	addr = __pa(list);
 
-	pr_alert("FLASH: Image is %u bytes\n", image_data.size);
-	pr_alert("FLASH: Image update requested\n");
-	pr_alert("FLASH: Image will be updated during system reboot\n");
-	pr_alert("FLASH: This will take several minutes. Do not power off!\n");
-
 flash:
 	rc = opal_update_flash(addr);
 
 invalid_img:
 	return rc;
+}
+
+/* Return CPUs to OPAL before starting FW update */
+static void flash_return_cpu(void *info)
+{
+	int cpu = smp_processor_id();
+
+	if (!cpu_online(cpu))
+		return;
+
+	/* Disable IRQ */
+	hard_irq_disable();
+
+	/* Return the CPU to OPAL */
+	opal_return_cpu();
+}
+
+/* This gets called just before system reboots */
+void opal_flash_term_callback(void)
+{
+	struct cpumask mask;
+
+	if (update_flash_data.status != FLASH_IMG_READY)
+		return;
+
+	pr_alert("FLASH: Flashing new firmware\n");
+	pr_alert("FLASH: Image is %u bytes\n", image_data.size);
+	pr_alert("FLASH: Performing flash and reboot/shutdown\n");
+	pr_alert("FLASH: This will take several minutes. Do not power off!\n");
+
+	/* Small delay to help getting the above message out */
+	msleep(500);
+
+	/* Return secondary CPUs to firmware */
+	cpumask_copy(&mask, cpu_online_mask);
+	cpumask_clear_cpu(smp_processor_id(), &mask);
+	if (!cpumask_empty(&mask))
+		smp_call_function_many(&mask,
+				       flash_return_cpu, NULL, false);
+	/* Hard disable interrupts */
+	hard_irq_disable();
 }
 
 /*
@@ -504,7 +546,7 @@ static struct attribute_group image_op_attr_group = {
 	.attrs = image_op_attrs,
 };
 
-void __init opal_flash_init(void)
+void __init opal_flash_update_init(void)
 {
 	int ret;
 

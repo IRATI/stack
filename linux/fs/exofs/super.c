@@ -2,7 +2,7 @@
  * Copyright (C) 2005, 2006
  * Avishay Traeger (avishay@gmail.com)
  * Copyright (C) 2008, 2009
- * Boaz Harrosh <bharrosh@panasas.com>
+ * Boaz Harrosh <ooo@electrozaur.com>
  *
  * Copyrights for code taken from ext2:
  *     Copyright (C) 1992, 1993, 1994, 1995
@@ -836,7 +836,7 @@ static int exofs_fill_super(struct super_block *sb, void *data, int silent)
 		goto free_sbi;
 	}
 
-	ret = bdi_setup_and_register(&sbi->bdi, "exofs", BDI_CAP_MAP_COPY);
+	ret = bdi_setup_and_register(&sbi->bdi, "exofs");
 	if (ret) {
 		EXOFS_DBGMSG("Failed to bdi_setup_and_register\n");
 		dput(sb->s_root);
@@ -958,7 +958,7 @@ static struct dentry *exofs_get_parent(struct dentry *child)
 	if (!ino)
 		return ERR_PTR(-ESTALE);
 
-	return d_obtain_alias(exofs_iget(child->d_inode->i_sb, ino));
+	return d_obtain_alias(exofs_iget(d_inode(child)->i_sb, ino));
 }
 
 static struct inode *exofs_nfs_get_inode(struct super_block *sb,

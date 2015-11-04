@@ -1,6 +1,6 @@
 /*
  * QLogic Fibre Channel HBA Driver
- * Copyright (c)  2003-2013 QLogic Corporation
+ * Copyright (c)  2003-2014 QLogic Corporation
  *
  * See LICENSE.qla2xxx for copyright and licensing details.
  */
@@ -1718,20 +1718,20 @@ qla83xx_beacon_blink(struct scsi_qla_host *vha)
 	uint16_t orig_led_cfg[6];
 	uint32_t led_10_value, led_43_value;
 
-	if (!IS_QLA83XX(ha) && !IS_QLA81XX(ha))
+	if (!IS_QLA83XX(ha) && !IS_QLA81XX(ha) && !IS_QLA27XX(ha))
 		return;
 
 	if (!ha->beacon_blink_led)
 		return;
 
-	if (IS_QLA2031(ha)) {
+	if (IS_QLA27XX(ha)) {
+		qla2x00_write_ram_word(vha, 0x1003, 0x40000230);
+		qla2x00_write_ram_word(vha, 0x1004, 0x40000230);
+	} else if (IS_QLA2031(ha)) {
 		led_select_value = qla83xx_select_led_port(ha);
 
-		qla83xx_wr_reg(vha, led_select_value, 0x40002000);
-		qla83xx_wr_reg(vha, led_select_value + 4, 0x40002000);
-		msleep(1000);
-		qla83xx_wr_reg(vha, led_select_value, 0x40004000);
-		qla83xx_wr_reg(vha, led_select_value + 4, 0x40004000);
+		qla83xx_wr_reg(vha, led_select_value, 0x40000230);
+		qla83xx_wr_reg(vha, led_select_value + 4, 0x40000230);
 	} else if (IS_QLA8031(ha)) {
 		led_select_value = qla83xx_select_led_port(ha);
 
@@ -1814,7 +1814,7 @@ qla24xx_beacon_on(struct scsi_qla_host *vha)
 			return QLA_FUNCTION_FAILED;
 		}
 
-		if (IS_QLA2031(ha))
+		if (IS_QLA2031(ha) || IS_QLA27XX(ha))
 			goto skip_gpio;
 
 		spin_lock_irqsave(&ha->hardware_lock, flags);
@@ -1851,7 +1851,7 @@ qla24xx_beacon_off(struct scsi_qla_host *vha)
 
 	ha->beacon_blink_led = 0;
 
-	if (IS_QLA2031(ha))
+	if (IS_QLA2031(ha) || IS_QLA27XX(ha))
 		goto set_fw_options;
 
 	if (IS_QLA8031(ha) || IS_QLA81XX(ha))
@@ -2583,7 +2583,8 @@ qla25xx_read_optrom_data(struct scsi_qla_host *vha, uint8_t *buf,
 	uint32_t faddr, left, burst;
 	struct qla_hw_data *ha = vha->hw;
 
-	if (IS_QLA25XX(ha) || IS_QLA81XX(ha) || IS_QLA27XX(ha))
+	if (IS_QLA25XX(ha) || IS_QLA81XX(ha) || IS_QLA83XX(ha) ||
+	    IS_QLA27XX(ha))
 		goto try_fast;
 	if (offset & 0xfff)
 		goto slow_read;
@@ -3094,7 +3095,7 @@ qla24xx_get_flash_version(scsi_qla_host_t *vha, void *mbuf)
 		ha->fw_revision[2] = dcode[2];
 		ha->fw_revision[3] = dcode[3];
 		ql_dbg(ql_dbg_init, vha, 0x0060,
-		    "Firmware revision %d.%d.%d.%d.\n",
+		    "Firmware revision %d.%d.%d (%x).\n",
 		    ha->fw_revision[0], ha->fw_revision[1],
 		    ha->fw_revision[2], ha->fw_revision[3]);
 	}
@@ -3165,7 +3166,7 @@ qla2xxx_get_vpd_field(scsi_qla_host_t *vha, char *key, char *str, size_t size)
 	}
 
 	if (pos < end - len && *pos != 0x78)
-		return snprintf(str, size, "%.*s", len, pos + 3);
+		return scnprintf(str, size, "%.*s", len, pos + 3);
 
 	return 0;
 }

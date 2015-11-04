@@ -52,7 +52,7 @@ ENTRY(__kvm_tlb_flush_vmid_ipa)
 	dsb	ishst
 	add	r0, r0, #KVM_VTTBR
 	ldrd	r2, r3, [r0]
-	mcrr	p15, 6, r2, r3, c2	@ Write VTTBR
+	mcrr	p15, 6, rr_lo_hi(r2, r3), c2	@ Write VTTBR
 	isb
 	mcr     p15, 0, r0, c8, c3, 0	@ TLBIALLIS (rt ignored)
 	dsb	ish
@@ -65,6 +65,17 @@ ENTRY(__kvm_tlb_flush_vmid_ipa)
 	pop	{r2, r3}
 	bx	lr
 ENDPROC(__kvm_tlb_flush_vmid_ipa)
+
+/**
+ * void __kvm_tlb_flush_vmid(struct kvm *kvm) - Flush per-VMID TLBs
+ *
+ * Reuses __kvm_tlb_flush_vmid_ipa() for ARMv7, without passing address
+ * parameter
+ */
+
+ENTRY(__kvm_tlb_flush_vmid)
+	b	__kvm_tlb_flush_vmid_ipa
+ENDPROC(__kvm_tlb_flush_vmid)
 
 /********************************************************************
  * Flush TLBs and instruction caches of all CPUs inside the inner-shareable
@@ -135,7 +146,7 @@ ENTRY(__kvm_vcpu_run)
 	ldr	r1, [vcpu, #VCPU_KVM]
 	add	r1, r1, #KVM_VTTBR
 	ldrd	r2, r3, [r1]
-	mcrr	p15, 6, r2, r3, c2	@ Write VTTBR
+	mcrr	p15, 6, rr_lo_hi(r2, r3), c2	@ Write VTTBR
 
 	@ We're all done, just restore the GPRs and go to the guest
 	restore_guest_regs
@@ -159,13 +170,9 @@ __kvm_vcpu_return:
 	@ Don't trap coprocessor accesses for host kernel
 	set_hstr vmexit
 	set_hdcr vmexit
-	set_hcptr vmexit, (HCPTR_TTA | HCPTR_TCP(10) | HCPTR_TCP(11))
+	set_hcptr vmexit, (HCPTR_TTA | HCPTR_TCP(10) | HCPTR_TCP(11)), after_vfp_restore
 
 #ifdef CONFIG_VFPv3
-	@ Save floating point registers we if let guest use them.
-	tst	r2, #(HCPTR_TCP(10) | HCPTR_TCP(11))
-	bne	after_vfp_restore
-
 	@ Switch VFP/NEON hardware state to the host's
 	add	r7, vcpu, #VCPU_VFP_GUEST
 	store_vfp_state r7
@@ -177,6 +184,8 @@ after_vfp_restore:
 	@ Restore FPEXC_EN which we clobbered on entry
 	pop	{r2}
 	VFPFMXR FPEXC, r2
+#else
+after_vfp_restore:
 #endif
 
 	@ Reset Hyp-role
@@ -199,8 +208,13 @@ after_vfp_restore:
 
 	restore_host_regs
 	clrex				@ Clear exclusive monitor
+#ifndef CONFIG_CPU_ENDIAN_BE8
 	mov	r0, r1			@ Return the return code
 	mov	r1, #0			@ Clear upper bits in return value
+#else
+	@ r1 already has return code
+	mov	r0, #0			@ Clear upper bits in return value
+#endif /* CONFIG_CPU_ENDIAN_BE8 */
 	bx	lr			@ return to IOCTL
 
 /********************************************************************
@@ -467,7 +481,7 @@ switch_to_guest_vfp:
 	push	{r3-r7}
 
 	@ NEON/VFP used.  Turn on VFP access.
-	set_hcptr vmexit, (HCPTR_TCP(10) | HCPTR_TCP(11))
+	set_hcptr vmtrap, (HCPTR_TCP(10) | HCPTR_TCP(11))
 
 	@ Switch VFP/NEON hardware state to the guest's
 	add	r7, r0, #VCPU_VFP_HOST

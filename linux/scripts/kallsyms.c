@@ -84,7 +84,7 @@ static void usage(void)
  */
 static inline int is_arm_mapping_symbol(const char *str)
 {
-	return str[0] == '$' && strchr("atd", str[1])
+	return str[0] == '$' && strchr("axtd", str[1])
 	       && (str[2] == '\0' || str[2] == '.');
 }
 
@@ -123,7 +123,7 @@ static int read_symbol(FILE *in, struct sym_entry *s)
 	}
 	if (strlen(str) > KSYM_NAME_LEN) {
 		fprintf(stderr, "Symbol %s too long for kallsyms (%zu vs %d).\n"
-                                "Please increase KSYM_NAME_LEN both in kernel and kallsyms.c\n",
+				"Please increase KSYM_NAME_LEN both in kernel and kallsyms.c\n",
 			str, strlen(str), KSYM_NAME_LEN);
 		return -1;
 	}
@@ -212,15 +212,22 @@ static int symbol_valid(struct sym_entry *s)
 		"_SDA_BASE_",		/* ppc */
 		"_SDA2_BASE_",		/* ppc */
 		NULL };
+
+	static char *special_suffixes[] = {
+		"_veneer",		/* arm */
+		NULL };
+
 	int i;
-	int offset = 1;
+	char *sym_name = (char *)s->sym + 1;
+
 
 	if (s->addr < kernel_start_addr)
 		return 0;
 
 	/* skip prefix char */
-	if (symbol_prefix_char && *(s->sym + 1) == symbol_prefix_char)
-		offset++;
+	if (symbol_prefix_char && *sym_name == symbol_prefix_char)
+		sym_name++;
+
 
 	/* if --all-symbols is not specified, then symbols outside the text
 	 * and inittext sections are discarded */
@@ -235,21 +242,25 @@ static int symbol_valid(struct sym_entry *s)
 		 * rules.
 		 */
 		if ((s->addr == text_range_text->end &&
-				strcmp((char *)s->sym + offset,
+				strcmp(sym_name,
 				       text_range_text->end_sym)) ||
 		    (s->addr == text_range_inittext->end &&
-				strcmp((char *)s->sym + offset,
+				strcmp(sym_name,
 				       text_range_inittext->end_sym)))
 			return 0;
 	}
 
 	/* Exclude symbols which vary between passes. */
-	if (strstr((char *)s->sym + offset, "_compiled."))
-		return 0;
-
 	for (i = 0; special_symbols[i]; i++)
-		if( strcmp((char *)s->sym + offset, special_symbols[i]) == 0 )
+		if (strcmp(sym_name, special_symbols[i]) == 0)
 			return 0;
+
+	for (i = 0; special_suffixes[i]; i++) {
+		int l = strlen(sym_name) - strlen(special_suffixes[i]);
+
+		if (l >= 0 && strcmp(sym_name + l, special_suffixes[i]) == 0)
+			return 0;
+	}
 
 	return 1;
 }

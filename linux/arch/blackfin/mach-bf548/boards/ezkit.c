@@ -159,7 +159,7 @@ static struct platform_device bf54x_kpad_device = {
 #endif
 
 #if IS_ENABLED(CONFIG_INPUT_BFIN_ROTARY)
-#include <asm/bfin_rotary.h>
+#include <linux/platform_data/bfin_rotary.h>
 
 static struct bfin_rotary_platform_data bfin_rotary_data = {
 	/*.rotary_up_key     = KEY_UP,*/
@@ -172,6 +172,11 @@ static struct bfin_rotary_platform_data bfin_rotary_data = {
 };
 
 static struct resource bfin_rotary_resources[] = {
+	{
+		.start = CNT_CONFIG,
+		.end   = CNT_CONFIG + 0xff,
+		.flags = IORESOURCE_MEM,
+	},
 	{
 		.start = IRQ_CNT,
 		.end = IRQ_CNT,
@@ -2118,7 +2123,7 @@ static struct pinctrl_map __initdata bfin_pinmux_map[] = {
 	PIN_MAP_MUX_GROUP_DEFAULT("bfin-rotary",  "pinctrl-adi2.0", NULL, "rotary"),
 	PIN_MAP_MUX_GROUP_DEFAULT("bfin_can.0",  "pinctrl-adi2.0", NULL, "can0"),
 	PIN_MAP_MUX_GROUP_DEFAULT("bfin_can.1",  "pinctrl-adi2.0", NULL, "can1"),
-	PIN_MAP_MUX_GROUP_DEFAULT("bf54x-lq043",  "pinctrl-adi2.0", NULL, "ppi0_24b"),
+	PIN_MAP_MUX_GROUP_DEFAULT("bf54x-lq043",  "pinctrl-adi2.0", "ppi0_24bgrp", "ppi0"),
 	PIN_MAP_MUX_GROUP_DEFAULT("bfin-i2s.0",  "pinctrl-adi2.0", NULL, "sport0"),
 	PIN_MAP_MUX_GROUP_DEFAULT("bfin-tdm.0",  "pinctrl-adi2.0", NULL, "sport0"),
 	PIN_MAP_MUX_GROUP_DEFAULT("bfin-ac97.0",  "pinctrl-adi2.0", NULL, "sport0"),
@@ -2140,7 +2145,9 @@ static struct pinctrl_map __initdata bfin_pinmux_map[] = {
 	PIN_MAP_MUX_GROUP_DEFAULT("pata-bf54x",  "pinctrl-adi2.0", NULL, "atapi_alter"),
 #endif
 	PIN_MAP_MUX_GROUP_DEFAULT("bf5xx-nand.0",  "pinctrl-adi2.0", NULL, "nfc0"),
-	PIN_MAP_MUX_GROUP_DEFAULT("bf54x-keys",  "pinctrl-adi2.0", NULL, "keys_4x4"),
+	PIN_MAP_MUX_GROUP_DEFAULT("bf54x-keys",  "pinctrl-adi2.0", "keys_4x4grp", "keys"),
+	PIN_MAP_MUX_GROUP("bf54x-keys", "4bit",  "pinctrl-adi2.0", "keys_4x4grp", "keys"),
+	PIN_MAP_MUX_GROUP("bf54x-keys", "8bit",  "pinctrl-adi2.0", "keys_8x8grp", "keys"),
 };
 
 static int __init ezkit_init(void)

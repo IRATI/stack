@@ -12,12 +12,18 @@
 #ifndef _ASM_R4KCACHE_H
 #define _ASM_R4KCACHE_H
 
+#include <linux/stringify.h>
+
 #include <asm/asm.h>
 #include <asm/cacheops.h>
+#include <asm/compiler.h>
 #include <asm/cpu-features.h>
 #include <asm/cpu-type.h>
 #include <asm/mipsmtregs.h>
 #include <asm/uaccess.h> /* for segment_eq() */
+
+extern void (*r4k_blast_dcache)(void);
+extern void (*r4k_blast_icache)(void);
 
 /*
  * This macro return a properly sign-extended address suitable as base address
@@ -36,88 +42,28 @@
 	__asm__ __volatile__(						\
 	"	.set	push					\n"	\
 	"	.set	noreorder				\n"	\
-	"	.set	arch=r4000				\n"	\
+	"	.set "MIPS_ISA_ARCH_LEVEL"			\n"	\
 	"	cache	%0, %1					\n"	\
 	"	.set	pop					\n"	\
 	:								\
 	: "i" (op), "R" (*(unsigned char *)(addr)))
 
 #ifdef CONFIG_MIPS_MT
-/*
- * Temporary hacks for SMTC debug. Optionally force single-threaded
- * execution during I-cache flushes.
- */
-
-#define PROTECT_CACHE_FLUSHES 1
-
-#ifdef PROTECT_CACHE_FLUSHES
-
-extern int mt_protiflush;
-extern int mt_protdflush;
-extern void mt_cflush_lockdown(void);
-extern void mt_cflush_release(void);
-
-#define BEGIN_MT_IPROT \
-	unsigned long flags = 0;			\
-	unsigned long mtflags = 0;			\
-	if(mt_protiflush) {				\
-		local_irq_save(flags);			\
-		ehb();					\
-		mtflags = dvpe();			\
-		mt_cflush_lockdown();			\
-	}
-
-#define END_MT_IPROT \
-	if(mt_protiflush) {				\
-		mt_cflush_release();			\
-		evpe(mtflags);				\
-		local_irq_restore(flags);		\
-	}
-
-#define BEGIN_MT_DPROT \
-	unsigned long flags = 0;			\
-	unsigned long mtflags = 0;			\
-	if(mt_protdflush) {				\
-		local_irq_save(flags);			\
-		ehb();					\
-		mtflags = dvpe();			\
-		mt_cflush_lockdown();			\
-	}
-
-#define END_MT_DPROT \
-	if(mt_protdflush) {				\
-		mt_cflush_release();			\
-		evpe(mtflags);				\
-		local_irq_restore(flags);		\
-	}
-
-#else
-
-#define BEGIN_MT_IPROT
-#define BEGIN_MT_DPROT
-#define END_MT_IPROT
-#define END_MT_DPROT
-
-#endif /* PROTECT_CACHE_FLUSHES */
 
 #define __iflush_prologue						\
 	unsigned long redundance;					\
 	extern int mt_n_iflushes;					\
-	BEGIN_MT_IPROT							\
 	for (redundance = 0; redundance < mt_n_iflushes; redundance++) {
 
 #define __iflush_epilogue						\
-	END_MT_IPROT							\
 	}
 
 #define __dflush_prologue						\
 	unsigned long redundance;					\
 	extern int mt_n_dflushes;					\
-	BEGIN_MT_DPROT							\
 	for (redundance = 0; redundance < mt_n_dflushes; redundance++) {
 
 #define __dflush_epilogue \
-	END_MT_DPROT	 \
 	}
 
 #define __inv_dflush_prologue __dflush_prologue
@@ -204,7 +150,7 @@ static inline void flush_scache_line(unsigned long addr)
 	__asm__ __volatile__(					\
 	"	.set	push			\n"		\
 	"	.set	noreorder		\n"		\
-	"	.set	arch=r4000		\n"		\
+	"	.set "MIPS_ISA_ARCH_LEVEL"	\n"		\
 	"1:	cache	%0, (%1)		\n"		\
 	"2:	.set	pop			\n"		\
 	"	.section __ex_table,\"a\"	\n"		\
@@ -255,7 +201,11 @@ static inline void protected_flush_icache_line(unsigned long addr)
  */
 static inline void protected_writeback_dcache_line(unsigned long addr)
 {
+#ifdef CONFIG_EVA
+	protected_cachee_op(Hit_Writeback_Inv_D, addr);
+#else
 	protected_cache_op(Hit_Writeback_Inv_D, addr);
+#endif
 }
 
 static inline void protected_writeback_scache_line(unsigned long addr)
@@ -271,6 +221,7 @@ static inline void invalidate_tcache_page(unsigned long addr)
 	cache_op(Page_Invalidate_T, addr);
 }
 
+#ifndef CONFIG_CPU_MIPSR6
 #define cache16_unroll32(base,op)					\
 	__asm__ __volatile__(						\
 	"	.set push					\n"	\
@@ -374,6 +325,149 @@ static inline void invalidate_tcache_page(unsigned long addr)
 		:							\
 		: "r" (base),						\
 		  "i" (op));
+
+#else
+/*
+ * MIPS R6 changed the cache opcode and moved to a 8-bit offset field.
+ * This means we now need to increment the base register before we flush
+ * more cache lines
+ */
+#define cache16_unroll32(base,op)				\
+	__asm__ __volatile__(					\
+	"	.set push\n"					\
+	"	.set noreorder\n"				\
+	"	.set mips64r6\n"				\
+	"	.set noat\n"					\
+	"	cache %1, 0x000(%0); cache %1, 0x010(%0)\n"	\
+	"	cache %1, 0x020(%0); cache %1, 0x030(%0)\n"	\
+	"	cache %1, 0x040(%0); cache %1, 0x050(%0)\n"	\
+	"	cache %1, 0x060(%0); cache %1, 0x070(%0)\n"	\
+	"	cache %1, 0x080(%0); cache %1, 0x090(%0)\n"	\
+	"	cache %1, 0x0a0(%0); cache %1, 0x0b0(%0)\n"	\
+	"	cache %1, 0x0c0(%0); cache %1, 0x0d0(%0)\n"	\
+	"	cache %1, 0x0e0(%0); cache %1, 0x0f0(%0)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, %0, 0x100	\n"	\
+	"	cache %1, 0x000($1); cache %1, 0x010($1)\n"	\
+	"	cache %1, 0x020($1); cache %1, 0x030($1)\n"	\
+	"	cache %1, 0x040($1); cache %1, 0x050($1)\n"	\
+	"	cache %1, 0x060($1); cache %1, 0x070($1)\n"	\
+	"	cache %1, 0x080($1); cache %1, 0x090($1)\n"	\
+	"	cache %1, 0x0a0($1); cache %1, 0x0b0($1)\n"	\
+	"	cache %1, 0x0c0($1); cache %1, 0x0d0($1)\n"	\
+	"	cache %1, 0x0e0($1); cache %1, 0x0f0($1)\n"	\
+	"	.set pop\n"					\
+		:						\
+		: "r" (base),					\
+		  "i" (op));
+
+#define cache32_unroll32(base,op)				\
+	__asm__ __volatile__(					\
+	"	.set push\n"					\
+	"	.set noreorder\n"				\
+	"	.set mips64r6\n"				\
+	"	.set noat\n"					\
+	"	cache %1, 0x000(%0); cache %1, 0x020(%0)\n"	\
+	"	cache %1, 0x040(%0); cache %1, 0x060(%0)\n"	\
+	"	cache %1, 0x080(%0); cache %1, 0x0a0(%0)\n"	\
+	"	cache %1, 0x0c0(%0); cache %1, 0x0e0(%0)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, %0, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x020($1)\n"	\
+	"	cache %1, 0x040($1); cache %1, 0x060($1)\n"	\
+	"	cache %1, 0x080($1); cache %1, 0x0a0($1)\n"	\
+	"	cache %1, 0x0c0($1); cache %1, 0x0e0($1)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, $1, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x020($1)\n"	\
+	"	cache %1, 0x040($1); cache %1, 0x060($1)\n"	\
+	"	cache %1, 0x080($1); cache %1, 0x0a0($1)\n"	\
+	"	cache %1, 0x0c0($1); cache %1, 0x0e0($1)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, $1, 0x100\n"	\
+	"	cache %1, 0x000($1); cache %1, 0x020($1)\n"	\
+	"	cache %1, 0x040($1); cache %1, 0x060($1)\n"	\
+	"	cache %1, 0x080($1); cache %1, 0x0a0($1)\n"	\
+	"	cache %1, 0x0c0($1); cache %1, 0x0e0($1)\n"	\
+	"	.set pop\n"					\
+		:						\
+		: "r" (base),					\
+		  "i" (op));
+
+#define cache64_unroll32(base,op)				\
+	__asm__ __volatile__(					\
+	"	.set push\n"					\
+	"	.set noreorder\n"				\
+	"	.set mips64r6\n"				\
+	"	.set noat\n"					\
+	"	cache %1, 0x000(%0); cache %1, 0x040(%0)\n"	\
+	"	cache %1, 0x080(%0); cache %1, 0x0c0(%0)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, %0, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x040($1)\n"	\
+	"	cache %1, 0x080($1); cache %1, 0x0c0($1)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, $1, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x040($1)\n"	\
+	"	cache %1, 0x080($1); cache %1, 0x0c0($1)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, $1, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x040($1)\n"	\
+	"	cache %1, 0x080($1); cache %1, 0x0c0($1)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, $1, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x040($1)\n"	\
+	"	cache %1, 0x080($1); cache %1, 0x0c0($1)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, $1, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x040($1)\n"	\
+	"	cache %1, 0x080($1); cache %1, 0x0c0($1)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, $1, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x040($1)\n"	\
+	"	cache %1, 0x080($1); cache %1, 0x0c0($1)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, $1, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x040($1)\n"	\
+	"	cache %1, 0x080($1); cache %1, 0x0c0($1)\n"	\
+	"	.set pop\n"					\
+		:						\
+		: "r" (base),					\
+		  "i" (op));
+
+#define cache128_unroll32(base,op)				\
+	__asm__ __volatile__(					\
+	"	.set push\n"					\
+	"	.set noreorder\n"				\
+	"	.set mips64r6\n"				\
+	"	.set noat\n"					\
+	"	cache %1, 0x000(%0); cache %1, 0x080(%0)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, %0, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x080($1)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, $1, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x080($1)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, $1, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x080($1)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, $1, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x080($1)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, $1, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x080($1)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, $1, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x080($1)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, $1, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x080($1)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, $1, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x080($1)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, $1, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x080($1)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, $1, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x080($1)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, $1, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x080($1)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, $1, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x080($1)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, $1, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x080($1)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, $1, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x080($1)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, $1, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x080($1)\n"	\
+	"	"__stringify(LONG_ADDIU)" $1, $1, 0x100 \n"	\
+	"	cache %1, 0x000($1); cache %1, 0x080($1)\n"	\
+	"	.set pop\n"					\
+		:						\
+		: "r" (base),					\
+		  "i" (op));
+#endif /* CONFIG_CPU_MIPSR6 */
 
 /*
  * Perform the cache operation specified by op using a user mode virtual
@@ -524,6 +618,8 @@ __BUILD_BLAST_CACHE(s, scache, Index_Writeback_Inv_SD, Hit_Writeback_Inv_SD, 32,
 __BUILD_BLAST_CACHE(d, dcache, Index_Writeback_Inv_D, Hit_Writeback_Inv_D, 64, )
 __BUILD_BLAST_CACHE(i, icache, Index_Invalidate_I, Hit_Invalidate_I, 64, )
 __BUILD_BLAST_CACHE(s, scache, Index_Writeback_Inv_SD, Hit_Writeback_Inv_SD, 64, )
+__BUILD_BLAST_CACHE(d, dcache, Index_Writeback_Inv_D, Hit_Writeback_Inv_D, 128, )
+__BUILD_BLAST_CACHE(i, icache, Index_Invalidate_I, Hit_Invalidate_I, 128, )
 __BUILD_BLAST_CACHE(s, scache, Index_Writeback_Inv_SD, Hit_Writeback_Inv_SD, 128, )
 
 __BUILD_BLAST_CACHE(inv_d, dcache, Index_Writeback_Inv_D, Hit_Invalidate_D, 16, )

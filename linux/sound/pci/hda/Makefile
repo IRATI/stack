@@ -1,15 +1,15 @@
 snd-hda-intel-objs := hda_intel.o
 snd-hda-controller-objs := hda_controller.o
+snd-hda-tegra-objs := hda_tegra.o
 # for haswell power well
 snd-hda-intel-$(CONFIG_SND_HDA_I915) +=	hda_i915.o
 
-snd-hda-codec-y := hda_codec.o hda_jack.o hda_auto_parser.o hda_sysfs.o
+snd-hda-codec-y := hda_bind.o hda_codec.o hda_jack.o hda_auto_parser.o hda_sysfs.o
 snd-hda-codec-$(CONFIG_PROC_FS) += hda_proc.o
 snd-hda-codec-$(CONFIG_SND_HDA_HWDEP) += hda_hwdep.o
 snd-hda-codec-$(CONFIG_SND_HDA_INPUT_BEEP) += hda_beep.o
 
 # for trace-points
-CFLAGS_hda_codec.o := -I$(src)
 CFLAGS_hda_controller.o := -I$(src)
 
 snd-hda-codec-generic-objs :=	hda_generic.o
@@ -47,3 +47,4 @@ obj-$(CONFIG_SND_HDA_CODEC_HDMI) += snd-hda-codec-hdmi.o
 # otherwise the codec patches won't be hooked before the PCI probe
 # when built in kernel
 obj-$(CONFIG_SND_HDA_INTEL) += snd-hda-intel.o
+obj-$(CONFIG_SND_HDA_TEGRA) += snd-hda-tegra.o

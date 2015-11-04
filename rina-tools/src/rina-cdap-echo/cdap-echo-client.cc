@@ -165,7 +165,7 @@ void Client::cacep()
         	}
         }
 
-        cdap_rib::SerializedObject message;
+        cdap_rib::ser_obj_t message;
         message.message_ = buffer;
         message.size_ = bytes_read;
         cdap_prov_->process_message(message, flow_.portId);
@@ -238,7 +238,7 @@ void Client::sendReadRMessage()
                         		break;
                         	}
                         }
-                        cdap_rib::SerializedObject message;
+                        cdap_rib::ser_obj_t message;
                         message.message_ = buffer;
                         message.size_ = bytes_read;
                         cdap_prov_->process_message(message,flow_.portId);
@@ -271,7 +271,7 @@ void Client::release()
         	}
         }
 
-        cdap_rib::SerializedObject message;
+        cdap_rib::ser_obj_t message;
         message.message_ = buffer;
         message.size_ = bytes_read;
         cdap_prov_->process_message(message, flow_.portId);

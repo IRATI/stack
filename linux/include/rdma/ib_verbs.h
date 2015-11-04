@@ -51,6 +51,7 @@
 #include <uapi/linux/if_ether.h>
 
 #include <linux/atomic.h>
+#include <linux/mmu_notifier.h>
 #include <asm/uaccess.h>
 
 extern struct workqueue_struct *ib_wq;
@@ -80,8 +81,8 @@ enum rdma_transport_type {
 	RDMA_TRANSPORT_USNIC_UDP
 };
 
-enum rdma_transport_type
-rdma_node_get_transport(enum rdma_node_type node_type) __attribute_const__;
+__attribute_const__ enum rdma_transport_type
+rdma_node_get_transport(enum rdma_node_type node_type);
 
 enum rdma_link_layer {
 	IB_LINK_LAYER_UNSPECIFIED,
@@ -123,7 +124,8 @@ enum ib_device_cap_flags {
 	IB_DEVICE_MEM_WINDOW_TYPE_2A	= (1<<23),
 	IB_DEVICE_MEM_WINDOW_TYPE_2B	= (1<<24),
 	IB_DEVICE_MANAGED_FLOW_STEERING = (1<<29),
-	IB_DEVICE_SIGNATURE_HANDOVER	= (1<<30)
+	IB_DEVICE_SIGNATURE_HANDOVER	= (1<<30),
+	IB_DEVICE_ON_DEMAND_PAGING	= (1<<31),
 };
 
 enum ib_signature_prot_cap {
@@ -141,6 +143,27 @@ enum ib_atomic_cap {
 	IB_ATOMIC_NONE,
 	IB_ATOMIC_HCA,
 	IB_ATOMIC_GLOB
+};
+
+enum ib_odp_general_cap_bits {
+	IB_ODP_SUPPORT = 1 << 0,
+};
+
+enum ib_odp_transport_cap_bits {
+	IB_ODP_SUPPORT_SEND	= 1 << 0,
+	IB_ODP_SUPPORT_RECV	= 1 << 1,
+	IB_ODP_SUPPORT_WRITE	= 1 << 2,
+	IB_ODP_SUPPORT_READ	= 1 << 3,
+	IB_ODP_SUPPORT_ATOMIC	= 1 << 4,
+};
+
+struct ib_odp_caps {
+	uint64_t general_caps;
+	struct {
+		uint32_t  rc_odp_caps;
+		uint32_t  uc_odp_caps;
+		uint32_t  ud_odp_caps;
+	} per_transport_caps;
 };
 
 struct ib_device_attr {
@@ -186,6 +209,7 @@ struct ib_device_attr {
 	u8			local_ca_ack_delay;
 	int			sig_prot_cap;
 	int			sig_guard_cap;
+	struct ib_odp_caps	odp_caps;
 };
 
 enum ib_mtu {
@@ -466,14 +490,14 @@ enum ib_rate {
  * converted to 2, since 5 Gbit/sec is 2 * 2.5 Gbit/sec.
  * @rate: rate to convert.
  */
-int ib_rate_to_mult(enum ib_rate rate) __attribute_const__;
+__attribute_const__ int ib_rate_to_mult(enum ib_rate rate);
 
 /**
  * ib_rate_to_mbps - Convert the IB rate enum to Mbps.
  * For example, IB_RATE_2_5_GBPS will be converted to 2500.
  * @rate: rate to convert.
  */
-int ib_rate_to_mbps(enum ib_rate rate) __attribute_const__;
+__attribute_const__ int ib_rate_to_mbps(enum ib_rate rate);
 
 enum ib_mr_create_flags {
 	IB_MR_SIGNATURE_EN = 1,
@@ -491,20 +515,14 @@ struct ib_mr_init_attr {
 	u32	    flags;
 };
 
-enum ib_signature_type {
-	IB_SIG_TYPE_T10_DIF,
-};
-
 /**
- * T10-DIF Signature types
- * T10-DIF types are defined by SCSI
- * specifications.
+ * Signature types
+ * IB_SIG_TYPE_NONE: Unprotected.
+ * IB_SIG_TYPE_T10_DIF: Type T10-DIF
  */
-enum ib_t10_dif_type {
-	IB_T10DIF_NONE,
-	IB_T10DIF_TYPE1,
-	IB_T10DIF_TYPE2,
-	IB_T10DIF_TYPE3
+enum ib_signature_type {
+	IB_SIG_TYPE_NONE,
+	IB_SIG_TYPE_T10_DIF,
 };
 
 /**
@@ -520,24 +538,26 @@ enum ib_t10_dif_bg_type {
 /**
  * struct ib_t10_dif_domain - Parameters specific for T10-DIF
  *     domain.
- * @type: T10-DIF type (0|1|2|3)
  * @bg_type: T10-DIF block guard type (CRC|CSUM)
  * @pi_interval: protection information interval.
  * @bg: seed of guard computation.
  * @app_tag: application tag of guard block
  * @ref_tag: initial guard block reference tag.
- * @type3_inc_reftag: T10-DIF type 3 does not state
- *     about the reference tag, it is the user
- *     choice to increment it or not.
+ * @ref_remap: Indicate wethear the reftag increments each block
+ * @app_escape: Indicate to skip block check if apptag=0xffff
+ * @ref_escape: Indicate to skip block check if reftag=0xffffffff
+ * @apptag_check_mask: check bitmask of application tag.
  */
 struct ib_t10_dif_domain {
-	enum ib_t10_dif_type	type;
 	enum ib_t10_dif_bg_type bg_type;
 	u16			pi_interval;
 	u16			bg;
 	u16			app_tag;
 	u32			ref_tag;
-	bool			type3_inc_reftag;
+	bool			ref_remap;
+	bool			app_escape;
+	bool			ref_escape;
+	u16			apptag_check_mask;
 };
 
 /**
@@ -604,7 +624,7 @@ struct ib_mr_status {
  * enum.
  * @mult: multiple to convert.
  */
-enum ib_rate mult_to_ib_rate(int mult) __attribute_const__;
+__attribute_const__ enum ib_rate mult_to_ib_rate(int mult);
 
 struct ib_ah_attr {
 	struct ib_global_route	grh;
@@ -783,6 +803,7 @@ enum ib_qp_create_flags {
 	IB_QP_CREATE_BLOCK_MULTICAST_LOOPBACK	= 1 << 1,
 	IB_QP_CREATE_NETIF_QP			= 1 << 5,
 	IB_QP_CREATE_SIGNATURE_EN		= 1 << 6,
+	IB_QP_CREATE_USE_GFP_NOIO		= 1 << 7,
 	/* reserve bits 26-31 for low level drivers' internal use */
 	IB_QP_CREATE_RESERVED_START		= 1 << 26,
 	IB_QP_CREATE_RESERVED_END		= 1 << 31,
@@ -1076,7 +1097,8 @@ enum ib_access_flags {
 	IB_ACCESS_REMOTE_READ	= (1<<2),
 	IB_ACCESS_REMOTE_ATOMIC	= (1<<3),
 	IB_ACCESS_MW_BIND	= (1<<4),
-	IB_ZERO_BASED		= (1<<5)
+	IB_ZERO_BASED		= (1<<5),
+	IB_ACCESS_ON_DEMAND     = (1<<6),
 };
 
 struct ib_phys_buf {
@@ -1096,7 +1118,8 @@ struct ib_mr_attr {
 enum ib_mr_rereg_flags {
 	IB_MR_REREG_TRANS	= 1,
 	IB_MR_REREG_PD		= (1<<1),
-	IB_MR_REREG_ACCESS	= (1<<2)
+	IB_MR_REREG_ACCESS	= (1<<2),
+	IB_MR_REREG_SUPPORTED	= ((IB_MR_REREG_ACCESS << 1) - 1)
 };
 
 /**
@@ -1117,6 +1140,8 @@ struct ib_fmr_attr {
 	u8	page_shift;
 };
 
+struct ib_umem;
+
 struct ib_ucontext {
 	struct ib_device       *device;
 	struct list_head	pd_list;
@@ -1129,6 +1154,24 @@ struct ib_ucontext {
 	struct list_head	xrcd_list;
 	struct list_head	rule_list;
 	int			closing;
+
+	struct pid             *tgid;
+#ifdef CONFIG_INFINIBAND_ON_DEMAND_PAGING
+	struct rb_root      umem_tree;
+	/*
+	 * Protects .umem_rbroot and tree, as well as odp_mrs_count and
+	 * mmu notifiers registration.
+	 */
+	struct rw_semaphore	umem_rwsem;
+	void (*invalidate_range)(struct ib_umem *umem,
+				 unsigned long start, unsigned long end);
+
+	struct mmu_notifier	mn;
+	atomic_t		notifier_count;
+	/* A list of umems that don't have private mmu notifier counters yet. */
+	struct list_head	no_private_counters;
+	int                     odp_mrs_count;
+#endif
 };
 
 struct ib_uobject {
@@ -1546,6 +1589,13 @@ struct ib_device {
 						  u64 virt_addr,
 						  int mr_access_flags,
 						  struct ib_udata *udata);
+	int			   (*rereg_user_mr)(struct ib_mr *mr,
+						    int flags,
+						    u64 start, u64 length,
+						    u64 virt_addr,
+						    int mr_access_flags,
+						    struct ib_pd *pd,
+						    struct ib_udata *udata);
 	int                        (*query_mr)(struct ib_mr *mr,
 					       struct ib_mr_attr *mr_attr);
 	int                        (*dereg_mr)(struct ib_mr *mr);

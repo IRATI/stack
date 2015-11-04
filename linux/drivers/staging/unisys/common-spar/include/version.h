@@ -1,4 +1,4 @@
-/* Copyright © 2010 - 2013 UNISYS CORPORATION
+/* Copyright (C) 2010 - 2013 UNISYS CORPORATION
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -30,7 +30,6 @@
 #define SPARVER4 "0"
 
 #define  VERSION        SPARVER1 "." SPARVER2 "." SPARVER3 "." SPARVER4
-#define  VERSIONDATE    __DATE__
 
 /* Here are various version forms needed in Windows environments.
  */

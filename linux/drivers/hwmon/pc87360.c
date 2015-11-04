@@ -244,7 +244,6 @@ static struct pc87360_data *pc87360_update_device(struct device *dev);
 
 static struct platform_driver pc87360_driver = {
 	.driver = {
-		.owner	= THIS_MODULE,
 		.name	= "pc87360",
 	},
 	.probe		= pc87360_probe,
@@ -614,6 +613,9 @@ static ssize_t set_vrm(struct device *dev, struct device_attribute *attr,
 	err = kstrtoul(buf, 10, &val);
 	if (err)
 		return err;
+
+	if (val > 255)
+		return -EINVAL;
 
 	data->vrm = val;
 	return count;

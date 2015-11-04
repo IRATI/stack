@@ -1,7 +1,7 @@
 /*******************************************************************
  * This file is part of the Emulex Linux Device Driver for         *
  * Fibre Channel Host Bus Adapters.                                *
- * Copyright (C) 2007-2012 Emulex.  All rights reserved.           *
+ * Copyright (C) 2007-2015 Emulex.  All rights reserved.           *
  * EMULEX and SLI are trademarks of Emulex.                        *
  * www.emulex.com                                                  *
  *                                                                 *
@@ -269,7 +269,7 @@ static int
 lpfc_debugfs_hbqinfo_data(struct lpfc_hba *phba, char *buf, int size)
 {
 	int len = 0;
-	int cnt, i, j, found, posted, low;
+	int i, j, found, posted, low;
 	uint32_t phys, raw_index, getidx;
 	struct lpfc_hbq_init *hip;
 	struct hbq_s *hbqs;
@@ -279,7 +279,7 @@ lpfc_debugfs_hbqinfo_data(struct lpfc_hba *phba, char *buf, int size)
 
 	if (phba->sli_rev != 3)
 		return 0;
-	cnt = LPFC_HBQINFO_SIZE;
+
 	spin_lock_irq(&phba->hbalock);
 
 	/* toggle between multiple hbqs, if any */
@@ -968,8 +968,8 @@ lpfc_debugfs_dumpDif_open(struct inode *inode, struct file *file)
 		goto out;
 
 	/* Round to page boundary */
-	printk(KERN_ERR	"9060 BLKGRD: %s: _dump_buf_dif=0x%p file=%s\n",
-		__func__, _dump_buf_dif, file->f_dentry->d_name.name);
+	printk(KERN_ERR	"9060 BLKGRD: %s: _dump_buf_dif=0x%p file=%pD\n",
+		__func__, _dump_buf_dif, file);
 	debug->buffer = _dump_buf_dif;
 	if (!debug->buffer) {
 		kfree(debug);
@@ -1011,7 +1011,7 @@ static ssize_t
 lpfc_debugfs_dif_err_read(struct file *file, char __user *buf,
 	size_t nbytes, loff_t *ppos)
 {
-	struct dentry *dent = file->f_dentry;
+	struct dentry *dent = file->f_path.dentry;
 	struct lpfc_hba *phba = file->private_data;
 	char cbuf[32];
 	uint64_t tmp = 0;
@@ -1052,7 +1052,7 @@ static ssize_t
 lpfc_debugfs_dif_err_write(struct file *file, const char __user *buf,
 	size_t nbytes, loff_t *ppos)
 {
-	struct dentry *dent = file->f_dentry;
+	struct dentry *dent = file->f_path.dentry;
 	struct lpfc_hba *phba = file->private_data;
 	char dstbuf[32];
 	uint64_t tmp = 0;
@@ -2314,7 +2314,7 @@ proc_cq:
 			goto too_big;
 	}
 
-	if (phba->cfg_EnableXLane) {
+	if (phba->cfg_fof) {
 
 		/* OAS CQ */
 		qp = phba->sli4_hba.oas_cq;

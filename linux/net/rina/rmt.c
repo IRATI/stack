@@ -48,6 +48,7 @@
 #include "rds/rstr.h"
 #include "ipcp-instances.h"
 #include "ipcp-utils.h"
+#include "rmt-ps-common.h" // TODO --> rmt-ps-default.h
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 #define MAX_PDUS_SENT_PER_CYCLE 10
@@ -451,23 +452,56 @@ int rmt_select_policy_set(struct rmt *rmt,
 			  const string_t *path,
 			  const string_t *name)
 {
-	size_t cmplen;
-	size_t offset;
+        struct ps_select_transaction trans;
+        size_t cmplen;
+        size_t offset;
 
-	ASSERT(path);
+        ASSERT(path);
 
-	parse_component_id(path, &cmplen, &offset);
+        ps_factory_parse_component_id(path, &cmplen, &offset);
 
-	if (strcmp(path, "") == 0)
-		/* The request addresses this policy-set. */
-		return base_select_policy_set(&rmt->base, &policy_sets, name);
-	else if (strncmp(path, "pff", cmplen) == 0)
-		/* The request addresses the PFF subcomponent. */
-		return pff_select_policy_set(rmt->pff, path + offset, name);
+        if (cmplen && strncmp(path, "pff", cmplen) == 0) {
+                /* The request addresses the PFF subcomponent. */
+                return pff_select_policy_set(rmt->pff, path + offset, name);
+        }
 
-	LOG_ERR("This component has no subcomponent named '%s'", path);
+        if (strcmp(path, "") != 0) {
+                LOG_ERR("This component has no subcomponent named '%s'", path);
+                return -1;
+        }
 
-	return -1;
+        /* The request addresses this policy-set. */
+        base_select_policy_set_start(&rmt->base, &trans, &policy_sets, name);
+
+        if (trans.state == PS_SEL_TRANS_PENDING) {
+                struct rmt_ps * ps;
+
+                /* Check consistency. */
+                ps = container_of(trans.candidate_ps, struct rmt_ps, base);
+                if (!ps->rmt_next_scheduled_policy_tx ||
+                                !ps->rmt_enqueue_scheduling_policy_tx ||
+                                !ps->rmt_requeue_scheduling_policy_tx ||
+                                !ps->rmt_scheduling_create_policy_tx ||
+                                !ps->rmt_scheduling_destroy_policy_tx) {
+                        LOG_ERR("RMT policy set is invalid, missing "
+                                "policies:\n"
+                                "       rmt_next_scheduled_policy_tx=%p\n"
+                                "       rmt_enqueue_scheduling_policy_tx=%p\n"
+                                "       rmt_requeue_scheduling_policy_tx=%p\n"
+                                "       rmt_scheduling_create_policy_tx=%p\n"
+                                "       rmt_scheduling_destroy_policy_tx=%p\n",
+                                ps->rmt_next_scheduled_policy_tx,
+                                ps->rmt_enqueue_scheduling_policy_tx,
+                                ps->rmt_requeue_scheduling_policy_tx,
+                                ps->rmt_scheduling_create_policy_tx,
+                                ps->rmt_scheduling_destroy_policy_tx);
+                        trans.state = PS_SEL_TRANS_ABORTED;
+                }
+        }
+
+        base_select_policy_set_finish(&rmt->base, &trans);
+
+        return trans.state == PS_SEL_TRANS_COMMITTED ? 0 : -1;
 }
 EXPORT_SYMBOL(rmt_select_policy_set);
 
@@ -486,7 +520,7 @@ int rmt_set_policy_set_param(struct rmt *rmt,
 		return -1;
 	}
 
-	parse_component_id(path, &cmplen, &offset);
+	ps_factory_parse_component_id(path, &cmplen, &offset);
 
 	LOG_DBG("set-policy-set-param '%s' '%s' '%s'", path, name, value);
 
@@ -501,7 +535,7 @@ int rmt_set_policy_set_param(struct rmt *rmt,
 			LOG_ERR("Unknown RMT parameter policy '%s'", name);
 
 		rcu_read_unlock();
-	} else if (strncmp(path, "pff", cmplen) == 0)
+	} else if (cmplen && strncmp(path, "pff", cmplen) == 0)
 		/* The request addresses the PFF subcomponent. */
 		return pff_set_policy_set_param(rmt->pff,
 						path + offset,

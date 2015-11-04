@@ -16,6 +16,8 @@
 #include <linux/string.h>
 
 #include <asm/bootinfo.h>
+#include <asm/cdmm.h>
+#include <asm/maar.h>
 #include <asm/sections.h>
 #include <asm/fw/fw.h>
 
@@ -26,26 +28,38 @@ unsigned long physical_memsize = 0L;
 
 fw_memblock_t * __init fw_getmdesc(int eva)
 {
-	char *memsize_str, *ememsize_str __maybe_unused = NULL, *ptr;
-	unsigned long memsize = 0, ememsize __maybe_unused = 0;
+	char *memsize_str, *ememsize_str = NULL, *ptr;
+	unsigned long memsize = 0, ememsize = 0;
 	static char cmdline[COMMAND_LINE_SIZE] __initdata;
 	int tmp;
 
 	/* otherwise look in the environment */
 
 	memsize_str = fw_getenv("memsize");
-	if (memsize_str)
-		tmp = kstrtol(memsize_str, 0, &memsize);
+	if (memsize_str) {
+		tmp = kstrtoul(memsize_str, 0, &memsize);
+		if (tmp)
+			pr_warn("Failed to read the 'memsize' env variable.\n");
+	}
 	if (eva) {
 	/* Look for ememsize for EVA */
 		ememsize_str = fw_getenv("ememsize");
-		if (ememsize_str)
-			tmp = kstrtol(ememsize_str, 0, &ememsize);
+		if (ememsize_str) {
+			tmp = kstrtoul(ememsize_str, 0, &ememsize);
+			if (tmp)
+				pr_warn("Failed to read the 'ememsize' env variable.\n");
+		}
 	}
 	if (!memsize && !ememsize) {
 		pr_warn("memsize not set in YAMON, set to default (32Mb)\n");
 		physical_memsize = 0x02000000;
 	} else {
+		if (memsize > (256 << 20)) { /* memsize should be capped to 256M */
+			pr_warn("Unsupported memsize value (0x%lx) detected! "
+				"Using 0x10000000 (256M) instead\n",
+				memsize);
+			memsize = 256 << 20;
+		}
 		/* If ememsize is set, then set physical_memsize to that */
 		physical_memsize = ememsize ? : memsize;
 	}
@@ -163,4 +177,35 @@ void __init prom_free_prom_memory(void)
 		free_init_pages("YAMON memory",
 				addr, addr + boot_mem_map.map[i].size);
 	}
+}
+
+unsigned platform_maar_init(unsigned num_pairs)
+{
+	phys_addr_t mem_end = (physical_memsize & ~0xffffull) - 1;
+	struct maar_config cfg[] = {
+		/* DRAM preceding I/O */
+		{ 0x00000000, 0x0fffffff, MIPS_MAAR_S },
+
+		/* DRAM following I/O */
+		{ 0x20000000, mem_end, MIPS_MAAR_S },
+
+		/* DRAM alias in upper half of physical */
+		{ 0x80000000, 0x80000000 + mem_end, MIPS_MAAR_S },
+	};
+	unsigned i, num_cfg = ARRAY_SIZE(cfg);
+
+	/* If DRAM fits before I/O, drop the region following it */
+	if (physical_memsize <= 0x10000000) {
+		num_cfg--;
+		for (i = 1; i < num_cfg; i++)
+			cfg[i] = cfg[i + 1];
+	}
+
+	return maar_config(cfg, num_cfg, num_pairs);
+}
+
+phys_addr_t mips_cdmm_phys_base(void)
+{
+	/* This address is "typically unused" */
+	return 0x1fc10000;
 }

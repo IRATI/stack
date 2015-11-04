@@ -292,7 +292,6 @@ out:
 	return ret;
 }
 
-
 int batadv_recv_icmp_packet(struct sk_buff *skb,
 			    struct batadv_hard_iface *recv_if)
 {
@@ -443,11 +442,13 @@ batadv_find_router(struct batadv_priv *bat_priv,
 
 	router = batadv_orig_router_get(orig_node, recv_if);
 
+	if (!router)
+		return router;
+
 	/* only consider bonding for recv_if == BATADV_IF_DEFAULT (first hop)
 	 * and if activated.
 	 */
-	if (recv_if == BATADV_IF_DEFAULT || !atomic_read(&bat_priv->bonding) ||
-	    !router)
+	if (!(recv_if == BATADV_IF_DEFAULT && atomic_read(&bat_priv->bonding)))
 		return router;
 
 	/* bonding: loop through the list of possible routers found
@@ -455,7 +456,7 @@ batadv_find_router(struct batadv_priv *bat_priv,
 	 * the last chosen bonding candidate (next_candidate). If no such
 	 * router is found, use the first candidate found (the previously
 	 * chosen bonding candidate might have been the last one in the list).
-	 * If this can't be found either, return the previously choosen
+	 * If this can't be found either, return the previously chosen
 	 * router - obviously there are no other candidates.
 	 */
 	rcu_read_lock();
@@ -706,11 +707,11 @@ static int batadv_check_unicast_ttvn(struct batadv_priv *bat_priv,
 	if (batadv_tt_local_client_is_roaming(bat_priv, ethhdr->h_dest, vid)) {
 		if (batadv_reroute_unicast_packet(bat_priv, unicast_packet,
 						  ethhdr->h_dest, vid))
-			net_ratelimited_function(batadv_dbg, BATADV_DBG_TT,
-						 bat_priv,
-						 "Rerouting unicast packet to %pM (dst=%pM): Local Roaming\n",
-						 unicast_packet->dest,
-						 ethhdr->h_dest);
+			batadv_dbg_ratelimited(BATADV_DBG_TT,
+					       bat_priv,
+					       "Rerouting unicast packet to %pM (dst=%pM): Local Roaming\n",
+					       unicast_packet->dest,
+					       ethhdr->h_dest);
 		/* at this point the mesh destination should have been
 		 * substituted with the originator address found in the global
 		 * table. If not, let the packet go untouched anyway because
@@ -752,10 +753,10 @@ static int batadv_check_unicast_ttvn(struct batadv_priv *bat_priv,
 	 */
 	if (batadv_reroute_unicast_packet(bat_priv, unicast_packet,
 					  ethhdr->h_dest, vid)) {
-		net_ratelimited_function(batadv_dbg, BATADV_DBG_TT, bat_priv,
-					 "Rerouting unicast packet to %pM (dst=%pM): TTVN mismatch old_ttvn=%u new_ttvn=%u\n",
-					 unicast_packet->dest, ethhdr->h_dest,
-					 old_ttvn, curr_ttvn);
+		batadv_dbg_ratelimited(BATADV_DBG_TT, bat_priv,
+				       "Rerouting unicast packet to %pM (dst=%pM): TTVN mismatch old_ttvn=%u new_ttvn=%u\n",
+				       unicast_packet->dest, ethhdr->h_dest,
+				       old_ttvn, curr_ttvn);
 		return 1;
 	}
 
