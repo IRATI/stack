@@ -197,7 +197,7 @@ protected:
 	int timeout_;
 	rina::Timer timer_;
 	rina::Lockable lock_;
-	int port_id_;
+	rina::cdap_rib::con_handle_t con;
 	rina::TimerTask * last_scheduled_task_;
 };
 

@@ -771,7 +771,7 @@ void FlowStateRIBObject::write(const rina::cdap_rib::con_handle_t &con,
 		obj->get_neighboraddress() == new_obj.get_neighboraddress())
 	{
 		*obj = new_obj;
-		obj->set_avoidport(con.handle_);
+		obj->set_avoidport(con.port_id);
 		res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 	}
 	else
@@ -1041,7 +1041,7 @@ void FlowStateRIBObjects::write(const rina::cdap_rib::con_handle_t &con,
 	std::list<FlowStateObject> new_objects;
 	encoder.decode(obj_req, new_objects);
 	manager->updateObjects(new_objects,
-			       con.handle_,
+			       con.port_id,
 			       IPCPFactory::getIPCP()->get_address());
 }
 
@@ -1470,14 +1470,16 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(
 
 	try {
 		rina::cdap_rib::obj_info_t obj;
+		rina::cdap_rib::con_handle_t con;
 		obj.class_ = FlowStateRIBObjects::clazz_name;
 		obj.name_ = FlowStateRIBObjects::object_name;
 		db_->encodeAllFSOs(obj.value_);
 		obj.inst_ = 0;
 		rina::cdap_rib::flags_t flags;
 		rina::cdap_rib::filt_info_t filt;
+		con.port_id = portId;
 		if (obj.value_.size_ != 0)
-			rib_daemon_->getProxy()->remote_write(portId,
+			rib_daemon_->getProxy()->remote_write(con,
 							      obj,
 							      flags,
 							      filt,
@@ -1510,6 +1512,7 @@ void LinkStateRoutingPolicy::propagateFSDB()
 	}
 
 	FlowStateObjectListEncoder encoder;
+	rina::cdap_rib::con_handle_t con;
 	for (std::map<int, std::list<FlowStateObject> >::iterator it = objectsToSend.begin();
 		it != objectsToSend.end(); ++it)
 
@@ -1525,7 +1528,8 @@ void LinkStateRoutingPolicy::propagateFSDB()
 			obj.class_ = FlowStateRIBObjects::clazz_name;
 			obj.name_ = FlowStateRIBObjects::object_name;
 			encoder.encode(it->second, obj.value_);
-			rib_daemon_->getProxy()->remote_write(it->first,
+			con.port_id = it->first;
+			rib_daemon_->getProxy()->remote_write(con,
 							      obj,
 							      flags,
 							      filter,

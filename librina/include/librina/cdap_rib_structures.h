@@ -29,9 +29,26 @@
 namespace rina {
 namespace cdap_rib {
 
+// CDAP syntax
+typedef struct concrete_syntax {
+	enum ConcreteSyntax {
+		GPB,
+		JSON
+	};
+
+	/// The concrete syntax that will be used to encode the CDAP messages
+	ConcreteSyntax syntax;
+
+	/// The version of the concrete syntax
+	unsigned int version;
+
+	concrete_syntax() : syntax(GPB), version(1) {};
+} concrete_syntax_t;
+
 typedef struct cdap_params {
 	long timeout_;
 	bool is_IPCP_;
+	concrete_syntax_t syntax;
 
 	cdap_params() : timeout_(0), is_IPCP_(false) {};
 } cdap_params_t;
@@ -82,7 +99,6 @@ typedef struct ep_info {
 	/// Application-Process-Name (string), mandatory (optional for the response).
 	std::string ap_name_;
 } ep_info_t;
-
 
 typedef struct flags {
 	enum Flags {
@@ -187,7 +203,7 @@ enum cdap_dest_t { CDAP_DEST_PORT,
 		   CDAP_DEST_IPCM };
 
 typedef struct connection_handler {
-	unsigned int handle_;
+	unsigned int port_id;
 	cdap_dest_t cdap_dest;
 	int abs_syntax;
 	ep_info_t src_;
@@ -195,10 +211,15 @@ typedef struct connection_handler {
 	auth_policy_t auth_;
 	vers_info_t version_;
 
+	//if the message was forwarded by the IPCM
+	//this is the sequence number (otherwise 0)
+	unsigned int fwd_mgs_seqn;
+
 	connection_handler() {
 		cdap_dest = CDAP_DEST_PORT;
 		abs_syntax = 0;
-		handle_ = 0;
+		port_id = 0;
+		fwd_mgs_seqn = 0;
 	};
 } con_handle_t;
 

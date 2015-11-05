@@ -32,80 +32,81 @@
 
 int ipcp_id = 1;
 
-bool test_flow_state_object(rinad::Encoder * encoder) {
-	rinad::FlowStateObject fso = rinad::FlowStateObject(23, 84, 2, true, 123, 450);
-	rinad::FlowStateObject * recovered_obj = 0;
+bool test_flow_state_object()
+{
+	rinad::FlowStateObject fso(23, 84, 2, true, 123, 450);
+	rinad::FlowStateObject recovered_obj;
+	rinad::FlowStateObjectEncoder encoder;
 
-	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
-	cdapMessage.obj_class_ = rinad::EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS;
+	rina::ser_obj_t encoded_obj;
 
-	encoder->encode(&fso, &cdapMessage);
+	encoder.encode(fso, encoded_obj);
+	encoder.decode(encoded_obj, recovered_obj);
 
-	recovered_obj = (rinad::FlowStateObject *) encoder->decode(&cdapMessage);
-
-	if (fso.address_ != recovered_obj->address_) {
+	if (fso.get_address() != recovered_obj.get_address()) {
 		LOG_IPCP_ERR("Addresses are different; original: %u, recovered: %u",
-				fso.address_, recovered_obj->address_);
+			     fso.get_address(),
+			     recovered_obj.get_address());
 		return false;
 	}
 
-	if (fso.neighbor_address_ != recovered_obj->neighbor_address_) {
+	if (fso.get_neighboraddress() != recovered_obj.get_neighboraddress()) {
 		LOG_IPCP_ERR("Neighbor addresses are different; original: %u, recovered: %u",
-				fso.neighbor_address_, recovered_obj->neighbor_address_);
+			     fso.get_neighboraddress(),
+			     recovered_obj.get_neighboraddress());
 		return false;
 	}
 
-	if (fso.cost_ != recovered_obj->cost_) {
+	if (fso.get_cost() != recovered_obj.get_cost()) {
 		LOG_IPCP_ERR("Costs are different; original: %u, recovered: %u",
-				fso.cost_, recovered_obj->cost_);
+			     fso.get_cost(),
+			     recovered_obj.get_cost());
 		return false;
 	}
 
-	if (fso.sequence_number_ != recovered_obj->sequence_number_) {
+	if (fso.get_sequencenumber() != recovered_obj.get_sequencenumber()) {
 		LOG_IPCP_ERR("Sequence numbers are different; original: %d, recovered: %d",
-				fso.sequence_number_, recovered_obj->sequence_number_);
+		             fso.get_sequencenumber(),
+		             recovered_obj.get_sequencenumber());
 		return false;
 	}
 
-	if (fso.up_ != recovered_obj->up_) {
+	if (fso.is_state() != recovered_obj.is_state()) {
 		LOG_IPCP_ERR("States are different; original: %d, recovered: %d",
-				fso.up_, recovered_obj->up_);
+			     fso.is_state(),
+			     recovered_obj.is_state());
 		return false;
 	}
 
-	if (fso.age_ != recovered_obj->age_) {
+	if (fso.get_age() != recovered_obj.get_age()) {
 		LOG_IPCP_ERR("Ages are different; original: %u, recovered: %u",
-				fso.age_, recovered_obj->age_);
+			     fso.get_age(),
+			     recovered_obj.get_age());
 		return false;
 	}
-
-	delete recovered_obj;
 
 	LOG_IPCP_INFO("Flow State Object Encoder tested successfully");
 	return true;
 }
 
-bool test_flow_state_object_list(rinad::Encoder * encoder) {
-	std::list<rinad::FlowStateObject *> fso_list;
-	rinad::FlowStateObject fso1 = rinad::FlowStateObject(23, 1, 2, true, 123, 434);
-	rinad::FlowStateObject fso2 = rinad::FlowStateObject(34, 2, 1, true, 223, 434);
-	std::list<rinad::FlowStateObject*> * recovered_obj = 0;
+bool test_flow_state_object_list()
+{
+	std::list<rinad::FlowStateObject> fso_list;
+	rinad::FlowStateObject fso1(23, 1, 2, true, 123, 434);
+	rinad::FlowStateObject fso2(34, 2, 1, true, 223, 434);
+	std::list<rinad::FlowStateObject> recovered_obj;
+	rinad::FlowStateObjectListEncoder encoder;
+	rina::ser_obj_t encoded_obj;
 
-	fso_list.push_back(&fso1);
-	fso_list.push_back(&fso2);
+	fso_list.push_back(fso1);
+	fso_list.push_back(fso2);
 
-	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
-	cdapMessage.obj_class_ = rinad::EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS;
+	encoder.encode(fso_list, encoded_obj);
+	encoder.decode(encoded_obj, recovered_obj);
 
-	encoder->encode(&fso_list, &cdapMessage);
-
-	recovered_obj = (std::list<rinad::FlowStateObject*> *) encoder->decode(&cdapMessage);
-
-	if (fso_list.size() != recovered_obj->size()) {
+	if (fso_list.size() != recovered_obj.size()) {
 		return false;
 	}
-
-	delete recovered_obj;
 
 	LOG_IPCP_INFO("Flow State Object List Encoder tested successfully");
 	return true;
@@ -113,19 +114,13 @@ bool test_flow_state_object_list(rinad::Encoder * encoder) {
 
 int main()
 {
-	rinad::Encoder encoder;
-	encoder.addEncoder(rinad::EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
-			new rinad::FlowStateObjectListEncoder());
-	encoder.addEncoder(rinad::EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
-			new rinad::FlowStateObjectEncoder());
-
-	bool result = test_flow_state_object(&encoder);
+	bool result = test_flow_state_object();
 	if (!result) {
 		LOG_IPCP_ERR("Problems testing Flow State Object Encoder");
 		return -1;
 	}
 
-	result = test_flow_state_object_list(&encoder);
+	result = test_flow_state_object_list();
 	if (!result) {
 		LOG_IPCP_ERR("Problems testing Flow State Object List Encoder");
 		return -1;

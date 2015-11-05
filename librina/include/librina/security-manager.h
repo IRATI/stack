@@ -43,6 +43,7 @@ public:
 
 	PolicyConfig crcPolicy;
 	PolicyConfig ttlPolicy;
+	cdap_rib::con_handle_t con;
 	int id;
 };
 

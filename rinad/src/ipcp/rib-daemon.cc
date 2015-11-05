@@ -73,8 +73,7 @@ class IPCPCDAPIOHandler : public rina::cdap::CDAPIOHandler
  public:
 	IPCPCDAPIOHandler(){};
 	void send(const rina::cdap::cdap_m_t &m_sent,
-		  unsigned int handle,
-		  rina::cdap_rib::cdap_dest_t cdap_dest);
+		  const rina::cdap_rib::con_handle_t& con_handle);
 	void process_message(const rina::ser_obj_t &message,
 			     unsigned int handle,
 			     rina::cdap_rib::cdap_dest_t cdap_dest);
@@ -91,15 +90,14 @@ class IPCPCDAPIOHandler : public rina::cdap::CDAPIOHandler
 };
 
 void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t& m_sent,
-			     unsigned int handle,
-			     rina::cdap_rib::cdap_dest_t cdap_dest)
+			     const rina::cdap_rib::con_handle_t& con_handle)
 {
 	rina::ser_obj_t sdu;
 	rina::cdap::cdap_m_t a_data_m;
 
 	atomic_send_lock_.lock();
 	try {
-		if (cdap_dest == rina::cdap_rib::CDAP_DEST_ADDRESS) {
+		if (con_handle.cdap_dest == rina::cdap_rib::CDAP_DEST_ADDRESS) {
 			rina::cdap::ADataObject adata;
 			ADataObjectEncoder encoder;
 			rina::cdap_rib::flags_t flags;
@@ -107,7 +105,7 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t& m_sent,
 			rina::cdap_rib::obj_info_t obj;
 
 			adata.source_address_ = IPCPFactory::getIPCP()->get_address();
-			adata.dest_address_ = handle;
+			adata.dest_address_ = con_handle.port_id;
 			manager_->encodeCDAPMessage(m_sent,
 						    adata.encoded_cdap_message_);
 			obj.class_ = rina::cdap::ADataObject::A_DATA_OBJECT_CLASS;
@@ -123,27 +121,31 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t& m_sent,
 			manager_->encodeCDAPMessage(a_data_m, sdu);
 			rina::kernelIPCProcess->sendMgmgtSDUToAddress(sdu.message_,
 								      sdu.size_,
-								      handle);
+								      con_handle.port_id);
 			LOG_IPCP_DBG("Sent A-Data CDAP message to address %u: \n%s",
-				     handle,
+				     con_handle.port_id,
 				     m_sent.to_string().c_str());
 			if (m_sent.invoke_id_ != 0 && !m_sent.is_request_message()) {
 				manager_->get_invoke_id_manager()->freeInvokeId(m_sent.invoke_id_,
 										true);
 			}
-		} else if (cdap_dest == rina::cdap_rib::CDAP_DEST_PORT) {
-			manager_->encodeNextMessageToBeSent(m_sent, sdu, handle);
+		} else if (con_handle.cdap_dest == rina::cdap_rib::CDAP_DEST_PORT) {
+			manager_->encodeNextMessageToBeSent(m_sent,
+							    sdu,
+							    con_handle.port_id);
 			rina::kernelIPCProcess->writeMgmgtSDUToPortId(sdu.message_,
 								      sdu.size_,
-								      handle);
+								      con_handle.port_id);
 			LOG_IPCP_DBG("Sent CDAP message of size %d through port-id %u: \n%s" ,
-				      sdu.size_, handle,
+				      sdu.size_,
+				      con_handle.port_id,
 				      m_sent.to_string().c_str());
 
-			manager_->messageSent(m_sent, handle);
-		} else if (cdap_dest == rina::cdap_rib::CDAP_DEST_IPCM) {
+			manager_->messageSent(m_sent,
+					     con_handle.port_id);
+		} else if (con_handle.cdap_dest == rina::cdap_rib::CDAP_DEST_IPCM) {
 			manager_->encodeCDAPMessage(m_sent, sdu);
-			rina::extendedIPCManager->forwardCDAPResponse(handle,
+			rina::extendedIPCManager->forwardCDAPResponse(con_handle.fwd_mgs_seqn,
 								      sdu,
 								      0);
 			LOG_IPCP_DBG("Forwarded CDAP message to IPCM: \n%s",
@@ -157,7 +159,7 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t& m_sent,
 
 		std::string reason = std::string(e.what());
 		if (reason.compare("Flow closed") == 0) {
-			manager_->removeCDAPSession(handle);
+			manager_->removeCDAPSession(con_handle.port_id);
 		}
 
 		atomic_send_lock_.unlock();
@@ -179,7 +181,7 @@ void IPCPCDAPIOHandler::process_message(const rina::ser_obj_t &message,
 			manager_->decodeCDAPMessage(message, m_rcv);
 			rina::cdap_rib::con_handle_t con_handle;
 			con_handle.cdap_dest = rina::cdap_rib::CDAP_DEST_IPCM;
-			con_handle.handle_ = handle;
+			con_handle.fwd_mgs_seqn = handle;
 
 			LOG_IPCP_DBG("Received delegated CDAP message from IPCM \n%s",
 					m_rcv.to_string().c_str());
@@ -226,7 +228,7 @@ void IPCPCDAPIOHandler::process_message(const rina::ser_obj_t &message,
 
 			rina::cdap_rib::con_handle_t con_handle;
 			con_handle.cdap_dest = rina::cdap_rib::CDAP_DEST_ADDRESS;
-			con_handle.handle_ = handle;
+			con_handle.port_id = handle;
 
 			LOG_IPCP_DBG("Received A-Data CDAP message from address %u \n%s",
 				     a_data_obj.source_address_,

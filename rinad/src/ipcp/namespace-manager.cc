@@ -113,7 +113,7 @@ bool DFTEntryRIBObj::delete_(const rina::cdap_rib::con_handle_t &con_handle,
 			     rina::cdap_rib::res_info_t& res)
 {
 	std::list<int> exc_neighs;
-	exc_neighs.push_back(con_handle.handle_);
+	exc_neighs.push_back(con_handle.port_id);
 	nsm->removeDFTEntry(entry->getKey(),
 			    true,
 			    false,
@@ -195,7 +195,7 @@ void DFTRIBObj::create(const rina::cdap_rib::con_handle_t &con_handle,
 	}
 
 	std::list<int> exc_neighs;
-	exc_neighs.push_back(con_handle.handle_);
+	exc_neighs.push_back(con_handle.port_id);
 	namespace_manager_->addDFTEntries(entriesToCreate,
 					  true,
 					  exc_neighs);
@@ -304,13 +304,15 @@ void NamespaceManager::addDFTEntries(const std::list<rina::DirectoryForwardingTa
 	encoder.encode(entries, obj.value_);
 	rina::cdap_rib::flags_t flags;
 	rina::cdap_rib::filt_info_t filt;
+	rina::cdap_rib::con_handle_t con;
 	for (int i = 0; i < session_ids.size(); i++) {
 		if (contains_entry(session_ids[i],
 				neighs_to_exclude))
 			continue;
 
 		try {
-			ipcp->rib_daemon_->getProxy()->remote_create(session_ids[i],
+			con.port_id = session_ids[i];
+			ipcp->rib_daemon_->getProxy()->remote_create(con,
 								     obj,
 								     flags,
 								     filt,
@@ -371,13 +373,15 @@ void NamespaceManager::removeDFTEntry(const std::string& key,
 	obj.name_ = obj_name;
 	rina::cdap_rib::flags_t flags;
 	rina::cdap_rib::filt_info_t filt;
+	rina::cdap_rib::con_handle_t con;
 	for (int i = 0; i < session_ids.size(); i++) {
 		if (contains_entry(session_ids[i],
 				   neighs_to_exclude))
 			continue;
 
 		try {
-			ipcp->rib_daemon_->getProxy()->remote_delete(session_ids[i],
+			con.port_id = session_ids[i];
+			ipcp->rib_daemon_->getProxy()->remote_delete(con,
 								     obj,
 								     flags,
 								     filt,

@@ -467,8 +467,7 @@ void FlowAllocatorInstance::set_allocate_response_message_handle(
 		allocate_response_message_handle;
 }
 
-void FlowAllocatorInstance::submitAllocateRequest(
-		const rina::FlowRequestEvent& event)
+void FlowAllocatorInstance::submitAllocateRequest(const rina::FlowRequestEvent& event)
 {
 	IFlowAllocatorPs * faps =
 		dynamic_cast<IFlowAllocatorPs *>(flow_allocator_->ps);
@@ -503,6 +502,8 @@ void FlowAllocatorInstance::submitAllocateRequest(
 	object_name_ = ss.str();
 
 	//3 Request the creation of the connection(s) in the Kernel
+	con.port_id = destinationAddress;
+	con.cdap_dest = rina::cdap_rib::CDAP_DEST_ADDRESS;
 	state = CONNECTION_CREATE_REQUESTED;
 	rina::kernelIPCProcess->createConnection(*(flow_->getActiveConnection()));
 	LOG_IPCP_DBG("Requested the creation of a connection to the kernel, for flow with port-id %d",
@@ -570,12 +571,11 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(const rina::Cre
 			obj.name_ = object_name_;
 			encoder.encode(*flow_, obj.value_);
 
-			rib_daemon_->getProxy()->remote_create(flow_->destination_address,
+			rib_daemon_->getProxy()->remote_create(con,
 							       obj,
 							       flags,
 							       filt,
-							       this,
-							       rina::cdap_rib::CDAP_DEST_ADDRESS);
+							       this);
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR(
 					"Problems sending M_CREATE <Flow> CDAP message to neighbor: %s",
@@ -631,6 +631,8 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(Flow * flow,
 
 	//2 Check if the source application process has access to the destination application process.
 	// If not send negative M_CREATE_R back to the sender IPC process, and do housekeeping.
+	con.port_id = flow->source_address;
+	con.cdap_dest = rina::cdap_rib::CDAP_DEST_ADDRESS;
 	if (!smps->acceptFlow(*flow_)) {
 		LOG_IPCP_WARN(
 				"Security Manager denied incoming flow request from application %s",
@@ -648,12 +650,11 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(Flow * flow,
 				rina::cdap_rib::res_info_t res;
 				res.code_ = rina::cdap_rib::CDAP_ERROR;
 
-				rina::cdap::getProvider()->send_create_result(flow_->source_address,
+				rina::cdap::getProvider()->send_create_result(con,
 									      obj,
 									      flags,
 									      res,
-									      invoke_id_,
-									      rina::cdap_rib::CDAP_DEST_ADDRESS);
+									      invoke_id_);
 			} catch (rina::Exception &e) {
 				LOG_IPCP_ERR("Problems sending CDAP message: %s",
 					     e.what());
@@ -752,12 +753,11 @@ void FlowAllocatorInstance::submitAllocateResponse(const rina::AllocateFlowRespo
 				rina::cdap_rib::res_info_t res;
 				res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 
-				rina::cdap::getProvider()->send_create_result(flow_->source_address,
+				rina::cdap::getProvider()->send_create_result(con,
 									      obj,
 									      flags,
 									      res,
-									      invoke_id_,
-									      rina::cdap_rib::CDAP_DEST_ADDRESS);
+									      invoke_id_);
 			} catch (rina::Exception &e) {
 				LOG_IPCP_ERR("Problems requesting RIB Daemon to send CDAP Message: %s",
 					     e.what());
@@ -830,12 +830,11 @@ void FlowAllocatorInstance::submitAllocateResponse(const rina::AllocateFlowRespo
 			res.code_ = rina::cdap_rib::CDAP_ERROR;
 			res.reason_ = "Application has rejected the flow";
 
-			rina::cdap::getProvider()->send_create_result(flow_->source_address,
+			rina::cdap::getProvider()->send_create_result(con,
 								      obj,
 								      flags,
 								      res,
-								      invoke_id_,
-								      rina::cdap_rib::CDAP_DEST_ADDRESS);
+								      invoke_id_);
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Problems requesting RIB Daemon to send CDAP Message: %s",
 					e.what());
@@ -946,24 +945,16 @@ void FlowAllocatorInstance::submitDeallocate(
 		//2 Send M_DELETE
 		if (flow_->source_address != flow_->destination_address) {
 			try {
-				unsigned int address = 0;
-				if (ipc_process_->get_address() == flow_->source_address) {
-					address = flow_->destination_address;
-				} else {
-					address = flow_->source_address;
-				}
-
 				rina::cdap_rib::flags_t flags;
 				rina::cdap_rib::filt_info_t filt;
 				rina::cdap_rib::obj_info_t obj;
 				obj.class_ = FlowRIBObject::class_name;
 				obj.name_ = object_name_;
-				rib_daemon_->getProxy()->remote_delete(address,
+				rib_daemon_->getProxy()->remote_delete(con,
 								       obj,
 								       flags,
 								       filt,
-								       NULL,
-								       rina::cdap_rib::CDAP_DEST_ADDRESS);
+								       NULL);
 			} catch (rina::Exception &e) {
 				LOG_IPCP_ERR("Problems sending M_DELETE flow request: %s",
 					     e.what());

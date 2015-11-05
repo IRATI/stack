@@ -93,7 +93,8 @@ void ManagerWorker::operate(rina::FlowInformation flow)
 	bool create_result = false;
         ConnectionCallback callback;
         std::cout << "cdap_prov created" << std::endl;
-        cdap::init(&callback, false);
+        rina::cdap_rib::concrete_syntax_t syntax;
+        cdap::init(&callback, syntax, false);
         cdap_prov_ = cdap::getProvider();
         // CACEP
         cacep(flow.portId);
@@ -152,7 +153,10 @@ bool ManagerWorker::createIPCP_1(int port_id)
 	filt.filter_ = 0;
 	filt.scope_ = 0;
 
-	cdap_prov_->remote_create(port_id, obj, flags, filt, 28);
+	cdap_rib::con_handle_t con;
+	con.port_id = port_id;
+
+	cdap_prov_->remote_create(con, obj, flags, filt, 28);
 	std::cout << "create IPC request CDAP message sent to port "
 			<< port_id << std::endl;
 
@@ -201,7 +205,10 @@ bool ManagerWorker::createIPCP_2(int port_id) {
 	filt.filter_ = 0;
 	filt.scope_ = 0;
 
-	cdap_prov_->remote_create(port_id, obj, flags, filt, 34);
+	cdap_rib::con_handle_t con;
+	con.port_id = port_id;
+
+	cdap_prov_->remote_create(con, obj, flags, filt, 34);
 	std::cout << "create IPC request CDAP message sent to port "
 			<< port_id << std::endl;
 
@@ -249,7 +256,10 @@ bool ManagerWorker::createIPCP_3(int port_id) {
 	filt.filter_ = 0;
 	filt.scope_ = 0;
 
-	cdap_prov_->remote_create(port_id, obj, flags, filt, 67);
+	cdap_rib::con_handle_t con;
+	con.port_id = port_id;
+
+	cdap_prov_->remote_create(con, obj, flags, filt, 67);
 	std::cout << "create IPC request CDAP message sent to port "
 			<< port_id << std::endl;
 
@@ -284,7 +294,10 @@ void ManagerWorker::queryRIB(int port_id, std::string name)
 	filt.filter_ = 0;
 	filt.scope_ = 0;
 
-        cdap_prov_->remote_read(port_id, obj, flags, filt, 89);
+	cdap_rib::con_handle_t con;
+	con.port_id = port_id;
+
+        cdap_prov_->remote_read(con, obj, flags, filt, 89);
         std::cout << "Read RIBDaemon request CDAP message sent" << std::endl;
 
         int bytes_read = ipcManager->readSDU(port_id,

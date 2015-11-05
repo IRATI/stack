@@ -1390,6 +1390,7 @@ IPCManager_::read_ipcp_ribobj(Addon* callee, Promise* promise,
 		msg.op_code_ = rina::cdap::cdap_m_t::M_READ;
 		msg.obj_class_ = object_class;
 		msg.obj_name_ = object_name;
+		msg.invoke_id_ = 15;
 
 		trans = new TransactionState(callee, promise);
 		if(!trans){

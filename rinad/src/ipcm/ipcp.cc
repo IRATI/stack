@@ -453,14 +453,14 @@ void IPCMIPCProcess::forwardCDAPMessage(const rina::cdap::CDAPMessage& msg,
 					unsigned int opaque)
 {
 	rina::ser_obj_t encoded_msg;
+	rina::cdap_rib::concrete_syntax_t syntax;
+	rina::cdap::CDAPMessageEncoder encoder(syntax);
 
-	rina::cdap::getProvider()->get_session_manager()->encodeCDAPMessage(msg,
-									    encoded_msg);
+	encoder.encode(msg, encoded_msg);
 
 	proxy_->forwardCDAPMessage(encoded_msg,
 				   opaque);
 }
-
 
 //
 // IPCM IPC process factory

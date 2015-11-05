@@ -250,13 +250,13 @@ protected:
 	///            be optionally added
 	///
 	virtual void create(const cdap_rib::con_handle_t &con,
-				const std::string& fqn,
-				const std::string& class_,
-				const cdap_rib::filt_info_t &filt,
-				const int invoke_id,
-				const ser_obj_t &obj_req,
-				ser_obj_t &obj_reply,
-				cdap_rib::res_info_t& res);
+			    const std::string& fqn,
+			    const std::string& class_,
+			    const cdap_rib::filt_info_t &filt,
+			    const int invoke_id,
+			    const ser_obj_t &obj_req,
+			    ser_obj_t &obj_reply,
+			    cdap_rib::res_info_t& res);
 	///
 	/// Process a remote delete operation
 	///
@@ -273,11 +273,11 @@ protected:
 	///      returned
 	///
 	virtual bool delete_(const cdap_rib::con_handle_t &con,
-					const std::string& fqn,
-					const std::string& class_,
-					const cdap_rib::filt_info_t &filt,
-					const int invoke_id,
-					cdap_rib::res_info_t& res);
+			     const std::string& fqn,
+			     const std::string& class_,
+			     const cdap_rib::filt_info_t &filt,
+			     const int invoke_id,
+			     cdap_rib::res_info_t& res);
 
 	///
 	///
@@ -294,12 +294,12 @@ protected:
 	///            be optionally added
 	///
 	virtual void read(const cdap_rib::con_handle_t &con,
-					const std::string& fqn,
-					const std::string& class_,
-					const cdap_rib::filt_info_t &filt,
-					const int invoke_id,
-					ser_obj_t &obj_reply,
-					cdap_rib::res_info_t& res);
+			  const std::string& fqn,
+			  const std::string& class_,
+			  const cdap_rib::filt_info_t &filt,
+			  const int invoke_id,
+			  ser_obj_t &obj_reply,
+			  cdap_rib::res_info_t& res);
 
 	///
 	///
@@ -316,11 +316,11 @@ protected:
 	///            be optionally added
 	///
 	virtual void cancelRead(const cdap_rib::con_handle_t &con,
-					const std::string& fqn,
-					const std::string& class_,
-					const cdap_rib::filt_info_t &filt,
-					const int invoke_id,
-					cdap_rib::res_info_t& res);
+			        const std::string& fqn,
+			        const std::string& class_,
+			        const cdap_rib::filt_info_t &filt,
+			        const int invoke_id,
+			        cdap_rib::res_info_t& res);
 
 	///
 	///
@@ -340,13 +340,13 @@ protected:
 	///            be optionally added
 	///
 	virtual void write(const cdap_rib::con_handle_t &con,
-				const std::string& fqn,
-				const std::string& class_,
-				const cdap_rib::filt_info_t &filt,
-				const int invoke_id,
-				const ser_obj_t &obj_req,
-				ser_obj_t &obj_reply,
-				cdap_rib::res_info_t& res);
+			   const std::string& fqn,
+			   const std::string& class_,
+			   const cdap_rib::filt_info_t &filt,
+			   const int invoke_id,
+			   const ser_obj_t &obj_req,
+			   ser_obj_t &obj_reply,
+			   cdap_rib::res_info_t& res);
 
 	///
 	///
@@ -367,13 +367,13 @@ protected:
 	///            be optionally added
 	///
 	virtual void start(const cdap_rib::con_handle_t &con,
-				const std::string& fqn,
-				const std::string& class_,
-				const cdap_rib::filt_info_t &filt,
-				const int invoke_id,
-				const ser_obj_t &obj_req,
-				ser_obj_t &obj_reply,
-				cdap_rib::res_info_t& res);
+			   const std::string& fqn,
+			   const std::string& class_,
+			   const cdap_rib::filt_info_t &filt,
+			   const int invoke_id,
+			   const ser_obj_t &obj_req,
+			   ser_obj_t &obj_reply,
+			   cdap_rib::res_info_t& res);
 
 	///
 	///
@@ -394,13 +394,13 @@ protected:
 	///            be optionally added
 	///
 	virtual void stop(const cdap_rib::con_handle_t &con,
-				const std::string& fqn,
-				const std::string& class_,
-				const cdap_rib::filt_info_t &filt,
-				const int invoke_id,
-				const ser_obj_t &obj_req,
-				ser_obj_t &obj_reply,
-				cdap_rib::res_info_t& res);
+			  const std::string& fqn,
+			  const std::string& class_,
+			  const cdap_rib::filt_info_t &filt,
+			  const int invoke_id,
+			  const ser_obj_t &obj_req,
+			  ser_obj_t &obj_reply,
+			  cdap_rib::res_info_t& res);
 
 	///
 	/// Get the class name.
@@ -516,14 +516,14 @@ typedef int64_t rib_handle_t;
 /// Schema's create callback prototype
 ///
 typedef void (*create_cb_t)(const rib_handle_t rib,
-				const cdap_rib::con_handle_t &con,
-				const std::string& fqn,
-				const std::string& class_,
-				const cdap_rib::filt_info_t &filt,
-				const int invoke_id,
-				const ser_obj_t &obj_req,
-				ser_obj_t &obj_reply,
-				cdap_rib::res_info_t& res);
+			    const cdap_rib::con_handle_t &con,
+			    const std::string& fqn,
+			    const std::string& class_,
+			    const cdap_rib::filt_info_t &filt,
+			    const int invoke_id,
+			    const ser_obj_t &obj_req,
+			    ser_obj_t &obj_reply,
+			    cdap_rib::res_info_t& res);
 
 ///
 /// RIB Schema Object
@@ -593,9 +593,9 @@ public:
 	/// @throws eSchemaNotFound, eSchemaInvalidClass and eSchemaCBRegExists
 	///
 	void addCreateCallbackSchema(const cdap_rib::vers_info_t& version,
-						const std::string& class_,
-						const std::string& fqn_,
-						create_cb_t cb);
+				     const std::string& class_,
+				     const std::string& fqn_,
+				     create_cb_t cb);
 
 	///
 	/// Destroys a RIB schema
@@ -759,8 +759,10 @@ public:
 	///
 	/// @throws eRIBNotFound, eObjDoesNotExist
 	///
-	void removeObjRIB(const rib_handle_t& handle, const int64_t inst_id);
-	void removeObjRIB(const rib_handle_t& handle, const std::string fqdn);
+	void removeObjRIB(const rib_handle_t& handle,
+			  const int64_t inst_id);
+	void removeObjRIB(const rib_handle_t& handle,
+			  const std::string fqdn);
 
 	///
 	/// Check if an object is already in the RIB
@@ -770,7 +772,8 @@ public:
 	/// @param handle The handle of the RIB
 	/// @param fqdn The object fqdn
 	///
-	bool containsObj(const rib_handle_t& handle, const std::string fqdn);
+	bool containsObj(const rib_handle_t& handle,
+			 const std::string fqdn);
 
 	///
 	/// Get the list of all the objects in the RIB
@@ -796,11 +799,11 @@ public:
 	/// @param port_id Flow port id to be used
 	/// @ret A CDAP connection handle
 	///
-	cdap_rib::con_handle_t remote_open_connection(
-			const cdap_rib::vers_info_t &ver,
-			const cdap_rib::ep_info_t &src,
-			const cdap_rib::ep_info_t &dest,
-			const cdap_rib::auth_policy &auth, int port_id);
+	cdap_rib::con_handle_t remote_open_connection(const cdap_rib::vers_info_t &ver,
+						      const cdap_rib::ep_info_t &src,
+						      const cdap_rib::ep_info_t &dest,
+						      const cdap_rib::auth_policy &auth,
+						      int port_id);
 
 	///
 	/// Close a CDAP connection to a remote RIB
@@ -814,82 +817,75 @@ public:
 	///
 	/// @ret success/failure
 	///
-	int remote_create(unsigned int handle,
+	int remote_create(const cdap_rib::con_handle_t& con,
 			  const cdap_rib::obj_info_t &obj,
 			  const cdap_rib::flags_t &flags,
 			  const cdap_rib::filt_info_t &filt,
-			  RIBOpsRespHandler * resp_handler,
-			  cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
+			  RIBOpsRespHandler * resp_handler);
 
 	///
 	/// Perform a delete operation over an object of the remote RIB
 	///
 	/// @ret success/failure
 	///
-	int remote_delete(unsigned int handle,
+	int remote_delete(const cdap_rib::con_handle_t& con,
 			  const cdap_rib::obj_info_t &obj,
 			  const cdap_rib::flags_t &flags,
 			  const cdap_rib::filt_info_t &filt,
-			  RIBOpsRespHandler * resp_handler,
-			  cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
+			  RIBOpsRespHandler * resp_handler);
 
 	///
 	/// Perform a read operation over an object of the remote RIB
 	///
 	/// @ret success/failure
 	///
-	int remote_read(unsigned int handle,
+	int remote_read(const cdap_rib::con_handle_t& con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::flags_t &flags,
 			const cdap_rib::filt_info_t &filt,
-			RIBOpsRespHandler * resp_handler,
-			cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
+			RIBOpsRespHandler * resp_handler);
 	///
 	/// Perform a cancel read operation over an object of the remote RIB
 	///
 	/// @ret success/failure
 	///
-	int remote_cancel_read(unsigned int handle,
+	int remote_cancel_read(const cdap_rib::con_handle_t& con,
 			       const cdap_rib::flags_t &flags,
 			       int invoke_id,
-			       RIBOpsRespHandler * resp_handler,
-			       cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
+			       RIBOpsRespHandler * resp_handler);
 
 	///
 	/// Perform a write operation over an object of the remote RIB
 	///
 	/// @ret success/failure
 	///
-	int remote_write(unsigned int handle,
+	int remote_write(const cdap_rib::con_handle_t& con,
 			 const cdap_rib::obj_info_t &obj,
 			 const cdap_rib::flags_t &flags,
 			 const cdap_rib::filt_info_t &filt,
-			 RIBOpsRespHandler * resp_handler,
-			 cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
+			 RIBOpsRespHandler * resp_handler);
 
 	///
 	/// Perform a start operation over an object of the remote RIB
 	///
 	/// @ret success/failure
 	///
-	int remote_start(unsigned int handle,
+	int remote_start(const cdap_rib::con_handle_t& con,
 			 const cdap_rib::obj_info_t &obj,
 			 const cdap_rib::flags_t &flags,
 			 const cdap_rib::filt_info_t &filt,
-			 RIBOpsRespHandler * resp_handler,
-			 cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
+			 RIBOpsRespHandler * resp_handler);
 
 	///
 	/// Perform a stop operation over an object of the remote RIB
 	///
 	/// @ret success/failure
 	///
-	int remote_stop(unsigned int handle,
+	int remote_stop(const cdap_rib::con_handle_t& con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::flags_t &flags,
 			const cdap_rib::filt_info_t &filt,
-			RIBOpsRespHandler * resp_handler,
-			cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
+			RIBOpsRespHandler * resp_handler);
 
 private:
 	///@internal

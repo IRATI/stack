@@ -58,6 +58,7 @@ cdap_rib::auth_policy_t AuthNonePolicySet::get_auth_policy(int session_id,
 	ISecurityContext * sc = new ISecurityContext(session_id);
 	sc->crcPolicy = profile.crcPolicy;
 	sc->ttlPolicy = profile.ttlPolicy;
+	sc->con.port_id = session_id;
 	sec_man->add_security_context(sc);
 
 	cdap_rib::auth_policy_t result;
@@ -84,6 +85,7 @@ rina::IAuthPolicySet::AuthStatus AuthNonePolicySet::initiate_authentication(cons
 	ISecurityContext * sc = new ISecurityContext(session_id);
 	sc->crcPolicy = profile.crcPolicy;
 	sc->ttlPolicy = profile.ttlPolicy;
+	sc->con.port_id = session_id;
 	sec_man->add_security_context(sc);
 
 	return rina::IAuthPolicySet::SUCCESSFULL;
@@ -165,6 +167,7 @@ cdap_rib::auth_policy_t AuthPasswordPolicySet::get_auth_policy(int session_id,
 	sc->challenge_length = sc->password.length();
 	sc->crcPolicy = profile.crcPolicy;
 	sc->ttlPolicy = profile.ttlPolicy;
+	sc->con.port_id = session_id;
 	sec_man->add_security_context(sc);
 
 	cdap_rib::auth_policy_t result;
@@ -245,6 +248,7 @@ rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(
 	sc->challenge_length = sc->password.length();
 	sc->crcPolicy = profile.crcPolicy;
 	sc->ttlPolicy = profile.ttlPolicy;
+	sc->con.port_id = session_id;
 	sec_man->add_security_context(sc);
 
 	ScopedLock scopedLock(lock);
@@ -266,7 +270,7 @@ rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(
 
 		//object class contains challenge request or reply
 		//object name contains cipher name
-		rib_daemon->remote_write(session_id,
+		rib_daemon->remote_write(sc->con,
 					 obj_info,
 					 flags,
 					 filt,
@@ -309,7 +313,7 @@ int AuthPasswordPolicySet::process_challenge_request(const std::string& challeng
 
 		//object class contains challenge request or reply
 		//object name contains cipher name
-		rib_daemon->remote_write(session_id,
+		rib_daemon->remote_write(sc->con,
 					 obj_info,
 					 flags,
 					 filt,
@@ -580,6 +584,7 @@ SSH2SecurityContext::SSH2SecurityContext(int session_id,
 	crcPolicy = profile.crcPolicy;
 	ttlPolicy = profile.ttlPolicy;
 	encrypt_policy_config = profile.encryptPolicy;
+	con.port_id = session_id;
 
 	dh_peer_pub_key = NULL;
 	dh_state = NULL;
@@ -631,6 +636,7 @@ SSH2SecurityContext::SSH2SecurityContext(int session_id,
 	crcPolicy = profile.crcPolicy;
 	ttlPolicy = profile.ttlPolicy;
 	encrypt_policy_config = profile.encryptPolicy;
+	con.port_id = session_id;
 
 	dh_peer_pub_key = NULL;
 	dh_state = NULL;
@@ -1046,7 +1052,7 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::decryption_enabled_server(SSH2Secu
 		encode_ssh2_auth_options(auth_options,
 					 obj_info.value_);
 
-		rib_daemon->remote_write(sc->id,
+		rib_daemon->remote_write(sc->con,
 					 obj_info,
 					 flags,
 					 filt,
@@ -1207,7 +1213,7 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::encryption_decryption_enabled_clie
 		obj_info.inst_ = 0;
 		encrypted_challenge.get_seralized_object(obj_info.value_);
 
-		rib_daemon->remote_write(sc->id, obj_info, flags, filt, NULL);
+		rib_daemon->remote_write(sc->con, obj_info, flags, filt, NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 		sec_man->destroy_security_context(sc->id);
@@ -1307,7 +1313,7 @@ int AuthSSH2PolicySet::process_client_challenge_message(const cdap::CDAPMessage&
 					       encrypted_server_challenge,
 					       obj_info.value_);
 
-		rib_daemon->remote_write(sc->id, obj_info, flags, filt, NULL);
+		rib_daemon->remote_write(sc->con, obj_info, flags, filt, NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 		sec_man->destroy_security_context(sc->id);
@@ -1436,7 +1442,7 @@ int AuthSSH2PolicySet::process_client_challenge_reply_message(const cdap::CDAPMe
 		obj_info.inst_ = 0;
 		hashed_ser_challenge.get_seralized_object(obj_info.value_);
 
-		rib_daemon->remote_write(sc->id, obj_info, flags, filt,  NULL);
+		rib_daemon->remote_write(sc->con, obj_info, flags, filt,  NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 		sec_man->destroy_security_context(sc->id);
