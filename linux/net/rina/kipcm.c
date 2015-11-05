@@ -2415,6 +2415,12 @@ struct ipcp_instance * kipcm_find_ipcp_by_name(struct kipcm * kipcm,
 
         KIPCM_LOCK(kipcm);
 
+	if (!kipcm || !name_is_ok(name)) {
+        	KIPCM_UNLOCK(kipcm);
+		LOG_ERR("Wrong KIPCM or IPCP name struct passed...");
+		return NULL;
+	}
+
         ipc_process = ipcp_imap_find_by_name(kipcm->instances, name);
 
         KIPCM_UNLOCK(kipcm);
