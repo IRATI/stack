@@ -29,7 +29,6 @@
 #include "debug.h"
 #include "rds/rmem.h"
 #include "rmt-ps.h"
-#include "rmt-ps-common.h"
 #include "pci.h"
 
 #define  N1_CYCLE_DURATION 100
