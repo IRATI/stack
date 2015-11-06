@@ -23,6 +23,10 @@
 
 #include <linux/export.h>
 #include <linux/kobject.h>
+/* For wait_queue */
+#include <linux/sched.h>
+#include <linux/wait.h>
+
 
 #define RINA_PREFIX "efcp"
 
@@ -65,6 +69,7 @@ struct efcp_container {
         struct rmt *         rmt;
         struct kfa *         kfa;
         spinlock_t           lock;
+	wait_queue_head_t    del_wq;
 };
 
 static struct efcp * efcp_create(void)
@@ -199,6 +204,7 @@ struct efcp_container * efcp_container_create(struct kfa * kfa)
 
         container->kfa = kfa;
         spin_lock_init(&container->lock);
+	init_waitqueue_head(&container->del_wq);
 
         return container;
 }
@@ -358,7 +364,6 @@ int efcp_container_write(struct efcp_container * container,
                 spin_unlock_irqrestore(&container->lock, flags);
                 sdu_destroy(sdu);
                 LOG_DBG("EFCP already deallocated");
-
                 return 0;
         }
         atomic_inc(&tmp->pending_ops);
@@ -370,8 +375,7 @@ int efcp_container_write(struct efcp_container * container,
         if (atomic_dec_and_test(&tmp->pending_ops) &&
             tmp->state == EFCP_DEALLOCATED) {
                 spin_unlock_irqrestore(&container->lock, flags);
-                efcp_destroy(tmp);
-
+		wake_up_interruptible(&container->del_wq);
                 return ret;
         }
         spin_unlock_irqrestore(&container->lock, flags);
@@ -462,7 +466,6 @@ int efcp_container_receive(struct efcp_container * container,
                 spin_unlock_irqrestore(&container->lock, flags);
                 pdu_destroy(pdu);
                 LOG_DBG("EFCP already deallocated");
-
                 return 0;
         }
         atomic_inc(&tmp->pending_ops);
@@ -473,9 +476,8 @@ int efcp_container_receive(struct efcp_container * container,
         spin_lock_irqsave(&container->lock, flags);
         if (atomic_dec_and_test(&tmp->pending_ops) &&
             tmp->state == EFCP_DEALLOCATED) {
-                efcp_destroy(tmp);
                 spin_unlock_irqrestore(&container->lock, flags);
-
+		wake_up_interruptible(&container->del_wq);
                 return ret;
         }
         spin_unlock_irqrestore(&container->lock, flags);
@@ -761,6 +763,7 @@ int efcp_connection_destroy(struct efcp_container * container,
 {
         struct efcp * tmp;
         unsigned long flags;
+	int retval;
 
         LOG_DBG("EFCP connection destroy called");
 
@@ -789,17 +792,24 @@ int efcp_connection_destroy(struct efcp_container * container,
                 return -1;
         }
         tmp->state = EFCP_DEALLOCATED;
-        if (atomic_read(&tmp->pending_ops) == 0) {
-                spin_unlock_irqrestore(&container->lock, flags);
-                if (efcp_destroy(tmp)) {
-                        LOG_ERR("Cannot destroy instance %d, instance lost", id);
-                        return -1;
-                }
-                return 0;
-        }
-        LOG_DBG("efcp_connection_destroy with pending ops");
+	if (atomic_read(&tmp->pending_ops) != 0) {
+		spin_unlock_irqrestore(&container->lock, flags);
+		retval = wait_event_interruptible(container->del_wq,
+						  atomic_read(&tmp->pending_ops) == 0 &&
+						  tmp->state == EFCP_DEALLOCATED);
+		if (retval != 0)
+			LOG_ERR("EFCP destroy even interrupted (%d)", retval);
+               	if (efcp_destroy(tmp)) {
+               	        LOG_ERR("Cannot destroy instance %d, instance lost", id);
+               	        return -1;
+               	}
+		return 0;
+	}
         spin_unlock_irqrestore(&container->lock, flags);
-
+        if (efcp_destroy(tmp)) {
+        	LOG_ERR("Cannot destroy instance %d, instance lost", id);
+        	return -1;
+        }
         return 0;
 }
 EXPORT_SYMBOL(efcp_connection_destroy);

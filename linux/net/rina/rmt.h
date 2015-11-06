@@ -75,40 +75,6 @@ struct rmt_n1_port {
 	atomic_t pending_ops;
 };
 
-/* The key in this struct is used to filter by cep_ids, qos_id, address... */
-struct rmt_kqueue {
-	struct rfifo *queue;
-	unsigned int key;
-	unsigned int max_q;
-	unsigned int min_qth;
-	unsigned int max_qth;
-	struct hlist_node hlist;
-};
-
-struct rmt_qgroup {
-	port_id_t pid;
-	struct hlist_node hlist;
-	DECLARE_HASHTABLE(queues, RMT_PS_HASHSIZE);
-};
-
-struct rmt_queue_set {
-	DECLARE_HASHTABLE(qgroups, RMT_PS_HASHSIZE);
-};
-
-struct rmt_kqueue *rmt_kqueue_create(unsigned int key);
-struct rmt_kqueue *rmt_kqueue_find(struct rmt_qgroup *g,
-				   unsigned int key);
-int                rmt_kqueue_destroy(struct rmt_kqueue *q);
-
-struct rmt_qgroup *rmt_qgroup_create(port_id_t pid);
-struct rmt_qgroup *rmt_qgroup_find(struct rmt_queue_set *qs,
-				   port_id_t pid);
-int		   rmt_qgroup_destroy(struct rmt_qgroup *g);
-
-struct rmt_queue_set *rmt_queue_set_create(void);
-int		      rmt_queue_set_destroy(struct rmt_queue_set *qs);
-
-
 struct rmt	  *rmt_create(struct ipcp_instance *parent,
 			      struct kfa *kfa,
 			      struct efcp_container *efcpc);
