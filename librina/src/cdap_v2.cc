@@ -287,8 +287,8 @@ class ConnectionStateMachine : public rina::Lockable
 	/// The state of the CDAP connection, drives the CDAP connection
 	/// state machine
 	ConnectionState connection_state_;
-	rina::Timer *open_timer_;
-	rina::Timer *close_timer_;
+	Timer timer;
+	TimerTask * last_timer_task;
 	friend class ResetStablishmentTimerTask;
 	friend class ReleaseConnectionTimerTask;
 };
@@ -938,19 +938,19 @@ ConnectionStateMachine::ConnectionStateMachine(CDAPSession *cdap_session,
 {
 	cdap_session_ = cdap_session;
 	timeout_ = timeout;
+	last_timer_task = 0;
 	lock();
 	connection_state_ = NONE;
-	unlock();
-	open_timer_ = 0;
-	close_timer_ = 0;
+	unlock();;
 }
 ConnectionStateMachine::~ConnectionStateMachine() throw ()
 {
-	delete open_timer_;
-	open_timer_ = 0;
-	delete close_timer_;
-	close_timer_ = 0;
+	if (last_timer_task)
+		timer.cancelTask(last_timer_task);
+
+	last_timer_task = 0;
 }
+
 bool ConnectionStateMachine::is_connected() const
 {
 	return connection_state_ == CONNECTED;
@@ -1071,10 +1071,8 @@ void ConnectionStateMachine::connect()
 	unlock();
 	LOG_DBG("Waiting timeout %d to receive a connection response",
 		timeout_);
-	open_timer_ = new rina::Timer();
-	ResetStablishmentTimerTask *reset = new ResetStablishmentTimerTask(
-			this);
-	open_timer_->scheduleTask(reset, timeout_);
+	last_timer_task = new ResetStablishmentTimerTask(this);
+	timer.scheduleTask(last_timer_task, timeout_);
 }
 void ConnectionStateMachine::connectReceived()
 {
@@ -1107,8 +1105,10 @@ void ConnectionStateMachine::connectResponseReceived()
 		throw CDAPException(ss.str());
 	}
 	LOG_DBG("Connection response received");
-	delete open_timer_;
-	open_timer_ = 0;
+	if (last_timer_task) {
+		timer.cancelTask(last_timer_task);
+		last_timer_task = 0;
+	}
 	connection_state_ = CONNECTED;
 	unlock();
 }
@@ -1119,12 +1119,10 @@ void ConnectionStateMachine::release(const cdap_m_t &cdap_message)
 	connection_state_ = AWAITCLOSE;
 	unlock();
 	if (cdap_message.invoke_id_ != 0) {
-		close_timer_ = new rina::Timer();
-		ReleaseConnectionTimerTask *reset =
-				new ReleaseConnectionTimerTask(this);
+		last_timer_task = new ReleaseConnectionTimerTask(this);
 		LOG_DBG("Waiting timeout %d to receive a release response",
 			timeout_);
-		close_timer_->scheduleTask(reset, timeout_);
+		timer.scheduleTask(last_timer_task, timeout_);
 	}
 
 }
@@ -1162,8 +1160,10 @@ void ConnectionStateMachine::releaseResponseReceived()
 		throw CDAPException(ss.str());
 	}
 	LOG_DBG("Release response received");
-	delete close_timer_;
-	close_timer_ = 0;
+	if (last_timer_task) {
+		timer.cancelTask(last_timer_task);
+		last_timer_task = 0;
+	}
 }
 
 // CLASS ResetStablishmentTimerTask

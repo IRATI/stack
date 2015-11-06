@@ -2055,7 +2055,6 @@ void RIBDaemon::remote_open_connection_result(const cdap_rib::con_handle_t &con,
 					      const cdap_rib::res_info_t &res)
 {
 	// FIXME remove invoke_id
-
 	app_con_callback_->connectResult(res, con);
 
 	if (res.code_ == cdap_rib::CDAP_SUCCESS) {
