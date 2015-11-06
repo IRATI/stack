@@ -442,6 +442,13 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %include "librina/concurrency.h"
 %include "librina/common.h"
 
+namespace rina {
+namespace cdap {
+class cdap_m_t;
+}
+}
+
+%template(TempCDAPMessageEncoder) rina::Encoder<rina::cdap::cdap_m_t>;
 %template(TempStringEncoder) rina::Encoder<std::string>;
 %template(TempIntEncoder) rina::Encoder<int>;
 
