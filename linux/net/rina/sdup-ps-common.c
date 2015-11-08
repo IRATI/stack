@@ -69,6 +69,16 @@ int common_sdup_add_padding_policy(struct sdup_ps * ps,
 	char *		data;
 	int i;
 
+	if (!ps || !pdu || !port_conf){
+		LOG_ERR("Encryption arguments not initialized!");
+		return -1;
+	}
+
+	/* encryption and therefore padding is disabled */
+	if (port_conf->blkcipher == NULL ||
+	    !port_conf->enable_encryption)
+		return 0;
+
 	LOG_DBG("PADDING!");
 
 	buf = pdu_ser_buffer(pdu);
@@ -103,6 +113,11 @@ int common_sdup_remove_padding_policy(struct sdup_ps * ps,
 		LOG_ERR("Encryption arguments not initialized!");
 		return -1;
 	}
+
+	/* decryption and therefore padding is disabled */
+	if (port_conf->blkcipher == NULL ||
+	    !port_conf->enable_decryption)
+		return 0;
 
 	LOG_DBG("UNPADDING!");
 	buf = pdu_ser_buffer(pdu);
@@ -142,6 +157,11 @@ int common_sdup_encrypt_policy(struct sdup_ps * ps,
 		return -1;
 	}
 
+	/* encryption is disabled */
+	if (port_conf->blkcipher == NULL ||
+	    !port_conf->enable_encryption)
+		return 0;
+
 	LOG_DBG("ENCRYPT!");
 
 	desc.flags = 0;
@@ -170,12 +190,18 @@ int common_sdup_decrypt_policy(struct sdup_ps * ps,
 	struct buffer *		buf;
 	ssize_t			buffer_size;
 	void *			data;
-	LOG_DBG("DECRYPT!");
 
 	if (!ps || !pdu || !port_conf){
 		LOG_ERR("Failed decryption");
 		return -1;
 	}
+
+	/* decryption is disabled */
+	if (port_conf->blkcipher == NULL ||
+	    !port_conf->enable_decryption)
+		return 0;
+
+	LOG_DBG("DECRYPT!");
 
 	desc.flags = 0;
 	desc.tfm = port_conf->blkcipher;
@@ -228,8 +254,8 @@ int common_sdup_set_lifetime_limit_policy(struct sdup_ps * ps,
 			return -1;
 
 		memcpy(data, &ttl, sizeof(ttl));
+		LOG_DBG("SETTTL! %d", (int)ttl);
 	}
-	LOG_DBG("SETTTL! %d", (int)ttl);
 	return 0;
 }
 
@@ -246,7 +272,7 @@ int common_sdup_get_lifetime_limit_policy(struct sdup_ps * ps,
 		return -1;
 	}
 
-        if (port_conf->initial_ttl_value > 0){
+	if (port_conf->initial_ttl_value > 0){
 		if (pdu_ser_data_and_length(pdu, &data, &len))
 			return -1;
 
@@ -256,8 +282,8 @@ int common_sdup_get_lifetime_limit_policy(struct sdup_ps * ps,
 			LOG_ERR("Failed to shrink ser PDU");
 			return -1;
 		}
+		LOG_DBG("GET_TTL! %d", (int)*ttl);
 	}
-	LOG_DBG("GET_TTL! %d", (int)*ttl);
 	return 0;
 }
 
@@ -273,18 +299,18 @@ int common_sdup_dec_check_lifetime_limit_policy(struct sdup_ps * ps,
 		return -1;
 	}
 
-	pci = pdu_pci_get_rw(pdu);
-	ttl = pci_ttl(pci);
+	if (port_conf->initial_ttl_value > 0){
+		pci = pdu_pci_get_rw(pdu);
+		ttl = pci_ttl(pci);
 
-        if (port_conf->initial_ttl_value > 0){
 		ttl = ttl-1;
 		if (ttl == 0){
 			LOG_DBG("TTL dropped to 0, dropping pdu.");
 			return -1;
 		}
+		pci_ttl_set(pci, ttl);
+		LOG_DBG("DEC_CHECK_TTL! new ttl: %d", (int)ttl);
 	}
-	pci_ttl_set(pci, ttl);
-	LOG_DBG("DEC_CHECK_TTL! new ttl: %d", (int)ttl);
 	return 0;
 }
 
@@ -322,7 +348,9 @@ int common_sdup_add_error_check_policy(struct sdup_ps * ps,
 		return -1;
 	}
 
-	LOG_DBG("CRC!");
+	if (port_conf->dup_conf == NULL)
+		return 0;
+
 	if (port_conf->dup_conf->error_check_policy != NULL){
 		/* TODO Assuming CRC32 */
 		if (pdu_ser_tail_grow_gfp(pdu, sizeof(u32))) {
@@ -344,6 +372,7 @@ int common_sdup_add_error_check_policy(struct sdup_ps * ps,
 			return -1;
 
 		memcpy(data+len-sizeof(crc), &crc, sizeof(crc));
+		LOG_DBG("CRC!");
 	}
 	return 0;
 }
@@ -364,7 +393,9 @@ int common_sdup_check_error_check_policy(struct sdup_ps * ps,
 	if (!pdu_ser_is_ok(pdu))
 		return -1;
 
-	LOG_DBG("CHECKCRC!");
+	if (port_conf->dup_conf == NULL)
+		return 0;
+
 	if (port_conf->dup_conf->error_check_policy != NULL){
 		data = 0;
 		crc  = 0;
@@ -384,6 +415,7 @@ int common_sdup_check_error_check_policy(struct sdup_ps * ps,
 			LOG_ERR("Failed to shrink ser PDU");
 			return -1;
 		}
+		LOG_DBG("CHECKCRC!");
 	}
 	return 0;
 }

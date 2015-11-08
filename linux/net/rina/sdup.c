@@ -410,21 +410,18 @@ bool sdup_protect_pdu(struct sdup * instance,
 		return -1;
 	}
 
-	if (port_conf->blkcipher != NULL &&
-	    port_conf->enable_encryption &&
-	    ps->sdup_add_padding_policy(ps, pdu, port_conf)){
+	if (ps->sdup_add_padding_policy(ps, pdu, port_conf)){
 		rcu_read_unlock();
 		return -1;
 	}
 
-	if (port_conf->blkcipher != NULL &&
-	    port_conf->enable_encryption &&
-	    ps->sdup_encrypt_policy(ps, pdu, port_conf)){
+	if (ps->sdup_encrypt_policy(ps, pdu, port_conf)){
 		rcu_read_unlock();
 		return -1;
 	}
 
 	if (ps->sdup_add_error_check_policy(ps, pdu, port_conf)){
+		rcu_read_unlock();
 		return -1;
 	}
 
@@ -463,16 +460,12 @@ bool sdup_unprotect_pdu(struct sdup * instance,
 		return -1;
 	}
 
-	if (port_conf->blkcipher != NULL &&
-	    port_conf->enable_decryption &&
-	    ps->sdup_decrypt_policy(ps, pdu, port_conf)){
+	if (ps->sdup_decrypt_policy(ps, pdu, port_conf)){
 		rcu_read_unlock();
 		return -1;
 	}
 
-	if (port_conf->blkcipher != NULL &&
-	    port_conf->enable_decryption &&
-	    ps->sdup_remove_padding_policy(ps, pdu, port_conf)){
+	if (ps->sdup_remove_padding_policy(ps, pdu, port_conf)){
 		rcu_read_unlock();
 		return -1;
 	}
