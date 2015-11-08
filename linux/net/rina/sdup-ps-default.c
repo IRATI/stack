@@ -75,8 +75,8 @@ int default_sdup_get_lifetime_limit_policy(struct sdup_ps * ps,
 }
 
 int default_sdup_dec_check_lifetime_limit_policy(struct sdup_ps * ps,
-						struct pdu * pdu,
-						struct sdup_port_conf * port_conf)
+						 struct pdu * pdu,
+						 struct sdup_port_conf * port_conf)
 {
 	return common_sdup_dec_check_lifetime_limit_policy(ps, pdu, port_conf);
 }

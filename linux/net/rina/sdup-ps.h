@@ -29,9 +29,9 @@
 #include "ps-factory.h"
 
 struct sdup_ps {
-        struct ps_base base;
+	struct ps_base base;
 
-        /* Behavioural policies. */
+	/* Behavioural policies. */
 
 	int (* sdup_add_padding_policy)(struct sdup_ps *,
 					struct pdu_ser *,
@@ -80,10 +80,10 @@ struct sdup_ps {
 				struct pdu_ser *,
 				struct sdup_port_conf *);
 
-        /* Reference used to access the SDUP data model. */
-        struct sdup * dm;
+	/* Reference used to access the SDUP data model. */
+	struct sdup * dm;
 
-        /* Data private to the policy-set implementation. */
+	/* Data private to the policy-set implementation. */
 	//no private data at the moment...
 	//void *       priv;
 };

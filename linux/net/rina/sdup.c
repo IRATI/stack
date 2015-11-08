@@ -129,11 +129,11 @@ static int extract_policy_parameters(struct dup_config_entry * entry)
 		}
 
 		if (kstrtouint(policy_param_value(parameter),
-                               10,
-                               &entry->initial_ttl_value)) {
-                        LOG_ERR("Failed to convert TTL string to int");
+			       10,
+			       &entry->initial_ttl_value)) {
+			LOG_ERR("Failed to convert TTL string to int");
 			return -1;
-                }
+		}
 
 		LOG_DBG("Initial TTL value is %u", entry->initial_ttl_value);
 	}
@@ -148,7 +148,7 @@ static int extract_policy_parameters(struct dup_config_entry * entry)
 
 		aux = policy_param_value(parameter);
 		if (string_cmp(aux, "AES128") == 0 ||
-				string_cmp(aux, "AES256") == 0) {
+		    string_cmp(aux, "AES256") == 0) {
 			if (string_dup("ecb(aes)",
 				       &entry->encryption_cipher)) {
 				LOG_ERR("Problems copying 'encryptAlg' value");
@@ -228,52 +228,52 @@ int sdup_select_policy_set(struct sdup * instance,
 			   const string_t * path,
 			   const string_t * name)
 {
-        struct ps_select_transaction trans;
+	struct ps_select_transaction trans;
 
-        ASSERT(path);
+	ASSERT(path);
 
-        if (strcmp(path, "") != 0) {
-                LOG_ERR("This component has no subcomponent named '%s'", path);
-                return -1;
-        }
+	if (strcmp(path, "") != 0) {
+		LOG_ERR("This component has no subcomponent named '%s'", path);
+		return -1;
+	}
 
-        /* The request addresses this policy-set. */
-        base_select_policy_set_start(&instance->base,
+	/* The request addresses this policy-set. */
+	base_select_policy_set_start(&instance->base,
 				     &trans,
 				     &policy_sets,
 				     name);
 
-        if (trans.state == PS_SEL_TRANS_PENDING) {
-                struct sdup_ps * ps;
+	if (trans.state == PS_SEL_TRANS_PENDING) {
+		struct sdup_ps * ps;
 
-                ps = container_of(trans.candidate_ps, struct sdup_ps, base);
-                if (!ps){
-                        LOG_ERR("SDUP policy set is invalid");
-                        trans.state = PS_SEL_TRANS_ABORTED;
-                }
-        }
+		ps = container_of(trans.candidate_ps, struct sdup_ps, base);
+		if (!ps){
+			LOG_ERR("SDUP policy set is invalid");
+			trans.state = PS_SEL_TRANS_ABORTED;
+		}
+	}
 
-        base_select_policy_set_finish(&instance->base, &trans);
+	base_select_policy_set_finish(&instance->base, &trans);
 
-        return trans.state == PS_SEL_TRANS_COMMITTED ? 0 : -1;
+	return trans.state == PS_SEL_TRANS_COMMITTED ? 0 : -1;
 }
 EXPORT_SYMBOL(sdup_select_policy_set);
 
 int sdup_config_set(struct sdup *        instance,
-                    struct sdup_config * sdup_config)
+		    struct sdup_config * sdup_config)
 {
 	struct dup_config * dup_pos;
 	LOG_INFO("SDUP Config received.");
 
-        if (!instance) {
-                LOG_ERR("Bogus instance passed");
-                return -1;
-        }
+	if (!instance) {
+		LOG_ERR("Bogus instance passed");
+		return -1;
+	}
 
-        if (!sdup_config) {
-                 LOG_ERR("Bogus sdup_conf passed");
-                return -1;
-        }
+	if (!sdup_config) {
+		LOG_ERR("Bogus sdup_conf passed");
+		return -1;
+	}
 
 	/*verify policy params, TODO without extract policy parameters */
 	if (extract_policy_parameters(sdup_config->default_dup_conf)) {
@@ -289,9 +289,9 @@ int sdup_config_set(struct sdup *        instance,
 		}
 	}
 
-        instance->sdup_conf = sdup_config;
+	instance->sdup_conf = sdup_config;
 
-        return 0;
+	return 0;
 }
 EXPORT_SYMBOL(sdup_config_set);
 
@@ -327,7 +327,7 @@ EXPORT_SYMBOL(sdup_create);
 
 int sdup_destroy(struct sdup * instance)
 {
-        struct sdup_port_conf * pos, * nxt;
+	struct sdup_port_conf * pos, * nxt;
 
 	if (!instance) {
 		LOG_ERR("Bogus instance passed, bailing out");
@@ -335,13 +335,13 @@ int sdup_destroy(struct sdup * instance)
 	}
 
 	/* dealloc attributes */;
-        list_for_each_entry_safe(pos, nxt,
-                                 &instance->port_confs,
-                                 list) {
+	list_for_each_entry_safe(pos, nxt,
+				 &instance->port_confs,
+				 list) {
 		port_conf_destroy(pos);
-        }
+	}
 
-        if (instance->sdup_conf)
+	if (instance->sdup_conf)
 		sdup_config_destroy(instance->sdup_conf);
 
 	rina_component_fini(&instance->base);
@@ -361,13 +361,13 @@ int sdup_init_port_config(struct sdup * instance,
 	struct sdup_port_conf *tmp;
 	struct dup_config_entry * dup_conf;
 
-	LOG_INFO("Initialized SDUP configuration for port");
-
 	dup_conf = find_dup_config(instance->sdup_conf,
 				   n1_dif_name->process_name);
 	tmp = port_conf_create(port_id, dup_conf);
 
 	list_add(&(tmp->list), &(instance->port_confs));
+
+	LOG_INFO("Initialized SDUP configuration for port");
 	return 0;
 }
 EXPORT_SYMBOL(sdup_init_port_config);
@@ -375,17 +375,17 @@ EXPORT_SYMBOL(sdup_init_port_config);
 int sdup_destroy_port_config(struct sdup * instance,
 			     port_id_t port_id)
 {
-        struct sdup_port_conf * pos, * nxt;
+	struct sdup_port_conf * pos, * nxt;
 
-        list_for_each_entry_safe(pos, nxt,
-                                 &instance->port_confs,
-                                 list) {
+	list_for_each_entry_safe(pos, nxt,
+				 &instance->port_confs,
+				 list) {
 		if (pos->port_id == port_id){
 			port_conf_destroy(pos);
 			LOG_INFO("Destroyed SDUP configuration for port");
 			return 0;
 		}
-        }
+	}
 	LOG_INFO("No SDUP configuration found for port");
 	return -1;
 }
@@ -627,7 +627,7 @@ EXPORT_SYMBOL(sdup_enable_encryption);
 struct sdup *
 sdup_from_component(struct rina_component * component)
 {
-        return container_of(component, struct sdup, base);
+	return container_of(component, struct sdup, base);
 }
 EXPORT_SYMBOL(sdup_from_component);
 
