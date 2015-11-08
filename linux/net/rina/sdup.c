@@ -68,26 +68,31 @@ struct sdup_port_conf * port_conf_create(port_id_t port_id,
 
 	tmp->dup_conf = dup_conf;
 
-	/* init the rest of attributes */
-	if (dup_conf != NULL &&
-	    dup_conf->encryption_cipher != NULL) {
-		tmp->blkcipher =
-			crypto_alloc_blkcipher(dup_conf->encryption_cipher,
-					       0,
-					       0);
-		if (IS_ERR(tmp->blkcipher)) {
-			LOG_ERR("could not allocate blkcipher handle for %s\n",
-				dup_conf->encryption_cipher);
-			return NULL;
-		}
-	}else
-		tmp->blkcipher = NULL;
-
-	tmp->initial_ttl_value = dup_conf->initial_ttl_value;
+	tmp->initial_ttl_value = 0;
+	tmp->blkcipher = NULL;
 	tmp->enable_encryption = false;
 	tmp->enable_decryption = false;
-	tmp->compress_alg = dup_conf->compress_alg;
+	tmp->compress_alg = NULL;
 
+	/* init the rest of attributes */
+	if (dup_conf != NULL){
+		if (dup_conf->encryption_cipher != NULL){
+			tmp->blkcipher =
+				crypto_alloc_blkcipher(dup_conf->encryption_cipher,
+						       0,
+						       0);
+			if (IS_ERR(tmp->blkcipher)) {
+				LOG_ERR("could not allocate blkcipher handle for %s\n",
+					dup_conf->encryption_cipher);
+				return NULL;
+			}
+		}
+
+		tmp->initial_ttl_value = dup_conf->initial_ttl_value;
+		tmp->enable_encryption = false;
+		tmp->enable_decryption = false;
+		tmp->compress_alg = dup_conf->compress_alg;
+	}
 	return tmp;
 }
 
