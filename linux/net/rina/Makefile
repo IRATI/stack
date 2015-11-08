@@ -32,7 +32,6 @@ rina-personality-default-y :=					\
 	kipcm-utils.o kipcm.o					\
 	sdup.o							\
 	default.o ps-factory.o					\
-	rmt-ps-common.o						\
 	rmt-ps-default.o					\
 	dtp-ps-default.o					\
 	dtcp-ps-default.o                       		\
