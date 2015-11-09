@@ -152,7 +152,7 @@ default_closed_window(struct dtp_ps * ps, struct pdu * pdu)
 EXPORT_SYMBOL(common_closed_window);
 
 int
-common_flow_control_overrun(struct dtp_ps * ps,
+default_snd_flow_control_overrun(struct dtp_ps * ps,
                             struct pdu *    pdu)
 {
         struct cwq * cwq;

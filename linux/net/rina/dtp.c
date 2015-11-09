@@ -1010,8 +1010,8 @@ int dtp_select_policy_set(struct dtp * dtp,
                 if (!ps->closed_window) {
                         ps->closed_window = default_closed_window;
                 }
-                if (!ps->flow_control_overrun) {
-                        ps->flow_control_overrun = default_flow_control_overrun;
+                if (!ps->snd_flow_control_overrun) {
+                        ps->snd_flow_control_overrun = default_snd_flow_control_overrun;
                 }
                 if (!ps->initial_sequence_number) {
                         ps->initial_sequence_number = default_initial_sequence_number;
