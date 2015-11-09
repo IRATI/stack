@@ -77,8 +77,6 @@
 #define DA_UNMAP_GRANULARITY_ALIGNMENT_DEFAULT	0
 /* Default max_write_same_len, disabled by default */
 #define DA_MAX_WRITE_SAME_LEN			0
-/* Default max transfer length */
-#define DA_FABRIC_MAX_SECTORS			8192
 /* Use a model alias based on the configfs backend device name */
 #define DA_EMULATE_MODEL_ALIAS			0
 /* Emulation for Direct Page Out */
@@ -108,6 +106,8 @@
 #define DA_EMULATE_ALUA				0
 /* Enforce SCSI Initiator Port TransportID with 'ISID' for PR */
 #define DA_ENFORCE_PR_ISIDS			1
+/* Force SPC-3 PR Activate Persistence across Target Power Loss */
+#define DA_FORCE_PR_APTPL			0
 #define DA_STATUS_MAX_SECTORS_MIN		16
 #define DA_STATUS_MAX_SECTORS_MAX		8192
 /* By default don't report non-rotating (solid state) medium */
@@ -165,10 +165,8 @@ enum se_cmd_flags_table {
 	SCF_SEND_DELAYED_TAS		= 0x00004000,
 	SCF_ALUA_NON_OPTIMIZED		= 0x00008000,
 	SCF_PASSTHROUGH_SG_TO_MEM_NOALLOC = 0x00020000,
-	SCF_ACK_KREF			= 0x00040000,
 	SCF_COMPARE_AND_WRITE		= 0x00080000,
 	SCF_COMPARE_AND_WRITE_POST	= 0x00100000,
-	SCF_CMD_XCOPY_PASSTHROUGH	= 0x00200000,
 };
 
 /* struct se_dev_entry->lun_flags and struct se_lun->lun_access */
@@ -407,7 +405,7 @@ struct t10_reservation {
 	/* Activate Persistence across Target Power Loss enabled
 	 * for SCSI device */
 	int pr_aptpl_active;
-#define PR_APTPL_BUF_LEN			8192
+#define PR_APTPL_BUF_LEN			262144
 	u32 pr_generation;
 	spinlock_t registration_lock;
 	spinlock_t aptpl_reg_lock;
@@ -474,6 +472,12 @@ struct se_dif_v1_tuple {
 	__be32			ref_tag;
 };
 
+/* for sam_task_attr */
+#define TCM_SIMPLE_TAG	0x20
+#define TCM_HEAD_TAG	0x21
+#define TCM_ORDERED_TAG	0x22
+#define TCM_ACA_TAG	0x24
+
 struct se_cmd {
 	/* SAM response code being sent to initiator */
 	u8			scsi_status;
@@ -514,11 +518,11 @@ struct se_cmd {
 	struct list_head	se_cmd_list;
 	struct completion	cmd_wait_comp;
 	struct kref		cmd_kref;
-	struct target_core_fabric_ops *se_tfo;
+	const struct target_core_fabric_ops *se_tfo;
 	sense_reason_t		(*execute_cmd)(struct se_cmd *);
 	sense_reason_t		(*execute_rw)(struct se_cmd *, struct scatterlist *,
 					      u32, enum dma_data_direction);
-	sense_reason_t (*transport_complete_callback)(struct se_cmd *);
+	sense_reason_t (*transport_complete_callback)(struct se_cmd *, bool);
 
 	unsigned char		*t_task_cdb;
 	unsigned char		__t_task_cdb[TCM_MAX_COMMAND_SIZE];
@@ -585,6 +589,7 @@ struct se_node_acl {
 	bool			acl_stop:1;
 	u32			queue_depth;
 	u32			acl_index;
+	enum target_prot_type	saved_prot_type;
 #define MAX_ACL_TAG_SIZE 64
 	char			acl_tag[MAX_ACL_TAG_SIZE];
 	/* Used for PR SPEC_I_PT=1 and REGISTER_AND_MOVE */
@@ -610,6 +615,7 @@ struct se_session {
 	unsigned		sess_tearing_down:1;
 	u64			sess_bin_isid;
 	enum target_prot_op	sup_prot_ops;
+	enum target_prot_type	sess_prot_type;
 	struct se_node_acl	*se_node_acl;
 	struct se_portal_group *se_tpg;
 	void			*fabric_sess_ptr;
@@ -680,12 +686,12 @@ struct se_dev_attrib {
 	enum target_prot_type pi_prot_type;
 	enum target_prot_type hw_pi_prot_type;
 	int		enforce_pr_isids;
+	int		force_pr_aptpl;
 	int		is_nonrot;
 	int		emulate_rest_reord;
 	u32		hw_block_size;
 	u32		block_size;
 	u32		hw_max_sectors;
-	u32		fabric_max_sectors;
 	u32		optimal_sectors;
 	u32		hw_queue_depth;
 	u32		queue_depth;
@@ -884,7 +890,7 @@ struct se_portal_group {
 	/* List of TCM sessions associated wth this TPG */
 	struct list_head	tpg_sess_list;
 	/* Pointer to $FABRIC_MOD dependent code */
-	struct target_core_fabric_ops *se_tpg_tfo;
+	const struct target_core_fabric_ops *se_tpg_tfo;
 	struct se_wwn		*se_tpg_wwn;
 	struct config_group	tpg_group;
 	struct config_group	*tpg_default_groups[7];
@@ -902,5 +908,19 @@ struct se_wwn {
 	struct config_group	*wwn_default_groups[2];
 	struct config_group	fabric_stat_group;
 };
+
+static inline void atomic_inc_mb(atomic_t *v)
+{
+	smp_mb__before_atomic();
+	atomic_inc(v);
+	smp_mb__after_atomic();
+}
+
+static inline void atomic_dec_mb(atomic_t *v)
+{
+	smp_mb__before_atomic();
+	atomic_dec(v);
+	smp_mb__after_atomic();
+}
 
 #endif /* TARGET_CORE_BASE_H */

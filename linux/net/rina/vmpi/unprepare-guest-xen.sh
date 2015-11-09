@@ -4,4 +4,6 @@
 
 set -x
 
-sudo rmmod vmpi-xen-guest
+sudo rmmod vmpi-guest-xen
+sudo rmmod vmpi-provider
+sudo rmmod vmpi-bufs

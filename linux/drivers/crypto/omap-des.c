@@ -223,12 +223,19 @@ static void omap_des_write_n(struct omap_des_dev *dd, u32 offset,
 
 static int omap_des_hw_init(struct omap_des_dev *dd)
 {
+	int err;
+
 	/*
 	 * clocks are enabled when request starts and disabled when finished.
 	 * It may be long delays between requests.
 	 * Device might go to off mode to save power.
 	 */
-	pm_runtime_get_sync(dd->dev);
+	err = pm_runtime_get_sync(dd->dev);
+	if (err < 0) {
+		pm_runtime_put_noidle(dd->dev);
+		dev_err(dd->dev, "%s: failed to get_sync(%d)\n", __func__, err);
+		return err;
+	}
 
 	if (!(dd->flags & FLAGS_INIT)) {
 		dd->flags |= FLAGS_INIT;
@@ -528,9 +535,6 @@ static int omap_des_crypt_dma_stop(struct omap_des_dev *dd)
 
 	dmaengine_terminate_all(dd->dma_lch_in);
 	dmaengine_terminate_all(dd->dma_lch_out);
-
-	dma_unmap_sg(dd->dev, dd->in_sg, dd->in_sg_len, DMA_TO_DEVICE);
-	dma_unmap_sg(dd->dev, dd->out_sg, dd->out_sg_len, DMA_FROM_DEVICE);
 
 	return err;
 }
@@ -914,7 +918,7 @@ static irqreturn_t omap_des_irq(int irq, void *dev_id)
 
 			scatterwalk_advance(&dd->in_walk, 4);
 			if (dd->in_sg->length == _calc_walked(in)) {
-				dd->in_sg = scatterwalk_sg_next(dd->in_sg);
+				dd->in_sg = sg_next(dd->in_sg);
 				if (dd->in_sg) {
 					scatterwalk_start(&dd->in_walk,
 							  dd->in_sg);
@@ -946,7 +950,7 @@ static irqreturn_t omap_des_irq(int irq, void *dev_id)
 			*dst = omap_des_read(dd, DES_REG_DATA_N(dd, i));
 			scatterwalk_advance(&dd->out_walk, 4);
 			if (dd->out_sg->length == _calc_walked(out)) {
-				dd->out_sg = scatterwalk_sg_next(dd->out_sg);
+				dd->out_sg = sg_next(dd->out_sg);
 				if (dd->out_sg) {
 					scatterwalk_start(&dd->out_walk,
 							  dd->out_sg);
@@ -958,9 +962,9 @@ static irqreturn_t omap_des_irq(int irq, void *dev_id)
 			}
 		}
 
-		dd->total -= DES_BLOCK_SIZE;
+		BUG_ON(dd->total < DES_BLOCK_SIZE);
 
-		BUG_ON(dd->total < 0);
+		dd->total -= DES_BLOCK_SIZE;
 
 		/* Clear IRQ status */
 		status &= ~DES_REG_IRQ_DATA_OUT;
@@ -1074,16 +1078,20 @@ static int omap_des_probe(struct platform_device *pdev)
 	if (err)
 		goto err_res;
 
-	dd->io_base = devm_request_and_ioremap(dev, res);
-	if (!dd->io_base) {
-		dev_err(dev, "can't ioremap\n");
-		err = -ENOMEM;
+	dd->io_base = devm_ioremap_resource(dev, res);
+	if (IS_ERR(dd->io_base)) {
+		err = PTR_ERR(dd->io_base);
 		goto err_res;
 	}
 	dd->phys_base = res->start;
 
 	pm_runtime_enable(dev);
-	pm_runtime_get_sync(dev);
+	err = pm_runtime_get_sync(dev);
+	if (err < 0) {
+		pm_runtime_put_noidle(dev);
+		dev_err(dd->dev, "%s: failed to get_sync(%d)\n", __func__, err);
+		goto err_get;
+	}
 
 	omap_des_dma_stop(dd);
 
@@ -1148,6 +1156,7 @@ err_algs:
 err_irq:
 	tasklet_kill(&dd->done_task);
 	tasklet_kill(&dd->queue_task);
+err_get:
 	pm_runtime_disable(dev);
 err_res:
 	dd = NULL;
@@ -1191,7 +1200,14 @@ static int omap_des_suspend(struct device *dev)
 
 static int omap_des_resume(struct device *dev)
 {
-	pm_runtime_get_sync(dev);
+	int err;
+
+	err = pm_runtime_get_sync(dev);
+	if (err < 0) {
+		pm_runtime_put_noidle(dev);
+		dev_err(dev, "%s: failed to get_sync(%d)\n", __func__, err);
+		return err;
+	}
 	return 0;
 }
 #endif
@@ -1203,7 +1219,6 @@ static struct platform_driver omap_des_driver = {
 	.remove	= omap_des_remove,
 	.driver	= {
 		.name	= "omap-des",
-		.owner	= THIS_MODULE,
 		.pm	= &omap_des_pm_ops,
 		.of_match_table	= of_match_ptr(omap_des_of_match),
 	},

@@ -52,7 +52,7 @@
 #endif
 
 extern const char *drbd_buildtag(void);
-#define REL_VERSION "8.4.3"
+#define REL_VERSION "8.4.5"
 #define API_VERSION 1
 #define PRO_VERSION_MIN 86
 #define PRO_VERSION_MAX 101
@@ -172,7 +172,7 @@ enum drbd_ret_code {
 	ERR_RES_NOT_KNOWN	= 158,
 	ERR_RES_IN_USE		= 159,
 	ERR_MINOR_CONFIGURED    = 160,
-	ERR_MINOR_EXISTS	= 161,
+	ERR_MINOR_OR_VOLUME_EXISTS = 161,
 	ERR_INVALID_REQUEST	= 162,
 	ERR_NEED_APV_100	= 163,
 	ERR_NEED_ALLOW_TWO_PRI  = 164,
@@ -245,7 +245,7 @@ enum drbd_disk_state {
 	D_DISKLESS,
 	D_ATTACHING,      /* In the process of reading the meta-data */
 	D_FAILED,         /* Becomes D_DISKLESS as soon as we told it the peer */
-			/* when >= D_FAILED it is legal to access mdev->bc */
+			  /* when >= D_FAILED it is legal to access mdev->ldev */
 	D_NEGOTIATING,    /* Late attaching state, we need to talk to the peer */
 	D_INCONSISTENT,
 	D_OUTDATED,

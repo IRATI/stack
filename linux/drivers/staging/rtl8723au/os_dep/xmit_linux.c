@@ -24,47 +24,6 @@
 #include <xmit_osdep.h>
 #include <osdep_intf.h>
 
-uint rtw_remainder_len23a(struct pkt_file *pfile)
-{
-	return pfile->buf_len - ((unsigned long)(pfile->cur_addr) -
-	       (unsigned long)(pfile->buf_start));
-}
-
-void _rtw_open_pktfile23a(struct sk_buff *pktptr, struct pkt_file *pfile)
-{
-	pfile->pkt = pktptr;
-	pfile->buf_start = pktptr->data;
-	pfile->cur_addr = pktptr->data;
-	pfile->buf_len = pktptr->len;
-	pfile->pkt_len = pktptr->len;
-
-	pfile->cur_buffer = pfile->buf_start;
-}
-
-uint _rtw_pktfile_read23a(struct pkt_file *pfile, u8 *rmem, uint rlen)
-{
-	uint	len = 0;
-
-	len =  rtw_remainder_len23a(pfile);
-	len = (rlen > len) ? len : rlen;
-
-	if (rmem)
-		skb_copy_bits(pfile->pkt, pfile->buf_len-pfile->pkt_len,
-			      rmem, len);
-
-	pfile->cur_addr += len;
-	pfile->pkt_len -= len;
-
-	return len;
-}
-
-int rtw_endofpktfile23a(struct pkt_file *pfile)
-{
-	if (pfile->pkt_len == 0)
-		return true;
-	return false;
-}
-
 int rtw_os_xmit_resource_alloc23a(struct rtw_adapter *padapter,
 			       struct xmit_buf *pxmitbuf, u32 alloc_sz)
 {
@@ -164,11 +123,11 @@ int rtw_xmit23a_entry23a(struct sk_buff *skb, struct net_device *pnetdev)
 	struct xmit_priv *pxmitpriv = &padapter->xmitpriv;
 	int res = 0;
 
-	RT_TRACE(_module_rtl871x_mlme_c_, _drv_info_, ("+xmit_enry\n"));
+	RT_TRACE(_module_rtl871x_mlme_c_, _drv_info_, "+xmit_enry\n");
 
 	if (!rtw_if_up23a(padapter)) {
 		RT_TRACE(_module_xmit_osdep_c_, _drv_err_,
-			 ("rtw_xmit23a_entry23a: rtw_if_up23a fail\n"));
+			 "rtw_xmit23a_entry23a: rtw_if_up23a fail\n");
 		goto drop_packet;
 	}
 
@@ -180,16 +139,16 @@ int rtw_xmit23a_entry23a(struct sk_buff *skb, struct net_device *pnetdev)
 
 	pxmitpriv->tx_pkts++;
 	RT_TRACE(_module_xmit_osdep_c_, _drv_info_,
-		 ("rtw_xmit23a_entry23a: tx_pkts=%d\n",
-		 (u32)pxmitpriv->tx_pkts));
+		 "rtw_xmit23a_entry23a: tx_pkts=%d\n",
+		 (u32)pxmitpriv->tx_pkts);
 	goto exit;
 
 drop_packet:
 	pxmitpriv->tx_drop++;
 	dev_kfree_skb_any(skb);
 	RT_TRACE(_module_xmit_osdep_c_, _drv_notice_,
-		 ("rtw_xmit23a_entry23a: drop, tx_drop=%d\n",
-		 (u32)pxmitpriv->tx_drop));
+		 "rtw_xmit23a_entry23a: drop, tx_drop=%d\n",
+		 (u32)pxmitpriv->tx_drop);
 exit:
 	return 0;
 }

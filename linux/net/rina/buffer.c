@@ -212,6 +212,18 @@ ssize_t buffer_length(const struct buffer * b)
 }
 EXPORT_SYMBOL(buffer_length);
 
+int buffer_set_length(struct buffer * b, size_t len)
+{
+        if (len > b->size) {
+                return -1;
+        }
+
+        b->size = len;
+
+        return 0;
+}
+EXPORT_SYMBOL(buffer_set_length);
+
 const void * buffer_data_ro(const struct buffer * b)
 {
         if (!buffer_is_ok(b))

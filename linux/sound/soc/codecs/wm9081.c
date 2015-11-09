@@ -340,7 +340,7 @@ static SOC_ENUM_SINGLE_DECL(speaker_mode, WM9081_ANALOGUE_SPEAKER_2, 6,
 static int speaker_mode_get(struct snd_kcontrol *kcontrol,
 			    struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	unsigned int reg;
 
 	reg = snd_soc_read(codec, WM9081_ANALOGUE_SPEAKER_2);
@@ -361,7 +361,7 @@ static int speaker_mode_get(struct snd_kcontrol *kcontrol,
 static int speaker_mode_put(struct snd_kcontrol *kcontrol,
 			    struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	unsigned int reg_pwr = snd_soc_read(codec, WM9081_POWER_MANAGEMENT);
 	unsigned int reg2 = snd_soc_read(codec, WM9081_ANALOGUE_SPEAKER_2);
 
@@ -734,7 +734,7 @@ static int configure_clock(struct snd_soc_codec *codec)
 static int clk_sys_event(struct snd_soc_dapm_widget *w,
 			 struct snd_kcontrol *kcontrol, int event)
 {
-	struct snd_soc_codec *codec = w->codec;
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct wm9081_priv *wm9081 = snd_soc_codec_get_drvdata(codec);
 
 	/* This should be done on init() for bypass paths */
@@ -1029,19 +1029,19 @@ static int wm9081_hw_params(struct snd_pcm_substream *substream,
 		/* Otherwise work out a BCLK from the sample size */
 		wm9081->bclk = 2 * wm9081->fs;
 
-		switch (params_format(params)) {
-		case SNDRV_PCM_FORMAT_S16_LE:
+		switch (params_width(params)) {
+		case 16:
 			wm9081->bclk *= 16;
 			break;
-		case SNDRV_PCM_FORMAT_S20_3LE:
+		case 20:
 			wm9081->bclk *= 20;
 			aif2 |= 0x4;
 			break;
-		case SNDRV_PCM_FORMAT_S24_LE:
+		case 24:
 			wm9081->bclk *= 24;
 			aif2 |= 0x8;
 			break;
-		case SNDRV_PCM_FORMAT_S32_LE:
+		case 32:
 			wm9081->bclk *= 32;
 			aif2 |= 0xc;
 			break;
@@ -1277,15 +1277,8 @@ static int wm9081_probe(struct snd_soc_codec *codec)
 	return 0;
 }
 
-static int wm9081_remove(struct snd_soc_codec *codec)
-{
-	wm9081_set_bias_level(codec, SND_SOC_BIAS_OFF);
-	return 0;
-}
-
 static struct snd_soc_codec_driver soc_codec_dev_wm9081 = {
 	.probe = 	wm9081_probe,
-	.remove = 	wm9081_remove,
 
 	.set_sysclk = wm9081_set_sysclk,
 	.set_bias_level = wm9081_set_bias_level,

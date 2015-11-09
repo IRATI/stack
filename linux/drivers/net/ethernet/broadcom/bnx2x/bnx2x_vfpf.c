@@ -12,9 +12,9 @@
  * license other than the GPL, without Broadcom's express prior written
  * consent.
  *
- * Maintained by: Eilon Greenstein <eilong@broadcom.com>
- * Written by: Shmulik Ravid <shmulikr@broadcom.com>
- *	       Ariel Elior <ariele@broadcom.com>
+ * Maintained by: Ariel Elior <ariel.elior@qlogic.com>
+ * Written by: Shmulik Ravid
+ *	       Ariel Elior <ariel.elior@qlogic.com>
  */
 
 #include "bnx2x.h"
@@ -224,6 +224,7 @@ int bnx2x_vfpf_acquire(struct bnx2x *bp, u8 tx_count, u8 rx_count)
 	struct vfpf_acquire_tlv *req = &bp->vf2pf_mbox->req.acquire;
 	struct pfvf_acquire_resp_tlv *resp = &bp->vf2pf_mbox->resp.acquire_resp;
 	struct vfpf_port_phys_id_resp_tlv *phys_port_resp;
+	struct vfpf_fp_hsi_resp_tlv *fp_hsi_resp;
 	u32 vf_id;
 	bool resources_acquired = false;
 
@@ -237,6 +238,7 @@ int bnx2x_vfpf_acquire(struct bnx2x *bp, u8 tx_count, u8 rx_count)
 
 	req->vfdev_info.vf_id = vf_id;
 	req->vfdev_info.vf_os = 0;
+	req->vfdev_info.fp_hsi_ver = ETH_FP_HSI_VERSION;
 
 	req->resc_request.num_rxqs = rx_count;
 	req->resc_request.num_txqs = tx_count;
@@ -250,6 +252,9 @@ int bnx2x_vfpf_acquire(struct bnx2x *bp, u8 tx_count, u8 rx_count)
 	/* Request physical port identifier */
 	bnx2x_add_tlv(bp, req, req->first_tlv.tl.length,
 		      CHANNEL_TLV_PHYS_PORT_ID, sizeof(struct channel_tlv));
+
+	/* Bulletin support for bulletin board with length > legacy length */
+	req->vfdev_info.caps |= VF_CAP_SUPPORT_EXT_BULLETIN;
 
 	/* add list termination tlv */
 	bnx2x_add_tlv(bp, req,
@@ -313,9 +318,14 @@ int bnx2x_vfpf_acquire(struct bnx2x *bp, u8 tx_count, u8 rx_count)
 			memset(&bp->vf2pf_mbox->resp, 0,
 			       sizeof(union pfvf_tlvs));
 		} else {
-			/* PF reports error */
-			BNX2X_ERR("Failed to get the requested amount of resources: %d. Breaking...\n",
-				  bp->acquire_resp.hdr.status);
+			/* Determine reason of PF failure of acquire process */
+			fp_hsi_resp = bnx2x_search_tlv_list(bp, resp,
+							    CHANNEL_TLV_FP_HSI_SUPPORT);
+			if (fp_hsi_resp && !fp_hsi_resp->is_supported)
+				BNX2X_ERR("Old hypervisor - doesn't support current fastpath HSI version; Need to downgrade VF driver [or upgrade hypervisor]\n");
+			else
+				BNX2X_ERR("Failed to get the requested amount of resources: %d. Breaking...\n",
+					  bp->acquire_resp.hdr.status);
 			rc = -EAGAIN;
 			goto out;
 		}
@@ -328,6 +338,25 @@ int bnx2x_vfpf_acquire(struct bnx2x *bp, u8 tx_count, u8 rx_count)
 	if (phys_port_resp) {
 		memcpy(bp->phys_port_id, phys_port_resp->id, ETH_ALEN);
 		bp->flags |= HAS_PHYS_PORT_ID;
+	}
+
+	/* Old Hypevisors might not even support the FP_HSI_SUPPORT TLV.
+	 * If that's the case, we need to make certain required FW was
+	 * supported by such a hypervisor [i.e., v0-v2].
+	 */
+	fp_hsi_resp = bnx2x_search_tlv_list(bp, resp,
+					    CHANNEL_TLV_FP_HSI_SUPPORT);
+	if (!fp_hsi_resp && (ETH_FP_HSI_VERSION > ETH_FP_HSI_VER_2)) {
+		BNX2X_ERR("Old hypervisor - need to downgrade VF's driver\n");
+
+		/* Since acquire succeeded on the PF side, we need to send a
+		 * release message in order to allow future probes.
+		 */
+		bnx2x_vfpf_finalize(bp, &req->first_tlv);
+		bnx2x_vfpf_release(bp);
+
+		rc = -EINVAL;
+		goto out;
 	}
 
 	/* get HW info */
@@ -565,7 +594,7 @@ int bnx2x_vfpf_setup_q(struct bnx2x *bp, struct bnx2x_fastpath *fp,
 	bnx2x_vfpf_prep(bp, &req->first_tlv, CHANNEL_TLV_SETUP_Q, sizeof(*req));
 
 	/* select tpa mode to request */
-	if (!fp->disable_tpa) {
+	if (fp->mode != TPA_MODE_DISABLED) {
 		flags |= VFPF_QUEUE_FLG_TPA;
 		flags |= VFPF_QUEUE_FLG_TPA_IPV6;
 		if (fp->mode == TPA_MODE_GRO)
@@ -580,7 +609,6 @@ int bnx2x_vfpf_setup_q(struct bnx2x *bp, struct bnx2x_fastpath *fp,
 	flags |= VFPF_QUEUE_FLG_STATS;
 	flags |= VFPF_QUEUE_FLG_CACHE_ALIGN;
 	flags |= VFPF_QUEUE_FLG_VLAN;
-	DP(NETIF_MSG_IFUP, "vlan removal enabled\n");
 
 	/* Common */
 	req->vf_qid = fp_idx;
@@ -772,7 +800,7 @@ int bnx2x_vfpf_config_rss(struct bnx2x *bp,
 	req->rss_key_size = T_ETH_RSS_KEY;
 	req->rss_result_mask = params->rss_result_mask;
 
-	/* flags handled individually for backward/forward compatability */
+	/* flags handled individually for backward/forward compatibility */
 	if (params->rss_flags & (1 << BNX2X_RSS_MODE_DISABLED))
 		req->rss_flags |= VFPF_RSS_MODE_DISABLED;
 	if (params->rss_flags & (1 << BNX2X_RSS_MODE_REGULAR))
@@ -949,14 +977,6 @@ static void storm_memset_vf_mbx_valid(struct bnx2x *bp, u16 abs_fid)
 	REG_WR8(bp, addr, 1);
 }
 
-static inline void bnx2x_set_vf_mbxs_valid(struct bnx2x *bp)
-{
-	int i;
-
-	for_each_vf(bp, i)
-		storm_memset_vf_mbx_valid(bp, bnx2x_vf(bp, i, abs_vfid));
-}
-
 /* enable vf_pf mailbox (aka vf-pf-channel) */
 void bnx2x_vf_enable_mbx(struct bnx2x *bp, u8 abs_vfid)
 {
@@ -1131,6 +1151,26 @@ static void bnx2x_vf_mbx_resp_phys_port(struct bnx2x *bp,
 	*offset += sizeof(struct vfpf_port_phys_id_resp_tlv);
 }
 
+static void bnx2x_vf_mbx_resp_fp_hsi_ver(struct bnx2x *bp,
+					 struct bnx2x_virtf *vf,
+					 void *buffer,
+					 u16 *offset)
+{
+	struct vfpf_fp_hsi_resp_tlv *fp_hsi;
+
+	bnx2x_add_tlv(bp, buffer, *offset, CHANNEL_TLV_FP_HSI_SUPPORT,
+		      sizeof(struct vfpf_fp_hsi_resp_tlv));
+
+	fp_hsi = (struct vfpf_fp_hsi_resp_tlv *)
+		 (((u8 *)buffer) + *offset);
+	fp_hsi->is_supported = (vf->fp_hsi > ETH_FP_HSI_VERSION) ? 0 : 1;
+
+	/* Offset should continue representing the offset to the tail
+	 * of TLV data (outside this function scope)
+	 */
+	*offset += sizeof(struct vfpf_fp_hsi_resp_tlv);
+}
+
 static void bnx2x_vf_mbx_acquire_resp(struct bnx2x *bp, struct bnx2x_virtf *vf,
 				      struct bnx2x_vf_mbx *mbx, int vfop_status)
 {
@@ -1225,11 +1265,52 @@ static void bnx2x_vf_mbx_acquire_resp(struct bnx2x *bp, struct bnx2x_virtf *vf,
 				  CHANNEL_TLV_PHYS_PORT_ID))
 		bnx2x_vf_mbx_resp_phys_port(bp, vf, &mbx->msg->resp, &length);
 
+	/* `New' vfs will want to know if fastpath HSI is supported, since
+	 * if that's not the case they could print into system log the fact
+	 * the driver version must be updated.
+	 */
+	bnx2x_vf_mbx_resp_fp_hsi_ver(bp, vf, &mbx->msg->resp, &length);
+
 	bnx2x_add_tlv(bp, &mbx->msg->resp, length, CHANNEL_TLV_LIST_END,
 		      sizeof(struct channel_list_end_tlv));
 
 	/* send the response */
 	bnx2x_vf_mbx_resp_send_msg(bp, vf, vfop_status);
+}
+
+static bool bnx2x_vf_mbx_is_windows_vm(struct bnx2x *bp,
+				       struct vfpf_acquire_tlv *acquire)
+{
+	/* Windows driver does one of three things:
+	 * 1. Old driver doesn't have bulletin board address set.
+	 * 2. 'Middle' driver sends mc_num == 32.
+	 * 3. New driver sets the OS field.
+	 */
+	if (!acquire->bulletin_addr ||
+	    acquire->resc_request.num_mc_filters == 32 ||
+	    ((acquire->vfdev_info.vf_os & VF_OS_MASK) ==
+	     VF_OS_WINDOWS))
+		return true;
+
+	return false;
+}
+
+static int bnx2x_vf_mbx_acquire_chk_dorq(struct bnx2x *bp,
+					 struct bnx2x_virtf *vf,
+					 struct bnx2x_vf_mbx *mbx)
+{
+	/* Linux drivers which correctly set the doorbell size also
+	 * send a physical port request
+	 */
+	if (bnx2x_search_tlv_list(bp, &mbx->msg->req,
+				  CHANNEL_TLV_PHYS_PORT_ID))
+		return 0;
+
+	/* Issue does not exist in windows VMs */
+	if (bnx2x_vf_mbx_is_windows_vm(bp, &mbx->msg->req.acquire))
+		return 0;
+
+	return -EOPNOTSUPP;
 }
 
 static void bnx2x_vf_mbx_acquire(struct bnx2x *bp, struct bnx2x_virtf *vf,
@@ -1247,12 +1328,49 @@ static void bnx2x_vf_mbx_acquire(struct bnx2x *bp, struct bnx2x_virtf *vf,
 	   acquire->resc_request.num_vlan_filters,
 	   acquire->resc_request.num_mc_filters);
 
+	/* Prevent VFs with old drivers from loading, since they calculate
+	 * CIDs incorrectly requiring a VF-flr [VM reboot] in order to recover
+	 * while being upgraded.
+	 */
+	rc = bnx2x_vf_mbx_acquire_chk_dorq(bp, vf, mbx);
+	if (rc) {
+		DP(BNX2X_MSG_IOV,
+		   "VF [%d] - Can't support acquire request due to doorbell mismatch. Please update VM driver\n",
+		   vf->abs_vfid);
+		goto out;
+	}
+
+	/* Verify the VF fastpath HSI can be supported by the loaded FW.
+	 * Linux vfs should be oblivious to changes between v0 and v2.
+	 */
+	if (bnx2x_vf_mbx_is_windows_vm(bp, &mbx->msg->req.acquire))
+		vf->fp_hsi = acquire->vfdev_info.fp_hsi_ver;
+	else
+		vf->fp_hsi = max_t(u8, acquire->vfdev_info.fp_hsi_ver,
+				   ETH_FP_HSI_VER_2);
+	if (vf->fp_hsi > ETH_FP_HSI_VERSION) {
+		DP(BNX2X_MSG_IOV,
+		   "VF [%d] - Can't support acquire request since VF requests a FW version which is too new [%02x > %02x]\n",
+		   vf->abs_vfid, acquire->vfdev_info.fp_hsi_ver,
+		   ETH_FP_HSI_VERSION);
+		rc = -EINVAL;
+		goto out;
+	}
+
 	/* acquire the resources */
 	rc = bnx2x_vf_acquire(bp, vf, &acquire->resc_request);
 
 	/* store address of vf's bulletin board */
 	vf->bulletin_map = acquire->bulletin_addr;
+	if (acquire->vfdev_info.caps & VF_CAP_SUPPORT_EXT_BULLETIN) {
+		DP(BNX2X_MSG_IOV, "VF[%d] supports long bulletin boards\n",
+		   vf->abs_vfid);
+		vf->cfg_flags |= VF_CFG_EXT_BULLETIN;
+	} else {
+		vf->cfg_flags &= ~VF_CFG_EXT_BULLETIN;
+	}
 
+out:
 	/* response */
 	bnx2x_vf_mbx_acquire_resp(bp, vf, mbx, rc);
 }
@@ -1272,6 +1390,10 @@ static void bnx2x_vf_mbx_init_vf(struct bnx2x *bp, struct bnx2x_virtf *vf,
 	/* set VF multiqueue statistics collection mode */
 	if (init->flags & VFPF_INIT_FLG_STATS_COALESCE)
 		vf->cfg_flags |= VF_CFG_STATS_COALESCE;
+
+	/* Update VF's view of link state */
+	if (vf->cfg_flags & VF_CFG_EXT_BULLETIN)
+		bnx2x_iov_link_update_vf(bp, vf->index);
 
 	/* response */
 	bnx2x_vf_mbx_resp(bp, vf, rc);
@@ -1747,7 +1869,7 @@ static void bnx2x_vf_mbx_update_rss(struct bnx2x *bp, struct bnx2x_virtf *vf,
 	rss.rss_obj = &vf->rss_conf_obj;
 	rss.rss_result_mask = rss_tlv->rss_result_mask;
 
-	/* flags handled individually for backward/forward compatability */
+	/* flags handled individually for backward/forward compatibility */
 	rss.rss_flags = 0;
 	rss.ramrod_flags = 0;
 
@@ -2007,6 +2129,17 @@ void bnx2x_vf_mbx(struct bnx2x *bp)
 	}
 }
 
+void bnx2x_vf_bulletin_finalize(struct pf_vf_bulletin_content *bulletin,
+				bool support_long)
+{
+	/* Older VFs contain a bug where they can't check CRC for bulletin
+	 * boards of length greater than legacy size.
+	 */
+	bulletin->length = support_long ? BULLETIN_CONTENT_SIZE :
+					  BULLETIN_CONTENT_LEGACY_SIZE;
+	bulletin->crc = bnx2x_crc_vf_bulletin(bulletin);
+}
+
 /* propagate local bulletin board to vf */
 int bnx2x_post_vf_bulletin(struct bnx2x *bp, int vf)
 {
@@ -2023,8 +2156,9 @@ int bnx2x_post_vf_bulletin(struct bnx2x *bp, int vf)
 
 	/* increment bulletin board version and compute crc */
 	bulletin->version++;
-	bulletin->length = BULLETIN_CONTENT_SIZE;
-	bulletin->crc = bnx2x_crc_vf_bulletin(bp, bulletin);
+	bnx2x_vf_bulletin_finalize(bulletin,
+				   (bnx2x_vf(bp, vf, cfg_flags) &
+				    VF_CFG_EXT_BULLETIN) ? true : false);
 
 	/* propagate bulletin board via dmae to vm memory */
 	rc = bnx2x_copy32_vf_dmae(bp, false, pf_addr,

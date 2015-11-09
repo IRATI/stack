@@ -23,7 +23,6 @@
 
 #include "ccp-crypto.h"
 
-
 static int ccp_sha_complete(struct crypto_async_request *async_req, int ret)
 {
 	struct ahash_request *req = ahash_request_cast(async_req);
@@ -37,11 +36,13 @@ static int ccp_sha_complete(struct crypto_async_request *async_req, int ret)
 	if (rctx->hash_rem) {
 		/* Save remaining data to buffer */
 		unsigned int offset = rctx->nbytes - rctx->hash_rem;
+
 		scatterwalk_map_and_copy(rctx->buf, rctx->src,
 					 offset, rctx->hash_rem, 0);
 		rctx->buf_count = rctx->hash_rem;
-	} else
+	} else {
 		rctx->buf_count = 0;
+	}
 
 	/* Update result area if supplied */
 	if (req->result)
@@ -198,10 +199,9 @@ static int ccp_sha_setkey(struct crypto_ahash *tfm, const u8 *key,
 {
 	struct ccp_ctx *ctx = crypto_tfm_ctx(crypto_ahash_tfm(tfm));
 	struct crypto_shash *shash = ctx->u.sha.hmac_tfm;
-	struct {
-		struct shash_desc sdesc;
-		char ctx[crypto_shash_descsize(shash)];
-	} desc;
+
+	SHASH_DESC_ON_STACK(sdesc, shash);
+
 	unsigned int block_size = crypto_shash_blocksize(shash);
 	unsigned int digest_size = crypto_shash_digestsize(shash);
 	int i, ret;
@@ -216,11 +216,11 @@ static int ccp_sha_setkey(struct crypto_ahash *tfm, const u8 *key,
 
 	if (key_len > block_size) {
 		/* Must hash the input key */
-		desc.sdesc.tfm = shash;
-		desc.sdesc.flags = crypto_ahash_get_flags(tfm) &
+		sdesc->tfm = shash;
+		sdesc->flags = crypto_ahash_get_flags(tfm) &
 			CRYPTO_TFM_REQ_MAY_SLEEP;
 
-		ret = crypto_shash_digest(&desc.sdesc, key, key_len,
+		ret = crypto_shash_digest(sdesc, key, key_len,
 					  ctx->u.sha.key);
 		if (ret) {
 			crypto_ahash_set_flags(tfm, CRYPTO_TFM_RES_BAD_KEY_LEN);
@@ -228,8 +228,9 @@ static int ccp_sha_setkey(struct crypto_ahash *tfm, const u8 *key,
 		}
 
 		key_len = digest_size;
-	} else
+	} else {
 		memcpy(ctx->u.sha.key, key, key_len);
+	}
 
 	for (i = 0; i < block_size; i++) {
 		ctx->u.sha.ipad[i] = ctx->u.sha.key[i] ^ 0x36;
@@ -356,7 +357,7 @@ static int ccp_register_hmac_alg(struct list_head *head,
 	ret = crypto_register_ahash(alg);
 	if (ret) {
 		pr_err("%s ahash algorithm registration error (%d)\n",
-			base->cra_name, ret);
+		       base->cra_name, ret);
 		kfree(ccp_alg);
 		return ret;
 	}
@@ -411,7 +412,7 @@ static int ccp_register_sha_alg(struct list_head *head,
 	ret = crypto_register_ahash(alg);
 	if (ret) {
 		pr_err("%s ahash algorithm registration error (%d)\n",
-			base->cra_name, ret);
+		       base->cra_name, ret);
 		kfree(ccp_alg);
 		return ret;
 	}

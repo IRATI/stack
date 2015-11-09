@@ -10,7 +10,6 @@
 
 #include <linux/module.h>
 #include <linux/spinlock.h>
-#include <linux/workqueue.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
 #include <linux/errno.h>
@@ -424,7 +423,6 @@ static struct platform_driver nuc900_spi_driver = {
 	.remove		= nuc900_spi_remove,
 	.driver		= {
 		.name	= "nuc900-spi",
-		.owner	= THIS_MODULE,
 	},
 };
 module_platform_driver(nuc900_spi_driver);

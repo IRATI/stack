@@ -23,10 +23,11 @@
 #include <linux/syscalls.h>
 #include <linux/ratelimit.h>
 
+#include <asm/esr.h>
 #include <asm/fpsimd.h>
 #include <asm/signal32.h>
 #include <asm/uaccess.h>
-#include <asm/unistd32.h>
+#include <asm/unistd.h>
 
 struct compat_sigcontext {
 	/* We always set these two fields to 0 */
@@ -80,6 +81,8 @@ struct compat_vfp_sigframe {
 
 #define VFP_MAGIC		0x56465001
 #define VFP_STORAGE_SIZE	sizeof(struct compat_vfp_sigframe)
+
+#define FSR_WRITE_SHIFT		(11)
 
 struct compat_aux_sigframe {
 	struct compat_vfp_sigframe	vfp;
@@ -151,8 +154,7 @@ int copy_siginfo_to_user32(compat_siginfo_t __user *to, const siginfo_t *from)
 	case __SI_TIMER:
 		 err |= __put_user(from->si_tid, &to->si_tid);
 		 err |= __put_user(from->si_overrun, &to->si_overrun);
-		 err |= __put_user((compat_uptr_t)(unsigned long)from->si_ptr,
-				   &to->si_ptr);
+		 err |= __put_user(from->si_int, &to->si_int);
 		break;
 	case __SI_POLL:
 		err |= __put_user(from->si_band, &to->si_band);
@@ -166,7 +168,8 @@ int copy_siginfo_to_user32(compat_siginfo_t __user *to, const siginfo_t *from)
 		 * Other callers might not initialize the si_lsb field,
 		 * so check explicitely for the right codes here.
 		 */
-		if (from->si_code == BUS_MCEERR_AR || from->si_code == BUS_MCEERR_AO)
+		if (from->si_signo == SIGBUS &&
+		    (from->si_code == BUS_MCEERR_AR || from->si_code == BUS_MCEERR_AO))
 			err |= __put_user(from->si_addr_lsb, &to->si_addr_lsb);
 #endif
 		break;
@@ -181,7 +184,13 @@ int copy_siginfo_to_user32(compat_siginfo_t __user *to, const siginfo_t *from)
 	case __SI_MESGQ: /* But this is */
 		err |= __put_user(from->si_pid, &to->si_pid);
 		err |= __put_user(from->si_uid, &to->si_uid);
-		err |= __put_user((compat_uptr_t)(unsigned long)from->si_ptr, &to->si_ptr);
+		err |= __put_user(from->si_int, &to->si_int);
+		break;
+	case __SI_SYS:
+		err |= __put_user((compat_uptr_t)(unsigned long)
+				from->si_call_addr, &to->si_call_addr);
+		err |= __put_user(from->si_syscall, &to->si_syscall);
+		err |= __put_user(from->si_arch, &to->si_arch);
 		break;
 	default: /* this is just in case for now ... */
 		err |= __put_user(from->si_pid, &to->si_pid);
@@ -193,8 +202,6 @@ int copy_siginfo_to_user32(compat_siginfo_t __user *to, const siginfo_t *from)
 
 int copy_siginfo_from_user32(siginfo_t *to, compat_siginfo_t __user *from)
 {
-	memset(to, 0, sizeof *to);
-
 	if (copy_from_user(to, from, __ARCH_SI_PREAMBLE_SIZE) ||
 	    copy_from_user(to->_sifields._pad,
 			   from->_sifields._pad, SI_PAD_SIZE))
@@ -205,21 +212,39 @@ int copy_siginfo_from_user32(siginfo_t *to, compat_siginfo_t __user *from)
 
 /*
  * VFP save/restore code.
+ *
+ * We have to be careful with endianness, since the fpsimd context-switch
+ * code operates on 128-bit (Q) register values whereas the compat ABI
+ * uses an array of 64-bit (D) registers. Consequently, we need to swap
+ * the two halves of each Q register when running on a big-endian CPU.
  */
+union __fpsimd_vreg {
+	__uint128_t	raw;
+	struct {
+#ifdef __AARCH64EB__
+		u64	hi;
+		u64	lo;
+#else
+		u64	lo;
+		u64	hi;
+#endif
+	};
+};
+
 static int compat_preserve_vfp_context(struct compat_vfp_sigframe __user *frame)
 {
 	struct fpsimd_state *fpsimd = &current->thread.fpsimd_state;
 	compat_ulong_t magic = VFP_MAGIC;
 	compat_ulong_t size = VFP_STORAGE_SIZE;
 	compat_ulong_t fpscr, fpexc;
-	int err = 0;
+	int i, err = 0;
 
 	/*
 	 * Save the hardware registers to the fpsimd_state structure.
 	 * Note that this also saves V16-31, which aren't visible
 	 * in AArch32.
 	 */
-	fpsimd_save_state(fpsimd);
+	fpsimd_preserve_current_state();
 
 	/* Place structure header on the stack */
 	__put_user_error(magic, &frame->magic, err);
@@ -228,10 +253,15 @@ static int compat_preserve_vfp_context(struct compat_vfp_sigframe __user *frame)
 	/*
 	 * Now copy the FP registers. Since the registers are packed,
 	 * we can copy the prefix we want (V0-V15) as it is.
-	 * FIXME: Won't work if big endian.
 	 */
-	err |= __copy_to_user(&frame->ufp.fpregs, fpsimd->vregs,
-			      sizeof(frame->ufp.fpregs));
+	for (i = 0; i < ARRAY_SIZE(frame->ufp.fpregs); i += 2) {
+		union __fpsimd_vreg vreg = {
+			.raw = fpsimd->vregs[i >> 1],
+		};
+
+		__put_user_error(vreg.lo, &frame->ufp.fpregs[i], err);
+		__put_user_error(vreg.hi, &frame->ufp.fpregs[i + 1], err);
+	}
 
 	/* Create an AArch32 fpscr from the fpsr and the fpcr. */
 	fpscr = (fpsimd->fpsr & VFP_FPSCR_STAT_MASK) |
@@ -256,7 +286,7 @@ static int compat_restore_vfp_context(struct compat_vfp_sigframe __user *frame)
 	compat_ulong_t magic = VFP_MAGIC;
 	compat_ulong_t size = VFP_STORAGE_SIZE;
 	compat_ulong_t fpscr;
-	int err = 0;
+	int i, err = 0;
 
 	__get_user_error(magic, &frame->magic, err);
 	__get_user_error(size, &frame->size, err);
@@ -266,12 +296,14 @@ static int compat_restore_vfp_context(struct compat_vfp_sigframe __user *frame)
 	if (magic != VFP_MAGIC || size != VFP_STORAGE_SIZE)
 		return -EINVAL;
 
-	/*
-	 * Copy the FP registers into the start of the fpsimd_state.
-	 * FIXME: Won't work if big endian.
-	 */
-	err |= __copy_from_user(fpsimd.vregs, frame->ufp.fpregs,
-				sizeof(frame->ufp.fpregs));
+	/* Copy the FP registers into the start of the fpsimd_state. */
+	for (i = 0; i < ARRAY_SIZE(frame->ufp.fpregs); i += 2) {
+		union __fpsimd_vreg vreg;
+
+		__get_user_error(vreg.lo, &frame->ufp.fpregs[i], err);
+		__get_user_error(vreg.hi, &frame->ufp.fpregs[i + 1], err);
+		fpsimd.vregs[i >> 1] = vreg.raw;
+	}
 
 	/* Extract the fpsr and the fpcr from the fpscr */
 	__get_user_error(fpscr, &frame->ufp.fpscr, err);
@@ -282,11 +314,8 @@ static int compat_restore_vfp_context(struct compat_vfp_sigframe __user *frame)
 	 * We don't need to touch the exception register, so
 	 * reload the hardware state.
 	 */
-	if (!err) {
-		preempt_disable();
-		fpsimd_load_state(&fpsimd);
-		preempt_enable();
-	}
+	if (!err)
+		fpsimd_update_current_state(&fpsimd);
 
 	return err ? -EFAULT : 0;
 }
@@ -341,7 +370,7 @@ asmlinkage int compat_sys_sigreturn(struct pt_regs *regs)
 	struct compat_sigframe __user *frame;
 
 	/* Always make any pending restarted system calls return -EINTR */
-	current_thread_info()->restart_block.fn = do_no_restart_syscall;
+	current->restart_block.fn = do_no_restart_syscall;
 
 	/*
 	 * Since we stacked the signal on a 64-bit boundary,
@@ -375,7 +404,7 @@ asmlinkage int compat_sys_rt_sigreturn(struct pt_regs *regs)
 	struct compat_rt_sigframe __user *frame;
 
 	/* Always make any pending restarted system calls return -EINTR */
-	current_thread_info()->restart_block.fn = do_no_restart_syscall;
+	current->restart_block.fn = do_no_restart_syscall;
 
 	/*
 	 * Since we stacked the signal on a 64-bit boundary,
@@ -407,18 +436,12 @@ badframe:
 	return 0;
 }
 
-static void __user *compat_get_sigframe(struct k_sigaction *ka,
+static void __user *compat_get_sigframe(struct ksignal *ksig,
 					struct pt_regs *regs,
 					int framesize)
 {
-	compat_ulong_t sp = regs->compat_sp;
+	compat_ulong_t sp = sigsp(regs->compat_sp, ksig);
 	void __user *frame;
-
-	/*
-	 * This is the X/Open sanctioned signal stack switching.
-	 */
-	if ((ka->sa.sa_flags & SA_ONSTACK) && !sas_ss_flags(sp))
-		sp = current->sas_ss_sp + current->sas_ss_size;
 
 	/*
 	 * ATPCS B01 mandates 8-byte alignment
@@ -440,7 +463,7 @@ static void compat_setup_return(struct pt_regs *regs, struct k_sigaction *ka,
 {
 	compat_ulong_t handler = ptr_to_compat(ka->sa.sa_handler);
 	compat_ulong_t retcode;
-	compat_ulong_t spsr = regs->pstate & ~PSR_f;
+	compat_ulong_t spsr = regs->pstate & ~(PSR_f | COMPAT_PSR_E_BIT);
 	int thumb;
 
 	/* Check if the handler is written for ARM or Thumb */
@@ -453,6 +476,9 @@ static void compat_setup_return(struct pt_regs *regs, struct k_sigaction *ka,
 
 	/* The IT state must be cleared for both ARM and Thumb-2 */
 	spsr &= ~COMPAT_PSR_IT_MASK;
+
+	/* Restore the original endianness */
+	spsr |= COMPAT_PSR_ENDSTATE;
 
 	if (ka->sa.sa_flags & SA_RESTORER) {
 		retcode = ptr_to_compat(ka->sa.sa_restorer);
@@ -500,7 +526,9 @@ static int compat_setup_sigframe(struct compat_sigframe __user *sf,
 	__put_user_error(regs->pstate, &sf->uc.uc_mcontext.arm_cpsr, err);
 
 	__put_user_error((compat_ulong_t)0, &sf->uc.uc_mcontext.trap_no, err);
-	__put_user_error((compat_ulong_t)0, &sf->uc.uc_mcontext.error_code, err);
+	/* set the compat FSR WnR */
+	__put_user_error(!!(current->thread.fault_code & ESR_ELx_WNR) <<
+			 FSR_WRITE_SHIFT, &sf->uc.uc_mcontext.error_code, err);
 	__put_user_error(current->thread.fault_address, &sf->uc.uc_mcontext.fault_address, err);
 	__put_user_error(set->sig[0], &sf->uc.uc_mcontext.oldmask, err);
 
@@ -518,18 +546,18 @@ static int compat_setup_sigframe(struct compat_sigframe __user *sf,
 /*
  * 32-bit signal handling routines called from signal.c
  */
-int compat_setup_rt_frame(int usig, struct k_sigaction *ka, siginfo_t *info,
+int compat_setup_rt_frame(int usig, struct ksignal *ksig,
 			  sigset_t *set, struct pt_regs *regs)
 {
 	struct compat_rt_sigframe __user *frame;
 	int err = 0;
 
-	frame = compat_get_sigframe(ka, regs, sizeof(*frame));
+	frame = compat_get_sigframe(ksig, regs, sizeof(*frame));
 
 	if (!frame)
 		return 1;
 
-	err |= copy_siginfo_to_user32(&frame->info, info);
+	err |= copy_siginfo_to_user32(&frame->info, &ksig->info);
 
 	__put_user_error(0, &frame->sig.uc.uc_flags, err);
 	__put_user_error(0, &frame->sig.uc.uc_link, err);
@@ -539,7 +567,7 @@ int compat_setup_rt_frame(int usig, struct k_sigaction *ka, siginfo_t *info,
 	err |= compat_setup_sigframe(&frame->sig, regs, set);
 
 	if (err == 0) {
-		compat_setup_return(regs, ka, frame->sig.retcode, frame, usig);
+		compat_setup_return(regs, &ksig->ka, frame->sig.retcode, frame, usig);
 		regs->regs[1] = (compat_ulong_t)(unsigned long)&frame->info;
 		regs->regs[2] = (compat_ulong_t)(unsigned long)&frame->sig.uc;
 	}
@@ -547,13 +575,13 @@ int compat_setup_rt_frame(int usig, struct k_sigaction *ka, siginfo_t *info,
 	return err;
 }
 
-int compat_setup_frame(int usig, struct k_sigaction *ka, sigset_t *set,
+int compat_setup_frame(int usig, struct ksignal *ksig, sigset_t *set,
 		       struct pt_regs *regs)
 {
 	struct compat_sigframe __user *frame;
 	int err = 0;
 
-	frame = compat_get_sigframe(ka, regs, sizeof(*frame));
+	frame = compat_get_sigframe(ksig, regs, sizeof(*frame));
 
 	if (!frame)
 		return 1;
@@ -562,7 +590,7 @@ int compat_setup_frame(int usig, struct k_sigaction *ka, sigset_t *set,
 
 	err |= compat_setup_sigframe(frame, regs, set);
 	if (err == 0)
-		compat_setup_return(regs, ka, frame->retcode, frame, usig);
+		compat_setup_return(regs, &ksig->ka, frame->retcode, frame, usig);
 
 	return err;
 }

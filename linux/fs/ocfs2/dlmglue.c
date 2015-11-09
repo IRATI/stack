@@ -861,8 +861,13 @@ static inline void ocfs2_generic_handle_convert_action(struct ocfs2_lock_res *lo
 	 * We set the OCFS2_LOCK_UPCONVERT_FINISHING flag before clearing
 	 * the OCFS2_LOCK_BUSY flag to prevent the dc thread from
 	 * downconverting the lock before the upconvert has fully completed.
+	 * Do not prevent the dc thread from downconverting if NONBLOCK lock
+	 * had already returned.
 	 */
-	lockres_or_flags(lockres, OCFS2_LOCK_UPCONVERT_FINISHING);
+	if (!(lockres->l_flags & OCFS2_LOCK_NONBLOCK_FINISHED))
+		lockres_or_flags(lockres, OCFS2_LOCK_UPCONVERT_FINISHING);
+	else
+		lockres_clear_flags(lockres, OCFS2_LOCK_NONBLOCK_FINISHED);
 
 	lockres_clear_flags(lockres, OCFS2_LOCK_BUSY);
 }
@@ -1324,13 +1329,12 @@ static void lockres_add_mask_waiter(struct ocfs2_lock_res *lockres,
 
 /* returns 0 if the mw that was removed was already satisfied, -EBUSY
  * if the mask still hadn't reached its goal */
-static int lockres_remove_mask_waiter(struct ocfs2_lock_res *lockres,
+static int __lockres_remove_mask_waiter(struct ocfs2_lock_res *lockres,
 				      struct ocfs2_mask_waiter *mw)
 {
-	unsigned long flags;
 	int ret = 0;
 
-	spin_lock_irqsave(&lockres->l_lock, flags);
+	assert_spin_locked(&lockres->l_lock);
 	if (!list_empty(&mw->mw_item)) {
 		if ((lockres->l_flags & mw->mw_mask) != mw->mw_goal)
 			ret = -EBUSY;
@@ -1338,6 +1342,18 @@ static int lockres_remove_mask_waiter(struct ocfs2_lock_res *lockres,
 		list_del_init(&mw->mw_item);
 		init_completion(&mw->mw_complete);
 	}
+
+	return ret;
+}
+
+static int lockres_remove_mask_waiter(struct ocfs2_lock_res *lockres,
+				      struct ocfs2_mask_waiter *mw)
+{
+	unsigned long flags;
+	int ret = 0;
+
+	spin_lock_irqsave(&lockres->l_lock, flags);
+	ret = __lockres_remove_mask_waiter(lockres, mw);
 	spin_unlock_irqrestore(&lockres->l_lock, flags);
 
 	return ret;
@@ -1373,6 +1389,12 @@ static int __ocfs2_cluster_lock(struct ocfs2_super *osb,
 	unsigned long flags;
 	unsigned int gen;
 	int noqueue_attempted = 0;
+	int dlm_locked = 0;
+
+	if (!(lockres->l_flags & OCFS2_LOCK_INITIALIZED)) {
+		mlog_errno(-EINVAL);
+		return -EINVAL;
+	}
 
 	ocfs2_init_mask_waiter(&mw);
 
@@ -1481,6 +1503,7 @@ again:
 			ocfs2_recover_from_dlm_error(lockres, 1);
 			goto out;
 		}
+		dlm_locked = 1;
 
 		mlog(0, "lock %s, successful return from ocfs2_dlm_lock\n",
 		     lockres->l_name);
@@ -1514,10 +1537,17 @@ out:
 	if (wait && arg_flags & OCFS2_LOCK_NONBLOCK &&
 	    mw.mw_mask & (OCFS2_LOCK_BUSY|OCFS2_LOCK_BLOCKED)) {
 		wait = 0;
-		if (lockres_remove_mask_waiter(lockres, &mw))
+		spin_lock_irqsave(&lockres->l_lock, flags);
+		if (__lockres_remove_mask_waiter(lockres, &mw)) {
+			if (dlm_locked)
+				lockres_or_flags(lockres,
+					OCFS2_LOCK_NONBLOCK_FINISHED);
+			spin_unlock_irqrestore(&lockres->l_lock, flags);
 			ret = -EAGAIN;
-		else
+		} else {
+			spin_unlock_irqrestore(&lockres->l_lock, flags);
 			goto again;
+		}
 	}
 	if (wait) {
 		ret = ocfs2_wait_for_mask(&mw);
@@ -2544,11 +2574,6 @@ int ocfs2_super_lock(struct ocfs2_super *osb,
 	 * refreshed, so we do it here. Of course, making sense of
 	 * everything is up to the caller :) */
 	status = ocfs2_should_refresh_lock_res(lockres);
-	if (status < 0) {
-		ocfs2_cluster_unlock(osb, lockres, level);
-		mlog_errno(status);
-		goto bail;
-	}
 	if (status) {
 		status = ocfs2_refresh_slot_info(osb);
 
@@ -2897,37 +2922,24 @@ static int ocfs2_dlm_debug_release(struct inode *inode, struct file *file)
 
 static int ocfs2_dlm_debug_open(struct inode *inode, struct file *file)
 {
-	int ret;
 	struct ocfs2_dlm_seq_priv *priv;
-	struct seq_file *seq;
 	struct ocfs2_super *osb;
 
-	priv = kzalloc(sizeof(struct ocfs2_dlm_seq_priv), GFP_KERNEL);
+	priv = __seq_open_private(file, &ocfs2_dlm_seq_ops, sizeof(*priv));
 	if (!priv) {
-		ret = -ENOMEM;
-		mlog_errno(ret);
-		goto out;
+		mlog_errno(-ENOMEM);
+		return -ENOMEM;
 	}
+
 	osb = inode->i_private;
 	ocfs2_get_dlm_debug(osb->osb_dlm_debug);
 	priv->p_dlm_debug = osb->osb_dlm_debug;
 	INIT_LIST_HEAD(&priv->p_iter_res.l_debug_list);
 
-	ret = seq_open(file, &ocfs2_dlm_seq_ops);
-	if (ret) {
-		kfree(priv);
-		mlog_errno(ret);
-		goto out;
-	}
-
-	seq = file->private_data;
-	seq->private = priv;
-
 	ocfs2_add_lockres_tracking(&priv->p_iter_res,
 				   priv->p_dlm_debug);
 
-out:
-	return ret;
+	return 0;
 }
 
 static const struct file_operations ocfs2_dlm_debug_fops = {
@@ -3743,8 +3755,10 @@ static int ocfs2_dentry_convert_worker(struct ocfs2_lock_res *lockres,
 			break;
 		spin_unlock(&dentry_attach_lock);
 
-		mlog(0, "d_delete(%.*s);\n", dentry->d_name.len,
-		     dentry->d_name.name);
+		if (S_ISDIR(dl->dl_inode->i_mode))
+			shrink_dcache_parent(dentry);
+
+		mlog(0, "d_delete(%pd);\n", dentry);
 
 		/*
 		 * The following dcache calls may do an
@@ -4011,9 +4025,13 @@ static void ocfs2_downconvert_thread_do_work(struct ocfs2_super *osb)
 	osb->dc_work_sequence = osb->dc_wake_sequence;
 
 	processed = osb->blocked_lock_count;
-	while (processed) {
-		BUG_ON(list_empty(&osb->blocked_lock_list));
-
+	/*
+	 * blocked lock processing in this loop might call iput which can
+	 * remove items off osb->blocked_lock_list. Downconvert up to
+	 * 'processed' number of locks, but stop short if we had some
+	 * removed in ocfs2_mark_lockres_freeing when downconverting.
+	 */
+	while (processed && !list_empty(&osb->blocked_lock_list)) {
 		lockres = list_entry(osb->blocked_lock_list.next,
 				     struct ocfs2_lock_res, l_blocked_list);
 		list_del_init(&lockres->l_blocked_list);

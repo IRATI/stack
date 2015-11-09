@@ -3509,7 +3509,6 @@ int rnl_assign_dif_response(ipc_process_id_t id,
 {
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -3539,10 +3538,7 @@ int rnl_assign_dif_response(ipc_process_id_t id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
@@ -3560,7 +3556,6 @@ int rnl_update_dif_config_response(ipc_process_id_t id,
 {
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -3590,10 +3585,7 @@ int rnl_update_dif_config_response(ipc_process_id_t id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
@@ -3612,7 +3604,6 @@ int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
         uint_t                command;
-        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -3645,10 +3636,7 @@ int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
@@ -3669,7 +3657,6 @@ int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t         ipc_id,
 {
         struct sk_buff * msg;
         struct rina_msg_hdr * hdr;
-        int result;
 
         msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!msg) {
@@ -3702,10 +3689,7 @@ int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t         ipc_id,
                 return -1;
         }
 
-        result = genlmsg_end(msg, hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(msg, hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    msg,
@@ -3723,7 +3707,6 @@ int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
 {
         struct sk_buff * out_msg;
         struct rina_msg_hdr * out_hdr;
-        int result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -3752,10 +3735,7 @@ int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
@@ -3772,7 +3752,6 @@ int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
 {
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -3801,10 +3780,7 @@ int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
@@ -3821,7 +3797,6 @@ int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
 {
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -3850,10 +3825,7 @@ int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
@@ -3871,7 +3843,6 @@ int rnl_ipcp_conn_create_resp_msg(ipc_process_id_t ipc_id,
 {
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE, GFP_ATOMIC);
         if (!out_msg) {
@@ -3900,10 +3871,7 @@ int rnl_ipcp_conn_create_resp_msg(ipc_process_id_t ipc_id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
 #if 0
         result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
@@ -3926,7 +3894,6 @@ int rnl_ipcp_conn_create_result_msg(ipc_process_id_t ipc_id,
 {
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -3957,10 +3924,7 @@ int rnl_ipcp_conn_create_result_msg(ipc_process_id_t ipc_id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
@@ -3978,7 +3942,6 @@ int rnl_ipcp_conn_update_result_msg(ipc_process_id_t ipc_id,
 {
         struct sk_buff * out_msg;
         struct rina_msg_hdr * out_hdr;
-        int    result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -4007,10 +3970,7 @@ int rnl_ipcp_conn_update_result_msg(ipc_process_id_t ipc_id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
@@ -4057,11 +4017,8 @@ int rnl_ipcp_conn_destroy_result_msg(ipc_process_id_t ipc_id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
+        genlmsg_end(out_msg, out_hdr);
 
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
         result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
         if (result) {
                 LOG_ERR("Could not send unicast msg: %d", result);
@@ -4076,7 +4033,6 @@ int rnl_ipcm_sock_closed_notif_msg(u32 closed_port, u32 dest_port)
 {
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE, GFP_ATOMIC);
         if (!out_msg) {
@@ -4105,10 +4061,7 @@ int rnl_ipcm_sock_closed_notif_msg(u32 closed_port, u32 dest_port)
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
@@ -4155,10 +4108,7 @@ int rnl_ipcp_pff_dump_resp_msg(ipc_process_id_t   ipc_id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
         if (result) {
@@ -4206,10 +4156,7 @@ int rnl_ipcm_query_rib_resp_msg(ipc_process_id_t   ipc_id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
         if (result) {
@@ -4227,7 +4174,6 @@ int rnl_set_policy_set_param_response(ipc_process_id_t id,
 {
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -4257,10 +4203,7 @@ int rnl_set_policy_set_param_response(ipc_process_id_t id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
@@ -4278,7 +4221,6 @@ int rnl_select_policy_set_response(ipc_process_id_t id,
 {
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -4308,10 +4250,7 @@ int rnl_select_policy_set_response(ipc_process_id_t id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
@@ -4330,7 +4269,6 @@ int rnl_enable_encryption_response(ipc_process_id_t id,
 {
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -4360,10 +4298,7 @@ int rnl_enable_encryption_response(ipc_process_id_t id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,

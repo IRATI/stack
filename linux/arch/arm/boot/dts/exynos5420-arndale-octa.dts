@@ -26,6 +26,11 @@
 		bootargs = "console=ttySAC3,115200";
 	};
 
+	firmware@02073000 {
+		compatible = "samsung,secure-firmware";
+		reg = <0x02073000 0x1000>;
+	};
+
 	fixed-rate-clocks {
 		oscclk {
 			compatible = "samsung,exynos5420-oscclk";
@@ -37,39 +42,37 @@
 		status = "okay";
 	};
 
+	codec@11000000 {
+		samsung,mfc-r = <0x43000000 0x800000>;
+		samsung,mfc-l = <0x51000000 0x800000>;
+	};
+
 	mmc@12200000 {
 		status = "okay";
 		broken-cd;
-		supports-highspeed;
 		card-detect-delay = <200>;
 		samsung,dw-mshc-ciu-div = <3>;
 		samsung,dw-mshc-sdr-timing = <0 4>;
 		samsung,dw-mshc-ddr-timing = <0 2>;
 		pinctrl-names = "default";
-		pinctrl-0 = <&sd0_clk &sd0_cmd &sd0_bus4 &sd0_bus8>;
+		pinctrl-0 = <&sd0_clk &sd0_cmd &sd0_bus1 &sd0_bus4 &sd0_bus8>;
 		vmmc-supply = <&ldo10_reg>;
-
-		slot@0 {
-			reg = <0>;
-			bus-width = <8>;
-		};
+		bus-width = <8>;
+		cap-mmc-highspeed;
 	};
 
 	mmc@12220000 {
 		status = "okay";
-		supports-highspeed;
 		card-detect-delay = <200>;
 		samsung,dw-mshc-ciu-div = <3>;
 		samsung,dw-mshc-sdr-timing = <2 3>;
 		samsung,dw-mshc-ddr-timing = <1 2>;
 		pinctrl-names = "default";
-		pinctrl-0 = <&sd2_clk &sd2_cmd &sd2_cd &sd2_bus4>;
-		vmmc-supply = <&ldo10_reg>;
-
-		slot@0 {
-			reg = <0>;
-			bus-width = <4>;
-		};
+		pinctrl-0 = <&sd2_clk &sd2_cmd &sd2_cd &sd2_bus1 &sd2_bus4>;
+		vmmc-supply = <&ldo19_reg>;
+		vqmmc-supply = <&ldo13_reg>;
+		bus-width = <4>;
+		cap-sd-highspeed;
 	};
 
 	hsi2c_4: i2c@12CA0000 {
@@ -364,4 +367,12 @@
 			gpio-key,wakeup;
 		};
 	};
+};
+
+&usbdrd_dwc3_1 {
+	dr_mode = "host";
+};
+
+&cci {
+	status = "disabled";
 };

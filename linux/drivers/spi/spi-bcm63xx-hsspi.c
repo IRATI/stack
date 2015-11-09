@@ -18,7 +18,6 @@
 #include <linux/err.h>
 #include <linux/interrupt.h>
 #include <linux/spi/spi.h>
-#include <linux/workqueue.h>
 #include <linux/mutex.h>
 
 #define HSSPI_GLOBAL_CTRL_REG			0x0
@@ -460,7 +459,6 @@ static SIMPLE_DEV_PM_OPS(bcm63xx_hsspi_pm_ops, bcm63xx_hsspi_suspend,
 static struct platform_driver bcm63xx_hsspi_driver = {
 	.driver = {
 		.name	= "bcm63xx-hsspi",
-		.owner	= THIS_MODULE,
 		.pm	= &bcm63xx_hsspi_pm_ops,
 	},
 	.probe		= bcm63xx_hsspi_probe,

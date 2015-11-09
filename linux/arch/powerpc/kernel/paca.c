@@ -98,6 +98,9 @@ static inline void free_lppacas(void) { }
 /*
  * 3 persistent SLBs are registered here.  The buffer will be zero
  * initially, hence will all be invaild until we actually write them.
+ *
+ * If you make the number of persistent SLB entries dynamic, please also
+ * update PR KVM to flush and restore them accordingly.
  */
 static struct slb_shadow *slb_shadow;
 
@@ -111,6 +114,14 @@ static void __init allocate_slb_shadows(int nr_cpus, int limit)
 static struct slb_shadow * __init init_slb_shadow(int cpu)
 {
 	struct slb_shadow *s = &slb_shadow[cpu];
+
+	/*
+	 * When we come through here to initialise boot_paca, the slb_shadow
+	 * buffers are not allocated yet. That's OK, we'll get one later in
+	 * boot, but make sure we don't corrupt memory at 0.
+	 */
+	if (!slb_shadow)
+		return NULL;
 
 	s->persistent = cpu_to_be32(SLB_NUM_BOLTED);
 	s->buffer_length = cpu_to_be32(sizeof(*s));

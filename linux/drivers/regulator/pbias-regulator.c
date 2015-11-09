@@ -30,6 +30,7 @@
 struct pbias_reg_info {
 	u32 enable;
 	u32 enable_mask;
+	u32 disable_val;
 	u32 vmode;
 	unsigned int enable_time;
 	char *name;
@@ -49,39 +50,20 @@ static const unsigned int pbias_volt_table[] = {
 	3000000
 };
 
-static int pbias_regulator_enable(struct regulator_dev *rdev)
-{
-	struct pbias_regulator_data *data = rdev_get_drvdata(rdev);
-	const struct pbias_reg_info *info = data->info;
-
-	return regmap_update_bits(data->syscon, rdev->desc->enable_reg,
-				  info->enable_mask, info->enable);
-}
-
-static int pbias_regulator_is_enable(struct regulator_dev *rdev)
-{
-	struct pbias_regulator_data *data = rdev_get_drvdata(rdev);
-	const struct pbias_reg_info *info = data->info;
-	int value;
-
-	regmap_read(data->syscon, rdev->desc->enable_reg, &value);
-
-	return (value & info->enable_mask) == info->enable;
-}
-
 static struct regulator_ops pbias_regulator_voltage_ops = {
 	.list_voltage = regulator_list_voltage_table,
 	.get_voltage_sel = regulator_get_voltage_sel_regmap,
 	.set_voltage_sel = regulator_set_voltage_sel_regmap,
-	.enable = pbias_regulator_enable,
+	.enable = regulator_enable_regmap,
 	.disable = regulator_disable_regmap,
-	.is_enabled = pbias_regulator_is_enable,
+	.is_enabled = regulator_is_enabled_regmap,
 };
 
 static const struct pbias_reg_info pbias_mmc_omap2430 = {
 	.enable = BIT(1),
 	.enable_mask = BIT(1),
 	.vmode = BIT(0),
+	.disable_val = 0,
 	.enable_time = 100,
 	.name = "pbias_mmc_omap2430"
 };
@@ -97,6 +79,7 @@ static const struct pbias_reg_info pbias_sim_omap3 = {
 static const struct pbias_reg_info pbias_mmc_omap4 = {
 	.enable = BIT(26) | BIT(22),
 	.enable_mask = BIT(26) | BIT(25) | BIT(22),
+	.disable_val = BIT(25),
 	.vmode = BIT(21),
 	.enable_time = 100,
 	.name = "pbias_mmc_omap4"
@@ -105,6 +88,7 @@ static const struct pbias_reg_info pbias_mmc_omap4 = {
 static const struct pbias_reg_info pbias_mmc_omap5 = {
 	.enable = BIT(27) | BIT(26),
 	.enable_mask = BIT(27) | BIT(25) | BIT(26),
+	.disable_val = BIT(25),
 	.vmode = BIT(21),
 	.enable_time = 100,
 	.name = "pbias_mmc_omap5"
@@ -142,10 +126,8 @@ static int pbias_regulator_probe(struct platform_device *pdev)
 
 	drvdata = devm_kzalloc(&pdev->dev, sizeof(struct pbias_regulator_data)
 			       * count, GFP_KERNEL);
-	if (drvdata == NULL) {
-		dev_err(&pdev->dev, "Failed to allocate device data\n");
+	if (!drvdata)
 		return -ENOMEM;
-	}
 
 	syscon = syscon_regmap_lookup_by_phandle(np, "syscon");
 	if (IS_ERR(syscon))
@@ -180,6 +162,8 @@ static int pbias_regulator_probe(struct platform_device *pdev)
 		drvdata[data_idx].desc.vsel_mask = info->vmode;
 		drvdata[data_idx].desc.enable_reg = res->start;
 		drvdata[data_idx].desc.enable_mask = info->enable_mask;
+		drvdata[data_idx].desc.enable_val = info->enable;
+		drvdata[data_idx].desc.disable_val = info->disable_val;
 
 		cfg.init_data = pbias_matches[idx].init_data;
 		cfg.driver_data = &drvdata[data_idx];
@@ -206,7 +190,6 @@ static struct platform_driver pbias_regulator_driver = {
 	.probe		= pbias_regulator_probe,
 	.driver		= {
 		.name		= "pbias-regulator",
-		.owner		= THIS_MODULE,
 		.of_match_table = of_match_ptr(pbias_of_match),
 	},
 };

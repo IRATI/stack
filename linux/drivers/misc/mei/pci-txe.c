@@ -27,6 +27,7 @@
 #include <linux/jiffies.h>
 #include <linux/interrupt.h>
 #include <linux/workqueue.h>
+#include <linux/pm_runtime.h>
 
 #include <linux/mei.h>
 
@@ -35,15 +36,25 @@
 #include "hw-txe.h"
 
 static const struct pci_device_id mei_txe_pci_tbl[] = {
-	{PCI_DEVICE(PCI_VENDOR_ID_INTEL, 0x0F18)}, /* Baytrail */
+	{PCI_VDEVICE(INTEL, 0x0F18)}, /* Baytrail */
+	{PCI_VDEVICE(INTEL, 0x2298)}, /* Cherrytrail */
+
 	{0, }
 };
 MODULE_DEVICE_TABLE(pci, mei_txe_pci_tbl);
 
+#ifdef CONFIG_PM
+static inline void mei_txe_set_pm_domain(struct mei_device *dev);
+static inline void mei_txe_unset_pm_domain(struct mei_device *dev);
+#else
+static inline void mei_txe_set_pm_domain(struct mei_device *dev) {}
+static inline void mei_txe_unset_pm_domain(struct mei_device *dev) {}
+#endif /* CONFIG_PM */
 
 static void mei_txe_pci_iounmap(struct pci_dev *pdev, struct mei_txe_hw *hw)
 {
 	int i;
+
 	for (i = SEC_BAR; i < NUM_OF_MEM_BARS; i++) {
 		if (hw->mem_addr[i]) {
 			pci_iounmap(pdev, hw->mem_addr[i]);
@@ -52,12 +63,12 @@ static void mei_txe_pci_iounmap(struct pci_dev *pdev, struct mei_txe_hw *hw)
 	}
 }
 /**
- * mei_probe - Device Initialization Routine
+ * mei_txe_probe - Device Initialization Routine
  *
  * @pdev: PCI device structure
  * @ent: entry in mei_txe_pci_tbl
  *
- * returns 0 on success, <0 on failure.
+ * Return: 0 on success, <0 on failure.
  */
 static int mei_txe_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
@@ -137,11 +148,24 @@ static int mei_txe_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 		goto release_irq;
 	}
 
-	err = mei_register(dev);
+	pm_runtime_set_autosuspend_delay(&pdev->dev, MEI_TXI_RPM_TIMEOUT);
+	pm_runtime_use_autosuspend(&pdev->dev);
+
+	err = mei_register(dev, &pdev->dev);
 	if (err)
 		goto release_irq;
 
 	pci_set_drvdata(pdev, dev);
+
+	/*
+	* For not wake-able HW runtime pm framework
+	* can't be used on pci device level.
+	* Use domain runtime pm callbacks instead.
+	*/
+	if (!pci_dev_run_wake(pdev))
+		mei_txe_set_pm_domain(dev);
+
+	pm_runtime_put_noidle(&pdev->dev);
 
 	return 0;
 
@@ -169,7 +193,7 @@ end:
 }
 
 /**
- * mei_remove - Device Removal Routine
+ * mei_txe_remove - Device Removal Routine
  *
  * @pdev: PCI device structure
  *
@@ -187,9 +211,14 @@ static void mei_txe_remove(struct pci_dev *pdev)
 		return;
 	}
 
+	pm_runtime_get_noresume(&pdev->dev);
+
 	hw = to_txe_hw(dev);
 
 	mei_stop(dev);
+
+	if (!pci_dev_run_wake(pdev))
+		mei_txe_unset_pm_domain(dev);
 
 	/* disable interrupts */
 	mei_disable_interrupts(dev);
@@ -265,15 +294,129 @@ static int mei_txe_pci_resume(struct device *device)
 
 	return err;
 }
+#endif /* CONFIG_PM_SLEEP */
 
-static SIMPLE_DEV_PM_OPS(mei_txe_pm_ops,
-			 mei_txe_pci_suspend,
-			 mei_txe_pci_resume);
+#ifdef CONFIG_PM
+static int mei_txe_pm_runtime_idle(struct device *device)
+{
+	struct pci_dev *pdev = to_pci_dev(device);
+	struct mei_device *dev;
+
+	dev_dbg(&pdev->dev, "rpm: txe: runtime_idle\n");
+
+	dev = pci_get_drvdata(pdev);
+	if (!dev)
+		return -ENODEV;
+	if (mei_write_is_idle(dev))
+		pm_runtime_autosuspend(device);
+
+	return -EBUSY;
+}
+static int mei_txe_pm_runtime_suspend(struct device *device)
+{
+	struct pci_dev *pdev = to_pci_dev(device);
+	struct mei_device *dev;
+	int ret;
+
+	dev_dbg(&pdev->dev, "rpm: txe: runtime suspend\n");
+
+	dev = pci_get_drvdata(pdev);
+	if (!dev)
+		return -ENODEV;
+
+	mutex_lock(&dev->device_lock);
+
+	if (mei_write_is_idle(dev))
+		ret = mei_txe_aliveness_set_sync(dev, 0);
+	else
+		ret = -EAGAIN;
+
+	/*
+	 * If everything is okay we're about to enter PCI low
+	 * power state (D3) therefor we need to disable the
+	 * interrupts towards host.
+	 * However if device is not wakeable we do not enter
+	 * D-low state and we need to keep the interrupt kicking
+	 */
+	 if (!ret && pci_dev_run_wake(pdev))
+		mei_disable_interrupts(dev);
+
+	dev_dbg(&pdev->dev, "rpm: txe: runtime suspend ret=%d\n", ret);
+
+	mutex_unlock(&dev->device_lock);
+	return ret;
+}
+
+static int mei_txe_pm_runtime_resume(struct device *device)
+{
+	struct pci_dev *pdev = to_pci_dev(device);
+	struct mei_device *dev;
+	int ret;
+
+	dev_dbg(&pdev->dev, "rpm: txe: runtime resume\n");
+
+	dev = pci_get_drvdata(pdev);
+	if (!dev)
+		return -ENODEV;
+
+	mutex_lock(&dev->device_lock);
+
+	mei_enable_interrupts(dev);
+
+	ret = mei_txe_aliveness_set_sync(dev, 1);
+
+	mutex_unlock(&dev->device_lock);
+
+	dev_dbg(&pdev->dev, "rpm: txe: runtime resume ret = %d\n", ret);
+
+	return ret;
+}
+
+/**
+ * mei_txe_set_pm_domain - fill and set pm domain structure for device
+ *
+ * @dev: mei_device
+ */
+static inline void mei_txe_set_pm_domain(struct mei_device *dev)
+{
+	struct pci_dev *pdev  = to_pci_dev(dev->dev);
+
+	if (pdev->dev.bus && pdev->dev.bus->pm) {
+		dev->pg_domain.ops = *pdev->dev.bus->pm;
+
+		dev->pg_domain.ops.runtime_suspend = mei_txe_pm_runtime_suspend;
+		dev->pg_domain.ops.runtime_resume = mei_txe_pm_runtime_resume;
+		dev->pg_domain.ops.runtime_idle = mei_txe_pm_runtime_idle;
+
+		pdev->dev.pm_domain = &dev->pg_domain;
+	}
+}
+
+/**
+ * mei_txe_unset_pm_domain - clean pm domain structure for device
+ *
+ * @dev: mei_device
+ */
+static inline void mei_txe_unset_pm_domain(struct mei_device *dev)
+{
+	/* stop using pm callbacks if any */
+	dev->dev->pm_domain = NULL;
+}
+
+static const struct dev_pm_ops mei_txe_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(mei_txe_pci_suspend,
+				mei_txe_pci_resume)
+	SET_RUNTIME_PM_OPS(
+		mei_txe_pm_runtime_suspend,
+		mei_txe_pm_runtime_resume,
+		mei_txe_pm_runtime_idle)
+};
 
 #define MEI_TXE_PM_OPS	(&mei_txe_pm_ops)
 #else
 #define MEI_TXE_PM_OPS	NULL
-#endif /* CONFIG_PM_SLEEP */
+#endif /* CONFIG_PM */
+
 /*
  *  PCI driver structure
  */

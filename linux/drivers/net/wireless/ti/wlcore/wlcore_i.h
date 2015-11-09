@@ -45,6 +45,9 @@
 #define WL1271_TX_SECURITY_LO16(s) ((u16)((s) & 0xffff))
 #define WL1271_TX_SECURITY_HI32(s) ((u32)(((s) >> 16) & 0xffffffff))
 #define WL1271_TX_SQN_POST_RECOVERY_PADDING 0xff
+/* Use smaller padding for GEM, as some  APs have issues when it's too big */
+#define WL1271_TX_SQN_POST_RECOVERY_PADDING_GEM 0x20
+
 
 #define WL1271_CIPHER_SUITE_GEM 0x00147201
 
@@ -198,8 +201,12 @@ struct wl1271_if_operations {
 };
 
 struct wlcore_platdev_data {
-	struct wl12xx_platform_data *pdata;
 	struct wl1271_if_operations *if_ops;
+
+	bool ref_clock_xtal;	/* specify whether the clock is XTAL or not */
+	u32 ref_clock_freq;	/* in Hertz */
+	u32 tcxo_clock_freq;	/* in Hertz, tcxo is always XTAL */
+	bool pwr_in_suspend;
 };
 
 #define MAX_NUM_KEYS 14
@@ -248,6 +255,7 @@ enum wl12xx_vif_flags {
 	WLVIF_FLAG_AP_PROBE_RESP_SET,
 	WLVIF_FLAG_IN_USE,
 	WLVIF_FLAG_ACTIVE,
+	WLVIF_FLAG_BEACON_DISABLED,
 };
 
 struct wl12xx_vif;
@@ -324,6 +332,7 @@ struct wl1271_station {
 	 * total freed FW packets on the link to the STA - used for tracking the
 	 * AES/TKIP PN across recoveries. Re-initialized each time from the
 	 * wl1271_station structure.
+	 * Used in both AP and STA mode.
 	 */
 	u64 total_freed_pkts;
 };
@@ -430,6 +439,8 @@ struct wl12xx_vif {
 
 	bool wmm_enabled;
 
+	bool radar_enabled;
+
 	/* Rx Streaming */
 	struct work_struct rx_streaming_enable_work;
 	struct work_struct rx_streaming_disable_work;
@@ -459,6 +470,17 @@ struct wl12xx_vif {
 	/* work for canceling ROC after pending auth reply */
 	struct delayed_work pending_auth_complete_work;
 
+	/* update rate conrol */
+	enum ieee80211_sta_rx_bandwidth rc_update_bw;
+	struct work_struct rc_update_work;
+
+	/*
+	 * total freed FW packets on the link.
+	 * For STA this holds the PN of the link to the AP.
+	 * For AP this holds the PN of the broadcast link.
+	 */
+	u64 total_freed_pkts;
+
 	/*
 	 * This struct must be last!
 	 * data that has to be saved acrossed reconfigs (e.g. recovery)
@@ -466,15 +488,6 @@ struct wl12xx_vif {
 	 */
 	struct {
 		u8 persistent[0];
-
-		/*
-		 * total freed FW packets on the link - used for
-		 * storing the AES/TKIP PN during recovery, as this
-		 * structure is not zeroed out.
-		 * For STA this holds the PN of the link to the AP.
-		 * For AP this holds the PN of the broadcast link.
-		 */
-		u64 total_freed_pkts;
 	};
 };
 
@@ -512,8 +525,8 @@ int wl1271_recalc_rx_streaming(struct wl1271 *wl, struct wl12xx_vif *wlvif);
 void wl12xx_queue_recovery_work(struct wl1271 *wl);
 size_t wl12xx_copy_fwlog(struct wl1271 *wl, u8 *memblock, size_t maxlen);
 int wl1271_rx_filter_alloc_field(struct wl12xx_rx_filter *filter,
-					u16 offset, u8 flags,
-					u8 *pattern, u8 len);
+				 u16 offset, u8 flags,
+				 const u8 *pattern, u8 len);
 void wl1271_rx_filter_free(struct wl12xx_rx_filter *filter);
 struct wl12xx_rx_filter *wl1271_rx_filter_alloc(void);
 int wl1271_rx_filter_get_fields_size(struct wl12xx_rx_filter *filter);

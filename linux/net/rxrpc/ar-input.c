@@ -28,7 +28,7 @@
 const char *rxrpc_pkts[] = {
 	"?00",
 	"DATA", "ACK", "BUSY", "ABORT", "ACKALL", "CHALL", "RESP", "DEBUG",
-	"?09", "?10", "?11", "?12", "?13", "?14", "?15"
+	"?09", "?10", "?11", "?12", "VERSION", "?14", "?15"
 };
 
 /*
@@ -45,7 +45,7 @@ int rxrpc_queue_rcv_skb(struct rxrpc_call *call, struct sk_buff *skb,
 	struct rxrpc_skb_priv *sp;
 	struct rxrpc_sock *rx = call->socket;
 	struct sock *sk;
-	int skb_len, ret;
+	int ret;
 
 	_enter(",,%d,%d", force, terminal);
 
@@ -101,13 +101,6 @@ int rxrpc_queue_rcv_skb(struct rxrpc_call *call, struct sk_buff *skb,
 			rx->interceptor(sk, call->user_call_ID, skb);
 			spin_unlock_bh(&sk->sk_receive_queue.lock);
 		} else {
-
-			/* Cache the SKB length before we tack it onto the
-			 * receive queue.  Once it is added it no longer
-			 * belongs to us and may be freed by other threads of
-			 * control pulling packets from the queue */
-			skb_len = skb->len;
-
 			_net("post skb %p", skb);
 			__skb_queue_tail(&sk->sk_receive_queue, skb);
 			spin_unlock_bh(&sk->sk_receive_queue.lock);
@@ -600,6 +593,20 @@ static void rxrpc_post_packet_to_conn(struct rxrpc_connection *conn,
 	rxrpc_queue_conn(conn);
 }
 
+/*
+ * post endpoint-level events to the local endpoint
+ * - this includes debug and version messages
+ */
+static void rxrpc_post_packet_to_local(struct rxrpc_local *local,
+				       struct sk_buff *skb)
+{
+	_enter("%p,%p", local, skb);
+
+	atomic_inc(&local->usage);
+	skb_queue_tail(&local->event_queue, skb);
+	rxrpc_queue_work(&local->event_processor);
+}
+
 static struct rxrpc_connection *rxrpc_conn_from_local(struct rxrpc_local *local,
 					       struct sk_buff *skb,
 					       struct rxrpc_skb_priv *sp)
@@ -706,6 +713,11 @@ void rxrpc_data_ready(struct sock *sk)
 		goto bad_message;
 	}
 
+	if (sp->hdr.type == RXRPC_PACKET_TYPE_VERSION) {
+		rxrpc_post_packet_to_local(local, skb);
+		goto out;
+	}
+	
 	if (sp->hdr.type == RXRPC_PACKET_TYPE_DATA &&
 	    (sp->hdr.callNumber == 0 || sp->hdr.seq == 0))
 		goto bad_message;
@@ -738,6 +750,8 @@ void rxrpc_data_ready(struct sock *sk)
 		else
 			goto cant_route_call;
 	}
+
+out:
 	rxrpc_put_local(local);
 	return;
 

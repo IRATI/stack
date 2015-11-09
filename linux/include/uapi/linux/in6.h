@@ -149,7 +149,7 @@ struct in6_flowlabel_req {
 /*
  *	IPV6 socket options
  */
-
+#if __UAPI_DEF_IPV6_OPTIONS
 #define IPV6_ADDRFORM		1
 #define IPV6_2292PKTINFO	2
 #define IPV6_2292HOPOPTS	3
@@ -196,6 +196,7 @@ struct in6_flowlabel_req {
 
 #define IPV6_IPSEC_POLICY	34
 #define IPV6_XFRM_POLICY	35
+#endif
 
 /*
  * Multicast:
@@ -261,6 +262,7 @@ struct in6_flowlabel_req {
  * IP6T_SO_ORIGINAL_DST		80
  */
 
+#define IPV6_AUTOFLOWLABEL	70
 /* RFC5014: Source address selection */
 #define IPV6_ADDR_PREFERENCES	72
 

@@ -10,13 +10,13 @@
  * published by the Free Software Foundation.
  */
 
-#include <linux/export.h>
 #include <linux/device.h>
-#include <linux/regmap.h>
-#include <linux/irq.h>
+#include <linux/export.h>
 #include <linux/interrupt.h>
+#include <linux/irq.h>
 #include <linux/irqdomain.h>
 #include <linux/pm_runtime.h>
+#include <linux/regmap.h>
 #include <linux/slab.h>
 
 #include "internal.h"
@@ -347,6 +347,9 @@ int regmap_add_irq_chip(struct regmap *map, int irq, int irq_flags,
 	int ret = -ENOMEM;
 	u32 reg;
 
+	if (chip->num_regs <= 0)
+		return -EINVAL;
+
 	for (i = 0; i < chip->num_irqs; i++) {
 		if (chip->irqs[i].reg_offset % map->reg_stride)
 			return -EINVAL;
@@ -496,7 +499,8 @@ int regmap_add_irq_chip(struct regmap *map, int irq, int irq_flags,
 		goto err_alloc;
 	}
 
-	ret = request_threaded_irq(irq, NULL, regmap_irq_thread, irq_flags,
+	ret = request_threaded_irq(irq, NULL, regmap_irq_thread,
+				   irq_flags | IRQF_ONESHOT,
 				   chip->name, d);
 	if (ret != 0) {
 		dev_err(map->dev, "Failed to request IRQ %d for %s: %d\n",

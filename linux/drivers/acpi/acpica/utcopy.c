@@ -5,7 +5,7 @@
  *****************************************************************************/
 
 /*
- * Copyright (C) 2000 - 2014, Intel Corp.
+ * Copyright (C) 2000 - 2015, Intel Corp.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -999,6 +999,12 @@ acpi_ut_copy_iobject_to_iobject(union acpi_operand_object *source_desc,
 						      walk_state);
 	} else {
 		status = acpi_ut_copy_simple_object(source_desc, *dest_desc);
+	}
+
+	/* Delete the allocated object if copy failed */
+
+	if (ACPI_FAILURE(status)) {
+		acpi_ut_remove_reference(*dest_desc);
 	}
 
 	return_ACPI_STATUS(status);

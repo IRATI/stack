@@ -31,7 +31,6 @@
 #include "debug.h"
 #include "rds/rmem.h"
 #include "rmt-ps.h"
-#include "rmt-ps-common.h"
 #include "policies.h"
 #include "rmt-ps-debug.h"
 
@@ -150,7 +149,7 @@ red_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
 
 	/* Compute average queue usage (see RED)
 	 * RED does not do this here and instead uses an approximation
-	 * when the idle period is over. But doing this the qavg 
+	 * when the idle period is over. But doing this the qavg
 	 * calculation seems to be distorted. For this PS we can afford to
 	 * calculate the avg also when pdus are dequeued.
 	 */
@@ -164,8 +163,8 @@ red_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
         }
 #if RMT_DEBUG
 	if (q->debug->q_index < RMT_DEBUG_SIZE && ret_pdu) {
-		q->debug->q_log[q->debug->q_index][0] = rfifo_length(q->queue); 
-		q->debug->q_log[q->debug->q_index++][1] = q->vars.qavg >> q->parms.Wlog; 
+		q->debug->q_log[q->debug->q_index][0] = rfifo_length(q->queue);
+		q->debug->q_log[q->debug->q_index++][1] = q->vars.qavg >> q->parms.Wlog;
 	}
 	q->debug->stats = q->stats;
 #endif
@@ -246,8 +245,8 @@ congestion_drop:
 exit:
 #if RMT_DEBUG
 	if (q->debug->q_index < RMT_DEBUG_SIZE && pdu) {
-		q->debug->q_log[q->debug->q_index][0] = rfifo_length(q->queue); 
-		q->debug->q_log[q->debug->q_index++][1] = q->vars.qavg >> q->parms.Wlog; 
+		q->debug->q_log[q->debug->q_index][0] = rfifo_length(q->queue);
+		q->debug->q_log[q->debug->q_index++][1] = q->vars.qavg >> q->parms.Wlog;
 	}
 	q->debug->stats = q->stats;
 #endif
@@ -402,7 +401,7 @@ rmt_ps_red_create(struct rina_component * component)
 	ps_param = policy_param_find(rmt_cfg->policy_set, "qmax_p");
 	if (!ps_param)
 		LOG_WARN("No PS param qmax_p");
-	else 
+	else
 		red_rmt_ps_set_policy_set_param(&ps->base,
 						policy_param_name(ps_param),
 						policy_param_value(ps_param));
@@ -426,27 +425,27 @@ rmt_ps_red_create(struct rina_component * component)
 	ps_param = policy_param_find(rmt_cfg->policy_set, "Wlog_p");
 	if (!ps_param)
 		LOG_WARN("No PS param Wlog_p");
-	else	
+	else
 		red_rmt_ps_set_policy_set_param(&ps->base,
 						policy_param_name(ps_param),
 						policy_param_value(ps_param));
 
 	ps_param = policy_param_find(rmt_cfg->policy_set, "Plog_p");
-	if (!ps_param) 
+	if (!ps_param)
 		LOG_WARN("No PS param Plog_p");
-	else 
+	else
 		red_rmt_ps_set_policy_set_param(&ps->base,
 						policy_param_name(ps_param),
 						policy_param_value(ps_param));
 
 	ps_param = policy_param_find(rmt_cfg->policy_set, "Scell_log_p");
-	if (!ps_param) 
+	if (!ps_param)
 		LOG_DBG("No PS param Scell_log_p");
-	else 
+	else
 		red_rmt_ps_set_policy_set_param(&ps->base,
 						policy_param_name(ps_param),
 						policy_param_value(ps_param));
-	
+
 	ps_param = policy_param_find(rmt_cfg->policy_set, "stab_address_p");
 	if (!ps_param) {
 		LOG_DBG("No PS param stab_address");
@@ -455,13 +454,12 @@ rmt_ps_red_create(struct rina_component * component)
 		red_rmt_ps_set_policy_set_param(&ps->base,
 						policy_param_name(ps_param),
 						policy_param_value(ps_param));
-	
 
-        ps->max_q_policy_tx = NULL;
-        ps->max_q_policy_rx = NULL;
-        ps->rmt_q_monitor_policy_tx_enq = NULL;
-        ps->rmt_q_monitor_policy_tx_deq = NULL;
-        ps->rmt_q_monitor_policy_rx = NULL;
+        ps->max_q_policy_tx = NULL; /* default (== NULL) */
+        ps->max_q_policy_rx = NULL; /* default (== NULL) */
+        ps->rmt_q_monitor_policy_tx_enq = NULL; /* default (== NULL) */
+        ps->rmt_q_monitor_policy_tx_deq = NULL; /* default (== NULL) */
+        ps->rmt_q_monitor_policy_rx = NULL; /* default (== NULL) */
         ps->rmt_next_scheduled_policy_tx = red_rmt_next_scheduled_policy_tx;
         ps->rmt_enqueue_scheduling_policy_tx = red_rmt_enqueue_scheduling_policy_tx;
 	ps->rmt_requeue_scheduling_policy_tx = red_rmt_enqueue_scheduling_policy_tx;

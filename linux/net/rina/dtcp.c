@@ -34,7 +34,10 @@
 #include "dtcp-conf-utils.h"
 #include "ps-factory.h"
 #include "dtcp-ps.h"
+#include "dtcp-ps-default.h"
 #include "policies.h"
+#include "rds/rmem.h"
+#include "debug.h"
 
 static struct policy_set_list policy_sets = {
         .head = LIST_HEAD_INIT(policy_sets.head)
@@ -1629,48 +1632,82 @@ int dtcp_select_policy_set(struct dtcp * dtcp,
                            const string_t * name)
 {
         struct dtcp_config * cfg = dtcp->cfg;
-        struct dtcp_ps *ps;
-        int ret;
+        struct ps_select_transaction trans;
 
         if (path && strcmp(path, "")) {
                 LOG_ERR("This component has no selectable subcomponents");
                 return -1;
         }
 
-        ret = base_select_policy_set(&dtcp->base, &policy_sets, name);
-        if (ret) {
-                return ret;
+        base_select_policy_set_start(&dtcp->base, &trans, &policy_sets, name);
+
+        if (trans.state == PS_SEL_TRANS_PENDING) {
+                struct dtcp_ps *ps;
+
+                /* Copy the connection parameters to the policy-set. From now
+                 * on these connection parameters must be accessed by the DTCP
+                 * policy set, and not from the struct connection. */
+                ps = container_of(trans.candidate_ps, struct dtcp_ps, base);
+                ps->flow_ctrl                   = dtcp_flow_ctrl(cfg);
+                ps->rtx_ctrl                    = dtcp_rtx_ctrl(cfg);
+                ps->flowctrl.window_based       = dtcp_window_based_fctrl(cfg);
+                ps->flowctrl.rate_based         = dtcp_rate_based_fctrl(cfg);
+                ps->flowctrl.sent_bytes_th      = dtcp_sent_bytes_th(cfg);
+                ps->flowctrl.sent_bytes_percent_th
+                                                = dtcp_sent_bytes_percent_th(cfg);
+                ps->flowctrl.sent_buffers_th    = dtcp_sent_buffers_th(cfg);
+                ps->flowctrl.rcvd_bytes_th      = dtcp_rcvd_bytes_th(cfg);
+                ps->flowctrl.rcvd_bytes_percent_th
+                                                = dtcp_rcvd_bytes_percent_th(cfg);
+                ps->flowctrl.rcvd_buffers_th    = dtcp_rcvd_buffers_th(cfg);
+                ps->rtx.max_time_retry          = dtcp_max_time_retry(cfg);
+                ps->rtx.data_retransmit_max     = dtcp_data_retransmit_max(cfg);
+                ps->rtx.initial_tr              = dtcp_initial_tr(cfg);
+                ps->flowctrl.window.max_closed_winq_length
+                                                = dtcp_max_closed_winq_length(cfg);
+                ps->flowctrl.window.initial_credit
+                                                = dtcp_initial_credit(cfg);
+                ps->flowctrl.rate.sending_rate  = dtcp_sending_rate(cfg);
+                ps->flowctrl.rate.time_period   = dtcp_time_period(cfg);
+
+                /* Fill in default policies. */
+                if (!ps->lost_control_pdu) {
+                        ps->lost_control_pdu = default_lost_control_pdu;
+                }
+#ifdef CONFIG_RINA_DTCP_RCVR_ACK
+                if (!ps->rcvr_ack) {
+                        ps->rcvr_ack = default_rcvr_ack;
+                }
+#endif /* CONFIG_RINA_DTCP_RCVR_ACK */
+#ifdef CONFIG_RINA_DTCP_RCVR_ACK_ATIMER
+                if (!ps->rcvr_ack_atimer) {
+                        ps->rcvr_ack_atimer = default_rcvr_ack_atimer;
+                }
+#endif /* CONFIG_RINA_DTCP_RCVR_ACK_ATIMER */
+                if (!ps->sender_ack) {
+                        ps->sender_ack = default_sender_ack;
+                }
+                if (!ps->sending_ack) {
+                        ps->sending_ack = default_sending_ack;
+                }
+                if (!ps->receiving_flow_control) {
+                        ps->receiving_flow_control =
+                                default_receiving_flow_control;
+                }
+                if (!ps->rcvr_flow_control) {
+                        ps->rcvr_flow_control = default_rcvr_flow_control;
+                }
+                if (!ps->rate_reduction) {
+                        ps->rate_reduction = default_rate_reduction;
+                }
+                if (!ps->rtt_estimator) {
+                        ps->rtt_estimator = default_rtt_estimator;
+                }
         }
 
-        /* Copy the connection parameter to the policy-set. From now on
-         * these connection parameters must be accessed by the DTCP policy set,
-         * and not from the struct connection. */
-        mutex_lock(&dtcp->base.ps_lock);
-        ps = container_of(dtcp->base.ps, struct dtcp_ps, base);
-        ps->flow_ctrl                   = dtcp_flow_ctrl(cfg);
-        ps->rtx_ctrl                    = dtcp_rtx_ctrl(cfg);
-        ps->flowctrl.window_based       = dtcp_window_based_fctrl(cfg);
-        ps->flowctrl.rate_based         = dtcp_rate_based_fctrl(cfg);
-        ps->flowctrl.sent_bytes_th      = dtcp_sent_bytes_th(cfg);
-        ps->flowctrl.sent_bytes_percent_th
-                                        = dtcp_sent_bytes_percent_th(cfg);
-        ps->flowctrl.sent_buffers_th    = dtcp_sent_buffers_th(cfg);
-        ps->flowctrl.rcvd_bytes_th      = dtcp_rcvd_bytes_th(cfg);
-        ps->flowctrl.rcvd_bytes_percent_th
-                                        = dtcp_rcvd_bytes_percent_th(cfg);
-        ps->flowctrl.rcvd_buffers_th    = dtcp_rcvd_buffers_th(cfg);
-        ps->rtx.max_time_retry          = dtcp_max_time_retry(cfg);
-        ps->rtx.data_retransmit_max     = dtcp_data_retransmit_max(cfg);
-        ps->rtx.initial_tr              = dtcp_initial_tr(cfg);
-        ps->flowctrl.window.max_closed_winq_length
-                                        = dtcp_max_closed_winq_length(cfg);
-        ps->flowctrl.window.initial_credit
-                                        = dtcp_initial_credit(cfg);
-        ps->flowctrl.rate.sending_rate  = dtcp_sending_rate(cfg);
-        ps->flowctrl.rate.time_period   = dtcp_time_period(cfg);
-        mutex_unlock(&dtcp->base.ps_lock);
+        base_select_policy_set_finish(&dtcp->base, &trans);
 
-        return ret;
+        return trans.state == PS_SEL_TRANS_COMMITTED ? 0 : -1;
 }
 EXPORT_SYMBOL(dtcp_select_policy_set);
 

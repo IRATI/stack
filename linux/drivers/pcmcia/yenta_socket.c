@@ -1236,11 +1236,9 @@ static int yenta_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	if (!socket->cb_irq || request_irq(socket->cb_irq, yenta_interrupt, IRQF_SHARED, "yenta", socket)) {
 		/* No IRQ or request_irq failed. Poll */
 		socket->cb_irq = 0; /* But zero is a valid IRQ number. */
-		init_timer(&socket->poll_timer);
-		socket->poll_timer.function = yenta_interrupt_wrapper;
-		socket->poll_timer.data = (unsigned long)socket;
-		socket->poll_timer.expires = jiffies + HZ;
-		add_timer(&socket->poll_timer);
+		setup_timer(&socket->poll_timer, yenta_interrupt_wrapper,
+			    (unsigned long)socket);
+		mod_timer(&socket->poll_timer, jiffies + HZ);
 		dev_printk(KERN_INFO, &dev->dev,
 			   "no PCI IRQ, CardBus support disabled for this "
 			   "socket.\n");
@@ -1352,7 +1350,7 @@ static const struct dev_pm_ops yenta_pm_ops = {
 		.driver_data	= CARDBUS_TYPE_##type,	\
 	}
 
-static DEFINE_PCI_DEVICE_TABLE(yenta_table) = {
+static const struct pci_device_id yenta_table[] = {
 	CB_ID(PCI_VENDOR_ID_TI, PCI_DEVICE_ID_TI_1031, TI),
 
 	/*

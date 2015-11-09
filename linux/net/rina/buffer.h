@@ -38,6 +38,7 @@ int             buffer_destroy(struct buffer * b);
 
 /* NOTE: The following function may return -1 */
 ssize_t         buffer_length(const struct buffer * b);
+int buffer_set_length(struct buffer * b, size_t len);
 
 /* NOTE: Returns the raw buffer memory, watch-out ... */
 const void *    buffer_data_ro(const struct buffer * b); /* Read only */

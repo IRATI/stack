@@ -20,7 +20,9 @@
 #include <linux/delay.h>
 #include <linux/hw_random.h>
 #include <linux/cpu.h>
+#ifdef CONFIG_X86
 #include <asm/cpu_device_id.h>
+#endif
 #include <linux/ccp.h>
 
 #include "ccp-dev.h"
@@ -34,7 +36,6 @@ struct ccp_tasklet_data {
 	struct completion completion;
 	struct ccp_cmd *cmd;
 };
-
 
 static struct ccp_device *ccp_dev;
 static inline struct ccp_device *ccp_get_device(void)
@@ -51,6 +52,20 @@ static inline void ccp_del_device(struct ccp_device *ccp)
 {
 	ccp_dev = NULL;
 }
+
+/**
+ * ccp_present - check if a CCP device is present
+ *
+ * Returns zero if a CCP device is present, -ENODEV otherwise.
+ */
+int ccp_present(void)
+{
+	if (ccp_get_device())
+		return 0;
+
+	return -ENODEV;
+}
+EXPORT_SYMBOL_GPL(ccp_present);
 
 /**
  * ccp_enqueue_cmd - queue an operation for processing by the CCP
@@ -280,11 +295,9 @@ struct ccp_device *ccp_alloc_struct(struct device *dev)
 {
 	struct ccp_device *ccp;
 
-	ccp = kzalloc(sizeof(*ccp), GFP_KERNEL);
-	if (ccp == NULL) {
-		dev_err(dev, "unable to allocate device struct\n");
+	ccp = devm_kzalloc(dev, sizeof(*ccp), GFP_KERNEL);
+	if (!ccp)
 		return NULL;
-	}
 	ccp->dev = dev;
 
 	INIT_LIST_HEAD(&ccp->cmd);
@@ -359,6 +372,12 @@ int ccp_init(struct ccp_device *ccp)
 
 		/* Build queue interrupt mask (two interrupts per queue) */
 		qim |= cmd_q->int_ok | cmd_q->int_err;
+
+#ifdef CONFIG_ARM64
+		/* For arm64 set the recommended queue cache settings */
+		iowrite32(ccp->axcache, ccp->io_regs + CMD_Q_CACHE_BASE +
+			  (CMD_Q_CACHE_INC * i));
+#endif
 
 		dev_dbg(dev, "queue #%u available\n", i);
 	}
@@ -558,12 +577,16 @@ bool ccp_queues_suspended(struct ccp_device *ccp)
 }
 #endif
 
+#ifdef CONFIG_X86
 static const struct x86_cpu_id ccp_support[] = {
 	{ X86_VENDOR_AMD, 22, },
+	{ },
 };
+#endif
 
 static int __init ccp_mod_init(void)
 {
+#ifdef CONFIG_X86
 	struct cpuinfo_x86 *cpuinfo = &boot_cpu_data;
 	int ret;
 
@@ -589,12 +612,30 @@ static int __init ccp_mod_init(void)
 
 		break;
 	}
+#endif
+
+#ifdef CONFIG_ARM64
+	int ret;
+
+	ret = ccp_platform_init();
+	if (ret)
+		return ret;
+
+	/* Don't leave the driver loaded if init failed */
+	if (!ccp_get_device()) {
+		ccp_platform_exit();
+		return -ENODEV;
+	}
+
+	return 0;
+#endif
 
 	return -ENODEV;
 }
 
 static void __exit ccp_mod_exit(void)
 {
+#ifdef CONFIG_X86
 	struct cpuinfo_x86 *cpuinfo = &boot_cpu_data;
 
 	switch (cpuinfo->x86) {
@@ -602,6 +643,11 @@ static void __exit ccp_mod_exit(void)
 		ccp_pci_exit();
 		break;
 	}
+#endif
+
+#ifdef CONFIG_ARM64
+	ccp_platform_exit();
+#endif
 }
 
 module_init(ccp_mod_init);

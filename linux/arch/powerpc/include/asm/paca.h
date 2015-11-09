@@ -42,7 +42,6 @@ extern unsigned int debug_smp_processor_id(void); /* from linux/smp.h */
 #define get_slb_shadow()	(get_paca()->slb_shadow_ptr)
 
 struct task_struct;
-struct opal_machine_check_event;
 
 /*
  * Defines the layout of the paca.
@@ -78,10 +77,6 @@ struct paca_struct {
 	u64 kernel_toc;			/* Kernel TOC address */
 	u64 kernelbase;			/* Base address of kernel */
 	u64 kernel_msr;			/* MSR while running in kernel */
-#ifdef CONFIG_PPC_STD_MMU_64
-	u64 stab_real;			/* Absolute address of segment table */
-	u64 stab_addr;			/* Virtual address of segment table */
-#endif /* CONFIG_PPC_STD_MMU_64 */
 	void *emergency_sp;		/* pointer to emergency stack */
 	u64 data_offset;		/* per cpu data offset */
 	s16 hw_cpu_id;			/* Physical processor number */
@@ -92,7 +87,10 @@ struct paca_struct {
 	struct slb_shadow *slb_shadow_ptr;
 	struct dtl_entry *dispatch_log;
 	struct dtl_entry *dispatch_log_end;
+#endif /* CONFIG_PPC_STD_MMU_64 */
+	u64 dscr_default;		/* per-CPU default DSCR */
 
+#ifdef CONFIG_PPC_STD_MMU_64
 	/*
 	 * Now, starting in cacheline 2, the exception save areas
 	 */
@@ -108,9 +106,9 @@ struct paca_struct {
 #endif /* CONFIG_PPC_STD_MMU_64 */
 
 #ifdef CONFIG_PPC_BOOK3E
-	u64 exgen[8] __attribute__((aligned(0x80)));
+	u64 exgen[8] __aligned(0x40);
 	/* Keep pgd in the same cacheline as the start of extlb */
-	pgd_t *pgd __attribute__((aligned(0x80))); /* Current PGD */
+	pgd_t *pgd __aligned(0x40); /* Current PGD */
 	pgd_t *kernel_pgd;		/* Kernel PGD */
 
 	/* Shared by all threads of a core -- points to tcd of first thread */
@@ -155,11 +153,15 @@ struct paca_struct {
 #endif
 
 #ifdef CONFIG_PPC_POWERNV
-	/* Pointer to OPAL machine check event structure set by the
-	 * early exception handler for use by high level C handler
-	 */
-	struct opal_machine_check_event *opal_mc_evt;
+	/* Per-core mask tracking idle threads and a lock bit-[L][TTTTTTTT] */
+	u32 *core_idle_state_ptr;
+	u8 thread_idle_state;		/* PNV_THREAD_RUNNING/NAP/SLEEP	*/
+	/* Mask to indicate thread id in core */
+	u8 thread_mask;
+	/* Mask to denote subcore sibling threads */
+	u8 subcore_sibling_mask;
 #endif
+
 #ifdef CONFIG_PPC_BOOK3S_64
 	/* Exclusive emergency stack pointer for machine check exception. */
 	void *mc_emergency_sp;
@@ -168,6 +170,7 @@ struct paca_struct {
 	 * and already using emergency stack.
 	 */
 	u16 in_mce;
+	u8 hmi_event_available;		 /* HMI event is available */
 #endif
 
 	/* Stuff for accurate time accounting */

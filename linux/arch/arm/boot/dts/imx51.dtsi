@@ -19,6 +19,7 @@
 
 / {
 	aliases {
+		ethernet0 = &fec;
 		gpio0 = &gpio1;
 		gpio1 = &gpio2;
 		gpio2 = &gpio3;
@@ -209,15 +210,17 @@
 				};
 
 				ssi2: ssi@70014000 {
+					#sound-dai-cells = <0>;
 					compatible = "fsl,imx51-ssi", "fsl,imx21-ssi";
 					reg = <0x70014000 0x4000>;
 					interrupts = <30>;
-					clocks = <&clks IMX5_CLK_SSI2_IPG_GATE>;
+					clocks = <&clks IMX5_CLK_SSI2_IPG_GATE>,
+						 <&clks IMX5_CLK_SSI2_ROOT_GATE>;
+					clock-names = "ipg", "baud";
 					dmas = <&sdma 24 1 0>,
 					       <&sdma 25 1 0>;
 					dma-names = "rx", "tx";
 					fsl,fifo-depth = <15>;
-					fsl,ssi-dma-events = <25 24 23 22>; /* TX0 RX0 TX1 RX1 */
 					status = "disabled";
 				};
 
@@ -262,6 +265,7 @@
 				interrupts = <14>;
 				clocks = <&clks IMX5_CLK_USBOH3_GATE>;
 				fsl,usbmisc = <&usbmisc 1>;
+				dr_mode = "host";
 				status = "disabled";
 			};
 
@@ -271,6 +275,7 @@
 				interrupts = <16>;
 				clocks = <&clks IMX5_CLK_USBOH3_GATE>;
 				fsl,usbmisc = <&usbmisc 2>;
+				dr_mode = "host";
 				status = "disabled";
 			};
 
@@ -280,6 +285,7 @@
 				interrupts = <17>;
 				clocks = <&clks IMX5_CLK_USBOH3_GATE>;
 				fsl,usbmisc = <&usbmisc 3>;
+				dr_mode = "host";
 				status = "disabled";
 			};
 
@@ -499,15 +505,17 @@
 			};
 
 			ssi1: ssi@83fcc000 {
+				#sound-dai-cells = <0>;
 				compatible = "fsl,imx51-ssi", "fsl,imx21-ssi";
 				reg = <0x83fcc000 0x4000>;
 				interrupts = <29>;
-				clocks = <&clks IMX5_CLK_SSI1_IPG_GATE>;
+				clocks = <&clks IMX5_CLK_SSI1_IPG_GATE>,
+					 <&clks IMX5_CLK_SSI1_ROOT_GATE>;
+				clock-names = "ipg", "baud";
 				dmas = <&sdma 28 0 0>,
 				       <&sdma 29 0 0>;
 				dma-names = "rx", "tx";
 				fsl,fifo-depth = <15>;
-				fsl,ssi-dma-events = <29 28 27 26>; /* TX0 RX0 TX1 RX1 */
 				status = "disabled";
 			};
 
@@ -537,6 +545,8 @@
 			};
 
 			nfc: nand@83fdb000 {
+				#address-cells = <1>;
+				#size-cells = <1>;
 				compatible = "fsl,imx51-nand";
 				reg = <0x83fdb000 0x1000 0xcfff0000 0x10000>;
 				interrupts = <8>;
@@ -553,15 +563,17 @@
 			};
 
 			ssi3: ssi@83fe8000 {
+				#sound-dai-cells = <0>;
 				compatible = "fsl,imx51-ssi", "fsl,imx21-ssi";
 				reg = <0x83fe8000 0x4000>;
 				interrupts = <96>;
-				clocks = <&clks IMX5_CLK_SSI3_IPG_GATE>;
+				clocks = <&clks IMX5_CLK_SSI3_IPG_GATE>,
+					 <&clks IMX5_CLK_SSI3_ROOT_GATE>;
+				clock-names = "ipg", "baud";
 				dmas = <&sdma 46 0 0>,
 				       <&sdma 47 0 0>;
 				dma-names = "rx", "tx";
 				fsl,fifo-depth = <15>;
-				fsl,ssi-dma-events = <47 46 37 35>; /* TX0 RX0 TX1 RX1 */
 				status = "disabled";
 			};
 

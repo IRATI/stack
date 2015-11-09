@@ -125,11 +125,11 @@ static struct usb_tx_sdu *alloc_tx_sdu_struct(void)
 {
 	struct usb_tx_sdu *t_sdu;
 
-	t_sdu = kzalloc(sizeof(struct usb_tx_sdu), GFP_ATOMIC);
+	t_sdu = kzalloc(sizeof(struct usb_tx_sdu), GFP_KERNEL);
 	if (!t_sdu)
 		return NULL;
 
-	t_sdu->buf = kmalloc(SDU_BUF_SIZE, GFP_ATOMIC);
+	t_sdu->buf = kmalloc(SDU_BUF_SIZE, GFP_KERNEL);
 	if (!t_sdu->buf) {
 		kfree(t_sdu);
 		return NULL;
@@ -183,14 +183,14 @@ static struct usb_rx *alloc_rx_struct(void)
 	struct usb_rx *r = NULL;
 	int ret = 0;
 
-	r = kmalloc(sizeof(struct usb_rx), GFP_ATOMIC);
+	r = kmalloc(sizeof(struct usb_rx), GFP_KERNEL);
 	if (!r) {
 		ret = -ENOMEM;
 		goto out;
 	}
 
-	r->urb = usb_alloc_urb(0, GFP_ATOMIC);
-	r->buf = kmalloc(RX_BUF_SIZE, GFP_ATOMIC);
+	r->urb = usb_alloc_urb(0, GFP_KERNEL);
+	r->buf = kmalloc(RX_BUF_SIZE, GFP_KERNEL);
 	if (!r->urb || !r->buf) {
 		ret = -ENOMEM;
 		goto out;
@@ -264,28 +264,25 @@ static void release_usb(struct lte_udev *udev)
 	unsigned long flags;
 
 	spin_lock_irqsave(&tx->lock, flags);
-	list_for_each_entry_safe(t_sdu, t_sdu_next, &tx->sdu_list, list)
-	{
+	list_for_each_entry_safe(t_sdu, t_sdu_next, &tx->sdu_list, list) {
 		list_del(&t_sdu->list);
 		free_tx_sdu_struct(t_sdu);
 	}
 
-	list_for_each_entry_safe(t, t_next, &tx->hci_list, list)
-	{
+	list_for_each_entry_safe(t, t_next, &tx->hci_list, list) {
 		list_del(&t->list);
 		free_tx_struct(t);
 	}
 
-	list_for_each_entry_safe(t_sdu, t_sdu_next, &tx->free_list, list)
-	{
+	list_for_each_entry_safe(t_sdu, t_sdu_next, &tx->free_list, list) {
 		list_del(&t_sdu->list);
 		free_tx_sdu_struct(t_sdu);
 	}
 	spin_unlock_irqrestore(&tx->lock, flags);
 
 	spin_lock_irqsave(&rx->submit_lock, flags);
-	list_for_each_entry_safe(r, r_next, &rx->rx_submit_list, rx_submit_list)
-	{
+	list_for_each_entry_safe(r, r_next, &rx->rx_submit_list,
+				 rx_submit_list) {
 		spin_unlock_irqrestore(&rx->submit_lock, flags);
 		usb_kill_urb(r->urb);
 		spin_lock_irqsave(&rx->submit_lock, flags);
@@ -293,16 +290,14 @@ static void release_usb(struct lte_udev *udev)
 	spin_unlock_irqrestore(&rx->submit_lock, flags);
 
 	spin_lock_irqsave(&rx->rx_lock, flags);
-	list_for_each_entry_safe(r, r_next, &rx->free_list, free_list)
-	{
+	list_for_each_entry_safe(r, r_next, &rx->free_list, free_list) {
 		list_del(&r->free_list);
 		free_rx_struct(r);
 	}
 	spin_unlock_irqrestore(&rx->rx_lock, flags);
 
 	spin_lock_irqsave(&rx->to_host_lock, flags);
-	list_for_each_entry_safe(r, r_next, &rx->to_host_list, to_host_list)
-	{
+	list_for_each_entry_safe(r, r_next, &rx->to_host_list, to_host_list) {
 		if (r->index == (void *)udev) {
 			list_del(&r->to_host_list);
 			free_rx_struct(r);
@@ -366,6 +361,7 @@ static int init_usb(struct lte_udev *udev)
 	INIT_DELAYED_WORK(&udev->work_rx, do_rx);
 	return 0;
 fail:
+	release_usb(udev);
 	return ret;
 }
 
@@ -457,9 +453,8 @@ static void remove_rx_submit_list(struct usb_rx *r, struct rx_cxt *rx)
 	struct usb_rx	*r_remove, *r_remove_next;
 
 	spin_lock_irqsave(&rx->submit_lock, flags);
-	list_for_each_entry_safe(r_remove,
-			r_remove_next, &rx->rx_submit_list, rx_submit_list)
-	{
+	list_for_each_entry_safe(r_remove, r_remove_next,
+				 &rx->rx_submit_list, rx_submit_list) {
 		if (r == r_remove) {
 			list_del(&r->rx_submit_list);
 			break;
@@ -485,7 +480,7 @@ static void gdm_usb_rcv_complete(struct urb *urb)
 		spin_unlock_irqrestore(&rx->to_host_lock, flags);
 	} else {
 		if (urb->status && udev->usb_state == PM_NORMAL)
-			pr_err("%s: urb status error %d\n",
+			dev_err(&urb->dev->dev, "%s: urb status error %d\n",
 			       __func__, urb->status);
 
 		put_rx_struct(rx, r);
@@ -562,7 +557,7 @@ static void gdm_usb_send_complete(struct urb *urb)
 	unsigned long flags;
 
 	if (urb->status == -ECONNRESET) {
-		pr_info("CONNRESET\n");
+		dev_info(&urb->dev->dev, "CONNRESET\n");
 		return;
 	}
 
@@ -595,7 +590,8 @@ static int send_tx_packet(struct usb_device *usbdev, struct usb_tx *t, u32 len)
 	ret = usb_submit_urb(t->urb, GFP_ATOMIC);
 
 	if (ret)
-		pr_err("usb_submit_urb failed: %d\n", ret);
+		dev_err(&usbdev->dev, "usb_submit_urb failed: %d\n",
+			ret);
 
 	usb_mark_last_busy(usbdev);
 
@@ -669,9 +665,8 @@ static void do_tx(struct work_struct *work)
 	if (!udev->send_complete) {
 		spin_unlock_irqrestore(&tx->lock, flags);
 		return;
-	} else {
-		udev->send_complete = 0;
 	}
+	udev->send_complete = 0;
 
 	if (!list_empty(&tx->hci_list)) {
 		t = list_entry(tx->hci_list.next, struct usb_tx, list);
@@ -687,6 +682,10 @@ static void do_tx(struct work_struct *work)
 		}
 
 		t = alloc_tx_struct(TX_BUF_SIZE);
+		if (t == NULL) {
+			spin_unlock_irqrestore(&tx->lock, flags);
+			return;
+		}
 		t->callback = NULL;
 		t->tx = tx;
 		t->is_sdu = 1;
@@ -850,7 +849,7 @@ static int gdm_usb_probe(struct usb_interface *intf,
 	udev->usbdev = usbdev;
 	ret = init_usb(udev);
 	if (ret < 0) {
-		pr_err("init_usb func failed\n");
+		dev_err(intf->usb_dev, "init_usb func failed\n");
 		goto err_init_usb;
 	}
 	udev->intf = intf;
@@ -869,7 +868,7 @@ static int gdm_usb_probe(struct usb_interface *intf,
 
 	ret = request_mac_address(udev);
 	if (ret < 0) {
-		pr_err("request Mac address failed\n");
+		dev_err(intf->usb_dev, "request Mac address failed\n");
 		goto err_mac_address;
 	}
 
@@ -895,6 +894,7 @@ static void gdm_usb_disconnect(struct usb_interface *intf)
 	struct lte_udev *udev;
 	u16 idVendor, idProduct;
 	struct usb_device *usbdev;
+
 	usbdev = interface_to_usbdev(intf);
 
 	idVendor = __le16_to_cpu(usbdev->descriptor.idVendor);
@@ -929,15 +929,15 @@ static int gdm_usb_suspend(struct usb_interface *intf, pm_message_t pm_msg)
 	udev = phy_dev->priv_dev;
 	rx = &udev->rx;
 	if (udev->usb_state != PM_NORMAL) {
-		pr_err("usb suspend - invalid state\n");
+		dev_err(intf->usb_dev, "usb suspend - invalid state\n");
 		return -1;
 	}
 
 	udev->usb_state = PM_SUSPEND;
 
 	spin_lock_irqsave(&rx->submit_lock, flags);
-	list_for_each_entry_safe(r, r_next, &rx->rx_submit_list, rx_submit_list)
-	{
+	list_for_each_entry_safe(r, r_next, &rx->rx_submit_list,
+				 rx_submit_list) {
 		spin_unlock_irqrestore(&rx->submit_lock, flags);
 		usb_kill_urb(r->urb);
 		spin_lock_irqsave(&rx->submit_lock, flags);
@@ -962,7 +962,7 @@ static int gdm_usb_resume(struct usb_interface *intf)
 	rx = &udev->rx;
 
 	if (udev->usb_state != PM_SUSPEND) {
-		pr_err("usb resume - invalid state\n");
+		dev_err(intf->usb_dev, "usb resume - invalid state\n");
 		return -1;
 	}
 	udev->usb_state = PM_NORMAL;

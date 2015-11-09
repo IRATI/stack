@@ -3,11 +3,12 @@
 #include <elfutils/libdwfl.h>
 #include <inttypes.h>
 #include <errno.h>
+#include "debug.h"
 #include "unwind.h"
 #include "unwind-libdw.h"
 #include "machine.h"
 #include "thread.h"
-#include "types.h"
+#include <linux/types.h>
 #include "event.h"
 #include "perf_regs.h"
 
@@ -25,7 +26,7 @@ static int __report_module(struct addr_location *al, u64 ip,
 	Dwfl_Module *mod;
 	struct dso *dso = NULL;
 
-	thread__find_addr_location(ui->thread, ui->machine,
+	thread__find_addr_location(ui->thread,
 				   PERF_RECORD_MISC_USER,
 				   MAP__FUNCTION, ip, al);
 
@@ -88,7 +89,7 @@ static int access_dso_mem(struct unwind_info *ui, Dwarf_Addr addr,
 	struct addr_location al;
 	ssize_t size;
 
-	thread__find_addr_map(ui->thread, ui->machine, PERF_RECORD_MISC_USER,
+	thread__find_addr_map(ui->thread, PERF_RECORD_MISC_USER,
 			      MAP__FUNCTION, addr, &al);
 	if (!al.map) {
 		pr_debug("unwind: no map for %lx\n", (unsigned long)addr);
@@ -163,14 +164,14 @@ frame_callback(Dwfl_Frame *state, void *arg)
 }
 
 int unwind__get_entries(unwind_entry_cb_t cb, void *arg,
-			struct machine *machine, struct thread *thread,
+			struct thread *thread,
 			struct perf_sample *data,
 			int max_stack)
 {
 	struct unwind_info ui = {
 		.sample		= data,
 		.thread		= thread,
-		.machine	= machine,
+		.machine	= thread->mg->machine,
 		.cb		= cb,
 		.arg		= arg,
 		.max_stack	= max_stack,

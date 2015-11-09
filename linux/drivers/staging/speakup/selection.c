@@ -66,6 +66,7 @@ int speakup_set_selection(struct tty_struct *tty)
 	if (ps > pe) {
 		/* make sel_start <= sel_end */
 		int tmp = ps;
+
 		ps = pe;
 		pe = tmp;
 	}
@@ -156,7 +157,7 @@ static void __speakup_paste_selection(struct work_struct *work)
 		pasted += count;
 	}
 	remove_wait_queue(&vc->paste_wait, &wait);
-	current->state = TASK_RUNNING;
+	__set_current_state(TASK_RUNNING);
 
 	tty_buffer_unlock_exclusive(&vc->port);
 	tty_ldisc_deref(ld);

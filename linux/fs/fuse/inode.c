@@ -308,7 +308,6 @@ struct inode *fuse_iget(struct super_block *sb, u64 nodeid,
 		if (!fc->writeback_cache || !S_ISREG(attr->mode))
 			inode->i_flags |= S_NOCMTIME;
 		inode->i_generation = generation;
-		inode->i_data.backing_dev_info = &fc->bdi;
 		fuse_init_inode(inode, attr);
 		unlock_new_inode(inode);
 	} else if ((inode->i_mode ^ attr->mode) & S_IFMT) {
@@ -376,28 +375,13 @@ static void fuse_bdi_destroy(struct fuse_conn *fc)
 		bdi_destroy(&fc->bdi);
 }
 
-void fuse_conn_kill(struct fuse_conn *fc)
-{
-	spin_lock(&fc->lock);
-	fc->connected = 0;
-	fc->blocked = 0;
-	fc->initialized = 1;
-	spin_unlock(&fc->lock);
-	/* Flush all readers on this fs */
-	kill_fasync(&fc->fasync, SIGIO, POLL_IN);
-	wake_up_all(&fc->waitq);
-	wake_up_all(&fc->blocked_waitq);
-	wake_up_all(&fc->reserved_req_waitq);
-}
-EXPORT_SYMBOL_GPL(fuse_conn_kill);
-
 static void fuse_put_super(struct super_block *sb)
 {
 	struct fuse_conn *fc = get_fuse_conn_super(sb);
 
 	fuse_send_destroy(fc);
 
-	fuse_conn_kill(fc);
+	fuse_abort_conn(fc);
 	mutex_lock(&fuse_mutex);
 	list_del(&fc->entry);
 	fuse_ctl_remove_conn(fc);
@@ -425,7 +409,7 @@ static int fuse_statfs(struct dentry *dentry, struct kstatfs *buf)
 {
 	struct super_block *sb = dentry->d_sb;
 	struct fuse_conn *fc = get_fuse_conn_super(sb);
-	struct fuse_req *req;
+	FUSE_ARGS(args);
 	struct fuse_statfs_out outarg;
 	int err;
 
@@ -434,23 +418,16 @@ static int fuse_statfs(struct dentry *dentry, struct kstatfs *buf)
 		return 0;
 	}
 
-	req = fuse_get_req_nopages(fc);
-	if (IS_ERR(req))
-		return PTR_ERR(req);
-
 	memset(&outarg, 0, sizeof(outarg));
-	req->in.numargs = 0;
-	req->in.h.opcode = FUSE_STATFS;
-	req->in.h.nodeid = get_node_id(dentry->d_inode);
-	req->out.numargs = 1;
-	req->out.args[0].size =
-		fc->minor < 4 ? FUSE_COMPAT_STATFS_SIZE : sizeof(outarg);
-	req->out.args[0].value = &outarg;
-	fuse_request_send(fc, req);
-	err = req->out.h.error;
+	args.in.numargs = 0;
+	args.in.h.opcode = FUSE_STATFS;
+	args.in.h.nodeid = get_node_id(d_inode(dentry));
+	args.out.numargs = 1;
+	args.out.args[0].size = sizeof(outarg);
+	args.out.args[0].value = &outarg;
+	err = fuse_simple_request(fc, &args);
 	if (!err)
 		convert_fuse_statfs(buf, &outarg.st);
-	fuse_put_request(fc, req);
 	return err;
 }
 
@@ -478,6 +455,17 @@ static const match_table_t tokens = {
 	{OPT_ERR,			NULL}
 };
 
+static int fuse_match_uint(substring_t *s, unsigned int *res)
+{
+	int err = -ENOMEM;
+	char *buf = match_strdup(s);
+	if (buf) {
+		err = kstrtouint(buf, 10, res);
+		kfree(buf);
+	}
+	return err;
+}
+
 static int parse_fuse_opt(char *opt, struct fuse_mount_data *d, int is_bdev)
 {
 	char *p;
@@ -488,6 +476,7 @@ static int parse_fuse_opt(char *opt, struct fuse_mount_data *d, int is_bdev)
 	while ((p = strsep(&opt, ",")) != NULL) {
 		int token;
 		int value;
+		unsigned uv;
 		substring_t args[MAX_OPT_ARGS];
 		if (!*p)
 			continue;
@@ -511,18 +500,18 @@ static int parse_fuse_opt(char *opt, struct fuse_mount_data *d, int is_bdev)
 			break;
 
 		case OPT_USER_ID:
-			if (match_int(&args[0], &value))
+			if (fuse_match_uint(&args[0], &uv))
 				return 0;
-			d->user_id = make_kuid(current_user_ns(), value);
+			d->user_id = make_kuid(current_user_ns(), uv);
 			if (!uid_valid(d->user_id))
 				return 0;
 			d->user_id_present = 1;
 			break;
 
 		case OPT_GROUP_ID:
-			if (match_int(&args[0], &value))
+			if (fuse_match_uint(&args[0], &uv))
 				return 0;
-			d->group_id = make_kgid(current_user_ns(), value);
+			d->group_id = make_kgid(current_user_ns(), uv);
 			if (!gid_valid(d->group_id))
 				return 0;
 			d->group_id_present = 1;
@@ -751,7 +740,7 @@ static struct dentry *fuse_fh_to_parent(struct super_block *sb,
 
 static struct dentry *fuse_get_parent(struct dentry *child)
 {
-	struct inode *child_inode = child->d_inode;
+	struct inode *child_inode = d_inode(child);
 	struct fuse_conn *fc = get_fuse_conn(child_inode);
 	struct inode *inode;
 	struct dentry *parent;
@@ -895,9 +884,6 @@ static void process_init_reply(struct fuse_conn *fc, struct fuse_req *req)
 				fc->writeback_cache = 1;
 			if (arg->time_gran && arg->time_gran <= 1000000000)
 				fc->sb->s_time_gran = arg->time_gran;
-			else
-				fc->sb->s_time_gran = 1000000000;
-
 		} else {
 			ra_pages = fc->max_read / PAGE_CACHE_SIZE;
 			fc->no_lock = 1;
@@ -910,7 +896,7 @@ static void process_init_reply(struct fuse_conn *fc, struct fuse_req *req)
 		fc->max_write = max_t(unsigned, 4096, fc->max_write);
 		fc->conn_init = 1;
 	}
-	fc->initialized = 1;
+	fuse_set_initialized(fc);
 	wake_up_all(&fc->blocked_waitq);
 }
 
@@ -926,7 +912,7 @@ static void fuse_send_init(struct fuse_conn *fc, struct fuse_req *req)
 		FUSE_SPLICE_WRITE | FUSE_SPLICE_MOVE | FUSE_SPLICE_READ |
 		FUSE_FLOCK_LOCKS | FUSE_IOCTL_DIR | FUSE_AUTO_INVAL_DATA |
 		FUSE_DO_READDIRPLUS | FUSE_READDIRPLUS_AUTO | FUSE_ASYNC_DIO |
-		FUSE_WRITEBACK_CACHE;
+		FUSE_WRITEBACK_CACHE | FUSE_NO_OPEN_SUPPORT;
 	req->in.h.opcode = FUSE_INIT;
 	req->in.numargs = 1;
 	req->in.args[0].size = sizeof(*arg);
@@ -1006,7 +992,7 @@ static int fuse_fill_super(struct super_block *sb, void *data, int silent)
 
 	sb->s_flags &= ~(MS_NOSEC | MS_I_VERSION);
 
-	if (!parse_fuse_opt((char *) data, &d, is_bdev))
+	if (!parse_fuse_opt(data, &d, is_bdev))
 		goto err;
 
 	if (is_bdev) {
@@ -1040,6 +1026,7 @@ static int fuse_fill_super(struct super_block *sb, void *data, int silent)
 		goto err_fput;
 
 	fuse_conn_init(fc);
+	fc->release = fuse_free_conn;
 
 	fc->dev = sb->s_dev;
 	fc->sb = sb;
@@ -1054,7 +1041,6 @@ static int fuse_fill_super(struct super_block *sb, void *data, int silent)
 		fc->dont_mask = 1;
 	sb->s_flags |= MS_POSIXACL;
 
-	fc->release = fuse_free_conn;
 	fc->flags = d.flags;
 	fc->user_id = d.user_id;
 	fc->group_id = d.group_id;
@@ -1252,7 +1238,6 @@ static void fuse_fs_cleanup(void)
 }
 
 static struct kobject *fuse_kobj;
-static struct kobject *connections_kobj;
 
 static int fuse_sysfs_init(void)
 {
@@ -1264,11 +1249,9 @@ static int fuse_sysfs_init(void)
 		goto out_err;
 	}
 
-	connections_kobj = kobject_create_and_add("connections", fuse_kobj);
-	if (!connections_kobj) {
-		err = -ENOMEM;
+	err = sysfs_create_mount_point(fuse_kobj, "connections");
+	if (err)
 		goto out_fuse_unregister;
-	}
 
 	return 0;
 
@@ -1280,7 +1263,7 @@ static int fuse_sysfs_init(void)
 
 static void fuse_sysfs_cleanup(void)
 {
-	kobject_put(connections_kobj);
+	sysfs_remove_mount_point(fuse_kobj, "connections");
 	kobject_put(fuse_kobj);
 }
 

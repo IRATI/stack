@@ -35,7 +35,6 @@
 
 struct da732x_priv {
 	struct regmap *regmap;
-	struct snd_soc_codec *codec;
 
 	unsigned int sysclk;
 	bool pll_en;
@@ -217,7 +216,7 @@ static void da732x_set_charge_pump(struct snd_soc_codec *codec, int state)
 		snd_soc_write(codec, DA732X_REG_CP_CTRL1, DA723X_CP_DIS);
 		break;
 	default:
-		pr_err(KERN_ERR "Wrong charge pump state\n");
+		pr_err("Wrong charge pump state\n");
 		break;
 	}
 }
@@ -332,7 +331,7 @@ static SOC_ENUM_SINGLE_DECL(da732x_adc2_voice_filter_enum,
 static int da732x_hpf_set(struct snd_kcontrol *kcontrol,
 			  struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct soc_enum *enum_ctrl = (struct soc_enum *)kcontrol->private_value;
 	unsigned int reg = enum_ctrl->reg;
 	unsigned int sel = ucontrol->value.integer.value[0];
@@ -360,7 +359,7 @@ static int da732x_hpf_set(struct snd_kcontrol *kcontrol,
 static int da732x_hpf_get(struct snd_kcontrol *kcontrol,
 			  struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct soc_enum *enum_ctrl = (struct soc_enum *)kcontrol->private_value;
 	unsigned int reg = enum_ctrl->reg;
 	int val;
@@ -610,7 +609,7 @@ static const struct snd_kcontrol_new da732x_snd_controls[] = {
 static int da732x_adc_event(struct snd_soc_dapm_widget *w,
 			    struct snd_kcontrol *kcontrol, int event)
 {
-	struct snd_soc_codec *codec = w->codec;
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMU:
@@ -664,7 +663,7 @@ static int da732x_adc_event(struct snd_soc_dapm_widget *w,
 static int da732x_out_pga_event(struct snd_soc_dapm_widget *w,
 				struct snd_kcontrol *kcontrol, int event)
 {
-	struct snd_soc_codec *codec = w->codec;
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMU:
@@ -877,11 +876,11 @@ static const struct snd_soc_dapm_widget da732x_dapm_widgets[] = {
 
 static const struct snd_soc_dapm_route da732x_dapm_routes[] = {
 	/* Inputs */
-	{"AUX1L PGA", "NULL", "AUX1L"},
-	{"AUX1R PGA", "NULL", "AUX1R"},
+	{"AUX1L PGA", NULL, "AUX1L"},
+	{"AUX1R PGA", NULL, "AUX1R"},
 	{"MIC1 PGA", NULL, "MIC1"},
-	{"MIC2 PGA", "NULL", "MIC2"},
-	{"MIC3 PGA", "NULL", "MIC3"},
+	{"MIC2 PGA", NULL, "MIC2"},
+	{"MIC3 PGA", NULL, "MIC3"},
 
 	/* Capture Path */
 	{"ADC1 Left MUX", "MIC1", "MIC1 PGA"},
@@ -1508,31 +1507,7 @@ static int da732x_set_bias_level(struct snd_soc_codec *codec,
 	return 0;
 }
 
-static int da732x_probe(struct snd_soc_codec *codec)
-{
-	struct da732x_priv *da732x = snd_soc_codec_get_drvdata(codec);
-	struct snd_soc_dapm_context *dapm = &codec->dapm;
-
-	da732x->codec = codec;
-
-	dapm->idle_bias_off = false;
-
-	da732x_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
-
-	return 0;
-}
-
-static int da732x_remove(struct snd_soc_codec *codec)
-{
-
-	da732x_set_bias_level(codec, SND_SOC_BIAS_OFF);
-
-	return 0;
-}
-
 static struct snd_soc_codec_driver soc_codec_dev_da732x = {
-	.probe			= da732x_probe,
-	.remove			= da732x_remove,
 	.set_bias_level		= da732x_set_bias_level,
 	.controls		= da732x_snd_controls,
 	.num_controls		= ARRAY_SIZE(da732x_snd_controls),

@@ -48,6 +48,9 @@
 #include "rds/rstr.h"
 #include "ipcp-instances.h"
 #include "ipcp-utils.h"
+/* To be added with new PS
+ * #include "rmt-ps-default.h"
+ */
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 #define MAX_PDUS_SENT_PER_CYCLE 10
@@ -86,7 +89,7 @@ static struct rmt_n1_port *n1_port_create(port_id_t id,
 
 	ASSERT(is_port_id_ok(id));
 
-	tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+	tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
 	if (!tmp)
 		return NULL;
 
@@ -262,160 +265,6 @@ static struct rmt_n1_port *n1pmap_find(struct rmt *instance,
 	return NULL;
 }
 
-/* RMT DATA MODELS FOR RMT PS */
-
-struct rmt_kqueue *rmt_kqueue_create(unsigned int key)
-{
-	struct rmt_kqueue *tmp;
-
-	tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
-	if (!tmp)
-		return NULL;
-
-	tmp->queue = rfifo_create_ni();
-	if (!tmp->queue) {
-		rkfree(tmp);
-		return NULL;
-	}
-
-	tmp->key = key;
-	INIT_HLIST_NODE(&tmp->hlist);
-
-	return tmp;
-}
-EXPORT_SYMBOL(rmt_kqueue_create);
-
-int rmt_kqueue_destroy(struct rmt_kqueue *q)
-{
-	if (!q) {
-		LOG_ERR("No RMT Key-queue to destroy...");
-		return -1;
-	}
-
-	hash_del(&q->hlist);
-
-	if (q->queue)
-		rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
-
-	rkfree(q);
-
-	return 0;
-}
-EXPORT_SYMBOL(rmt_kqueue_destroy);
-
-struct rmt_kqueue *rmt_kqueue_find(struct rmt_qgroup *g,
-				   unsigned int key)
-{
-	struct rmt_kqueue *entry;
-	const struct hlist_head *head;
-
-	ASSERT(g);
-
-	head = &g->queues[rmap_hash(g->queues, key)];
-	hlist_for_each_entry(entry, head, hlist)
-		if (entry->key == key)
-			return entry;
-
-	return NULL;
-}
-EXPORT_SYMBOL(rmt_kqueue_find);
-
-struct rmt_qgroup *rmt_qgroup_create(port_id_t pid)
-{
-	struct rmt_qgroup *tmp;
-
-	if (!is_port_id_ok(pid)) {
-		LOG_ERR("Could not create qgroup, wrong port id");
-		return NULL;
-	}
-
-	tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
-	if (!tmp)
-		return NULL;
-
-	tmp->pid = pid;
-	hash_init(tmp->queues);
-
-	return tmp;
-}
-EXPORT_SYMBOL(rmt_qgroup_create);
-
-int rmt_qgroup_destroy(struct rmt_qgroup *g)
-{
-	struct rmt_kqueue *entry;
-	struct hlist_node *tmp;
-	int		   bucket;
-
-	ASSERT(g);
-	hash_del(&g->hlist);
-
-	hash_for_each_safe(g->queues, bucket, tmp, entry, hlist)
-		if (rmt_kqueue_destroy(entry)) {
-			LOG_ERR("Could not destroy entry %pK", entry);
-			return -1;
-		}
-
-	LOG_DBG("Qgroup for port: %u destroyed...", g->pid);
-	rkfree(g);
-
-	return 0;
-}
-EXPORT_SYMBOL(rmt_qgroup_destroy);
-
-struct rmt_qgroup *rmt_qgroup_find(struct rmt_queue_set *qs,
-				   port_id_t pid)
-{
-	struct rmt_qgroup *entry;
-	const struct hlist_head *head;
-
-	ASSERT(qs);
-
-	head = &qs->qgroups[rmap_hash(qs->qgroups, pid)];
-
-	hlist_for_each_entry(entry, head, hlist)
-		if (entry->pid == pid)
-			return entry;
-
-	return NULL;
-}
-EXPORT_SYMBOL(rmt_qgroup_find);
-
-struct rmt_queue_set *rmt_queue_set_create(void)
-{
-	struct rmt_queue_set *tmp;
-
-	tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
-	if (!tmp)
-		return NULL;
-
-	hash_init(tmp->qgroups);
-
-	return tmp;
-}
-EXPORT_SYMBOL(rmt_queue_set_create);
-
-int rmt_queue_set_destroy(struct rmt_queue_set *qs)
-{
-	struct rmt_qgroup *entry;
-	struct hlist_node *tmp;
-	int bucket;
-
-	ASSERT(qs);
-
-	hash_for_each_safe(qs->qgroups, bucket, tmp, entry, hlist)
-		if (rmt_qgroup_destroy(entry)) {
-			LOG_ERR("Could not destroy entry %pK", entry);
-			return -1;
-		}
-
-	rkfree(qs);
-
-	return 0;
-}
-EXPORT_SYMBOL(rmt_queue_set_destroy);
-
-/* RMT DATAMODEL FOR RMT PS END */
-
 static int pff_cache_init(struct pff_cache *c)
 {
 	ASSERT(c);
@@ -451,23 +300,56 @@ int rmt_select_policy_set(struct rmt *rmt,
 			  const string_t *path,
 			  const string_t *name)
 {
-	size_t cmplen;
-	size_t offset;
+        struct ps_select_transaction trans;
+        size_t cmplen;
+        size_t offset;
 
-	ASSERT(path);
+        ASSERT(path);
 
-	parse_component_id(path, &cmplen, &offset);
+        ps_factory_parse_component_id(path, &cmplen, &offset);
 
-	if (strcmp(path, "") == 0)
-		/* The request addresses this policy-set. */
-		return base_select_policy_set(&rmt->base, &policy_sets, name);
-	else if (strncmp(path, "pff", cmplen) == 0)
-		/* The request addresses the PFF subcomponent. */
-		return pff_select_policy_set(rmt->pff, path + offset, name);
+        if (cmplen && strncmp(path, "pff", cmplen) == 0) {
+                /* The request addresses the PFF subcomponent. */
+                return pff_select_policy_set(rmt->pff, path + offset, name);
+        }
 
-	LOG_ERR("This component has no subcomponent named '%s'", path);
+        if (strcmp(path, "") != 0) {
+                LOG_ERR("This component has no subcomponent named '%s'", path);
+                return -1;
+        }
 
-	return -1;
+        /* The request addresses this policy-set. */
+        base_select_policy_set_start(&rmt->base, &trans, &policy_sets, name);
+
+        if (trans.state == PS_SEL_TRANS_PENDING) {
+                struct rmt_ps * ps;
+
+                /* Check consistency. */
+                ps = container_of(trans.candidate_ps, struct rmt_ps, base);
+                if (!ps->rmt_next_scheduled_policy_tx ||
+                                !ps->rmt_enqueue_scheduling_policy_tx ||
+                                !ps->rmt_requeue_scheduling_policy_tx ||
+                                !ps->rmt_scheduling_create_policy_tx ||
+                                !ps->rmt_scheduling_destroy_policy_tx) {
+                        LOG_ERR("RMT policy set is invalid, missing "
+                                "policies:\n"
+                                "       rmt_next_scheduled_policy_tx=%p\n"
+                                "       rmt_enqueue_scheduling_policy_tx=%p\n"
+                                "       rmt_requeue_scheduling_policy_tx=%p\n"
+                                "       rmt_scheduling_create_policy_tx=%p\n"
+                                "       rmt_scheduling_destroy_policy_tx=%p\n",
+                                ps->rmt_next_scheduled_policy_tx,
+                                ps->rmt_enqueue_scheduling_policy_tx,
+                                ps->rmt_requeue_scheduling_policy_tx,
+                                ps->rmt_scheduling_create_policy_tx,
+                                ps->rmt_scheduling_destroy_policy_tx);
+                        trans.state = PS_SEL_TRANS_ABORTED;
+                }
+        }
+
+        base_select_policy_set_finish(&rmt->base, &trans);
+
+        return trans.state == PS_SEL_TRANS_COMMITTED ? 0 : -1;
 }
 EXPORT_SYMBOL(rmt_select_policy_set);
 
@@ -486,7 +368,7 @@ int rmt_set_policy_set_param(struct rmt *rmt,
 		return -1;
 	}
 
-	parse_component_id(path, &cmplen, &offset);
+	ps_factory_parse_component_id(path, &cmplen, &offset);
 
 	LOG_DBG("set-policy-set-param '%s' '%s' '%s'", path, name, value);
 
@@ -501,7 +383,7 @@ int rmt_set_policy_set_param(struct rmt *rmt,
 			LOG_ERR("Unknown RMT parameter policy '%s'", name);
 
 		rcu_read_unlock();
-	} else if (strncmp(path, "pff", cmplen) == 0)
+	} else if (cmplen && strncmp(path, "pff", cmplen) == 0)
 		/* The request addresses the PFF subcomponent. */
 		return pff_set_policy_set_param(rmt->pff,
 						path + offset,
@@ -1662,13 +1544,6 @@ struct rmt *rmt_create(struct ipcp_instance *parent,
 	tasklet_init(&tmp->egress_tasklet,
 		     send_worker,
 		     (unsigned long) tmp);
-
-	/* Try to select the default policy set factory. */
-	if (rmt_select_policy_set(tmp, "", RINA_PS_DEFAULT_NAME)) {
-		LOG_ERR("Could not load RMT PS");
-		rmt_destroy(tmp);
-		return NULL;
-	}
 
 	LOG_DBG("Instance %pK initialized successfully", tmp);
 	return tmp;

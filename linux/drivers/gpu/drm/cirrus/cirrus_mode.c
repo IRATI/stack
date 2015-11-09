@@ -16,6 +16,7 @@
  */
 #include <drm/drmP.h>
 #include <drm/drm_crtc_helper.h>
+#include <drm/drm_plane_helper.h>
 
 #include <video/cirrus.h>
 
@@ -500,35 +501,23 @@ static int cirrus_vga_get_modes(struct drm_connector *connector)
 	int count;
 
 	/* Just add a static list of modes */
-	count = drm_add_modes_noedid(connector, 1280, 1024);
-	drm_set_preferred_mode(connector, 1024, 768);
+	if (cirrus_bpp <= 24) {
+		count = drm_add_modes_noedid(connector, 1280, 1024);
+		drm_set_preferred_mode(connector, 1024, 768);
+	} else {
+		count = drm_add_modes_noedid(connector, 800, 600);
+		drm_set_preferred_mode(connector, 800, 600);
+	}
 	return count;
-}
-
-static int cirrus_vga_mode_valid(struct drm_connector *connector,
-				 struct drm_display_mode *mode)
-{
-	/* Any mode we've added is valid */
-	return MODE_OK;
 }
 
 static struct drm_encoder *cirrus_connector_best_encoder(struct drm_connector
 						  *connector)
 {
 	int enc_id = connector->encoder_ids[0];
-	struct drm_mode_object *obj;
-	struct drm_encoder *encoder;
-
 	/* pick the encoder ids */
-	if (enc_id) {
-		obj =
-		    drm_mode_object_find(connector->dev, enc_id,
-					 DRM_MODE_OBJECT_ENCODER);
-		if (!obj)
-			return NULL;
-		encoder = obj_to_encoder(obj);
-		return encoder;
-	}
+	if (enc_id)
+		return drm_encoder_find(connector->dev, enc_id);
 	return NULL;
 }
 
@@ -546,7 +535,6 @@ static void cirrus_connector_destroy(struct drm_connector *connector)
 
 struct drm_connector_helper_funcs cirrus_vga_connector_helper_funcs = {
 	.get_modes = cirrus_vga_get_modes,
-	.mode_valid = cirrus_vga_mode_valid,
 	.best_encoder = cirrus_connector_best_encoder,
 };
 
@@ -573,6 +561,7 @@ static struct drm_connector *cirrus_vga_init(struct drm_device *dev)
 
 	drm_connector_helper_add(connector, &cirrus_vga_connector_helper_funcs);
 
+	drm_connector_register(connector);
 	return connector;
 }
 

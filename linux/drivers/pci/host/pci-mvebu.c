@@ -99,11 +99,9 @@ struct mvebu_pcie_port;
 struct mvebu_pcie {
 	struct platform_device *pdev;
 	struct mvebu_pcie_port *ports;
-	struct msi_chip *msi;
+	struct msi_controller *msi;
 	struct resource io;
-	char io_name[30];
 	struct resource realio;
-	char mem_name[30];
 	struct resource mem;
 	struct resource busn;
 	int nports;
@@ -113,7 +111,6 @@ struct mvebu_pcie {
 struct mvebu_pcie_port {
 	char *name;
 	void __iomem *base;
-	spinlock_t conf_lock;
 	u32 port;
 	u32 lane;
 	int devfn;
@@ -132,6 +129,7 @@ struct mvebu_pcie_port {
 	size_t memwin_size;
 	phys_addr_t iowin_base;
 	size_t iowin_size;
+	u32 saved_pcie_stat;
 };
 
 static inline void mvebu_writel(struct mvebu_pcie_port *port, u32 val, u32 reg)
@@ -329,9 +327,11 @@ static void mvebu_pcie_add_windows(struct mvebu_pcie_port *port,
 		ret = mvebu_mbus_add_window_remap_by_id(target, attribute, base,
 							sz, remap);
 		if (ret) {
+			phys_addr_t end = base + sz - 1;
+
 			dev_err(&port->pcie->pdev->dev,
-				"Could not create MBus window at 0x%x, size 0x%x: %d\n",
-				base, sz, ret);
+				"Could not create MBus window at [mem %pa-%pa]: %d\n",
+				&base, &end, ret);
 			mvebu_pcie_del_windows(port, base - size_mapped,
 					       size_mapped);
 			return;
@@ -613,14 +613,15 @@ static inline struct mvebu_pcie *sys_to_pcie(struct pci_sys_data *sys)
 	return sys->private_data;
 }
 
-static struct mvebu_pcie_port *
-mvebu_pcie_find_port(struct mvebu_pcie *pcie, struct pci_bus *bus,
-		     int devfn)
+static struct mvebu_pcie_port *mvebu_pcie_find_port(struct mvebu_pcie *pcie,
+						    struct pci_bus *bus,
+						    int devfn)
 {
 	int i;
 
 	for (i = 0; i < pcie->nports; i++) {
 		struct mvebu_pcie_port *port = &pcie->ports[i];
+
 		if (bus->number == 0 && port->devfn == devfn)
 			return port;
 		if (bus->number != 0 &&
@@ -638,7 +639,6 @@ static int mvebu_pcie_wr_conf(struct pci_bus *bus, u32 devfn,
 {
 	struct mvebu_pcie *pcie = sys_to_pcie(bus->sysdata);
 	struct mvebu_pcie_port *port;
-	unsigned long flags;
 	int ret;
 
 	port = mvebu_pcie_find_port(pcie, bus, devfn);
@@ -664,10 +664,8 @@ static int mvebu_pcie_wr_conf(struct pci_bus *bus, u32 devfn,
 		return PCIBIOS_DEVICE_NOT_FOUND;
 
 	/* Access the real PCIe interface */
-	spin_lock_irqsave(&port->conf_lock, flags);
 	ret = mvebu_pcie_hw_wr_conf(port, bus, devfn,
 				    where, size, val);
-	spin_unlock_irqrestore(&port->conf_lock, flags);
 
 	return ret;
 }
@@ -678,7 +676,6 @@ static int mvebu_pcie_rd_conf(struct pci_bus *bus, u32 devfn, int where,
 {
 	struct mvebu_pcie *pcie = sys_to_pcie(bus->sysdata);
 	struct mvebu_pcie_port *port;
-	unsigned long flags;
 	int ret;
 
 	port = mvebu_pcie_find_port(pcie, bus, devfn);
@@ -710,10 +707,8 @@ static int mvebu_pcie_rd_conf(struct pci_bus *bus, u32 devfn, int where,
 	}
 
 	/* Access the real PCIe interface */
-	spin_lock_irqsave(&port->conf_lock, flags);
 	ret = mvebu_pcie_hw_rd_conf(port, bus, devfn,
 				    where, size, val);
-	spin_unlock_irqrestore(&port->conf_lock, flags);
 
 	return ret;
 }
@@ -727,18 +722,9 @@ static int mvebu_pcie_setup(int nr, struct pci_sys_data *sys)
 {
 	struct mvebu_pcie *pcie = sys_to_pcie(sys);
 	int i;
-	int domain = 0;
 
-#ifdef CONFIG_PCI_DOMAINS
-	domain = sys->domain;
-#endif
-
-	snprintf(pcie->mem_name, sizeof(pcie->mem_name), "PCI MEM %04x",
-		 domain);
-	pcie->mem.name = pcie->mem_name;
-
-	snprintf(pcie->io_name, sizeof(pcie->io_name), "PCI I/O %04x", domain);
-	pcie->realio.name = pcie->io_name;
+	pcie->mem.name = "PCI MEM";
+	pcie->realio.name = "PCI I/O";
 
 	if (request_resource(&iomem_resource, &pcie->mem))
 		return 0;
@@ -756,6 +742,7 @@ static int mvebu_pcie_setup(int nr, struct pci_sys_data *sys)
 
 	for (i = 0; i < pcie->nports; i++) {
 		struct mvebu_pcie_port *port = &pcie->ports[i];
+
 		if (!port->base)
 			continue;
 		mvebu_pcie_setup_hw(port);
@@ -779,17 +766,11 @@ static struct pci_bus *mvebu_pcie_scan_bus(int nr, struct pci_sys_data *sys)
 	return bus;
 }
 
-static void mvebu_pcie_add_bus(struct pci_bus *bus)
-{
-	struct mvebu_pcie *pcie = sys_to_pcie(bus->sysdata);
-	bus->msi = pcie->msi;
-}
-
 static resource_size_t mvebu_pcie_align_resource(struct pci_dev *dev,
-						const struct resource *res,
-						resource_size_t start,
-						resource_size_t size,
-						resource_size_t align)
+						 const struct resource *res,
+						 resource_size_t start,
+						 resource_size_t size,
+						 resource_size_t align)
 {
 	if (dev->bus->number != 0)
 		return start;
@@ -821,6 +802,10 @@ static void mvebu_pcie_enable(struct mvebu_pcie *pcie)
 
 	memset(&hw, 0, sizeof(hw));
 
+#ifdef CONFIG_PCI_MSI
+	hw.msi_ctrl = pcie->msi;
+#endif
+
 	hw.nr_controllers = 1;
 	hw.private_data   = (void **)&pcie;
 	hw.setup          = mvebu_pcie_setup;
@@ -828,7 +813,6 @@ static void mvebu_pcie_enable(struct mvebu_pcie *pcie)
 	hw.map_irq        = of_irq_parse_and_map_pci;
 	hw.ops            = &mvebu_pcie_ops;
 	hw.align_resource = mvebu_pcie_align_resource;
-	hw.add_bus        = mvebu_pcie_add_bus;
 
 	pci_common_init(&hw);
 }
@@ -839,7 +823,8 @@ static void mvebu_pcie_enable(struct mvebu_pcie *pcie)
  * found, maps it.
  */
 static void __iomem *mvebu_pcie_map_registers(struct platform_device *pdev,
-		      struct device_node *np, struct mvebu_pcie_port *port)
+					      struct device_node *np,
+					      struct mvebu_pcie_port *port)
 {
 	struct resource regs;
 	int ret = 0;
@@ -877,7 +862,7 @@ static int mvebu_get_tgt_attr(struct device_node *np, int devfn,
 	rangesz = pna + na + ns;
 	nranges = rlen / sizeof(__be32) / rangesz;
 
-	for (i = 0; i < nranges; i++) {
+	for (i = 0; i < nranges; i++, range += rangesz) {
 		u32 flags = of_read_number(range, 1);
 		u32 slot = of_read_number(range + 1, 1);
 		u64 cpuaddr = of_read_number(range + na, pna);
@@ -887,14 +872,14 @@ static int mvebu_get_tgt_attr(struct device_node *np, int devfn,
 			rtype = IORESOURCE_IO;
 		else if (DT_FLAGS_TO_TYPE(flags) == DT_TYPE_MEM32)
 			rtype = IORESOURCE_MEM;
+		else
+			continue;
 
 		if (slot == PCI_SLOT(devfn) && type == rtype) {
 			*tgt = DT_CPUADDR_TO_TARGET(cpuaddr);
 			*attr = DT_CPUADDR_TO_ATTR(cpuaddr);
 			return 0;
 		}
-
-		range += rangesz;
 	}
 
 	return -ENOENT;
@@ -913,6 +898,35 @@ static void mvebu_pcie_msi_enable(struct mvebu_pcie *pcie)
 
 	if (pcie->msi)
 		pcie->msi->dev = &pcie->pdev->dev;
+}
+
+static int mvebu_pcie_suspend(struct device *dev)
+{
+	struct mvebu_pcie *pcie;
+	int i;
+
+	pcie = dev_get_drvdata(dev);
+	for (i = 0; i < pcie->nports; i++) {
+		struct mvebu_pcie_port *port = pcie->ports + i;
+		port->saved_pcie_stat = mvebu_readl(port, PCIE_STAT_OFF);
+	}
+
+	return 0;
+}
+
+static int mvebu_pcie_resume(struct device *dev)
+{
+	struct mvebu_pcie *pcie;
+	int i;
+
+	pcie = dev_get_drvdata(dev);
+	for (i = 0; i < pcie->nports; i++) {
+		struct mvebu_pcie_port *port = pcie->ports + i;
+		mvebu_writel(port, port->saved_pcie_stat, PCIE_STAT_OFF);
+		mvebu_pcie_setup_hw(port);
+	}
+
+	return 0;
 }
 
 static int mvebu_pcie_probe(struct platform_device *pdev)
@@ -1060,7 +1074,6 @@ static int mvebu_pcie_probe(struct platform_device *pdev)
 		mvebu_pcie_set_local_dev_nr(port, 1);
 
 		port->dn = child;
-		spin_lock_init(&port->conf_lock);
 		mvebu_sw_pci_bridge_init(port);
 		i++;
 	}
@@ -1072,6 +1085,8 @@ static int mvebu_pcie_probe(struct platform_device *pdev)
 
 	mvebu_pcie_msi_enable(pcie);
 	mvebu_pcie_enable(pcie);
+
+	platform_set_drvdata(pdev, pcie);
 
 	return 0;
 }
@@ -1085,13 +1100,18 @@ static const struct of_device_id mvebu_pcie_of_match_table[] = {
 };
 MODULE_DEVICE_TABLE(of, mvebu_pcie_of_match_table);
 
+static struct dev_pm_ops mvebu_pcie_pm_ops = {
+	.suspend_noirq = mvebu_pcie_suspend,
+	.resume_noirq = mvebu_pcie_resume,
+};
+
 static struct platform_driver mvebu_pcie_driver = {
 	.driver = {
-		.owner = THIS_MODULE,
 		.name = "mvebu-pcie",
 		.of_match_table = mvebu_pcie_of_match_table,
 		/* driver unloading/unbinding currently not supported */
 		.suppress_bind_attrs = true,
+		.pm = &mvebu_pcie_pm_ops,
 	},
 	.probe = mvebu_pcie_probe,
 };
@@ -1099,4 +1119,4 @@ module_platform_driver(mvebu_pcie_driver);
 
 MODULE_AUTHOR("Thomas Petazzoni <thomas.petazzoni@free-electrons.com>");
 MODULE_DESCRIPTION("Marvell EBU PCIe driver");
-MODULE_LICENSE("GPLv2");
+MODULE_LICENSE("GPL v2");

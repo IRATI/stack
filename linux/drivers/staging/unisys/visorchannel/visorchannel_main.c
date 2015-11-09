@@ -1,6 +1,6 @@
 /* visorchannel_main.c
  *
- * Copyright © 2010 - 2013 UNISYS CORPORATION
+ * Copyright (C) 2010 - 2013 UNISYS CORPORATION
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -22,21 +22,22 @@
 #include "globals.h"
 #include "channel.h"
 #include "visorchannel.h"
-#include "guidutils.h"
+#include <linux/uuid.h>
 
 #define MYDRVNAME "visorchannel"
 
 static int __init
 visorchannel_init(void)
 {
-	INFODRV("driver version %s loaded", VERSION);
+	if (!unisys_spar_platform)
+		return -ENODEV;
+
 	return 0;
 }
 
 static void
 visorchannel_exit(void)
 {
-	INFODRV("driver unloaded");
 }
 
 module_init(visorchannel_init);

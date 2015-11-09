@@ -367,7 +367,7 @@ static int adp5588_gpio_probe(struct i2c_client *client,
 	struct gpio_chip *gc;
 	int ret, i, revid;
 
-	if (pdata == NULL) {
+	if (!pdata) {
 		dev_err(&client->dev, "missing platform data\n");
 		return -ENODEV;
 	}
@@ -378,11 +378,9 @@ static int adp5588_gpio_probe(struct i2c_client *client,
 		return -EIO;
 	}
 
-	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
-	if (dev == NULL) {
-		dev_err(&client->dev, "failed to alloc memory\n");
+	dev = devm_kzalloc(&client->dev, sizeof(*dev), GFP_KERNEL);
+	if (!dev)
 		return -ENOMEM;
-	}
 
 	dev->client = client;
 
@@ -448,7 +446,6 @@ static int adp5588_gpio_probe(struct i2c_client *client,
 err_irq:
 	adp5588_irq_teardown(dev);
 err:
-	kfree(dev);
 	return ret;
 }
 
@@ -472,13 +469,8 @@ static int adp5588_gpio_remove(struct i2c_client *client)
 	if (dev->irq_base)
 		free_irq(dev->client->irq, dev);
 
-	ret = gpiochip_remove(&dev->gpio_chip);
-	if (ret) {
-		dev_err(&client->dev, "gpiochip_remove failed %d\n", ret);
-		return ret;
-	}
+	gpiochip_remove(&dev->gpio_chip);
 
-	kfree(dev);
 	return 0;
 }
 

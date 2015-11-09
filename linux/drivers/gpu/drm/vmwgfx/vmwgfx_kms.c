@@ -75,7 +75,7 @@ void vmw_display_unit_cleanup(struct vmw_display_unit *du)
 		vmw_surface_unreference(&du->cursor_surface);
 	if (du->cursor_dmabuf)
 		vmw_dmabuf_unreference(&du->cursor_dmabuf);
-	drm_sysfs_connector_remove(&du->connector);
+	drm_connector_unregister(&du->connector);
 	drm_crtc_cleanup(&du->crtc);
 	drm_encoder_cleanup(&du->encoder);
 	drm_connector_cleanup(&du->connector);
@@ -136,7 +136,7 @@ int vmw_cursor_update_dmabuf(struct vmw_private *dev_priv,
 	kmap_offset = 0;
 	kmap_num = (width*height*4 + PAGE_SIZE - 1) >> PAGE_SHIFT;
 
-	ret = ttm_bo_reserve(&dmabuf->base, true, false, false, 0);
+	ret = ttm_bo_reserve(&dmabuf->base, true, false, false, NULL);
 	if (unlikely(ret != 0)) {
 		DRM_ERROR("reserve failed\n");
 		return -EINVAL;
@@ -187,7 +187,7 @@ int vmw_du_crtc_cursor_set(struct drm_crtc *crtc, struct drm_file *file_priv,
 	 * can do this since the caller in the drm core doesn't check anything
 	 * which is protected by any looks.
 	 */
-	mutex_unlock(&crtc->mutex);
+	drm_modeset_unlock_crtc(crtc);
 	drm_modeset_lock_all(dev_priv->dev);
 
 	/* A lot of the code assumes this */
@@ -252,7 +252,7 @@ int vmw_du_crtc_cursor_set(struct drm_crtc *crtc, struct drm_file *file_priv,
 	ret = 0;
 out:
 	drm_modeset_unlock_all(dev_priv->dev);
-	mutex_lock(&crtc->mutex);
+	drm_modeset_lock_crtc(crtc, crtc->cursor);
 
 	return ret;
 }
@@ -273,7 +273,7 @@ int vmw_du_crtc_cursor_move(struct drm_crtc *crtc, int x, int y)
 	 * can do this since the caller in the drm core doesn't check anything
 	 * which is protected by any looks.
 	 */
-	mutex_unlock(&crtc->mutex);
+	drm_modeset_unlock_crtc(crtc);
 	drm_modeset_lock_all(dev_priv->dev);
 
 	vmw_cursor_update_position(dev_priv, shown,
@@ -281,7 +281,7 @@ int vmw_du_crtc_cursor_move(struct drm_crtc *crtc, int x, int y)
 				   du->cursor_y + du->hotspot_y);
 
 	drm_modeset_unlock_all(dev_priv->dev);
-	mutex_lock(&crtc->mutex);
+	drm_modeset_lock_crtc(crtc, crtc->cursor);
 
 	return 0;
 }
@@ -343,7 +343,7 @@ void vmw_kms_cursor_snoop(struct vmw_surface *srf,
 	kmap_offset = cmd->dma.guest.ptr.offset >> PAGE_SHIFT;
 	kmap_num = (64*64*4) >> PAGE_SHIFT;
 
-	ret = ttm_bo_reserve(bo, true, false, false, 0);
+	ret = ttm_bo_reserve(bo, true, false, false, NULL);
 	if (unlikely(ret != 0)) {
 		DRM_ERROR("reserve failed\n");
 		return;
@@ -1501,7 +1501,6 @@ int vmw_kms_cursor_bypass_ioctl(struct drm_device *dev, void *data,
 {
 	struct drm_vmw_cursor_bypass_arg *arg = data;
 	struct vmw_display_unit *du;
-	struct drm_mode_object *obj;
 	struct drm_crtc *crtc;
 	int ret = 0;
 
@@ -1519,13 +1518,12 @@ int vmw_kms_cursor_bypass_ioctl(struct drm_device *dev, void *data,
 		return 0;
 	}
 
-	obj = drm_mode_object_find(dev, arg->crtc_id, DRM_MODE_OBJECT_CRTC);
-	if (!obj) {
+	crtc = drm_crtc_find(dev, arg->crtc_id);
+	if (!crtc) {
 		ret = -ENOENT;
 		goto out;
 	}
 
-	crtc = obj_to_crtc(obj);
 	du = vmw_crtc_to_du(crtc);
 
 	du->hotspot_x = arg->xhot;
@@ -1830,9 +1828,7 @@ vmw_du_connector_detect(struct drm_connector *connector, bool force)
 	struct vmw_private *dev_priv = vmw_priv(dev);
 	struct vmw_display_unit *du = vmw_connector_to_du(connector);
 
-	mutex_lock(&dev_priv->hw_mutex);
 	num_displays = vmw_read(dev_priv, SVGA_REG_NUM_DISPLAYS);
-	mutex_unlock(&dev_priv->hw_mutex);
 
 	return ((vmw_connector_to_du(connector)->unit < num_displays &&
 		 du->pref_active) ?
@@ -1952,6 +1948,14 @@ int vmw_du_connector_fill_modes(struct drm_connector *connector,
 		DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_PVSYNC)
 	};
 	int i;
+	u32 assumed_bpp = 2;
+
+	/*
+	 * If using screen objects, then assume 32-bpp because that's what the
+	 * SVGA device is assuming
+	 */
+	if (dev_priv->sou_priv)
+		assumed_bpp = 4;
 
 	/* Add preferred mode */
 	{
@@ -1962,8 +1966,9 @@ int vmw_du_connector_fill_modes(struct drm_connector *connector,
 		mode->vdisplay = du->pref_height;
 		vmw_guess_mode_timing(mode);
 
-		if (vmw_kms_validate_mode_vram(dev_priv, mode->hdisplay * 2,
-					       mode->vdisplay)) {
+		if (vmw_kms_validate_mode_vram(dev_priv,
+						mode->hdisplay * assumed_bpp,
+						mode->vdisplay)) {
 			drm_mode_probed_add(connector, mode);
 		} else {
 			drm_mode_destroy(dev, mode);
@@ -1985,7 +1990,8 @@ int vmw_du_connector_fill_modes(struct drm_connector *connector,
 		    bmode->vdisplay > max_height)
 			continue;
 
-		if (!vmw_kms_validate_mode_vram(dev_priv, bmode->hdisplay * 2,
+		if (!vmw_kms_validate_mode_vram(dev_priv,
+						bmode->hdisplay * assumed_bpp,
 						bmode->vdisplay))
 			continue;
 
@@ -2001,7 +2007,7 @@ int vmw_du_connector_fill_modes(struct drm_connector *connector,
 	if (du->pref_mode)
 		list_move(&du->pref_mode->head, &connector->probed_modes);
 
-	drm_mode_connector_list_update(connector);
+	drm_mode_connector_list_update(connector, true);
 
 	return 1;
 }
@@ -2027,23 +2033,17 @@ int vmw_kms_update_layout_ioctl(struct drm_device *dev, void *data,
 	int i;
 	struct drm_mode_config *mode_config = &dev->mode_config;
 
-	ret = ttm_read_lock(&dev_priv->reservation_sem, true);
-	if (unlikely(ret != 0))
-		return ret;
-
 	if (!arg->num_outputs) {
 		struct drm_vmw_rect def_rect = {0, 0, 800, 600};
 		vmw_du_update_layout(dev_priv, 1, &def_rect);
-		goto out_unlock;
+		return 0;
 	}
 
 	rects_size = arg->num_outputs * sizeof(struct drm_vmw_rect);
 	rects = kcalloc(arg->num_outputs, sizeof(struct drm_vmw_rect),
 			GFP_KERNEL);
-	if (unlikely(!rects)) {
-		ret = -ENOMEM;
-		goto out_unlock;
-	}
+	if (unlikely(!rects))
+		return -ENOMEM;
 
 	user_rects = (void __user *)(unsigned long)arg->rects;
 	ret = copy_from_user(rects, user_rects, rects_size);
@@ -2068,7 +2068,5 @@ int vmw_kms_update_layout_ioctl(struct drm_device *dev, void *data,
 
 out_free:
 	kfree(rects);
-out_unlock:
-	ttm_read_unlock(&dev_priv->reservation_sem);
 	return ret;
 }

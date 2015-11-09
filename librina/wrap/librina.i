@@ -165,6 +165,7 @@ SWIG_JAVABODY_TYPEWRAPPER(public, public, public, SWIGTYPE)
     jenv->ThrowNew(excep, $1.what());
   return $null;
 }
+/*
 %typemap(throws, throws="eu.irati.librina.AllocateFlowException") rina::AllocateFlowException {
   jclass excep = jenv->FindClass("eu/irati/librina/AllocateFlowException");
   if (excep)
@@ -213,12 +214,14 @@ SWIG_JAVABODY_TYPEWRAPPER(public, public, public, SWIGTYPE)
     jenv->ThrowNew(excep, $1.what());
   return $null;
 }
+*/
 %typemap(throws, throws="eu.irati.librina.GetDIFPropertiesException") rina::GetDIFPropertiesException {
   jclass excep = jenv->FindClass("eu/irati/librina/GetDIFPropertiesException");
   if (excep)
     jenv->ThrowNew(excep, $1.what());
   return $null;
 }
+/*
 %typemap(throws, throws="eu.irati.librina.GetDIFPropertiesResponseException") rina::GetDIFPropertiesResponseException {
   jclass excep = jenv->FindClass("eu/irati/librina/GetDIFPropertiesResponseException");
   if (excep)
@@ -249,6 +252,7 @@ SWIG_JAVABODY_TYPEWRAPPER(public, public, public, SWIGTYPE)
     jenv->ThrowNew(excep, $1.what());
   return $null;
 }
+*/
 %typemap(throws, throws="eu.irati.librina.InitializationException") rina::InitializationException {
   jclass excep = jenv->FindClass("eu/irati/librina/InitializationException");
   if (excep)
@@ -274,6 +278,9 @@ SWIG_JAVABODY_TYPEWRAPPER(public, public, public, SWIGTYPE)
   }
 
 %typemap(out) rina::IPCEvent *rina::IPCEventProducer::OPERATION {
+    if ($1 == NULL) {
+      return NULL;
+    }
     if ($1->eventType == rina::APPLICATION_REGISTRATION_REQUEST_EVENT) {
     	rina::ApplicationRegistrationRequestEvent *appRegReqEvent = dynamic_cast<rina::ApplicationRegistrationRequestEvent *>($1);
         jclass clazz = jenv->FindClass("eu/irati/librina/ApplicationRegistrationRequestEvent");
@@ -351,6 +358,28 @@ SWIG_JAVABODY_TYPEWRAPPER(public, public, public, SWIGTYPE)
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
+    } else if ($1->eventType == rina::APPLICATION_UNREGISTERED_EVENT) { /* mcr */
+  	rina::ApplicationUnregisteredEvent *appUnregisteredEvent = dynamic_cast<rina::ApplicationUnregisteredEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/ApplicationUnregisteredEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::ApplicationUnregisteredEvent **)&cptr = appUnregisteredEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
+    } else if ($1->eventType == rina::APPLICATION_REGISTRATION_CANCELED_EVENT) { /* mcr */
+  	rina::AppRegistrationCanceledEvent *canceledEvent = dynamic_cast<rina::AppRegistrationCanceledEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/AppRegistrationCanceledEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::AppRegistrationCanceledEvent **)&cptr = canceledEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
     } else if ($1->eventType == rina::ALLOCATE_FLOW_RESPONSE_EVENT) {
     	rina::AllocateFlowResponseEvent *flowReqEvent = dynamic_cast<rina::AllocateFlowResponseEvent *>($1);
         jclass clazz = jenv->FindClass("eu/irati/librina/AllocateFlowResponseEvent");
@@ -395,6 +424,9 @@ SWIG_JAVABODY_TYPEWRAPPER(public, public, public, SWIGTYPE)
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
+    } else {
+      // Generate a warning message, rather than silently fail
+      std::cerr << "Warning: Java bindings - unmapped IPCEvent of type=" << $1->eventType << std::endl;
     }
 } 
 %enddef
@@ -406,6 +438,7 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %module(directors="1") cdapcallbackjava
 
 %{
+#include <iostream>
 #include "librina/exceptions.h"
 #include "librina/patterns.h"
 #include "librina/concurrency.h"
@@ -518,3 +551,4 @@ MAKE_COLLECTION_ITERABLE(UnsignedIntListIterator, Long, std::list, unsigned int)
 %template(FlowInformationList) std::list<rina::FlowInformation>;
 %template(UnsignedIntList) std::list<unsigned int>;
 
+/* end */

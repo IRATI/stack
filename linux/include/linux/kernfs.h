@@ -43,9 +43,9 @@ enum kernfs_node_flag {
 	KERNFS_HAS_SEQ_SHOW	= 0x0040,
 	KERNFS_HAS_MMAP		= 0x0080,
 	KERNFS_LOCKDEP		= 0x0100,
-	KERNFS_STATIC_NAME	= 0x0200,
 	KERNFS_SUICIDAL		= 0x0400,
 	KERNFS_SUICIDED		= 0x0800,
+	KERNFS_EMPTY_DIR	= 0x1000,
 };
 
 /* @flags for kernfs_create_root() */
@@ -91,6 +91,7 @@ struct kernfs_elem_attr {
 	const struct kernfs_ops	*ops;
 	struct kernfs_open_node	*open;
 	loff_t			size;
+	struct kernfs_node	*notify_next;	/* for kernfs_notify() */
 };
 
 /*
@@ -161,6 +162,10 @@ struct kernfs_root {
 	/* private fields, do not use outside kernfs proper */
 	struct ida		ino_ida;
 	struct kernfs_syscall_ops *syscall_ops;
+
+	/* list of kernfs_super_info of this root, protected by kernfs_mutex */
+	struct list_head	supers;
+
 	wait_queue_head_t	deactivate_waitq;
 };
 
@@ -174,6 +179,7 @@ struct kernfs_open_file {
 	struct mutex		mutex;
 	int			event;
 	struct list_head	list;
+	char			*prealloc_buf;
 
 	size_t			atomic_write_len;
 	bool			mmapped;
@@ -209,6 +215,13 @@ struct kernfs_ops {
 	 * larger ones are rejected with -E2BIG.
 	 */
 	size_t atomic_write_len;
+	/*
+	 * "prealloc" causes a buffer to be allocated at open for
+	 * all read/write requests.  As ->seq_show uses seq_read()
+	 * which does its own allocation, it is incompatible with
+	 * ->prealloc.  Provide ->read and ->write with ->prealloc.
+	 */
+	bool prealloc;
 	ssize_t (*write)(struct kernfs_open_file *of, char *buf, size_t bytes,
 			 loff_t off);
 
@@ -273,12 +286,13 @@ void kernfs_destroy_root(struct kernfs_root *root);
 struct kernfs_node *kernfs_create_dir_ns(struct kernfs_node *parent,
 					 const char *name, umode_t mode,
 					 void *priv, const void *ns);
+struct kernfs_node *kernfs_create_empty_dir(struct kernfs_node *parent,
+					    const char *name);
 struct kernfs_node *__kernfs_create_file(struct kernfs_node *parent,
 					 const char *name,
 					 umode_t mode, loff_t size,
 					 const struct kernfs_ops *ops,
 					 void *priv, const void *ns,
-					 bool name_is_static,
 					 struct lock_class_key *key);
 struct kernfs_node *kernfs_create_link(struct kernfs_node *parent,
 				       const char *name,
@@ -300,6 +314,7 @@ struct dentry *kernfs_mount_ns(struct file_system_type *fs_type, int flags,
 			       struct kernfs_root *root, unsigned long magic,
 			       bool *new_sb_created, const void *ns);
 void kernfs_kill_sb(struct super_block *sb);
+struct super_block *kernfs_pin_sb(struct kernfs_root *root, const void *ns);
 
 void kernfs_init(void);
 
@@ -355,8 +370,7 @@ kernfs_create_dir_ns(struct kernfs_node *parent, const char *name,
 static inline struct kernfs_node *
 __kernfs_create_file(struct kernfs_node *parent, const char *name,
 		     umode_t mode, loff_t size, const struct kernfs_ops *ops,
-		     void *priv, const void *ns, bool name_is_static,
-		     struct lock_class_key *key)
+		     void *priv, const void *ns, struct lock_class_key *key)
 { return ERR_PTR(-ENOSYS); }
 
 static inline struct kernfs_node *
@@ -425,7 +439,7 @@ kernfs_create_file_ns(struct kernfs_node *parent, const char *name,
 	key = (struct lock_class_key *)&ops->lockdep_key;
 #endif
 	return __kernfs_create_file(parent, name, mode, size, ops, priv, ns,
-				    false, key);
+				    key);
 }
 
 static inline struct kernfs_node *

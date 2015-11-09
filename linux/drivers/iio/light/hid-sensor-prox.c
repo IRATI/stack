@@ -21,6 +21,7 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/slab.h>
+#include <linux/delay.h>
 #include <linux/hid-sensor-hub.h>
 #include <linux/iio/iio.h>
 #include <linux/iio/sysfs.h>
@@ -42,8 +43,6 @@ struct prox_state {
 static const struct iio_chan_spec prox_channels[] = {
 	{
 		.type = IIO_PROXIMITY,
-		.modified = 1,
-		.channel2 = IIO_NO_MOD,
 		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW),
 		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_OFFSET) |
 		BIT(IIO_CHAN_INFO_SCALE) |
@@ -73,7 +72,6 @@ static int prox_read_raw(struct iio_dev *indio_dev,
 	struct prox_state *prox_state = iio_priv(indio_dev);
 	int report_id = -1;
 	u32 address;
-	int ret;
 	int ret_type;
 
 	*val = 0;
@@ -90,12 +88,17 @@ static int prox_read_raw(struct iio_dev *indio_dev,
 			report_id = -1;
 			break;
 		}
-		if (report_id >= 0)
+		if (report_id >= 0) {
+			hid_sensor_power_state(&prox_state->common_attributes,
+						true);
 			*val = sensor_hub_input_attr_get_raw_value(
 				prox_state->common_attributes.hsdev,
 				HID_USAGE_SENSOR_PROX, address,
-				report_id);
-		else {
+				report_id,
+				SENSOR_HUB_SYNC);
+			hid_sensor_power_state(&prox_state->common_attributes,
+						false);
+		} else {
 			*val = 0;
 			return -EINVAL;
 		}
@@ -111,14 +114,12 @@ static int prox_read_raw(struct iio_dev *indio_dev,
 		ret_type = IIO_VAL_INT;
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ:
-		ret = hid_sensor_read_samp_freq_value(
+		ret_type = hid_sensor_read_samp_freq_value(
 				&prox_state->common_attributes, val, val2);
-		ret_type = IIO_VAL_INT_PLUS_MICRO;
 		break;
 	case IIO_CHAN_INFO_HYSTERESIS:
-		ret = hid_sensor_read_raw_hyst_value(
+		ret_type = hid_sensor_read_raw_hyst_value(
 				&prox_state->common_attributes, val, val2);
-		ret_type = IIO_VAL_INT_PLUS_MICRO;
 		break;
 	default:
 		ret_type = -EINVAL;
@@ -176,9 +177,8 @@ static int prox_proc_event(struct hid_sensor_hub_device *hsdev,
 	struct iio_dev *indio_dev = platform_get_drvdata(priv);
 	struct prox_state *prox_state = iio_priv(indio_dev);
 
-	dev_dbg(&indio_dev->dev, "prox_proc_event [%d]\n",
-				prox_state->common_attributes.data_ready);
-	if (prox_state->common_attributes.data_ready)
+	dev_dbg(&indio_dev->dev, "prox_proc_event\n");
+	if (atomic_read(&prox_state->common_attributes.data_ready))
 		hid_sensor_push_data(indio_dev,
 				&prox_state->human_presence,
 				sizeof(prox_state->human_presence));
@@ -251,7 +251,6 @@ static int hid_prox_probe(struct platform_device *pdev)
 	struct iio_dev *indio_dev;
 	struct prox_state *prox_state;
 	struct hid_sensor_hub_device *hsdev = pdev->dev.platform_data;
-	struct iio_chan_spec *channels;
 
 	indio_dev = devm_iio_device_alloc(&pdev->dev,
 				sizeof(struct prox_state));
@@ -270,20 +269,21 @@ static int hid_prox_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	channels = kmemdup(prox_channels, sizeof(prox_channels), GFP_KERNEL);
-	if (!channels) {
+	indio_dev->channels = kmemdup(prox_channels, sizeof(prox_channels),
+				      GFP_KERNEL);
+	if (!indio_dev->channels) {
 		dev_err(&pdev->dev, "failed to duplicate channels\n");
 		return -ENOMEM;
 	}
 
-	ret = prox_parse_report(pdev, hsdev, channels,
+	ret = prox_parse_report(pdev, hsdev,
+				(struct iio_chan_spec *)indio_dev->channels,
 				HID_USAGE_SENSOR_PROX, prox_state);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to setup attributes\n");
 		goto error_free_dev_mem;
 	}
 
-	indio_dev->channels = channels;
 	indio_dev->num_channels =
 				ARRAY_SIZE(prox_channels);
 	indio_dev->dev.parent = &pdev->dev;
@@ -297,7 +297,7 @@ static int hid_prox_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to initialize trigger buffer\n");
 		goto error_free_dev_mem;
 	}
-	prox_state->common_attributes.data_ready = false;
+	atomic_set(&prox_state->common_attributes.data_ready, 0);
 	ret = hid_sensor_setup_trigger(indio_dev, name,
 				&prox_state->common_attributes);
 	if (ret) {
@@ -363,7 +363,7 @@ static struct platform_driver hid_prox_platform_driver = {
 	.id_table = hid_prox_ids,
 	.driver = {
 		.name	= KBUILD_MODNAME,
-		.owner	= THIS_MODULE,
+		.pm	= &hid_sensor_pm_ops,
 	},
 	.probe		= hid_prox_probe,
 	.remove		= hid_prox_remove,

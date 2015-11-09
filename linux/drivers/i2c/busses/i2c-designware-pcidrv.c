@@ -6,7 +6,7 @@
  * Copyright (C) 2006 Texas Instruments.
  * Copyright (C) 2007 MontaVista Software Inc.
  * Copyright (C) 2009 Provigent Ltd.
- * Copyright (C) 2011 Intel corporation.
+ * Copyright (C) 2011, 2015 Intel Corporation.
  *
  * ----------------------------------------------------------------------------
  *
@@ -19,10 +19,6 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  * ----------------------------------------------------------------------------
  *
  */
@@ -44,10 +40,6 @@
 #define DRIVER_NAME "i2c-designware-pci"
 
 enum dw_pci_ctl_id_t {
-	moorestown_0,
-	moorestown_1,
-	moorestown_2,
-
 	medfield_0,
 	medfield_1,
 	medfield_2,
@@ -56,6 +48,7 @@ enum dw_pci_ctl_id_t {
 	medfield_5,
 
 	baytrail,
+	haswell,
 };
 
 struct dw_scl_sda_cfg {
@@ -95,28 +88,16 @@ static struct dw_scl_sda_cfg byt_config = {
 	.sda_hold = 0x6,
 };
 
-static struct  dw_pci_controller  dw_pci_controllers[] = {
-	[moorestown_0] = {
-		.bus_num     = 0,
-		.bus_cfg   = INTEL_MID_STD_CFG | DW_IC_CON_SPEED_FAST,
-		.tx_fifo_depth = 32,
-		.rx_fifo_depth = 32,
-		.clk_khz      = 25000,
-	},
-	[moorestown_1] = {
-		.bus_num     = 1,
-		.bus_cfg   = INTEL_MID_STD_CFG | DW_IC_CON_SPEED_FAST,
-		.tx_fifo_depth = 32,
-		.rx_fifo_depth = 32,
-		.clk_khz      = 25000,
-	},
-	[moorestown_2] = {
-		.bus_num     = 2,
-		.bus_cfg   = INTEL_MID_STD_CFG | DW_IC_CON_SPEED_FAST,
-		.tx_fifo_depth = 32,
-		.rx_fifo_depth = 32,
-		.clk_khz      = 25000,
-	},
+/* Haswell HCNT/LCNT/SDA hold time */
+static struct dw_scl_sda_cfg hsw_config = {
+	.ss_hcnt = 0x01b0,
+	.fs_hcnt = 0x48,
+	.ss_lcnt = 0x01fb,
+	.fs_lcnt = 0xa0,
+	.sda_hold = 0x9,
+};
+
+static struct dw_pci_controller dw_pci_controllers[] = {
 	[medfield_0] = {
 		.bus_num     = 0,
 		.bus_cfg   = INTEL_MID_STD_CFG | DW_IC_CON_SPEED_FAST,
@@ -164,11 +145,19 @@ static struct  dw_pci_controller  dw_pci_controllers[] = {
 		.bus_cfg = INTEL_MID_STD_CFG | DW_IC_CON_SPEED_FAST,
 		.tx_fifo_depth = 32,
 		.rx_fifo_depth = 32,
-		.clk_khz = 100000,
 		.functionality = I2C_FUNC_10BIT_ADDR,
 		.scl_sda_cfg = &byt_config,
 	},
+	[haswell] = {
+		.bus_num = -1,
+		.bus_cfg = INTEL_MID_STD_CFG | DW_IC_CON_SPEED_FAST,
+		.tx_fifo_depth = 32,
+		.rx_fifo_depth = 32,
+		.functionality = I2C_FUNC_10BIT_ADDR,
+		.scl_sda_cfg = &hsw_config,
+	},
 };
+
 static struct i2c_algorithm i2c_dw_algo = {
 	.master_xfer	= i2c_dw_xfer,
 	.functionality	= i2c_dw_func,
@@ -243,7 +232,7 @@ static int i2c_dw_pci_probe(struct pci_dev *pdev,
 	dev->functionality = controller->functionality |
 				DW_DEFAULT_FUNCTIONALITY;
 
-	dev->master_cfg =  controller->bus_cfg;
+	dev->master_cfg = controller->bus_cfg;
 	if (controller->scl_sda_cfg) {
 		cfg = controller->scl_sda_cfg;
 		dev->ss_hcnt = cfg->ss_hcnt;
@@ -309,12 +298,8 @@ static void i2c_dw_pci_remove(struct pci_dev *pdev)
 MODULE_ALIAS("i2c_designware-pci");
 
 static const struct pci_device_id i2_designware_pci_ids[] = {
-	/* Moorestown */
-	{ PCI_VDEVICE(INTEL, 0x0802), moorestown_0 },
-	{ PCI_VDEVICE(INTEL, 0x0803), moorestown_1 },
-	{ PCI_VDEVICE(INTEL, 0x0804), moorestown_2 },
 	/* Medfield */
-	{ PCI_VDEVICE(INTEL, 0x0817), medfield_3,},
+	{ PCI_VDEVICE(INTEL, 0x0817), medfield_3 },
 	{ PCI_VDEVICE(INTEL, 0x0818), medfield_4 },
 	{ PCI_VDEVICE(INTEL, 0x0819), medfield_5 },
 	{ PCI_VDEVICE(INTEL, 0x082C), medfield_0 },
@@ -328,6 +313,17 @@ static const struct pci_device_id i2_designware_pci_ids[] = {
 	{ PCI_VDEVICE(INTEL, 0x0F45), baytrail },
 	{ PCI_VDEVICE(INTEL, 0x0F46), baytrail },
 	{ PCI_VDEVICE(INTEL, 0x0F47), baytrail },
+	/* Haswell */
+	{ PCI_VDEVICE(INTEL, 0x9c61), haswell },
+	{ PCI_VDEVICE(INTEL, 0x9c62), haswell },
+	/* Braswell / Cherrytrail */
+	{ PCI_VDEVICE(INTEL, 0x22C1), baytrail },
+	{ PCI_VDEVICE(INTEL, 0x22C2), baytrail },
+	{ PCI_VDEVICE(INTEL, 0x22C3), baytrail },
+	{ PCI_VDEVICE(INTEL, 0x22C4), baytrail },
+	{ PCI_VDEVICE(INTEL, 0x22C5), baytrail },
+	{ PCI_VDEVICE(INTEL, 0x22C6), baytrail },
+	{ PCI_VDEVICE(INTEL, 0x22C7), baytrail },
 	{ 0,}
 };
 MODULE_DEVICE_TABLE(pci, i2_designware_pci_ids);

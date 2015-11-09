@@ -1,6 +1,6 @@
 /* parser.h
  *
- * Copyright © 2010 - 2013 UNISYS CORPORATION
+ * Copyright (C) 2010 - 2013 UNISYS CORPORATION
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -18,7 +18,8 @@
 #ifndef __PARSER_H__
 #define __PARSER_H__
 
-#include "uniklog.h"
+#include <linux/uuid.h>
+
 #include "timskmod.h"
 #include "channel.h"
 
@@ -29,17 +30,17 @@ typedef enum {
 	PARSERSTRING_NAME,
 } PARSER_WHICH_STRING;
 
-typedef struct PARSER_CONTEXT_Tag PARSER_CONTEXT;
-
-PARSER_CONTEXT *parser_init(U64 addr, U32 bytes, BOOL isLocal, BOOL *tryAgain);
-PARSER_CONTEXT *parser_init_byteStream(U64 addr, U32 bytes, BOOL isLocal,
-				       BOOL *tryAgain);
-void parser_param_start(PARSER_CONTEXT *ctx, PARSER_WHICH_STRING which_string);
-void *parser_param_get(PARSER_CONTEXT *ctx, char *nam, int namesize);
-void *parser_string_get(PARSER_CONTEXT *ctx);
-GUID parser_id_get(PARSER_CONTEXT *ctx);
-char *parser_simpleString_get(PARSER_CONTEXT *ctx);
-void *parser_byteStream_get(PARSER_CONTEXT *ctx, ulong *nbytes);
-void parser_done(PARSER_CONTEXT *ctx);
+struct parser_context *parser_init(u64 addr, u32 bytes, BOOL isLocal,
+				   BOOL *tryAgain);
+struct parser_context *parser_init_byte_stream(u64 addr, u32 bytes, BOOL local,
+				       BOOL *retry);
+void parser_param_start(struct parser_context *ctx,
+			PARSER_WHICH_STRING which_string);
+void *parser_param_get(struct parser_context *ctx, char *nam, int namesize);
+void *parser_string_get(struct parser_context *ctx);
+uuid_le parser_id_get(struct parser_context *ctx);
+char *parser_simpleString_get(struct parser_context *ctx);
+void *parser_byte_stream_get(struct parser_context *ctx, ulong *nbytes);
+void parser_done(struct parser_context *ctx);
 
 #endif

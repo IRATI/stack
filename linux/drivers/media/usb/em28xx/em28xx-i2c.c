@@ -501,6 +501,12 @@ static int em28xx_i2c_xfer(struct i2c_adapter *i2c_adap,
 	int addr, rc, i;
 	u8 reg;
 
+	/* prevent i2c xfer attempts after device is disconnected
+	   some fe's try to do i2c writes/reads from their release
+	   interfaces when called in disconnect path */
+	if (dev->disconnected)
+		return -ENODEV;
+
 	rc = rt_mutex_trylock(&dev->i2c_bus_lock);
 	if (rc < 0)
 		return rc;
@@ -587,6 +593,7 @@ static inline unsigned long em28xx_hash_mem(char *buf, int length, int bits)
 	unsigned long l = 0;
 	int len = 0;
 	unsigned char c;
+
 	do {
 		if (len == length) {
 			c = (char)len;
@@ -871,6 +878,7 @@ static struct i2c_client em28xx_client_template = {
  * incomplete list of known devices
  */
 static char *i2c_devs[128] = {
+       [0x1c >> 1] = "lgdt330x",
 	[0x3e >> 1] = "remote IR sensor",
 	[0x4a >> 1] = "saa7113h",
 	[0x52 >> 1] = "drxk",
@@ -939,12 +947,11 @@ int em28xx_i2c_register(struct em28xx *dev, unsigned bus,
 	dev->i2c_bus[bus].algo_type = algo_type;
 	dev->i2c_bus[bus].dev = dev;
 	dev->i2c_adap[bus].algo_data = &dev->i2c_bus[bus];
-	i2c_set_adapdata(&dev->i2c_adap[bus], &dev->v4l2_dev);
 
 	retval = i2c_add_adapter(&dev->i2c_adap[bus]);
 	if (retval < 0) {
 		em28xx_errdev("%s: i2c_add_adapter failed! retval [%d]\n",
-			__func__, retval);
+			      __func__, retval);
 		return retval;
 	}
 
@@ -956,7 +963,7 @@ int em28xx_i2c_register(struct em28xx *dev, unsigned bus,
 		retval = em28xx_i2c_eeprom(dev, bus, &dev->eedata, &dev->eedata_len);
 		if ((retval < 0) && (retval != -ENODEV)) {
 			em28xx_errdev("%s: em28xx_i2_eeprom failed! retval [%d]\n",
-				__func__, retval);
+				      __func__, retval);
 
 			return retval;
 		}

@@ -230,7 +230,6 @@ static int poodle_wm8731_init(struct snd_soc_pcm_runtime *rtd)
 
 	snd_soc_dapm_nc_pin(dapm, "LLINEIN");
 	snd_soc_dapm_nc_pin(dapm, "RLINEIN");
-	snd_soc_dapm_enable_pin(dapm, "MICIN");
 
 	return 0;
 }
@@ -297,7 +296,6 @@ static int poodle_remove(struct platform_device *pdev)
 static struct platform_driver poodle_driver = {
 	.driver		= {
 		.name	= "poodle-audio",
-		.owner	= THIS_MODULE,
 		.pm     = &snd_soc_pm_ops,
 	},
 	.probe		= poodle_probe,

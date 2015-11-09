@@ -132,6 +132,13 @@ static int omap_wdt_start(struct watchdog_device *wdog)
 
 	pm_runtime_get_sync(wdev->dev);
 
+	/*
+	 * Make sure the watchdog is disabled. This is unfortunately required
+	 * because writing to various registers with the watchdog running has no
+	 * effect.
+	 */
+	omap_wdt_disable(wdev);
+
 	/* initialize prescaler */
 	while (readl_relaxed(base + OMAP_WATCHDOG_WPS) & 0x01)
 		cpu_relax();
@@ -189,7 +196,7 @@ static int omap_wdt_set_timeout(struct watchdog_device *wdog,
 }
 
 static const struct watchdog_info omap_wdt_info = {
-	.options = WDIOF_SETTIMEOUT | WDIOF_KEEPALIVEPING,
+	.options = WDIOF_SETTIMEOUT | WDIOF_MAGICCLOSE | WDIOF_KEEPALIVEPING,
 	.identity = "OMAP Watchdog",
 };
 
@@ -353,7 +360,6 @@ static struct platform_driver omap_wdt_driver = {
 	.suspend	= omap_wdt_suspend,
 	.resume		= omap_wdt_resume,
 	.driver		= {
-		.owner	= THIS_MODULE,
 		.name	= "omap_wdt",
 		.of_match_table = omap_wdt_of_match,
 	},

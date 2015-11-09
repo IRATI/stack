@@ -28,7 +28,6 @@ struct s5m8767_info {
 	struct device *dev;
 	struct sec_pmic_dev *iodev;
 	int num_regulators;
-	struct regulator_dev **rdev;
 	struct sec_opmode_data *opmode;
 
 	int ramp_delay;
@@ -529,16 +528,6 @@ static int s5m8767_pmic_dt_parse_ds_gpio(struct sec_pmic_dev *iodev,
 	return 0;
 }
 
-static void s5m8767_pmic_dt_parse_ext_control_gpio(struct sec_pmic_dev *iodev,
-		struct sec_regulator_data *rdata,
-		struct device_node *reg_np)
-{
-	rdata->ext_control_gpio = of_get_named_gpio(reg_np,
-			"s5m8767,pmic-ext-control-gpios", 0);
-	if (!gpio_is_valid(rdata->ext_control_gpio))
-		rdata->ext_control_gpio = 0;
-}
-
 static int s5m8767_pmic_dt_parse_pdata(struct platform_device *pdev,
 					struct sec_platform_data *pdata)
 {
@@ -587,11 +576,13 @@ static int s5m8767_pmic_dt_parse_pdata(struct platform_device *pdev,
 			continue;
 		}
 
-		s5m8767_pmic_dt_parse_ext_control_gpio(iodev, rdata, reg_np);
+		rdata->ext_control_gpio = of_get_named_gpio(reg_np,
+			"s5m8767,pmic-ext-control-gpios", 0);
 
 		rdata->id = i;
 		rdata->initdata = of_get_regulator_init_data(
-						&pdev->dev, reg_np);
+						&pdev->dev, reg_np,
+						&regulators[i]);
 		rdata->reg_node = reg_np;
 		rdata++;
 		rmode->id = i;
@@ -695,9 +686,8 @@ static int s5m8767_pmic_probe(struct platform_device *pdev)
 	struct sec_pmic_dev *iodev = dev_get_drvdata(pdev->dev.parent);
 	struct sec_platform_data *pdata = iodev->pdata;
 	struct regulator_config config = { };
-	struct regulator_dev **rdev;
 	struct s5m8767_info *s5m8767;
-	int i, ret, size, buck_init;
+	int i, ret, buck_init;
 
 	if (!pdata) {
 		dev_err(pdev->dev.parent, "Platform data not supplied\n");
@@ -736,12 +726,6 @@ static int s5m8767_pmic_probe(struct platform_device *pdev)
 	if (!s5m8767)
 		return -ENOMEM;
 
-	size = sizeof(struct regulator_dev *) * (S5M8767_REG_MAX - 2);
-	s5m8767->rdev = devm_kzalloc(&pdev->dev, size, GFP_KERNEL);
-	if (!s5m8767->rdev)
-		return -ENOMEM;
-
-	rdev = s5m8767->rdev;
 	s5m8767->dev = &pdev->dev;
 	s5m8767->iodev = iodev;
 	s5m8767->num_regulators = pdata->num_regulators;
@@ -938,6 +922,7 @@ static int s5m8767_pmic_probe(struct platform_device *pdev)
 		const struct sec_voltage_desc *desc;
 		int id = pdata->regulators[i].id;
 		int enable_reg, enable_val;
+		struct regulator_dev *rdev;
 
 		desc = reg_voltage_map[id];
 		if (desc) {
@@ -964,26 +949,28 @@ static int s5m8767_pmic_probe(struct platform_device *pdev)
 		config.driver_data = s5m8767;
 		config.regmap = iodev->regmap_pmic;
 		config.of_node = pdata->regulators[i].reg_node;
-		config.ena_gpio = config.ena_gpio_flags = 0;
-		if (pdata->regulators[i].ext_control_gpio)
+		config.ena_gpio = -EINVAL;
+		config.ena_gpio_flags = 0;
+		config.ena_gpio_initialized = true;
+		if (gpio_is_valid(pdata->regulators[i].ext_control_gpio))
 			s5m8767_regulator_config_ext_control(s5m8767,
 					&pdata->regulators[i], &config);
 
-		rdev[i] = devm_regulator_register(&pdev->dev, &regulators[id],
+		rdev = devm_regulator_register(&pdev->dev, &regulators[id],
 						  &config);
-		if (IS_ERR(rdev[i])) {
-			ret = PTR_ERR(rdev[i]);
+		if (IS_ERR(rdev)) {
+			ret = PTR_ERR(rdev);
 			dev_err(s5m8767->dev, "regulator init failed for %d\n",
 					id);
 			return ret;
 		}
 
-		if (pdata->regulators[i].ext_control_gpio) {
-			ret = s5m8767_enable_ext_control(s5m8767, rdev[i]);
+		if (gpio_is_valid(pdata->regulators[i].ext_control_gpio)) {
+			ret = s5m8767_enable_ext_control(s5m8767, rdev);
 			if (ret < 0) {
 				dev_err(s5m8767->dev,
 						"failed to enable gpio control over %s: %d\n",
-						rdev[i]->desc->name, ret);
+						rdev->desc->name, ret);
 				return ret;
 			}
 		}
@@ -1001,7 +988,6 @@ MODULE_DEVICE_TABLE(platform, s5m8767_pmic_id);
 static struct platform_driver s5m8767_pmic_driver = {
 	.driver = {
 		.name = "s5m8767-pmic",
-		.owner = THIS_MODULE,
 	},
 	.probe = s5m8767_pmic_probe,
 	.id_table = s5m8767_pmic_id,
