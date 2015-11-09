@@ -149,7 +149,6 @@ default_closed_window(struct dtp_ps * ps, struct pdu * pdu)
 
 	return 0;
 }
-EXPORT_SYMBOL(common_closed_window);
 
 int
 default_snd_flow_control_overrun(struct dtp_ps * ps,
@@ -194,7 +193,6 @@ default_snd_flow_control_overrun(struct dtp_ps * ps,
 
         return 0;
 }
-EXPORT_SYMBOL(common_flow_control_overrun);
 
 int
 default_initial_sequence_number(struct dtp_ps * ps)
@@ -323,31 +321,6 @@ bool default_reconcile_flow_conflict(struct dtp_ps * ps)
 	LOG_DBG("Reconciling window and rate flow controls...");
         return true;
 }
-EXPORT_SYMBOL(common_reconcile_flow_conflict);
-
-int dtp_ps_common_set_policy_set_param(struct ps_base * bps,
-                                       const char    * name,
-                                       const char    * value)
-{
-        struct dtp_ps *ps = container_of(bps, struct dtp_ps, base);
-
-        (void) ps;
-
-        if (!name) {
-                LOG_ERR("Null parameter name");
-                return -1;
-        }
-
-        if (!value) {
-                LOG_ERR("Null parameter value");
-                return -1;
-        }
-
-        LOG_ERR("No such parameter to set");
-
-        return -1;
-}
-EXPORT_SYMBOL(dtp_ps_common_set_policy_set_param);
 
 static struct ps_base *
 dtp_ps_default_create(struct rina_component * component)
