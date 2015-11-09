@@ -318,7 +318,7 @@ default_sender_inactivity_timer(struct dtp_ps * ps)
         return 0;
 }
 
-bool common_reconcile_flow_conflict(struct dtp_ps * ps)
+bool default_reconcile_flow_conflict(struct dtp_ps * ps)
 {
 	LOG_DBG("Reconciling window and rate flow controls...");
         return true;
