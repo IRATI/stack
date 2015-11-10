@@ -38,6 +38,14 @@ public:
 		return class_name;
 	};
 
+	void read(const rina::cdap_rib::con_handle_t &con,
+		  const std::string& fqn,
+		  const std::string& class_,
+		  const rina::cdap_rib::filt_info_t &filt,
+		  const int invoke_id,
+		  rina::cdap_rib::obj_info_t &obj_reply,
+		  rina::cdap_rib::res_info_t& res);
+
 	const static std::string class_name;
 	const static std::string object_name_prefix;
 
@@ -130,6 +138,14 @@ public:
 	const std::string& get_class() const {
 		return class_name;
 	};
+
+	void read(const rina::cdap_rib::con_handle_t &con,
+		  const std::string& fqn,
+		  const std::string& class_,
+		  const rina::cdap_rib::filt_info_t &filt,
+		  const int invoke_id,
+		  rina::cdap_rib::obj_info_t &obj_reply,
+		  rina::cdap_rib::res_info_t& res);
 
 	const static std::string class_name;
 	const static std::string object_name;
@@ -327,7 +343,7 @@ public:
 		  const std::string& class_,
 		  const rina::cdap_rib::filt_info_t &filt,
 		  const int invoke_id,
-		  rina::ser_obj_t &obj_reply,
+		  rina::cdap_rib::obj_info_t &obj_reply,
 		  rina::cdap_rib::res_info_t& res);
 
 	void startObject();

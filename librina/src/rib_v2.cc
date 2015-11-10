@@ -644,9 +644,9 @@ void RIB::delete_request(const cdap_rib::con_handle_t &con,
 }
 
 void RIB::read_request(const cdap_rib::con_handle_t &con,
-		const cdap_rib::obj_info_t &obj,
-		const cdap_rib::filt_info_t &filt,
-		const int invoke_id)
+		       const cdap_rib::obj_info_t &obj,
+		       const cdap_rib::filt_info_t &filt,
+		       const int invoke_id)
 {
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
@@ -682,11 +682,13 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 		//Mutual exclusion
 		ReadScopedLock rlock(rib_obj->rwlock, false);
 
-		rib_obj->read(con, obj.name_, obj.class_,
-							filt,
-							invoke_id,
-							obj_reply.value_,
-							res);
+		rib_obj->read(con,
+			      obj.name_,
+			      obj.class_,
+			      filt,
+			      invoke_id,
+			      obj_reply,
+			      res);
 	} else {
 		res.code_ = cdap_rib::CDAP_INVALID_OBJ;
 	} //RAII
@@ -2734,7 +2736,7 @@ void RIBObj::read(const cdap_rib::con_handle_t &con,
 		  const std::string& class_,
 		  const cdap_rib::filt_info_t &filt,
 		  const int invoke_id,
-		  ser_obj_t &obj_reply,
+		  cdap_rib::obj_info_t &obj_reply,
 		  cdap_rib::res_info_t& res)
 {
 	operation_not_supported(res);

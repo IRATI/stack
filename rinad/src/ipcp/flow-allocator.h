@@ -131,6 +131,14 @@ public:
 		return class_name;
 	};
 
+	void read(const rina::cdap_rib::con_handle_t &con,
+		  const std::string& fqn,
+		  const std::string& class_,
+		  const rina::cdap_rib::filt_info_t &filt,
+		  const int invoke_id,
+		  rina::cdap_rib::obj_info_t &obj_reply,
+		  rina::cdap_rib::res_info_t& res);
+
 	bool delete_(const rina::cdap_rib::con_handle_t &con,
 		     const std::string& fqn,
 		     const std::string& class_,

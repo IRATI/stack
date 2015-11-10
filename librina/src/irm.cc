@@ -367,6 +367,20 @@ const std::string UnderlayingRegistrationRIBObj::get_displayable_value() const
 	return ss.str();
 }
 
+void UnderlayingRegistrationRIBObj::read(const rina::cdap_rib::con_handle_t &con,
+					 const std::string& fqn,
+					 const std::string& class_,
+					 const rina::cdap_rib::filt_info_t &filt,
+					 const int invoke_id,
+					 rina::cdap_rib::obj_info_t &obj_reply,
+					 rina::cdap_rib::res_info_t& res)
+{
+	cdap::StringEncoder encoder;
+	encoder.encode(dif_name, obj_reply.value_);
+
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+}
+
 //Class UnderlayingFlowRIBObj
 const std::string UnderlayingFlowRIBObj::class_name = "UnderlayingFlow";
 const std::string UnderlayingFlowRIBObj::object_name_prefix = "/ipcmanagement/irm/underflows/portId=";
@@ -393,6 +407,18 @@ const std::string UnderlayingFlowRIBObj::get_displayable_value() const
 	return ss.str();
 }
 
+void UnderlayingFlowRIBObj::read(const rina::cdap_rib::con_handle_t &con,
+				 const std::string& fqn,
+				 const std::string& class_,
+				 const rina::cdap_rib::filt_info_t &filt,
+				 const int invoke_id,
+				 rina::cdap_rib::obj_info_t &obj_reply,
+				 rina::cdap_rib::res_info_t& res)
+{
+	//TODO implement FlowInformationEncoder
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+}
+
 //Class UnderlayingDIFRIBObj
 const std::string UnderlayingDIFRIBObj::class_name = "UnderlayingDIF";
 const std::string UnderlayingDIFRIBObj::object_name_prefix = "/ipcmanagement/irm/underdifs/difName=";
@@ -410,6 +436,18 @@ const std::string UnderlayingDIFRIBObj::get_displayable_value() const
 	ss << "DIF name: " << dif_properties.DIFName.getEncodedString();
 	ss << "; Max SDU size: " << dif_properties.maxSDUSize;
 	return ss.str();
+}
+
+void UnderlayingDIFRIBObj::read(const rina::cdap_rib::con_handle_t &con,
+				const std::string& fqn,
+				const std::string& class_,
+				const rina::cdap_rib::filt_info_t &filt,
+				const int invoke_id,
+				rina::cdap_rib::obj_info_t &obj_reply,
+				rina::cdap_rib::res_info_t& res)
+{
+	//TODO implement DIFProperties encoder
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }
 
 }

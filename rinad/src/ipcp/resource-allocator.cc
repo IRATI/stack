@@ -65,6 +65,22 @@ const std::string QoSCubeRIBObject::get_displayable_value() const
 	return ss.str();
 }
 
+void QoSCubeRIBObject::read(const rina::cdap_rib::con_handle_t &con,
+			    const std::string& fqn,
+			    const std::string& class_,
+			    const rina::cdap_rib::filt_info_t &filt,
+			    const int invoke_id,
+			    rina::cdap_rib::obj_info_t &obj_reply,
+			    rina::cdap_rib::res_info_t& res)
+{
+	if (qos_cube) {
+		QoSCubeEncoder encoder;
+		encoder.encode(*qos_cube, obj_reply.value_);
+	}
+
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+}
+
 //Class QoS Cube Set RIB Object
 const std::string QoSCubesRIBObject::class_name = "QoSCubes";
 const std::string QoSCubesRIBObject::object_name = "/resalloc/qoscubes";
@@ -113,6 +129,18 @@ const std::string NextHopTEntryRIBObj::get_displayable_value() const
 	return ss.str();
 }
 
+void NextHopTEntryRIBObj::read(const rina::cdap_rib::con_handle_t &con,
+			       const std::string& fqn,
+			       const std::string& class_,
+			       const rina::cdap_rib::filt_info_t &filt,
+			       const int invoke_id,
+			       rina::cdap_rib::obj_info_t &obj_reply,
+			       rina::cdap_rib::res_info_t& res)
+{
+	//TODO implement encoder
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+}
+
 // Class PDUFTEntryRIBObj
 const std::string PDUFTEntryRIBObj::parent_class_name = "PDUForwardingTable";
 const std::string PDUFTEntryRIBObj::parent_object_name = "/resalloc/pduft";
@@ -136,6 +164,18 @@ const std::string PDUFTEntryRIBObj::get_displayable_value() const
 		ss << it->alts.front() << "/ ";
 	}
 	return ss.str();
+}
+
+void PDUFTEntryRIBObj::read(const rina::cdap_rib::con_handle_t &con,
+			    const std::string& fqn,
+			    const std::string& class_,
+			    const rina::cdap_rib::filt_info_t &filt,
+			    const int invoke_id,
+			    rina::cdap_rib::obj_info_t &obj_reply,
+			    rina::cdap_rib::res_info_t& res)
+{
+	//TODO Implement the PDUFTEntry encoder
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }
 
 //Class NMinusOneFlowManager

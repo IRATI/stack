@@ -43,6 +43,23 @@ FlowRIBObject::FlowRIBObject(IPCProcess * ipc_process,
 	flow_allocator_instance_ = flow_allocator_instance;
 }
 
+void FlowRIBObject::read(const rina::cdap_rib::con_handle_t &con,
+			 const std::string& fqn,
+			 const std::string& class_,
+			 const rina::cdap_rib::filt_info_t &filt,
+			 const int invoke_id,
+			 rina::cdap_rib::obj_info_t &obj_reply,
+			 rina::cdap_rib::res_info_t& res)
+{
+	Flow * flow = flow_allocator_instance_->get_flow();
+	if (flow) {
+		FlowEncoder encoder;
+		encoder.encode(*flow, obj_reply.value_);
+	}
+
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+}
+
 bool FlowRIBObject::delete_(const rina::cdap_rib::con_handle_t &con,
 			    const std::string& fqn,
 			    const std::string& class_,

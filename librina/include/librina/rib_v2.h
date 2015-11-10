@@ -298,7 +298,7 @@ protected:
 			  const std::string& class_,
 			  const cdap_rib::filt_info_t &filt,
 			  const int invoke_id,
-			  ser_obj_t &obj_reply,
+			  cdap_rib::obj_info_t &obj_reply,
 			  cdap_rib::res_info_t& res);
 
 	///

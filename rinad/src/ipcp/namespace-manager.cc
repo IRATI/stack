@@ -48,6 +48,22 @@ const std::string WhateverCastNameRIBObj::get_displayable_value() const
     return ss.str();
 }
 
+void WhateverCastNameRIBObj::read(const rina::cdap_rib::con_handle_t &con,
+				  const std::string& fqn,
+				  const std::string& class_,
+				  const rina::cdap_rib::filt_info_t &filt,
+				  const int invoke_id,
+				  rina::cdap_rib::obj_info_t &obj_reply,
+				  rina::cdap_rib::res_info_t& res)
+{
+	if (name) {
+		WhatevercastNameEncoder encoder;
+		encoder.encode(*name, obj_reply.value_);
+	}
+
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+}
+
 // Class WhateverCastNamesRIBObj
 const std::string WhateverCastNamesRIBObj::class_name = "Neighbor";
 const std::string WhateverCastNamesRIBObj::object_name = "/difmanagement/nsm/whatnames";
@@ -119,6 +135,22 @@ bool DFTEntryRIBObj::delete_(const rina::cdap_rib::con_handle_t &con_handle,
 			    false,
 			    exc_neighs);
 	return true;
+}
+
+void DFTEntryRIBObj::read(const rina::cdap_rib::con_handle_t &con,
+			  const std::string& fqn,
+			  const std::string& class_,
+			  const rina::cdap_rib::filt_info_t &filt,
+			  const int invoke_id,
+			  rina::cdap_rib::obj_info_t &obj_reply,
+			  rina::cdap_rib::res_info_t& res)
+{
+	if (entry) {
+		DFTEEncoder encoder;
+		encoder.encode(*entry, obj_reply.value_);
+	}
+
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }
 
 // Class DirectoryForwardingTableEntry Set RIB Object
