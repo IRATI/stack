@@ -119,13 +119,6 @@ default_closed_window(struct dtp_ps * ps, struct pdu * pdu)
 
 	max_len = dtcp_max_closed_winq_length(dtcp_config_get(dtcp));
 
-	if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
-		LOG_DBG("rbfc CWQ: %zd, lim: %u", cwq_size(cwq), max_len);
-	}
-
-	// Nice here... <_<
-	// What if max = 0? Where are the checks?!?
-	// It was: if (cwq_size(cwq) < max_len - 1)
 	if (max_len != 0 && (cwq_size(cwq) < max_len - 1)) {
 		if (cwq_push(cwq, pdu)) {
 			LOG_ERR("Failed to push into cwq");
