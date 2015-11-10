@@ -1217,4 +1217,3 @@ struct policy * dtcp_rtt_estimator(struct dtcp_config * cfg)
         return cfg->rtt_estimator;
 }
 EXPORT_SYMBOL(dtcp_rtt_estimator);
-
