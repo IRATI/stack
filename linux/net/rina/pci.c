@@ -328,7 +328,8 @@ EXPORT_SYMBOL(pci_type);
 
 address_t pci_source(const struct pci * pci)
 {
-        ASSERT(pci); /* FIXME: Should not be an ASSERT ... */
+	if (!pci_is_ok(pci))
+		return address_bad();
 
         return pci->source;
 }
@@ -336,7 +337,8 @@ EXPORT_SYMBOL(pci_source);
 
 address_t pci_destination(const struct pci * pci)
 {
-        ASSERT(pci); /* FIXME: Should not be an ASSERT ... */
+	if (!pci_is_ok(pci))
+		return address_bad();
 
         return pci->destination;
 }
