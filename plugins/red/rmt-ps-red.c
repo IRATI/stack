@@ -109,8 +109,9 @@ static int red_rmt_queue_destroy(struct red_rmt_queue * q)
         return 0;
 }
 
-struct red_rmt_queue * red_rmt_queue_find(struct red_rmt_ps_data * data,
-                                          port_id_t                port_id)
+static struct red_rmt_queue *
+red_rmt_queue_find(struct red_rmt_ps_data * data,
+                   port_id_t                port_id)
 {
         struct red_rmt_queue * entry;
         const struct hlist_head *  head;
@@ -127,16 +128,17 @@ struct red_rmt_queue * red_rmt_queue_find(struct red_rmt_ps_data * data,
 }
 
 static struct pdu *
-red_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
-                                 struct rmt_n1_port * port)
+red_rmt_dequeue_policy(struct rmt_ps *      ps,
+		       struct rmt_n1_port * port)
 {
         struct red_rmt_queue *   q;
         struct red_rmt_ps_data * data = ps->priv;
         struct pdu *             ret_pdu;
+	unsigned int             qlen;
 
         if (!ps || !port || !data) {
                 LOG_ERR("Wrong input parameters for "
-                        "rmt_next_scheduled_policy_tx");
+                        "red_rmt_dequeue_policy");
                 return NULL;
         }
 
@@ -147,6 +149,16 @@ red_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
                 return NULL;
         }
 
+	qlen = rfifo_length(q->queue);
+	if (port->pending_pdu) {
+		qlen++;
+		ret_pdu = port->pending_pdu;
+		port->pending_pdu = NULL;
+	} else
+        	ret_pdu = rfifo_pop(q->queue);
+        if (!ret_pdu)
+                LOG_ERR("Could not dequeue scheduled pdu");
+
 	/* Compute average queue usage (see RED)
 	 * RED does not do this here and instead uses an approximation
 	 * when the idle period is over. But doing this the qavg
@@ -155,12 +167,8 @@ red_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
 	 */
 	q->vars.qavg = red_calc_qavg(&q->parms,
 				     &q->vars,
-				     rfifo_length(q->queue));
+				     qlen);
 
-        ret_pdu = rfifo_pop(q->queue);
-        if (!ret_pdu) {
-                LOG_ERR("Could not dequeue scheduled pdu");
-        }
 #if RMT_DEBUG
 	if (q->debug->q_index < RMT_DEBUG_SIZE && ret_pdu) {
 		q->debug->q_log[q->debug->q_index][0] = rfifo_length(q->queue);
@@ -171,19 +179,21 @@ red_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
         return ret_pdu;
 }
 
-static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
-                                                struct rmt_n1_port * port,
-                                                struct pdu *         pdu)
+static int red_rmt_enqueue_policy(struct rmt_ps *      ps,
+                                  struct rmt_n1_port * port,
+                                  struct pdu *         pdu)
 {
         struct red_rmt_queue *   q;
         struct red_rmt_ps_data * data = ps->priv;
         struct pci *             pci;
         unsigned long            pci_flags;
+	int			 ret;
+	unsigned int             qlen;
 
         if (!ps || !port || !pdu || !data) {
                 LOG_ERR("Wrong input parameters for "
                         "rmt_enqueu_scheduling_policy_tx");
-                return -1;
+                return RMT_PS_ENQ_ERR;
         }
 
         q = red_rmt_queue_find(data, port->port_id);
@@ -191,8 +201,19 @@ static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
                 LOG_ERR("Could not find queue for n1_port %u",
                         port->port_id);
                 pdu_destroy(pdu);
-                return -1;
+                return RMT_PS_ENQ_ERR;
         }
+
+	if (port->state != N1_PORT_STATE_DISABLED	&&
+	    !port->pending_pdu				&&
+	    rfifo_is_empty(q->queue)) {
+		ret = RMT_PS_ENQ_DSEND;
+		goto exit;
+	}
+
+	qlen = rfifo_length(q->queue);
+	if (port->pending_pdu)
+		qlen++;
 
 	/* Compute average queue usage (see RED)
 	 * Formula is qavg = qavg*(1-W) + backlog*W;
@@ -200,13 +221,16 @@ static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
 	 */
 	q->vars.qavg = red_calc_qavg(&q->parms,
 				     &q->vars,
-				     rfifo_length(q->queue));
+				     qlen);
 	LOG_DBG("qavg':  %lu, qlen: %lu", q->vars.qavg >> (q->parms.Wlog),
-					  rfifo_length(q->queue));
+					  qlen);
 
-	if(rfifo_length(q->queue) >= data->conf_data.limit) {
+	if(qlen >= data->conf_data.limit) {
 		q->stats.forced_drop++;
-		goto congestion_drop;
+		ret = RMT_PS_ENQ_DROP;
+        	pdu_destroy(pdu);
+        	LOG_DBG("PDU dropped, qmax reached...");
+		goto exit;
 	}
 
 	switch (red_action(&q->parms, &q->vars, q->vars.qavg)) {
@@ -234,13 +258,7 @@ static int red_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
 	}
 
 	rfifo_push_ni(q->queue, pdu);
-	goto exit;
-
-congestion_drop:
-
-        pdu_destroy(pdu);
-        atomic_dec(&port->n_sdus);
-        LOG_DBG("PDU dropped, qmax reached...");
+	ret = RMT_PS_ENQ_SCHED;
 
 exit:
 #if RMT_DEBUG
@@ -250,12 +268,11 @@ exit:
 	}
 	q->debug->stats = q->stats;
 #endif
-
-        return 0;
+        return ret;
 }
 
-static int red_rmt_scheduling_create_policy_tx(struct rmt_ps *      ps,
-                                               struct rmt_n1_port * port)
+static int red_rmt_q_create_policy(struct rmt_ps *      ps,
+                                   struct rmt_n1_port * port)
 {
         struct red_rmt_queue *   q;
         struct red_rmt_ps_data * data;
@@ -282,8 +299,8 @@ static int red_rmt_scheduling_create_policy_tx(struct rmt_ps *      ps,
         LOG_DBG("Structures for scheduling policies created...");
         return 0;
 }
-static int red_rmt_scheduling_destroy_policy_tx(struct rmt_ps *      ps,
-                                                struct rmt_n1_port * port)
+static int red_rmt_q_destroy_policy(struct rmt_ps *      ps,
+                                    struct rmt_n1_port * port)
 {
         struct red_rmt_ps_data * data;
         struct red_rmt_queue *   q;
@@ -301,6 +318,31 @@ static int red_rmt_scheduling_destroy_policy_tx(struct rmt_ps *      ps,
         if (q) return red_rmt_queue_destroy(q);
 
         return -1;
+}
+
+static bool red_rmt_needs_sched_policy(struct rmt_ps *      ps,
+				       struct rmt_n1_port * port)
+{
+	struct red_rmt_queue *   q;
+	struct red_rmt_ps_data * data = ps->priv;
+
+	if (!ps || !port || !data) {
+		LOG_ERR("Wrong input parameters for "
+                        "rmt_needs_sched_policy");
+		return false;
+	}
+
+	if (port->pending_pdu)
+		return true;
+
+	q = red_rmt_queue_find(data, port->port_id);
+	if (!q) {
+		LOG_ERR("Could not find queue for n1_port %u",
+		port->port_id);
+		return false;
+	}
+
+	return !rfifo_is_empty(q->queue);
 }
 
 static int red_rmt_ps_set_policy_set_param(struct ps_base * bps,
@@ -455,16 +497,11 @@ rmt_ps_red_create(struct rina_component * component)
 						policy_param_name(ps_param),
 						policy_param_value(ps_param));
 
-        ps->max_q_policy_tx = NULL; /* default (== NULL) */
-        ps->max_q_policy_rx = NULL; /* default (== NULL) */
-        ps->rmt_q_monitor_policy_tx_enq = NULL; /* default (== NULL) */
-        ps->rmt_q_monitor_policy_tx_deq = NULL; /* default (== NULL) */
-        ps->rmt_q_monitor_policy_rx = NULL; /* default (== NULL) */
-        ps->rmt_next_scheduled_policy_tx = red_rmt_next_scheduled_policy_tx;
-        ps->rmt_enqueue_scheduling_policy_tx = red_rmt_enqueue_scheduling_policy_tx;
-	ps->rmt_requeue_scheduling_policy_tx = red_rmt_enqueue_scheduling_policy_tx;
-        ps->rmt_scheduling_create_policy_tx  = red_rmt_scheduling_create_policy_tx;
-        ps->rmt_scheduling_destroy_policy_tx = red_rmt_scheduling_destroy_policy_tx;
+        ps->rmt_enqueue_policy = red_rmt_enqueue_policy;
+        ps->rmt_dequeue_policy = red_rmt_dequeue_policy;
+	ps->rmt_q_create_policy = red_rmt_q_create_policy;
+	ps->rmt_q_destroy_policy = red_rmt_q_destroy_policy;
+        ps->rmt_needs_sched_policy = red_rmt_needs_sched_policy;
 
         return &ps->base;
 }
