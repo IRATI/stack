@@ -128,11 +128,6 @@ default_closed_window(struct dtp_ps * ps, struct pdu * pdu)
 		return 0;
 	}
 
-	// Go on flow control overrun on rate based...
-	//if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
-		// Do nothing...
-	//}
-
 	ASSERT(ps->snd_flow_control_overrun);
 
 	if (ps->snd_flow_control_overrun(ps, pdu)) {
