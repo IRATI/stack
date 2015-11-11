@@ -1378,6 +1378,10 @@ static int parse_dt_cons(struct nlattr *  attr,
                 dt_cons->max_pdu_life =
                         nla_get_u32(attrs[DTC_ATTR_MAX_PDU_LIFE]);
 
+        /* FIXME: To modify once this field are supported by rnl. */
+        dt_cons->rate = 4;
+        dt_cons->frame = 4;
+
         dt_cons->dif_integrity = nla_get_flag(attrs[DTC_ATTR_DIF_INTEGRITY]);
 
         return 0;

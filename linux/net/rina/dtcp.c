@@ -924,7 +924,8 @@ static int populate_ctrl_pci(struct pci *  pci,
 
                         pci_control_new_left_wind_edge_set(pci, LWE);
                         pci_control_new_rt_wind_edge_set(pci,
-                                                         rcvr_rt_wind_edge(dtcp));
+				rcvr_rt_wind_edge(dtcp));
+
                         pci_control_my_left_wind_edge_set(pci, snd_lft);
                         pci_control_my_rt_wind_edge_set(pci, snd_rt);
                 }

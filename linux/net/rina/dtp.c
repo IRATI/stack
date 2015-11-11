@@ -1611,10 +1611,6 @@ int dtp_receive(struct dtp * instance,
         LOG_DBG("DTP Received PDU %u (CPU: %d)",
                 seq_num, smp_processor_id());
 
-        if(ps && ps->rx_control) {
-        	ps->rx_control(ps, pdu);
-        }
-
          if (instance->sv->drf_required) {
 #if DTP_INACTIVITY_TIMERS_ENABLE
                 /* Start ReceiverInactivityTimer */

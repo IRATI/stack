@@ -155,6 +155,7 @@ default_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
                 LOG_ERR("No PCI passed, cannot run policy");
                 return -1;
         }
+
         pdu = pdu_ctrl_generate(dtcp, PDU_TYPE_FC);
         if (!pdu)
                 return -1;
@@ -163,7 +164,7 @@ default_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         dump_we(dtcp, pdu_pci_get_rw(pdu));
 
         if (dtcp_pdu_send(dtcp, pdu))
-                return -1;
+               return -1;
 
         return 0;
 }
@@ -208,19 +209,13 @@ default_rate_reduction(struct dtcp_ps * ps, const struct pci * pci) {
 	rt = pci_control_sndr_rate(pci);
 	tf = pci_control_time_frame(pci);
 
-	// HACK: Consider 0 time frame an error and do not update fields.
 	if(rt == 0 || tf == 0) {
-	       LOG_WARN("HACK received rate: %u, time: %u",
-	       rt, tf);
-
 	       return 0;
 	}
 
-	// Adjust rates.
 	dtcp_sndr_rate_set(dtcp, rt);
 	dtcp_rcvr_rate_set(dtcp, rt);
 
-	// Adjust time frame.
 	dtcp_time_frame_set(dtcp, pci_control_time_frame(pci));
 
 	LOG_DBG("DTCP: %pK", dtcp);
