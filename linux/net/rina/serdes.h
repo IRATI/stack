@@ -46,7 +46,10 @@ struct pdu *           pdu_deserialize_ni(const struct serdes * instance,
                                           struct dup_config_entry * dup_conf,
                                           struct crypto_blkcipher * blkcipher);
 
-// Computes the size of the PCI ONLY given the type and dt configuration.
-// HACK warning here... see it's implementation for details.
-int 			serdes_pci_size(pdu_type_t type);
+/* Get the size in bytes of the pci. Returns -1 on error.*/
+int 		       serdes_pci_size(pdu_type_t type, struct dt_cons * c);
+
+/* Get the size in bytes of the pdu. Returns -1 on error. */
+int 		       serdes_pdu_size(struct pdu * p, struct dt_cons * c);
+
 #endif

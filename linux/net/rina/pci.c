@@ -68,7 +68,6 @@ struct pci {
                 seq_num_t new_lf_wind_edge;
                 seq_num_t my_lf_wind_edge;
                 seq_num_t my_rt_wind_edge;
-                // Rate-based FC.
 		u_int32_t sndr_rate;
 		u_int32_t time_frame;
         } control;

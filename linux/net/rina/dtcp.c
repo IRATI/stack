@@ -328,10 +328,6 @@ int dtcp_sndr_rate_set(struct dtcp * dtcp, uint_t rate)
 	}
 
 	spin_lock_irqsave(&dtcp->sv->lock, flags);
-	// For debugging purposes of the review only!
-	if(dtcp->sv->sndr_rate != rate) {
-		LOG_WARN(" ECNL Rate adjusted to %u", rate);
-	}
 	dtcp->sv->sndr_rate = rate;
 	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 
@@ -525,10 +521,6 @@ int dtcp_rate_fc_reset(struct dtcp * dtcp, struct timespec * now)
 	}
 
 	spin_lock_irqsave(&dtcp->sv->lock, flags);
-	// Let me debug this.
-	LOG_DBG("rbfc: Renewing rate after %lu:%lu",
-		now->tv_sec - dtcp->sv->last_time.tv_sec,
-		now->tv_nsec - dtcp->sv->last_time.tv_nsec);
 	dtcp->sv->pdus_sent_in_time_unit = 0;
 	dtcp->sv->pdus_rcvd_in_time_unit = 0;
 	dtcp->sv->last_time.tv_sec = now->tv_sec;
@@ -941,11 +933,10 @@ static int populate_ctrl_pci(struct pci *  pci,
                 	rt = dtcp_sndr_rate(dtcp);
                 	tf = dtcp_time_frame(dtcp);
 
-                	LOG_DBG("rbfc Populating control pci with rate "
+                	LOG_DBG("Populating control pci with rate "
                 		"settings, rate: %u, time: %u",
                 		rt, tf);
 
-                	// Just fill up the header fields.
                         pci_control_sndr_rate_set(pci, rt);
                         pci_control_time_frame_set(pci, tf);
                 }
@@ -1128,13 +1119,10 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
         rt = pci_control_sndr_rate(pci);
         tf = pci_control_time_frame(pci);
 
-        // Is this a window based control flow?
         if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
         	snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
-        	dt_sv_window_closed_set(dtcp->parent, false);
         }
 
-        // Is this a rate based control flow?
         if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
 		if(tf && rt) {
 			dtcp_sndr_rate_set(dtcp, rt);
@@ -1183,15 +1171,11 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         	ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
         rcu_read_unlock();
 
-        // Window based flow control?
 	if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
-		// Window based. Why not separated?
-		// Not a problem in the end; the fields are always there.
 		snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
 		LOG_DBG("Right Window Edge: %u", snd_rt_wind_edge(dtcp));
 	}
 
-        // Rate based, if any.
 	if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
 	        rt = pci_control_sndr_rate(pci);
 	        tf = pci_control_time_frame(pci);
@@ -1199,13 +1183,9 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
 	        if(tf && rt) {
 			dtcp_sndr_rate_set(dtcp, rt);
 			dtcp_time_frame_set(dtcp, tf);
-			LOG_DBG("rbfc Rate based fields sets on flow ctl and "
+			LOG_DBG("Rate based fields sets on flow ctl and "
 				"ack, rate: %u, time: %u",
 				rt, tf);
-	        } else {
-	        	LOG_WARN("HACK executed, received rate: %u, time: %u",
-				rt, tf);
-			//return 0;
 	        }
 	}
 
@@ -1578,7 +1558,7 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
                 if (ps->flowctrl.rate_based) {
                         instance->sv->sndr_rate =
                                 ps->flowctrl.rate.sending_rate;
-			// Do like this until we have a separate rate in config.
+
 			instance->sv->rcvr_rate =
                                 instance->sv->sndr_rate;
                         instance->sv->time_unit =
@@ -2052,12 +2032,12 @@ int dtcp_ps_unpublish(const char * name)
 { return ps_unpublish(&policy_sets, name); }
 EXPORT_SYMBOL(dtcp_ps_unpublish);
 
-// Returns the ms represented by the timespec given.
+/* Returns the ms represented by the timespec given. */
 unsigned long dtcp_ms(struct timespec * ts) {
 	return (ts->tv_sec * 1000) + (ts->tv_nsec / 1000000);
 }
 
-// Is the given rate exceeded? Reset if the time frame given elapses.
+/* Is the given rate exceeded? Reset if the time frame given elapses. */
 bool dtcp_rate_exceeded(struct dtcp * dtcp, int send) {
 	struct timespec now  = {0, 0};
 	struct timespec last = {0, 0};
@@ -2065,19 +2045,15 @@ bool dtcp_rate_exceeded(struct dtcp * dtcp, int send) {
 	uint_t rate = 0;
 	uint_t lim = 0;
 
-	// Get and compute the elapsed time.
 	dtcp_last_time(dtcp, &last);
 	getnstimeofday(&now);
 	sub = timespec_sub(now, last);
 
-	// More than the given time-frame passed.
 	if (dtcp_ms(&sub) >= dtcp_time_frame(dtcp))
 	{
-		// Reset the credit and all the other things.
 		dtcp_rate_fc_reset(dtcp, &now);
 	}
 
-	// Direction: send or receive?
 	if (send) {
 		rate = dtcp_sent_itu(dtcp);
 		lim = dtcp_sndr_rate(dtcp);
@@ -2086,7 +2062,6 @@ bool dtcp_rate_exceeded(struct dtcp * dtcp, int send) {
 		lim = dtcp_rcvr_rate(dtcp);
 	}
 
-	// Check if the given credit has expired.
 	if (rate >= lim)
 	{
 		LOG_DBG("rbfc: Rate exceeded, send: %d, rate: %d, lim: %d",

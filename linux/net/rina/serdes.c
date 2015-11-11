@@ -127,8 +127,7 @@ static int base_pci_size(const struct dt_cons * dt_cons)
 static int fc_pci_size(const struct dt_cons * dt_cons)
 {
         return 3 * dt_cons->seq_num_length +
-		RATE_LEN + TIME_LEN;
-                //dt_cons->rate + dt_cons->frame;
+                dt_cons->rate + dt_cons->frame;
 }
 
 static int serialize_base_pci(const struct serdes * instance,
@@ -1122,24 +1121,18 @@ struct pdu * pdu_deserialize_ni(const struct serdes * instance,
 { return pdu_deserialize_gfp(GFP_ATOMIC, instance, pdu, dup_conf, blkcipher); }
 EXPORT_SYMBOL(pdu_deserialize_ni);
 
-// Kewin: Fix my hardcoded crap.
-int serdes_pci_size(pdu_type_t type) {
-	//struct dt_conf * dtc = s->dt_cons;
-	int seqn = 4;
-	int addr = 2;
-	int len  = 2;
-	int cep  = 2;
-	int qos  = 2;
-	//int port = 2;
+int serdes_pci_size(pdu_type_t type, struct dt_cons * c) {
+	int seqn;
+	int rate;
+	int base;
 
-	int base = //base_pci_size(dtc);
-		VERSION_SIZE	+
-		2 * addr	+
-		qos		+
-		2 * cep		+
-		PDU_TYPE_SIZE	+
-		FLAGS_SIZE	+
-		len;
+	if(!c) {
+		return -1;
+	}
+
+	seqn = c->seq_num_length;
+	rate = c->rate;
+	base = base_pci_size(c);
 
 	switch(type) {
 	case PDU_TYPE_DT:
@@ -1149,7 +1142,7 @@ int serdes_pci_size(pdu_type_t type) {
 		base +=
 			2 * CTRL_SEQ_NR +
 			4 * seqn +
-			RATE_LEN;
+			rate;
 		break;
 	case PDU_TYPE_ACK:
 		base += CTRL_SEQ_NR + seqn;
@@ -1157,21 +1150,14 @@ int serdes_pci_size(pdu_type_t type) {
 	case PDU_TYPE_NACK:
 		break;
 	case PDU_TYPE_FC:
-		base += CTRL_SEQ_NR + //fc_pci_size(dtc);
-			(3 * seqn) +
-			RATE_LEN +
-			TIME_LEN;
+		base += CTRL_SEQ_NR + fc_pci_size(c);
 
 		break;
 	case PDU_TYPE_ACK_AND_FC:
 		base +=
 			CTRL_SEQ_NR +
-			//fc_pci_size(dtc) +
-			(3 * seqn) +
-			RATE_LEN +
-			TIME_LEN +
+			fc_pci_size(c) +
 			seqn;
-			//dtc->seq_num_length;
 		break;
 	case PDU_TYPE_NACK_AND_FC:
 		break;
@@ -1184,10 +1170,30 @@ int serdes_pci_size(pdu_type_t type) {
 	case PDU_TYPE_SNACK_AND_FC:
 		break;
 	case PDU_TYPE_MGMT:
-		base += seqn; //dtc->seq_num_length;
+		base += seqn;
 		break;
 	}
 
 	return base;
 }
 EXPORT_SYMBOL(serdes_pci_size);
+
+int serdes_pdu_size(struct pdu * p, struct dt_cons * c) {
+	struct buffer * b = 0;
+	struct pci * pci = 0;
+
+	if(!p || !c) {
+		return -1;
+	}
+
+	b = pdu_buffer_get_ro(p);
+	pci = pdu_pci_get_ro(p);
+
+	if(!pci || !b) {
+		return -1;
+	}
+
+	return buffer_length(b) +
+		serdes_pci_size(pci_type(pci), c);
+}
+EXPORT_SYMBOL(serdes_pdu_size);

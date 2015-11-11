@@ -39,6 +39,7 @@
 #include "ps-factory.h"
 #include "dtp-ps.h"
 #include "policies.h"
+#include "serdes.h"
 
 static struct policy_set_list policy_sets = {
         .head = LIST_HEAD_INIT(policy_sets.head)
@@ -838,16 +839,13 @@ static unsigned int msec_to_next_rate(uint time_frame, struct timespec * last) {
 	next.tv_sec = last->tv_sec;
 	next.tv_nsec = last->tv_nsec;
 
-	// Consume the seconds.
 	while(time_frame >= 1000) {
 		next.tv_sec += 1;
 		time_frame -= 1000;
 	}
 
-	// Add the nano-seconds.
 	next.tv_nsec += time_frame * 1000000;
 
-	// Consume eventual seconds store in the nsec field.
 	if(next.tv_nsec > 1000000000L) {
 		next.tv_sec += 1;
 		next.tv_nsec -= 1000000000L;
@@ -856,24 +854,15 @@ static unsigned int msec_to_next_rate(uint time_frame, struct timespec * last) {
 	getnstimeofday(&now);
 
 	diff = timespec_sub(next, now);
-	ret = (diff.tv_sec * 1000) + 		// Sec to msec
-		(diff.tv_nsec / 1000000); 	// Nsec to msec.
-
-	// Avoid to go wait more than a time frame.
-	//if(ret > time_frame * 1000) {
-	//	ret = time_frame * 1000;
-	//}
-
-	// Wait at least 1 msec.
-	//if(ret == 0) {
-	//	ret++;
-	//}
+	ret = (diff.tv_sec * 1000) +
+		(diff.tv_nsec / 1000000);
 
 	return ret;
 }
 
-// Does not start the timer(return false) if it's not necessary and work can be
-// done.
+/* Does not start the timer(return false) if it's not necessary and work can be
+ * done.
+ */
 void dtp_start_rate_timer(struct dtp * dtp, struct dtcp * dtcp) {
 	uint rtf = dtcp_time_frame(dtcp);
 	uint tf = 0;
@@ -883,15 +872,12 @@ void dtp_start_rate_timer(struct dtp * dtp, struct dtcp * dtcp) {
 		dtcp_last_time(dtcp, &t);
 		tf = msec_to_next_rate(rtf, &t);
 
-		LOG_DBG("rbfc Rate based timer start, time %u msec, "
+		LOG_DBG("Rate based timer start, time %u msec, "
 			"last: %lu:%lu",
 			tf,
 			t.tv_sec,
 			t.tv_nsec);
 
-		// NOTE: For the moment our metric is based on seconds.
-		// This is due the way of getting precise time by
-		// kernel, which returns second and nanoseconds.
 		rtimer_start(dtp->timers.rate_window, tf);
 	} else {
 		LOG_DBG("rbfc Rate based timer is still pending...");
@@ -918,16 +904,12 @@ static void tf_rate_window(void * o)
         LOG_DBG("rbfc Timer job start...");
         LOG_DBG("rbfc Re-opening the rate mechanism");
 
-        // Timer resets, reset all the status.
 	getnstimeofday(&now);
-	// Port enabled. This crash everything.
+
 	efcp_enable_write(dt_efcp(dtp_dt(dtp)));
-	// Rate fulfiled flag.
 	dtp_sv_rate_fulfiled_set(dtp, false);
-	// Rate limits.
 	dtcp_rate_fc_reset(dtcp, &now);
 
-	// Now that is open flush what has been enqueued.
 	q = dt_cwq(dtp->parent);
 	cwq_deliver(q,
 	    dtp->parent,
@@ -1232,9 +1214,6 @@ static bool window_is_closed(struct dtp *    dtp,
         sv = dtp->sv;
         ASSERT(sv);
 
-        //if (dt_sv_window_closed(dt) || dtp_sv_rate_fulfiled(dtp))
-	//      return true;
-
         wb = sv->window_based;
         if (wb && seq_num > dtcp_snd_rt_win(dtcp)) {
                 dt_sv_window_closed_set(dt, true);
@@ -1248,7 +1227,6 @@ static bool window_is_closed(struct dtp *    dtp,
         		dtp_start_rate_timer(dtp, dtcp);
 			r_ret = true;
 		} else {
-			// Only if the window is closed!
 			if (dtp_sv_rate_fulfiled(dtp)) {
 				LOG_DBG("rbfc Re-opening the rate mechanism");
 				dtp_sv_rate_fulfiled_set(dtp, false);
@@ -1258,7 +1236,6 @@ static bool window_is_closed(struct dtp *    dtp,
 
         retval = (w_ret || r_ret);
 
-        // Both the mechanism are signaling a conflict?
         if(w_ret && r_ret)
         	retval = ps->reconcile_flow_conflict(ps);
 
@@ -1278,8 +1255,12 @@ int dtp_write(struct dtp * instance,
         struct dtp_ps *         ps;
         seq_num_t               sn, csn;
         struct efcp *           efcp;
-        uint_t sz;
+        int sz;
         uint_t sc;
+
+	struct dt_cons *	dc = 0;
+	struct efcp_container *	ec = 0;
+	struct efcp_config *	ef = 0;
 
         if (!sdu_is_ok(sdu))
                 return -1;
@@ -1303,6 +1284,15 @@ int dtp_write(struct dtp * instance,
                 sdu_destroy(sdu);
                 return -1;
         }
+
+        if(efcp) {
+		ec = efcp_container_get(efcp);
+
+		if(ec) {
+			ef = efcp_container_config(ec);
+			dc = ef->dt_cons;
+		}
+	}
 
         /* State Vector must not be NULL */
         sv = instance->sv;
@@ -1417,16 +1407,17 @@ int dtp_write(struct dtp * instance,
 				return 0;
 			}
 			if(sv->rate_based) {
-				sz = pdu_length(pdu);
+				sz = serdes_pdu_size(pdu, dc);
 				sc = dtcp_sent_itu(dtcp);
 
-				// Size will consume the credit.
-				if (sz + sc >= dtcp_sndr_rate(dtcp)) {
-					dtcp_sent_itu_set(
-						dtcp,
-						dtcp_sndr_rate(dtcp));
-				} else {
-					dtcp_sent_itu_inc(dtcp, sz);
+				if(sz >= 0) {
+					if (sz + sc >= dtcp_sndr_rate(dtcp)) {
+						dtcp_sent_itu_set(
+							dtcp,
+							dtcp_sndr_rate(dtcp));
+					} else {
+						dtcp_sent_itu_inc(dtcp, sz);
+					}
 				}
 			}
                 }
@@ -1504,7 +1495,7 @@ static bool is_drf_required(struct dtp * dtp)
 */
 
 static bool is_fc_overrun(
-	struct dt * dt, struct dtcp * dtcp, seq_num_t seq_num, uint_t pdul)
+	struct dt * dt, struct dtcp * dtcp, seq_num_t seq_num, int pdul)
 {
         bool to_ret, w_ret = false, r_ret = false;
 
@@ -1516,9 +1507,9 @@ static bool is_fc_overrun(
         }
 
         if (dtcp_rate_based_fctrl(dtcp_config_get(dtcp))){
-        	//r_ret = dtcp_rate_exceeded(dtcp, 0);
-        	// Just increment; don't block all during the receiving phase.
-		dtcp_recv_itu_inc(dtcp, pdul);
+        	if(pdul >= 0) {
+        		dtcp_recv_itu_inc(dtcp, pdul);
+        	}
         }
 
         to_ret = w_ret || r_ret;
@@ -1550,6 +1541,11 @@ int dtp_receive(struct dtp * instance,
         struct rqueue *  to_post;
         /*struct rqueue *       to_post;*/
 
+	struct dt_cons *	dc = 0;
+	struct efcp_container *	ec = 0;
+	struct efcp_config *	ef = 0;
+	struct efcp *		efcp = 0;
+
         LOG_DBG("DTP receive started...");
 
         if (!pdu_is_ok(pdu)) {
@@ -1579,6 +1575,16 @@ int dtp_receive(struct dtp * instance,
 
         dtcp = dt_dtcp(dt);
 
+	efcp = dt_efcp(dt);
+        if(efcp) {
+        	ec = efcp_container_get(efcp);
+
+        	if(ec) {
+        		ef = efcp_container_config(ec);
+			dc = ef->dt_cons;
+        	}
+        }
+
         if (!pdu_pci_present(pdu)) {
                 LOG_DBG("Couldn't find PCI in PDU");
                 pdu_destroy(pdu);
@@ -1605,9 +1611,7 @@ int dtp_receive(struct dtp * instance,
         LOG_DBG("DTP Received PDU %u (CPU: %d)",
                 seq_num, smp_processor_id());
 
-        // Rx control is defined?
         if(ps && ps->rx_control) {
-        	// Do not care return value.
         	ps->rx_control(ps, pdu);
         }
 
@@ -1650,7 +1654,7 @@ int dtp_receive(struct dtp * instance,
          *   they are not, LWE is not updated and always 0
          */
         if ((seq_num <= LWE) || (is_fc_overrun(
-		dt, dtcp, seq_num, pdu_length(pdu))))
+		dt, dtcp, seq_num, serdes_pdu_size(pdu, dc))))
         {
 
                 pdu_destroy(pdu);

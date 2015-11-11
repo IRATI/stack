@@ -37,6 +37,7 @@
 #include "dtp.h"
 #include "rmt.h"
 #include "dtp-ps.h"
+#include "serdes.h"
 
 #define RTIMER_ENABLED 1
 
@@ -296,8 +297,13 @@ void cwq_deliver(struct cwq * queue,
         bool                    flow_ctrl;
 
         bool			rate_ctrl = false;
-        uint_t 			sz = 0;
+        int 			sz = 0;
 	uint_t 			sc = 0;
+
+	struct dt_cons *	dc = 0;
+	struct efcp_container * ec = 0;
+	struct efcp_config * 	ef = 0;
+	struct efcp *		efcp = 0;
 
         if (!queue)
                 return;
@@ -311,6 +317,18 @@ void cwq_deliver(struct cwq * queue,
         dtcp = dt_dtcp(dt);
         if (!dtcp)
                 return;
+
+        efcp = dt_efcp(dt);
+
+        /* Oh god why... */
+        if(efcp) {
+        	ec = efcp_container_get(efcp);
+
+        	if(ec) {
+        		ef = efcp_container_config(ec);
+        		dc = ef->dt_cons;
+        	}
+        }
 
         rcu_read_lock();
         rtx_ctrl  = dtcp_ps_get(dtcp)->rtx_ctrl;
@@ -349,25 +367,20 @@ void cwq_deliver(struct cwq * queue,
                         }
                         rtxq_push_ni(rtxq, tmp);
                 }
-                // Maintain the rate while pumping out messages from the cwq.
                 if(rate_ctrl) {
-                	// Port is enabled.
-                	// if !enabled then enable should be better here.
-                	//efcp_enable_write(dt_efcp(dt));
-
-                	sz = pdu_length(pdu);
+                	sz = serdes_pdu_size(pdu, dc);
 			sc = dtcp_sent_itu(dtcp);
 
-			// Size will consume the credit.
-			if (sz + sc >= dtcp_sndr_rate(dtcp)) {
-				dtcp_sent_itu_set(
-					dtcp,
-					dtcp_sndr_rate(dtcp));
-				// Out of this cycle.
-				break;
-			} else {
-				// Simply increment the sent pdu rate.
-				dtcp_sent_itu_inc(dtcp, sz);
+			if(sz >= 0) {
+				if (sz + sc >= dtcp_sndr_rate(dtcp)) {
+					dtcp_sent_itu_set(
+						dtcp,
+						dtcp_sndr_rate(dtcp));
+
+					break;
+				} else {
+					dtcp_sent_itu_inc(dtcp, sz);
+				}
 			}
                 }
                 pci = pdu_pci_get_ro(pdu);
@@ -579,8 +592,14 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
         // Used by rbfc.
         struct dtp * 	    dtp;
         struct dtcp *	    dtcp;
-        uint_t sz;
+
+        int sz;
 	uint_t sc;
+
+	struct dt_cons *	dc = 0;
+	struct efcp_container *	ec = 0;
+	struct efcp_config *	ef = 0;
+	struct efcp *		efcp = 0;
 
         ASSERT(q);
         ASSERT(dt);
@@ -588,6 +607,17 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
 
         dtp = dt_dtp(dt);
         dtcp = dt_dtcp(dt);
+
+	efcp = dt_efcp(dt);
+
+        if(efcp) {
+        	ec = efcp_container_get(efcp);
+
+        	if(ec) {
+        		ef = efcp_container_config(ec);
+        		dc = ef->dt_cons;
+        	}
+        }
 
         /*
          * FIXME: this should be change since we are sending in inverse order
@@ -603,32 +633,26 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
                                 rtxq_entry_destroy(cur);
                                 continue;
                         }
-                        // Rate-limit also retx.
-			// Before heavy duplication of the pdu.
 			if(dtp &&
 				dtcp &&
 				dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
 
-				sz = pdu_length(cur->pdu);
+				sz = serdes_pdu_size(cur->pdu, dc);
 				sc = dtcp_sent_itu(dtcp);
 
-				// Size will consume the credit.
-				if (sz + sc >= dtcp_sndr_rate(dtcp)) {
-					dtcp_sent_itu_set(
-						dtcp,
-						dtcp_sndr_rate(dtcp));
-				} else {
-					// Simply increment the sent pdu rate.
-					dtcp_sent_itu_inc(dtcp, sz);
+				if(sz >= 0) {
+					if (sz + sc >= dtcp_sndr_rate(dtcp)) {
+						dtcp_sent_itu_set(
+							dtcp,
+							dtcp_sndr_rate(dtcp));
+					} else {
+						dtcp_sent_itu_inc(dtcp, sz);
+					}
 				}
 
 				if(dtcp_rate_exceeded(dtcp, 1)) {
-					// Do not consume the retries.
 					dtp_sv_rate_fulfiled_set(dtp, true);
 					dtp_start_rate_timer(dtp, dtcp);
-
-					// Cannot use anymore that port.
-					//efcp_disable_write(dt_efcp(dt));
 					break;
 				}
 			}
@@ -738,8 +762,13 @@ static int rtxqueue_rtx(struct rtxqueue * q,
         // Used by rbfc.
         struct dtp *        dtp;
         struct dtcp *	    dtcp;
-        uint_t sz;
+        int sz;
         uint_t sc;
+
+	struct dt_cons *	dc = 0;
+	struct efcp_container *	ec = 0;
+	struct efcp_config *	ef = 0;
+	struct efcp *		efcp = 0;
 
         ASSERT(q);
         ASSERT(dt);
@@ -747,6 +776,17 @@ static int rtxqueue_rtx(struct rtxqueue * q,
 
         dtp = dt_dtp(dt);
         dtcp = dt_dtcp(dt);
+
+	efcp = dt_efcp(dt);
+
+        if(efcp) {
+        	ec = efcp_container_get(efcp);
+
+        	if(ec) {
+        		ef = efcp_container_config(ec);
+        		dc = ef->dt_cons;
+        	}
+        }
 
         tr_jiffies = msecs_to_jiffies(tr);
 
@@ -765,32 +805,26 @@ static int rtxqueue_rtx(struct rtxqueue * q,
                                 rtxq_entry_destroy(cur);
                                 continue;
                         }
-                        // Rate-limit also retx.
-                        // Before heavy duplication of the pdu.
                         if(dtp &&
 				dtcp &&
 				dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
 
-                        	sz = pdu_length(cur->pdu);
+                        	sz = serdes_pdu_size(cur->pdu, dc);
 				sc = dtcp_sent_itu(dtcp);
 
-				// Size will consume the credit.
-				if (sz + sc >= dtcp_sndr_rate(dtcp)) {
-					dtcp_sent_itu_set(
-						dtcp,
-						dtcp_sndr_rate(dtcp));
-				} else {
-					// Simply increment the sent pdu rate.
-					dtcp_sent_itu_inc(dtcp, sz);
+				if(sz >= 0) {
+					if (sz + sc >= dtcp_sndr_rate(dtcp)) {
+						dtcp_sent_itu_set(
+							dtcp,
+							dtcp_sndr_rate(dtcp));
+					} else {
+						dtcp_sent_itu_inc(dtcp, sz);
+					}
 				}
 
 				if(dtcp_rate_exceeded(dtcp, 1)) {
-					// Do not consume the retries.
 					dtp_sv_rate_fulfiled_set(dtp, true);
 					dtp_start_rate_timer(dtp, dtcp);
-
-					// Cannot use anymore that port.
-					//efcp_disable_write(dt_efcp(dt));
 					break;
 				}
                         }

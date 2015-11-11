@@ -103,66 +103,22 @@ int              dtcp_srtt_set(struct dtcp * dtcp, uint_t srtt);
 uint_t           dtcp_rttvar(struct dtcp * dtcp);
 int              dtcp_rttvar_set(struct dtcp * dtcp, uint_t rttvar);
 
-// Get the unit to send per time frame.
-uint_t dtcp_time_frame(struct dtcp * dtcp);
-
-// Set a new value to the unit to send per time frame.
-// The value to set in in seconds.
-// 0 on success.
-int dtcp_time_frame_set(struct dtcp * dtcp, uint_t sec);
-
-// Fills the given timespec structure with the values read from the state
-// vector. Returns 0 on success.
-int dtcp_last_time(struct dtcp * dtcp, struct timespec * s);
-
-// Set the state vector last_time using given arguments values.
-// Returns 0 on success.
-int dtcp_last_time_set(struct dtcp * dtcp, struct timespec * s);
-
-// Get the actual sender rate.
-uint_t dtcp_sndr_rate(struct dtcp * dtcp);
-
-// Set the actual sender rate credit.
-// 0 on success.
-int dtcp_sndr_rate_set(struct dtcp * dtcp, uint_t rate);
-
-// Get the actual allowed receive rate.
-uint_t dtcp_rcvr_rate(struct dtcp * dtcp);
-
-// Set the actual received rate credit.
-// 0 on success.
-int dtcp_rcvr_rate_set(struct dtcp * dtcp, uint_t rate);
-
-// Obtain the recv units per time unit.
-uint_t dtcp_recv_itu(struct dtcp * dtcp);
-
-// Set the recv units per time unit.
-// 0 on success.
-int dtcp_recv_itu_set(struct dtcp * dtcp, uint_t recv);
-
-// Increment by 'recv' the number of unit received per time.
-// 0 on success.
-int dtcp_recv_itu_inc(struct dtcp * dtcp, uint_t recv);
-
-// Get the number of unit sent per time unit.
-uint_t dtcp_sent_itu(struct dtcp * dtcp);
-
-// Set the number of unit sent per time unit.
-// 0 on success.
-int dtcp_sent_itu_set(struct dtcp * dtcp, uint_t sent);
-
-// Increment by 'sent' the number of unit sent per time.
-// 0 on success.
-int dtcp_sent_itu_inc(struct dtcp * dtcp, uint_t sent);
-
-// Performs the necessary steps to reset the state of the sv for rate based
-// flow control in one step(only one lock and unlock).
-// 0 on success.
-int dtcp_rate_fc_reset(struct dtcp * dtcp, struct timespec * now);
-
-// Check if rate flow control conditions are exceeded. Reset the credit if the
-// time frame is elapsed. send at 0 for recv conditions.
-bool dtcp_rate_exceeded(struct dtcp * dtcp, int send);
+uint_t 		 dtcp_time_frame(struct dtcp * dtcp);
+int 		 dtcp_time_frame_set(struct dtcp * dtcp, uint_t sec);
+int 		 dtcp_last_time(struct dtcp * dtcp, struct timespec * s);
+int 		 dtcp_last_time_set(struct dtcp * dtcp, struct timespec * s);
+uint_t 		 dtcp_sndr_rate(struct dtcp * dtcp);
+int 		 dtcp_sndr_rate_set(struct dtcp * dtcp, uint_t rate);
+uint_t 		 dtcp_rcvr_rate(struct dtcp * dtcp);
+int 		 dtcp_rcvr_rate_set(struct dtcp * dtcp, uint_t rate);
+uint_t 		 dtcp_recv_itu(struct dtcp * dtcp);
+int 		 dtcp_recv_itu_set(struct dtcp * dtcp, uint_t recv);
+int 		 dtcp_recv_itu_inc(struct dtcp * dtcp, uint_t recv);
+uint_t 		 dtcp_sent_itu(struct dtcp * dtcp);
+int 		 dtcp_sent_itu_set(struct dtcp * dtcp, uint_t sent);
+int 		 dtcp_sent_itu_inc(struct dtcp * dtcp, uint_t sent);
+int 		 dtcp_rate_fc_reset(struct dtcp * dtcp, struct timespec * now);
+bool 		 dtcp_rate_exceeded(struct dtcp * dtcp, int send);
 
 /* end SDK */
 
