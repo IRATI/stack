@@ -1,0 +1,29 @@
+package rina.messages;
+option optimize_for = LITE_RUNTIME;
+
+message difProperties_t {
+	optional int32 max_sdu_size = 1;	// Maximum SDU size
+	optional string dif_name = 2;		// DIF name
+}
+
+// Values for the flags field.
+enum flowStateValues_t {
+	FLOW_ALLOCATION_REQUESTED = 0;		
+	FLOW_ALLOCATED = 1;				
+	FLOW_DEALLOCATION_REQUESTED = 2;
+	FLOW_DEALLOCATED = 3;			
+}
+
+message flowInformation_t {
+	optional string local_apn = 1;		// Local app process name
+	optional string local_api = 2;		// Local app process instance
+	optional string local_aen = 3;		// Local app entity name
+	optional string local_aei = 4;		// Local app entity instance
+	optional string remote_apn = 5;		// Remote app process name
+	optional string remote_api = 6;		// Remote app process instance
+	optional string remote_aen = 7;		// Remote app entity name
+	optional string remote_aei = 8;		// Remote app entity instance
+	optional string dif_name = 9;		// The DIF that provides the flow
+	optional int32  port_id = 10;		// The port-id of the flow
+	optional flowStateValues_t state = 11;	// The state of the flow
+}
