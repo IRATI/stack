@@ -376,9 +376,9 @@ protected:
 			const cdap_rib::filt_info_t &filt,
 			const int invoke_id);
 	void read_request(const cdap_rib::con_handle_t &con,
-			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::filt_info_t &filt,
-			const int invoke_id);
+			  const cdap_rib::obj_info_t &obj,
+			  const cdap_rib::filt_info_t &filt,
+			  const int invoke_id);
 	void cancel_read_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::filt_info_t &filt,
@@ -423,6 +423,11 @@ private:
 
 	//Number of objects that delegate
 	unsigned int num_of_deleg;
+
+	void get_objects_to_operate(const int64_t object_id,
+				    int scope,
+				    char* filter,
+				    std::list<RIBObj*>& objects);
 
 	//@internal only; must be called with the rwlock acquired
 	RIBObj* get_obj(int64_t inst_id);
@@ -661,7 +666,7 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 	obj_reply.value_.message_ = NULL;
 
 	cdap_rib::res_info_t res;
-	RIBObj* rib_obj = NULL;
+	std::list<RIBObj*> objects;
 
 	/* RAII scope for RIB scoped lock (read) */
 	{
@@ -669,16 +674,40 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 		ReadScopedLock rlock(rwlock);
 
 		int64_t id = get_obj_inst_id(obj.name_);
-		rib_obj = get_obj(id);
 
-		//Acquire the read lock over the object (make sure it is not
-		//deleted while we process the operation)
-		if(rib_obj)
-			rib_obj->rwlock.readlock();
+		//Get all objects affected by the operation
+		get_objects_to_operate(id,
+				       filt.scope_,
+				       filt.filter_,
+				       objects);
 	} //RAII
 
-	/* RAII scope for OBJ scoped lock(read) */
-	if(rib_obj){
+	if(objects.size() == 0){
+		if (invoke_id != 0) {
+			res.code_ = cdap_rib::CDAP_INVALID_OBJ;
+
+			try {
+				cdap_provider->send_read_result(con,
+								obj_reply,
+								flags,
+								res,
+								invoke_id);
+			} catch (Exception &e) {
+				LOG_ERR("Unable to send response for invoke id %d",
+						invoke_id);
+			}
+		}
+
+		return;
+	}
+
+	std::list<RIBObj*>::iterator it;
+	RIBObj* rib_obj = NULL;
+	unsigned int count = 0;
+	for (it = objects.begin(); it != objects.end(); ++it) {
+		rib_obj = *it;
+		count++;
+
 		//Mutual exclusion
 		ReadScopedLock rlock(rib_obj->rwlock, false);
 
@@ -689,23 +718,27 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 			      invoke_id,
 			      obj_reply,
 			      res);
-	} else {
-		res.code_ = cdap_rib::CDAP_INVALID_OBJ;
-	} //RAII
 
-	if (res.code_ == cdap_rib::CDAP_PENDING ||
-			invoke_id == 0)
-		return;
+		if (res.code_ == cdap_rib::CDAP_PENDING ||
+				invoke_id == 0)
+			continue;
 
-	try {
-		cdap_provider->send_read_result(con,
-						obj_reply,
-						flags,
-						res,
-						invoke_id);
-	} catch (Exception &e) {
-		LOG_ERR("Unable to send response for invoke id %d",
+		try {
+			if (count == objects.size())
+				flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
+			else
+				flags.flags_ = cdap_rib::flags_t::F_RD_INCOMPLETE;
+			obj_reply.class_ = rib_obj->class_name;
+			obj_reply.name_ = rib_obj->fqn;
+			cdap_provider->send_read_result(con,
+							obj_reply,
+							flags,
+							res,
 							invoke_id);
+		} catch (Exception &e) {
+			LOG_ERR("Unable to send response for invoke id %d",
+					invoke_id);
+		}
 	}
 }
 
@@ -942,6 +975,39 @@ void RIB::stop_request(const cdap_rib::con_handle_t &con,
 		LOG_ERR("Unable to send response for invoke id %d",
 							invoke_id);
 	}
+}
+
+void RIB::get_objects_to_operate(const int64_t object_id,
+			         int scope,
+			         char * filter,
+			         std::list<RIBObj*>& objects)
+{
+	std::list<int64_t> *child_list = NULL;
+	RIBObj * rib_obj = NULL;
+
+	rib_obj = get_obj(object_id);
+	if (!rib_obj)
+		return;
+	//TODO apply filter
+
+	//Acquire the read lock over the object (make sure it is not
+	//deleted while we process the operation)
+	rib_obj->rwlock.readlock();
+	objects.push_back(rib_obj);
+
+	if (scope == 0)
+		return;
+
+	child_list = obj_inst_child_map[object_id];
+	if (!child_list || child_list->size() == 0)
+		return;
+
+	std::list<int64_t>::const_iterator it;
+	for(it = child_list->begin(); it != child_list->end(); ++it)
+		get_objects_to_operate(*it,
+				       scope - 1,
+				       filter,
+				       objects);
 }
 
 RIBObj* RIB::get_obj(int64_t inst_id){

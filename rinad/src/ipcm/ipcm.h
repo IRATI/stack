@@ -490,10 +490,12 @@ public:
         //
         // @ret IPCM_PENDING if the NL message could be sent to the IPCP,
         // IPCM_FAILURE otherwise
-	ipcm_res_t read_ipcp_ribobj(Addon* callee, Promise* promise,
-			      const unsigned short ipcp_id,
-			      const std::string& object_class,
-			      const std::string& object_name);
+	ipcm_res_t read_ipcp_ribobj(Addon* callee,
+				    Promise* promise,
+			      	    const unsigned short ipcp_id,
+			      	    const std::string& object_class,
+			      	    const std::string& object_name,
+			      	    int scope);
 
 	//
 	// Update policy-set catalog, with the plugins stored in

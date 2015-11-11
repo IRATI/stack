@@ -1366,10 +1366,12 @@ IPCManager_::update_catalog(Addon* callee)
 }
 
 ipcm_res_t
-IPCManager_::read_ipcp_ribobj(Addon* callee, Promise* promise,
+IPCManager_::read_ipcp_ribobj(Addon* callee,
+			      Promise* promise,
 			      const unsigned short ipcp_id,
 			      const std::string& object_class,
-			      const std::string& object_name)
+			      const std::string& object_name,
+			      int scope)
 {
 	IPCMIPCProcess * ipcp;
 	TransactionState* trans;
@@ -1391,6 +1393,7 @@ IPCManager_::read_ipcp_ribobj(Addon* callee, Promise* promise,
 		msg.obj_class_ = object_class;
 		msg.obj_name_ = object_name;
 		msg.invoke_id_ = 15;
+		msg.scope_ = scope;
 
 		trans = new TransactionState(callee, promise);
 		if(!trans){
