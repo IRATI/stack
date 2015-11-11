@@ -67,3 +67,36 @@ EXTRA_DIST +=                                   \
 protoSOURCES += auth-policies.pb.cc auth-policies.pb.h
 
 
+irm.stamp: irm.proto
+	rm -f irm.tmp
+	touch irm.tmp
+	$(PROTOC) -I$(builddir) -I$(srcdir)	\
+		--cpp_out=$(builddir)		\
+		$(srcdir)/irm.proto
+	mv -f irm.tmp $@
+
+irm.pb.h irm.pb.cc: irm.stamp
+	if test -f $@; then :; else \
+	  trap 'rm -rf irm.lock irm.stamp' 1 2 13 15; \
+	  if mkdir irm.lock 2>/dev/null; then \
+	    rm -f irm.stamp; \
+	    $(MAKE) $(AM_MAKEFLAGS) irm.stamp; \
+	    result=$$?; rm -rf irm.lock; exit $$result; \
+	  else \
+	    while test -d irm.lock; do sleep 1; done; \
+	    test -f irm.stamp; \
+	  fi; \
+	fi
+
+DISTCLEANFILES +=                               \
+        irm.pb.h irm.pb.cc irm.stamp
+
+MOSTLYCLEANFILES +=                             \
+        irm.tmp
+
+EXTRA_DIST +=                                   \
+        irm.proto
+
+protoSOURCES += irm.pb.cc irm.pb.h
+
+

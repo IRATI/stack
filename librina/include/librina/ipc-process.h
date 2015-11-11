@@ -810,6 +810,7 @@ struct NHopAltList {
 
 	NHopAltList() { }
 	NHopAltList(unsigned int x) { alts.push_back(x); }
+	void add_alt(unsigned int x) { alts.push_back(x); }
 };
 
 /// Models an entry of the routing table
@@ -849,6 +850,9 @@ public:
 
         /** The qos-id */
         unsigned int qosId;
+
+	/** The cost */
+	unsigned int cost;
 
         /** The N-1 portid */
         std::list<PortIdAltlist> portIdAltlists;

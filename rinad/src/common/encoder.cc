@@ -35,6 +35,7 @@
 #include "encoders/QoSSpecification.pb.h"
 #include "encoders/FlowMessage.pb.h"
 #include "encoders/EnrollmentInformationMessage.pb.h"
+#include "encoders/RoutingForwarding.pb.h"
 
 namespace rinad {
 
@@ -94,6 +95,8 @@ rina::messages::policyDescriptor_t* get_policyDescriptor_t(const rina::PolicyCon
 			rina::messages::property_t * pro = gpf_conf->add_policyparameters();
 			get_property_t(pro, *it);
 	}
+
+	return gpf_conf;
 }
 }//namespace helpers
 
@@ -470,6 +473,7 @@ rina::DTCPConfig* get_DTCPConfig(
 	const rina::messages::dtcpConfig_t &gpf_conf, rina::DTCPConfig &conf)
 {
 	conf.flow_control_ = gpf_conf.flowcontrol();
+	conf.rtx_control_ = gpf_conf.rtxcontrol();
 	rina::DTCPFlowControlConfig flow_conf;
 	get_DTCPFlowControlConfig(gpf_conf.flowcontrolconfig(), flow_conf);
 	conf.set_flow_control_config(flow_conf);
@@ -960,11 +964,19 @@ void FlowEncoder::decode(const rina::ser_obj_t &serobj, Flow &des_obj)
 	des_obj.source_address = gpb.sourceaddress();
 	des_obj.destination_address = gpb.destinationaddress();
 
+	rina::DTPConfig dtp_config;
+	cube_helpers::get_DTPConfig(gpb.dtpconfig(), dtp_config);
+
+	rina::DTCPConfig dtcp_config;
+	cube_helpers::get_DTCPConfig(gpb.dtcpconfig(), dtcp_config);
+
 	for (int i = 0; i < gpb.connectionids_size(); ++i) {
 		rina::Connection* connection = new rina::Connection;
 		flow_helpers::get_Connection(gpb.connectionids(i), *connection);
 		connection->sourceAddress = gpb.sourceaddress();
 		connection->destAddress = gpb.destinationaddress();
+		connection->dtpConfig = dtp_config;
+		connection->dtcpConfig = dtcp_config;
 		des_obj.connections.push_back(connection);
 	}
 	des_obj.current_connection_index =
@@ -976,19 +988,107 @@ void FlowEncoder::decode(const rina::ser_obj_t &serobj, Flow &des_obj)
 		gpb.qosparameters(), fs);
 	des_obj.flow_specification = fs;
 
-	rina::DTPConfig dtp_config;
-	cube_helpers::get_DTPConfig(gpb.dtpconfig(), dtp_config);
-	des_obj.getActiveConnection()->setDTPConfig(dtp_config);
-
-	rina::DTCPConfig dtcp_config;
-	cube_helpers::get_DTCPConfig(gpb.dtcpconfig(), dtcp_config);
-	des_obj.getActiveConnection()->setDTCPConfig(dtcp_config);
-
 	des_obj.access_control = const_cast<char*>(gpb.accesscontrol()
 		.c_str());
 	des_obj.max_create_flow_retries = gpb.maxcreateflowretries();
 	des_obj.create_flow_retries = gpb.createflowretries();
 	des_obj.hop_count = gpb.hopcount();
+}
+
+// CLASS RoutingTableEntryEncoder
+void RoutingTableEntryEncoder::encode(const rina::RoutingTableEntry &obj,
+				      rina::ser_obj_t& serobj)
+{
+	rina::messages::rt_entry_t gpb;
+
+	gpb.set_address(obj.address);
+	gpb.set_qos_id(obj.qosId);
+	gpb.set_cost(obj.cost);
+
+	std::list<rina::NHopAltList>::const_iterator it;
+	std::list<unsigned int>::const_iterator it2;
+	for (it = obj.nextHopAddresses.begin();
+			it != obj.nextHopAddresses.end(); ++it) {
+		rina::messages::uint_list_t *gpf_list = gpb
+						.add_next_hops();
+		for (it2 = it->alts.begin(); it2 != it->alts.end(); ++it2) {
+			gpf_list->add_member(*it2);
+		}
+	}
+
+	serobj.size_ = gpb.ByteSize();
+	serobj.message_ = new char[serobj.size_];
+	gpb.SerializeToArray(serobj.message_, serobj.size_);
+}
+
+void RoutingTableEntryEncoder::decode(const rina::ser_obj_t &serobj,
+				      rina::RoutingTableEntry &des_obj)
+{
+	rina::messages::rt_entry_t gpb;
+
+	gpb.ParseFromArray(serobj.message_, serobj.size_);
+
+	des_obj.address = gpb.address();
+	des_obj.qosId = gpb.qos_id();
+	des_obj.cost = gpb.cost();
+
+	for (int i = 0; i < gpb.next_hops_size(); ++i) {
+		rina::NHopAltList list;
+		rina::messages::uint_list_t gpb_list = gpb.next_hops(i);
+		for(int j=0; j<gpb_list.member_size(); j++) {
+			list.alts.push_back(gpb_list.member(j));
+		}
+
+		des_obj.nextHopAddresses.push_back(list);
+	}
+}
+
+// CLASS PDUForwardingTableEntry
+void PDUForwardingTableEntryEncoder::encode(const rina::PDUForwardingTableEntry &obj,
+				      	    rina::ser_obj_t& serobj)
+{
+	rina::messages::pduft_entry_t gpb;
+
+	gpb.set_address(obj.address);
+	gpb.set_qos_id(obj.qosId);
+	gpb.set_cost(obj.cost);
+
+	std::list<rina::PortIdAltlist>::const_iterator it;
+	std::list<unsigned int>::const_iterator it2;
+	for (it = obj.portIdAltlists.begin();
+			it != obj.portIdAltlists.end(); ++it) {
+		rina::messages::uint_list_t *gpf_list = gpb
+				.add_port_ids();
+		for (it2 = it->alts.begin(); it2 != it->alts.end(); ++it2) {
+			gpf_list->add_member(*it2);
+		}
+	}
+
+	serobj.size_ = gpb.ByteSize();
+	serobj.message_ = new char[serobj.size_];
+	gpb.SerializeToArray(serobj.message_, serobj.size_);
+}
+
+void PDUForwardingTableEntryEncoder::decode(const rina::ser_obj_t &serobj,
+					    rina::PDUForwardingTableEntry &des_obj)
+{
+	rina::messages::pduft_entry_t gpb;
+
+	gpb.ParseFromArray(serobj.message_, serobj.size_);
+
+	des_obj.address = gpb.address();
+	des_obj.qosId = gpb.qos_id();
+	des_obj.cost = gpb.cost();
+
+	for (int i = 0; i < gpb.port_ids_size(); ++i) {
+		rina::PortIdAltlist list;
+		rina::messages::uint_list_t gpb_list = gpb.port_ids(i);
+		for(int j=0; j<gpb_list.member_size(); j++) {
+			list.alts.push_back(gpb_list.member(j));
+		}
+
+		des_obj.portIdAltlists.push_back(list);
+	}
 }
 
 }// namespace rinad

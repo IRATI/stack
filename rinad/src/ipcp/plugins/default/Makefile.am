@@ -44,16 +44,34 @@ testsLIBS =	$(COMMONLIBS)
 	
 test_routing_SOURCES  =					    \
 	test-routing.cc							\
-	../../components.cc	 ../../components.h \
+	../../components.cc	   ../../components.h \
+	../../ipc-process.cc	   ../../ipc-process.h \
+	../../namespace-manager.cc ../../namespace-manager.h \
+	../../flow-allocator.cc    ../../flow-allocator.h \
+	../../enrollment-task.cc    ../../enrollment-task.h \
+	../../resource-allocator.cc    ../../resource-allocator.h \
+	../../rib-daemon.h	   ../../rib-daemon.cc \
+	../../routing.cc           \
+	../../security-manager.cc \
 	routing-ps.cc 	     routing-ps.h
-test_routing_CPPFLAGS = $(testsCPPFLAGS)
+test_routing_CPPFLAGS = $(testsCPPFLAGS) \
+			-DPLUGINSDIR=\"$(pkglibdir)/ipcp\"
 test_routing_LDADD    = $(testsLIBS)
 
 test_encoders_SOURCES  =			\
 	test-encoders.cc			\
-	../../components.cc	 ../../components.h \
-    routing-ps.cc 	     routing-ps.h
-test_encoders_CPPFLAGS = $(testsCPPFLAGS)
+	../../components.cc	   ../../components.h \
+	../../ipc-process.cc	   ../../ipc-process.h \
+	../../namespace-manager.cc ../../namespace-manager.h \
+	../../flow-allocator.cc    ../../flow-allocator.h \
+	../../enrollment-task.cc    ../../enrollment-task.h \
+	../../resource-allocator.cc    ../../resource-allocator.h \
+	../../rib-daemon.h	   ../../rib-daemon.cc \
+	../../routing.cc           \
+	../../security-manager.cc \
+	routing-ps.cc 	     routing-ps.h
+test_encoders_CPPFLAGS = $(testsCPPFLAGS) \
+			-DPLUGINSDIR=\"$(pkglibdir)/ipcp\"
 test_encoders_LDADD    = $(testsLIBS)
 
 check_PROGRAMS =				\

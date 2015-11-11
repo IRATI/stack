@@ -48,10 +48,14 @@ testsLIBS     = $(COMMONLIBS)
 
 test_encoders_SOURCES  =			\
 	test-encoders.cc			\
-	components.cc	     components.h	\
-	rib-daemon.cc        rib-daemon.h	\
-	flow-allocator.cc    flow-allocator.h	\
-	enrollment-task.cc   enrollment-task.h	
+	components.cc	   components.h \
+	ipc-process.cc	   ipc-process.h \
+	namespace-manager.cc namespace-manager.h \
+	flow-allocator.cc    flow-allocator.h \
+	enrollment-task.cc    enrollment-task.h \
+	resource-allocator.cc    resource-allocator.h \
+	rib-daemon.h	   rib-daemon.cc \
+	routing.cc          security-manager.cc
 test_encoders_CPPFLAGS = $(testsCPPFLAGS)
 test_encoders_LDADD    = $(testsLIBS)
 

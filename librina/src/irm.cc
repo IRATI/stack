@@ -27,6 +27,8 @@
 #include "librina/irm.h"
 #include "librina/ipc-process.h"
 
+#include "irm.pb.h"
+
 namespace rina {
 
 IPCResourceManager::IPCResourceManager() : ApplicationEntity(ApplicationEntity::IRM_AE_NAME),
@@ -415,7 +417,9 @@ void UnderlayingFlowRIBObj::read(const rina::cdap_rib::con_handle_t &con,
 				 rina::cdap_rib::obj_info_t &obj_reply,
 				 rina::cdap_rib::res_info_t& res)
 {
-	//TODO implement FlowInformationEncoder
+	FlowInformationEncoder encoder;
+	encoder.encode(flow_information, obj_reply.value_);
+
 	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }
 
@@ -446,8 +450,88 @@ void UnderlayingDIFRIBObj::read(const rina::cdap_rib::con_handle_t &con,
 				rina::cdap_rib::obj_info_t &obj_reply,
 				rina::cdap_rib::res_info_t& res)
 {
-	//TODO implement DIFProperties encoder
+	DIFPropertiesEncoder encoder;
+	encoder.encode(dif_properties, obj_reply.value_);
+
 	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+}
+
+//Class DIFPropertiesEncoder
+void DIFPropertiesEncoder::encode(const DIFProperties &obj,
+				  rina::ser_obj_t& serobj)
+{
+	rina::messages::difProperties_t gpb;
+
+	gpb.set_max_sdu_size(obj.maxSDUSize);
+	gpb.set_dif_name(obj.DIFName.processName);
+
+	serobj.size_ = gpb.ByteSize();
+	serobj.message_ = new char[serobj.size_];
+	gpb.SerializeToArray(serobj.message_, serobj.size_);
+}
+
+void DIFPropertiesEncoder::decode(const rina::ser_obj_t &serobj,
+				  DIFProperties &des_obj)
+{
+	rina::messages::difProperties_t gpb;
+	gpb.ParseFromArray(serobj.message_, serobj.size_);
+
+	des_obj.maxSDUSize = gpb.max_sdu_size();
+	des_obj.DIFName.processName = gpb.dif_name();
+}
+
+//Class FlowInformationEncoder
+void FlowInformationEncoder::encode(const FlowInformation &obj,
+				    rina::ser_obj_t& serobj)
+{
+	rina::messages::flowInformation_t gpb;
+
+	gpb.set_local_apn(obj.localAppName.processName);
+	gpb.set_local_api(obj.localAppName.processInstance);
+	gpb.set_local_aen(obj.localAppName.entityName);
+	gpb.set_local_aei(obj.localAppName.entityInstance);
+
+	gpb.set_remote_apn(obj.remoteAppName.processName);
+	gpb.set_remote_api(obj.remoteAppName.processInstance);
+	gpb.set_remote_aen(obj.remoteAppName.entityName);
+	gpb.set_remote_aei(obj.remoteAppName.entityInstance);
+
+	gpb.set_dif_name(obj.difName.processName);
+	gpb.set_port_id(obj.portId);
+	if (!messages::flowStateValues_t_IsValid(obj.state)) {
+		throw Exception("Encoding Message: Not a valid flow state");
+	}
+	gpb.set_state((messages::flowStateValues_t) obj.state);
+
+	serobj.size_ = gpb.ByteSize();
+	serobj.message_ = new char[serobj.size_];
+	gpb.SerializeToArray(serobj.message_, serobj.size_);
+}
+
+void FlowInformationEncoder::decode(const rina::ser_obj_t &serobj,
+				    FlowInformation &des_obj)
+{
+	rina::messages::flowInformation_t gpb;
+	gpb.ParseFromArray(serobj.message_, serobj.size_);
+
+	des_obj.localAppName.processName = gpb.local_apn();
+	des_obj.localAppName.processInstance = gpb.local_api();
+	des_obj.localAppName.entityName = gpb.local_aen();
+	des_obj.localAppName.entityInstance = gpb.local_aei();
+
+	des_obj.remoteAppName.processName = gpb.remote_apn();
+	des_obj.remoteAppName.processInstance = gpb.remote_api();
+	des_obj.remoteAppName.entityName = gpb.remote_aen();
+	des_obj.remoteAppName.entityInstance = gpb.remote_aei();
+
+	des_obj.difName.processName = gpb.dif_name();
+	des_obj.portId = gpb.port_id();
+	if (gpb.has_state()) {
+		int state_value = gpb.state();
+		FlowInformation::FlowState state =
+				static_cast<FlowInformation::FlowState>(state_value);
+		des_obj.state = state;
+	}
 }
 
 }

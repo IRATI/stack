@@ -149,6 +149,21 @@ private:
 	DIFProperties dif_properties;
 };
 
+/// Encoder of the DIFProperties object
+class DIFPropertiesEncoder: public Encoder<DIFProperties> {
+public:
+	void encode(const DIFProperties &obj, rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj, DIFProperties &des_obj);
+};
+
+/// Encoder of the FlowInformation object
+class FlowInformationEncoder: public Encoder<FlowInformation> {
+public:
+	void encode(const FlowInformation &obj, rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj, FlowInformation &des_obj);
+};
+
+
 }
 
 #endif

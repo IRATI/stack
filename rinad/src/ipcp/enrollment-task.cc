@@ -101,7 +101,7 @@ void NeighborsRIBObj::create(const rina::cdap_rib::con_handle_t &con,
 	std::stringstream ss;
 	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 
-	//TODO 1 decode neighbor list from ser_obj_t
+	//1 decode neighbor list from ser_obj_t
 	encoder.decode(obj_req, neighbors);
 
 	std::list<rina::Neighbor>::iterator iterator;

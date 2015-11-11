@@ -838,17 +838,19 @@ void PortIdAltlist::add_alt(unsigned int nh)
 PDUForwardingTableEntry::PDUForwardingTableEntry() {
         address = 0;
         qosId = 0;
+        cost = 0;
 }
 
 bool PDUForwardingTableEntry::operator==(
                 const PDUForwardingTableEntry &other) const {
-        if (address != other.getAddress()) {
+        if (address != other.getAddress())
                 return false;
-        }
 
-        if (qosId != other.getQosId()) {
+        if (qosId != other.getQosId())
                 return false;
-        }
+
+        if (cost != other.cost)
+        	return false;
 
         return true;
 }
@@ -886,7 +888,7 @@ void PDUForwardingTableEntry::setQosId(unsigned int qosId) {
 const std::string PDUForwardingTableEntry::toString() {
         std::stringstream ss;
 
-        ss<<"Address: "<<address<<" QoS-id: "<<qosId;
+        ss<<"Address: "<<address<<" QoS-id: "<<qosId<< " Cost: "<<cost;
         ss<<"List of N-1 port-ids: ";
         for (std::list<PortIdAltlist>::iterator it = portIdAltlists.begin();
                         it != portIdAltlists.end(); it++)

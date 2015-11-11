@@ -153,6 +153,20 @@ public:
 	void decode(const rina::ser_obj_t &serobj, Flow &des_obj);
 };
 
+/// Encoder of the RoutingTableEntry
+class RoutingTableEntryEncoder: public rina::Encoder<rina::RoutingTableEntry> {
+public:
+	void encode(const rina::RoutingTableEntry &obj, rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj, rina::RoutingTableEntry &des_obj);
+};
+
+/// Encoder of the PDUForwardingTableEntry
+class PDUForwardingTableEntryEncoder: public rina::Encoder<rina::PDUForwardingTableEntry> {
+public:
+	void encode(const rina::PDUForwardingTableEntry &obj, rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj, rina::PDUForwardingTableEntry &des_obj);
+};
+
 }
 
 #endif

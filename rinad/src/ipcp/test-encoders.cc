@@ -81,6 +81,7 @@ bool test_flow () {
 	pconnection_to_encode->setDTCPConfig(dtcp_config_to_encode);
 	connection_list.push_front(pconnection_to_encode);
 	flow_to_encode.connections = connection_list;
+	flow_to_encode.current_connection_index = 0;
 
 	// Encode
 	encoder.encode(flow_to_encode, encoded_obj);
@@ -575,6 +576,82 @@ bool test_watchdog() {
 	return true;
 }
 
+bool test_nhopt_entry() {
+	rinad::RoutingTableEntryEncoder encoder;
+	rina::RoutingTableEntry entry;
+	rina::RoutingTableEntry recovered_obj;
+	rina::ser_obj_t encoded_obj;
+
+	entry.address = 25;
+	entry.qosId = 3;
+	entry.cost = 10;
+	rina::NHopAltList list1;
+	list1.alts.push_back(12);
+	list1.alts.push_back(43);
+	entry.nextHopAddresses.push_back(list1);
+	rina::NHopAltList list2;
+	list2.alts.push_back(42);
+	list2.alts.push_back(124);
+	list2.alts.push_back(982);
+	entry.nextHopAddresses.push_back(list2);
+
+	encoder.encode(entry, encoded_obj);
+	encoder.decode(encoded_obj, recovered_obj);
+
+	if (entry.address != recovered_obj.address)
+		return false;
+
+	if (entry.qosId != recovered_obj.qosId)
+		return false;
+
+	if (entry.cost != recovered_obj.cost)
+		return false;
+
+	if (entry.nextHopAddresses.size() != recovered_obj.nextHopAddresses.size())
+		return false;
+
+	LOG_IPCP_INFO("Routing Table Entry Encoder tested successfully");
+	return true;
+}
+
+bool test_pduft_entry() {
+	rinad::PDUForwardingTableEntryEncoder encoder;
+	rina::PDUForwardingTableEntry entry;
+	rina::PDUForwardingTableEntry recovered_obj;
+	rina::ser_obj_t encoded_obj;
+
+	entry.address = 25;
+	entry.qosId = 3;
+	entry.cost = 10;
+	rina::PortIdAltlist list1;
+	list1.alts.push_back(12);
+	list1.alts.push_back(43);
+	entry.portIdAltlists.push_back(list1);
+	rina::PortIdAltlist list2;
+	list2.alts.push_back(42);
+	list2.alts.push_back(124);
+	list2.alts.push_back(982);
+	entry.portIdAltlists.push_back(list2);
+
+	encoder.encode(entry, encoded_obj);
+	encoder.decode(encoded_obj, recovered_obj);
+
+	if (entry.address != recovered_obj.address)
+		return false;
+
+	if (entry.qosId != recovered_obj.qosId)
+		return false;
+
+	if (entry.cost != recovered_obj.cost)
+		return false;
+
+	if (entry.portIdAltlists.size() != recovered_obj.portIdAltlists.size())
+		return false;
+
+	LOG_IPCP_INFO("PDU Forwarding Table Entry Encoder tested successfully");
+	return true;
+}
+
 int main()
 {
 	bool result = test_data_transfer_constants();
@@ -646,6 +723,18 @@ int main()
 	result = test_watchdog();
 	if (!result) {
 		LOG_IPCP_ERR("Problems testing Watchdog Encoder");
+		return -1;
+	}
+
+	result = test_nhopt_entry();
+	if (!result) {
+		LOG_IPCP_ERR("Problems testing Routing Table Entry Encoder");
+		return -1;
+	}
+
+	result = test_pduft_entry();
+	if (!result) {
+		LOG_IPCP_ERR("Problems testing PDU Forwarding Table Entry Encoder");
 		return -1;
 	}
 

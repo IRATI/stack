@@ -137,7 +137,11 @@ void NextHopTEntryRIBObj::read(const rina::cdap_rib::con_handle_t &con,
 			       rina::cdap_rib::obj_info_t &obj_reply,
 			       rina::cdap_rib::res_info_t& res)
 {
-	//TODO implement encoder
+	if (rt_entry) {
+		RoutingTableEntryEncoder encoder;
+		encoder.encode(*rt_entry, obj_reply.value_);
+	}
+
 	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }
 
@@ -174,7 +178,11 @@ void PDUFTEntryRIBObj::read(const rina::cdap_rib::con_handle_t &con,
 			    rina::cdap_rib::obj_info_t &obj_reply,
 			    rina::cdap_rib::res_info_t& res)
 {
-	//TODO Implement the PDUFTEntry encoder
+	if (ft_entry) {
+		PDUForwardingTableEntryEncoder encoder;
+		encoder.encode(*ft_entry, obj_reply.value_);
+	}
+
 	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }
 
