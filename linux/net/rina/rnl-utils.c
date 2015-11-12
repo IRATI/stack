@@ -1332,6 +1332,8 @@ static int parse_dt_cons(struct nlattr *  attr,
         attr_policy[DTC_ATTR_CEP_ID].len           = 2;
         attr_policy[DTC_ATTR_SEQ_NUM].type         = NLA_U16;
         attr_policy[DTC_ATTR_SEQ_NUM].len          = 2;
+        attr_policy[DTC_ATTR_CTRL_SEQ_NUM].type    = NLA_U16;
+        attr_policy[DTC_ATTR_CTRL_SEQ_NUM].len     = 2;
         attr_policy[DTC_ATTR_ADDRESS].type         = NLA_U16;
         attr_policy[DTC_ATTR_ADDRESS].len          = 2;
         attr_policy[DTC_ATTR_LENGTH].type          = NLA_U16;
@@ -1340,6 +1342,10 @@ static int parse_dt_cons(struct nlattr *  attr,
         attr_policy[DTC_ATTR_MAX_PDU_SIZE].len     = 4;
         attr_policy[DTC_ATTR_MAX_PDU_LIFE].type    = NLA_U32;
         attr_policy[DTC_ATTR_MAX_PDU_LIFE].len     = 4;
+        attr_policy[DTC_ATTR_RATE].type            = NLA_U16;
+        attr_policy[DTC_ATTR_RATE].len             = 2;
+        attr_policy[DTC_ATTR_FRAME].type           = NLA_U16;
+        attr_policy[DTC_ATTR_FRAME].len            = 2;
         attr_policy[DTC_ATTR_DIF_INTEGRITY].type   = NLA_FLAG;
         attr_policy[DTC_ATTR_DIF_INTEGRITY].len    = 0;
 
@@ -1362,6 +1368,10 @@ static int parse_dt_cons(struct nlattr *  attr,
                 dt_cons->seq_num_length =
                         nla_get_u16(attrs[DTC_ATTR_SEQ_NUM]);
 
+        if (attrs[DTC_ATTR_CTRL_SEQ_NUM])
+                dt_cons->ctrl_seq_num_length =
+                        nla_get_u16(attrs[DTC_ATTR_CTRL_SEQ_NUM]);
+
         if (attrs[DTC_ATTR_ADDRESS])
                 dt_cons->address_length =
                         nla_get_u16(attrs[DTC_ATTR_ADDRESS]);
@@ -1378,9 +1388,13 @@ static int parse_dt_cons(struct nlattr *  attr,
                 dt_cons->max_pdu_life =
                         nla_get_u32(attrs[DTC_ATTR_MAX_PDU_LIFE]);
 
-        /* FIXME: To modify once this field are supported by rnl. */
-        dt_cons->rate = 4;
-        dt_cons->frame = 4;
+        if (attrs[DTC_ATTR_RATE])
+                dt_cons->rate_length =
+                        nla_get_u16(attrs[DTC_ATTR_RATE]);
+
+        if (attrs[DTC_ATTR_FRAME])
+                dt_cons->frame_length =
+                        nla_get_u16(attrs[DTC_ATTR_FRAME]);
 
         dt_cons->dif_integrity = nla_get_flag(attrs[DTC_ATTR_DIF_INTEGRITY]);
 

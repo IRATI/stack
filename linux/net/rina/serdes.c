@@ -45,11 +45,6 @@ const uint8_t version = 1;
 
 #define PDU_TYPE_SIZE 1
 #define FLAGS_SIZE    1
-/* FIXME: To be also defined in dt_cons when rate based fc is added */
-#define RATE_LEN      4
-#define TIME_LEN      4
-/* FIXME: To be added in dt_cons ASAP */
-#define CTRL_SEQ_NR   4
 
 /* FIXME: These externs have to disappear from here */
 struct pdu *     pdu_create_gfp(gfp_t flags);
@@ -127,7 +122,7 @@ static int base_pci_size(const struct dt_cons * dt_cons)
 static int fc_pci_size(const struct dt_cons * dt_cons)
 {
         return 3 * dt_cons->seq_num_length +
-                dt_cons->rate + dt_cons->frame;
+                dt_cons->rate_length + dt_cons->frame_length;
 }
 
 static int serialize_base_pci(const struct serdes * instance,
@@ -235,7 +230,7 @@ static int serialize_ctrl_seq(const struct serdes * instance,
         ASSERT(dt_cons);
 
         seq = pci_sequence_number_get(pci);
-        memcpy(data + offset, &seq, CTRL_SEQ_NR);
+        memcpy(data + offset, &seq, dt_cons->ctrl_seq_num_length);
 
         return 0;
 }
@@ -258,7 +253,7 @@ static int serialize_cc_pci(const struct serdes * instance,
         ASSERT(dt_cons);
 
         seq = pci_control_last_seq_num_rcvd(pci);
-        memcpy(data + offset, &seq, CTRL_SEQ_NR);
+        memcpy(data + offset, &seq, dt_cons->ctrl_seq_num_length);
 
         seq = pci_control_new_left_wind_edge(pci);
         memcpy(data + offset, &seq, dt_cons->seq_num_length);
@@ -279,12 +274,12 @@ static int serialize_cc_pci(const struct serdes * instance,
         /* Add MyRcvRate here in the future */
 
         rt = pci_control_sndr_rate(pci);
-        memcpy(data + offset, &rt, dt_cons->rate);
-        offset += dt_cons->rate;
+        memcpy(data + offset, &rt, dt_cons->rate_length);
+        offset += dt_cons->rate_length;
 
         rt = pci_control_time_frame(pci);
-        memcpy(data + offset, &rt, dt_cons->frame);
-        offset += dt_cons->frame;
+        memcpy(data + offset, &rt, dt_cons->frame_length);
+        offset += dt_cons->frame_length;
 
         return 0;
 }
@@ -322,12 +317,12 @@ static int serialize_fc_pci(const struct serdes * instance,
          */
 
         rt = pci_control_sndr_rate(pci);
-        memcpy(data + offset, &rt, dt_cons->rate);
-        offset += dt_cons->rate;
+        memcpy(data + offset, &rt, dt_cons->rate_length);
+        offset += dt_cons->rate_length;
 
         rt = pci_control_time_frame(pci);
-        memcpy(data + offset, &rt, dt_cons->frame);
-        offset += dt_cons->frame;
+        memcpy(data + offset, &rt, dt_cons->frame_length);
+        offset += dt_cons->frame_length;
 
         return 0;
 }
@@ -448,13 +443,13 @@ static int deserialize_fc_pci(const struct serdes * instance,
         /* Rate mechanism de-serialization.
          */
 
-        memcpy(&rt, ptr + *offset, dt_cons->rate);
-        *offset += dt_cons->rate;
+        memcpy(&rt, ptr + *offset, dt_cons->rate_length);
+        *offset += dt_cons->rate_length;
         if (pci_control_sndr_rate_set(new_pci, rt))
                 return -1;
 
-	memcpy(&rt, ptr + *offset, dt_cons->frame);
-        *offset += dt_cons->frame;
+	memcpy(&rt, ptr + *offset, dt_cons->frame_length);
+        *offset += dt_cons->frame_length;
         if (pci_control_time_frame_set(new_pci, rt))
                 return -1;
 
@@ -506,8 +501,8 @@ static int deserialize_cc_pci(const struct serdes * instance,
 
         seq = 0;
 
-        memcpy(&seq, ptr + *offset, CTRL_SEQ_NR);
-        *offset += CTRL_SEQ_NR;
+        memcpy(&seq, ptr + *offset, dt_cons->ctrl_seq_num_length);
+        *offset += dt_cons->ctrl_seq_num_length;
         if (pci_control_last_seq_num_rcvd_set(new_pci, seq))
                 return -1;
 
@@ -539,13 +534,13 @@ static int deserialize_cc_pci(const struct serdes * instance,
 	 /* Rate mechanism de-serialization.
          */
 
-        memcpy(&rt, ptr + *offset, dt_cons->rate);
-        *offset += dt_cons->rate;
+        memcpy(&rt, ptr + *offset, dt_cons->rate_length);
+        *offset += dt_cons->rate_length;
         if (pci_control_sndr_rate_set(new_pci, rt))
                 return -1;
 
-	memcpy(&rt, ptr + *offset, dt_cons->frame);
-        *offset += dt_cons->frame;
+	memcpy(&rt, ptr + *offset, dt_cons->frame_length);
+        *offset += dt_cons->frame_length;
         if (pci_control_time_frame_set(new_pci, rt))
                 return -1;
 
@@ -571,8 +566,8 @@ static int deserialize_ctrl_seq(const struct serdes * instance,
 
         seq = 0;
 
-        memcpy(&seq, ptr + *offset, CTRL_SEQ_NR);
-        *offset += CTRL_SEQ_NR;
+        memcpy(&seq, ptr + *offset, dt_cons->ctrl_seq_num_length);
+        *offset += dt_cons->ctrl_seq_num_length;
         if (pci_sequence_number_set(new_pci, seq))
                 return -1;
 
@@ -650,20 +645,22 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
 
                 break;
         case PDU_TYPE_FC:
-                size = pci_size + CTRL_SEQ_NR + fc_pci_size(dt_cons);
+                size = pci_size + dt_cons->ctrl_seq_num_length + 	\
+			fc_pci_size(dt_cons);
                 if (size <= 0)
                         return NULL;
 
                 break;
         case PDU_TYPE_ACK:
-                size = pci_size + CTRL_SEQ_NR + dt_cons->seq_num_length;
+                size = pci_size + dt_cons->ctrl_seq_num_length +	\
+			dt_cons->seq_num_length;
                 if (size <= 0)
                         return NULL;
 
                 break;
         case PDU_TYPE_ACK_AND_FC:
                 size = pci_size +
-                        CTRL_SEQ_NR +
+                        dt_cons->ctrl_seq_num_length +
                         fc_pci_size(dt_cons) +
                         dt_cons->seq_num_length;
                 if (size <= 0)
@@ -672,9 +669,9 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
                 break;
         case PDU_TYPE_CACK:
                 size = pci_size +
-                        2 * CTRL_SEQ_NR +
+                        2 * dt_cons->ctrl_seq_num_length +
                         4 * dt_cons->seq_num_length +
-			dt_cons->rate;
+			dt_cons->rate_length;
                 if (size <= 0)
                         return NULL;
 
@@ -709,7 +706,7 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
         case PDU_TYPE_FC:
                 if (serialize_ctrl_seq(instance, data, pci, pci_size) ||
                     serialize_fc_pci(instance, data, pci,
-                                     pci_size + CTRL_SEQ_NR)) {
+                                     pci_size + dt_cons->ctrl_seq_num_length)) {
                         rkfree(data);
                         return NULL;
                 }
@@ -718,7 +715,7 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
         case PDU_TYPE_ACK:
                 if (serialize_ctrl_seq(instance, data, pci, pci_size) ||
                     serialize_ack_pci(instance, data, pci,
-                                      pci_size + CTRL_SEQ_NR)) {
+                                      pci_size + dt_cons->ctrl_seq_num_length)) {
                         rkfree(data);
                         return NULL;
                 }
@@ -727,10 +724,10 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
         case PDU_TYPE_ACK_AND_FC:
                 if (serialize_ctrl_seq(instance, data, pci, pci_size) ||
                     serialize_ack_pci(instance, data, pci,
-                                      pci_size + CTRL_SEQ_NR) ||
+                                      pci_size + dt_cons->ctrl_seq_num_length) ||
                     serialize_fc_pci(instance, data, pci,
                                      pci_size +
-                                     CTRL_SEQ_NR +
+                                     dt_cons->ctrl_seq_num_length +
                                      dt_cons->seq_num_length)) {
                         rkfree(data);
                         return NULL;
@@ -740,7 +737,7 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
         case PDU_TYPE_CACK:
                 if (serialize_ctrl_seq(instance, data, pci, pci_size) ||
                     serialize_cc_pci(instance, data, pci,
-                                     pci_size + CTRL_SEQ_NR)) {
+                                     pci_size + dt_cons->ctrl_seq_num_length)) {
                         rkfree(data);
                         return NULL;
                 }
@@ -1107,6 +1104,7 @@ EXPORT_SYMBOL(pdu_deserialize_ni);
 
 int serdes_pci_size(pdu_type_t type, struct dt_cons * c) {
 	int seqn;
+	int cseqn;
 	int rate;
 	int base;
 
@@ -1114,9 +1112,10 @@ int serdes_pci_size(pdu_type_t type, struct dt_cons * c) {
 		return -1;
 	}
 
-	seqn = c->seq_num_length;
-	rate = c->rate;
-	base = base_pci_size(c);
+	seqn  = c->seq_num_length;
+	cseqn = c->ctrl_seq_num_length;
+	rate  = c->rate_length;
+	base  = base_pci_size(c);
 
 	switch(type) {
 	case PDU_TYPE_MGMT:
@@ -1125,22 +1124,22 @@ int serdes_pci_size(pdu_type_t type, struct dt_cons * c) {
 		break;
 	case PDU_TYPE_CACK:
 		base +=
-			2 * CTRL_SEQ_NR +
+			2 * cseqn +
 			4 * seqn +
 			rate;
 		break;
 	case PDU_TYPE_ACK:
-		base += CTRL_SEQ_NR + seqn;
+		base += cseqn + seqn;
 		break;
 	case PDU_TYPE_NACK:
 		break;
 	case PDU_TYPE_FC:
-		base += CTRL_SEQ_NR + fc_pci_size(c);
+		base += cseqn + fc_pci_size(c);
 
 		break;
 	case PDU_TYPE_ACK_AND_FC:
 		base +=
-			CTRL_SEQ_NR +
+			cseqn +
 			fc_pci_size(c) +
 			seqn;
 		break;
