@@ -120,8 +120,11 @@ bool DIFConfigValidator::dataTransferConstants() {
 		      data_trans_config.port_id_length_ != 0 &&
 		      data_trans_config.cep_id_length_ != 0 &&
 		      data_trans_config.sequence_number_length_ != 0 &&
+		      data_trans_config.ctrl_sequence_number_length_ != 0 &&
 		      data_trans_config.length_length_ != 0 &&
 		      data_trans_config.max_pdu_size_ != 0 &&
+		      data_trans_config.rate_length_ != 0 &&
+		      data_trans_config.frame_length_ != 0 &&
 		      data_trans_config.max_pdu_lifetime_ != 0;
 	if (!result)
 		LOG_ERR("Data Transfer Constants configuration failed");

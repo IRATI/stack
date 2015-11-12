@@ -70,6 +70,9 @@ struct dt_cons {
         /* The length of the sequence number field in the DTP PCI, in bytes */
         u_int16_t seq_num_length;
 
+        /* The length of the sequence number field in the DTCP PCI, in bytes */
+        u_int16_t ctrl_seq_num_length;
+
         /* The maximum length allowed for a PDU in this DIF, in bytes */
         u_int32_t max_pdu_size;
 
@@ -80,10 +83,10 @@ struct dt_cons {
         u_int32_t max_pdu_life;
 
         /* Rate for rate based mechanism. */
-        u_int32_t rate;
+        u_int16_t rate_length;
 
         /* Time frame for rate based mechanism. */
-        u_int32_t frame;
+        u_int16_t frame_length;
 
         /*
          * True if the PDUs in this DIF have CRC, TTL, and/or encryption.

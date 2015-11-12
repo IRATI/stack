@@ -990,6 +990,22 @@ void DataTransferConstants::set_length_length(unsigned short length_length) {
 	length_length_ = length_length;
 }
 
+unsigned short DataTransferConstants::get_rate_length() const {
+	return rate_length_;
+}
+
+void DataTransferConstants::set_rate_length(unsigned short rate_length) {
+	rate_length_ = rate_length;
+}
+
+unsigned short DataTransferConstants::get_frame_length() const {
+	return frame_length_;
+}
+
+void DataTransferConstants::set_frame_length(unsigned short frame_length) {
+	frame_length_ = frame_length;
+}
+
 unsigned int DataTransferConstants::get_max_pdu_lifetime() const {
 	return max_pdu_lifetime_;
 }
@@ -1028,6 +1044,14 @@ unsigned short DataTransferConstants::get_sequence_number_length() const {
 
 void DataTransferConstants::set_sequence_number_length(unsigned short sequence_number_length) {
 	sequence_number_length_ = sequence_number_length;
+}
+
+unsigned short DataTransferConstants::get_ctrl_sequence_number_length() const {
+	return ctrl_sequence_number_length_;
+}
+
+void DataTransferConstants::set_ctrl_sequence_number_length(unsigned short ctrl_sequence_number_length) {
+	ctrl_sequence_number_length_ = ctrl_sequence_number_length;
 }
 
 bool DataTransferConstants::isInitialized() {
