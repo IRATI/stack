@@ -45,10 +45,6 @@ struct pdu *           pdu_deserialize_ni(const struct serdes * instance,
                                           struct pdu_ser *      pdu,
                                           struct dup_config_entry * dup_conf,
                                           struct crypto_blkcipher * blkcipher);
-
-/* Get the size in bytes of the pci. Returns -1 on error.*/
-int 		       serdes_pci_size(pdu_type_t type, struct dt_cons * c);
-
 /* Get the size in bytes of the pdu. Returns -1 on error. */
 int 		       serdes_pdu_size(struct pdu * p, struct dt_cons * c);
 

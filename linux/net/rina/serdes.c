@@ -1159,7 +1159,6 @@ int serdes_pci_size(pdu_type_t type, struct dt_cons * c) {
 
 	return base;
 }
-EXPORT_SYMBOL(serdes_pci_size);
 
 int serdes_pdu_size(struct pdu * p, struct dt_cons * c) {
 	const struct buffer * b = 0;
