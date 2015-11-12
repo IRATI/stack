@@ -63,12 +63,6 @@ menu "Core"
 
 source "net/rina/rds/Kconfig"
 
-config RINA_PERSONALITY_DEFAULT
-       	tristate "Default Personality support"
-	default m
-	---help---
-	  No help for the time being
-
 endmenu
 
 menuconfig IPC_PROCESSES

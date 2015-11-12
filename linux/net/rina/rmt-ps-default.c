@@ -312,7 +312,7 @@ static int rmt_ps_default_set_policy_set_param(struct ps_base *bps,
 	return 0;
 }
 
-static struct ps_base *rmt_ps_default_create(struct rina_component *component)
+struct ps_base *rmt_ps_default_create(struct rina_component *component)
 {
 	struct rmt *rmt;
 	struct rmt_ps *ps;
@@ -371,8 +371,9 @@ static struct ps_base *rmt_ps_default_create(struct rina_component *component)
 
 	return &ps->base;
 }
+EXPORT_SYMBOL(rmt_ps_default_create);
 
-static void rmt_ps_default_destroy(struct ps_base *bps)
+void rmt_ps_default_destroy(struct ps_base *bps)
 {
 	struct rmt_ps *ps;
 	struct rmt_ps_default_data *data;
@@ -389,10 +390,4 @@ static void rmt_ps_default_destroy(struct ps_base *bps)
 		rkfree(ps);
 	}
 }
-
-struct ps_factory default_rmt_ps_factory = {
-	.owner = THIS_MODULE,
-	.create = rmt_ps_default_create,
-	.destroy = rmt_ps_default_destroy,
-};
-EXPORT_SYMBOL(default_rmt_ps_factory );
+EXPORT_SYMBOL(rmt_ps_default_destroy);

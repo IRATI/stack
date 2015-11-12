@@ -51,6 +51,10 @@ struct flow_messages {
 };
 
 struct kipcm {
+	/* FIXME: LB: instances and kset replicate the same info (list of
+	 * ipcps), instances could be probably removed if we stay with kobjs
+	 */
+	struct kset *           kset;
         struct mutex            lock;
         struct ipcp_factories * factories;
         struct ipcp_imap *      instances;
@@ -58,6 +62,27 @@ struct kipcm {
         struct rnl_set *        rnls;
         struct kfa *            kfa;
 };
+
+struct kipcm * default_kipcm;
+EXPORT_SYMBOL(default_kipcm);
+
+/* FIXME: LB: this ktype is for IPCPs, not to be used here
+
+static ssize_t kipcm_ipcp_show(struct kobject *   kobj,
+                               struct attribute * attr,
+                               char *             buf)
+{ return sprintf(buf, "%s", kobject_name(kobj)); }
+
+static const struct sysfs_ops kipcm_ipcp_sysfs_ops = {
+        .show = kipcm_ipcp_show
+};
+
+static struct kobj_type kipcm_ipcp_ktype = {
+        .sysfs_ops     = &kipcm_ipcp_sysfs_ops,
+        .default_attrs = NULL,
+        .release       = NULL,
+};
+*/
 
 message_handler_cb kipcm_handlers[RINA_C_MAX];
 
@@ -1648,22 +1673,27 @@ static int netlink_handlers_register(struct kipcm * kipcm)
         return 0;
 }
 
-struct kipcm * kipcm_create(struct kobject * parent,
-                            struct rnl_set * rnls)
+int kipcm_init(struct kobject * parent)
 {
         struct kipcm * tmp;
 
-        LOG_DBG("Initializing");
-
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
-                return NULL;
+                return -1;
+
+        tmp->rnls = rnl_set_create();
+        if (!tmp->rnls) {
+                LOG_ERR("Could not create RNL set ...");
+                rkfree(tmp);
+		return -1;
+        }
 
         tmp->factories = ipcpf_init(parent);
         if (!tmp->factories) {
                 LOG_ERR("Failed to build factories");
+		rnl_set_destroy(tmp->rnls);
                 rkfree(tmp);
-                return NULL;
+                return -1;
         }
 
         tmp->instances = ipcp_imap_create();
@@ -1672,8 +1702,9 @@ struct kipcm * kipcm_create(struct kobject * parent,
                 if (ipcpf_fini(tmp->factories)) {
                         /* FIXME: What could we do here ? */
                 }
+		rnl_set_destroy(tmp->rnls);
                 rkfree(tmp);
-                return NULL;
+                return -1;
         }
 
         tmp->messages = rkzalloc(sizeof(struct flow_messages), GFP_KERNEL);
@@ -1685,8 +1716,9 @@ struct kipcm * kipcm_create(struct kobject * parent,
                 if (ipcp_imap_destroy(tmp->instances)) {
                         /* FIXME: What could we do here ? */
                 }
+		rnl_set_destroy(tmp->rnls);
                 rkfree(tmp);
-                return NULL;
+                return -1;
         }
 
         tmp->messages->ingress = kipcm_pmap_create();
@@ -1701,8 +1733,9 @@ struct kipcm * kipcm_create(struct kobject * parent,
                         if (kipcm_smap_destroy(tmp->messages->egress)) {
                                 /* FIXME: What could we do here ? */
                         }
+		rnl_set_destroy(tmp->rnls);
                 rkfree(tmp);
-                return NULL;
+                return -1;
         }
 
         tmp->kfa = kfa_create();
@@ -1719,11 +1752,12 @@ struct kipcm * kipcm_create(struct kobject * parent,
                 if (ipcpf_fini(tmp->factories)) {
                         /* FIXME: What could we do here ? */
                 }
+		rnl_set_destroy(tmp->rnls);
                 rkfree(tmp);
-                return NULL;
+                return -1;
         }
 
-        if (rnl_set_register(rnls)) {
+        if (rnl_set_register(tmp->rnls)) {
                 if (kipcm_pmap_destroy(tmp->messages->ingress)) {
                         /* FIXME: What could we do here ? */
                 }
@@ -1739,12 +1773,15 @@ struct kipcm * kipcm_create(struct kobject * parent,
                 if (ipcpf_fini(tmp->factories)) {
                         /* FIXME: What could we do here ? */
                 }
+		rnl_set_destroy(tmp->rnls);
                 rkfree(tmp);
-                return NULL;
+                return -1;
         }
-        tmp->rnls = rnls;
 
         if (netlink_handlers_register(tmp)) {
+		if (rnl_set_unregister(tmp->rnls)) {
+			/* FIXME: What should we do here ? */
+		}
                 if (kipcm_pmap_destroy(tmp->messages->ingress)) {
                         /* FIXME: What could we do here ? */
                 }
@@ -1760,18 +1797,49 @@ struct kipcm * kipcm_create(struct kobject * parent,
                 if (ipcpf_fini(tmp->factories)) {
                         /* FIXME: What could we do here ? */
                 }
+		rnl_set_destroy(tmp->rnls);
                 rkfree(tmp);
-                return NULL;
+                return -1;
         }
+
+	tmp->kset = kset_create_and_add("ipcps", NULL, parent);
+	if (!tmp->kset) {
+		LOG_ERR("Could not initialize IPCP sys entry");
+        	if (netlink_handlers_unregister(tmp->rnls)) {
+        	        /* FIXME: What should we do here ? */
+        	}
+		if (rnl_set_unregister(tmp->rnls)) {
+			/* FIXME: What should we do here ? */
+		}
+                if (kipcm_pmap_destroy(tmp->messages->ingress)) {
+                        /* FIXME: What could we do here ? */
+                }
+                if (kipcm_smap_destroy(tmp->messages->egress)) {
+                        /* FIXME: What could we do here ? */
+                }
+                if (ipcp_imap_destroy(tmp->instances)) {
+                        /* FIXME: What could we do here ? */
+                }
+                if (kfa_destroy(tmp->kfa)) {
+                        /* FIXME: What could we do here ? */
+                }
+                if (ipcpf_fini(tmp->factories)) {
+                        /* FIXME: What could we do here ? */
+                }
+		rnl_set_destroy(tmp->rnls);
+                rkfree(tmp);
+                return -1;
+	}
 
         KIPCM_LOCK_INIT(tmp);
 
         LOG_DBG("Initialized successfully");
 
-        return tmp;
+	default_kipcm = tmp;
+	return 0;
 }
 
-int kipcm_destroy(struct kipcm * kipcm)
+int kipcm_fini(struct kipcm * kipcm)
 {
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
@@ -1810,11 +1878,18 @@ int kipcm_destroy(struct kipcm * kipcm)
                 /* FIXME: What should we do here? */
         }
 
+        if (rnl_set_destroy(kipcm->rnls)) {
+                /* FIXME: What should we do here? */
+        }
+	rnl_exit();
+
         KIPCM_UNLOCK(kipcm);
 
         KIPCM_LOCK_FINI(kipcm);
 
+	kset_unregister(kipcm->kset);
         rkfree(kipcm);
+	default_kipcm = NULL;
 
         LOG_DBG("Finalized successfully");
 
@@ -1901,10 +1976,10 @@ int kipcm_ipcp_factory_unregister(struct kipcm *        kipcm,
 }
 EXPORT_SYMBOL(kipcm_ipcp_factory_unregister);
 
-int kipcm_ipcp_create(struct kipcm *      kipcm,
-                      const struct name * ipcp_name,
-                      ipc_process_id_t    id,
-                      const char *        factory_name)
+int kipcm_ipc_create(struct kipcm *      kipcm,
+                     const struct name * ipcp_name,
+                     ipc_process_id_t    id,
+                     const char *        factory_name)
 {
         char *                 name;
         struct ipcp_factory *  factory;
@@ -1973,8 +2048,8 @@ int kipcm_ipcp_create(struct kipcm *      kipcm,
         return 0;
 }
 
-int kipcm_ipcp_destroy(struct kipcm *   kipcm,
-                       ipc_process_id_t id)
+int kipcm_ipc_destroy(struct kipcm *   kipcm,
+                      ipc_process_id_t id)
 {
         struct ipcp_instance * instance;
         struct ipcp_factory *  factory;

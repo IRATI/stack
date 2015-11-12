@@ -6,45 +6,34 @@
 
 ccflags-y += -Wtype-limits
 
-obj-$(CONFIG_RINA) +=				\
-	utils.o debug.o				\
-	rds/					\
-	core.o personality.o			\
-	rnl-utils.o rnl-workarounds.o rnl.o	\
-	buffer.o pci.o pdu.o sdu.o du.o	        \
-	serdes.o pdu-ser.o du-protection.o	\
-	ipcp-utils.o				\
-	connection.o common.o policies.o	\
-	dtp-conf-utils.o dtcp-conf-utils.o      \
-
-obj-y +=					\
-	syscalls.o
-
-obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
-	rina-personality-default.o
-
-# TODO rmt-ps-common will be removed soon by a different patch
-rina-personality-default-y :=					\
+obj-$(CONFIG_RINA) +=						\
+	utils.o debug.o						\
+	rds/							\
+	core.o							\
+	rnl-utils.o rnl-workarounds.o rnl.o			\
+	buffer.o pci.o pdu.o sdu.o du.o	        		\
+	serdes.o pdu-ser.o du-protection.o			\
+	ipcp-utils.o						\
+	connection.o common.o policies.o			\
+	dtp-conf-utils.o dtcp-conf-utils.o      		\
 	ipcp-factories.o ipcp-instances.o			\
 	cidm.o dt.o dt-utils.o dtcp.o dtp.o efcp-utils.o efcp.o	\
 	pff.o rmt.o						\
 	pim.o pidm.o kfa-utils.o kfa.o				\
 	kipcm-utils.o kipcm.o					\
-	default.o ps-factory.o					\
+	ps-factory.o						\
 	rmt-ps-default.o					\
 	dtp-ps-default.o					\
 	dtcp-ps-default.o                       		\
-	pff-ps-default.o
+	pff-ps-default.o					\
 
-ifeq  ($(CONFIG_RINA_PERSONALITY_DEFAULT),m)
-rina-personality-default-y +=			\
-	 utils-workarounds.o
-endif
+obj-y +=							\
+	syscalls.o
 
-obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
+obj-m +=							\
 	rina-default-plugin.o
-
-rina-default-plugin-y :=			\
+	
+rina-default-plugin-y :=					\
 	default-plugin.o
 
 obj-$(CONFIG_VMPI) += vmpi/

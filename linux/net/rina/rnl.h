@@ -30,8 +30,6 @@
 #include <net/netlink.h>
 #include <net/sock.h>
 
-#include "personality.h"
-
 typedef enum {
 
         /* 0 Unespecified operation */
@@ -180,7 +178,7 @@ void             rnl_exit(void);
 
 struct rnl_set;
 
-struct rnl_set * rnl_set_create(personality_id id);
+struct rnl_set * rnl_set_create(void);
 int              rnl_set_destroy(struct rnl_set * set);
 
 typedef int (* message_handler_cb)(void *             data,

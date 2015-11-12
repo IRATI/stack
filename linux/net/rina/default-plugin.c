@@ -31,11 +31,34 @@
 #include "dtp-ps.h"
 #include "dtcp-ps.h"
 #include "pff-ps.h"
+#include "rmt-ps-default.h"
+#include "dtp-ps-default.h"
+#include "dtcp-ps-default.h"
+#include "pff-ps-default.h"
 
-extern struct ps_factory default_rmt_ps_factory;
-extern struct ps_factory default_dtp_ps_factory;
-extern struct ps_factory default_dtcp_ps_factory;
-extern struct ps_factory default_pff_ps_factory;
+struct ps_factory default_rmt_ps_factory = {
+	.owner = THIS_MODULE,
+	.create = rmt_ps_default_create,
+	.destroy = rmt_ps_default_destroy,
+};
+
+struct ps_factory default_dtp_ps_factory = {
+	.owner = THIS_MODULE,
+	.create = dtp_ps_default_create,
+	.destroy = dtp_ps_default_destroy,
+};
+
+struct ps_factory default_dtcp_ps_factory = {
+	.owner = THIS_MODULE,
+	.create = dtcp_ps_default_create,
+	.destroy = dtcp_ps_default_destroy,
+};
+
+struct ps_factory default_pff_ps_factory = {
+	.owner = THIS_MODULE,
+	.create = pff_ps_default_create,
+	.destroy = pff_ps_default_destroy,
+};
 
 static int __init mod_init(void)
 {
