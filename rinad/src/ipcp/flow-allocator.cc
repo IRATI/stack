@@ -109,6 +109,89 @@ FlowsRIBObject::FlowsRIBObject(IPCProcess * ipc_process,
 	flow_allocator_ = flow_allocator;
 }
 
+//Class Connections RIB Object
+const std::string ConnectionsRIBObj::class_name = "Connections";
+const std::string ConnectionsRIBObj::object_name = "/dt/connections";
+
+ConnectionsRIBObj::ConnectionsRIBObj(IPCProcess * ipc_process,
+			       	     IFlowAllocator * flow_allocator)
+	: IPCPRIBObj(ipc_process, class_name)
+{
+	flow_allocator_ = flow_allocator;
+}
+
+//Class Connection RIB Object
+const std::string ConnectionRIBObject::class_name = "Connection";
+const std::string ConnectionRIBObject::object_name_prefix = "/dt/connections/srcCepId=";
+
+ConnectionRIBObject::ConnectionRIBObject(IPCProcess * ipc_process,
+					 IFlowAllocatorInstance * fai_)
+	: IPCPRIBObj(ipc_process, class_name)
+{
+	fai = fai_;
+}
+
+void ConnectionRIBObject::read(const rina::cdap_rib::con_handle_t &con,
+			       const std::string& fqn,
+			       const std::string& class_,
+			       const rina::cdap_rib::filt_info_t &filt,
+			       const int invoke_id,
+			       rina::cdap_rib::obj_info_t &obj_reply,
+			       rina::cdap_rib::res_info_t& res)
+{
+	DTPInformationEncoder encoder;
+	rina::DTPInformation dtp_info(fai->get_flow()->getActiveConnection());
+	encoder.encode(dtp_info, obj_reply.value_);
+
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+}
+
+const std::string ConnectionRIBObject::get_displayable_value() const
+{
+	rina::Connection * con = fai->get_flow()->getActiveConnection();
+	std::stringstream ss;
+	ss << "CEP-ids: src = " << con->sourceCepId << ", dest = " << con->destCepId
+	   << "; Addresses: src = " << con->sourceAddress << ", dest = " << con->destAddress
+	   << "; Qos-id: " << con->qosId << "; Port-id: " << con->portId << std::endl;
+	ss << "DTP config: " << con->dtpConfig.toString();
+	ss << "Tx: pdus = " << con->pdus_tx << ", Bytes = " << con->bytes_tx
+	   << "; RX: pdus = " << con->pdus_rx << ", Bytes = " << con->bytes_rx << std::endl;
+
+	return ss.str();
+}
+
+//Class DTCP RIB Object
+const std::string DTCPRIBObject::class_name = "DTCP";
+const std::string DTCPRIBObject::object_name_suffix = "/dtcp";
+
+DTCPRIBObject::DTCPRIBObject(IPCProcess * ipc_process,
+			     IFlowAllocatorInstance * fai_)
+	: IPCPRIBObj(ipc_process, class_name)
+{
+	fai = fai_;
+}
+
+void DTCPRIBObject::read(const rina::cdap_rib::con_handle_t &con,
+			 const std::string& fqn,
+			 const std::string& class_,
+			 const rina::cdap_rib::filt_info_t &filt,
+			 const int invoke_id,
+			 rina::cdap_rib::obj_info_t &obj_reply,
+			 rina::cdap_rib::res_info_t& res)
+{
+	DTCPInformationEncoder encoder;
+	encoder.encode(fai->get_flow()->getActiveConnection()->dtcpConfig,
+		       obj_reply.value_);
+
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+}
+
+const std::string DTCPRIBObject::get_displayable_value() const
+{
+	rina::Connection * con = fai->get_flow()->getActiveConnection();
+	return con->dtcpConfig.toString();
+}
+
 //Class Flow Allocator
 FlowAllocator::FlowAllocator() : IFlowAllocator()
 {
@@ -169,6 +252,9 @@ void FlowAllocator::populateRIB()
 
 		tmp = new DataTransferRIBObj(ipcp);
 		rib_daemon_->addObjRIB(DataTransferRIBObj::object_name, &tmp);
+
+		tmp = new ConnectionsRIBObj(ipcp, this);
+		rib_daemon_->addObjRIB(ConnectionsRIBObj::object_name, &tmp);
 	} catch (rina::Exception &e) {
 		LOG_ERR("Problems adding object to the RIB : %s", e.what());
 	}
@@ -823,6 +909,16 @@ void FlowAllocatorInstance::submitAllocateResponse(const rina::AllocateFlowRespo
 			flow_->state = Flow::ALLOCATED;
 			rina::rib::RIBObj * obj = new FlowRIBObject(ipc_process_, this);
 			rib_daemon_->addObjRIB(object_name_, &obj);
+
+			std::stringstream ss;
+			ss << ConnectionRIBObject::object_name_prefix
+			   << flow_->getActiveConnection()->sourceCepId;
+			obj = new ConnectionRIBObject(ipc_process_, this);
+			rib_daemon_->addObjRIB(ss.str(), &obj);
+
+			ss << DTCPRIBObject::object_name_suffix;
+			obj = new DTCPRIBObject(ipc_process_, this);
+			rib_daemon_->addObjRIB(ss.str(), &obj);
 		} catch (rina::Exception &e) {
 			LOG_IPCP_WARN("Error adding Flow Rib object: %s",
 				      e.what());
@@ -923,6 +1019,16 @@ void FlowAllocatorInstance::processUpdateConnectionResponseEvent(
 		flow_->state = Flow::ALLOCATED;
 		rina::rib::RIBObj * obj = new FlowRIBObject(ipc_process_, this);
 		rib_daemon_->addObjRIB(object_name_, &obj);
+
+		std::stringstream ss;
+		ss << ConnectionRIBObject::object_name_prefix
+		   << flow_->getActiveConnection()->sourceCepId;
+		obj = new ConnectionRIBObject(ipc_process_, this);
+		rib_daemon_->addObjRIB(ss.str(), &obj);
+
+		ss << DTCPRIBObject::object_name_suffix;
+		obj = new DTCPRIBObject(ipc_process_, this);
+		rib_daemon_->addObjRIB(ss.str(), &obj);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_WARN(
 				"Problems requesting the RIB Daemon to create a RIB object: %s",
@@ -1039,6 +1145,15 @@ void FlowAllocatorInstance::destroyFlowAllocatorInstance(
 
 	try {
 		rib_daemon_->removeObjRIB(object_name_);
+
+		std::stringstream ss;
+		std::string con_name;
+		ss << ConnectionRIBObject::object_name_prefix
+		   << flow_->getActiveConnection()->sourceCepId;
+		con_name = ss.str();
+		ss << DTCPRIBObject::object_name_suffix;
+		rib_daemon_->removeObjRIB(ss.str());
+		rib_daemon_->removeObjRIB(con_name);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems deleting object from RIB: %s", e.what());
 	}

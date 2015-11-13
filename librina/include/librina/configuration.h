@@ -428,7 +428,7 @@ public:
         void set_sender_timer_inactivity_policy(
         		const PolicyConfig& sender_timer_inactivity_policy);
 #endif
-        const std::string toString();
+        const std::string toString() const;
 
         /// Indicates if DTCP is required
         bool dtcp_present_;

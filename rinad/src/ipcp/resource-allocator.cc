@@ -377,6 +377,12 @@ void ResourceAllocator::populateRIB()
 
 		tmp = new rina::rib::RIBObj(PDUFTEntryRIBObj::parent_class_name);
 		rib_daemon_->addObjRIB(PDUFTEntryRIBObj::parent_object_name, &tmp);
+
+		tmp = new rina::rib::RIBObj("RMT");
+		rib_daemon_->addObjRIB("/rmt", &tmp);
+
+		tmp = new rina::rib::RIBObj("RMTN1Flows");
+		rib_daemon_->addObjRIB("/rmt/n1flows", &tmp);
 	} catch (rina::Exception &e) {
 		LOG_ERR("Problems adding object to the RIB : %s", e.what());
 	}

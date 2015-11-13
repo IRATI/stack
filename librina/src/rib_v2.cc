@@ -1357,10 +1357,13 @@ const cdap_rib::vers_info_t& RIB::get_version() const {
 std::list<RIBObjectData> RIB::get_all_rib_objects_data()
 {
 	std::list<RIBObjectData> result;
+	RIBObjectData data;
 
 	for (std::map<std::string, RIBObj*>::iterator it = obj_name_map.begin();
 			it != obj_name_map.end(); ++it) {
-		result.push_back(it->second->get_object_data());
+		data = it->second->get_object_data();
+		data.instance_ = __get_obj_inst_id(data.name_);
+		result.push_back(data);
 	}
 
 	return result;

@@ -743,36 +743,35 @@ public:
         /** The address of the IPC Process at the source of the conection */
         unsigned int sourceAddress;
 
-        /**
-         * The address of the IPC Process at the destination of
-         * the connection
-         */
+        /** The address of the IPC Process at the destination of the connection */
         unsigned int destAddress;
 
-        /**
-         * The id of the QoS cube associated to the connection
-         */
+        /** The id of the QoS cube associated to the connection */
         unsigned int qosId;
 
-        /**
-         * The source CEP-id
-         */
+        /** The source CEP-id */
         int sourceCepId;
 
-        /**
-         * The destination CEP-id
-         */
+        /** The destination CEP-id */
         int destCepId;
 
-        /**
-         * The DTP connection policies
-         */
+        /** The DTP connection policies */
         DTPConfig dtpConfig;
 
-        /**
-         * The DTCP connection policies
-         */
+        /** The DTCP connection policies */
         DTCPConfig dtcpConfig;
+
+        /** PDUs transmitted in this connection */
+	unsigned int pdus_tx;
+
+	/** PDUs received in this connection */
+	unsigned int pdus_rx;
+
+	/** Bytes transmitted in this connection */
+	unsigned long bytes_tx;
+
+	/** Bytes received in this connection */
+	unsigned long bytes_rx;
 
         /**
          * The id of the IPC Process using the flow supported by this
@@ -802,6 +801,25 @@ public:
         void setDTCPConfig(const DTCPConfig& dtcpConfig);
 #endif
         const std::string toString();
+};
+
+struct DTPInformation {
+	unsigned int src_cep_id;
+	unsigned int dest_cep_id;
+	unsigned int src_address;
+	unsigned int dest_address;
+	unsigned int qos_id;
+	unsigned int port_id;
+	DTPConfig dtp_config;
+
+	unsigned int pdus_tx;
+	unsigned int pdus_rx;
+	unsigned long bytes_tx;
+	unsigned long bytes_rx;
+
+	DTPInformation();
+	DTPInformation(Connection * connection);
+	const std::string toString() const;
 };
 
 struct NHopAltList {

@@ -751,8 +751,9 @@ void FlowStateRIBObject::read(const rina::cdap_rib::con_handle_t &con,
 	rina::ser_obj_t &obj_reply, rina::cdap_rib::res_info_t& res)
 {
 	FlowStateObjectEncoder encoder;
-	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 	encoder.encode(*obj, obj_reply);
+
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }
 
 void FlowStateRIBObject::write(const rina::cdap_rib::con_handle_t &con, 

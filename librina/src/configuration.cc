@@ -759,7 +759,7 @@ void DTPConfig::set_incomplete_delivery(bool incomplete_delivery) {
 	incomplete_delivery_ = incomplete_delivery;
 }
 
-const std::string DTPConfig::toString() {
+const std::string DTPConfig::toString() const {
         std::stringstream ss;
         ss<<"DTP Policy Set (name/version): "<<dtp_policy_set_.get_name();
         ss<<"/"<<dtp_policy_set_.get_version();

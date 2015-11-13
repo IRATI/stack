@@ -167,6 +167,20 @@ public:
 	void decode(const rina::ser_obj_t &serobj, rina::PDUForwardingTableEntry &des_obj);
 };
 
+/// Encoder of the Connection
+class DTPInformationEncoder: public rina::Encoder<rina::DTPInformation> {
+public:
+	void encode(const rina::DTPInformation &obj, rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj, rina::DTPInformation &des_obj);
+};
+
+/// Encoder of the Connection
+class DTCPInformationEncoder: public rina::Encoder<rina::DTCPConfig> {
+public:
+	void encode(const rina::DTCPConfig &obj, rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj, rina::DTCPConfig &des_obj);
+};
+
 }
 
 #endif

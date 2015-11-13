@@ -457,9 +457,6 @@ void IPCPRIBDaemonImpl::initialize_rib_daemon(rina::cacep::AppConHandlerInterfac
 		robj = new rina::rib::RIBObj("RIBDaemon");
 		ribd->addObjRIB(rib, "/ribdaemon", &robj);
 
-		robj = new rina::rib::RIBObj("RMT");
-		ribd->addObjRIB(rib, "/rmt", &robj);
-
 		robj = new rina::rib::RIBObj("SDUDelimiting");
 		ribd->addObjRIB(rib, "/sdudel", &robj);
 	} catch (rina::Exception &e1) {

@@ -65,3 +65,17 @@ message dtpConfig_t { //configuration of the policies and parameters of a DTP el
 	optional uint32 initialATimer = 7;                             //maximum time that a receiver will wait before sending an Ack
         optional policyDescriptor_t dtppolicyset = 8;                  //it indicates the name of the policy set fot the dtp
 }
+
+message connection_t {
+	optional uint32 src_cep_id = 1; 				//identifies the source connection endpoint (unique within the source IPC process)
+	optional uint32 dest_cep_id = 2; 				//identifies the destination connection endpoint (unique within the destination IPC process)
+	optional uint32 qos_id = 3; 					//identifies the QoS cube under which this connection is classified
+	optional uint32 src_address = 4;				//The local IPCP address
+	optional uint32 dest_address = 5;				//The remote IPCP address
+	optional uint32 port_id = 6;					//The port-id of the flow this connection belongs to
+	optional dtpConfig_t dtp_config = 7; 				//The DTP configuration
+	optional uint32 pdus_tx = 8;					//PDUs transmitted on this connection
+	optional uint32 pdus_rx = 9;					//PDUs received on this connection
+	optional uint64 bytes_tx = 10;					//Bytes transmitted on this connection
+	optional uint64 bytes_rx = 11;					//Bytes received on this connection
+}
