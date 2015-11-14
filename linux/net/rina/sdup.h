@@ -53,6 +53,12 @@ int sdup_select_policy_set(struct sdup * instance,
 			   const string_t * path,
 			   const string_t * name);
 
+int sdup_set_policy_set_param(struct sdup * sdup,
+                              const char * path,
+                              const char * name,
+                              const char * value);
+
+
 int sdup_config_set(struct sdup *        instance,
 		    struct sdup_config * sdup_config);
 

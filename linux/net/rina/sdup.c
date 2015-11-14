@@ -259,6 +259,43 @@ int sdup_select_policy_set(struct sdup * instance,
 }
 EXPORT_SYMBOL(sdup_select_policy_set);
 
+/* NOTE: Skeleton code, SDU protection currently does not take params */
+int sdup_set_policy_set_param(struct sdup * sdup,
+                              const char * path,
+                              const char * name,
+                              const char * value)
+{
+        struct sdup_ps * ps;
+        int ret = -1;
+
+        if (!sdup || !path || !name || !value) {
+                LOG_ERRF("NULL arguments %p %p %p %p", sdup, path, name, value);
+                return -1;
+        }
+
+        LOG_DBG("set-policy-set-param '%s' '%s' '%s'", path, name, value);
+
+        if (strcmp(path, "") == 0) {
+                /* The request addresses this PFF instance. */
+                rcu_read_lock();
+
+                ps = container_of(rcu_dereference(sdup->base.ps),
+                                  struct sdup_ps, base);
+                if (!ps) {
+                        LOG_ERR("No policy-set selected for this PFF");
+                } else {
+                        LOG_ERR("Unknown PFF parameter policy '%s'", name);
+                }
+
+                rcu_read_unlock();
+        } else {
+                ret = base_set_policy_set_param(&sdup->base, path, name, value);
+        }
+
+        return ret;
+}
+EXPORT_SYMBOL(sdup_set_policy_set_param);
+
 int sdup_config_set(struct sdup *        instance,
 		    struct sdup_config * sdup_config)
 {

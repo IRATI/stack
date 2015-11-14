@@ -21,6 +21,11 @@
                         "Name": "default",
                         "Component": "dtcp",
                         "Version" : "1"
+                },
+                {
+                        "Name": "default",
+                        "Component": "sdup",
+                        "Version" : "1"
                 }
         ]
 }

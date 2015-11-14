@@ -287,6 +287,11 @@ int rmt_select_policy_set(struct rmt *rmt,
                 return pff_select_policy_set(rmt->pff, path + offset, name);
         }
 
+        if (cmplen && strncmp(path, "sdup", cmplen) == 0) {
+                /* The request addresses the SDU protection subcomponent. */
+                return sdup_select_policy_set(rmt->sdup, path + offset, name);
+        }
+
         if (strcmp(path, "") != 0) {
                 LOG_ERR("This component has no subcomponent named '%s'", path);
                 return -1;
@@ -357,14 +362,23 @@ int rmt_set_policy_set_param(struct rmt *rmt,
 			LOG_ERR("Unknown RMT parameter policy '%s'", name);
 
 		rcu_read_unlock();
-	} else if (cmplen && strncmp(path, "pff", cmplen) == 0)
+
+	} else if (cmplen && strncmp(path, "pff", cmplen) == 0) {
 		/* The request addresses the PFF subcomponent. */
 		return pff_set_policy_set_param(rmt->pff,
 						path + offset,
 						name, value);
-	else
+
+	} else if (cmplen && strncmp(path, "sdup", cmplen) == 0) {
+		/* The request addresses the SDU protection subcomponent. */
+		return sdup_set_policy_set_param(rmt->sdup,
+						 path + offset,
+						 name, value);
+
+	} else {
 		/* The request addresses the RMT policy-set. */
 		ret = base_set_policy_set_param(&rmt->base, path, name, value);
+        }
 
 	return ret;
 }
