@@ -134,6 +134,7 @@ sdup_ps_default_create(struct rina_component * component)
 	}
 
 	ps->dm          = sdup;
+        ps->priv        = NULL;
 
 	/* SDUP policy functions*/
 	ps->sdup_add_padding_policy		= default_sdup_add_padding_policy;

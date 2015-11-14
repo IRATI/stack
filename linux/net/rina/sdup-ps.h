@@ -84,8 +84,7 @@ struct sdup_ps {
 	struct sdup * dm;
 
 	/* Data private to the policy-set implementation. */
-	//no private data at the moment...
-	//void *       priv;
+	void *       priv;
 };
 
 /*
