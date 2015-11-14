@@ -431,7 +431,7 @@ bool sdup_protect_pdu(struct sdup * instance,
 	}
 	rcu_read_unlock();
 
-	LOG_INFO("Protected pdu.");
+	LOG_DBG("Protected pdu.");
 	return 0;
 }
 EXPORT_SYMBOL(sdup_protect_pdu);
@@ -477,7 +477,7 @@ bool sdup_unprotect_pdu(struct sdup * instance,
 
 	rcu_read_unlock();
 
-	LOG_INFO("Unprotected pdu.");
+	LOG_DBG("Unprotected pdu.");
 	return 0;
 }
 EXPORT_SYMBOL(sdup_unprotect_pdu);
