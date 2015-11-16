@@ -48,7 +48,6 @@ public:
 
 private:
 	rina::QoSCube * qos_cube;
-
 };
 
 /// Representation of a set of QoS cubes in the RIB
@@ -71,6 +70,31 @@ public:
 
 	const static std::string class_name;
 	const static std::string object_name;
+};
+
+class RMTN1FlowRIBObj: public rina::rib::RIBObj {
+public:
+	RMTN1FlowRIBObj(const rina::FlowInformation & flow_info);
+	const std::string get_displayable_value() const;
+
+	const std::string& get_class() const {
+		return class_name;
+	};
+
+	void read(const rina::cdap_rib::con_handle_t &con,
+		  const std::string& fqn,
+		  const std::string& class_,
+		  const rina::cdap_rib::filt_info_t &filt,
+		  const int invoke_id,
+		  rina::cdap_rib::obj_info_t &obj_reply,
+		  rina::cdap_rib::res_info_t& res);
+
+	const static std::string class_name;
+	const static std::string object_name_prefix;
+
+private:
+	int port_id;
+	bool started;
 };
 
 class NextHopTEntryRIBObj: public rina::rib::RIBObj {
@@ -151,7 +175,7 @@ public:
 	IPCProcess * ipcp_;
 };
 
-class ResourceAllocator: public IResourceAllocator {
+class ResourceAllocator: public IResourceAllocator, rina::InternalEventListener {
 public:
 	ResourceAllocator();
 	~ResourceAllocator();
@@ -169,9 +193,21 @@ public:
 	/// This operation takes ownership of the entries
 	void set_rt_entries(const std::list<rina::RoutingTableEntry*>& rt);
 
+	void eventHappened(rina::InternalEvent * event);
+
 private:
 	/// Create initial RIB objects
 	void populateRIB();
+	void subscribeToEvents();
+
+	/// Called by the RIB Daemon when the flow supporting the CDAP session with the remote peer
+	/// has been deallocated
+	/// @param event
+	void nMinusOneFlowDeallocated(rina::NMinusOneFlowDeallocatedEvent  * event);
+
+	/// Called when a new N-1 flow has been allocated
+	// @param portId
+	void nMinusOneFlowAllocated(rina::NMinusOneFlowAllocatedEvent * flowEvent);
 
 	INMinusOneFlowManager * n_minus_one_flow_manager_;
 	IPCPRIBDaemon * rib_daemon_;

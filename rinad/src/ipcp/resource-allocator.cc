@@ -103,6 +103,36 @@ void QoSCubesRIBObject::create(const rina::cdap_rib::con_handle_t &con,
 	LOG_IPCP_ERR("Missing code");
 }
 
+// Class RMTN1Flow RIB object
+const std::string RMTN1FlowRIBObj::class_name = "RMTN1Flow";
+const std::string RMTN1FlowRIBObj::object_name_prefix = "/rmt/n1flows/port_id=";
+
+RMTN1FlowRIBObj::RMTN1FlowRIBObj(const rina::FlowInformation& info)
+	: rina::rib::RIBObj(class_name)
+{
+	port_id = info.portId;
+	started = true;
+}
+
+const std::string RMTN1FlowRIBObj::get_displayable_value() const
+{
+	std::stringstream ss;
+	ss << "Port-id: " << port_id << "; Started: " << started;
+	return ss.str();
+}
+
+void RMTN1FlowRIBObj::read(const rina::cdap_rib::con_handle_t &con,
+			   const std::string& fqn,
+			   const std::string& class_,
+			   const rina::cdap_rib::filt_info_t &filt,
+			   const int invoke_id,
+			   rina::cdap_rib::obj_info_t &obj_reply,
+			   rina::cdap_rib::res_info_t& res)
+{
+	//TODO
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+}
+
 // Class NextHopTEntryRIBObj
 const std::string NextHopTEntryRIBObj::parent_class_name = "NextHopTable";
 const std::string NextHopTEntryRIBObj::parent_object_name = "/resalloc/nhopt";
@@ -358,6 +388,7 @@ void ResourceAllocator::set_application_process(rina::ApplicationProcess * ap)
 	rib_daemon_ = ipcp->rib_daemon_;
 
 	populateRIB();
+	subscribeToEvents();
 }
 
 /// Create initial RIB objects
@@ -386,6 +417,56 @@ void ResourceAllocator::populateRIB()
 	} catch (rina::Exception &e) {
 		LOG_ERR("Problems adding object to the RIB : %s", e.what());
 	}
+}
+
+void ResourceAllocator::eventHappened(rina::InternalEvent * event)
+{
+	if (event->type == rina::InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED){
+		rina::NMinusOneFlowDeallocatedEvent * flowEvent =
+				(rina::NMinusOneFlowDeallocatedEvent *) event;
+		nMinusOneFlowDeallocated(flowEvent);
+	}else if (event->type == rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED){
+		rina::NMinusOneFlowAllocatedEvent * flowEvent =
+				(rina::NMinusOneFlowAllocatedEvent *) event;
+		nMinusOneFlowAllocated(flowEvent);
+	}
+}
+
+void ResourceAllocator::nMinusOneFlowAllocated(rina::NMinusOneFlowAllocatedEvent * flowEvent)
+{
+	rina::rib::RIBObj * rib_obj = new RMTN1FlowRIBObj(flowEvent->flow_information_);
+	std::stringstream ss;
+	ss << RMTN1FlowRIBObj::object_name_prefix
+	   << flowEvent->flow_information_.portId;
+
+	try {
+		rib_daemon_->addObjRIB(ss.str(), &rib_obj);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems adding object to RIB: %s",
+			     e.what());
+	}
+}
+
+void ResourceAllocator::nMinusOneFlowDeallocated(rina::NMinusOneFlowDeallocatedEvent  * event)
+{
+	std::stringstream ss;
+	ss << RMTN1FlowRIBObj::object_name_prefix
+	   << event->port_id_;
+
+	try {
+		rib_daemon_->removeObjRIB(ss.str());
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems removing object from RIB: %s",
+			     e.what());
+	}
+}
+
+void ResourceAllocator::subscribeToEvents()
+{
+	ipcp->internal_event_manager_->subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED,
+					       	        this);
+	ipcp->internal_event_manager_->subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED,
+					 	 	this);
 }
 
 void ResourceAllocator::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
