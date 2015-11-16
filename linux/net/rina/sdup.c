@@ -404,7 +404,7 @@ int sdup_init_port_config(struct sdup * instance,
 
 	list_add(&(tmp->list), &(instance->port_confs));
 
-	LOG_INFO("Initialized SDUP configuration for port");
+	LOG_INFO("Initialized SDUP configuration for port %d", port_id);
 	return 0;
 }
 EXPORT_SYMBOL(sdup_init_port_config);
@@ -419,7 +419,8 @@ int sdup_destroy_port_config(struct sdup * instance,
 				 list) {
 		if (pos->port_id == port_id){
 			port_conf_destroy(pos);
-			LOG_INFO("Destroyed SDUP configuration for port");
+			LOG_INFO("Destroyed SDUP configuration for port %d",
+				 port_id);
 			return 0;
 		}
 	}
