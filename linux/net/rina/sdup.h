@@ -21,35 +21,83 @@
 #ifndef RINA_SDUP_H
 #define RINA_SDUP_H
 
-#include <linux/crypto.h>
-
 #include "common.h"
 #include "ipcp-factories.h"
 #include "ipcp-instances.h"
 #include "ps-factory.h"
 #include "pdu-ser.h"
 
-struct sdup;
+/** The Encryption sub-component */
+struct sdup_enc {
+	/* The encryption policy-set instance */
+	struct rina_component base;
 
-struct sdup_port_conf {
+	/* The parent SDU protection instance */
+	struct sdup_port * parent;
+};
+
+/** The Error check sub-component */
+struct sdup_errc {
+	/* The error check policy-set instance */
+	struct rina_component base;
+
+	/* The parent SDU Protection instance */
+	struct sdup_port * parent;
+};
+
+/** The TTL sub-component */
+struct sdup_ttl {
+	/* The TTL policy-set instance */
+	struct rina_component base;
+
+	/* The parent SDU Protection instance */
+	struct sdup_port * parent;
+};
+
+/** SDU protection instance for an N-1 port */
+struct sdup_port {
+	/* The id of the N-1 port this instance is protecting */
 	port_id_t port_id;
-	struct dup_config_entry * dup_conf;
 
-	u_int32_t  	initial_ttl_value;
+	/* Encryption component */
+	struct sdup_enc *  enc;
 
-	//Encryption-related fields
-	bool 		enable_encryption;
-	bool		enable_decryption;
-	string_t * 	encryption_cipher;
-	string_t * 	message_digest;
-	string_t * 	compress_alg;
+	/* Error check component */
+	struct sdup_errc * errc;
 
-	struct crypto_blkcipher * blkcipher;
+	/* TTL component */
+	struct sdup_ttl * ttl;
 
+	/* Configuration of this instance */
+	struct dup_config_entry * conf;
+
+	/* Link it to the main IPCP SDU Protection component */
 	struct list_head list;
 };
 
-int sdup_select_policy_set(struct sdup * instance,
+/** The SDU Protection component of an IPC Process */
+struct sdup {
+	/* The SDU Protection module configuration */
+	struct sdup_config * sdup_conf;
+
+	/* The list of SDU Protection instances, one per N-1 port */
+	struct list_head instances;
+};
+
+struct sdup_enc  *sdup_enc_from_component(struct rina_component *component);
+struct sdup_errc *sdup_errc_from_component(struct rina_component *component);
+struct sdup_ttl  *sdup_ttl_from_component(struct rina_component *component);
+
+int sdup_enc_select_policy_set(struct sdup_enc * sdup_enc,
+                               const char * path,
+                               const char * name);
+int sdup_errc_select_policy_set(struct sdup_errc * sdup_errc,
+                                const char * path,
+                                const char * name);
+int sdup_ttl_select_policy_set(struct sdup_ttl * sdup_ttl,
+                               const char * path,
+                               const char * name);
+int sdup_select_policy_set(struct sdup_port * instance,
 			   const string_t * path,
 			   const string_t * name);
 
@@ -66,40 +114,34 @@ struct sdup * sdup_create(struct ipcp_instance *  parent);
 
 int           sdup_destroy(struct sdup * instance);
 
-int sdup_init_port_config(struct sdup * instance,
-			  const struct name * n1_dif_name,
-			  port_id_t port_id);
+struct sdup_port * sdup_init_port_config(struct sdup * instance,
+			  	  	 const struct name * n1_dif_name,
+			  	  	 port_id_t port_id);
 
 int sdup_destroy_port_config(struct sdup * instance,
 			     port_id_t port_id);
 
-bool sdup_protect_pdu(struct sdup * instance,
-		      struct pdu_ser * pdu,
-		      port_id_t port_id);
+int sdup_protect_pdu(struct sdup_port * instance,
+		     struct pdu_ser * pdu);
 
-bool sdup_unprotect_pdu(struct sdup * instance,
-			struct pdu_ser * pdu,
-			port_id_t port_id);
+int sdup_unprotect_pdu(struct sdup_port * instance,
+		       struct pdu_ser * pdu);
 
-bool sdup_set_lifetime_limit(struct sdup * instance,
-			     struct pdu_ser * pdu,
-			     port_id_t port_id,
-			     struct pci * pci);
+int sdup_set_lifetime_limit(struct sdup_port * instance,
+			    struct pdu_ser * pdu,
+			    struct pci * pci);
 
-bool sdup_get_lifetime_limit(struct sdup * instance,
-			     struct pdu_ser * pdu,
-			     port_id_t port_id,
-			     size_t * ttl);
+int sdup_get_lifetime_limit(struct sdup_port * instance,
+			    struct pdu_ser * pdu,
+			    size_t * ttl);
 
-bool sdup_dec_check_lifetime_limit(struct sdup * instance,
-				   struct pdu * pdu,
-				   port_id_t port_id);
+int sdup_dec_check_lifetime_limit(struct sdup_port * instance,
+				  struct pdu * pdu);
 
-int sdup_enable_encryption(struct sdup *     instance,
+int sdup_enable_encryption(struct sdup_port * instance,
 			   bool 	    enable_encryption,
 			   bool    	    enable_decryption,
-			   struct buffer *  encrypt_key,
-			   port_id_t 	    port_id);
+			   struct buffer *  encrypt_key);
 
 struct sdup * sdup_from_component(struct rina_component * component);
 
