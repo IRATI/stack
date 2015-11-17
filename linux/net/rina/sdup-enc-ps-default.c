@@ -35,9 +35,55 @@
 
 struct sdup_enc_ps_default_data {
 	struct crypto_blkcipher * blkcipher;
-	bool 			  enable_encryption;
-	bool			  enable_decryption;
+	bool 		enable_encryption;
+	bool		enable_decryption;
+	string_t * 	encryption_cipher;
+	string_t * 	message_digest;
+	string_t * 	compress_alg;
 };
+
+static struct sdup_enc_ps_default_data * priv_data_create()
+{
+	struct sdup_enc_ps_default_data * data =
+			rkmalloc(sizeof(*data), GFP_KERNEL);
+	if (!data)
+		return NULL;
+
+	data->blkcipher = NULL;
+	data->enable_decryption = false;
+	data->enable_encryption = false;
+	data->encryption_cipher = NULL;
+	data->message_digest = NULL;
+	data->compress_alg = NULL;
+
+	return data;
+}
+
+static void priv_data_destroy(struct sdup_enc_ps_default_data * data)
+{
+	if (!data)
+		return;
+
+	if (data->blkcipher)
+		crypto_free_blkcipher(data->blkcipher);
+
+	if (data->compress_alg) {
+		rkfree(data->compress_alg);
+		data->compress_alg = NULL;
+	}
+
+	if (data->encryption_cipher) {
+		rkfree(data->encryption_cipher);
+		data->encryption_cipher = NULL;
+	}
+
+	if (data->message_digest) {
+		rkfree(data->message_digest);
+		data->message_digest = NULL;
+	}
+
+	rkfree(data);
+}
 
 static bool _pdu_ser_data_and_length(struct pdu_ser * pdu,
 				     unsigned char ** data,
@@ -63,9 +109,8 @@ static bool _pdu_ser_data_and_length(struct pdu_ser * pdu,
 	return 0;
 }
 
-static int _default_sdup_add_padding_policy(struct sdup_ps * ps,
-				    	    struct pdu_ser * pdu,
-				    	    struct sdup_port_conf * port_conf)
+static int _default_sdup_add_padding_policy(struct sdup_enc_ps_default_data * priv_data,
+				    	    struct pdu_ser * pdu)
 {
 	struct buffer * buf;
 	ssize_t		buffer_size;
@@ -74,20 +119,20 @@ static int _default_sdup_add_padding_policy(struct sdup_ps * ps,
 	char *		data;
 	int i;
 
-	if (!ps || !pdu || !port_conf){
+	if (!priv_data || !pdu){
 		LOG_ERR("Encryption arguments not initialized!");
 		return -1;
 	}
 
 	/* encryption and therefore padding is disabled */
-	if (port_conf->blkcipher == NULL ||
-	    !port_conf->enable_encryption)
+	if (priv_data->blkcipher == NULL ||
+	    !priv_data->enable_encryption)
 		return 0;
 
 	LOG_DBG("PADDING!");
 
 	buf = pdu_ser_buffer(pdu);
-	blk_size = crypto_blkcipher_blocksize(port_conf->blkcipher);
+	blk_size = crypto_blkcipher_blocksize(priv_data->blkcipher);
 	buffer_size = buffer_length(buf);
 	padded_size = (buffer_size/blk_size + 1) * blk_size;
 
@@ -105,9 +150,8 @@ static int _default_sdup_add_padding_policy(struct sdup_ps * ps,
 	return 0;
 }
 
-static int _default_sdup_remove_padding_policy(struct sdup_ps * ps,
-				       	       struct pdu_ser * pdu,
-				       	       struct sdup_port_conf * port_conf)
+static int _default_sdup_remove_padding_policy(struct sdup_enc_ps_default_data * priv_data,
+				       	       struct pdu_ser * pdu)
 {
 	struct buffer *	buf;
 	const char *	data;
@@ -115,14 +159,14 @@ static int _default_sdup_remove_padding_policy(struct sdup_ps * ps,
 	ssize_t		pad_len;
 	int		i;
 
-	if (!ps || !pdu || !port_conf){
+	if (!priv_data || !pdu){
 		LOG_ERR("Encryption arguments not initialized!");
 		return -1;
 	}
 
 	/* decryption and therefore padding is disabled */
-	if (port_conf->blkcipher == NULL ||
-	    !port_conf->enable_decryption)
+	if (priv_data->blkcipher == NULL ||
+	    !priv_data->enable_decryption)
 		return 0;
 
 	LOG_DBG("UNPADDING!");
@@ -148,9 +192,8 @@ static int _default_sdup_remove_padding_policy(struct sdup_ps * ps,
 	return 0;
 }
 
-static int _default_sdup_encrypt_policy(struct sdup_ps * ps,
-				 	struct pdu_ser * pdu,
-				 	struct sdup_port_conf * port_conf)
+static int _default_sdup_encrypt_policy(struct sdup_enc_ps_default_data * priv_data,
+				 	struct pdu_ser * pdu)
 {
 	struct blkcipher_desc	desc;
 	struct scatterlist	sg_src;
@@ -159,20 +202,20 @@ static int _default_sdup_encrypt_policy(struct sdup_ps * ps,
 	ssize_t			buffer_size;
 	void *			data;
 
-	if (!ps || !pdu || !port_conf){
+	if (!priv_data || !pdu){
 		LOG_ERR("Encryption arguments not initialized!");
 		return -1;
 	}
 
 	/* encryption is disabled */
-	if (port_conf->blkcipher == NULL ||
-	    !port_conf->enable_encryption)
+	if (priv_data->blkcipher == NULL ||
+	    !priv_data->enable_encryption)
 		return 0;
 
 	LOG_DBG("ENCRYPT!");
 
 	desc.flags = 0;
-	desc.tfm = port_conf->blkcipher;
+	desc.tfm = priv_data->blkcipher;
 	buf = pdu_ser_buffer(pdu);
 	buffer_size = buffer_length(buf);
 	data = buffer_data_rw(buf);
@@ -188,9 +231,8 @@ static int _default_sdup_encrypt_policy(struct sdup_ps * ps,
 	return 0;
 }
 
-static int _default_sdup_decrypt_policy(struct sdup_ps * ps,
-				 	struct pdu_ser * pdu,
-					struct sdup_port_conf * port_conf)
+static int _default_sdup_decrypt_policy(struct sdup_enc_ps_default_data * priv_data,
+				 	struct pdu_ser * pdu)
 {
 	struct blkcipher_desc	desc;
 	struct scatterlist	sg_src;
@@ -199,20 +241,20 @@ static int _default_sdup_decrypt_policy(struct sdup_ps * ps,
 	ssize_t			buffer_size;
 	void *			data;
 
-	if (!ps || !pdu || !port_conf){
+	if (!priv_data || !pdu){
 		LOG_ERR("Failed decryption");
 		return -1;
 	}
 
 	/* decryption is disabled */
-	if (port_conf->blkcipher == NULL ||
-	    !port_conf->enable_decryption)
+	if (priv_data->blkcipher == NULL ||
+	    !priv_data->enable_decryption)
 		return 0;
 
 	LOG_DBG("DECRYPT!");
 
 	desc.flags = 0;
-	desc.tfm = port_conf->blkcipher;
+	desc.tfm = priv_data->blkcipher;
 	buf = pdu_ser_buffer(pdu);
 	buffer_size = buffer_length(buf);
 	data = buffer_data_rw(buf);
@@ -228,92 +270,236 @@ static int _default_sdup_decrypt_policy(struct sdup_ps * ps,
 	return 0;
 }
 
-static int _default_sdup_compress(struct sdup_ps * ps,
-			  	  struct pdu_ser * pdu,
-			  	  struct sdup_port_conf * port_conf)
+static int _default_sdup_compress(struct sdup_enc_ps_default_data * priv_data,
+			  	  struct pdu_ser * pdu)
 {
 	LOG_DBG("COMPRESSION");
 	return 0;
 }
 
-static int _default_sdup_decompress(struct sdup_ps * ps,
-			    	    struct pdu_ser * pdu,
-			    	    struct sdup_port_conf * port_conf)
+static int _default_sdup_decompress(struct sdup_enc_ps_default_data * priv_data,
+			    	    struct pdu_ser * pdu)
 {
 	LOG_DBG("DECOMPRESSION");
 	return 0;
 }
 
-int default_sdup_encrypt_policy(struct sdup_ps * ps,
-				struct pdu_ser * pdu,
-				struct sdup_port_conf * port_conf)
+int default_sdup_encrypt_policy(struct sdup_enc_ps * ps,
+				struct pdu_ser * pdu)
 {
 	int result = 0;
+	struct sdup_enc_ps_default_data * priv_data = ps->priv;
 
-	result = _default_sdup_compress(ps, pdu, port_conf);
+	result = _default_sdup_compress(priv_data, pdu);
 	if (result)
 		return result;
 
-	result = _default_sdup_add_padding_policy(ps, pdu, port_conf);
+	result = _default_sdup_add_padding_policy(priv_data, pdu);
 	if (result)
 		return result;
 
-	return _default_sdup_encrypt_policy(ps, pdu, port_conf);
+	return _default_sdup_encrypt_policy(priv_data, pdu);
 }
 
-int default_sdup_decrypt_policy(struct sdup_ps * ps,
-				struct pdu_ser * pdu,
-				struct sdup_port_conf * port_conf)
+int default_sdup_decrypt_policy(struct sdup_enc_ps * ps,
+				struct pdu_ser * pdu)
 {
 	int result = 0;
+	struct sdup_enc_ps_default_data * priv_data = ps->priv;
 
-	result = _default_sdup_decrypt_policy(ps, pdu, port_conf);
+	result = _default_sdup_decrypt_policy(priv_data, pdu);
 	if (result)
 		return result;
 
-	result = _default_sdup_remove_padding_policy(ps, pdu, port_conf);
+	result = _default_sdup_remove_padding_policy(priv_data, pdu);
 	if (result)
 		return result;
 
-	return _default_sdup_decompress(ps, pdu, port_conf);
+	return _default_sdup_decompress(priv_data, pdu);
 }
 
-int default_sdup_add_hmac(struct sdup_ps * ps,
-			  struct pdu_ser * pdu,
-			  struct sdup_port_conf * port_conf)
+int default_sdup_add_hmac(struct sdup_enc_ps * ps,
+			  struct pdu_ser * pdu)
 {
 	LOG_DBG("Adding HMAC");
 	return 0;
 }
 
-int default_sdup_verify_hmac(struct sdup_ps * ps,
-			     struct pdu_ser * pdu,
-			     struct sdup_port_conf * port_conf)
+int default_sdup_verify_hmac(struct sdup_enc_ps * ps,
+			     struct pdu_ser * pdu)
 {
 	LOG_DBG("Checking HMAC");
+	return 0;
+}
+
+int default_sdup_enable_encryption(struct sdup_enc_ps * ps,
+				   bool enable_encryption,
+				   bool enable_decryption,
+				   struct buffer * encrypt_key)
+{
+	struct sdup_enc_ps_default_data * priv_data;
+
+	if (!ps) {
+		LOG_ERR("Bogus SDUP Encryption PS passed");
+		return -1;
+	}
+
+	if (!encrypt_key) {
+		LOG_ERR("Bogus encryption key passed");
+		return -1;
+	}
+
+	priv_data = ps->priv;
+
+	if (!priv_data->blkcipher) {
+		LOG_ERR("Block cipher is not set for N-1 port %d", port_id);
+		return -1;
+	}
+
+	if (!priv_data->enable_decryption &&
+	    !priv_data->enable_encryption) {
+		if (crypto_blkcipher_setkey(priv_data->blkcipher,
+					    buffer_data_ro(encrypt_key),
+					    buffer_length(encrypt_key))) {
+			LOG_ERR("Could not set encryption key for N-1 port %d",
+				port_id);
+			return -1;
+		}
+	}
+
+	if (!priv_data->enable_decryption){
+		priv_data->enable_decryption = enable_decryption;
+	}
+	if (!priv_data->enable_encryption){
+		priv_data->enable_encryption = enable_encryption;
+	}
+
+	LOG_DBG("Encryption enabled state: %d", port_conf->enable_encryption);
+	LOG_DBG("Decryption enabled state: %d", port_conf->enable_decryption);
+
 	return 0;
 }
 
 static struct ps_base *
 sdup_enc_ps_default_create(struct rina_component * component)
 {
-	struct sdup * sdup = sdup_from_component(component);
-	struct sdup_enc_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
+	struct dup_config_entry * conf;
+	struct sdup_enc * sdup_enc;
+	struct sdup_enc_ps * ps;
+	struct sdup_port * sdup_port;
+	struct sdup_enc_ps_default_data * data;
+	struct policy_parm * parameter;
+	const string_t * aux;
 
-	if (!ps) {
+	sdup_enc = sdup_enc_from_component(component);
+	if (!sdup_enc)
+		return NULL;
+
+	sdup_port = sdup_enc->parent;
+	if (!sdup_port)
+		return NULL;
+
+	conf = sdup_port->conf;
+	if (!conf)
+		return NULL;
+
+	ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
+	if (!ps)
+		return NULL;
+
+	data = priv_data_create();
+	if (!data) {
+		rkfree(ps);
 		return NULL;
 	}
 
-	ps->dm          = sdup;
-        ps->priv        = NULL;
+	ps->dm          = sdup_port;
+        ps->priv        = data;
+
+        /* Parse policy parameters */
+        if (conf->encryption_policy) {
+        	parameter = policy_param_find(conf->encryption_policy,
+        				      "encryptAlg");
+        	if (!parameter) {
+        		LOG_ERR("Could not find 'encryptAlg' in Encr. policy");
+        		rkfree(ps);
+        		priv_data_destroy(data);
+        		return NULL;
+        	}
+
+        	aux = policy_param_value(parameter);
+        	if (string_cmp(aux, "AES128") == 0 ||
+        			string_cmp(aux, "AES256") == 0) {
+        		if (string_dup("ecb(aes)",
+        				&data->encryption_cipher)) {
+        			LOG_ERR("Problems copying 'encryptAlg' value");
+        			rkfree(ps);
+        			priv_data_destroy(data);
+        			return NULL;
+        		}
+        		LOG_DBG("Encryption cipher is %s",
+        				entry->encryption_cipher);
+        	} else {
+        		LOG_DBG("Unsupported encryption cipher %s", aux);
+        	}
+
+        	parameter = policy_param_find(conf->encryption_policy,
+        				      "macAlg");
+        	if (!parameter) {
+        		LOG_ERR("Could not find 'macAlg' in Encrypt. policy");
+        		rkfree(ps);
+        		priv_data_destroy(data);
+        		return NULL;
+        	}
+
+        	aux = policy_param_value(parameter);
+        	if (string_cmp(aux, "SHA1") == 0) {
+        		if (string_dup("sha1", &data->message_digest)) {
+        			LOG_ERR("Problems copying 'digest' value");
+        			rkfree(ps);
+        			priv_data_destroy(data);
+        			return NULL;
+        		}
+        		LOG_DBG("Message digest is %s", entry->message_digest);
+        	} else if (string_cmp(aux, "MD5") == 0) {
+        		if (string_dup("md5", &data->message_digest)) {
+        			LOG_ERR("Problems copying 'digest' value)");
+           			rkfree(ps);
+           			priv_data_destroy(data);
+           			return NULL;
+        		}
+        		LOG_DBG("Message digest is %s", entry->message_digest);
+        	} else {
+        		LOG_DBG("Unsupported message digest %s", aux);
+        	}
+        } else {
+        	LOG_ERR("Bogus configuration passed");
+		rkfree(ps);
+		priv_data_destroy(data);
+		return NULL;
+        }
+
+        /* Instantiate block cipher */
+        data->blkcipher =
+        		crypto_alloc_blkcipher(data->encryption_cipher,
+        				       0,
+        				       0);
+        if (IS_ERR(data->blkcipher)) {
+        	LOG_ERR("could not allocate blkcipher handle for %s\n",
+        		data->encryption_cipher);
+		rkfree(ps);
+		priv_data_destroy(data);
+        	return NULL;
+        }
 
 	/* SDUP policy functions*/
-	ps->sdup_encrypt_policy			= default_sdup_encrypt_policy;
-	ps->sdup_decrypt_policy			= default_sdup_decrypt_policy;
-	ps->sdup_add_hmac			= default_sdup_add_hmac;
-	ps->sdup_verify_hmac			= default_sdup_verify_hmac;
-	ps->sdup_compress			= default_sdup_compress;
-	ps->sdup_decompress			= default_sdup_decompress;
+	ps->sdup_encrypt_policy		= default_sdup_encrypt_policy;
+	ps->sdup_decrypt_policy		= default_sdup_decrypt_policy;
+	ps->sdup_add_hmac		= default_sdup_add_hmac;
+	ps->sdup_verify_hmac		= default_sdup_verify_hmac;
+	ps->sdup_compress		= default_sdup_compress;
+	ps->sdup_decompress		= default_sdup_decompress;
+	ps->sdup_enable_encryption	= default_sdup_enable_encryption;
 
 	return &ps->base;
 }
@@ -321,9 +507,15 @@ sdup_enc_ps_default_create(struct rina_component * component)
 static void
 sdup_enc_ps_default_destroy(struct ps_base * bps)
 {
-	struct sdup_enc_ps *ps = container_of(bps, struct sdup_enc_ps, base);
+	struct sdup_enc_ps_default_data * data;
+	struct sdup_enc_ps *ps;
+
+	ps = container_of(bps, struct sdup_enc_ps, base);
+	data = ps->priv;
 
 	if (bps) {
+		if (data)
+			priv_data_destroy(data);
 		rkfree(ps);
 	}
 }

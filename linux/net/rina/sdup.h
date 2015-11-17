@@ -101,11 +101,22 @@ int sdup_select_policy_set(struct sdup_port * instance,
 			   const string_t * path,
 			   const string_t * name);
 
-int sdup_set_policy_set_param(struct sdup * sdup,
+int sdup_enc_set_policy_set_param(struct sdup_enc * sdup_enc,
+                                  const char * path,
+                                  const char * name,
+                                  const char * value);
+int sdup_errc_set_policy_set_param(struct sdup_errc * sdup_errc,
+                                   const char * path,
+                                   const char * name,
+                                   const char * value);
+int sdup_ttl_set_policy_set_param(struct sdup_ttl * sdup_ttl,
+                                  const char * path,
+                                  const char * name,
+                                  const char * value);
+int sdup_set_policy_set_param(struct sdup_port * sdup_port,
                               const char * path,
                               const char * name,
                               const char * value);
-
 
 int sdup_config_set(struct sdup *        instance,
 		    struct sdup_config * sdup_config);
@@ -142,7 +153,5 @@ int sdup_enable_encryption(struct sdup_port * instance,
 			   bool 	    enable_encryption,
 			   bool    	    enable_decryption,
 			   struct buffer *  encrypt_key);
-
-struct sdup * sdup_from_component(struct rina_component * component);
 
 #endif

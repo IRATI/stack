@@ -42,8 +42,16 @@
 #include "sdup-errc-ps.h"
 #include "sdup-ttl-ps.h"
 
-static struct policy_set_list policy_sets = {
-	.head = LIST_HEAD_INIT(policy_sets.head)
+static struct policy_set_list enc_policy_sets = {
+	.head = LIST_HEAD_INIT(enc_policy_sets.head)
+};
+
+static struct policy_set_list errc_policy_sets = {
+	.head = LIST_HEAD_INIT(errc_policy_sets.head)
+};
+
+static struct policy_set_list ttl_policy_sets = {
+	.head = LIST_HEAD_INIT(ttl_policy_sets.head)
 };
 
 struct sdup_enc *sdup_enc_from_component(struct rina_component *component)
@@ -71,7 +79,10 @@ int sdup_enc_select_policy_set(struct sdup_enc * sdup_enc,
                 return -1;
         }
 
-        base_select_policy_set_start(&sdup_enc->base, &trans, &policy_sets, name);
+        base_select_policy_set_start(&sdup_enc->base,
+        			     &trans,
+        			     &enc_policy_sets,
+        			     name);
 
         if (trans.state == PS_SEL_TRANS_PENDING) {
                 struct sdup_enc_ps *ps;
@@ -79,7 +90,8 @@ int sdup_enc_select_policy_set(struct sdup_enc * sdup_enc,
                 ps = container_of(trans.candidate_ps, struct sdup_enc_ps, base);
                 if (!ps->sdup_add_hmac || !ps->sdup_compress ||
                 		!ps->sdup_decompress || !ps->sdup_decrypt_policy ||
-                		!ps->sdup_encrypt_policy ||  !ps->sdup_verify_hmac) {
+                		!ps->sdup_encrypt_policy ||  !ps->sdup_verify_hmac ||
+                		!ps->sdup_enable_encryption) {
                         LOG_ERR("SDUP encryption policy set is invalid, policies are "
                                 "missing:\n"
                                 "       sdup_add_hmac=%p\n"
@@ -87,13 +99,15 @@ int sdup_enc_select_policy_set(struct sdup_enc * sdup_enc,
                                 "       sdup_decompress=%p\n"
                                 "       sdup_decrypt_policy=%p\n"
                                 "       sdup_encrypt_policy=%p\n"
-                                "       sdup_verify_hmac=%p\n",
+                                "       sdup_verify_hmac=%p\n"
+                        	"       sdup_enable_encryption=%p\n",
                                 ps->sdup_add_hmac,
                                 ps->sdup_compress,
                                 ps->sdup_decompress,
                                 ps->sdup_decrypt_policy,
                                 ps->sdup_encrypt_policy,
-                                ps->sdup_verify_hmac);
+                                ps->sdup_verify_hmac,
+                                ps->sdup_enable_encryption);
                         trans.state = PS_SEL_TRANS_ABORTED;
                 }
         }
@@ -117,7 +131,10 @@ int sdup_errc_select_policy_set(struct sdup_errc * sdup_errc,
                 return -1;
         }
 
-        base_select_policy_set_start(&sdup_errc->base, &trans, &policy_sets, name);
+        base_select_policy_set_start(&sdup_errc->base,
+        			     &trans,
+        			     &errc_policy_sets,
+        			     name);
 
         if (trans.state == PS_SEL_TRANS_PENDING) {
                 struct sdup_errc_ps *ps;
@@ -154,7 +171,10 @@ int sdup_ttl_select_policy_set(struct sdup_ttl * sdup_ttl,
                 return -1;
         }
 
-        base_select_policy_set_start(&sdup_ttl->base, &trans, &policy_sets, name);
+        base_select_policy_set_start(&sdup_ttl->base,
+        			     &trans,
+        			     &ttl_policy_sets,
+        			     name);
 
         if (trans.state == PS_SEL_TRANS_PENDING) {
                 struct sdup_ttl_ps *ps;
@@ -194,21 +214,28 @@ int sdup_select_policy_set(struct sdup_port * instance,
 
         if (cmplen && strncmp(path, "enc", cmplen) == 0) {
                 /* The request addresses the Encryption subcomponent. */
-                return sdup_enc_select_policy_set(instance->enc, path + offset, name);
+                return sdup_enc_select_policy_set(instance->enc,
+                				  path + offset,
+                				  name);
         }
 
         if (cmplen && strncmp(path, "errc", cmplen) == 0) {
                 /* The request addresses the Error Check subcomponent. */
-                return sdup_errc_select_policy_set(instance->errc, path + offset, name);
+                return sdup_errc_select_policy_set(instance->errc,
+                				   path + offset,
+                				   name);
         }
 
         if (cmplen && strncmp(path, "ttl", cmplen) == 0) {
                 /* The request addresses the TTL subcomponent. */
-                return sdup_ttl_select_policy_set(instance->ttl, path + offset, name);
+                return sdup_ttl_select_policy_set(instance->ttl,
+                				  path + offset,
+                				  name);
         }
 
         if (strcmp(path, "") != 0) {
-                LOG_ERR("This component has no subcomponent named '%s'", path);
+                LOG_ERR("This component has no subcomponent named '%s'",
+                	path);
                 return -1;
         }
 
@@ -447,17 +474,16 @@ static struct sdup_port * find_port(struct sdup * sdup,
 	return NULL;
 }
 
-/* NOTE: Skeleton code, SDU protection currently does not take params */
-int sdup_set_policy_set_param(struct sdup * sdup,
-                              const char * path,
-                              const char * name,
-                              const char * value)
+int sdup_enc_set_policy_set_param(struct sdup_enc * sdup_enc,
+                                  const char * path,
+                                  const char * name,
+                                  const char * value)
 {
-        struct sdup_ps * ps;
+        struct sdup_enc_ps * ps;
         int ret = -1;
 
-        if (!sdup || !path || !name || !value) {
-                LOG_ERRF("NULL arguments %p %p %p %p", sdup, path, name, value);
+        if (!sdup_enc || !path || !name || !value) {
+                LOG_ERRF("NULL arguments %p %p %p %p", pff, path, name, value);
                 return -1;
         }
 
@@ -467,20 +493,140 @@ int sdup_set_policy_set_param(struct sdup * sdup,
                 /* The request addresses this PFF instance. */
                 rcu_read_lock();
 
-                ps = container_of(rcu_dereference(sdup->base.ps),
-                                  struct sdup_ps, base);
+                ps = container_of(rcu_dereference(sdup_enc->base.ps),
+                                  struct sdup_enc_ps, base);
                 if (!ps) {
-                        LOG_ERR("No policy-set selected for this PFF");
+                        LOG_ERR("No policy-set selected for this SDUP Encryption component");
                 } else {
-                        LOG_ERR("Unknown PFF parameter policy '%s'", name);
+                        LOG_ERR("Unknown SDUP Encryption parameter policy '%s'", name);
                 }
 
                 rcu_read_unlock();
         } else {
-                ret = base_set_policy_set_param(&sdup->base, path, name, value);
+                ret = base_set_policy_set_param(&sdup_enc->base, path, name, value);
         }
 
         return ret;
+}
+EXPORT_SYMBOL(sdup_enc_set_policy_set_param);
+
+int sdup_errc_set_policy_set_param(struct sdup_errc * sdup_errc,
+                                   const char * path,
+                                   const char * name,
+                                   const char * value)
+{
+        struct sdup_errc_ps * ps;
+        int ret = -1;
+
+        if (!sdup_errc || !path || !name || !value) {
+                LOG_ERRF("NULL arguments %p %p %p %p", pff, path, name, value);
+                return -1;
+        }
+
+        LOG_DBG("set-policy-set-param '%s' '%s' '%s'", path, name, value);
+
+        if (strcmp(path, "") == 0) {
+                /* The request addresses this PFF instance. */
+                rcu_read_lock();
+
+                ps = container_of(rcu_dereference(sdup_errc->base.ps),
+                                  struct sdup_errc_ps, base);
+                if (!ps) {
+                        LOG_ERR("No policy-set selected for this SDUP Error check component");
+                } else {
+                        LOG_ERR("Unknown SDUP Error check parameter policy '%s'", name);
+                }
+
+                rcu_read_unlock();
+        } else {
+                ret = base_set_policy_set_param(&sdup_errc->base, path, name, value);
+        }
+
+        return ret;
+}
+EXPORT_SYMBOL(sdup_errc_set_policy_set_param);
+
+int sdup_ttl_set_policy_set_param(struct sdup_ttl * sdup_ttl,
+                                  const char * path,
+                                  const char * name,
+                                  const char * value)
+{
+        struct sdup_enc_ps * ps;
+        int ret = -1;
+
+        if (!sdup_ttl || !path || !name || !value) {
+                LOG_ERRF("NULL arguments %p %p %p %p", pff, path, name, value);
+                return -1;
+        }
+
+        LOG_DBG("set-policy-set-param '%s' '%s' '%s'", path, name, value);
+
+        if (strcmp(path, "") == 0) {
+                /* The request addresses this PFF instance. */
+                rcu_read_lock();
+
+                ps = container_of(rcu_dereference(sdup_ttl->base.ps),
+                                  struct sdup_ttl_ps, base);
+                if (!ps) {
+                        LOG_ERR("No policy-set selected for this SDUP TTL component");
+                } else {
+                        LOG_ERR("Unknown SDUP TTL parameter policy '%s'", name);
+                }
+
+                rcu_read_unlock();
+        } else {
+                ret = base_set_policy_set_param(&sdup_ttl->base, path, name, value);
+        }
+
+        return ret;
+}
+EXPORT_SYMBOL(sdup_ttl_set_policy_set_param);
+
+int sdup_set_policy_set_param(struct sdup_port * sdup_port,
+                              const char * path,
+                              const char * name,
+                              const char * value)
+{
+	size_t cmplen;
+	size_t offset;
+	int ret = -1;
+
+	if (!sdup_port || !path || !name || !value) {
+		LOG_ERRF("NULL arguments %p %p %p %p", rmt, path, name, value);
+		return -1;
+	}
+
+	ps_factory_parse_component_id(path, &cmplen, &offset);
+
+	LOG_DBG("set-policy-set-param '%s' '%s' '%s'", path, name, value);
+
+	if (strcmp(path, "") == 0) {
+		return -1;
+
+	}
+
+	if (cmplen && strncmp(path, "enc", cmplen) == 0) {
+		/* The request addresses the sdup-enc subcomponent. */
+		return sdup_enc_set_policy_set_param(sdup_port->enc,
+						     path + offset,
+						     name,
+						     value);
+
+	} else if (cmplen && strncmp(path, "errc", cmplen) == 0) {
+		/* The request addresses the sdup-errc subcomponent. */
+		return sdup_errc_set_policy_set_param(sdup_port->errc,
+						      path + offset,
+						      name,
+						      value);
+	} else if (cmplen && strncmp(path, "ttl", cmplen) == 0) {
+		/* The request addresses the sdup-ttl subcomponent. */
+		return sdup_ttl_set_policy_set_param(sdup_port->ttl,
+						     path + offset,
+						     name,
+						     value);
+	} else {
+		return -1;
+        }
 }
 EXPORT_SYMBOL(sdup_set_policy_set_param);
 
@@ -815,87 +961,79 @@ int sdup_dec_check_lifetime_limit(struct sdup_port * instance,
 }
 EXPORT_SYMBOL(sdup_dec_check_lifetime_limit);
 
-int sdup_enable_encryption(struct sdup_port *    instance,
+int sdup_enable_encryption(struct sdup_port * instance,
 			   bool enable_encryption,
 			   bool enable_decryption,
 			   struct buffer * encrypt_key)
 {
-	struct sdup_port_conf * port_conf;
+	struct sdup_port * port;
+	struct sdup_enc_ps * enc_ps;
 
-	if (!instance) {
-		LOG_ERR("Bogus SDUP instance passed");
+	if (!instance || !encrypt_key) {
+		LOG_ERR("Bogus parameters passed");
 		return -1;
 	}
 
-	if (!encrypt_key) {
-		LOG_ERR("Bogus encryption key passed");
-		return -1;
-	}
+	rcu_read_lock();
+	if (instance->enc) {
+		enc_ps = container_of(rcu_dereference(instance->enc->base.ps),
+				      struct sdup_enc_ps,
+				      base);
 
-	port_conf = find_port_conf(instance, port_id);
-	if (!port_conf) {
-		LOG_ERR("Could not find SDUP Port Configuration for N-1 port %d", port_id);
-		return -1;
-	}
-
-	if (!port_conf->dup_conf) {
-		LOG_ERR("SDU Protection for N-1 port %d is NULL", port_id);
-		return -1;
-	}
-
-	if (!port_conf->dup_conf->encryption_policy) {
-		LOG_ERR("Encryption policy for N-1 port %d is NULL", port_id);
-		return -1;
-	}
-
-	if (!port_conf->blkcipher) {
-		LOG_ERR("Block cipher is not set for N-1 port %d", port_id);
-		return -1;
-	}
-
-	if (!port_conf->enable_decryption &&
-	    !port_conf->enable_encryption) {
-		if (crypto_blkcipher_setkey(port_conf->blkcipher,
-					    buffer_data_ro(encrypt_key),
-					    buffer_length(encrypt_key))) {
-			LOG_ERR("Could not set encryption key for N-1 port %d",
-				port_id);
+		if (enc_ps->sdup_enable_encryption(enc_ps,
+						   enable_encryption,
+						   enable_decryption,
+						   encrypt_key)) {
+			rcu_read_unlock();
 			return -1;
 		}
 	}
-
-	if (!port_conf->enable_decryption){
-		port_conf->enable_decryption = enable_decryption;
-	}
-	if (!port_conf->enable_encryption){
-		port_conf->enable_encryption = enable_encryption;
-	}
-
-	LOG_DBG("Encryption enabled state: %d", port_conf->enable_encryption);
-	LOG_DBG("Decryption enabled state: %d", port_conf->enable_decryption);
 
 	return 0;
 }
 EXPORT_SYMBOL(sdup_enable_encryption);
 
-struct sdup *
-sdup_from_component(struct rina_component * component)
-{
-	return container_of(component, struct sdup, base);
-}
-EXPORT_SYMBOL(sdup_from_component);
-
-int sdup_ps_publish(struct ps_factory * factory)
+int sdup_enc_ps_publish(struct ps_factory * factory)
 {
 	if (factory == NULL) {
 		LOG_ERR("%s: NULL factory", __func__);
 		return -1;
 	}
 
-	return ps_publish(&policy_sets, factory);
+	return ps_publish(&enc_policy_sets, factory);
 }
-EXPORT_SYMBOL(sdup_ps_publish);
+EXPORT_SYMBOL(sdup_enc_ps_publish);
 
-int sdup_ps_unpublish(const char * name)
-{ return ps_unpublish(&policy_sets, name); }
-EXPORT_SYMBOL(sdup_ps_unpublish);
+int sdup_enc_ps_unpublish(const char * name)
+{ return ps_unpublish(&enc_policy_sets, name); }
+EXPORT_SYMBOL(sdup_enc_ps_unpublish);
+
+int sdup_errc_ps_publish(struct ps_factory * factory)
+{
+	if (factory == NULL) {
+		LOG_ERR("%s: NULL factory", __func__);
+		return -1;
+	}
+
+	return ps_publish(&errc_policy_sets, factory);
+}
+EXPORT_SYMBOL(sdup_errc_ps_publish);
+
+int sdup_errc_ps_unpublish(const char * name)
+{ return ps_unpublish(&errc_policy_sets, name); }
+EXPORT_SYMBOL(sdup_errc_ps_unpublish);
+
+int sdup_ttl_ps_publish(struct ps_factory * factory)
+{
+	if (factory == NULL) {
+		LOG_ERR("%s: NULL factory", __func__);
+		return -1;
+	}
+
+	return ps_publish(&ttl_policy_sets, factory);
+}
+EXPORT_SYMBOL(sdup_ttl_ps_publish);
+
+int sdup_ttl_ps_unpublish(const char * name)
+{ return ps_unpublish(&ttl_policy_sets, name); }
+EXPORT_SYMBOL(sdup_ttl_ps_unpublish);

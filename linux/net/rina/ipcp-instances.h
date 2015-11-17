@@ -116,11 +116,6 @@ struct dup_config_entry {
 
 	//Encryption-related fields
 	struct policy * encryption_policy;
-	bool 		enable_encryption;
-	bool		enable_decryption;
-	string_t * 	encryption_cipher;
-	string_t * 	message_digest;
-	string_t * 	compress_alg;
 };
 
 struct dup_config {

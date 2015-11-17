@@ -37,6 +37,10 @@ struct sdup_enc_ps {
 				    struct pdu_ser *);
 	int (* sdup_decrypt_policy)(struct sdup_enc_ps *,
 				    struct pdu_ser *);
+	int (* sdup_enable_encryption)(struct sdup_enc_ps *,
+				       bool,
+				       bool,
+				       struct buffer *);
 
 	int (* sdup_add_hmac)(struct sdup_enc_ps *,
 			      struct pdu_ser *);
@@ -49,7 +53,7 @@ struct sdup_enc_ps {
 				struct pdu_ser *);
 
 	/* Reference used to access the SDUP data model. */
-	struct sdup * dm;
+	struct sdup_port * dm;
 
 	/* Data private to the policy-set implementation. */
 	void *       priv;
