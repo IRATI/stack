@@ -29,17 +29,22 @@
 #include "sdup.h"
 #include "sdup-ttl-ps.h"
 #include "debug.h"
+#include "policies.h"
 
-int default_sdup_set_lifetime_limit_policy(struct sdup_ps * ps,
+struct sdup_ttl_ps_default_data {
+	u_int32_t  	initial_ttl_value;
+};
+
+int default_sdup_set_lifetime_limit_policy(struct sdup_ttl_ps * ps,
 					   struct pdu_ser * pdu,
-					   struct sdup_port_conf * port_conf,
 					   size_t pci_ttl)
 {
 	unsigned char * data;
 	size_t          len;
 	size_t		ttl;
+	struct sdup_ttl_ps_default_data * priv_data = ps->priv;
 
-	if (!ps || !pdu || !port_conf){
+	if (!ps || !pdu){
 		LOG_ERR("Failed set_lifetime_limit");
 		return -1;
 	}
@@ -48,11 +53,11 @@ int default_sdup_set_lifetime_limit_policy(struct sdup_ps * ps,
 
 	if (pci_ttl > 0)
 		ttl = pci_ttl;
-	else if (port_conf->initial_ttl_value > 0){
-		ttl = port_conf->initial_ttl_value;
+	else if (priv_data->initial_ttl_value > 0){
+		ttl = priv_data->initial_ttl_value;
 	}
 
-	if (port_conf->initial_ttl_value > 0){
+	if (priv_data->initial_ttl_value > 0){
 		if (pdu_ser_head_grow_gfp(GFP_ATOMIC, pdu, sizeof(ttl))) {
 			LOG_ERR("Failed to grow ser PDU");
 			return -1;
@@ -71,20 +76,20 @@ int default_sdup_set_lifetime_limit_policy(struct sdup_ps * ps,
 	return 0;
 }
 
-int default_sdup_get_lifetime_limit_policy(struct sdup_ps * ps,
+int default_sdup_get_lifetime_limit_policy(struct sdup_ttl_ps * ps,
 					   struct pdu_ser * pdu,
-					   struct sdup_port_conf * port_conf,
 					   size_t * ttl)
 {
 	unsigned char * data;
 	size_t          len;
+	struct sdup_ttl_ps_default_data * priv_data = ps->priv;
 
-	if (!ps || !pdu || !port_conf || !ttl){
+	if (!ps || !pdu || !ttl){
 		LOG_ERR("Failed get_lifetime_limit");
 		return -1;
 	}
 
-	if (port_conf->initial_ttl_value > 0){
+	if (priv_data->initial_ttl_value > 0){
 		if (pdu_ser_data_and_length(pdu, &data, &len))
 			return -1;
 
@@ -100,19 +105,19 @@ int default_sdup_get_lifetime_limit_policy(struct sdup_ps * ps,
 	return 0;
 }
 
-int default_sdup_dec_check_lifetime_limit_policy(struct sdup_ps * ps,
-						 struct pdu * pdu,
-						 struct sdup_port_conf * port_conf)
+int default_sdup_dec_check_lifetime_limit_policy(struct sdup_ttl_ps * ps,
+						 struct pdu * pdu)
 {
 	struct pci * pci;
 	size_t ttl;
+	struct sdup_ttl_ps_default_data * priv_data = ps->priv;
 
-	if (!ps || !pdu || !port_conf){
+	if (!ps || !pdu){
 		LOG_ERR("Failed dec_check_lifetime_limit");
 		return -1;
 	}
 
-	if (port_conf->initial_ttl_value > 0){
+	if (priv_data->initial_ttl_value > 0){
 		pci = pdu_pci_get_rw(pdu);
 		ttl = pci_ttl(pci);
 
@@ -131,15 +136,64 @@ int default_sdup_dec_check_lifetime_limit_policy(struct sdup_ps * ps,
 static struct ps_base *
 sdup_ttl_ps_default_create(struct rina_component * component)
 {
-	struct sdup * sdup = sdup_from_component(component);
-	struct sdup_ttl_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
+	struct dup_config_entry * conf;
+	struct sdup_comp * sdup_comp;
+	struct sdup_ttl_ps * ps;
+	struct sdup_port * sdup_port;
+	struct sdup_ttl_ps_default_data * data;
+	struct policy_parm * parameter;
 
-	if (!ps) {
+	sdup_comp = sdup_comp_from_component(component);
+	if (!sdup_comp)
+		return NULL;
+
+	sdup_port = sdup_comp->parent;
+	if (!sdup_port)
+		return NULL;
+
+	conf = sdup_port->conf;
+	if (!conf)
+		return NULL;
+
+	ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
+	if (!ps)
+		return NULL;
+
+	data = rkzalloc(sizeof(*data), GFP_KERNEL);
+	if (!data) {
+		rkfree(ps);
 		return NULL;
 	}
 
-	ps->dm          = sdup;
-        ps->priv        = NULL;
+	ps->dm          = sdup_port;
+        ps->priv        = data;
+
+        /* Parse parameters from config */
+	if (conf->ttl_policy) {
+		parameter = policy_param_find(conf->ttl_policy, "initialValue");
+		if (!parameter) {
+			LOG_ERR("Could not find 'initialValue' in TTL policy");
+			rkfree(ps);
+			rkfree(data);
+			return NULL;
+		}
+
+		if (kstrtouint(policy_param_value(parameter),
+			       10,
+			       &data->initial_ttl_value)) {
+			LOG_ERR("Failed to convert TTL string to int");
+			rkfree(ps);
+			rkfree(data);
+			return NULL;
+		}
+
+		LOG_DBG("Initial TTL value is %u", entry->initial_ttl_value);
+	} else {
+		LOG_ERR("TTL policy is NULL");
+		rkfree(ps);
+		rkfree(data);
+		return NULL;
+	}
 
 	/* SDUP policy functions*/
 	ps->sdup_set_lifetime_limit_policy	 = default_sdup_set_lifetime_limit_policy;
@@ -152,9 +206,15 @@ sdup_ttl_ps_default_create(struct rina_component * component)
 static void
 sdup_ttl_ps_default_destroy(struct ps_base * bps)
 {
-	struct sdup_ps *ps = container_of(bps, struct sdup_ttl_ps, base);
+	struct sdup_ttl_ps_default_data * data;
+	struct sdup_ttl_ps *ps;
+
+	ps = container_of(bps, struct sdup_ttl_ps, base);
+	data = ps->priv;
 
 	if (bps) {
+		if (data)
+			rkfree(data);
 		rkfree(ps);
 	}
 }

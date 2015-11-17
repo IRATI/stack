@@ -52,58 +52,50 @@ static bool pdu_ser_crc32(struct pdu_ser * pdu,
 	return 0;
 }
 
-int default_sdup_add_error_check_policy(struct sdup_ps * ps,
-					struct pdu_ser * pdu,
-					struct sdup_port_conf * port_conf)
+int default_sdup_add_error_check_policy(struct sdup_errc_ps * ps,
+					struct pdu_ser * pdu)
 {
 	u32             crc;
 	unsigned char * data;
 	ssize_t         len;
 
-	if (!ps || !pdu || !port_conf){
+	if (!ps || !pdu){
 		LOG_ERR("Error check arguments not initialized!");
 		return -1;
 	}
 
-	if (port_conf->dup_conf == NULL)
-		return 0;
-
-	if (port_conf->dup_conf->error_check_policy != NULL){
-		/* TODO Assuming CRC32 */
-		if (pdu_ser_tail_grow_gfp(pdu, sizeof(u32))) {
-			LOG_ERR("Failed to grow ser PDU");
-			return -1;
-		}
-
-		crc  = 0;
-		data = 0;
-		len  = 0;
-
-		if (!pdu_ser_is_ok(pdu))
-			return -1;
-
-		if (pdu_ser_crc32(pdu, &crc))
-			return -1;
-
-		if (pdu_ser_data_and_length(pdu, &data, &len))
-			return -1;
-
-		memcpy(data+len-sizeof(crc), &crc, sizeof(crc));
-		LOG_DBG("CRC!");
+	if (pdu_ser_tail_grow_gfp(pdu, sizeof(u32))) {
+		LOG_ERR("Failed to grow ser PDU");
+		return -1;
 	}
+
+	crc  = 0;
+	data = 0;
+	len  = 0;
+
+	if (!pdu_ser_is_ok(pdu))
+		return -1;
+
+	if (pdu_ser_crc32(pdu, &crc))
+		return -1;
+
+	if (pdu_ser_data_and_length(pdu, &data, &len))
+		return -1;
+
+	memcpy(data+len-sizeof(crc), &crc, sizeof(crc));
+	LOG_DBG("CRC!");
 
 	return 0;
 }
 
-int default_sdup_check_error_check_policy(struct sdup_ps * ps,
-					  struct pdu_ser * pdu,
-					  struct sdup_port_conf * port_conf)
+int default_sdup_check_error_check_policy(struct sdup_errc_ps * ps,
+					  struct pdu_ser * pdu)
 {
 	u32             crc;
 	unsigned char * data;
 	ssize_t         len;
 
-	if (!ps || !pdu || !port_conf){
+	if (!ps || !pdu ){
 		LOG_ERR("Error check arguments not initialized!");
 		return -1;
 	}
@@ -111,30 +103,25 @@ int default_sdup_check_error_check_policy(struct sdup_ps * ps,
 	if (!pdu_ser_is_ok(pdu))
 		return -1;
 
-	if (port_conf->dup_conf == NULL)
-		return 0;
+	data = 0;
+	crc  = 0;
+	len  = 0;
 
-	if (port_conf->dup_conf->error_check_policy != NULL){
-		data = 0;
-		crc  = 0;
-		len  = 0;
+	if (pdu_ser_crc32(pdu, &crc))
+		return -1;
 
-		if (pdu_ser_crc32(pdu, &crc))
-			return -1;
+	if (pdu_ser_data_and_length(pdu, &data, &len))
+		return -1;
 
-		if (pdu_ser_data_and_length(pdu, &data, &len))
-			return -1;
+	if (memcmp(&crc, data+len-sizeof(crc), sizeof(crc)))
+		return -1;
 
-		if (memcmp(&crc, data+len-sizeof(crc), sizeof(crc)))
-			return -1;
-
-		/* Assuming CRC32 */
-		if (pdu_ser_tail_shrink_gfp(pdu, sizeof(u32))) {
-			LOG_ERR("Failed to shrink ser PDU");
-			return -1;
-		}
-		LOG_DBG("CHECKCRC!");
+	if (pdu_ser_tail_shrink_gfp(pdu, sizeof(u32))) {
+		LOG_ERR("Failed to shrink ser PDU");
+		return -1;
 	}
+
+	LOG_DBG("CHECKCRC!");
 
 	return 0;
 }
@@ -142,14 +129,19 @@ int default_sdup_check_error_check_policy(struct sdup_ps * ps,
 static struct ps_base *
 sdup_errc_ps_default_create(struct rina_component * component)
 {
-	struct sdup * sdup = sdup_from_component(component);
-	struct sdup_errc_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
+	struct sdup_comp * sdup_comp;
+	struct sdup_errc_ps * ps;
 
-	if (!ps) {
+	sdup_comp = sdup_comp_from_component(component);
+	if (!sdup_comp)
 		return NULL;
-	}
 
-	ps->dm          = sdup;
+
+	ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
+	if (!ps)
+		return NULL;
+
+	ps->dm          = sdup_comp->parent;
         ps->priv        = NULL;
 
 	/* SDUP policy functions*/

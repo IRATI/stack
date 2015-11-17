@@ -43,7 +43,7 @@ struct sdup_ttl_ps {
 						     struct pdu *);
 
 	/* Reference used to access the SDUP data model. */
-	struct sdup * dm;
+	struct sdup_port * dm;
 
 	/* Data private to the policy-set implementation. */
 	void *       priv;

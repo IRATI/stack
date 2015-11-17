@@ -28,6 +28,7 @@
 #define RINA_PREFIX "sdup-enc-ps-default"
 
 #include "logs.h"
+#include "policies.h"
 #include "rds/rmem.h"
 #include "sdup.h"
 #include "sdup-enc-ps.h"
@@ -42,7 +43,7 @@ struct sdup_enc_ps_default_data {
 	string_t * 	compress_alg;
 };
 
-static struct sdup_enc_ps_default_data * priv_data_create()
+static struct sdup_enc_ps_default_data * priv_data_create(void)
 {
 	struct sdup_enc_ps_default_data * data =
 			rkmalloc(sizeof(*data), GFP_KERNEL);
@@ -85,32 +86,8 @@ static void priv_data_destroy(struct sdup_enc_ps_default_data * data)
 	rkfree(data);
 }
 
-static bool _pdu_ser_data_and_length(struct pdu_ser * pdu,
-				     unsigned char ** data,
-				     ssize_t *        len)
-{
-	struct buffer * buf;
-
-	buf = pdu_ser_buffer(pdu);
-	if (!buffer_is_ok(buf))
-		return -1;
-
-	ASSERT(data);
-	ASSERT(len);
-
-	*data = (unsigned char *) buffer_data_rw(buf);
-	if (!*data) {
-		LOG_ERR("Cannot get data from serialised PDU");
-		return -1;
-	}
-
-	*len = buffer_length(buf);
-
-	return 0;
-}
-
-static int _default_sdup_add_padding_policy(struct sdup_enc_ps_default_data * priv_data,
-				    	    struct pdu_ser * pdu)
+static int default_sdup_add_padding_policy(struct sdup_enc_ps_default_data * priv_data,
+				    	   struct pdu_ser * pdu)
 {
 	struct buffer * buf;
 	ssize_t		buffer_size;
@@ -150,8 +127,8 @@ static int _default_sdup_add_padding_policy(struct sdup_enc_ps_default_data * pr
 	return 0;
 }
 
-static int _default_sdup_remove_padding_policy(struct sdup_enc_ps_default_data * priv_data,
-				       	       struct pdu_ser * pdu)
+static int default_sdup_remove_padding_policy(struct sdup_enc_ps_default_data * priv_data,
+				       	      struct pdu_ser * pdu)
 {
 	struct buffer *	buf;
 	const char *	data;
@@ -192,8 +169,8 @@ static int _default_sdup_remove_padding_policy(struct sdup_enc_ps_default_data *
 	return 0;
 }
 
-static int _default_sdup_encrypt_policy(struct sdup_enc_ps_default_data * priv_data,
-				 	struct pdu_ser * pdu)
+static int default_sdup_encrypt_policy(struct sdup_enc_ps_default_data * priv_data,
+				       struct pdu_ser * pdu)
 {
 	struct blkcipher_desc	desc;
 	struct scatterlist	sg_src;
@@ -231,8 +208,8 @@ static int _default_sdup_encrypt_policy(struct sdup_enc_ps_default_data * priv_d
 	return 0;
 }
 
-static int _default_sdup_decrypt_policy(struct sdup_enc_ps_default_data * priv_data,
-				 	struct pdu_ser * pdu)
+static int default_sdup_decrypt_policy(struct sdup_enc_ps_default_data * priv_data,
+				       struct pdu_ser * pdu)
 {
 	struct blkcipher_desc	desc;
 	struct scatterlist	sg_src;
@@ -270,52 +247,52 @@ static int _default_sdup_decrypt_policy(struct sdup_enc_ps_default_data * priv_d
 	return 0;
 }
 
-static int _default_sdup_compress(struct sdup_enc_ps_default_data * priv_data,
+static int default_sdup_compress(struct sdup_enc_ps_default_data * priv_data,
 			  	  struct pdu_ser * pdu)
 {
 	LOG_DBG("COMPRESSION");
 	return 0;
 }
 
-static int _default_sdup_decompress(struct sdup_enc_ps_default_data * priv_data,
+static int default_sdup_decompress(struct sdup_enc_ps_default_data * priv_data,
 			    	    struct pdu_ser * pdu)
 {
 	LOG_DBG("DECOMPRESSION");
 	return 0;
 }
 
-int default_sdup_encrypt_policy(struct sdup_enc_ps * ps,
-				struct pdu_ser * pdu)
+int default_sdup_encrypt(struct sdup_enc_ps * ps,
+			 struct pdu_ser * pdu)
 {
 	int result = 0;
 	struct sdup_enc_ps_default_data * priv_data = ps->priv;
 
-	result = _default_sdup_compress(priv_data, pdu);
+	result = default_sdup_compress(priv_data, pdu);
 	if (result)
 		return result;
 
-	result = _default_sdup_add_padding_policy(priv_data, pdu);
+	result = default_sdup_add_padding_policy(priv_data, pdu);
 	if (result)
 		return result;
 
-	return _default_sdup_encrypt_policy(priv_data, pdu);
+	return default_sdup_encrypt_policy(priv_data, pdu);
 }
 
-int default_sdup_decrypt_policy(struct sdup_enc_ps * ps,
-				struct pdu_ser * pdu)
+int default_sdup_decrypt(struct sdup_enc_ps * ps,
+			 struct pdu_ser * pdu)
 {
 	int result = 0;
 	struct sdup_enc_ps_default_data * priv_data = ps->priv;
 
-	result = _default_sdup_decrypt_policy(priv_data, pdu);
+	result = default_sdup_decrypt_policy(priv_data, pdu);
 	if (result)
 		return result;
 
-	result = _default_sdup_remove_padding_policy(priv_data, pdu);
+	result = default_sdup_remove_padding_policy(priv_data, pdu);
 	if (result)
 		return result;
 
-	return _default_sdup_decompress(priv_data, pdu);
+	return default_sdup_decompress(priv_data, pdu);
 }
 
 int default_sdup_add_hmac(struct sdup_enc_ps * ps,
@@ -352,7 +329,8 @@ int default_sdup_enable_encryption(struct sdup_enc_ps * ps,
 	priv_data = ps->priv;
 
 	if (!priv_data->blkcipher) {
-		LOG_ERR("Block cipher is not set for N-1 port %d", port_id);
+		LOG_ERR("Block cipher is not set for N-1 port %d",
+			ps->dm->port_id);
 		return -1;
 	}
 
@@ -362,7 +340,7 @@ int default_sdup_enable_encryption(struct sdup_enc_ps * ps,
 					    buffer_data_ro(encrypt_key),
 					    buffer_length(encrypt_key))) {
 			LOG_ERR("Could not set encryption key for N-1 port %d",
-				port_id);
+				ps->dm->port_id);
 			return -1;
 		}
 	}
@@ -384,18 +362,18 @@ static struct ps_base *
 sdup_enc_ps_default_create(struct rina_component * component)
 {
 	struct dup_config_entry * conf;
-	struct sdup_enc * sdup_enc;
+	struct sdup_comp * sdup_comp;
 	struct sdup_enc_ps * ps;
 	struct sdup_port * sdup_port;
 	struct sdup_enc_ps_default_data * data;
 	struct policy_parm * parameter;
 	const string_t * aux;
 
-	sdup_enc = sdup_enc_from_component(component);
-	if (!sdup_enc)
+	sdup_comp = sdup_comp_from_component(component);
+	if (!sdup_comp)
 		return NULL;
 
-	sdup_port = sdup_enc->parent;
+	sdup_port = sdup_comp->parent;
 	if (!sdup_port)
 		return NULL;
 
@@ -493,12 +471,10 @@ sdup_enc_ps_default_create(struct rina_component * component)
         }
 
 	/* SDUP policy functions*/
-	ps->sdup_encrypt_policy		= default_sdup_encrypt_policy;
-	ps->sdup_decrypt_policy		= default_sdup_decrypt_policy;
+	ps->sdup_encrypt		= default_sdup_encrypt;
+	ps->sdup_decrypt		= default_sdup_decrypt;
 	ps->sdup_add_hmac		= default_sdup_add_hmac;
 	ps->sdup_verify_hmac		= default_sdup_verify_hmac;
-	ps->sdup_compress		= default_sdup_compress;
-	ps->sdup_decompress		= default_sdup_decompress;
 	ps->sdup_enable_encryption	= default_sdup_enable_encryption;
 
 	return &ps->base;

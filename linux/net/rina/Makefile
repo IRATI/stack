@@ -23,7 +23,6 @@ obj-y +=					\
 obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
 	rina-personality-default.o
 
-# TODO rmt-ps-common will be removed soon by a different patch
 rina-personality-default-y :=					\
 	ipcp-factories.o ipcp-instances.o			\
 	cidm.o dt.o dt-utils.o dtcp.o dtp.o efcp-utils.o efcp.o	\
@@ -36,7 +35,9 @@ rina-personality-default-y :=					\
 	dtp-ps-default.o					\
 	dtcp-ps-default.o                       		\
 	pff-ps-default.o					\
-	sdup-ps-default.o
+	sdup-enc-ps-default.o					\
+	sdup-errc-ps-default.o					\
+	sdup-ttl-ps-default.o				
 
 ifeq  ($(CONFIG_RINA_PERSONALITY_DEFAULT),m)
 rina-personality-default-y +=			\

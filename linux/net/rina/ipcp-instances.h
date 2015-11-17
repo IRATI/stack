@@ -107,7 +107,6 @@ struct dup_config_entry {
 	// If NULL TTL is disabled,
 	// otherwise contains the TTL policy data
 	struct policy * ttl_policy;
-	u_int32_t  	initial_ttl_value;
 
 	// if NULL error_check is disabled,
 	// otherwise contains the error check policy

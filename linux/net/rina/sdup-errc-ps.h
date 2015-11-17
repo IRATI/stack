@@ -28,6 +28,8 @@
 #include "pdu-ser.h"
 #include "ps-factory.h"
 
+#define CRC32 "CRC32"
+
 struct sdup_errc_ps {
 	struct ps_base base;
 
@@ -39,7 +41,7 @@ struct sdup_errc_ps {
 					      struct pdu_ser *);
 
 	/* Reference used to access the SDUP data model. */
-	struct sdup * dm;
+	struct sdup_port * dm;
 
 	/* Data private to the policy-set implementation. */
 	void *       priv;

@@ -665,9 +665,10 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
 	sdup_config = dif_information->configuration->sdup_config;
 	if (!sdup_config) {
 		LOG_INFO("No SDU protection config specified, using default");
-	} else {
-		sdup_config_set(data->sdup, sdup_config);
+		sdup_config = sdup_config_create();
+		sdup_config->default_dup_conf = dup_config_entry_create();
 	}
+	sdup_config_set(data->sdup, sdup_config);
 
         return 0;
 }

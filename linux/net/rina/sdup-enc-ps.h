@@ -33,10 +33,10 @@ struct sdup_enc_ps {
 
 	/* Behavioural policies. */
 
-	int (* sdup_encrypt_policy)(struct sdup_enc_ps *,
-				    struct pdu_ser *);
-	int (* sdup_decrypt_policy)(struct sdup_enc_ps *,
-				    struct pdu_ser *);
+	int (* sdup_encrypt)(struct sdup_enc_ps *,
+		             struct pdu_ser *);
+	int (* sdup_decrypt)(struct sdup_enc_ps *,
+			     struct pdu_ser *);
 	int (* sdup_enable_encryption)(struct sdup_enc_ps *,
 				       bool,
 				       bool,
@@ -46,11 +46,6 @@ struct sdup_enc_ps {
 			      struct pdu_ser *);
 	int (* sdup_verify_hmac)(struct sdup_enc_ps *,
 				 struct pdu_ser *);
-
-	int (* sdup_compress)(struct sdup_enc_ps *,
-			      struct pdu_ser *);
-	int (* sdup_decompress)(struct sdup_enc_ps *,
-				struct pdu_ser *);
 
 	/* Reference used to access the SDUP data model. */
 	struct sdup_port * dm;

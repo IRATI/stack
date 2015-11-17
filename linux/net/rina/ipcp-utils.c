@@ -490,6 +490,8 @@ struct sdup_config * sdup_config_create(void)
 
         INIT_LIST_HEAD(&(tmp->specific_dup_confs));
 
+        tmp->default_dup_conf = NULL;
+
         return tmp;
 }
 EXPORT_SYMBOL(sdup_config_create);
@@ -654,8 +656,10 @@ struct dup_config_entry * dup_config_entry_create(void)
 	if (!tmp)
 		return NULL;
 
-	tmp->enable_decryption = false;
-	tmp->enable_encryption = false;
+	tmp->n_1_dif_name = NULL;
+	tmp->encryption_policy = NULL;
+	tmp->error_check_policy = NULL;
+	tmp->ttl_policy = NULL;
 
 	return tmp;
 }
@@ -693,12 +697,6 @@ int dup_config_entry_destroy(struct dup_config_entry * entry)
 
 	if (entry->encryption_policy)
 		policy_destroy(entry->encryption_policy);
-
-	if (entry->encryption_cipher)
-		rkfree(entry->encryption_cipher);
-
-	if (entry->message_digest)
-		rkfree(entry->message_digest);
 
 	rkfree(entry);
 
@@ -744,8 +742,6 @@ int dup_config_entry_cpy(const struct dup_config_entry * src,
         	if (!dst->ttl_policy) {
         		return -1;
         	}
-
-        	dst->initial_ttl_value = src->initial_ttl_value;
         }
 
         if (src->encryption_policy) {
@@ -753,13 +749,6 @@ int dup_config_entry_cpy(const struct dup_config_entry * src,
         	if (!dst->encryption_policy) {
         		return -1;
         	}
-
-                if (string_dup(src->encryption_cipher, &dst->encryption_cipher) ||
-                    string_dup(src->message_digest, &dst->message_digest))
-                    return -1;
-
-                dst->enable_decryption = src->enable_decryption;
-                dst->enable_encryption = src->enable_encryption;
         }
 
         return 0;
