@@ -271,10 +271,7 @@ static void sdup_port_destroy(struct sdup_port * instance)
 
 	instance->conf = NULL;
 
-	LOG_INFO("Aqui6");
 	rkfree(instance);
-	LOG_INFO("Aqui7");
-
 };
 
 struct sdup_port * sdup_port_create(port_id_t port_id,
@@ -592,8 +589,6 @@ struct sdup * sdup_create(struct ipcp_instance * parent)
 	tmp->sdup_conf = NULL;
 	INIT_LIST_HEAD(&(tmp->instances));
 
-	LOG_INFO("SDUP Created!!!");
-
 	return tmp;
 }
 EXPORT_SYMBOL(sdup_create);
@@ -648,7 +643,7 @@ struct sdup_port * sdup_init_port_config(struct sdup * instance,
 
 	list_add(&(tmp->list), &(instance->instances));
 
-	LOG_INFO("Initialized SDUP configuration for port %d", port_id);
+	LOG_DBG("Initialized SDUP configuration for port %d", port_id);
 
 	return tmp;
 }
@@ -665,7 +660,7 @@ int sdup_destroy_port_config(struct sdup_port * instance)
 
 	port_id = instance->port_id;
 	sdup_port_destroy(instance);
-	LOG_INFO("Destroyed SDUP configuration for port %d",
+	LOG_DBG("Destroyed SDUP configuration for port %d",
 		 port_id);
 
 	return 0;
