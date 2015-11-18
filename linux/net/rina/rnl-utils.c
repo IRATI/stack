@@ -2713,17 +2713,17 @@ rnl_parse_crypto_state_info(
         attr_policy[ICSTATE_ENABLE_CRYPTO_RX].type = NLA_FLAG;
         attr_policy[ICSTATE_ENABLE_CRYPTO_RX].len  = 0;
         attr_policy[ICSTATE_MAC_KEY_TX].type = NLA_UNSPEC;
-        attr_policy[ICSTATE_MAC_KEY_TX].len = 65535;
+        attr_policy[ICSTATE_MAC_KEY_TX].len = 0;
         attr_policy[ICSTATE_MAC_KEY_RX].type = NLA_UNSPEC;
-        attr_policy[ICSTATE_MAC_KEY_RX].len = 65535;
+        attr_policy[ICSTATE_MAC_KEY_RX].len = 0;
         attr_policy[ICSTATE_ENCRYPT_KEY_TX].type = NLA_UNSPEC;
-        attr_policy[ICSTATE_ENCRYPT_KEY_TX].len = 65535;
+        attr_policy[ICSTATE_ENCRYPT_KEY_TX].len = 0;
         attr_policy[ICSTATE_ENCRYPT_KEY_RX].type = NLA_UNSPEC;
-        attr_policy[ICSTATE_ENCRYPT_KEY_RX].len = 65535;
+        attr_policy[ICSTATE_ENCRYPT_KEY_RX].len = 0;
         attr_policy[ICSTATE_IV_TX].type = NLA_UNSPEC;
-        attr_policy[ICSTATE_IV_TX].len = 65535;
+        attr_policy[ICSTATE_IV_TX].len = 0;
         attr_policy[ICSTATE_IV_RX].type = NLA_UNSPEC;
-        attr_policy[ICSTATE_IV_RX].len = 65535;
+        attr_policy[ICSTATE_IV_RX].len = 0;
 
         if (nla_parse_nested(attrs,
         		     ICSTATE_ATTR_MAX,

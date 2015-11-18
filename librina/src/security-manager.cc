@@ -546,7 +546,7 @@ CryptoState SSH2SecurityContext::get_crypto_state(bool enable_crypto_tx,
 {
 	CryptoState result;
 	result.enable_crypto_tx = enable_crypto_tx;
-	result.enable_crypto_tx = enable_crypto_rx;
+	result.enable_crypto_rx = enable_crypto_rx;
 	result.encrypt_key_tx = encrypt_key;
 	result.port_id = id;
 
