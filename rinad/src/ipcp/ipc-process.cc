@@ -813,6 +813,10 @@ void IPCProcessImpl::event_loop(void){
 		delete e;
 	}
 
+void IPCProcessImpl::sync_with_kernel()
+{
+	//flow_allocator_->sync_with_kernel();
+	//resource_allocator_->sync_with_kernel();
 }
 
 //Class IPCPFactory

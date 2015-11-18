@@ -60,9 +60,128 @@ struct efcp {
         struct efcp_container * container;
         enum efcp_state         state;
         atomic_t                pending_ops;
+	struct kobject          kobj;
+};
+
+static ssize_t efcp_sysfs_show(struct kobject *   kobj,
+                               struct attribute * attr,
+                               char *             buf)
+{
+	struct kobj_attribute * kattr;
+	kattr = container_of(attr, struct kobj_attribute, attr);
+	return kattr->show(kobj, kattr, buf);
+
+}
+
+static ssize_t efcp_attr_show(struct kobject *		     kobj,
+                         	     struct kobj_attribute * attr,
+                                     char *		     buf)
+{
+	struct efcp * instance;
+	struct dtp_config * dtp_cfg;
+
+	instance = container_of(kobj, struct efcp, kobj);
+	if (!instance || !instance->dt)
+		return 0;
+
+	if (strcmp(attr->attr.name, "src_address") == 0)
+		return sprintf(buf, "%u\n",
+			connection_src_addr(instance->connection));
+	if (strcmp(attr->attr.name, "dst_address") == 0)
+		return sprintf(buf, "%u\n",
+			connection_dst_addr(instance->connection));
+	if (strcmp(attr->attr.name, "src_cep_id") == 0)
+		return sprintf(buf, "%d\n",
+			connection_src_cep_id(instance->connection));
+	if (strcmp(attr->attr.name, "dst_cep_id") == 0)
+		return sprintf(buf, "%d\n",
+			connection_dst_cep_id(instance->connection));
+	if (strcmp(attr->attr.name, "qos_id") == 0)
+		return sprintf(buf, "%u\n",
+			connection_qos_id(instance->connection));
+	if (strcmp(attr->attr.name, "port_id") == 0)
+		return sprintf(buf, "%u\n",
+			connection_port_id(instance->connection));
+	if (strcmp(attr->attr.name, "init_a_timer") == 0) {
+		dtp_cfg = dtp_config_get(dt_dtp(instance->dt));
+		return sprintf(buf, "%u\n",
+			dtp_conf_initial_a_timer(dtp_cfg));
+	}
+	if (strcmp(attr->attr.name, "max_sdu_gap") == 0) {
+		dtp_cfg = dtp_config_get(dt_dtp(instance->dt));
+		return sprintf(buf, "%u\n",
+			dtp_conf_max_sdu_gap(dtp_cfg));
+	}
+	if (strcmp(attr->attr.name, "partial_delivery") == 0) {
+		dtp_cfg = dtp_config_get(dt_dtp(instance->dt));
+		return sprintf(buf, "%u\n",
+			dtp_conf_partial_del(dtp_cfg) ? 1 : 0);
+	}
+	if (strcmp(attr->attr.name, "incomplete_delivery") == 0) {
+		dtp_cfg = dtp_config_get(dt_dtp(instance->dt));
+		return sprintf(buf, "%u\n",
+			dtp_conf_incomplete_del(dtp_cfg) ? 1 : 0);
+	}
+	if (strcmp(attr->attr.name, "in_order_delivery") == 0) {
+		dtp_cfg = dtp_config_get(dt_dtp(instance->dt));
+		return sprintf(buf, "%u\n",
+			dtp_conf_in_order_del(dtp_cfg) ? 1 : 0);
+	}
+	if (strcmp(attr->attr.name, "seq_num_rollover_th") == 0) {
+		dtp_cfg = dtp_config_get(dt_dtp(instance->dt));
+		return sprintf(buf, "%d\n",
+			dtp_conf_seq_num_ro_th(dtp_cfg));
+	}
+	return 0;
+}
+
+static const struct sysfs_ops efcp_sysfs_ops = {
+        .show = efcp_sysfs_show
+};
+
+#define EFCP_ATTR(NAME)                              			\
+        static struct kobj_attribute NAME##_attr = {			\
+		.attr = { .name = __stringify(NAME), .mode = S_IRUGO },	\
+        	.show = efcp_attr_show,				\
+}
+
+EFCP_ATTR(src_address);
+EFCP_ATTR(dst_address);
+EFCP_ATTR(src_cep_id);
+EFCP_ATTR(dst_cep_id);
+EFCP_ATTR(qos_id);
+EFCP_ATTR(port_id);
+EFCP_ATTR(init_a_timer);
+EFCP_ATTR(max_sdu_gap);
+EFCP_ATTR(patial_delivery);
+EFCP_ATTR(incomplete_delivery);
+EFCP_ATTR(in_order_delivery);
+EFCP_ATTR(seq_num_rollover_th);
+
+static struct attribute * efcp_attrs[] = {
+	&src_address_attr.attr,
+	&dst_address_attr.attr,
+	&src_cep_id_attr.attr,
+	&dst_cep_id_attr.attr,
+	&qos_id_attr.attr,
+	&port_id_attr.attr,
+	&init_a_timer_attr.attr,
+	&max_sdu_gap_attr.attr,
+	&patial_delivery_attr.attr,
+	&incomplete_delivery_attr.attr,
+	&in_order_delivery_attr.attr,
+	&seq_num_rollover_th_attr.attr,
+	NULL,
+};
+
+static struct kobj_type efcp_ktype = {
+        .sysfs_ops     = &efcp_sysfs_ops,
+        .default_attrs = efcp_attrs,
+        .release       = NULL,
 };
 
 struct efcp_container {
+	struct kset *        kset;
         struct efcp_imap *   instances;
         struct cidm *        cidm;
         struct efcp_config * config;
@@ -173,6 +292,7 @@ static int efcp_destroy(struct efcp * instance)
                 connection_destroy(instance->connection);
         }
 
+	kobject_del(&instance->kobj);
         rkfree(instance);
 
         LOG_DBG("EFCP instance %pK finalized successfully", instance);
@@ -180,7 +300,7 @@ static int efcp_destroy(struct efcp * instance)
         return 0;
 }
 
-struct efcp_container * efcp_container_create(struct kfa * kfa)
+struct efcp_container * efcp_container_create(struct kfa * kfa, struct kobject * parent)
 {
         struct efcp_container * container;
 
@@ -193,6 +313,7 @@ struct efcp_container * efcp_container_create(struct kfa * kfa)
         if (!container)
                 return NULL;
 
+	container->kset        = NULL;
         container->instances   = efcp_imap_create();
         container->cidm        = cidm_create();
         if (!container->instances ||
@@ -205,6 +326,13 @@ struct efcp_container * efcp_container_create(struct kfa * kfa)
         container->kfa = kfa;
         spin_lock_init(&container->lock);
 	init_waitqueue_head(&container->del_wq);
+
+	container->kset = kset_create_and_add("connections", NULL, parent);
+	if (!container->kset) {
+                LOG_ERR("Failed to create EFCP container sysfs entrance");
+                efcp_container_destroy(container);
+                return NULL;
+	}
 
         return container;
 }
@@ -222,6 +350,8 @@ int efcp_container_destroy(struct efcp_container * container)
         if (container->cidm)       cidm_destroy(container->cidm);
 
         if (container->config)     efcp_config_destroy(container->config);
+
+	if (container->kset)       kset_unregister(container->kset);
         rkfree(container);
 
         return 0;
@@ -597,7 +727,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         cep_id = cidm_allocate(container->cidm);
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("CIDM generated wrong CEP ID");
-                connection_destroy(connection);
+                efcp_destroy(tmp);
                 return cep_id_bad();
         }
 
@@ -606,11 +736,26 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         connection_src_cep_id_set(connection, cep_id);
         if (!is_candidate_connection_ok((const struct connection *) connection)) {
                 LOG_ERR("Bogus connection passed, bailing out");
-                connection_destroy(connection);
+                efcp_destroy(tmp);
                 return cep_id_bad();
         }
 
         tmp->connection = connection;
+
+	tmp->kobj.kset = container->kset;
+	if (!tmp->kobj.kset) {
+                efcp_destroy(tmp);
+                return cep_id_bad();
+	}
+	if (kobject_init_and_add(&tmp->kobj,
+				 &efcp_ktype,
+				 NULL,
+				 "%d",
+				 cep_id)) {
+                efcp_destroy(tmp);
+                return cep_id_bad();
+	}
+
         tmp->dt = dt_create();
         if (!tmp->dt) {
                 efcp_destroy(tmp);

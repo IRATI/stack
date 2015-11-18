@@ -145,6 +145,85 @@ struct interface_data_mapping {
         struct ipcp_instance_data * data;
 };
 
+static ssize_t eth_vlan_ipcp_sysfs_show(struct kobject *   kobj,
+                         	        struct attribute * attr,
+                                        char *             buf)
+{
+	struct kobj_attribute * kattr;
+	kattr = container_of(attr, struct kobj_attribute, attr);
+	return kattr->show(kobj, kattr, buf);
+
+}
+
+static ssize_t eth_vlan_ipcp_attr_show(struct kobject *        kobj,
+                         	       struct kobj_attribute * attr,
+                                       char *                  buf)
+{
+	struct ipcp_instance * instance;
+
+	instance = container_of(kobj, struct ipcp_instance, kobj);
+	if (!instance || !instance->data)
+		return 0;
+
+	if (strcmp(attr->attr.name, "name") == 0)
+		return sprintf(buf, "%s\n",
+			name_tostring(instance->data->name));
+	if (strcmp(attr->attr.name, "dif") == 0)
+		return sprintf(buf, "%s\n",
+			name_tostring(instance->data->dif_name));
+	if (strcmp(attr->attr.name, "address") == 0)
+                return sprintf(buf,
+		               "%02X:%02X:%02X:%02X:%02X:%02X\n",
+                               instance->data->dev->dev_addr[5],
+                               instance->data->dev->dev_addr[4],
+                               instance->data->dev->dev_addr[3],
+                               instance->data->dev->dev_addr[2],
+                               instance->data->dev->dev_addr[1],
+                               instance->data->dev->dev_addr[0]);
+	if (strcmp(attr->attr.name, "type") == 0)
+		return sprintf(buf, "shim-eth-vlan\n");
+	if (strcmp(attr->attr.name, "vlan_id") == 0)
+		return sprintf(buf, "%u\n", instance->data->info->vlan_id);
+	if (strcmp(attr->attr.name, "iface") == 0)
+		return sprintf(buf, "%s\n",
+			instance->data->info->interface_name);
+
+	return 0;
+}
+
+static const struct sysfs_ops eth_vlan_ipcp_sysfs_ops = {
+        .show = eth_vlan_ipcp_sysfs_show
+};
+
+#define ETH_ATTR(NAME)                              			\
+        static struct kobj_attribute NAME##_attr = {			\
+		.attr = { .name = __stringify(NAME), .mode = S_IRUGO },	\
+        	.show = eth_vlan_ipcp_attr_show,			\
+}
+
+ETH_ATTR(name);
+ETH_ATTR(type);
+ETH_ATTR(dif);
+ETH_ATTR(address);
+ETH_ATTR(vlan_id);
+ETH_ATTR(iface);
+
+static struct attribute * eth_vlan_ipcp_attrs[] = {
+	&name_attr.attr,
+	&dif_attr.attr,
+	&address_attr.attr,
+	&type_attr.attr,
+	&vlan_id_attr.attr,
+	&iface_attr.attr,
+	NULL,
+};
+
+static struct kobj_type eth_vlan_ipcp_instance_ktype = {
+        .sysfs_ops     = &eth_vlan_ipcp_sysfs_ops,
+        .default_attrs = eth_vlan_ipcp_attrs,
+        .release       = NULL,
+};
+
 static DEFINE_SPINLOCK(data_instances_lock);
 static struct list_head data_instances_list;
 
@@ -1863,6 +1942,21 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
 
         /* fill it properly */
         inst->ops  = &eth_vlan_instance_ops;
+
+	inst->kobj.kset = kipcm_kset(default_kipcm);
+	if (!inst->kobj.kset) {
+		rkfree(inst);
+		return NULL;
+	}
+	if (kobject_init_and_add(&inst->kobj,
+				 &eth_vlan_ipcp_instance_ktype,
+				 NULL,
+				 "%u",
+				 id)) {
+		rkfree(inst);
+		return NULL;
+	}
+
         inst->data = rkzalloc(sizeof(struct ipcp_instance_data), GFP_KERNEL);
         if (!inst->data) {
                 inst_cleanup(inst);
@@ -2002,6 +2096,8 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                                 spin_unlock(&data_instances_lock);
                                 rkfree(mapping);
                         }
+
+                        kobject_del(&instance->kobj);
 
                         /*
                          * Might cause problems:

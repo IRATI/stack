@@ -100,6 +100,69 @@ struct normal_flow {
         struct list_head       list;
 };
 
+static ssize_t normal_ipcp_sysfs_show(struct kobject *   kobj,
+                         	      struct attribute * attr,
+                                      char *             buf)
+{
+	struct kobj_attribute * kattr;
+	kattr = container_of(attr, struct kobj_attribute, attr);
+	return kattr->show(kobj, kattr, buf);
+
+}
+
+static ssize_t normal_ipcp_attr_show(struct kobject *        kobj,
+                         	     struct kobj_attribute * attr,
+                                     char *                  buf)
+{
+	struct ipcp_instance * instance;
+
+	instance = container_of(kobj, struct ipcp_instance, kobj);
+	if (!instance || !instance->data)
+		return 0;
+
+	if (strcmp(attr->attr.name, "name") == 0)
+		return sprintf(buf, "%s\n",
+			name_tostring(&instance->data->name));
+	if (strcmp(attr->attr.name, "dif") == 0)
+		return sprintf(buf, "%s\n",
+			name_tostring(&instance->data->dif_name));
+	if (strcmp(attr->attr.name, "address") == 0)
+		return sprintf(buf, "%u\n", instance->data->address);
+	if (strcmp(attr->attr.name, "type") == 0)
+		return sprintf(buf, "normal\n");
+
+	return 0;
+}
+
+static const struct sysfs_ops normal_ipcp_sysfs_ops = {
+        .show = normal_ipcp_sysfs_show
+};
+
+#define NORMAL_ATTR(NAME)                              			\
+        static struct kobj_attribute NAME##_attr = {			\
+		.attr = { .name = __stringify(NAME), .mode = S_IRUGO },	\
+        	.show = normal_ipcp_attr_show,				\
+}
+
+NORMAL_ATTR(name);
+NORMAL_ATTR(type);
+NORMAL_ATTR(dif);
+NORMAL_ATTR(address);
+
+static struct attribute * normal_ipcp_attrs[] = {
+	&name_attr.attr,
+	&dif_attr.attr,
+	&address_attr.attr,
+	&type_attr.attr,
+	NULL,
+};
+
+static struct kobj_type normal_ipcp_instance_ktype = {
+        .sysfs_ops     = &normal_ipcp_sysfs_ops,
+        .default_attrs = normal_ipcp_attrs,
+        .release       = NULL,
+};
+
 static struct normal_flow * find_flow(struct ipcp_instance_data * data,
                                       port_id_t                   port_id)
 {
@@ -1280,7 +1343,21 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
-        instance->ops  = &normal_instance_ops;
+        instance->ops = &normal_instance_ops;
+
+	instance->kobj.kset = kipcm_kset(default_kipcm);
+	if (!instance->kobj.kset) {
+		rkfree(instance);
+		return NULL;
+	}
+	if (kobject_init_and_add(&instance->kobj,
+				 &normal_ipcp_instance_ktype,
+				 NULL,
+				 "%u",
+				 id)) {
+		rkfree(instance);
+		return NULL;
+	}
 
         /* FIXME: Rearrange the mess creating the data */
         instance->data = rkzalloc(sizeof(struct ipcp_instance_data),
@@ -1305,7 +1382,8 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         /*  FIXME: Remove as soon as the kipcm_kfa gets removed */
         instance->data->kfa = kipcm_kfa(default_kipcm);
 
-        instance->data->efcpc = efcp_container_create(instance->data->kfa);
+        instance->data->efcpc = efcp_container_create(instance->data->kfa,
+						      &instance->kobj);
         if (!instance->data->efcpc) {
                 rkfree(instance->data);
                 rkfree(instance);
@@ -1321,10 +1399,10 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
-        instance->data->rmt = rmt_create(instance,
-                                         instance->data->kfa,
+        instance->data->rmt = rmt_create(instance->data->kfa,
                                          instance->data->efcpc,
-					 instance->data->sdup);
+					 instance->data->sdup,
+					 &instance->kobj);
         if (!instance->data->rmt) {
                 LOG_ERR("Failed creation of RMT instance");
 		sdup_destroy(instance->data->sdup);
@@ -1402,6 +1480,8 @@ static int normal_destroy(struct ipcp_factory_data * data,
                 LOG_ERR("Could not deallocate normal ipcp flows");
                 return -1;
         }
+
+        kobject_del(&instance->kobj);
 
         sdup_destroy(tmp->sdup);
         efcp_container_destroy(tmp->efcpc);

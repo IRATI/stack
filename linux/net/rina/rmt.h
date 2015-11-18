@@ -24,6 +24,7 @@
 #define RINA_RMT_H
 
 #include <linux/hashtable.h>
+#include <linux/kobject.h>
 
 #include "common.h"
 #include "du.h"
@@ -67,6 +68,8 @@ struct n1_port_stats {
 	unsigned int plen; /* port len, all pdus enqueued in PS queue/s */
 	unsigned int pdrop;
 	unsigned int perr;
+	unsigned int tx_pdus;
+	unsigned int rx_pdus;
 };
 
 struct rmt_n1_port {
@@ -81,12 +84,13 @@ struct rmt_n1_port {
 	struct n1_port_stats	stats;
 	bool			wbusy;
 	void 			*rmt_ps_queues;
+	struct kobject		kobj;
 };
 
-struct rmt	  *rmt_create(struct ipcp_instance *parent,
-			      struct kfa *kfa,
+struct rmt	  *rmt_create(struct kfa *kfa,
 			      struct efcp_container *efcpc,
-			      struct sdup *sdup);
+			      struct sdup *sdup,
+			      struct kobject *parent);
 int		   rmt_destroy(struct rmt *instance);
 int		   rmt_address_set(struct rmt *instance,
 				   address_t address);

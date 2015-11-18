@@ -66,24 +66,6 @@ struct kipcm {
 struct kipcm * default_kipcm;
 EXPORT_SYMBOL(default_kipcm);
 
-/* FIXME: LB: this ktype is for IPCPs, not to be used here
-
-static ssize_t kipcm_ipcp_show(struct kobject *   kobj,
-                               struct attribute * attr,
-                               char *             buf)
-{ return sprintf(buf, "%s", kobject_name(kobj)); }
-
-static const struct sysfs_ops kipcm_ipcp_sysfs_ops = {
-        .show = kipcm_ipcp_show
-};
-
-static struct kobj_type kipcm_ipcp_ktype = {
-        .sysfs_ops     = &kipcm_ipcp_sysfs_ops,
-        .default_attrs = NULL,
-        .release       = NULL,
-};
-*/
-
 message_handler_cb kipcm_handlers[RINA_C_MAX];
 
 #ifdef CONFIG_RINA_KIPCM_LOCKS_DEBUG
@@ -2518,3 +2500,14 @@ struct kfa * kipcm_kfa(struct kipcm * kipcm)
         return kipcm->kfa;
 }
 EXPORT_SYMBOL(kipcm_kfa);
+
+struct kset * kipcm_kset(struct kipcm * kipcm)
+{
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
+                return NULL;
+        }
+
+        return kipcm->kset;
+}
+EXPORT_SYMBOL(kipcm_kset);

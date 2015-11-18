@@ -28,7 +28,7 @@
 struct pff;
 struct pci;
 
-struct pff *    pff_create(void);
+struct pff *    pff_create(struct kobject * parent);
 int             pff_destroy(struct pff * instance);
 
 bool            pff_is_ok(struct pff * instance);

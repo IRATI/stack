@@ -21,6 +21,7 @@
 
 #include <linux/rculist.h>
 #include <linux/slab.h>
+#include <linux/kobject.h>
 
 #define RINA_PREFIX "pff"
 
@@ -36,12 +37,13 @@ static struct policy_set_list policy_sets = {
 
 struct pff {
         struct rina_component base;
+        struct kset * kset;
 };
 
 static bool __pff_is_ok(struct pff * instance)
 { return instance ? true : false; }
 
-static struct pff * pff_create_gfp(gfp_t flags)
+static struct pff * pff_create_gfp(struct kobject * parent, gfp_t flags)
 {
         struct pff * tmp;
 
@@ -49,7 +51,15 @@ static struct pff * pff_create_gfp(gfp_t flags)
         if (!tmp)
                 return NULL;
 
+        tmp->kset = NULL;
         rina_component_init(&tmp->base);
+
+	tmp->kset = kset_create_and_add("pff", NULL, parent);
+	if (!tmp->kset) {
+                LOG_ERR("Failed to create PFF sysfs entry");
+                pff_destroy(tmp);
+                return NULL;
+	}
 
         /* Try to select the default policy-set. */
         if (pff_select_policy_set(tmp, "", RINA_PS_DEFAULT_NAME)) {
@@ -66,13 +76,16 @@ struct pff * pff_create_ni(void)
 { return pff_create_gfp(GFP_ATOMIC); }
 #endif
 
-struct pff * pff_create(void)
-{ return pff_create_gfp(GFP_KERNEL); }
+struct pff * pff_create(struct kobject * parent)
+{ return pff_create_gfp(parent, GFP_KERNEL); }
 
 int pff_destroy(struct pff * instance)
 {
         if (!__pff_is_ok(instance))
                 return -1;
+
+	if (instance->kset)
+		kset_unregister(instance->kset);
 
         rina_component_fini(&instance->base);
 

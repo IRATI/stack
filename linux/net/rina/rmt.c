@@ -1,5 +1,4 @@
 /*
-
  * RMT (Relaying and Multiplexing Task)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
@@ -30,6 +29,7 @@
 #include <linux/sched.h>
 #include <linux/wait.h>
 #include <linux/string.h>
+#include <linux/kobject.h>
 /* FIXME: to be re-removed after removing tasklets */
 #include <linux/interrupt.h>
 
@@ -78,6 +78,75 @@ struct rmt {
 	struct pff_cache cache;
 	struct rmt_config *rmt_cfg;
 	struct sdup *sdup;
+	struct kobject kobj;
+};
+
+static struct kobj_type rmt_ktype = {
+        .release       = NULL,
+};
+
+static ssize_t rmt_n1_port_sysfs_show(struct kobject *   kobj,
+                         	      struct attribute * attr,
+                                      char *             buf)
+{
+	struct kobj_attribute * kattr;
+	kattr = container_of(attr, struct kobj_attribute, attr);
+	return kattr->show(kobj, kattr, buf);
+}
+
+static ssize_t rmt_n1_port_attr_show(struct kobject *        kobj,
+                         	     struct kobj_attribute * attr,
+                                     char *                  buf)
+{
+	struct rmt_n1_port * n1_port;
+
+	n1_port = container_of(kobj, struct rmt_n1_port, kobj);
+	if (!n1_port)
+		return 0;
+
+	if (strcmp(attr->attr.name, "queued_pdus") == 0)
+		return sprintf(buf, "%u\n", n1_port->stats.plen);
+	if (strcmp(attr->attr.name, "dropped_pdus") == 0)
+		return sprintf(buf, "%u\n", n1_port->stats.pdrop);
+	if (strcmp(attr->attr.name, "error_pdus") == 0)
+		return sprintf(buf, "%u\n", n1_port->stats.perr);
+	if (strcmp(attr->attr.name, "tx_pdus") == 0)
+		return sprintf(buf, "%u\n", n1_port->stats.tx_pdus);
+	if (strcmp(attr->attr.name, "rx_pdus") == 0)
+		return sprintf(buf, "%u\n", n1_port->stats.rx_pdus);
+
+	return 0;
+}
+
+static const struct sysfs_ops rmt_n1_port_sysfs_ops = {
+        .show = rmt_n1_port_sysfs_show
+};
+
+#define N1_PORT_ATTR(NAME)                              			\
+        static struct kobj_attribute NAME##_attr = {			\
+		.attr = { .name = __stringify(NAME), .mode = S_IRUGO },	\
+        	.show = rmt_n1_port_attr_show,				\
+}
+
+N1_PORT_ATTR(queued_pdus);
+N1_PORT_ATTR(dropped_pdus);
+N1_PORT_ATTR(error_pdus);
+N1_PORT_ATTR(tx_pdus);
+N1_PORT_ATTR(rx_pdus);
+
+static struct attribute * rmt_n1_port_attrs[] = {
+	&queued_pdus_attr.attr,
+	&dropped_pdus_attr.attr,
+	&error_pdus_attr.attr,
+	&tx_pdus_attr.attr,
+	&rx_pdus_attr.attr,
+	NULL,
+};
+
+static struct kobj_type rmt_n1_port_ktype = {
+        .sysfs_ops     = &rmt_n1_port_sysfs_ops,
+        .default_attrs = rmt_n1_port_attrs,
+        .release       = NULL,
 };
 
 static struct rmt_n1_port *n1_port_create(port_id_t id,
@@ -91,6 +160,7 @@ static struct rmt_n1_port *n1_port_create(port_id_t id,
 	if (!tmp)
 		return NULL;
 
+	kobject_init(&tmp->kobj, &rmt_n1_port_ktype);
 	INIT_HLIST_NODE(&tmp->hlist);
 
 	tmp->port_id = id;
@@ -133,6 +203,8 @@ static int n1_port_destroy(struct rmt_n1_port *n1p)
 
 	hash_del(&n1p->hlist);
 
+	kobject_del(&n1p->kobj);
+
 	if (n1p->sdup_port)
 		sdup_destroy_port_config(n1p->sdup_port);
 
@@ -167,25 +239,10 @@ static int n1_port_cleanup(struct rmt *instance,
 }
 
 struct n1pmap {
-	/* FIXME: Has to be moved in the pipelines */
 	spinlock_t lock;
-
+	struct kset * kset;
 	DECLARE_HASHTABLE(n1_ports, 7);
 };
-
-static struct n1pmap *n1pmap_create(void)
-{
-	struct n1pmap *tmp;
-
-	tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-	if (!tmp)
-		return NULL;
-
-	hash_init(tmp->n1_ports);
-	spin_lock_init(&tmp->lock);
-
-	return tmp;
-}
 
 static int n1pmap_destroy(struct rmt *instance)
 {
@@ -212,8 +269,34 @@ static int n1pmap_destroy(struct rmt *instance)
 	}
 	spin_unlock_irqrestore(&m->lock, flags);
 
+	if (m->kset)
+		kset_unregister(m->kset);
+
 	rkfree(m);
 	return 0;
+}
+
+static struct n1pmap *n1pmap_create(struct kobject * parent)
+{
+	struct n1pmap *tmp;
+
+	tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+	if (!tmp)
+		return NULL;
+
+	tmp->kset = NULL;
+
+	hash_init(tmp->n1_ports);
+	spin_lock_init(&tmp->lock);
+
+	tmp->kset = kset_create_and_add("n1_ports", NULL, parent);
+	if (!tmp->kset) {
+                LOG_ERR("Failed to create n1_ports sysfs entry");
+                rkfree(tmp);
+                return NULL;
+	}
+
+	return tmp;
 }
 
 #define n1_port_lock(port, flags)	\
@@ -436,6 +519,8 @@ int rmt_destroy(struct rmt *instance)
 	if (instance->rmt_cfg)
 		rmt_config_destroy(instance->rmt_cfg);
 
+	kobject_del(&instance->kobj);
+
 	rina_component_fini(&instance->base);
 
 	rkfree(instance);
@@ -565,7 +650,6 @@ static int n1_port_write_sdu(struct rmt *rmt,
 			n1_port->state = N1_PORT_STATE_DISABLED;
 
 		n1_port_unlock(n1_port, flags);
-		return 0;
 	}
 
 	return ret;
@@ -757,6 +841,7 @@ static void send_worker(unsigned long o)
 				break;
 
 			pdus_sent++;
+			n1_port->stats.tx_pdus++;
 		}
 
 		if (n1_port->state == N1_PORT_STATE_ENABLED &&
@@ -866,6 +951,10 @@ int rmt_send_port_id(struct rmt *instance,
 	/*FIXME LB: This is just horrible, needs to be rethinked */
 	n1_port_lock(n1_port, flags);
 	n1_port->wbusy = false;
+	if (ret == 0)
+		n1_port->stats.tx_pdus++;
+	else if (ret == -EAGAIN)
+		ret = 0;
 	n1_port_unlock(n1_port, flags);
 	n1pmap_release(instance, n1_port);
 	return ret;
@@ -1068,6 +1157,8 @@ int rmt_n1port_bind(struct rmt *instance,
 	tmp = n1_port_create(id, n1_ipcp);
 	if (!tmp)
 		return -1;
+	tmp->kobj.kset = instance->n1_ports->kset;
+	kobject_add(&tmp->kobj, NULL, "%u", id);
 
 	rcu_read_lock();
 	ps = container_of(rcu_dereference(instance->base.ps),
@@ -1280,6 +1371,7 @@ int rmt_receive(struct rmt *rmt,
                 pdu_ser_destroy(pdu_ser);
 		return -1;
 	}
+	n1_port->stats.rx_pdus++;
 
 	/* SDU Protection */
 	if (sdup_unprotect_pdu(n1_port->sdup_port, pdu_ser)) {
@@ -1377,10 +1469,10 @@ int rmt_receive(struct rmt *rmt,
 }
 EXPORT_SYMBOL(rmt_receive);
 
-struct rmt *rmt_create(struct ipcp_instance *parent,
-		       struct kfa *kfa,
+struct rmt *rmt_create(struct kfa *kfa,
 		       struct efcp_container *efcpc,
-		       struct sdup *sdup)
+		       struct sdup *sdup,
+		       struct kobject *parent)
 {
 	struct rmt *tmp;
 
@@ -1394,18 +1486,25 @@ struct rmt *rmt_create(struct ipcp_instance *parent,
 		return NULL;
 
 	tmp->address = address_bad();
-	tmp->parent = parent;
+	tmp->parent = container_of(parent, struct ipcp_instance, kobj);
 	tmp->kfa = kfa;
 	tmp->efcpc = efcpc;
-	tmp->sdup      = sdup;
+	tmp->sdup = sdup;
 	rina_component_init(&tmp->base);
-	tmp->pff = pff_create();
+
+	if (kobject_init_and_add(&tmp->kobj, &rmt_ktype, parent, "rmt")) {
+                LOG_ERR("Failed to create RMT sysfs entry");
+                rmt_destroy(tmp);
+                return NULL;
+	}
+
+	tmp->pff = pff_create(&tmp->kobj);
 	if (!tmp->pff) {
 		rmt_destroy(tmp);
 		return NULL;
 	}
 
-	tmp->n1_ports = n1pmap_create();
+	tmp->n1_ports = n1pmap_create(&tmp->kobj);
 	if (!tmp->n1_ports) {
 		LOG_ERR("Failed to create N-1 ports map");
 		rmt_destroy(tmp);

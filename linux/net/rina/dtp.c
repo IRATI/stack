@@ -115,6 +115,11 @@ struct dtp_sv * dtp_dtp_sv(struct dtp * dtp)
 }
 EXPORT_SYMBOL(dtp_dtp_sv);
 
+struct dtp_config * dtp_config_get(struct dtp * dtp)
+{
+	return dtp->cfg;
+}
+
 int nxt_seq_reset(struct dtp_sv * sv, seq_num_t sn)
 {
         unsigned long flags;

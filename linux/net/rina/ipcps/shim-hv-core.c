@@ -119,6 +119,65 @@ struct name_list_element {
         struct name      application_name;
 };
 
+static ssize_t shim_hv_ipcp_sysfs_show(struct kobject *   kobj,
+                         	      struct attribute * attr,
+                                      char *             buf)
+{
+	struct kobj_attribute * kattr;
+	kattr = container_of(attr, struct kobj_attribute, attr);
+	return kattr->show(kobj, kattr, buf);
+
+}
+
+static ssize_t shim_hv_ipcp_attr_show(struct kobject *        kobj,
+                         	     struct kobj_attribute * attr,
+                                     char *                  buf)
+{
+	struct ipcp_instance * instance;
+
+	instance = container_of(kobj, struct ipcp_instance, kobj);
+	if (!instance || !instance->data)
+		return 0;
+
+	if (strcmp(attr->attr.name, "name") == 0)
+		return sprintf(buf, "%s\n",
+			name_tostring(&instance->data->name));
+	if (strcmp(attr->attr.name, "dif") == 0)
+		return sprintf(buf, "%s\n",
+			name_tostring(&instance->data->dif_name));
+	if (strcmp(attr->attr.name, "type") == 0)
+		return sprintf(buf, "shim_hv\n");
+
+	return 0;
+}
+
+static const struct sysfs_ops shim_hv_ipcp_sysfs_ops = {
+        .show = shim_hv_ipcp_sysfs_show
+};
+
+#define SHIM_HV_ATTR(NAME)                              			\
+        static struct kobj_attribute NAME##_attr = {			\
+		.attr = { .name = __stringify(NAME), .mode = S_IRUGO },	\
+        	.show = shim_hv_ipcp_attr_show,				\
+}
+
+SHIM_HV_ATTR(name);
+SHIM_HV_ATTR(type);
+SHIM_HV_ATTR(dif);
+
+static struct attribute * shim_hv_ipcp_attrs[] = {
+	&name_attr.attr,
+	&dif_attr.attr,
+	&type_attr.attr,
+	NULL,
+};
+
+static struct kobj_type shim_hv_ipcp_instance_ktype = {
+        .sysfs_ops     = &shim_hv_ipcp_sysfs_ops,
+        .default_attrs = shim_hv_ipcp_attrs,
+        .release       = NULL,
+};
+
 static unsigned int
 port_id_to_channel(struct ipcp_instance_data *priv, port_id_t port_id)
 {
@@ -1218,6 +1277,16 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
 
         ipcp->ops = &shim_hv_ipcp_ops;
 
+	ipcp->kobj.kset = kipcm_kset(default_kipcm);
+	if (!ipcp->kobj.kset) {
+		goto alloc_data;
+	if (kobject_init_and_add(&ipcp->kobj,
+				 &shim_hv_ipcp_ktype,
+				 NULL,
+				 "%u",
+				 id))
+		goto alloc_data;
+
         /* Allocate private data for the new shim IPC process. */
         ipcp->data = priv = rkzalloc(sizeof(struct ipcp_instance_data),
                                      GFP_KERNEL);
@@ -1304,6 +1373,7 @@ shim_hv_factory_ipcp_destroy(struct ipcp_factory_data * factory_data,
         name_fini(&ipcp->data->name);
         rkfree(ipcp->data->vmpi.channels);
         name_fini(&ipcp->data->dif_name);
+        kobject_del(&ipcp->kobj);
         LOG_DBGF("ipcp destroyed (id = %d)", ipcp->data->id);
         rkfree(ipcp->data);
         rkfree(ipcp);

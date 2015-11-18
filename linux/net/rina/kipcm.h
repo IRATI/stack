@@ -133,4 +133,7 @@ int            kipcm_notify_flow_dealloc(ipc_process_id_t ipc_id,
 
 struct ipcp_instance * kipcm_find_ipcp_by_name(struct kipcm * kipcm,
                                                struct name *  name);
+
+struct kset * kipcm_kset(struct kipcm * kipcm);
+
 #endif

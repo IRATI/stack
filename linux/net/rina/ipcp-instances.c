@@ -27,6 +27,23 @@
 #include "utils.h"
 #include "ipcp-instances.h"
 
+static ssize_t ipcp_instance_show(struct kobject *   kobj,
+                         struct attribute * attr,
+                         char *             buf)
+
+{ return sprintf(buf, "IPCP ID: %s", kobject_name(kobj)); }
+
+static const struct sysfs_ops ipcp_instance_sysfs_ops = {
+        .show = ipcp_instance_show
+};
+
+struct kobj_type ipcp_instance_ktype = {
+        .sysfs_ops     = &ipcp_instance_sysfs_ops,
+        .default_attrs = NULL,
+        .release       = NULL,
+};
+EXPORT_SYMBOL(ipcp_instance_ktype);
+
 struct dt_cons * dt_cons_dup_gfp(gfp_t                  flags,
                                  const struct dt_cons * dt_cons)
 {
