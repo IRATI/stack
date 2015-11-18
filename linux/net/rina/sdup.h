@@ -41,8 +41,8 @@ struct sdup_port {
 	/* The id of the N-1 port this instance is protecting */
 	port_id_t port_id;
 
-	/* Encryption component */
-	struct sdup_comp *  enc;
+	/* Cryptographic component */
+	struct sdup_comp * crypto;
 
 	/* Error check component */
 	struct sdup_comp * errc;
@@ -71,9 +71,9 @@ struct sdup_comp * sdup_comp_from_component(struct rina_component *component);
 int sdup_enc_select_policy_set(struct sdup_comp * sdup_comp,
                                const char * path,
                                const char * name);
-int sdup_errc_select_policy_set(struct sdup_comp * sdup_comp,
-                                const char * path,
-                                const char * name);
+int sdup_crypto_select_policy_set(struct sdup_comp * sdup_comp,
+                                  const char * path,
+                                  const char * name);
 int sdup_ttl_select_policy_set(struct sdup_comp * sdup_comp,
                                const char * path,
                                const char * name);
@@ -85,10 +85,10 @@ int sdup_enc_set_policy_set_param(struct sdup_comp * sdup_comp,
                                   const char * path,
                                   const char * name,
                                   const char * value);
-int sdup_errc_set_policy_set_param(struct sdup_comp * sdup_comp,
-                                   const char * path,
-                                   const char * name,
-                                   const char * value);
+int sdup_crypto_set_policy_set_param(struct sdup_comp * sdup_comp,
+                                     const char * path,
+                                     const char * name,
+                                     const char * value);
 int sdup_ttl_set_policy_set_param(struct sdup_comp * sdup_comp,
                                   const char * path,
                                   const char * name,
@@ -132,10 +132,8 @@ int sdup_get_lifetime_limit(struct sdup_port * instance,
 int sdup_dec_check_lifetime_limit(struct sdup_port * instance,
 				  struct pdu * pdu);
 
-int sdup_enable_encryption(struct sdup * instance,
-			   bool enable_encryption,
-			   bool enable_decryption,
-			   struct buffer * encrypt_key,
-			   port_id_t port_id);
+int sdup_update_crypto_state(struct sdup * instance,
+			     struct sdup_crypto_state * state,
+			     port_id_t port_id);
 
 #endif

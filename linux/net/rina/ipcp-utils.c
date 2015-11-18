@@ -657,7 +657,7 @@ struct dup_config_entry * dup_config_entry_create(void)
 		return NULL;
 
 	tmp->n_1_dif_name = NULL;
-	tmp->encryption_policy = NULL;
+	tmp->crypto_policy = NULL;
 	tmp->error_check_policy = NULL;
 	tmp->ttl_policy = NULL;
 
@@ -695,8 +695,8 @@ int dup_config_entry_destroy(struct dup_config_entry * entry)
 	if (entry->ttl_policy)
 		policy_destroy(entry->ttl_policy);
 
-	if (entry->encryption_policy)
-		policy_destroy(entry->encryption_policy);
+	if (entry->crypto_policy)
+		policy_destroy(entry->crypto_policy);
 
 	rkfree(entry);
 
@@ -744,9 +744,9 @@ int dup_config_entry_cpy(const struct dup_config_entry * src,
         	}
         }
 
-        if (src->encryption_policy) {
-        	dst->encryption_policy = policy_dup_name_version(src->encryption_policy);
-        	if (!dst->encryption_policy) {
+        if (src->crypto_policy) {
+        	dst->crypto_policy = policy_dup_name_version(src->crypto_policy);
+        	if (!dst->crypto_policy) {
         		return -1;
         	}
         }

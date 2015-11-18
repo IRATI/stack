@@ -35,7 +35,7 @@ rina-personality-default-y :=					\
 	dtp-ps-default.o					\
 	dtcp-ps-default.o                       		\
 	pff-ps-default.o					\
-	sdup-enc-ps-default.o					\
+	sdup-crypto-ps-default.o				\
 	sdup-errc-ps-default.o					\
 	sdup-ttl-ps-default.o				
 

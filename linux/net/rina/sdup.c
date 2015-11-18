@@ -39,12 +39,12 @@
 #include "ipcp-instances.h"
 #include "ipcp-utils.h"
 #include "sdup.h"
-#include "sdup-enc-ps.h"
+#include "sdup-crypto-ps.h"
 #include "sdup-errc-ps.h"
 #include "sdup-ttl-ps.h"
 
-static struct policy_set_list enc_policy_sets = {
-	.head = LIST_HEAD_INIT(enc_policy_sets.head)
+static struct policy_set_list crypto_policy_sets = {
+	.head = LIST_HEAD_INIT(crypto_policy_sets.head)
 };
 
 static struct policy_set_list errc_policy_sets = {
@@ -59,9 +59,9 @@ struct sdup_comp *sdup_comp_from_component(struct rina_component *component)
 { return container_of(component, struct sdup_comp, base); }
 EXPORT_SYMBOL(sdup_comp_from_component);
 
-int sdup_enc_select_policy_set(struct sdup_comp * sdup_comp,
-                               const string_t *  path,
-                               const string_t *  name)
+int sdup_crypto_select_policy_set(struct sdup_comp * sdup_comp,
+                                  const string_t *  path,
+                                  const string_t *  name)
 {
         struct ps_select_transaction trans;
 
@@ -74,28 +74,23 @@ int sdup_enc_select_policy_set(struct sdup_comp * sdup_comp,
 
         base_select_policy_set_start(&sdup_comp->base,
         			     &trans,
-        			     &enc_policy_sets,
+        			     &crypto_policy_sets,
         			     name);
 
         if (trans.state == PS_SEL_TRANS_PENDING) {
-                struct sdup_enc_ps *ps;
+                struct sdup_crypto_ps *ps;
 
-                ps = container_of(trans.candidate_ps, struct sdup_enc_ps, base);
-                if (!ps->sdup_add_hmac || !ps->sdup_decrypt ||
-                		!ps->sdup_encrypt ||  !ps->sdup_verify_hmac ||
-                		!ps->sdup_enable_encryption) {
+                ps = container_of(trans.candidate_ps, struct sdup_crypto_ps, base);
+                if (!ps->sdup_apply_crypto|| !ps->sdup_remove_crypto ||
+                		!ps->sdup_update_crypto_state) {
                         LOG_ERR("SDUP encryption policy set is invalid, policies are "
                                 "missing:\n"
-                                "       sdup_add_hmac=%p\n"
-                                "       sdup_decrypt=%p\n"
-                                "       sdup_encrypt=%p\n"
-                                "       sdup_verify_hmac=%p\n"
-                        	"       sdup_enable_encryption=%p\n",
-                                ps->sdup_add_hmac,
-                                ps->sdup_decrypt,
-                                ps->sdup_encrypt,
-                                ps->sdup_verify_hmac,
-                                ps->sdup_enable_encryption);
+                                "       sdup_apply_crypto=%p\n"
+                                "       sdup_remove_crypto=%p\n"
+                        	"       sdup_update_crypto_state=%p\n",
+                                ps->sdup_apply_crypto,
+                                ps->sdup_remove_crypto,
+                                ps->sdup_update_crypto_state);
                         trans.state = PS_SEL_TRANS_ABORTED;
                 }
         }
@@ -104,7 +99,7 @@ int sdup_enc_select_policy_set(struct sdup_comp * sdup_comp,
 
         return trans.state = PS_SEL_TRANS_COMMITTED ? 0 : -1;
 }
-EXPORT_SYMBOL(sdup_enc_select_policy_set);
+EXPORT_SYMBOL(sdup_crypto_select_policy_set);
 
 int sdup_errc_select_policy_set(struct sdup_comp * sdup_comp,
                                 const string_t *  path,
@@ -200,11 +195,11 @@ int sdup_select_policy_set(struct sdup_port * instance,
 
         ps_factory_parse_component_id(path, &cmplen, &offset);
 
-        if (cmplen && strncmp(path, "enc", cmplen) == 0) {
-                /* The request addresses the Encryption subcomponent. */
-                return sdup_enc_select_policy_set(instance->enc,
-                				  path + offset,
-                				  name);
+        if (cmplen && strncmp(path, "crypto", cmplen) == 0) {
+                /* The request addresses the crypto subcomponent. */
+                return sdup_crypto_select_policy_set(instance->crypto,
+                				     path + offset,
+                				     name);
         }
 
         if (cmplen && strncmp(path, "errc", cmplen) == 0) {
@@ -265,7 +260,7 @@ static void sdup_port_destroy(struct sdup_port * instance)
 
 	list_del(&(instance->list));
 
-	sdup_comp_destroy(instance->enc);
+	sdup_comp_destroy(instance->crypto);
 	sdup_comp_destroy(instance->errc);
 	sdup_comp_destroy(instance->ttl);
 
@@ -278,7 +273,7 @@ struct sdup_port * sdup_port_create(port_id_t port_id,
 				    struct dup_config_entry * dup_conf)
 {
 	struct sdup_port * tmp;
-	const string_t * enc_ps_name;
+	const string_t * crypto_ps_name;
 	const string_t * errc_ps_name;
 	const string_t * ttl_ps_name;
 
@@ -297,22 +292,22 @@ struct sdup_port * sdup_port_create(port_id_t port_id,
 	tmp->port_id = port_id;
 	tmp->conf = dup_conf;
 
-	if (dup_conf->encryption_policy) {
-		enc_ps_name = policy_name(dup_conf->encryption_policy);
-		tmp->enc = sdup_comp_create(tmp);
-		if (!tmp->enc) {
+	if (dup_conf->crypto_policy) {
+		crypto_ps_name = policy_name(dup_conf->crypto_policy);
+		tmp->crypto = sdup_comp_create(tmp);
+		if (!tmp->crypto) {
 			sdup_port_destroy(tmp);
 			return NULL;
 		}
 
-		if (sdup_enc_select_policy_set(tmp->enc, "", enc_ps_name)) {
-			LOG_ERR("Could not set policy set %s for SDUP Enc",
-				enc_ps_name);
+		if (sdup_crypto_select_policy_set(tmp->crypto, "", crypto_ps_name)) {
+			LOG_ERR("Could not set policy set %s for SDUP Crypto",
+				crypto_ps_name);
 			sdup_port_destroy(tmp);
 			return NULL;
 		}
 	} else
-		tmp->enc = NULL;
+		tmp->crypto = NULL;
 
 	if (dup_conf->error_check_policy) {
 		errc_ps_name = policy_name(dup_conf->error_check_policy);
@@ -373,12 +368,12 @@ static struct dup_config_entry * find_dup_config(struct sdup_config * sdup_conf,
 	return sdup_conf->default_dup_conf;
 }
 
-int sdup_enc_set_policy_set_param(struct sdup_comp * sdup_comp,
-                                  const char * path,
-                                  const char * name,
-                                  const char * value)
+int sdup_crypto_set_policy_set_param(struct sdup_comp * sdup_comp,
+                                     const char * path,
+                                     const char * name,
+                                     const char * value)
 {
-        struct sdup_enc_ps * ps;
+        struct sdup_crypto_ps * ps;
         int ret = -1;
 
         if (!sdup_comp || !path || !name || !value) {
@@ -393,11 +388,11 @@ int sdup_enc_set_policy_set_param(struct sdup_comp * sdup_comp,
                 rcu_read_lock();
 
                 ps = container_of(rcu_dereference(sdup_comp->base.ps),
-                                  struct sdup_enc_ps, base);
+                                  struct sdup_crypto_ps, base);
                 if (!ps) {
-                        LOG_ERR("No policy-set selected for this SDUP Encryption component");
+                        LOG_ERR("No policy-set selected for this SDUP Crypto component");
                 } else {
-                        LOG_ERR("Unknown SDUP Encryption parameter policy '%s'", name);
+                        LOG_ERR("Unknown SDUP Crypto parameter policy '%s'", name);
                 }
 
                 rcu_read_unlock();
@@ -407,7 +402,7 @@ int sdup_enc_set_policy_set_param(struct sdup_comp * sdup_comp,
 
         return ret;
 }
-EXPORT_SYMBOL(sdup_enc_set_policy_set_param);
+EXPORT_SYMBOL(sdup_crypto_set_policy_set_param);
 
 int sdup_errc_set_policy_set_param(struct sdup_comp * sdup_comp,
                                    const char * path,
@@ -503,12 +498,12 @@ int sdup_set_policy_set_param(struct sdup_port * sdup_port,
 
 	}
 
-	if (cmplen && strncmp(path, "enc", cmplen) == 0) {
-		/* The request addresses the sdup-enc subcomponent. */
-		return sdup_enc_set_policy_set_param(sdup_port->enc,
-						     path + offset,
-						     name,
-						     value);
+	if (cmplen && strncmp(path, "crypto", cmplen) == 0) {
+		/* The request addresses the sdup-crypto subcomponent. */
+		return sdup_crypto_set_policy_set_param(sdup_port->crypto,
+						        path + offset,
+						        name,
+						        value);
 
 	} else if (cmplen && strncmp(path, "errc", cmplen) == 0) {
 		/* The request addresses the sdup-errc subcomponent. */
@@ -670,7 +665,7 @@ EXPORT_SYMBOL(sdup_destroy_port_config);
 int sdup_protect_pdu(struct sdup_port * instance,
 		     struct pdu_ser * pdu)
 {
-	struct sdup_enc_ps * enc_ps = NULL;
+	struct sdup_crypto_ps * crypto_ps = NULL;
 	struct sdup_errc_ps * errc_ps = NULL;
 
 	if (!instance) {
@@ -679,12 +674,12 @@ int sdup_protect_pdu(struct sdup_port * instance,
 	}
 
 	rcu_read_lock();
-	if (instance->enc) {
-		enc_ps = container_of(rcu_dereference(instance->enc->base.ps),
-				      struct sdup_enc_ps,
-				      base);
+	if (instance->crypto) {
+		crypto_ps = container_of(rcu_dereference(instance->crypto->base.ps),
+				         struct sdup_crypto_ps,
+				         base);
 
-		if (enc_ps->sdup_encrypt(enc_ps, pdu)) {
+		if (crypto_ps->sdup_apply_crypto(crypto_ps, pdu)) {
 			rcu_read_unlock();
 			return -1;
 		}
@@ -701,13 +696,6 @@ int sdup_protect_pdu(struct sdup_port * instance,
 		}
 	}
 
-	if (instance->enc) {
-		if (enc_ps->sdup_add_hmac(enc_ps, pdu)) {
-			rcu_read_unlock();
-			return -1;
-		}
-	}
-
 	rcu_read_unlock();
 
 	LOG_DBG("Protected pdu.");
@@ -717,9 +705,9 @@ int sdup_protect_pdu(struct sdup_port * instance,
 EXPORT_SYMBOL(sdup_protect_pdu);
 
 int sdup_unprotect_pdu(struct sdup_port * instance,
-			struct pdu_ser * pdu)
+		       struct pdu_ser * pdu)
 {
-	struct sdup_enc_ps * enc_ps = NULL;
+	struct sdup_crypto_ps * crypto_ps = NULL;
 	struct sdup_errc_ps * errc_ps = NULL;
 
 	if (!instance) {
@@ -728,16 +716,6 @@ int sdup_unprotect_pdu(struct sdup_port * instance,
 	}
 
 	rcu_read_lock();
-	if (instance->enc) {
-		enc_ps = container_of(rcu_dereference(instance->enc->base.ps),
-				      struct sdup_enc_ps,
-				      base);
-
-		if (enc_ps->sdup_verify_hmac(enc_ps, pdu)) {
-			rcu_read_unlock();
-			return -1;
-		}
-	}
 
 	if (instance->errc) {
 		errc_ps = container_of(rcu_dereference(instance->errc->base.ps),
@@ -750,13 +728,16 @@ int sdup_unprotect_pdu(struct sdup_port * instance,
 		}
 	}
 
-	if (instance->enc) {
-		if (enc_ps->sdup_decrypt(enc_ps, pdu)) {
+	if (instance->crypto) {
+		crypto_ps = container_of(rcu_dereference(instance->crypto->base.ps),
+				         struct sdup_crypto_ps,
+				         base);
+
+		if (crypto_ps->sdup_remove_crypto(crypto_ps, pdu)) {
 			rcu_read_unlock();
 			return -1;
 		}
 	}
-
 	rcu_read_unlock();
 
 	LOG_DBG("Unprotected pdu.");
@@ -870,17 +851,15 @@ static struct sdup_port * find_port(struct sdup * sdup,
 	return NULL;
 }
 
-int sdup_enable_encryption(struct sdup * instance,
-			   bool enable_encryption,
-			   bool enable_decryption,
-			   struct buffer * encrypt_key,
-			   port_id_t port_id)
+int sdup_update_crypto_state(struct sdup * instance,
+			     struct sdup_crypto_state * state,
+			     port_id_t port_id)
 {
 	struct sdup_port * port;
-	struct sdup_enc_ps * enc_ps;
+	struct sdup_crypto_ps * crypto_ps;
 
-	if (!instance || !encrypt_key) {
-		LOG_ERR("Bogus parameters passed");
+	if (!instance) {
+		LOG_ERR("Bogus instance passed");
 		return -1;
 	}
 
@@ -889,15 +868,13 @@ int sdup_enable_encryption(struct sdup * instance,
 		return -1;
 
 	rcu_read_lock();
-	if (port->enc) {
-		enc_ps = container_of(rcu_dereference(port->enc->base.ps),
-				      struct sdup_enc_ps,
-				      base);
+	if (port->crypto) {
+		crypto_ps = container_of(rcu_dereference(port->crypto->base.ps),
+				         struct sdup_crypto_ps,
+				         base);
 
-		if (enc_ps->sdup_enable_encryption(enc_ps,
-						   enable_encryption,
-						   enable_decryption,
-						   encrypt_key)) {
+		if (crypto_ps->sdup_update_crypto_state(crypto_ps,
+						        state)) {
 			rcu_read_unlock();
 			return -1;
 		}
@@ -905,22 +882,22 @@ int sdup_enable_encryption(struct sdup * instance,
 
 	return 0;
 }
-EXPORT_SYMBOL(sdup_enable_encryption);
+EXPORT_SYMBOL(sdup_update_crypto_state);
 
-int sdup_enc_ps_publish(struct ps_factory * factory)
+int sdup_crypto_ps_publish(struct ps_factory * factory)
 {
 	if (factory == NULL) {
 		LOG_ERR("%s: NULL factory", __func__);
 		return -1;
 	}
 
-	return ps_publish(&enc_policy_sets, factory);
+	return ps_publish(&crypto_policy_sets, factory);
 }
-EXPORT_SYMBOL(sdup_enc_ps_publish);
+EXPORT_SYMBOL(sdup_crypto_ps_publish);
 
-int sdup_enc_ps_unpublish(const char * name)
-{ return ps_unpublish(&enc_policy_sets, name); }
-EXPORT_SYMBOL(sdup_enc_ps_unpublish);
+int sdup_crypto_ps_unpublish(const char * name)
+{ return ps_unpublish(&crypto_policy_sets, name); }
+EXPORT_SYMBOL(sdup_crypto_ps_unpublish);
 
 int sdup_errc_ps_publish(struct ps_factory * factory)
 {

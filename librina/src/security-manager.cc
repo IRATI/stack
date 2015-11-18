@@ -105,9 +105,10 @@ int AuthNonePolicySet::set_policy_set_param(const std::string& name,
         return -1;
 }
 
-IAuthPolicySet::AuthStatus AuthNonePolicySet::encryption_enabled(int port_id)
+IAuthPolicySet::AuthStatus AuthNonePolicySet::crypto_state_updated(int port_id)
 {
-	LOG_ERR("Encryption is not supported by this policy, on port_id %d", port_id);
+	LOG_ERR("Cryptographic SDU Protection is not supported by this policy, on port_id %d",
+		port_id);
 	return FAILED;
 }
 
@@ -385,7 +386,7 @@ int AuthPasswordPolicySet::set_policy_set_param(const std::string& name,
         return -1;
 }
 
-IAuthPolicySet::AuthStatus AuthPasswordPolicySet::encryption_enabled(int port_id)
+IAuthPolicySet::AuthStatus AuthPasswordPolicySet::crypto_state_updated(int port_id)
 {
 	LOG_ERR("Encryption is not supported by this policy, on port_id %d", port_id);
 	return IAuthPolicySet::FAILED;
@@ -540,13 +541,13 @@ SSH2SecurityContext::~SSH2SecurityContext()
 	}
 }
 
-EncryptionProfile SSH2SecurityContext::get_encryption_profile(bool enable_encryption,
-					 	 	      bool enable_decryption)
+CryptoState SSH2SecurityContext::get_crypto_state(bool enable_crypto_tx,
+					 	  bool enable_crypto_rx)
 {
-	EncryptionProfile result;
-	result.enable_encryption = enable_encryption;
-	result.enable_decryption = enable_decryption;
-	result.encrypt_key = encrypt_key;
+	CryptoState result;
+	result.enable_crypto_tx = enable_crypto_tx;
+	result.enable_crypto_tx = enable_crypto_rx;
+	result.encrypt_key_tx = encrypt_key;
 	result.port_id = id;
 
 	return result;
@@ -938,8 +939,8 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(const Auth
 
 	// Configure kernel SDU protection policy with shared secret and algorithms
 	// tell it to enable decryption
-	AuthStatus result = sec_man->enable_encryption(sc->get_encryption_profile(false, true),
-						       this);
+	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(false, true),
+						         this);
 	if (result == IAuthPolicySet::FAILED) {
 		delete sc;
 		return result;
@@ -986,7 +987,7 @@ int AuthSSH2PolicySet::edh_generate_shared_secret(SSH2SecurityContext * sc)
 	return 0;
 }
 
-IAuthPolicySet::AuthStatus AuthSSH2PolicySet::encryption_enabled(int port_id)
+IAuthPolicySet::AuthStatus AuthSSH2PolicySet::crypto_state_updated(int port_id)
 {
 	SSH2SecurityContext * sc;
 
@@ -1068,8 +1069,8 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::decryption_enabled_server(SSH2Secu
 
 	// Configure kernel SDU protection policy with shared secret and algorithms
 	// tell it to enable encryption
-	AuthStatus result = sec_man->enable_encryption(sc->get_encryption_profile(true, false),
-						       this);
+	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(true, false),
+						         this);
 	if (result == IAuthPolicySet::FAILED) {
 		sec_man->destroy_security_context(sc->id);
 		return result;
@@ -1185,8 +1186,8 @@ int AuthSSH2PolicySet::process_edh_exchange_message(const CDAPMessage& message, 
 
 	// Configure kernel SDU protection policy with shared secret and algorithms
 	// tell it to enable decryption and encryption
-	AuthStatus result = sec_man->enable_encryption(sc->get_encryption_profile(true, true),
-						       this);
+	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(true, true),
+						         this);
 	if (result == IAuthPolicySet::FAILED) {
 		sec_man->destroy_security_context(sc->id);
 		return result;

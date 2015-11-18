@@ -31,7 +31,7 @@
 #include "dtp-ps.h"
 #include "dtcp-ps.h"
 #include "pff-ps.h"
-#include "sdup-enc-ps.h"
+#include "sdup-crypto-ps.h"
 #include "sdup-errc-ps.h"
 #include "sdup-ttl-ps.h"
 
@@ -39,7 +39,7 @@ extern struct ps_factory default_rmt_ps_factory;
 extern struct ps_factory default_dtp_ps_factory;
 extern struct ps_factory default_dtcp_ps_factory;
 extern struct ps_factory default_pff_ps_factory;
-extern struct ps_factory default_sdup_enc_ps_factory;
+extern struct ps_factory default_sdup_crypto_ps_factory;
 extern struct ps_factory default_sdup_errc_ps_factory;
 extern struct ps_factory default_sdup_ttl_ps_factory;
 
@@ -51,7 +51,7 @@ static int __init mod_init(void)
         strcpy(default_dtp_ps_factory.name, RINA_PS_DEFAULT_NAME);
         strcpy(default_dtcp_ps_factory.name, RINA_PS_DEFAULT_NAME);
         strcpy(default_pff_ps_factory.name, RINA_PS_DEFAULT_NAME);
-        strcpy(default_sdup_enc_ps_factory.name, RINA_PS_DEFAULT_NAME);
+        strcpy(default_sdup_crypto_ps_factory.name, RINA_PS_DEFAULT_NAME);
         strcpy(default_sdup_errc_ps_factory.name, CRC32);
         strcpy(default_sdup_ttl_ps_factory.name, RINA_PS_DEFAULT_NAME);
 
@@ -87,13 +87,13 @@ static int __init mod_init(void)
 
         LOG_INFO("PFF default policy set loaded successfully");
 
-        ret = sdup_enc_ps_publish(&default_sdup_enc_ps_factory);
+        ret = sdup_crypto_ps_publish(&default_sdup_crypto_ps_factory);
         if (ret) {
-                LOG_ERR("Failed to publish SDU Protection encryption policy set factory");
+                LOG_ERR("Failed to publish SDU Protection Crypto policy set factory");
                 return -1;
         }
 
-        LOG_INFO("SDU Protection default encryption policy set loaded successfully");
+        LOG_INFO("SDU Protection default Crypto policy set loaded successfully");
 
         ret = sdup_errc_ps_publish(&default_sdup_errc_ps_factory);
         if (ret) {
@@ -118,9 +118,9 @@ static void __exit mod_exit(void)
 {
         int ret;
 
-        ret = sdup_enc_ps_unpublish(RINA_PS_DEFAULT_NAME);
+        ret = sdup_crypto_ps_unpublish(RINA_PS_DEFAULT_NAME);
         if (ret) {
-                LOG_ERR("Failed to unpublish SDU Protection encryption policy set factory");
+                LOG_ERR("Failed to unpublish SDU Protection Crypto policy set factory");
                 return;
         }
 
