@@ -315,8 +315,8 @@ int default_sdup_update_crypto_state(struct sdup_crypto_ps * ps,
 		priv_data->enable_encryption = state->enable_crypto_tx;
 	}
 
-	LOG_DBG("Encryption enabled state: %d", port_conf->enable_encryption);
-	LOG_DBG("Decryption enabled state: %d", port_conf->enable_decryption);
+	LOG_DBG("Crypto rx enabled state: %d", state->enable_crypto_rx);
+	LOG_DBG("Crypto tx enabled state: %d", state->enable_crypto_tx);
 
 	return 0;
 }
