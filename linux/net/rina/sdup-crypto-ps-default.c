@@ -379,7 +379,7 @@ sdup_crypto_ps_default_create(struct rina_component * component)
         			return NULL;
         		}
         		LOG_DBG("Encryption cipher is %s",
-        				entry->encryption_cipher);
+        			data->encryption_cipher);
         	} else {
         		LOG_DBG("Unsupported encryption cipher %s", aux);
         	}
@@ -401,7 +401,7 @@ sdup_crypto_ps_default_create(struct rina_component * component)
         			priv_data_destroy(data);
         			return NULL;
         		}
-        		LOG_DBG("Message digest is %s", entry->message_digest);
+        		LOG_DBG("Message digest is %s", data->message_digest);
         	} else if (string_cmp(aux, "MD5") == 0) {
         		if (string_dup("md5", &data->message_digest)) {
         			LOG_ERR("Problems copying 'digest' value)");
@@ -409,7 +409,7 @@ sdup_crypto_ps_default_create(struct rina_component * component)
            			priv_data_destroy(data);
            			return NULL;
         		}
-        		LOG_DBG("Message digest is %s", entry->message_digest);
+        		LOG_DBG("Message digest is %s", data->message_digest);
         	} else {
         		LOG_DBG("Unsupported message digest %s", aux);
         	}

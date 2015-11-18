@@ -187,7 +187,7 @@ sdup_ttl_ps_default_create(struct rina_component * component)
 			return NULL;
 		}
 
-		LOG_DBG("Initial TTL value is %u", entry->initial_ttl_value);
+		LOG_DBG("Initial TTL value is %u", data->initial_ttl_value);
 	} else {
 		LOG_ERR("TTL policy is NULL");
 		rkfree(ps);

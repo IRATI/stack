@@ -83,7 +83,6 @@ int default_sdup_add_error_check_policy(struct sdup_errc_ps * ps,
 		return -1;
 
 	memcpy(data+len-sizeof(crc), &crc, sizeof(crc));
-	LOG_DBG("CRC!");
 
 	return 0;
 }
@@ -120,8 +119,6 @@ int default_sdup_check_error_check_policy(struct sdup_errc_ps * ps,
 		LOG_ERR("Failed to shrink ser PDU");
 		return -1;
 	}
-
-	LOG_DBG("CHECKCRC!");
 
 	return 0;
 }
