@@ -854,8 +854,12 @@ UcharArray::~UcharArray()
 UcharArray& UcharArray::operator=(const UcharArray &other)
 {
 	length = other.length;
-	data = new unsigned char[length];
-	memcpy(data, other.data, length);
+	if (length > 0) {
+		data = new unsigned char[length];
+		memcpy(data, other.data, length);
+	} else
+		data = 0;
+
 	return *this;
 }
 
