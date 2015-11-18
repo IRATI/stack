@@ -337,6 +337,9 @@ rnl_ipcp_update_crypto_state_req_msg_attrs_create(void)
         if  (!tmp)
                 return NULL;
 
+        tmp->port_id = 0;
+        tmp->state = NULL;
+
         return tmp;
 }
 
@@ -2693,36 +2696,67 @@ rnl_parse_ipcp_select_policy_set_req_msg(
 }
 
 static int
-rnl_parse_cryto_state_info(
-                struct genl_info * info,
+rnl_parse_crypto_state_info(
+		struct nlattr * crypto_state_attr,
                 struct sdup_crypto_state * state)
 {
-	state->enable_crypto_tx = info->attrs[ICSTATE_ENABLE_CRYPTO_TX];
-	state->enable_crypto_rx = info->attrs[ICSTATE_ENABLE_CRYPTO_RX];
+        struct nla_policy attr_policy[ICSTATE_ATTR_MAX + 1];
+        struct nlattr *   attrs[ICSTATE_ATTR_MAX + 1];
 
-        if (info->attrs[ICSTATE_MAC_KEY_TX])
-        	state->mac_key_tx = buffer_create_from(nla_data(info->attrs[ICSTATE_MAC_KEY_TX]),
-        					       nla_len(info->attrs[ICSTATE_MAC_KEY_TX]));
+        if (!crypto_state_attr || !state) {
+                LOG_ERR("Bogus input parameters, cannot parse name app info");
+                return -1;
+        }
 
-        if (info->attrs[ICSTATE_MAC_KEY_RX])
-        	state->mac_key_rx = buffer_create_from(nla_data(info->attrs[ICSTATE_MAC_KEY_RX]),
-        					       nla_len(info->attrs[ICSTATE_MAC_KEY_RX]));
+        attr_policy[ICSTATE_ENABLE_CRYPTO_TX].type = NLA_FLAG;
+        attr_policy[ICSTATE_ENABLE_CRYPTO_TX].len  = 0;
+        attr_policy[ICSTATE_ENABLE_CRYPTO_RX].type = NLA_FLAG;
+        attr_policy[ICSTATE_ENABLE_CRYPTO_RX].len  = 0;
+        attr_policy[ICSTATE_MAC_KEY_TX].type = NLA_UNSPEC;
+        attr_policy[ICSTATE_MAC_KEY_TX].len = 65535;
+        attr_policy[ICSTATE_MAC_KEY_RX].type = NLA_UNSPEC;
+        attr_policy[ICSTATE_MAC_KEY_RX].len = 65535;
+        attr_policy[ICSTATE_ENCRYPT_KEY_TX].type = NLA_UNSPEC;
+        attr_policy[ICSTATE_ENCRYPT_KEY_TX].len = 65535;
+        attr_policy[ICSTATE_ENCRYPT_KEY_RX].type = NLA_UNSPEC;
+        attr_policy[ICSTATE_ENCRYPT_KEY_RX].len = 65535;
+        attr_policy[ICSTATE_IV_TX].type = NLA_UNSPEC;
+        attr_policy[ICSTATE_IV_TX].len = 65535;
+        attr_policy[ICSTATE_IV_RX].type = NLA_UNSPEC;
+        attr_policy[ICSTATE_IV_RX].len = 65535;
 
-        if (info->attrs[ICSTATE_ENCRYPT_KEY_TX])
-        	state->encrypt_key_tx = buffer_create_from(nla_data(info->attrs[ICSTATE_ENCRYPT_KEY_TX]),
-        					           nla_len(info->attrs[ICSTATE_ENCRYPT_KEY_TX]));
+        if (nla_parse_nested(attrs,
+        		     ICSTATE_ATTR_MAX,
+        		     crypto_state_attr,
+        		     attr_policy) < 0)
+                return -1;
 
-        if (info->attrs[ICSTATE_ENCRYPT_KEY_RX])
-        	state->encrypt_key_rx = buffer_create_from(nla_data(info->attrs[ICSTATE_ENCRYPT_KEY_RX]),
-        					           nla_len(info->attrs[ICSTATE_ENCRYPT_KEY_RX]));
+	state->enable_crypto_tx = attrs[ICSTATE_ENABLE_CRYPTO_TX];
+	state->enable_crypto_rx = attrs[ICSTATE_ENABLE_CRYPTO_RX];
 
-        if (info->attrs[ICSTATE_IV_TX])
-        	state->iv_tx = buffer_create_from(nla_data(info->attrs[ICSTATE_IV_TX]),
-        					  nla_len(info->attrs[ICSTATE_IV_TX]));
+        if (attrs[ICSTATE_MAC_KEY_TX])
+        	state->mac_key_tx = buffer_create_from(nla_data(attrs[ICSTATE_MAC_KEY_TX]),
+        					       nla_len(attrs[ICSTATE_MAC_KEY_TX]));
 
-        if (info->attrs[ICSTATE_IV_RX])
-        	state->iv_rx = buffer_create_from(nla_data(info->attrs[ICSTATE_IV_RX]),
-        					  nla_len(info->attrs[ICSTATE_IV_RX]));
+        if (attrs[ICSTATE_MAC_KEY_RX])
+        	state->mac_key_rx = buffer_create_from(nla_data(attrs[ICSTATE_MAC_KEY_RX]),
+        					       nla_len(attrs[ICSTATE_MAC_KEY_RX]));
+
+        if (attrs[ICSTATE_ENCRYPT_KEY_TX])
+        	state->encrypt_key_tx = buffer_create_from(nla_data(attrs[ICSTATE_ENCRYPT_KEY_TX]),
+        					           nla_len(attrs[ICSTATE_ENCRYPT_KEY_TX]));
+
+        if (attrs[ICSTATE_ENCRYPT_KEY_RX])
+        	state->encrypt_key_rx = buffer_create_from(nla_data(attrs[ICSTATE_ENCRYPT_KEY_RX]),
+        					           nla_len(attrs[ICSTATE_ENCRYPT_KEY_RX]));
+
+        if (attrs[ICSTATE_IV_TX])
+        	state->iv_tx = buffer_create_from(nla_data(attrs[ICSTATE_IV_TX]),
+        					  nla_len(attrs[ICSTATE_IV_TX]));
+
+        if (attrs[ICSTATE_IV_RX])
+        	state->iv_rx = buffer_create_from(nla_data(attrs[ICSTATE_IV_RX]),
+        					  nla_len(attrs[ICSTATE_IV_RX]));
 
         return 0;
 }
@@ -2759,8 +2793,10 @@ rnl_parse_ipcp_update_crypto_state_req_msg(
 
         if (info->attrs[IUCSR_ATTR_CRYPT_STATE]) {
         	msg_attrs->state = sdup_crypto_state_create();
-        	rnl_parse_cryto_state_info(info->attrs[IUCSR_ATTR_CRYPT_STATE],
-        				   msg_attrs->state);
+        	if (!msg_attrs->state)
+        		return -1;
+        	rnl_parse_crypto_state_info(info->attrs[IUCSR_ATTR_CRYPT_STATE],
+        				    msg_attrs->state);
 
         }
 
