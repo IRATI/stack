@@ -267,11 +267,9 @@ static struct nla_policy isps_policy[ISPS_ATTR_MAX + 1] = {
         [ISPS_ATTR_NAME] = NLA_INIT_STRING,
 };
 
-static struct nla_policy ieerm_policy[IEERM_ATTR_MAX + 1] = {
-	[IEERM_ATTR_N_1_PORT] 	 	   = NLA_INIT_U32,
-        [IEERM_ATTR_EN_ENCRYPT] 	   = NLA_INIT_FLAG,
-        [IEERM_ATTR_EN_DECRYPT] 	   = NLA_INIT_FLAG,
-        [IEERM_ATTR_ENCRYPT_KEY] 	   = NLA_INIT_UNSPEC,
+static struct nla_policy iucsr_policy[IUCSR_ATTR_MAX + 1] = {
+	[IUCSR_ATTR_N_1_PORT] 	 	   = NLA_INIT_U32,
+        [IUCSR_ATTR_CRYPT_STATE] 	   = NLA_INIT_NESTED,
 };
 
 #define DECL_NL_OP(COMMAND, POLICY) {           \
@@ -325,8 +323,8 @@ static struct genl_ops nl_ops[] = {
         DECL_NL_OP(RINA_C_IPCP_SET_POLICY_SET_PARAM_RESPONSE, NULL),
         DECL_NL_OP(RINA_C_IPCP_SELECT_POLICY_SET_REQUEST, isps_policy),
         DECL_NL_OP(RINA_C_IPCP_SELECT_POLICY_SET_RESPONSE, NULL),
-        DECL_NL_OP(RINA_C_IPCP_ENABLE_ENCRYPTION_REQUEST, ieerm_policy),
-        DECL_NL_OP(RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE, NULL)
+        DECL_NL_OP(RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST, iucsr_policy),
+        DECL_NL_OP(RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE, NULL)
 };
 
 int rnl_handler_register(struct rnl_set *   set,

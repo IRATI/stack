@@ -21,11 +21,15 @@ obj-$(CONFIG_RINA) +=						\
 	pff.o rmt.o						\
 	pim.o pidm.o kfa-utils.o kfa.o				\
 	kipcm-utils.o kipcm.o					\
+	sdup.o							\
 	ps-factory.o						\
 	rmt-ps-default.o					\
 	dtp-ps-default.o					\
 	dtcp-ps-default.o                       		\
 	pff-ps-default.o					\
+	sdup-crypto-ps-default.o				\
+	sdup-errc-ps-default.o					\
+	sdup-ttl-ps-default.o				
 
 obj-y +=							\
 	syscalls.o
