@@ -77,7 +77,10 @@ int sdup_crypto_select_policy_set(struct sdup_comp * sdup_comp,
 int sdup_ttl_select_policy_set(struct sdup_comp * sdup_comp,
                                const char * path,
                                const char * name);
-int sdup_select_policy_set(struct sdup_port * instance,
+int sdup_port_select_policy_set(struct sdup_port * instance,
+                                const string_t * path,
+                                const string_t * name);
+int sdup_select_policy_set(struct sdup * instance,
 			   const string_t * path,
 			   const string_t * name);
 

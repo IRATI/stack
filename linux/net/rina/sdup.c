@@ -184,9 +184,9 @@ int sdup_ttl_select_policy_set(struct sdup_comp * sdup_comp,
 }
 EXPORT_SYMBOL(sdup_ttl_select_policy_set);
 
-int sdup_select_policy_set(struct sdup_port * instance,
-			   const string_t * path,
-			   const string_t * name)
+int sdup_port_select_policy_set(struct sdup_port * instance,
+			        const string_t * path,
+			        const string_t * name)
 {
         size_t cmplen;
         size_t offset;
@@ -223,6 +223,49 @@ int sdup_select_policy_set(struct sdup_port * instance,
         }
 
         return -1;
+}
+EXPORT_SYMBOL(sdup_port_select_policy_set);
+
+static struct sdup_port * find_port(struct sdup * sdup,
+				    port_id_t port_id);
+
+int sdup_select_policy_set(struct sdup * instance,
+			   const string_t * path,
+			   const string_t * name)
+{
+        struct sdup_port *sdup_port;
+        int portid;
+        size_t cmplen;
+        size_t offset;
+        char numbuf[8];
+        int ret;
+
+        if (!path) {
+                LOG_ERR("NULL path");
+                return -1;
+        }
+
+        ps_factory_parse_component_id(path, &cmplen, &offset);
+        if (cmplen > sizeof(numbuf)-1) {
+                LOG_ERR("Invalid port-id' %s'", path);
+                return -1;
+        }
+
+        memcpy(numbuf, path, cmplen);
+        numbuf[cmplen] = '\0';
+        ret = kstrtoint(numbuf, 10, &portid);
+        if (ret) {
+                LOG_ERR("Invalid port-id '%s'", path);
+                return -1;
+        }
+
+        sdup_port = find_port(instance, portid);
+        if (!sdup_port) {
+            LOG_ERR("No N-1 port with port-id %d", portid);
+            return -1;
+        }
+
+        return sdup_port_select_policy_set(sdup_port, path + offset, name);
 }
 EXPORT_SYMBOL(sdup_select_policy_set);
 
@@ -269,7 +312,7 @@ static void sdup_port_destroy(struct sdup_port * instance)
 	rkfree(instance);
 };
 
-struct sdup_port * sdup_port_create(port_id_t port_id,
+static struct sdup_port * sdup_port_create(port_id_t port_id,
 				    struct dup_config_entry * dup_conf)
 {
 	struct sdup_port * tmp;

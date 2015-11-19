@@ -287,6 +287,11 @@ int rmt_select_policy_set(struct rmt *rmt,
                 return pff_select_policy_set(rmt->pff, path + offset, name);
         }
 
+        if (cmplen && strncmp(path, "sdup", cmplen) == 0) {
+                /* The request addresses the SDU protection subcomponent. */
+                return sdup_select_policy_set(rmt->sdup, path + offset, name);
+        }
+
         if (strcmp(path, "") != 0) {
                 LOG_ERR("This component has no subcomponent named '%s'", path);
                 return -1;
