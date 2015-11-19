@@ -47,11 +47,6 @@
 /*  FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
 
-struct normal_info {
-        struct name * name;
-        struct name * dif_name;
-};
-
 enum mgmt_state {
         MGMT_DATA_READY,
         MGMT_DATA_DESTROYED
@@ -69,8 +64,9 @@ struct ipcp_instance_data {
         /* FIXME: add missing needed attributes */
         ipc_process_id_t        id;
         u32                     nl_port;
+        struct name             name;
+        struct name             dif_name;
         struct list_head        flows;
-        struct normal_info *    info;
         /*  FIXME: Remove it as soon as the kipcm_kfa gets removed*/
         struct kfa *            kfa;
         struct efcp_container * efcpc;
@@ -625,8 +621,12 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         struct sdup_config * sdup_config;
         struct rmt_config *  rmt_config;
 
-        data->info->dif_name = name_dup(dif_information->dif_name);
-        data->address        = dif_information->configuration->address;
+        if (name_cpy(dif_information->dif_name, &data->dif_name)) {
+                LOG_ERR("%s: name_cpy() failed", __func__);
+                return -1;
+        }
+
+        data->address  = dif_information->configuration->address;
 
         efcp_config = dif_information->configuration->efcp_config;
 
@@ -956,19 +956,17 @@ static int normal_pff_flush(struct ipcp_instance_data * data)
 static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
 {
         ASSERT(data);
-        ASSERT(data->info);
-        ASSERT(name_is_ok(data->info->name));
+        ASSERT(name_is_ok(&data->name));
 
-        return data->info->name;
+        return &data->name;
 }
 
 static const struct name * normal_dif_name(struct ipcp_instance_data * data)
 {
         ASSERT(data);
-        ASSERT(data->info);
-        ASSERT(name_is_ok(data->info->dif_name));
+        ASSERT(name_is_ok(&data->dif_name));
 
-        return data->info->dif_name;
+        return &data->dif_name;
 }
 
 typedef const string_t *const_string;
@@ -1296,21 +1294,9 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
 
         instance->data->id      = id;
         instance->data->nl_port = data->nl_port;
-        instance->data->info    = rkzalloc(sizeof(struct normal_info),
-                                           GFP_KERNEL);
-        if (!instance->data->info) {
-                LOG_ERR("Could not allocate memory for normal ipcp info");
-                rkfree(instance->data);
-                rkfree(instance);
-                return NULL;
-        }
 
-        /* FIXME: This (whole) function has to be rehersed HEAVILY */
-
-        instance->data->info->name = name_dup(name);
-        if (!instance->data->info->name) {
+        if (name_cpy(name, &instance->data->name)) {
                 LOG_ERR("Failed creation of ipc name");
-                rkfree(instance->data->info);
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -1321,8 +1307,6 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
 
         instance->data->efcpc = efcp_container_create(instance->data->kfa);
         if (!instance->data->efcpc) {
-                name_destroy(instance->data->info->name);
-                rkfree(instance->data->info);
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -1332,8 +1316,6 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         if (!instance->data->sdup) {
                 LOG_ERR("Failed creation of SDUP instance");
                 efcp_container_destroy(instance->data->efcpc);
-                name_destroy(instance->data->info->name);
-                rkfree(instance->data->info);
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -1347,8 +1329,6 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 LOG_ERR("Failed creation of RMT instance");
 		sdup_destroy(instance->data->sdup);
                 efcp_container_destroy(instance->data->efcpc);
-                name_destroy(instance->data->info->name);
-                rkfree(instance->data->info);
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -1359,8 +1339,6 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 rmt_destroy(instance->data->rmt);
 		sdup_destroy(instance->data->sdup);
                 efcp_container_destroy(instance->data->efcpc);
-                name_destroy(instance->data->info->name);
-                rkfree(instance->data->info);
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -1372,8 +1350,6 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 rmt_destroy(instance->data->rmt);
 		sdup_destroy(instance->data->sdup);
                 efcp_container_destroy(instance->data->efcpc);
-                name_destroy(instance->data->info->name);
-                rkfree(instance->data->info);
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -1425,14 +1401,6 @@ static int normal_destroy(struct ipcp_factory_data * data,
         if (normal_deallocate_all(tmp)) {
                 LOG_ERR("Could not deallocate normal ipcp flows");
                 return -1;
-        }
-
-        if (tmp->info) {
-                if (tmp->info->dif_name)
-                        name_destroy(tmp->info->dif_name);
-                if (tmp->info->name)
-                        name_destroy(tmp->info->name);
-                rkfree(tmp->info);
         }
 
         sdup_destroy(tmp->sdup);
