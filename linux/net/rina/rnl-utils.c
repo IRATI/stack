@@ -36,6 +36,7 @@
 #include "dtp-conf-utils.h"
 #include "dtcp-conf-utils.h"
 #include "policies.h"
+#include "sdup.h"
 
 /*
  * FIXME: I suppose these functions are internal (at least for the time being)
@@ -327,14 +328,17 @@ rnl_ipcp_select_policy_set_req_msg_attrs_create(void)
         return tmp;
 }
 
-static struct rnl_ipcp_enable_encrypt_req_msg_attrs *
-rnl_ipcp_enable_encryption_req_msg_attrs_create(void)
+static struct rnl_ipcp_update_crypto_state_req_msg_attrs *
+rnl_ipcp_update_crypto_state_req_msg_attrs_create(void)
 {
-        struct rnl_ipcp_enable_encrypt_req_msg_attrs * tmp;
+        struct rnl_ipcp_update_crypto_state_req_msg_attrs * tmp;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if  (!tmp)
                 return NULL;
+
+        tmp->port_id = 0;
+        tmp->state = NULL;
 
         return tmp;
 }
@@ -465,9 +469,9 @@ struct rnl_msg * rnl_msg_create(enum rnl_msg_attr_type type)
                         return NULL;
                 }
                 break;
-        case RNL_MSG_ATTRS_ENABLE_ENCRYPTION_REQUEST:
+        case RNL_MSG_ATTRS_UPDATE_CRYPTO_STATE_REQUEST:
                 tmp->attrs =
-                        rnl_ipcp_enable_encryption_req_msg_attrs_create();
+                	rnl_ipcp_update_crypto_state_req_msg_attrs_create();
                 if (!tmp->attrs) {
                         rkfree(tmp);
                         return NULL;
@@ -716,20 +720,45 @@ rnl_ipcp_select_policy_set_msg_attrs_destroy(
         return 0;
 }
 
+static void sdup_crypto_state_destroy(struct sdup_crypto_state * state)
+{
+	if (!state)
+		return;
+
+	if (state->mac_key_tx)
+		buffer_destroy(state->mac_key_tx);
+
+	if (state->mac_key_rx)
+		buffer_destroy(state->mac_key_rx);
+
+	if (state->encrypt_key_tx)
+		buffer_destroy(state->encrypt_key_tx);
+
+	if (state->encrypt_key_rx)
+		buffer_destroy(state->encrypt_key_rx);
+
+	if (state->iv_tx)
+		buffer_destroy(state->iv_tx);
+
+	if (state->iv_rx)
+		buffer_destroy(state->iv_rx);
+
+	rkfree(state);
+}
+
 static int
-rnl_ipcp_enable_encryption_msg_attrs_destroy(
-                struct rnl_ipcp_enable_encrypt_req_msg_attrs * attrs)
+rnl_ipcp_update_crypto_state_msg_attrs_destroy(
+                struct rnl_ipcp_update_crypto_state_req_msg_attrs * attrs)
 {
         if (!attrs)
                 return -1;
 
-        if (attrs->encrypt_key) {
-        	buffer_destroy(attrs->encrypt_key);
-        }
+        if (attrs->state)
+        	sdup_crypto_state_destroy(attrs->state);
 
         rkfree(attrs);
 
-        LOG_DBG("rnl_ipcp_enable_encrypt_req_msg_attrs destroyed correctly");
+        LOG_DBG("rnl_ipcp_update_crypto_state_req_msg_attrs destroyed correctly");
 
         return 0;
 }
@@ -782,8 +811,8 @@ int rnl_msg_destroy(struct rnl_msg * msg)
         case RNL_MSG_ATTRS_SELECT_POLICY_SET_REQUEST:
                 rnl_ipcp_select_policy_set_msg_attrs_destroy(msg->attrs);
                 break;
-        case RNL_MSG_ATTRS_ENABLE_ENCRYPTION_REQUEST:
-                rnl_ipcp_enable_encryption_msg_attrs_destroy(msg->attrs);
+        case RNL_MSG_ATTRS_UPDATE_CRYPTO_STATE_REQUEST:
+        	rnl_ipcp_update_crypto_state_msg_attrs_destroy(msg->attrs);
                 break;
         default:
                 break;
@@ -1452,12 +1481,12 @@ static int parse_dup_config_entry(struct nlattr *           dup_config_entry_att
                 goto parse_fail;
 
         if (attrs[AUTHP_ENCRYPT_POLICY]) {
-        	dup_config_entry->encryption_policy = policy_create();
-        	if (!dup_config_entry->encryption_policy)
+        	dup_config_entry->crypto_policy = policy_create();
+        	if (!dup_config_entry->crypto_policy)
         		goto parse_fail;
 
         	if (parse_policy(attrs[AUTHP_ENCRYPT_POLICY],
-        			 dup_config_entry->encryption_policy))
+        			 dup_config_entry->crypto_policy))
         		goto parse_fail;
         }
 
@@ -2667,27 +2696,108 @@ rnl_parse_ipcp_select_policy_set_req_msg(
 }
 
 static int
-rnl_parse_ipcp_enable_encryption_req_msg(
-                struct genl_info * info,
-                struct rnl_ipcp_enable_encrypt_req_msg_attrs * msg_attrs)
+rnl_parse_crypto_state_info(
+		struct nlattr * crypto_state_attr,
+                struct sdup_crypto_state * state)
 {
-        if (info->attrs[IEERM_ATTR_N_1_PORT])
+        struct nla_policy attr_policy[ICSTATE_ATTR_MAX + 1];
+        struct nlattr *   attrs[ICSTATE_ATTR_MAX + 1];
+
+        if (!crypto_state_attr || !state) {
+                LOG_ERR("Bogus input parameters, cannot parse name app info");
+                return -1;
+        }
+
+        attr_policy[ICSTATE_ENABLE_CRYPTO_TX].type = NLA_FLAG;
+        attr_policy[ICSTATE_ENABLE_CRYPTO_TX].len  = 0;
+        attr_policy[ICSTATE_ENABLE_CRYPTO_RX].type = NLA_FLAG;
+        attr_policy[ICSTATE_ENABLE_CRYPTO_RX].len  = 0;
+        attr_policy[ICSTATE_MAC_KEY_TX].type = NLA_UNSPEC;
+        attr_policy[ICSTATE_MAC_KEY_TX].len = 0;
+        attr_policy[ICSTATE_MAC_KEY_RX].type = NLA_UNSPEC;
+        attr_policy[ICSTATE_MAC_KEY_RX].len = 0;
+        attr_policy[ICSTATE_ENCRYPT_KEY_TX].type = NLA_UNSPEC;
+        attr_policy[ICSTATE_ENCRYPT_KEY_TX].len = 0;
+        attr_policy[ICSTATE_ENCRYPT_KEY_RX].type = NLA_UNSPEC;
+        attr_policy[ICSTATE_ENCRYPT_KEY_RX].len = 0;
+        attr_policy[ICSTATE_IV_TX].type = NLA_UNSPEC;
+        attr_policy[ICSTATE_IV_TX].len = 0;
+        attr_policy[ICSTATE_IV_RX].type = NLA_UNSPEC;
+        attr_policy[ICSTATE_IV_RX].len = 0;
+
+        if (nla_parse_nested(attrs,
+        		     ICSTATE_ATTR_MAX,
+        		     crypto_state_attr,
+        		     attr_policy) < 0)
+                return -1;
+
+	state->enable_crypto_tx = attrs[ICSTATE_ENABLE_CRYPTO_TX];
+	state->enable_crypto_rx = attrs[ICSTATE_ENABLE_CRYPTO_RX];
+
+        if (attrs[ICSTATE_MAC_KEY_TX])
+        	state->mac_key_tx = buffer_create_from(nla_data(attrs[ICSTATE_MAC_KEY_TX]),
+        					       nla_len(attrs[ICSTATE_MAC_KEY_TX]));
+
+        if (attrs[ICSTATE_MAC_KEY_RX])
+        	state->mac_key_rx = buffer_create_from(nla_data(attrs[ICSTATE_MAC_KEY_RX]),
+        					       nla_len(attrs[ICSTATE_MAC_KEY_RX]));
+
+        if (attrs[ICSTATE_ENCRYPT_KEY_TX])
+        	state->encrypt_key_tx = buffer_create_from(nla_data(attrs[ICSTATE_ENCRYPT_KEY_TX]),
+        					           nla_len(attrs[ICSTATE_ENCRYPT_KEY_TX]));
+
+        if (attrs[ICSTATE_ENCRYPT_KEY_RX])
+        	state->encrypt_key_rx = buffer_create_from(nla_data(attrs[ICSTATE_ENCRYPT_KEY_RX]),
+        					           nla_len(attrs[ICSTATE_ENCRYPT_KEY_RX]));
+
+        if (attrs[ICSTATE_IV_TX])
+        	state->iv_tx = buffer_create_from(nla_data(attrs[ICSTATE_IV_TX]),
+        					  nla_len(attrs[ICSTATE_IV_TX]));
+
+        if (attrs[ICSTATE_IV_RX])
+        	state->iv_rx = buffer_create_from(nla_data(attrs[ICSTATE_IV_RX]),
+        					  nla_len(attrs[ICSTATE_IV_RX]));
+
+        return 0;
+}
+
+static struct sdup_crypto_state * sdup_crypto_state_create(void)
+{
+	struct sdup_crypto_state * tmp;
+
+	tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+	if (!tmp) {
+		return NULL;
+	}
+
+	tmp->enable_crypto_tx = false;
+	tmp->enable_crypto_rx = false;
+	tmp->mac_key_tx = NULL;
+	tmp->mac_key_rx = NULL;
+	tmp->encrypt_key_tx = NULL;
+	tmp->encrypt_key_rx = NULL;
+	tmp->iv_tx = NULL;
+	tmp->iv_rx = NULL;
+
+	return tmp;
+}
+
+static int
+rnl_parse_ipcp_update_crypto_state_req_msg(
+                struct genl_info * info,
+                struct rnl_ipcp_update_crypto_state_req_msg_attrs * msg_attrs)
+{
+        if (info->attrs[IUCSR_ATTR_N_1_PORT])
                 msg_attrs->port_id =
-                        nla_get_u32(info->attrs[IEERM_ATTR_N_1_PORT]);
+                        nla_get_u32(info->attrs[IUCSR_ATTR_N_1_PORT]);
 
-	if (info->attrs[IEERM_ATTR_EN_ENCRYPT])
-		msg_attrs->encryption_enabled = true;
-	else
-		msg_attrs->encryption_enabled = false;
+        if (info->attrs[IUCSR_ATTR_CRYPT_STATE]) {
+        	msg_attrs->state = sdup_crypto_state_create();
+        	if (!msg_attrs->state)
+        		return -1;
+        	rnl_parse_crypto_state_info(info->attrs[IUCSR_ATTR_CRYPT_STATE],
+        				    msg_attrs->state);
 
-	if (info->attrs[IEERM_ATTR_EN_DECRYPT])
-		msg_attrs->decrption_enabled = true;
-	else
-		msg_attrs->decrption_enabled = false;
-
-        if (info->attrs[IEERM_ATTR_ENCRYPT_KEY]) {
-        	msg_attrs->encrypt_key = buffer_create_from(nla_data(info->attrs[IEERM_ATTR_ENCRYPT_KEY]),
-        						    nla_len(info->attrs[IEERM_ATTR_ENCRYPT_KEY]));
         }
 
         return 0;
@@ -2823,9 +2933,9 @@ int rnl_parse_msg(struct genl_info * info,
                                                              msg->attrs) < 0)
                         goto fail;
                 break;
-        case RINA_C_IPCP_ENABLE_ENCRYPTION_REQUEST:
-                if (rnl_parse_ipcp_enable_encryption_req_msg(info,
-                                                             msg->attrs) < 0)
+        case RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST:
+                if (rnl_parse_ipcp_update_crypto_state_req_msg(info,
+                                                               msg->attrs) < 0)
                         goto fail;
                 break;
         default:
@@ -3483,21 +3593,20 @@ static int rnl_format_ipcp_select_policy_set_resp_msg(
                                                 skb_out);
 }
 
-static int rnl_format_ipcp_enable_encryption_resp_msg(
-                                                uint_t           result,
-                                                port_id_t 	 port_id,
-                                                struct sk_buff * skb_out)
+static int rnl_format_ipcp_update_crypto_state_resp_msg(uint_t           result,
+                                                	port_id_t 	 port_id,
+                                                	struct sk_buff * skb_out)
 {
 	if (!skb_out) {
 		LOG_ERR("Bogus input parameter(s), bailing out");
 		return -1;
 	}
 
-	if (nla_put_u32(skb_out, IEEREM_ATTR_RESULT, result) < 0)
-		return format_fail("rnl_format_ipcp_enable_encryption_resp_msg");
+	if (nla_put_u32(skb_out, IUCSRE_ATTR_RESULT, result) < 0)
+		return format_fail("rnl_format_ipcp_update_crypto_state_resp_msg");
 
-	if (nla_put_u32(skb_out, IEEREM_ATTR_N_1_PORT, port_id) < 0)
-		return format_fail("rnl_format_ipcp_enable_encryption_resp_msg");
+	if (nla_put_u32(skb_out, IUCSRE_ATTR_N_1_PORT, port_id) < 0)
+		return format_fail("rnl_format_ipcp_update_crypto_state_resp_msg");
 
         return 0;
 }
@@ -4261,11 +4370,11 @@ int rnl_select_policy_set_response(ipc_process_id_t id,
 }
 EXPORT_SYMBOL(rnl_select_policy_set_response);
 
-int rnl_enable_encryption_response(ipc_process_id_t id,
-                                   uint_t           res,
-                                   rnl_sn_t         seq_num,
-                                   port_id_t	    n_1_port,
-                                   u32              nl_port_id)
+int rnl_update_crypto_state_response(ipc_process_id_t id,
+                                     uint_t           res,
+                                     rnl_sn_t         seq_num,
+                                     port_id_t	    n_1_port,
+                                     u32              nl_port_id)
 {
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
@@ -4282,7 +4391,7 @@ int rnl_enable_encryption_response(ipc_process_id_t id,
                             seq_num,
                             &rnl_nl_family,
                             0,
-                            RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE);
+                            RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE);
         if (!out_hdr) {
                 LOG_ERR("Could not use genlmsg_put");
                 nlmsg_free(out_msg);
@@ -4292,7 +4401,7 @@ int rnl_enable_encryption_response(ipc_process_id_t id,
         out_hdr->src_ipc_id = id;
         out_hdr->dst_ipc_id = 0;
 
-        if (rnl_format_ipcp_enable_encryption_resp_msg(res, n_1_port, out_msg)) {
+        if (rnl_format_ipcp_update_crypto_state_resp_msg(res, n_1_port, out_msg)) {
                 LOG_ERR("Could not format message ...");
                 nlmsg_free(out_msg);
                 return -1;
@@ -4303,7 +4412,7 @@ int rnl_enable_encryption_response(ipc_process_id_t id,
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
                                    nl_port_id,
-                                   RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE,
+                                   RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE,
                                    seq_num);
 }
-EXPORT_SYMBOL(rnl_enable_encryption_response);
+EXPORT_SYMBOL(rnl_update_crypto_state_response);
