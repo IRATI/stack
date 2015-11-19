@@ -163,10 +163,10 @@ typedef enum {
         RINA_C_IPCP_SELECT_POLICY_SET_RESPONSE,
 
         /* 41, IPC Process (user space) -> KIPCM */
-        RINA_C_IPCP_ENABLE_ENCRYPTION_REQUEST,
+        RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST,
 
         /* 42 KIPCM -> IPC Process (user space) */
-        RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE,
+        RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE,
 
         /* 43 */
         RINA_C_MAX,

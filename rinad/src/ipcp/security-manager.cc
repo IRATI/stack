@@ -76,53 +76,53 @@ rina::AuthSDUProtectionProfile IPCPSecurityManager::get_auth_sdup_profile(const 
 	}
 }
 
-rina::IAuthPolicySet::AuthStatus IPCPSecurityManager::enable_encryption(const rina::EncryptionProfile& profile,
-						   	   	        rina::IAuthPolicySet * caller)
+rina::IAuthPolicySet::AuthStatus IPCPSecurityManager::update_crypto_state(const rina::CryptoState& state,
+						   	   	          rina::IAuthPolicySet * caller)
 {
 	unsigned int handle;
 
 	rina::ScopedLock sc_lock(lock);
 	try{
-		LOG_DBG("Requesting the kernel to enable encryption on port-id: %d",
-			profile.port_id);
-		handle = rina::kernelIPCProcess->enableEncryption(profile);
+		LOG_DBG("Requesting the kernel to update crypto state on port-id: %d",
+			state.port_id);
+		handle = rina::kernelIPCProcess->updateCryptoState(state);
 	} catch(rina::Exception &e) {
 		return rina::IAuthPolicySet::FAILED;
 	}
 
-	pending_enable_encryption_requests[handle] = caller;
+	pending_update_crypto_state_requests[handle] = caller;
 
 	return rina::IAuthPolicySet::IN_PROGRESS;
 }
 
-void IPCPSecurityManager::process_enable_encryption_response(const rina::EnableEncryptionResponseEvent& event)
+void IPCPSecurityManager::process_update_crypto_state_response(const rina::UpdateCryptoStateResponseEvent& event)
 {
 	rina::IAuthPolicySet * caller;
 
 	lock.lock();
 
 	std::map<unsigned int, rina::IAuthPolicySet *>::iterator it =
-			pending_enable_encryption_requests.find(event.sequenceNumber);
-	if (it == pending_enable_encryption_requests.end()) {
+			pending_update_crypto_state_requests.find(event.sequenceNumber);
+	if (it == pending_update_crypto_state_requests.end()) {
 		lock.unlock();
-		LOG_WARN("Could not find pending request for enable encryption response event %u",
+		LOG_WARN("Could not find pending request for update crypto state response event %u",
 			  event.sequenceNumber);
 		return;
 	} else  {
 		caller = it->second;
-		pending_enable_encryption_requests.erase(it);
+		pending_update_crypto_state_requests.erase(it);
 	}
 
 	lock.unlock();
 
 	if (event.result != 0) {
-		LOG_ERR("Enabling flow encryption failed, authentication failed");
+		LOG_ERR("Update crypto state failed, authentication failed");
 		destroy_security_context(event.port_id);
 		ipcp->enrollment_task_->authentication_completed(event.port_id, false);
 		return;
 	}
 
-	rina::IAuthPolicySet::AuthStatus status = caller->encryption_enabled(event.port_id);
+	rina::IAuthPolicySet::AuthStatus status = caller->crypto_state_updated(event.port_id);
 	if (status == rina::IAuthPolicySet::FAILED) {
 		ipcp->enrollment_task_->authentication_completed(event.port_id, false);
 		return;

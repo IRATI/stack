@@ -186,5 +186,4 @@ struct mod_pff_entry {
 	struct list_head port_id_altlists;
         struct list_head next;
 };
-
 #endif
