@@ -73,8 +73,8 @@ enum RINANetlinkOperationCode{
         RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE, /* 38, IPC Process -> IPC Manager */
         RINA_C_IPCM_SELECT_POLICY_SET_REQUEST, /* 39, IPC Manager -> IPC Process */
         RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE, /* 40, IPC Process -> IPC Manager */
-        RINA_C_IPCP_ENABLE_ENCRYPTION_REQUEST, /* 41, IPC Process (user space) -> IPC Process (kernel) */
-        RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE, /* 42, IPC Process (kernel) -> IPC Process (user space) */
+        RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST, /* 41, IPC Process (user space) -> IPC Process (kernel) */
+        RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE, /* 42, IPC Process (kernel) -> IPC Process (user space) */
 
         /* Userspace only messages MUST be after all the messages that are also
          * handled by the kernel. */
@@ -1393,17 +1393,17 @@ public:
         IPCEvent* toIPCEvent();
 };
 
-class IPCPEnableEncryptionRequestMessage : public BaseNetlinkMessage {
+class IPCPUpdateCryptoStateRequestMessage : public BaseNetlinkMessage {
 public:
-	IPCPEnableEncryptionRequestMessage();
+	IPCPUpdateCryptoStateRequestMessage();
 	IPCEvent* toIPCEvent();
 
-	EncryptionProfile profile;
+	CryptoState state;
 };
 
-class IPCPEnableEncryptionResponseMessage: public BaseNetlinkResponseMessage {
+class IPCPUpdateCryptoStateResponseMessage: public BaseNetlinkResponseMessage {
 public:
-	IPCPEnableEncryptionResponseMessage();
+	IPCPUpdateCryptoStateResponseMessage();
 	IPCEvent* toIPCEvent();
 
 	int port_id;

@@ -75,9 +75,9 @@ public:
 	virtual int process_incoming_message(const cdap::CDAPMessage& message,
 					     int session_id) = 0;
 
-	//Called when encryption has been enabled on a certain port, if the call
-	//to the Security Manager's "enable encryption" was asynchronous
-	virtual AuthStatus encryption_enabled(int port_id) = 0;
+	//Called when the crypto state has been updated on a certain port, if the call
+	//to the Security Manager's "update crypto state" was asynchronous
+	virtual AuthStatus crypto_state_updated(int port_id) = 0;
 
 	// The type of authentication policy
 	std::string type;
@@ -98,7 +98,7 @@ public:
 	int process_incoming_message(const cdap::CDAPMessage& message, int session_id);
 	int set_policy_set_param(const std::string& name,
 	                         const std::string& value);
-	AuthStatus encryption_enabled(int port_id);
+	AuthStatus crypto_state_updated(int port_id);
 
 private:
 	ISecurityManager * sec_man;
@@ -158,7 +158,7 @@ public:
 				     int session_id);
 	int set_policy_set_param(const std::string& name,
 	                         const std::string& value);
-	AuthStatus encryption_enabled(int port_id);
+	AuthStatus crypto_state_updated(int port_id);
 
 private:
 	std::string * generate_random_challenge(int length);
@@ -200,15 +200,20 @@ public:
 	UcharArray dh_public_key;
 };
 
-class EncryptionProfile {
+class CryptoState {
 public:
-	EncryptionProfile() : port_id(0), enable_encryption(false),
-			enable_decryption(false){ };
+	CryptoState() : port_id(0), enable_crypto_tx(false),
+			enable_crypto_rx(false){ };
 
 	int port_id;
-	bool enable_encryption;
-	bool enable_decryption;
-	UcharArray encrypt_key;
+	bool enable_crypto_tx;
+	bool enable_crypto_rx;
+	UcharArray encrypt_key_tx;
+	UcharArray encrypt_key_rx;
+	UcharArray mac_key_tx;
+	UcharArray mac_key_rx;
+	UcharArray iv_tx;
+	UcharArray iv_rx;
 };
 
 ///Captures all data of the SSHRSA security context
@@ -221,8 +226,8 @@ public:
 	SSH2SecurityContext(int session_id, const AuthSDUProtectionProfile& profile,
 			    SSH2AuthOptions * options);
 	~SSH2SecurityContext();
-	EncryptionProfile get_encryption_profile(bool enable_encryption,
-						 bool enable_decryption);
+	CryptoState get_crypto_state(bool enable_crypto_tx,
+				     bool enable_crypto_rx);
 
 	static const std::string KEY_EXCHANGE_ALGORITHM;
 	static const std::string ENCRYPTION_ALGORITHM;
@@ -335,7 +340,7 @@ public:
 
 	//Called when encryption has been enabled on a certain port, if the call
 	//to the Security Manager's "enable encryption" was asynchronous
-	AuthStatus encryption_enabled(int port_id);
+	AuthStatus crypto_state_updated(int port_id);
 
 private:
 	AuthStatus decryption_enabled_server(SSH2SecurityContext * sc);
@@ -419,8 +424,8 @@ public:
         void destroy_security_context(int context_id);
         void add_security_context(ISecurityContext * context);
         void eventHappened(InternalEvent * event);
-        virtual IAuthPolicySet::AuthStatus enable_encryption(const EncryptionProfile& profile,
-        						     IAuthPolicySet * caller) = 0;
+        virtual IAuthPolicySet::AuthStatus update_crypto_state(const CryptoState& profile,
+        						       IAuthPolicySet * caller) = 0;
 
 private:
         /// The authentication policy sets, by type

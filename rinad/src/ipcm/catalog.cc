@@ -214,6 +214,25 @@ int Catalog::load_by_template(Addon *addon, unsigned int ipcp_id,
 				     qit->dtcp_config_.dtcp_policy_set_);
 	}
 
+        psinfo_from_psconfig(required_policy_sets, "crypto",
+                t->secManConfiguration.default_auth_profile.encryptPolicy);
+        psinfo_from_psconfig(required_policy_sets, "errc",
+                t->secManConfiguration.default_auth_profile.crcPolicy);
+        psinfo_from_psconfig(required_policy_sets, "ttl",
+                t->secManConfiguration.default_auth_profile.ttlPolicy);
+
+        for (map<std::string, rina::AuthSDUProtectionProfile>::const_iterator
+                pit = t->secManConfiguration.specific_auth_profiles.begin();
+                    pit !=t->secManConfiguration.specific_auth_profiles.end();
+                        pit++) {
+		psinfo_from_psconfig(required_policy_sets, "crypto",
+				     pit->second.encryptPolicy);
+		psinfo_from_psconfig(required_policy_sets, "errc",
+				     pit->second.crcPolicy);
+		psinfo_from_psconfig(required_policy_sets, "ttl",
+				     pit->second.ttlPolicy);
+        }
+
 	// Load all the policy sets in the list
 	for (list<rina::PsInfo>::iterator i=required_policy_sets.begin();
 			i != required_policy_sets.end(); i++) {
@@ -229,7 +248,10 @@ int Catalog::load_by_template(Addon *addon, unsigned int ipcp_id,
                 // This must not be done for DTCP and DTP policy sets,
                 // since they associated to a flow and not to an IPCP.
                 if (!ret && i->app_entity != "dtcp"
-                         && i->app_entity != "dtp" ) {
+                         && i->app_entity != "dtp"
+                         && i->app_entity != "errc"
+                         && i->app_entity != "crypto"
+                         && i->app_entity != "ttl") {
 			policy_set_selected(*i, ipcp_id);
 		}
 	}

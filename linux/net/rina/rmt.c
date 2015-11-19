@@ -1,4 +1,5 @@
 /*
+
  * RMT (Relaying and Multiplexing Task)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
@@ -74,14 +75,13 @@ struct rmt {
 	struct serdes *serdes;
 	struct tasklet_struct egress_tasklet;
 	struct n1pmap *n1_ports;
-	struct sdup_config *sdup_conf;
 	struct pff_cache cache;
 	struct rmt_config *rmt_cfg;
+	struct sdup *sdup;
 };
 
 static struct rmt_n1_port *n1_port_create(port_id_t id,
-					  struct ipcp_instance *n1_ipcp,
-					  struct dup_config_entry *dup_config)
+					  struct ipcp_instance *n1_ipcp)
 {
 	struct rmt_n1_port *tmp;
 
@@ -96,25 +96,6 @@ static struct rmt_n1_port *n1_port_create(port_id_t id,
 	tmp->port_id = id;
 	tmp->n1_ipcp = n1_ipcp;
 	tmp->state   = N1_PORT_STATE_ENABLED;
-	tmp->dup_config = dup_config;
-	tmp->pending_pdu = NULL;
-
-	/* dup state init. FIXME: This has to be moved to the
-	 * specific encryption policy initialization
-	 */
-	if (dup_config != NULL &&
-		dup_config->encryption_cipher != NULL) {
-		tmp->blkcipher =
-			crypto_alloc_blkcipher(dup_config->encryption_cipher,
-					       0,
-					       0);
-		if (IS_ERR(tmp->blkcipher)) {
-			LOG_ERR("could not allocate blkcipher handle for %s\n",
-				dup_config->encryption_cipher);
-			return NULL;
-		}
-	} else
-	    tmp->blkcipher = NULL;
 
 	atomic_set(&tmp->refs_c, 0);
 	spin_lock_init(&tmp->lock);
@@ -129,10 +110,6 @@ static int n1_port_user_ipcp_unbind(struct rmt_n1_port *n1p)
 	struct ipcp_instance *n1_ipcp;
 
 	ASSERT(n1p);
-
-	/* FIXME: this has to be moved to specific encryption policy */
-	if (n1p->blkcipher != NULL)
-		crypto_free_blkcipher(n1p->blkcipher);
 
 	n1_ipcp = n1p->n1_ipcp;
 	if (n1_ipcp && n1_ipcp->ops && n1_ipcp->data &&
@@ -152,12 +129,8 @@ static int n1_port_destroy(struct rmt_n1_port *n1p)
 
 	hash_del(&n1p->hlist);
 
-	if (n1p->dup_config)
-		dup_config_entry_destroy(n1p->dup_config);
-
-	/* FIXME: this has to be moved to specific encryption policy */
-	if (n1p->blkcipher)
-		crypto_free_blkcipher(n1p->blkcipher);
+	if (n1p->sdup_port)
+		sdup_destroy_port_config(n1p->sdup_port);
 
 	if (n1p->pending_pdu)
 		pdu_destroy(n1p->pending_pdu);
@@ -356,6 +329,11 @@ int rmt_select_policy_set(struct rmt *rmt,
                 return pff_select_policy_set(rmt->pff, path + offset, name);
         }
 
+        if (cmplen && strncmp(path, "sdup", cmplen) == 0) {
+                /* The request addresses the SDU protection subcomponent. */
+                return sdup_select_policy_set(rmt->sdup, path + offset, name);
+        }
+
         if (strcmp(path, "") != 0) {
                 LOG_ERR("This component has no subcomponent named '%s'", path);
                 return -1;
@@ -418,14 +396,17 @@ int rmt_set_policy_set_param(struct rmt *rmt,
 			LOG_ERR("Unknown RMT parameter policy '%s'", name);
 
 		rcu_read_unlock();
-	} else if (cmplen && strncmp(path, "pff", cmplen) == 0)
+
+	} else if (cmplen && strncmp(path, "pff", cmplen) == 0) {
 		/* The request addresses the PFF subcomponent. */
 		return pff_set_policy_set_param(rmt->pff,
 						path + offset,
 						name, value);
-	else
+
+	} else {
 		/* The request addresses the RMT policy-set. */
 		ret = base_set_policy_set_param(&rmt->base, path, name, value);
+        }
 
 	return ret;
 }
@@ -447,8 +428,6 @@ int rmt_destroy(struct rmt *instance)
 		pff_destroy(instance->pff);
 	if (instance->serdes)
 		serdes_destroy(instance->serdes);
-	if (instance->sdup_conf)
-		sdup_config_destroy(instance->sdup_conf);
 	if (instance->rmt_cfg)
 		rmt_config_destroy(instance->rmt_cfg);
 
@@ -503,117 +482,6 @@ int rmt_dt_cons_set(struct rmt *instance,
 	return 0;
 }
 EXPORT_SYMBOL(rmt_dt_cons_set);
-
-static int extract_policy_parameters(struct dup_config_entry *entry)
-{
-	struct policy *policy;
-	struct policy_parm *parameter;
-	const string_t *aux;
-
-	if (!entry) {
-		LOG_ERR("Bogus entry passed");
-		return -1;
-	}
-
-	policy = entry->ttl_policy;
-	if (policy) {
-		parameter = policy_param_find(policy, "initialValue");
-		if (!parameter) {
-			LOG_ERR("Could not find 'initialValue' in TTL policy");
-			return -1;
-		}
-
-		if (kstrtouint(policy_param_value(parameter),
-			       10,
-			       &entry->initial_ttl_value)) {
-			LOG_ERR("Failed to convert TTL string to int");
-			return -1;
-		}
-
-		LOG_DBG("Initial TTL value is %u", entry->initial_ttl_value);
-	}
-
-	policy = entry->encryption_policy;
-	if (policy) {
-		parameter = policy_param_find(policy, "encryptAlg");
-		if (!parameter) {
-			LOG_ERR("Could not find 'encryptAlg' in Encr. policy");
-			return -1;
-		}
-
-		aux = policy_param_value(parameter);
-		if (string_cmp(aux, "AES128") == 0 ||
-			string_cmp(aux, "AES256") == 0) {
-			if (string_dup("ecb(aes)", &entry->encryption_cipher)) {
-				LOG_ERR("Problems copying 'encryptAlg' value");
-				return -1;
-			}
-			LOG_DBG("Encryption cipher is %s",
-				entry->encryption_cipher);
-		} else
-			LOG_DBG("Unsupported encryption cipher %s", aux);
-
-		parameter = policy_param_find(policy, "macAlg");
-		if (!parameter) {
-			LOG_ERR("Could not find 'macAlg' in Encrypt. policy");
-			return -1;
-		}
-
-		aux = policy_param_value(parameter);
-		if (string_cmp(aux, "SHA1") == 0) {
-			if (string_dup("sha1", &entry->message_digest)) {
-				LOG_ERR("Problems copying 'digest' value");
-				return -1;
-			}
-			LOG_DBG("Message digest is %s", entry->message_digest);
-		} else if (string_cmp(aux, "MD5") == 0) {
-			if (string_dup("md5", &entry->message_digest)) {
-				LOG_ERR("Problems copying 'digest' value)");
-				return -1;
-			}
-			LOG_DBG("Message digest is %s", entry->message_digest);
-		} else
-			LOG_DBG("Unsupported message digest %s", aux);
-	}
-
-	return 0;
-}
-
-int rmt_sdup_config_set(struct rmt *instance,
-			struct sdup_config *sdup_conf)
-{
-	struct dup_config *dup_pos;
-
-	if (!instance) {
-		LOG_ERR("Bogus instance passed");
-		return -1;
-	}
-
-	if (!sdup_conf) {
-		LOG_ERR("Bogus sdup_conf passed");
-		return -1;
-	}
-
-	/* FIXME this code should be moved to specific sdup policies */
-	if (extract_policy_parameters(sdup_conf->default_dup_conf)) {
-		LOG_DBG("Setting SDU protection policies to NULL");
-		sdup_config_destroy(sdup_conf);
-		return -1;
-	}
-
-	list_for_each_entry(dup_pos, &sdup_conf->specific_dup_confs, next) {
-		if (extract_policy_parameters(dup_pos->entry)) {
-			LOG_DBG("Setting sdu protection policies to NULL");
-			sdup_config_destroy(sdup_conf);
-			return -1;
-		}
-	}
-
-	instance->sdup_conf = sdup_conf;
-
-	return 0;
-}
-EXPORT_SYMBOL(rmt_sdup_config_set);
 
 struct rmt_config *rmt_config_get(struct rmt *instance)
 {
@@ -671,8 +539,6 @@ static int n1_port_write(struct rmt *rmt,
 	struct buffer *buffer;
 	struct ipcp_instance *n1_ipcp;
 	struct pci *pci;
-	size_t ttl;
-	struct dup_config_entry *dup_conf;
 	int ret;
 	unsigned long flags;
 
@@ -687,35 +553,35 @@ static int n1_port_write(struct rmt *rmt,
 
 	port_id = n1_port->port_id;
 	n1_ipcp = n1_port->n1_ipcp;
-	dup_conf = n1_port->dup_config;
 
-	pci = 0;
-	ttl = 0;
-
-	/* FIXME, this should be moved to specific TTL policy inside serdes */
-	if (dup_conf != NULL && dup_conf->ttl_policy != NULL) {
-		pci = pdu_pci_get_rw(pdu);
-		if (!pci) {
-			LOG_ERR("Cannot get PCI");
-			goto error_nobuff;
-		}
-
-		LOG_DBG("TTL to start with is %d", dup_conf->initial_ttl_value);
-
-		if (pci_ttl_set(pci, dup_conf->initial_ttl_value)) {
-			LOG_ERR("Could not set TTL");
-			goto error_nobuff;
-		}
+	pci = pdu_pci_get_rw(pdu);
+	if (!pci) {
+		LOG_ERR("Cannot get PCI");
+		pdu_destroy(pdu);
+		return -1;
 	}
 
-	pdu_ser = pdu_serialize_ni(rmt->serdes,
-				   pdu,
-				   dup_conf,
-				   n1_port->blkcipher);
+	pdu_ser = pdu_serialize_ni(rmt->serdes, pdu);
 	if (!pdu_ser) {
 		LOG_ERR("Error creating serialized PDU");
 		goto error_nobuff;
 	}
+
+	/* SDU Protection */
+	if (sdup_set_lifetime_limit(n1_port->sdup_port, pdu_ser, pci)){
+                LOG_ERR("Error adding a Lifetime limit to serialized PDU");
+                pdu_destroy(pdu);
+                pdu_ser_destroy(pdu_ser);
+                return -1;
+        }
+
+	if (sdup_protect_pdu(n1_port->sdup_port, pdu_ser)){
+                LOG_ERR("Error Protecting serialized PDU");
+                pdu_destroy(pdu);
+                pdu_ser_destroy(pdu_ser);
+                return -1;
+        }
+	/* end SDU Protection */
 
 	buffer = pdu_ser_buffer(pdu_ser);
 	if (!buffer_is_ok(buffer)) {
@@ -1006,29 +872,6 @@ int rmt_send(struct rmt *instance,
 }
 EXPORT_SYMBOL(rmt_send);
 
-static struct dup_config_entry *find_dup_config(struct sdup_config *sdup_conf,
-						string_t *n_1_dif_name)
-{
-	struct dup_config *dup_pos;
-
-	if (!sdup_conf)
-		return NULL;
-
-	list_for_each_entry(dup_pos, &sdup_conf->specific_dup_confs, next) {
-		if (string_cmp(dup_pos->entry->n_1_dif_name,
-			       n_1_dif_name) == 0) {
-			LOG_DBG("SDU Protection config for N-1 DIF %s",
-				n_1_dif_name);
-			return dup_pos->entry;
-		}
-	}
-
-	LOG_DBG("Returning default SDU Protection config for N-1 DIF %s",
-		n_1_dif_name);
-
-	return sdup_conf->default_dup_conf;
-}
-
 int rmt_enable_port_id(struct rmt *instance,
 		       port_id_t id)
 {
@@ -1157,9 +1000,7 @@ int rmt_n1port_bind(struct rmt *instance,
 {
 	struct rmt_n1_port *tmp;
 	struct rmt_ps *ps;
-	const struct name *n_1_dif_name;
-	struct dup_config_entry *dup_config;
-	struct dup_config_entry *tmp_dup_config;
+	const struct name *dif_name;
 
 	if (!instance) {
 		LOG_ERR("Bogus instance passed");
@@ -1186,20 +1027,7 @@ int rmt_n1port_bind(struct rmt *instance,
 		return -1;
 	}
 
-	/* FIXME: To be moved into SDUP */
-	n_1_dif_name = n1_ipcp->ops->dif_name(n1_ipcp->data);
-	if (n_1_dif_name) {
-		tmp_dup_config = find_dup_config(instance->sdup_conf,
-						 n_1_dif_name->process_name);
-		if (tmp_dup_config) {
-			LOG_DBG("Found SDU Protection policy configuration");
-			dup_config = dup_config_entry_dup(tmp_dup_config);
-		} else
-			dup_config = NULL;
-	} else
-		dup_config = NULL;
-
-	tmp = n1_port_create(id, n1_ipcp, dup_config);
+	tmp = n1_port_create(id, n1_ipcp);
 	if (!tmp)
 		return -1;
 
@@ -1224,6 +1052,14 @@ int rmt_n1port_bind(struct rmt *instance,
 	hash_add(instance->n1_ports->n1_ports, &tmp->hlist, id);
 	LOG_DBG("Added send queue to rmt instance %pK for port-id %d",
 		instance, id);
+
+	dif_name = n1_ipcp->ops->dif_name(n1_ipcp->data);
+	tmp->sdup_port = sdup_init_port_config(instance->sdup, dif_name, id);
+	if (!tmp->sdup_port){
+		LOG_ERR("Failed init of SDUP configuration for port-id %d", id);
+		n1_port_destroy(tmp);
+		return -1;
+	}
 
 	return 0;
 }
@@ -1361,6 +1197,8 @@ int rmt_receive(struct rmt *rmt,
 	struct serdes *serdes;
 	struct buffer *buf;
 	struct rmt_n1_port *n1_port;
+	unsigned long flags;
+	size_t		 ttl;
 
 	if (!sdu_is_ok(sdu)) {
 		LOG_ERR("Bogus SDU passed");
@@ -1373,6 +1211,13 @@ int rmt_receive(struct rmt *rmt,
 	}
 	if (!is_port_id_ok(from)) {
 		LOG_ERR("Wrong port-id %d", from);
+		sdu_destroy(sdu);
+		return -1;
+	}
+
+	n1_port = n1pmap_find(rmt, from);
+	if (!n1_port) {
+		LOG_ERR("Could not retrieve N-1 port for the received PDU...");
 		sdu_destroy(sdu);
 		return -1;
 	}
@@ -1399,20 +1244,26 @@ int rmt_receive(struct rmt *rmt,
 		return -1;
 	}
 
-	serdes = rmt->serdes;
-	ASSERT(serdes);
+	/* SDU Protection */
+	if (sdup_unprotect_pdu(n1_port->sdup_port, pdu_ser)) {
+                LOG_DBG("Failed to unprotect PDU");
+                pdu_ser_destroy(pdu_ser);
+                return -1;
+        }
 
-	n1_port = n1pmap_find(rmt, from);
-	if (!n1_port) {
-		LOG_ERR("Could not retrieve N-1 port for the received PDU...");
-		return -1;
-	}
-
-	pdu = pdu_deserialize_ni(serdes, pdu_ser,
-				 n1_port->dup_config, n1_port->blkcipher);
+	if (sdup_get_lifetime_limit(n1_port->sdup_port, pdu_ser, &ttl)) {
+                LOG_DBG("Failed to unprotect PDU");
+                pdu_ser_destroy(pdu_ser);
+                return -1;
+        }
+	/* end SDU Protection */
 
 	n1pmap_release(rmt, n1_port);
 
+        serdes = rmt->serdes;
+        ASSERT(serdes);
+
+        pdu = pdu_deserialize_ni(serdes, pdu_ser);
 	if (!pdu) {
 		LOG_ERR("Failed to deserialize PDU!");
 		pdu_ser_destroy(pdu_ser);
@@ -1425,6 +1276,9 @@ int rmt_receive(struct rmt *rmt,
 		pdu_destroy(pdu);
 		return -1;
 	}
+
+	/* store TTL value received from SDUP module */
+	pci_ttl_set(pci, ttl);
 
 	ASSERT(pdu_is_ok(pdu));
 
@@ -1444,12 +1298,18 @@ int rmt_receive(struct rmt *rmt,
 	if (rmt->address != dst_addr) {
 		if (!dst_addr)
 			return process_mgmt_pdu_ni(rmt, from, pdu);
-		else
+		else {
+			if (sdup_dec_check_lifetime_limit(n1_port->sdup_port, pdu)) {
+				LOG_ERR("Lifetime of PDU reached dropping PDU!");
+				pdu_destroy(pdu);
+				return -1;
+			}
 			/* Forward PDU */
 			/*NOTE: we could reuse the serialized pdu when
 			 * forwarding */
 			return rmt_send(rmt,
 					pdu);
+		}
 	} else {
 		/* pdu is for me */
 		switch (pdu_type) {
@@ -1482,7 +1342,8 @@ EXPORT_SYMBOL(rmt_receive);
 
 struct rmt *rmt_create(struct ipcp_instance *parent,
 		       struct kfa *kfa,
-		       struct efcp_container *efcpc)
+		       struct efcp_container *efcpc,
+		       struct sdup *sdup)
 {
 	struct rmt *tmp;
 
@@ -1499,7 +1360,7 @@ struct rmt *rmt_create(struct ipcp_instance *parent,
 	tmp->parent = parent;
 	tmp->kfa = kfa;
 	tmp->efcpc = efcpc;
-	tmp->sdup_conf = NULL;
+	tmp->sdup      = sdup;
 	rina_component_init(&tmp->base);
 	tmp->pff = pff_create();
 	if (!tmp->pff) {
@@ -1574,74 +1435,3 @@ EXPORT_SYMBOL(rmt_ps_publish);
 int rmt_ps_unpublish(const char *name)
 { return ps_unpublish(&policy_sets, name); }
 EXPORT_SYMBOL(rmt_ps_unpublish);
-
-int rmt_enable_encryption(struct rmt *instance,
-			  bool enable_encryption,
-			  bool enable_decryption,
-			  struct buffer *encrypt_key,
-			  port_id_t port_id)
-{
-	struct rmt_n1_port *rmt_port;
-
-	if (!instance) {
-		LOG_ERR("Bogus RMT instance passed");
-		return -1;
-	}
-
-	if (!encrypt_key) {
-		LOG_ERR("Bogus encryption key passed");
-		return -1;
-	}
-
-	if (!enable_decryption && !enable_encryption) {
-		LOG_ERR("Neither encryption nor decryption is being enabled");
-		return -1;
-	}
-
-	rmt_port = n1pmap_find(instance, port_id);
-	if (!rmt_port) {
-		LOG_ERR("Could not find N-1 port %d", port_id);
-		return -1;
-	}
-
-	if (!rmt_port->dup_config) {
-		LOG_ERR("SDU Protection for N-1 port %d is NULL", port_id);
-		return -1;
-	}
-
-	if (!rmt_port->dup_config->encryption_policy) {
-		LOG_ERR("Encryption policy for N-1 port %d is NULL", port_id);
-		return -1;
-	}
-
-	if (!rmt_port->blkcipher) {
-		LOG_ERR("Block cipher is not set for N-1 port %d", port_id);
-		return -1;
-	}
-
-	if (!rmt_port->dup_config->enable_decryption &&
-		!rmt_port->dup_config->enable_encryption) {
-		/* Need to set key. FIXME: Move this to policy specific code */
-		if (crypto_blkcipher_setkey(rmt_port->blkcipher,
-					    buffer_data_ro(encrypt_key),
-					    buffer_length(encrypt_key))) {
-			n1pmap_release(instance, rmt_port);
-			LOG_ERR("Could not set encryption key for N-1 port %d",
-				port_id);
-			return -1;
-		}
-	}
-
-	if (!rmt_port->dup_config->enable_decryption)
-		rmt_port->dup_config->enable_decryption = enable_decryption;
-
-	if (!rmt_port->dup_config->enable_encryption)
-		rmt_port->dup_config->enable_encryption = enable_encryption;
-
-	n1pmap_release(instance, rmt_port);
-	LOG_DBG("Encryption enabled state: %d", enable_encryption);
-	LOG_DBG("Decryption enabled state: %d", enable_decryption);
-
-	return 0;
-}
-EXPORT_SYMBOL(rmt_enable_encryption);

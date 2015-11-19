@@ -774,10 +774,10 @@ void IPCProcessImpl::event_loop(void){
 				processPluginLoadRequestEvent(*event);
 				}
 				break;
-			case rina::IPC_PROCESS_ENABLE_ENCRYPTION_RESPONSE:
+			case rina::IPC_PROCESS_UPDATE_CRYPTO_STATE_RESPONSE:
 				{
-				DOWNCAST_DECL(e, rina::EnableEncryptionResponseEvent, event);
-				security_manager_->process_enable_encryption_response(*event);
+				DOWNCAST_DECL(e, rina::UpdateCryptoStateResponseEvent, event);
+				security_manager_->process_update_crypto_state_response(*event);
 				}
 				break;
 			case rina::IPC_PROCESS_FWD_CDAP_MSG:

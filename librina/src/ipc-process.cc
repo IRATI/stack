@@ -249,9 +249,9 @@ int DumpFTResponseEvent::getResult() const {
 }
 
 // Class enable encryption response event
-EnableEncryptionResponseEvent::EnableEncryptionResponseEvent(int res,
+UpdateCryptoStateResponseEvent::UpdateCryptoStateResponseEvent(int res,
                 int port, unsigned int sequenceNumber) :
-                		IPCEvent(IPC_PROCESS_ENABLE_ENCRYPTION_RESPONSE,
+                		IPCEvent(IPC_PROCESS_UPDATE_CRYPTO_STATE_RESPONSE,
                 				sequenceNumber)
 {
 	port_id = port;
@@ -1190,17 +1190,17 @@ unsigned int KernelIPCProcess::dumptPDUFT() {
         return seqNum;
 }
 
-unsigned int KernelIPCProcess::enableEncryption(const EncryptionProfile& profile)
+unsigned int KernelIPCProcess::updateCryptoState(const CryptoState& state)
 {
         unsigned int seqNum=0;
 
 #if STUB_API
         //Do nothing
 #else
-        IPCPEnableEncryptionRequestMessage message;
+        IPCPUpdateCryptoStateRequestMessage message;
         message.setSourceIpcProcessId(ipcProcessId);
         message.setDestIpcProcessId(ipcProcessId);
-        message.profile = profile;
+        message.state = state;
         message.setDestPortId(0);
         message.setRequestMessage(true);
 

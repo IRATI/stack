@@ -24,7 +24,6 @@
 #define RINA_RMT_H
 
 #include <linux/hashtable.h>
-#include <linux/crypto.h>
 
 #include "common.h"
 #include "du.h"
@@ -32,6 +31,7 @@
 #include "ipcp-factories.h"
 #include "ipcp-instances.h"
 #include "ps-factory.h"
+#include "sdup.h"
 
 struct rmt;
 
@@ -69,22 +69,20 @@ struct rmt_n1_port {
 	struct ipcp_instance	*n1_ipcp;
 	struct hlist_node	hlist;
 	enum flow_state		state;
-	struct dup_config_entry *dup_config;
-	struct crypto_blkcipher *blkcipher;
 	atomic_t		refs_c;
 	struct pdu		*pending_pdu;
+	struct sdup_port 	*sdup_port;
 };
 
 struct rmt	  *rmt_create(struct ipcp_instance *parent,
 			      struct kfa *kfa,
-			      struct efcp_container *efcpc);
+			      struct efcp_container *efcpc,
+			      struct sdup *sdup);
 int		   rmt_destroy(struct rmt *instance);
 int		   rmt_address_set(struct rmt *instance,
 				   address_t address);
 int		   rmt_dt_cons_set(struct rmt *instance,
 				   struct dt_cons *dt_cons);
-int		   rmt_sdup_config_set(struct rmt *instance,
-				       struct sdup_config *sdup_conf);
 int		   rmt_config_set(struct rmt *instance,
 				  struct rmt_config *rmt_config);
 struct rmt_config *rmt_config_get(struct rmt *instance);
@@ -122,11 +120,6 @@ int		   rmt_set_policy_set_param(struct rmt *rmt,
 					    const string_t *path,
 					    const string_t *name,
 					    const string_t *value);
-int		   rmt_enable_encryption(struct rmt *instance,
-					 bool	enable_encryption,
-					 bool	enable_decryption,
-					 struct buffer *encrypt_key,
-					 port_id_t port_id);
 struct rmt	  *rmt_from_component(struct rina_component *component);
 
 #endif

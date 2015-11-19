@@ -473,8 +473,8 @@ const std::string IPCEvent::eventTypeToString(IPCEventType eventType) {
         case IPC_PROCESS_PLUGIN_LOAD_RESPONSE:
                 result = "40_PLUGIN_LOAD_RESPONSE";
                 break;
-        case IPC_PROCESS_ENABLE_ENCRYPTION_RESPONSE:
-                result = "41_ENABLE_ENCRYPTION_RESPONSE";
+        case IPC_PROCESS_UPDATE_CRYPTO_STATE_RESPONSE:
+                result = "41_UPDATE_CRYPTO_STATE_RESPONSE";
                 break;
 	case IPC_PROCESS_FWD_CDAP_MSG:
 		result = "42_IPC_PROCESS_FWD_CDAP_MSG";
@@ -822,8 +822,12 @@ UcharArray::~UcharArray()
 UcharArray& UcharArray::operator=(const UcharArray &other)
 {
 	length = other.length;
-	data = new unsigned char[length];
-	memcpy(data, other.data, length);
+	if (length > 0) {
+		data = new unsigned char[length];
+		memcpy(data, other.data, length);
+	} else
+		data = 0;
+
 	return *this;
 }
 

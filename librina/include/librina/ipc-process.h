@@ -911,12 +911,13 @@ public:
 #endif
 };
 
-class EnableEncryptionResponseEvent: public IPCEvent {
+class UpdateCryptoStateResponseEvent: public IPCEvent {
 public:
-        EnableEncryptionResponseEvent(int res,
-                        int port_id, unsigned int sequenceNumber);
+	UpdateCryptoStateResponseEvent(int res,
+                        	       int port_id,
+                        	       unsigned int sequenceNumber);
 
-        // The N-1 port-id where encryption was to be applied
+        // The N-1 port-id where crypto state was updated
         int port_id;
 
         // Result of the operation, 0 success
@@ -1034,8 +1035,8 @@ public:
          */
         unsigned int dumptPDUFT();
 
-        /// Request the kernel to enable encryption, decryption or both on a certain port
-        unsigned int enableEncryption(const EncryptionProfile& profile);
+        /// Request the kernel to update the state of cryptographic protection policies
+        unsigned int updateCryptoState(const CryptoState& state);
 
         /**
          * Request the Kernel IPC Process to modify a policy-set-related
