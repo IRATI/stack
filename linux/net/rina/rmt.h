@@ -72,6 +72,7 @@ struct rmt_n1_port {
 	enum flow_state	state;
 	atomic_t n_sdus;
 	atomic_t pending_ops;
+	struct sdup_port * sdup_port;
 };
 
 struct rmt	  *rmt_create(struct ipcp_instance *parent,

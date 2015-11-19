@@ -665,9 +665,10 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
 	sdup_config = dif_information->configuration->sdup_config;
 	if (!sdup_config) {
 		LOG_INFO("No SDU protection config specified, using default");
-	} else {
-		sdup_config_set(data->sdup, sdup_config);
+		sdup_config = sdup_config_create();
+		sdup_config->default_dup_conf = dup_config_entry_create();
 	}
+	sdup_config_set(data->sdup, sdup_config);
 
         return 0;
 }
@@ -1156,17 +1157,13 @@ static int normal_set_policy_set_param(struct ipcp_instance_data * data,
         return -1;
 }
 
-int normal_enable_encryption(struct ipcp_instance_data * data,
-			     bool 	      enable_encryption,
-		             bool    	      enable_decryption,
-		             struct buffer *  encrypt_key,
-		             port_id_t 	      port_id)
+int normal_update_crypto_state(struct ipcp_instance_data * data,
+			       struct sdup_crypto_state * state,
+		               port_id_t 	      port_id)
 {
-	return sdup_enable_encryption(data->sdup,
-				      enable_encryption,
-				      enable_decryption,
-				      encrypt_key,
-				      port_id);
+	return sdup_update_crypto_state(data->sdup,
+				        state,
+				        port_id);
 }
 
 static struct ipcp_instance_ops normal_instance_ops = {
@@ -1212,7 +1209,7 @@ static struct ipcp_instance_ops normal_instance_ops = {
 
         .enable_write              = enable_write,
         .disable_write             = disable_write,
-        .enable_encryption         = normal_enable_encryption,
+        .update_crypto_state       = normal_update_crypto_state,
         .dif_name		   = normal_dif_name
 };
 

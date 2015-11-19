@@ -1,4 +1,5 @@
 /*
+
  * RMT (Relaying and Multiplexing Task)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
@@ -131,6 +132,9 @@ static int n1_port_destroy(struct rmt_n1_port *n1p)
 
 	hash_del(&n1p->hlist);
 
+	if (n1p->sdup_port)
+		sdup_destroy_port_config(n1p->sdup_port);
+
 	rkfree(n1p);
 
 	return 0;
@@ -151,10 +155,6 @@ static int n1_port_cleanup(struct rmt *instance,
 	rcu_read_unlock();
 
 	n1_port_destroy(n1_port);
-
-	if (sdup_destroy_port_config(instance->sdup, n1_port->port_id)){
-		LOG_ERR("Sdup_destroy_port_config failed");
-	}
 
 	return 0;
 }
@@ -287,11 +287,6 @@ int rmt_select_policy_set(struct rmt *rmt,
                 return pff_select_policy_set(rmt->pff, path + offset, name);
         }
 
-        if (cmplen && strncmp(path, "sdup", cmplen) == 0) {
-                /* The request addresses the SDU protection subcomponent. */
-                return sdup_select_policy_set(rmt->sdup, path + offset, name);
-        }
-
         if (strcmp(path, "") != 0) {
                 LOG_ERR("This component has no subcomponent named '%s'", path);
                 return -1;
@@ -368,12 +363,6 @@ int rmt_set_policy_set_param(struct rmt *rmt,
 		return pff_set_policy_set_param(rmt->pff,
 						path + offset,
 						name, value);
-
-	} else if (cmplen && strncmp(path, "sdup", cmplen) == 0) {
-		/* The request addresses the SDU protection subcomponent. */
-		return sdup_set_policy_set_param(rmt->sdup,
-						 path + offset,
-						 name, value);
 
 	} else {
 		/* The request addresses the RMT policy-set. */
@@ -550,14 +539,14 @@ static int n1_port_write(struct rmt *rmt,
 	}
 
 	/* SDU Protection */
-	if (sdup_set_lifetime_limit(rmt->sdup, pdu_ser, port_id, pci)){
+	if (sdup_set_lifetime_limit(n1_port->sdup_port, pdu_ser, pci)){
                 LOG_ERR("Error adding a Lifetime limit to serialized PDU");
                 pdu_destroy(pdu);
                 pdu_ser_destroy(pdu_ser);
                 return -1;
         }
 
-	if (sdup_protect_pdu(rmt->sdup, pdu_ser, port_id)){
+	if (sdup_protect_pdu(n1_port->sdup_port, pdu_ser)){
                 LOG_ERR("Error Protecting serialized PDU");
                 pdu_destroy(pdu);
                 pdu_ser_destroy(pdu_ser);
@@ -1068,7 +1057,8 @@ int rmt_n1port_bind(struct rmt *instance,
 		instance, id);
 
 	dif_name = n1_ipcp->ops->dif_name(n1_ipcp->data);
-	if (sdup_init_port_config(instance->sdup, dif_name, id)){
+	tmp->sdup_port = sdup_init_port_config(instance->sdup, dif_name, id);
+	if (!tmp->sdup_port){
 		LOG_ERR("Failed init of SDUP configuration for port-id %d", id);
 		n1_port_destroy(tmp);
 		return -1;
@@ -1237,6 +1227,13 @@ int rmt_receive(struct rmt *rmt,
 		return -1;
 	}
 
+	n1_port = n1pmap_find(rmt, from);
+	if (!n1_port) {
+		LOG_ERR("Could not retrieve N-1 port for the received PDU...");
+		sdu_destroy(sdu);
+		return -1;
+	}
+
 	buf = sdu_buffer_rw(sdu);
 	if (!buf) {
 		LOG_DBG("No buffer present");
@@ -1260,13 +1257,13 @@ int rmt_receive(struct rmt *rmt,
 	}
 
 	/* SDU Protection */
-	if (sdup_unprotect_pdu(rmt->sdup, pdu_ser, from)) {
+	if (sdup_unprotect_pdu(n1_port->sdup_port, pdu_ser)) {
                 LOG_DBG("Failed to unprotect PDU");
                 pdu_ser_destroy(pdu_ser);
                 return -1;
         }
 
-	if (sdup_get_lifetime_limit(rmt->sdup, pdu_ser, from, &ttl)) {
+	if (sdup_get_lifetime_limit(n1_port->sdup_port, pdu_ser, &ttl)) {
                 LOG_DBG("Failed to unprotect PDU");
                 pdu_ser_destroy(pdu_ser);
                 return -1;
@@ -1275,12 +1272,6 @@ int rmt_receive(struct rmt *rmt,
 
         serdes = rmt->serdes;
         ASSERT(serdes);
-
-	n1_port = n1pmap_find(rmt, from);
-	if (!n1_port) {
-		LOG_ERR("Could not retrieve N-1 port for the received PDU...");
-		return -1;
-	}
 
 	spin_lock_irqsave(&n1_port->lock, flags);
 	pdu = pdu_deserialize_ni(serdes, pdu_ser);
@@ -1321,7 +1312,7 @@ int rmt_receive(struct rmt *rmt,
 		if (!dst_addr)
 			return process_mgmt_pdu_ni(rmt, from, pdu);
 		else {
-			if (sdup_dec_check_lifetime_limit(rmt->sdup, pdu, from)) {
+			if (sdup_dec_check_lifetime_limit(n1_port->sdup_port, pdu)) {
 				LOG_ERR("Lifetime of PDU reached dropping PDU!");
 				pdu_destroy(pdu);
 				return -1;
