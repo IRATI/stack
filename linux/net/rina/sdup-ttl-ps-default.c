@@ -26,8 +26,7 @@
 
 #include "logs.h"
 #include "rds/rmem.h"
-#include "sdup.h"
-#include "sdup-ttl-ps.h"
+#include "sdup-ttl-ps-default.h"
 #include "debug.h"
 #include "policies.h"
 
@@ -75,6 +74,7 @@ int default_sdup_set_lifetime_limit_policy(struct sdup_ttl_ps * ps,
 
 	return 0;
 }
+EXPORT_SYMBOL(default_sdup_set_lifetime_limit_policy);
 
 int default_sdup_get_lifetime_limit_policy(struct sdup_ttl_ps * ps,
 					   struct pdu_ser * pdu,
@@ -104,6 +104,7 @@ int default_sdup_get_lifetime_limit_policy(struct sdup_ttl_ps * ps,
 
 	return 0;
 }
+EXPORT_SYMBOL(default_sdup_get_lifetime_limit_policy);
 
 int default_sdup_dec_check_lifetime_limit_policy(struct sdup_ttl_ps * ps,
 						 struct pdu * pdu)
@@ -132,9 +133,9 @@ int default_sdup_dec_check_lifetime_limit_policy(struct sdup_ttl_ps * ps,
 
 	return 0;
 }
+EXPORT_SYMBOL(default_sdup_dec_check_lifetime_limit_policy);
 
-static struct ps_base *
-sdup_ttl_ps_default_create(struct rina_component * component)
+struct ps_base * sdup_ttl_ps_default_create(struct rina_component * component)
 {
 	struct dup_config_entry * conf;
 	struct sdup_comp * sdup_comp;
@@ -202,9 +203,9 @@ sdup_ttl_ps_default_create(struct rina_component * component)
 
 	return &ps->base;
 }
+EXPORT_SYMBOL(sdup_ttl_ps_default_create);
 
-static void
-sdup_ttl_ps_default_destroy(struct ps_base * bps)
+void sdup_ttl_ps_default_destroy(struct ps_base * bps)
 {
 	struct sdup_ttl_ps_default_data * data;
 	struct sdup_ttl_ps *ps;
@@ -218,10 +219,4 @@ sdup_ttl_ps_default_destroy(struct ps_base * bps)
 		rkfree(ps);
 	}
 }
-
-struct ps_factory default_sdup_ttl_ps_factory = {
-	.owner   = THIS_MODULE,
-	.create  = sdup_ttl_ps_default_create,
-	.destroy = sdup_ttl_ps_default_destroy,
-};
-EXPORT_SYMBOL(default_sdup_ttl_ps_factory);
+EXPORT_SYMBOL(sdup_ttl_ps_default_destroy);

@@ -30,7 +30,7 @@
 #include "logs.h"
 #include "rds/rmem.h"
 #include "rds/rtimer.h"
-#include "pff-ps.h"
+#include "pff-ps-default.h"
 #include "debug.h"
 
 /* FIXME: This representation is crappy and MUST be changed */
@@ -266,8 +266,8 @@ static struct pft_entry * pft_find(struct pff_ps_priv * priv,
         return NULL;
 }
 
-static int default_add(struct pff_ps *        ps,
-                       struct mod_pff_entry * entry)
+int default_add(struct pff_ps *        ps,
+                struct mod_pff_entry * entry)
 {
         struct pff_ps_priv *     priv;
         struct pft_entry *       tmp;
@@ -323,8 +323,8 @@ static int default_add(struct pff_ps *        ps,
         return 0;
 }
 
-static int default_remove(struct pff_ps *        ps,
-                          struct mod_pff_entry * entry)
+int default_remove(struct pff_ps *        ps,
+                   struct mod_pff_entry * entry)
 {
         struct pff_ps_priv *       priv;
         struct port_id_altlist *   alts;
@@ -376,7 +376,7 @@ static int default_remove(struct pff_ps *        ps,
         return 0;
 }
 
-static bool default_is_empty(struct pff_ps * ps)
+bool default_is_empty(struct pff_ps * ps)
 {
         struct pff_ps_priv * priv;
         bool                 empty;
@@ -403,7 +403,7 @@ static void __pft_flush(struct pff_ps_priv * priv)
         }
 }
 
-static int default_flush(struct pff_ps * ps)
+int default_flush(struct pff_ps * ps)
 {
         struct pff_ps_priv * priv;
 
@@ -420,10 +420,10 @@ static int default_flush(struct pff_ps * ps)
         return 0;
 }
 
-static int default_nhop(struct pff_ps * ps,
-                        struct pci *    pci,
-                        port_id_t **    ports,
-                        size_t *        count)
+int default_nhop(struct pff_ps * ps,
+                 struct pci *    pci,
+                 port_id_t **    ports,
+                 size_t *        count)
 {
         struct pff_ps_priv * priv;
         address_t            destination;
@@ -507,8 +507,8 @@ static int pfte_port_id_altlists_copy(struct pft_entry * entry,
         return 0;
 }
 
-static int default_dump(struct pff_ps *    ps,
-                        struct list_head * entries)
+int default_dump(struct pff_ps *    ps,
+                 struct list_head * entries)
 {
         struct pff_ps_priv *   priv;
         struct pft_entry *     pos;
@@ -542,7 +542,7 @@ static int default_dump(struct pff_ps *    ps,
         return 0;
 }
 
-static struct ps_base *
+struct ps_base *
 pff_ps_default_create(struct rina_component * component)
 {
         struct pff_ps * ps;
@@ -577,8 +577,9 @@ pff_ps_default_create(struct rina_component * component)
 
         return &ps->base;
 }
+EXPORT_SYMBOL(pff_ps_default_create);
 
-static void pff_ps_default_destroy(struct ps_base * bps)
+void pff_ps_default_destroy(struct ps_base * bps)
 {
         struct pff_ps * ps = container_of(bps, struct pff_ps, base);
 
@@ -600,10 +601,4 @@ static void pff_ps_default_destroy(struct ps_base * bps)
                 rkfree(ps);
         }
 }
-
-struct ps_factory default_pff_ps_factory = {
-        .owner   = THIS_MODULE,
-        .create  = pff_ps_default_create,
-        .destroy = pff_ps_default_destroy,
-};
-EXPORT_SYMBOL(default_pff_ps_factory);
+EXPORT_SYMBOL(pff_ps_default_destroy);

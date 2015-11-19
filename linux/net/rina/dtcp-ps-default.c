@@ -284,7 +284,7 @@ default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
         return 0;
 }
 
-static struct ps_base *
+struct ps_base *
 dtcp_ps_default_create(struct rina_component * component)
 {
         struct dtcp * dtcp = dtcp_from_component(component);
@@ -323,8 +323,9 @@ dtcp_ps_default_create(struct rina_component * component)
 
         return &ps->base;
 }
+EXPORT_SYMBOL(dtcp_ps_default_create);
 
-static void dtcp_ps_default_destroy(struct ps_base * bps)
+void dtcp_ps_default_destroy(struct ps_base * bps)
 {
         struct dtcp_ps *ps = container_of(bps, struct dtcp_ps, base);
 
@@ -332,10 +333,4 @@ static void dtcp_ps_default_destroy(struct ps_base * bps)
                 rkfree(ps);
         }
 }
-
-struct ps_factory default_dtcp_ps_factory = {
-        .owner          = THIS_MODULE,
-        .create  = dtcp_ps_default_create,
-        .destroy = dtcp_ps_default_destroy,
-};
-EXPORT_SYMBOL(default_dtcp_ps_factory);
+EXPORT_SYMBOL(dtcp_ps_default_destroy);
