@@ -41,6 +41,7 @@
 #include "dtp.h"
 #include "dtcp.h"
 #include "rmt.h"
+#include "sdup.h"
 #include "efcp-utils.h"
 
 /*  FIXME: To be removed ABSOLUTELY */
@@ -74,6 +75,7 @@ struct ipcp_instance_data {
         struct kfa *            kfa;
         struct efcp_container * efcpc;
         struct rmt *            rmt;
+        struct sdup *           sdup;
         address_t               address;
         struct mgmt_data *      mgmt_data;
         spinlock_t              lock;
@@ -647,13 +649,6 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         	return -1;
         }
 
-        sdup_config = dif_information->configuration->sdup_config;
-        if (!sdup_config) {
-        	LOG_INFO("No SDU protection config specified, using default");
-        } else {
-        	rmt_sdup_config_set(data->rmt, sdup_config);
-        }
-
         if (rmt_address_set(data->rmt, data->address))
                 return -1;
 
@@ -666,6 +661,14 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
                 LOG_ERR("Could not set RMT conf");
 		return -1;
         }
+
+	sdup_config = dif_information->configuration->sdup_config;
+	if (!sdup_config) {
+		LOG_INFO("No SDU protection config specified, using default");
+		sdup_config = sdup_config_create();
+		sdup_config->default_dup_conf = dup_config_entry_create();
+	}
+	sdup_config_set(data->sdup, sdup_config);
 
         return 0;
 }
@@ -1154,17 +1157,13 @@ static int normal_set_policy_set_param(struct ipcp_instance_data * data,
         return -1;
 }
 
-int normal_enable_encryption(struct ipcp_instance_data * data,
-			     bool 	      enable_encryption,
-		             bool    	      enable_decryption,
-		             struct buffer *  encrypt_key,
-		             port_id_t 	      port_id)
+int normal_update_crypto_state(struct ipcp_instance_data * data,
+			       struct sdup_crypto_state * state,
+		               port_id_t 	      port_id)
 {
-	return rmt_enable_encryption(data->rmt,
-				     enable_encryption,
-				     enable_decryption,
-				     encrypt_key,
-				     port_id);
+	return sdup_update_crypto_state(data->sdup,
+				        state,
+				        port_id);
 }
 
 static struct ipcp_instance_ops normal_instance_ops = {
@@ -1210,7 +1209,7 @@ static struct ipcp_instance_ops normal_instance_ops = {
 
         .enable_write              = enable_write,
         .disable_write             = disable_write,
-        .enable_encryption         = normal_enable_encryption,
+        .update_crypto_state       = normal_update_crypto_state,
         .dif_name		   = normal_dif_name
 };
 
@@ -1326,11 +1325,25 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 rkfree(instance);
                 return NULL;
         }
+
+        instance->data->sdup = sdup_create(instance);
+        if (!instance->data->sdup) {
+                LOG_ERR("Failed creation of SDUP instance");
+                efcp_container_destroy(instance->data->efcpc);
+                name_destroy(instance->data->info->name);
+                rkfree(instance->data->info);
+                rkfree(instance->data);
+                rkfree(instance);
+                return NULL;
+        }
+
         instance->data->rmt = rmt_create(instance,
                                          instance->data->kfa,
-                                         instance->data->efcpc);
+                                         instance->data->efcpc,
+					 instance->data->sdup);
         if (!instance->data->rmt) {
                 LOG_ERR("Failed creation of RMT instance");
+		sdup_destroy(instance->data->sdup);
                 efcp_container_destroy(instance->data->efcpc);
                 name_destroy(instance->data->info->name);
                 rkfree(instance->data->info);
@@ -1342,6 +1355,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         if (efcp_bind_rmt(instance->data->efcpc, instance->data->rmt)) {
                 LOG_ERR("Failed binding of RMT and EFCPC");
                 rmt_destroy(instance->data->rmt);
+		sdup_destroy(instance->data->sdup);
                 efcp_container_destroy(instance->data->efcpc);
                 name_destroy(instance->data->info->name);
                 rkfree(instance->data->info);
@@ -1354,6 +1368,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         if (!instance->data->mgmt_data) {
                 LOG_ERR("Failed creation of management data");
                 rmt_destroy(instance->data->rmt);
+		sdup_destroy(instance->data->sdup);
                 efcp_container_destroy(instance->data->efcpc);
                 name_destroy(instance->data->info->name);
                 rkfree(instance->data->info);
@@ -1418,6 +1433,7 @@ static int normal_destroy(struct ipcp_factory_data * data,
                 rkfree(tmp->info);
         }
 
+        sdup_destroy(tmp->sdup);
         efcp_container_destroy(tmp->efcpc);
         rmt_destroy(tmp->rmt);
         mgmt_data_destroy(tmp->mgmt_data);

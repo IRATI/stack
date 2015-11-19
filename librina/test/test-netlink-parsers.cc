@@ -3277,32 +3277,32 @@ int testRmtDumpPDUFTResponseMessage() {
         return returnValue;
 }
 
-int testEnableEncryptionRequestMessage() {
-        std::cout << "TESTING ENABLE ENCRYPTION REQUEST MESSAGE\n";
+int testUpdateCryptoStateRequestMessage() {
+        std::cout << "TESTING UPDATE CRYPTO STATE REQUEST MESSAGE\n";
         int returnValue = 0;
 
-        IPCPEnableEncryptionRequestMessage message;
-        message.profile.enable_decryption = true;
-        message.profile.enable_encryption = true;
-        message.profile.port_id = 232;
-        message.profile.encrypt_key.length = 16;
-        message.profile.encrypt_key.data = new unsigned char[16];
-        message.profile.encrypt_key.data[0] = 0x01;
-        message.profile.encrypt_key.data[1] = 0x02;
-        message.profile.encrypt_key.data[2] = 0x03;
-        message.profile.encrypt_key.data[3] = 0x04;
-        message.profile.encrypt_key.data[4] = 0x05;
-        message.profile.encrypt_key.data[5] = 0x06;
-        message.profile.encrypt_key.data[6] = 0x07;
-        message.profile.encrypt_key.data[7] = 0x08;
-        message.profile.encrypt_key.data[8] = 0x09;
-        message.profile.encrypt_key.data[9] = 0x10;
-        message.profile.encrypt_key.data[10] = 0x11;
-        message.profile.encrypt_key.data[11] = 0x12;
-        message.profile.encrypt_key.data[12] = 0x13;
-        message.profile.encrypt_key.data[13] = 0x14;
-        message.profile.encrypt_key.data[14] = 0x15;
-        message.profile.encrypt_key.data[15] = 0x16;
+        IPCPUpdateCryptoStateRequestMessage message;
+        message.state.enable_crypto_tx = true;
+        message.state.enable_crypto_rx = true;
+        message.state.port_id = 232;
+        message.state.encrypt_key_tx.length = 16;
+        message.state.encrypt_key_tx.data = new unsigned char[16];
+        message.state.encrypt_key_tx.data[0] = 0x01;
+        message.state.encrypt_key_tx.data[1] = 0x02;
+        message.state.encrypt_key_tx.data[2] = 0x03;
+        message.state.encrypt_key_tx.data[3] = 0x04;
+        message.state.encrypt_key_tx.data[4] = 0x05;
+        message.state.encrypt_key_tx.data[5] = 0x06;
+        message.state.encrypt_key_tx.data[6] = 0x07;
+        message.state.encrypt_key_tx.data[7] = 0x08;
+        message.state.encrypt_key_tx.data[8] = 0x09;
+        message.state.encrypt_key_tx.data[9] = 0x10;
+        message.state.encrypt_key_tx.data[10] = 0x11;
+        message.state.encrypt_key_tx.data[11] = 0x12;
+        message.state.encrypt_key_tx.data[12] = 0x13;
+        message.state.encrypt_key_tx.data[13] = 0x14;
+        message.state.encrypt_key_tx.data[14] = 0x15;
+        message.state.encrypt_key_tx.data[15] = 0x16;
 
         struct nl_msg* netlinkMessage = nlmsg_alloc();
         if (!netlinkMessage) {
@@ -3320,33 +3320,33 @@ int testEnableEncryptionRequestMessage() {
         }
 
         nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
-        IPCPEnableEncryptionRequestMessage * recoveredMessage =
-                        dynamic_cast<IPCPEnableEncryptionRequestMessage *>(
+        IPCPUpdateCryptoStateRequestMessage * recoveredMessage =
+                        dynamic_cast<IPCPUpdateCryptoStateRequestMessage *>(
                                         parseBaseNetlinkMessage(netlinkMessageHeader));
 
         if (recoveredMessage == 0) {
                 std::cout << "Error parsing IPCPEnableEncryptionRequestMessage message "
                                 << "\n";
                 returnValue = -1;
-        } else if (message.profile.enable_decryption != recoveredMessage->profile.enable_decryption) {
-        	std::cout << "Error with enable decryption";
+        } else if (message.state.enable_crypto_rx != recoveredMessage->state.enable_crypto_rx) {
+        	std::cout << "Error with enable_crypto_rx" << std::endl;
         	returnValue = -1;
-        } else if (message.profile.enable_encryption != recoveredMessage->profile.enable_encryption) {
-        	std::cout << "Error with enable_encryption";
+        } else if (message.state.enable_crypto_tx != recoveredMessage->state.enable_crypto_tx) {
+        	std::cout << "Error with enable_crypto_tx"<< std::endl;
         	returnValue = -1;
-        } else if (message.profile.port_id != recoveredMessage->profile.port_id) {
-        	std::cout << "Error with port_id";
+        } else if (message.state.port_id != recoveredMessage->state.port_id) {
+        	std::cout << "Error with port_id"<< std::endl;
         	returnValue = -1;
-        } else if (message.profile.encrypt_key.length != recoveredMessage->profile.encrypt_key.length) {
-        	std::cout << "Error with encrypt key length";
+        } else if (message.state.encrypt_key_tx.length != recoveredMessage->state.encrypt_key_tx.length) {
+        	std::cout << "Error with encrypt_key_tx length"<< std::endl;
         	returnValue = -1;
-        } else if (message.profile.encrypt_key.data[10] != recoveredMessage->profile.encrypt_key.data[10]) {
-        	std::cout << "Error with encrypt key data";
+        } else if (message.state.encrypt_key_tx.data[10] != recoveredMessage->state.encrypt_key_tx.data[10]) {
+        	std::cout << "Error with encrypt_key_tx data"<< std::endl;
         	returnValue = -1;
         }
 
         if (returnValue == 0) {
-                std::cout << "IPCPEnableEncryptionRequestMessage test ok\n";
+                std::cout << "IPCPUpdateCryptoStateRequestMessage test ok\n";
         }
         nlmsg_free(netlinkMessage);
         delete recoveredMessage;
@@ -3574,7 +3574,7 @@ int main() {
 	        return result;
 	}
 
-	result = testEnableEncryptionRequestMessage();
+	result = testUpdateCryptoStateRequestMessage();
 	if (result < 0) {
 		return result;
 	}
