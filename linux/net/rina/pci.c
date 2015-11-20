@@ -68,6 +68,8 @@ struct pci {
                 seq_num_t new_lf_wind_edge;
                 seq_num_t my_lf_wind_edge;
                 seq_num_t my_rt_wind_edge;
+		u_int32_t sndr_rate;
+		u_int32_t time_frame;
         } control;
 };
 
@@ -492,3 +494,64 @@ seq_num_t pci_control_last_seq_num_rcvd(const struct pci * pci)
 { return pci ? pci->control.last_ctrl_seq_num_rcvd : 0; }
 EXPORT_SYMBOL(pci_control_last_seq_num_rcvd);
 
+u_int32_t pci_control_sndr_rate(const struct pci * pci) {
+	if(!pci) {
+		LOG_DBG("%s invalid PCI: 0x%pK",
+			__func__,
+			pci);
+
+		return 0;
+	}
+
+	return pci->control.sndr_rate;
+}
+EXPORT_SYMBOL(pci_control_sndr_rate);
+
+u_int32_t pci_control_time_frame(const struct pci * pci) {
+	if(!pci) {
+		LOG_DBG("%s invalid PCI: 0x%pK",
+			__func__,
+			pci);
+
+		return 0;
+	}
+
+	return pci->control.time_frame;
+}
+EXPORT_SYMBOL(pci_control_time_frame);
+
+// Set the sender rate field in the pci control block.
+// 0 on success.
+int pci_control_sndr_rate_set(struct pci * pci, u_int32_t rate) {
+	if (!pci)
+	{
+		LOG_DBG("%s, invalid PCI; pci: %pK.",
+			__FUNCTION__,
+			pci);
+
+		return -1;
+	}
+
+	pci->control.sndr_rate = rate;
+
+	return 0;
+}
+EXPORT_SYMBOL(pci_control_sndr_rate_set);
+
+// Set the time frame field in the pci control block.
+// 0 on success.
+int pci_control_time_frame_set(struct pci * pci, u_int32_t frame) {
+	if (!pci)
+	{
+		LOG_DBG("%s, invalid PCI; pci: %pK.",
+			__FUNCTION__,
+			pci);
+
+		return -1;
+	}
+
+	pci->control.time_frame = frame;
+
+	return 0;
+}
+EXPORT_SYMBOL(pci_control_time_frame_set);

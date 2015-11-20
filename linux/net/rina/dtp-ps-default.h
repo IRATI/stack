@@ -32,7 +32,7 @@ int default_transmission_control(struct dtp_ps * ps, struct pdu * pdu);
 
 int default_closed_window(struct dtp_ps * ps, struct pdu * pdu);
 
-int default_flow_control_overrun(struct dtp_ps * ps,
+int default_snd_flow_control_overrun(struct dtp_ps * ps,
                                  struct pdu *    pdu);
 
 int default_initial_sequence_number(struct dtp_ps * ps);

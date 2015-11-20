@@ -103,7 +103,26 @@ int              dtcp_srtt_set(struct dtcp * dtcp, uint_t srtt);
 uint_t           dtcp_rttvar(struct dtcp * dtcp);
 int              dtcp_rttvar_set(struct dtcp * dtcp, uint_t rttvar);
 
+uint_t 		 dtcp_time_frame(struct dtcp * dtcp);
+int 		 dtcp_time_frame_set(struct dtcp * dtcp, uint_t sec);
+int 		 dtcp_last_time(struct dtcp * dtcp, struct timespec * s);
+int 		 dtcp_last_time_set(struct dtcp * dtcp, struct timespec * s);
+uint_t 		 dtcp_sndr_rate(struct dtcp * dtcp);
+int 		 dtcp_sndr_rate_set(struct dtcp * dtcp, uint_t rate);
+uint_t 		 dtcp_rcvr_rate(struct dtcp * dtcp);
+int 		 dtcp_rcvr_rate_set(struct dtcp * dtcp, uint_t rate);
+uint_t 		 dtcp_recv_itu(struct dtcp * dtcp);
+int 		 dtcp_recv_itu_set(struct dtcp * dtcp, uint_t recv);
+int 		 dtcp_recv_itu_inc(struct dtcp * dtcp, uint_t recv);
+uint_t 		 dtcp_sent_itu(struct dtcp * dtcp);
+int 		 dtcp_sent_itu_set(struct dtcp * dtcp, uint_t sent);
+int 		 dtcp_sent_itu_inc(struct dtcp * dtcp, uint_t sent);
+int 		 dtcp_rate_fc_reset(struct dtcp * dtcp, struct timespec * now);
+bool 		 dtcp_rate_exceeded(struct dtcp * dtcp, int send);
+
 /* end SDK */
+
+int              pdus_sent_in_t_unit_set(struct dtcp * dtcp, uint_t s);
 
 /*FIXME: wrapper to be called by dtp in the post_worker */
 int              dtcp_sending_ack_policy(struct dtcp * dtcp);

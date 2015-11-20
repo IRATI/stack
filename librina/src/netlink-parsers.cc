@@ -3943,6 +3943,12 @@ int putDataTransferConstantsObject(nl_msg* netlinkMessage,
                         object.get_max_pdu_size());
         NLA_PUT_U32(netlinkMessage, DTC_ATTR_MAX_PDU_LIFE,
                                 object.get_max_pdu_lifetime());
+        NLA_PUT_U16(netlinkMessage, DTC_ATTR_RATE,
+                                object.get_rate_length());
+        NLA_PUT_U16(netlinkMessage, DTC_ATTR_FRAME,
+                                object.get_frame_length());
+        NLA_PUT_U16(netlinkMessage, DTC_ATTR_CTRL_SEQ_NUM,
+                        object.get_ctrl_sequence_number_length());
         if (object.is_dif_integrity()){
                 NLA_PUT_FLAG(netlinkMessage, DTC_ATTR_DIF_INTEGRITY);
         }
@@ -6608,6 +6614,9 @@ DataTransferConstants * parseDataTransferConstantsObject(nlattr *nested) {
         attr_policy[DTC_ATTR_SEQ_NUM].type = NLA_U16;
         attr_policy[DTC_ATTR_SEQ_NUM].minlen = 2;
         attr_policy[DTC_ATTR_SEQ_NUM].maxlen = 2;
+        attr_policy[DTC_ATTR_CTRL_SEQ_NUM].type = NLA_U16;
+        attr_policy[DTC_ATTR_CTRL_SEQ_NUM].minlen = 2;
+        attr_policy[DTC_ATTR_CTRL_SEQ_NUM].maxlen = 2;
         attr_policy[DTC_ATTR_ADDRESS].type = NLA_U16;
         attr_policy[DTC_ATTR_ADDRESS].minlen = 2;
         attr_policy[DTC_ATTR_ADDRESS].maxlen = 2;
@@ -6620,6 +6629,12 @@ DataTransferConstants * parseDataTransferConstantsObject(nlattr *nested) {
         attr_policy[DTC_ATTR_MAX_PDU_LIFE].type = NLA_U32;
         attr_policy[DTC_ATTR_MAX_PDU_LIFE].minlen = 4;
         attr_policy[DTC_ATTR_MAX_PDU_LIFE].maxlen = 4;
+        attr_policy[DTC_ATTR_RATE].type = NLA_U16;
+        attr_policy[DTC_ATTR_RATE].minlen = 2;
+        attr_policy[DTC_ATTR_RATE].maxlen = 2;
+        attr_policy[DTC_ATTR_FRAME].type = NLA_U16;
+        attr_policy[DTC_ATTR_FRAME].minlen = 2;
+        attr_policy[DTC_ATTR_FRAME].maxlen = 2;
         attr_policy[DTC_ATTR_DIF_INTEGRITY].type = NLA_FLAG;
         attr_policy[DTC_ATTR_DIF_INTEGRITY].minlen = 0;
         attr_policy[DTC_ATTR_DIF_INTEGRITY].maxlen = 0;
@@ -6653,6 +6668,11 @@ DataTransferConstants * parseDataTransferConstantsObject(nlattr *nested) {
                                 nla_get_u16(attrs[DTC_ATTR_SEQ_NUM]));
         }
 
+        if (attrs[DTC_ATTR_CTRL_SEQ_NUM]) {
+                result->set_ctrl_sequence_number_length(
+                                nla_get_u16(attrs[DTC_ATTR_CTRL_SEQ_NUM]));
+        }
+
         if (attrs[DTC_ATTR_ADDRESS]) {
                 result->set_address_length(nla_get_u16(attrs[DTC_ATTR_ADDRESS]));
         }
@@ -6669,6 +6689,16 @@ DataTransferConstants * parseDataTransferConstantsObject(nlattr *nested) {
         if (attrs[DTC_ATTR_MAX_PDU_LIFE]) {
                 result->set_max_pdu_lifetime(
                                 nla_get_u32(attrs[DTC_ATTR_MAX_PDU_LIFE]));
+        }
+
+        if (attrs[DTC_ATTR_RATE]) {
+                result->set_rate_length(
+                                nla_get_u16(attrs[DTC_ATTR_RATE]));
+        }
+
+        if (attrs[DTC_ATTR_FRAME]) {
+                result->set_frame_length(
+                                nla_get_u16(attrs[DTC_ATTR_FRAME]));
         }
 
         if (attrs[DTC_ATTR_DIF_INTEGRITY]) {

@@ -1287,11 +1287,14 @@ int testIpcmAssignToDIFRequestMessage() {
 	dataTransferConstants.set_cep_id_length(2);
 	dataTransferConstants.set_dif_integrity(true);
 	dataTransferConstants.set_length_length(3);
+	dataTransferConstants.set_rate_length(4);
+	dataTransferConstants.set_frame_length(4);
 	dataTransferConstants.set_max_pdu_lifetime(4);
 	dataTransferConstants.set_max_pdu_size(5);
 	dataTransferConstants.set_port_id_length(6);
 	dataTransferConstants.set_qos_id_length(7);
 	dataTransferConstants.set_sequence_number_length(8);
+	dataTransferConstants.set_ctrl_sequence_number_length(4);
 	efcpConfiguration.set_data_transfer_constants(dataTransferConstants);
 	QoSCube * qosCube = new QoSCube("cube 1", 1);
 	efcpConfiguration.add_qos_cube(qosCube);
@@ -1372,6 +1375,20 @@ int testIpcmAssignToDIFRequestMessage() {
                                 << " are different\n";
                 returnValue = -1;
         } else if (message.getDIFInformation().get_dif_configuration().get_efcp_configuration().
+        		get_data_transfer_constants().get_rate_length() !=
+                                        recoveredMessage->getDIFInformation().get_dif_configuration().
+                                        get_efcp_configuration().get_data_transfer_constants().get_rate_length()) {
+                std::cout << "DIFInformation.DIFConfiguration.dtc.rateLength on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getDIFInformation().get_dif_configuration().get_efcp_configuration().
+        		get_data_transfer_constants().get_frame_length() !=
+                                        recoveredMessage->getDIFInformation().get_dif_configuration().
+                                        get_efcp_configuration().get_data_transfer_constants().get_frame_length()) {
+                std::cout << "DIFInformation.DIFConfiguration.dtc.frameLength on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getDIFInformation().get_dif_configuration().get_efcp_configuration().
         		get_data_transfer_constants().get_max_pdu_lifetime() !=
                                         recoveredMessage->getDIFInformation().get_dif_configuration().
                                         get_efcp_configuration().get_data_transfer_constants().get_max_pdu_lifetime()) {
@@ -1404,6 +1421,13 @@ int testIpcmAssignToDIFRequestMessage() {
                                         recoveredMessage->getDIFInformation().get_dif_configuration().
                                         get_efcp_configuration().get_data_transfer_constants().get_sequence_number_length()) {
                 std::cout << "DIFInformation.DIFConfiguration.dtc.seqNumLength on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getDIFInformation().get_dif_configuration().get_efcp_configuration().
+        		get_data_transfer_constants().get_ctrl_sequence_number_length() !=
+                                        recoveredMessage->getDIFInformation().get_dif_configuration().
+                                        get_efcp_configuration().get_data_transfer_constants().get_ctrl_sequence_number_length()) {
+                std::cout << "DIFInformation.DIFConfiguration.dtc.ctrlSeqNumLength on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
         } else if (message.getDIFInformation().get_dif_configuration().get_efcp_configuration().

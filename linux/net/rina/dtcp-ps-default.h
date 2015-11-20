@@ -52,7 +52,7 @@ int default_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci);
 
 int default_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci);
 
-int default_rate_reduction(struct dtcp_ps * ps);
+int default_rate_reduction(struct dtcp_ps * ps, const struct pci * pci);
 
 int default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn);
 

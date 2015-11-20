@@ -135,6 +135,13 @@ struct dtcp_sv {
          */
         uint_t       pdus_rcvd_in_time_unit;
 
+        /* Rate based both in and out-bound */
+
+	/* Last time-instant when the credit check has been done.
+	 * This is used by rate-based flow control mechanism.
+	 */
+	struct timespec last_time;
+
         /*
          * Control of duplicated control PDUs
          * */
@@ -197,6 +204,332 @@ int dtcp_pdu_send(struct dtcp * dtcp, struct pdu * pdu)
         			    pdu);
 }
 EXPORT_SYMBOL(dtcp_pdu_send);
+
+uint_t dtcp_time_frame(struct dtcp * dtcp)
+{
+	uint_t ret = 0;
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return 0;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	ret = dtcp->sv->time_unit;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return ret;
+}
+EXPORT_SYMBOL(dtcp_time_frame);
+
+int dtcp_time_frame_set(struct dtcp * dtcp, uint_t sec)
+{
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return -1;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	dtcp->sv->time_unit = sec;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL(dtcp_time_frame_set);
+
+int dtcp_last_time(struct dtcp * dtcp, struct timespec * s)
+{
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return -1;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	s->tv_sec = dtcp->sv->last_time.tv_sec;
+	s->tv_nsec = dtcp->sv->last_time.tv_nsec;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL(dtcp_last_time);
+
+int dtcp_last_time_set(struct dtcp * dtcp, struct timespec * s)
+{
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return -1;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	dtcp->sv->last_time.tv_sec = s->tv_sec;
+	dtcp->sv->last_time.tv_nsec = s->tv_nsec;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL(dtcp_last_time_set);
+
+uint_t dtcp_sndr_rate(struct dtcp * dtcp)
+{
+	uint_t ret;
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return 0;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	ret = dtcp->sv->sndr_rate;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return ret;
+}
+EXPORT_SYMBOL(dtcp_sndr_rate);
+
+int dtcp_sndr_rate_set(struct dtcp * dtcp, uint_t rate)
+{
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return -1;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	dtcp->sv->sndr_rate = rate;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL(dtcp_sndr_rate_set);
+
+uint_t dtcp_rcvr_rate(struct dtcp * dtcp)
+{
+	uint_t ret;
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return 0;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	ret = dtcp->sv->rcvr_rate;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return ret;
+}
+EXPORT_SYMBOL(dtcp_rcvr_rate);
+
+int dtcp_rcvr_rate_set(struct dtcp * dtcp, uint_t rate)
+{
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return -1;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	dtcp->sv->rcvr_rate = rate;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL(dtcp_rcvr_rate_set);
+
+uint_t dtcp_recv_itu(struct dtcp * dtcp)
+{
+	uint_t ret = 0;
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return 0;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	ret = dtcp->sv->pdus_rcvd_in_time_unit;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return ret;
+}
+EXPORT_SYMBOL(dtcp_recv_itu);
+
+int dtcp_recv_itu_set(struct dtcp * dtcp, uint_t recv)
+{
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return -1;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	dtcp->sv->pdus_rcvd_in_time_unit = recv;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL(dtcp_recv_itu_set);
+
+int dtcp_recv_itu_inc(struct dtcp * dtcp, uint_t recv)
+{
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return -1;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	dtcp->sv->pdus_rcvd_in_time_unit += recv;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL(dtcp_recv_itu_inc);
+
+uint_t dtcp_sent_itu(struct dtcp * dtcp)
+{
+	uint_t ret = 0;
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return 0;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	ret = dtcp->sv->pdus_sent_in_time_unit;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return ret;
+}
+EXPORT_SYMBOL(dtcp_sent_itu);
+
+int dtcp_sent_itu_set(struct dtcp * dtcp, uint_t sent)
+{
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return -1;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	dtcp->sv->pdus_sent_in_time_unit = sent;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL(dtcp_sent_itu_set);
+
+int dtcp_sent_itu_inc(struct dtcp * dtcp, uint_t sent)
+{
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
+			__FUNCTION__,
+			dtcp);
+
+		return -1;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	dtcp->sv->pdus_sent_in_time_unit += sent;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL(dtcp_sent_itu_inc);
+
+int dtcp_rate_fc_reset(struct dtcp * dtcp, struct timespec * now)
+{
+	unsigned long flags;
+
+	if (!dtcp || !dtcp->sv || !now)
+	{
+		LOG_DBG("%s, Wrong arguments; dtcp: %pK, now: %pK.",
+			__FUNCTION__,
+			dtcp,
+			now);
+
+		return -1;
+	}
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	dtcp->sv->pdus_sent_in_time_unit = 0;
+	dtcp->sv->pdus_rcvd_in_time_unit = 0;
+	dtcp->sv->last_time.tv_sec = now->tv_sec;
+	dtcp->sv->last_time.tv_nsec = now->tv_nsec;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL(dtcp_rate_fc_reset);
 
 uint_t dtcp_rtt(struct dtcp * dtcp)
 {
@@ -407,6 +740,23 @@ seq_num_t rcvr_rt_wind_edge(struct dtcp * dtcp)
 }
 EXPORT_SYMBOL(rcvr_rt_wind_edge);
 
+int pdus_sent_in_t_unit_set(struct dtcp * dtcp, uint_t s)
+{
+        unsigned long flags;
+
+        if (!dtcp || !dtcp->sv) {
+                LOG_ERR("Bogus DTCP instance");
+                return -1;
+        }
+
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        dtcp->sv->pdus_sent_in_time_unit = s;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+        return 0;
+}
+EXPORT_SYMBOL(pdus_sent_in_t_unit_set);
+
 static seq_num_t next_snd_ctl_seq(struct dtcp * dtcp)
 {
         seq_num_t     tmp;
@@ -552,6 +902,8 @@ static int populate_ctrl_pci(struct pci *  pci,
         seq_num_t snd_lft;
         seq_num_t snd_rt;
         seq_num_t LWE;
+        uint_t rt;
+        uint_t tf;
 
         dtcp_cfg = dtcp_config_get(dtcp);
         if (!dtcp_cfg) {
@@ -564,6 +916,7 @@ static int populate_ctrl_pci(struct pci *  pci,
          * PDU_TYPE_NACK_AND_FC ?
          */
         LWE = dt_sv_rcv_lft_win(dtcp->parent);
+
         if (dtcp_flow_ctrl(dtcp_cfg)) {
                 if (dtcp_window_based_fctrl(dtcp_cfg)) {
                         snd_lft = snd_lft_win(dtcp);
@@ -571,13 +924,22 @@ static int populate_ctrl_pci(struct pci *  pci,
 
                         pci_control_new_left_wind_edge_set(pci, LWE);
                         pci_control_new_rt_wind_edge_set(pci,
-                                                         rcvr_rt_wind_edge(dtcp));
+				rcvr_rt_wind_edge(dtcp));
+
                         pci_control_my_left_wind_edge_set(pci, snd_lft);
                         pci_control_my_rt_wind_edge_set(pci, snd_rt);
                 }
 
                 if (dtcp_rate_based_fctrl(dtcp_cfg)) {
-                        LOG_MISSING;
+                	rt = dtcp_sndr_rate(dtcp);
+                	tf = dtcp_time_frame(dtcp);
+
+                	LOG_DBG("Populating control pci with rate "
+                		"settings, rate: %u, time: %u",
+                		rt, tf);
+
+                        pci_control_sndr_rate_set(pci, rt);
+                        pci_control_time_frame_set(pci, tf);
                 }
         }
 
@@ -642,6 +1004,8 @@ void dump_we(struct dtcp * dtcp, struct pci *  pci)
         seq_num_t    my_rt_we;
         seq_num_t    my_lf_we;
         seq_num_t    ack;
+        uint_t	     rate;
+        uint_t	     tframe;
 
         ASSERT(dtcp);
         ASSERT(pci);
@@ -659,13 +1023,17 @@ void dump_we(struct dtcp * dtcp, struct pci *  pci)
         my_rt_we  = pci_control_my_rt_wind_edge(pci);
         pci_seqn  = pci_sequence_number_get(pci);
         ack       = pci_control_ack_seq_num(pci);
+        rate	  = pci_control_sndr_rate(pci);
+        tframe	  = pci_control_time_frame(pci);
 
         LOG_DBG("SEQN: %u N/Ack: %u SndRWE: %u SndLWE: %u "
                 "RcvRWE: %u RcvLWE: %u "
                 "newRWE: %u newLWE: %u "
-                "myRWE: %u myLWE: %u",
+                "myRWE: %u myLWE: %u "
+                "rate: %u tframe: %u",
                 pci_seqn, ack, snd_rt_we, snd_lf_we, rcv_rt_we, rcv_lf_we,
-                new_rt_we, new_lf_we, my_rt_we, my_lf_we);
+                new_rt_we, new_lf_we, my_rt_we, my_lf_we,
+                rate, tframe);
 }
 EXPORT_SYMBOL(dump_we);
 
@@ -740,6 +1108,8 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
                         struct pdu *  pdu)
 {
         struct pci * pci;
+        uint_t 	     rt;
+        uint_t       tf;
 
         ASSERT(dtcp);
         ASSERT(pdu);
@@ -747,8 +1117,28 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
         pci = pdu_pci_get_rw(pdu);
         ASSERT(pci);
 
-        snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
+        rt = pci_control_sndr_rate(pci);
+        tf = pci_control_time_frame(pci);
+
+        if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
+        	snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
+        }
+
+        if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
+		if(tf && rt) {
+			dtcp_sndr_rate_set(dtcp, rt);
+			dtcp_time_frame_set(dtcp, tf);
+
+			LOG_DBG("rbfc Rate based fields sets on flow ctl, "
+				"rate: %u, time: %u",
+				rt, tf);
+		}
+        }
+
         push_pdus_rmt(dtcp);
+
+        LOG_DBG("DTCP received FC (CPU: %d)", smp_processor_id());
+        dump_we(dtcp, pci);
 
         pdu_destroy(pdu);
         return 0;
@@ -760,6 +1150,8 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         struct dtcp_ps * ps;
         seq_num_t        seq;
         struct pci *     pci;
+        uint_t		 rt;
+        uint_t           tf;
 
         ASSERT(dtcp);
 
@@ -780,8 +1172,23 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         	ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
         rcu_read_unlock();
 
-        snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
-        LOG_DBG("Right Window Edge: %u", snd_rt_wind_edge(dtcp));
+	if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
+		snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
+		LOG_DBG("Right Window Edge: %u", snd_rt_wind_edge(dtcp));
+	}
+
+	if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
+	        rt = pci_control_sndr_rate(pci);
+	        tf = pci_control_time_frame(pci);
+
+	        if(tf && rt) {
+			dtcp_sndr_rate_set(dtcp, rt);
+			dtcp_time_frame_set(dtcp, tf);
+			LOG_DBG("Rate based fields sets on flow ctl and "
+				"ack, rate: %u, time: %u",
+				rt, tf);
+	        }
+	}
 
         LOG_DBG("Calling CWQ_deliver for DTCP: %pK", dtcp);
         push_pdus_rmt(dtcp);
@@ -1137,11 +1544,28 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
                 instance->sv->data_retransmit_max =
                         ps->rtx.data_retransmit_max;
 
-        instance->sv->sndr_credit         = ps->flowctrl.window.initial_credit;
-        instance->sv->snd_rt_wind_edge    = ps->flowctrl.window.initial_credit +
-                        dtp_sv_last_nxt_seq_nr(dt_dtp(instance->parent));
-        instance->sv->rcvr_credit         = ps->flowctrl.window.initial_credit;
-        instance->sv->rcvr_rt_wind_edge   = ps->flowctrl.window.initial_credit;
+        if (ps->flow_ctrl) {
+                if (ps->flowctrl.window_based) {
+                        instance->sv->sndr_credit =
+                                ps->flowctrl.window.initial_credit;
+                        instance->sv->snd_rt_wind_edge =
+                                ps->flowctrl.window.initial_credit +
+                                dtp_sv_last_nxt_seq_nr(dt_dtp(instance->parent));
+                        instance->sv->rcvr_credit =
+                                ps->flowctrl.window.initial_credit;
+                        instance->sv->rcvr_rt_wind_edge =
+                                ps->flowctrl.window.initial_credit;
+                }
+                if (ps->flowctrl.rate_based) {
+                        instance->sv->sndr_rate =
+                                ps->flowctrl.rate.sending_rate;
+
+			instance->sv->rcvr_rate =
+                                instance->sv->sndr_rate;
+                        instance->sv->time_unit =
+                                ps->flowctrl.rate.time_period;
+                }
+        }
         rcu_read_unlock();
 
         LOG_DBG("DTCP SV initialized with dtcp_conf:");
@@ -1155,6 +1579,12 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
                 instance->sv->rcvr_credit);
         LOG_DBG("  rcvr_rt_wind_edge:   %u",
                 instance->sv->rcvr_rt_wind_edge);
+        LOG_DBG("  sending_rate:        %u",
+                instance->sv->sndr_rate);
+	LOG_DBG("  receiving_rate:      %u",
+                instance->sv->rcvr_rate);
+        LOG_DBG("  time_unit:           %u",
+                instance->sv->time_unit);
 
         return 0;
 }
@@ -1482,6 +1912,7 @@ int dtcp_sv_update(struct dtcp * dtcp, const struct pci * pci)
 
         if (flow_ctrl) {
                 if (win_based) {
+                	LOG_DBG("Window based fctrl invoked");
                         if (ps->rcvr_flow_control(ps, pci)) {
                                 LOG_ERR("Failed Rcvr Flow Control policy");
                                 retval = -1;
@@ -1490,7 +1921,7 @@ int dtcp_sv_update(struct dtcp * dtcp, const struct pci * pci)
 
                 if (rate_based) {
                         LOG_DBG("Rate based fctrl invoked");
-                        if (ps->rate_reduction(ps)) {
+                        if (ps->rate_reduction(ps, pci)) {
                                 LOG_ERR("Failed Rate Reduction policy");
                                 retval = -1;
                         }
@@ -1602,3 +2033,44 @@ int dtcp_ps_unpublish(const char * name)
 { return ps_unpublish(&policy_sets, name); }
 EXPORT_SYMBOL(dtcp_ps_unpublish);
 
+/* Returns the ms represented by the timespec given. */
+unsigned long dtcp_ms(struct timespec * ts) {
+	return (ts->tv_sec * 1000) + (ts->tv_nsec / 1000000);
+}
+
+/* Is the given rate exceeded? Reset if the time frame given elapses. */
+bool dtcp_rate_exceeded(struct dtcp * dtcp, int send) {
+	struct timespec now  = {0, 0};
+	struct timespec last = {0, 0};
+	struct timespec sub  = {0, 0};
+	uint_t rate = 0;
+	uint_t lim = 0;
+
+	dtcp_last_time(dtcp, &last);
+	getnstimeofday(&now);
+	sub = timespec_sub(now, last);
+
+	if (dtcp_ms(&sub) >= dtcp_time_frame(dtcp))
+	{
+		dtcp_rate_fc_reset(dtcp, &now);
+	}
+
+	if (send) {
+		rate = dtcp_sent_itu(dtcp);
+		lim = dtcp_sndr_rate(dtcp);
+	} else {
+		rate = dtcp_recv_itu(dtcp);
+		lim = dtcp_rcvr_rate(dtcp);
+	}
+
+	if (rate >= lim)
+	{
+		LOG_DBG("rbfc: Rate exceeded, send: %d, rate: %d, lim: %d",
+			send, rate, lim);
+
+		return true;
+	}
+
+	return false;
+}
+EXPORT_SYMBOL(dtcp_rate_exceeded);

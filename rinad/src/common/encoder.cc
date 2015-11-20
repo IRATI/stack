@@ -115,6 +115,9 @@ void DataTransferConstantsEncoder::encode(const rina::DataTransferConstants &obj
 	gpb.set_portidlength(obj.port_id_length_);
 	gpb.set_qosidlength(obj.qos_id_length_);
 	gpb.set_sequencenumberlength(obj.sequence_number_length_);
+	gpb.set_ratelength(obj.rate_length_);
+	gpb.set_framelength(obj.frame_length_);
+	gpb.set_ctrlsequencenumberlength(obj.ctrl_sequence_number_length_);
 
 	serobj.size_ = gpb.ByteSize();
 	serobj.message_ = new char[serobj.size_];
@@ -137,6 +140,9 @@ void DataTransferConstantsEncoder::decode(const rina::ser_obj_t &serobj,
 	des_obj.port_id_length_ = gpb.portidlength();
 	des_obj.qos_id_length_ = gpb.qosidlength();
 	des_obj.sequence_number_length_ = gpb.sequencenumberlength();
+	des_obj.ctrl_sequence_number_length_ = gpb.ctrlsequencenumberlength();
+	des_obj.frame_length_ = gpb.framelength();
+	des_obj.rate_length_ = gpb.ratelength();
 }
 
 
