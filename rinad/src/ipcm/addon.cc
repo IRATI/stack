@@ -118,11 +118,10 @@ void Addon::distribute_flow_event(rina::IPCEvent* event){
 	}
 
 	if(event){
-		LOG_WARN("Unprocessed event of type %s and sequence number %u. Destroying...",
+		LOG_WARN("Unprocessed event of type %s and sequence number %u.",
 				rina::IPCEvent::eventTypeToString(event->eventType).c_str(),
 				event->sequenceNumber);
 
-		assert(0);
 		delete event;
 	}
 }

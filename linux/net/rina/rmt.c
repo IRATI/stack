@@ -1197,7 +1197,6 @@ int rmt_receive(struct rmt *rmt,
 	struct serdes *serdes;
 	struct buffer *buf;
 	struct rmt_n1_port *n1_port;
-	unsigned long flags;
 	size_t		 ttl;
 
 	if (!sdu_is_ok(sdu)) {

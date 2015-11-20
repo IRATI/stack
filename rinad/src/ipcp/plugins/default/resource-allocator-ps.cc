@@ -42,8 +42,7 @@ private:
 DefaultPDUFTGeneratorPs::DefaultPDUFTGeneratorPs(IResourceAllocator * ra) : res_alloc(ra)
 { }
 
-void DefaultPDUFTGeneratorPs::routingTableUpdated(
-		const std::list<rina::RoutingTableEntry*>& rt)
+void DefaultPDUFTGeneratorPs::routingTableUpdated(const std::list<rina::RoutingTableEntry*>& rt)
 {
 	LOG_IPCP_DBG("Got %d entries in the routing table", rt.size());
 	//Compute PDU Forwarding Table
@@ -99,6 +98,10 @@ void DefaultPDUFTGeneratorPs::routingTableUpdated(
 		LOG_IPCP_ERR("Error setting PDU Forwarding Table in the kernel: %s",
 				e.what());
 	}
+
+	//Update resource allocator
+	res_alloc->set_rt_entries(rt);
+	res_alloc->set_pduft_entries(pduft);
 }
 
 int DefaultPDUFTGeneratorPs::set_policy_set_param(const std::string& name,

@@ -35,7 +35,7 @@ public:
 	/// @param object
 	/// @throws exception if the object is not recognized by the encoder
 	/// @return
-	virtual void encode(const T &obj, rina::cdap_rib::ser_obj_t& serobj) = 0;
+	virtual void encode(const T &obj, rina::ser_obj_t& serobj) = 0;
 	/// Converts a byte array to an object of the type specified by "className"
 	/// @param byte[] serializedObject
 	/// @param objectClass The type of object to be decoded
@@ -43,7 +43,7 @@ public:
 	/// encoder can recognize, or the byte array value doesn't correspond to an
 	/// object of the type "className"
 	/// @return
-	virtual void decode(const rina::cdap_rib::ser_obj_t &serobj,
+	virtual void decode(const rina::ser_obj_t &serobj,
 			T& des_obj) = 0;
 };
 

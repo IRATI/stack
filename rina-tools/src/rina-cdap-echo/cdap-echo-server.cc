@@ -58,7 +58,7 @@ void ConnectionCallback::remote_read_request(
 	cdap_rib::res_info_t res;
 	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 	std::cout<<"read request CDAP message received"<<std::endl;
-	get_provider()->send_read_result(con.port_, obj, flags, res, message_id);
+	get_provider()->send_read_result(con, obj, flags, res, message_id);
 	std::cout<<"read response CDAP message sent"<<std::endl;
 }
 
@@ -68,7 +68,7 @@ void ConnectionCallback::close_connection(const rina::cdap_rib::con_handle_t &co
 	cdap_rib::res_info_t res;
 	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 	std::cout<<"conection close request CDAP message received"<<std::endl;
-	get_provider()->send_close_connection_result(con.port_, flags, res, message_id);
+	get_provider()->send_close_connection_result(con.port_id, flags, res, message_id);
 	std::cout<<"conection close response CDAP message sent"<<std::endl;
 	*keep_serving_ = false;
 }
@@ -93,10 +93,11 @@ void CDAPEchoWorker::serveEchoFlow(int port_id)
 	bool keep_serving = true;
 	char buffer[max_sdu_size];
 	rina::cdap::CDAPProviderInterface *cdap_prov;
+	rina::cdap_rib::concrete_syntax_t syntax;
 	int bytes_read = 0;
 
 	ConnectionCallback callback(&keep_serving);
-	cdap::init(&callback, false);
+	cdap::init(&callback, syntax, false);
 
 	cdap_prov = cdap::getProvider();
 
@@ -123,7 +124,7 @@ void CDAPEchoWorker::serveEchoFlow(int port_id)
 			break;
 		}
 
-		cdap_rib::ser_obj_t message;
+		ser_obj_t message;
 		message.message_ = buffer;
 		message.size_ = bytes_read;
 		cdap_prov->process_message(message, port_id);

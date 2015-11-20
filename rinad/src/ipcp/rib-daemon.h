@@ -22,6 +22,7 @@
 #ifndef IPCP_RIB_DAEMON_HH
 #define IPCP_RIB_DAEMON_HH
 
+#include <librina/cdap_v2.h>
 #include <librina/concurrency.h>
 
 #include "common/concurrency.h"
@@ -33,8 +34,7 @@ namespace rinad {
 /// passes them to the RIB Daemon
 class ManagementSDUReaderData {
 public:
-	ManagementSDUReaderData(IPCPRIBDaemon * rib_daemon, unsigned int max_sdu_size);
-	IPCPRIBDaemon * rib_daemon_;
+	ManagementSDUReaderData(unsigned int max_sdu_size);
 	unsigned int max_sdu_size_;
 };
 
@@ -45,22 +45,22 @@ void * doManagementSDUReaderWork(void* data);
 ///Full implementation of the RIB Daemon
 class IPCPRIBDaemonImpl : public IPCPRIBDaemon, public rina::InternalEventListener {
 public:
-	IPCPRIBDaemonImpl();
+	IPCPRIBDaemonImpl(rina::cacep::AppConHandlerInterface *app_con_callback);
+	rina::rib::RIBDaemonProxy * getProxy();
         void set_application_process(rina::ApplicationProcess * ap);
         void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
         void eventHappened(rina::InternalEvent * event);
         void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event);
-        void sendMessageSpecific(bool useAddress, const rina::CDAPMessage & cdapMessage, int sessionId,
-			unsigned int address, rina::ICDAPResponseMessageHandler * cdapMessageHandler);
-        void cdapMessageDelivered(char* message, int length, int portId);
-	void generateCDAPResponse(int invoke_id,
-			rina::CDAPSessionDescriptor * cdapSessDescr,
-			rina::CDAPMessage::Opcode opcode,
-			const std::string& obj_class,
-			const std::string& obj_name,
-			rina::RIBObjectValue& robject_value);
+        const rina::rib::rib_handle_t & get_rib_handle();
+        int64_t addObjRIB(const std::string& fqn, rina::rib::RIBObj** obj);
+        void removeObjRIB(const std::string& fqn);
 
 private:
+	void initialize_rib_daemon(rina::cacep::AppConHandlerInterface *app_con_callback);
+
+	//Handle to the RIB
+	rina::rib::rib_handle_t rib;
+
         INMinusOneFlowManager * n_minus_one_flow_manager_;
         rina::Thread * management_sdu_reader_;
 

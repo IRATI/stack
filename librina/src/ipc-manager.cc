@@ -475,7 +475,7 @@ void IPCProcessProxy::pluginLoad(const std::string& name, bool load,
 #endif
 }
 
-void IPCProcessProxy::forwardCDAPMessage(const SerializedObject& sermsg,
+void IPCProcessProxy::forwardCDAPMessage(const ser_obj_t& sermsg,
 					 unsigned int opaque)
 {
 #if STUB_API
@@ -852,7 +852,7 @@ int IpcmAllocateFlowRequestResultEvent::getPortId() const
 
 /* CLASS QUERY RIB RESPONSE EVENT */
 QueryRIBResponseEvent::QueryRIBResponseEvent(
-                const std::list<RIBObjectData>& ribObjects,
+                const std::list<rib::RIBObjectData>& ribObjects,
                 int result,
                 unsigned int sequenceNumber) :
         BaseResponseEvent(result,
@@ -860,7 +860,7 @@ QueryRIBResponseEvent::QueryRIBResponseEvent(
                           sequenceNumber)
 { this->ribObjects = ribObjects; }
 
-const std::list<RIBObjectData>& QueryRIBResponseEvent::getRIBObject() const
+const std::list<rib::RIBObjectData>& QueryRIBResponseEvent::getRIBObject() const
 { return ribObjects; }
 
 /* CLASS UPDATE DIF CONFIGURATION RESPONSE EVENT */

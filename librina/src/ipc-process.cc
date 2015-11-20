@@ -579,7 +579,7 @@ void ExtendedIPCManager::flowDeallocatedRemotely(
 
 void ExtendedIPCManager::queryRIBResponse(
 		const QueryRIBRequestEvent& event, int result,
-		const std::list<RIBObjectData>& ribObjects) {
+		const std::list<rib::RIBObjectData>& ribObjects) {
 #if STUB_API
 	//Do nothing
 #else
@@ -685,8 +685,8 @@ void ExtendedIPCManager::pluginLoadResponse(
 }
 
 void ExtendedIPCManager::forwardCDAPResponse(unsigned int sequenceNumber,
-				const rina::SerializedObject& sermsg,
-				int result)
+					     const ser_obj_t& sermsg,
+					     int result)
 {
 #if STUB_API
 	//Do nothing
@@ -805,11 +805,61 @@ const std::string Connection::toString() {
         return ss.str();
 }
 
+DTPInformation::DTPInformation()
+{
+	src_cep_id = 0;
+	dest_cep_id = 0;
+	src_address = 0;
+	dest_address = 0;
+	qos_id = 0;
+	port_id = 0;
+	pdus_tx = 0;
+	pdus_rx = 0;
+	bytes_tx = 0;
+	bytes_rx = 0;
+}
+
+DTPInformation::DTPInformation(Connection * connection)
+{
+	src_cep_id = connection->sourceCepId;
+	dest_cep_id = connection->destCepId;
+	src_address = connection->sourceAddress;
+	dest_address = connection->destAddress;
+	qos_id = connection->qosId;
+	port_id = connection->portId;
+	dtp_config = connection->dtpConfig;
+	pdus_tx = connection->pdus_tx;
+	pdus_rx = connection->pdus_rx;
+	bytes_tx = connection->bytes_rx;
+	bytes_rx = connection->bytes_tx;
+}
+
+const std::string DTPInformation::toString() const
+{
+	std::stringstream ss;
+	ss << "CEP-ids: src = " << src_cep_id << ", dest = " << dest_cep_id
+	   << "; Addresses: src = " << src_address << ", dest = " << dest_address
+	   << "; Qos-id: " << qos_id << "; Port-id: " << port_id << std::endl;
+	ss << " DTP config: " << dtp_config.toString();
+	ss << " Tx: pdus = " << pdus_tx << ", Bytes = " << bytes_tx
+	   << " RX: pdus = " << pdus_rx << ", Bytes = " << bytes_rx << std::endl;
+
+	return ss.str();
+}
+
 /* CLASS ROUTING TABLE ENTRE */
 RoutingTableEntry::RoutingTableEntry(){
 	address = 0;
 	cost = 1;
 	qosId = 0;
+}
+
+const std::string RoutingTableEntry::getKey() const
+{
+	std::stringstream ss;
+	ss << address << "-" << qosId;
+
+	return ss.str();
 }
 
 PortIdAltlist::PortIdAltlist()
@@ -830,17 +880,19 @@ void PortIdAltlist::add_alt(unsigned int nh)
 PDUForwardingTableEntry::PDUForwardingTableEntry() {
         address = 0;
         qosId = 0;
+        cost = 0;
 }
 
 bool PDUForwardingTableEntry::operator==(
                 const PDUForwardingTableEntry &other) const {
-        if (address != other.getAddress()) {
+        if (address != other.getAddress())
                 return false;
-        }
 
-        if (qosId != other.getQosId()) {
+        if (qosId != other.getQosId())
                 return false;
-        }
+
+        if (cost != other.cost)
+        	return false;
 
         return true;
 }
@@ -878,7 +930,7 @@ void PDUForwardingTableEntry::setQosId(unsigned int qosId) {
 const std::string PDUForwardingTableEntry::toString() {
         std::stringstream ss;
 
-        ss<<"Address: "<<address<<" QoS-id: "<<qosId;
+        ss<<"Address: "<<address<<" QoS-id: "<<qosId<< " Cost: "<<cost;
         ss<<"List of N-1 port-ids: ";
         for (std::list<PortIdAltlist>::iterator it = portIdAltlists.begin();
                         it != portIdAltlists.end(); it++)
@@ -891,6 +943,15 @@ const std::string PDUForwardingTableEntry::toString() {
 
         return ss.str();
 }
+
+const std::string PDUForwardingTableEntry::getKey() const
+{
+	std::stringstream ss;
+	ss << address << "-" << qosId;
+
+	return ss.str();
+}
+
 
 /* CLASS READ MANAGEMENT SDU RESULT */
 ReadManagementSDUResult::ReadManagementSDUResult() {
@@ -1299,7 +1360,7 @@ void DirectoryForwardingTableEntry::set_timestamp(long timestamp) {
 	timestamp_ = timestamp;
 }
 
-std::string DirectoryForwardingTableEntry::getKey() {
+const std::string DirectoryForwardingTableEntry::getKey() const{
 	return ap_naming_info_.getEncodedString();
 }
 

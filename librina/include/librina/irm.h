@@ -26,7 +26,7 @@
 
 #include "librina/application.h"
 #include "librina/internal-events.h"
-#include "librina/rib.h"
+#include "librina/rib_v2.h"
 
 namespace rina {
 
@@ -48,6 +48,7 @@ public:
 	virtual ~IPCResourceManager() { };
 	virtual void set_application_process(ApplicationProcess * ap);
 	void set_flow_acceptor(FlowAcceptor * fa);
+	void set_rib_handle(rina::rib::rib_handle_t rib_handle);
 	unsigned int allocateNMinus1Flow(const FlowInformation& flowInformation);
 	void allocateRequestResult(const AllocateFlowRequestResultEvent& event);
 	void flowAllocationRequested(const FlowRequestEvent& event);
@@ -59,13 +60,12 @@ public:
 	std::list<FlowInformation> getAllNMinusOneFlowInformation() const;
 
 protected:
-	IRIBDaemon * rib_daemon_;
-	CDAPSessionManagerInterface * cdap_session_manager_;
-	InternalEventManager * event_manager_;
-	FlowAcceptor * flow_acceptor_;
-
 	/// true if the IRM is used by an IPC Process, false otherwise
 	bool ipcp;
+	rib::RIBDaemonProxy * rib_daemon_;
+	rina::rib::rib_handle_t rib;
+	InternalEventManager * event_manager_;
+	FlowAcceptor * flow_acceptor_;
 
 	///Populate the IPC Process RIB with the objects related to N-1 Flow Management
 	void populateRIB();
@@ -74,59 +74,95 @@ protected:
 	void cleanFlowAndNotify(int portId);
 };
 
-class DIFRegistrationRIBObject: public BaseRIBObject {
+class UnderlayingRegistrationRIBObj: public rib::RIBObj {
 public:
-	DIFRegistrationRIBObject(IRIBDaemon * rib_daemon,
-				 const std::string& object_class,
-				 const std::string& object_name,
-				 const std::string& dif_name_);
-	const void* get_value() const;
-	void deleteObject(const void* objectValue);
-	std::string get_displayable_value();
+	UnderlayingRegistrationRIBObj(const std::string& dif_name_);
+	const std::string get_displayable_value() const;
+	const std::string& get_class() const {
+		return class_name;
+	};
+
+	void read(const rina::cdap_rib::con_handle_t &con,
+		  const std::string& fqn,
+		  const std::string& class_,
+		  const rina::cdap_rib::filt_info_t &filt,
+		  const int invoke_id,
+		  rina::cdap_rib::obj_info_t &obj_reply,
+		  rina::cdap_rib::res_info_t& res);
+
+	const static std::string class_name;
+	const static std::string object_name_prefix;
+	const static std::string parent_class_name;
+	const static std::string parent_object_name;
 
 private:
 	std::string dif_name;
 };
 
-class DIFRegistrationSetRIBObject: public BaseRIBObject {
+class UnderlayingFlowRIBObj: public rib::RIBObj {
 public:
-	static const std::string DIF_REGISTRATION_SET_RIB_OBJECT_CLASS;
-	static const std::string DIF_REGISTRATION_RIB_OBJECT_CLASS;
-	static const std::string DIF_REGISTRATION_SET_RIB_OBJECT_NAME;
+	UnderlayingFlowRIBObj(const rina::FlowInformation& flow_info);
+	const std::string get_displayable_value() const;
+	const std::string& get_class() const {
+		return class_name;
+	};
 
-	DIFRegistrationSetRIBObject(IRIBDaemon * rib_daemon);
-	const void* get_value() const;
-	void createObject(const std::string& objectClass,
-                          const std::string& objectName,
-                          const void* objectValue);
-};
+	void read(const rina::cdap_rib::con_handle_t &con,
+		  const std::string& fqn,
+		  const std::string& class_,
+		  const rina::cdap_rib::filt_info_t &filt,
+		  const int invoke_id,
+		  rina::cdap_rib::obj_info_t &obj_reply,
+		  rina::cdap_rib::res_info_t& res);
 
-class NMinusOneFlowRIBObject: public BaseRIBObject {
-public:
-	NMinusOneFlowRIBObject(IRIBDaemon * rib_daemon,
-			       const std::string& object_class,
-			       const std::string& object_name,
-			       const rina::FlowInformation& flow_info);
-	const void* get_value() const;
-	void deleteObject(const void* objectValue);
-	std::string get_displayable_value();
+	const static std::string class_name;
+	const static std::string object_name_prefix;
+	const static std::string parent_class_name;
+	const static std::string parent_object_name;
 
 private:
 	FlowInformation flow_information;
 };
 
-class NMinusOneFlowSetRIBObject: public BaseRIBObject {
+class UnderlayingDIFRIBObj: public rib::RIBObj {
 public:
-	static const std::string N_MINUS_ONE_FLOW_SET_RIB_OBJECT_CLASS;
-	static const std::string N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS;
-	static const std::string N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
+	UnderlayingDIFRIBObj(const rina::DIFProperties& dif_properties);
+	const std::string get_displayable_value() const;
+	const std::string& get_class() const {
+		return class_name;
+	};
 
-	NMinusOneFlowSetRIBObject(IRIBDaemon * rib_daemon);
-	const void* get_value() const;
-	void createObject(const std::string& objectClass,
-                          const std::string& objectName,
-                          const void* objectValue);
+	void read(const rina::cdap_rib::con_handle_t &con,
+		  const std::string& fqn,
+		  const std::string& class_,
+		  const rina::cdap_rib::filt_info_t &filt,
+		  const int invoke_id,
+		  rina::cdap_rib::obj_info_t &obj_reply,
+		  rina::cdap_rib::res_info_t& res);
+
+	const static std::string class_name;
+	const static std::string object_name_prefix;
+	const static std::string parent_class_name;
+	const static std::string parent_object_name;
+
+private:
+	DIFProperties dif_properties;
 };
+
+/// Encoder of the DIFProperties object
+class DIFPropertiesEncoder: public Encoder<DIFProperties> {
+public:
+	void encode(const DIFProperties &obj, rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj, DIFProperties &des_obj);
+};
+
+/// Encoder of the FlowInformation object
+class FlowInformationEncoder: public Encoder<FlowInformation> {
+public:
+	void encode(const FlowInformation &obj, rina::ser_obj_t& serobj);
+	void decode(const rina::ser_obj_t &serobj, FlowInformation &des_obj);
+};
+
 
 }
 

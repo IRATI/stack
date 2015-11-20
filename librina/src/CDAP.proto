@@ -1,4 +1,5 @@
-package rina.cdap.impl.googleprotobuf;
+package rina.messages;
+option optimize_for = LITE_RUNTIME;
 
 // Message types.
 enum opCode_t {
@@ -75,4 +76,12 @@ message CDAPMessage {
 	optional string srcApName = 26;			// Source Application name
 	optional string resultReason = 27;		// further explanation of result
 	optional int64 version = 28;			// For application use - RIB/class version.
+}
+
+message int_t {  //information to identify an int
+	required uint32 value = 1; 				//value of the integer
+}
+
+message string_t {  //information to identify an string
+	required string value = 1; 				//value of the string
 }

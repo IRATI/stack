@@ -31,8 +31,8 @@
 #include <librina/ipc-process.h>
 #include <librina/internal-events.h>
 #include <librina/irm.h>
+#include <librina/rib_v2.h>
 #include <librina/security-manager.h>
-
 #include "common/encoder.h"
 
 namespace rinad {
@@ -110,100 +110,18 @@ public:
 class IPCPEnrollmentTaskPS : public rina::IPolicySet {
 public:
         virtual ~IPCPEnrollmentTaskPS() {};
-        virtual void connect_received(const rina::CDAPMessage& cdapMessage,
-        			      rina::CDAPSessionDescriptor * session_descriptor) = 0;
+	virtual void connect_received(const rina::cdap::CDAPMessage& cdapMessage,
+			     	      const rina::cdap_rib::con_handle_t &con) = 0;
         virtual void connect_response_received(int result,
         				       const std::string& result_reason,
-        				       rina::CDAPSessionDescriptor * session_descriptor) = 0;
-        virtual void process_authentication_message(const rina::CDAPMessage& message,
-        					    rina::CDAPSessionDescriptor * session_descriptor) = 0;
+        				       const rina::cdap_rib::con_handle_t &con) = 0;
+        virtual void process_authentication_message(const rina::cdap::CDAPMessage& message,
+        					    const rina::cdap_rib::con_handle_t &con) = 0;
 	virtual void authentication_completed(int port_id, bool success) = 0;
         virtual void initiate_enrollment(const rina::NMinusOneFlowAllocatedEvent & event,
-        				 rina::EnrollmentRequest * request) = 0;
+        				 const rina::EnrollmentRequest& request) = 0;
         virtual void inform_ipcm_about_failure(IEnrollmentStateMachine * state_machine) = 0;
         virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
-};
-
-/// The object that contains all the information
-/// that is required to initiate an enrollment
-/// request (send as the objectvalue of a CDAP M_START
-/// message, as specified by the Enrollment spec)
-class EnrollmentInformationRequest {
-public:
-	EnrollmentInformationRequest() : address_(0),
-		allowed_to_start_early_(false) {};
-
-	/// The address of the IPC Process that requests
-	///to join a DIF
-	unsigned int address_;
-	std::list<rina::ApplicationProcessNamingInformation> supporting_difs_;
-	bool allowed_to_start_early_;
-};
-
-/// Encapsulates all the information required to manage a Flow
-class Flow {
-public:
-	enum IPCPFlowState {
-		EMPTY,
-		ALLOCATION_IN_PROGRESS,
-		ALLOCATED,
-		WAITING_2_MPL_BEFORE_TEARING_DOWN,
-		DEALLOCATED
-	};
-
-	Flow();
-	Flow(const Flow& flow);
-	~Flow();
-	rina::Connection * getActiveConnection();
-	std::string toString();
-
-	/// The application that requested the flow
-	rina::ApplicationProcessNamingInformation source_naming_info;
-
-	/// The destination application of the flow
-	rina::ApplicationProcessNamingInformation destination_naming_info;
-
-	/// The port-id returned to the Application process that requested the flow. This port-id is used for
-	/// the life of the flow.
-	unsigned int source_port_id;
-
-	/// The port-id returned to the destination Application process. This port-id is used for
-	// the life of the flow
-	unsigned int destination_port_id;
-
-	/// The address of the IPC process that is the source of this flow
-	unsigned int source_address;
-
-	/// The address of the IPC process that is the destination of this flow
-	unsigned int destination_address;
-
-	/// All the possible connections of this flow
-	std::list<rina::Connection*> connections;
-
-	/// The index of the connection that is currently Active in this flow
-	unsigned int current_connection_index;
-
-	/// The status of this flow
-	IPCPFlowState state;
-
-	/// The list of parameters from the AllocateRequest that generated this flow
-	rina::FlowSpecification flow_specification;
-
-	/// TODO this is just a placeHolder for this piece of data
-	char* access_control;
-
-	/// Maximum number of retries to create the flow before giving up.
-	unsigned int max_create_flow_retries;
-
-	/// The current number of retries
-	unsigned int create_flow_retries;
-
-	/// While the search rules that generate the forwarding table should allow for a
-	/// natural termination condition, it seems wise to have the means to enforce termination.
-	unsigned int hop_count;
-
-	///True if this IPC process is the source of the flow, false otherwise
-	bool source;
 };
 
 class IFlowAllocatorInstance;
@@ -271,7 +189,6 @@ public:
 	virtual void removeFlowAllocatorInstance(int portId) = 0;
 
         // Plugin support
-	virtual std::list<rina::QoSCube*> getQoSCubes() = 0;
 	virtual Flow * createFlow() = 0;
 	virtual void destroyFlow(Flow *) = 0;
 };
@@ -336,17 +253,23 @@ public:
 
 	/// Add an entry to the directory forwarding table
 	/// @param entry
-	virtual void addDFTEntry(rina::DirectoryForwardingTableEntry * entry) = 0;
+	virtual void addDFTEntries(const std::list<rina::DirectoryForwardingTableEntry>& entries,
+				   bool notify_neighs,
+				   std::list<int>& neighs_to_exclude) = 0;
 
 	/// Get an entry from the application name
 	/// @param apNamingInfo
 	/// @return
-	virtual rina::DirectoryForwardingTableEntry * getDFTEntry(
-			const rina::ApplicationProcessNamingInformation& apNamingInfo) = 0;
+	virtual rina::DirectoryForwardingTableEntry * getDFTEntry(const std::string& key) = 0;
+
+	virtual std::list<rina::DirectoryForwardingTableEntry> getDFTEntries() = 0;
 
 	/// Remove an entry from the directory forwarding table
 	/// @param apNamingInfo
-	virtual void removeDFTEntry(const rina::ApplicationProcessNamingInformation& apNamingInfo) = 0;
+	virtual void removeDFTEntry(const std::string& key,
+			 	    bool notify_neighs,
+			 	    bool remove_from_rib,
+			 	    std::list<int>& neighs_to_exclude) = 0;
 
 	/// Process an application registration request
 	/// @param event
@@ -362,6 +285,12 @@ public:
 
 	virtual rina::ApplicationRegistrationInformation
 		get_reg_app_info(const rina::ApplicationProcessNamingInformation name) = 0;
+
+	virtual std::list<rina::WhatevercastName> get_whatevercast_names() = 0;
+
+	virtual void add_whatevercast_name(rina::WhatevercastName * name) = 0;
+
+	virtual void remove_whatevercast_name(const std::string& name_key) = 0;
 };
 
 ///N-1 Flow Manager interface
@@ -424,7 +353,17 @@ public:
 			pduft_gen_ps(NULL){ };
 	virtual ~IResourceAllocator(){};
 	virtual INMinusOneFlowManager * get_n_minus_one_flow_manager() const = 0;
+	virtual std::list<rina::QoSCube*> getQoSCubes() = 0;
 	int set_pduft_gen_policy_set(const std::string& name);
+	virtual void addQoSCube(const rina::QoSCube& cube) = 0;
+
+	virtual std::list<rina::PDUForwardingTableEntry> get_pduft_entries() = 0;
+	/// This operation takes ownership of the entries
+	virtual void set_pduft_entries(const std::list<rina::PDUForwardingTableEntry*>& pduft) = 0;
+
+	virtual std::list<rina::RoutingTableEntry> get_rt_entries() = 0;
+	/// This operation takes ownership of the entries
+	virtual void set_rt_entries(const std::list<rina::RoutingTableEntry*>& rt) = 0;
 
 	IPDUFTGeneratorPs * pduft_gen_ps;
 };
@@ -475,35 +414,29 @@ class IPCPRIBDaemon;
 
 /// Base RIB Object. API for the create/delete/read/write/start/stop RIB
 /// functionality for certain objects (identified by objectNames)
-class BaseIPCPRIBObject: public rina::BaseRIBObject {
+class IPCPRIBObj: public rina::rib::RIBObj {
 public:
-	virtual ~BaseIPCPRIBObject(){};
-	BaseIPCPRIBObject(IPCProcess* ipc_process,
-                      const std::string& object_class,
-                      long object_instance,
-                      const std::string& object_name);
+	virtual ~IPCPRIBObj(){};
+	IPCPRIBObj(IPCProcess* ipc_process,
+                   const std::string& object_class);
 
 	IPCProcess * ipc_process_;
 	IPCPRIBDaemon * rib_daemon_;
 };
 
 /// Interface that provides the RIB Daemon API
-class IPCPRIBDaemon : public rina::RIBDaemon, public IPCProcessComponent {
+class IPCPRIBDaemon : public rina::rib::RIBDaemonAE, public IPCProcessComponent {
 public:
-	IPCPRIBDaemon() : wmpi(0) { };
+	IPCPRIBDaemon() { };
 	virtual ~IPCPRIBDaemon(){};
-
-	rina::WireMessageProviderInterface *wmpi;
 
 	/// Process a Query RIB Request from the IPC Manager
 	/// @param event
 	virtual void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event) = 0;
-	virtual void generateCDAPResponse(int invoke_id,
-			rina::CDAPSessionDescriptor * cdapSessDescr,
-			rina::CDAPMessage::Opcode opcode,
-			const std::string& obj_class,
-			const std::string& obj_name,
-			rina::RIBObjectValue& robject_value) = 0;
+	virtual const rina::rib::rib_handle_t & get_rib_handle() = 0;
+        virtual int64_t addObjRIB(const std::string& fqn,
+        			  rina::rib::RIBObj** obj) = 0;
+        virtual void removeObjRIB(const std::string& fqn) = 0;
 };
 
 /// IPC Process interface
@@ -514,8 +447,6 @@ public:
 	static const int DEFAULT_MAX_SDU_SIZE_IN_BYTES;
 
 	IDelimiter * delimiter_;
-	rina::IMasterEncoder * encoder_;
-	rina::CDAPSessionManagerInterface* cdap_session_manager_;
 	rina::InternalEventManager * internal_event_manager_;
 	IPCPEnrollmentTask * enrollment_task_;
 	IFlowAllocator * flow_allocator_;
@@ -531,62 +462,9 @@ public:
 	virtual void set_address(unsigned int address) = 0;
 	virtual const IPCProcessOperationalState& get_operational_state() const = 0;
 	virtual void set_operational_state(const IPCProcessOperationalState& operational_state) = 0;
-	virtual const rina::DIFInformation& get_dif_information() const = 0;
+	virtual rina::DIFInformation& get_dif_information() = 0;
 	virtual void set_dif_information(const rina::DIFInformation& dif_information) = 0;
-	virtual const std::list<rina::Neighbor*> get_neighbors() const = 0;
-};
-
-/// A simple RIB object that just acts as a wrapper. Represents an object in the RIB that just
-/// can be read or written, and whose read/write operations have no side effects other than
-/// updating the value of the object
-class SimpleIPCPRIBObject: public BaseIPCPRIBObject {
-public:
-        SimpleIPCPRIBObject(IPCProcess* ipc_process,
-                        const std::string& object_class,
-			const std::string& object_name,
-                        const void* object_value);
-	virtual const void* get_value() const;
-	virtual void        writeObject(const void* object);
-
-	/// Create has the semantics of update
-	virtual void createObject(const std::string& objectClass,
-                                  const std::string& objectName,
-                                  const void* objectValue);
-
-private:
-	const void* object_value_;
-};
-
-/// Class SimpleSetRIBObject. A RIB object that is a set and has no side effects
-class SimpleSetIPCPRIBObject: public SimpleIPCPRIBObject {
-public:
-        SimpleSetIPCPRIBObject(IPCProcess * ipc_process,
-                           const std::string& object_class,
-                           const std::string& set_member_object_class,
-                           const std::string& object_name);
-	void createObject(const std::string& objectClass,
-                          const std::string& objectName,
-                          const void* objectValue);
-
-private:
-	std::string set_member_object_class_;
-};
-
-/// Class SimpleSetMemberRIBObject. A RIB object that is member of a set
-class SimpleSetMemberIPCPRIBObject: public SimpleIPCPRIBObject {
-public:
-        SimpleSetMemberIPCPRIBObject(IPCProcess* ipc_process,
-                                 const std::string& object_class,
-                                 const std::string& object_name,
-                                 const void* object_value);
-	virtual void deleteObject(const void* objectValue);
-};
-
-class IPCMCDAPSessDesc : public rina::CDAPSessionDescriptor {
-public:
-	IPCMCDAPSessDesc(unsigned int seqnum) : rina::CDAPSessionDescriptor(),
-						 req_seqnum(seqnum) { }
-	unsigned int req_seqnum;
+	virtual const std::list<rina::Neighbor> get_neighbors() const = 0;
 };
 
 } //namespace rinad

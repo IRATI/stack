@@ -26,8 +26,8 @@
 #include <librina/logs.h>
 #include <librina/cdap_v2.h>
 #include <librina/common.h>
-#include <rinad/ipcm/encoders_mad.h>
-#include <rinad/ipcm/structures_mad.h>
+#include <rinad/common/encoders_mad.h>
+#include <rinad/common/structures_mad.h>
 
 #include "manager.h"
 
@@ -68,7 +68,7 @@ void ConnectionCallback::remote_read_result(
 	std::cout << "Query Rib operation returned result " << res.code_
 			<< std::endl;
 	std::string query_rib;
-	rinad::mad_manager::StringEncoder().decode(obj.value_,
+	rina::cdap::StringEncoder().decode(obj.value_,
 								query_rib);
 	std::cout << "QueryRIB:" << std::endl << query_rib << std::endl;
 }
@@ -93,7 +93,8 @@ void ManagerWorker::operate(rina::FlowInformation flow)
 	bool create_result = false;
         ConnectionCallback callback;
         std::cout << "cdap_prov created" << std::endl;
-        cdap::init(&callback, false);
+        rina::cdap_rib::concrete_syntax_t syntax;
+        cdap::init(&callback, syntax, false);
         cdap_prov_ = cdap::getProvider();
         // CACEP
         cacep(flow.portId);
@@ -122,7 +123,7 @@ void ManagerWorker::cacep(int port_id)
 {
 	char buffer[max_sdu_size_in_bytes];
 	int bytes_read = ipcManager->readSDU(port_id, buffer, max_sdu_size_in_bytes);
-	cdap_rib::ser_obj_t message;
+	ser_obj_t message;
 	message.message_ = buffer;
 	message.size_ = bytes_read;
 	cdap::getProvider()->process_message(message, port_id);
@@ -144,7 +145,7 @@ bool ManagerWorker::createIPCP_1(int port_id)
 	obj.class_ = "IPCProcess";
 	obj.inst_ = 0;
 	mad_manager::IPCPConfigEncoder().encode(ipc_config,
-								obj.value_);
+						obj.value_);
 	cdap_rib::flags_t flags;
 	flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
 
@@ -152,14 +153,17 @@ bool ManagerWorker::createIPCP_1(int port_id)
 	filt.filter_ = 0;
 	filt.scope_ = 0;
 
-	cdap_prov_->remote_create(port_id, obj, flags, filt);
+	cdap_rib::con_handle_t con;
+	con.port_id = port_id;
+
+	cdap_prov_->remote_create(con, obj, flags, filt, 28);
 	std::cout << "create IPC request CDAP message sent to port "
 			<< port_id << std::endl;
 
 	try {
 		int bytes_read = ipcManager->readSDU(port_id, buffer,
 							max_sdu_size_in_bytes);
-		cdap_rib::ser_obj_t message;
+		ser_obj_t message;
 		message.message_ = buffer;
 		message.size_ = bytes_read;
 		cdap_prov_->process_message(message, port_id);
@@ -201,14 +205,17 @@ bool ManagerWorker::createIPCP_2(int port_id) {
 	filt.filter_ = 0;
 	filt.scope_ = 0;
 
-	cdap_prov_->remote_create(port_id, obj, flags, filt);
+	cdap_rib::con_handle_t con;
+	con.port_id = port_id;
+
+	cdap_prov_->remote_create(con, obj, flags, filt, 34);
 	std::cout << "create IPC request CDAP message sent to port "
 			<< port_id << std::endl;
 
 	try {
 		int bytes_read = ipcManager->readSDU(port_id, buffer,
 							max_sdu_size_in_bytes);
-		cdap_rib::ser_obj_t message;
+		ser_obj_t message;
 		message.message_ = buffer;
 		message.size_ = bytes_read;
 		cdap_prov_->process_message(message, port_id);
@@ -238,7 +245,7 @@ bool ManagerWorker::createIPCP_3(int port_id) {
 	obj.class_ = "IPCProcess";
 	obj.inst_ = 0;
 	mad_manager::IPCPConfigEncoder().encode(ipc_config,
-								obj.value_);
+						obj.value_);
 	mad_manager::ipcp_config_t object;
 	mad_manager::IPCPConfigEncoder().decode(obj.value_, object);
 
@@ -249,14 +256,17 @@ bool ManagerWorker::createIPCP_3(int port_id) {
 	filt.filter_ = 0;
 	filt.scope_ = 0;
 
-	cdap_prov_->remote_create(port_id, obj, flags, filt);
+	cdap_rib::con_handle_t con;
+	con.port_id = port_id;
+
+	cdap_prov_->remote_create(con, obj, flags, filt, 67);
 	std::cout << "create IPC request CDAP message sent to port "
 			<< port_id << std::endl;
 
 	try {
 		int bytes_read = ipcManager->readSDU(port_id, buffer,
 							max_sdu_size_in_bytes);
-		cdap_rib::ser_obj_t message;
+		ser_obj_t message;
 		message.message_ = buffer;
 		message.size_ = bytes_read;
 		cdap_prov_->process_message(message, port_id);
@@ -284,13 +294,16 @@ void ManagerWorker::queryRIB(int port_id, std::string name)
 	filt.filter_ = 0;
 	filt.scope_ = 0;
 
-        cdap_prov_->remote_read(port_id, obj, flags, filt);
+	cdap_rib::con_handle_t con;
+	con.port_id = port_id;
+
+        cdap_prov_->remote_read(con, obj, flags, filt, 89);
         std::cout << "Read RIBDaemon request CDAP message sent" << std::endl;
 
         int bytes_read = ipcManager->readSDU(port_id,
         				     buffer,
         				     max_sdu_size_in_bytes);
-        cdap_rib::ser_obj_t message;
+        ser_obj_t message;
         message.message_ = buffer;
         message.size_ = bytes_read;
         cdap_prov_->process_message(message, port_id);

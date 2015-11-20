@@ -449,21 +449,18 @@ void IPCMIPCProcess::pluginLoad(const std::string& name, bool load,
 	proxy_->pluginLoad(name, load, opaque);
 }
 
-void IPCMIPCProcess::forwardCDAPMessage(const rina::CDAPMessage& msg,
+void IPCMIPCProcess::forwardCDAPMessage(const rina::cdap::CDAPMessage& msg,
 					unsigned int opaque)
 {
-	rina::WireMessageProviderInterface * wmpi =
-		rina::WireMessageProviderFactory().createWireMessageProvider();
-	const rina::SerializedObject * so;
-	stringstream ss;
+	rina::ser_obj_t encoded_msg;
+	rina::cdap_rib::concrete_syntax_t syntax;
+	rina::cdap::CDAPMessageEncoder encoder(syntax);
 
-	so = wmpi->serializeMessage(msg);
-	delete wmpi;
+	encoder.encode(msg, encoded_msg);
 
-	proxy_->forwardCDAPMessage(*so, opaque);
-	delete so;
+	proxy_->forwardCDAPMessage(encoded_msg,
+				   opaque);
 }
-
 
 //
 // IPCM IPC process factory
