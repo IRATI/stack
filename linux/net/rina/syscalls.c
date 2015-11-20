@@ -28,38 +28,23 @@
 
 #include "logs.h"
 #include "utils.h"
-#include "personality.h"
+#include "kipcm.h"
 #include "debug.h"
 #include "ipcp-utils.h"
 #include "du.h"
 
-#define CALL_PERSONALITY(RETVAL, PERS, HOOK, ARGS...)			\
-	do {								\
-		LOG_DBG("Handling personality hook %s",			\
-			__stringify(HOOK));				\
-									\
-		if (PERS == NULL) {					\
-			LOG_ERR("No personality registered");		\
-			return -1;					\
-		}							\
-									\
-		ASSERT(PERS);						\
-		ASSERT(PERS->ops);					\
-									\
-		if (PERS->ops->HOOK == NULL) {				\
-			LOG_ERR("Personality has no %s hook",		\
-				__stringify(HOOK));			\
-			return -1;					\
-		}							\
-									\
-		LOG_DBG("Calling personality hook %s",			\
-			__stringify(HOOK));				\
-									\
-		RETVAL = PERS->ops->HOOK(PERS->data, ##ARGS);		\
+#define CALL_KIPCM(RETVAL, HOOK, ARGS...)			\
+	do {							\
+		LOG_DBG("Handling KIPCM hook %s",		\
+			__stringify(HOOK));			\
+								\
+		ASSERT(default_kipcm);				\
+								\
+		LOG_DBG("Calling KIPCM hook %s",		\
+			__stringify(HOOK));			\
+								\
+		RETVAL = kipcm_##HOOK(default_kipcm, ##ARGS);	\
 	} while (0)
-
-#define CALL_DEFAULT_PERSONALITY(RETVAL, HOOK, ARGS...)			\
-	CALL_PERSONALITY(RETVAL, default_personality, HOOK, ##ARGS)
 
 #ifdef CONFIG_RINA_SYSCALLS_DEBUG
 #define SYSCALL_DUMP_ENTER LOG_DBG("Entered %s syscall body", __func__)
@@ -135,7 +120,7 @@ SYSCALL_DEFINE6(ipc_create,
 	LOG_DBG("  Entity instance  = %s", tn->entity_instance);
 	LOG_DBG("  Type		    = %s", tt);
 
-	CALL_DEFAULT_PERSONALITY(retval, ipc_create, tn, id, tt);
+	CALL_KIPCM(retval, ipc_create, tn, id, tt);
 
 	name_destroy(tn);
 	rkfree(tt);
@@ -158,7 +143,7 @@ SYSCALL_DEFINE1(ipc_destroy,
 
 	SYSCALL_DUMP_ENTER;
 
-	CALL_DEFAULT_PERSONALITY(retval, ipc_destroy, id);
+	CALL_KIPCM(retval, ipc_destroy, id);
 
 	SYSCALL_DUMP_EXIT;
 
@@ -188,7 +173,7 @@ SYSCALL_DEFINE3(sdu_read,
 
 	tmp = NULL;
 
-	CALL_DEFAULT_PERSONALITY(retval, sdu_read, id, &tmp);
+	CALL_KIPCM(retval, sdu_read, id, &tmp);
 	/* Taking ownership from the internal layers */
 
 	LOG_DBG("Personality returned value %zd", retval);
@@ -282,7 +267,7 @@ SYSCALL_DEFINE3(sdu_write,
 	ASSERT(sdu_is_ok(sdu));
 
 	/* Passing ownership to the internal layers */
-	CALL_DEFAULT_PERSONALITY(retval, sdu_write, id, sdu);
+	CALL_KIPCM(retval, sdu_write, id, sdu);
 	if (retval < 0) {
 		SYSCALL_DUMP_EXIT;
 		/* NOTE: Do not destroy SDU, ownership isn't our anymore */
@@ -329,7 +314,7 @@ SYSCALL_DEFINE3(allocate_port,
 		return -EFAULT;
 	}
 
-	CALL_DEFAULT_PERSONALITY(retval, flow_create, id, tname);
+	CALL_KIPCM(retval, flow_create, id, tname);
 
 	SYSCALL_DUMP_EXIT;
 
@@ -351,7 +336,7 @@ SYSCALL_DEFINE2(deallocate_port,
 
 	SYSCALL_DUMP_ENTER;
 
-	CALL_DEFAULT_PERSONALITY(retval, flow_destroy, ipcp_id, id);
+	CALL_KIPCM(retval, flow_destroy, ipcp_id, id);
 
 	SYSCALL_DUMP_EXIT;
 
@@ -378,7 +363,7 @@ SYSCALL_DEFINE3(flow_io_ctl,
 
 	switch (cmd) {
 	case FLOW_F_GETFL: /* GET FLOW FLAGS */
-		CALL_DEFAULT_PERSONALITY(retval, flow_opts, pid);
+		CALL_KIPCM(retval, flow_opts, pid);
 		LOG_DBG("Got I/O options for port-id = %d: %o",
 			pid, (uint) retval);
 
@@ -386,7 +371,7 @@ SYSCALL_DEFINE3(flow_io_ctl,
 
 		return retval;
 	case FLOW_F_SETFL: /* SET FLOW FLAGS */
-		CALL_DEFAULT_PERSONALITY(retval,
+		CALL_KIPCM(retval,
 					 flow_opts_set,
 					 pid,
 					 (flow_opts_t) arg);
@@ -428,7 +413,7 @@ SYSCALL_DEFINE4(management_sdu_read,
 
 	tmp = NULL;
 
-	CALL_DEFAULT_PERSONALITY(retval, mgmt_sdu_read, ipcp_id, &tmp);
+	CALL_KIPCM(retval, mgmt_sdu_read, ipcp_id, &tmp);
 	/* Taking ownership from the internal layers */
 
 	LOG_DBG("Personality returned value %zd", retval);
@@ -539,7 +524,7 @@ SYSCALL_DEFINE5(management_sdu_write,
 	ASSERT(sdu_wpi_is_ok(sdu_wpi));
 
 	/* Passing ownership to the internal layers */
-	CALL_DEFAULT_PERSONALITY(retval, mgmt_sdu_write, ipcp_id, sdu_wpi);
+	CALL_KIPCM(retval, mgmt_sdu_write, ipcp_id, sdu_wpi);
 	if (retval) {
 		SYSCALL_DUMP_EXIT;
 		/* NOTE: Do not destroy SDU, ownership isn't our anymore */

@@ -26,6 +26,8 @@
 #include "dtp-ps.h"
 #include "dtp.h"
 
+struct ps_base * dtp_ps_default_create(struct rina_component *component);
+void dtp_ps_default_destroy(struct ps_base *bps);
 int default_transmission_control(struct dtp_ps * ps, struct pdu * pdu);
 
 int default_closed_window(struct dtp_ps * ps, struct pdu * pdu);

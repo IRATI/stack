@@ -31,24 +31,24 @@
 #include "kfa.h"
 
 struct kipcm;
-
+extern struct kipcm * default_kipcm;
 /*
  * The following functions represent the KIPCM northbound interface
  */
 
-struct kipcm * kipcm_create(struct kobject * parent, struct rnl_set * set);
-int            kipcm_destroy(struct kipcm * kipcm);
+int kipcm_init(struct kobject * parent);
+int kipcm_fini(struct kipcm * kipcm);
 
 /*
  * NOTE: factory_name must be the string published by the choosen IPC
  *       factory (module). if type is NULL a default factory will be assumed
  */
-int            kipcm_ipcp_create(struct kipcm *      kipcm,
-                                 const struct name * name,
-                                 ipc_process_id_t    id,
-                                 const char *        factory_name);
-int            kipcm_ipcp_destroy(struct kipcm *   kipcm,
-                                  ipc_process_id_t id);
+int            kipcm_ipc_create(struct kipcm *      kipcm,
+                                const struct name * name,
+                                ipc_process_id_t    id,
+                                const char *        factory_name);
+int            kipcm_ipc_destroy(struct kipcm *   kipcm,
+                                 ipc_process_id_t id);
 
 /* If successful: takes the ownership of the SDU */
 int            kipcm_sdu_write(struct kipcm * kipcm,

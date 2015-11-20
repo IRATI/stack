@@ -27,8 +27,7 @@
 
 #include "logs.h"
 #include "rds/rmem.h"
-#include "sdup.h"
-#include "sdup-errc-ps.h"
+#include "sdup-errc-ps-default.h"
 #include "debug.h"
 
 static bool pdu_ser_crc32(struct pdu_ser * pdu,
@@ -86,6 +85,7 @@ int default_sdup_add_error_check_policy(struct sdup_errc_ps * ps,
 
 	return 0;
 }
+EXPORT_SYMBOL(default_sdup_add_error_check_policy);
 
 int default_sdup_check_error_check_policy(struct sdup_errc_ps * ps,
 					  struct pdu_ser * pdu)
@@ -122,9 +122,9 @@ int default_sdup_check_error_check_policy(struct sdup_errc_ps * ps,
 
 	return 0;
 }
+EXPORT_SYMBOL(default_sdup_check_error_check_policy);
 
-static struct ps_base *
-sdup_errc_ps_default_create(struct rina_component * component)
+struct ps_base * sdup_errc_ps_default_create(struct rina_component * component)
 {
 	struct sdup_comp * sdup_comp;
 	struct sdup_errc_ps * ps;
@@ -147,9 +147,9 @@ sdup_errc_ps_default_create(struct rina_component * component)
 
 	return &ps->base;
 }
+EXPORT_SYMBOL(sdup_errc_ps_default_create);
 
-static void
-sdup_errc_ps_default_destroy(struct ps_base * bps)
+void sdup_errc_ps_default_destroy(struct ps_base * bps)
 {
 	struct sdup_errc_ps *ps = container_of(bps, struct sdup_errc_ps, base);
 
@@ -157,10 +157,4 @@ sdup_errc_ps_default_destroy(struct ps_base * bps)
 		rkfree(ps);
 	}
 }
-
-struct ps_factory default_sdup_errc_ps_factory = {
-	.owner   = THIS_MODULE,
-	.create  = sdup_errc_ps_default_create,
-	.destroy = sdup_errc_ps_default_destroy,
-};
-EXPORT_SYMBOL(default_sdup_errc_ps_factory);
+EXPORT_SYMBOL(sdup_errc_ps_default_destroy);

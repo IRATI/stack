@@ -500,7 +500,7 @@ void IPCProcessProxy::forwardCDAPMessage(const ser_obj_t& sermsg,
 const std::string IPCProcessFactory::unknown_ipc_process_error =
 		"Could not find an IPC Process with the provided id";
 const std::string IPCProcessFactory::path_to_ipc_process_types =
-		"/sys/rina/personalities/default/ipcp-factories/";
+		"/sys/rina/ipcp-factories/";
 const std::string IPCProcessFactory::normal_ipc_process_type =
 		"normal";
 

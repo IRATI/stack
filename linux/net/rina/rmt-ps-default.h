@@ -27,6 +27,8 @@
 #include "rmt.h"
 #include "rmt-ps.h"
 
+struct ps_base * rmt_ps_default_create(struct rina_component *component);
+void rmt_ps_default_destroy(struct ps_base *bps);
 int default_rmt_q_create_policy(struct rmt_ps      *ps,
 				struct rmt_n1_port *n1_port);
 int default_rmt_q_destroy_policy(struct rmt_ps      *ps,
