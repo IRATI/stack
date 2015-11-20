@@ -956,6 +956,9 @@ DataTransferConstants::DataTransferConstants() {
 	max_pdu_size_ = 0;
 	dif_integrity_ = false;
 	max_pdu_lifetime_ = 0;
+	rate_length_ = 0;
+	frame_length_ = 0;
+	ctrl_sequence_number_length_ = 0;
 }
 
 unsigned short DataTransferConstants::get_address_length() const {

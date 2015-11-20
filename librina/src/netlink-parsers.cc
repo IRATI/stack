@@ -3936,8 +3936,6 @@ int putDataTransferConstantsObject(nl_msg* netlinkMessage,
         NLA_PUT_U16(netlinkMessage, DTC_ATTR_CEP_ID, object.get_cep_id_length());
         NLA_PUT_U16(netlinkMessage, DTC_ATTR_SEQ_NUM,
                         object.get_sequence_number_length());
-        NLA_PUT_U16(netlinkMessage, DTC_ATTR_CTRL_SEQ_NUM,
-                        object.get_ctrl_sequence_number_length());
         NLA_PUT_U16(netlinkMessage, DTC_ATTR_ADDRESS,
                         object.get_address_length());
         NLA_PUT_U16(netlinkMessage, DTC_ATTR_LENGTH, object.get_length_length());
@@ -3949,6 +3947,8 @@ int putDataTransferConstantsObject(nl_msg* netlinkMessage,
                                 object.get_rate_length());
         NLA_PUT_U16(netlinkMessage, DTC_ATTR_FRAME,
                                 object.get_frame_length());
+        NLA_PUT_U16(netlinkMessage, DTC_ATTR_CTRL_SEQ_NUM,
+                        object.get_ctrl_sequence_number_length());
         if (object.is_dif_integrity()){
                 NLA_PUT_FLAG(netlinkMessage, DTC_ATTR_DIF_INTEGRITY);
         }
@@ -6612,6 +6612,9 @@ DataTransferConstants * parseDataTransferConstantsObject(nlattr *nested) {
         attr_policy[DTC_ATTR_SEQ_NUM].type = NLA_U16;
         attr_policy[DTC_ATTR_SEQ_NUM].minlen = 2;
         attr_policy[DTC_ATTR_SEQ_NUM].maxlen = 2;
+        attr_policy[DTC_ATTR_CTRL_SEQ_NUM].type = NLA_U16;
+        attr_policy[DTC_ATTR_CTRL_SEQ_NUM].minlen = 2;
+        attr_policy[DTC_ATTR_CTRL_SEQ_NUM].maxlen = 2;
         attr_policy[DTC_ATTR_ADDRESS].type = NLA_U16;
         attr_policy[DTC_ATTR_ADDRESS].minlen = 2;
         attr_policy[DTC_ATTR_ADDRESS].maxlen = 2;
