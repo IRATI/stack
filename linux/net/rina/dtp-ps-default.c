@@ -84,6 +84,7 @@ int
 default_closed_window(struct dtp_ps * ps, struct pdu * pdu)
 {
         struct dtp * dtp = ps->dm;
+        struct dtcp * dtcp;
         struct cwq * cwq;
         struct dt *  dt;
         uint_t       max_len;
@@ -102,6 +103,9 @@ default_closed_window(struct dtp_ps * ps, struct pdu * pdu)
         dt = dtp_dt(dtp);
         ASSERT(dt);
 
+        dtcp = dt_dtcp(dt);
+        ASSERT(dtcp);
+
         cwq = dt_cwq(dt);
         if (!cwq) {
                 LOG_ERR("Failed to get cwq");
@@ -113,29 +117,30 @@ default_closed_window(struct dtp_ps * ps, struct pdu * pdu)
 
         ASSERT(dtp);
 
-        max_len = dtcp_max_closed_winq_length(dtcp_config_get(dt_dtcp(dt)));
-        if (cwq_size(cwq) < max_len - 1) {
-                if (cwq_push(cwq, pdu)) {
-                        LOG_ERR("Failed to push into cwq");
-                        return -1;
-                }
+	max_len = dtcp_max_closed_winq_length(dtcp_config_get(dtcp));
 
-                return 0;
-        }
+	if (max_len != 0 && (cwq_size(cwq) < max_len - 1)) {
+		if (cwq_push(cwq, pdu)) {
+			LOG_ERR("Failed to push into cwq");
+			return -1;
+		}
 
-        ASSERT(ps->flow_control_overrun);
+		return 0;
+	}
 
-        if (ps->flow_control_overrun(ps, pdu)) {
-                LOG_ERR("Failed Flow Control Overrun");
-                return -1;
-        }
+	ASSERT(ps->snd_flow_control_overrun);
 
-        return 0;
+	if (ps->snd_flow_control_overrun(ps, pdu)) {
+		LOG_ERR("Failed Flow Control Overrun");
+		return -1;
+	}
+
+	return 0;
 }
 
 int
-default_flow_control_overrun(struct dtp_ps * ps,
-                             struct pdu *    pdu)
+default_snd_flow_control_overrun(struct dtp_ps * ps,
+                            struct pdu *    pdu)
 {
         struct cwq * cwq;
         struct dt *  dt;
@@ -168,6 +173,8 @@ default_flow_control_overrun(struct dtp_ps * ps,
                 LOG_ERR("Failed to push into cwq");
                 return -1;
         }
+
+        LOG_DBG("rbfc Disabling the write on port...");
 
         if (efcp_disable_write(dt_efcp(dt)))
                 return -1;
@@ -297,6 +304,12 @@ default_sender_inactivity_timer(struct dtp_ps * ps)
         return 0;
 }
 
+bool default_reconcile_flow_conflict(struct dtp_ps * ps)
+{
+	LOG_DBG("Reconciling window and rate flow controls...");
+        return true;
+}
+
 static struct ps_base *
 dtp_ps_default_create(struct rina_component * component)
 {
@@ -313,10 +326,12 @@ dtp_ps_default_create(struct rina_component * component)
 
         ps->transmission_control        = default_transmission_control;
         ps->closed_window               = default_closed_window;
-        ps->flow_control_overrun        = default_flow_control_overrun;
+        ps->snd_flow_control_overrun    = default_snd_flow_control_overrun;
+        ps->rcv_flow_control_overrun    = NULL;
         ps->initial_sequence_number     = default_initial_sequence_number;
         ps->receiver_inactivity_timer   = default_receiver_inactivity_timer;
         ps->sender_inactivity_timer     = default_sender_inactivity_timer;
+        ps->reconcile_flow_conflict     = default_reconcile_flow_conflict;
 
         /* Just zero here. These fields are really initialized by
          * dtp_select_policy_set. */
