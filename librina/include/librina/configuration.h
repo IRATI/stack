@@ -586,6 +586,12 @@ public:
         void set_qos_id_length(unsigned short qos_id_length);
         unsigned short get_sequence_number_length() const;
         void set_sequence_number_length(unsigned short sequence_number_length);
+        unsigned short get_ctrl_sequence_number_length() const;
+        void set_ctrl_sequence_number_length(unsigned short ctrl_sequence_number_length);
+        unsigned short get_rate_length() const;
+        void set_rate_length(unsigned short rate_length);
+        unsigned short get_frame_length() const;
+        void set_frame_length(unsigned short frame_length);
 #endif
         bool isInitialized();
         const std::string toString();
@@ -602,6 +608,10 @@ public:
         /// The length of the sequence number field in the DTP PCI, in bytes
         unsigned short sequence_number_length_;
 
+        /// The length of the control sequence number field in the DTCP PCI, in
+	// bytes
+        unsigned short ctrl_sequence_number_length_;
+
         /// The length of the address field in the DTP PCI, in bytes
         unsigned short address_length_;
 
@@ -610,6 +620,12 @@ public:
 
         /// The maximum length allowed for a PDU in this DIF, in bytes
         unsigned int max_pdu_size_;
+
+        /// The length of the rate field in the DTP PCI, in bytes
+        unsigned short rate_length_;
+
+        /// The length of the frame field in the DTP PCI, in bytes
+        unsigned short frame_length_;
 
         /// True if the PDUs in this DIF have CRC, TTL, and/or encryption. Since
         /// headers are encrypted, not just user data, if any flow uses encryption,

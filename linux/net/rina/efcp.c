@@ -291,6 +291,7 @@ cep_id_t efcp_dst_cep_id(struct efcp * efcp)
 
 address_t efcp_src_addr(struct efcp * efcp)
 { return connection_src_addr(efcp->connection); }
+EXPORT_SYMBOL(efcp_src_addr);
 
 address_t efcp_dst_addr(struct efcp * efcp)
 { return connection_dst_addr(efcp->connection); }
@@ -658,7 +659,8 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 }
         }
 
-        if (dtcp_window_based_fctrl(dtcp_cfg)) {
+        if (dtcp_window_based_fctrl(dtcp_cfg) ||
+            dtcp_rate_based_fctrl(dtcp_cfg)) {
                 cwq = cwq_create();
                 if (!cwq) {
                         LOG_ERR("Failed to create closed window queue");

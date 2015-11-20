@@ -136,6 +136,8 @@ void parse_flow_ctrl(const Json::Value  root,
                                      "rateReductionPolicy",
                                      rfc.rate_reduction_policy_);
 
+                        fc.rate_based_config_ = rfc;
+
                 }
 
                 fc.sent_bytes_threshold_ = flow_ctrl
@@ -560,6 +562,14 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 		(dt_const
 				.get("lengthLength", 0)
 				.asUInt());
+		dt.rate_length_ = static_cast<unsigned short>
+		(dt_const
+				.get("rateLength", 0)
+				.asUInt());
+		dt.frame_length_ = static_cast<unsigned short>
+		(dt_const
+				.get("frameLength", 0)
+				.asUInt());
 		dt.max_pdu_lifetime_ = dt_const
 				.get("maxPduLifetime", 0)
 				.asUInt();
@@ -579,6 +589,11 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 				static_cast<unsigned short>
 		(dt_const
 				.get("sequenceNumberLength", 0)
+				.asUInt());
+		dt.ctrl_sequence_number_length_ =
+				static_cast<unsigned short>
+		(dt_const
+				.get("ctrlSequenceNumberLength", 0)
 				.asUInt());
 		dif_template->dataTransferConstants = dt;
 	}

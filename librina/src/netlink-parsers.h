@@ -457,10 +457,13 @@ enum DataTransferConstantsAttributes {
         DTC_ATTR_PORT_ID,
         DTC_ATTR_CEP_ID,
         DTC_ATTR_SEQ_NUM,
+        DTC_ATTR_CTRL_SEQ_NUM,
         DTC_ATTR_ADDRESS,
         DTC_ATTR_LENGTH,
         DTC_ATTR_MAX_PDU_SIZE,
         DTC_ATTR_MAX_PDU_LIFE,
+        DTC_ATTR_RATE,
+        DTC_ATTR_FRAME,
         DTC_ATTR_DIF_INTEGRITY,
         __DTC_ATTR_MAX,
 };
