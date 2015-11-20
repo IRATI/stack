@@ -8,6 +8,8 @@
  * kind, whether express or implied.
  */
 
+#include <dt-bindings/media/omap3-isp.h>
+
 #include "omap3.dtsi"
 
 / {
@@ -69,6 +71,21 @@
 			pinctrl-single,register-width = <16>;
 			pinctrl-single,function-mask = <0xff1f>;
 		};
+
+		isp: isp@480bc000 {
+			compatible = "ti,omap3-isp";
+			reg = <0x480bc000 0x12fc
+			       0x480bd800 0x0600>;
+			interrupts = <24>;
+			iommus = <&mmu_isp>;
+			syscon = <&scm_conf 0x2f0>;
+			ti,phy-type = <OMAP3ISP_PHY_TYPE_CSIPHY>;
+			#clock-cells = <1>;
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+		};
 	};
 };
 
@@ -76,6 +93,17 @@
 &venc {
 	clocks = <&dss_tv_fck>, <&dss_96m_fck>;
 	clock-names = "fck", "tv_dac_clk";
+};
+
+&ssi {
+	status = "ok";
+
+	clocks = <&ssi_ssr_fck>,
+		 <&ssi_sst_fck>,
+		 <&ssi_ick>;
+	clock-names = "ssi_ssr_fck",
+		      "ssi_sst_fck",
+		      "ssi_ick";
 };
 
 /include/ "omap34xx-omap36xx-clocks.dtsi"

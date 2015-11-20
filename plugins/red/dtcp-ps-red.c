@@ -28,7 +28,6 @@
 #include "rds/rmem.h"
 #include "dtcp-ps.h"
 #include "dtcp-conf-utils.h"
-#include "dtcp-ps-common.h"
 #include "policies.h"
 #include "logs.h"
 #include "dtcp-ps-debug.h"
@@ -54,25 +53,6 @@ struct red_dtcp_ps_data {
 	struct red_dtcp_debug *debug;
 #endif
 };
-
-static int
-red_lost_control_pdu(struct dtcp_ps * ps)
-{ return common_lost_control_pdu(ps); }
-
-static int red_rcvr_ack(struct dtcp_ps * ps, const struct pci * pci)
-{ return common_rcvr_ack(ps, pci); }
-
-static int
-red_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num)
-{ return common_sender_ack(ps, seq_num); }
-
-static int
-red_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
-{ return common_sending_ack(ps, seq); }
-
-static int
-red_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
-{ return common_receiving_flow_control(ps, pci); }
 
 static int
 red_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
@@ -122,38 +102,6 @@ red_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         return 0;
 }
 
-static int
-red_rate_reduction(struct dtcp_ps * ps)
-{ return common_rate_reduction(ps); }
-
-static int dtcp_ps_red_set_policy_set_param(struct ps_base * bps,
-                                            const char    * name,
-                                            const char    * value)
-{
-        struct dtcp_ps *ps = container_of(bps, struct dtcp_ps, base);
-        struct red_dtcp_ps_data * data = ps->priv;
-
-        if (!ps || ! data) {
-                LOG_ERR("Wrong PS or parameters to set");
-                return -1;
-        }
-
-        if (!name) {
-                LOG_ERR("Null parameter name");
-                return -1;
-        }
-
-        if (!value) {
-                LOG_ERR("Null parameter value");
-                return -1;
-        }
-
-        return 0;
-}
-
-static int red_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
-{ return common_rtt_estimator(ps, sn); }
-
 static struct ps_base *
 dtcp_ps_red_create(struct rina_component * component)
 {
@@ -177,25 +125,25 @@ dtcp_ps_red_create(struct rina_component * component)
 
 	spin_lock_init(&data->lock);
 
-        ps->base.set_policy_set_param   = dtcp_ps_red_set_policy_set_param;
+        ps->base.set_policy_set_param   = NULL; /* default */
         ps->dm                          = dtcp;
         ps->priv                        = data;
 
         ps->flow_init                   = NULL;
-        ps->lost_control_pdu            = red_lost_control_pdu;
-        ps->rtt_estimator               = red_rtt_estimator;
+        ps->lost_control_pdu            = NULL; /* default */
+        ps->rtt_estimator               = NULL; /* default */
         ps->retransmission_timer_expiry = NULL;
         ps->received_retransmission     = NULL;
-        ps->sender_ack                  = red_sender_ack;
-        ps->sending_ack                 = red_sending_ack;
+        ps->sender_ack                  = NULL; /* default */
+        ps->sending_ack                 = NULL; /* default */
         ps->receiving_ack_list          = NULL;
         ps->initial_rate                = NULL;
-        ps->receiving_flow_control      = red_receiving_flow_control;
+        ps->receiving_flow_control      = NULL; /* default */
         ps->update_credit               = NULL;
         ps->reconcile_flow_conflict     = NULL;
-        ps->rcvr_ack                    = red_rcvr_ack,
+        ps->rcvr_ack                    = NULL; /* default */
         ps->rcvr_flow_control           = red_rcvr_flow_control;
-        ps->rate_reduction              = red_rate_reduction;
+        ps->rate_reduction              = NULL; /* default */
         ps->rcvr_control_ack            = NULL;
         ps->no_rate_slow_down           = NULL;
         ps->no_override_default_peak    = NULL;

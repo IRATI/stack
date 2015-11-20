@@ -36,6 +36,7 @@
 #include "dtp-conf-utils.h"
 #include "dtcp-conf-utils.h"
 #include "policies.h"
+#include "sdup.h"
 
 /*
  * FIXME: I suppose these functions are internal (at least for the time being)
@@ -327,14 +328,17 @@ rnl_ipcp_select_policy_set_req_msg_attrs_create(void)
         return tmp;
 }
 
-static struct rnl_ipcp_enable_encrypt_req_msg_attrs *
-rnl_ipcp_enable_encryption_req_msg_attrs_create(void)
+static struct rnl_ipcp_update_crypto_state_req_msg_attrs *
+rnl_ipcp_update_crypto_state_req_msg_attrs_create(void)
 {
-        struct rnl_ipcp_enable_encrypt_req_msg_attrs * tmp;
+        struct rnl_ipcp_update_crypto_state_req_msg_attrs * tmp;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if  (!tmp)
                 return NULL;
+
+        tmp->port_id = 0;
+        tmp->state = NULL;
 
         return tmp;
 }
@@ -465,9 +469,9 @@ struct rnl_msg * rnl_msg_create(enum rnl_msg_attr_type type)
                         return NULL;
                 }
                 break;
-        case RNL_MSG_ATTRS_ENABLE_ENCRYPTION_REQUEST:
+        case RNL_MSG_ATTRS_UPDATE_CRYPTO_STATE_REQUEST:
                 tmp->attrs =
-                        rnl_ipcp_enable_encryption_req_msg_attrs_create();
+                	rnl_ipcp_update_crypto_state_req_msg_attrs_create();
                 if (!tmp->attrs) {
                         rkfree(tmp);
                         return NULL;
@@ -716,20 +720,45 @@ rnl_ipcp_select_policy_set_msg_attrs_destroy(
         return 0;
 }
 
+static void sdup_crypto_state_destroy(struct sdup_crypto_state * state)
+{
+	if (!state)
+		return;
+
+	if (state->mac_key_tx)
+		buffer_destroy(state->mac_key_tx);
+
+	if (state->mac_key_rx)
+		buffer_destroy(state->mac_key_rx);
+
+	if (state->encrypt_key_tx)
+		buffer_destroy(state->encrypt_key_tx);
+
+	if (state->encrypt_key_rx)
+		buffer_destroy(state->encrypt_key_rx);
+
+	if (state->iv_tx)
+		buffer_destroy(state->iv_tx);
+
+	if (state->iv_rx)
+		buffer_destroy(state->iv_rx);
+
+	rkfree(state);
+}
+
 static int
-rnl_ipcp_enable_encryption_msg_attrs_destroy(
-                struct rnl_ipcp_enable_encrypt_req_msg_attrs * attrs)
+rnl_ipcp_update_crypto_state_msg_attrs_destroy(
+                struct rnl_ipcp_update_crypto_state_req_msg_attrs * attrs)
 {
         if (!attrs)
                 return -1;
 
-        if (attrs->encrypt_key) {
-        	buffer_destroy(attrs->encrypt_key);
-        }
+        if (attrs->state)
+        	sdup_crypto_state_destroy(attrs->state);
 
         rkfree(attrs);
 
-        LOG_DBG("rnl_ipcp_enable_encrypt_req_msg_attrs destroyed correctly");
+        LOG_DBG("rnl_ipcp_update_crypto_state_req_msg_attrs destroyed correctly");
 
         return 0;
 }
@@ -782,8 +811,8 @@ int rnl_msg_destroy(struct rnl_msg * msg)
         case RNL_MSG_ATTRS_SELECT_POLICY_SET_REQUEST:
                 rnl_ipcp_select_policy_set_msg_attrs_destroy(msg->attrs);
                 break;
-        case RNL_MSG_ATTRS_ENABLE_ENCRYPTION_REQUEST:
-                rnl_ipcp_enable_encryption_msg_attrs_destroy(msg->attrs);
+        case RNL_MSG_ATTRS_UPDATE_CRYPTO_STATE_REQUEST:
+        	rnl_ipcp_update_crypto_state_msg_attrs_destroy(msg->attrs);
                 break;
         default:
                 break;
@@ -1324,24 +1353,30 @@ static int parse_dt_cons(struct nlattr *  attr,
         struct nla_policy attr_policy[DTC_ATTR_MAX + 1];
         struct nlattr *   attrs[DTC_ATTR_MAX + 1];
 
-        attr_policy[DTC_ATTR_QOS_ID].type        = NLA_U16;
-        attr_policy[DTC_ATTR_QOS_ID].len         = 2;
-        attr_policy[DTC_ATTR_PORT_ID].type       = NLA_U16;
-        attr_policy[DTC_ATTR_PORT_ID].len        = 2;
-        attr_policy[DTC_ATTR_CEP_ID].type        = NLA_U16;
-        attr_policy[DTC_ATTR_CEP_ID].len         = 2;
-        attr_policy[DTC_ATTR_SEQ_NUM].type       = NLA_U16;
-        attr_policy[DTC_ATTR_SEQ_NUM].len        = 2;
-        attr_policy[DTC_ATTR_ADDRESS].type       = NLA_U16;
-        attr_policy[DTC_ATTR_ADDRESS].len        = 2;
-        attr_policy[DTC_ATTR_LENGTH].type        = NLA_U16;
-        attr_policy[DTC_ATTR_LENGTH].len         = 2;
-        attr_policy[DTC_ATTR_MAX_PDU_SIZE].type  = NLA_U32;
-        attr_policy[DTC_ATTR_MAX_PDU_SIZE].len   = 4;
-        attr_policy[DTC_ATTR_MAX_PDU_LIFE].type  = NLA_U32;
-        attr_policy[DTC_ATTR_MAX_PDU_LIFE].len   = 4;
-        attr_policy[DTC_ATTR_DIF_INTEGRITY].type = NLA_FLAG;
-        attr_policy[DTC_ATTR_DIF_INTEGRITY].len  = 0;
+        attr_policy[DTC_ATTR_QOS_ID].type          = NLA_U16;
+        attr_policy[DTC_ATTR_QOS_ID].len           = 2;
+        attr_policy[DTC_ATTR_PORT_ID].type         = NLA_U16;
+        attr_policy[DTC_ATTR_PORT_ID].len          = 2;
+        attr_policy[DTC_ATTR_CEP_ID].type          = NLA_U16;
+        attr_policy[DTC_ATTR_CEP_ID].len           = 2;
+        attr_policy[DTC_ATTR_SEQ_NUM].type         = NLA_U16;
+        attr_policy[DTC_ATTR_SEQ_NUM].len          = 2;
+        attr_policy[DTC_ATTR_CTRL_SEQ_NUM].type    = NLA_U16;
+        attr_policy[DTC_ATTR_CTRL_SEQ_NUM].len     = 2;
+        attr_policy[DTC_ATTR_ADDRESS].type         = NLA_U16;
+        attr_policy[DTC_ATTR_ADDRESS].len          = 2;
+        attr_policy[DTC_ATTR_LENGTH].type          = NLA_U16;
+        attr_policy[DTC_ATTR_LENGTH].len           = 2;
+        attr_policy[DTC_ATTR_MAX_PDU_SIZE].type    = NLA_U32;
+        attr_policy[DTC_ATTR_MAX_PDU_SIZE].len     = 4;
+        attr_policy[DTC_ATTR_MAX_PDU_LIFE].type    = NLA_U32;
+        attr_policy[DTC_ATTR_MAX_PDU_LIFE].len     = 4;
+        attr_policy[DTC_ATTR_RATE].type            = NLA_U16;
+        attr_policy[DTC_ATTR_RATE].len             = 2;
+        attr_policy[DTC_ATTR_FRAME].type           = NLA_U16;
+        attr_policy[DTC_ATTR_FRAME].len            = 2;
+        attr_policy[DTC_ATTR_DIF_INTEGRITY].type   = NLA_FLAG;
+        attr_policy[DTC_ATTR_DIF_INTEGRITY].len    = 0;
 
         if (nla_parse_nested(attrs, DTC_ATTR_MAX, attr, attr_policy) < 0)
                 return -1;
@@ -1362,6 +1397,10 @@ static int parse_dt_cons(struct nlattr *  attr,
                 dt_cons->seq_num_length =
                         nla_get_u16(attrs[DTC_ATTR_SEQ_NUM]);
 
+        if (attrs[DTC_ATTR_CTRL_SEQ_NUM])
+                dt_cons->ctrl_seq_num_length =
+                        nla_get_u16(attrs[DTC_ATTR_CTRL_SEQ_NUM]);
+
         if (attrs[DTC_ATTR_ADDRESS])
                 dt_cons->address_length =
                         nla_get_u16(attrs[DTC_ATTR_ADDRESS]);
@@ -1377,6 +1416,14 @@ static int parse_dt_cons(struct nlattr *  attr,
         if (attrs[DTC_ATTR_MAX_PDU_LIFE])
                 dt_cons->max_pdu_life =
                         nla_get_u32(attrs[DTC_ATTR_MAX_PDU_LIFE]);
+
+        if (attrs[DTC_ATTR_RATE])
+                dt_cons->rate_length =
+                        nla_get_u16(attrs[DTC_ATTR_RATE]);
+
+        if (attrs[DTC_ATTR_FRAME])
+                dt_cons->frame_length =
+                        nla_get_u16(attrs[DTC_ATTR_FRAME]);
 
         dt_cons->dif_integrity = nla_get_flag(attrs[DTC_ATTR_DIF_INTEGRITY]);
 
@@ -1452,12 +1499,12 @@ static int parse_dup_config_entry(struct nlattr *           dup_config_entry_att
                 goto parse_fail;
 
         if (attrs[AUTHP_ENCRYPT_POLICY]) {
-        	dup_config_entry->encryption_policy = policy_create();
-        	if (!dup_config_entry->encryption_policy)
+        	dup_config_entry->crypto_policy = policy_create();
+        	if (!dup_config_entry->crypto_policy)
         		goto parse_fail;
 
         	if (parse_policy(attrs[AUTHP_ENCRYPT_POLICY],
-        			 dup_config_entry->encryption_policy))
+        			 dup_config_entry->crypto_policy))
         		goto parse_fail;
         }
 
@@ -2667,27 +2714,108 @@ rnl_parse_ipcp_select_policy_set_req_msg(
 }
 
 static int
-rnl_parse_ipcp_enable_encryption_req_msg(
-                struct genl_info * info,
-                struct rnl_ipcp_enable_encrypt_req_msg_attrs * msg_attrs)
+rnl_parse_crypto_state_info(
+		struct nlattr * crypto_state_attr,
+                struct sdup_crypto_state * state)
 {
-        if (info->attrs[IEERM_ATTR_N_1_PORT])
+        struct nla_policy attr_policy[ICSTATE_ATTR_MAX + 1];
+        struct nlattr *   attrs[ICSTATE_ATTR_MAX + 1];
+
+        if (!crypto_state_attr || !state) {
+                LOG_ERR("Bogus input parameters, cannot parse name app info");
+                return -1;
+        }
+
+        attr_policy[ICSTATE_ENABLE_CRYPTO_TX].type = NLA_FLAG;
+        attr_policy[ICSTATE_ENABLE_CRYPTO_TX].len  = 0;
+        attr_policy[ICSTATE_ENABLE_CRYPTO_RX].type = NLA_FLAG;
+        attr_policy[ICSTATE_ENABLE_CRYPTO_RX].len  = 0;
+        attr_policy[ICSTATE_MAC_KEY_TX].type = NLA_UNSPEC;
+        attr_policy[ICSTATE_MAC_KEY_TX].len = 0;
+        attr_policy[ICSTATE_MAC_KEY_RX].type = NLA_UNSPEC;
+        attr_policy[ICSTATE_MAC_KEY_RX].len = 0;
+        attr_policy[ICSTATE_ENCRYPT_KEY_TX].type = NLA_UNSPEC;
+        attr_policy[ICSTATE_ENCRYPT_KEY_TX].len = 0;
+        attr_policy[ICSTATE_ENCRYPT_KEY_RX].type = NLA_UNSPEC;
+        attr_policy[ICSTATE_ENCRYPT_KEY_RX].len = 0;
+        attr_policy[ICSTATE_IV_TX].type = NLA_UNSPEC;
+        attr_policy[ICSTATE_IV_TX].len = 0;
+        attr_policy[ICSTATE_IV_RX].type = NLA_UNSPEC;
+        attr_policy[ICSTATE_IV_RX].len = 0;
+
+        if (nla_parse_nested(attrs,
+        		     ICSTATE_ATTR_MAX,
+        		     crypto_state_attr,
+        		     attr_policy) < 0)
+                return -1;
+
+	state->enable_crypto_tx = attrs[ICSTATE_ENABLE_CRYPTO_TX];
+	state->enable_crypto_rx = attrs[ICSTATE_ENABLE_CRYPTO_RX];
+
+        if (attrs[ICSTATE_MAC_KEY_TX])
+        	state->mac_key_tx = buffer_create_from(nla_data(attrs[ICSTATE_MAC_KEY_TX]),
+        					       nla_len(attrs[ICSTATE_MAC_KEY_TX]));
+
+        if (attrs[ICSTATE_MAC_KEY_RX])
+        	state->mac_key_rx = buffer_create_from(nla_data(attrs[ICSTATE_MAC_KEY_RX]),
+        					       nla_len(attrs[ICSTATE_MAC_KEY_RX]));
+
+        if (attrs[ICSTATE_ENCRYPT_KEY_TX])
+        	state->encrypt_key_tx = buffer_create_from(nla_data(attrs[ICSTATE_ENCRYPT_KEY_TX]),
+        					           nla_len(attrs[ICSTATE_ENCRYPT_KEY_TX]));
+
+        if (attrs[ICSTATE_ENCRYPT_KEY_RX])
+        	state->encrypt_key_rx = buffer_create_from(nla_data(attrs[ICSTATE_ENCRYPT_KEY_RX]),
+        					           nla_len(attrs[ICSTATE_ENCRYPT_KEY_RX]));
+
+        if (attrs[ICSTATE_IV_TX])
+        	state->iv_tx = buffer_create_from(nla_data(attrs[ICSTATE_IV_TX]),
+        					  nla_len(attrs[ICSTATE_IV_TX]));
+
+        if (attrs[ICSTATE_IV_RX])
+        	state->iv_rx = buffer_create_from(nla_data(attrs[ICSTATE_IV_RX]),
+        					  nla_len(attrs[ICSTATE_IV_RX]));
+
+        return 0;
+}
+
+static struct sdup_crypto_state * sdup_crypto_state_create(void)
+{
+	struct sdup_crypto_state * tmp;
+
+	tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+	if (!tmp) {
+		return NULL;
+	}
+
+	tmp->enable_crypto_tx = false;
+	tmp->enable_crypto_rx = false;
+	tmp->mac_key_tx = NULL;
+	tmp->mac_key_rx = NULL;
+	tmp->encrypt_key_tx = NULL;
+	tmp->encrypt_key_rx = NULL;
+	tmp->iv_tx = NULL;
+	tmp->iv_rx = NULL;
+
+	return tmp;
+}
+
+static int
+rnl_parse_ipcp_update_crypto_state_req_msg(
+                struct genl_info * info,
+                struct rnl_ipcp_update_crypto_state_req_msg_attrs * msg_attrs)
+{
+        if (info->attrs[IUCSR_ATTR_N_1_PORT])
                 msg_attrs->port_id =
-                        nla_get_u32(info->attrs[IEERM_ATTR_N_1_PORT]);
+                        nla_get_u32(info->attrs[IUCSR_ATTR_N_1_PORT]);
 
-	if (info->attrs[IEERM_ATTR_EN_ENCRYPT])
-		msg_attrs->encryption_enabled = true;
-	else
-		msg_attrs->encryption_enabled = false;
+        if (info->attrs[IUCSR_ATTR_CRYPT_STATE]) {
+        	msg_attrs->state = sdup_crypto_state_create();
+        	if (!msg_attrs->state)
+        		return -1;
+        	rnl_parse_crypto_state_info(info->attrs[IUCSR_ATTR_CRYPT_STATE],
+        				    msg_attrs->state);
 
-	if (info->attrs[IEERM_ATTR_EN_DECRYPT])
-		msg_attrs->decrption_enabled = true;
-	else
-		msg_attrs->decrption_enabled = false;
-
-        if (info->attrs[IEERM_ATTR_ENCRYPT_KEY]) {
-        	msg_attrs->encrypt_key = buffer_create_from(nla_data(info->attrs[IEERM_ATTR_ENCRYPT_KEY]),
-        						    nla_len(info->attrs[IEERM_ATTR_ENCRYPT_KEY]));
         }
 
         return 0;
@@ -2823,9 +2951,9 @@ int rnl_parse_msg(struct genl_info * info,
                                                              msg->attrs) < 0)
                         goto fail;
                 break;
-        case RINA_C_IPCP_ENABLE_ENCRYPTION_REQUEST:
-                if (rnl_parse_ipcp_enable_encryption_req_msg(info,
-                                                             msg->attrs) < 0)
+        case RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST:
+                if (rnl_parse_ipcp_update_crypto_state_req_msg(info,
+                                                               msg->attrs) < 0)
                         goto fail;
                 break;
         default:
@@ -3483,21 +3611,20 @@ static int rnl_format_ipcp_select_policy_set_resp_msg(
                                                 skb_out);
 }
 
-static int rnl_format_ipcp_enable_encryption_resp_msg(
-                                                uint_t           result,
-                                                port_id_t 	 port_id,
-                                                struct sk_buff * skb_out)
+static int rnl_format_ipcp_update_crypto_state_resp_msg(uint_t           result,
+                                                	port_id_t 	 port_id,
+                                                	struct sk_buff * skb_out)
 {
 	if (!skb_out) {
 		LOG_ERR("Bogus input parameter(s), bailing out");
 		return -1;
 	}
 
-	if (nla_put_u32(skb_out, IEEREM_ATTR_RESULT, result) < 0)
-		return format_fail("rnl_format_ipcp_enable_encryption_resp_msg");
+	if (nla_put_u32(skb_out, IUCSRE_ATTR_RESULT, result) < 0)
+		return format_fail("rnl_format_ipcp_update_crypto_state_resp_msg");
 
-	if (nla_put_u32(skb_out, IEEREM_ATTR_N_1_PORT, port_id) < 0)
-		return format_fail("rnl_format_ipcp_enable_encryption_resp_msg");
+	if (nla_put_u32(skb_out, IUCSRE_ATTR_N_1_PORT, port_id) < 0)
+		return format_fail("rnl_format_ipcp_update_crypto_state_resp_msg");
 
         return 0;
 }
@@ -3509,7 +3636,6 @@ int rnl_assign_dif_response(ipc_process_id_t id,
 {
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -3539,10 +3665,7 @@ int rnl_assign_dif_response(ipc_process_id_t id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
@@ -3560,7 +3683,6 @@ int rnl_update_dif_config_response(ipc_process_id_t id,
 {
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -3590,10 +3712,7 @@ int rnl_update_dif_config_response(ipc_process_id_t id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
@@ -3612,7 +3731,6 @@ int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
         uint_t                command;
-        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -3645,10 +3763,7 @@ int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
@@ -3669,7 +3784,6 @@ int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t         ipc_id,
 {
         struct sk_buff * msg;
         struct rina_msg_hdr * hdr;
-        int result;
 
         msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!msg) {
@@ -3702,10 +3816,7 @@ int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t         ipc_id,
                 return -1;
         }
 
-        result = genlmsg_end(msg, hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(msg, hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    msg,
@@ -3723,7 +3834,6 @@ int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
 {
         struct sk_buff * out_msg;
         struct rina_msg_hdr * out_hdr;
-        int result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -3752,10 +3862,7 @@ int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
@@ -3772,7 +3879,6 @@ int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
 {
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -3801,10 +3907,7 @@ int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
@@ -3821,7 +3924,6 @@ int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
 {
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -3850,10 +3952,7 @@ int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
@@ -3871,7 +3970,6 @@ int rnl_ipcp_conn_create_resp_msg(ipc_process_id_t ipc_id,
 {
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE, GFP_ATOMIC);
         if (!out_msg) {
@@ -3900,10 +3998,7 @@ int rnl_ipcp_conn_create_resp_msg(ipc_process_id_t ipc_id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
 #if 0
         result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
@@ -3926,7 +4021,6 @@ int rnl_ipcp_conn_create_result_msg(ipc_process_id_t ipc_id,
 {
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -3957,10 +4051,7 @@ int rnl_ipcp_conn_create_result_msg(ipc_process_id_t ipc_id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
@@ -3978,7 +4069,6 @@ int rnl_ipcp_conn_update_result_msg(ipc_process_id_t ipc_id,
 {
         struct sk_buff * out_msg;
         struct rina_msg_hdr * out_hdr;
-        int    result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -4007,10 +4097,7 @@ int rnl_ipcp_conn_update_result_msg(ipc_process_id_t ipc_id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
@@ -4057,11 +4144,8 @@ int rnl_ipcp_conn_destroy_result_msg(ipc_process_id_t ipc_id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
+        genlmsg_end(out_msg, out_hdr);
 
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
         result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
         if (result) {
                 LOG_ERR("Could not send unicast msg: %d", result);
@@ -4076,7 +4160,6 @@ int rnl_ipcm_sock_closed_notif_msg(u32 closed_port, u32 dest_port)
 {
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE, GFP_ATOMIC);
         if (!out_msg) {
@@ -4105,10 +4188,7 @@ int rnl_ipcm_sock_closed_notif_msg(u32 closed_port, u32 dest_port)
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
@@ -4155,10 +4235,7 @@ int rnl_ipcp_pff_dump_resp_msg(ipc_process_id_t   ipc_id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
         if (result) {
@@ -4206,10 +4283,7 @@ int rnl_ipcm_query_rib_resp_msg(ipc_process_id_t   ipc_id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
         if (result) {
@@ -4227,7 +4301,6 @@ int rnl_set_policy_set_param_response(ipc_process_id_t id,
 {
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -4257,10 +4330,7 @@ int rnl_set_policy_set_param_response(ipc_process_id_t id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
@@ -4278,7 +4348,6 @@ int rnl_select_policy_set_response(ipc_process_id_t id,
 {
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -4308,10 +4377,7 @@ int rnl_select_policy_set_response(ipc_process_id_t id,
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
@@ -4322,15 +4388,14 @@ int rnl_select_policy_set_response(ipc_process_id_t id,
 }
 EXPORT_SYMBOL(rnl_select_policy_set_response);
 
-int rnl_enable_encryption_response(ipc_process_id_t id,
-                                   uint_t           res,
-                                   rnl_sn_t         seq_num,
-                                   port_id_t	    n_1_port,
-                                   u32              nl_port_id)
+int rnl_update_crypto_state_response(ipc_process_id_t id,
+                                     uint_t           res,
+                                     rnl_sn_t         seq_num,
+                                     port_id_t	    n_1_port,
+                                     u32              nl_port_id)
 {
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -4344,7 +4409,7 @@ int rnl_enable_encryption_response(ipc_process_id_t id,
                             seq_num,
                             &rnl_nl_family,
                             0,
-                            RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE);
+                            RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE);
         if (!out_hdr) {
                 LOG_ERR("Could not use genlmsg_put");
                 nlmsg_free(out_msg);
@@ -4354,21 +4419,18 @@ int rnl_enable_encryption_response(ipc_process_id_t id,
         out_hdr->src_ipc_id = id;
         out_hdr->dst_ipc_id = 0;
 
-        if (rnl_format_ipcp_enable_encryption_resp_msg(res, n_1_port, out_msg)) {
+        if (rnl_format_ipcp_update_crypto_state_resp_msg(res, n_1_port, out_msg)) {
                 LOG_ERR("Could not format message ...");
                 nlmsg_free(out_msg);
                 return -1;
         }
 
-        result = genlmsg_end(out_msg, out_hdr);
-        if (result) {
-                LOG_DBG("Result of genlmesg_end: %d", result);
-        }
+        genlmsg_end(out_msg, out_hdr);
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
                                    nl_port_id,
-                                   RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE,
+                                   RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE,
                                    seq_num);
 }
-EXPORT_SYMBOL(rnl_enable_encryption_response);
+EXPORT_SYMBOL(rnl_update_crypto_state_response);

@@ -1,7 +1,7 @@
 /*
  * Marvell Wireless LAN device driver: 802.11n
  *
- * Copyright (C) 2011, Marvell International Ltd.
+ * Copyright (C) 2011-2014, Marvell International Ltd.
  *
  * This software file (the "File") is distributed by Marvell International
  * Ltd. under the terms of the GNU General Public License Version 2, June 1991
@@ -39,7 +39,7 @@ int mwifiex_fill_cap_info(struct mwifiex_private *priv, u8 radio_type,
 {
 	uint16_t ht_ext_cap = le16_to_cpu(ht_cap->extended_ht_cap_info);
 	struct ieee80211_supported_band *sband =
-					priv->wdev->wiphy->bands[radio_type];
+					priv->wdev.wiphy->bands[radio_type];
 
 	if (WARN_ON_ONCE(!sband)) {
 		dev_err(priv->adapter->dev, "Invalid radio type!\n");
@@ -159,6 +159,7 @@ int mwifiex_ret_11n_addba_req(struct mwifiex_private *priv,
 	int tid;
 	struct host_cmd_ds_11n_addba_rsp *add_ba_rsp = &resp->params.add_ba_rsp;
 	struct mwifiex_tx_ba_stream_tbl *tx_ba_tbl;
+	struct mwifiex_ra_list_tbl *ra_list;
 	u16 block_ack_param_set = le16_to_cpu(add_ba_rsp->block_ack_param_set);
 
 	add_ba_rsp->ssn = cpu_to_le16((le16_to_cpu(add_ba_rsp->ssn))
@@ -166,7 +167,13 @@ int mwifiex_ret_11n_addba_req(struct mwifiex_private *priv,
 
 	tid = (block_ack_param_set & IEEE80211_ADDBA_PARAM_TID_MASK)
 	       >> BLOCKACKPARAM_TID_POS;
+	ra_list = mwifiex_wmm_get_ralist_node(priv, tid, add_ba_rsp->
+		peer_mac_addr);
 	if (le16_to_cpu(add_ba_rsp->status_code) != BA_RESULT_SUCCESS) {
+		if (ra_list) {
+			ra_list->ba_status = BA_SETUP_NONE;
+			ra_list->amsdu_in_ampdu = false;
+		}
 		mwifiex_del_ba_tbl(priv, tid, add_ba_rsp->peer_mac_addr,
 				   TYPE_DELBA_SENT, true);
 		if (add_ba_rsp->add_rsp_result != BA_RESULT_TIMEOUT)
@@ -185,6 +192,10 @@ int mwifiex_ret_11n_addba_req(struct mwifiex_private *priv,
 			tx_ba_tbl->amsdu = true;
 		else
 			tx_ba_tbl->amsdu = false;
+		if (ra_list) {
+			ra_list->amsdu_in_ampdu = tx_ba_tbl->amsdu;
+			ra_list->ba_status = BA_SETUP_COMPLETE;
+		}
 	} else {
 		dev_err(priv->adapter->dev, "BA stream not created\n");
 	}
@@ -314,7 +325,7 @@ mwifiex_cmd_append_11n_tlv(struct mwifiex_private *priv,
 		return ret_len;
 
 	radio_type = mwifiex_band_to_radio_type((u8) bss_desc->bss_band);
-	sband = priv->wdev->wiphy->bands[radio_type];
+	sband = priv->wdev.wiphy->bands[radio_type];
 
 	if (bss_desc->bcn_ht_cap) {
 		ht_cap = (struct mwifiex_ie_types_htcap *) *buffer;
@@ -345,8 +356,7 @@ mwifiex_cmd_append_11n_tlv(struct mwifiex_private *priv,
 
 			memcpy((u8 *) ht_info +
 			       sizeof(struct mwifiex_ie_types_header),
-			       (u8 *) bss_desc->bcn_ht_oper +
-			       sizeof(struct ieee_types_header),
+			       (u8 *)bss_desc->bcn_ht_oper,
 			       le16_to_cpu(ht_info->header.len));
 
 			if (!(sband->ht_cap.cap &
@@ -516,6 +526,7 @@ void mwifiex_create_ba_tbl(struct mwifiex_private *priv, u8 *ra, int tid,
 			   enum mwifiex_ba_status ba_status)
 {
 	struct mwifiex_tx_ba_stream_tbl *new_node;
+	struct mwifiex_ra_list_tbl *ra_list;
 	unsigned long flags;
 
 	if (!mwifiex_get_ba_tbl(priv, tid, ra)) {
@@ -523,7 +534,11 @@ void mwifiex_create_ba_tbl(struct mwifiex_private *priv, u8 *ra, int tid,
 				   GFP_ATOMIC);
 		if (!new_node)
 			return;
-
+		ra_list = mwifiex_wmm_get_ralist_node(priv, tid, ra);
+		if (ra_list) {
+			ra_list->ba_status = ba_status;
+			ra_list->amsdu_in_ampdu = false;
+		}
 		INIT_LIST_HEAD(&new_node->list);
 
 		new_node->tid = tid;
@@ -542,10 +557,10 @@ void mwifiex_create_ba_tbl(struct mwifiex_private *priv, u8 *ra, int tid,
 int mwifiex_send_addba(struct mwifiex_private *priv, int tid, u8 *peer_mac)
 {
 	struct host_cmd_ds_11n_addba_req add_ba_req;
-	struct mwifiex_sta_node *sta_ptr;
 	u32 tx_win_size = priv->add_ba_param.tx_win_size;
 	static u8 dialog_tok;
 	int ret;
+	unsigned long flags;
 	u16 block_ack_param_set;
 
 	dev_dbg(priv->adapter->dev, "cmd: %s: tid %d\n", __func__, tid);
@@ -554,8 +569,12 @@ int mwifiex_send_addba(struct mwifiex_private *priv, int tid, u8 *peer_mac)
 	    ISSUPP_TDLS_ENABLED(priv->adapter->fw_cap_info) &&
 	    priv->adapter->is_hw_11ac_capable &&
 	    memcmp(priv->cfg_bssid, peer_mac, ETH_ALEN)) {
+		struct mwifiex_sta_node *sta_ptr;
+
+		spin_lock_irqsave(&priv->sta_list_spinlock, flags);
 		sta_ptr = mwifiex_get_sta_entry(priv, peer_mac);
 		if (!sta_ptr) {
+			spin_unlock_irqrestore(&priv->sta_list_spinlock, flags);
 			dev_warn(priv->adapter->dev,
 				 "BA setup with unknown TDLS peer %pM!\n",
 				peer_mac);
@@ -563,6 +582,7 @@ int mwifiex_send_addba(struct mwifiex_private *priv, int tid, u8 *peer_mac)
 		}
 		if (sta_ptr->is_11ac_enabled)
 			tx_win_size = MWIFIEX_11AC_STA_AMPDU_DEF_TXWINSIZE;
+		spin_unlock_irqrestore(&priv->sta_list_spinlock, flags);
 	}
 
 	block_ack_param_set = (u16)((tid << BLOCKACKPARAM_TID_POS) |
@@ -749,4 +769,46 @@ void mwifiex_set_ba_params(struct mwifiex_private *priv)
 	priv->add_ba_param.rx_amsdu = true;
 
 	return;
+}
+
+u8 mwifiex_get_sec_chan_offset(int chan)
+{
+	u8 sec_offset;
+
+	switch (chan) {
+	case 36:
+	case 44:
+	case 52:
+	case 60:
+	case 100:
+	case 108:
+	case 116:
+	case 124:
+	case 132:
+	case 140:
+	case 149:
+	case 157:
+		sec_offset = IEEE80211_HT_PARAM_CHA_SEC_ABOVE;
+		break;
+	case 40:
+	case 48:
+	case 56:
+	case 64:
+	case 104:
+	case 112:
+	case 120:
+	case 128:
+	case 136:
+	case 144:
+	case 153:
+	case 161:
+		sec_offset = IEEE80211_HT_PARAM_CHA_SEC_BELOW;
+		break;
+	case 165:
+	default:
+		sec_offset = IEEE80211_HT_PARAM_CHA_SEC_NONE;
+		break;
+	}
+
+	return sec_offset;
 }

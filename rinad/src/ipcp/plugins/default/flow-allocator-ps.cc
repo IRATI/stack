@@ -74,7 +74,7 @@ Flow * FlowAllocatorPs::newFlowRequest(IPCProcess * ipc_process,
 	rina::Connection * connection = new rina::Connection();
 	connection->portId = event.portId;
 	connection->sourceAddress = ipc_process->get_address();
-	connection->setQosId(1);
+	connection->setQosId(qosCube->id_);
 	connection->setFlowUserIpcProcessId(event.flowRequestorIpcProcessId);
         rina::DTPConfig dtpConfig = rina::DTPConfig(
                         qosCube->get_dtp_config());

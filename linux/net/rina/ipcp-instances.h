@@ -25,6 +25,7 @@
 #include <linux/kobject.h>
 
 #include "du.h"
+#include "buffer.h"
 
 struct dtp_config;
 struct dtcp_config;
@@ -70,6 +71,9 @@ struct dt_cons {
         /* The length of the sequence number field in the DTP PCI, in bytes */
         u_int16_t seq_num_length;
 
+        /* The length of the sequence number field in the DTCP PCI, in bytes */
+        u_int16_t ctrl_seq_num_length;
+
         /* The maximum length allowed for a PDU in this DIF, in bytes */
         u_int32_t max_pdu_size;
 
@@ -78,6 +82,12 @@ struct dt_cons {
          * in delta-T
          */
         u_int32_t max_pdu_life;
+
+        /* Rate for rate based mechanism. */
+        u_int16_t rate_length;
+
+        /* Time frame for rate based mechanism. */
+        u_int16_t frame_length;
 
         /*
          * True if the PDUs in this DIF have CRC, TTL, and/or encryption.
@@ -107,20 +117,14 @@ struct dup_config_entry {
 	// If NULL TTL is disabled,
 	// otherwise contains the TTL policy data
 	struct policy * ttl_policy;
-	u_int32_t  	initial_ttl_value;
 
 	// if NULL error_check is disabled,
 	// otherwise contains the error check policy
 	// data
 	struct policy * error_check_policy;
 
-	//Encryption-related fields
-	struct policy * encryption_policy;
-	bool 		enable_encryption;
-	bool		enable_decryption;
-	string_t * 	encryption_cipher;
-	string_t * 	message_digest;
-	string_t * 	compress_alg;
+	//Cryptographic-related fields
+	struct policy * crypto_policy;
 };
 
 struct dup_config {
@@ -177,6 +181,33 @@ struct dif_info {
 
         /* The DIF configuration (policies, parameters, etc) */
         struct dif_config * configuration;
+};
+
+/** The state of a particular instance of an SDU crypto protection policy */
+struct sdup_crypto_state {
+	/** Enable or disable encryption crypto operations on write */
+	bool enable_crypto_tx;
+
+	/** Enable or disable encryption crypto operations on read */
+	bool enable_crypto_rx;
+
+	/** Message Authentication Key to be used for write */
+	struct buffer * mac_key_tx;
+
+	/** Message Authentication key to be used for read */
+	struct buffer * mac_key_rx;
+
+	/** Encryption key to be used for write */
+	struct buffer * encrypt_key_tx;
+
+	/** Encryption key to be used for read */
+	struct buffer * encrypt_key_rx;
+
+	/** Initialization vector to be used for write */
+	struct buffer * iv_tx;
+
+	/** Initialization vector to be used for read*/
+	struct buffer * iv_rx;
 };
 
 /* Pre-declared, the implementation should define it properly */
@@ -304,11 +335,9 @@ struct ipcp_instance_ops {
                                   const string_t * path,
                                   const string_t * ps_name);
 
-        int (* enable_encryption)(struct ipcp_instance_data * data,
-        			  bool 		   enable_encryption,
-        		          bool 		   enable_decryption,
-        		          struct buffer *  encrypt_key,
-        		          port_id_t 	   port_id);
+        int (* update_crypto_state)(struct ipcp_instance_data * data,
+        			    struct sdup_crypto_state * state,
+        		            port_id_t 	   port_id);
 
         int (* enable_write)(struct ipcp_instance_data * data, port_id_t id);
         int (* disable_write)(struct ipcp_instance_data * data, port_id_t id);

@@ -23,6 +23,7 @@
 
 #include "drmP.h"
 #include "radeon.h"
+#include "radeon_asic.h"
 #include "trinityd.h"
 #include "r600_dpm.h"
 #include "trinity_dpm.h"
@@ -1268,6 +1269,7 @@ void trinity_dpm_setup_asic(struct radeon_device *rdev)
 	trinity_release_mutex(rdev);
 }
 
+#if 0
 void trinity_dpm_reset_asic(struct radeon_device *rdev)
 {
 	struct trinity_power_info *pi = trinity_get_pi(rdev);
@@ -1283,6 +1285,7 @@ void trinity_dpm_reset_asic(struct radeon_device *rdev)
 	}
 	trinity_release_mutex(rdev);
 }
+#endif
 
 static u16 trinity_convert_voltage_index_to_value(struct radeon_device *rdev,
 						  u32 vid_2bit)
@@ -1874,7 +1877,22 @@ int trinity_dpm_init(struct radeon_device *rdev)
 	for (i = 0; i < SUMO_MAX_HARDWARE_POWERLEVELS; i++)
 		pi->at[i] = TRINITY_AT_DFLT;
 
-	pi->enable_bapm = false;
+	if (radeon_bapm == -1) {
+		/* There are stability issues reported on with
+		 * bapm enabled when switching between AC and battery
+		 * power.  At the same time, some MSI boards hang
+		 * if it's not enabled and dpm is enabled.  Just enable
+		 * it for MSI boards right now.
+		 */
+		if (rdev->pdev->subsystem_vendor == 0x1462)
+			pi->enable_bapm = true;
+		else
+			pi->enable_bapm = false;
+	} else if (radeon_bapm == 0) {
+		pi->enable_bapm = false;
+	} else {
+		pi->enable_bapm = true;
+	}
 	pi->enable_nbps_policy = true;
 	pi->enable_sclk_ds = true;
 	pi->enable_gfx_power_gating = true;
@@ -1944,6 +1962,31 @@ void trinity_dpm_debugfs_print_current_performance_level(struct radeon_device *r
 			   current_index, pl->sclk,
 			   trinity_convert_voltage_index_to_value(rdev, pl->vddc_index));
 	}
+}
+
+u32 trinity_dpm_get_current_sclk(struct radeon_device *rdev)
+{
+	struct trinity_power_info *pi = trinity_get_pi(rdev);
+	struct radeon_ps *rps = &pi->current_rps;
+	struct trinity_ps *ps = trinity_get_ps(rps);
+	struct trinity_pl *pl;
+	u32 current_index =
+		(RREG32(TARGET_AND_CURRENT_PROFILE_INDEX) & CURRENT_STATE_MASK) >>
+		CURRENT_STATE_SHIFT;
+
+	if (current_index >= ps->num_levels) {
+		return 0;
+	} else {
+		pl = &ps->levels[current_index];
+		return pl->sclk;
+	}
+}
+
+u32 trinity_dpm_get_current_mclk(struct radeon_device *rdev)
+{
+	struct trinity_power_info *pi = trinity_get_pi(rdev);
+
+	return pi->sys_info.bootup_uma_clk;
 }
 
 void trinity_dpm_fini(struct radeon_device *rdev)

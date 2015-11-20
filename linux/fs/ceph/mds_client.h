@@ -41,6 +41,9 @@ struct ceph_mds_reply_info_in {
 	char *symlink;
 	u32 xattr_len;
 	char *xattr_data;
+	u64 inline_version;
+	u32 inline_len;
+	char *inline_data;
 };
 
 /*
@@ -134,6 +137,7 @@ struct ceph_mds_session {
 	int               s_nr_caps, s_trim_caps;
 	int               s_num_cap_releases;
 	int		  s_cap_reconnect;
+	int		  s_readonly;
 	struct list_head  s_cap_releases; /* waiting cap_release messages */
 	struct list_head  s_cap_releases_done; /* ready to send */
 	struct ceph_cap  *s_cap_iterator;
@@ -166,6 +170,11 @@ struct ceph_mds_client;
  */
 typedef void (*ceph_mds_request_callback_t) (struct ceph_mds_client *mdsc,
 					     struct ceph_mds_request *req);
+/*
+ * wait for request completion callback
+ */
+typedef int (*ceph_mds_request_wait_callback_t) (struct ceph_mds_client *mdsc,
+						 struct ceph_mds_request *req);
 
 /*
  * an in-flight mds request
@@ -194,6 +203,7 @@ struct ceph_mds_request {
 	int r_fmode;        /* file mode, if expecting cap */
 	kuid_t r_uid;
 	kgid_t r_gid;
+	struct timespec r_stamp;
 
 	/* for choosing which mds to send this request to */
 	int r_direct_mode;
@@ -201,9 +211,7 @@ struct ceph_mds_request {
 	bool r_direct_is_hash;  /* true if r_direct_hash is valid */
 
 	/* data payload is used for xattr ops */
-	struct page **r_pages;
-	int r_num_pages;
-	int r_data_len;
+	struct ceph_pagelist *r_pagelist;
 
 	/* what caps shall we drop? */
 	int r_inode_drop, r_inode_unless;
@@ -216,6 +224,7 @@ struct ceph_mds_request {
 	int r_request_release_offset;
 	struct ceph_msg  *r_reply;
 	struct ceph_mds_reply_info_parsed r_reply_info;
+	struct page *r_locked_page;
 	int r_err;
 	bool r_aborted;
 
@@ -240,6 +249,7 @@ struct ceph_mds_request {
 	struct completion r_completion;
 	struct completion r_safe_completion;
 	ceph_mds_request_callback_t r_callback;
+	ceph_mds_request_wait_callback_t r_wait_for_completion;
 	struct list_head  r_unsafe_item;  /* per-session unsafe list item */
 	bool		  r_got_unsafe, r_got_safe, r_got_result;
 
@@ -263,6 +273,7 @@ struct ceph_mds_client {
 	struct list_head        waiting_for_map;
 
 	struct ceph_mds_session **sessions;    /* NULL for mds if no session */
+	atomic_t		num_sessions;
 	int                     max_sessions;  /* len of s_mds_sessions */
 	int                     stopping;      /* true if shutting down */
 
@@ -330,6 +341,8 @@ ceph_get_mds_session(struct ceph_mds_session *s)
 	atomic_inc(&s->s_ref);
 	return s;
 }
+
+extern const char *ceph_session_state_name(int s);
 
 extern void ceph_put_mds_session(struct ceph_mds_session *s);
 

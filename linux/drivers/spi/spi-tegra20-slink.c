@@ -1001,7 +1001,7 @@ static const struct tegra_slink_chip_data tegra20_spi_cdata = {
 	.cs_hold_time = false,
 };
 
-static struct of_device_id tegra_slink_of_match[] = {
+static const struct of_device_id tegra_slink_of_match[] = {
 	{ .compatible = "nvidia,tegra30-slink", .data = &tegra30_spi_cdata, },
 	{ .compatible = "nvidia,tegra20-slink", .data = &tegra20_spi_cdata, },
 	{}
@@ -1224,7 +1224,6 @@ static const struct dev_pm_ops slink_pm_ops = {
 static struct platform_driver tegra_slink_driver = {
 	.driver = {
 		.name		= "spi-tegra-slink",
-		.owner		= THIS_MODULE,
 		.pm		= &slink_pm_ops,
 		.of_match_table	= tegra_slink_of_match,
 	},

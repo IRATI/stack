@@ -13,6 +13,7 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
+#include <linux/of_gpio.h>
 
 #include <drm/drm_edid.h>
 
@@ -43,6 +44,8 @@ struct panel_drv_data {
 	struct device *dev;
 
 	struct omap_video_timings timings;
+
+	int hpd_gpio;
 };
 
 #define to_panel_data(x) container_of(x, struct panel_drv_data, dssdev)
@@ -161,99 +164,27 @@ static bool hdmic_detect(struct omap_dss_device *dssdev)
 	struct panel_drv_data *ddata = to_panel_data(dssdev);
 	struct omap_dss_device *in = ddata->in;
 
-	return in->ops.hdmi->detect(in);
+	if (gpio_is_valid(ddata->hpd_gpio))
+		return gpio_get_value_cansleep(ddata->hpd_gpio);
+	else
+		return in->ops.hdmi->detect(in);
 }
 
-static int hdmic_audio_enable(struct omap_dss_device *dssdev)
-{
-	struct panel_drv_data *ddata = to_panel_data(dssdev);
-	struct omap_dss_device *in = ddata->in;
-	int r;
-
-	/* enable audio only if the display is active */
-	if (!omapdss_device_is_enabled(dssdev))
-		return -EPERM;
-
-	r = in->ops.hdmi->audio_enable(in);
-	if (r)
-		return r;
-
-	dssdev->audio_state = OMAP_DSS_AUDIO_ENABLED;
-
-	return 0;
-}
-
-static void hdmic_audio_disable(struct omap_dss_device *dssdev)
+static int hdmic_set_hdmi_mode(struct omap_dss_device *dssdev, bool hdmi_mode)
 {
 	struct panel_drv_data *ddata = to_panel_data(dssdev);
 	struct omap_dss_device *in = ddata->in;
 
-	in->ops.hdmi->audio_disable(in);
-
-	dssdev->audio_state = OMAP_DSS_AUDIO_DISABLED;
+	return in->ops.hdmi->set_hdmi_mode(in, hdmi_mode);
 }
 
-static int hdmic_audio_start(struct omap_dss_device *dssdev)
-{
-	struct panel_drv_data *ddata = to_panel_data(dssdev);
-	struct omap_dss_device *in = ddata->in;
-	int r;
-
-	/*
-	 * No need to check the panel state. It was checked when trasitioning
-	 * to AUDIO_ENABLED.
-	 */
-	if (dssdev->audio_state != OMAP_DSS_AUDIO_ENABLED)
-		return -EPERM;
-
-	r = in->ops.hdmi->audio_start(in);
-	if (r)
-		return r;
-
-	dssdev->audio_state = OMAP_DSS_AUDIO_PLAYING;
-
-	return 0;
-}
-
-static void hdmic_audio_stop(struct omap_dss_device *dssdev)
+static int hdmic_set_infoframe(struct omap_dss_device *dssdev,
+		const struct hdmi_avi_infoframe *avi)
 {
 	struct panel_drv_data *ddata = to_panel_data(dssdev);
 	struct omap_dss_device *in = ddata->in;
 
-	in->ops.hdmi->audio_stop(in);
-
-	dssdev->audio_state = OMAP_DSS_AUDIO_ENABLED;
-}
-
-static bool hdmic_audio_supported(struct omap_dss_device *dssdev)
-{
-	struct panel_drv_data *ddata = to_panel_data(dssdev);
-	struct omap_dss_device *in = ddata->in;
-
-	if (!omapdss_device_is_enabled(dssdev))
-		return false;
-
-	return in->ops.hdmi->audio_supported(in);
-}
-
-static int hdmic_audio_config(struct omap_dss_device *dssdev,
-		struct omap_dss_audio *audio)
-{
-	struct panel_drv_data *ddata = to_panel_data(dssdev);
-	struct omap_dss_device *in = ddata->in;
-	int r;
-
-	/* config audio only if the display is active */
-	if (!omapdss_device_is_enabled(dssdev))
-		return -EPERM;
-
-	r = in->ops.hdmi->audio_config(in, audio);
-	if (r)
-		return r;
-
-	dssdev->audio_state = OMAP_DSS_AUDIO_CONFIGURED;
-
-	return 0;
+	return in->ops.hdmi->set_infoframe(in, avi);
 }
 
 static struct omap_dss_driver hdmic_driver = {
@@ -271,13 +202,8 @@ static struct omap_dss_driver hdmic_driver = {
 
 	.read_edid		= hdmic_read_edid,
 	.detect			= hdmic_detect,
-
-	.audio_enable		= hdmic_audio_enable,
-	.audio_disable		= hdmic_audio_disable,
-	.audio_start		= hdmic_audio_start,
-	.audio_stop		= hdmic_audio_stop,
-	.audio_supported	= hdmic_audio_supported,
-	.audio_config		= hdmic_audio_config,
+	.set_hdmi_mode		= hdmic_set_hdmi_mode,
+	.set_hdmi_infoframe	= hdmic_set_infoframe,
 };
 
 static int hdmic_probe_pdata(struct platform_device *pdev)
@@ -287,6 +213,8 @@ static int hdmic_probe_pdata(struct platform_device *pdev)
 	struct omap_dss_device *in, *dssdev;
 
 	pdata = dev_get_platdata(&pdev->dev);
+
+	ddata->hpd_gpio = -ENODEV;
 
 	in = omap_dss_find_output(pdata->source);
 	if (in == NULL) {
@@ -307,6 +235,14 @@ static int hdmic_probe_of(struct platform_device *pdev)
 	struct panel_drv_data *ddata = platform_get_drvdata(pdev);
 	struct device_node *node = pdev->dev.of_node;
 	struct omap_dss_device *in;
+	int gpio;
+
+	/* HPD GPIO */
+	gpio = of_get_named_gpio(node, "hpd-gpios", 0);
+	if (gpio_is_valid(gpio))
+		ddata->hpd_gpio = gpio;
+	else
+		ddata->hpd_gpio = -ENODEV;
 
 	in = omapdss_of_find_source_for_first_ep(node);
 	if (IS_ERR(in)) {
@@ -342,6 +278,13 @@ static int hdmic_probe(struct platform_device *pdev)
 			return r;
 	} else {
 		return -ENODEV;
+	}
+
+	if (gpio_is_valid(ddata->hpd_gpio)) {
+		r = devm_gpio_request_one(&pdev->dev, ddata->hpd_gpio,
+				GPIOF_DIR_IN, "hdmi_hpd");
+		if (r)
+			goto err_reg;
 	}
 
 	ddata->timings = hdmic_default_timings;
@@ -393,8 +336,8 @@ static struct platform_driver hdmi_connector_driver = {
 	.remove	= __exit_p(hdmic_remove),
 	.driver	= {
 		.name	= "connector-hdmi",
-		.owner	= THIS_MODULE,
 		.of_match_table = hdmic_of_match,
+		.suppress_bind_attrs = true,
 	},
 };
 

@@ -27,7 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <linux/export.h>
 #include <linux/sunrpc/bc_xprt.h>
 
-#ifdef RPC_DEBUG
+#if IS_ENABLED(CONFIG_SUNRPC_DEBUG)
 #define RPCDBG_FACILITY	RPCDBG_TRANS
 #endif
 
@@ -60,7 +60,7 @@ static void xprt_free_allocation(struct rpc_rqst *req)
 
 	dprintk("RPC:        free allocations for req= %p\n", req);
 	WARN_ON_ONCE(test_bit(RPC_BC_PA_IN_USE, &req->rq_bc_pa_state));
-	xbufp = &req->rq_private_buf;
+	xbufp = &req->rq_rcv_buf;
 	free_page((unsigned long)xbufp->head[0].iov_base);
 	xbufp = &req->rq_snd_buf;
 	free_page((unsigned long)xbufp->head[0].iov_base);
@@ -244,10 +244,10 @@ void xprt_free_bc_request(struct rpc_rqst *req)
 	dprintk("RPC:       free backchannel req=%p\n", req);
 
 	req->rq_connect_cookie = xprt->connect_cookie - 1;
-	smp_mb__before_clear_bit();
+	smp_mb__before_atomic();
 	WARN_ON_ONCE(!test_bit(RPC_BC_PA_IN_USE, &req->rq_bc_pa_state));
 	clear_bit(RPC_BC_PA_IN_USE, &req->rq_bc_pa_state);
-	smp_mb__after_clear_bit();
+	smp_mb__after_atomic();
 
 	if (!xprt_need_to_requeue(xprt)) {
 		/*
@@ -309,12 +309,15 @@ void xprt_complete_bc_request(struct rpc_rqst *req, uint32_t copied)
 	struct rpc_xprt *xprt = req->rq_xprt;
 	struct svc_serv *bc_serv = xprt->bc_serv;
 
+	spin_lock(&xprt->bc_pa_lock);
+	list_del(&req->rq_bc_pa_list);
+	spin_unlock(&xprt->bc_pa_lock);
+
 	req->rq_private_buf.len = copied;
 	set_bit(RPC_BC_PA_IN_USE, &req->rq_bc_pa_state);
 
 	dprintk("RPC:       add callback request to list\n");
 	spin_lock(&bc_serv->sv_cb_lock);
-	list_del(&req->rq_bc_pa_list);
 	list_add(&req->rq_bc_list, &bc_serv->sv_cb_list);
 	wake_up(&bc_serv->sv_cb_waitq);
 	spin_unlock(&bc_serv->sv_cb_lock);

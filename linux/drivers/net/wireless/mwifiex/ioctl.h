@@ -1,7 +1,7 @@
 /*
  * Marvell Wireless LAN device driver: ioctl data structures & APIs
  *
- * Copyright (C) 2011, Marvell International Ltd.
+ * Copyright (C) 2011-2014, Marvell International Ltd.
  *
  * This software file (the "File") is distributed by Marvell International
  * Ltd. under the terms of the GNU General Public License Version 2, June 1991
@@ -137,6 +137,8 @@ struct mwifiex_ds_get_stats {
 	u32 fcs_error;
 	u32 tx_frame;
 	u32 wep_icv_error[4];
+	u32 bcn_rcv_cnt;
+	u32 bcn_miss_cnt;
 };
 
 #define MWIFIEX_MAX_VER_STR_LEN    128
@@ -180,7 +182,11 @@ struct mwifiex_ds_tx_ba_stream_tbl {
 	u8 amsdu;
 };
 
-#define DBG_CMD_NUM	5
+#define DBG_CMD_NUM    5
+
+struct tdls_peer_info {
+	u8 peer_addr[ETH_ALEN];
+};
 
 struct mwifiex_debug_info {
 	u32 int_counter;
@@ -193,6 +199,9 @@ struct mwifiex_debug_info {
 	u32 rx_tbl_num;
 	struct mwifiex_ds_rx_reorder_tbl rx_tbl
 		[MWIFIEX_MAX_RX_BASTREAM_SUPPORTED];
+	u32 tdls_peer_num;
+	struct tdls_peer_info tdls_list
+		[MWIFIEX_MAX_TDLS_PEER_SUPPORTED];
 	u16 ps_mode;
 	u32 ps_state;
 	u8 is_deep_sleep;
@@ -303,7 +312,7 @@ struct mwifiex_ds_ant_cfg {
 	u32 rx_ant;
 };
 
-#define MWIFIEX_NUM_OF_CMD_BUFFER	20
+#define MWIFIEX_NUM_OF_CMD_BUFFER	50
 #define MWIFIEX_SIZE_OF_CMD_BUFFER	2048
 
 enum {

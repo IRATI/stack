@@ -75,10 +75,10 @@ struct dtcp_ps {
         int (* receiving_flow_control)(struct dtcp_ps * instance,
                                        const struct pci * pci);
         int (* update_credit)(struct dtcp_ps * instance);
-        int (* reconcile_flow_conflict)(struct dtcp_ps * instance);
         int (* rcvr_flow_control)(struct dtcp_ps * instance,
                                   const struct pci * pci);
-        int (* rate_reduction)(struct dtcp_ps * instance);
+        int (* rate_reduction)(struct dtcp_ps * instance,
+        			const struct pci * pci);
         int (* rcvr_control_ack)(struct dtcp_ps * instance);
         int (* no_rate_slow_down)(struct dtcp_ps * instance);
         int (* no_override_default_peak)(struct dtcp_ps * instance);

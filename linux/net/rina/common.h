@@ -71,8 +71,13 @@ address_t address_bad(void);
 typedef uint          timeout_t;
 typedef uint          seq_num_t;
 
-/* FIXME: The qos_id_t should be defined correctly in the near future */
-typedef uint          qos_id_t;
+typedef int qos_id_t;
+
+/* ALWAYS use this function to check if the id looks good */
+bool is_qos_id_ok(qos_id_t id);
+
+/* ALWAYS use this function to get a bad id */
+qos_id_t qos_id_bad(void);
 
 struct uint_range {
         uint_t min;
@@ -181,5 +186,4 @@ struct mod_pff_entry {
 	struct list_head port_id_altlists;
         struct list_head next;
 };
-
 #endif

@@ -418,10 +418,13 @@ enum data_transfer_cons_attrs_list {
         DTC_ATTR_PORT_ID,
         DTC_ATTR_CEP_ID,
         DTC_ATTR_SEQ_NUM,
+        DTC_ATTR_CTRL_SEQ_NUM,
         DTC_ATTR_ADDRESS,
         DTC_ATTR_LENGTH,
         DTC_ATTR_MAX_PDU_SIZE,
         DTC_ATTR_MAX_PDU_LIFE,
+        DTC_ATTR_RATE,
+        DTC_ATTR_FRAME,
         DTC_ATTR_DIF_INTEGRITY,
         __DTC_ATTR_MAX,
 };
@@ -586,21 +589,32 @@ enum ipcm_select_policy_set_req_result_attrs_list {
 };
 #define ISPSR_ATTR_MAX (__ISPSR_ATTR_MAX -1)
 
-enum ipcp_enable_encryption_req_attrs_list {
-	IEERM_ATTR_N_1_PORT = 1,
-	IEERM_ATTR_EN_ENCRYPT,
-        IEERM_ATTR_EN_DECRYPT,
-        IEERM_ATTR_ENCRYPT_KEY,
-        __IEERM_ATTR_MAX,
+enum ipcp_update_crypto_state_req_attrs_list {
+	IUCSR_ATTR_N_1_PORT = 1,
+	IUCSR_ATTR_CRYPT_STATE,
+        __IUCSR_ATTR_MAX,
 };
-#define IEERM_ATTR_MAX (__IEERM_ATTR_MAX -1)
+#define IUCSR_ATTR_MAX (__IUCSR_ATTR_MAX -1)
 
-enum ipcp_enable_encryption_resp_attrs_list {
-        IEEREM_ATTR_RESULT = 1,
-        IEEREM_ATTR_N_1_PORT,
-        __IEEREM_ATTR_MAX,
+enum ipcp_crypto_state_attrs_list {
+	ICSTATE_ENABLE_CRYPTO_TX = 1,
+	ICSTATE_ENABLE_CRYPTO_RX,
+	ICSTATE_MAC_KEY_TX,
+	ICSTATE_MAC_KEY_RX,
+	ICSTATE_ENCRYPT_KEY_TX,
+	ICSTATE_ENCRYPT_KEY_RX,
+	ICSTATE_IV_TX,
+	ICSTATE_IV_RX,
+        __ICSTATE_ATTR_MAX,
 };
-#define IEEREM_ATTR_MAX (__IEEREM_ATTR_MAX -1)
+#define ICSTATE_ATTR_MAX (__ICSTATE_ATTR_MAX -1)
+
+enum ipcp_update_crypto_state_resp_attrs_list {
+        IUCSRE_ATTR_RESULT = 1,
+        IUCSRE_ATTR_N_1_PORT,
+        __IUCSRE_ATTR_MAX,
+};
+#define IUCSRE_ATTR_MAX (__IUCSRE_ATTR_MAX -1)
 
 /* FIXME: Should be hidden by the API !!! */
 struct rina_msg_hdr {
@@ -624,7 +638,7 @@ enum rnl_msg_attr_type {
         RNL_MSG_ATTRS_QUERY_RIB_REQUEST,
         RNL_MSG_ATTRS_SET_POLICY_SET_PARAM_REQUEST,
         RNL_MSG_ATTRS_SELECT_POLICY_SET_REQUEST,
-        RNL_MSG_ATTRS_ENABLE_ENCRYPTION_REQUEST
+        RNL_MSG_ATTRS_UPDATE_CRYPTO_STATE_REQUEST
 };
 
 struct rnl_msg {
@@ -845,10 +859,8 @@ struct rnl_ipcp_select_policy_set_req_msg_attrs {
         string_t * name;
 };
 
-struct rnl_ipcp_enable_encrypt_req_msg_attrs {
-	bool 		encryption_enabled;
-	bool		decrption_enabled;
-	struct buffer * encrypt_key;
+struct rnl_ipcp_update_crypto_state_req_msg_attrs {
+	struct sdup_crypto_state * state;
 	port_id_t 	port_id;
 };
 
@@ -948,9 +960,9 @@ int rnl_select_policy_set_response(ipc_process_id_t id,
                                    rnl_sn_t         seq_num,
                                    u32              nl_port_id);
 
-int rnl_enable_encryption_response(ipc_process_id_t id,
-                                   uint_t           res,
-                                   rnl_sn_t         seq_num,
-                                   port_id_t	    n_1_port,
-                                   u32              nl_port_id);
+int rnl_update_crypto_state_response(ipc_process_id_t id,
+                                     uint_t           res,
+                                     rnl_sn_t         seq_num,
+                                     port_id_t	     n_1_port,
+                                     u32              nl_port_id);
 #endif

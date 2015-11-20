@@ -27,6 +27,7 @@
 #include <librina/cdap_v2.h>
 #include <librina/common.h>
 #include <rinad/ipcm/encoders_mad.h>
+#include <rinad/ipcm/structures_mad.h>
 
 #include "manager.h"
 
@@ -67,7 +68,7 @@ void ConnectionCallback::remote_read_result(
 	std::cout << "Query Rib operation returned result " << res.code_
 			<< std::endl;
 	std::string query_rib;
-	rinad::mad_manager::encoders::StringEncoder().decode(obj.value_,
+	rinad::mad_manager::StringEncoder().decode(obj.value_,
 								query_rib);
 	std::cout << "QueryRIB:" << std::endl << query_rib << std::endl;
 }
@@ -121,7 +122,7 @@ void ManagerWorker::cacep(int port_id)
 {
 	char buffer[max_sdu_size_in_bytes];
 	int bytes_read = ipcManager->readSDU(port_id, buffer, max_sdu_size_in_bytes);
-	cdap_rib::SerializedObject message;
+	cdap_rib::ser_obj_t message;
 	message.message_ = buffer;
 	message.size_ = bytes_read;
 	cdap::getProvider()->process_message(message, port_id);
@@ -131,7 +132,7 @@ bool ManagerWorker::createIPCP_1(int port_id)
 {
 	char buffer[max_sdu_size_in_bytes];
 
-	mad_manager::structures::ipcp_config_t ipc_config;
+	mad_manager::ipcp_config_t ipc_config;
 	ipc_config.process_instance = "1";
 	ipc_config.process_name = "test1.IRATI";
 	ipc_config.process_type = "normal-ipc";
@@ -142,11 +143,8 @@ bool ManagerWorker::createIPCP_1(int port_id)
 	obj.name_ = IPCP_1;
 	obj.class_ = "IPCProcess";
 	obj.inst_ = 0;
-	mad_manager::encoders::IPCPConfigEncoder().encode(ipc_config,
+	mad_manager::IPCPConfigEncoder().encode(ipc_config,
 								obj.value_);
-	mad_manager::structures::ipcp_config_t object;
-	mad_manager::encoders::IPCPConfigEncoder().decode(obj.value_, object);
-
 	cdap_rib::flags_t flags;
 	flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
 
@@ -161,7 +159,7 @@ bool ManagerWorker::createIPCP_1(int port_id)
 	try {
 		int bytes_read = ipcManager->readSDU(port_id, buffer,
 							max_sdu_size_in_bytes);
-		cdap_rib::SerializedObject message;
+		cdap_rib::ser_obj_t message;
 		message.message_ = buffer;
 		message.size_ = bytes_read;
 		cdap_prov_->process_message(message, port_id);
@@ -176,7 +174,7 @@ bool ManagerWorker::createIPCP_1(int port_id)
 bool ManagerWorker::createIPCP_2(int port_id) {
 	char buffer[max_sdu_size_in_bytes];
 
-	mad_manager::structures::ipcp_config_t ipc_config;
+	mad_manager::ipcp_config_t ipc_config;
 	ipc_config.process_instance = "1";
 	ipc_config.process_name = "test2.IRATI";
 	ipc_config.process_type = "normal-ipc";
@@ -191,10 +189,10 @@ bool ManagerWorker::createIPCP_2(int port_id) {
 	obj.name_ = IPCP_2;
 	obj.class_ = "IPCProcess";
 	obj.inst_ = 0;
-	mad_manager::encoders::IPCPConfigEncoder().encode(ipc_config,
+	mad_manager::IPCPConfigEncoder().encode(ipc_config,
 								obj.value_);
-	mad_manager::structures::ipcp_config_t object;
-	mad_manager::encoders::IPCPConfigEncoder().decode(obj.value_, object);
+	mad_manager::ipcp_config_t object;
+	mad_manager::IPCPConfigEncoder().decode(obj.value_, object);
 
 	cdap_rib::flags_t flags;
 	flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
@@ -210,7 +208,7 @@ bool ManagerWorker::createIPCP_2(int port_id) {
 	try {
 		int bytes_read = ipcManager->readSDU(port_id, buffer,
 							max_sdu_size_in_bytes);
-		cdap_rib::SerializedObject message;
+		cdap_rib::ser_obj_t message;
 		message.message_ = buffer;
 		message.size_ = bytes_read;
 		cdap_prov_->process_message(message, port_id);
@@ -225,7 +223,7 @@ bool ManagerWorker::createIPCP_2(int port_id) {
 bool ManagerWorker::createIPCP_3(int port_id) {
 	char buffer[max_sdu_size_in_bytes];
 
-	mad_manager::structures::ipcp_config_t ipc_config;
+	mad_manager::ipcp_config_t ipc_config;
 	ipc_config.process_instance = "1";
 	ipc_config.process_name = "test3.IRATI";
 	ipc_config.process_type = "normal-ipc";
@@ -239,10 +237,10 @@ bool ManagerWorker::createIPCP_3(int port_id) {
 	obj.name_ = IPCP_3;
 	obj.class_ = "IPCProcess";
 	obj.inst_ = 0;
-	mad_manager::encoders::IPCPConfigEncoder().encode(ipc_config,
+	mad_manager::IPCPConfigEncoder().encode(ipc_config,
 								obj.value_);
-	mad_manager::structures::ipcp_config_t object;
-	mad_manager::encoders::IPCPConfigEncoder().decode(obj.value_, object);
+	mad_manager::ipcp_config_t object;
+	mad_manager::IPCPConfigEncoder().decode(obj.value_, object);
 
 	cdap_rib::flags_t flags;
 	flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
@@ -258,7 +256,7 @@ bool ManagerWorker::createIPCP_3(int port_id) {
 	try {
 		int bytes_read = ipcManager->readSDU(port_id, buffer,
 							max_sdu_size_in_bytes);
-		cdap_rib::SerializedObject message;
+		cdap_rib::ser_obj_t message;
 		message.message_ = buffer;
 		message.size_ = bytes_read;
 		cdap_prov_->process_message(message, port_id);
@@ -292,7 +290,7 @@ void ManagerWorker::queryRIB(int port_id, std::string name)
         int bytes_read = ipcManager->readSDU(port_id,
         				     buffer,
         				     max_sdu_size_in_bytes);
-        cdap_rib::SerializedObject message;
+        cdap_rib::ser_obj_t message;
         message.message_ = buffer;
         message.size_ = bytes_read;
         cdap_prov_->process_message(message, port_id);

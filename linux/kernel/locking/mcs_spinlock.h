@@ -27,7 +27,7 @@ struct mcs_spinlock {
 #define arch_mcs_spin_lock_contended(l)					\
 do {									\
 	while (!(smp_load_acquire(l)))					\
-		arch_mutex_cpu_relax();					\
+		cpu_relax_lowlatency();					\
 } while (0)
 #endif
 
@@ -56,9 +56,6 @@ do {									\
  * If the lock has already been acquired, then this will proceed to spin
  * on this node->locked until the previous lock holder sets the node->locked
  * in mcs_spin_unlock().
- *
- * We don't inline mcs_spin_lock() so that perf can correctly account for the
- * time spent in this lock function.
  */
 static inline
 void mcs_spin_lock(struct mcs_spinlock **lock, struct mcs_spinlock *node)
@@ -81,7 +78,7 @@ void mcs_spin_lock(struct mcs_spinlock **lock, struct mcs_spinlock *node)
 		 */
 		return;
 	}
-	ACCESS_ONCE(prev->next) = node;
+	WRITE_ONCE(prev->next, node);
 
 	/* Wait until the lock holder passes the lock down. */
 	arch_mcs_spin_lock_contended(&node->locked);
@@ -94,7 +91,7 @@ void mcs_spin_lock(struct mcs_spinlock **lock, struct mcs_spinlock *node)
 static inline
 void mcs_spin_unlock(struct mcs_spinlock **lock, struct mcs_spinlock *node)
 {
-	struct mcs_spinlock *next = ACCESS_ONCE(node->next);
+	struct mcs_spinlock *next = READ_ONCE(node->next);
 
 	if (likely(!next)) {
 		/*
@@ -103,27 +100,12 @@ void mcs_spin_unlock(struct mcs_spinlock **lock, struct mcs_spinlock *node)
 		if (likely(cmpxchg(lock, node, NULL) == node))
 			return;
 		/* Wait until the next pointer is set */
-		while (!(next = ACCESS_ONCE(node->next)))
-			arch_mutex_cpu_relax();
+		while (!(next = READ_ONCE(node->next)))
+			cpu_relax_lowlatency();
 	}
 
 	/* Pass lock to next waiter. */
 	arch_mcs_spin_unlock_contended(&next->locked);
 }
-
-/*
- * Cancellable version of the MCS lock above.
- *
- * Intended for adaptive spinning of sleeping locks:
- * mutex_lock()/rwsem_down_{read,write}() etc.
- */
-
-struct optimistic_spin_queue {
-	struct optimistic_spin_queue *next, *prev;
-	int locked; /* 1 if lock acquired */
-};
-
-extern bool osq_lock(struct optimistic_spin_queue **lock);
-extern void osq_unlock(struct optimistic_spin_queue **lock);
 
 #endif /* __LINUX_MCS_SPINLOCK_H */

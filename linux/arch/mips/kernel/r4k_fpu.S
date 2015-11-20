@@ -13,15 +13,18 @@
  * Copyright (C) 1999, 2001 Silicon Graphics, Inc.
  */
 #include <asm/asm.h>
-#include <asm/asmmacro.h>
 #include <asm/errno.h>
 #include <asm/fpregdef.h>
 #include <asm/mipsregs.h>
 #include <asm/asm-offsets.h>
 #include <asm/regdef.h>
 
+/* preprocessor replaces the fp in ".set fp=64" with $30 otherwise */
+#undef fp
+
 	.macro	EX insn, reg, src
 	.set	push
+	SET_HARDFLOAT
 	.set	nomacro
 .ex\@:	\insn	\reg, \src
 	.set	pop
@@ -31,15 +34,20 @@
 	.endm
 
 	.set	noreorder
-	.set	arch=r4000
 
 LEAF(_save_fp_context)
-	cfc1	t1, fcr31
-
-#if defined(CONFIG_64BIT) || defined(CONFIG_CPU_MIPS32_R2)
 	.set	push
+	SET_HARDFLOAT
+	cfc1	t1, fcr31
+	.set	pop
+
+#if defined(CONFIG_64BIT) || defined(CONFIG_CPU_MIPS32_R2) || \
+		defined(CONFIG_CPU_MIPS32_R6)
+	.set	push
+	SET_HARDFLOAT
 #ifdef CONFIG_CPU_MIPS32_R2
-	.set	mips64r2
+	.set	mips32r2
+	.set	fp=64
 	mfc0	t0, CP0_STATUS
 	sll	t0, t0, 5
 	bgez	t0, 1f			# skip storing odd if FR=0
@@ -65,6 +73,8 @@ LEAF(_save_fp_context)
 1:	.set	pop
 #endif
 
+	.set push
+	SET_HARDFLOAT
 	/* Store the 16 even double precision registers */
 	EX	sdc1 $f0, SC_FPREGS+0(a0)
 	EX	sdc1 $f2, SC_FPREGS+16(a0)
@@ -85,17 +95,23 @@ LEAF(_save_fp_context)
 	EX	sw t1, SC_FPC_CSR(a0)
 	jr	ra
 	 li	v0, 0					# success
+	.set pop
 	END(_save_fp_context)
 
 #ifdef CONFIG_MIPS32_COMPAT
 	/* Save 32-bit process floating point context */
 LEAF(_save_fp_context32)
+	.set push
+	.set MIPS_ISA_ARCH_LEVEL_RAW
+	SET_HARDFLOAT
 	cfc1	t1, fcr31
 
+#ifndef CONFIG_CPU_MIPS64_R6
 	mfc0	t0, CP0_STATUS
 	sll	t0, t0, 5
 	bgez	t0, 1f			# skip storing odd if FR=0
 	 nop
+#endif
 
 	/* Store the 16 odd double precision registers */
 	EX      sdc1 $f1, SC32_FPREGS+8(a0)
@@ -135,6 +151,7 @@ LEAF(_save_fp_context32)
 	EX	sw t1, SC32_FPC_CSR(a0)
 	cfc1	t0, $0				# implementation/version
 	EX	sw t0, SC32_FPC_EIR(a0)
+	.set pop
 
 	jr	ra
 	 li	v0, 0					# success
@@ -149,10 +166,13 @@ LEAF(_save_fp_context32)
 LEAF(_restore_fp_context)
 	EX	lw t1, SC_FPC_CSR(a0)
 
-#if defined(CONFIG_64BIT) || defined(CONFIG_CPU_MIPS32_R2)
+#if defined(CONFIG_64BIT) || defined(CONFIG_CPU_MIPS32_R2)  || \
+		defined(CONFIG_CPU_MIPS32_R6)
 	.set	push
+	SET_HARDFLOAT
 #ifdef CONFIG_CPU_MIPS32_R2
-	.set	mips64r2
+	.set	mips32r2
+	.set	fp=64
 	mfc0	t0, CP0_STATUS
 	sll	t0, t0, 5
 	bgez	t0, 1f			# skip loading odd if FR=0
@@ -176,6 +196,8 @@ LEAF(_restore_fp_context)
 	EX	ldc1 $f31, SC_FPREGS+248(a0)
 1:	.set pop
 #endif
+	.set push
+	SET_HARDFLOAT
 	EX	ldc1 $f0, SC_FPREGS+0(a0)
 	EX	ldc1 $f2, SC_FPREGS+16(a0)
 	EX	ldc1 $f4, SC_FPREGS+32(a0)
@@ -193,6 +215,7 @@ LEAF(_restore_fp_context)
 	EX	ldc1 $f28, SC_FPREGS+224(a0)
 	EX	ldc1 $f30, SC_FPREGS+240(a0)
 	ctc1	t1, fcr31
+	.set pop
 	jr	ra
 	 li	v0, 0					# success
 	END(_restore_fp_context)
@@ -200,12 +223,16 @@ LEAF(_restore_fp_context)
 #ifdef CONFIG_MIPS32_COMPAT
 LEAF(_restore_fp_context32)
 	/* Restore an o32 sigcontext.  */
+	.set push
+	SET_HARDFLOAT
 	EX	lw t1, SC32_FPC_CSR(a0)
 
+#ifndef CONFIG_CPU_MIPS64_R6
 	mfc0	t0, CP0_STATUS
 	sll	t0, t0, 5
 	bgez	t0, 1f			# skip loading odd if FR=0
 	 nop
+#endif
 
 	EX      ldc1 $f1, SC32_FPREGS+8(a0)
 	EX      ldc1 $f3, SC32_FPREGS+24(a0)
@@ -243,220 +270,9 @@ LEAF(_restore_fp_context32)
 	ctc1	t1, fcr31
 	jr	ra
 	 li	v0, 0					# success
+	.set pop
 	END(_restore_fp_context32)
 #endif
-
-#ifdef CONFIG_CPU_HAS_MSA
-
-	.macro	save_sc_msareg	wr, off, sc, tmp
-#ifdef CONFIG_64BIT
-	copy_u_d \tmp, \wr, 1
-	EX sd	\tmp, (\off+(\wr*8))(\sc)
-#elif defined(CONFIG_CPU_LITTLE_ENDIAN)
-	copy_u_w \tmp, \wr, 2
-	EX sw	\tmp, (\off+(\wr*8)+0)(\sc)
-	copy_u_w \tmp, \wr, 3
-	EX sw	\tmp, (\off+(\wr*8)+4)(\sc)
-#else /* CONFIG_CPU_BIG_ENDIAN */
-	copy_u_w \tmp, \wr, 2
-	EX sw	\tmp, (\off+(\wr*8)+4)(\sc)
-	copy_u_w \tmp, \wr, 3
-	EX sw	\tmp, (\off+(\wr*8)+0)(\sc)
-#endif
-	.endm
-
-/*
- * int _save_msa_context(struct sigcontext *sc)
- *
- * Save the upper 64 bits of each vector register along with the MSA_CSR
- * register into sc. Returns zero on success, else non-zero.
- */
-LEAF(_save_msa_context)
-	save_sc_msareg	0, SC_MSAREGS, a0, t0
-	save_sc_msareg	1, SC_MSAREGS, a0, t0
-	save_sc_msareg	2, SC_MSAREGS, a0, t0
-	save_sc_msareg	3, SC_MSAREGS, a0, t0
-	save_sc_msareg	4, SC_MSAREGS, a0, t0
-	save_sc_msareg	5, SC_MSAREGS, a0, t0
-	save_sc_msareg	6, SC_MSAREGS, a0, t0
-	save_sc_msareg	7, SC_MSAREGS, a0, t0
-	save_sc_msareg	8, SC_MSAREGS, a0, t0
-	save_sc_msareg	9, SC_MSAREGS, a0, t0
-	save_sc_msareg	10, SC_MSAREGS, a0, t0
-	save_sc_msareg	11, SC_MSAREGS, a0, t0
-	save_sc_msareg	12, SC_MSAREGS, a0, t0
-	save_sc_msareg	13, SC_MSAREGS, a0, t0
-	save_sc_msareg	14, SC_MSAREGS, a0, t0
-	save_sc_msareg	15, SC_MSAREGS, a0, t0
-	save_sc_msareg	16, SC_MSAREGS, a0, t0
-	save_sc_msareg	17, SC_MSAREGS, a0, t0
-	save_sc_msareg	18, SC_MSAREGS, a0, t0
-	save_sc_msareg	19, SC_MSAREGS, a0, t0
-	save_sc_msareg	20, SC_MSAREGS, a0, t0
-	save_sc_msareg	21, SC_MSAREGS, a0, t0
-	save_sc_msareg	22, SC_MSAREGS, a0, t0
-	save_sc_msareg	23, SC_MSAREGS, a0, t0
-	save_sc_msareg	24, SC_MSAREGS, a0, t0
-	save_sc_msareg	25, SC_MSAREGS, a0, t0
-	save_sc_msareg	26, SC_MSAREGS, a0, t0
-	save_sc_msareg	27, SC_MSAREGS, a0, t0
-	save_sc_msareg	28, SC_MSAREGS, a0, t0
-	save_sc_msareg	29, SC_MSAREGS, a0, t0
-	save_sc_msareg	30, SC_MSAREGS, a0, t0
-	save_sc_msareg	31, SC_MSAREGS, a0, t0
-	jr	ra
-	 li	v0, 0
-	END(_save_msa_context)
-
-#ifdef CONFIG_MIPS32_COMPAT
-
-/*
- * int _save_msa_context32(struct sigcontext32 *sc)
- *
- * Save the upper 64 bits of each vector register along with the MSA_CSR
- * register into sc. Returns zero on success, else non-zero.
- */
-LEAF(_save_msa_context32)
-	save_sc_msareg	0, SC32_MSAREGS, a0, t0
-	save_sc_msareg	1, SC32_MSAREGS, a0, t0
-	save_sc_msareg	2, SC32_MSAREGS, a0, t0
-	save_sc_msareg	3, SC32_MSAREGS, a0, t0
-	save_sc_msareg	4, SC32_MSAREGS, a0, t0
-	save_sc_msareg	5, SC32_MSAREGS, a0, t0
-	save_sc_msareg	6, SC32_MSAREGS, a0, t0
-	save_sc_msareg	7, SC32_MSAREGS, a0, t0
-	save_sc_msareg	8, SC32_MSAREGS, a0, t0
-	save_sc_msareg	9, SC32_MSAREGS, a0, t0
-	save_sc_msareg	10, SC32_MSAREGS, a0, t0
-	save_sc_msareg	11, SC32_MSAREGS, a0, t0
-	save_sc_msareg	12, SC32_MSAREGS, a0, t0
-	save_sc_msareg	13, SC32_MSAREGS, a0, t0
-	save_sc_msareg	14, SC32_MSAREGS, a0, t0
-	save_sc_msareg	15, SC32_MSAREGS, a0, t0
-	save_sc_msareg	16, SC32_MSAREGS, a0, t0
-	save_sc_msareg	17, SC32_MSAREGS, a0, t0
-	save_sc_msareg	18, SC32_MSAREGS, a0, t0
-	save_sc_msareg	19, SC32_MSAREGS, a0, t0
-	save_sc_msareg	20, SC32_MSAREGS, a0, t0
-	save_sc_msareg	21, SC32_MSAREGS, a0, t0
-	save_sc_msareg	22, SC32_MSAREGS, a0, t0
-	save_sc_msareg	23, SC32_MSAREGS, a0, t0
-	save_sc_msareg	24, SC32_MSAREGS, a0, t0
-	save_sc_msareg	25, SC32_MSAREGS, a0, t0
-	save_sc_msareg	26, SC32_MSAREGS, a0, t0
-	save_sc_msareg	27, SC32_MSAREGS, a0, t0
-	save_sc_msareg	28, SC32_MSAREGS, a0, t0
-	save_sc_msareg	29, SC32_MSAREGS, a0, t0
-	save_sc_msareg	30, SC32_MSAREGS, a0, t0
-	save_sc_msareg	31, SC32_MSAREGS, a0, t0
-	jr	ra
-	 li	v0, 0
-	END(_save_msa_context32)
-
-#endif /* CONFIG_MIPS32_COMPAT */
-
-	.macro restore_sc_msareg	wr, off, sc, tmp
-#ifdef CONFIG_64BIT
-	EX ld	\tmp, (\off+(\wr*8))(\sc)
-	insert_d \wr, 1, \tmp
-#elif defined(CONFIG_CPU_LITTLE_ENDIAN)
-	EX lw	\tmp, (\off+(\wr*8)+0)(\sc)
-	insert_w \wr, 2, \tmp
-	EX lw	\tmp, (\off+(\wr*8)+4)(\sc)
-	insert_w \wr, 3, \tmp
-#else /* CONFIG_CPU_BIG_ENDIAN */
-	EX lw	\tmp, (\off+(\wr*8)+4)(\sc)
-	insert_w \wr, 2, \tmp
-	EX lw	\tmp, (\off+(\wr*8)+0)(\sc)
-	insert_w \wr, 3, \tmp
-#endif
-	.endm
-
-/*
- * int _restore_msa_context(struct sigcontext *sc)
- */
-LEAF(_restore_msa_context)
-	restore_sc_msareg	0, SC_MSAREGS, a0, t0
-	restore_sc_msareg	1, SC_MSAREGS, a0, t0
-	restore_sc_msareg	2, SC_MSAREGS, a0, t0
-	restore_sc_msareg	3, SC_MSAREGS, a0, t0
-	restore_sc_msareg	4, SC_MSAREGS, a0, t0
-	restore_sc_msareg	5, SC_MSAREGS, a0, t0
-	restore_sc_msareg	6, SC_MSAREGS, a0, t0
-	restore_sc_msareg	7, SC_MSAREGS, a0, t0
-	restore_sc_msareg	8, SC_MSAREGS, a0, t0
-	restore_sc_msareg	9, SC_MSAREGS, a0, t0
-	restore_sc_msareg	10, SC_MSAREGS, a0, t0
-	restore_sc_msareg	11, SC_MSAREGS, a0, t0
-	restore_sc_msareg	12, SC_MSAREGS, a0, t0
-	restore_sc_msareg	13, SC_MSAREGS, a0, t0
-	restore_sc_msareg	14, SC_MSAREGS, a0, t0
-	restore_sc_msareg	15, SC_MSAREGS, a0, t0
-	restore_sc_msareg	16, SC_MSAREGS, a0, t0
-	restore_sc_msareg	17, SC_MSAREGS, a0, t0
-	restore_sc_msareg	18, SC_MSAREGS, a0, t0
-	restore_sc_msareg	19, SC_MSAREGS, a0, t0
-	restore_sc_msareg	20, SC_MSAREGS, a0, t0
-	restore_sc_msareg	21, SC_MSAREGS, a0, t0
-	restore_sc_msareg	22, SC_MSAREGS, a0, t0
-	restore_sc_msareg	23, SC_MSAREGS, a0, t0
-	restore_sc_msareg	24, SC_MSAREGS, a0, t0
-	restore_sc_msareg	25, SC_MSAREGS, a0, t0
-	restore_sc_msareg	26, SC_MSAREGS, a0, t0
-	restore_sc_msareg	27, SC_MSAREGS, a0, t0
-	restore_sc_msareg	28, SC_MSAREGS, a0, t0
-	restore_sc_msareg	29, SC_MSAREGS, a0, t0
-	restore_sc_msareg	30, SC_MSAREGS, a0, t0
-	restore_sc_msareg	31, SC_MSAREGS, a0, t0
-	jr	ra
-	 li	v0, 0
-	END(_restore_msa_context)
-
-#ifdef CONFIG_MIPS32_COMPAT
-
-/*
- * int _restore_msa_context32(struct sigcontext32 *sc)
- */
-LEAF(_restore_msa_context32)
-	restore_sc_msareg	0, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	1, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	2, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	3, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	4, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	5, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	6, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	7, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	8, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	9, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	10, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	11, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	12, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	13, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	14, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	15, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	16, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	17, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	18, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	19, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	20, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	21, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	22, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	23, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	24, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	25, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	26, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	27, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	28, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	29, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	30, SC32_MSAREGS, a0, t0
-	restore_sc_msareg	31, SC32_MSAREGS, a0, t0
-	jr	ra
-	 li	v0, 0
-	END(_restore_msa_context32)
-
-#endif /* CONFIG_MIPS32_COMPAT */
-
-#endif /* CONFIG_CPU_HAS_MSA */
 
 	.set	reorder
 

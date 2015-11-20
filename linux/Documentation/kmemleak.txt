@@ -62,6 +62,10 @@ Memory may be allocated or freed before kmemleak is initialised and
 these actions are stored in an early log buffer. The size of this buffer
 is configured via the CONFIG_DEBUG_KMEMLEAK_EARLY_LOG_SIZE option.
 
+If CONFIG_DEBUG_KMEMLEAK_DEFAULT_OFF are enabled, the kmemleak is
+disabled by default. Passing "kmemleak=on" on the kernel command
+line enables the function. 
+
 Basic Algorithm
 ---------------
 
@@ -122,7 +126,7 @@ Then as usual to get your report with:
 Freeing kmemleak internal objects
 ---------------------------------
 
-To allow access to previosuly found memory leaks after kmemleak has been
+To allow access to previously found memory leaks after kmemleak has been
 disabled by the user or due to an fatal error, internal kmemleak objects
 won't be freed when kmemleak is disabled, and those objects may occupy
 a large part of physical memory.
@@ -142,6 +146,7 @@ kmemleak_alloc_percpu	 - notify of a percpu memory block allocation
 kmemleak_free		 - notify of a memory block freeing
 kmemleak_free_part	 - notify of a partial memory block freeing
 kmemleak_free_percpu	 - notify of a percpu memory block freeing
+kmemleak_update_trace	 - update object allocation stack trace
 kmemleak_not_leak	 - mark an object as not a leak
 kmemleak_ignore		 - do not scan or report an object as leak
 kmemleak_scan_area	 - add scan areas inside a memory block

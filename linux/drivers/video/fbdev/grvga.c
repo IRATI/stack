@@ -514,9 +514,10 @@ free_fb:
 static int grvga_remove(struct platform_device *device)
 {
 	struct fb_info *info = dev_get_drvdata(&device->dev);
-	struct grvga_par *par = info->par;
+	struct grvga_par *par;
 
 	if (info) {
+		par = info->par;
 		unregister_framebuffer(info);
 		fb_dealloc_cmap(&info->cmap);
 
@@ -548,7 +549,6 @@ MODULE_DEVICE_TABLE(of, svgactrl_of_match);
 static struct platform_driver grvga_driver = {
 	.driver = {
 		.name = "grlib-svgactrl",
-		.owner = THIS_MODULE,
 		.of_match_table = svgactrl_of_match,
 	},
 	.probe		= grvga_probe,

@@ -80,6 +80,10 @@ struct ocfs2_inode_info
 	 */
 	tid_t i_sync_tid;
 	tid_t i_datasync_tid;
+
+	wait_queue_head_t append_dio_wq;
+
+	struct dquot *i_dquot[MAXQUOTAS];
 };
 
 /*
@@ -162,7 +166,7 @@ static inline blkcnt_t ocfs2_inode_sector_count(struct inode *inode)
 {
 	int c_to_s_bits = OCFS2_SB(inode->i_sb)->s_clustersize_bits - 9;
 
-	return (blkcnt_t)(OCFS2_I(inode)->ip_clusters << c_to_s_bits);
+	return (blkcnt_t)OCFS2_I(inode)->ip_clusters << c_to_s_bits;
 }
 
 /* Validate that a bh contains a valid inode */

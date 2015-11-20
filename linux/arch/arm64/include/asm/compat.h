@@ -37,8 +37,8 @@ typedef s32		compat_ssize_t;
 typedef s32		compat_time_t;
 typedef s32		compat_clock_t;
 typedef s32		compat_pid_t;
-typedef u32		__compat_uid_t;
-typedef u32		__compat_gid_t;
+typedef u16		__compat_uid_t;
+typedef u16		__compat_gid_t;
 typedef u16		__compat_uid16_t;
 typedef u16		__compat_gid16_t;
 typedef u32		__compat_uid32_t;
@@ -161,7 +161,6 @@ typedef struct compat_siginfo {
 	int si_code;
 
 	union {
-		/* The padding is the same size as AArch64. */
 		int _pad[128/sizeof(int) - 3];
 
 		/* kill() */
@@ -205,6 +204,13 @@ typedef struct compat_siginfo {
 			compat_long_t _band;	/* POLL_IN, POLL_OUT, POLL_MSG */
 			int _fd;
 		} _sigpoll;
+
+		/* SIGSYS */
+		struct {
+			compat_uptr_t _call_addr; /* calling user insn */
+			int _syscall;	/* triggering system call number */
+			compat_uint_t _arch;	/* AUDIT_ARCH_* of syscall */
+		} _sigsys;
 	} _sifields;
 } compat_siginfo_t;
 
@@ -304,11 +310,6 @@ static inline int is_compat_thread(struct thread_info *thread)
 }
 
 #else /* !CONFIG_COMPAT */
-
-static inline int is_compat_task(void)
-{
-	return 0;
-}
 
 static inline int is_compat_thread(struct thread_info *thread)
 {

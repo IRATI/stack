@@ -267,6 +267,9 @@ void ActiveWorker::allocateFlow()
 							   rrevent->difName);
 		LOG_INFO("[w:%u] Flow allocated, port id = %d", id, flow_.portId);
 	}
+
+	// Delete the event
+	delete event;
 }
 
 // Flow active worker
@@ -335,11 +338,11 @@ void* ActiveWorker::run(void* param)
 				LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
 			}
 
-			rina::cdap_rib::SerializedObject message;
+			rina::cdap_rib::ser_obj_t message;
 			message.message_ = buffer;
 			message.size_ = bytes_read;
 
-			//Instruct CDAP provider to process the message
+			//Instruct CDAP provider to process the CACEP message
 			try{
 				rina::cdap::getProvider()->process_message(message,
 							port_id);
@@ -359,11 +362,11 @@ void* ActiveWorker::run(void* param)
 					LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
 				}
 
-				rina::cdap_rib::SerializedObject message;
+				rina::cdap_rib::ser_obj_t message;
 				message.message_ = buffer;
 				message.size_ = bytes_read;
 
-				//Instruct CDAP provider to process the message
+				//Instruct CDAP provider to process the RIB operation message
 				try{
 					rina::cdap::getProvider()->process_message(
 									message,
@@ -521,6 +524,12 @@ FlowManager::~FlowManager()
 
 		//Remove
 		it = next;
+	}
+
+	// Delete pending elements
+	for (std::map<unsigned int, rina::IPCEvent*>::const_iterator it = pending_events.begin();
+			it != pending_events.end(); it++){
+		delete it->second;
 	}
 
 }

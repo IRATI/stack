@@ -9,6 +9,7 @@
  */
 
 #include <linux/bootmem.h>
+#include <asm/bootinfo.h>
 #include <asm/smp-ops.h>
 
 #include <loongson.h>
@@ -30,7 +31,11 @@ void __init prom_init(void)
 	set_io_port_base((unsigned long)
 		ioremap(LOONGSON_PCIIO_BASE, LOONGSON_PCIIO_SIZE));
 
+#ifdef CONFIG_NUMA
+	prom_init_numa_memory();
+#else
 	prom_init_memory();
+#endif
 
 	/*init the uart base address */
 	prom_init_uart_base();

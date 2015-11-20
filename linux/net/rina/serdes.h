@@ -36,13 +36,13 @@ int                    serdes_destroy(struct serdes * instance);
 struct pdu_ser *       pdu_serialize(const struct serdes * instance,
                                      struct pdu *          pdu);
 struct pdu_ser *       pdu_serialize_ni(const struct serdes * instance,
-                                        struct pdu *          pdu,
-                                        struct dup_config_entry * dup_conf,
-                                        struct crypto_blkcipher * blkcipher);
+                                        struct pdu *          pdu);
 struct pdu *           pdu_deserialize(const struct serdes * instance,
                                        struct pdu_ser *      pdu);
 struct pdu *           pdu_deserialize_ni(const struct serdes * instance,
-                                          struct pdu_ser *      pdu,
-                                          struct dup_config_entry * dup_conf,
-                                          struct crypto_blkcipher * blkcipher);
+                                          struct pdu_ser *      pdu);
+
+/* Get the size in bytes of the pdu. Returns -1 on error. */
+int 		       serdes_pdu_size(struct pdu * p, struct dt_cons * c);
+
 #endif

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011  Intel Corporation. All rights reserved.
+ * Copyright (C) 2014 Marvell International Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -680,16 +681,17 @@ void nfc_llcp_send_to_raw_sock(struct nfc_llcp_local *local,
 			continue;
 
 		if (skb_copy == NULL) {
-			skb_copy = __pskb_copy(skb, NFC_LLCP_RAW_HEADER_SIZE,
-					       GFP_ATOMIC);
+			skb_copy = __pskb_copy_fclone(skb, NFC_RAW_HEADER_SIZE,
+						      GFP_ATOMIC, true);
 
 			if (skb_copy == NULL)
 				continue;
 
-			data = skb_push(skb_copy, NFC_LLCP_RAW_HEADER_SIZE);
+			data = skb_push(skb_copy, NFC_RAW_HEADER_SIZE);
 
 			data[0] = local->dev ? local->dev->idx : 0xFF;
-			data[1] = direction;
+			data[1] = direction & 0x01;
+			data[1] |= (RAW_PAYLOAD_LLCP << 1);
 		}
 
 		nskb = skb_clone(skb_copy, GFP_ATOMIC);
@@ -747,7 +749,7 @@ static void nfc_llcp_tx_work(struct work_struct *work)
 			__net_timestamp(skb);
 
 			nfc_llcp_send_to_raw_sock(local, skb,
-						  NFC_LLCP_DIRECTION_TX);
+						  NFC_DIRECTION_TX);
 
 			ret = nfc_data_exchange(local->dev, local->target_idx,
 						skb, nfc_llcp_recv, local);
@@ -1476,7 +1478,7 @@ static void nfc_llcp_rx_work(struct work_struct *work)
 
 	__net_timestamp(skb);
 
-	nfc_llcp_send_to_raw_sock(local, skb, NFC_LLCP_DIRECTION_RX);
+	nfc_llcp_send_to_raw_sock(local, skb, NFC_DIRECTION_RX);
 
 	nfc_llcp_rx_skb(local, skb);
 
@@ -1510,8 +1512,10 @@ int nfc_llcp_data_received(struct nfc_dev *dev, struct sk_buff *skb)
 	struct nfc_llcp_local *local;
 
 	local = nfc_llcp_find_local(dev);
-	if (local == NULL)
+	if (local == NULL) {
+		kfree_skb(skb);
 		return -ENODEV;
+	}
 
 	__nfc_llcp_recv(local, skb);
 
