@@ -31,8 +31,7 @@
 #include "logs.h"
 #include "policies.h"
 #include "rds/rmem.h"
-#include "sdup.h"
-#include "sdup-crypto-ps.h"
+#include "sdup-crypto-ps-default.h"
 #include "debug.h"
 
 struct sdup_crypto_ps_default_data {
@@ -260,6 +259,7 @@ int default_sdup_apply_crypto(struct sdup_crypto_ps * ps,
 
 	return default_sdup_encrypt_policy(priv_data, pdu);
 }
+EXPORT_SYMBOL(default_sdup_apply_crypto);
 
 int default_sdup_remove_crypto(struct sdup_crypto_ps * ps,
 			       struct pdu_ser * pdu)
@@ -273,6 +273,8 @@ int default_sdup_remove_crypto(struct sdup_crypto_ps * ps,
 
 	return default_sdup_remove_padding_policy(priv_data, pdu);
 }
+EXPORT_SYMBOL(default_sdup_remove_crypto);
+
 
 int default_sdup_update_crypto_state(struct sdup_crypto_ps * ps,
 				     struct sdup_crypto_state * state)
@@ -320,9 +322,9 @@ int default_sdup_update_crypto_state(struct sdup_crypto_ps * ps,
 
 	return 0;
 }
+EXPORT_SYMBOL(default_sdup_update_crypto_state);
 
-static struct ps_base *
-sdup_crypto_ps_default_create(struct rina_component * component)
+struct ps_base * sdup_crypto_ps_default_create(struct rina_component * component)
 {
 	struct dup_config_entry * conf;
 	struct sdup_comp * sdup_comp;
@@ -440,9 +442,9 @@ sdup_crypto_ps_default_create(struct rina_component * component)
 
 	return &ps->base;
 }
+EXPORT_SYMBOL(sdup_crypto_ps_default_create);
 
-static void
-sdup_crypto_ps_default_destroy(struct ps_base * bps)
+void sdup_crypto_ps_default_destroy(struct ps_base * bps)
 {
 	struct sdup_crypto_ps_default_data * data;
 	struct sdup_crypto_ps *ps;
@@ -456,10 +458,4 @@ sdup_crypto_ps_default_destroy(struct ps_base * bps)
 		rkfree(ps);
 	}
 }
-
-struct ps_factory default_sdup_crypto_ps_factory = {
-	.owner   = THIS_MODULE,
-	.create  = sdup_crypto_ps_default_create,
-	.destroy = sdup_crypto_ps_default_destroy,
-};
-EXPORT_SYMBOL(default_sdup_crypto_ps_factory);
+EXPORT_SYMBOL(sdup_crypto_ps_default_destroy);

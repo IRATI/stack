@@ -446,7 +446,7 @@ int rnl_set_unregister(struct rnl_set * set)
 }
 EXPORT_SYMBOL(rnl_set_unregister);
 
-struct rnl_set * rnl_set_create(personality_id id)
+struct rnl_set * rnl_set_create(void)
 {
         struct rnl_set * tmp;
 
