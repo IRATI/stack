@@ -155,6 +155,7 @@ default_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
                 LOG_ERR("No PCI passed, cannot run policy");
                 return -1;
         }
+
         pdu = pdu_ctrl_generate(dtcp, PDU_TYPE_FC);
         if (!pdu)
                 return -1;
@@ -163,7 +164,7 @@ default_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         dump_we(dtcp, pdu_pci_get_rw(pdu));
 
         if (dtcp_pdu_send(dtcp, pdu))
-                return -1;
+               return -1;
 
         return 0;
 }
@@ -193,18 +194,36 @@ default_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 }
 
 int
-default_rate_reduction(struct dtcp_ps * ps)
-{
-        struct dtcp * dtcp = ps->dm;
+default_rate_reduction(struct dtcp_ps * ps, const struct pci * pci) {
 
-        if (!dtcp) {
-                LOG_ERR("No instance passed, cannot run policy");
-                return -1;
-        }
+	struct dtcp * dtcp = ps->dm;
+	u_int32_t rt;
+	u_int32_t tf;
 
-        LOG_MISSING;
+	if (!dtcp) {
+	       LOG_ERR("No instance passed, cannot run policy");
+	       return -1;
+	}
 
-        return 0;
+
+	rt = pci_control_sndr_rate(pci);
+	tf = pci_control_time_frame(pci);
+
+	if(rt == 0 || tf == 0) {
+	       return 0;
+	}
+
+	dtcp_sndr_rate_set(dtcp, rt);
+	dtcp_rcvr_rate_set(dtcp, rt);
+
+	dtcp_time_frame_set(dtcp, pci_control_time_frame(pci));
+
+	LOG_DBG("DTCP: %pK", dtcp);
+	LOG_DBG("    Rate: %u, Time: %u",
+		dtcp_sndr_rate(dtcp),
+		dtcp_time_frame(dtcp));;
+
+	return 0;
 }
 
 int
@@ -308,7 +327,6 @@ dtcp_ps_default_create(struct rina_component * component)
         ps->initial_rate                = NULL;
         ps->receiving_flow_control      = default_receiving_flow_control;
         ps->update_credit               = NULL;
-        ps->reconcile_flow_conflict     = NULL;
 #ifdef CONFIG_RINA_DTCP_RCVR_ACK
         ps->rcvr_ack                    = default_rcvr_ack,
 #endif

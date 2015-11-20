@@ -174,11 +174,14 @@ bool test_data_transfer_constants(rinad::Encoder * encoder) {
 	dtc.cep_id_length_ = 15;
 	dtc.dif_integrity_ = true;
 	dtc.length_length_ = 12;
+	dtc.rate_length_ = 5;
+	dtc.frame_length_ = 3;
 	dtc.max_pdu_lifetime_ = 45243;
 	dtc.max_pdu_size_ = 1233;
 	dtc.port_id_length_ = 541;
 	dtc.qos_id_length_ = 3414;
 	dtc.sequence_number_length_ = 123;
+	dtc.ctrl_sequence_number_length_ = 482;
 
 	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
 	cdapMessage.obj_class_ = rinad::EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS;
@@ -202,6 +205,14 @@ bool test_data_transfer_constants(rinad::Encoder * encoder) {
 		return false;
 	}
 
+	if (dtc.rate_length_ != recovered_obj->rate_length_) {
+		return false;
+	}
+
+	if (dtc.frame_length_ != recovered_obj->frame_length_) {
+		return false;
+	}
+
 	if (dtc.max_pdu_lifetime_ != recovered_obj->max_pdu_lifetime_) {
 		return false;
 	}
@@ -219,6 +230,10 @@ bool test_data_transfer_constants(rinad::Encoder * encoder) {
 	}
 
 	if (dtc.sequence_number_length_ != recovered_obj->sequence_number_length_) {
+		return false;
+	}
+
+	if (dtc.ctrl_sequence_number_length_ != recovered_obj->ctrl_sequence_number_length_) {
 		return false;
 	}
 
