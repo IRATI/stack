@@ -98,7 +98,7 @@ int CDAPEchoWorker::internal_run()
 void CDAPEchoWorker::serveEchoFlow(int port_id)
 {
 	bool keep_serving = true;
-	char buffer[max_sdu_size];
+	unsigned char buffer[max_sdu_size];
 	rina::cdap::CDAPProviderInterface *cdap_prov;
 	rina::cdap_rib::concrete_syntax_t syntax;
 	int bytes_read = 0;

@@ -88,17 +88,17 @@ public:
 	void import();
 	void add_plugin(const std::string& plugin_name,
 		        const std::string& plugin_path);
-	int load_by_template(Addon *addon, unsigned int ipcp_id,
-			     const rinad::DIFTemplate *dif_template);
+	int load(Addon *addon, unsigned int ipcp_id,
+			const rina::DIFConfiguration& t);
 
 	int load_policy_set(Addon *addon, unsigned int ipcp_id,
-			    const rina::PsInfo& psinfo);
+			const rina::PsInfo& psinfo);
 
 	int plugin_loaded(const std::string& plugin_name,
-			  unsigned int ipcp_id, bool load);
+			 unsigned int ipcp_id, bool load);
 
 	int policy_set_selected(const rina::PsInfo& ps_info,
-			        unsigned int id);
+			unsigned int id);
 
 	void ipcp_destroyed(unsigned int ipcp_id);
 

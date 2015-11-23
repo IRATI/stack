@@ -39,14 +39,16 @@ static const unsigned int max_sdu_size_in_bytes = 10000;
 class ConnectionCallback : public rina::cdap::CDAPCallbackInterface {
  public:
 	void open_connection(const rina::cdap_rib::con_handle_t &con,
-				const rina::cdap_rib::flags_t &flags,
-				int message_id);
+		     const rina::cdap::CDAPMessage& message);
 	void remote_create_result(const rina::cdap_rib::con_handle_t &con,
-					const rina::cdap_rib::obj_info_t &obj,
-					const rina::cdap_rib::res_info_t &res);
+			  const rina::cdap_rib::obj_info_t &obj,
+			  const rina::cdap_rib::res_info_t &res,
+			  const int invoke_id);
 	void remote_read_result(const rina::cdap_rib::con_handle_t &con,
-				const rina::cdap_rib::obj_info_t &obj,
-				const rina::cdap_rib::res_info_t &res);
+			const rina::cdap_rib::obj_info_t &obj,
+			const rina::cdap_rib::res_info_t &res,
+			const rina::cdap_rib::flags_t &flags,
+			const int invoke_id);
 };
 
 class ManagerWorker : public ServerWorker {

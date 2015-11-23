@@ -59,37 +59,6 @@ SWIG_JAVABODY_TYPEWRAPPER(public, public, public, SWIGTYPE)
         return $jnicall;
  }
 
-/**
- * char * typemaps. 
- * These are input typemaps for mapping a Java byte[] array to a C char array.
- * Note that as a Java array is used and thus passeed by reference, the C
- * routine can return data to Java via the parameter.
- *
- * Example usage wrapping:
- *   void foo(char *array);
- *  
- * Java usage:
- *   byte b[] = new byte[20];
- *   modulename.foo(b);
- */
-/*
-%typemap(jni)    char * "jbyteArray"
-%typemap(jtype)  char * "byte[]"
-%typemap(jstype) char * "byte[]"
-%typemap(in)     char * {
-        $1 = (char *) JCALL2(GetByteArrayElements, jenv, $input, 0); 
-}
-
-%typemap(argout) char * {
-        JCALL3(ReleaseByteArrayElements, jenv, $input, (jbyte *) $1, 0); 
-}
-
-%typemap(javain) char * "$javainput"
-
-%typemap(javaout) char * {
-        return $jnicall;
- }
-*/
 /* Define the class Exception */
 %typemap(javabase) Exception "java.lang.Exception";
 %typemap(javacode) Exception %{
@@ -406,6 +375,7 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 #include "librina/cdap_rib_structures.h"
 #include "librina/cdap_v2.h"
 #include "librina/ipc-api.h"
+#include "librina/configuration.h"
 %}
 
 %feature("director") rina::cdap::CDAPCallbackInterface;
@@ -441,6 +411,7 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %include "librina/patterns.h"
 %include "librina/concurrency.h"
 %include "librina/common.h"
+%include "librina/configuration.h"
 
 namespace rina {
 namespace cdap {

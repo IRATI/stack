@@ -23,10 +23,7 @@
 #define __DIF_VALIDATOR_H__
 
 #include <cstdlib>
-#include <iostream>
-#include <map>
 #include <vector>
-#include <utility>
 
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
@@ -52,12 +49,11 @@ public:
                 SHIM_HV,
                 SHIM_NOT_DEFINED
         };
-        DIFConfigValidator(const rina::DIFConfiguration &dif_config,
-                        const rina::DIFInformation &dif_info, std::string type);
+        DIFConfigValidator(const rina::DIFInformation &dif_info,
+        		std::string type);
         bool validateConfigs();
 private:
         Types type_;
-        const rina::DIFConfiguration &dif_config_;
         const rina::DIFInformation &dif_info_;
 
 	bool validateShimEth();
@@ -72,6 +68,7 @@ private:
 	bool qosCubes();
 	bool knownIPCProcessAddresses();
 	bool pdufTableGeneratorConfiguration();
+	void print_log(const std::string& message, std::stringstream& result);
 };
 
 

@@ -24,7 +24,6 @@
 #ifndef CDAP_PROVIDER_H_
 #define CDAP_PROVIDER_H_
 #include <string>
-#include <librina/common.h>
 
 #include <librina/common.h>
 #include <librina/concurrency.h>
@@ -49,32 +48,6 @@ public:
 private:
 	/// Operation result code
 	ErrorCode result_;
-};
-
-///Object exchanged between applications processes that
-///contains the source and destination addresses of the processes
-///and optional authentication information, as well as an
-///encoded CDAP Message. It is used to exchange CDAP messages
-///between APs without having a CDAP session previously established
-///(it can be seen as a one message session)
-class ADataObject {
-public:
-	static const std::string A_DATA;
-	static const std::string A_DATA_OBJECT_CLASS;
-	static const std::string A_DATA_OBJECT_NAME;
-
-	ADataObject();
-	ADataObject(unsigned int source_address,
-		    unsigned int dest_address);
-	~ADataObject();
-
-	//The address of the source AP (or IPCP)
-	unsigned int source_address_;
-
-	//The address of the destination AP (or IPCP)
-	unsigned int dest_address_;
-
-	ser_obj_t encoded_cdap_message_;
 };
 
 //TODO: remove this => convert to a pure struct or use the class directly

@@ -465,7 +465,7 @@ void DIFPropertiesEncoder::encode(const DIFProperties &obj,
 	gpb.set_dif_name(obj.DIFName.processName);
 
 	serobj.size_ = gpb.ByteSize();
-	serobj.message_ = new char[serobj.size_];
+	serobj.message_ = new unsigned char[serobj.size_];
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
 
@@ -503,7 +503,7 @@ void FlowInformationEncoder::encode(const FlowInformation &obj,
 	gpb.set_state((messages::flowStateValues_t) obj.state);
 
 	serobj.size_ = gpb.ByteSize();
-	serobj.message_ = new char[serobj.size_];
+	serobj.message_ = new unsigned char[serobj.size_];
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
 

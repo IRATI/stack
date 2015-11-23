@@ -31,11 +31,11 @@ namespace rinad {
 class FlowAllocatorPs: public IFlowAllocatorPs {
 public:
 	FlowAllocatorPs(IFlowAllocator * dm);
-        virtual Flow *newFlowRequest(IPCProcess * ipc_process,
-                                     const rina::FlowRequestEvent& event);
-        int set_policy_set_param(const std::string& name,
-                                 const std::string& value);
-        virtual ~FlowAllocatorPs() {}
+	configs::Flow *newFlowRequest(IPCProcess * ipc_process,
+			const rina::FlowRequestEvent& flowRequestEvent);
+	int set_policy_set_param(const std::string& name,
+							 const std::string& value);
+	virtual ~FlowAllocatorPs() {}
 
 private:
         // Data model of the security manager component.
@@ -48,11 +48,11 @@ FlowAllocatorPs::FlowAllocatorPs(IFlowAllocator * dm_) : dm(dm_)
 { }
 
 
-Flow * FlowAllocatorPs::newFlowRequest(IPCProcess * ipc_process,
+configs::Flow * FlowAllocatorPs::newFlowRequest(IPCProcess * ipc_process,
                                        const rina::FlowRequestEvent&
                                        event)
 {
-	Flow* flow;
+	configs::Flow* flow;
 	rina::QoSCube * qosCube = NULL;
 
 	flow = dm->createFlow();
@@ -61,7 +61,7 @@ Flow * FlowAllocatorPs::newFlowRequest(IPCProcess * ipc_process,
 	flow->hop_count = 3;
 	flow->max_create_flow_retries = 1;
 	flow->source = true;
-	flow->state = Flow::ALLOCATION_IN_PROGRESS;
+	flow->state = configs::Flow::ALLOCATION_IN_PROGRESS;
 
 	std::list<rina::Connection*> connections;
 	try {
@@ -146,11 +146,11 @@ class FlowAllocatorRoundRobinPs: public IFlowAllocatorPs {
 public:
 	FlowAllocatorRoundRobinPs(IFlowAllocator * dm_) :
 		dm(dm_), last_qos_index(0) {};
-        Flow *newFlowRequest(IPCProcess * ipc_process,
-                             const rina::FlowRequestEvent& event);
-        int set_policy_set_param(const std::string& name,
-        			 const std::string& value);
-        virtual ~FlowAllocatorRoundRobinPs() {}
+	configs::Flow *newFlowRequest(IPCProcess * ipc_process,
+			const rina::FlowRequestEvent& event);
+	int set_policy_set_param(const std::string& name,
+			const std::string& value);
+	virtual ~FlowAllocatorRoundRobinPs() {}
 
 private:
         // Data model of the security manager component.
@@ -158,10 +158,10 @@ private:
         int last_qos_index;
 };
 
-Flow * FlowAllocatorRoundRobinPs::newFlowRequest(IPCProcess * ipc_process,
+configs::Flow * FlowAllocatorRoundRobinPs::newFlowRequest(IPCProcess * ipc_process,
                                        	         const rina::FlowRequestEvent& event)
 {
-	Flow* flow;
+	configs::Flow* flow;
 	rina::QoSCube * qosCube = NULL;
 	std::list<rina::Connection*> connections;
         std::list<rina::QoSCube*> qosCubes = dm->ipcp->resource_allocator_->getQoSCubes();
@@ -198,7 +198,7 @@ Flow * FlowAllocatorRoundRobinPs::newFlowRequest(IPCProcess * ipc_process,
 	flow->hop_count = 3;
 	flow->max_create_flow_retries = 1;
 	flow->source = true;
-	flow->state = Flow::ALLOCATION_IN_PROGRESS;
+	flow->state = configs::Flow::ALLOCATION_IN_PROGRESS;
 
 	rina::Connection * connection = new rina::Connection();
 	connection->portId = event.portId;

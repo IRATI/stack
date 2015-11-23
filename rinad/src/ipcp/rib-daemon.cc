@@ -41,7 +41,7 @@ void * doManagementSDUReaderWork(void* arg)
 {
 	ManagementSDUReaderData * data = (ManagementSDUReaderData *) arg;
 	rina::ser_obj_t message;
-	message.message_ = new char[data->max_sdu_size_];
+	message.message_ = new unsigned char[data->max_sdu_size_];
 
 	rina::ReadManagementSDUResult result;
 	LOG_IPCP_INFO("Starting Management SDU reader ...");
@@ -101,7 +101,7 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t& m_sent,
 	try {
 		if (con_handle.cdap_dest == rina::cdap_rib::CDAP_DEST_ADDRESS) {
 			rina::cdap::ADataObject adata;
-			ADataObjectEncoder encoder;
+			encoders::ADataObjectEncoder encoder;
 			rina::cdap_rib::flags_t flags;
 			rina::cdap_rib::filt_info_t filt;
 			rina::cdap_rib::obj_info_t obj;
@@ -210,7 +210,7 @@ void IPCPCDAPIOHandler::process_message(const rina::ser_obj_t &message,
 	//2 If it is an A-Data PDU extract the real message
 	if (m_rcv.obj_name_ == rina::cdap::ADataObject::A_DATA_OBJECT_NAME) {
 		try {
-			ADataObjectEncoder encoder;
+			encoders::ADataObjectEncoder encoder;
 			rina::cdap::ADataObject a_data_obj;
 			rina::cdap::cdap_m_t inner_m;
 
@@ -274,7 +274,7 @@ void IPCPCDAPIOHandler::invoke_callback(const rina::cdap_rib::con_handle_t& con_
 	obj.inst_ = m_rcv.obj_inst_;
 	obj.name_ = m_rcv.obj_name_;
 	obj.value_.size_ = m_rcv.obj_value_.size_;
-	obj.value_.message_ = new char[obj.value_.size_];
+	obj.value_.message_ = new unsigned char[obj.value_.size_];
 	memcpy(obj.value_.message_,
 	       m_rcv.obj_value_.message_,
 	       m_rcv.obj_value_.size_);

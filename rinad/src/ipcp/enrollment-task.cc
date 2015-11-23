@@ -35,6 +35,7 @@
 #include "common/concurrency.h"
 #include "common/encoders/EnrollmentInformationMessage.pb.h"
 #include "ipcp/enrollment-task.h"
+#include "common/encoder.h"
 
 namespace rinad {
 
@@ -69,7 +70,7 @@ void NeighborRIBObj::read(const rina::cdap_rib::con_handle_t &con,
 			  rina::cdap_rib::res_info_t& res)
 {
 	if (neighbor) {
-		NeighborEncoder encoder;
+		encoders::NeighborEncoder encoder;
 		encoder.encode(*neighbor, obj_reply.value_);
 	}
 
@@ -97,7 +98,7 @@ void NeighborsRIBObj::create(const rina::cdap_rib::con_handle_t &con,
 {
 	rina::Lockable lock;
 	rina::ScopedLock g(lock);
-	NeighborListEncoder encoder;
+	encoders::NeighborListEncoder encoder;
 	std::list<rina::Neighbor> neighbors;
 	std::stringstream ss;
 	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
@@ -509,7 +510,7 @@ void IEnrollmentStateMachine::sendNeighbors()
 		rina::cdap_rib::obj_info_t obj;
 		rina::cdap_rib::flags_t flags;
 		rina::cdap_rib::filt_info_t filt;
-		NeighborListEncoder encoder;
+		encoders::NeighborListEncoder encoder;
 		obj.class_ = NeighborsRIBObj::class_name;
 		obj.name_ = NeighborsRIBObj::object_name;
 		encoder.encode(neighbors_to_send, obj.value_);

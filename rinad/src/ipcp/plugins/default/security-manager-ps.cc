@@ -34,7 +34,7 @@ class SecurityManagerPs: public ISecurityManagerPs {
 public:
 	SecurityManagerPs(IPCPSecurityManager * dm);
 	bool isAllowedToJoinDIF(const rina::Neighbor& newMember);
-	bool acceptFlow(const Flow& newFlow);
+	bool acceptFlow(const configs::Flow& newFlow);
         int set_policy_set_param(const std::string& name,
                                  const std::string& value);
         virtual ~SecurityManagerPs() {}
@@ -55,7 +55,7 @@ bool SecurityManagerPs::isAllowedToJoinDIF(const rina::Neighbor& newMember)
 	return true;
 }
 
-bool SecurityManagerPs::acceptFlow(const Flow& newFlow)
+bool SecurityManagerPs::acceptFlow(const configs::Flow& newFlow)
 {
 	LOG_IPCP_DBG("Accepting flow from remote application %s",
 			newFlow.source_naming_info.getEncodedString().c_str());
