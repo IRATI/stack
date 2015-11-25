@@ -150,12 +150,7 @@ red_rmt_dequeue_policy(struct rmt_ps *      ps,
         }
 
 	qlen = rfifo_length(q->queue);
-	if (port->pending_pdu) {
-		qlen++;
-		ret_pdu = port->pending_pdu;
-		port->pending_pdu = NULL;
-	} else
-        	ret_pdu = rfifo_pop(q->queue);
+        ret_pdu = rfifo_pop(q->queue);
         if (!ret_pdu)
                 LOG_ERR("Could not dequeue scheduled pdu");
 
@@ -204,16 +199,7 @@ static int red_rmt_enqueue_policy(struct rmt_ps *      ps,
                 return RMT_PS_ENQ_ERR;
         }
 
-	if (port->state != N1_PORT_STATE_DISABLED	&&
-	    !port->pending_pdu				&&
-	    rfifo_is_empty(q->queue)) {
-		ret = RMT_PS_ENQ_DSEND;
-		goto exit;
-	}
-
 	qlen = rfifo_length(q->queue);
-	if (port->pending_pdu)
-		qlen++;
 
 	/* Compute average queue usage (see RED)
 	 * Formula is qavg = qavg*(1-W) + backlog*W;
@@ -318,31 +304,6 @@ static int red_rmt_q_destroy_policy(struct rmt_ps *      ps,
         if (q) return red_rmt_queue_destroy(q);
 
         return -1;
-}
-
-static bool red_rmt_needs_sched_policy(struct rmt_ps *      ps,
-				       struct rmt_n1_port * port)
-{
-	struct red_rmt_queue *   q;
-	struct red_rmt_ps_data * data = ps->priv;
-
-	if (!ps || !port || !data) {
-		LOG_ERR("Wrong input parameters for "
-                        "rmt_needs_sched_policy");
-		return false;
-	}
-
-	if (port->pending_pdu)
-		return true;
-
-	q = red_rmt_queue_find(data, port->port_id);
-	if (!q) {
-		LOG_ERR("Could not find queue for n1_port %u",
-		port->port_id);
-		return false;
-	}
-
-	return !rfifo_is_empty(q->queue);
 }
 
 static int red_rmt_ps_set_policy_set_param(struct ps_base * bps,
@@ -501,7 +462,6 @@ rmt_ps_red_create(struct rina_component * component)
         ps->rmt_dequeue_policy = red_rmt_dequeue_policy;
 	ps->rmt_q_create_policy = red_rmt_q_create_policy;
 	ps->rmt_q_destroy_policy = red_rmt_q_destroy_policy;
-        ps->rmt_needs_sched_policy = red_rmt_needs_sched_policy;
 
         return &ps->base;
 }
