@@ -76,10 +76,10 @@ struct rmt_n1_port {
 	struct hlist_node	hlist;
 	enum flow_state		state;
 	atomic_t		refs_c;
-	struct pdu		*pending_pdu;
+	struct sdu		*pending_sdu;
 	struct sdup_port 	*sdup_port;
 	struct n1_port_stats	stats;
-	bool			wbussy;
+	bool			wbusy;
 };
 
 struct rmt	  *rmt_create(struct ipcp_instance *parent,

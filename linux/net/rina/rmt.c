@@ -98,7 +98,7 @@ static struct rmt_n1_port *n1_port_create(port_id_t id,
 	tmp->state   = N1_PORT_STATE_ENABLED;
 
 	atomic_set(&tmp->refs_c, 0);
-	tmp->wbussy = false;
+	tmp->wbusy = false;
 	tmp->stats.plen = 0;
 	tmp->stats.pdrop = 0;
 	tmp->stats.perr = 0;
@@ -136,10 +136,10 @@ static int n1_port_destroy(struct rmt_n1_port *n1p)
 	if (n1p->sdup_port)
 		sdup_destroy_port_config(n1p->sdup_port);
 
-	if (n1p->pending_pdu)
-		pdu_destroy(n1p->pending_pdu);
+	if (n1p->pending_sdu)
+		sdu_destroy(n1p->pending_sdu);
 
-	if (n1p->wbussy)
+	if (n1p->wbusy)
 		LOG_WARN("Deleting n1_port with bussy writer... there may be something wrong...");
 
 	rkfree(n1p);
@@ -534,9 +534,46 @@ int rmt_config_set(struct rmt	     *instance,
 }
 EXPORT_SYMBOL(rmt_config_set);
 
-static int n1_port_write(struct rmt *rmt,
-			 struct rmt_n1_port *n1_port,
-			 struct pdu *pdu)
+static int n1_port_write_sdu(struct rmt *rmt,
+			     struct rmt_n1_port *n1_port,
+			     struct sdu *sdu)
+{
+	int ret;
+	unsigned long flags;
+
+	LOG_DBG("Gonna send SDU to port-id %d", port_id);
+	ret = n1_port->n1_ipcp->ops->sdu_write(n1_port->n1_ipcp->data,
+					       n1_port->port_id,
+					       sdu);
+
+	if (ret == -EAGAIN) {
+		n1_port_lock(n1_port, flags);
+		if (n1_port->pending_sdu) {
+			LOG_ERR("Already a pending SDU present for port %d",
+					n1_port->port_id);
+			sdu_destroy(n1_port->pending_sdu);
+			n1_port->stats.plen--;
+		}
+
+		n1_port->pending_sdu = sdu;
+		n1_port->stats.plen++;
+
+		if (n1_port->state == N1_PORT_STATE_DO_NOT_DISABLE) {
+			n1_port->state = N1_PORT_STATE_ENABLED;
+			tasklet_hi_schedule(&rmt->egress_tasklet);
+		} else
+			n1_port->state = N1_PORT_STATE_DISABLED;
+
+		n1_port_unlock(n1_port, flags);
+		return 0;
+	}
+
+	return ret;
+}
+
+static struct sdu * generate_sdu_from_pdu(struct rmt * rmt,
+				     	  struct rmt_n1_port *n1_port,
+				     	  struct pdu *pdu)
 {
 	struct sdu *sdu;
 	struct pdu_ser *pdu_ser;
@@ -544,8 +581,6 @@ static int n1_port_write(struct rmt *rmt,
 	struct buffer *buffer;
 	struct ipcp_instance *n1_ipcp;
 	struct pci *pci;
-	int ret;
-	unsigned long flags;
 
 	ASSERT(n1_port);
 	ASSERT(rmt);
@@ -553,7 +588,7 @@ static int n1_port_write(struct rmt *rmt,
 
 	if (!pdu) {
 		LOG_DBG("No PDU to work in this queue ...");
-		return -1;
+		return NULL;
 	}
 
 	port_id = n1_port->port_id;
@@ -562,40 +597,41 @@ static int n1_port_write(struct rmt *rmt,
 	pci = pdu_pci_get_rw(pdu);
 	if (!pci) {
 		LOG_ERR("Cannot get PCI");
-		goto error_nobuff;
+		return NULL;
 	}
 
 	pdu_ser = pdu_serialize_ni(rmt->serdes, pdu);
 	if (!pdu_ser) {
 		LOG_ERR("Error creating serialized PDU");
-		goto error_nobuff;
+		return NULL;
 	}
 
 	/* SDU Protection */
 	if (sdup_set_lifetime_limit(n1_port->sdup_port, pdu_ser, pci)){
-                LOG_ERR("Error adding a Lifetime limit to serialized PDU");
-                pdu_ser_destroy(pdu_ser);
-		goto error_nobuff;
-        }
+		LOG_ERR("Error adding a Lifetime limit to serialized PDU");
+		pdu_ser_destroy(pdu_ser);
+		return NULL;
+	}
 
 	if (sdup_protect_pdu(n1_port->sdup_port, pdu_ser)){
-                LOG_ERR("Error Protecting serialized PDU");
-                pdu_ser_destroy(pdu_ser);
-		goto error_nobuff;
-        }
+		LOG_ERR("Error Protecting serialized PDU");
+		pdu_ser_destroy(pdu_ser);
+		return NULL;
+	}
 	/* end SDU Protection */
 
 	buffer = pdu_ser_buffer(pdu_ser);
 	if (!buffer_is_ok(buffer)) {
 		LOG_ERR("Buffer is not okay");
-                pdu_ser_destroy(pdu_ser);
-		goto error_nobuff;
+		pdu_ser_destroy(pdu_ser);
+		return NULL;
 	}
 
 	if (pdu_ser_buffer_disown(pdu_ser)) {
 		LOG_ERR("Could not disown buffer");
-                pdu_ser_destroy(pdu_ser);
-		goto error_all;
+		pdu_ser_destroy(pdu_ser);
+		buffer_destroy(buffer);
+		return NULL;
 	}
 
 	pdu_ser_destroy(pdu_ser);
@@ -603,41 +639,29 @@ static int n1_port_write(struct rmt *rmt,
 	sdu = sdu_create_buffer_with_ni(buffer);
 	if (!sdu) {
 		LOG_ERR("Error creating SDU from serialized PDU");
-		goto error_all;
+		buffer_destroy(buffer);
+		return NULL;
 	}
 
-	LOG_DBG("Gonna send SDU to port-id %d", port_id);
-	ret = n1_ipcp->ops->sdu_write(n1_ipcp->data, port_id, sdu);
+	return sdu;
+}
 
-	if (ret == -EAGAIN) {
-		n1_port_lock(n1_port, flags);
-		if (n1_port->pending_pdu) {
-			LOG_ERR("Already a pending PDU present for port %d",
-				n1_port->port_id);
-			pdu_destroy(n1_port->pending_pdu);
-		}
-		/* FIXME: the serialized SDU should be kept instead of the pdu,
-		 * but we need the pdu to be sent to n1_port_write
-		 */
-		n1_port->pending_pdu = pdu;
+static int n1_port_write(struct rmt *rmt,
+			 struct rmt_n1_port *n1_port,
+			 struct pdu *pdu)
+{
+	struct sdu *sdu;
 
-		if (n1_port->state == N1_PORT_STATE_DO_NOT_DISABLE) {
-			n1_port->state = N1_PORT_STATE_ENABLED;
-		       	tasklet_hi_schedule(&rmt->egress_tasklet);
-		} else
-			n1_port->state = N1_PORT_STATE_DISABLED;
+	ASSERT(n1_port);
+	ASSERT(rmt);
+	ASSERT(rmt->serdes);
 
-		n1_port_unlock(n1_port, flags);
-		return 0;
-	}
+	sdu = generate_sdu_from_pdu(rmt, n1_port, pdu);
 	pdu_destroy(pdu);
-	return ret;
+	if (!sdu)
+		return -1;
 
-error_all:
-	buffer_destroy(buffer);
-error_nobuff:
-	pdu_destroy(pdu);
-	return -1;
+	return n1_port_write_sdu(rmt, n1_port, sdu);
 }
 
 static void send_worker(unsigned long o)
@@ -650,6 +674,7 @@ static void send_worker(unsigned long o)
 	int pdus_sent;
 	struct rmt_ps *ps;
 	struct pdu *pdu = NULL;
+	struct sdu *sdu = NULL;
 	int ret;
 
 	LOG_DBG("Send worker called");
@@ -688,7 +713,7 @@ static void send_worker(unsigned long o)
 
 		if (n1_port->state == N1_PORT_STATE_DISABLED	||
 		    !n1_port->stats.plen			||
-		    n1_port->wbussy) {
+		    n1_port->wbusy) {
 			spin_unlock(&n1_port->lock);
 			spin_lock(&rmt->n1_ports->lock);
 			LOG_DBG("Port state is DISABLED or no PDUs to send");
@@ -696,7 +721,7 @@ static void send_worker(unsigned long o)
 		}
 
 		atomic_inc(&n1_port->refs_c);
-		n1_port->wbussy = true;
+		n1_port->wbusy = true;
 
 		pdus_sent = 0;
 		ret = 0;
@@ -704,21 +729,28 @@ static void send_worker(unsigned long o)
 
 		while ((pdus_sent < MAX_PDUS_SENT_PER_CYCLE) &&
 			n1_port->stats.plen) {
-			if (n1_port->pending_pdu) {
-				pdu = n1_port->pending_pdu;
-				n1_port->pending_pdu = NULL;
-			} else
+			if (n1_port->pending_sdu) {
+				sdu = n1_port->pending_sdu;
+				n1_port->pending_sdu = NULL;
+				n1_port->stats.plen--;
+			} else {
 				pdu = ps->rmt_dequeue_policy(ps, n1_port);
-			if (!pdu) {
-				if (n1_port->stats.plen)
-					LOG_ERR("rmt_dequeue_policy returned no pdu but plen is %u",
-						n1_port->stats.plen);
-				break;
+				if (!pdu) {
+					if (n1_port->stats.plen)
+						LOG_ERR("rmt_dequeue_policy returned no pdu but plen is %u",
+								n1_port->stats.plen);
+					break;
+				}
+
+				n1_port->stats.plen--;
+				sdu = generate_sdu_from_pdu(rmt, n1_port, pdu);
+				pdu_destroy(pdu);
+				if (!sdu)
+					continue;
 			}
-			n1_port->stats.plen--;
 
 			spin_unlock(&n1_port->lock);
-			ret =  n1_port_write(rmt, n1_port, pdu);
+			ret =  n1_port_write_sdu(rmt, n1_port, sdu);
 			spin_lock(&n1_port->lock);
 
 			if (ret)
@@ -733,7 +765,7 @@ static void send_worker(unsigned long o)
 
 		rcu_read_unlock();
 
-		n1_port->wbussy = false;
+		n1_port->wbusy = false;
 		if (atomic_dec_and_test(&n1_port->refs_c) &&
 		    n1_port->state == N1_PORT_STATE_DEALLOCATED) {
 			spin_unlock(&n1_port->lock);
@@ -800,9 +832,8 @@ int rmt_send_port_id(struct rmt *instance,
 
 	n1_port_lock(n1_port, flags);
 	if (n1_port->stats.plen 				||
-		n1_port->wbussy 				||
-		n1_port->state == N1_PORT_STATE_DISABLED	||
-	        n1_port->pending_pdu) {
+		n1_port->wbusy 					||
+		n1_port->state == N1_PORT_STATE_DISABLED) {
 		ret = ps->rmt_enqueue_policy(ps, n1_port, pdu);
 		rcu_read_unlock();
 		switch (ret) {
@@ -828,13 +859,13 @@ int rmt_send_port_id(struct rmt *instance,
 		return 0;
 	}
 	rcu_read_unlock();
-	n1_port->wbussy = true;
+	n1_port->wbusy = true;
 	n1_port_unlock(n1_port, flags);
 	LOG_DBG("PDU ready to be sent, no need to enqueue");
 	ret = n1_port_write(instance, n1_port, pdu);
 	/*FIXME LB: This is just horrible, needs to be rethinked */
 	n1_port_lock(n1_port, flags);
-	n1_port->wbussy = false;
+	n1_port->wbusy = false;
 	n1_port_unlock(n1_port, flags);
 	n1pmap_release(instance, n1_port);
 	return ret;
