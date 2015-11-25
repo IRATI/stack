@@ -103,6 +103,19 @@ RIBFactory::RIBFactory(RIBAEassoc ver_assoc){
 }
 
 RIBFactory::~RIBFactory() throw (){
+	// Destroy RIBs
+	std::map<rib_handle_t, uint64_t>::const_iterator it;
+	for (it = ribs.begin(); it != ribs.end(); ++it){
+		switch(it->second){
+			case 0x1ULL:
+				rib_v1::destroyRIB(it->first);
+				break;
+			default:
+				assert(0);
+				break;
+		}
+	}
+
 	// FIXME destroy con handlers and resp handlers
 	LOG_INFO("RIBFactory destructor called");
 	rina::rib::fini();
