@@ -28,12 +28,12 @@
 #include "rds/rmem.h"
 #include "rmt-ps.h"
 
-static int
+static void *
 dummy_rmt_q_create_policy(struct rmt_ps      *ps,
 			  struct rmt_n1_port *port)
 {
         printk("%s: called()\n", __func__);
-        return 0;
+        return NULL;
 }
 
 static int

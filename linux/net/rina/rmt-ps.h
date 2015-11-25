@@ -43,7 +43,7 @@ struct rmt_ps {
 	int (*rmt_enqueue_policy)(struct rmt_ps *,
 				  struct rmt_n1_port *,
 				  struct pdu *);
-	int (*rmt_q_create_policy)(struct rmt_ps *,
+	void* (*rmt_q_create_policy)(struct rmt_ps *,
 				   struct rmt_n1_port *);
 	int (*rmt_q_destroy_policy)(struct rmt_ps *,
 				    struct rmt_n1_port *);

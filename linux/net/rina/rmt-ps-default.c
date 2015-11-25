@@ -82,7 +82,7 @@ static int rmt_queue_destroy(struct rmt_queue *q)
 	return 0;
 }
 
-int default_rmt_q_create_policy(struct rmt_ps      *ps,
+void * default_rmt_q_create_policy(struct rmt_ps      *ps,
 			        struct rmt_n1_port *n1_port)
 {
 	struct rmt_queue *queue;
@@ -90,7 +90,7 @@ int default_rmt_q_create_policy(struct rmt_ps      *ps,
 
 	if (!ps || !n1_port || !ps->priv) {
 		LOG_ERR("Wrong input parameters");
-		return -1;
+		return NULL;
 	}
 
 	data = ps->priv;
@@ -99,13 +99,11 @@ int default_rmt_q_create_policy(struct rmt_ps      *ps,
 	if (!queue) {
 		LOG_ERR("Could not create queue for n1_port %u",
 			n1_port->port_id);
-		n1_port->rmt_ps_queues = NULL;
-		return -1;
+		return NULL;
 	}
 
-	n1_port->rmt_ps_queues = queue;
 	LOG_DBG("Structures for scheduling policies created...");
-	return 0;
+	return queue;
 }
 EXPORT_SYMBOL(default_rmt_q_create_policy);
 
@@ -169,7 +167,6 @@ struct pdu *default_rmt_dequeue_policy(struct rmt_ps	  *ps,
 				       struct rmt_n1_port *n1_port)
 {
 	struct rmt_queue *q;
-	struct rmt_ps_default_data *data = ps->priv;
 	struct pdu *ret_pdu;
 
 	if (!ps || !n1_port) {

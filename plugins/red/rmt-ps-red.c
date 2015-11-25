@@ -230,7 +230,7 @@ exit:
         return ret;
 }
 
-static int red_rmt_q_create_policy(struct rmt_ps *      ps,
+static void * red_rmt_q_create_policy(struct rmt_ps *      ps,
                                    struct rmt_n1_port * port)
 {
         struct red_rmt_queue *   q;
@@ -239,7 +239,7 @@ static int red_rmt_q_create_policy(struct rmt_ps *      ps,
         if (!ps || !port || !ps->priv) {
                 LOG_ERR("Wrong input parameters for "
                         "red_rmt_scheduling_create_policy");
-                return -1;
+                return NULL;
         }
 
         data = ps->priv;
@@ -250,15 +250,13 @@ static int red_rmt_q_create_policy(struct rmt_ps *      ps,
         if (!q) {
                 LOG_ERR("Could not create queue for n1_port %u",
                         port->port_id);
-                port->rmt_ps_queues = NULL;
-                return -1;
+                return NULL;
         }
 
-        port->rmt_ps_queues = q;
-
         LOG_DBG("Structures for scheduling policies created...");
-        return 0;
+        return q;
 }
+
 static int red_rmt_q_destroy_policy(struct rmt_ps *      ps,
                                     struct rmt_n1_port * port)
 {

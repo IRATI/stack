@@ -247,15 +247,15 @@ static struct pdu * cas_rmt_dequeue_policy(struct rmt_ps      *ps,
 	return ret_pdu;
 }
 
-static int cas_rmt_q_create_policy(struct rmt_ps      *ps,
-				   struct rmt_n1_port *port)
+static void * cas_rmt_q_create_policy(struct rmt_ps      *ps,
+				      struct rmt_n1_port *port)
 {
         struct cas_rmt_queue *   q;
         struct cas_rmt_ps_data * data;
 
         if (!ps || !port || !ps->priv) {
                 LOG_ERR("Wrong input parms for cas_rmt_q_create_policy_tx");
-		return -1;
+		return NULL;
         }
 
         data = ps->priv;
@@ -264,8 +264,7 @@ static int cas_rmt_q_create_policy(struct rmt_ps      *ps,
         if (!q) {
                 LOG_ERR("Could not create queue for n1_port %u",
                         port->port_id);
-                port->rmt_ps_queues = NULL;
-                return -1;
+                return NULL;
         }
 
         getnstimeofday(&q->reg_cycles.prev_cycle.t_start);
@@ -275,10 +274,8 @@ static int cas_rmt_q_create_policy(struct rmt_ps      *ps,
         q->reg_cycles.prev_cycle.avg_len = 0;
         q->reg_cycles.cur_cycle = q->reg_cycles.prev_cycle;
 
-        port->rmt_ps_queues = q;
-
         LOG_DBG("Structures for scheduling policies created...");
-        return 0;
+        return q;
 }
 
 static int cas_rmt_q_destroy_policy(struct rmt_ps      *ps,

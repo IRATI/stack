@@ -1079,13 +1079,13 @@ int rmt_n1port_bind(struct rmt *instance,
 		return -1;
 	}
 
-	if (ps->rmt_q_create_policy(ps, tmp)) {
-		rcu_read_unlock();
+	tmp->rmt_ps_queues = ps->rmt_q_create_policy(ps, tmp);
+	rcu_read_unlock();
+	if (!tmp->rmt_ps_queues) {
 		LOG_ERR("Cannot create structs for scheduling policy");
 		n1_port_destroy(tmp);
 		return -1;
 	}
-	rcu_read_unlock();
 
 	hash_add(instance->n1_ports->n1_ports, &tmp->hlist, id);
 	LOG_DBG("Added send queue to rmt instance %pK for port-id %d",
