@@ -42,15 +42,9 @@
 struct rmt_queue {
 	struct rfifo	 *queue;
 	port_id_t	  pid;
-	struct hlist_node hlist;
-};
-
-struct rmt_queue_set {
-	DECLARE_HASHTABLE(queues, RMT_PS_HASHSIZE);
 };
 
 struct rmt_ps_default_data {
-	struct rmt_queue_set *outqs;
 	unsigned int q_max;
 };
 
@@ -69,7 +63,6 @@ static struct rmt_queue *rmt_queue_create(port_id_t port)
 	}
 
 	tmp->pid = port;
-	INIT_HLIST_NODE(&tmp->hlist);
 
 	return tmp;
 }
@@ -81,60 +74,10 @@ static int rmt_queue_destroy(struct rmt_queue *q)
 		return -1;
 	}
 
-	hash_del(&q->hlist);
-
 	if (q->queue)
 		rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
 
 	rkfree(q);
-
-	return 0;
-}
-
-static struct rmt_queue *rmt_queue_find(struct rmt_queue_set *qs,
-					port_id_t port)
-{
-	struct rmt_queue *entry;
-	const struct hlist_head *head;
-
-	ASSERT(qs);
-
-	head = &qs->queues[rmap_hash(qs->queues, port)];
-	hlist_for_each_entry(entry, head, hlist)
-		if (entry->pid == port)
-			return entry;
-
-	return NULL;
-}
-
-static struct rmt_queue_set *rmt_queue_set_create(void)
-{
-	struct rmt_queue_set *tmp;
-
-	tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
-	if (!tmp)
-		return NULL;
-
-	hash_init(tmp->queues);
-
-	return tmp;
-}
-
-static int rmt_queue_set_destroy(struct rmt_queue_set *qs)
-{
-	struct rmt_queue  *entry;
-	struct hlist_node *tmp;
-	int bucket;
-
-	ASSERT(qs);
-
-	hash_for_each_safe(qs->queues, bucket, tmp, entry, hlist)
-		if (rmt_queue_destroy(entry)) {
-			LOG_ERR("Could not destroy entry %pK", entry);
-			return -1;
-		}
-
-	rkfree(qs);
 
 	return 0;
 }
@@ -156,11 +99,11 @@ int default_rmt_q_create_policy(struct rmt_ps      *ps,
 	if (!queue) {
 		LOG_ERR("Could not create queue for n1_port %u",
 			n1_port->port_id);
+		n1_port->rmt_ps_queues = NULL;
 		return -1;
 	}
 
-	hash_add(data->outqs->queues, &queue->hlist, n1_port->port_id);
-
+	n1_port->rmt_ps_queues = queue;
 	LOG_DBG("Structures for scheduling policies created...");
 	return 0;
 }
@@ -179,14 +122,13 @@ int default_rmt_q_destroy_policy(struct rmt_ps      *ps,
 
 	data = ps->priv;
 
-	queue = rmt_queue_find(data->outqs, n1_port->port_id);
+	queue = n1_port->rmt_ps_queues;
 	if (!queue) {
 		LOG_ERR("Could not find queue for n1_port %u",
 			n1_port->port_id);
 		return -1;
 	}
 
-	hash_del(&queue->hlist);
 	rmt_queue_destroy(queue);
 
 	return 0;
@@ -205,7 +147,7 @@ int default_rmt_enqueue_policy(struct rmt_ps	  *ps,
 		return RMT_PS_ENQ_ERR;
 	}
 
-	q = rmt_queue_find(data->outqs, n1_port->port_id);
+	q = n1_port->rmt_ps_queues;
 	if (!q) {
 		LOG_ERR("Could not find queue for n1_port %u",
 			n1_port->port_id);
@@ -235,7 +177,7 @@ struct pdu *default_rmt_dequeue_policy(struct rmt_ps	  *ps,
 		return NULL;
 	}
 
-	q = rmt_queue_find(data->outqs, n1_port->port_id);
+	q = n1_port->rmt_ps_queues;
 	if (!q) {
 		LOG_ERR("Could not find queue for n1_port %u",
 			n1_port->port_id);
@@ -304,21 +246,12 @@ struct ps_base *rmt_ps_default_create(struct rina_component *component)
 		return NULL;
 	}
 
-	/* Allocate policy-set private data. */
-	data->outqs = rmt_queue_set_create();
-	if (!data->outqs) {
-		rkfree(ps);
-		rkfree(data);
-		return NULL;
-	}
-
 	ps->base.set_policy_set_param = NULL; /* default */
 	ps->dm = rmt;
 	ps->priv = data;
 
 	rmt_cfg = rmt_config_get(rmt);
 	if(!rmt_cfg) {
-		rmt_queue_set_destroy(data->outqs);
 		rkfree(data);
 		rkfree(ps);
 		return NULL;
@@ -351,11 +284,8 @@ void rmt_ps_default_destroy(struct ps_base *bps)
 	data = ps->priv;
 
 	if (bps) {
-		if (data) {
-			if (data->outqs)
-				rmt_queue_set_destroy(data->outqs);
+		if (data)
 			rkfree(data);
-		}
 		rkfree(ps);
 	}
 }

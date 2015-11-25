@@ -32,7 +32,6 @@
 #include "pci.h"
 
 #define  N1_CYCLE_DURATION 100
-#define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
 struct reg_cycle_t {
         struct timespec t_start;
@@ -50,11 +49,9 @@ struct cas_rmt_queue {
                 struct reg_cycle_t cur_cycle;
         } reg_cycles;
 	bool 		 first_run;
-        struct hlist_node hlist;
 };
 
 struct cas_rmt_ps_data {
-        DECLARE_HASHTABLE(queues, RMT_PS_HASHSIZE);
         unsigned int q_max;
 };
 
@@ -82,8 +79,6 @@ static struct cas_rmt_queue * cas_queue_create(port_id_t port_id)
         tmp->reg_cycles.cur_cycle                       = tmp->reg_cycles.prev_cycle;
 	tmp->first_run                                  = true;
 
-        INIT_HLIST_NODE(&tmp->hlist);
-
         return tmp;
 }
 
@@ -94,30 +89,11 @@ static int cas_rmt_queue_destroy(struct cas_rmt_queue * q)
                 return -1;
         }
 
-        hash_del(&q->hlist);
-
         if (q->queue) rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
 
         rkfree(q);
 
         return 0;
-}
-
-struct cas_rmt_queue * cas_rmt_queue_find(struct cas_rmt_ps_data * data,
-                                          port_id_t                port_id)
-{
-        struct cas_rmt_queue *    entry;
-        const struct hlist_head * head;
-
-        ASSERT(data);
-
-        head = &data->queues[rmap_hash(data->queues, port_id)];
-        hlist_for_each_entry(entry, head, hlist) {
-                if (entry->port_id == port_id)
-                        return entry;
-        }
-
-        return NULL;
 }
 
 static int update_cycles(struct reg_cycle_t * prev_cycle,
@@ -196,7 +172,7 @@ static int cas_rmt_enqueue_policy(struct rmt_ps      *ps,
 
         data = ps->priv;
 
-        q = cas_rmt_queue_find(data, port->port_id);
+        q = port->rmt_ps_queues;
         if (!q) {
                 LOG_ERR("Monitoring: could not find CAS queue for N-1 port %u",
                         port->port_id);
@@ -243,7 +219,7 @@ static struct pdu * cas_rmt_dequeue_policy(struct rmt_ps      *ps,
 
         data = ps->priv;
 
-        q = cas_rmt_queue_find(data, port->port_id);
+        q = port->rmt_ps_queues;
         if (!q) {
                 LOG_ERR("Monitoring: could not find CAS queue for N-1 port %u",
                         port->port_id);
@@ -288,6 +264,7 @@ static int cas_rmt_q_create_policy(struct rmt_ps      *ps,
         if (!q) {
                 LOG_ERR("Could not create queue for n1_port %u",
                         port->port_id);
+                port->rmt_ps_queues = NULL;
                 return -1;
         }
 
@@ -298,8 +275,7 @@ static int cas_rmt_q_create_policy(struct rmt_ps      *ps,
         q->reg_cycles.prev_cycle.avg_len = 0;
         q->reg_cycles.cur_cycle = q->reg_cycles.prev_cycle;
 
-        /* FIXME this is not used in this implementation so far */
-        hash_add(data->queues, &q->hlist, port->port_id);
+        port->rmt_ps_queues = q;
 
         LOG_DBG("Structures for scheduling policies created...");
         return 0;
@@ -319,7 +295,7 @@ static int cas_rmt_q_destroy_policy(struct rmt_ps      *ps,
         data = ps->priv;
         ASSERT(data);
 
-        q = cas_rmt_queue_find(data, port->port_id);
+        q = port->rmt_ps_queues;
         if (q) return cas_rmt_queue_destroy(q);
 
         return -1;
@@ -372,7 +348,6 @@ rmt_ps_cas_create(struct rina_component * component)
         ps->base.set_policy_set_param = rmt_cas_set_policy_set_param;
         ps->dm = rmt;
 
-        hash_init(data->queues);
         ps->priv = data;
 
         ps->rmt_q_create_policy = cas_rmt_q_create_policy;
@@ -386,9 +361,6 @@ rmt_ps_cas_create(struct rina_component * component)
 static void rmt_ps_cas_destroy(struct ps_base * bps)
 {
         struct rmt_ps *          ps = container_of(bps, struct rmt_ps, base);
-        struct cas_rmt_queue *   entry;
-        struct hlist_node *      tmp;
-        int                      bucket;
         struct cas_rmt_ps_data * data;
 
         data = ps->priv;
@@ -401,18 +373,6 @@ static void rmt_ps_cas_destroy(struct ps_base * bps)
         if (bps) {
 
                 if (data) {
-                        hash_for_each_safe(data->queues,
-					   bucket,
-					   tmp,
-					   entry,
-					   hlist) {
-                                ASSERT(entry);
-                                if (cas_rmt_queue_destroy(entry)) {
-                                        LOG_ERR("Could not destroy entry %pK",
-						entry);
-                                        return;
-                                }
-                        }
                         rkfree(data);
                 }
                 rkfree(ps);

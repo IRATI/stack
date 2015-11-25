@@ -80,6 +80,7 @@ struct rmt_n1_port {
 	struct sdup_port 	*sdup_port;
 	struct n1_port_stats	stats;
 	bool			wbusy;
+	void 			*rmt_ps_queues;
 };
 
 struct rmt	  *rmt_create(struct ipcp_instance *parent,
