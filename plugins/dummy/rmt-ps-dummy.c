@@ -50,7 +50,7 @@ dummy_rmt_enqueue_policy(struct rmt_ps	    *ps,
 			 struct pdu	    *pdu)
 {
         printk("%s: called()\n", __func__);
-        return RMT_PS_ENQ_DSEND;
+        return RMT_PS_ENQ_SCHED;
 }
 
 static struct pdu *
@@ -59,14 +59,6 @@ dummy_rmt_dequeue_policy(struct rmt_ps	    *ps,
 {
 	printk("%s: called()\n", __func__);
 	return NULL;
-}
-
-static bool
-dummy_rmt_needs_sched_policy(struct rmt_ps	*ps,
-			     struct rmt_n1_port *port)
-{
-        printk("%s: called()\n", __func__);
-        return false;
 }
 
 static int
@@ -103,14 +95,13 @@ rmt_ps_dummy_create(struct rina_component *component)
 		return NULL;
 	}
 
-	ps->base.set_policy_set_param = dummy_rmt_ps_set_policy_set_param;
+	ps->base.set_policy_set_param = dummy_rmt_ps_set_policy_set_param; /* default */
 	ps->dm = rmt;
 	ps->priv = NULL;
 	ps->rmt_q_create_policy = dummy_rmt_q_create_policy;
 	ps->rmt_q_destroy_policy = dummy_rmt_q_destroy_policy;
 	ps->rmt_enqueue_policy = dummy_rmt_enqueue_policy;
 	ps->rmt_dequeue_policy = dummy_rmt_dequeue_policy;
-	ps->rmt_needs_sched_policy = dummy_rmt_needs_sched_policy;
 
 	return &ps->base;
 }

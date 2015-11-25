@@ -204,13 +204,6 @@ static int cas_rmt_enqueue_policy(struct rmt_ps      *ps,
         }
 
         cur_qlen = rfifo_length(q->queue);
-	if (port->pending_pdu)
-		cur_qlen++;
-
-	if (port->state != N1_PORT_STATE_DISABLED    &&
-	    cur_qlen == 0)
-		return RMT_PS_ENQ_DSEND;
-
 	if (cur_qlen >= data->q_max) {
 		pdu_destroy(pdu);
 		return RMT_PS_ENQ_DROP;
@@ -258,17 +251,11 @@ static struct pdu * cas_rmt_dequeue_policy(struct rmt_ps      *ps,
         }
 
         cur_qlen = rfifo_length(q->queue);
-	if (port->pending_pdu) {
-		ret_pdu = port->pending_pdu;
-		port->pending_pdu = NULL;
-		cur_qlen++;
-	} else {
-		ret_pdu = rfifo_pop(q->queue);
-		if (!ret_pdu) {
-			LOG_ERR("Could not dequeue scheduled PDU");
-			return NULL;
-		}
-	}
+        ret_pdu = rfifo_pop(q->queue);
+        if (!ret_pdu) {
+        	LOG_ERR("Could not dequeue scheduled PDU");
+        	return NULL;
+        }
 
         prev_cycle = &q->reg_cycles.prev_cycle;
         cur_cycle  = &q->reg_cycles.cur_cycle;
@@ -282,32 +269,6 @@ static struct pdu * cas_rmt_dequeue_policy(struct rmt_ps      *ps,
                 port->port_id, cur_cycle->avg_len);
 
 	return ret_pdu;
-}
-
-static bool
-cas_rmt_needs_sched_policy(struct rmt_ps *      ps,
-                           struct rmt_n1_port * port)
-{
-        struct cas_rmt_queue *   q;
-        struct cas_rmt_ps_data * data = ps->priv;
-
-        if (!ps || !port || !data) {
-                LOG_ERR("Wrong input parameters for "
-                        "rmt_needs_sched_policy");
-                return false;
-        }
-
-	if (port->pending_pdu)
-		return true;
-
-        q = cas_rmt_queue_find(data, port->port_id);
-        if (!q) {
-                LOG_ERR("Could not find queue for n1_port %u",
-                        port->port_id);
-                return false;
-        }
-
-        return !rfifo_is_empty(q->queue);
 }
 
 static int cas_rmt_q_create_policy(struct rmt_ps      *ps,
@@ -418,7 +379,6 @@ rmt_ps_cas_create(struct rina_component * component)
         ps->rmt_q_destroy_policy = cas_rmt_q_destroy_policy;
         ps->rmt_enqueue_policy = cas_rmt_enqueue_policy;
         ps->rmt_dequeue_policy = cas_rmt_dequeue_policy;
-        ps->rmt_needs_sched_policy = cas_rmt_needs_sched_policy;
 
         return &ps->base;
 }
