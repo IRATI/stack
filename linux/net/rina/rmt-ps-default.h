@@ -38,6 +38,4 @@ int default_rmt_enqueue_policy(struct rmt_ps	 *ps,
 			       struct pdu	 *pdu);
 struct pdu *default_rmt_dequeue_policy(struct rmt_ps	 *ps,
 				       struct rmt_n1_port *n1_port);
-bool default_rmt_needs_sched_policy(struct rmt_ps *ps,
-				    struct rmt_n1_port *n1_port);
 #endif

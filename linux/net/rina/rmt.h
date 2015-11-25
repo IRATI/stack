@@ -63,6 +63,12 @@ enum flow_state {
 	N1_PORT_STATE_DEALLOCATED,
 };
 
+struct n1_port_stats {
+	unsigned int plen; /* port len, all pdus enqueued in PS queue/s */
+	unsigned int pdrop;
+	unsigned int perr;
+};
+
 struct rmt_n1_port {
 	spinlock_t		lock;
 	port_id_t		port_id;
@@ -72,6 +78,8 @@ struct rmt_n1_port {
 	atomic_t		refs_c;
 	struct pdu		*pending_pdu;
 	struct sdup_port 	*sdup_port;
+	struct n1_port_stats	stats;
+	bool			wbussy;
 };
 
 struct rmt	  *rmt_create(struct ipcp_instance *parent,

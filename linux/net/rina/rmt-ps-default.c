@@ -213,18 +213,13 @@ int default_rmt_enqueue_policy(struct rmt_ps	  *ps,
 		return RMT_PS_ENQ_ERR;
 	}
 
-	if (n1_port->state == N1_PORT_STATE_DISABLED	||
-	    n1_port->pending_pdu			||
-	    !rfifo_is_empty(q->queue)) {
-		if (rfifo_length(q->queue) >= data->q_max) {
-			pdu_destroy(pdu);
-			return RMT_PS_ENQ_DROP;
-		}
-		rfifo_push_ni(q->queue, pdu);
-		return RMT_PS_ENQ_SCHED;
+	if (rfifo_length(q->queue) >= data->q_max) {
+		pdu_destroy(pdu);
+		return RMT_PS_ENQ_DROP;
 	}
 
-	return RMT_PS_ENQ_DSEND;
+	rfifo_push_ni(q->queue, pdu);
+	return RMT_PS_ENQ_SCHED;
 }
 EXPORT_SYMBOL(default_rmt_enqueue_policy);
 
@@ -238,12 +233,6 @@ struct pdu *default_rmt_dequeue_policy(struct rmt_ps	  *ps,
 	if (!ps || !n1_port) {
 		LOG_ERR("Wrong input parameters");
 		return NULL;
-	}
-
-	if (n1_port->pending_pdu) {
-		ret_pdu = n1_port->pending_pdu;
-		n1_port->pending_pdu = NULL;
-		return ret_pdu;
 	}
 
 	q = rmt_queue_find(data->outqs, n1_port->port_id);
@@ -262,25 +251,6 @@ struct pdu *default_rmt_dequeue_policy(struct rmt_ps	  *ps,
 	return ret_pdu;
 }
 EXPORT_SYMBOL(default_rmt_dequeue_policy);
-
-bool default_rmt_needs_sched_policy(struct rmt_ps      *ps,
-				    struct rmt_n1_port *n1_port)
-{
-	struct rmt_queue *q;
-	struct rmt_ps_default_data *data = ps->priv;
-
-	if (n1_port->pending_pdu)
-		return true;
-
-	q = rmt_queue_find(data->outqs, n1_port->port_id);
-	if (!q) {
-		LOG_ERR("Could not find queue for n1_port %u",
-			n1_port->port_id);
-		return false;
-	}
-	return !rfifo_is_empty(q->queue);
-}
-EXPORT_SYMBOL(default_rmt_needs_sched_policy);
 
 static int rmt_ps_default_set_policy_set_param(struct ps_base *bps,
 					       const char *name,
@@ -367,7 +337,6 @@ struct ps_base *rmt_ps_default_create(struct rina_component *component)
 	ps->rmt_enqueue_policy = default_rmt_enqueue_policy;
 	ps->rmt_q_create_policy = default_rmt_q_create_policy;
 	ps->rmt_q_destroy_policy = default_rmt_q_destroy_policy;
-	ps->rmt_needs_sched_policy = default_rmt_needs_sched_policy;
 
 	return &ps->base;
 }

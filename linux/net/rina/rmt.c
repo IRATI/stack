@@ -98,6 +98,10 @@ static struct rmt_n1_port *n1_port_create(port_id_t id,
 	tmp->state   = N1_PORT_STATE_ENABLED;
 
 	atomic_set(&tmp->refs_c, 0);
+	tmp->wbussy = false;
+	tmp->stats.plen = 0;
+	tmp->stats.pdrop = 0;
+	tmp->stats.perr = 0;
 	spin_lock_init(&tmp->lock);
 
 	LOG_DBG("N-1 port %pK created successfully (port-id = %d)", tmp, id);
@@ -134,6 +138,9 @@ static int n1_port_destroy(struct rmt_n1_port *n1p)
 
 	if (n1p->pending_pdu)
 		pdu_destroy(n1p->pending_pdu);
+
+	if (n1p->wbussy)
+		LOG_WARN("Deleting n1_port with bussy writer... there may be something wrong...");
 
 	rkfree(n1p);
 
@@ -356,8 +363,6 @@ int rmt_select_policy_set(struct rmt *rmt,
 			ps->rmt_q_create_policy = default_rmt_q_create_policy;
                 if (!ps->rmt_q_destroy_policy)
 			ps->rmt_q_destroy_policy = default_rmt_q_destroy_policy;
-                if (!ps->rmt_needs_sched_policy)
-			ps->rmt_needs_sched_policy = default_rmt_needs_sched_policy;
         }
 
         base_select_policy_set_finish(&rmt->base, &trans);
@@ -557,8 +562,7 @@ static int n1_port_write(struct rmt *rmt,
 	pci = pdu_pci_get_rw(pdu);
 	if (!pci) {
 		LOG_ERR("Cannot get PCI");
-		pdu_destroy(pdu);
-		return -1;
+		goto error_nobuff;
 	}
 
 	pdu_ser = pdu_serialize_ni(rmt->serdes, pdu);
@@ -570,27 +574,27 @@ static int n1_port_write(struct rmt *rmt,
 	/* SDU Protection */
 	if (sdup_set_lifetime_limit(n1_port->sdup_port, pdu_ser, pci)){
                 LOG_ERR("Error adding a Lifetime limit to serialized PDU");
-                pdu_destroy(pdu);
                 pdu_ser_destroy(pdu_ser);
-                return -1;
+		goto error_nobuff;
         }
 
 	if (sdup_protect_pdu(n1_port->sdup_port, pdu_ser)){
                 LOG_ERR("Error Protecting serialized PDU");
-                pdu_destroy(pdu);
                 pdu_ser_destroy(pdu_ser);
-                return -1;
+		goto error_nobuff;
         }
 	/* end SDU Protection */
 
 	buffer = pdu_ser_buffer(pdu_ser);
 	if (!buffer_is_ok(buffer)) {
 		LOG_ERR("Buffer is not okay");
-		goto error_all;
+                pdu_ser_destroy(pdu_ser);
+		goto error_nobuff;
 	}
 
 	if (pdu_ser_buffer_disown(pdu_ser)) {
 		LOG_ERR("Could not disown buffer");
+                pdu_ser_destroy(pdu_ser);
 		goto error_all;
 	}
 
@@ -660,7 +664,7 @@ static void send_worker(unsigned long o)
 	ps = container_of(rcu_dereference(rmt->base.ps),
 			  struct rmt_ps,
 			  base);
-	if (!ps || !ps->rmt_dequeue_policy || !ps->rmt_needs_sched_policy) {
+	if (!ps || !ps->rmt_dequeue_policy) {
 		rcu_read_unlock();
 		LOG_ERR("Wrong RMT PS");
 		return;
@@ -682,8 +686,9 @@ static void send_worker(unsigned long o)
 			continue;
 		}
 
-		if (n1_port->state == N1_PORT_STATE_DISABLED ||
-		    !ps->rmt_needs_sched_policy(ps, n1_port)) {
+		if (n1_port->state == N1_PORT_STATE_DISABLED	||
+		    !n1_port->stats.plen			||
+		    n1_port->wbussy) {
 			spin_unlock(&n1_port->lock);
 			spin_lock(&rmt->n1_ports->lock);
 			LOG_DBG("Port state is DISABLED or no PDUs to send");
@@ -691,15 +696,26 @@ static void send_worker(unsigned long o)
 		}
 
 		atomic_inc(&n1_port->refs_c);
+		n1_port->wbussy = true;
 
 		pdus_sent = 0;
 		ret = 0;
 		/* Try to send PDUs on that port-id here */
+
 		while ((pdus_sent < MAX_PDUS_SENT_PER_CYCLE) &&
-			ps->rmt_needs_sched_policy(ps, n1_port)) {
-			pdu = ps->rmt_dequeue_policy(ps, n1_port);
-			if (!pdu)
+			n1_port->stats.plen) {
+			if (n1_port->pending_pdu) {
+				pdu = n1_port->pending_pdu;
+				n1_port->pending_pdu = NULL;
+			} else
+				pdu = ps->rmt_dequeue_policy(ps, n1_port);
+			if (!pdu) {
+				if (n1_port->stats.plen)
+					LOG_ERR("rmt_dequeue_policy returned no pdu but plen is %u",
+						n1_port->stats.plen);
 				break;
+			}
+			n1_port->stats.plen--;
 
 			spin_unlock(&n1_port->lock);
 			ret =  n1_port_write(rmt, n1_port, pdu);
@@ -712,11 +728,12 @@ static void send_worker(unsigned long o)
 		}
 
 		if (n1_port->state == N1_PORT_STATE_ENABLED &&
-			ps->rmt_needs_sched_policy(ps, n1_port))
+			n1_port->stats.plen)
 			reschedule++;
 
 		rcu_read_unlock();
 
+		n1_port->wbussy = false;
 		if (atomic_dec_and_test(&n1_port->refs_c) &&
 		    n1_port->state == N1_PORT_STATE_DEALLOCATED) {
 			spin_unlock(&n1_port->lock);
@@ -727,6 +744,7 @@ static void send_worker(unsigned long o)
 
 		spin_unlock(&n1_port->lock);
 		spin_lock(&rmt->n1_ports->lock);
+
 	}
 	spin_unlock(&rmt->n1_ports->lock);
 
@@ -740,7 +758,7 @@ int rmt_send_port_id(struct rmt *instance,
 		     port_id_t id,
 		     struct pdu *pdu)
 {
-	struct rmt_n1_port *out_n1_port;
+	struct rmt_n1_port *n1_port;
 	struct rmt_ps *ps;
 	unsigned long flags;
 	int ret;
@@ -761,53 +779,66 @@ int rmt_send_port_id(struct rmt *instance,
 		return -1;
 	}
 
-	out_n1_port = n1pmap_find(instance, id);
-	if (!out_n1_port) {
-		LOG_ERR("Could not find the N-1 port");
-		pdu_destroy(pdu);
-		return -1;
-	}
-
 	rcu_read_lock();
 	ps = container_of(rcu_dereference(instance->base.ps),
 	  		  struct rmt_ps, base);
 
 	if (!ps || !ps->rmt_enqueue_policy) {
 		rcu_read_unlock();
-		n1pmap_release(instance, out_n1_port);
 		LOG_ERR("PS or enqueue policy null, dropping pdu");
 		pdu_destroy(pdu);
 		return -1;
 	}
 
-	n1_port_lock(out_n1_port, flags);
-	ret = ps->rmt_enqueue_policy(ps, out_n1_port, pdu);
-	n1_port_unlock(out_n1_port, flags);
-	rcu_read_unlock();
-
-	switch (ret) {
-	case RMT_PS_ENQ_SCHED:
-		n1pmap_release(instance, out_n1_port);
-		tasklet_hi_schedule(&instance->egress_tasklet);
-		return 0;
-	case RMT_PS_ENQ_DSEND:
-		LOG_DBG("PDU ready to be sent, no need to enqueue");
-		ret = n1_port_write(instance, out_n1_port, pdu);
-		n1pmap_release(instance, out_n1_port);
-		return ret;
-	case RMT_PS_ENQ_DROP:
-		n1pmap_release(instance, out_n1_port);
-		LOG_DBG("PDU dropped while enqueing");
-		return 0;
-	case RMT_PS_ENQ_ERR:
-		n1pmap_release(instance, out_n1_port);
-		LOG_DBG("Some error occurred while enqueuing PDU");
-		return 0;
-	default:
-		n1pmap_release(instance, out_n1_port);
-		LOG_ERR("rmt_enqueu_policy returned wrong value");
+	n1_port = n1pmap_find(instance, id);
+	if (!n1_port) {
+		rcu_read_unlock();
+		LOG_ERR("Could not find the N-1 port");
+		pdu_destroy(pdu);
 		return -1;
 	}
+
+	n1_port_lock(n1_port, flags);
+	if (n1_port->stats.plen 				||
+		n1_port->wbussy 				||
+		n1_port->state == N1_PORT_STATE_DISABLED	||
+	        n1_port->pending_pdu) {
+		ret = ps->rmt_enqueue_policy(ps, n1_port, pdu);
+		rcu_read_unlock();
+		switch (ret) {
+		case RMT_PS_ENQ_SCHED:
+			n1_port->stats.plen++;
+			/* FIXME LB: can this be done before releasing the port? */
+			tasklet_hi_schedule(&instance->egress_tasklet);
+			break;
+		case RMT_PS_ENQ_DROP:
+			n1_port->stats.pdrop++;
+			LOG_DBG("PDU dropped while enqueing");
+			break;
+		case RMT_PS_ENQ_ERR:
+			n1_port->stats.perr++;
+			LOG_DBG("Some error occurred while enqueuing PDU");
+			break;
+		default:
+			LOG_ERR("rmt_enqueu_policy returned wrong value");
+			break;
+		}
+		n1_port_unlock(n1_port, flags);
+		n1pmap_release(instance, n1_port);
+		return 0;
+	}
+	rcu_read_unlock();
+	n1_port->wbussy = true;
+	n1_port_unlock(n1_port, flags);
+	LOG_DBG("PDU ready to be sent, no need to enqueue");
+	ret = n1_port_write(instance, n1_port, pdu);
+	/*FIXME LB: This is just horrible, needs to be rethinked */
+	n1_port_lock(n1_port, flags);
+	n1_port->wbussy = false;
+	n1_port_unlock(n1_port, flags);
+	n1pmap_release(instance, n1_port);
+	return ret;
+
 }
 EXPORT_SYMBOL(rmt_send_port_id);
 
@@ -877,7 +908,6 @@ int rmt_enable_port_id(struct rmt *instance,
 {
 	struct rmt_n1_port *n1_port;
 	unsigned long flags;
-	struct rmt_ps *ps;
 	int ret = 0;
 
 	if (!instance) {
@@ -909,20 +939,9 @@ int rmt_enable_port_id(struct rmt *instance,
 		goto exit;
 	}
 
-	rcu_read_lock();
-	ps = container_of(rcu_dereference(instance->base.ps),
-			  struct rmt_ps,
-			  base);
-	if (!ps || !ps->rmt_needs_sched_policy) {
-		rcu_read_unlock();
-		LOG_ERR("Wrong RMT PS");
-		ret = -1;
-		goto exit;
-	}
 	n1_port->state = N1_PORT_STATE_ENABLED;
-	if (ps->rmt_needs_sched_policy(ps, n1_port))
+	if (n1_port->stats.plen)
 		tasklet_hi_schedule(&instance->egress_tasklet);
-	rcu_read_unlock();
 
 	LOG_DBG("Changed state to ENABLED");
 exit:
@@ -937,7 +956,6 @@ int rmt_disable_port_id(struct rmt *instance,
 {
 	struct rmt_n1_port *n1_port;
 	unsigned long flags;
-	struct rmt_ps *ps;
 	int ret = 0;
 
 	if (!instance) {
@@ -969,19 +987,8 @@ int rmt_disable_port_id(struct rmt *instance,
 
 	if (n1_port->state == N1_PORT_STATE_DO_NOT_DISABLE) {
 		n1_port->state = N1_PORT_STATE_ENABLED;
-		rcu_read_lock();
-		ps = container_of(rcu_dereference(instance->base.ps),
-				  struct rmt_ps,
-				  base);
-		if (!ps || !ps->rmt_needs_sched_policy) {
-			rcu_read_unlock();
-			LOG_ERR("Wrong RMT PS");
-			ret = -1;
-			goto exit;
-		}
-		if (ps->rmt_needs_sched_policy(ps, n1_port))
+		if (n1_port->stats.plen)
 			tasklet_hi_schedule(&instance->egress_tasklet);
-		rcu_read_unlock();
 		goto exit;
 	}
 
@@ -1092,9 +1099,9 @@ int rmt_n1port_unbind(struct rmt *instance,
 		return 0;
 	}
 
-	spin_lock_irqsave(&n1_port->lock, flags);
+	n1_port_lock(n1_port, flags);
 	n1_port->state = N1_PORT_STATE_DEALLOCATED;
-	spin_unlock_irqrestore(&n1_port->lock, flags);
+	n1_port_unlock(n1_port, flags);
 	/* NOTE: Releasing the lock to be able to use n1pmap_release... it is
 	 * not wrong since once in N1_PORT_STATE_DEALLOCATED no other action
 	 * will be performed on the n1_port but this action should be atomic */
@@ -1197,7 +1204,7 @@ int rmt_receive(struct rmt *rmt,
 	struct serdes *serdes;
 	struct buffer *buf;
 	struct rmt_n1_port *n1_port;
-	size_t		 ttl;
+	size_t ttl;
 
 	if (!sdu_is_ok(sdu)) {
 		LOG_ERR("Bogus SDU passed");
@@ -1210,13 +1217,6 @@ int rmt_receive(struct rmt *rmt,
 	}
 	if (!is_port_id_ok(from)) {
 		LOG_ERR("Wrong port-id %d", from);
-		sdu_destroy(sdu);
-		return -1;
-	}
-
-	n1_port = n1pmap_find(rmt, from);
-	if (!n1_port) {
-		LOG_ERR("Could not retrieve N-1 port for the received PDU...");
 		sdu_destroy(sdu);
 		return -1;
 	}
@@ -1240,6 +1240,13 @@ int rmt_receive(struct rmt *rmt,
 	if (!pdu_ser) {
 		LOG_DBG("No ser PDU to work with");
 		buffer_destroy(buf);
+		return -1;
+	}
+
+	n1_port = n1pmap_find(rmt, from);
+	if (!n1_port) {
+		LOG_ERR("Could not retrieve N-1 port for the received PDU...");
+                pdu_ser_destroy(pdu_ser);
 		return -1;
 	}
 
