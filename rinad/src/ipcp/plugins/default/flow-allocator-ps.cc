@@ -166,6 +166,8 @@ Flow * FlowAllocatorRoundRobinPs::newFlowRequest(IPCProcess * ipc_process,
         std::list<rina::QoSCube*> qosCubes = dm->getQoSCubes();
         std::list<rina::QoSCube*>::const_iterator iterator;
         int count;
+        rina::Lockable lock;
+        rina::ScopedLock g(lock);
 
 	if (*(qosCubes.begin())==NULL)
 	    throw rina::Exception("No QoSCubes defined.");
@@ -183,6 +185,7 @@ Flow * FlowAllocatorRoundRobinPs::newFlowRequest(IPCProcess * ipc_process,
 
 			qosCube = *iterator;
 			last_qos_index = count;
+			break;
 		}
 	}
 
