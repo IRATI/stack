@@ -47,6 +47,7 @@ int wrapped_main(int argc, char** argv)
         int gap;
         int perf_interval;
         int dw;
+        int rate;
         unsigned int lost_wait;
         string test_type;
         string server_apn;
@@ -119,7 +120,7 @@ int wrapped_main(int argc, char** argv)
                                                 "string");
                 TCLAP::ValueArg<string> test_type_arg("t",
                                                       "test-type",
-                                                      "Type of test (ping, perf)",
+                                                      "Type of test (ping, perf, flood)",
                                                       false,
                                                       "ping",
                                                       "string");
@@ -147,6 +148,12 @@ int wrapped_main(int argc, char** argv)
                                                             false,
                                                             2000,
                                                             "unsigned integer");
+                TCLAP::ValueArg<int> rate_arg("",
+                                             "rate",
+                                             "In flood mode, rate at which the data must be sent in kBps, default = 1000 kBps",
+                                             false,
+                                             1000,
+                                             "integer");
 
                 cmd.add(listen_arg);
                 cmd.add(count_arg);
@@ -164,6 +171,7 @@ int wrapped_main(int argc, char** argv)
                 cmd.add(perf_interval_arg);
                 cmd.add(dealloc_wait_arg);
                 cmd.add(lost_wait_arg);
+                cmd.add(rate_arg);
 
                 cmd.parse(argc, argv);
 
@@ -183,6 +191,7 @@ int wrapped_main(int argc, char** argv)
                 perf_interval = perf_interval_arg.getValue();
                 dw = dealloc_wait_arg.getValue();
                 lost_wait = lost_wait_arg.getValue();
+                rate = rate_arg.getValue();
 
                 if (size > Application::max_buffer_size) {
                         size = Application::max_buffer_size;
@@ -208,7 +217,7 @@ int wrapped_main(int argc, char** argv)
                 // Client mode
                 Client c(test_type, dif_name, client_apn, client_api,
                          server_apn, server_api, quiet, count,
-                         registration, size, wait, gap, dw, lost_wait);
+                         registration, size, wait, gap, dw, lost_wait, rate);
 
                 c.run();
         }

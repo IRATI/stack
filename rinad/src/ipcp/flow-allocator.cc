@@ -608,13 +608,16 @@ void FlowAllocatorInstance::submitAllocateRequest(
 {
 	IFlowAllocatorPs * faps =
 		dynamic_cast<IFlowAllocatorPs *>(flow_allocator_->ps);
+	if (!faps) {
+		std::stringstream ss;
+		ss << "Flow allocator policy is NULL ";
+		throw rina::Exception(ss.str().c_str());
+	}
+
 	rina::ScopedLock g(*lock_);
 
 	flow_request_event_ = event;
-
 	flow_ = faps->newFlowRequest(ipc_process_, flow_request_event_);
-
-	LOG_IPCP_DBG("Generated flow object");
 
 	//1 Check directory to see to what IPC process the CDAP M_CREATE request has to be delivered
 	unsigned int destinationAddress = namespace_manager_->getDFTNextHop(
