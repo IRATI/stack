@@ -58,13 +58,13 @@ Client::Client(const string& t_type,
                const string& server_apn, const string& server_api,
                bool q, unsigned long count,
                bool registration, unsigned int size,
-               int w, int g, int dw, unsigned int lw) :
+               int w, int g, int dw, unsigned int lw, int rt) :
         Application(dif_nm, apn, api), test_type(t_type), dif_name(dif_nm),
         server_name(server_apn), server_instance(server_api),
         quiet(q), echo_times(count),
         client_app_reg(registration), data_size(size), wait(w), gap(g),
         dealloc_wait(dw), lost_wait(lw), nsdus(0), snd(0), m2(0),
-        sdus_received(0), min_rtt(LONG_MAX), max_rtt(0), average_rtt(0)
+        sdus_received(0), min_rtt(LONG_MAX), max_rtt(0), average_rtt(0), rate(rt)
 {
         std::map<unsigned long, timespec> * tmp = new std::map<unsigned long, timespec>();
         m = *tmp;
@@ -263,100 +263,99 @@ void Client::pingFlow(int port_id)
 
 void Client::floodFlow(int port_id)
 {
-        unsigned long sdus_sent = 0;
-        double variance = 0, stdev = 0;
-        timespec endtp, begintp, mintp, mtp;
-        unsigned long sn;
-        double delta = 0;
-        double current_rtt = 0;
-        unsigned char *buffer2 = new unsigned char[data_size];
+	unsigned long sdus_sent = 0;
+	double variance = 0, stdev = 0;
+	timespec endtp, begintp, mintp, mtp;
+	unsigned long sn;
+	double delta = 0;
+	double current_rtt = 0;
+	unsigned char *buffer2 = new unsigned char[data_size];
 
-        ipcManager->setFlowOptsBlocking(port_id, true);
-        snd = startSender(port_id);
-        cout << "Sender started" << endl;
-        while(true) {
-                int bytes_read = 0;
+	ipcManager->setFlowOptsBlocking(port_id, true);
+	snd = startSender(port_id);
+	cout << "Sender started" << endl;
+	while(true) {
+		int bytes_read = 0;
 
-                try {
-                        bytes_read = ipcManager->readSDU(port_id, buffer2, data_size);
-                } catch (rina::FlowAllocationException &e) {
-                        LOG_ERR("Flow has been deallocated");
-                        break;
-                } catch (rina::UnknownFlowException &e) {
-                        LOG_ERR("Flow does not exist");
-                        break;
-                } catch (rina::Exception &e) {
-                        LOG_ERR("Problems reading SDU from flow, continuing");
-                        continue;
-                }
+		try {
+			bytes_read = ipcManager->readSDU(port_id, buffer2, data_size);
+		} catch (rina::FlowAllocationException &e) {
+			LOG_ERR("Flow has been deallocated");
+			break;
+		} catch (rina::UnknownFlowException &e) {
+			LOG_ERR("Flow does not exist");
+			break;
+		} catch (rina::Exception &e) {
+			LOG_ERR("Problems reading SDU from flow, continuing");
+			continue;
+		}
 
-                get_current_time(endtp);
+		get_current_time(endtp);
 
-                lock.lock();
-                mtp = maxtp;
-                lock.unlock();
-                if (bytes_read == 0) {
-                        LOG_WARN("Returned 0 bytes, SDU considered lost");
-                        double mtime = time_difference_in_ms(mtp, endtp);
-                        lock.lock();
-                        sdus_sent = nsdus;
-                        lock.unlock();
-                        if (mtime > lost_wait && (sdus_sent == echo_times)) {
-                                cout << "Experiment finished: " << mtime << endl;
-                                break;
-                        }
+		lock.lock();
+		mtp = maxtp;
+		lock.unlock();
+		if (bytes_read == 0) {
+			LOG_WARN("Returned 0 bytes, SDU considered lost");
+			double mtime = time_difference_in_ms(mtp, endtp);
+			lock.lock();
+			sdus_sent = nsdus;
+			lock.unlock();
+			if (mtime > lost_wait && (sdus_sent == echo_times)) {
+				cout << "Experiment finished: " << mtime << endl;
+				break;
+			}
 
-                        continue;
-                }
+			continue;
+		}
 
-                memcpy(&sn, buffer2, sizeof(sn));
-                lock.lock();
-                sdus_received++;
-                if (m.find(sn) != m.end()) {
-                        begintp = m[sn];
-                        m.erase(sn);
-                }
-                lock.unlock();
-                current_rtt = time_difference_in_ms(begintp, endtp);
-                if (current_rtt < min_rtt) {
-                        min_rtt = current_rtt;
-                }
-                if (current_rtt > max_rtt) {
-                        max_rtt = current_rtt;
-                }
+		memcpy(&sn, buffer2, sizeof(sn));
+		lock.lock();
+		sdus_received++;
+		if (m.find(sn) != m.end()) {
+			begintp = m[sn];
+			m.erase(sn);
+		}
+		lock.unlock();
+		current_rtt = time_difference_in_ms(begintp, endtp);
+		if (current_rtt < min_rtt) {
+			min_rtt = current_rtt;
+		}
+		if (current_rtt > max_rtt) {
+			max_rtt = current_rtt;
+		}
 
-                delta = current_rtt - average_rtt;
-                average_rtt = average_rtt + delta/(double)sdus_received;
-                m2 = m2 + delta*(current_rtt - average_rtt);
+		delta = current_rtt - average_rtt;
+		average_rtt = average_rtt + delta/(double)sdus_received;
+		m2 = m2 + delta*(current_rtt - average_rtt);
 
-                double mtime = time_difference_in_ms(mtp, endtp);
-                lock.lock();
-                sdus_sent = nsdus;
-                lock.unlock();
-                if (mtime > lost_wait ||
-                    (sdus_sent == echo_times && sdus_sent == sdus_received)) {
-                        cout << "Timeout exceeded: " << mtime << endl;
-                        break;
-                }
+		double mtime = time_difference_in_ms(mtp, endtp);
+		lock.lock();
+		sdus_sent = nsdus;
+		lock.unlock();
+		if (mtime > lost_wait ||
+				(sdus_sent == echo_times && sdus_sent == sdus_received)) {
+			break;
+		}
 
-        }
+	}
 
-        lock.lock();
-        sdus_sent = nsdus;
-        lock.unlock();
+	lock.lock();
+	sdus_sent = nsdus;
+	lock.unlock();
 
-        variance = m2/((double)sdus_received -1);
-        stdev = sqrt(variance);
+	variance = m2/((double)sdus_received -1);
+	stdev = sqrt(variance);
 
-        unsigned long rt = 0;
-        if (sdus_sent > 0) rt = ((sdus_sent - sdus_received)*100/sdus_sent);
-        cout << "SDUs sent: "<< sdus_sent << "; SDUs received: " << sdus_received;
-        cout << "; " << rt << "% SDU loss" <<endl;
-        cout << "Minimum RTT: " << min_rtt << " ms; Maximum RTT: " << max_rtt
-             << " ms; Average RTT:" << average_rtt
-             << " ms; Standard deviation: " << stdev<<" ms"<<endl;
+	unsigned long rt = 0;
+	if (sdus_sent > 0) rt = ((sdus_sent - sdus_received)*100/sdus_sent);
+	cout << "SDUs sent: "<< sdus_sent << "; SDUs received: " << sdus_received;
+	cout << "; " << rt << "% SDU loss" <<endl;
+	cout << "Minimum RTT: " << min_rtt << " ms; Maximum RTT: " << max_rtt
+			<< " ms; Average RTT:" << average_rtt
+			<< " ms; Standard deviation: " << stdev<<" ms"<<endl;
 
-        delete [] buffer2;
+	delete [] buffer2;
 }
 
 void Client::perfFlow(int port_id)
@@ -439,7 +438,7 @@ Sender * Client::startSender(int port_id)
                                      data_size,
                                      dealloc_wait,
                                      lost_wait,
-                                     wait,
+                                     rate,
                                      port_id,
                                      this);
 
@@ -451,22 +450,37 @@ Sender * Client::startSender(int port_id)
 
 void Client::map_push(unsigned long sn, timespec tp)
 {
-        ScopedLock g(lock);
+	ScopedLock g(lock);
         m[sn] = tp;
 
 }
 
 void Client::set_sdus(unsigned long n)
 {
-        ScopedLock g(lock);
+	ScopedLock g(lock);
         nsdus = n;
 
 }
 
 void Client::set_maxTP(timespec tp)
 {
-        ScopedLock g(lock);
+	ScopedLock g(lock);
         maxtp = tp;
+}
+
+void Client::cancelFloodFlow(int port_id)
+{
+        try {
+        	ipcManager->requestFlowDeallocation(port_id);
+        } catch(rina::Exception &e) {
+        	//Ignore, flow was already deallocated
+        }
+}
+
+void Client::startCancelFloodFlowTask(int port_id)
+{
+	cflood_task = new CFloodCancelFlowTimerTask(port_id, this);
+	timer.scheduleTask(cflood_task, lost_wait);
 }
 
 Client::~Client()
@@ -489,16 +503,27 @@ Client::~Client()
              << " ms; Standard deviation: " << stdev<<" ms"<<endl;
 }
 
+CFloodCancelFlowTimerTask::CFloodCancelFlowTimerTask(int pid, Client * cl)
+{
+	port_id = pid;
+	client = cl;
+}
+
+void CFloodCancelFlowTimerTask::run()
+{
+	client->cancelFloodFlow(port_id);
+}
+
 Sender::Sender(rina::ThreadAttributes * threadAttributes,
                    unsigned long echo_times,
                    unsigned int data_size,
                    int dealloc_wait,
                    unsigned int lost_wait,
-                   int wait,
+                   int rt,
                    int port_id,
                    Client * client) : SimpleThread(threadAttributes),
            echo_times(echo_times), data_size(data_size),
-           dealloc_wait(dealloc_wait), lost_wait(lost_wait), wait(wait),
+           dealloc_wait(dealloc_wait), lost_wait(lost_wait), rate(rt),
            port_id(port_id), client(client)
 {
 }
@@ -543,55 +568,57 @@ void ts_add(const timespec *t,
 
 int Sender::run(void)
 {
-        char buffer[data_size];
-        unsigned int sdus_sent = 0;
-        timespec begintp, endtp;
-        timespec mintp, maxtp;
-        unsigned char counter = 0;
-        double interval_time = 0;
-        bool out = false;
+	char buffer[data_size];
+	unsigned int sdus_sent = 0;
+	timespec begintp, endtp;
+	timespec mintp, maxtp;
+	unsigned char counter = 0;
+	double interval_time = 0;
+	bool out = false;
 
-        if (wait) { /* wait in kB/s */
-                interval_time = ((double) data_size) / ((double) wait); /* ms */
-        }
+	if (rate) { /* wait in kB/s */
+		interval_time = ((double) data_size) / ((double) rate); /* ms */
+	}
 
-        cout << "Experiment params" << endl;
-        cout << "RATE: " << wait << endl;
-        cout << "Interval: " << interval_time << endl;
+	cout << "Experiment params" << endl;
+	cout << "RATE: " << rate << endl;
+	cout << "Interval: " << interval_time << endl;
 
-        get_current_time(mintp);
-        timespec next = mintp;
-        for (unsigned long n = 0; n < echo_times; n++) {
-                memcpy(buffer, &n, sizeof(n));
+	get_current_time(mintp);
+	timespec next = mintp;
+	for (unsigned long n = 0; n < echo_times; n++) {
+		memcpy(buffer, &n, sizeof(n));
 
-                get_current_time(begintp);
-                try {
-                        ipcManager->writeSDU(port_id, buffer, data_size);
-                } catch (rina::FlowNotAllocatedException &e) {
-                        LOG_ERR("Flow has been deallocated");
-                        break;
-                } catch (rina::UnknownFlowException &e) {
-                        LOG_ERR("Flow does not exist");
-                        break;
-                } catch (rina::Exception &e) {
-                        LOG_ERR("Problems writing SDU to flow, continuing");
-                        continue;
-                }
+		get_current_time(begintp);
+		try {
+			ipcManager->writeSDU(port_id, buffer, data_size);
+		} catch (rina::FlowNotAllocatedException &e) {
+			LOG_ERR("Flow has been deallocated");
+			break;
+		} catch (rina::UnknownFlowException &e) {
+			LOG_ERR("Flow does not exist");
+			break;
+		} catch (rina::Exception &e) {
+			LOG_ERR("Problems writing SDU to flow, continuing");
+			continue;
+		}
 
-                client->map_push(n, begintp);
-                sdus_sent++;
-                get_current_time(maxtp);
-                client->set_maxTP(maxtp);
-                client->set_sdus(sdus_sent);
-                if (wait) {
-                        long nanos = interval_time * MILLION;
-                        timespec interval = {nanos / BILLION, nanos % BILLION};
-                        ts_add(&next,&interval,&next);
-                        busy_wait_until(next);
-                }
-        }
-        cout << "ENDED sending. SDUs sent: "<< sdus_sent << "; in TIME: " <<
-                        time_difference_in_ms(mintp, maxtp) << " ms" <<endl;
+		client->map_push(n, begintp);
+		sdus_sent++;
+		get_current_time(maxtp);
+		client->set_maxTP(maxtp);
+		client->set_sdus(sdus_sent);
+		if (rate) {
+			long nanos = interval_time * MILLION;
+			timespec interval = {nanos / BILLION, nanos % BILLION};
+			ts_add(&next,&interval,&next);
+			busy_wait_until(next);
+		}
+	}
+	cout << "ENDED sending. SDUs sent: "<< sdus_sent << "; in TIME: " <<
+			time_difference_in_ms(mintp, maxtp) << " ms" <<endl;
 
-        return 0;
+	client->startCancelFloodFlowTask(port_id);
+
+	return 0;
 }
