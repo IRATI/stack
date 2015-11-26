@@ -73,6 +73,7 @@ struct rmt_n1_port {
 	atomic_t n_sdus;
 	atomic_t pending_ops;
 	struct sdup_port * sdup_port;
+	void * ps_n1port_opaque;
 };
 
 struct rmt	  *rmt_create(struct ipcp_instance *parent,
