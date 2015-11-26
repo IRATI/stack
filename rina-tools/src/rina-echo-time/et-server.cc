@@ -54,6 +54,8 @@ int EchoTimeServerWorker::internal_run()
                 servePingFlow(port_id);
         else if (test_type == "perf")
                 servePerfFlow(port_id);
+        else if (test_type == "flood")
+                serveFloodFlow(port_id);
         else {
                 /* This should not happen. The error condition
                  * must be catched before this point. */
@@ -94,6 +96,41 @@ void EchoTimeServerWorker::servePingFlow(int port_id)
 
         if  (dw > 0 && last_task) {
         	timer.cancelTask(last_task);
+        }
+
+        delete [] buffer;
+}
+
+void EchoTimeServerWorker::serveFloodFlow(int port_id)
+{
+        char *buffer = new char[max_buffer_size];
+
+        // Setup a timer if dealloc_wait option is set */
+        if (dw > 0) {
+                last_task = new CancelFlowTimerTask(port_id, this);
+                timer.scheduleTask(last_task, dw);
+        }
+
+        try {
+                for(;;) {
+                        int bytes_read = ipcManager->readSDU(port_id,
+                                                             buffer,
+                                                             max_buffer_size);
+
+                        ipcManager->writeSDU(port_id, buffer, bytes_read);
+                        if (dw > 0 && last_task) {
+                                timer.cancelTask(last_task);
+                                last_task = new CancelFlowTimerTask(port_id, this);
+                                timer.scheduleTask(last_task, dw);
+                        }
+                }
+        } catch(rina::IPCException &e) {
+                // This thread was blocked in the readSDU() function
+                // when the flow gets deallocated
+        }
+
+        if  (dw > 0 && last_task) {
+                timer.cancelTask(last_task);
         }
 
         delete [] buffer;
