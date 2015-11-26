@@ -98,7 +98,7 @@ static struct q_qos * q_qos_create(qos_id_t id,
 #if CU_DEBUG
 static void dump_info_q_qos(struct q_qos * q)
 {
-        LOG_INFO("QoS-id: %d, occupation: %d, "
+        LOG_INFO("QoS-id: %d, occupation: %zd, "
                 "drops: %u, handled: %u",
                 q->qos_id,
                 rfifo_length(q->queue),
@@ -847,26 +847,10 @@ static int cu_rmt_scheduling_destroy_policy_tx(struct rmt_ps *      ps,
         return 0;
 }
 
-static int rmt_config_apply(struct policy_parm * param, void * data)
+static int cher_urg_ps_set_policy_set_param_priv(struct cherish_urgency_data * data,
+                                            	 const char *     name,
+                                            	 const char *     value)
 {
-        struct rmt * tmp;
-        struct rmt_config * cfg;
-
-        tmp = (struct rmt *) data;
-        cfg = rmt_config_get(tmp);
-        rmt_set_policy_set_param(tmp,
-                                 policy_name(cfg->policy_set),
-                                 policy_param_name(param),
-                                 policy_param_value(param));
-        return 0;
-}
-
-static int cher_urg_ps_set_policy_set_param(struct ps_base * bps,
-                                            const char *     name,
-                                            const char *     value)
-{
-        struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
-        struct cherish_urgency_data * data = ps->priv;
         struct config_q_qos * conf_qos;
         int int_value, ret, offset, dotlen;
         qos_id_t qos_id;
@@ -899,7 +883,7 @@ static int cher_urg_ps_set_policy_set_param(struct ps_base * bps,
         }
 
         ret = kstrtoint(buf, 10, &qos_id);
-        LOG_INFO("Arrived parameter info for QoS id %u", qos_id);
+        LOG_DBG("Arrived parameter info for QoS id %u", qos_id);
         rkfree(buf);
         conf_qos = config_q_qos_find(data->config, qos_id);
         if (!conf_qos) {
@@ -908,13 +892,13 @@ static int cher_urg_ps_set_policy_set_param(struct ps_base * bps,
                         return -1;
 
                 list_add(&conf_qos->list, &data->config->list_queues);
-                LOG_INFO("Created queue for QoS id %u", qos_id);
+                LOG_DBG("Created queue for QoS id %u", qos_id);
         }
 
         if (strcmp(name + offset, "urgency-class") == 0) {
                 ret = kstrtoint(value, 10, &int_value);
                 if (!ret) {
-                        LOG_INFO("Urgency class %u", int_value);
+                        LOG_DBG("Urgency class %u", int_value);
                         conf_qos->key = int_value;
                         return 0;
                 }
@@ -925,7 +909,7 @@ static int cher_urg_ps_set_policy_set_param(struct ps_base * bps,
         if (strcmp(name + offset, "skip-prob") == 0) {
                 ret = kstrtoint(value, 10, &int_value);
                 if (!ret) {
-                        LOG_INFO("Skip probability %u", int_value);
+                	LOG_DBG("Skip probability %u", int_value);
                         conf_qos->skip_prob = int_value;
                         return 0;
                 }
@@ -936,7 +920,7 @@ static int cher_urg_ps_set_policy_set_param(struct ps_base * bps,
         if (strcmp(name + offset, "drop-prob") == 0) {
                 ret = kstrtoint(value, 10, &int_value);
                 if (!ret) {
-                        LOG_INFO("Drop probability %u", int_value);
+                	LOG_DBG("Drop probability %u", int_value);
                         conf_qos->drop_prob = int_value;
                         return 0;
                 }
@@ -947,7 +931,7 @@ static int cher_urg_ps_set_policy_set_param(struct ps_base * bps,
         if (strcmp(name + offset, "abs-th") == 0) {
                 ret = kstrtoint(value, 10, &int_value);
                 if (!ret) {
-                        LOG_INFO("Absolute threshold %u", int_value);
+                	LOG_DBG("Absolute threshold %u", int_value);
                         conf_qos->abs_th = int_value;
                         return 0;
                 }
@@ -958,7 +942,7 @@ static int cher_urg_ps_set_policy_set_param(struct ps_base * bps,
         if (strcmp(name + offset, "th") == 0) {
                 ret = kstrtoint(value, 10, &int_value);
                 if (!ret) {
-                        LOG_INFO("Threshold %u", int_value);
+                	LOG_DBG("Threshold %u", int_value);
                         conf_qos->th = int_value;
                         return 0;
                 }
@@ -971,13 +955,33 @@ static int cher_urg_ps_set_policy_set_param(struct ps_base * bps,
         return -1;
 }
 
+static int rmt_config_apply(struct policy_parm * param, void * data)
+{
+        struct cherish_urgency_data * tmp;
+
+        tmp = (struct cherish_urgency_data *) data;
+
+        return cher_urg_ps_set_policy_set_param_priv(data,
+        					     policy_param_name(param),
+        					     policy_param_value(param));
+}
+
+static int cher_urg_ps_set_policy_set_param(struct ps_base * bps,
+                                            const char *     name,
+                                            const char *     value)
+{
+        struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
+        struct cherish_urgency_data * data = ps->priv;
+
+        return cher_urg_ps_set_policy_set_param_priv(data, name, value);
+}
+
 static struct ps_base *
 rmt_ps_cher_urg_create(struct rina_component * component)
 {
         struct rmt * rmt = rmt_from_component(component);
         struct rmt_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
         struct cherish_urgency_data * data;
-        struct cher_urg_config * config;
         struct rmt_config * rmt_cfg;
 
         if (!ps)
@@ -989,8 +993,8 @@ rmt_ps_cher_urg_create(struct rina_component * component)
                 return NULL;
         }
 
-        config = cherish_urgency_config_create();
-        if (!config) {
+        data->config = cherish_urgency_config_create();
+        if (!data->config) {
                 rkfree(ps);
                 cu_data_destroy(data);
                 return NULL;
@@ -1001,9 +1005,8 @@ rmt_ps_cher_urg_create(struct rina_component * component)
         ps->priv = data;
 
         rmt_cfg = rmt_config_get(rmt);
-        policy_for_each(rmt_cfg->policy_set, rmt, rmt_config_apply);
+        policy_for_each(rmt_cfg->policy_set, data, rmt_config_apply);
 
-        data->config = config;
         ps->max_q_policy_tx = cu_max_q_policy_tx;
         ps->max_q_policy_rx = cu_max_q_policy_rx;
         ps->rmt_q_monitor_policy_rx = cu_rmt_q_monitor_policy_rx;
