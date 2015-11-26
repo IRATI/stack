@@ -34,8 +34,6 @@
 #include "policies.h"
 #include "rmt-ps-debug.h"
 
-#define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
-
 #define MIN_TH_P_DEFAULT 2
 #define MAX_TH_P_DEFAULT 5
 #define WP_P_DEFAULT 2
@@ -52,11 +50,9 @@ struct red_rmt_queue {
 #if RMT_DEBUG
 	struct red_rmt_debug * debug;
 #endif
-        struct hlist_node hlist;
 };
 
 struct red_rmt_ps_data {
-        DECLARE_HASHTABLE(queues, RMT_PS_HASHSIZE);
 	struct tc_red_qopt conf_data;
 	u8 *   stab;
 };
@@ -88,8 +84,6 @@ static struct red_rmt_queue * red_queue_create(port_id_t          port_id,
 	tmp->debug = red_rmt_debug_create(port_id);
 #endif
 
-        INIT_HLIST_NODE(&tmp->hlist);
-
         return tmp;
 }
 
@@ -99,32 +93,11 @@ static int red_rmt_queue_destroy(struct red_rmt_queue * q)
                 LOG_ERR("No RMT Key-queue to destroy...");
                 return -1;
         }
-
-        hash_del(&q->hlist);
-
         if (q->queue) rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
 
         rkfree(q);
 
         return 0;
-}
-
-static struct red_rmt_queue *
-red_rmt_queue_find(struct red_rmt_ps_data * data,
-                   port_id_t                port_id)
-{
-        struct red_rmt_queue * entry;
-        const struct hlist_head *  head;
-
-        ASSERT(data);
-
-        head = &data->queues[rmap_hash(data->queues, port_id)];
-        hlist_for_each_entry(entry, head, hlist) {
-                if (entry->port_id == port_id)
-                        return entry;
-        }
-
-        return NULL;
 }
 
 static struct pdu *
@@ -142,7 +115,7 @@ red_rmt_dequeue_policy(struct rmt_ps *      ps,
                 return NULL;
         }
 
-        q = red_rmt_queue_find(data, port->port_id);
+        q = port->rmt_ps_queues;
         if (!q) {
                 LOG_ERR("Could not find queue for n1_port %u",
                         port->port_id);
@@ -150,12 +123,7 @@ red_rmt_dequeue_policy(struct rmt_ps *      ps,
         }
 
 	qlen = rfifo_length(q->queue);
-	if (port->pending_pdu) {
-		qlen++;
-		ret_pdu = port->pending_pdu;
-		port->pending_pdu = NULL;
-	} else
-        	ret_pdu = rfifo_pop(q->queue);
+        ret_pdu = rfifo_pop(q->queue);
         if (!ret_pdu)
                 LOG_ERR("Could not dequeue scheduled pdu");
 
@@ -196,7 +164,7 @@ static int red_rmt_enqueue_policy(struct rmt_ps *      ps,
                 return RMT_PS_ENQ_ERR;
         }
 
-        q = red_rmt_queue_find(data, port->port_id);
+        q = port->rmt_ps_queues;
         if (!q) {
                 LOG_ERR("Could not find queue for n1_port %u",
                         port->port_id);
@@ -204,16 +172,7 @@ static int red_rmt_enqueue_policy(struct rmt_ps *      ps,
                 return RMT_PS_ENQ_ERR;
         }
 
-	if (port->state != N1_PORT_STATE_DISABLED	&&
-	    !port->pending_pdu				&&
-	    rfifo_is_empty(q->queue)) {
-		ret = RMT_PS_ENQ_DSEND;
-		goto exit;
-	}
-
 	qlen = rfifo_length(q->queue);
-	if (port->pending_pdu)
-		qlen++;
 
 	/* Compute average queue usage (see RED)
 	 * Formula is qavg = qavg*(1-W) + backlog*W;
@@ -271,7 +230,7 @@ exit:
         return ret;
 }
 
-static int red_rmt_q_create_policy(struct rmt_ps *      ps,
+static void * red_rmt_q_create_policy(struct rmt_ps *      ps,
                                    struct rmt_n1_port * port)
 {
         struct red_rmt_queue *   q;
@@ -280,7 +239,7 @@ static int red_rmt_q_create_policy(struct rmt_ps *      ps,
         if (!ps || !port || !ps->priv) {
                 LOG_ERR("Wrong input parameters for "
                         "red_rmt_scheduling_create_policy");
-                return -1;
+                return NULL;
         }
 
         data = ps->priv;
@@ -291,14 +250,13 @@ static int red_rmt_q_create_policy(struct rmt_ps *      ps,
         if (!q) {
                 LOG_ERR("Could not create queue for n1_port %u",
                         port->port_id);
-                return -1;
+                return NULL;
         }
 
-        hash_add(data->queues, &q->hlist, port->port_id);
-
         LOG_DBG("Structures for scheduling policies created...");
-        return 0;
+        return q;
 }
+
 static int red_rmt_q_destroy_policy(struct rmt_ps *      ps,
                                     struct rmt_n1_port * port)
 {
@@ -314,35 +272,10 @@ static int red_rmt_q_destroy_policy(struct rmt_ps *      ps,
         data = ps->priv;
         ASSERT(data);
 
-        q = red_rmt_queue_find(data, port->port_id);
+        q = port->rmt_ps_queues;
         if (q) return red_rmt_queue_destroy(q);
 
         return -1;
-}
-
-static bool red_rmt_needs_sched_policy(struct rmt_ps *      ps,
-				       struct rmt_n1_port * port)
-{
-	struct red_rmt_queue *   q;
-	struct red_rmt_ps_data * data = ps->priv;
-
-	if (!ps || !port || !data) {
-		LOG_ERR("Wrong input parameters for "
-                        "rmt_needs_sched_policy");
-		return false;
-	}
-
-	if (port->pending_pdu)
-		return true;
-
-	q = red_rmt_queue_find(data, port->port_id);
-	if (!q) {
-		LOG_ERR("Could not find queue for n1_port %u",
-		port->port_id);
-		return false;
-	}
-
-	return !rfifo_is_empty(q->queue);
 }
 
 static int red_rmt_ps_set_policy_set_param(struct ps_base * bps,
@@ -501,7 +434,6 @@ rmt_ps_red_create(struct rina_component * component)
         ps->rmt_dequeue_policy = red_rmt_dequeue_policy;
 	ps->rmt_q_create_policy = red_rmt_q_create_policy;
 	ps->rmt_q_destroy_policy = red_rmt_q_destroy_policy;
-        ps->rmt_needs_sched_policy = red_rmt_needs_sched_policy;
 
         return &ps->base;
 }

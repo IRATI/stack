@@ -245,7 +245,6 @@ dtcp_ps_cas_create(struct rina_component * component)
         ps->initial_rate                = NULL;
         ps->receiving_flow_control      = NULL; /* default */
         ps->update_credit               = NULL;
-        ps->reconcile_flow_conflict     = NULL;
         ps->rcvr_ack                    = NULL; /* default */
         ps->rcvr_flow_control           = cas_rcvr_flow_control;
         ps->rate_reduction              = NULL; /* default */

@@ -938,8 +938,6 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        sdu_destroy(sdu);
-
         skb->dev      = data->dev;
         skb->protocol = htons(ETH_P_RINA);
 
@@ -948,12 +946,14 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         if (retval < 0) {
                 LOG_ERR("Problems in dev_hard_header (%d)", retval);
                 kfree_skb(skb);
+                sdu_destroy(sdu);
                 return -1;
         }
 
         retval = dev_queue_xmit(skb);
         if (retval == -ENETDOWN) {
         	LOG_ERR("dev_q_xmit returned device down");
+        	sdu_destroy(sdu);
         	return -1;
         }
         if (retval != NET_XMIT_SUCCESS) {
@@ -961,6 +961,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         	return -EAGAIN;
         }
 
+        sdu_destroy(sdu);
         LOG_DBG("Packet sent");
 
         return 0;

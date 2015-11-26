@@ -31,9 +31,8 @@
 
 /* rmt_enqueue_policy return values */
 #define RMT_PS_ENQ_SCHED 1	/* PDU enqueued and RMT needs to schedule */
-#define RMT_PS_ENQ_DSEND 2      /* Queue(s) empty, PDU written down directly */
-#define RMT_PS_ENQ_ERR   3	/* Error */
-#define RMT_PS_ENQ_DROP  4	/* PDU dropped due to queue full occupation */
+#define RMT_PS_ENQ_ERR   2	/* Error */
+#define RMT_PS_ENQ_DROP  3	/* PDU dropped due to queue full occupation */
 
 struct rmt_ps {
 	struct ps_base base;
@@ -44,12 +43,10 @@ struct rmt_ps {
 	int (*rmt_enqueue_policy)(struct rmt_ps *,
 				  struct rmt_n1_port *,
 				  struct pdu *);
-	int (*rmt_q_create_policy)(struct rmt_ps *,
+	void* (*rmt_q_create_policy)(struct rmt_ps *,
 				   struct rmt_n1_port *);
 	int (*rmt_q_destroy_policy)(struct rmt_ps *,
 				    struct rmt_n1_port *);
-	bool (*rmt_needs_sched_policy)(struct rmt_ps *,
-				       struct rmt_n1_port *);
 
 	/* Reference used to access the RMT data model. */
 	struct rmt *dm;

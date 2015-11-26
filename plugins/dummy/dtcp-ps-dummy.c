@@ -69,7 +69,7 @@ dummy_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 }
 
 static int
-dummy_rate_reduction(struct dtcp_ps * ps)
+dummy_rate_reduction(struct dtcp_ps * ps, const struct pci * pci)
 {
         printk("%s: called()\n", __func__);
         return 0;
@@ -107,7 +107,6 @@ dtcp_ps_dummy_create(struct rina_component * component)
         ps->initial_rate                = NULL;
         ps->receiving_flow_control      = dummy_receiving_flow_control;
         ps->update_credit               = NULL;
-        ps->reconcile_flow_conflict     = NULL;
         ps->rcvr_ack                    = dummy_rcvr_ack,
         ps->rcvr_flow_control           = dummy_rcvr_flow_control;
         ps->rate_reduction              = dummy_rate_reduction;

@@ -95,10 +95,12 @@ dtp_ps_dummy_create(struct rina_component * component)
 
         ps->transmission_control        = dummy_transmission_control;
         ps->closed_window               = dummy_closed_window;
-        ps->flow_control_overrun        = dummy_flow_control_overrun;
+        ps->snd_flow_control_overrun    = dummy_flow_control_overrun;
+        ps->rcv_flow_control_overrun    = NULL;
         ps->initial_sequence_number     = dummy_initial_sequence_number;
         ps->receiver_inactivity_timer   = dummy_receiver_inactivity_timer;
         ps->sender_inactivity_timer     = dummy_sender_inactivity_timer;
+        ps->reconcile_flow_conflict     = NULL;
 
         /* Just zero here. These fields are really initialized by
          * dtp_select_policy_set. */
