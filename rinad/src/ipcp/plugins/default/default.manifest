@@ -27,6 +27,11 @@
                         "Component": "flow-allocator",
                         "Version" : "1"
                 },
+		{
+                        "Name": "RoundRobin",
+                        "Component": "flow-allocator",
+                        "Version" : "1"
+                },
                 {
                         "Name": "default",
                         "Component": "namespace-manager",
