@@ -77,7 +77,7 @@ protected:
         int createFlow();
         void pingFlow(int port_id);
         void perfFlow(int port_id);
-        void nonstopFlow(int port_id);
+        void floodFlow(int port_id);
         void destroyFlow(int port_id);
 
 private:

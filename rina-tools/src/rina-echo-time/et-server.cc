@@ -54,8 +54,8 @@ int EchoTimeServerWorker::internal_run()
                 servePingFlow(port_id);
         else if (test_type == "perf")
                 servePerfFlow(port_id);
-        else if (test_type == "nonstop")
-                serveNonstopFlow(port_id);
+        else if (test_type == "flood")
+                serveFloodFlow(port_id);
         else {
                 /* This should not happen. The error condition
                  * must be catched before this point. */
@@ -101,7 +101,7 @@ void EchoTimeServerWorker::servePingFlow(int port_id)
         delete [] buffer;
 }
 
-void EchoTimeServerWorker::serveNonstopFlow(int port_id)
+void EchoTimeServerWorker::serveFloodFlow(int port_id)
 {
         char *buffer = new char[max_buffer_size];
 

@@ -38,7 +38,7 @@ public:
 private:
         void servePingFlow(int port_id);
         void servePerfFlow(int port_id);
-        void serveNonstopFlow(int port_id);
+        void serveFloodFlow(int port_id);
         void printPerfStats(unsigned long pkt,
         		    unsigned long bytes,
         		    unsigned long us);

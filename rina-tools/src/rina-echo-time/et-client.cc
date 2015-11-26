@@ -89,8 +89,8 @@ void Client::run()
         	pingFlow(port_id);
         else if (test_type == "perf")
         	perfFlow(port_id);
-        else if (test_type == "nonstop")
-                nonstopFlow(port_id);
+        else if (test_type == "flood")
+                floodFlow(port_id);
         else
         	LOG_ERR("Unknown test type '%s'", test_type.c_str());
 
@@ -261,7 +261,7 @@ void Client::pingFlow(int port_id)
         delete [] buffer2;
 }
 
-void Client::nonstopFlow(int port_id)
+void Client::floodFlow(int port_id)
 {
         unsigned long sdus_sent = 0;
         double variance = 0, stdev = 0;
@@ -296,13 +296,13 @@ void Client::nonstopFlow(int port_id)
                 mtp = maxtp;
                 lock.unlock();
                 if (bytes_read == 0) {
-                        LOG_WARN("Timeout waiting for reply, SDU considered lost");
+                        LOG_WARN("Returned 0 bytes, SDU considered lost");
                         double mtime = time_difference_in_ms(mtp, endtp);
                         lock.lock();
                         sdus_sent = nsdus;
                         lock.unlock();
                         if (mtime > lost_wait && (sdus_sent == echo_times)) {
-                                cout << "We are about to leave: " << mtime << endl;
+                                cout << "Experiment finished: " << mtime << endl;
                                 break;
                         }
 
