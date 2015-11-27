@@ -1516,6 +1516,9 @@ void EnrollmentTaskPs::populate_rib()
 		tmp = new OperationalStatusRIBObject(ipcp);
 		rib_daemon->addObjRIB(OperationalStatusRIBObject::object_name, &tmp);
 
+		tmp = new rina::rib::RIBObj("Naming");
+		rib_daemon->addObjRIB("/difmanagement/naming", &tmp);
+
 		tmp = new AddressRIBObject(ipcp);
 		rib_daemon->addObjRIB(AddressRIBObject::object_name, &tmp);
 	} catch (rina::Exception &e) {
