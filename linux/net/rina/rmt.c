@@ -498,8 +498,8 @@ struct rmt_config *rmt_config_get(struct rmt *instance)
 }
 EXPORT_SYMBOL(rmt_config_get);
 
-int rmt_config_set(struct rmt	     *instance,
-		   struct rmt_config *rmt_config)
+int rmt_config_set(struct rmt *        instance,
+		   struct rmt_config * rmt_config)
 {
 	const string_t *rmt_ps_name;
 	const string_t *pff_ps_name;

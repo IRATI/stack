@@ -275,3 +275,15 @@ int policy_version_set(struct policy * policy,
         return 0;
 }
 EXPORT_SYMBOL(policy_version_set);
+
+void policy_for_each(struct policy * policy,
+                     void * opaque,
+                     int        (* f)(struct policy_parm * entry, void * opaque))
+{
+        struct policy_parm * entry;
+
+        list_for_each_entry(entry, &policy->params, next)
+                f(entry, opaque);
+
+}
+EXPORT_SYMBOL(policy_for_each);

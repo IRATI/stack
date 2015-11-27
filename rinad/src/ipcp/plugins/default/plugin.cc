@@ -33,6 +33,12 @@ extern "C" void
 destroyFlowAllocatorPs(rina::IPolicySet * instance);
 
 extern "C" rina::IPolicySet *
+createFlowAllocatorRoundRobinPs(rina::ApplicationEntity * context);
+
+extern "C" void
+destroyFlowAllocatorRoundRobinPs(rina::IPolicySet * instance);
+
+extern "C" rina::IPolicySet *
 createNamespaceManagerPs(rina::ApplicationEntity * context);
 
 extern "C" void
@@ -64,11 +70,11 @@ get_factories(std::vector<struct rina::PsFactory>& factories)
         struct rina::PsFactory auth_password_factory;
         struct rina::PsFactory auth_ssh2_factory;
         struct rina::PsFactory fa_factory;
+        struct rina::PsFactory farr_factory;
         struct rina::PsFactory nsm_factory;
         struct rina::PsFactory pduft_gen_factory;
         struct rina::PsFactory et_factory;
         struct rina::PsFactory rc_factory;
-        int ret;
 
         sm_factory.info.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;
         sm_factory.info.app_entity = rina::ApplicationEntity::SECURITY_MANAGER_AE_NAME;
@@ -99,6 +105,12 @@ get_factories(std::vector<struct rina::PsFactory>& factories)
         fa_factory.create = createFlowAllocatorPs;
         fa_factory.destroy = destroyFlowAllocatorPs;
 	factories.push_back(fa_factory);
+
+        farr_factory.info.name = "RoundRobin";
+        farr_factory.info.app_entity = IFlowAllocator::FLOW_ALLOCATOR_AE_NAME;
+        farr_factory.create = createFlowAllocatorRoundRobinPs;
+        farr_factory.destroy = destroyFlowAllocatorRoundRobinPs;
+        factories.push_back(farr_factory);
 
         nsm_factory.info.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;
         nsm_factory.info.app_entity = INamespaceManager::NAMESPACE_MANAGER_AE_NAME;
