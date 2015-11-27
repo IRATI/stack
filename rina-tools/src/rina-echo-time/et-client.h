@@ -23,9 +23,44 @@
 
 #include <string>
 #include <librina/concurrency.h>
+#include <librina/timer.h>
 
 #include "application.h"
 
+
+class Client;
+
+class CFloodCancelFlowTimerTask : public rina::TimerTask {
+public:
+	CFloodCancelFlowTimerTask(int port_id, Client * client);
+	void run();
+
+private:
+	int port_id;
+	Client * client;
+};
+
+class Sender: public rina::SimpleThread {
+public:
+        Sender(rina::ThreadAttributes * threadAttributes,
+                 unsigned long echo_times,
+                 unsigned int data_size,
+                 int dealloc_wait,
+                 unsigned int lost_wait,
+                 int rate,
+                 int port_id,
+                 Client * client);
+        ~Sender() throw() {};
+        int run();
+private:
+        unsigned long echo_times; // -1 is infinite
+        unsigned int data_size;
+        int dealloc_wait;
+        unsigned int lost_wait;
+        int rate;
+        int port_id;
+        Client * client;
+};
 
 class Client: public Application {
 public:
@@ -42,14 +77,22 @@ public:
                int wait,
                int g,
                int dw,
-               unsigned int lw);
-               void run();
+               unsigned int lw,
+               int rt);
+       void run();
+       int readSDU(int portId, void * sdu, int maxBytes, unsigned int timout);
+       void map_push(unsigned long sn, timespec tp);
+       void set_sdus(unsigned long n);
+       void set_maxTP(timespec tp);
+       void cancelFloodFlow(int port_id);
+       void startCancelFloodFlowTask(int port_id);
+       ~Client();
 protected:
         int createFlow();
         void pingFlow(int port_id);
         void perfFlow(int port_id);
+        void floodFlow(int port_id);
         void destroyFlow(int port_id);
-        int readSDU(int portId, void * sdu, int maxBytes, unsigned int timout);
 
 private:
         std::string test_type;
@@ -64,6 +107,20 @@ private:
         int gap;
         int dealloc_wait;
         unsigned int lost_wait;
+        int rate;
         rina::Sleep sleep_wrapper;
+        Sender * startSender(int port_id);
+        rina::Lockable lock;
+        std::map<unsigned long, timespec> m;
+        Sender * snd;
+        unsigned long nsdus;
+        double m2;
+        unsigned long sdus_received;
+        double min_rtt;
+        double max_rtt;
+        double average_rtt;
+        timespec maxtp;
+        rina::Timer timer;
+        CFloodCancelFlowTimerTask * cflood_task;
 };
 #endif//ET_CLIENT_HPP
