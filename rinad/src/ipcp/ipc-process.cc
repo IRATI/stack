@@ -33,6 +33,7 @@
 #include "ipcp/resource-allocator.h"
 #include "ipcp/rib-daemon.h"
 #include "ipcp/components.h"
+#include "ipcp/utils.h"
 
 namespace rinad {
 
@@ -45,6 +46,32 @@ namespace rinad {
 //Timeouts for timed wait
 #define IPCP_EVENT_TIMEOUT_S 0
 #define IPCP_EVENT_TIMEOUT_NS 1000000000 //1 sec
+
+//Class KernelSyncTrigger
+KernelSyncTrigger::KernelSyncTrigger(rina::ThreadAttributes * threadAttributes,
+		  	  	     IPCProcessImpl * ipc_process,
+		  	  	     unsigned int sync_period)
+	: rina::SimpleThread(threadAttributes)
+{
+	end = false;
+	ipcp = ipc_process;
+	period_in_ms = sync_period;
+}
+
+int KernelSyncTrigger::run()
+{
+	while(!end) {
+		sleep.sleepForMili(period_in_ms);
+		ipcp->sync_with_kernel();
+	}
+
+	return 0;
+}
+
+void KernelSyncTrigger::finish()
+{
+	end = true;
+}
 
 //Class IPCProcessImpl
 IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& nm,
@@ -66,6 +93,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 
         state = NOT_INITIALIZED;
         lock_ = new rina::Lockable();
+        kernel_sync = NULL;
 
         // Initialize application entities
         delimiter_ = 0; //TODO initialize Delimiter once it is implemented
@@ -105,6 +133,12 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 IPCProcessImpl::~IPCProcessImpl() {
 	if (lock_) {
 		delete lock_;
+	}
+
+	if (kernel_sync) {
+		kernel_sync->finish();
+		kernel_sync->join(NULL);
+		delete kernel_sync;
 	}
 
 	if (delimiter_) {
@@ -302,6 +336,11 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 		LOG_IPCP_ERR("Bad configuration error: %s", e.what());
 		rina::extendedIPCManager->assignToDIFResponse(requestEvent, -1);
 	}
+
+	rina::ThreadAttributes threadAttributes;
+	threadAttributes.setJoinable();
+	kernel_sync = new KernelSyncTrigger(&threadAttributes, this, 4000);
+	kernel_sync->start();
 
 	state = ASSIGNED_TO_DIF;
 
@@ -575,7 +614,7 @@ void IPCProcessImpl::processSelectPolicySetResponseEvent(
 
 void IPCProcessImpl::processPluginLoadRequestEvent(
                         const rina::PluginLoadRequestEvent& event) {
-		rina::ScopedLock g(*lock_);
+	rina::ScopedLock g(*lock_);
         int result;
 
         if (event.load) {
@@ -812,11 +851,12 @@ void IPCProcessImpl::event_loop(void){
 		}
 		delete e;
 	}
+}
 
 void IPCProcessImpl::sync_with_kernel()
 {
-	//flow_allocator_->sync_with_kernel();
-	//resource_allocator_->sync_with_kernel();
+	flow_allocator_->sync_with_kernel();
+	resource_allocator_->sync_with_kernel();
 }
 
 //Class IPCPFactory

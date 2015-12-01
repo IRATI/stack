@@ -30,6 +30,7 @@ ipcp_LDFLAGS = -Wl,--export-dynamic
 ipcp_SOURCES  =						\
 	main.cc						\
 	components.cc		components.h		\
+	utils.cc		utils.h			\
 	rib-daemon.cc		rib-daemon.h		\
 	enrollment-task.cc	enrollment-task.h	\
 	namespace-manager.cc	namespace-manager.h	\

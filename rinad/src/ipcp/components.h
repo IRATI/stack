@@ -57,6 +57,10 @@ public:
         virtual ~IPCProcessComponent() { };
         virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
 
+        // Periodically read the kernel information exported via sysfs relevant
+        // to this IPCP component, by default do nothing
+        virtual void sync_with_kernel() { };
+
         IPCProcess * ipcp;
 };
 
