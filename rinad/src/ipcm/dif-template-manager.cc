@@ -34,28 +34,30 @@ using namespace std;
 
 namespace rinad {
 
-//Class DIF Template Monitor
-DIFTemplateMonitor::DIFTemplateMonitor(rina::ThreadAttributes * thread_attrs,
-		   	   	       const std::string& folder,
-		   	   	       DIFTemplateManager * dtm) :
+//Class DIFConfigFolderMonitor
+DIFConfigFolderMonitor::DIFConfigFolderMonitor(rina::ThreadAttributes * thread_attrs,
+		   	   	       	       const std::string& folder,
+		   	   	       	       DIFTemplateManager * dtm,
+		   	   	       	       DIFAllocator * da) :
 		   	   			       rina::SimpleThread(thread_attrs)
 {
 	folder_name = folder;
 	stop = false;
 	dif_template_manager = dtm;
+	dif_allocator = da;
 }
 
-DIFTemplateMonitor::~DIFTemplateMonitor() throw()
+DIFConfigFolderMonitor::~DIFConfigFolderMonitor() throw()
 {
 }
 
-void DIFTemplateMonitor::do_stop()
+void DIFConfigFolderMonitor::do_stop()
 {
 	rina::ScopedLock g(lock);
 	stop = true;
 }
 
-bool DIFTemplateMonitor::has_to_stop()
+bool DIFConfigFolderMonitor::has_to_stop()
 {
 	rina::ScopedLock g(lock);
 	return stop;
@@ -70,7 +72,7 @@ static bool str_ends_with(const std::string& str, const std::string& suffix)
 	return std::equal(suffix.rbegin(), suffix.rend(), str.rbegin());
 }
 
-void DIFTemplateMonitor::process_events(int fd)
+void DIFConfigFolderMonitor::process_events(int fd)
 {
         char buf[4096]
             __attribute__ ((aligned(__alignof__(struct inotify_event))));
@@ -95,6 +97,11 @@ void DIFTemplateMonitor::process_events(int fd)
                 		ptr += sizeof(struct inotify_event) + event->len) {
                 	event = (const struct inotify_event *) ptr;
                 	std::string file_name = std::string(event->name);
+
+                	if (file_name == DIFAllocator::DIF_DIRECTORY_FILE_NAME) {
+                		dif_allocator->update_directory_contents();
+                		continue;
+                	}
 
 			if (! str_ends_with(file_name, ".dif")) {
 				continue;
@@ -122,7 +129,7 @@ void DIFTemplateMonitor::process_events(int fd)
         }
 }
 
-int DIFTemplateMonitor::run()
+int DIFConfigFolderMonitor::run()
 {
 	int fd;
 	int wd;
@@ -177,7 +184,8 @@ int DIFTemplateMonitor::run()
 //Class DIF Template Manager
 const std::string DIFTemplateManager::DEFAULT_TEMPLATE_NAME = "default.dif";
 
-DIFTemplateManager::DIFTemplateManager(const std::string& folder)
+DIFTemplateManager::DIFTemplateManager(const std::string& folder,
+				       DIFAllocator * dif_allocator)
 {
 	stringstream ss;
 	std::string::size_type pos = folder.rfind("/");
@@ -198,19 +206,22 @@ DIFTemplateManager::DIFTemplateManager(const std::string& folder)
 	//Create a thread that monitors the DIF template folder when required
 	rina::ThreadAttributes thread_attrs;
 	thread_attrs.setJoinable();
-	template_monitor = new DIFTemplateMonitor(&thread_attrs, folder, this);
-	template_monitor->start();
+	monitor = new DIFConfigFolderMonitor(&thread_attrs,
+					     folder_name,
+					     this,
+					     dif_allocator);
+	monitor->start();
 }
 
 DIFTemplateManager::~DIFTemplateManager()
 {
 	void * status;
 
-	if (template_monitor) {
-		template_monitor->do_stop();
-		template_monitor->join(&status);
+	if (monitor) {
+		monitor->do_stop();
+		monitor->join(&status);
 
-		delete template_monitor;
+		delete monitor;
 	}
 
 	// Destroy all DIF templates in the map

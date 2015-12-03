@@ -29,28 +29,6 @@
 
 namespace rinad {
 
-class DIFAllocator;
-
-/// Monitors the file with the application to DIF mappings
-class DIFDirectoryMonitor: public rina::SimpleThread {
-public:
-	DIFDirectoryMonitor(rina::ThreadAttributes * thread_attrs,
-			   const std::string& file,
-			   DIFAllocator * da);
-	~DIFDirectoryMonitor() throw();
-	void do_stop();
-	int run();
-
-private:
-	bool has_to_stop();
-	void process_events(int fd);
-
-	DIFAllocator * dif_allocator;
-	std::string folder;
-	bool stop;
-	rina::Lockable lock;
-};
-
 class DIFAllocator {
 public:
 	static const std::string DIF_DIRECTORY_FILE_NAME;
@@ -69,7 +47,6 @@ private:
 	std::map<std::string, rina::ApplicationProcessNamingInformation> dif_directory;
 
 	rina::ReadWriteLockable directory_lock;
-	DIFDirectoryMonitor * directory_monitor;
 };
 
 } //namespace rinad
