@@ -101,19 +101,16 @@ struct dt * dtp_dt(struct dtp * dtp)
 {
         return dtp->parent;
 }
-EXPORT_SYMBOL(dtp_dt);
 
 struct rmt * dtp_rmt(struct dtp * dtp)
 {
         return dtp->rmt;
 }
-EXPORT_SYMBOL(dtp_rmt);
 
 struct dtp_sv * dtp_dtp_sv(struct dtp * dtp)
 {
         return dtp->sv;
 }
-EXPORT_SYMBOL(dtp_dtp_sv);
 
 struct dtp_config * dtp_config_get(struct dtp * dtp)
 {
@@ -133,7 +130,6 @@ int nxt_seq_reset(struct dtp_sv * sv, seq_num_t sn)
 
         return 0;
 }
-EXPORT_SYMBOL(nxt_seq_reset);
 
 static seq_num_t nxt_seq_get(struct dtp_sv * sv)
 {
@@ -168,7 +164,6 @@ seq_num_t dtp_sv_last_nxt_seq_nr(struct dtp * instance)
 
         return tmp;
 }
-EXPORT_SYMBOL(dtp_sv_last_nxt_seq_nr);
 
 seq_num_t dtp_sv_max_seq_nr_sent(struct dtp * instance)
 {
@@ -189,7 +184,6 @@ seq_num_t dtp_sv_max_seq_nr_sent(struct dtp * instance)
 
         return tmp;
 }
-EXPORT_SYMBOL(dtp_sv_max_seq_nr_sent);
 
 int dtp_sv_max_seq_nr_set(struct dtp * instance, seq_num_t num)
 {
@@ -210,7 +204,6 @@ int dtp_sv_max_seq_nr_set(struct dtp * instance, seq_num_t num)
 
         return 0;
 }
-EXPORT_SYMBOL(dtp_sv_max_seq_nr_set);
 
 static bool sv_rate_fulfiled(struct dtp_sv * sv)
 {
@@ -237,7 +230,6 @@ bool dtp_sv_rate_fulfiled(struct dtp * instance)
 
         return sv_rate_fulfiled(sv);
 }
-EXPORT_SYMBOL(dtp_sv_rate_fulfiled);
 
 int dtp_sv_rate_fulfiled_set(struct dtp * instance, bool fulfiled)
 {
@@ -259,7 +251,6 @@ int dtp_sv_rate_fulfiled_set(struct dtp * instance, bool fulfiled)
 
         return 0;
 }
-EXPORT_SYMBOL(dtp_sv_rate_fulfiled_set);
 
 #if 0
 static uint_t dropped_pdus(struct dtp_sv * sv)
@@ -309,7 +300,6 @@ int dtp_initial_sequence_number(struct dtp * instance)
 
         return 0;
 }
-EXPORT_SYMBOL(dtp_initial_sequence_number);
 
 /* Sequencing/reassembly queue */
 
@@ -404,7 +394,6 @@ void dtp_squeue_flush(struct dtp * dtp)
 
         return;
 }
-EXPORT_SYMBOL(dtp_squeue_flush);
 
 static struct pdu * seq_queue_pop(struct seq_queue * q)
 {
@@ -766,7 +755,6 @@ finish:
         LOG_DBG("Finish process_Atimer_expiration");
         return pci_ret;
 }
-EXPORT_SYMBOL(process_A_expiration);
 
 static bool seqq_is_empty(struct squeue * queue)
 {
@@ -888,7 +876,6 @@ void dtp_start_rate_timer(struct dtp * dtp, struct dtcp * dtcp) {
 		LOG_DBG("rbfc Rate based timer is still pending...");
 	}
 }
-EXPORT_SYMBOL(dtp_start_rate_timer);
 
 static void tf_rate_window(void * o)
 {
@@ -1485,7 +1472,6 @@ int dtp_write(struct dtp * instance,
 
 void dtp_drf_required_set(struct dtp * dtp)
 { dtp->sv->drf_required = true; }
-EXPORT_SYMBOL(dtp_drf_required_set);
 
 /*
 static bool is_drf_required(struct dtp * dtp)
@@ -1797,7 +1783,6 @@ struct rtimer * dtp_sender_inactivity_timer(struct dtp * instance)
 {
         return instance->timers.sender_inactivity;
 }
-EXPORT_SYMBOL(dtp_sender_inactivity_timer);
 
 int dtp_ps_publish(struct ps_factory * factory)
 {
