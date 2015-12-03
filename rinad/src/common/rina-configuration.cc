@@ -157,14 +157,6 @@ string RINAConfiguration::toString() const
                 ss << "\tTemplate name: " << it->template_name << endl;
         }
 
-        ss << "Application --> DIF mappings:" << endl;
-        for (map<string, rina::ApplicationProcessNamingInformation>::
-                        const_iterator mit = applicationToDIFMappings.begin();
-                                mit != applicationToDIFMappings.end(); mit++) {
-                ss << "\t" << mit->first << ": " << mit->second.toString()
-                        << endl;
-        }
-
         return local.toString() + ss.str();
 }
 
@@ -271,23 +263,6 @@ std::string DIFTemplate::toString()
 	ss << std::endl;
 
 	return ss.str();
-}
-
-bool RINAConfiguration::lookup_dif_by_application(
-                const rina::ApplicationProcessNamingInformation& app_name,
-                rina::ApplicationProcessNamingInformation& result)
-{
-        string encoded_name = app_name.getEncodedString();
-
-        map<string, rina::ApplicationProcessNamingInformation>::iterator it =
-                applicationToDIFMappings.find(encoded_name);
-
-        if (it != applicationToDIFMappings.end()) {
-                result = it->second;
-                return true;
-        }
-
-        return false;
 }
 
 }

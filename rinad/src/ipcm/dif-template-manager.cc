@@ -100,7 +100,7 @@ void DIFTemplateMonitor::process_events(int fd)
 				continue;
 			}
 
-                	if (event->mask & IN_CLOSE_WRITE)
+                	if (event->mask & IN_CLOSE_WRITE) {
                 		LOG_DBG("The file of DIF template %s has been modified.",
                 				event->name);
 
@@ -111,6 +111,8 @@ void DIFTemplateMonitor::process_events(int fd)
                 			//TODO augment dif_template with the defaults
                 			dif_template_manager->add_dif_template(file_name, dif_template);
                 		}
+                	}
+
                 	if (event->mask & IN_DELETE) {
                 		LOG_DBG("The file of DIF template %s has been deleted.",
                 				event->name);

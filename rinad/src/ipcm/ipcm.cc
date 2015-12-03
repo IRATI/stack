@@ -83,7 +83,7 @@ namespace rinad {
 Singleton<IPCManager_> IPCManager;
 
 IPCManager_::IPCManager_() : req_to_stop(false), io_thread(NULL),
-		dif_template_manager(NULL) {
+		dif_template_manager(NULL), dif_allocator(NULL) {
 
 }
 
@@ -91,6 +91,10 @@ IPCManager_::~IPCManager_()
 {
 	if (dif_template_manager) {
 		delete dif_template_manager;
+	}
+
+	if (dif_allocator) {
+		delete dif_allocator;
 	}
 }
 
@@ -123,6 +127,7 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
 
 		// Initialize DIF Templates Manager (with its monitor thread)
 		dif_template_manager = new DIFTemplateManager(config_file);
+		dif_allocator = new DIFAllocator(config_file);
 	} catch (rina::InitializationException& e) {
 		LOG_ERR("Error while initializing librina-ipc-manager");
 		exit(EXIT_FAILURE);
@@ -809,7 +814,7 @@ IPCManager_::enroll_to_dif(Addon* callee, Promise* promise, const unsigned short
 bool IPCManager_::lookup_dif_by_application(
 	const rina::ApplicationProcessNamingInformation& apName,
 	rina::ApplicationProcessNamingInformation& difName){
-	return config.lookup_dif_by_application(apName, difName);
+	return dif_allocator->lookup_dif_by_application(apName, difName);
 }
 
 ipcm_res_t

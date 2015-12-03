@@ -35,6 +35,7 @@
 #include <librina/patterns.h>
 
 #include "dif-template-manager.h"
+#include "dif-allocator.h"
 #include "catalog.h"
 
 //Addons
@@ -826,6 +827,9 @@ public:
 
 	//The DIF template manager
 	DIFTemplateManager * dif_template_manager;
+
+	//The DIF Allocator
+	DIFAllocator * dif_allocator;
 
 	//Catalog of policies
 	Catalog catalog;

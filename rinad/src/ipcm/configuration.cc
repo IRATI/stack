@@ -394,32 +394,6 @@ void parse_ipc_to_create(const Json::Value          root,
         }
 }
 
-void parse_app_to_dif(const Json::Value & root,
-                      std::map<std::string,
-                      rina::ApplicationProcessNamingInformation>
-                      & applicationToDIFMappings)
-{
-        Json::Value appToDIF = root["applicationToDIFMappings"];
-        if (appToDIF != 0) {
-                for (unsigned int i = 0; i < appToDIF.size(); i++) {
-                        string encodedAppName = appToDIF[i]
-                                .get("encodedAppName", string())
-                                .asString();
-
-                        rina::ApplicationProcessNamingInformation difName =
-                                rina::ApplicationProcessNamingInformation
-                                (appToDIF[i]
-                                 .get("difName", string())
-                                 .asString(), string());
-
-                        applicationToDIFMappings.insert
-                                (pair<string,
-                                 rina::ApplicationProcessNamingInformation>
-                                 (encodedAppName, difName));
-                }
-        }
-}
-
 void parse_local_conf(const Json::Value &         root,
                       rinad::LocalConfiguration & local)
 {
@@ -517,7 +491,6 @@ bool parse_configuration(std::string& file_loc)
 
 	config.configuration_file = file_loc;
         parse_local_conf(root, config.local);
-        parse_app_to_dif(root, config.applicationToDIFMappings);
         parse_ipc_to_create(root, config.ipcProcessesToCreate);
         parse_dif_configs(root, config.difConfigurations);
         IPCManager->loadConfig(config);
@@ -847,7 +820,7 @@ DIFTemplate * parse_dif_template(const std::string& file_name,
         Json::Reader reader;
         ifstream     file;
 
-        file.open(file_name.c_str());
+        file.open(file_name.c_str(), std::ifstream::in);
         if (file.fail()) {
                 LOG_ERR("Failed to open config file");
                 return 0;
@@ -870,6 +843,61 @@ DIFTemplate * parse_dif_template(const std::string& file_name,
         parse_dif_template_config(root, dif_template);
 
         return dif_template;
+}
+
+void parse_app_to_dif(const Json::Value & root,
+		      std::map<std::string, rina::ApplicationProcessNamingInformation>& mappings)
+{
+        Json::Value appToDIF = root["applicationToDIFMappings"];
+        if (appToDIF != 0) {
+                for (unsigned int i = 0; i < appToDIF.size(); i++) {
+                        string encodedAppName = appToDIF[i]
+                                .get("encodedAppName", string())
+                                .asString();
+
+                        rina::ApplicationProcessNamingInformation difName =
+                                rina::ApplicationProcessNamingInformation
+                                (appToDIF[i]
+                                 .get("difName", string())
+                                 .asString(), string());
+
+                        mappings[encodedAppName] = difName;
+                        LOG_DBG("Added mapping of app %s to DIF %s",
+                        	encodedAppName.c_str(),
+                        	difName.processName.c_str());
+                }
+        }
+}
+
+bool parse_app_to_dif_mappings(const std::string& file_name,
+			       std::map<std::string, rina::ApplicationProcessNamingInformation>& mappings)
+{
+        // Parse config file with jsoncpp
+        Json::Value  root;
+        Json::Reader reader;
+        ifstream     file;
+
+        file.open(file_name.c_str());
+        if (file.fail()) {
+                LOG_ERR("Failed to open apps to DIF mappings file");
+                return false;
+        }
+
+        if (!reader.parse(file, root, false)) {
+        	LOG_ERR("Failed to parse apps to DIF mappings file");
+
+        	// FIXME: Log messages need to take string for this to work
+        	cout << "Failed to parse JSON" << endl
+        			<< reader.getFormatedErrorMessages() << endl;
+
+        	return false;
+        }
+
+        file.close();
+
+        parse_app_to_dif(root, mappings);
+
+        return true;
 }
 
 }

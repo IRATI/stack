@@ -9,16 +9,6 @@
 		"/lib/modules/4.1.10-irati/extra"
 	]
     },
-    "applicationToDIFMappings": [
-        {
-            "encodedAppName": "rina.apps.echotime.server-1--",
-            "difName": "normal.DIF"
-        },
-        {
-            "encodedAppName": "rina.apps.echotime.client-1--",
-            "difName": "normal.DIF"
-        }
-    ],
     "ipcProcessesToCreate": [
         {
             "apName": "normal-1.IPCP",
