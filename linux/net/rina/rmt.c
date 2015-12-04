@@ -81,6 +81,18 @@ struct rmt {
 	struct kobject kobj;
 };
 
+#define stats_get(name, n1_port, retval, flags)					\
+        spin_lock_irqsave(&n1_port->lock, flags);				\
+        retval = n1_port->stats.name;						\
+        spin_unlock_irqrestore(&n1_port->lock, flags);
+
+#define stats_inc(name, n1_port, bytes)						\
+        n1_port->stats.name##_pdus++;						\
+	n1_port->stats.name##_bytes += (unsigned int) bytes;			\
+        LOG_DBG("PDUs __STRINGIFY(name) %u (%u)",				\
+		n1_port->stats.name##_pdus, n1_port->stats.name##_bytes);
+
+
 static struct kobj_type rmt_ktype = {
         .release       = NULL,
 };
@@ -99,22 +111,41 @@ static ssize_t rmt_n1_port_attr_show(struct kobject *        kobj,
                                      char *                  buf)
 {
 	struct rmt_n1_port * n1_port;
+	unsigned int stats_ret;
+	unsigned long flags;
 
 	n1_port = container_of(kobj, struct rmt_n1_port, kobj);
 	if (!n1_port)
 		return 0;
 
-	if (strcmp(attr->attr.name, "queued_pdus") == 0)
-		return sprintf(buf, "%u\n", n1_port->stats.plen);
-	if (strcmp(attr->attr.name, "dropped_pdus") == 0)
-		return sprintf(buf, "%u\n", n1_port->stats.pdrop);
-	if (strcmp(attr->attr.name, "error_pdus") == 0)
-		return sprintf(buf, "%u\n", n1_port->stats.perr);
-	if (strcmp(attr->attr.name, "tx_pdus") == 0)
-		return sprintf(buf, "%u\n", n1_port->stats.tx_pdus);
-	if (strcmp(attr->attr.name, "rx_pdus") == 0)
-		return sprintf(buf, "%u\n", n1_port->stats.rx_pdus);
-
+	if (strcmp(attr->attr.name, "queued_pdus") == 0) {
+		stats_get(plen, n1_port, stats_ret, flags);
+		return sprintf(buf, "%u\n", stats_ret);
+	}
+	if (strcmp(attr->attr.name, "drop_pdus") == 0) {
+		stats_get(drop_pdus, n1_port, stats_ret, flags);
+		return sprintf(buf, "%u\n", stats_ret);
+	}
+	if (strcmp(attr->attr.name, "err_pdus") == 0) {
+		stats_get(err_pdus, n1_port, stats_ret, flags);
+		return sprintf(buf, "%u\n", stats_ret);
+	}
+	if (strcmp(attr->attr.name, "tx_pdus") == 0) {
+		stats_get(tx_pdus, n1_port, stats_ret, flags);
+		return sprintf(buf, "%u\n", stats_ret);
+	}
+	if (strcmp(attr->attr.name, "rx_pdus") == 0) {
+		stats_get(rx_pdus, n1_port, stats_ret, flags);
+		return sprintf(buf, "%u\n", stats_ret);
+	}
+	if (strcmp(attr->attr.name, "tx_bytes") == 0) {
+		stats_get(tx_bytes, n1_port, stats_ret, flags);
+		return sprintf(buf, "%u\n", stats_ret);
+	}
+	if (strcmp(attr->attr.name, "rx_bytes") == 0) {
+		stats_get(rx_bytes, n1_port, stats_ret, flags);
+		return sprintf(buf, "%u\n", stats_ret);
+	}
 	return 0;
 }
 
@@ -129,17 +160,21 @@ static const struct sysfs_ops rmt_n1_port_sysfs_ops = {
 }
 
 N1_PORT_ATTR(queued_pdus);
-N1_PORT_ATTR(dropped_pdus);
-N1_PORT_ATTR(error_pdus);
+N1_PORT_ATTR(drop_pdus);
+N1_PORT_ATTR(err_pdus);
 N1_PORT_ATTR(tx_pdus);
+N1_PORT_ATTR(tx_bytes);
 N1_PORT_ATTR(rx_pdus);
+N1_PORT_ATTR(rx_bytes);
 
 static struct attribute * rmt_n1_port_attrs[] = {
 	&queued_pdus_attr.attr,
-	&dropped_pdus_attr.attr,
-	&error_pdus_attr.attr,
+	&drop_pdus_attr.attr,
+	&err_pdus_attr.attr,
 	&tx_pdus_attr.attr,
+	&tx_bytes_attr.attr,
 	&rx_pdus_attr.attr,
+	&rx_bytes_attr.attr,
 	NULL,
 };
 
@@ -170,8 +205,12 @@ static struct rmt_n1_port *n1_port_create(port_id_t id,
 	atomic_set(&tmp->refs_c, 0);
 	tmp->wbusy = false;
 	tmp->stats.plen = 0;
-	tmp->stats.pdrop = 0;
-	tmp->stats.perr = 0;
+	tmp->stats.drop_pdus = 0;
+	tmp->stats.err_pdus = 0;
+	tmp->stats.tx_pdus = 0;
+	tmp->stats.tx_bytes = 0;
+	tmp->stats.rx_pdus = 0;
+	tmp->stats.rx_bytes = 0;
 	spin_lock_init(&tmp->lock);
 
 	LOG_DBG("N-1 port %pK created successfully (port-id = %d)", tmp, id);
@@ -573,6 +612,16 @@ int rmt_dt_cons_set(struct rmt *instance,
 }
 EXPORT_SYMBOL(rmt_dt_cons_set);
 
+struct serdes * rmt_serdes(struct rmt * instance)
+{
+	if (!instance || !instance->serdes) {
+		LOG_ERR("Bogus instance passed");
+		return NULL;
+	}
+
+	return instance->serdes;
+}
+
 struct rmt_config *rmt_config_get(struct rmt *instance)
 {
 	if (!instance) {
@@ -625,6 +674,7 @@ static int n1_port_write_sdu(struct rmt *rmt,
 {
 	int ret;
 	unsigned long flags;
+	ssize_t bytes = buffer_length(sdu_buffer_ro(sdu));
 
 	LOG_DBG("Gonna send SDU to port-id %d", n1_port->port_id);
 	ret = n1_port->n1_ipcp->ops->sdu_write(n1_port->n1_ipcp->data,
@@ -650,9 +700,10 @@ static int n1_port_write_sdu(struct rmt *rmt,
 			n1_port->state = N1_PORT_STATE_DISABLED;
 
 		n1_port_unlock(n1_port, flags);
+		return ret;
 	}
 
-	return ret;
+	return (int) bytes;
 }
 
 static struct sdu * generate_sdu_from_pdu(struct rmt * rmt,
@@ -837,11 +888,11 @@ static void send_worker(unsigned long o)
 			ret =  n1_port_write_sdu(rmt, n1_port, sdu);
 			spin_lock(&n1_port->lock);
 
-			if (ret)
+			if (ret < 0)
 				break;
 
 			pdus_sent++;
-			n1_port->stats.tx_pdus++;
+			stats_inc(tx, n1_port, ret);
 		}
 
 		if (n1_port->state == N1_PORT_STATE_ENABLED &&
@@ -884,6 +935,7 @@ int rmt_send_port_id(struct rmt *instance,
 		LOG_ERR("Bogus PDU passed");
 		return -1;
 	}
+
 	if (!instance) {
 		LOG_ERR("Bogus RMT passed");
 		pdu_destroy(pdu);
@@ -924,15 +976,14 @@ int rmt_send_port_id(struct rmt *instance,
 		switch (ret) {
 		case RMT_PS_ENQ_SCHED:
 			n1_port->stats.plen++;
-			/* FIXME LB: can this be done before releasing the port? */
 			tasklet_hi_schedule(&instance->egress_tasklet);
 			break;
 		case RMT_PS_ENQ_DROP:
-			n1_port->stats.pdrop++;
+			n1_port->stats.drop_pdus++;
 			LOG_DBG("PDU dropped while enqueing");
 			break;
 		case RMT_PS_ENQ_ERR:
-			n1_port->stats.perr++;
+			n1_port->stats.err_pdus++;
 			LOG_DBG("Some error occurred while enqueuing PDU");
 			break;
 		default:
@@ -951,14 +1002,14 @@ int rmt_send_port_id(struct rmt *instance,
 	/*FIXME LB: This is just horrible, needs to be rethinked */
 	n1_port_lock(n1_port, flags);
 	n1_port->wbusy = false;
-	if (ret == 0)
-		n1_port->stats.tx_pdus++;
-	else if (ret == -EAGAIN)
+	if (ret >= 0) {
+		stats_inc(tx, n1_port, ret);
+		ret = 0;
+	} else if (ret == -EAGAIN)
 		ret = 0;
 	n1_port_unlock(n1_port, flags);
 	n1pmap_release(instance, n1_port);
 	return ret;
-
 }
 EXPORT_SYMBOL(rmt_send_port_id);
 
@@ -1327,6 +1378,7 @@ int rmt_receive(struct rmt *rmt,
 	struct buffer *buf;
 	struct rmt_n1_port *n1_port;
 	size_t ttl;
+	ssize_t bytes;
 
 	if (!sdu_is_ok(sdu)) {
 		LOG_ERR("Bogus SDU passed");
@@ -1357,6 +1409,7 @@ int rmt_receive(struct rmt *rmt,
 	}
 
 	sdu_destroy(sdu);
+	bytes = buffer_length(buf);
 
 	pdu_ser = pdu_ser_create_buffer_with_ni(buf);
 	if (!pdu_ser) {
@@ -1371,7 +1424,7 @@ int rmt_receive(struct rmt *rmt,
                 pdu_ser_destroy(pdu_ser);
 		return -1;
 	}
-	n1_port->stats.rx_pdus++;
+	stats_inc(rx, n1_port, bytes);
 
 	/* SDU Protection */
 	if (sdup_unprotect_pdu(n1_port->sdup_port, pdu_ser)) {

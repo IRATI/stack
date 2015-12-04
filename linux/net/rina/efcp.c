@@ -78,10 +78,9 @@ static ssize_t efcp_attr_show(struct kobject *		     kobj,
                                      char *		     buf)
 {
 	struct efcp * instance;
-	struct dtp_config * dtp_cfg;
 
 	instance = container_of(kobj, struct efcp, kobj);
-	if (!instance || !instance->dt)
+	if (!instance || !instance->connection || !instance->dt)
 		return 0;
 
 	if (strcmp(attr->attr.name, "src_address") == 0)
@@ -102,36 +101,18 @@ static ssize_t efcp_attr_show(struct kobject *		     kobj,
 	if (strcmp(attr->attr.name, "port_id") == 0)
 		return sprintf(buf, "%u\n",
 			connection_port_id(instance->connection));
-	if (strcmp(attr->attr.name, "init_a_timer") == 0) {
-		dtp_cfg = dtp_config_get(dt_dtp(instance->dt));
-		return sprintf(buf, "%u\n",
-			dtp_conf_initial_a_timer(dtp_cfg));
-	}
-	if (strcmp(attr->attr.name, "max_sdu_gap") == 0) {
-		dtp_cfg = dtp_config_get(dt_dtp(instance->dt));
-		return sprintf(buf, "%u\n",
-			dtp_conf_max_sdu_gap(dtp_cfg));
-	}
-	if (strcmp(attr->attr.name, "partial_delivery") == 0) {
-		dtp_cfg = dtp_config_get(dt_dtp(instance->dt));
-		return sprintf(buf, "%u\n",
-			dtp_conf_partial_del(dtp_cfg) ? 1 : 0);
-	}
-	if (strcmp(attr->attr.name, "incomplete_delivery") == 0) {
-		dtp_cfg = dtp_config_get(dt_dtp(instance->dt));
-		return sprintf(buf, "%u\n",
-			dtp_conf_incomplete_del(dtp_cfg) ? 1 : 0);
-	}
-	if (strcmp(attr->attr.name, "in_order_delivery") == 0) {
-		dtp_cfg = dtp_config_get(dt_dtp(instance->dt));
-		return sprintf(buf, "%u\n",
-			dtp_conf_in_order_del(dtp_cfg) ? 1 : 0);
-	}
-	if (strcmp(attr->attr.name, "seq_num_rollover_th") == 0) {
-		dtp_cfg = dtp_config_get(dt_dtp(instance->dt));
-		return sprintf(buf, "%d\n",
-			dtp_conf_seq_num_ro_th(dtp_cfg));
-	}
+	if (strcmp(attr->attr.name, "a_timer") == 0)
+		return sprintf(buf, "%u\n", dt_sv_a(instance->dt));
+	if (strcmp(attr->attr.name, "r_timer") == 0)
+		return sprintf(buf, "%u\n", dt_sv_r(instance->dt));
+	if (strcmp(attr->attr.name, "tr_timeout") == 0)
+		return sprintf(buf, "%u\n", dt_sv_tr(instance->dt));
+	if (strcmp(attr->attr.name, "max_flow_pdu_size") == 0)
+		return sprintf(buf, "%u\n", dt_sv_max_pdu_size(instance->dt));
+	if (strcmp(attr->attr.name, "max_flow_sdu_size") == 0)
+		return sprintf(buf, "%u\n", dt_sv_max_sdu_size(instance->dt));
+	if (strcmp(attr->attr.name, "max_packet_life") == 0)
+		return sprintf(buf, "%u\n", dt_sv_mpl(instance->dt));
 	return 0;
 }
 
@@ -151,12 +132,12 @@ EFCP_ATTR(src_cep_id);
 EFCP_ATTR(dst_cep_id);
 EFCP_ATTR(qos_id);
 EFCP_ATTR(port_id);
-EFCP_ATTR(init_a_timer);
-EFCP_ATTR(max_sdu_gap);
-EFCP_ATTR(patial_delivery);
-EFCP_ATTR(incomplete_delivery);
-EFCP_ATTR(in_order_delivery);
-EFCP_ATTR(seq_num_rollover_th);
+EFCP_ATTR(a_timer);
+EFCP_ATTR(r_timer);
+EFCP_ATTR(tr_timeout);
+EFCP_ATTR(max_flow_pdu_size);
+EFCP_ATTR(max_flow_sdu_size);
+EFCP_ATTR(max_packet_life);
 
 static struct attribute * efcp_attrs[] = {
 	&src_address_attr.attr,
@@ -165,17 +146,17 @@ static struct attribute * efcp_attrs[] = {
 	&dst_cep_id_attr.attr,
 	&qos_id_attr.attr,
 	&port_id_attr.attr,
-	&init_a_timer_attr.attr,
-	&max_sdu_gap_attr.attr,
-	&patial_delivery_attr.attr,
-	&incomplete_delivery_attr.attr,
-	&in_order_delivery_attr.attr,
-	&seq_num_rollover_th_attr.attr,
-	NULL,
+	&a_timer_attr.attr,
+	&r_timer_attr.attr,
+	&tr_timeout_attr.attr,
+	&max_flow_pdu_size_attr.attr,
+	&max_flow_sdu_size_attr.attr,
+		&max_packet_life_attr.attr,
+		NULL,
 };
 
 static struct kobj_type efcp_ktype = {
-        .sysfs_ops     = &efcp_sysfs_ops,
+       	.sysfs_ops     = &efcp_sysfs_ops,
         .default_attrs = efcp_attrs,
         .release       = NULL,
 };
@@ -767,7 +748,8 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         /* FIXME: dtp_create() takes ownership of the connection parameter */
         dtp = dtp_create(tmp->dt,
                          container->rmt,
-                         dtp_cfg);
+                         dtp_cfg,
+			 &tmp->kobj);
         if (!dtp) {
                 efcp_destroy(tmp);
                 return cep_id_bad();
@@ -869,8 +851,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         if (dtp_sv_init(dtp,
                         dtcp_rtx_ctrl(dtcp_cfg),
                         dtcp_window_based_fctrl(dtcp_cfg),
-                        dtcp_rate_based_fctrl(dtcp_cfg),
-                        a)) {
+                        dtcp_rate_based_fctrl(dtcp_cfg))) {
                 LOG_ERR("Could not init dtp_sv");
                 efcp_destroy(tmp);
                 return cep_id_bad();

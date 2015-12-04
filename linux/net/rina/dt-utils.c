@@ -37,7 +37,6 @@
 #include "dtp.h"
 #include "rmt.h"
 #include "dtp-ps.h"
-#include "serdes.h"
 
 #define RTIMER_ENABLED 1
 
@@ -233,25 +232,6 @@ static void enable_write(struct cwq * cwq,
         return;
 }
 
-int dt_pdu_send(struct dt *  dt,
-                struct rmt * rmt,
-                address_t    address,
-                qos_id_t     qos_id,
-                struct pdu * pdu)
-{
-        struct efcp * efcp;
-
-        if (!dt)
-                return -1;
-
-        efcp = dt_efcp(dt);
-        if (!efcp)
-                return -1;
-
-        return common_efcp_pdu_send(efcp, rmt, address, qos_id, pdu);
-}
-EXPORT_SYMBOL(dt_pdu_send);
-
 static bool can_deliver(struct dtp * dtp, struct dtcp * dtcp)
 {
         bool to_ret = false, w_ret = false, r_ret = false;
@@ -285,9 +265,7 @@ static bool can_deliver(struct dtp * dtp, struct dtcp * dtcp)
 
 void cwq_deliver(struct cwq * queue,
                  struct dt *  dt,
-                 struct rmt * rmt,
-                 address_t    address,
-                 qos_id_t     qos_id)
+                 struct rmt * rmt)
 {
         struct rtxq *           rtxq;
         struct dtcp *           dtcp;
@@ -299,11 +277,6 @@ void cwq_deliver(struct cwq * queue,
         bool			rate_ctrl = false;
         int 			sz = 0;
 	uint_t 			sc = 0;
-
-	struct dt_cons *	dc = 0;
-	struct efcp_container * ec = 0;
-	struct efcp_config * 	ef = 0;
-	struct efcp *		efcp = 0;
 
         if (!queue)
                 return;
@@ -317,18 +290,6 @@ void cwq_deliver(struct cwq * queue,
         dtcp = dt_dtcp(dt);
         if (!dtcp)
                 return;
-
-        efcp = dt_efcp(dt);
-
-        /* Oh god why... */
-        if(efcp) {
-        	ec = efcp_container_get(efcp);
-
-        	if(ec) {
-        		ef = efcp_container_config(ec);
-        		dc = ef->dt_cons;
-        	}
-        }
 
         rcu_read_lock();
         rtx_ctrl  = dtcp_ps_get(dtcp)->rtx_ctrl;
@@ -368,7 +329,7 @@ void cwq_deliver(struct cwq * queue,
                         rtxq_push_ni(rtxq, tmp);
                 }
                 if(rate_ctrl) {
-                	sz = serdes_pdu_size(pdu, dc);
+                	sz = buffer_length(pdu_buffer_get_ro(pdu));
 			sc = dtcp_sent_itu(dtcp);
 
 			if(sz >= 0) {
@@ -388,7 +349,7 @@ void cwq_deliver(struct cwq * queue,
                                           pci_sequence_number_get(pci)))
                         LOG_ERR("Problems setting sender left window edge");
 
-                dt_pdu_send(dt, rmt, address, qos_id, pdu);
+                dt_pdu_send(dt, rmt, pdu);
         }
         spin_unlock(&queue->lock);
 
@@ -596,28 +557,12 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
         int sz;
 	uint_t sc;
 
-	struct dt_cons *	dc = 0;
-	struct efcp_container *	ec = 0;
-	struct efcp_config *	ef = 0;
-	struct efcp *		efcp = 0;
-
         ASSERT(q);
         ASSERT(dt);
         ASSERT(rmt);
 
         dtp = dt_dtp(dt);
         dtcp = dt_dtcp(dt);
-
-	efcp = dt_efcp(dt);
-
-        if(efcp) {
-        	ec = efcp_container_get(efcp);
-
-        	if(ec) {
-        		ef = efcp_container_config(ec);
-        		dc = ef->dt_cons;
-        	}
-        }
 
         /*
          * FIXME: this should be change since we are sending in inverse order
@@ -637,7 +582,7 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
 				dtcp &&
 				dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
 
-				sz = serdes_pdu_size(cur->pdu, dc);
+				sz = buffer_length(pdu_buffer_get_ro(cur->pdu));
 				sc = dtcp_sent_itu(dtcp);
 
 				if(sz >= 0) {
@@ -659,8 +604,6 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
                         tmp = pdu_dup_ni(cur->pdu);
                         if (dt_pdu_send(dt,
                                         rmt,
-                                        pci_destination(pdu_pci_get_ro(tmp)),
-                                        pci_qos_id(pdu_pci_get_ro(tmp)),
                                         tmp))
                                 continue;
                 } else
@@ -765,28 +708,12 @@ static int rtxqueue_rtx(struct rtxqueue * q,
         int sz;
         uint_t sc;
 
-	struct dt_cons *	dc = 0;
-	struct efcp_container *	ec = 0;
-	struct efcp_config *	ef = 0;
-	struct efcp *		efcp = 0;
-
         ASSERT(q);
         ASSERT(dt);
         ASSERT(rmt);
 
         dtp = dt_dtp(dt);
         dtcp = dt_dtcp(dt);
-
-	efcp = dt_efcp(dt);
-
-        if(efcp) {
-        	ec = efcp_container_get(efcp);
-
-        	if(ec) {
-        		ef = efcp_container_config(ec);
-        		dc = ef->dt_cons;
-        	}
-        }
 
         tr_jiffies = msecs_to_jiffies(tr);
 
@@ -809,7 +736,7 @@ static int rtxqueue_rtx(struct rtxqueue * q,
 				dtcp &&
 				dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
 
-                        	sz = serdes_pdu_size(cur->pdu, dc);
+                        	sz = buffer_length(pdu_buffer_get_ro(cur->pdu));
 				sc = dtcp_sent_itu(dtcp);
 
 				if(sz >= 0) {
@@ -831,8 +758,6 @@ static int rtxqueue_rtx(struct rtxqueue * q,
                         tmp = pdu_dup_ni(cur->pdu);
                         if (dt_pdu_send(dt,
                                         rmt,
-                                        pci_destination(pdu_pci_get_ro(tmp)),
-                                        pci_qos_id(pdu_pci_get_ro(tmp)),
                                         tmp))
                                 continue;
                 } else {
@@ -1122,11 +1047,9 @@ int rtxq_nack(struct rtxq * q,
         return 0;
 }
 
-int common_efcp_pdu_send(struct efcp * efcp,
-        		 struct rmt *  rmt,
-        	         address_t     address,
-                         qos_id_t      qos_id,
-			 struct pdu *  pdu)
+int dt_pdu_send(struct dt *   dt,
+        	struct rmt *  rmt,
+		struct pdu *  pdu)
 {
         struct pci *	        pci;
 	struct efcp_container * efcpc;
@@ -1134,6 +1057,9 @@ int common_efcp_pdu_send(struct efcp * efcp,
 
 	if (!pdu)
 	        return -1;
+
+        if (!dt)
+                return -1;
 
 	pci = pdu_pci_get_rw(pdu);
 	if (!pci)
@@ -1150,7 +1076,7 @@ int common_efcp_pdu_send(struct efcp * efcp,
 
 	/* Local flow case */
 	dest_cep_id = pci_cep_destination(pci);
-	efcpc = efcp_container_get(efcp);
+	efcpc = efcp_container_get(dt_efcp(dt));
 	if (!efcpc) {
 	        LOG_ERR("Could not retrieve the EFCP container in"
 	        "loopback operation");
@@ -1164,4 +1090,4 @@ int common_efcp_pdu_send(struct efcp * efcp,
 
 	return 0;
 }
-EXPORT_SYMBOL(common_efcp_pdu_send);
+EXPORT_SYMBOL(dt_pdu_send);

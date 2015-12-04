@@ -185,23 +185,13 @@ EXPORT_SYMBOL(dtcp_config_get);
 
 int dtcp_pdu_send(struct dtcp * dtcp, struct pdu * pdu)
 {
-        struct efcp * efcp;
-
         ASSERT(dtcp);
+        ASSERT(dtcp->rmt);
         ASSERT(dtcp->parent);
 
-        efcp = dt_efcp(dtcp->parent);
-        if (!efcp) {
-                LOG_ERR("Passed instance has no EFCP, dtcp_pdu_send bailing out");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        return common_efcp_pdu_send(efcp,
-        			    dtcp->rmt,
-        			    efcp_dst_addr(efcp),
-        			    efcp_qos_id(efcp),
-        			    pdu);
+        return dt_pdu_send(dtcp->parent,
+                           dtcp->rmt,
+                           pdu);
 }
 EXPORT_SYMBOL(dtcp_pdu_send);
 
@@ -803,15 +793,9 @@ static void last_snd_data_ack_set(struct dtcp * dtcp, seq_num_t seq_num)
 static int push_pdus_rmt(struct dtcp * dtcp)
 {
         struct cwq *  q;
-        struct efcp * efcp;
 
         ASSERT(dtcp);
 
-        efcp = dt_efcp(dtcp->parent);
-        if (!efcp) {
-                LOG_ERR("Passed instance has no EFCP, bailing out");
-                return -1;
-        }
         q = dt_cwq(dtcp->parent);
         if (!q) {
                 LOG_ERR("No Closed Window Queue");
@@ -820,9 +804,7 @@ static int push_pdus_rmt(struct dtcp * dtcp)
 
         cwq_deliver(q,
                     dtcp->parent,
-                    dtcp->rmt,
-                    efcp_dst_addr(efcp),
-                    efcp_qos_id(efcp));
+                    dtcp->rmt);
 
         return 0;
 }

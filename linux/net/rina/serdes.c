@@ -66,12 +66,51 @@ struct pdu_ser * pdu_ser_create_buffer_with_gfp(gfp_t           flags,
 
 struct serdes {
         struct dt_cons * dt_cons;
+	/* To store the PCI size of the distinct PDU types */
+	ssize_t serdes_pci_sizes[PDU_TYPES];
 };
+
+static int serdes_type2size(pdu_type_t type)
+{
+        switch (type) {
+        case PDU_TYPE_MGMT:
+        case PDU_TYPE_DT:
+		return 1;
+        case PDU_TYPE_FC:
+		return 2;
+        case PDU_TYPE_ACK:
+		return 3;
+        case PDU_TYPE_ACK_AND_FC:
+		return 4;
+        case PDU_TYPE_CACK:
+		return 5;
+        default:
+		return PDU_TYPES;
+	}
+}
+
+static int base_pci_size(const struct dt_cons * dt_cons)
+{
+        return VERSION_SIZE                 +
+                2 * dt_cons->address_length +
+                dt_cons->qos_id_length      +
+                2 * dt_cons->cep_id_length  +
+                PDU_TYPE_SIZE               +
+                FLAGS_SIZE                  +
+                dt_cons->length_length;
+}
+
+static int fc_pci_size(const struct dt_cons * dt_cons)
+{
+        return 3 * dt_cons->seq_num_length +
+                dt_cons->rate_length + dt_cons->frame_length;
+}
 
 static struct serdes * serdes_create_gfp(gfp_t            flags,
                                          struct dt_cons * dt_cons)
 {
         struct serdes * tmp;
+	int pci_size;
 
         if (!dt_cons)
                 return NULL;
@@ -80,6 +119,33 @@ static struct serdes * serdes_create_gfp(gfp_t            flags,
         if (!tmp)
                 return NULL;
 
+	pci_size = base_pci_size(dt_cons);
+	tmp->serdes_pci_sizes[0] = pci_size;
+	tmp->serdes_pci_sizes[serdes_type2size(PDU_TYPE_DT)] =		\
+                pci_size + dt_cons->seq_num_length;
+	tmp->serdes_pci_sizes[serdes_type2size(PDU_TYPE_MGMT)] =	\
+                pci_size + dt_cons->seq_num_length;
+	tmp->serdes_pci_sizes[serdes_type2size(PDU_TYPE_FC)] =		\
+                pci_size + dt_cons->ctrl_seq_num_length +		\
+		fc_pci_size(dt_cons);
+	tmp->serdes_pci_sizes[serdes_type2size(PDU_TYPE_ACK)] =		\
+                pci_size + dt_cons->ctrl_seq_num_length +		\
+		dt_cons->seq_num_length;
+	tmp->serdes_pci_sizes[serdes_type2size(PDU_TYPE_ACK_AND_FC)] =	\
+                pci_size + dt_cons->ctrl_seq_num_length +		\
+		fc_pci_size(dt_cons) + dt_cons->seq_num_length;
+	tmp->serdes_pci_sizes[serdes_type2size(PDU_TYPE_CACK)] =	\
+                pci_size + 2 * dt_cons->ctrl_seq_num_length +		\
+		4 * dt_cons->seq_num_length + dt_cons->rate_length;
+	tmp->serdes_pci_sizes[PDU_TYPES] =	-1;
+	/* To be completed for
+	 * PDU_TYPE_NACK
+	 * PDU_TYPE_NACK_AND_FC
+	 * PDU_TYPE_SACK
+	 * PDU_TYPE_SNACK
+	 * PDU_TYPE_SACK_AND_FC
+	 * PDU_TYPE_SNACK_AND_FC
+	 */
         tmp->dt_cons = dt_cons;
 
         return tmp;
@@ -106,23 +172,6 @@ int serdes_destroy(struct serdes * instance)
         return 0;
 }
 EXPORT_SYMBOL(serdes_destroy);
-
-static int base_pci_size(const struct dt_cons * dt_cons)
-{
-        return VERSION_SIZE                 +
-                2 * dt_cons->address_length +
-                dt_cons->qos_id_length      +
-                2 * dt_cons->cep_id_length  +
-                PDU_TYPE_SIZE               +
-                FLAGS_SIZE                  +
-                dt_cons->length_length;
-}
-
-static int fc_pci_size(const struct dt_cons * dt_cons)
-{
-        return 3 * dt_cons->seq_num_length +
-                dt_cons->rate_length + dt_cons->frame_length;
-}
 
 static int serialize_base_pci(const struct serdes * instance,
                               char *                data,
@@ -621,59 +670,10 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
                 return NULL;
         }
 
-        /* Base PCI size, fields present in all PDUs */
-        pci_size = base_pci_size(dt_cons);
-
-        /*
-         * These are available in the stack at this point in time
-         * Extend if necessary (e.g.) NACKs, SACKs, ...
-         * Set size in first switch/case
-         */
-        switch (pdu_type) {
-        case PDU_TYPE_MGMT:
-        case PDU_TYPE_DT:
-                size = pci_size + dt_cons->seq_num_length + buffer_size;
-
-                if (size <= 0)
-                        return NULL;
-
-                break;
-        case PDU_TYPE_FC:
-                size = pci_size + dt_cons->ctrl_seq_num_length + 	\
-			fc_pci_size(dt_cons);
-                if (size <= 0)
-                        return NULL;
-
-                break;
-        case PDU_TYPE_ACK:
-                size = pci_size + dt_cons->ctrl_seq_num_length +	\
-			dt_cons->seq_num_length;
-                if (size <= 0)
-                        return NULL;
-
-                break;
-        case PDU_TYPE_ACK_AND_FC:
-                size = pci_size +
-                        dt_cons->ctrl_seq_num_length +
-                        fc_pci_size(dt_cons) +
-                        dt_cons->seq_num_length;
-                if (size <= 0)
-                        return NULL;
-
-                break;
-        case PDU_TYPE_CACK:
-                size = pci_size +
-                        2 * dt_cons->ctrl_seq_num_length +
-                        4 * dt_cons->seq_num_length +
-			dt_cons->rate_length;
-                if (size <= 0)
-                        return NULL;
-
-                break;
-        default:
-                LOG_ERR("Unknown PDU type %02X", pdu_type);
-                return NULL;
-        }
+	pci_size = instance->serdes_pci_sizes[0];
+	size = instance->serdes_pci_sizes[serdes_type2size(pdu_type)];
+	if (pdu_type == PDU_TYPE_MGMT || pdu_type == PDU_TYPE_DT)
+		size += buffer_size;
 
         data = rkmalloc(size, flags);
         if (!data)
@@ -959,81 +959,3 @@ struct pdu * pdu_deserialize_ni(const struct serdes * instance,
                                 struct pdu_ser *      pdu)
 { return pdu_deserialize_gfp(GFP_ATOMIC, instance, pdu); }
 EXPORT_SYMBOL(pdu_deserialize_ni);
-
-int serdes_pci_size(pdu_type_t type, struct dt_cons * c) {
-	int seqn;
-	int cseqn;
-	int rate;
-	int base;
-
-	if(!c) {
-		return -1;
-	}
-
-	seqn  = c->seq_num_length;
-	cseqn = c->ctrl_seq_num_length;
-	rate  = c->rate_length;
-	base  = base_pci_size(c);
-
-	switch(type) {
-	case PDU_TYPE_MGMT:
-	case PDU_TYPE_DT:
-		base += seqn;
-		break;
-	case PDU_TYPE_CACK:
-		base +=
-			2 * cseqn +
-			4 * seqn +
-			rate;
-		break;
-	case PDU_TYPE_ACK:
-		base += cseqn + seqn;
-		break;
-	case PDU_TYPE_NACK:
-		break;
-	case PDU_TYPE_FC:
-		base += cseqn + fc_pci_size(c);
-
-		break;
-	case PDU_TYPE_ACK_AND_FC:
-		base +=
-			cseqn +
-			fc_pci_size(c) +
-			seqn;
-		break;
-	case PDU_TYPE_NACK_AND_FC:
-		break;
-	case PDU_TYPE_SACK:
-		break;
-	case PDU_TYPE_SNACK:
-		break;
-	case PDU_TYPE_SACK_AND_FC:
-		break;
-	case PDU_TYPE_SNACK_AND_FC:
-		break;
-	default:
-		return -1;
-	}
-
-	return base;
-}
-
-int serdes_pdu_size(struct pdu * p, struct dt_cons * c) {
-	const struct buffer * b = 0;
-	const struct pci * pci = 0;
-
-	if(!p || !c) {
-		return -1;
-	}
-
-	b = pdu_buffer_get_ro(p);
-	pci = pdu_pci_get_ro(p);
-
-	if(!pci || !b) {
-		return -1;
-	}
-
-	return buffer_length(b) +
-		serdes_pci_size(pci_type(pci), c);
-}
-EXPORT_SYMBOL(serdes_pdu_size);

@@ -48,9 +48,7 @@ int                 cwq_flush(struct cwq * q);
 ssize_t             cwq_size(struct cwq * q);
 void                cwq_deliver(struct cwq * queue,
                                 struct dt *  dt,
-                                struct rmt * rmt,
-                                address_t    address,
-                                qos_id_t     qos_id);
+                                struct rmt * rmt);
 seq_num_t            cwq_peek(struct cwq * queue);
 
 struct rtxq;
@@ -80,14 +78,6 @@ int                 rtxq_nack(struct rtxq * q,
 int                 rtxq_flush(struct rtxq * q);
 
 int 		    dt_pdu_send(struct dt *  dt,
-        	    	    struct rmt * rmt,
-        	    	    address_t    address,
-        	    	    qos_id_t     qos_id,
+        	    	        struct rmt * rmt,
                                 struct pdu * pdu);
-int 		    common_efcp_pdu_send(struct efcp * efcp,
-        	    	             struct rmt *  rmt,
-        	    	             address_t     address,
-        	    		     qos_id_t      qos_id,
-        	    		     struct pdu *  pdu);
-
 #endif

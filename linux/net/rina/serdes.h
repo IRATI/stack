@@ -41,8 +41,4 @@ struct pdu *           pdu_deserialize(const struct serdes * instance,
                                        struct pdu_ser *      pdu);
 struct pdu *           pdu_deserialize_ni(const struct serdes * instance,
                                           struct pdu_ser *      pdu);
-
-/* Get the size in bytes of the pdu. Returns -1 on error. */
-int 		       serdes_pdu_size(struct pdu * p, struct dt_cons * c);
-
 #endif
