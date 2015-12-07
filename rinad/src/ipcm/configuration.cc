@@ -879,8 +879,8 @@ bool parse_app_to_dif_mappings(const std::string& file_name,
 
         file.open(file_name.c_str());
         if (file.fail()) {
-                LOG_ERR("Failed to open apps to DIF mappings file");
-                return false;
+                LOG_WARN("Cannot open apps to DIF mappings file");
+                return true;
         }
 
         if (!reader.parse(file, root, false)) {

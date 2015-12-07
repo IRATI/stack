@@ -51,4 +51,4 @@ private:
 
 } //namespace rinad
 
-#endif  /* __DIF_TEMPLATE_MONITOR_H__ */
+#endif  /* __DIF_ALLOCATOR_H__ */
