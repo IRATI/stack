@@ -195,19 +195,6 @@ class RINAConfiguration {
          */
         std::list<DIFTemplateMapping> difConfigurations;
 
-        /*
-         * Application to DIF mappings
-         *
-         * std::string encodedAppName:
-         *  The application name encoded this way:
-         *  APName-APInstance-AEName-AEInstance
-         *
-         * rina::ApplicationProcessNamingInformation difName;
-         */
-        std::map<std::string,
-                rina::ApplicationProcessNamingInformation>
-                applicationToDIFMappings;
-
 	/*
 	 * The path of the configuration file where the configuration
 	 * comes from
@@ -217,10 +204,6 @@ class RINAConfiguration {
         bool lookup_dif_template_mappings(
                         const rina::ApplicationProcessNamingInformation& dif_name,
                         DIFTemplateMapping& result) const;
-
-        bool lookup_dif_by_application(
-                const rina::ApplicationProcessNamingInformation& app_name,
-                rina::ApplicationProcessNamingInformation& result);
 
 #if 0
         bool lookup_ipcp_address(const std::string dif_name,
