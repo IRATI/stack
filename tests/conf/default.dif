@@ -6,7 +6,10 @@
     	"lengthLength" : 2,
     	"portIdLength" : 2,
     	"qosIdLength" : 2,
+        "rateLength" : 4,
+        "frameLength" : 4,
     	"sequenceNumberLength" : 4,
+        "ctrlSequenceNumberLength" : 4,
     	"maxPduSize" : 10000,
     	"maxPduLifetime" : 60000
     },
