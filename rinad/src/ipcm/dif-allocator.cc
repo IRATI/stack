@@ -34,7 +34,7 @@ using namespace std;
 
 namespace rinad {
 
-//Class DIF Template Manager
+//Class DIF Allocator
 const std::string DIFAllocator::DIF_DIRECTORY_FILE_NAME = "da.map";
 
 DIFAllocator::DIFAllocator(const std::string& folder)
@@ -53,7 +53,7 @@ DIFAllocator::DIFAllocator(const std::string& folder)
 
 	LOG_INFO("DIF Directory file: %s", fq_file_name.c_str());
 
-	//load current templates from template folder
+	//load current mappings
 	if (!parse_app_to_dif_mappings(fq_file_name, dif_directory)) {
 		LOG_ERR("Problems loading initial directory");
 	}
@@ -83,8 +83,11 @@ void DIFAllocator::update_directory_contents()
 {
 	rina::WriteScopedLock g(directory_lock);
 	dif_directory.clear();
-	parse_app_to_dif_mappings(fq_file_name, dif_directory);
-	LOG_DBG("DIF Allocator Directory updated!");
+	if (!parse_app_to_dif_mappings(fq_file_name, dif_directory)) {
+	    LOG_ERR("Problems while updating DIF Allocator Directory!");
+        } else {
+	    LOG_DBG("DIF Allocator Directory updated!");
+        }
 }
 
 } //namespace rinad
