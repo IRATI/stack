@@ -29,40 +29,24 @@
 #include "rds/rfifo.h"
 #include "ps-factory.h"
 
+/* rmt_enqueue_policy return values */
+#define RMT_PS_ENQ_SCHED 1	/* PDU enqueued and RMT needs to schedule */
+#define RMT_PS_ENQ_ERR   2	/* Error */
+#define RMT_PS_ENQ_DROP  3	/* PDU dropped due to queue full occupation */
+
 struct rmt_ps {
 	struct ps_base base;
 
 	/* Behavioural policies. */
-	void (*max_q_policy_tx)(struct rmt_ps *,
-				struct pdu *,
-				struct rmt_n1_port *);
-	void (*max_q_policy_rx)(struct rmt_ps *,
-				 struct sdu *,
-				 struct rmt_n1_port *);
-	void (*rmt_q_monitor_policy_tx_enq)(struct rmt_ps *,
-					    struct pdu *,
-					    struct rmt_n1_port *);
-	void (*rmt_q_monitor_policy_tx_deq)(struct rmt_ps *,
-					    struct pdu *,
-					    struct rmt_n1_port *);
-	void (*rmt_q_monitor_policy_rx)(struct rmt_ps *,
-					struct sdu *,
-					struct rmt_n1_port *);
-	struct pdu *(*rmt_next_scheduled_policy_tx)(struct rmt_ps *,
-						    struct rmt_n1_port *);
-	int (*rmt_enqueue_scheduling_policy_tx)(struct rmt_ps *,
-						struct rmt_n1_port *,
-						struct pdu *);
-	int (*rmt_requeue_scheduling_policy_tx)(struct rmt_ps *,
-						struct rmt_n1_port *,
-						struct pdu *);
-	int (*rmt_scheduling_policy_rx)(struct rmt_ps *,
-					struct rmt_n1_port *,
-					struct sdu *);
-	int (*rmt_scheduling_create_policy_tx)(struct rmt_ps *,
-					       struct rmt_n1_port *);
-	int (*rmt_scheduling_destroy_policy_tx)(struct rmt_ps *,
-						struct rmt_n1_port *);
+	struct pdu *(*rmt_dequeue_policy)(struct rmt_ps *,
+					  struct rmt_n1_port *);
+	int (*rmt_enqueue_policy)(struct rmt_ps *,
+				  struct rmt_n1_port *,
+				  struct pdu *);
+	void* (*rmt_q_create_policy)(struct rmt_ps *,
+				   struct rmt_n1_port *);
+	int (*rmt_q_destroy_policy)(struct rmt_ps *,
+				    struct rmt_n1_port *);
 
 	/* Reference used to access the RMT data model. */
 	struct rmt *dm;

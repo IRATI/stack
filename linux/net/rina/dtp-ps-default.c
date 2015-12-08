@@ -310,7 +310,7 @@ bool default_reconcile_flow_conflict(struct dtp_ps * ps)
         return true;
 }
 
-static struct ps_base *
+struct ps_base *
 dtp_ps_default_create(struct rina_component * component)
 {
         struct dtp * dtp = dtp_from_component(component);
@@ -345,8 +345,9 @@ dtp_ps_default_create(struct rina_component * component)
 
         return &ps->base;
 }
+EXPORT_SYMBOL(dtp_ps_default_create);
 
-static void dtp_ps_default_destroy(struct ps_base * bps)
+void dtp_ps_default_destroy(struct ps_base * bps)
 {
         struct dtp_ps *ps = container_of(bps, struct dtp_ps, base);
 
@@ -354,10 +355,4 @@ static void dtp_ps_default_destroy(struct ps_base * bps)
                 rkfree(ps);
         }
 }
-
-struct ps_factory default_dtp_ps_factory = {
-        .owner          = THIS_MODULE,
-        .create  = dtp_ps_default_create,
-        .destroy = dtp_ps_default_destroy,
-};
-EXPORT_SYMBOL(default_dtp_ps_factory);
+EXPORT_SYMBOL(dtp_ps_default_destroy);

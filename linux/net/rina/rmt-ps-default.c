@@ -34,6 +34,7 @@
 #include "rmt.h"
 #include "debug.h"
 #include "policies.h"
+#include "rmt-ps-default.h"
 
 #define DEFAULT_Q_MAX 1000
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
@@ -41,15 +42,9 @@
 struct rmt_queue {
 	struct rfifo	 *queue;
 	port_id_t	  pid;
-	struct hlist_node hlist;
-};
-
-struct rmt_queue_set {
-	DECLARE_HASHTABLE(queues, RMT_PS_HASHSIZE);
 };
 
 struct rmt_ps_default_data {
-	struct rmt_queue_set *outqs;
 	unsigned int q_max;
 };
 
@@ -68,7 +63,6 @@ static struct rmt_queue *rmt_queue_create(port_id_t port)
 	}
 
 	tmp->pid = port;
-	INIT_HLIST_NODE(&tmp->hlist);
 
 	return tmp;
 }
@@ -80,8 +74,6 @@ static int rmt_queue_destroy(struct rmt_queue *q)
 		return -1;
 	}
 
-	hash_del(&q->hlist);
-
 	if (q->queue)
 		rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
 
@@ -90,63 +82,15 @@ static int rmt_queue_destroy(struct rmt_queue *q)
 	return 0;
 }
 
-static struct rmt_queue *rmt_queue_find(struct rmt_queue_set *qs,
-					port_id_t port)
-{
-	struct rmt_queue *entry;
-	const struct hlist_head *head;
-
-	ASSERT(qs);
-
-	head = &qs->queues[rmap_hash(qs->queues, port)];
-	hlist_for_each_entry(entry, head, hlist)
-		if (entry->pid == port)
-			return entry;
-
-	return NULL;
-}
-
-static struct rmt_queue_set *rmt_queue_set_create(void)
-{
-	struct rmt_queue_set *tmp;
-
-	tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
-	if (!tmp)
-		return NULL;
-
-	hash_init(tmp->queues);
-
-	return tmp;
-}
-
-static int rmt_queue_set_destroy(struct rmt_queue_set *qs)
-{
-	struct rmt_queue  *entry;
-	struct hlist_node *tmp;
-	int bucket;
-
-	ASSERT(qs);
-
-	hash_for_each_safe(qs->queues, bucket, tmp, entry, hlist)
-		if (rmt_queue_destroy(entry)) {
-			LOG_ERR("Could not destroy entry %pK", entry);
-			return -1;
-		}
-
-	rkfree(qs);
-
-	return 0;
-}
-
-static int default_rmt_scheduling_create_policy_tx(struct rmt_ps      *ps,
-						   struct rmt_n1_port *n1_port)
+void * default_rmt_q_create_policy(struct rmt_ps      *ps,
+			        struct rmt_n1_port *n1_port)
 {
 	struct rmt_queue *queue;
 	struct rmt_ps_default_data *data;
 
 	if (!ps || !n1_port || !ps->priv) {
 		LOG_ERR("Wrong input parameters");
-		return -1;
+		return NULL;
 	}
 
 	data = ps->priv;
@@ -155,17 +99,16 @@ static int default_rmt_scheduling_create_policy_tx(struct rmt_ps      *ps,
 	if (!queue) {
 		LOG_ERR("Could not create queue for n1_port %u",
 			n1_port->port_id);
-		return -1;
+		return NULL;
 	}
 
-	hash_add(data->outqs->queues, &queue->hlist, n1_port->port_id);
-
 	LOG_DBG("Structures for scheduling policies created...");
-	return 0;
+	return queue;
 }
+EXPORT_SYMBOL(default_rmt_q_create_policy);
 
-static int default_rmt_scheduling_destroy_policy_tx(struct rmt_ps      *ps,
-						    struct rmt_n1_port *n1_port)
+int default_rmt_q_destroy_policy(struct rmt_ps      *ps,
+				 struct rmt_n1_port *n1_port)
 {
 	struct rmt_queue *queue;
 	struct rmt_ps_default_data *data;
@@ -177,49 +120,53 @@ static int default_rmt_scheduling_destroy_policy_tx(struct rmt_ps      *ps,
 
 	data = ps->priv;
 
-	queue = rmt_queue_find(data->outqs, n1_port->port_id);
+	queue = n1_port->rmt_ps_queues;
 	if (!queue) {
 		LOG_ERR("Could not find queue for n1_port %u",
 			n1_port->port_id);
 		return -1;
 	}
 
-	hash_del(&queue->hlist);
 	rmt_queue_destroy(queue);
 
 	return 0;
 }
+EXPORT_SYMBOL(default_rmt_q_destroy_policy);
 
-int default_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *ps,
-					    struct rmt_n1_port *n1_port,
-					    struct pdu *pdu)
+int default_rmt_enqueue_policy(struct rmt_ps	  *ps,
+			       struct rmt_n1_port *n1_port,
+			       struct pdu	  *pdu)
 {
 	struct rmt_queue *q;
 	struct rmt_ps_default_data *data = ps->priv;
 
 	if (!ps || !n1_port || !pdu) {
 		LOG_ERR("Wrong input parameters");
-		return -1;
+		return RMT_PS_ENQ_ERR;
 	}
 
-	q = rmt_queue_find(data->outqs, n1_port->port_id);
+	q = n1_port->rmt_ps_queues;
 	if (!q) {
 		LOG_ERR("Could not find queue for n1_port %u",
 			n1_port->port_id);
 		pdu_destroy(pdu);
-		return -1;
+		return RMT_PS_ENQ_ERR;
+	}
+
+	if (rfifo_length(q->queue) >= data->q_max) {
+		pdu_destroy(pdu);
+		return RMT_PS_ENQ_DROP;
 	}
 
 	rfifo_push_ni(q->queue, pdu);
-
-	return 0;
+	return RMT_PS_ENQ_SCHED;
 }
+EXPORT_SYMBOL(default_rmt_enqueue_policy);
 
-struct pdu *default_rmt_next_scheduled_policy_tx(struct rmt_ps *ps,
-						struct rmt_n1_port *n1_port)
+struct pdu *default_rmt_dequeue_policy(struct rmt_ps	  *ps,
+				       struct rmt_n1_port *n1_port)
 {
 	struct rmt_queue *q;
-	struct rmt_ps_default_data *data = ps->priv;
 	struct pdu *ret_pdu;
 
 	if (!ps || !n1_port) {
@@ -227,8 +174,7 @@ struct pdu *default_rmt_next_scheduled_policy_tx(struct rmt_ps *ps,
 		return NULL;
 	}
 
-	/* NOTE: The policy is called with the n1_port lock taken */
-	q = rmt_queue_find(data->outqs, n1_port->port_id);
+	q = n1_port->rmt_ps_queues;
 	if (!q) {
 		LOG_ERR("Could not find queue for n1_port %u",
 			n1_port->port_id);
@@ -243,11 +189,7 @@ struct pdu *default_rmt_next_scheduled_policy_tx(struct rmt_ps *ps,
 
 	return ret_pdu;
 }
-
-static int default_rmt_scheduling_policy_rx(struct rmt_ps *ps,
-					    struct rmt_n1_port *n1_port,
-					    struct sdu *sdu)
-{ return 0; }
+EXPORT_SYMBOL(default_rmt_dequeue_policy);
 
 static int rmt_ps_default_set_policy_set_param(struct ps_base *bps,
 					       const char *name,
@@ -279,7 +221,7 @@ static int rmt_ps_default_set_policy_set_param(struct ps_base *bps,
 	return 0;
 }
 
-static struct ps_base *rmt_ps_default_create(struct rina_component *component)
+struct ps_base *rmt_ps_default_create(struct rina_component *component)
 {
 	struct rmt *rmt;
 	struct rmt_ps *ps;
@@ -301,21 +243,12 @@ static struct ps_base *rmt_ps_default_create(struct rina_component *component)
 		return NULL;
 	}
 
-	/* Allocate policy-set private data. */
-	data->outqs = rmt_queue_set_create();
-	if (!data->outqs) {
-		rkfree(ps);
-		rkfree(data);
-		return NULL;
-	}
-
 	ps->base.set_policy_set_param = NULL; /* default */
 	ps->dm = rmt;
 	ps->priv = data;
 
 	rmt_cfg = rmt_config_get(rmt);
 	if(!rmt_cfg) {
-		rmt_queue_set_destroy(data->outqs);
 		rkfree(data);
 		rkfree(ps);
 		return NULL;
@@ -330,28 +263,16 @@ static struct ps_base *rmt_ps_default_create(struct rina_component *component)
 						    policy_param_name(parm),
 						    policy_param_value(parm));
 
-	ps->max_q_policy_tx = NULL;
-	ps->max_q_policy_rx = NULL;
-	ps->rmt_q_monitor_policy_tx_enq = NULL;
-	ps->rmt_q_monitor_policy_tx_deq = NULL;
-	ps->rmt_q_monitor_policy_rx = NULL;
-	ps->rmt_next_scheduled_policy_tx =
-		default_rmt_next_scheduled_policy_tx;
-	ps->rmt_enqueue_scheduling_policy_tx =
-		default_rmt_enqueue_scheduling_policy_tx;
-	ps->rmt_requeue_scheduling_policy_tx =
-		default_rmt_enqueue_scheduling_policy_tx;
-	ps->rmt_scheduling_policy_rx =
-		default_rmt_scheduling_policy_rx;
-	ps->rmt_scheduling_create_policy_tx  =
-		default_rmt_scheduling_create_policy_tx;
-	ps->rmt_scheduling_destroy_policy_tx =
-		default_rmt_scheduling_destroy_policy_tx;
+	ps->rmt_dequeue_policy = default_rmt_dequeue_policy;
+	ps->rmt_enqueue_policy = default_rmt_enqueue_policy;
+	ps->rmt_q_create_policy = default_rmt_q_create_policy;
+	ps->rmt_q_destroy_policy = default_rmt_q_destroy_policy;
 
 	return &ps->base;
 }
+EXPORT_SYMBOL(rmt_ps_default_create);
 
-static void rmt_ps_default_destroy(struct ps_base *bps)
+void rmt_ps_default_destroy(struct ps_base *bps)
 {
 	struct rmt_ps *ps;
 	struct rmt_ps_default_data *data;
@@ -360,18 +281,9 @@ static void rmt_ps_default_destroy(struct ps_base *bps)
 	data = ps->priv;
 
 	if (bps) {
-		if (data) {
-			if (data->outqs)
-				rmt_queue_set_destroy(data->outqs);
+		if (data)
 			rkfree(data);
-		}
 		rkfree(ps);
 	}
 }
-
-struct ps_factory default_rmt_ps_factory = {
-	.owner = THIS_MODULE,
-	.create = rmt_ps_default_create,
-	.destroy = rmt_ps_default_destroy,
-};
-EXPORT_SYMBOL(default_rmt_ps_factory );
+EXPORT_SYMBOL(rmt_ps_default_destroy);

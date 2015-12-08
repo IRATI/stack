@@ -28,7 +28,7 @@
 #include "logs.h"
 #include "debug.h"
 #include "rnl.h"
-#include "personality.h"
+#include "kipcm.h"
 #include "utils.h"
 
 #define MK_RINA_VERSION(MAJOR, MINOR, MICRO)                            \
@@ -39,7 +39,7 @@
 #define RINA_VERSION_MICRO(V) ((V      ) & 0xFFFF)
 
 static struct kset * root_kset = NULL;
-static uint32_t      version   = MK_RINA_VERSION(0, 4, 0);
+static uint32_t      version   = MK_RINA_VERSION(1, 4, 1);
 
 #if 0
 uint32_t rina_version(void)
@@ -90,13 +90,15 @@ static int __init rina_core_init(void)
                 return -1;
         }
 
+        LOG_DBG("Initializing RNL");
         if (rnl_init()) {
                 kset_unregister(root_kset);
                 rina_debug_exit();
                 return -1;
         }
 
-        if (rina_personality_init(&root_kset->kobj)) {
+	LOG_DBG("Initializing KIPCM");
+        if (kipcm_init(&root_kset->kobj)) {
                 rnl_exit();
                 kset_unregister(root_kset);
                 rina_debug_exit();

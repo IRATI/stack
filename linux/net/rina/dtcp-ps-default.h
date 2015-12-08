@@ -32,6 +32,8 @@
 
 #include "dtcp-ps.h"
 
+struct ps_base * dtcp_ps_default_create(struct rina_component *component);
+void dtcp_ps_default_destroy(struct ps_base *bps);
 int default_lost_control_pdu(struct dtcp_ps * ps);
 
 #ifdef CONFIG_RINA_DTCP_RCVR_ACK

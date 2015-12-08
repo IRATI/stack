@@ -13,8 +13,7 @@ lib_LTLIBRARIES = librinad.la
 
 #Distributable headers
 librinad_ladir = $(pkgincludedir)/ipcm
-librinad_la_HEADERS = structures_mad.h 		\
-		encoders_mad.h
+librinad_la_HEADERS = encoder.h
 
 librinad_la_CFLAGS   =
 librinad_la_CPPFLAGS =				\
@@ -30,13 +29,17 @@ librinad_la_LIBADD   =				\
 librinad_la_SOURCES  =					\
 	debug.cc              debug.h                   \
 	rina-configuration.cc rina-configuration.h	\
+	configuration.h    configuration.cc   \
 	encoder.cc	      encoder.h			\
-			      structures_mad.h 		\
-	encoders_mad.cc	      encoders_mad.h		\
+	structures_mad.h 					\
+	encoders_mad.h		encoders_mad.cc \
 			      concurrency.h
 
 commonheadersdir = $(includedir)/rinad/common
-commonheaders_HEADERS = encoder.h
+commonheaders_HEADERS =   \
+	encoder.h         \
+	encoders_mad.h    \
+	structures_mad.h
 
 encodersheadersdir = $(includedir)/rinad/common/encoders
 # Here 'make' has entered the build/rinad/src/common directory,

@@ -25,7 +25,6 @@
 #ifdef __cplusplus
 
 #include "librina/application.h"
-#include "librina/cdap.h"
 
 namespace rina {
 

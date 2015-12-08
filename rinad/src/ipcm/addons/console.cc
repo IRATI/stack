@@ -145,7 +145,7 @@ IPCMConsole::IPCMConsole(const unsigned int port_) :
 	commands_map["read-ipcp-ribobj"] =
 			ConsoleCmdInfo(&IPCMConsole::read_ipcp_ribobj,
 				"USAGE: read-ipcp-ribobj <ipcp-id> <object-class> "
-				"<object-name>");
+				"<object-name> <scope>");
 	commands_map["show-catalog"] =
 			ConsoleCmdInfo(&IPCMConsole::show_catalog,
 				"USAGE: show-catalog [<component-name>]");
@@ -825,8 +825,9 @@ int IPCMConsole::read_ipcp_ribobj(std::vector<std::string>& args)
 {
 	Promise promise;
 	int ipcp_id;
+	int scope;
 
-	if (args.size() != 4) {
+	if (args.size() != 5) {
 		outstream << commands_map[args[0]].usage << endl;
 		return CMDRETCONT;
 	}
@@ -836,13 +837,22 @@ int IPCMConsole::read_ipcp_ribobj(std::vector<std::string>& args)
 		return CMDRETCONT;
 	}
 
+	if (string2int(args[4], scope)){
+		outstream << "Invalid scope" << endl;
+		return CMDRETCONT;
+	}
+
 	if (!IPCManager->ipcp_exists(ipcp_id)) {
 		outstream << "No such IPC process id" << endl;
 		return CMDRETCONT;
 	}
 
-	if (IPCManager->read_ipcp_ribobj(this, &promise, ipcp_id,
-					 args[2], args[3]) == IPCM_FAILURE ||
+	if (IPCManager->read_ipcp_ribobj(this,
+					 &promise,
+					 ipcp_id,
+					 args[2],
+					 args[3],
+					 scope) == IPCM_FAILURE ||
 					 promise.wait() != IPCM_SUCCESS) {
 		outstream << "Error occured while forwarding CDAP message to IPCP" << endl;
 	} else {

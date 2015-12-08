@@ -24,7 +24,6 @@
 #define RINA_RMT_H
 
 #include <linux/hashtable.h>
-#include <linux/crypto.h>
 
 #include "common.h"
 #include "du.h"
@@ -64,15 +63,24 @@ enum flow_state {
 	N1_PORT_STATE_DEALLOCATED,
 };
 
+struct n1_port_stats {
+	unsigned int plen; /* port len, all pdus enqueued in PS queue/s */
+	unsigned int pdrop;
+	unsigned int perr;
+};
+
 struct rmt_n1_port {
-	spinlock_t lock;
-	port_id_t port_id;
-	struct ipcp_instance *n1_ipcp;
-	struct hlist_node hlist;
-	enum flow_state	state;
-	atomic_t n_sdus;
-	atomic_t pending_ops;
-	struct sdup_port * sdup_port;
+	spinlock_t		lock;
+	port_id_t		port_id;
+	struct ipcp_instance	*n1_ipcp;
+	struct hlist_node	hlist;
+	enum flow_state		state;
+	atomic_t		refs_c;
+	struct sdu		*pending_sdu;
+	struct sdup_port 	*sdup_port;
+	struct n1_port_stats	stats;
+	bool			wbusy;
+	void 			*rmt_ps_queues;
 };
 
 struct rmt	  *rmt_create(struct ipcp_instance *parent,
@@ -121,11 +129,6 @@ int		   rmt_set_policy_set_param(struct rmt *rmt,
 					    const string_t *path,
 					    const string_t *name,
 					    const string_t *value);
-int		   rmt_enable_encryption(struct rmt *instance,
-					 bool	enable_encryption,
-					 bool	enable_decryption,
-					 struct buffer *encrypt_key,
-					 port_id_t port_id);
 struct rmt	  *rmt_from_component(struct rina_component *component);
 
 #endif

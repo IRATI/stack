@@ -32,7 +32,6 @@
 #include "pci.h"
 
 #define  N1_CYCLE_DURATION 100
-#define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
 struct reg_cycle_t {
         struct timespec t_start;
@@ -45,17 +44,15 @@ struct reg_cycle_t {
 struct cas_rmt_queue {
         struct rfifo *    queue;
         port_id_t         port_id;
-        unsigned int      max_q;
         struct {
                 struct reg_cycle_t prev_cycle;
                 struct reg_cycle_t cur_cycle;
         } reg_cycles;
 	bool 		 first_run;
-        struct hlist_node hlist;
 };
 
 struct cas_rmt_ps_data {
-        DECLARE_HASHTABLE(queues, RMT_PS_HASHSIZE);
+        unsigned int q_max;
 };
 
 static struct cas_rmt_queue * cas_queue_create(port_id_t port_id)
@@ -82,8 +79,6 @@ static struct cas_rmt_queue * cas_queue_create(port_id_t port_id)
         tmp->reg_cycles.cur_cycle                       = tmp->reg_cycles.prev_cycle;
 	tmp->first_run                                  = true;
 
-        INIT_HLIST_NODE(&tmp->hlist);
-
         return tmp;
 }
 
@@ -94,8 +89,6 @@ static int cas_rmt_queue_destroy(struct cas_rmt_queue * q)
                 return -1;
         }
 
-        hash_del(&q->hlist);
-
         if (q->queue) rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
 
         rkfree(q);
@@ -103,37 +96,74 @@ static int cas_rmt_queue_destroy(struct cas_rmt_queue * q)
         return 0;
 }
 
-struct cas_rmt_queue * cas_rmt_queue_find(struct cas_rmt_ps_data * data,
-                                          port_id_t                port_id)
+static int update_cycles(struct reg_cycle_t * prev_cycle,
+		  	 struct reg_cycle_t * cur_cycle,
+			 ssize_t cur_qlen,
+			 bool enqueue)
 {
-        struct cas_rmt_queue *    entry;
-        const struct hlist_head * head;
+	ssize_t		end_len;
+        struct timespec	t_sub;
+        s64		t_sub_ns;
 
-        ASSERT(data);
+	end_len = 0;
+	if (!enqueue) {
+		if (!cur_qlen)
+			return -1;
+		end_len = 1;
+	}
 
-        head = &data->queues[rmap_hash(data->queues, port_id)];
-        hlist_for_each_entry(entry, head, hlist) {
-                if (entry->port_id == port_id)
-                        return entry;
+        else if (cur_qlen == end_len) {
+                /* end cycle */
+		getnstimeofday(&cur_cycle->t_end);
+		t_sub = timespec_sub(cur_cycle->t_end, cur_cycle->t_last_start);
+		cur_cycle->sum_area += (ulong) cur_qlen * timespec_to_ns(&t_sub);
+		cur_cycle->t_last_start = cur_cycle->t_end;
+        } else {
+                /* middle cycle */
+                cur_cycle->t_last_start = cur_cycle->t_end;
+                getnstimeofday(&cur_cycle->t_end);
+                t_sub = timespec_sub(cur_cycle->t_end, cur_cycle->t_last_start);
+                cur_cycle->sum_area +=(ulong) cur_qlen * timespec_to_ns(&t_sub);
         }
 
-        return NULL;
+        t_sub = timespec_sub(cur_cycle->t_end, prev_cycle->t_start);
+	t_sub_ns = timespec_to_ns(&t_sub);
+        cur_cycle->avg_len = (cur_cycle->sum_area + prev_cycle->sum_area);
+
+	if (t_sub_ns <= 0) {
+		LOG_ERR("Time delta is <= 0!");
+		return -1;
+	}
+
+	cur_cycle->avg_len /= (ulong) abs64(t_sub_ns);
+	return 0;
 }
 
+static int mark_pdu(struct pdu * ret_pdu)
+{
+        struct pci *    pci;
+        pdu_flags_t     pci_flags;
 
-static void cas_rmt_q_monitor_policy_tx_common(struct rmt_ps *      ps,
-                                               struct pdu *         pdu,
-                                               struct rmt_n1_port * port,
-					       bool                 enqueue)
+        pci = pdu_pci_get_rw(ret_pdu);
+        if (!pci) {
+        	LOG_ERR("No PCI to mark in this PDU...");
+		pdu_destroy(ret_pdu);
+                return -1;
+        }
+        pci_flags = pci_flags_get(pci);
+        pci_flags_set(pci, pci_flags |= PDU_FLAGS_EXPLICIT_CONGESTION);
+        LOG_DBG("ECN bit marked");
+	return 0;
+}
+
+static int cas_rmt_enqueue_policy(struct rmt_ps      *ps,
+				  struct rmt_n1_port *port,
+				  struct pdu	     *pdu)
 {
         struct cas_rmt_queue *   q;
         struct cas_rmt_ps_data * data;
         ssize_t                  cur_qlen;
         struct reg_cycle_t *     prev_cycle, * cur_cycle;
-        struct pci *             pci;
-        pdu_flags_t              pci_flags;
-        struct timespec          t_sub;
-        s64			 t_sub_ns;
 
         ASSERT(ps);
         ASSERT(ps->priv);
@@ -142,216 +172,90 @@ static void cas_rmt_q_monitor_policy_tx_common(struct rmt_ps *      ps,
 
         data = ps->priv;
 
-        q = cas_rmt_queue_find(data, port->port_id);
+        q = port->rmt_ps_queues;
         if (!q) {
                 LOG_ERR("Monitoring: could not find CAS queue for N-1 port %u",
                         port->port_id);
-                return;
+                return RMT_PS_ENQ_ERR;
         }
 
-        cur_qlen   = rfifo_length(q->queue);
+        cur_qlen = rfifo_length(q->queue);
+	if (cur_qlen >= data->q_max) {
+		pdu_destroy(pdu);
+		return RMT_PS_ENQ_DROP;
+	}
+
         prev_cycle = &q->reg_cycles.prev_cycle;
         cur_cycle  = &q->reg_cycles.cur_cycle;
 
-        /* new cycle or end cycle */
-        if (cur_qlen == 0) {
-                /* new cycle */
-                if (enqueue) {
-                        LOG_DBG("new cycle");
-                        *prev_cycle = *cur_cycle;
-			if (q->first_run) {
-				getnstimeofday(&cur_cycle->t_start);
-				getnstimeofday(&prev_cycle->t_start);
-				prev_cycle->t_start.tv_nsec -= N1_CYCLE_DURATION;
-				q->first_run = false;
-			}
-
-                        getnstimeofday(&cur_cycle->t_start);
-                        cur_cycle->t_last_start = cur_cycle->t_start;
-                        cur_cycle->t_end        = cur_cycle->t_start;
-                        cur_cycle->sum_area     = 0;
-                /* end cycle */
-                } else {
-                        LOG_DBG("end cycle");
-                        getnstimeofday(&cur_cycle->t_end);
-                        t_sub = timespec_sub(cur_cycle->t_end,
-                                             cur_cycle->t_last_start);
-                        cur_cycle->sum_area  +=
-                                (ulong) atomic_read(&port->n_sdus) *          \
-                                timespec_to_ns(&t_sub);
-                        cur_cycle->t_last_start = cur_cycle->t_end;
-                        LOG_DBG("n_sdus: %u",
-                                (uint_t) atomic_read(&port->n_sdus));
-                        LOG_DBG("t_end - t_last_start = %llu - %llu = %llu",
-                                timespec_to_ns(&cur_cycle->t_end),
-                                timespec_to_ns(&cur_cycle->t_last_start),
-                                timespec_to_ns(&t_sub));
-                        LOG_DBG("sum_area: %u",cur_cycle->sum_area);
-                }
-        } else {
-                LOG_DBG("In middle cycle");
-                cur_cycle->t_last_start = cur_cycle->t_end;
-                getnstimeofday(&cur_cycle->t_end);
-                t_sub = timespec_sub(cur_cycle->t_end, cur_cycle->t_last_start);
-                LOG_DBG("Prev sum area: %u", cur_cycle->sum_area);
-                cur_cycle->sum_area +=(ulong) atomic_read(&port->n_sdus) *    \
-                                      timespec_to_ns(&t_sub);
-                LOG_DBG("n_sdus: %u", (uint_t) atomic_read(&port->n_sdus));
-                LOG_DBG("t_end - t_last_start = %llu - %llu = %llu",
-                        timespec_to_ns(&cur_cycle->t_end),
-                        timespec_to_ns(&cur_cycle->t_last_start),
-                        timespec_to_ns(&t_sub));
-                LOG_DBG("sum_area: %lu",cur_cycle->sum_area);
-        }
-
-        LOG_DBG(" Avg len inputs");
-        LOG_DBG("cur_cycle->avg_len = (cur_cycle->sum_area + prev_cycle->sum_area) / (cur_cycle->t_end - prev_cycle->t_start) =>");
-        LOG_DBG("%u = (%u + %u) / (%llu - %llu)",
-                (uint_t) atomic_read(&port->n_sdus),
-                cur_cycle->sum_area,
-                prev_cycle->sum_area,
-                timespec_to_ns(&cur_cycle->t_end),
-                timespec_to_ns(&prev_cycle->t_start));
-
-
-        if (timespec_equal(&cur_cycle->t_end, &prev_cycle->t_start)) {
-                LOG_WARN("Division by 0 avoided..");
-        }
-        t_sub = timespec_sub(cur_cycle->t_end, prev_cycle->t_start);
-	t_sub_ns = timespec_to_ns(&t_sub);
-        cur_cycle->avg_len = (cur_cycle->sum_area + prev_cycle->sum_area);
-
-	/* This raise a warning: WARNING: "__divdi3" undefined. For some reason
-	 * it can not divide by a s64 variable but can do it by an insigned
-	 * long, both of size 64bits */
-	if (t_sub_ns < 0)
-		LOG_ERR("Time delta is < 0!");
-
-	cur_cycle->avg_len /=  (ulong) abs64(t_sub_ns);
+	if (update_cycles(prev_cycle, cur_cycle, cur_qlen, true)) {
+		pdu_destroy(pdu);
+		return RMT_PS_ENQ_ERR;
+	}
 
         LOG_DBG("The length for N-1 port %u just calculated is: %lu",
                 port->port_id, cur_cycle->avg_len);
 
-        if (cur_cycle->avg_len >= 1) {
-                LOG_DBG("Congestion detected in port %u, marking packets...",
-                         port->port_id);
-                pci = pdu_pci_get_rw(pdu);
-                if (!pci) {
-                        LOG_ERR("No PCI to mark in this PDU...");
-                        return;
-                }
-                pci_flags = pci_flags_get(pci);
-                pci_flags_set(pci, pci_flags |= PDU_FLAGS_EXPLICIT_CONGESTION);
-                LOG_DBG("ECN bit marked");
-        }
+        if (cur_cycle->avg_len >= 1)
+		if (mark_pdu(pdu))
+			return RMT_PS_ENQ_ERR;
 
-        return;
-
+	rfifo_push_ni(q->queue, pdu);
+        return RMT_PS_ENQ_SCHED;
 }
 
-static void cas_rmt_q_monitor_policy_tx_enq(struct rmt_ps *      ps,
-                                            struct pdu *         pdu,
-                                            struct rmt_n1_port * port)
-{ return cas_rmt_q_monitor_policy_tx_common(ps, pdu, port, true); }
-
-static void cas_rmt_q_monitor_policy_tx_deq(struct rmt_ps *      ps,
-                                            struct pdu *         pdu,
-                                            struct rmt_n1_port * port)
-{ return cas_rmt_q_monitor_policy_tx_common(ps, pdu, port, false); }
-
-
-static struct pdu *
-cas_rmt_next_scheduled_policy_tx(struct rmt_ps *      ps,
-                                 struct rmt_n1_port * port)
+static struct pdu * cas_rmt_dequeue_policy(struct rmt_ps      *ps,
+					   struct rmt_n1_port *port)
 {
         struct cas_rmt_queue *   q;
-        struct cas_rmt_ps_data * data = ps->priv;
-        struct pdu *             ret_pdu;
+        struct cas_rmt_ps_data * data;
+        ssize_t                  cur_qlen;
+        struct reg_cycle_t *     prev_cycle, * cur_cycle;
+	struct pdu *             ret_pdu;
 
-        if (!ps || !port || !data) {
-                LOG_ERR("Wrong input parameters for "
-                        "rmt_next_scheduled_policy_tx");
-                return NULL;
-        }
+        ASSERT(ps);
+        ASSERT(ps->priv);
+        ASSERT(port);
 
-        q = cas_rmt_queue_find(data, port->port_id);
+        data = ps->priv;
+
+        q = port->rmt_ps_queues;
         if (!q) {
-                LOG_ERR("Could not find queue for n1_port %u",
+                LOG_ERR("Monitoring: could not find CAS queue for N-1 port %u",
                         port->port_id);
                 return NULL;
         }
 
+        cur_qlen = rfifo_length(q->queue);
         ret_pdu = rfifo_pop(q->queue);
         if (!ret_pdu) {
-                LOG_ERR("Could not dequeue scheduled pdu");
-                return NULL;
+        	LOG_ERR("Could not dequeue scheduled PDU");
+        	return NULL;
         }
 
-        return ret_pdu;
+        prev_cycle = &q->reg_cycles.prev_cycle;
+        cur_cycle  = &q->reg_cycles.cur_cycle;
+
+	if (update_cycles(prev_cycle, cur_cycle, cur_qlen, false)) {
+		pdu_destroy(ret_pdu);
+		return NULL;
+	}
+
+        LOG_DBG("The length for N-1 port %u just calculated is: %lu",
+                port->port_id, cur_cycle->avg_len);
+
+	return ret_pdu;
 }
 
-static int cas_rmt_enqueue_scheduling_policy_tx(struct rmt_ps *      ps,
-                                                struct rmt_n1_port * port,
-                                                struct pdu *         pdu)
-{
-        struct cas_rmt_queue *   q;
-        struct cas_rmt_ps_data * data = ps->priv;
-
-        if (!ps || !port || !pdu || !data) {
-                LOG_ERR("Wrong input parameters for "
-                        "rmt_enqueu_scheduling_policy_tx");
-                return -1;
-        }
-
-        /* NOTE: The policy is called with the n1_port lock taken */
-        q = cas_rmt_queue_find(data, port->port_id);
-        if (!q) {
-                LOG_ERR("Could not find queue for n1_port %u",
-                        port->port_id);
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        rfifo_push_ni(q->queue, pdu);
-        return 0;
-}
-
-static int cas_rmt_requeue_scheduling_policy_tx(struct rmt_ps *      ps,
-                                        	struct rmt_n1_port * port,
-                                        	struct pdu *         pdu)
-{
-        struct cas_rmt_queue *   q;
-        struct cas_rmt_ps_data * data = ps->priv;
-
-        if (!ps || !port || !pdu) {
-                LOG_ERR("Wrong input parameters for "
-                        "rmt_requeu_scheduling_policy_tx");
-                return -1;
-        }
-
-        /* NOTE: The policy is called with the n1_port lock taken */
-        q = cas_rmt_queue_find(data, port->port_id);
-        if (!q) {
-                LOG_ERR("Could not find queue for n1_port %u",
-                        port->port_id);
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        rfifo_head_push_ni(q->queue, pdu);
-        return 0;
-}
-
-static int cas_rmt_scheduling_create_policy_tx(struct rmt_ps *      ps,
-                                               struct rmt_n1_port * port)
+static void * cas_rmt_q_create_policy(struct rmt_ps      *ps,
+				      struct rmt_n1_port *port)
 {
         struct cas_rmt_queue *   q;
         struct cas_rmt_ps_data * data;
 
         if (!ps || !port || !ps->priv) {
-                LOG_ERR("Wrong input parameters for "
-                        "cas_rmt_scheduling_create_policy");
-                return -1;
+                LOG_ERR("Wrong input parms for cas_rmt_q_create_policy_tx");
+		return NULL;
         }
 
         data = ps->priv;
@@ -360,7 +264,7 @@ static int cas_rmt_scheduling_create_policy_tx(struct rmt_ps *      ps,
         if (!q) {
                 LOG_ERR("Could not create queue for n1_port %u",
                         port->port_id);
-                return -1;
+                return NULL;
         }
 
         getnstimeofday(&q->reg_cycles.prev_cycle.t_start);
@@ -368,36 +272,60 @@ static int cas_rmt_scheduling_create_policy_tx(struct rmt_ps *      ps,
         getnstimeofday(&q->reg_cycles.prev_cycle.t_end);
         q->reg_cycles.prev_cycle.sum_area = 0;
         q->reg_cycles.prev_cycle.avg_len = 0;
-
         q->reg_cycles.cur_cycle = q->reg_cycles.prev_cycle;
 
-
-        /* FIXME this is not used in this implementation so far */
-        hash_add(data->queues, &q->hlist, port->port_id);
-
         LOG_DBG("Structures for scheduling policies created...");
-        return 0;
+        return q;
 }
 
-static int cas_rmt_scheduling_destroy_policy_tx(struct rmt_ps *      ps,
-                                                struct rmt_n1_port * port)
+static int cas_rmt_q_destroy_policy(struct rmt_ps      *ps,
+				    struct rmt_n1_port *port)
 {
         struct cas_rmt_ps_data * data;
         struct cas_rmt_queue *   q;
 
         if (!ps || !port || !ps->priv) {
-                LOG_ERR("Wrong input parameters for "
-                        "rmt_scheduling_destroy_policy_common");
+                LOG_ERR("Wrong input parms for rmt_q_destroy_policy");
                 return -1;
         }
 
         data = ps->priv;
         ASSERT(data);
 
-        q = cas_rmt_queue_find(data, port->port_id);
+        q = port->rmt_ps_queues;
         if (q) return cas_rmt_queue_destroy(q);
 
         return -1;
+}
+
+static int rmt_cas_set_policy_set_param(struct ps_base *bps,
+					const char *name,
+					const char *value)
+{
+	struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
+	struct cas_rmt_ps_data *data = ps->priv;
+	int bool_value;
+	int ret;
+
+	(void) ps;
+
+	if (!name) {
+		LOG_ERR("Null parameter name");
+		return -1;
+	}
+
+	if (!value) {
+		LOG_ERR("Null parameter value");
+		return -1;
+	}
+
+	if (strcmp(name, "q_max") == 0) {
+		ret = kstrtoint(value, 10, &bool_value);
+		if (!ret)
+			data->q_max = bool_value;
+	}
+
+	return 0;
 }
 
 static struct ps_base *
@@ -411,22 +339,18 @@ rmt_ps_cas_create(struct rina_component * component)
                 return NULL;
         }
 
-        ps->base.set_policy_set_param = NULL; /* default */
+	/* FIXME: to be configured using rmt_config */
+	data->q_max = 200;
+
+        ps->base.set_policy_set_param = rmt_cas_set_policy_set_param;
         ps->dm = rmt;
 
-        hash_init(data->queues);
         ps->priv = data;
 
-        ps->max_q_policy_tx = NULL; /* default (== NULL) */
-        ps->max_q_policy_rx = NULL; /* default (== NULL) */
-        ps->rmt_q_monitor_policy_tx_enq = cas_rmt_q_monitor_policy_tx_enq;
-        ps->rmt_q_monitor_policy_tx_deq = cas_rmt_q_monitor_policy_tx_deq;
-        ps->rmt_q_monitor_policy_rx = NULL; /* default (== NULL) */
-        ps->rmt_next_scheduled_policy_tx     = cas_rmt_next_scheduled_policy_tx;
-        ps->rmt_enqueue_scheduling_policy_tx = cas_rmt_enqueue_scheduling_policy_tx;
-        ps->rmt_requeue_scheduling_policy_tx = cas_rmt_requeue_scheduling_policy_tx;
-        ps->rmt_scheduling_create_policy_tx  = cas_rmt_scheduling_create_policy_tx;
-        ps->rmt_scheduling_destroy_policy_tx = cas_rmt_scheduling_destroy_policy_tx;
+        ps->rmt_q_create_policy = cas_rmt_q_create_policy;
+        ps->rmt_q_destroy_policy = cas_rmt_q_destroy_policy;
+        ps->rmt_enqueue_policy = cas_rmt_enqueue_policy;
+        ps->rmt_dequeue_policy = cas_rmt_dequeue_policy;
 
         return &ps->base;
 }
@@ -434,9 +358,6 @@ rmt_ps_cas_create(struct rina_component * component)
 static void rmt_ps_cas_destroy(struct ps_base * bps)
 {
         struct rmt_ps *          ps = container_of(bps, struct rmt_ps, base);
-        struct cas_rmt_queue *   entry;
-        struct hlist_node *      tmp;
-        int                      bucket;
         struct cas_rmt_ps_data * data;
 
         data = ps->priv;
@@ -449,13 +370,6 @@ static void rmt_ps_cas_destroy(struct ps_base * bps)
         if (bps) {
 
                 if (data) {
-                        hash_for_each_safe(data->queues, bucket, tmp, entry, hlist) {
-                                ASSERT(entry);
-                                if (cas_rmt_queue_destroy(entry)) {
-                                        LOG_ERR("Could not destroy entry %pK", entry);
-                                        return;
-                                }
-                        }
                         rkfree(data);
                 }
                 rkfree(ps);

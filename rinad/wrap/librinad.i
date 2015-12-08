@@ -87,11 +87,6 @@ import eu.irati.librina.ser_obj_t;
   JCALL3(SetObjectArrayElement, jenv, $input, 0, jvalue);
 }
 %apply  std::string& INPUT { std::string & des_obj }
-
- 
- 
- 
- 
  
 %typemap(javaimports) SWIGTYPE 
 %{
@@ -110,7 +105,6 @@ import eu.irati.librina.ser_obj_t;
 
 namespace rinad{
 namespace mad_manager{
-%template(TempStringEncoder) Encoder<std::string>;
 %template(TempIPCPConfigEncoder) Encoder<ipcp_config_t>;
 %template(TempIPCPEncoder) Encoder<ipcp_t>;
 }}

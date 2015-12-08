@@ -30,44 +30,90 @@
 
 namespace rinad {
 
-class WhateverCastNameSetRIBObject: public BaseIPCPRIBObject {
+class WhateverCastNameRIBObj: public rina::rib::RIBObj {
 public:
-	WhateverCastNameSetRIBObject(IPCProcess * ipc_process);
-	~WhateverCastNameSetRIBObject();
-	const void* get_value() const;
-	void remoteCreateObject(void * object_value,
-			const std::string& object_name, int invoke_id,
-			rina::CDAPSessionDescriptor * session_descriptor);
-	void createObject(const std::string& objectClass,
-			const std::string& objectName,
-			const void* objectValue);
+	WhateverCastNameRIBObj(rina::WhatevercastName* name);
+	const std::string get_displayable_value() const;
+	const std::string& get_class() const {
+		return class_name;
+	};
+
+	void read(const rina::cdap_rib::con_handle_t &con,
+		  const std::string& fqn,
+		  const std::string& class_,
+		  const rina::cdap_rib::filt_info_t &filt,
+		  const int invoke_id,
+		  rina::cdap_rib::obj_info_t &obj_reply,
+		  rina::cdap_rib::res_info_t& res);
+
+	const static std::string class_name;
+	const static std::string object_name_prefix;
 
 private:
-	void createName(rina::WhatevercastName * name);
-	rina::Lockable * lock_;
+	rina::WhatevercastName * name;
 };
 
-class DirectoryForwardingTableEntryRIBObject: public SimpleSetMemberIPCPRIBObject {
+class WhateverCastNamesRIBObj: public IPCPRIBObj {
 public:
-	DirectoryForwardingTableEntryRIBObject(IPCProcess * ipc_process, const std::string& object_name,
-			rina::DirectoryForwardingTableEntry * entry);
-	void remoteCreateObject(void * object_value, const std::string& object_name,
-			int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
-	void remoteDeleteObject(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
-	void createObject(const std::string& objectClass, const std::string& objectName,
-			const void* objectValue);
-	void deleteObject(const void* objectValue);
-	std::string get_displayable_value();
+	WhateverCastNamesRIBObj(IPCProcess * ipc_process);
+	~WhateverCastNamesRIBObj();
+
+	const std::string& get_class() const {
+		return class_name;
+	};
+
+	//Create
+	void create(const rina::cdap_rib::con_handle_t &con,
+		    const std::string& fqn,
+		    const std::string& class_,
+		    const rina::cdap_rib::filt_info_t &filt,
+		    const int invoke_id,
+		    const rina::ser_obj_t &obj_req,
+		    rina::ser_obj_t &obj_reply,
+		    rina::cdap_rib::res_info_t& res);
+
+	const static std::string class_name;
+	const static std::string object_name;
 
 private:
-	INamespaceManager * namespace_manager_;
-	rina::ApplicationProcessNamingInformation ap_name_entry_;
+	rina::Lockable lock_;
 };
 
-class DirectoryForwardingTableEntrySetRIBObject:
-		public BaseIPCPRIBObject, public rina::InternalEventListener {
+class DFTEntryRIBObj: public IPCPRIBObj {
 public:
-	DirectoryForwardingTableEntrySetRIBObject(IPCProcess * ipc_process);
+	DFTEntryRIBObj(IPCProcess * ipcp,
+		       rina::DirectoryForwardingTableEntry * entry);
+	const std::string get_displayable_value() const;
+	const std::string& get_class() const {
+		return class_name;
+	};
+
+	bool delete_(const rina::cdap_rib::con_handle_t &con,
+		     const std::string& fqn,
+		     const std::string& class_,
+		     const rina::cdap_rib::filt_info_t &filt,
+		     const int invoke_id,
+		     rina::cdap_rib::res_info_t& res);
+
+	void read(const rina::cdap_rib::con_handle_t &con,
+		  const std::string& fqn,
+		  const std::string& class_,
+		  const rina::cdap_rib::filt_info_t &filt,
+		  const int invoke_id,
+		  rina::cdap_rib::obj_info_t &obj_reply,
+		  rina::cdap_rib::res_info_t& res);
+
+	const static std::string class_name;
+	const static std::string object_name_prefix;
+
+private:
+	rina::DirectoryForwardingTableEntry * entry;
+	INamespaceManager * nsm;
+};
+
+class DFTRIBObj: public IPCPRIBObj, public rina::InternalEventListener {
+public:
+	DFTRIBObj(IPCProcess * ipc_process);
 
 	/// Called when the connectivity to a neighbor has been lost. All the
 	/// applications registered from that neighbor have to be removed from the directory
@@ -77,27 +123,24 @@ public:
 	/// during enrollment-. See what parts of the update we didn't now, and tell the
 	/// RIB Daemon about them (will create/update the objects and notify my neighbors
 	/// except for the one that has sent me the update)
-	void remoteCreateObject(void * object_value, const std::string& object_name,
-			int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
+	void create(const rina::cdap_rib::con_handle_t &con,
+		    const std::string& fqn,
+		    const std::string& class_,
+		    const rina::cdap_rib::filt_info_t &filt,
+		    const int invoke_id,
+		    const rina::ser_obj_t &obj_req,
+		    rina::ser_obj_t &obj_reply,
+		    rina::cdap_rib::res_info_t& res);
 
-	/// One or more local applications have registered to this DIF or a routing update
-	/// has been received
-	void createObject(const std::string& objectClass, const std::string& objectName,
-			const void* objectValue);
+	const std::string& get_class() const {
+		return class_name;
+	};
 
-	/// One or more local applications have unregistered from this DIF or a routing
-	/// update has been received
-	void deleteObject(const void* objectValue);
-	const void* get_value() const;
+	const static std::string class_name;
+	const static std::string object_name;
 
 private:
 	INamespaceManager * namespace_manager_;
-	void deleteObjects(const std::list<std::string>& namesToDelete);
-	void populateEntriesToCreateList(rina::DirectoryForwardingTableEntry* entry,
-			std::list<rina::DirectoryForwardingTableEntry *> * list);
-	void populateEntriesToDeleteList(rina::DirectoryForwardingTableEntry* entry,
-			std::list<rina::DirectoryForwardingTableEntry *> * list);
-	BaseRIBObject * getObject(const std::string& candidateKey);
 };
 
 class NamespaceManager: public INamespaceManager {
@@ -106,10 +149,15 @@ public:
 	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	unsigned int getDFTNextHop(const rina::ApplicationProcessNamingInformation& apNamingInfo);
-	void addDFTEntry(rina::DirectoryForwardingTableEntry * entry);
-	rina::DirectoryForwardingTableEntry * getDFTEntry(
-				const rina::ApplicationProcessNamingInformation& apNamingInfo);
-	void removeDFTEntry(const rina::ApplicationProcessNamingInformation& apNamingInfo);
+	void addDFTEntries(const std::list<rina::DirectoryForwardingTableEntry>& entries,
+			   bool notify_neighs,
+			   std::list<int>& neighs_to_exclude);
+	rina::DirectoryForwardingTableEntry * getDFTEntry(const std::string& key);
+	std::list<rina::DirectoryForwardingTableEntry> getDFTEntries();
+	void removeDFTEntry(const std::string& key,
+			    bool notify_neighs,
+			    bool remove_from_rib,
+			    std::list<int>& neighs_to_exclude);
 	unsigned short getRegIPCProcessId(const rina::ApplicationProcessNamingInformation& apNamingInfo);
 	void processApplicationRegistrationRequestEvent(
 				const rina::ApplicationRegistrationRequestEvent& event);
@@ -119,12 +167,21 @@ public:
 	rina::ApplicationRegistrationInformation
 		get_reg_app_info(const rina::ApplicationProcessNamingInformation name);
 
+	std::list<rina::WhatevercastName> get_whatevercast_names();
+	void add_whatevercast_name(rina::WhatevercastName * name);
+	void remove_whatevercast_name(const std::string& name_key);
+
 private:
+	rina::Lockable lock;
+
 	/// The directory forwarding table
 	rina::ThreadSafeMapOfPointers<std::string, rina::DirectoryForwardingTableEntry> dft_;
 
 	/// Applications registered in this IPC Process
 	rina::ThreadSafeMapOfPointers<std::string, rina::ApplicationRegistrationInformation> registrations_;
+
+	/// Whatevercast names
+	rina::ThreadSafeMapOfPointers<std::string, rina::WhatevercastName> what_names;
 
 	IPCPRIBDaemon * rib_daemon_;
 
@@ -133,6 +190,8 @@ private:
 			int result);
 	int replyToIPCManagerUnregister(const rina::ApplicationUnregistrationRequestEvent& event,
 			int result);
+
+	bool contains_entry(int candidate, const std::list<int>& elements);
 };
 
 } //namespace rinad

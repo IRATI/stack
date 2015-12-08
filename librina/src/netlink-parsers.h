@@ -966,9 +966,9 @@ enum RIBObjectAttributes {
 
 #define RIBO_ATTR_MAX (__RIBO_ATTR_MAX -1)
 
-int putRIBObject(nl_msg* netlinkMessage, const RIBObjectData& object);
+int putRIBObject(nl_msg* netlinkMessage, const rib::RIBObjectData& object);
 
-RIBObjectData * parseRIBObject(nlattr *nested);
+rib::RIBObjectData * parseRIBObject(nlattr *nested);
 
 /* IpcmDIFQueryRIBResponseMessage CLASS*/
 enum IpcmDIFQueryRIBResponseMessageAttributes {

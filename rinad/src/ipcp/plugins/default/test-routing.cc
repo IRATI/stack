@@ -29,6 +29,7 @@
 
 int ipcp_id = 1;
 
+/*
 class FakeEncoder: public rina::EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object) {
@@ -413,10 +414,10 @@ int test_flow_state_object_db () {
 	LOG_IPCP_INFO("incrementAge_AddObjectCheckModified_False test passed");
 
 	return result;
-}
+}*/
 
 int Graph_EmptyGraph_Empty() {
-	std::list<rinad::FlowStateObject *> objects;
+	std::list<rinad::FlowStateObject> objects;
 	rinad::Graph g = rinad::Graph(objects);
 
 	if (g.vertices_.size() != 0) {
@@ -431,12 +432,12 @@ int Graph_EmptyGraph_Empty() {
 }
 
 int Graph_Contruct2Nodes_True() {
-	std::list<rinad::FlowStateObject *> objects;
-	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
-	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, true, 1, 1);
-	objects.push_back(&fso1);
-	objects.push_back(&fso2);
-    rinad::Graph g = rinad::Graph(objects);
+	std::list<rinad::FlowStateObject> objects;
+	rinad::FlowStateObject fso1(1, 2, 1, true, 1, 1);
+	rinad::FlowStateObject fso2(2, 1, 1, true, 1, 1);
+	objects.push_back(fso1);
+	objects.push_back(fso2);
+	rinad::Graph g = rinad::Graph(objects);
 
     if (g.vertices_.size() != 2) {
     	return -1;
@@ -457,11 +458,11 @@ int Graph_Contruct2Nodes_True() {
 }
 
 int Graph_StateFalseisEmpty_True() {
-	std::list<rinad::FlowStateObject *> objects;
-	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
-	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, false, 1, 1);
-	objects.push_back(&fso1);
-	objects.push_back(&fso2);
+	std::list<rinad::FlowStateObject> objects;
+	rinad::FlowStateObject fso1(1, 2, 1, true, 1, 1);
+	rinad::FlowStateObject fso2(2, 1, 1, false, 1, 1);
+	objects.push_back(fso1);
+	objects.push_back(fso2);
 	rinad::Graph g = rinad::Graph(objects);
 
 	if (g.edges_.size() != 0) {
@@ -472,12 +473,12 @@ int Graph_StateFalseisEmpty_True() {
 }
 
 int Graph_NotConnected_True() {
-	std::list<rinad::FlowStateObject *> objects;
-	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
-	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 3, 1, false, 1, 1);
-	rinad::FlowStateObject fso3 = rinad::FlowStateObject(3, 2, 1, false, 1, 1);
-	objects.push_back(&fso1);
-	objects.push_back(&fso2);
+	std::list<rinad::FlowStateObject> objects;
+	rinad::FlowStateObject fso1(1, 2, 1, true, 1, 1);
+	rinad::FlowStateObject fso2(2, 3, 1, false, 1, 1);
+	rinad::FlowStateObject fso3(3, 2, 1, false, 1, 1);
+	objects.push_back(fso1);
+	objects.push_back(fso2);
 	rinad::Graph g = rinad::Graph(objects);
 
 	if (g.vertices_.size() != 3) {
@@ -492,9 +493,9 @@ int Graph_NotConnected_True() {
 }
 
 int Graph_ContructNoBiderectionalFlow_False() {
-	std::list<rinad::FlowStateObject *> objects;
-	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
-	objects.push_back(&fso1);
+	std::list<rinad::FlowStateObject> objects;
+	rinad::FlowStateObject fso1(1, 2, 1, true, 1, 1);
+	objects.push_back(fso1);
 	rinad::Graph g = rinad::Graph(objects);
 
 	if (g.vertices_.size() != 2) {
@@ -509,19 +510,19 @@ int Graph_ContructNoBiderectionalFlow_False() {
 }
 
 int Graph_ContructTriangleGraph_True() {
-	std::list<rinad::FlowStateObject *> objects;
-	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
-	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, true, 1, 1);
-	rinad::FlowStateObject fso3 = rinad::FlowStateObject(1, 3, 1, true, 1, 1);
-	rinad::FlowStateObject fso4 = rinad::FlowStateObject(3, 1, 1, true, 1, 1);
-	rinad::FlowStateObject fso5 = rinad::FlowStateObject(2, 3, 1, true, 1, 1);
-	rinad::FlowStateObject fso6 = rinad::FlowStateObject(3, 2, 1, true, 1, 1);
-	objects.push_back(&fso1);
-	objects.push_back(&fso2);
-	objects.push_back(&fso3);
-	objects.push_back(&fso4);
-	objects.push_back(&fso5);
-	objects.push_back(&fso6);
+	std::list<rinad::FlowStateObject> objects;
+	rinad::FlowStateObject fso1(1, 2, 1, true, 1, 1);
+	rinad::FlowStateObject fso2(2, 1, 1, true, 1, 1);
+	rinad::FlowStateObject fso3(1, 3, 1, true, 1, 1);
+	rinad::FlowStateObject fso4(3, 1, 1, true, 1, 1);
+	rinad::FlowStateObject fso5(2, 3, 1, true, 1, 1);
+	rinad::FlowStateObject fso6(3, 2, 1, true, 1, 1);
+	objects.push_back(fso1);
+	objects.push_back(fso2);
+	objects.push_back(fso3);
+	objects.push_back(fso4);
+	objects.push_back(fso5);
+	objects.push_back(fso6);
 	rinad::Graph g = rinad::Graph(objects);
 
 	if (g.vertices_.size() != 3) {
@@ -584,7 +585,7 @@ int test_graph () {
 }
 
 int getRoutingTable_NoFSO_size0() {
-	std::list<rinad::FlowStateObject *> fsos;
+	std::list<rinad::FlowStateObject> fsos;
 	std::list<rina::RoutingTableEntry *> rtable;
 	rinad::IRoutingAlgorithm * routingAlgorithm;
 	int result = 0;
@@ -603,20 +604,20 @@ int getRoutingTable_NoFSO_size0() {
 }
 
 int getRoutingTable_LinearGraphNumberOfEntries_2() {
-	std::list<rinad::FlowStateObject *> objects;
-	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
-	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, true, 1, 1);
-	rinad::FlowStateObject fso3 = rinad::FlowStateObject(2, 3, 1, true, 1, 1);
-	rinad::FlowStateObject fso4 = rinad::FlowStateObject(3, 2, 1, true, 1, 1);
+	std::list<rinad::FlowStateObject> objects;
+	rinad::FlowStateObject fso1(1, 2, 1, true, 1, 1);
+	rinad::FlowStateObject fso2(2, 1, 1, true, 1, 1);
+	rinad::FlowStateObject fso3(2, 3, 1, true, 1, 1);
+	rinad::FlowStateObject fso4(3, 2, 1, true, 1, 1);
 	rinad::IRoutingAlgorithm * routingAlgorithm;
 	std::list<rina::RoutingTableEntry *> rtable;
 	routingAlgorithm = new rinad::DijkstraAlgorithm();
 	int result = 0;
 
-	objects.push_back(&fso1);
-	objects.push_back(&fso2);
-	objects.push_back(&fso3);
-	objects.push_back(&fso4);
+	objects.push_back(fso1);
+	objects.push_back(fso2);
+	objects.push_back(fso3);
+	objects.push_back(fso4);
 
 	rtable = routingAlgorithm->computeRoutingTable(rinad::Graph(objects),
 						       objects, 1);
@@ -629,17 +630,17 @@ int getRoutingTable_LinearGraphNumberOfEntries_2() {
 }
 
 int getRoutingTable_StateFalseNoEntries_True() {
-	std::list<rinad::FlowStateObject *> objects;
-	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
-	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, false, 1, 1);
+	std::list<rinad::FlowStateObject> objects;
+	rinad::FlowStateObject fso1(1, 2, 1, true, 1, 1);
+	rinad::FlowStateObject fso2(2, 1, 1, false, 1, 1);
 	rinad::IRoutingAlgorithm * routingAlgorithm;
 	std::list<rina::RoutingTableEntry *> rtable;
 	int result = 0;
 
 	routingAlgorithm = new rinad::DijkstraAlgorithm();
 
-	objects.push_back(&fso1);
-	objects.push_back(&fso2);
+	objects.push_back(fso1);
+	objects.push_back(fso2);
 
 	rtable = routingAlgorithm->computeRoutingTable(rinad::Graph(objects),
 						       objects, 1);
@@ -652,25 +653,25 @@ int getRoutingTable_StateFalseNoEntries_True() {
 }
 
 int getRoutingTable_MultiGraphEntries_True() {
-	std::list<rinad::FlowStateObject *> objects;
-	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
-	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, true, 1, 1);
-	rinad::FlowStateObject fso3 = rinad::FlowStateObject(1, 3, 1, true, 1, 1);
-	rinad::FlowStateObject fso4 = rinad::FlowStateObject(3, 1, 1, true, 1, 1);
-	rinad::FlowStateObject fso5 = rinad::FlowStateObject(2, 3, 1, true, 1, 1);
-	rinad::FlowStateObject fso6 = rinad::FlowStateObject(3, 2, 1, true, 1, 1);
+	std::list<rinad::FlowStateObject> objects;
+	rinad::FlowStateObject fso1(1, 2, 1, true, 1, 1);
+	rinad::FlowStateObject fso2(2, 1, 1, true, 1, 1);
+	rinad::FlowStateObject fso3(1, 3, 1, true, 1, 1);
+	rinad::FlowStateObject fso4(3, 1, 1, true, 1, 1);
+	rinad::FlowStateObject fso5(2, 3, 1, true, 1, 1);
+	rinad::FlowStateObject fso6(3, 2, 1, true, 1, 1);
 	rinad::IRoutingAlgorithm * routingAlgorithm;
 	std::list<rina::RoutingTableEntry *> rtable;
 	int result = 0;
 
 	routingAlgorithm = new rinad::DijkstraAlgorithm();
 
-	objects.push_back(&fso1);
-	objects.push_back(&fso2);
-	objects.push_back(&fso3);
-	objects.push_back(&fso4);
-	objects.push_back(&fso5);
-	objects.push_back(&fso6);
+	objects.push_back(fso1);
+	objects.push_back(fso2);
+	objects.push_back(fso3);
+	objects.push_back(fso4);
+	objects.push_back(fso5);
+	objects.push_back(fso6);
 
 	rtable = routingAlgorithm->computeRoutingTable(rinad::Graph(objects),
 						       objects, 1);
@@ -683,7 +684,7 @@ int getRoutingTable_MultiGraphEntries_True() {
 }
 
 int getRoutingTable_MoreGraphEntries_True(bool lfa) {
-	std::list<rinad::FlowStateObject *> objects;
+	std::list<rinad::FlowStateObject> objects;
 	rinad::IRoutingAlgorithm * routingAlgorithm;
 	std::list<rina::RoutingTableEntry *> rtable;
 	std::vector<unsigned int> exp_nhops;
@@ -692,24 +693,24 @@ int getRoutingTable_MoreGraphEntries_True(bool lfa) {
 
 	routingAlgorithm = new rinad::DijkstraAlgorithm();
 
-	objects.push_back(new rinad::FlowStateObject(1, 2, 1, true, 1, 1));
-	objects.push_back(new rinad::FlowStateObject(2, 1, 1, true, 1, 1));
-	objects.push_back(new rinad::FlowStateObject(1, 4, 1, true, 1, 1));
-	objects.push_back(new rinad::FlowStateObject(4, 1, 1, true, 1, 1));
-	objects.push_back(new rinad::FlowStateObject(1, 3, 1, true, 1, 1));
-	objects.push_back(new rinad::FlowStateObject(3, 1, 1, true, 1, 1));
-	objects.push_back(new rinad::FlowStateObject(2, 5, 1, true, 1, 1));
-	objects.push_back(new rinad::FlowStateObject(5, 2, 1, true, 1, 1));
-	objects.push_back(new rinad::FlowStateObject(4, 5, 1, true, 1, 1));
-	objects.push_back(new rinad::FlowStateObject(5, 4, 1, true, 1, 1));
-	objects.push_back(new rinad::FlowStateObject(4, 6, 1, true, 1, 1));
-	objects.push_back(new rinad::FlowStateObject(6, 4, 1, true, 1, 1));
-	objects.push_back(new rinad::FlowStateObject(5, 7, 1, true, 1, 1));
-	objects.push_back(new rinad::FlowStateObject(7, 5, 1, true, 1, 1));
-	objects.push_back(new rinad::FlowStateObject(6, 7, 1, true, 1, 1));
-	objects.push_back(new rinad::FlowStateObject(7, 6, 1, true, 1, 1));
-	objects.push_back(new rinad::FlowStateObject(3, 7, 1, true, 1, 1));
-	objects.push_back(new rinad::FlowStateObject(7, 3, 1, true, 1, 1));
+	objects.push_back(rinad::FlowStateObject(1, 2, 1, true, 1, 1));
+	objects.push_back(rinad::FlowStateObject(2, 1, 1, true, 1, 1));
+	objects.push_back(rinad::FlowStateObject(1, 4, 1, true, 1, 1));
+	objects.push_back(rinad::FlowStateObject(4, 1, 1, true, 1, 1));
+	objects.push_back(rinad::FlowStateObject(1, 3, 1, true, 1, 1));
+	objects.push_back(rinad::FlowStateObject(3, 1, 1, true, 1, 1));
+	objects.push_back(rinad::FlowStateObject(2, 5, 1, true, 1, 1));
+	objects.push_back(rinad::FlowStateObject(5, 2, 1, true, 1, 1));
+	objects.push_back(rinad::FlowStateObject(4, 5, 1, true, 1, 1));
+	objects.push_back(rinad::FlowStateObject(5, 4, 1, true, 1, 1));
+	objects.push_back(rinad::FlowStateObject(4, 6, 1, true, 1, 1));
+	objects.push_back(rinad::FlowStateObject(6, 4, 1, true, 1, 1));
+	objects.push_back(rinad::FlowStateObject(5, 7, 1, true, 1, 1));
+	objects.push_back(rinad::FlowStateObject(7, 5, 1, true, 1, 1));
+	objects.push_back(rinad::FlowStateObject(6, 7, 1, true, 1, 1));
+	objects.push_back(rinad::FlowStateObject(7, 6, 1, true, 1, 1));
+	objects.push_back(rinad::FlowStateObject(3, 7, 1, true, 1, 1));
+	objects.push_back(rinad::FlowStateObject(7, 3, 1, true, 1, 1));
 
 	exp_nhops.resize(8);
 	exp_nhops[0] = exp_nhops[1] = 1;  // Not meaningful
@@ -768,11 +769,6 @@ int getRoutingTable_MoreGraphEntries_True(bool lfa) {
 		resalg->fortifyRoutingTable(graph, 1, rtable);
 	}
 
-	for (std::list<rinad::FlowStateObject *>::iterator
-			it = objects.begin(); it != objects.end(); it++) {
-		delete *it;
-	}
-
 	delete routingAlgorithm;
 	return result;
 }
@@ -829,12 +825,12 @@ int main()
 {
 	int result = 0;
 
-	result = test_flow_state_object_db();
+	/*result = test_flow_state_object_db();
 	if (result < 0) {
 		LOG_IPCP_ERR("test_flow_state_object_db tests failed");
 		return result;
 	}
-	LOG_IPCP_INFO("test_flow_state_object_db tests passed");
+	LOG_IPCP_INFO("test_flow_state_object_db tests passed");*/
 
 	result = test_graph();
 	if (result < 0) {

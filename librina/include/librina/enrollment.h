@@ -30,6 +30,7 @@
 #include "irm.h"
 #include "timer.h"
 #include "security-manager.h"
+#include "rib_v2.h"
 
 namespace rina {
 
@@ -63,14 +64,23 @@ public:
 class EnrollmentRequest
 {
 public:
-	EnrollmentRequest(Neighbor * neighbor) : neighbor_(neighbor),
+	EnrollmentRequest() : ipcm_initiated_(false) {};
+	EnrollmentRequest(const rina::Neighbor& neighbor) : neighbor_(neighbor),
 		ipcm_initiated_(false) { };
-	EnrollmentRequest(Neighbor * neighbor,
+	EnrollmentRequest(const rina::Neighbor& neighbor,
                           const EnrollToDAFRequestEvent & event) : neighbor_(neighbor),
                  event_(event), ipcm_initiated_(true) { };
 
+	EnrollmentRequest& operator=(const EnrollmentRequest &other)
+	{
+		neighbor_ = other.neighbor_;
+		event_ = other.event_;
+		ipcm_initiated_ = other.ipcm_initiated_;
+		return *this;
+	}
+
 	/// The neighbor to enroll to
-	Neighbor * neighbor_;
+	Neighbor neighbor_;
 
 	/// The request event that triggered the Enrollment
 	EnrollToDAFRequestEvent event_;
@@ -79,47 +89,18 @@ public:
 	bool ipcm_initiated_;
 };
 
-class NeighborRIBObject: public SimpleSetMemberRIBObject {
-public:
-	NeighborRIBObject(IRIBDaemon * ribdaemon,
-			const std::string& object_class,
-			const std::string& object_name,
-			const rina::Neighbor* neighbor);
-	std::string get_displayable_value();
-};
-
-class NeighborSetRIBObject: public BaseRIBObject {
-public:
-	static const std::string NEIGHBOR_SET_RIB_OBJECT_CLASS;
-	static const std::string NEIGHBOR_RIB_OBJECT_CLASS;
-	static const std::string NEIGHBOR_SET_RIB_OBJECT_NAME;
-
-	NeighborSetRIBObject(ApplicationProcess * app, IRIBDaemon * rib_daemon);
-	~NeighborSetRIBObject() { };
-	const void* get_value() const;
-	void remoteCreateObject(void * object_value, const std::string& object_name,
-			int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
-	void createObject(const std::string& objectClass,
-			const std::string& objectName,
-			const void* objectValue);
-
-private:
-	void populateNeighborsToCreateList(rina::Neighbor * neighbor,
-			std::list<rina::Neighbor *> * list);
-	void createNeighbor(rina::Neighbor * neighbor);
-
-	Lockable lock_;
-	ApplicationProcess * app_;
-};
-
 /// Interface that must be implementing by classes that provide
 /// the behavior of an enrollment task
 class IEnrollmentTask : public rina::ApplicationEntity,
-			public rina::CACEPHandler {
+			public rina::cacep::AppConHandlerInterface {
 public:
 	IEnrollmentTask() : rina::ApplicationEntity(ApplicationEntity::ENROLLMENT_TASK_AE_NAME) { };
 	virtual ~IEnrollmentTask() { };
-	virtual const std::list<Neighbor *> get_neighbors() const = 0;
+	virtual const std::list<Neighbor> get_neighbors() const = 0;
+	virtual std::list<rina::Neighbor*> get_neighbor_pointers() = 0;
+	virtual void add_neighbor(const Neighbor& neighbor) = 0;
+	virtual void add_or_update_neighbor(const Neighbor& neighbor) = 0;
+	virtual void remove_neighbor(const std::string& neighbor_key) = 0;
 	virtual const std::list<std::string> get_enrolled_app_names() const = 0;
 
 	/// Process a request to initiate enrollment with a new Neighbor, triggered by the IPC Manager
@@ -129,7 +110,7 @@ public:
 	/// Starts the enrollment program
 	/// @param cdapMessage
 	/// @param cdapSessionDescriptor
-	virtual void initiateEnrollment(EnrollmentRequest * request) = 0;
+	virtual void initiateEnrollment(const EnrollmentRequest& request) = 0;
 
 	/// Called by the enrollment state machine when the enrollment request has been completed,
 	/// either successfully or unsuccessfully

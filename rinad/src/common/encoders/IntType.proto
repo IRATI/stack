@@ -1,0 +1,6 @@
+package rina.messages;
+option optimize_for = LITE_RUNTIME;
+
+message int_t {  //information to identify an int
+	required uint32 value = 1; 				//value of the integer
+}

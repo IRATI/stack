@@ -28,355 +28,209 @@
 
 namespace rinad {
 
-// Class WhatevercastNameSetRIBObject
-WhateverCastNameSetRIBObject::WhateverCastNameSetRIBObject(IPCProcess * ipc_process) :
-	BaseIPCPRIBObject(ipc_process, EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS,
-			rina::objectInstanceGenerator->getObjectInstance(),
-			EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_NAME) {
-	lock_ = new rina::Lockable();
-}
+// Class WhateverCastNameRIBObj
+const std::string WhateverCastNameRIBObj::class_name = "Neighbor";
+const std::string WhateverCastNameRIBObj::object_name_prefix = "/difmanagement/nsm/whatnames/name=";
 
-WhateverCastNameSetRIBObject::~WhateverCastNameSetRIBObject() {
-	if (lock_) {
-		delete lock_;
-	}
-}
-
-const void* WhateverCastNameSetRIBObject::get_value() const {
-	return 0;
-}
-
-void WhateverCastNameSetRIBObject::remoteCreateObject(void * object_value,
-		const std::string& object_name, int invoke_id,
-		rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::ScopedLock g(*lock_);
-	std::list<rina::WhatevercastName *> namesToCreate;
-
-	try {
-		if (object_name.compare(EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS) == 0) {
-			std::list<rina::WhatevercastName *> * names =
-					(std::list<rina::WhatevercastName *> *) object_value;
-			std::list<rina::WhatevercastName *>::const_iterator iterator;
-			for(iterator = names->begin(); iterator != names->end(); ++iterator) {
-				namesToCreate.push_back((*iterator));
-			}
-
-			delete names;
-		} else {
-			rina::WhatevercastName * name = (rina::WhatevercastName *) object_value;
-			namesToCreate.push_back(name);
-		}
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Error decoding CDAP object value: %s", e.what());
-	}
-
-	if (namesToCreate.size() == 0) {
-		LOG_IPCP_DBG("No whatevercast name entries to create or update");
-		return;
-	}
-
-	try {
-		rib_daemon_->createObject(EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS,
-				EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_NAME, &namesToCreate, 0);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems creating RIB object: %s", e.what());
-	}
-}
-
-void WhateverCastNameSetRIBObject::createObject(const std::string& objectClass,
-		const std::string& objectName,
-		const void* objectValue) {
-
-	if (objectClass.compare(EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS) == 0) {
-		std::list<rina::WhatevercastName *>::const_iterator iterator;
-		std::list<rina::WhatevercastName *> * names =
-				(std::list<rina::WhatevercastName *> *) objectValue;
-
-		for (iterator = names->begin(); iterator != names->end(); ++iterator) {
-			createName((*iterator));
-		}
-	} else {
-		rina::WhatevercastName * currentName = (rina::WhatevercastName*) objectValue;
-		createName(currentName);
-	}
-}
-
-void WhateverCastNameSetRIBObject::createName(rina::WhatevercastName * name) {
-	std::stringstream ss;
-	ss<<EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_NAME<<EncoderConstants::SEPARATOR;
-	ss<<name->rule_;
-	BaseRIBObject * ribObject = new SimpleSetMemberIPCPRIBObject(ipc_process_,
-			EncoderConstants::WHATEVERCAST_NAME_RIB_OBJECT_CLASS, ss.str(), name);
-	add_child(ribObject);
-	try {
-		rib_daemon_->addRIBObject(ribObject);
-	} catch(rina::Exception &e){
-		LOG_IPCP_ERR("Problems adding object to the RIB: %s", e.what());
-	}
-}
-
-// Class DirectoryForwardingTableEntry RIB Object
-DirectoryForwardingTableEntryRIBObject::DirectoryForwardingTableEntryRIBObject(IPCProcess * ipc_process,
-		const std::string& object_name, rina::DirectoryForwardingTableEntry * entry):
-			SimpleSetMemberIPCPRIBObject(ipc_process, EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS,
-					object_name, entry){
-	namespace_manager_ = ipc_process->namespace_manager_;
-	namespace_manager_->addDFTEntry(entry);
-	ap_name_entry_ = entry->get_ap_naming_info();
-}
-
-void DirectoryForwardingTableEntryRIBObject::remoteCreateObject(void * object_value, const std::string& object_name,
-		int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
-	rina::DirectoryForwardingTableEntry * entry;
-	rina::DirectoryForwardingTableEntry * currentEntry;
-
-	try {
-		entry = (rina::DirectoryForwardingTableEntry *) object_value;
-	} catch (rina::Exception & e){
-		LOG_IPCP_ERR("Problems decoding message: %s", e.what());
-		return;
-	}
-
-	if (entry->getKey().compare(ap_name_entry_.getEncodedString()) != 0){
-		LOG_IPCP_ERR("Keys of the received and existing entries are different, cannot update");
-		delete entry;
-		return;
-	}
-
-	currentEntry = namespace_manager_->getDFTEntry(ap_name_entry_);
-	if (currentEntry->get_address() != entry->get_address()) {
-		currentEntry->set_address(entry->get_address());
-		std::list<int> cdapSessionIds;
-		cdapSessionIds.push_back(session_descriptor->port_id_);
-		rina::NotificationPolicy notificationPolicy = rina::NotificationPolicy(cdapSessionIds);
-		try {
-			rib_daemon_->createObject(EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS, object_name,
-					currentEntry, &notificationPolicy);
-		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Problems creating RIB object: %s", e.what());
-		}
-	}
-
-	delete entry;
-}
-
-void DirectoryForwardingTableEntryRIBObject::createObject(const std::string& objectClass,
-                                                          const std::string& objectName,
-                                                          const void* objectValue)
+WhateverCastNameRIBObj::WhateverCastNameRIBObj(rina::WhatevercastName* name_) :
+		rina::rib::RIBObj(class_name), name(name_)
 {
-	//Do nothing
 }
 
-void DirectoryForwardingTableEntryRIBObject::remoteDeleteObject(int invoke_id,
-		rina::CDAPSessionDescriptor * session_descriptor) {
-	std::list<int> cdapSessionIds;
-
-	cdapSessionIds.push_back(session_descriptor->port_id_);
-	rina::NotificationPolicy notificationPolicy = rina::NotificationPolicy(cdapSessionIds);
-	try {
-		rib_daemon_->deleteObject(class_, name_, 0, &notificationPolicy);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems deleting RIB object: %s", e.what());
-	}
-}
-
-void DirectoryForwardingTableEntryRIBObject::deleteObject(const void* objectValue)
+const std::string WhateverCastNameRIBObj::get_displayable_value() const
 {
-	namespace_manager_->removeDFTEntry(ap_name_entry_);
-	parent_->remove_child(name_);
-	rib_daemon_->removeRIBObject(name_);
-}
-
-std::string DirectoryForwardingTableEntryRIBObject::get_displayable_value() {
-    const rina::DirectoryForwardingTableEntry * dfte =
-    		(const rina::DirectoryForwardingTableEntry *) get_value();
     std::stringstream ss;
-    ss << "App name: " << dfte->ap_naming_info_.getEncodedString();
-    ss << "; Address: " << dfte->address_;
-    ss << "; Timestamp: " << dfte->timestamp_;
+    ss << "Name: " << name->name_;
+    ss << "; Rule: " << name->rule_;
+
+    //TODO add set members
 
     return ss.str();
 }
 
-// Class DirectoryForwardingTableEntry Set RIB Object
-DirectoryForwardingTableEntrySetRIBObject::DirectoryForwardingTableEntrySetRIBObject(IPCProcess * ipc_process):
-		BaseIPCPRIBObject(ipc_process, EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
-				rina::objectInstanceGenerator->getObjectInstance(),
-				EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME)
+void WhateverCastNameRIBObj::read(const rina::cdap_rib::con_handle_t &con,
+				  const std::string& fqn,
+				  const std::string& class_,
+				  const rina::cdap_rib::filt_info_t &filt,
+				  const int invoke_id,
+				  rina::cdap_rib::obj_info_t &obj_reply,
+				  rina::cdap_rib::res_info_t& res)
 {
-	namespace_manager_ = ipc_process_->namespace_manager_;
-	ipc_process->internal_event_manager_->subscribeToEvent(
-			rina::InternalEvent::APP_CONNECTIVITY_TO_NEIGHBOR_LOST, this);
+	if (name) {
+		WhatevercastNameEncoder encoder;
+		encoder.encode(*name, obj_reply.value_);
+	}
+
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }
 
-void DirectoryForwardingTableEntrySetRIBObject::deleteObjects(
-		const std::list<std::string>& namesToDelete) {
-	std::list<std::string>::const_iterator iterator;
+// Class WhateverCastNamesRIBObj
+const std::string WhateverCastNamesRIBObj::class_name = "Neighbor";
+const std::string WhateverCastNamesRIBObj::object_name = "/difmanagement/nsm/whatnames";
 
-	for(iterator = namesToDelete.begin(); iterator != namesToDelete.end(); ++iterator) {
-		rib_daemon_->deleteObject(EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS, *iterator, 0, 0);
+WhateverCastNamesRIBObj::WhateverCastNamesRIBObj(IPCProcess * ipc_process) :
+	IPCPRIBObj(ipc_process, class_name)
+{
+}
+
+WhateverCastNamesRIBObj::~WhateverCastNamesRIBObj()
+{
+}
+
+void WhateverCastNamesRIBObj::create(const rina::cdap_rib::con_handle_t &con,
+				     const std::string& fqn,
+				     const std::string& class_,
+				     const rina::cdap_rib::filt_info_t &filt,
+				     const int invoke_id,
+				     const rina::ser_obj_t &obj_req,
+				     rina::ser_obj_t &obj_reply,
+				     rina::cdap_rib::res_info_t& res)
+{
+	std::list<rina::WhatevercastName> namesToCreate;
+	WhatevercastNameListEncoder encoder;
+
+	//1 Decode list of names
+	encoder.decode(obj_req, namesToCreate);
+
+	//2 Iterate list and create names
+	std::list<rina::WhatevercastName>::iterator it;
+	for (it = namesToCreate.begin(); it != namesToCreate.end(); ++it) {
+		rina::WhatevercastName * name = new rina::WhatevercastName(*it);
+		ipc_process_->namespace_manager_->add_whatevercast_name(name);
 	}
 }
 
-void DirectoryForwardingTableEntrySetRIBObject::eventHappened(rina::InternalEvent * event)
+// Class DFTEntryRIBObj
+const std::string DFTEntryRIBObj::class_name = "DirectoryForwardingTableEntry";
+const std::string DFTEntryRIBObj::object_name_prefix = "/difmanagement/nsm/dft/key=";
+
+DFTEntryRIBObj::DFTEntryRIBObj(IPCProcess * ipcp,
+			       rina::DirectoryForwardingTableEntry* entry_) :
+		IPCPRIBObj(ipcp, class_name), entry(entry_)
+{
+	nsm = ipc_process_->namespace_manager_;
+}
+
+const std::string DFTEntryRIBObj::get_displayable_value() const
+{
+	std::stringstream ss;
+	ss << "App name: " << entry->ap_naming_info_.getEncodedString();
+	ss << "; Address: " << entry->address_;
+	ss << "; Timestamp: " << entry->timestamp_;
+
+	return ss.str();
+}
+
+bool DFTEntryRIBObj::delete_(const rina::cdap_rib::con_handle_t &con_handle,
+			     const std::string& fqn,
+			     const std::string& class_,
+			     const rina::cdap_rib::filt_info_t &filt,
+			     const int invoke_id,
+			     rina::cdap_rib::res_info_t& res)
+{
+	std::list<int> exc_neighs;
+	exc_neighs.push_back(con_handle.port_id);
+	nsm->removeDFTEntry(entry->getKey(),
+			    true,
+			    false,
+			    exc_neighs);
+	return true;
+}
+
+void DFTEntryRIBObj::read(const rina::cdap_rib::con_handle_t &con,
+			  const std::string& fqn,
+			  const std::string& class_,
+			  const rina::cdap_rib::filt_info_t &filt,
+			  const int invoke_id,
+			  rina::cdap_rib::obj_info_t &obj_reply,
+			  rina::cdap_rib::res_info_t& res)
+{
+	if (entry) {
+		DFTEEncoder encoder;
+		encoder.encode(*entry, obj_reply.value_);
+	}
+
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+}
+
+// Class DirectoryForwardingTableEntry Set RIB Object
+const std::string DFTRIBObj::class_name = "DirectoryForwardingTable";
+const std::string DFTRIBObj::object_name = "/difmanagement/nsm/dft";
+
+DFTRIBObj::DFTRIBObj(IPCProcess * ipc_process):
+		IPCPRIBObj(ipc_process, class_name)
+{
+	namespace_manager_ = ipc_process_->namespace_manager_;
+	ipc_process->internal_event_manager_->subscribeToEvent(rina::InternalEvent::APP_CONNECTIVITY_TO_NEIGHBOR_LOST,
+							       this);
+}
+
+void DFTRIBObj::eventHappened(rina::InternalEvent * event)
 {
 	if (event->type != rina::InternalEvent::APP_CONNECTIVITY_TO_NEIGHBOR_LOST)
 		return;
 
 	rina::ConnectiviyToNeighborLostEvent * conEvent =
 		(rina::ConnectiviyToNeighborLostEvent *) event;
-	std::list<std::string> objectsToDelete;
+	std::list<std::string> entriesToDelete;
 
-	rina::DirectoryForwardingTableEntry * entry;
-		std::list<BaseRIBObject *>::const_iterator iterator;
-	for (iterator = get_children().begin(); iterator != get_children().end(); ++iterator) {
-		entry = (rina::DirectoryForwardingTableEntry *) (*iterator)->get_value();
-		LOG_IPCP_DBG("Entry pointer: %p", entry);
-		if (entry->get_address() == conEvent->neighbor_.get_address()) {
-			objectsToDelete.push_back((*iterator)->name_);
-		}
+	std::list<rina::DirectoryForwardingTableEntry> entries = namespace_manager_->getDFTEntries();
+	std::list<rina::DirectoryForwardingTableEntry>::const_iterator iterator;
+	for (iterator = entries.begin(); iterator != entries.end(); ++iterator) {
+		if (iterator->get_address() == conEvent->neighbor_.get_address())
+			entriesToDelete.push_back(iterator->getKey());
+	}
+
+	if (entriesToDelete.size() == 0)
+		return;
+
+	std::list<int> exc_neighs;
+	std::list<std::string>::const_iterator it;
+	for (it = entriesToDelete.begin(); it != entriesToDelete.end(); ++it) {
+		namespace_manager_->removeDFTEntry(*it,
+						   true,
+						   true,
+						   exc_neighs);
 	}
 }
 
-void DirectoryForwardingTableEntrySetRIBObject::remoteCreateObject(void * object_value,
-		const std::string& object_name, int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
-	std::list<rina::DirectoryForwardingTableEntry *> entriesToCreateOrUpdate;
+void DFTRIBObj::create(const rina::cdap_rib::con_handle_t &con_handle,
+		       const std::string& fqn,
+		       const std::string& class_,
+		       const rina::cdap_rib::filt_info_t &filt,
+		       const int invoke_id,
+		       const rina::ser_obj_t &obj_req,
+		       rina::ser_obj_t &obj_reply,
+		       rina::cdap_rib::res_info_t& res)
+{
+	std::list<rina::DirectoryForwardingTableEntry> entriesToCreateOrUpdate;
+	std::list<rina::DirectoryForwardingTableEntry> entriesToCreate;
+	rina::DirectoryForwardingTableEntry * entry;
+	DFTEListEncoder encoder;
 
-	try {
-		if (object_name.compare(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME) == 0) {
-			std::list<rina::DirectoryForwardingTableEntry *> * entries =
-					(std::list<rina::DirectoryForwardingTableEntry *> *) object_value;
-			std::list<rina::DirectoryForwardingTableEntry *>::const_iterator iterator;
-			for(iterator = entries->begin(); iterator != entries->end(); ++iterator) {
-				populateEntriesToCreateList(*iterator, &entriesToCreateOrUpdate);
-			}
+	//1 Decode list of names
+	encoder.decode(obj_req, entriesToCreateOrUpdate);
 
-			delete entries;
-		} else {
-			rina::DirectoryForwardingTableEntry * receivedEntry =
-					(rina::DirectoryForwardingTableEntry *) object_value;
-			populateEntriesToCreateList(receivedEntry, &entriesToCreateOrUpdate);
-		}
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Error decoding CDAP object value: %s", e.what());
+	//2 Iterate list and create names
+	std::list<rina::DirectoryForwardingTableEntry>::iterator it;
+	for (it = entriesToCreateOrUpdate.begin(); it != entriesToCreateOrUpdate.end(); ++it) {
+		entry = namespace_manager_->getDFTEntry(it->getKey());
+		if (entry)
+			entry->address_ = it->address_;
+		else
+			entriesToCreate.push_back(*it);
 	}
 
-	if (entriesToCreateOrUpdate.size() == 0) {
-		LOG_IPCP_DBG("No DFT entries to create or update");
+	if (entriesToCreate.size() == 0) {
+		LOG_IPCP_DBG("No DFT entries to create");
 		return;
 	}
 
-	std::list<int> cdapSessionIds;
-	cdapSessionIds.push_back(session_descriptor->port_id_);
-	rina::NotificationPolicy notificationPolicy = rina::NotificationPolicy(cdapSessionIds);
-
-	try {
-		rib_daemon_->createObject(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
-				EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME, &entriesToCreateOrUpdate,
-				&notificationPolicy);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems creating RIB object: %s", e.what());
-	}
-}
-
-void DirectoryForwardingTableEntrySetRIBObject::populateEntriesToCreateList(rina::DirectoryForwardingTableEntry* entry,
-		std::list<rina::DirectoryForwardingTableEntry *> * list)
-{
-	rina::DirectoryForwardingTableEntry * currentEntry;
-
-	currentEntry = namespace_manager_->getDFTEntry(entry->get_ap_naming_info());
-	if (!currentEntry) {
-		list->push_back(entry);
-	} else if (currentEntry->get_address() != entry->get_address()) {
-		currentEntry->set_address(entry->get_address());
-		delete entry;
-	} else {
-		delete entry;
-	}
-}
-
-void DirectoryForwardingTableEntrySetRIBObject::createObject(const std::string& objectClass,
-                                                             const std::string& objectName,
-                                                             const void*        objectValue)
-{
-	std::list<rina::DirectoryForwardingTableEntry *>::const_iterator iterator;
-	rina::DirectoryForwardingTableEntry * currentEntry;
-	std::list<rina::DirectoryForwardingTableEntry *> * entries =
-						(std::list<rina::DirectoryForwardingTableEntry *> *) objectValue;
-
-	for (iterator = entries->begin(); iterator != entries->end(); ++iterator) {
-		currentEntry = *iterator;
-		if (namespace_manager_->getDFTEntry(currentEntry->get_ap_naming_info())) {
-			continue;
-		}
-
-		std::stringstream ss;
-		ss<<name_<<EncoderConstants::SEPARATOR<<currentEntry->getKey();
-		BaseRIBObject * ribObject = new DirectoryForwardingTableEntryRIBObject(ipc_process_,
-							ss.str(), currentEntry);
-		add_child(ribObject);
-		try {
-			rib_daemon_->addRIBObject(ribObject);
-		} catch(rina::Exception &e){
-			LOG_IPCP_ERR("Problems adding object to the RIB: %s", e.what());
-		}
-	}
-}
-
-void DirectoryForwardingTableEntrySetRIBObject::populateEntriesToDeleteList(rina::DirectoryForwardingTableEntry* entry,
-		std::list<rina::DirectoryForwardingTableEntry *> * list)
-{
-	rina::DirectoryForwardingTableEntry * currentEntry;
-
-	currentEntry = namespace_manager_->getDFTEntry(entry->get_ap_naming_info());
-	if (currentEntry) {
-		list->push_back(currentEntry);
-	}
-
-	delete entry;
-}
-
-void DirectoryForwardingTableEntrySetRIBObject::deleteObject(const void* objectValue)
-{
-	std::list<rina::DirectoryForwardingTableEntry *>::const_iterator iterator;
-	//rina::DirectoryForwardingTableEntry * currentEntry;
-	std::list<rina::DirectoryForwardingTableEntry *> * entries =
-			(std::list<rina::DirectoryForwardingTableEntry *> *) objectValue;
-
-	BaseRIBObject * ribObject;
-	for (iterator = entries->begin(); iterator != entries->end(); ++iterator) {
-		ribObject = getObject ((*iterator)->getKey());
-		if (ribObject) {
-			remove_child(ribObject->name_);
-			try {
-				rib_daemon_->removeRIBObject(ribObject->name_);
-			} catch (rina::Exception &e) {
-				LOG_IPCP_ERR("Problems removing object from the RIB: %s", e.what());
-			}
-		} else {
-			LOG_IPCP_WARN("Could not find object to delete in the PDU FT");
-		}
-	}
-}
-
-rina::BaseRIBObject * DirectoryForwardingTableEntrySetRIBObject::getObject(const std::string& candidateKey)
-{
-	rina::DirectoryForwardingTableEntry * entry;
-	std::list<BaseRIBObject *>::const_iterator iterator;
-
-	for (iterator = get_children().begin(); iterator != get_children().end(); ++iterator) {
-		entry = (rina::DirectoryForwardingTableEntry *) (*iterator)->get_value();
-		if (entry->getKey().compare(candidateKey) == 0) {
-			return *iterator;
-		}
-	}
-
-	return 0;
-}
-
-const void* DirectoryForwardingTableEntrySetRIBObject::get_value() const
-{
-	return 0;
+	std::list<int> exc_neighs;
+	exc_neighs.push_back(con_handle.port_id);
+	namespace_manager_->addDFTEntries(entriesToCreate,
+					  true,
+					  exc_neighs);
 }
 
 //Class Namespace Manager
@@ -411,13 +265,19 @@ void NamespaceManager::set_dif_configuration(const rina::DIFConfiguration& dif_c
 
 void NamespaceManager::populateRIB()
 {
+	rina::rib::RIBObj* tmp;
+
 	try {
-		BaseIPCPRIBObject * object = new DirectoryForwardingTableEntrySetRIBObject(ipcp);
-		rib_daemon_->addRIBObject(object);
-		object = new WhateverCastNameSetRIBObject(ipcp);
-		rib_daemon_->addRIBObject(object);
+		tmp = new rina::rib::RIBObj("NamespaceManager");
+		rib_daemon_->addObjRIB("/difmanagement/nsm", &tmp);
+
+		tmp = new WhateverCastNamesRIBObj(ipcp);
+		rib_daemon_->addObjRIB(WhateverCastNamesRIBObj::object_name, &tmp);
+
+		tmp = new DFTRIBObj(ipcp);
+		rib_daemon_->addObjRIB(DFTRIBObj::object_name, &tmp);
 	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems adding object to the RIB : %s", e.what());
+		LOG_ERR("Problems adding object to the RIB : %s", e.what());
 	}
 }
 
@@ -433,26 +293,138 @@ unsigned int NamespaceManager::getDFTNextHop(const rina::ApplicationProcessNamin
 	return 0;
 }
 
-void NamespaceManager::addDFTEntry(rina::DirectoryForwardingTableEntry * entry)
+void NamespaceManager::addDFTEntries(const std::list<rina::DirectoryForwardingTableEntry>& entries,
+			    	     bool notify_neighs,
+			    	     std::list<int>& neighs_to_exclude)
 {
-	dft_.put(entry->getKey(), entry);
-	LOG_IPCP_DBG("Added entry to DFT: %s", entry->toString().c_str());
-}
+	rina::ScopedLock g(lock);
+	rina::DirectoryForwardingTableEntry * entry;
 
-rina::DirectoryForwardingTableEntry * NamespaceManager::getDFTEntry(
-			const rina::ApplicationProcessNamingInformation& apNamingInfo)
-{
-	return dft_.find(apNamingInfo.getEncodedString());
-}
+	std::list<rina::DirectoryForwardingTableEntry>::const_iterator it;
+	for (it = entries.begin(); it != entries.end(); ++it) {
+		if (dft_.find(it->getKey()) != 0)
+			continue;
 
-void NamespaceManager::removeDFTEntry(const rina::ApplicationProcessNamingInformation& apNamingInfo)
-{
-	rina::DirectoryForwardingTableEntry * entry =
-			dft_.erase(apNamingInfo.getEncodedString());
-	if (entry) {
-		LOG_IPCP_DBG("Removed entry form DFT: %s", entry->toString().c_str());
-		delete entry;
+		entry = new rina::DirectoryForwardingTableEntry();
+		entry->address_ = it->address_;
+		entry->ap_naming_info_ = it->ap_naming_info_;
+		entry->timestamp_ = it->timestamp_;
+
+		try {
+			std::stringstream ss;
+			ss << DFTEntryRIBObj::object_name_prefix
+			   << entry->getKey();
+
+			rina::rib::RIBObj * nrobj = new DFTEntryRIBObj(ipcp, entry);
+			rib_daemon_->addObjRIB(ss.str(), &nrobj);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems creating RIB object: %s",
+					e.what());
+		}
+
+		dft_.put(entry->getKey(), entry);
+		LOG_IPCP_DBG("Added entry to DFT: %s",
+			     entry->toString().c_str());
 	}
+
+	std::vector<int> session_ids;
+	rina::cdap::getProvider()->get_session_manager()->getAllCDAPSessionIds(session_ids);
+	DFTEListEncoder encoder;
+	rina::cdap_rib::obj_info_t obj;
+	obj.class_ = DFTRIBObj::class_name;
+	obj.name_ = DFTRIBObj::object_name;
+	encoder.encode(entries, obj.value_);
+	rina::cdap_rib::flags_t flags;
+	rina::cdap_rib::filt_info_t filt;
+	rina::cdap_rib::con_handle_t con;
+	for (int i = 0; i < session_ids.size(); i++) {
+		if (contains_entry(session_ids[i],
+				neighs_to_exclude))
+			continue;
+
+		try {
+			con.port_id = session_ids[i];
+			ipcp->rib_daemon_->getProxy()->remote_create(con,
+								     obj,
+								     flags,
+								     filt,
+								     NULL);
+		} catch (rina::Exception &e) {
+			LOG_WARN("Problems sending delete CDAP message: %s",
+					e.what());
+		}
+	}
+}
+
+rina::DirectoryForwardingTableEntry * NamespaceManager::getDFTEntry(const std::string& key)
+{
+	return dft_.find(key);
+}
+
+std::list<rina::DirectoryForwardingTableEntry> NamespaceManager::getDFTEntries()
+{
+	return dft_.getCopyofentries();
+}
+
+void NamespaceManager::removeDFTEntry(const std::string& key,
+			 	      bool notify_neighs,
+			 	      bool remove_from_rib,
+			 	      std::list<int>& neighs_to_exclude)
+{
+	rina::ScopedLock g(lock);
+	std::string obj_name;
+
+	rina::DirectoryForwardingTableEntry * entry = dft_.erase(key);
+	if (!entry) {
+		LOG_IPCP_WARN("Could not find DFT for key: %s",
+			      key.c_str());
+		return;
+	}
+
+	std::stringstream ss;
+	ss << DFTEntryRIBObj::object_name_prefix
+	   << key;
+	obj_name = ss.str();
+
+	if (remove_from_rib) {
+		try {
+			rib_daemon_->removeObjRIB(obj_name);
+		} catch (rina::Exception &e){
+			LOG_IPCP_ERR("Error removing object from RIB %s",
+					e.what());
+		}
+	}
+
+	LOG_IPCP_DBG("Removed entry from DFT: %s",
+		     entry->toString().c_str());
+
+	std::vector<int> session_ids;
+	rina::cdap::getProvider()->get_session_manager()->getAllCDAPSessionIds(session_ids);
+	rina::cdap_rib::obj_info_t obj;
+	obj.class_ = DFTEntryRIBObj::class_name;
+	obj.name_ = obj_name;
+	rina::cdap_rib::flags_t flags;
+	rina::cdap_rib::filt_info_t filt;
+	rina::cdap_rib::con_handle_t con;
+	for (int i = 0; i < session_ids.size(); i++) {
+		if (contains_entry(session_ids[i],
+				   neighs_to_exclude))
+			continue;
+
+		try {
+			con.port_id = session_ids[i];
+			ipcp->rib_daemon_->getProxy()->remote_delete(con,
+								     obj,
+								     flags,
+								     filt,
+								     NULL);
+		} catch (rina::Exception &e) {
+			LOG_WARN("Problems sending delete CDAP message: %s",
+					e.what());
+		}
+	}
+
+	delete entry;
 }
 
 unsigned short NamespaceManager::getRegIPCProcessId(const rina::ApplicationProcessNamingInformation& apNamingInfo)
@@ -505,7 +477,8 @@ void NamespaceManager::processApplicationRegistrationRequestEvent(
 	registration->ipcProcessId = event.applicationRegistrationInformation.ipcProcessId;
 	registrations_.put(appToRegister.getEncodedString(), registration);
 	LOG_IPCP_INFO("Successfully registered application %s with IPC Process id %us",
-			appToRegister.getEncodedString().c_str(), ipcp->get_id());
+		       appToRegister.getEncodedString().c_str(),
+		       ipcp->get_id());
 	result = replyToIPCManagerRegister(event, 0);
 	if (result == -1) {
 		registrations_.erase(appToRegister.getEncodedString());
@@ -513,26 +486,18 @@ void NamespaceManager::processApplicationRegistrationRequestEvent(
 		return;
 	}
 
-	std::list<rina::DirectoryForwardingTableEntry *> entriesToCreate;
-	rina::DirectoryForwardingTableEntry * entry = new rina::DirectoryForwardingTableEntry();
-	entry->set_address(ipcp->get_address());
-	entry->set_ap_naming_info(appToRegister);
+	std::list<rina::DirectoryForwardingTableEntry> entriesToCreate;
+	rina::DirectoryForwardingTableEntry entry;
+	entry.address_ = ipcp->get_address();
+	entry.ap_naming_info_ = appToRegister;
 	entriesToCreate.push_back(entry);
+	std::list<int> exc_neighs;
 
-	std::list<int> cdapSessionIds;
-	rina::NotificationPolicy notificationPolicy = rina::NotificationPolicy(cdapSessionIds);
-
-	try {
-		rib_daemon_->createObject(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
-				EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME, &entriesToCreate,
-				&notificationPolicy);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems creating RIB object: %s", e.what());
-	}
+	addDFTEntries(entriesToCreate, true, exc_neighs);
 }
 
 int NamespaceManager::replyToIPCManagerUnregister(const rina::ApplicationUnregistrationRequestEvent& event,
-		int result)
+						  int result)
 {
 	try {
 		rina::extendedIPCManager->unregisterApplicationResponse(event, result);
@@ -544,6 +509,18 @@ int NamespaceManager::replyToIPCManagerUnregister(const rina::ApplicationUnregis
 	return 0;
 }
 
+bool NamespaceManager::contains_entry(int candidate,
+				      const std::list<int>& elements)
+{
+	std::list<int>::const_iterator it;
+	for (it = elements.begin(); it != elements.end(); ++it) {
+		if (candidate == *it)
+			return true;
+	}
+
+	return false;
+}
+
 rina::ApplicationRegistrationInformation
 	NamespaceManager::get_reg_app_info(const rina::ApplicationProcessNamingInformation name)
 {
@@ -553,6 +530,62 @@ rina::ApplicationRegistrationInformation
 	} else {
 		throw rina::Exception("Could not locate application registration");
 	}
+}
+
+std::list<rina::WhatevercastName> NamespaceManager::get_whatevercast_names()
+{
+	return what_names.getCopyofentries();
+}
+
+void NamespaceManager::add_whatevercast_name(rina::WhatevercastName * name)
+{
+	rina::ScopedLock g(lock);
+
+	if (what_names.find(name->name_) != 0) {
+		LOG_IPCP_WARN("Tried to add an already existing Whatevercast name: %s",
+				name->name_.c_str());
+		return;
+	}
+
+	try {
+		std::stringstream ss;
+		ss << WhateverCastNameRIBObj::object_name_prefix
+		   << name->name_;
+
+		rina::rib::RIBObj * nrobj = new WhateverCastNameRIBObj(name);
+		rib_daemon_->addObjRIB(ss.str(), &nrobj);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems creating RIB object: %s",
+				e.what());
+	}
+
+	what_names.put(name->name_, name);
+}
+
+void NamespaceManager::remove_whatevercast_name(const std::string& name_key)
+{
+	rina::WhatevercastName * name;
+
+	rina::ScopedLock g(lock);
+
+	name = what_names.erase(name_key);
+	if (name == 0) {
+		LOG_IPCP_WARN("Could not find Whatevercast Name for key: %s",
+			      name_key.c_str());
+		return;
+	}
+
+	try {
+		std::stringstream ss;
+		ss << WhateverCastNameRIBObj::object_name_prefix
+	           << name->name_;
+		rib_daemon_->removeObjRIB(ss.str());
+	} catch (rina::Exception &e){
+		LOG_IPCP_ERR("Error removing object from RIB %s",
+			     e.what());
+	}
+
+	delete name;
 }
 
 void NamespaceManager::processApplicationUnregistrationRequestEvent(
@@ -579,25 +612,19 @@ void NamespaceManager::processApplicationUnregistrationRequestEvent(
 		return;
 	}
 
-	std::list<int> cdapSessionIds;
-	rina::NotificationPolicy notificationPolicy = rina::NotificationPolicy(cdapSessionIds);
-
-	try {
-		std::stringstream ss;
-		ss<<EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME;
-		ss<<EncoderConstants::SEPARATOR<< unregisteredApp->appName.getEncodedString();
-		rib_daemon_->deleteObject(EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS,
-				ss.str(), 0, &notificationPolicy);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems creating RIB object: %s", e.what());
-	}
+	std::list<int> exc_neighs;
+	removeDFTEntry(unregisteredApp->appName.getEncodedString(),
+		       true,
+		       true,
+		       exc_neighs);
 
 	delete unregisteredApp;
 }
 
 unsigned int NamespaceManager::getAdressByname(const rina::ApplicationProcessNamingInformation& name)
 {
-	std::list<rina::Neighbor *> neighbors = ipcp->get_neighbors();
+	std::list<rina::Neighbor *> neighbors =
+			ipcp->enrollment_task_->get_neighbor_pointers();
 	std::list<rina::Neighbor *>::const_iterator it;
 	for (it = neighbors.begin(); it != neighbors.end(); ++it) {
 		if ((*it)->name_.processName.compare(name.processName) == 0) {

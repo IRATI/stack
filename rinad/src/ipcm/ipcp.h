@@ -428,7 +428,7 @@ public:
 	 * @throws ForwardCDAPException if an error happens during
          *         the process
 	 */
-	void forwardCDAPMessage(const rina::CDAPMessage& msg,
+	void forwardCDAPMessage(const rina::cdap::CDAPMessage& msg,
 				unsigned int opaque);
 
 private:

@@ -100,11 +100,6 @@ test_timer_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_timer_CXXFLAGS = $(COMMONCXXFLAGS)
 test_timer_LDFLAGS  = $(FUNCTIONALLDFLAGS)
 
-test_cdap_SOURCES  = test-cdap.cc
-test_cdap_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
-test_cdap_CXXFLAGS = $(COMMONCXXFLAGS)
-test_cdap_LDFLAGS  = $(FUNCTIONALLDFLAGS)
-
 test_rib_v2_SOURCES  = test-rib_v2.cc
 test_rib_v2_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_rib_v2_CXXFLAGS = $(COMMONCXXFLAGS) -Wno-unused-variable -Wno-unused-parameter
@@ -120,7 +115,6 @@ check_PROGRAMS =				\
 	test-concurrency			\
 	test-syscalls				\
 	test-timer				\
-	test-cdap				\
 	test-rib_v2
 
 XFAIL_TESTS =				\	
@@ -138,8 +132,7 @@ FUNCTIONAL_PASS_TESTS = \
 	test-netlink-parsers \
 	test-concurrency \
 	test-syscalls \
-	test-timer \
-	test-cdap
+	test-timer
 
 FUNCTIONAL_XFAIL_TESTS =
 
@@ -164,4 +157,3 @@ check-all: check check-functional
 #test-concurrency			
 #test-syscalls				
 #test-timer				
-#test-cdap	

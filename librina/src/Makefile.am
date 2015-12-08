@@ -73,12 +73,9 @@ allsources =							\
         ipc-manager.cc						\
         ipc-process.cc						\
         faux-sockets.cc						\
-        cdap.cc							\
-        security-manager.cc					\
-        rib.cc							\
-        enrollment.cc						\
         cdap_v2.cc						\
         rib_v2.cc						\
+        security-manager.cc					\
         irm.cc							\
         sdu-protection.cc					\
         netlink-messages.cc  netlink-messages.h			\
@@ -86,7 +83,6 @@ allsources =							\
         netlink-manager.cc   netlink-manager.h			\
         syscalls-wrappers.cc rina-systypes.h    rina-syscalls.h	\
         $(protoSOURCES)						\
-        cdap-impl.cc	     cdap-impl.h			\
 	plugin-info.cc	     plugin-info.h
 
 librina_la_SOURCES  = $(allsources)

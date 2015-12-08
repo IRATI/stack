@@ -27,7 +27,6 @@
 #include <cppunit/TestFixture.h>
 #include <cppunit/extensions/HelperMacros.h>
 
-#include "librina/cdap.h"
 #include "librina/ipc-process.h"
 #include "librina/common.h"
 #include "librina/cdap_v2.h"
@@ -109,7 +108,7 @@ public:
 //Register
 CPPUNIT_TEST_SUITE_REGISTRATION( ribBasicOps );
 
-class remoteHandlers : public rina::rib::RIBOpsRespHandlers {
+class remoteHandlers : public rina::rib::RIBOpsRespHandler {
 
 //
 //Required mock ups
@@ -146,7 +145,8 @@ public:
 	~AppHandlers(){};
 
 	/// A remote Connect request has been received.
-	void connect(int invoke_id, const cdap_rib::con_handle_t &con){ (void)con; (void)invoke_id;};
+	void connect(const rina::cdap::CDAPMessage& message,
+		     const cdap_rib::con_handle_t &con){ (void)con; (void)message;};
 	/// A remote Connect response has been received.
 	void connectResult(const cdap_rib::res_info_t &res,
 			const cdap_rib::con_handle_t &con){ (void)con; (void)res; };
@@ -155,6 +155,8 @@ public:
 	/// A remote Release response has been received.
 	void releaseResult(const cdap_rib::res_info_t &res,
 			const cdap_rib::con_handle_t &con){ (void)con; (void)res; };
+	void process_authentication_message(const rina::cdap::CDAPMessage& message,
+					    const cdap_rib::con_handle_t &con) { (void) message; (void)con;}
 };
 
 static class AppHandlers app_handlers;
@@ -176,61 +178,68 @@ public:
 
 	//remote
 	virtual int remote_close_connection(unsigned int port){ return 0;};
-	virtual int remote_create(unsigned int port,
+	virtual int remote_create(const cdap_rib::con_handle_t& con,
 				  const cdap_rib::obj_info_t &obj,
 				  const cdap_rib::flags_t &flags,
-				  const cdap_rib::filt_info_t &filt){ return 0;};
-	virtual int remote_delete(unsigned int port,
+				  const cdap_rib::filt_info_t &filt,
+				  const int invoke_id) {return 0;};
+	virtual int remote_delete(const cdap_rib::con_handle_t& con,
 				  const cdap_rib::obj_info_t &obj,
 				  const cdap_rib::flags_t &flags,
-				  const cdap_rib::filt_info_t &filt){ return 0;};
-	virtual int remote_read(unsigned int port,
+				  const cdap_rib::filt_info_t &filt,
+				  const int invoke_id) {return 0;};
+	virtual int remote_read(const cdap_rib::con_handle_t& con,
 				const cdap_rib::obj_info_t &obj,
 				const cdap_rib::flags_t &flags,
-				const cdap_rib::filt_info_t &filt){ return 0;};
-	virtual int remote_cancel_read(unsigned int port,
+				const cdap_rib::filt_info_t &filt,
+				const int invoke_id) {return 0;};
+	virtual int remote_cancel_read(const cdap_rib::con_handle_t& con,
 				       const cdap_rib::flags_t &flags,
-				       int invoke_id){ return 0;};
-	virtual int remote_write(unsigned int port,
+				       const int invoke_id) {return 0;};
+	virtual int remote_write(const cdap_rib::con_handle_t& con,
 				 const cdap_rib::obj_info_t &obj,
 				 const cdap_rib::flags_t &flags,
-				 const cdap_rib::filt_info_t &filt){ return 0;};
-	virtual int remote_start(unsigned int port,
+				 const cdap_rib::filt_info_t &filt,
+				 const int invoke_id) {return 0;};
+	virtual int remote_start(const cdap_rib::con_handle_t& con,
 				 const cdap_rib::obj_info_t &obj,
 				 const cdap_rib::flags_t &flags,
-				 const cdap_rib::filt_info_t &filt){ return 0;};
-	virtual int remote_stop(unsigned int port,
+				 const cdap_rib::filt_info_t &filt,
+				 const int invoke_id) {return 0;};
+	virtual int remote_stop(const cdap_rib::con_handle_t& con,
 				const cdap_rib::obj_info_t &obj,
 				const cdap_rib::flags_t &flags,
-				const cdap_rib::filt_info_t &filt){ return 0;};
+				const cdap_rib::filt_info_t &filt,
+				const int invoke_id) {return 0;};
 
 	//local
 	virtual void send_open_connection_result(const cdap_rib::con_handle_t &con,
-					      const cdap_rib::res_info_t &res,
-					      int invoke_id){};
+					         const cdap_rib::res_info_t &res,
+					         int invoke_id){};
 	virtual void send_close_connection_result(unsigned int port,
-					       const cdap_rib::flags_t &flags,
-					       const cdap_rib::res_info_t &res,
-					       int invoke_id){};
-	virtual void send_create_result(unsigned int port,
-					    const cdap_rib::obj_info_t &obj,
-					    const cdap_rib::flags_t &flags,
-					    const cdap_rib::res_info_t &res,
-					    int invoke_id){};
-	virtual void send_delete_result(unsigned int port,
-					    const cdap_rib::obj_info_t &obj,
-					    const cdap_rib::flags_t &flags,
-					    const cdap_rib::res_info_t &res,
-					    int invoke_id){};
-	virtual void send_read_result(unsigned int port,
-					  const cdap_rib::obj_info_t &obj,
-					  const cdap_rib::flags_t &flags,
-					  const cdap_rib::res_info_t &res,
-					  int invoke_id){
+					          const cdap_rib::flags_t &flags,
+					          const cdap_rib::res_info_t &res,
+					          int invoke_id){};
+	virtual void send_create_result(const cdap_rib::con_handle_t& con,
+					const cdap_rib::obj_info_t &obj,
+					const cdap_rib::flags_t &flags,
+					const cdap_rib::res_info_t &res,
+					int invoke_id) {};
+	virtual void send_delete_result(const cdap_rib::con_handle_t& con,
+					const cdap_rib::obj_info_t &obj,
+					const cdap_rib::flags_t &flags,
+					const cdap_rib::res_info_t &res,
+					int invoke_id) {};
+	virtual void send_read_result(const cdap_rib::con_handle_t& con,
+				      const cdap_rib::obj_info_t &obj,
+				      const cdap_rib::flags_t &flags,
+				      const cdap_rib::res_info_t &res,
+				      int invoke_id){
 
 		switch(invoke_id){
 			case 4:
-				CPPUNIT_ASSERT_MESSAGE("READ result for invoke id 4 != SUCCESS", res.code_ == cdap_rib::CDAP_SUCCESS);
+				CPPUNIT_ASSERT_MESSAGE("READ result for invoke id 4 != SUCCESS",
+						       res.code_ == cdap_rib::CDAP_SUCCESS);
 				break;
 
 			default:
@@ -239,17 +248,19 @@ public:
 		}
 
 	};
-	virtual void send_cancel_read_result(
-			unsigned int port, const cdap_rib::flags_t &flags,
-			const cdap_rib::res_info_t &res, int invoke_id){};
-	virtual void send_write_result(unsigned int port,
-					   const cdap_rib::flags_t &flags,
-					   const cdap_rib::res_info_t &res,
-					   int invoke_id){
+	virtual void send_cancel_read_result(const cdap_rib::con_handle_t& con,
+					     const cdap_rib::flags_t &flags,
+					     const cdap_rib::res_info_t &res,
+					     int invoke_id) {};
+	virtual void send_write_result(const cdap_rib::con_handle_t& con,
+				       const cdap_rib::flags_t &flags,
+				       const cdap_rib::res_info_t &res,
+				       int invoke_id) {
 		switch(invoke_id){
 			case 2:
 			case 3:
-				CPPUNIT_ASSERT_MESSAGE("WRITE result for invoke id != OPERATION NOT SUPPORTED", res.code_ == cdap_rib::CDAP_OP_NOT_SUPPORTED);
+				CPPUNIT_ASSERT_MESSAGE("WRITE result for invoke id != OPERATION NOT SUPPORTED",
+						       res.code_ == cdap_rib::CDAP_OP_NOT_SUPPORTED);
 				break;
 			default:
 				CPPUNIT_ASSERT_MESSAGE("WRITE result for an invalid invoke id", 0);
@@ -257,19 +268,24 @@ public:
 		}
 
 	};
-	virtual void send_start_result(unsigned int port,
-					   const cdap_rib::obj_info_t &obj,
-					   const cdap_rib::flags_t &flags,
-					   const cdap_rib::res_info_t &res,
-					   int invoke_id){};
-	virtual void send_stop_result(unsigned int port,
-					  const cdap_rib::flags_t &flags,
-					  const cdap_rib::res_info_t &res,
-					  int invoke_id){};
-	virtual void process_message(cdap_rib::ser_obj_t &message,
-				     unsigned int port){};
+	virtual void send_start_result(const cdap_rib::con_handle_t& con,
+				       const cdap_rib::obj_info_t &obj,
+				       const cdap_rib::flags_t &flags,
+				       const cdap_rib::res_info_t &res,
+				       int invoke_id) {};
+	virtual void send_stop_result(const cdap_rib::con_handle_t& con,
+				      const cdap_rib::flags_t &flags,
+				      const cdap_rib::res_info_t &res,
+				      int invoke_id) {};
+	virtual void process_message(const ser_obj_t &message,
+				     unsigned int port,
+				     cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT) {};
 
 	virtual void destroy_session(int port){ (void)port; /*FIXME*/ };
+
+	virtual void set_cdap_io_handler(CDAPIOHandler * handler) {};
+
+	virtual cdap::CDAPSessionManagerInterface * get_session_manager() {return 0;};
 };
 
 static CDAPProviderMockup cdap_provider_mockup;
@@ -287,7 +303,7 @@ public:
 					const std::string& class_,
 					const cdap_rib::filt_info_t &filt,
 					const int invoke_id,
-					cdap_rib::ser_obj_t &obj_reply,
+					ser_obj_t &obj_reply,
 					cdap_rib::res_info_t& res){
 
 
@@ -322,7 +338,7 @@ public:
 					const std::string& class_,
 					const cdap_rib::filt_info_t &filt,
 					const int invoke_id,
-					cdap_rib::ser_obj_t &obj_reply,
+					ser_obj_t &obj_reply,
 					cdap_rib::res_info_t& res){
 	};
 	static const std::string class_;
@@ -348,8 +364,8 @@ public:
 				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
-				const cdap_rib::ser_obj_t &obj_req,
-				cdap_rib::ser_obj_t &obj_reply,
+				const ser_obj_t &obj_req,
+				ser_obj_t &obj_reply,
 				cdap_rib::res_info_t& res){
 
 		fprintf(stderr, "Got a START operation for path: '%s'\n", fqn.c_str());
@@ -381,8 +397,8 @@ void create_callback_1(const rib_handle_t rib,
 				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
-				const cdap_rib::ser_obj_t &obj_req,
-				cdap_rib::ser_obj_t &obj_reply,
+				const ser_obj_t &obj_req,
+				ser_obj_t &obj_reply,
 				cdap_rib::res_info_t& res){
 	CPPUNIT_ASSERT_MESSAGE("Invalid invoke id during create generic", invoke_id==7);
 	res.code_ = cdap_rib::CDAP_SUCCESS;
@@ -395,8 +411,8 @@ void create_callback_2(const rib_handle_t rib,
 				const std::string& class_,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
-				const cdap_rib::ser_obj_t &obj_req,
-				cdap_rib::ser_obj_t &obj_reply,
+				const ser_obj_t &obj_req,
+				ser_obj_t &obj_reply,
 				cdap_rib::res_info_t& res){
 	CPPUNIT_ASSERT_MESSAGE("Invalid invoke id during create specific", invoke_id==6);
 	res.code_ = cdap_rib::CDAP_SUCCESS;
@@ -442,7 +458,7 @@ void ribBasicOps::testInit(){
 
 	CPPUNIT_ASSERT_MESSAGE("Invalid ribdproxy before init", ribd == NULL);
 
-	rina::rib::init(&app_handlers, &remote_handlers, params);
+	rina::rib::init(&app_handlers, params);
 
 	//Mockups
 	rina::rib::__set_cdap_provider(&cdap_provider_mockup);
@@ -452,7 +468,7 @@ void ribBasicOps::testInit(){
 
 	//Double call to init should throw an exception
 	try{
-		rina::rib::init(&app_handlers, &remote_handlers, params);
+		rina::rib::init(&app_handlers, params);
 		CPPUNIT_ASSERT_MESSAGE("Double call to init did not throw an exception", 0);
 	}catch(...){}
 
@@ -889,34 +905,40 @@ cdap_rib::flags_t flags_ok;
 void ribBasicOps::testConnect(){
 
 	//Fill in the necessary stuff (only)
-	con_ok.port_ = 0x1;
+	con_ok.port_id = 0x1;
 	con_ok.dest_.ae_name_ = ae;
 	con_ok.version_ = version;
 
 	//Fill in the necessary
-	con_ko.port_ = 0x1;
+	con_ko.port_id = 0x1;
 	con_ko.dest_.ae_name_ = "invalid_ae";
 	con_ko.version_ = version;
 
+	cdap::CDAPMessage message;
+	message.version_ = 0x01;
+
 	//Invalid AE name
 	try{
-		rib_provider->open_connection(con_ko, flags_ok, 0x1);
+		rib_provider->open_connection(con_ko, message);
 		CPPUNIT_ASSERT_MESSAGE("Connection with an invalid AE name has succeeded", 0);
 	}catch(eRIBNotFound&){
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Invalid exception thrown during open_connection", 0);
 	}
 
+	message.version_ = 0x02;
+
 	//Fake stablishment of a connection
 	try{
-		rib_provider->open_connection(con_ok, flags_ok, 0x2);
+		rib_provider->open_connection(con_ok, message);
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during open_connection", 0);
 	}
 
+	message.version_ = 0x03;
 	//Retry; this should succeed (overwrite)
 	try{
-		rib_provider->open_connection(con_ok, flags_ok, 0x3);
+		rib_provider->open_connection(con_ok, message);
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during open_connection (retry)", 0);
 	}
@@ -928,15 +950,15 @@ void ribBasicOps::testOperations(){
 
 	obj_info_t obj_info1;
 	cdap_rib::filt_info_t filter;
-	int* message;
+	char* message;
 	int invoke_id;
 
 	//Use FQN first
 	obj_info1.inst_ = -1;
 	obj_info1.name_ = "/x/y/z/invalid";
-	obj_info1.value_.size_ = sizeof(int);
-	obj_info1.value_.message_ = new int;
-	message = (int*)obj_info1.value_.message_;
+	obj_info1.value_.size_ = sizeof(char[1]);
+	obj_info1.value_.message_ = new char[1];
+	message = (char*)obj_info1.value_.message_;
 
 	//Issue a request with an invalid con id
 	invoke_id = 1;

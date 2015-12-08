@@ -129,7 +129,8 @@ void Client::createFlow()
 void Client::cacep()
 {
         char buffer[max_buffer_size];
-        cdap::init(this, false);
+        rina::cdap_rib::concrete_syntax_t syntax;
+        cdap::init(this, syntax, false);
         cdap_prov_ = cdap::getProvider();
         cdap_rib::vers_info_t ver;
         ver.version_ = 1;
@@ -165,7 +166,7 @@ void Client::cacep()
         	}
         }
 
-        cdap_rib::ser_obj_t message;
+        ser_obj_t message;
         message.message_ = buffer;
         message.size_ = bytes_read;
         cdap_prov_->process_message(message, flow_.portId);
@@ -220,7 +221,7 @@ void Client::sendReadRMessage()
                         cdap_rib::filt_info_t filt;
                         filt.filter_ = 0;
                         filt.scope_ = 0;
-                        cdap_prov_->remote_read(con_.port_, obj, flags, filt);
+                        cdap_prov_->remote_read(con_, obj, flags, filt, 35);
                         std::cout << "read request CDAP message sent"
                                   << std::endl;
 
@@ -238,7 +239,7 @@ void Client::sendReadRMessage()
                         		break;
                         	}
                         }
-                        cdap_rib::ser_obj_t message;
+                        ser_obj_t message;
                         message.message_ = buffer;
                         message.size_ = bytes_read;
                         cdap_prov_->process_message(message,flow_.portId);
@@ -254,7 +255,7 @@ void Client::release()
         char buffer[max_buffer_size];
         std::cout << "release request CDAP message sent" << std::endl;
         int bytes_read = 0;
-        cdap_prov_->remote_close_connection(con_.port_);
+        cdap_prov_->remote_close_connection(con_.port_id);
         std::cout << "Waiting for release response" << std::endl;
 
         while(true) {
@@ -271,7 +272,7 @@ void Client::release()
         	}
         }
 
-        cdap_rib::ser_obj_t message;
+        ser_obj_t message;
         message.message_ = buffer;
         message.size_ = bytes_read;
         cdap_prov_->process_message(message, flow_.portId);

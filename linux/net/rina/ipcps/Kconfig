@@ -7,7 +7,6 @@
 config RINA_NORMAL_IPCP
 	tristate "Normal IPC Process"
 	default y
-        depends on RINA_PERSONALITY_DEFAULT
 	help
 	  No help for the time being
 
@@ -31,8 +30,7 @@ endif
 config RINA_SHIM_ETH_VLAN
 	tristate "Shim IPC over Ethernet (using VLANs) support"
 	default m
-#        depends on RINA_PERSONALITY_DEFAULT && RINARP && VLAN_8021Q
-        depends on RINA_PERSONALITY_DEFAULT && RINARP
+        depends on RINARP
 	help
 	  No help for the time being
 
@@ -60,7 +58,6 @@ config RINA_SHIM_ETH_VLAN_REGRESSION_TESTS
 config RINA_SHIM_TCP_UDP
 	tristate "Shim IPC over TCP/UDP support"
 	default m
-        depends on RINA_PERSONALITY_DEFAULT
 	help
 	  No help for the time being
 
@@ -75,8 +72,7 @@ config RINA_SHIM_TCP_UDP_BUFFER_SIZE
 config RINA_SHIM_HV
 	tristate "Shim IPC for Hypervisors"
 	default m
-        depends on RINA_PERSONALITY_DEFAULT && \
-                   (VMPI_KVM_GUEST || VMPI_KVM_HOST || \
-                    VMPI_XEN_GUEST || VMPI_XEN_HOST)
+        depends on (VMPI_KVM_GUEST || VMPI_KVM_HOST || \
+                   VMPI_XEN_GUEST || VMPI_XEN_HOST)
 	help
 	  No help for the time being

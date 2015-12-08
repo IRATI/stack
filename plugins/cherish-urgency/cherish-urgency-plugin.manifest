@@ -1,0 +1,11 @@
+{
+        "PluginName": "cherish-urgency-plugin",
+        "PluginVersion": "1",
+        "PolicySets" : [
+                {
+                        "Name": "cher-urg-ps",
+                        "Component": "rmt",
+                        "Version" : "1"
+                }
+        ]
+}
