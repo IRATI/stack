@@ -63,7 +63,7 @@ void Client::run()
 {
         keep_running_ = true;
         if (client_app_reg) {
-                applicationRegister(false);
+                applicationRegister();
         }
         createFlow();
         if (flow_.portId >= 0) {
@@ -81,7 +81,6 @@ void Client::createFlow()
         IPCEvent* event;
         uint seqnum;
 
-        qosspec.blocking = false;
         if (gap >= 0)
                 qosspec.maxAllowableGap = gap;
 
@@ -122,6 +121,7 @@ void Client::createFlow()
         if (flow_.portId < 0) {
                 LOG_ERR("Failed to allocate a flow");
         } else {
+		ipcManager->setFlowOptsBlocking(flow_.portId, false);
                 LOG_DBG("[DEBUG] Port id = %d", flow_.portId);
         }
 }
@@ -129,18 +129,18 @@ void Client::createFlow()
 void Client::cacep()
 {
         char buffer[max_buffer_size];
-        cdap::CDAPProviderFactory::init(2000);
-        cdap_prov_ = cdap::CDAPProviderFactory::create(false, this);
+        cdap::init(this, false);
+        cdap_prov_ = cdap::getProvider();
         cdap_rib::vers_info_t ver;
         ver.version_ = 1;
-        cdap_rib::src_info_t src;
+        cdap_rib::ep_info_t src;
         int bytes_read = 0;
 
         src.ap_name_ = flow_.localAppName.processName;
         src.ae_name_ = flow_.localAppName.entityName;
         src.ap_inst_ = flow_.localAppName.processInstance;
         src.ae_inst_ = flow_.localAppName.entityInstance;
-        cdap_rib::dest_info_t dest;
+        cdap_rib::ep_info_t dest;
         dest.ap_name_ = flow_.remoteAppName.processName;
         dest.ae_name_ = flow_.remoteAppName.entityName;
         dest.ap_inst_ = flow_.remoteAppName.processInstance;
@@ -149,7 +149,7 @@ void Client::cacep()
         auth.name = rina::IAuthPolicySet::AUTH_NONE;
 
         std::cout << "open conection request CDAP message sent" << std::endl;
-        con_ = cdap_prov_->open_connection(ver, src, dest, auth,
+        con_ = cdap_prov_->remote_open_connection(ver, src, dest, auth,
                                            flow_.portId);
         while (true) {
         	try {
@@ -165,7 +165,7 @@ void Client::cacep()
         	}
         }
 
-        cdap_rib::SerializedObject message;
+        cdap_rib::ser_obj_t message;
         message.message_ = buffer;
         message.size_ = bytes_read;
         cdap_prov_->process_message(message, flow_.portId);
@@ -238,7 +238,7 @@ void Client::sendReadRMessage()
                         		break;
                         	}
                         }
-                        cdap_rib::SerializedObject message;
+                        cdap_rib::ser_obj_t message;
                         message.message_ = buffer;
                         message.size_ = bytes_read;
                         cdap_prov_->process_message(message,flow_.portId);
@@ -254,7 +254,7 @@ void Client::release()
         char buffer[max_buffer_size];
         std::cout << "release request CDAP message sent" << std::endl;
         int bytes_read = 0;
-        cdap_prov_->close_connection(con_.port_);
+        cdap_prov_->remote_close_connection(con_.port_);
         std::cout << "Waiting for release response" << std::endl;
 
         while(true) {
@@ -271,7 +271,7 @@ void Client::release()
         	}
         }
 
-        cdap_rib::SerializedObject message;
+        cdap_rib::ser_obj_t message;
         message.message_ = buffer;
         message.size_ = bytes_read;
         cdap_prov_->process_message(message, flow_.portId);
@@ -283,7 +283,7 @@ void Client::destroyFlow()
         DeallocateFlowResponseEvent *resp = 0;
         unsigned int seqnum;
         IPCEvent* event;
-        cdap::CDAPProviderFactory::destroy(flow_.portId);
+        cdap::destroy(flow_.portId);
         seqnum = ipcManager->requestFlowDeallocation(flow_.portId);
 
         for (;;) {
@@ -298,5 +298,4 @@ void Client::destroyFlow()
         assert(resp);
 
         ipcManager->flowDeallocationResult(flow_.portId, resp->result == 0);
-        cdap::CDAPProviderFactory::finit();
 }

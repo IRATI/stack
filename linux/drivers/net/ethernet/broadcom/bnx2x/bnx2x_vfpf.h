@@ -12,8 +12,8 @@
  * license other than the GPL, without Broadcom's express prior written
  * consent.
  *
- * Maintained by: Eilon Greenstein <eilong@broadcom.com>
- * Written by: Ariel Elior <ariele@broadcom.com>
+ * Maintained by: Ariel Elior <ariel.elior@qlogic.com>
+ * Written by: Ariel Elior <ariel.elior@qlogic.com>
  */
 #ifndef VF_PF_IF_H
 #define VF_PF_IF_H
@@ -65,6 +65,7 @@ struct hw_sb_info {
 #define VFPF_RX_MASK_ACCEPT_ALL_MULTICAST	0x00000008
 #define VFPF_RX_MASK_ACCEPT_BROADCAST		0x00000010
 #define BULLETIN_CONTENT_SIZE		(sizeof(struct pf_vf_bulletin_content))
+#define BULLETIN_CONTENT_LEGACY_SIZE	(32)
 #define BULLETIN_ATTEMPTS	5 /* crc failures before throwing towel */
 #define BULLETIN_CRC_SEED	0
 
@@ -117,7 +118,15 @@ struct vfpf_acquire_tlv {
 		/* the following fields are for debug purposes */
 		u8  vf_id;		/* ME register value */
 		u8  vf_os;		/* e.g. Linux, W2K8 */
-		u8 padding[2];
+#define VF_OS_SUBVERSION_MASK	(0x1f)
+#define VF_OS_MASK		(0xe0)
+#define VF_OS_SHIFT		(5)
+#define VF_OS_UNDEFINED		(0 << VF_OS_SHIFT)
+#define VF_OS_WINDOWS		(1 << VF_OS_SHIFT)
+
+		u8 fp_hsi_ver;
+		u8 caps;
+#define VF_CAP_SUPPORT_EXT_BULLETIN	(1 << 0)
 	} vfdev_info;
 
 	struct vf_pf_resc_request resc_request;
@@ -193,6 +202,12 @@ struct vfpf_port_phys_id_resp_tlv {
 	struct channel_tlv tl;
 	u8 id[ETH_ALEN];
 	u8 padding[2];
+};
+
+struct vfpf_fp_hsi_resp_tlv {
+	struct channel_tlv tl;
+	u8 is_supported;
+	u8 padding[3];
 };
 
 #define VFPF_INIT_FLG_STATS_COALESCE	(1 << 0) /* when set the VFs queues
@@ -393,11 +408,23 @@ struct pf_vf_bulletin_content {
 					 * to attempt to send messages on the
 					 * channel after this bit is set
 					 */
+#define LINK_VALID		3	/* alert the VF thet a new link status
+					 * update is available for it
+					 */
 	u8 mac[ETH_ALEN];
 	u8 mac_padding[2];
 
 	u16 vlan;
 	u8 vlan_padding[6];
+
+	u16 link_speed;			 /* Effective line speed */
+	u8 link_speed_padding[6];
+	u32 link_flags;			 /* VFPF_LINK_REPORT_XXX flags */
+#define VFPF_LINK_REPORT_LINK_DOWN	 (1 << 0)
+#define VFPF_LINK_REPORT_FULL_DUPLEX	 (1 << 1)
+#define VFPF_LINK_REPORT_RX_FC_ON	 (1 << 2)
+#define VFPF_LINK_REPORT_TX_FC_ON	 (1 << 3)
+	u8 link_flags_padding[4];
 };
 
 union pf_vf_bulletin {
@@ -427,6 +454,7 @@ enum channel_tlvs {
 	CHANNEL_TLV_UPDATE_RSS,
 	CHANNEL_TLV_PHYS_PORT_ID,
 	CHANNEL_TLV_UPDATE_TPA,
+	CHANNEL_TLV_FP_HSI_SUPPORT,
 	CHANNEL_TLV_MAX
 };
 

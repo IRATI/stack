@@ -55,3 +55,13 @@ EXPORT_SYMBOL(is_address_ok);
 address_t address_bad(void)
 { return ADDRESS_WRONG; }
 EXPORT_SYMBOL(address_bad);
+
+#define QOS_ID_WRONG -1
+
+qos_id_t qos_id_bad(void)
+{ return QOS_ID_WRONG; }
+EXPORT_SYMBOL(qos_id_bad);
+
+bool is_qos_id_ok(qos_id_t id)
+{ return id != QOS_ID_WRONG ? true : false; }
+EXPORT_SYMBOL(is_qos_id_ok);

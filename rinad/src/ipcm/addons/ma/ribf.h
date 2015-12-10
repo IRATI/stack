@@ -51,6 +51,9 @@ DECLARE_EXCEPTION_SUBCLASS(eDuplicatedRIB);
  */
 DECLARE_EXCEPTION_SUBCLASS(eRIBNotFound);
 
+// Helper type
+typedef std::map<uint64_t, std::list<std::string> > RIBAEassoc;
+
 /**
  * @brief RIB manager
  */
@@ -58,45 +61,82 @@ class RIBFactory{
 
 public:
 	//Constructors
-	RIBFactory(std::list<uint64_t> supported_versions);
+	RIBFactory(RIBAEassoc ver_assoc);
 	virtual ~RIBFactory(void) throw();
 
-	/**
-	 * Get a reference to a RIB
-	 * @throws eRIBNotFound
-	 */
-	rina::rib::RIBDNorthInterface& getRIB(uint64_t version);
-
-#if 0
-	//TODO: if ever necessary
 
 	/**
-	 * @brief Destroy a RIB instance
-	 *
-	 * This call will stop all communications that are using this RIB
-	 * instance
-	 */
-	void destroyRIB(uint64_t version);
-#endif
+	* Get the RIB provider proxy
+	*/
+	static inline rina::rib::RIBDaemonProxy* getProxy(){
+		if(!ribd)
+			ribd = rina::rib::RIBDaemonProxyFactory();
+		return ribd;
+	}
+
+	/**
+	* Get the handle of the specific RIB and AE name associated
+	*/
+	static rina::rib::rib_handle_t getRIBHandle(
+						const uint64_t& version,
+						const std::string& AEname);
+
+	//Process IPCP create event to all RIB versions
+	void createIPCPevent(int ipcp_id);
+
+	//Process IPCP create event to all RIB versions
+	void destroyIPCPevent(int ipcp_id);
+
 
 protected:
-	/**
-	 * Create a RIB instance
-	 * @throwseDuplicatedRIB
-	 */
-	void createRIB(uint64_t version);
-
 	//Mutex
 	rina::Lockable mutex;
 
-	//Map with the current RIB instances
-	std::map<uint64_t, rina::rib::RIBDNorthInterface*> rib_inst_;
-	rina::rib::RIBDFactory factory_;
+	//Map handle <-> version
+	std::map<rina::rib::rib_handle_t, uint64_t> ribs;
 
-	/*
-	 * Internal methods
-	 */
-	//TODO
+	//RIBProxy instance
+	static rina::rib::RIBDaemonProxy* ribd;
+};
+
+//
+// Empty callbacks
+//
+
+class RIBRespHandler : public rina::rib::RIBOpsRespHandlers {
+public:
+	~RIBRespHandler(){};
+
+	void remoteCreateResult(const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::obj_info_t &obj,
+			const rina::cdap_rib::res_info_t &res);
+	void remoteDeleteResult(const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::res_info_t &res);
+	void remoteReadResult(const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::obj_info_t &obj,
+			const rina::cdap_rib::res_info_t &res);
+	void remoteCancelReadResult(const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::res_info_t &res);
+	void remoteWriteResult(const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::obj_info_t &obj,
+			const rina::cdap_rib::res_info_t &res);
+	void remoteStartResult(const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::obj_info_t &obj,
+			const rina::cdap_rib::res_info_t &res);
+	void remoteStopResult(const rina::cdap_rib::con_handle_t &con,
+			const rina::cdap_rib::obj_info_t &obj,
+			const rina::cdap_rib::res_info_t &res);
+};
+
+class RIBConHandler : public rina::cacep::AppConHandlerInterface {
+
+public:
+	void connect(int message_id, const rina::cdap_rib::con_handle_t &con);
+	void connectResult(const rina::cdap_rib::res_info_t &res,
+				const rina::cdap_rib::con_handle_t &con);
+	void release(int message_id, const rina::cdap_rib::con_handle_t &con);
+	void releaseResult(const rina::cdap_rib::res_info_t &res,
+				const rina::cdap_rib::con_handle_t &con);
 };
 
 }; //namespace mad

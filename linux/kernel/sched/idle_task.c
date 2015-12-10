@@ -20,7 +20,7 @@ select_task_rq_idle(struct task_struct *p, int cpu, int sd_flag, int flags)
  */
 static void check_preempt_curr_idle(struct rq *rq, struct task_struct *p, int flags)
 {
-	resched_task(rq->idle);
+	resched_curr(rq);
 }
 
 static struct task_struct *
@@ -75,6 +75,10 @@ static unsigned int get_rr_interval_idle(struct rq *rq, struct task_struct *task
 	return 0;
 }
 
+static void update_curr_idle(struct rq *rq)
+{
+}
+
 /*
  * Simple, special scheduling class for the per-CPU idle tasks:
  */
@@ -101,4 +105,5 @@ const struct sched_class idle_sched_class = {
 
 	.prio_changed		= prio_changed_idle,
 	.switched_to		= switched_to_idle,
+	.update_curr		= update_curr_idle,
 };

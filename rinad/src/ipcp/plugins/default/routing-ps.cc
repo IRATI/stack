@@ -352,8 +352,6 @@ std::list<rina::RoutingTableEntry *> DijkstraAlgorithm::computeRoutingTable(
 	unsigned int nextHop;
 	rina::RoutingTableEntry * entry;
 
-	(void)fsoList; // avoid compiler barfs
-
 	execute(graph, source_address);
 
 	for (it = graph.vertices_.begin(); it != graph.vertices_.end(); ++it) {
@@ -362,8 +360,8 @@ std::list<rina::RoutingTableEntry *> DijkstraAlgorithm::computeRoutingTable(
 			if (nextHop != 0) {
 				entry = new rina::RoutingTableEntry();
 				entry->address = (*it);
-				entry->nextHopAddresses.push_back(nextHop);
-				entry->qosId = 1;
+				entry->nextHopAddresses.push_back(rina::NHopAltList(nextHop));
+				entry->qosId = 0;
 				entry->cost = 1;
 				result.push_back(entry);
 				LOG_IPCP_DBG("Added entry to routing table: destination %u, next-hop %u",
@@ -751,6 +749,7 @@ void LoopFreeAlternateAlgorithm::extendRoutingTableEntry(
 	std::list<rina::RoutingTableEntry *>::iterator rit;
 	bool found = false;
 
+	// Find the involved routing table entry
 	for (rit = rt.begin(); rit != rt.end(); rit++) {
 		if ((*rit)->address == target_address) {
 			break;
@@ -767,11 +766,11 @@ void LoopFreeAlternateAlgorithm::extendRoutingTableEntry(
 	// with the new alternative 'nexthop'
 	rina::NHopAltList& altlist = (*rit)->nextHopAddresses.front();
 
-	//Find the involved routing table entry, try to extend it
 	for (std::list<unsigned int>::iterator
 			hit = altlist.alts.begin();
 				hit != altlist.alts.end(); hit++) {
 		if (*hit == nexthop) {
+			// The nexthop is already in the alternatives
 			found = true;
 			break;
 		}
@@ -805,14 +804,14 @@ void LoopFreeAlternateAlgorithm::fortifyRoutingTable(const Graph& graph,
 		}
 	}
 
-	// For each node other than than the source node and its neighbors
+	// For each node X other than than the source node
 	for (std::list<unsigned int>::const_iterator it = graph.vertices_.begin();
 						it != graph.vertices_.end(); ++it) {
-		if ((*it) == source_address || neighbors_dist_trees.count(*it)) {
+		if ((*it) == source_address) {
 			continue;
 		}
 
-		// For each neighbor of the source node
+		// For each neighbor of the source node, excluding X
 		for (std::map<unsigned int, std::map<unsigned int, int> >::iterator
 			nit = neighbors_dist_trees.begin();
 				nit != neighbors_dist_trees.end(); nit++) {
@@ -821,6 +820,10 @@ void LoopFreeAlternateAlgorithm::fortifyRoutingTable(const Graph& graph,
 			// into account
 			std::map< unsigned int, int>& neigh_dist_map = nit->second;
 			unsigned int neigh = nit->first;
+
+			if (neigh == *it) {
+				continue;
+			}
 
 			// dist(neigh, target) < dist(neigh, source) + dist(source, target)
 			if (neigh_dist_map[*it] < src_dist_tree[neigh] + src_dist_tree[*it]) {
@@ -1741,5 +1744,3 @@ void* FlowStateObjectListEncoder::decode(
 }
 
 }
-
-

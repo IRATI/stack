@@ -27,3 +27,6 @@ stats librina librina/include librina/src
 stats rinad rinad/src
 stats rina-tools rina-tools/src
 stats total linux/net/rina librina/include librina/src rinad/src rina-tools/src
+
+echo -e "\nCode editing statistics between IRATI 1.0.0 and current pristine development branch"
+git diff --stat v1.0.0 pristine-1.3 librina/ rinad/ rina-tools/src/ linux/ plugins/ | tail -n 1

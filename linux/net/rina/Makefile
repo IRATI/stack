@@ -11,8 +11,8 @@ obj-$(CONFIG_RINA) +=				\
 	rds/					\
 	core.o personality.o			\
 	rnl-utils.o rnl-workarounds.o rnl.o	\
-	buffer.o qos.o pci.o pdu.o sdu.o du.o	\
-	serdes.o pdu-ser.o du-protection.o	\
+	buffer.o pci.o pdu.o sdu.o du.o	        \
+	serdes.o pdu-ser.o			\
 	ipcp-utils.o				\
 	connection.o common.o policies.o	\
 	dtp-conf-utils.o dtcp-conf-utils.o      \
@@ -29,7 +29,15 @@ rina-personality-default-y :=					\
 	pff.o rmt.o						\
 	pim.o pidm.o kfa-utils.o kfa.o				\
 	kipcm-utils.o kipcm.o					\
-	default.o ps-factory.o
+	sdup.o							\
+	default.o ps-factory.o					\
+	rmt-ps-default.o					\
+	dtp-ps-default.o					\
+	dtcp-ps-default.o                       		\
+	pff-ps-default.o					\
+	sdup-crypto-ps-default.o				\
+	sdup-errc-ps-default.o					\
+	sdup-ttl-ps-default.o				
 
 ifeq  ($(CONFIG_RINA_PERSONALITY_DEFAULT),m)
 rina-personality-default-y +=			\
@@ -40,14 +48,7 @@ obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
 	rina-default-plugin.o
 
 rina-default-plugin-y :=			\
-	default-plugin.o			\
-	rmt-ps-common.o				\
-	rmt-ps-default.o			\
-	dtp-ps-common.o				\
-	dtp-ps-default.o			\
-	dtcp-ps-common.o 		        \
-	dtcp-ps-default.o                       \
-	pff-ps-default.o
+	default-plugin.o
 
 obj-$(CONFIG_VMPI) += vmpi/
 obj-$(CONFIG_RINA) += ipcps/

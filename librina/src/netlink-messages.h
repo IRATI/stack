@@ -8,12 +8,12 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -72,8 +72,8 @@ enum RINANetlinkOperationCode{
         RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE, /* 38, IPC Process -> IPC Manager */
         RINA_C_IPCM_SELECT_POLICY_SET_REQUEST, /* 39, IPC Manager -> IPC Process */
         RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE, /* 40, IPC Process -> IPC Manager */
-        RINA_C_IPCP_ENABLE_ENCRYPTION_REQUEST, /* 41, IPC Process (user space) -> IPC Process (kernel) */
-        RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE, /* 42, IPC Process (kernel) -> IPC Process (user space) */
+        RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST, /* 41, IPC Process (user space) -> IPC Process (kernel) */
+        RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE, /* 42, IPC Process (kernel) -> IPC Process (user space) */
 
         /* Userspace only messages MUST be after all the messages that are also
          * handled by the kernel. */
@@ -310,7 +310,6 @@ class AppAllocateFlowResponseMessage: public BaseNetlinkResponseMessage {
 	 * wants the IPC Process to reply to the source or not
 	 */
 	bool notifySource;
-
 public:
 	AppAllocateFlowResponseMessage();
 	bool isNotifySource() const;
@@ -585,9 +584,6 @@ public:
 
 	/** The DIF name where the application wants to register */
 	ApplicationProcessNamingInformation difName;
-
-	/** If the flows allocated to the registered app will be blocking or not*/
-	bool blocking;
 
 	IpcmRegisterApplicationRequestMessage();
 	const ApplicationProcessNamingInformation& getApplicationName() const;
@@ -1167,7 +1163,7 @@ public:
  * connection to the EFCP module in the kernel.
  */
 class IpcpConnectionCreateRequestMessage: public BaseNetlinkMessage {
-        
+
         /** Contains the data of the connection to be created */
         Connection connection;
 
@@ -1396,17 +1392,17 @@ public:
         IPCEvent* toIPCEvent();
 };
 
-class IPCPEnableEncryptionRequestMessage : public BaseNetlinkMessage {
+class IPCPUpdateCryptoStateRequestMessage : public BaseNetlinkMessage {
 public:
-	IPCPEnableEncryptionRequestMessage();
+	IPCPUpdateCryptoStateRequestMessage();
 	IPCEvent* toIPCEvent();
 
-	EncryptionProfile profile;
+	CryptoState state;
 };
 
-class IPCPEnableEncryptionResponseMessage: public BaseNetlinkResponseMessage {
+class IPCPUpdateCryptoStateResponseMessage: public BaseNetlinkResponseMessage {
 public:
-	IPCPEnableEncryptionResponseMessage();
+	IPCPUpdateCryptoStateResponseMessage();
 	IPCEvent* toIPCEvent();
 
 	int port_id;

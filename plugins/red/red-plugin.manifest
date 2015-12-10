@@ -1,0 +1,16 @@
+{
+        "PluginName": "red-plugin",
+        "PluginVersion": "1",
+        "PolicySets" : [
+                {
+                        "Name": "red-ps",
+                        "Component": "rmt",
+                        "Version" : "1"
+                },
+                {
+                        "Name": "red-ps",
+                        "Component": "dtcp",
+                        "Version" : "1"
+                }
+        ]
+}

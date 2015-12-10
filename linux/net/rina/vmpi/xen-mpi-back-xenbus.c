@@ -430,16 +430,17 @@ static int connect_rings(struct backend_info *be)
 
 
 static const struct xenbus_device_id mpiback_ids[] = {
-	{ "vmpi" },
+	{ "mpi" },
 	{ "" }
 };
 
 
-static DEFINE_XENBUS_DRIVER(mpiback, ,
+static struct xenbus_driver mpiback_driver = {
+        .ids = mpiback_ids,
 	.probe = mpiback_probe,
 	.remove = mpiback_remove,
 	.otherend_changed = frontend_changed,
-);
+};
 
 int xenmpi_xenbus_init(void)
 {

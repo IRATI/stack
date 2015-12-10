@@ -446,9 +446,9 @@ static void setup_i2c_controller(struct nmk_i2c_dev *dev)
  */
 static int read_i2c(struct nmk_i2c_dev *dev, u16 flags)
 {
-	u32 status = 0;
+	int status = 0;
 	u32 mcr, irq_mask;
-	int timeout;
+	unsigned long timeout;
 
 	mcr = load_i2c_mcr_reg(dev, flags);
 	writel(mcr, dev->virtbase + I2C_MCR);
@@ -517,7 +517,7 @@ static int write_i2c(struct nmk_i2c_dev *dev, u16 flags)
 {
 	u32 status = 0;
 	u32 mcr, irq_mask;
-	int timeout;
+	unsigned long timeout;
 
 	mcr = load_i2c_mcr_reg(dev, flags);
 
@@ -879,19 +879,19 @@ static irqreturn_t i2c_irq_handler(int irq, void *arg)
 #ifdef CONFIG_PM_SLEEP
 static int nmk_i2c_suspend_late(struct device *dev)
 {
-	pinctrl_pm_select_sleep_state(dev);
+	int ret;
 
+	ret = pm_runtime_force_suspend(dev);
+	if (ret)
+		return ret;
+
+	pinctrl_pm_select_sleep_state(dev);
 	return 0;
 }
 
 static int nmk_i2c_resume_early(struct device *dev)
 {
-	/* First go to the default state */
-	pinctrl_pm_select_default_state(dev);
-	/* Then let's idle the pins until the next transfer happens */
-	pinctrl_pm_select_idle_state(dev);
-
-	return 0;
+	return pm_runtime_force_resume(dev);
 }
 #endif
 
@@ -932,7 +932,7 @@ static int nmk_i2c_runtime_resume(struct device *dev)
 
 static const struct dev_pm_ops nmk_i2c_pm = {
 	SET_LATE_SYSTEM_SLEEP_PM_OPS(nmk_i2c_suspend_late, nmk_i2c_resume_early)
-	SET_PM_RUNTIME_PM_OPS(nmk_i2c_runtime_suspend,
+	SET_RUNTIME_PM_OPS(nmk_i2c_runtime_suspend,
 			nmk_i2c_runtime_resume,
 			NULL)
 };
@@ -1032,10 +1032,10 @@ static int nmk_i2c_probe(struct amba_device *adev, const struct amba_id *id)
 	adap = &dev->adap;
 	adap->dev.of_node = np;
 	adap->dev.parent = &adev->dev;
-	adap->owner	= THIS_MODULE;
-	adap->class	= I2C_CLASS_HWMON | I2C_CLASS_SPD | I2C_CLASS_DEPRECATED;
-	adap->algo	= &nmk_i2c_algo;
-	adap->timeout	= msecs_to_jiffies(dev->timeout);
+	adap->owner = THIS_MODULE;
+	adap->class = I2C_CLASS_DEPRECATED;
+	adap->algo = &nmk_i2c_algo;
+	adap->timeout = msecs_to_jiffies(dev->timeout);
 	snprintf(adap->name, sizeof(adap->name),
 		 "Nomadik I2C at %pR", &adev->res);
 

@@ -184,19 +184,19 @@ void ManagementAgent::process_ipcm_event(const IPCMEvent& event){
 				LOG_DBG("The IPCP '%s'(%d) has been created",
 							ipcp_name.c_str(),
 							event.ipcp_id);
-				rib_v1::createIPCPObject(get_rib()->getRIB(1), event.ipcp_id);
+				rib_factory->createIPCPevent(event.ipcp_id);
 				break;
 		case IPCM_IPCP_CRASHED:
 				LOG_DBG("IPCP '%s'(%d) has CRASHED!",
 							ipcp_name.c_str(),
 							event.ipcp_id);
-				rib_v1::destroyIPCPObject(get_rib()->getRIB(1), event.ipcp_id);
+				rib_factory->destroyIPCPevent(event.ipcp_id);
 				break;
 		case IPCM_IPCP_TO_BE_DESTROYED:
 				LOG_DBG("IPCP '%s'(%d) is about to be destroyed...",
 							ipcp_name.c_str(),
 							event.ipcp_id);
-				rib_v1::destroyIPCPObject(get_rib()->getRIB(1), event.ipcp_id);
+				rib_factory->destroyIPCPevent(event.ipcp_id);
 				break;
 		case IPCM_IPCP_UPDATED:
 				LOG_DBG("The configuration of the IPCP '%s'(%d) has been updated",
@@ -205,13 +205,6 @@ void ManagementAgent::process_ipcm_event(const IPCMEvent& event){
 				break;
 	}
 
-}
-
-
-
-RIBFactory* ManagementAgent::get_rib() const
-{
-  return rib_factory;
 }
 
 //Initialization and destruction routines
@@ -235,10 +228,14 @@ ManagementAgent::ManagementAgent(const rinad::RINAConfiguration& config) :
 	*/
 	//Create RIBs
 	//TODO charge from configuration
-	std::list<uint64_t> supported_versions;
+	RIBAEassoc assocs;
 	uint64_t v1 = 1;
-	supported_versions.push_back(v1);
-	rib_factory = new RIBFactory(supported_versions);
+	std::list<std::string> aes;
+	aes.push_back("v1");
+
+	//Add
+	assocs[v1] = aes;
+	rib_factory = new RIBFactory(assocs);
 
 	//TODO
 	//FlowManager
@@ -281,6 +278,9 @@ ManagementAgent::~ManagementAgent(){
 
 	//Conf Manager
 	delete conf_manager;
+
+	//RIB Factory
+	delete rib_factory;
 
 	LOG_INFO("Goodbye!");
 }

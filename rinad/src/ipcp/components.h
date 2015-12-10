@@ -262,8 +262,9 @@ public:
 	/// Process, it forwards the Create_Request to the IPC Process designated by the address.
 	/// @param cdapMessage
 	/// @param underlyingPortId
-	virtual void createFlowRequestMessageReceived(Flow * flow, const std::string& object_name,
-			int invoke_id) = 0;
+	virtual void createFlowRequestMessageReceived(Flow * flow,
+						      const std::string& object_name,
+						      int invoke_id) = 0;
 
 	/// Called by the flow allocator instance when it finishes to cleanup the state.
 	/// @param portId
@@ -460,14 +461,14 @@ public:
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	~IPCPSecurityManager() {};
 	rina::AuthSDUProtectionProfile get_auth_sdup_profile(const std::string& under_dif_name);
-        rina::IAuthPolicySet::AuthStatus enable_encryption(const rina::EncryptionProfile& profile,
-        						   rina::IAuthPolicySet * caller);
-        void process_enable_encryption_response(const rina::EnableEncryptionResponseEvent& event);
+        rina::IAuthPolicySet::AuthStatus update_crypto_state(const rina::CryptoState& state,
+        						     rina::IAuthPolicySet * caller);
+        void process_update_crypto_state_response(const rina::UpdateCryptoStateResponseEvent& event);
 
 private:
 	rina::SecurityManagerConfiguration config;
 	rina::Lockable lock;
-	std::map<unsigned int, rina::IAuthPolicySet *> pending_enable_encryption_requests;
+	std::map<unsigned int, rina::IAuthPolicySet *> pending_update_crypto_state_requests;
 };
 
 class IPCPRIBDaemon;

@@ -1,18 +1,18 @@
 //
 // Echo Server
-// 
+//
 // Addy Bombeke <addy.bombeke@ugent.be>
-// 
+//
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation; either version 2 of the License, or
 // (at your option) any later version.
-// 
+//
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU General Public License
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -33,7 +33,7 @@ using namespace std;
 using namespace rina;
 
 EchoTimeServerWorker::EchoTimeServerWorker(ThreadAttributes * threadAttributes,
-			   	   	   const std::string& type,
+					   const std::string& type,
 			   	   	   int port,
 			   	   	   int deallocate_wait,
 			   	   	   int inter,
@@ -54,6 +54,8 @@ int EchoTimeServerWorker::internal_run()
                 servePingFlow(port_id);
         else if (test_type == "perf")
                 servePerfFlow(port_id);
+        else if (test_type == "flood")
+                serveFloodFlow(port_id);
         else {
                 /* This should not happen. The error condition
                  * must be catched before this point. */
@@ -94,6 +96,41 @@ void EchoTimeServerWorker::servePingFlow(int port_id)
 
         if  (dw > 0 && last_task) {
         	timer.cancelTask(last_task);
+        }
+
+        delete [] buffer;
+}
+
+void EchoTimeServerWorker::serveFloodFlow(int port_id)
+{
+        char *buffer = new char[max_buffer_size];
+
+        // Setup a timer if dealloc_wait option is set */
+        if (dw > 0) {
+                last_task = new CancelFlowTimerTask(port_id, this);
+                timer.scheduleTask(last_task, dw);
+        }
+
+        try {
+                for(;;) {
+                        int bytes_read = ipcManager->readSDU(port_id,
+                                                             buffer,
+                                                             max_buffer_size);
+
+                        ipcManager->writeSDU(port_id, buffer, bytes_read);
+                        if (dw > 0 && last_task) {
+                                timer.cancelTask(last_task);
+                                last_task = new CancelFlowTimerTask(port_id, this);
+                                timer.scheduleTask(last_task, dw);
+                        }
+                }
+        } catch(rina::IPCException &e) {
+                // This thread was blocked in the readSDU() function
+                // when the flow gets deallocated
+        }
+
+        if  (dw > 0 && last_task) {
+                timer.cancelTask(last_task);
         }
 
         delete [] buffer;
@@ -208,12 +245,12 @@ EchoTimeServer::EchoTimeServer(const string& t_type,
 {
 }
 
-ServerWorker * EchoTimeServer::internal_start_worker(int port_id)
+ServerWorker * EchoTimeServer::internal_start_worker(rina::FlowInformation flow)
 {
 	ThreadAttributes threadAttributes;
         EchoTimeServerWorker * worker = new EchoTimeServerWorker(&threadAttributes,
         		    	    	         	 	 test_type,
-        		    	    	         	 	 port_id,
+        		    	    	         	 	 flow.portId,
         		    	    	         	 	 dw,
         		    	    	         	 	 interval,
         		    	    	         	 	 max_buffer_size,

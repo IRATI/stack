@@ -97,7 +97,7 @@ F: linux/net/rina/rina-default-plugin*
 
 Shim eth-vlan and RINA ARP
 M: Sander Vrijders <sander.vrijders (at) intec.ugent.be>
-F: linux/net/rina/ipcps/shim-eth-vlan*
+F: linux/net/rina/ipcps/shim-eth*
 F: linux/net/rina/rinarp/
 
 Shim tcp-udp
@@ -159,6 +159,7 @@ F: linux/net/rina/syscall*
 Dummy kernel-space plugin:
 M: Leonardo Bergesio <leonardo.bergesio (at) i2cat.net>
 F: plugins/dummy/*
+F: plugins/red/*
 
 Jain's Congestion Avoidance plugin:
 M: Leonardo Bergesio <leonardo.bergesio (at) i2cat.net>
@@ -236,7 +237,7 @@ RIB
 M: Marc Sune <marc.sune (at) bisdn.de>
 F: librina/include/librina/rib*
 F: librina/src/*rib*
-F: test/*rib*
+F: librina/test/*rib*
 
 SDK
 M: Vincenzo Maffione <v.maffione (at) nextworks.it>
@@ -252,6 +253,9 @@ F: librina/src/netlink*
 F: librina/src/rina-sys*
 F: librina/src/syscalls*
 
+C bindings
+M: Dimitri Staessens <dimitri.staessens (at) intec.ugent.be>
+F: librina/wrap/c/*
 
 RINA Daemons
 ------------
@@ -347,3 +351,9 @@ F: rina-tools/src/rina-cdap-echo/
 Test manager
 M: Bernat Gaston <bernat.gaston (at) i2cat.net>
 F: rina-tools/src/manager/
+
+
+Misc
+-------------
+M: Vincenzo Maffione <v.maffione (at) nextworks.it>
+F: misc/code-stats

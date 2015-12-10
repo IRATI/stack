@@ -476,7 +476,7 @@ static struct ib_mr *c2_reg_user_mr(struct ib_pd *pd, u64 start, u64 length,
 					 c2mr->umem->page_size,
 					 i,
 					 length,
-					 c2mr->umem->offset,
+					 ib_umem_offset(c2mr->umem),
 					 &kva,
 					 c2_convert_access(acc),
 					 c2mr);
@@ -734,7 +734,7 @@ static struct net_device *c2_pseudo_netdev_init(struct c2_dev *c2dev)
 	/* change ethxxx to iwxxx */
 	strcpy(name, "iw");
 	strcat(name, &c2dev->netdev->name[3]);
-	netdev = alloc_netdev(0, name, setup);
+	netdev = alloc_netdev(0, name, NET_NAME_UNKNOWN, setup);
 	if (!netdev) {
 		printk(KERN_ERR PFX "%s -  etherdev alloc failed",
 			__func__);

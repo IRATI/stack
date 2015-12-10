@@ -131,7 +131,10 @@ PKG_CHECK_MODULES(OPENSSL, [openssl >= $OPENSSL_MIN_VERSION],, [
 ])
 
 build_bindings=no
+build_bindings_swig=no
 build_bindings_java=no
+build_bindings_c=yes
+
 AX_SELECTOR_ENABLE([java-bindings],[
     build_bindings_java=yes
 ],[
@@ -139,9 +142,19 @@ AX_SELECTOR_ENABLE([java-bindings],[
 ])
 AS_IF([test "$build_bindings_java" = "yes"],[
     build_bindings=yes
+    build_bindings_swig=yes
 ])
+AX_SELECTOR_DISABLE([c-bindings],[
+    build_bindings_c=yes
+],[
+    build_bindings_c=no
+])
+AS_IF([test "$build_bindings_c" = "yes"],[
+    build_bindings=yes
+])
+AM_CONDITIONAL(BUILD_BINDINGS_C, [test $build_bindings_c = yes])
 
-AS_IF([test "$build_bindings" = "yes"],[
+AS_IF([test "$build_bindings_swig" = "yes"],[
     AX_PKG_SWIG([2.0],[
         #
         # SWIG version > 2.0.4 && < 2.0.8 have a bug preventing correct
@@ -175,7 +188,7 @@ AS_IF([test "$build_bindings_java" = "yes"],[
 AM_CONDITIONAL(BUILD_BINDINGS_JAVA, [test $build_bindings_java = yes])
 
 AC_PATH_PROG([MVN],[mvn],[])
-AS_IF([test x"$MVN" != x""],[
+AS_IF([test x"$MVN" = x""],[
     AC_MSG_WARN([Your system lacks of maven support, Java parts will not be built/installed])
 ])
 AM_CONDITIONAL(BUILD_MAVEN_SUPPORT, [test x"$MVN" != x""])
@@ -212,7 +225,7 @@ AS_IF([test -n "$sysheaders"],[
     AS_IF([test x"$GXX" != x"yes"],[
         AC_MSG_ERROR([Your system lacks of GNU C++ compiler])
     ])
-    
+
     CXX_SYSINCLUDES=
 
     for cxxheaders in `$CXX -v -S -x c++ /dev/null -o /dev/null 2>&1 \
@@ -248,6 +261,8 @@ AX_HAVE_SYSCALL([deallocate_port],[],[
 AX_HAVE_SYSCALL([management_sdu_read],[],[
     AC_MSG_ERROR([Your system lacks of a necessary syscall])])
 AX_HAVE_SYSCALL([management_sdu_write],[],[
+    AC_MSG_ERROR([Your system lacks of a necessary syscall])])
+AX_HAVE_SYSCALL([flow_io_ctl],[],[
     AC_MSG_ERROR([Your system lacks of a necessary syscall])])
 
 CFLAGS="$oldcflags"
@@ -287,6 +302,10 @@ AC_CONFIG_FILES([
 
     wrap/Makefile
     wrap/java/Makefile
+    wrap/c/Makefile
+    wrap/c/src/Makefile
+    wrap/c/include/Makefile
+    wrap/c/include/librina-c/Makefile
 
     test/Makefile
 

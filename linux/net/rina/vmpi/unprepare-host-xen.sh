@@ -25,10 +25,12 @@ if test "$?" != 0; then
         usage
 fi
 
-sudo rmmod vmpi-xen-host.ko
+sudo rmmod vmpi-host-xen
+sudo rmmod vmpi-provider
+sudo rmmod vmpi-bufs
 
 FRONTEND_ID="$1"  # DomID of the frontend we want to teardown
 
-cleandir /local/domain/${FRONTEND_ID}/device/vmpi/0
-cleandir /local/domain/0/backend/vmpi/${FRONTEND_ID}/0
+cleandir /local/domain/${FRONTEND_ID}/device/mpi/0
+cleandir /local/domain/0/backend/mpi/${FRONTEND_ID}/0
 

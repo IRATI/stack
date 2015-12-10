@@ -48,7 +48,7 @@
 
 #include "core_priv.h"
 
-int ib_rate_to_mult(enum ib_rate rate)
+__attribute_const__ int ib_rate_to_mult(enum ib_rate rate)
 {
 	switch (rate) {
 	case IB_RATE_2_5_GBPS: return  1;
@@ -65,7 +65,7 @@ int ib_rate_to_mult(enum ib_rate rate)
 }
 EXPORT_SYMBOL(ib_rate_to_mult);
 
-enum ib_rate mult_to_ib_rate(int mult)
+__attribute_const__ enum ib_rate mult_to_ib_rate(int mult)
 {
 	switch (mult) {
 	case 1:  return IB_RATE_2_5_GBPS;
@@ -82,7 +82,7 @@ enum ib_rate mult_to_ib_rate(int mult)
 }
 EXPORT_SYMBOL(mult_to_ib_rate);
 
-int ib_rate_to_mbps(enum ib_rate rate)
+__attribute_const__ int ib_rate_to_mbps(enum ib_rate rate)
 {
 	switch (rate) {
 	case IB_RATE_2_5_GBPS: return 2500;
@@ -107,7 +107,7 @@ int ib_rate_to_mbps(enum ib_rate rate)
 }
 EXPORT_SYMBOL(ib_rate_to_mbps);
 
-enum rdma_transport_type
+__attribute_const__ enum rdma_transport_type
 rdma_node_get_transport(enum rdma_node_type node_type)
 {
 	switch (node_type) {
@@ -879,7 +879,8 @@ int ib_resolve_eth_l2_attrs(struct ib_qp *qp,
 		if (rdma_link_local_addr((struct in6_addr *)qp_attr->ah_attr.grh.dgid.raw)) {
 			rdma_get_ll_mac((struct in6_addr *)qp_attr->ah_attr.grh.dgid.raw, qp_attr->ah_attr.dmac);
 			rdma_get_ll_mac((struct in6_addr *)sgid.raw, qp_attr->smac);
-			qp_attr->vlan_id = rdma_get_vlan_id(&sgid);
+			if (!(*qp_attr_mask & IB_QP_VID))
+				qp_attr->vlan_id = rdma_get_vlan_id(&sgid);
 		} else {
 			ret = rdma_addr_find_dmac_by_grh(&sgid, &qp_attr->ah_attr.grh.dgid,
 					qp_attr->ah_attr.dmac, &qp_attr->vlan_id);

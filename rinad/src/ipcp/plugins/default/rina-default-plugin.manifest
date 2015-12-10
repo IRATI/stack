@@ -21,6 +21,21 @@
                         "Name": "default",
                         "Component": "dtcp",
                         "Version" : "1"
+                },
+                {
+                        "Name": "default",
+                        "Component": "crypto",
+                        "Version" : "1"
+                },
+                {
+                        "Name": "default",
+                        "Component": "errc",
+                        "Version" : "1"
+                },
+                {
+                        "Name": "default",
+                        "Component": "ttl",
+                        "Version" : "1"
                 }
         ]
 }

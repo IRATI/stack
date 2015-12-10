@@ -21,7 +21,6 @@
 #include <linux/swap.h>
 #include <linux/blkdev.h>
 #include <linux/backing-dev.h>
-#include "time.h"
 #include "kmem.h"
 #include "xfs_message.h"
 
@@ -90,16 +89,6 @@ kmem_zalloc_large(size_t size, xfs_km_flags_t flags)
 		memalloc_noio_restore(noio_flag);
 
 	return ptr;
-}
-
-void
-kmem_free(const void *ptr)
-{
-	if (!is_vmalloc_addr(ptr)) {
-		kfree(ptr);
-	} else {
-		vfree(ptr);
-	}
 }
 
 void *

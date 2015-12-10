@@ -85,7 +85,6 @@ enum FlowSpecificationAttributes {
 	FSPEC_ATTR_PEAK_BWITH_DURATION,
 	FSPEC_ATTR_PEAK_SDU_BWITH_DURATION,
 	FSPEC_ATTR_UNDETECTED_BER,
-	FSPEC_ATTR_BLOCKING,
 	__FSPEC_ATTR_MAX,
 };
 
@@ -217,7 +216,6 @@ enum ApplicationRegistrationInformationAttributes {
         ARIA_ATTR_APP_NAME = 1,
 	ARIA_ATTR_APP_REG_TYPE,
 	ARIA_ATTR_APP_DIF_NAME,
-	ARIA_ATTR_APP_BLOCKING,
 	__ARIA_ATTR_MAX,
 };
 
@@ -399,7 +397,6 @@ enum IpcmRegisterApplicationRequestMessageAttributes {
 	IRAR_ATTR_APP_NAME = 1,
 	IRAR_ATTR_DIF_NAME,
 	IRAR_ATTR_REG_IPC_ID,
-	IRAR_ATTR_BLOCKING,
 	__IRAR_ATTR_MAX,
 };
 
@@ -460,10 +457,13 @@ enum DataTransferConstantsAttributes {
         DTC_ATTR_PORT_ID,
         DTC_ATTR_CEP_ID,
         DTC_ATTR_SEQ_NUM,
+        DTC_ATTR_CTRL_SEQ_NUM,
         DTC_ATTR_ADDRESS,
         DTC_ATTR_LENGTH,
         DTC_ATTR_MAX_PDU_SIZE,
         DTC_ATTR_MAX_PDU_LIFE,
+        DTC_ATTR_RATE,
+        DTC_ATTR_FRAME,
         DTC_ATTR_DIF_INTEGRITY,
         __DTC_ATTR_MAX,
 };
@@ -1477,36 +1477,55 @@ int putIpcmPluginLoadResponseMessageObject(nl_msg* netlinkMessage,
 IpcmPluginLoadResponseMessage *parseIpcmPluginLoadResponseMessage(
 		nlmsghdr *hdr);
 
-/* IPCPEnableEncryptionRequestMessageAttributes CLASS */
-enum IPCPEnableEncryptionRequestMessageAttributes {
-        EERM_ATTR_N_1_PORT = 1,
-	EERM_ATTR_EN_ENCRYPT,
-        EERM_ATTR_EN_DECRYPT,
-        EERM_ATTR_ENCRYPT_KEY,
-        __EERM_ATTR_MAX,
+/* CryptoState CLASS */
+enum IPCPCryptoStateAttributes {
+        CRYPTS_ATTR_ENABLE_TX = 1,
+        CRYPTS_ATTR_ENABLE_RX,
+        CRYPTS_ATTR_MAC_KEY_TX,
+        CRYPTS_ATTR_MAC_KEY_RX,
+        CRYPTS_ATTR_ENCRYPT_KEY_TX,
+        CRYPTS_ATTR_ENCRYPT_KEY_RX,
+        CRYPTS_ATTR_IV_TX,
+        CRYPTS_ATTR_IV_RX,
+        __CRYPTS_ATTR_MAX,
 };
 
-#define EERM_ATTR_MAX (__EERM_ATTR_MAX -1)
+#define CRYPTS_ATTR_MAX (__CRYPTS_ATTR_MAX -1)
 
-int putIPCPEnableEncryptionRequestMessage(nl_msg* netlinkMessage,
-                const IPCPEnableEncryptionRequestMessage& object);
+int putCryptoState(nl_msg* netlinkMessage,
+                   const CryptoState& object);
 
-IPCPEnableEncryptionRequestMessage * parseIPCPEnableEncryptionRequestMessage(
+void parseCryptoState(nlattr *nested,
+		      IPCPUpdateCryptoStateRequestMessage * result);
+
+/* IPCPEnableEncryptionRequestMessageAttributes CLASS */
+enum IPCPUpdateCryptoStateRequestMessageAttributes {
+        UCSR_ATTR_N_1_PORT = 1,
+	UCSR_ATTR_STATE,
+        __UCSR_ATTR_MAX,
+};
+
+#define UCSR_ATTR_MAX (__UCSR_ATTR_MAX -1)
+
+int putIPCPUpdateCryptoStateRequestMessage(nl_msg* netlinkMessage,
+                const IPCPUpdateCryptoStateRequestMessage& object);
+
+IPCPUpdateCryptoStateRequestMessage * parseIPCPUpdateCryptoStateRequestMessage(
                 nlmsghdr *hdr);
 
-/* IPCPEnableEncryptionResponseMessageAttributes CLASS */
-enum IPCPEnableEncryptionResponseMessageAttributes {
-        EEREM_ATTR_RESULT = 1,
-        EEREM_ATTR_N_1_PORT,
-        __EEREM_ATTR_MAX,
+/* IPCPUpdateCryptoStateResponseMessageAttributes CLASS */
+enum IPCPUpdateCryptoStateResponseMessageAttributes {
+        UCSREM_ATTR_RESULT = 1,
+        UCSREM_ATTR_N_1_PORT,
+        __UCSREM_ATTR_MAX,
 };
 
-#define EEREM_ATTR_MAX (__EEREM_ATTR_MAX -1)
+#define UCSREM_ATTR_MAX (__UCSREM_ATTR_MAX -1)
 
-int putIPCPEnableEncryptionResponseMessage(nl_msg* netlinkMessage,
-                const IPCPEnableEncryptionResponseMessage& object);
+int putIPCPUpdateCryptoStateResponseMessage(nl_msg* netlinkMessage,
+                const IPCPUpdateCryptoStateResponseMessage& object);
 
-IPCPEnableEncryptionResponseMessage * parseIPCPEnableEncryptionResponseMessage(
+IPCPUpdateCryptoStateResponseMessage * parseIPCPUpdateCryptoStateResponseMessage(
                 nlmsghdr *hdr);
 
 /* IpcmFwdCDAPMsgMessage CLASS*/

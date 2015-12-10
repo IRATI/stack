@@ -84,7 +84,7 @@ void IPCManager_::ipc_process_plugin_load_response_handler(rina::PluginLoadRespo
 	ostringstream ss;
         int ret = -1;
 
-        IPCPTransState* trans = get_transaction_state<IPCPTransState>(event->sequenceNumber);
+        IPCPpluginTransState* trans = get_transaction_state<IPCPpluginTransState>(event->sequenceNumber);
 
         if(!trans){
         	ss << ": Warning: unknown plugin load response received: "
@@ -108,10 +108,16 @@ void IPCManager_::ipc_process_plugin_load_response_handler(rina::PluginLoadRespo
         //Auto release the read lock
         rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
-        ss << "plugin-load-op completed on IPC process "
+        ss << "plugin-load-op [plugin=" << trans->plugin_name <<
+	      ", load=" << trans->load << "] completed on IPC process "
 	       << ipcp->get_name().toString()
 	       << " [success=" << success << "]" << endl;
         FLUSH_LOG(INFO, ss);
+
+	if (success) {
+		catalog.plugin_loaded(trans->plugin_name, trans->ipcp_id,
+				      trans->load);
+	}
 
 	//Mark as completed
 	trans->completed(success ? IPCM_SUCCESS : IPCM_FAILURE);
@@ -125,10 +131,11 @@ void IPCManager_::ipc_process_select_policy_set_response_handler(
 	ostringstream ss;
         int ret = -1;
 
-	IPCPTransState* trans = get_transaction_state<IPCPTransState>(event->sequenceNumber);
+	IPCPSelectPsTransState* trans = get_transaction_state<IPCPSelectPsTransState>(event->sequenceNumber);
 
 	if(!trans){
-		ss << ": Warning: unknown select policy response received: "<<event->sequenceNumber<<endl;
+		ss << ": Warning: unknown select policy response received: "
+			<<event->sequenceNumber<<endl;
 		FLUSH_LOG(WARN, ss);
 		return;
 	}
@@ -150,6 +157,10 @@ void IPCManager_::ipc_process_select_policy_set_response_handler(
 	       << ipcp->get_name().toString() <<
 		" [success=" << success << "]" << endl;
 	FLUSH_LOG(INFO, ss);
+
+	if (success) {
+		catalog.policy_set_selected(trans->ps_info, trans->id);
+	}
 
 	//Mark as completed
 	trans->completed(success ? IPCM_SUCCESS : IPCM_FAILURE);

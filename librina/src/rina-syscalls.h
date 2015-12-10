@@ -9,12 +9,12 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -48,7 +48,7 @@ namespace rina {
          * @param sdu pointer to the memory address of the first byte of the
          *        SDU
          * @param maxBytes Maximum amount of bytes to read
-         * @return number of bytes read if successful, a negative number 
+         * @return number of bytes read if successful, a negative number
          *         indicating an error otherwise
          */
         int syscallReadSDU(int portId,
@@ -113,8 +113,7 @@ namespace rina {
          * indicating error otherwise
          */
         int syscallAllocatePortId(unsigned short ipcProcessId,
-                        	  const ApplicationProcessNamingInformation & applicationName,
-                        	  bool blocking);
+                        	  const ApplicationProcessNamingInformation & applicationName);
 
         /**
          * Wrappert of the deallocate port-is system call
@@ -126,6 +125,15 @@ namespace rina {
          */
         int syscallDeallocatePortId(unsigned short ipcProcessId, int portId);
 
+	/**
+         * Wrapper of the flow_io_ctl system call
+         * @param portId the port-id to control
+         * @param cmd, the command, only F_GETFL and F_SETFL are supported
+         * @param arg, the flags to be set, only O_NONBLOCK is supported
+         * @return 0 if everything was ok, negative number indicating error
+         *         otherwise
+         */
+        int syscallFlowIOCtl(int portId, int cmd, unsigned long arg);
 }
 
 #endif

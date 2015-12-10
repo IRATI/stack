@@ -73,13 +73,13 @@ public:
                const std::string& app_instance);
         virtual ~Server();
 
-        void run(bool blocking);
+        virtual void run(bool blocking);
         void worker_completed(ServerWorker * worker);
         void remove_completed_workers();
 
 protected:
-        void startWorker(int port_id);
-        virtual ServerWorker * internal_start_worker(int port_id) = 0;
+        void startWorker(rina::FlowInformation flow);
+        virtual ServerWorker * internal_start_worker(rina::FlowInformation flow) = 0;
 
         rina::Lockable lock;
         std::list<ServerWorker *> active_workers;

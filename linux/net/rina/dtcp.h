@@ -92,7 +92,10 @@ struct pdu *     pdu_ctrl_ack_create(struct dtcp * dtcp,
                                      seq_num_t     snd_left_wind_edge,
                                      seq_num_t     snd_rt_wind_edge);
 struct pdu *     pdu_ctrl_generate(struct dtcp * dtcp, pdu_type_t type);
+uint_t           dtcp_rcvr_credit(struct dtcp * dtcp);
+void             dtcp_rcvr_credit_set(struct dtcp * dtcp, uint_t credit);
 void             update_rt_wind_edge(struct dtcp * dtcp);
+void 		 update_credit_and_rt_wind_edge(struct dtcp * dtcp, uint_t credit);
 uint_t           dtcp_rtt(struct dtcp * dtcp);
 int              dtcp_rtt_set(struct dtcp * dtcp, uint_t rtt);
 uint_t           dtcp_srtt(struct dtcp * dtcp);
@@ -100,7 +103,26 @@ int              dtcp_srtt_set(struct dtcp * dtcp, uint_t srtt);
 uint_t           dtcp_rttvar(struct dtcp * dtcp);
 int              dtcp_rttvar_set(struct dtcp * dtcp, uint_t rttvar);
 
+uint_t 		 dtcp_time_frame(struct dtcp * dtcp);
+int 		 dtcp_time_frame_set(struct dtcp * dtcp, uint_t sec);
+int 		 dtcp_last_time(struct dtcp * dtcp, struct timespec * s);
+int 		 dtcp_last_time_set(struct dtcp * dtcp, struct timespec * s);
+uint_t 		 dtcp_sndr_rate(struct dtcp * dtcp);
+int 		 dtcp_sndr_rate_set(struct dtcp * dtcp, uint_t rate);
+uint_t 		 dtcp_rcvr_rate(struct dtcp * dtcp);
+int 		 dtcp_rcvr_rate_set(struct dtcp * dtcp, uint_t rate);
+uint_t 		 dtcp_recv_itu(struct dtcp * dtcp);
+int 		 dtcp_recv_itu_set(struct dtcp * dtcp, uint_t recv);
+int 		 dtcp_recv_itu_inc(struct dtcp * dtcp, uint_t recv);
+uint_t 		 dtcp_sent_itu(struct dtcp * dtcp);
+int 		 dtcp_sent_itu_set(struct dtcp * dtcp, uint_t sent);
+int 		 dtcp_sent_itu_inc(struct dtcp * dtcp, uint_t sent);
+int 		 dtcp_rate_fc_reset(struct dtcp * dtcp, struct timespec * now);
+bool 		 dtcp_rate_exceeded(struct dtcp * dtcp, int send);
+
 /* end SDK */
+
+int              pdus_sent_in_t_unit_set(struct dtcp * dtcp, uint_t s);
 
 /*FIXME: wrapper to be called by dtp in the post_worker */
 int              dtcp_sending_ack_policy(struct dtcp * dtcp);

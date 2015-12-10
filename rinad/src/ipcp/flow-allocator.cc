@@ -67,10 +67,12 @@ FlowSetRIBObject::FlowSetRIBObject(IPCProcess * ipc_process,
 
 void FlowSetRIBObject::remoteCreateObject(
 		void * object_value, const std::string& object_name,
-		int invoke_id, rina::CDAPSessionDescriptor * session_descriptor)
+		int invoke_id,
+		rina::CDAPSessionDescriptor * session_descriptor)
 {
 	flow_allocator_->createFlowRequestMessageReceived((Flow *) object_value,
-			object_name, invoke_id);
+							  object_name,
+							  invoke_id);
 }
 
 void FlowSetRIBObject::createObject(const std::string& objectClass,
@@ -261,7 +263,9 @@ void FlowAllocator::populateRIB()
 }
 
 void FlowAllocator::createFlowRequestMessageReceived(
-		Flow * flow, const std::string& object_name, int invoke_id)
+		Flow * flow,
+		const std::string& object_name,
+		int invoke_id)
 {
 	IFlowAllocatorInstance * fai = 0;
 	unsigned int myAddress = 0;
@@ -280,8 +284,7 @@ void FlowAllocator::createFlowRequestMessageReceived(
 		//the Flow object from the CDAP message and call the FAI
 		try {
 			portId = rina::extendedIPCManager->allocatePortId(
-					flow->destination_naming_info,
-					namespace_manager_->get_reg_app_info(flow->destination_naming_info).blocking);
+					flow->destination_naming_info);
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Problems requesting a port-id: %s. Ignoring the Flow allocation request",
 					e.what());
@@ -330,8 +333,7 @@ void FlowAllocator::submitAllocateRequest(
 	IFlowAllocatorInstance * fai;
 
 	try {
-		portId = rina::extendedIPCManager->allocatePortId(event.localApplicationName,
-								  event.flowSpecification.blocking);
+		portId = rina::extendedIPCManager->allocatePortId(event.localApplicationName);
 		LOG_IPCP_DBG("Got assigned port-id %d", portId);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems requesting an available port-id to the Kernel IPC Manager: %s",
@@ -606,13 +608,16 @@ void FlowAllocatorInstance::submitAllocateRequest(
 {
 	IFlowAllocatorPs * faps =
 		dynamic_cast<IFlowAllocatorPs *>(flow_allocator_->ps);
+	if (!faps) {
+		std::stringstream ss;
+		ss << "Flow allocator policy is NULL ";
+		throw rina::Exception(ss.str().c_str());
+	}
+
 	rina::ScopedLock g(*lock_);
 
 	flow_request_event_ = event;
-
 	flow_ = faps->newFlowRequest(ipc_process_, flow_request_event_);
-
-	LOG_IPCP_DBG("Generated flow object");
 
 	//1 Check directory to see to what IPC process the CDAP M_CREATE request has to be delivered
 	unsigned int destinationAddress = namespace_manager_->getDFTNextHop(

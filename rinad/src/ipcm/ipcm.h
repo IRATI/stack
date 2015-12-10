@@ -358,8 +358,7 @@ public:
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t register_at_dif(Addon* callee, Promise* promise,
 			const unsigned short ipcp_id,
-			const rina::ApplicationProcessNamingInformation& difName,
-			bool blocking);
+			const rina::ApplicationProcessNamingInformation& difName);
 
 	//
 	// Enroll IPCP to a single DIF
@@ -495,6 +494,13 @@ public:
 			      const unsigned short ipcp_id,
 			      const std::string& object_class,
 			      const std::string& object_name);
+
+	//
+	// Update policy-set catalog, with the plugins stored in
+	// the pluginsPaths configuration variable
+	//
+	// @ret IPCM_FAILURE on failure, otherwise the IPCM_SUCCESS
+	ipcm_res_t update_catalog(Addon* callee);
 
 	//
 	// Get the current logging debug level

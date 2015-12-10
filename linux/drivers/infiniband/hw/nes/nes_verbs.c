@@ -1616,8 +1616,8 @@ static struct ib_cq *nes_create_cq(struct ib_device *ibdev, int entries,
 				entries, nescq->cq_mem_size, nescq->hw_cq.cq_number);
 
 		/* allocate the physical buffer space */
-		mem = pci_alloc_consistent(nesdev->pcidev, nescq->cq_mem_size,
-				&nescq->hw_cq.cq_pbase);
+		mem = pci_zalloc_consistent(nesdev->pcidev, nescq->cq_mem_size,
+					    &nescq->hw_cq.cq_pbase);
 		if (!mem) {
 			printk(KERN_ERR PFX "Unable to allocate pci memory for cq\n");
 			nes_free_resource(nesadapter, nesadapter->allocated_cqs, cq_num);
@@ -1625,7 +1625,6 @@ static struct ib_cq *nes_create_cq(struct ib_device *ibdev, int entries,
 			return ERR_PTR(-ENOMEM);
 		}
 
-		memset(mem, 0, nescq->cq_mem_size);
 		nescq->hw_cq.cq_vbase = mem;
 		nescq->hw_cq.cq_head = 0;
 		nes_debug(NES_DBG_CQ, "CQ%u virtual address @ %p, phys = 0x%08X\n",
@@ -2342,9 +2341,9 @@ static struct ib_mr *nes_reg_user_mr(struct ib_pd *pd, u64 start, u64 length,
 	nes_debug(NES_DBG_MR, "User base = 0x%lX, Virt base = 0x%lX, length = %u,"
 			" offset = %u, page size = %u.\n",
 			(unsigned long int)start, (unsigned long int)virt, (u32)length,
-			region->offset, region->page_size);
+			ib_umem_offset(region), region->page_size);
 
-	skip_pages = ((u32)region->offset) >> 12;
+	skip_pages = ((u32)ib_umem_offset(region)) >> 12;
 
 	if (ib_copy_from_udata(&req, udata, sizeof(req))) {
 		ib_umem_release(region);
@@ -2409,7 +2408,7 @@ static struct ib_mr *nes_reg_user_mr(struct ib_pd *pd, u64 start, u64 length,
 				region_length -= skip_pages << 12;
 				for (page_index = skip_pages; page_index < chunk_pages; page_index++) {
 					skip_pages = 0;
-					if ((page_count != 0) && (page_count<<12)-(region->offset&(4096-1)) >= region->length)
+					if ((page_count != 0) && (page_count << 12) - (ib_umem_offset(region) & (4096 - 1)) >= region->length)
 						goto enough_pages;
 					if ((page_count&0x01FF) == 0) {
 						if (page_count >= 1024 * 512) {

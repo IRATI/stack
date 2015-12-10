@@ -244,7 +244,7 @@ SOC_DOUBLE_R_TLV("Output 2 Playback Volume", WM8988_LOUT2V, WM8988_ROUT2V,
 static int wm8988_lrc_control(struct snd_soc_dapm_widget *w,
 			      struct snd_kcontrol *kcontrol, int event)
 {
-	struct snd_soc_codec *codec = w->codec;
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	u16 adctl2 = snd_soc_read(codec, WM8988_ADCTL2);
 
 	/* Use the DAC to gate LRC if active, otherwise use ADC */
@@ -268,7 +268,7 @@ static const struct soc_enum wm8988_lline_enum =
 			      wm8988_line_texts,
 			      wm8988_line_values);
 static const struct snd_kcontrol_new wm8988_left_line_controls =
-	SOC_DAPM_VALUE_ENUM("Route", wm8988_lline_enum);
+	SOC_DAPM_ENUM("Route", wm8988_lline_enum);
 
 static const struct soc_enum wm8988_rline_enum =
 	SOC_VALUE_ENUM_SINGLE(WM8988_ROUTM1, 0, 7,
@@ -276,7 +276,7 @@ static const struct soc_enum wm8988_rline_enum =
 			      wm8988_line_texts,
 			      wm8988_line_values);
 static const struct snd_kcontrol_new wm8988_right_line_controls =
-	SOC_DAPM_VALUE_ENUM("Route", wm8988_lline_enum);
+	SOC_DAPM_ENUM("Route", wm8988_lline_enum);
 
 /* Left Mixer */
 static const struct snd_kcontrol_new wm8988_left_mixer_controls[] = {
@@ -304,7 +304,7 @@ static const struct soc_enum wm8988_lpga_enum =
 			      wm8988_pga_sel,
 			      wm8988_pga_val);
 static const struct snd_kcontrol_new wm8988_left_pga_controls =
-	SOC_DAPM_VALUE_ENUM("Route", wm8988_lpga_enum);
+	SOC_DAPM_ENUM("Route", wm8988_lpga_enum);
 
 /* Right PGA Mux */
 static const struct soc_enum wm8988_rpga_enum =
@@ -313,7 +313,7 @@ static const struct soc_enum wm8988_rpga_enum =
 			      wm8988_pga_sel,
 			      wm8988_pga_val);
 static const struct snd_kcontrol_new wm8988_right_pga_controls =
-	SOC_DAPM_VALUE_ENUM("Route", wm8988_rpga_enum);
+	SOC_DAPM_ENUM("Route", wm8988_rpga_enum);
 
 /* Differential Mux */
 static const char *wm8988_diff_sel[] = {"Line 1", "Line 2"};
@@ -687,16 +687,16 @@ static int wm8988_pcm_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	/* bit size */
-	switch (params_format(params)) {
-	case SNDRV_PCM_FORMAT_S16_LE:
+	switch (params_width(params)) {
+	case 16:
 		break;
-	case SNDRV_PCM_FORMAT_S20_3LE:
+	case 20:
 		iface |= 0x0004;
 		break;
-	case SNDRV_PCM_FORMAT_S24_LE:
+	case 24:
 		iface |= 0x0008;
 		break;
-	case SNDRV_PCM_FORMAT_S32_LE:
+	case 32:
 		iface |= 0x000c;
 		break;
 	}
@@ -793,21 +793,6 @@ static struct snd_soc_dai_driver wm8988_dai = {
 	.symmetric_rates = 1,
 };
 
-static int wm8988_suspend(struct snd_soc_codec *codec)
-{
-	struct wm8988_priv *wm8988 = snd_soc_codec_get_drvdata(codec);
-
-	wm8988_set_bias_level(codec, SND_SOC_BIAS_OFF);
-	regcache_mark_dirty(wm8988->regmap);
-	return 0;
-}
-
-static int wm8988_resume(struct snd_soc_codec *codec)
-{
-	wm8988_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
-	return 0;
-}
-
 static int wm8988_probe(struct snd_soc_codec *codec)
 {
 	int ret = 0;
@@ -825,23 +810,13 @@ static int wm8988_probe(struct snd_soc_codec *codec)
 	snd_soc_update_bits(codec, WM8988_ROUT2V, 0x0100, 0x0100);
 	snd_soc_update_bits(codec, WM8988_RINVOL, 0x0100, 0x0100);
 
-	wm8988_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
-
 	return 0;
 }
 
-static int wm8988_remove(struct snd_soc_codec *codec)
-{
-	wm8988_set_bias_level(codec, SND_SOC_BIAS_OFF);
-	return 0;
-}
-
-static struct snd_soc_codec_driver soc_codec_dev_wm8988 = {
+static const struct snd_soc_codec_driver soc_codec_dev_wm8988 = {
 	.probe =	wm8988_probe,
-	.remove =	wm8988_remove,
-	.suspend =	wm8988_suspend,
-	.resume =	wm8988_resume,
 	.set_bias_level = wm8988_set_bias_level,
+	.suspend_bias_off = true,
 
 	.controls = wm8988_snd_controls,
 	.num_controls = ARRAY_SIZE(wm8988_snd_controls),
@@ -851,7 +826,7 @@ static struct snd_soc_codec_driver soc_codec_dev_wm8988 = {
 	.num_dapm_routes = ARRAY_SIZE(wm8988_dapm_routes),
 };
 
-static struct regmap_config wm8988_regmap = {
+static const struct regmap_config wm8988_regmap = {
 	.reg_bits = 7,
 	.val_bits = 9,
 

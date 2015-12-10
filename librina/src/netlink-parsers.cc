@@ -501,19 +501,19 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
-	case RINA_C_IPCP_ENABLE_ENCRYPTION_REQUEST: {
-		IPCPEnableEncryptionRequestMessage * responseObject =
-			dynamic_cast<IPCPEnableEncryptionRequestMessage *>(message);
-		if (putIPCPEnableEncryptionRequestMessage(netlinkMessage,
+	case RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST: {
+		IPCPUpdateCryptoStateRequestMessage * responseObject =
+			dynamic_cast<IPCPUpdateCryptoStateRequestMessage *>(message);
+		if (putIPCPUpdateCryptoStateRequestMessage(netlinkMessage,
 				*responseObject) < 0) {
 			return -1;
 		}
 		return 0;
 	}
-	case RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE: {
-		IPCPEnableEncryptionResponseMessage * responseObject =
-			dynamic_cast<IPCPEnableEncryptionResponseMessage *>(message);
-		if (putIPCPEnableEncryptionResponseMessage(netlinkMessage,
+	case RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE: {
+		IPCPUpdateCryptoStateResponseMessage * responseObject =
+			dynamic_cast<IPCPUpdateCryptoStateResponseMessage *>(message);
+		if (putIPCPUpdateCryptoStateResponseMessage(netlinkMessage,
 				*responseObject) < 0) {
 			return -1;
 		}
@@ -748,12 +748,12 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 		return parseIpcmPluginLoadResponseMessage(
 		                netlinkMessageHeader);
 	}
-	case RINA_C_IPCP_ENABLE_ENCRYPTION_REQUEST: {
-		return parseIPCPEnableEncryptionRequestMessage(
+	case RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST: {
+		return parseIPCPUpdateCryptoStateRequestMessage(
 		                netlinkMessageHeader);
 	}
-	case RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE: {
-		return parseIPCPEnableEncryptionResponseMessage(
+	case RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE: {
+		return parseIPCPUpdateCryptoStateResponseMessage(
 				netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_FWD_CDAP_MSG_REQUEST: {
@@ -876,9 +876,6 @@ int putFlowSpecificationObject(nl_msg* netlinkMessage,
 		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_UNDETECTED_BER,
 				object.undetectedBitErrorRate);
 	}
-	if (object.blocking) {
-		NLA_PUT_FLAG(netlinkMessage, FSPEC_ATTR_BLOCKING);
-	}
 
 	return 0;
 
@@ -922,9 +919,6 @@ FlowSpecification * parseFlowSpecificationObject(nlattr *nested) {
 	attr_policy[FSPEC_ATTR_UNDETECTED_BER].type = NLA_U32;
 	attr_policy[FSPEC_ATTR_UNDETECTED_BER].minlen = 4;
 	attr_policy[FSPEC_ATTR_UNDETECTED_BER].maxlen = 4;
-	attr_policy[FSPEC_ATTR_BLOCKING].type = NLA_FLAG;
-	attr_policy[FSPEC_ATTR_BLOCKING].minlen = 0;
-	attr_policy[FSPEC_ATTR_BLOCKING].maxlen = 0;
 	struct nlattr *attrs[FSPEC_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, FSPEC_ATTR_MAX, nested, attr_policy);
@@ -981,12 +975,6 @@ FlowSpecification * parseFlowSpecificationObject(nlattr *nested) {
 	if (attrs[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION]) {
 		result->peakSDUBandwidthDuration =
 				nla_get_u32(attrs[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION]);
-	}
-
-	if (attrs[FSPEC_ATTR_BLOCKING]) {
-		result->blocking = true;
-	} else {
-		result->blocking = false;
 	}
 
 	return result;
@@ -1822,10 +1810,6 @@ int putApplicationRegistrationInformationObject(nl_msg* netlinkMessage,
 		nla_nest_end(netlinkMessage, difName);
 	}
 
-	if (object.blocking) {
-		NLA_PUT_FLAG(netlinkMessage, ARIA_ATTR_APP_BLOCKING);
-	}
-
 	return 0;
 
 	nla_put_failure: LOG_ERR(
@@ -1845,9 +1829,6 @@ ApplicationRegistrationInformation * parseApplicationRegistrationInformation(
 	attr_policy[ARIA_ATTR_APP_DIF_NAME].type = NLA_NESTED;
 	attr_policy[ARIA_ATTR_APP_DIF_NAME].minlen = 0;
 	attr_policy[ARIA_ATTR_APP_DIF_NAME].maxlen = 0;
-	attr_policy[ARIA_ATTR_APP_BLOCKING].type = NLA_FLAG;
-	attr_policy[ARIA_ATTR_APP_BLOCKING].minlen = 0;
-	attr_policy[ARIA_ATTR_APP_BLOCKING].maxlen = 0;
 	struct nlattr *attrs[ARIA_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, ARIA_ATTR_MAX, nested, attr_policy);
@@ -1886,12 +1867,6 @@ ApplicationRegistrationInformation * parseApplicationRegistrationInformation(
 			result->difName = *difName;
 			delete difName;
 		}
-	}
-
-	if (attrs[ARIA_ATTR_APP_BLOCKING]) {
-		result->blocking = true;
-	} else {
-		result->blocking = false;
 	}
 
 	return result;
@@ -3862,8 +3837,10 @@ int putAppGetDIFPropertiesResponseMessageObject(nl_msg* netlinkMessage,
 	return -1;
 }
 
-int putIpcmRegisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
-		const IpcmRegisterApplicationRequestMessage& object) {
+int putIpcmRegisterApplicationRequestMessageObject(
+	nl_msg* netlinkMessage,
+	const IpcmRegisterApplicationRequestMessage& object)
+{
 	struct nlattr *difName, *applicationName;
 
 	if (!(applicationName = nla_nest_start(netlinkMessage, IRAR_ATTR_APP_NAME))) {
@@ -3889,10 +3866,6 @@ int putIpcmRegisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
 	                        object.getRegIpcProcessId());
 	}
 
-	if (object.blocking) {
-		nla_put_flag(netlinkMessage, IRAR_ATTR_BLOCKING);
-	}
-
 	return 0;
 
 	nla_put_failure: LOG_ERR(
@@ -3900,8 +3873,10 @@ int putIpcmRegisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
 	return -1;
 }
 
-int putIpcmRegisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
-		const IpcmRegisterApplicationResponseMessage& object) {
+int putIpcmRegisterApplicationResponseMessageObject(
+	nl_msg* netlinkMessage,
+	const IpcmRegisterApplicationResponseMessage& object)
+{
 	NLA_PUT_U32(netlinkMessage, IRARE_ATTR_RESULT, object.getResult());
 
 	return 0;
@@ -3911,8 +3886,10 @@ int putIpcmRegisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
 	return -1;
 }
 
-int putIpcmUnregisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
-		const IpcmUnregisterApplicationRequestMessage& object) {
+int putIpcmUnregisterApplicationRequestMessageObject(
+	nl_msg* netlinkMessage,
+	const IpcmUnregisterApplicationRequestMessage& object)
+{
 	struct nlattr *difName, *applicationName;
 
 	if (!(applicationName = nla_nest_start(netlinkMessage, IUAR_ATTR_APP_NAME))) {
@@ -3966,6 +3943,12 @@ int putDataTransferConstantsObject(nl_msg* netlinkMessage,
                         object.get_max_pdu_size());
         NLA_PUT_U32(netlinkMessage, DTC_ATTR_MAX_PDU_LIFE,
                                 object.get_max_pdu_lifetime());
+        NLA_PUT_U16(netlinkMessage, DTC_ATTR_RATE,
+                                object.get_rate_length());
+        NLA_PUT_U16(netlinkMessage, DTC_ATTR_FRAME,
+                                object.get_frame_length());
+        NLA_PUT_U16(netlinkMessage, DTC_ATTR_CTRL_SEQ_NUM,
+                        object.get_ctrl_sequence_number_length());
         if (object.is_dif_integrity()){
                 NLA_PUT_FLAG(netlinkMessage, DTC_ATTR_DIF_INTEGRITY);
         }
@@ -5429,41 +5412,97 @@ int putIpcmPluginLoadResponseMessageObject(nl_msg* netlinkMessage,
         return -1;
 }
 
-int putIPCPEnableEncryptionRequestMessage(nl_msg* netlinkMessage,
-		const IPCPEnableEncryptionRequestMessage& object)
+int putCryptoState(nl_msg* netlinkMessage,
+                   const CryptoState& object)
 {
-	if (object.profile.enable_decryption) {
-		NLA_PUT_FLAG(netlinkMessage, EERM_ATTR_EN_DECRYPT);
-	}
-	if (object.profile.enable_encryption) {
-		NLA_PUT_FLAG(netlinkMessage, EERM_ATTR_EN_ENCRYPT);
-	}
-	NLA_PUT(netlinkMessage, EERM_ATTR_ENCRYPT_KEY,
-		object.profile.encrypt_key.length, object.profile.encrypt_key.data);
-	NLA_PUT_U32(netlinkMessage, EERM_ATTR_N_1_PORT, object.profile.port_id);
+	if (object.enable_crypto_tx)
+		NLA_PUT_FLAG(netlinkMessage, CRYPTS_ATTR_ENABLE_TX);
+
+	if (object.enable_crypto_rx)
+		NLA_PUT_FLAG(netlinkMessage, CRYPTS_ATTR_ENABLE_RX);
+
+	if (object.mac_key_tx.data)
+		NLA_PUT(netlinkMessage,
+			CRYPTS_ATTR_MAC_KEY_TX,
+			object.mac_key_tx.length,
+			object.mac_key_tx.data);
+
+	if (object.mac_key_rx.data)
+		NLA_PUT(netlinkMessage,
+			CRYPTS_ATTR_MAC_KEY_RX,
+			object.mac_key_rx.length,
+			object.mac_key_rx.data);
+
+	if (object.encrypt_key_tx.data)
+		NLA_PUT(netlinkMessage,
+			CRYPTS_ATTR_ENCRYPT_KEY_TX,
+			object.encrypt_key_tx.length,
+			object.encrypt_key_tx.data);
+
+	if (object.encrypt_key_rx.data)
+		NLA_PUT(netlinkMessage,
+			CRYPTS_ATTR_ENCRYPT_KEY_RX,
+			object.encrypt_key_rx.length,
+			object.encrypt_key_rx.data);
+
+	if (object.iv_tx.data)
+		NLA_PUT(netlinkMessage,
+			CRYPTS_ATTR_IV_TX,
+			object.iv_tx.length,
+			object.iv_tx.data);
+
+	if (object.iv_rx.data)
+		NLA_PUT(netlinkMessage,
+			CRYPTS_ATTR_IV_RX,
+			object.iv_rx.length,
+			object.iv_rx.data);
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building CryptoState Netlink object");
+	return -1;
+}
+
+int putIPCPUpdateCryptoStateRequestMessage(nl_msg* netlinkMessage,
+					   const IPCPUpdateCryptoStateRequestMessage& object)
+{
+	struct nlattr *state;
+
+	NLA_PUT_U32(netlinkMessage, UCSR_ATTR_N_1_PORT, object.state.port_id);
+
+        if (!(state = nla_nest_start(netlinkMessage, UCSR_ATTR_STATE))) {
+                goto nla_put_failure;
+        }
+
+        if (putCryptoState(netlinkMessage,
+                           object.state) < 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, state);
 
 	return 0;
 
         nla_put_failure: LOG_ERR(
-                        "Error building IpcmPluginLoadRequestMessage "
+                        "Error building IPCPUpdateCryptoStateRequestMessage "
                         "Netlink object");
         return -1;
 }
 
-int putIPCPEnableEncryptionResponseMessage(nl_msg* netlinkMessage,
-		const IPCPEnableEncryptionResponseMessage& object)
+int putIPCPUpdateCryptoStateResponseMessage(nl_msg* netlinkMessage,
+		const IPCPUpdateCryptoStateResponseMessage& object)
 {
-	NLA_PUT_U32(netlinkMessage, EEREM_ATTR_RESULT, object.result);
-	NLA_PUT_U32(netlinkMessage, EEREM_ATTR_N_1_PORT, object.port_id);
+	NLA_PUT_U32(netlinkMessage, UCSREM_ATTR_RESULT, object.result);
+	NLA_PUT_U32(netlinkMessage, UCSREM_ATTR_N_1_PORT, object.port_id);
 
 	return 0;
 
         nla_put_failure: LOG_ERR(
-                        "Error building IPCPEnableEncryptionResponseMessage"
+                        "Error building IPCPUpdateCryptoStateResponseMessage"
                         "Netlink object");
         return -1;
 }
-
 
 int putIpcmFwdCDAPMsgMessageObject(nl_msg* netlinkMessage,
 		const IpcmFwdCDAPMsgMessage& object){
@@ -6386,9 +6425,6 @@ parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr) {
 	attr_policy[IRAR_ATTR_REG_IPC_ID].type = NLA_U16;
 	attr_policy[IRAR_ATTR_REG_IPC_ID].minlen = 2;
 	attr_policy[IRAR_ATTR_REG_IPC_ID].maxlen = 2;
-	attr_policy[IRAR_ATTR_BLOCKING].type = NLA_FLAG;
-	attr_policy[IRAR_ATTR_BLOCKING].minlen = 0;
-	attr_policy[IRAR_ATTR_BLOCKING].maxlen = 0;
 	struct nlattr *attrs[IRAR_ATTR_MAX + 1];
 
 	/*
@@ -6438,12 +6474,6 @@ parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr) {
 	if (attrs[IRAR_ATTR_REG_IPC_ID]) {
 	      result->setRegIpcProcessId(
 	                      nla_get_u16(attrs[IRAR_ATTR_REG_IPC_ID]));
-	}
-
-	if (attrs[IRAR_ATTR_BLOCKING]) {
-		result->blocking = true;
-	} else {
-		result->blocking = false;
 	}
 
 	return result;
@@ -6582,6 +6612,9 @@ DataTransferConstants * parseDataTransferConstantsObject(nlattr *nested) {
         attr_policy[DTC_ATTR_SEQ_NUM].type = NLA_U16;
         attr_policy[DTC_ATTR_SEQ_NUM].minlen = 2;
         attr_policy[DTC_ATTR_SEQ_NUM].maxlen = 2;
+        attr_policy[DTC_ATTR_CTRL_SEQ_NUM].type = NLA_U16;
+        attr_policy[DTC_ATTR_CTRL_SEQ_NUM].minlen = 2;
+        attr_policy[DTC_ATTR_CTRL_SEQ_NUM].maxlen = 2;
         attr_policy[DTC_ATTR_ADDRESS].type = NLA_U16;
         attr_policy[DTC_ATTR_ADDRESS].minlen = 2;
         attr_policy[DTC_ATTR_ADDRESS].maxlen = 2;
@@ -6594,6 +6627,12 @@ DataTransferConstants * parseDataTransferConstantsObject(nlattr *nested) {
         attr_policy[DTC_ATTR_MAX_PDU_LIFE].type = NLA_U32;
         attr_policy[DTC_ATTR_MAX_PDU_LIFE].minlen = 4;
         attr_policy[DTC_ATTR_MAX_PDU_LIFE].maxlen = 4;
+        attr_policy[DTC_ATTR_RATE].type = NLA_U16;
+        attr_policy[DTC_ATTR_RATE].minlen = 2;
+        attr_policy[DTC_ATTR_RATE].maxlen = 2;
+        attr_policy[DTC_ATTR_FRAME].type = NLA_U16;
+        attr_policy[DTC_ATTR_FRAME].minlen = 2;
+        attr_policy[DTC_ATTR_FRAME].maxlen = 2;
         attr_policy[DTC_ATTR_DIF_INTEGRITY].type = NLA_FLAG;
         attr_policy[DTC_ATTR_DIF_INTEGRITY].minlen = 0;
         attr_policy[DTC_ATTR_DIF_INTEGRITY].maxlen = 0;
@@ -6627,6 +6666,11 @@ DataTransferConstants * parseDataTransferConstantsObject(nlattr *nested) {
                                 nla_get_u16(attrs[DTC_ATTR_SEQ_NUM]));
         }
 
+        if (attrs[DTC_ATTR_CTRL_SEQ_NUM]) {
+                result->set_ctrl_sequence_number_length(
+                                nla_get_u16(attrs[DTC_ATTR_CTRL_SEQ_NUM]));
+        }
+
         if (attrs[DTC_ATTR_ADDRESS]) {
                 result->set_address_length(nla_get_u16(attrs[DTC_ATTR_ADDRESS]));
         }
@@ -6643,6 +6687,16 @@ DataTransferConstants * parseDataTransferConstantsObject(nlattr *nested) {
         if (attrs[DTC_ATTR_MAX_PDU_LIFE]) {
                 result->set_max_pdu_lifetime(
                                 nla_get_u32(attrs[DTC_ATTR_MAX_PDU_LIFE]));
+        }
+
+        if (attrs[DTC_ATTR_RATE]) {
+                result->set_rate_length(
+                                nla_get_u16(attrs[DTC_ATTR_RATE]));
+        }
+
+        if (attrs[DTC_ATTR_FRAME]) {
+                result->set_frame_length(
+                                nla_get_u16(attrs[DTC_ATTR_FRAME]));
         }
 
         if (attrs[DTC_ATTR_DIF_INTEGRITY]) {
@@ -9250,90 +9304,153 @@ parseIpcmPluginLoadResponseMessage(nlmsghdr *hdr){
 	return result;
 }
 
-IPCPEnableEncryptionRequestMessage * parseIPCPEnableEncryptionRequestMessage(
+void parseCryptoState(nlattr *nested,
+		      IPCPUpdateCryptoStateRequestMessage * result)
+{
+	struct nla_policy attr_policy[CRYPTS_ATTR_MAX + 1];
+	attr_policy[CRYPTS_ATTR_ENABLE_TX].type = NLA_FLAG;
+	attr_policy[CRYPTS_ATTR_ENABLE_TX].minlen = 0;
+	attr_policy[CRYPTS_ATTR_ENABLE_TX].maxlen = 0;
+	attr_policy[CRYPTS_ATTR_ENABLE_RX].type = NLA_FLAG;
+	attr_policy[CRYPTS_ATTR_ENABLE_RX].minlen = 0;
+	attr_policy[CRYPTS_ATTR_ENABLE_RX].maxlen = 0;
+	attr_policy[CRYPTS_ATTR_MAC_KEY_TX].type = NLA_UNSPEC;
+	attr_policy[CRYPTS_ATTR_MAC_KEY_TX].minlen = 0;
+	attr_policy[CRYPTS_ATTR_MAC_KEY_TX].maxlen = 65535;
+	attr_policy[CRYPTS_ATTR_MAC_KEY_RX].type = NLA_UNSPEC;
+	attr_policy[CRYPTS_ATTR_MAC_KEY_RX].minlen = 0;
+	attr_policy[CRYPTS_ATTR_MAC_KEY_RX].maxlen = 65535;
+	attr_policy[CRYPTS_ATTR_ENCRYPT_KEY_TX].type = NLA_UNSPEC;
+	attr_policy[CRYPTS_ATTR_ENCRYPT_KEY_TX].minlen = 0;
+	attr_policy[CRYPTS_ATTR_ENCRYPT_KEY_TX].maxlen = 65535;
+	attr_policy[CRYPTS_ATTR_ENCRYPT_KEY_RX].type = NLA_UNSPEC;
+	attr_policy[CRYPTS_ATTR_ENCRYPT_KEY_RX].minlen = 0;
+	attr_policy[CRYPTS_ATTR_ENCRYPT_KEY_RX].maxlen = 65535;
+	attr_policy[CRYPTS_ATTR_IV_TX].type = NLA_UNSPEC;
+	attr_policy[CRYPTS_ATTR_IV_TX].minlen = 0;
+	attr_policy[CRYPTS_ATTR_IV_TX].maxlen = 65535;
+	attr_policy[CRYPTS_ATTR_IV_RX].type = NLA_UNSPEC;
+	attr_policy[CRYPTS_ATTR_IV_RX].minlen = 0;
+	attr_policy[CRYPTS_ATTR_IV_RX].maxlen = 65535;
+	struct nlattr *attrs[CRYPTS_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, CRYPTS_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing CryptoState information from Netlink message: %d",
+				err);
+		return;
+	}
+
+	result->state.enable_crypto_tx = attrs[CRYPTS_ATTR_ENABLE_TX];
+	result->state.enable_crypto_rx = attrs[CRYPTS_ATTR_ENABLE_RX];
+
+	if (attrs[CRYPTS_ATTR_MAC_KEY_TX]) {
+		result->state.mac_key_tx.length = nla_len(attrs[CRYPTS_ATTR_MAC_KEY_TX]);
+		result->state.mac_key_tx.data = new unsigned char[result->state.mac_key_tx.length];
+		unsigned char * data = (unsigned char *) nla_data(attrs[CRYPTS_ATTR_MAC_KEY_TX]);
+		memcpy(result->state.mac_key_tx.data, data, result->state.mac_key_tx.length);
+	}
+
+	if (attrs[CRYPTS_ATTR_MAC_KEY_RX]) {
+		result->state.mac_key_rx.length = nla_len(attrs[CRYPTS_ATTR_MAC_KEY_RX]);
+		result->state.mac_key_rx.data = new unsigned char[result->state.mac_key_rx.length];
+		unsigned char * data = (unsigned char *) nla_data(attrs[CRYPTS_ATTR_MAC_KEY_RX]);
+		memcpy(result->state.mac_key_rx.data, data, result->state.mac_key_rx.length);
+	}
+
+	if (attrs[CRYPTS_ATTR_ENCRYPT_KEY_TX]) {
+		result->state.encrypt_key_tx.length = nla_len(attrs[CRYPTS_ATTR_ENCRYPT_KEY_TX]);
+		result->state.encrypt_key_tx.data = new unsigned char[result->state.encrypt_key_tx.length];
+		unsigned char * data = (unsigned char *) nla_data(attrs[CRYPTS_ATTR_ENCRYPT_KEY_TX]);
+		memcpy(result->state.encrypt_key_tx.data, data, result->state.encrypt_key_tx.length);
+	}
+
+	if (attrs[CRYPTS_ATTR_ENCRYPT_KEY_RX]) {
+		result->state.encrypt_key_rx.length = nla_len(attrs[CRYPTS_ATTR_ENCRYPT_KEY_RX]);
+		result->state.encrypt_key_rx.data = new unsigned char[result->state.encrypt_key_rx.length];
+		unsigned char * data = (unsigned char *) nla_data(attrs[CRYPTS_ATTR_ENCRYPT_KEY_RX]);
+		memcpy(result->state.encrypt_key_rx.data, data, result->state.encrypt_key_rx.length);
+	}
+
+	if (attrs[CRYPTS_ATTR_IV_TX]) {
+		result->state.iv_tx.length = nla_len(attrs[CRYPTS_ATTR_IV_TX]);
+		result->state.iv_tx.data = new unsigned char[result->state.iv_tx.length];
+		unsigned char * data = (unsigned char *) nla_data(attrs[CRYPTS_ATTR_IV_TX]);
+		memcpy(result->state.iv_tx.data, data, result->state.iv_tx.length);
+	}
+
+	if (attrs[CRYPTS_ATTR_IV_RX]) {
+		result->state.iv_rx.length = nla_len(attrs[CRYPTS_ATTR_IV_RX]);
+		result->state.iv_rx.data = new unsigned char[result->state.iv_rx.length];
+		unsigned char * data = (unsigned char *) nla_data(attrs[CRYPTS_ATTR_IV_RX]);
+		memcpy(result->state.iv_rx.data, data, result->state.iv_rx.length);
+	}
+}
+
+IPCPUpdateCryptoStateRequestMessage * parseIPCPUpdateCryptoStateRequestMessage(
 		nlmsghdr *hdr)
 {
-	struct nla_policy attr_policy[EERM_ATTR_MAX + 1];
-	attr_policy[EERM_ATTR_EN_ENCRYPT].type = NLA_FLAG;
-	attr_policy[EERM_ATTR_EN_ENCRYPT].minlen = 0;
-	attr_policy[EERM_ATTR_EN_ENCRYPT].maxlen = 0;
-	attr_policy[EERM_ATTR_EN_DECRYPT].type = NLA_FLAG;
-	attr_policy[EERM_ATTR_EN_DECRYPT].minlen = 0;
-	attr_policy[EERM_ATTR_EN_DECRYPT].maxlen = 0;
-	attr_policy[EERM_ATTR_ENCRYPT_KEY].type = NLA_UNSPEC;
-	attr_policy[EERM_ATTR_ENCRYPT_KEY].minlen = 0;
-	attr_policy[EERM_ATTR_ENCRYPT_KEY].maxlen = 65535;
-        attr_policy[EERM_ATTR_N_1_PORT].type = NLA_U32;
-        attr_policy[EERM_ATTR_N_1_PORT].minlen = 4;
-        attr_policy[EERM_ATTR_N_1_PORT].maxlen = 4;
-	struct nlattr *attrs[EERM_ATTR_MAX + 1];
+	struct nla_policy attr_policy[UCSR_ATTR_MAX + 1];
+	attr_policy[UCSR_ATTR_STATE].type = NLA_NESTED;
+	attr_policy[UCSR_ATTR_STATE].minlen = 0;
+	attr_policy[UCSR_ATTR_STATE].maxlen = 0;
+        attr_policy[UCSR_ATTR_N_1_PORT].type = NLA_U32;
+        attr_policy[UCSR_ATTR_N_1_PORT].minlen = 4;
+        attr_policy[UCSR_ATTR_N_1_PORT].maxlen = 4;
+	struct nlattr *attrs[UCSR_ATTR_MAX + 1];
 
 	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
-			EERM_ATTR_MAX, attr_policy);
+			UCSR_ATTR_MAX, attr_policy);
 	if (err < 0) {
-		LOG_ERR("Error parsing IPCPEnableEncryptionRequestMessage "
+		LOG_ERR("Error parsing IPCPUpdateCryptoStateRequestMessage "
 				"information from Netlink message: %d", err);
 		return 0;
 	}
 
-	IPCPEnableEncryptionRequestMessage * result =
-			new IPCPEnableEncryptionRequestMessage();
+	IPCPUpdateCryptoStateRequestMessage * result =
+			new IPCPUpdateCryptoStateRequestMessage();
 
-	if (attrs[EERM_ATTR_EN_ENCRYPT]) {
-		result->profile.enable_encryption = true;
-	} else {
-		result->profile.enable_encryption = false;
+	if (attrs[UCSR_ATTR_STATE]) {
+		parseCryptoState(attrs[UCSR_ATTR_STATE], result);
 	}
 
-	if (attrs[EERM_ATTR_EN_DECRYPT]) {
-		result->profile.enable_decryption = true;
-	} else {
-		result->profile.enable_decryption = false;
-	}
-
-	if (attrs[EERM_ATTR_ENCRYPT_KEY]) {
-		result->profile.encrypt_key.length = nla_len(attrs[EERM_ATTR_ENCRYPT_KEY]);
-		result->profile.encrypt_key.data = new unsigned char[result->profile.encrypt_key.length];
-		unsigned char * data = (unsigned char *) nla_data(attrs[EERM_ATTR_ENCRYPT_KEY]);
-		memcpy(result->profile.encrypt_key.data, data, result->profile.encrypt_key.length);
-	}
-
-	if (attrs[EERM_ATTR_N_1_PORT]) {
-		result->profile.port_id =
-				nla_get_u32(attrs[EERM_ATTR_N_1_PORT]);
+	if (attrs[UCSR_ATTR_N_1_PORT]) {
+		result->state.port_id =
+				nla_get_u32(attrs[UCSR_ATTR_N_1_PORT]);
 	}
 
 	return result;
 }
 
-IPCPEnableEncryptionResponseMessage * parseIPCPEnableEncryptionResponseMessage(nlmsghdr *hdr)
+IPCPUpdateCryptoStateResponseMessage * parseIPCPUpdateCryptoStateResponseMessage(nlmsghdr *hdr)
 {
-	struct nla_policy attr_policy[EEREM_ATTR_MAX + 1];
-        attr_policy[EEREM_ATTR_RESULT].type = NLA_U32;
-        attr_policy[EEREM_ATTR_RESULT].minlen = 4;
-        attr_policy[EEREM_ATTR_RESULT].maxlen = 4;
-        attr_policy[EEREM_ATTR_N_1_PORT].type = NLA_U32;
-        attr_policy[EEREM_ATTR_N_1_PORT].minlen = 4;
-        attr_policy[EEREM_ATTR_N_1_PORT].maxlen = 4;
-	struct nlattr *attrs[EEREM_ATTR_MAX + 1];
+	struct nla_policy attr_policy[UCSREM_ATTR_MAX + 1];
+        attr_policy[UCSREM_ATTR_RESULT].type = NLA_U32;
+        attr_policy[UCSREM_ATTR_RESULT].minlen = 4;
+        attr_policy[UCSREM_ATTR_RESULT].maxlen = 4;
+        attr_policy[UCSREM_ATTR_N_1_PORT].type = NLA_U32;
+        attr_policy[UCSREM_ATTR_N_1_PORT].minlen = 4;
+        attr_policy[UCSREM_ATTR_N_1_PORT].maxlen = 4;
+	struct nlattr *attrs[UCSREM_ATTR_MAX + 1];
 
 	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
-			EEREM_ATTR_MAX, attr_policy);
+			UCSREM_ATTR_MAX, attr_policy);
 	if (err < 0) {
 		LOG_ERR("Error parsing IPCPEnableEncryptionResponseMessage "
                         "information from Netlink message: %d", err);
 		return 0;
 	}
 
-	IPCPEnableEncryptionResponseMessage * result =
-			new IPCPEnableEncryptionResponseMessage();
+	IPCPUpdateCryptoStateResponseMessage * result =
+			new IPCPUpdateCryptoStateResponseMessage();
 
-	if (attrs[IPLRE_ATTR_RESULT]) {
-		result->result = nla_get_u32(attrs[IPLRE_ATTR_RESULT]);
+	if (attrs[UCSREM_ATTR_RESULT]) {
+		result->result = nla_get_u32(attrs[UCSREM_ATTR_RESULT]);
 	}
 
-	if (attrs[EEREM_ATTR_N_1_PORT]) {
-		result->port_id = nla_get_u32(attrs[EEREM_ATTR_N_1_PORT]);
+	if (attrs[UCSREM_ATTR_N_1_PORT]) {
+		result->port_id = nla_get_u32(attrs[UCSREM_ATTR_N_1_PORT]);
 	}
 
 	return result;

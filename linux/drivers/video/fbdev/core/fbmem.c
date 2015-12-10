@@ -433,7 +433,7 @@ static void fb_do_show_logo(struct fb_info *info, struct fb_image *image,
 			image->dx += image->width + 8;
 		}
 	} else if (rotate == FB_ROTATE_UD) {
-		for (x = 0; x < num && image->dx >= 0; x++) {
+		for (x = 0; x < num; x++) {
 			info->fbops->fb_imageblit(info, image);
 			image->dx -= image->width + 8;
 		}
@@ -445,7 +445,7 @@ static void fb_do_show_logo(struct fb_info *info, struct fb_image *image,
 			image->dy += image->height + 8;
 		}
 	} else if (rotate == FB_ROTATE_CCW) {
-		for (x = 0; x < num && image->dy >= 0; x++) {
+		for (x = 0; x < num; x++) {
 			info->fbops->fb_imageblit(info, image);
 			image->dy -= image->height + 8;
 		}
@@ -674,6 +674,7 @@ int fb_show_logo(struct fb_info *info, int rotate)
 int fb_prepare_logo(struct fb_info *info, int rotate) { return 0; }
 int fb_show_logo(struct fb_info *info, int rotate) { return 0; }
 #endif /* CONFIG_LOGO */
+EXPORT_SYMBOL(fb_prepare_logo);
 EXPORT_SYMBOL(fb_show_logo);
 
 static void *fb_seq_start(struct seq_file *m, loff_t *pos)
@@ -1179,7 +1180,7 @@ static long do_fb_ioctl(struct fb_info *info, unsigned int cmd,
 			return -EFAULT;
 		if (con2fb.console < 1 || con2fb.console > MAX_NR_CONSOLES)
 			return -EINVAL;
-		if (con2fb.framebuffer < 0 || con2fb.framebuffer >= FB_MAX)
+		if (con2fb.framebuffer >= FB_MAX)
 			return -EINVAL;
 		if (!registered_fb[con2fb.framebuffer])
 			request_module("fb%d", con2fb.framebuffer);
@@ -1906,97 +1907,5 @@ int fb_new_modelist(struct fb_info *info)
 
 	return err;
 }
-
-static char *video_options[FB_MAX] __read_mostly;
-static int ofonly __read_mostly;
-
-/**
- * fb_get_options - get kernel boot parameters
- * @name:   framebuffer name as it would appear in
- *          the boot parameter line
- *          (video=<name>:<options>)
- * @option: the option will be stored here
- *
- * NOTE: Needed to maintain backwards compatibility
- */
-int fb_get_options(const char *name, char **option)
-{
-	char *opt, *options = NULL;
-	int retval = 0;
-	int name_len = strlen(name), i;
-
-	if (name_len && ofonly && strncmp(name, "offb", 4))
-		retval = 1;
-
-	if (name_len && !retval) {
-		for (i = 0; i < FB_MAX; i++) {
-			if (video_options[i] == NULL)
-				continue;
-			if (!video_options[i][0])
-				continue;
-			opt = video_options[i];
-			if (!strncmp(name, opt, name_len) &&
-			    opt[name_len] == ':')
-				options = opt + name_len + 1;
-		}
-	}
-	/* No match, pass global option */
-	if (!options && option && fb_mode_option)
-		options = kstrdup(fb_mode_option, GFP_KERNEL);
-	if (options && !strncmp(options, "off", 3))
-		retval = 1;
-
-	if (option)
-		*option = options;
-
-	return retval;
-}
-EXPORT_SYMBOL(fb_get_options);
-
-#ifndef MODULE
-/**
- *	video_setup - process command line options
- *	@options: string of options
- *
- *	Process command line options for frame buffer subsystem.
- *
- *	NOTE: This function is a __setup and __init function.
- *            It only stores the options.  Drivers have to call
- *            fb_get_options() as necessary.
- *
- *	Returns zero.
- *
- */
-static int __init video_setup(char *options)
-{
-	int i, global = 0;
-
-	if (!options || !*options)
- 		global = 1;
-
- 	if (!global && !strncmp(options, "ofonly", 6)) {
- 		ofonly = 1;
- 		global = 1;
- 	}
-
- 	if (!global && !strchr(options, ':')) {
- 		fb_mode_option = options;
- 		global = 1;
- 	}
-
- 	if (!global) {
- 		for (i = 0; i < FB_MAX; i++) {
- 			if (video_options[i] == NULL) {
- 				video_options[i] = options;
- 				break;
- 			}
-
-		}
-	}
-
-	return 1;
-}
-__setup("video=", video_setup);
-#endif
 
 MODULE_LICENSE("GPL");

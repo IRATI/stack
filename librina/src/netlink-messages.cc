@@ -9,12 +9,12 @@
 // modify it under the terms of the GNU Lesser General Public
 // License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// 
+//
 // This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 // Lesser General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU Lesser General Public
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -286,11 +286,11 @@ const std::string BaseNetlinkMessage::operationCodeToString(RINANetlinkOperation
 	case RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE:
 		result = "40_SET_POL_SET_RESP";
 		break;
-	case RINA_C_IPCP_ENABLE_ENCRYPTION_REQUEST:
-		result = "41_ENABLE_ENCRYPT_REQ";
+	case RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST:
+		result = "41_UPDATE_CRYPTO_STATE_REQ";
 		break;
-	case RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE:
-		result = "42_ENABLE_ENCRYPT_RESP";
+	case RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE:
+		result = "42_UPDATE_CRYPTO_STATE_RESP";
 		break;
 	case RINA_C_IPCM_IPC_PROCESS_INITIALIZED:
 		result = "43_IPCP_INIT";
@@ -554,6 +554,7 @@ bool AppAllocateFlowResponseMessage::isNotifySource() const {
 void AppAllocateFlowResponseMessage::setNotifySource(bool notifySource) {
 	this->notifySource = notifySource;
 }
+
 
 IPCEvent* AppAllocateFlowResponseMessage::toIPCEvent(){
         AllocateFlowResponseEvent * event =
@@ -1337,19 +1338,23 @@ IpcmAllocateFlowResponseMessage::IpcmAllocateFlowResponseMessage() :
 	this->notifySource = false;
 }
 
-void IpcmAllocateFlowResponseMessage::setResult(int result) {
+void IpcmAllocateFlowResponseMessage::setResult(int result)
+{
 	this->result = result;
 }
 
-int IpcmAllocateFlowResponseMessage::getResult() const {
+int IpcmAllocateFlowResponseMessage::getResult() const
+{
 	return result;
 }
 
-bool IpcmAllocateFlowResponseMessage::isNotifySource() const {
+bool IpcmAllocateFlowResponseMessage::isNotifySource() const
+{
 	return notifySource;
 }
 
-void IpcmAllocateFlowResponseMessage::setNotifySource(bool notifySource) {
+void IpcmAllocateFlowResponseMessage::setNotifySource(bool notifySource)
+{
 	this->notifySource = notifySource;
 }
 
@@ -1984,28 +1989,28 @@ IPCEvent* RmtDumpPDUFTEntriesResponseMessage::toIPCEvent() {
         return event;
 }
 
-/// CLASS IPCPEnableEncryptionRequestMessage
-IPCPEnableEncryptionRequestMessage::IPCPEnableEncryptionRequestMessage()
-	: BaseNetlinkMessage(RINA_C_IPCP_ENABLE_ENCRYPTION_REQUEST)
+/// CLASS IPCPUpdateCryptoStateRequestMessage
+IPCPUpdateCryptoStateRequestMessage::IPCPUpdateCryptoStateRequestMessage()
+	: BaseNetlinkMessage(RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST)
 {
 }
 
-IPCEvent* IPCPEnableEncryptionRequestMessage::toIPCEvent() {
+IPCEvent* IPCPUpdateCryptoStateRequestMessage::toIPCEvent() {
         return 0;
 }
 
 /// CLASS IPCPEnableEncryptionResponseMessage
-IPCPEnableEncryptionResponseMessage::IPCPEnableEncryptionResponseMessage()
-	: BaseNetlinkResponseMessage(RINA_C_IPCP_ENABLE_ENCRYPTION_RESPONSE)
+IPCPUpdateCryptoStateResponseMessage::IPCPUpdateCryptoStateResponseMessage()
+	: BaseNetlinkResponseMessage(RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE)
 {
 	port_id = 0;
 }
 
-IPCEvent* IPCPEnableEncryptionResponseMessage::toIPCEvent()
+IPCEvent* IPCPUpdateCryptoStateResponseMessage::toIPCEvent()
 {
-        IPCEvent * event = new EnableEncryptionResponseEvent(result,
-                        				     port_id,
-                        				     getSequenceNumber());
+        IPCEvent * event = new UpdateCryptoStateResponseEvent(result,
+                        				      port_id,
+                        				      getSequenceNumber());
         return event;
 }
 

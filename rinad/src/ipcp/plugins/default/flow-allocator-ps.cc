@@ -30,8 +30,8 @@ namespace rinad {
 class FlowAllocatorPs: public IFlowAllocatorPs {
 public:
 	FlowAllocatorPs(IFlowAllocator * dm);
-        Flow *newFlowRequest(IPCProcess * ipc_process,
-                             const rina::FlowRequestEvent& event);
+        virtual Flow *newFlowRequest(IPCProcess * ipc_process,
+                                     const rina::FlowRequestEvent& event);
         int set_policy_set_param(const std::string& name,
                                  const std::string& value);
         virtual ~FlowAllocatorPs() {}
@@ -74,7 +74,7 @@ Flow * FlowAllocatorPs::newFlowRequest(IPCProcess * ipc_process,
 	rina::Connection * connection = new rina::Connection();
 	connection->portId = event.portId;
 	connection->sourceAddress = ipc_process->get_address();
-	connection->setQosId(1);
+	connection->setQosId(qosCube->id_);
 	connection->setFlowUserIpcProcessId(event.flowRequestorIpcProcessId);
         rina::DTPConfig dtpConfig = rina::DTPConfig(
                         qosCube->get_dtp_config());
@@ -141,20 +141,131 @@ int FlowAllocatorPs::set_policy_set_param(const std::string& name,
         return -1;
 }
 
+class FlowAllocatorRoundRobinPs: public IFlowAllocatorPs {
+public:
+	FlowAllocatorRoundRobinPs(IFlowAllocator * dm_) :
+		dm(dm_), last_qos_index(0) {};
+        Flow *newFlowRequest(IPCProcess * ipc_process,
+                             const rina::FlowRequestEvent& event);
+        int set_policy_set_param(const std::string& name,
+        			 const std::string& value);
+        virtual ~FlowAllocatorRoundRobinPs() {}
+
+private:
+        // Data model of the security manager component.
+        IFlowAllocator * dm;
+        int last_qos_index;
+};
+
+Flow * FlowAllocatorRoundRobinPs::newFlowRequest(IPCProcess * ipc_process,
+                                       	         const rina::FlowRequestEvent& event)
+{
+	Flow* flow;
+	rina::QoSCube * qosCube = NULL;
+	std::list<rina::Connection*> connections;
+        std::list<rina::QoSCube*> qosCubes = dm->getQoSCubes();
+        std::list<rina::QoSCube*>::const_iterator iterator;
+        int count;
+        rina::Lockable lock;
+        rina::ScopedLock g(lock);
+
+	if (*(qosCubes.begin())==NULL)
+	    throw rina::Exception("No QoSCubes defined.");
+
+	if (qosCubes.size() == 1 || last_qos_index == -1 || last_qos_index == qosCubes.size() - 1) {
+		qosCube = qosCubes.front();
+		last_qos_index = 0;
+	} else {
+		count = 0;
+		for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
+			if (count <= last_qos_index) {
+				count++;
+				continue;
+			}
+
+			qosCube = *iterator;
+			last_qos_index = count;
+			break;
+		}
+	}
+
+	LOG_IPCP_DBG("Selected qos cube with name %s", qosCube->get_name().c_str());
+
+	flow = dm->createFlow();
+	flow->destination_naming_info = event.remoteApplicationName;
+	flow->source_naming_info = event.localApplicationName;
+	flow->hop_count = 3;
+	flow->max_create_flow_retries = 1;
+	flow->source = true;
+	flow->state = Flow::ALLOCATION_IN_PROGRESS;
+
+	rina::Connection * connection = new rina::Connection();
+	connection->portId = event.portId;
+	connection->sourceAddress = ipc_process->get_address();
+	connection->setQosId(qosCube->id_);
+	connection->setFlowUserIpcProcessId(event.flowRequestorIpcProcessId);
+        rina::DTPConfig dtpConfig = rina::DTPConfig(
+                        qosCube->get_dtp_config());
+	if (event.flowSpecification.maxAllowableGap < 0) {
+		dtpConfig.set_max_sdu_gap(INT_MAX);
+	} else {
+		dtpConfig.set_max_sdu_gap(qosCube->get_max_allowable_gap());
+	}
+	connection->setDTPConfig(dtpConfig);
+        rina::DTCPConfig dtcpConfig = rina::DTCPConfig(
+                        qosCube->get_dtcp_config());
+	connection->setDTCPConfig(dtcpConfig);
+	connections.push_back(connection);
+
+	flow->connections = connections;
+	flow->current_connection_index = 0;
+	flow->flow_specification = event.flowSpecification;
+
+	return flow;
+}
+
+int FlowAllocatorRoundRobinPs::set_policy_set_param(const std::string& name,
+                                            	    const std::string& value)
+{
+        LOG_IPCP_DBG("No policy-set-specific parameters to set (%s, %s)",
+                        name.c_str(), value.c_str());
+        return -1;
+}
+
 extern "C" rina::IPolicySet *
 createFlowAllocatorPs(rina::ApplicationEntity * ctx)
 {
-        IFlowAllocator * sm = dynamic_cast<IFlowAllocator *>(ctx);
+        IFlowAllocator * fa = dynamic_cast<IFlowAllocator *>(ctx);
 
-        if (!sm) {
+        if (!fa) {
                 return NULL;
         }
 
-        return new FlowAllocatorPs(sm);
+        return new FlowAllocatorPs(fa);
 }
 
 extern "C" void
 destroyFlowAllocatorPs(rina::IPolicySet * ps)
+{
+        if (ps) {
+                delete ps;
+        }
+}
+
+extern "C" rina::IPolicySet *
+createFlowAllocatorRoundRobinPs(rina::ApplicationEntity * ctx)
+{
+        IFlowAllocator * fa = dynamic_cast<IFlowAllocator *>(ctx);
+
+        if (!fa) {
+                return NULL;
+        }
+
+        return new FlowAllocatorRoundRobinPs(fa);
+}
+
+extern "C" void
+destroyFlowAllocatorRoundRobinPs(rina::IPolicySet * ps)
 {
         if (ps) {
                 delete ps;

@@ -4,4 +4,6 @@
 
 set -x
 
-sudo insmod vmpi-xen-guest.ko
+sudo insmod vmpi-bufs.ko
+sudo insmod vmpi-provider.ko
+sudo insmod vmpi-guest-xen.ko

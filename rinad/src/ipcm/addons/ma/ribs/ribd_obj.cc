@@ -17,32 +17,37 @@ namespace rib_v1 {
 //Static class names
 const std::string RIBDaemonObj::class_name = "RIBDaemon";
 
-RIBDaemonObj::RIBDaemonObj(std::string name,
-		long instance, int ipcp_id_)
-	: rina::rib::EmptyRIBObject(class_name, name, instance, NULL),
+RIBDaemonObj::RIBDaemonObj(int ipcp_id_)
+	: rina::rib::RIBObj(class_name),
 	ipcp_id(ipcp_id_){
 }
 
 //Read
-rina::cdap_rib::res_info_t* RIBDaemonObj::remoteRead(const std::string& name,
-		rina::cdap_rib::SerializedObject &obj_reply){
+void RIBDaemonObj::read(const rina::cdap_rib::con_handle_t &con,
+				const std::string& fqn,
+				const std::string& class_,
+				const rina::cdap_rib::filt_info_t &filt,
+				const int invoke_id,
+				rina::cdap_rib::ser_obj_t &obj_reply,
+				rina::cdap_rib::res_info_t& res) {
 
 	QueryRIBPromise promise;
-	rina::cdap_rib::res_info_t* r = new rina::cdap_rib::res_info_t;
-	r->result_ = 0;
+
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 
 	//Perform the query
 	if (IPCManager->query_rib(ManagementAgent::inst, &promise, ipcp_id) == IPCM_FAILURE ||
 			promise.wait() != IPCM_SUCCESS){
-		r->result_ = -1;
-		return r;
+		res.code_ = rina::cdap_rib::CDAP_ERROR;
+		return;
 	}
 
-	//Serialize and return
-	mad_manager::encoders::StringEncoder encoder;
-	encoder.encode(promise.serialized_rib, obj_reply);
+	// FIXME cut the query rib to avoid oversizing the shim eth buffer. Erase when spliting is implemented
+	std::string trunk = promise.serialized_rib.substr(0, 1000);
 
-	return r;
+	//Serialize and return
+	mad_manager::StringEncoder encoder;
+	encoder.encode(trunk, obj_reply);
 }
 
 

@@ -21,15 +21,12 @@
 #include <linux/module.h>
 #include <linux/sched.h>
 #include <linux/kernel.h>
-#include <linux/aio.h>
 #include <linux/list.h>
 #include <linux/wait.h>
 #include <linux/slab.h>
+#include <linux/mutex.h>
 
-#include "vmpi-structs.h"       /* struct vmpi_hdr */
-#include "vmpi-limits.h"
-#include "vmpi-ops.h"
-#include "vmpi-provider.h"
+#include "vmpi.h"
 
 
 struct vmpi_provider {
@@ -40,8 +37,7 @@ struct vmpi_provider {
 };
 
 static LIST_HEAD(providers);
-static DECLARE_WAIT_QUEUE_HEAD(wqh);
-/* TODO mutex */
+static struct mutex lock;
 
 static struct vmpi_provider*
 vmpi_search_instance_by_id(struct list_head *head, unsigned int provider,
@@ -63,23 +59,22 @@ int vmpi_provider_find_instance(unsigned int provider, int id,
                                 struct vmpi_ops *ops)
 {
         struct vmpi_provider *elem;
-        int ret;
 
         if (provider > VMPI_PROVIDER_AUTO) {
                 printk("%s: Invalid provider %u\n", __func__, provider);
                 return -EINVAL;
         }
 
-        ret = wait_event_interruptible(wqh,
-                vmpi_search_instance_by_id(&providers, provider, id) != NULL);
-        if (ret) {
-                return ret;
-        }
-
+        mutex_lock(&lock);
         elem = vmpi_search_instance_by_id(&providers, provider, id);
+        if (elem == NULL) {
+                mutex_unlock(&lock);
+                return -EAGAIN;
+        }
 
         /* Fill in the vmpi_ops structure. */
         *ops = elem->ops;
+        mutex_unlock(&lock);
 
         return 0;
 }
@@ -105,12 +100,13 @@ int vmpi_provider_register(unsigned int provider, unsigned int id,
         elem->provider = provider;
         elem->id = id;
         elem->ops = *ops;
-        list_add_tail(&elem->node, &providers);
 
-        wake_up_interruptible(&wqh);
+        mutex_lock(&lock);
+        list_add_tail(&elem->node, &providers);
+        mutex_unlock(&lock);
 
         printk("%s: Provider %s:%u registered\n", __func__,
-               (provider == VMPI_PROVIDER_HOST ? "HOST" : "GUEST"), id);
+               (provider == VMPI_PROVIDER_HOST) ? "HOST" : "GUEST", id);
 
         return 0;
 }
@@ -125,41 +121,41 @@ int vmpi_provider_unregister(unsigned int provider, unsigned int id)
                 return -EINVAL;
         }
 
+        mutex_lock(&lock);
         elem = vmpi_search_instance_by_id(&providers, provider, id);
         if (!elem) {
+                mutex_unlock(&lock);
                 printk("%s: No such provider %u:%u\n", __func__, provider, id);
                 return -ENOENT;
         }
 
         list_del(&elem->node);
+        mutex_unlock(&lock);
+
         kfree(elem);
 
         printk("%s: Provider %s:%u unregistered\n", __func__,
-               (provider == VMPI_PROVIDER_HOST ? "HOST" : "GUEST"), id);
+               (provider == VMPI_PROVIDER_HOST) ? "HOST" : "GUEST", id);
 
         return 0;
 }
 EXPORT_SYMBOL_GPL(vmpi_provider_unregister);
 
-unsigned int vmpi_get_num_channels(void)
-{
-        return VMPI_MAX_CHANNELS_DEFAULT;
-}
-EXPORT_SYMBOL_GPL(vmpi_get_num_channels);
-
 unsigned int vmpi_get_max_payload_size(void)
 {
-        return VMPI_BUF_SIZE - sizeof(struct vmpi_hdr);
+        return VMPI_BUF_SIZE;
 }
 EXPORT_SYMBOL_GPL(vmpi_get_max_payload_size);
 
 static int __init vmpi_provider_init(void)
 {
+        mutex_init(&lock);
         return 0;
 }
 
 static void __exit vmpi_provider_fini(void)
 {
+        mutex_destroy(&lock);
 }
 
 module_init(vmpi_provider_init);

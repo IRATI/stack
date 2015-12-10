@@ -23,6 +23,8 @@
  *
  */
 
+/* Uncomment next line to get verbose printout */
+/* #define DEBUG */
 #define pr_fmt(fmt) "ACPI: " fmt
 
 #include <linux/init.h>
@@ -44,6 +46,12 @@ static struct acpi_table_desc initial_tables[ACPI_MAX_TABLES] __initdata;
 
 static int acpi_apic_instance __initdata;
 
+/*
+ * Disable table checksum verification for the early stage due to the size
+ * limitation of the current x86 early mapping implementation.
+ */
+static bool acpi_verify_table_checksum __initdata = false;
+
 void acpi_table_print_madt_entry(struct acpi_subtable_header *header)
 {
 	if (!header)
@@ -55,9 +63,9 @@ void acpi_table_print_madt_entry(struct acpi_subtable_header *header)
 		{
 			struct acpi_madt_local_apic *p =
 			    (struct acpi_madt_local_apic *)header;
-			pr_info("LAPIC (acpi_id[0x%02x] lapic_id[0x%02x] %s)\n",
-				p->processor_id, p->id,
-				(p->lapic_flags & ACPI_MADT_ENABLED) ? "enabled" : "disabled");
+			pr_debug("LAPIC (acpi_id[0x%02x] lapic_id[0x%02x] %s)\n",
+				 p->processor_id, p->id,
+				 (p->lapic_flags & ACPI_MADT_ENABLED) ? "enabled" : "disabled");
 		}
 		break;
 
@@ -65,9 +73,9 @@ void acpi_table_print_madt_entry(struct acpi_subtable_header *header)
 		{
 			struct acpi_madt_local_x2apic *p =
 			    (struct acpi_madt_local_x2apic *)header;
-			pr_info("X2APIC (apic_id[0x%02x] uid[0x%02x] %s)\n",
-				p->local_apic_id, p->uid,
-				(p->lapic_flags & ACPI_MADT_ENABLED) ? "enabled" : "disabled");
+			pr_debug("X2APIC (apic_id[0x%02x] uid[0x%02x] %s)\n",
+				 p->local_apic_id, p->uid,
+				 (p->lapic_flags & ACPI_MADT_ENABLED) ? "enabled" : "disabled");
 		}
 		break;
 
@@ -75,8 +83,8 @@ void acpi_table_print_madt_entry(struct acpi_subtable_header *header)
 		{
 			struct acpi_madt_io_apic *p =
 			    (struct acpi_madt_io_apic *)header;
-			pr_info("IOAPIC (id[0x%02x] address[0x%08x] gsi_base[%d])\n",
-				p->id, p->address, p->global_irq_base);
+			pr_debug("IOAPIC (id[0x%02x] address[0x%08x] gsi_base[%d])\n",
+				 p->id, p->address, p->global_irq_base);
 		}
 		break;
 
@@ -149,9 +157,9 @@ void acpi_table_print_madt_entry(struct acpi_subtable_header *header)
 		{
 			struct acpi_madt_io_sapic *p =
 			    (struct acpi_madt_io_sapic *)header;
-			pr_info("IOSAPIC (id[0x%x] address[%p] gsi_base[%d])\n",
-				p->id, (void *)(unsigned long)p->address,
-				p->global_irq_base);
+			pr_debug("IOSAPIC (id[0x%x] address[%p] gsi_base[%d])\n",
+				 p->id, (void *)(unsigned long)p->address,
+				 p->global_irq_base);
 		}
 		break;
 
@@ -159,9 +167,9 @@ void acpi_table_print_madt_entry(struct acpi_subtable_header *header)
 		{
 			struct acpi_madt_local_sapic *p =
 			    (struct acpi_madt_local_sapic *)header;
-			pr_info("LSAPIC (acpi_id[0x%02x] lsapic_id[0x%02x] lsapic_eid[0x%02x] %s)\n",
-				p->processor_id, p->id, p->eid,
-				(p->lapic_flags & ACPI_MADT_ENABLED) ? "enabled" : "disabled");
+			pr_debug("LSAPIC (acpi_id[0x%02x] lsapic_id[0x%02x] lsapic_eid[0x%02x] %s)\n",
+				 p->processor_id, p->id, p->eid,
+				 (p->lapic_flags & ACPI_MADT_ENABLED) ? "enabled" : "disabled");
 		}
 		break;
 
@@ -177,6 +185,28 @@ void acpi_table_print_madt_entry(struct acpi_subtable_header *header)
 		}
 		break;
 
+	case ACPI_MADT_TYPE_GENERIC_INTERRUPT:
+		{
+			struct acpi_madt_generic_interrupt *p =
+				(struct acpi_madt_generic_interrupt *)header;
+			pr_debug("GICC (acpi_id[0x%04x] address[%llx] MPIDR[0x%llx] %s)\n",
+				 p->uid, p->base_address,
+				 p->arm_mpidr,
+				 (p->flags & ACPI_MADT_ENABLED) ? "enabled" : "disabled");
+
+		}
+		break;
+
+	case ACPI_MADT_TYPE_GENERIC_DISTRIBUTOR:
+		{
+			struct acpi_madt_generic_distributor *p =
+				(struct acpi_madt_generic_distributor *)header;
+			pr_debug("GIC Distributor (gic_id[0x%04x] address[%llx] gsi_base[%d])\n",
+				 p->gic_id, p->base_address,
+				 p->global_irq_base);
+		}
+		break;
+
 	default:
 		pr_warn("Found unsupported MADT entry (type = 0x%x)\n",
 			header->type);
@@ -184,30 +214,24 @@ void acpi_table_print_madt_entry(struct acpi_subtable_header *header)
 	}
 }
 
-
 int __init
-acpi_table_parse_entries(char *id,
-			     unsigned long table_size,
-			     int entry_id,
-			     acpi_tbl_entry_handler handler,
-			     unsigned int max_entries)
+acpi_parse_entries(char *id, unsigned long table_size,
+		acpi_tbl_entry_handler handler,
+		struct acpi_table_header *table_header,
+		int entry_id, unsigned int max_entries)
 {
-	struct acpi_table_header *table_header = NULL;
 	struct acpi_subtable_header *entry;
-	unsigned int count = 0;
+	int count = 0;
 	unsigned long table_end;
-	acpi_size tbl_size;
 
 	if (acpi_disabled)
 		return -ENODEV;
 
-	if (!handler)
+	if (!id || !handler)
 		return -EINVAL;
 
-	if (strncmp(id, ACPI_SIG_MADT, 4) == 0)
-		acpi_get_table_with_size(id, acpi_apic_instance, &table_header, &tbl_size);
-	else
-		acpi_get_table_with_size(id, 0, &table_header, &tbl_size);
+	if (!table_size)
+		return -EINVAL;
 
 	if (!table_header) {
 		pr_warn("%4.4s not present\n", id);
@@ -224,9 +248,12 @@ acpi_table_parse_entries(char *id,
 	while (((unsigned long)entry) + sizeof(struct acpi_subtable_header) <
 	       table_end) {
 		if (entry->type == entry_id
-		    && (!max_entries || count++ < max_entries))
+		    && (!max_entries || count < max_entries)) {
 			if (handler(entry, table_end))
-				goto err;
+				return -EINVAL;
+
+			count++;
+		}
 
 		/*
 		 * If entry->length is 0, break from this loop to avoid
@@ -234,22 +261,53 @@ acpi_table_parse_entries(char *id,
 		 */
 		if (entry->length == 0) {
 			pr_err("[%4.4s:0x%02x] Invalid zero length\n", id, entry_id);
-			goto err;
+			return -EINVAL;
 		}
 
 		entry = (struct acpi_subtable_header *)
 		    ((unsigned long)entry + entry->length);
 	}
+
 	if (max_entries && count > max_entries) {
 		pr_warn("[%4.4s:0x%02x] ignored %i entries of %i found\n",
 			id, entry_id, count - max_entries, count);
 	}
 
+	return count;
+}
+
+int __init
+acpi_table_parse_entries(char *id,
+			 unsigned long table_size,
+			 int entry_id,
+			 acpi_tbl_entry_handler handler,
+			 unsigned int max_entries)
+{
+	struct acpi_table_header *table_header = NULL;
+	acpi_size tbl_size;
+	int count;
+	u32 instance = 0;
+
+	if (acpi_disabled)
+		return -ENODEV;
+
+	if (!id || !handler)
+		return -EINVAL;
+
+	if (!strncmp(id, ACPI_SIG_MADT, 4))
+		instance = acpi_apic_instance;
+
+	acpi_get_table_with_size(id, instance, &table_header, &tbl_size);
+	if (!table_header) {
+		pr_warn("%4.4s not present\n", id);
+		return -ENODEV;
+	}
+
+	count = acpi_parse_entries(id, table_size, handler, table_header,
+			entry_id, max_entries);
+
 	early_acpi_os_unmap_memory((char *)table_header, tbl_size);
 	return count;
-err:
-	early_acpi_os_unmap_memory((char *)table_header, tbl_size);
-	return -EINVAL;
 }
 
 int __init
@@ -333,6 +391,14 @@ int __init acpi_table_init(void)
 {
 	acpi_status status;
 
+	if (acpi_verify_table_checksum) {
+		pr_info("Early table checksum verification enabled\n");
+		acpi_gbl_verify_table_checksum = TRUE;
+	} else {
+		pr_info("Early table checksum verification disabled\n");
+		acpi_gbl_verify_table_checksum = FALSE;
+	}
+
 	status = acpi_initialize_tables(initial_tables, ACPI_MAX_TABLES, 0);
 	if (ACPI_FAILURE(status))
 		return -EINVAL;
@@ -346,7 +412,8 @@ static int __init acpi_parse_apic_instance(char *str)
 	if (!str)
 		return -EINVAL;
 
-	acpi_apic_instance = simple_strtoul(str, NULL, 0);
+	if (kstrtoint(str, 0, &acpi_apic_instance))
+		return -EINVAL;
 
 	pr_notice("Shall use APIC/MADT table %d\n", acpi_apic_instance);
 
@@ -354,3 +421,12 @@ static int __init acpi_parse_apic_instance(char *str)
 }
 
 early_param("acpi_apic_instance", acpi_parse_apic_instance);
+
+static int __init acpi_force_table_verification_setup(char *s)
+{
+	acpi_verify_table_checksum = true;
+
+	return 0;
+}
+
+early_param("acpi_force_table_verification", acpi_force_table_verification_setup);

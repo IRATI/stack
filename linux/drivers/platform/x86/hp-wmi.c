@@ -53,8 +53,10 @@ MODULE_ALIAS("wmi:5FB7F034-2C63-45e9-BE91-3D44E2C707E4");
 #define HPWMI_ALS_QUERY 0x3
 #define HPWMI_HARDWARE_QUERY 0x4
 #define HPWMI_WIRELESS_QUERY 0x5
+#define HPWMI_BIOS_QUERY 0x9
+#define HPWMI_FEATURE_QUERY 0xb
 #define HPWMI_HOTKEY_QUERY 0xc
-#define HPWMI_FEATURE_QUERY 0xd
+#define HPWMI_FEATURE2_QUERY 0xd
 #define HPWMI_WIRELESS2_QUERY 0x1b
 #define HPWMI_POSTCODEERROR_QUERY 0x2a
 
@@ -143,7 +145,8 @@ static const struct key_entry hp_wmi_keymap[] = {
 	{ KE_KEY, 0x20e8, { KEY_MEDIA } },
 	{ KE_KEY, 0x2142, { KEY_MEDIA } },
 	{ KE_KEY, 0x213b, { KEY_INFO } },
-	{ KE_KEY, 0x2169, { KEY_DIRECTION } },
+	{ KE_KEY, 0x2169, { KEY_ROTATE_DISPLAY } },
+	{ KE_KEY, 0x216a, { KEY_SETUP } },
 	{ KE_KEY, 0x231b, { KEY_HELP } },
 	{ KE_END, 0 }
 };
@@ -293,15 +296,36 @@ static int hp_wmi_tablet_state(void)
 	return (state & 0x4) ? 1 : 0;
 }
 
-static int hp_wmi_bios_2009_later(void)
+static int __init hp_wmi_bios_2008_later(void)
 {
 	int state = 0;
 	int ret = hp_wmi_perform_query(HPWMI_FEATURE_QUERY, 0, &state,
 				       sizeof(state), sizeof(state));
-	if (ret)
-		return ret;
+	if (!ret)
+		return 1;
 
-	return (state & 0x10) ? 1 : 0;
+	return (ret == HPWMI_RET_UNKNOWN_CMDTYPE) ? 0 : -ENXIO;
+}
+
+static int __init hp_wmi_bios_2009_later(void)
+{
+	int state = 0;
+	int ret = hp_wmi_perform_query(HPWMI_FEATURE2_QUERY, 0, &state,
+				       sizeof(state), sizeof(state));
+	if (!ret)
+		return 1;
+
+	return (ret == HPWMI_RET_UNKNOWN_CMDTYPE) ? 0 : -ENXIO;
+}
+
+static int __init hp_wmi_enable_hotkeys(void)
+{
+	int value = 0x6e;
+	int ret = hp_wmi_perform_query(HPWMI_BIOS_QUERY, 1, &value,
+				       sizeof(value), 0);
+	if (ret)
+		return -EINVAL;
+	return 0;
 }
 
 static int hp_wmi_set_block(void *data, bool blocked)
@@ -648,6 +672,9 @@ static int __init hp_wmi_input_setup(void)
 			    hp_wmi_tablet_state());
 	input_sync(hp_wmi_input_dev);
 
+	if (!hp_wmi_bios_2009_later() && hp_wmi_bios_2008_later())
+		hp_wmi_enable_hotkeys();
+
 	status = wmi_install_notify_handler(HPWMI_EVENT_GUID, hp_wmi_notify, NULL);
 	if (ACPI_FAILURE(status)) {
 		err = -EIO;
@@ -686,7 +713,7 @@ static void cleanup_sysfs(struct platform_device *device)
 	device_remove_file(&device->dev, &dev_attr_postcode);
 }
 
-static int hp_wmi_rfkill_setup(struct platform_device *device)
+static int __init hp_wmi_rfkill_setup(struct platform_device *device)
 {
 	int err;
 	int wireless = 0;
@@ -788,7 +815,7 @@ register_wifi_error:
 	return err;
 }
 
-static int hp_wmi_rfkill2_setup(struct platform_device *device)
+static int __init hp_wmi_rfkill2_setup(struct platform_device *device)
 {
 	int err, i;
 	struct bios_rfkill2_state state;
@@ -988,7 +1015,6 @@ static const struct dev_pm_ops hp_wmi_pm_ops = {
 static struct platform_driver hp_wmi_driver = {
 	.driver = {
 		.name = "hp-wmi",
-		.owner = THIS_MODULE,
 		.pm = &hp_wmi_pm_ops,
 	},
 	.remove = __exit_p(hp_wmi_bios_remove),

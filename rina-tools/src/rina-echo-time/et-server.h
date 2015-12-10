@@ -38,6 +38,7 @@ public:
 private:
         void servePingFlow(int port_id);
         void servePerfFlow(int port_id);
+        void serveFloodFlow(int port_id);
         void printPerfStats(unsigned long pkt,
         		    unsigned long bytes,
         		    unsigned long us);
@@ -63,7 +64,7 @@ public:
         ~EchoTimeServer() { };
 
 protected:
-        ServerWorker * internal_start_worker(int port_id);
+        ServerWorker * internal_start_worker(rina::FlowInformation flow);
 
 private:
         std::string test_type;

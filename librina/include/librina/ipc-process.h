@@ -487,7 +487,7 @@ public:
 	 * an error occurs
 	 */
 	void notifyIPCProcessInitialized(
-	                const ApplicationProcessNamingInformation& name);
+		const ApplicationProcessNamingInformation& name);
 
 	/**
 	 * True if the IPC Process has been successfully initialized, false
@@ -503,8 +503,8 @@ public:
 	 * @return
 	 */
 	ApplicationRegistration * appRegistered(
-	                        const ApplicationProcessNamingInformation& appName,
-	                        const ApplicationProcessNamingInformation& DIFName);
+		const ApplicationProcessNamingInformation& appName,
+		const ApplicationProcessNamingInformation& DIFName);
 
 	/**
 	 * The IPC Process has been unregistered from the DIF called DIFName,
@@ -513,7 +513,7 @@ public:
 	 * @param DIFName
 	 */
 	void appUnregistered(const ApplicationProcessNamingInformation& appName,
-	                const ApplicationProcessNamingInformation& DIFName);
+			     const ApplicationProcessNamingInformation& DIFName);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of an "assign
@@ -535,8 +535,9 @@ public:
 	 * IPC Manager
 	 */
 	void enrollToDIFResponse(const EnrollToDAFRequestEvent& event,
-	                int result, const std::list<Neighbor> & newNeighbors,
-	                const DIFInformation& difInformation);
+				 int result,
+				 const std::list<Neighbor> & newNeighbors,
+				 const DIFInformation& difInformation);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of a "register
@@ -632,8 +633,8 @@ public:
 	 * confirming/denying the flow
 	 */
 	FlowInformation allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
-			int result, bool notifySource);
-
+					     int result,
+					     bool notifySource);
 	/**
 	 * Invoked by the IPC Process to respond to the Application Process that
 	 * requested a flow deallocation
@@ -643,8 +644,9 @@ public:
 	 * @throws DeallocateFlowResponseException if there are issues
 	 * replying ot the application
 	 */
-	void notifyflowDeallocated(const FlowDeallocateRequestEvent flowDeallocateEvent,
-			int result);
+	void notifyflowDeallocated(
+		const FlowDeallocateRequestEvent flowDeallocateEvent,
+		int result);
 
 	/**
 	 * Invoked by the ipC Process to notify that a flow has been remotely
@@ -664,7 +666,7 @@ public:
 	 * @throws QueryRIBResponseException
 	 */
 	void queryRIBResponse(const QueryRIBRequestEvent& event, int result,
-			const std::list<RIBObjectData>& ribObjects);
+			      const std::list<RIBObjectData>& ribObjects);
 
 	/**
 	 * Request an available portId to the kernel
@@ -672,12 +674,10 @@ public:
 	 * associated to the port-id requested (0 if is an application)
 	 * @param appName The name of the application that requested
 	 * the flow (could be an IPC Process or a regular application)
-	 * @param blocking true if the flow is blocking, false otherwise
 	 * @return the port-id
 	 * @throws PortAllocationException if something goes wrong
 	 */
-	int allocatePortId(const ApplicationProcessNamingInformation& appName,
-			   bool blocking);
+	int allocatePortId(const ApplicationProcessNamingInformation& appName);
 
 	/**
 	 * Request the kernel to free a used port-id
@@ -887,12 +887,13 @@ public:
 #endif
 };
 
-class EnableEncryptionResponseEvent: public IPCEvent {
+class UpdateCryptoStateResponseEvent: public IPCEvent {
 public:
-        EnableEncryptionResponseEvent(int res,
-                        int port_id, unsigned int sequenceNumber);
+	UpdateCryptoStateResponseEvent(int res,
+                        	       int port_id,
+                        	       unsigned int sequenceNumber);
 
-        // The N-1 port-id where encryption was to be applied
+        // The N-1 port-id where crypto state was updated
         int port_id;
 
         // Result of the operation, 0 success
@@ -1010,8 +1011,8 @@ public:
          */
         unsigned int dumptPDUFT();
 
-        /// Request the kernel to enable encryption, decryption or both on a certain port
-        unsigned int enableEncryption(const EncryptionProfile& profile);
+        /// Request the kernel to update the state of cryptographic protection policies
+        unsigned int updateCryptoState(const CryptoState& state);
 
         /**
          * Request the Kernel IPC Process to modify a policy-set-related

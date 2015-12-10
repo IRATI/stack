@@ -148,7 +148,11 @@ IPCMConsole::IPCMConsole(const unsigned int port_) :
 				"<object-name>");
 	commands_map["show-catalog"] =
 			ConsoleCmdInfo(&IPCMConsole::show_catalog,
-				"USAGE: show-catalog");
+				"USAGE: show-catalog [<component-name>]");
+
+	commands_map["update-catalog"] =
+			ConsoleCmdInfo(&IPCMConsole::update_catalog,
+				"USAGE: update-catalog");
 
 	rina::ThreadAttributes ta;
 	worker = new rina::Thread(console_function, this, &ta);
@@ -536,7 +540,7 @@ IPCMConsole::register_at_dif(vector<string>& args)
 		return CMDRETCONT;
 	}
 
-	if(IPCManager->register_at_dif(this, &promise, ipcp_id, dif_name, true) == IPCM_FAILURE ||
+	if(IPCManager->register_at_dif(this, &promise, ipcp_id, dif_name) == IPCM_FAILURE ||
 			promise.wait() != IPCM_SUCCESS) {
 		outstream << "Registration failed" << endl;
 		return CMDRETCONT;
@@ -852,13 +856,29 @@ int IPCMConsole::read_ipcp_ribobj(std::vector<std::string>& args)
 
 int IPCMConsole::show_catalog(std::vector<std::string>& args)
 {
-	if (args.size() != 1) {
-		outstream << commands_map[args[0]].usage << endl;
-		return CMDRETCONT;
-	}
+	switch (args.size()) {
+	case 1:
+		outstream << IPCManager->catalog.toString();
+		break;
 
-	outstream << IPCManager->catalog.toString();
+	case 2:
+		outstream << IPCManager->catalog.toString(args[1]);
+		break;
+
+	default:
+		outstream << commands_map[args[0]].usage << endl;
+		break;
+	}
 
 	return CMDRETCONT;
 }
+
+int IPCMConsole::update_catalog(std::vector<std::string>& args)
+{
+	IPCManager->update_catalog(this);
+	outstream << "Catalog updated" << endl;
+
+	return CMDRETCONT;
+}
+
 }//namespace rinad

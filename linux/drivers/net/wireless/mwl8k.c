@@ -1159,12 +1159,11 @@ static int mwl8k_rxq_init(struct ieee80211_hw *hw, int index)
 
 	size = MWL8K_RX_DESCS * priv->rxd_ops->rxd_size;
 
-	rxq->rxd = pci_alloc_consistent(priv->pdev, size, &rxq->rxd_dma);
+	rxq->rxd = pci_zalloc_consistent(priv->pdev, size, &rxq->rxd_dma);
 	if (rxq->rxd == NULL) {
 		wiphy_err(hw->wiphy, "failed to alloc RX descriptors\n");
 		return -ENOMEM;
 	}
-	memset(rxq->rxd, 0, size);
 
 	rxq->buf = kcalloc(MWL8K_RX_DESCS, sizeof(*rxq->buf), GFP_KERNEL);
 	if (rxq->buf == NULL) {
@@ -1278,7 +1277,7 @@ static inline void mwl8k_save_beacon(struct ieee80211_hw *hw,
 	struct mwl8k_priv *priv = hw->priv;
 
 	priv->capture_beacon = false;
-	memset(priv->capture_bssid, 0, ETH_ALEN);
+	eth_zero_addr(priv->capture_bssid);
 
 	/*
 	 * Use GFP_ATOMIC as rxq_process is called from
@@ -1451,12 +1450,11 @@ static int mwl8k_txq_init(struct ieee80211_hw *hw, int index)
 
 	size = MWL8K_TX_DESCS * sizeof(struct mwl8k_tx_desc);
 
-	txq->txd = pci_alloc_consistent(priv->pdev, size, &txq->txd_dma);
+	txq->txd = pci_zalloc_consistent(priv->pdev, size, &txq->txd_dma);
 	if (txq->txd == NULL) {
 		wiphy_err(hw->wiphy, "failed to alloc TX descriptors\n");
 		return -ENOMEM;
 	}
-	memset(txq->txd, 0, size);
 
 	txq->skb = kcalloc(MWL8K_TX_DESCS, sizeof(*txq->skb), GFP_KERNEL);
 	if (txq->skb == NULL) {
@@ -1633,22 +1631,17 @@ static int mwl8k_tid_queue_mapping(u8 tid)
 	case 0:
 	case 3:
 		return IEEE80211_AC_BE;
-		break;
 	case 1:
 	case 2:
 		return IEEE80211_AC_BK;
-		break;
 	case 4:
 	case 5:
 		return IEEE80211_AC_VI;
-		break;
 	case 6:
 	case 7:
 		return IEEE80211_AC_VO;
-		break;
 	default:
 		return -1;
-		break;
 	}
 }
 
@@ -3105,14 +3098,14 @@ static void mwl8k_update_survey(struct mwl8k_priv *priv,
 
 	cca_cnt = ioread32(priv->regs + NOK_CCA_CNT_REG);
 	cca_cnt /= 1000; /* uSecs to mSecs */
-	survey->channel_time_busy = (u64) cca_cnt;
+	survey->time_busy = (u64) cca_cnt;
 
 	rx_rdy = ioread32(priv->regs + BBU_RXRDY_CNT_REG);
 	rx_rdy /= 1000; /* uSecs to mSecs */
-	survey->channel_time_rx = (u64) rx_rdy;
+	survey->time_rx = (u64) rx_rdy;
 
 	priv->channel_time = jiffies - priv->channel_time;
-	survey->channel_time = jiffies_to_msecs(priv->channel_time);
+	survey->time = jiffies_to_msecs(priv->channel_time);
 
 	survey->channel = channel;
 
@@ -3122,9 +3115,9 @@ static void mwl8k_update_survey(struct mwl8k_priv *priv,
 	survey->noise = nf * -1;
 
 	survey->filled = SURVEY_INFO_NOISE_DBM |
-			 SURVEY_INFO_CHANNEL_TIME |
-			 SURVEY_INFO_CHANNEL_TIME_BUSY |
-			 SURVEY_INFO_CHANNEL_TIME_RX;
+			 SURVEY_INFO_TIME |
+			 SURVEY_INFO_TIME_BUSY |
+			 SURVEY_INFO_TIME_RX;
 }
 
 /*
@@ -5555,7 +5548,9 @@ mwl8k_ampdu_action(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	return rc;
 }
 
-static void mwl8k_sw_scan_start(struct ieee80211_hw *hw)
+static void mwl8k_sw_scan_start(struct ieee80211_hw *hw,
+				struct ieee80211_vif *vif,
+				const u8 *mac_addr)
 {
 	struct mwl8k_priv *priv = hw->priv;
 	u8 tmp;
@@ -5572,7 +5567,8 @@ static void mwl8k_sw_scan_start(struct ieee80211_hw *hw)
 	priv->sw_scan_start = true;
 }
 
-static void mwl8k_sw_scan_complete(struct ieee80211_hw *hw)
+static void mwl8k_sw_scan_complete(struct ieee80211_hw *hw,
+				   struct ieee80211_vif *vif)
 {
 	struct mwl8k_priv *priv = hw->priv;
 	u8 tmp;
@@ -5681,7 +5677,7 @@ MODULE_FIRMWARE("mwl8k/helper_8366.fw");
 MODULE_FIRMWARE("mwl8k/fmimage_8366.fw");
 MODULE_FIRMWARE(MWL8K_8366_AP_FW(MWL8K_8366_AP_FW_API));
 
-static DEFINE_PCI_DEVICE_TABLE(mwl8k_pci_id_table) = {
+static const struct pci_device_id mwl8k_pci_id_table[] = {
 	{ PCI_VDEVICE(MARVELL, 0x2a0a), .driver_data = MWL8363, },
 	{ PCI_VDEVICE(MARVELL, 0x2a0c), .driver_data = MWL8363, },
 	{ PCI_VDEVICE(MARVELL, 0x2a24), .driver_data = MWL8363, },

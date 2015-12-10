@@ -37,7 +37,7 @@ Application::Application(const string& dif_name_,
         app_instance(app_instance_)
 { }
 
-void Application::applicationRegister(bool blocking)
+void Application::applicationRegister()
 {
         ApplicationRegistrationInformation ari;
         RegisterApplicationResponseEvent *resp;
@@ -47,7 +47,6 @@ void Application::applicationRegister(bool blocking)
         ari.ipcProcessId = 0;  // This is an application, not an IPC process
         ari.appName = ApplicationProcessNamingInformation(app_name,
                                                           app_instance);
-        ari.blocking = blocking;
 
         if (dif_name == string()) {
                 ari.applicationRegistrationType = APPLICATION_REGISTRATION_ANY_DIF;

@@ -660,7 +660,7 @@ static int deliver_to_subscribers(struct snd_seq_client *client,
 				  int atomic, int hop)
 {
 	struct snd_seq_subscribers *subs;
-	int err = 0, num_ev = 0;
+	int err, result = 0, num_ev = 0;
 	struct snd_seq_event event_saved;
 	struct snd_seq_client_port *src_port;
 	struct snd_seq_port_subs_info *grp;
@@ -685,8 +685,12 @@ static int deliver_to_subscribers(struct snd_seq_client *client,
 						  subs->info.flags & SNDRV_SEQ_PORT_SUBS_TIME_REAL);
 		err = snd_seq_deliver_single_event(client, event,
 						   0, atomic, hop);
-		if (err < 0)
-			break;
+		if (err < 0) {
+			/* save first error that occurs and continue */
+			if (!result)
+				result = err;
+			continue;
+		}
 		num_ev++;
 		/* restore original event record */
 		*event = event_saved;
@@ -697,7 +701,7 @@ static int deliver_to_subscribers(struct snd_seq_client *client,
 		up_read(&grp->list_mutex);
 	*event = event_saved; /* restore */
 	snd_seq_port_unlock(src_port);
-	return (err < 0) ? err : num_ev;
+	return (result < 0) ? result : num_ev;
 }
 
 
@@ -709,7 +713,7 @@ static int port_broadcast_event(struct snd_seq_client *client,
 				struct snd_seq_event *event,
 				int atomic, int hop)
 {
-	int num_ev = 0, err = 0;
+	int num_ev = 0, err, result = 0;
 	struct snd_seq_client *dest_client;
 	struct snd_seq_client_port *port;
 
@@ -724,14 +728,18 @@ static int port_broadcast_event(struct snd_seq_client *client,
 		err = snd_seq_deliver_single_event(NULL, event,
 						   SNDRV_SEQ_FILTER_BROADCAST,
 						   atomic, hop);
-		if (err < 0)
-			break;
+		if (err < 0) {
+			/* save first error that occurs and continue */
+			if (!result)
+				result = err;
+			continue;
+		}
 		num_ev++;
 	}
 	read_unlock(&dest_client->ports_lock);
 	snd_seq_client_unlock(dest_client);
 	event->dest.port = SNDRV_SEQ_ADDRESS_BROADCAST; /* restore */
-	return (err < 0) ? err : num_ev;
+	return (result < 0) ? result : num_ev;
 }
 
 /*
@@ -741,7 +749,7 @@ static int port_broadcast_event(struct snd_seq_client *client,
 static int broadcast_event(struct snd_seq_client *client,
 			   struct snd_seq_event *event, int atomic, int hop)
 {
-	int err = 0, num_ev = 0;
+	int err, result = 0, num_ev = 0;
 	int dest;
 	struct snd_seq_addr addr;
 
@@ -760,12 +768,16 @@ static int broadcast_event(struct snd_seq_client *client,
 			err = snd_seq_deliver_single_event(NULL, event,
 							   SNDRV_SEQ_FILTER_BROADCAST,
 							   atomic, hop);
-		if (err < 0)
-			break;
+		if (err < 0) {
+			/* save first error that occurs and continue */
+			if (!result)
+				result = err;
+			continue;
+		}
 		num_ev += err;
 	}
 	event->dest = addr; /* restore */
-	return (err < 0) ? err : num_ev;
+	return (result < 0) ? result : num_ev;
 }
 
 
@@ -1121,7 +1133,7 @@ static int snd_seq_ioctl_system_info(struct snd_seq_client *client, void __user 
 	/* fill the info fields */
 	info.queues = SNDRV_SEQ_MAX_QUEUES;
 	info.clients = SNDRV_SEQ_MAX_CLIENTS;
-	info.ports = 256;	/* fixed limit */
+	info.ports = SNDRV_SEQ_MAX_PORTS;
 	info.channels = 256;	/* fixed limit */
 	info.cur_clients = client_usage.cur;
 	info.cur_queues = snd_seq_queue_get_cur_queues();
@@ -1267,7 +1279,6 @@ static int snd_seq_ioctl_create_port(struct snd_seq_client *client,
 				port->owner = callback->owner;
 			port->private_data = callback->private_data;
 			port->private_free = callback->private_free;
-			port->callback_all = callback->callback_all;
 			port->event_input = callback->event_input;
 			port->c_src.open = callback->subscribe;
 			port->c_src.close = callback->unsubscribe;
@@ -1868,6 +1879,7 @@ static int snd_seq_ioctl_get_client_pool(struct snd_seq_client *client,
 	if (cptr == NULL)
 		return -ENOENT;
 	memset(&info, 0, sizeof(info));
+	info.client = cptr->number;
 	info.output_pool = cptr->pool->size;
 	info.output_room = cptr->pool->room;
 	info.output_free = info.output_pool;
@@ -2559,6 +2571,8 @@ static const struct file_operations snd_seq_f_ops =
 	.compat_ioctl =	snd_seq_ioctl_compat,
 };
 
+static struct device seq_dev;
+
 /* 
  * register sequencer device 
  */
@@ -2566,12 +2580,17 @@ int __init snd_sequencer_device_init(void)
 {
 	int err;
 
+	snd_device_initialize(&seq_dev, NULL);
+	dev_set_name(&seq_dev, "seq");
+
 	if (mutex_lock_interruptible(&register_mutex))
 		return -ERESTARTSYS;
 
-	if ((err = snd_register_device(SNDRV_DEVICE_TYPE_SEQUENCER, NULL, 0,
-				       &snd_seq_f_ops, NULL, "seq")) < 0) {
+	err = snd_register_device(SNDRV_DEVICE_TYPE_SEQUENCER, NULL, 0,
+				  &snd_seq_f_ops, NULL, &seq_dev);
+	if (err < 0) {
 		mutex_unlock(&register_mutex);
+		put_device(&seq_dev);
 		return err;
 	}
 	
@@ -2587,5 +2606,6 @@ int __init snd_sequencer_device_init(void)
  */
 void __exit snd_sequencer_device_done(void)
 {
-	snd_unregister_device(SNDRV_DEVICE_TYPE_SEQUENCER, NULL, 0);
+	snd_unregister_device(&seq_dev);
+	put_device(&seq_dev);
 }

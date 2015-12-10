@@ -23,6 +23,10 @@
 
 #include <linux/export.h>
 #include <linux/kobject.h>
+/* For wait_queue */
+#include <linux/sched.h>
+#include <linux/wait.h>
+
 
 #define RINA_PREFIX "efcp"
 
@@ -65,135 +69,8 @@ struct efcp_container {
         struct rmt *         rmt;
         struct kfa *         kfa;
         spinlock_t           lock;
+	wait_queue_head_t    del_wq;
 };
-
-static int efcp_select_policy_set(struct efcp * efcp,
-                                  const string_t * path,
-                                  const string_t * ps_name)
-{
-        size_t cmplen;
-        size_t offset;
-
-        parse_component_id(path, &cmplen, &offset);
-
-        if (strncmp(path, "dtp", cmplen) == 0) {
-                return dtp_select_policy_set(dt_dtp(efcp->dt), path + offset,
-                                             ps_name);
-        } else if (strncmp(path, "dtcp", cmplen) == 0 && dt_dtcp(efcp->dt)) {
-                return dtcp_select_policy_set(dt_dtcp(efcp->dt), path + offset,
-                                             ps_name);
-        }
-
-        /* Currently there are no policy sets specified for EFCP (strictly
-         * speaking). */
-        LOG_ERR("The selected component does not exist");
-
-        return -1;
-}
-
-typedef const string_t *const_string;
-
-/* Helper function to parse the component id path for EFCP container. */
-struct efcp *
-efcp_container_parse_component_id(struct efcp_container * container,
-                                  const_string * path)
-{
-        struct efcp * efcp;
-        cep_id_t cep_id;
-        size_t cmplen;
-        size_t offset;
-        char numbuf[8];
-        int ret;
-
-        if (!*path) {
-                LOG_ERR("NULL path");
-                return NULL;
-        }
-
-        parse_component_id(*path, &cmplen, &offset);
-        if (cmplen > sizeof(numbuf)-1) {
-                LOG_ERR("Invalid cep-id' %s'", *path);
-                return NULL;
-        }
-
-        memcpy(numbuf, *path, cmplen);
-        numbuf[cmplen] = '\0';
-        ret = kstrtoint(numbuf, 10, &cep_id);
-        if (ret) {
-                LOG_ERR("Invalid cep-id '%s'", *path);
-                return NULL;
-        }
-
-        efcp = efcp_imap_find(container->instances, cep_id);
-        if (!efcp) {
-                LOG_ERR("No connection with cep-id %d", cep_id);
-                return NULL;
-        }
-
-        *path += offset;
-
-        return efcp;
-
-}
-
-int efcp_container_select_policy_set(struct efcp_container * container,
-                                     const string_t * path,
-                                     const string_t * ps_name)
-{
-        struct efcp * efcp;
-        const string_t * new_path = path;
-
-        efcp = efcp_container_parse_component_id(container, &new_path);
-        if (!efcp) {
-                return -1;
-        }
-
-        return efcp_select_policy_set(efcp, new_path, ps_name);
-}
-EXPORT_SYMBOL(efcp_container_select_policy_set);
-
-static int efcp_set_policy_set_param(struct efcp * efcp,
-                                     const char * path,
-                                     const char * name,
-                                     const char * value)
-{
-        size_t cmplen;
-        size_t offset;
-
-        parse_component_id(path, &cmplen, &offset);
-
-        if (strncmp(path, "dtp", cmplen) == 0) {
-                return dtp_set_policy_set_param(dt_dtp(efcp->dt),
-                                        path + offset, name, value);
-        } else if (strncmp(path, "dtcp", cmplen) == 0 && dt_dtcp(efcp->dt)) {
-                return dtcp_set_policy_set_param(dt_dtcp(efcp->dt),
-                                        path + offset, name, value);
-        }
-
-        /* Currently there are no parametric policies specified for EFCP
-         * (strictly speaking). */
-        LOG_ERR("No parametric policies for this EFCP component");
-
-        return -1;
-}
-EXPORT_SYMBOL(efcp_set_policy_set_param);
-
-int efcp_container_set_policy_set_param(struct efcp_container * container,
-                                        const char * path, const char * name,
-                                        const char * value)
-{
-
-        struct efcp * efcp;
-        const string_t * new_path = path;
-
-        efcp = efcp_container_parse_component_id(container, &new_path);
-        if (!efcp) {
-                return -1;
-        }
-
-        return efcp_set_policy_set_param(efcp, new_path, name, value);
-}
-EXPORT_SYMBOL(efcp_container_set_policy_set_param);
 
 static struct efcp * efcp_create(void)
 {
@@ -327,6 +204,7 @@ struct efcp_container * efcp_container_create(struct kfa * kfa)
 
         container->kfa = kfa;
         spin_lock_init(&container->lock);
+	init_waitqueue_head(&container->del_wq);
 
         return container;
 }
@@ -413,6 +291,7 @@ cep_id_t efcp_dst_cep_id(struct efcp * efcp)
 
 address_t efcp_src_addr(struct efcp * efcp)
 { return connection_src_addr(efcp->connection); }
+EXPORT_SYMBOL(efcp_src_addr);
 
 address_t efcp_dst_addr(struct efcp * efcp)
 { return connection_dst_addr(efcp->connection); }
@@ -486,7 +365,6 @@ int efcp_container_write(struct efcp_container * container,
                 spin_unlock_irqrestore(&container->lock, flags);
                 sdu_destroy(sdu);
                 LOG_DBG("EFCP already deallocated");
-
                 return 0;
         }
         atomic_inc(&tmp->pending_ops);
@@ -498,8 +376,7 @@ int efcp_container_write(struct efcp_container * container,
         if (atomic_dec_and_test(&tmp->pending_ops) &&
             tmp->state == EFCP_DEALLOCATED) {
                 spin_unlock_irqrestore(&container->lock, flags);
-                efcp_destroy(tmp);
-
+		wake_up_interruptible(&container->del_wq);
                 return ret;
         }
         spin_unlock_irqrestore(&container->lock, flags);
@@ -590,7 +467,6 @@ int efcp_container_receive(struct efcp_container * container,
                 spin_unlock_irqrestore(&container->lock, flags);
                 pdu_destroy(pdu);
                 LOG_DBG("EFCP already deallocated");
-
                 return 0;
         }
         atomic_inc(&tmp->pending_ops);
@@ -601,9 +477,8 @@ int efcp_container_receive(struct efcp_container * container,
         spin_lock_irqsave(&container->lock, flags);
         if (atomic_dec_and_test(&tmp->pending_ops) &&
             tmp->state == EFCP_DEALLOCATED) {
-                efcp_destroy(tmp);
                 spin_unlock_irqrestore(&container->lock, flags);
-
+		wake_up_interruptible(&container->del_wq);
                 return ret;
         }
         spin_unlock_irqrestore(&container->lock, flags);
@@ -784,7 +659,8 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 }
         }
 
-        if (dtcp_window_based_fctrl(dtcp_cfg)) {
+        if (dtcp_window_based_fctrl(dtcp_cfg) ||
+            dtcp_rate_based_fctrl(dtcp_cfg)) {
                 cwq = cwq_create();
                 if (!cwq) {
                         LOG_ERR("Failed to create closed window queue");
@@ -889,6 +765,7 @@ int efcp_connection_destroy(struct efcp_container * container,
 {
         struct efcp * tmp;
         unsigned long flags;
+	int retval;
 
         LOG_DBG("EFCP connection destroy called");
 
@@ -917,17 +794,24 @@ int efcp_connection_destroy(struct efcp_container * container,
                 return -1;
         }
         tmp->state = EFCP_DEALLOCATED;
-        if (atomic_read(&tmp->pending_ops) == 0) {
-                spin_unlock_irqrestore(&container->lock, flags);
-                if (efcp_destroy(tmp)) {
-                        LOG_ERR("Cannot destroy instance %d, instance lost", id);
-                        return -1;
-                }
-                return 0;
-        }
-        LOG_DBG("efcp_connection_destroy with pending ops");
+	if (atomic_read(&tmp->pending_ops) != 0) {
+		spin_unlock_irqrestore(&container->lock, flags);
+		retval = wait_event_interruptible(container->del_wq,
+						  atomic_read(&tmp->pending_ops) == 0 &&
+						  tmp->state == EFCP_DEALLOCATED);
+		if (retval != 0)
+			LOG_ERR("EFCP destroy even interrupted (%d)", retval);
+               	if (efcp_destroy(tmp)) {
+               	        LOG_ERR("Cannot destroy instance %d, instance lost", id);
+               	        return -1;
+               	}
+		return 0;
+	}
         spin_unlock_irqrestore(&container->lock, flags);
-
+        if (efcp_destroy(tmp)) {
+        	LOG_ERR("Cannot destroy instance %d, instance lost", id);
+        	return -1;
+        }
         return 0;
 }
 EXPORT_SYMBOL(efcp_connection_destroy);
@@ -1041,3 +925,17 @@ int efcp_enqueue(struct efcp * efcp,
         }
         return 0;
 }
+
+struct dt *
+efcp_dt(struct efcp * efcp)
+{
+        return efcp->dt;
+}
+EXPORT_SYMBOL(efcp_dt);
+
+struct efcp_imap *
+efcp_container_get_instances(struct efcp_container *efcpc)
+{
+	return efcpc->instances;
+}
+EXPORT_SYMBOL(efcp_container_get_instances);

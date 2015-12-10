@@ -29,6 +29,7 @@
 #include <linux/of.h>
 #include <linux/phy/phy.h>
 #include <linux/platform_device.h>
+#include <linux/reset.h>
 #include <linux/usb.h>
 #include <linux/usb/hcd.h>
 #include <linux/usb/ehci_pdriver.h>
@@ -41,7 +42,9 @@
 
 struct ehci_platform_priv {
 	struct clk *clks[EHCI_MAX_CLKS];
-	struct phy *phy;
+	struct reset_control *rst;
+	struct phy **phys;
+	int num_phys;
 };
 
 static const char hcd_name[] = "ehci-platform";
@@ -76,7 +79,7 @@ static int ehci_platform_power_on(struct platform_device *dev)
 {
 	struct usb_hcd *hcd = platform_get_drvdata(dev);
 	struct ehci_platform_priv *priv = hcd_to_ehci_priv(hcd);
-	int clk, ret;
+	int clk, ret, phy_num;
 
 	for (clk = 0; clk < EHCI_MAX_CLKS && priv->clks[clk]; clk++) {
 		ret = clk_prepare_enable(priv->clks[clk]);
@@ -84,20 +87,28 @@ static int ehci_platform_power_on(struct platform_device *dev)
 			goto err_disable_clks;
 	}
 
-	if (priv->phy) {
-		ret = phy_init(priv->phy);
-		if (ret)
-			goto err_disable_clks;
-
-		ret = phy_power_on(priv->phy);
-		if (ret)
-			goto err_exit_phy;
+	for (phy_num = 0; phy_num < priv->num_phys; phy_num++) {
+		if (priv->phys[phy_num]) {
+			ret = phy_init(priv->phys[phy_num]);
+			if (ret)
+				goto err_exit_phy;
+			ret = phy_power_on(priv->phys[phy_num]);
+			if (ret) {
+				phy_exit(priv->phys[phy_num]);
+				goto err_exit_phy;
+			}
+		}
 	}
 
 	return 0;
 
 err_exit_phy:
-	phy_exit(priv->phy);
+	while (--phy_num >= 0) {
+		if (priv->phys[phy_num]) {
+			phy_power_off(priv->phys[phy_num]);
+			phy_exit(priv->phys[phy_num]);
+		}
+	}
 err_disable_clks:
 	while (--clk >= 0)
 		clk_disable_unprepare(priv->clks[clk]);
@@ -109,11 +120,13 @@ static void ehci_platform_power_off(struct platform_device *dev)
 {
 	struct usb_hcd *hcd = platform_get_drvdata(dev);
 	struct ehci_platform_priv *priv = hcd_to_ehci_priv(hcd);
-	int clk;
+	int clk, phy_num;
 
-	if (priv->phy) {
-		phy_power_off(priv->phy);
-		phy_exit(priv->phy);
+	for (phy_num = 0; phy_num < priv->num_phys; phy_num++) {
+		if (priv->phys[phy_num]) {
+			phy_power_off(priv->phys[phy_num]);
+			phy_exit(priv->phys[phy_num]);
+		}
 	}
 
 	for (clk = EHCI_MAX_CLKS - 1; clk >= 0; clk--)
@@ -141,7 +154,8 @@ static int ehci_platform_probe(struct platform_device *dev)
 	struct usb_ehci_pdata *pdata = dev_get_platdata(&dev->dev);
 	struct ehci_platform_priv *priv;
 	struct ehci_hcd *ehci;
-	int err, irq, clk = 0;
+	const char *phy_name;
+	int err, irq, phy_num, clk = 0;
 
 	if (usb_disabled())
 		return -ENODEV;
@@ -153,7 +167,8 @@ static int ehci_platform_probe(struct platform_device *dev)
 	if (!pdata)
 		pdata = &ehci_platform_defaults;
 
-	err = dma_coerce_mask_and_coherent(&dev->dev, DMA_BIT_MASK(32));
+	err = dma_coerce_mask_and_coherent(&dev->dev,
+		pdata->dma_mask_64 ? DMA_BIT_MASK(64) : DMA_BIT_MASK(32));
 	if (err)
 		return err;
 
@@ -161,11 +176,6 @@ static int ehci_platform_probe(struct platform_device *dev)
 	if (irq < 0) {
 		dev_err(&dev->dev, "no irq provided");
 		return irq;
-	}
-	res_mem = platform_get_resource(dev, IORESOURCE_MEM, 0);
-	if (!res_mem) {
-		dev_err(&dev->dev, "no memory resource provided");
-		return -ENXIO;
 	}
 
 	hcd = usb_create_hcd(&ehci_platform_hc_driver, &dev->dev,
@@ -188,12 +198,42 @@ static int ehci_platform_probe(struct platform_device *dev)
 		if (of_property_read_bool(dev->dev.of_node, "big-endian"))
 			ehci->big_endian_mmio = ehci->big_endian_desc = 1;
 
-		priv->phy = devm_phy_get(&dev->dev, "usb");
-		if (IS_ERR(priv->phy)) {
-			err = PTR_ERR(priv->phy);
-			if (err == -EPROBE_DEFER)
-				goto err_put_hcd;
-			priv->phy = NULL;
+		if (of_property_read_bool(dev->dev.of_node,
+					  "needs-reset-on-resume"))
+			pdata->reset_on_resume = 1;
+
+		priv->num_phys = of_count_phandle_with_args(dev->dev.of_node,
+				"phys", "#phy-cells");
+		priv->num_phys = priv->num_phys > 0 ? priv->num_phys : 1;
+
+		priv->phys = devm_kcalloc(&dev->dev, priv->num_phys,
+				sizeof(struct phy *), GFP_KERNEL);
+		if (!priv->phys)
+			return -ENOMEM;
+
+		for (phy_num = 0; phy_num < priv->num_phys; phy_num++) {
+				err = of_property_read_string_index(
+						dev->dev.of_node,
+						"phy-names", phy_num,
+						&phy_name);
+
+				if (err < 0) {
+					if (priv->num_phys > 1) {
+						dev_err(&dev->dev, "phy-names not provided");
+						goto err_put_hcd;
+					} else
+						phy_name = "usb";
+				}
+
+				priv->phys[phy_num] = devm_phy_get(&dev->dev,
+						phy_name);
+				if (IS_ERR(priv->phys[phy_num])) {
+					err = PTR_ERR(priv->phys[phy_num]);
+					if ((priv->num_phys > 1) ||
+					    (err == -EPROBE_DEFER))
+						goto err_put_hcd;
+					priv->phys[phy_num] = NULL;
+				}
 		}
 
 		for (clk = 0; clk < EHCI_MAX_CLKS; clk++) {
@@ -208,6 +248,18 @@ static int ehci_platform_probe(struct platform_device *dev)
 		}
 	}
 
+	priv->rst = devm_reset_control_get_optional(&dev->dev, NULL);
+	if (IS_ERR(priv->rst)) {
+		err = PTR_ERR(priv->rst);
+		if (err == -EPROBE_DEFER)
+			goto err_put_clks;
+		priv->rst = NULL;
+	} else {
+		err = reset_control_deassert(priv->rst);
+		if (err)
+			goto err_put_clks;
+	}
+
 	if (pdata->big_endian_desc)
 		ehci->big_endian_desc = 1;
 	if (pdata->big_endian_mmio)
@@ -218,7 +270,7 @@ static int ehci_platform_probe(struct platform_device *dev)
 		dev_err(&dev->dev,
 			"Error: CONFIG_USB_EHCI_BIG_ENDIAN_MMIO not set\n");
 		err = -EINVAL;
-		goto err_put_clks;
+		goto err_reset;
 	}
 #endif
 #ifndef CONFIG_USB_EHCI_BIG_ENDIAN_DESC
@@ -226,24 +278,25 @@ static int ehci_platform_probe(struct platform_device *dev)
 		dev_err(&dev->dev,
 			"Error: CONFIG_USB_EHCI_BIG_ENDIAN_DESC not set\n");
 		err = -EINVAL;
-		goto err_put_clks;
+		goto err_reset;
 	}
 #endif
 
 	if (pdata->power_on) {
 		err = pdata->power_on(dev);
 		if (err < 0)
-			goto err_put_clks;
+			goto err_reset;
 	}
 
-	hcd->rsrc_start = res_mem->start;
-	hcd->rsrc_len = resource_size(res_mem);
-
+	res_mem = platform_get_resource(dev, IORESOURCE_MEM, 0);
 	hcd->regs = devm_ioremap_resource(&dev->dev, res_mem);
 	if (IS_ERR(hcd->regs)) {
 		err = PTR_ERR(hcd->regs);
 		goto err_power;
 	}
+	hcd->rsrc_start = res_mem->start;
+	hcd->rsrc_len = resource_size(res_mem);
+
 	err = usb_add_hcd(hcd, irq, IRQF_SHARED);
 	if (err)
 		goto err_power;
@@ -256,6 +309,9 @@ static int ehci_platform_probe(struct platform_device *dev)
 err_power:
 	if (pdata->power_off)
 		pdata->power_off(dev);
+err_reset:
+	if (priv->rst)
+		reset_control_assert(priv->rst);
 err_put_clks:
 	while (--clk >= 0)
 		clk_put(priv->clks[clk]);
@@ -280,6 +336,9 @@ static int ehci_platform_remove(struct platform_device *dev)
 	if (pdata->power_off)
 		pdata->power_off(dev);
 
+	if (priv->rst)
+		reset_control_assert(priv->rst);
+
 	for (clk = 0; clk < EHCI_MAX_CLKS && priv->clks[clk]; clk++)
 		clk_put(priv->clks[clk]);
 
@@ -291,8 +350,7 @@ static int ehci_platform_remove(struct platform_device *dev)
 	return 0;
 }
 
-#ifdef CONFIG_PM
-
+#ifdef CONFIG_PM_SLEEP
 static int ehci_platform_suspend(struct device *dev)
 {
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
@@ -325,19 +383,16 @@ static int ehci_platform_resume(struct device *dev)
 			return err;
 	}
 
-	ehci_resume(hcd, false);
+	ehci_resume(hcd, pdata->reset_on_resume);
 	return 0;
 }
-
-#else /* !CONFIG_PM */
-#define ehci_platform_suspend	NULL
-#define ehci_platform_resume	NULL
-#endif /* CONFIG_PM */
+#endif /* CONFIG_PM_SLEEP */
 
 static const struct of_device_id vt8500_ehci_ids[] = {
 	{ .compatible = "via,vt8500-ehci", },
 	{ .compatible = "wm,prizm-ehci", },
 	{ .compatible = "generic-ehci", },
+	{ .compatible = "cavium,octeon-6335-ehci", },
 	{}
 };
 MODULE_DEVICE_TABLE(of, vt8500_ehci_ids);
@@ -348,10 +403,8 @@ static const struct platform_device_id ehci_platform_table[] = {
 };
 MODULE_DEVICE_TABLE(platform, ehci_platform_table);
 
-static const struct dev_pm_ops ehci_platform_pm_ops = {
-	.suspend	= ehci_platform_suspend,
-	.resume		= ehci_platform_resume,
-};
+static SIMPLE_DEV_PM_OPS(ehci_platform_pm_ops, ehci_platform_suspend,
+	ehci_platform_resume);
 
 static struct platform_driver ehci_platform_driver = {
 	.id_table	= ehci_platform_table,
@@ -359,7 +412,6 @@ static struct platform_driver ehci_platform_driver = {
 	.remove		= ehci_platform_remove,
 	.shutdown	= usb_hcd_platform_shutdown,
 	.driver		= {
-		.owner	= THIS_MODULE,
 		.name	= "ehci-platform",
 		.pm	= &ehci_platform_pm_ops,
 		.of_match_table = vt8500_ehci_ids,

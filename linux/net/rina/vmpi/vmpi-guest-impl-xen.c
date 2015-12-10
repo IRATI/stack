@@ -37,17 +37,10 @@
 #include <xen/interface/memory.h>
 #include <xen/interface/grant_table.h>
 
-#include "vmpi-limits.h"
 #include "vmpi-structs.h"
 #include "vmpi-guest-impl.h"
+#include "vmpi.h"
 
-
-//#define VERBOSE
-#ifdef VERBOSE
-#define IFV(x) x
-#else   /* !VERBOSE */
-#define IFV(x)
-#endif  /* !VERBOSE */
 
 #define GRANT_INVALID_REF	0
 
@@ -83,7 +76,7 @@ struct vmpi_impl_info {
 	 *  them.
 	 */
 	union buf_entry {
-                struct vmpi_buffer *buf;
+                struct vmpi_buf *buf;
 		unsigned long link;
 	} tx_bufs[NET_TX_RING_SIZE];
 	grant_ref_t gref_tx_head;
@@ -104,7 +97,7 @@ struct vmpi_impl_info {
 
 	struct timer_list rx_refill_timer;
 
-	struct vmpi_buffer *rx_bufs[NET_RX_RING_SIZE];
+	struct vmpi_buf *rx_bufs[NET_RX_RING_SIZE];
 	grant_ref_t gref_rx_head;
 	grant_ref_t grant_rx_ref[NET_RX_RING_SIZE];
 
@@ -150,11 +143,11 @@ static int xenmpi_rxidx(RING_IDX idx)
 	return idx & (NET_RX_RING_SIZE - 1);
 }
 
-static struct vmpi_buffer *xenmpi_get_rx_buf(struct vmpi_impl_info *np,
+static struct vmpi_buf *xenmpi_get_rx_buf(struct vmpi_impl_info *np,
 					 RING_IDX ri)
 {
 	int i = xenmpi_rxidx(ri);
-	struct vmpi_buffer *buf = np->rx_bufs[i];
+	struct vmpi_buf *buf = np->rx_bufs[i];
 	np->rx_bufs[i] = NULL;
 	return buf;
 }
@@ -180,7 +173,7 @@ static void rx_refill_timeout(unsigned long data)
 static void xenmpi_alloc_rx_buffers(struct vmpi_impl_info *np)
 {
 	unsigned short id;
-        struct vmpi_buffer *buf;
+        struct vmpi_buf *buf;
 	int i, batch_target, notify;
 	RING_IDX req_prod = np->rx.req_prod_pvt;
 	grant_ref_t ref;
@@ -198,7 +191,7 @@ static void xenmpi_alloc_rx_buffers(struct vmpi_impl_info *np)
 	batch_target = np->rx_target - (req_prod - np->rx.rsp_cons);
 	for (i = vmpi_queue_len(&np->rx_batch); i < batch_target; i++) {
                 /* Allocate the buffer as a page. */
-                buf = vmpi_buffer_create(0);
+                buf = vmpi_buf_create(0);
 		if (unlikely(!buf)) {
 			/* Could not allocate any vmpibufs. Try again later. */
 			mod_timer(&np->rx_refill_timer,
@@ -262,11 +255,11 @@ static void xenmpi_alloc_rx_buffers(struct vmpi_impl_info *np)
 }
 #endif
 
-struct vmpi_buffer *vmpi_impl_get_written_buffer(vmpi_impl_info_t *np)
+struct vmpi_buf *vmpi_impl_get_written_buffer(vmpi_impl_info_t *np)
 {
 	RING_IDX cons, prod;
 	unsigned short id;
-        struct vmpi_buffer *buf = NULL;
+        struct vmpi_buf *buf = NULL;
 
 	prod = np->tx.sring->rsp_prod;
 	rmb(); /* Ensure we see responses up to 'prod'. */
@@ -308,7 +301,8 @@ struct vmpi_buffer *vmpi_impl_get_written_buffer(vmpi_impl_info_t *np)
 }
 
 int
-vmpi_impl_write_buf(struct vmpi_impl_info *np, struct vmpi_buffer *buf)
+vmpi_impl_write_buf(struct vmpi_impl_info *np, struct vmpi_buf *buf,
+                    unsigned int channel)
 {
 	unsigned short id;
 	struct xen_mpi_tx_request *tx = NULL;
@@ -404,7 +398,7 @@ vmpi_impl_write_buf(struct vmpi_impl_info *np, struct vmpi_buffer *buf)
 static void xenmpi_refill_one(struct vmpi_impl_info *np)
 {
 	unsigned short id;
-        struct vmpi_buffer *buf;
+        struct vmpi_buf *buf;
 	int notify;
 	RING_IDX req_prod = np->rx.req_prod_pvt;
 	grant_ref_t ref;
@@ -412,7 +406,7 @@ static void xenmpi_refill_one(struct vmpi_impl_info *np)
 	struct xen_mpi_rx_request *req;
 
         /* Allocate the buffer as a page. */
-        buf = vmpi_buffer_create(0);
+        buf = vmpi_buf_create(0);
         if (unlikely(!buf)) {
                 printk("%s: failed to refill\n", __func__);
                 return;
@@ -451,10 +445,10 @@ static void xenmpi_refill_one(struct vmpi_impl_info *np)
                 __func__, req_prod, req->id, req->gref, req->offset, req->len));
 }
 
-struct vmpi_buffer *vmpi_impl_read_buffer(vmpi_impl_info_t *np)
+struct vmpi_buf *vmpi_impl_read_buffer(vmpi_impl_info_t *np)
 {
         RING_IDX cons, prod;
-        struct vmpi_buffer *buf = NULL;
+        struct vmpi_buf *buf = NULL;
 
 	spin_lock(&np->rx_lock);
 
@@ -511,7 +505,7 @@ out:
 
 static void xenmpi_release_tx_bufs(struct vmpi_impl_info *np)
 {
-	struct vmpi_buffer *buf;
+	struct vmpi_buf *buf;
 	int i;
 
 	for (i = 0; i < NET_TX_RING_SIZE; i++) {
@@ -538,7 +532,7 @@ static void xenmpi_release_rx_bufs(struct vmpi_impl_info *np)
 
 	for (id = 0; id < NET_RX_RING_SIZE; id++) {
 		struct page *page;
-                struct vmpi_buffer *buf;
+                struct vmpi_buf *buf;
 
 		buf = np->rx_bufs[id];
 		if (!buf)
@@ -558,7 +552,7 @@ static void xenmpi_release_rx_bufs(struct vmpi_impl_info *np)
 					  (unsigned long)page_address(page));
 		np->grant_rx_ref[id] = GRANT_INVALID_REF;
 
-                vmpi_buffer_destroy(buf);
+                vmpi_buf_destroy(buf);
 	}
 
 	spin_unlock_bh(&np->rx_lock);
@@ -1070,7 +1064,7 @@ static int xenmpi_connect(struct vmpi_impl_info *np)
 	/* Step 2: Rebuild the RX buffer freelist and the RX ring itself. */
 	for (requeue_idx = 0, i = 0; i < NET_RX_RING_SIZE; i++) {
 		const struct page *page;
-                struct vmpi_buffer *buf;
+                struct vmpi_buf *buf;
 
 		if (!np->rx_bufs[i])
 			continue;
@@ -1165,12 +1159,6 @@ static void mpiback_changed(struct xenbus_device *dev,
 	}
 }
 
-static const struct xenbus_device_id mpifront_ids[] = {
-	{ "vmpi" },
-	{ "" }
-};
-
-
 static int mpifront_remove(struct xenbus_device *dev)
 {
 	struct vmpi_impl_info *info = dev_get_drvdata(&dev->dev);
@@ -1194,12 +1182,18 @@ static int mpifront_remove(struct xenbus_device *dev)
 	return 0;
 }
 
-static DEFINE_XENBUS_DRIVER(mpifront, ,
+static const struct xenbus_device_id mpifront_ids[] = {
+	{ "mpi" },
+	{ "" }
+};
+
+static struct xenbus_driver mpifront_driver = {
+        .ids = mpifront_ids,
 	.probe = mpifront_probe,
 	.remove = mpifront_remove,
 	.resume = mpifront_resume,
 	.otherend_changed = mpiback_changed,
-);
+};
 
 static int __init mpi_init(void)
 {

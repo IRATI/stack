@@ -22,6 +22,7 @@
 
 	chosen {
 		bootargs = "console=ttyS0,115200n8";
+		stdout-path = &uart0;
 	};
 
 	mbus {
@@ -35,8 +36,7 @@
 	};
 
 	ocp@f1000000 {
-		pinctrl: pinctrl@10000 {
-			pinctrl-0 = <&pmx_sdio_cd>;
+		pinctrl: pin-controller@10000 {
 			pinctrl-names = "default";
 
 			pmx_sdio_cd: pmx-sdio-cd {
@@ -68,8 +68,8 @@
 		#address-cells = <2>;
 		#size-cells = <0>;
 
-		dsa,ethernet = <&eth0>;
-		dsa,mii-bus = <&ethphy1>;
+		dsa,ethernet = <&eth0port>;
+		dsa,mii-bus = <&mdio>;
 
 		switch@0 {
 			#address-cells = <1>;
@@ -118,35 +118,19 @@
 	};
 
 	partition@300000 {
-		label = "data";
+		label = "rootfs";
 		reg = <0x0300000 0x500000>;
 	};
 };
 
 &mdio {
 	status = "okay";
-
-	ethphy0: ethernet-phy@0 {
-		reg = <0>;
-	};
-
-	ethphy1: ethernet-phy@ff {
-		reg = <0xff>; /* No PHY attached */
-		speed = <1000>;
-		duple = <1>;
-	};
 };
 
 &eth0 {
 	status = "okay";
 	ethernet0-port@0 {
-		phy-handle = <&ethphy0>;
-	};
-};
-
-&eth1 {
-	status = "okay";
-	ethernet1-port@0 {
-		phy-handle = <&ethphy1>;
+		speed = <1000>;
+		duplex = <1>;
 	};
 };

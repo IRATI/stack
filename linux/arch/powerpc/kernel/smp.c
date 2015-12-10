@@ -36,6 +36,7 @@
 #include <linux/atomic.h>
 #include <asm/irq.h>
 #include <asm/hw_irq.h>
+#include <asm/kvm_ppc.h>
 #include <asm/page.h>
 #include <asm/pgtable.h>
 #include <asm/prom.h>
@@ -51,6 +52,7 @@
 #endif
 #include <asm/vdso.h>
 #include <asm/debug.h>
+#include <asm/kexec.h>
 
 #ifdef DEBUG
 #include <asm/udbg.h>
@@ -241,7 +243,7 @@ void smp_muxed_ipi_message_pass(int cpu, int msg)
 
 irqreturn_t smp_ipi_demux(void)
 {
-	struct cpu_messages *info = &__get_cpu_var(ipi_message);
+	struct cpu_messages *info = this_cpu_ptr(&ipi_message);
 	unsigned int all;
 
 	mb();	/* order any irq clear */
@@ -375,6 +377,14 @@ void __init smp_prepare_cpus(unsigned int max_cpus)
 					GFP_KERNEL, cpu_to_node(cpu));
 		zalloc_cpumask_var_node(&per_cpu(cpu_core_map, cpu),
 					GFP_KERNEL, cpu_to_node(cpu));
+		/*
+		 * numa_node_id() works after this.
+		 */
+		if (cpu_present(cpu)) {
+			set_cpu_numa_node(cpu, numa_cpu_lookup_table[cpu]);
+			set_cpu_numa_mem(cpu,
+				local_memory_node(numa_cpu_lookup_table[cpu]));
+		}
 	}
 
 	cpumask_set_cpu(boot_cpuid, cpu_sibling_mask(boot_cpuid));
@@ -390,6 +400,7 @@ void smp_prepare_boot_cpu(void)
 #ifdef CONFIG_PPC64
 	paca[boot_cpuid].__current = current;
 #endif
+	set_numa_node(numa_cpu_lookup_table[boot_cpuid]);
 	current_set[boot_cpuid] = task_thread_info(current);
 }
 
@@ -423,20 +434,6 @@ void generic_cpu_die(unsigned int cpu)
 	printk(KERN_ERR "CPU%d didn't die...\n", cpu);
 }
 
-void generic_mach_cpu_die(void)
-{
-	unsigned int cpu;
-
-	local_irq_disable();
-	idle_task_exit();
-	cpu = smp_processor_id();
-	printk(KERN_DEBUG "CPU%d offline\n", cpu);
-	__get_cpu_var(cpu_state) = CPU_DEAD;
-	smp_wmb();
-	while (__get_cpu_var(cpu_state) != CPU_UP_PREPARE)
-		cpu_relax();
-}
-
 void generic_set_cpu_dead(unsigned int cpu)
 {
 	per_cpu(cpu_state, cpu) = CPU_DEAD;
@@ -457,38 +454,9 @@ int generic_check_cpu_restart(unsigned int cpu)
 	return per_cpu(cpu_state, cpu) == CPU_UP_PREPARE;
 }
 
-static atomic_t secondary_inhibit_count;
-
-/*
- * Don't allow secondary CPU threads to come online
- */
-void inhibit_secondary_onlining(void)
+static bool secondaries_inhibited(void)
 {
-	/*
-	 * This makes secondary_inhibit_count stable during cpu
-	 * online/offline operations.
-	 */
-	get_online_cpus();
-
-	atomic_inc(&secondary_inhibit_count);
-	put_online_cpus();
-}
-EXPORT_SYMBOL_GPL(inhibit_secondary_onlining);
-
-/*
- * Allow secondary CPU threads to come online again
- */
-void uninhibit_secondary_onlining(void)
-{
-	get_online_cpus();
-	atomic_dec(&secondary_inhibit_count);
-	put_online_cpus();
-}
-EXPORT_SYMBOL_GPL(uninhibit_secondary_onlining);
-
-static int secondaries_inhibited(void)
-{
-	return atomic_read(&secondary_inhibit_count);
+	return kvm_hv_mode_active();
 }
 
 #else /* HOTPLUG_CPU */
@@ -517,7 +485,7 @@ int __cpu_up(unsigned int cpu, struct task_struct *tidle)
 	 * Don't allow secondary threads to come online if inhibited
 	 */
 	if (threads_per_core > 1 && secondaries_inhibited() &&
-	    cpu % threads_per_core != 0)
+	    cpu_thread_in_subcore(cpu))
 		return -EBUSY;
 
 	if (smp_ops == NULL ||
@@ -573,8 +541,8 @@ int __cpu_up(unsigned int cpu, struct task_struct *tidle)
 	if (smp_ops->give_timebase)
 		smp_ops->give_timebase();
 
-	/* Wait until cpu puts itself in the online map */
-	while (!cpu_online(cpu))
+	/* Wait until cpu puts itself in the online & active maps */
+	while (!cpu_online(cpu) || !cpu_active(cpu))
 		cpu_relax();
 
 	return 0;
@@ -750,6 +718,9 @@ void start_secondary(void *unused)
 	}
 	traverse_core_siblings(cpu, true);
 
+	set_numa_node(numa_cpu_lookup_table[cpu]);
+	set_numa_mem(local_memory_node(numa_cpu_lookup_table[cpu]));
+
 	smp_wmb();
 	notify_cpu_starting(cpu);
 	set_cpu_online(cpu, true);
@@ -765,6 +736,28 @@ int setup_profiling_timer(unsigned int multiplier)
 {
 	return 0;
 }
+
+#ifdef CONFIG_SCHED_SMT
+/* cpumask of CPUs with asymetric SMT dependancy */
+static int powerpc_smt_flags(void)
+{
+	int flags = SD_SHARE_CPUCAPACITY | SD_SHARE_PKG_RESOURCES;
+
+	if (cpu_has_feature(CPU_FTR_ASYM_SMT)) {
+		printk_once(KERN_INFO "Enabling Asymmetric SMT scheduling\n");
+		flags |= SD_ASYM_PACKING;
+	}
+	return flags;
+}
+#endif
+
+static struct sched_domain_topology_level powerpc_topology[] = {
+#ifdef CONFIG_SCHED_SMT
+	{ cpu_smt_mask, powerpc_smt_flags, SD_INIT_NAME(SMT) },
+#endif
+	{ cpu_cpu_mask, SD_INIT_NAME(DIE) },
+	{ NULL, },
+};
 
 void __init smp_cpus_done(unsigned int max_cpus)
 {
@@ -790,15 +783,8 @@ void __init smp_cpus_done(unsigned int max_cpus)
 
 	dump_numa_cpu_topology();
 
-}
+	set_sched_topology(powerpc_topology);
 
-int arch_sd_sibling_asym_packing(void)
-{
-	if (cpu_has_feature(CPU_FTR_ASYM_SMT)) {
-		printk_once(KERN_INFO "Enabling Asymmetric SMT scheduling\n");
-		return SD_ASYM_PACKING;
-	}
-	return 0;
 }
 
 #ifdef CONFIG_HOTPLUG_CPU

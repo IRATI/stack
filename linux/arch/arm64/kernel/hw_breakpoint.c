@@ -20,6 +20,7 @@
 
 #define pr_fmt(fmt) "hw-breakpoint: " fmt
 
+#include <linux/compat.h>
 #include <linux/cpu_pm.h>
 #include <linux/errno.h>
 #include <linux/hw_breakpoint.h>
@@ -27,7 +28,6 @@
 #include <linux/ptrace.h>
 #include <linux/smp.h>
 
-#include <asm/compat.h>
 #include <asm/current.h>
 #include <asm/debug-monitors.h>
 #include <asm/hw_breakpoint.h>
@@ -527,7 +527,7 @@ int arch_validate_hwbkpt_settings(struct perf_event *bp)
 	 * Disallow per-task kernel breakpoints since these would
 	 * complicate the stepping code.
 	 */
-	if (info->ctrl.privilege == AARCH64_BREAKPOINT_EL1 && bp->hw.bp_target)
+	if (info->ctrl.privilege == AARCH64_BREAKPOINT_EL1 && bp->hw.target)
 		return -EINVAL;
 
 	return 0;
@@ -894,7 +894,7 @@ static struct notifier_block hw_breakpoint_reset_nb = {
 	.notifier_call = hw_breakpoint_reset_notify,
 };
 
-#ifdef CONFIG_ARM64_CPU_SUSPEND
+#ifdef CONFIG_CPU_PM
 extern void cpu_suspend_set_dbg_restorer(void (*hw_bp_restore)(void *));
 #else
 static inline void cpu_suspend_set_dbg_restorer(void (*hw_bp_restore)(void *))

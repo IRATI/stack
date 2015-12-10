@@ -11,7 +11,7 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
@@ -30,51 +30,52 @@
 #include "ps-factory.h"
 
 struct rmt_ps {
-        struct ps_base base;
+	struct ps_base base;
 
-        /* Behavioural policies. */
-        void (* max_q_policy_tx)(struct rmt_ps *,
-                                 struct pdu *,
-                                 struct rmt_n1_port *);
-        void (* max_q_policy_rx)(struct rmt_ps *,
-                                 struct sdu *,
-                                 struct rmt_n1_port *);
-        void (* rmt_q_monitor_policy_tx_enq)(struct rmt_ps *,
-                                             struct pdu *,
-                                             struct rmt_n1_port *);
-        void (* rmt_q_monitor_policy_tx_deq)(struct rmt_ps *,
-                                             struct pdu *,
-                                             struct rmt_n1_port *);
-        void (* rmt_q_monitor_policy_rx)(struct rmt_ps *,
-                                 struct sdu *,
-                                 struct rmt_n1_port *);
-        struct pdu * (* rmt_next_scheduled_policy_tx)(struct rmt_ps *,
-                                                      struct rmt_n1_port *);
-        int (* rmt_enqueue_scheduling_policy_tx)(struct rmt_ps *,
-                                                 struct rmt_n1_port *,
-                                                 struct pdu *);
-        int (* rmt_requeue_scheduling_policy_tx)(struct rmt_ps *,
-                                                 struct rmt_n1_port *,
-                                                 struct pdu *);
-        int (* rmt_scheduling_policy_rx)(struct rmt_ps *,
-                                         struct rmt_n1_port *, struct sdu *);
-        int (* rmt_scheduling_create_policy_tx)(struct rmt_ps *,
-                                                struct rmt_n1_port *);
-        int (* rmt_scheduling_destroy_policy_tx)(struct rmt_ps *,
-                                                 struct rmt_n1_port *);
+	/* Behavioural policies. */
+	void (*max_q_policy_tx)(struct rmt_ps *,
+				struct pdu *,
+				struct rmt_n1_port *);
+	void (*max_q_policy_rx)(struct rmt_ps *,
+				 struct sdu *,
+				 struct rmt_n1_port *);
+	void (*rmt_q_monitor_policy_tx_enq)(struct rmt_ps *,
+					    struct pdu *,
+					    struct rmt_n1_port *);
+	void (*rmt_q_monitor_policy_tx_deq)(struct rmt_ps *,
+					    struct pdu *,
+					    struct rmt_n1_port *);
+	void (*rmt_q_monitor_policy_rx)(struct rmt_ps *,
+					struct sdu *,
+					struct rmt_n1_port *);
+	struct pdu *(*rmt_next_scheduled_policy_tx)(struct rmt_ps *,
+						    struct rmt_n1_port *);
+	int (*rmt_enqueue_scheduling_policy_tx)(struct rmt_ps *,
+						struct rmt_n1_port *,
+						struct pdu *);
+	int (*rmt_requeue_scheduling_policy_tx)(struct rmt_ps *,
+						struct rmt_n1_port *,
+						struct pdu *);
+	int (*rmt_scheduling_policy_rx)(struct rmt_ps *,
+					struct rmt_n1_port *,
+					struct sdu *);
+	int (*rmt_scheduling_create_policy_tx)(struct rmt_ps *,
+					       struct rmt_n1_port *);
+	int (*rmt_scheduling_destroy_policy_tx)(struct rmt_ps *,
+						struct rmt_n1_port *);
 
-        /* Reference used to access the RMT data model. */
-        struct rmt * dm;
+	/* Reference used to access the RMT data model. */
+	struct rmt *dm;
 
-        /* Data private to the policy-set implementation. */
-        void *       priv;
+	/* Data private to the policy-set implementation. */
+	void *priv;
 };
 
 /*
  * The ownership of @factory is not passed. Plugin module is therefore
  * in charge of deallocate its memory, if necessary.
  */
-int rmt_ps_publish(struct ps_factory * factory);
-int rmt_ps_unpublish(const char * name);
+int rmt_ps_publish(struct ps_factory *factory);
+int rmt_ps_unpublish(const char *name);
 
 #endif

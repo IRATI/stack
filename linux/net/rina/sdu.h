@@ -23,9 +23,9 @@
 #define RINA_SDU_H
 
 #include <linux/types.h>
+#include <linux/list.h>
 
 #include "common.h"
-#include "qos.h"
 #include "buffer.h"
 
 /*
@@ -34,6 +34,7 @@
  */
 struct sdu {
         struct buffer * buffer;
+        struct list_head node;
 };
 
 /*

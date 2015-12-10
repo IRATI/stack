@@ -137,7 +137,7 @@ struct crypto_template *crypto_lookup_template(const char *name);
 
 int crypto_register_instance(struct crypto_template *tmpl,
 			     struct crypto_instance *inst);
-int crypto_unregister_instance(struct crypto_alg *alg);
+int crypto_unregister_instance(struct crypto_instance *inst);
 
 int crypto_init_spawn(struct crypto_spawn *spawn, struct crypto_alg *alg,
 		      struct crypto_instance *inst, u32 mask);
@@ -408,6 +408,12 @@ noinline unsigned long __crypto_memneq(const void *a, const void *b, size_t size
 static inline int crypto_memneq(const void *a, const void *b, size_t size)
 {
 	return __crypto_memneq(a, b, size) != 0UL ? 1 : 0;
+}
+
+static inline void crypto_yield(u32 flags)
+{
+	if (flags & CRYPTO_TFM_REQ_MAY_SLEEP)
+		cond_resched();
 }
 
 #endif	/* _CRYPTO_ALGAPI_H */

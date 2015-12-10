@@ -179,7 +179,6 @@ static int vmw_fb_set_par(struct fb_info *info)
 		vmw_write(vmw_priv, SVGA_REG_DISPLAY_POSITION_Y, info->var.yoffset);
 		vmw_write(vmw_priv, SVGA_REG_DISPLAY_WIDTH, info->var.xres);
 		vmw_write(vmw_priv, SVGA_REG_DISPLAY_HEIGHT, info->var.yres);
-		vmw_write(vmw_priv, SVGA_REG_BYTES_PER_LINE, info->fix.line_length);
 		vmw_write(vmw_priv, SVGA_REG_DISPLAY_ID, SVGA_ID_INVALID);
 	}
 
@@ -375,10 +374,16 @@ static int vmw_fb_create_bo(struct vmw_private *vmw_priv,
 			    size_t size, struct vmw_dma_buffer **out)
 {
 	struct vmw_dma_buffer *vmw_bo;
-	struct ttm_placement ne_placement = vmw_vram_ne_placement;
+	struct ttm_place ne_place = vmw_vram_ne_placement.placement[0];
+	struct ttm_placement ne_placement;
 	int ret;
 
-	ne_placement.lpfn = (size + PAGE_SIZE - 1) >> PAGE_SHIFT;
+	ne_placement.num_placement = 1;
+	ne_placement.placement = &ne_place;
+	ne_placement.num_busy_placement = 1;
+	ne_placement.busy_placement = &ne_place;
+
+	ne_place.lpfn = (size + PAGE_SIZE - 1) >> PAGE_SHIFT;
 
 	(void) ttm_write_lock(&vmw_priv->reservation_sem, false);
 

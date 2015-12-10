@@ -17,7 +17,6 @@
 #include <linux/irq.h>
 #include <linux/irqchip/chained_irq.h>
 #include <linux/bitops.h>
-#include <linux/workqueue.h>
 #include <linux/gpio.h>
 #include <linux/device.h>
 #include <linux/amba/bus.h>
@@ -53,28 +52,34 @@ struct pl061_gpio {
 
 	void __iomem		*base;
 	struct gpio_chip	gc;
+	bool			uses_pinctrl;
 
 #ifdef CONFIG_PM
 	struct pl061_context_save_regs csave_regs;
 #endif
 };
 
-static int pl061_gpio_request(struct gpio_chip *chip, unsigned offset)
+static int pl061_gpio_request(struct gpio_chip *gc, unsigned offset)
 {
 	/*
 	 * Map back to global GPIO space and request muxing, the direction
 	 * parameter does not matter for this controller.
 	 */
-	int gpio = chip->base + offset;
+	struct pl061_gpio *chip = container_of(gc, struct pl061_gpio, gc);
+	int gpio = gc->base + offset;
 
-	return pinctrl_request_gpio(gpio);
+	if (chip->uses_pinctrl)
+		return pinctrl_request_gpio(gpio);
+	return 0;
 }
 
-static void pl061_gpio_free(struct gpio_chip *chip, unsigned offset)
+static void pl061_gpio_free(struct gpio_chip *gc, unsigned offset)
 {
-	int gpio = chip->base + offset;
+	struct pl061_gpio *chip = container_of(gc, struct pl061_gpio, gc);
+	int gpio = gc->base + offset;
 
-	pinctrl_free_gpio(gpio);
+	if (chip->uses_pinctrl)
+		pinctrl_free_gpio(gpio);
 }
 
 static int pl061_direction_input(struct gpio_chip *gc, unsigned offset)
@@ -88,7 +93,7 @@ static int pl061_direction_input(struct gpio_chip *gc, unsigned offset)
 
 	spin_lock_irqsave(&chip->lock, flags);
 	gpiodir = readb(chip->base + GPIODIR);
-	gpiodir &= ~(1 << offset);
+	gpiodir &= ~(BIT(offset));
 	writeb(gpiodir, chip->base + GPIODIR);
 	spin_unlock_irqrestore(&chip->lock, flags);
 
@@ -106,16 +111,16 @@ static int pl061_direction_output(struct gpio_chip *gc, unsigned offset,
 		return -EINVAL;
 
 	spin_lock_irqsave(&chip->lock, flags);
-	writeb(!!value << offset, chip->base + (1 << (offset + 2)));
+	writeb(!!value << offset, chip->base + (BIT(offset + 2)));
 	gpiodir = readb(chip->base + GPIODIR);
-	gpiodir |= 1 << offset;
+	gpiodir |= BIT(offset);
 	writeb(gpiodir, chip->base + GPIODIR);
 
 	/*
 	 * gpio value is set again, because pl061 doesn't allow to set value of
 	 * a gpio pin before configuring it in OUT mode.
 	 */
-	writeb(!!value << offset, chip->base + (1 << (offset + 2)));
+	writeb(!!value << offset, chip->base + (BIT(offset + 2)));
 	spin_unlock_irqrestore(&chip->lock, flags);
 
 	return 0;
@@ -125,14 +130,14 @@ static int pl061_get_value(struct gpio_chip *gc, unsigned offset)
 {
 	struct pl061_gpio *chip = container_of(gc, struct pl061_gpio, gc);
 
-	return !!readb(chip->base + (1 << (offset + 2)));
+	return !!readb(chip->base + (BIT(offset + 2)));
 }
 
 static void pl061_set_value(struct gpio_chip *gc, unsigned offset, int value)
 {
 	struct pl061_gpio *chip = container_of(gc, struct pl061_gpio, gc);
 
-	writeb(!!value << offset, chip->base + (1 << (offset + 2)));
+	writeb(!!value << offset, chip->base + (BIT(offset + 2)));
 }
 
 static int pl061_irq_type(struct irq_data *d, unsigned trigger)
@@ -207,7 +212,7 @@ static void pl061_irq_mask(struct irq_data *d)
 {
 	struct gpio_chip *gc = irq_data_get_irq_chip_data(d);
 	struct pl061_gpio *chip = container_of(gc, struct pl061_gpio, gc);
-	u8 mask = 1 << (irqd_to_hwirq(d) % PL061_GPIO_NR);
+	u8 mask = BIT(irqd_to_hwirq(d) % PL061_GPIO_NR);
 	u8 gpioie;
 
 	spin_lock(&chip->lock);
@@ -220,7 +225,7 @@ static void pl061_irq_unmask(struct irq_data *d)
 {
 	struct gpio_chip *gc = irq_data_get_irq_chip_data(d);
 	struct pl061_gpio *chip = container_of(gc, struct pl061_gpio, gc);
-	u8 mask = 1 << (irqd_to_hwirq(d) % PL061_GPIO_NR);
+	u8 mask = BIT(irqd_to_hwirq(d) % PL061_GPIO_NR);
 	u8 gpioie;
 
 	spin_lock(&chip->lock);
@@ -264,6 +269,8 @@ static int pl061_probe(struct amba_device *adev, const struct amba_id *id)
 		return PTR_ERR(chip->base);
 
 	spin_lock_init(&chip->lock);
+	if (of_property_read_bool(dev->of_node, "gpio-ranges"))
+		chip->uses_pinctrl = true;
 
 	chip->gc.request = pl061_gpio_request;
 	chip->gc.free = pl061_gpio_free;
@@ -302,9 +309,9 @@ static int pl061_probe(struct amba_device *adev, const struct amba_id *id)
 
 	for (i = 0; i < PL061_GPIO_NR; i++) {
 		if (pdata) {
-			if (pdata->directions & (1 << i))
+			if (pdata->directions & (BIT(i)))
 				pl061_direction_output(&chip->gc, i,
-						pdata->values & (1 << i));
+						pdata->values & (BIT(i)));
 			else
 				pl061_direction_input(&chip->gc, i);
 		}
@@ -331,7 +338,7 @@ static int pl061_suspend(struct device *dev)
 	chip->csave_regs.gpio_ie = readb(chip->base + GPIOIE);
 
 	for (offset = 0; offset < PL061_GPIO_NR; offset++) {
-		if (chip->csave_regs.gpio_dir & (1 << offset))
+		if (chip->csave_regs.gpio_dir & (BIT(offset)))
 			chip->csave_regs.gpio_data |=
 				pl061_get_value(&chip->gc, offset) << offset;
 	}
@@ -345,10 +352,10 @@ static int pl061_resume(struct device *dev)
 	int offset;
 
 	for (offset = 0; offset < PL061_GPIO_NR; offset++) {
-		if (chip->csave_regs.gpio_dir & (1 << offset))
+		if (chip->csave_regs.gpio_dir & (BIT(offset)))
 			pl061_direction_output(&chip->gc, offset,
 					chip->csave_regs.gpio_data &
-					(1 << offset));
+					(BIT(offset)));
 		else
 			pl061_direction_input(&chip->gc, offset);
 	}

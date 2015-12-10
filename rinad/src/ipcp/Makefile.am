@@ -39,6 +39,10 @@ ipcp_SOURCES  =						\
 	routing.cc                      \
 	ipc-process.cc          ipc-process.h
 
+ipcpheadersdir = $(includedir)/rinad/ipcp
+ipcpheaders_HEADERS = components.h		\
+		ipcp-logging.h
+
 testsCPPFLAGS = $(COMMONCPPFLAGS)
 testsLIBS     = $(COMMONLIBS)
 

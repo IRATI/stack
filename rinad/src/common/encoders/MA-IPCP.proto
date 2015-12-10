@@ -14,11 +14,19 @@ message ipcp{
 	required string processName = 2;	//Process name
 }
 
+// Contains the information about the neighbor to use for the enrollment
+message enrollment_config{
+	required string neighbor_name = 1;				//the name of the neighbor
+	required string neighbor_instance = 2;			//the instance of the neighbor
+	required string enrollment_dif = 3;				//the dif to use in the enrollment
+	required string enrollment_underlying_dif = 4;   //the underlying dif to use in the enrollment
+}
 //Contains the information to setup a new IPCP Process
 message ipcp_config{
-	required string process_name = 1;  		//the name of the process
+	required string process_name = 1;  			//the name of the process
 	required string process_instance = 2;  		//the instance of the process
-	required string process_type = 3;  		//the type of the process
-	optional string dif_to_register = 4;  		//the DIF to register the IPCP
+	required string process_type = 3;  			//the type of the process
+	repeated string difs_to_register = 4;  		//the DIF to register the IPCP
 	optional string dif_to_assign = 5;  		//the DIF to assign the IPCP
+	optional enrollment_config enrollment_info = 6;	//enrollment information
 }

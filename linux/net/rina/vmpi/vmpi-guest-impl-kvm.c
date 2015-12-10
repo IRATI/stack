@@ -18,7 +18,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-//#define DEBUG
 #include <linux/netdevice.h>
 #include <linux/module.h>
 #include <linux/virtio.h>
@@ -29,7 +28,6 @@
 #include <linux/poll.h>
 
 #include "vmpi-guest-impl.h"
-#include "vmpi-structs.h"
 #include "vmpi.h"
 
 
@@ -37,15 +35,19 @@
 struct vmpi_impl_queue {
         struct virtqueue *vq;
         vmpi_impl_callback_t cb;
-        struct scatterlist sg[MAX_SKB_FRAGS + 2];
+        struct scatterlist sg[2];
         char name[40];
+#ifndef VMPI_BUF_CAN_PUSH
+        int hdr_head;
+        int hdr_tail;
+        struct vmpi_hdr hdrs[VMPI_RING_SIZE];
+#endif /* ! VMPI_BUF_CAN_PUSH */
 };
 
 struct vmpi_impl_info {
         struct virtio_device *vdev;
         struct vmpi_impl_queue *sq;
         struct vmpi_impl_queue *rq;
-        unsigned int status;
         void *private;
 };
 
@@ -83,14 +85,27 @@ virtio_mpi_recv_callback(struct virtqueue *vq)
         }
 }
 
+/* To be called under lock. */
 int
-vmpi_impl_write_buf(struct vmpi_impl_info *vi, struct vmpi_buffer *buf)
+vmpi_impl_write_buf(struct vmpi_impl_info *vi, struct vmpi_buf *vb,
+                    unsigned int channel)
 {
-        ssize_t ret = 0;
         struct vmpi_impl_queue *q = vi->sq;
+        ssize_t ret;
 
-        sg_set_buf(q->sg, buf->p, buf->len);
-        ret = virtqueue_add_outbuf(q->vq, q->sg, 1, buf, GFP_KERNEL);
+#ifdef VMPI_BUF_CAN_PUSH
+        vmpi_buf_push(vb, sizeof(struct vmpi_hdr));
+        ((struct vmpi_hdr *)vmpi_buf_data(vb))->channel = channel;
+        sg_init_one(q->sg, vmpi_buf_data(vb), vmpi_buf_len(vb));
+        ret = virtqueue_add_outbuf(q->vq, q->sg, 1, vb, GFP_KERNEL);
+#else
+        sg_init_table(q->sg, 2);
+        q->hdrs[q->hdr_tail].channel = channel;
+        sg_set_buf(q->sg, q->hdrs + q->hdr_tail, sizeof(struct vmpi_hdr));
+        q->hdr_tail = (q->hdr_tail + 1) & VMPI_RING_SIZE_MASK;
+        sg_set_buf(q->sg + 1, vmpi_buf_data(vb), vmpi_buf_len(vb));
+        ret = virtqueue_add_outbuf(q->vq, q->sg, 2, vb, GFP_KERNEL);
+#endif
 
         return ret;
 }
@@ -101,69 +116,110 @@ vmpi_impl_txkick(struct vmpi_impl_info *vi)
         virtqueue_kick(vi->sq->vq);
 }
 
-struct vmpi_buffer *
+bool
+vmpi_impl_tx_should_stop(struct vmpi_impl_info *vi)
+{
+        return vi->sq->vq->num_free < 4;
+}
+
+struct vmpi_buf *
 vmpi_impl_get_written_buffer(struct vmpi_impl_info *vi)
 {
         unsigned int len;
-        struct vmpi_buffer *buf = virtqueue_get_buf(vi->sq->vq, &len);
+        struct vmpi_buf *vb = virtqueue_get_buf(vi->sq->vq, &len);
 
-        if (buf) {
-                buf->len = len;
+        if (vb) {
+                vmpi_buf_set_len(vb, len);
         }
 
-        return buf;
+        return vb;
 }
 
-struct vmpi_buffer *
-vmpi_impl_read_buffer(struct vmpi_impl_info *vi)
+static int
+add_rx_buf(struct vmpi_impl_queue *q)
+{
+        struct vmpi_buf *nvb;
+        int err;
+
+        nvb = vmpi_buf_alloc(VMPI_BUF_SIZE, 0, GFP_KERNEL);
+        if (unlikely(nvb == NULL)) {
+                printk("Error: vmpi_buf_alloc(%lu) failed\n",
+                                VMPI_BUF_SIZE);
+                return -1;
+        }
+
+#ifdef VMPI_BUF_CAN_PUSH
+        sg_init_one(q->sg, vmpi_buf_data(nvb), vmpi_buf_size(nvb));
+        err = virtqueue_add_inbuf(q->vq, q->sg, 1, nvb, GFP_ATOMIC);
+#else
+        sg_init_table(q->sg, 2);
+        sg_set_buf(q->sg, q->hdrs + q->hdr_tail, sizeof(struct vmpi_hdr));
+        sg_set_buf(q->sg + 1, vmpi_buf_data(nvb), vmpi_buf_size(nvb));
+        err = virtqueue_add_inbuf(q->vq, q->sg, 2, nvb, GFP_ATOMIC);
+#endif
+        if (unlikely(err)) {
+                vmpi_buf_free(nvb);
+                printk("Error: virtqueue_add_inbuf() failed\n");
+
+        } else {
+#ifndef VMPI_BUF_CAN_PUSH
+                q->hdr_tail = (q->hdr_tail + 1) & VMPI_RING_SIZE_MASK;
+#endif
+        }
+
+        return err;
+}
+
+/* To be called under lock. */
+struct vmpi_buf *
+vmpi_impl_read_buffer(struct vmpi_impl_info *vi, unsigned *channel)
 {
         unsigned int len;
         struct vmpi_impl_queue *q = vi->rq;
-        struct vmpi_buffer *buf = virtqueue_get_buf(q->vq, &len);
-        struct vmpi_buffer *newbuf;
-        int err;
+        struct vmpi_buf *vb = virtqueue_get_buf(q->vq, &len);
+        struct vmpi_hdr *hdr;
 
-        if (buf) {
-                buf->len = len;
-                newbuf = vmpi_buffer_create(VMPI_BUF_SIZE);
-                if (unlikely(newbuf == NULL)) {
-                        printk("Error: vmpi_buffer_create(%lu) failed\n",
-                               VMPI_BUF_SIZE);
-                } else {
-                        sg_set_buf(q->sg, newbuf->p, newbuf->size);
-                        err = virtqueue_add_inbuf(q->vq, q->sg, 1, newbuf,
-                                                  GFP_ATOMIC);
-                        if (unlikely(err)) {
-                                printk("Error: virtqueue_add_inbuf() failed\n");
-                        }
-                        virtqueue_kick(q->vq);
-                }
+        if (!vb) {
+                return NULL;
         }
 
-        return buf;
-}
+#ifdef VMPI_BUF_CAN_PUSH
+        vmpi_buf_set_len(vb, len);
+        hdr = vmpi_buf_data(vb);
+        vmpi_buf_pop(vb, sizeof(struct vmpi_hdr));
+#else
+        vmpi_buf_set_len(vb, len - sizeof(struct vmpi_hdr));
+        hdr = q->hdrs + q->hdr_head;
+        q->hdr_head = (q->hdr_head + 1) & VMPI_RING_SIZE_MASK;
+#endif
+        *channel = hdr->channel;
 
-static inline bool
-vmpi_impl_xx_cb(struct vmpi_impl_queue *q, int enable)
-{
-        if (enable) {
-                return virtqueue_enable_cb(q->vq);
-        }
-        virtqueue_disable_cb(q->vq);
+        add_rx_buf(q);
+        virtqueue_kick(q->vq);
 
-        return true;
+        return vb;
 }
 
 bool
 vmpi_impl_send_cb(struct vmpi_impl_info *vi, int enable)
 {
-        return vmpi_impl_xx_cb(vi->sq, enable);
+        if (enable) {
+                return virtqueue_enable_cb_delayed(vi->sq->vq);
+        }
+        virtqueue_disable_cb(vi->sq->vq);
+
+        return true;
 }
 
 bool
 vmpi_impl_receive_cb(struct vmpi_impl_info *vi, int enable)
 {
-        return vmpi_impl_xx_cb(vi->rq, enable);
+        if (enable) {
+                return virtqueue_enable_cb(vi->rq->vq);
+        }
+        virtqueue_disable_cb(vi->rq->vq);
+
+        return true;
 }
 
 void
@@ -252,7 +308,7 @@ virtio_mpi_config_changed(struct virtio_device *vdev)
 static int
 virtio_mpi_alloc_queues(struct vmpi_impl_info *vi)
 {
-        vi->sq = kzalloc(sizeof(*vi->sq) * 1, GFP_KERNEL);
+        vi->sq = kzalloc((sizeof(*vi->sq)) * 1, GFP_KERNEL);
         if (!vi->sq)
                 goto err_sq;
 
@@ -281,21 +337,21 @@ virtio_mpi_free_queues(struct vmpi_impl_info *vi)
 static void
 vmpi_impl_free_unused_bufs(struct vmpi_impl_info *vi)
 {
-        void *buf;
+        struct vmpi_buf *vb;
         struct virtqueue *vq;
         int cnt;
 
         cnt = 0;
         vq = vi->sq->vq;
-        while ((buf = virtqueue_detach_unused_buf(vq)) != NULL) {
-                (void)buf;
+        while ((vb = virtqueue_detach_unused_buf(vq)) != NULL) {
+                vmpi_buf_free(vb);
                 cnt++;
         }
 
         cnt = 0;
         vq = vi->rq->vq;
-        while ((buf = virtqueue_detach_unused_buf(vq)) != NULL) {
-                vmpi_buffer_destroy(buf);
+        while ((vb = virtqueue_detach_unused_buf(vq)) != NULL) {
+                vmpi_buf_free(vb);
                 cnt++;
                 //--vi->rq[0].num;
         }
@@ -394,40 +450,32 @@ virtio_mpi_probe(struct virtio_device *vdev)
         if (err)
                 goto init_vqs;
 
-        vi->status = 1;
-
-        vi->private = vmpi_init(vi, &err, false);
+        vi->private = vmpi_init(vi, &err);
         if (vi->private == NULL) {
                 printk("vmpi_init() failed\n");
                 goto vmpi_ini;
         }
 
-        /* Setup some receive buffers. */
-        for (i = 0; i < VMPI_RING_SIZE; i++) {
-                struct vmpi_impl_queue *q = vi->rq;
-                struct vmpi_buffer *buf;
-                int err;
+        virtio_device_ready(vdev);
 
-                buf = vmpi_buffer_create(VMPI_BUF_SIZE);
-                if (buf == NULL) {
-                        goto setup_rxbufs;
-                }
-                sg_set_buf(q->sg, buf->p, buf->size);
-                err = virtqueue_add_inbuf(q->vq, q->sg, 1, buf, GFP_ATOMIC);
+        /* Setup some receive buffers. */
+        i = 0;
+        do {
+                err = add_rx_buf(vi->rq);
                 if (err) {
-                        vmpi_buffer_destroy(buf);
                         goto setup_rxbufs;
                 }
-        }
+                i++;
+        } while (vi->rq->vq->num_free);
         virtqueue_kick(vi->rq->vq);
 
-        printk("virtio_mpi_probe completed\n");
+        printk("virtio_mpi_probe completed (%d rx bufs added)\n", i);
 
         return 0;
 
  setup_rxbufs:
         vmpi_impl_free_unused_bufs(vi);
-        vmpi_fini(vi->private, false);
+        vmpi_fini(vi->private);
  vmpi_ini:
         virtio_mpi_del_vqs(vi);
  init_vqs:
@@ -441,7 +489,7 @@ virtio_mpi_remove(struct virtio_device *vdev)
 {
         struct vmpi_impl_info *vi = vdev->priv;
 
-        vmpi_fini(vi->private, false);
+        vmpi_fini(vi->private);
 
         remove_vq_common(vi);
         kfree(vi);
@@ -479,6 +527,5 @@ module_virtio_driver(virtio_mpi_driver);
 
 MODULE_DEVICE_TABLE(virtio, id_table);
 MODULE_DESCRIPTION("Virtio MPI driver");
-MODULE_ALIAS_MISCDEV(VIRTIO_MPI_MINOR);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Vincenzo Maffione");
