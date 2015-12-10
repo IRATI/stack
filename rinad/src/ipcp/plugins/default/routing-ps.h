@@ -1,3 +1,5 @@
+
+
 /*
  * Link-state routing policy
  *
@@ -30,6 +32,37 @@
 #include "common/encoders/FlowStateMessage.pb.h"
 
 namespace rinad {
+
+struct TreeNode {
+    unsigned int addr;
+    int metric;
+    std::set<TreeNode*> chldel;
+    std::set<TreeNode*> chl;
+    TreeNode(){
+            addr = 0;
+            metric = UINT16_MAX;
+    }
+    TreeNode(const unsigned int &_addr, const int &_metric){
+        addr = _addr;
+        metric = _metric;
+    }
+    bool operator == (const TreeNode &b) const
+    {
+        return addr == b.addr;
+    }
+    bool operator < (const TreeNode &b) const
+    {
+        return addr < b.addr;
+    }
+
+    ~TreeNode(){
+	std::set<TreeNode*>::iterator c;
+        for(c=chldel.begin(); c != chldel.end(); ++c){
+            delete *c;
+        }
+    }
+
+};
 
 class LinkStateRoutingPolicy;
 
@@ -223,12 +256,15 @@ public:
 private:
     std::set<unsigned int> settled_nodes_;
     std::set<unsigned int> unsettled_nodes_;
-    std::map<unsigned int, std::list<PredecessorInfo *> > predecessors_;
+    std::set<unsigned int> minimum_nodes_;
+    std::map<unsigned int, std::list<TreeNode *> > predecessors_;
     std::map<unsigned int, int> distances_;
-
+    TreeNode* t;
     void execute(const Graph& graph, unsigned int source);
-    unsigned int getMinimum() const;
-    void findMinimalDistances (const Graph& graph, unsigned int node);
+    void addRecursive(std::list<rina::RoutingTableEntry *> &table, int qos, unsigned int next, TreeNode * node);
+    std::list<rina::RoutingTableEntry *>::iterator findEntry(std::list<rina::RoutingTableEntry *> &table, unsigned int addr);
+    void getMinimum();
+    void findMinimalDistances (const Graph& graph, TreeNode * pred);
     int getShortestDistance(unsigned int destination) const;
     bool isNeighbor(Edge * edge, unsigned int node) const;
     bool isSettled(unsigned int node) const;
@@ -576,3 +612,5 @@ public:
 }
 
 #endif
+
+

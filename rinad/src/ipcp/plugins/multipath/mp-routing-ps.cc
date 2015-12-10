@@ -309,12 +309,14 @@ void ECMPDijkstraAlgorithm::clear()
 	settled_nodes_.clear();
 	predecessors_.clear();
 	distances_.clear();
+	delete t;
 }
 
 void ECMPDijkstraAlgorithm::computeShortestDistances(const Graph& graph,
 					unsigned int source_address,
 					std::map<unsigned int, int>& distances)
 {
+	LOG_IPCP_INFO("Empezando ECMPDijskstrAlgorithm");
 	execute(graph, source_address);
 
 	// Write back the result
@@ -339,7 +341,7 @@ std::list<rina::RoutingTableEntry *> ECMPDijkstraAlgorithm::computeRoutingTable(
 
     execute(graph, source_address);
 
-    for (it = graph.vertices_.begin(); it != graph.vertices_.end(); ++it) {
+    /*for (it = graph.vertices_.begin(); it != graph.vertices_.end(); ++it) {
         if ((*it) != source_address) {
             nextHops = getNextHops((*it), source_address);
             if (!nextHops.empty()) {
@@ -355,49 +357,152 @@ std::list<rina::RoutingTableEntry *> ECMPDijkstraAlgorithm::computeRoutingTable(
                 result.push_back(entry);
             }
         }
-    }
+    }*/
+	LOG_IPCP_INFO("¡¡¡Iterando Nodo con id %u", t->addr);
+	for(std::set<TreeNode *>::iterator it = t->chl.begin(); it != t->chl.end(); it++){
+		LOG_IPCP_INFO("¡¡¡Hijo Encontrado!!!! con id %u", (*it)->addr);
+		
+		std::list<rina::RoutingTableEntry *>::iterator pos = findEntry(result, (*it)->addr);
 
-	/* delete graph_;
-	 unsettled_nodes_.clear();
-	 settled_nodes_.clear();
-	 predecessors_.clear();
-	 distances_.clear();
-	 */
+		if(pos != result.end()){
+			(*pos)->nextHopAddresses.push_back((*it)->addr);
+			LOG_IPCP_INFO("¡¡¡Posición Encontrada!!!!");
+		}
+		else{
+			LOG_IPCP_INFO("¡¡¡Posición no Encontrada!!!!");
+			entry = new rina::RoutingTableEntry();
+		        entry->address = (*it)->addr;
+		        entry->qosId = 1;
+		        entry->cost = 1;
+			entry->nextHopAddresses.push_back((*it)->addr);
+			LOG_IPCP_INFO("Added entry to routing table: destination %u, next-hop %u",
+                        entry->address, (*it)->addr);
+			result.push_back(entry);
+			LOG_IPCP_INFO("¡¡¡Entrada añadida!!!!");
+		}
+		LOG_IPCP_INFO("¡¡¡Llamando a addRecursive!!!!");
+		addRecursive(result, 1, (*it)->addr, *it);
+	}
 	clear();
 
     return result;
 }
 
+void ECMPDijkstraAlgorithm::addRecursive(std::list<rina::RoutingTableEntry *> &table, int qos, unsigned int next, TreeNode * node){
+	
+	LOG_IPCP_INFO("¡¡¡Iterando Nodo con id %u en addRecursive", node->addr);
+	for(std::set<TreeNode *>::iterator it = node->chl.begin(); it != node->chl.end(); it++){
+		//LOG_IPCP_INFO("Prueba de que 17 existe hijo: %u",(*((*(t.chl.begin()))->chl.begin()))->addr);
+		LOG_IPCP_INFO("¡¡¡Hijo Encontrado!!!! con id %u", (*it)->addr);
+		std::list<rina::RoutingTableEntry *>::iterator pos = findEntry(table,(*it)->addr);
+
+		if(pos != table.end()){
+			(*pos)->nextHopAddresses.push_back(next);
+			LOG_IPCP_INFO("¡¡¡Posición Encontrada!!!!");
+		}
+		else{
+			LOG_IPCP_INFO("¡¡¡Posición no Encontrada!!!!");
+			rina::RoutingTableEntry * entry = new rina::RoutingTableEntry();
+		        entry->address = (*it)->addr;
+		        entry->qosId = 1;
+		        entry->cost = 1;
+			entry->nextHopAddresses.push_back(next);
+			LOG_IPCP_INFO("Added entry to routing table: destination %u, next-hop %u",
+                        entry->address, next);
+			table.push_back(entry);
+			LOG_IPCP_INFO("¡¡¡Entrada añadida!!!!");
+		}
+		addRecursive(table, 1, next, *it);
+		LOG_IPCP_INFO("¡¡¡Llamando a addRecursive!!!!");
+	}
+}
+
+std::list<rina::RoutingTableEntry *>::iterator ECMPDijkstraAlgorithm::findEntry(std::list<rina::RoutingTableEntry *> &table, unsigned int addr)
+{
+	std::list<rina::RoutingTableEntry *>::iterator it;
+	for(it = table.begin(); it != table.end(); it++)
+	{
+		if((*it)->address == addr){
+			return it;
+		}
+	}
+	return it;
+}
+
 void ECMPDijkstraAlgorithm::execute(const Graph& graph, unsigned int source)
 {
     distances_[source] = 0;
-    unsettled_nodes_.insert(source);
+    settled_nodes_.insert(source);
+    t = new TreeNode(source, 0);
+    //t.addr = source;
+    //t.metric = 0;
 
-    unsigned int node;
-    while (unsettled_nodes_.size() > 0) {
-        node = getMinimum();
-        settled_nodes_.insert(node);
-        unsettled_nodes_.erase(node);
-        findMinimalDistances(graph, node);
-    }
-}
-
-unsigned int ECMPDijkstraAlgorithm::getMinimum() const
-{
-    unsigned int minimum = UINT_MAX;
-    std::set<unsigned int>::iterator it;
-
-    for (it = unsettled_nodes_.begin(); it != unsettled_nodes_.end(); ++it) {
-        if (minimum == UINT_MAX) {
-            minimum = (*it);
-        } else {
-            if (getShortestDistance((*it)) < getShortestDistance(minimum)) {
-                minimum = (*it);
-            }
+    std::list<Edge *>::const_iterator edgeIt;
+    int cost;
+    unsigned int target = 0;
+    int shortestDistance;
+    for (edgeIt = graph.edges_.begin(); edgeIt != graph.edges_.end();
+            ++edgeIt) {
+        if (isNeighbor((*edgeIt), source)) {
+            target = (*edgeIt)->getOtherEndpoint(source);
+	    distances_[target]=(*edgeIt)->weight_;
+            predecessors_[target].push_front(t);
+            unsettled_nodes_.insert(target);
         }
     }
 
-    return minimum;
+
+
+    while (unsettled_nodes_.size() > 0) {
+	std::set<unsigned int>::iterator it;
+        getMinimum();
+	LOG_IPCP_INFO("¡¡¡Que pasa!!!!");
+	for(it = minimum_nodes_.begin(); it != minimum_nodes_.end(); ++it){
+		LOG_IPCP_INFO("¡¡¡Hola!!!");
+        	settled_nodes_.insert(*it);
+
+		TreeNode * nt = new TreeNode(*it, distances_.find(*it)->second);
+		LOG_IPCP_INFO("Created Node: addr %u, metric %u",
+                        *it, distances_.find(*it)->second);
+		bool fPar = true;
+		for(std::list<TreeNode *>::iterator par = predecessors_.find(*it)->second.begin(); par != predecessors_.find(*it)->second.end(); ++par){
+			LOG_IPCP_INFO("¡¡¡Predecesor encontrado!!!! con id %u", (*par)->addr);
+			if(fPar){
+				(*par)->chldel.insert(nt);
+				fPar = false;
+			}
+			(*par)->chl.insert(nt);
+			LOG_IPCP_INFO("Comprobamos que el nodo %u tiene un hijo %u",(*par)->addr,(*(*par)->chl.begin())->addr);
+		}
+
+        	unsettled_nodes_.erase(*it);
+        	findMinimalDistances(graph, nt);
+	}
+    }
+}
+
+void ECMPDijkstraAlgorithm::getMinimum()
+{
+	unsigned int minimum = UINT_MAX;
+	std::set<unsigned int>::iterator it;
+	minimum_nodes_.clear();
+	std::list<Edge *>::const_iterator edgeIt;
+	for (it = unsettled_nodes_.begin(); it != unsettled_nodes_.end(); ++it) {
+		if (minimum == UINT_MAX) {
+			minimum_nodes_.insert(*it);
+			minimum = (*it);
+		} else {
+			if (getShortestDistance((*it)) < getShortestDistance(minimum)) {
+								
+				minimum = (*it);
+				minimum_nodes_.clear();
+			}
+			if (getShortestDistance((*it)) == getShortestDistance(minimum)) {
+								
+				minimum_nodes_.insert(*it);
+			}
+		}
+	}
 }
 
 int ECMPDijkstraAlgorithm::getShortestDistance(unsigned int destination) const
@@ -413,8 +518,7 @@ int ECMPDijkstraAlgorithm::getShortestDistance(unsigned int destination) const
     return distance;
 }
 
-void ECMPDijkstraAlgorithm::findMinimalDistances(const Graph& graph,
-							unsigned int node)
+void ECMPDijkstraAlgorithm::findMinimalDistances(const Graph& graph, TreeNode * pred)
 {
     std::list<unsigned int> adjacentNodes;
     std::list<Edge *>::const_iterator edgeIt;
@@ -424,16 +528,17 @@ void ECMPDijkstraAlgorithm::findMinimalDistances(const Graph& graph,
     int shortestDistance;
     for (edgeIt = graph.edges_.begin(); edgeIt != graph.edges_.end();
             ++edgeIt) {
-        if (isNeighbor((*edgeIt), node)) {
-            target = (*edgeIt)->getOtherEndpoint(node);
+        if (isNeighbor((*edgeIt), pred->addr)) {
+            target = (*edgeIt)->getOtherEndpoint(pred->addr);
             cost = (*edgeIt)->weight_;
-            shortestDistance = getShortestDistance(node) + cost;
-            if (shortestDistance <= getShortestDistance(target)) {
+            shortestDistance = getShortestDistance(pred->addr) + cost;
+            if (shortestDistance < getShortestDistance(target)) {
+	    
                 distances_[target] = shortestDistance;
-                // predecessors_[target] = new PredecessorInfo(node);
-                PredecessorInfo * p = new PredecessorInfo(node);
-                predecessors_[target].push_front(p);
-                // predecessors_.insert(std::pair<unsigned int, PredecessorInfo *>(target, new PredecessorInfo(node)));
+		predecessors_[target].clear();
+	    }
+	    if (shortestDistance == getShortestDistance(target)) {
+                predecessors_[target].push_front(pred);
                 unsettled_nodes_.insert(target);
             }
         }
@@ -467,9 +572,9 @@ bool ECMPDijkstraAlgorithm::isSettled(unsigned int node) const
 std::list<unsigned int> ECMPDijkstraAlgorithm::getNextHops(unsigned int target,
         unsigned int source)
 {
-    std::map<unsigned int, std::list<PredecessorInfo *> >::iterator it;
-    std::map<unsigned int, std::list<PredecessorInfo *> >::iterator innerIt;
-    PredecessorInfo * step;
+    std::map<unsigned int, std::list<TreeNode *> >::iterator it;
+    std::map<unsigned int, std::list<TreeNode *> >::iterator innerIt;
+    TreeNode * step;
     std::list<unsigned int> nextHops;
     unsigned int nextHop;
 
@@ -478,29 +583,30 @@ std::list<unsigned int> ECMPDijkstraAlgorithm::getNextHops(unsigned int target,
         return nextHops;
     } else {
         nextHop = target;
-        for (std::list<PredecessorInfo *>::iterator predIt = it->second.begin(); predIt != it->second.end(); predIt++) {
+        for (std::list<TreeNode *>::iterator predIt = it->second.begin(); predIt != it->second.end(); predIt++) {
             step = (*predIt);
-            innerIt = predecessors_.find(step->predecessor_);
-            //nextHop = step->predecessor_;
-	    LOG_IPCP_INFO("Soy el ECMP de mp-routing-ps");
+            innerIt = predecessors_.find(step->addr);
+            //nextHop = step->addr;
+	    LOG_IPCP_INFO("Soy el ECMP de routing-ps");
             
             while (innerIt != predecessors_.end()) {
-		nextHop = step->predecessor_;
+		nextHop = step->addr;
                 step = *(innerIt->second.begin());
-                if (step->predecessor_ == source) {
+                if (step->addr == source) {
                     break;
                 }
 
-                innerIt = predecessors_.find(step->predecessor_);
+                innerIt = predecessors_.find(step->addr);
             }
             
-            if (step->predecessor_ != target) {
+            if (step->addr != target) {
                 nextHops.push_front(nextHop);
             }
         }
     }
 
     return nextHops;
+
 }
 
 //Class IResiliencyAlgorithm
