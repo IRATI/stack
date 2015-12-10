@@ -268,8 +268,7 @@ private:
     int getShortestDistance(unsigned int destination) const;
     bool isNeighbor(Edge * edge, unsigned int node) const;
     bool isSettled(unsigned int node) const;
-    std::list<unsigned int> getNextHops(unsigned int address, unsigned int sourceAddress);
-	void clear();
+    void clear();
 };
 
 class IResiliencyAlgorithm {

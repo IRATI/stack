@@ -518,7 +518,6 @@ void ECMPDijkstraAlgorithm::computeShortestDistances(const Graph& graph,
 					unsigned int source_address,
 					std::map<unsigned int, int>& distances)
 {
-	LOG_IPCP_INFO("Empezando ECMPDijskstrAlgorithm");
 	execute(graph, source_address);
 
 	// Write back the result
@@ -542,29 +541,23 @@ std::list<rina::RoutingTableEntry *> ECMPDijkstraAlgorithm::computeRoutingTable(
 
     execute(graph, source_address);
 
-	LOG_IPCP_INFO("¡¡¡Iterando Nodo con id %u", t->addr);
 	for(std::set<TreeNode *>::iterator it = t->chl.begin(); it != t->chl.end(); it++){
-		LOG_IPCP_INFO("¡¡¡Hijo Encontrado!!!! con id %u", (*it)->addr);
 		
 		std::list<rina::RoutingTableEntry *>::iterator pos = findEntry(result, (*it)->addr);
 
 		if(pos != result.end()){
 			(*pos)->nextHopAddresses.push_back((*it)->addr);
-			LOG_IPCP_INFO("¡¡¡Posición Encontrada!!!!");
 		}
 		else{
-			LOG_IPCP_INFO("¡¡¡Posición no Encontrada!!!!");
 			entry = new rina::RoutingTableEntry();
 		        entry->address = (*it)->addr;
 		        entry->qosId = 1;
 		        entry->cost = (*it)->metric;
 			entry->nextHopAddresses.push_back((*it)->addr);
-			LOG_IPCP_INFO("Added entry to routing table: destination %u, next-hop %u",
+			LOG_IPCP_DBG("Added entry to routing table: destination %u, next-hop %u",
                         entry->address, (*it)->addr);
 			result.push_back(entry);
-			LOG_IPCP_INFO("¡¡¡Entrada añadida!!!!");
 		}
-		LOG_IPCP_INFO("¡¡¡Llamando a addRecursive!!!!");
 		addRecursive(result, 1, (*it)->addr, *it);
 	}
 	clear();
@@ -574,30 +567,23 @@ std::list<rina::RoutingTableEntry *> ECMPDijkstraAlgorithm::computeRoutingTable(
 
 void ECMPDijkstraAlgorithm::addRecursive(std::list<rina::RoutingTableEntry *> &table, int qos, unsigned int next, TreeNode * node){
 	
-	LOG_IPCP_INFO("¡¡¡Iterando Nodo con id %u en addRecursive", node->addr);
 	for(std::set<TreeNode *>::iterator it = node->chl.begin(); it != node->chl.end(); it++){
-		//LOG_IPCP_INFO("Prueba de que 17 existe hijo: %u",(*((*(t.chl.begin()))->chl.begin()))->addr);
-		LOG_IPCP_INFO("¡¡¡Hijo Encontrado!!!! con id %u", (*it)->addr);
 		std::list<rina::RoutingTableEntry *>::iterator pos = findEntry(table,(*it)->addr);
 
 		if(pos != table.end()){
 			(*pos)->nextHopAddresses.push_back(next);
-			LOG_IPCP_INFO("¡¡¡Posición Encontrada!!!!");
 		}
 		else{
-			LOG_IPCP_INFO("¡¡¡Posición no Encontrada!!!!");
 			rina::RoutingTableEntry * entry = new rina::RoutingTableEntry();
 		        entry->address = (*it)->addr;
 		        entry->qosId = 1;
 		        entry->cost = (*it)->metric;
 			entry->nextHopAddresses.push_back(next);
-			LOG_IPCP_INFO("Added entry to routing table: destination %u, next-hop %u",
+			LOG_IPCP_DBG("Added entry to routing table: destination %u, next-hop %u",
                         entry->address, next);
 			table.push_back(entry);
-			LOG_IPCP_INFO("¡¡¡Entrada añadida!!!!");
 		}
 		addRecursive(table, 1, next, *it);
-		LOG_IPCP_INFO("¡¡¡Llamando a addRecursive!!!!");
 	}
 }
 
@@ -638,23 +624,17 @@ void ECMPDijkstraAlgorithm::execute(const Graph& graph, unsigned int source)
     while (unsettled_nodes_.size() > 0) {
 	std::set<unsigned int>::iterator it;
         getMinimum();
-	LOG_IPCP_INFO("¡¡¡Que pasa!!!!");
 	for(it = minimum_nodes_.begin(); it != minimum_nodes_.end(); ++it){
-		LOG_IPCP_INFO("¡¡¡Hola!!!");
         	settled_nodes_.insert(*it);
 
 		TreeNode * nt = new TreeNode(*it, distances_.find(*it)->second);
-		LOG_IPCP_INFO("Created Node: addr %u, metric %u",
-                        *it, distances_.find(*it)->second);
 		bool fPar = true;
 		for(std::list<TreeNode *>::iterator par = predecessors_.find(*it)->second.begin(); par != predecessors_.find(*it)->second.end(); ++par){
-			LOG_IPCP_INFO("¡¡¡Predecesor encontrado!!!! con id %u", (*par)->addr);
 			if(fPar){
 				(*par)->chldel.insert(nt);
 				fPar = false;
 			}
 			(*par)->chl.insert(nt);
-			LOG_IPCP_INFO("Comprobamos que el nodo %u tiene un hijo %u",(*par)->addr,(*(*par)->chl.begin())->addr);
 		}
 
         	unsettled_nodes_.erase(*it);
@@ -670,22 +650,18 @@ void ECMPDijkstraAlgorithm::getMinimum()
 	minimum_nodes_.clear();
 	std::list<Edge *>::const_iterator edgeIt;
 	for (it = unsettled_nodes_.begin(); it != unsettled_nodes_.end(); ++it) {
-	LOG_IPCP_INFO("¡¡¡Iterando Nodo con id %u en getMinimum", *it);
 		if (minimum == UINT_MAX) {
 			minimum_nodes_.insert(*it);
 			minimum = (*it);
-			LOG_IPCP_INFO("Realizada primera iteracion");
 		} else {
 			if (getShortestDistance((*it)) < getShortestDistance(minimum)) {
 								
 				minimum = (*it);
 				minimum_nodes_.clear();
-				LOG_IPCP_INFO("Nuevo minimo encontrado");
 			}
 			if (getShortestDistance((*it)) == getShortestDistance(minimum)) {
 								
 				minimum_nodes_.insert(*it);
-				LOG_IPCP_INFO("Nuevo nodo introducido");
 			}
 		}
 	}
