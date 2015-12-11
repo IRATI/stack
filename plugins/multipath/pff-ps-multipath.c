@@ -665,7 +665,7 @@ pff_ps_multipath_create(struct rina_component * component)
         ps->pff_nhop = mp_next_hop;
         ps->pff_dump = mp_dump;
 
-	LOG_INFO("Multipath create called");
+	LOG_DBG("Multipath create called");
 
         return &ps->base;
 }

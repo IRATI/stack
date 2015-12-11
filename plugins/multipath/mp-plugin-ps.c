@@ -58,7 +58,7 @@ static void __exit mod_exit(void)
                 return;
         }
 
-        LOG_INFO("Dummy PFT dummy policy set unloaded successfully");
+        LOG_INFO("PFF multipath policy set unloaded successfully");
 }
 
 module_init(mod_init);
