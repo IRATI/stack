@@ -772,8 +772,9 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         rcu_read_unlock();
         if (dtcp_present) {
                 dtcp = dtcp_create(tmp->dt,
+                                   container->rmt,
                                    dtcp_cfg,
-                                   container->rmt);
+				   &tmp->kobj);
                 if (!dtcp) {
                         efcp_destroy(tmp);
                         return cep_id_bad();

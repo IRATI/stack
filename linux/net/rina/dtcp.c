@@ -167,6 +167,56 @@ struct dtcp {
         struct rmt *           rmt;
 
         atomic_t               cpdus_in_transit;
+	struct kobject         kobj;
+};
+
+static ssize_t dtcp_sysfs_show(struct kobject *   kobj,
+                               struct attribute * attr,
+                               char *             buf)
+{
+	struct kobj_attribute * kattr;
+	kattr = container_of(attr, struct kobj_attribute, attr);
+	return kattr->show(kobj, kattr, buf);
+
+}
+
+static ssize_t dtcp_attr_show(struct kobject *		     kobj,
+                         	     struct kobj_attribute * attr,
+                                     char *		     buf)
+{
+	struct dtcp * instance;
+
+	instance = container_of(kobj, struct dtcp, kobj);
+	if (!instance || !instance->sv)
+		return 0;
+
+	if (strcmp(attr->attr.name, "placeholder") == 0) {
+		return sprintf(buf, "%u\n", 0);
+	}
+	return 0;
+}
+
+static const struct sysfs_ops dtcp_sysfs_ops = {
+        .show = dtcp_sysfs_show
+};
+
+#define DTCP_ATTR(NAME)                              			\
+        static struct kobj_attribute NAME##_attr = {			\
+		.attr = { .name = __stringify(NAME), .mode = S_IRUGO },	\
+        	.show = dtcp_attr_show,					\
+}
+
+DTCP_ATTR(placeholder);
+
+static struct attribute * dtcp_attrs[] = {
+	&placeholder_attr.attr,
+	NULL,
+};
+
+static struct kobj_type dtcp_ktype = {
+        .sysfs_ops     = &dtcp_sysfs_ops,
+        .default_attrs = dtcp_attrs,
+        .release       = NULL,
 };
 
 struct dt * dtcp_dt(struct dtcp * dtcp)
@@ -1776,8 +1826,9 @@ int dtcp_set_policy_set_param(struct dtcp * dtcp,
 EXPORT_SYMBOL(dtcp_set_policy_set_param);
 
 struct dtcp * dtcp_create(struct dt *          dt,
+                          struct rmt *         rmt,
                           struct dtcp_config * dtcp_cfg,
-                          struct rmt *         rmt)
+			  struct kobject *     parent)
 {
         struct dtcp * tmp;
         string_t *    ps_name;
@@ -1802,6 +1853,15 @@ struct dtcp * dtcp_create(struct dt *          dt,
         }
 
         tmp->parent = dt;
+
+	if (kobject_init_and_add(&tmp->kobj,
+				 &dtcp_ktype,
+				 parent,
+				 "dtcp")) {
+                dtcp_destroy(tmp);
+                return NULL;
+	}
+
 
         tmp->sv = rkzalloc(sizeof(*tmp->sv), GFP_ATOMIC);
         if (!tmp->sv) {
@@ -1852,6 +1912,7 @@ int dtcp_destroy(struct dtcp * instance)
         if (instance->sv)       rkfree(instance->sv);
         if (instance->cfg)      dtcp_config_destroy(instance->cfg);
         rina_component_fini(&instance->base);
+	kobject_del(&instance->kobj);
         rkfree(instance);
 
         LOG_DBG("Instance %pK destroyed successfully", instance);
