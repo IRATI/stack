@@ -1,0 +1,11 @@
+{
+        "PluginName": "pff-multipath",
+        "PluginVersion": "1",
+        "PolicySets" : [
+                {
+                        "Name": "multipath",
+                        "Component": "pff",
+                        "Version" : "1"
+                }
+        ]
+}
