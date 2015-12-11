@@ -1,3 +1,5 @@
+
+
 //
 // Link-state policy set for Routing
 //
@@ -496,6 +498,238 @@ unsigned int DijkstraAlgorithm::getNextHop(unsigned int target,
 	return nextHop;
 }
 
+// ECMP Dijkstra algorithm
+ECMPDijkstraAlgorithm::ECMPDijkstraAlgorithm()
+{
+}
+
+void ECMPDijkstraAlgorithm::clear()
+{
+	unsettled_nodes_.clear();
+	settled_nodes_.clear();
+	predecessors_.clear();
+	distances_.clear();
+	delete t;
+}
+
+void ECMPDijkstraAlgorithm::computeShortestDistances(const Graph& graph,
+					unsigned int source_address,
+					std::map<unsigned int, int>& distances)
+{
+	execute(graph, source_address);
+
+	// Write back the result
+	distances = distances_;
+
+	clear();
+}
+
+std::list<rina::RoutingTableEntry *> ECMPDijkstraAlgorithm::computeRoutingTable(
+		const Graph& graph,
+        const std::list<FlowStateObject *>& fsoList,
+        unsigned int source_address)
+{
+    std::list<rina::RoutingTableEntry *> result;
+    std::list<unsigned int>::const_iterator it;
+    std::list<unsigned int>::const_iterator nextHopsIt;
+    std::list<unsigned int> nextHops;
+    rina::RoutingTableEntry * entry;
+
+	(void)fsoList; // avoid compiler barfs
+
+    execute(graph, source_address);
+
+	for(std::set<TreeNode *>::iterator it = t->chl.begin(); it != t->chl.end(); it++){
+		
+		std::list<rina::RoutingTableEntry *>::iterator pos = findEntry(result, (*it)->addr);
+
+		if(pos != result.end()){
+			(*pos)->nextHopAddresses.push_back((*it)->addr);
+		}
+		else{
+			entry = new rina::RoutingTableEntry();
+		        entry->address = (*it)->addr;
+		        entry->qosId = 1;
+		        entry->cost = (*it)->metric;
+			entry->nextHopAddresses.push_back((*it)->addr);
+			LOG_IPCP_DBG("Added entry to routing table: destination %u, next-hop %u",
+                        entry->address, (*it)->addr);
+			result.push_back(entry);
+		}
+		addRecursive(result, 1, (*it)->addr, *it);
+	}
+	clear();
+
+    return result;
+}
+
+void ECMPDijkstraAlgorithm::addRecursive(std::list<rina::RoutingTableEntry *> &table, int qos, unsigned int next, TreeNode * node){
+	
+	for(std::set<TreeNode *>::iterator it = node->chl.begin(); it != node->chl.end(); it++){
+		std::list<rina::RoutingTableEntry *>::iterator pos = findEntry(table,(*it)->addr);
+
+		if(pos != table.end()){
+			(*pos)->nextHopAddresses.push_back(next);
+		}
+		else{
+			rina::RoutingTableEntry * entry = new rina::RoutingTableEntry();
+		        entry->address = (*it)->addr;
+		        entry->qosId = 1;
+		        entry->cost = (*it)->metric;
+			entry->nextHopAddresses.push_back(next);
+			LOG_IPCP_DBG("Added entry to routing table: destination %u, next-hop %u",
+                        entry->address, next);
+			table.push_back(entry);
+		}
+		addRecursive(table, 1, next, *it);
+	}
+}
+
+std::list<rina::RoutingTableEntry *>::iterator ECMPDijkstraAlgorithm::findEntry(std::list<rina::RoutingTableEntry *> &table, unsigned int addr)
+{
+	std::list<rina::RoutingTableEntry *>::iterator it;
+	for(it = table.begin(); it != table.end(); it++)
+	{
+		if((*it)->address == addr){
+			return it;
+		}
+	}
+	return it;
+}
+
+void ECMPDijkstraAlgorithm::execute(const Graph& graph, unsigned int source)
+{
+    distances_[source] = 0;
+    settled_nodes_.insert(source);
+    t = new TreeNode(source, 0);
+
+    std::list<Edge *>::const_iterator edgeIt;
+    int cost;
+    unsigned int target = 0;
+    int shortestDistance;
+    for (edgeIt = graph.edges_.begin(); edgeIt != graph.edges_.end();
+            ++edgeIt) {
+        if (isNeighbor((*edgeIt), source)) {
+            target = (*edgeIt)->getOtherEndpoint(source);
+	    distances_[target]=(*edgeIt)->weight_;
+            predecessors_[target].push_front(t);
+            unsettled_nodes_.insert(target);
+        }
+    }
+
+
+
+    while (unsettled_nodes_.size() > 0) {
+	std::set<unsigned int>::iterator it;
+        getMinimum();
+	for(it = minimum_nodes_.begin(); it != minimum_nodes_.end(); ++it){
+        	settled_nodes_.insert(*it);
+
+		TreeNode * nt = new TreeNode(*it, distances_.find(*it)->second);
+		bool fPar = true;
+		for(std::list<TreeNode *>::iterator par = predecessors_.find(*it)->second.begin(); par != predecessors_.find(*it)->second.end(); ++par){
+			if(fPar){
+				(*par)->chldel.insert(nt);
+				fPar = false;
+			}
+			(*par)->chl.insert(nt);
+		}
+
+        	unsettled_nodes_.erase(*it);
+        	findMinimalDistances(graph, nt);
+	}
+    }
+}
+
+void ECMPDijkstraAlgorithm::getMinimum()
+{
+	unsigned int minimum = UINT_MAX;
+	std::set<unsigned int>::iterator it;
+	minimum_nodes_.clear();
+	std::list<Edge *>::const_iterator edgeIt;
+	for (it = unsettled_nodes_.begin(); it != unsettled_nodes_.end(); ++it) {
+		if (minimum == UINT_MAX) {
+			minimum_nodes_.insert(*it);
+			minimum = (*it);
+		} else {
+			if (getShortestDistance((*it)) < getShortestDistance(minimum)) {
+								
+				minimum = (*it);
+				minimum_nodes_.clear();
+			}
+			if (getShortestDistance((*it)) == getShortestDistance(minimum)) {
+								
+				minimum_nodes_.insert(*it);
+			}
+		}
+	}
+}
+
+int ECMPDijkstraAlgorithm::getShortestDistance(unsigned int destination) const
+{
+    std::map<unsigned int, int>::const_iterator it;
+    int distance = INT_MAX;
+
+    it = distances_.find(destination);
+    if (it != distances_.end()) {
+        distance = it->second;
+    }
+
+    return distance;
+}
+
+void ECMPDijkstraAlgorithm::findMinimalDistances(const Graph& graph, TreeNode * pred)
+{
+    std::list<unsigned int> adjacentNodes;
+    std::list<Edge *>::const_iterator edgeIt;
+    int cost;
+
+    unsigned int target = 0;
+    int shortestDistance;
+    for (edgeIt = graph.edges_.begin(); edgeIt != graph.edges_.end();
+            ++edgeIt) {
+        if (isNeighbor((*edgeIt), pred->addr)) {
+            target = (*edgeIt)->getOtherEndpoint(pred->addr);
+            cost = (*edgeIt)->weight_;
+            shortestDistance = getShortestDistance(pred->addr) + cost;
+            if (shortestDistance < getShortestDistance(target)) {
+	    
+                distances_[target] = shortestDistance;
+		predecessors_[target].clear();
+	    }
+	    if (shortestDistance == getShortestDistance(target)) {
+                predecessors_[target].push_front(pred);
+                unsettled_nodes_.insert(target);
+            }
+        }
+    }
+}
+
+bool ECMPDijkstraAlgorithm::isNeighbor(Edge * edge, unsigned int node) const
+{
+    if (edge->isVertexIn(node)) {
+        if (!isSettled(edge->getOtherEndpoint(node))) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool ECMPDijkstraAlgorithm::isSettled(unsigned int node) const
+{
+    std::set<unsigned int>::iterator it;
+
+    for (it = settled_nodes_.begin(); it != settled_nodes_.end(); ++it) {
+        if ((*it) == node) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
 //Class IResiliencyAlgorithm
 IResiliencyAlgorithm::IResiliencyAlgorithm(IRoutingAlgorithm& ra)
 						: routing_algorithm(ra)
@@ -628,6 +862,8 @@ const void* FlowStateRIBObjectGroup::get_value() const
 void FlowStateRIBObjectGroup::remoteWriteObject(void * object_value,
 		int invoke_id, rina::CDAPSessionDescriptor * cdapSessionDescriptor)
 {
+	(void) invoke_id;
+
 	std::list<FlowStateObject *> * objects =
 			(std::list<FlowStateObject *> *) object_value;
 	lsr_policy_->writeMessageReceived(*objects,
@@ -679,6 +915,8 @@ void FlowStateRIBObject::createObject(const std::string& objectClass, const std:
 
 void FlowStateRIBObject::deleteObject(const void* objectValue)
 {
+        (void) objectValue; // Stop compiler barfs
+
 	parent_->remove_child(name_);
 	rib_daemon_->removeRIBObject(name_);
 }
@@ -929,6 +1167,8 @@ void LinkStateRoutingCDAPMessageHandler::readResponse(int result,
 		const std::string& object_name,
 		rina::CDAPSessionDescriptor * session_descriptor)
 {
+	(void) object_name;
+
 	if (result != 0) {
 		LOG_IPCP_ERR("Problems reading Flow State Objects from neighbor: %s",
 				result_reason.c_str());
@@ -1036,6 +1276,7 @@ const std::string LinkStateRoutingPolicy::WAIT_UNTIL_AGE_INCREMENT = "waitUntilA
 const std::string LinkStateRoutingPolicy::ROUTING_ALGORITHM = "routingAlgorithm";
 const int LinkStateRoutingPolicy::MAXIMUM_BUFFER_SIZE = 4096;
 const std::string LinkStateRoutingPolicy::DIJKSTRA_ALG = "Dijkstra";
+const std::string LinkStateRoutingPolicy::ECMP_DIJKSTRA_ALG = "ECMPDijkstra";
 
 LinkStateRoutingPolicy::LinkStateRoutingPolicy(IPCProcess * ipcp)
 {
@@ -1128,6 +1369,10 @@ void LinkStateRoutingPolicy::set_dif_configuration(
 
         if (routing_alg == DIJKSTRA_ALG) {
         	routing_algorithm_ = new DijkstraAlgorithm();
+                LOG_IPCP_DBG("Using Dijkstra as routing algorithm");
+        } else if (routing_alg == ECMP_DIJKSTRA_ALG)  {
+                routing_algorithm_ = new ECMPDijkstraAlgorithm();
+                LOG_IPCP_DBG("Using ECMP Dijkstra as routing algorithm");
         } else {
         	throw rina::Exception("Unsupported routing algorithm");
         }
