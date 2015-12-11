@@ -27,9 +27,6 @@
 
 #include "logs.h"
 #include "rds/rmem.h"
-#include "rmt-ps.h"
-#include "dtp-ps.h"
-#include "dtcp-ps.h"
 #include "pff-ps.h"
 
 extern struct ps_factory pff_factory;

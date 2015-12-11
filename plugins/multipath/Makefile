@@ -11,7 +11,7 @@ ccflags-y = -Wtype-limits -Inet/rina
 
 obj-m := pff-multipath.o
 
-pff-multipath-y := mp-plugin-ps.o pft-ps-multipath.o
+pff-multipath-y := mp-plugin-ps.o pff-ps-multipath.o
 
 else
 

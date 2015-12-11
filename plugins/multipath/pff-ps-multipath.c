@@ -1,7 +1,7 @@
 /*
- * Dummy PFT PS
+ * ECMP PS
  *
- *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
+ *    Javier Garcia <javier.garcial@atos.net>
  *
  * This program is free software; you can dummyistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -244,32 +244,11 @@ static struct pft_entry * pft_find(struct pff_ps_priv * priv,
 {
         struct pft_entry * pos;
 
-	LOG_DBG("In pft_find");
-	
-//	header = kmalloc(sizeof(*header), GFP_KERNEL);
- //       if (!header) {
-//		LOG_DBG("fallo kmalloc");
- //       	return header;
-  //      }
-//	LOG_DBG("pft_find: header kmalloc correct");
-//	INIT_LIST_HEAD(header);
-
-	//Modificaciones para depurar
-
-	//struct pft_entry * deb_aux;
-
-	//Fin modificacion
-
         ASSERT(priv_is_ok(priv));
         ASSERT(is_address_ok(destination));
 
         list_for_each_entry(pos, &priv->entries, next) {
 		
-		LOG_DBG("%lu Address entry inside loop", (unsigned long)pos->destination);
-		LOG_DBG("%lu QoS entry inside loop", (unsigned long)pos->qos_id);
-		
-		//Fin de modificaciones
-              
 		if ((pos->destination == destination) &&
                     (pos->qos_id == qos_id)) {
 
@@ -278,12 +257,6 @@ static struct pft_entry * pft_find(struct pff_ps_priv * priv,
                 }
         }
 	
-//	LOG_DBG("exiting pft_find");
-//	if(list_empty(header)>0)
-//	{
-//		LOG_DBG("The list is empty before sending it from pft_find");
-//	}
-
         return NULL;
 }
 
@@ -325,9 +298,6 @@ static int mp_add(struct pff_ps *        ps,
                 list_add(&tmp->next, &priv->entries);
         }
 
-	LOG_DBG("mp_add: address: %lu", (unsigned long)tmp->destination);
-	LOG_DBG("mp_add: QoS %lu", (unsigned long)tmp->qos_id);
-
 	list_for_each_entry(alts, &entry->port_id_altlists, next) {
 		if (alts->num_ports < 1) {
 			LOG_INFO("Port id alternative set is empty");
@@ -353,9 +323,6 @@ static int mp_remove(struct pff_ps *        ps,
         struct pff_ps_priv *       priv;
         struct port_id_altlist *   alts;
         struct pft_entry *         tmp;
-	//struct list_head *         header;
-
-	LOG_DBG("Inside mp_remove");
 
         priv = (struct pff_ps_priv *) ps->priv;
         if (!priv_is_ok(priv))
@@ -382,8 +349,6 @@ static int mp_remove(struct pff_ps *        ps,
                 spin_unlock(&priv->lock);
                 return -1;
         }
-	LOG_DBG("%lu Address in mp_remove", (unsigned long)entry->fwd_info);
-	LOG_DBG("%lu QoS in mp_remove", (unsigned long)entry->qos_id);
 
 	list_for_each_entry(alts, &entry->port_id_altlists, next) {
 		if (alts->num_ports < 1) {
@@ -391,7 +356,7 @@ static int mp_remove(struct pff_ps *        ps,
 			continue;
 		}
 
-	//	 Just remove the first alternative and ignore the others.
+	// Just remove the first alternative and ignore the others.
 		pfte_port_remove(tmp, alts->ports[0]);
 	}
 
@@ -561,7 +526,6 @@ static int mp_next_hop(struct pff_ps * ps,
         }
 
 	list_for_each_entry(pos, &tmp->ports, next) {
-	LOG_DBG("Puerto en la entrada elegida: %d",(int)pos->port_id);
 	}
 
         /* 
@@ -569,7 +533,6 @@ static int mp_next_hop(struct pff_ps * ps,
          * CRC16 Linux kernel implementation
         */
         port = select_entry(tmp, pci);
-	LOG_DBG("Puerto final elegido: %d",(int)port->port_id);
 
         if (pfte_ports_copy(port, ports, count)) {
                 spin_unlock_irqrestore(&priv->lock, flags);
