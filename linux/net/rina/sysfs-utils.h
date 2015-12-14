@@ -70,10 +70,10 @@
 	(x, y, ##__VA_ARGS__)
 
 /* Declares a kobj_attribute object */
-#define DECLARE_ATTR(COMP_NAME, ATTR_NAME)							\
-        static struct kobj_attribute ATTR_NAME##_attr = {			\
-		.attr = { .name = __stringify(ATTR_NAME), .mode = S_IRUGO },	\
-        	.show = CAT(COMP_NAME, _attr_show),				\
+#define DECLARE_ATTR(COMP_NAME, ATTR_NAME)				  \
+        static struct kobj_attribute ATTR_NAME##_attr = {		  \
+		.attr = {.name = __stringify(ATTR_NAME), .mode = S_IRUGO},\
+        	.show = CAT(COMP_NAME, _attr_show),			  \
 	};
 
 /* Declares a sysfs_ops object with is show function*/
@@ -118,4 +118,12 @@ static const struct sysfs_ops COMP_NAME##_sysfs_ops = {		\
 	        .release       = NULL,				\
 	};
 
+/* Adds an attribute to an existing kobject */
+#define ADD_ATTR_TO_KOBJ(kobj, ATTR_NAME)			\
+	sysfs_create_file(kobj, &ATTR_NAME##_attr.attr);
+
+/* Declares a new attribute and adds it to an existing kobject */
+#define DECLARE_AND_ADD_SYSFS_ATTRS(kobj, COMP_NAME, ...)	\
+	CALL_FOR_EACH(DECLARE_ATTR, COMP_NAME, ##__VA_ARGS__)	\
+	CALL_FOR_EACH(ADD_ATTR_TO_KOBJ, kobj, ##__VA_ARGS__)
 #endif
