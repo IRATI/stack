@@ -345,7 +345,7 @@ static int mp_remove(struct pff_ps *        ps,
         spin_lock(&priv->lock);
 
         tmp = pft_find(priv, entry->fwd_info, entry->qos_id);
-        if (tmp) {
+        if (!tmp) {
                 spin_unlock(&priv->lock);
                 return -1;
         }
