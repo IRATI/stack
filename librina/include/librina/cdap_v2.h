@@ -286,7 +286,7 @@ public:
 				  const cdap_rib::obj_info_t &obj,
 				  const cdap_rib::flags_t &flags,
 				  const cdap_rib::filt_info_t &filt,
-				  const int invoke_id) = 0;
+				  const int invoke_id = -1) = 0;
 
 	///
 	/// Perform a delete operation over an object of the remote RIB
@@ -297,7 +297,7 @@ public:
 				  const cdap_rib::obj_info_t &obj,
 				  const cdap_rib::flags_t &flags,
 				  const cdap_rib::filt_info_t &filt,
-				  const int invoke_id) = 0;
+				  const int invoke_id = -1) = 0;
 
 	///
 	/// Perform a read operation over an object of the remote RIB
@@ -308,7 +308,7 @@ public:
 				const cdap_rib::obj_info_t &obj,
 				const cdap_rib::flags_t &flags,
 				const cdap_rib::filt_info_t &filt,
-				const int invoke_id)= 0;
+				const int invoke_id = -1)= 0;
 	///
 	/// Perform a cancel read operation over an object of the remote RIB
 	///
@@ -316,7 +316,7 @@ public:
 	///
 	virtual int remote_cancel_read(const cdap_rib::con_handle_t &con,
 				       const cdap_rib::flags_t &flags,
-				       const int invoke_id) = 0;
+				       const int invoke_id = -1) = 0;
 
 	///
 	/// Perform a write operation over an object of the remote RIB
@@ -327,7 +327,7 @@ public:
 				 const cdap_rib::obj_info_t &obj,
 				 const cdap_rib::flags_t &flags,
 				 const cdap_rib::filt_info_t &filt,
-				 const int invoke_id) = 0;
+				 const int invoke_id = -1) = 0;
 
 	///
 	/// Perform a start operation over an object of the remote RIB
@@ -338,7 +338,7 @@ public:
 				 const cdap_rib::obj_info_t &obj,
 				 const cdap_rib::flags_t &flags,
 				 const cdap_rib::filt_info_t &filt,
-				 const int invoke_id) = 0;
+				 const int invoke_id = -1) = 0;
 
 	///
 	/// Perform a stop operation over an object of the remote RIB
@@ -349,7 +349,7 @@ public:
 				const cdap_rib::obj_info_t &obj,
 				const cdap_rib::flags_t &flags,
 				const cdap_rib::filt_info_t &filt,
-				const int invoke_id) = 0;
+				const int invoke_id = -1) = 0;
 
 	//
 	// Local operations results
