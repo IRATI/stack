@@ -50,6 +50,7 @@
 #include "ipcp-instances.h"
 #include "ipcp-utils.h"
 #include "rmt-ps-default.h"
+#include "sysfs-utils.h"
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 #define MAX_PDUS_SENT_PER_CYCLE 10
@@ -93,19 +94,6 @@ struct rmt {
 		n1_port->stats.name##_pdus, n1_port->stats.name##_bytes);
 
 
-static struct kobj_type rmt_ktype = {
-        .release       = NULL,
-};
-
-static ssize_t rmt_n1_port_sysfs_show(struct kobject *   kobj,
-                         	      struct attribute * attr,
-                                      char *             buf)
-{
-	struct kobj_attribute * kattr;
-	kattr = container_of(attr, struct kobj_attribute, attr);
-	return kattr->show(kobj, kattr, buf);
-}
-
 static ssize_t rmt_n1_port_attr_show(struct kobject *        kobj,
                          	     struct kobj_attribute * attr,
                                      char *                  buf)
@@ -148,41 +136,11 @@ static ssize_t rmt_n1_port_attr_show(struct kobject *        kobj,
 	}
 	return 0;
 }
-
-static const struct sysfs_ops rmt_n1_port_sysfs_ops = {
-        .show = rmt_n1_port_sysfs_show
-};
-
-#define N1_PORT_ATTR(NAME)                              			\
-        static struct kobj_attribute NAME##_attr = {			\
-		.attr = { .name = __stringify(NAME), .mode = S_IRUGO },	\
-        	.show = rmt_n1_port_attr_show,				\
-}
-
-N1_PORT_ATTR(queued_pdus);
-N1_PORT_ATTR(drop_pdus);
-N1_PORT_ATTR(err_pdus);
-N1_PORT_ATTR(tx_pdus);
-N1_PORT_ATTR(tx_bytes);
-N1_PORT_ATTR(rx_pdus);
-N1_PORT_ATTR(rx_bytes);
-
-static struct attribute * rmt_n1_port_attrs[] = {
-	&queued_pdus_attr.attr,
-	&drop_pdus_attr.attr,
-	&err_pdus_attr.attr,
-	&tx_pdus_attr.attr,
-	&tx_bytes_attr.attr,
-	&rx_pdus_attr.attr,
-	&rx_bytes_attr.attr,
-	NULL,
-};
-
-static struct kobj_type rmt_n1_port_ktype = {
-        .sysfs_ops     = &rmt_n1_port_sysfs_ops,
-        .default_attrs = rmt_n1_port_attrs,
-        .release       = NULL,
-};
+DECLARE_SYSFS_EMTPY_KTYPE(rmt);
+DECLARE_SYSFS_OPS(rmt_n1_port);
+DECLARE_SYSFS_ATTRS(rmt_n1_port, queued_pdus, drop_pdus, err_pdus, tx_pdus,
+	tx_bytes, rx_pdus, rx_bytes);
+DECLARE_SYSFS_KTYPE(rmt_n1_port);
 
 static struct rmt_n1_port *n1_port_create(port_id_t id,
 					  struct ipcp_instance *n1_ipcp)
@@ -1209,7 +1167,7 @@ int rmt_n1port_bind(struct rmt *instance,
 	if (!tmp)
 		return -1;
 	tmp->kobj.kset = instance->n1_ports->kset;
-	kobject_add(&tmp->kobj, NULL, "%u", id);
+	kobject_add(&tmp->kobj, NULL, "%d", id);
 
 	rcu_read_lock();
 	ps = container_of(rcu_dereference(instance->base.ps),

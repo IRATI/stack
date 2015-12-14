@@ -40,6 +40,7 @@
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
 #include "vmpi.h"
+#include "sysfs-utils.h"
 
 /* FIXME: Pigsty workaround, to be removed immediately */
 #if defined(CONFIG_VMPI_KVM_GUEST) && !defined(CONFIG_VMPI_KVM_GUEST_MODULE)
@@ -119,16 +120,6 @@ struct name_list_element {
         struct name      application_name;
 };
 
-static ssize_t shim_hv_ipcp_sysfs_show(struct kobject *   kobj,
-                         	      struct attribute * attr,
-                                      char *             buf)
-{
-	struct kobj_attribute * kattr;
-	kattr = container_of(attr, struct kobj_attribute, attr);
-	return kattr->show(kobj, kattr, buf);
-
-}
-
 static ssize_t shim_hv_ipcp_attr_show(struct kobject *        kobj,
                          	     struct kobj_attribute * attr,
                                      char *                  buf)
@@ -150,33 +141,9 @@ static ssize_t shim_hv_ipcp_attr_show(struct kobject *        kobj,
 
 	return 0;
 }
-
-static const struct sysfs_ops shim_hv_ipcp_sysfs_ops = {
-        .show = shim_hv_ipcp_sysfs_show
-};
-
-#define SHIM_HV_ATTR(NAME)                              			\
-        static struct kobj_attribute NAME##_attr = {			\
-		.attr = { .name = __stringify(NAME), .mode = S_IRUGO },	\
-        	.show = shim_hv_ipcp_attr_show,				\
-}
-
-SHIM_HV_ATTR(name);
-SHIM_HV_ATTR(type);
-SHIM_HV_ATTR(dif);
-
-static struct attribute * shim_hv_ipcp_attrs[] = {
-	&name_attr.attr,
-	&dif_attr.attr,
-	&type_attr.attr,
-	NULL,
-};
-
-static struct kobj_type shim_hv_ipcp_instance_ktype = {
-        .sysfs_ops     = &shim_hv_ipcp_sysfs_ops,
-        .default_attrs = shim_hv_ipcp_attrs,
-        .release       = NULL,
-};
+DECLARE_SYSFS_OPS(shim_hv_ipcp);
+DECLARE_SYSFS_ATTRS(shim_hv_ipcp, name, tpye, dif);
+DECLARE_SYSFS_KTYPE(shim_hv_ipcp);
 
 static unsigned int
 port_id_to_channel(struct ipcp_instance_data *priv, port_id_t port_id)

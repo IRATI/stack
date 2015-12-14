@@ -51,6 +51,7 @@
 #include "rinarp/rinarp.h"
 #include "rinarp/arp826-utils.h"
 #include "shim-eth.h"
+#include "sysfs-utils.h"
 
 #define DEFAULT_QDISC_MAX_SIZE 50
 #define DEFAULT_QDISC_ENABLE_SIZE 10
@@ -145,16 +146,6 @@ struct interface_data_mapping {
         struct ipcp_instance_data * data;
 };
 
-static ssize_t eth_vlan_ipcp_sysfs_show(struct kobject *   kobj,
-                         	        struct attribute * attr,
-                                        char *             buf)
-{
-	struct kobj_attribute * kattr;
-	kattr = container_of(attr, struct kobj_attribute, attr);
-	return kattr->show(kobj, kattr, buf);
-
-}
-
 static ssize_t eth_vlan_ipcp_attr_show(struct kobject *        kobj,
                          	       struct kobj_attribute * attr,
                                        char *                  buf)
@@ -190,39 +181,9 @@ static ssize_t eth_vlan_ipcp_attr_show(struct kobject *        kobj,
 
 	return 0;
 }
-
-static const struct sysfs_ops eth_vlan_ipcp_sysfs_ops = {
-        .show = eth_vlan_ipcp_sysfs_show
-};
-
-#define ETH_ATTR(NAME)                              			\
-        static struct kobj_attribute NAME##_attr = {			\
-		.attr = { .name = __stringify(NAME), .mode = S_IRUGO },	\
-        	.show = eth_vlan_ipcp_attr_show,			\
-}
-
-ETH_ATTR(name);
-ETH_ATTR(type);
-ETH_ATTR(dif);
-ETH_ATTR(address);
-ETH_ATTR(vlan_id);
-ETH_ATTR(iface);
-
-static struct attribute * eth_vlan_ipcp_attrs[] = {
-	&name_attr.attr,
-	&dif_attr.attr,
-	&address_attr.attr,
-	&type_attr.attr,
-	&vlan_id_attr.attr,
-	&iface_attr.attr,
-	NULL,
-};
-
-static struct kobj_type eth_vlan_ipcp_instance_ktype = {
-        .sysfs_ops     = &eth_vlan_ipcp_sysfs_ops,
-        .default_attrs = eth_vlan_ipcp_attrs,
-        .release       = NULL,
-};
+DECLARE_SYSFS_OPS(eth_vlan_ipcp);
+DECLARE_SYSFS_ATTRS(eth_vlan_ipcp, name, type, dif, address, vlan_id, iface);
+DECLARE_SYSFS_KTYPE(eth_vlan_ipcp);
 
 static DEFINE_SPINLOCK(data_instances_lock);
 static struct list_head data_instances_list;
@@ -1949,7 +1910,7 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
 		return NULL;
 	}
 	if (kobject_init_and_add(&inst->kobj,
-				 &eth_vlan_ipcp_instance_ktype,
+				 &eth_vlan_ipcp_ktype,
 				 NULL,
 				 "%u",
 				 id)) {

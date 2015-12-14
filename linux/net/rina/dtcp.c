@@ -38,6 +38,7 @@
 #include "policies.h"
 #include "rds/rmem.h"
 #include "debug.h"
+#include "sysfs-utils.h"
 
 static struct policy_set_list policy_sets = {
         .head = LIST_HEAD_INIT(policy_sets.head)
@@ -170,16 +171,6 @@ struct dtcp {
 	struct kobject         kobj;
 };
 
-static ssize_t dtcp_sysfs_show(struct kobject *   kobj,
-                               struct attribute * attr,
-                               char *             buf)
-{
-	struct kobj_attribute * kattr;
-	kattr = container_of(attr, struct kobj_attribute, attr);
-	return kattr->show(kobj, kattr, buf);
-
-}
-
 static ssize_t dtcp_attr_show(struct kobject *		     kobj,
                          	     struct kobj_attribute * attr,
                                      char *		     buf)
@@ -195,29 +186,9 @@ static ssize_t dtcp_attr_show(struct kobject *		     kobj,
 	}
 	return 0;
 }
-
-static const struct sysfs_ops dtcp_sysfs_ops = {
-        .show = dtcp_sysfs_show
-};
-
-#define DTCP_ATTR(NAME)                              			\
-        static struct kobj_attribute NAME##_attr = {			\
-		.attr = { .name = __stringify(NAME), .mode = S_IRUGO },	\
-        	.show = dtcp_attr_show,					\
-}
-
-DTCP_ATTR(placeholder);
-
-static struct attribute * dtcp_attrs[] = {
-	&placeholder_attr.attr,
-	NULL,
-};
-
-static struct kobj_type dtcp_ktype = {
-        .sysfs_ops     = &dtcp_sysfs_ops,
-        .default_attrs = dtcp_attrs,
-        .release       = NULL,
-};
+DECLARE_SYSFS_OPS(dtcp);
+DECLARE_SYSFS_ATTRS(dtcp, placeholder);
+DECLARE_SYSFS_KTYPE(dtcp);
 
 struct dt * dtcp_dt(struct dtcp * dtcp)
 {

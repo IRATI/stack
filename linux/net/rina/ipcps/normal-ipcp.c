@@ -43,6 +43,7 @@
 #include "rmt.h"
 #include "sdup.h"
 #include "efcp-utils.h"
+#include "sysfs-utils.h"
 
 /*  FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
@@ -100,16 +101,6 @@ struct normal_flow {
         struct list_head       list;
 };
 
-static ssize_t normal_ipcp_sysfs_show(struct kobject *   kobj,
-                         	      struct attribute * attr,
-                                      char *             buf)
-{
-	struct kobj_attribute * kattr;
-	kattr = container_of(attr, struct kobj_attribute, attr);
-	return kattr->show(kobj, kattr, buf);
-
-}
-
 static ssize_t normal_ipcp_attr_show(struct kobject *        kobj,
                          	     struct kobj_attribute * attr,
                                      char *                  buf)
@@ -133,35 +124,9 @@ static ssize_t normal_ipcp_attr_show(struct kobject *        kobj,
 
 	return 0;
 }
-
-static const struct sysfs_ops normal_ipcp_sysfs_ops = {
-        .show = normal_ipcp_sysfs_show
-};
-
-#define NORMAL_ATTR(NAME)                              			\
-        static struct kobj_attribute NAME##_attr = {			\
-		.attr = { .name = __stringify(NAME), .mode = S_IRUGO },	\
-        	.show = normal_ipcp_attr_show,				\
-}
-
-NORMAL_ATTR(name);
-NORMAL_ATTR(type);
-NORMAL_ATTR(dif);
-NORMAL_ATTR(address);
-
-static struct attribute * normal_ipcp_attrs[] = {
-	&name_attr.attr,
-	&dif_attr.attr,
-	&address_attr.attr,
-	&type_attr.attr,
-	NULL,
-};
-
-static struct kobj_type normal_ipcp_instance_ktype = {
-        .sysfs_ops     = &normal_ipcp_sysfs_ops,
-        .default_attrs = normal_ipcp_attrs,
-        .release       = NULL,
-};
+DECLARE_SYSFS_OPS(normal_ipcp);
+DECLARE_SYSFS_ATTRS(normal_ipcp, name, type, dif, address);
+DECLARE_SYSFS_KTYPE(normal_ipcp);
 
 static struct normal_flow * find_flow(struct ipcp_instance_data * data,
                                       port_id_t                   port_id)
@@ -1351,7 +1316,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
 		return NULL;
 	}
 	if (kobject_init_and_add(&instance->kobj,
-				 &normal_ipcp_instance_ktype,
+				 &normal_ipcp_ktype,
 				 NULL,
 				 "%u",
 				 id)) {

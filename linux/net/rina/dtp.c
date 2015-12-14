@@ -197,7 +197,6 @@ static ssize_t dtp_attr_show(struct kobject *		     kobj,
 	}
 	return 0;
 }
-
 DECLARE_SYSFS_OPS(dtp);
 DECLARE_SYSFS_ATTRS(dtp, init_a_timer, max_sdu_gap, partial_delivery,
 		    incomplete_delivery, in_order_delivery, seq_num_rollover_th,

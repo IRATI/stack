@@ -47,6 +47,7 @@
 #include "dt-utils.h"
 #include "dtp-ps.h"
 #include "policies.h"
+#include "sysfs-utils.h"
 
 enum efcp_state {
         EFCP_ALLOCATED = 1,
@@ -62,16 +63,6 @@ struct efcp {
         atomic_t                pending_ops;
 	struct kobject          kobj;
 };
-
-static ssize_t efcp_sysfs_show(struct kobject *   kobj,
-                               struct attribute * attr,
-                               char *             buf)
-{
-	struct kobj_attribute * kattr;
-	kattr = container_of(attr, struct kobj_attribute, attr);
-	return kattr->show(kobj, kattr, buf);
-
-}
 
 static ssize_t efcp_attr_show(struct kobject *		     kobj,
                          	     struct kobj_attribute * attr,
@@ -115,51 +106,11 @@ static ssize_t efcp_attr_show(struct kobject *		     kobj,
 		return sprintf(buf, "%u\n", dt_sv_mpl(instance->dt));
 	return 0;
 }
-
-static const struct sysfs_ops efcp_sysfs_ops = {
-        .show = efcp_sysfs_show
-};
-
-#define EFCP_ATTR(NAME)                              			\
-        static struct kobj_attribute NAME##_attr = {			\
-		.attr = { .name = __stringify(NAME), .mode = S_IRUGO },	\
-        	.show = efcp_attr_show,				\
-}
-
-EFCP_ATTR(src_address);
-EFCP_ATTR(dst_address);
-EFCP_ATTR(src_cep_id);
-EFCP_ATTR(dst_cep_id);
-EFCP_ATTR(qos_id);
-EFCP_ATTR(port_id);
-EFCP_ATTR(a_timer);
-EFCP_ATTR(r_timer);
-EFCP_ATTR(tr_timeout);
-EFCP_ATTR(max_flow_pdu_size);
-EFCP_ATTR(max_flow_sdu_size);
-EFCP_ATTR(max_packet_life);
-
-static struct attribute * efcp_attrs[] = {
-	&src_address_attr.attr,
-	&dst_address_attr.attr,
-	&src_cep_id_attr.attr,
-	&dst_cep_id_attr.attr,
-	&qos_id_attr.attr,
-	&port_id_attr.attr,
-	&a_timer_attr.attr,
-	&r_timer_attr.attr,
-	&tr_timeout_attr.attr,
-	&max_flow_pdu_size_attr.attr,
-	&max_flow_sdu_size_attr.attr,
-		&max_packet_life_attr.attr,
-		NULL,
-};
-
-static struct kobj_type efcp_ktype = {
-       	.sysfs_ops     = &efcp_sysfs_ops,
-        .default_attrs = efcp_attrs,
-        .release       = NULL,
-};
+DECLARE_SYSFS_OPS(efcp);
+DECLARE_SYSFS_ATTRS(efcp, src_address, dst_address, src_cep_id, dst_cep_id,
+	qos_id, port_id, a_timer, r_timer, tr_timeout, max_flow_pdu_size,
+	max_flow_sdu_size, max_packet_life);
+DECLARE_SYSFS_KTYPE(efcp);
 
 struct efcp_container {
 	struct kset *        kset;
