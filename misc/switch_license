@@ -1,0 +1,70 @@
+#!/usr/bin/env python
+
+# Written by Vincenzo Maffione <v.maffione@gmail.com>
+
+import glob
+
+
+new_header = [
+'This library is free software; you can redistribute it and/or\n',
+'modify it under the terms of the GNU Lesser General Public\n',
+'License as published by the Free Software Foundation; either\n',
+'version 2.1 of the License, or (at your option) any later version.\n',
+'\n',
+'This library is distributed in the hope that it will be useful,\n',
+'but WITHOUT ANY WARRANTY; without even the implied warranty of\n',
+'MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU\n',
+'Lesser General Public License for more details.\n',
+'\n',
+'You should have received a copy of the GNU Lesser General Public\n',
+'License along with this library; if not, write to the Free Software\n',
+'Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,\n',
+'MA  02110-1301  USA\n'
+]
+
+
+files = []
+files += glob.glob('rinad/src/**/*.cc', recursive=True)
+files += glob.glob('rinad/src/**/*.h', recursive=True)
+
+for filename in files:
+    fin = open(filename, 'r')
+
+    hdr = False
+    output_lines = []
+    match = 'This program is free software; you can redistribute it and/or'
+    cpp_style_comments = False
+
+    while 1:
+        line = fin.readline()
+        if line == '':
+            break
+
+        if not hdr:
+            if line.find(match) != -1:
+                hdr = True
+                match = 'Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.'
+                cpp_style_comments = line.find('//') != -1
+
+            if not hdr:
+                output_lines.append(line)
+            else:
+                for hl in new_header:
+                    space = ' ' if hl != '\n' else ''
+                    comment = '//' if cpp_style_comments else ' *'
+
+                    hl = comment + space + hl
+                    output_lines.append(hl)
+
+        else:
+            if line.find(match) != -1:
+                hdr = False
+                match = 'x'*45
+
+    fin.close()
+
+    fout = open(filename, 'w')
+
+    for line in output_lines:
+        fout.write(line)
+    fout.close()
