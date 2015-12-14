@@ -40,6 +40,7 @@
 #include "dtp-ps.h"
 #include "policies.h"
 #include "serdes.h"
+#include "sysfs-utils.h"
 
 static struct policy_set_list policy_sets = {
         .head = LIST_HEAD_INIT(policy_sets.head)
@@ -109,16 +110,6 @@ static struct dtp_sv default_sv = {
         .drf_required                  = true,
         .rate_fulfiled                 = false,
 };
-
-static ssize_t dtp_sysfs_show(struct kobject *   kobj,
-                               struct attribute * attr,
-                               char *             buf)
-{
-	struct kobj_attribute * kattr;
-	kattr = container_of(attr, struct kobj_attribute, attr);
-	return kattr->show(kobj, kattr, buf);
-
-}
 
 #define stats_get(name, sv, retval, flags)			\
         ASSERT(sv);						\
@@ -207,50 +198,11 @@ static ssize_t dtp_attr_show(struct kobject *		     kobj,
 	return 0;
 }
 
-static const struct sysfs_ops dtp_sysfs_ops = {
-        .show = dtp_sysfs_show
-};
-
-#define DTP_ATTR(NAME)                              			\
-        static struct kobj_attribute NAME##_attr = {			\
-		.attr = { .name = __stringify(NAME), .mode = S_IRUGO },	\
-        	.show = dtp_attr_show,				\
-}
-
-DTP_ATTR(init_a_timer);
-DTP_ATTR(max_sdu_gap);
-DTP_ATTR(patial_delivery);
-DTP_ATTR(incomplete_delivery);
-DTP_ATTR(in_order_delivery);
-DTP_ATTR(seq_num_rollover_th);
-DTP_ATTR(drop_pdus);
-DTP_ATTR(err_pdus);
-DTP_ATTR(tx_pdus);
-DTP_ATTR(tx_bytes);
-DTP_ATTR(rx_pdus);
-DTP_ATTR(rx_bytes);
-
-static struct attribute * dtp_attrs[] = {
-	&init_a_timer_attr.attr,
-	&max_sdu_gap_attr.attr,
-	&patial_delivery_attr.attr,
-	&incomplete_delivery_attr.attr,
-	&in_order_delivery_attr.attr,
-	&seq_num_rollover_th_attr.attr,
-	&drop_pdus_attr.attr,
-	&err_pdus_attr.attr,
-	&tx_pdus_attr.attr,
-	&tx_bytes_attr.attr,
-	&rx_pdus_attr.attr,
-	&rx_bytes_attr.attr,
-	NULL,
-};
-
-static struct kobj_type dtp_ktype = {
-        .sysfs_ops     = &dtp_sysfs_ops,
-        .default_attrs = dtp_attrs,
-        .release       = NULL,
-};
+DECLARE_SYSFS_OPS(dtp);
+DECLARE_SYSFS_ATTRS(dtp, init_a_timer, max_sdu_gap, partial_delivery,
+		    incomplete_delivery, in_order_delivery, seq_num_rollover_th,
+		    drop_pdus, err_pdus, tx_pdus, tx_bytes, rx_pdus, rx_bytes);
+DECLARE_SYSFS_KTYPE(dtp);
 
 struct dt * dtp_dt(struct dtp * dtp)
 {
