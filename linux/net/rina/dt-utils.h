@@ -59,6 +59,8 @@ struct rtxq *       rtxq_create_ni(struct dt *  dt,
                                    struct rmt * rmt);
 int                 rtxq_destroy(struct rtxq * q);
 
+int		    rtxq_size(struct rtxq * q);
+int		    rtxq_drop_pdus(struct rtxq * q);
 /* FIXME: Where do we keep the rexmsntimer for the PDU? */
 struct rtxq_entry * rtxq_entry_peek(struct rtxq * q,
                                     seq_num_t sn);

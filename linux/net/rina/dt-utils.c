@@ -472,6 +472,8 @@ int rtxq_entry_destroy(struct rtxq_entry * entry)
 EXPORT_SYMBOL(rtxq_entry_destroy);
 
 struct rtxqueue {
+	int len;
+	int drop_pdus;
         struct list_head head;
 };
 
@@ -484,6 +486,8 @@ static struct rtxqueue * rtxqueue_create_gfp(gfp_t flags)
                 return NULL;
 
         INIT_LIST_HEAD(&tmp->head);
+	tmp->len = 0;
+	tmp->drop_pdus = 0;
 
         return tmp;
 }
@@ -502,6 +506,7 @@ static int rtxqueue_flush(struct rtxqueue * q)
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
                 rtxq_entry_destroy(cur);
+		q->len --;
         }
 
         return 0;
@@ -535,6 +540,7 @@ static int rtxqueue_entries_ack(struct rtxqueue * q,
                 if (seq < seq_num) {
                         LOG_DBG("Seq num acked: %u", seq);
                         rtxq_entry_destroy(cur);
+			q->len--;
                 } else
                         return 0;
         }
@@ -576,6 +582,8 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
                                 LOG_ERR("Maximum number of rtx has been "
                                         "achieved. Can't maintain QoS");
                                 rtxq_entry_destroy(cur);
+				q->len--;
+				q->drop_pdus++;
                                 continue;
                         }
 			if(dtp &&
@@ -650,6 +658,7 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
 
         if (list_empty(&q->head)) {
                 list_add(&tmp->next, &q->head);
+		q->len++;
                 LOG_DBG("First PDU with seqnum: %u push to rtxq at: %pk",
                         csn, q);
                 return 0;
@@ -667,6 +676,7 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
         }
         if (csn > psn) {
                 list_add_tail(&tmp->next, &q->head);
+		q->len++;
                 LOG_DBG("Last PDU with seqnum: %u push to rtxq at: %pk",
                         csn, q);
                 return 0;
@@ -681,6 +691,7 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
                 }
                 if (csn > psn) {
                         list_add(&tmp->next, &cur->next);
+			q->len++;
                         LOG_DBG("Middle PDU with seqnum: %u push to "
                                 "rtxq at: %pk", csn, q);
                         return 0;
@@ -730,6 +741,8 @@ static int rtxqueue_rtx(struct rtxqueue * q,
                                         "achieved for SeqN %u. Can't "
                                         "maintain QoS", seq);
                                 rtxq_entry_destroy(cur);
+				q->len--;
+				q->drop_pdus++;
                                 continue;
                         }
                         if(dtp &&
@@ -925,6 +938,33 @@ struct rtxq * rtxq_create_ni(struct dt *  dt,
         spin_lock_init(&tmp->lock);
 
         return tmp;
+}
+
+int rtxq_size(struct rtxq * q)
+{
+        unsigned long       flags;
+	unsigned int ret;
+        if (!q)
+                return -1;
+
+        spin_lock_irqsave(&q->lock, flags);
+        ret = q->queue->len;
+        spin_unlock_irqrestore(&q->lock, flags);
+        return ret;
+}
+EXPORT_SYMBOL(rtxq_size);
+
+int rtxq_drop_pdus(struct rtxq * q)
+{
+        unsigned long       flags;
+	int ret;
+        if (!q)
+                return -1;
+
+        spin_lock_irqsave(&q->lock, flags);
+        ret = q->queue->drop_pdus;
+        spin_unlock_irqrestore(&q->lock, flags);
+        return ret;
 }
 
 struct rtxq_entry * rtxq_entry_peek(struct rtxq * q, seq_num_t sn)

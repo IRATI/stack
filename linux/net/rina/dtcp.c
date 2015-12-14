@@ -171,25 +171,6 @@ struct dtcp {
 	struct kobject         kobj;
 };
 
-static ssize_t dtcp_attr_show(struct kobject *		     kobj,
-                         	     struct kobj_attribute * attr,
-                                     char *		     buf)
-{
-	struct dtcp * instance;
-
-	instance = container_of(kobj, struct dtcp, kobj);
-	if (!instance || !instance->sv)
-		return 0;
-
-	if (strcmp(attr->attr.name, "placeholder") == 0) {
-		return sprintf(buf, "%u\n", 0);
-	}
-	return 0;
-}
-DECLARE_SYSFS_OPS(dtcp);
-DECLARE_SYSFS_ATTRS(dtcp, placeholder);
-DECLARE_SYSFS_KTYPE(dtcp);
-
 struct dt * dtcp_dt(struct dtcp * dtcp)
 {
         return dtcp->parent;
@@ -215,6 +196,30 @@ int dtcp_pdu_send(struct dtcp * dtcp, struct pdu * pdu)
                            pdu);
 }
 EXPORT_SYMBOL(dtcp_pdu_send);
+
+static uint_t dtcp_pdus_per_time_unit(struct dtcp * dtcp)
+{
+	uint_t ret = 0;
+	unsigned long flags;
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	ret = dtcp->sv->pdus_per_time_unit;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return ret;
+}
+
+static uint_t dtcp_time_unit(struct dtcp * dtcp)
+{
+	uint_t ret = 0;
+	unsigned long flags;
+
+	spin_lock_irqsave(&dtcp->sv->lock, flags);
+	ret = dtcp->sv->time_unit;
+	spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+	return ret;
+}
 
 uint_t dtcp_time_frame(struct dtcp * dtcp)
 {
@@ -799,6 +804,21 @@ static seq_num_t last_snd_data_ack(struct dtcp * dtcp)
         return tmp;
 }
 
+static seq_num_t last_rcv_data_ack(struct dtcp * dtcp)
+{
+        seq_num_t     tmp;
+        unsigned long flags;
+
+        ASSERT(dtcp);
+        ASSERT(dtcp->sv);
+
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        tmp = dtcp->sv->last_rcv_data_ack;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+        return tmp;
+}
+
 static void last_snd_data_ack_set(struct dtcp * dtcp, seq_num_t seq_num)
 {
         unsigned long flags;
@@ -810,6 +830,164 @@ static void last_snd_data_ack_set(struct dtcp * dtcp, seq_num_t seq_num)
         dtcp->sv->last_snd_data_ack = seq_num;
         spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 }
+
+static uint_t dtcp_sndr_credit(struct dtcp * dtcp) {
+        unsigned long flags;
+        seq_num_t credit;
+
+        ASSERT(dtcp);
+        ASSERT(dtcp->sv);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        credit = dtcp->sv->sndr_credit;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+        return credit;
+}
+
+uint_t dtcp_rcvr_credit(struct dtcp * dtcp) {
+        unsigned long flags;
+        seq_num_t credit;
+
+        ASSERT(dtcp);
+        ASSERT(dtcp->sv);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        credit = dtcp->sv->rcvr_credit;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+        return credit;
+}
+EXPORT_SYMBOL(dtcp_rcvr_credit);
+
+void dtcp_rcvr_credit_set(struct dtcp * dtcp, uint_t credit)
+{
+        unsigned long flags;
+
+        ASSERT(dtcp);
+        ASSERT(dtcp->sv);
+
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        dtcp->sv->rcvr_credit = credit;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+}
+EXPORT_SYMBOL(dtcp_rcvr_credit_set);
+
+void update_rt_wind_edge(struct dtcp * dtcp)
+{
+        seq_num_t     seq;
+        unsigned long flags;
+
+        ASSERT(dtcp);
+        ASSERT(dtcp->sv);
+
+        seq = dt_sv_rcv_lft_win(dtcp->parent);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        seq += dtcp->sv->rcvr_credit;
+        dtcp->sv->rcvr_rt_wind_edge = seq;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+}
+EXPORT_SYMBOL(update_rt_wind_edge);
+
+void update_credit_and_rt_wind_edge(struct dtcp * dtcp, uint_t credit)
+{
+        unsigned long flags;
+
+        ASSERT(dtcp);
+        ASSERT(dtcp->sv);
+
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        dtcp->sv->rcvr_credit = credit;
+	/* applying the TCP rule of not shrinking the window */
+	if (dt_sv_rcv_lft_win(dtcp->parent) + credit > dtcp->sv->rcvr_rt_wind_edge)
+        	dtcp->sv->rcvr_rt_wind_edge = dt_sv_rcv_lft_win(dtcp->parent) + credit;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+}
+EXPORT_SYMBOL(update_credit_and_rt_wind_edge);
+
+static ssize_t dtcp_attr_show(struct kobject *		     kobj,
+                         	     struct kobj_attribute * attr,
+                                     char *		     buf)
+{
+	struct dtcp * instance;
+
+	instance = container_of(kobj, struct dtcp, kobj);
+	if (!instance || !instance->sv || !instance->parent || !instance->cfg)
+		return 0;
+
+	if (strcmp(attr->attr.name, "rtt") == 0) {
+		return sprintf(buf, "%u\n", dtcp_rtt(instance));
+	}
+	if (strcmp(attr->attr.name, "srtt") == 0) {
+		return sprintf(buf, "%u\n", dtcp_srtt(instance));
+	}
+	if (strcmp(attr->attr.name, "rttvar") == 0) {
+		return sprintf(buf, "%u\n", dtcp_rttvar(instance));
+	}
+	/* Flow control */
+	if (strcmp(attr->attr.name, "closed_win_q_length") == 0) {
+		return sprintf(buf, "%zu\n", cwq_size(dt_cwq(instance->parent)));
+	}
+	if (strcmp(attr->attr.name, "closed_win_q_size") == 0) {
+		return sprintf(buf, "%u\n",
+			dtcp_max_closed_winq_length(instance->cfg));
+	}
+	/* Win based */
+	if (strcmp(attr->attr.name, "sndr_credit") == 0) {
+		return sprintf(buf, "%u\n", dtcp_sndr_credit(instance));
+	}
+	if (strcmp(attr->attr.name, "rcvr_credit") == 0) {
+		return sprintf(buf, "%u\n", dtcp_rcvr_credit(instance));
+	}
+	if (strcmp(attr->attr.name, "snd_rt_win_edge") == 0) {
+		return sprintf(buf, "%u\n", dtcp_snd_rt_win(instance));
+	}
+	if (strcmp(attr->attr.name, "rcv_rt_win_edge") == 0) {
+		return sprintf(buf, "%u\n", dtcp_rcv_rt_win(instance));
+	}
+	/* Rate based */
+	if (strcmp(attr->attr.name, "pdus_per_time_unit") == 0) {
+		return sprintf(buf, "%u\n", dtcp_pdus_per_time_unit(instance));
+	}
+	if (strcmp(attr->attr.name, "time_unit") == 0) {
+		return sprintf(buf, "%u\n", dtcp_time_unit(instance));
+	}
+	if (strcmp(attr->attr.name, "sndr_rate") == 0) {
+		return sprintf(buf, "%u\n", dtcp_sndr_rate(instance));
+	}
+	if (strcmp(attr->attr.name, "rcvr_rate") == 0) {
+		return sprintf(buf, "%u\n", dtcp_rcvr_rate(instance));
+	}
+	if (strcmp(attr->attr.name, "pdus_rcvd_in_time_unit") == 0) {
+		return sprintf(buf, "%u\n", dtcp_recv_itu(instance));
+	}
+	if (strcmp(attr->attr.name, "last_time") == 0) {
+		struct timespec s;
+		dtcp_last_time(instance, &s);
+		return sprintf(buf, "%lld.%.9ld\n",
+			(long long) s.tv_sec, s.tv_nsec);
+	}
+	/* Rtx control */
+	if (strcmp(attr->attr.name, "data_retransmit_max") == 0) {
+		return sprintf(buf, "%u\n", dtcp_data_retransmit_max(instance->cfg));
+	}
+	if (strcmp(attr->attr.name, "last_snd_data_ack") == 0) {
+		return sprintf(buf, "%u\n", last_snd_data_ack(instance));
+	}
+	if (strcmp(attr->attr.name, "last_rcv_data_ack") == 0) {
+		return sprintf(buf, "%u\n", last_rcv_data_ack(instance));
+	}
+	if (strcmp(attr->attr.name, "snd_lf_win") == 0) {
+		return sprintf(buf, "%u\n", dtcp_snd_lf_win(instance));
+	}
+	if (strcmp(attr->attr.name, "rtx_q_length") == 0) {
+		return sprintf(buf, "%u\n", rtxq_size(dt_rtxq(instance->parent)));
+	}
+	if (strcmp(attr->attr.name, "rtx_drop_pdus") == 0) {
+		return sprintf(buf, "%u\n",
+			rtxq_drop_pdus(dt_rtxq(instance->parent)));
+	}
+	return 0;
+}
+DECLARE_SYSFS_OPS(dtcp);
+DECLARE_SYSFS_ATTRS(dtcp, placeholder);
+DECLARE_SYSFS_KTYPE(dtcp);
 
 static int push_pdus_rmt(struct dtcp * dtcp)
 {
@@ -1435,64 +1613,6 @@ int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
         return 0;
 }
 EXPORT_SYMBOL(dtcp_ack_flow_control_pdu_send);
-
-uint_t dtcp_rcvr_credit(struct dtcp * dtcp) {
-        unsigned long flags;
-        seq_num_t credit;
-
-        ASSERT(dtcp);
-        ASSERT(dtcp->sv);
-        spin_lock_irqsave(&dtcp->sv->lock, flags);
-        credit = dtcp->sv->rcvr_credit;
-        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
-        return credit;
-}
-EXPORT_SYMBOL(dtcp_rcvr_credit);
-
-void dtcp_rcvr_credit_set(struct dtcp * dtcp, uint_t credit)
-{
-        unsigned long flags;
-
-        ASSERT(dtcp);
-        ASSERT(dtcp->sv);
-
-        spin_lock_irqsave(&dtcp->sv->lock, flags);
-        dtcp->sv->rcvr_credit = credit;
-        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
-}
-EXPORT_SYMBOL(dtcp_rcvr_credit_set);
-
-void update_rt_wind_edge(struct dtcp * dtcp)
-{
-        seq_num_t     seq;
-        unsigned long flags;
-
-        ASSERT(dtcp);
-        ASSERT(dtcp->sv);
-
-        seq = dt_sv_rcv_lft_win(dtcp->parent);
-        spin_lock_irqsave(&dtcp->sv->lock, flags);
-        seq += dtcp->sv->rcvr_credit;
-        dtcp->sv->rcvr_rt_wind_edge = seq;
-        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
-}
-EXPORT_SYMBOL(update_rt_wind_edge);
-
-void update_credit_and_rt_wind_edge(struct dtcp * dtcp, uint_t credit)
-{
-        unsigned long flags;
-
-        ASSERT(dtcp);
-        ASSERT(dtcp->sv);
-
-        spin_lock_irqsave(&dtcp->sv->lock, flags);
-        dtcp->sv->rcvr_credit = credit;
-	/* applying the TCP rule of not shrinking the window */
-	if (dt_sv_rcv_lft_win(dtcp->parent) + credit > dtcp->sv->rcvr_rt_wind_edge)
-        	dtcp->sv->rcvr_rt_wind_edge = dt_sv_rcv_lft_win(dtcp->parent) + credit;
-        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
-}
-EXPORT_SYMBOL(update_credit_and_rt_wind_edge);
 
 static struct dtcp_sv default_sv = {
         .pdus_per_time_unit     = 0,
