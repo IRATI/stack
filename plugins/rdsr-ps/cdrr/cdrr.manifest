@@ -1,0 +1,11 @@
+{
+        "PluginName": "cdrr",
+        "PluginVersion": "1",
+        "PolicySets" : [
+                {
+                        "Name": "cdrr",
+                        "Component": "dtcp",
+                        "Version" : "1"
+                }
+        ]
+}

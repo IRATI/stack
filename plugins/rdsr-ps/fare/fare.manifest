@@ -1,0 +1,11 @@
+{
+        "PluginName": "fare",
+        "PluginVersion": "1",
+        "PolicySets" : [
+                {
+                        "Name": "fare",
+                        "Component": "flow-allocator",
+                        "Version" : "1"
+                }
+        ]
+}

@@ -1,0 +1,45 @@
+Receiver congestion Detection, Sender Reaction policies.
+Author: Kewin Rausch <kewin.rausch@create-net.org>
+
+********************************************************************************
+RESUME
+********************************************************************************
+This set of policies will provide a congestion control set of policies which 
+allows to take advantage of the rate based flow control to avoid congestions in 
+your favourite topology.
+
+Whenever congestion happens in an intermediate node, it will mark pdus which
+pass through it, leaving other flows free to achieve the desired rate (if they
+took different routes).
+
+********************************************************************************
+COMPONENTS
+********************************************************************************
+- ecn: Explicit Congestion Notification policy.
+	a very basic congestion detection RMT policy which starts to mark
+	packets as Congested when you start to use the RMT queues.
+	
+- cdrr: Congestion Detection Rate Reduction policy.
+	A DTCP policy which adapts the flows to their average bandwidth when 
+	congestion-marked pdus are detected. If no congestion is occurring then 
+	it allow the flow to push at a predefined 
+	rate that you can set.
+		
+- fare: Flow Allocation Rate Enforcement policy.
+	A FA policy which reads set the flow rate to the average bandwidth 
+	requested (which we threat as Minimum Granted Bandwidth).
+	
+All these policies works independently from each other. You can replace the RMT
+or DTCP with your own without any problem, if you need to perform alternative
+behaviors.
+
+********************************************************************************
+BUILD
+********************************************************************************
+For kernel mode components ECN and CDRR:
+just invoke the makefile present in the same folder where the sources are. You
+must be under IRATI-compiled kernel.
+
+For user space mode component FARE:
+you have to replace existing elements with the path where you installed the 
+IRATI userspace components. See comments in the make file for additional info.
