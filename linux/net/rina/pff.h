@@ -64,7 +64,7 @@ int             pff_set_policy_set_param(struct pff * pff,
                                          const char * value);
 
 struct pff_ps * pff_ps_get(struct pff * pff);
-
+struct kset *   pff_kset(struct pff * pff);
 struct pff *    pff_from_component(struct rina_component * component);
 
 #endif

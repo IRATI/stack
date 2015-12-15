@@ -35,6 +35,7 @@
 #include "debug.h"
 #include "policies.h"
 #include "rmt-ps-default.h"
+#include "sysfs-utils.h"
 
 #define DEFAULT_Q_MAX 1000
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
@@ -47,7 +48,27 @@ struct rmt_queue {
 
 struct rmt_ps_default_data {
 	unsigned int q_max;
+	struct kobject kobj;
 };
+
+static ssize_t rmt_ps_attr_show(struct kobject *        kobj,
+                         	struct kobj_attribute * attr,
+                                char *                  buf)
+{
+	struct rmt_ps_default_data * data;
+
+	data = container_of(kobj, struct rmt_ps_default_data, kobj);
+	if (!data)
+		return 0;
+
+	if (strcmp(attr->attr.name, "q_max") == 0) {
+		return sprintf(buf, "%u\n", data->q_max);
+	}
+	return 0;
+}
+DECLARE_SYSFS_OPS(rmt_ps);
+DECLARE_SYSFS_ATTRS(rmt_ps, q_max);
+DECLARE_SYSFS_KTYPE(rmt_ps);
 
 static struct rmt_queue *rmt_queue_create(port_id_t port)
 {
@@ -248,7 +269,7 @@ struct ps_base *rmt_ps_default_create(struct rina_component *component)
 	struct rmt *rmt;
 	struct rmt_ps *ps;
 	struct rmt_ps_default_data *data;
-	struct rmt_config *rmt_cfg;
+	const struct rmt_config *rmt_cfg;
 	struct policy_parm *parm;
 
 	rmt = rmt_from_component(component);
@@ -259,11 +280,15 @@ struct ps_base *rmt_ps_default_create(struct rina_component *component)
 	if (!ps)
 		return NULL;
 
-	data = rkmalloc(sizeof(*data), GFP_KERNEL);
+	data = rkzalloc(sizeof(*data), GFP_KERNEL);
 	if (!data) {
 		rkfree(ps);
 		return NULL;
 	}
+	/* FIXME: workaround so that kobject_add does not bang */
+	memset(&data->kobj, 0x00, sizeof(data->kobj));
+	kobject_init_and_add(&data->kobj, &rmt_ps_ktype,
+				rmt_kobject(rmt), "ps");
 
 	ps->base.set_policy_set_param = NULL; /* default */
 	ps->dm = rmt;
@@ -304,6 +329,7 @@ void rmt_ps_default_destroy(struct ps_base *bps)
 
 	if (bps) {
 		if (data)
+			kobject_del(&data->kobj);
 			rkfree(data);
 		rkfree(ps);
 	}

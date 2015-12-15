@@ -40,6 +40,32 @@ struct pff {
         struct kset * kset;
 };
 
+/*
+static ssize_t pff_attr_show(struct kobject *        kobj,
+                             struct kobj_attribute * attr,
+                             char *                  buf)
+{
+	struct pff * pff;
+
+	 = container_of(kobj, struct rmt, kobj);
+	if (!rmt || !rmt->rmt_cfg || !rmt->rmt_cfg->policy_set)
+		return 0;
+
+	if (strcmp(attr->attr.name, "ps_name") == 0) {
+		return sprintf(buf, "%s\n",
+			policy_name(rmt->rmt_cfg->policy_set));
+	}
+	if (strcmp(attr->attr.name, "ps_name") == 0) {
+		return sprintf(buf, "%s\n",
+			policy_version(rmt->rmt_cfg->policy_set));
+	}
+	return 0;
+}
+DECLARE_SYSFS_OPS(pff);
+DECLARE_SYSFS_ATTRS(pff, ps_name, ps_version);
+DECLARE_SYSFS_KTYPE(pff);
+*/
+
 static bool __pff_is_ok(struct pff * instance)
 { return instance ? true : false; }
 
@@ -352,16 +378,14 @@ int pff_set_policy_set_param(struct pff * pff,
 
                 ps = container_of(rcu_dereference(pff->base.ps),
                                   struct pff_ps, base);
-                if (!ps) {
+                if (!ps)
                         LOG_ERR("No policy-set selected for this PFF");
-                } else {
+                 else
                         LOG_ERR("Unknown PFF parameter policy '%s'", name);
-                }
 
                 rcu_read_unlock();
-        } else {
+        } else
                 ret = base_set_policy_set_param(&pff->base, path, name, value);
-        }
 
         return ret;
 }
@@ -373,6 +397,10 @@ struct pff_ps * pff_ps_get(struct pff * pff)
         return container_of(rcu_dereference(pff->base.ps),
                             struct pff_ps, base);
 }
+
+struct kset * pff_kset(struct pff * pff)
+{ return pff->kset; }
+EXPORT_SYMBOL(pff_kset);
 
 struct pff * pff_from_component(struct rina_component * component)
 { return container_of(component, struct pff, base); }

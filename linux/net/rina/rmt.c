@@ -597,6 +597,17 @@ struct serdes * rmt_serdes(struct rmt * instance)
 	return instance->serdes;
 }
 
+struct kobject * rmt_kobject(struct rmt * instance)
+{
+	if (!instance) {
+		LOG_ERR("Bogus instance passed");
+		return NULL;
+	}
+
+	return &instance->kobj;
+}
+EXPORT_SYMBOL(rmt_kobject);
+
 struct rmt_config *rmt_config_get(struct rmt *instance)
 {
 	if (!instance) {

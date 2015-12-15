@@ -32,6 +32,7 @@
 #include "rds/rtimer.h"
 #include "pff-ps-default.h"
 #include "debug.h"
+#include "sysfs-utils.h"
 
 /* FIXME: This representation is crappy and MUST be changed */
 struct pft_port_entry {
@@ -96,7 +97,40 @@ struct pft_entry {
         qos_id_t         qos_id;
         struct list_head ports;
         struct list_head next;
+	struct kobject   kobj;
 };
+
+static ssize_t pft_entry_attr_show(struct kobject *        kobj,
+                        	   struct kobj_attribute * attr,
+                                   char *                  buf)
+{
+	struct pft_entry * entry;
+
+	entry = container_of(kobj, struct pft_entry, kobj);
+	if (!entry)
+		return 0;
+
+	if (strcmp(attr->attr.name, "dest_addr") == 0) {
+		return sprintf(buf, "%u\n", entry->destination);
+	}
+	if (strcmp(attr->attr.name, "qos_id") == 0) {
+		return sprintf(buf, "%u\n", entry->qos_id);
+	}
+	if (strcmp(attr->attr.name, "ports") == 0) {
+		int offset = 0;
+		struct pft_port_entry * pos;
+        	list_for_each_entry(pos, &entry->ports, next) {
+			offset += sprintf(buf + offset, "%u ", pos->port_id);
+        	}
+		if (offset > 1)
+			sprintf(buf + offset -1, "\n");
+		return offset;
+	}
+	return 0;
+}
+DECLARE_SYSFS_OPS(pft_entry);
+DECLARE_SYSFS_ATTRS(pft_entry, dest_addr, qos_id, ports);
+DECLARE_SYSFS_KTYPE(pft_entry);
 
 static struct pft_entry * pfte_create_gfp(gfp_t     flags,
                                           address_t destination,
@@ -104,7 +138,7 @@ static struct pft_entry * pfte_create_gfp(gfp_t     flags,
 {
         struct pft_entry * tmp;
 
-        tmp = rkmalloc(sizeof(*tmp), flags);
+        tmp = rkzalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return NULL;
 
@@ -113,7 +147,17 @@ static struct pft_entry * pfte_create_gfp(gfp_t     flags,
         INIT_LIST_HEAD(&tmp->ports);
         INIT_LIST_HEAD(&tmp->next);
 
+	/* FIXME: workaround so that kobject_add does not bang */
+	memset(&tmp->kobj, 0x00, sizeof(tmp->kobj));
+	kobject_init(&tmp->kobj, &pft_entry_ktype);
+
         return tmp;
+}
+
+static void entry_add_to_pff_kset(struct pft_entry * entry, struct pff_ps * ps)
+{
+	entry->kobj.kset = pff_kset(ps->dm);
+	kobject_add(&entry->kobj, NULL, "%u", entry->destination);
 }
 
 static struct pft_entry * pfte_create_ni(address_t destination,
@@ -144,6 +188,7 @@ static void pfte_destroy(struct pft_entry * entry)
         }
 
         list_del(&entry->next);
+	kobject_del(&entry->kobj);
         rkfree(entry);
 }
 
@@ -300,7 +345,7 @@ int default_add(struct pff_ps *        ps,
                         spin_unlock(&priv->lock);
                         return -1;
                 }
-
+		entry_add_to_pff_kset(tmp, ps);
                 list_add(&tmp->next, &priv->entries);
         }
 

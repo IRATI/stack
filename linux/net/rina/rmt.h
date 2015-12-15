@@ -137,5 +137,5 @@ int		   rmt_set_policy_set_param(struct rmt *rmt,
 					    const string_t *name,
 					    const string_t *value);
 struct rmt	  *rmt_from_component(struct rina_component *component);
-
+struct kobject    *rmt_kobject(struct rmt * instance);
 #endif
