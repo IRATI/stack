@@ -15,18 +15,6 @@ extern "C" void
 destroyAuthNonePs(rina::IPolicySet * instance);
 
 extern "C" rina::IPolicySet *
-createAuthPasswordPs(rina::ApplicationEntity * context);
-
-extern "C" void
-destroyAuthPasswordPs(rina::IPolicySet * instance);
-
-extern "C" rina::IPolicySet *
-createAuthSSH2Ps(rina::ApplicationEntity * context);
-
-extern "C" void
-destroyAuthSSH2Ps(rina::IPolicySet * instance);
-
-extern "C" rina::IPolicySet *
 createFlowAllocatorPs(rina::ApplicationEntity * context);
 
 extern "C" void
@@ -67,8 +55,6 @@ get_factories(std::vector<struct rina::PsFactory>& factories)
 {
         struct rina::PsFactory sm_factory;
         struct rina::PsFactory auth_none_factory;
-        struct rina::PsFactory auth_password_factory;
-        struct rina::PsFactory auth_ssh2_factory;
         struct rina::PsFactory fa_factory;
         struct rina::PsFactory farr_factory;
         struct rina::PsFactory nsm_factory;
@@ -87,18 +73,6 @@ get_factories(std::vector<struct rina::PsFactory>& factories)
         auth_none_factory.create = createAuthNonePs;
         auth_none_factory.destroy = destroyAuthNonePs;
 	factories.push_back(auth_none_factory);
-
-        auth_password_factory.info.name = rina::IAuthPolicySet::AUTH_PASSWORD;
-        auth_password_factory.info.app_entity = rina::ApplicationEntity::SECURITY_MANAGER_AE_NAME;
-        auth_password_factory.create = createAuthPasswordPs;
-        auth_password_factory.destroy = destroyAuthPasswordPs;
-	factories.push_back(auth_password_factory);
-
-        auth_ssh2_factory.info.name = rina::IAuthPolicySet::AUTH_SSH2;
-        auth_ssh2_factory.info.app_entity = rina::ApplicationEntity::SECURITY_MANAGER_AE_NAME;
-        auth_ssh2_factory.create = createAuthSSH2Ps;
-        auth_ssh2_factory.destroy = destroyAuthSSH2Ps;
-	factories.push_back(auth_ssh2_factory);
 
         fa_factory.info.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;
         fa_factory.info.app_entity = IFlowAllocator::FLOW_ALLOCATOR_AE_NAME;

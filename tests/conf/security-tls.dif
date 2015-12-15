@@ -1,0 +1,40 @@
+{
+    "difType" : "normal-ipc",
+    "securityManagerConfiguration" : {
+    	"policySet" : {
+          "name" : "default",
+          "version" : "1"
+        },
+        "authSDUProtProfiles" : {
+           "default" : {
+              "authPolicy" : {
+              	"name" : "PSOC_authentication-tlshandshake",
+          	"version" : "1",
+          	"parameters" : [ {
+          	   "name" : "cipherSuite",
+          	   "value" : "suite_name"
+          	}, {
+                   "name" : "compressionMethod",
+                   "value" : "method1_name"
+                } ]
+              },
+              "encryptPolicy" : {
+                 "name" : "PSOC_crypto-tlsrecord",
+                 "version" : "1"
+              },
+              "TTLPolicy" : {
+                 "name" : "default",
+                 "version" : "1",
+                 "parameters" : [ {
+                    "name" : "initialValue",
+                    "value" : "50"
+                  } ]
+                },
+                "ErrorCheckPolicy" : {
+                   "name" : "CRC32",
+                   "version" : "1"
+                }
+           }
+        }
+    }
+  }
