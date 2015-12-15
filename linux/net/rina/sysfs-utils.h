@@ -21,12 +21,14 @@
 #ifndef RINA_SYSFSUTILS_H
 #define RINA_SYSFSUTILS_H
 
+/* Supports maximum 24 arguments, aka sysfs attributes, to be defined at once */
 #define _GET_NTH_ARG(				\
 	_1, _2, _3, _4, _5, _6, _7, _8, _9, _10,\
 	_11, _12, _13, _14, _15, _16, _17, _18,	\
 	_19, _20, _21, _22, _23, _24, N, ...) N
 
-/* _call: Function name
+/* Utility functions to map the different number of variable arguments
+ * _call: Function name
  * x	: Component name
  * y	: Attribute name
  */
@@ -59,7 +61,9 @@
 #define __CAT(A, B) A ## B
 #define CAT(A, B) __CAT(A, B)
 
-/* x	: Function/macro name
+/* Loops on __VA_ARGS__ (attribute names) at the end you get one call to
+ * __func_1(x,y,attribute_name) per attribute
+ * x	: Function/macro name
  * y	: Component name
  */
 #define CALL_FOR_EACH(x, y,  ...) _GET_NTH_ARG(__VA_ARGS__, 		\
@@ -119,8 +123,8 @@ static const struct sysfs_ops COMP_NAME##_sysfs_ops = {		\
 	};
 
 /* Adds an attribute to an existing kobject */
-#define ADD_ATTR_TO_KOBJ(kobj, ATTR_NAME)			\
-	sysfs_create_file(kobj, &ATTR_NAME##_attr.attr);
+#define ADD_ATTR_TO_KOBJ(KOBJ, ATTR_NAME)			\
+	sysfs_create_file(KOBJ, &ATTR_NAME##_attr.attr);
 
 /* Declares a new attribute and adds it to an existing kobject */
 #define DECLARE_AND_ADD_SYSFS_ATTRS(kobj, COMP_NAME, ...)	\

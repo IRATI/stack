@@ -983,10 +983,13 @@ static ssize_t dtcp_attr_show(struct kobject *		     kobj,
 		return sprintf(buf, "%u\n",
 			rtxq_drop_pdus(dt_rtxq(instance->parent)));
 	}
+	if (strcmp(attr->attr.name, "ps_name") == 0) {
+		return sprintf(buf, "%s\n",instance->base.ps_factory->name);
+	}
 	return 0;
 }
 DECLARE_SYSFS_OPS(dtcp);
-DECLARE_SYSFS_ATTRS(dtcp, rtt, srtt, rttvar);
+DECLARE_SYSFS_ATTRS(dtcp, rtt, srtt, rttvar, ps_name);
 DECLARE_SYSFS_KTYPE(dtcp);
 
 static int push_pdus_rmt(struct dtcp * dtcp)

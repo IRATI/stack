@@ -93,6 +93,21 @@ struct rmt {
         LOG_DBG("PDUs __STRINGIFY(name) %u (%u)",				\
 		n1_port->stats.name##_pdus, n1_port->stats.name##_bytes);
 
+static ssize_t rmt_attr_show(struct kobject *        kobj,
+                             struct kobj_attribute * attr,
+                             char *                  buf)
+{
+	struct rmt * rmt;
+
+	rmt = container_of(kobj, struct rmt, kobj);
+	if (!rmt || !rmt->base.ps)
+		return 0;
+
+	if (strcmp(attr->attr.name, "ps_name") == 0) {
+		return sprintf(buf, "%s\n", rmt->base.ps_factory->name);
+	}
+	return 0;
+}
 
 static ssize_t rmt_n1_port_attr_show(struct kobject *        kobj,
                          	     struct kobj_attribute * attr,
@@ -136,7 +151,9 @@ static ssize_t rmt_n1_port_attr_show(struct kobject *        kobj,
 	}
 	return 0;
 }
-DECLARE_SYSFS_EMTPY_KTYPE(rmt);
+DECLARE_SYSFS_OPS(rmt);
+DECLARE_SYSFS_ATTRS(rmt, ps_name);
+DECLARE_SYSFS_KTYPE(rmt);
 DECLARE_SYSFS_OPS(rmt_n1_port);
 DECLARE_SYSFS_ATTRS(rmt_n1_port, queued_pdus, drop_pdus, err_pdus, tx_pdus,
 	tx_bytes, rx_pdus, rx_bytes);

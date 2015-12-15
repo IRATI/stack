@@ -195,12 +195,16 @@ static ssize_t dtp_attr_show(struct kobject *		     kobj,
 		stats_get(rx_bytes, instance->sv, stats_ret, flags);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
+	if (strcmp(attr->attr.name, "ps_name") == 0) {
+		return sprintf(buf, "%s\n", instance->base.ps_factory->name);
+	}
 	return 0;
 }
 DECLARE_SYSFS_OPS(dtp);
 DECLARE_SYSFS_ATTRS(dtp, init_a_timer, max_sdu_gap, partial_delivery,
 		    incomplete_delivery, in_order_delivery, seq_num_rollover_th,
-		    drop_pdus, err_pdus, tx_pdus, tx_bytes, rx_pdus, rx_bytes);
+		    drop_pdus, err_pdus, tx_pdus, tx_bytes, rx_pdus, rx_bytes,
+		    ps_name);
 DECLARE_SYSFS_KTYPE(dtp);
 
 struct dt * dtp_dt(struct dtp * dtp)
