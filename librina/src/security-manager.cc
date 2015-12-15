@@ -40,6 +40,7 @@ namespace rina {
 const std::string IAuthPolicySet::AUTH_NONE = "PSOC_authentication-none";
 const std::string IAuthPolicySet::AUTH_PASSWORD = "PSOC_authentication-password";
 const std::string IAuthPolicySet::AUTH_SSH2 = "PSOC_authentication-ssh2";
+const std::string IAuthPolicySet::AUTH_TLSHAND = "PSOC_authentication-tlshandshake";
 
 IAuthPolicySet::IAuthPolicySet(const std::string& type_)
 {

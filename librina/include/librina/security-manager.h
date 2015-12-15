@@ -56,6 +56,7 @@ public:
 	static const std::string AUTH_NONE;
 	static const std::string AUTH_PASSWORD;
 	static const std::string AUTH_SSH2;
+	static const std::string AUTH_TLSHAND;
 
 	IAuthPolicySet(const std::string& type_);
 	virtual ~IAuthPolicySet() { };
