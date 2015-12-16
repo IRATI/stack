@@ -4,6 +4,7 @@
 #define IPCP_MODULE "security-manager-example-ps"
 #include "ipcp-logging.h"
 #include "components.h"
+#include "common/configuration.h"
 
 
 namespace rinad {
@@ -12,7 +13,7 @@ class SecurityManagerExamplePs: public ISecurityManagerPs {
 public:
 	SecurityManagerExamplePs(IPCPSecurityManager * dm);
 	bool isAllowedToJoinDIF(const rina::Neighbor& newMember);
-	bool acceptFlow(const Flow& newFlow);
+	bool acceptFlow(const configs::Flow& newFlow);
 	int set_policy_set_param(const std::string& name,
 			const std::string& value);
 	virtual ~SecurityManagerExamplePs() {}
@@ -38,7 +39,7 @@ bool SecurityManagerExamplePs::isAllowedToJoinDIF(const rina::Neighbor&
 	return true;
 }
 
-bool SecurityManagerExamplePs::acceptFlow(const Flow& newFlow)
+bool SecurityManagerExamplePs::acceptFlow(const configs::Flow& newFlow)
 {
 	LOG_IPCP_DBG("Accepting flow from remote application %s",
 			newFlow.source_naming_info.getEncodedString().c_str());
