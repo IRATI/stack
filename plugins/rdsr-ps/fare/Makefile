@@ -1,23 +1,42 @@
-#
-# Makefile for IRATI Flow Allocator Rate Enforcement plugin.
-#
-# Author: Kewin Rausch <kewin.rausch@create-net.org>
-#
-# Root folder.
-root=/pristine
-# Userspace compiled folder.
-rootu=/pristine/userspace 
-# Final directory where to put the policy.
-out-dir=$(rootu)/lib/rinad/ipcp/
-# Librina headers.
-librina-dir=$(root)/librina/include
-# Rinad elements.
-rinad-dir=$(root)/rinad/src
-# Rinad compiled elements.
-rinad-out-dir=$(root)/build/rinad/src/
-# Compiled libraries.
-lib-dir=$(rootu)/lib
+# Set INSTALLDIR environment variable to the directory containing
+# the IRATI installation
 
-all:
-	cp fare.manifest $(out-dir)
-	g++ -I$(rinad-dir) -I$(rinad-dir)/common -I$(rinad-out-dir) -I$(librina-dir) -L$(lib-dir) -lrina -fPIC -shared fa-ps-fare.cpp -o $(out-dir)/fare.so
+INSTALLDIR = /pristine/userspace
+
+ifndef INSTALLDIR
+$(error The INSTALLDIR environment variable is not set)
+endif
+
+PLUGIN_NAME = sm-example
+SOURCES     =					\
+	plugin.cc				\
+	sm-example.cc
+
+CXX        = g++
+CXXFLAGS   = -Wall -Werror -fPIC
+LDFLAGS    = -shared -L $(INSTALLDIR)/lib
+LIBS       = -lrina
+
+CXXFLAGS   += -I $(INSTALLDIR)/include/rinad/ipcp
+CXXFLAGS   += -I $(INSTALLDIR)/include/rinad
+CXXFLAGS   += -I $(INSTALLDIR)/include
+
+OBJECTS    = $(SOURCES:.cc=.o)
+
+all: $(PLUGIN_NAME).so
+
+$(PLUGIN_NAME).so: $(OBJECTS)
+	$(CXX) $(LDFLAGS) $(OBJECTS) -o $@
+
+.cc.o:
+	$(CXX) -c $(CXXFLAGS) $< -o $@
+
+clean:
+	rm -f $(OBJECTS)
+
+install:
+	install $(PLUGIN_NAME).so $(INSTALLDIR)/lib/rinad/ipcp
+	install -m 0644 $(PLUGIN_NAME).manifest $(INSTALLDIR)/lib/rinad/ipcp
+
+uninstall:
+	-rm $(INSTALLDIR)/lib/rinad/ipcp/$(PLUGIN_NAME).so $(INSTALLDIR)/lib/rinad/ipcp/$(PLUGIN_NAME).manifest
