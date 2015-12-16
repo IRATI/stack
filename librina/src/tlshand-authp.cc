@@ -160,7 +160,7 @@ TLSHandSecurityContext::TLSHandSecurityContext(int session_id,
 		: ISecurityContext(session_id)
 {
 	cipher_suite = profile.authPolicy.get_param_value_as_string(CIPHER_SUITE);
-	compress_method = profile.encryptPolicy.get_param_value_as_string(COMPRESSION_METHOD);
+	compress_method = profile.authPolicy.get_param_value_as_string(COMPRESSION_METHOD);
 	keystore_path = profile.authPolicy.get_param_value_as_string(KEYSTORE_PATH);
 	if (keystore_path == std::string()) {
 		//TODO set the configuration directory as the default keystore path
